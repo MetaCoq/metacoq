@@ -327,6 +327,18 @@ checker/src/wf.mli
 /pcuic/src/PCUICPretty.ml
 /pcuic/src/PCUICPretty.mli
 /pcuic/src/ssreflect.ml
+pcuic/src/cMorphisms.ml
+pcuic/src/cMorphisms.mli
+pcuic/src/eqDecInstances.ml
+pcuic/src/eqDecInstances.mli
+pcuic/src/pCUICEquality.ml
+pcuic/src/pCUICEquality.mli
+pcuic/src/pCUICInduction.ml
+pcuic/src/pCUICInduction.mli
+pcuic/src/pCUICPretty.ml
+pcuic/src/pCUICPretty.mli
+pcuic/src/pCUICReflect.ml
+pcuic/src/pCUICReflect.mli
 
 /pcuic/src/ssreflect.mli
 /erasure/Makefile.plugin-e

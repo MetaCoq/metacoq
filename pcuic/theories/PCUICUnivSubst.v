@@ -7,6 +7,7 @@ Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 
+
 (** * Universe substitution
 
   *WIP*
@@ -14,7 +15,9 @@ Set Asymmetric Patterns.
   Substitution of universe levels for universe level variables, used to
   implement universe polymorphism. *)
 
-Fixpoint subst_instance_constr (u : universe_instance) (c : term) :=
+
+Instance subst_instance_constr : UnivSubst term :=
+  fix subst_instance_constr u c {struct c} : term :=
   match c with
   | tRel _ | tVar _  => c
   | tEvar ev args => tEvar ev (List.map (subst_instance_constr u) args)
@@ -39,8 +42,11 @@ Fixpoint subst_instance_constr (u : universe_instance) (c : term) :=
     tCoFix mfix' idx
   end.
 
-Definition subst_instance_context (u : universe_instance) (c : context) : context :=
-  PCUICAstUtils.map_context (subst_instance_constr u) c.
+Instance subst_instance_decl : UnivSubst context_decl
+  := map_decl ∘ subst_instance_constr.
+
+Instance subst_instance_context : UnivSubst context
+  := map_context ∘ subst_instance_constr.
 
 Lemma lift_subst_instance_constr u c n k :
   lift n k (subst_instance_constr u c) = subst_instance_constr u (lift n k c).
@@ -69,12 +75,13 @@ Proof.
   destruct a as [na [b|] ty]; simpl; eauto.
 Qed.
 
-Lemma subst_instance_context_length u ctx : #|subst_instance_context u ctx| = #|ctx|.
+Lemma subst_instance_context_length u ctx
+  : #|subst_instance_context u ctx| = #|ctx|.
 Proof. unfold subst_instance_context, map_context. now rewrite map_length. Qed.
 
 Lemma subst_subst_instance_constr u c N k :
-  subst (map (subst_instance_constr u) N) k (subst_instance_constr u c) =
-  subst_instance_constr u (subst N k c).
+  subst (map (subst_instance_constr u) N) k (subst_instance_constr u c)
+  = subst_instance_constr u (subst N k c).
 Proof.
   induction c in k |- * using term_forall_list_ind; simpl; auto;
     rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
@@ -86,7 +93,8 @@ Proof.
 Qed.
 
 Lemma map_subst_instance_constr_to_extended_list_k u ctx k :
-  map (subst_instance_constr u) (to_extended_list_k ctx k) = to_extended_list_k ctx k.
+  map (subst_instance_constr u) (to_extended_list_k ctx k)
+  = to_extended_list_k ctx k.
 Proof.
   pose proof (to_extended_list_k_spec ctx k).
   solve_all. now destruct H as [n [-> _]].
@@ -186,16 +194,8 @@ Section SubstInstanceClosed.
 
   Context (u : universe_instance) (Hcl : closedu_instance 0 u).
 
-  Lemma forallb_nth {A} (l : list A) (n : nat) P d :
-    forallb P l -> n < #|l| -> exists x, (nth n l d = x) /\ P x.
-  Proof.
-    induction l in n |- *; destruct n; simpl; auto; try easy.
-    move/andP => [pa pl] pn. exists a; easy.
-    move/andP => [pa pl] pn. specialize (IHl n pl).
-    forward IHl. lia. auto.
-  Qed.
-
-  Lemma subst_instance_level_closedu t : closedu_level #|u| t -> closedu_level 0 (subst_instance_level u t).
+  Lemma subst_instance_level_closedu t :
+    closedu_level #|u| t -> closedu_level 0 (subst_instance_level u t).
   Proof.
     destruct t => /=; auto.
     move/Nat.ltb_spec0. intro H.
@@ -204,14 +204,16 @@ Section SubstInstanceClosed.
   Qed.
 
   Lemma subst_instance_level_expr_closedu t :
-    closedu_level_expr #|u| t -> closedu_level_expr 0 (subst_instance_level_expr u t).
+    closedu_level_expr #|u| t
+    -> closedu_level_expr 0 (subst_instance_level_expr u t).
   Proof.
     destruct t as [l n].
     rewrite /closedu_level_expr /subst_instance_level_expr /=.
     move/(subst_instance_level_closedu) => //.
   Qed.
 
-  Lemma subst_instance_univ_closedu t : closedu_universe #|u| t -> closedu_universe 0 (subst_instance_univ u t).
+  Lemma subst_instance_univ_closedu t :
+    closedu_universe #|u| t -> closedu_universe 0 (subst_instance_univ u t).
   Proof.
     rewrite /closedu_universe /subst_instance_univ => H.
     eapply (forallb_Forall (closedu_level_expr #|u|)) in H; auto.

@@ -10,7 +10,6 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq Require Import LibHypsNaming.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
-     PCUICSubstitution PCUICClosed PCUICCumulativity PCUICGeneration
      PCUICSubstitution PCUICClosed PCUICCumulativity PCUICGeneration PCUICReduction
      PCUICParallelReduction PCUICEquality
      PCUICParallelReductionConfluence PCUICConfluence.
@@ -342,10 +341,10 @@ Section ContextConversion.
   Proof.
     intros tu tt' uu'.
     pose proof tu as tu2.
-    eapply red_eq_term_upto_univ_l in tu. 9:eapply tt'. all:tc. 2:eapply eq_universe_leq_universe.
+    eapply red_eq_term_upto_univ_l in tu. 7:eapply tt'. all:tc. 2:eapply eq_universe_leq_universe.
     destruct tu as [u'' [uu'' t'u'']].
     destruct (red_confluence wfΣ uu' uu'') as [unf [ul ur]].
-    eapply red_eq_term_upto_univ_r in t'u''. 10:eapply ur. all:tc. 2:eapply eq_universe_leq_universe.
+    eapply red_eq_term_upto_univ_r in t'u''. 8:eapply ur. all:tc. 2:eapply eq_universe_leq_universe.
     destruct t'u'' as [t'' [t't'' t''unf]].
     exists t'', unf. intuition auto.
   Qed.
@@ -356,10 +355,10 @@ Section ContextConversion.
   Proof.
     intros tu tt' uu'.
     pose proof tu as tu2.
-    eapply red_eq_term_upto_univ_l in tu. 9:eapply tt'. all:tc. 2:eauto.
+    eapply red_eq_term_upto_univ_l in tu. 7:eapply tt'. all:tc. 2:eauto.
     destruct tu as [u'' [uu'' t'u'']].
     destruct (red_confluence wfΣ uu' uu'') as [unf [ul ur]].
-    eapply red_eq_term_upto_univ_r in t'u''. 10:eapply ur. all:tc. 2:eauto.
+    eapply red_eq_term_upto_univ_r in t'u''. 8:eapply ur. all:tc. 2:eauto.
     destruct t'u'' as [t'' [t't'' t''unf]].
     exists t'', unf. intuition auto.
   Qed.
@@ -373,7 +372,8 @@ Section ContextConversion.
     apply cumul_alt in H as [v [v' [[redl redr] leq]]].
     destruct (red_red_ctx Σ wfΣ redl Hctx) as [lnf [redl0 redr0]].
     apply cumul_alt.
-    eapply red_eq_term_upto_univ_l in leq; eauto. all:tc; pcuic.
+    eapply red_eq_term_upto_univ_l in leq; eauto. all:tc.
+    2: apply eq_universe_leq_universe.
     destruct leq as [? [? ?]].
     destruct (red_red_ctx _ wfΣ redr Hctx) as [rnf [redl1 redr1]].
     destruct (red_confluence wfΣ r redr1). destruct p.
@@ -417,7 +417,7 @@ Section ContextConversion.
   Arguments red_ctx : clear implicits.
 
   Lemma red_eq_context_upto_l {Re Γ Δ u v}
-        `{Reflexive _ Re} `{Transitive _ Re} `{SubstUnivPreserving Re} :
+        `{Reflexive _ Re} `{Transitive _ Re} :
     red Σ Γ u v ->
     eq_context_upto Re Γ Δ ->
     ∑ v',
@@ -438,6 +438,11 @@ Section ContextConversion.
       now transitivity v'.
       eapply eq_term_upto_univ_trans with v''; auto.
   Qed.
+
+  Definition eq_universe_leq_universe' φ u u'
+    := eq_universe_leq_universe φ u u'.
+
+  Hint Resolve eq_universe_leq_universe' : pcuic.
 
   Lemma cumul_trans_red_leqterm {Γ t u v} :
     Σ ;;; Γ |- t <= u -> Σ ;;; Γ |- u <= v ->

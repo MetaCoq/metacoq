@@ -17,7 +17,7 @@ Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 Require Import Equations.Prop.DepElim.
 
 Ltac tc := try typeclasses eauto 10.
-Hint Resolve eq_universe_leq_universe : pcuic.
+Hint Resolve eq_universe_leq_universe' : pcuic.
 
 Derive Signature for cumul assumption_context.
 

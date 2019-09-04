@@ -589,6 +589,19 @@ Section Typecheck.
     now apply global_ext_uctx_consistent.
   Qed.
 
+  Lemma is_graph_of_uctx_levels l :
+    wGraph.VSet.mem l (uGraph.wGraph.V G) ->
+    LevelSet.mem l (global_ext_levels Σ).
+  Proof.
+    unfold is_graph_of_uctx in HG.
+    case_eq (gc_of_uctx (global_ext_uctx Σ)); [intros [lvs cts] XX|intro XX];
+      rewrite XX in *; simpl in *; [|contradiction].
+    unfold gc_of_uctx in XX; simpl in XX.
+    destruct (gc_of_constraints Σ); [|discriminate].
+    inversion XX; subst. generalize (global_ext_levels Σ); intros lvs; cbn.
+    unfold no_prop_levels.
+  Admitted.
+
 
   Program Definition check_consistent_instance uctx u
     : typing_result (consistent_instance_ext Σ uctx u)
@@ -598,6 +611,12 @@ Section Typecheck.
        | Polymorphic_ctx (inst, cstrs)
        | Cumulative_ctx ((inst, cstrs), _) =>
          let '(inst, cstrs) := AUContext.repr (inst, cstrs) in
+         check_eq_true (forallb (fun l => match no_prop_of_level l with
+                                       | Some l => wGraph.VSet.mem l (uGraph.wGraph.V G)
+                                       | None => false
+                                       end) u)
+                       (Msg "instance does not have the right length") ;;
+         (* check_eq_true (forallb (fun l => LevelSet.mem l lvs) u) ;; *)
          X <- check_eq_nat #|u| #|inst|
                           (Msg "instance does not have the right length");;
          match check_constraints G (subst_instance_cstrs u cstrs) with
@@ -607,11 +626,29 @@ Section Typecheck.
          (* #|u| = #|inst| /\ valid_constraints φ (subst_instance_cstrs u cstrs) *)
        end.
   Next Obligation.
-    eapply check_constraints_spec; eauto.
-  Defined.
+    eapply forallb_All in H. eapply All_forallb'; tea.
+    clear. intros []; cbnr; trivial.
+  Qed.
   Next Obligation.
-    eapply check_constraints_spec; eauto.
-  Defined.
+    repeat split.
+    - eapply forallb_All in H. eapply All_forallb'; tea.
+      intros []; simpl. discriminate.
+      all: apply is_graph_of_uctx_levels.
+    - now rewrite mapi_length in X.
+    - eapply check_constraints_spec; eauto.
+  Qed.
+  Next Obligation.
+    eapply forallb_All in H. eapply All_forallb'; tea.
+    clear. intros []; cbnr; trivial.
+  Qed.
+  Next Obligation.
+    repeat split.
+    - eapply forallb_All in H. eapply All_forallb'; tea.
+      intros []; simpl. discriminate.
+      all: apply is_graph_of_uctx_levels.
+    - now rewrite mapi_length in X.
+    - eapply check_constraints_spec; eauto.
+  Qed.
 
 
   Definition eqb_opt_term (t u : option term) :=
@@ -1278,11 +1315,6 @@ Section CheckEnv.
   Definition uctx_of_udecl u : ContextSet.t :=
     (levels_of_udecl u, constraints_of_udecl u).
 
-  Definition is_not_Var l := match l with
-                             | Level.Var _ => false
-                             | _ => true
-                             end.
-
   Lemma add_uctx_make_graph levels1 levels2 ctrs1 ctrs2
   : add_uctx (levels1, ctrs1) (make_graph (levels2, ctrs2))
     = make_graph (wGraph.VSet.union levels1 levels2,
@@ -1323,7 +1355,7 @@ Section CheckEnv.
                                     " |= " ++ Pretty.print_constraint_set (constraints_of_udecl udecl))));;
     check_eq_true match udecl with
                   | Monomorphic_ctx ctx
-                    => LevelSet.for_all is_not_Var ctx.1
+                    => LevelSet.for_all (negb ∘ Level.is_var) ctx.1
                   | _ => true
                   end (IllFormedDecl id (Msg "Var level in monomorphic context")) ;;
     (* TODO: could be optimized by reusing G *)
@@ -1354,9 +1386,6 @@ Section CheckEnv.
       apply negb_true_iff in H. now apply LevelSetFact.not_mem_iff in H.
     - exact HH.
     - clear -H1. destruct udecl; trivial.
-      apply LevelSet.for_all_spec in H1.
-      2: now intros x y [].
-      intros l Hl; specialize (H1 l Hl); now destruct l.
     - clear -HΣ HH Huctx H2 HG. unfold gc_of_uctx, uctx_of_udecl in *.
       simpl in *.
       unfold satisfiable_udecl.
@@ -1514,7 +1543,6 @@ Section CheckEnv.
     sq. repeat split.
     - intros l Hl; now apply LevelSetFact.empty_iff in Hl.
     - intros l Hl; now apply ConstraintSetFact.empty_iff in Hl.
-    - intros l Hl; now apply LevelSetFact.empty_iff in Hl.
     - red. unfold global_ext_constraints; simpl.
       apply wf_consistent in X. destruct X as [v Hv].
       exists v. intros c Hc.

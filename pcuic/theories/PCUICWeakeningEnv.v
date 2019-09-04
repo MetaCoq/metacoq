@@ -76,23 +76,21 @@ Proof.
   - simpl. apply LevelSet.union_spec. right; eauto.
 Qed.
 
+Lemma weakening_env_global_ext_levels' Σ Σ' φ (H : extends Σ Σ') l
+  : LevelSet.mem l (global_ext_levels (Σ, φ))
+    -> LevelSet.mem l (global_ext_levels (Σ', φ)).
+Proof.
+  intro HH. apply LevelSet.mem_spec in HH.
+  now eapply LevelSet.mem_spec, weakening_env_global_ext_levels.
+Qed.
+
+
 Lemma weakening_env_global_ext_constraints Σ Σ' φ (H : extends Σ Σ')
   : ConstraintSet.Subset (global_ext_constraints (Σ, φ))
                          (global_ext_constraints (Σ', φ)).
 Proof.
   destruct H as [Σ'' eq]. subst.
   apply global_ext_constraints_app.
-Qed.
-
-Lemma valid_subset {cf:checker_flags} φ φ' ctrs
-  : ConstraintSet.Subset φ φ' -> valid_constraints φ ctrs
-    ->  valid_constraints φ' ctrs.
-Proof.
-  unfold valid_constraints.
-  destruct check_univs; [|trivial].
-  intros Hφ H.
-  intuition. apply H.
-  intros ctr Hc. apply H0. now apply Hφ.
 Qed.
 
 Lemma eq_term_subset {cf:checker_flags} φ φ' t t'
@@ -117,7 +115,7 @@ Lemma eq_context_subset {cf:checker_flags} φ φ' Γ Γ'
     -> eq_context φ Γ Γ' ->  eq_context φ' Γ Γ'.
 Proof.
   intros Hφ. induction 1; constructor.
-  intuition. now eapply eq_decl_subset. assumption.
+  eapply eq_decl_subset; eassumption. assumption.
 Qed.
 
 Lemma check_correct_arity_subset {cf:checker_flags} φ φ' decl ind u ctx pars pctx
@@ -288,9 +286,11 @@ Proof.
     intros X.
     destruct ctrs; tas. 2: destruct ctx as [cst _].
     all: destruct (AUContext.repr cst).
-    all: destruct X as [X1 X2]; split; tas.
-    all: eapply valid_subset.
-    all: try eapply weakening_env_global_ext_constraints; tea.
+    all: destruct X as [X1 [X2 [X3 X4]]]; repeat split; tas.
+    1,3: eapply forallb_Forall in X2; eapply forallb_Forall, Forall_impl; tea;
+      intros x H0; now eapply weakening_env_global_ext_levels'.
+    all: eapply valid_subset; tea;
+      now eapply weakening_env_global_ext_constraints.
 Qed.
 Hint Resolve weakening_env_consistent_instance : extends.
 
@@ -535,4 +535,85 @@ Proof.
   intros wfΣ Hdecl.
   split. destruct Hdecl as [Hidecl Hcdecl]. now apply on_declared_inductive in Hidecl.
   apply (declared_projection_inv _ _ mdecl idecl ref pdecl weaken_env_prop_typing wfΣ wfΣ Hdecl).
+Qed.
+
+
+Definition on_udecl_prop `{checker_flags} Σ (udecl : universes_decl)
+  := let levels := levels_of_udecl udecl in
+     let global_levels := global_levels Σ in
+     let all_levels := LevelSet.union levels global_levels in
+     ConstraintSet.For_all (fun '(l1,_,l2) => LevelSet.In l1 all_levels
+                                             /\ LevelSet.In l2 all_levels)
+                             (constraints_of_udecl udecl)
+     /\ match udecl with
+       | Monomorphic_ctx ctx => LevelSet.for_all (negb ∘ Level.is_var) ctx.1
+                               /\ LevelSet.Subset ctx.1 global_levels
+                               /\ ConstraintSet.Subset ctx.2 (global_constraints Σ)
+                               /\ satisfiable_udecl Σ udecl
+       | _ => True
+       end.
+
+Lemma weaken_lookup_on_global_env' `{checker_flags} Σ c decl :
+  wf Σ ->
+  lookup_env Σ c = Some decl ->
+  on_udecl_prop Σ (universes_decl_of_decl decl).
+Proof.
+  intros wfΣ HH.
+  induction wfΣ; simpl. discriminate.
+  cbn in HH. subst udecl. destruct (ident_eq c (global_decl_ident d)).
+  - apply some_inj in HH; destruct HH.
+    clear -o. unfold on_udecl, on_udecl_prop in *.
+    destruct o as [H1 [H2 [H3 H4]]]. repeat split.
+    + clear -H2. intros [[? ?] ?] Hc. specialize (H2 _ Hc).
+      destruct H2 as [H H']. simpl. split.
+      apply LevelSet.union_spec in H. apply LevelSet.union_spec.
+      destruct H; [now left|right]. apply LevelSet.union_spec; now right.
+      apply LevelSet.union_spec in H'. apply LevelSet.union_spec.
+      destruct H'; [now left|right]. apply LevelSet.union_spec; now right.
+    + revert H3. case_eq (universes_decl_of_decl d); trivial.
+      intros ctx eq Hctx. repeat split.
+      * auto.
+      * intros l Hl. simpl. replace (monomorphic_levels_decl d) with ctx.1.
+        -- apply LevelSet.union_spec; now left.
+        -- clear -eq. destruct d as [? c|? c]; cbn in *.
+           all: destruct c; cbn in *; now rewrite eq.
+      * simpl. replace (monomorphic_constraints_decl d) with ctx.2.
+        -- intros c Hc; apply ConstraintSet.union_spec; now left.
+        -- clear -eq. destruct d as [? c|? c]; cbn in *.
+           all: destruct c; cbn in *; now rewrite eq.
+      * clear -eq H4. destruct H4 as [v Hv]. exists v.
+      intros c Hc; apply (Hv c).
+      apply ConstraintSet.union_spec in Hc; destruct Hc as [Hc|Hc].
+      2: apply ConstraintSet.union_spec in Hc; destruct Hc as [Hc|Hc].
+      -- apply ConstraintSet.union_spec. simpl in *. left; now rewrite eq.
+      -- apply ConstraintSet.union_spec; left. simpl.
+         destruct d as [? [? ? []]|? [? ? ? ? []]]; simpl in *; tas;
+           now apply ConstraintSet.empty_spec in Hc.
+      -- apply ConstraintSet.union_spec; now right.
+  - specialize (IHwfΣ HH). revert IHwfΣ o; clear.
+    generalize (universes_decl_of_decl decl); intros d' HH Hd.
+    unfold on_udecl_prop in *.
+    destruct HH as [H1 H2]. split.
+    + clear -H1. intros [[? ?] ?] Hc. specialize (H1 _ Hc).
+      destruct H1 as [H H']. simpl. split.
+      apply LevelSet.union_spec in H. apply LevelSet.union_spec.
+      destruct H; [now left|right]. apply LevelSet.union_spec; now right.
+      apply LevelSet.union_spec in H'. apply LevelSet.union_spec.
+      destruct H'; [now left|right]. apply LevelSet.union_spec; now right.
+    + destruct d'; trivial. repeat split.
+      * destruct H2; auto.
+      * intros l Hl. apply H2 in Hl.
+        apply LevelSet.union_spec; now right.
+      * intros c Hc. apply H2 in Hc.
+        apply ConstraintSet.union_spec; now right.
+      * destruct Hd as [_ [_ [_ Hd]]]; cbn in Hd.
+        destruct Hd as [v Hv]. exists v. intros c Hc; apply Hv; clear v Hv.
+          apply ConstraintSet.union_spec in Hc; destruct Hc as [Hc|Hc]; simpl in *.
+          2: apply ConstraintSet.union_spec in Hc; destruct Hc as [Hc|Hc];
+            simpl in *.
+          -- apply H2 in Hc. apply ConstraintSet.union_spec; now right.
+          -- clear -Hc. destruct d as [? [? ? []]|? [? ? ? ? []]]; cbn in *.
+             all: try (apply ConstraintSet.empty_spec in Hc; contradiction).
+             all: apply ConstraintSet.union_spec; now left.
+          -- apply ConstraintSet.union_spec; now right.
 Qed.

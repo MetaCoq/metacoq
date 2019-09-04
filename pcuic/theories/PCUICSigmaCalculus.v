@@ -696,15 +696,32 @@ Lemma urenaming_context :
     urenaming (Δ ,,, rename_context f Ξ) (Γ ,,, Ξ) (shiftn #|Ξ| f).
 Proof.
   intros Γ Δ Ξ f h.
-  induction Ξ as [| [na [bo|] ty] Ξ ih].
+  induction Ξ as [| [na [bo|] ty] Ξ ih] in Γ, Δ, f, h |- *.
   - simpl. eapply urenaming_ext. 2: eassumption.
     intros []. all: reflexivity.
   - simpl. rewrite rename_context_snoc.
     rewrite app_context_cons. simpl. unfold rename_decl. unfold map_decl. simpl.
-    (* eapply urenaming_ext. *)
-    (* 2: eapply urenaming_vass. *)
-Abort.
-
+    eapply urenaming_ext.
+    2: eapply urenaming_vdef.
+    + intros [|i].
+      * reflexivity.
+      * unfold shiftn. simpl. replace (i - 0) with i by lia.
+        destruct (Nat.ltb_spec0 i #|Ξ|).
+        -- destruct (Nat.ltb_spec0 (S i) (S #|Ξ|)). all: easy.
+        -- destruct (Nat.ltb_spec0 (S i) (S #|Ξ|)). all: easy.
+    + eapply ih. assumption.
+  - simpl. rewrite rename_context_snoc.
+    rewrite app_context_cons. simpl. unfold rename_decl. unfold map_decl. simpl.
+    eapply urenaming_ext.
+    2: eapply urenaming_vass.
+    + intros [|i].
+      * reflexivity.
+      * unfold shiftn. simpl. replace (i - 0) with i by lia.
+        destruct (Nat.ltb_spec0 i #|Ξ|).
+        -- destruct (Nat.ltb_spec0 (S i) (S #|Ξ|)). all: easy.
+        -- destruct (Nat.ltb_spec0 (S i) (S #|Ξ|)). all: easy.
+    + eapply ih. assumption.
+Qed.
 
 (* Need to not generalise to n and use #|L| instead to use the above lemma *)
 

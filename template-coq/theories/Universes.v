@@ -1,5 +1,5 @@
 From Coq Require Import Ascii String ZArith List Bool.
-From Coq Require Import MSetWeakList MSetFacts MSetProperties.
+From Coq Require Import MSetWeakList MSetFacts MSetProperties CRelationClasses.
 From MetaCoq.Template Require Import utils BasicAst config.
 Import ListNotations.
 
@@ -28,6 +28,12 @@ Module Level.
   Definition is_set (x : t) :=
     match x with
     | lSet => true
+    | _ => false
+    end.
+
+  Definition is_var (l : t) :=
+    match l with
+    | Var _ => true
     | _ => false
     end.
 
@@ -67,6 +73,24 @@ End LevelDecidableType.
 Module LevelSet <: (MSetInterface.WSetsOn LevelDecidableType) := MSets.MSetWeakList.Make LevelDecidableType.
 Module LevelSetFact := WFactsOn LevelDecidableType LevelSet.
 Module LevelSetProp := WPropertiesOn LevelDecidableType LevelSet.
+
+Definition LevelSet_pair x y
+  := LevelSet.add y (LevelSet.singleton x).
+
+Lemma LevelSet_pair_In x y z :
+  LevelSet.In x (LevelSet_pair y z) -> x = y \/ x = z.
+Proof.
+  intro H. apply LevelSetFact.add_iff in H.
+  destruct H; [intuition|].
+  apply LevelSetFact.singleton_1 in H; intuition.
+Qed.
+
+Definition LevelSet_mem_union (s s' : LevelSet.t) x :
+  LevelSet.mem x (LevelSet.union s s') <-> LevelSet.mem x s \/ LevelSet.mem x s'.
+Proof.
+  rewrite LevelSetFact.union_b.
+  apply orb_true_iff.
+Qed.
 
 Definition universe_level := Level.t.
 
@@ -219,6 +243,9 @@ Module UnivConstraintDec.
   Defined.
 End UnivConstraintDec.
 Module ConstraintSet <: MSetInterface.WSetsOn UnivConstraintDec := MSets.MSetWeakList.Make UnivConstraintDec.
+Module ConstraintSetFact := MSetFacts.WFactsOn UnivConstraintDec ConstraintSet.
+Module ConstraintSetProp := MSetProperties.WPropertiesOn UnivConstraintDec
+                                                         ConstraintSet.
 
 Definition make_univ_constraint : universe_level -> constraint_type -> universe_level -> univ_constraint
   := fun x y z => (x, y, z).
@@ -282,7 +309,7 @@ Module AUContext.
 
   Definition make (ids : list ident) (ctrs : constraints) : t := (ids, ctrs).
   Definition repr '((u, cst) : t) : UContext.t :=
-    (map_i (fun i _ => Level.Var i) u, cst).
+    (mapi (fun i _ => Level.Var i) u, cst).
 
   Definition levels (uctx : t) : LevelSet.t :=
     LevelSetProp.of_list (fst (repr uctx)).
@@ -343,6 +370,30 @@ Inductive universes_decl : Type :=
 | Monomorphic_ctx (ctx : ContextSet.t)
 | Polymorphic_ctx (cst : AUContext.t)
 | Cumulative_ctx (ctx : ACumulativityInfo.t).
+
+
+Definition monomorphic_udecl u :=
+  match u with
+  | Monomorphic_ctx ctx => ctx
+  | _ => ContextSet.empty
+  end.
+
+Definition monomorphic_levels φ := (monomorphic_udecl φ).1.
+Definition monomorphic_constraints φ := (monomorphic_udecl φ).2.
+
+Definition levels_of_udecl u :=
+  match u with
+  | Monomorphic_ctx ctx => fst ctx
+  | Polymorphic_ctx ctx
+  | Cumulative_ctx (ctx, _) => AUContext.levels ctx
+  end.
+
+Definition constraints_of_udecl u :=
+  match u with
+  | Monomorphic_ctx ctx => snd ctx
+  | Polymorphic_ctx ctx
+  | Cumulative_ctx (ctx, _) => snd (AUContext.repr ctx)
+  end.
 
 
 (** * Valuations *)
@@ -420,65 +471,74 @@ Definition leq_universe φ u u'
   := if check_univs then leq_universe0 φ u u' else True.
 
 (* ctrs are "enforced" by φ *)
+
+Definition valid_constraints0 φ ctrs
+  := forall v, satisfies v φ -> satisfies v ctrs.
+
 Definition valid_constraints φ ctrs
-  := if check_univs then forall v, satisfies v φ -> satisfies v ctrs else True.
+  := if check_univs then valid_constraints0 φ ctrs else True.
+
+Lemma valid_subset φ φ' ctrs
+  : ConstraintSet.Subset φ φ' -> valid_constraints φ ctrs
+    ->  valid_constraints φ' ctrs.
+Proof.
+  unfold valid_constraints.
+  destruct check_univs; [|trivial].
+  intros Hφ H v Hv. apply H.
+  intros ctr Hc. apply Hv. now apply Hφ.
+Qed.
 
 
 (** **** Lemmas about eq and leq **** *)
 
-Lemma eq_universe0_refl φ s : eq_universe0 φ s s.
+(** We show that equality and inequality of universes form an equivalence and 
+    a partial order (one w.r.t. the other).
+    We use classes from [CRelationClasses] for consistency with the rest of the
+    development which uses relations in [Type] rather than [Prop].
+    These definitions hence use [Prop <= Type]. *)
+
+Global Instance eq_universe0_refl φ : Reflexive (eq_universe0 φ).
 Proof.
-  intros vH; reflexivity.
+  intros vH s; reflexivity.
 Qed.
 
-Lemma eq_universe_refl φ s : eq_universe φ s s.
+Global Instance eq_universe_refl φ : Reflexive (eq_universe φ).
 Proof.
+  intro s.
   unfold eq_universe; destruct check_univs;
     [apply eq_universe0_refl|constructor].
 Qed.
 
-Lemma leq_universe0_refl φ s : leq_universe0 φ s s.
+Global Instance leq_universe0_refl φ : Reflexive (leq_universe0 φ).
 Proof.
-  intros vH; reflexivity.
+  intros s vH; reflexivity.
 Qed.
 
-Lemma leq_universe_refl φ s : leq_universe φ s s.
+Global Instance leq_universe_refl φ : Reflexive (leq_universe φ).
 Proof.
+  intro s.
   unfold leq_universe; destruct check_univs;
     [apply leq_universe0_refl|constructor].
 Qed.
 
-Lemma eq_universe0_sym :
-  forall φ s s',
-    eq_universe0 φ s s' ->
-    eq_universe0 φ s' s.
+Global Instance eq_universe0_sym φ : Symmetric (eq_universe0 φ).
 Proof.
-  intros φ s s' e vH. symmetry ; eauto.
+  intros s s' e vH. symmetry ; eauto.
 Qed.
 
-Lemma eq_universe_sym :
-  forall φ s s',
-    eq_universe φ s s' ->
-    eq_universe φ s' s.
+Global Instance eq_universe_sym φ : Symmetric (eq_universe φ).
 Proof.
   unfold eq_universe. destruct check_univs ; eauto.
   eapply eq_universe0_sym.
 Qed.
 
-Lemma eq_universe0_trans φ s1 s2 s3 :
-  eq_universe0 φ s1 s2 ->
-  eq_universe0 φ s2 s3 ->
-  eq_universe0 φ s1 s3.
+Global Instance eq_universe0_trans φ : Transitive (eq_universe0 φ).
 Proof.
-  intros h1 h2.
-  intros v h. etransitivity ; try eapply h1 ; eauto.
+  intros s1 s2 s3 h1 h2 v h.
+  etransitivity ; try eapply h1 ; eauto.
 Qed.
 
-Lemma eq_universe_trans φ :
-  forall s1 s2 s3,
-    eq_universe φ s1 s2 ->
-    eq_universe φ s2 s3 ->
-    eq_universe φ s1 s3.
+Global Instance eq_universe_trans φ : Transitive (eq_universe φ).
 Proof.
   intros s1 s2 s3.
   unfold eq_universe. destruct check_univs ; auto.
@@ -486,22 +546,14 @@ Proof.
   eapply eq_universe0_trans ; eauto.
 Qed.
 
-Lemma leq_universe0_trans φ s1 s2 s3 :
-  leq_universe0 φ s1 s2 ->
-  leq_universe0 φ s2 s3 ->
-  leq_universe0 φ s1 s3.
+Global Instance leq_universe0_trans φ : Transitive (leq_universe0 φ).
 Proof.
-  intros h1 h2.
-  intros v h. cbn. etransitivity.
+  intros s1 s2 s3 h1 h2 v h. etransitivity.
   - eapply h1. assumption.
   - eapply h2. assumption.
 Qed.
 
-Lemma leq_universe_trans φ :
-  forall s1 s2 s3,
-    leq_universe φ s1 s2 ->
-    leq_universe φ s2 s3 ->
-    leq_universe φ s1 s3.
+Global Instance leq_universe_trans φ : Transitive (leq_universe φ).
 Proof.
   intros s1 s2 s3.
   unfold leq_universe. destruct check_univs ; auto.
@@ -550,18 +602,31 @@ Qed.
 (* Rk: [leq_universe φ s1 (sort_of_product s1 s2)] does not hold due
    impredicativity. *)
 
-Lemma eq_universe_leq_universe φ t u
-  : eq_universe φ t u -> leq_universe φ t u.
+Global Instance eq_universe_leq_universe φ : subrelation (eq_universe φ) (leq_universe φ).
 Proof.
-  unfold eq_universe, leq_universe; destruct check_univs.
-  intros HH v Hv. rewrite (HH v Hv). apply BinInt.Z.le_refl.
-  intuition.
+  unfold eq_universe, leq_universe; destruct check_univs; [|intuition].
+  intros u u' HH v Hv. rewrite (HH v Hv). apply BinInt.Z.le_refl.
 Qed.
 
-Lemma leq_universe0_antisym φ t u :
-  leq_universe0 φ t u -> leq_universe0 φ u t -> eq_universe0 φ t u.
+Global Instance eq_universe0_equivalence φ : Equivalence (eq_universe0 φ) :=
+   {| Equivalence_Reflexive := _ ;
+      Equivalence_Symmetric := _;
+      Equivalence_Transitive := _ |}.
+
+Global Instance eq_universe_equivalence φ : Equivalence (eq_universe φ) :=
+   {| Equivalence_Reflexive := eq_universe_refl _ ;
+      Equivalence_Symmetric := eq_universe_sym _;
+      Equivalence_Transitive := eq_universe_trans _ |}.
+
+Global Instance leq_universe_preorder φ : PreOrder (leq_universe φ) :=
+   {| PreOrder_Reflexive := leq_universe_refl _ ;
+      PreOrder_Transitive := leq_universe_trans _ |}.
+
+
+Global Instance leq_universe0_antisym φ
+  : Antisymmetric (eq_universe0 φ) (leq_universe0 φ).
 Proof.
-  intros tu ut. unfold leq_universe0, eq_universe0 in *.
+  intros t u tu ut. unfold leq_universe0, eq_universe0 in *.
   red in tu, ut.
   intros v sat.
   specialize (tu _ sat).
@@ -569,32 +634,18 @@ Proof.
   simpl in tu, ut. Lia.lia.
 Qed.
 
-Lemma leq_universe_antisym φ t u :
-  leq_universe φ t u -> leq_universe φ u t -> eq_universe φ t u.
+Global Instance leq_universe_antisym φ
+  : Antisymmetric (eq_universe φ) (leq_universe φ).
 Proof.
-  intros tu ut. unfold leq_universe, eq_universe in *.
-  destruct check_univs; auto using leq_universe0_antisym.
+  intros t u tu ut. unfold leq_universe, eq_universe in *.
+  destruct check_univs; [|trivial]. eapply leq_universe0_antisym; auto.
 Qed.
 
-(** We show that equality and inequality of universes form an equivalence and 
-    a partial order (one w.r.t. the other).
-    We use classes from [CRelationClasses] for consistency with the rest of the
-    development which uses relations in [Type] rather than [Prop].
-    These definitions hence use [Prop <= Type]. *)
-
-Global Instance eq_universe_equivalence φ : CRelationClasses.Equivalence (eq_universe φ) :=
-   {| CRelationClasses.Equivalence_Reflexive := eq_universe_refl _ ;
-      CRelationClasses.Equivalence_Symmetric := eq_universe_sym _;
-      CRelationClasses.Equivalence_Transitive := eq_universe_trans _ |}.
-
-Global Instance leq_universe_preorder φ : CRelationClasses.PreOrder (leq_universe φ) :=
-   {| CRelationClasses.PreOrder_Reflexive := leq_universe_refl _ ;
-      CRelationClasses.PreOrder_Transitive := leq_universe_trans _ |}.
-
-Global Instance leq_universe_partial_order φ : CRelationClasses.PartialOrder (eq_universe φ) (leq_universe φ).
+Global Instance leq_universe_partial_order φ
+  : PartialOrder (eq_universe φ) (leq_universe φ).
 Proof.
-  red. intros x y; split. intros eqxy; split. now eapply eq_universe_leq_universe. red.
-  now eapply eq_universe_leq_universe, CRelationClasses.symmetry.
+  intros x y; split. intros eqxy; split. now eapply eq_universe_leq_universe. red.
+  now eapply eq_universe_leq_universe, symmetry.
   intros [l r]. now eapply leq_universe_antisym.
 Defined.
 

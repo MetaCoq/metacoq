@@ -38,3 +38,6 @@ mrproper:
 
 .merlin:
 	make -f Makefile.plugin .merlin
+
+cleanplugin: Makefile.plugin
+#	make -f Makefile.plugin clean

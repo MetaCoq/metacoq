@@ -44,19 +44,21 @@ Proof.
 Qed.
 
 Lemma isErasable_subst_instance (Σ : global_env_ext) Γ T univs u :
-  wf Σ ->  wf_local Σ Γ ->
+  wf_ext Σ ->  wf_local Σ Γ ->
   wf_local (Σ.1, univs) (PCUICUnivSubst.subst_instance_context u Γ) ->
   isErasable Σ Γ T ->
+  sub_context_set (monomorphic_udecl Σ.2) (global_ext_context_set (Σ.1, univs)) ->
   consistent_instance_ext (Σ.1,univs) (Σ.2) u ->
   isErasable (Σ.1,univs) (PCUICUnivSubst.subst_instance_context u Γ) (PCUICUnivSubst.subst_instance_constr u T).
 Proof.
   intros. destruct X2 as (? & ? & [ | (? & ? & ?)]).
   - eapply typing_subst_instance in t; eauto.
-    eexists. split. eauto. left. eapply isArity_subst_instance. eauto.
+    eexists. split. eapply t; eauto.
+    left. eapply isArity_subst_instance. eauto.
   - eapply typing_subst_instance in t; eauto.
-    eexists. split. eauto. right.
+    eexists. split. eapply t; eauto. right.
     eapply typing_subst_instance in t0; eauto.
-    eexists. split. eauto.
+    eexists. split. eapply t0; eauto.
     now eapply is_prop_subst_instance.
 Qed.
 
@@ -134,7 +136,7 @@ Proof.
     eapply PCUICContextConversion.context_conversion with Γ; eauto.
     eassumption.
   - econstructor. eauto. eauto.
-    eapply All2_All_left in X3. 2:{ intros. destruct X1. exact e. }
+    eapply All2_All_left in X4. 2:{ intros. destruct X1. exact e. }
 
     eapply All2_impl. eapply All2_All_mix_left.
     all: firstorder.
@@ -198,39 +200,38 @@ Proof.
   rewrite PCUICUnivSubst.lift_subst_instance_constr. reflexivity.
 Qed.
 
-Lemma erases_subst_instance_constr :
-  forall Σ : global_env_ext, wf Σ ->
-  forall Γ, wf_local Σ Γ ->
-  forall t T, Σ ;;; Γ |- t : T ->
-    forall t' u univs,
-  wf_local (Σ.1, univs) (PCUICUnivSubst.subst_instance_context u Γ) ->
-      consistent_instance_ext (Σ.1,univs) (Σ.2) u ->
-    Σ ;;; Γ |- t ⇝ℇ t' ->
-    (Σ.1,univs) ;;; (PCUICUnivSubst.subst_instance_context u Γ) |- PCUICUnivSubst.subst_instance_constr u t ⇝ℇ t'.
-Proof.
-  apply (typing_ind_env (fun Σ Γ t T =>
+
+
+Lemma erases_subst_instance_constr0
+  : env_prop (fun Σ Γ t T => wf_ext Σ ->
                            forall t' u univs,
                              wf_local (Σ.1, univs) (PCUICUnivSubst.subst_instance_context u Γ) ->
+sub_context_set (monomorphic_udecl Σ.2) (global_ext_context_set (Σ.1, univs)) ->
       consistent_instance_ext (Σ.1,univs) (Σ.2) u ->
     Σ ;;; Γ |- t ⇝ℇ t' ->
-    (Σ.1,univs) ;;; (PCUICUnivSubst.subst_instance_context u Γ) |- PCUICUnivSubst.subst_instance_constr u t ⇝ℇ t')); intros; cbn -[PCUICUnivSubst.subst_instance_constr] in *.
+    (Σ.1,univs) ;;; (PCUICUnivSubst.subst_instance_context u Γ) |- PCUICUnivSubst.subst_instance_constr u t ⇝ℇ t').
+Proof.
+  apply typing_ind_env; intros; cbn -[PCUICUnivSubst.subst_instance_constr] in *.
   all: match goal with [ H : erases _ _ ?a _ |- ?G ] => tryif is_var a then idtac else inv H end.
   Hint Resolve isErasable_subst_instance.
   all: try now (econstructor; eauto).
   - cbn. econstructor.
-    eapply H0 in H7; eauto.
+    eapply H0 in X2; eauto.
     econstructor. eauto. cbn. econstructor.
-    eapply typing_subst_instance in X0. exact X0. all:eauto.
+    eapply typing_subst_instance in X0; eauto. apply snd in X0.
+    cbn in X0. refine (X0 _ _ _ _ _); eauto.
   - cbn. econstructor.
-    eapply H0 in H9; eauto.
-    eapply H1 in H10. exact H10. eauto.
+    eapply H0 in X3; eauto.
+    eapply H1 in X3; eauto. exact X3.
     econstructor. eauto. cbn. econstructor.
-    eapply typing_subst_instance in X0. exact X0. all:eauto.
-    cbn. eapply typing_subst_instance in X1. exact X1. all:eauto.
+    eapply typing_subst_instance in X0; eauto. apply snd in X0.
+    cbn in X0. refine (X0 _ _ _ _ _); eauto.
+    cbn. eapply typing_subst_instance in X1; eauto. apply snd in X1.
+    cbn in X1. refine (X1 _ _ _ _ _); eauto.
   - cbn. econstructor; eauto.
     eapply All2_map_left.
     eapply All2_impl. eapply All2_All_mix_left.
-    eapply All2_All_left. exact X3. intros. destruct X5.
+    eapply All2_All_left. exact X4. intros. destruct X7.
     exact e. exact H15.
     intros; cbn in *. destruct H. destruct p0. split; eauto.
   - admit.
@@ -238,35 +239,53 @@ Proof.
     { (* rewrite subst_instance_context_app. *)
       apply All_local_env_app in X as [X Hfixc].
 
-      revert Hfixc. clear - wfΣ wfΓ H1 X1.
+      revert Hfixc. clear - wfΣ wfΓ H1 H2 X1 X2.
       induction 1.
       - eauto.
       - cbn. econstructor; eauto. cbn in *.
         destruct t0 as (? & ? & ?). eexists.
-        cbn. eapply typing_subst_instance in t0. exact t0. all:eauto.
+        cbn. eapply typing_subst_instance in t0; eauto. apply snd in t0. cbn in t0.
+        rapply t0; eauto.
         eapply typing_wf_local; eauto.
       - cbn. econstructor; eauto. cbn in *.
         destruct t0 as (? & ? & ?). destruct t1. eexists.
-        cbn. eapply typing_subst_instance in t0. exact t0. all:eauto.
+        cbn. eapply typing_subst_instance in t0; eauto. apply snd in t0.
+        rapply t0; eauto.
         eapply typing_wf_local; eauto.
-        cbn in *. destruct t1. eapply typing_subst_instance in t1. exact t1. all:eauto.
+        cbn in *. destruct t1. eapply typing_subst_instance in t1; eauto.
+        apply snd in t1. rapply t1. all:eauto.
         eapply typing_wf_local; eauto.
     }
 
     cbn. econstructor; eauto.
     eapply All2_map_left.
     eapply All2_impl. eapply All2_All_mix_left. eassumption.
-    exact H6.
-    intros; cbn in *. destruct X2. destruct p0. destruct p0.
+    exact H7.
+    intros; cbn in *. destruct X3. destruct p0. destruct p0.
     destruct p. destruct p. repeat split; eauto.
     eapply e2 in e1.
     unfold PCUICUnivSubst.subst_instance_context in *.
     unfold map_context in *. rewrite map_app in *. subst types. 2:eauto.
     eapply erases_ctx_ext. eassumption. unfold app_context.
     f_equal.
-    eapply fix_context_subst_instance. eauto.
+    eapply fix_context_subst_instance. all: eauto.
   - eauto.
 Admitted.
+
+Lemma erases_subst_instance_constr :
+  forall Σ : global_env_ext, wf_ext Σ ->
+  forall Γ, wf_local Σ Γ ->
+  forall t T, Σ ;;; Γ |- t : T ->
+    forall t' u univs,
+  wf_local (Σ.1, univs) (PCUICUnivSubst.subst_instance_context u Γ) ->
+sub_context_set (monomorphic_udecl Σ.2) (global_ext_context_set (Σ.1, univs)) ->      consistent_instance_ext (Σ.1,univs) (Σ.2) u ->
+    Σ ;;; Γ |- t ⇝ℇ t' ->
+    (Σ.1,univs) ;;; (PCUICUnivSubst.subst_instance_context u Γ) |- PCUICUnivSubst.subst_instance_constr u t ⇝ℇ t'.
+Proof.
+  intros Σ X Γ X0 t T X1 t' u univs X2 H H0 H1.
+  unshelve eapply (erases_subst_instance_constr0 Σ _ Γ _ _ _ _); tea; eauto.
+Qed.
+
     
 Lemma declared_constant_inj Σ c decl1 decl2 :
   declared_constant Σ c decl1 -> declared_constant Σ c decl2 -> decl1 = decl2.
@@ -492,11 +511,14 @@ Proof.
         eapply PCUICWeakeningEnv.declared_constant_inv in H'; eauto.
         unfold on_constant_decl in H'. rewrite H0 in H'. red in H'.
         eapply typing_subst_instance in H'; eauto.
+        apply snd in H'; rapply H'; eauto.
+        admit. admit.
         eapply PCUICWeakeningEnv.weaken_env_prop_typing.
       * eapply PCUICWeakeningEnv.declared_constant_inv in H'; eauto.
         unfold on_constant_decl in H'. rewrite H0 in H'. cbn in *.
         2:eapply PCUICWeakeningEnv.weaken_env_prop_typing.
         eapply erases_subst_instance_constr in H'; eauto.
+        admit. admit.
       * destruct H3. exists x0. split; eauto. econstructor; eauto.
     + exists tBox. split. econstructor.
       eapply Is_type_eval. 3: eassumption. eauto. eauto. econstructor. eauto.

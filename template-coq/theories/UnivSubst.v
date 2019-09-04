@@ -14,27 +14,36 @@ Require Import ssreflect ssrbool.
   Substitution of universe levels for universe level variables, used to
   implement universe polymorphism. *)
 
-Definition subst_instance_level (u : universe_instance) (l : Level.t) : Level.t :=
-  match l with
-  | Level.lProp | Level.lSet | Level.Level _ => l
-  | Level.Var n => List.nth n u Level.lProp
-  end.
 
-Definition subst_instance_cstrs u (cstrs : constraints) : constraints :=
-  ConstraintSet.fold (fun '(l,d,r) =>
-      ConstraintSet.add (subst_instance_level u l, d, subst_instance_level u r))
-                     cstrs ConstraintSet.empty.
+(** Substitutable type *)
 
-Definition subst_instance_level_expr u (s : Universe.Expr.t) : Universe.Expr.t :=
-  let '(l, b) := s in (subst_instance_level u l, b).
+Class UnivSubst A := subst_instance : universe_instance -> A -> A.
 
-Definition subst_instance_univ u (s : universe) : universe :=
-  NEL.map (subst_instance_level_expr u) s.
 
-Definition subst_instance_instance (u u' : universe_instance) : universe_instance :=
-  List.map (subst_instance_level u) u'.
+Instance subst_instance_level : UnivSubst Level.t :=
+  fun u l => match l with
+          | Level.lProp | Level.lSet | Level.Level _ => l
+          | Level.Var n => List.nth n u Level.lSet
+          end.
 
-Fixpoint subst_instance_constr (u : universe_instance) (c : term) : term :=
+Instance subst_instance_cstr : UnivSubst univ_constraint :=
+  fun u c => (subst_instance_level u c.1.1, c.1.2, subst_instance_level u c.2).
+
+Instance subst_instance_cstrs : UnivSubst constraints :=
+  fun u ctrs => ConstraintSet.fold (fun c => ConstraintSet.add (subst_instance_cstr u c))
+                                ctrs ConstraintSet.empty.
+
+Instance subst_instance_level_expr : UnivSubst Universe.Expr.t :=
+  fun u e => (subst_instance_level u e.1, e.2).
+
+Instance subst_instance_univ : UnivSubst universe :=
+  fun u s => NEL.map (subst_instance_level_expr u) s.
+
+Instance subst_instance_instance : UnivSubst universe_instance :=
+  fun u u' => List.map (subst_instance_level u) u'.
+
+Instance subst_instance_constr : UnivSubst term :=
+  fix subst_instance_constr u c {struct c} : term :=
   match c with
   | tRel _ | tVar _ => c
   | tSort s => tSort (subst_instance_univ u s)
@@ -60,8 +69,8 @@ Fixpoint subst_instance_constr (u : universe_instance) (c : term) : term :=
     tCoFix mfix' idx
   end.
 
-Definition subst_instance_context (u : universe_instance) (c : context) : context :=
-  AstUtils.map_context (subst_instance_constr u) c.
+Instance subst_instance_context : UnivSubst context :=
+  fun u c => AstUtils.map_context (subst_instance_constr u) c.
 
 Lemma lift_subst_instance_constr u c n k :
   lift n k (subst_instance_constr u c) = subst_instance_constr u (lift n k c).
@@ -217,15 +226,6 @@ Section SubstInstanceClosed.
       produces a universe-closed term. *)
 
   Context (u : universe_instance) (Hcl : closedu_instance 0 u).
-
-  Lemma forallb_nth {A} (l : list A) (n : nat) P d :
-    forallb P l -> n < #|l| -> exists x, (nth n l d = x) /\ P x.
-  Proof.
-    induction l in n |- *; destruct n; simpl; auto; try easy.
-    move/andP => [pa pl] pn. exists a; easy.
-    move/andP => [pa pl] pn. specialize (IHl n pl).
-    forward IHl. lia. auto.
-  Qed.
 
   Lemma subst_instance_level_closedu t
     : closedu_level #|u| t -> closedu_level 0 (subst_instance_level u t).

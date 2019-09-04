@@ -142,8 +142,8 @@ Proof.
       cbn in h1, h2. destruct_andb.
       inversion X. subst.
       f_equal.
-      * destruct a, p. cbn in *. destruct H6. subst.
-        f_equal. eapply H11 ; assumption.
+      * destruct a, p. cbn in *. destruct X0. subst.
+        f_equal. eapply H9 ; assumption.
       * eapply IHl ; assumption.
   - f_equal ; try solve [ ih ].
     revert mfix' H1 H2 H H0 a.
@@ -153,9 +153,9 @@ Proof.
       inversion X. subst.
       cbn in h1, h2, h3, h4. destruct_andb.
       f_equal.
-      * destruct a, d. cbn in *. destruct H2 as [[? ?] ?].
+      * destruct a, d. cbn in *. destruct X0 as [[? ?] ?].
         destruct H1 as [Hty Hbod].
-        unfold test_def in H7, H. cbn in H7, H.
+        unfold test_def in H5, H. cbn in H5, H.
         destruct_andb. anonify.
         f_equal.
         -- eapply Hty; assumption.
@@ -170,9 +170,9 @@ Proof.
       inversion X. subst.
       cbn in h1, h2, h3, h4. destruct_andb.
       f_equal.
-      * destruct a, d. cbn in *. destruct H2 as [[? ?] ?].
+      * destruct a, d. cbn in *. destruct X0 as [[? ?] ?].
         destruct H1 as [Hty Hbod].
-        unfold test_def in H7, H. cbn in H7, H.
+        unfold test_def in H5, H. cbn in H5, H.
         destruct_andb. anonify.
         f_equal.
         -- eapply Hty; assumption.
@@ -878,6 +878,16 @@ Proof.
   destruct a as [? [?|] ?]; cbn; apply IHindctx.
 Qed.
 
+Lemma subst_instance_context_nlctx u ctx :
+  subst_instance_context u (nlctx ctx) = nlctx (subst_instance_context u ctx).
+Proof.
+  induction ctx; cbnr.
+  f_equal. 2: apply IHctx.
+  clear. destruct a as [? [] ?]; unfold map_decl, map_decl_anon; cbn; f_equal.
+  all: now rewrite nl_subst_instance_constr.
+Qed.
+
+
 Lemma typing_nlg {cf:checker_flags} :
   env_prop (fun Σ Γ t T => nlg Σ ;;; nlctx Γ |- nl t : nl T).
 Proof.
@@ -895,7 +905,7 @@ Proof.
       [|destruct decl; reflexivity].
     constructor; eauto using nlg_wf_local.
     + unfold declared_constant in *. now erewrite lookup_env_nlg; tea.
-    + red. rewrite global_ext_constraints_nlg; assumption.
+    + red. rewrite global_ext_levels_nlg, global_ext_constraints_nlg; assumption.
   - replace (nl (ind_type idecl)) with (ind_type (nl_one_inductive_body idecl));
       [|destruct idecl; reflexivity].
     destruct isdecl as [H1 H2].
@@ -904,8 +914,8 @@ Proof.
     + replace (ind_bodies (nl_mutual_inductive_body mdecl)) with
           (map nl_one_inductive_body (ind_bodies mdecl)); [|now destruct mdecl].
       rewrite nth_error_map, H2. reflexivity.
-    + unfold consistent_instance_ext. rewrite global_ext_constraints_nlg.
-      assumption.
+    + unfold consistent_instance_ext.
+      rewrite global_ext_levels_nlg, global_ext_constraints_nlg; assumption.
   - destruct cdecl as [[id t] n]. cbn.
     rewrite nl_inds.
     eapply type_Construct with (idecl0:=nl_one_inductive_body idecl)
@@ -918,8 +928,8 @@ Proof.
             (map nl_one_inductive_body (ind_bodies mdecl)); [|now destruct mdecl].
         rewrite nth_error_map, H2. reflexivity.
       * rewrite nth_error_map, H3. reflexivity.
-    + unfold consistent_instance_ext. rewrite global_ext_constraints_nlg.
-      assumption.
+    + unfold consistent_instance_ext.
+      rewrite global_ext_levels_nlg, global_ext_constraints_nlg; assumption.
   - rewrite nl_mkApps, map_app, map_skipn. cbn.
     eapply type_Case with  (mdecl0:=nl_mutual_inductive_body mdecl)
                            (idecl0:=nl_one_inductive_body idecl)
@@ -934,8 +944,10 @@ Proof.
             (map nl_one_inductive_body (ind_bodies mdecl)); [|now destruct mdecl].
         rewrite nth_error_map, HH2. reflexivity.
     + clear -H0. unfold types_of_case in *.
-      set (params := instantiate_params (ind_params mdecl)
-                                        (firstn npar args) (ind_type idecl)) in H0.
+      set (params := instantiate_params
+                       (subst_instance_context u (ind_params mdecl))
+                       (firstn npar args)
+                       (subst_instance_constr u (ind_type idecl))) in H0.
       replace (instantiate_params _ _ _) with (option_map nl params).
       * destruct params; [|discriminate]. simpl.
         case_eq (destArity [] t);
@@ -960,6 +972,7 @@ Proof.
         rewrite mapi_map, map_mapi. apply mapi_ext.
         intros n [[id t] k].
         rewrite <- nl_subst_instance_constr, <- nl_inds, <- nl_subst.
+        rewrite subst_instance_context_nlctx.
         rewrite <- nl_instantiate_params.
         destruct (instantiate_params _ _ _); [|reflexivity].
         cbn. change (@nil context_decl) with (nlctx []) at 2.
@@ -976,11 +989,13 @@ Proof.
         rewrite map_app. cbn. rewrite nl_mkApps. cbn. repeat f_equal.
         rewrite map_app. f_equal. apply nl_to_extended_list.
       * rewrite firstn_map. cbn. subst params.
-        apply nl_instantiate_params.
-    + clear -H1. unfold check_correct_arity in *.
+        rewrite nl_instantiate_params. f_equal.
+        now rewrite <- subst_instance_context_nlctx.
+        apply nl_subst_instance_constr.
+    + clear -X2. unfold check_correct_arity in *.
       rewrite global_ext_constraints_nlg.
-      inversion H1; subst. cbn. constructor.
-      * clear -H2. destruct H2 as [H1 H2]; cbn in *.
+      inversion X2; subst. cbn. constructor.
+      * clear -X. destruct X as [H1 H2]; cbn in *.
         destruct y as [? [?|] ?]; cbn in *; [contradiction|].
         split; cbn; tas. apply nl_eq_term in H2.
         refine (eq_rect _ (fun d => eq_term _ d _) H2 _ _).
@@ -990,8 +1005,8 @@ Proof.
         unfold nlctx; now rewrite map_length.
       * eapply All2_map, All2_impl; tea.
         apply nl_eq_decl'.
-    + rewrite nl_mkApps in X4; eassumption.
-    + clear -X5. eapply All2_map, All2_impl; tea. cbn.
+    + rewrite nl_mkApps in *; eassumption.
+    + clear -X6. eapply All2_map, All2_impl; tea. cbn.
       clear. intros x y [[? ?] ?]. split; tas.
   - destruct pdecl as [pdecl1 pdecl2]; simpl.
     rewrite map_rev.

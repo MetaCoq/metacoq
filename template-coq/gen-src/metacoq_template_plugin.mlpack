@@ -26,6 +26,7 @@ MSetProperties
 BinNums
 Equality0
 CRelationClasses
+Compare_dec
 Utils
 Config0
 Universes0

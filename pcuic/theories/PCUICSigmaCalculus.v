@@ -745,13 +745,34 @@ Proof.
     apply OnOne2_length in X as hl. rewrite <- hl. clear hl.
     generalize #|mfix0|. intro n.
     eapply fix_red_body.
-    induction X.
-    + destruct p as [[p1 p2] p3]. inversion p3.
+    Fail induction X using OnOne2_ind_l.
+    revert mfix0 mfix1 X.
+    refine (
+      OnOne2_ind_l _
+        (fun (L : mfixpoint term) (x y : def term) =>
+           (red1 Σ (Γ ,,, fix_context L) (dbody x) (dbody y)
+           × (forall (Δ0 : list context_decl) (f0 : nat -> nat),
+                 urenaming Δ0 (Γ ,,, fix_context L) f0 ->
+                 red1 Σ Δ0 (rename f0 (dbody x)) (rename f0 (dbody y))))
+           × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)
+        )
+        (fun L mfix0 mfix1 o =>
+           OnOne2
+             (fun x y : def term =>
+                red1 Σ (Δ ,,, fix_context (map (map_def (rename f) (rename (shiftn n f))) L)) (dbody x) (dbody y)
+                × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y))
+             (map (map_def (rename f) (rename (shiftn n f))) mfix0)
+             (map (map_def (rename f) (rename (shiftn n f))) mfix1)
+        )
+        _ _
+    ).
+    + intros L x y l [[p1 p2] p3].
+      inversion p3.
       simpl. constructor. split.
       * eapply p2. admit.
-      * simpl. f_equal ; auto. f_equal ; auto.
-        f_equal. assumption.
-    + simpl. constructor. Fail eapply IHX. admit.
+      * simpl. easy.
+    + intros L x l l' h ih.
+      simpl. constructor. eapply ih.
   - simpl.
     apply OnOne2_length in X as hl. rewrite <- hl. clear hl.
     generalize #|mfix0|. intro n.

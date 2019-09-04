@@ -726,10 +726,11 @@ Qed.
 Lemma rename_fix_context :
   forall f mfix,
     rename_context f (fix_context mfix) =
-    fix_context (map (map_def (rename f) (rename f)) mfix).
+    fix_context (map (map_def (rename f) (rename (shiftn #|mfix| f))) mfix).
 Proof.
   intros f mfix.
-  induction mfix using list_ind_rev in f |- *.
+  generalize #|mfix|. intro n.
+  induction mfix using list_ind_rev in f, n |- *.
   - reflexivity.
   - unfold fix_context. rewrite map_app. rewrite 2!mapi_app.
     rewrite 2!List.rev_app_distr.
@@ -744,6 +745,29 @@ Proof.
       f_equal. f_equal. f_equal. lia.
     + apply IHmfix.
 Qed.
+
+(* Also true... why?? *)
+(* Lemma rename_fix_context : *)
+(*   forall f mfix, *)
+(*     rename_context f (fix_context mfix) = *)
+(*     fix_context (map (map_def (rename f) (rename f)) mfix). *)
+(* Proof. *)
+(*   intros f mfix. *)
+(*   induction mfix using list_ind_rev in f |- *. *)
+(*   - reflexivity. *)
+(*   - unfold fix_context. rewrite map_app. rewrite 2!mapi_app. *)
+(*     rewrite 2!List.rev_app_distr. *)
+(*     unfold rename_context. rewrite fold_context_app. *)
+(*     simpl. f_equal. *)
+(*     + unfold map_decl, vass. simpl. f_equal. *)
+(*       autorewrite with sigma. eapply inst_ext. *)
+(*       intro i. rewrite List.rev_length. rewrite mapi_length. rewrite map_length. *)
+(*       unfold subst_compose, shiftn, ren, lift_renaming. simpl. *)
+(*       replace (#|mfix| + 0) with #|mfix| by lia. *)
+(*       destruct (Nat.ltb_spec0 (#|mfix| + i) #|mfix|). 1: lia. *)
+(*       f_equal. f_equal. f_equal. lia. *)
+(*     + apply IHmfix. *)
+(* Qed. *)
 
 Lemma red1_rename :
   forall Σ Γ Δ u v f,
@@ -841,11 +865,10 @@ Proof.
     + intros L x y l [[p1 p2] p3].
       inversion p3.
       simpl. constructor. split.
-      * eapply p2.
-        Fail rewrite <- rename_fix_context.
-
-        Fail eapply urenaming_context.
-        admit.
+      * eapply p2. rewrite <- rename_fix_context.
+        rewrite <- fix_context_length.
+        eapply urenaming_context.
+        assumption.
       * simpl. easy.
     + intros L x l l' h ih.
       simpl. constructor. eapply ih.
@@ -860,7 +883,41 @@ Proof.
       * simpl. f_equal ; auto. f_equal ; auto.
         f_equal. assumption.
     + simpl. constructor. eapply IHX.
-Admitted.
+  - simpl.
+    apply OnOne2_length in X as hl. rewrite <- hl. clear hl.
+    eapply cofix_red_body.
+    Fail induction X using OnOne2_ind_l.
+    revert mfix0 mfix1 X.
+    refine (
+      OnOne2_ind_l _
+        (fun (L : mfixpoint term) (x y : def term) =>
+           (red1 Σ (Γ ,,, fix_context L) (dbody x) (dbody y)
+           × (forall (Δ0 : list context_decl) (f0 : nat -> nat),
+                 urenaming Δ0 (Γ ,,, fix_context L) f0 ->
+                 red1 Σ Δ0 (rename f0 (dbody x)) (rename f0 (dbody y))))
+           × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)
+        )
+        (fun L mfix0 mfix1 o =>
+           OnOne2
+             (fun x y : def term =>
+                red1 Σ (Δ ,,, fix_context (map (map_def (rename f) (rename (shiftn #|L| f))) L)) (dbody x) (dbody y)
+                × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y))
+             (map (map_def (rename f) (rename (shiftn #|L| f))) mfix0)
+             (map (map_def (rename f) (rename (shiftn #|L| f))) mfix1)
+        )
+        _ _
+    ).
+    + intros L x y l [[p1 p2] p3].
+      inversion p3.
+      simpl. constructor. split.
+      * eapply p2. rewrite <- rename_fix_context.
+        rewrite <- fix_context_length.
+        eapply urenaming_context.
+        assumption.
+      * simpl. easy.
+    + intros L x l l' h ih.
+      simpl. constructor. eapply ih.
+Qed.
 
 Lemma meta_conv :
   forall Σ Γ t A B,

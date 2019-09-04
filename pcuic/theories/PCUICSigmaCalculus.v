@@ -1766,7 +1766,7 @@ Proof.
            f_equal. autorewrite with sigma. reflexivity.
         -- admit.
       * right. eexists. eapply ihB. assumption.
-    + admit.
+    + eapply cumul_rename. all: eassumption.
 Admitted.
 
 End Renaming.

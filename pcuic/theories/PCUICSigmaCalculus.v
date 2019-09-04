@@ -1619,6 +1619,26 @@ Proof.
   rewrite e in hd. assumption.
 Qed.
 
+Lemma cumul_rename :
+  forall Σ Γ Δ f A B,
+    wf Σ.1 ->
+    renaming Σ Δ Γ f ->
+    Σ ;;; Γ |- A <= B ->
+    Σ ;;; Δ |- rename f A <= rename f B.
+Proof.
+  intros Σ Γ Δ f A B hΣ hf h.
+  induction h.
+  - eapply cumul_refl. admit.
+  - eapply cumul_red_l.
+    + eapply red1_rename. all: try eassumption.
+      apply hf.
+    + assumption.
+  - eapply cumul_red_r.
+    + eassumption.
+    + eapply red1_rename. all: try eassumption.
+      apply hf.
+Admitted.
+
 Lemma typing_rename :
   forall Σ Γ Δ f t A,
     wf Σ.1 ->

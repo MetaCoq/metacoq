@@ -1191,7 +1191,7 @@ Section Confluence.
     Proof.
       (* rewrite -{1}(List.rev_length m). *)
       intros.
-      eapply Alli_nth_error. intros.
+      eapply forall_nth_error_Alli. intros.
       eapply All_local_env_lookup in H; eauto.  red in H.
       destruct x as [? [?|] ?]. simpl in *. intuition.
       now simpl in H.

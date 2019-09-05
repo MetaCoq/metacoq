@@ -937,6 +937,22 @@ Proof. induction 1; constructor; auto. Qed.
 Lemma All_map_inv {A B} (P : B -> Prop) (f : A -> B) l : All P (map f l) -> All (compose P f) l.
 Proof. induction l; intros Hf; inv Hf; try constructor; eauto. Qed.
 
+Lemma All_nth_error :
+  forall A P l i x,
+    @All A P l ->
+    nth_error l i = Some x ->
+    P x.
+Proof.
+  intros A P l i x h e.
+  induction h in i, x, e |- *.
+  - destruct i. all: discriminate.
+  - destruct i.
+    + simpl in e. inversion e. subst. clear e.
+      assumption.
+    + simpl in e. eapply IHh in e.
+      assumption.
+Qed.
+
 Lemma Alli_mix {A} {P : nat -> A -> Type} {Q : nat -> A -> Type} {n l} :
   Alli P n l -> Alli Q n l -> Alli (fun n x => (P n x * Q n x)%type) n l.
 Proof. induction 1; intros Hq; inv Hq; constructor; auto. Qed.
@@ -953,6 +969,24 @@ Proof.
   inversion_clear H. split; intuition auto. constructor; auto. eapply IHl; eauto.
   simpl. replace (S (#|l| + n)) with (#|l| + S n) by lia.
   eapply IHl; eauto.
+Qed.
+
+Lemma Alli_nth_error :
+  forall A P k l i x,
+    @Alli A P k l ->
+    nth_error l i = Some x ->
+    P (k + i) x.
+Proof.
+  intros A P k l i x h e.
+  induction h in i, x, e |- *.
+  - destruct i. all: discriminate.
+  - destruct i.
+    + simpl in e. inversion e. subst. clear e.
+      replace (n + 0) with n by lia.
+      assumption.
+    + simpl in e. eapply IHh in e.
+      replace (n + S i) with (S n + i) by lia.
+      assumption.
 Qed.
 
 Lemma map_eq_inj {A B} (f g : A -> B) l: map f l = map g l ->
@@ -978,7 +1012,7 @@ Proof.
   intros Hl. unfold mapi. apply mapi_ext_size. simpl. auto.
 Qed.
 
-Lemma Alli_nth_error {A} (P : nat -> A -> Type) k ctx :
+Lemma forall_nth_error_Alli {A} (P : nat -> A -> Type) k ctx :
   (forall i x, nth_error ctx i = Some x -> P (k + i) x) ->
   Alli P k ctx.
 Proof.

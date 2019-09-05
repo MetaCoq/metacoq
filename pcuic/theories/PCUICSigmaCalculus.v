@@ -19,37 +19,6 @@ Require PCUICWeakening.
 Set Asymmetric Patterns.
 Open Scope sigma_scope.
 
-(* TODO MOVE *)
-Lemma nth_error_idsn_Some :
-  forall n k,
-    k < n ->
-    nth_error (idsn n) k = Some (tRel k).
-Proof.
-  intros n k h.
-  induction n in k, h |- *.
-  - inversion h.
-  - simpl. destruct (Nat.ltb_spec0 k n).
-    + rewrite nth_error_app1.
-      * rewrite idsn_length. auto.
-      * eapply IHn. assumption.
-    + assert (k = n) by omega. subst.
-      rewrite nth_error_app2.
-      * rewrite idsn_length. auto.
-      * rewrite idsn_length. replace (n - n) with 0 by omega.
-        simpl. reflexivity.
-Qed.
-
-(* TODO MOVE *)
-Lemma nth_error_idsn_None :
-  forall n k,
-    k >= n ->
-    nth_error (idsn n) k = None.
-Proof.
-  intros n k h.
-  eapply nth_error_None.
-  rewrite idsn_length. auto.
-Qed.
-
 Hint Rewrite @lift_rename : sigma.
 
 Lemma subst1_inst :
@@ -556,7 +525,7 @@ Proof.
   destruct decl as [ty bo un]. simpl in *.
   rewrite e in decl'.
   eapply typecheck_closed in decl' as [? ee]. 2: auto. 2: constructor.
-    move/andP in ee. destruct ee. assumption.
+  move/andP in ee. destruct ee. assumption.
 Qed.
 
 Lemma rename_shiftn :
@@ -1460,25 +1429,6 @@ Proof.
 Qed.
 
 (* TODO MOVE *)
-Lemma Alli_nth_error :
-  forall A P k l i x,
-    @Alli A P k l ->
-    nth_error l i = Some x ->
-    P (k + i) x.
-Proof.
-  intros A P k l i x h e.
-  induction h in i, x, e |- *.
-  - destruct i. all: discriminate.
-  - destruct i.
-    + simpl in e. inversion e. subst. clear e.
-      replace (n + 0) with n by lia.
-      assumption.
-    + simpl in e. eapply IHh in e.
-      replace (n + S i) with (S n + i) by lia.
-      assumption.
-Qed.
-
-(* TODO MOVE *)
 Lemma declared_inductive_closed_type :
   forall Σ mdecl ind idecl,
     wf Σ ->
@@ -1491,7 +1441,7 @@ Proof.
   eapply lookup_on_global_env in h1. 2: eauto.
   destruct h1 as [Σ' [wfΣ' decl']].
   red in decl'. destruct decl' as [h ? ? ?].
-  eapply Alli_nth_error in h. 2: eassumption.
+  eapply forall_nth_error_Alli in h. 2: eassumption.
   simpl in h. destruct h as [? ? ? [? h] ? ? ?].
   eapply typecheck_closed in h as [? e]. 2: auto. 2: constructor.
   move/andP in e. destruct e. assumption.
@@ -1511,7 +1461,7 @@ Proof.
   eapply lookup_on_global_env in hmdecl. 2: eauto.
   destruct hmdecl as [Σ' [wfΣ' decl']].
   red in decl'. destruct decl' as [h ? ? ?].
-  eapply Alli_nth_error in h. 2: eassumption.
+  eapply forall_nth_error_Alli in h. 2: eassumption.
   simpl in h. destruct h as [? ? ? ? h ? ?].
   unfold on_constructors in h.
   clear - h wfΣ'.
@@ -1525,23 +1475,6 @@ Proof.
       2: eapply typing_wf_local ; eauto.
       move/andP in e. destruct e. assumption.
     + assumption.
-Qed.
-
-(* TODO MOVE *)
-Lemma All_nth_error :
-  forall A P l i x,
-    @All A P l ->
-    nth_error l i = Some x ->
-    P x.
-Proof.
-  intros A P l i x h e.
-  induction h in i, x, e |- *.
-  - destruct i. all: discriminate.
-  - destruct i.
-    + simpl in e. inversion e. subst. clear e.
-      assumption.
-    + simpl in e. eapply IHh in e.
-      assumption.
 Qed.
 
 (* TODO MOVE *)

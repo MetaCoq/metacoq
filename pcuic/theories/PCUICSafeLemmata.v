@@ -689,7 +689,6 @@ Section Lemmata.
   Qed.
 
   Context (Σ : global_env_ext).
-  Context (hΣ : ∥ wf Σ ∥).
 
   Inductive welltyped Σ Γ t : Prop :=
   | iswelltyped A : Σ ;;; Γ |- t : A -> welltyped Σ Γ t.
@@ -706,6 +705,8 @@ Section Lemmata.
   Lemma wellformed_irr :
     forall {Σ Γ t} (h1 h2 : wellformed Σ Γ t), h1 = h2.
   Proof. intros. apply proof_irrelevance. Qed.
+
+  Context (hΣ : ∥ wf Σ ∥).
 
   Lemma welltyped_rename :
     forall Γ u v,
@@ -1208,50 +1209,6 @@ Section Lemmata.
       exists B. assumption.
   Qed.
 
-  (* Lemma welltyped_zipp : *)
-  (*   forall Γ t ρ, *)
-  (*     welltyped Σ Γ (zipp t ρ) -> *)
-  (*     welltyped Σ Γ t. *)
-  (* Proof. *)
-  (*   intros Γ t ρ [A h]. *)
-  (*   unfold zipp in h. *)
-  (*   case_eq (decompose_stack ρ). intros l π e. *)
-  (*   rewrite e in h. clear - h. *)
-  (*   revert t A h. *)
-  (*   induction l ; intros t A h. *)
-  (*   - eexists. cbn in h. eassumption. *)
-  (*   - cbn in h. apply IHl in h. *)
-  (*     destruct h as [T h]. *)
-  (*     apply inversion_App in h as hh. *)
-  (*     destruct hh as [na [A' [B' [? [? ?]]]]]. *)
-  (*     eexists. eassumption. *)
-  (* Qed. *)
-
-  (* Lemma welltyped_zippx : *)
-  (*   forall Γ t ρ, *)
-  (*     welltyped Σ Γ (zippx t ρ) -> *)
-  (*     welltyped Σ (Γ ,,, stack_context ρ) t. *)
-  (* Proof. *)
-  (*   intros Γ t ρ h. *)
-  (*   unfold zippx in h. *)
-  (*   case_eq (decompose_stack ρ). intros l π e. *)
-  (*   rewrite e in h. *)
-  (*   apply welltyped_it_mkLambda_or_LetIn in h. *)
-  (*   pose proof (decompose_stack_eq _ _ _ e). subst. *)
-  (*   rewrite stack_context_appstack. *)
-  (*   clear - h. destruct h as [A h]. *)
-  (*   revert t A h. *)
-  (*   induction l ; intros t A h. *)
-  (*   - eexists. eassumption. *)
-  (*   - cbn in h. apply IHl in h. *)
-  (*     destruct h as [B h]. *)
-  (*     apply inversion_App in h as hh. *)
-  (*     destruct hh as [na [A' [B' [? [? ?]]]]]. *)
-  (*     eexists. eassumption. *)
-  (* Qed. *)
-
-  Derive NoConfusion NoConfusionHom for list.
-
   Lemma it_mkLambda_or_LetIn_welltyped :
     forall Γ Δ t,
       welltyped Σ (Γ ,,, Δ) t ->
@@ -1262,50 +1219,45 @@ Section Lemmata.
     eassumption.
   Qed.
 
-  (* Lemma zipx_welltyped : *)
-  (*   forall {Γ t π}, *)
-  (*     welltyped Σ Γ (zipc t π) -> *)
-  (*     welltyped Σ [] (zipx Γ t π). *)
-  (* Proof. *)
-  (*   intros Γ t π h. *)
-  (*   eapply it_mkLambda_or_LetIn_welltyped. *)
-  (*   rewrite app_context_nil_l. *)
-  (*   assumption. *)
-  (* Qed. *)
+  Lemma welltyped_it_mkLambda_or_LetIn_iff :
+    forall Γ Δ t,
+      welltyped Σ Γ (it_mkLambda_or_LetIn Δ t) <->
+      welltyped Σ (Γ ,,, Δ) t.
+  Proof.
+    intros; split.
+    apply welltyped_it_mkLambda_or_LetIn.
+    apply it_mkLambda_or_LetIn_welltyped.
+  Qed.
 
-  (* Lemma welltyped_zipx : *)
-  (*   forall {Γ t π}, *)
-  (*     welltyped Σ [] (zipx Γ t π) -> *)
-  (*     welltyped Σ Γ (zipc t π). *)
-  (* Proof. *)
-  (*   intros Γ t π h. *)
-  (*   apply welltyped_it_mkLambda_or_LetIn in h. *)
-  (*   rewrite app_context_nil_l in h. *)
-  (*   assumption. *)
-  (* Qed. *)
-
-  (* Lemma welltyped_zipc_zippx : *)
-  (*   forall Γ t π, *)
-  (*     welltyped Σ Γ (zipc t π) -> *)
-  (*     welltyped Σ Γ (zippx t π). *)
-  (* Proof. *)
-  (*   intros Γ t π h. *)
-  (*   unfold zippx. *)
-  (*   case_eq (decompose_stack π). intros l ρ e. *)
-  (*   pose proof (decompose_stack_eq _ _ _ e). subst. *)
-  (*   eapply it_mkLambda_or_LetIn_welltyped. *)
-  (*   rewrite zipc_appstack in h. zip fold in h. *)
-  (*   apply welltyped_context in h ; auto. *)
-  (* Qed. *)
-
+  Lemma isWfArity_it_mkLambda_or_LetIn :
+    forall Γ Δ T,
+      isWfArity typing Σ Γ (it_mkLambda_or_LetIn Δ T) ->
+      isWfArity typing Σ (Γ ,,, Δ) T.
+  Proof.
+    intro Γ; induction Δ in Γ |- *; intro T; [easy|].
+    destruct a as [na [bd|] ty].
+    - simpl. cbn. intro HH. apply IHΔ in HH.
+      destruct HH as [Δ' [s [HH HH']]].
+      cbn in HH; apply destArity_app_Some in HH.
+      destruct HH as [Δ'' [HH1 HH2]].
+      exists Δ'', s. split; tas.
+      refine (eq_rect _ (fun Γ => wf_local Σ Γ) HH' _ _).
+      rewrite HH2. rewrite app_context_assoc. reflexivity.
+    - simpl. cbn. intro HH. apply IHΔ in HH.
+      destruct HH as [Δ' [s [HH HH']]]. discriminate.
+  Qed.
 
   Lemma wellformed_it_mkLambda_or_LetIn :
     forall Γ Δ t,
       wellformed Σ Γ (it_mkLambda_or_LetIn Δ t) ->
       wellformed Σ (Γ ,,, Δ) t.
   Proof.
-    intros Γ Δ t h.
-  Admitted.
+    intros Γ Δ t [Hwf|Hwf];
+      [left; now apply welltyped_it_mkLambda_or_LetIn |
+       right; destruct Hwf; constructor].
+    now apply isWfArity_it_mkLambda_or_LetIn.
+  Qed.
+
 
   Lemma wellformed_zipp :
     forall Γ t ρ,
@@ -1331,33 +1283,6 @@ Section Lemmata.
         rewrite destArity_tApp in h1. discriminate.
   Qed.
 
-  Lemma wellformed_zippx :
-    forall Γ t ρ,
-      wellformed Σ Γ (zippx t ρ) ->
-      wellformed Σ (Γ ,,, stack_context ρ) t.
-  Proof.
-    destruct hΣ as [wΣ].
-    intros Γ t ρ h.
-    unfold zippx in h.
-    case_eq (decompose_stack ρ). intros l π e.
-    rewrite e in h.
-    apply wellformed_it_mkLambda_or_LetIn in h.
-    pose proof (decompose_stack_eq _ _ _ e). subst.
-    rewrite stack_context_appstack.
-    clear - h wΣ. destruct h as [[A h]|h].
-    - left.
-      induction l in t, A, h |- *.
-      + rdestruct h. econstructor. eassumption.
-      + cbn in h. apply IHl in h.
-        destruct h as [B h].
-        apply inversion_App in h as hh ; auto.
-        destruct hh as [na [A' [B' [? [? ?]]]]].
-        eexists. eassumption.
-    - right. destruct l.
-      + assumption.
-      + destruct h as [[ctx [s [h1 _]]]].
-        rewrite destArity_tApp in h1. discriminate.
-  Qed.
 
   Lemma it_mkLambda_or_LetIn_wellformed :
     forall Γ Δ t,
@@ -1365,6 +1290,7 @@ Section Lemmata.
       wellformed Σ Γ (it_mkLambda_or_LetIn Δ t).
   Admitted.
 
+  (* Wrong for t = alg univ, π = ε, Γ = vass A *)
   Lemma zipx_wellformed :
     forall {Γ t π},
       wellformed Σ Γ (zipc t π) ->
@@ -1387,6 +1313,21 @@ Section Lemmata.
     assumption.
   Qed.
 
+  Lemma wellformed_zipc_stack_context Γ t π ρ args
+    : decompose_stack π = (args, ρ)
+      -> wellformed Σ Γ (zipc t π)
+      -> wellformed Σ (Γ ,,, stack_context π) (zipc t (appstack args ε)).
+  Proof.
+    intros h h1.
+    apply decompose_stack_eq in h. subst.
+    rewrite stack_context_appstack.
+    induction args in Γ, t, ρ, h1 |- *.
+    - cbn in *.
+      now apply (wellformed_context Γ (t, ρ)).
+    - simpl. eauto.
+  Qed.
+
+  (* Is it correct? *)
   Lemma wellformed_zipc_zippx :
     forall Γ t π,
       wellformed Σ Γ (zipc t π) ->
@@ -1395,12 +1336,13 @@ Section Lemmata.
     intros Γ t π h.
     unfold zippx.
     case_eq (decompose_stack π). intros l ρ e.
-    pose proof (decompose_stack_eq _ _ _ e). subst.
-    eapply it_mkLambda_or_LetIn_wellformed.
-    rewrite zipc_appstack in h. zip fold in h.
-    apply wellformed_context in h ; auto.
-  Qed.
-
+    pose proof (decompose_stack_eq _ _ _ e). subst. clear e.
+    rewrite zipc_appstack in h.
+    (* revert h. generalize (mkApps t l); clear t l. *)
+    zip fold in h.
+    apply wellformed_context in h ; simpl in h.
+  (* Qed. *)
+  Admitted.
 
   Lemma lookup_env_const_name :
     forall {c c' d},

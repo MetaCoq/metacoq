@@ -528,22 +528,14 @@ Section Conversion.
     }.
   Next Obligation.
     apply wellformed_zipx in h1 ; tas.
-    apply wellformed_zipc_zippx in h1 ; tas.
-    cbn. rewrite zipc_appstack. cbn.
-    unfold zippx in h1. rewrite <- e1 in h1.
-    apply wellformed_it_mkLambda_or_LetIn in h1 ; tas.
-    pose proof (decompose_stack_eq _ _ _ (eq_sym e1)). subst.
-    rewrite stack_context_appstack. assumption.
+    symmetry in e1.
+    eapply wellformed_zipc_stack_context; tea.
   Qed.
   Next Obligation.
     clear aux eq1.
     apply wellformed_zipx in h2; tas.
-    apply wellformed_zipc_zippx in h2 ; tas.
-    cbn. rewrite zipc_appstack. cbn.
-    unfold zippx in h2. rewrite <- e2 in h2.
-    apply wellformed_it_mkLambda_or_LetIn in h2; tas.
-    pose proof (decompose_stack_eq _ _ _ (eq_sym e2)). subst.
-    rewrite stack_context_appstack. assumption.
+    symmetry in e2.
+    eapply wellformed_zipc_stack_context; tea.
   Qed.
   Next Obligation.
     pose proof hΣ as hΣ'.
@@ -1357,21 +1349,16 @@ Section Conversion.
     rewrite 2!stack_context_appstack in h.
 
     apply wellformed_zipx in h1; tas.
-    apply wellformed_zipc_zippx in h1 ; auto.
-    unfold zippx in h1. rewrite decompose_stack_appstack in h1.
-    rewrite decompose_stack_twice with (1 := e1) in h1.
-    simpl in h1. rewrite app_nil_r in h1.
-    apply wellformed_it_mkLambda_or_LetIn in h1; tas.
+    eapply wellformed_zipc_stack_context in h1; tea.
+    rewrite zipc_appstack in h1.
     pose proof (wellformed_wf_local _ _ h1).
     apply mkApps_Prod_nil' in h1 ; auto. subst.
     destruct H.
     clear aux.
     apply wellformed_zipx in h2; tas.
-    apply wellformed_zipc_zippx in h2 ; auto.
-    unfold zippx in h2. rewrite decompose_stack_appstack in h2.
-    rewrite decompose_stack_twice with (1 := e2) in h2.
-    simpl in h2. rewrite app_nil_r in h2.
-    apply wellformed_it_mkLambda_or_LetIn in h2; tas.
+    eapply wellformed_zipc_stack_context in h2; tea.
+    pose proof (wellformed_wf_local _ _ h2).
+    rewrite zipc_appstack in h2.
     apply mkApps_Prod_nil' in h2 ; auto. subst.
 
     cbn.

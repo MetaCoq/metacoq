@@ -12,7 +12,7 @@ let cast_prop = ref (false)
 let is_cast_prop () = !cast_prop
 
 
-let toDecl (old: Name.t * ((Constr.constr) option) * Constr.constr) : Context.Rel.Declaration.t =
+let toDecl (old: Name.t * ((Constr.constr) option) * Constr.constr) : Constr.rel_declaration =
   let (name,value,typ) = old in
   match value with
   | Some value -> Context.Rel.Declaration.LocalDef (name,value,typ)
@@ -159,6 +159,9 @@ let var = CArray.map_to_list Q.quote_variance (Univ.ACumulativityInfo.variance c
      *    Q.mkCumulative_ctx (Q.quote_abstract_univ_context (Univ.ACumulativityInfo.univ_context cumi)) *)
     | _ -> failwith "todo sim"
 
+  let quote_inductive' (ind, i) =
+    Q.quote_inductive (Q.quote_kn (Names.MutInd.canonical ind), Q.quote_int i)
+
   let quote_term_remember
       (add_constant : KerName.t -> 'a -> 'a)
       (add_inductive : Names.inductive -> 'a -> 'a) =
@@ -207,17 +210,16 @@ let var = CArray.map_to_list Q.quote_variance (Univ.ACumulativityInfo.variance c
 
       | Constr.Const (c,pu) ->
          let kn = Names.Constant.canonical c in
-         let pu' = Q.quote_univ_instance pu in
-	 (Q.mkConst (Q.quote_kn kn) pu', add_constant kn acc)
+	 (Q.mkConst (Q.quote_kn kn) (Q.quote_univ_instance pu),
+          add_constant kn acc)
 
-      | Constr.Construct (((ind,i),c),pu) ->
-         (Q.mkConstruct (Q.quote_inductive (Q.quote_kn (Names.MutInd.canonical ind), Q.quote_int i),
-                         Q.quote_int (c - 1))
-            (Q.quote_univ_instance pu), add_inductive (ind,i) acc)
+      | Constr.Construct ((mind,c),pu) ->
+         (Q.mkConstruct (quote_inductive' mind, Q.quote_int (c - 1)) (Q.quote_univ_instance pu),
+          add_inductive mind acc)
 
-      | Constr.Ind ((ind,i),pu) ->
-         (Q.mkInd (Q.quote_inductive (Q.quote_kn (Names.MutInd.canonical ind), Q.quote_int i))
-            (Q.quote_univ_instance pu), add_inductive (ind,i) acc)
+      | Constr.Ind (mind,pu) ->
+         (Q.mkInd (quote_inductive' mind) (Q.quote_univ_instance pu),
+          add_inductive mind acc)
 
       | Constr.Case (ci,typeInfo,discriminant,e) ->
          let ind = Q.quote_inductive (Q.quote_kn (Names.MutInd.canonical (fst ci.Constr.ci_ind)),
@@ -236,12 +238,9 @@ let var = CArray.map_to_list Q.quote_variance (Univ.ACumulativityInfo.variance c
       | Constr.Fix fp -> quote_fixpoint acc env fp
       | Constr.CoFix fp -> quote_cofixpoint acc env fp
       | Constr.Proj (p,c) ->
-         let proj = Environ.lookup_projection p (snd env) in
-         let ind = proj.Declarations.proj_ind in
-         let ind = Q.quote_inductive (Q.quote_kn (Names.MutInd.canonical ind),
-                                      Q.quote_int 0) in
-         let pars = Q.quote_int proj.Declarations.proj_npars in
-         let arg = Q.quote_int proj.Declarations.proj_arg in
+         let ind = quote_inductive' (Projection.inductive p) in
+         let pars = Q.quote_int (Projection.npars p) in
+         let arg  = Q.quote_int (Projection.arg p)   in
          let p' = Q.quote_proj ind pars arg in
          let kn = Names.Constant.canonical (Names.Projection.constant p) in
          let t', acc = quote_term acc env c in
@@ -282,13 +281,11 @@ let var = CArray.map_to_list Q.quote_variance (Univ.ACumulativityInfo.variance c
       let acc, ds' =
         CArray.fold_left_map (fun acc t -> let x,y = quote_term acc envfix t in y, x) acc ds in
       ((b',(ns',ts',ds')), acc)
-    and quote_fixpoint acc env t =
-      let ((a,b),decl) = t in
+    and quote_fixpoint acc env ((a,b),decl) =
       let a' = Array.map Q.quote_int a in
       let (b',decl'),acc = quote_recdecl acc env b decl in
       (Q.mkFix ((a',b'),decl'), acc)
-    and quote_cofixpoint acc env t =
-      let (a,decl) = t in
+    and quote_cofixpoint acc env (a,decl) =
       let (a',decl'),acc = quote_recdecl acc env a decl in
       (Q.mkCoFix (a',decl'), acc)
     and quote_rel_decl acc env = function
@@ -338,16 +335,15 @@ let var = CArray.map_to_list Q.quote_variance (Univ.ACumulativityInfo.variance c
 	  in
           let projs, acc =
             match mib.Declarations.mind_record with
-            | Some (Some (id, csts, ps)) ->
+            | PrimRecord [|id, csts, ps|] ->  (* TODO handle mutual records *)
                let ctxwolet = Termops.smash_rel_context mib.mind_params_ctxt in
                let indty = Constr.mkApp (Constr.mkIndU ((t,0),inst),
                                        Context.Rel.to_extended_vect Constr.mkRel 0 ctxwolet) in
                let indbinder = Context.Rel.Declaration.LocalAssum (Names.Name id,indty) in
                let envpars = push_rel_context (indbinder :: ctxwolet) env in
                let ps, acc = CArray.fold_right2 (fun cst pb (ls,acc) ->
-                 let (ty, acc) = quote_term acc envpars pb.Declarations.proj_type in
-                 let kn = Names.KerName.label (Names.Constant.canonical cst) in
-                 let na = Q.quote_ident (Names.Label.to_id kn) in
+                 let (ty, acc) = quote_term acc envpars pb in
+                 let na = Q.quote_ident (Names.Label.to_id cst) in
                  ((na, ty) :: ls, acc)) csts ps ([],acc)
                in ps, acc
             | _ -> [], acc
@@ -548,5 +544,5 @@ since  [absrt_info] is a private type *)
     Q.quote_entry entry
 
   let quote_ugraph (g : UGraph.t) =
-    Q.quote_univ_constraints (UGraph.constraints_of_universes g)
+    Q.quote_univ_constraints (fst (UGraph.constraints_of_universes g))
 end

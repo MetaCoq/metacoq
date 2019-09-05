@@ -458,7 +458,7 @@ Section Conversion.
   (*     { b : bool | if b then ∥ Σ ;;; Γ |- zippx t π == zippx t π' ∥ else True } *)
   (*   end. *)
 
-  Definition Ret s Γ t π π' :=
+  Definition Ret (s : state) Γ t π π' :=
     forall (leq : match s with Args => unit | _ => conv_pb end),
       (match s with Fallback t' | Term t' => isred (t, π) | _ => True end) ->
       (match s with Fallback t' | Term t' => isred (t', π') | _ => True end) ->
@@ -2700,6 +2700,10 @@ Section Conversion.
     _isconv (Fallback t2) Γ t1 π1 h1 π2 h2 aux :=
       λ { | leq | r1 | r2 := _isconv_fallback Γ leq t1 π1 h1 t2 π2 h2 r1 r2 aux }.
 
+  Set Printing Coercions.
+
+  Coercion st_ := st.
+
   Equations(noeqns) isconv_full (s : state) (Γ : context)
             (t : term) (π1 : stack) (h1 : wtp Γ t π1)
             (π2 : stack) (h2 : wts Γ s t π2)
@@ -2707,16 +2711,35 @@ Section Conversion.
 
     isconv_full s Γ t π1 h1 π2 h2 :=
       Fix_F (R := R)
-            (fun '(mkpack s' Γ' t' π1' π2' h2') => wtp Γ' t' π1' -> wts Γ' s' t' π2' -> Ret s' Γ' t' π1' π2')
+            (fun pp => wtp (ctx pp) (tm pp) (stk1 pp) -> wts (ctx pp) (st pp) (tm pp) (stk2 pp)
+                    -> Ret (st pp) (ctx pp) (tm pp) (stk1 pp) (stk2 pp)
+                    )
             (fun pp f => _)
             (x := mkpack s Γ t π1 π2 _)
             _ _ _.
+  (* NOTE (Danil): something is wrong when destructing a record with primitive projections,
+     the commented code below doesn't type check. For some reason, [Ret] is applied to something
+     of type [pack] instead of [state] *)
+      (* Fix_F (R := R) *)
+      (*       (fun '(mkpack s' Γ' t' π1' π2' h2') => wtp Γ' t' π1' -> wts Γ' s' t' π2' -> Ret s' Γ' t' π1' π2') *)
+      (*       (fun pp f => _) *)
+      (*       (x := mkpack s Γ t π1 π2 _) *)
+      (*       _ _ _. *)
   Next Obligation.
+    (* TODO: remove. This is just for demonstraction that something is wrong: *)
+    (* if we uncomment the lines below, we can build something that is not well-typed
+       and the typechecker will complain on Qed for this obigation *)
+    (* pose ((fun '(mkpack s' Γ' t' π1' π2' h2') => wtp Γ' t' π1' -> wts Γ' s' t' π2' -> Ret s' Γ' t' π1' π2')) as PP. simpl in PP. *)
+    (* NOTE (Danil): [PP] contains a subterm [Ret pat (ctx pat) (tm pat) (stk1 pat)
+       (stk2 pat)], but [pat] is of type [pack] and not [state]! How
+       is that possible? Set Printing All does not add anything
+       usefull for understanding *)
+
     unshelve eapply _isconv ; try assumption.
     apply wellformed_zipx in h1; tas.
     intros s' Γ' t' π1' π2' h1' h2' hR.
     apply wellformed_zipc_zippx in h1 ; auto.
-    destruct pp.
+    destruct pp. simpl in *.
     assert (wth0 = zwts H0) by apply wellformed_irr. subst.
     specialize (f (mkpack s' Γ' t' π1' π2' (zwts h2')) hR). cbn in f.
     eapply f ; assumption.

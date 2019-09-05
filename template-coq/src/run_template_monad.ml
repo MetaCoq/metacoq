@@ -203,12 +203,17 @@ let unquote_one_inductive_entry evm trm (* of type one_inductive_entry *) : _ * 
   else
     not_supported_verb trm "unquote_one_inductive_entry"
 
+let map_option f o =
+  match o with
+  | Some x -> Some (f x)
+  | None -> None          
+  
 let unquote_mutual_inductive_entry evm trm (* of type mutual_inductive_entry *) : _ * Entries.mutual_inductive_entry =
   let (h,args) = app_full trm [] in
   if constr_equall h tBuild_mutual_inductive_entry then
     match args with
     | record::finite::params::inds::univs::priv::[] ->
-       let record = unquote_map_option (unquote_map_option unquote_ident) record in
+       let record = map_option (map_option (fun x -> [|x|])) (unquote_map_option (unquote_map_option unquote_ident) record) in
        let finite = denote_mind_entry_finite finite in
        let evm, params = map_evm (fun evm p -> let (l,r) = unquote_pair p in
                                                let evm, e = denote_local_entry evm r in
@@ -312,7 +317,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
        let ctx = Evd.evar_universe_context evm in
        let hook = Lemmas.mk_hook (fun _ gr _ -> let env = Global.env () in
                                                 let evm = Evd.from_env env in
-                                                let evm, t = Evd.fresh_global env evm gr in k (env, evm, t)) in  (* todo better *)
+                                                let evm, t = Evd.fresh_global env evm gr in k (env, evm, EConstr.to_constr evm t)) in  (* todo better *)
        ignore (Obligations.add_definition ident ~term:c cty ctx ~kind ~hook obls)
     (* let kind = Decl_kinds.(Global, Flags.use_polymorphic_flag (), DefinitionBody Definition) in *)
     (* Lemmas.start_proof (unquote_ident name) kind evm (EConstr.of_constr typ) *)
@@ -442,7 +447,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     let name' = Namegen.next_ident_away_from (unquote_ident name) (fun id -> Nametab.exists_cci (Lib.make_path id)) in
     k (env, evm, quote_ident name')
   | TmExistingInstance name ->
-     Classes.existing_instance true (CAst.make (Libnames.Qualid (Libnames.qualid_of_ident (unquote_ident name)))) None;
+     Classes.existing_instance true (Libnames.qualid_of_ident (unquote_ident name)) None;
      k (env, evm, Lazy.force unit_tt)
   | TmInferInstance (s, typ) ->
     begin

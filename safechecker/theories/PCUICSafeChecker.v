@@ -683,6 +683,8 @@ Section Typecheck.
   (*   eapply type_CoFix; eauto. *)
   (* Defined. *)
 
+  Open Scope nat.
+
   Program Fixpoint infer (Γ : context) (HΓ : ∥ wf_local Σ Γ ∥) (t : term) {struct t}
     : typing_result ({ A : term & ∥ Σ ;;; Γ |- t : A ∥ }) :=
     match t with

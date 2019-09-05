@@ -1797,10 +1797,12 @@ Lemma typing_ind_env `{cf : checker_flags} :
 Proof.
   intros P Pdecl; unfold env_prop.
   intros X X0 Xcast X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 Σ wfΣ Γ wfΓ t T H.
+  (* NOTE (Danil): while porting to 8.9, I had to split original "pose" into 2 pieces,
+   otherwise it takes forever to execure the "pose", for some reason *)
   pose (@Fix_F ({ Σ : _ & { wfΣ : wf Σ.1 & { Γ : context & { wfΓ : wf_local Σ Γ &
-               { t : term & { T : term & Σ ;;; Γ |- t : T }}}}}})
-               (lexprod (MR lt (fun Σ => globenv_size (fst Σ)))
-                            (fun Σ => MR lt (fun x => typing_size (projT2 (projT2 (projT2 (projT2 (projT2 x))))))))).
+               { t : term & { T : term & Σ ;;; Γ |- t : T }}}}}})) as p0.
+  specialize (p0 (lexprod (MR lt (fun Σ => globenv_size (fst Σ)))
+                         (fun Σ => MR lt (fun x => typing_size (projT2 (projT2 (projT2 (projT2 (projT2 x))))))))) as p.
   set(foo := existT _ Σ (existT _ wfΣ (existT _ Γ (existT _ wfΓ (existT _ t (existT _ _ H))))) : { Σ : _ & { wfΣ : wf Σ.1 & { Γ : context & { wfΓ & { t : term & { T : term & Σ ;;; Γ |- t : T }}}}}}).
   change Σ with (projT1 foo).
   change Γ with (projT1 (projT2 (projT2 foo))).

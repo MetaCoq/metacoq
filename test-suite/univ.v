@@ -60,8 +60,11 @@ Run TemplateProgram (tmQuoteConstant "Cat" false >>= tmEval all >>= tmPrint).
 Polymorphic Cumulative Inductive list (A : Type) : Type :=
 nil : list A | cons : A -> list A -> list A.
 
+Set Printing Universes.
+
 Module to.
-Run TemplateProgram (t <- tmQuoteInductive "list" ;;
+  (* TODO : fix this *)
+ Run TemplateProgram (t <- tmQuoteInductive "list" ;;
                      t <- tmEval all (mind_body_to_entry t) ;;
                      tmPrint t ;;
                      tmMkInductive t).
@@ -187,6 +190,7 @@ Polymorphic Definition F@{i} := Type@{i}.
 
 Quote Definition qT := Eval compute in F.
 Require Import List. Import ListNotations.
+Fail Make Definition T'2 := (tSort [(Level.Var 1, false)]).
 
 Quote Recursively Definition qT' := F.
 

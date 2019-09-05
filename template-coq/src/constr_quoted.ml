@@ -154,6 +154,8 @@ struct
   let tConstraintSetempty = lazy (Universes.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "ConstraintSet") "empty"))
   let tConstraintSetadd = lazy (Universes.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "ConstraintSet") "add"))
   let tmake_univ_constraint = resolve_symbol pkg_univ "make_univ_constraint"
+  let tinit_graph = resolve_symbol pkg_ugraph "init_graph"
+  let tadd_global_constraints = resolve_symbol pkg_ugraph  "add_global_constraints"
 
   let (tdef,tmkdef) = (r_base_reify "def", r_base_reify "mkdef")
   let (tLocalDef,tLocalAssum,tlocal_entry) = (r_reify "LocalDef", r_reify "LocalAssum", r_reify "local_entry")
@@ -200,7 +202,207 @@ struct
       | l :: ls ->
 	constr_mkApp (c_cons, [| typ ; l ; to_list ls |])
     in to_list
+
   let to_coq_listl typ = to_coq_list (Lazy.force typ)
+
+  let quote_option ty = function
+    | Some tm -> constr_mkApp (cSome, [|ty; tm|])
+    | None -> constr_mkApp (cNone, [|ty|])
+
+  (* Quote OCaml int to Coq nat *)
+  let quote_int =
+    (* the cache is global but only accessible through quote_int *)
+    let cache : (int,Constr.constr) Hashtbl.t = Hashtbl.create 10 in
+    let rec recurse (i : int) : Constr.constr =
+      try Hashtbl.find cache i
+      with
+	Not_found ->
+	  if i = 0 then
+	    let result = tO in
+	    let _ =
+              Hashtbl.add cache i (Lazy.force result) in
+	    Lazy.force result
+	  else
+	    let result =
+              constr_mkApp (tS, [| recurse (i - 1) |]) in
+	    let _ =
+              Hashtbl.add cache i result in
+	    result
+    in
+    fun i ->
+    if i >= 0 then recurse i else
+      CErrors.anomaly Pp.(str "Negative int can't be unquoted to nat.")
+
+  let quote_bool b =
+    if b then ttrue else tfalse
+
+  let quote_char i =
+    constr_mkAppl (tAscii, Array.of_list (List.map (fun m -> quote_bool ((i land m) = m))
+					 (List.rev [128;64;32;16;8;4;2;1])))
+
+  let chars = Array.init 255 quote_char
+
+  let quote_char c = chars.(int_of_char c)
+
+  let string_hash = Hashtbl.create 420
+
+  let to_string s =
+    let len = String.length s in
+    let rec go from acc =
+      if from < 0 then acc
+      else
+        let term = constr_mkApp (tString, [| quote_char (String.get s from) ; acc |]) in
+        go (from - 1) term
+    in
+    go (len - 1) (Lazy.force tEmptyString)
+
+  let quote_string s =
+    try Hashtbl.find string_hash s
+    with Not_found ->
+      let term = to_string s in
+      Hashtbl.add string_hash s term; term
+
+  let quote_ident i =
+    let s = Names.Id.to_string i in
+    quote_string s
+
+  let quote_name n =
+    match n with
+      Names.Name id -> constr_mkApp (nNamed, [| quote_ident id |])
+    | Names.Anonymous -> Lazy.force nAnon
+
+  let quote_cast_kind k =
+    match k with
+      Constr.VMcast -> kVmCast
+    | Constr.DEFAULTcast -> kCast
+    | Constr.REVERTcast -> kRevertCast
+    | Constr.NATIVEcast -> kNative
+
+  let string_of_level s =
+    to_string (Univ.Level.to_string s)
+
+  let quote_level l =
+    let open Univ in
+    debug (fun () -> str"quote_level " ++ Level.pr l);
+    if Level.is_prop l then Lazy.force lProp
+    else if Level.is_set l then Lazy.force lSet
+    else match Level.var_index l with
+         | Some x -> constr_mkApp (tLevelVar, [| quote_int x |])
+         | None -> constr_mkApp (tLevel, [| string_of_level l|])
+
+  let quote_universe s =
+    let levels = Universe.map (fun (l,i) ->
+                     pair (Lazy.force tlevel) (Lazy.force bool_type) (quote_level l)
+                       (if i > 0 then (Lazy.force ttrue) else (Lazy.force tfalse))) s in
+    to_coq_list (prod (Lazy.force tlevel) (Lazy.force bool_type)) levels
+
+  (* todo : can be deduced from quote_level, hence shoud be in the Reify module *)
+  let quote_univ_instance u =
+    let arr = Univ.Instance.to_array u in
+    to_coq_list (Lazy.force tlevel) (CArray.map_to_list quote_level arr)
+
+  let quote_constraint_type (c : Univ.constraint_type) =
+    match c with
+    | Lt -> Lazy.force tunivLt
+    | Le -> Lazy.force tunivLe
+    | Eq -> Lazy.force tunivEq
+
+  let quote_univ_constraint ((l1, ct, l2) : Univ.univ_constraint) =
+    let l1 = quote_level l1 in
+    let l2 = quote_level l2 in
+    let ct = quote_constraint_type ct in
+    constr_mkApp (tmake_univ_constraint, [| l1; ct; l2 |])
+
+  let quote_univ_constraints const =
+    let const = Univ.Constraint.elements const in
+    List.fold_left (fun tm c ->
+        let c = quote_univ_constraint c in
+        constr_mkApp (tConstraintSetadd, [| c; tm|])
+      ) (Lazy.force tConstraintSetempty) const
+
+  let quote_variance v =
+    match v with
+    | Univ.Variance.Irrelevant -> Lazy.force cIrrelevant
+    | Univ.Variance.Covariant -> Lazy.force cCovariant
+    | Univ.Variance.Invariant -> Lazy.force cInvariant
+
+  let quote_cuminfo_variance var =
+    let var_list = CArray.map_to_list quote_variance var in
+    to_coq_list (Lazy.force tVariance) var_list
+
+  let quote_ucontext inst const =
+    let inst' = quote_univ_instance inst in
+    let const' = quote_univ_constraints const in
+    constr_mkApp (tUContextmake, [|inst'; const'|])
+
+  let quote_univ_context uctx =
+    let inst = Univ.UContext.instance uctx in
+    let const = Univ.UContext.constraints uctx in
+    constr_mkApp (cMonomorphic_ctx, [| quote_ucontext inst const |])
+
+  let quote_cumulative_univ_context cumi =
+    let uctx = Univ.CumulativityInfo.univ_context cumi in
+    let inst = Univ.UContext.instance uctx in
+    let const = Univ.UContext.constraints uctx in
+    let var = Univ.CumulativityInfo.variance cumi in
+    let uctx' = quote_ucontext inst const in
+    let var' = quote_cuminfo_variance var in
+    let listvar = constr_mkAppl (tlist, [| tVariance |]) in
+    let cumi' = pair (Lazy.force tUContext) listvar uctx' var' in
+    constr_mkApp (cCumulative_ctx, [| cumi' |])
+
+  let quote_abstract_univ_context_aux uctx =
+    let inst = Univ.UContext.instance uctx in
+    let const = Univ.UContext.constraints uctx in
+    constr_mkApp (cPolymorphic_ctx, [| quote_ucontext inst const |])
+
+  let quote_abstract_univ_context uctx =
+    let uctx = Univ.AUContext.repr uctx in
+    quote_abstract_univ_context_aux uctx
+
+  let quote_inductive_universes uctx =
+    match uctx with
+    | Monomorphic_ind_entry uctx -> quote_univ_context (Univ.ContextSet.to_context uctx)
+    | Polymorphic_ind_entry uctx -> quote_abstract_univ_context_aux uctx
+    | Cumulative_ind_entry info ->
+      quote_abstract_univ_context_aux (CumulativityInfo.univ_context info) (* FIXME lossy *)
+
+  let quote_ugraph (g : UGraph.t) =
+    let inst' = quote_univ_instance Univ.Instance.empty in
+    let const' = quote_univ_constraints (fst (UGraph.constraints_of_universes g)) in
+    let uctx = constr_mkApp (tUContextmake, [|inst' ; const'|]) in
+    constr_mkApp (tadd_global_constraints, [|constr_mkApp (cMonomorphic_ctx, [| uctx |]); Lazy.force tinit_graph|])
+
+  let quote_sort s =
+    quote_universe (Sorts.univ_of_sort s)
+
+  let quote_sort_family = function
+    | Sorts.InProp -> sfProp
+    | Sorts.InSet -> sfSet
+    | Sorts.InType -> sfType
+
+  let quote_context_decl na b t =
+    constr_mkApp (tmkdecl, [| na; quote_option (Lazy.force tTerm) b; t |])
+
+  let quote_context ctx =
+    to_coq_list (Lazy.force tcontext_decl) ctx
+
+  let mk_ctor_list =
+    let ctor_list =
+      let ctor_info_typ = prod (prod (Lazy.force tident) (Lazy.force tTerm)) (Lazy.force tnat) in
+      to_coq_list ctor_info_typ
+    in
+    fun ls ->
+    let ctors = List.map (fun (a,b,c) -> pair (prod (Lazy.force tident) (Lazy.force tTerm)) (Lazy.force tnat)
+				              (pair (Lazy.force tident) (Lazy.force tTerm) a b) c) ls in
+    ctor_list ctors
+
+  let mk_proj_list d =
+    to_coq_list (prod (Lazy.force tident) (Lazy.force tTerm))
+                (List.map (fun (a, b) -> pair (Lazy.force tident) (Lazy.force tTerm) a b) d)
+
+  let quote_inductive (kn, i) =
+    constr_mkApp (tmkInd, [| kn; i |])
 
   let rec seq f t =
     if f < t then f :: seq (f + 1) t
@@ -212,7 +414,7 @@ struct
 
   let mkRel i = constr_mkApp (tRel, [| i |])
   let mkVar id = constr_mkApp (tVar, [| id |])
-  let mkEvar n args = constr_mkApp (tEvar, [| n; to_coq_listl tTerm (Array.to_list args) |])
+  let mkEvar n args = constr_mkApp (tEvar, [| n; to_coq_list (Lazy.force tTerm) (Array.to_list args) |])
   let mkSort s = constr_mkApp (tSort, [| s |])
   let mkCast c k t = constr_mkApp (tCast, [| c ; k ; t |])
   let mkConst kn u = constr_mkApp (tConst, [| kn ; u |])

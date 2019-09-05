@@ -2983,7 +2983,7 @@ Section Confluence.
       + simpl.
         case e': decompose_app => [hd' args'].
         rewrite (decompose_app_rename e').
-        case: (view_construct hd') => [ind' n u'] /=.
+        case: (view_construct hd') => [ind' n u' |] /=.
         change (eq_inductive ind c) with (eqb ind c).
         case: (@eqb_spec _ reflect_inductive ind c) => Hind.
         { (* Reduction *)
@@ -3037,7 +3037,7 @@ Section Confluence.
       + simpl.
         case e': decompose_app => [hd' args'].
         rewrite (decompose_app_rename e').
-        case: (view_construct hd') => [ind' n u'] /=.
+        case: (view_construct hd') => [ind' n u' | ] /=.
         rewrite nth_error_map.
         case enth : nth_error => [arg|] /= //.
         change eq_inductive with (@eqb inductive _).

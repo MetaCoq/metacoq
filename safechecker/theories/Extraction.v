@@ -36,6 +36,6 @@ Cd "src".
 Separate Extraction MakeOrderTac PCUICSafeChecker.typecheck_program
          SafeTemplateChecker.infer_and_print_template_program
          (* The following directives ensure separate extraction does not produce name clashes *)
-         String utils UnivSubst.
+         String utils UnivSubst Pretty.
 
 Cd "..".

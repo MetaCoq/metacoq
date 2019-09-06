@@ -1694,8 +1694,27 @@ Proof.
         (*    Fail eapply urenaming_context. *)
         (*    (* That was a dream but it doesn't work that way unfortunately... *) *)
         admit.
-      * (* forall_nth_error_All *)
-        admit.
+      * eapply forall_nth_error_All. intros i d e.
+        rewrite nth_error_map in e.
+        case_eq (nth_error mfix i).
+        2: intros e' ; rewrite e' in e ; discriminate.
+        intros d' e'. rewrite e' in e. simpl in e. inversion e as [ee].
+        clear e. rename ee into e. subst.
+        eapply All_nth_error in ihmfix as [[h1 h2] ih]. 2: exact e'.
+        destruct d' as [na ty bo rarg]. simpl in *.
+        split.
+        -- rewrite <- rename_fix_context.
+           eapply meta_conv.
+           ++ eapply ih. split.
+              ** (* Again this... *) admit.
+              ** rewrite <- fix_context_length. eapply urenaming_context.
+                 apply hf.
+           ++ autorewrite with sigma. subst types. rewrite fix_context_length.
+              eapply inst_ext. intro j.
+              unfold ren, lift_renaming, subst_compose, shiftn. simpl. f_equal.
+              destruct (Nat.ltb_spec0 (#|mfix| + j) #|mfix|). 1: lia.
+              f_equal. f_equal. lia.
+        -- eapply isLambda_rename. assumption.
     + destruct decl as [na ty bo rarg]. simpl. reflexivity.
   - intros Σ wfΣ Γ wfΓ mfix n decl types H0 X X0 ihmfix Δ f hf.
     admit.

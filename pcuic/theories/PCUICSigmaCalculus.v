@@ -1441,7 +1441,7 @@ Proof.
   eapply lookup_on_global_env in h1. 2: eauto.
   destruct h1 as [Σ' [wfΣ' decl']].
   red in decl'. destruct decl' as [h ? ? ?].
-  eapply forall_nth_error_Alli in h. 2: eassumption.
+  eapply Alli_nth_error in h. 2: eassumption.
   simpl in h. destruct h as [? ? ? [? h] ? ? ?].
   eapply typecheck_closed in h as [? e]. 2: auto. 2: constructor.
   move/andP in e. destruct e. assumption.
@@ -1461,7 +1461,7 @@ Proof.
   eapply lookup_on_global_env in hmdecl. 2: eauto.
   destruct hmdecl as [Σ' [wfΣ' decl']].
   red in decl'. destruct decl' as [h ? ? ?].
-  eapply forall_nth_error_Alli in h. 2: eassumption.
+  eapply Alli_nth_error in h. 2: eassumption.
   simpl in h. destruct h as [? ? ? ? h ? ?].
   unfold on_constructors in h.
   clear - h wfΣ'.

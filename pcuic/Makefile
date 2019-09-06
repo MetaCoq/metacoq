@@ -1,4 +1,4 @@
-all: theory #plugin
+all: theory plugin
 
 _PluginProject: _PluginProject.in metacoq-config
 	cat metacoq-config > _PluginProject
@@ -20,13 +20,13 @@ theory: Makefile.pcuic
 plugin: theory Makefile.plugin
 	$(MAKE) -f Makefile.plugin
 
-install: theory #plugin
+install: theory plugin
 	$(MAKE) -f Makefile.pcuic install
-	# $(MAKE) -f Makefile.plugin install
+	$(MAKE) -f Makefile.plugin install
 
 clean: Makefile.pcuic Makefile.plugin
 	make -f Makefile.pcuic clean
-	# make -f Makefile.plugin clean
+	make -f Makefile.plugin clean
 
 mrproper:
 	rm -f metacoq-config

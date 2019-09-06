@@ -327,4 +327,9 @@ checker/src/wf.mli
 /pcuic/src/PCUICPretty.ml
 /pcuic/src/PCUICPretty.mli
 /pcuic/src/ssreflect.ml
+
 /pcuic/src/ssreflect.mli
+/erasure/Makefile.plugin-e
+/safechecker/Makefile.plugin-e
+/template-coq/Makefile.plugin-e
+/template-coq/Makefile.template-e

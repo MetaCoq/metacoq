@@ -1808,7 +1808,33 @@ Proof.
         exists (rename_context f ctx), s. split.
         -- rewrite rename_context_inst_context. rewrite <- e'.
            f_equal. autorewrite with sigma. reflexivity.
-        -- admit.
+        -- clear - h2 hf.
+           induction ctx as [| [na [b|] A] Ξ ih].
+           ++ apply hf.
+           ++ rewrite rename_context_snoc. simpl.
+              unfold rename_decl, map_decl. simpl.
+              simpl in h2. inversion h2. subst. simpl in *.
+              destruct tu as [? ?].
+              constructor.
+              ** eapply ih. eassumption.
+              ** simpl. eexists. eapply X1.
+                 split.
+                 --- eapply ih. eassumption.
+                 --- eapply urenaming_context. apply hf.
+              ** simpl. eapply X0.
+                 split.
+                 --- eapply ih. eassumption.
+                 --- eapply urenaming_context. apply hf.
+           ++ rewrite rename_context_snoc. simpl.
+              unfold rename_decl, map_decl. simpl.
+              simpl in h2. inversion h2. subst. simpl in *.
+              destruct tu as [? ?]. simpl in *.
+              constructor.
+              ** eapply ih. eassumption.
+              ** simpl. eexists. eapply X0.
+                 split.
+                 --- eapply ih. eassumption.
+                 --- eapply urenaming_context. apply hf.
       * right. eexists. eapply ihB. assumption.
     + eapply cumul_rename. all: eassumption.
 Admitted.

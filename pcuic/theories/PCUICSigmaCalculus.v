@@ -1682,9 +1682,21 @@ Proof.
       rewrite rename_closedn. 2: reflexivity.
       eapply declared_projection_closed_type in isdecl. 2: auto.
       rewrite List.rev_length. rewrite e. assumption.
-  - intros Σ wfΣ Γ wfΓ mfix n decl types H0 H1 X ihmfix Δ f hf.
-    simpl.
-    admit.
+  - intros Σ wfΣ Γ wfΓ mfix n decl types hdecl H1 X ihmfix Δ f hf.
+    simpl. eapply meta_conv.
+    + eapply type_Fix.
+      * eapply fix_guard_rename. assumption.
+      * rewrite nth_error_map. rewrite hdecl. simpl. reflexivity.
+      * rewrite <- rename_fix_context.
+        (* case_eq (nth_error mfix 0). *)
+        (* -- intros d e. eapply All_nth_error in ihmfix as [h ih]. 2: eassumption. *)
+        (*    eapply typing_wf_local. eapply ih. subst types. *)
+        (*    Fail eapply urenaming_context. *)
+        (*    (* That was a dream but it doesn't work that way unfortunately... *) *)
+        admit.
+      * (* forall_nth_error_All *)
+        admit.
+    + destruct decl as [na ty bo rarg]. simpl. reflexivity.
   - intros Σ wfΣ Γ wfΓ mfix n decl types H0 X X0 ihmfix Δ f hf.
     admit.
   - intros Σ wfΣ Γ wfΓ t A B X ht iht hwf hcu Δ f hf.

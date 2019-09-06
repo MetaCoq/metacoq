@@ -38,6 +38,8 @@ theories/PCUICRetyping.v
 theories/PCUICElimination.v
 theories/PCUICSN.v
 
+theories/PCUICSigmaCalculus.v
+
 theories/PCUICSafeLemmata.v
 
 theories/TemplateToPCUIC.v

@@ -1012,14 +1012,31 @@ Proof.
   intros Hl. unfold mapi. apply mapi_ext_size. simpl. auto.
 Qed.
 
-Lemma forall_nth_error_Alli {A} (P : nat -> A -> Type) k ctx :
-  (forall i x, nth_error ctx i = Some x -> P (k + i) x) ->
-  Alli P k ctx.
+Lemma forall_nth_error_All :
+  forall {A} (P : A -> Type) l,
+    (forall i x, nth_error l i = Some x -> P x) ->
+    All P l.
 Proof.
-  intros. induction ctx in k, X |- *. constructor.
-  constructor. specialize (X 0 a eq_refl). now rewrite Nat.add_0_r in X.
-  apply IHctx. intros. specialize (X (S i) x H).
-  simpl. now replace (S (k + i)) with (k + S i) by lia.
+  intros A P l h.
+  induction l.
+  - constructor.
+  - constructor.
+    + specialize (h 0 a eq_refl). assumption.
+    + eapply IHl. intros i x e. eapply (h (S i)). assumption.
+Qed.
+
+Lemma forall_nth_error_Alli :
+  forall {A} (P : nat -> A -> Type) k l,
+    (forall i x, nth_error l i = Some x -> P (k + i) x) ->
+    Alli P k l.
+Proof.
+  intros A P k l h.
+  induction l in k, h |- *.
+  - constructor.
+  - constructor.
+    + specialize (h 0 a eq_refl). now rewrite Nat.add_0_r in h.
+    + apply IHl. intros. specialize (h (S i) x H).
+      simpl. now replace (S (k + i)) with (k + S i) by lia.
 Qed.
 
 Lemma Alli_mapi {A B} {P : nat -> B -> Type} (f : nat -> A -> B) k l :

@@ -1682,11 +1682,122 @@ Proof.
       rewrite rename_closedn. 2: reflexivity.
       eapply declared_projection_closed_type in isdecl. 2: auto.
       rewrite List.rev_length. rewrite e. assumption.
-  - intros Σ wfΣ Γ wfΓ mfix n decl types H0 H1 X ihmfix Δ f hf.
-    simpl.
-    admit.
-  - intros Σ wfΣ Γ wfΓ mfix n decl types H0 X X0 ihmfix Δ f hf.
-    admit.
+  - intros Σ wfΣ Γ wfΓ mfix n decl types hdecl H1 X ihmfix Δ f hf.
+    assert (hΔ' : wf_local Σ (Δ ,,, rename_context f (fix_context mfix))).
+    { subst types. set (Ξ := fix_context mfix) in *.
+      clearbody Ξ. clear - X hf.
+      induction Ξ as [| [na [b|] A] Ξ ih].
+      - apply hf.
+      - rewrite rename_context_snoc. simpl.
+        unfold rename_decl, map_decl. simpl.
+        simpl in X. inversion X. subst. simpl in *.
+        destruct X1 as [? [h1 ih1]].
+        destruct X2 as [h2 ih2].
+        constructor.
+        + eapply ih. assumption.
+        + simpl. eexists. eapply ih1.
+          split.
+          * eapply ih. assumption.
+          * eapply urenaming_context. apply hf.
+        + simpl. eapply ih2.
+          split.
+          * eapply ih. assumption.
+          * eapply urenaming_context. apply hf.
+      - rewrite rename_context_snoc. simpl.
+        unfold rename_decl, map_decl. simpl.
+        simpl in X. inversion X. subst. simpl in *.
+        destruct X1 as [? [h1 ih1]].
+        constructor.
+        + eapply ih. assumption.
+        + simpl. eexists. eapply ih1.
+          split.
+          * eapply ih. assumption.
+          * eapply urenaming_context. apply hf.
+    }
+    simpl. eapply meta_conv.
+    + eapply type_Fix.
+      * eapply fix_guard_rename. assumption.
+      * rewrite nth_error_map. rewrite hdecl. simpl. reflexivity.
+      * rewrite <- rename_fix_context. eapply hΔ'.
+      * eapply forall_nth_error_All. intros i d e.
+        rewrite nth_error_map in e.
+        case_eq (nth_error mfix i).
+        2: intros e' ; rewrite e' in e ; discriminate.
+        intros d' e'. rewrite e' in e. simpl in e. inversion e as [ee].
+        clear e. rename ee into e. subst.
+        eapply All_nth_error in ihmfix as [[h1 h2] ih]. 2: exact e'.
+        destruct d' as [na ty bo rarg]. simpl in *.
+        split.
+        -- rewrite <- rename_fix_context.
+           eapply meta_conv.
+           ++ eapply ih. split.
+              ** assumption.
+              ** rewrite <- fix_context_length. eapply urenaming_context.
+                 apply hf.
+           ++ autorewrite with sigma. subst types. rewrite fix_context_length.
+              eapply inst_ext. intro j.
+              unfold ren, lift_renaming, subst_compose, shiftn. simpl. f_equal.
+              destruct (Nat.ltb_spec0 (#|mfix| + j) #|mfix|). 1: lia.
+              f_equal. f_equal. lia.
+        -- eapply isLambda_rename. assumption.
+    + destruct decl as [na ty bo rarg]. simpl. reflexivity.
+  - intros Σ wfΣ Γ wfΓ mfix n decl types hdecl X ihmfix hallow Δ f hf.
+    assert (hΔ' : wf_local Σ (Δ ,,, rename_context f (fix_context mfix))).
+    { subst types. set (Ξ := fix_context mfix) in *.
+      clearbody Ξ. clear - X hf.
+      induction Ξ as [| [na [b|] A] Ξ ih].
+      - apply hf.
+      - rewrite rename_context_snoc. simpl.
+        unfold rename_decl, map_decl. simpl.
+        simpl in X. inversion X. subst. simpl in *.
+        destruct X1 as [? [h1 ih1]].
+        destruct X2 as [h2 ih2].
+        constructor.
+        + eapply ih. assumption.
+        + simpl. eexists. eapply ih1.
+          split.
+          * eapply ih. assumption.
+          * eapply urenaming_context. apply hf.
+        + simpl. eapply ih2.
+          split.
+          * eapply ih. assumption.
+          * eapply urenaming_context. apply hf.
+      - rewrite rename_context_snoc. simpl.
+        unfold rename_decl, map_decl. simpl.
+        simpl in X. inversion X. subst. simpl in *.
+        destruct X1 as [? [h1 ih1]].
+        constructor.
+        + eapply ih. assumption.
+        + simpl. eexists. eapply ih1.
+          split.
+          * eapply ih. assumption.
+          * eapply urenaming_context. apply hf.
+    }
+    simpl. eapply meta_conv.
+    + eapply type_CoFix.
+      * assumption.
+      * rewrite nth_error_map. rewrite hdecl. simpl. reflexivity.
+      * rewrite <- rename_fix_context. eapply hΔ'.
+      * eapply forall_nth_error_All. intros i d e.
+        rewrite nth_error_map in e.
+        case_eq (nth_error mfix i).
+        2: intros e' ; rewrite e' in e ; discriminate.
+        intros d' e'. rewrite e' in e. simpl in e. inversion e as [ee].
+        clear e. rename ee into e. subst.
+        eapply All_nth_error in ihmfix as [h ih]. 2: exact e'.
+        destruct d' as [na ty bo rarg]. simpl in *.
+        rewrite <- rename_fix_context.
+        eapply meta_conv.
+        -- eapply ih. split.
+           ++ assumption.
+           ++ rewrite <- fix_context_length. eapply urenaming_context.
+              apply hf.
+        -- autorewrite with sigma. subst types. rewrite fix_context_length.
+           eapply inst_ext. intro j.
+           unfold ren, lift_renaming, subst_compose, shiftn. simpl. f_equal.
+           destruct (Nat.ltb_spec0 (#|mfix| + j) #|mfix|). 1: lia.
+           f_equal. f_equal. lia.
+    + destruct decl as [na ty bo rarg]. simpl. reflexivity.
   - intros Σ wfΣ Γ wfΓ t A B X ht iht hwf hcu Δ f hf.
     eapply type_Cumul.
     + eapply iht. assumption.
@@ -1697,7 +1808,33 @@ Proof.
         exists (rename_context f ctx), s. split.
         -- rewrite rename_context_inst_context. rewrite <- e'.
            f_equal. autorewrite with sigma. reflexivity.
-        -- admit.
+        -- clear - h2 hf.
+           induction ctx as [| [na [b|] A] Ξ ih].
+           ++ apply hf.
+           ++ rewrite rename_context_snoc. simpl.
+              unfold rename_decl, map_decl. simpl.
+              simpl in h2. inversion h2. subst. simpl in *.
+              destruct tu as [? ?].
+              constructor.
+              ** eapply ih. eassumption.
+              ** simpl. eexists. eapply X1.
+                 split.
+                 --- eapply ih. eassumption.
+                 --- eapply urenaming_context. apply hf.
+              ** simpl. eapply X0.
+                 split.
+                 --- eapply ih. eassumption.
+                 --- eapply urenaming_context. apply hf.
+           ++ rewrite rename_context_snoc. simpl.
+              unfold rename_decl, map_decl. simpl.
+              simpl in h2. inversion h2. subst. simpl in *.
+              destruct tu as [? ?]. simpl in *.
+              constructor.
+              ** eapply ih. eassumption.
+              ** simpl. eexists. eapply X0.
+                 split.
+                 --- eapply ih. eassumption.
+                 --- eapply urenaming_context. apply hf.
       * right. eexists. eapply ihB. assumption.
     + eapply cumul_rename. all: eassumption.
 Admitted.

@@ -715,7 +715,7 @@ Proof.
     + apply IHmfix.
 Qed.
 
-(* Also true... why?? *)
+(* Also true... so we can probably prove a more general lemma. *)
 (* Lemma rename_fix_context : *)
 (*   forall f mfix, *)
 (*     rename_context f (fix_context mfix) = *)

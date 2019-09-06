@@ -1683,40 +1683,42 @@ Proof.
       eapply declared_projection_closed_type in isdecl. 2: auto.
       rewrite List.rev_length. rewrite e. assumption.
   - intros Σ wfΣ Γ wfΓ mfix n decl types hdecl H1 X ihmfix Δ f hf.
+    assert (hΔ' : wf_local Σ (Δ ,,, rename_context f (fix_context mfix))).
+    { subst types. set (Ξ := fix_context mfix) in *.
+      clearbody Ξ. clear - X hf.
+      induction Ξ as [| [na [b|] A] Ξ ih].
+      - apply hf.
+      - rewrite rename_context_snoc. simpl.
+        unfold rename_decl, map_decl. simpl.
+        simpl in X. inversion X. subst. simpl in *.
+        destruct X1 as [? [h1 ih1]].
+        destruct X2 as [h2 ih2].
+        constructor.
+        + eapply ih. assumption.
+        + simpl. eexists. eapply ih1.
+          split.
+          * eapply ih. assumption.
+          * eapply urenaming_context. apply hf.
+        + simpl. eapply ih2.
+          split.
+          * eapply ih. assumption.
+          * eapply urenaming_context. apply hf.
+      - rewrite rename_context_snoc. simpl.
+        unfold rename_decl, map_decl. simpl.
+        simpl in X. inversion X. subst. simpl in *.
+        destruct X1 as [? [h1 ih1]].
+        constructor.
+        + eapply ih. assumption.
+        + simpl. eexists. eapply ih1.
+          split.
+          * eapply ih. assumption.
+          * eapply urenaming_context. apply hf.
+    }
     simpl. eapply meta_conv.
     + eapply type_Fix.
       * eapply fix_guard_rename. assumption.
       * rewrite nth_error_map. rewrite hdecl. simpl. reflexivity.
-      * rewrite <- rename_fix_context.
-        subst types. set (Ξ := fix_context mfix) in *.
-        clearbody Ξ. clear - X hf.
-        induction Ξ as [| [na [b|] A] Ξ ih].
-        -- apply hf.
-        -- rewrite rename_context_snoc. simpl.
-           unfold rename_decl, map_decl. simpl.
-           simpl in X. inversion X. subst. simpl in *.
-           destruct X1 as [? [h1 ih1]].
-           destruct X2 as [h2 ih2].
-           constructor.
-           ++ eapply ih. assumption.
-           ++ simpl. eexists. eapply ih1.
-              split.
-              ** eapply ih. assumption.
-              ** eapply urenaming_context. apply hf.
-           ++ simpl. eapply ih2.
-              split.
-              ** eapply ih. assumption.
-              ** eapply urenaming_context. apply hf.
-        -- rewrite rename_context_snoc. simpl.
-           unfold rename_decl, map_decl. simpl.
-           simpl in X. inversion X. subst. simpl in *.
-           destruct X1 as [? [h1 ih1]].
-           constructor.
-           ++ eapply ih. assumption.
-           ++ simpl. eexists. eapply ih1.
-              split.
-              ** eapply ih. assumption.
-              ** eapply urenaming_context. apply hf.
+      * rewrite <- rename_fix_context. eapply hΔ'.
       * eapply forall_nth_error_All. intros i d e.
         rewrite nth_error_map in e.
         case_eq (nth_error mfix i).
@@ -1729,7 +1731,7 @@ Proof.
         -- rewrite <- rename_fix_context.
            eapply meta_conv.
            ++ eapply ih. split.
-              ** (* Again this... *) admit.
+              ** assumption.
               ** rewrite <- fix_context_length. eapply urenaming_context.
                  apply hf.
            ++ autorewrite with sigma. subst types. rewrite fix_context_length.

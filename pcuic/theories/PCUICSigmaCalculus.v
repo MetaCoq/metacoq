@@ -1688,12 +1688,35 @@ Proof.
       * eapply fix_guard_rename. assumption.
       * rewrite nth_error_map. rewrite hdecl. simpl. reflexivity.
       * rewrite <- rename_fix_context.
-        (* case_eq (nth_error mfix 0). *)
-        (* -- intros d e. eapply All_nth_error in ihmfix as [h ih]. 2: eassumption. *)
-        (*    eapply typing_wf_local. eapply ih. subst types. *)
-        (*    Fail eapply urenaming_context. *)
-        (*    (* That was a dream but it doesn't work that way unfortunately... *) *)
-        admit.
+        subst types. set (Ξ := fix_context mfix) in *.
+        clearbody Ξ. clear - X hf.
+        induction Ξ as [| [na [b|] A] Ξ ih].
+        -- apply hf.
+        -- rewrite rename_context_snoc. simpl.
+           unfold rename_decl, map_decl. simpl.
+           simpl in X. inversion X. subst. simpl in *.
+           destruct X1 as [? [h1 ih1]].
+           destruct X2 as [h2 ih2].
+           constructor.
+           ++ eapply ih. assumption.
+           ++ simpl. eexists. eapply ih1.
+              split.
+              ** eapply ih. assumption.
+              ** eapply urenaming_context. apply hf.
+           ++ simpl. eapply ih2.
+              split.
+              ** eapply ih. assumption.
+              ** eapply urenaming_context. apply hf.
+        -- rewrite rename_context_snoc. simpl.
+           unfold rename_decl, map_decl. simpl.
+           simpl in X. inversion X. subst. simpl in *.
+           destruct X1 as [? [h1 ih1]].
+           constructor.
+           ++ eapply ih. assumption.
+           ++ simpl. eexists. eapply ih1.
+              split.
+              ** eapply ih. assumption.
+              ** eapply urenaming_context. apply hf.
       * eapply forall_nth_error_All. intros i d e.
         rewrite nth_error_map in e.
         case_eq (nth_error mfix i).

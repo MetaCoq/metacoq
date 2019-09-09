@@ -1,3 +1,5 @@
+SED = `which gsed || which sed`
+
 all: theory plugin
 
 _PluginProject: _PluginProject.in metacoq-config
@@ -10,6 +12,7 @@ _CoqProject: _CoqProject.in metacoq-config
 
 Makefile.plugin: _PluginProject
 	coq_makefile -f _PluginProject -o Makefile.plugin $(DEPS)
+	$(SED) -i -e s/coqdeps/coqdeps.plugin/g Makefile.plugin
 
 Makefile.pcuic: _CoqProject
 	coq_makefile -f _CoqProject -o Makefile.pcuic $(DEPS)

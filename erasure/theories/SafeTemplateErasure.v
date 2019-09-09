@@ -42,6 +42,7 @@ Local Open Scope string_scope.
 
 Program Definition erase_and_print_template_program {cf : checker_flags} (p : Ast.program)
   : string + string :=
+  let p := fix_program_universes p in
   match erase_template_program p return string + string with
   | CorrectDecl (Σ', t) =>
     inl ("Environment is well-formed and " ++ Pretty.print_term (AstUtils.empty_ext p.1) [] true p.2 ++

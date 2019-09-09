@@ -404,6 +404,23 @@ Section Lemmata.
       + cbn. eexists. eassumption.
   Qed.
 
+  (* TODO MOVE *)
+  Lemma eq_context_upto_rev :
+    forall Γ Δ Re,
+      eq_context_upto Re Γ Δ ->
+      eq_context_upto Re (List.rev Γ) (List.rev Δ).
+  Proof.
+    intros Γ Δ Re h.
+    induction h.
+    - constructor.
+    - simpl. eapply eq_context_upto_cat.
+      + repeat constructor. assumption.
+      + assumption.
+    - simpl. eapply eq_context_upto_cat.
+      + repeat constructor. all: assumption.
+      + assumption.
+  Qed.
+
   Lemma type_rename :
     forall Σ Γ u v A,
       wf Σ.1 ->
@@ -583,15 +600,42 @@ Section Lemmata.
       dependent destruction e.
       eapply All2_nth_error_Some in hnth as hnth' ; eauto.
       destruct hnth' as [decl' [hnth' hh]].
-      simpl in hh. destruct hh as [[ety ebo] era].
+      destruct hh as [[ety ebo] era].
       eapply type_Cumul.
       + econstructor.
         * eapply fix_guard_eq_term ; eauto.
           constructor. assumption.
         * eassumption.
-        * subst types.
-          (* Using ihmfix? *)
-          admit.
+        * rename types into Δ. set (Ξ := fix_context mfix').
+          assert (e : eq_context_upto eq Δ Ξ).
+          { eapply eq_context_upto_rev.
+            clear - a.
+            unfold mapi. generalize 0 at 2 4. intro n.
+            induction a in n |- *.
+            - constructor.
+            - simpl. constructor.
+              + eapply eq_term_upto_univ_lift. apply r.
+              + eapply IHa.
+          }
+          clearbody Δ Ξ.
+          clear - e hwf wfΓ.
+          induction e.
+          -- assumption.
+          -- simpl in *. inversion hwf. subst.
+             constructor.
+             ++ eapply IHe. assumption.
+             ++ simpl. destruct X0 as [? [? ih]].
+                eexists. (* NEED context conversion for eq_context_upto
+                            then using ih and e to conclude.
+                          *)
+                admit.
+          -- simpl in *. inversion hwf. subst.
+             constructor.
+             ++ eapply IHe. assumption.
+             ++ simpl. destruct X0 as [? [? ih]]. (* SAME NEED *) admit.
+             ++ simpl in *. destruct X1 as [? ih].
+                (* More involved but similar again, just need some conversion *)
+                admit.
         * admit.
       + eapply validity_term ; eauto.
         instantiate (1 := tFix mfix n).

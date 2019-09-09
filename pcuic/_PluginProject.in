@@ -9,6 +9,8 @@ src/signature.mli
 src/signature.ml
 # src/logic1.mli
 # src/logic1.ml
+src/init.mli
+src/init.ml
 
 # From Coq
 # src/cRelationClasses.mli
@@ -17,6 +19,8 @@ src/signature.ml
 # src/relation.ml
 # src/relation_Properties.mli
 # src/relation_Properties.ml
+src/cMorphisms.mli
+src/cMorphisms.ml
 src/ssreflect.mli
 src/ssreflect.ml
 
@@ -26,14 +30,14 @@ src/pCUICAstUtils.ml
 src/pCUICAstUtils.mli
 src/pCUICLiftSubst.ml
 src/pCUICLiftSubst.mli
-# src/eqDecInstances.ml
-# src/eqDecInstances.mli
+src/eqDecInstances.ml
+src/eqDecInstances.mli
 src/pCUICInduction.mli
 src/pCUICInduction.ml
-# src/pCUICReflect.mli
-# src/pCUICReflect.ml
-# src/pCUICEquality.mli
-# src/pCUICEquality.ml
+src/pCUICReflect.mli
+src/pCUICReflect.ml
+src/pCUICEquality.mli
+src/pCUICEquality.ml
 src/pCUICTyping.ml
 src/pCUICTyping.mli
 src/pCUICUnivSubst.ml

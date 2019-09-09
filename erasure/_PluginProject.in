@@ -19,6 +19,8 @@ src/uGraph0.ml
 src/uGraph0.mli
 src/wGraph.ml
 src/wGraph.mli
+src/typing0.mli
+src/typing0.ml
 
 # From PCUIC
 src/pCUICAst.ml
@@ -79,8 +81,8 @@ src/pCUICSafeConversion.mli
 src/pCUICSafeConversion.ml
 src/pCUICSafeChecker.mli
 src/pCUICSafeChecker.ml
-# src/safeTemplateChecker.mli
-# src/safeTemplateChecker.ml
+src/safeTemplateChecker.mli
+src/safeTemplateChecker.ml
 
 # src/ssreflect.mli
 # src/ssreflect.ml

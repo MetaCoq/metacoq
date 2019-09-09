@@ -333,3 +333,7 @@ checker/src/wf.mli
 /safechecker/Makefile.plugin-e
 /template-coq/Makefile.plugin-e
 /template-coq/Makefile.template-e
+/erasure/src/safeTemplateChecker.ml
+/erasure/src/safeTemplateChecker.mli
+/erasure/src/typing0.ml
+/erasure/src/typing0.mli

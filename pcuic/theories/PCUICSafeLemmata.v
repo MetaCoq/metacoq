@@ -670,65 +670,65 @@ Section Lemmata.
       destruct hh as [[ety ebo] era].
       assert (hwf' : wf_local Σ (Γ ,,, fix_context mfix')).
       { rename types into Δ. set (Ξ := fix_context mfix').
-          assert (e : eq_context_upto eq Δ Ξ).
-          { eapply eq_context_upto_rev.
-            clear - a.
-            unfold mapi. generalize 0 at 2 4. intro n.
-            induction a in n |- *.
-            - constructor.
-            - simpl. constructor.
-              + eapply eq_term_upto_univ_lift. apply r.
-              + eapply IHa.
-          }
-          clearbody Δ Ξ.
-          clear - e hwf wfΣ wfΓ.
-          induction e.
-          -- assumption.
-          -- simpl in *. inversion hwf. subst.
-             constructor.
-             ++ eapply IHe. assumption.
-             ++ simpl. destruct X0 as [? [? ih]].
-                eexists.
-                eapply context_conversion.
-                ** assumption.
-                ** eapply IHe. assumption.
-                ** eapply ih. assumption.
-                ** eapply eq_context_upto_conv_context.
-                   eapply eq_context_impl ; revgoals.
-                   --- eapply eq_context_upto_cat. 2: eassumption.
-                       eapply eq_context_upto_refl. auto.
-                   --- intros ? ? []. eapply eq_universe_refl.
-          -- simpl in *. inversion hwf. subst.
-             constructor.
-             ++ eapply IHe. assumption.
-             ++ simpl. destruct X0 as [? [? ih]].
-                eexists.
-                eapply context_conversion.
-                ** assumption.
-                ** eapply IHe. assumption.
-                ** eapply ih. assumption.
-                ** eapply eq_context_upto_conv_context.
-                   eapply eq_context_impl ; revgoals.
-                   --- eapply eq_context_upto_cat. 2: eassumption.
-                       eapply eq_context_upto_refl. auto.
-                   --- intros ? ? []. eapply eq_universe_refl.
-             ++ simpl in *. destruct X0 as [? [? ih1]]. destruct X1 as [? ih2].
-                eapply context_conversion.
-                ** assumption.
-                ** eapply IHe. assumption.
-                ** eapply type_Cumul.
-                   --- eapply ih2. assumption.
-                   --- right. eexists. eapply ih1. assumption.
-                   --- eapply cumul_refl.
-                       eapply eq_term_upto_univ_impl. 3: eassumption.
-                       all: intros ? ? [].
-                       +++ eapply eq_universe_refl.
-                       +++ eapply leq_universe_refl.
-                ** eapply eq_context_upto_conv_context.
-                   eapply eq_context_impl ; revgoals.
-                   --- eapply eq_context_upto_cat. 2: eassumption.
-                       eapply eq_context_upto_refl. auto.
-                   --- intros ? ? []. eapply eq_universe_refl.
+        assert (e : eq_context_upto eq Δ Ξ).
+        { eapply eq_context_upto_rev.
+          clear - a.
+          unfold mapi. generalize 0 at 2 4. intro n.
+          induction a in n |- *.
+          - constructor.
+          - simpl. constructor.
+            + eapply eq_term_upto_univ_lift. apply r.
+            + eapply IHa.
+        }
+        clearbody Δ Ξ.
+        clear - e hwf wfΣ wfΓ.
+        induction e.
+        - assumption.
+        - simpl in *. inversion hwf. subst.
+          constructor.
+          + eapply IHe. assumption.
+          + simpl. destruct X0 as [? [? ih]].
+            eexists.
+            eapply context_conversion.
+            * assumption.
+            * eapply IHe. assumption.
+            * eapply ih. assumption.
+            * eapply eq_context_upto_conv_context.
+              eapply eq_context_impl ; revgoals.
+              -- eapply eq_context_upto_cat. 2: eassumption.
+                 eapply eq_context_upto_refl. auto.
+              -- intros ? ? []. eapply eq_universe_refl.
+        - simpl in *. inversion hwf. subst.
+          constructor.
+          + eapply IHe. assumption.
+          + simpl. destruct X0 as [? [? ih]].
+            eexists.
+            eapply context_conversion.
+            * assumption.
+            * eapply IHe. assumption.
+            * eapply ih. assumption.
+            * eapply eq_context_upto_conv_context.
+              eapply eq_context_impl ; revgoals.
+              -- eapply eq_context_upto_cat. 2: eassumption.
+                 eapply eq_context_upto_refl. auto.
+              -- intros ? ? []. eapply eq_universe_refl.
+          + simpl in *. destruct X0 as [? [? ih1]]. destruct X1 as [? ih2].
+            eapply context_conversion.
+            * assumption.
+            * eapply IHe. assumption.
+            * eapply type_Cumul.
+              -- eapply ih2. assumption.
+              -- right. eexists. eapply ih1. assumption.
+              -- eapply cumul_refl.
+                 eapply eq_term_upto_univ_impl. 3: eassumption.
+                 all: intros ? ? [].
+                 ++ eapply eq_universe_refl.
+                 ++ eapply leq_universe_refl.
+            * eapply eq_context_upto_conv_context.
+              eapply eq_context_impl ; revgoals.
+              -- eapply eq_context_upto_cat. 2: eassumption.
+                 eapply eq_context_upto_refl. auto.
+              -- intros ? ? []. eapply eq_universe_refl.
       }
       eapply type_Cumul.
       + econstructor.

@@ -736,7 +736,31 @@ Section Lemmata.
           constructor. assumption.
         * eassumption.
         * assumption.
-        * rename types into Δ. set (Ξ := fix_context mfix') in *.
+        * assert (val :
+            All (fun d =>
+              lift_typing typing Σ (Γ ,,, fix_context mfix')
+                          ((lift0 #|fix_context mfix'|) (dtype d))
+                          None
+            ) mfix'
+          ).
+          { pose proof hwf' as hΔ. revert hΔ.
+            generalize (fix_context mfix'). intros Δ hΔ.
+            clear - hwf' hΔ.
+            eapply All_rev_inv.
+            induction mfix' using list_rect_rev.
+            - constructor.
+            - simpl. rewrite rev_app_distr. simpl.
+              unfold fix_context in hwf'.
+              rewrite mapi_app in hwf'.
+              rewrite rev_app_distr in hwf'.
+              simpl in hwf'.
+              inversion hwf'. subst.
+              constructor.
+              + simpl in X0. admit.
+                (* NEED relation between Δ and fix_context *)
+              + eapply IHmfix'. assumption.
+          }
+          rename types into Δ. set (Ξ := fix_context mfix') in *.
           assert (e : eq_context_upto eq Δ Ξ).
           { eapply eq_context_upto_rev.
             clear - a.
@@ -750,7 +774,7 @@ Section Lemmata.
           clearbody Δ Ξ.
           assert (el : #|Δ| = #|Ξ|).
           { eapply eq_context_upto_length. eassumption. }
-          clear - e a ihmfix wfΣ hwf' el.
+          clear - e a ihmfix wfΣ hwf' el val.
           induction a.
           -- constructor.
           -- inversion ihmfix. subst.
@@ -762,7 +786,21 @@ Section Lemmata.
                    --- assumption.
                    --- eapply type_Cumul.
                        +++ eapply ih. intuition eauto.
-                       +++ admit. (* What's missing here? *)
+                       +++ right. simpl in val. inversion val. subst.
+                           destruct X.
+                           eexists. eapply context_conversion.
+                           *** assumption.
+                           *** eauto using typing_wf_local.
+                           *** eassumption.
+                           *** eapply eq_context_upto_conv_context.
+                               eapply eq_context_upto_sym.
+                               ---- intros ? ? ?. eapply eq_universe_sym.
+                                    assumption.
+                               ---- eapply eq_context_impl ; revgoals.
+                                    ++++ eapply eq_context_upto_cat.
+                                         2: eassumption.
+                                         eapply eq_context_upto_refl. auto.
+                                    ++++ intros ? ? []. eapply eq_universe_refl.
                        +++ eapply cumul_refl. rewrite <- el.
                            eapply eq_term_upto_univ_lift.
                            eapply eq_term_upto_univ_impl.

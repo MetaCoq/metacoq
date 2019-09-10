@@ -247,10 +247,18 @@ Section Lemmata.
 
   Lemma context_conversion :
     forall {Σ Γ t T Γ'},
+      wf Σ.1 ->
+      wf_local Σ Γ' ->
       Σ ;;; Γ |- t : T ->
       conv_context Σ Γ Γ' ->
       Σ ;;; Γ' |- t : T.
-  Admitted.
+  Proof.
+    intros Σ Γ t T Γ' hΣ hΓ' h e.
+    eapply context_conversion.
+    4: exact e.
+    all: try assumption.
+    eapply typing_wf_local. eassumption.
+  Qed.
 
   Hint Resolve eq_term_upto_univ_refl : core.
 
@@ -447,6 +455,9 @@ Section Lemmata.
       econstructor.
       + eapply ihA. assumption.
       + eapply context_conversion.
+        * assumption.
+        * constructor. 1: assumption.
+          simpl. eexists. eapply ihA. assumption.
         * eapply ihB. assumption.
         * constructor.
           -- apply conv_ctx_refl ; auto.
@@ -458,6 +469,9 @@ Section Lemmata.
       + econstructor.
         * eapply ihA. assumption.
         * eapply context_conversion.
+          -- assumption.
+          -- constructor. 1: assumption.
+             simpl. eexists. eapply ihA. assumption.
           -- eapply ihB. assumption.
           -- constructor.
              ++ apply conv_ctx_refl ; auto.
@@ -482,6 +496,18 @@ Section Lemmata.
           -- constructor. eapply eq_term_leq_term.
              eapply eq_term_upto_univ_eq_eq_term. assumption.
         * eapply context_conversion.
+          -- assumption.
+          -- constructor.
+             ++ assumption.
+             ++ simpl. eexists. eapply ihB. assumption.
+             ++ simpl. eapply type_Cumul.
+                ** eapply ihb. assumption.
+                ** right. eexists. eapply ihB. assumption.
+                ** eapply cumul_refl.
+                   eapply eq_term_upto_univ_impl. 3: eassumption.
+                   all: intros x ? [].
+                   --- eapply eq_universe_refl.
+                   --- eapply leq_universe_refl.
           -- eapply ihA. assumption.
           -- constructor.
              ++ apply conv_ctx_refl ; auto.
@@ -625,7 +651,8 @@ Section Lemmata.
              constructor.
              ++ eapply IHe. assumption.
              ++ simpl. destruct X0 as [? [? ih]].
-                eexists. (* NEED context conversion for eq_context_upto
+                eexists.
+ (* NEED context conversion for eq_context_upto
                             then using ih and e to conclude.
                           *)
                 admit.

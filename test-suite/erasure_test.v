@@ -1,5 +1,6 @@
 From MetaCoq.Template Require Import Loader.
 From MetaCoq.Erasure Require Import Loader.
+From MetaCoq.SafeChecker Require Import Loader.
 Local Open Scope string_scope.
 
 MetaCoq Erase nat.
@@ -34,3 +35,8 @@ MetaCoq Erase ((fun (X : Set) (x : X) (e : x = x) =>
 
 (** Check the treatment of Prop <= Type *)
 MetaCoq Erase ((fun (X : Set) (x : X) => x) True I).
+Quote Recursively Definition foo := List.map.
+
+Require Import List.
+Import ListNotations.
+MetaCoq Erase (map negb [true; false]).

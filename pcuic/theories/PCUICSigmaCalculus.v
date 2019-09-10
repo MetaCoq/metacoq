@@ -1328,7 +1328,9 @@ Proof.
       replace t' with t ; revgoals
     end
   end.
-  { autorewrite with sigma. admit. }
+  { autorewrite with sigma.
+    rewrite <- !rename_inst.
+    now rewrite rename_subst_instance_constr. }
   rewrite eity.
   case_eq (destArity [] ity) ;
     try solve [ intro bot ; rewrite bot in h ; discriminate h ].
@@ -1407,7 +1409,7 @@ Proof.
           simpl. rewrite idsn_length. reflexivity.
   }
   rewrite ebrtys'. autorewrite with sigma. reflexivity.
-Admitted.
+Qed.
 
 (* TODO MOVE *)
 Lemma declared_constant_closed_type :

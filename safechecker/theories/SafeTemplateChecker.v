@@ -100,7 +100,7 @@ Definition fix_global_env_universes (Σ : Ast.global_env) : Ast.global_env :=
     let dangling := dangling_universes declared declcstrs in
     (update_universes (LevelSet.union declu dangling, declcstrs) decl, LevelSet.union declared dangling)
   in
-  fst (fold_map_right fix_decl Σ LevelSet.empty).
+  fst (fold_map_left fix_decl Σ LevelSet.empty).
 
 Definition fix_program_universes (p : Ast.program) : Ast.program :=
   let '(Σ, t) := p in

@@ -460,6 +460,16 @@ Section Lemmata.
       all: eapply eq_term_upto_univ_impl. all: eassumption.
   Qed.
 
+  (* TODO MOVE *)
+  Lemma eq_context_upto_length :
+    forall Re Γ Δ,
+      eq_context_upto Re Γ Δ ->
+      #|Γ| = #|Δ|.
+  Proof.
+    intros Re Γ Δ h.
+    induction h. all: simpl ; auto.
+  Qed.
+
   Lemma type_rename :
     forall Σ Γ u v A,
       wf Σ.1 ->
@@ -723,7 +733,51 @@ Section Lemmata.
                    --- eapply eq_context_upto_cat. 2: eassumption.
                        eapply eq_context_upto_refl. auto.
                    --- intros ? ? []. eapply eq_universe_refl.
-        * admit.
+        * rename types into Δ. set (Ξ := fix_context mfix').
+          assert (e : eq_context_upto eq Δ Ξ).
+          { eapply eq_context_upto_rev.
+            clear - a.
+            unfold mapi. generalize 0 at 2 4. intro n.
+            induction a in n |- *.
+            - constructor.
+            - simpl. constructor.
+              + eapply eq_term_upto_univ_lift. apply r.
+              + eapply IHa.
+          }
+          clearbody Δ Ξ.
+          assert (hΞ : wf_local Σ (Γ ,,, Ξ)).
+          { admit. }
+          assert (el : #|Δ| = #|Ξ|).
+          { eapply eq_context_upto_length. eassumption. }
+          clear - e a ihmfix wfΣ hΞ el.
+          induction a.
+          -- constructor.
+          -- inversion ihmfix. subst.
+             destruct X as [[? ?] ih].
+             constructor.
+             ++ split.
+                ** eapply context_conversion.
+                   --- assumption.
+                   --- assumption.
+                   --- eapply type_Cumul.
+                       +++ eapply ih. intuition eauto.
+                       +++ admit. (* What's missing here? *)
+                       +++ eapply cumul_refl. rewrite <- el.
+                           eapply eq_term_upto_univ_lift.
+                           eapply eq_term_upto_univ_impl.
+                           3: intuition eauto.
+                           all: intros ? ? [].
+                           *** eapply eq_universe_refl.
+                           *** eapply leq_universe_refl.
+                   --- eapply eq_context_upto_conv_context.
+                       eapply eq_context_impl ; revgoals.
+                       +++ eapply eq_context_upto_cat. 2: eassumption.
+                           eapply eq_context_upto_refl. auto.
+                       +++ intros ? ? []. eapply eq_universe_refl.
+                ** eapply isLambda_eq_term_l.
+                   --- eassumption.
+                   --- intuition eauto.
+             ++ eapply IHa. assumption.
       + eapply validity_term ; eauto.
         instantiate (1 := tFix mfix n).
         econstructor ; eauto.

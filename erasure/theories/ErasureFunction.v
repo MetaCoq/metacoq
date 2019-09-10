@@ -191,6 +191,17 @@ Local Existing Instance extraction_checker_flags.
 Definition wf_ext_wf Σ : wf_ext Σ -> wf Σ := fst.
 Hint Resolve wf_ext_wf.
 
+Program Definition is_erasable_fast (Sigma : PCUICAst.global_env_ext) (HΣ : ∥wf_ext Sigma∥) (Gamma : context) (HΓ : ∥wf_local Sigma Gamma∥) (t : PCUICAst.term) :
+  typing_result ({∥isErasable Sigma Gamma t∥} +{∥(isErasable Sigma Gamma t -> False) × welltyped Sigma Gamma t∥}) :=
+  mlet (T; _) <- @make_graph_and_infer _ _ HΣ Gamma HΓ t ;;
+  mlet b <- is_arity Sigma _ Gamma _ T _ ;;
+  if b : {_} + {_} then
+    ret (left _)
+  else mlet (K; _) <-  @make_graph_and_infer _ _ HΣ Gamma HΓ T ;;
+       mlet (u;_) <- @reduce_to_sort _ Sigma _ Gamma K _ ;;
+      match is_prop_sort u with true => ret (left _) | false => ret (right _) end
+.
+
 
 Program Definition is_erasable (Sigma : PCUICAst.global_env_ext) (HΣ : ∥wf_ext Sigma∥) (Gamma : context) (HΓ : ∥wf_local Sigma Gamma∥) (t : PCUICAst.term) :
   typing_result ({∥isErasable Sigma Gamma t∥} +{∥(isErasable Sigma Gamma t -> False) × welltyped Sigma Gamma t∥}) :=

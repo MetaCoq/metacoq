@@ -668,12 +668,8 @@ Section Lemmata.
       eapply All2_nth_error_Some in hnth as hnth' ; eauto.
       destruct hnth' as [decl' [hnth' hh]].
       destruct hh as [[ety ebo] era].
-      eapply type_Cumul.
-      + econstructor.
-        * eapply fix_guard_eq_term ; eauto.
-          constructor. assumption.
-        * eassumption.
-        * rename types into Δ. set (Ξ := fix_context mfix').
+      assert (hwf' : wf_local Σ (Γ ,,, fix_context mfix')).
+      { rename types into Δ. set (Ξ := fix_context mfix').
           assert (e : eq_context_upto eq Δ Ξ).
           { eapply eq_context_upto_rev.
             clear - a.
@@ -733,7 +729,14 @@ Section Lemmata.
                    --- eapply eq_context_upto_cat. 2: eassumption.
                        eapply eq_context_upto_refl. auto.
                    --- intros ? ? []. eapply eq_universe_refl.
-        * rename types into Δ. set (Ξ := fix_context mfix').
+      }
+      eapply type_Cumul.
+      + econstructor.
+        * eapply fix_guard_eq_term ; eauto.
+          constructor. assumption.
+        * eassumption.
+        * assumption.
+        * rename types into Δ. set (Ξ := fix_context mfix') in *.
           assert (e : eq_context_upto eq Δ Ξ).
           { eapply eq_context_upto_rev.
             clear - a.
@@ -745,11 +748,9 @@ Section Lemmata.
               + eapply IHa.
           }
           clearbody Δ Ξ.
-          assert (hΞ : wf_local Σ (Γ ,,, Ξ)).
-          { admit. }
           assert (el : #|Δ| = #|Ξ|).
           { eapply eq_context_upto_length. eassumption. }
-          clear - e a ihmfix wfΣ hΞ el.
+          clear - e a ihmfix wfΣ hwf' el.
           induction a.
           -- constructor.
           -- inversion ihmfix. subst.

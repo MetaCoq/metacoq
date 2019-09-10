@@ -1393,8 +1393,6 @@ Section CheckEnv.
         rewrite no_prop_levels_union. reflexivity.
   Defined.
 
-
-
   Program Fixpoint check_wf_env (Σ : global_env)
     : EnvCheck (∑ G, (is_graph_of_uctx G (global_uctx Σ) /\ ∥ wf Σ ∥)) :=
     match Σ with
@@ -1484,6 +1482,7 @@ Section CheckEnv.
     rewrite eq1; clear eq1.
     assumption.
   Qed.
+
 
   Lemma wf_consistent Σ : wf Σ -> consistent (global_constraints Σ).
   Proof.

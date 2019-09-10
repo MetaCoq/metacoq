@@ -105,12 +105,12 @@ Section TypeOf.
           end
 
     | tInd ind u => fun wf =>
-          d <- lookup_ind_decl ind ;;
+          d <- @lookup_ind_decl Σ ind ;;
           let ty := subst_instance_constr u d.π2.π1.(ind_type) in
           ret (ty; _)
 
     | tConstruct ind k u => fun wf =>
-          d <- lookup_ind_decl ind ;;
+          d <- @lookup_ind_decl Σ ind ;;
           match nth_error d.π2.π1.(ind_ctors) k with
           | Some cdecl =>
             ret (type_of_constructor d.π1 cdecl (ind, k) u; _)
@@ -123,7 +123,7 @@ Section TypeOf.
       ret (mkApps p (List.skipn par indargs.π2.π2.π1 ++ [c]); _)
 
     | tProj (ind, n, k) c => fun wf =>
-       d <- lookup_ind_decl ind ;;
+       d <- @lookup_ind_decl Σ ind ;;
        match nth_error d.π2.π1.(ind_projs) k with
        | Some pdecl =>
             c_ty <- type_of Γ c _ ;;
@@ -153,7 +153,14 @@ Section TypeOf.
     econstructor; eauto using typing_wf_local.
   Defined.
 
-  Admit Obligations.
+  Solve All Obligations with program_simpl; match goal with
+                                              [ |- ∥ _ ∥ ] => todo "PCUICSafeRetyping.type_of"
+                                            | [ |- welltyped _ _ _ ] => todo "PCUICSafeRetyping.type_of"
+                                            | [ |- wellformed _ _ _ ] => todo "PCUICSafeRetyping.type_of"
+                             end.
+  Next Obligation.
+    todo "PCUICSafeRetyping.type_of".
+  Defined.
 
   (* Program Definition sort_of (Γ : context) (t : term) (wf : welltyped Σ Γ t) : typing_result universe := *)
   (*   ty <- type_of Γ t wf;; *)

@@ -36,6 +36,7 @@ PCUICUnivSubst
 PCUICSafeReduce
 PCUICSafeConversion
 PCUICSafeChecker
+PCUICSafeRetyping
 SafeTemplateChecker
 
 EAst
@@ -45,6 +46,7 @@ Extract
 ELiftSubst
 ETyping
 ErasureFunction
+SafeErasureFunction
 SafeTemplateErasure
 
 G_metacoq_erasure

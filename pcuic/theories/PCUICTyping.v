@@ -1354,6 +1354,15 @@ Proof. intro H; apply H. Qed.
 
 Hint Resolve wf_ext_wf.
 
+Lemma wf_ext_consistent {cf:checker_flags} Σ :
+  wf_ext Σ -> consistent Σ.
+Proof.
+  intros [? [? [? [? ?]]]]; assumption.
+Qed.
+
+Hint Resolve wf_ext_consistent.
+
+
 Definition env_prop `{checker_flags} (P : forall Σ Γ t T, Type) :=
   forall Σ (wfΣ : wf Σ.1) Γ (wfΓ : wf_local Σ Γ) t T, Σ ;;; Γ |- t : T ->
     Forall_decls_typing P Σ.1 * P Σ Γ t T.

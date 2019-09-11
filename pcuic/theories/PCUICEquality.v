@@ -53,8 +53,8 @@ Proof.
   intros H x y xy. eapply All2_impl; tea.
 Qed.
 
-(* ** Syntactic equality up-to universes
-  We donn't look at printing annotations *)
+(** ** Syntactic equality up-to universes
+  We don't look at printing annotations *)
 
 Inductive eq_term_upto_univ (Re Rle : universe -> universe -> Type) : term -> term -> Type :=
 | eq_Rel n  :
@@ -77,15 +77,15 @@ Inductive eq_term_upto_univ (Re Rle : universe -> universe -> Type) : term -> te
     eq_term_upto_univ Re Rle (tApp t u) (tApp t' u')
 
 | eq_Const c u u' :
-    R_universe_instance Rle u u' ->
+    R_universe_instance Re u u' ->
     eq_term_upto_univ Re Rle (tConst c u) (tConst c u')
 
 | eq_Ind i u u' :
-    R_universe_instance Rle u u' ->
+    R_universe_instance Re u u' ->
     eq_term_upto_univ Re Rle (tInd i u) (tInd i u')
 
 | eq_Construct i k u u' :
-    R_universe_instance Rle u u' ->
+    R_universe_instance Re u u' ->
     eq_term_upto_univ Re Rle (tConstruct i k u) (tConstruct i k u')
 
 | eq_Lambda na na' ty ty' t t' :
@@ -104,14 +104,14 @@ Inductive eq_term_upto_univ (Re Rle : universe -> universe -> Type) : term -> te
     eq_term_upto_univ Re Rle u u' ->
     eq_term_upto_univ Re Rle (tLetIn na t ty u) (tLetIn na' t' ty' u')
 
-| eq_Case ind par p p' c c' brs brs' :
+| eq_Case indn p p' c c' brs brs' :
     eq_term_upto_univ Re Re p p' ->
     eq_term_upto_univ Re Re c c' ->
     All2 (fun x y =>
       (fst x = fst y) *
       eq_term_upto_univ Re Re (snd x) (snd y)
     ) brs brs' ->
-    eq_term_upto_univ Re Rle (tCase (ind, par) p c brs) (tCase (ind, par) p' c' brs')
+    eq_term_upto_univ Re Rle (tCase indn p c brs) (tCase indn p' c' brs')
 
 | eq_Proj p c c' :
     eq_term_upto_univ Re Re c c' ->
@@ -154,8 +154,6 @@ Proof.
   induction t in Rle, hRle |- * using term_forall_list_ind; simpl;
     try constructor; eauto; try solve [eapply All_All2; eauto];
       try solve [eapply All2_same; eauto].
-  - destruct p. constructor; auto.
-    red in X. eapply All_All2; eauto.
   - eapply All_All2; eauto. simpl. intuition eauto.
   - eapply All_All2; eauto. simpl. intuition eauto.
 Qed.
@@ -246,8 +244,8 @@ Proof.
     induction h in a0, brs'0 |- *.
     + assumption.
     + dependent destruction a0. constructor ; eauto.
-      destruct r as [h1 [h2 h3]]. eauto.
-      destruct p as [? ?]. split; eauto.
+      destruct r as [h1 [h2 h3]].
+      destruct p0 as [? ?]. split; eauto.
       transitivity (fst y); auto.
   - dependent destruction e2.
     econstructor.
@@ -515,16 +513,16 @@ Fixpoint eqb_term_upto_univ (equ lequ : universe -> universe -> bool) (u v : ter
 
   | tConst c u, tConst c' u' =>
     eqb c c' &&
-    forallb2 lequ (map Universe.make u) (map Universe.make u')
+    forallb2 equ (map Universe.make u) (map Universe.make u')
 
   | tInd i u, tInd i' u' =>
     eqb i i' &&
-    forallb2 lequ (map Universe.make u) (map Universe.make u')
+    forallb2 equ (map Universe.make u) (map Universe.make u')
 
   | tConstruct i k u, tConstruct i' k' u' =>
     eqb i i' &&
     eqb k k' &&
-    forallb2 lequ (map Universe.make u) (map Universe.make u')
+    forallb2 equ (map Universe.make u) (map Universe.make u')
 
   | tLambda na A t, tLambda na' A' t' =>
     eqb_term_upto_univ equ equ A A' &&
@@ -1004,39 +1002,6 @@ Proof.
   eapply eq_term_upto_univ_eq_eq_term_upto_univ ; exact _.
 Qed.
 
-(* TODO: change, this lemma is not applicable *)
-(* Lemma eq_term_upto_univ_subst_instance_constr Re Rle : *)
-(*   forall u u', *)
-(*     respectful Re Re (subst_instance_univ u) (subst_instance_univ u') -> *)
-(*     respectful Rle Rle (subst_instance_univ u) (subst_instance_univ u') -> *)
-(*     R_universe_instance Rle u u' -> *)
-(*     respectful (eq_term_upto_univ Re Rle) (eq_term_upto_univ Re Rle) *)
-(*                (subst_instance_constr u) (subst_instance_constr u'). *)
-(* Proof. *)
-(*   intros u u' hRe hRle hu b b' hb. *)
-(*   unfold respectful in *. *)
-(*   induction b in b', hb, Rle, hRle |- * using term_forall_list_ind. *)
-(*   all: try solve [ dependent destruction hb ; constructor ; eauto ]. *)
-(*   - dependent destruction hb. cbn. constructor. *)
-(*     solve_all. *)
-(*   - dependent destruction hb. cbn. constructor. *)
-(*     eapply All2_map_inv in r. eapply All2_map. *)
-(*     eapply All2_map. solve_all. *)
-(*     specialize (hRle _ _ X). eapply hRle. *)
-(*   - dependent destruction hb. cbn. constructor. *)
-(*     eapply All2_map_inv in r. eapply All2_map. *)
-(*     eapply All2_map. solve_all. *)
-(*     specialize (hRle _ _ X). eapply hRle. *)
-(*   - dependent destruction hb. cbn. constructor. *)
-(*     eapply All2_map_inv in r. eapply All2_map. *)
-(*     eapply All2_map. solve_all. *)
-(*     specialize (hRle _ _ X). eapply hRle. *)
-(*   - dependent destruction hb. cbn. constructor; solve_all. *)
-(*   - dependent destruction hb. cbn. *)
-(*     constructor; solve_all. *)
-(*   - dependent destruction hb. cbn. *)
-(*     constructor; solve_all. *)
-(* Qed. *)
 
 Lemma eq_term_upto_univ_isApp Re Rle u v :
   eq_term_upto_univ Re Rle u v ->
@@ -1252,9 +1217,8 @@ Qed.
 
 
 Definition subst_instance_valuation (u : universe_instance) (v : valuation) :=
-{| valuation_mono := valuation_mono v ;
-   valuation_poly := fun i => Z.to_nat (val0 v (nth i u Level.lSet))
-|}.
+  {| valuation_mono := valuation_mono v ;
+     valuation_poly := fun i => Z.to_nat (val0 v (nth i u Level.lSet)) |}.
 
 
 Lemma subst_instance_univ_val' u l v
@@ -1269,6 +1233,68 @@ Proof.
     destruct HH as [?l [HH1 HH2]]. rewrite HH1.
     destruct l0; try discriminate; cbn.
     apply Zle_0_nat.
+Qed.
+
+
+Class SubstUnivPreserving Re := Build_SubstUnivPreserving :
+  forall s u1 u2, R_universe_instance Re u1 u2 ->
+             Re (subst_instance_univ u1 s) (subst_instance_univ u2 s).
+
+Lemma subst_equal_inst_inst Re :
+  SubstUnivPreserving Re ->
+  forall u u1 u2, R_universe_instance Re u1 u2 ->
+             R_universe_instance Re (subst_instance_instance u1 u)
+                                    (subst_instance_instance u2 u).
+Proof.
+  intros hRe u. induction u; cbnr. constructor.
+  intros u1 u2; unfold R_universe_instance; cbn; constructor.
+  - now apply (hRe (Universe.make a) u1 u2).
+  - exact (IHu u1 u2 X).
+Qed.
+
+Lemma eq_term_upto_univ_subst_instance_constr Re :
+  Reflexive Re ->
+  SubstUnivPreserving Re ->
+  forall t u1 u2,
+    R_universe_instance Re u1 u2 ->
+    eq_term_upto_univ Re Re (subst_instance_constr u1 t)
+                            (subst_instance_constr u2 t).
+Proof.
+  intros ref hRe t.
+  induction t using term_forall_list_ind; intros u1 u2 hu.
+  all: cbn; try constructor; eauto using subst_equal_inst_inst.
+  all: eapply All2_map, All_All2; tea; cbn; intros; rdestruct; eauto.
+Qed.
+
+Instance leq_term_SubstUnivPreserving {cf:checker_flags} φ :
+  SubstUnivPreserving (eq_universe φ).
+Proof.
+  intros s u1 u2 hu.
+  unfold eq_universe in *; destruct check_univs; [|trivial].
+  intros v Hv; cbn.
+  assert (Hl: forall l, (val0 v (subst_instance_level u1 l)
+                    = val0 v (subst_instance_level u2 l))%Z).  {
+    destruct l; cbnr.
+    apply All2_map_inv in hu.
+    induction n in u1, u2, hu |- *; cbnr.
+    - destruct hu; cbnr. now apply e.
+    - destruct hu; cbnr. now apply IHn. }
+  assert (He : forall e, (val1 v (subst_instance_level_expr u1 e)
+                     = val1 v (subst_instance_level_expr u2 e))%Z). {
+    destruct e as [l []]; specialize (Hl l); unfold val1; cbnr; tas.
+    replace (Level.is_prop (subst_instance_level u2 l))
+      with (Level.is_prop (subst_instance_level u1 l)).
+    + destruct ?; lia.
+    + destruct l; cbnr. clear Hl.
+      apply All2_map_inv in hu.
+      induction n in u1, u2, hu |- *.
+      * destruct hu; cbnr.
+        specialize (e _ Hv).
+        destruct x, y; cbn in *; try reflexivity; lia.
+      * destruct hu; cbnr. eauto. }
+  induction s. eapply He.
+  cbn -[val]. rewrite !val_cons.
+  specialize (He a). unfold subst_instance_univ in IHs. lia.
 Qed.
 
 

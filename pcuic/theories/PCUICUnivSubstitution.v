@@ -530,8 +530,8 @@ Qed.
 
 Hint Resolve consistent_instance_valid_constraints : univ_subst.
 
-Class SubstUnivPreserving {A} `{UnivSubst A} (R : constraints -> crelation A)
-  := Build_SubstUnivPreserving :
+Class SubstUnivPreserved {A} `{UnivSubst A} (R : constraints -> crelation A)
+  := Build_SubstUnivPreserved :
        forall φ φ' (u : universe_instance),
          forallb (fun x => negb (Level.is_prop x)) u ->
          valid_constraints φ' (subst_instance_cstrs u φ) ->
@@ -550,7 +550,7 @@ Proof.
   apply satisfies_subst_instance_ctr; aa.
 Qed.
 
-Global Instance leq_universe_subst_instance : SubstUnivPreserving leq_universe.
+Global Instance leq_universe_subst_instance : SubstUnivPreserved leq_universe.
 Proof.
   intros φ φ' u Hu HH t t' Htt'.
   unfold leq_universe in *; case_eq check_univs;
@@ -561,7 +561,7 @@ Proof.
   eapply satisfies_subst_instance; tea.
 Qed.
 
-Global Instance eq_universe_subst_instance : SubstUnivPreserving eq_universe.
+Global Instance eq_universe_subst_instance : SubstUnivPreserved eq_universe.
 Proof.
   intros φ φ' u Hu HH t t' Htt'.
   unfold eq_universe in *; case_eq check_univs;
@@ -594,8 +594,8 @@ Definition precompose_subst_instance_instance__2 Rle u i i'
 
 Global Instance eq_term_upto_univ_subst_instance
          (Re Rle : constraints -> crelation universe)
-      {he: SubstUnivPreserving Re} {hle: SubstUnivPreserving Rle}
-  : SubstUnivPreserving (fun φ => eq_term_upto_univ (Re φ) (Rle φ)).
+      {he: SubstUnivPreserved Re} {hle: SubstUnivPreserved Rle}
+  : SubstUnivPreserved (fun φ => eq_term_upto_univ (Re φ) (Rle φ)).
 Proof.
   intros φ φ' u Hu HH t t'.
   specialize (he _ _ _ Hu HH).
@@ -608,10 +608,10 @@ Proof.
     eapply All_impl; eauto; cbn; intros; aa.
 Qed.
 
-Lemma leq_term_subst_instance : SubstUnivPreserving leq_term.
+Lemma leq_term_subst_instance : SubstUnivPreserved leq_term.
 Proof. exact _. Qed.
 
-Lemma eq_term_subst_instance : SubstUnivPreserving eq_term.
+Lemma eq_term_subst_instance : SubstUnivPreserved eq_term.
 Proof. exact _. Qed.
 
 
@@ -872,13 +872,13 @@ Proof.
   - econstructor 3. eauto. eapply red1_subst_instance; cbn; eauto.
 Qed.
 
-Global Instance eq_decl_subst_instance : SubstUnivPreserving eq_decl.
+Global Instance eq_decl_subst_instance : SubstUnivPreserved eq_decl.
 Proof.
   intros φ1 φ2 u Hu HH [? [?|] ?] [? [?|] ?] [H1 H2]; split; cbn in *; auto.
   all: eapply eq_term_subst_instance; tea.
 Qed.
 
-Global Instance eq_context_subst_instance : SubstUnivPreserving eq_context.
+Global Instance eq_context_subst_instance : SubstUnivPreserved eq_context.
 Proof.
   intros φ φ' u Hu HH Γ Γ' X. eapply All2_map, All2_impl; tea.
   eapply eq_decl_subst_instance; eassumption.

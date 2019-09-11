@@ -142,7 +142,7 @@ Proof.
       cbn in h1, h2. destruct_andb.
       inversion X. subst.
       f_equal.
-      * destruct a, p. cbn in *. destruct X0. subst.
+      * destruct a, p0. cbn in *. destruct X0. subst.
         f_equal. eapply H9 ; assumption.
       * eapply IHl ; assumption.
   - f_equal ; try solve [ ih ].

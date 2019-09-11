@@ -273,8 +273,7 @@ Section Principality.
       Σ ;;; Γ |- mkApps (tInd ind ui) l <= T ->
       ∑ ui' l',
         red Σ.1 Γ T (mkApps (tInd ind ui') l') ×
-        All2 (leq_universe (global_ext_constraints Σ))
-          (List.map Universe.make ui) (List.map Universe.make ui') ×
+        R_universe_instance (eq_universe Σ) ui ui' ×
         All2 (fun a a' => Σ ;;; Γ |- a = a') l l'.
   Proof.
     intros Γ ind ui l T h.
@@ -298,8 +297,7 @@ Section Principality.
       Σ ;;; Γ |- T <= mkApps (tInd ind ui) l ->
       ∑ ui' l',
         red Σ.1 Γ T (mkApps (tInd ind ui') l') ×
-        All2 (leq_universe (global_ext_constraints Σ))
-          (List.map Universe.make ui') (List.map Universe.make ui) ×
+        R_universe_instance (eq_universe Σ) ui' ui ×
         All2 (fun a a' => Σ ;;; Γ |- a == a') l l'.
   Proof.
     intros Γ ind ui l T h.

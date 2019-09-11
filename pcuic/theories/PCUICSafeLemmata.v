@@ -675,21 +675,14 @@ Section Lemmata.
           -- dependent destruction he. constructor.
           -- dependent destruction he.
              dependent destruction ihbrs.
-             destruct r.
+             destruct r. destruct p1.
              destruct p.
-             destruct p0 as [[? ?] ?].
+             destruct p0 as [[[? ?] ?] ihy].
              constructor ; eauto. intuition eauto.
              ++ solve [ etransitivity ; eauto ].
              ++ econstructor.
                 ** eassumption.
-                ** (* We're missing the validity proof...
-                      Is it hidden in the types_of_case_eq_term proof?
-                      Are we missing an ingredient or should type_Case ask
-                      that the branches types are sorted?
-
-                      Should be ok now.
-                    *)
-                  admit.
+                ** right. eexists. eapply ihy. assumption.
                 ** constructor.
                    eapply eq_term_leq_term.
                    eapply eq_term_upto_univ_eq_eq_term. assumption.
@@ -1052,7 +1045,8 @@ Section Lemmata.
       intros A hΣ hu e.
       eapply tm ; eauto.
       eapply typing_wf_local. eassumption.
-  Admitted.
+    Unshelve. exact 0.
+  Qed.
 
   Corollary type_nameless :
     forall Σ Γ u A,

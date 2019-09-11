@@ -471,63 +471,6 @@ Check (@PCUICSafeLemmata.it_mkLambda_or_LetIn_let_free_conv'_inv
             (PCUICAstUtils.app_context Γ Δ2)) /\
        PCUICCumulativity.conv leq Σ (PCUICAstUtils.app_context Γ Δ1) t1 t2).
 
-Check (@PCUICSafeLemmata.it_mkLambda_or_LetIn_conv'
-     of forall cf : config.checker_flags,
-       PCUICNormal.RedFlags.t ->
-       forall Σ : PCUICAst.global_env_ext,
-       utils.squash (PCUICTyping.wf (PCUICAstUtils.fst_ctx Σ)) ->
-       forall (leq : PCUICCumulativity.conv_pb) (Γ Δ1 Δ2 : PCUICAst.context)
-         (t1 t2 : PCUICAst.term),
-       PCUICSR.context_relation (PCUICSR.conv_decls Σ) (PCUICAstUtils.app_context Γ Δ1)
-         (PCUICAstUtils.app_context Γ Δ2) ->
-       PCUICCumulativity.conv leq Σ (PCUICAstUtils.app_context Γ Δ1) t1 t2 ->
-       PCUICCumulativity.conv leq Σ Γ (PCUICAstUtils.it_mkLambda_or_LetIn Δ1 t1)
-                              (PCUICAstUtils.it_mkLambda_or_LetIn Δ2 t2)).
-
-Check (@PCUICSafeLemmata.Prod_conv
-     of forall cf : config.checker_flags,
-       PCUICNormal.RedFlags.t ->
-       forall Σ : PCUICAst.global_env_ext,
-       utils.squash (PCUICTyping.wf (PCUICAstUtils.fst_ctx Σ)) ->
-       forall (leq : PCUICCumulativity.conv_pb) (Γ : PCUICAst.context)
-         (na1 : BasicAst.name) (A1 B1 : PCUICAst.term) (na2 : BasicAst.name)
-         (A2 B2 : PCUICAst.term),
-       PCUICTyping.conv Σ Γ A1 A2 ->
-       PCUICCumulativity.conv leq Σ (PCUICAst.snoc Γ (PCUICAst.vass na1 A1)) B1 B2 ->
-       PCUICCumulativity.conv leq Σ Γ (PCUICAst.tProd na1 A1 B1)
-         (PCUICAst.tProd na2 A2 B2)).
-
-Check (@PCUICSafeLemmata.it_mkLambda_or_LetIn_conv
-     of forall cf : config.checker_flags,
-       PCUICNormal.RedFlags.t ->
-       forall Σ : PCUICAst.global_env_ext,
-       utils.squash (PCUICTyping.wf (PCUICAstUtils.fst_ctx Σ)) ->
-       forall (Γ Δ1 Δ2 : PCUICAst.context) (t1 t2 : PCUICAst.term),
-       PCUICSR.context_relation (PCUICSR.conv_decls Σ) (PCUICAstUtils.app_context Γ Δ1)
-         (PCUICAstUtils.app_context Γ Δ2) ->
-       PCUICTyping.conv Σ (PCUICAstUtils.app_context Γ Δ1) t1 t2 ->
-       PCUICTyping.conv Σ Γ (PCUICAstUtils.it_mkLambda_or_LetIn Δ1 t1)
-         (PCUICAstUtils.it_mkLambda_or_LetIn Δ2 t2)).
-
-Check (@PCUICSafeLemmata.App_conv
-     of forall cf : config.checker_flags,
-       PCUICNormal.RedFlags.t ->
-       forall Σ : PCUICAst.global_env_ext,
-       utils.squash (PCUICTyping.wf (PCUICAstUtils.fst_ctx Σ)) ->
-       forall (Γ : PCUICAst.context) (t1 t2 u1 u2 : PCUICAst.term),
-       PCUICTyping.conv Σ Γ t1 t2 ->
-       PCUICTyping.conv Σ Γ u1 u2 ->
-       PCUICTyping.conv Σ Γ (PCUICAst.tApp t1 u1) (PCUICAst.tApp t2 u2)).
-
-Check (@PCUICSafeLemmata.mkApps_conv_weak
-     of forall cf : config.checker_flags,
-       PCUICNormal.RedFlags.t ->
-       forall Σ : PCUICAst.global_env_ext,
-       utils.squash (PCUICTyping.wf (PCUICAstUtils.fst_ctx Σ)) ->
-       forall (Γ : PCUICAst.context) (u1 u2 : PCUICAst.term) (l : list PCUICAst.term),
-       PCUICTyping.conv Σ Γ u1 u2 ->
-       PCUICTyping.conv Σ Γ (PCUICAst.mkApps u1 l) (PCUICAst.mkApps u2 l)).
-
 Check (@PCUICSafeLemmata.welltyped_zipc_replace
      of forall cf : config.checker_flags,
        PCUICNormal.RedFlags.t ->

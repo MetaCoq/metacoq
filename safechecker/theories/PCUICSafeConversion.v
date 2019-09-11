@@ -1362,10 +1362,11 @@ Section Conversion.
 
     cbn.
     apply it_mkLambda_or_LetIn_stack_context_conv_inv in h0 as [? ?] ; auto.
+    destruct hΣ.
     eapply it_mkLambda_or_LetIn_conv' ; auto.
     apply it_mkLambda_or_LetIn_stack_context_conv'_inv in h as [[?] hl] ; auto.
     apply Lambda_conv_inv in hl as [[?] ?] ; auto.
-    eapply Prod_conv ; auto.
+    eapply conv_Prod ; auto.
   Qed.
 
   (* tCase *)

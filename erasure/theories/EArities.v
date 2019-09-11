@@ -74,12 +74,12 @@ Proof.
   depind X1.
   - destruct H as (? & ? & ?). sq.
     eapply PCUICCumulativity.red_cumul_inv in X1.
-    eapply PCUICConversion.cumul_trans in c. 2:assumption.  2:eassumption.
+    eapply (cumul_trans _ _ _ _ _) in c; tea.
     eapply invert_cumul_arity_l in c; eauto.
   - eapply IHX1.
     destruct H as (? & ? & ?). sq.
     eapply PCUICCumulativity.red_cumul_inv in X2.
-    eapply PCUICConversion.cumul_trans in c. 2: assumption.  2:eassumption.
+    eapply (cumul_trans _ _ _ _ _) in c; tea.
     eapply invert_cumul_arity_l in c; eauto.
     destruct c as (? & ? & ?). sq.
     eapply invert_red_prod in X3 as (? & ? & [] & ?); eauto; subst.
@@ -268,10 +268,10 @@ Proof.
     rename c2 into X.
     revert c l X.
     depind t0; intros; subst.
-    + eapply PCUICConversion.cumul_trans in c; eauto.
+    + eapply (cumul_trans _ _ _ _ _) in c; tea.
       eapply invert_cumul_arity_r in c; eauto.
       eapply it_mkProd_red_Arity; eauto.
-    + eapply PCUICConversion.cumul_trans in c; eauto.
+    + eapply (cumul_trans _ _ _ _ _) in c; tea.
       eapply invert_cumul_prod_r in c as (? & ? & ? & [] & ?); eauto.
 
       eapply invert_it_Ind_red in r as (? & ? & ?); eauto.
@@ -456,7 +456,7 @@ Proof.
 
   eapply invert_cumul_arity_r in c0 as (? & ? & ?); eauto. sq.
   eapply PCUICCumulativity.red_cumul_inv in X.
-  eapply PCUICConversion.cumul_trans in c; eauto.
+  eapply (cumul_trans _ _ _ _ _) in c; tea.
 
   eapply invert_cumul_arity_l in c as (? & ? & ?); eauto. sq.
   exists x1; split; sq; eauto.

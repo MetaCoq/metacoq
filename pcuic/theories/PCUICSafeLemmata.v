@@ -1123,31 +1123,6 @@ Section Lemmata.
       eapply cumul_zippx. assumption.
   Qed.
 
-  Lemma cored_eq_term_upto_univ_r :
-    forall Re Rle Γ u v u',
-      Reflexive Re ->
-      Reflexive Rle ->
-      Transitive Re ->
-      Transitive Rle ->
-      (forall u u' : universe, Re u u' -> Rle u u') ->
-      eq_term_upto_univ Re Rle u u' ->
-      cored Σ Γ v u ->
-      exists v',
-        cored Σ Γ v' u' /\
-        ∥ eq_term_upto_univ Re Rle v v' ∥.
-  Proof.
-    intros Re Rle Γ u v u' he hle tRe tRle hR e h.
-    induction h.
-    - eapply red1_eq_term_upto_univ_l in X ; try exact e ; eauto.
-      destruct X as [v' [r e']].
-      exists v'. split ; auto.
-      constructor. assumption. now constructor.
-    - specialize (IHh e). destruct IHh as [v' [c [ev]]].
-      eapply red1_eq_term_upto_univ_l in X ; try exact ev ; eauto.
-      destruct X as [w' [? ?]].
-      exists w'. split ; auto.
-      eapply cored_trans ; eauto. now constructor.
-  Qed.
 
   Lemma cored_nl :
     forall Γ u v,

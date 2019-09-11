@@ -879,19 +879,159 @@ Section Lemmata.
       + constructor. eapply eq_term_leq_term.
         apply eq_term_sym.
         eapply eq_term_upto_univ_eq_eq_term. assumption.
-    - intros mfix n decl types hnth wf ihmfix hac v e. subst types.
+    - intros mfix n decl types hnth hwf ihmfix hac v e. subst types.
       dependent destruction e.
-      pose proof (All2_nth_error_Some _ _ a hnth) as [decl' [? [[? ?] ?]]].
+      eapply All2_nth_error_Some in hnth as hnth' ; eauto.
+      destruct hnth' as [decl' [hnth' hh]].
+      destruct hh as [[ety ebo] era].
+      assert (hwf' : wf_local Σ (Γ ,,, fix_context mfix')).
+      { set (Δ := fix_context mfix) in *.
+        set (Ξ := fix_context mfix').
+        assert (e : eq_context_upto eq Δ Ξ).
+        { eapply eq_context_upto_rev.
+          clear - a.
+          unfold mapi. generalize 0 at 2 4. intro n.
+          induction a in n |- *.
+          - constructor.
+          - simpl. constructor.
+            + eapply eq_term_upto_univ_lift. apply r.
+            + eapply IHa.
+        }
+        clearbody Δ Ξ.
+        clear - e hwf wfΣ wfΓ.
+        induction e.
+        - assumption.
+        - simpl in *. inversion hwf. subst.
+          constructor.
+          + eapply IHe. assumption.
+          + simpl. destruct X0 as [? [? ih]].
+            eexists.
+            eapply context_conversion.
+            * assumption.
+            * eapply IHe. assumption.
+            * eapply ih. assumption.
+            * eapply eq_context_upto_conv_context.
+              eapply eq_context_impl ; revgoals.
+              -- eapply eq_context_upto_cat. 2: eassumption.
+                 eapply eq_context_upto_refl. auto.
+              -- intros ? ? []. eapply eq_universe_refl.
+        - simpl in *. inversion hwf. subst.
+          constructor.
+          + eapply IHe. assumption.
+          + simpl. destruct X0 as [? [? ih]].
+            eexists.
+            eapply context_conversion.
+            * assumption.
+            * eapply IHe. assumption.
+            * eapply ih. assumption.
+            * eapply eq_context_upto_conv_context.
+              eapply eq_context_impl ; revgoals.
+              -- eapply eq_context_upto_cat. 2: eassumption.
+                 eapply eq_context_upto_refl. auto.
+              -- intros ? ? []. eapply eq_universe_refl.
+          + simpl in *. destruct X0 as [? [? ih1]]. destruct X1 as [? ih2].
+            eapply context_conversion.
+            * assumption.
+            * eapply IHe. assumption.
+            * eapply type_Cumul.
+              -- eapply ih2. assumption.
+              -- right. eexists. eapply ih1. assumption.
+              -- eapply cumul_refl.
+                 eapply eq_term_upto_univ_impl. 3: eassumption.
+                 all: intros ? ? [].
+                 ++ eapply eq_universe_refl.
+                 ++ eapply leq_universe_refl.
+            * eapply eq_context_upto_conv_context.
+              eapply eq_context_impl ; revgoals.
+              -- eapply eq_context_upto_cat. 2: eassumption.
+                 eapply eq_context_upto_refl. auto.
+              -- intros ? ? []. eapply eq_universe_refl.
+      }
       eapply type_Cumul.
       + econstructor.
         * assumption.
         * eassumption.
-        * (* Using ihmfix probably, we'll need a lemma *)
-          admit.
-        * admit.
-      + eapply @validity_term with (t := tCoFix mfix n) ; eauto.
+        * assumption.
+        * assert (val :
+            All (fun d =>
+              lift_typing typing Σ (Γ ,,, fix_context mfix')
+                          ((lift0 #|fix_context mfix'|) (dtype d))
+                          None
+            ) mfix'
+          ).
+          { eapply forall_nth_error_All.
+            intros i d e.
+            apply fix_context_nth_error in e as e'.
+            apply nth_error_weak_context with (Γ := Γ) in e'.
+            eapply wf_local_nth_error_vass in e'. all: try eassumption.
+            rewrite simpl_lift in e' by lia.
+            apply nth_error_Some_length in e as hl.
+            replace (S (#|mfix'| - S i) + i)
+              with (#|mfix'|)
+              in e'
+              by lia.
+            rewrite fix_context_length. assumption.
+          }
+          set (Δ := fix_context mfix) in *.
+          set (Ξ := fix_context mfix') in *.
+          assert (e : eq_context_upto eq Δ Ξ).
+          { eapply eq_context_upto_rev.
+            clear - a.
+            unfold mapi. generalize 0 at 2 4. intro n.
+            induction a in n |- *.
+            - constructor.
+            - simpl. constructor.
+              + eapply eq_term_upto_univ_lift. apply r.
+              + eapply IHa.
+          }
+          clearbody Δ Ξ.
+          assert (el : #|Δ| = #|Ξ|).
+          { eapply eq_context_upto_length. eassumption. }
+          clear - e a ihmfix wfΣ hwf' el val.
+          induction a.
+          -- constructor.
+          -- inversion ihmfix. subst.
+             destruct X as [? ih].
+             constructor.
+             ++ eapply context_conversion.
+                ** assumption.
+                ** assumption.
+                ** eapply type_Cumul.
+                   --- eapply ih. intuition eauto.
+                   --- right. simpl in val. inversion val. subst.
+                       destruct X.
+                       eexists. eapply context_conversion.
+                       +++ assumption.
+                       +++ eauto using typing_wf_local.
+                       +++ eassumption.
+                       +++ eapply eq_context_upto_conv_context.
+                           eapply eq_context_upto_sym.
+                           *** intros ? ? ?. eapply eq_universe_sym.
+                               assumption.
+                           *** eapply eq_context_impl ; revgoals.
+                               ---- eapply eq_context_upto_cat.
+                                    2: eassumption.
+                                    eapply eq_context_upto_refl. auto.
+                               ---- intros ? ? []. eapply eq_universe_refl.
+                   --- eapply cumul_refl. rewrite <- el.
+                       eapply eq_term_upto_univ_lift.
+                       eapply eq_term_upto_univ_impl.
+                       3: intuition eauto.
+                       all: intros ? ? [].
+                       +++ eapply eq_universe_refl.
+                       +++ eapply leq_universe_refl.
+                ** eapply eq_context_upto_conv_context.
+                   eapply eq_context_impl ; revgoals.
+                   --- eapply eq_context_upto_cat. 2: eassumption.
+                       eapply eq_context_upto_refl. auto.
+                   --- intros ? ? []. eapply eq_universe_refl.
+             ++ eapply IHa.
+                ** assumption.
+                ** inversion val. assumption.
+      + eapply validity_term ; eauto.
+        instantiate (1 := tCoFix mfix n).
         econstructor ; eauto.
-        * apply All_local_env_lift_prod_inv in wf as [? ?]. assumption.
+        * apply All_local_env_lift_prod_inv in hwf as [? ?]. assumption.
         * apply All_prod_inv in ihmfix as [? ?]. assumption.
       + constructor. eapply eq_term_leq_term.
         apply eq_term_sym.

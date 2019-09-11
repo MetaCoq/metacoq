@@ -41,11 +41,12 @@ Fixpoint nameless (t : term) : bool :=
     forallb (test_def nameless nameless) mfix
   end.
 
-Definition map_def_anon {A B : Set} (tyf bodyf : A -> B) (d : def A) :=
-  {| dname := nAnon ;
-     dtype := tyf d.(dtype) ;
-     dbody := bodyf d.(dbody) ;
-     rarg := d.(rarg) |}.
+Definition map_def_anon {A B : Set} (tyf bodyf : A -> B) (d : def A) := {|
+  dname := nAnon ;
+  dtype := tyf d.(dtype) ;
+  dbody := bodyf d.(dbody) ;
+  rarg  := d.(rarg)
+|}.
 
 Fixpoint nl (t : term) : term :=
   match t with
@@ -216,34 +217,62 @@ Proof.
         eapply IHm. assumption.
 Qed.
 
-Lemma nl_eq_term_upto_univ Re Rle t t'
-  : eq_term_upto_univ Re Rle t t' -> eq_term_upto_univ Re Rle (nl t) (nl t').
+Lemma nl_eq_term_upto_univ :
+  forall Re Rle t t',
+    eq_term_upto_univ Re Rle t t' ->
+    eq_term_upto_univ Re Rle (nl t) (nl t').
 Proof.
-  revert t t' Rle. fix aux 4.
-  destruct 1; cbn; econstructor; eauto.
-  induction a; simpl; constructor; eauto.
-  induction a; simpl; constructor; eauto.
-  destruct x, y, r; cbn in *; split; eauto.
-  induction a; simpl; constructor; eauto.
-  destruct x, y, r as [[? ?] ?]; cbn in *; split; eauto.
-  induction a; simpl; constructor; eauto.
-  destruct x, y, r as [[? ?] ?]; cbn in *; split; eauto.
+  intros Re Rle t t' h.
+  revert t t' Rle h. fix aux 4.
+  intros t t' Rle h.
+  destruct h.
+  all: simpl.
+  all: try solve [ econstructor ; eauto ].
+  - econstructor.
+    induction a.
+    + constructor.
+    + simpl. econstructor. all: eauto.
+  - econstructor. all: try solve [ eauto ].
+    induction a.
+    + constructor.
+    + simpl. econstructor. 2: solve [ eauto ].
+      destruct x, y, r. simpl in *.
+      split. 1: assumption.
+      eauto.
+  - econstructor.
+    induction a. 1: constructor.
+    simpl. constructor.
+    + destruct x, y, r as [[? ?] ?].
+      simpl in *. eauto.
+    + eauto.
+  - econstructor.
+    induction a. 1: constructor.
+    simpl. constructor.
+    + destruct x, y, r as [[? ?] ?].
+      simpl in *. eauto.
+    + eauto.
 Qed.
 
-Lemma nl_leq_term {cf:checker_flags} φ t t'
-  : leq_term φ t t' -> leq_term φ (nl t) (nl t').
+Lemma nl_leq_term {cf:checker_flags} :
+  forall φ t t',
+    leq_term φ t t' ->
+    leq_term φ (nl t) (nl t').
 Proof.
-  apply nl_eq_term_upto_univ.
+  intros. apply nl_eq_term_upto_univ. assumption.
 Qed.
 
-Lemma nl_eq_term {cf:checker_flags} φ t t'
-  : eq_term φ t t' -> eq_term φ (nl t) (nl t').
+Lemma nl_eq_term {cf:checker_flags} :
+  forall φ t t',
+    eq_term φ t t' ->
+    eq_term φ (nl t) (nl t').
 Proof.
-  apply nl_eq_term_upto_univ.
+  intros. apply nl_eq_term_upto_univ. assumption.
 Qed.
 
 Corollary eq_term_nl_eq :
-  forall u v, eq_term_upto_univ eq eq u v -> nl u = nl v.
+  forall u v,
+    eq_term_upto_univ eq eq u v ->
+    nl u = nl v.
 Proof.
   intros u v h.
   eapply nameless_eq_term_spec.
@@ -258,22 +287,6 @@ Local Ltac ih3 :=
     |- eq_term_upto_univ _ _ ?u _ =>
     eapply ih ; assumption
   end.
-
-(* TODO Move *)
-Lemma Forall2_map_inv :
-  forall {A B A' B'} (R : A' -> B' -> Prop) (f : A -> A')
-    (g : B -> B') (l : list A) (l' : list B),
-    Forall2 R (map f l) (map g l') ->
-    Forall2 (fun x => R (f x) ∘ g) l l'.
-Proof.
-  intros A B A' B' R f g l l' h.
-  induction l in l', h |- * ; destruct l' ; try solve [ inversion h ].
-  - constructor.
-  - constructor.
-    + inversion h. subst. assumption.
-    + eapply IHl. inversion h. assumption.
-Qed.
-
 
 Lemma eq_term_upto_univ_nl_inv :
   forall Re Rle u v,
@@ -303,15 +316,16 @@ Proof.
     apply All2_map_inv in a. solve_all.
 Qed.
 
-Definition map_decl_anon f (d : context_decl) :=
-  {| decl_name := nAnon ;
-     decl_body := option_map f d.(decl_body) ;
-     decl_type := f d.(decl_type)
-  |}.
+Definition map_decl_anon f (d : context_decl) := {|
+  decl_name := nAnon ;
+  decl_body := option_map f d.(decl_body) ;
+  decl_type := f d.(decl_type)
+|}.
 
 Definition nlctx (Γ : context) : context :=
   map (map_decl_anon nl) Γ.
 
+(* TODO MOVE *)
 Definition test_option {A} f (o : option A) : bool :=
   match o with
   | None => true
@@ -584,286 +598,399 @@ Proof.
 Qed.
 
 
-Lemma global_ext_levels_nlg Σ
-  : global_ext_levels (nlg Σ) = global_ext_levels Σ.
+Lemma global_ext_levels_nlg :
+  forall Σ,
+    global_ext_levels (nlg Σ) = global_ext_levels Σ.
 Proof.
-  destruct Σ as [g ?]; cbn; unfold global_ext_levels.
-  f_equal. simpl. clear -g.
-  induction g; simpl; [reflexivity|].
-  f_equal; tas.
-  destruct a; simpl; unfold monomorphic_levels_decl; reflexivity.
+  intros [g ?].
+  cbn. unfold global_ext_levels. f_equal.
+  simpl. clear - g.
+  induction g. 1: reflexivity.
+  simpl. f_equal. 2: assumption.
+  destruct a. all: reflexivity.
 Qed.
 
-Lemma global_ext_constraints_nlg Σ
-  : global_ext_constraints (nlg Σ) = global_ext_constraints Σ.
+Lemma global_ext_constraints_nlg :
+  forall Σ,
+    global_ext_constraints (nlg Σ) = global_ext_constraints Σ.
 Proof.
-  destruct Σ as [g ?]; cbn; unfold global_ext_constraints.
-  f_equal. simpl. clear -g.
-  induction g; simpl; [reflexivity|].
-  f_equal; tas.
-  destruct a; simpl; unfold monomorphic_levels_decl; reflexivity.
+  intros [g ?].
+  cbn. unfold global_ext_constraints.
+  f_equal. simpl. clear - g.
+  induction g. 1: reflexivity.
+  simpl. f_equal. 2: assumption.
+  destruct a. all: reflexivity.
 Qed.
 
-Lemma nl_lookup_env Σ c
-  : lookup_env (map nl_global_decl Σ) c
+Lemma nl_lookup_env :
+  forall Σ c,
+    lookup_env (map nl_global_decl Σ) c
     = option_map nl_global_decl (lookup_env Σ c).
 Proof.
-  induction Σ; cbn. reflexivity.
-  replace (global_decl_ident (nl_global_decl a)) with (global_decl_ident a);
-    [|destruct a; reflexivity].
-  destruct (ident_eq c (global_decl_ident a)); tas.
-  reflexivity.
+  intros Σ c.
+  induction Σ. 1: reflexivity.
+  simpl.
+  replace (global_decl_ident (nl_global_decl a))
+    with (global_decl_ident a)
+    by (destruct a ; reflexivity).
+  destruct (ident_eq c (global_decl_ident a)).
+  - reflexivity.
+  - assumption.
 Qed.
 
-Lemma lookup_env_nlg Σ c decl :
-  lookup_env Σ.1 c = Some decl
-  -> lookup_env (nlg Σ) c = Some (nl_global_decl decl).
+Lemma lookup_env_nlg :
+  forall Σ c decl,
+    lookup_env Σ.1 c = Some decl ->
+    lookup_env (nlg Σ) c = Some (nl_global_decl decl).
 Proof.
-  destruct Σ as [g ?]; cbn. rewrite nl_lookup_env.
-  intro H; now rewrite H.
+  intros [g ?] c decl h.
+  cbn. rewrite nl_lookup_env.
+  rewrite h. reflexivity.
 Qed.
 
-Lemma nlg_wf_local {cf:checker_flags} Σ Γ (wfΓ : wf_local Σ Γ)
-  : All_local_env_over typing
-                       (fun Σ0 Γ0 (_ : wf_local Σ0 Γ0) (t T : term)
-                          (_ : Σ0;;; Γ0 |- t : T) => nlg Σ0;;; nlctx Γ0 |- nl t : nl T) Σ Γ wfΓ
-    -> wf_local (nlg Σ) (nlctx Γ).
+Lemma nlg_wf_local {cf : checker_flags} :
+  forall Σ Γ (hΓ : wf_local Σ Γ),
+    All_local_env_over
+      typing
+      (fun Σ Γ (_ : wf_local Σ Γ) (t T : term) (_ : Σ ;;; Γ |- t : T) =>
+         nlg Σ ;;; nlctx Γ |- nl t : nl T)
+      Σ Γ hΓ ->
+    wf_local (nlg Σ) (nlctx Γ).
 Proof.
-  induction 1. constructor.
-  simpl. unfold map_decl_anon. cbn. constructor; tas. eexists; eassumption.
-  simpl. unfold map_decl_anon. cbn. constructor; tas. eexists; eassumption.
+  intros Σ Γ hΓ h.
+  induction h.
+  - constructor.
+  - simpl. unfold map_decl_anon. cbn. constructor. 1: assumption.
+    eexists. eassumption.
+  - simpl. unfold map_decl_anon. cbn. constructor.
+    + assumption.
+    + eexists. eassumption.
+    + assumption.
 Qed.
 
-Lemma nl_lift n k t
-  : nl (lift n k t) = lift n k (nl t).
+Lemma nl_lift :
+  forall n k t,
+    nl (lift n k t) = lift n k (nl t).
 Proof.
-  revert t k. fix aux 1.
-  destruct t; intro; cbn; try congruence.
-  - destruct (_ <=? _); reflexivity.
-  - f_equal. induction l; [reflexivity|]. cbn. f_equal; auto.
-  - f_equal; auto. induction brs; [reflexivity|]. destruct a. cbn.
-    f_equal; auto. unfold on_snd. cbn. f_equal; auto.
-  - f_equal; auto. rewrite map_length.
-    generalize (#|mfix| + k).
-    induction mfix; [reflexivity|]. destruct a. cbn.
-    intro k'. f_equal; auto. unfold map_def_anon, map_def; cbn. congruence.
-  - f_equal; auto. rewrite map_length.
-    generalize (#|mfix| + k).
-    induction mfix; [reflexivity|]. destruct a. cbn.
-    intro k'. f_equal; auto. unfold map_def_anon, map_def; cbn. congruence.
+  intros n k t.
+  induction t in n, k |- * using term_forall_list_ind.
+  all: simpl.
+  all: try congruence.
+  - destruct (_ <=? _). all: reflexivity.
+  - f_equal. induction H.
+    + reflexivity.
+    + simpl. f_equal.
+      * eapply p.
+      * eapply IHAll.
+  - f_equal. 1-2: solve [ auto ].
+    induction X. 1: reflexivity.
+    simpl. f_equal. 2: assumption.
+    unfold on_snd. cbn. f_equal. auto.
+  - f_equal. rewrite map_length.
+    generalize (#|m| + k). intro l.
+    induction X.
+    + reflexivity.
+    + simpl. f_equal.
+      * unfold map_def_anon, map_def. simpl.
+        f_equal. all: eapply p.
+      * assumption.
+  - f_equal. rewrite map_length.
+    generalize (#|m| + k). intro l.
+    induction X.
+    + reflexivity.
+    + simpl. f_equal.
+      * unfold map_def_anon, map_def. simpl.
+        f_equal. all: eapply p.
+      * assumption.
 Qed.
 
-Lemma nl_subst s k u
-  : nl (subst s k u) = subst (map nl s) k (nl u).
+Lemma nl_subst :
+  forall s k u,
+    nl (subst s k u) = subst (map nl s) k (nl u).
 Proof.
-  revert u k. fix aux 1.
-  destruct u; intro; cbn; try congruence.
-  - destruct (_ <=? _); try reflexivity.
-    rewrite nth_error_map. destruct (nth_error _ _); cbn.
-    apply nl_lift. now rewrite map_length.
-  - f_equal. induction l; [reflexivity|]. cbn. f_equal; auto.
-  - f_equal; auto. induction brs; [reflexivity|]. destruct a. cbn.
-    f_equal; auto. unfold on_snd. cbn. f_equal; auto.
-  - f_equal; auto. rewrite map_length.
-    generalize (#|mfix| + k).
-    induction mfix; [reflexivity|]. destruct a. cbn.
-    intro k'. f_equal; auto. unfold map_def_anon, map_def; cbn. congruence.
-  - f_equal; auto. rewrite map_length.
-    generalize (#|mfix| + k).
-    induction mfix; [reflexivity|]. destruct a. cbn.
-    intro k'. f_equal; auto. unfold map_def_anon, map_def; cbn. congruence.
+  intros s k u.
+  induction u in s, k |- * using term_forall_list_ind.
+  all: simpl.
+  all: try congruence.
+  - destruct (_ <=? _). 2: reflexivity.
+    rewrite nth_error_map. destruct (nth_error _ _).
+    + simpl. apply nl_lift.
+    + rewrite map_length. reflexivity.
+  - f_equal. induction H.
+    + reflexivity.
+    + simpl. f_equal.
+      * eapply p.
+      * eapply IHAll.
+  - f_equal. 1-2: solve [ auto ].
+    induction X. 1: reflexivity.
+    simpl. f_equal. 2: assumption.
+    unfold on_snd. cbn. f_equal. auto.
+  - f_equal. rewrite map_length.
+    generalize (#|m| + k). intro l.
+    induction X.
+    + reflexivity.
+    + simpl. f_equal.
+      * unfold map_def_anon, map_def. simpl.
+        f_equal. all: eapply p.
+      * assumption.
+  - f_equal. rewrite map_length.
+    generalize (#|m| + k). intro l.
+    induction X.
+    + reflexivity.
+    + simpl. f_equal.
+      * unfold map_def_anon, map_def. simpl.
+        f_equal. all: eapply p.
+      * assumption.
 Qed.
 
-(* TODO move *)
-Lemma map_app_context f Γ Γ' : map f (Γ ,,, Γ') = map f Γ ,,, map f Γ'.
+Lemma nl_eq_decl {cf:checker_flags} :
+  forall φ d d',
+    eq_decl φ d d' ->
+    eq_decl φ (map_decl nl d) (map_decl nl d').
 Proof.
-  induction Γ'; simpl; congruence.
+  intros φ d d' [h1 h2].
+  split.
+  - simpl. destruct d as [? [?|] ?], d' as [? [?|] ?].
+    all: cbn in *.
+    all: trivial.
+    apply nl_eq_term. assumption.
+  - apply nl_eq_term. assumption.
 Qed.
 
-
-Lemma nl_eq_decl {cf:checker_flags} φ d d'
-  : eq_decl φ d d' -> eq_decl φ (map_decl nl d) (map_decl nl d').
+Lemma nl_eq_decl' {cf:checker_flags} :
+  forall φ d d',
+    eq_decl φ d d' ->
+    eq_decl φ (map_decl_anon nl d) (map_decl_anon nl d').
 Proof.
-  intros [H1 H2]. split; cbn.
-  - destruct d as [? [?|] ?], d' as [? [?|] ?]; cbn in *; trivial.
-    now apply nl_eq_term.
-  - now apply nl_eq_term.
+  intros φ d d' [h1 h2].
+  split.
+  - simpl. destruct d as [? [?|] ?], d' as [? [?|] ?].
+    all: cbn in *.
+    all: trivial.
+    apply nl_eq_term. assumption.
+  - apply nl_eq_term. assumption.
 Qed.
 
-Lemma nl_eq_decl' {cf:checker_flags} φ d d'
-  : eq_decl φ d d' -> eq_decl φ (map_decl_anon nl d) (map_decl_anon nl d').
+Lemma nl_eq_context {cf:checker_flags} :
+  forall φ Γ Γ',
+    eq_context φ Γ Γ' ->
+    eq_context φ (nlctx Γ) (nlctx Γ').
 Proof.
-  intros [H1 H2]. split; cbn.
-  - destruct d as [? [?|] ?], d' as [? [?|] ?]; cbn in *; trivial.
-    now apply nl_eq_term.
-  - now apply nl_eq_term.
+  intros φ Γ Γ' h.
+  unfold eq_context, nlctx.
+  eapply All2_map, All2_impl.
+  - eassumption.
+  - apply nl_eq_decl'.
 Qed.
 
-Lemma nl_eq_context {cf:checker_flags} φ Γ Γ'
-  : eq_context φ Γ Γ' -> eq_context φ (nlctx Γ) (nlctx Γ').
-Proof.
-  unfold eq_context, nlctx. intro.
-  eapply All2_map, All2_impl. eassumption.
-  apply nl_eq_decl'.
-Qed.
-
-Lemma nl_decompose_app t 
-  : decompose_app (nl t)
+Lemma nl_decompose_app :
+  forall t,
+    decompose_app (nl t)
     = let '(u, vs) := decompose_app t in (nl u, map nl vs).
 Proof.
+  intro t.
   unfold decompose_app.
   change [] with (map nl []) at 1. generalize (@nil term).
-  induction t; try reflexivity.
-  intro; cbn. change (nl t2 :: map nl l) with (map nl (t2 :: l)).
+  induction t. all: try reflexivity.
+  intro l. cbn. change (nl t2 :: map nl l) with (map nl (t2 :: l)).
   apply IHt1.
 Qed.
 
-Lemma nl_fix_context mfix
-  : nlctx (fix_context mfix) = fix_context (map (map_def_anon nl nl) mfix).
+Lemma nl_fix_context :
+  forall mfix,
+    nlctx (fix_context mfix) = fix_context (map (map_def_anon nl nl) mfix).
+Proof.
+  intro mfix.
   unfold nlctx, fix_context, mapi.
   generalize 0 at 2 4.
-  induction mfix. reflexivity.
-  intro n; simpl. rewrite map_app. cbn. f_equal.
-  apply IHmfix.
-  unfold map_decl_anon. cbn. now rewrite nl_lift.
+  induction mfix.
+  - reflexivity.
+  - intro n. simpl. rewrite map_app. cbn. f_equal.
+    + apply IHmfix.
+    + unfold map_decl_anon. cbn. rewrite nl_lift. reflexivity.
 Qed.
 
-
-Lemma nl_red1 Σ Γ M N :
-  red1 Σ Γ M N -> red1 (map nl_global_decl  Σ) (nlctx Γ) (nl M) (nl N).
+Lemma nl_red1 :
+  forall Σ Γ M N,
+    red1 Σ Γ M N ->
+    red1 (map nl_global_decl Σ) (nlctx Γ) (nl M) (nl N).
 Proof.
-  induction 1 using red1_ind_all; cbn;
-    rewrite ?nl_lift, ?nl_subst, ?nl_subst_instance_constr;
-    try (econstructor; eauto; fail).
-  - constructor. unfold nlctx; rewrite nth_error_map.
-    destruct (nth_error Γ i); cbn in *; [|discriminate]. 
-    apply some_inj in H; now rewrite H.
+  intros Σ Γ M N h.
+  induction h using red1_ind_all.
+  all: simpl.
+  all: rewrite ?nl_lift, ?nl_subst, ?nl_subst_instance_constr.
+  all: try solve [ econstructor ; eauto ].
+  - constructor. unfold nlctx. rewrite nth_error_map.
+    destruct (nth_error Γ i). 2: discriminate.
+    cbn in *. apply some_inj in H. rewrite H. reflexivity.
   - rewrite nl_mkApps. cbn.
     replace (nl (iota_red pars c args brs))
       with (iota_red pars c (map nl args) (map (on_snd nl) brs)).
     + eapply red_iota.
-    + unfold iota_red. rewrite nl_mkApps; cbn.
-      rewrite map_skipn. now rewrite nth_map.
+    + unfold iota_red. rewrite nl_mkApps.
+      rewrite map_skipn. rewrite nth_map. all: reflexivity.
   - rewrite !nl_mkApps. cbn. eapply red_fix with (narg:=narg).
     + unfold unfold_fix in *. rewrite nth_error_map.
-      destruct (nth_error mfix idx); cbn; [|discriminate].
-      replace (isLambda (nl (dbody d))) with (isLambda (dbody d));
-        [|now destruct (dbody d)].
-      destruct (isLambda (dbody d)); [|discriminate].
-      inversion H; subst. rewrite nl_subst.
+      destruct (nth_error mfix idx). 2: discriminate.
+      cbn.
+      replace (isLambda (nl (dbody d))) with (isLambda (dbody d))
+        by (destruct (dbody d) ; reflexivity).
+      destruct (isLambda (dbody d)). 2: discriminate.
+      inversion H. subst. rewrite nl_subst.
       repeat f_equal. clear.
       unfold fix_subst. rewrite map_length.
-      induction #|mfix|. reflexivity. cbn.
-      now rewrite IHn.
+      induction #|mfix|.
+      * reflexivity.
+      * cbn. rewrite IHn. reflexivity.
     + unfold is_constructor in *.
-      rewrite nth_error_map. destruct (nth_error args narg); [|discriminate].
+      rewrite nth_error_map. destruct (nth_error args narg) ; [| discriminate ].
       cbn. unfold isConstruct_app in *. rewrite nl_decompose_app.
-      destruct (decompose_app t) as [u ?]; destruct u; try discriminate.
+      destruct (decompose_app t) as [u ?].
+      destruct u. all: try discriminate.
       reflexivity.
-  - rewrite !nl_mkApps. simpl. eapply red_cofix_case with (narg:=narg).
-    + unfold unfold_cofix in *. rewrite nth_error_map.
-      destruct (nth_error mfix idx); cbn; [|discriminate].
-      inversion H; subst. rewrite nl_subst.
-      repeat f_equal. clear.
-      unfold cofix_subst. rewrite map_length.
-      induction #|mfix|. reflexivity. cbn.
-      now rewrite IHn.
-  - rewrite !nl_mkApps. simpl. eapply red_cofix_proj with (narg:=narg).
-    + unfold unfold_cofix in *. rewrite nth_error_map.
-      destruct (nth_error mfix idx); cbn; [|discriminate].
-      inversion H; subst. rewrite nl_subst.
-      repeat f_equal. clear.
-      unfold cofix_subst. rewrite map_length.
-      induction #|mfix|. reflexivity. cbn.
-      now rewrite IHn.
-  - econstructor. unfold declared_constant in *.
-    rewrite nl_lookup_env, H. reflexivity.
-    destruct decl as [? [?|] ?]; cbn in *; congruence.
-  - rewrite nl_mkApps; cbn. constructor.
-    now rewrite nth_error_map, H.
-  - constructor. eapply OnOne2_map, OnOne2_impl; tea.
-    cbn. intros x y [[? ?] ?]. split; assumption.
-  - constructor. eapply OnOne2_map, OnOne2_impl; tea.
-    cbn. intros x y [? ?]; assumption.
-  - constructor. eapply OnOne2_map, OnOne2_impl; tea.
-    cbn. intros x y [[? ?] ?]. split; tas.
-    cbn; congruence.
-  - apply fix_red_body. eapply OnOne2_map, OnOne2_impl; tea.
-    cbn. intros x y [[? ?] ?]. split; cbn; tas.
-    now rewrite nlctx_app_context, nl_fix_context in r0.
-    cbn; congruence.
-  - constructor. eapply OnOne2_map, OnOne2_impl; tea.
-    cbn. intros x y [[? ?] ?]. split; tas.
-    cbn; congruence.
-  - apply cofix_red_body. eapply OnOne2_map, OnOne2_impl; tea.
-    cbn. intros x y [[? ?] ?]. split; cbn; tas.
-    now rewrite nlctx_app_context, nl_fix_context in r0.
-    cbn; congruence.
+  - rewrite !nl_mkApps. simpl. eapply red_cofix_case with (narg := narg).
+    unfold unfold_cofix in *. rewrite nth_error_map.
+    destruct (nth_error mfix idx). 2: discriminate.
+    cbn.
+    inversion H. subst. rewrite nl_subst.
+    repeat f_equal. clear.
+    unfold cofix_subst. rewrite map_length.
+    induction #|mfix|.
+    * reflexivity.
+    * cbn. rewrite IHn. reflexivity.
+  - rewrite !nl_mkApps. simpl. eapply red_cofix_proj with (narg := narg).
+    unfold unfold_cofix in *. rewrite nth_error_map.
+    destruct (nth_error mfix idx). 2: discriminate.
+    cbn.
+    inversion H. subst. rewrite nl_subst.
+    repeat f_equal. clear.
+    unfold cofix_subst. rewrite map_length.
+    induction #|mfix|.
+    * reflexivity.
+    * cbn. rewrite IHn. reflexivity.
+  - econstructor.
+    + unfold declared_constant in *.
+      rewrite nl_lookup_env, H. reflexivity.
+    + destruct decl as [? [?|] ?].
+      all: cbn in *.
+      all: congruence.
+  - rewrite nl_mkApps. cbn. constructor.
+    rewrite nth_error_map, H. reflexivity.
+  - constructor. eapply OnOne2_map, OnOne2_impl. 1: eassumption.
+    cbn. intros x y [[? ?] ?]. split. all: assumption.
+  - constructor. eapply OnOne2_map, OnOne2_impl. 1: eassumption.
+    cbn. intros x y [? ?]. all: assumption.
+  - constructor. eapply OnOne2_map, OnOne2_impl. 1: eassumption.
+    cbn. intros x y [[? ?] ?]. split. 1: assumption.
+    cbn. congruence.
+  - apply fix_red_body. eapply OnOne2_map, OnOne2_impl. 1: eassumption.
+    cbn. intros x y [[? ?] ?]. split.
+    + rewrite nlctx_app_context, nl_fix_context in r0. assumption.
+    + cbn. congruence.
+  - constructor. eapply OnOne2_map, OnOne2_impl. 1: eassumption.
+    cbn. intros x y [[? ?] ?]. split. 1: assumption.
+    cbn. congruence.
+  - apply cofix_red_body. eapply OnOne2_map, OnOne2_impl. 1: eassumption.
+    cbn. intros x y [[? ?] ?]. split.
+    + rewrite nlctx_app_context, nl_fix_context in r0. assumption.
+    + cbn. congruence.
 Qed.
 
-Lemma nl_cumul {cf:checker_flags} Σ Γ A B
-  : Σ ;;; Γ |- A <= B -> nlg Σ ;;; nlctx Γ |- nl A <= nl B.
+Lemma nl_cumul {cf:checker_flags} :
+  forall Σ Γ A B,
+    Σ ;;; Γ |- A <= B ->
+    nlg Σ ;;; nlctx Γ |- nl A <= nl B.
 Proof.
-  induction 1.
-  - constructor. rewrite global_ext_constraints_nlg. now apply nl_leq_term.
-  - eapply cumul_red_l; tea. destruct Σ; now apply nl_red1.
-  - eapply cumul_red_r; tea. destruct Σ; now apply nl_red1.
+  intros Σ Γ A B h.
+  induction h.
+  - constructor. rewrite global_ext_constraints_nlg. apply nl_leq_term.
+    assumption.
+  - eapply cumul_red_l. 2: eassumption.
+    destruct Σ. apply nl_red1. assumption.
+  - eapply cumul_red_r. 1: eassumption.
+    destruct Σ. apply nl_red1. assumption.
 Qed.
 
-Lemma nl_destArity Γ A Δ s
-  : destArity Γ A = Some (Δ, s) -> destArity (nlctx Γ) (nl A) = Some (nlctx Δ, s).
+Lemma nl_destArity :
+  forall Γ A Δ s,
+    destArity Γ A = Some (Δ, s) ->
+    destArity (nlctx Γ) (nl A) = Some (nlctx Δ, s).
 Proof.
-  induction A in Γ |- *; cbn in *; intros; try discriminate.
-  now inversion H.
-  apply (IHA2 (Γ ,, vass na A1) H).
-  apply (IHA3 (Γ ,, vdef na A1 A2) H).
+  intros Γ A Δ s h.
+  induction A in Γ, h |- *.
+  all: simpl in *. all: try discriminate.
+  - inversion h. reflexivity.
+  - apply (IHA2 (Γ ,, vass na A1) h).
+  - apply (IHA3 (Γ ,, vdef na A1 A2) h).
 Qed.
 
-Lemma nl_instantiate_params params args ty
-  : option_map nl (instantiate_params params args ty) =
+Lemma nl_instantiate_params :
+  forall params args ty,
+    option_map nl (instantiate_params params args ty) =
     instantiate_params (nlctx params) (map nl args) (nl ty).
 Proof.
+  intros params args ty.
   unfold instantiate_params.
-  assert (eq: option_map (fun '(s, ty0) => (map nl s, nl ty0)) (instantiate_params_subst (List.rev params) args [] ty) = instantiate_params_subst (List.rev (nlctx params)) (map nl args) [] (nl ty)). {
-    replace (List.rev (nlctx params)) with (nlctx (List.rev params));
-      [|unfold nlctx; now rewrite map_rev].
+  assert (e :
+    option_map (fun '(s, ty0) => (map nl s, nl ty0))
+               (instantiate_params_subst (List.rev params) args [] ty)
+    = instantiate_params_subst (List.rev (nlctx params))
+                               (map nl args) [] (nl ty)
+  ).
+  { replace (List.rev (nlctx params)) with (nlctx (List.rev params))
+      by (unfold nlctx ; rewrite map_rev ; reflexivity).
     change [] with (map nl []) at 2.
-    generalize (List.rev params), (@nil term).
-    clear. intro params. revert args. induction params in ty |- *.
-    intros [|l l'] l0; reflexivity.
-    intros l0 l1; simpl.
-    destruct a as [? [?|] ?]; cbn.
-    destruct ty; cbn; try reflexivity. rewrite IHparams. cbn.
-    now rewrite nl_subst.
-    destruct ty, l0; cbn; try reflexivity. now rewrite IHparams. }
-  rewrite <- eq.
-  destruct (instantiate_params_subst _ _ _) as [[? ?]|]; cbn.
-  f_equal. apply nl_subst. reflexivity.
+    generalize (List.rev params), (@nil term). clear.
+    intros params l.
+    induction params in ty, args, l |- *.
+    - destruct args. all: reflexivity.
+    - simpl. destruct a as [? [?|] ?].
+      + simpl. destruct ty. all: try reflexivity.
+        simpl. rewrite IHparams. simpl.
+        rewrite nl_subst. reflexivity.
+      + destruct ty. all: try reflexivity.
+        destruct args.
+        * reflexivity.
+        * rewrite IHparams. reflexivity.
+  }
+  rewrite <- e.
+  destruct (instantiate_params_subst _ _ _) as [[? ?]|].
+  - simpl. f_equal. apply nl_subst.
+  - reflexivity.
 Qed.
 
-Lemma nl_inds kn u bodies
-  : map nl (inds kn u bodies) = inds kn u (map nl_one_inductive_body bodies).
+Lemma nl_inds :
+  forall kn u bodies,
+    map nl (inds kn u bodies) = inds kn u (map nl_one_inductive_body bodies).
 Proof.
+  intros kn u bodies.
   unfold inds. rewrite map_length.
-  induction #|bodies|. reflexivity.
-  simpl. now rewrite IHn.
+  induction #|bodies|.
+  - reflexivity.
+  - simpl. rewrite IHn. reflexivity.
 Qed.
 
-Lemma nl_decompose_prod_assum Γ t
-  : decompose_prod_assum (nlctx Γ) (nl t)
+Lemma nl_decompose_prod_assum :
+  forall Γ t,
+    decompose_prod_assum (nlctx Γ) (nl t)
     = let '(Γ, t) := decompose_prod_assum Γ t in (nlctx Γ, nl t).
 Proof.
-  induction t in Γ |- *; cbn; try reflexivity.
-  apply (IHt2 (Γ ,, vass na t1)).
-  apply (IHt3 (Γ ,, vdef na t1 t2)).
+  intros Γ t.
+  induction t in Γ |- *. all: try reflexivity.
+  - apply (IHt2 (Γ ,, vass na t1)).
+  - apply (IHt3 (Γ ,, vdef na t1 t2)).
 Qed.
 
-Lemma nl_it_mkProd_or_LetIn Γ A
-  : nl (it_mkProd_or_LetIn Γ A) = it_mkProd_or_LetIn (nlctx Γ) (nl A).
+Lemma nl_it_mkProd_or_LetIn :
+  forall Γ A,
+    nl (it_mkProd_or_LetIn Γ A) = it_mkProd_or_LetIn (nlctx Γ) (nl A).
 Proof.
-  induction Γ in A |- *. reflexivity.
-  simpl. rewrite IHΓ. f_equal.
-  destruct a as [? [?|] ?]; reflexivity.
+  intros Γ A.
+  induction Γ in A |- *.
+  - reflexivity.
+  - simpl. rewrite IHΓ. f_equal.
+    destruct a as [? [?|] ?].
+    all: reflexivity.
 Qed.
 
 Lemma nl_to_extended_list:
@@ -873,9 +1000,12 @@ Proof.
   intros indctx. unfold to_extended_list, to_extended_list_k.
   change [] with (map nl []) at 2.
   generalize (@nil term), 0.
-  induction indctx. reflexivity.
-  simpl. intros l n.
-  destruct a as [? [?|] ?]; cbn; apply IHindctx.
+  induction indctx.
+  - reflexivity.
+  - simpl. intros l n.
+    destruct a as [? [?|] ?].
+    all: cbn.
+    all: apply IHindctx.
 Qed.
 
 Lemma subst_instance_context_nlctx u ctx :
@@ -888,7 +1018,7 @@ Proof.
 Qed.
 
 
-Lemma typing_nlg {cf:checker_flags} :
+Lemma typing_nlg {cf : checker_flags} :
   env_prop (fun Σ Γ t T => nlg Σ ;;; nlctx Γ |- nl t : nl T).
 Proof.
   clear.
@@ -1071,22 +1201,27 @@ Proof.
     + now apply nl_cumul.
 Qed.
 
-Corollary reflect_nleq_term t t' :
-  reflect (nl t = nl t') (nleq_term t t').
+Corollary reflect_nleq_term :
+  forall t t',
+    reflect (nl t = nl t') (nleq_term t t').
 Proof.
+  intros t t'.
   destruct (reflect_eq_term_upto_univ_eqb t t').
   - constructor. eapply eq_term_nl_eq. assumption.
   - constructor. intro bot. apply f.
-    apply eq_term_upto_univ_nl_inv ; auto.
+    apply eq_term_upto_univ_nl_inv.
     rewrite bot.
-    apply eq_term_upto_univ_refl ; auto.
+    apply eq_term_upto_univ_refl.
+    all: auto.
 Qed.
 
-Lemma nleq_term_it_mkLambda_or_LetIn Γ u v :
+Lemma nleq_term_it_mkLambda_or_LetIn :
+  forall Γ u v,
     nleq_term u v ->
     nleq_term (it_mkLambda_or_LetIn Γ u) (it_mkLambda_or_LetIn Γ v).
 Proof.
-  intros h. induction Γ as [| [na [b|] A] Γ ih ] in u, v, h |- *.
+  intros Γ u v h.
+  induction Γ as [| [na [b|] A] Γ ih ] in u, v, h |- *.
   - assumption.
   - simpl. cbn. apply ih.
     eapply ssrbool.introT.

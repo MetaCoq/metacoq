@@ -1719,6 +1719,20 @@ Proof.
   specialize (IHl _ _ H0). intuition auto.
 Qed.
 
+Lemma Forall2_map_inv :
+  forall {A B A' B'} (R : A' -> B' -> Prop) (f : A -> A')
+    (g : B -> B') (l : list A) (l' : list B),
+    Forall2 R (map f l) (map g l') ->
+    Forall2 (fun x => R (f x) ∘ g) l l'.
+Proof.
+  intros A B A' B' R f g l l' h.
+  induction l in l', h |- * ; destruct l' ; try solve [ inversion h ].
+  - constructor.
+  - constructor.
+    + inversion h. subst. assumption.
+    + eapply IHl. inversion h. assumption.
+Qed.
+
 Lemma All2_app_inv : forall (A B : Type) (R : A -> B -> Type),
     forall l l1 l2, All2 R (l1 ++ l2) l -> { '(l1',l2') : _ & (l = l1' ++ l2')%list * (All2 R l1 l1') * (All2 R l2 l2')}%type.
 Proof.

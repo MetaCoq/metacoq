@@ -526,7 +526,7 @@ Section Lemmata.
     - apply nth_error_Some_length in h. assumption.
   Qed.
 
-  Lemma type_rename :
+  Lemma typing_alpha :
     forall Σ Γ u v A,
       wf Σ.1 ->
       Σ ;;; Γ |- u : A ->
@@ -916,7 +916,7 @@ Section Lemmata.
       Σ ;;; Γ |- nl u : A.
   Proof.
     intros Σ Γ u A hΣ h.
-    eapply type_rename ; eauto.
+    eapply typing_alpha ; eauto.
     eapply eq_term_upto_univ_tm_nl. all: auto.
   Qed.
 
@@ -994,7 +994,7 @@ Section Lemmata.
   Proof.
     intros Γ u v [A h] e.
     destruct hΣ.
-    exists A. eapply type_rename ; eauto.
+    exists A. eapply typing_alpha ; eauto.
   Qed.
 
   Lemma wellformed_rename :
@@ -2107,10 +2107,10 @@ Section Lemmata.
     (* apply conv_alt_red in h as [u' [v' [? [? ?]]]]. *)
     (* pose proof (subject_reduction _ Γ _ _ _ hΣ hu r) as hu'. *)
     (* pose proof (subject_reduction _ Γ _ _ _ hΣ hv r0) as hv'. *)
-    (* pose proof (type_rename _ _ _ _ hu' e) as hv''. *)
+    (* pose proof (typing_alpha _ _ _ _ hu' e) as hv''. *)
     (* pose proof (principal_typing _ hv' hv'') as [C [? [? hvC]]]. *)
     (* apply eq_term_sym in e as e'. *)
-    (* pose proof (type_rename _ _ _ _ hvC e') as huC. *)
+    (* pose proof (typing_alpha _ _ _ _ hvC e') as huC. *)
     (* Not clear.*)
   Abort.
 

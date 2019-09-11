@@ -1153,12 +1153,10 @@ Section Lemmata.
     forall Γ u v,
       cored Σ Γ u v ->
       cored Σ (nlctx Γ) (nl u) (nl v).
-  Admitted.
-
-  Lemma red_nl :
-    forall Γ u v,
-      red Σ Γ u v ->
-      red Σ (nlctx Γ) (nl u) (nl v).
+  Proof.
+    intros Γ u v H. induction H.
+    - constructor 1. admit.
+    - econstructor 2; tea. admit.
   Admitted.
 
   Derive Signature for Acc.

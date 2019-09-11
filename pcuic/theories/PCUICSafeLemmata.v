@@ -660,14 +660,14 @@ Section Lemmata.
       + econstructor. all: try eassumption.
         * eapply ihp. assumption.
         * eapply ihc. assumption.
-        * assert (All2 (fun x y => fst x = fst y × Σ ;;; Γ |- snd x : snd y) brs' btys)
+        * assert (All2 (fun x y => (fst x = fst y × Σ ;;; Γ |- snd x : snd y) × (Σ ;;; Γ |- y.2 : tSort ps)) brs' btys)
             as hty.
           { clear - ihbrs a.
             induction ihbrs in brs', a |- *.
             - dependent destruction a. constructor.
             - dependent destruction a.
               constructor. all: auto.
-              destruct p, r as [[? ?] ?]. split ; eauto.
+              destruct p, r as [[[? ?] ?] ?]. intuition eauto.
               transitivity (fst x) ; eauto.
           }
           clear - he hty ihbrs.
@@ -678,7 +678,7 @@ Section Lemmata.
              destruct r.
              destruct p.
              destruct p0 as [[? ?] ?].
-             constructor ; eauto. split.
+             constructor ; eauto. intuition eauto.
              ++ solve [ etransitivity ; eauto ].
              ++ econstructor.
                 ** eassumption.
@@ -686,6 +686,8 @@ Section Lemmata.
                       Is it hidden in the types_of_case_eq_term proof?
                       Are we missing an ingredient or should type_Case ask
                       that the branches types are sorted?
+
+                      Should be ok now.
                     *)
                   admit.
                 ** constructor.
@@ -694,7 +696,10 @@ Section Lemmata.
       + eapply validity_term ; eauto.
         instantiate (1 := tCase (ind, npar) p c brs).
         econstructor ; eauto.
-        apply All2_prod_inv in ihbrs as [? ?]. assumption.
+        apply All2_prod_inv in ihbrs as [a1 a4].
+        apply All2_prod_inv in a1 as [a1 a3].
+        apply All2_prod_inv in a1 as [a1 a2].
+        apply All2_prod. all: assumption.
       + constructor.
         eapply eq_term_leq_term.
         apply eq_term_sym.

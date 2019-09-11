@@ -46,7 +46,7 @@ Proof.
   unfold subst_instance_instance.
   now rewrite map_length.
 Qed.
-  
+
 Lemma subst_instance_level_two u1 u2 l :
   subst_instance_level u1 (subst_instance_level u2 l)
   = subst_instance_level (subst_instance_instance u1 u2) l.
@@ -330,7 +330,7 @@ Proof.
   now apply not_var_global_levels in H2.
 Qed.
 
-Lemma monomorphic_global_constraint_ext Σ φ 
+Lemma monomorphic_global_constraint_ext Σ φ
       (hΣ : wf_ext (Σ, Monomorphic_ctx φ)) c :
   CS.In c (global_ext_constraints (Σ, Monomorphic_ctx φ))
   -> is_monomorphic_cstr c.
@@ -499,7 +499,7 @@ Hint Resolve consistent_ext_trans : univ_subst.
 
 
 Lemma consistent_instance_valid_constraints Σ φ u univs :
-  wf_ext (Σ, φ) -> 
+  wf_ext (Σ, φ) ->
   CS.Subset (monomorphic_constraints φ)
                        (global_ext_constraints (Σ, univs)) ->
   consistent_instance_ext (Σ, univs) φ u ->
@@ -526,7 +526,7 @@ Proof.
   - apply satisfies_subst_instance_ctr; tas.
     rewrite equal_subst_instance_cstrs_mono; aa.
     apply satisfies_union in Hv; apply Hv.
-Qed. 
+Qed.
 
 Hint Resolve consistent_instance_valid_constraints : univ_subst.
 
@@ -633,7 +633,7 @@ Proof.
     destruct l; cbn; try reflexivity; discriminate.
 Qed.
 
-Lemma subst_instance_univ_make l u : 
+Lemma subst_instance_univ_make l u :
   subst_instance_univ u (Universe.make l)
   = Universe.make (subst_instance_level u l).
 Proof.
@@ -664,7 +664,7 @@ Proof.
     + apply LS.union_spec; right; simpl.
       apply LS.mem_spec, global_levels_Set.
 Qed.
-    
+
 
 Lemma is_prop_subst_instance_univ u l
       (Hu : forallb (negb ∘ Level.is_prop) u)
@@ -821,7 +821,7 @@ Proof.
     unfold unfold_cofix.
     rewrite nth_error_map. destruct nth_error; cbn.
     rewrite <- subst_subst_instance_constr, cofix_subst_subst_instance.
-    all: now inversion E. 
+    all: now inversion E.
   - cbn. rewrite subst_instance_constr_two. econstructor; eauto.
   - cbn. rewrite !subst_instance_constr_mkApps.
     econstructor. now rewrite nth_error_map, H.
@@ -860,7 +860,7 @@ Qed.
 Lemma cumul_subst_instance (Σ : global_env_ext) Γ u A B univs :
   forallb (fun x => negb (Level.is_prop x)) u ->
   valid_constraints (global_ext_constraints (Σ.1, univs))
-                    (subst_instance_cstrs u Σ) -> 
+                    (subst_instance_cstrs u Σ) ->
   Σ ;;; Γ |- A <= B ->
   (Σ.1,univs) ;;; subst_instance_context u Γ
                    |- subst_instance_constr u A <= subst_instance_constr u B.
@@ -972,7 +972,7 @@ Proof.
   induction t in Γ |- *; cbnr.
   now rewrite IHt1.
 Qed.
-    
+
 Lemma subst_instance_to_extended_list u l
   : map (subst_instance_constr u) (to_extended_list l)
     = to_extended_list (subst_instance_context u l).
@@ -1005,7 +1005,7 @@ Proof.
   unfold decompose_app; rewrite <- (subst_instance_decompose_app_rec u0 [] t0).
   destruct (decompose_app_rec t0 []); cbn.
   unfold subst_instance, subst_instance_list.
-  case_eq (chop (ind_npars mdecl) l); intros l0 l1 H. 
+  case_eq (chop (ind_npars mdecl) l); intros l0 l1 H.
   eapply chop_map in H; rewrite H; clear H.
   unfold on_snd; cbn. f_equal.
   rewrite subst_instance_constr_it_mkProd_or_LetIn. f_equal.
@@ -1140,9 +1140,10 @@ Proof.
     + eapply All2_map with (f := (on_snd (subst_instance_constr u0)))
                            (g:= (on_snd (subst_instance_constr u0))).
       eapply All2_impl. eassumption. intros.
-      destruct X7. destruct p0. split. cbn. eauto. cbn.
+      simpl in X7. destruct X7 as [[[? ?] ?] ?]. intuition eauto.
+      cbn. eauto. cbn.
       destruct x, y; cbn in *; subst.
-      eapply t; assumption.
+      eapply t1; assumption.
   - intros p c u mdecl idecl pdecl isdecl args X X0 X1 X2 H u0 univs wfΣ' HSub H0.
     rewrite <- subst_subst_instance_constr. cbn.
     rewrite !subst_instance_constr_two.

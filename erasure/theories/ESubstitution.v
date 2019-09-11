@@ -109,7 +109,7 @@ Proof.
   all: try now (econstructor; eapply Is_type_extends; eauto).
   - econstructor. all:eauto.
     2:{ eauto. eapply All2_All_left in X4.
-        2:{ intros ? ? []. exact e. }
+        2:{ intros ? ? [[[? ?] ?] ?]. exact e. }
         eapply All2_All_mix_left in X4; eauto.
         eapply All2_impl. exact X4.
         intros. destruct H as [? []].
@@ -208,13 +208,13 @@ Proof.
     + eapply h_forall_Γ0; eauto.
     + eapply All2_map.
       eapply All2_All_left in X4.
-      2:{ intros ? ? [? e]. exact e. }
+      2:{ idtac. intros ? ? [[[[? ?] e0] ?] e']. exact e0. }
       eapply All2_impl. eapply All2_All_mix_left.
       eassumption. eassumption. intros.
       destruct H. destruct p0.
       cbn. destruct x, y; cbn in *; subst.
       split; eauto.
-  - rewrite lift_mkApps. 
+  - rewrite lift_mkApps.
     rewrite map_repeat. cbn. econstructor.
     + eauto.
     + eauto.
@@ -408,7 +408,7 @@ Proof.
         eapply All2_impl_In; eauto.
         intros. destruct H10, x, y. cbn in *. subst. split; eauto.
         eapply All2_All_left in X4.
-        2:{ intros ? ? []. exact e0. }
+        2:{ intros ? ? [[[[? ?] e1] ?] ?]. exact e1. }
 
         eapply In_nth_error in H8 as [].
         eapply nth_error_all in X4; eauto.

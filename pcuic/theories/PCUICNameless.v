@@ -1137,7 +1137,7 @@ Proof.
         apply nl_eq_decl'.
     + rewrite nl_mkApps in *; eassumption.
     + clear -X6. eapply All2_map, All2_impl; tea. cbn.
-      clear. intros x y [[? ?] ?]. split; tas.
+      clear. intros x y [[[? ?] ?] ?]. intuition eauto.
   - destruct pdecl as [pdecl1 pdecl2]; simpl.
     rewrite map_rev.
     eapply type_Proj with (mdecl0:=nl_mutual_inductive_body mdecl)

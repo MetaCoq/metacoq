@@ -1084,26 +1084,26 @@ Section Lemmata.
     destruct x ; assumption.
   Qed.
 
-  Lemma conv_context :
-    forall Σ Γ u v ρ,
-      wf Σ.1 ->
-      Σ ;;; Γ ,,, stack_context ρ |- u == v ->
-      Σ ;;; Γ |- zipc u ρ == zipc v ρ.
-  Proof.
-    intros Σ Γ u v ρ hΣ h.
-    induction ρ in u, v, h |- *.
-    - assumption.
-    - simpl. eapply IHρ. eapply conv_App_l ; auto.
-    - simpl. eapply IHρ. eapply conv_App_r ; auto.
-    - simpl. eapply IHρ. eapply conv_App_r ; auto.
-    - simpl. eapply IHρ. eapply conv_Case_c ; auto.
-    - simpl. eapply IHρ. eapply conv_Proj_c ; auto.
-    - simpl. eapply IHρ. eapply conv_Prod_l ; auto.
-    - simpl. eapply IHρ. eapply conv_Prod_r ; auto.
-    - simpl. eapply IHρ. eapply conv_Lambda_l ; auto.
-    - simpl. eapply IHρ. eapply conv_Lambda_r ; auto.
-    - simpl. eapply IHρ. eapply conv_App_r ; auto.
-  Qed.
+  (* Lemma conv_context : *)
+  (*   forall Σ Γ u v ρ, *)
+  (*     wf Σ.1 -> *)
+  (*     Σ ;;; Γ ,,, stack_context ρ |- u == v -> *)
+  (*     Σ ;;; Γ |- zipc u ρ == zipc v ρ. *)
+  (* Proof. *)
+  (*   intros Σ Γ u v ρ hΣ h. *)
+  (*   induction ρ in u, v, h |- *. *)
+  (*   - assumption. *)
+  (*   - simpl. eapply IHρ. eapply conv_App_l ; auto. *)
+  (*   - simpl. eapply IHρ. eapply conv_App_r ; auto. *)
+  (*   - simpl. eapply IHρ. eapply conv_App_r ; auto. *)
+  (*   - simpl. eapply IHρ. eapply conv_Case_c ; auto. *)
+  (*   - simpl. eapply IHρ. eapply conv_Proj_c ; auto. *)
+  (*   - simpl. eapply IHρ. eapply conv_Prod_l ; auto. *)
+  (*   - simpl. eapply IHρ. eapply conv_Prod_r ; auto. *)
+  (*   - simpl. eapply IHρ. eapply conv_Lambda_l ; auto. *)
+  (*   - simpl. eapply IHρ. eapply conv_Lambda_r ; auto. *)
+  (*   - simpl. eapply IHρ. eapply conv_App_r ; auto. *)
+  (* Qed. *)
 
   Context (Σ : global_env_ext).
 
@@ -1996,54 +1996,9 @@ Section Lemmata.
     assumption.
   Qed.
 
-  Lemma red_lambda_inv Γ na A1 b1 T :
-    red Σ Γ (tLambda na A1 b1) T ->
-    ∑ A2 b2, (T = tLambda na A2 b2) *
-             red Σ Γ A1 A2 * red Σ (Γ ,, vass na A1) b1 b2.
-  Proof.
-    intros.
-    eapply red_alt in X. eapply clos_rt_rt1n_iff in X.
-    depind X.
-    - eexists _, _; intuition eauto.
-    - depelim r; solve_discr; specialize (IHX _ _ _ _ eq_refl);
-      destruct IHX as [A2 [B2 [[-> ?] ?]]].
-      * eexists _, _; intuition eauto.
-        now eapply red_step with M'.
-        eapply PCUICConfluence.red_red_ctx; eauto. admit.
-        constructor; auto. eapply All2_local_env_red_refl.
-        red. auto.
-      * eexists _, _; intuition eauto.
-        now eapply red_step with M'.
-  Admitted.
-
   Hint Resolve conv_alt_refl conv_alt_red : core.
   Hint Resolve conv_ctx_refl: core.
 
-  Lemma Lambda_conv_inv :
-    forall leq Γ na1 na2 A1 A2 b1 b2,
-      wf_local Σ Γ ->
-      conv leq Σ Γ (tLambda na1 A1 b1) (tLambda na2 A2 b2) ->
-      ∥ Σ ;;; Γ |- A1 == A2 ∥ /\ conv leq Σ (Γ ,, vass na1 A1) b1 b2.
-  Proof.
-    intros * wfΓ.
-    destruct leq; simpl in *.
-    destruct 1.
-    eapply conv_alt_red in X as [l [r [[redl redr] eq]]].
-    eapply red_lambda_inv in redl as [A1' [b1' [[-> ?] ?]]].
-    eapply red_lambda_inv in redr as [A2' [b2' [[-> ?] ?]]].
-    depelim eq. destruct hΣ.
-    assert(Σ ;;; Γ |- A1 == A2).
-    { eapply conv_alt_trans with A1'; auto.
-      eapply conv_alt_trans with A2'; auto.
-      apply conv_alt_sym; auto. }
-    split; constructor; auto.
-    eapply conv_alt_trans with b1'; auto.
-    eapply conv_alt_trans with b2'; auto.
-    apply conv_alt_sym; auto.
-    eapply conv_alt_conv_ctx; eauto.
-    constructor; auto. constructor. now apply conv_alt_sym.
-    admit. (* Similar *)
-  Admitted.
 
   (* Let bindings are not injective, so it_mkLambda_or_LetIn is not either.
      However, when they are all lambdas they become injective for conversion.
@@ -2057,14 +2012,15 @@ Section Lemmata.
       let_free_context Γ
     end.
 
-  Notation conv_ctx Σ Γ Γ' := (context_relation (conv_decls Σ) Γ Γ').
-
-  Lemma it_mkLambda_or_LetIn_let_free_conv_inv :
-    forall Γ Δ1 Δ2 t1 t2,
+  (* Wrong if #|Δ1| <> #|Δ2| ? *)
+  Lemma it_mkLambda_or_LetIn_let_free_conv_inv Γ Δ1 Δ2 t1 t2 :
       let_free_context Δ1 ->
       let_free_context Δ2 ->
       Σ ;;; Γ |- it_mkLambda_or_LetIn Δ1 t1 == it_mkLambda_or_LetIn Δ2 t2 ->
-      conv_ctx Σ (Γ ,,, Δ1) (Γ ,,, Δ2) × Σ ;;; Γ ,,, Δ1 |- t1 == t2.
+      conv_context Σ (Γ ,,, Δ1) (Γ ,,, Δ2) × Σ ;;; Γ ,,, Δ1 |- t1 == t2.
+  Proof.
+    induction Δ1 as [|[na [bd|] ty] Δ1] in Δ2, t1, t2 |- *; cbn; [|discriminate|].
+    - intros _.
   Admitted.
 
   Lemma let_free_stack_context :
@@ -2080,7 +2036,7 @@ Section Lemmata.
     forall Γ π1 π2 t1 t2,
       Σ ;;; Γ |- it_mkLambda_or_LetIn (stack_context π1) t1
                  == it_mkLambda_or_LetIn (stack_context π2) t2 ->
-      conv_ctx Σ (Γ ,,, stack_context π1) (Γ ,,, stack_context π2) ×
+      conv_context Σ (Γ ,,, stack_context π1) (Γ ,,, stack_context π2) ×
       Σ ;;; Γ ,,, stack_context π1 |- t1 == t2.
   Proof.
     intros Γ π1 π2 t1 t2 h.
@@ -2095,14 +2051,14 @@ Section Lemmata.
       let_free_context Δ1 ->
       let_free_context Δ2 ->
       conv leq Σ Γ (it_mkLambda_or_LetIn Δ1 t1) (it_mkLambda_or_LetIn Δ2 t2) ->
-      ∥ conv_ctx Σ (Γ ,,, Δ1) (Γ ,,, Δ2) ∥ /\ conv leq Σ (Γ ,,, Δ1) t1 t2.
+      ∥ conv_context Σ (Γ ,,, Δ1) (Γ ,,, Δ2) ∥ /\ conv leq Σ (Γ ,,, Δ1) t1 t2.
   Admitted.
 
   Lemma it_mkLambda_or_LetIn_stack_context_conv'_inv :
     forall leq Γ π1 π2 t1 t2,
       conv leq Σ Γ (it_mkLambda_or_LetIn (stack_context π1) t1)
                    (it_mkLambda_or_LetIn (stack_context π2) t2) ->
-      ∥ conv_ctx Σ (Γ ,,, stack_context π1) (Γ ,,, stack_context π2) ∥ /\
+      ∥ conv_context Σ (Γ ,,, stack_context π1) (Γ ,,, stack_context π2) ∥ /\
       conv leq Σ (Γ ,,, stack_context π1) t1 t2.
   Proof.
     intros leq Γ π1 π2 t1 t2 h.
@@ -2111,40 +2067,6 @@ Section Lemmata.
     - eapply let_free_stack_context.
     - assumption.
   Qed.
-
-  Lemma it_mkLambda_or_LetIn_conv' :
-    forall leq Γ Δ1 Δ2 t1 t2,
-      conv_ctx Σ (Γ ,,, Δ1) (Γ ,,, Δ2) ->
-      conv leq Σ (Γ ,,, Δ1) t1 t2 ->
-      conv leq Σ Γ (it_mkLambda_or_LetIn Δ1 t1) (it_mkLambda_or_LetIn Δ2 t2).
-  Admitted.
-
-  Lemma Prod_conv :
-    forall leq Γ na1 A1 B1 na2 A2 B2,
-      Σ ;;; Γ |- A1 == A2 ->
-      conv leq Σ (Γ ,, vass na1 A1) B1 B2 ->
-      conv leq Σ Γ (tProd na1 A1 B1) (tProd na2 A2 B2).
-  Admitted.
-
-  Lemma it_mkLambda_or_LetIn_conv :
-    forall Γ Δ1 Δ2 t1 t2,
-      conv_ctx Σ (Γ ,,, Δ1) (Γ ,,, Δ2) ->
-      Σ ;;; Γ ,,, Δ1 |- t1 == t2 ->
-      Σ ;;; Γ |- it_mkLambda_or_LetIn Δ1 t1 == it_mkLambda_or_LetIn Δ2 t2.
-  Admitted.
-
-  Lemma App_conv :
-    forall Γ t1 t2 u1 u2,
-      Σ ;;; Γ |- t1 == t2 ->
-      Σ ;;; Γ |- u1 == u2 ->
-      Σ ;;; Γ |- tApp t1 u1 == tApp t2 u2.
-  Admitted.
-
-  Lemma mkApps_conv_weak :
-    forall Γ u1 u2 l,
-      Σ ;;; Γ |- u1 == u2 ->
-      Σ ;;; Γ |- mkApps u1 l == mkApps u2 l.
-  Admitted.
 
   Lemma cored_red_cored :
     forall Γ u v w,
@@ -2423,3 +2345,4 @@ Lemma isWfArity_or_Type_cumul {cf:checker_flags} :
     isWfArity_or_Type Σ Γ A' ->
     isWfArity_or_Type Σ Γ A.
 Admitted.
+

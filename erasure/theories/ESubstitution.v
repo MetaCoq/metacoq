@@ -8,7 +8,6 @@ From Equations Require Import Equations.
 Require Import String.
 Local Open Scope list_scope.
 Set Asymmetric Patterns.
-Local Set Keyed Unification.
 Import MonadNotation.
 
 Module PA := PCUICAst.
@@ -50,30 +49,6 @@ Proof.
   eauto.
 Qed.
 
-Lemma SingletonProp_extends:
-  forall (Σ : global_env_ext) (ind : inductive)
-    (mdecl : PCUICAst.mutual_inductive_body) (idecl : PCUICAst.one_inductive_body),
-
-    PCUICTyping.declared_inductive (fst Σ) mdecl ind idecl ->
-    forall (Σ' : global_env) (u0 : universe_instance),
-      wf Σ' ->
-      extends Σ Σ' ->
-      SingletonProp Σ ind -> SingletonProp (Σ', Σ.2) ind.
-Proof.
-Admitted.
-
-Lemma Computational_extends:
-  forall (Σ : global_env_ext) (ind : inductive)
-    (mdecl : PCUICAst.mutual_inductive_body) (idecl : PCUICAst.one_inductive_body),
-
-    PCUICTyping.declared_inductive (fst Σ) mdecl ind idecl ->
-    forall (Σ' : global_env) (u0 : universe_instance),
-      wf Σ' ->
-      extends Σ Σ' ->
-      Computational Σ ind -> Computational (Σ', Σ.2) ind.
-Proof.
-Admitted.
-
 Lemma Informative_extends:
   forall (Σ : global_env_ext) (ind : inductive)
     (mdecl : PCUICAst.mutual_inductive_body) (idecl : PCUICAst.one_inductive_body),
@@ -108,19 +83,14 @@ Proof.
   all: try now (econstructor; eauto).
   all: try now (econstructor; eapply Is_type_extends; eauto).
   - econstructor. all:eauto.
-    2:{ eauto. eapply All2_All_left in X4.
+    2:{ eauto. eapply All2_All_left in X3.
         2:{ intros ? ? []. exact e. }
-        eapply All2_All_mix_left in X4; eauto.
-        eapply All2_impl. exact X4.
+        eapply All2_All_mix_left in X3; eauto.
+        eapply All2_impl. exact X3.
         intros. destruct H as [? []].
         split; eauto. }
-    eapply Computational_extends; eauto.
-  - econstructor. all:eauto.
-    eapply SingletonProp_extends; eauto.
-    eapply Is_type_extends; eauto.
-    inv X4. eapply X8; eauto.
-  - eapply erases_tCase_Empty; eauto.
-    eapply SingletonProp_extends; eauto.
+
+    eapply Informative_extends; eauto.
   - econstructor. destruct isdecl. 2:eauto.
     eapply Informative_extends; eauto.
   - econstructor.
@@ -158,12 +128,6 @@ Lemma erases_ctx_ext (Σ : global_env_ext) Γ Γ' t t' :
   erases Σ Γ t t' -> Γ = Γ' -> erases Σ Γ' t t'.
 Proof.
   intros. now subst.
-Qed.
-
-Lemma map_repeat X Y (f : X -> Y) x n :
-  map f (repeat x n) = repeat (f x) n.
-Proof.
-  induction n; cbn; congruence.
 Qed.
 
 Lemma erases_weakening' (Σ : global_env_ext) (Γ Γ' Γ'' : PCUICAst.context) (t T : PCUICAst.term) t' :
@@ -207,20 +171,13 @@ Proof.
     + eauto.
     + eapply h_forall_Γ0; eauto.
     + eapply All2_map.
-      eapply All2_All_left in X4.
+      eapply All2_All_left in X3.
       2:{ intros ? ? [? e]. exact e. }
       eapply All2_impl. eapply All2_All_mix_left.
       eassumption. eassumption. intros.
       destruct H. destruct p0.
       cbn. destruct x, y; cbn in *; subst.
       split; eauto.
-  - rewrite lift_mkApps. 
-    rewrite map_repeat. cbn. econstructor.
-    + eauto.
-    + eauto.
-    + eauto.
-    + admit.
-    + admit.
   - assert (HT : Σ;;; Γ ,,, Γ' |- PCUICAst.tFix mfix n : (decl.(dtype))).
     econstructor; eauto. eapply All_local_env_impl. eassumption. intros.
     destruct T; cbn in *; firstorder.
@@ -254,7 +211,7 @@ Proof.
     rewrite <- plus_n_O.
     now rewrite (All2_length _ _ H4).
   - eauto.
-Admitted.
+Qed.
 
 Lemma erases_weakening (Σ : global_env_ext) (Γ Γ' : PCUICAst.context) (t T : PCUICAst.term) t' :
   wf Σ ->
@@ -400,19 +357,19 @@ Proof.
     + cbn. econstructor.
     + econstructor.
       eapply is_type_subst; eauto.
-  - depelim H4.
+  - depelim H5.
     + cbn. econstructor.
       * eauto.
-      * eapply H3; eauto.
+      * eapply H4; eauto.
       * eapply All2_map.
         eapply All2_impl_In; eauto.
-        intros. destruct H10, x, y. cbn in *. subst. split; eauto.
-        eapply All2_All_left in X4.
+        intros. destruct H11, x, y. cbn in *. subst. split; eauto.
+        eapply All2_All_left in X3.
         2:{ intros ? ? []. exact e0. }
 
-        eapply In_nth_error in H8 as [].
-        eapply nth_error_all in X4; eauto.
-        eapply X4; eauto.
+        eapply In_nth_error in H9 as [].
+        eapply nth_error_all in X3; eauto.
+        eapply X3; eauto.
     (* + cbn. econstructor. *)
     (*   eapply H4 in H5; eauto. *)
     (*   econstructor. *)
@@ -429,8 +386,6 @@ Proof.
     (*   eapply H4 in H5_; eauto. *)
     (*   inv X3. destruct X6. *)
     (*   eapply e; eauto. *)
-    + admit.
-    + admit.
     + econstructor.
       eapply is_type_subst; eauto.
   - inv H1.
@@ -494,4 +449,4 @@ Proof.
     + econstructor.
       eapply is_type_subst; eauto.
   - eapply H; eauto.
-Admitted.
+Qed.

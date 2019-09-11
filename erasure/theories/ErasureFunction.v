@@ -124,13 +124,12 @@ Next Obligation.
     cbn. eapply isWfArity_prod_inv; eauto.
 Qed.
 Next Obligation.
-  clear He.
   sq. destruct HT as [ [] | [] ].
-  - eapply subject_reduction in X; eauto.
-    eapply inversion_Prod in X as (? & ? & ? & ? & ?).
+  - eapply subject_reduction in X5; eauto.
+    eapply inversion_Prod in X5 as (? & ? & ? & ? & ?).
     do 2 econstructor. eauto. auto.
   - econstructor 2. sq.
-    eapply PCUICPrincipality.isWfArity_red in X; eauto.
+    eapply PCUICPrincipality.isWfArity_red in X5; eauto.
     eapply isWfArity_prod_inv; eauto.
 Qed.
 Next Obligation.
@@ -142,27 +141,26 @@ Next Obligation.
   eassumption. now cbn.
 Qed.
 Next Obligation.
-  clear He.
   destruct HΣ as [wΣ].
   destruct H1 as (? & ? & ?). sq.
   destruct H.
-  edestruct (red_confluence wfΣ X0 X) as (? & ? & ?); eauto.
+  edestruct (red_confluence wfΣ X6 X5) as (? & ? & ?); eauto.
   eapply invert_red_prod in r as (? & ? & [] & ?); eauto. subst.
 
   eapply invert_cumul_arity_l in H2. 2:eauto. 3: eapply PCUICCumulativity.red_cumul. 3:eauto. 2:eauto.
   destruct H2 as (? & ? & ?). sq.
 
-  eapply invert_red_prod in X2 as (? & ? & [] & ?); eauto. subst. cbn in *.
+  eapply invert_red_prod in X8 as (? & ? & [] & ?); eauto. subst. cbn in *.
   exists x4; split; eauto.
 
   destruct HT as [ [] | [] ].
-  ++ sq. pose proof (X2). pose proof X2.
+  ++ sq. pose proof (X8). pose proof X8.
 
-     eapply subject_reduction in X4. 2:eauto. 2:{ etransitivity. exact X. exact r0. }
-     eapply inversion_Prod in X4 as (? & ? & ? & ? & ?) ; auto.
+     eapply subject_reduction in X9. 2:eauto. 2:{ etransitivity. exact X5. exact r0. }
+     eapply inversion_Prod in X9 as (? & ? & ? & ? & ?) ; auto.
 
-     eapply subject_reduction in X3. 2:eauto. 2:{ exact X0. }
-     eapply inversion_Prod in X3 as (? & ? & ? & ? & ?) ; auto.
+     eapply subject_reduction in X10. 2:eauto. 2:{ exact X6. }
+     eapply inversion_Prod in X10 as (? & ? & ? & ? & ?) ; auto.
 
      etransitivity. eassumption.
 
@@ -344,17 +342,10 @@ Section Erase.
                         ret (E.tApp f' l')
       ; erase Γ HΓ (tCase ip p c brs) _ :=
                              c' <- erase Γ HΓ c;;
-                                if is_box c' then
-                                  match brs with
-                                  | (a, b) :: brs => b' <- erase Γ HΓ b ;; ret (E.mkApps b' (repeat E.tBox a))
-                                  | [] => ret (E.tCase ip c' [])
-                                  end
-                                else
-                                  brs' <- monad_map (T :=typing_result) (fun x => x' <- erase Γ HΓ (snd x);; ret (fst x, x')) brs;;
-                                  ret (E.tCase ip c' brs')
+                                brs' <- monad_map (T :=typing_result) (fun x => x' <- erase Γ HΓ (snd x);; ret (fst x, x')) brs;;
+                                ret (E.tCase ip c' brs')
       ; erase Γ HΓ (tProj p c) _ :=
-          c' <- erase Γ HΓ c;;
-             if is_box c' then ret (E.tBox) else
+                      c' <- erase Γ HΓ c;;
                          ret (E.tProj p c')
       ; erase Γ HΓ (tFix mfix n) _ :=
                         mfix' <- erase_mfix (erase) Γ HΓ mfix;;
@@ -426,44 +417,39 @@ Proof.
     split. econstructor; eauto. left. subst.
     eapply isArity_subst_instance.
     eapply isArity_ind_type; eauto.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  (* - econstructor. *)
-  (*   eapply elim_restriction_works. eauto. eauto. eauto. intros. *)
-  (*   eapply f, isErasable_Proof. eauto. eauto. *)
+  - econstructor.
+    eapply elim_restriction_works. eauto. eauto. eauto. intros.
+    eapply f, isErasable_Proof. eauto. eauto.
 
-  (*   pose proof (Prelim.monad_map_All2 _ _ _ brs a2 E2). *)
+    pose proof (Prelim.monad_map_All2 _ _ _ brs a2 E2).
 
-  (*   eapply All2_All_left in X3. 2:{ intros. destruct X4. exact e. } *)
+    eapply All2_All_left in X3. 2:{ intros. destruct X4. exact e. }
 
-  (*   eapply All2_impl. *)
-  (*   eapply All2_All_mix_left. eassumption. eassumption. *)
-  (*   intros. destruct H5. *)
-  (*   destruct ?; inv e0. cbn. eauto. *)
+    eapply All2_impl.
+    eapply All2_All_mix_left. eassumption. eassumption.
+    intros. destruct H5.
+    destruct ?; inv e0. cbn. eauto.
   - econstructor.
     clear E.
-    admit.
-    (* destruct isdecl as (? & ? & ?). *)
-    (* eapply elim_restriction_works_proj; eauto. intros. *)
-    (* eapply isErasable_Proof in X2. eauto. *)
 
-    (* eauto. *)
+    destruct isdecl as (? & ? & ?).
+    eapply elim_restriction_works_proj; eauto. intros.
+    eapply isErasable_Proof in X2. eauto.
+
+    eauto.
   - clear E. econstructor.
     unfold erase_mfix in *.
     repeat destruct ?; try congruence.
-    (* pose proof (Prelim.monad_map_All2 _ _ _ mfix a1 E1). *)
-    (* eapply All2_impl. eapply All2_All_mix_left. exact X0. eassumption. *)
+    pose proof (Prelim.monad_map_All2 _ _ _ mfix a1 E1).
+    eapply All2_impl. eapply All2_All_mix_left. exact X0. eassumption.
 
-    (* intros. destruct X1. cbn in *. unfold bind in e. cbn in e. *)
-    (* repeat destruct ?; try congruence; inv e. *)
+    intros. destruct X1. cbn in *. unfold bind in e. cbn in e.
+    repeat destruct ?; try congruence; inv e.
 
-    (* cbn. repeat split; eauto. *)
-    (* eapply p. eauto. *)
-  (* - clear E. inv t; discriminate. *)
-Admitted.
+    cbn. repeat split; eauto.
+    eapply p. eauto.
+  - clear E. inv t; discriminate.
+Qed.
 
 Lemma erase_Some_typed {Σ wfΣ Γ wfΓ t r} :
   erase Σ wfΣ Γ wfΓ t = Checked r -> exists T, ∥Σ ;;; Γ |- t : T∥.
@@ -499,9 +485,9 @@ Definition erase_one_inductive_body Σ wfΣ npars arities Har
   decty <- lift_opt_typing (decompose_prod_n_assum [] npars oib.(ind_type))
         (NotAnInductive oib.(ind_type)) ;;
   let '(params, arity) := decty in
-  (* type <- erase Σ wfΣ [] wf_local_nil oib.(ind_type) ;; *)
+  type <- erase Σ wfΣ [] wf_local_nil oib.(ind_type) ;;
   ctors <- monad_map (fun '(x, y, z) => y' <- erase Σ wfΣ arities Har y;; ret (x, y', z)) oib.(ind_ctors);;
-  (* FIXME not used! let projctx := arities ,,, params ,, vass nAnon oib.(ind_type) in *)
+  let projctx := arities ,,, params ,, vass nAnon oib.(ind_type) in
   projs <- monad_map (fun '(x, y) => y' <- erase Σ wfΣ [] wf_local_nil y;; ret (x, y')) oib.(ind_projs);;
   ret {| E.ind_name := oib.(ind_name);
          E.ind_kelim := oib.(ind_kelim);
@@ -601,8 +587,8 @@ Proof.
         unfold erases_one_inductive_body. cbn. destruct ?; cbn.
         (* unfold lift_opt_typing in E. *)
         (* destruct decompose_prod_n_assum eqn:E6; inv E. cbn. *)
-        pose proof (Prelim.monad_map_All2 _ _ _ _ _ E3).
-        pose proof (Prelim.monad_map_All2 _ _ _ _ _ E4). repeat split; eauto.
+        pose proof (Prelim.monad_map_All2 _ _ _ _ _ E4).
+        pose proof (Prelim.monad_map_All2 _ _ _ _ _ E5). repeat split; eauto.
         -- eapply All2_Forall2.
            eapply All2_impl_In. eassumption.
            intros. destruct x0, p, y, p. cbn in *.
@@ -610,7 +596,7 @@ Proof.
            inv H4. split; eauto.
 
            (* pose (t' := t). inv t'. cbn in *. *)
-           destruct (erase_Some_typed E5) as [? []].
+           destruct (erase_Some_typed E6) as [? []].
 
            eapply erases_erase. 2:eauto. eauto.
         -- eapply All2_Forall2.
@@ -620,7 +606,7 @@ Proof.
              inv H4. split; eauto.
 
            (* pose (t' := t). inv t'. cbn in *. *)
-           destruct (erase_Some_typed E5) as [? []].
+           destruct (erase_Some_typed E6) as [? []].
 
            eapply erases_erase.
            2:{ eauto. } eauto.

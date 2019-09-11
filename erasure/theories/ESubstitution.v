@@ -83,10 +83,10 @@ Proof.
   all: try now (econstructor; eauto).
   all: try now (econstructor; eapply Is_type_extends; eauto).
   - econstructor. all:eauto.
-    2:{ eauto. eapply All2_All_left in X3.
+    2:{ eapply All2_All_left in X4.
         2:{ intros ? ? []. exact e. }
-        eapply All2_All_mix_left in X3; eauto.
-        eapply All2_impl. exact X3.
+        eapply All2_All_mix_left in X4; eauto.
+        eapply All2_impl. exact X4.
         intros. destruct H as [? []].
         split; eauto. }
 
@@ -100,7 +100,7 @@ Proof.
     split; eauto.
   - eauto.
 Qed.
-
+    
 (** ** Weakening *)
 
 Lemma Is_type_weakening:
@@ -171,7 +171,7 @@ Proof.
     + eauto.
     + eapply h_forall_Γ0; eauto.
     + eapply All2_map.
-      eapply All2_All_left in X3.
+      eapply All2_All_left in X4.
       2:{ intros ? ? [? e]. exact e. }
       eapply All2_impl. eapply All2_All_mix_left.
       eassumption. eassumption. intros.
@@ -212,7 +212,7 @@ Proof.
     now rewrite (All2_length _ _ H4).
   - eauto.
 Qed.
-
+      
 Lemma erases_weakening (Σ : global_env_ext) (Γ Γ' : PCUICAst.context) (t T : PCUICAst.term) t' :
   wf Σ ->
   wf_local Σ (Γ ,,, Γ') ->
@@ -357,37 +357,22 @@ Proof.
     + cbn. econstructor.
     + econstructor.
       eapply is_type_subst; eauto.
-  - depelim H5.
+  - depelim H4.
     + cbn. econstructor.
       * eauto.
-      * eapply H4; eauto.
+      * eapply H3; eauto.
       * eapply All2_map.
         eapply All2_impl_In; eauto.
-        intros. destruct H11, x, y. cbn in *. subst. split; eauto.
-        eapply All2_All_left in X3.
+        intros. destruct H10, x, y. cbn in *. subst. split; eauto.
+        eapply All2_All_left in X4.
         2:{ intros ? ? []. exact e0. }
 
-        eapply In_nth_error in H9 as [].
-        eapply nth_error_all in X3; eauto.
-        eapply X3; eauto.
-    (* + cbn. econstructor. *)
-    (*   eapply H4 in H5; eauto. *)
-    (*   econstructor. *)
-    (* + cbn.  *)
+        eapply In_nth_error in H8 as [].
+        eapply nth_error_all in X4; eauto.
+        eapply X4; eauto.
 
-    (*   Lemma subst_mkppBox s m n x : *)
-    (*     subst s m (mkAppBox x n) = mkAppBox (subst s m x) n. *)
-    (*   Proof. *)
-    (*     revert x; induction n; cbn; intros; try congruence. *)
-    (*     now rewrite IHn. *)
-    (*   Qed. *)
-    (*   rewrite subst_mkppBox. *)
-    (*   econstructor. *)
-    (*   eapply H4 in H5_; eauto. *)
-    (*   inv X3. destruct X6. *)
-    (*   eapply e; eauto. *)
-    + econstructor.
-      eapply is_type_subst; eauto.
+  + econstructor.
+    eapply is_type_subst; eauto.
   - inv H1.
     + cbn. econstructor.
       * eauto.

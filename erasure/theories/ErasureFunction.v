@@ -123,13 +123,13 @@ Next Obligation.
     eapply isWfArity_red in X; eauto.
     cbn. eapply isWfArity_prod_inv; eauto.
 Qed.
-Next Obligation.
+Next Obligation. 
   sq. destruct HT as [ [] | [] ].
-  - eapply subject_reduction in X5; eauto.
-    eapply inversion_Prod in X5 as (? & ? & ? & ? & ?).
+  - clear He. eapply subject_reduction in r; eauto.
+    eapply inversion_Prod in r as (? & ? & ? & ? & ?).
     do 2 econstructor. eauto. auto.
-  - econstructor 2. sq.
-    eapply PCUICPrincipality.isWfArity_red in X5; eauto.
+  - clear He. econstructor 2. sq.
+    eapply PCUICPrincipality.isWfArity_red in r; eauto.
     eapply isWfArity_prod_inv; eauto.
 Qed.
 Next Obligation.
@@ -144,31 +144,23 @@ Next Obligation.
   destruct HΣ as [wΣ].
   destruct H1 as (? & ? & ?). sq.
   destruct H.
-  edestruct (red_confluence wfΣ X6 X5) as (? & ? & ?); eauto.
-  eapply invert_red_prod in r as (? & ? & [] & ?); eauto. subst.
+  edestruct (red_confluence wfΣ r X) as (? & ? & ?); eauto.
+  eapply invert_red_prod in r0 as (? & ? & [] & ?); eauto. subst.
 
   eapply invert_cumul_arity_l in H2. 2:eauto. 3: eapply PCUICCumulativity.red_cumul. 3:eauto. 2:eauto.
   destruct H2 as (? & ? & ?). sq.
 
-  eapply invert_red_prod in X8 as (? & ? & [] & ?); eauto. subst. cbn in *.
+  eapply invert_red_prod in X1 as (? & ? & [] & ?); eauto. subst. cbn in *.
   exists x4; split; eauto.
 
   destruct HT as [ [] | [] ].
-  ++ sq. pose proof (X8). pose proof X8.
-
-     eapply subject_reduction in X9. 2:eauto. 2:{ etransitivity. exact X5. exact r0. }
-     eapply inversion_Prod in X9 as (? & ? & ? & ? & ?) ; auto.
-
-     eapply subject_reduction in X10. 2:eauto. 2:{ exact X6. }
-     eapply inversion_Prod in X10 as (? & ? & ? & ? & ?) ; auto.
-
-     etransitivity. eassumption.
-
+  ++ sq. etransitivity; eauto.
      eapply context_conversion_red; eauto. econstructor.
 
      eapply conv_context_refl; eauto. econstructor.
 
      eapply PCUICConversion.conv_sym, red_conv; eauto.
+
   ++ sq. etransitivity. eassumption.
 
      eapply context_conversion_red; eauto. econstructor.
@@ -179,7 +171,6 @@ Next Obligation.
 
      eapply PCUICConversion.conv_sym, red_conv; eauto.
 Qed.
-
 Next Obligation.
 Admitted. (* reduce to prod, if it returns a TypeError (NotAProduct _) just means it is not an arity *)
 
@@ -423,11 +414,11 @@ Proof.
 
     pose proof (Prelim.monad_map_All2 _ _ _ brs a2 E2).
 
-    eapply All2_All_left in X3. 2:{ intros. destruct X4. exact e. }
+    eapply All2_All_left in X4. 2:{ intros. destruct X5. exact e. }
 
     eapply All2_impl.
     eapply All2_All_mix_left. eassumption. eassumption.
-    intros. destruct H5.
+    intros. destruct H4.
     destruct ?; inv e0. cbn. eauto.
   - econstructor.
     clear E.

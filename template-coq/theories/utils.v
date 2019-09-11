@@ -57,6 +57,30 @@ Tactic Notation "destruct" "?" "in" hyp(H) :=
   match type of H with context [match ?x with _ => _ end] => destruct x eqn:e
   end.
 
+Tactic Notation "apply*" constr(H) "in" hyp(H')
+  := apply H in H'; [..|apply H].
+
+Ltac cbnr := cbn; try reflexivity.
+
+(* This is an attempt to overcome the fact that auto/eauto *)
+(* do not deal with products *)
+Ltac rdestruct :=
+  repeat match goal with
+  | H : _ /\ _ |- _ => destruct H
+  | H : _ × _ |- _ => destruct H
+  | H : sigT _ |- _ => destruct H
+  | |- _ /\ _ => split
+  | |- _ × _ => split
+  | |- sigT _ => eexists
+  end.
+
+Notation "'precompose'" := (fun R f x y => R (f x) (f y)) (only parsing).
+
+Definition transport {A} (P : A -> Type) {x y : A} (e : x = y) : P x -> P y
+  := fun u => eq_rect x P u y e.
+
+Notation "p # x" := (transport _ p x) (right associativity, at level 65).
+
 (** We cannot use ssrbool as it breaks extraction. *)
 Coercion is_true : bool >-> Sortclass.
 
@@ -196,13 +220,6 @@ Fixpoint fold_left_i_aux {A B} (f : A -> nat -> B -> A) (n0 : nat) (l : list B)
      end.
 Definition fold_left_i {A B} f := @fold_left_i_aux A B f 0.
 
-
-Fixpoint map_i_aux {A B} (f : nat -> A -> B) (n0 : nat) (l : list A) : list B
-  := match l with
-     | [] => []
-     | x :: l => (f n0 x) :: (map_i_aux f (S n0) l)
-     end.
-Definition map_i {A B} f := @map_i_aux A B f 0.
 
 
 Section Forallb2.
@@ -2279,6 +2296,26 @@ Module NEL.
     induction l; cbn; congruence.
   Qed.
 
+  Lemma map_app {A B : Set} (f : A -> B) l l' :
+    map f (l ++ l') = map f l ++ map f l'.
+  Proof.
+    induction l; cbn; congruence.
+  Qed.
+
+  Lemma map_map {A B C : Set} (f : A -> B) (g : B -> C) l :
+    map g (map f l) = map (fun x => g (f x)) l.
+  Proof.
+    induction l; simpl; auto.
+    rewrite IHl; auto.
+  Qed.
+
+  Lemma map_ext {A B : Set} (f g : A -> B) l :
+    (forall x, f x = g x) -> map f l = map g l.
+  Proof.
+    intros.
+    induction l; cbn; rewrite ?H; congruence.
+  Defined.
+
 End NEL.
 
 Definition non_empty_list := NEL.t.
@@ -2696,4 +2733,38 @@ Lemma All_forallb_forallb_spec {A : Type} {P : A -> Type} {p : A -> bool}
 Proof.
   induction 1; simpl; trivial.
   rewrite !andb_and. intros [px pl] Hx. eauto.
+Qed.
+
+
+Lemma forallb_nth {A} (l : list A) (n : nat) P d :
+  forallb P l -> n < #|l| -> exists x, (nth n l d = x) /\ P x.
+Proof.
+  induction l in n |- *; destruct n; simpl; auto; try easy.
+  move/andP => [pa pl] pn. exists a; easy.
+  move/andP => [pa pl] pn. specialize (IHl n pl).
+  forward IHl. lia. auto.
+Qed.
+
+Lemma forallb_nth' {A} {l : list A} {P} n d :
+  forallb P l -> {exists x, (nth n l d = x) /\ P x} + {nth n l d = d}.
+Proof.
+  intro H. destruct (le_lt_dec #|l| n) as [HH|HH].
+  - rewrite nth_overflow; tas; now right.
+  - left. eapply forallb_nth; assumption.
+Qed.
+
+Lemma forallb_impl {A} (p q : pred A) l :
+  (forall x, In x l -> p x -> q x) -> forallb p l -> forallb q l.
+Proof.
+  intros H0 H1. eapply forallb_forall. intros x H2. 
+  eapply forallb_forall in H1; tea.
+  now eapply H0.
+Qed.
+
+Lemma forallb_iff {A} (p q : pred A) l :
+  (forall x, In x l -> p x <-> q x) -> forallb p l = forallb q l.
+Proof.
+  intros H0. eapply Forall_forallb_eq_forallb with (P:=fun x => In x l).
+  - now apply Forall_forall.
+  - intros; eapply eq_true_iff_eq; eauto.
 Qed.

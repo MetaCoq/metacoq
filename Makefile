@@ -61,3 +61,10 @@ test-suite: template-coq checker
 
 translations: template-coq
 	$(MAKE) -C translations
+
+cleanplugins:
+	$(MAKE) -C template-coq cleanplugin
+	$(MAKE) -C pcuic cleanplugin
+	$(MAKE) -C checker cleanplugin
+	$(MAKE) -C safechecker cleanplugin
+	$(MAKE) -C erasure cleanplugin

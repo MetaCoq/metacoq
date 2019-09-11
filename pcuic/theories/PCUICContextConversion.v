@@ -10,7 +10,6 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq Require Import LibHypsNaming.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
-     PCUICSubstitution PCUICClosed PCUICCumulativity PCUICGeneration
      PCUICSubstitution PCUICClosed PCUICCumulativity PCUICGeneration PCUICReduction
      PCUICParallelReduction PCUICEquality
      PCUICParallelReductionConfluence PCUICConfluence.
@@ -342,10 +341,10 @@ Section ContextConversion.
   Proof.
     intros tu tt' uu'.
     pose proof tu as tu2.
-    eapply red_eq_term_upto_univ_l in tu. 9:eapply tt'. all:tc. 2:eapply eq_universe_leq_universe.
+    eapply red_eq_term_upto_univ_l in tu; try exact tt'; tc.
     destruct tu as [u'' [uu'' t'u'']].
     destruct (red_confluence wfΣ uu' uu'') as [unf [ul ur]].
-    eapply red_eq_term_upto_univ_r in t'u''. 10:eapply ur. all:tc. 2:eapply eq_universe_leq_universe.
+    eapply red_eq_term_upto_univ_r in t'u''; try exact ur; tc.
     destruct t'u'' as [t'' [t't'' t''unf]].
     exists t'', unf. intuition auto.
   Qed.
@@ -356,10 +355,10 @@ Section ContextConversion.
   Proof.
     intros tu tt' uu'.
     pose proof tu as tu2.
-    eapply red_eq_term_upto_univ_l in tu. 9:eapply tt'. all:tc. 2:eauto.
+    eapply red_eq_term_upto_univ_l in tu; try exact tt'; tc.
     destruct tu as [u'' [uu'' t'u'']].
     destruct (red_confluence wfΣ uu' uu'') as [unf [ul ur]].
-    eapply red_eq_term_upto_univ_r in t'u''. 10:eapply ur. all:tc. 2:eauto.
+    eapply red_eq_term_upto_univ_r in t'u''; try exact ur; tc.
     destruct t'u'' as [t'' [t't'' t''unf]].
     exists t'', unf. intuition auto.
   Qed.
@@ -373,7 +372,7 @@ Section ContextConversion.
     apply cumul_alt in H as [v [v' [[redl redr] leq]]].
     destruct (red_red_ctx Σ wfΣ redl Hctx) as [lnf [redl0 redr0]].
     apply cumul_alt.
-    eapply red_eq_term_upto_univ_l in leq; eauto. all:tc; pcuic.
+    eapply red_eq_term_upto_univ_l in leq; tea; tc.
     destruct leq as [? [? ?]].
     destruct (red_red_ctx _ wfΣ redr Hctx) as [rnf [redl1 redr1]].
     destruct (red_confluence wfΣ r redr1). destruct p.
@@ -439,6 +438,11 @@ Section ContextConversion.
       eapply eq_term_upto_univ_trans with v''; auto.
   Qed.
 
+  Definition eq_universe_leq_universe' φ u u'
+    := eq_universe_leq_universe φ u u'.
+
+  Hint Resolve eq_universe_leq_universe' : pcuic.
+
   Lemma cumul_trans_red_leqterm {Γ t u v} :
     Σ ;;; Γ |- t <= u -> Σ ;;; Γ |- u <= v ->
     ∑ l o r, red Σ Γ t l *
@@ -478,8 +482,8 @@ Section ContextConversion.
   Proof.
     intros eqctx cum.
     eapply conv_alt_red in cum as [nf [nf' [[redl redr] ?]]].
-    eapply (red_eq_context_upto_l (Re:=eq_universe _)) in redl; eauto.
-    eapply (red_eq_context_upto_l (Re:=eq_universe _)) in redr; eauto.
+    eapply (red_eq_context_upto_l (Re:=eq_universe _)) in redl; tea.
+    eapply (red_eq_context_upto_l (Re:=eq_universe _)) in redr; tea.
     destruct redl as [v' [redv' eqv']].
     destruct redr as [v'' [redv'' eqv'']].
     eapply conv_alt_red. exists v', v''; intuition auto.
@@ -494,8 +498,8 @@ Section ContextConversion.
   Proof.
     intros eqctx cum.
     eapply cumul_alt in cum as [nf [nf' [[redl redr] ?]]].
-    eapply (red_eq_context_upto_l (Re:=eq_universe _)) in redl; eauto.
-    eapply (red_eq_context_upto_l (Re:=eq_universe _)) in redr; eauto.
+    eapply (red_eq_context_upto_l (Re:=eq_universe Σ) (Δ:=Δ)) in redl; tas.
+    eapply (red_eq_context_upto_l (Re:=eq_universe Σ) (Δ:=Δ)) in redr; tas.
     destruct redl as [v' [redv' eqv']].
     destruct redr as [v'' [redv'' eqv'']].
     eapply cumul_alt. exists v', v''; intuition auto.
@@ -699,7 +703,7 @@ Lemma context_conversion {cf:checker_flags} : env_prop
                                 forall Γ', conv_context Σ Γ Γ' -> wf_local Σ Γ' -> Σ ;;; Γ' |- t : T).
 Proof.
   apply typing_ind_env; intros Σ wfΣ Γ wfΓ; intros **; rename_all_hyps;
-    try solve [econstructor; eauto]; try solve [econstructor; pcuic; auto; constructor; pcuic].
+    try solve [econstructor; eauto].
 
   - pose proof heq_nth_error.
     eapply (context_relation_nth X0) in H as [d' [Hnth [Hrel Hconv]]].

@@ -320,65 +320,65 @@ Proof.
   case_eq (TTy.instantiate_params (Ast.ind_params mdecl) args (Ast.ind_type idecl)).
   all: try discriminate. intros ity e.
   rewrite e in ht. specialize ht with (4 := eq_refl).
-  rewrite ht ; trivial. clear ht.
-  apply wf_instantiate_params in e as wfity ; trivial.
-  all: try apply All_Forall ; trivial.
-  pose proof (trans_destArity [] ity wfity); trivial.
-  destruct TTy.destArity as [[ctx s] | ]; try congruence.
-  rewrite H.
-  pose proof (trans_destArity [] pty wfpty); trivial.
-  destruct TTy.destArity as [[ctx' s'] | ]; try congruence.
-  rewrite H0.
-  apply TTy.onConstructors in onind.
-  assert(forall brtys,
-            map_option_out (TTy.build_branches_type ind mdecl idecl args u p) = Some brtys ->
-            map_option_out
-              (build_branches_type ind (trans_minductive_body mdecl) (trans_one_ind_body idecl) (map trans args) u (trans p)) =
-            Some (map (on_snd trans) brtys)).
-  intros brtys.
-  unfold TTy.build_branches_type, build_branches_type.
-  unfold trans_one_ind_body. simpl. rewrite -> mapi_map.
-  eapply Alli_map_option_out_mapi_Some_spec. eapply onind. eauto.
-  intros i [[id t] n] [t0 ar].
-  unfold compose, on_snd. simpl.
-  intros [ont cshape]. destruct cshape; simpl in *.
-  destruct ont. destruct x; simpl in *. subst t. simpl.
-  unfold TTy.instantiate_params, instantiate_params.
-  destruct TTy.instantiate_params_subst eqn:Heq.
-  destruct p0 as [s0 ty].
-  pose proof Heq.
-  apply instantiate_params_subst_make_context_subst in H1 as [ctx'' Hctx''].
+  (* rewrite ht ; trivial. clear ht. *)
+  (* apply wf_instantiate_params in e as wfity ; trivial. *)
+  (* all: try apply All_Forall ; trivial. *)
+  (* pose proof (trans_destArity [] ity wfity); trivial. *)
+  (* destruct TTy.destArity as [[ctx s] | ]; try congruence. *)
+  (* rewrite H. *)
+  (* pose proof (trans_destArity [] pty wfpty); trivial. *)
+  (* destruct TTy.destArity as [[ctx' s'] | ]; try congruence. *)
+  (* rewrite H0. *)
+  (* apply TTy.onConstructors in onind. *)
+  (* assert(forall brtys, *)
+  (*           map_option_out (TTy.build_branches_type ind mdecl idecl args u p) = Some brtys -> *)
+  (*           map_option_out *)
+  (*             (build_branches_type ind (trans_minductive_body mdecl) (trans_one_ind_body idecl) (map trans args) u (trans p)) = *)
+  (*           Some (map (on_snd trans) brtys)). *)
+  (* intros brtys. *)
+  (* unfold TTy.build_branches_type, build_branches_type. *)
+  (* unfold trans_one_ind_body. simpl. rewrite -> mapi_map. *)
+  (* eapply Alli_map_option_out_mapi_Some_spec. eapply onind. eauto. *)
+  (* intros i [[id t] n] [t0 ar]. *)
+  (* unfold compose, on_snd. simpl. *)
+  (* intros [ont cshape]. destruct cshape; simpl in *. *)
+  (* destruct ont. destruct x; simpl in *. subst t. simpl. *)
+  (* unfold TTy.instantiate_params, instantiate_params. *)
+  (* destruct TTy.instantiate_params_subst eqn:Heq. *)
+  (* destruct p0 as [s0 ty]. *)
+  (* pose proof Heq. *)
+  (* apply instantiate_params_subst_make_context_subst in H1 as [ctx'' Hctx'']. *)
 
-  eapply trans_instantiate_params_subst in Heq. simpl in Heq.
-  rewrite map_rev in Heq.
-  rewrite trans_subst in Heq. apply Forall_All. apply wf_inds.
-  apply wf_subst_instance_constr.
-  now eapply typing_wf in t2.
-  rewrite trans_subst_instance_constr trans_inds in Heq.
-  rewrite Heq.
-  apply PCUICSubstitution.instantiate_params_subst_make_context_subst in Heq.
-  destruct Heq as [ctx''' [Hs0 Hdecomp]].
-  rewrite List.rev_length map_length in Hdecomp.
-  rewrite <- trans_subst_instance_constr in Hdecomp.
-  rewrite !Template.UnivSubst.subst_instance_constr_it_mkProd_or_LetIn in Hdecomp.
-  rewrite !trans_it_mkProd_or_LetIn in Hdecomp.
-  assert (#|Template.Ast.ind_params mdecl| =
-    #|PCUICTyping.subst_context
-      (inds (inductive_mind ind) u (map trans_one_ind_body (Template.Ast.ind_bodies mdecl))) 0
-      (map trans_decl (Template.UnivSubst.subst_instance_context u (Template.Ast.ind_params mdecl)))|).
-  now rewrite PCUICSubstitution.subst_context_length map_length Template.UnivSubst.subst_instance_context_length.
-  rewrite H1 in Hdecomp.
-  rewrite PCUICSubstitution.subst_it_mkProd_or_LetIn in Hdecomp.
-  rewrite decompose_prod_n_assum_it_mkProd in Hdecomp.
-  injection Hdecomp. intros <- <-. clear Hdecomp.
+  (* eapply trans_instantiate_params_subst in Heq. simpl in Heq. *)
+  (* rewrite map_rev in Heq. *)
+  (* rewrite trans_subst in Heq. apply Forall_All. apply wf_inds. *)
+  (* apply wf_subst_instance_constr. *)
+  (* now eapply typing_wf in t2. *)
+  (* rewrite trans_subst_instance_constr trans_inds in Heq. *)
+  (* rewrite Heq. *)
+  (* apply PCUICSubstitution.instantiate_params_subst_make_context_subst in Heq. *)
+  (* destruct Heq as [ctx''' [Hs0 Hdecomp]]. *)
+  (* rewrite List.rev_length map_length in Hdecomp. *)
+  (* rewrite <- trans_subst_instance_constr in Hdecomp. *)
+  (* rewrite !Template.UnivSubst.subst_instance_constr_it_mkProd_or_LetIn in Hdecomp. *)
+  (* rewrite !trans_it_mkProd_or_LetIn in Hdecomp. *)
+  (* assert (#|Template.Ast.ind_params mdecl| = *)
+  (*   #|PCUICTyping.subst_context *)
+  (*     (inds (inductive_mind ind) u (map trans_one_ind_body (Template.Ast.ind_bodies mdecl))) 0 *)
+  (*     (map trans_decl (Template.UnivSubst.subst_instance_context u (Template.Ast.ind_params mdecl)))|). *)
+  (* now rewrite PCUICSubstitution.subst_context_length map_length Template.UnivSubst.subst_instance_context_length. *)
+  (* rewrite H1 in Hdecomp. *)
+  (* rewrite PCUICSubstitution.subst_it_mkProd_or_LetIn in Hdecomp. *)
+  (* rewrite decompose_prod_n_assum_it_mkProd in Hdecomp. *)
+  (* injection Hdecomp. intros <- <-. clear Hdecomp. *)
 
-  subst cshape_concl_head. destruct Hctx''.
+  (* subst cshape_concl_head. destruct Hctx''. *)
 
-  admit. admit. admit. admit. congruence.
-  revert H1. destruct map_option_out. intros.
-  specialize (H1 _ eq_refl). rewrite H1.
-  congruence.
-  intros. discriminate.
+  (* admit. admit. admit. admit. congruence. *)
+  (* revert H1. destruct map_option_out. intros. *)
+  (* specialize (H1 _ eq_refl). rewrite H1. *)
+  (* congruence. *)
+  (* intros. discriminate. *)
 Admitted.
 
 Hint Constructors T.wf : wf.
@@ -797,6 +797,28 @@ Proof.
     rewrite b. admit.
 Admitted.
 
+Lemma global_ext_levels_trans Σ
+  : global_ext_levels (trans_global Σ) = TTy.global_ext_levels Σ.
+Proof.
+  destruct Σ.
+  unfold trans_global, TTy.global_ext_levels, global_ext_levels; simpl.
+  f_equal. clear u.
+  induction l. reflexivity.
+  simpl. rewrite IHl. f_equal. clear.
+  destruct a; reflexivity.
+Qed.
+
+Lemma global_ext_constraints_trans Σ
+  : global_ext_constraints (trans_global Σ) = TTy.global_ext_constraints Σ.
+Proof.
+  destruct Σ.
+  unfold trans_global, TTy.global_ext_constraints, global_ext_constraints; simpl.
+  f_equal. clear u.
+  induction l. reflexivity.
+  simpl. rewrite IHl. f_equal. clear.
+  destruct a; reflexivity.
+Qed.
+
 Lemma trans_cumul (Σ : Ast.global_env_ext) Γ T U :
   TTy.on_global_env (fun Σ => wf_decl_pred) Σ ->
   List.Forall wf_decl Γ ->
@@ -806,13 +828,13 @@ Proof.
   intros wfΣ wfΓ.
   induction 3. constructor; auto.
   apply trans_leq_term in l; auto.
-  admit. (* For Simon :) *)
+  now rewrite global_ext_constraints_trans.
   pose proof r as H3. apply wf_red1 in H3; auto.
   apply trans_red1 in r; auto. econstructor 2; eauto.
   econstructor 3.
   apply IHX; auto. apply wf_red1 in r; auto.
   apply trans_red1 in r; auto.
-Admitted.
+Qed.
 
 Definition Tlift_typing (P : Template.Ast.global_env_ext -> Tcontext -> Tterm -> Tterm -> Type) :=
   fun Σ Γ t T =>
@@ -938,7 +960,7 @@ Proof.
   - (* Sorts *)
     constructor; eauto.
     eapply trans_wf_local; eauto.
-    admit. (* Simon *)
+    now rewrite global_ext_levels_trans.
 
   - (* Casts *)
     eapply refine_type. eapply type_App with nAnon (trans t).

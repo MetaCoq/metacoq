@@ -21,15 +21,15 @@ Ltac tc := try typeclasses eauto 10.
 Set Asymmetric Patterns.
 
 
-
 Lemma red1_eq_context_upto_l Σ Re Γ Δ u v :
   Reflexive Re ->
+  SubstUnivPreserving Re ->
   red1 Σ Γ u v ->
   eq_context_upto Re Γ Δ ->
   ∑ v', red1 Σ Δ u v' *
         eq_term_upto_univ Re Re v v'.
 Proof.
-  intros he h e.
+  intros he he' h e.
   induction h in Δ, e |- * using red1_ind_all.
   all: try solve [
     eexists ; split ; [
@@ -375,21 +375,22 @@ Proof.
     + constructor. assumption.
 Qed.
 
+
 Lemma red1_eq_term_upto_univ_l Σ Re Rle Γ u v u' :
   Reflexive Re ->
+  SubstUnivPreserving Re ->
   Reflexive Rle ->
   Transitive Re ->
   Transitive Rle ->
-  SubstUnivPreserving Re ->
-  SubstUnivPreserving Rle ->
-  (forall u u' : universe, Re u u' -> Rle u u') ->
+  subrelation Re Rle ->
   eq_term_upto_univ Re Rle u u' ->
   red1 Σ Γ u v ->
   ∑ v', red1 Σ Γ u' v' *
         eq_term_upto_univ Re Rle v v'.
 Proof.
-  intros he hle tRe tRle hRe hRle hR e h.
-  induction h in u', e, tRle, Rle, hle, hRle, hR |- * using red1_ind_all.
+  unfold subrelation.
+  intros he he' hle tRe tRle hR e h.
+  induction h in u', e, tRle, Rle, hle, hR |- * using red1_ind_all.
   all: try solve [
     dependent destruction e ;
     edestruct IHh as [? [? ?]] ; [ .. | eassumption | ] ; eauto ;
@@ -398,7 +399,8 @@ Proof.
     | constructor ; eauto
     ]
   ].
-  all: try solve [
+  (* tLambda and tProd *)
+  10,13: solve [
     dependent destruction e ;
     edestruct IHh as [? [? ?]] ; [ .. | eassumption | ] ; eauto ;
     clear h ;
@@ -412,6 +414,7 @@ Proof.
           eapply e
         | eapply eq_context_upto_refl ; eauto
         ]
+      | assumption
       | assumption
       | destruct hh as [? [? ?]]
       ]
@@ -527,8 +530,8 @@ Proof.
   - dependent destruction e.
     eexists. split.
     + econstructor. all: eauto.
-    + eapply eq_term_upto_univ_subst_instance_constr ; eauto.
-      eapply eq_term_upto_univ_refl ; eauto.
+    + eapply eq_term_upto_univ_leq; tas.
+      now apply eq_term_upto_univ_subst_instance_constr.
   - dependent destruction e.
     apply eq_term_upto_univ_mkApps_l_inv in e as [? [? [[h1 h2] h3]]]. subst.
     dependent destruction h1.
@@ -553,9 +556,10 @@ Proof.
         | eapply eq_context_upto_refl ; eauto
         ]
       | assumption
+      | assumption
       | destruct hh as [? [? ?]]
       ]
-    end.
+     end.
     eexists. split.
     + eapply letin_red_body ; eauto.
     + constructor ; eauto.
@@ -664,7 +668,6 @@ Proof.
         × (forall (Rle : crelation universe) (u' : term),
            Reflexive Rle ->
            Transitive Rle ->
-           SubstUnivPreserving Rle ->
            (forall u u'0 : universe, Re u u'0 -> Rle u u'0) ->
            eq_term_upto_univ Re Rle (dbody x) u' ->
            ∑ v' : term,
@@ -744,7 +747,7 @@ Proof.
       intros x x' y [r e] [[? ?] ?].
       inversion e. clear e.
       eapply red1_eq_context_upto_l in r as [? [? ?]].
-      3: eassumption. 2: assumption.
+      3: eassumption. all: tea.
       eexists. constructor.
       instantiate (1 := mkdef _ _ _ _ _). simpl.
       intuition eauto.
@@ -809,7 +812,6 @@ Proof.
         × (forall (Rle : crelation universe) (u' : term),
            Reflexive Rle ->
            Transitive Rle ->
-           SubstUnivPreserving Rle ->
            (forall u u'0 : universe, Re u u'0 -> Rle u u'0) ->
            eq_term_upto_univ Re Rle (dbody x) u' ->
            ∑ v' : term,
@@ -888,7 +890,7 @@ Proof.
       intros x x' y [r e] [[? ?] ?].
       inversion e. clear e.
       eapply red1_eq_context_upto_l in r as [? [? ?]].
-      3: eassumption. 2: assumption.
+      3: eassumption. all: tea.
       eexists.
       instantiate (1 := mkdef _ _ _ _ _). simpl.
       intuition eauto.
@@ -900,10 +902,11 @@ Proof.
     eexists. split.
     +  eapply cofix_red_body. eassumption.
     + constructor. all: eauto.
-Qed.
+Admitted.
 
 Lemma red1_eq_context_upto_r Σ Re Γ Δ u v :
   Reflexive Re -> Symmetric Re ->
+  SubstUnivPreserving Re ->
   red1 Σ Γ u v ->
   eq_context_upto Re Δ Γ ->
   ∑ v', red1 Σ Δ u v' *
@@ -918,23 +921,21 @@ Qed.
 
 Lemma red1_eq_term_upto_univ_r Σ Re Rle Γ u v u' :
   Reflexive Re ->
+  SubstUnivPreserving Re ->
   Reflexive Rle ->
   Symmetric Re ->
   Transitive Re ->
   Transitive Rle ->
-  SubstUnivPreserving Re ->
-  SubstUnivPreserving Rle ->
-  (forall u u' : universe, Re u u' -> Rle u u') ->
+  subrelation Re Rle ->
   eq_term_upto_univ Re Rle u' u ->
   red1 Σ Γ u v ->
   ∑ v', red1 Σ Γ u' v' ×
         eq_term_upto_univ Re Rle v' v.
 Proof.
-  intros he hle tRe tRle hRe hRle hR e h uv.
+  intros he he' hle tRe tRle hR e h uv.
   destruct (red1_eq_term_upto_univ_l Σ Re (flip Rle) Γ u v u'); auto.
   now eapply flip_Transitive.
-  red. unfold flip, CMorphisms.respectful; intros. now eapply hR.
-  intros. symmetry in X. apply e. auto.
+  intros x y X. symmetry in X. apply e. auto.
   eapply eq_term_upto_univ_flip; eauto.
   exists x. intuition auto.
   eapply (eq_term_upto_univ_flip Re (flip Rle) Rle); eauto.
@@ -944,9 +945,10 @@ Qed.
 
 Section RedEq.
   Context (Σ : global_env_ext).
-  Context {Re Rle} {refl : Reflexive Re} {refl' :Reflexive Rle} {sym : Symmetric Re}
-          {trre : Transitive Re} {trle : Transitive Rle} `{SubstUnivPreserving Re} `{SubstUnivPreserving Rle}.
-  Context (inclre : forall u u' : universe, Re u u' -> Rle u u').
+  Context {Re Rle : crelation universe} {refl : Reflexive Re} {refl': Reflexive Rle}
+          {pres : SubstUnivPreserving Re}
+          {sym : Symmetric Re} {trre : Transitive Re} {trle : Transitive Rle}.
+  Context (inclre : subrelation Re Rle).
 
   Lemma red_eq_term_upto_univ_r {Γ T V U} :
     eq_term_upto_univ Re Rle T U -> red Σ Γ U V ->
@@ -2723,8 +2725,8 @@ Proof.
   eapply conv_alt_red in X1 as [u'' [v' [[uu'' vv'] eq']]].
   eapply conv_alt_red.
   destruct (red_confluence wfΣ uu' uu'') as [u'nf [ul ur]].
-  eapply red_eq_term_upto_univ_r in ul as [tnf [redtnf ?]]. 10:eapply eq. all:tc. 2:trivial.
-  eapply red_eq_term_upto_univ_l in ur as [unf [redunf ?]]. 9:eapply eq'. all:tc. 2:trivial.
+  eapply red_eq_term_upto_univ_r in ul as [tnf [redtnf ?]]; tea; tc.
+  eapply red_eq_term_upto_univ_l in ur as [unf [redunf ?]]; tea; tc.
   exists tnf, unf.
   intuition auto.
   now transitivity t'.

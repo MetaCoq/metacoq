@@ -666,31 +666,11 @@ Definition on_udecl_decl {A} (F : universes_decl -> A) d : A :=
   | InductiveDecl _ mb => F mb.(ind_universes)
   end.
 
-Definition monomorphic_udecl u :=
-  match u with
-  | Monomorphic_ctx ctx => ctx
-  | _ => ContextSet.empty
-  end.
-
 Definition monomorphic_udecl_decl := on_udecl_decl monomorphic_udecl.
 
 Definition monomorphic_levels_decl := fst ∘ monomorphic_udecl_decl.
 
 Definition monomorphic_constraints_decl := snd ∘ monomorphic_udecl_decl.
-
-Definition levels_of_udecl u :=
-  match u with
-  | Monomorphic_ctx ctx => fst ctx
-  | Polymorphic_ctx ctx
-  | Cumulative_ctx (ctx, _) => AUContext.levels ctx
-  end.
-
-Definition constraints_of_udecl u :=
-  match u with
-  | Monomorphic_ctx ctx => snd ctx
-  | Polymorphic_ctx ctx
-  | Cumulative_ctx (ctx, _) => snd (AUContext.repr ctx)
-  end.
 
 Definition universes_decl_of_decl := on_udecl_decl (fun x => x).
 
@@ -739,6 +719,7 @@ Definition consistent_instance `{checker_flags} (φ : constraints) uctx (u : uni
   | Cumulative_ctx (c, _) => (* FIXME Cumulative *)
     let '(inst, cstrs) := AUContext.repr c in
     List.length u = List.length inst /\
+    forallb (negb ∘ Level.is_prop) u /\
     valid_constraints φ (subst_instance_cstrs u cstrs)
   end.
 

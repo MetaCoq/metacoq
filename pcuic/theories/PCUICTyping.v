@@ -492,18 +492,27 @@ Fixpoint instantiate_params_subst params pars s ty :=
     end
   end.
 
-
 Definition instantiate_params params pars ty :=
   match instantiate_params_subst (List.rev params) pars [] ty with
   | Some (s, ty) => Some (subst0 s ty)
   | None => None
   end.
 
+Lemma instantiate_params_ params pars ty :
+  instantiate_params params pars ty
+  = option_map (fun '(s, ty) => subst0 s ty)
+               (instantiate_params_subst (List.rev params) pars [] ty).
+Proof.
+  unfold instantiate_params.
+  repeat (destruct ?; cbnr).
+Qed.
+
+(* [params], [p] and output are already instanciated by [u] *)
 Definition build_branches_type ind mdecl idecl params u p :=
   let inds := inds (inductive_mind ind) u mdecl.(ind_bodies) in
   let branch_type i '(id, t, ar) :=
     let ty := subst0 inds (subst_instance_constr u t) in
-    match instantiate_params mdecl.(ind_params) params ty with
+    match instantiate_params (subst_instance_context u mdecl.(ind_params)) params ty with
     | Some ty =>
       let '(sign, ccl) := decompose_prod_assum [] ty in
       let nargs := List.length sign in
@@ -516,9 +525,31 @@ Definition build_branches_type ind mdecl idecl params u p :=
     end
   in mapi branch_type idecl.(ind_ctors).
 
+Lemma build_branches_type_ ind mdecl idecl params u p :
+  build_branches_type ind mdecl idecl params u p
+  = let inds := inds (inductive_mind ind) u mdecl.(ind_bodies) in
+    let branch_type i '(id, t, ar) :=
+        let ty := subst0 inds (subst_instance_constr u t) in
+        option_map (fun ty =>
+         let '(sign, ccl) := decompose_prod_assum [] ty in
+         let nargs := List.length sign in
+         let allargs := snd (decompose_app ccl) in
+         let '(paramrels, args) := chop mdecl.(ind_npars) allargs in
+         let cstr := tConstruct ind i u in
+         let args := (args ++ [mkApps cstr (paramrels ++ to_extended_list sign)])%list in
+         (ar, it_mkProd_or_LetIn sign (mkApps (lift0 nargs p) args)))
+                  (instantiate_params (subst_instance_context u mdecl.(ind_params))
+                                      params ty)
+    in mapi branch_type idecl.(ind_ctors).
+Proof.
+  apply mapi_ext. intros ? [[? ?] ?]; cbnr.
+  repeat (destruct ?; cbnr).
+Qed.
+
+(* [params], [p], [pty] and output already instanciated by [u] *)
 Definition types_of_case ind mdecl idecl params u p pty :=
   let brtys := build_branches_type ind mdecl idecl params u p in
-  match instantiate_params mdecl.(ind_params) params idecl.(ind_type) with
+  match instantiate_params (subst_instance_context u mdecl.(ind_params)) params (subst_instance_constr u idecl.(ind_type)) with
   | Some ity =>
     match
       destArity [] ity,
@@ -532,16 +563,26 @@ Definition types_of_case ind mdecl idecl params u p pty :=
   | None => None
   end.
 
+Lemma types_of_case_spec ind mdecl idecl pars u p pty indctx pctx ps btys :
+  types_of_case ind mdecl idecl pars u p pty
+  = Some (indctx, pctx, ps, btys)
+  <-> exists s', option_map (destArity [])
+                     (instantiate_params (subst_instance_context u (ind_params mdecl)) pars (subst_instance_constr u (ind_type idecl)))
+          = Some (Some (indctx, s'))
+          /\ destArity [] pty = Some (pctx, ps)
+          /\ map_option_out (build_branches_type ind mdecl idecl pars u p)
+            = Some btys.
+Proof.
+  unfold types_of_case.
+  repeat (destruct ?; cbn).
+  all: split; [try discriminate; inversion 1; subst; eexists; repeat split|].
+  all: intros [s' [HH1 [HH2 HH3]]]; inversion HH1; inversion HH2; now inversion HH3.
+Qed.
+
 Definition on_udecl_decl {A} (F : universes_decl -> A) d : A :=
   match d with
   | ConstantDecl  _ cb => F cb.(cst_universes)
   | InductiveDecl _ mb => F mb.(ind_universes)
-  end.
-
-Definition monomorphic_udecl u :=
-  match u with
-  | Monomorphic_ctx ctx => ctx
-  | _ => ContextSet.empty
   end.
 
 Definition monomorphic_udecl_decl := on_udecl_decl monomorphic_udecl.
@@ -550,20 +591,6 @@ Definition monomorphic_levels_decl := fst ∘ monomorphic_udecl_decl.
 
 Definition monomorphic_constraints_decl := snd ∘ monomorphic_udecl_decl.
 
-Definition levels_of_udecl u :=
-  match u with
-  | Monomorphic_ctx ctx => fst ctx
-  | Polymorphic_ctx ctx
-  | Cumulative_ctx (ctx, _) => AUContext.levels ctx
-  end.
-
-Definition constraints_of_udecl u :=
-  match u with
-  | Monomorphic_ctx ctx => snd ctx
-  | Polymorphic_ctx ctx
-  | Cumulative_ctx (ctx, _) => snd (AUContext.repr ctx)
-  end.
-
 Definition universes_decl_of_decl := on_udecl_decl (fun x => x).
 
 (* Definition LevelSet_add_list l := LevelSet.union (LevelSetProp.of_list l). *)
@@ -571,9 +598,33 @@ Definition universes_decl_of_decl := on_udecl_decl (fun x => x).
 Definition LevelSet_pair x y
   := LevelSet.add y (LevelSet.singleton x).
 
+Lemma LevelSet_pair_In x y z :
+  LevelSet.In x (LevelSet_pair y z) -> x = y \/ x = z.
+Proof.
+  intro H. apply LevelSetFact.add_iff in H.
+  destruct H; [intuition|].
+  apply LevelSetFact.singleton_1 in H; intuition.
+Qed.
+
 Definition global_levels (Σ : global_env) : LevelSet.t
   := fold_right (fun decl lvls => LevelSet.union (monomorphic_levels_decl decl) lvls)
                 (LevelSet_pair Level.lSet Level.lProp) Σ.
+
+Lemma global_levels_Set Σ :
+  LevelSet.mem Level.lSet (global_levels Σ) = true.
+Proof.
+  induction Σ; simpl. reflexivity.
+  apply LevelSet.mem_spec, LevelSet.union_spec; right.
+  now apply LevelSet.mem_spec in IHΣ.
+Qed.
+
+Lemma global_levels_Prop Σ :
+  LevelSet.mem Level.lProp (global_levels Σ) = true.
+Proof.
+  induction Σ; simpl. reflexivity.
+  apply LevelSet.mem_spec, LevelSet.union_spec; right.
+  now apply LevelSet.mem_spec in IHΣ.
+Qed.
 
 (** One can compute the constraints associated to a global environment or its
     extension by folding over its constituent definitions.
@@ -607,20 +658,24 @@ Proof.
 Qed.
 
 
-(** Check that [uctx] instantiated at [u] is consistent with the current universe graph. *)
+(** Check that [uctx] instantiated at [u] is consistent with
+    the current universe graph. *)
 
-Definition consistent_instance `{checker_flags} (φ : constraints) uctx (u : universe_instance) :=
+Definition consistent_instance `{checker_flags} (lvs : LevelSet.t) (φ : constraints) uctx (u : universe_instance) :=
   match uctx with
   | Monomorphic_ctx c => List.length u = 0
   | Polymorphic_ctx c
   | Cumulative_ctx (c, _) => (* FIXME Cumulative *)
-    let '(inst, cstrs) := AUContext.repr c in
-    List.length u = List.length inst /\
-    valid_constraints φ (subst_instance_cstrs u cstrs)
+    (* no prop levels in instances *)
+    forallb (negb ∘ Level.is_prop) u /\
+    (* levels of the instance already declared *)
+    forallb (fun l => LevelSet.mem l lvs) u /\
+    List.length u = List.length c.1 /\
+    valid_constraints φ (subst_instance_cstrs u c.2)
   end.
 
-Definition consistent_instance_ext `{checker_flags}
-  := consistent_instance ∘ global_ext_constraints.
+Definition consistent_instance_ext `{checker_flags} Σ
+  := consistent_instance (global_ext_levels Σ) (global_ext_constraints Σ).
 
 
 Reserved Notation " Σ ;;; Γ |- t : T " (at level 50, Γ, t, T at next level).
@@ -871,6 +926,15 @@ where " Σ ;;; Γ |- t : T " := (typing Σ Γ t T) : type_scope.
 
 Notation wf_local Σ Γ := (All_local_env (lift_typing typing Σ) Γ).
 
+Lemma meta_conv {cf : checker_flags} Σ Γ t A B :
+    Σ ;;; Γ |- t : A ->
+    A = B ->
+    Σ ;;; Γ |- t : B.
+Proof.
+  intros h []; assumption.
+Qed.
+
+
 (** ** Typechecking of global environments *)
 
 Definition isType `{checker_flags} (Σ : global_env_ext) (Γ : context) (t : term) :=
@@ -1098,10 +1162,7 @@ Section GlobalMaps.
                                                /\ LevelSet.In l2 all_levels)
                                (constraints_of_udecl udecl)
        /\ match udecl with
-         | Monomorphic_ctx ctx =>  LevelSet.For_all (fun l => match l with
-                                                          | Level.Var _ => false
-                                                          | _ => true
-                                                          end) (fst ctx)
+         | Monomorphic_ctx ctx =>  LevelSet.for_all (negb ∘ Level.is_var) ctx.1
          | _ => True
          end
        /\ satisfiable_udecl Σ udecl.
@@ -1287,6 +1348,20 @@ Arguments lexprod [A B].
 
 Definition wf `{checker_flags} := Forall_decls_typing typing.
 Definition wf_ext `{checker_flags} := on_global_env_ext (lift_typing typing).
+
+Lemma wf_ext_wf {cf:checker_flags} Σ : wf_ext Σ -> wf Σ.
+Proof. intro H; apply H. Qed.
+
+Hint Resolve wf_ext_wf.
+
+Lemma wf_ext_consistent {cf:checker_flags} Σ :
+  wf_ext Σ -> consistent Σ.
+Proof.
+  intros [? [? [? [? ?]]]]; assumption.
+Qed.
+
+Hint Resolve wf_ext_consistent.
+
 
 Definition env_prop `{checker_flags} (P : forall Σ Γ t T, Type) :=
   forall Σ (wfΣ : wf Σ.1) Γ (wfΓ : wf_local Σ Γ) t T, Σ ;;; Γ |- t : T ->

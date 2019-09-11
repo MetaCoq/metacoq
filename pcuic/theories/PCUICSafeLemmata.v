@@ -334,7 +334,7 @@ Section Lemmata.
   Proof.
     intros ind mdecl idecl npar args u p p' pty indctx pctx ps btys htc e.
     unfold types_of_case in *.
-    case_eq (instantiate_params (ind_params mdecl) (firstn npar args) (ind_type idecl)) ;
+    case_eq (instantiate_params (subst_instance_context u (ind_params mdecl)) (firstn npar args) (subst_instance_constr u (ind_type idecl))) ;
       try solve [ intro bot ; rewrite bot in htc ; discriminate htc ].
     intros ity eity. rewrite eity in htc.
     case_eq (destArity [] ity) ;
@@ -635,19 +635,19 @@ Section Lemmata.
         eapply eq_term_upto_univ_subst ; now auto.
     - intros cst u decl ? ? hdecl hcons v e.
       dependent destruction e.
-      apply All2_eq in a. apply map_inj in a ; revgoals.
+      apply All2_eq in r. apply map_inj in r ; revgoals.
       { intros x y h. inversion h. reflexivity. }
       subst.
       constructor ; auto.
     - intros ind u mdecl idecl isdecl ? ? hcons v e.
       dependent destruction e.
-      apply All2_eq in a. apply map_inj in a ; revgoals.
+      apply All2_eq in r. apply map_inj in r ; revgoals.
       { intros x y h. inversion h. reflexivity. }
       subst.
       econstructor ; eauto.
     - intros ind i u mdecl idecl cdecl isdecl ? ? ? v e.
       dependent destruction e.
-      apply All2_eq in a. apply map_inj in a ; revgoals.
+      apply All2_eq in r. apply map_inj in r ; revgoals.
       { intros x y h. inversion h. reflexivity. }
       subst.
       econstructor ; eauto.
@@ -1540,44 +1540,15 @@ Section Lemmata.
       eapply cumul_zippx. assumption.
   Qed.
 
-  Lemma cored_eq_term_upto_univ_r :
-    forall Re Rle Γ u v u',
-      Reflexive Re ->
-      Reflexive Rle ->
-      Transitive Re ->
-      Transitive Rle ->
-      SubstUnivPreserving Re ->
-      SubstUnivPreserving Rle ->
-      (forall u u' : universe, Re u u' -> Rle u u') ->
-      eq_term_upto_univ Re Rle u u' ->
-      cored Σ Γ v u ->
-      exists v',
-        cored Σ Γ v' u' /\
-        ∥ eq_term_upto_univ Re Rle v v' ∥.
-  Proof.
-    intros Re Rle Γ u v u' he hle tRe tRle hRe hRle hR e h.
-    induction h.
-    - eapply red1_eq_term_upto_univ_l in X ; try exact e ; eauto.
-      destruct X as [v' [r e']].
-      exists v'. split ; auto.
-      constructor. assumption. now constructor.
-    - specialize (IHh e). destruct IHh as [v' [c [ev]]].
-      eapply red1_eq_term_upto_univ_l in X ; try exact ev ; eauto.
-      destruct X as [w' [? ?]].
-      exists w'. split ; auto.
-      eapply cored_trans ; eauto. now constructor.
-  Qed.
 
   Lemma cored_nl :
     forall Γ u v,
       cored Σ Γ u v ->
       cored Σ (nlctx Γ) (nl u) (nl v).
-  Admitted.
-
-  Lemma red_nl :
-    forall Γ u v,
-      red Σ Γ u v ->
-      red Σ (nlctx Γ) (nl u) (nl v).
+  Proof.
+    intros Γ u v H. induction H.
+    - constructor 1. admit.
+    - econstructor 2; tea. admit.
   Admitted.
 
   Derive Signature for Acc.
@@ -2411,7 +2382,7 @@ Proof.
   intros Σ Γ ind u p args mdecl idecl isdecl pars pty Hp indctx pctx ps btys e
          Hc.
   unfold types_of_case in e.
-  case_eq (instantiate_params (ind_params mdecl) pars (ind_type idecl));
+  case_eq (instantiate_params (subst_instance_context u (ind_params mdecl)) pars (subst_instance_constr u (ind_type idecl)));
     [|intro HH; rewrite HH in e; discriminate e].
   intros params' He; rewrite He in e.
   case_eq (destArity [] params');

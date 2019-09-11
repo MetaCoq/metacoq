@@ -392,16 +392,6 @@ Check (@PCUICSafeLemmata.cored_nl
        PCUICSafeLemmata.cored (PCUICAstUtils.fst_ctx Σ)
          (PCUICNameless.nlctx Γ) (PCUICNameless.nl u) (PCUICNameless.nl v)).
 
-Check (@PCUICSafeLemmata.red_nl
-     of forall cf : config.checker_flags,
-       PCUICNormal.RedFlags.t ->
-       forall Σ : PCUICAst.global_env_ext,
-       utils.squash (PCUICTyping.wf (PCUICAstUtils.fst_ctx Σ)) ->
-       forall (Γ : PCUICAst.context) (u v : PCUICAst.term),
-       PCUICTyping.red (PCUICAstUtils.fst_ctx Σ) Γ u v ->
-       PCUICTyping.red (PCUICAstUtils.fst_ctx Σ)
-         (PCUICNameless.nlctx Γ) (PCUICNameless.nl u) (PCUICNameless.nl v)).
-
 Check (@PCUICSafeLemmata.wellformed_it_mkLambda_or_LetIn
      of forall cf : config.checker_flags,
        PCUICNormal.RedFlags.t ->

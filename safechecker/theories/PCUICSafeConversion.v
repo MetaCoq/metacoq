@@ -224,10 +224,9 @@ Section Conversion.
     - exact (nl t).
     - exact (nlstack π2).
     - exact (nlstack π1).
-    - eapply wellformed_rename ; try assumption.
-      + exact h.
-      + destruct s; cbn.
-        all: rewrite <- nl_zipx; eapply eq_term_upto_univ_tm_nl; auto.
+    - eapply wellformed_rename ; try eassumption.
+      destruct s; cbn.
+      all: rewrite <- nl_zipx; eapply eq_term_upto_univ_tm_nl; auto.
   Defined.
 
   Definition wterm Γ := { t : term | wellformed Σ Γ t }.

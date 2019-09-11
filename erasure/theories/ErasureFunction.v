@@ -499,9 +499,9 @@ Definition erase_one_inductive_body Σ wfΣ npars arities Har
   decty <- lift_opt_typing (decompose_prod_n_assum [] npars oib.(ind_type))
         (NotAnInductive oib.(ind_type)) ;;
   let '(params, arity) := decty in
-  type <- erase Σ wfΣ [] wf_local_nil oib.(ind_type) ;;
+  (* type <- erase Σ wfΣ [] wf_local_nil oib.(ind_type) ;; *)
   ctors <- monad_map (fun '(x, y, z) => y' <- erase Σ wfΣ arities Har y;; ret (x, y', z)) oib.(ind_ctors);;
-  let projctx := arities ,,, params ,, vass nAnon oib.(ind_type) in
+  (* FIXME not used! let projctx := arities ,,, params ,, vass nAnon oib.(ind_type) in *)
   projs <- monad_map (fun '(x, y) => y' <- erase Σ wfΣ [] wf_local_nil y;; ret (x, y')) oib.(ind_projs);;
   ret {| E.ind_name := oib.(ind_name);
          E.ind_kelim := oib.(ind_kelim);
@@ -601,8 +601,8 @@ Proof.
         unfold erases_one_inductive_body. cbn. destruct ?; cbn.
         (* unfold lift_opt_typing in E. *)
         (* destruct decompose_prod_n_assum eqn:E6; inv E. cbn. *)
-        pose proof (Prelim.monad_map_All2 _ _ _ _ _ E4).
-        pose proof (Prelim.monad_map_All2 _ _ _ _ _ E5). repeat split; eauto.
+        pose proof (Prelim.monad_map_All2 _ _ _ _ _ E3).
+        pose proof (Prelim.monad_map_All2 _ _ _ _ _ E4). repeat split; eauto.
         -- eapply All2_Forall2.
            eapply All2_impl_In. eassumption.
            intros. destruct x0, p, y, p. cbn in *.
@@ -610,7 +610,7 @@ Proof.
            inv H4. split; eauto.
 
            (* pose (t' := t). inv t'. cbn in *. *)
-           destruct (erase_Some_typed E6) as [? []].
+           destruct (erase_Some_typed E5) as [? []].
 
            eapply erases_erase. 2:eauto. eauto.
         -- eapply All2_Forall2.
@@ -620,7 +620,7 @@ Proof.
              inv H4. split; eauto.
 
            (* pose (t' := t). inv t'. cbn in *. *)
-           destruct (erase_Some_typed E6) as [? []].
+           destruct (erase_Some_typed E5) as [? []].
 
            eapply erases_erase.
            2:{ eauto. } eauto.

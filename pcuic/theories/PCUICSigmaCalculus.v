@@ -1059,7 +1059,7 @@ Qed.
 
 Lemma build_branches_type_rename :
   forall ind mdecl idecl args u p brs f,
-    closed_ctx (ind_params mdecl) ->
+    closed_ctx (subst_instance_context u (ind_params mdecl)) ->
     map_option_out (build_branches_type ind mdecl idecl args u p) = Some brs ->
     map_option_out (
         build_branches_type
@@ -1288,6 +1288,7 @@ Proof.
     simpl. autorewrite with sigma. reflexivity.
 Qed.
 
+
 Lemma types_of_case_rename :
   forall Σ ind mdecl idecl npar args u p pty indctx pctx ps btys f,
     wf Σ ->
@@ -1307,13 +1308,14 @@ Lemma types_of_case_rename :
 Proof.
   intros Σ ind mdecl idecl npar args u p pty indctx pctx ps btys f hΣ hdecl h.
   unfold types_of_case in *.
-  case_eq (instantiate_params (ind_params mdecl) (firstn npar args) (ind_type idecl)) ;
+  case_eq (instantiate_params (subst_instance_context u (ind_params mdecl)) (firstn npar args) (subst_instance_constr u (ind_type idecl))) ;
     try solve [ intro bot ; rewrite bot in h ; discriminate h ].
   intros ity eity. rewrite eity in h.
   pose proof (on_declared_inductive hΣ hdecl) as [onmind onind].
   apply onParams in onmind as Hparams.
-  assert (closedparams : closed_ctx (ind_params mdecl)).
-  { eapply PCUICWeakening.closed_wf_local. all: eauto. eauto. }
+  assert (closedparams : closed_ctx (subst_instance_context u (ind_params mdecl))).
+  { rewrite closedn_subst_instance_context.
+    eapply PCUICWeakening.closed_wf_local. all: eauto. eauto. }
   epose proof (inst_declared_inductive _ ind mdecl idecl (ren f) hΣ) as hi.
   forward hi by assumption. rewrite <- hi.
   eapply instantiate_params_rename with (f := f) in eity ; auto.
@@ -1326,7 +1328,9 @@ Proof.
       replace t' with t ; revgoals
     end
   end.
-  { autorewrite with sigma. reflexivity. }
+  { autorewrite with sigma.
+    rewrite <- !rename_inst.
+    now rewrite rename_subst_instance_constr. }
   rewrite eity.
   case_eq (destArity [] ity) ;
     try solve [ intro bot ; rewrite bot in h ; discriminate h ].
@@ -1987,7 +1991,7 @@ Admitted.
 
 Lemma build_branches_type_inst :
   forall ind mdecl idecl args u p brs σ,
-    closed_ctx (ind_params mdecl) ->
+    closed_ctx (subst_instance_context u (ind_params mdecl)) ->
     map_option_out (build_branches_type ind mdecl idecl args u p) = Some brs ->
     map_option_out (
         build_branches_type
@@ -2094,40 +2098,42 @@ Lemma types_of_case_inst :
 Proof.
   intros Σ ind mdecl idecl npar args u p pty indctx pctx ps btys σ hΣ hdecl h.
   unfold types_of_case in *.
-  case_eq (instantiate_params (ind_params mdecl) (firstn npar args) (ind_type idecl)) ;
+  case_eq (instantiate_params (subst_instance_context u (ind_params mdecl)) (firstn npar args) (subst_instance_constr u (ind_type idecl))) ;
     try solve [ intro bot ; rewrite bot in h ; discriminate h ].
   intros ity eity. rewrite eity in h.
   pose proof (on_declared_inductive hΣ hdecl) as [onmind onind].
   apply onParams in onmind as Hparams.
-  assert (closedparams : closed_ctx (ind_params mdecl)).
-  { eapply PCUICWeakening.closed_wf_local. all: eauto. eauto. }
+  assert (closedparams : closed_ctx (subst_instance_context u (ind_params mdecl))).
+  { rewrite closedn_subst_instance_context.
+    eapply PCUICWeakening.closed_wf_local. all: eauto. eauto. }
   epose proof (inst_declared_inductive _ ind mdecl idecl σ hΣ) as hi.
   forward hi by assumption. rewrite <- hi.
   eapply instantiate_params_inst with (σ := σ) in eity ; auto.
   rewrite -> ind_type_map.
   rewrite firstn_map.
   autorewrite with sigma.
-  rewrite eity.
-  case_eq (destArity [] ity) ;
-    try solve [ intro bot ; rewrite bot in h ; discriminate h ].
-  intros [args0 ?] ear. rewrite ear in h.
-  eapply inst_destArity with (σ := σ) in ear as ear'.
-  simpl in ear'. autorewrite with sigma in ear'.
-  rewrite ear'.
-  case_eq (destArity [] pty) ;
-    try solve [ intro bot ; rewrite bot in h ; discriminate h ].
-  intros [args' s'] epty. rewrite epty in h.
-  eapply inst_destArity with (σ := σ) in epty as epty'.
-  simpl in epty'. autorewrite with sigma in epty'.
-  rewrite epty'.
-  case_eq (map_option_out (build_branches_type ind mdecl idecl (firstn npar args) u p)) ;
-    try solve [ intro bot ; rewrite bot in h ; discriminate h ].
-  intros brtys ebrtys. rewrite ebrtys in h.
-  inversion h. subst. clear h.
-  eapply build_branches_type_inst with (σ := σ) in ebrtys as ebrtys'.
-  2: assumption.
-  rewrite ebrtys'. reflexivity.
-Qed.
+(*   rewrite eity. *)
+(*   case_eq (destArity [] ity) ; *)
+(*     try solve [ intro bot ; rewrite bot in h ; discriminate h ]. *)
+(*   intros [args0 ?] ear. rewrite ear in h. *)
+(*   eapply inst_destArity with (σ := σ) in ear as ear'. *)
+(*   simpl in ear'. autorewrite with sigma in ear'. *)
+(*   rewrite ear'. *)
+(*   case_eq (destArity [] pty) ; *)
+(*     try solve [ intro bot ; rewrite bot in h ; discriminate h ]. *)
+(*   intros [args' s'] epty. rewrite epty in h. *)
+(*   eapply inst_destArity with (σ := σ) in epty as epty'. *)
+(*   simpl in epty'. autorewrite with sigma in epty'. *)
+(*   rewrite epty'. *)
+(*   case_eq (map_option_out (build_branches_type ind mdecl idecl (firstn npar args) u p)) ; *)
+(*     try solve [ intro bot ; rewrite bot in h ; discriminate h ]. *)
+(*   intros brtys ebrtys. rewrite ebrtys in h. *)
+(*   inversion h. subst. clear h. *)
+(*   eapply build_branches_type_inst with (σ := σ) in ebrtys as ebrtys'. *)
+(*   2: assumption. *)
+(*   rewrite ebrtys'. reflexivity. *)
+(* Qed. *)
+Admitted.
 
 Lemma type_inst :
   forall Σ Γ Δ σ t A,

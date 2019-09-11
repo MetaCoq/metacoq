@@ -470,6 +470,62 @@ Section Lemmata.
     induction h. all: simpl ; auto.
   Qed.
 
+  (* TODO MOVE *)
+  Lemma wf_local_nth_error_vass :
+    forall Σ Γ i na ty,
+      wf Σ.1 ->
+      wf_local Σ Γ ->
+      nth_error Γ i = Some (vass na ty) ->
+      lift_typing typing Σ Γ (lift0 (S i) ty) None.
+  Proof.
+    intros Σ Γ i na ty hΣ hΓ e. simpl.
+    induction i in Γ, hΓ, e |- *.
+    - destruct Γ. 1: discriminate.
+      simpl in e. apply some_inj in e. subst.
+      inversion hΓ. subst. simpl in X0.
+      destruct X0 as [s h].
+      exists s. change (tSort s) with (lift0 1 (tSort s)).
+      eapply PCUICWeakening.weakening with (Γ' := [ vass na ty ]).
+      all: assumption.
+    - destruct Γ. 1: discriminate.
+      simpl in e.
+      specialize IHi with (2 := e).
+      destruct IHi as [s h].
+      + inversion hΓ. all: auto.
+      + exists s. change (tSort s) with (lift0 1 (lift0 (S i) (tSort s))).
+        rewrite simpl_lift0.
+        eapply PCUICWeakening.weakening with (Γ' := [ c ]).
+        all: assumption.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma fix_context_nth_error :
+    forall m i d,
+      nth_error m i = Some d ->
+      nth_error (fix_context m) (#|m| - S i) =
+      Some (vass (dname d) (lift0 i (dtype d))).
+  Proof.
+    intros m i d e.
+    rewrite <- fix_context_length.
+    unfold fix_context. rewrite List.rev_length.
+    rewrite <- nth_error_rev.
+    - rewrite nth_error_mapi. rewrite e. simpl. reflexivity.
+    - rewrite mapi_length.
+      eauto using nth_error_Some_length.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma nth_error_weak_context :
+    forall Γ Δ i d,
+      nth_error Δ i = Some d ->
+      nth_error (Γ ,,, Δ) i = Some d.
+  Proof.
+    intros Γ Δ i d h.
+    rewrite nth_error_app_lt.
+    - assumption.
+    - apply nth_error_Some_length in h. assumption.
+  Qed.
+
   Lemma type_rename :
     forall Σ Γ u v A,
       wf Σ.1 ->
@@ -743,22 +799,18 @@ Section Lemmata.
                           None
             ) mfix'
           ).
-          { pose proof hwf' as hΔ. revert hΔ.
-            generalize (fix_context mfix'). intros Δ hΔ.
-            clear - hwf' hΔ.
-            eapply All_rev_inv.
-            induction mfix' using list_rect_rev.
-            - constructor.
-            - simpl. rewrite rev_app_distr. simpl.
-              unfold fix_context in hwf'.
-              rewrite mapi_app in hwf'.
-              rewrite rev_app_distr in hwf'.
-              simpl in hwf'.
-              inversion hwf'. subst.
-              constructor.
-              + simpl in X0. admit.
-                (* NEED relation between Δ and fix_context *)
-              + eapply IHmfix'. assumption.
+          { eapply forall_nth_error_All.
+            intros i d e.
+            apply fix_context_nth_error in e as e'.
+            apply nth_error_weak_context with (Γ := Γ) in e'.
+            eapply wf_local_nth_error_vass in e'. all: try eassumption.
+            rewrite simpl_lift in e' by lia.
+            apply nth_error_Some_length in e as hl.
+            replace (S (#|mfix'| - S i) + i)
+              with (#|mfix'|)
+              in e'
+              by lia.
+            rewrite fix_context_length. assumption.
           }
           rename types into Δ. set (Ξ := fix_context mfix') in *.
           assert (e : eq_context_upto eq Δ Ξ).
@@ -816,7 +868,9 @@ Section Lemmata.
                 ** eapply isLambda_eq_term_l.
                    --- eassumption.
                    --- intuition eauto.
-             ++ eapply IHa. assumption.
+             ++ eapply IHa.
+                ** assumption.
+                ** inversion val. assumption.
       + eapply validity_term ; eauto.
         instantiate (1 := tFix mfix n).
         econstructor ; eauto.

@@ -90,22 +90,4 @@ Open Scope type_scope.
            now rewrite app_context_assoc in H2.
    Admitted.
 
-   Lemma isWfArity_red1 :
-     forall {Γ A B},
-       red1 (fst Σ) Γ A B ->
-       isWfArity typing Σ Γ A ->
-       isWfArity typing Σ Γ B.
-   Admitted.
-
-   Lemma isWfArity_red :
-     forall {Γ A B},
-       red (fst Σ) Γ A B ->
-       isWfArity typing Σ Γ A ->
-       isWfArity typing Σ Γ B.
-   Proof.
-     induction 1.
-     - easy.
-     - intro. now eapply isWfArity_red1.
-   Qed.
-
  End Normalisation.

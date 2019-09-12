@@ -599,8 +599,22 @@ Section Typecheck.
     unfold gc_of_uctx in XX; simpl in XX.
     destruct (gc_of_constraints Σ); [|discriminate].
     inversion XX; subst. generalize (global_ext_levels Σ); intros lvs; cbn.
-    unfold no_prop_levels.
-  Admitted.
+    clear. intro H. apply LevelSet.mem_spec. apply wGraph.VSet.mem_spec in H.
+    apply LevelSetProp.FM.elements_2.
+    unfold no_prop_levels in H.
+    rewrite LevelSet.fold_spec in H.
+    cut (SetoidList.InA eq (level_of_no_prop l) (LevelSet.elements lvs)
+         \/ wGraph.VSet.In l wGraph.VSet.empty). {
+      intros [|H0]; [trivial|].
+      now apply wGraph.VSet.empty_spec in H0. }
+    revert H. generalize (LevelSet.elements lvs), wGraph.VSet.empty; clear.
+    intros lvs; induction lvs; cbn; [intuition|].
+    intros S H. apply IHlvs in H. destruct H as [H|H].
+    - left. now constructor 2.
+    - destruct a; cbn in *. now right.
+      all: apply wGraph.VSet.add_spec in H; destruct H as [H|H]; [left|now right].
+      all: rewrite H; now constructor.
+  Qed.
 
 
   Program Definition check_consistent_instance uctx u

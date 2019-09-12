@@ -1001,7 +1001,9 @@ Section Typecheck.
     - symmetry; eassumption.
     - apply check_correct_arity_spec; assumption.
     - eapply type_reduction; eassumption.
-  Qed.
+    - (* TODO @Simon Update the case case to reflect new typing rule *)
+      admit.
+  Admitted.
 
   (* tProj *)
   Next Obligation. now eapply validity_wf. Defined.

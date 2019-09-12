@@ -188,10 +188,15 @@ Section Inversion.
         Σ ;;; Γ |- p : pty ×
         types_of_case ind mdecl idecl pars u p pty =
         Some (indctx, pctx, ps, btys) ×
-        check_correct_arity (global_ext_constraints Σ) idecl ind u indctx pars pctx ×
+        check_correct_arity (global_ext_constraints Σ)
+        idecl ind u indctx pars pctx ×
         Exists (fun sf => universe_family ps = sf) (ind_kelim idecl) ×
         Σ ;;; Γ |- c : mkApps (tInd ind u) args ×
-        All2 (fun x y => fst x = fst y × Σ ;;; Γ |- snd x : snd y) brs btys ×
+        All2 (fun x y =>
+          (fst x = fst y) *
+          (Σ ;;; Γ |- snd x : snd y) *
+          (Σ ;;; Γ |- snd y : tSort ps)
+        ) brs btys ×
         Σ ;;; Γ |- mkApps p (skipn npar args ++ [c]) <= T.
   Proof.
     intros Γ ind npar p c brs T h. invtac h.

@@ -890,7 +890,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     check_correct_arity (global_ext_constraints Σ) idecl ind u indctx pars pctx ->
     List.Exists (fun sf => universe_family ps = sf) idecl.(ind_kelim) ->
     Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
-    All2 (fun x y => (fst x = fst y) * (Σ ;;; Γ |- snd x : snd y)) brs btys ->
+    All2 (fun x y => (fst x = fst y) * (Σ ;;; Γ |- snd x : snd y) * (Σ ;;; Γ |- snd y : tSort ps)) brs btys ->
     Σ ;;; Γ |- tCase (ind, npar) p c brs : mkApps p (List.skipn npar args ++ [c])
 
 | type_Proj p c u :
@@ -1319,7 +1319,7 @@ Proof.
   exact (S (S (wf_local_size _ typing_size _ a))).
   exact (S (S (wf_local_size _ typing_size _ a))).
   exact (S (Nat.max d1 (Nat.max d2
-                                (all2_size _ (fun x y p => typing_size Σ Γ (snd x) (snd y) (snd p)) a)))).
+                                (all2_size _ (fun x y p => Nat.max (typing_size Σ Γ (snd x) (snd y) (snd (fst p))) (typing_size _ _ _ _ (snd p))) a)))).
   exact (S (Nat.max (wf_local_size _ typing_size _ a) (all_size _ (fun x p => typing_size Σ _ _ _ (fst p)) a0))).
   exact (S (Nat.max (wf_local_size _ typing_size _ a) (all_size _ (fun x p => typing_size Σ _ _ _ p) a0))).
   destruct s. red in i.
@@ -1541,8 +1541,13 @@ Lemma typing_ind_env `{cf : checker_flags} :
         P Σ Γ p pty ->
         Σ;;; Γ |- c : mkApps (tInd ind u) args ->
         P Σ Γ c (mkApps (tInd ind u) args) ->
-        All2 (fun x y : nat * term => (fst x = fst y) * (Σ;;; Γ |- snd x : snd y)
-                                         * P Σ Γ (snd x) (snd y))%type brs btys ->
+        All2 (fun x y : nat * term =>
+                (fst x = fst y) *
+                (Σ;;; Γ |- snd x : snd y) *
+                P Σ Γ (snd x) (snd y) *
+                (Σ ;;; Γ |- snd y : tSort ps) *
+                P Σ Γ (snd y) (tSort ps)
+        )%type brs btys ->
         P Σ Γ (tCase (ind, npar) p c brs) (mkApps p (skipn npar args ++ [c]))) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : projection) (c : term) u
@@ -1755,8 +1760,10 @@ Proof.
        eapply (X14 _ wfΓ _ _ H0); eauto. lia.
        clear X13. revert a wfΓ X14. simpl. clear. intros.
        induction a; simpl in *. constructor.
-       destruct r. constructor. split; auto.
+       destruct r as [[? ?] ?]. constructor. intuition eauto.
        eapply (X14 _ wfΓ _ _ t); eauto. simpl; auto with arith.
+       lia.
+       eapply (X14 _ wfΓ _ _ t0); eauto. simpl; auto with arith.
        lia.
        apply IHa. auto. intros.
        eapply (X14 _ wfΓ0 _ _ Hty). lia.
@@ -1870,7 +1877,7 @@ Proof.
              --- red. destruct t1. unshelve eapply X14. all: eauto.
                  simpl. lia.
           ** auto. right.
-             exists u. intuition. 
+             exists u. intuition.
 Qed.
 
 

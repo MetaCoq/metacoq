@@ -660,14 +660,14 @@ Section Lemmata.
       + econstructor. all: try eassumption.
         * eapply ihp. assumption.
         * eapply ihc. assumption.
-        * assert (All2 (fun x y => fst x = fst y × Σ ;;; Γ |- snd x : snd y) brs' btys)
+        * assert (All2 (fun x y => (fst x = fst y × Σ ;;; Γ |- snd x : snd y) × (Σ ;;; Γ |- y.2 : tSort ps)) brs' btys)
             as hty.
           { clear - ihbrs a.
             induction ihbrs in brs', a |- *.
             - dependent destruction a. constructor.
             - dependent destruction a.
               constructor. all: auto.
-              destruct p, r as [[? ?] ?]. split ; eauto.
+              destruct p, r as [[[? ?] ?] ?]. intuition eauto.
               transitivity (fst x) ; eauto.
           }
           clear - he hty ihbrs.
@@ -675,26 +675,24 @@ Section Lemmata.
           -- dependent destruction he. constructor.
           -- dependent destruction he.
              dependent destruction ihbrs.
-             destruct r.
+             destruct r. destruct p1.
              destruct p.
-             destruct p0 as [[? ?] ?].
-             constructor ; eauto. split.
+             destruct p0 as [[[? ?] ?] ihy].
+             constructor ; eauto. intuition eauto.
              ++ solve [ etransitivity ; eauto ].
              ++ econstructor.
                 ** eassumption.
-                ** (* We're missing the validity proof...
-                      Is it hidden in the types_of_case_eq_term proof?
-                      Are we missing an ingredient or should type_Case ask
-                      that the branches types are sorted?
-                    *)
-                  admit.
+                ** right. eexists. eapply ihy. assumption.
                 ** constructor.
                    eapply eq_term_leq_term.
                    eapply eq_term_upto_univ_eq_eq_term. assumption.
       + eapply validity_term ; eauto.
         instantiate (1 := tCase (ind, npar) p c brs).
         econstructor ; eauto.
-        apply All2_prod_inv in ihbrs as [? ?]. assumption.
+        apply All2_prod_inv in ihbrs as [a1 a4].
+        apply All2_prod_inv in a1 as [a1 a3].
+        apply All2_prod_inv in a1 as [a1 a2].
+        apply All2_prod. all: assumption.
       + constructor.
         eapply eq_term_leq_term.
         apply eq_term_sym.
@@ -1047,7 +1045,8 @@ Section Lemmata.
       intros A hΣ hu e.
       eapply tm ; eauto.
       eapply typing_wf_local. eassumption.
-  Admitted.
+    Unshelve. exact 0.
+  Qed.
 
   Corollary type_nameless :
     forall Σ Γ u A,

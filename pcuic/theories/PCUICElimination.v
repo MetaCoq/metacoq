@@ -187,7 +187,7 @@ Proof.
   unfold build_branches_type in *.
   assert (exists t', nth_error x7 n = Some (m, t')).
   eapply All2_nth_error_Some in H as (? & ?). 2:eassumption. destruct p0.
-  rewrite e. destruct p0. cbn in *. subst. destruct x1. cbn. eauto.
+  rewrite e. destruct p0 as [[? ?] ?]. cbn in *. subst. destruct x1. cbn. eauto.
   destruct H3.
   eapply map_option_Some in E4.
   eapply All2_nth_error_Some_r in E4 as (? & ? & ?); eauto.

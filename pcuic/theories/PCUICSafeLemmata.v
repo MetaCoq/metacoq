@@ -1475,6 +1475,19 @@ Section Lemmata.
       eapply conv_Prod_r. assumption.
   Qed.
 
+  Lemma conv_zipp :
+    forall Γ u v ρ,
+      Σ ;;; Γ |- u == v ->
+      Σ ;;; Γ |- zipp u ρ == zipp v ρ.
+  Proof.
+    intros Γ u v ρ h.
+    unfold zipp.
+    destruct decompose_stack.
+    induction l in u, v, h |- *.
+    - assumption.
+    - simpl.  eapply IHl. eapply conv_App_l. assumption.
+  Qed.
+
   Lemma conv_alt_zippx :
     forall Γ u v ρ,
       Σ ;;; (Γ ,,, stack_context ρ) |- u == v ->
@@ -1671,7 +1684,7 @@ Section Lemmata.
         rewrite destArity_tApp in h1. discriminate.
   Qed.
 
-
+  (* WRONG *)
   Lemma it_mkLambda_or_LetIn_wellformed :
     forall Γ Δ t,
       wellformed Σ (Γ ,,, Δ) t ->
@@ -1726,11 +1739,11 @@ Section Lemmata.
     case_eq (decompose_stack π). intros l ρ e.
     pose proof (decompose_stack_eq _ _ _ e). subst. clear e.
     rewrite zipc_appstack in h.
-    (* revert h. generalize (mkApps t l); clear t l. *)
     zip fold in h.
     apply wellformed_context in h ; simpl in h.
-  (* Qed. *)
-  Admitted.
+    eapply it_mkLambda_or_LetIn_wellformed.
+    assumption.
+  Qed.
 
   Lemma lookup_env_const_name :
     forall {c c' d},
@@ -2045,6 +2058,13 @@ Section Lemmata.
     admit. (* Similar *)
   Admitted.
 
+  Lemma conv_Lambda :
+    forall leq Γ na1 na2 A1 A2 b1 b2,
+      ∥ Σ ;;; Γ |- A1 == A2 ∥ ->
+      conv leq Σ (Γ ,, vass na1 A1) b1 b2 ->
+      conv leq Σ Γ (tLambda na1 A1 b1) (tLambda na2 A2 b2).
+  Admitted.
+
   (* Let bindings are not injective, so it_mkLambda_or_LetIn is not either.
      However, when they are all lambdas they become injective for conversion.
      stack_contexts only produce lambdas so we can use this property on them.
@@ -2079,7 +2099,7 @@ Section Lemmata.
   Lemma it_mkLambda_or_LetIn_stack_context_conv_inv :
     forall Γ π1 π2 t1 t2,
       Σ ;;; Γ |- it_mkLambda_or_LetIn (stack_context π1) t1
-                 == it_mkLambda_or_LetIn (stack_context π2) t2 ->
+             == it_mkLambda_or_LetIn (stack_context π2) t2 ->
       conv_ctx Σ (Γ ,,, stack_context π1) (Γ ,,, stack_context π2) ×
       Σ ;;; Γ ,,, stack_context π1 |- t1 == t2.
   Proof.

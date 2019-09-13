@@ -566,7 +566,7 @@ Definition types_of_case ind mdecl idecl params u p pty :=
 Lemma types_of_case_spec ind mdecl idecl pars u p pty indctx pctx ps btys :
   types_of_case ind mdecl idecl pars u p pty
   = Some (indctx, pctx, ps, btys)
-  <-> exists s', option_map (destArity [])
+  <~> ∑ s', option_map (destArity [])
                      (instantiate_params (subst_instance_context u (ind_params mdecl)) pars (subst_instance_constr u (ind_type idecl)))
           = Some (Some (indctx, s'))
           /\ destArity [] pty = Some (pctx, ps)

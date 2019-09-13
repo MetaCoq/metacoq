@@ -208,6 +208,7 @@ Proof.
     destruct x, decl_body; cbn in H0; try now inv H0.
 Qed.
 
+
 Lemma tConstruct_no_Type (Σ : global_env_ext) ind c u x1 : wf Σ ->
   isErasable Σ [] (mkApps (tConstruct ind c u) x1) ->
   Is_proof Σ [] (mkApps (tConstruct ind c u) x1).
@@ -262,7 +263,7 @@ Proof.
     eapply typing_spine_red in t0. 3:auto. 2:{ eapply PCUICCumulativity.All_All2_refl. clear. induction x1; eauto. }
     2: eapply PCUICCumulativity.red_cumul. 2: eassumption. 2:eapply PCUICCumulativity.cumul_refl'.
     clear - wfΣ t0 H c2.
-    2:{ eapply isWfArity_or_Type_cumul. eapply PCUICCumulativity.red_cumul. eassumption. eauto. }
+    2:{ eapply isWfArity_or_Type_red; eassumption. }
 
     (* assert ((Σ;;; [] |- it_mkProd_or_LetIn c (mkApps (tInd i u) l) <= x0) + (Σ;;; [] |- x0 <= it_mkProd_or_LetIn c (mkApps (tInd i u) l))) by eauto. clear c2. *)
     rename c2 into X.

@@ -35,6 +35,7 @@ Ltac rdestruct H :=
   | _ => idtac
   end.
 
+
 Definition nodelta_flags := RedFlags.mk true true true false true true.
 
 
@@ -2262,6 +2263,7 @@ Lemma strengthening `{cf : checker_flags} :
     Σ;;; Γ ,,, Γ' |- t : T.
 Admitted.
 
+(* todo: move *)
 Lemma map_option_out_mapi :
   forall {A B} (l : list A) (l' : list B) f P,
     map_option_out (mapi f l) = Some l' ->
@@ -2282,6 +2284,7 @@ Proof.
     now eapply IHl.
 Qed.
 
+(* todo: move *)
 Lemma Alli_id :
   forall {A} {P : nat -> A -> Type} (l : list A) (n : nat),
     (forall n x, P n x) -> Alli P n l.
@@ -2290,61 +2293,84 @@ Proof.
   induction l in n |- * ; constructor ; eauto.
 Qed.
 
-Lemma type_Case_valid_btys {cf:checker_flags} :
-  forall Σ Γ ind u p args mdecl idecl
-    (isdecl : declared_inductive (fst Σ) mdecl ind idecl)
-    (pars := List.firstn mdecl.(ind_npars) args)
-    pty (Hp : Σ ;;; Γ |- p : pty)
-    indctx pctx ps btys
-    (e : types_of_case ind mdecl idecl pars u p pty = Some (indctx, pctx, ps, btys))
-    (Hc : PCUICTyping.check_correct_arity (global_ext_constraints Σ) idecl ind u indctx pars pctx),
-    Forall (fun A : nat × term => wellformed Σ Γ (snd A)) btys.
+(* todo: move *)
+Lemma map_option_out_All {A} P (l : list (option A)) l' :
+  (All (on_some P) l) ->
+  map_option_out l = Some l' ->
+  All P l'.
 Proof.
-  intros Σ Γ ind u p args mdecl idecl isdecl pars pty Hp indctx pctx ps btys e
-         Hc.
-  unfold types_of_case in e.
-  case_eq (instantiate_params (subst_instance_context u (ind_params mdecl)) pars (subst_instance_constr u (ind_type idecl)));
-    [|intro HH; rewrite HH in e; discriminate e].
-  intros params' He; rewrite He in e.
-  case_eq (destArity [] params');
-    [|intro HH; rewrite HH in e; discriminate e].
-  intros [params_ctx params_sort] He1; rewrite He1 in e.
-  case_eq (destArity [] pty);
-    [|intro HH; rewrite HH in e; discriminate e].
-  intros [pty_ctx pty_sort] He2; rewrite He2 in e.
+  induction 1 in l' |- *; cbn; inversion 1; subst; try constructor.
+  destruct x; [|discriminate].
+  case_eq (map_option_out l); [|intro e; rewrite e in H1; discriminate]. 
+  intros l0 e; rewrite e in H1; inversion H1; subst.
+  constructor; auto.
+Qed.
 
-  case_eq (map_option_out (build_branches_type ind mdecl idecl pars u p));
-    [|intro HH; rewrite HH in e; discriminate e].
-  intros brtys He3; rewrite He3 in e.
-  inversion e; subst; clear e.
-  unfold build_branches_type in He3.
-  solve_all.
-  eapply (map_option_out_mapi (ind_ctors idecl) btys _ _ He3); clear He3.
-  apply Alli_id.
-  intros i [[id ctor] k].
-  case_eq (instantiate_params (ind_params mdecl) pars ((subst0 (inds (inductive_mind ind) u (ind_bodies mdecl))) (subst_instance_constr u ctor))); [|cbn; trivial].
-  intros ipars Hipars.
-  case_eq (decompose_prod_assum [] ipars). intros ipars0 ipars1 ipars01.
-  case_eq (chop (ind_npars mdecl) (snd (decompose_app ipars1))).
-  intros ipars10 ipars11 Hipars1. cbn.
-  (* left. econstructor. *)
-  (* clear params' He. *)
+(* todo: move *)
+Lemma All_mapi {A B} P f l k :
+  Alli (fun i x => P (f i x)) k l -> All P (@mapi_rec A B f l k).
+Proof.
+  induction 1; simpl; constructor; tas.
+Qed.
 
-  (* apply PCUICWeakeningEnv.on_declared_inductive in X2; try assumption. *)
-  (* destruct X2 as [XX2 XX3]. *)
-  (* apply onConstructors in XX3; unfold on_constructors in XX3. *)
-  (* eapply Alli_impl; try eassumption. *)
-  (* clear -He. *)
-  (* intros n [[id ctor_ty] nc] X. *)
-  (* destruct X as [X1 X2]; cbn in *. *)
+
+
+Lemma type_Case_valid_btys {cf:checker_flags} Σ Γ ind u npar p (* c brs *) args :
+    forall mdecl idecl (isdecl : declared_inductive Σ.1 mdecl ind idecl),
+    mdecl.(ind_npars) = npar ->
+    let pars := List.firstn npar args in
+    forall pty, Σ ;;; Γ |- p : pty ->
+    forall indctx pctx ps btys, types_of_case ind mdecl idecl pars u p pty
+                           = Some (indctx, pctx, ps, btys) ->
+    (* check_correct_arity (global_ext_constraints Σ) idecl ind u indctx pars pctx -> *)
+    (* List.Exists (fun sf => universe_family ps = sf) idecl.(ind_kelim) -> *)
+    (* Σ ;;; Γ |- c : mkApps (tInd ind u) args -> *)
+    (* All2 (fun x y => (fst x = fst y) × (Σ ;;; Γ |- snd x : snd y)) brs btys -> *)
+    All (fun x => Σ ;;; Γ |- snd x : tSort ps) btys.
+Proof.
+  intros mdecl idecl isdecl H0 pars pty X indctx pctx ps btys toc. 
+  apply types_of_case_spec in toc.
+  destruct toc as [s' [_ [H1 H2]]].
+  pose proof (PCUICClosed.destArity_spec [] pty) as Hpty; rewrite H1 in Hpty;
+    cbn in Hpty; subst; clear H1.
+  unfold build_branches_type in H2.
+  eapply map_option_out_All; tea. clear H2.
+  apply All_mapi.
+  apply PCUICWeakeningEnv.on_declared_inductive in isdecl as [oind oc].
+  apply onConstructors in oc.
+  eapply Alli_impl; tea.
+  intros n [[id ct] k] [Hct1 Hct2]; cbn in *.
+  case_eq (instantiate_params (subst_instance_context u (ind_params mdecl)) pars
+             ((subst0 (inds (inductive_mind ind) u (ind_bodies mdecl)))
+                (subst_instance_constr u ct))).
+  - intros ct' Hct'.
+    case_eq (decompose_prod_assum [] ct'); intros sign ccl e1.
+    case_eq (chop (ind_npars mdecl) (decompose_app ccl).2);
+      intros paramrels args0 e2; cbn.
+    admit.
+  - intro HH. cbn.
 Admitted.
 
-Lemma isWfArity_or_Type_cumul {cf:checker_flags} :
-  forall Σ {Γ A A'},
-    Σ;;; Γ |- A' <= A ->
-    isWfArity_or_Type Σ Γ A' ->
-    isWfArity_or_Type Σ Γ A.
-Admitted.
+Lemma type_Case' {cf:checker_flags} Σ Γ ind u npar p c brs args :
+    forall mdecl idecl (isdecl : declared_inductive Σ.1 mdecl ind idecl),
+    mdecl.(ind_npars) = npar ->
+    let pars := List.firstn npar args in
+    forall pty, Σ ;;; Γ |- p : pty ->
+    forall indctx pctx ps btys, types_of_case ind mdecl idecl pars u p pty
+                           = Some (indctx, pctx, ps, btys) ->
+    check_correct_arity (global_ext_constraints Σ) idecl ind u indctx pars pctx ->
+    List.Exists (fun sf => universe_family ps = sf) idecl.(ind_kelim) ->
+    Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
+    All2 (fun x y => (fst x = fst y) × (Σ ;;; Γ |- snd x : snd y)) brs btys ->
+    Σ ;;; Γ |- tCase (ind, npar) p c brs : mkApps p (List.skipn npar args ++ [c]).
+Proof.
+  intros mdecl idecl isdecl H pars pty X indctx pctx ps btys H0 X0 H1 X1 X2. 
+  econstructor; tea.
+  eapply type_Case_valid_btys in H0; tea.
+  eapply All2_All_mix_right; tas.
+Qed.
+
+
 
 
 Arguments red1_ctx _ _ _ : clear implicits.
@@ -2498,13 +2524,24 @@ Section SRContext.
 
    Lemma isWfArity_red {Σ Γ A B} :
      wf Σ.1 -> 
-       red (fst Σ) Γ A B ->
-       isWfArity typing Σ Γ A ->
-       isWfArity typing Σ Γ B.
+     red (fst Σ) Γ A B ->
+     isWfArity typing Σ Γ A ->
+     isWfArity typing Σ Γ B.
    Proof.
      induction 2.
      - easy.
      - intro. now eapply isWfArity_red1.
+   Qed.
+
+   Lemma isWfArity_or_Type_red {Σ Γ A B} :
+     wf Σ.1 ->
+     red (fst Σ) Γ A B ->
+     isWfArity_or_Type Σ Γ A ->
+     isWfArity_or_Type Σ Γ B.
+   Proof.
+     intros ? ? [?|[? ?]]; [left|right].
+     eapply isWfArity_red; eassumption.
+     eexists. eapply subject_reduction; tea.
    Qed.
 
 End SRContext.

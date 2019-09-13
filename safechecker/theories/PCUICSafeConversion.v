@@ -1429,6 +1429,7 @@ Section Conversion.
       simpl. rewrite <- app_nil_r. eapply positionR_poscat. constructor.
   Qed.
   Next Obligation.
+    destruct hΣ as [wΣ].
     destruct b ; auto.
     split. 1: assumption.
     destruct H0 as [h0].
@@ -1459,7 +1460,7 @@ Section Conversion.
     apply mkApps_Prod_nil' in h2 ; auto. subst.
 
     simpl.
-    eapply Prod_conv. all: auto.
+    eapply conv_Prod. all: auto.
   Qed.
 
   (* tCase *)

@@ -2056,7 +2056,7 @@ Section Lemmata.
     forall Γ π1 π2 t1 t2,
       Σ ;;; Γ |- it_mkLambda_or_LetIn (stack_context π1) t1
              == it_mkLambda_or_LetIn (stack_context π2) t2 ->
-      conv_ctx Σ (Γ ,,, stack_context π1) (Γ ,,, stack_context π2) ×
+      conv_context Σ (Γ ,,, stack_context π1) (Γ ,,, stack_context π2) ×
       Σ ;;; Γ ,,, stack_context π1 |- t1 == t2.
   Proof.
     intros Γ π1 π2 t1 t2 h.
@@ -2365,4 +2365,3 @@ Lemma isWfArity_or_Type_cumul {cf:checker_flags} :
     isWfArity_or_Type Σ Γ A' ->
     isWfArity_or_Type Σ Γ A.
 Admitted.
-

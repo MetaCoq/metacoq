@@ -902,7 +902,7 @@ Proof.
     eexists. split.
     +  eapply cofix_red_body. eassumption.
     + constructor. all: eauto.
-Admitted.
+Qed.
 
 Lemma red1_eq_context_upto_r Σ Re Γ Δ u v :
   Reflexive Re -> Symmetric Re ->

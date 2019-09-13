@@ -349,3 +349,4 @@ pcuic/src/pCUICReflect.mli
 /erasure/src/safeTemplateChecker.mli
 /erasure/src/typing0.ml
 /erasure/src/typing0.mli
+/pcuic/Makefile.plugin-e

@@ -1317,7 +1317,7 @@ Section CheckEnv.
     let global_levels := global_levels Σ in
     let all_levels := LevelSet.union levels global_levels in
     check_eq_true (LevelSet.for_all (fun l => negb (LevelSet.mem l global_levels))
-                                    levels) (IllFormedDecl id (Msg "non fresh level"));;
+                                    levels) (IllFormedDecl id (Msg ("non fresh level in " ++ Pretty.print_lset levels)));;
     check_eq_true (ConstraintSet.for_all (fun '(l1, _, l2) => LevelSet.mem l1 all_levels && LevelSet.mem l2 all_levels) (constraints_of_udecl udecl))
                                     (IllFormedDecl id (Msg ("non declared level in " ++ Pretty.print_lset levels ++
                                     " |= " ++ Pretty.print_constraint_set (constraints_of_udecl udecl))));;

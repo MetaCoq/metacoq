@@ -333,6 +333,9 @@ Section ContextConversion.
       constructor; pcuic; eapply conv_refl'.
   Qed.
 
+  Global Instance conv_ctx_refl' : Reflexive (context_relation conv_decls)
+    := conv_ctx_refl.
+
   Hint Resolve conv_ctx_refl : pcuic.
 
   Lemma fill_le {Γ t t' u u'} :

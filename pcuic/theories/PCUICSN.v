@@ -88,7 +88,7 @@ Open Scope type_scope.
            apply destArity_app_Some in H1. destruct H1 as [ctx' [e1 e2]]; subst.
            apply IHt3. exists ctx', s. split. assumption.
            now rewrite app_context_assoc in H2.
-   Qed.
+   Admitted.
 
    Lemma isWfArity_red1 :
      forall {Γ A B},

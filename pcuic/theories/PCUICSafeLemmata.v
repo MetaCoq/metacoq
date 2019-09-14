@@ -1690,19 +1690,20 @@ Section Lemmata.
     forall Γ Δ t,
       wellformed Σ (Γ ,,, Δ) t ->
       wellformed Σ Γ (it_mkLambda_or_LetIn Δ t).
-  Admitted.
+  Abort.
 
   (* Wrong for t = alg univ, π = ε, Γ = vass A *)
   Lemma zipx_wellformed :
     forall {Γ t π},
       wellformed Σ Γ (zipc t π) ->
       wellformed Σ [] (zipx Γ t π).
-  Proof.
-    intros Γ t π h.
-    eapply it_mkLambda_or_LetIn_wellformed.
-    rewrite app_context_nil_l.
-    assumption.
-  Qed.
+  (* Proof. *)
+  (*   intros Γ t π h. *)
+  (*   eapply it_mkLambda_or_LetIn_wellformed. *)
+  (*   rewrite app_context_nil_l. *)
+  (*   assumption. *)
+  (* Qed. *)
+  Abort.
 
   Lemma wellformed_zipx :
     forall {Γ t π},
@@ -1729,22 +1730,23 @@ Section Lemmata.
     - simpl. eauto.
   Qed.
 
-  (* Is it correct? *)
+  (* Wrong  *)
   Lemma wellformed_zipc_zippx :
     forall Γ t π,
       wellformed Σ Γ (zipc t π) ->
       wellformed Σ Γ (zippx t π).
-  Proof.
-    intros Γ t π h.
-    unfold zippx.
-    case_eq (decompose_stack π). intros l ρ e.
-    pose proof (decompose_stack_eq _ _ _ e). subst. clear e.
-    rewrite zipc_appstack in h.
-    zip fold in h.
-    apply wellformed_context in h ; simpl in h.
-    eapply it_mkLambda_or_LetIn_wellformed.
-    assumption.
-  Qed.
+  (* Proof. *)
+  (*   intros Γ t π h. *)
+  (*   unfold zippx. *)
+  (*   case_eq (decompose_stack π). intros l ρ e. *)
+  (*   pose proof (decompose_stack_eq _ _ _ e). subst. clear e. *)
+  (*   rewrite zipc_appstack in h. *)
+  (*   zip fold in h. *)
+  (*   apply wellformed_context in h ; simpl in h. *)
+  (*   eapply it_mkLambda_or_LetIn_wellformed. *)
+  (*   assumption. *)
+  (* Qed. *)
+  Abort.
 
   Lemma lookup_env_const_name :
     forall {c c' d},
@@ -2321,7 +2323,7 @@ Lemma map_option_out_All {A} P (l : list (option A)) l' :
 Proof.
   induction 1 in l' |- *; cbn; inversion 1; subst; try constructor.
   destruct x; [|discriminate].
-  case_eq (map_option_out l); [|intro e; rewrite e in H1; discriminate]. 
+  case_eq (map_option_out l); [|intro e; rewrite e in H1; discriminate].
   intros l0 e; rewrite e in H1; inversion H1; subst.
   constructor; auto.
 Qed.
@@ -2348,7 +2350,7 @@ Lemma type_Case_valid_btys {cf:checker_flags} Σ Γ ind u npar p (* c brs *) arg
     (* All2 (fun x y => (fst x = fst y) × (Σ ;;; Γ |- snd x : snd y)) brs btys -> *)
     All (fun x => Σ ;;; Γ |- snd x : tSort ps) btys.
 Proof.
-  intros mdecl idecl isdecl H0 pars pty X indctx pctx ps btys toc. 
+  intros mdecl idecl isdecl H0 pars pty X indctx pctx ps btys toc.
   apply types_of_case_spec in toc.
   destruct toc as [s' [_ [H1 H2]]].
   pose proof (PCUICClosed.destArity_spec [] pty) as Hpty; rewrite H1 in Hpty;
@@ -2384,7 +2386,7 @@ Lemma type_Case' {cf:checker_flags} Σ Γ ind u npar p c brs args :
     All2 (fun x y => (fst x = fst y) × (Σ ;;; Γ |- snd x : snd y)) brs btys ->
     Σ ;;; Γ |- tCase (ind, npar) p c brs : mkApps p (List.skipn npar args ++ [c]).
 Proof.
-  intros mdecl idecl isdecl H pars pty X indctx pctx ps btys H0 X0 H1 X1 X2. 
+  intros mdecl idecl isdecl H pars pty X indctx pctx ps btys H0 X0 H1 X1 X2.
   econstructor; tea.
   eapply type_Case_valid_btys in H0; tea.
   eapply All2_All_mix_right; tas.
@@ -2455,7 +2457,7 @@ Section SRContext.
       change (Γ,, vdef na b t ,,, Γ') with (Γ ,,, [vdef na b t] ,,, Γ') in *.
       assert (subslet Σ Γ [b] [vdef na b t]). {
         pose proof (cons_let_def Σ Γ [] [] na b t) as XX.
-        rewrite !subst_empty in XX. apply XX. constructor. 
+        rewrite !subst_empty in XX. apply XX. constructor.
         apply wf_local_app in X. inversion X; subst; cbn in *; assumption. }
       constructor; cbn; auto. exists s.
       change (tSort s) with (subst [b] #|Γ'| (tSort s)).
@@ -2465,7 +2467,7 @@ Section SRContext.
       change (Γ,, vdef na b t ,,, Γ') with (Γ ,,, [vdef na b t] ,,, Γ') in *.
       assert (subslet Σ Γ [b] [vdef na b t]). {
         pose proof (cons_let_def Σ Γ [] [] na b t) as XX.
-        rewrite !subst_empty in XX. apply XX. constructor. 
+        rewrite !subst_empty in XX. apply XX. constructor.
         apply wf_local_app in X. inversion X; subst; cbn in *; assumption. }
       constructor; cbn; auto. exists s.
       change (tSort s) with (subst [b] #|Γ'| (tSort s)).
@@ -2482,7 +2484,7 @@ Section SRContext.
 
 
    Lemma isWfArity_red1 {Σ Γ A B} :
-     wf Σ.1 -> 
+     wf Σ.1 ->
        red1 (fst Σ) Γ A B ->
        isWfArity typing Σ Γ A ->
        isWfArity typing Σ Γ B.
@@ -2496,7 +2498,7 @@ Section SRContext.
        rewrite ee in H. eexists _, s'. split. eassumption.
        rewrite ee in H1. cbn in *. inversion H1; subst.
        rewrite app_context_assoc in H2.
-       now eapply wf_local_subst1.         
+       now eapply wf_local_subst1.
      - rewrite destArity_tFix in H1; discriminate.
      - rewrite destArity_app in H1.
        case_eq (destArity [] b'); [intros [ctx' s']|]; intro ee;
@@ -2522,7 +2524,7 @@ Section SRContext.
          inversion H1; subst. now rewrite app_context_assoc in H2. }
        destruct IHX as [ctx'' [s'' [ee' ?]]].
        eexists _, s''; split. cbn. rewrite destArity_app, ee'. reflexivity.
-       now rewrite app_context_assoc. 
+       now rewrite app_context_assoc.
      - rewrite destArity_app in H1.
        case_eq (destArity [] M2); [intros [ctx' s']|]; intro ee;
          rewrite ee in H1; [|discriminate].
@@ -2543,7 +2545,7 @@ Section SRContext.
    Qed.
 
    Lemma isWfArity_red {Σ Γ A B} :
-     wf Σ.1 -> 
+     wf Σ.1 ->
      red (fst Σ) Γ A B ->
      isWfArity typing Σ Γ A ->
      isWfArity typing Σ Γ B.

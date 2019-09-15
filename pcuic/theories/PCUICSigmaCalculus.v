@@ -7,6 +7,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLif
      PCUICTyping PCUICWeakeningEnv PCUICClosed PCUICReduction PCUICEquality.
 Require Import ssreflect ssrbool.
 
+Set Keyed Unification.
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 Set Equations With UIP.

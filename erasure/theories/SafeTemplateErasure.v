@@ -52,7 +52,7 @@ Definition assume_wf_decl {cf : checker_flags} (Σ : global_env_ext) :
     forall d : global_decl, EnvCheck (∥ on_global_decl (lift_typing typing) Σ d ∥).
 Proof.
   intros. apply CorrectDecl. constructor. todo "assumed correct global declaration".
-Qed.
+Defined.
 
 Program Fixpoint check_wf_env_only_univs (Σ : global_env)
   : EnvCheck (∑ G, (is_graph_of_uctx G (global_uctx Σ) /\ ∥ wf Σ ∥)) :=

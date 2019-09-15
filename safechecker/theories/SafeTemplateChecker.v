@@ -57,15 +57,21 @@ Definition update_universes (univs : ContextSet.t) (cb : Ast.global_decl)  :=
   | Ast.InductiveDecl kn mib => Ast.InductiveDecl kn (update_mib_universes univs mib)
   end.
 
+Definition is_unbound_level declared (l : Level.t) :=
+  match l with
+  | Level.Level _ => negb (LevelSet.mem l declared)
+  | _ => false
+  end.
+
 (** We compute the dangling universes in the constraints only for now. *)
 Definition dangling_universes declared cstrs :=
   ConstraintSet.fold (fun '(l, d, r) acc =>
                         let acc :=
-                            if negb (LevelSet.mem l declared) then
+                            if is_unbound_level declared l then
                               LevelSet.add l acc
                             else acc
                         in
-                        if negb (LevelSet.mem r declared) then
+                        if is_unbound_level declared r then
                           LevelSet.add r acc
                         else acc) cstrs LevelSet.empty.
 

@@ -292,6 +292,22 @@ Section Lemmata.
       now eapply isWfArity_alpha.
   Qed.
 
+  Lemma wellformed_nlctx Γ u :
+      wellformed Σ Γ u ->
+      wellformed Σ (nlctx Γ) u.
+  Proof.
+    destruct hΣ as [hΣ'].
+    assert (Γ ≡Γ nlctx Γ) by apply upto_names_nlctx.
+    intros [[A hu]|[[ctx [s [X1 X2]]]]]; [left|right].
+    - exists A. eapply context_conversion'; tea.
+      eapply wf_local_alpha with Γ; tea.
+      now eapply typing_wf_local.
+      now eapply upto_names_conv_context.
+    - constructor. exists ctx, s. split; tas.
+      eapply wf_local_alpha; tea.
+      now eapply eq_context_upto_cat.
+  Qed.
+
 
   Lemma red_cored_or_eq :
     forall Γ u v,

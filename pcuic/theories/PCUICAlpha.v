@@ -837,6 +837,21 @@ Section Alpha.
   Qed.
 
 
+  Lemma upto_names_nl t
+    : t ≡ nl t.
+  Proof.
+    eapply eq_term_upto_univ_tm_nl; exact _.
+  Qed.
+
+  Lemma upto_names_nlctx Γ
+    : Γ ≡Γ nlctx Γ.
+  Proof.
+    induction Γ as [|a Γ]; try constructor.
+    destruct a as [na [bo|] ty]; simpl; constructor; cbn; tas.
+    all: apply upto_names_nl.
+  Qed.
+
+
 End Alpha.
 
-Print Assumptions isWfArity_alpha.
+Infix "≡Γ" := upto_names_ctx (at level 60).

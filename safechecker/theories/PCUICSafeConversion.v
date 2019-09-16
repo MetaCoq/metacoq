@@ -228,17 +228,6 @@ Section Conversion.
     | Fallback t => Fallback (nl t)
     end.
 
-  (* TODO MOVE *)
-  Lemma wellformed_nlctx :
-    forall Γ u,
-      wellformed Σ Γ u ->
-      wellformed Σ (nlctx Γ) u.
-  Proof.
-    (* We must first do some context conversion to change Γ by nlctx Γ *)
-    (* For this we need to be able to show that nlctx is eq_context_upto
-         as well as wf_local from wf_local Γ.
-     *)
-  Admitted.
 
   Definition nl_pack {Γ : context} (p : pack Γ) : nlpack (nlctx Γ).
   Proof.
@@ -248,7 +237,7 @@ Section Conversion.
     - exact (nl t).
     - exact (nlstack π2).
     - exact (nlstack π1).
-    - eapply wellformed_nlctx.
+    - eapply wellformed_nlctx; tas.
       eapply wellformed_alpha ; try eassumption.
       destruct s.
       all: cbn.
@@ -323,7 +312,7 @@ Section Conversion.
     eapply Acc_fun with (f := fun x => obpack (nl_pack x)).
     apply R_aux_Acc.
     rewrite <- nl_zipc.
-    eapply wellformed_nlctx.
+    eapply wellformed_nlctx; tas.
     eapply wellformed_alpha ; try eassumption.
     eapply eq_term_upto_univ_tm_nl. all: auto.
   Qed.

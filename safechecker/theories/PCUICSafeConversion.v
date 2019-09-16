@@ -229,6 +229,95 @@ Section Conversion.
     end.
 
   (* TODO MOVE *)
+  Lemma eq_context_upto_nlctx :
+    forall Γ,
+      eq_context_upto eq Γ (nlctx Γ).
+  Proof.
+    intros Γ.
+    induction Γ as [| [na [b|] A] Γ ih ].
+    - constructor.
+    - simpl. constructor.
+      + eapply eq_term_upto_univ_tm_nl.
+        all: auto.
+      + simpl. eapply eq_term_upto_univ_tm_nl.
+        all: auto.
+      + assumption.
+    - simpl. constructor.
+      + simpl. eapply eq_term_upto_univ_tm_nl.
+        all: auto.
+      + assumption.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma wf_local_nlctx :
+    forall Γ,
+      wf Σ.1 ->
+      wf_local Σ Γ ->
+      wf_local Σ (nlctx Γ).
+  Proof.
+    intros wΣ Γ h.
+    induction h.
+    - constructor.
+    - simpl. unfold map_decl_anon. simpl. constructor.
+      + assumption.
+      + destruct t0 as [s ht].
+        exists s. eapply typing_alpha.
+        * assumption.
+        * eapply context_conversion. 3: exact ht. all: try assumption.
+          eapply eq_context_upto_conv_context.
+          eapply eq_context_impl.
+          2: eapply eq_context_upto_nlctx.
+          intros ? ? []. eapply eq_universe_refl.
+        * eapply eq_term_upto_univ_tm_nl. all: auto.
+    - simpl. unfold map_decl_anon. simpl. constructor.
+      + assumption.
+      + destruct t0 as [s ht].
+        exists s. eapply typing_alpha.
+        * assumption.
+        * eapply context_conversion. 3: exact ht. all: try assumption.
+          eapply eq_context_upto_conv_context.
+          eapply eq_context_impl.
+          2: eapply eq_context_upto_nlctx.
+          intros ? ? []. eapply eq_universe_refl.
+        * eapply eq_term_upto_univ_tm_nl. all: auto.
+      + simpl in *. destruct t0 as [s ht].
+        eapply context_conversion. all: try assumption.
+        * eapply typing_wf_local. eassumption.
+        * eapply type_Cumul.
+          -- eapply typing_alpha. all: try eassumption.
+             eapply eq_term_upto_univ_tm_nl. all: auto.
+          -- right. exists s. eapply typing_alpha. all: eauto.
+             eapply eq_term_upto_univ_tm_nl. all: auto.
+          -- constructor. eapply eq_term_upto_univ_tm_nl.
+             all: intro.
+             ++ eapply eq_universe_refl.
+             ++ eapply leq_universe_refl.
+        * eapply eq_context_upto_conv_context.
+          eapply eq_context_impl.
+          2: eapply eq_context_upto_nlctx.
+          intros ? ? []. eapply eq_universe_refl.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma welltyped_nlctx :
+    forall Γ u,
+      welltyped Σ Γ u ->
+      welltyped Σ (nlctx Γ) u.
+  Proof.
+    destruct hΣ.
+    intros Γ u [A h].
+    exists A. eapply context_conversion. all: try eassumption.
+    - eapply typing_wf_local. eassumption.
+    - eapply eq_context_upto_conv_context.
+      eapply eq_context_impl.
+      2: eapply eq_context_upto_nlctx.
+      intros ? ? []. eapply eq_universe_refl.
+    - eapply wf_local_nlctx.
+      + assumption.
+      + eapply typing_wf_local. eassumption.
+  Qed.
+
+  (* TODO MOVE *)
   Lemma wellformed_nlctx :
     forall Γ u,
       wellformed Σ Γ u ->

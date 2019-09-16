@@ -246,6 +246,76 @@ Section Conversion.
       all: auto.
   Defined.
 
+  Definition cored' Γ u v :=
+    exists u' v', cored Σ Γ u' v' /\ ∥ u ≡ u' ∥ /\ ∥ v ≡ v' ∥.
+
+  Lemma cored_alt :
+    forall Γ u v,
+      cored Σ Γ u v <~> ∥ Relation.trans_clos (red1 Σ Γ) v u ∥.
+  Proof.
+    intros Γ u v.
+    split.
+    - intro h. induction h.
+      + constructor. constructor. assumption.
+      + destruct IHh as [ih]. constructor.
+        eapply Relation.t_trans.
+        * eassumption.
+        * constructor. assumption.
+    - intros [h]. induction h.
+      + constructor. assumption.
+      + eapply cored_trans'. all: eassumption.
+  Qed.
+
+  Lemma cored'_postpone :
+    forall Γ u v,
+      cored' Γ u v ->
+      exists u', cored Σ Γ u' v /\ ∥ u ≡ u' ∥.
+  Proof.
+    intros Γ u v [u' [v' [r [[hu] [hv]]]]].
+    apply cored_alt in r.
+    destruct r as [r].
+    induction r in u, v, hu, hv.
+    - eapply red1_eq_term_upto_univ_r in r. 9: eassumption. all: auto.
+      + destruct r as [u' [r e]].
+        exists u'. split.
+        * constructor. assumption.
+        * constructor. eapply upto_names_trans. all: eauto.
+          eapply upto_names_sym. assumption.
+      + intros s u1 u2 h. unfold R_universe_instance in h.
+        apply All2_eq in h. apply utils.map_inj in h.
+        * subst. reflexivity.
+        * intros ? ? H. inversion H. reflexivity.
+      + intros ? ? ? ? ?. subst. reflexivity.
+      + intros ? ? ? ? ?. subst. reflexivity.
+      + intros ? ?. auto.
+    - specialize IHr1 with (1 := upto_names_ref _) (2 := hv).
+      destruct IHr1 as [y' [h1 [e1]]].
+      specialize IHr2 with (1 := hu) (2 := upto_names_sym _ _ e1).
+      destruct IHr2 as [u' [h2 ?]].
+      exists u'. split.
+      + eapply cored_trans'. all: eauto.
+      + assumption.
+  Qed.
+
+  Lemma normalisation_upto :
+    forall Γ u,
+      wellformed Σ Γ u ->
+      Acc (cored' Γ) u.
+  Proof.
+    destruct hΣ.
+    intros Γ u h.
+    apply normalisation' in h. 2: auto.
+    (* TODO We need to have cored'_postpone as an equivalence...
+       So more work.
+     *)
+
+
+    (* assert (h' : forall u', upto_names u u' -> Acc ) *)
+    (* induction h. *)
+    (* constructor. intros v [v' [u' [r [[hu] [hv]]]]]. *)
+    (* eapply H0. *)
+  Abort.
+
   Definition wterm Γ := { t : term | wellformed Σ Γ t }.
 
   Definition wcored Γ (u v : wterm Γ) :=

@@ -109,50 +109,6 @@ Proof.
     + right. eapply hB ; eassumption.
 Qed.
 
-Section DestArity.
-  Lemma destArity_app_aux {Γ Γ' t}
-    : destArity (Γ ,,, Γ') t = option_map (fun '(ctx, s) => (Γ ,,, ctx, s))
-                                          (destArity Γ' t).
-  Proof.
-    revert Γ'.
-    induction t; cbn; intro Γ'; try reflexivity.
-    - rewrite <- app_context_cons. now eapply IHt2.
-    - rewrite <- app_context_cons. now eapply IHt3.
-  Qed.
-
-  Lemma destArity_app {Γ t}
-    : destArity Γ t = option_map (fun '(ctx, s) => (Γ ,,, ctx, s))
-                                          (destArity [] t).
-  Proof.
-    exact (@destArity_app_aux Γ [] t).
-  Qed.
-
-  Lemma destArity_app_Some {Γ t ctx s}
-    : destArity Γ t = Some (ctx, s)
-      -> ∑ ctx', destArity [] t = Some (ctx', s) /\ ctx = Γ ,,, ctx'.
-  Proof.
-    intros H. rewrite destArity_app in H.
-    destruct (destArity [] t) as [[ctx' s']|]; cbn in *.
-    exists ctx'. inversion H. now subst.
-    discriminate H.
-  Qed.
-
-  Lemma destArity_tFix {mfix idx args} :
-    destArity [] (mkApps (tFix mfix idx) args) = None.
-  Proof.
-    induction args. reflexivity.
-    rewrite mkApps_nonempty. reflexivity.
-    intros e; discriminate e.
-  Qed.
-
-  Lemma destArity_tApp {t u l} :
-    destArity [] (mkApps (tApp t u) l) = None.
-  Proof.
-    induction l. reflexivity.
-    rewrite mkApps_nonempty. reflexivity.
-    intros e; discriminate e.
-  Qed.
-End DestArity.
 
 Section Lemmata.
   Context {cf : checker_flags}.
@@ -314,24 +270,28 @@ Section Lemmata.
 
   Context (hΣ : ∥ wf Σ ∥).
 
-  Lemma welltyped_rename :
-    forall Γ u v,
+  Lemma welltyped_alpha Γ u v :
       welltyped Σ Γ u ->
       eq_term_upto_univ eq eq u v ->
       welltyped Σ Γ v.
   Proof.
-    intros Γ u v [A h] e.
+    intros [A h] e.
     destruct hΣ.
     exists A. eapply typing_alpha ; eauto.
   Qed.
 
-  Lemma wellformed_rename :
-    forall Γ u v,
+  Lemma wellformed_alpha Γ u v :
       wellformed Σ Γ u ->
       eq_term_upto_univ eq eq u v ->
       wellformed Σ Γ v.
   Proof.
-  Admitted.
+    destruct hΣ as [hΣ'].
+    intros [X|X] e; [left|right].
+    - destruct X as [A Hu]. eexists. eapply typing_alpha; tea.
+    - destruct X. constructor.
+      now eapply isWfArity_alpha.
+  Qed.
+
 
   Lemma red_cored_or_eq :
     forall Γ u v,
@@ -1203,13 +1163,6 @@ Section Lemmata.
   Hint Resolve conv_alt_refl conv_alt_red : core.
   Hint Resolve conv_ctx_refl: core.
 
-
-  Lemma conv_Lambda :
-    forall leq Γ na1 na2 A1 A2 b1 b2,
-      ∥ Σ ;;; Γ |- A1 == A2 ∥ ->
-      conv leq Σ (Γ ,, vass na1 A1) b1 b2 ->
-      conv leq Σ Γ (tLambda na1 A1 b1) (tLambda na2 A2 b2).
-  Admitted.
 
   (* Let bindings are not injective, so it_mkLambda_or_LetIn is not either.
      However, when they are all lambdas they become injective for conversion.

@@ -6,7 +6,7 @@ From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
      AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
-     PCUICCumulativity PCUICSR PCUICPosition PCUICEquality PCUICNameless
+     PCUICCumulativity PCUICPosition PCUICEquality PCUICNameless
      PCUICContextConversion PCUICValidity.
 From Equations Require Import Equations.
 
@@ -200,7 +200,7 @@ Section Alpha.
         * constructor.
           -- apply conv_ctx_refl ; auto.
           -- constructor. constructor.
-             eapply eq_term_upto_univ_eq_eq_term. assumption.
+             eapply upto_names_impl_eq_term. assumption.
     - intros na A t s1 B ih hA ihA hB ihB v e.
       dependent destruction e.
       econstructor.
@@ -214,14 +214,14 @@ Section Alpha.
           -- constructor.
              ++ apply conv_ctx_refl ; auto.
              ++ do 2 constructor.
-                eapply eq_term_upto_univ_eq_eq_term. assumption.
+                eapply upto_names_impl_eq_term. assumption.
       + eapply validity_term ; eauto.
         econstructor ; eauto.
       + constructor.
         eapply eq_term_leq_term.
         apply eq_term_sym.
         constructor.
-        all: try (eapply eq_term_upto_univ_eq_eq_term ; assumption).
+        all: try (eapply upto_names_impl_eq_term ; assumption).
         all: eapply eq_term_refl.
     - intros na b B t s1 A ih hB ihB hb ihb hA ihA v e.
       dependent destruction e.
@@ -232,7 +232,7 @@ Section Alpha.
           -- eapply ihb. assumption.
           -- right. eexists. eapply ihB. assumption.
           -- constructor. eapply eq_term_leq_term.
-             eapply eq_term_upto_univ_eq_eq_term. assumption.
+             eapply upto_names_impl_eq_term. assumption.
         * eapply context_conversion'.
           -- assumption.
           -- constructor.
@@ -250,16 +250,16 @@ Section Alpha.
           -- constructor.
              ++ apply conv_ctx_refl ; auto.
              ++ econstructor. constructor.
-                now apply eq_term_upto_univ_eq_eq_term.
+                now apply upto_names_impl_eq_term.
                 constructor.
-                now apply eq_term_upto_univ_eq_eq_term.
+                now apply upto_names_impl_eq_term.
       + eapply validity_term ; eauto.
         econstructor ; eauto.
       + constructor.
         eapply eq_term_leq_term.
         apply eq_term_sym.
         constructor.
-        all: try (eapply eq_term_upto_univ_eq_eq_term ; assumption).
+        all: try (eapply upto_names_impl_eq_term ; assumption).
         all: eapply eq_term_refl.
     - intros t na A B u ih ht iht hu ihu v e.
       dependent destruction e.
@@ -272,7 +272,7 @@ Section Alpha.
       + constructor.
         eapply eq_term_leq_term.
         apply eq_term_sym.
-        eapply eq_term_upto_univ_eq_eq_term.
+        eapply upto_names_impl_eq_term.
         eapply eq_term_upto_univ_subst ; now auto.
     - intros cst u decl ? ? hdecl hcons v e.
       dependent destruction e.
@@ -326,7 +326,7 @@ Section Alpha.
                 ** right. eexists. eapply ihy. assumption.
                 ** constructor.
                    eapply eq_term_leq_term.
-                   eapply eq_term_upto_univ_eq_eq_term. assumption.
+                   eapply upto_names_impl_eq_term. assumption.
       + eapply validity_term ; eauto.
         instantiate (1 := tCase (ind, npar) p c brs).
         econstructor ; eauto.
@@ -338,11 +338,11 @@ Section Alpha.
         eapply eq_term_leq_term.
         apply eq_term_sym.
         eapply eq_term_mkApps.
-        all: try (eapply eq_term_upto_univ_eq_eq_term ; assumption).
+        all: try (eapply upto_names_impl_eq_term ; assumption).
         eapply All2_app.
         * eapply All2_same. intro. eapply eq_term_refl.
         * constructor ; eauto.
-          eapply eq_term_upto_univ_eq_eq_term. assumption.
+          eapply upto_names_impl_eq_term. assumption.
     - intros p c u mdecl idecl pdecl isdecl args X X0 hc ihc H ty v e.
       dependent destruction e.
       econstructor.
@@ -353,7 +353,7 @@ Section Alpha.
       + constructor.
         eapply eq_term_leq_term.
         apply eq_term_sym.
-        eapply eq_term_upto_univ_eq_eq_term.
+        eapply upto_names_impl_eq_term.
         eapply eq_term_upto_univ_substs ; auto; try reflexivity.
         * constructor ; auto.
           eapply All2_same.
@@ -388,7 +388,7 @@ Section Alpha.
             * assumption.
             * eapply IHe. assumption.
             * eapply ih. assumption.
-            * eapply eq_context_upto_conv_context.
+            * eapply eq_context_upto_univ_conv_context.
               eapply eq_context_impl ; revgoals.
               -- eapply eq_context_upto_cat. 2: eassumption.
                  eapply eq_context_upto_refl. auto.
@@ -402,7 +402,7 @@ Section Alpha.
             * assumption.
             * eapply IHe. assumption.
             * eapply ih. assumption.
-            * eapply eq_context_upto_conv_context.
+            * eapply eq_context_upto_univ_conv_context.
               eapply eq_context_impl ; revgoals.
               -- eapply eq_context_upto_cat. 2: eassumption.
                  eapply eq_context_upto_refl. auto.
@@ -419,7 +419,7 @@ Section Alpha.
                  all: intros ? ? [].
                  ++ eapply eq_universe_refl.
                  ++ eapply leq_universe_refl.
-            * eapply eq_context_upto_conv_context.
+            * eapply eq_context_upto_univ_conv_context.
               eapply eq_context_impl ; revgoals.
               -- eapply eq_context_upto_cat. 2: eassumption.
                  eapply eq_context_upto_refl. auto.
@@ -483,7 +483,7 @@ Section Alpha.
                            *** assumption.
                            *** eauto using typing_wf_local.
                            *** eassumption.
-                           *** eapply eq_context_upto_conv_context.
+                           *** eapply eq_context_upto_univ_conv_context.
                                eapply eq_context_upto_sym.
                                ---- intros ? ? ?. eapply eq_universe_sym.
                                     assumption.
@@ -499,7 +499,7 @@ Section Alpha.
                            all: intros ? ? [].
                            *** eapply eq_universe_refl.
                            *** eapply leq_universe_refl.
-                   --- eapply eq_context_upto_conv_context.
+                   --- eapply eq_context_upto_univ_conv_context.
                        eapply eq_context_impl ; revgoals.
                        +++ eapply eq_context_upto_cat. 2: eassumption.
                            eapply eq_context_upto_refl. auto.
@@ -517,7 +517,7 @@ Section Alpha.
         * apply All_prod_inv in ihmfix as [? ?]. assumption.
       + constructor. eapply eq_term_leq_term.
         apply eq_term_sym.
-        eapply eq_term_upto_univ_eq_eq_term. assumption.
+        eapply upto_names_impl_eq_term. assumption.
     - intros mfix n decl types hnth hwf ihmfix hac v e. subst types.
       dependent destruction e.
       eapply All2_nth_error_Some in hnth as hnth' ; eauto.
@@ -549,7 +549,7 @@ Section Alpha.
             * assumption.
             * eapply IHe. assumption.
             * eapply ih. assumption.
-            * eapply eq_context_upto_conv_context.
+            * eapply eq_context_upto_univ_conv_context.
               eapply eq_context_impl ; revgoals.
               -- eapply eq_context_upto_cat. 2: eassumption.
                  eapply eq_context_upto_refl. auto.
@@ -563,7 +563,7 @@ Section Alpha.
             * assumption.
             * eapply IHe. assumption.
             * eapply ih. assumption.
-            * eapply eq_context_upto_conv_context.
+            * eapply eq_context_upto_univ_conv_context.
               eapply eq_context_impl ; revgoals.
               -- eapply eq_context_upto_cat. 2: eassumption.
                  eapply eq_context_upto_refl. auto.
@@ -580,7 +580,7 @@ Section Alpha.
                  all: intros ? ? [].
                  ++ eapply eq_universe_refl.
                  ++ eapply leq_universe_refl.
-            * eapply eq_context_upto_conv_context.
+            * eapply eq_context_upto_univ_conv_context.
               eapply eq_context_impl ; revgoals.
               -- eapply eq_context_upto_cat. 2: eassumption.
                  eapply eq_context_upto_refl. auto.
@@ -643,7 +643,7 @@ Section Alpha.
                        +++ assumption.
                        +++ eauto using typing_wf_local.
                        +++ eassumption.
-                       +++ eapply eq_context_upto_conv_context.
+                       +++ eapply eq_context_upto_univ_conv_context.
                            eapply eq_context_upto_sym.
                            *** intros ? ? ?. eapply eq_universe_sym.
                                assumption.
@@ -659,7 +659,7 @@ Section Alpha.
                        all: intros ? ? [].
                        +++ eapply eq_universe_refl.
                        +++ eapply leq_universe_refl.
-                ** eapply eq_context_upto_conv_context.
+                ** eapply eq_context_upto_univ_conv_context.
                    eapply eq_context_impl ; revgoals.
                    --- eapply eq_context_upto_cat. 2: eassumption.
                        eapply eq_context_upto_refl. auto.
@@ -674,7 +674,7 @@ Section Alpha.
         * apply All_prod_inv in ihmfix as [? ?]. assumption.
       + constructor. eapply eq_term_leq_term.
         apply eq_term_sym.
-        eapply eq_term_upto_univ_eq_eq_term. assumption.
+        eapply upto_names_impl_eq_term. assumption.
     - intros t A B X ht iht har hcu v e.
       eapply type_Cumul.
       + eapply iht. assumption.
@@ -700,5 +700,143 @@ Section Alpha.
     eapply eq_term_upto_univ_tm_nl. all: auto.
   Qed.
 
+  Local Ltac inv H := inversion H; subst; clear H.
+
+  Lemma upto_names_eq_term_upto_univ Re Rle t u
+    : eq_term_upto_univ Re Rle t u ->
+      forall t' u', t ≡ t' -> u ≡ u' ->
+               eq_term_upto_univ Re Rle t' u'.
+  Proof.
+    revert t u Rle. fix aux 4.
+    destruct 1; cbn; intros t'' u'' H H0;
+      inv H; inv H0; try econstructor; eauto.
+    - revert args'0 args'1 X X0.
+      induction a; simpl; intros args0 args'0 H1 H2.
+      + inv H1; inv H2; constructor; eauto.
+      + inv H1; inv H2. constructor; eauto.
+    - apply All2_eq, map_inj in X.
+      apply All2_eq, map_inj in X0.
+      congruence.
+      all: intros x y H; now inv H. 
+    - apply All2_eq, map_inj in X.
+      apply All2_eq, map_inj in X0.
+      congruence.
+      all: intros x y H; now inv H. 
+    - apply All2_eq, map_inj in X.
+      apply All2_eq, map_inj in X0.
+      congruence.
+      all: intros x y H; now inv H. 
+    - revert brs'0 brs'1 X3 X6.
+      induction a; simpl; intros args0 args'0 H1 H2.
+      + inv H1; inv H2; constructor; eauto.
+      + inv H1; inv H2. constructor; eauto.
+        destruct X3, X7, r. split; eauto. congruence.
+    - revert mfix'0 mfix'1 X X0.
+      induction a; simpl; intros args0 args'0 H1 H2.
+      + inv H1; inv H2; constructor; eauto.
+      + inv H1; inv H2. constructor; eauto.
+        destruct X as [[? ?] ?], X1 as [[? ?] ?], r as [[? ?] ?].
+        repeat split; eauto. congruence.
+    - revert mfix'0 mfix'1 X X0.
+      induction a; simpl; intros args0 args'0 H1 H2.
+      + inv H1; inv H2; constructor; eauto.
+      + inv H1; inv H2. constructor; eauto.
+        destruct X as [[? ?] ?], X1 as [[? ?] ?], r as [[? ?] ?].
+        repeat split; eauto. congruence.
+  Qed.
+
+  Lemma upto_names_leq_term φ t u t' u'
+    : t ≡ t' -> u ≡ u' -> leq_term φ t u -> leq_term φ t' u'.
+  Proof.
+    intros; eapply upto_names_eq_term_upto_univ; eassumption.
+  Qed.
+
+  Lemma upto_names_eq_term φ t u t' u'
+    : t ≡ t' -> u ≡ u' -> eq_term φ t u -> eq_term φ t' u'.
+  Proof.
+    intros; eapply upto_names_eq_term_upto_univ; eassumption.
+  Qed.
+
+  Definition upto_names_decl := eq_decl_upto eq.
+
+  Definition upto_names_ctx := eq_context_upto eq.
+
+  Infix "≡Γ" := upto_names_ctx (at level 60).
+
+
+  Lemma destArity_alpha Γ u v ctx s :
+    destArity Γ u = Some (ctx, s) ->
+    u ≡ v ->
+    ∑ ctx', destArity Γ v = Some (ctx', s) × ctx ≡Γ ctx'.
+  Proof.
+    induction u in v, Γ, ctx, s |- *; cbn; try discriminate.
+    - intros X Y. destruct v; inv Y. inv X.
+      eexists. split; reflexivity.
+    - intros X Y. rewrite destArity_app in X.
+      case_eq (destArity [] u2); [|intro e; rewrite e in X; discriminate].
+      intros [ctx' s'] e; rewrite e in X; cbn in X; inv X.
+      destruct v; inv Y.
+      eapply IHu2 in e; tea. destruct e as [ctx'' [e1 e2]].
+      eexists; split. cbn. rewrite destArity_app, e1; reflexivity.
+      apply eq_context_upto_cat; tas. constructor; tas. reflexivity.
+    - intros X Y. rewrite destArity_app in X.
+      case_eq (destArity [] u3); [|intro e; rewrite e in X; discriminate].
+      intros [ctx' s'] e; rewrite e in X; cbn in X; inv X.
+      destruct v; inv Y.
+      eapply IHu3 in e; tea. destruct e as [ctx'' [e1 e2]].
+      eexists; split. cbn. rewrite destArity_app, e1; reflexivity.
+      apply eq_context_upto_cat; tas. constructor; tas. reflexivity.
+  Qed.
+
+
+  Lemma upto_names_conv_context (Σ : global_env_ext) Γ Δ :
+    Γ ≡Γ Δ -> conv_context Σ Γ Δ.
+  Proof.
+    eapply eq_context_upto_conv_context.
+    intros x y []. eapply eq_universe_refl.
+  Qed.
+
+  Lemma wf_local_alpha Σ Γ Γ' :
+    wf Σ.1 -> wf_local Σ Γ -> Γ ≡Γ Γ' -> wf_local Σ Γ'.
+  Proof.
+    intro hΣ. induction 1 in Γ' |- *.
+    - intro Y; inv Y; constructor.
+    - intro Y; inv Y. constructor. auto.
+      destruct t0 as [s Ht]. exists s. eapply typing_alpha; tea.
+      eapply context_conversion'; tea. auto.
+      now apply upto_names_conv_context.
+    - intro Y; inv Y. constructor; auto.
+      + destruct t0 as [s Ht]. exists s. eapply typing_alpha; tea.
+        eapply context_conversion'; tea. auto.
+        now apply upto_names_conv_context.
+      + cbn in *.
+        eapply type_Cumul with t.
+        * eapply typing_alpha; tea.
+        eapply context_conversion'; tea. auto.
+        apply upto_names_conv_context; tea.
+        * right. destruct t0 as [s Ht]. exists s.
+          eapply typing_alpha; tea.
+          eapply context_conversion'; tea. auto.
+          now apply upto_names_conv_context.
+        * constructor; now apply upto_names_impl_leq_term.
+  Qed.
+
+
+  Lemma isWfArity_alpha Σ Γ u v :
+    wf Σ.1 -> 
+    isWfArity typing Σ Γ u ->
+    u ≡ v ->
+    isWfArity typing Σ Γ v.
+  Proof.
+    intros hΣ [ctx [s [X1 X2]]] e.
+    eapply destArity_alpha in X1; tea.
+    destruct X1 as [ctx' [X1 X1']].
+    exists ctx', s. split; tas.
+    eapply wf_local_alpha; tea.
+    now eapply eq_context_upto_cat.
+  Qed.
+
 
 End Alpha.
+
+Print Assumptions isWfArity_alpha.

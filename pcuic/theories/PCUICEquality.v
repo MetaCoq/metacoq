@@ -978,16 +978,14 @@ Qed.
 Definition nleq_term t t' :=
   eqb_term_upto_univ eqb eqb t t'.
 
-(* todo: rename *)
-Corollary reflect_eq_term_upto_univ_eqb :
+Corollary reflect_upto_names :
   forall t t', reflectT (upto_names t t') (nleq_term t t').
 Proof.
   intros t t'. eapply reflect_eq_term_upto_univ.
   all: intros u u'; eapply reflect_reflectT, eqb_spec.
 Qed.
 
-(* todo: rename *)
-Lemma eq_term_upto_univ_eq_eq_term_upto_univ Re Rle :
+Lemma upto_names_impl Re Rle :
     Reflexive Re ->
     Reflexive Rle ->
     subrelation upto_names (eq_term_upto_univ Re Rle).
@@ -996,11 +994,18 @@ Proof.
   all: intros ? ? []; eauto.
 Qed.
 
-Lemma eq_term_upto_univ_eq_eq_term {cf:checker_flags} φ u v :
+Lemma upto_names_impl_eq_term {cf:checker_flags} φ u v :
     u ≡ v -> eq_term φ u v.
 Proof.
-  eapply eq_term_upto_univ_eq_eq_term_upto_univ ; exact _.
+  eapply upto_names_impl ; exact _.
 Qed.
+
+Lemma upto_names_impl_leq_term {cf:checker_flags} φ u v :
+    u ≡ v -> leq_term φ u v.
+Proof.
+  eapply upto_names_impl ; exact _.
+Qed.
+
 
 
 Lemma eq_term_upto_univ_isApp Re Rle u v :

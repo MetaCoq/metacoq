@@ -915,7 +915,7 @@ End Acc_sidecond_generator.
 
   Lemma wellformed_R_pres Γ :
     forall x y : term × stack, wellformed Σ Γ (zip x) -> R Σ Γ y x -> wellformed Σ Γ (zip y).
-  Proof. intros. todo "wellformed_R_pres proof"%string. Defined.
+  Proof. intros. todo "wellformed_R_pres proof"%string. Admitted.
 
   Equations reduce_stack_full (Γ : context) (t : term) (π : stack)
            (h : wellformed Σ Γ (zip (t,π))) : { t' : term * stack | Req Σ Γ t' (t, π) /\ Pr t' π /\ Pr' t' } :=

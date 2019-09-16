@@ -471,6 +471,62 @@ Fixpoint destArity Γ (t : term) :=
   | _ => None
   end.
 
+Lemma destArity_app_aux {Γ Γ' t}
+  : destArity (Γ ,,, Γ') t = option_map (fun '(ctx, s) => (Γ ,,, ctx, s))
+                                        (destArity Γ' t).
+Proof.
+  revert Γ'.
+  induction t; cbn; intro Γ'; try reflexivity.
+  - rewrite <- app_context_cons. now eapply IHt2.
+  - rewrite <- app_context_cons. now eapply IHt3.
+Qed.
+
+Lemma destArity_app {Γ t}
+  : destArity Γ t = option_map (fun '(ctx, s) => (Γ ,,, ctx, s))
+                               (destArity [] t).
+Proof.
+  exact (@destArity_app_aux Γ [] t).
+Qed.
+
+Lemma destArity_app_Some {Γ t ctx s}
+  : destArity Γ t = Some (ctx, s)
+    -> ∑ ctx', destArity [] t = Some (ctx', s) /\ ctx = Γ ,,, ctx'.
+Proof.
+  intros H. rewrite destArity_app in H.
+  destruct (destArity [] t) as [[ctx' s']|]; cbn in *.
+  exists ctx'. inversion H. now subst.
+  discriminate H.
+Qed.
+
+Lemma mkApps_nonempty f l :
+  l <> [] -> mkApps f l = tApp (mkApps f (removelast l)) (last l f).
+Proof.
+  destruct l using rev_ind. intros; congruence.
+  intros. rewrite <- mkApps_nested. simpl. f_equal.
+  rewrite removelast_app. congruence. simpl. now rewrite app_nil_r.
+  rewrite last_app. congruence.
+  reflexivity.
+Qed.
+
+Lemma destArity_tFix {mfix idx args} :
+  destArity [] (mkApps (tFix mfix idx) args) = None.
+Proof.
+  induction args. reflexivity.
+  rewrite mkApps_nonempty.
+  intros e; discriminate e.
+  reflexivity.
+Qed.
+
+Lemma destArity_tApp {t u l} :
+  destArity [] (mkApps (tApp t u) l) = None.
+Proof.
+  induction l. reflexivity.
+  rewrite mkApps_nonempty.
+  intros e; discriminate e.
+  reflexivity.
+Qed.
+
+
 (** Compute the type of a case from the predicate [p], actual parameters [pars] and
     an inductive declaration. *)
 

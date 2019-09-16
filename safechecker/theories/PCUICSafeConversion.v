@@ -249,7 +249,7 @@ Section Conversion.
     - exact (nlstack π2).
     - exact (nlstack π1).
     - eapply wellformed_nlctx.
-      eapply wellformed_rename ; try eassumption.
+      eapply wellformed_alpha ; try eassumption.
       destruct s.
       all: cbn.
       all: rewrite <- nl_zipc.
@@ -324,7 +324,7 @@ Section Conversion.
     apply R_aux_Acc.
     rewrite <- nl_zipc.
     eapply wellformed_nlctx.
-    eapply wellformed_rename ; try eassumption.
+    eapply wellformed_alpha ; try eassumption.
     eapply eq_term_upto_univ_tm_nl. all: auto.
   Qed.
 
@@ -1468,8 +1468,8 @@ Section Conversion.
     specialize (hl2 eq_refl).
     destruct l2 ; try discriminate hl2. clear hl2.
     simpl in *.
-    eapply conv_Lambda. all: auto.
-    constructor. assumption.
+    destruct hΣ.
+    now eapply conv_Lambda.
   Qed.
 
   (* tProd *)
@@ -1519,11 +1519,11 @@ Section Conversion.
   (* tCase *)
   Next Obligation.
     symmetry in eq1.
-    eapply wellformed_rename ; [ assumption .. | exact h2 |].
+    eapply wellformed_alpha ; [ assumption .. | exact h2 |].
     eapply eq_term_upto_univ_sym. all: auto.
     eapply eq_term_upto_univ_zipc. all: auto.
     eapply elimT.
-    - eapply reflect_eq_term_upto_univ_eqb.
+    - eapply reflect_upto_names.
     - assumption.
   Qed.
   Next Obligation.
@@ -1547,9 +1547,9 @@ Section Conversion.
     eapply conv_zipp.
     constructor.
     symmetry in eq1.
-    eapply eq_term_upto_univ_eq_eq_term.
+    eapply upto_names_impl_eq_term.
     eapply elimT.
-    - eapply reflect_eq_term_upto_univ_eqb.
+    - eapply reflect_upto_names.
     - assumption.
   Qed.
   Next Obligation.
@@ -1618,10 +1618,10 @@ Section Conversion.
         assert (bot : eqb_term_upto_univ eqb eqb c c && eqb_term_upto_univ eqb eqb c' c').
         { apply andb_and. split.
           - eapply introT.
-            + eapply reflect_eq_term_upto_univ_eqb.
+            + eapply reflect_upto_names.
             + eapply eq_term_upto_univ_refl. all: intro ; reflexivity.
           - eapply introT.
-            + eapply reflect_eq_term_upto_univ_eqb.
+            + eapply reflect_upto_names.
             + eapply eq_term_upto_univ_refl. all: intro ; reflexivity.
         }
         rewrite bot in eq3. discriminate.
@@ -1639,10 +1639,10 @@ Section Conversion.
           assert (bot : eqb_term_upto_univ eqb eqb c c && eqb_term_upto_univ eqb eqb c' c').
           { apply andb_and. split.
             - eapply introT.
-              + eapply reflect_eq_term_upto_univ_eqb.
+              + eapply reflect_upto_names.
               + eapply eq_term_upto_univ_refl. all: intro ; reflexivity.
             - eapply introT.
-              + eapply reflect_eq_term_upto_univ_eqb.
+              + eapply reflect_upto_names.
               + eapply eq_term_upto_univ_refl. all: intro ; reflexivity.
           }
           rewrite bot in eq3. discriminate.
@@ -1662,10 +1662,10 @@ Section Conversion.
           assert (bot : eqb_term_upto_univ eqb eqb c c && eqb_term_upto_univ eqb eqb c' c').
           { apply andb_and. split.
             - eapply introT.
-              + eapply reflect_eq_term_upto_univ_eqb.
+              + eapply reflect_upto_names.
               + eapply eq_term_upto_univ_refl. all: intro ; reflexivity.
             - eapply introT.
-              + eapply reflect_eq_term_upto_univ_eqb.
+              + eapply reflect_upto_names.
               + eapply eq_term_upto_univ_refl. all: intro ; reflexivity.
           }
           rewrite bot in eq3. discriminate.
@@ -1686,10 +1686,10 @@ Section Conversion.
              assert (bot : eqb_term_upto_univ eqb eqb c c && eqb_term_upto_univ eqb eqb c' c').
              { apply andb_and. split.
                - eapply introT.
-                 + eapply reflect_eq_term_upto_univ_eqb.
+                 + eapply reflect_upto_names.
                  + eapply eq_term_upto_univ_refl. all: intro ; reflexivity.
                - eapply introT.
-                 + eapply reflect_eq_term_upto_univ_eqb.
+                 + eapply reflect_upto_names.
                  + eapply eq_term_upto_univ_refl. all: intro ; reflexivity.
              }
              rewrite bot in eq3. discriminate.
@@ -1734,12 +1734,12 @@ Section Conversion.
   (* tProj *)
   Next Obligation.
     destruct hΣ as [wΣ].
-    eapply wellformed_rename ; try assumption.
+    eapply wellformed_alpha ; try assumption.
     - exact h2.
     - apply eq_term_upto_univ_sym ; auto.
       eapply eq_term_upto_univ_zipc ; auto.
       eapply elimT.
-      + eapply reflect_eq_term_upto_univ_eqb.
+      + eapply reflect_upto_names.
       + symmetry. assumption.
   Qed.
   Next Obligation.
@@ -1762,21 +1762,21 @@ Section Conversion.
     eapply conv_alt_trans ; try eassumption.
     eapply conv_zipp.
     constructor.
-    eapply eq_term_upto_univ_eq_eq_term.
+    eapply upto_names_impl_eq_term.
     eapply elimT.
-    - eapply reflect_eq_term_upto_univ_eqb.
+    - eapply reflect_upto_names.
     - symmetry. assumption.
   Qed.
 
   (* tFix *)
   Next Obligation.
     destruct hΣ as [wΣ].
-    eapply wellformed_rename ; try assumption.
+    eapply wellformed_alpha ; try assumption.
     - exact h2.
     - apply eq_term_upto_univ_sym ; auto.
       eapply eq_term_upto_univ_zipc ; auto.
       eapply elimT.
-      + eapply reflect_eq_term_upto_univ_eqb.
+      + eapply reflect_upto_names.
       + symmetry. assumption.
   Qed.
   Next Obligation.
@@ -1800,9 +1800,9 @@ Section Conversion.
     eapply conv_zipp.
     constructor.
     symmetry in eq1.
-    eapply eq_term_upto_univ_eq_eq_term.
+    eapply upto_names_impl_eq_term.
     eapply elimT.
-    - eapply reflect_eq_term_upto_univ_eqb.
+    - eapply reflect_upto_names.
     - assumption.
   Qed.
   Next Obligation.
@@ -2070,12 +2070,12 @@ Section Conversion.
   (* tCoFix *)
   Next Obligation.
     destruct hΣ as [wΣ].
-    eapply wellformed_rename ; try assumption.
+    eapply wellformed_alpha ; try assumption.
     - exact h2.
     - apply eq_term_upto_univ_sym ; auto.
       eapply eq_term_upto_univ_zipc ; auto.
       eapply elimT.
-      + eapply reflect_eq_term_upto_univ_eqb.
+      + eapply reflect_upto_names.
       + symmetry. assumption.
   Qed.
   Next Obligation.
@@ -2099,9 +2099,9 @@ Section Conversion.
     eapply conv_zipp.
     constructor.
     symmetry in eq1.
-    eapply eq_term_upto_univ_eq_eq_term.
+    eapply upto_names_impl_eq_term.
     eapply elimT.
-    - eapply reflect_eq_term_upto_univ_eqb.
+    - eapply reflect_upto_names.
     - assumption.
   Qed.
 
@@ -2982,14 +2982,14 @@ Section Conversion.
     destruct eqb_term_stack eqn:e. 2: auto.
     apply eqb_term_stack_spec with (Γ := Γ) in e as [hx h].
     split.
-    - constructor. eapply eq_context_upto_conv_context. assumption.
+    - constructor. eapply eq_context_upto_univ_conv_context. assumption.
     - constructor. constructor. assumption.
   Qed.
   Next Obligation.
     destruct leqb_term_stack eqn:e. 2: auto.
     apply leqb_term_stack_spec with (Γ := Γ) in e as [hx h].
     split.
-    - constructor. eapply eq_context_upto_conv_context. assumption.
+    - constructor. eapply eq_context_upto_univ_conv_context. assumption.
     - constructor. constructor. assumption.
   Qed.
 

@@ -1206,7 +1206,7 @@ Corollary reflect_nleq_term :
     reflect (nl t = nl t') (nleq_term t t').
 Proof.
   intros t t'.
-  destruct (reflect_eq_term_upto_univ_eqb t t').
+  destruct (reflect_upto_names t t').
   - constructor. eapply eq_term_nl_eq. assumption.
   - constructor. intro bot. apply f.
     apply eq_term_upto_univ_nl_inv.

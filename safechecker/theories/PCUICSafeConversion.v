@@ -323,11 +323,41 @@ Section Conversion.
       wellformed Σ Γ u ->
       wellformed Σ (nlctx Γ) u.
   Proof.
-    (* We must first do some context conversion to change Γ by nlctx Γ *)
-    (* For this we need to be able to show that nlctx is eq_context_upto
-         as well as wf_local from wf_local Γ.
-     *)
-  Admitted.
+    destruct hΣ as [wΣ].
+    intros Γ u [h | [[Δ [s [e w]]]]].
+    - left. eapply welltyped_nlctx. assumption.
+    - right. constructor.
+      exists Δ, s. split. 1: assumption.
+      clear - w wΣ. induction Δ as [| [na [b|] A] Δ ih ].
+      + eapply wf_local_nlctx. all: auto.
+      + simpl. inversion w. subst. constructor.
+        * eapply ih. assumption.
+        * destruct X0 as [s h].
+          exists s. eapply context_conversion. 3: exact h. all: auto.
+          eapply eq_context_upto_conv_context.
+          eapply eq_context_impl with (Re := eq).
+          -- intros ? ? []. eapply eq_universe_refl.
+          -- eapply eq_context_upto_cat.
+             ++ eapply eq_context_upto_nlctx.
+             ++ eapply eq_ctx_refl. auto.
+        * eapply context_conversion. 3: exact X1. all: auto.
+          eapply eq_context_upto_conv_context.
+          eapply eq_context_impl with (Re := eq).
+          -- intros ? ? []. eapply eq_universe_refl.
+          -- eapply eq_context_upto_cat.
+             ++ eapply eq_context_upto_nlctx.
+             ++ eapply eq_ctx_refl. auto.
+      + simpl. inversion w. subst. constructor.
+        * eapply ih. assumption.
+        * destruct X0 as [s h].
+          exists s. eapply context_conversion. 3: exact h. all: auto.
+          eapply eq_context_upto_conv_context.
+          eapply eq_context_impl with (Re := eq).
+          -- intros ? ? []. eapply eq_universe_refl.
+          -- eapply eq_context_upto_cat.
+             ++ eapply eq_context_upto_nlctx.
+             ++ eapply eq_ctx_refl. auto.
+  Qed.
 
   Definition nl_pack {Γ : context} (p : pack Γ) : nlpack (nlctx Γ).
   Proof.

@@ -319,13 +319,17 @@ Section Conversion.
     apply normalisation' in h. 2: auto.
     eapply Acc_impl.
     - eapply cored'_postpone.
-    - (* If it were about infinite paths we would be done now. *)
-
-
-    (* assert (h' : forall u', upto_names u u' -> Acc ) *)
-    (* induction h. *)
-    (* constructor. intros v [v' [u' [r [[hu] [hv]]]]]. *)
-    (* eapply H0. *)
+    - clear - h. induction h as [u h ih].
+      constructor. intros y [y' [r [e]]].
+      eapply ih in r as h'.
+      clear - e h'.
+      induction h' as [x h ih].
+      constructor. intros z [z' [r [e']]].
+      (* It seems we need to do something like cored'_postpone again. *)
+      eapply ih.
+      + admit.
+      + admit.
+      + exists z'. intuition eauto. constructor. assumption.
   Abort.
 
   Definition wterm Γ := { t : term | wellformed Σ Γ t }.

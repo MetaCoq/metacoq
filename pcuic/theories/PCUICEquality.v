@@ -1099,6 +1099,45 @@ Proof.
     constructor ; eauto. constructor.
 Qed.
 
+Lemma eq_context_upto_rev' :
+  forall Γ Δ Re,
+    eq_context_upto Re Γ Δ ->
+    eq_context_upto Re (List.rev Γ) (List.rev Δ).
+Proof.
+  intros Γ Δ Re h.
+  induction h.
+  - constructor.
+  - simpl. eapply eq_context_upto_cat.
+    + repeat constructor. assumption.
+    + assumption.
+  - simpl. eapply eq_context_upto_cat.
+    + repeat constructor. all: assumption.
+    + assumption.
+Qed.
+
+Lemma eq_context_impl :
+  forall Re Re',
+    subrelation Re Re' ->
+    subrelation (eq_context_upto Re) (eq_context_upto Re').
+Proof.
+  intros Re Re' hR Γ Δ h.
+  induction h.
+  - constructor.
+  - constructor. 2: assumption.
+    eapply eq_term_upto_univ_impl. all: eassumption.
+  - constructor. 3: assumption.
+    all: eapply eq_term_upto_univ_impl. all: eassumption.
+Qed.
+
+Lemma eq_context_upto_length :
+  forall Re Γ Δ,
+    eq_context_upto Re Γ Δ ->
+    #|Γ| = #|Δ|.
+Proof.
+  intros Re Γ Δ h.
+  induction h. all: simpl ; auto.
+Qed.
+
 Section ContextUpTo.
 
   Context (Re : universe -> universe -> Type).

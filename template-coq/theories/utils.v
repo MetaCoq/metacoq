@@ -2768,3 +2768,52 @@ Proof.
   - now apply Forall_forall.
   - intros; eapply eq_true_iff_eq; eauto.
 Qed.
+
+Lemma map_inj :
+  forall A B (f : A -> B) l l',
+    (forall x y, f x = f y -> x = y) ->
+    map f l = map f l' ->
+    l = l'.
+Proof.
+  intros A B f l l' h e.
+  induction l in l', e |- *.
+  - destruct l' ; try discriminate. reflexivity.
+  - destruct l' ; try discriminate. inversion e.
+    f_equal ; eauto.
+Qed.
+
+Lemma All2_eq :
+  forall A (l l' : list A),
+    All2 eq l l' ->
+    l = l'.
+Proof.
+  intros A l l' h.
+  induction h ; eauto. subst. reflexivity.
+Qed.
+
+
+Lemma All_prod_inv :
+  forall A P Q l,
+    All (fun x : A => P x × Q x) l ->
+    All P l × All Q l.
+Proof.
+  intros A P Q l h.
+  induction h.
+  - split ; auto.
+  - destruct IHh, p.
+    split ; constructor ; auto.
+Qed.
+
+
+Lemma All_prod :
+  forall A P Q l,
+    All P l ->
+    All Q l ->
+    All (fun x : A => P x × Q x) l.
+Proof.
+  intros A P Q l h1 h2.
+  induction h1 in h2 |- *.
+  - constructor.
+  - dependent destruction h2.
+    forward IHh1 ; auto.
+Qed.

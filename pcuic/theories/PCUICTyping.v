@@ -2058,4 +2058,38 @@ Section All_local_env.
     - destruct n. noconf eq. simpl. split; auto.
       apply IHX.
   Defined.
+
+
+  Lemma All_local_env_prod_inv :
+    forall P Q Γ,
+      All_local_env (fun Δ A t => P Δ A t × Q Δ A t) Γ ->
+      All_local_env P Γ × All_local_env Q Γ.
+  Proof.
+    intros P Q Γ h.
+    induction h.
+    - split ; constructor.
+    - destruct IHh, t0.
+      split ; constructor ; auto.
+    - destruct IHh, t0, t1.
+      split ; constructor ; auto.
+  Qed.
+
+  Lemma All_local_env_lift_prod_inv :
+    forall Σ P Q Δ,
+      All_local_env (lift_typing (fun Σ Γ t A => P Σ Γ t A × Q Σ Γ t A) Σ) Δ ->
+      All_local_env (lift_typing P Σ) Δ × All_local_env (lift_typing Q Σ) Δ.
+  Proof.
+    intros Σ P Q Δ h.
+    induction h.
+    - split ; constructor.
+    - destruct IHh. destruct t0 as [? [? ?]].
+      split ; constructor ; auto.
+      + cbn. eexists. eassumption.
+      + cbn. eexists. eassumption.
+    - destruct IHh. destruct t0 as [? [? ?]]. destruct t1.
+      split ; constructor ; auto.
+      + cbn. eexists. eassumption.
+      + cbn. eexists. eassumption.
+  Qed.
+
 End All_local_env.

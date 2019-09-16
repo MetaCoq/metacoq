@@ -1206,7 +1206,7 @@ Corollary reflect_nleq_term :
     reflect (nl t = nl t') (nleq_term t t').
 Proof.
   intros t t'.
-  destruct (reflect_eq_term_upto_univ_eqb t t').
+  destruct (reflect_upto_names t t').
   - constructor. eapply eq_term_nl_eq. assumption.
   - constructor. intro bot. apply f.
     apply eq_term_upto_univ_nl_inv.
@@ -1238,3 +1238,208 @@ Proof.
       * eapply reflect_nleq_term.
       * assumption.
 Qed.
+
+Lemma nl_two M :
+  nl (nl M) = nl M.
+Proof.
+  induction M using term_forall_list_ind; cbnr.
+  all: rewrite ?IHM1, ?IHM2, ?IHM3, ?IHM; cbnr.
+  - f_equal. induction H; cbnr. congruence.
+  - f_equal. induction X; cbnr. f_equal; tas.
+    destruct x; unfold on_snd; simpl in *. congruence.
+  - f_equal. induction X; cbnr. f_equal; tas.
+    destruct p, x; unfold map_def_anon; simpl in *. congruence.
+  - f_equal. induction X; cbnr. f_equal; tas.
+    destruct p, x; unfold map_def_anon; simpl in *. congruence.
+Qed.
+
+
+Local Ltac aa :=
+  match goal with
+  | |- ∑ _ : _, _ × ?t = _ => exists t
+  end; split; [|symmetry; apply nl_two]; simpl;
+  rewrite ?nl_lift, ?nl_subst, ?nl_subst_instance_constr.
+
+Local Ltac bb :=
+  repeat match goal with
+  | H : ∑ _ : _, _ × ?t = _ |- _ => destruct H as [? [? ?]]
+  end;
+  eexists; split.
+
+Local Ltac bb' := bb; [econstructor|]; tea; cbn.
+
+Arguments on_snd {_ _ _} _ _/.
+Arguments map_def_anon {_ _} _ _ _/.
+
+
+Lemma nl_red1' Σ Γ M N :
+    red1 Σ Γ M N ->
+    ∑ N', red1 Σ (nlctx Γ) (nl M) N' × nl N = nl N'.
+Proof.
+  assert (maptwo : forall brs, map (on_snd (A:=nat) nl) (map (on_snd nl) brs)
+                          = map (on_snd nl) brs). {
+    intro. rewrite map_map.
+    apply map_ext. intros; simpl; now rewrite nl_two. }
+  intros h.
+  induction h using red1_ind_all.
+  all: try solve [ bb'; pose proof nl_two; congruence ].
+  all: try solve [ aa; econstructor; eauto ].
+
+  - aa. constructor. unfold nlctx. rewrite nth_error_map.
+    destruct (nth_error Γ i). 2: discriminate.
+    cbn in *. apply some_inj in H. rewrite H. reflexivity.
+  - aa. rewrite nl_mkApps. cbn.
+    replace (nl (iota_red pars c args brs))
+      with (iota_red pars c (map nl args) (map (on_snd nl) brs)).
+    + eapply red_iota.
+    + unfold iota_red. rewrite nl_mkApps.
+      rewrite map_skipn. rewrite nth_map. all: reflexivity.
+  - aa. rewrite !nl_mkApps. cbn. eapply red_fix with (narg:=narg).
+    + unfold unfold_fix in *. rewrite nth_error_map.
+      destruct (nth_error mfix idx). 2: discriminate.
+      cbn.
+      replace (isLambda (nl (dbody d))) with (isLambda (dbody d))
+        by (destruct (dbody d) ; reflexivity).
+      destruct (isLambda (dbody d)). 2: discriminate.
+      inversion H. subst. rewrite nl_subst.
+      repeat f_equal. clear.
+      unfold fix_subst. rewrite map_length.
+      induction #|mfix|.
+      * reflexivity.
+      * cbn. rewrite IHn. reflexivity.
+    + unfold is_constructor in *.
+      rewrite nth_error_map. destruct (nth_error args narg) ; [| discriminate ].
+      cbn. unfold isConstruct_app in *. rewrite nl_decompose_app.
+      destruct (decompose_app t) as [u ?].
+      destruct u. all: try discriminate.
+      reflexivity.
+  - aa. rewrite !nl_mkApps. simpl. eapply red_cofix_case with (narg := narg).
+    unfold unfold_cofix in *. rewrite nth_error_map.
+    destruct (nth_error mfix idx). 2: discriminate.
+    cbn.
+    inversion H. subst. rewrite nl_subst.
+    repeat f_equal. clear.
+    unfold cofix_subst. rewrite map_length.
+    induction #|mfix|.
+    * reflexivity.
+    * cbn. rewrite IHn. reflexivity.
+  - aa. rewrite !nl_mkApps. simpl. eapply red_cofix_proj with (narg := narg).
+    unfold unfold_cofix in *. rewrite nth_error_map.
+    destruct (nth_error mfix idx). 2: discriminate.
+    cbn.
+    inversion H. subst. rewrite nl_subst.
+    repeat f_equal. clear.
+    unfold cofix_subst. rewrite map_length.
+    induction #|mfix|.
+    * reflexivity.
+    * cbn. rewrite IHn. reflexivity.
+  - aa. rewrite nl_mkApps. constructor.
+    rewrite nth_error_map, H. reflexivity.
+  - assert (Y : ∑ brs'', map (on_snd nl) brs' = map (on_snd nl) brs''
+    × OnOne2 (on_Trel_eq (red1 Σ (nlctx Γ)) snd fst) (map (on_snd nl) brs) brs''). {
+      induction X.
+      + destruct p0 as [[? [hd'' [? ?]]] ?].
+        eexists ((hd'.1, hd'') :: map (on_snd nl) tl); cbn; split. congruence.
+        constructor; cbn. split; tas.
+      + destruct IHX as [brs'' [? ?]]. exists ((hd.1, nl hd.2) :: brs''); cbn; split.
+        rewrite nl_two. congruence. now constructor. }
+    destruct Y as [brs'' [? ?]].
+    exists (tCase ind (nl p) (nl c) brs''); cbn; split; [|rewrite !nl_two; congruence].
+    now constructor.
+  - assert (Y : ∑ l'', map nl l' = map nl l''
+                           × OnOne2 (red1 Σ (nlctx Γ)) (map nl l) l''). {
+      induction X.
+      + destruct p as [? [hd'' [? ?]]].
+        eexists (hd'' :: map nl tl); cbn; split. f_equal; tas.
+        rewrite map_map; apply map_ext; intro; now rewrite nl_two.
+        now constructor.
+      + destruct IHX as [l'' [? ?]]. exists (nl hd :: l''); cbn; split.
+        rewrite nl_two. congruence. now constructor. }
+    destruct Y as [l'' [? ?]].
+    exists (tEvar ev l''); cbn; split. now constructor. congruence.
+  - assert (Y : ∑ mfix'', map (map_def_anon nl nl) mfix1
+                          = map (map_def_anon nl nl) mfix''
+    × OnOne2 (fun x y => red1 Σ (nlctx Γ) (dtype x) (dtype y)
+     × (dname x, dbody x, rarg x) = (dname y, dbody y, rarg y))
+    (map (map_def_anon nl nl) mfix0) mfix''). {
+      induction X.
+      + destruct p as [[? [typ'' [? ?]]] ?]. cbn.
+        eexists ({|dname:=nAnon; dtype:=typ''; dbody:=nl (dbody hd');
+                   rarg:=rarg hd' |}
+                   :: map (map_def_anon nl nl) tl); cbn; split.
+        f_equal; simpl. rewrite nl_two. congruence.
+        rewrite map_map; apply map_ext; intros []; simpl; now rewrite !nl_two.
+        constructor. cbn. split; auto. congruence.
+      + destruct IHX as [mfix'' [? ?]].
+        exists (map_def_anon nl nl hd :: mfix''); cbn; split.
+        rewrite !nl_two. congruence. now constructor. }
+    destruct Y as [mfix'' [? ?]].
+    exists (tFix mfix'' idx); cbn; split. now constructor. congruence.
+  - assert (Y : ∑ mfix'', map (map_def_anon nl nl) mfix1
+                          = map (map_def_anon nl nl) mfix''
+    × OnOne2 (fun x y : def term =>
+     red1 Σ (nlctx Γ ,,, fix_context (map (map_def_anon nl nl) mfix0)) 
+       (dbody x) (dbody y)
+     × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y))
+    (map (map_def_anon nl nl) mfix0) mfix''). {
+ (*      induction mfix1 in mfix0, X |- *; inversion X; subst. *)
+ (*      + destruct X0 as [[X1 [hd'' [X3 X4]]] X5]. *)
+ (*        eexists ({|dname:=nAnon; dtype:=nl (dtype a); dbody:=hd''; *)
+ (*                   rarg:=rarg a |} :: map (map_def_anon nl nl) mfix1). *)
+ (*        split. cbn. f_equal. rewrite nl_two. f_equal; tas. *)
+ (*        rewrite map_map; apply map_ext; intros []; simpl; now rewrite !nl_two. *)
+ (*        constructor. split. *)
+ (*      now rewrite nlctx_app_context, nl_fix_context in X3. *)
+ (*      cbn. congruence. *)
+ (*      + specialize (IHmfix1 _ X0); clear X0. *)
+
+ (* simpl. exact X3. *)
+
+ (*      + *)
+
+
+
+ (*      rewrite nlctx_app_context in X. rewrite <- nl_fix_context. *)
+ (*      set (c := fix_context mfix0) in *. cut (c = fix_context mfix0); cbnr. *)
+ (*      clearbody c. *)
+ (*      induction X; intro; subst c. *)
+ (*      + destruct p as [[? [bo'' [? ?]]] ?]. simpl. *)
+ (*        eexists ({|dname:=nAnon; dtype:=nl (dtype hd'); dbody:=bo''; *)
+ (*                   rarg:=rarg hd' |} *)
+ (*                   :: map (map_def_anon nl nl) tl); simpl; split. *)
+ (*        f_equal; simpl. rewrite nl_two. congruence. *)
+ (*        rewrite map_map; apply map_ext; intros []; simpl; now rewrite !nl_two. *)
+ (*        constructor. simpl. split; auto. congruence. *)
+ (*        (* now rewrite nlctx_app_context, nl_fix_context in r0. *) *)
+ (*      + destruct IHX as [mfix'' [? ?]]. *)
+ (*        exists (map_def_anon nl nl hd :: mfix''); cbn; split. *)
+ (*        rewrite !nl_two. congruence. now constructor. } *)
+
+
+ (* } *)
+ (*    destruct Y as [mfix'' [? ?]]. *)
+ (*    exists (tFix mfix'' idx); cbn; split. apply fix_red_body; tas. *)
+ (*    congruence. *)
+
+
+
+(*   - constructor. eapply OnOne2_map, OnOne2_impl. 1: eassumption. *)
+(*     cbn. intros x y [[? ?] ?]. split. all: assumption. *)
+(*   - constructor. eapply OnOne2_map, OnOne2_impl. 1: eassumption. *)
+(*     cbn. intros x y [? ?]. all: assumption. *)
+(*   - constructor. eapply OnOne2_map, OnOne2_impl. 1: eassumption. *)
+(*     cbn. intros x y [[? ?] ?]. split. 1: assumption. *)
+(*     cbn. congruence. *)
+(*   - apply fix_red_body. eapply OnOne2_map, OnOne2_impl. 1: eassumption. *)
+(*     cbn. intros x y [[? ?] ?]. split. *)
+(*     + rewrite nlctx_app_context, nl_fix_context in r0. assumption. *)
+(*     + cbn. congruence. *)
+(*   - constructor. eapply OnOne2_map, OnOne2_impl. 1: eassumption. *)
+(*     cbn. intros x y [[? ?] ?]. split. 1: assumption. *)
+(*     cbn. congruence. *)
+(*   - apply cofix_red_body. eapply OnOne2_map, OnOne2_impl. 1: eassumption. *)
+(*     cbn. intros x y [[? ?] ?]. split. *)
+(*     + rewrite nlctx_app_context, nl_fix_context in r0. assumption. *)
+(*     + cbn. congruence. *)
+(* Qed. *)
+Admitted.

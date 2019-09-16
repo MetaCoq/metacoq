@@ -37,16 +37,6 @@ Proof.
   apply IHl.
 Qed.
 
-Lemma mkApps_nonempty f l :
-  l <> [] -> mkApps f l = tApp (mkApps f (removelast l)) (last l f).
-Proof.
-  destruct l using rev_ind. intros; congruence.
-  intros. rewrite <- mkApps_nested. simpl. f_equal.
-  rewrite removelast_app. congruence. simpl. now rewrite app_nil_r.
-  rewrite last_app. congruence.
-  reflexivity.
-Qed.
-
 (** Requires Validity *)
 Lemma type_mkApps_inv {cf:checker_flags} (Σ : global_env_ext) Γ f u T : wf Σ ->
   Σ ;;; Γ |- mkApps f u : T ->

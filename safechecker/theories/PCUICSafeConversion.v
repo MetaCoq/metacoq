@@ -297,6 +297,18 @@ Section Conversion.
       + assumption.
   Qed.
 
+  (* TODO MOVE *)
+  Lemma Acc_impl :
+    forall A (R R' : A -> A -> Prop),
+      (forall x y, R x y -> R' x y) ->
+      forall x, Acc R' x -> Acc R x.
+  Proof.
+    intros A R R' h x hx.
+    induction hx as [x h1 h2].
+    constructor. intros y hy.
+    eapply h2. eapply h. assumption.
+  Qed.
+
   Lemma normalisation_upto :
     forall Γ u,
       wellformed Σ Γ u ->
@@ -305,9 +317,9 @@ Section Conversion.
     destruct hΣ.
     intros Γ u h.
     apply normalisation' in h. 2: auto.
-    (* TODO We need to have cored'_postpone as an equivalence...
-       So more work.
-     *)
+    eapply Acc_impl.
+    - eapply cored'_postpone.
+    - (* If it were about infinite paths we would be done now. *)
 
 
     (* assert (h' : forall u', upto_names u u' -> Acc ) *)

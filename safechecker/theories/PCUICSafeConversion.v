@@ -297,6 +297,19 @@ Section Conversion.
       + assumption.
   Qed.
 
+  Corollary cored_upto :
+    forall Γ u v v',
+      cored Σ Γ u v ->
+      v ≡ v' ->
+      exists u', cored Σ Γ u' v' /\ ∥ u ≡ u' ∥.
+  Proof.
+    intros Γ u v v' h e.
+    eapply cored'_postpone.
+    exists u, v. intuition eauto.
+    - constructor. apply upto_names_ref.
+    - constructor. apply upto_names_sym. assumption.
+  Qed.
+
   (* TODO MOVE *)
   Lemma Acc_impl :
     forall A (R R' : A -> A -> Prop),

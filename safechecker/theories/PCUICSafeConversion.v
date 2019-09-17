@@ -200,26 +200,6 @@ Section Conversion.
   Arguments tm' {_} _.
   Arguments wth {_} _.
 
-  (* TODO Can probably just go away as it is identical to pack *)
-  Record nlpack (Γ : context) := mknlpack {
-    nl_st : state ;
-    nl_tm : term ;
-    nl_stk1 : stack ;
-    nl_stk2 : stack ;
-    nl_tm' := match nl_st with
-           | Reduction t | Fallback t | Term t => t
-           | Args => nl_tm
-           end ;
-    nl_wth : wellformed Σ Γ (zipc nl_tm' nl_stk2)
-  }.
-
-  Arguments nl_st {_} _.
-  Arguments nl_tm {_} _.
-  Arguments nl_stk1 {_} _.
-  Arguments nl_stk2 {_} _.
-  Arguments nl_tm' {_} _.
-  Arguments nl_wth {_} _.
-
   Definition nlstate (s : state) :=
     match s with
     | Reduction t => Reduction (nl t)
@@ -228,8 +208,7 @@ Section Conversion.
     | Fallback t => Fallback (nl t)
     end.
 
-
-  Definition nl_pack {Γ : context} (p : pack Γ) : nlpack (nlctx Γ).
+  Definition nl_pack {Γ : context} (p : pack Γ) : pack (nlctx Γ).
   Proof.
     destruct p as [s t π1 π2 t' h].
     unshelve eexists.
@@ -246,115 +225,10 @@ Section Conversion.
       all: auto.
   Defined.
 
-  Definition cored' Γ u v :=
-    exists u' v', cored Σ Γ u' v' /\ ∥ u ≡ u' ∥ /\ ∥ v ≡ v' ∥.
-
-  Lemma cored_alt :
-    forall Γ u v,
-      cored Σ Γ u v <~> ∥ Relation.trans_clos (red1 Σ Γ) v u ∥.
-  Proof.
-    intros Γ u v.
-    split.
-    - intro h. induction h.
-      + constructor. constructor. assumption.
-      + destruct IHh as [ih]. constructor.
-        eapply Relation.t_trans.
-        * eassumption.
-        * constructor. assumption.
-    - intros [h]. induction h.
-      + constructor. assumption.
-      + eapply cored_trans'. all: eassumption.
-  Qed.
-
-  Lemma cored'_postpone :
-    forall Γ u v,
-      cored' Γ u v ->
-      exists u', cored Σ Γ u' v /\ ∥ u ≡ u' ∥.
-  Proof.
-    intros Γ u v [u' [v' [r [[hu] [hv]]]]].
-    apply cored_alt in r.
-    destruct r as [r].
-    induction r in u, v, hu, hv.
-    - eapply red1_eq_term_upto_univ_r in r. 9: eassumption. all: auto.
-      + destruct r as [u' [r e]].
-        exists u'. split.
-        * constructor. assumption.
-        * constructor. eapply upto_names_trans. all: eauto.
-          eapply upto_names_sym. assumption.
-      + intros s u1 u2 h. unfold R_universe_instance in h.
-        apply All2_eq in h. apply utils.map_inj in h.
-        * subst. reflexivity.
-        * intros ? ? H. inversion H. reflexivity.
-      + intros ? ? ? ? ?. subst. reflexivity.
-      + intros ? ? ? ? ?. subst. reflexivity.
-      + intros ? ?. auto.
-    - specialize IHr1 with (1 := upto_names_ref _) (2 := hv).
-      destruct IHr1 as [y' [h1 [e1]]].
-      specialize IHr2 with (1 := hu) (2 := upto_names_sym _ _ e1).
-      destruct IHr2 as [u' [h2 ?]].
-      exists u'. split.
-      + eapply cored_trans'. all: eauto.
-      + assumption.
-  Qed.
-
-  Corollary cored_upto :
-    forall Γ u v v',
-      cored Σ Γ u v ->
-      v ≡ v' ->
-      exists u', cored Σ Γ u' v' /\ ∥ u ≡ u' ∥.
-  Proof.
-    intros Γ u v v' h e.
-    eapply cored'_postpone.
-    exists u, v. intuition eauto.
-    - constructor. apply upto_names_ref.
-    - constructor. apply upto_names_sym. assumption.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma Acc_impl :
-    forall A (R R' : A -> A -> Prop),
-      (forall x y, R x y -> R' x y) ->
-      forall x, Acc R' x -> Acc R x.
-  Proof.
-    intros A R R' h x hx.
-    induction hx as [x h1 h2].
-    constructor. intros y hy.
-    eapply h2. eapply h. assumption.
-  Qed.
-
-  Lemma Acc_cored_cored' :
-    forall Γ u,
-      Acc (cored Σ Γ) u ->
-      forall u', u ≡ u' -> Acc (cored' Γ) u'.
-  Proof.
-    intros Γ u h. induction h as [u h ih].
-    intros u' e. constructor. intros v [v' [u'' [r [[e1] [e2]]]]].
-    assert (ee : u'' ≡ u).
-    { eapply upto_names_sym. eapply upto_names_trans. all: eassumption. }
-    eapply cored_upto in r as hh. 2: exact ee.
-    destruct hh as [v'' [r' [e']]].
-    eapply ih.
-    - eassumption.
-    - eapply upto_names_sym. eapply upto_names_trans. all: eassumption.
-  Qed.
-
-  Lemma normalisation_upto :
-    forall Γ u,
-      wellformed Σ Γ u ->
-      Acc (cored' Γ) u.
-  Proof.
-    destruct hΣ.
-    intros Γ u h.
-    apply normalisation' in h. 2: auto.
-    eapply Acc_cored_cored'.
-    - eassumption.
-    - apply upto_names_ref.
-  Qed.
-
   Definition wterm Γ := { t : term | wellformed Σ Γ t }.
 
   Definition wcored Γ (u v : wterm Γ) :=
-    cored' Γ (` u) (` v).
+    cored' Σ Γ (` u) (` v).
 
   Lemma wcored_wf :
     forall Γ, well_founded (wcored Γ).
@@ -369,26 +243,21 @@ Section Conversion.
   Qed.
 
   Definition R_aux Γ :=
-    t ⊩ cored' Γ ⨶ @posR t ⊗ w ⊩ wcored Γ ⨶ @posR (` w) ⊗ stateR.
-
-  Notation nl_pzt u := (zipc (nl_tm u) (nl_stk1 u)) (only parsing).
-  Notation nl_pps1 u := (stack_pos (nl_tm u) (nl_stk1 u)) (only parsing).
-  Notation nl_pwt u := (exist _ (nl_wth u)) (only parsing).
-  Notation nl_pps2 u := (stack_pos (nl_tm' u) (nl_stk2 u)) (only parsing).
-
-  Notation obpack u :=
-    (nl_pzt u ; (nl_pps1 u, (nl_pwt u ; (nl_pps2 u, nl_st u)))) (only parsing).
-
-  Definition R_nl Γ (u v : nlpack Γ) :=
-    R_aux Γ (obpack u) (obpack v).
-
-  Definition R Γ (u v : pack Γ) :=
-    R_nl (nlctx Γ) (nl_pack u) (nl_pack v).
+    t ⊩ cored' Σ Γ ⨶ @posR t ⊗ w ⊩ wcored Γ ⨶ @posR (` w) ⊗ stateR.
 
   Notation pzt u := (zipc (tm u) (stk1 u)) (only parsing).
   Notation pps1 u := (stack_pos (tm u) (stk1 u)) (only parsing).
   Notation pwt u := (exist _ (wth u)) (only parsing).
   Notation pps2 u := (stack_pos (tm' u) (stk2 u)) (only parsing).
+
+  Notation obpack u :=
+    (pzt u ; (pps1 u, (pwt u ; (pps2 u, st u)))) (only parsing).
+
+  Definition R_nl Γ (u v : pack Γ) :=
+    R_aux Γ (obpack u) (obpack v).
+
+  Definition R Γ (u v : pack Γ) :=
+    R_nl (nlctx Γ) (nl_pack u) (nl_pack v).
 
   Lemma R_aux_Acc :
     forall Γ t p w q s,
@@ -405,7 +274,7 @@ Section Conversion.
           -- intro. eapply stateR_Acc.
         * eapply wcored_wf.
     - destruct hΣ as [hΣ'].
-      eapply normalisation_upto. assumption.
+      eapply normalisation_upto. all: assumption.
   Qed.
 
   Lemma R_Acc :
@@ -420,134 +289,6 @@ Section Conversion.
     eapply wellformed_nlctx; tas.
     eapply wellformed_alpha ; try eassumption.
     eapply eq_term_upto_univ_tm_nl. all: auto.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma cored_eq_context_upto_names :
-    forall Γ Δ u v,
-      eq_context_upto_names Γ Δ ->
-      cored Σ Γ u v ->
-      cored Σ Δ u v.
-  Proof.
-    intros Γ Δ u v e h.
-    apply cored_alt in h as [h].
-    induction h in Δ, e |- *.
-    - constructor. eapply red1_eq_context_upto_names. all: eauto.
-    - eapply cored_trans'.
-      + eapply IHh2. assumption.
-      + eapply IHh1. assumption.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma cored_eq_term_upto :
-    forall Re Rle Γ u v u',
-      CRelationClasses.Reflexive Re ->
-      SubstUnivPreserving Re ->
-      CRelationClasses.Reflexive Rle ->
-      CRelationClasses.Symmetric Re ->
-      CRelationClasses.Transitive Re ->
-      CRelationClasses.Transitive Rle ->
-      CRelationClasses.subrelation Re Rle ->
-      eq_term_upto_univ Re Rle u u' ->
-      cored Σ Γ v u ->
-      exists v', cored Σ Γ v' u' /\ ∥ eq_term_upto_univ Re Rle v v' ∥.
-  Proof.
-    intros Re Rle Γ u v u' X X0 X1 X2 X3 X4 X5 e h.
-    apply cored_alt in h as [h].
-    induction h in u', e |- *.
-    - eapply red1_eq_term_upto_univ_l in r. 8: eauto. all: auto.
-      destruct r as [? [? ?]].
-      eexists. split.
-      + constructor. eassumption.
-      + constructor. assumption.
-    - specialize (IHh1 _ e). destruct IHh1 as [y' [r1 [e1]]].
-      specialize (IHh2 _ e1). destruct IHh2 as [z' [r2 [e2]]].
-      exists z'. split.
-      + eapply cored_trans'. all: eassumption.
-      + constructor. assumption.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma cored_eq_context_upto :
-    forall Re Γ Δ u v,
-      CRelationClasses.Reflexive Re ->
-      CRelationClasses.Symmetric Re ->
-      CRelationClasses.Transitive Re ->
-      SubstUnivPreserving Re ->
-      eq_context_upto Re Γ Δ ->
-      cored Σ Γ u v ->
-      exists u', cored Σ Δ u' v /\ ∥ eq_term_upto_univ Re Re u u' ∥.
-  Proof.
-    intros Re Γ Δ u v hRe1 hRe2 hRe3 hRe4 e h.
-    apply cored_alt in h as [h].
-    induction h.
-    - eapply red1_eq_context_upto_l in r. all: eauto.
-      destruct r as [? [? ?]].
-      eexists. split.
-      + constructor. eassumption.
-      + constructor. assumption.
-    - destruct IHh1 as [x' [r1 [e1]]].
-      destruct IHh2 as [y' [r2 [e2]]].
-      eapply cored_eq_term_upto in r2. 9: exact e1. all: auto.
-      + destruct r2 as [y'' [r2' [e2']]].
-        exists y''. split.
-        * eapply cored_trans'. all: eassumption.
-        * constructor. eapply eq_term_upto_univ_trans. all: eauto.
-      + intros ? ? ?. assumption.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma eq_context_upto_nlctx :
-    forall Γ,
-      eq_context_upto eq Γ (nlctx Γ).
-  Proof.
-    intros Γ.
-    induction Γ as [| [na [b|] A] Γ ih ].
-    - constructor.
-    - simpl. constructor.
-      + eapply eq_term_upto_univ_tm_nl.
-        all: auto.
-      + simpl. eapply eq_term_upto_univ_tm_nl.
-        all: auto.
-      + assumption.
-    - simpl. constructor.
-      + simpl. eapply eq_term_upto_univ_tm_nl.
-        all: auto.
-      + assumption.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma cored_cored'_nl :
-    forall Γ u v,
-      cored Σ Γ u v ->
-      cored' (nlctx Γ) (nl u) (nl v).
-  Proof.
-    intros Γ u v h.
-    eapply cored_eq_context_upto in h.
-    6: eapply eq_context_upto_nlctx.
-    all: auto.
-    - destruct h as [u' [r [e]]].
-      eexists _, _. intuition eauto.
-      + constructor. eapply upto_names_trans.
-        * eapply upto_names_sym. eapply upto_names_nl.
-        * assumption.
-      + constructor. eapply upto_names_sym. eapply upto_names_nl.
-    - intros ? ? ? []. auto.
-    - intros ? ? ? r. apply All2_eq in r. apply map_inj in r.
-      + subst. reflexivity.
-      + intros ? ? H. inversion H. reflexivity.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma cored_cored' :
-    forall Γ u v,
-      cored Σ Γ u v ->
-      cored' Γ u v.
-  Proof.
-    intros Γ u v h.
-    exists u, v. intuition eauto.
-    - constructor. eapply upto_names_ref.
-    - constructor. eapply upto_names_ref.
   Qed.
 
   Lemma R_cored :
@@ -587,7 +328,7 @@ Section Conversion.
     forall Γ t1 t2 (p1 : pos t1) (p2 : pos t2) w1 w2 q1 q2 s1 s2,
       t1 = t2 ->
       ` p1 = ` p2 ->
-      cored' Γ (` w1) (` w2) ->
+      cored' Σ Γ (` w1) (` w2) ->
       R_aux Γ (t1 ; (p1, (w1 ; (q1, s1)))) (t2 ; (p2, (w2 ; (q2, s2)))).
   Proof.
     intros Γ t1 t2 [p1 hp1] [p2 hp2] [t1' h1'] [t2' h2'] q1 q2 s1 s2 e1 e2 h.
@@ -704,13 +445,6 @@ Section Conversion.
     (conv_stack_ctx Γ π π' /\
      ∥ Σ ;;; Γ ,,, stack_context π |- zipp t π == zipp t π' ∥)
       (only parsing).
-
-  (* TODO MOVE Should be in context conversion *)
-  Axiom red_context_conversion :
-    forall Γ u v Γ',
-      red Σ Γ' u v ->
-      conv_context Σ Γ Γ' ->
-      red Σ Γ u v.
 
   (* Definition Ret s Γ t π π' := *)
   (*   match s with *)
@@ -1381,43 +1115,6 @@ Section Conversion.
     now eapply All_local_env_app in wf.
   Qed.
 
-  (* TODO MOVE *)
-  Lemma cored_zipc :
-    forall Γ t u π,
-      cored Σ (Γ ,,, stack_context π) t u ->
-      cored Σ Γ (zipc t π) (zipc u π).
-  Proof.
-    intros Γ t u π h.
-    do 2 zip fold. eapply cored_context. assumption.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma red_zipc :
-    forall Γ t u π,
-      red Σ (Γ ,,, stack_context π) t u ->
-      red Σ Γ (zipc t π) (zipc u π).
-  Proof.
-    intros Γ t u π h.
-    do 2 zip fold. eapply red_context. assumption.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma wellformed_zipc_zipp :
-    forall Γ t π,
-      wellformed Σ Γ (zipc t π) ->
-      wellformed Σ (Γ ,,, stack_context π) (zipp t π).
-  Proof.
-    intros Γ t π h.
-    unfold zipp.
-    case_eq (decompose_stack π). intros l ρ e.
-    pose proof (decompose_stack_eq _ _ _ e). subst. clear e.
-    rewrite zipc_appstack in h.
-    zip fold in h.
-    apply wellformed_context in h. 2: assumption. simpl in h.
-    rewrite stack_context_appstack.
-    assumption.
-  Qed.
-
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
             (t2 : term) (π2 : stack) (h2 : wtp Γ t2 π2)
@@ -2037,7 +1734,7 @@ Section Conversion.
     case_eq (decompose_stack π1). intros l1 ρ1 e1.
     rewrite e1 in r.
     rewrite e1 in d. simpl in d. subst.
-    apply wellformed_zipc_zipp in h1 as hh1.
+    apply wellformed_zipc_zipp in h1 as hh1. 2: auto.
     pose proof (decompose_stack_eq _ _ _ e1). subst.
     unfold zipp in hh1. rewrite e1 in hh1.
     pose proof (red_wellformed _ hΣ hh1 r) as hh.
@@ -2794,16 +2491,12 @@ Section Conversion.
     - reflexivity.
   Qed.
 
-
-  (* TODO MOVE *)
   Definition leqb_term :=
     eqb_term_upto_univ (try_eqb_universe G) (try_leqb_universe G).
 
-  (* TODO MOVE *)
   Definition eqb_term :=
     eqb_term_upto_univ (try_eqb_universe G) (try_eqb_universe G).
 
-  (* TODO MOVE *)
   Lemma leqb_term_spec t u :
     leqb_term t u ->
     leq_term (global_ext_constraints Σ) t u.
@@ -2818,7 +2511,6 @@ Section Conversion.
     now eapply global_ext_uctx_consistent.
   Qed.
 
-  (* TODO MOVE *)
   Lemma eqb_term_spec t u :
     eqb_term t u ->
     eq_term (global_ext_constraints Σ) t u.
@@ -2833,7 +2525,6 @@ Section Conversion.
     now eapply global_ext_uctx_consistent.
   Qed.
 
-  (* TODO MOVE *)
   Fixpoint eqb_ctx (Γ Δ : context) : bool :=
     match Γ, Δ with
     | [], [] => true
@@ -2846,7 +2537,6 @@ Section Conversion.
     | _, _ => false
     end.
 
-  (* TODO MOVE *)
   Lemma eqb_ctx_spec :
     forall Γ Δ,
       eqb_ctx Γ Δ ->
@@ -2950,7 +2640,7 @@ Section Conversion.
     case_eq (decompose_stack π1). intros l1' ρ1' e1.
     rewrite e1 in r.
     rewrite e1 in d. simpl in d. subst.
-    apply wellformed_zipc_zipp in h1 as hh1.
+    apply wellformed_zipc_zipp in h1 as hh1. 2: auto.
     apply decompose_stack_eq in e1 as ?. subst.
     unfold zipp in hh1. rewrite e1 in hh1.
     pose proof (red_wellformed _ hΣ hh1 r) as hh.
@@ -3080,7 +2770,7 @@ Section Conversion.
     case_eq (decompose_stack π2). intros l2' ρ2' e2.
     rewrite e2 in r.
     rewrite e2 in d. simpl in d. subst.
-    apply wellformed_zipc_zipp in h2 as hh2.
+    apply wellformed_zipc_zipp in h2 as hh2. 2: auto.
     apply decompose_stack_eq in e2 as ?. subst.
     unfold zipp in hh2. rewrite e2 in hh2.
     pose proof (red_wellformed _ hΣ hh2 r) as hh.
@@ -3248,7 +2938,7 @@ Section Conversion.
   Next Obligation.
     unshelve eapply _isconv ; try assumption.
     intros s' t' π1' π2' h1' h2' hR.
-    apply wellformed_zipc_zipp in h1.
+    apply wellformed_zipc_zipp in h1. 2: auto.
     destruct pp.
     assert (wth0 = zwts H0) by apply wellformed_irr. subst.
     specialize (f (mkpack Γ s' t' π1' π2' (zwts h2')) hR). cbn in f.

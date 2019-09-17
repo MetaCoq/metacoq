@@ -795,8 +795,8 @@ Proof.
 Qed.
 
 Lemma eq_context_upto_conv_context {cf:checker_flags} (Σ : global_env_ext) Re :
-  subrelation Re (eq_universe Σ)
-  -> subrelation (eq_context_upto Re) (fun Γ Γ' => conv_context Σ Γ Γ').
+  subrelation Re (eq_universe Σ) ->
+  subrelation (eq_context_upto Re) (fun Γ Γ' => conv_context Σ Γ Γ').
 Proof.
   intros HRe Γ Δ h. induction h.
   - constructor.
@@ -817,3 +817,9 @@ Proof.
   intros h. eapply eq_context_upto_conv_context; tea.
   reflexivity.
 Qed.
+
+Axiom red_context_conversion :
+  forall {cf : checker_flags} (Σ : global_env_ext) Γ u v Γ',
+    red Σ Γ' u v ->
+    conv_context Σ Γ Γ' ->
+    red Σ Γ u v.

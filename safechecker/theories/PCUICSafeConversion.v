@@ -1115,43 +1115,6 @@ Section Conversion.
     now eapply All_local_env_app in wf.
   Qed.
 
-  (* TODO MOVE *)
-  Lemma cored_zipc :
-    forall Γ t u π,
-      cored Σ (Γ ,,, stack_context π) t u ->
-      cored Σ Γ (zipc t π) (zipc u π).
-  Proof.
-    intros Γ t u π h.
-    do 2 zip fold. eapply cored_context. assumption.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma red_zipc :
-    forall Γ t u π,
-      red Σ (Γ ,,, stack_context π) t u ->
-      red Σ Γ (zipc t π) (zipc u π).
-  Proof.
-    intros Γ t u π h.
-    do 2 zip fold. eapply red_context. assumption.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma wellformed_zipc_zipp :
-    forall Γ t π,
-      wellformed Σ Γ (zipc t π) ->
-      wellformed Σ (Γ ,,, stack_context π) (zipp t π).
-  Proof.
-    intros Γ t π h.
-    unfold zipp.
-    case_eq (decompose_stack π). intros l ρ e.
-    pose proof (decompose_stack_eq _ _ _ e). subst. clear e.
-    rewrite zipc_appstack in h.
-    zip fold in h.
-    apply wellformed_context in h. 2: assumption. simpl in h.
-    rewrite stack_context_appstack.
-    assumption.
-  Qed.
-
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
             (t2 : term) (π2 : stack) (h2 : wtp Γ t2 π2)
@@ -1771,7 +1734,7 @@ Section Conversion.
     case_eq (decompose_stack π1). intros l1 ρ1 e1.
     rewrite e1 in r.
     rewrite e1 in d. simpl in d. subst.
-    apply wellformed_zipc_zipp in h1 as hh1.
+    apply wellformed_zipc_zipp in h1 as hh1. 2: auto.
     pose proof (decompose_stack_eq _ _ _ e1). subst.
     unfold zipp in hh1. rewrite e1 in hh1.
     pose proof (red_wellformed _ hΣ hh1 r) as hh.
@@ -2684,7 +2647,7 @@ Section Conversion.
     case_eq (decompose_stack π1). intros l1' ρ1' e1.
     rewrite e1 in r.
     rewrite e1 in d. simpl in d. subst.
-    apply wellformed_zipc_zipp in h1 as hh1.
+    apply wellformed_zipc_zipp in h1 as hh1. 2: auto.
     apply decompose_stack_eq in e1 as ?. subst.
     unfold zipp in hh1. rewrite e1 in hh1.
     pose proof (red_wellformed _ hΣ hh1 r) as hh.
@@ -2814,7 +2777,7 @@ Section Conversion.
     case_eq (decompose_stack π2). intros l2' ρ2' e2.
     rewrite e2 in r.
     rewrite e2 in d. simpl in d. subst.
-    apply wellformed_zipc_zipp in h2 as hh2.
+    apply wellformed_zipc_zipp in h2 as hh2. 2: auto.
     apply decompose_stack_eq in e2 as ?. subst.
     unfold zipp in hh2. rewrite e2 in hh2.
     pose proof (red_wellformed _ hΣ hh2 r) as hh.
@@ -2982,7 +2945,7 @@ Section Conversion.
   Next Obligation.
     unshelve eapply _isconv ; try assumption.
     intros s' t' π1' π2' h1' h2' hR.
-    apply wellformed_zipc_zipp in h1.
+    apply wellformed_zipc_zipp in h1. 2: auto.
     destruct pp.
     assert (wth0 = zwts H0) by apply wellformed_irr. subst.
     specialize (f (mkpack Γ s' t' π1' π2' (zwts h2')) hR). cbn in f.

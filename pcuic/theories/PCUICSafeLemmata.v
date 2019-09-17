@@ -1429,6 +1429,40 @@ Section Lemmata.
     apply Construct_Ind_ind_eq in hc. eauto.
   Qed.
 
+  Lemma cored_zipc :
+    forall Γ t u π,
+      cored Σ (Γ ,,, stack_context π) t u ->
+      cored Σ Γ (zipc t π) (zipc u π).
+  Proof.
+    intros Γ t u π h.
+    do 2 zip fold. eapply cored_context. assumption.
+  Qed.
+
+  Lemma red_zipc :
+    forall Γ t u π,
+      red Σ (Γ ,,, stack_context π) t u ->
+      red Σ Γ (zipc t π) (zipc u π).
+  Proof.
+    intros Γ t u π h.
+    do 2 zip fold. eapply red_context. assumption.
+  Qed.
+
+  Lemma wellformed_zipc_zipp :
+    forall Γ t π,
+      wellformed Σ Γ (zipc t π) ->
+      wellformed Σ (Γ ,,, stack_context π) (zipp t π).
+  Proof.
+    intros Γ t π h.
+    unfold zipp.
+    case_eq (decompose_stack π). intros l ρ e.
+    pose proof (decompose_stack_eq _ _ _ e). subst. clear e.
+    rewrite zipc_appstack in h.
+    zip fold in h.
+    apply wellformed_context in h. simpl in h.
+    rewrite stack_context_appstack.
+    assumption.
+  Qed.
+
 End Lemmata.
 
 

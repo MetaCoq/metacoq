@@ -364,21 +364,6 @@ Proof.
   intros []; constructor; auto.
 Qed.
 
-Definition cumul_red_l' `{checker_flags} :
-  forall Σ Γ t u,
-    wf Σ.1 ->
-    red (fst Σ) Γ t u ->
-    Σ ;;; Γ |- t <= u.
-Proof.
-  intros Σ Γ t u hΣ h.
-  induction h.
-  - eapply cumul_refl'.
-  - eapply PCUICConversion.cumul_trans ; try eassumption.
-    eapply cumul_red_l.
-    + eassumption.
-    + eapply cumul_refl'.
-Defined.
-
 Section Typecheck.
   Context {cf : checker_flags} {Σ : global_env_ext} (HΣ : ∥ wf Σ ∥)
           (Hφ : ∥ on_udecl Σ.1 Σ.2 ∥)
@@ -387,18 +372,6 @@ Section Typecheck.
   Local Definition HΣ' : ∥ wf_ext Σ ∥.
   Proof.
     destruct HΣ, Hφ; now constructor.
-  Defined.
-
-  Lemma type_reduction {Γ t A B}
-    : wf Σ -> wf_local Σ Γ -> Σ ;;; Γ |- t : A -> red (fst Σ) Γ A B -> Σ ;;; Γ |- t : B.
-  Proof.
-    intros HΣ' HΓ Ht Hr.
-    econstructor. eassumption.
-    2: now eapply cumul_red_l'.
-    destruct (validity_term HΣ' HΓ Ht).
-    - left. eapply isWfArity_red; try eassumption.
-    - destruct i as [s HA]. right.
-      exists s. eapply subject_reduction; eassumption.
   Defined.
 
   Definition isType_wellformed {Γ t}

@@ -385,52 +385,6 @@ Section Principality.
     move=> wfΓ. red. exists [], u. intuition auto.
   Qed.
 
-  (** Needs subject reduction for converting contexts *)
-  Lemma isWfArity_red Γ x t :
-    isWfArity typing Σ Γ x -> red Σ Γ x t ->
-    isWfArity typing Σ Γ t.
-  Proof.
-    intros [ctx [s [? ?]]].
-    assert(forall Γ l t,
-              wf_local Σ (Γ ,,, ctx) ->
-              destArity l x = Some (ctx, s) -> red Σ (Γ ,,, l) x t -> isWfArity typing Σ (Γ ,,, l) t).
-    clear e a Γ t.
-    induction x in ctx, s |- *; intros Γ l' t wfΓ e; noconf e. intros.
-    - revert X wfΓ.
-      move=> redt wf.
-      apply invert_red_sort in redt. subst.
-      exists [], u; intuition eauto.
-    - move=> redt.
-      (* * move=> t redt wf. *)
-      (*   destruct x as [na [b|] ty]. simpl in *. *)
-      (*   rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /= in redt. *)
-      (*   rewrite app_context_assoc in wf. *)
-      (*   eapply invert_red_letin in redt as [?|?]. admit. admit. *)
-      (*   admit. *)
-      (*   rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /= in redt. *)
-      (*   rewrite app_context_assoc in wf. *)
-      (*   red. *)
-      apply invert_red_prod in redt as [A' [B' [[? ?] ?]]]. subst.
-      specialize (IHx2 _ _ _ _ B' wfΓ e r0).
-      destruct IHx2 as [ctx' [s' [? ?]]].
-      red.
-      generalize (destArity_spec [] B').
-      rewrite e0 /= => ->.
-      rewrite destArity_it_mkProd_or_LetIn. simpl.
-      eexists _, s' => /= //. split; eauto.
-      unfold snoc. (* Need a context conversion... *)
-      admit.
-
-    - clear IHx1 IHx2.
-      move=> redt.
-      eapply invert_red_letin in redt as [?|?].
-      destruct s0 as [na' [d' [ty' [b' ?]]]].
-      repeat outtimes.
-      admit.
-      admit.
-    - intros. now eapply (X _ []).
-  Admitted.
-
   (* Duplicate *)
   (* Lemma eq_term_upto_univ_mkApps_r_inv : *)
   (*   forall Re Rle u l t, *)

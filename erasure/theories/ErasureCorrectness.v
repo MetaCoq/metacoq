@@ -43,6 +43,7 @@ Proof.
   destruct b; cbn in *; try congruence.
 Qed.
 
+(* @Simon: Maybe we need wf_ext as assumption here? *)
 Lemma isErasable_subst_instance (Σ : global_env_ext) Γ T univs u :
   wf Σ ->  wf_local Σ Γ ->
   wf_local (Σ.1, univs) (PCUICUnivSubst.subst_instance_context u Γ) ->
@@ -52,12 +53,26 @@ Lemma isErasable_subst_instance (Σ : global_env_ext) Γ T univs u :
 Proof.
   intros. destruct X2 as (? & ? & [ | (? & ? & ?)]).
   - eapply typing_subst_instance in t; eauto.
-    eexists. split. admit. left. eapply isArity_subst_instance. eauto.
+    eexists. split.
+    + eapply t.
+      * admit.                  (* This would be fixed by changing the assumption *)
+      * admit.                  (* I don't know what this means *)
+      * eauto.
+    + left. eapply isArity_subst_instance. eauto.
   - eapply typing_subst_instance in t; eauto.
-    eexists. split. admit. right.
-    eapply typing_subst_instance in t0; eauto.
-    eexists. split. admit.
-    now eapply is_prop_subst_instance.
+    eexists. split.
+    + eapply t.
+      * admit.
+      * admit.
+      * eauto.
+    + right.
+      eapply typing_subst_instance in t0; eauto.
+      eexists. split.
+      * eapply t0.
+        -- admit.
+        -- admit.
+        -- eauto.
+      * now eapply is_prop_subst_instance.
 Admitted.
 
 (** * Correctness of erasure  *)

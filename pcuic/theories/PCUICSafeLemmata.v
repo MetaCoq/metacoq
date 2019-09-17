@@ -9,7 +9,10 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICCumulativity PCUICSR PCUICPosition PCUICEquality PCUICNameless
      PCUICAlpha PCUICNormal PCUICInversion PCUICCumulativity PCUICReduction
      PCUICConfluence PCUICConversion PCUICContextConversion PCUICValidity
-     PCUICParallelReductionConfluence.
+     PCUICParallelReductionConfluence PCUICWeakeningEnv
+     PCUICClosed PCUICPrincipality PCUICSubstitution
+     PCUICWeakening PCUICGeneration.
+
 From Equations Require Import Equations.
 
 Require Import Equations.Prop.DepElim.
@@ -1192,17 +1195,6 @@ Section Lemmata.
       let_free_context Γ
     end.
 
-  (* Wrong if #|Δ1| <> #|Δ2| ? *)
-  Lemma it_mkLambda_or_LetIn_let_free_conv_inv Γ Δ1 Δ2 t1 t2 :
-      let_free_context Δ1 ->
-      let_free_context Δ2 ->
-      Σ ;;; Γ |- it_mkLambda_or_LetIn Δ1 t1 == it_mkLambda_or_LetIn Δ2 t2 ->
-      conv_context Σ (Γ ,,, Δ1) (Γ ,,, Δ2) × Σ ;;; Γ ,,, Δ1 |- t1 == t2.
-  Proof.
-    induction Δ1 as [|[na [bd|] ty] Δ1] in Δ2, t1, t2 |- *; cbn; [|discriminate|].
-    - intros _.
-  Admitted.
-
   Lemma let_free_stack_context :
     forall π,
       let_free_context (stack_context π).
@@ -1210,42 +1202,6 @@ Section Lemmata.
     intros π.
     induction π.
     all: (simpl ; rewrite ?IHπ ; reflexivity).
-  Qed.
-
-  Lemma it_mkLambda_or_LetIn_stack_context_conv_inv :
-    forall Γ π1 π2 t1 t2,
-      Σ ;;; Γ |- it_mkLambda_or_LetIn (stack_context π1) t1
-             == it_mkLambda_or_LetIn (stack_context π2) t2 ->
-      conv_context Σ (Γ ,,, stack_context π1) (Γ ,,, stack_context π2) ×
-      Σ ;;; Γ ,,, stack_context π1 |- t1 == t2.
-  Proof.
-    intros Γ π1 π2 t1 t2 h.
-    eapply it_mkLambda_or_LetIn_let_free_conv_inv.
-    - eapply let_free_stack_context.
-    - eapply let_free_stack_context.
-    - assumption.
-  Qed.
-
-  Lemma it_mkLambda_or_LetIn_let_free_conv'_inv :
-    forall leq Γ Δ1 Δ2 t1 t2,
-      let_free_context Δ1 ->
-      let_free_context Δ2 ->
-      conv leq Σ Γ (it_mkLambda_or_LetIn Δ1 t1) (it_mkLambda_or_LetIn Δ2 t2) ->
-      ∥ conv_context Σ (Γ ,,, Δ1) (Γ ,,, Δ2) ∥ /\ conv leq Σ (Γ ,,, Δ1) t1 t2.
-  Admitted.
-
-  Lemma it_mkLambda_or_LetIn_stack_context_conv'_inv :
-    forall leq Γ π1 π2 t1 t2,
-      conv leq Σ Γ (it_mkLambda_or_LetIn (stack_context π1) t1)
-                   (it_mkLambda_or_LetIn (stack_context π2) t2) ->
-      ∥ conv_context Σ (Γ ,,, stack_context π1) (Γ ,,, stack_context π2) ∥ /\
-      conv leq Σ (Γ ,,, stack_context π1) t1 t2.
-  Proof.
-    intros leq Γ π1 π2 t1 t2 h.
-    eapply it_mkLambda_or_LetIn_let_free_conv'_inv.
-    - eapply let_free_stack_context.
-    - eapply let_free_stack_context.
-    - assumption.
   Qed.
 
   Lemma cored_red_cored :
@@ -1385,8 +1341,6 @@ Section Lemmata.
     (* We should also use invert_cumul_ind_l at some point. *)
   Admitted.
 
-  Require Import PCUICWeakeningEnv.
-
   Lemma Proj_red_cond :
     forall Γ i pars narg i' c u l,
       wellformed Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i' c u) l)) ->
@@ -1432,8 +1386,6 @@ Section Lemmata.
 End Lemmata.
 
 
-Require Import PCUICWeakening PCUICGeneration uGraph.
-
 Lemma strengthening `{cf : checker_flags} :
   forall {Σ Γ Γ' Γ'' t T},
     wf Σ.1 ->
@@ -1441,6 +1393,8 @@ Lemma strengthening `{cf : checker_flags} :
     |- lift #|Γ''| #|Γ'| t : lift #|Γ''| #|Γ'| T ->
     Σ;;; Γ ,,, Γ' |- t : T.
 Admitted.
+
+Require Import uGraph.
 
 (* todo: move *)
 Lemma map_option_out_mapi :
@@ -1551,176 +1505,10 @@ Qed.
 
 
 
-
-Arguments red1_ctx _ _ _ : clear implicits.
-
-Require Import PCUICClosed PCUICPrincipality PCUICSubstitution.
-
-Section SRContext.
-  Context {cf:checker_flags}.
-  (* Context {Σ : global_env_ext} (wfΣ : wf Σ) *)
-
-  Lemma destArity_spec_Some ctx T ctx' s :
-    destArity ctx T = Some (ctx', s)
-    -> it_mkProd_or_LetIn ctx T = it_mkProd_or_LetIn ctx' (tSort s).
-  Proof.
-    pose proof (PCUICClosed.destArity_spec ctx T) as H.
-    intro e; now rewrite e in H.
-  Qed.
-
-  (* todo: rename wf_local_app *)
-  Definition wf_local_app' {Σ Γ1 Γ2} :
-    wf_local Σ Γ1 -> wf_local_rel Σ Γ1 Γ2
-    -> wf_local Σ (Γ1 ,,, Γ2).
-  Proof.
-    intros H1 H2. apply wf_local_local_rel.
-    apply wf_local_rel_local in H1.
-    apply wf_local_rel_app_inv; tas.
-    now rewrite app_context_nil_l.
-  Qed.
-
-  Lemma subject_reduction_ctx :
-    env_prop (fun Σ Γ t A => forall Γ', @red1_ctx Σ Γ Γ' -> Σ ;;; Γ' |- t : A).
-  Proof.
-  Admitted.
-
-  Lemma wf_local_red {Σ Γ Γ'} :
-    red_ctx Σ.1 Γ Γ' -> wf_local Σ Γ -> wf_local Σ Γ'.
-  Proof.
-    (* induction 1; cbn in *. *)
-    (* - intro e. inversion e; subst; cbn in *. *)
-    (*   constructor; tas. destruct X0 as [s Ht]. exists s. *)
-    (*   eapply subject_reduction1; tea. *)
-    (* - intro e. inversion e; subst; cbn in *. *)
-    (*   destruct p as [[? []]|[? []]]; constructor; cbn; tas. *)
-    (*   + eapply subject_reduction1; tea. *)
-    (*   + destruct X0; eexists; eapply subject_reduction1; tea. *)
-    (*   + econstructor; tea. *)
-    (*     right; destruct X0; eexists; eapply subject_reduction1; tea. *)
-    (*     econstructor 2. eassumption. reflexivity. *)
-    (* - intro H; inversion H; subst; constructor; cbn in *; auto. *)
-  Admitted.
-
-
-  Lemma wf_local_subst1 Σ (wfΣ : wf Σ.1) Γ na b t Γ' :
-      wf_local Σ (Γ ,,, [],, vdef na b t ,,, Γ') ->
-      wf_local Σ (Γ ,,, subst_context [b] 0 Γ').
-  Proof.
-    induction Γ' as [|d Γ']; [now inversion 1|].
-    change (d :: Γ') with (Γ' ,, d).
-    destruct d as [na' [bd|] ty]; rewrite !app_context_cons; intro HH.
-    - simpl. rewrite subst_context_snoc0. simpl.
-      inversion HH; subst; cbn in *. destruct X0 as [s X0].
-      change (Γ,, vdef na b t ,,, Γ') with (Γ ,,, [vdef na b t] ,,, Γ') in *.
-      assert (subslet Σ Γ [b] [vdef na b t]). {
-        pose proof (cons_let_def Σ Γ [] [] na b t) as XX.
-        rewrite !subst_empty in XX. apply XX. constructor.
-        apply wf_local_app in X. inversion X; subst; cbn in *; assumption. }
-      constructor; cbn; auto. exists s.
-      change (tSort s) with (subst [b] #|Γ'| (tSort s)).
-      all: eapply substitution_alt; tea.
-    - simpl. rewrite subst_context_snoc0. simpl.
-      inversion HH; subst; cbn in *. destruct X0 as [s X0].
-      change (Γ,, vdef na b t ,,, Γ') with (Γ ,,, [vdef na b t] ,,, Γ') in *.
-      assert (subslet Σ Γ [b] [vdef na b t]). {
-        pose proof (cons_let_def Σ Γ [] [] na b t) as XX.
-        rewrite !subst_empty in XX. apply XX. constructor.
-        apply wf_local_app in X. inversion X; subst; cbn in *; assumption. }
-      constructor; cbn; auto. exists s.
-      change (tSort s) with (subst [b] #|Γ'| (tSort s)).
-      all: eapply substitution_alt; tea.
-  Qed.
-
-
-  Lemma red_ctx_app_context_l {Σ Γ Γ' Δ}
-    : red_ctx Σ Γ Γ' -> red_ctx Σ (Γ ,,, Δ) (Γ' ,,, Δ).
-  Proof.
-    induction Δ as [|[na [bd|] ty] Δ]; [trivial| |];
-      intro H; simpl; constructor; cbn; eauto; now apply IHΔ.
-  Qed.
-
-
-   Lemma isWfArity_red1 {Σ Γ A B} :
-     wf Σ.1 ->
-       red1 (fst Σ) Γ A B ->
-       isWfArity typing Σ Γ A ->
-       isWfArity typing Σ Γ B.
-   Proof.
-     intro wfΣ. induction 1 using red1_ind_all.
-     all: intros [ctx [s [H1 H2]]]; cbn in *; try discriminate.
-     - rewrite destArity_app in H1.
-       case_eq (destArity [] b'); [intros [ctx' s']|]; intro ee;
-         [|rewrite ee in H1; discriminate].
-       pose proof (subst_destArity [] b' [b] 0) as H; cbn in H.
-       rewrite ee in H. eexists _, s'. split. eassumption.
-       rewrite ee in H1. cbn in *. inversion H1; subst.
-       rewrite app_context_assoc in H2.
-       now eapply wf_local_subst1.
-     - rewrite destArity_tFix in H1; discriminate.
-     - rewrite destArity_app in H1.
-       case_eq (destArity [] b'); [intros [ctx' s']|]; intro ee;
-         rewrite ee in H1; [|discriminate].
-       eexists _, s'; split. cbn. rewrite destArity_app, ee. reflexivity.
-       cbn in H1. inversion H1; subst.
-       eapply wf_local_red; [|exact H2].
-       rewrite !app_context_assoc. apply red_ctx_app_context_l.
-       constructor; cbn. reflexivity. split; auto.
-     - rewrite destArity_app in H1.
-       case_eq (destArity [] b'); [intros [ctx' s']|]; intro ee;
-         rewrite ee in H1; [|discriminate].
-       eexists _, s'; split. cbn. rewrite destArity_app, ee. reflexivity.
-       cbn in H1. inversion H1; subst.
-       eapply wf_local_red; [|exact H2].
-       rewrite !app_context_assoc. apply red_ctx_app_context_l.
-       constructor; cbn. reflexivity. split; auto.
-     - rewrite destArity_app in H1.
-       case_eq (destArity [] b'); [intros [ctx' s']|]; intro ee;
-         rewrite ee in H1; [|discriminate].
-       forward IHX. {
-         eexists _, s'; split; tea. cbn in H1.
-         inversion H1; subst. now rewrite app_context_assoc in H2. }
-       destruct IHX as [ctx'' [s'' [ee' ?]]].
-       eexists _, s''; split. cbn. rewrite destArity_app, ee'. reflexivity.
-       now rewrite app_context_assoc.
-     - rewrite destArity_app in H1.
-       case_eq (destArity [] M2); [intros [ctx' s']|]; intro ee;
-         rewrite ee in H1; [|discriminate].
-       eexists _, s'; split. cbn. rewrite destArity_app, ee. reflexivity.
-       cbn in H1. inversion H1; subst.
-       eapply wf_local_red; [|exact H2].
-       rewrite !app_context_assoc. apply red_ctx_app_context_l.
-       constructor; cbn. reflexivity. auto.
-     - rewrite destArity_app in H1.
-       case_eq (destArity [] M2); [intros [ctx' s']|]; intro ee;
-         rewrite ee in H1; [|discriminate].
-       forward IHX. {
-         eexists _, s'; split; tea. cbn in H1.
-         inversion H1; subst. now rewrite app_context_assoc in H2. }
-       destruct IHX as [ctx'' [s'' [ee' ?]]].
-       eexists _, s''; split. cbn. rewrite destArity_app, ee'. reflexivity.
-       now rewrite app_context_assoc.
-   Qed.
-
-   Lemma isWfArity_red {Σ Γ A B} :
-     wf Σ.1 ->
-     red (fst Σ) Γ A B ->
-     isWfArity typing Σ Γ A ->
-     isWfArity typing Σ Γ B.
-   Proof.
-     induction 2.
-     - easy.
-     - intro. now eapply isWfArity_red1.
-   Qed.
-
-   Lemma isWfArity_or_Type_red {Σ Γ A B} :
-     wf Σ.1 ->
-     red (fst Σ) Γ A B ->
-     isWfArity_or_Type Σ Γ A ->
-     isWfArity_or_Type Σ Γ B.
-   Proof.
-     intros ? ? [?|[? ?]]; [left|right].
-     eapply isWfArity_red; eassumption.
-     eexists. eapply subject_reduction; tea.
-   Qed.
-
-End SRContext.
+Lemma destArity_spec_Some ctx T ctx' s :
+  destArity ctx T = Some (ctx', s)
+  -> it_mkProd_or_LetIn ctx T = it_mkProd_or_LetIn ctx' (tSort s).
+Proof.
+  pose proof (PCUICClosed.destArity_spec ctx T) as H.
+  intro e; now rewrite e in H.
+Qed.

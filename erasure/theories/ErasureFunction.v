@@ -130,7 +130,7 @@ Next Obligation.
     eapply inversion_Prod in X as (? & ? & ? & ? & ?).
     do 2 econstructor. eauto. auto.
   - econstructor 2. sq.
-    eapply PCUICPrincipality.isWfArity_red in X; eauto.
+    eapply isWfArity_red in X; eauto.
     eapply isWfArity_prod_inv; eauto.
 Qed.
 Next Obligation.

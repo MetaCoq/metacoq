@@ -191,14 +191,6 @@ Check (@PCUICPrincipality.leq_universe_product_mon
          (Universes.Universe.sort_of_product u v)
          (Universes.Universe.sort_of_product u' v')).
 
-Check (@PCUICPrincipality.isWfArity_red
-     of forall (cf : config.checker_flags) (Σ : PCUICAst.global_env_ext),
-       PCUICTyping.wf (PCUICAstUtils.fst_ctx Σ) ->
-       forall (Γ : PCUICAst.context) (x t : PCUICAst.term),
-       PCUICTyping.isWfArity PCUICTyping.typing Σ Γ x ->
-       PCUICTyping.red (PCUICAstUtils.fst_ctx Σ) Γ x t ->
-       PCUICTyping.isWfArity PCUICTyping.typing Σ Γ t).
-
 Check (@PCUICPrincipality.principal_typing
      of forall (cf : config.checker_flags) (Σ : PCUICAst.global_env_ext),
        PCUICTyping.wf (PCUICAstUtils.fst_ctx Σ) ->

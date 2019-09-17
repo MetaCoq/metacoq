@@ -10,7 +10,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
      PCUICSubstitution PCUICClosed PCUICCumulativity PCUICGeneration
      PCUICSubstitution PCUICClosed PCUICCumulativity PCUICGeneration PCUICReduction
-     PCUICParallelReduction PCUICEquality
+     PCUICParallelReduction PCUICEquality PCUICAlpha
      PCUICValidity PCUICParallelReductionConfluence PCUICConfluence
      PCUICContextConversion
      PCUICConversion PCUICInversion PCUICPrincipality.
@@ -291,3 +291,444 @@ Proof.
   intros. eapply subject_reduction; try eassumption.
   now apply red1_red.
 Defined.
+
+Section SRContext.
+  Context {cf:checker_flags}.
+
+  (* todo: rename wf_local_app *)
+  Definition wf_local_app' {Σ Γ1 Γ2} :
+    wf_local Σ Γ1 -> wf_local_rel Σ Γ1 Γ2
+    -> wf_local Σ (Γ1 ,,, Γ2).
+  Proof.
+    intros H1 H2. apply wf_local_local_rel.
+    apply wf_local_rel_local in H1.
+    apply wf_local_rel_app_inv; tas.
+    now rewrite app_context_nil_l.
+  Qed.
+
+  Definition cumul_red_l' `{checker_flags} :
+    forall Σ Γ t u,
+      wf Σ.1 ->
+      red (fst Σ) Γ t u ->
+      Σ ;;; Γ |- t <= u.
+  Proof.
+    intros Σ Γ t u hΣ h.
+    induction h.
+    - eapply cumul_refl'.
+    - eapply PCUICConversion.cumul_trans ; try eassumption.
+      eapply cumul_red_l.
+      + eassumption.
+      + eapply cumul_refl'.
+  Defined.
+
+  Hint Constructors OnOne2_local_env : aa.
+  Hint Unfold red1_ctx : aa.
+
+
+  Lemma red1_ctx_app Σ Γ Γ' Δ :
+    red1_ctx Σ Γ Γ' ->
+    red1_ctx Σ (Γ ,,, Δ) (Γ' ,,, Δ).
+  Proof.
+    induction Δ. trivial.
+    intro H. simpl. constructor. now apply IHΔ.
+  Qed.
+
+  Lemma red1_red_ctx Σ Γ Γ' :
+    red1_ctx Σ Γ Γ' ->
+    red_ctx Σ Γ Γ'.
+  Proof.
+    induction 1; cbn in *.
+    - constructor. reflexivity. cbn; eauto using red1_red.
+    - constructor. reflexivity.
+      destruct p as [[? []]|[? []]]; cbn; eauto using red1_red.
+    - destruct d as [na [bo|] ty]; constructor; eauto.
+      split; eapply refl_red.
+      apply refl_red.
+  Qed.
+
+  Lemma nth_error_red1_ctx Σ Γ Γ' n decl :
+    wf Σ ->
+    nth_error Γ n = Some decl ->
+    red1_ctx Σ Γ Γ' ->
+    ∑ decl', nth_error Γ' n = Some decl'
+              × red Σ Γ' (lift0 (S n) (decl_type decl))
+              (lift0 (S n) (decl_type decl')).
+  Proof.
+    intros wfΣ h1 h2; induction h2 in n, h1 |- *.
+    - destruct n.
+      + inversion h1; subst. exists (vass na t').
+        split; cbnr.
+        eapply (weakening_red_0 wfΣ _ [_]); tas; cbnr.
+        apply red1_red; tas.
+      + exists decl. split; tas. apply refl_red.
+    - destruct n.
+      + inversion h1; subst.
+        destruct p as [[? []]|[? []]].
+        -- exists (vdef na b' t).
+           split; cbnr.
+           eapply (weakening_red_0 wfΣ _ [_]); tas; cbnr.
+           apply refl_red.
+        -- exists (vdef na b t').
+           split; cbnr.
+           eapply (weakening_red_0 wfΣ _ [_]); tas; cbnr.
+           apply red1_red; tas.
+      + exists decl. split; tas. apply refl_red.
+    - destruct n.
+      + exists d. split; cbnr. inv h1; apply refl_red.
+      + cbn in h1. specialize (IHh2 _ h1).
+        destruct IHh2 as [decl' [X1 X2]].
+        exists decl'. split; tas.
+        rewrite !(simpl_lift0 _ (S n)).
+        eapply (weakening_red_0 wfΣ _ [_]); tas; cbnr.
+  Qed.
+
+
+  Lemma wf_local_isType_nth Σ Γ n decl :
+    wf Σ.1 ->
+    wf_local Σ Γ ->
+    nth_error Γ n = Some decl ->
+    ∑ s, Σ ;;; Γ |- lift0 (S n) (decl_type decl) : tSort s.
+  Proof.
+    induction n in Γ, decl |- *; intros hΣ hΓ e; destruct Γ;
+      cbn; inversion e; inversion hΓ; subst.
+    all: try (destruct X0 as [s Ht]; exists s;
+              eapply (weakening _ _ [_] _ (tSort s)); tas).
+    - eapply IHn in H0; tas. destruct H0 as [s Ht]. exists s.
+      rewrite simpl_lift0.
+      eapply (weakening _ _ [_] _ (tSort s)); tas; cbnr.
+    - eapply IHn in H0; tas. destruct H0 as [s Ht]. exists s.
+      rewrite simpl_lift0.
+      eapply (weakening _ _ [_] _ (tSort s)); tas; cbnr.
+  Qed.
+
+  Ltac invs H := inversion H; subst.
+  Ltac invc H := inversion H; subst; clear H.
+
+  Lemma subject_reduction_ctx :
+    env_prop (fun Σ Γ t A => forall Γ', red1_ctx Σ Γ Γ' -> Σ ;;; Γ' |- t : A).
+  Proof.
+    assert (X: forall Σ Γ wfΓ, All_local_env_over typing
+                          (fun Σ Γ (_ : wf_local Σ Γ)  t T (_ : Σ;;; Γ |- t : T) =>
+                             forall Γ', red1_ctx Σ Γ Γ' -> Σ;;; Γ' |- t : T) Σ Γ wfΓ
+                          -> wf Σ -> forall Γ', red1_ctx Σ Γ Γ' -> wf_local Σ Γ'). {
+      induction 1.
+      - intros hΣ Γ' r. inv r.
+      - intros hΣ Γ' r. inv r.
+        + constructor; tas.
+          destruct tu as [s Ht]. exists s. eapply subject_reduction1; tea.
+        + constructor; tas. eapply IHX; tas.
+          eexists. now eapply p.
+      - intros hΣ Γ' r. inv r.
+        + destruct X0 as [[? []]|[? []]]; constructor; cbn; tas.
+          eapply subject_reduction1; tea.
+          destruct tu as [s Ht]. exists s. eapply subject_reduction1; tea.
+          econstructor; tea.
+          2: eauto using red_cumul.
+          right. destruct tu as [s ?]; exists s; eapply subject_reduction1; tea.
+        + constructor; tas. eapply IHX; tas.
+          eexists. now eapply p0.
+          now eapply p. }
+    eapply typing_ind_env; cbn; intros; try solve [econstructor; eauto with aa].
+    - assert (X2: ∑ decl', nth_error Γ' n = Some decl'
+             × red Σ.1 Γ' (lift0 (S n) (decl_type decl))
+             (lift0 (S n) (decl_type decl'))) by now eapply nth_error_red1_ctx.
+      destruct X2 as [decl' [H1 H2]].
+      eapply type_Cumul. econstructor. eauto. exact H1.
+      2: now eapply red_cumul_inv.
+      right.
+      clear decl' H1 H2.
+      induction X1 in wfΓ, n, H, X0 |- *; cbn in *.
+      + destruct n; cbn in *.
+        * invc H. invs wfΓ. destruct X2 as [s Ht]; exists s.
+          eapply (weakening _ _ [_] _ (tSort _)); tas; cbnr.
+          constructor; tas. exists s.
+          eapply subject_reduction; tea; auto.
+        * invc H. invs wfΓ.
+          eapply wf_local_isType_nth in H1; tea.
+          destruct H1 as [s Ht]. exists s.
+          rewrite simpl_lift0.
+          eapply (weakening _ _ [_] _ (tSort _)); tas; cbnr.
+          constructor; tas. destruct X2 as [s' ?]; exists s'.
+          eapply subject_reduction; tea; auto.
+      + destruct n; cbn in *.
+        * invc H. invs wfΓ. destruct X2 as [s Ht]; exists s.
+          eapply (weakening _ _ [_] _ (tSort _)); tas; cbnr.
+          destruct p as [[? []]|[? []]]; constructor; cbn; tas.
+          now exists s. 
+          eapply subject_reduction; tea; auto.
+          exists s. eapply subject_reduction; tea; auto.
+          econstructor; tea.
+          2: eauto using red_cumul.
+          right. exists s; eapply subject_reduction1; tea.
+        * invc H. invs wfΓ.
+          eapply wf_local_isType_nth in H1; tea.
+          destruct H1 as [s Ht]. exists s.
+          rewrite simpl_lift0.
+          eapply (weakening _ _ [_] _ (tSort _)); tas; cbnr.
+          destruct p as [[? []]|[? []]]; constructor; cbn; tas.
+          eapply subject_reduction; tea; auto.
+          destruct X2 as [s' Ht']. exists s'.
+          eapply subject_reduction; tea; auto.
+          econstructor; tea.
+          2: eauto using red_cumul.
+          right. destruct X2 as [s' ?]; exists s'; eapply subject_reduction1; tea.
+      + destruct n; cbn in *.
+        * invc H. clear IHX1. invs wfΓ.
+          -- invs X0. destruct tu as [s Ht]; exists s.
+             eapply (weakening _ _ [_] _ (tSort _)); tas; cbnr.
+             eapply (X _ _ wfΓ); tea. now constructor.
+             eauto.
+          -- invs X0. destruct tu as [s Ht]; exists s.
+             eapply (weakening _ _ [_] _ (tSort _)); tas; cbnr.
+             eapply (X _ _ wfΓ); tea. now constructor.
+             eauto.
+        * invs wfΓ; inv X0.
+          -- specialize (IHX1 _ _ H X4).
+             destruct IHX1 as [s ?]; exists s.
+             rewrite simpl_lift0.
+             eapply (weakening _ _ [_] _ (tSort _)); tas; cbnr.
+             constructor. eauto.
+             exists tu.π1. eauto.
+          -- specialize (IHX1 _ _ H X5).
+             destruct IHX1 as [s ?]; exists s.
+             rewrite simpl_lift0.
+             eapply (weakening _ _ [_] _ (tSort _)); tas; cbnr.
+             constructor. eauto.
+             exists tu.π1. eauto. cbn. eauto.
+    - econstructor; tea; eauto.
+      eapply All2_impl; tea; cbn.
+      intros; utils.rdestruct; eauto.
+    - assert (XX: red1_ctx Σ.1 (Γ ,,, fix_context mfix) (Γ' ,,, fix_context mfix))
+        by now eapply red1_ctx_app.
+      econstructor; tea.
+      + set (Δ := Γ ,,, fix_context mfix) in *.
+        assert (ZZ: ∑ wfΔ, All_local_env_over typing
+                            (fun Σ Γ (_ : wf_local Σ Γ)  t T (_ : Σ;;; Γ |- t : T) =>
+                               forall Γ', red1_ctx Σ Γ Γ' -> Σ;;; Γ' |- t : T) Σ Δ wfΔ). {
+          clearbody Δ; clear -X0.
+          induction X0.
+          - eexists; constructor.
+          - destruct t0 as [? [? ?]].
+            eexists; unshelve econstructor; tea.
+            exact IHX0.π1.
+            eexists; eassumption.
+            exact IHX0.π2. eassumption.
+          - destruct IHX0 as [X1 X2].
+            destruct t0 as [s [Y1 Y2]], t1 as [Y3 Y4].
+            eexists.
+            unshelve econstructor; tea. eexists; eassumption.
+            eauto. }
+        eapply X with (Γ ,,, fix_context mfix) ZZ.π1; tea. exact ZZ.π2.
+      + eapply All_impl; tea.
+        intros; utils.rdestruct; eauto. 
+    - assert (XX: red1_ctx Σ.1 (Γ ,,, fix_context mfix) (Γ' ,,, fix_context mfix))
+        by now eapply red1_ctx_app.
+      econstructor; tea.
+      + set (Δ := Γ ,,, fix_context mfix) in *.
+        assert (ZZ: ∑ wfΔ, All_local_env_over typing
+                            (fun Σ Γ (_ : wf_local Σ Γ)  t T (_ : Σ;;; Γ |- t : T) =>
+                               forall Γ', red1_ctx Σ Γ Γ' -> Σ;;; Γ' |- t : T) Σ Δ wfΔ). {
+          clearbody Δ; clear -X0.
+          induction X0.
+          - eexists; constructor.
+          - destruct t0 as [? [? ?]].
+            eexists; unshelve econstructor; tea.
+            exact IHX0.π1.
+            eexists; eassumption.
+            exact IHX0.π2. eassumption.
+          - destruct IHX0 as [X1 X2].
+            destruct t0 as [s [Y1 Y2]], t1 as [Y3 Y4].
+            eexists.
+            unshelve econstructor; tea. eexists; eassumption.
+            eauto. }
+        eapply X with (Γ ,,, fix_context mfix) ZZ.π1; tea. exact ZZ.π2.
+      + eapply All_impl; tea.
+        intros; utils.rdestruct; eauto. 
+    - econstructor.
+      + now eapply X2.
+      + destruct X3 as [[[ctx [s [H1 H2]]] X3]|X3]; [left|right].
+        * cbn in *. exists ctx, s. split; eauto.
+          eapply X; tea.
+          now apply red1_ctx_app.
+        * utils.rdestruct; eauto.
+      + eapply cumul_red_ctx; tea. now apply red1_red_ctx.
+  Qed.
+
+
+  Lemma wf_local_red1 {Σ Γ Γ'} :
+    wf Σ.1 -> 
+    red1_ctx Σ.1 Γ Γ' -> wf_local Σ Γ -> wf_local Σ Γ'.
+  Proof.
+    intro hΣ. induction 1; cbn in *.
+    - intro e. inversion e; subst; cbn in *.
+      constructor; tas. destruct X0 as [s Ht]. exists s.
+      eapply subject_reduction1; tea.
+    - intro e. inversion e; subst; cbn in *.
+      destruct p as [[? []]|[? []]]; constructor; cbn; tas.
+      + eapply subject_reduction1; tea.
+      + destruct X0; eexists; eapply subject_reduction1; tea.
+      + econstructor; tea.
+        right; destruct X0; eexists; eapply subject_reduction1; tea.
+        econstructor 2. eassumption. reflexivity.
+    - intro H; inversion H; subst; constructor; cbn in *; auto.
+      + destruct X1 as [s Ht]. exists s. 
+        eapply subject_reduction_ctx; tea.
+      + destruct X1 as [s Ht]. exists s. 
+        eapply subject_reduction_ctx; tea.
+      + eapply subject_reduction_ctx; tea.
+  Qed.
+
+  Lemma eq_context_upto_names_upto_names Γ Δ :
+    eq_context_upto_names Γ Δ -> Γ ≡Γ Δ.
+  Proof.
+    induction 1; cbnr; try constructor; eauto.
+    destruct x as [? [] ?], y as [? [] ?]; cbn in *; subst; inversion e.
+    all: constructor; cbnr; eauto.
+  Qed.
+
+
+  Lemma wf_local_red {Σ Γ Γ'} :
+    wf Σ.1 -> 
+    red_ctx Σ.1 Γ Γ' -> wf_local Σ Γ -> wf_local Σ Γ'.
+  Proof.
+    intros hΣ h. apply red_ctx_clos_rt_red1_ctx in h.
+    induction h; eauto using wf_local_red1.
+    apply eq_context_upto_names_upto_names in e.
+    eauto using wf_local_alpha.
+  Qed.
+
+
+  Lemma wf_local_subst1 Σ (wfΣ : wf Σ.1) Γ na b t Γ' :
+      wf_local Σ (Γ ,,, [],, vdef na b t ,,, Γ') ->
+      wf_local Σ (Γ ,,, subst_context [b] 0 Γ').
+  Proof.
+    induction Γ' as [|d Γ']; [now inversion 1|].
+    change (d :: Γ') with (Γ' ,, d).
+    destruct d as [na' [bd|] ty]; rewrite !app_context_cons; intro HH.
+    - rewrite subst_context_snoc0. simpl.
+      inversion HH; subst; cbn in *. destruct X0 as [s X0].
+      change (Γ,, vdef na b t ,,, Γ') with (Γ ,,, [vdef na b t] ,,, Γ') in *.
+      assert (subslet Σ Γ [b] [vdef na b t]). {
+        pose proof (cons_let_def Σ Γ [] [] na b t) as XX.
+        rewrite !subst_empty in XX. apply XX. constructor.
+        apply wf_local_app in X. inversion X; subst; cbn in *; assumption. }
+      constructor; cbn; auto. exists s.
+      change (tSort s) with (subst [b] #|Γ'| (tSort s)).
+      all: eapply substitution_alt; tea.
+    - rewrite subst_context_snoc0. simpl.
+      inversion HH; subst; cbn in *. destruct X0 as [s X0].
+      change (Γ,, vdef na b t ,,, Γ') with (Γ ,,, [vdef na b t] ,,, Γ') in *.
+      assert (subslet Σ Γ [b] [vdef na b t]). {
+        pose proof (cons_let_def Σ Γ [] [] na b t) as XX.
+        rewrite !subst_empty in XX. apply XX. constructor.
+        apply wf_local_app in X. inversion X; subst; cbn in *; assumption. }
+      constructor; cbn; auto. exists s.
+      change (tSort s) with (subst [b] #|Γ'| (tSort s)).
+      all: eapply substitution_alt; tea.
+  Qed.
+
+
+  Lemma red_ctx_app_context_l {Σ Γ Γ' Δ}
+    : red_ctx Σ Γ Γ' -> red_ctx Σ (Γ ,,, Δ) (Γ' ,,, Δ).
+  Proof.
+    induction Δ as [|[na [bd|] ty] Δ]; [trivial| |];
+      intro H; simpl; constructor; cbn; eauto; now apply IHΔ.
+  Qed.
+
+
+   Lemma isWfArity_red1 {Σ Γ A B} :
+     wf Σ.1 ->
+       red1 (fst Σ) Γ A B ->
+       isWfArity typing Σ Γ A ->
+       isWfArity typing Σ Γ B.
+   Proof.
+     intro wfΣ. induction 1 using red1_ind_all.
+     all: intros [ctx [s [H1 H2]]]; cbn in *; try discriminate.
+     - rewrite destArity_app in H1.
+       case_eq (destArity [] b'); [intros [ctx' s']|]; intro ee;
+         [|rewrite ee in H1; discriminate].
+       pose proof (subst_destArity [] b' [b] 0) as H; cbn in H.
+       rewrite ee in H. eexists _, s'. split. eassumption.
+       rewrite ee in H1. cbn in *. inversion H1; subst.
+       rewrite app_context_assoc in H2.
+       now eapply wf_local_subst1.
+     - rewrite destArity_tFix in H1; discriminate.
+     - rewrite destArity_app in H1.
+       case_eq (destArity [] b'); [intros [ctx' s']|]; intro ee;
+         rewrite ee in H1; [|discriminate].
+       eexists _, s'; split. cbn. rewrite destArity_app ee. reflexivity.
+       cbn in H1. inversion H1; subst.
+       eapply wf_local_red; try exact H2; tas.
+       rewrite !app_context_assoc. apply red_ctx_app_context_l.
+       constructor; cbn. reflexivity. split; auto.
+     - rewrite destArity_app in H1.
+       case_eq (destArity [] b'); [intros [ctx' s']|]; intro ee;
+         rewrite ee in H1; [|discriminate].
+       eexists _, s'; split. cbn. rewrite destArity_app ee. reflexivity.
+       cbn in H1. inversion H1; subst.
+       eapply wf_local_red; try exact H2; tas.
+       rewrite !app_context_assoc. apply red_ctx_app_context_l.
+       constructor; cbn. reflexivity. split; auto.
+     - rewrite destArity_app in H1.
+       case_eq (destArity [] b'); [intros [ctx' s']|]; intro ee;
+         rewrite ee in H1; [|discriminate].
+       forward IHX. {
+         eexists _, s'; split; tea. cbn in H1.
+         inversion H1; subst. now rewrite app_context_assoc in H2. }
+       destruct IHX as [ctx'' [s'' [ee' ?]]].
+       eexists _, s''; split. cbn. rewrite destArity_app ee'. reflexivity.
+       now rewrite app_context_assoc.
+     - rewrite destArity_app in H1.
+       case_eq (destArity [] M2); [intros [ctx' s']|]; intro ee;
+         rewrite ee in H1; [|discriminate].
+       eexists _, s'; split. cbn. rewrite destArity_app ee. reflexivity.
+       cbn in H1. inversion H1; subst.
+       eapply wf_local_red; try exact H2; tas.
+       rewrite !app_context_assoc. apply red_ctx_app_context_l.
+       constructor; cbn. reflexivity. auto.
+     - rewrite destArity_app in H1.
+       case_eq (destArity [] M2); [intros [ctx' s']|]; intro ee;
+         rewrite ee in H1; [|discriminate].
+       forward IHX. {
+         eexists _, s'; split; tea. cbn in H1.
+         inversion H1; subst. now rewrite app_context_assoc in H2. }
+       destruct IHX as [ctx'' [s'' [ee' ?]]].
+       eexists _, s''; split. cbn. rewrite destArity_app ee'. reflexivity.
+       now rewrite app_context_assoc.
+   Qed.
+
+   Lemma isWfArity_red {Σ Γ A B} :
+     wf Σ.1 ->
+     red (fst Σ) Γ A B ->
+     isWfArity typing Σ Γ A ->
+     isWfArity typing Σ Γ B.
+   Proof.
+     induction 2.
+     - easy.
+     - intro. now eapply isWfArity_red1.
+   Qed.
+
+   Lemma isWfArity_or_Type_red {Σ Γ A B} :
+     wf Σ.1 ->
+     red (fst Σ) Γ A B ->
+     isWfArity_or_Type Σ Γ A ->
+     isWfArity_or_Type Σ Γ B.
+   Proof.
+     intros ? ? [?|[? ?]]; [left|right].
+     eapply isWfArity_red; eassumption.
+     eexists. eapply subject_reduction; tea.
+   Qed.
+
+  Lemma type_reduction {Σ Γ t A B}
+    : wf Σ.1 -> wf_local Σ Γ -> Σ ;;; Γ |- t : A -> red (fst Σ) Γ A B -> Σ ;;; Γ |- t : B.
+  Proof.
+    intros HΣ' HΓ Ht Hr.
+    econstructor. eassumption.
+    2: now eapply cumul_red_l'.
+    destruct (validity_term HΣ' HΓ Ht).
+    - left. eapply isWfArity_red; try eassumption.
+    - destruct i as [s HA]. right.
+      exists s. eapply subject_reduction; eassumption.
+  Defined.
+
+End SRContext.

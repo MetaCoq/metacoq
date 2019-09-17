@@ -2587,6 +2587,9 @@ Section RedConfluence.
 
 End RedConfluence.
 
+Arguments red1_ctx _ _ _ : clear implicits.
+
+
 Section ConfluenceFacts.
   Context {cf : checker_flags}.
   Context (Σ : global_env) (wfΣ : wf Σ).

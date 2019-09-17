@@ -322,6 +322,22 @@ Section Conversion.
     eapply h2. eapply h. assumption.
   Qed.
 
+  Lemma Acc_cored_cored' :
+    forall Γ u,
+      Acc (cored Σ Γ) u ->
+      forall u', u ≡ u' -> Acc (cored' Γ) u'.
+  Proof.
+    intros Γ u h. induction h as [u h ih].
+    intros u' e. constructor. intros v [v' [u'' [r [[e1] [e2]]]]].
+    assert (ee : u'' ≡ u).
+    { eapply upto_names_sym. eapply upto_names_trans. all: eassumption. }
+    eapply cored_upto in r as hh. 2: exact ee.
+    destruct hh as [v'' [r' [e']]].
+    eapply ih.
+    - eassumption.
+    - eapply upto_names_sym. eapply upto_names_trans. all: eassumption.
+  Qed.
+
   Lemma normalisation_upto :
     forall Γ u,
       wellformed Σ Γ u ->

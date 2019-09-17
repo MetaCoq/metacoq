@@ -233,7 +233,7 @@ at the root directory.
 Compile
 -------
 
-Once in the right environment, Use:
+Once in the right environment, run `./configure.sh` for a global build or `./configure.sh local` for a local build. Then use:
 
 - `make` to compile the `template-coq` plugin, the `checker`, the `pcuic`
   development and the `extraction` plugin. You can also selectively build

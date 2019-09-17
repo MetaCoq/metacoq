@@ -2491,16 +2491,12 @@ Section Conversion.
     - reflexivity.
   Qed.
 
-
-  (* TODO MOVE *)
   Definition leqb_term :=
     eqb_term_upto_univ (try_eqb_universe G) (try_leqb_universe G).
 
-  (* TODO MOVE *)
   Definition eqb_term :=
     eqb_term_upto_univ (try_eqb_universe G) (try_eqb_universe G).
 
-  (* TODO MOVE *)
   Lemma leqb_term_spec t u :
     leqb_term t u ->
     leq_term (global_ext_constraints Σ) t u.
@@ -2515,7 +2511,6 @@ Section Conversion.
     now eapply global_ext_uctx_consistent.
   Qed.
 
-  (* TODO MOVE *)
   Lemma eqb_term_spec t u :
     eqb_term t u ->
     eq_term (global_ext_constraints Σ) t u.
@@ -2530,7 +2525,6 @@ Section Conversion.
     now eapply global_ext_uctx_consistent.
   Qed.
 
-  (* TODO MOVE *)
   Fixpoint eqb_ctx (Γ Δ : context) : bool :=
     match Γ, Δ with
     | [], [] => true
@@ -2543,7 +2537,6 @@ Section Conversion.
     | _, _ => false
     end.
 
-  (* TODO MOVE *)
   Lemma eqb_ctx_spec :
     forall Γ Δ,
       eqb_ctx Γ Δ ->

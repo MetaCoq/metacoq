@@ -446,13 +446,6 @@ Section Conversion.
      ∥ Σ ;;; Γ ,,, stack_context π |- zipp t π == zipp t π' ∥)
       (only parsing).
 
-  (* TODO MOVE Should be in context conversion *)
-  Axiom red_context_conversion :
-    forall Γ u v Γ',
-      red Σ Γ' u v ->
-      conv_context Σ Γ Γ' ->
-      red Σ Γ u v.
-
   (* Definition Ret s Γ t π π' := *)
   (*   match s with *)
   (*   | Reduction t' => *)

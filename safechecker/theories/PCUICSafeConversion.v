@@ -346,20 +346,10 @@ Section Conversion.
     destruct hΣ.
     intros Γ u h.
     apply normalisation' in h. 2: auto.
-    eapply Acc_impl.
-    - eapply cored'_postpone.
-    - clear - h. induction h as [u h ih].
-      constructor. intros y [y' [r [e]]].
-      eapply ih in r as h'.
-      clear - e h'.
-      induction h' as [x h ih].
-      constructor. intros z [z' [r [e']]].
-      (* It seems we need to do something like cored'_postpone again. *)
-      eapply ih.
-      + admit.
-      + admit.
-      + exists z'. intuition eauto. constructor. assumption.
-  Abort.
+    eapply Acc_cored_cored'.
+    - eassumption.
+    - apply upto_names_ref.
+  Qed.
 
   Definition wterm Γ := { t : term | wellformed Σ Γ t }.
 

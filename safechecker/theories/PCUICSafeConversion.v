@@ -200,26 +200,6 @@ Section Conversion.
   Arguments tm' {_} _.
   Arguments wth {_} _.
 
-  (* TODO Can probably just go away as it is identical to pack *)
-  Record nlpack (Γ : context) := mknlpack {
-    nl_st : state ;
-    nl_tm : term ;
-    nl_stk1 : stack ;
-    nl_stk2 : stack ;
-    nl_tm' := match nl_st with
-           | Reduction t | Fallback t | Term t => t
-           | Args => nl_tm
-           end ;
-    nl_wth : wellformed Σ Γ (zipc nl_tm' nl_stk2)
-  }.
-
-  Arguments nl_st {_} _.
-  Arguments nl_tm {_} _.
-  Arguments nl_stk1 {_} _.
-  Arguments nl_stk2 {_} _.
-  Arguments nl_tm' {_} _.
-  Arguments nl_wth {_} _.
-
   Definition nlstate (s : state) :=
     match s with
     | Reduction t => Reduction (nl t)
@@ -228,8 +208,7 @@ Section Conversion.
     | Fallback t => Fallback (nl t)
     end.
 
-
-  Definition nl_pack {Γ : context} (p : pack Γ) : nlpack (nlctx Γ).
+  Definition nl_pack {Γ : context} (p : pack Γ) : pack (nlctx Γ).
   Proof.
     destruct p as [s t π1 π2 t' h].
     unshelve eexists.
@@ -371,24 +350,19 @@ Section Conversion.
   Definition R_aux Γ :=
     t ⊩ cored' Γ ⨶ @posR t ⊗ w ⊩ wcored Γ ⨶ @posR (` w) ⊗ stateR.
 
-  Notation nl_pzt u := (zipc (nl_tm u) (nl_stk1 u)) (only parsing).
-  Notation nl_pps1 u := (stack_pos (nl_tm u) (nl_stk1 u)) (only parsing).
-  Notation nl_pwt u := (exist _ (nl_wth u)) (only parsing).
-  Notation nl_pps2 u := (stack_pos (nl_tm' u) (nl_stk2 u)) (only parsing).
-
-  Notation obpack u :=
-    (nl_pzt u ; (nl_pps1 u, (nl_pwt u ; (nl_pps2 u, nl_st u)))) (only parsing).
-
-  Definition R_nl Γ (u v : nlpack Γ) :=
-    R_aux Γ (obpack u) (obpack v).
-
-  Definition R Γ (u v : pack Γ) :=
-    R_nl (nlctx Γ) (nl_pack u) (nl_pack v).
-
   Notation pzt u := (zipc (tm u) (stk1 u)) (only parsing).
   Notation pps1 u := (stack_pos (tm u) (stk1 u)) (only parsing).
   Notation pwt u := (exist _ (wth u)) (only parsing).
   Notation pps2 u := (stack_pos (tm' u) (stk2 u)) (only parsing).
+
+  Notation obpack u :=
+    (pzt u ; (pps1 u, (pwt u ; (pps2 u, st u)))) (only parsing).
+
+  Definition R_nl Γ (u v : pack Γ) :=
+    R_aux Γ (obpack u) (obpack v).
+
+  Definition R Γ (u v : pack Γ) :=
+    R_nl (nlctx Γ) (nl_pack u) (nl_pack v).
 
   Lemma R_aux_Acc :
     forall Γ t p w q s,

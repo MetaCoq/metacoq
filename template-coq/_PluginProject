@@ -10,6 +10,7 @@ gen-src/ast0.ml
 gen-src/ast0.mli
 gen-src/ast_denoter.ml
 gen-src/ast_quoter.ml
+gen-src/ast_id_quoter.ml
 gen-src/astUtils.ml
 gen-src/astUtils.mli
 gen-src/basicAst.ml

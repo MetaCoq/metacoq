@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TOCOPY="ast_denoter.ml ast_quoter.ml denote.ml denoter.ml plugin_core.ml plugin_core.mli quoted.ml quoter.ml run_extractable.ml run_extractable.mli tm_util.ml"
+TOCOPY="ast_denoter.ml ast_quoter.ml ast_id_quoter.ml denote.ml denoter.ml plugin_core.ml plugin_core.mli quoted.ml quoter.ml run_extractable.ml run_extractable.mli tm_util.ml"
 
 # Test is gen-src is older than src
 if [[ "gen-src" -ot "src" || ! -f "gen-src/denote.ml" || ! -f "gen-src/metacoq_template_plugin.cmxs" ||

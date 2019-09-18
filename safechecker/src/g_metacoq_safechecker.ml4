@@ -28,3 +28,16 @@ VERNAC COMMAND EXTEND MetaCoqSafeCheck CLASSIFIED AS QUERY
     check env evm c
   ]
 END
+
+let kern_check env evm c =
+  let (env,term) = Ast_id_quoter.quote_term_rec env (EConstr.to_constr evm c) in
+  let _ = Kernel.Typeops.infer env term in
+  Feedback.msg_info "I don't know what to do."
+
+VERNAC COMMAND EXTEND MetaCoqUnsafeCheck CLASSIFIED AS QUERY
+| [ "MetaCoq" "UnsafeCheck" constr(c) ] -> [
+    let (evm,env) = Pfedit.get_current_context () in
+    let (c, _) = Constrintern.interp_constr env evm c in
+    kern_check env evm c
+  ]
+END

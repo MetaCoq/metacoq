@@ -791,10 +791,10 @@ Section Conversion.
     - eapply conv_trans'.
       + assumption.
       + eassumption.
-      + eapply red_conv_r ; auto.
-        eapply red_context_conversion.
-        * eassumption.
+      + eapply conv_context_convp.
         * assumption.
+        * eapply red_conv_r. all: eauto.
+        * eapply conv_context_sym. all: auto.
   Qed.
 
   Equations unfold_one_fix (Γ : context) (mfix : mfixpoint term)
@@ -1639,15 +1639,15 @@ Section Conversion.
         clear.
         induction brs ; eauto.
     - eapply conv_trans' ; try eassumption.
-      eapply red_conv_r ; try assumption.
-      eapply red_zipp.
-      eapply reds_case.
-      + constructor.
-      + eapply red_context_conversion.
-        * eassumption.
-        * assumption.
-      + clear.
-        induction brs' ; eauto.
+      eapply conv_context_convp.
+      + assumption.
+      + eapply red_conv_r. 1: assumption.
+        eapply red_zipp.
+        eapply reds_case. 2: eassumption.
+        * constructor.
+        * clear.
+          induction brs' ; eauto.
+      + eapply conv_context_sym. all: auto.
   Qed.
 
   (* tProj *)
@@ -1978,10 +1978,12 @@ Section Conversion.
       destruct hx as [hx].
       pose proof (red_trans _ _ _ _ _ r1 r2') as r.
       eapply conv_trans' ; revgoals.
-      + eapply red_conv_r. 1: assumption.
-        * eapply red_context_conversion.
-          -- eassumption.
-          -- rewrite e. assumption.
+      + eapply conv_context_convp.
+        * assumption.
+        * eapply red_conv_r. 1: assumption.
+          eassumption.
+        * eapply conv_context_sym. 1: auto.
+          rewrite e. assumption.
       + assumption.
       + assumption.
   Qed.
@@ -2883,14 +2885,16 @@ Section Conversion.
     rewrite decompose_stack_appstack.
     erewrite decompose_stack_twice ; eauto. simpl.
     rewrite app_nil_r.
-    eapply red_conv_r ; try assumption.
-    rewrite stack_context_appstack in r1.
-    eapply red_context_conversion. 2: eassumption.
-    eapply red_trans ; try eassumption.
-    clear eq3. symmetry in eq2. apply decompose_stack_eq in eq2. subst.
-    rewrite stack_context_appstack in r2.
-    rewrite zipc_appstack in r2. cbn in r2.
-    assumption.
+    eapply conv_context_convp.
+    - assumption.
+    - eapply red_conv_r. 1: assumption.
+      rewrite stack_context_appstack in r1.
+      eapply red_trans ; try eassumption.
+      clear eq3. symmetry in eq2. apply decompose_stack_eq in eq2. subst.
+      rewrite stack_context_appstack in r2.
+      rewrite zipc_appstack in r2. cbn in r2.
+      assumption.
+    - eapply conv_context_sym. all: auto.
   Qed.
   Next Obligation.
     destruct eqb_term_stack eqn:e. 2: auto.

@@ -1417,6 +1417,21 @@ Section Lemmata.
     assumption.
   Qed.
 
+  Lemma conv_context_convp :
+    forall Γ Γ' leq u v,
+      conv leq Σ Γ u v ->
+      conv_context Σ Γ Γ' ->
+      conv leq Σ Γ' u v.
+  Proof.
+    intros Γ Γ' leq u v h hx.
+    destruct hΣ.
+    destruct leq.
+    - simpl. destruct h. constructor.
+      eapply conv_alt_conv_ctx. all: eauto.
+    - simpl in *. destruct h. constructor.
+      eapply cumul_conv_ctx. all: eauto.
+  Qed.
+
 End Lemmata.
 
 

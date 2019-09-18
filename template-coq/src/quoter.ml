@@ -118,22 +118,20 @@ struct
   let push_rel_context ctx (in_prop, env) = (in_prop, Environ.push_rel_context ctx env)
 
   (* From printmod.ml *)
-  let instantiate_cumulativity_info cumi =
+  let aucontext_ucontext univs =
     let open Univ in
-    let univs = ACumulativityInfo.univ_context cumi in
-    let expose ctx =
-      let inst = AUContext.instance ctx in
-      let cst = AUContext.instantiate inst ctx in
-      UContext.make (inst, cst)
-    in CumulativityInfo.make (expose univs, ACumulativityInfo.variance cumi)
+    let inst = AUContext.instance univs in
+    let cst = UContext.constraints (AUContext.repr univs) in
+    (* let cst = AUContext.instantiate inst univs in *)
+    UContext.make (inst, cst)
 
   let get_abstract_inductive_universes iu =
     match iu with
     | Declarations.Monomorphic_ind ctx -> Univ.ContextSet.to_context ctx
     | Polymorphic_ind ctx -> Univ.AUContext.repr ctx
     | Cumulative_ind cumi ->
-       let cumi = instantiate_cumulativity_info cumi in
-       Univ.CumulativityInfo.univ_context cumi  (* FIXME check also *)
+       (* let cumi = instantiate_cumulativity_info cumi in *)
+      Univ.AUContext.repr (Univ.ACumulativityInfo.univ_context cumi)  (* FIXME check also *)
 
   let quote_constant_uctx = function
     | Monomorphic_const ctx -> Q.mkMonomorphic_ctx (Q.quote_univ_contextset ctx)
@@ -146,8 +144,8 @@ struct
     | Cumulative_ind cumi ->
       (* let cumi = instantiate_cumulativity_info cumi in *)
       let ctx = Q.quote_abstract_univ_context (Univ.ACumulativityInfo.univ_context cumi) in
-let var = CArray.map_to_list Q.quote_variance (Univ.ACumulativityInfo.variance cumi) in
-       Q.mkCumulative_ctx ctx var
+      let var = CArray.map_to_list Q.quote_variance (Univ.ACumulativityInfo.variance cumi) in
+      Q.mkCumulative_ctx ctx var
 
   let quote_entries_inductive_universes iu =
     match iu with

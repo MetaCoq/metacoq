@@ -167,10 +167,9 @@ struct
     constr_mkApp (cCumulative_ctx, [| cumi' |])
 
  let quote_abstract_univ_context uctx =
-    let uctx = AUContext.repr uctx in
-    let arr = Univ.Instance.to_array (UContext.instance uctx) in
-    let idents = to_coq_listl tident (CArray.map_to_list (fun na -> quote_string (Univ.Level.to_string na))  arr) in
-    let const' = quote_univ_constraints (UContext.constraints uctx) in
+    let arr = Univ.Instance.to_array (AUContext.instance uctx) in
+    let idents = to_coq_listl tident (CArray.map_to_list (fun na -> quote_string (Univ.Level.to_string na)) arr) in
+    let const' = quote_univ_constraints (UContext.constraints (AUContext.repr uctx)) in
     constr_mkApp (tAUContextmake, [|idents; const'|])
 
 

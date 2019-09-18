@@ -7,12 +7,8 @@ Require Import Coq.Strings.Ascii.
 Require Import Coq.Bool.Bool.
 Import ListNotations.
 
-Require Import MetaCoq.Checker.Loader.
-Require Import MetaCoq.Template.Typing.
-Require Import MetaCoq.Template.kernel.Checker.
-Require Import MetaCoq.Template.Ast.
-Require Import MetaCoq.Template.Loader.
-Require Import MetaCoq.Template.utils.
+Require Import MetaCoq.Template.All.
+Require Import MetaCoq.Checker.All.
 
 Unset Template Cast Propositions.
 
@@ -31,23 +27,23 @@ Unset Printing Matching.
 Ltac typecheck := try red; cbn; intros;
   match goal with
     |- ?Σ ;;; ?Γ |- ?t : ?T =>
-    eapply (infer_correct Σ Γ t T); [constructor|vm_compute; reflexivity]
+    refine (infer_correct Σ _ _ Γ t T _ _); [reflexivity|constructor|vm_compute; reflexivity]
   end.
 Ltac infer := try red;
   match goal with
     |- ?Σ ;;; ?Γ |- ?t : ?T =>
-    eapply (infer_correct Σ Γ t T); [constructor|
-      let t' := eval vm_compute in (infer Σ Γ t) in
+    refine (infer_correct Σ _ _ Γ t T _ _); [reflexivity|constructor|
+      let t' := eval vm_compute in (infer' Σ Γ t) in
           change (t' = Checked T); reflexivity]
   end.
 
 Quote Definition natr := nat.
 
-Definition type_program (p : global_declarations * term) (ty : term) :=
-  let Σ := reconstruct_global_context (fst p) in
+Definition type_program (p : program) (ty : term) :=
+  let Σ := empty_ext (fst p) in
   Σ ;;; [] |- snd p : ty.
 
-Example typecheck_four : type_program four natr := ltac:(typecheck).
+Example typecheck_four : type_program four natr:= ltac:(typecheck).
 
 Goal { ty & type_program four ty }.
 Proof.
@@ -59,7 +55,7 @@ Qed.
 (* Eval native_compute in typecheck_program p_Plus1. *)
 
 Definition test_reduction (p : program) :=
-    let Σ := reconstruct_global_context (fst p) in
+    let Σ := empty_ext (fst p) in
     reduce (fst Σ) [] (snd p).
 
 Definition string_of_env_error e :=
@@ -159,11 +155,11 @@ Definition f2 := (forall (A:Type@{i}) (B: Prop), A -> B -> B).
 
 Quote Definition f1' := (forall (A:Type@{i}) (B: Prop), A -> B -> A). 
 
-Eval lazy in infer (nil, ConstraintSet.empty) nil f1'.
+Eval lazy in infer' (empty_ext []) nil f1'.
 
 Quote Definition f2' := (forall (A:Type@{i}) (B: Prop), A -> B -> B). 
 
-Eval lazy in infer (nil, ConstraintSet.empty) nil f2'.
+Eval lazy in infer' (empty_ext []) nil f2'.
 
 Definition f := (forall (A:Type@{i}) (B: Type@{j}), A -> B -> A).
 (* : Type@{i+1, j+1} *)
@@ -172,4 +168,4 @@ Quote Definition f' := (forall (A:Type@{i}) (B:Type@{j}), A -> B -> A).
 
 Quote Definition f'' := (forall (B: Type@{j}), B -> B). 
 
-Eval lazy in infer (nil, ConstraintSet.empty) nil f'.
+Eval lazy in infer' (empty_ext []) nil f'.

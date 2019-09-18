@@ -56,15 +56,19 @@ sig
   val quote_univ_instance : Univ.Instance.t -> quoted_univ_instance
   val quote_univ_constraints : Univ.Constraint.t -> quoted_univ_constraints
   val quote_univ_context : Univ.UContext.t -> quoted_univ_context
-  val quote_cumulative_univ_context : Univ.CumulativityInfo.t -> quoted_univ_context
-  val quote_abstract_univ_context : Univ.AUContext.t -> quoted_univ_context
-  val quote_inductive_universes : Entries.inductive_universes -> quoted_inductive_universes
+  val quote_univ_contextset : Univ.ContextSet.t -> quoted_univ_contextset
+  val quote_variance : Univ.Variance.t -> quoted_variance
+  val quote_abstract_univ_context : Univ.AUContext.t -> quoted_abstract_univ_context
+
+  val mkMonomorphic_ctx : quoted_univ_contextset -> quoted_universes_decl
+  val mkPolymorphic_ctx : quoted_abstract_univ_context -> quoted_universes_decl
+  val mkCumulative_ctx : quoted_abstract_univ_context -> quoted_variance list -> quoted_universes_decl
 
   val quote_mind_params : (quoted_ident * (t,t) sum) list -> quoted_mind_params
   val quote_mind_finiteness : Declarations.recursivity_kind -> quoted_mind_finiteness
   val quote_mutual_inductive_entry :
     quoted_mind_finiteness * quoted_mind_params * quoted_ind_entry list *
-    quoted_inductive_universes ->
+    quoted_universes_decl ->
     quoted_mind_entry
 
   val quote_entry : (quoted_definition_entry, quoted_mind_entry) sum option -> quoted_entry
@@ -77,22 +81,24 @@ sig
                                  * (quoted_ident * t (* projection type *)) list
                                  -> quoted_one_inductive_body
 
-  val mk_mutual_inductive_body : quoted_int (* number of params (no lets) *)
+  val mk_mutual_inductive_body :
+    quoted_mind_finiteness
+    -> quoted_int (* number of params (no lets) *)
     -> quoted_context (* parameters context with lets *)
     -> quoted_one_inductive_body list
-    -> quoted_univ_context
+    -> quoted_universes_decl
     -> quoted_mutual_inductive_body
 
-  val mk_constant_body : t (* type *) -> t option (* body *) -> quoted_univ_context -> quoted_constant_body
+  val mk_constant_body : t (* type *) -> t option (* body *) -> quoted_universes_decl -> quoted_constant_body
 
   val mk_inductive_decl : quoted_kernel_name -> quoted_mutual_inductive_body -> quoted_global_decl
 
   val mk_constant_decl : quoted_kernel_name -> quoted_constant_body -> quoted_global_decl
 
-  val empty_global_declartions : quoted_global_declarations
-  val add_global_decl : quoted_global_decl -> quoted_global_declarations -> quoted_global_declarations
+  val empty_global_declartions : unit -> quoted_global_env
+  val add_global_decl : quoted_global_decl -> quoted_global_env -> quoted_global_env
 
-  val mk_program : quoted_global_declarations -> t -> quoted_program
+  val mk_program : quoted_global_env -> t -> quoted_program
 end
 
 
@@ -112,35 +118,44 @@ struct
   let push_rel_context ctx (in_prop, env) = (in_prop, Environ.push_rel_context ctx env)
 
   (* From printmod.ml *)
-  let instantiate_cumulativity_info cumi =
+  let aucontext_ucontext univs =
     let open Univ in
-    let univs = ACumulativityInfo.univ_context cumi in
-    let expose ctx =
-      let inst = AUContext.instance ctx in
-      let cst = AUContext.instantiate inst ctx in
-      UContext.make (inst, cst)
-    in CumulativityInfo.make (expose univs, ACumulativityInfo.variance cumi)
+    let inst = AUContext.instance univs in
+    let cst = UContext.constraints (AUContext.repr univs) in
+    (* let cst = AUContext.instantiate inst univs in *)
+    UContext.make (inst, cst)
 
   let get_abstract_inductive_universes iu =
     match iu with
     | Declarations.Monomorphic_ind ctx -> Univ.ContextSet.to_context ctx
     | Polymorphic_ind ctx -> Univ.AUContext.repr ctx
     | Cumulative_ind cumi ->
-       let cumi = instantiate_cumulativity_info cumi in
-       Univ.CumulativityInfo.univ_context cumi  (* FIXME check also *)
+       (* let cumi = instantiate_cumulativity_info cumi in *)
+      Univ.AUContext.repr (Univ.ACumulativityInfo.univ_context cumi)  (* FIXME check also *)
 
   let quote_constant_uctx = function
-    | Monomorphic_const ctx -> Q.quote_univ_context (Univ.ContextSet.to_context ctx)
-    | Polymorphic_const ctx -> Q.quote_abstract_univ_context ctx
+    | Monomorphic_const ctx -> Q.mkMonomorphic_ctx (Q.quote_univ_contextset ctx)
+    | Polymorphic_const ctx -> Q.mkPolymorphic_ctx (Q.quote_abstract_univ_context ctx)
 
-  let quote_abstract_inductive_universes iu =
+  let quote_declarations_inductive_universes iu =
     match iu with
-    | Monomorphic_ind ctx ->
-       Q.quote_univ_context (Univ.ContextSet.to_context ctx)
-    | Polymorphic_ind ctx -> Q.quote_abstract_univ_context ctx
+    | Monomorphic_ind ctx -> Q.mkMonomorphic_ctx (Q.quote_univ_contextset ctx)
+    | Polymorphic_ind ctx -> Q.mkPolymorphic_ctx (Q.quote_abstract_univ_context ctx)
     | Cumulative_ind cumi ->
-       let cumi = instantiate_cumulativity_info cumi in (* FIXME what is the point of that *)
-       Q.quote_cumulative_univ_context cumi
+      (* let cumi = instantiate_cumulativity_info cumi in *)
+      let ctx = Q.quote_abstract_univ_context (Univ.ACumulativityInfo.univ_context cumi) in
+      let var = CArray.map_to_list Q.quote_variance (Univ.ACumulativityInfo.variance cumi) in
+      Q.mkCumulative_ctx ctx var
+
+  let quote_entries_inductive_universes iu =
+    match iu with
+    | Monomorphic_ind_entry ctx -> Q.mkMonomorphic_ctx (Q.quote_univ_contextset ctx)
+    (* | Polymorphic_ind_entry ctx -> Q.mkPolymorphic_ctx (Q.quote_univ_context ctx)
+     * | Cumulative_ind_entry cumi ->
+     *   (\* let cumi = instantiate_cumulativity_info cumi in *\)
+     *   (\* FIXME variance is thrown away *\)
+     *    Q.mkCumulative_ctx (Q.quote_abstract_univ_context (Univ.ACumulativityInfo.univ_context cumi)) *)
+    | _ -> failwith "todo sim"
 
   let quote_inductive' (ind, i) =
     Q.quote_inductive (Q.quote_kn (Names.MutInd.canonical ind), Q.quote_int i)
@@ -228,6 +243,7 @@ struct
          let kn = Names.Constant.canonical (Names.Projection.constant p) in
          let t', acc = quote_term acc env c in
          (Q.mkProj p' t', add_constant kn acc)
+      | Constr.Meta _ -> failwith "Meta not supported by TemplateCoq"
       in
       let in_prop, env' = env in
       if is_cast_prop () && not in_prop then
@@ -336,9 +352,10 @@ struct
       in
       let nparams = Q.quote_int mib.Declarations.mind_nparams in
       let paramsctx, acc = quote_rel_context acc env mib.Declarations.mind_params_ctxt in
-      let uctx = quote_abstract_inductive_universes mib.Declarations.mind_universes in
+      let uctx = quote_declarations_inductive_universes mib.Declarations.mind_universes in
       let bodies = List.map Q.mk_one_inductive_body (List.rev ls) in
-      let mind = Q.mk_mutual_inductive_body nparams paramsctx bodies uctx in
+      let finite = Q.quote_mind_finiteness mib.Declarations.mind_finite in
+      let mind = Q.mk_mutual_inductive_body finite nparams paramsctx bodies uctx in
       Q.mk_inductive_decl ref_name mind, acc
     in ((fun acc env -> quote_term acc (false, env)),
         (fun acc env -> quote_minductive_type acc (false, env)))
@@ -428,7 +445,7 @@ struct
       (x,y)
     in
     let (tm, _) = quote_rem () env trm in
-    let decls =  List.fold_left (fun acc d -> Q.add_global_decl d acc) Q.empty_global_declartions !constants in
+    let decls =  List.fold_left (fun acc d -> Q.add_global_decl d acc) (Q.empty_global_declartions ()) !constants in
     Q.mk_program decls tm
 
   let quote_one_ind envA envC (mi:Entries.one_inductive_entry) =
@@ -486,7 +503,7 @@ since  [absrt_info] is a private type *)
     (* env for quoting arities of inductives -- just push the params *)
     let (envA,_) = List.fold_left (process_local_entry (fun _ _ _ _ _ -> ())) (env,()) (List.rev (t.mind_entry_params)) in
     let is = List.map (quote_one_ind envA envC) t.mind_entry_inds in
-   let uctx = Q.quote_inductive_universes t.mind_entry_universes in
+   let uctx = quote_entries_inductive_universes t.mind_entry_universes in
     Q.quote_mutual_inductive_entry (mf, mp, is, uctx)
 
   let quote_constant_body bypass env evm (cd : constant_body) =
@@ -524,4 +541,6 @@ since  [absrt_info] is a private type *)
     let entry = quote_entry_aux bypass env evm t in
     Q.quote_entry entry
 
+  let quote_ugraph (g : UGraph.t) =
+    Q.quote_univ_constraints (fst (UGraph.constraints_of_universes g))
 end

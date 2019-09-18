@@ -54,7 +54,7 @@ VERNAC COMMAND EXTEND Make_tests CLASSIFIED AS QUERY
     | [ "Test" "Quote" constr(def) ] ->
       [ let (evm,env) = Pfedit.get_current_context () in
         let (evm, def) = Constrintern.interp_open_constr env evm def in
-        let (evm, pgm) = EConstr.fresh_global env evm Template_monad.ptmTestQuote in
+        let (evm, pgm) = EConstr.fresh_global env evm (Lazy.force Template_monad.ptmTestQuote) in
         let pgm = Constr.mkApp (EConstr.to_constr evm pgm, [|Constr.mkRel 0; EConstr.to_constr evm def|]) in
         run_template_program env evm pgm ]
 END;;
@@ -63,7 +63,7 @@ VERNAC COMMAND EXTEND Make_vernac CLASSIFIED AS SIDEFF
     | [ "Quote" "Definition" ident(name) ":=" constr(def) ] ->
       [ let (evm,env) = Pfedit.get_current_context () in
         let (evm, def) = Constrintern.interp_open_constr env evm def in
-        let (evm, pgm) = EConstr.fresh_global env evm Template_monad.ptmQuoteDefinition in
+        let (evm, pgm) = EConstr.fresh_global env evm (Lazy.force Template_monad.ptmQuoteDefinition) in
         let pgm = Constr.mkApp (EConstr.to_constr evm pgm, [|Constr_quoter.TemplateCoqQuoter.quote_ident name; Constr.mkRel 0; EConstr.to_constr evm def|]) in
         run_template_program env evm pgm ]
 END;;
@@ -75,7 +75,7 @@ VERNAC COMMAND EXTEND Make_vernac_reduce CLASSIFIED AS SIDEFF
         (* TODO : implem quoting of tactic reductions so that we can use ptmQuoteDefinitionRed *)
         let (evm, rd) = Tacinterp.interp_redexp env evm rd in
 	let (evm, def) = Quoter.reduce env evm rd (EConstr.to_constr evm def) in
-        let (evm, pgm) = EConstr.fresh_global env evm Template_monad.ptmQuoteDefinition in
+        let (evm, pgm) = EConstr.fresh_global env evm (Lazy.force Template_monad.ptmQuoteDefinition) in
         let pgm = Constr.mkApp (EConstr.to_constr evm pgm, [|Constr_quoter.TemplateCoqQuoter.quote_ident name; Constr.mkRel 0; def|]) in
         run_template_program env evm pgm ]
 END;;
@@ -84,7 +84,7 @@ VERNAC COMMAND EXTEND Make_recursive CLASSIFIED AS SIDEFF
     | [ "Quote" "Recursively" "Definition" ident(name) ":=" constr(def) ] ->
       [ let (evm,env) = Pfedit.get_current_context () in
         let (evm, def) = Constrintern.interp_open_constr env evm def in
-        let (evm, pgm) = EConstr.fresh_global env evm Template_monad.ptmQuoteRecDefinition in
+        let (evm, pgm) = EConstr.fresh_global env evm (Lazy.force Template_monad.ptmQuoteRecDefinition) in
         let pgm = Constr.mkApp (EConstr.to_constr evm pgm, [|Constr_quoter.TemplateCoqQuoter.quote_ident name; Constr.mkRel 0; EConstr.to_constr evm def|]) in
         run_template_program env evm pgm ]
 END;;
@@ -93,7 +93,7 @@ VERNAC COMMAND EXTEND Unquote_vernac CLASSIFIED AS SIDEFF
     | [ "Make" "Definition" ident(name) ":=" constr(def) ] ->
       [ let (evm, env) = Pfedit.get_current_context () in
         let (evm, def) = Constrintern.interp_open_constr env evm def in
-        let (evm, pgm) = EConstr.fresh_global env evm Template_monad.ptmMkDefinition in
+        let (evm, pgm) = EConstr.fresh_global env evm (Lazy.force Template_monad.ptmMkDefinition) in
         let pgm = Constr.mkApp (EConstr.to_constr evm pgm, [|Constr_quoter.TemplateCoqQuoter.quote_ident name; EConstr.to_constr evm def|]) in
         run_template_program env evm pgm ]
 END;;
@@ -102,7 +102,7 @@ VERNAC COMMAND EXTEND Unquote_inductive CLASSIFIED AS SIDEFF
     | [ "Make" "Inductive" constr(def) ] ->
       [ let (evm, env) = Pfedit.get_current_context () in
         let (evm, def) = Constrintern.interp_open_constr env evm def in
-        let (evm, pgm) = EConstr.fresh_global env evm Template_monad.ptmMkInductive in
+        let (evm, pgm) = EConstr.fresh_global env evm (Lazy.force Template_monad.ptmMkInductive) in
         let pgm = Constr.mkApp (EConstr.to_constr evm pgm, [|EConstr.to_constr evm def|]) in
         run_template_program env evm pgm ]
 END;;

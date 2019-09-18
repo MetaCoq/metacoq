@@ -48,18 +48,18 @@ Proof.
   fix auxl' 1.
   destruct l; constructor; [|apply auxl'].
   apply auxt.
-  revert l.
+  revert brs.
   fix auxl' 1.
-  destruct l; constructor; [|apply auxl'].
+  destruct brs; constructor; [|apply auxl'].
   apply auxt.
 
-  revert m.
+  revert mfix.
   fix auxm 1.
-  destruct m; constructor; [|apply auxm].
+  destruct mfix; constructor; [|apply auxm].
   split; apply auxt.
-  revert m.
+  revert mfix.
   fix auxm 1.
-  destruct m; constructor; [|apply auxm].
+  destruct mfix; constructor; [|apply auxm].
   split; apply auxt.
 Defined.
 
@@ -105,18 +105,17 @@ Proof.
   fix auxl' 1.
   destruct l; constructor; [|apply auxl'].
   apply auxt.
-  revert l.
+  revert brs.
   fix auxl' 1.
-  destruct l; constructor; [|apply auxl'].
+  destruct brs; constructor; [|apply auxl'].
   apply auxt.
 
-  revert m.
+  revert mfix.
   fix auxm 1.
-  destruct m; constructor; [|apply auxm].
+  destruct mfix; constructor; [|apply auxm].
   split; apply auxt.
-  revert m.
+  revert mfix.
   fix auxm 1.
-  destruct m; constructor; [|apply auxm].
+  destruct mfix; constructor; [|apply auxm].
   split; apply auxt.
 Defined.
-

@@ -1,0 +1,27 @@
+-I src
+-Q src MetaCoq.Template
+-R theories MetaCoq.Template
+
+# the MetaCoq plugin
+src/tm_util.ml
+
+src/quoted.ml
+src/quoter.ml
+src/constr_quoted.ml
+src/constr_quoter.ml
+
+src/denoter.ml
+src/denote.ml
+src/constr_denoter.ml
+
+src/g_template_coq.ml4
+src/template_coq.mlpack
+src/template_monad.mli
+src/template_monad.ml
+src/run_template_monad.mli
+src/run_template_monad.ml
+src/plugin_core.mli
+src/plugin_core.ml
+
+theories/Loader.v
+theories/All.v

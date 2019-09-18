@@ -1,0 +1,24 @@
+-I ../template-coq/build
+-I src
+-R theories MetaCoq.Checker
+
+theories/wGraph.v
+theories/uGraph.v
+theories/LibHypsNaming.v
+theories/WfInv.v
+theories/Typing.v
+theories/TypingWf.v
+theories/Generation.v
+theories/WeakeningEnv.v
+theories/Closed.v
+theories/Weakening.v
+theories/Substitution.v
+theories/MetaTheory.v
+theories/kernel/Checker.v
+theories/WcbvEval.v
+theories/Retyping.v
+theories/Normal.v
+theories/All.v
+
+# Extraction
+theories/Extraction.v

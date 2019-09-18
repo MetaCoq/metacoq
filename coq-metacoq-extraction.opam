@@ -28,7 +28,7 @@ depends: [
   "coq-metacoq-checker" {= version}
   "coq-metacoq-pcuic" {= version}
 ]
-synopsis: "Implementation and verification of Coq's \"extraction\" procedure."
+synopsis: "Implementation and verification of Coq's \"extraction\" procedure"
 description: """
 MetaCoq is a meta-programming framework for Coq.
 

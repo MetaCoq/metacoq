@@ -1,0 +1,11 @@
+--- gen-src/cRelationClasses.mli.orig	2019-07-18 10:50:01.000000000 -0400
++++ gen-src/cRelationClasses.mli	2019-07-18 10:49:53.000000000 -0400
+@@ -104,7 +104,7 @@
+ val flip_Equivalence :
+   ('a1, 'a2) coq_Equivalence -> ('a1, 'a2) coq_Equivalence
+ 
+-val eq_equivalence : ('a1, __) coq_Equivalence
++val eq_equivalence : (__, __) coq_Equivalence
+ 
+ val iff_equivalence : (__, __) coq_Equivalence
+ 

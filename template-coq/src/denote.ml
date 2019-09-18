@@ -7,8 +7,6 @@ open Denoter
 
 (* todo: the recursive call is uneeded provided we call it on well formed terms *)
 
-let print_term (u: Constr.t) : Pp.t = Printer.pr_constr u
-
 let strict_unquote_universe_mode = ref true
 
 let map_evm (f : 'a -> 'b -> 'a * 'c) (evm : 'a) (l : 'b list) : 'a * ('c list) =

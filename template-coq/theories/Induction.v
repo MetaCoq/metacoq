@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From MetaCoq.Template Require Import BasicAst Ast AstUtils.
+From MetaCoq Require Import BasicAst Ast AstUtils.
 Require Import List Program.
 Require Import BinPos.
 Require Import Coq.Arith.Compare_dec Bool.

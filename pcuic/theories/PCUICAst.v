@@ -16,22 +16,21 @@ Open Scope pcuic.
    Casts are absent as well. *)
 
 Inductive term : Set :=
-| tRel       : nat -> term
-| tVar       : ident -> term (* For free variables (e.g. in a goal) *)
-| tEvar      : nat -> list term -> term
-| tSort      : universe -> term
-| tProd      : name -> term (* the type *) -> term -> term
-| tLambda    : name -> term (* the type *) -> term -> term
-| tLetIn     : name -> term (* the term *) -> term (* the type *) -> term -> term
-| tApp       : term -> term -> term
-| tConst     : kername -> universe_instance -> term
-| tInd       : inductive -> universe_instance -> term
-| tConstruct : inductive -> nat -> universe_instance -> term
-| tCase      : (inductive * nat) (* # of parameters *) -> term (* type info *)
-               -> term (* discriminee *) -> list (nat * term) (* branches *) -> term
-| tProj      : projection -> term -> term
-| tFix       : mfixpoint term -> nat -> term
-| tCoFix     : mfixpoint term -> nat -> term.
+| tRel (n : nat)
+| tVar (i : ident) (* For free variables (e.g. in a goal) *)
+| tEvar (n : nat) (l : list term)
+| tSort (u : universe)
+| tProd (na : name) (A B : term)
+| tLambda (na : name) (A t : term)
+| tLetIn (na : name) (b B t : term) (* let na := b : B in t *)
+| tApp (u v : term)
+| tConst (k : kername) (ui : universe_instance)
+| tInd (ind : inductive) (ui : universe_instance)
+| tConstruct (ind : inductive) (n : nat) (ui : universe_instance)
+| tCase (indn : inductive * nat) (p c : term) (brs : list (nat * term)) (* # of parameters/type info/discriminee/branches *)
+| tProj (p : projection) (c : term)
+| tFix (mfix : mfixpoint term) (idx : nat)
+| tCoFix (mfix : mfixpoint term) (idx : nat).
 
 Fixpoint mkApps t us :=
   match us with
@@ -61,12 +60,12 @@ Definition isLambda t :=
 
 Record parameter_entry := {
   parameter_entry_type      : term;
-  parameter_entry_universes : universe_context }.
+  parameter_entry_universes : universes_decl }.
 
 Record definition_entry := {
   definition_entry_type      : term;
   definition_entry_body      : term;
-  definition_entry_universes : universe_context;
+  definition_entry_universes : universes_decl;
   definition_entry_opaque    : bool }.
 
 
@@ -94,11 +93,6 @@ Inductive constant_entry :=
   [x1:X1;...;xn:Xn].
 *)
 
-Inductive recursivity_kind :=
-  | Finite (* = inductive *)
-  | CoFinite (* = coinductive *)
-  | BiFinite (* = non-recursive, like in "Record" definitions *).
-
 Inductive local_entry : Set :=
 | LocalDef : term -> local_entry (* local let binding *)
 | LocalAssum : term -> local_entry.
@@ -118,7 +112,7 @@ Record mutual_inductive_entry := {
   mind_entry_finite    : recursivity_kind;
   mind_entry_params    : list (ident * local_entry);
   mind_entry_inds      : list one_inductive_entry;
-  mind_entry_universes : universe_context;
+  mind_entry_universes : universes_decl;
   mind_entry_private   : option bool
   (* Private flag for sealing an inductive definition in an enclosing
      module. Not handled by Template Coq yet. *) }.
@@ -166,30 +160,31 @@ Record one_inductive_body := {
 
 (** See [mutual_inductive_body] from [declarations.ml]. *)
 Record mutual_inductive_body := {
+  ind_finite : recursivity_kind;
   ind_npars : nat;
   ind_params : context;
   ind_bodies : list one_inductive_body ;
-  ind_universes : universe_context }.
+  ind_universes : universes_decl }.
 
 (** See [constant_body] from [declarations.ml] *)
 Record constant_body := {
     cst_type : term;
     cst_body : option term;
-    cst_universes : universe_context }.
+    cst_universes : universes_decl }.
 
 Inductive global_decl :=
 | ConstantDecl : kername -> constant_body -> global_decl
 | InductiveDecl : kername -> mutual_inductive_body -> global_decl.
 
-Definition global_declarations := list global_decl.
+Definition global_env := list global_decl.
 
 (** A context of global declarations + global universe constraints,
     i.e. a global environment *)
 
-Definition global_context : Type := global_declarations * constraints.
+Definition global_env_ext : Type := global_env * universes_decl.
 
 (** *** Programs
 
   A set of declarations and a term, as produced by [Quote Recursively]. *)
 
-Definition program : Type := global_declarations * term.
+Definition program : Type := global_env * term.

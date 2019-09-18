@@ -1,4 +1,6 @@
-Require Import Ascii String ZArith List utils.
+From Coq Require Import Ascii String ZArith List Bool.
+From Coq Require Import MSetWeakList MSetFacts MSetProperties.
+From MetaCoq.Template Require Import utils BasicAst config.
 Import ListNotations.
 
 Module Level.
@@ -44,94 +46,62 @@ Module Level.
     end.
   (** Comparison function *)
 
-  (* Definition level_dec (l1 l2 : Level.t) : {l1 = l2}+{l1 <> l2}. *)
-  (*   decide equality. apply string_dec. apply Peano_dec.eq_nat_dec. *)
-  (* Defined. *)
-  (* Definition equal (l1 l2 : Level.t) : bool *)
-  (*   := if level_dec l1 l2 then true else false. *)
+  Definition eq_dec (l1 l2 : t) : {l1 = l2}+{l1 <> l2}.
+  Proof.
+    decide equality. apply string_dec. apply Peano_dec.eq_nat_dec.
+  Defined.
+
   Definition equal (l1 l2 : Level.t) : bool
     := match compare l1 l2 with Eq => true | _ => false end.
-  (** Equality function *)
-
-  (* val hash : t -> int *)
-  (* val make : Names.DirPath.t -> int -> t *)
-  (* (** Create a new universe level from a unique identifier and an associated *)
-  (*     module path. *) *)
-  (* val pr : t -> Pp.std_ppcmds *)
-  (* (** Pretty-printing *) *)
-  (* val to_string : t -> string *)
-  (* (** Debug printing *) *)
-  (* val var : int -> t *)
-  (* val var_index : t -> int option *)
 End Level.
 
-Require FSets.FSetWeakList.
-Require FSets.FMapWeakList.
 Module LevelDecidableType.
    Definition t : Type := Level.t.
    Definition eq : t -> t -> Prop := eq.
    Definition eq_refl : forall x : t, eq x x := @eq_refl _.
    Definition eq_sym : forall x y : t, eq x y -> eq y x := @eq_sym _.
    Definition eq_trans : forall x y z : t, eq x y -> eq y z -> eq x z := @eq_trans _.
-   Definition eq_equiv : RelationClasses.Equivalence eq.
-   Proof. constructor. red. apply eq_refl. red. apply eq_sym. red. apply eq_trans. Defined.
-   Definition eq_dec : forall x y : t, {eq x y} + {~ eq x y}.
-     unfold eq. decide equality. apply string_dec. apply Peano_dec.eq_nat_dec.
-   Defined.
+   Definition eq_equiv : RelationClasses.Equivalence eq := _.
+   Definition eq_dec : forall x y : t, {eq x y} + {~ eq x y} := Level.eq_dec.
 End LevelDecidableType.
 Module LevelSet <: (MSetInterface.WSetsOn LevelDecidableType) := MSets.MSetWeakList.Make LevelDecidableType.
-Module LevelMap := FSets.FMapWeakList.Make LevelDecidableType.
+Module LevelSetFact := WFactsOn LevelDecidableType LevelSet.
+Module LevelSetProp := WPropertiesOn LevelDecidableType LevelSet.
 
 Definition universe_level := Level.t.
 
 
 Module Universe.
   Module Expr.
-    Definition t : Set := Level.t * bool. (* level+1 if true *)
+    (* level+1 if true. Except if Prop -> boolean ignored *)
+    Definition t : Set := Level.t * bool.
 
+    (* Warning: (lProp, true) represents also Prop *)
     Definition is_small (e : t) : bool :=
       match e with
-      | (l, false) => Level.is_small l
+      | (Level.lProp, _)
+      | (Level.lSet, false) => true
       | _ => false
       end.
 
-    Inductive super_result :=
-    | SuperSame (_ : bool)
-    (* The level expressions are in cumulativity relation. boolean
-           indicates if left is smaller than right?  *)
-    | SuperDiff (_ : comparison).
-    (* The level expressions are unrelated, the comparison result
-           is canonical *)
-
-    (** [super u v] compares two level expressions,
-       returning [SuperSame] if they refer to the same level at potentially different
-       increments or [SuperDiff] if they are different. The booleans indicate if the
-       left expression is "smaller" than the right one in both cases. *)
-    Definition super (x y : t) : super_result :=
-      match Level.compare (fst x) (fst y) with
-      | Eq => SuperSame (bool_lt' (snd x) (snd y))
-      | cmp =>
-	  match x, y with
-	  | (l, false), (l', false) =>
-	    match l, l' with
-	    | Level.lProp, Level.lProp => SuperSame false
-	    | Level.lProp, _ => SuperSame true
-	    | _, Level.lProp => SuperSame false
-	    | _, _ => SuperDiff cmp
-            end
-	  | _, _ => SuperDiff cmp
-          end
-      end.
-
-
     Definition is_level (e : t) : bool :=
       match e with
+      | (Level.lProp, _)
       | (_, false) => true
       | _ => false
       end.
 
+    Definition is_prop (e : t) : bool :=
+      match e with
+      | (Level.lProp, _) => true
+      | _ => false
+      end.
+
     Definition equal (e1 e2 : t) : bool
-      := Level.equal (fst e1) (fst e2) && Bool.eqb (snd e1) (snd e2).
+      := match e1, e2 with
+         | (Level.lProp, _), (Level.lProp, _) => true
+         | (l1, b1), (l2, b2) => Level.equal l1 l2 && Bool.eqb b1 b2
+         end.
 
     Definition get_level (e : t) : Level.t := fst e.
 
@@ -140,126 +110,96 @@ Module Universe.
     Definition type1 : t := (Level.set, true).
   End Expr.
 
-  (** INVARIANTS: not empty, sorted ??, no duplicate *)
   Definition t : Set := non_empty_list Expr.t.
 
-  Definition universe_coercion : t -> list Expr.t := @projT1 _ _.
-  Coercion universe_coercion : t >-> list.
-
-
-  (* val compare : t -> t -> int *)
-  (* (** Comparison function *) *)
-
   Definition equal (u1 u2 : t) : bool :=
-    forallb2 Expr.equal u1 u2.
-  (* Equality function on formal universes *)
-  (* val hash : t -> int *)
-  (* (** Hash function *) *)
+    NEL.forallb2 Expr.equal u1 u2.
 
   Definition make (l : Level.t) : t
-    := make_non_empty_list (l, false) [].
+    := NEL.sing (l, false).
   (** Create a universe representing the given level. *)
 
   Definition make' (e : Expr.t) : t
-    := make_non_empty_list e [].
+    := NEL.sing e.
 
   Definition make'' (e : Expr.t) (u : list Expr.t) : t
-    := make_non_empty_list e u.
-  (* val pr : t -> Pp.std_ppcmds *)
-  (* (** Pretty-printing *) *)
-  (* val pr_with : (Level.t -> Pp.std_ppcmds) -> t -> Pp.std_ppcmds *)
+    := NEL.cons' e u.
 
+  (* FIXME: take duplicates in account *)
   Definition is_level (u : t) : bool :=
-    match (u : list _) with
-    | [(_, false)] => true
+    match u with
+    | NEL.sing e => Expr.is_level e
     | _ => false
     end.
   (** Test if the universe is a level or an algebraic universe. *)
 
   Definition is_levels (u : t) : bool :=
-    forallb Expr.is_level u.
+    NEL.forallb Expr.is_level u.
   (** Test if the universe is a lub of levels or contains +n's. *)
 
   Definition level (u : t) : option Level.t :=
-    match (u : list _) with
-    | [(l, false)] => Some l
+    match u with
+    | NEL.sing (Level.lProp, _) => Some Level.lProp
+    | NEL.sing (l, false) => Some l
     | _ => None
     end.
   (** Try to get a level out of a universe, returns [None] if it
       is an algebraic universe. *)
 
-  Definition levels (u : t) : list Level.t :=
-    LevelSet.elements (fold_left (fun s '(l, _) => LevelSet.add l s)
-                                 u LevelSet.empty).
-  (** Get the levels inside the universe, forgetting about increments *)
+  (* Definition levels (u : t) : list Level.t := *)
+  (*   LevelSet.elements (NEL.fold_left (fun s '(l, _) => LevelSet.add l s) *)
+  (*                                u LevelSet.empty). *)
+  (* (** Get the levels inside the universe, forgetting about increments *) *)
 
   Definition is_small (u : t) : bool :=
-    match (u : list _) with
-    | [e] => Expr.is_small e
-    | _ => false
-    end.
+    NEL.forallb Expr.is_small u.
+
+  Definition is_prop (u : t) : bool :=
+    NEL.forallb Expr.is_prop u.
 
   Definition type0m : t := make Level.prop.
   Definition type0 : t := make Level.set.
   Definition type1  :t := make' Expr.type1.
 
-  Definition super (u : Level.t) : t :=
-    if Level.is_small u then type1
-    else make' (u, true).
-  (** The universe strictly above *)
+  Definition super (l : Level.t) : t :=
+    if Level.is_small l then type1
+    else make' (l, true).
+  (** The universe strictly above FOR TYPING (not cumulativity) *)
 
-  Fixpoint insert {A} `{ComparableType A} (x : A) (l : list A) :=
-    match l with
-    | [] => [x]
-    | y :: l' =>  match compare x y with
-                 | Eq => l
-                 | Lt => x :: l
-                 | Gt => y :: (insert x l')
-                 end
-    end.
+  Definition try_suc (u : t) : t :=
+    NEL.map (fun '(l, b) =>  (l, true)) u.
 
-  Fixpoint merge_univs (fuel : nat) (l1 l2 : list Expr.t) : list Expr.t :=
-    match fuel with
-    | O => l1
-    | S fuel => match l1, l2 with
-               | [], _ => l2
-               | _, [] => l1
-               | h1 :: t1, h2 :: t2 =>
-                 match Expr.super h1 h2 with
-	         | Expr.SuperSame true (* h1 < h2 *) => merge_univs fuel t1 l2
-	         | Expr.SuperSame false => merge_univs fuel l1 t2
-	         | Expr.SuperDiff Lt (* h1 < h2 is name order *)
-                   => h1 :: (merge_univs fuel t1 l2)
-                 | _ => h2 :: (merge_univs fuel l1 t2)
-                 end
-               end
-    end.
+  (* FIXME: don't duplicate *)
+  Definition sup (u1 u2 : t) : t := NEL.app u1 u2.
+  (** The l.u.b. of 2 universes (naive because of duplicates) *)
 
-  Program Definition sup (u1 u2 : t) : t :=
-    (merge_univs (length u1 + length u2 + 1) u1 u2; _).
-  Next Obligation.
-  Admitted. (* TODO *)
-  (** The l.u.b. of 2 universes *)
+  (* Definition existsb (P : Expr.t -> bool) (u : t) : bool := NEL.existsb P u. *)
+  Definition for_all (P : Expr.t -> bool) (u : t) : bool := NEL.forallb P u.
 
-  Definition existsb : (Expr.t -> bool) -> t -> bool := @existsb _.
-  Definition for_all : (Expr.t -> bool) -> t -> bool := @forallb _.
+  (** Type of product *)
+  Definition sort_of_product (domsort rangsort : t) :=
+    (* Prop impredicativity *)
+    if Universe.is_prop rangsort then rangsort
+    else Universe.sup domsort rangsort.
 
-  (* Type of product *)
-
-  Definition sort_of_product (domsort rangsort:t) :=
-  match (domsort, rangsort) with
-  (* Product rule (s,Prop,Prop) *)
-    | (_,([(Level.lProp,false)]; _))  => rangsort
-    (* (* Product rule (Type_i,Type_i,Type_i) *) *)
-    | (u1,u2) => Universe.sup u1 u2
-  end.
-
-           
 End Universe.
 
 Definition universe := Universe.t.
-Definition universe_coercion : universe -> list Universe.Expr.t := @projT1 _ _.
+Definition universe_coercion : universe -> list Universe.Expr.t := NEL.to_list.
 Coercion universe_coercion : universe >-> list.
+
+
+(** Sort families *)
+
+Inductive sort_family : Set := InProp | InSet | InType.
+
+(** Family of a universe [u]. *)
+
+Definition universe_family (u : universe) :=
+  if Universe.is_prop u then InProp
+  else if Universe.is_small u then InSet
+  else InType.
+
 
 Module ConstraintType.
   Inductive t : Set := Lt | Le | Eq.
@@ -268,7 +208,6 @@ End ConstraintType.
 Definition constraint_type := ConstraintType.t.
 Definition univ_constraint : Set := universe_level * ConstraintType.t * universe_level.
 
-Require MSets.MSetWeakList.
 Module UnivConstraintDec.
   Definition t : Set := univ_constraint.
   Definition eq : t -> t -> Prop := eq.
@@ -288,35 +227,13 @@ Definition make_univ_constraint : universe_level -> constraint_type -> universe_
     the lowest universe *)
 Definition constraints : Type := ConstraintSet.t.  (* list univ_constraint *)
 
-(* val empty_constraint : constraints *)
-(* val union_constraint : constraints -> constraints -> constraints *)
-(* val eq_constraint : constraints -> constraints -> bool *)
+Definition empty_constraint : constraints := ConstraintSet.empty.
 
-(** A value with universe constraints. *)
-Definition constrained A : Type := A * constraints.
-
-(** Constrained *)
-Definition constraints_of {A} : constrained A -> constraints := snd.
-
-(** Enforcing constraints. *)
-
-Definition constraint_function A : Type := A -> A -> constraints -> constraints.
-
+(* Definition constraint_function A : Type := A -> A -> constraints -> constraints. *)
 (* val enforce_eq : universe constraint_function *)
 (* val enforce_leq : universe constraint_function *)
 (* val enforce_eq_level : universe_level constraint_function *)
 (* val enforce_leq_level : universe_level constraint_function *)
-
-(* (** {6 Substitution} *) *)
-
-(* type universe_subst_fn = universe_level -> universe *)
-(* type universe_level_subst_fn = universe_level -> universe_level *)
-
-(* (** A full substitution, might involve algebraic universes *) *)
-(* type universe_subst = universe universe_map *)
-(* type universe_level_subst = universe_level universe_map *)
-
-(* val level_subst_of : universe_subst_fn -> universe_level_subst_fn *)
 
 
 (** {6 Universe instances} *)
@@ -334,50 +251,21 @@ Module Instance.
     | _ => false
     end.
 
-  (* val of_array : Level.t array -> t *)
-  (* val to_array : t -> Level.t array *)
-  (* val append : t -> t -> t *)
-  (* (** To concatenate two instances, used for discharge *) *)
-
   Definition equal (i j : t) :=
     forallb2 Level.equal i j.
 
   Definition equal_upto (f : Level.t -> Level.t -> bool) (i j : t) :=
     forallb2 f i j.
-
-  (* val equal : t -> t -> bool *)
-  (* (** Equality *) *)
-  (* val length : t -> int *)
-  (* (** Instance length *) *)
-  (* val hcons : t -> t *)
-  (* (** Hash-consing. *) *)
-  (* val hash : t -> int *)
-  (* (** Hash value *) *)
-  (* val share : t -> t * int *)
-  (* (** Simultaneous hash-consing and hash-value computation *) *)
-  (* val subst_fn : universe_level_subst_fn -> t -> t *)
-  (* (** Substitution by a level-to-level function. *) *)
-  (* val pr : (Level.t -> Pp.std_ppcmds) -> t -> Pp.std_ppcmds *)
-  (* (** Pretty-printing, no comments *) *)
-  (* val levels : t -> LSet.t *)
-  (* (** The set of levels in the instance *) *)
 End Instance.
 
 Definition universe_instance := Instance.t.
 
 (* val enforce_eq_instances : universe_instance constraint_function *)
 
-Definition puniverses A : Type := A * universe_instance.
-Definition out_punivs {A} : puniverses A -> A := fst.
-Definition in_punivs {A} (x : A) : puniverses A := (x, Instance.empty).
-
-(* val eq_puniverses : ('a -> 'a -> bool) -> 'a puniverses -> 'a puniverses -> bool *)
-
 
 Module UContext.
-  Definition t := constrained Instance.t.
+  Definition t := universe_instance × constraints.
 
-  (* Definition make : constrained Instance.t -> t := fun x => x. *)
   Definition make : Instance.t -> ConstraintSet.t -> t := pair.
 
   Definition empty : t := (Instance.empty, ConstraintSet.empty).
@@ -387,12 +275,28 @@ Module UContext.
   Definition constraints : t -> constraints := snd.
 
   Definition dest : t -> Instance.t * ConstraintSet.t := fun x => x.
-
-  (* (** Keeps the order of the instances *) *)
-  (* val union : t -> t -> t *)
-  (* (* the number of universes in the context *) *)
-  (* val size : t -> int *)
 End UContext.
+
+Module AUContext.
+  Definition t := list ident × constraints.
+
+  Definition make (ids : list ident) (ctrs : constraints) : t := (ids, ctrs).
+  Definition repr '((u, cst) : t) : UContext.t :=
+    (map_i (fun i _ => Level.Var i) u, cst).
+
+  Definition levels (uctx : t) : LevelSet.t :=
+    LevelSetProp.of_list (fst (repr uctx)).
+End AUContext.
+
+Module ContextSet.
+  Definition t := LevelSet.t × constraints.
+
+  Definition empty : t := (LevelSet.empty, ConstraintSet.empty).
+
+  Definition is_empty (uctx : t)
+    := LevelSet.is_empty (fst uctx) && ConstraintSet.is_empty (snd uctx).
+End ContextSet.
+
 
 (* Variance info is needed to do full universe polymorphism *)
 Module Variance.
@@ -407,7 +311,6 @@ Module Variance.
 
   (* val check_subtype : t -> t -> bool *)
   (* val sup : t -> t -> t *)
-  (* val pr : t -> Pp.t *)
 End Variance.
 
 (** Universe info for cumulative inductive types: A context of
@@ -417,13 +320,14 @@ End Variance.
 
     This data structure maintains the invariant that the variance
    array has the same length as the universe instance. *)
-Module CumulativityInfo.
-  Definition t := prod UContext.t (list Variance.t).
+Module ACumulativityInfo.
+  Definition t := AUContext.t × list Variance.t.
 
-  Definition empty : t := (UContext.empty, nil).
+  Definition make ctx var : t := (ctx, var).
+  (* Definition empty : t := (AUContext.empty, nil). *)
   (* val is_empty : t -> bool *)
 
-  Definition univ_context : t -> UContext.t := fst.
+  Definition univ_context : t -> AUContext.t := fst.
   Definition variance : t -> list Variance.t := snd.
 
   (** This function takes a universe context representing constraints
@@ -433,81 +337,276 @@ Module CumulativityInfo.
 
   (* val leq_constraints : t -> Instance.t constraint_function *)
   (* val eq_constraints : t -> Instance.t constraint_function *)
-End CumulativityInfo.
+End ACumulativityInfo.
 
-Inductive universe_context : Type :=
-| Monomorphic_ctx (ctx : UContext.t)
-| Polymorphic_ctx (cst : UContext.t)
-| Cumulative_ctx (ctx : CumulativityInfo.t).
+Inductive universes_decl : Type :=
+| Monomorphic_ctx (ctx : ContextSet.t)
+| Polymorphic_ctx (cst : AUContext.t)
+| Cumulative_ctx (ctx : ACumulativityInfo.t).
 
 
 (** * Valuations *)
 
 Import Level ConstraintType.
 
-Record valuation := 
+
+(** A valuation is a universe level (nat) given for each
+    universe variable (Level.t).
+    It is >= for polymorphic universes and > 0 for monomorphic universes. *)
+
+Record valuation :=
   { valuation_mono : string -> positive ;
     valuation_poly : nat -> nat }.
 
-Fixpoint val0 (v : valuation) (l : Level.t) : Z :=
+Definition val0 (v : valuation) (l : Level.t) : Z :=
   match l with
   | lProp => -1
   | lSet => 0
-  | Level s => Zpos (v.(valuation_mono) s)
+  | Level s => Z.pos (v.(valuation_mono) s)
   | Var x => Z.of_nat (v.(valuation_poly) x)
   end.
 
 Definition val1 v (e : Universe.Expr.t) : Z :=
   let n := val0 v (fst e) in
-  if snd e then n + 1 else n.
+  if snd e && negb (is_prop (fst e)) then n + 1 else n.
 
-Program Definition val (v : valuation) (u : universe) : Z :=
-  match u : list _ with
-  | [] => _
-  | e :: u => List.fold_left (fun n e => Z.max (val1 v e) n) u (val1 v e)
+Definition val (v : valuation) (u : universe) : Z :=
+  match u with
+  | NEL.sing e => val1 v e
+  | NEL.cons e u => NEL.fold_left (fun n e => Z.max (val1 v e) n) u (val1 v e)
   end.
-Next Obligation.
-  apply False_rect.
-  apply u.2; assumption.
-Defined.
+
+Definition llt `{checker_flags} (x y : Z) : Prop :=
+  if prop_sub_type
+  then (x < y)%Z
+  else (0 <= x /\ x < y)%Z.
+
+Notation "x < y" := (llt x y) : univ_scope.
+
+Delimit Scope univ_scope with u.
+
+Definition lle `{checker_flags} (x y : Z) : Prop :=
+  (x < y)%u \/ x = y.
+
+Notation "x <= y" := (lle x y) : univ_scope.
+
+Section Univ.
+
+Context `{cf : checker_flags}.
 
 Inductive satisfies0 (v : valuation) : univ_constraint -> Prop :=
-| satisfies0_Lt l l' : (val0 v l < val0 v l')%Z -> satisfies0 v (l, Lt, l')
-| satisfies0_Le l l' : (val0 v l <= val0 v l')%Z -> satisfies0 v (l, Le, l')
+| satisfies0_Lt l l' : (val0 v l < val0 v l')%u -> satisfies0 v (l, Lt, l')
+| satisfies0_Le l l' : (val0 v l <= val0 v l')%u -> satisfies0 v (l, Le, l')
 | satisfies0_Eq l l' : val0 v l = val0 v l' -> satisfies0 v (l, Eq, l').
 
-Definition satisfies v : constraints -> Prop := 
+Definition satisfies v : constraints -> Prop :=
   ConstraintSet.For_all (satisfies0 v).
 
 Definition consistent ctrs := exists v, satisfies v ctrs.
 
-Definition eq_universe (φ : constraints) u u' :=
-  forall v : valuation, satisfies v φ -> val v u = val v u'.
+Definition eq_universe0 (φ : constraints) u u' :=
+  forall v, satisfies v φ -> val v u = val v u'.
 
-Definition leq_universe (φ : constraints) u u' :=
-  forall v : valuation, satisfies v φ -> (val v u <= val v u')%Z.
+Definition leq_universe_n n (φ : constraints) u u' :=
+  forall v, satisfies v φ -> (Z.of_nat n + val v u <= val v u')%Z.
 
-Definition lt_universe (φ : constraints) u u' :=
-  forall v : valuation, satisfies v φ -> (val v u < val v u')%Z.
+Definition leq_universe0 := leq_universe_n 0.
+Definition lt_universe := leq_universe_n 1.
+
+Definition eq_universe φ u u'
+  := if check_univs then eq_universe0 φ u u' else True.
+
+Definition leq_universe φ u u'
+  := if check_univs then leq_universe0 φ u u' else True.
+
+(* ctrs are "enforced" by φ *)
+Definition valid_constraints φ ctrs
+  := if check_univs then forall v, satisfies v φ -> satisfies v ctrs else True.
 
 
-Require Import config.
+(** **** Lemmas about eq and leq **** *)
 
-Definition eq_universe' `{checker_flags} φ u u'
-  := if check_univs then eq_universe φ u u' else True.
-
-Definition leq_universe' `{checker_flags} φ u u'
-  := if check_univs then leq_universe φ u u' else True.
-
-
-Program Definition try_suc (u : universe) : universe :=   (* FIXME suc s *)
-  (map (fun '(l, b) =>  (l, true)) u; _).
-Next Obligation.
-  intro. apply u.2. destruct u as [[] ?].
-  reflexivity. discriminate.
+Lemma eq_universe0_refl φ s : eq_universe0 φ s s.
+Proof.
+  intros vH; reflexivity.
 Qed.
 
-Conjecture leq_universe_product_l : forall `{checker_flags} φ s1 s2,
-    leq_universe' φ s1 (Universe.sort_of_product s1 s2).
-Conjecture leq_universe_product_r : forall `{checker_flags} φ s1 s2,
-    leq_universe' φ s2 (Universe.sort_of_product s1 s2).
+Lemma eq_universe_refl φ s : eq_universe φ s s.
+Proof.
+  unfold eq_universe; destruct check_univs;
+    [apply eq_universe0_refl|constructor].
+Qed.
+
+Lemma leq_universe0_refl φ s : leq_universe0 φ s s.
+Proof.
+  intros vH; reflexivity.
+Qed.
+
+Lemma leq_universe_refl φ s : leq_universe φ s s.
+Proof.
+  unfold leq_universe; destruct check_univs;
+    [apply leq_universe0_refl|constructor].
+Qed.
+
+Lemma eq_universe0_sym :
+  forall φ s s',
+    eq_universe0 φ s s' ->
+    eq_universe0 φ s' s.
+Proof.
+  intros φ s s' e vH. symmetry ; eauto.
+Qed.
+
+Lemma eq_universe_sym :
+  forall φ s s',
+    eq_universe φ s s' ->
+    eq_universe φ s' s.
+Proof.
+  unfold eq_universe. destruct check_univs ; eauto.
+  eapply eq_universe0_sym.
+Qed.
+
+Lemma eq_universe0_trans φ s1 s2 s3 :
+  eq_universe0 φ s1 s2 ->
+  eq_universe0 φ s2 s3 ->
+  eq_universe0 φ s1 s3.
+Proof.
+  intros h1 h2.
+  intros v h. etransitivity ; try eapply h1 ; eauto.
+Qed.
+
+Lemma eq_universe_trans φ :
+  forall s1 s2 s3,
+    eq_universe φ s1 s2 ->
+    eq_universe φ s2 s3 ->
+    eq_universe φ s1 s3.
+Proof.
+  intros s1 s2 s3.
+  unfold eq_universe. destruct check_univs ; auto.
+  intros h1 h2.
+  eapply eq_universe0_trans ; eauto.
+Qed.
+
+Lemma leq_universe0_trans φ s1 s2 s3 :
+  leq_universe0 φ s1 s2 ->
+  leq_universe0 φ s2 s3 ->
+  leq_universe0 φ s1 s3.
+Proof.
+  intros h1 h2.
+  intros v h. cbn. etransitivity.
+  - eapply h1. assumption.
+  - eapply h2. assumption.
+Qed.
+
+Lemma leq_universe_trans φ :
+  forall s1 s2 s3,
+    leq_universe φ s1 s2 ->
+    leq_universe φ s2 s3 ->
+    leq_universe φ s1 s3.
+Proof.
+  intros s1 s2 s3.
+  unfold leq_universe. destruct check_univs ; auto.
+  intros h1 h2.
+  eapply leq_universe0_trans ; eauto.
+Qed.
+
+
+Lemma val_cons v e s
+  : val v (NEL.cons e s) = Z.max (val1 v e) (val v s).
+Proof.
+  cbn. generalize (val1 v e); clear e.
+  induction s.
+  intro; cbn. apply Z.max_comm.
+  intro; cbn in *. rewrite !IHs. Lia.lia.
+Defined.
+
+Lemma val_sup v s1 s2 :
+  val v (Universe.sup s1 s2) = Z.max (val v s1) (val v s2).
+Proof.
+  induction s1.
+  unfold Universe.sup, NEL.app. now rewrite val_cons.
+  change (Universe.sup (NEL.cons a s1) s2) with (NEL.cons a (Universe.sup s1 s2)).
+  rewrite !val_cons. rewrite IHs1. Lia.lia.
+Qed.
+
+Lemma leq_universe0_sup_l φ s1 s2 : leq_universe0 φ s1 (Universe.sup s1 s2).
+Proof.
+  intros v H. rewrite val_sup. Lia.lia.
+Qed.
+
+Lemma leq_universe0_sup_r φ s1 s2 : leq_universe0 φ s2 (Universe.sup s1 s2).
+Proof.
+  intros v H. rewrite val_sup. Lia.lia.
+Qed.
+
+Lemma leq_universe_product φ s1 s2
+  : leq_universe φ s2 (Universe.sort_of_product s1 s2).
+Proof.
+  unfold leq_universe; destruct check_univs; [cbn|constructor].
+  unfold Universe.sort_of_product; case_eq (Universe.is_prop s2); intro eq.
+  apply leq_universe0_refl.
+  apply leq_universe0_sup_r.
+Qed.
+
+(* Rk: [leq_universe φ s1 (sort_of_product s1 s2)] does not hold due
+   impredicativity. *)
+
+Lemma eq_universe_leq_universe φ t u
+  : eq_universe φ t u -> leq_universe φ t u.
+Proof.
+  unfold eq_universe, leq_universe; destruct check_univs.
+  intros HH v Hv. rewrite (HH v Hv). apply BinInt.Z.le_refl.
+  intuition.
+Qed.
+
+Lemma leq_universe0_antisym φ t u :
+  leq_universe0 φ t u -> leq_universe0 φ u t -> eq_universe0 φ t u.
+Proof.
+  intros tu ut. unfold leq_universe0, eq_universe0 in *.
+  red in tu, ut.
+  intros v sat.
+  specialize (tu _ sat).
+  specialize (ut _ sat).
+  simpl in tu, ut. Lia.lia.
+Qed.
+
+Lemma leq_universe_antisym φ t u :
+  leq_universe φ t u -> leq_universe φ u t -> eq_universe φ t u.
+Proof.
+  intros tu ut. unfold leq_universe, eq_universe in *.
+  destruct check_univs; auto using leq_universe0_antisym.
+Qed.
+
+(** We show that equality and inequality of universes form an equivalence and 
+    a partial order (one w.r.t. the other).
+    We use classes from [CRelationClasses] for consistency with the rest of the
+    development which uses relations in [Type] rather than [Prop].
+    These definitions hence use [Prop <= Type]. *)
+
+Global Instance eq_universe_equivalence φ : CRelationClasses.Equivalence (eq_universe φ) :=
+   {| CRelationClasses.Equivalence_Reflexive := eq_universe_refl _ ;
+      CRelationClasses.Equivalence_Symmetric := eq_universe_sym _;
+      CRelationClasses.Equivalence_Transitive := eq_universe_trans _ |}.
+
+Global Instance leq_universe_preorder φ : CRelationClasses.PreOrder (leq_universe φ) :=
+   {| CRelationClasses.PreOrder_Reflexive := leq_universe_refl _ ;
+      CRelationClasses.PreOrder_Transitive := leq_universe_trans _ |}.
+
+Global Instance leq_universe_partial_order φ : CRelationClasses.PartialOrder (eq_universe φ) (leq_universe φ).
+Proof.
+  red. intros x y; split. intros eqxy; split. now eapply eq_universe_leq_universe. red.
+  now eapply eq_universe_leq_universe, CRelationClasses.symmetry.
+  intros [l r]. now eapply leq_universe_antisym.
+Defined.
+
+(* This universe is a hack used in plugings to generate fresh universes *)
+Definition fresh_universe : universe. exact Universe.type0. Qed.
+
+End Univ.
+
+Definition is_prop_sort s :=
+  match Universe.level s with
+  | Some l => Level.is_prop l
+  | None => false
+  end.
+
+(* Check (_ : forall (cf : checker_flags) Σ, Reflexive (eq_universe Σ)). *)

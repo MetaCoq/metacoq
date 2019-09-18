@@ -34,6 +34,7 @@ install:
 - opam list
 
 script:
+ - ./configure.sh local
  - make -j ${NJOBS} all test-suite
 
 notifications:

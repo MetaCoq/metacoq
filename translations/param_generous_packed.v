@@ -28,7 +28,7 @@ Definition proj (b : bool) (t : term) : term
 
 Fixpoint refresh_universes (t : term) {struct t} :=
   match t with
-  | tSort s => tSort (if Universe.is_level s then s else [])
+  | tSort s => tSort (if Universe.is_level s then s else fresh_universe)
   | tProd na b t => tProd na b (refresh_universes t)
   | tLetIn na b t' t => tLetIn na b t' (refresh_universes t)
   | _ => t
@@ -105,8 +105,8 @@ with tsl_term  (fuel : nat) (Σ : global_context) (E : tsl_table) (Γ : context)
   | tRel n => ret (tRel n)
 
   | tSort s =>
-    ret (pair (tSort [])
-              (tLambda (nNamed "A") (tSort []) (tProd nAnon (tRel 0) (tSort [])))
+    ret (pair (tSort fresh_universe)
+              (tLambda (nNamed "A") (tSort fresh_universe) (tProd nAnon (tRel 0) (tSort fresh_universe)))
               (tSort s)
               (tLambda (nNamed "A") (tSort s) (tProd nAnon (tRel 0) (tSort s))))
 
@@ -117,7 +117,7 @@ with tsl_term  (fuel : nat) (Σ : global_context) (E : tsl_table) (Γ : context)
   | tConst s univs => lookup_tsl_table' E (ConstRef s)
   | tInd i univs => lookup_tsl_table' E (IndRef i)
   | tConstruct i n univs => lookup_tsl_table' E (ConstructRef i n)
-  | t => match infer Σ Γ t with
+  | t => match infer' Σ Γ t with
          | Checked typ => let typ := refresh_universes typ in
                          t1 <- tsl_rec fuel Σ E Γ true t ;;
                          t2 <- tsl_rec fuel Σ E Γ false t ;;
@@ -257,7 +257,7 @@ Proposition uip_preservation : UIP -> El UIPᵗ.
   - cbn. intros A x y p q.  apply H.
 Defined.
 
-Notation " A × B " := (@sigT A (fun _ => B)) (at level 30) : type_scope.
+Notation " A × B " := (@sigT A (fun _ => B)) : type_scope.
 
 Definition equiv (A B : Type) : Type :=
   exists (f : A -> B) (g : B -> A),

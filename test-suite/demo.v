@@ -133,7 +133,7 @@ Definition mut_i : mutual_inductive_entry :=
   mind_entry_finite := Finite;
   mind_entry_params := [];
   mind_entry_inds := [one_i; one_i2];
-  mind_entry_universes := Monomorphic_ctx ([], ConstraintSet.empty);
+  mind_entry_universes := Monomorphic_ctx (LevelSet.empty, ConstraintSet.empty);
   mind_entry_private := None;
 |}.
 
@@ -160,7 +160,7 @@ Definition mut_list_i : mutual_inductive_entry :=
   mind_entry_finite := Finite;
   mind_entry_params := [("A", LocalAssum (tSort Universe.type0))];
   mind_entry_inds := [one_list_i];
-  mind_entry_universes := Monomorphic_ctx ([], ConstraintSet.empty);
+  mind_entry_universes := Monomorphic_ctx (LevelSet.empty, ConstraintSet.empty);
   mind_entry_private := None;
 |}.
 
@@ -185,7 +185,7 @@ Definition mut_pt_i : mutual_inductive_entry :=
   mind_entry_finite := BiFinite;
   mind_entry_params := [("A", LocalAssum (tSort Universe.type0))];
   mind_entry_inds := [one_pt_i];
-  mind_entry_universes := Monomorphic_ctx ([], ConstraintSet.empty);
+  mind_entry_universes := Monomorphic_ctx (LevelSet.empty, ConstraintSet.empty);
   mind_entry_private := None;
 |}.
 
@@ -351,8 +351,8 @@ Inductive T : Type :=
 Quote Recursively Definition TT := T.
 
 Unset Strict Unquote Universe Mode.
-Make Definition t := (tSort ([(Level.Level "Top.20000", false)]; _)).
-Make Definition t' := (tSort ([]; _)).
+Make Definition t := (tSort (NEL.sing (Level.Level "Top.20000", false))).
+Make Definition t' := (tSort fresh_universe).
 Make Definition myProp := (tSort (Universe.make' (Level.lProp, false))).
 Make Definition myProp' := (tSort Universe.type0m).
 Make Definition mySet := (tSort (Universe.make Level.lSet)).
@@ -374,7 +374,6 @@ Check eq_refl : ones = ones'.
 (* Run TemplateProgram (tmQuoteUniverses tt >>= tmDefinition "universes"). *)
 (* Print universes. *)
 (* Definition tyu := Eval vm_compute in universes. *)
-(* Check (universes : uGraph.t). *)
 
 
 Definition kername_of_qualid (q : qualid) : TemplateMonad kername :=

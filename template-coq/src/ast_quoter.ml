@@ -21,17 +21,20 @@ struct
   type quoted_proj = projection
   type quoted_global_reference = global_reference
 
-  type quoted_sort_family = sort_family
+  type quoted_sort_family = Universes0.sort_family
   type quoted_constraint_type = Universes0.constraint_type
   type quoted_univ_constraint = Universes0.univ_constraint
-  type quoted_univ_instance = Universes0.Instance.t
   type quoted_univ_constraints = Universes0.constraints
-  type quoted_univ_context = Universes0.universe_context
-  type quoted_inductive_universes = quoted_univ_context
+  type quoted_univ_instance = Universes0.Instance.t
+  type quoted_univ_context = Universes0.UContext.t
+  type quoted_univ_contextset = Universes0.ContextSet.t
+  type quoted_abstract_univ_context = Universes0.AUContext.t
+  type quoted_variance = Universes0.Variance.t
+  type quoted_universes_decl = Universes0.universes_decl
 
   type quoted_mind_params = (ident * local_entry) list
   type quoted_ind_entry = quoted_ident * t * quoted_bool * quoted_ident list * t list
-  type quoted_definition_entry = t * t option * quoted_univ_context
+  type quoted_definition_entry = t * t option * quoted_universes_decl
   type quoted_mind_entry = mutual_inductive_entry
   type quoted_mind_finiteness = recursivity_kind
   type quoted_entry = (constant_entry, quoted_mind_entry) sum option
@@ -42,7 +45,7 @@ struct
   type quoted_mutual_inductive_body = mutual_inductive_body
   type quoted_constant_body = constant_body
   type quoted_global_decl = global_decl
-  type quoted_global_declarations = global_declarations
+  type quoted_global_env = global_env
   type quoted_program = program
 
   open Names
@@ -78,9 +81,9 @@ struct
 
   let quote_sort_family s =
     match s with
-    | Sorts.InProp -> BasicAst.InProp
-    | Sorts.InSet -> BasicAst.InSet
-    | Sorts.InType -> BasicAst.InType
+    | Sorts.InProp -> Universes0.InProp
+    | Sorts.InSet -> Universes0.InSet
+    | Sorts.InType -> Universes0.InType
 
   let quote_cast_kind = function
     | DEFAULTcast -> Cast
@@ -114,37 +117,22 @@ struct
     | Univ.Variance.Covariant -> Universes0.Variance.Covariant
     | Univ.Variance.Invariant -> Universes0.Variance.Invariant
 
-  let quote_cuminfo_variance (var : Univ.Variance.t array) =
-    CArray.map_to_list quote_variance var
-
   let quote_univ_context (uctx : Univ.UContext.t) : quoted_univ_context =
     let levels = Univ.UContext.instance uctx  in
     let constraints = Univ.UContext.constraints uctx in
-    Universes0.Monomorphic_ctx (quote_univ_instance levels, quote_univ_constraints constraints)
+    (quote_univ_instance levels, quote_univ_constraints constraints)
 
-  let quote_cumulative_univ_context (cumi : Univ.CumulativityInfo.t) : quoted_univ_context =
-    let uctx = Univ.CumulativityInfo.univ_context cumi in
-    let levels = Univ.UContext.instance uctx  in
-    let constraints = Univ.UContext.constraints uctx in
-    let var = Univ.CumulativityInfo.variance cumi in
-    let uctx' = (quote_univ_instance levels, quote_univ_constraints constraints) in
-    let var' = quote_cuminfo_variance var in
-    Universes0.Cumulative_ctx (uctx', var')
+  let quote_univ_contextset (uctx : Univ.ContextSet.t) : quoted_univ_contextset =
+    let levels = List.map quote_level (Univ.LSet.elements (Univ.ContextSet.levels uctx)) in
+    let constraints = Univ.ContextSet.constraints uctx in
+    (Universes0.LevelSetProp.of_list levels, quote_univ_constraints constraints)
 
-  let quote_abstract_univ_context_aux uctx : quoted_univ_context =
-    let levels = Univ.UContext.instance uctx in
-    let constraints = Univ.UContext.constraints uctx in
-    Universes0.Polymorphic_ctx (quote_univ_instance levels, quote_univ_constraints constraints)
-
-  let quote_abstract_univ_context (uctx : Univ.AUContext.t) =
+  let quote_abstract_univ_context uctx =
     let uctx = Univ.AUContext.repr uctx in
-    quote_abstract_univ_context_aux uctx
-
-  let quote_inductive_universes = function
-    | Entries.Monomorphic_ind_entry ctx -> quote_univ_context (Univ.ContextSet.to_context ctx)
-    | Entries.Polymorphic_ind_entry ctx -> quote_abstract_univ_context_aux ctx
-    | Entries.Cumulative_ind_entry ctx ->
-      quote_abstract_univ_context_aux (Univ.CumulativityInfo.univ_context ctx)
+    let levels = CArray.map_to_list (fun l -> string_to_list (Univ.Level.to_string l))
+        (Univ.Instance.to_array (Univ.UContext.instance uctx)) in
+    let constraints = Univ.UContext.constraints uctx in
+    (levels, quote_univ_constraints constraints)
 
   let quote_context_decl na b t =
     { decl_name = na;
@@ -153,7 +141,7 @@ struct
 
   let quote_context l = l
 
-  let mkAnon = Coq_nAnon
+  let mkAnon () = Coq_nAnon
   let mkName i = Coq_nNamed i
 
   let mkRel n = Coq_tRel n
@@ -203,13 +191,20 @@ struct
     Coq_tCase (info,p,c,branches)
   let mkProj p c = Coq_tProj (p,c)
 
+
+  let mkMonomorphic_ctx tm = Universes0.Monomorphic_ctx tm 
+  let mkPolymorphic_ctx tm = Universes0.Polymorphic_ctx tm 
+  let mkCumulative_ctx tm var = Universes0.Cumulative_ctx (tm, var)
+
+
   let mk_one_inductive_body (id, ty, kel, ctr, proj) =
     let ctr = List.map (fun (a, b, c) -> ((a, b), c)) ctr in
     { ind_name = id; ind_type = ty;
       ind_kelim = kel; ind_ctors = ctr; ind_projs = proj }
 
-  let mk_mutual_inductive_body npars params inds uctx =
-    {ind_npars = npars; ind_params = params; ind_bodies = inds; ind_universes = uctx}
+  let mk_mutual_inductive_body finite npars params inds uctx =
+    {ind_finite = finite;
+     ind_npars = npars; ind_params = params; ind_bodies = inds; ind_universes = uctx}
 
   let mk_constant_body ty tm uctx =
     {cst_type = ty; cst_body = tm; cst_universes = uctx}
@@ -218,7 +213,7 @@ struct
 
   let mk_constant_decl kn bdy = ConstantDecl (kn, bdy)
 
-  let empty_global_declartions = []
+  let empty_global_declartions () = []
 
   let add_global_decl a b = a :: b
 
@@ -336,16 +331,15 @@ struct
   let unquote_level_expr (trm : Universes0.Level.t) (b : quoted_bool) : Univ.Universe.t =
     let l = unquote_level trm in
     let u = Univ.Universe.make l in
-    if b then Univ.Universe.super u
+    if b && not (Univ.Level.is_prop l) then Univ.Universe.super u
     else u
 
   let unquote_universe evd (trm : Universes0.Universe.t) =
-    match Specif.projT1 trm with
-    | [] -> Evd.new_univ_variable (Evd.UnivFlexible false) evd
-    | (l,b)::q ->
-      evd, List.fold_left (fun u (l,b) ->
-          let u' = unquote_level_expr l b in Univ.Universe.sup u u')
-        (unquote_level_expr l b) q
+    (* | [] -> Evd.new_univ_variable (Evd.UnivFlexible false) evd *)
+    let rec aux = function
+      | Utils.NEL.Coq_sing (l,b) -> unquote_level_expr l b
+      | Utils.NEL.Coq_cons ((l,b), q) -> Univ.Universe.sup (aux q) (unquote_level_expr l b)
+    in evd, aux trm
 
   let quote_global_reference : Globnames.global_reference -> quoted_global_reference = function
     | Globnames.VarRef _ -> CErrors.user_err (Pp.str "VarRef unsupported")

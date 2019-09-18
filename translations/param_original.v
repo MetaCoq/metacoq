@@ -131,6 +131,7 @@ Definition tsl_mind_body (E : tsl_table) (mp : string) (kn : kername)
     + (* ctors *)
       refine (fold_left_i (fun E k _ => _ :: E) ind.(ind_ctors) []).
       exact (ConstructRef (mkInd kn i) k, tConstruct (mkInd kn' i) k []).
+  - exact mind.(ind_finite).
   - (* params: 2 times the same parameters? Probably wrong *)
     refine (mind.(ind_params) ++ mind.(ind_params))%list.
   - refine (map_i _ mind.(ind_bodies)).

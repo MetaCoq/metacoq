@@ -31,10 +31,6 @@ Arguments rarg {term} _.
 Definition mfixpoint (term : Set) : Set :=
   list (def term).
 
-(** Sort families *)
-
-Inductive sort_family : Set := InProp | InSet | InType.
-
 (** The kind of a cast *)
 
 Inductive cast_kind : Set :=
@@ -42,6 +38,11 @@ Inductive cast_kind : Set :=
 | NativeCast
 | Cast
 | RevertCast.
+
+Inductive recursivity_kind :=
+  | Finite (* = inductive *)
+  | CoFinite (* = coinductive *)
+  | BiFinite (* = non-recursive, like in "Record" definitions *).
 
 (** Kernel declaration references [global_reference] *)
 

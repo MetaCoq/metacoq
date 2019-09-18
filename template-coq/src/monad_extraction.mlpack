@@ -12,16 +12,15 @@ BinPosDef
 BinPos
 Bool
 Common
-Config0
 Datatypes
-DecidableType
 Decimal
 Equalities
 Extractable
-FMapWeakList
 List0
 Logic0
 MSetWeakList
+MSetProperties
+MSetFacts
 Nat0
 OrderedType0
 Orders
@@ -29,7 +28,6 @@ OrdersTac
 PeanoNat
 Specif
 String0
-UGraph0
 
 
 

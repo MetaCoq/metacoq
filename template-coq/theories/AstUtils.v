@@ -1,30 +1,106 @@
 From Coq Require Import Ascii String Bool OrderedType Lia List Program Arith.
 From MetaCoq.Template Require Import BasicAst Ast utils.
 Import List.ListNotations.
-Require Import FunctionalExtensionality.
 Require Import ssreflect.
 
 Set Asymmetric Patterns.
 
+(** Raw term printing *)
+
+Local Open Scope string_scope.
+
+Definition string_of_list_aux {A} (f : A -> string) (sep : string) (l : list A) : string :=
+  let fix aux l :=
+      match l return string with
+      | nil => ""
+      | cons a nil => f a
+      | cons a l => f a ++ sep ++ aux l
+      end
+  in aux l.
+
+Definition string_of_list {A} (f : A -> string) (l : list A) : string :=
+  "[" ++ string_of_list_aux f "," l ++ "]".
+
+Definition string_of_level (l : Level.t) : string :=
+  match l with
+  | Level.lProp => "Prop"
+  | Level.lSet => "Set"
+  | Level.Level s => s
+  | Level.Var n => "Var" ++ string_of_nat n
+  end.
+
+Definition string_of_level_expr (l : Level.t * bool) : string :=
+  let '(l, b) := l in
+  string_of_level l ++ (if b then "+1" else "").
+
+Definition string_of_sort (u : universe) :=
+  string_of_list string_of_level_expr u.
+Definition string_of_name (na : name) :=
+  match na with
+  | nAnon => "Anonymous"
+  | nNamed n => n
+  end.
+Definition string_of_universe_instance u :=
+  string_of_list string_of_level u.
+
+Definition string_of_def {A : Set} (f : A -> string) (def : def A) :=
+  "(" ++ string_of_name (dname def) ++ "," ++ f (dtype def) ++ "," ++ f (dbody def) ++ ","
+      ++ string_of_nat (rarg def) ++ ")".
+
+Definition string_of_inductive (i : inductive) :=
+  (inductive_mind i) ++ "," ++ string_of_nat (inductive_ind i).
+
+Fixpoint string_of_term (t : term) :=
+  match t with
+  | tRel n => "Rel(" ++ string_of_nat n ++ ")"
+  | tVar n => "Var(" ++ n ++ ")"
+  | tEvar ev args => "Evar(" ++ string_of_nat ev ++ "," ++ string_of_list string_of_term args ++ ")"
+  | tSort s => "Sort(" ++ string_of_sort s ++ ")"
+  | tCast c k t => "Cast(" ++ string_of_term c ++ (* TODO *) ","
+                           ++ string_of_term t ++ ")"
+  | tProd na b t => "Prod(" ++ string_of_name na ++ "," ++
+                            string_of_term b ++ "," ++ string_of_term t ++ ")"
+  | tLambda na b t => "Lambda(" ++ string_of_name na ++ "," ++ string_of_term b
+                                ++ "," ++ string_of_term t ++ ")"
+  | tLetIn na b t' t => "LetIn(" ++ string_of_name na ++ "," ++ string_of_term b
+                                 ++ "," ++ string_of_term t' ++ "," ++ string_of_term t ++ ")"
+  | tApp f l => "App(" ++ string_of_term f ++ "," ++ string_of_list string_of_term l ++ ")"
+  | tConst c u => "Const(" ++ c ++ "," ++ string_of_universe_instance u ++ ")"
+  | tInd i u => "Ind(" ++ string_of_inductive i ++ "," ++ string_of_universe_instance u ++ ")"
+  | tConstruct i n u => "Construct(" ++ string_of_inductive i ++ "," ++ string_of_nat n ++ ","
+                                    ++ string_of_universe_instance u ++ ")"
+  | tCase (ind, i) t p brs =>
+    "Case(" ++ string_of_inductive ind ++ "," ++ string_of_nat i ++ "," ++ string_of_term t ++ ","
+            ++ string_of_term p ++ "," ++ string_of_list (fun b => string_of_term (snd b)) brs ++ ")"
+  | tProj (ind, i, k) c =>
+    "Proj(" ++ string_of_inductive ind ++ "," ++ string_of_nat i ++ "," ++ string_of_nat k ++ ","
+            ++ string_of_term c ++ ")"
+  | tFix l n => "Fix(" ++ (string_of_list (string_of_def string_of_term) l) ++ "," ++ string_of_nat n ++ ")"
+  | tCoFix l n => "CoFix(" ++ (string_of_list (string_of_def string_of_term) l) ++ "," ++ string_of_nat n ++ ")"
+  end.
+Local Close Scope string_scope.
+
 (** Make a lambda/let-in string of abstractions from a context [Γ], ending with term [t]. *)
 
+Definition mkLambda_or_LetIn d t :=
+  match d.(decl_body) with
+  | None => tLambda d.(decl_name) d.(decl_type) t
+  | Some b => tLetIn d.(decl_name) b d.(decl_type) t
+  end.
+
 Definition it_mkLambda_or_LetIn (l : context) (t : term) :=
-  List.fold_left
-    (fun acc d =>
-       match d.(decl_body) with
-       | None => tLambda d.(decl_name) d.(decl_type) acc
-       | Some b => tLetIn d.(decl_name) b d.(decl_type) acc
-       end) l t.
+  List.fold_left (fun acc d => mkLambda_or_LetIn d acc) l t.
 
 (** Make a prod/let-in string of abstractions from a context [Γ], ending with term [t]. *)
 
+Definition mkProd_or_LetIn d t :=
+  match d.(decl_body) with
+  | None => tProd d.(decl_name) d.(decl_type) t
+  | Some b => tLetIn d.(decl_name) b d.(decl_type) t
+  end.
+
 Definition it_mkProd_or_LetIn (l : context) (t : term) :=
-  List.fold_left
-    (fun acc d =>
-       match d.(decl_body) with
-       | None => tProd d.(decl_name) d.(decl_type) acc
-       | Some b => tLetIn d.(decl_name) b d.(decl_type) acc
-       end) l t.
+  List.fold_left (fun acc d => mkProd_or_LetIn d acc) l t.
 
 Definition map_decl f (d : context_decl) :=
   {| decl_name := d.(decl_name);
@@ -195,7 +271,7 @@ Proof.
     destruct f; simpl; try (discriminate || reflexivity).
 Qed.
 
-Lemma mkApp_nested f l l' : mkApps (mkApps f l) l' = mkApps f (l ++ l').
+Lemma mkApps_nested f l l' : mkApps (mkApps f l) l' = mkApps f (l ++ l').
 Proof.
   induction l; destruct f; destruct l'; simpl; rewrite ?app_nil_r; auto.
   f_equal. now rewrite <- app_assoc.
@@ -204,7 +280,7 @@ Qed.
 Lemma mkApp_mkApps f a l : mkApp (mkApps f l) a = mkApps f (l ++ [a]).
 Proof.
   destruct l. simpl. reflexivity.
-  rewrite <- mkApp_nested. reflexivity.
+  rewrite <- mkApps_nested. reflexivity.
 Qed.
 
 Lemma mkApp_tApp f u : isApp f = false -> mkApp f u = tApp f [u].
@@ -233,7 +309,7 @@ Fixpoint remove_arity (n : nat) (t : term) : term :=
           end
   end.
 
-Fixpoint lookup_mind_decl (id : ident) (decls : global_declarations)
+Fixpoint lookup_mind_decl (id : ident) (decls : global_env)
  := match decls with
     | nil => None
     | InductiveDecl kn d :: tl =>
@@ -416,20 +492,28 @@ Qed.
 Definition polymorphic_instance uctx :=
   match uctx with
   | Monomorphic_ctx c => Instance.empty
-  | Polymorphic_ctx c => fst (UContext.dest c)
-  | Cumulative_ctx c => fst (UContext.dest (fst c))
+  | Polymorphic_ctx c
+  | Cumulative_ctx (c, _) => fst (AUContext.repr c)
   end.
 
-Definition map_one_inductive_body mind u arities f n m :=
+Fixpoint context_assumptions (Γ : context) :=
+  match Γ with
+  | [] => 0
+  | d :: Γ =>
+    match d.(decl_body) with
+    | Some _ => context_assumptions Γ
+    | None => S (context_assumptions Γ)
+    end
+  end.
+
+Definition map_one_inductive_body npars arities f (n : nat) m :=
   match m with
   | Build_one_inductive_body ind_name ind_type ind_kelim ind_ctors ind_projs =>
-    let '(ctx, _) := decompose_prod_assum [] (f 0 ind_type) in
-    let indty := mkApps (tInd (mkInd mind n) u) (to_extended_list ctx) in
     Build_one_inductive_body ind_name
                              (f 0 ind_type)
                              ind_kelim
                              (map (on_pi2 (f arities)) ind_ctors)
-                             (map (on_snd (f (S (length ctx)))) ind_projs)
+                             (map (on_snd (f (S npars))) ind_projs)
   end.
 
 Definition fold_context f (Γ : context) : context :=
@@ -464,6 +548,13 @@ Proof.
   rewrite List.rev_app_distr.
   rewrite mapi_app. rewrite <- List.rev_app_distr. f_equal. f_equal.
   apply mapi_ext. intros. f_equal. rewrite List.rev_length. f_equal.
+Qed.
+
+Lemma context_assumptions_fold Γ f : context_assumptions (fold_context f Γ) = context_assumptions Γ.
+Proof.
+  rewrite fold_context_alt.
+  unfold mapi. generalize 0 (Nat.pred #|Γ|).
+  induction Γ as [|[na [body|] ty] tl]; cbn; intros; eauto.
 Qed.
 
 Lemma nth_error_fold_context (f : nat -> term -> term):
@@ -511,35 +602,34 @@ Proof.
   do 2 f_equal. lia. now rewrite fold_context_length.
 Qed.
 
-Definition map_mutual_inductive_body mind f m :=
+Definition map_mutual_inductive_body f m :=
   match m with
-  | Build_mutual_inductive_body ind_npars ind_pars ind_bodies ind_universes =>
+  | Build_mutual_inductive_body finite ind_npars ind_pars ind_bodies ind_universes =>
     let arities := arities_context ind_bodies in
-    let u := polymorphic_instance ind_universes in
-    Build_mutual_inductive_body ind_npars (fold_context f ind_pars)
-      (mapi (map_one_inductive_body mind u (length arities) f) ind_bodies)
+    let pars := fold_context f ind_pars in
+    Build_mutual_inductive_body finite ind_npars pars
+      (mapi (map_one_inductive_body (context_assumptions pars) (length arities) f) ind_bodies)
       ind_universes
   end.
 
-Lemma ind_type_map f arities mind u n oib :
-  ind_type (map_one_inductive_body mind u arities f n oib) = f 0 (ind_type oib).
-Proof. destruct oib. simpl. destruct decompose_prod_assum. reflexivity. Qed.
+Lemma ind_type_map f npars_ass arities n oib :
+  ind_type (map_one_inductive_body npars_ass arities f n oib) = f 0 (ind_type oib).
+Proof. destruct oib. reflexivity. Qed.
 
-Lemma ind_ctors_map f arities mind u n oib :
-  ind_ctors (map_one_inductive_body mind u arities f n oib) =
+Lemma ind_ctors_map f npars_ass arities n oib :
+  ind_ctors (map_one_inductive_body npars_ass arities f n oib) =
   map (on_pi2 (f arities)) (ind_ctors oib).
-Proof. destruct oib; simpl; destruct decompose_prod_assum; reflexivity. Qed.
+Proof. destruct oib; simpl; reflexivity. Qed.
 
-Lemma ind_pars_map mind f m :
-  ind_params (map_mutual_inductive_body mind f m) =
+Lemma ind_pars_map f m :
+  ind_params (map_mutual_inductive_body f m) =
   fold_context f (ind_params m).
 Proof. destruct m; simpl; reflexivity. Qed.
 
-Lemma ind_projs_map f mind u arities n oib :
-  ind_projs (map_one_inductive_body mind u arities f n oib) =
-  let '(ctx, _) := decompose_prod_assum [] (f 0 oib.(ind_type)) in
-  map (on_snd (f (S (length ctx)))) (ind_projs oib).
-Proof. destruct oib; simpl. destruct decompose_prod_assum. simpl. reflexivity. Qed.
+Lemma ind_projs_map f npars_ass arities n oib :
+  ind_projs (map_one_inductive_body npars_ass arities f n oib) =
+  map (on_snd (f (S npars_ass))) (ind_projs oib).
+Proof. destruct oib; simpl. reflexivity. Qed.
 
 Definition test_def {A : Set} (tyf bodyf : A -> bool) (d : def A) :=
   tyf d.(dtype) && bodyf d.(dbody).
@@ -566,8 +656,8 @@ Lemma compose_map_def {A B C : Set} (f f' : B -> C) (g g' : A -> B) :
   compose (A:=def A) (map_def f f') (map_def g g') = map_def (compose f g) (compose f' g').
 Proof. reflexivity. Qed.
 
-Lemma map_def_id {t : Set} : map_def (@id t) (@id t) = id.
-Proof. extensionality p. now destruct p. Qed.
+Lemma map_def_id {t : Set} x : map_def (@id t) (@id t) x = id x.
+Proof. now destruct x. Qed.
 Hint Rewrite @map_def_id @map_id : map.
 
 Lemma map_def_spec {A B : Set} (P P' : A -> Prop) (f f' g g' : A -> B) (x : def A) :
@@ -665,3 +755,10 @@ Ltac apply_spec :=
   | H : Forall _ _ |- is_true (forallb _ _) =>
     eapply (Forall_forallb _ _ _ H); clear H
   end.
+
+(** Use a coercion for this common projection of the global context. *)
+Definition fst_ctx : global_env_ext -> global_env := fst.
+Coercion fst_ctx : global_env_ext >-> global_env.
+
+Definition empty_ext (Σ : global_env) : global_env_ext
+  := (Σ, Monomorphic_ctx ContextSet.empty).

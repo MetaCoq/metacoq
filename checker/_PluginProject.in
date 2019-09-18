@@ -1,0 +1,33 @@
+-I src
+-Q src MetaCoq.Checker
+-R theories MetaCoq.Checker
+
+# From Coq's stdlib
+src/compare_dec.mli
+src/compare_dec.ml
+src/mSetList.mli
+src/mSetList.ml
+
+src/liftSubst.ml
+src/liftSubst.mli
+src/monad_utils.ml
+src/monad_utils.mli
+src/retyping0.ml
+src/retyping0.mli
+src/typing0.ml
+src/typing0.mli
+src/typingWf.ml
+src/typingWf.mli
+src/uGraph0.ml
+src/uGraph0.mli
+src/univSubst0.ml
+src/univSubst0.mli
+src/wGraph.ml
+src/wGraph.mli
+src/checker0.mli
+src/checker0.ml
+
+src/g_metacoq_checker.ml4
+src/metacoq_checker_plugin.mlpack
+
+theories/Loader.v

@@ -2,13 +2,11 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config monad_utils utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICChecker.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICChecker PCUICConversion PCUICCumulativity.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 Import monad_utils.MonadNotation.
-
-Existing Instance default_checker_flags.
 
 (** * Retyping
 
@@ -19,9 +17,19 @@ Existing Instance default_checker_flags.
   substitution are costly here. No universe checking or conversion is done
   in particular. *)
 
+Axiom reduce_to_sort :
+  global_env -> context -> term -> typing_result universe.
+Axiom reduce_to_prod :
+  global_env -> context -> term -> typing_result (term × term).
+
+Axiom reduce_to_ind :
+  global_env -> context -> term
+  -> typing_result ((inductive × list Level.t) × list term).
+
 Section TypeOf.
+  Context {cf : checker_flags}.
   Context `{F : Fuel}.
-  Context (Σ : global_context).
+  Context (Σ : global_env_ext).
 
   Section SortOf.
     Context (type_of : context -> term -> typing_result term).
@@ -43,7 +51,7 @@ Section TypeOf.
     | tVar n => raise (UnboundVar n)
     | tEvar ev args => raise (UnboundEvar ev)
 
-    | tSort s => ret (tSort (try_suc s))
+    | tSort s => ret (tSort (Universe.try_suc s))
 
     | tProd n t b =>
       s1 <- type_of_as_sort type_of Γ t ;;
@@ -101,12 +109,6 @@ Section TypeOf.
     type_of_as_sort type_of Γ ty.
 
   Open Scope type_scope.
-
-  Notation "'∑'  x .. y , P" := (sigT (fun x => .. (sigT (fun y => P)) ..))
-    (at level 200, x binder, y binder, right associativity) : type_scope.
-
-  Notation "( x ; .. ; y ; z )" :=
-    (existT x (.. (existT y z) ..)) : type_scope.
 
   Conjecture cumul_reduce_to_sort : forall {Γ T s},
     reduce_to_sort (fst Σ) Γ T = Checked s ->
@@ -184,7 +186,7 @@ Section TypeOf.
     one_ih ; eassumption.
 
   Ltac cih :=
-    eapply type_Conv ; [
+    eapply type_Cumul ; [
       ih
     | try eassumption
     | try eassumption
@@ -213,13 +215,18 @@ Section TypeOf.
       split.
       + econstructor ; try eassumption ; try ih ; try cih.
         (* Again we're missing result on how to type sorts... *)
-        all: admit.
+        left. red. exists [], a.
+        unfold app_context; simpl; intuition auto with pcuic.
+        eapply typing_wf_local; tea.
+        left. red. exists [], a0. unfold app_context; simpl; intuition auto with pcuic.
+        eapply typing_wf_local; tea.
       + (* Sorts again *)
+        simpl.
         admit.
     - go eq. split.
       + econstructor ; try eassumption ; try ih ; try cih.
       + eapply congr_cumul_prod.
-        * eapply cumul_refl'.
+        * eapply conv_alt_refl. reflexivity.
         * ih.
     - go eq. split.
       + econstructor ; try eassumption ; try ih ; try cih.
@@ -241,7 +248,7 @@ Section TypeOf.
     - admit.
     - split.
       + ih.
-      + eapply cumul_trans ; try eassumption. ih.
+      + eapply cumul_trans ; try eassumption.
   Admitted.
 
 

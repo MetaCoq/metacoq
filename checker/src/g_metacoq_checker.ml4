@@ -15,10 +15,10 @@ let check env evm c =
   let term = Ast_quoter.quote_term_rec env (EConstr.to_constr evm c) in
   (* Feedback.msg_debug (str"Finished quoting.. checking."); *)
   let fuel = pow two (pow two (pow two two)) in
-  let checker_flags = true in
+  let checker_flags = Config0.default_checker_flags in
   match Checker0.typecheck_program checker_flags fuel term with
   | CorrectDecl t ->
-     Feedback.msg_info (str "Successfully checked of type: " ++ pr_char_list (Checker0.string_of_term t))
+     Feedback.msg_info (str "Successfully checked of type: " ++ pr_char_list (AstUtils.string_of_term t))
   | EnvError (AlreadyDeclared id) ->
      CErrors.user_err ~hdr:"metacoq" (str "Already declared: " ++ pr_char_list id)
   | EnvError (IllFormedDecl (id, e)) ->

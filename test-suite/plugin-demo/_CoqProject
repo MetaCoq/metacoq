@@ -50,8 +50,6 @@ src/equalities.ml
 src/equalities.mli
 src/extractable.ml
 src/extractable.mli
-src/fMapWeakList.ml
-src/fMapWeakList.mli
 src/list0.ml
 src/list0.mli
 src/logic0.ml

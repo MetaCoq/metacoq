@@ -43,37 +43,28 @@ Proof.
   destruct b; cbn in *; try congruence.
 Qed.
 
-(* @Simon: Maybe we need wf_ext as assumption here? *)
 Lemma isErasable_subst_instance (Σ : global_env_ext) Γ T univs u :
-  wf Σ ->  wf_local Σ Γ ->
+  wf_ext Σ ->  wf_local Σ Γ ->
   wf_local (Σ.1, univs) (PCUICUnivSubst.subst_instance_context u Γ) ->
   isErasable Σ Γ T ->
+  sub_context_set (monomorphic_udecl Σ.2) (global_ext_context_set (Σ.1, univs)) ->
   consistent_instance_ext (Σ.1,univs) (Σ.2) u ->
   isErasable (Σ.1,univs) (PCUICUnivSubst.subst_instance_context u Γ) (PCUICUnivSubst.subst_instance_constr u T).
 Proof.
   intros. destruct X2 as (? & ? & [ | (? & ? & ?)]).
   - eapply typing_subst_instance in t; eauto.
     eexists. split.
-    + eapply t.
-      * admit.                  (* This would be fixed by changing the assumption *)
-      * admit.                  (* I don't know what this means *)
-      * eauto.
+    + eapply t; tas.
     + left. eapply isArity_subst_instance. eauto.
   - eapply typing_subst_instance in t; eauto.
     eexists. split.
-    + eapply t.
-      * admit.
-      * admit.
-      * eauto.
+    + eapply t; tas.
     + right.
       eapply typing_subst_instance in t0; eauto.
       eexists. split.
-      * eapply t0.
-        -- admit.
-        -- admit.
-        -- eauto.
+      * eapply t0; tas.
       * now eapply is_prop_subst_instance.
-Admitted.
+Qed.
 
 (** * Correctness of erasure  *)
 
@@ -133,7 +124,6 @@ env_prop
 Proof.
   apply typing_ind_env; intros Σ wfΣ Γ wfΓ; intros **; rename_all_hyps.
   all: match goal with [ H : erases _ _ ?a _ |- ?G ] => tryif is_var a then idtac else inv H end.
-  Hint Resolve isErasable_subst_instance.
   Hint Resolve Is_type_conv_context.
   all: try now (econstructor; eauto).
   - econstructor. eapply h_forall_Γ'0.
@@ -225,8 +215,7 @@ sub_context_set (monomorphic_udecl Σ.2) (global_ext_context_set (Σ.1, univs)) 
 Proof.
   apply typing_ind_env; intros; cbn -[PCUICUnivSubst.subst_instance_constr] in *.
   all: match goal with [ H : erases _ _ ?a _ |- ?G ] => tryif is_var a then idtac else inv H end.
-  Hint Resolve isErasable_subst_instance.
-  all: try now (econstructor; eauto).
+  all: try now (econstructor; eauto using isErasable_subst_instance).
   - cbn. econstructor.
     eapply H0 in X2; eauto.
     econstructor. eauto. cbn. econstructor.

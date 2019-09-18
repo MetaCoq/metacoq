@@ -20,22 +20,6 @@ Import MonadNotation.
 
 Module PSR := PCUICSafeReduce.
 
-(* TODO MOVE *)
-Lemma conv_context_convp :
-  forall {cf : checker_flags} (Σ : global_env_ext) Γ Γ' leq u v,
-    wf Σ ->
-    conv leq Σ Γ u v ->
-    conv_context Σ Γ Γ' ->
-    conv leq Σ Γ' u v.
-Proof.
-  intros cf Σ Γ Γ' leq u v hΣ h hx.
-  destruct leq.
-  - simpl. destruct h. constructor.
-    eapply conv_alt_conv_ctx. all: eauto.
-  - simpl in *. destruct h. constructor.
-    eapply cumul_conv_ctx. all: eauto.
-Qed.
-
 (** * Conversion for PCUIC without fuel
 
   Following PCUICSafereduce, we derive a fuel-free implementation of

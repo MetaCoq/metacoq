@@ -20,7 +20,6 @@ Definition bool_list := List.map negb (cons true (cons false nil)).
 Set Printing Universes.
 (* Universe issues: undeclared universes from sections *)
 (* Quote Recursively Definition boolq := bool_list. *)
-
 MetaCoq SafeCheck bool_list.
 
 
@@ -30,5 +29,5 @@ Error: Type error: Msgundeclared level, while checking MetaCoq.Template.Universe
 (* Time MetaCoq SafeCheck @infer_and_print_template_program. *)
 (*
 Error:
-Type error: Terms are not convertible: Ind(Coq.Init.Datatypes.nat,0,[]) App(Lambda(n,Ind(Coq.Init.Datatypes.nat,0,[]),Ind(Coq.Init.Datatypes.nat,0,[])),Construct(Coq.Init.Datatypes.nat,0,0,[])) after reduction: Ind(Coq.Init.Datatypes.nat,0,[]) Ind(Coq.Init.Datatypes.nat,0,[]), while checking Coq.Init.Nat.add
+Type error: Terms are not <= for cumulativity: Sort([Coq.Init.Datatypes.23,Coq.Init.Datatypes.24]) Sort([Set]) after reduction: Sort([Coq.Init.Datatypes.23,Coq.Init.Datatypes.24]) Sort([Set]), while checking MetaCoq.Template.Universes.Universe.Expr.t
 *)

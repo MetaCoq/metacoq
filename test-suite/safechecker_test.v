@@ -12,7 +12,7 @@ MetaCoq SafeCheck (3 + 1).
 Quote Definition foo := (3 + 1).
 
 Time MetaCoq SafeCheck plus.
-Time MetaCoq UnsafeCheck plus.
+Time MetaCoq CoqCheck Nat.add.
 
 Require Import MetaCoq.SafeChecker.SafeTemplateChecker.
 
@@ -22,8 +22,7 @@ Set Printing Universes.
 (* Universe issues: undeclared universes from sections *)
 (* Quote Recursively Definition boolq := bool_list. *)
 Time MetaCoq SafeCheck bool_list.
-Time MetaCoq UnsafeCheck bool_list.
-
+Time MetaCoq CoqCheck bool_list.
 
 (* Even with universe checking disabled, we get:
 Error: Type error: Msgundeclared level, while checking MetaCoq.Template.Universes.LevelSet.Raw.elt
@@ -534,11 +533,11 @@ Definition isequiv_adjointify {A B : Type} (f : A -> B) (g : B -> A)
   := BuildIsEquiv A B f g (issect' f g issect isretr) isretr
                   (is_adjoint' f g issect isretr).
 
-MetaCoq SafeCheck @ap.
-MetaCoq SafeCheck @issect'.
+(* MetaCoq SafeCheck @ap. *)
+(* MetaCoq SafeCheck @issect'. *)
 Fail MetaCoq SafeCheck @ap_pp.
 Fail MetaCoq SafeCheck @isequiv_adjointify.
 Fail MetaCoq SafeCheck @IsEquiv.
-MetaCoq UnsafeCheck @IsEquiv.
+MetaCoq CoqCheck IsEquiv.
 Fail Time MetaCoq SafeCheck @isequiv_adjointify.
-Time MetaCoq UnsafeCheck @isequiv_adjointify.
+Time MetaCoq CoqCheck isequiv_adjointify.

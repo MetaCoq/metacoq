@@ -350,3 +350,8 @@ pcuic/src/pCUICReflect.mli
 /erasure/src/typing0.ml
 /erasure/src/typing0.mli
 /pcuic/Makefile.plugin-e
+
+/erasure/src/pCUICSafeRetyping.ml
+/erasure/src/pCUICSafeRetyping.mli
+/erasure/src/safeErasureFunction.ml
+/erasure/src/safeErasureFunction.mli

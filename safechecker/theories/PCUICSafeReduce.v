@@ -941,13 +941,18 @@ End Acc_sidecond_generator.
   Defined.
   Next Obligation.
     destruct hΣ.
+    eapply R_Acc. all: assumption.
+  Defined.
+  (* Replace the last obligation by the following to run inside Coq. *)
+  (* Next Obligation.
+    destruct hΣ.
     revert h. generalize (t, π).
     refine (Acc_intro_generator
               (R:=fun x y => R Σ Γ x y)
               (P:=fun x => wellformed Σ Γ (zip x)) (fun x y Px Hy => _) 12 _).
     simpl in *. eapply wellformed_R_pres; eauto.
     intros; eapply R_Acc; eassumption.
-  Defined.
+  Defined. *)
 
   Definition reduce_stack Γ t π h :=
     let '(exist ts _) := reduce_stack_full Γ t π h in ts.

@@ -675,7 +675,7 @@ Section ContextConversion.
     (*   induction assΔ in y, e |- *; depelim e. constructor. *)
     (*   destruct y0; try constructor. simpl in *. subst. constructor; auto. *)
     (*   eauto. *)
-  Admitted.
+  Abort.
 
   Lemma conv_isWfArity_or_Type Γ Γ' T U :
     conv_context Γ' Γ ->
@@ -683,7 +683,7 @@ Section ContextConversion.
     isWfArity_or_Type Σ Γ T ->
     isWfArity_or_Type Σ Γ' U.
   Proof.
-  Admitted.
+  Abort.
 End ContextConversion.
 
 Notation conv_context Σ Γ Γ' := (context_relation (conv_decls Σ) Γ Γ').

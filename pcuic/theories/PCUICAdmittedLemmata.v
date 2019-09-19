@@ -215,14 +215,6 @@ Check (@PCUICSR.leq_univ_substu
        forall φ : Universes.constraints,
          PCUICEquality.SubstUnivPreserving (Universes.leq_universe φ)).
 
-Check (@PCUICSR.conv_isWfArity_or_Type
-     of forall (cf : config.checker_flags) (Σ : PCUICAst.global_env_ext),
-       PCUICTyping.wf (PCUICAstUtils.fst_ctx Σ) ->
-       forall (Γ Γ' : PCUICAst.context) (T U : PCUICAst.term),
-       PCUICSR.context_relation (PCUICSR.conv_decls Σ) Γ' Γ ->
-       PCUICTyping.conv Σ Γ T U ->
-       PCUICGeneration.isWfArity_or_Type Σ Γ T -> PCUICGeneration.isWfArity_or_Type Σ Γ' U).
-
 Check (@PCUICSR.conv_context_trans
      of forall (cf : config.checker_flags)
          (Σ : PCUICAst.global_env * Universes.universes_decl),

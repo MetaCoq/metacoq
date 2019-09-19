@@ -17,10 +17,10 @@ authors: ["Abhishek Anand <aa755@cs.cornell.edu>"
 license: "MIT"
 build: [
   ["sh" "./configure.sh"]
-  [make "-j%{jobs}%" "-C" "extraction"]
+  [make "-j%{jobs}%" "-C" "erasure"]
 ]
 install: [
-  [make "-C" "extraction" "install"]
+  [make "-C" "erasure" "install"]
 ]
 depends: [
   "ocaml" {> "4.02.3"}
@@ -30,11 +30,11 @@ depends: [
   "coq-metacoq-pcuic" {= version}
   "coq-metacoq-safechecker" {= version}
 ]
-synopsis: "Implementation and verification of Coq's \"extraction\" procedure"
+synopsis: "Implementation and verification of an erasure procedure for Coq"
 description: """
 MetaCoq is a meta-programming framework for Coq.
 
-The Extraction module provides a complete specification of Coq's so-called
+The Erasure module provides a complete specification of Coq's so-called
 \"extraction\" procedure, starting from the PCUIC calculus and targeting
 untyped call-by-value lambda-calculus.
 

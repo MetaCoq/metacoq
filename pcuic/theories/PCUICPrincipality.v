@@ -30,7 +30,7 @@ Section Principality.
 
   Definition Is_conv_to_Arity Σ Γ T := exists T', ∥red Σ Γ T T'∥ /\ isArity T'.
 
-
+ 
 
   Lemma invert_red_sort Γ u v :
     red Σ Γ (tSort u) v -> v = tSort u.

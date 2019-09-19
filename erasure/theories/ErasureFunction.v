@@ -5,7 +5,7 @@ From MetaCoq.Checker Require Import uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICTyping PCUICMetaTheory PCUICWcbvEval PCUICLiftSubst PCUICInversion
      PCUICConfluence PCUICCumulativity PCUICSR PCUICNormal PCUICSafeLemmata
-     PCUICValidity PCUICPrincipality PCUICElimination PCUICSN.
+     PCUICValidity PCUICPrincipality PCUICElimination PCUICSN PCUICPrincipality.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker.
 From MetaCoq.Erasure Require EAst ELiftSubst ETyping EWcbvEval Extract ErasureCorrectness.
 From Equations Require Import Equations.
@@ -93,21 +93,157 @@ Ltac sq := try (destruct HΣ as [wfΣ]; clear HΣ);
          | H : ∥ _ ∥ |- _ => destruct H
          end; try eapply sq.
 
+Hint Constructors normal neutral.
+
+Derive Signature for normal.
+Derive Signature for neutral.
+
+Definition normal_neutral_dec Γ t : ({normal Σ Γ t} + {~ (normal Σ Γ t)}) * ({neutral Σ Γ t} + {~ (neutral Σ Γ t)}).
+Proof.
+  induction t in Γ |- *; split; eauto.
+  all: try now (right; intros H; depelim H).
+  - destruct (option_map decl_body (nth_error Γ n)) as [ [ | ] | ] eqn:E.
+    + right. intros H. depelim H. depelim H. congruence. admit. admit.
+    + eauto.
+    + right. intros H. depelim H. depelim H. congruence. admit. admit.
+  - destruct (option_map decl_body (nth_error Γ n)) as [ [ | ] | ] eqn:E.
+    + right. intros H. depelim H. congruence. 
+    + eauto.
+    + right. intros H. depelim H. congruence.
+  - destruct (IHt1 Γ) as [[] _];
+      [destruct (IHt2 (Γ,, vass na t1)) as [[] _]|]; eauto.
+    + right. intros H. depelim H. depelim H. eauto. admit. admit.
+    + right. intros H. depelim H. depelim H. eauto. admit. admit.
+  - destruct (IHt1 Γ) as [[] _];
+      [destruct (IHt2 (Γ,, vass na t1)) as [[] _]|]; eauto.
+    + right. intros H. depelim H. depelim H. eauto. admit. admit.
+    + right. intros H. depelim H. depelim H. eauto. admit. admit.
+  - right. intros H. depelim H. depelim H. admit. admit.
+  - destruct (IHt1 Γ) as [_ []];
+      [destruct (IHt2 Γ) as [[] _]|]; eauto.
+    + right. intros H. depelim H. depelim H. eauto. admit. admit.
+    + right. intros H. depelim H. depelim H. eauto. admit. admit.
+  - destruct (IHt1 Γ) as [_ []];
+      [destruct (IHt2 Γ) as [[] _]|]; eauto.
+    + right. intros H. depelim H. eauto. 
+    + right. intros H. depelim H. eauto.
+  - destruct (lookup_env Σ k) as [[] | ] eqn:E.
+    + destruct (cst_body c) eqn:E2.
+      * right. intros H. depelim H. depelim H. congruence. admit. admit.
+      * destruct (string_dec k k0). subst. left. eauto. 
+        right. intros H. depelim H. depelim H. congruence. admit. admit.
+    +   right. intros H. depelim H. depelim H. congruence. admit. admit.
+    +   right. intros H. depelim H. depelim H. congruence. admit. admit.
+  - destruct (lookup_env Σ k) as [[] | ] eqn:E.
+    + destruct (cst_body c) eqn:E2.
+      * right. intros H. depelim H. congruence. 
+      * destruct (string_dec k k0). subst. left. eauto. 
+        right. intros H. depelim H. congruence.
+    +   right. intros H. depelim H. congruence.
+    +   right. intros H. depelim H. congruence.
+  -
+Admitted.
+        
+Definition normal_dec Γ t : {normal Σ Γ t} + {~ (normal Σ Γ t)}.
+Proof.
+  eapply normal_neutral_dec.
+Defined.
+
+Lemma normal_red1 Γ t t' : normal Σ Γ t -> red1 Σ Γ t t' -> False.
+Proof.
+Admitted.
+
+Inductive red' (Σ : global_env) (Γ : context) : term -> term -> Type :=
+  refl_red' M : red' Σ Γ M M
+| trans_red' : forall M P N : term, red1 Σ Γ M P -> red' Σ Γ P N -> red' Σ Γ M N.
+
+Instance red'_transitive Γ : CRelationClasses.Transitive (red' Σ Γ).
+Proof.
+  intros ? ? ? ?. revert z. induction X; intros.
+  - eauto.
+  - econstructor. eauto. eauto.
+Qed.
+
+Lemma red_red' Γ t t' : red Σ Γ t t' -> red' Σ Γ t t'.
+Proof.
+  induction 1.
+  - econstructor.
+  - etransitivity. eassumption. econstructor. eauto. econstructor.
+Qed.
+
+Program Definition reduce_to_sort' Γ t (h : wellformed Σ Γ t)
+  : typing_result ((∑ u, ∥ red (fst Σ) Γ t (tSort u) ∥) + ((∑ u, ∥ red (fst Σ) Γ t (tSort u) ∥) -> False)) :=
+  match t with
+  | tSort u => ret (inl (u; sq (refl_red _ _ _)))
+  | _ =>
+    match hnf HΣ Γ t h with
+    | tSort u => ret (inl (u; _))
+    | t' => if normal_dec Γ t' then ret (inr _) else TypeError (Msg "hnf did not return normal form")
+    end
+  end.
+Next Obligation.
+  epose proof (hnf_sound HΣ (h:=h)).
+  now rewrite <- Heq_anonymous in H0.
+Defined.
+Next Obligation.
+  pose proof (hnf_sound HΣ (h := h)).
+  repeat match goal with [H : squash (red _ _ _ _ ) |- _ ] => destruct H end.
+  destruct HΣ.
+  eapply PCUICConfluence.red_confluence in X as [t'' []]. 3:exact X0. 2:eauto.
+  eapply red_red' in r.
+  inversion r; subst.
+  - eapply invert_red_sort in r0; eauto.
+    edestruct H0. eauto.
+  - eapply normal_red1 in X; eauto.
+Qed.
+
+Program Definition reduce_to_prod' Γ t (h : wellformed Σ Γ t)
+  : typing_result ((∑ na a b, ∥ red (fst Σ) Γ t (tProd na a b) ∥) + ((∑ na a b, ∥ red (fst Σ) Γ t (tProd na a b) ∥) -> False)) :=
+  match t with
+  | tProd na a b => ret (inl (na; a; b; sq (refl_red _ _ _)))
+  | _ =>
+    match hnf HΣ Γ t h with
+    | tProd na a b => ret (inl (na; a; b; _))
+    | t' => if normal_dec Γ t' then ret (inr _) else TypeError (Msg "hnf did not return normal form")
+    end
+  end.
+Next Obligation.
+  epose proof (hnf_sound HΣ (h:=h)).
+  now rewrite <- Heq_anonymous in H0.
+Defined.
+Next Obligation.
+  pose proof (hnf_sound HΣ (h := h)).
+  repeat match goal with [H : squash (red _ _ _ _ ) |- _ ] => destruct H end.
+  destruct HΣ.
+  eapply PCUICConfluence.red_confluence in X1 as [t'' []]. 3:exact X2. 2:eauto.
+  eapply red_red' in r.
+  inversion r; subst.
+  - eapply invert_red_prod in r0 as (? & ? & [] & ?); eauto.
+    edestruct H0. eauto.
+  - eapply normal_red1 in X1; eauto.
+Qed.
+
+Lemma Is_conv_to_Arity_inv Γ T :
+  Is_conv_to_Arity Σ Γ T ->
+  (exists na A B, ∥red Σ Γ T (tProd na A B)∥) \/ (exists u, ∥red Σ Γ T (tSort u)∥).
+Admitted.
+
 Equations is_arity Γ (HΓ : ∥wf_local Σ Γ∥) T (HT : wellformed Σ Γ T) :
   typing_result ({Is_conv_to_Arity Σ Γ T} + {~ Is_conv_to_Arity Σ Γ T})
   by wf ((Γ;T;HT) : (∑ Γ t, wellformed Σ Γ t)) term_rel :=
   {
-    is_arity Γ HΓ T HT with (@reduce_to_sort _ Σ HΣ Γ T HT) => {
-    | Checked H => ret (left _) ;
-    | TypeError _ with inspect (@reduce_to_prod _ Σ HΣ Γ T _) => {
-      | exist (Checked (na; A; B; H)) He =>
+    is_arity Γ HΓ T HT with (@reduce_to_sort' Γ T HT) => {
+    | Checked (inl H) => ret (left _) ;
+    | Checked (inr Hs) with inspect (@reduce_to_prod' Γ T _) => {
+      | exist (Checked (inl (na; A; B; H))) He =>
         match is_arity (Γ,, vass na A) _ B _ with
         | Checked (left  H) => ret (left _)
         | Checked (right H) => ret (right _)
         | TypeError t => TypeError t
         end;
-      | exist (TypeError (NotAProduct _ _)) He => ret (right _);
-      | exist (TypeError t) He => TypeError t }
+      | exist (Checked (inr _)) He => ret (right _);
+      | exist (TypeError t) He => TypeError t } ;
+    | TypeError t => TypeError t
     }
   }.
 Next Obligation.
@@ -123,34 +259,36 @@ Next Obligation.
     eapply isWfArity_red in X; eauto.
     cbn. eapply isWfArity_prod_inv; eauto.
 Qed.
-Next Obligation. 
-  sq. destruct HT as [ [] | [] ].
-  - clear He. eapply subject_reduction in r; eauto.
-    eapply inversion_Prod in r as (? & ? & ? & ? & ?).
+Next Obligation.
+  clear He. sq. destruct HT as [ [] | [] ].
+  - eapply subject_reduction in X; eauto.
+    eapply inversion_Prod in X as (? & ? & ? & ? & ?).
     do 2 econstructor. eauto. auto.
-  - clear He. econstructor 2. sq.
-    eapply PCUICPrincipality.isWfArity_red in r; eauto.
+  - econstructor 2. sq.
+    eapply PCUICPrincipality.isWfArity_red in X; eauto.
     eapply isWfArity_prod_inv; eauto.
 Qed.
 Next Obligation.
+  clear He.
   sq. repeat eexists. eassumption.
 Qed.
 Next Obligation.
+  clear He.
   destruct H as (? & ? & ?). eexists (tProd _ _ _). split; sq.
   etransitivity. eassumption. eapply PCUICReduction.red_prod. econstructor.
   eassumption. now cbn.
 Qed.
 Next Obligation.
   destruct HΣ as [wΣ].
-  destruct H1 as (? & ? & ?). sq.
+  destruct H1 as (? & ? & ?). clear He. sq.
   destruct H.
-  edestruct (red_confluence wfΣ r X) as (? & ? & ?); eauto.
+  edestruct (red_confluence wfΣ X X0) as (? & ? & ?); eauto.
   eapply invert_red_prod in r0 as (? & ? & [] & ?); eauto. subst.
 
   eapply invert_cumul_arity_l in H2. 2:eauto. 3: eapply PCUICCumulativity.red_cumul. 3:eauto. 2:eauto.
   destruct H2 as (? & ? & ?). sq.
 
-  eapply invert_red_prod in X1 as (? & ? & [] & ?); eauto. subst. cbn in *.
+  eapply invert_red_prod in X2 as (? & ? & [] & ?); eauto. subst. cbn in *.
   exists x4; split; eauto.
 
   destruct HT as [ [] | [] ].
@@ -172,7 +310,9 @@ Next Obligation.
      eapply PCUICConversion.conv_sym, red_conv; eauto.
 Qed.
 Next Obligation.
-Admitted. (* reduce to prod, if it returns a TypeError (NotAProduct _) just means it is not an arity *)
+  Hint Constructors squash.
+  eapply Is_conv_to_Arity_inv in H as [(? & ? & ? & ?) | (? & ?)]; eauto.
+Qed. 
 
 End fix_sigma.
 

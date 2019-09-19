@@ -1135,8 +1135,8 @@ Print Assumptions infer.
 (* Extraction infer. *)
 
 
-Require Checker.
-Require Import Checker.wGraph.
+From MetaCoq.Checker Require kernel.Checker.
+From MetaCoq.Checker Require Import wGraph.
 
 Section CheckEnv.
   Context  {cf:checker_flags}.

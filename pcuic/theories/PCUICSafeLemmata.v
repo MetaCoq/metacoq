@@ -1443,7 +1443,7 @@ Lemma strengthening `{cf : checker_flags} :
     Σ;;; Γ ,,, Γ' |- t : T.
 Admitted.
 
-Require Import uGraph.
+From MetaCoq.Checker Require Import uGraph.
 
 (* todo: move *)
 Lemma map_option_out_mapi :

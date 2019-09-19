@@ -29,7 +29,7 @@ Lemma type_Case_inv (Σ : global_env_ext) (hΣ : wf Σ.1) Γ ind npar p c brs T 
          (Σ;;; Γ |- p : pty) *
          (types_of_case ind mdecl idecl pars u p pty = Some (indctx, pctx, ps, btys)) *
          (check_correct_arity (global_ext_constraints Σ) idecl ind u indctx pars pctx) *
-         (Exists (fun sf : sort_family => universe_family ps = sf) (PCUICAst.ind_kelim idecl)) *
+         (existsb (leb_sort_family (universe_family ps)) (PCUICAst.ind_kelim idecl)) *
          (Σ;;; Γ |- c : PCUICAst.mkApps (tInd ind u) args) *
          (All2 (fun x y : nat * PCUICAst.term => ((fst x = fst y) * (Σ;;; Γ |- snd x : snd y)) * (Σ ;;; Γ |- snd y : tSort ps)) brs btys) *
          (Σ ;;; Γ |- PCUICAst.mkApps p (skipn npar args ++ [c])  <= T)}%type.

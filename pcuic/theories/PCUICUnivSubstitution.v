@@ -1090,6 +1090,7 @@ Proof.
     + unfold inds. induction #|ind_bodies mdecl|. reflexivity.
       cbn. now rewrite IHn.
     + symmetry; apply subst_instance_constr_two.
+
   - intros ind u npar p c brs args mdecl idecl isdecl X X0 H pty X1 indctx pctx ps
            btys H0 X2 H1 X3 X4 X5 X6 u0 univs wfΣ' HSub H2.
     rewrite subst_instance_constr_mkApps in *.
@@ -1100,7 +1101,6 @@ Proof.
                           (pctx0:=subst_instance_context u0 pctx)
                           (btys0:=map (on_snd (subst_instance_constr u0)) btys);
       eauto.
-
     + clear -H0 H2. rewrite firstn_map.
       apply* types_of_case_spec in H0. destruct H0 as [s' [E1 [E2 E3]]].
       eexists. repeat split.
@@ -1126,15 +1126,18 @@ Proof.
         rewrite subst_instance_context_length.
         intro; symmetry; apply lift_subst_instance_constr.
       * apply subst_instance_to_extended_list.
-    + clear -H1 H2. induction H1.
-      -- constructor 1. unfold universe_family in *.
-         rewrite is_prop_subst_instance_univ; aa.
-         destruct (Universe.is_prop ps); aa.
-         case_eq (Universe.is_small ps); intro HH; rewrite HH in H.
-         ++ apply (is_small_subst_instance_univ u0) in HH.
-            now rewrite HH.
-         ++ admit.  (* FIXME: InType not stable under substituion *)
-      -- constructor 2; auto.
+    + clear -H1 H2.
+      induction (ind_kelim idecl) as [|a l]; try discriminate; cbn in *.
+      apply* orb_true_iff in H1.
+      destruct H1 as [H1|H1]; [left|right; now eapply IHl].
+      clear IHl. unfold universe_family in *.
+      rewrite is_prop_subst_instance_univ; [|aa].
+      destruct (Universe.is_prop ps); cbnr.
+      case_eq (Universe.is_small ps); intro HH; rewrite HH in H1.
+      ++ apply (is_small_subst_instance_univ u0) in HH.
+         now rewrite HH.
+      ++ destruct a; inv H1.
+         destruct ?; constructor.
     + apply X5 in H2; tea.
       rewrite subst_instance_constr_mkApps in H2; eassumption.
     + eapply All2_map with (f := (on_snd (subst_instance_constr u0)))
@@ -1144,12 +1147,14 @@ Proof.
       cbn. eauto. cbn.
       destruct x, y; cbn in *; subst.
       eapply t1; assumption.
+
   - intros p c u mdecl idecl pdecl isdecl args X X0 X1 X2 H u0 univs wfΣ' HSub H0.
     rewrite <- subst_subst_instance_constr. cbn.
     rewrite !subst_instance_constr_two.
     rewrite map_rev. econstructor; eauto. 2:now rewrite map_length.
     eapply X2 in H0; tas. rewrite subst_instance_constr_mkApps in H0.
     eassumption.
+
   - intros mfix n decl H H0 X X0 u univs wfΣ' HSub H1.
     erewrite map_dtype. econstructor.
     + now apply fix_guard_subst_instance.
@@ -1169,6 +1174,7 @@ Proof.
         rewrite <- (fix_context_subst_instance u mfix).
         eapply X3.
       * destruct x as [? ? []]; cbn in *; tea.
+
   - intros mfix n decl H X X0 H0 u univs wfΣ' HSub H1.
     erewrite map_dtype. econstructor; tas.
     + rewrite nth_error_map, H. reflexivity.
@@ -1181,11 +1187,11 @@ Proof.
       * specialize (X3 u univs wfΣ' HSub H1). erewrite map_dbody in X3.
         rewrite <- lift_subst_instance_constr in X3.
         rewrite fix_context_length, map_length in *.
-        erewrite map_dtype with (d := x) in X3.
         unfold subst_instance_context, map_context in *.
         rewrite map_app in *.
+        unfold compose.
         rewrite <- (fix_context_subst_instance u mfix).
-        eapply X3.
+        rewrite <- map_dtype. eapply X3.
 
   - intros t0 A B X X0 X1 X2 X3 u univs wfΣ' HSub H.
     econstructor. eapply X1; aa.
@@ -1200,8 +1206,8 @@ Proof.
         eexists. eapply p0; tas.
         eapply p; tas.
       * aa.
-    + eapply cumul_subst_instance; eauto.
-Admitted.
+    + destruct HSub. eapply cumul_subst_instance; aa.
+Qed.
 
 
 Lemma typing_subst_instance' Σ φ Γ t T u univs :

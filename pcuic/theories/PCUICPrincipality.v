@@ -661,7 +661,7 @@ Section Principality.
       clear redr redr' a1 a2.
       exists (mkApps u1 (skipn (ind_npars x10) x9 ++ [u2])); repeat split; auto.
 
-      2:{ revert e3.
+      2:{ revert e2.
           rewrite /types_of_case.
           destruct instantiate_params eqn:Heq => //.
           destruct (destArity [] t1) as [[args s']|] eqn:eqar => //.

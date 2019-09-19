@@ -790,18 +790,18 @@ Section Typecheck.
         check_eq_true
           (check_correct_arity body ind u indctx (firstn par args) pctx)
           (Msg "not correct arity") ;;
-        match Exists_dec (fun sf  => universe_family ps = sf) (ind_kelim body)
-                         (sort_family_eqdec _) with
-        | right _ => raise (Msg "cannot eliminate over this sort")
-        | left x =>
- (fix check_branches (brs btys : list (nat * term))
-      (HH : Forall (squash ∘ (isType Σ Γ) ∘ snd) btys) {struct brs}
-   : typing_result
-       (All2 (fun x y => fst x = fst y /\ ∥ Σ ;;; Γ |- snd x : snd y ∥) brs btys)
+        check_eq_true
+          (existsb (leb_sort_family (universe_family ps)) (ind_kelim body))
+          (Msg "cannot eliminate over this sort") ;;
+        (fix check_branches (brs btys : list (nat * term))
+          (HH : Forall (squash ∘ (isType Σ Γ) ∘ snd) btys) {struct brs}
+            : typing_result
+              (All2 (fun x y => fst x = fst y /\ ∥ Σ ;;; Γ |- snd x : snd y ∥) brs btys)
                     := match brs, btys with
                        | [], [] => ret (All2_nil _)
                        | (n, t) :: brs , (m, A) :: btys =>
-                         W <- check_dec (Msg "not nat eq") (EqDecInstances.nat_eqdec n m) ;;
+                         W <- check_dec (Msg "not nat eq")
+                                       (EqDecInstances.nat_eqdec n m) ;;
                          Z <- infer_cumul infer Γ HΓ t A _ ;;
                          X <- check_branches brs btys _ ;;
                          ret (All2_cons _ _ _ _ _ (conj _ _) X)
@@ -809,7 +809,6 @@ Section Typecheck.
                        | _ :: _, [] => raise (Msg "wrong number of branches")
                        end) brs btys _ ;;
           ret (mkApps p (List.skipn par args ++ [c]); _)
-        end
       end
 
     | tProj (ind, n, k) c =>
@@ -965,7 +964,7 @@ Section Typecheck.
     destruct (eqb_spec ind I) as [e|e]; [destruct e|discriminate H0].
     change (eqb (ind_npars d) par = true) in H1.
     destruct (eqb_spec (ind_npars d) par) as [e|e]; [|discriminate].
-    rename Heq_anonymous0 into HH. symmetry in HH.
+    rename Heq_anonymous into HH. symmetry in HH.
     eapply (type_Case_valid_btys Σ Γ) in HH; tea.
     eapply All_Forall, All_impl; tea. clear.
     intros x X; constructor; now exists ps.

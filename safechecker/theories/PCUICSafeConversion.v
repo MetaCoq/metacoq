@@ -2604,7 +2604,7 @@ Section Conversion.
     - simpl. constructor. constructor. eapply leqb_term_spec. assumption.
   Qed.
 
-  (* Lemma leqb_term_stack_spec :
+  Lemma leqb_term_stack_spec :
     forall Γ t1 π1 t2 π2,
       leqb_term_stack t1 π1 t2 π2 ->
       eq_context_upto (eq_universe (global_ext_constraints Σ))
@@ -2619,7 +2619,7 @@ Section Conversion.
       + eapply eq_context_upto_refl. intro. apply eq_universe_refl.
       + eapply eqb_ctx_spec. assumption.
     - eapply leqb_term_spec. assumption.
-  Qed. *)
+  Qed.
 
   Equations(noeqns) _isconv_fallback (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
@@ -2644,9 +2644,12 @@ Section Conversion.
             isconv_prog leq t1 π1 rt2' (θ2' +++ θ2) aux
           }
         } ;
-      | @exist None _ with inspect (eqb_termp leq t1 t2) := {
-        | @exist true eq1 := isconv_args t1 π1 π2 aux ;
-        | @exist false _ := no
+      | @exist None _ with inspect leq := {
+        | @exist Conv eq1 with inspect (nleq_term t1 t2) := {
+          | @exist true eq2 := isconv_args t1 π1 π2 aux ;
+          | @exist false _ := no
+          } ;
+        | @exist Cumul eq1 := exist (leqb_term_stack t1 π1 t2 π2) _
         }
       }
     }.
@@ -2915,24 +2918,47 @@ Section Conversion.
     - eapply conv_context_sym. all: auto.
   Qed.
   Next Obligation.
-    (* I will need to strengthen wellformed_zipc_replace it seems... *)
-    admit.
-  Admitted.
+    destruct hΣ as [wΣ].
+    eapply wellformed_alpha ; try assumption.
+    - exact h2.
+    - apply eq_term_upto_univ_sym ; auto.
+      eapply eq_term_upto_univ_zipc ; auto.
+      eapply elimT.
+      + eapply reflect_upto_names.
+      + symmetry. assumption.
+  Qed.
   Next Obligation.
     eapply R_stateR. all: simpl. all: try reflexivity.
-    - (* Seems wrong... *) give_up.
+    - eapply ssrbool.elimT.
+      + eapply reflect_nleq_term.
+      + eapply nleq_term_zipc.
+        symmetry. assumption.
     - constructor.
-  Admitted.
+  Qed.
   Next Obligation.
     destruct b. 2: auto.
     destruct h as [hx [h]].
     split. 1: assumption.
     destruct hΣ.
-    eapply conv_trans'.
+    constructor.
+    eapply conv_alt_trans.
     - assumption.
-    - eapply conv_conv_l. all: eauto.
-    - eapply conv_zipp'.
-      eapply eqb_termp_spec. auto.
+    - eassumption.
+    - eapply conv_zipp.
+      constructor.
+      eapply upto_names_impl_eq_term.
+      eapply elimT.
+      + eapply reflect_upto_names.
+      + eauto.
+  Qed.
+  Next Obligation.
+    case_eq (leqb_term_stack t1 π1 t2 π2). 2: auto.
+    intro e.
+    apply (leqb_term_stack_spec Γ) in e.
+    destruct e as [hx h].
+    split.
+    - constructor. eapply eq_context_upto_univ_conv_context. assumption.
+    - constructor. constructor. assumption.
   Qed.
 
   Equations _isconv (s : state) (Γ : context)

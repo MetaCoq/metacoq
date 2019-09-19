@@ -212,7 +212,7 @@ Fixpoint string_of_term (t : term) :=
                                 ++ ") (" ++ string_of_term t ++ ")"
   | tLetIn na b t' t => "LetIn(" ++ string_of_name na ++ "," ++ string_of_term b
                                  ++ "," ++ string_of_term t' ++ "," ++ string_of_term t ++ ")"
-  | tApp f l => string_of_term f ++ " @ " ++ string_of_term l
+  | tApp f l => string_of_term f ++ " @ (" ++ string_of_term l ++ ")"
   | tConst c u => "Const(" ++ c ++ "," ++ string_of_universe_instance u ++ ")"
   | tInd i u => "Ind(" ++ string_of_inductive i ++ "," ++ string_of_universe_instance u ++ ")"
   | tConstruct i n u => "Construct(" ++ string_of_inductive i ++ "," ++ string_of_nat n ++ ","

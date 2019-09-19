@@ -492,6 +492,22 @@ Proof.
 Qed.
 Hint Resolve 100 weaken_wf_local : pcuic.
 
+Lemma on_declared_constant `{checker_flags} Σ cst decl :
+  wf Σ -> declared_constant Σ cst decl ->
+  on_constant_decl (lift_typing typing) (Σ, cst_universes decl) decl.
+Proof.
+  intros.
+  eapply declared_constant_inv; tea.
+  apply weaken_env_prop_typing.
+Qed.
+
+Lemma declared_constant_inj {Σ c} decl1 decl2 :
+  declared_constant Σ c decl1 -> declared_constant Σ c decl2 -> decl1 = decl2.
+Proof.
+  intros. unfold declared_constant in *. rewrite H in H0.
+  now inv H0.
+Qed.
+
 Lemma on_declared_minductive `{checker_flags} {Σ ref decl} :
   wf Σ ->
   declared_minductive Σ ref decl ->

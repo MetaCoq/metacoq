@@ -8,11 +8,10 @@ From MetaCoq Require Import LibHypsNaming.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
-     PCUICSubstitution PCUICClosed PCUICCumulativity PCUICGeneration
      PCUICSubstitution PCUICClosed PCUICCumulativity PCUICGeneration PCUICReduction
      PCUICParallelReduction PCUICEquality PCUICAlpha
      PCUICValidity PCUICParallelReductionConfluence PCUICConfluence
-     PCUICContextConversion
+     PCUICContextConversion PCUICUnivSubstitution
      PCUICConversion PCUICInversion PCUICPrincipality.
 
 Require Import ssreflect ssrbool.
@@ -242,10 +241,20 @@ Proof.
     constructor. constructor.
 
   - (* Constant unfolding *)
-    eapply declared_constant_inv in wfΣ; eauto with pcuic.
+    unshelve epose proof (declared_constant_inj decl decl0 _ _); tea; subst decl.
     destruct decl0 as [ty body' univs]; simpl in *; subst body'.
-    hnf in wfΣ. simpl in wfΣ. (* Substitutivity of typing w.r.t. universes *) admit.
-    eapply weaken_env_prop_typing.
+    eapply on_declared_constant in H; tas; cbn in H.
+    rewrite <- (app_context_nil_l Γ).
+    apply typecheck_closed in H as H'; tas; [|constructor].
+    destruct H' as [_ H']. apply andb_and in H'.
+    replace (subst_instance_constr u body)
+      with (lift0 #|Γ| (subst_instance_constr u body)).
+    replace (subst_instance_constr u ty)
+      with (lift0 #|Γ| (subst_instance_constr u ty)).
+    2-3: rewrite lift_subst_instance_constr lift_closed; cbnr; apply H'.
+    eapply weakening; tea.
+    now rewrite app_context_nil_l.
+    eapply typing_subst_instance_decl with (Γ0:=[]); tea.
 
   - (* iota reduction *) admit.
   - (* Case congruence *) admit.

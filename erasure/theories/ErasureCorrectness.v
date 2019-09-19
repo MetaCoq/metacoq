@@ -7,7 +7,8 @@ From MetaCoq.Erasure Require Import EAst ELiftSubst ETyping EWcbvEval Extract Pr
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICInduction
      PCUICWeakening PCUICSubstitution PCUICChecker PCUICRetyping PCUICMetaTheory
      PCUICWcbvEval PCUICSR  PCUICClosed PCUICInversion PCUICUnivSubstitution
-     PCUICEquality PCUICConversion (* PCUICContextConversion *) PCUICElimination PCUICUnivSubst.
+     PCUICEquality PCUICConversion (* PCUICContextConversion *) PCUICElimination
+     PCUICUnivSubst PCUICWeakeningEnv.
 
 Require Import String.
 Local Open Scope string_scope.
@@ -43,8 +44,14 @@ Proof.
   destruct b; cbn in *; try congruence.
 Qed.
 
+
+Lemma wf_ext_wk_wf {cf:checker_flags} Σ : wf_ext_wk Σ -> wf Σ.
+Proof. intro H; apply H. Qed.
+
+Hint Resolve wf_ext_wk_wf.
+
 Lemma isErasable_subst_instance (Σ : global_env_ext) Γ T univs u :
-  wf_ext Σ ->  wf_local Σ Γ ->
+  wf_ext_wk Σ ->  wf_local Σ Γ ->
   wf_local (Σ.1, univs) (PCUICUnivSubst.subst_instance_context u Γ) ->
   isErasable Σ Γ T ->
   sub_context_set (monomorphic_udecl Σ.2) (global_ext_context_set (Σ.1, univs)) ->
@@ -145,7 +152,7 @@ Proof.
 
     eapply All2_impl. eapply All2_All_mix_left. eassumption. eassumption.
     intros. cbn in *.
-    decompose [prod] X3. intuition auto.
+    decompose [prod] X2. intuition auto.
     eapply b0.
     subst types.
     eapply conv_context_app; auto. now eapply typing_wf_local in a4.
@@ -161,14 +168,14 @@ Proof.
     eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
     now eapply typing_wf_local; eauto.
     eapply conv_context_app; auto. eapply typing_wf_local; eauto.
-    eapply typing_wf_local in X3.
+    eapply typing_wf_local in X2.
     eapply PCUICSafeChecker.wf_local_app_inv.
-    eauto. eapply wf_local_rel_local in X3.
-    eapply wf_local_rel_app in X3 as []. rewrite app_context_nil_l in w0.
+    eauto. eapply wf_local_rel_local in X2.
+    eapply wf_local_rel_app in X2 as []. rewrite app_context_nil_l in w0.
 
 
     eapply wf_local_rel_conv; eauto.
-    destruct X3. exists x0.
+    destruct X2. exists x0.
     eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
     now eapply typing_wf_local; eauto.
     eapply conv_context_app; auto. eapply typing_wf_local; eauto.
@@ -203,7 +210,7 @@ Qed.
 
 
 Lemma erases_subst_instance_constr0
-  : env_prop (fun Σ Γ t T => wf_ext Σ ->
+  : env_prop (fun Σ Γ t T => wf_ext_wk Σ ->
                            forall t' u univs,
                              wf_local (Σ.1, univs) (PCUICUnivSubst.subst_instance_context u Γ) ->
 sub_context_set (monomorphic_udecl Σ.2) (global_ext_context_set (Σ.1, univs)) ->
@@ -273,7 +280,7 @@ Proof.
 Admitted.
 
 Lemma erases_subst_instance_constr :
-  forall Σ : global_env_ext, wf_ext Σ ->
+  forall Σ : global_env_ext, wf_ext_wk Σ ->
   forall Γ, wf_local Σ Γ ->
   forall t T, Σ ;;; Γ |- t : T ->
     forall t' u univs,
@@ -286,12 +293,6 @@ Proof.
   unshelve eapply (erases_subst_instance_constr0 Σ _ Γ _ _ _ _); tea; eauto.
 Qed.
 
-
-Lemma declared_constant_inj Σ c decl1 decl2 :
-  declared_constant Σ c decl1 -> declared_constant Σ c decl2 -> decl1 = decl2.
-Proof.
-  intros. inv H. inv H0. rewrite H1 in H2. now inv H2.
-Qed.
 
 (** ** Erasure and applications  *)
 
@@ -371,35 +372,35 @@ Proof.
       * eassumption.
       * destruct ?; tauto.
     + edestruct IHerases_global_decls as (decl' & ? & ?).
-      eapply PCUICWeakeningEnv.wf_extends.
+      eapply wf_extends.
       eassumption. now eexists [_]. eauto.
       destruct decl. cbn in *.
       exists decl'. split. eauto.
       unfold erases_constant_body in *. clear H. destruct ?. destruct ?.
       eapply (@erases_extends (_, _)). 6: eassumption.
-        eapply PCUICWeakeningEnv.wf_extends.
+        eapply wf_extends.
         eassumption. now eexists [_]. eauto.
-        eapply (PCUICWeakeningEnv.declared_constant_inv Σ) in H0; eauto.
+        eapply (declared_constant_inv Σ) in H0; eauto.
         unfold on_constant_decl in H0. rewrite E0 in H0. unfold lift_typing in H0. exact H0.
-        eapply PCUICWeakeningEnv.weaken_env_prop_typing. eapply PCUICWeakeningEnv.wf_extends. eauto.
-        eexists [_]. reflexivity. eapply PCUICWeakeningEnv.wf_extends. eauto. now eexists [_].
+        eapply weaken_env_prop_typing. eapply wf_extends. eauto.
+        eexists [_]. reflexivity. eapply wf_extends. eauto. now eexists [_].
         eauto. now eexists [_].
       * tauto.
       * destruct ?; tauto.
   - destruct ?.
     + inv H0.
     + edestruct IHerases_global_decls as (decl' & ? & ?).
-      eapply PCUICWeakeningEnv.wf_extends.
+      eapply wf_extends.
       eassumption. now eexists [_]. eauto.
       exists decl'. split. eauto.
       unfold erases_constant_body in *. clear H. destruct ?. destruct ?.
       * eapply (@erases_extends (_,_)). 6: eassumption.
-        eapply PCUICWeakeningEnv.wf_extends.
+        eapply wf_extends.
         eassumption. now eexists [_]. eauto.
-        eapply (PCUICWeakeningEnv.declared_constant_inv Σ) in H0; eauto.
+        eapply (declared_constant_inv Σ) in H0; eauto.
         unfold on_constant_decl in H0. rewrite E0 in H0. unfold lift_typing in H0. eassumption.
-        eapply PCUICWeakeningEnv.weaken_env_prop_typing. eapply PCUICWeakeningEnv.wf_extends. eauto.
-        eexists [_]. reflexivity. eapply PCUICWeakeningEnv.wf_extends. eauto. now eexists [_].
+        eapply weaken_env_prop_typing. eapply wf_extends. eauto.
+        eexists [_]. reflexivity. eapply wf_extends. eauto. now eexists [_].
         eauto. now eexists [_].
       * tauto.
       * destruct ?; tauto.
@@ -508,15 +509,15 @@ Proof.
       eapply declared_constant_inj in d; eauto; subst.
       edestruct IHeval.
       * cbn in *.
-        eapply PCUICWeakeningEnv.declared_constant_inv in H'; eauto.
+        eapply declared_constant_inv in H'; eauto.
         unfold on_constant_decl in H'. rewrite H0 in H'. red in H'.
         eapply typing_subst_instance in H'; eauto.
         apply snd in H'; rapply H'; eauto.
         admit. admit.
-        eapply PCUICWeakeningEnv.weaken_env_prop_typing.
-      * eapply PCUICWeakeningEnv.declared_constant_inv in H'; eauto.
+        eapply weaken_env_prop_typing.
+      * eapply declared_constant_inv in H'; eauto.
         unfold on_constant_decl in H'. rewrite H0 in H'. cbn in *.
-        2:eapply PCUICWeakeningEnv.weaken_env_prop_typing.
+        2:eapply weaken_env_prop_typing.
         eapply erases_subst_instance_constr in H'; eauto.
         admit. admit.
       * destruct H3. exists x0. split; eauto. econstructor; eauto.

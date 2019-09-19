@@ -12,6 +12,7 @@ MetaCoq SafeCheck (3 + 1).
 Quote Definition foo := (3 + 1).
 
 Time MetaCoq SafeCheck plus.
+Time MetaCoq UnsafeCheck plus.
 
 Require Import MetaCoq.SafeChecker.SafeTemplateChecker.
 
@@ -20,7 +21,8 @@ Definition bool_list := List.map negb (cons true (cons false nil)).
 Set Printing Universes.
 (* Universe issues: undeclared universes from sections *)
 (* Quote Recursively Definition boolq := bool_list. *)
-MetaCoq SafeCheck bool_list.
+Time MetaCoq SafeCheck bool_list.
+Time MetaCoq UnsafeCheck bool_list.
 
 
 (* Even with universe checking disabled, we get:

@@ -30,9 +30,9 @@ VERNAC COMMAND EXTEND MetaCoqSafeCheck CLASSIFIED AS QUERY
 END
 
 let kern_check env evm c =
-  let (env,term) = Ast_id_quoter.quote_term_rec env (EConstr.to_constr evm c) in
-  let _ = Kernel.Typeops.infer env term in
-  Feedback.msg_info "I don't know what to do."
+  let term = EConstr.to_constr evm c in
+  let _ = Typeops.infer env term in
+  ()
 
 VERNAC COMMAND EXTEND MetaCoqUnsafeCheck CLASSIFIED AS QUERY
 | [ "MetaCoq" "UnsafeCheck" constr(c) ] -> [

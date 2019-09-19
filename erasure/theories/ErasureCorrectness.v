@@ -582,6 +582,7 @@ Proof.
         pose proof (Ee.eval_to_value _ _ _ He_v').
         eapply value_app_inv in H4. subst. eassumption. 2:eauto.
 
+        eapply wf_ext_wf in extr_env_wf'0.
         eapply tCase_length_branch_inv in extr_env_wf'0.
         2:{ eapply subject_reduction. eauto.
             exact Hty.
@@ -653,6 +654,7 @@ Proof.
            reflexivity. cbn in *.
            enough (#|skipn (ind_npars mdecl') args| = n0) as <- by eauto.
 
+           eapply wf_ext_wf in extr_env_wf'0.
            eapply tCase_length_branch_inv in extr_env_wf'0.
            2:{ eapply subject_reduction. eauto.
                exact Hty.
@@ -738,13 +740,28 @@ Proof.
     eapply inversion_CoFix in t0 as (? & ? & ? &?); eauto.
     inversion i0. eauto.
   - pose (Hty' := Hty).
-    eapply inversion_App in Hty' as (? & ? & ? & ? & ? & ?); eauto. 
+    eapply inversion_App in Hty' as (? & ? & ? & ? & ? & ?); eauto.
     inv He.
-    + eapply IHeval1 in t as (? & ? & ?); eauto.
+    + assert (t' := t). eapply IHeval1 in t as (? & ? & ?); eauto.
       eapply IHeval2 in t0 as (? & ? & ?); eauto.
-      exists (E.tApp x2 x3).
-      split. 2:{ eapply Ee.eval_app_cong; eauto. admit. }
-      eauto.
+      destruct (EAstUtils.isBox x2) eqn:E.
+      * destruct x2; inv E. exists tBox. split. 2: econstructor; eauto. 
+        pose proof (Is_type_app Σ [] f'[a']).
+        inversion H2.
+        edestruct H8; eauto. cbn. eapply subject_reduction. eauto.
+        exact Hty. eapply PCUICReduction.red_app.
+        eapply wcbeval_red; eauto.
+        eapply wcbeval_red; eauto.
+      * exists (E.tApp x2 x3).
+        split. 2:{ eapply Ee.eval_app_cong; eauto.
+                   eapply ssrbool.negbT.
+                   repeat eapply orb_false_intro.
+                   - destruct x2; try reflexivity.
+                     inv H2. inv H0.
+                   - destruct x2; try reflexivity.
+                     inv H2. inv H0.
+                   - eauto. }
+        econstructor; eauto.
     + exists tBox. split. 2: now econstructor.
       econstructor. eapply Is_type_red. 3:eauto. eauto.
       eapply PCUICReduction.red_app.

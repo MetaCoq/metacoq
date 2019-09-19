@@ -34,6 +34,12 @@ Error:
 Type error: Terms are not <= for cumulativity: Sort([Coq.Init.Datatypes.23,Coq.Init.Datatypes.24]) Sort([Set]) after reduction: Sort([Coq.Init.Datatypes.23,Coq.Init.Datatypes.24]) Sort([Set]), while checking MetaCoq.Template.Universes.Universe.Expr.t
 *)
 
+(* Unset Universe Minimization ToSet. *)
+
+Set Universe Polymorphism.
+
+(* Basic notations *)
+
 Inductive sigT {A:Type} (P:A -> Type) : Type :=
     existT : forall x:A, P x -> sigT P.
 
@@ -530,5 +536,9 @@ Definition isequiv_adjointify {A B : Type} (f : A -> B) (g : B -> A)
 
 MetaCoq SafeCheck @ap.
 MetaCoq SafeCheck @issect'.
-MetaCoq SafeCheck @ap_pp.
+Fail MetaCoq SafeCheck @ap_pp.
 Fail MetaCoq SafeCheck @isequiv_adjointify.
+Fail MetaCoq SafeCheck @IsEquiv.
+MetaCoq UnsafeCheck @IsEquiv.
+Fail Time MetaCoq SafeCheck @isequiv_adjointify.
+Time MetaCoq UnsafeCheck @isequiv_adjointify.

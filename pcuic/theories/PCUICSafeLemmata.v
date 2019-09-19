@@ -656,6 +656,30 @@ Section Lemmata.
     - simpl.  eapply IHl. eapply conv_App_l. assumption.
   Qed.
 
+  Lemma cumul_zipp :
+    forall Γ u v π,
+      Σ ;;; Γ |- u <= v ->
+      Σ ;;; Γ |- zipp u π <= zipp v π.
+  Proof.
+    intros Γ u v π h.
+    unfold zipp.
+    destruct decompose_stack as [l ρ].
+    induction l in u, v, h |- *.
+    - assumption.
+    - simpl.  eapply IHl. eapply cumul_App_l. assumption.
+  Qed.
+
+  Lemma conv_zipp' :
+    forall leq Γ u v π,
+      conv leq Σ Γ u v ->
+      conv leq Σ Γ (zipp u π) (zipp v π).
+  Proof.
+    intros leq Γ u v π h.
+    destruct leq.
+    - destruct h. constructor. eapply conv_zipp. assumption.
+    - destruct h. constructor. eapply cumul_zipp. assumption.
+  Qed.
+
   Lemma conv_alt_zippx :
     forall Γ u v ρ,
       Σ ;;; (Γ ,,, stack_context ρ) |- u == v ->

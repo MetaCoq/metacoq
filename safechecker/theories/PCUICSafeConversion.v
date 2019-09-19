@@ -2734,9 +2734,12 @@ Section Conversion.
       | @exist None _ with inspect leq := {
         | @exist Conv eq1 with inspect (nleq_term t1 t2) := {
           | @exist true eq2 := isconv_args t1 π1 π2 aux ;
-          | @exist false _ := no
+          (* | @exist false _ := no *)
+          (* It should be useless, but as nleq_term might not see equal
+             universes, this might be a useful fallback.
+          *)
+          | @exist false _ := exist (eqb_term (zipp t1 π1) (zipp t2 π2)) _
           } ;
-        (* | @exist Conv eq1 := exist (eqb_term_stack t1 π1 t2 π2) _ ; *)
         | @exist Cumul eq1 with inspect (nleq_term t1 t2) := {
           | @exist true eq2 := isconv_args t1 π1 π2 aux ;
           | @exist false _ := exist (leqb_term (zipp t1 π1) (zipp t2 π2)) _
@@ -3076,15 +3079,12 @@ Section Conversion.
       + eapply reflect_upto_names.
       + eauto.
   Qed.
-  (* Next Obligation.
-    case_eq (eqb_term_stack t1 π1 t2 π2). 2: auto.
+  Next Obligation.
+    case_eq (eqb_term (zipp t1 π1) (zipp t2 π2)). 2: auto.
     intro e.
-    apply (eqb_term_stack_spec Γ) in e.
-    destruct e as [hx h].
-    split.
-    - constructor. eapply eq_context_upto_univ_conv_context. assumption.
-    - constructor. constructor. assumption.
-  Qed. *)
+    apply eqb_term_spec in e.
+    constructor. constructor. assumption.
+  Qed.
   Next Obligation.
     destruct hΣ as [wΣ].
     eapply wellformed_alpha ; try assumption.

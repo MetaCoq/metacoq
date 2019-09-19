@@ -174,7 +174,7 @@ Definition string_of_level (l : Level.t) : string :=
   | Level.lProp => "Prop"
   | Level.lSet => "Set"
   | Level.Level s => s
-  | Level.Var n => "Var" ++ string_of_nat n
+  | Level.Var n => "Var " ++ string_of_nat n
   end.
 
 Definition string_of_level_expr (l : Level.t * bool) : string :=
@@ -183,11 +183,13 @@ Definition string_of_level_expr (l : Level.t * bool) : string :=
 
 Definition string_of_sort (u : universe) :=
   string_of_list string_of_level_expr u.
+
 Definition string_of_name (na : name) :=
   match na with
-  | nAnon => "Anonymous"
+  | nAnon => "_"
   | nNamed n => n
   end.
+
 Definition string_of_universe_instance u :=
   string_of_list string_of_level u.
 
@@ -200,17 +202,17 @@ Definition string_of_inductive (i : inductive) :=
 
 Fixpoint string_of_term (t : term) :=
   match t with
-  | tRel n => "Rel(" ++ string_of_nat n ++ ")"
+  | tRel n => "#" ++ string_of_nat n
   | tVar n => "Var(" ++ n ++ ")"
-  | tEvar ev args => "Evar(" ++ string_of_nat ev ++ "[]" (* TODO *)  ++ ")"
+  | tEvar ev args => "Evar(" ++ string_of_nat ev ++ "TODO" ++ ")"
   | tSort s => "Sort(" ++ string_of_sort s ++ ")"
-  | tProd na b t => "Prod(" ++ string_of_name na ++ "," ++
-                            string_of_term b ++ "," ++ string_of_term t ++ ")"
-  | tLambda na b t => "Lambda(" ++ string_of_name na ++ "," ++ string_of_term b
-                                ++ "," ++ string_of_term t ++ ")"
+  | tProd na b t => "Pi (" ++ string_of_name na ++ " : " ++
+                            string_of_term b ++ ") (" ++ string_of_term t ++ ")"
+  | tLambda na b t => "Lam (" ++ string_of_name na ++ " : " ++ string_of_term b
+                                ++ ") (" ++ string_of_term t ++ ")"
   | tLetIn na b t' t => "LetIn(" ++ string_of_name na ++ "," ++ string_of_term b
                                  ++ "," ++ string_of_term t' ++ "," ++ string_of_term t ++ ")"
-  | tApp f l => "App(" ++ string_of_term f ++ "," ++ string_of_term l ++ ")"
+  | tApp f l => string_of_term f ++ " @ (" ++ string_of_term l ++ ")"
   | tConst c u => "Const(" ++ c ++ "," ++ string_of_universe_instance u ++ ")"
   | tInd i u => "Ind(" ++ string_of_inductive i ++ "," ++ string_of_universe_instance u ++ ")"
   | tConstruct i n u => "Construct(" ++ string_of_inductive i ++ "," ++ string_of_nat n ++ ","
@@ -234,10 +236,10 @@ Definition string_of_type_error (e : type_error) : string :=
   | UndeclaredInductive c => "Undeclared inductive " ++ (inductive_mind c)
   | UndeclaredConstructor c i => "Undeclared inductive " ++ (inductive_mind c)
   | NotCumulSmaller Γ t u t' u' => "Terms are not <= for cumulativity: " ++
-      string_of_term t ++ " " ++ string_of_term u ++ " after reduction: " ++
-      string_of_term t' ++ " " ++ string_of_term u'
+      string_of_term t ++ " and " ++ string_of_term u ++ " after reduction: " ++
+      string_of_term t' ++ " and " ++ string_of_term u'
   | NotConvertible Γ t u => "Terms are not convertible: " ++
-      string_of_term t ++ " " ++ string_of_term u
+      string_of_term t ++ " and " ++ string_of_term u
   | NotASort t => "Not a sort"
   | NotAProduct t t' => "Not a product"
   | NotAnInductive t => "Not an inductive"

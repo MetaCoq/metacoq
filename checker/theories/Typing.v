@@ -965,7 +965,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     forall pty, Σ ;;; Γ |- p : pty ->
     forall indctx pctx ps btys, types_of_case ind mdecl idecl pars u p pty = Some (indctx, pctx, ps, btys) ->
     check_correct_arity (global_ext_constraints Σ) idecl ind u indctx pars pctx ->
-    List.Exists (fun sf => universe_family ps = sf) idecl.(ind_kelim) ->
+    existsb (leb_sort_family (universe_family ps)) idecl.(ind_kelim) ->
     Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
     All2 (fun x y => (fst x = fst y) * (Σ ;;; Γ |- snd x : snd y)) brs btys ->
     Σ ;;; Γ |- tCase (ind, npar) p c brs : mkApps p (List.skipn npar args ++ [c])
@@ -1730,7 +1730,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         forall indctx pctx ps btys,
         types_of_case ind mdecl idecl pars u p pty = Some (indctx, pctx, ps, btys) ->
         check_correct_arity (global_ext_constraints Σ) idecl ind u indctx pars pctx ->
-        Exists (fun sf : sort_family => universe_family ps = sf) (ind_kelim idecl) ->
+        existsb (leb_sort_family (universe_family ps)) (ind_kelim idecl) ->
         P Σ Γ p pty ->
         Σ;;; Γ |- c : mkApps (tInd ind u) args ->
         P Σ Γ c (mkApps (tInd ind u) args) ->

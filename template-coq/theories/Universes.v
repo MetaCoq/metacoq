@@ -217,6 +217,14 @@ Coercion universe_coercion : universe >-> list.
 
 Inductive sort_family : Set := InProp | InSet | InType.
 
+Definition leb_sort_family x y :=
+  match x, y with
+  | InProp, _ => true
+  | InSet, InProp => false
+  | InType, (InProp | InSet) => false
+  | _, _ => true
+  end.
+
 (** Family of a universe [u]. *)
 
 Definition universe_family (u : universe) :=

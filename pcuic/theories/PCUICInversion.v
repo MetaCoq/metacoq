@@ -190,7 +190,7 @@ Section Inversion.
         Some (indctx, pctx, ps, btys) ×
         check_correct_arity (global_ext_constraints Σ)
         idecl ind u indctx pars pctx ×
-        Exists (fun sf => universe_family ps = sf) (ind_kelim idecl) ×
+        existsb (leb_sort_family (universe_family ps)) (ind_kelim idecl) ×
         Σ ;;; Γ |- c : mkApps (tInd ind u) args ×
         All2 (fun x y =>
           (fst x = fst y) *

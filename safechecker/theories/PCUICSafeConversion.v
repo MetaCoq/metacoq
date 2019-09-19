@@ -1149,6 +1149,94 @@ Section Conversion.
     now eapply All_local_env_app in wf.
   Qed.
 
+  Equations(noeqns) unfold_constants (Γ : context) (leq : conv_pb)
+            (c : kername) (u : universe_instance) (π1 : stack)
+            (h1 : wtp Γ (tConst c u) π1)
+            (c' : kername) (u' : universe_instance) (π2 : stack)
+            (h2 : wtp Γ (tConst c' u') π2)
+            (hx : conv_stack_ctx Γ π1 π2)
+            (aux : Aux (Term (tConst c' u')) Γ (tConst c u) π1 π2 h2)
+    : { b : bool | if b then conv_term leq Γ (tConst c u) π1 (tConst c' u') π2 else True } :=
+
+    unfold_constants Γ leq c u π1 h1 c' u' π2 h2 hx aux
+    with inspect (lookup_env Σ c') := {
+    | @exist (Some (ConstantDecl n {| cst_body := Some b |})) eq1 :=
+      isconv_red leq (tConst c u) π1 (subst_instance_constr u' b) π2 aux ;
+    (* Inductive or not found *)
+    | _ with inspect (lookup_env Σ c) := {
+      | @exist (Some (ConstantDecl n {| cst_body := Some b |})) eq1 :=
+        isconv_red leq (subst_instance_constr u b) π1
+                        (tConst c' u') π2 aux ;
+      (* Both Inductive or not found *)
+      | _ := no
+      }
+    }.
+  Next Obligation.
+    eapply red_wellformed ; auto.
+    - exact h2.
+    - constructor. eapply red_zipc.
+      eapply red_const. eassumption.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_cored2.
+    all: try reflexivity.
+    simpl. eapply cored_zipc.
+    eapply cored_const. eassumption.
+  Qed.
+  Next Obligation.
+    destruct hΣ.
+    destruct b0 ; auto.
+    eapply conv_trans' ; try eassumption.
+    eapply red_conv_r ; try assumption.
+    eapply red_zipp. eapply red_const. eassumption.
+  Qed.
+  Next Obligation.
+    eapply red_wellformed ; auto ; [ exact h1 | ].
+    constructor. eapply red_zipc.
+    eapply red_const. eassumption.
+  Qed.
+  Next Obligation.
+    eapply R_cored. simpl. eapply cored_zipc.
+    eapply cored_const. eassumption.
+  Qed.
+  Next Obligation.
+    destruct hΣ as [wΣ].
+    destruct b0 ; auto.
+    eapply conv_trans' ; try eassumption.
+    eapply red_conv_l ; try assumption.
+    eapply red_zipp. eapply red_const. eassumption.
+  Qed.
+  Next Obligation.
+    eapply red_wellformed ; auto ; [ exact h1 | ].
+    constructor. eapply red_zipc. eapply red_const. eassumption.
+  Qed.
+  Next Obligation.
+    eapply R_cored. simpl. eapply cored_zipc.
+    eapply cored_const. eassumption.
+  Qed.
+  Next Obligation.
+    destruct hΣ as [wΣ].
+    destruct b0 ; auto.
+    eapply conv_trans' ; try eassumption.
+    eapply red_conv_l ; try assumption.
+    eapply red_zipp. eapply red_const. eassumption.
+  Qed.
+  Next Obligation.
+    eapply red_wellformed ; auto ; [ exact h1 | ].
+    constructor. eapply red_zipc. eapply red_const. eassumption.
+  Qed.
+  Next Obligation.
+    eapply R_cored. simpl. eapply cored_zipc.
+    eapply cored_const. eassumption.
+  Qed.
+  Next Obligation.
+    destruct hΣ as [wΣ].
+    destruct b0 ; auto.
+    eapply conv_trans' ; try eassumption.
+    eapply red_conv_l ; try assumption.
+    eapply red_zipp. eapply red_const. eassumption.
+  Qed.
+
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
             (t2 : term) (π2 : stack) (h2 : wtp Γ t2 π2)
@@ -1168,28 +1256,17 @@ Section Conversion.
           (* Unfold both constants at once *)
           | @exist false _ with inspect (lookup_env Σ c) := {
             | @exist (Some (ConstantDecl n {| cst_body := Some body |})) eq3 :=
-              (* In PCUICChecker, there is no subst but I guess it's just wrong. *)
               isconv_red leq (subst_instance_constr u body) π1
                              (subst_instance_constr u body) π2 aux ;
             (* Inductive or not found *)
             | @exist _ _ := no
             }
           } ;
-        (* If the two constants are different, we unfold one of them *)
-        | right _ with inspect (lookup_env Σ c') := {
-          | @exist (Some (ConstantDecl n {| cst_body := Some b |})) eq1 :=
-            isconv_red leq (tConst c u) π1 (subst_instance_constr u' b) π2 aux ;
-          (* Inductive or not found *)
-          | _ with inspect (lookup_env Σ c) := {
-            | @exist (Some (ConstantDecl n {| cst_body := Some b |})) eq1 :=
-              isconv_red leq (subst_instance_constr u b) π1
-                             (tConst c' u') π2 aux ;
-            (* Both Inductive or not found *)
-            | _ := no
-            }
-          }
+        (* If universes are different, we unfold one of the constants *)
+        | right _ := unfold_constants Γ leq c u π1 h1 c' u' π2 h2 hx aux
         } ;
-      | right _ := no
+      (* If the two constants are different, we unfold one of them *)
+      | right _ := unfold_constants Γ leq c u π1 h1 c' u' π2 h2 hx aux
       } ;
 
     | prog_view_Lambda na A1 t1 na' A2 t2
@@ -1310,70 +1387,6 @@ Section Conversion.
       eapply red_conv_r ; try assumption.
       eapply red_zipp.
       eapply red_const. eassumption.
-  Qed.
-  Next Obligation.
-    eapply red_wellformed ; auto ; [ exact h2 | ].
-    constructor. eapply red_zipc.
-    eapply red_const. eassumption.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_cored2.
-    all: try reflexivity.
-    simpl. eapply cored_zipc.
-    eapply cored_const. eassumption.
-  Qed.
-  Next Obligation.
-    destruct hΣ.
-    destruct b0 ; auto.
-    eapply conv_trans' ; try eassumption.
-    eapply red_conv_r ; try assumption.
-    eapply red_zipp. eapply red_const. eassumption.
-  Qed.
-  Next Obligation.
-    eapply red_wellformed ; auto ; [ exact h1 | ].
-    constructor. eapply red_zipc.
-    eapply red_const. eassumption.
-  Qed.
-  Next Obligation.
-    eapply R_cored. simpl. eapply cored_zipc.
-    eapply cored_const. eassumption.
-  Qed.
-  Next Obligation.
-    destruct hΣ as [wΣ].
-    destruct b0 ; auto.
-    eapply conv_trans' ; try eassumption.
-    eapply red_conv_l ; try assumption.
-    eapply red_zipp. eapply red_const. eassumption.
-  Qed.
-  Next Obligation.
-    eapply red_wellformed ; auto ; [ exact h1 | ].
-    constructor. eapply red_zipc. eapply red_const. eassumption.
-  Qed.
-  Next Obligation.
-    eapply R_cored. simpl. eapply cored_zipc.
-    eapply cored_const. eassumption.
-  Qed.
-  Next Obligation.
-    destruct hΣ as [wΣ].
-    destruct b0 ; auto.
-    eapply conv_trans' ; try eassumption.
-    eapply red_conv_l ; try assumption.
-    eapply red_zipp. eapply red_const. eassumption.
-  Qed.
-  Next Obligation.
-    eapply red_wellformed ; auto ; [ exact h1 | ].
-    constructor. eapply red_zipc. eapply red_const. eassumption.
-  Qed.
-  Next Obligation.
-    eapply R_cored. simpl. eapply cored_zipc.
-    eapply cored_const. eassumption.
-  Qed.
-  Next Obligation.
-    destruct hΣ as [wΣ].
-    destruct b0 ; auto.
-    eapply conv_trans' ; try eassumption.
-    eapply red_conv_l ; try assumption.
-    eapply red_zipp. eapply red_const. eassumption.
   Qed.
 
   (* tLambda *)

@@ -312,8 +312,6 @@ Qed.
 
 (** ** Prelim on typing *)
 
-Require Import PCUIC.PCUICGeneration.
-
 Inductive red_decls Σ Γ Γ' : forall (x y : PCUICAst.context_decl), Type :=
 | conv_vass na na' T T' : isType Σ Γ' T' -> red Σ Γ T T' ->
                       red_decls Σ Γ Γ' (PCUICAst.vass na T) (PCUICAst.vass na' T')

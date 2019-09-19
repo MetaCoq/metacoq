@@ -528,4 +528,5 @@ Definition isequiv_adjointify {A B : Type} (f : A -> B) (g : B -> A)
 
 MetaCoq SafeCheck @ap.
 MetaCoq SafeCheck @issect'.
-Fail MetaCoq SafeCheck @ap_pp.
+MetaCoq SafeCheck @ap_pp.
+Fail MetaCoq SafeCheck @isequiv_adjointify.

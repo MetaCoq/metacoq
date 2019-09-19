@@ -134,8 +134,9 @@ Section Conversion.
 
   Inductive stateR : state -> state -> Prop :=
   | stateR_Term_Reduction : forall u v, stateR (Term u) (Reduction v)
-  | stateR_Arg_Term : forall u, stateR Args (Term u)
-  | stateR_Fallback_Term : forall u v, stateR (Fallback u) (Term v).
+  | stateR_Args_Term : forall u, stateR Args (Term u)
+  | stateR_Fallback_Term : forall u v, stateR (Fallback u) (Term v)
+  | stateR_Args_Fallback : forall u, stateR Args (Fallback u).
 
   Derive Signature for stateR.
 
@@ -150,7 +151,8 @@ Section Conversion.
     assert (forall t, Acc stateR (Fallback t)) as hFall.
     { intros t. constructor. intros s h.
       dependent induction h.
-      all: discriminate.
+      all: try discriminate.
+      apply hArgs.
     }
     assert (forall t, Acc stateR (Term t)) as hTerm.
     { intros t. constructor. intros s h.
@@ -2585,7 +2587,24 @@ Section Conversion.
     eqb_ctx (stack_context π1) (stack_context π2) &&
     leqb_term (zipp t1 π1) (zipp t2 π2).
 
-  Lemma leqb_term_stack_spec :
+  Definition eqb_termp leq u v :=
+    match leq with
+    | Conv => eqb_term u v
+    | Cumul => leqb_term u v
+    end.
+
+  Lemma eqb_termp_spec :
+    forall leq u v Γ,
+      eqb_termp leq u v ->
+      conv leq Σ Γ u v.
+  Proof.
+    intros leq u v Γ e.
+    destruct leq.
+    - simpl. constructor. constructor. eapply eqb_term_spec. assumption.
+    - simpl. constructor. constructor. eapply leqb_term_spec. assumption.
+  Qed.
+
+  (* Lemma leqb_term_stack_spec :
     forall Γ t1 π1 t2 π2,
       leqb_term_stack t1 π1 t2 π2 ->
       eq_context_upto (eq_universe (global_ext_constraints Σ))
@@ -2600,7 +2619,7 @@ Section Conversion.
       + eapply eq_context_upto_refl. intro. apply eq_universe_refl.
       + eapply eqb_ctx_spec. assumption.
     - eapply leqb_term_spec. assumption.
-  Qed.
+  Qed. *)
 
   Equations(noeqns) _isconv_fallback (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
@@ -2625,11 +2644,10 @@ Section Conversion.
             isconv_prog leq t1 π1 rt2' (θ2' +++ θ2) aux
           }
         } ;
-      | @exist None _ :=
-        match leq with
-        | Conv => exist (eqb_term_stack t1 π1 t2 π2) _
-        | Cumul => exist (leqb_term_stack t1 π1 t2 π2) _
-        end
+      | @exist None _ with inspect (eqb_termp leq t1 t2) := {
+        | @exist true eq1 := isconv_args t1 π1 π2 aux ;
+        | @exist false _ := no
+        }
       }
     }.
   Next Obligation.
@@ -2897,18 +2915,24 @@ Section Conversion.
     - eapply conv_context_sym. all: auto.
   Qed.
   Next Obligation.
-    destruct eqb_term_stack eqn:e. 2: auto.
-    apply eqb_term_stack_spec with (Γ := Γ) in e as [hx h].
-    split.
-    - constructor. eapply eq_context_upto_univ_conv_context. assumption.
-    - constructor. constructor. assumption.
-  Qed.
+    (* I will need to strengthen wellformed_zipc_replace it seems... *)
+    admit.
+  Admitted.
   Next Obligation.
-    destruct leqb_term_stack eqn:e. 2: auto.
-    apply leqb_term_stack_spec with (Γ := Γ) in e as [hx h].
-    split.
-    - constructor. eapply eq_context_upto_univ_conv_context. assumption.
-    - constructor. constructor. assumption.
+    eapply R_stateR. all: simpl. all: try reflexivity.
+    - (* Seems wrong... *) give_up.
+    - constructor.
+  Admitted.
+  Next Obligation.
+    destruct b. 2: auto.
+    destruct h as [hx [h]].
+    split. 1: assumption.
+    destruct hΣ.
+    eapply conv_trans'.
+    - assumption.
+    - eapply conv_conv_l. all: eauto.
+    - eapply conv_zipp'.
+      eapply eqb_termp_spec. auto.
   Qed.
 
   Equations _isconv (s : state) (Γ : context)

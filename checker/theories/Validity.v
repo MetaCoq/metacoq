@@ -1,5 +1,5 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From MetaCoq Require Import config utils Ast AstUtils Induction LiftSubst Typing WeakSubst.
+From MetaCoq.Template Require Import config utils Ast AstUtils Induction LiftSubst Typing WeakSubst.
 
 Arguments All_local_env typing%type_scope {H} Σ Γ.
 

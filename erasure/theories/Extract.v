@@ -139,7 +139,8 @@ Definition is_axiom_decl g :=
   end.
 
 Definition axiom_free Σ :=
-  List.forallb (fun g => negb (is_axiom_decl g)) Σ.
+  forall c decl, declared_constant Σ c decl -> cst_body decl <> None.
+  (* List.forallb (fun g => negb (is_axiom_decl g)) Σ. *)
 
 Definition computational_ind Σ ind :=
   let 'mkInd mind n := ind in

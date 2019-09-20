@@ -533,8 +533,24 @@ Definition isequiv_adjointify {A B : Type} (f : A -> B) (g : B -> A)
            (issect : g∘ f == id) (isretr : f  ∘ g == id)  : IsEquiv f
   := BuildIsEquiv A B f g (issect' f g issect isretr) isretr
                   (is_adjoint' f g issect isretr).
+Monomorphic Definition foo' := @isequiv_adjointify.
+Time MetaCoq SafeCheck foo'.
+Time MetaCoq CoqCheck foo'.
 
-Fail  MetaCoq SafeCheck @ap.
+Definition bignat := 10000.
+Time MetaCoq SafeCheck bignat.
+(*
+Debug: Quoting
+Debug: Quoting executed in: 0.0130159854889s
+Debug: Checking executed in: 0.0271821022034s
+Environment is well-formed and Const(Top.bignat,[]) has type: Ind(Coq.Init.Datatypes.nat,0,[])
+
+<infomsg>Finished transaction in 0.04 secs (0.039u,0.s) (successful)</infomsg>
+
+************************************
+*)
+MetaCoq CoqCheck bignat.
+
 (* MetaCoq SafeCheck @issect'. *)
 Fail MetaCoq SafeCheck @ap_pp.
 Fail MetaCoq SafeCheck @isequiv_adjointify.

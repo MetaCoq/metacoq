@@ -15,7 +15,11 @@ and then issue the command at the root of the directory:
     # opam install .
     
 This should install Coq 8.8.2, Equations 1.2 and all the MetaCoq
-packages.
+packages. 
+
+BEWARE: remove any previous installation of MetaCoq in `coqc
+-where`/user-contrib before trying to compile anything, otherwise Coq 
+might get confused as to which MetaCoq we are referring to.
 
 Alternatively, to build locally you can first install Coq and Equations:
 

@@ -12,13 +12,22 @@ let pr_char c = str (Char.escaped c)
 
 let pr_char_list = prlist_with_sep mt pr_char
 
+let time prefix f x =
+  let start = Unix.gettimeofday () in
+  let res = f x in
+  let stop = Unix.gettimeofday () in
+  let () = Feedback.msg_debug (prefix ++ str " executed in: " ++ Pp.real (stop -. start) ++ str "s") in
+  res
+
 let check env evm c =
-  (* if Feedback.msg_debug (str"Quoting"); *)
-  let term = Ast_quoter.quote_term_rec env (EConstr.to_constr evm c) in
-  (* Feedback.msg_debug (str"Finished quoting.. checking."); *)
-  match SafeTemplateChecker.infer_and_print_template_program Config0.default_checker_flags term with
-  | Coq_inl s ->
-     Feedback.msg_info (pr_char_list s)
+  Feedback.msg_debug (str"Quoting");
+  let term = time (str"Quoting") (Ast_quoter.quote_term_rec env) (EConstr.to_constr evm c) in
+  let check = time (str"Checking")
+      (SafeTemplateChecker.infer_and_print_template_program Config0.default_checker_flags)
+      term
+  in
+  match check with
+  | Coq_inl s -> Feedback.msg_info (pr_char_list s)
   | Coq_inr s -> CErrors.user_err ~hdr:"metacoq" (pr_char_list s)
 
 VERNAC COMMAND EXTEND MetaCoqSafeCheck CLASSIFIED AS QUERY
@@ -58,7 +67,7 @@ let retypecheck_term_dependencies env gr =
 
 let kern_check env evm gr =
   try
-    let () = retypecheck_term_dependencies env gr in
+    let () = time (str"Coq kernel checking") (retypecheck_term_dependencies env) gr in
     Feedback.msg_info (Printer.pr_global gr ++ str " and all its dependencies are well-typed.")
   with e -> raise e
 

@@ -40,3 +40,6 @@ Quote Recursively Definition foo := List.map.
 Require Import List.
 Import ListNotations.
 MetaCoq Erase (map negb [true; false]).
+
+Definition bignat := 10000.
+MetaCoq Erase bignat.

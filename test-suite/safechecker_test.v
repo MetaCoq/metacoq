@@ -537,8 +537,7 @@ Monomorphic Definition foo' := @isequiv_adjointify.
 Time MetaCoq SafeCheck foo'.
 Time MetaCoq CoqCheck foo'.
 
-
-Definition bignat := 30000.
+Definition bignat := 10000.
 Time MetaCoq SafeCheck bignat.
 (*
 Debug: Quoting
@@ -550,7 +549,7 @@ Environment is well-formed and Const(Top.bignat,[]) has type: Ind(Coq.Init.Datat
 
 ************************************
 *)
-Time MetaCoq CoqCheck bignat.
+MetaCoq CoqCheck bignat.
 
 (* MetaCoq SafeCheck @issect'. *)
 Fail MetaCoq SafeCheck @ap_pp.

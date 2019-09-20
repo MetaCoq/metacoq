@@ -400,7 +400,8 @@ Section Reduce.
                 | @exist true eqi := rec reduce arg π ;
                 | @exist false _ := give (tProj (i, pars, narg) (mkApps (tConstruct ind' c' ui) args)) π
                 } ;
-              | @exist None eqa := False_rect _ _
+              (* | @exist None eqa := False_rect _ _ *)
+              | @exist None eqa := give (tProj (i, pars, narg) (mkApps (tConstruct ind' c' ui) args)) π
               } ;
             | ccview_cofix mfix idx with inspect (unfold_cofix mfix idx) := {
               | @exist (Some (narg, fn)) eq' :=
@@ -826,17 +827,23 @@ Section Reduce.
         reflexivity.
   Qed.
   Next Obligation.
-    unfold Pr in p. simpl in p.
-    pose proof p as p'.
-    rewrite <- prf' in p'. simpl in p'. subst.
-    symmetry in prf'. apply decompose_stack_eq in prf' as ?.
-    subst.
-    apply Req_red in r as hr.
-    pose proof (red_wellformed _ hΣ h hr) as hh.
-    cbn in hh. rewrite zipc_appstack in hh. cbn in hh.
-    zip fold in hh.
-    apply wellformed_context in hh. simpl in hh.
-    apply Proj_red_cond in hh. all: eauto.
+    clear eq.
+    dependent destruction r.
+    - inversion H. subst. cbn in prf'. inversion prf'. subst.
+      cbn. reflexivity.
+    - unfold Pr in p. cbn in p.
+      rewrite <- prf' in p. cbn in p. subst.
+      dependent destruction H.
+      + cbn in H. symmetry in prf'.
+        pose proof (decompose_stack_eq _ _ _ prf'). subst.
+        rewrite zipc_appstack in H. cbn in H.
+        right. econstructor. assumption.
+      + cbn in H0. inversion H0. subst. clear H0.
+        symmetry in prf'.
+        pose proof (decompose_stack_eq _ _ _ prf'). subst.
+        rewrite zipc_appstack in H2. cbn in H2.
+        apply zipc_inj in H2. inversion H2. subst.
+        reflexivity.
   Qed.
   Next Obligation.
     unfold Pr in p. simpl in p.

@@ -1378,7 +1378,7 @@ Section Lemmata.
     simpl in *.
     destruct p.
     destruct o0.
-  Admitted.
+  Abort.
 
   Lemma Case_Construct_ind_eq :
     forall {Γ ind ind' npar pred i u brs args},

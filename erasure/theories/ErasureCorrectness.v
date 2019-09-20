@@ -293,6 +293,38 @@ Proof.
   unshelve eapply (erases_subst_instance_constr0 Σ _ Γ _ _ _ _); tea; eauto.
 Qed.
 
+Lemma erases_subst_instance'' Σ φ Γ t T u univs t' :
+  wf_ext_wk (Σ, univs) ->
+  (Σ, univs) ;;; Γ |- t : T ->
+  sub_context_set (monomorphic_udecl univs) (global_context_set Σ) ->
+  consistent_instance_ext (Σ, φ) univs u ->
+  (Σ, univs) ;;; Γ |- t ⇝ℇ t' ->
+  (Σ, φ) ;;; subst_instance_context u Γ
+            |- subst_instance_constr u t ⇝ℇ  t'.
+Proof.
+  intros X X0 X1. intros.
+  eapply (erases_subst_instance_constr (Σ, univs)); tas.
+  eapply typing_wf_local; eassumption. eauto.
+  eapply typing_wf_local.
+  eapply typing_subst_instance''; eauto.
+  etransitivity; tea. apply global_context_set_sub_ext. 
+Qed.
+
+Lemma erases_subst_instance_decl Σ Γ t T c decl u t' :
+  wf Σ.1 ->
+  lookup_env Σ.1 c = Some decl ->
+  (Σ.1, universes_decl_of_decl decl) ;;; Γ |- t : T ->
+  consistent_instance_ext Σ (universes_decl_of_decl decl) u ->
+  (Σ.1, universes_decl_of_decl decl) ;;; Γ |- t ⇝ℇ t' ->
+   Σ ;;; subst_instance_context u Γ
+            |- subst_instance_constr u t ⇝ℇ  t'.
+Proof.
+  destruct Σ as [Σ φ]. intros X X0 X1 X2.
+  eapply erases_subst_instance''; tea. split; tas. 
+  eapply weaken_lookup_on_global_env'; tea.
+  eapply weaken_lookup_on_global_env''; tea.
+Qed.
+
 (** ** Erasure and applications  *)
 
 Lemma erases_App (Σ : global_env_ext) Γ f L T t :
@@ -509,17 +541,18 @@ Proof.
       eapply declared_constant_inj in d; eauto; subst.
       edestruct IHeval.
       * cbn in *. pose proof (wf_ext_wf _ extr_env_wf'0). cbn in X0.
+        assert (H'' := H').
         eapply PCUICWeakeningEnv.declared_constant_inv in H'; eauto.
-        unfold on_constant_decl in H'. rewrite H0 in H'. red in H'.        
-        eapply typing_subst_instance in H'; eauto. eapply H'; cbn; tas.
-        3:eapply PCUICWeakeningEnv.weaken_env_prop_typing.
-        admit. admit.           (* @Simon: any ideas? *)        
+        2:eapply PCUICWeakeningEnv.weaken_env_prop_typing.
+        unfold on_constant_decl in H'. rewrite H0 in H'. red in H'.
+        unfold declared_constant in H''.
+        eapply typing_subst_instance_decl with (Σ0 := (Σ, univs)) (Γ := []); eauto.
       * pose proof (wf_ext_wf _ extr_env_wf'0). cbn in X0.
+        assert (H'' := H').
         eapply PCUICWeakeningEnv.declared_constant_inv in H'; eauto.
         unfold on_constant_decl in H'. rewrite H0 in H'. cbn in *.
         2:eapply PCUICWeakeningEnv.weaken_env_prop_typing.
-        eapply erases_subst_instance_constr in H'; eauto.
-        admit. admit.           (* same here *)
+        eapply erases_subst_instance_decl with (Σ := (Σ, univs)) (Γ := []); eauto.
       * destruct H3. exists x0. split; eauto. econstructor; eauto.
     + exists tBox. split. econstructor.
       eapply Is_type_eval. 3: eassumption. eauto. eauto. econstructor. eauto.

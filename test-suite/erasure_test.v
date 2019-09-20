@@ -43,3 +43,6 @@ MetaCoq Erase (map negb [true; false]).
 
 Definition bignat := 10000.
 MetaCoq Erase bignat.
+
+Require Import vs.
+MetaCoq Erase main.

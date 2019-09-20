@@ -56,7 +56,7 @@ erasure: template-coq safechecker pcuic
 checker: template-coq
 	$(MAKE) -C checker
 
-test-suite: template-coq checker
+test-suite: template-coq checker safechecker erasure
 	$(MAKE) -C test-suite
 
 translations: template-coq

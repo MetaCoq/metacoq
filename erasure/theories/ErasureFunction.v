@@ -362,7 +362,7 @@ Next Obligation.
      eapply PCUICConversion.conv_sym, red_conv; eauto.
 Qed.
 Next Obligation.
-  Hint Constructors squash.
+  Hint Constructors squash. destruct HΣ.
   eapply Is_conv_to_Arity_inv in H as [(? & ? & ? & ?) | (? & ?)]; eauto.
 Qed. 
 
@@ -795,3 +795,4 @@ Proof.
            2:{ eauto. } eauto.
   * eapply IHΣ. unfold erase_global. rewrite E2. reflexivity.
 Qed.
+

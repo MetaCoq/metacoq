@@ -453,7 +453,7 @@ Definition EisConstruct_app :=
 
 Lemma is_construct_erases Σ Γ t t' :
   Σ;;; Γ |- t ⇝ℇ t' ->
-           isConstruct_app t = EisConstruct_app t'.
+           negb (isConstruct_app t) = negb (EisConstruct_app t').
 Admitted.
 
 Lemma erases_correct Σ t T t' v Σ' :

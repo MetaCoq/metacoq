@@ -10,13 +10,13 @@ install: all
 	$(MAKE) -C erasure install
 
 html: all
-	$(MAKE) -C template-coq html
-	$(MAKE) -C pcuic html
-	$(MAKE) -C safechecker html
-	$(MAKE) -C erasure html
-	mv template-coq/html/*.html html
-	rm template-coq/html/coqdoc.css
-	rm -d template-coq/html
+	"coqdoc" -toc -utf8 -interpolate -l -html \
+		-R template-coq/theories MetaCoq.Template \
+		-R checker/theories MetaCoq.Checker \
+		-R pcuic/theories MetaCoq.PCUIC \
+		-R safechecker/theories MetaCoq.SafeChecker \
+		-R erasure/theories MetaCoq.Erasure \
+		-d html */theories/*.v
 
 clean:
 	$(MAKE) -C template-coq clean

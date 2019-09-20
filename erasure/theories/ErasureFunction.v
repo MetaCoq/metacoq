@@ -5,7 +5,7 @@ From MetaCoq.Checker Require Import uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICTyping PCUICMetaTheory PCUICWcbvEval PCUICLiftSubst PCUICInversion
      PCUICConfluence PCUICCumulativity PCUICSR PCUICNormal PCUICSafeLemmata
-     PCUICValidity PCUICPrincipality PCUICElimination PCUICSN.
+     PCUICValidity PCUICPrincipality PCUICElimination PCUICSN PCUICPrincipality.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker.
 From MetaCoq.Erasure Require EAst ELiftSubst ETyping EWcbvEval Extract ErasureCorrectness.
 From Equations Require Import Equations.
@@ -93,21 +93,209 @@ Ltac sq := try (destruct HΣ as [wfΣ]; clear HΣ);
          | H : ∥ _ ∥ |- _ => destruct H
          end; try eapply sq.
 
+Hint Constructors normal neutral.
+
+Derive Signature for normal.
+Derive Signature for neutral.
+
+(* Definition normal_neutral_dec Γ t : ({normal Σ Γ t} + {~ (normal Σ Γ t)}) * ({neutral Σ Γ t} + {~ (neutral Σ Γ t)}). *)
+(* Proof. *)
+(*   induction t in Γ |- *; split; eauto. *)
+(*   all: try now (right; intros H; depelim H). *)
+(*   - destruct (option_map decl_body (nth_error Γ n)) as [ [ | ] | ] eqn:E. *)
+(*     + right. intros H. depelim H. depelim H. congruence. admit. admit. *)
+(*     + eauto. *)
+(*     + right. intros H. depelim H. depelim H. congruence. admit. admit. *)
+(*   - destruct (option_map decl_body (nth_error Γ n)) as [ [ | ] | ] eqn:E. *)
+(*     + right. intros H. depelim H. congruence.  *)
+(*     + eauto. *)
+(*     + right. intros H. depelim H. congruence. *)
+(*   - destruct (IHt1 Γ) as [[] _]; *)
+(*       [destruct (IHt2 (Γ,, vass na t1)) as [[] _]|]; eauto. *)
+(*     + right. intros H. depelim H. depelim H. eauto. admit. admit. *)
+(*     + right. intros H. depelim H. depelim H. eauto. admit. admit. *)
+(*   - destruct (IHt1 Γ) as [[] _]; *)
+(*       [destruct (IHt2 (Γ,, vass na t1)) as [[] _]|]; eauto. *)
+(*     + right. intros H. depelim H. depelim H. eauto. admit. admit. *)
+(*     + right. intros H. depelim H. depelim H. eauto. admit. admit. *)
+(*   - right. intros H. depelim H. depelim H. admit. admit. *)
+(*   - destruct (IHt1 Γ) as [_ []]; *)
+(*       [destruct (IHt2 Γ) as [[] _]|]; eauto. *)
+(*     + right. intros H. depelim H. depelim H. eauto. admit. admit. *)
+(*     + right. intros H. depelim H. depelim H. eauto. admit. admit. *)
+(*   - destruct (IHt1 Γ) as [_ []]; *)
+(*       [destruct (IHt2 Γ) as [[] _]|]; eauto. *)
+(*     + right. intros H. depelim H. eauto.  *)
+(*     + right. intros H. depelim H. eauto. *)
+(*   - destruct (lookup_env Σ k) as [[] | ] eqn:E. *)
+(*     + destruct (cst_body c) eqn:E2. *)
+(*       * right. intros H. depelim H. depelim H. congruence. admit. admit. *)
+(*       * destruct (string_dec k k0). subst. left. eauto.  *)
+(*         right. intros H. depelim H. depelim H. congruence. admit. admit. *)
+(*     +   right. intros H. depelim H. depelim H. congruence. admit. admit. *)
+(*     +   right. intros H. depelim H. depelim H. congruence. admit. admit. *)
+(*   - destruct (lookup_env Σ k) as [[] | ] eqn:E. *)
+(*     + destruct (cst_body c) eqn:E2. *)
+(*       * right. intros H. depelim H. congruence.  *)
+(*       * destruct (string_dec k k0). subst. left. eauto.  *)
+(*         right. intros H. depelim H. congruence. *)
+(*     +   right. intros H. depelim H. congruence. *)
+(*     +   right. intros H. depelim H. congruence. *)
+(*   - *)
+(* Admitted. *)
+
+Lemma mkApps_tFix_inv t mfix n L :
+  t = mkApps (tFix mfix n) L ->
+  (∑ a b, t = tApp a b) + ((t = tFix mfix n) * (L = [])).
+Proof.
+  destruct L; cbn; subst.
+  - eauto.
+  - generalize (tFix mfix n). clear. intros. subst. left. induction L in t1, t0 |- *.
+    + cbn. eauto.
+    + cbn. edestruct IHL as (? & ? & ?).
+      rewrite e. eauto.
+Qed.
+
+Notation err := (TypeError  (Msg "hnf did not return normal form")).
+Program Fixpoint normal_dec Γ t : typing_result (forall t', red1 Σ Γ t t' -> False) :=
+  match t with
+  | tRel n => match option_map decl_body (nth_error Γ n) with
+               Some (Some body) => err
+             | _ => ret _
+             end
+  | tVar n => ret _
+  | tSort u => ret _
+  | tProd na A B => H1 <- normal_dec Γ A ;;
+                      H2 <- normal_dec (Γ,, vass na A) B;;
+                      ret _
+  | tLambda na A B => H1 <- normal_dec Γ A ;;
+                      H2 <- normal_dec (Γ,, vass na A) B;;
+                      ret _
+  | tLetIn _ _ _ _ => err
+  | tConst c u => match lookup_env Σ c  with Some (ConstantDecl _ (Build_constant_body _ (Some _) _)) => err
+                                       | _ => ret _
+                 end
+  | tInd _ _ => ret _
+  | tConstruct _ _ _ => ret _
+  | tCase _ _ _ _ => err
+  | tProj _ _ => err
+  (* | tFix _ _ => ret _ *)
+  (* | tCoFix _ _ => ret _ *)
+  | _ => TypeError (Msg "not implemented")
+  end.
+Next Obligation.
+  intros; depelim X; try congruence; eapply mkApps_tFix_inv in H0 as [(? & ? & ?) | [] ]; congruence.
+Qed.
+Next Obligation.
+  intros; depelim X; try congruence; try eapply mkApps_tFix_inv in H as [(? & ? & ?) | [] ]; try congruence.
+Qed.
+Next Obligation.
+  intros; depelim X; try congruence; try eapply mkApps_tFix_inv in H as [(? & ? & ?) | [] ]; try congruence.
+Qed.
+Next Obligation.
+  intros; depelim X; try congruence; try eapply mkApps_tFix_inv in H as [(? & ? & ?) | [] ]; try congruence; eauto.
+Qed.
+Next Obligation.
+  intros; depelim X; try congruence; try eapply mkApps_tFix_inv in H as [(? & ? & ?) | []]; try congruence; eauto.
+Qed.
+Next Obligation.
+  intros; depelim X; try congruence; try eapply mkApps_tFix_inv in H0 as [(? & ? & ?) | [] ]; try congruence; eauto.
+  unfold declared_constant in *. rewrite isdecl in H. destruct decl. destruct cst_body; cbn in *; firstorder congruence.
+Qed.
+Next Obligation.
+  intros; depelim X; try congruence; try eapply mkApps_tFix_inv in H as [(? & ? & ?) | [] ]; try congruence; eauto.
+Qed.
+Next Obligation.
+  intros; depelim X; try congruence; try eapply mkApps_tFix_inv in H as [(? & ? & ?) | [] ]; try congruence; eauto.
+Qed.
+Solve All Obligations with firstorder congruence.
+
+Inductive red' (Σ : global_env) (Γ : context) : term -> term -> Type :=
+  refl_red' M : red' Σ Γ M M
+| trans_red' : forall M P N : term, red1 Σ Γ M P -> red' Σ Γ P N -> red' Σ Γ M N.
+
+Instance red'_transitive Γ : CRelationClasses.Transitive (red' Σ Γ).
+Proof.
+  intros ? ? ? ?. revert z. induction X; intros.
+  - eauto.
+  - econstructor. eauto. eauto.
+Qed.
+
+Lemma red_red' Γ t t' : red Σ Γ t t' -> red' Σ Γ t t'.
+Proof.
+  induction 1.
+  - econstructor.
+  - etransitivity. eassumption. econstructor. eauto. econstructor.
+Qed.
+
+Program Definition reduce_to_sort' Γ t (h : wellformed Σ Γ t)
+  : typing_result ((∑ u, ∥ red (fst Σ) Γ t (tSort u) ∥) + ((∑ u, ∥ red (fst Σ) Γ t (tSort u) ∥) -> False)) :=
+  match t with
+  | tSort u => ret (inl (u; sq (refl_red _ _ _)))
+  | _ =>
+    match hnf HΣ Γ t h with
+    | tSort u => ret (inl (u; _))
+    | t' => match normal_dec Γ t' with Checked H => ret (inr _) | TypeError t => TypeError t end
+    end
+  end.
+Next Obligation.
+  epose proof (hnf_sound HΣ (h:=h)).
+  now rewrite <- Heq_anonymous in H0.
+Defined.
+Next Obligation.
+  pose proof (hnf_sound HΣ (h := h)).
+  repeat match goal with [H : squash (red _ _ _ _ ) |- _ ] => destruct H end.
+  destruct HΣ.
+  eapply PCUICConfluence.red_confluence in X as [t'' []]. 3:exact X0. 2:eauto.
+  eapply red_red' in r.
+  inversion r; subst.
+  - eapply invert_red_sort in r0; eauto.
+    edestruct H0. eauto.
+  - eauto.
+Qed.
+
+Program Definition reduce_to_prod' Γ t (h : wellformed Σ Γ t)
+  : typing_result ((∑ na a b, ∥ red (fst Σ) Γ t (tProd na a b) ∥) + ((∑ na a b, ∥ red (fst Σ) Γ t (tProd na a b) ∥) -> False)) :=
+  match t with
+  | tProd na a b => ret (inl (na; a; b; sq (refl_red _ _ _)))
+  | _ =>
+    match hnf HΣ Γ t h with
+    | tProd na a b => ret (inl (na; a; b; _))
+    | t' => match normal_dec Γ t' with Checked H => ret (inr _) | _ => TypeError (Msg "hnf did not return normal form") end
+    end
+  end.
+Next Obligation.
+  epose proof (hnf_sound HΣ (h:=h)).
+  now rewrite <- Heq_anonymous in H0.
+Defined.
+Next Obligation.
+  pose proof (hnf_sound HΣ (h := h)).
+  repeat match goal with [H : squash (red _ _ _ _ ) |- _ ] => destruct H end.
+  destruct HΣ.
+  eapply PCUICConfluence.red_confluence in X1 as [t'' []]. 3:exact X2. 2:eauto.
+  eapply red_red' in r.
+  inversion r; subst.
+  - eapply invert_red_prod in r0 as (? & ? & [] & ?); eauto.
+    edestruct H0. eauto.
+  - eauto. 
+Qed.
+
 Equations is_arity Γ (HΓ : ∥wf_local Σ Γ∥) T (HT : wellformed Σ Γ T) :
   typing_result ({Is_conv_to_Arity Σ Γ T} + {~ Is_conv_to_Arity Σ Γ T})
   by wf ((Γ;T;HT) : (∑ Γ t, wellformed Σ Γ t)) term_rel :=
   {
-    is_arity Γ HΓ T HT with (@reduce_to_sort _ Σ HΣ Γ T HT) => {
-    | Checked H => ret (left _) ;
-    | TypeError _ with inspect (@reduce_to_prod _ Σ HΣ Γ T _) => {
-      | exist (Checked (na; A; B; H)) He =>
+    is_arity Γ HΓ T HT with (@reduce_to_sort' Γ T HT) => {
+    | Checked (inl H) => ret (left _) ;
+    | Checked (inr Hs) with inspect (@reduce_to_prod' Γ T _) => {
+      | exist (Checked (inl (na; A; B; H))) He =>
         match is_arity (Γ,, vass na A) _ B _ with
         | Checked (left  H) => ret (left _)
         | Checked (right H) => ret (right _)
         | TypeError t => TypeError t
         end;
-      | exist (TypeError (NotAProduct _ _)) He => ret (right _);
-      | exist (TypeError t) He => TypeError t }
+      | exist (Checked (inr _)) He => ret (right _);
+      | exist (TypeError t) He => TypeError t } ;
+    | TypeError t => TypeError t
     }
   }.
 Next Obligation.
@@ -124,8 +312,7 @@ Next Obligation.
     cbn. eapply isWfArity_prod_inv; eauto.
 Qed.
 Next Obligation.
-  clear He.
-  sq. destruct HT as [ [] | [] ].
+  clear He. sq. destruct HT as [ [] | [] ].
   - eapply subject_reduction in X; eauto.
     eapply inversion_Prod in X as (? & ? & ? & ? & ?).
     do 2 econstructor. eauto. auto.
@@ -134,20 +321,21 @@ Next Obligation.
     eapply isWfArity_prod_inv; eauto.
 Qed.
 Next Obligation.
+  clear He.
   sq. repeat eexists. eassumption.
 Qed.
 Next Obligation.
+  clear He.
   destruct H as (? & ? & ?). eexists (tProd _ _ _). split; sq.
   etransitivity. eassumption. eapply PCUICReduction.red_prod. econstructor.
   eassumption. now cbn.
 Qed.
 Next Obligation.
-  clear He.
   destruct HΣ as [wΣ].
-  destruct H1 as (? & ? & ?). sq.
+  destruct H1 as (? & ? & ?). clear He. sq.
   destruct H.
-  edestruct (red_confluence wfΣ X0 X) as (? & ? & ?); eauto.
-  eapply invert_red_prod in r as (? & ? & [] & ?); eauto. subst.
+  edestruct (red_confluence wfΣ X X0) as (? & ? & ?); eauto.
+  eapply invert_red_prod in r0 as (? & ? & [] & ?); eauto. subst.
 
   eapply invert_cumul_arity_l in H2. 2:eauto. 3: eapply PCUICCumulativity.red_cumul. 3:eauto. 2:eauto.
   destruct H2 as (? & ? & ?). sq.
@@ -156,21 +344,13 @@ Next Obligation.
   exists x4; split; eauto.
 
   destruct HT as [ [] | [] ].
-  ++ sq. pose proof (X2). pose proof X2.
-
-     eapply subject_reduction in X4. 2:eauto. 2:{ etransitivity. exact X. exact r0. }
-     eapply inversion_Prod in X4 as (? & ? & ? & ? & ?) ; auto.
-
-     eapply subject_reduction in X3. 2:eauto. 2:{ exact X0. }
-     eapply inversion_Prod in X3 as (? & ? & ? & ? & ?) ; auto.
-
-     etransitivity. eassumption.
-
+  ++ sq. etransitivity; eauto.
      eapply context_conversion_red; eauto. econstructor.
 
      eapply conv_context_refl; eauto. econstructor.
 
      eapply PCUICConversion.conv_sym, red_conv; eauto.
+
   ++ sq. etransitivity. eassumption.
 
      eapply context_conversion_red; eauto. econstructor.
@@ -181,9 +361,10 @@ Next Obligation.
 
      eapply PCUICConversion.conv_sym, red_conv; eauto.
 Qed.
-
 Next Obligation.
-Admitted. (* reduce to prod, if it returns a TypeError (NotAProduct _) just means it is not an arity *)
+  Hint Constructors squash. destruct HΣ.
+  eapply Is_conv_to_Arity_inv in H as [(? & ? & ? & ?) | (? & ?)]; eauto.
+Qed. 
 
 End fix_sigma.
 
@@ -343,17 +524,10 @@ Section Erase.
                         ret (E.tApp f' l')
       ; erase Γ HΓ (tCase ip p c brs) _ :=
                              c' <- erase Γ HΓ c;;
-                                if is_box c' then
-                                  match brs with
-                                  | (a, b) :: brs => b' <- erase Γ HΓ b ;; ret (E.mkApps b' (repeat E.tBox a))
-                                  | [] => ret (E.tCase ip c' [])
-                                  end
-                                else
-                                  brs' <- monad_map (T :=typing_result) (fun x => x' <- erase Γ HΓ (snd x);; ret (fst x, x')) brs;;
-                                  ret (E.tCase ip c' brs')
+                                brs' <- monad_map (T :=typing_result) (fun x => x' <- erase Γ HΓ (snd x);; ret (fst x, x')) brs;;
+                                ret (E.tCase ip c' brs')
       ; erase Γ HΓ (tProj p c) _ :=
-          c' <- erase Γ HΓ c;;
-             if is_box c' then ret (E.tBox) else
+                      c' <- erase Γ HΓ c;;
                          ret (E.tProj p c')
       ; erase Γ HΓ (tFix mfix n) _ :=
                         mfix' <- erase_mfix (erase) Γ HΓ mfix;;
@@ -425,44 +599,40 @@ Proof.
     split. econstructor; eauto. left. subst.
     eapply isArity_subst_instance.
     eapply isArity_ind_type; eauto.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  - admit.
-  (* - econstructor. *)
-  (*   eapply elim_restriction_works. eauto. eauto. eauto. intros. *)
-  (*   eapply f, isErasable_Proof. eauto. eauto. *)
+  - econstructor.
+    eapply elim_restriction_works. eauto. eauto. eauto. intros.
+    eapply f, isErasable_Proof. eauto. eauto.
 
-  (*   pose proof (Prelim.monad_map_All2 _ _ _ brs a2 E2). *)
+    pose proof (Prelim.monad_map_All2 _ _ _ brs a2 E2).
 
-  (*   eapply All2_All_left in X3. 2:{ intros. destruct X4. exact e. } *)
+    eapply All2_All_left in X4. 2:{ intros. destruct X5. destruct p0. destruct p0. exact e0. }
 
-  (*   eapply All2_impl. *)
-  (*   eapply All2_All_mix_left. eassumption. eassumption. *)
-  (*   intros. destruct H5. *)
-  (*   destruct ?; inv e0. cbn. eauto. *)
+    eapply All2_impl.
+    eapply All2_All_mix_left. eassumption. eassumption.
+    intros. destruct H4.
+    destruct ?; inv e0. cbn. eauto.
   - econstructor.
     clear E.
-    admit.
-    (* destruct isdecl as (? & ? & ?). *)
-    (* eapply elim_restriction_works_proj; eauto. intros. *)
-    (* eapply isErasable_Proof in X2. eauto. *)
 
-    (* eauto. *)
+    destruct isdecl as (? & ? & ?).
+    eapply elim_restriction_works_proj; eauto. intros.
+    eapply isErasable_Proof in X2. eauto.
+
+    eauto.
   - clear E. econstructor.
     unfold erase_mfix in *.
     repeat destruct ?; try congruence.
-    (* pose proof (Prelim.monad_map_All2 _ _ _ mfix a1 E1). *)
-    (* eapply All2_impl. eapply All2_All_mix_left. exact X0. eassumption. *)
+    pose proof (Prelim.monad_map_All2 _ _ _ mfix a1 E1).
+    eapply All2_impl. eapply All2_All_mix_left. exact X0. eassumption.
 
-    (* intros. destruct X1. cbn in *. unfold bind in e. cbn in e. *)
-    (* repeat destruct ?; try congruence; inv e. *)
+    intros. destruct X1. cbn in *. unfold bind in e. cbn in e.
+    repeat destruct ?; try congruence; inv e.
 
-    (* cbn. repeat split; eauto. *)
-    (* eapply p. eauto. *)
-  (* - clear E. inv t; discriminate. *)
-Admitted.
+    cbn. repeat split; eauto.
+    eapply p. eauto.
+  - clear E. inv t; discriminate.
+Qed.
+Print Assumptions erases_erase.
 
 Lemma erase_Some_typed {Σ wfΣ Γ wfΓ t r} :
   erase Σ wfΣ Γ wfΓ t = Checked r -> exists T, ∥Σ ;;; Γ |- t : T∥.
@@ -498,9 +668,9 @@ Definition erase_one_inductive_body Σ wfΣ npars arities Har
   decty <- lift_opt_typing (decompose_prod_n_assum [] npars oib.(ind_type))
         (NotAnInductive oib.(ind_type)) ;;
   let '(params, arity) := decty in
-  (* type <- erase Σ wfΣ [] wf_local_nil oib.(ind_type) ;; *)
+  type <- erase Σ wfΣ [] wf_local_nil oib.(ind_type) ;;
   ctors <- monad_map (fun '(x, y, z) => y' <- erase Σ wfΣ arities Har y;; ret (x, y', z)) oib.(ind_ctors);;
-  (* FIXME not used! let projctx := arities ,,, params ,, vass nAnon oib.(ind_type) in *)
+  let projctx := arities ,,, params ,, vass nAnon oib.(ind_type) in
   projs <- monad_map (fun '(x, y) => y' <- erase Σ wfΣ [] wf_local_nil y;; ret (x, y')) oib.(ind_projs);;
   ret {| E.ind_name := oib.(ind_name);
          E.ind_kelim := oib.(ind_kelim);
@@ -600,8 +770,8 @@ Proof.
         unfold erases_one_inductive_body. cbn. destruct ?; cbn.
         (* unfold lift_opt_typing in E. *)
         (* destruct decompose_prod_n_assum eqn:E6; inv E. cbn. *)
-        pose proof (Prelim.monad_map_All2 _ _ _ _ _ E3).
-        pose proof (Prelim.monad_map_All2 _ _ _ _ _ E4). repeat split; eauto.
+        pose proof (Prelim.monad_map_All2 _ _ _ _ _ E4).
+        pose proof (Prelim.monad_map_All2 _ _ _ _ _ E5). repeat split; eauto.
         -- eapply All2_Forall2.
            eapply All2_impl_In. eassumption.
            intros. destruct x0, p, y, p. cbn in *.
@@ -609,7 +779,7 @@ Proof.
            inv H4. split; eauto.
 
            (* pose (t' := t). inv t'. cbn in *. *)
-           destruct (erase_Some_typed E5) as [? []].
+           destruct (erase_Some_typed E6) as [? []].
 
            eapply erases_erase. 2:eauto. eauto.
         -- eapply All2_Forall2.
@@ -619,9 +789,10 @@ Proof.
              inv H4. split; eauto.
 
            (* pose (t' := t). inv t'. cbn in *. *)
-           destruct (erase_Some_typed E5) as [? []].
+           destruct (erase_Some_typed E6) as [? []].
 
            eapply erases_erase.
            2:{ eauto. } eauto.
   * eapply IHΣ. unfold erase_global. rewrite E2. reflexivity.
 Qed.
+

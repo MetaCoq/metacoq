@@ -8,7 +8,6 @@ From Equations Require Import Equations.
 Require Import String.
 Local Open Scope list_scope.
 Set Asymmetric Patterns.
-Local Set Keyed Unification.
 Import MonadNotation.
 
 Module PA := PCUICAst.
@@ -50,30 +49,6 @@ Proof.
   eauto.
 Qed.
 
-Lemma SingletonProp_extends:
-  forall (Σ : global_env_ext) (ind : inductive)
-    (mdecl : PCUICAst.mutual_inductive_body) (idecl : PCUICAst.one_inductive_body),
-
-    PCUICTyping.declared_inductive (fst Σ) mdecl ind idecl ->
-    forall (Σ' : global_env) (u0 : universe_instance),
-      wf Σ' ->
-      extends Σ Σ' ->
-      SingletonProp Σ ind -> SingletonProp (Σ', Σ.2) ind.
-Proof.
-Admitted.
-
-Lemma Computational_extends:
-  forall (Σ : global_env_ext) (ind : inductive)
-    (mdecl : PCUICAst.mutual_inductive_body) (idecl : PCUICAst.one_inductive_body),
-
-    PCUICTyping.declared_inductive (fst Σ) mdecl ind idecl ->
-    forall (Σ' : global_env) (u0 : universe_instance),
-      wf Σ' ->
-      extends Σ Σ' ->
-      Computational Σ ind -> Computational (Σ', Σ.2) ind.
-Proof.
-Admitted.
-
 Lemma Informative_extends:
   forall (Σ : global_env_ext) (ind : inductive)
     (mdecl : PCUICAst.mutual_inductive_body) (idecl : PCUICAst.one_inductive_body),
@@ -114,13 +89,8 @@ Proof.
         eapply All2_impl. exact X4.
         intros. destruct H as [? []].
         split; eauto. }
-    eapply Computational_extends; eauto.
-  - econstructor. all:eauto.
-    eapply SingletonProp_extends; eauto.
-    eapply Is_type_extends; eauto.
-    inv X4. eapply X8; eauto.
-  - eapply erases_tCase_Empty; eauto.
-    eapply SingletonProp_extends; eauto.
+
+    eapply Informative_extends; eauto.
   - econstructor. destruct isdecl. 2:eauto.
     eapply Informative_extends; eauto.
   - econstructor.
@@ -130,7 +100,7 @@ Proof.
     split; eauto.
   - eauto.
 Qed.
-
+    
 (** ** Weakening *)
 
 Lemma Is_type_weakening:
@@ -158,12 +128,6 @@ Lemma erases_ctx_ext (Σ : global_env_ext) Γ Γ' t t' :
   erases Σ Γ t t' -> Γ = Γ' -> erases Σ Γ' t t'.
 Proof.
   intros. now subst.
-Qed.
-
-Lemma map_repeat X Y (f : X -> Y) x n :
-  map f (repeat x n) = repeat (f x) n.
-Proof.
-  induction n; cbn; congruence.
 Qed.
 
 Lemma erases_weakening' (Σ : global_env_ext) (Γ Γ' Γ'' : PCUICAst.context) (t T : PCUICAst.term) t' :
@@ -214,13 +178,6 @@ Proof.
       destruct H. destruct p0.
       cbn. destruct x, y; cbn in *; subst.
       split; eauto.
-  - rewrite lift_mkApps.
-    rewrite map_repeat. cbn. econstructor.
-    + eauto.
-    + eauto.
-    + eauto.
-    + admit.
-    + admit.
   - assert (HT : Σ;;; Γ ,,, Γ' |- PCUICAst.tFix mfix n : (decl.(dtype))).
     econstructor; eauto. eapply All_local_env_impl. eassumption. intros.
     destruct T; cbn in *; firstorder.
@@ -254,8 +211,8 @@ Proof.
     rewrite <- plus_n_O.
     now rewrite (All2_length _ _ H4).
   - eauto.
-Admitted.
-
+Qed.
+      
 Lemma erases_weakening (Σ : global_env_ext) (Γ Γ' : PCUICAst.context) (t T : PCUICAst.term) t' :
   wf Σ ->
   wf_local Σ (Γ ,,, Γ') ->
@@ -413,26 +370,9 @@ Proof.
         eapply In_nth_error in H8 as [].
         eapply nth_error_all in X4; eauto.
         eapply X4; eauto.
-    (* + cbn. econstructor. *)
-    (*   eapply H4 in H5; eauto. *)
-    (*   econstructor. *)
-    (* + cbn.  *)
 
-    (*   Lemma subst_mkppBox s m n x : *)
-    (*     subst s m (mkAppBox x n) = mkAppBox (subst s m x) n. *)
-    (*   Proof. *)
-    (*     revert x; induction n; cbn; intros; try congruence. *)
-    (*     now rewrite IHn. *)
-    (*   Qed. *)
-    (*   rewrite subst_mkppBox. *)
-    (*   econstructor. *)
-    (*   eapply H4 in H5_; eauto. *)
-    (*   inv X3. destruct X6. *)
-    (*   eapply e; eauto. *)
-    + admit.
-    + admit.
-    + econstructor.
-      eapply is_type_subst; eauto.
+  + econstructor.
+    eapply is_type_subst; eauto.
   - inv H1.
     + cbn. econstructor.
       * eauto.
@@ -494,4 +434,4 @@ Proof.
     + econstructor.
       eapply is_type_subst; eauto.
   - eapply H; eauto.
-Admitted.
+Qed.

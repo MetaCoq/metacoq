@@ -251,7 +251,8 @@ Proof.
     move/andP: H => [H H'].
     eapply Ee.atom_mkApps in H' as [H1 _].
     destruct n, L; discriminate.
-Qed.
+  - exfalso.
+Admitted.
 
 (** ** Prelim on eliminations  *)
 (* Lemma universe_family_is_prop_sort: *)

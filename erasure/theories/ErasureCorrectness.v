@@ -451,15 +451,22 @@ Definition EisConstruct_app :=
         | _ => false
         end.
 
+Lemma fst_decompose_app_rec t l : fst (EAstUtils.decompose_app_rec t l) = fst (EAstUtils.decompose_app t).
+Proof.
+  induction t in l |- *; simpl; auto. rewrite IHt1.
+  unfold decompose_app. simpl. now rewrite (IHt1 [t2]).
+Qed.
+
 Lemma is_construct_erases Σ Γ t t' :
   Σ;;; Γ |- t ⇝ℇ t' ->
   negb (isConstruct_app t) -> negb (EisConstruct_app t').
 Proof.
   induction 1; cbn; try congruence.
   - unfold isConstruct_app in *. clear IHerases2.
-    cbn.
-    
-Admitted.
+    cbn. rewrite PCUICParallelReductionConfluence.fst_decompose_app_rec.
+    unfold EisConstruct_app in *.
+    cbn. rewrite fst_decompose_app_rec. eassumption.
+Qed.
 
 Lemma erases_correct Σ t T t' v Σ' :
   extraction_pre Σ ->

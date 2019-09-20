@@ -21,7 +21,8 @@ depends: [
   "coq-metacoq-template" {= version}
   "coq-metacoq-checker" {= version}
   "coq-metacoq-pcuic" {= version}
-  "coq-metacoq-extraction" {= version}
+  "coq-metacoq-safechecker" {= version}
+  "coq-metacoq-erasure" {= version}
 ]
 synopsis: "A meta-programming framework for Coq"
 description: """

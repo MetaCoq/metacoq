@@ -1,7 +1,8 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
-From MetaCoq Require Import config utils Ast AstUtils Induction LiftSubst UnivSubst Typing.
+From MetaCoq.Template Require Import config utils Ast AstUtils Induction LiftSubst UnivSubst.
+From MetaCoq.Checker Require Import Typing.
 Require Import String.
 Require Import ssreflect.
 Local Open Scope string_scope.

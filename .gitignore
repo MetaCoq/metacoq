@@ -355,3 +355,5 @@ pcuic/src/pCUICReflect.mli
 /erasure/src/pCUICSafeRetyping.mli
 /erasure/src/safeErasureFunction.ml
 /erasure/src/safeErasureFunction.mli
+
+template-coq/gen-src/cRelationClasses.mli.rej

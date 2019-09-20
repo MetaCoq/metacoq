@@ -4,7 +4,7 @@
     should use these same directives for consistency.
 *)
 
-(* From MetaCoq Require All. *)
+(* From MetaCoq.Template Require All. *)
 Require Import MetaCoq.Template.utils.
 Require Import FSets.
 Require Import ExtrOcamlBasic.

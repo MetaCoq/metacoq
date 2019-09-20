@@ -33,9 +33,15 @@ install:
 - opam install -j ${NJOBS} -y camlp5.${CAMLP5_VER} ocamlfind.${FINDLIB_VER} coq.${COQ_VER} coq-equations.${EQUATIONS_VER}
 - opam list
 
+matrix:
+  include:
+    - name: "Local build"
+      env: TARGET=ci-local
+    - name: "Opam installation"
+      env: TARGET=ci-opam
+
 script:
- - ./configure.sh local
- - make -j ${NJOBS} all test-suite
+ - make -j ${NJOBS} ${TARGET}
 
 notifications:
   webhooks:

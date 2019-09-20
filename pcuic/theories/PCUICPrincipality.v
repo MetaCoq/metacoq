@@ -29,8 +29,11 @@ Section Principality.
   Context (wfΣ : wf Σ).
 
   Definition Is_conv_to_Arity Σ Γ T := exists T', ∥red Σ Γ T T'∥ /\ isArity T'.
-
  
+  Lemma Is_conv_to_Arity_inv Γ T :
+    Is_conv_to_Arity Σ Γ T ->
+    (exists na A B, ∥red Σ Γ T (tProd na A B)∥) \/ (exists u, ∥red Σ Γ T (tSort u)∥).
+  Admitted.
 
   Lemma invert_red_sort Γ u v :
     red Σ Γ (tSort u) v -> v = tSort u.

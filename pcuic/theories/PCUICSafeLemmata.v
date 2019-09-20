@@ -1363,7 +1363,7 @@ Section Lemmata.
     unfold declared_minductive in dm.
     (* Do we need to exploit wellformedness of the context?? *)
     (* We should also use invert_cumul_ind_l at some point. *)
-  Admitted.
+  Abort.
 
   Lemma Proj_red_cond :
     forall Γ i pars narg i' c u l,
@@ -1384,7 +1384,7 @@ Section Lemmata.
     forall {Γ ind ind' npar pred i u brs args},
       wellformed Σ Γ (tCase (ind, npar) pred (mkApps (tConstruct ind' i u) args) brs) ->
       ind = ind'.
-  Proof.
+  (* Proof.
     destruct hΣ as [wΣ].
     intros Γ ind ind' npar pred i u brs args [[A h]|[[ctx [s [e _]]]]];
       [|discriminate].
@@ -1392,20 +1392,22 @@ Section Lemmata.
     destruct ih
       as [uni [args' [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]].
     apply Construct_Ind_ind_eq in ht0. eauto.
-  Qed.
+  Qed. *)
+  Abort.
 
   Lemma Proj_Constuct_ind_eq :
     forall Γ i i' pars narg c u l,
       wellformed Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i' c u) l)) ->
       i = i'.
-  Proof.
+  (* Proof.
     destruct hΣ as [wΣ].
     intros Γ i i' pars narg c u l [[T h]|[[ctx [s [e _]]]]];
       [|discriminate].
     apply inversion_Proj in h ; auto.
     destruct h as [uni [mdecl [idecl [pdecl [args' [? [hc [? ?]]]]]]]].
     apply Construct_Ind_ind_eq in hc. eauto.
-  Qed.
+  Qed. *)
+  Abort.
 
   Lemma cored_zipc :
     forall Γ t u π,

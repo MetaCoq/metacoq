@@ -1,6 +1,7 @@
 Supplementary material for POPL submission Coq Coq Correct!
 
-This archive contains the whole development as source. If you only want
+This archive contains the whole development as source (from 
+https://github.com/MetaCoq/metacoq/tree/clean). If you only want
 to browse the files a "light" documentation is available in
 `html/toc.html` which provides access to all the development files.
 

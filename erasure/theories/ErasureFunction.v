@@ -153,7 +153,13 @@ Lemma mkApps_tFix_inv t mfix n L :
   t = mkApps (tFix mfix n) L ->
   (∑ a b, t = tApp a b) + ((t = tFix mfix n) * (L = [])).
 Proof.
-Admitted.
+  destruct L; cbn; subst.
+  - eauto.
+  - generalize (tFix mfix n). clear. intros. subst. left. induction L in t1, t0 |- *.
+    + cbn. eauto.
+    + cbn. edestruct IHL as (? & ? & ?).
+      rewrite e. eauto.
+Qed.
 
 Notation err := (TypeError  (Msg "hnf did not return normal form")).
 Program Fixpoint normal_dec Γ t : typing_result (forall t', red1 Σ Γ t t' -> False) :=
@@ -604,7 +610,7 @@ Proof.
 
     pose proof (Prelim.monad_map_All2 _ _ _ brs a2 E2).
 
-    eapply All2_All_left in X4. 2:{ intros. destruct X5. exact e. }
+    eapply All2_All_left in X4. 2:{ intros. destruct X5. destruct p0. destruct p0. exact e0. }
 
     eapply All2_impl.
     eapply All2_All_mix_left. eassumption. eassumption.

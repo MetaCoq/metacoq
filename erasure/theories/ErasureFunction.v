@@ -144,11 +144,6 @@ Derive Signature for neutral.
 (*   - *)
 (* Admitted. *)
 
-Lemma Is_conv_to_Arity_inv Γ T :
-  Is_conv_to_Arity Σ Γ T ->
-  (exists na A B, ∥red Σ Γ T (tProd na A B)∥) \/ (exists u, ∥red Σ Γ T (tSort u)∥).
-Admitted.
-
 Lemma mkApps_tFix_inv t mfix n L :
   t = mkApps (tFix mfix n) L ->
   (∑ a b, t = tApp a b) + ((t = tFix mfix n) * (L = [])).

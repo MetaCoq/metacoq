@@ -3,7 +3,7 @@ MetaCoq
 
 <img src="https://github.com/MetaCoq/metacoq/raw/master/docs/assets/LOGO.png" alt="MetaCoq" width="50px"/>
 
-[![Build Status](https://travis-ci.org/MetaCoq/metacoq.svg?branch=coq-8.8)](https://travis-ci.org/MetaCoq/metacoq)
+[![Build Status](https://travis-ci.org/MetaCoq/metacoq.svg?branch=clean)](https://travis-ci.org/MetaCoq/metacoq)
 [![Gitter](https://img.shields.io/gitter/room/nwjs/nw.js.svg)](https://gitter.im/coq/Template-Coq)
 
 MetaCoq is a project formalizing Coq in Coq and providing tools for
@@ -81,7 +81,7 @@ Example of plugin built on top of this.
 Branches
 ========
 
-The [coq-8.8](https://github.com/MetaCoq/metacoq/tree/coq-8.8) branch is the active development branch. If possible, it's strongly recommended to use this branch.
+The [clean](https://github.com/MetaCoq/metacoq/tree/clean) branch is the active development branch. If possible, it's strongly recommended to use this branch.
 
 The branches [coq-8.6](https://github.com/MetaCoq/metacoq/tree/coq-8.6),
 [coq-8.7](https://github.com/MetaCoq/metacoq/tree/coq-8.7) are frozen.
@@ -93,7 +93,7 @@ The branch [master](https://github.com/MetaCoq/metacoq/tree/master) tracks the c
 Documentation
 =============
 
-You may want to start by a demo: [demo.v](https://github.com/MetaCoq/metacoq/tree/coq-8.8/test-suite/demo.v)
+You may want to start by a demo: [demo.v](https://github.com/MetaCoq/metacoq/tree/clean/test-suite/demo.v)
 
 The 8.8 branch [documentation (coqdoc files)](html/Template.All.html)
 and pretty-printed HTML versions of the [translations](html/translations) are available.
@@ -129,9 +129,9 @@ a fresh level when `Strict Unquote Universe Mode` is off.
 Examples of plugins
 -------------------
 
-- a plugin to add a constructor in [test-suite/add_constructor.v](https://github.com/MetaCoq/metacoq/tree/coq-8.8/test-suite/add_constructor.v)
-- a parametricity plugin in [translations/param_original.v](https://github.com/MetaCoq/metacoq/tree/coq-8.8/translations/param_original.v)
-- a plugin to negate funext in [translations/times_bool_fun.v](https://github.com/MetaCoq/metacoq/tree/coq-8.8/translations/times_bool_fun.v)
+- a plugin to add a constructor in [test-suite/add_constructor.v](https://github.com/MetaCoq/metacoq/tree/clean/test-suite/add_constructor.v)
+- a parametricity plugin in [translations/param_original.v](https://github.com/MetaCoq/metacoq/tree/clean/translations/param_original.v)
+- a plugin to negate funext in [translations/times_bool_fun.v](https://github.com/MetaCoq/metacoq/tree/clean/translations/times_bool_fun.v)
 
 
 Papers
@@ -182,10 +182,10 @@ Install from GitHub repository
 To get the source code:
 
     # git clone https://github.com/MetaCoq/metacoq.git
-    # git checkout -b coq-8.8 origin/coq-8.8
+    # git checkout -b clean origin/clean
     # git status
 
-Check that you are indeed on the `coq-8.8` branch.
+Check that you are indeed on the `clean` branch.
 
 Requirements
 ------------

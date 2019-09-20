@@ -59,4 +59,4 @@ Makefile.template: _TemplateCoqProject
 cleanplugin: Makefile.plugin
 	make -f Makefile.plugin clean
 
-TOCOPY=ast_denoter.ml ast_quoter.ml ast_id_quoter.ml denote.ml denoter.ml plugin_core.ml plugin_core.mli quoted.ml quoter.ml run_extractable.ml run_extractable.mli tm_util.ml
+TOCOPY=ast_denoter.ml ast_quoter.ml denote.ml denoter.ml plugin_core.ml plugin_core.mli quoted.ml quoter.ml run_extractable.ml run_extractable.mli tm_util.ml

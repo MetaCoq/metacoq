@@ -1,5 +1,6 @@
 From MetaCoq.Template Require Import Loader.
 From MetaCoq.SafeChecker Require Import Loader.
+
 Local Open Scope string_scope.
 MetaCoq SafeCheck nat.
 (*
@@ -533,7 +534,7 @@ Definition isequiv_adjointify {A B : Type} (f : A -> B) (g : B -> A)
   := BuildIsEquiv A B f g (issect' f g issect isretr) isretr
                   (is_adjoint' f g issect isretr).
 
-(* MetaCoq SafeCheck @ap. *)
+Fail  MetaCoq SafeCheck @ap.
 (* MetaCoq SafeCheck @issect'. *)
 Fail MetaCoq SafeCheck @ap_pp.
 Fail MetaCoq SafeCheck @isequiv_adjointify.

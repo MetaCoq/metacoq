@@ -453,7 +453,12 @@ Definition EisConstruct_app :=
 
 Lemma is_construct_erases Σ Γ t t' :
   Σ;;; Γ |- t ⇝ℇ t' ->
-           negb (isConstruct_app t) = negb (EisConstruct_app t').
+  negb (isConstruct_app t) -> negb (EisConstruct_app t').
+Proof.
+  induction 1; cbn; try congruence.
+  - unfold isConstruct_app in *. clear IHerases2.
+    cbn.
+    
 Admitted.
 
 Lemma erases_correct Σ t T t' v Σ' :
@@ -993,7 +998,7 @@ Proof.
                          rewrite !EAstUtils.decompose_app_mkApps in H1; try reflexivity.
                          inv H1.
                          rewrite H5.
-                         erewrite is_construct_erases in Hcon; eauto.
+                         eapply is_construct_erases in Hcon; eauto.
                          unfold EisConstruct_app in *.
                          destruct ?; eauto.
                      +++ assert (EAstUtils.decompose_app (EAst.mkApps (E.tFix mfix' idx) L) = EAstUtils.decompose_app (EAst.mkApps tBox x6)) by now rewrite H.

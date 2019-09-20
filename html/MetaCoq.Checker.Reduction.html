@@ -1,0 +1,259 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<title>MetaCoq.Checker.Reduction</title>
+</head>
+
+<body>
+
+<div id="page">
+
+<div id="header">
+</div>
+
+<div id="main">
+
+<h1 class="libtitle">Library MetaCoq.Checker.Reduction</h1>
+
+<div class="code">
+
+<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+<a name="lab7"></a><h1 class="section">Lemmas about reduction: Church-Rosser property of parallel one-step reduction</h1>
+
+<div class="paragraph"> </div>
+
+ First we need a definition of parallel one step beta reduction, for
+    which confluence can be proven. 
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Definition</span> <span class="id" title="var">atom</span> <span class="id" title="var">t</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">t</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">tRel</span> <span class="id" title="var">_</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">tVar</span> <span class="id" title="var">_</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">tSort</span> <span class="id" title="var">_</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">tConst</span> <span class="id" title="var">_</span> <span class="id" title="var">_</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">tInd</span> <span class="id" title="var">_</span> <span class="id" title="var">_</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">tConstruct</span> <span class="id" title="var">_</span> <span class="id" title="var">_</span> <span class="id" title="var">_</span> ⇒ <span class="id" title="var">true</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">_</span> ⇒ <span class="id" title="var">false</span><br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <span class="id" title="var">wf_red_wf</span> `{<span class="id" title="var">checker_flags</span>} <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">M</span> <span class="id" title="var">N</span> : <span class="id" title="keyword">wf</span> <span class="id" title="var">Σ</span> → <span class="id" title="var">wf_local</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> → <span class="id" title="var">Ast.wf</span> <span class="id" title="var">M</span> → <span class="id" title="tactic">red</span> (<span class="id" title="var">fst</span> <span class="id" title="var">Σ</span>) <span class="id" title="var">Γ</span> <span class="id" title="var">M</span> <span class="id" title="var">N</span> → <span class="id" title="var">Ast.wf</span> <span class="id" title="var">N</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <span class="id" title="var">substitution_red</span> `{<span class="id" title="var">cf</span>:<span class="id" title="var">checker_flags</span>} <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">Γ'</span> <span class="id" title="var">Γ''</span> <span class="id" title="var">s</span> <span class="id" title="var">M</span> <span class="id" title="var">N</span> :<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">wf</span> <span class="id" title="var">Σ</span> → <span class="id" title="keyword">All</span> <span class="id" title="var">Ast.wf</span> <span class="id" title="var">s</span> → <span class="id" title="var">subs</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">s</span> <span class="id" title="var">Γ'</span> → <span class="id" title="var">wf_local</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> → <span class="id" title="var">Ast.wf</span> <span class="id" title="var">M</span> →<br/>
+&nbsp;&nbsp;<span class="id" title="var">wf_local</span> <span class="id" title="var">Σ</span> (<span class="id" title="var">Γ</span> ,,, <span class="id" title="var">Γ'</span> ,,, <span class="id" title="var">Γ''</span>) →<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">red</span> (<span class="id" title="var">fst</span> <span class="id" title="var">Σ</span>) (<span class="id" title="var">Γ</span> ,,, <span class="id" title="var">Γ'</span> ,,, <span class="id" title="var">Γ''</span>) <span class="id" title="var">M</span> <span class="id" title="var">N</span> →<br/>
+&nbsp;&nbsp;<span class="id" title="tactic">red</span> (<span class="id" title="var">fst</span> <span class="id" title="var">Σ</span>) (<span class="id" title="var">Γ</span> ,,, <span class="id" title="var">subst_context</span> <span class="id" title="var">s</span> 0 <span class="id" title="var">Γ''</span>) (<span class="id" title="tactic">subst</span> <span class="id" title="var">s</span> #|<span class="id" title="var">Γ''</span>| <span class="id" title="var">M</span>) (<span class="id" title="tactic">subst</span> <span class="id" title="var">s</span> #|<span class="id" title="var">Γ''</span>| <span class="id" title="var">N</span>).<br/>
+
+<br/>
+<span class="id" title="keyword">Section</span> <span class="id" title="var">ParallelReduction</span>.<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Context</span> (<span class="id" title="var">Σ</span> : <span class="id" title="var">global_env</span>).<br/>
+
+<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Inductive</span> <span class="id" title="var">pred1</span> (<span class="id" title="var">Γ</span> : <span class="id" title="keyword">context</span>) : <span class="id" title="var">term</span> → <span class="id" title="var">term</span> → <span class="id" title="keyword">Prop</span> :=<br/>
+&nbsp;&nbsp;</div>
+
+<div class="doc">
+Reductions  Beta 
+</div>
+<div class="code">
+&nbsp;&nbsp;| <span class="id" title="var">pred_beta</span> <span class="id" title="var">na</span> <span class="id" title="var">t</span> <span class="id" title="var">b0</span> <span class="id" title="var">b1</span> <span class="id" title="var">a0</span> <span class="id" title="var">a1</span> <span class="id" title="var">l0</span> <span class="id" title="var">l1</span> :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> <span class="id" title="var">b0</span> <span class="id" title="var">b1</span> → <span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> <span class="id" title="var">a0</span> <span class="id" title="var">a1</span> → <span class="id" title="var">Forall2</span> (<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span>) <span class="id" title="var">l0</span> <span class="id" title="var">l1</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">tApp</span> (<span class="id" title="var">tLambda</span> <span class="id" title="var">na</span> <span class="id" title="var">t</span> <span class="id" title="var">b0</span>) (<span class="id" title="var">a0</span> :: <span class="id" title="var">l0</span>)) (<span class="id" title="var">mkApps</span> (<span class="id" title="var">subst10</span> <span class="id" title="var">a1</span> <span class="id" title="var">b1</span>) <span class="id" title="var">l1</span>)<br/>
+<br/>
+&nbsp;&nbsp;</div>
+
+<div class="doc">
+Let 
+</div>
+<div class="code">
+&nbsp;&nbsp;| <span class="id" title="var">pred_zeta</span> <span class="id" title="var">na</span> <span class="id" title="var">d0</span> <span class="id" title="var">d1</span> <span class="id" title="var">t</span> <span class="id" title="var">b0</span> <span class="id" title="var">b1</span> :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> <span class="id" title="var">d0</span> <span class="id" title="var">d1</span> → <span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> <span class="id" title="var">b0</span> <span class="id" title="var">b1</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">tLetIn</span> <span class="id" title="var">na</span> <span class="id" title="var">d0</span> <span class="id" title="var">t</span> <span class="id" title="var">b0</span>) (<span class="id" title="var">subst10</span> <span class="id" title="var">d1</span> <span class="id" title="var">b1</span>)<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id" title="var">pred_rel</span> <span class="id" title="var">i</span> <span class="id" title="var">body</span> <span class="id" title="var">body'</span> :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">option_map</span> <span class="id" title="var">decl_body</span> (<span class="id" title="var">nth_error</span> <span class="id" title="var">Γ</span> <span class="id" title="var">i</span>) = <span class="id" title="var">Some</span> (<span class="id" title="var">Some</span> <span class="id" title="var">body</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">lift0</span> (<span class="id" title="var">S</span> <span class="id" title="var">i</span>) <span class="id" title="var">body</span>) <span class="id" title="var">body'</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">tRel</span> <span class="id" title="var">i</span>) <span class="id" title="var">body'</span><br/>
+<br/>
+&nbsp;&nbsp;</div>
+
+<div class="doc">
+Case 
+</div>
+<div class="code">
+&nbsp;&nbsp;| <span class="id" title="var">pred_iota</span> <span class="id" title="var">ind</span> <span class="id" title="var">pars</span> <span class="id" title="var">c</span> <span class="id" title="var">u</span> <span class="id" title="var">args0</span> <span class="id" title="var">args1</span> <span class="id" title="var">p</span> <span class="id" title="var">brs0</span> <span class="id" title="var">brs1</span> :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Forall2</span> (<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span>) <span class="id" title="var">args0</span> <span class="id" title="var">args1</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Forall2</span> (<span class="id" title="var">on_rel</span> (<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span>) <span class="id" title="var">snd</span>) <span class="id" title="var">brs0</span> <span class="id" title="var">brs1</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">tCase</span> (<span class="id" title="var">ind</span>, <span class="id" title="var">pars</span>) <span class="id" title="var">p</span> (<span class="id" title="var">mkApps</span> (<span class="id" title="var">tConstruct</span> <span class="id" title="var">ind</span> <span class="id" title="var">c</span> <span class="id" title="var">u</span>) <span class="id" title="var">args0</span>) <span class="id" title="var">brs0</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">iota_red</span> <span class="id" title="var">pars</span> <span class="id" title="var">c</span> <span class="id" title="var">args1</span> <span class="id" title="var">brs1</span>)<br/>
+<br/>
+&nbsp;&nbsp;</div>
+
+<div class="doc">
+Fix unfolding, with guard 
+</div>
+<div class="code">
+&nbsp;&nbsp;| <span class="id" title="var">pred_fix</span> <span class="id" title="var">mfix</span> <span class="id" title="var">idx</span> <span class="id" title="var">args0</span> <span class="id" title="var">args1</span> <span class="id" title="var">narg</span> <span class="id" title="var">fn0</span> <span class="id" title="var">fn1</span> :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">unfold_fix</span> <span class="id" title="var">mfix</span> <span class="id" title="var">idx</span> = <span class="id" title="var">Some</span> (<span class="id" title="var">narg</span>, <span class="id" title="var">fn0</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">is_constructor</span> <span class="id" title="var">narg</span> <span class="id" title="var">args1</span> = <span class="id" title="var">true</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Forall2</span> (<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span>) <span class="id" title="var">args0</span> <span class="id" title="var">args1</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> <span class="id" title="var">fn0</span> <span class="id" title="var">fn1</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">tApp</span> (<span class="id" title="var">tFix</span> <span class="id" title="var">mfix</span> <span class="id" title="var">idx</span>) <span class="id" title="var">args0</span>) (<span class="id" title="var">tApp</span> <span class="id" title="var">fn1</span> <span class="id" title="var">args1</span>)<br/>
+<br/>
+&nbsp;&nbsp;</div>
+
+<div class="doc">
+CoFix-case unfolding 
+</div>
+<div class="code">
+&nbsp;&nbsp;| <span class="id" title="var">pred_cofix_case</span> <span class="id" title="var">ip</span> <span class="id" title="var">p0</span> <span class="id" title="var">p1</span> <span class="id" title="var">mfix</span> <span class="id" title="var">idx</span> <span class="id" title="var">args0</span> <span class="id" title="var">args1</span> <span class="id" title="var">narg</span> <span class="id" title="var">fn0</span> <span class="id" title="var">fn1</span> <span class="id" title="var">brs0</span> <span class="id" title="var">brs1</span> :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">unfold_cofix</span> <span class="id" title="var">mfix</span> <span class="id" title="var">idx</span> = <span class="id" title="var">Some</span> (<span class="id" title="var">narg</span>, <span class="id" title="var">fn0</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Forall2</span> (<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span>) <span class="id" title="var">args0</span> <span class="id" title="var">args1</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> <span class="id" title="var">fn0</span> <span class="id" title="var">fn1</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> <span class="id" title="var">p0</span> <span class="id" title="var">p1</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Forall2</span> (<span class="id" title="var">on_rel</span> (<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span>) <span class="id" title="var">snd</span>) <span class="id" title="var">brs0</span> <span class="id" title="var">brs1</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">tCase</span> <span class="id" title="var">ip</span> <span class="id" title="var">p0</span> (<span class="id" title="var">mkApps</span> (<span class="id" title="var">tCoFix</span> <span class="id" title="var">mfix</span> <span class="id" title="var">idx</span>) <span class="id" title="var">args0</span>) <span class="id" title="var">brs0</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">tCase</span> <span class="id" title="var">ip</span> (<span class="id" title="var">mkApps</span> <span class="id" title="var">fn1</span> <span class="id" title="var">args1</span>) <span class="id" title="var">p1</span> <span class="id" title="var">brs1</span>)<br/>
+<br/>
+&nbsp;&nbsp;</div>
+
+<div class="doc">
+CoFix-proj unfolding 
+</div>
+<div class="code">
+&nbsp;&nbsp;| <span class="id" title="var">pred_cofix_proj</span> <span class="id" title="var">p</span> <span class="id" title="var">mfix</span> <span class="id" title="var">idx</span> <span class="id" title="var">args0</span> <span class="id" title="var">args1</span> <span class="id" title="var">narg</span> <span class="id" title="var">fn0</span> <span class="id" title="var">fn1</span> :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">unfold_cofix</span> <span class="id" title="var">mfix</span> <span class="id" title="var">idx</span> = <span class="id" title="var">Some</span> (<span class="id" title="var">narg</span>, <span class="id" title="var">fn0</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Forall2</span> (<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span>) <span class="id" title="var">args0</span> <span class="id" title="var">args1</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> <span class="id" title="var">fn0</span> <span class="id" title="var">fn1</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">tProj</span> <span class="id" title="var">p</span> (<span class="id" title="var">mkApps</span> (<span class="id" title="var">tCoFix</span> <span class="id" title="var">mfix</span> <span class="id" title="var">idx</span>) <span class="id" title="var">args0</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">tProj</span> <span class="id" title="var">p</span> (<span class="id" title="var">mkApps</span> <span class="id" title="var">fn1</span> <span class="id" title="var">args1</span>))<br/>
+<br/>
+&nbsp;&nbsp;</div>
+
+<div class="doc">
+Constant unfolding 
+</div>
+<div class="code">
+&nbsp;&nbsp;| <span class="id" title="var">pred_delta</span> <span class="id" title="var">c</span> <span class="id" title="var">decl</span> <span class="id" title="var">body</span> (<span class="id" title="var">isdecl</span> : <span class="id" title="var">declared_constant</span> <span class="id" title="var">Σ</span> <span class="id" title="var">c</span> <span class="id" title="var">decl</span>) <span class="id" title="var">u</span> :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">decl</span>.(<span class="id" title="var">cst_body</span>) = <span class="id" title="var">Some</span> <span class="id" title="var">body</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">tConst</span> <span class="id" title="var">c</span> <span class="id" title="var">u</span>) (<span class="id" title="var">subst_instance_constr</span> <span class="id" title="var">u</span> <span class="id" title="var">body</span>)<br/>
+<br/>
+&nbsp;&nbsp;</div>
+
+<div class="doc">
+Proj 
+</div>
+<div class="code">
+&nbsp;&nbsp;| <span class="id" title="var">pred_proj</span> <span class="id" title="var">i</span> <span class="id" title="var">pars</span> <span class="id" title="var">narg</span> <span class="id" title="var">args</span> <span class="id" title="var">k</span> <span class="id" title="var">u</span> <span class="id" title="var">args0</span> <span class="id" title="var">args1</span> <span class="id" title="var">arg1</span> :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Forall2</span> (<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span>) <span class="id" title="var">args0</span> <span class="id" title="var">args1</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">nth_error</span> <span class="id" title="var">args</span> (<span class="id" title="var">pars</span> + <span class="id" title="var">narg</span>) = <span class="id" title="var">Some</span> <span class="id" title="var">arg1</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">tProj</span> (<span class="id" title="var">i</span>, <span class="id" title="var">pars</span>, <span class="id" title="var">narg</span>) (<span class="id" title="var">mkApps</span> (<span class="id" title="var">tConstruct</span> <span class="id" title="var">i</span> <span class="id" title="var">k</span> <span class="id" title="var">u</span>) <span class="id" title="var">args0</span>)) <span class="id" title="var">arg1</span><br/>
+<br/>
+&nbsp;&nbsp;| <span class="id" title="var">pred_cast</span> <span class="id" title="var">t</span> <span class="id" title="var">k</span> <span class="id" title="var">u</span> <span class="id" title="var">t'</span> : <span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> <span class="id" title="var">t</span> <span class="id" title="var">t'</span> → <span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">tCast</span> <span class="id" title="var">t</span> <span class="id" title="var">k</span> <span class="id" title="var">u</span>) <span class="id" title="var">t'</span><br/>
+<br/>
+&nbsp;&nbsp;</div>
+
+<div class="doc">
+Congruences 
+</div>
+<div class="code">
+&nbsp;&nbsp;| <span class="id" title="var">pred_abs</span> <span class="id" title="var">na</span> <span class="id" title="var">M</span> <span class="id" title="var">M'</span> <span class="id" title="var">N</span> <span class="id" title="var">N'</span> : <span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> <span class="id" title="var">M</span> <span class="id" title="var">M'</span> → <span class="id" title="var">pred1</span> (<span class="id" title="var">Γ</span> ,, <span class="id" title="var">vass</span> <span class="id" title="var">na</span> <span class="id" title="var">M</span>) <span class="id" title="var">N</span> <span class="id" title="var">N'</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">tLambda</span> <span class="id" title="var">na</span> <span class="id" title="var">M</span> <span class="id" title="var">N</span>) (<span class="id" title="var">tLambda</span> <span class="id" title="var">na</span> <span class="id" title="var">M'</span> <span class="id" title="var">N'</span>)<br/>
+&nbsp;&nbsp;| <span class="id" title="var">pred_app</span> <span class="id" title="var">M0</span> <span class="id" title="var">M1</span> <span class="id" title="var">N0</span> <span class="id" title="var">N1</span> :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> <span class="id" title="var">M0</span> <span class="id" title="var">M1</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Forall2</span> (<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span>) <span class="id" title="var">N0</span> <span class="id" title="var">N1</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">tApp</span> <span class="id" title="var">M0</span> <span class="id" title="var">N0</span>) (<span class="id" title="var">tApp</span> <span class="id" title="var">M1</span> <span class="id" title="var">N1</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br/>
+&nbsp;&nbsp;| <span class="id" title="var">pred_letin</span> <span class="id" title="var">na</span> <span class="id" title="var">d0</span> <span class="id" title="var">d1</span> <span class="id" title="var">t0</span> <span class="id" title="var">t1</span> <span class="id" title="var">b0</span> <span class="id" title="var">b1</span> :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> <span class="id" title="var">d0</span> <span class="id" title="var">d1</span> → <span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> <span class="id" title="var">t0</span> <span class="id" title="var">t1</span> → <span class="id" title="var">pred1</span> (<span class="id" title="var">Γ</span> ,, <span class="id" title="var">vdef</span> <span class="id" title="var">na</span> <span class="id" title="var">d0</span> <span class="id" title="var">t0</span>) <span class="id" title="var">b0</span> <span class="id" title="var">b1</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">tLetIn</span> <span class="id" title="var">na</span> <span class="id" title="var">d0</span> <span class="id" title="var">t0</span> <span class="id" title="var">b0</span>) (<span class="id" title="var">tLetIn</span> <span class="id" title="var">na</span> <span class="id" title="var">d1</span> <span class="id" title="var">t1</span> <span class="id" title="var">b1</span>)<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id" title="var">pred_case</span> <span class="id" title="var">ind</span> <span class="id" title="var">p0</span> <span class="id" title="var">p1</span> <span class="id" title="var">c0</span> <span class="id" title="var">c1</span> <span class="id" title="var">brs0</span> <span class="id" title="var">brs1</span> :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> <span class="id" title="var">p0</span> <span class="id" title="var">p1</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> <span class="id" title="var">c0</span> <span class="id" title="var">c1</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Forall2</span> (<span class="id" title="var">on_rel</span> (<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span>) <span class="id" title="var">snd</span>) <span class="id" title="var">brs0</span> <span class="id" title="var">brs1</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">tCase</span> <span class="id" title="var">ind</span> <span class="id" title="var">p0</span> <span class="id" title="var">c0</span> <span class="id" title="var">brs0</span>) (<span class="id" title="var">tCase</span> <span class="id" title="var">ind</span> <span class="id" title="var">p1</span> <span class="id" title="var">c1</span> <span class="id" title="var">brs1</span>)<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id" title="var">pred_proj_congr</span> <span class="id" title="var">p</span> <span class="id" title="var">c</span> <span class="id" title="var">c'</span> : <span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> <span class="id" title="var">c</span> <span class="id" title="var">c'</span> → <span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">tProj</span> <span class="id" title="var">p</span> <span class="id" title="var">c</span>) (<span class="id" title="var">tProj</span> <span class="id" title="var">p</span> <span class="id" title="var">c'</span>)<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id" title="var">pred_fix_congr</span> <span class="id" title="var">mfix0</span> <span class="id" title="var">mfix1</span> <span class="id" title="var">idx</span> :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Forall2</span> (<span class="id" title="keyword">fun</span> <span class="id" title="var">d0</span> <span class="id" title="var">d1</span> ⇒ <span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">dtype</span> <span class="id" title="var">d0</span>) (<span class="id" title="var">dtype</span> <span class="id" title="var">d1</span>) ∧<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">pred1</span> (<span class="id" title="var">Γ</span> ,,, <span class="id" title="var">fix_context</span> <span class="id" title="var">mfix0</span>) (<span class="id" title="var">dbody</span> <span class="id" title="var">d0</span>) (<span class="id" title="var">dbody</span> <span class="id" title="var">d1</span>)) <span class="id" title="var">mfix0</span> <span class="id" title="var">mfix1</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">tFix</span> <span class="id" title="var">mfix0</span> <span class="id" title="var">idx</span>) (<span class="id" title="var">tFix</span> <span class="id" title="var">mfix1</span> <span class="id" title="var">idx</span>)<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id" title="var">pred_cofix_congr</span> <span class="id" title="var">mfix0</span> <span class="id" title="var">mfix1</span> <span class="id" title="var">idx</span> :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Forall2</span> (<span class="id" title="keyword">fun</span> <span class="id" title="var">d0</span> <span class="id" title="var">d1</span> ⇒ <span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">dtype</span> <span class="id" title="var">d0</span>) (<span class="id" title="var">dtype</span> <span class="id" title="var">d1</span>) ∧<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">pred1</span> (<span class="id" title="var">Γ</span> ,,, <span class="id" title="var">fix_context</span> <span class="id" title="var">mfix0</span>) (<span class="id" title="var">dbody</span> <span class="id" title="var">d0</span>) (<span class="id" title="var">dbody</span> <span class="id" title="var">d1</span>)) <span class="id" title="var">mfix0</span> <span class="id" title="var">mfix1</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">tCoFix</span> <span class="id" title="var">mfix0</span> <span class="id" title="var">idx</span>) (<span class="id" title="var">tCoFix</span> <span class="id" title="var">mfix1</span> <span class="id" title="var">idx</span>)<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id" title="var">pred_prod</span> <span class="id" title="var">na</span> <span class="id" title="var">M0</span> <span class="id" title="var">M1</span> <span class="id" title="var">N0</span> <span class="id" title="var">N1</span> : <span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> <span class="id" title="var">M0</span> <span class="id" title="var">M1</span> → <span class="id" title="var">pred1</span> (<span class="id" title="var">Γ</span> ,, <span class="id" title="var">vass</span> <span class="id" title="var">na</span> <span class="id" title="var">M0</span>) <span class="id" title="var">N0</span> <span class="id" title="var">N1</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">tProd</span> <span class="id" title="var">na</span> <span class="id" title="var">M0</span> <span class="id" title="var">N0</span>) (<span class="id" title="var">tProd</span> <span class="id" title="var">na</span> <span class="id" title="var">M1</span> <span class="id" title="var">N1</span>)<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id" title="var">evar_pred</span> <span class="id" title="var">ev</span> <span class="id" title="var">l</span> <span class="id" title="var">l'</span> : <span class="id" title="var">Forall2</span> (<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span>) <span class="id" title="var">l</span> <span class="id" title="var">l'</span> → <span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">tEvar</span> <span class="id" title="var">ev</span> <span class="id" title="var">l</span>) (<span class="id" title="var">tEvar</span> <span class="id" title="var">ev</span> <span class="id" title="var">l'</span>)<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id" title="var">pred_cast_congr</span> <span class="id" title="var">k</span> <span class="id" title="var">M0</span> <span class="id" title="var">M1</span> <span class="id" title="var">N0</span> <span class="id" title="var">N1</span> : <span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> <span class="id" title="var">M0</span> <span class="id" title="var">M1</span> → <span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> <span class="id" title="var">N0</span> <span class="id" title="var">N1</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">tCast</span> <span class="id" title="var">M0</span> <span class="id" title="var">k</span> <span class="id" title="var">N0</span>) (<span class="id" title="var">tCast</span> <span class="id" title="var">M1</span> <span class="id" title="var">k</span> <span class="id" title="var">N1</span>)<br/>
+<br/>
+&nbsp;&nbsp;| <span class="id" title="var">pred_atom</span> <span class="id" title="var">t</span> : <span class="id" title="var">atom</span> <span class="id" title="var">t</span> → <span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> <span class="id" title="var">t</span> <span class="id" title="var">t</span>.<br/>
+
+<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Lemma</span> <span class="id" title="var">All_Forall2</span> {<span class="id" title="var">A</span>} (<span class="id" title="var">P</span> : <span class="id" title="var">A</span> → <span class="id" title="var">A</span> → <span class="id" title="keyword">Prop</span>) <span class="id" title="var">Q</span> (<span class="id" title="var">l</span> : <span class="id" title="var">list</span> <span class="id" title="var">A</span>) :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="keyword">∀</span> <span class="id" title="var">x</span>, <span class="id" title="var">Q</span> <span class="id" title="var">x</span> → <span class="id" title="var">P</span> <span class="id" title="var">x</span> <span class="id" title="var">x</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">All</span> <span class="id" title="var">Q</span> <span class="id" title="var">l</span> → <span class="id" title="var">Forall2</span> <span class="id" title="var">P</span> <span class="id" title="var">l</span> <span class="id" title="var">l</span>.<br/>
+
+<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Lemma</span> <span class="id" title="var">pred1_refl</span> <span class="id" title="var">Γ</span> <span class="id" title="var">t</span> : <span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> <span class="id" title="var">t</span> <span class="id" title="var">t</span>.<br/>
+
+<br/>
+
+<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Lemma</span> <span class="id" title="var">Forall2_same</span> {<span class="id" title="var">A</span>} (<span class="id" title="var">P</span> : <span class="id" title="var">A</span> → <span class="id" title="var">A</span> → <span class="id" title="keyword">Prop</span>) <span class="id" title="var">l</span> : (<span class="id" title="keyword">∀</span> <span class="id" title="var">x</span>, <span class="id" title="var">P</span> <span class="id" title="var">x</span> <span class="id" title="var">x</span>) → <span class="id" title="var">Forall2</span> <span class="id" title="var">P</span> <span class="id" title="var">l</span> <span class="id" title="var">l</span>.<br/>
+ 
+<br/>
+
+<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Lemma</span> <span class="id" title="var">red1_pred1</span> <span class="id" title="var">Γ</span> : <span class="id" title="keyword">∀</span> <span class="id" title="var">M</span> <span class="id" title="var">N</span>, <span class="id" title="var">red1</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">M</span> <span class="id" title="var">N</span> → <span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> <span class="id" title="var">M</span> <span class="id" title="var">N</span>.<br/>
+
+<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Lemma</span> <span class="id" title="var">pred1_red</span> <span class="id" title="var">Γ</span> : <span class="id" title="keyword">∀</span> <span class="id" title="var">M</span> <span class="id" title="var">N</span>, <span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> <span class="id" title="var">M</span> <span class="id" title="var">N</span> → <span class="id" title="tactic">red</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">M</span> <span class="id" title="var">N</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">End</span> <span class="id" title="var">ParallelReduction</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <span class="id" title="var">substitution_pred1</span> `{<span class="id" title="var">cf</span>:<span class="id" title="var">checker_flags</span>} <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">Γ'</span> <span class="id" title="var">Γ''</span> <span class="id" title="var">s</span> <span class="id" title="var">M</span> <span class="id" title="var">N</span> :<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">wf</span> <span class="id" title="var">Σ</span> → <span class="id" title="keyword">All</span> <span class="id" title="var">Ast.wf</span> <span class="id" title="var">s</span> → <span class="id" title="var">subs</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">s</span> <span class="id" title="var">Γ'</span> → <span class="id" title="var">wf_local</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> → <span class="id" title="var">Ast.wf</span> <span class="id" title="var">M</span> →<br/>
+&nbsp;&nbsp;<span class="id" title="var">wf_local</span> <span class="id" title="var">Σ</span> (<span class="id" title="var">Γ</span> ,,, <span class="id" title="var">Γ'</span> ,,, <span class="id" title="var">Γ''</span>) →<br/>
+&nbsp;&nbsp;<span class="id" title="var">pred1</span> (<span class="id" title="var">fst</span> <span class="id" title="var">Σ</span>) (<span class="id" title="var">Γ</span> ,,, <span class="id" title="var">Γ'</span> ,,, <span class="id" title="var">Γ''</span>) <span class="id" title="var">M</span> <span class="id" title="var">N</span> →<br/>
+&nbsp;&nbsp;<span class="id" title="var">pred1</span> (<span class="id" title="var">fst</span> <span class="id" title="var">Σ</span>) (<span class="id" title="var">Γ</span> ,,, <span class="id" title="var">subst_context</span> <span class="id" title="var">s</span> 0 <span class="id" title="var">Γ''</span>) (<span class="id" title="tactic">subst</span> <span class="id" title="var">s</span> #|<span class="id" title="var">Γ''</span>| <span class="id" title="var">M</span>) (<span class="id" title="tactic">subst</span> <span class="id" title="var">s</span> #|<span class="id" title="var">Γ''</span>| <span class="id" title="var">N</span>).<br/>
+
+<br/>
+<span class="id" title="keyword">Theorem</span> <span class="id" title="var">confluence</span> <span class="id" title="var">Γ</span> <span class="id" title="var">t</span> :<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">∀</span> <span class="id" title="var">t0</span> <span class="id" title="var">t1</span>, <span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> <span class="id" title="var">t</span> <span class="id" title="var">t0</span> → <span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> <span class="id" title="var">t</span> <span class="id" title="var">t1</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">∃</span> <span class="id" title="var">v</span>, <span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> <span class="id" title="var">t0</span> <span class="id" title="var">v</span> ∧ <span class="id" title="var">pred1</span> <span class="id" title="var">Γ</span> <span class="id" title="var">t1</span> <span class="id" title="var">v</span>.<br/>
+</div>
+</div>
+
+<div id="footer">
+<hr/><a href="index.html">Index</a><hr/>This page has been generated by <a href="http://coq.inria.fr/">coqdoc</a>
+</div>
+
+</div>
+
+</body>
+</html>

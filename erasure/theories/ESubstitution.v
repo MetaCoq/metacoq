@@ -10,6 +10,8 @@ Local Open Scope list_scope.
 Set Asymmetric Patterns.
 Import MonadNotation.
 
+Local Set Keyed Unification.
+
 Module PA := PCUICAst.
 Module P := PCUICWcbvEval.
 Local Existing Instance config.extraction_checker_flags.

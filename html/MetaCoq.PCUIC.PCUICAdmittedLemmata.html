@@ -1,0 +1,608 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<title>MetaCoq.PCUIC.PCUICAdmittedLemmata</title>
+</head>
+
+<body>
+
+<div id="page">
+
+<div id="header">
+</div>
+
+<div id="main">
+
+<h1 class="libtitle">Library MetaCoq.PCUIC.PCUICAdmittedLemmata</h1>
+
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Notation</span> &quot;a 'of' A" := (<span class="id" title="keyword">match</span> <span class="id" title="var">a</span> : <span class="id" title="var">A</span> <span class="id" title="keyword">with</span> <span class="id" title="var">_</span> ⇒ <span class="id" title="var">a</span> <span class="id" title="keyword">end</span>) (<span class="id" title="tactic">at</span> <span class="id" title="keyword">level</span> 100).<br/>
+
+<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICUnivSubstitution.fix_context_subst_instance</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> (<span class="id" title="var">mfix</span> : <span class="id" title="var">list</span> (<span class="id" title="var">BasicAst.def</span> <span class="id" title="var">PCUICAst.term</span>)) (<span class="id" title="var">u</span> : <span class="id" title="var">Universes.universe_instance</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICLiftSubst.fix_context</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">List.map</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">PCUICAstUtils.map_def</span> (<span class="id" title="var">PCUICUnivSubst.subst_instance_constr</span> <span class="id" title="var">u</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">PCUICUnivSubst.subst_instance_constr</span> <span class="id" title="var">u</span>)) <span class="id" title="var">mfix</span>) =<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">List.map</span> (<span class="id" title="var">PCUICAstUtils.map_decl</span> (<span class="id" title="var">PCUICUnivSubst.subst_instance_constr</span> <span class="id" title="var">u</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">PCUICLiftSubst.fix_context</span> <span class="id" title="var">mfix</span>)).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICUnivSubstitution.isWfArity_subst_instance</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> (<span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env</span> × <span class="id" title="var">Universes.universes_decl</span>) <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">Γ</span> : <span class="id" title="var">PCUICAst.context</span>) (<span class="id" title="var">B</span> : <span class="id" title="var">PCUICAst.term</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.isWfArity</span> <span class="id" title="var">PCUICTyping.typing</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">B</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> (<span class="id" title="var">u</span> : <span class="id" title="var">Universes.universe_instance</span>) (<span class="id" title="var">univs</span> : <span class="id" title="var">Universes.universes_decl</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.consistent_instance_ext</span> (<span class="id" title="var">fst</span> <span class="id" title="var">Σ</span>, <span class="id" title="var">univs</span>) (<span class="id" title="var">snd</span> <span class="id" title="var">Σ</span>) <span class="id" title="var">u</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.isWfArity</span> <span class="id" title="var">PCUICTyping.typing</span> (<span class="id" title="var">fst</span> <span class="id" title="var">Σ</span>, <span class="id" title="var">univs</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">PCUICUnivSubst.subst_instance_context</span> <span class="id" title="var">u</span> <span class="id" title="var">Γ</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">PCUICUnivSubst.subst_instance_constr</span> <span class="id" title="var">u</span> <span class="id" title="var">B</span>)).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICUnivSubstitution.subst_instance_constr_two</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> (<span class="id" title="var">u1</span> <span class="id" title="var">u2</span> : <span class="id" title="var">Universes.universe_instance</span>) (<span class="id" title="var">t</span> : <span class="id" title="var">PCUICAst.term</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICUnivSubst.subst_instance_constr</span> <span class="id" title="var">u1</span> (<span class="id" title="var">PCUICUnivSubst.subst_instance_constr</span> <span class="id" title="var">u2</span> <span class="id" title="var">t</span>) =<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICUnivSubst.subst_instance_constr</span> (<span class="id" title="var">UnivSubst.subst_instance_instance</span> <span class="id" title="var">u1</span> <span class="id" title="var">u2</span>) <span class="id" title="var">t</span>).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICUnivSubstitution.consistent_ext_trans</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> (<span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env</span> × <span class="id" title="var">Universes.universes_decl</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">u</span> : <span class="id" title="var">Universes.universe_instance</span>) (<span class="id" title="var">U</span> : <span class="id" title="var">Universes.universes_decl</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.consistent_instance_ext</span> <span class="id" title="var">Σ</span> <span class="id" title="var">U</span> <span class="id" title="var">u</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> (<span class="id" title="var">u0</span> : <span class="id" title="var">Universes.universe_instance</span>) (<span class="id" title="var">univs</span> : <span class="id" title="var">Universes.universes_decl</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.consistent_instance_ext</span> (<span class="id" title="var">fst</span> <span class="id" title="var">Σ</span>, <span class="id" title="var">univs</span>) (<span class="id" title="var">snd</span> <span class="id" title="var">Σ</span>) <span class="id" title="var">u0</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.consistent_instance_ext</span> (<span class="id" title="var">fst</span> <span class="id" title="var">Σ</span>, <span class="id" title="var">univs</span>) <span class="id" title="var">U</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">UnivSubst.subst_instance_instance</span> <span class="id" title="var">u0</span> <span class="id" title="var">u</span>)).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICUnivSubstitution.subst_instance_univ_super</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> (<span class="id" title="var">l</span> : <span class="id" title="var">Universes.Level.t</span>) (<span class="id" title="var">u</span> : <span class="id" title="var">Universes.universe_instance</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">UnivSubst.subst_instance_univ</span> <span class="id" title="var">u</span> (<span class="id" title="var">Universes.Universe.super</span> <span class="id" title="var">l</span>) =<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Universes.Universe.super</span> (<span class="id" title="var">UnivSubst.subst_instance_level</span> <span class="id" title="var">u</span> <span class="id" title="var">l</span>)).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICUnivSubstitution.subst_instance_univ_make</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> (<span class="id" title="var">l</span> : <span class="id" title="var">Universes.Level.t</span>) (<span class="id" title="var">u</span> : <span class="id" title="var">Universes.universe_instance</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">UnivSubst.subst_instance_univ</span> <span class="id" title="var">u</span> (<span class="id" title="var">Universes.Universe.make</span> <span class="id" title="var">l</span>) =<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Universes.Universe.make</span> (<span class="id" title="var">UnivSubst.subst_instance_level</span> <span class="id" title="var">u</span> <span class="id" title="var">l</span>)).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICUnivSubstitution.LevelIn_subst_instance</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> (<span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env</span> × <span class="id" title="var">Universes.universes_decl</span>) <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">l</span> : <span class="id" title="var">Universes.Level.t</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Universes.LevelSet.In</span> <span class="id" title="var">l</span> (<span class="id" title="var">PCUICTyping.global_ext_levels</span> <span class="id" title="var">Σ</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> (<span class="id" title="var">u</span> : <span class="id" title="var">Universes.universe_instance</span>) (<span class="id" title="var">univs</span> : <span class="id" title="var">Universes.universes_decl</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.consistent_instance_ext</span> (<span class="id" title="var">fst</span> <span class="id" title="var">Σ</span>, <span class="id" title="var">univs</span>) (<span class="id" title="var">snd</span> <span class="id" title="var">Σ</span>) <span class="id" title="var">u</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Universes.LevelSet.In</span> (<span class="id" title="var">UnivSubst.subst_instance_level</span> <span class="id" title="var">u</span> <span class="id" title="var">l</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">PCUICTyping.global_ext_levels</span> (<span class="id" title="var">fst</span> <span class="id" title="var">Σ</span>, <span class="id" title="var">univs</span>))).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICUnivSubstitution.product_subst_instance</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> (<span class="id" title="var">u</span> : <span class="id" title="var">Universes.universe_instance</span>) (<span class="id" title="var">s1</span> <span class="id" title="var">s2</span> : <span class="id" title="var">Universes.Universe.t</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">UnivSubst.subst_instance_univ</span> <span class="id" title="var">u</span> (<span class="id" title="var">Universes.Universe.sort_of_product</span> <span class="id" title="var">s1</span> <span class="id" title="var">s2</span>) =<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Universes.Universe.sort_of_product</span> (<span class="id" title="var">UnivSubst.subst_instance_univ</span> <span class="id" title="var">u</span> <span class="id" title="var">s1</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">UnivSubst.subst_instance_univ</span> <span class="id" title="var">u</span> <span class="id" title="var">s2</span>)).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICUnivSubstitution.fix_subst_subst_instance</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> (<span class="id" title="var">u</span> : <span class="id" title="var">Universes.universe_instance</span>) (<span class="id" title="var">mfix</span> : <span class="id" title="var">BasicAst.mfixpoint</span> <span class="id" title="var">PCUICAst.term</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.fix_subst</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">List.map</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">PCUICAstUtils.map_def</span> (<span class="id" title="var">PCUICUnivSubst.subst_instance_constr</span> <span class="id" title="var">u</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">PCUICUnivSubst.subst_instance_constr</span> <span class="id" title="var">u</span>)) <span class="id" title="var">mfix</span>) =<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">List.map</span> (<span class="id" title="var">PCUICUnivSubst.subst_instance_constr</span> <span class="id" title="var">u</span>) (<span class="id" title="var">PCUICTyping.fix_subst</span> <span class="id" title="var">mfix</span>)).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (<span class="id" title="var">PCUICUnivSubstitution.cofix_subst_subst_instance</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> (<span class="id" title="var">u</span> : <span class="id" title="var">Universes.universe_instance</span>) (<span class="id" title="var">mfix</span> : <span class="id" title="var">BasicAst.mfixpoint</span> <span class="id" title="var">PCUICAst.term</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.cofix_subst</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">List.map</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">PCUICAstUtils.map_def</span> (<span class="id" title="var">PCUICUnivSubst.subst_instance_constr</span> <span class="id" title="var">u</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">PCUICUnivSubst.subst_instance_constr</span> <span class="id" title="var">u</span>)) <span class="id" title="var">mfix</span>) =<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">List.map</span> (<span class="id" title="var">PCUICUnivSubst.subst_instance_constr</span> <span class="id" title="var">u</span>) (<span class="id" title="var">PCUICTyping.cofix_subst</span> <span class="id" title="var">mfix</span>)).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICUnivSubstitution.isConstruct_app_subst_instance</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> (<span class="id" title="var">u</span> : <span class="id" title="var">Universes.universe_instance</span>) (<span class="id" title="var">t</span> : <span class="id" title="var">PCUICAst.term</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.isConstruct_app</span> (<span class="id" title="var">PCUICUnivSubst.subst_instance_constr</span> <span class="id" title="var">u</span> <span class="id" title="var">t</span>) =<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.isConstruct_app</span> <span class="id" title="var">t</span>).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICUnivSubstitution.leq_term_subst_instance</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> (<span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>) (<span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">u</span> : <span class="id" title="var">Universes.universe_instance</span>) (<span class="id" title="var">univs</span> : <span class="id" title="var">Universes.universes_decl</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.consistent_instance_ext</span> (<span class="id" title="var">fst</span> <span class="id" title="var">Σ</span>, <span class="id" title="var">univs</span>) (<span class="id" title="var">snd</span> <span class="id" title="var">Σ</span>) <span class="id" title="var">u</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> <span class="id" title="var">t</span> <span class="id" title="var">u0</span> : <span class="id" title="var">PCUICAst.term</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.leq_term</span> (<span class="id" title="var">PCUICTyping.global_ext_constraints</span> <span class="id" title="var">Σ</span>) <span class="id" title="var">t</span> <span class="id" title="var">u0</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.leq_term</span> (<span class="id" title="var">PCUICTyping.global_ext_constraints</span> (<span class="id" title="var">fst</span> <span class="id" title="var">Σ</span>, <span class="id" title="var">univs</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">PCUICUnivSubst.subst_instance_constr</span> <span class="id" title="var">u</span> <span class="id" title="var">t</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">PCUICUnivSubst.subst_instance_constr</span> <span class="id" title="var">u</span> <span class="id" title="var">u0</span>)).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICUnivSubstitution.typing_subst_instance</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> (<span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>) (<span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.wf</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> <span class="id" title="var">Γ</span> : <span class="id" title="var">PCUICAst.context</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.All_local_env</span> (<span class="id" title="var">PCUICTyping.lift_typing</span> <span class="id" title="var">PCUICTyping.typing</span> <span class="id" title="var">Σ</span>) <span class="id" title="var">Γ</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> <span class="id" title="var">t</span> <span class="id" title="var">T</span> : <span class="id" title="var">PCUICAst.term</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.typing</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">t</span> <span class="id" title="var">T</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> (<span class="id" title="var">u</span> : <span class="id" title="var">Universes.universe_instance</span>) (<span class="id" title="var">univs</span> : <span class="id" title="var">Universes.universes_decl</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.consistent_instance_ext</span> (<span class="id" title="var">fst</span> <span class="id" title="var">Σ</span>, <span class="id" title="var">univs</span>) (<span class="id" title="var">snd</span> <span class="id" title="var">Σ</span>) <span class="id" title="var">u</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.All_local_env</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">PCUICTyping.lift_typing</span> <span class="id" title="var">PCUICTyping.typing</span> (<span class="id" title="var">fst</span> <span class="id" title="var">Σ</span>, <span class="id" title="var">univs</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">PCUICUnivSubst.subst_instance_context</span> <span class="id" title="var">u</span> <span class="id" title="var">Γ</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.typing</span> (<span class="id" title="var">fst</span> <span class="id" title="var">Σ</span>, <span class="id" title="var">univs</span>) (<span class="id" title="var">PCUICUnivSubst.subst_instance_context</span> <span class="id" title="var">u</span> <span class="id" title="var">Γ</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">PCUICUnivSubst.subst_instance_constr</span> <span class="id" title="var">u</span> <span class="id" title="var">t</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">PCUICUnivSubst.subst_instance_constr</span> <span class="id" title="var">u</span> <span class="id" title="var">T</span>)).<br/>
+
+<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICValidity.isWfArity_or_Type_subst_instance</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> (<span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>) (<span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">Γ</span> : <span class="id" title="var">PCUICAst.context</span>) (<span class="id" title="var">u</span> : <span class="id" title="var">list</span> <span class="id" title="var">Universes.Level.t</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">univs</span> : <span class="id" title="var">Universes.universes_decl</span>) (<span class="id" title="var">ty</span> : <span class="id" title="var">PCUICAst.term</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.All_local_env</span> (<span class="id" title="var">PCUICTyping.lift_typing</span> <span class="id" title="var">PCUICTyping.typing</span> <span class="id" title="var">Σ</span>) <span class="id" title="var">Γ</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.consistent_instance_ext</span> <span class="id" title="var">Σ</span> <span class="id" title="var">univs</span> <span class="id" title="var">u</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICGeneration.isWfArity_or_Type</span> (<span class="id" title="var">fst</span> <span class="id" title="var">Σ</span>, <span class="id" title="var">univs</span>) <span class="id" title="var">nil</span> <span class="id" title="var">ty</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICGeneration.isWfArity_or_Type</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">PCUICUnivSubst.subst_instance_constr</span> <span class="id" title="var">u</span> <span class="id" title="var">ty</span>)).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICValidity.validity</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> <span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.env_prop</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="keyword">fun</span> (<span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>) (<span class="id" title="var">Γ</span> : <span class="id" title="var">PCUICAst.context</span>) (<span class="id" title="var">_</span> <span class="id" title="var">T</span> : <span class="id" title="var">PCUICAst.term</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;⇒ <span class="id" title="var">PCUICGeneration.isWfArity_or_Type</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">T</span>)).<br/>
+
+<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICPrincipality.invert_red_prod</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> (<span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>) (<span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.wf</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> (<span class="id" title="var">Γ</span> : <span class="id" title="var">PCUICAst.context</span>) (<span class="id" title="var">na</span> : <span class="id" title="var">BasicAst.name</span>) (<span class="id" title="var">A</span> <span class="id" title="var">B</span> <span class="id" title="var">v</span> : <span class="id" title="var">PCUICAst.term</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.red</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>) <span class="id" title="var">Γ</span> (<span class="id" title="var">PCUICAst.tProd</span> <span class="id" title="var">na</span> <span class="id" title="var">A</span> <span class="id" title="var">B</span>) <span class="id" title="var">v</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<span class="id" title="var">A'</span> : <span class="id" title="var">PCUICAst.term</span> &amp;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<span class="id" title="var">B'</span> : <span class="id" title="var">PCUICAst.term</span> &amp;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;((<span class="id" title="var">v</span> = <span class="id" title="var">PCUICAst.tProd</span> <span class="id" title="var">na</span> <span class="id" title="var">A'</span> <span class="id" title="var">B'</span>) × <span class="id" title="var">PCUICTyping.red</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>) <span class="id" title="var">Γ</span> <span class="id" title="var">A</span> <span class="id" title="var">A'</span> ×<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.red</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>) (<span class="id" title="var">PCUICAst.vass</span> <span class="id" title="var">na</span> <span class="id" title="var">A</span> :: <span class="id" title="var">Γ</span>)%<span class="id" title="var">list</span> <span class="id" title="var">B</span> <span class="id" title="var">B'</span>)%<span class="id" title="keyword">type</span>}}).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICPrincipality.invert_cumul_arity_r</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> (<span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>) (<span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.wf</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> (<span class="id" title="var">Γ</span> : <span class="id" title="var">PCUICAst.context</span>) (<span class="id" title="var">C</span> <span class="id" title="var">T</span> : <span class="id" title="var">PCUICAst.term</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.All_local_env</span> (<span class="id" title="var">PCUICTyping.lift_typing</span> <span class="id" title="var">PCUICTyping.typing</span> <span class="id" title="var">Σ</span>) <span class="id" title="var">Γ</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.isArity</span> <span class="id" title="var">T</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.cumul</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">C</span> <span class="id" title="var">T</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICPrincipality.Is_conv_to_Arity</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>) <span class="id" title="var">Γ</span> <span class="id" title="var">C</span>).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICPrincipality.invert_cumul_arity_l</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> (<span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>) (<span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.wf</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> (<span class="id" title="var">Γ</span> : <span class="id" title="var">PCUICAst.context</span>) (<span class="id" title="var">C</span> <span class="id" title="var">T</span> : <span class="id" title="var">PCUICAst.term</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.All_local_env</span> (<span class="id" title="var">PCUICTyping.lift_typing</span> <span class="id" title="var">PCUICTyping.typing</span> <span class="id" title="var">Σ</span>) <span class="id" title="var">Γ</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.isArity</span> <span class="id" title="var">C</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.cumul</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">C</span> <span class="id" title="var">T</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICPrincipality.Is_conv_to_Arity</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>) <span class="id" title="var">Γ</span> <span class="id" title="var">T</span>).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICPrincipality.invert_red_letin</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> (<span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>) (<span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.wf</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> (<span class="id" title="var">Γ</span> : <span class="id" title="var">PCUICAst.context</span>) (<span class="id" title="var">C</span> : <span class="id" title="var">PCUICAst.term</span>) (<span class="id" title="var">na</span> : <span class="id" title="var">BasicAst.name</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">d</span> <span class="id" title="var">ty</span> <span class="id" title="var">b</span> : <span class="id" title="var">PCUICAst.term</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.red</span> (<span class="id" title="var">fst</span> <span class="id" title="var">Σ</span>) <span class="id" title="var">Γ</span> (<span class="id" title="var">PCUICAst.tLetIn</span> <span class="id" title="var">na</span> <span class="id" title="var">d</span> <span class="id" title="var">ty</span> <span class="id" title="var">b</span>) <span class="id" title="var">C</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<span class="id" title="var">na'</span> : <span class="id" title="var">BasicAst.name</span> &amp;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<span class="id" title="var">d'</span> : <span class="id" title="var">PCUICAst.term</span> &amp;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<span class="id" title="var">ty'</span> : <span class="id" title="var">PCUICAst.term</span> &amp;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<span class="id" title="var">b'</span> : <span class="id" title="var">PCUICAst.term</span> &amp;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">PCUICTyping.red</span> (<span class="id" title="var">fst</span> <span class="id" title="var">Σ</span>) <span class="id" title="var">Γ</span> <span class="id" title="var">C</span> (<span class="id" title="var">PCUICAst.tLetIn</span> <span class="id" title="var">na'</span> <span class="id" title="var">d'</span> <span class="id" title="var">ty'</span> <span class="id" title="var">b'</span>) ×<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.conv</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">d</span> <span class="id" title="var">d'</span> × <span class="id" title="var">PCUICTyping.conv</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">ty</span> <span class="id" title="var">ty'</span> ×<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.cumul</span> <span class="id" title="var">Σ</span> (<span class="id" title="var">PCUICAst.snoc</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">PCUICAst.vdef</span> <span class="id" title="var">na</span> <span class="id" title="var">d</span> <span class="id" title="var">ty</span>)) <span class="id" title="var">b</span> <span class="id" title="var">b'</span>)%<span class="id" title="keyword">type</span>}}}} +<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.red</span> (<span class="id" title="var">fst</span> <span class="id" title="var">Σ</span>) <span class="id" title="var">Γ</span> (<span class="id" title="var">PCUICLiftSubst.subst1</span> <span class="id" title="var">d</span> 0 <span class="id" title="var">b</span>) <span class="id" title="var">C</span>).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICPrincipality.invert_cumul_letin_l</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> (<span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>) (<span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.wf</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> (<span class="id" title="var">Γ</span> : <span class="id" title="var">PCUICAst.context</span>) (<span class="id" title="var">C</span> : <span class="id" title="var">PCUICAst.term</span>) (<span class="id" title="var">na</span> : <span class="id" title="var">BasicAst.name</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">d</span> <span class="id" title="var">ty</span> <span class="id" title="var">b</span> : <span class="id" title="var">PCUICAst.term</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.cumul</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">PCUICAst.tLetIn</span> <span class="id" title="var">na</span> <span class="id" title="var">d</span> <span class="id" title="var">ty</span> <span class="id" title="var">b</span>) <span class="id" title="var">C</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.cumul</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">PCUICLiftSubst.subst1</span> <span class="id" title="var">d</span> 0 <span class="id" title="var">b</span>) <span class="id" title="var">C</span>).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICPrincipality.leq_universe_product_mon</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> (<span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>) (<span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.wf</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> <span class="id" title="var">u</span> <span class="id" title="var">u'</span> <span class="id" title="var">v</span> <span class="id" title="var">v'</span> : <span class="id" title="var">Universes.universe</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Universes.leq_universe</span> (<span class="id" title="var">PCUICTyping.global_ext_constraints</span> <span class="id" title="var">Σ</span>) <span class="id" title="var">u</span> <span class="id" title="var">u'</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Universes.leq_universe</span> (<span class="id" title="var">PCUICTyping.global_ext_constraints</span> <span class="id" title="var">Σ</span>) <span class="id" title="var">v</span> <span class="id" title="var">v'</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Universes.leq_universe</span> (<span class="id" title="var">PCUICTyping.global_ext_constraints</span> <span class="id" title="var">Σ</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">Universes.Universe.sort_of_product</span> <span class="id" title="var">u</span> <span class="id" title="var">v</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">Universes.Universe.sort_of_product</span> <span class="id" title="var">u'</span> <span class="id" title="var">v'</span>)).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICPrincipality.principal_typing</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> (<span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>) (<span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.wf</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> (<span class="id" title="var">Γ</span> : <span class="id" title="var">PCUICAst.context</span>) (<span class="id" title="var">u</span> <span class="id" title="var">A</span> <span class="id" title="var">B</span> : <span class="id" title="var">PCUICAst.term</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.typing</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">u</span> <span class="id" title="var">A</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.typing</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">u</span> <span class="id" title="var">B</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<span class="id" title="var">C</span> : <span class="id" title="var">PCUICAst.term</span> &amp;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">PCUICTyping.cumul</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">C</span> <span class="id" title="var">A</span> ×<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">PCUICTyping.cumul</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">C</span> <span class="id" title="var">B</span> × <span class="id" title="var">PCUICTyping.typing</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">u</span> <span class="id" title="var">C</span>))%<span class="id" title="keyword">type</span>}).<br/>
+
+<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICSR.eq_univ_substu</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> (<span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>) (<span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.wf</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> φ : <span class="id" title="var">Universes.constraints</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICEquality.SubstUnivPreserving</span> (<span class="id" title="var">Universes.eq_universe</span> φ)).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICSR.leq_univ_substu</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> (<span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>) (<span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.wf</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> φ : <span class="id" title="var">Universes.constraints</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICEquality.SubstUnivPreserving</span> (<span class="id" title="var">Universes.leq_universe</span> φ)).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICSR.conv_isWfArity_or_Type</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> (<span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>) (<span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.wf</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> (<span class="id" title="var">Γ</span> <span class="id" title="var">Γ'</span> : <span class="id" title="var">PCUICAst.context</span>) (<span class="id" title="var">T</span> <span class="id" title="var">U</span> : <span class="id" title="var">PCUICAst.term</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICSR.context_relation</span> (<span class="id" title="var">PCUICSR.conv_decls</span> <span class="id" title="var">Σ</span>) <span class="id" title="var">Γ'</span> <span class="id" title="var">Γ</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.conv</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">T</span> <span class="id" title="var">U</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICGeneration.isWfArity_or_Type</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">T</span> → <span class="id" title="var">PCUICGeneration.isWfArity_or_Type</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ'</span> <span class="id" title="var">U</span>).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICSR.conv_context_trans</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> (<span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env</span> × <span class="id" title="var">Universes.universes_decl</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.wf</span> (<span class="id" title="var">fst</span> <span class="id" title="var">Σ</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">CRelationClasses.Transitive</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="keyword">fun</span> <span class="id" title="var">Γ</span> <span class="id" title="var">Γ'</span> : <span class="id" title="var">PCUICAst.context</span> ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICSR.context_relation</span> (<span class="id" title="var">PCUICSR.conv_decls</span> <span class="id" title="var">Σ</span>) <span class="id" title="var">Γ</span> <span class="id" title="var">Γ'</span>)).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICSR.context_conversion</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> <span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.env_prop</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="keyword">fun</span> (<span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>) (<span class="id" title="var">Γ</span> : <span class="id" title="var">PCUICAst.context</span>) (<span class="id" title="var">t</span> <span class="id" title="var">T</span> : <span class="id" title="var">PCUICAst.term</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> <span class="id" title="var">Γ'</span> : <span class="id" title="var">PCUICAst.context</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICSR.context_relation</span> (<span class="id" title="var">PCUICSR.conv_decls</span> <span class="id" title="var">Σ</span>) <span class="id" title="var">Γ</span> <span class="id" title="var">Γ'</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.typing</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ'</span> <span class="id" title="var">t</span> <span class="id" title="var">T</span>)).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICSR.cumul_Prod_inv</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> (<span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env</span> × <span class="id" title="var">Universes.universes_decl</span>) <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">Γ</span> : <span class="id" title="var">PCUICAst.context</span>) (<span class="id" title="var">na</span> <span class="id" title="var">na'</span> : <span class="id" title="var">BasicAst.name</span>) (<span class="id" title="var">A</span> <span class="id" title="var">B</span> <span class="id" title="var">A'</span> <span class="id" title="var">B'</span> : <span class="id" title="var">PCUICAst.term</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.wf</span> (<span class="id" title="var">fst</span> <span class="id" title="var">Σ</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.All_local_env</span> (<span class="id" title="var">PCUICTyping.lift_typing</span> <span class="id" title="var">PCUICTyping.typing</span> <span class="id" title="var">Σ</span>) <span class="id" title="var">Γ</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.cumul</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">PCUICAst.tProd</span> <span class="id" title="var">na</span> <span class="id" title="var">A</span> <span class="id" title="var">B</span>) (<span class="id" title="var">PCUICAst.tProd</span> <span class="id" title="var">na'</span> <span class="id" title="var">A'</span> <span class="id" title="var">B'</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.conv</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">A</span> <span class="id" title="var">A'</span> ×<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.cumul</span> <span class="id" title="var">Σ</span> (<span class="id" title="var">PCUICAst.snoc</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">PCUICAst.vass</span> <span class="id" title="var">na'</span> <span class="id" title="var">A'</span>)) <span class="id" title="var">B</span> <span class="id" title="var">B'</span>).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICSR.type_mkApps_inv</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> (<span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>) (<span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">Γ</span> : <span class="id" title="var">PCUICAst.context</span>) (<span class="id" title="var">f</span> : <span class="id" title="var">PCUICAst.term</span>) (<span class="id" title="var">u</span> : <span class="id" title="var">list</span> <span class="id" title="var">PCUICAst.term</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">T</span> : <span class="id" title="var">PCUICAst.term</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.wf</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.typing</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">PCUICAst.mkApps</span> <span class="id" title="var">f</span> <span class="id" title="var">u</span>) <span class="id" title="var">T</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<span class="id" title="var">T'</span> : <span class="id" title="var">PCUICAst.term</span> &amp;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<span class="id" title="var">U</span> : <span class="id" title="var">PCUICAst.term</span> &amp;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">PCUICTyping.typing</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">f</span> <span class="id" title="var">T'</span> × <span class="id" title="var">PCUICGeneration.typing_spine</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">T'</span> <span class="id" title="var">u</span> <span class="id" title="var">U</span> ×<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.cumul</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">U</span> <span class="id" title="var">T</span>)%<span class="id" title="keyword">type</span>}}).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICSR.sr_red1</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> <span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>, <span class="id" title="var">PCUICTyping.env_prop</span> <span class="id" title="var">PCUICSR.SR_red1</span>).<br/>
+
+<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (<span class="id" title="var">PCUICWcbvEval.eval_closed</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> (<span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env</span>) (<span class="id" title="var">Γ</span> : <span class="id" title="var">PCUICAst.context</span>) <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">n</span> : <span class="id" title="var">nat</span>) (<span class="id" title="var">t</span> <span class="id" title="var">u</span> : <span class="id" title="var">PCUICAst.term</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICLiftSubst.closedn</span> <span class="id" title="var">n</span> <span class="id" title="var">t</span> = <span class="id" title="var">true</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICWcbvEval.eval</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">t</span> <span class="id" title="var">u</span> → <span class="id" title="var">PCUICLiftSubst.closedn</span> <span class="id" title="var">n</span> <span class="id" title="var">u</span> = <span class="id" title="var">true</span>).<br/>
+
+<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICRetyping.type_of_sound</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> <span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">utils.Fuel</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> (<span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>) (<span class="id" title="var">Γ</span> : <span class="id" title="var">PCUICAst.context</span>) (<span class="id" title="var">t</span> <span class="id" title="var">A</span> <span class="id" title="var">B</span> : <span class="id" title="var">PCUICAst.term</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.typing</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">t</span> <span class="id" title="var">A</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICRetyping.type_of</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">t</span> = <span class="id" title="var">PCUICChecker.Checked</span> <span class="id" title="var">B</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.typing</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">t</span> <span class="id" title="var">B</span> × <span class="id" title="var">PCUICTyping.cumul</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">B</span> <span class="id" title="var">A</span>).<br/>
+
+<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICElimination.elim_restriction_works_kelim1</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> (<span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>) (<span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">Γ</span> : <span class="id" title="var">PCUICAst.context</span>) (<span class="id" title="var">T</span> : <span class="id" title="var">PCUICAst.term</span>) (<span class="id" title="var">ind</span> : <span class="id" title="var">BasicAst.inductive</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">npar</span> : <span class="id" title="var">nat</span>) (<span class="id" title="var">p</span> <span class="id" title="var">c</span> : <span class="id" title="var">PCUICAst.term</span>) (<span class="id" title="var">brs</span> : <span class="id" title="var">list</span> (<span class="id" title="var">nat</span> × <span class="id" title="var">PCUICAst.term</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">mind</span> : <span class="id" title="var">PCUICAst.mutual_inductive_body</span>) (<span class="id" title="var">idecl</span> : <span class="id" title="var">PCUICAst.one_inductive_body</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.wf</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.declared_inductive</span> (<span class="id" title="var">fst</span> <span class="id" title="var">Σ</span>) <span class="id" title="var">mind</span> <span class="id" title="var">ind</span> <span class="id" title="var">idecl</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.typing</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">PCUICAst.tCase</span> (<span class="id" title="var">ind</span>, <span class="id" title="var">npar</span>) <span class="id" title="var">p</span> <span class="id" title="var">c</span> <span class="id" title="var">brs</span>) <span class="id" title="var">T</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">PCUICElimination.Is_proof</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">PCUICAst.tCase</span> (<span class="id" title="var">ind</span>, <span class="id" title="var">npar</span>) <span class="id" title="var">p</span> <span class="id" title="var">c</span> <span class="id" title="var">brs</span>) → <span class="id" title="var">False</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">List.In</span> <span class="id" title="var">Universes.InType</span> (<span class="id" title="var">PCUICAst.ind_kelim</span> <span class="id" title="var">idecl</span>)).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICElimination.elim_restriction_works_kelim2</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> (<span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>) (<span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">ind</span> : <span class="id" title="var">BasicAst.inductive</span>) (<span class="id" title="var">mind</span> : <span class="id" title="var">PCUICAst.mutual_inductive_body</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">idecl</span> : <span class="id" title="var">PCUICAst.one_inductive_body</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.wf</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.declared_inductive</span> (<span class="id" title="var">fst</span> <span class="id" title="var">Σ</span>) <span class="id" title="var">mind</span> <span class="id" title="var">ind</span> <span class="id" title="var">idecl</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">List.In</span> <span class="id" title="var">Universes.InType</span> (<span class="id" title="var">PCUICAst.ind_kelim</span> <span class="id" title="var">idecl</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICElimination.Informative</span> <span class="id" title="var">Σ</span> <span class="id" title="var">ind</span>).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICElimination.tCase_length_branch_inv</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> (<span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>) (<span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">Γ</span> : <span class="id" title="var">PCUICAst.context</span>) (<span class="id" title="var">ind</span> : <span class="id" title="var">BasicAst.inductive</span>) (<span class="id" title="var">npar</span> : <span class="id" title="var">nat</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">p</span> : <span class="id" title="var">PCUICAst.term</span>) (<span class="id" title="var">n</span> : <span class="id" title="var">nat</span>) (<span class="id" title="var">u</span> : <span class="id" title="var">Universes.universe_instance</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">args</span> : <span class="id" title="var">list</span> <span class="id" title="var">PCUICAst.term</span>) (<span class="id" title="var">brs</span> : <span class="id" title="var">list</span> (<span class="id" title="var">nat</span> × <span class="id" title="var">PCUICAst.term</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">T</span> : <span class="id" title="var">PCUICAst.term</span>) (<span class="id" title="var">m</span> : <span class="id" title="var">nat</span>) (<span class="id" title="var">t</span> : <span class="id" title="var">PCUICAst.term</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.wf</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.typing</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">PCUICAst.tCase</span> (<span class="id" title="var">ind</span>, <span class="id" title="var">npar</span>) <span class="id" title="var">p</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">PCUICAst.mkApps</span> (<span class="id" title="var">PCUICAst.tConstruct</span> <span class="id" title="var">ind</span> <span class="id" title="var">n</span> <span class="id" title="var">u</span>) <span class="id" title="var">args</span>) <span class="id" title="var">brs</span>) <span class="id" title="var">T</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">List.nth_error</span> <span class="id" title="var">brs</span> <span class="id" title="var">n</span> = <span class="id" title="var">Some</span> (<span class="id" title="var">m</span>, <span class="id" title="var">t</span>) → <span class="id" title="var">length</span> <span class="id" title="var">args</span> = <span class="id" title="var">npar</span> + <span class="id" title="var">m</span>).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICElimination.cumul_prop1</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> <span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">config.prop_sub_type</span> = <span class="id" title="var">false</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> (<span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>) (<span class="id" title="var">Γ</span> : <span class="id" title="var">PCUICAst.context</span>) <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">A</span> <span class="id" title="var">B</span> : <span class="id" title="var">PCUICAst.term</span>) (<span class="id" title="var">u</span> : <span class="id" title="var">Universes.Universe.t</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.wf</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">is_true</span> (<span class="id" title="var">Universes.is_prop_sort</span> <span class="id" title="var">u</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.typing</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">B</span> (<span class="id" title="var">PCUICAst.tSort</span> <span class="id" title="var">u</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.cumul</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">A</span> <span class="id" title="var">B</span> → <span class="id" title="var">PCUICTyping.typing</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">A</span> (<span class="id" title="var">PCUICAst.tSort</span> <span class="id" title="var">u</span>)).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICElimination.cumul_prop2</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> <span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">config.prop_sub_type</span> = <span class="id" title="var">false</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> (<span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>) (<span class="id" title="var">Γ</span> : <span class="id" title="var">PCUICAst.context</span>) <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">A</span> <span class="id" title="var">B</span> : <span class="id" title="var">PCUICAst.term</span>) (<span class="id" title="var">u</span> : <span class="id" title="var">Universes.Universe.t</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.wf</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">is_true</span> (<span class="id" title="var">Universes.is_prop_sort</span> <span class="id" title="var">u</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.cumul</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">A</span> <span class="id" title="var">B</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.typing</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">A</span> (<span class="id" title="var">PCUICAst.tSort</span> <span class="id" title="var">u</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.typing</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">B</span> (<span class="id" title="var">PCUICAst.tSort</span> <span class="id" title="var">u</span>)).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICElimination.leq_universe_prop</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> <span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">config.prop_sub_type</span> = <span class="id" title="var">false</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> (<span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>) (<span class="id" title="var">u1</span> <span class="id" title="var">u2</span> : <span class="id" title="var">Universes.universe</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.wf</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Universes.leq_universe</span> (<span class="id" title="var">PCUICTyping.global_ext_constraints</span> <span class="id" title="var">Σ</span>) <span class="id" title="var">u1</span> <span class="id" title="var">u2</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">is_true</span> (<span class="id" title="var">Universes.is_prop_sort</span> <span class="id" title="var">u1</span>) ∨ <span class="id" title="var">is_true</span> (<span class="id" title="var">Universes.is_prop_sort</span> <span class="id" title="var">u2</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">is_true</span> (<span class="id" title="var">Universes.is_prop_sort</span> <span class="id" title="var">u1</span>) ∧ <span class="id" title="var">is_true</span> (<span class="id" title="var">Universes.is_prop_sort</span> <span class="id" title="var">u2</span>)).<br/>
+
+<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICSafeLemmata.context_conversion</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> <span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICNormal.RedFlags.t</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> (<span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>) (<span class="id" title="var">Γ</span> : <span class="id" title="var">PCUICAst.context</span>) <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">t</span> <span class="id" title="var">T</span> : <span class="id" title="var">PCUICAst.term</span>) (<span class="id" title="var">Γ'</span> : <span class="id" title="var">PCUICAst.context</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.typing</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">t</span> <span class="id" title="var">T</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICSR.context_relation</span> (<span class="id" title="var">PCUICSR.conv_decls</span> <span class="id" title="var">Σ</span>) <span class="id" title="var">Γ</span> <span class="id" title="var">Γ'</span> → <span class="id" title="var">PCUICTyping.typing</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ'</span> <span class="id" title="var">t</span> <span class="id" title="var">T</span>).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICSafeLemmata.type_rename</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> <span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICNormal.RedFlags.t</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> (<span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env</span> × <span class="id" title="var">Universes.universes_decl</span>) <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">Γ</span> : <span class="id" title="var">PCUICAst.context</span>) (<span class="id" title="var">u</span> <span class="id" title="var">v</span> <span class="id" title="var">A</span> : <span class="id" title="var">PCUICAst.term</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.wf</span> (<span class="id" title="var">fst</span> <span class="id" title="var">Σ</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.typing</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">u</span> <span class="id" title="var">A</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.eq_term_upto_univ</span> <span class="id" title="var">eq</span> <span class="id" title="var">eq</span> <span class="id" title="var">u</span> <span class="id" title="var">v</span> → <span class="id" title="var">PCUICTyping.typing</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">v</span> <span class="id" title="var">A</span>).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICSafeLemmata.wellformed_rename</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> <span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICNormal.RedFlags.t</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> <span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">utils.squash</span> (<span class="id" title="var">PCUICTyping.wf</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>)) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> (<span class="id" title="var">Γ</span> : <span class="id" title="var">PCUICAst.context</span>) (<span class="id" title="var">u</span> <span class="id" title="var">v</span> : <span class="id" title="var">PCUICAst.term</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICSafeLemmata.wellformed</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">u</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.eq_term_upto_univ</span> <span class="id" title="var">eq</span> <span class="id" title="var">eq</span> <span class="id" title="var">u</span> <span class="id" title="var">v</span> → <span class="id" title="var">PCUICSafeLemmata.wellformed</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">v</span>).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICSafeLemmata.cored_nl</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> <span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICNormal.RedFlags.t</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> <span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">utils.squash</span> (<span class="id" title="var">PCUICTyping.wf</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>)) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> (<span class="id" title="var">Γ</span> : <span class="id" title="var">PCUICAst.context</span>) (<span class="id" title="var">u</span> <span class="id" title="var">v</span> : <span class="id" title="var">PCUICAst.term</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICSafeLemmata.cored</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>) <span class="id" title="var">Γ</span> <span class="id" title="var">u</span> <span class="id" title="var">v</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICSafeLemmata.cored</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">PCUICNameless.nlctx</span> <span class="id" title="var">Γ</span>) (<span class="id" title="var">PCUICNameless.nl</span> <span class="id" title="var">u</span>) (<span class="id" title="var">PCUICNameless.nl</span> <span class="id" title="var">v</span>)).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICSafeLemmata.wellformed_it_mkLambda_or_LetIn</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> <span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICNormal.RedFlags.t</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> <span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">utils.squash</span> (<span class="id" title="var">PCUICTyping.wf</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>)) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> (<span class="id" title="var">Γ</span> <span class="id" title="var">Δ</span> : <span class="id" title="var">PCUICAst.context</span>) (<span class="id" title="var">t</span> : <span class="id" title="var">PCUICAst.term</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICSafeLemmata.wellformed</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">PCUICAstUtils.it_mkLambda_or_LetIn</span> <span class="id" title="var">Δ</span> <span class="id" title="var">t</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICSafeLemmata.wellformed</span> <span class="id" title="var">Σ</span> (<span class="id" title="var">PCUICAstUtils.app_context</span> <span class="id" title="var">Γ</span> <span class="id" title="var">Δ</span>) <span class="id" title="var">t</span>).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICSafeLemmata.it_mkLambda_or_LetIn_wellformed</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> <span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICNormal.RedFlags.t</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> <span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">utils.squash</span> (<span class="id" title="var">PCUICTyping.wf</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>)) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> (<span class="id" title="var">Γ</span> <span class="id" title="var">Δ</span> : <span class="id" title="var">PCUICAst.context</span>) (<span class="id" title="var">t</span> : <span class="id" title="var">PCUICAst.term</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICSafeLemmata.wellformed</span> <span class="id" title="var">Σ</span> (<span class="id" title="var">PCUICAstUtils.app_context</span> <span class="id" title="var">Γ</span> <span class="id" title="var">Δ</span>) <span class="id" title="var">t</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICSafeLemmata.wellformed</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">PCUICAstUtils.it_mkLambda_or_LetIn</span> <span class="id" title="var">Δ</span> <span class="id" title="var">t</span>)).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICSafeLemmata.isAppProd_isProd</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> <span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICNormal.RedFlags.t</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> <span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">utils.squash</span> (<span class="id" title="var">PCUICTyping.wf</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>)) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> (<span class="id" title="var">Γ</span> : <span class="id" title="var">PCUICAst.context</span>) (<span class="id" title="var">t</span> : <span class="id" title="var">PCUICAst.term</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">is_true</span> (<span class="id" title="var">PCUICSafeLemmata.isAppProd</span> <span class="id" title="var">t</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICSafeLemmata.welltyped</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">t</span> → <span class="id" title="var">is_true</span> (<span class="id" title="var">PCUICSafeLemmata.isProd</span> <span class="id" title="var">t</span>)).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICSafeLemmata.mkApps_Prod_nil'</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> <span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICNormal.RedFlags.t</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> <span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">utils.squash</span> (<span class="id" title="var">PCUICTyping.wf</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>)) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> (<span class="id" title="var">Γ</span> : <span class="id" title="var">PCUICAst.context</span>) (<span class="id" title="var">na</span> : <span class="id" title="var">BasicAst.name</span>) (<span class="id" title="var">A</span> <span class="id" title="var">B</span> : <span class="id" title="var">PCUICAst.term</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">l</span> : <span class="id" title="var">list</span> <span class="id" title="var">PCUICAst.term</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICSafeLemmata.wellformed</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">PCUICAst.mkApps</span> (<span class="id" title="var">PCUICAst.tProd</span> <span class="id" title="var">na</span> <span class="id" title="var">A</span> <span class="id" title="var">B</span>) <span class="id" title="var">l</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">l</span> = <span class="id" title="var">nil</span>).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICSafeLemmata.Lambda_conv_inv</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> <span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICNormal.RedFlags.t</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> <span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">utils.squash</span> (<span class="id" title="var">PCUICTyping.wf</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>)) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> (<span class="id" title="var">leq</span> : <span class="id" title="var">PCUICCumulativity.conv_pb</span>) (<span class="id" title="var">Γ</span> : <span class="id" title="var">PCUICAst.context</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">na1</span> <span class="id" title="var">na2</span> : <span class="id" title="var">BasicAst.name</span>) (<span class="id" title="var">A1</span> <span class="id" title="var">A2</span> <span class="id" title="var">b1</span> <span class="id" title="var">b2</span> : <span class="id" title="var">PCUICAst.term</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICCumulativity.conv</span> <span class="id" title="var">leq</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">PCUICAst.tLambda</span> <span class="id" title="var">na1</span> <span class="id" title="var">A1</span> <span class="id" title="var">b1</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">PCUICAst.tLambda</span> <span class="id" title="var">na2</span> <span class="id" title="var">A2</span> <span class="id" title="var">b2</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">utils.squash</span> (<span class="id" title="var">PCUICTyping.conv</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">A1</span> <span class="id" title="var">A2</span>) ∧<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICCumulativity.conv</span> <span class="id" title="var">leq</span> <span class="id" title="var">Σ</span> (<span class="id" title="var">PCUICAst.snoc</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">PCUICAst.vass</span> <span class="id" title="var">na1</span> <span class="id" title="var">A1</span>)) <span class="id" title="var">b1</span> <span class="id" title="var">b2</span>).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICSafeLemmata.it_mkLambda_or_LetIn_let_free_conv_inv</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> <span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICNormal.RedFlags.t</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> <span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">utils.squash</span> (<span class="id" title="var">PCUICTyping.wf</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>)) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> (<span class="id" title="var">Γ</span> <span class="id" title="var">Δ1</span> <span class="id" title="var">Δ2</span> : <span class="id" title="var">PCUICAst.context</span>) (<span class="id" title="var">t1</span> <span class="id" title="var">t2</span> : <span class="id" title="var">PCUICAst.term</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">is_true</span> (<span class="id" title="var">PCUICSafeLemmata.let_free_context</span> <span class="id" title="var">Δ1</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">is_true</span> (<span class="id" title="var">PCUICSafeLemmata.let_free_context</span> <span class="id" title="var">Δ2</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.conv</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">PCUICAstUtils.it_mkLambda_or_LetIn</span> <span class="id" title="var">Δ1</span> <span class="id" title="var">t1</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">PCUICAstUtils.it_mkLambda_or_LetIn</span> <span class="id" title="var">Δ2</span> <span class="id" title="var">t2</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICSR.context_relation</span> (<span class="id" title="var">PCUICSR.conv_decls</span> <span class="id" title="var">Σ</span>) (<span class="id" title="var">PCUICAstUtils.app_context</span> <span class="id" title="var">Γ</span> <span class="id" title="var">Δ1</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">PCUICAstUtils.app_context</span> <span class="id" title="var">Γ</span> <span class="id" title="var">Δ2</span>) ×<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.conv</span> <span class="id" title="var">Σ</span> (<span class="id" title="var">PCUICAstUtils.app_context</span> <span class="id" title="var">Γ</span> <span class="id" title="var">Δ1</span>) <span class="id" title="var">t1</span> <span class="id" title="var">t2</span>).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICSafeLemmata.it_mkLambda_or_LetIn_let_free_conv'_inv</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> <span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICNormal.RedFlags.t</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> <span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">utils.squash</span> (<span class="id" title="var">PCUICTyping.wf</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>)) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> (<span class="id" title="var">leq</span> : <span class="id" title="var">PCUICCumulativity.conv_pb</span>) (<span class="id" title="var">Γ</span> <span class="id" title="var">Δ1</span> <span class="id" title="var">Δ2</span> : <span class="id" title="var">PCUICAst.context</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">t1</span> <span class="id" title="var">t2</span> : <span class="id" title="var">PCUICAst.term</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">is_true</span> (<span class="id" title="var">PCUICSafeLemmata.let_free_context</span> <span class="id" title="var">Δ1</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">is_true</span> (<span class="id" title="var">PCUICSafeLemmata.let_free_context</span> <span class="id" title="var">Δ2</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICCumulativity.conv</span> <span class="id" title="var">leq</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">PCUICAstUtils.it_mkLambda_or_LetIn</span> <span class="id" title="var">Δ1</span> <span class="id" title="var">t1</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">PCUICAstUtils.it_mkLambda_or_LetIn</span> <span class="id" title="var">Δ2</span> <span class="id" title="var">t2</span>) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">utils.squash</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">PCUICSR.context_relation</span> (<span class="id" title="var">PCUICSR.conv_decls</span> <span class="id" title="var">Σ</span>) (<span class="id" title="var">PCUICAstUtils.app_context</span> <span class="id" title="var">Γ</span> <span class="id" title="var">Δ1</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">PCUICAstUtils.app_context</span> <span class="id" title="var">Γ</span> <span class="id" title="var">Δ2</span>)) ∧<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICCumulativity.conv</span> <span class="id" title="var">leq</span> <span class="id" title="var">Σ</span> (<span class="id" title="var">PCUICAstUtils.app_context</span> <span class="id" title="var">Γ</span> <span class="id" title="var">Δ1</span>) <span class="id" title="var">t1</span> <span class="id" title="var">t2</span>).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICSafeLemmata.welltyped_zipc_replace</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> <span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICNormal.RedFlags.t</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> <span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">utils.squash</span> (<span class="id" title="var">PCUICTyping.wf</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>)) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> (<span class="id" title="var">Γ</span> : <span class="id" title="var">PCUICAst.context</span>) (<span class="id" title="var">u</span> <span class="id" title="var">v</span> : <span class="id" title="var">PCUICAst.term</span>) (π : <span class="id" title="var">PCUICPosition.stack</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICSafeLemmata.welltyped</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">PCUICPosition.zipc</span> <span class="id" title="var">v</span> π) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICSafeLemmata.welltyped</span> <span class="id" title="var">Σ</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">PCUICAstUtils.app_context</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">PCUICPosition.stack_context</span> π)) <span class="id" title="var">u</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.conv</span> <span class="id" title="var">Σ</span> (<span class="id" title="var">PCUICAstUtils.app_context</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">PCUICPosition.stack_context</span> π)) <span class="id" title="var">u</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">v</span> → <span class="id" title="var">PCUICSafeLemmata.welltyped</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">PCUICPosition.zipc</span> <span class="id" title="var">u</span> π)).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICSafeLemmata.wellformed_zipc_replace</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> <span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICNormal.RedFlags.t</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> <span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">utils.squash</span> (<span class="id" title="var">PCUICTyping.wf</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>)) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> (<span class="id" title="var">Γ</span> : <span class="id" title="var">PCUICAst.context</span>) (<span class="id" title="var">u</span> <span class="id" title="var">v</span> : <span class="id" title="var">PCUICAst.term</span>) (π : <span class="id" title="var">PCUICPosition.stack</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICSafeLemmata.wellformed</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">PCUICPosition.zipc</span> <span class="id" title="var">v</span> π) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICSafeLemmata.wellformed</span> <span class="id" title="var">Σ</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">PCUICAstUtils.app_context</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">PCUICPosition.stack_context</span> π)) <span class="id" title="var">u</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.conv</span> <span class="id" title="var">Σ</span> (<span class="id" title="var">PCUICAstUtils.app_context</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">PCUICPosition.stack_context</span> π)) <span class="id" title="var">u</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">v</span> → <span class="id" title="var">PCUICSafeLemmata.wellformed</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">PCUICPosition.zipc</span> <span class="id" title="var">u</span> π)).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICSafeLemmata.conv_context_conversion</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> <span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICNormal.RedFlags.t</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> <span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">utils.squash</span> (<span class="id" title="var">PCUICTyping.wf</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>)) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> (<span class="id" title="var">Γ</span> : <span class="id" title="var">PCUICAst.context</span>) (<span class="id" title="var">u</span> <span class="id" title="var">v</span> : <span class="id" title="var">PCUICAst.term</span>) (<span class="id" title="var">Γ'</span> : <span class="id" title="var">PCUICAst.context</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.conv</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">u</span> <span class="id" title="var">v</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICSR.context_relation</span> (<span class="id" title="var">PCUICSR.conv_decls</span> <span class="id" title="var">Σ</span>) <span class="id" title="var">Γ</span> <span class="id" title="var">Γ'</span> → <span class="id" title="var">PCUICTyping.conv</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ'</span> <span class="id" title="var">u</span> <span class="id" title="var">v</span>).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICSafeLemmata.Construct_Ind_ind_eq</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> <span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICNormal.RedFlags.t</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> <span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">utils.squash</span> (<span class="id" title="var">PCUICTyping.wf</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>)) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> (<span class="id" title="var">Γ</span> : <span class="id" title="var">PCUICAst.context</span>) (<span class="id" title="var">n</span> : <span class="id" title="var">nat</span>) (<span class="id" title="var">i</span> : <span class="id" title="var">BasicAst.inductive</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">args</span> : <span class="id" title="var">list</span> <span class="id" title="var">PCUICAst.term</span>) (<span class="id" title="var">u</span> : <span class="id" title="var">Universes.universe_instance</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">i'</span> : <span class="id" title="var">BasicAst.inductive</span>) (<span class="id" title="var">args'</span> : <span class="id" title="var">list</span> <span class="id" title="var">PCUICAst.term</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">u'</span> : <span class="id" title="var">Universes.universe_instance</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICTyping.typing</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">PCUICAst.mkApps</span> (<span class="id" title="var">PCUICAst.tConstruct</span> <span class="id" title="var">i</span> <span class="id" title="var">n</span> <span class="id" title="var">u</span>) <span class="id" title="var">args</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">PCUICAst.mkApps</span> (<span class="id" title="var">PCUICAst.tInd</span> <span class="id" title="var">i'</span> <span class="id" title="var">u'</span>) <span class="id" title="var">args'</span>) → <span class="id" title="var">i</span> = <span class="id" title="var">i'</span>).<br/>
+
+<br/>
+<span class="id" title="keyword">Check</span> (@<span class="id" title="var">PCUICSafeLemmata.Proj_red_cond</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">of</span> <span class="id" title="keyword">∀</span> <span class="id" title="var">cf</span> : <span class="id" title="var">config.checker_flags</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICNormal.RedFlags.t</span> →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> <span class="id" title="var">Σ</span> : <span class="id" title="var">PCUICAst.global_env_ext</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">utils.squash</span> (<span class="id" title="var">PCUICTyping.wf</span> (<span class="id" title="var">PCUICAstUtils.fst_ctx</span> <span class="id" title="var">Σ</span>)) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">∀</span> (<span class="id" title="var">Γ</span> : <span class="id" title="var">PCUICAst.context</span>) (<span class="id" title="var">i</span> : <span class="id" title="var">BasicAst.inductive</span>) <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">pars</span> <span class="id" title="var">narg</span> : <span class="id" title="var">nat</span>) (<span class="id" title="var">i'</span> : <span class="id" title="var">BasicAst.inductive</span>) (<span class="id" title="var">c</span> : <span class="id" title="var">nat</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">u</span> : <span class="id" title="var">Universes.universe_instance</span>) (<span class="id" title="var">l</span> : <span class="id" title="var">list</span> <span class="id" title="var">PCUICAst.term</span>),<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">PCUICSafeLemmata.wellformed</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">PCUICAst.tProj</span> (<span class="id" title="var">i</span>, <span class="id" title="var">pars</span>, <span class="id" title="var">narg</span>) (<span class="id" title="var">PCUICAst.mkApps</span> (<span class="id" title="var">PCUICAst.tConstruct</span> <span class="id" title="var">i'</span> <span class="id" title="var">c</span> <span class="id" title="var">u</span>) <span class="id" title="var">l</span>)) →<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">List.nth_error</span> <span class="id" title="var">l</span> (<span class="id" title="var">pars</span> + <span class="id" title="var">narg</span>) ≠ <span class="id" title="var">None</span>).<br/>
+</div>
+</div>
+
+<div id="footer">
+<hr/><a href="index.html">Index</a><hr/>This page has been generated by <a href="http://coq.inria.fr/">coqdoc</a>
+</div>
+
+</div>
+
+</body>
+</html>

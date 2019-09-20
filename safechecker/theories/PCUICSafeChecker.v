@@ -8,7 +8,8 @@ From MetaCoq.Checker Require Import uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICNormal PCUICSR
      PCUICGeneration PCUICReflect PCUICEquality PCUICInversion PCUICValidity
-     PCUICWeakening PCUICPosition PCUICCumulativity PCUICSafeLemmata PCUICSN.
+     PCUICWeakening PCUICPosition PCUICCumulativity PCUICSafeLemmata PCUICSN
+     PCUICContextConversion.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeConversion.
 
 Import MonadNotation.

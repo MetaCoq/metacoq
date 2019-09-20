@@ -1,5 +1,6 @@
 From MetaCoq.Template Require Import Loader.
 From MetaCoq.SafeChecker Require Import Loader.
+
 Local Open Scope string_scope.
 MetaCoq SafeCheck nat.
 (*
@@ -12,6 +13,7 @@ MetaCoq SafeCheck (3 + 1).
 Quote Definition foo := (3 + 1).
 
 Time MetaCoq SafeCheck plus.
+Time MetaCoq CoqCheck Nat.add.
 
 Require Import MetaCoq.SafeChecker.SafeTemplateChecker.
 
@@ -20,8 +22,8 @@ Definition bool_list := List.map negb (cons true (cons false nil)).
 Set Printing Universes.
 (* Universe issues: undeclared universes from sections *)
 (* Quote Recursively Definition boolq := bool_list. *)
-MetaCoq SafeCheck bool_list.
-
+Time MetaCoq SafeCheck bool_list.
+Time MetaCoq CoqCheck bool_list.
 
 (* Even with universe checking disabled, we get:
 Error: Type error: Msgundeclared level, while checking MetaCoq.Template.Universes.LevelSet.Raw.elt
@@ -31,6 +33,12 @@ Error: Type error: Msgundeclared level, while checking MetaCoq.Template.Universe
 Error:
 Type error: Terms are not <= for cumulativity: Sort([Coq.Init.Datatypes.23,Coq.Init.Datatypes.24]) Sort([Set]) after reduction: Sort([Coq.Init.Datatypes.23,Coq.Init.Datatypes.24]) Sort([Set]), while checking MetaCoq.Template.Universes.Universe.Expr.t
 *)
+
+(* Unset Universe Minimization ToSet. *)
+
+Set Universe Polymorphism.
+
+(* Basic notations *)
 
 Inductive sigT {A:Type} (P:A -> Type) : Type :=
     existT : forall x:A, P x -> sigT P.
@@ -526,7 +534,11 @@ Definition isequiv_adjointify {A B : Type} (f : A -> B) (g : B -> A)
   := BuildIsEquiv A B f g (issect' f g issect isretr) isretr
                   (is_adjoint' f g issect isretr).
 
-MetaCoq SafeCheck @ap.
-MetaCoq SafeCheck @issect'.
-MetaCoq SafeCheck @ap_pp.
+Fail  MetaCoq SafeCheck @ap.
+(* MetaCoq SafeCheck @issect'. *)
+Fail MetaCoq SafeCheck @ap_pp.
 Fail MetaCoq SafeCheck @isequiv_adjointify.
+Fail MetaCoq SafeCheck @IsEquiv.
+MetaCoq CoqCheck IsEquiv.
+Fail Time MetaCoq SafeCheck @isequiv_adjointify.
+Time MetaCoq CoqCheck isequiv_adjointify.

@@ -333,6 +333,9 @@ Section ContextConversion.
       constructor; pcuic; eapply conv_refl'.
   Qed.
 
+  Global Instance conv_ctx_refl' : Reflexive (context_relation conv_decls)
+    := conv_ctx_refl.
+
   Hint Resolve conv_ctx_refl : pcuic.
 
   Lemma fill_le {Γ t t' u u'} :
@@ -775,3 +778,42 @@ Proof.
     right. destruct s as [s [ty ?]]. exists s. eauto.
     eapply cumul_conv_ctx; eauto.
 Admitted.
+
+
+Lemma context_conversion' {cf:checker_flags} {Σ Γ t T Γ'} :
+    wf Σ.1 ->
+    wf_local Σ Γ' ->
+    Σ ;;; Γ |- t : T ->
+    conv_context Σ Γ Γ' ->
+    Σ ;;; Γ' |- t : T.
+Proof.
+  intros hΣ hΓ' h e.
+  eapply context_conversion.
+  4: exact e.
+  all: try assumption.
+  eapply typing_wf_local. eassumption.
+Qed.
+
+Lemma eq_context_upto_conv_context {cf:checker_flags} (Σ : global_env_ext) Re :
+  subrelation Re (eq_universe Σ) ->
+  subrelation (eq_context_upto Re) (fun Γ Γ' => conv_context Σ Γ Γ').
+Proof.
+  intros HRe Γ Δ h. induction h.
+  - constructor.
+  - constructor; tas.
+    constructor. eapply conv_alt_refl.
+    eapply eq_term_upto_univ_impl; tea.
+  - constructor; tas.
+    constructor. eapply conv_alt_refl.
+    eapply eq_term_upto_univ_impl; tea.
+    eapply conv_alt_refl.
+    eapply eq_term_upto_univ_impl; tea.
+Qed.
+
+Lemma eq_context_upto_univ_conv_context {cf:checker_flags} Σ Γ Δ :
+    eq_context_upto (eq_universe (global_ext_constraints Σ)) Γ Δ ->
+    conv_context Σ Γ Δ.
+Proof.
+  intros h. eapply eq_context_upto_conv_context; tea.
+  reflexivity.
+Qed.

@@ -316,7 +316,7 @@ Next Obligation.
     eapply inversion_Prod in X as (? & ? & ? & ? & ?).
     do 2 econstructor. eauto. auto.
   - econstructor 2. sq.
-    eapply PCUICPrincipality.isWfArity_red in X; eauto.
+    eapply isWfArity_red in X; eauto.
     eapply isWfArity_prod_inv; eauto.
 Qed.
 Next Obligation.
@@ -370,7 +370,6 @@ End fix_sigma.
 Local Existing Instance extraction_checker_flags.
 Definition wf_ext_wf Σ : wf_ext Σ -> wf Σ := fst.
 Hint Resolve wf_ext_wf.
-
 
 Program Definition is_erasable (Sigma : PCUICAst.global_env_ext) (HΣ : ∥wf_ext Sigma∥) (Gamma : context) (HΓ : ∥wf_local Sigma Gamma∥) (t : PCUICAst.term) :
   typing_result ({∥isErasable Sigma Gamma t∥} +{∥(isErasable Sigma Gamma t -> False) × welltyped Sigma Gamma t∥}) :=

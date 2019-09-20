@@ -46,7 +46,7 @@ Proof.
   unfold subst_instance_instance.
   now rewrite map_length.
 Qed.
-  
+
 Lemma subst_instance_level_two u1 u2 l :
   subst_instance_level u1 (subst_instance_level u2 l)
   = subst_instance_level (subst_instance_instance u1 u2) l.
@@ -275,13 +275,17 @@ Proof.
     all: now intros x y [].
 Qed.
 
-Lemma not_var_global_ext_levels Σ φ (hΣ : wf_ext (Σ, Monomorphic_ctx φ)) :
+Definition wf_ext_wk (Σ : global_env_ext)
+  := wf Σ.1 × on_udecl_prop Σ.1 Σ.2.
+
+
+Lemma not_var_global_ext_levels Σ φ (hΣ : wf_ext_wk (Σ, Monomorphic_ctx φ)) :
   LS.For_all (negb ∘ Level.is_var)
                    (global_ext_levels (Σ, Monomorphic_ctx φ)).
 Proof.
   destruct hΣ as [hΣ Hφ].
   intros l Hl; apply LS.union_spec in Hl; destruct Hl as [Hl|Hl].
-  - destruct Hφ as [_ [_ [Hφ _]]]. apply LevelSetFact.for_all_2 in Hφ; auto.
+  - destruct Hφ as [_ [Hφ _]]. apply LevelSetFact.for_all_2 in Hφ; auto.
     now intros x y [].
   - eapply not_var_global_levels; eassumption.
 Qed.
@@ -304,14 +308,14 @@ Proof.
 
 Qed.
 
-Lemma levels_global_ext_constraint Σ φ (hΣ : wf_ext (Σ, φ)) c :
+Lemma levels_global_ext_constraint Σ φ (hΣ : wf_ext_wk (Σ, φ)) c :
   CS.In c (global_ext_constraints (Σ, φ))
   -> LS.In c.1.1 (global_ext_levels (Σ, φ))
     /\ LS.In c.2 (global_ext_levels (Σ, φ)).
 Proof.
   intro H. apply CS.union_spec in H; simpl in H.
   destruct hΣ as [hΣ Hφ], H as [Hc|H]; simpl in *.
-  - destruct Hφ as [_ [Hφ _]]. unfold global_ext_levels. simpl.
+  - destruct Hφ as [Hφ _]. unfold global_ext_levels. simpl.
     destruct c as [[l1 c] l2]; exact  (Hφ _ Hc).
   - apply levels_global_constraint in H; tas.
     split; apply LS.union_spec; right; apply H.
@@ -330,8 +334,8 @@ Proof.
   now apply not_var_global_levels in H2.
 Qed.
 
-Lemma monomorphic_global_constraint_ext Σ φ 
-      (hΣ : wf_ext (Σ, Monomorphic_ctx φ)) c :
+Lemma monomorphic_global_constraint_ext Σ φ
+      (hΣ : wf_ext_wk (Σ, Monomorphic_ctx φ)) c :
   CS.In c (global_ext_constraints (Σ, Monomorphic_ctx φ))
   -> is_monomorphic_cstr c.
 Proof.
@@ -402,7 +406,7 @@ Qed.
 
 
 Lemma consistent_ext_trans_polymorphic_case_aux {Σ φ1 φ2 φ' udecl inst inst'} :
-  wf_ext (Σ, Polymorphic_ctx (φ1, φ2)) ->
+  wf_ext_wk (Σ, Polymorphic_ctx (φ1, φ2)) ->
   valid_constraints0 (global_ext_constraints (Σ, Polymorphic_ctx (φ1, φ2)))
                      (subst_instance_cstrs inst udecl) ->
   valid_constraints0 (global_ext_constraints (Σ, φ'))
@@ -423,7 +427,7 @@ Proof.
 Qed.
 
 Lemma consistent_ext_trans_polymorphic_cases Σ φ φ' udecl inst inst' :
-  wf_ext (Σ, φ) ->
+  wf_ext_wk (Σ, φ) ->
   sub_context_set (monomorphic_udecl φ) (global_ext_context_set (Σ, φ')) ->
   consistent_instance_ext (Σ, φ) (Polymorphic_ctx udecl) inst ->
   consistent_instance_ext (Σ, φ') φ inst' ->
@@ -480,7 +484,7 @@ Proof.
 Qed.
 
 Lemma consistent_ext_trans Σ φ φ' udecl inst inst' :
-  wf_ext (Σ, φ) ->
+  wf_ext_wk (Σ, φ) ->
   sub_context_set (monomorphic_udecl φ) (global_ext_context_set (Σ, φ')) ->
   consistent_instance_ext (Σ, φ) udecl inst ->
   consistent_instance_ext (Σ, φ') φ inst' ->
@@ -499,7 +503,7 @@ Hint Resolve consistent_ext_trans : univ_subst.
 
 
 Lemma consistent_instance_valid_constraints Σ φ u univs :
-  wf_ext (Σ, φ) -> 
+  wf_ext_wk (Σ, φ) ->
   CS.Subset (monomorphic_constraints φ)
                        (global_ext_constraints (Σ, univs)) ->
   consistent_instance_ext (Σ, univs) φ u ->
@@ -524,9 +528,9 @@ Proof.
       unfold valid_constraints in H1; rewrite Hcf in H1.
       apply satisfies_subst_instance_ctr; aa.
   - apply satisfies_subst_instance_ctr; tas.
+    apply satisfies_union in Hv. destruct HΣ.
     rewrite equal_subst_instance_cstrs_mono; aa.
-    apply satisfies_union in Hv; apply Hv.
-Qed. 
+Qed.
 
 Hint Resolve consistent_instance_valid_constraints : univ_subst.
 
@@ -633,7 +637,7 @@ Proof.
     destruct l; cbn; try reflexivity; discriminate.
 Qed.
 
-Lemma subst_instance_univ_make l u : 
+Lemma subst_instance_univ_make l u :
   subst_instance_univ u (Universe.make l)
   = Universe.make (subst_instance_level u l).
 Proof.
@@ -664,7 +668,7 @@ Proof.
     + apply LS.union_spec; right; simpl.
       apply LS.mem_spec, global_levels_Set.
 Qed.
-    
+
 
 Lemma is_prop_subst_instance_univ u l
       (Hu : forallb (negb ∘ Level.is_prop) u)
@@ -821,7 +825,7 @@ Proof.
     unfold unfold_cofix.
     rewrite nth_error_map. destruct nth_error; cbn.
     rewrite <- subst_subst_instance_constr, cofix_subst_subst_instance.
-    all: now inversion E. 
+    all: now inversion E.
   - cbn. rewrite subst_instance_constr_two. econstructor; eauto.
   - cbn. rewrite !subst_instance_constr_mkApps.
     econstructor. now rewrite nth_error_map, H.
@@ -860,7 +864,7 @@ Qed.
 Lemma cumul_subst_instance (Σ : global_env_ext) Γ u A B univs :
   forallb (fun x => negb (Level.is_prop x)) u ->
   valid_constraints (global_ext_constraints (Σ.1, univs))
-                    (subst_instance_cstrs u Σ) -> 
+                    (subst_instance_cstrs u Σ) ->
   Σ ;;; Γ |- A <= B ->
   (Σ.1,univs) ;;; subst_instance_context u Γ
                    |- subst_instance_constr u A <= subst_instance_constr u B.
@@ -972,7 +976,7 @@ Proof.
   induction t in Γ |- *; cbnr.
   now rewrite IHt1.
 Qed.
-    
+
 Lemma subst_instance_to_extended_list u l
   : map (subst_instance_constr u) (to_extended_list l)
     = to_extended_list (subst_instance_context u l).
@@ -1005,7 +1009,7 @@ Proof.
   unfold decompose_app; rewrite <- (subst_instance_decompose_app_rec u0 [] t0).
   destruct (decompose_app_rec t0 []); cbn.
   unfold subst_instance, subst_instance_list.
-  case_eq (chop (ind_npars mdecl) l); intros l0 l1 H. 
+  case_eq (chop (ind_npars mdecl) l); intros l0 l1 H.
   eapply chop_map in H; rewrite H; clear H.
   unfold on_snd; cbn. f_equal.
   rewrite subst_instance_constr_it_mkProd_or_LetIn. f_equal.
@@ -1028,7 +1032,7 @@ Axiom fix_guard_subst_instance :
 Lemma All_local_env_over_subst_instance Σ Γ (wfΓ : wf_local Σ Γ) :
   All_local_env_over typing
                      (fun Σ0 Γ0 (_ : wf_local Σ0 Γ0) t T (_ : Σ0;;; Γ0 |- t : T) =>
-       forall u univs, wf_ext Σ0 ->
+       forall u univs, wf_ext_wk Σ0 ->
                   sub_context_set (monomorphic_udecl Σ0.2)
                                   (global_ext_context_set (Σ0.1, univs)) ->
                   consistent_instance_ext (Σ0.1, univs) Σ0.2 u ->
@@ -1036,7 +1040,7 @@ Lemma All_local_env_over_subst_instance Σ Γ (wfΓ : wf_local Σ Γ) :
                   |- subst_instance_constr u t : subst_instance_constr u T)
                      Σ Γ wfΓ ->
   forall u univs,
-    wf_ext Σ ->
+    wf_ext_wk Σ ->
     sub_context_set (monomorphic_udecl Σ.2)
                     (global_ext_context_set (Σ.1, univs)) ->
     consistent_instance_ext (Σ.1, univs) Σ.2 u ->
@@ -1050,7 +1054,7 @@ Hint Resolve All_local_env_over_subst_instance : univ_subst.
 
 Lemma typing_subst_instance :
   env_prop (fun Σ Γ t T => forall u univs,
-                wf_ext Σ ->
+                wf_ext_wk Σ ->
                 sub_context_set (monomorphic_udecl Σ.2)
                                 (global_ext_context_set (Σ.1, univs)) ->
                 consistent_instance_ext (Σ.1, univs) Σ.2 u ->
@@ -1090,6 +1094,7 @@ Proof.
     + unfold inds. induction #|ind_bodies mdecl|. reflexivity.
       cbn. now rewrite IHn.
     + symmetry; apply subst_instance_constr_two.
+
   - intros ind u npar p c brs args mdecl idecl isdecl X X0 H pty X1 indctx pctx ps
            btys H0 X2 H1 X3 X4 X5 X6 u0 univs wfΣ' HSub H2.
     rewrite subst_instance_constr_mkApps in *.
@@ -1100,7 +1105,6 @@ Proof.
                           (pctx0:=subst_instance_context u0 pctx)
                           (btys0:=map (on_snd (subst_instance_constr u0)) btys);
       eauto.
-
     + clear -H0 H2. rewrite firstn_map.
       apply* types_of_case_spec in H0. destruct H0 as [s' [E1 [E2 E3]]].
       eexists. repeat split.
@@ -1126,29 +1130,35 @@ Proof.
         rewrite subst_instance_context_length.
         intro; symmetry; apply lift_subst_instance_constr.
       * apply subst_instance_to_extended_list.
-    + clear -H1 H2. induction H1.
-      -- constructor 1. unfold universe_family in *.
-         rewrite is_prop_subst_instance_univ; aa.
-         destruct (Universe.is_prop ps); aa.
-         case_eq (Universe.is_small ps); intro HH; rewrite HH in H.
-         ++ apply (is_small_subst_instance_univ u0) in HH.
-            now rewrite HH.
-         ++ admit.  (* FIXME: InType not stable under substituion *)
-      -- constructor 2; auto.
+    + clear -H1 H2.
+      induction (ind_kelim idecl) as [|a l]; try discriminate; cbn in *.
+      apply* orb_true_iff in H1.
+      destruct H1 as [H1|H1]; [left|right; now eapply IHl].
+      clear IHl. unfold universe_family in *.
+      rewrite is_prop_subst_instance_univ; [|aa].
+      destruct (Universe.is_prop ps); cbnr.
+      case_eq (Universe.is_small ps); intro HH; rewrite HH in H1.
+      ++ apply (is_small_subst_instance_univ u0) in HH.
+         now rewrite HH.
+      ++ destruct a; inv H1.
+         destruct ?; constructor.
     + apply X5 in H2; tea.
       rewrite subst_instance_constr_mkApps in H2; eassumption.
     + eapply All2_map with (f := (on_snd (subst_instance_constr u0)))
                            (g:= (on_snd (subst_instance_constr u0))).
       eapply All2_impl. eassumption. intros.
-      destruct X7. destruct p0. split. cbn. eauto. cbn.
+      simpl in X7. destruct X7 as [[[? ?] ?] ?]. intuition eauto.
+      cbn. eauto. cbn.
       destruct x, y; cbn in *; subst.
-      eapply t; assumption.
+      eapply t1; assumption.
+
   - intros p c u mdecl idecl pdecl isdecl args X X0 X1 X2 H u0 univs wfΣ' HSub H0.
     rewrite <- subst_subst_instance_constr. cbn.
     rewrite !subst_instance_constr_two.
     rewrite map_rev. econstructor; eauto. 2:now rewrite map_length.
     eapply X2 in H0; tas. rewrite subst_instance_constr_mkApps in H0.
     eassumption.
+
   - intros mfix n decl H H0 X X0 u univs wfΣ' HSub H1.
     erewrite map_dtype. econstructor.
     + now apply fix_guard_subst_instance.
@@ -1168,6 +1178,7 @@ Proof.
         rewrite <- (fix_context_subst_instance u mfix).
         eapply X3.
       * destruct x as [? ? []]; cbn in *; tea.
+
   - intros mfix n decl H X X0 H0 u univs wfΣ' HSub H1.
     erewrite map_dtype. econstructor; tas.
     + rewrite nth_error_map, H. reflexivity.
@@ -1180,11 +1191,11 @@ Proof.
       * specialize (X3 u univs wfΣ' HSub H1). erewrite map_dbody in X3.
         rewrite <- lift_subst_instance_constr in X3.
         rewrite fix_context_length, map_length in *.
-        erewrite map_dtype with (d := x) in X3.
         unfold subst_instance_context, map_context in *.
         rewrite map_app in *.
+        unfold compose.
         rewrite <- (fix_context_subst_instance u mfix).
-        eapply X3.
+        rewrite <- map_dtype. eapply X3.
 
   - intros t0 A B X X0 X1 X2 X3 u univs wfΣ' HSub H.
     econstructor. eapply X1; aa.
@@ -1199,12 +1210,12 @@ Proof.
         eexists. eapply p0; tas.
         eapply p; tas.
       * aa.
-    + eapply cumul_subst_instance; eauto.
-Admitted.
+    + destruct HSub. eapply cumul_subst_instance; aa.
+Qed.
 
 
 Lemma typing_subst_instance' Σ φ Γ t T u univs :
-  wf_ext (Σ, univs) ->
+  wf_ext_wk (Σ, univs) ->
   (Σ, univs) ;;; Γ |- t : T ->
   sub_context_set (monomorphic_udecl univs) (global_ext_context_set (Σ, φ)) ->
   consistent_instance_ext (Σ, φ) univs u ->
@@ -1244,7 +1255,7 @@ Qed.
 
 
 Lemma typing_subst_instance'' Σ φ Γ t T u univs :
-  wf_ext (Σ, univs) ->
+  wf_ext_wk (Σ, univs) ->
   (Σ, univs) ;;; Γ |- t : T ->
   sub_context_set (monomorphic_udecl univs) (global_context_set Σ) ->
   consistent_instance_ext (Σ, φ) univs u ->
@@ -1257,5 +1268,19 @@ Proof.
   etransitivity; tea. apply global_context_set_sub_ext.
 Qed.
 
+
+Lemma typing_subst_instance_decl Σ Γ t T c decl u :
+  wf Σ.1 ->
+  lookup_env Σ.1 c = Some decl ->
+  (Σ.1, universes_decl_of_decl decl) ;;; Γ |- t : T ->
+  consistent_instance_ext Σ (universes_decl_of_decl decl) u ->
+  Σ ;;; subst_instance_context u Γ
+            |- subst_instance_constr u t : subst_instance_constr u T.
+Proof.
+  destruct Σ as [Σ φ]. intros X X0 X1 X2.
+  eapply typing_subst_instance''; tea. split; tas.
+  eapply weaken_lookup_on_global_env'; tea.
+  eapply weaken_lookup_on_global_env''; tea.
+Qed.
 
 End CheckerFlags.

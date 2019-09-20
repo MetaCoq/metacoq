@@ -858,6 +858,30 @@ Section Stacks.
     all: try (cbn ; rewrite ?IHρ ; reflexivity).
   Qed.
 
+  Lemma red1_zipp :
+    forall Γ t u π,
+      red1 Σ Γ t u ->
+      red1 Σ Γ (zipp t π) (zipp u π).
+  Proof.
+    intros Γ t u π h.
+    unfold zipp.
+    case_eq (decompose_stack π). intros l ρ e.
+    eapply red1_mkApps_f.
+    assumption.
+  Qed.
+
+  Lemma red_zipp :
+    forall Γ t u π,
+      red Σ Γ t u ->
+      red Σ Γ (zipp t π) (zipp u π).
+  Proof.
+    intros Γ t u π h. induction h.
+    - constructor.
+    - econstructor.
+      + eapply IHh.
+      + eapply red1_zipp. assumption.
+  Qed.
+
   Definition zippx t π :=
     let '(args, ρ) := decompose_stack π in
     it_mkLambda_or_LetIn (stack_context ρ) (mkApps t args).

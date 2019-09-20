@@ -54,12 +54,13 @@ Lemma elim_restriction_works_kelim1 `{cf : checker_flags} (Σ : global_env_ext) 
 Proof.
   intros wfΣ. intros.
   assert (HT := X).
-  eapply inversion_Case in X as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?).
+  eapply inversion_Case in X as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?); tas.
   unfold types_of_case in e0.
   repeat destruct ?; try congruence. subst. inv e0.
   eapply declared_inductive_inj in d as []. 2:exact H. subst.
-  enough (universe_family x6 = InType). rewrite H1 in e1.
-  eapply Exists_exists in e1 as (? & ? & ?). subst. eauto.
+  enough (universe_family x6 = InType). rewrite H1 in i.
+  eapply existsb_exists in i as (? & ? & ?).
+  destruct x1; tas; discriminate.
 
   destruct (universe_family x6) eqn:Eu.
   - exfalso. eapply H0. exists T. exists x6. split. admit.
@@ -187,7 +188,7 @@ Proof.
   unfold build_branches_type in *.
   assert (exists t', nth_error x7 n = Some (m, t')).
   eapply All2_nth_error_Some in H as (? & ?). 2:eassumption. destruct p0.
-  rewrite e. destruct p0. cbn in *. subst. destruct x1. cbn. eauto.
+  rewrite e. destruct p0 as [[? ?] ?]. cbn in *. subst. destruct x1. cbn. eauto.
   destruct H3.
   eapply map_option_Some in E4.
   eapply All2_nth_error_Some_r in E4 as (? & ? & ?); eauto.

@@ -471,6 +471,62 @@ Fixpoint destArity Γ (t : term) :=
   | _ => None
   end.
 
+Lemma destArity_app_aux {Γ Γ' t}
+  : destArity (Γ ,,, Γ') t = option_map (fun '(ctx, s) => (Γ ,,, ctx, s))
+                                        (destArity Γ' t).
+Proof.
+  revert Γ'.
+  induction t; cbn; intro Γ'; try reflexivity.
+  - rewrite <- app_context_cons. now eapply IHt2.
+  - rewrite <- app_context_cons. now eapply IHt3.
+Qed.
+
+Lemma destArity_app {Γ t}
+  : destArity Γ t = option_map (fun '(ctx, s) => (Γ ,,, ctx, s))
+                               (destArity [] t).
+Proof.
+  exact (@destArity_app_aux Γ [] t).
+Qed.
+
+Lemma destArity_app_Some {Γ t ctx s}
+  : destArity Γ t = Some (ctx, s)
+    -> ∑ ctx', destArity [] t = Some (ctx', s) /\ ctx = Γ ,,, ctx'.
+Proof.
+  intros H. rewrite destArity_app in H.
+  destruct (destArity [] t) as [[ctx' s']|]; cbn in *.
+  exists ctx'. inversion H. now subst.
+  discriminate H.
+Qed.
+
+Lemma mkApps_nonempty f l :
+  l <> [] -> mkApps f l = tApp (mkApps f (removelast l)) (last l f).
+Proof.
+  destruct l using rev_ind. intros; congruence.
+  intros. rewrite <- mkApps_nested. simpl. f_equal.
+  rewrite removelast_app. congruence. simpl. now rewrite app_nil_r.
+  rewrite last_app. congruence.
+  reflexivity.
+Qed.
+
+Lemma destArity_tFix {mfix idx args} :
+  destArity [] (mkApps (tFix mfix idx) args) = None.
+Proof.
+  induction args. reflexivity.
+  rewrite mkApps_nonempty.
+  intros e; discriminate e.
+  reflexivity.
+Qed.
+
+Lemma destArity_tApp {t u l} :
+  destArity [] (mkApps (tApp t u) l) = None.
+Proof.
+  induction l. reflexivity.
+  rewrite mkApps_nonempty.
+  intros e; discriminate e.
+  reflexivity.
+Qed.
+
+
 (** Compute the type of a case from the predicate [p], actual parameters [pars] and
     an inductive declaration. *)
 
@@ -566,7 +622,7 @@ Definition types_of_case ind mdecl idecl params u p pty :=
 Lemma types_of_case_spec ind mdecl idecl pars u p pty indctx pctx ps btys :
   types_of_case ind mdecl idecl pars u p pty
   = Some (indctx, pctx, ps, btys)
-  <-> exists s', option_map (destArity [])
+  <~> ∑ s', option_map (destArity [])
                      (instantiate_params (subst_instance_context u (ind_params mdecl)) pars (subst_instance_constr u (ind_type idecl)))
           = Some (Some (indctx, s'))
           /\ destArity [] pty = Some (pctx, ps)
@@ -888,9 +944,9 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     forall pty, Σ ;;; Γ |- p : pty ->
     forall indctx pctx ps btys, types_of_case ind mdecl idecl pars u p pty = Some (indctx, pctx, ps, btys) ->
     check_correct_arity (global_ext_constraints Σ) idecl ind u indctx pars pctx ->
-    List.Exists (fun sf => universe_family ps = sf) idecl.(ind_kelim) ->
+    existsb (leb_sort_family (universe_family ps)) idecl.(ind_kelim) ->
     Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
-    All2 (fun x y => (fst x = fst y) * (Σ ;;; Γ |- snd x : snd y)) brs btys ->
+    All2 (fun x y => (fst x = fst y) * (Σ ;;; Γ |- snd x : snd y) * (Σ ;;; Γ |- snd y : tSort ps)) brs btys ->
     Σ ;;; Γ |- tCase (ind, npar) p c brs : mkApps p (List.skipn npar args ++ [c])
 
 | type_Proj p c u :
@@ -1033,14 +1089,6 @@ Section GlobalMaps.
     match l with
     | [InProp;InSet;InType] => true
     | _ => false
-    end.
-
-  Definition leb_sort_family x y :=
-    match x, y with
-    | InProp, _ => true
-    | InSet, InProp => false
-    | InType, (InProp | InSet) => false
-    | _, _ => true
     end.
 
   Section CheckSmaller.
@@ -1319,7 +1367,7 @@ Proof.
   exact (S (S (wf_local_size _ typing_size _ a))).
   exact (S (S (wf_local_size _ typing_size _ a))).
   exact (S (Nat.max d1 (Nat.max d2
-                                (all2_size _ (fun x y p => typing_size Σ Γ (snd x) (snd y) (snd p)) a)))).
+                                (all2_size _ (fun x y p => Nat.max (typing_size Σ Γ (snd x) (snd y) (snd (fst p))) (typing_size _ _ _ _ (snd p))) a)))).
   exact (S (Nat.max (wf_local_size _ typing_size _ a) (all_size _ (fun x p => typing_size Σ _ _ _ (fst p)) a0))).
   exact (S (Nat.max (wf_local_size _ typing_size _ a) (all_size _ (fun x p => typing_size Σ _ _ _ p) a0))).
   destruct s. red in i.
@@ -1537,12 +1585,17 @@ Lemma typing_ind_env `{cf : checker_flags} :
         forall indctx pctx ps btys,
         types_of_case ind mdecl idecl pars u p pty = Some (indctx, pctx, ps, btys) ->
         check_correct_arity (global_ext_constraints Σ) idecl ind u indctx pars pctx ->
-        Exists (fun sf : sort_family => universe_family ps = sf) (ind_kelim idecl) ->
+        existsb (leb_sort_family (universe_family ps)) (ind_kelim idecl) ->
         P Σ Γ p pty ->
         Σ;;; Γ |- c : mkApps (tInd ind u) args ->
         P Σ Γ c (mkApps (tInd ind u) args) ->
-        All2 (fun x y : nat * term => (fst x = fst y) * (Σ;;; Γ |- snd x : snd y)
-                                         * P Σ Γ (snd x) (snd y))%type brs btys ->
+        All2 (fun x y : nat * term =>
+                (fst x = fst y) *
+                (Σ;;; Γ |- snd x : snd y) *
+                P Σ Γ (snd x) (snd y) *
+                (Σ ;;; Γ |- snd y : tSort ps) *
+                P Σ Γ (snd y) (tSort ps)
+        )%type brs btys ->
         P Σ Γ (tCase (ind, npar) p c brs) (mkApps p (skipn npar args ++ [c]))) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : projection) (c : term) u
@@ -1755,8 +1808,10 @@ Proof.
        eapply (X14 _ wfΓ _ _ H0); eauto. lia.
        clear X13. revert a wfΓ X14. simpl. clear. intros.
        induction a; simpl in *. constructor.
-       destruct r. constructor. split; auto.
+       destruct r as [[? ?] ?]. constructor. intuition eauto.
        eapply (X14 _ wfΓ _ _ t); eauto. simpl; auto with arith.
+       lia.
+       eapply (X14 _ wfΓ _ _ t0); eauto. simpl; auto with arith.
        lia.
        apply IHa. auto. intros.
        eapply (X14 _ wfΓ0 _ _ Hty). lia.
@@ -1870,7 +1925,7 @@ Proof.
              --- red. destruct t1. unshelve eapply X14. all: eauto.
                  simpl. lia.
           ** auto. right.
-             exists u. intuition. 
+             exists u. intuition.
 Qed.
 
 
@@ -2051,4 +2106,38 @@ Section All_local_env.
     - destruct n. noconf eq. simpl. split; auto.
       apply IHX.
   Defined.
+
+
+  Lemma All_local_env_prod_inv :
+    forall P Q Γ,
+      All_local_env (fun Δ A t => P Δ A t × Q Δ A t) Γ ->
+      All_local_env P Γ × All_local_env Q Γ.
+  Proof.
+    intros P Q Γ h.
+    induction h.
+    - split ; constructor.
+    - destruct IHh, t0.
+      split ; constructor ; auto.
+    - destruct IHh, t0, t1.
+      split ; constructor ; auto.
+  Qed.
+
+  Lemma All_local_env_lift_prod_inv :
+    forall Σ P Q Δ,
+      All_local_env (lift_typing (fun Σ Γ t A => P Σ Γ t A × Q Σ Γ t A) Σ) Δ ->
+      All_local_env (lift_typing P Σ) Δ × All_local_env (lift_typing Q Σ) Δ.
+  Proof.
+    intros Σ P Q Δ h.
+    induction h.
+    - split ; constructor.
+    - destruct IHh. destruct t0 as [? [? ?]].
+      split ; constructor ; auto.
+      + cbn. eexists. eassumption.
+      + cbn. eexists. eassumption.
+    - destruct IHh. destruct t0 as [? [? ?]]. destruct t1.
+      split ; constructor ; auto.
+      + cbn. eexists. eassumption.
+      + cbn. eexists. eassumption.
+  Qed.
+
 End All_local_env.

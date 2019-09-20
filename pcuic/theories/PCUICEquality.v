@@ -978,16 +978,14 @@ Qed.
 Definition nleq_term t t' :=
   eqb_term_upto_univ eqb eqb t t'.
 
-(* todo: rename *)
-Corollary reflect_eq_term_upto_univ_eqb :
+Corollary reflect_upto_names :
   forall t t', reflectT (upto_names t t') (nleq_term t t').
 Proof.
   intros t t'. eapply reflect_eq_term_upto_univ.
   all: intros u u'; eapply reflect_reflectT, eqb_spec.
 Qed.
 
-(* todo: rename *)
-Lemma eq_term_upto_univ_eq_eq_term_upto_univ Re Rle :
+Lemma upto_names_impl Re Rle :
     Reflexive Re ->
     Reflexive Rle ->
     subrelation upto_names (eq_term_upto_univ Re Rle).
@@ -996,11 +994,18 @@ Proof.
   all: intros ? ? []; eauto.
 Qed.
 
-Lemma eq_term_upto_univ_eq_eq_term {cf:checker_flags} φ u v :
+Lemma upto_names_impl_eq_term {cf:checker_flags} φ u v :
     u ≡ v -> eq_term φ u v.
 Proof.
-  eapply eq_term_upto_univ_eq_eq_term_upto_univ ; exact _.
+  eapply upto_names_impl ; exact _.
 Qed.
+
+Lemma upto_names_impl_leq_term {cf:checker_flags} φ u v :
+    u ≡ v -> leq_term φ u v.
+Proof.
+  eapply upto_names_impl ; exact _.
+Qed.
+
 
 
 Lemma eq_term_upto_univ_isApp Re Rle u v :
@@ -1097,6 +1102,45 @@ Proof.
     constructor ; eauto. constructor.
   - rewrite 2!rev_cons. eapply eq_context_upto_cat ; eauto.
     constructor ; eauto. constructor.
+Qed.
+
+Lemma eq_context_upto_rev' :
+  forall Γ Δ Re,
+    eq_context_upto Re Γ Δ ->
+    eq_context_upto Re (List.rev Γ) (List.rev Δ).
+Proof.
+  intros Γ Δ Re h.
+  induction h.
+  - constructor.
+  - simpl. eapply eq_context_upto_cat.
+    + repeat constructor. assumption.
+    + assumption.
+  - simpl. eapply eq_context_upto_cat.
+    + repeat constructor. all: assumption.
+    + assumption.
+Qed.
+
+Lemma eq_context_impl :
+  forall Re Re',
+    subrelation Re Re' ->
+    subrelation (eq_context_upto Re) (eq_context_upto Re').
+Proof.
+  intros Re Re' hR Γ Δ h.
+  induction h.
+  - constructor.
+  - constructor. 2: assumption.
+    eapply eq_term_upto_univ_impl. all: eassumption.
+  - constructor. 3: assumption.
+    all: eapply eq_term_upto_univ_impl. all: eassumption.
+Qed.
+
+Lemma eq_context_upto_length :
+  forall Re Γ Δ,
+    eq_context_upto Re Γ Δ ->
+    #|Γ| = #|Δ|.
+Proof.
+  intros Re Γ Δ h.
+  induction h. all: simpl ; auto.
 Qed.
 
 Section ContextUpTo.

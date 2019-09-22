@@ -42,21 +42,49 @@ Ltac rdestruct H :=
 Definition nodelta_flags := RedFlags.mk true true true false true true.
 
 
+(* Dependent lexicographic order *)
 Inductive dlexprod {A} {B : A -> Type}
           (leA : A -> A -> Prop) (leB : forall x, B x -> B x -> Prop)
   : sigT B -> sigT B -> Prop :=
-| left_lex : forall x x' y y', leA x x' -> dlexprod leA leB (x;y) (x';y')
-| right_lex : forall x y y', leB x y y' -> dlexprod leA leB (x;y) (x;y').
+| left_lex :
+    forall x x' y y',
+      leA x x' ->
+      dlexprod leA leB (x;y) (x';y')
+
+| right_lex :
+    forall x y y',
+      leB x y y' ->
+      dlexprod leA leB (x;y) (x;y').
 
 Derive Signature for dlexprod.
 
 Definition lexprod := Subterm.lexprod.
 Arguments lexprod {_ _} _ _ _ _.
 
+(* Dependent lexicographic order modulo another relation *)
+Inductive dlexmod {A} {B : A -> Type}
+    (leA : A -> A -> Prop)
+    (eA : A -> A -> Prop)
+    (coe : forall x x', eA x x' -> B x -> B x')
+    (leB : forall x, B x -> B x -> Prop)
+  : sigT B -> sigT B -> Prop :=
+| left_dlexmod :
+    forall x x' y y',
+      leA x x' ->
+      dlexmod leA eA coe leB (x;y) (x';y')
+
+| right_dlexmod :
+    forall x x' y y' (e : eA x x'),
+      leB x' (coe _ _ e y) y' ->
+      dlexmod leA eA coe leB (x;y) (x';y').
+
 Notation "x ⊩ R1 ⨶ R2" :=
   (dlexprod R1 (fun x => R2)) (at level 20, right associativity).
 Notation "R1 ⊗ R2" :=
   (lexprod R1 R2) (at level 20, right associativity).
+
+Notation "x ⊨ R1 / e ; coe ⨶ R2" :=
+  (dlexmod R1 e coe (fun x => R2)) (at level 20, right associativity).
 
 Lemma acc_dlexprod :
   forall A B leA leB,
@@ -111,6 +139,39 @@ Proof.
     + left. assumption.
     + right. eapply hB ; eassumption.
 Qed.
+
+Derive Signature for dlexmod.
+
+Lemma acc_dlexmod :
+forall A B leA eA coe leB,
+  (forall x, well_founded (leB x)) ->
+  forall x,
+    Acc leA x ->
+    forall y,
+      Acc (leB x) y ->
+      Acc (@dlexmod A B leA eA coe leB) (x;y).
+Proof.
+intros A B leA eA coe leB hw.
+induction 1 as [x hx ih1].
+intros y.
+induction 1 as [y hy ih2].
+constructor.
+intros [x' y'] h. dependent destruction h.
+- eapply ih1.
+  + assumption.
+  + apply hw.
+- simpl in *.
+  (* Maybe in the definition the bias should be on the other x
+     or again induction on forall x ~ x'
+  *)
+
+(* intro hB. rewrite <- H0.
+  pose proof (projT2_eq H1) as p2.
+  set (projT1_eq H1) as p1 in *; cbn in p1.
+  destruct p1; cbn in p2; destruct p2.
+  eapply ih2. assumption.
+Qed. *)
+Abort.
 
 
 Section Lemmata.

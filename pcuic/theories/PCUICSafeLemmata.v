@@ -186,6 +186,10 @@ forall A B (leA : A -> A -> Prop) (eA : A -> A -> Prop) coe leB,
   (forall x, well_founded (leB x)) ->
   (forall x x' y, eA x x' -> leA y x' -> leA y x) ->
   (forall x, exists e : eA x x, forall y, coe _ _ e y = y) ->
+  (forall x x' x'' e e' y y',
+    leB x' (coe x'' x' e' y') (coe x x' e y) ->
+    exists e'', leB x (coe _ _ e'' y') y
+  ) ->
   forall x,
     Acc leA x ->
     forall y,
@@ -193,7 +197,7 @@ forall A B (leA : A -> A -> Prop) (eA : A -> A -> Prop) coe leB,
       forall x' (e : eA x x'),
         Acc (@dlexmod A B leA eA coe leB) (x'; coe _ _ e y).
 Proof.
-  intros A B leA eA coe leB hw hA hcoe.
+  intros A B leA eA coe leB hw hA hcoe hleB.
   induction 1 as [x hx ih1].
   induction 1 as [y hy ih2].
   intros x' e.
@@ -205,11 +209,20 @@ Proof.
     + eapply hA. all: eauto.
     + apply hw.
   - simpl in *.
-    (* specialize (hcoe x'') as [e' he'].
-    rewrite <- (he' y''). *)
+    specialize ih2 with (x' := x'').
+    assert (e1 : eA x x'') by admit.
+    assert (e2 : eA x'' x) by admit.
+    replace y'' with (coe x x'' e1 (coe x'' x e2 y'')) by admit.
+    (* TODO: Replace y'' by coe of coe *)
+    (* specialize (hcoe x'') as [e' he']. *)
+    (* rewrite <- (he' y''). *)
+    (* Incorrect hleB
+       might need trans/sym for eA
+    *)
+    (* apply hleB in H as [e' h']. *)
+
     eapply ih2.
-    (* + eassumption.
-    + *)
+    (* Need relation on sym/trans *)
 Abort.
 
 Section Lemmata.

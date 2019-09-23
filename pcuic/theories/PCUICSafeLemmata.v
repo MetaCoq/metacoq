@@ -182,12 +182,10 @@ Qed. *)
 Abort.
 
 Lemma acc_dlexmod :
-forall A B leA (eA : A -> A -> Prop) coe leB,
+forall A B (leA : A -> A -> Prop) (eA : A -> A -> Prop) coe leB,
   (forall x, well_founded (leB x)) ->
-  (* We will need to know that coe x x "refl" y is y
-     or at least that leB preserved that,
-     maybe only to instantiate this.
-  *)
+  (forall x x' y, eA x x' -> leA y x' -> leA y x) ->
+  (forall x, exists e : eA x x, forall y, coe _ _ e y = y) ->
   forall x,
     Acc leA x ->
     forall y,
@@ -195,24 +193,23 @@ forall A B leA (eA : A -> A -> Prop) coe leB,
       forall x' (e : eA x x'),
         Acc (@dlexmod A B leA eA coe leB) (x'; coe _ _ e y).
 Proof.
-intros A B leA eA coe leB hw.
-induction 1 as [x hx ih1].
-induction 1 as [y hy ih2].
-intros x' e.
-constructor.
-intros [x'' y''] h. dependent destruction h.
-- (* Here we need to know leA is preserved by eA.
-     Maybe only have something similar to Acc_cored_cored'
-     as an assumption...
-     We can postpone eA in H to get the desired result.
-  *)
-  eapply ih1.
-  (* + assumption.
-  + apply hw.
-- simpl in *.
-  eapply ih2.
-  + eassumption.
-  + *)
+  intros A B leA eA coe leB hw hA hcoe.
+  induction 1 as [x hx ih1].
+  induction 1 as [y hy ih2].
+  intros x' e.
+  constructor.
+  intros [x'' y''] h. dependent destruction h.
+  - specialize (hcoe x'') as [e' he'].
+    rewrite <- (he' y'').
+    eapply ih1.
+    + eapply hA. all: eauto.
+    + apply hw.
+  - simpl in *.
+    (* specialize (hcoe x'') as [e' he'].
+    rewrite <- (he' y''). *)
+    eapply ih2.
+    (* + eassumption.
+    + *)
 Abort.
 
 Section Lemmata.

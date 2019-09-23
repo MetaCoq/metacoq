@@ -182,14 +182,17 @@ Qed. *)
 Abort.
 
 Lemma acc_dlexmod :
-forall A B (leA : A -> A -> Prop) (eA : A -> A -> Prop) coe leB,
+forall A B (leA : A -> A -> Prop) (eA : A -> A -> Prop) coe leB
+       (sym : forall x y, eA x y -> eA y x)
+       (trans : forall x y z, eA x y -> eA y z -> eA x z),
   (forall x, well_founded (leB x)) ->
   (forall x x' y, eA x x' -> leA y x' -> leA y x) ->
   (forall x, exists e : eA x x, forall y, coe _ _ e y = y) ->
-  (forall x x' x'' e e' y y',
+  (forall x x' y e, coe x x' e (coe _ _ (sym _ _ e) y) = y) ->
+  (* (forall x x' x'' e e' y y',
     leB x' (coe x'' x' e' y') (coe x x' e y) ->
     exists e'', leB x (coe _ _ e'' y') y
-  ) ->
+  ) -> *)
   forall x,
     Acc leA x ->
     forall y,
@@ -197,7 +200,7 @@ forall A B (leA : A -> A -> Prop) (eA : A -> A -> Prop) coe leB,
       forall x' (e : eA x x'),
         Acc (@dlexmod A B leA eA coe leB) (x'; coe _ _ e y).
 Proof.
-  intros A B leA eA coe leB hw hA hcoe hleB.
+  intros A B leA eA coe leB sym trans hw hA hcoe coesym (* hleB *).
   induction 1 as [x hx ih1].
   induction 1 as [y hy ih2].
   intros x' e.
@@ -210,19 +213,36 @@ Proof.
     + apply hw.
   - simpl in *.
     specialize ih2 with (x' := x'').
-    assert (e1 : eA x x'') by admit.
-    assert (e2 : eA x'' x) by admit.
-    replace y'' with (coe x x'' e1 (coe x'' x e2 y'')) by admit.
-    (* TODO: Replace y'' by coe of coe *)
-    (* specialize (hcoe x'') as [e' he']. *)
-    (* rewrite <- (he' y''). *)
-    (* Incorrect hleB
-       might need trans/sym for eA
-    *)
-    (* apply hleB in H as [e' h']. *)
-
+    set (e1 := trans _ _ _ e (sym _ _ e0)).
+    set (e2 := sym _ _ e1).
+    replace y'' with (coe _ _ e1 (coe _ _ e2 y''))
+      by eauto using coesym.
     eapply ih2.
-    (* Need relation on sym/trans *)
+    (*
+        leB y'' (coe e1 y)
+
+        leB y'' (coe e (coe (sym e0) y))
+
+        leB (coe (sym e) y'') (coe (sym e0) y)
+
+
+        If instead
+        e1 = sym e2
+        e2 = e0 . sym e
+
+        leB (coe e0 (coe (sym e) y'')) y
+
+        leB (coe (sym e) y'') (coe (sym e0) y)
+
+        Forward instead
+
+        coe e0 y'' < coe e y
+
+        coe (sym e) (coe e0 y'') < y
+
+        coe (sym e . e0) y''
+
+     *)
 Abort.
 
 Section Lemmata.

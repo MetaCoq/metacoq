@@ -244,6 +244,22 @@ Section Conversion.
     eapply H0. all: assumption.
   Qed.
 
+  (* Alternative definition of R_aux, to replace it eventually *)
+  (* Definition R_aux' Γ :=
+    t ⊨ cored' Σ Γ / eq_term ; ? ⨶ @posR t ⊗ ... *)
+  (* Several things:
+     - We need to show valid_pos is preserved by eq_term
+     - We need to use eq_term for cored' and not just upto_names
+     - Which of eq_term/leq_term? We want to account for both...
+
+     => Probably just eq_term
+     => This might only be interesting in cases like tCase where we
+     compare stuff with nl_eq,
+     for stacks we might want to keep both terms in the end
+     (no more zipc_replace!) and instead carry the information
+     that they are eq or leq.
+  *)
+
   Definition R_aux Γ :=
     t ⊩ cored' Σ Γ ⨶ @posR t ⊗ w ⊩ wcored Γ ⨶ @posR (` w) ⊗ stateR.
 
@@ -1250,6 +1266,7 @@ Section Conversion.
       False_rect _ _ ;
 
     | prog_view_Const c u c' u' with eq_dec c c' := {
+      (* TODO Not use eq_dec but eq_universe instead *)
       | left eq1 with eq_dec u u' := {
         | left eq2 with isconv_args_raw (tConst c u) π1 π2 aux := {
           | @exist true h := yes ;
@@ -1288,6 +1305,7 @@ Section Conversion.
       | @exist false _ := no
       } ;
 
+    (* TODO Replace nleq_term here by eq_term (x3) *)
     | prog_view_Case ind par p c brs ind' par' p' c' brs'
       with inspect (nleq_term (tCase (ind, par) p c brs) (tCase (ind', par') p' c' brs')) := {
       | @exist true eq1 := isconv_args (tCase (ind, par) p c brs) π1 π2 aux ;
@@ -1303,11 +1321,13 @@ Section Conversion.
         }
       } ;
 
+    (* TODO Replace nleq_term here by eq_term *)
     | prog_view_Proj p c p' c' with inspect (nleq_term (tProj p c) (tProj p' c')) := {
       | @exist true eq1 := isconv_args (tProj p c) π1 π2 aux ;
       | @exist false _ := no
       } ;
 
+    (* TODO Replace nleq_term here by eq_term *)
     | prog_view_Fix mfix idx mfix' idx'
       with inspect (nleq_term (tFix mfix idx) (tFix mfix' idx')) := {
       | @exist true eq1 := isconv_args (tFix mfix idx) π1 π2 aux ;
@@ -1334,6 +1354,7 @@ Section Conversion.
         }
       } ;
 
+    (* TODO Replace nleq_term here by eq_term *)
     | prog_view_CoFix mfix idx mfix' idx'
       with inspect (nleq_term (tCoFix mfix idx) (tCoFix mfix' idx')) := {
       | @exist true eq1 := isconv_args (tCoFix mfix idx) π1 π2 aux ;

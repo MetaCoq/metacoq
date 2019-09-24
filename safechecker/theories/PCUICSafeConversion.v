@@ -258,12 +258,41 @@ Section Conversion.
   Qed.
 
   (* Can be generalised *)
-  Definition eq_term_pos u v (e : eqt u v) (p : pos u) : pos v :=
-    exist (` p) (eq_term_valid_pos (proj2_sig p) e).
+  (* Definition eq_term_pos u v (e : eqt u v) (p : pos u) : pos v :=
+    exist (` p) (eq_term_valid_pos (proj2_sig p) e). *)
+
+  Definition weqt {Γ} (u v : wterm Γ) :=
+    eqt (` u) (` v).
+
+  (* Definition weq_term_pos {Γ} (u v : wterm Γ) (e : weqt u v) (p : pos u) *)
 
   (* Alternative definition of R_aux, to replace it eventually *)
-  Definition R_aux' Γ :=
-    t ⊨ eqt \ cored' Σ Γ by eq_term_pos ⨷ @posR t. (* ⊗ w ⊨ *)
+  Equations R_aux' (Γ : context) :
+    (∑ t : term, pos t × (∑ w : wterm Γ, pos (` w) × state)) ->
+    (∑ t : term, pos t × (∑ w : wterm Γ, pos (` w) × state)) -> Prop :=
+    R_aux' Γ :=
+      t ⊨ eqt \ cored' Σ Γ by _ ⨷
+      @posR t ⊗
+      w ⊨ weqt \ wcored Γ by _ ⨷
+      @posR (` w) ⊗
+      stateR.
+  Next Obligation.
+    split. 2: intuition eauto.
+    exists (` p).
+    destruct p as [p hp].
+    eapply eq_term_valid_pos. all: eauto.
+  Defined.
+  Next Obligation.
+    split. 2: assumption.
+    exists (` p).
+    destruct x as [u hu], x' as [v hv].
+    destruct p as [p hp].
+    simpl in *.
+    eapply eq_term_valid_pos. all: eauto.
+  Defined.
+
+  (* Transparent R_aux'. *)
+
   (* Several things:
      - We need to show valid_pos is preserved by eq_term
      - We need to use eq_term for cored' and not just upto_names
@@ -277,13 +306,15 @@ Section Conversion.
      that they are eq or leq.
   *)
 
+  Derive Signature for Subterm.lexprod.
+
   Lemma R_aux'_Acc :
-    forall Γ t p (* w q s *),
+    forall Γ t p w q s,
       wellformed Σ Γ t ->
-      (* Acc (R_aux' Γ) (t ; (p, (w ; (q, s)))). *)
-      Acc (R_aux' Γ) (t ; p).
+      Acc (R_aux' Γ) (t ; (p, (w ; (q, s)))).
   Proof.
-    intros Γ t p (* w q s *) ht.
+    intros Γ t p w q s ht.
+    rewrite R_aux'_equation_1.
     unshelve eapply dlexmod_Acc.
     - intros x y [e]. constructor. eapply eq_term_sym. assumption.
     - intros x y z [e1] [e2]. constructor. eapply eq_term_trans. all: eauto.
@@ -292,19 +323,38 @@ Section Conversion.
       eexists _,_. intuition eauto.
       + constructor. assumption.
       + constructor. eapply eq_term_trans. all: eauto.
-    - intros x. exists (sq (eq_term_refl _ _)). intros [q h].
-      unfold eq_term_pos. simpl. f_equal.
+    - intros x. exists (sq (eq_term_refl _ _)). intros [[q' h] [? [? ?]]].
+      unfold R_aux'_obligations_obligation_1.
+      simpl. f_equal. f_equal.
       eapply uip.
-    - intros x x' [q h] [e].
-      unfold eq_term_pos. simpl. f_equal.
+    - intros x x' [[q' h] [? [? ?]]] [e].
+      unfold R_aux'_obligations_obligation_1.
+      simpl. f_equal. f_equal.
       eapply uip.
-    - intros x y z e1 e2 [q h].
-      unfold eq_term_pos. simpl. f_equal.
+    - intros x y z e1 e2 [[q' h] [? [? ?]]].
+      unfold R_aux'_obligations_obligation_1.
+      simpl. f_equal. f_equal.
       eapply uip.
-    - intros x x' [e] [q h] [q' h'] hl.
-      unfold posR in *.
+    - intros x x' [e]
+             [[p1 hp1] [[u hu] [[q1 hq1] s1]]]
+             [[p2 hp2] [[v hv] [[q2 hq2] s2]]] hl.
       simpl in *.
-      assumption.
+      dependent destruction hl.
+      + left. unfold posR in *.
+        simpl in *.
+        assumption.
+      + match goal with
+        | |- context [ exist p1 ?hp1 ] =>
+          assert (ee : hp1 = hp2) by eapply uip
+        end.
+        rewrite ee. right. clear ee.
+        dependent destruction H.
+        * left. assumption.
+        * unshelve econstructor 2. 1: assumption.
+          dependent destruction H.
+          -- left. unfold posR in *.
+             simpl in *. assumption.
+          -- right. assumption.
     - eapply normalisation_upto. all: assumption.
   Abort.
 

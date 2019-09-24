@@ -4,7 +4,7 @@ MetaCoq
 <img src="https://github.com/MetaCoq/metacoq/raw/master/docs/assets/LOGO.png" alt="MetaCoq" width="50px"/>
 
 [![Build Status](https://travis-ci.org/MetaCoq/metacoq.svg?branch=coq-8.8)](https://travis-ci.org/MetaCoq/metacoq)
-[![Gitter](https://img.shields.io/gitter/room/nwjs/nw.js.svg)](https://gitter.im/coq/Template-Coq)
+[![Gitter](https://badges.gitter.im/coq/metacoq.svg)](https://gitter.im/coq/metacoq?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 MetaCoq is a project formalizing Coq in Coq and providing tools for
 manipulating Coq terms and developing certified plugins
@@ -14,6 +14,7 @@ manipulating Coq terms and developing certified plugins
 - [Installing](#installation-instructions)
 - [Documentation](#documentation)
 - [Papers](#papers)
+- [Team](#team--credits)
 
 At the center of this project is the Template-Coq quoting library for
 Coq. The project currently has a single repository extending
@@ -67,10 +68,10 @@ calculus has (partial) proofs of standard metatheoretical results:
 Implementation of a fuel-free and verified reduction machine, conversion
 checker and type checker for PCUIC.
 
-[Extraction](extraction/theories)
+[Erasure](erasure/theories)
 ----------
 
-An extraction procedure to untyped lambda-calculus accomplishing the
+An erasure procedure to untyped lambda-calculus accomplishing the
 same as the Extraction plugin of Coq.
 
 [Translations](translations)
@@ -137,10 +138,23 @@ Examples of plugins
 Papers
 ======
 
+- ["Coq Coq Codet! Towards a Verified Toolchain for Coq in
+  MetaCoq"](http://www.irif.fr/~sozeau/research/publications/Coq_Coq_Codet-CoqWS19.pdf)
+  Matthieu Sozeau, Simon Boulier, Yannick Forster, Nicolas Tabareau and
+  Théo Winterhalter. Abstract and
+  [presentation](http://www.ps.uni-saarland.de/~forster/downloads/slides-coqws19.pdf)
+  given at the [Coq Workshop
+  2019](https://staff.aist.go.jp/reynald.affeldt/coq2019/), September
+  2019.
+
+- ["Coq Coq Correct! Verification of Type Checking and Erasure for Coq, in Coq"](https://www.irif.fr/~sozeau/research/publications/drafts/Coq_Coq_Correct.pdf).
+  Matthieu Sozeau, Simon Boulier, Yannick Forster, Nicolas Tabareau
+  and Théo Winterhalter. Submitted, July 2019.
+  
 - ["The MetaCoq Project"](https://www.irif.fr/~sozeau/research/publications/drafts/The_MetaCoq_Project.pdf)
   Matthieu Sozeau, Abhishek Anand, Simon Boulier, Cyril Cohen, Yannick Forster, Fabian Kunze,
-  Gregory Malecha, Nicolas Tabareau, Théo Winterhalter.
-  Extended version of the ITP 2018 paper. Submitted.
+  Gregory Malecha, Nicolas Tabareau and Théo Winterhalter.
+  Extended version of the ITP 2018 paper. Submitted, March 2019.
 
   This includes a full documentation of the Template Monad.
 
@@ -150,25 +164,54 @@ Papers
 
 - The system was presented at [Coq'PL 2018](https://popl18.sigplan.org/event/coqpl-2018-typed-template-coq)
 
-Credits
+Team & Credits
 =======
 
-Template-Coq was originally developed by
-[Gregory Malecha](https://github.com/gmalecha).
+<center>
+<figure><img
+src="https://github.com/MetaCoq/metacoq/raw/master/docs/assets/abhishek-anand.jpg"
+alt="Abhishek Anand" width="150px" display="inline"/>
+<img
+src="https://github.com/MetaCoq/metacoq/raw/master/docs/assets/simon-boulier.jpg"
+alt="Simon Boulier" width="150px"/>
+<img
+src="https://github.com/MetaCoq/metacoq/raw/master/docs/assets/cyril-cohen.png"
+alt="Cyril Cohen" width="150px"/>
+<img
+src="https://github.com/MetaCoq/metacoq/raw/master/docs/assets/yannick-forster.jpg"
+alt="Yannick Forster" width="150px"/>
+<img
+src="https://github.com/MetaCoq/metacoq/raw/master/docs/assets/gregory-malecha.jpg"
+alt="Gregory Malecha" width="150px"/>
+<img
+src="https://github.com/MetaCoq/metacoq/raw/master/docs/assets/matthieu-sozeau.png"
+alt="Matthieu Sozeau" width="150px"/>
+<img
+src="https://github.com/MetaCoq/metacoq/raw/master/docs/assets/nicolas-tabareau.jpg"
+alt="Nicolas Tabareau" width="150px"/>
+<img
+src="https://github.com/MetaCoq/metacoq/raw/master/docs/assets/theo-winterhalter.jpg"
+alt="Théo Winterhalter" width="150px"/>
 
-MetaCoq is now developed by [Abhishek Anand](https://github.com/aa755),
-[Simon Boulier](https://github.com/simonboulier),
-[Cyril Cohen](https://github.com/CohenCyril)
-[Gregory Malecha](https://github.com/gmalecha),
-[Yannick Forster](https://github.com/yforster),
-[Matthieu Sozeau](https://github.com/mattam82),
-[Nicolas Tabareau](https://github.com/Tabareau) and
-[Théo Winterhalter](https://github.com/TheoWinterhalter).
+<figcaption>MetaCoq is developed by (left to right) 
+<a href="https://github.com/aa755">Abhishek Anand</a>,
+<a href="https://github.com/simonboulier">Simon Boulier</a>,
+<a href="https://github.com/CohenCyril">Cyril Cohen</a>,
+<a href="https://github.com/yforster">Yannick Forster</a>,
+<a href="https://github.com/gmalecha">Gregory Malecha</a>,
+<a href="https://github.com/mattam82">Matthieu Sozeau</a>,
+<a href="https://github.com/Tabareau">Nicolas Tabareau</a> and
+<a href="https://github.com/TheoWinterhalter">Théo Winterhalter</a>.
+</figcaption>
+</figure>
+</center>
 
-Copyright (c) 2014-2019 Gregory Malecha\
-Copyright (c) 2015-2019 Abhishek Anand, Matthieu Sozeau\
-Copyright (c) 2017-2019 Simon Boulier, Nicolas Tabareau, Cyril Cohen\
+```
+Copyright (c) 2014-2019 Gregory Malecha
+Copyright (c) 2015-2019 Abhishek Anand, Matthieu Sozeau
+Copyright (c) 2017-2019 Simon Boulier, Nicolas Tabareau, Cyril Cohen
 Copyright (c) 2018-2019 Yannick Forster, Théo Winterhalter
+```
 
 This software is distributed under the terms of the MIT license.
 See [LICENSE](LICENSE) for details.

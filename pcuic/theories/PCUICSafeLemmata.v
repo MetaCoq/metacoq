@@ -83,7 +83,7 @@ Notation "x ⊩ R1 ⨶ R2" :=
 Notation "R1 ⊗ R2" :=
   (lexprod R1 R2) (at level 20, right associativity).
 
-Notation "x ⊨ R1 / e ; coe ⨶ R2" :=
+Notation "x ⊨ e \ R1 'by' coe ⨷ R2" :=
   (dlexmod R1 e coe (fun x => R2)) (at level 20, right associativity).
 
 Lemma acc_dlexprod :

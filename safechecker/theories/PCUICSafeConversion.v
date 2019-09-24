@@ -244,13 +244,26 @@ Section Conversion.
     eapply H0. all: assumption.
   Qed.
 
+  Definition eqt u v :=
+    ∥ eq_term Σ u v ∥.
+
+  Lemma eq_term_valid_pos :
+    forall {u v p},
+      validpos u p ->
+      eqt u v ->
+      validpos v p.
+  Proof.
+    intros u v p vp [e].
+    eapply eq_term_valid_pos. all: eauto.
+  Qed.
+
   (* Can be generalised *)
-  Definition eq_term_pos {u v} (e : eq_term Σ u v) (p : pos u) : pos v :=
+  Definition eq_term_pos u v (e : eqt u v) (p : pos u) : pos v :=
     exist (` p) (eq_term_valid_pos (proj2_sig p) e).
 
   (* Alternative definition of R_aux, to replace it eventually *)
-  (* Definition R_aux' Γ :=
-    t ⊨ cored' Σ Γ / eq_term Σ ; ? ⨶ @posR t ⊗ ... *)
+  Definition R_aux' Γ :=
+    t ⊨ eqt \ cored' Σ Γ by eq_term_pos ⨷ @posR t.
   (* Several things:
      - We need to show valid_pos is preserved by eq_term
      - We need to use eq_term for cored' and not just upto_names

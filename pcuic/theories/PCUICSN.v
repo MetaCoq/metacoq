@@ -1,9 +1,11 @@
 (* Distributed under the terms of the MIT license.   *)
 
  From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
-     Classes.RelationClasses Omega.
+     Classes.CRelationClasses.
 From MetaCoq.Template
-Require Import config Universes monad_utils utils BasicAst AstUtils UnivSubst.
+Require Import config Universes monad_utils utils BasicAst AstUtils UnivSubst
+     Universes.
+From MetaCoq.Checker Require Import uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICPosition
      PCUICNormal PCUICInversion PCUICCumulativity PCUICSafeLemmata
@@ -106,8 +108,11 @@ Section Alpha.
   Context (Σ : global_env_ext).
   Context (hΣ : ∥ wf Σ ∥).
 
+  Notation eqt u v :=
+    (∥ eq_term (global_ext_constraints Σ) u v ∥).
+
   Definition cored' Γ u v :=
-    exists u' v', cored Σ Γ u' v' /\ ∥ u ≡ u' ∥ /\ ∥ v ≡ v' ∥.
+    exists u' v', cored Σ Γ u' v' /\ eqt u u' /\ eqt v v'.
 
   Lemma cored_alt :
     forall Γ u v,
@@ -129,28 +134,28 @@ Section Alpha.
   Lemma cored'_postpone :
     forall Γ u v,
       cored' Γ u v ->
-      exists u', cored Σ Γ u' v /\ ∥ u ≡ u' ∥.
+      exists u', cored Σ Γ u' v /\ eqt u u'.
   Proof.
     intros Γ u v [u' [v' [r [[hu] [hv]]]]].
     apply cored_alt in r.
     destruct r as [r].
     induction r in u, v, hu, hv.
-    - eapply red1_eq_term_upto_univ_r in r. 9: eassumption. all: auto.
+    - eapply red1_eq_term_upto_univ_r in r. 9: eassumption.
+      (* all: auto. *)
+      (* They should be automatic... *)
+      all: try eapply eq_universe_refl.
+      all: try eapply eq_universe_sym.
+      all: try eapply eq_universe_trans.
       + destruct r as [u' [r e]].
         exists u'. split.
         * constructor. assumption.
-        * constructor. eapply upto_names_trans. all: eauto.
-          eapply upto_names_sym. assumption.
-      + intros s u1 u2 h. unfold R_universe_instance in h.
-        apply All2_eq in h. apply utils.map_inj in h.
-        * subst. reflexivity.
-        * intros ? ? H. inversion H. reflexivity.
-      + intros ? ? ? ? ?. subst. reflexivity.
-      + intros ? ? ? ? ?. subst. reflexivity.
+        * constructor. eapply eq_term_trans. 1: eauto.
+          eapply eq_term_sym. assumption.
+      + eapply leq_term_SubstUnivPreserving.
       + intros ? ?. auto.
-    - specialize IHr1 with (1 := upto_names_ref _) (2 := hv).
+    - specialize IHr1 with (1 := eq_term_refl _ _) (2 := hv).
       destruct IHr1 as [y' [h1 [e1]]].
-      specialize IHr2 with (1 := hu) (2 := upto_names_sym _ _ e1).
+      specialize IHr2 with (1 := hu) (2 := eq_term_sym _ _ _ e1).
       destruct IHr2 as [u' [h2 ?]].
       exists u'. split.
       + eapply cored_trans'. all: eauto.
@@ -160,14 +165,14 @@ Section Alpha.
   Corollary cored_upto :
     forall Γ u v v',
       cored Σ Γ u v ->
-      v ≡ v' ->
-      exists u', cored Σ Γ u' v' /\ ∥ u ≡ u' ∥.
+      eq_term Σ v v' ->
+      exists u', cored Σ Γ u' v' /\ eqt u u'.
   Proof.
     intros Γ u v v' h e.
     eapply cored'_postpone.
     exists u, v. intuition eauto.
-    - constructor. apply upto_names_ref.
-    - constructor. apply upto_names_sym. assumption.
+    - constructor. apply eq_term_refl.
+    - constructor. apply eq_term_sym. assumption.
   Qed.
 
   Lemma Acc_impl :
@@ -184,17 +189,17 @@ Section Alpha.
   Lemma Acc_cored_cored' :
     forall Γ u,
       Acc (cored Σ Γ) u ->
-      forall u', u ≡ u' -> Acc (cored' Γ) u'.
+      forall u', eq_term Σ u u' -> Acc (cored' Γ) u'.
   Proof.
     intros Γ u h. induction h as [u h ih].
     intros u' e. constructor. intros v [v' [u'' [r [[e1] [e2]]]]].
-    assert (ee : u'' ≡ u).
-    { eapply upto_names_sym. eapply upto_names_trans. all: eassumption. }
+    assert (ee : eq_term Σ u'' u).
+    { eapply eq_term_sym. eapply eq_term_trans. all: eassumption. }
     eapply cored_upto in r as hh. 2: exact ee.
     destruct hh as [v'' [r' [e']]].
     eapply ih.
     - eassumption.
-    - eapply upto_names_sym. eapply upto_names_trans. all: eassumption.
+    - eapply eq_term_sym. eapply eq_term_trans. all: eassumption.
   Qed.
 
   Lemma normalisation_upto :
@@ -207,9 +212,10 @@ Section Alpha.
     apply normalisation' in h. 2: auto.
     eapply Acc_cored_cored'.
     - eassumption.
-    - apply upto_names_ref.
+    - apply eq_term_refl.
   Qed.
 
+  (* TODO Maybe switch to eq_context *)
   Lemma cored_eq_context_upto_names :
     forall Γ Δ u v,
       eq_context_upto_names Γ Δ ->
@@ -227,13 +233,13 @@ Section Alpha.
 
   Lemma cored_eq_term_upto :
     forall Re Rle Γ u v u',
-      CRelationClasses.Reflexive Re ->
+      Reflexive Re ->
       SubstUnivPreserving Re ->
-      CRelationClasses.Reflexive Rle ->
-      CRelationClasses.Symmetric Re ->
-      CRelationClasses.Transitive Re ->
-      CRelationClasses.Transitive Rle ->
-      CRelationClasses.subrelation Re Rle ->
+      Reflexive Rle ->
+      Symmetric Re ->
+      Transitive Re ->
+      Transitive Rle ->
+      subrelation Re Rle ->
       eq_term_upto_univ Re Rle u u' ->
       cored Σ Γ v u ->
       exists v', cored Σ Γ v' u' /\ ∥ eq_term_upto_univ Re Rle v v' ∥.
@@ -255,9 +261,9 @@ Section Alpha.
 
   Lemma cored_eq_context_upto :
     forall Re Γ Δ u v,
-      CRelationClasses.Reflexive Re ->
-      CRelationClasses.Symmetric Re ->
-      CRelationClasses.Transitive Re ->
+      Reflexive Re ->
+      Symmetric Re ->
+      Transitive Re ->
       SubstUnivPreserving Re ->
       eq_context_upto Re Γ Δ ->
       cored Σ Γ u v ->
@@ -311,10 +317,10 @@ Section Alpha.
     all: auto.
     - destruct h as [u' [r [e]]].
       eexists _, _. intuition eauto.
-      + constructor. eapply upto_names_trans.
-        * eapply upto_names_sym. eapply upto_names_nl.
-        * assumption.
-      + constructor. eapply upto_names_sym. eapply upto_names_nl.
+      + constructor. eapply eq_term_trans.
+        * eapply eq_term_sym. eapply eq_term_tm_nl.
+        * eapply upto_names_impl_eq_term. assumption.
+      + constructor. eapply eq_term_sym. eapply eq_term_tm_nl.
     - intros ? ? ? []. auto.
     - intros ? ? ? r. apply All2_eq in r. apply map_inj in r.
       + subst. reflexivity.
@@ -328,8 +334,8 @@ Section Alpha.
   Proof.
     intros Γ u v h.
     exists u, v. intuition eauto.
-    - constructor. eapply upto_names_ref.
-    - constructor. eapply upto_names_ref.
+    - constructor. eapply eq_term_refl.
+    - constructor. eapply eq_term_refl.
   Qed.
 
 End Alpha.

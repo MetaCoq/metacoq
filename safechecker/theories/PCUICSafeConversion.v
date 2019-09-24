@@ -284,17 +284,28 @@ Section Conversion.
       Acc (R_aux' Γ) (t ; p).
   Proof.
     intros Γ t p (* w q s *) ht.
-    (* eapply dlexprod_Acc.
-    - intro u. eapply Subterm.wf_lexprod.
-      + intro. eapply posR_Acc.
-      + intros [w' q']. eapply dlexprod_Acc.
-        * intros [t' h']. eapply Subterm.wf_lexprod.
-          -- intro. eapply posR_Acc.
-          -- intro. eapply stateR_Acc.
-        * eapply wcored_wf.
-    - destruct hΣ as [hΣ'].
-      eapply normalisation_upto. all: assumption.
-  Qed. *)
+    unshelve eapply dlexmod_Acc.
+    - intros x y [e]. constructor. eapply eq_term_sym. assumption.
+    - intros x y z [e1] [e2]. constructor. eapply eq_term_trans. all: eauto.
+    - admit.
+    - intros x x' y [e] [y' [x'' [r [[e1] [e2]]]]].
+      eexists _,_. intuition eauto.
+      + constructor. assumption.
+      + constructor. eapply eq_term_trans. all: eauto.
+    - intros x. exists (sq (eq_term_refl _ _)). intros [q h].
+      unfold eq_term_pos. simpl. f_equal.
+      eapply uip.
+    - intros x x' [q h] [e].
+      unfold eq_term_pos. simpl. f_equal.
+      eapply uip.
+    - intros x y z e1 e2 [q h].
+      unfold eq_term_pos. simpl. f_equal.
+      eapply uip.
+    - intros x x' [e] [q h] [q' h'] hl.
+      unfold posR in *.
+      simpl in *.
+      assumption.
+    - eapply normalisation_upto. all: assumption.
   Abort.
 
   Definition R_aux Γ :=

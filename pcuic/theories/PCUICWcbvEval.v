@@ -9,7 +9,6 @@ Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 
-Set Asymmetric Patterns.
 Require Import ssreflect ssrbool.
 
 Local Ltac inv H := inversion H; subst.
@@ -30,6 +29,7 @@ Local Ltac inv H := inversion H; subst.
 
 Definition atom t :=
   match t with
+  | tInd _ _
   | tConstruct _ _ _
   | tFix _ _
   | tCoFix _ _
@@ -67,6 +67,12 @@ Definition isFixApp t :=
 Definition isCoFix t :=
   match t with
   | tCoFix _ _ => true
+  | _ => false
+  end.
+
+Definition isInd t :=
+  match t with
+  | tInd _ _ => true
   | _ => false
   end.
 
@@ -306,7 +312,7 @@ Section Wcbv.
    *)
 
   Definition value_head x :=
-    isConstruct x || isCoFix x || isAssRel Γ x || isAxiom Σ x.
+    isInd x || isConstruct x || isCoFix x || isAssRel Γ x || isAxiom Σ x.
 
   (* Lemma value_head_atom x : value_head x -> atom x. *)
   (* Proof. destruct x; auto. Qed. *)
@@ -400,8 +406,8 @@ Section Wcbv.
       destruct IHX1; intuition subst.
       * rewrite a1.
         simpl. rewrite a1 in H. simpl in *.
-        apply (value_app f [a']). destruct f; simpl in * |- *; try congruence.
-        constructor; auto. constructor. constructor; auto.
+        apply (value_app f [a']). destruct f; simpl in * |- *; try congruence;
+        constructor; auto. constructor. auto. constructor; auto.
       * rewrite [tApp _ _](mkApps_nested _ (firstn n l) [a']).
         constructor 2; auto. eapply All_app_inv; auto.
       * rewrite [tApp _ _](mkApps_nested _ (firstn n l) [a']).
@@ -439,6 +445,7 @@ Section Wcbv.
         easy.
       * now eapply eval_atom.
       * now eapply eval_atom.
+      * now eapply eval_atom. 
       * rewrite -mkApps_nested.
         eapply All_app in H0 as [Hl Hx]. depelim Hx.
         eapply All_app in X as [Hl' Hx']. depelim Hx'.

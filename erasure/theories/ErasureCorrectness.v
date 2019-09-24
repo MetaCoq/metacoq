@@ -1103,15 +1103,16 @@ Proof.
         econstructor; eauto.
     + inv He.
       * eexists. split; eauto. now econstructor.
+    + inv He.
       * eexists. split. 2: now econstructor.
         econstructor; eauto.
+      * eexists. split. 2: now econstructor.
+        eauto.
     + inv He.
       * eexists. split; eauto. now econstructor.
       * eexists. split. 2: now econstructor.
         econstructor; eauto.
     + inv He.
-      * eexists. split; eauto. now econstructor.
-      * eexists. split. 2: now econstructor.
-        econstructor; eauto.
-  
+    * eexists. split; eauto. now econstructor.
+    * eexists. split. 2: now econstructor. eauto.
 Qed.

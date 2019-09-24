@@ -263,7 +263,7 @@ Section Conversion.
 
   (* Alternative definition of R_aux, to replace it eventually *)
   Definition R_aux' Γ :=
-    t ⊨ eqt \ cored' Σ Γ by eq_term_pos ⨷ @posR t.
+    t ⊨ eqt \ cored' Σ Γ by eq_term_pos ⨷ @posR t. (* ⊗ w ⊨ *)
   (* Several things:
      - We need to show valid_pos is preserved by eq_term
      - We need to use eq_term for cored' and not just upto_names
@@ -276,6 +276,26 @@ Section Conversion.
      (no more zipc_replace!) and instead carry the information
      that they are eq or leq.
   *)
+
+  Lemma R_aux'_Acc :
+    forall Γ t p (* w q s *),
+      wellformed Σ Γ t ->
+      (* Acc (R_aux' Γ) (t ; (p, (w ; (q, s)))). *)
+      Acc (R_aux' Γ) (t ; p).
+  Proof.
+    intros Γ t p (* w q s *) ht.
+    (* eapply dlexprod_Acc.
+    - intro u. eapply Subterm.wf_lexprod.
+      + intro. eapply posR_Acc.
+      + intros [w' q']. eapply dlexprod_Acc.
+        * intros [t' h']. eapply Subterm.wf_lexprod.
+          -- intro. eapply posR_Acc.
+          -- intro. eapply stateR_Acc.
+        * eapply wcored_wf.
+    - destruct hΣ as [hΣ'].
+      eapply normalisation_upto. all: assumption.
+  Qed. *)
+  Abort.
 
   Definition R_aux Γ :=
     t ⊩ cored' Σ Γ ⨶ @posR t ⊗ w ⊩ wcored Γ ⨶ @posR (` w) ⊗ stateR.

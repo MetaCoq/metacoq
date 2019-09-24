@@ -142,69 +142,30 @@ Qed.
 
 Derive Signature for dlexmod.
 
-(* We should somehow ask that leA is stable under eA
-   maybe for leB we can for the dependecy to be a subset type
-   this is the way we're going to use it anyway.
-*)
 Lemma acc_dlexmod :
-forall A B leA eA coe leB,
-  (forall x, well_founded (leB x)) ->
-  (* (forall x x' (e : eA x x'), (* Preserves leB or something... *)) *)
-  forall x,
-    Acc leA x ->
-    forall y,
-      Acc (leB x) y ->
-      Acc (@dlexmod A B leA eA coe leB) (x;y).
-Proof.
-intros A B leA eA coe leB hw.
-induction 1 as [x hx ih1].
-intros y.
-induction 1 as [y hy ih2].
-constructor.
-intros [x' y'] h. dependent destruction h.
-- eapply ih1.
-  + assumption.
-  + apply hw.
-- simpl in *.
-  eapply ih2.
-  + eassumption.
-  +
-  (* Maybe in the definition the bias should be on the other x
-     or again induction on forall x ~ x'
-  *)
-
-(* intro hB. rewrite <- H0.
-  pose proof (projT2_eq H1) as p2.
-  set (projT1_eq H1) as p1 in *; cbn in p1.
-  destruct p1; cbn in p2; destruct p2.
-  eapply ih2. assumption.
-Qed. *)
-Abort.
-
-Lemma acc_dlexmod :
-forall A B (leA : A -> A -> Prop) (eA : A -> A -> Prop)
-       (coe : forall x x', eA x x' -> B x -> B x')
-       (leB : forall x : A, B x -> B x -> Prop)
-       (sym : forall x y, eA x y -> eA y x)
-       (trans : forall x y z, eA x y -> eA y z -> eA x z),
-  (forall x, well_founded (leB x)) ->
-  (forall x x' y, eA x x' -> leA y x' -> leA y x) ->
-  (forall x, exists e : eA x x, forall y, coe _ _ e y = y) ->
-  (forall x x' y e, coe x x' (sym _ _ e) (coe _ _ e y) = y) ->
-  (forall x0 x1 x2 e1 e2 y,
-    coe _ _ (trans x0 x1 x2 e1 e2) y =
-    coe _ _ e2 (coe _ _ e1 y)
-  ) ->
-  (forall x x' e y y',
-    leB _ y (coe x x' e y') ->
-    leB _ (coe _ _ (sym _ _ e) y) y'
-  ) ->
-  forall x,
-    Acc leA x ->
-    forall y,
-      Acc (leB x) y ->
-      forall x' (e : eA x x'),
-        Acc (@dlexmod A B leA eA coe leB) (x'; coe _ _ e y).
+  forall A B (leA : A -> A -> Prop) (eA : A -> A -> Prop)
+        (coe : forall x x', eA x x' -> B x -> B x')
+        (leB : forall x : A, B x -> B x -> Prop)
+        (sym : forall x y, eA x y -> eA y x)
+        (trans : forall x y z, eA x y -> eA y z -> eA x z),
+    (forall x, well_founded (leB x)) ->
+    (forall x x' y, eA x x' -> leA y x' -> leA y x) ->
+    (forall x, exists e : eA x x, forall y, coe _ _ e y = y) ->
+    (forall x x' y e, coe x x' (sym _ _ e) (coe _ _ e y) = y) ->
+    (forall x0 x1 x2 e1 e2 y,
+      coe _ _ (trans x0 x1 x2 e1 e2) y =
+      coe _ _ e2 (coe _ _ e1 y)
+    ) ->
+    (forall x x' e y y',
+      leB _ y (coe x x' e y') ->
+      leB _ (coe _ _ (sym _ _ e) y) y'
+    ) ->
+    forall x,
+      Acc leA x ->
+      forall y,
+        Acc (leB x) y ->
+        forall x' (e : eA x x'),
+          Acc (@dlexmod A B leA eA coe leB) (x'; coe _ _ e y).
 Proof.
   intros A B leA eA coe leB sym trans hw hA hcoe coesym coetrans lesym.
   induction 1 as [x hx ih1].
@@ -227,6 +188,35 @@ Proof.
     rewrite coetrans.
     eapply lesym.
     assumption.
+Qed.
+
+Lemma dlexmod_Acc :
+  forall A B (leA : A -> A -> Prop) (eA : A -> A -> Prop)
+    (coe : forall x x', eA x x' -> B x -> B x')
+    (leB : forall x : A, B x -> B x -> Prop)
+    (sym : forall x y, eA x y -> eA y x)
+    (trans : forall x y z, eA x y -> eA y z -> eA x z),
+    (forall x, well_founded (leB x)) ->
+    (forall x x' y, eA x x' -> leA y x' -> leA y x) ->
+    (forall x, exists e : eA x x, forall y, coe _ _ e y = y) ->
+    (forall x x' y e, coe x x' (sym _ _ e) (coe _ _ e y) = y) ->
+    (forall x0 x1 x2 e1 e2 y,
+      coe _ _ (trans x0 x1 x2 e1 e2) y =
+      coe _ _ e2 (coe _ _ e1 y)
+    ) ->
+    (forall x x' e y y',
+      leB _ y (coe x x' e y') ->
+      leB _ (coe _ _ (sym _ _ e) y) y'
+    ) ->
+    forall x y,
+      Acc leA x ->
+      Acc (@dlexmod A B leA eA coe leB) (x ; y).
+Proof.
+  intros A B leA eA coe leB sym trans hB ? hcoe ? ? ? x y h.
+  specialize (hcoe x) as h'. destruct h' as [e he].
+  rewrite <- (he y).
+  eapply acc_dlexmod. all: eauto.
+  apply hB.
 Qed.
 
 Section Lemmata.

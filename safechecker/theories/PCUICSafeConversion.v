@@ -246,7 +246,7 @@ Section Conversion.
 
   (* Alternative definition of R_aux, to replace it eventually *)
   (* Definition R_aux' Γ :=
-    t ⊨ cored' Σ Γ / eq_term ; ? ⨶ @posR t ⊗ ... *)
+    t ⊨ cored' Σ Γ / eq_term Σ ; ? ⨶ @posR t ⊗ ... *)
   (* Several things:
      - We need to show valid_pos is preserved by eq_term
      - We need to use eq_term for cored' and not just upto_names

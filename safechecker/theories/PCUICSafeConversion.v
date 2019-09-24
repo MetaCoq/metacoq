@@ -244,6 +244,10 @@ Section Conversion.
     eapply H0. all: assumption.
   Qed.
 
+  (* Can be generalised *)
+  Definition eq_term_pos {u v} (e : eq_term Σ u v) (p : pos u) : pos v :=
+    exist (` p) (eq_term_valid_pos (proj2_sig p) e).
+
   (* Alternative definition of R_aux, to replace it eventually *)
   (* Definition R_aux' Γ :=
     t ⊨ cored' Σ Γ / eq_term Σ ; ? ⨶ @posR t ⊗ ... *)

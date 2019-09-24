@@ -87,7 +87,7 @@ Definition dprod_r na A B (p : pos B) : pos (tProd na A B) :=
 Definition dlet_in na A b t (p : pos t) : pos (tLetIn na A b t) :=
   exist (let_in :: ` p) (proj2_sig p).
 
-Lemma eq_term_valid_pos :
+Lemma eq_term_upto_valid_pos :
   forall {u v p Re Rle},
     validpos u p ->
     eq_term_upto_univ Re Rle u v ->
@@ -101,6 +101,16 @@ Proof.
       dependent destruction e ; simpl ;
       eapply ih ; eauto
     ].
+Qed.
+
+Lemma eq_term_valid_pos :
+  forall `{cf : checker_flags} {G u v p},
+    validpos u p ->
+    eq_term G u v ->
+    validpos v p.
+Proof.
+  intros cf G u v p vp e.
+  eapply eq_term_upto_valid_pos. all: eauto.
 Qed.
 
 Inductive positionR : position -> position -> Prop :=

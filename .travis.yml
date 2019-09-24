@@ -5,14 +5,12 @@ cache:
   apt: true
   directories:
   - $HOME/.opam
+  - $HOME/bin
 
 addons:
   apt:
     sources:
     - avsm
-    packages:
-    - opam
-    - aspcud
 
 env:
   global:
@@ -24,11 +22,15 @@ env:
   - EQUATIONS_VER="1.2~beta2+8.8"
 
 install:
+- curl -sL https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh > install.sh
+- export PATH=$HOME/bin:$PATH
+- which opam || (rm -rf $HOME/.opam; echo $HOME/bin | sudo sh install.sh --no-backup; opam init --disable-sandboxing -j ${NJOBS} --compiler=${COMPILER} -n -y)
+- opam --version
+- opam update
 - opam init -j ${NJOBS} -n -y --compiler=$COMPILER
 - opam switch set ${COMPILER}
 - eval $(opam config env)
 - opam config list
-- opam update
 - opam repo add coq-released https://coq.inria.fr/opam/released || echo "coq-released registered"
 - opam install -j ${NJOBS} -y camlp5.${CAMLP5_VER} ocamlfind.${FINDLIB_VER} coq.${COQ_VER} coq-equations.${EQUATIONS_VER}
 - opam list

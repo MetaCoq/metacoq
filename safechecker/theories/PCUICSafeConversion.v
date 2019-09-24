@@ -318,7 +318,41 @@ Section Conversion.
     unshelve eapply dlexmod_Acc.
     - intros x y [e]. constructor. eapply eq_term_sym. assumption.
     - intros x y z [e1] [e2]. constructor. eapply eq_term_trans. all: eauto.
-    - admit.
+    - intro u. eapply Subterm.wf_lexprod.
+      + intro. eapply posR_Acc.
+      + intros [w' q'].
+        unshelve eapply dlexmod_Acc.
+        * intros x y [e]. constructor. eapply eq_term_sym. assumption.
+        * intros x y z [e1] [e2]. constructor. eapply eq_term_trans. all: eauto.
+        * intros [t' h']. eapply Subterm.wf_lexprod.
+          -- intro. eapply posR_Acc.
+          -- intro. eapply stateR_Acc.
+        * intros x x' y [e] [y' [x'' [r [[e1] [e2]]]]].
+          eexists _,_. intuition eauto.
+          -- constructor. assumption.
+          -- constructor. eapply eq_term_trans. all: eauto.
+        * intros x. exists (sq (eq_term_refl _ _)). intros [[q'' h] ?].
+          unfold R_aux'_obligations_obligation_2.
+          simpl. f_equal. f_equal.
+          eapply uip.
+        * intros x x' [[q'' h] ?] [e].
+          unfold R_aux'_obligations_obligation_2.
+          simpl. f_equal. f_equal.
+          eapply uip.
+        * intros x y z e1 e2 [[q'' h] ?].
+          unfold R_aux'_obligations_obligation_2.
+          simpl. f_equal. f_equal.
+          eapply uip.
+        * intros [t1 ht1] [t2 ht2] [e] [[q1 hq1] s1] [[q2 hq2] s2] h.
+          simpl in *.
+          dependent destruction h.
+          -- left. unfold posR in *. simpl in *. assumption.
+          -- match goal with
+             | |- context [ exist q1 ?hq1 ] =>
+               assert (ee : hq1 = hq2) by eapply uip
+             end.
+            rewrite ee. right. clear ee. assumption.
+        * eapply wcored_wf.
     - intros x x' y [e] [y' [x'' [r [[e1] [e2]]]]].
       eexists _,_. intuition eauto.
       + constructor. assumption.
@@ -356,7 +390,7 @@ Section Conversion.
              simpl in *. assumption.
           -- right. assumption.
     - eapply normalisation_upto. all: assumption.
-  Abort.
+  Qed.
 
   Definition R_aux Γ :=
     t ⊩ cored' Σ Γ ⨶ @posR t ⊗ w ⊩ wcored Γ ⨶ @posR (` w) ⊗ stateR.

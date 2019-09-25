@@ -244,8 +244,139 @@ Section Conversion.
     eapply H0. all: assumption.
   Qed.
 
-  Definition R_aux Γ :=
-    t ⊩ cored' Σ Γ ⨶ @posR t ⊗ w ⊩ wcored Γ ⨶ @posR (` w) ⊗ stateR.
+  Definition eqt u v :=
+    ∥ eq_term Σ u v ∥.
+
+  Lemma eq_term_valid_pos :
+    forall {u v p},
+      validpos u p ->
+      eqt u v ->
+      validpos v p.
+  Proof.
+    intros u v p vp [e].
+    eapply eq_term_valid_pos. all: eauto.
+  Qed.
+
+  (* Can be generalised *)
+  (* Definition eq_term_pos u v (e : eqt u v) (p : pos u) : pos v :=
+    exist (` p) (eq_term_valid_pos (proj2_sig p) e). *)
+
+  Definition weqt {Γ} (u v : wterm Γ) :=
+    eqt (` u) (` v).
+
+  (* Definition weq_term_pos {Γ} (u v : wterm Γ) (e : weqt u v) (p : pos u) *)
+
+  Equations R_aux (Γ : context) :
+    (∑ t : term, pos t × (∑ w : wterm Γ, pos (` w) × state)) ->
+    (∑ t : term, pos t × (∑ w : wterm Γ, pos (` w) × state)) -> Prop :=
+    R_aux Γ :=
+      t ⊨ eqt \ cored' Σ Γ by _ ⨷
+      @posR t ⊗
+      w ⊨ weqt \ wcored Γ by _ ⨷
+      @posR (` w) ⊗
+      stateR.
+  Next Obligation.
+    split. 2: intuition eauto.
+    exists (` p).
+    destruct p as [p hp].
+    eapply eq_term_valid_pos. all: eauto.
+  Defined.
+  Next Obligation.
+    split. 2: assumption.
+    exists (` p).
+    destruct x as [u hu], x' as [v hv].
+    destruct p as [p hp].
+    simpl in *.
+    eapply eq_term_valid_pos. all: eauto.
+  Defined.
+
+  (* Transparent R_aux. *)
+
+  Derive Signature for Subterm.lexprod.
+
+  Lemma R_aux_Acc :
+    forall Γ t p w q s,
+      wellformed Σ Γ t ->
+      Acc (R_aux Γ) (t ; (p, (w ; (q, s)))).
+  Proof.
+    intros Γ t p w q s ht.
+    rewrite R_aux_equation_1.
+    unshelve eapply dlexmod_Acc.
+    - intros x y [e]. constructor. eapply eq_term_sym. assumption.
+    - intros x y z [e1] [e2]. constructor. eapply eq_term_trans. all: eauto.
+    - intro u. eapply Subterm.wf_lexprod.
+      + intro. eapply posR_Acc.
+      + intros [w' q'].
+        unshelve eapply dlexmod_Acc.
+        * intros x y [e]. constructor. eapply eq_term_sym. assumption.
+        * intros x y z [e1] [e2]. constructor. eapply eq_term_trans. all: eauto.
+        * intros [t' h']. eapply Subterm.wf_lexprod.
+          -- intro. eapply posR_Acc.
+          -- intro. eapply stateR_Acc.
+        * intros x x' y [e] [y' [x'' [r [[e1] [e2]]]]].
+          eexists _,_. intuition eauto.
+          -- constructor. assumption.
+          -- constructor. eapply eq_term_trans. all: eauto.
+        * intros x. exists (sq (eq_term_refl _ _)). intros [[q'' h] ?].
+          unfold R_aux_obligations_obligation_2.
+          simpl. f_equal. f_equal.
+          eapply uip.
+        * intros x x' [[q'' h] ?] [e].
+          unfold R_aux_obligations_obligation_2.
+          simpl. f_equal. f_equal.
+          eapply uip.
+        * intros x y z e1 e2 [[q'' h] ?].
+          unfold R_aux_obligations_obligation_2.
+          simpl. f_equal. f_equal.
+          eapply uip.
+        * intros [t1 ht1] [t2 ht2] [e] [[q1 hq1] s1] [[q2 hq2] s2] h.
+          simpl in *.
+          dependent destruction h.
+          -- left. unfold posR in *. simpl in *. assumption.
+          -- match goal with
+             | |- context [ exist q1 ?hq1 ] =>
+               assert (ee : hq1 = hq2) by eapply uip
+             end.
+            rewrite ee. right. clear ee. assumption.
+        * eapply wcored_wf.
+    - intros x x' y [e] [y' [x'' [r [[e1] [e2]]]]].
+      eexists _,_. intuition eauto.
+      + constructor. assumption.
+      + constructor. eapply eq_term_trans. all: eauto.
+    - intros x. exists (sq (eq_term_refl _ _)). intros [[q' h] [? [? ?]]].
+      unfold R_aux_obligations_obligation_1.
+      simpl. f_equal. f_equal.
+      eapply uip.
+    - intros x x' [[q' h] [? [? ?]]] [e].
+      unfold R_aux_obligations_obligation_1.
+      simpl. f_equal. f_equal.
+      eapply uip.
+    - intros x y z e1 e2 [[q' h] [? [? ?]]].
+      unfold R_aux_obligations_obligation_1.
+      simpl. f_equal. f_equal.
+      eapply uip.
+    - intros x x' [e]
+             [[p1 hp1] [[u hu] [[q1 hq1] s1]]]
+             [[p2 hp2] [[v hv] [[q2 hq2] s2]]] hl.
+      simpl in *.
+      dependent destruction hl.
+      + left. unfold posR in *.
+        simpl in *.
+        assumption.
+      + match goal with
+        | |- context [ exist p1 ?hp1 ] =>
+          assert (ee : hp1 = hp2) by eapply uip
+        end.
+        rewrite ee. right. clear ee.
+        dependent destruction H.
+        * left. assumption.
+        * unshelve econstructor 2. 1: assumption.
+          dependent destruction H.
+          -- left. unfold posR in *.
+             simpl in *. assumption.
+          -- right. assumption.
+    - eapply normalisation_upto. all: assumption.
+  Qed.
 
   Notation pzt u := (zipc (tm u) (stk1 u)) (only parsing).
   Notation pps1 u := (stack_pos (tm u) (stk1 u)) (only parsing).
@@ -255,29 +386,8 @@ Section Conversion.
   Notation obpack u :=
     (pzt u ; (pps1 u, (pwt u ; (pps2 u, st u)))) (only parsing).
 
-  Definition R_nl Γ (u v : pack Γ) :=
-    R_aux Γ (obpack u) (obpack v).
-
   Definition R Γ (u v : pack Γ) :=
-    R_nl (nlctx Γ) (nl_pack u) (nl_pack v).
-
-  Lemma R_aux_Acc :
-    forall Γ t p w q s,
-      wellformed Σ Γ t ->
-      Acc (R_aux Γ) (t ; (p, (w ; (q, s)))).
-  Proof.
-    intros Γ t p w q s ht.
-    eapply dlexprod_Acc.
-    - intro u. eapply Subterm.wf_lexprod.
-      + intro. eapply posR_Acc.
-      + intros [w' q']. eapply dlexprod_Acc.
-        * intros [t' h']. eapply Subterm.wf_lexprod.
-          -- intro. eapply posR_Acc.
-          -- intro. eapply stateR_Acc.
-        * eapply wcored_wf.
-    - destruct hΣ as [hΣ'].
-      eapply normalisation_upto. all: assumption.
-  Qed.
+    R_aux Γ (obpack u) (obpack v).
 
   Lemma R_Acc :
     forall Γ u,
@@ -285,12 +395,8 @@ Section Conversion.
       Acc (R Γ) u.
   Proof.
     intros Γ u h.
-    eapply Acc_fun with (f := fun x => obpack (nl_pack x)).
-    apply R_aux_Acc.
-    rewrite <- nl_zipc.
-    eapply wellformed_nlctx; tas.
-    eapply wellformed_alpha ; try eassumption.
-    eapply eq_term_upto_univ_tm_nl. all: auto.
+    eapply Acc_fun with (f := fun x => obpack x).
+    apply R_aux_Acc. assumption.
   Qed.
 
   Lemma R_cored :
@@ -299,100 +405,110 @@ Section Conversion.
       R Γ p1 p2.
   Proof.
     intros Γ p1 p2 h.
-    left. rewrite <- 2!nl_zipc.
-    eapply cored_cored'_nl. assumption.
+    left. eapply cored_cored'. assumption.
   Qed.
 
   Lemma R_aux_positionR :
     forall Γ t1 t2 (p1 : pos t1) (p2 : pos t2) s1 s2,
-      t1 = t2 ->
+      eq_term Σ t1 t2 ->
       positionR (` p1) (` p2) ->
       R_aux Γ (t1 ; (p1, s1)) (t2 ; (p2, s2)).
   Proof.
-    intros Γ t1 t2 p1 p2 s1 s2 e h.
-    subst. right. left. assumption.
+    intros Γ t1 t2 p1 p2 [? [? ?]] s2 e h.
+    unshelve eright.
+    - constructor. assumption.
+    - left. unfold posR. simpl. assumption.
   Qed.
 
   Lemma R_positionR :
     forall Γ p1 p2,
-      nl (pzt p1) = nl (pzt p2) ->
+      eq_term Σ (pzt p1) (pzt p2) ->
       positionR (` (pps1 p1)) (` (pps1 p2)) ->
       R Γ p1 p2.
   Proof.
     intros Γ [s1 t1 π1 ρ1 t1' h1] [s2 t2 π2 ρ2 t2' h2] e h. simpl in *.
     eapply R_aux_positionR ; simpl.
-    - rewrite <- 2!nl_zipc. assumption.
-    - rewrite 2!stack_position_nlstack.
-      assumption.
+    - assumption.
+    - assumption.
   Qed.
 
   Lemma R_aux_cored2 :
     forall Γ t1 t2 (p1 : pos t1) (p2 : pos t2) w1 w2 q1 q2 s1 s2,
-      t1 = t2 ->
+      eq_term Σ t1 t2 ->
       ` p1 = ` p2 ->
       cored' Σ Γ (` w1) (` w2) ->
       R_aux Γ (t1 ; (p1, (w1 ; (q1, s1)))) (t2 ; (p2, (w2 ; (q2, s2)))).
   Proof.
     intros Γ t1 t2 [p1 hp1] [p2 hp2] [t1' h1'] [t2' h2'] q1 q2 s1 s2 e1 e2 h.
     cbn in e2. cbn in h. subst.
-    pose proof (uip hp1 hp2). subst.
-    right. right. left. assumption.
+    unshelve eright.
+    - constructor. assumption.
+    - unfold R_aux_obligations_obligation_1. simpl.
+      match goal with
+      | |- context [ exist p2 ?hp1 ] =>
+        assert (e : hp1 = hp2) by eapply uip
+      end.
+      rewrite e.
+      right.
+      left. assumption.
   Qed.
 
   Lemma R_cored2 :
     forall Γ p1 p2,
-      nl (pzt p1) = nl (pzt p2) ->
+      eq_term Σ (pzt p1) (pzt p2) ->
       ` (pps1 p1) = ` (pps1 p2) ->
       cored Σ Γ (` (pwt p1)) (` (pwt p2)) ->
       R Γ p1 p2.
   Proof.
     intros Γ [s1 t1 π1 ρ1 t1' h1] [s2 t2 π2 ρ2 t2' h2] e1 e2 h. simpl in *.
-    eapply R_aux_cored2 ; simpl.
-    - rewrite <- 2!nl_zipc. assumption.
-    - rewrite 2!stack_position_nlstack. assumption.
-    - destruct s1, s2 ; simpl.
-      all: rewrite <- 2!nl_zipc.
-      all: eapply cored_cored'_nl ; auto.
+    eapply R_aux_cored2. all: simpl. all: auto.
+    destruct s1, s2.
+    all: eapply cored_cored'.
+    all: assumption.
   Qed.
 
   Lemma R_aux_positionR2 :
     forall Γ t1 t2 (p1 : pos t1) (p2 : pos t2) w1 w2 q1 q2 s1 s2,
-      t1 = t2 ->
+      eq_term Σ t1 t2 ->
       ` p1 = ` p2 ->
-      ` w1 = ` w2 ->
+      eq_term Σ (` w1) (` w2) ->
       positionR (` q1) (` q2) ->
       R_aux Γ (t1 ; (p1, (w1 ; (q1, s1)))) (t2 ; (p2, (w2 ; (q2, s2)))).
   Proof.
     intros Γ t1 t2 [p1 hp1] [p2 hp2] [t1' h1'] [t2' h2'] q1 q2 s1 s2 e1 e2 e3 h.
     cbn in e2. cbn in e3. subst.
-    pose proof (uip hp1 hp2). subst.
-    pose proof (wellformed_irr h1' h2'). subst.
-    right. right. right. left. assumption.
+    unshelve eright.
+    - constructor. assumption.
+    - unfold R_aux_obligations_obligation_1. simpl.
+      match goal with
+      | |- context [ exist p2 ?hp1 ] =>
+        assert (e : hp1 = hp2) by eapply uip
+      end.
+      rewrite e.
+      right.
+      unshelve eright.
+      + constructor. assumption.
+      + left. unfold posR. simpl. assumption.
   Qed.
 
   Lemma R_positionR2 :
     forall Γ p1 p2,
-      nl (pzt p1) = nl (pzt p2) ->
+      eq_term Σ (pzt p1) (pzt p2) ->
       ` (pps1 p1) = ` (pps1 p2) ->
-      nl (` (pwt p1)) = nl (` (pwt p2)) ->
+      eq_term Σ (` (pwt p1)) (` (pwt p2)) ->
       positionR (` (pps2 p1)) (` (pps2 p2)) ->
       R Γ p1 p2.
   Proof.
     intros Γ [s1 t1 π1 ρ1 t1' h1] [s2 t2 π2 ρ2 t2' h2] e1 e2 e3 h.
     simpl in *.
-    eapply R_aux_positionR2 ; simpl.
-    - rewrite <- 2!nl_zipc. assumption.
-    - rewrite 2!stack_position_nlstack. assumption.
-    - destruct s1, s2 ; simpl.
-      all: rewrite <- 2!nl_zipc. all: assumption.
-    - rewrite 2!stack_position_nlstack. assumption.
+    eapply R_aux_positionR2. all: simpl. all: auto.
   Qed.
 
   Lemma R_aux_stateR :
     forall Γ t1 t2 (p1 : pos t1) (p2 : pos t2) w1 w2 q1 q2 s1 s2 ,
-      t1 = t2 ->
+      eq_term Σ t1 t2 ->
       ` p1 = ` p2 ->
-      ` w1 = ` w2 ->
+      eq_term Σ (` w1) (` w2) ->
       ` q1 = ` q2 ->
       stateR s1 s2 ->
       R_aux Γ (t1 ; (p1, (w1 ; (q1, s1)))) (t2 ; (p2, (w2 ; (q2, s2)))).
@@ -400,30 +516,182 @@ Section Conversion.
     intros Γ t1 t2 [p1 hp1] [p2 hp2] [t1' h1'] [t2' h2'] [q1 hq1] [q2 hq2] s1 s2
            e1 e2 e3 e4 h.
     cbn in e2. cbn in e3. cbn in e4. subst.
-    pose proof (uip hp1 hp2). subst.
-    pose proof (wellformed_irr h1' h2'). subst.
-    pose proof (uip hq1 hq2). subst.
-    right. right. right. right. assumption.
+    unshelve eright.
+    - constructor. assumption.
+    - unfold R_aux_obligations_obligation_1. simpl.
+      match goal with
+      | |- context [ exist p2 ?hp1 ] =>
+        assert (e : hp1 = hp2) by eapply uip
+      end.
+      rewrite e.
+      right.
+      unshelve eright.
+      + constructor. assumption.
+      + unfold R_aux_obligations_obligation_2. simpl.
+        match goal with
+        | |- context [ exist q2 ?hq1 ] =>
+          assert (e' : hq1 = hq2) by eapply uip
+        end.
+        rewrite e'.
+        right. assumption.
   Qed.
 
   Lemma R_stateR :
     forall Γ p1 p2,
-      nl (pzt p1) = nl (pzt p2) ->
+      eq_term Σ (pzt p1) (pzt p2) ->
       ` (pps1 p1) = ` (pps1 p2) ->
-      nl (` (pwt p1)) = nl (` (pwt p2)) ->
+      eq_term Σ (` (pwt p1)) (` (pwt p2)) ->
       ` (pps2 p1) = ` (pps2 p2) ->
       stateR (st p1) (st p2) ->
       R Γ p1 p2.
   Proof.
     intros Γ [s1 t1 π1 ρ1 t1' h1] [s2 t2 π2 ρ2 t2' h2] e1 e2 e3 e4 h.
     simpl in *.
-    eapply R_aux_stateR ; simpl.
-    - rewrite <- 2!nl_zipc. assumption.
-    - rewrite 2!stack_position_nlstack. assumption.
-    - destruct s1, s2 ; simpl.
-      all: rewrite <- 2!nl_zipc. all: assumption.
-    - rewrite 2!stack_position_nlstack. assumption.
-    - induction h ; constructor.
+    eapply R_aux_stateR. all: simpl. all: auto.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma eqb_term_upto_univ_refl :
+    forall (eqb leqb : universe -> universe -> bool) t,
+      (forall u, eqb u u) ->
+      (forall u, leqb u u) ->
+      eqb_term_upto_univ eqb leqb t t.
+  Admitted.
+
+  Definition leqb_term :=
+    eqb_term_upto_univ (try_eqb_universe G) (try_leqb_universe G).
+
+  Definition eqb_term :=
+    eqb_term_upto_univ (try_eqb_universe G) (try_eqb_universe G).
+
+  Lemma leqb_term_spec t u :
+    leqb_term t u ->
+    leq_term (global_ext_constraints Σ) t u.
+  Proof.
+    pose proof hΣ'.
+    apply eqb_term_upto_univ_impl.
+    intros u1 u2; eapply (try_eqb_universe_spec G (global_ext_uctx Σ)); tas.
+    now eapply wf_ext_global_uctx_invariants.
+    now eapply global_ext_uctx_consistent.
+    intros u1 u2; eapply (try_leqb_universe_spec G (global_ext_uctx Σ)); tas.
+    now eapply wf_ext_global_uctx_invariants.
+    now eapply global_ext_uctx_consistent.
+  Qed.
+
+  Lemma eqb_term_spec t u :
+    eqb_term t u ->
+    eq_term (global_ext_constraints Σ) t u.
+  Proof.
+    pose proof hΣ'.
+    apply eqb_term_upto_univ_impl.
+    intros u1 u2; eapply (try_eqb_universe_spec G (global_ext_uctx Σ)); tas.
+    now eapply wf_ext_global_uctx_invariants.
+    now eapply global_ext_uctx_consistent.
+    intros u1 u2; eapply (try_eqb_universe_spec G (global_ext_uctx Σ)); tas.
+    now eapply wf_ext_global_uctx_invariants.
+    now eapply global_ext_uctx_consistent.
+  Qed.
+
+  Lemma leqb_term_refl :
+    forall t, leqb_term t t.
+  Proof.
+    intro t. eapply eqb_term_upto_univ_refl.
+  Admitted.
+
+  Lemma eqb_term_refl :
+    forall t, eqb_term t t.
+  Admitted.
+
+  Fixpoint eqb_ctx (Γ Δ : context) : bool :=
+    match Γ, Δ with
+    | [], [] => true
+    | {| decl_name := na1 ; decl_body := None ; decl_type := t1 |} :: Γ,
+      {| decl_name := na2 ; decl_body := None ; decl_type := t2 |} :: Δ =>
+      eqb_term t1 t2 && eqb_ctx Γ Δ
+    | {| decl_name := na1 ; decl_body := Some b1 ; decl_type := t1 |} :: Γ,
+      {| decl_name := na2 ; decl_body := Some b2 ; decl_type := t2 |} :: Δ =>
+      eqb_term b1 b2 && eqb_term t1 t2 && eqb_ctx Γ Δ
+    | _, _ => false
+    end.
+
+  Lemma eqb_ctx_spec :
+    forall Γ Δ,
+      eqb_ctx Γ Δ ->
+      eq_context_upto (eq_universe (global_ext_constraints Σ)) Γ Δ.
+  Proof.
+    intros Γ Δ h.
+    induction Γ as [| [na [b|] A] Γ ih ] in Δ, h |- *.
+    all: destruct Δ as [| [na' [b'|] A'] Δ].
+    all: try discriminate.
+    - constructor.
+    - simpl in h. apply andP in h as [h h3]. apply andP in h as [h1 h2].
+      constructor.
+      + eapply eqb_term_spec. assumption.
+      + eapply eqb_term_spec. assumption.
+      + eapply ih. assumption.
+    - simpl in h. apply andP in h as [h1 h2].
+      constructor.
+      + eapply eqb_term_spec. assumption.
+      + eapply ih. assumption.
+  Qed.
+
+  Definition eqb_term_stack t1 π1 t2 π2 :=
+    eqb_ctx (stack_context π1) (stack_context π2) &&
+    eqb_term (zipp t1 π1) (zipp t2 π2).
+
+  Lemma eqb_term_stack_spec :
+    forall Γ t1 π1 t2 π2,
+      eqb_term_stack t1 π1 t2 π2 ->
+      eq_context_upto (eq_universe (global_ext_constraints Σ))
+                      (Γ ,,, stack_context π1)
+                      (Γ ,,, stack_context π2) ×
+      eq_term (global_ext_constraints Σ) (zipp t1 π1) (zipp t2 π2).
+  Proof.
+    intros Γ t1 π1 t2 π2 h.
+    apply andP in h as [h1 h2].
+    split.
+    - eapply eq_context_upto_cat.
+      + eapply eq_context_upto_refl. intro. apply eq_universe_refl.
+      + eapply eqb_ctx_spec. assumption.
+    - eapply eqb_term_spec. assumption.
+  Qed.
+
+  Definition leqb_term_stack t1 π1 t2 π2 :=
+    eqb_ctx (stack_context π1) (stack_context π2) &&
+    leqb_term (zipp t1 π1) (zipp t2 π2).
+
+  Definition eqb_termp leq u v :=
+    match leq with
+    | Conv => eqb_term u v
+    | Cumul => leqb_term u v
+    end.
+
+  Lemma eqb_termp_spec :
+    forall leq u v Γ,
+      eqb_termp leq u v ->
+      conv leq Σ Γ u v.
+  Proof.
+    intros leq u v Γ e.
+    destruct leq.
+    - simpl. constructor. constructor. eapply eqb_term_spec. assumption.
+    - simpl. constructor. constructor. eapply leqb_term_spec. assumption.
+  Qed.
+
+  Lemma leqb_term_stack_spec :
+    forall Γ t1 π1 t2 π2,
+      leqb_term_stack t1 π1 t2 π2 ->
+      eq_context_upto (eq_universe (global_ext_constraints Σ))
+                      (Γ ,,, stack_context π1)
+                      (Γ ,,, stack_context π2) ×
+      leq_term (global_ext_constraints Σ) (zipp t1 π1) (zipp t2 π2).
+  Proof.
+    intros Γ t1 π1 t2 π2 h.
+    apply andP in h as [h1 h2].
+    split.
+    - eapply eq_context_upto_cat.
+      + eapply eq_context_upto_refl. intro. apply eq_universe_refl.
+      + eapply eqb_ctx_spec. assumption.
+    - eapply leqb_term_spec. assumption.
   Qed.
 
   Lemma zwts :
@@ -438,11 +706,6 @@ Section Conversion.
   Notation conv_stack_ctx Γ π1 π2 :=
     (∥ conv_context Σ (Γ ,,, stack_context π1) (Γ ,,, stack_context π2) ∥).
 
-  (* Notation conv_term leq Γ t π t' π' :=
-    (conv_stack_ctx Γ π π' /\
-     conv leq Σ (Γ ,,, stack_context π) (zipp t π) (zipp t' π'))
-      (only parsing). *)
-
   Notation conv_term leq Γ t π t' π' :=
     (conv leq Σ (Γ ,,, stack_context π) (zipp t π) (zipp t' π'))
       (only parsing).
@@ -450,10 +713,6 @@ Section Conversion.
   Notation alt_conv_term Γ t π π' :=
     (∥ Σ ;;; Γ ,,, stack_context π |- zipp t π == zipp t π' ∥)
       (only parsing).
-
-  (* Notation alt_conv_term Γ t π π' :=
-    (conv_stack_ctx Γ π π' /\ alt_conv_term' Γ t π π')
-      (only parsing). *)
 
   (* Definition Ret s Γ t π π' := *)
   (*   match s with *)
@@ -1237,6 +1496,36 @@ Section Conversion.
     eapply red_zipp. eapply red_const. eassumption.
   Qed.
 
+  (* TODO MOVE *)
+  Definition eqb_universe_instance u v :=
+    forallb2 (try_eqb_universe G) (map Universe.make u) (map Universe.make v).
+
+  (* TODO MOVE *)
+  Lemma eqb_universe_instance_spec :
+    forall u v,
+      eqb_universe_instance u v ->
+      R_universe_instance (eq_universe (global_ext_constraints Σ)) u v.
+  Proof.
+    intros u v e.
+    unfold eqb_universe_instance in e.
+    eapply forallb2_All2 in e.
+    eapply All2_impl. 1: eassumption.
+    intros. eapply (try_eqb_universe_spec G (global_ext_uctx Σ)).
+    all: auto.
+    - eapply wf_ext_global_uctx_invariants.
+      eapply hΣ'.
+    - eapply global_ext_uctx_consistent.
+      eapply hΣ'.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma wellformed_eq_term :
+    forall Γ u v,
+      wellformed Σ Γ u ->
+      eq_term Σ u v ->
+      wellformed Σ Γ v.
+  Admitted.
+
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
             (t2 : term) (π2 : stack) (h2 : wtp Γ t2 π2)
@@ -1250,8 +1539,8 @@ Section Conversion.
       False_rect _ _ ;
 
     | prog_view_Const c u c' u' with eq_dec c c' := {
-      | left eq1 with eq_dec u u' := {
-        | left eq2 with isconv_args_raw (tConst c u) π1 π2 aux := {
+      | left eq1 with inspect (eqb_universe_instance u u') := {
+        | @exist true eq2 with isconv_args_raw (tConst c u) π1 π2 aux := {
           | @exist true h := yes ;
           (* Unfold both constants at once *)
           | @exist false _ with inspect (lookup_env Σ c) := {
@@ -1263,7 +1552,7 @@ Section Conversion.
             }
           } ;
         (* If universes are different, we unfold one of the constants *)
-        | right _ := unfold_constants Γ leq c u π1 h1 c' u' π2 h2 hx aux
+        | @exist false _ := unfold_constants Γ leq c u π1 h1 c' u' π2 h2 hx aux
         } ;
       (* If the two constants are different, we unfold one of them *)
       | right _ := unfold_constants Γ leq c u π1 h1 c' u' π2 h2 hx aux
@@ -1289,11 +1578,11 @@ Section Conversion.
       } ;
 
     | prog_view_Case ind par p c brs ind' par' p' c' brs'
-      with inspect (nleq_term (tCase (ind, par) p c brs) (tCase (ind', par') p' c' brs')) := {
+      with inspect (eqb_term (tCase (ind, par) p c brs) (tCase (ind', par') p' c' brs')) := {
       | @exist true eq1 := isconv_args (tCase (ind, par) p c brs) π1 π2 aux ;
       | @exist false _ with inspect (reduce_term RedFlags.default Σ hΣ (Γ ,,, stack_context π1) c _) := {
         | @exist cred eq1 with inspect (reduce_term RedFlags.default Σ hΣ (Γ ,,, stack_context π2) c' _) := {
-           | @exist cred' eq2 with inspect (nleq_term cred c && nleq_term cred' c') := {
+           | @exist cred' eq2 with inspect (eqb_term cred c && eqb_term cred' c') := {
               | @exist true eq3 := no ;
               | @exist false eq3 :=
                 isconv_red leq (tCase (ind, par) p cred brs) π1
@@ -1303,13 +1592,13 @@ Section Conversion.
         }
       } ;
 
-    | prog_view_Proj p c p' c' with inspect (nleq_term (tProj p c) (tProj p' c')) := {
+    | prog_view_Proj p c p' c' with inspect (eqb_term (tProj p c) (tProj p' c')) := {
       | @exist true eq1 := isconv_args (tProj p c) π1 π2 aux ;
       | @exist false _ := no
       } ;
 
     | prog_view_Fix mfix idx mfix' idx'
-      with inspect (nleq_term (tFix mfix idx) (tFix mfix' idx')) := {
+      with inspect (eqb_term (tFix mfix idx) (tFix mfix' idx')) := {
       | @exist true eq1 := isconv_args (tFix mfix idx) π1 π2 aux ;
       | @exist false _ with inspect (unfold_one_fix Γ mfix idx π1 _) := {
         | @exist (Some (fn, θ)) eq1
@@ -1335,7 +1624,7 @@ Section Conversion.
       } ;
 
     | prog_view_CoFix mfix idx mfix' idx'
-      with inspect (nleq_term (tCoFix mfix idx) (tCoFix mfix' idx')) := {
+      with inspect (eqb_term (tCoFix mfix idx) (tCoFix mfix' idx')) := {
       | @exist true eq1 := isconv_args (tCoFix mfix idx) π1 π2 aux ;
       | @exist false _ := no
       } ;
@@ -1351,12 +1640,24 @@ Section Conversion.
 
   (* tConst *)
   Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    constructor.
+    eapply wellformed_eq_term. 1: eassumption.
+    eapply eq_term_zipc. eapply eq_term_sym.
+    constructor. eapply eqb_universe_instance_spec. auto.
   Qed.
   Next Obligation.
-    destruct h as [h]. destruct hΣ. eapply conv_conv_l. all: auto.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    all: simpl.
+    - eapply eq_term_zipc. constructor.
+      eapply eqb_universe_instance_spec. eauto.
+    - constructor.
+  Qed.
+  Next Obligation.
+    destruct h as [h]. destruct hΣ. eapply conv_conv_l. 1: auto.
+    eapply conv_alt_trans. all: try eassumption.
+    constructor.
+    eapply eq_term_zipp. constructor.
+    eapply eqb_universe_instance_spec. eauto.
   Qed.
   Next Obligation.
     eapply red_wellformed ; auto.
@@ -1365,10 +1666,17 @@ Section Conversion.
       eapply red_const. eassumption.
   Qed.
   Next Obligation.
-    eapply red_wellformed ; auto.
-    - exact h2.
-    - constructor. eapply red_zipc.
-      eapply red_const. eassumption.
+    eapply wellformed_eq_term.
+    - eapply red_wellformed ; auto.
+      + exact h2.
+      + constructor. eapply red_zipc.
+        eapply red_const. eassumption.
+    - eapply eq_term_zipc.
+      eapply eq_term_sym.
+      eapply eq_term_upto_univ_subst_instance_constr.
+      + intro. eapply eq_universe_refl.
+      + apply leq_term_SubstUnivPreserving.
+      + eapply eqb_universe_instance_spec. auto.
   Qed.
   Next Obligation.
     eapply R_cored. simpl.
@@ -1379,14 +1687,21 @@ Section Conversion.
   Next Obligation.
     destruct hΣ.
     destruct b ; auto.
-    eapply conv_trans' ; try assumption.
+    eapply conv_trans'.
+    - assumption.
     - eapply red_conv_l ; try assumption.
       eapply red_zipp.
       eapply red_const. eassumption.
     - eapply conv_trans' ; try eassumption.
-      eapply red_conv_r ; try assumption.
-      eapply red_zipp.
-      eapply red_const. eassumption.
+      eapply conv_trans'.
+      + assumption.
+      + eapply red_conv_r ; try assumption.
+        eapply red_zipp.
+        eapply red_const. eassumption.
+      + eapply conv_conv. 1: auto.
+        constructor. constructor.
+        eapply eq_term_zipp. constructor.
+        eapply eqb_universe_instance_spec. auto.
   Qed.
 
   (* tLambda *)
@@ -1486,23 +1801,19 @@ Section Conversion.
 
   (* tCase *)
   Next Obligation.
-    symmetry in eq1.
-    eapply wellformed_alpha ; [ assumption .. | exact h2 |].
-    eapply eq_term_upto_univ_sym. all: auto.
-    eapply eq_term_upto_univ_zipc. all: auto.
-    eapply elimT.
-    - eapply reflect_upto_names.
-    - assumption.
+    eapply wellformed_eq_term.
+    - exact h2.
+    - eapply eq_term_sym.
+      eapply eq_term_zipc.
+      eapply eqb_term_spec. auto.
   Qed.
   Next Obligation.
     unshelve eapply R_stateR.
-    all: try reflexivity.
-    - simpl.
-      symmetry in eq1.
-      eapply ssrbool.elimT.
-      + eapply reflect_nleq_term.
-      + eapply nleq_term_zipc. assumption.
-    - simpl. constructor.
+    all: try reflexivity. all: simpl.
+    - symmetry in eq1.
+      apply eqb_term_spec in eq1.
+      apply eq_term_zipc. assumption.
+    - constructor.
   Qed.
   Next Obligation.
     destruct hΣ as [wΣ].
@@ -1512,11 +1823,8 @@ Section Conversion.
     eapply conv_alt_trans ; try eassumption.
     eapply conv_zipp.
     constructor.
-    symmetry in eq1.
-    eapply upto_names_impl_eq_term.
-    eapply elimT.
-    - eapply reflect_upto_names.
-    - assumption.
+    eapply eqb_term_spec.
+    eauto.
   Qed.
   Next Obligation.
     destruct hΣ as [wΣ].
@@ -1581,16 +1889,9 @@ Section Conversion.
         rewrite e in eq3.
         rewrite e' in eq3.
         cbn in eq3. symmetry in eq3.
-        assert (bot : eqb_term_upto_univ eqb eqb c c && eqb_term_upto_univ eqb eqb c' c').
-        { apply andb_and. split.
-          - eapply introT.
-            + eapply reflect_upto_names.
-            + eapply eq_term_upto_univ_refl. all: intro ; reflexivity.
-          - eapply introT.
-            + eapply reflect_upto_names.
-            + eapply eq_term_upto_univ_refl. all: intro ; reflexivity.
-        }
-        rewrite bot in eq3. discriminate.
+        apply andb_false_elim in eq3 as [bot | bot].
+        all: rewrite eqb_term_refl in bot.
+        all: discriminate.
       + dependent destruction hr.
         * unshelve eapply R_cored2.
           all: try reflexivity.
@@ -1602,16 +1903,9 @@ Section Conversion.
           rewrite e in eq3.
           rewrite <- H2 in eq3.
           cbn in eq3. symmetry in eq3.
-          assert (bot : eqb_term_upto_univ eqb eqb c c && eqb_term_upto_univ eqb eqb c' c').
-          { apply andb_and. split.
-            - eapply introT.
-              + eapply reflect_upto_names.
-              + eapply eq_term_upto_univ_refl. all: intro ; reflexivity.
-            - eapply introT.
-              + eapply reflect_upto_names.
-              + eapply eq_term_upto_univ_refl. all: intro ; reflexivity.
-          }
-          rewrite bot in eq3. discriminate.
+          apply andb_false_elim in eq3 as [bot | bot].
+          all: rewrite eqb_term_refl in bot.
+          all: discriminate.
     - dependent destruction hr.
       + eapply R_cored. simpl.
         eapply cored_zipc. eapply cored_case. assumption.
@@ -1625,16 +1919,9 @@ Section Conversion.
           rewrite e' in eq3.
           rewrite <- H2 in eq3.
           cbn in eq3. symmetry in eq3.
-          assert (bot : eqb_term_upto_univ eqb eqb c c && eqb_term_upto_univ eqb eqb c' c').
-          { apply andb_and. split.
-            - eapply introT.
-              + eapply reflect_upto_names.
-              + eapply eq_term_upto_univ_refl. all: intro ; reflexivity.
-            - eapply introT.
-              + eapply reflect_upto_names.
-              + eapply eq_term_upto_univ_refl. all: intro ; reflexivity.
-          }
-          rewrite bot in eq3. discriminate.
+          apply andb_false_elim in eq3 as [bot | bot].
+          all: rewrite eqb_term_refl in bot.
+          all: discriminate.
         * dependent destruction hr.
           -- unshelve eapply R_cored2.
              all: try reflexivity.
@@ -1649,16 +1936,9 @@ Section Conversion.
              rewrite <- H4 in eq3.
              rewrite <- H5 in eq3.
              cbn in eq3. symmetry in eq3.
-             assert (bot : eqb_term_upto_univ eqb eqb c c && eqb_term_upto_univ eqb eqb c' c').
-             { apply andb_and. split.
-               - eapply introT.
-                 + eapply reflect_upto_names.
-                 + eapply eq_term_upto_univ_refl. all: intro ; reflexivity.
-               - eapply introT.
-                 + eapply reflect_upto_names.
-                 + eapply eq_term_upto_univ_refl. all: intro ; reflexivity.
-             }
-             rewrite bot in eq3. discriminate.
+             apply andb_false_elim in eq3 as [bot | bot].
+             all: rewrite eqb_term_refl in bot.
+             all: discriminate.
   Qed.
   Next Obligation.
     destruct hΣ as [wΣ].
@@ -1697,24 +1977,19 @@ Section Conversion.
 
   (* tProj *)
   Next Obligation.
-    destruct hΣ as [wΣ].
-    eapply wellformed_alpha ; try assumption.
+    eapply wellformed_eq_term.
     - exact h2.
-    - apply eq_term_upto_univ_sym ; auto.
-      eapply eq_term_upto_univ_zipc ; auto.
-      eapply elimT.
-      + eapply reflect_upto_names.
-      + symmetry. assumption.
+    - eapply eq_term_sym.
+      eapply eq_term_zipc.
+      eapply eqb_term_spec. auto.
   Qed.
   Next Obligation.
     unshelve eapply R_stateR.
     all: try reflexivity.
-    - simpl.
-      eapply ssrbool.elimT.
-      + eapply reflect_nleq_term.
-      + eapply nleq_term_zipc.
-        symmetry. assumption.
-    - simpl. constructor.
+    all: simpl.
+    - eapply eq_term_zipc.
+      eapply eqb_term_spec. eauto.
+    - constructor.
   Qed.
   Next Obligation.
     destruct hΣ as [wΣ].
@@ -1724,32 +1999,24 @@ Section Conversion.
     eapply conv_alt_trans ; try eassumption.
     eapply conv_zipp.
     constructor.
-    eapply upto_names_impl_eq_term.
-    eapply elimT.
-    - eapply reflect_upto_names.
-    - symmetry. assumption.
+    eapply eqb_term_spec. eauto.
   Qed.
 
   (* tFix *)
   Next Obligation.
-    destruct hΣ as [wΣ].
-    eapply wellformed_alpha ; try assumption.
+    eapply wellformed_eq_term.
     - exact h2.
-    - apply eq_term_upto_univ_sym ; auto.
-      eapply eq_term_upto_univ_zipc ; auto.
-      eapply elimT.
-      + eapply reflect_upto_names.
-      + symmetry. assumption.
+    - eapply eq_term_sym.
+      eapply eq_term_zipc.
+      eapply eqb_term_spec. auto.
   Qed.
   Next Obligation.
     unshelve eapply R_stateR.
     all: try reflexivity.
-    - simpl.
-      eapply ssrbool.elimT.
-      + eapply reflect_nleq_term.
-      + eapply nleq_term_zipc.
-        symmetry. assumption.
-    - simpl. constructor.
+    all: simpl.
+    - eapply eq_term_zipc.
+      eapply eqb_term_spec. eauto.
+    - constructor.
   Qed.
   Next Obligation.
     destruct hΣ as [wΣ].
@@ -1760,11 +2027,7 @@ Section Conversion.
     eapply conv_alt_trans ; try eassumption.
     eapply conv_zipp.
     constructor.
-    symmetry in eq1.
-    eapply upto_names_impl_eq_term.
-    eapply elimT.
-    - eapply reflect_upto_names.
-    - assumption.
+    eapply eqb_term_spec. eauto.
   Qed.
   Next Obligation.
     cbn. rewrite zipc_appstack. cbn.
@@ -2071,24 +2334,19 @@ Section Conversion.
 
   (* tCoFix *)
   Next Obligation.
-    destruct hΣ as [wΣ].
-    eapply wellformed_alpha ; try assumption.
+    eapply wellformed_eq_term.
     - exact h2.
-    - apply eq_term_upto_univ_sym ; auto.
-      eapply eq_term_upto_univ_zipc ; auto.
-      eapply elimT.
-      + eapply reflect_upto_names.
-      + symmetry. assumption.
+    - eapply eq_term_sym.
+      eapply eq_term_zipc.
+      eapply eqb_term_spec. auto.
   Qed.
   Next Obligation.
     unshelve eapply R_stateR.
     all: try reflexivity.
-    - simpl.
-      eapply ssrbool.elimT.
-      + eapply reflect_nleq_term.
-      + eapply nleq_term_zipc.
-        symmetry. assumption.
-    - simpl. constructor.
+    all: simpl.
+    - eapply eq_term_zipc.
+      eapply eqb_term_spec. eauto.
+    - constructor.
   Qed.
   Next Obligation.
     destruct hΣ as [wΣ].
@@ -2098,11 +2356,7 @@ Section Conversion.
     eapply conv_alt_trans ; try eassumption.
     eapply conv_zipp.
     constructor.
-    symmetry in eq1.
-    eapply upto_names_impl_eq_term.
-    eapply elimT.
-    - eapply reflect_upto_names.
-    - assumption.
+    eapply eqb_term_spec. eauto.
   Qed.
 
   (* Fallback *)
@@ -2300,8 +2554,8 @@ Section Conversion.
     pose proof (decompose_stack_eq _ _ _ (eq_sym eq1)). subst.
     instantiate (1 := h2').
     simpl in H0. destruct H0 as [eq hp].
-    unshelve eapply R_positionR ; try assumption.
-    simpl. f_equal. assumption.
+    unshelve eapply R_positionR. 2: assumption.
+    simpl. rewrite eq. reflexivity.
   Qed.
   Next Obligation.
     pose proof (decompose_stack_eq _ _ _ (eq_sym eq1)). subst.
@@ -2594,132 +2848,6 @@ Section Conversion.
     - reflexivity.
   Qed.
 
-  Definition leqb_term :=
-    eqb_term_upto_univ (try_eqb_universe G) (try_leqb_universe G).
-
-  Definition eqb_term :=
-    eqb_term_upto_univ (try_eqb_universe G) (try_eqb_universe G).
-
-  Lemma leqb_term_spec t u :
-    leqb_term t u ->
-    leq_term (global_ext_constraints Σ) t u.
-  Proof.
-    pose proof hΣ'.
-    apply eqb_term_upto_univ_impl.
-    intros u1 u2; eapply (try_eqb_universe_spec G (global_ext_uctx Σ)); tas.
-    now eapply wf_ext_global_uctx_invariants.
-    now eapply global_ext_uctx_consistent.
-    intros u1 u2; eapply (try_leqb_universe_spec G (global_ext_uctx Σ)); tas.
-    now eapply wf_ext_global_uctx_invariants.
-    now eapply global_ext_uctx_consistent.
-  Qed.
-
-  Lemma eqb_term_spec t u :
-    eqb_term t u ->
-    eq_term (global_ext_constraints Σ) t u.
-  Proof.
-    pose proof hΣ'.
-    apply eqb_term_upto_univ_impl.
-    intros u1 u2; eapply (try_eqb_universe_spec G (global_ext_uctx Σ)); tas.
-    now eapply wf_ext_global_uctx_invariants.
-    now eapply global_ext_uctx_consistent.
-    intros u1 u2; eapply (try_eqb_universe_spec G (global_ext_uctx Σ)); tas.
-    now eapply wf_ext_global_uctx_invariants.
-    now eapply global_ext_uctx_consistent.
-  Qed.
-
-  Fixpoint eqb_ctx (Γ Δ : context) : bool :=
-    match Γ, Δ with
-    | [], [] => true
-    | {| decl_name := na1 ; decl_body := None ; decl_type := t1 |} :: Γ,
-      {| decl_name := na2 ; decl_body := None ; decl_type := t2 |} :: Δ =>
-      eqb_term t1 t2 && eqb_ctx Γ Δ
-    | {| decl_name := na1 ; decl_body := Some b1 ; decl_type := t1 |} :: Γ,
-      {| decl_name := na2 ; decl_body := Some b2 ; decl_type := t2 |} :: Δ =>
-      eqb_term b1 b2 && eqb_term t1 t2 && eqb_ctx Γ Δ
-    | _, _ => false
-    end.
-
-  Lemma eqb_ctx_spec :
-    forall Γ Δ,
-      eqb_ctx Γ Δ ->
-      eq_context_upto (eq_universe (global_ext_constraints Σ)) Γ Δ.
-  Proof.
-    intros Γ Δ h.
-    induction Γ as [| [na [b|] A] Γ ih ] in Δ, h |- *.
-    all: destruct Δ as [| [na' [b'|] A'] Δ].
-    all: try discriminate.
-    - constructor.
-    - simpl in h. apply andP in h as [h h3]. apply andP in h as [h1 h2].
-      constructor.
-      + eapply eqb_term_spec. assumption.
-      + eapply eqb_term_spec. assumption.
-      + eapply ih. assumption.
-    - simpl in h. apply andP in h as [h1 h2].
-      constructor.
-      + eapply eqb_term_spec. assumption.
-      + eapply ih. assumption.
-  Qed.
-
-  Definition eqb_term_stack t1 π1 t2 π2 :=
-    eqb_ctx (stack_context π1) (stack_context π2) &&
-    eqb_term (zipp t1 π1) (zipp t2 π2).
-
-  Lemma eqb_term_stack_spec :
-    forall Γ t1 π1 t2 π2,
-      eqb_term_stack t1 π1 t2 π2 ->
-      eq_context_upto (eq_universe (global_ext_constraints Σ))
-                      (Γ ,,, stack_context π1)
-                      (Γ ,,, stack_context π2) ×
-      eq_term (global_ext_constraints Σ) (zipp t1 π1) (zipp t2 π2).
-  Proof.
-    intros Γ t1 π1 t2 π2 h.
-    apply andP in h as [h1 h2].
-    split.
-    - eapply eq_context_upto_cat.
-      + eapply eq_context_upto_refl. intro. apply eq_universe_refl.
-      + eapply eqb_ctx_spec. assumption.
-    - eapply eqb_term_spec. assumption.
-  Qed.
-
-  Definition leqb_term_stack t1 π1 t2 π2 :=
-    eqb_ctx (stack_context π1) (stack_context π2) &&
-    leqb_term (zipp t1 π1) (zipp t2 π2).
-
-  Definition eqb_termp leq u v :=
-    match leq with
-    | Conv => eqb_term u v
-    | Cumul => leqb_term u v
-    end.
-
-  Lemma eqb_termp_spec :
-    forall leq u v Γ,
-      eqb_termp leq u v ->
-      conv leq Σ Γ u v.
-  Proof.
-    intros leq u v Γ e.
-    destruct leq.
-    - simpl. constructor. constructor. eapply eqb_term_spec. assumption.
-    - simpl. constructor. constructor. eapply leqb_term_spec. assumption.
-  Qed.
-
-  Lemma leqb_term_stack_spec :
-    forall Γ t1 π1 t2 π2,
-      leqb_term_stack t1 π1 t2 π2 ->
-      eq_context_upto (eq_universe (global_ext_constraints Σ))
-                      (Γ ,,, stack_context π1)
-                      (Γ ,,, stack_context π2) ×
-      leq_term (global_ext_constraints Σ) (zipp t1 π1) (zipp t2 π2).
-  Proof.
-    intros Γ t1 π1 t2 π2 h.
-    apply andP in h as [h1 h2].
-    split.
-    - eapply eq_context_upto_cat.
-      + eapply eq_context_upto_refl. intro. apply eq_universe_refl.
-      + eapply eqb_ctx_spec. assumption.
-    - eapply leqb_term_spec. assumption.
-  Qed.
-
   Equations(noeqns) _isconv_fallback (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
             (t2 : term) (π2 : stack) (h2 : wtp Γ t2 π2)
@@ -2745,15 +2873,11 @@ Section Conversion.
           }
         } ;
       | @exist None _ with inspect leq := {
-        | @exist Conv eq1 with inspect (nleq_term t1 t2) := {
+        | @exist Conv eq1 with inspect (eqb_term t1 t2) := {
           | @exist true eq2 := isconv_args t1 π1 π2 aux ;
-          (* | @exist false _ := no *)
-          (* It should be useless, but as nleq_term might not see equal
-             universes, this might be a useful fallback.
-          *)
-          | @exist false _ := exist (eqb_term (zipp t1 π1) (zipp t2 π2)) _
+          | @exist false _ := no
           } ;
-        | @exist Cumul eq1 with inspect (nleq_term t1 t2) := {
+        | @exist Cumul eq1 with inspect (eqb_term t1 t2) := {
           | @exist true eq2 := isconv_args t1 π1 π2 aux ;
           | @exist false _ := exist (leqb_term (zipp t1 π1) (zipp t2 π2)) _
           }
@@ -3060,21 +3184,16 @@ Section Conversion.
     - eapply conv_context_sym. all: auto.
   Qed.
   Next Obligation.
-    destruct hΣ as [wΣ].
-    eapply wellformed_alpha ; try assumption.
+    eapply wellformed_eq_term.
     - exact h2.
-    - apply eq_term_upto_univ_sym ; auto.
-      eapply eq_term_upto_univ_zipc ; auto.
-      eapply elimT.
-      + eapply reflect_upto_names.
-      + symmetry. assumption.
+    - eapply eq_term_sym.
+      eapply eq_term_zipc.
+      eapply eqb_term_spec. auto.
   Qed.
   Next Obligation.
     eapply R_stateR. all: simpl. all: try reflexivity.
-    - eapply ssrbool.elimT.
-      + eapply reflect_nleq_term.
-      + eapply nleq_term_zipc.
-        symmetry. assumption.
+    - eapply eq_term_zipc.
+      eapply eqb_term_spec. eauto.
     - constructor.
   Qed.
   Next Obligation.
@@ -3087,33 +3206,19 @@ Section Conversion.
     - eassumption.
     - eapply conv_zipp.
       constructor.
-      eapply upto_names_impl_eq_term.
-      eapply elimT.
-      + eapply reflect_upto_names.
-      + eauto.
+      eapply eqb_term_spec. eauto.
   Qed.
   Next Obligation.
-    case_eq (eqb_term (zipp t1 π1) (zipp t2 π2)). 2: auto.
-    intro e.
-    apply eqb_term_spec in e.
-    constructor. constructor. assumption.
-  Qed.
-  Next Obligation.
-    destruct hΣ as [wΣ].
-    eapply wellformed_alpha ; try assumption.
+    eapply wellformed_eq_term.
     - exact h2.
-    - apply eq_term_upto_univ_sym ; auto.
-      eapply eq_term_upto_univ_zipc ; auto.
-      eapply elimT.
-      + eapply reflect_upto_names.
-      + symmetry. assumption.
+    - eapply eq_term_sym.
+      eapply eq_term_zipc.
+      eapply eqb_term_spec. auto.
   Qed.
   Next Obligation.
     eapply R_stateR. all: simpl. all: try reflexivity.
-    - eapply ssrbool.elimT.
-      + eapply reflect_nleq_term.
-      + eapply nleq_term_zipc.
-        symmetry. assumption.
+    - eapply eq_term_zipc.
+      eapply eqb_term_spec. eauto.
     - constructor.
   Qed.
   Next Obligation.
@@ -3126,10 +3231,8 @@ Section Conversion.
     - eapply conv_alt_cumul. all: eauto.
     - eapply cumul_zipp.
       constructor.
-      eapply upto_names_impl_leq_term.
-      eapply elimT.
-      + eapply reflect_upto_names.
-      + eauto.
+      eapply eq_term_leq_term.
+      eapply eqb_term_spec. eauto.
   Qed.
   Next Obligation.
     case_eq (leqb_term (zipp t1 π1) (zipp t2 π2)). 2: auto.

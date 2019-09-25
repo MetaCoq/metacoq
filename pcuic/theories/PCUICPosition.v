@@ -6,7 +6,7 @@ From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
      AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
-     PCUICReduction.
+     PCUICReduction PCUICEquality.
 From Equations Require Import Equations.
 
 Require Import Equations.Prop.DepElim.
@@ -16,7 +16,7 @@ Local Set Keyed Unification.
 Import MonadNotation.
 
 (* A choice is a local position.
-     We redefine positions in a non dependent way to make it more practical.
+   We define positions in a non dependent way to make it more practical.
  *)
 Inductive choice :=
 | app_l
@@ -86,6 +86,32 @@ Definition dprod_r na A B (p : pos B) : pos (tProd na A B) :=
 
 Definition dlet_in na A b t (p : pos t) : pos (tLetIn na A b t) :=
   exist (let_in :: ` p) (proj2_sig p).
+
+Lemma eq_term_upto_valid_pos :
+  forall {u v p Re Rle},
+    validpos u p ->
+    eq_term_upto_univ Re Rle u v ->
+    validpos v p.
+Proof.
+  intros u v p Re Rle vp e.
+  induction p as [| c p ih ] in u, v, Re, Rle, vp, e |- *.
+  - reflexivity.
+  - destruct c, u. all: try discriminate.
+    all: solve [
+      dependent destruction e ; simpl ;
+      eapply ih ; eauto
+    ].
+Qed.
+
+Lemma eq_term_valid_pos :
+  forall `{cf : checker_flags} {G u v p},
+    validpos u p ->
+    eq_term G u v ->
+    validpos v p.
+Proof.
+  intros cf G u v p vp e.
+  eapply eq_term_upto_valid_pos. all: eauto.
+Qed.
 
 Inductive positionR : position -> position -> Prop :=
 | positionR_app_lr p q : positionR (app_r :: p) (app_l :: q)

@@ -42,21 +42,49 @@ Ltac rdestruct H :=
 Definition nodelta_flags := RedFlags.mk true true true false true true.
 
 
+(* Dependent lexicographic order *)
 Inductive dlexprod {A} {B : A -> Type}
           (leA : A -> A -> Prop) (leB : forall x, B x -> B x -> Prop)
   : sigT B -> sigT B -> Prop :=
-| left_lex : forall x x' y y', leA x x' -> dlexprod leA leB (x;y) (x';y')
-| right_lex : forall x y y', leB x y y' -> dlexprod leA leB (x;y) (x;y').
+| left_lex :
+    forall x x' y y',
+      leA x x' ->
+      dlexprod leA leB (x;y) (x';y')
+
+| right_lex :
+    forall x y y',
+      leB x y y' ->
+      dlexprod leA leB (x;y) (x;y').
 
 Derive Signature for dlexprod.
 
 Definition lexprod := Subterm.lexprod.
 Arguments lexprod {_ _} _ _ _ _.
 
+(* Dependent lexicographic order modulo another relation *)
+Inductive dlexmod {A} {B : A -> Type}
+    (leA : A -> A -> Prop)
+    (eA : A -> A -> Prop)
+    (coe : forall x x', eA x x' -> B x -> B x')
+    (leB : forall x, B x -> B x -> Prop)
+  : sigT B -> sigT B -> Prop :=
+| left_dlexmod :
+    forall x x' y y',
+      leA x x' ->
+      dlexmod leA eA coe leB (x;y) (x';y')
+
+| right_dlexmod :
+    forall x x' y y' (e : eA x x'),
+      leB x' (coe _ _ e y) y' ->
+      dlexmod leA eA coe leB (x;y) (x';y').
+
 Notation "x ⊩ R1 ⨶ R2" :=
   (dlexprod R1 (fun x => R2)) (at level 20, right associativity).
 Notation "R1 ⊗ R2" :=
   (lexprod R1 R2) (at level 20, right associativity).
+
+Notation "x ⊨ e \ R1 'by' coe ⨷ R2" :=
+  (dlexmod R1 e coe (fun x => R2)) (at level 20, right associativity).
 
 Lemma acc_dlexprod :
   forall A B leA leB,
@@ -112,6 +140,84 @@ Proof.
     + right. eapply hB ; eassumption.
 Qed.
 
+Derive Signature for dlexmod.
+
+Lemma acc_dlexmod :
+  forall A B (leA : A -> A -> Prop) (eA : A -> A -> Prop)
+        (coe : forall x x', eA x x' -> B x -> B x')
+        (leB : forall x : A, B x -> B x -> Prop)
+        (sym : forall x y, eA x y -> eA y x)
+        (trans : forall x y z, eA x y -> eA y z -> eA x z),
+    (forall x, well_founded (leB x)) ->
+    (forall x x' y, eA x x' -> leA y x' -> leA y x) ->
+    (forall x, exists e : eA x x, forall y, coe _ _ e y = y) ->
+    (forall x x' y e, coe x x' (sym _ _ e) (coe _ _ e y) = y) ->
+    (forall x0 x1 x2 e1 e2 y,
+      coe _ _ (trans x0 x1 x2 e1 e2) y =
+      coe _ _ e2 (coe _ _ e1 y)
+    ) ->
+    (forall x x' e y y',
+      leB _ y (coe x x' e y') ->
+      leB _ (coe _ _ (sym _ _ e) y) y'
+    ) ->
+    forall x,
+      Acc leA x ->
+      forall y,
+        Acc (leB x) y ->
+        forall x' (e : eA x x'),
+          Acc (@dlexmod A B leA eA coe leB) (x'; coe _ _ e y).
+Proof.
+  intros A B leA eA coe leB sym trans hw hA hcoe coesym coetrans lesym.
+  induction 1 as [x hx ih1].
+  induction 1 as [y hy ih2].
+  intros x' e.
+  constructor.
+  intros [x'' y''] h. dependent destruction h.
+  - specialize (hcoe x'') as [e' he'].
+    rewrite <- (he' y'').
+    eapply ih1.
+    + eapply hA. all: eauto.
+    + apply hw.
+  - simpl in *.
+    specialize ih2 with (x' := x'').
+    set (e2 := trans _ _ _ e0 (sym _ _ e)).
+    set (e1 := sym _ _ e2).
+    replace y'' with (coe _ _ e1 (coe _ _ e2 y''))
+      by eauto using coesym.
+    eapply ih2.
+    rewrite coetrans.
+    eapply lesym.
+    assumption.
+Qed.
+
+Lemma dlexmod_Acc :
+  forall A B (leA : A -> A -> Prop) (eA : A -> A -> Prop)
+    (coe : forall x x', eA x x' -> B x -> B x')
+    (leB : forall x : A, B x -> B x -> Prop)
+    (sym : forall x y, eA x y -> eA y x)
+    (trans : forall x y z, eA x y -> eA y z -> eA x z),
+    (forall x, well_founded (leB x)) ->
+    (forall x x' y, eA x x' -> leA y x' -> leA y x) ->
+    (forall x, exists e : eA x x, forall y, coe _ _ e y = y) ->
+    (forall x x' y e, coe x x' (sym _ _ e) (coe _ _ e y) = y) ->
+    (forall x0 x1 x2 e1 e2 y,
+      coe _ _ (trans x0 x1 x2 e1 e2) y =
+      coe _ _ e2 (coe _ _ e1 y)
+    ) ->
+    (forall x x' e y y',
+      leB _ y (coe x x' e y') ->
+      leB _ (coe _ _ (sym _ _ e) y) y'
+    ) ->
+    forall x y,
+      Acc leA x ->
+      Acc (@dlexmod A B leA eA coe leB) (x ; y).
+Proof.
+  intros A B leA eA coe leB sym trans hB ? hcoe ? ? ? x y h.
+  specialize (hcoe x) as h'. destruct h' as [e he].
+  rewrite <- (he y).
+  eapply acc_dlexmod. all: eauto.
+  apply hB.
+Qed.
 
 Section Lemmata.
   Context {cf : checker_flags}.
@@ -169,6 +275,31 @@ Section Lemmata.
   Proof.
     intros Σ u v π h.
     eapply eq_term_upto_univ_zipc.
+    - intro. eapply eq_universe_refl.
+    - assumption.
+  Qed.
+
+  Lemma eq_term_upto_univ_zipp :
+    forall Re u v π,
+      Reflexive Re ->
+      eq_term_upto_univ Re Re u v ->
+      eq_term_upto_univ Re Re (zipp u π) (zipp v π).
+  Proof.
+    intros Re u v π he h.
+    unfold zipp.
+    case_eq (decompose_stack π). intros l ρ e.
+    eapply eq_term_upto_univ_mkApps.
+    - assumption.
+    - apply All2_same. intro. reflexivity.
+  Qed.
+
+  Lemma eq_term_zipp :
+    forall (Σ : global_env_ext) u v π,
+      eq_term (global_ext_constraints Σ) u v ->
+      eq_term (global_ext_constraints Σ) (zipp u π) (zipp v π).
+  Proof.
+    intros Σ u v π h.
+    eapply eq_term_upto_univ_zipp.
     - intro. eapply eq_universe_refl.
     - assumption.
   Qed.

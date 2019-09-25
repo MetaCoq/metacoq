@@ -238,6 +238,12 @@ Qed.
 
 Module Ee := EWcbvEval.
 
+Lemma fst_decompose_app_rec t l : fst (EAstUtils.decompose_app_rec t l) = fst (EAstUtils.decompose_app t).
+Proof.
+  induction t in l |- *; simpl; auto. rewrite IHt1.
+  unfold decompose_app. simpl. now rewrite (IHt1 [t2]).
+Qed.
+
 Lemma value_app_inv L :
   Ee.value (EAst.mkApps tBox L) ->
   L = nil.
@@ -251,8 +257,10 @@ Proof.
     move/andP: H => [H H'].
     eapply Ee.atom_mkApps in H' as [H1 _].
     destruct n, L; discriminate.
-  - exfalso.
-Admitted.
+  - unfold Ee.isStuckFix in H0. destruct f; try now inversion H0.
+    assert (EAstUtils.decompose_app (EAst.mkApps (EAst.tFix m n) args) = EAstUtils.decompose_app (EAst.mkApps tBox L)) by congruence.
+    rewrite !EAstUtils.decompose_app_mkApps in H1; eauto. inv H1.
+Qed.
 
 (** ** Prelim on eliminations  *)
 (* Lemma universe_family_is_prop_sort: *)

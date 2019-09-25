@@ -1518,6 +1518,14 @@ Section Conversion.
       eapply hΣ'.
   Qed.
 
+  (* TODO MOVE *)
+  Lemma wellformed_eq_term :
+    forall Γ u v,
+      wellformed Σ Γ u ->
+      eq_term Σ u v ->
+      wellformed Σ Γ v.
+  Admitted.
+
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
             (t2 : term) (π2 : stack) (h2 : wtp Γ t2 π2)
@@ -1632,7 +1640,10 @@ Section Conversion.
 
   (* tConst *)
   Next Obligation.
-  Admitted.
+    eapply wellformed_eq_term. 1: eassumption.
+    eapply eq_term_zipc. eapply eq_term_sym.
+    constructor. eapply eqb_universe_instance_spec. auto.
+  Qed.
   Next Obligation.
     unshelve eapply R_stateR.
     all: try reflexivity.
@@ -1655,12 +1666,18 @@ Section Conversion.
       eapply red_const. eassumption.
   Qed.
   Next Obligation.
-    (* eapply red_wellformed ; auto.
-    - exact h2.
-    - constructor. eapply red_zipc.
-      eapply red_const. eassumption.
-  Qed. *)
-  Admitted.
+    eapply wellformed_eq_term.
+    - eapply red_wellformed ; auto.
+      + exact h2.
+      + constructor. eapply red_zipc.
+        eapply red_const. eassumption.
+    - eapply eq_term_zipc.
+      eapply eq_term_sym.
+      eapply eq_term_upto_univ_subst_instance_constr.
+      + intro. eapply eq_universe_refl.
+      + apply leq_term_SubstUnivPreserving.
+      + eapply eqb_universe_instance_spec. auto.
+  Qed.
   Next Obligation.
     eapply R_cored. simpl.
     eapply cored_zipc.
@@ -1784,16 +1801,12 @@ Section Conversion.
 
   (* tCase *)
   Next Obligation.
-    (* TODO NEED wellformed upto eq_term *)
-    (* symmetry in eq1.
-    eapply wellformed_alpha ; [ assumption .. | exact h2 |].
-    eapply eq_term_upto_univ_sym. all: auto.
-    eapply eq_term_upto_univ_zipc. all: auto.
-    eapply elimT.
-    - eapply reflect_upto_names.
-    - assumption.
-  Qed. *)
-  Admitted.
+    eapply wellformed_eq_term.
+    - exact h2.
+    - eapply eq_term_sym.
+      eapply eq_term_zipc.
+      eapply eqb_term_spec. auto.
+  Qed.
   Next Obligation.
     unshelve eapply R_stateR.
     all: try reflexivity. all: simpl.
@@ -1964,17 +1977,12 @@ Section Conversion.
 
   (* tProj *)
   Next Obligation.
-    (* TODO NEED *)
-    (* destruct hΣ as [wΣ].
-    eapply wellformed_alpha ; try assumption.
+    eapply wellformed_eq_term.
     - exact h2.
-    - apply eq_term_upto_univ_sym ; auto.
-      eapply eq_term_upto_univ_zipc ; auto.
-      eapply elimT.
-      + eapply reflect_upto_names.
-      + symmetry. assumption.
-  Qed. *)
-  Admitted.
+    - eapply eq_term_sym.
+      eapply eq_term_zipc.
+      eapply eqb_term_spec. auto.
+  Qed.
   Next Obligation.
     unshelve eapply R_stateR.
     all: try reflexivity.
@@ -1996,16 +2004,12 @@ Section Conversion.
 
   (* tFix *)
   Next Obligation.
-    (* destruct hΣ as [wΣ].
-    eapply wellformed_alpha ; try assumption.
+    eapply wellformed_eq_term.
     - exact h2.
-    - apply eq_term_upto_univ_sym ; auto.
-      eapply eq_term_upto_univ_zipc ; auto.
-      eapply elimT.
-      + eapply reflect_upto_names.
-      + symmetry. assumption.
-  Qed. *)
-  Admitted.
+    - eapply eq_term_sym.
+      eapply eq_term_zipc.
+      eapply eqb_term_spec. auto.
+  Qed.
   Next Obligation.
     unshelve eapply R_stateR.
     all: try reflexivity.
@@ -2330,16 +2334,12 @@ Section Conversion.
 
   (* tCoFix *)
   Next Obligation.
-    (* destruct hΣ as [wΣ].
-    eapply wellformed_alpha ; try assumption.
+    eapply wellformed_eq_term.
     - exact h2.
-    - apply eq_term_upto_univ_sym ; auto.
-      eapply eq_term_upto_univ_zipc ; auto.
-      eapply elimT.
-      + eapply reflect_upto_names.
-      + symmetry. assumption.
-  Qed. *)
-  Admitted.
+    - eapply eq_term_sym.
+      eapply eq_term_zipc.
+      eapply eqb_term_spec. auto.
+  Qed.
   Next Obligation.
     unshelve eapply R_stateR.
     all: try reflexivity.
@@ -3184,16 +3184,12 @@ Section Conversion.
     - eapply conv_context_sym. all: auto.
   Qed.
   Next Obligation.
-    (* destruct hΣ as [wΣ].
-    eapply wellformed_alpha ; try assumption.
+    eapply wellformed_eq_term.
     - exact h2.
-    - apply eq_term_upto_univ_sym ; auto.
-      eapply eq_term_upto_univ_zipc ; auto.
-      eapply elimT.
-      + eapply reflect_upto_names.
-      + symmetry. assumption.
-  Qed. *)
-  Admitted.
+    - eapply eq_term_sym.
+      eapply eq_term_zipc.
+      eapply eqb_term_spec. auto.
+  Qed.
   Next Obligation.
     eapply R_stateR. all: simpl. all: try reflexivity.
     - eapply eq_term_zipc.
@@ -3213,29 +3209,18 @@ Section Conversion.
       eapply eqb_term_spec. eauto.
   Qed.
   Next Obligation.
-    (* case_eq (eqb_term (zipp t1 π1) (zipp t2 π2)). 2: auto.
-    intro e.
-    apply eqb_term_spec in e.
-    constructor. constructor. assumption.
-  Qed. *)
-  Admitted.
-  Next Obligation.
-    (* destruct hΣ as [wΣ].
-    eapply wellformed_alpha ; try assumption.
+    eapply wellformed_eq_term.
     - exact h2.
-    - apply eq_term_upto_univ_sym ; auto.
-      eapply eq_term_upto_univ_zipc ; auto.
-      eapply elimT.
-      + eapply reflect_upto_names.
-      + symmetry. assumption.
-  Qed. *)
-  Admitted.
-  (* Next Obligation.
+    - eapply eq_term_sym.
+      eapply eq_term_zipc.
+      eapply eqb_term_spec. auto.
+  Qed.
+  Next Obligation.
     eapply R_stateR. all: simpl. all: try reflexivity.
     - eapply eq_term_zipc.
       eapply eqb_term_spec. eauto.
     - constructor.
-  Qed. *)
+  Qed.
   Next Obligation.
     destruct b. 2: auto.
     destruct h as [h].

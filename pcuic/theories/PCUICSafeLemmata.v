@@ -279,6 +279,31 @@ Section Lemmata.
     - assumption.
   Qed.
 
+  Lemma eq_term_upto_univ_zipp :
+    forall Re u v π,
+      Reflexive Re ->
+      eq_term_upto_univ Re Re u v ->
+      eq_term_upto_univ Re Re (zipp u π) (zipp v π).
+  Proof.
+    intros Re u v π he h.
+    unfold zipp.
+    case_eq (decompose_stack π). intros l ρ e.
+    eapply eq_term_upto_univ_mkApps.
+    - assumption.
+    - apply All2_same. intro. reflexivity.
+  Qed.
+
+  Lemma eq_term_zipp :
+    forall (Σ : global_env_ext) u v π,
+      eq_term (global_ext_constraints Σ) u v ->
+      eq_term (global_ext_constraints Σ) (zipp u π) (zipp v π).
+  Proof.
+    intros Σ u v π h.
+    eapply eq_term_upto_univ_zipp.
+    - intro. eapply eq_universe_refl.
+    - assumption.
+  Qed.
+
   Lemma eq_term_upto_univ_zipx :
     forall Re Γ u v π,
       Reflexive Re ->

@@ -1496,6 +1496,28 @@ Section Conversion.
     eapply red_zipp. eapply red_const. eassumption.
   Qed.
 
+  (* TODO MOVE *)
+  Definition eqb_universe_instance u v :=
+    forallb2 (try_eqb_universe G) (map Universe.make u) (map Universe.make v).
+
+  (* TODO MOVE *)
+  Lemma eqb_universe_instance_spec :
+    forall u v,
+      eqb_universe_instance u v ->
+      R_universe_instance (eq_universe (global_ext_constraints Σ)) u v.
+  Proof.
+    intros u v e.
+    unfold eqb_universe_instance in e.
+    eapply forallb2_All2 in e.
+    eapply All2_impl. 1: eassumption.
+    intros. eapply (try_eqb_universe_spec G (global_ext_uctx Σ)).
+    all: auto.
+    - eapply wf_ext_global_uctx_invariants.
+      eapply hΣ'.
+    - eapply global_ext_uctx_consistent.
+      eapply hΣ'.
+  Qed.
+
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
             (t2 : term) (π2 : stack) (h2 : wtp Γ t2 π2)
@@ -1509,9 +1531,8 @@ Section Conversion.
       False_rect _ _ ;
 
     | prog_view_Const c u c' u' with eq_dec c c' := {
-      (* TODO Not use eq_dec but eq_universe instead *)
-      | left eq1 with eq_dec u u' := {
-        | left eq2 with isconv_args_raw (tConst c u) π1 π2 aux := {
+      | left eq1 with inspect (eqb_universe_instance u u') := {
+        | @exist true eq2 with isconv_args_raw (tConst c u) π1 π2 aux := {
           | @exist true h := yes ;
           (* Unfold both constants at once *)
           | @exist false _ with inspect (lookup_env Σ c) := {
@@ -1523,7 +1544,7 @@ Section Conversion.
             }
           } ;
         (* If universes are different, we unfold one of the constants *)
-        | right _ := unfold_constants Γ leq c u π1 h1 c' u' π2 h2 hx aux
+        | @exist false _ := unfold_constants Γ leq c u π1 h1 c' u' π2 h2 hx aux
         } ;
       (* If the two constants are different, we unfold one of them *)
       | right _ := unfold_constants Γ leq c u π1 h1 c' u' π2 h2 hx aux
@@ -1611,12 +1632,21 @@ Section Conversion.
 
   (* tConst *)
   Next Obligation.
+  Admitted.
+  Next Obligation.
     unshelve eapply R_stateR.
     all: try reflexivity.
-    constructor.
+    all: simpl.
+    - eapply eq_term_zipc. constructor.
+      eapply eqb_universe_instance_spec. eauto.
+    - constructor.
   Qed.
   Next Obligation.
-    destruct h as [h]. destruct hΣ. eapply conv_conv_l. all: auto.
+    destruct h as [h]. destruct hΣ. eapply conv_conv_l. 1: auto.
+    eapply conv_alt_trans. all: try eassumption.
+    constructor.
+    eapply eq_term_zipp. constructor.
+    eapply eqb_universe_instance_spec. eauto.
   Qed.
   Next Obligation.
     eapply red_wellformed ; auto.
@@ -1625,11 +1655,12 @@ Section Conversion.
       eapply red_const. eassumption.
   Qed.
   Next Obligation.
-    eapply red_wellformed ; auto.
+    (* eapply red_wellformed ; auto.
     - exact h2.
     - constructor. eapply red_zipc.
       eapply red_const. eassumption.
-  Qed.
+  Qed. *)
+  Admitted.
   Next Obligation.
     eapply R_cored. simpl.
     eapply cored_zipc.
@@ -1639,14 +1670,21 @@ Section Conversion.
   Next Obligation.
     destruct hΣ.
     destruct b ; auto.
-    eapply conv_trans' ; try assumption.
+    eapply conv_trans'.
+    - assumption.
     - eapply red_conv_l ; try assumption.
       eapply red_zipp.
       eapply red_const. eassumption.
     - eapply conv_trans' ; try eassumption.
-      eapply red_conv_r ; try assumption.
-      eapply red_zipp.
-      eapply red_const. eassumption.
+      eapply conv_trans'.
+      + assumption.
+      + eapply red_conv_r ; try assumption.
+        eapply red_zipp.
+        eapply red_const. eassumption.
+      + eapply conv_conv. 1: auto.
+        constructor. constructor.
+        eapply eq_term_zipp. constructor.
+        eapply eqb_universe_instance_spec. auto.
   Qed.
 
   (* tLambda *)

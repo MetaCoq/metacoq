@@ -9,5 +9,8 @@ Makefile.coq: Makefile
 clean: Makefile.coq
 	$(MAKE) -f Makefile.coq clean
 
+mrproper:
+	rm -f Makefile.coq
+
 plugin-demo:
 	$(MAKE) -C plugin-demo

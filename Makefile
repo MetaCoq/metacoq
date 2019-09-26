@@ -59,7 +59,7 @@ checker: template-coq
 test-suite: template-coq checker safechecker erasure
 	$(MAKE) -C test-suite
 
-translations: template-coq
+translations: template-coq checker
 	$(MAKE) -C translations
 
 cleanplugins:

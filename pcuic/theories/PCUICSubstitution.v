@@ -903,7 +903,7 @@ Lemma subst_build_branches_type {cf:checker_flags}
   on_inductive (lift_typing typing) (Σ, ind_universes mdecl)
                (inductive_mind ind) mdecl ->
   on_constructors (lift_typing typing) (Σ, ind_universes mdecl)
-            (inductive_mind ind) mdecl (inductive_ind ind) idecl 
+            (inductive_mind ind) mdecl (inductive_ind ind) idecl
             (ind_ctors idecl) ->
   map_option_out (build_branches_type ind mdecl idecl args u p) = Some brs ->
   map_option_out (build_branches_type ind mdecl
@@ -925,7 +925,7 @@ Proof.
   remember (subst0 (inds (inductive_mind ind) u (ind_bodies mdecl))
                    (subst_instance_constr u t)) as ty'.
   apply (subst_instantiate_params n k) in Heq as Heq'; tas.
-  erewrite subst_closedn in Heq'; tas. 
+  erewrite subst_closedn in Heq'; tas.
   rewrite Heq'.
   eapply instantiate_params_make_context_subst in Heq.
   destruct Heq as [ctx' [ty'' [s' [Hty [Hsubst Ht0]]]]].
@@ -1593,12 +1593,12 @@ Proof.
   unfold check_correct_arity.
   inversion_clear 1.
   rewrite subst_context_snoc. constructor.
-  - apply All2_length in X1. destruct X1.
-    apply (subst_eq_decl _ s (#|indctx| + k)) in X0.
-    unfold subst_decl, map_decl in X0; cbn in X0.
+  - apply All2_length in H1. destruct H1.
+    apply (subst_eq_decl _ s (#|indctx| + k)) in H0.
+    unfold subst_decl, map_decl in H0; cbn in H0.
     assert (XX : subst s (#|indctx| + k) (mkApps (tInd ind u) (map (lift0 #|indctx|) (firstn npar args) ++ to_extended_list indctx)) = mkApps (tInd ind u) (map (lift0 #|subst_context s k indctx|) (firstn npar (map (subst s k) args)) ++ to_extended_list (subst_context s k indctx)) );
-      [|now rewrite XX in X0].
-    clear X0.
+      [|now rewrite XX in H0].
+    clear H0.
     rewrite -> subst_mkApps; simpl. f_equal. rewrite map_app.
     rewrite -> firstn_map.
     rewrite !map_map_compose. cbn. f_equal.
@@ -2071,8 +2071,8 @@ Proof.
     apply subst_closedn; eauto. eapply closed_upwards; eauto. lia.
 
   - rewrite subst_mkApps map_app map_skipn.
-    specialize (X3 Γ Γ' Δ s sub eq_refl wfsubs).
-    specialize (X5 Γ Γ' Δ s sub eq_refl wfsubs).
+    specialize (X2 Γ Γ' Δ s sub eq_refl wfsubs).
+    specialize (X4 Γ Γ' Δ s sub eq_refl wfsubs).
     simpl. econstructor.
     4:{ eapply subst_types_of_case in H0.
         simpl in H1. subst pars. rewrite firstn_map. eapply H0; eauto.
@@ -2080,10 +2080,10 @@ Proof.
     -- eauto.
     -- eauto.
     -- eauto.
-    -- revert X2. subst pars.
+    -- revert H1. subst pars.
        apply subst_check_correct_arity.
     -- destruct idecl; simpl in *; auto.
-    -- now rewrite !subst_mkApps in X5.
+    -- now rewrite !subst_mkApps in X4.
     -- solve_all.
 
   - specialize (X2 Γ Γ' Δ s sub eq_refl wfsubs).

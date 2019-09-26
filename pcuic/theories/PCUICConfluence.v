@@ -22,7 +22,7 @@ Set Asymmetric Patterns.
 
 
 Lemma red1_eq_context_upto_l Σ Re Γ Δ u v :
-  Reflexive Re ->
+  RelationClasses.Reflexive Re ->
   SubstUnivPreserving Re ->
   red1 Σ Γ u v ->
   eq_context_upto Re Γ Δ ->
@@ -377,18 +377,18 @@ Qed.
 
 
 Lemma red1_eq_term_upto_univ_l Σ Re Rle Γ u v u' :
-  Reflexive Re ->
+  RelationClasses.Reflexive Re ->
   SubstUnivPreserving Re ->
-  Reflexive Rle ->
-  Transitive Re ->
-  Transitive Rle ->
-  subrelation Re Rle ->
+  RelationClasses.Reflexive Rle ->
+  RelationClasses.Transitive Re ->
+  RelationClasses.Transitive Rle ->
+  RelationClasses.subrelation Re Rle ->
   eq_term_upto_univ Re Rle u u' ->
   red1 Σ Γ u v ->
   ∑ v', red1 Σ Γ u' v' *
         eq_term_upto_univ Re Rle v v'.
 Proof.
-  unfold subrelation.
+  unfold RelationClasses.subrelation.
   intros he he' hle tRe tRle hR e h.
   induction h in u', e, tRle, Rle, hle, hR |- * using red1_ind_all.
   all: try solve [
@@ -665,9 +665,9 @@ Proof.
            ).
     { revert mfix' a.
       refine (OnOne2_ind_l _ (fun L x y => (red1 Σ (Γ ,,, fix_context L) (dbody x) (dbody y)
-        × (forall (Rle : crelation universe) (u' : term),
-           Reflexive Rle ->
-           Transitive Rle ->
+        × (forall Rle (u' : term),
+           RelationClasses.Reflexive Rle ->
+           RelationClasses.Transitive Rle ->
            (forall u u'0 : universe, Re u u'0 -> Rle u u'0) ->
            eq_term_upto_univ Re Rle (dbody x) u' ->
            ∑ v' : term,
@@ -809,9 +809,9 @@ Proof.
            ).
     { revert mfix' a.
       refine (OnOne2_ind_l _ (fun L x y => (red1 Σ (Γ ,,, fix_context L) (dbody x) (dbody y)
-        × (forall (Rle : crelation universe) (u' : term),
-           Reflexive Rle ->
-           Transitive Rle ->
+        × (forall Rle (u' : term),
+           RelationClasses.Reflexive Rle ->
+           RelationClasses.Transitive Rle ->
            (forall u u'0 : universe, Re u u'0 -> Rle u u'0) ->
            eq_term_upto_univ Re Rle (dbody x) u' ->
            ∑ v' : term,
@@ -905,7 +905,8 @@ Proof.
 Qed.
 
 Lemma red1_eq_context_upto_r Σ Re Γ Δ u v :
-  Reflexive Re -> Symmetric Re ->
+  RelationClasses.Reflexive Re ->
+  RelationClasses.Symmetric Re ->
   SubstUnivPreserving Re ->
   red1 Σ Γ u v ->
   eq_context_upto Re Δ Γ ->
@@ -920,13 +921,13 @@ Proof.
 Qed.
 
 Lemma red1_eq_term_upto_univ_r Σ Re Rle Γ u v u' :
-  Reflexive Re ->
+  RelationClasses.Reflexive Re ->
   SubstUnivPreserving Re ->
-  Reflexive Rle ->
-  Symmetric Re ->
-  Transitive Re ->
-  Transitive Rle ->
-  subrelation Re Rle ->
+  RelationClasses.Reflexive Rle ->
+  RelationClasses.Symmetric Re ->
+  RelationClasses.Transitive Re ->
+  RelationClasses.Transitive Rle ->
+  RelationClasses.subrelation Re Rle ->
   eq_term_upto_univ Re Rle u' u ->
   red1 Σ Γ u v ->
   ∑ v', red1 Σ Γ u' v' ×
@@ -934,21 +935,25 @@ Lemma red1_eq_term_upto_univ_r Σ Re Rle Γ u v u' :
 Proof.
   intros he he' hle tRe tRle hR e h uv.
   destruct (red1_eq_term_upto_univ_l Σ Re (flip Rle) Γ u v u'); auto.
-  now eapply flip_Transitive.
-  intros x y X. symmetry in X. apply e. auto.
-  eapply eq_term_upto_univ_flip; eauto.
-  exists x. intuition auto.
-  eapply (eq_term_upto_univ_flip Re (flip Rle) Rle); eauto.
-  now eapply flip_Transitive.
-  unfold flip. intros. eapply symmetry in X. eauto.
+  - now eapply flip_Transitive.
+  - intros x y X. symmetry in X. apply e. auto.
+  - eapply eq_term_upto_univ_flip; eauto.
+  - exists x. intuition auto.
+    eapply (eq_term_upto_univ_flip Re (flip Rle) Rle); eauto.
+    + now eapply flip_Transitive.
+    + unfold flip. intros ? ? H. symmetry in H. eauto.
 Qed.
 
 Section RedEq.
   Context (Σ : global_env_ext).
-  Context {Re Rle : crelation universe} {refl : Reflexive Re} {refl': Reflexive Rle}
+  Context {Re Rle : universe -> universe -> Prop}
+          {refl : RelationClasses.Reflexive Re}
+          {refl': RelationClasses.Reflexive Rle}
           {pres : SubstUnivPreserving Re}
-          {sym : Symmetric Re} {trre : Transitive Re} {trle : Transitive Rle}.
-  Context (inclre : subrelation Re Rle).
+          {sym : RelationClasses.Symmetric Re}
+          {trre : RelationClasses.Transitive Re}
+          {trle : RelationClasses.Transitive Rle}.
+  Context (inclre : RelationClasses.subrelation Re Rle).
 
   Lemma red_eq_term_upto_univ_r {Γ T V U} :
     eq_term_upto_univ Re Rle T U -> red Σ Γ U V ->

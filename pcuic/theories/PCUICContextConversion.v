@@ -419,7 +419,7 @@ Section ContextConversion.
   Arguments red_ctx : clear implicits.
 
   Lemma red_eq_context_upto_l {Re Γ Δ u v}
-        `{Reflexive _ Re} `{Transitive _ Re} `{SubstUnivPreserving Re} :
+        `{RelationClasses.Reflexive _ Re} `{RelationClasses.Transitive _ Re} `{SubstUnivPreserving Re} :
     red Σ Γ u v ->
     eq_context_upto Re Γ Δ ->
     ∑ v',
@@ -795,7 +795,7 @@ Proof.
 Qed.
 
 Lemma eq_context_upto_conv_context {cf:checker_flags} (Σ : global_env_ext) Re :
-  subrelation Re (eq_universe Σ) ->
+  RelationClasses.subrelation Re (eq_universe Σ) ->
   subrelation (eq_context_upto Re) (fun Γ Γ' => conv_context Σ Γ Γ').
 Proof.
   intros HRe Γ Δ h. induction h.

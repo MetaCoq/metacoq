@@ -130,11 +130,11 @@ Proof.
       * eapply H2 ; assumption.
       * eapply IHl ; assumption.
   - f_equal ; try solve [ ih ].
-    eapply eq_univ_make. eapply All2_Forall2. assumption.
+    eapply eq_univ_make. assumption.
   - f_equal ; try solve [ ih ].
-    eapply eq_univ_make. apply All2_Forall2; assumption.
+    eapply eq_univ_make. assumption.
   - f_equal ; try solve [ ih ].
-    eapply eq_univ_make. apply All2_Forall2; assumption.
+    eapply eq_univ_make. assumption.
   - f_equal ; try solve [ ih ].
     revert brs' H3 H0 a.
     induction l ; intros brs' h1 h2 h.
@@ -143,8 +143,8 @@ Proof.
       cbn in h1, h2. destruct_andb.
       inversion X. subst.
       f_equal.
-      * destruct a, p0. cbn in *. destruct X0. subst.
-        f_equal. eapply H9 ; assumption.
+      * destruct a, p0. cbn in *. destruct H6. subst.
+        f_equal. eapply H11 ; assumption.
       * eapply IHl ; assumption.
   - f_equal ; try solve [ ih ].
     revert mfix' H1 H2 H H0 a.
@@ -154,9 +154,9 @@ Proof.
       inversion X. subst.
       cbn in h1, h2, h3, h4. destruct_andb.
       f_equal.
-      * destruct a, d. cbn in *. destruct X0 as [[? ?] ?].
+      * destruct a, d. cbn in *. destruct H2 as [[? ?] ?].
         destruct H1 as [Hty Hbod].
-        unfold test_def in H5, H. cbn in H5, H.
+        unfold test_def in H7, H. cbn in H7, H.
         destruct_andb. anonify.
         f_equal.
         -- eapply Hty; assumption.
@@ -171,9 +171,9 @@ Proof.
       inversion X. subst.
       cbn in h1, h2, h3, h4. destruct_andb.
       f_equal.
-      * destruct a, d. cbn in *. destruct X0 as [[? ?] ?].
+      * destruct a, d. cbn in *. destruct H2 as [[? ?] ?].
         destruct H1 as [Hty Hbod].
-        unfold test_def in H5, H. cbn in H5, H.
+        unfold test_def in H7, H. cbn in H7, H.
         destruct_andb. anonify.
         f_equal.
         -- eapply Hty; assumption.
@@ -1122,10 +1122,10 @@ Proof.
         rewrite nl_instantiate_params. f_equal.
         now rewrite <- subst_instance_context_nlctx.
         apply nl_subst_instance_constr.
-    + clear -X2. unfold check_correct_arity in *.
+    + clear -H1. unfold check_correct_arity in *.
       rewrite global_ext_constraints_nlg.
-      inversion X2; subst. cbn. constructor.
-      * clear -X. destruct X as [H1 H2]; cbn in *.
+      inversion H1; subst. cbn. constructor.
+      * clear -H2. destruct H2 as [H1 H2]; cbn in *.
         destruct y as [? [?|] ?]; cbn in *; [contradiction|].
         split; cbn; tas. apply nl_eq_term in H2.
         refine (eq_rect _ (fun d => eq_term _ d _) H2 _ _).
@@ -1136,7 +1136,7 @@ Proof.
       * eapply All2_map, All2_impl; tea.
         apply nl_eq_decl'.
     + rewrite nl_mkApps in *; eassumption.
-    + clear -X6. eapply All2_map, All2_impl; tea. cbn.
+    + clear -X5. eapply All2_map, All2_impl; tea. cbn.
       clear. intros x y [[[? ?] ?] ?]. intuition eauto.
   - destruct pdecl as [pdecl1 pdecl2]; simpl.
     rewrite map_rev.
@@ -1378,7 +1378,7 @@ Proof.
   - assert (Y : ∑ mfix'', map (map_def_anon nl nl) mfix1
                           = map (map_def_anon nl nl) mfix''
     × OnOne2 (fun x y : def term =>
-     red1 Σ (nlctx Γ ,,, fix_context (map (map_def_anon nl nl) mfix0)) 
+     red1 Σ (nlctx Γ ,,, fix_context (map (map_def_anon nl nl) mfix0))
        (dbody x) (dbody y)
      × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y))
     (map (map_def_anon nl nl) mfix0) mfix''). {

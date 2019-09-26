@@ -585,7 +585,7 @@ Proof.
     with (map (subst_instance_univ u) (map Universe.make i)).
   replace (map Universe.make (map (subst_instance_level u) i'))
     with (map (subst_instance_univ u) (map Universe.make i')).
-  split. apply All2_map_inv. apply All2_map.
+  split. apply Forall2_map_inv. apply Forall2_map.
   all: rewrite !map_map; apply map_ext; reflexivity.
 Qed.
 
@@ -597,7 +597,7 @@ Definition precompose_subst_instance_instance__2 Rle u i i'
 
 
 Global Instance eq_term_upto_univ_subst_instance
-         (Re Rle : constraints -> crelation universe)
+         (Re Rle : constraints -> universe -> universe -> Prop)
       {he: SubstUnivPreserved Re} {hle: SubstUnivPreserved Rle}
   : SubstUnivPreserved (fun φ => eq_term_upto_univ (Re φ) (Rle φ)).
 Proof.

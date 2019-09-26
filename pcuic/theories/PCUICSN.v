@@ -233,13 +233,13 @@ Section Alpha.
 
   Lemma cored_eq_term_upto :
     forall Re Rle Γ u v u',
-      Reflexive Re ->
+      RelationClasses.Reflexive Re ->
       SubstUnivPreserving Re ->
-      Reflexive Rle ->
-      Symmetric Re ->
-      Transitive Re ->
-      Transitive Rle ->
-      subrelation Re Rle ->
+      RelationClasses.Reflexive Rle ->
+      RelationClasses.Symmetric Re ->
+      RelationClasses.Transitive Re ->
+      RelationClasses.Transitive Rle ->
+      RelationClasses.subrelation Re Rle ->
       eq_term_upto_univ Re Rle u u' ->
       cored Σ Γ v u ->
       exists v', cored Σ Γ v' u' /\ ∥ eq_term_upto_univ Re Rle v v' ∥.
@@ -261,9 +261,9 @@ Section Alpha.
 
   Lemma cored_eq_context_upto :
     forall Re Γ Δ u v,
-      Reflexive Re ->
-      Symmetric Re ->
-      Transitive Re ->
+      RelationClasses.Reflexive Re ->
+      RelationClasses.Symmetric Re ->
+      RelationClasses.Transitive Re ->
       SubstUnivPreserving Re ->
       eq_context_upto Re Γ Δ ->
       cored Σ Γ u v ->
@@ -322,7 +322,7 @@ Section Alpha.
         * eapply upto_names_impl_eq_term. assumption.
       + constructor. eapply eq_term_sym. eapply eq_term_tm_nl.
     - intros ? ? ? []. auto.
-    - intros ? ? ? r. apply All2_eq in r. apply map_inj in r.
+    - intros ? ? ? r. apply Forall2_eq in r. apply map_inj in r.
       + subst. reflexivity.
       + intros ? ? H. inversion H. reflexivity.
   Qed.

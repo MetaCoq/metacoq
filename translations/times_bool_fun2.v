@@ -1,7 +1,7 @@
-Require Import Template.All.
+From MetaCoq Require Import Template.All.
 Import String Lists.List.ListNotations MonadNotation.
 Open Scope list_scope. Open Scope string_scope.
-Require Import translation_utils times_bool_fun MiniHoTT.
+From MetaCoq.Translations Require Import translation_utils times_bool_fun MiniHoTT.
 
 Unset Strict Unquote Universe Mode.
 

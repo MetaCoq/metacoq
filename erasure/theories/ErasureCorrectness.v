@@ -468,6 +468,17 @@ Proof.
     cbn. rewrite fst_decompose_app_rec. eassumption.
 Qed.
 
+Lemma is_FixApp_erases Σ Γ t t' :
+  Σ;;; Γ |- t ⇝ℇ t' ->
+  negb (isFixApp t) -> negb (Ee.isFixApp t').
+Proof.
+  induction 1; cbn; try congruence.
+  - unfold isFixApp in *. clear IHerases2.
+    cbn. rewrite PCUICParallelReductionConfluence.fst_decompose_app_rec.
+    unfold Ee.isFixApp in *.
+    cbn. rewrite fst_decompose_app_rec. eassumption.
+Qed.
+
 Lemma erases_correct Σ t T t' v Σ' :
   extraction_pre Σ ->
   Σ;;; [] |- t : T ->
@@ -1085,8 +1096,13 @@ Proof.
                    repeat eapply orb_false_intro.
                    - destruct x2; try reflexivity.
                      inv H2. inv H0.
-                   - destruct x2; try reflexivity.
-                     inv H2. inv H0.
+                   - destruct x2 eqn:Ex; try reflexivity.
+                     + cbn. inv H2. cbn in *.
+                       eapply ssrbool.negbTE, is_FixApp_erases.
+                       econstructor; eauto.
+                       now rewrite orb_false_r in H0.
+                     + cbn in *. 
+                       inv H2. inv H0.
                    - eauto. }
         econstructor; eauto.
     + exists tBox. split. 2: now econstructor.
@@ -1102,7 +1118,8 @@ Proof.
       * eexists. split. 2: now econstructor.
         econstructor; eauto.
     + inv He.
-      * eexists. split; eauto. now econstructor.
+      * eexists. split. 2: now econstructor.
+        econstructor; eauto.
     + inv He.
       * eexists. split. 2: now econstructor.
         econstructor; eauto.
@@ -1113,6 +1130,7 @@ Proof.
       * eexists. split. 2: now econstructor.
         econstructor; eauto.
     + inv He.
-    * eexists. split; eauto. now econstructor.
-    * eexists. split. 2: now econstructor. eauto.
+      * eexists. split; eauto. now econstructor.
+      * eexists. split. 2: now econstructor.
+        econstructor; eauto.
 Qed.

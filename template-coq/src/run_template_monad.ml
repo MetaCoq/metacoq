@@ -261,11 +261,12 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
       let n = Declare.declare_definition ~kind:Decl_kinds.Definition name ~types:typ (body, univs) in
       let env = Global.env () in
       k (env, evm, Constr.mkConst n)
-  | TmDefinitionTerm (name, typ, body) ->
+  | TmDefinitionTerm (opaque, name, typ, body) ->
     if intactic
     then not_in_tactic "tmDefinition"
     else
       let name = unquote_ident (reduce_all env evm name) in
+      let opaque = unquote_bool (reduce_all env evm opaque) in
       let evm,body = denote_term evm (reduce_all env evm body) in
       let evm,typ =
         match unquote_option typ with
@@ -275,7 +276,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
           (evm, Some t)
       in
       let poly = Flags.is_universe_polymorphism () in
-      Plugin_core.run (Plugin_core.tmDefinition name ~poly typ body) env evm
+      Plugin_core.run (Plugin_core.tmDefinition name ~poly ~opaque typ body) env evm
         (fun env evm res -> k (env, evm, quote_kn res))
   | TmLemmaTerm (name, typ) ->
     let ident = unquote_ident (reduce_all env evm name) in

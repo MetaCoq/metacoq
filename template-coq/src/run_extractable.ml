@@ -206,14 +206,14 @@ let rec interp_tm (t : 'a coq_TM) : 'a tm =
   | Coq_tmEval (r,t) ->
     tmBind (tmEval (to_reduction_strategy r) (to_constr t))
            (fun x -> Obj.magic (tmOfConstr x))
-  | Coq_tmDefinition (nm, typ, trm) ->
+  | Coq_tmDefinition_ (opaque, nm, typ, trm) ->
     let typ =
       match typ with
         None -> None
       | Some typ -> Some (to_constr typ)
     in
     tmMap (fun x -> Obj.magic (of_kername x))
-          (tmDefinition (to_ident nm) typ (to_constr trm))
+          (tmDefinition (to_ident nm) ~opaque typ (to_constr trm))
   | Coq_tmAxiom (nm, typ) ->
     tmMap (fun x -> Obj.magic (of_kername x))
           (tmAxiom (to_ident nm) (to_constr typ))

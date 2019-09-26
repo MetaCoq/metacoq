@@ -11,7 +11,3 @@ From MetaCoq.Template Require Export
      UnivSubst     (* Substitution of universe instances *)
      TemplateMonad (* The TemplateMonad *)
      Loader        (* The plugin *).
-
-(* note(gmm): i'm not exactly sure where this should go. *)
-Notation "<% x %>" := (ltac:(let p y := exact y in quote_term x p))
-  (only parsing).

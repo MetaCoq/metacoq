@@ -1,8 +1,7 @@
-(* -*- coq-prog-args : ("-type-in-type") -*-  *)
 
 From MetaCoq Require Import Template.All.
 Require Import Arith.Compare_dec.
-From Translations Require Import translation_utils sigma.
+From MetaCoq.Translations Require Import translation_utils sigma.
 From MetaCoq.Checker Require Import All.
 Import String Lists.List.ListNotations MonadNotation.
 Open Scope string_scope.
@@ -223,7 +222,7 @@ Instance tsl_param : Translation
         tsl_ind := tsl_mind_body |}.
 
 
-Print Visibility.
+
 Notation "'TYPE'" := (sigma Type (fun A => A -> Type)).
 Notation "'El' A" := (sigma (π1 A) (π2 A)) (at level 20).
 

@@ -1,6 +1,6 @@
 From MetaCoq Require Import Template.All.
 Require Import Arith.Compare_dec.
-From Translations Require Import translation_utils.
+From MetaCoq.Translations Require Import translation_utils.
 Import String List Lists.List.ListNotations MonadNotation.
 Open Scope list_scope.
 Open Scope string_scope.

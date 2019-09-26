@@ -1,8 +1,9 @@
 -R ../template-coq/theories MetaCoq.Template
 -R ../checker/theories MetaCoq.Checker
--R . Translations
+-R . MetaCoq.Translations
 -I ../template-coq/src
 -arg -type-in-type
+-arg -q
 
 sigma.v
 MiniHoTT.v

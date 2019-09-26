@@ -2710,9 +2710,7 @@ Section Conversion.
     - reflexivity.
   Qed.
 
-  (* TODO Do proper recursive calls for conv args
-     Furthermore, the two last cases can probably factorised.
-  *)
+  (* TODO Factorise *)
   Equations(noeqns) _isconv_fallback (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
             (t2 : term) (π2 : stack) (h2 : wtp Γ t2 π2)
@@ -2742,9 +2740,9 @@ Section Conversion.
           | @exist true eq2 := isconv_args Conv t1 π1 t2 π2 aux ;
           | @exist false _ := no
           } ;
-        | @exist Cumul eq1 with inspect (eqb_term t1 t2) := {
+        | @exist Cumul eq1 with inspect (leqb_term t1 t2) := {
           | @exist true eq2 := isconv_args Cumul t1 π1 t2 π2 aux ;
-          | @exist false _ := exist (leqb_term (zipp t1 π1) (zipp t2 π2)) _
+          | @exist false _ := no
           }
         }
       }
@@ -3062,14 +3060,7 @@ Section Conversion.
   Qed.
   Next Obligation.
     constructor. constructor.
-    eapply eq_term_leq_term.
-    eapply eqb_term_spec. auto.
-  Qed.
-  Next Obligation.
-    case_eq (leqb_term (zipp t1 π1) (zipp t2 π2)). 2: auto.
-    intro e.
-    apply leqb_term_spec in e.
-    constructor. constructor. assumption.
+    eapply leqb_term_spec. auto.
   Qed.
 
   Equations _isconv (s : state) (Γ : context)

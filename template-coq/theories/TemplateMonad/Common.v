@@ -8,7 +8,7 @@ Set Printing Universes.
 
 (** Reduction strategy to apply, beware [cbv], [cbn] and [lazy] are _strong_. *)
 
-Inductive reductionStrategy : Set :=
+Variant reductionStrategy : Set :=
   cbv | cbn | hnf | all | lazy | unfold (i : ident).
 
 Record typed_term : Type := existT_typed_term
@@ -42,3 +42,11 @@ Record TMInstance@{t u r} :=
 (* Typeclass registration and querying for an instance *)
 ; tmExistingInstance : ident -> TemplateMonad unit
 }.
+
+Variant import_status : Set :=
+| ImportDefaultBehavior
+| ImportNeedQualified.
+
+Variant locality :=
+| Discharge
+| Global (_ : import_status).

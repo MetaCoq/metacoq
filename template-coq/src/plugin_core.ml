@@ -68,14 +68,14 @@ let tmEval (rd : reduction_strategy) (t : term) : term tm =
     let evd,t' = Quoter.reduce env evd rd t in
     k env evd t'
 
-let tmDefinition (nm : ident) ?poly:(poly=false) (typ : term option) (body : term) : kername tm =
+let tmDefinition (nm : ident) ?poly:(poly=false) ?opaque:(opaque=false) (typ : term option) (body : term) : kername tm =
   fun env evm success _fail ->
     let univs =
       if poly
       then Entries.Polymorphic_const_entry (Evd.to_universe_context evm)
       else Entries.Monomorphic_const_entry (Evd.universe_context_set evm) in
     let n =
-      Declare.declare_definition ~kind:Decl_kinds.Definition nm ?types:typ
+      Declare.declare_definition ~opaque:opaque ~kind:Decl_kinds.Definition nm ?types:typ
         (body, univs)
     in success (Global.env ()) evm (Names.Constant.canonical n)
 

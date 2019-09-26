@@ -1,4 +1,3 @@
-
 val ptmTestQuote : Names.global_reference Lazy.t
 val ptmQuoteDefinition : Names.global_reference Lazy.t
 val ptmQuoteDefinitionRed : Names.global_reference Lazy.t
@@ -23,7 +22,7 @@ type template_monad =
 
     (* creating definitions *)
   | TmDefinition of Constr.t * Constr.t * Constr.t * Constr.t
-  | TmDefinitionTerm of Constr.t * Constr.t * Constr.t
+  | TmDefinitionTerm of Constr.t * Constr.t * Constr.t * Constr.t
   | TmLemma of Constr.t * Constr.t
   | TmLemmaTerm of Constr.t * Constr.t
   | TmAxiom of Constr.t * Constr.t * Constr.t

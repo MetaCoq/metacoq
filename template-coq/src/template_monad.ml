@@ -119,7 +119,7 @@ let (ttmReturn,
    r_template_monad_type_p "tmFail",
    r_template_monad_type_p "tmEval",
 
-   r_template_monad_type_p "tmDefinition",
+   r_template_monad_type_p "tmDefinition_",
    r_template_monad_type_p "tmAxiom",
    r_template_monad_type_p "tmLemma",
 
@@ -155,7 +155,7 @@ type template_monad =
 
     (* creating definitions *)
   | TmDefinition of Constr.t * Constr.t * Constr.t * Constr.t
-  | TmDefinitionTerm of Constr.t * Constr.t * Constr.t
+  | TmDefinitionTerm of Constr.t * Constr.t * Constr.t * Constr.t
   | TmLemma of Constr.t * Constr.t
   | TmLemmaTerm of Constr.t * Constr.t
   | TmAxiom of Constr.t * Constr.t * Constr.t
@@ -254,9 +254,9 @@ let next_action env evd (pgm : constr) : template_monad * _ =
     | _ -> monad_failure "tmDefinitionRed" 4
   else if eq_gr ttmDefinition then
     match args with
-    | name::typ::body::[] ->
-       (TmDefinitionTerm (name, typ, body), universes)
-    | _ -> monad_failure "tmDefinition" 3
+    | opaque::name::typ::body::[] ->
+       (TmDefinitionTerm (opaque, name, typ, body), universes)
+    | _ -> monad_failure "tmDefinition" 4
 
   else if eq_gr ptmLemma then
     match args with

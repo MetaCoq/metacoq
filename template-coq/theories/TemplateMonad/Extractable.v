@@ -29,7 +29,8 @@ Cumulative Inductive TM@{t} : Type@{t} -> Type :=
   : TM Ast.term
 
 (* Return the defined constant *)
-| tmDefinition (nm : ident)
+| tmDefinition_ (opaque : bool) (*local : locality*)
+               (nm : ident)
                (type : option Ast.term) (term : Ast.term)
   : TM kername
 | tmAxiom (nm : ident)
@@ -79,21 +80,32 @@ Definition TypeInstance : Common.TMInstance :=
    |}.
 (* Monadic operations *)
 
+Definition tmOpaqueDefinition (nm : ident)
+               (type : option Ast.term) (term : Ast.term) :=
+  tmDefinition_ true nm type term.
+
+Definition tmDefinition (nm : ident)
+               (type : option Ast.term) (term : Ast.term) :=
+  tmDefinition_ false nm type term.
+
+
 Definition tmInductive' (mind : mutual_inductive_body) : TM unit
   := tmInductive (mind_body_to_entry mind).
 
 Definition tmLemmaRed (i : ident) (rd : reductionStrategy)
            (ty : Ast.term) :=
   tmBind (tmEval rd ty) (fun ty => tmLemma i ty).
+
 Definition tmAxiomRed (i : ident) (rd : reductionStrategy) (ty : Ast.term)
   :=
     tmBind (tmEval rd ty) (fun ty => tmAxiom i ty).
-Definition tmDefinitionRed (i : ident) (rd : reductionStrategy)
+
+Definition tmDefinitionRed (opaque : bool) (i : ident) (rd : reductionStrategy)
            (ty : option Ast.term) (body : Ast.term) :=
   match ty with
-  | None => tmDefinition i None body
+  | None => tmDefinition_ opaque i None body
   | Some ty =>
-    tmBind (tmEval rd ty) (fun ty => tmDefinition i (Some ty) body)
+    tmBind (tmEval rd ty) (fun ty => tmDefinition_ opaque i (Some ty) body)
   end.
 
 Definition tmInferInstanceRed (rd : reductionStrategy) (type : Ast.term)

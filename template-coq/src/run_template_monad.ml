@@ -249,16 +249,17 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     k (env, evm, h)
   | TmBind (a,f) ->
     run_template_program_rec ~intactic:intactic (fun (env, evm, ar) -> run_template_program_rec ~intactic:intactic k env (evm, Constr.mkApp (f, [|ar|]))) env (evm, a)
-  | TmDefinition (name,s,typ,body) ->
+  | TmDefinition (opaque,name,s,typ,body) ->
     if intactic
     then not_in_tactic "tmDefinition"
     else
       let name = unquote_ident (reduce_all env evm name) in
+      let opaque = unquote_bool (reduce_all env evm opaque) in
       let evm, typ = (match unquote_option s with Some s -> let red = unquote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
       let univs =
         if Flags.is_universe_polymorphism () then Polymorphic_const_entry (Evd.to_universe_context evm)
         else Monomorphic_const_entry (Evd.universe_context_set evm) in
-      let n = Declare.declare_definition ~kind:Decl_kinds.Definition name ~types:typ (body, univs) in
+      let n = Declare.declare_definition ~kind:Decl_kinds.Definition ~opaque name ~types:typ (body, univs) in
       let env = Global.env () in
       k (env, evm, Constr.mkConst n)
   | TmDefinitionTerm (opaque, name, typ, body) ->

@@ -357,3 +357,4 @@ pcuic/src/pCUICReflect.mli
 /erasure/src/safeErasureFunction.mli
 
 template-coq/gen-src/cRelationClasses.mli.rej
+.DS_Store

@@ -1,4 +1,5 @@
 From MetaCoq.Template Require Import All TemplateMonad.Core Monad monad_utils.
+From MetaCoq.Checker Require Import All.
 Require Import List.
 Import ListNotations MonadNotation String.
 Open Scope string_scope.
@@ -18,9 +19,9 @@ Fixpoint lookup_tsl_table (E : tsl_table) (gr : global_reference)
   end.
 
 
-Definition tsl_context := (global_context * tsl_table)%type.
+Definition tsl_context := (global_env_ext * tsl_table)%type.
 
-Definition emptyTC : tsl_context := (([], ConstraintSet.empty), []).
+Definition emptyTC : tsl_context := (empty_ext [], []).
 
 Inductive tsl_error :=
 | NotEnoughFuel
@@ -84,6 +85,10 @@ Definition tsl_name tsl_ident n :=
 Definition tmDebug {A} : A -> TemplateMonad unit
   := tmPrint.
   (* := fun _ => ret tt. *)
+
+
+Definition add_global_decl d (Σ : global_env_ext) : global_env_ext
+  := (d :: Σ.1, Σ.2).
 
 
 Definition Translate {tsl : Translation} (ΣE : tsl_context) (id : ident)
@@ -168,7 +173,7 @@ Definition Implement {tsl : Translation} (ΣE : tsl_context)
       gr <- tmAbout id ;;
       match gr with
       | Some (ConstRef kn) =>
-        let decl := {| cst_universes := Monomorphic_ctx UContext.empty;
+        let decl := {| cst_universes := Monomorphic_ctx ContextSet.empty;
                        cst_type := tA; cst_body := None |} in
         let Σ' := add_global_decl (ConstantDecl kn decl) (fst ΣE) in
         let E' := (ConstRef kn, tConst id' []) :: (snd ΣE) in
@@ -215,7 +220,7 @@ Definition ImplementExisting {tsl : Translation} (ΣE : tsl_context) (id : ident
         tmBind (tmUnquoteTyped Type tA') (fun A' =>
         tmDebug "plop3" ;;
         tmLemma id' A' ;;
-        let decl := {| cst_universes := Monomorphic_ctx UContext.empty;
+        let decl := {| cst_universes := Monomorphic_ctx ContextSet.empty;
                        cst_type := A; cst_body := body_constant_entry e |} in
         let Σ' := add_global_decl (ConstantDecl kn decl) (fst ΣE) in
         let E' := (ConstRef kn, tConst id' []) :: (snd ΣE) in

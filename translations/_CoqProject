@@ -1,4 +1,5 @@
 -R ../template-coq/theories MetaCoq.Template
+-R ../checker/theories MetaCoq.Checker
 -R . Translations
 -I ../template-coq/src
 -arg -type-in-type

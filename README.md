@@ -67,8 +67,9 @@ calculus has (partial) proofs of standard metatheoretical results:
 -----
 
 Implementation of a fuel-free and verified reduction machine, conversion
-checker and type checker for PCUIC. The extracted safe checker is
-available in Coq through a new vernacular command:
+checker and type checker for PCUIC. This relies on a postulate of 
+strong normalisation of the reduction relation of PCUIC on well-typed terms.
+The extracted safe checker is available in Coq through a new vernacular command:
 
     MetaCoq SafeCheck <term>
 
@@ -93,32 +94,18 @@ After importing `MetaCoq.Erasure.Loader`.
 [Translations](translations)
 ------------
 
-Examples of plugins built on top of this:
+Examples of translations built on top of this:
 
-- a plugin to add a constructor in [test-suite/add_constructor.v](https://github.com/MetaCoq/metacoq/tree/coq-8.9/test-suite/add_constructor.v)
 - a parametricity plugin in [translations/param_original.v](https://github.com/MetaCoq/metacoq/tree/coq-8.9/translations/param_original.v)
 - a plugin to negate funext in [translations/times_bool_fun.v](https://github.com/MetaCoq/metacoq/tree/coq-8.9/translations/times_bool_fun.v)
-
-Branches
-========
-
-The [coq-8.9](https://github.com/MetaCoq/metacoq/tree/coq-8.9) branch is
-the active development branch. If possible, it's strongly recommended to use this branch.
-
-The branches [coq-8.6](https://github.com/MetaCoq/metacoq/tree/coq-8.6),
-[coq-8.7](https://github.com/MetaCoq/metacoq/tree/coq-8.7) are frozen.
-[coq-8.8](https://github.com/MetaCoq/metacoq/tree/coq-8.8) is also available.
-
-The branch [master](https://github.com/MetaCoq/metacoq/tree/master) tracks the current Coq `master` branch.
-(Currently not working)
 
 Documentation
 =============
 
-You may want to start by a demo: [demo.v](https://github.com/MetaCoq/metacoq/tree/coq-8.8/test-suite/demo.v)
-
-The 8.9 branch [documentation (light coqdoc files)](html/toc.html) is
-also available.
+- You may want to start with a [demo](https://github.com/MetaCoq/metacoq/tree/coq-8.9/test-suite/demo.v)
+- The 8.9 branch [documentation (as light coqdoc files)](html/toc.html).
+- An example Coq plugin built on the Template Monad, which can be used to
+  add a constructor to any inductive type is in [test-suite/add_constructor.v](https://github.com/MetaCoq/metacoq/tree/coq-8.9/test-suite/add_constructor.v)
 
 ident vs. qualid. vs kername
 ---------------------------
@@ -300,10 +287,23 @@ Bugs
 
 Please report any bugs (or feature requests) on the github [issue tracker](https://github.com/MetaCoq/metacoq/issues)
 
+Branches
+========
+
+The [coq-8.9](https://github.com/MetaCoq/metacoq/tree/coq-8.9) branch is
+the active development branch. If possible, it's strongly recommended to use this branch.
+
+The branches [coq-8.6](https://github.com/MetaCoq/metacoq/tree/coq-8.6),
+[coq-8.7](https://github.com/MetaCoq/metacoq/tree/coq-8.7) are frozen.
+[coq-8.8](https://github.com/MetaCoq/metacoq/tree/coq-8.8) is also available.
+
+The branch [master](https://github.com/MetaCoq/metacoq/tree/master) tracks the current Coq `master` branch.
+(Currently not working)
+
 Installation instructions
 =========================
 
-Install with OPAM
+Installing with OPAM
 -----------------
 
 The easiest way to get all packages is through [`opam`](http://opam.ocaml.org).
@@ -352,13 +352,13 @@ one yet. You need to use **opam 2** to obtain the right version of
     # opam switch create coq.8.9.1 4.07.1
     # eval $(opam env)
 
-This creates the `coq.8.8.2` switch which initially contains only the
+This creates the `coq.8.9.1` switch which initially contains only the
 basic `OCaml` `4.07.1` compiler, and puts you in the right environment
 (check with `ocamlc -v`).
 
 Once in the right switch, you can install `Coq` and the `Equations` package using:
 
-    # opam pin add coq 8.8.2
+    # opam pin add coq 8.9.1
     # opam pin add coq-equations 1.2+8.9
 
 Pinning the packages prevents opam from trying to upgrade it afterwards, in
@@ -367,7 +367,7 @@ available (check with `coqc -v`). Then simply use:
 
     # opam install coq-metacoq
 
-Install from GitHub repository (for developers)
+Installing from GitHub repository (for developers)
 ------------------------------
 
 To get the source code:
@@ -403,22 +403,22 @@ When using `opam` you can get those using `opam install --deps-only .`.
 You can test the installation of the packages locally using 
 
     # opam install .
-    
+
 at the root directory.
 
-Compile
+Compiling from sources
 -------
 
-Once in the right environment, run `./configure.sh` for a global build or `./configure.sh local` for a local build. Then use:
+To compile locally without using `opam`, use `./configure.sh local` at the root, then use:
 
 - `make` to compile the `template-coq` plugin, the `checker`, the `pcuic`
-  development and the `safechecker` and `erasure` plugins. 
+  development and the `safechecker` and `erasure` plugins.
   You can also selectively build each target.
 
 - `make translations` to compile the translation plugins
 
 - `make test-suite` to compile the test suite
 
-- `make install` to install the plugin in `coq`'s user-contrib local
+- `make install` to install the plugin in `Coq`'s `user-contrib` local
   library. Then the `MetaCoq` namespace can be used for `Require
   Import` statements, e.g. `From MetaCoq.Template Require Import All.`.

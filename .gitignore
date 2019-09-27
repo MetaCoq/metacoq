@@ -357,3 +357,7 @@ template-coq/gen-src/cRelationClasses.mli.rej
 .DS_Store
 
 /translations/_CoqProject
+test-suite/vs.mli
+test-suite/vs.ml
+test-suite/myMain.mli
+test-suite/myMain.ml

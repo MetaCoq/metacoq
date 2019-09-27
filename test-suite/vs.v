@@ -13,8 +13,8 @@ Definition omap := match o with Some a => Some (h a) | None => None end.
 Definition obnd := match o with Some a => f a | None => None end.
 
 End option.
-Implicit Arguments omap [A B].
-Implicit Arguments obnd [A B].
+Arguments omap [A B].
+Arguments obnd [A B].
 
 Definition isSome {A : Type} (o : option A) := 
   match o with Some _ => true | _ => false end.
@@ -25,7 +25,7 @@ Variables (A B C : Type) (g : B -> C) (f : A -> B) (a : A).
 Definition compose := g (f a).
 
 End comp.
-Implicit Arguments compose [A B C].
+Arguments compose [A B C].
 
 (*new notation*)
 (*Notation "f \o g" := (compose f g) (at level 54, right associativity).*)
@@ -54,7 +54,7 @@ Fixpoint iter (n : nat) (a : A) :=
   end.
 
 End iter.
-Implicit Arguments iter [A].
+Arguments iter [A].
 
 Section tryfind.
 Variables (A E B : Type) (f : A -> E + B).
@@ -142,8 +142,8 @@ Inductive ret_kind (val : Type) : Type :=
 | Success : val -> ret_kind val
 | Failure : ret_kind val.
 
-Implicit Arguments Success [val].
-Implicit Arguments Failure [val].
+Arguments Success [val].
+Arguments Failure [val].
 
 (* variables.v *)
 
@@ -993,12 +993,9 @@ Lemma extensionality:
   forall (A B: Type) (f g : A -> B),  (forall x, f x = g x) -> f = g.
 Proof. intros; apply functional_extensionality. auto. Qed.
 
-Implicit Arguments extensionality.
-
 (** We also assert propositional extensionality. *)
 
 Axiom prop_ext: ClassicalFacts.prop_extensionality.
-Implicit Arguments prop_ext.
 
 (** * Proof irrelevance *)
 
@@ -1009,7 +1006,6 @@ Lemma proof_irr: ClassicalFacts.proof_irrelevance.
 Proof.
   exact (ClassicalFacts.ext_prop_dep_proof_irrel_cic prop_ext).
 Qed.
-Implicit Arguments proof_irr.
 
 (* end msl/Axioms.v *)
 
@@ -2182,7 +2178,6 @@ Print Assumptions the_loop.
 
 (* end show *)
 (* Required to work around Coq bug #2613 *)
-Implicit Arguments eq_sym. 
 
 Definition check_entailment (ent: entailment) : veristar_result :=
   let s := clause_list2set (pure_clauses (map order_eqv_clause (cnf ent)))

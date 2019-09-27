@@ -17,8 +17,8 @@ html: all
 		-R pcuic/theories MetaCoq.PCUIC \
 		-R safechecker/theories MetaCoq.SafeChecker \
 		-R erasure/theories MetaCoq.Erasure \
-		-R translations/theories MetaCoq.Translations \
-		-d html */theories/*.v
+		-R translations MetaCoq.Translations \
+		-d html */theories/*.v translations/*.v
 
 clean:
 	$(MAKE) -C template-coq clean

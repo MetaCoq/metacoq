@@ -556,7 +556,7 @@ Qed.
 Lemma lift_types_of_case ind mdecl idecl args u p pty indctx pctx ps btys n k :
   let f k' := lift n (k' + k) in
   let f_ctx := lift_context n k in
-  closed_ctx mdecl.(ind_params) ->
+  closed_ctx (subst_instance_context u (ind_params mdecl)) ->
   types_of_case ind mdecl idecl args u p pty = Some (indctx, pctx, ps, btys) ->
   types_of_case ind mdecl (map_one_inductive_body (context_assumptions mdecl.(ind_params))
                                                   (length (arities_context mdecl.(ind_bodies)))
@@ -567,9 +567,10 @@ Proof.
   simpl. intros closedpars.
   unfold types_of_case.
   rewrite -> ind_type_map. simpl.
-  pose proof (lift_instantiate_params n k (ind_params mdecl) args (ind_type idecl)) as H.
-  erewrite <- H ; trivial. clear H.
-  case_eq (instantiate_params (ind_params mdecl) args (ind_type idecl)) ; try discriminate.
+  epose proof (lift_instantiate_params n k _ args (subst_instance_constr u (ind_type idecl))) as H.
+  rewrite <- lift_subst_instance_constr.
+  erewrite <- H; trivial. clear H.
+  case_eq (instantiate_params (subst_instance_context u (ind_params mdecl)) args (subst_instance_constr u (ind_type idecl))) ; try discriminate.
   intros ity eq. simpl.
   pose proof (lift_destArity [] ity n k); trivial. simpl in H.
   unfold lift_context, fold_context in H. simpl in H. simpl. rewrite -> H. clear H.
@@ -855,6 +856,7 @@ Proof.
         -- destruct isdecl as [Hmdecl Hidecl].
            eapply on_declared_minductive in Hmdecl; eauto.
            eapply onParams in Hmdecl.
+           rewrite closedn_subst_instance_context.
            eapply closed_wf_local in Hmdecl; eauto. }
     -- erewrite -> lift_declared_inductive; eauto.
     -- auto.

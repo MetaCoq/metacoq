@@ -34,3 +34,6 @@ tmInferInstance.v
 issue27.v
 issue28.v
 extractable.v
+vs.v
+erasure_test.v
+safechecker_test.v

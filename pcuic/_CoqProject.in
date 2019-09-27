@@ -27,6 +27,7 @@ theories/PCUICContextConversion.v
 theories/PCUICConversion.v
 theories/PCUICGeneration.v
 theories/PCUICValidity.v
+theories/PCUICAlpha.v
 theories/PCUICPrincipality.v
 theories/PCUICSR.v
 theories/PCUICMetaTheory.v
@@ -37,6 +38,8 @@ theories/PCUICCheckerCompleteness.v
 theories/PCUICRetyping.v
 theories/PCUICElimination.v
 theories/PCUICSN.v
+
+theories/PCUICSigmaCalculus.v
 
 theories/PCUICSafeLemmata.v
 

@@ -135,6 +135,11 @@ Proof. apply nth_error_app_lt. Qed.
 Lemma app_context_nil_l Γ : [] ,,, Γ = Γ.
 Proof. unfold app_context; now rewrite app_nil_r. Qed.
 
+Lemma map_app_context f Γ Γ' : map f (Γ ,,, Γ') = map f Γ ,,, map f Γ'.
+Proof.
+  induction Γ'; simpl; congruence.
+Qed.
+
 Fixpoint decompose_app_rec (t : term) l :=
   match t with
   | tApp f a => decompose_app_rec f (a :: l)

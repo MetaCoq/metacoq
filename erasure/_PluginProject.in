@@ -8,8 +8,8 @@ src/classes0.mli
 src/classes0.ml
 
 # From Coq's stdlib
-src/compare_dec.mli
-src/compare_dec.ml
+# src/compare_dec.mli
+# src/compare_dec.ml
 src/mSetList.mli
 src/mSetList.ml
 
@@ -19,6 +19,8 @@ src/uGraph0.ml
 src/uGraph0.mli
 src/wGraph.ml
 src/wGraph.mli
+src/typing0.mli
+src/typing0.ml
 
 # From PCUIC
 src/pCUICAst.ml
@@ -79,8 +81,10 @@ src/pCUICSafeConversion.mli
 src/pCUICSafeConversion.ml
 src/pCUICSafeChecker.mli
 src/pCUICSafeChecker.ml
-# src/safeTemplateChecker.mli
-# src/safeTemplateChecker.ml
+src/pCUICSafeRetyping.ml
+src/pCUICSafeRetyping.mli
+src/safeTemplateChecker.mli
+src/safeTemplateChecker.ml
 
 # src/ssreflect.mli
 # src/ssreflect.ml
@@ -98,6 +102,8 @@ src/extract.mli
 src/extract.ml
 src/erasureFunction.mli
 src/erasureFunction.ml
+src/safeErasureFunction.mli
+src/safeErasureFunction.ml
 src/ePretty.mli
 src/ePretty.ml
 

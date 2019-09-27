@@ -57,6 +57,30 @@ Tactic Notation "destruct" "?" "in" hyp(H) :=
   match type of H with context [match ?x with _ => _ end] => destruct x eqn:e
   end.
 
+Tactic Notation "apply*" constr(H) "in" hyp(H')
+  := apply H in H'; [..|apply H].
+
+Ltac cbnr := cbn; try reflexivity.
+
+(* This is an attempt to overcome the fact that auto/eauto *)
+(* do not deal with products *)
+Ltac rdestruct :=
+  repeat match goal with
+  | H : _ /\ _ |- _ => destruct H
+  | H : _ × _ |- _ => destruct H
+  | H : sigT _ |- _ => destruct H
+  | |- _ /\ _ => split
+  | |- _ × _ => split
+  | |- sigT _ => eexists
+  end.
+
+Notation "'precompose'" := (fun R f x y => R (f x) (f y)) (only parsing).
+
+Definition transport {A} (P : A -> Type) {x y : A} (e : x = y) : P x -> P y
+  := fun u => eq_rect x P u y e.
+
+Notation "p # x" := (transport _ p x) (right associativity, at level 65).
+
 (** We cannot use ssrbool as it breaks extraction. *)
 Coercion is_true : bool >-> Sortclass.
 
@@ -196,13 +220,6 @@ Fixpoint fold_left_i_aux {A B} (f : A -> nat -> B -> A) (n0 : nat) (l : list B)
      end.
 Definition fold_left_i {A B} f := @fold_left_i_aux A B f 0.
 
-
-Fixpoint map_i_aux {A B} (f : nat -> A -> B) (n0 : nat) (l : list A) : list B
-  := match l with
-     | [] => []
-     | x :: l => (f n0 x) :: (map_i_aux f (S n0) l)
-     end.
-Definition map_i {A B} f := @map_i_aux A B f 0.
 
 
 Section Forallb2.
@@ -937,6 +954,22 @@ Proof. induction 1; constructor; auto. Qed.
 Lemma All_map_inv {A B} (P : B -> Prop) (f : A -> B) l : All P (map f l) -> All (compose P f) l.
 Proof. induction l; intros Hf; inv Hf; try constructor; eauto. Qed.
 
+Lemma All_nth_error :
+  forall A P l i x,
+    @All A P l ->
+    nth_error l i = Some x ->
+    P x.
+Proof.
+  intros A P l i x h e.
+  induction h in i, x, e |- *.
+  - destruct i. all: discriminate.
+  - destruct i.
+    + simpl in e. inversion e. subst. clear e.
+      assumption.
+    + simpl in e. eapply IHh in e.
+      assumption.
+Qed.
+
 Lemma Alli_mix {A} {P : nat -> A -> Type} {Q : nat -> A -> Type} {n l} :
   Alli P n l -> Alli Q n l -> Alli (fun n x => (P n x * Q n x)%type) n l.
 Proof. induction 1; intros Hq; inv Hq; constructor; auto. Qed.
@@ -953,6 +986,24 @@ Proof.
   inversion_clear H. split; intuition auto. constructor; auto. eapply IHl; eauto.
   simpl. replace (S (#|l| + n)) with (#|l| + S n) by lia.
   eapply IHl; eauto.
+Qed.
+
+Lemma Alli_nth_error :
+  forall A P k l i x,
+    @Alli A P k l ->
+    nth_error l i = Some x ->
+    P (k + i) x.
+Proof.
+  intros A P k l i x h e.
+  induction h in i, x, e |- *.
+  - destruct i. all: discriminate.
+  - destruct i.
+    + simpl in e. inversion e. subst. clear e.
+      replace (n + 0) with n by lia.
+      assumption.
+    + simpl in e. eapply IHh in e.
+      replace (n + S i) with (S n + i) by lia.
+      assumption.
 Qed.
 
 Lemma map_eq_inj {A B} (f g : A -> B) l: map f l = map g l ->
@@ -978,14 +1029,31 @@ Proof.
   intros Hl. unfold mapi. apply mapi_ext_size. simpl. auto.
 Qed.
 
-Lemma Alli_nth_error {A} (P : nat -> A -> Type) k ctx :
-  (forall i x, nth_error ctx i = Some x -> P (k + i) x) ->
-  Alli P k ctx.
+Lemma forall_nth_error_All :
+  forall {A} (P : A -> Type) l,
+    (forall i x, nth_error l i = Some x -> P x) ->
+    All P l.
 Proof.
-  intros. induction ctx in k, X |- *. constructor.
-  constructor. specialize (X 0 a eq_refl). now rewrite Nat.add_0_r in X.
-  apply IHctx. intros. specialize (X (S i) x H).
-  simpl. now replace (S (k + i)) with (k + S i) by lia.
+  intros A P l h.
+  induction l.
+  - constructor.
+  - constructor.
+    + specialize (h 0 a eq_refl). assumption.
+    + eapply IHl. intros i x e. eapply (h (S i)). assumption.
+Qed.
+
+Lemma forall_nth_error_Alli :
+  forall {A} (P : nat -> A -> Type) k l,
+    (forall i x, nth_error l i = Some x -> P (k + i) x) ->
+    Alli P k l.
+Proof.
+  intros A P k l h.
+  induction l in k, h |- *.
+  - constructor.
+  - constructor.
+    + specialize (h 0 a eq_refl). now rewrite Nat.add_0_r in h.
+    + apply IHl. intros. specialize (h (S i) x H).
+      simpl. now replace (S (k + i)) with (k + S i) by lia.
 Qed.
 
 Lemma Alli_mapi {A B} {P : nat -> B -> Type} (f : nat -> A -> B) k l :
@@ -1651,6 +1719,20 @@ Proof.
   specialize (IHl _ _ H0). intuition auto.
 Qed.
 
+Lemma Forall2_map_inv :
+  forall {A B A' B'} (R : A' -> B' -> Prop) (f : A -> A')
+    (g : B -> B') (l : list A) (l' : list B),
+    Forall2 R (map f l) (map g l') ->
+    Forall2 (fun x => R (f x) ∘ g) l l'.
+Proof.
+  intros A B A' B' R f g l l' h.
+  induction l in l', h |- * ; destruct l' ; try solve [ inversion h ].
+  - constructor.
+  - constructor.
+    + inversion h. subst. assumption.
+    + eapply IHl. inversion h. assumption.
+Qed.
+
 Lemma All2_app_inv : forall (A B : Type) (R : A -> B -> Type),
     forall l l1 l2, All2 R (l1 ++ l2) l -> { '(l1',l2') : _ & (l = l1' ++ l2')%list * (All2 R l1 l1') * (All2 R l2 l2')}%type.
 Proof.
@@ -2214,6 +2296,26 @@ Module NEL.
     induction l; cbn; congruence.
   Qed.
 
+  Lemma map_app {A B : Set} (f : A -> B) l l' :
+    map f (l ++ l') = map f l ++ map f l'.
+  Proof.
+    induction l; cbn; congruence.
+  Qed.
+
+  Lemma map_map {A B C : Set} (f : A -> B) (g : B -> C) l :
+    map g (map f l) = map (fun x => g (f x)) l.
+  Proof.
+    induction l; simpl; auto.
+    rewrite IHl; auto.
+  Qed.
+
+  Lemma map_ext {A B : Set} (f g : A -> B) l :
+    (forall x, f x = g x) -> map f l = map g l.
+  Proof.
+    intros.
+    induction l; cbn; rewrite ?H; congruence.
+  Defined.
+
 End NEL.
 
 Definition non_empty_list := NEL.t.
@@ -2631,4 +2733,87 @@ Lemma All_forallb_forallb_spec {A : Type} {P : A -> Type} {p : A -> bool}
 Proof.
   induction 1; simpl; trivial.
   rewrite !andb_and. intros [px pl] Hx. eauto.
+Qed.
+
+
+Lemma forallb_nth {A} (l : list A) (n : nat) P d :
+  forallb P l -> n < #|l| -> exists x, (nth n l d = x) /\ P x.
+Proof.
+  induction l in n |- *; destruct n; simpl; auto; try easy.
+  move/andP => [pa pl] pn. exists a; easy.
+  move/andP => [pa pl] pn. specialize (IHl n pl).
+  forward IHl. lia. auto.
+Qed.
+
+Lemma forallb_nth' {A} {l : list A} {P} n d :
+  forallb P l -> {exists x, (nth n l d = x) /\ P x} + {nth n l d = d}.
+Proof.
+  intro H. destruct (le_lt_dec #|l| n) as [HH|HH].
+  - rewrite nth_overflow; tas; now right.
+  - left. eapply forallb_nth; assumption.
+Qed.
+
+Lemma forallb_impl {A} (p q : pred A) l :
+  (forall x, In x l -> p x -> q x) -> forallb p l -> forallb q l.
+Proof.
+  intros H0 H1. eapply forallb_forall. intros x H2. 
+  eapply forallb_forall in H1; tea.
+  now eapply H0.
+Qed.
+
+Lemma forallb_iff {A} (p q : pred A) l :
+  (forall x, In x l -> p x <-> q x) -> forallb p l = forallb q l.
+Proof.
+  intros H0. eapply Forall_forallb_eq_forallb with (P:=fun x => In x l).
+  - now apply Forall_forall.
+  - intros; eapply eq_true_iff_eq; eauto.
+Qed.
+
+Lemma map_inj :
+  forall A B (f : A -> B) l l',
+    (forall x y, f x = f y -> x = y) ->
+    map f l = map f l' ->
+    l = l'.
+Proof.
+  intros A B f l l' h e.
+  induction l in l', e |- *.
+  - destruct l' ; try discriminate. reflexivity.
+  - destruct l' ; try discriminate. inversion e.
+    f_equal ; eauto.
+Qed.
+
+Lemma All2_eq :
+  forall A (l l' : list A),
+    All2 eq l l' ->
+    l = l'.
+Proof.
+  intros A l l' h.
+  induction h ; eauto. subst. reflexivity.
+Qed.
+
+
+Lemma All_prod_inv :
+  forall A P Q l,
+    All (fun x : A => P x × Q x) l ->
+    All P l × All Q l.
+Proof.
+  intros A P Q l h.
+  induction h.
+  - split ; auto.
+  - destruct IHh, p.
+    split ; constructor ; auto.
+Qed.
+
+
+Lemma All_prod :
+  forall A P Q l,
+    All P l ->
+    All Q l ->
+    All (fun x : A => P x × Q x) l.
+Proof.
+  intros A P Q l h1 h2.
+  induction h1 in h2 |- *.
+  - constructor.
+  - dependent destruction h2.
+    forward IHh1 ; auto.
 Qed.

@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
-From MetaCoq Require Import config utils Ast AstUtils Induction utils LiftSubst UnivSubst Typing TypingWf.
-From MetaCoq Require Import Generation WeakeningEnv Closed Weakening.
+From MetaCoq.Template Require Import config utils Ast AstUtils Induction utils LiftSubst UnivSubst.
+From MetaCoq.Checker Require Import Typing TypingWf Generation WeakeningEnv Closed Weakening.
 Require Import ssreflect.
 
 (** * Substitution lemmas for typing derivations. *)

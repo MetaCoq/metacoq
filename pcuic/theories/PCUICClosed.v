@@ -386,12 +386,13 @@ Proof.
     rewrite closedn_subst_instance_constr.
     eauto using closed_upwards with arith.
 
-  - intuition auto. solve_all. unfold test_snd. simpl in *.
-    toProp; eauto.
-    apply closedn_mkApps; auto.
-    rewrite forallb_app. simpl. rewrite H3.
-    rewrite forallb_skipn; auto.
-    now apply closedn_mkApps_inv in H7.
+  - intuition auto.
+    + solve_all. unfold test_snd. simpl in *.
+      toProp; eauto.
+    + apply closedn_mkApps; auto.
+      rewrite forallb_app. simpl. rewrite H3.
+      rewrite forallb_skipn; auto.
+      now apply closedn_mkApps_inv in H7.
 
   - intuition auto.
     apply closedn_subst0.
@@ -525,4 +526,22 @@ Proof.
   case: d => na [body|] ty; rewrite /closed_decl /=.
   move/andP => [cb cty] k' lek'. do 2 rewrite (@closed_upwards k) //.
   move=> cty k' lek'; rewrite (@closed_upwards k) //.
+Qed.
+
+
+Lemma rev_subst_instance_context u Γ :
+  List.rev (subst_instance_context u Γ) = subst_instance_context u (List.rev Γ).
+Proof.
+  unfold subst_instance_context, map_context.
+  now rewrite map_rev.
+Qed.
+
+Lemma closedn_subst_instance_context k Γ u :
+  closedn_ctx k (subst_instance_context u Γ) = closedn_ctx k Γ.
+Proof.
+  unfold closedn_ctx; f_equal.
+  rewrite rev_subst_instance_context.
+  rewrite mapi_map. apply mapi_ext.
+  intros n [? [] ?]; unfold closed_decl; cbn.
+  all: now rewrite !closedn_subst_instance_constr.
 Qed.

@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega Lia.
-From MetaCoq Require Import config utils Ast AstUtils Induction utils LiftSubst Typing TypingWf.
-From MetaCoq Require Import WeakeningEnv.
+From MetaCoq.Template Require Import config utils Ast AstUtils Induction utils LiftSubst.
+From MetaCoq.Checker Require Import Typing TypingWf WeakeningEnv.
 Require Import ssreflect ssrbool.
 
 Definition closed_decl n d :=

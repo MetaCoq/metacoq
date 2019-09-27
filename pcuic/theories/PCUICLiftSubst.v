@@ -1023,6 +1023,35 @@ Proof.
     -- rewrite nth_error_app_lt ?idsn_length //. apply IHn; lia.
 Qed.
 
+Lemma nth_error_idsn_Some :
+  forall n k,
+    k < n ->
+    nth_error (idsn n) k = Some (tRel k).
+Proof.
+  intros n k h.
+  induction n in k, h |- *.
+  - inversion h.
+  - simpl. destruct (Nat.ltb_spec0 k n).
+    + rewrite nth_error_app1.
+      * rewrite idsn_length. auto.
+      * eapply IHn. assumption.
+    + assert (k = n) by lia. subst.
+      rewrite nth_error_app2.
+      * rewrite idsn_length. auto.
+      * rewrite idsn_length. replace (n - n) with 0 by lia.
+        simpl. reflexivity.
+Qed.
+
+Lemma nth_error_idsn_None :
+  forall n k,
+    k >= n ->
+    nth_error (idsn n) k = None.
+Proof.
+  intros n k h.
+  eapply nth_error_None.
+  rewrite idsn_length. auto.
+Qed.
+
 Lemma up_Upn {n σ} : up n σ =1 ⇑^n σ.
 Proof.
   unfold up, Upn.

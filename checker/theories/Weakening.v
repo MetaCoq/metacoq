@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega Lia.
-From MetaCoq Require Import config utils LibHypsNaming Ast AstUtils Induction utils LiftSubst UnivSubst Typing TypingWf.
-From MetaCoq Require Import WeakeningEnv Closed.
+From MetaCoq.Template Require Import config utils Ast AstUtils Induction utils LiftSubst UnivSubst.
+From MetaCoq.Checker Require Import LibHypsNaming Typing TypingWf WeakeningEnv Closed.
 Require Import ssreflect ssrbool.
 
 (** * Weakening lemmas for typing derivations.

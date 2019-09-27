@@ -1,15 +1,15 @@
-(* -*- coq-prog-args : ("-type-in-type") -*-  *)
 
 From MetaCoq Require Import Template.All.
 Require Import Arith.Compare_dec.
-From Translations Require Import translation_utils sigma.
+From MetaCoq.Translations Require Import translation_utils sigma.
+From MetaCoq.Checker Require Import All.
 Import String Lists.List.ListNotations MonadNotation.
 Open Scope string_scope.
 Open Scope list_scope.
 Open Scope sigma_scope.
 
 Local Existing Instance config.default_checker_flags.
-Local Existing Instance Checker.default_fuel.
+Local Existing Instance default_fuel.
 
 
 Fixpoint refresh_universes (t : term) {struct t} :=
@@ -41,10 +41,10 @@ Fixpoint tsl_rec1 (n : nat) (t : term) {struct t} : term :=
   end.
     
 
-Fixpoint tsl_rec2 (fuel : nat) (Σ : global_declarations) (G : universes_graph) (E : tsl_table) (Γ : context) (t : term) {struct fuel}
+Fixpoint tsl_rec2 (fuel : nat) (Σ : global_env) (G : universes_graph) (E : tsl_table) (Γ : context) (t : term) {struct fuel}
   : tsl_result term :=
   match fuel with
-  | O => raise NotEnoughFuel
+  | O => raise translation_utils.NotEnoughFuel
   | S fuel =>
   match t with
   | tRel n => ret (proj2 (tRel n))
@@ -79,10 +79,10 @@ Fixpoint tsl_rec2 (fuel : nat) (Σ : global_declarations) (G : universes_graph) 
   | _ => raise TranslationNotHandeled
   end
   end
-with tsl_term  (fuel : nat) (Σ : global_declarations) (G : universes_graph) (E : tsl_table) (Γ : context) (t : term) {struct fuel}
+with tsl_term  (fuel : nat) (Σ : global_env) (G : universes_graph) (E : tsl_table) (Γ : context) (t : term) {struct fuel}
   : tsl_result term :=
   match fuel with
-  | O => raise NotEnoughFuel
+  | O => raise translation_utils.NotEnoughFuel
   | S fuel =>
   match t with
   | tRel n => ret (tRel n)
@@ -147,8 +147,8 @@ Definition tsl_mind_body (ΣE : tsl_context) (mp : string)
   : tsl_result (tsl_table * list mutual_inductive_body).
   refine (
       let Σ := fst (fst ΣE) in
-      match gc_of_constraints (snd (fst ΣE)) with
-      | None => raise (TypingError (UnsatisfiableConstraints (snd (fst ΣE))))
+      match gc_of_uctx (global_ext_uctx (fst ΣE)) with
+      | None => raise (TypingError (UnsatisfiableConstraints (snd (global_ext_uctx (fst ΣE)))))
       | Some ctrs => 
         let G := make_graph ctrs in
         let E := snd ΣE in
@@ -166,7 +166,7 @@ Definition tsl_mind_body (ΣE : tsl_context) (mp : string)
 
   - refine (let n := List.length arities - 1 in
             let L := List.combine arities arities2 in
-            List.rev (map_i (fun i '(a,a2) => pair a a2 (tInd (mkInd kn i) []) (tRel (n-i))) L)).
+            List.rev (mapi (fun i '(a,a2) => pair a a2 (tInd (mkInd kn i) []) (tRel (n-i))) L)).
 
   - (* inductive_body -> tsl_result inductive_body *)
     refine (monad_map_i _ mind.(ind_bodies)).
@@ -210,19 +210,19 @@ Defined.
 Instance tsl_param : Translation
   := {| tsl_id := tsl_ident ;
         tsl_tm := fun ΣE t =>
-      match gc_of_constraints (snd (fst ΣE)) with
-      | None => raise (TypingError (UnsatisfiableConstraints (snd (fst ΣE))))
+      match gc_of_uctx (global_ext_uctx (fst ΣE)) with
+      | None => raise (TypingError (UnsatisfiableConstraints (snd (global_ext_uctx (fst ΣE)))))
       | Some ctrs => tsl_term fuel (fst (fst ΣE)) (make_graph ctrs) (snd ΣE) [] t
       end;
         tsl_ty := Some (fun ΣE t =>
-      match gc_of_constraints (snd (fst ΣE)) with
-      | None => raise (TypingError (UnsatisfiableConstraints (snd (fst ΣE))))
+      match gc_of_uctx (global_ext_uctx (fst ΣE)) with
+      | None => raise (TypingError (UnsatisfiableConstraints (snd (global_ext_uctx (fst ΣE)))))
       | Some ctrs => tsl_ty_param fuel (fst (fst ΣE)) (make_graph ctrs) (snd ΣE) [] t
       end);
         tsl_ind := tsl_mind_body |}.
 
 
-Print Visibility.
+
 Notation "'TYPE'" := (sigma Type (fun A => A -> Type)).
 Notation "'El' A" := (sigma (π1 A) (π2 A)) (at level 20).
 

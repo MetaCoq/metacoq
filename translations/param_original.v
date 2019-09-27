@@ -1,6 +1,6 @@
 From MetaCoq Require Import Template.All.
 Require Import Arith.Compare_dec.
-From Translations Require Import translation_utils.
+From MetaCoq.Translations Require Import translation_utils.
 Import String List Lists.List.ListNotations MonadNotation.
 Open Scope list_scope.
 Open Scope string_scope.
@@ -134,7 +134,7 @@ Definition tsl_mind_body (E : tsl_table) (mp : string) (kn : kername)
   - exact mind.(ind_finite).
   - (* params: 2 times the same parameters? Probably wrong *)
     refine (mind.(ind_params) ++ mind.(ind_params))%list.
-  - refine (map_i _ mind.(ind_bodies)).
+  - refine (mapi _ mind.(ind_bodies)).
     intros i ind.
     refine {| ind_name := tsl_ident ind.(ind_name);
               ind_type := _;
@@ -146,13 +146,13 @@ Definition tsl_mind_body (E : tsl_table) (mp : string) (kn : kername)
                                   [tInd (mkInd kn i) []] in
               ar).
     + (* constructors *)
-      refine (map_i _ ind.(ind_ctors)).
+      refine (mapi _ ind.(ind_ctors)).
       intros k ((name, typ), nargs).
       refine (tsl_ident name, _, 2 * nargs).
       refine (subst_app _ [tConstruct (mkInd kn i) k []]).
       refine (fold_left_i (fun t0 i u  => t0 {S i := u}) _ (tsl_rec1 E typ)).
       (* [I_n-1; ... I_0] *)
-      refine (rev (map_i (fun i _ => tInd (mkInd kn i) [])
+      refine (rev (mapi (fun i _ => tInd (mkInd kn i) [])
                               mind.(ind_bodies))).
 Defined.
 

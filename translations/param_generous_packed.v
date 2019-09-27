@@ -1,6 +1,6 @@
 (* -*- coq-prog-args: ("-type-in-type" "-top" "Translations.tsl_param3") -*-  *)
-From MetaCoq Require Import Template.All.
-From Translations Require Import translation_utils.
+From MetaCoq Require Import Template.All Checker.All.
+From MetaCoq.Translations Require Import translation_utils.
 Import String Lists.List.ListNotations MonadNotation.
 Open Scope list_scope. Open Scope string_scope.
 
@@ -35,11 +35,11 @@ Fixpoint refresh_universes (t : term) {struct t} :=
   end.
 
 Local Instance tit : config.checker_flags
-  := {| config.check_univs := false |}.
+  := config.type_in_type.
 Existing Instance Checker.default_fuel.
 
 (* if b it is the first translation, else the second *)
-Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (E : tsl_table) (Γ : context)
+Fixpoint tsl_rec (fuel : nat) (Σ : global_env_ext) (E : tsl_table) (Γ : context)
          (b : bool) (t : term) {struct fuel} : tsl_result term :=
   match fuel with
   | O => raise NotEnoughFuel
@@ -96,7 +96,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (E : tsl_table) (Γ : contex
   end
   end
 
-with tsl_term  (fuel : nat) (Σ : global_context) (E : tsl_table) (Γ : context)
+with tsl_term  (fuel : nat) (Σ : global_env_ext) (E : tsl_table) (Γ : context)
                (t : term) {struct fuel} : tsl_result term :=
   match fuel with
   | O => raise NotEnoughFuel

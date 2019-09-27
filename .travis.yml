@@ -5,14 +5,12 @@ cache:
   apt: true
   directories:
   - $HOME/.opam
+  - $HOME/bin
 
 addons:
   apt:
     sources:
     - avsm
-    packages:
-    - opam
-    - aspcud
 
 env:
   global:
@@ -24,23 +22,34 @@ env:
   - COQ_VER="8.9.1"
 
 install:
+- curl -sL https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh > install.sh
+- export PATH=$HOME/bin:$PATH
+- which opam || (rm -rf $HOME/.opam; echo $HOME/bin | sudo sh install.sh --no-backup; opam init --disable-sandboxing -j ${NJOBS} --compiler=${COMPILER} -n -y)
+- opam --version
+- opam update
 - opam init -j ${NJOBS} -n -y --compiler=$COMPILER
 - opam switch set ${COMPILER}
 - eval $(opam config env)
 - opam config list
-- opam update
 - opam repo add coq-released https://coq.inria.fr/opam/released || echo "coq-released registered"
 - opam install -j ${NJOBS} -y camlp5.${CAMLP5_VER} ocamlfind.${FINDLIB_VER} coq.${COQ_VER} coq-equations.${EQUATIONS_VER}
 - opam list
 
+matrix:
+  include:
+    - name: "Local build"
+      env: TARGET=ci-local
+    - name: "Opam installation"
+      env: TARGET=ci-opam
+
 script:
- - ./configure.sh local
- - make -j ${NJOBS} all test-suite
+ - make -j ${NJOBS} ${TARGET}
 
 notifications:
   webhooks:
     urls:
       - https://webhooks.gitter.im/e/1d832177d55504ef1fba
+      - https://webhooks.gitter.im/e/16c924039f492c4a5640
     on_success: always  # options: [always|never|change] default: always
     on_failure: always  # options: [always|never|change] default: always
     on_start: never     # options: [always|never|change] default: always

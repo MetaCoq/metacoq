@@ -23,12 +23,22 @@ let pr_char_list l =
   (* We allow utf8 encoding *)
   str (Bytes.to_string (bytes_of_list l))
 
+let time prefix f x =
+  let start = Unix.gettimeofday () in
+  let res = f x in
+  let stop = Unix.gettimeofday () in
+  let () = Feedback.msg_debug (prefix ++ str " executed in: " ++ Pp.real (stop -. start) ++ str "s") in
+  res
+
 let check env evm c =
-  (* if Feedback.msg_debug (str"Quoting"); *)
-  let term = Ast_quoter.quote_term_rec env (EConstr.to_constr evm c) in
-  (* Feedback.msg_debug (str"Finished quoting.. checking."); *)
+  Feedback.msg_debug (str"Quoting");
+  let term = time (str"Quoting") (Ast_quoter.quote_term_rec env) (EConstr.to_constr evm c) in
   let checker_flags = Config0.extraction_checker_flags in
-  match SafeTemplateErasure.erase_and_print_template_program checker_flags term with
+  let erase = time (str"Erasing")
+      (SafeTemplateErasure.erase_and_print_template_program checker_flags)
+      term
+  in
+  match erase with
   | Coq_inl s -> Feedback.msg_info (pr_char_list s)
   | Coq_inr s -> CErrors.user_err ~hdr:"metacoq" (pr_char_list s)
 

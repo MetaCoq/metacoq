@@ -1,3 +1,4 @@
+Init
 Classes0
 Signature
 Ssreflect
@@ -6,6 +7,9 @@ PCUICAstUtils
 PCUICInduction
 PCUICUnivSubst
 PCUICLiftSubst
+EqDecInstances
+PCUICReflect
+PCUICEquality
 PCUICTyping
 PCUICChecker
 PCUICPretty

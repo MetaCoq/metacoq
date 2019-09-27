@@ -1,7 +1,8 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega Lia.
-From MetaCoq Require Import LibHypsNaming config utils Ast AstUtils Induction utils LiftSubst Typing.
+From MetaCoq.Template Require Import config utils Ast AstUtils Induction LiftSubst.
+From MetaCoq.Checker Require Import LibHypsNaming Typing.
 
 (** * Weakening lemmas w.r.t. the global environment *)
 
@@ -240,17 +241,6 @@ Proof.
   apply global_ext_constraints_app.
 Qed.
 
-Lemma valid_subset {cf:checker_flags} φ φ' ctrs
-  : ConstraintSet.Subset φ φ' -> valid_constraints φ ctrs
-    ->  valid_constraints φ' ctrs.
-Proof.
-  unfold valid_constraints.
-  destruct check_univs; [|trivial].
-  intros Hφ H.
-  intuition. apply H.
-  intros ctr Hc. apply H0. now apply Hφ.
-Qed.
-
 Lemma eq_term_subset {cf:checker_flags} φ φ' t t'
   : ConstraintSet.Subset φ φ'
     -> eq_term φ t t' ->  eq_term φ' t t'.
@@ -273,7 +263,7 @@ Lemma eq_context_subset {cf:checker_flags} φ φ' Γ Γ'
     -> eq_context φ Γ Γ' ->  eq_context φ' Γ Γ'.
 Proof.
   intros Hφ. induction 1; constructor.
-  intuition. now eapply eq_decl_subset. assumption.
+  eapply eq_decl_subset; eassumption. assumption.
 Qed.
 
 Lemma check_correct_arity_subset {cf:checker_flags} φ φ' decl ind u ctx pars pctx
@@ -291,7 +281,7 @@ Proof.
     intros X.
     destruct ctrs; tas. 2: destruct ctx as [cst _].
     all: destruct (AUContext.repr cst).
-    all: destruct X as [X1 X2]; split; tas.
+    all: destruct X as [X1 [X2 X3]]; repeat split; tas.
     all: eapply valid_subset.
     all: try eapply weakening_env_global_ext_constraints; tea.
 Qed.

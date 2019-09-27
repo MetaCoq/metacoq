@@ -1,5 +1,5 @@
-From MetaCoq Require Import Template.All.
-From Translations Require Import translation_utils MiniHoTT.
+From MetaCoq Require Import Template.All Checker.All.
+From MetaCoq.Translations Require Import translation_utils MiniHoTT.
 Import String Lists.List.ListNotations MonadNotation.
 Open Scope list_scope. Open Scope string_scope.
 
@@ -33,10 +33,10 @@ Definition pairTrue typ tm := tApp tpair [typ; tbool; tm; ttrue].
 
 
 
-Local Instance tit : config.checker_flags := {| config.check_univs := false |}.
+Local Instance tit : config.checker_flags := config.type_in_type.
 Existing Instance Checker.default_fuel.
 
-Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (E : tsl_table) (Γ : context) (t : term) {struct fuel}
+Fixpoint tsl_rec (fuel : nat) (Σ : global_env_ext) (E : tsl_table) (Γ : context) (t : term) {struct fuel}
   : tsl_result term :=
   match fuel with
   | O => raise NotEnoughFuel
@@ -147,7 +147,7 @@ Definition tsl_mind_body (ΣE : tsl_context) (mp : string) (kn : kername)
                              | Error _ => todo
                              end in
           let kn' := tsl_kn tsl_ident kn mp in _).
-  unshelve refine (let LI := List.split (map_i _ mind.(ind_bodies)) in
+  unshelve refine (let LI := List.split (mapi _ mind.(ind_bodies)) in
           ret (List.concat (fst LI),
                [{| ind_npars := mind.(ind_npars);
                    ind_params := _;
@@ -155,7 +155,7 @@ Definition tsl_mind_body (ΣE : tsl_context) (mp : string) (kn : kername)
                    ind_universes := mind.(ind_universes)|}])). (* FIXME always ok? *)
   intros i ind.
   simple refine (let ind_type' := _ in
-                 let ctors' := List.split (map_i _ ind.(ind_ctors)) in
+                 let ctors' := List.split (mapi _ ind.(ind_ctors)) in
                  (_ :: fst ctors',
                   {| ind_name := tsl_ident ind.(ind_name);
                      ind_type := ind_type';

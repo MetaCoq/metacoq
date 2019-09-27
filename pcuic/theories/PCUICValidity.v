@@ -294,7 +294,6 @@ Section Validity.
       subst ty.
       eapply typing_subst_instance in Hty.
       admit. auto. now eapply typing_wf_local in Hty.
-      admit. admit.
 
     - admit. (* Fix *)
     - admit. (* CoFix *)

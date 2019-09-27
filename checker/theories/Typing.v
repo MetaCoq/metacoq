@@ -666,31 +666,11 @@ Definition on_udecl_decl {A} (F : universes_decl -> A) d : A :=
   | InductiveDecl _ mb => F mb.(ind_universes)
   end.
 
-Definition monomorphic_udecl u :=
-  match u with
-  | Monomorphic_ctx ctx => ctx
-  | _ => ContextSet.empty
-  end.
-
 Definition monomorphic_udecl_decl := on_udecl_decl monomorphic_udecl.
 
 Definition monomorphic_levels_decl := fst ∘ monomorphic_udecl_decl.
 
 Definition monomorphic_constraints_decl := snd ∘ monomorphic_udecl_decl.
-
-Definition levels_of_udecl u :=
-  match u with
-  | Monomorphic_ctx ctx => fst ctx
-  | Polymorphic_ctx ctx
-  | Cumulative_ctx (ctx, _) => AUContext.levels ctx
-  end.
-
-Definition constraints_of_udecl u :=
-  match u with
-  | Monomorphic_ctx ctx => snd ctx
-  | Polymorphic_ctx ctx
-  | Cumulative_ctx (ctx, _) => snd (AUContext.repr ctx)
-  end.
 
 Definition universes_decl_of_decl := on_udecl_decl (fun x => x).
 
@@ -739,6 +719,7 @@ Definition consistent_instance `{checker_flags} (φ : constraints) uctx (u : uni
   | Cumulative_ctx (c, _) => (* FIXME Cumulative *)
     let '(inst, cstrs) := AUContext.repr c in
     List.length u = List.length inst /\
+    forallb (negb ∘ Level.is_prop) u /\
     valid_constraints φ (subst_instance_cstrs u cstrs)
   end.
 
@@ -984,7 +965,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     forall pty, Σ ;;; Γ |- p : pty ->
     forall indctx pctx ps btys, types_of_case ind mdecl idecl pars u p pty = Some (indctx, pctx, ps, btys) ->
     check_correct_arity (global_ext_constraints Σ) idecl ind u indctx pars pctx ->
-    List.Exists (fun sf => universe_family ps = sf) idecl.(ind_kelim) ->
+    existsb (leb_sort_family (universe_family ps)) idecl.(ind_kelim) ->
     Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
     All2 (fun x y => (fst x = fst y) * (Σ ;;; Γ |- snd x : snd y)) brs btys ->
     Σ ;;; Γ |- tCase (ind, npar) p c brs : mkApps p (List.skipn npar args ++ [c])
@@ -1749,7 +1730,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         forall indctx pctx ps btys,
         types_of_case ind mdecl idecl pars u p pty = Some (indctx, pctx, ps, btys) ->
         check_correct_arity (global_ext_constraints Σ) idecl ind u indctx pars pctx ->
-        Exists (fun sf : sort_family => universe_family ps = sf) (ind_kelim idecl) ->
+        existsb (leb_sort_family (universe_family ps)) (ind_kelim idecl) ->
         P Σ Γ p pty ->
         Σ;;; Γ |- c : mkApps (tInd ind u) args ->
         P Σ Γ c (mkApps (tInd ind u) args) ->

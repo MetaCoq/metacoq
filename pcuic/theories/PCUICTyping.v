@@ -471,6 +471,62 @@ Fixpoint destArity Γ (t : term) :=
   | _ => None
   end.
 
+Lemma destArity_app_aux {Γ Γ' t}
+  : destArity (Γ ,,, Γ') t = option_map (fun '(ctx, s) => (Γ ,,, ctx, s))
+                                        (destArity Γ' t).
+Proof.
+  revert Γ'.
+  induction t; cbn; intro Γ'; try reflexivity.
+  - rewrite <- app_context_cons. now eapply IHt2.
+  - rewrite <- app_context_cons. now eapply IHt3.
+Qed.
+
+Lemma destArity_app {Γ t}
+  : destArity Γ t = option_map (fun '(ctx, s) => (Γ ,,, ctx, s))
+                               (destArity [] t).
+Proof.
+  exact (@destArity_app_aux Γ [] t).
+Qed.
+
+Lemma destArity_app_Some {Γ t ctx s}
+  : destArity Γ t = Some (ctx, s)
+    -> ∑ ctx', destArity [] t = Some (ctx', s) /\ ctx = Γ ,,, ctx'.
+Proof.
+  intros H. rewrite destArity_app in H.
+  destruct (destArity [] t) as [[ctx' s']|]; cbn in *.
+  exists ctx'. inversion H. now subst.
+  discriminate H.
+Qed.
+
+Lemma mkApps_nonempty f l :
+  l <> [] -> mkApps f l = tApp (mkApps f (removelast l)) (last l f).
+Proof.
+  destruct l using rev_ind. intros; congruence.
+  intros. rewrite <- mkApps_nested. simpl. f_equal.
+  rewrite removelast_app. congruence. simpl. now rewrite app_nil_r.
+  rewrite last_app. congruence.
+  reflexivity.
+Qed.
+
+Lemma destArity_tFix {mfix idx args} :
+  destArity [] (mkApps (tFix mfix idx) args) = None.
+Proof.
+  induction args. reflexivity.
+  rewrite mkApps_nonempty.
+  intros e; discriminate e.
+  reflexivity.
+Qed.
+
+Lemma destArity_tApp {t u l} :
+  destArity [] (mkApps (tApp t u) l) = None.
+Proof.
+  induction l. reflexivity.
+  rewrite mkApps_nonempty.
+  intros e; discriminate e.
+  reflexivity.
+Qed.
+
+
 (** Compute the type of a case from the predicate [p], actual parameters [pars] and
     an inductive declaration. *)
 
@@ -492,18 +548,27 @@ Fixpoint instantiate_params_subst params pars s ty :=
     end
   end.
 
-
 Definition instantiate_params params pars ty :=
   match instantiate_params_subst (List.rev params) pars [] ty with
   | Some (s, ty) => Some (subst0 s ty)
   | None => None
   end.
 
+Lemma instantiate_params_ params pars ty :
+  instantiate_params params pars ty
+  = option_map (fun '(s, ty) => subst0 s ty)
+               (instantiate_params_subst (List.rev params) pars [] ty).
+Proof.
+  unfold instantiate_params.
+  repeat (destruct ?; cbnr).
+Qed.
+
+(* [params], [p] and output are already instanciated by [u] *)
 Definition build_branches_type ind mdecl idecl params u p :=
   let inds := inds (inductive_mind ind) u mdecl.(ind_bodies) in
   let branch_type i '(id, t, ar) :=
     let ty := subst0 inds (subst_instance_constr u t) in
-    match instantiate_params mdecl.(ind_params) params ty with
+    match instantiate_params (subst_instance_context u mdecl.(ind_params)) params ty with
     | Some ty =>
       let '(sign, ccl) := decompose_prod_assum [] ty in
       let nargs := List.length sign in
@@ -516,9 +581,31 @@ Definition build_branches_type ind mdecl idecl params u p :=
     end
   in mapi branch_type idecl.(ind_ctors).
 
+Lemma build_branches_type_ ind mdecl idecl params u p :
+  build_branches_type ind mdecl idecl params u p
+  = let inds := inds (inductive_mind ind) u mdecl.(ind_bodies) in
+    let branch_type i '(id, t, ar) :=
+        let ty := subst0 inds (subst_instance_constr u t) in
+        option_map (fun ty =>
+         let '(sign, ccl) := decompose_prod_assum [] ty in
+         let nargs := List.length sign in
+         let allargs := snd (decompose_app ccl) in
+         let '(paramrels, args) := chop mdecl.(ind_npars) allargs in
+         let cstr := tConstruct ind i u in
+         let args := (args ++ [mkApps cstr (paramrels ++ to_extended_list sign)])%list in
+         (ar, it_mkProd_or_LetIn sign (mkApps (lift0 nargs p) args)))
+                  (instantiate_params (subst_instance_context u mdecl.(ind_params))
+                                      params ty)
+    in mapi branch_type idecl.(ind_ctors).
+Proof.
+  apply mapi_ext. intros ? [[? ?] ?]; cbnr.
+  repeat (destruct ?; cbnr).
+Qed.
+
+(* [params], [p], [pty] and output already instanciated by [u] *)
 Definition types_of_case ind mdecl idecl params u p pty :=
   let brtys := build_branches_type ind mdecl idecl params u p in
-  match instantiate_params mdecl.(ind_params) params idecl.(ind_type) with
+  match instantiate_params (subst_instance_context u mdecl.(ind_params)) params (subst_instance_constr u idecl.(ind_type)) with
   | Some ity =>
     match
       destArity [] ity,
@@ -532,16 +619,26 @@ Definition types_of_case ind mdecl idecl params u p pty :=
   | None => None
   end.
 
+Lemma types_of_case_spec ind mdecl idecl pars u p pty indctx pctx ps btys :
+  types_of_case ind mdecl idecl pars u p pty
+  = Some (indctx, pctx, ps, btys)
+  <~> ∑ s', option_map (destArity [])
+                     (instantiate_params (subst_instance_context u (ind_params mdecl)) pars (subst_instance_constr u (ind_type idecl)))
+          = Some (Some (indctx, s'))
+          /\ destArity [] pty = Some (pctx, ps)
+          /\ map_option_out (build_branches_type ind mdecl idecl pars u p)
+            = Some btys.
+Proof.
+  unfold types_of_case.
+  repeat (destruct ?; cbn).
+  all: split; [try discriminate; inversion 1; subst; eexists; repeat split|].
+  all: intros [s' [HH1 [HH2 HH3]]]; inversion HH1; inversion HH2; now inversion HH3.
+Qed.
+
 Definition on_udecl_decl {A} (F : universes_decl -> A) d : A :=
   match d with
   | ConstantDecl  _ cb => F cb.(cst_universes)
   | InductiveDecl _ mb => F mb.(ind_universes)
-  end.
-
-Definition monomorphic_udecl u :=
-  match u with
-  | Monomorphic_ctx ctx => ctx
-  | _ => ContextSet.empty
   end.
 
 Definition monomorphic_udecl_decl := on_udecl_decl monomorphic_udecl.
@@ -550,20 +647,6 @@ Definition monomorphic_levels_decl := fst ∘ monomorphic_udecl_decl.
 
 Definition monomorphic_constraints_decl := snd ∘ monomorphic_udecl_decl.
 
-Definition levels_of_udecl u :=
-  match u with
-  | Monomorphic_ctx ctx => fst ctx
-  | Polymorphic_ctx ctx
-  | Cumulative_ctx (ctx, _) => AUContext.levels ctx
-  end.
-
-Definition constraints_of_udecl u :=
-  match u with
-  | Monomorphic_ctx ctx => snd ctx
-  | Polymorphic_ctx ctx
-  | Cumulative_ctx (ctx, _) => snd (AUContext.repr ctx)
-  end.
-
 Definition universes_decl_of_decl := on_udecl_decl (fun x => x).
 
 (* Definition LevelSet_add_list l := LevelSet.union (LevelSetProp.of_list l). *)
@@ -571,9 +654,33 @@ Definition universes_decl_of_decl := on_udecl_decl (fun x => x).
 Definition LevelSet_pair x y
   := LevelSet.add y (LevelSet.singleton x).
 
+Lemma LevelSet_pair_In x y z :
+  LevelSet.In x (LevelSet_pair y z) -> x = y \/ x = z.
+Proof.
+  intro H. apply LevelSetFact.add_iff in H.
+  destruct H; [intuition|].
+  apply LevelSetFact.singleton_1 in H; intuition.
+Qed.
+
 Definition global_levels (Σ : global_env) : LevelSet.t
   := fold_right (fun decl lvls => LevelSet.union (monomorphic_levels_decl decl) lvls)
                 (LevelSet_pair Level.lSet Level.lProp) Σ.
+
+Lemma global_levels_Set Σ :
+  LevelSet.mem Level.lSet (global_levels Σ) = true.
+Proof.
+  induction Σ; simpl. reflexivity.
+  apply LevelSet.mem_spec, LevelSet.union_spec; right.
+  now apply LevelSet.mem_spec in IHΣ.
+Qed.
+
+Lemma global_levels_Prop Σ :
+  LevelSet.mem Level.lProp (global_levels Σ) = true.
+Proof.
+  induction Σ; simpl. reflexivity.
+  apply LevelSet.mem_spec, LevelSet.union_spec; right.
+  now apply LevelSet.mem_spec in IHΣ.
+Qed.
 
 (** One can compute the constraints associated to a global environment or its
     extension by folding over its constituent definitions.
@@ -607,20 +714,24 @@ Proof.
 Qed.
 
 
-(** Check that [uctx] instantiated at [u] is consistent with the current universe graph. *)
+(** Check that [uctx] instantiated at [u] is consistent with
+    the current universe graph. *)
 
-Definition consistent_instance `{checker_flags} (φ : constraints) uctx (u : universe_instance) :=
+Definition consistent_instance `{checker_flags} (lvs : LevelSet.t) (φ : constraints) uctx (u : universe_instance) :=
   match uctx with
   | Monomorphic_ctx c => List.length u = 0
   | Polymorphic_ctx c
   | Cumulative_ctx (c, _) => (* FIXME Cumulative *)
-    let '(inst, cstrs) := AUContext.repr c in
-    List.length u = List.length inst /\
-    valid_constraints φ (subst_instance_cstrs u cstrs)
+    (* no prop levels in instances *)
+    forallb (negb ∘ Level.is_prop) u /\
+    (* levels of the instance already declared *)
+    forallb (fun l => LevelSet.mem l lvs) u /\
+    List.length u = List.length c.1 /\
+    valid_constraints φ (subst_instance_cstrs u c.2)
   end.
 
-Definition consistent_instance_ext `{checker_flags}
-  := consistent_instance ∘ global_ext_constraints.
+Definition consistent_instance_ext `{checker_flags} Σ
+  := consistent_instance (global_ext_levels Σ) (global_ext_constraints Σ).
 
 
 Reserved Notation " Σ ;;; Γ |- t : T " (at level 50, Γ, t, T at next level).
@@ -833,9 +944,9 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     forall pty, Σ ;;; Γ |- p : pty ->
     forall indctx pctx ps btys, types_of_case ind mdecl idecl pars u p pty = Some (indctx, pctx, ps, btys) ->
     check_correct_arity (global_ext_constraints Σ) idecl ind u indctx pars pctx ->
-    List.Exists (fun sf => universe_family ps = sf) idecl.(ind_kelim) ->
+    existsb (leb_sort_family (universe_family ps)) idecl.(ind_kelim) ->
     Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
-    All2 (fun x y => (fst x = fst y) * (Σ ;;; Γ |- snd x : snd y)) brs btys ->
+    All2 (fun x y => (fst x = fst y) * (Σ ;;; Γ |- snd x : snd y) * (Σ ;;; Γ |- snd y : tSort ps)) brs btys ->
     Σ ;;; Γ |- tCase (ind, npar) p c brs : mkApps p (List.skipn npar args ++ [c])
 
 | type_Proj p c u :
@@ -870,6 +981,15 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
 where " Σ ;;; Γ |- t : T " := (typing Σ Γ t T) : type_scope.
 
 Notation wf_local Σ Γ := (All_local_env (lift_typing typing Σ) Γ).
+
+Lemma meta_conv {cf : checker_flags} Σ Γ t A B :
+    Σ ;;; Γ |- t : A ->
+    A = B ->
+    Σ ;;; Γ |- t : B.
+Proof.
+  intros h []; assumption.
+Qed.
+
 
 (** ** Typechecking of global environments *)
 
@@ -969,14 +1089,6 @@ Section GlobalMaps.
     match l with
     | [InProp;InSet;InType] => true
     | _ => false
-    end.
-
-  Definition leb_sort_family x y :=
-    match x, y with
-    | InProp, _ => true
-    | InSet, InProp => false
-    | InType, (InProp | InSet) => false
-    | _, _ => true
     end.
 
   Section CheckSmaller.
@@ -1098,10 +1210,7 @@ Section GlobalMaps.
                                                /\ LevelSet.In l2 all_levels)
                                (constraints_of_udecl udecl)
        /\ match udecl with
-         | Monomorphic_ctx ctx =>  LevelSet.For_all (fun l => match l with
-                                                          | Level.Var _ => false
-                                                          | _ => true
-                                                          end) (fst ctx)
+         | Monomorphic_ctx ctx =>  LevelSet.for_all (negb ∘ Level.is_var) ctx.1
          | _ => True
          end
        /\ satisfiable_udecl Σ udecl.
@@ -1258,7 +1367,7 @@ Proof.
   exact (S (S (wf_local_size _ typing_size _ a))).
   exact (S (S (wf_local_size _ typing_size _ a))).
   exact (S (Nat.max d1 (Nat.max d2
-                                (all2_size _ (fun x y p => typing_size Σ Γ (snd x) (snd y) (snd p)) a)))).
+                                (all2_size _ (fun x y p => Nat.max (typing_size Σ Γ (snd x) (snd y) (snd (fst p))) (typing_size _ _ _ _ (snd p))) a)))).
   exact (S (Nat.max (wf_local_size _ typing_size _ a) (all_size _ (fun x p => typing_size Σ _ _ _ (fst p)) a0))).
   exact (S (Nat.max (wf_local_size _ typing_size _ a) (all_size _ (fun x p => typing_size Σ _ _ _ p) a0))).
   destruct s. red in i.
@@ -1287,6 +1396,20 @@ Arguments lexprod [A B].
 
 Definition wf `{checker_flags} := Forall_decls_typing typing.
 Definition wf_ext `{checker_flags} := on_global_env_ext (lift_typing typing).
+
+Lemma wf_ext_wf {cf:checker_flags} Σ : wf_ext Σ -> wf Σ.
+Proof. intro H; apply H. Qed.
+
+Hint Resolve wf_ext_wf.
+
+Lemma wf_ext_consistent {cf:checker_flags} Σ :
+  wf_ext Σ -> consistent Σ.
+Proof.
+  intros [? [? [? [? ?]]]]; assumption.
+Qed.
+
+Hint Resolve wf_ext_consistent.
+
 
 Definition env_prop `{checker_flags} (P : forall Σ Γ t T, Type) :=
   forall Σ (wfΣ : wf Σ.1) Γ (wfΓ : wf_local Σ Γ) t T, Σ ;;; Γ |- t : T ->
@@ -1462,12 +1585,17 @@ Lemma typing_ind_env `{cf : checker_flags} :
         forall indctx pctx ps btys,
         types_of_case ind mdecl idecl pars u p pty = Some (indctx, pctx, ps, btys) ->
         check_correct_arity (global_ext_constraints Σ) idecl ind u indctx pars pctx ->
-        Exists (fun sf : sort_family => universe_family ps = sf) (ind_kelim idecl) ->
+        existsb (leb_sort_family (universe_family ps)) (ind_kelim idecl) ->
         P Σ Γ p pty ->
         Σ;;; Γ |- c : mkApps (tInd ind u) args ->
         P Σ Γ c (mkApps (tInd ind u) args) ->
-        All2 (fun x y : nat * term => (fst x = fst y) * (Σ;;; Γ |- snd x : snd y)
-                                         * P Σ Γ (snd x) (snd y))%type brs btys ->
+        All2 (fun x y : nat * term =>
+                (fst x = fst y) *
+                (Σ;;; Γ |- snd x : snd y) *
+                P Σ Γ (snd x) (snd y) *
+                (Σ ;;; Γ |- snd y : tSort ps) *
+                P Σ Γ (snd y) (tSort ps)
+        )%type brs btys ->
         P Σ Γ (tCase (ind, npar) p c brs) (mkApps p (skipn npar args ++ [c]))) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : projection) (c : term) u
@@ -1682,8 +1810,10 @@ Proof.
        eapply (X14 _ wfΓ _ _ H0); eauto. lia.
        clear X13. revert a wfΓ X14. simpl. clear. intros.
        induction a; simpl in *. constructor.
-       destruct r. constructor. split; auto.
+       destruct r as [[? ?] ?]. constructor. intuition eauto.
        eapply (X14 _ wfΓ _ _ t); eauto. simpl; auto with arith.
+       lia.
+       eapply (X14 _ wfΓ _ _ t0); eauto. simpl; auto with arith.
        lia.
        apply IHa. auto. intros.
        eapply (X14 _ wfΓ0 _ _ Hty). lia.
@@ -1797,7 +1927,7 @@ Proof.
              --- red. destruct t1. unshelve eapply X14. all: eauto.
                  simpl. lia.
           ** auto. right.
-             exists u. intuition. 
+             exists u. intuition.
 Qed.
 
 
@@ -1978,4 +2108,38 @@ Section All_local_env.
     - destruct n. noconf eq. simpl. split; auto.
       apply IHX.
   Defined.
+
+
+  Lemma All_local_env_prod_inv :
+    forall P Q Γ,
+      All_local_env (fun Δ A t => P Δ A t × Q Δ A t) Γ ->
+      All_local_env P Γ × All_local_env Q Γ.
+  Proof.
+    intros P Q Γ h.
+    induction h.
+    - split ; constructor.
+    - destruct IHh, t0.
+      split ; constructor ; auto.
+    - destruct IHh, t0, t1.
+      split ; constructor ; auto.
+  Qed.
+
+  Lemma All_local_env_lift_prod_inv :
+    forall Σ P Q Δ,
+      All_local_env (lift_typing (fun Σ Γ t A => P Σ Γ t A × Q Σ Γ t A) Σ) Δ ->
+      All_local_env (lift_typing P Σ) Δ × All_local_env (lift_typing Q Σ) Δ.
+  Proof.
+    intros Σ P Q Δ h.
+    induction h.
+    - split ; constructor.
+    - destruct IHh. destruct t0 as [? [? ?]].
+      split ; constructor ; auto.
+      + cbn. eexists. eassumption.
+      + cbn. eexists. eassumption.
+    - destruct IHh. destruct t0 as [? [? ?]]. destruct t1.
+      split ; constructor ; auto.
+      + cbn. eexists. eassumption.
+      + cbn. eexists. eassumption.
+  Qed.
+
 End All_local_env.

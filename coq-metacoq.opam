@@ -1,5 +1,4 @@
 opam-version: "2.0"
-version: "2.2"
 maintainer: "matthieu.sozeau@inria.fr"
 homepage: "https://metacoq.github.io/metacoq"
 dev-repo: "git+https://github.com/MetaCoq/metacoq.git#coq-8.8"
@@ -17,7 +16,7 @@ authors: ["Abhishek Anand <aa755@cs.cornell.edu>"
 license: "MIT"
 depends: [
   "ocaml" {> "4.02.3"}
-  "coq" {>= "8.8" & < "8.9~"}
+  "coq" {>= "8.9" & < "8.10~"}
   "coq-metacoq-template" {= version}
   "coq-metacoq-checker" {= version}
   "coq-metacoq-pcuic" {= version}

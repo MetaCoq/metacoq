@@ -8,6 +8,7 @@ install: all
 	$(MAKE) -C pcuic install
 	$(MAKE) -C safechecker install
 	$(MAKE) -C erasure install
+	$(MAKE) -C translations install
 
 html: all
 	"coqdoc" -toc -utf8 -interpolate -l -html \
@@ -16,6 +17,7 @@ html: all
 		-R pcuic/theories MetaCoq.PCUIC \
 		-R safechecker/theories MetaCoq.SafeChecker \
 		-R erasure/theories MetaCoq.Erasure \
+		-R translations/theories MetaCoq.Translations \
 		-d html */theories/*.v
 
 clean:
@@ -33,6 +35,8 @@ mrproper:
 	$(MAKE) -C safechecker mrproper
 	$(MAKE) -C erasure mrproper
 	$(MAKE) -C checker mrproper
+	$(MAKE) -C test-suite mrproper
+	$(MAKE) -C translations mrproper
 
 .merlin:
 	$(MAKE) -C template-coq .merlin

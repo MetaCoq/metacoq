@@ -1,3 +1,4 @@
+.history
 *.annot
 .coq_config
 *.cm*
@@ -241,6 +242,7 @@ checker/src/wf.mli
 /pcuic/src/classes0.mli
 /pcuic/src/classes0.ml
 /checker/metacoq-config
+/translations/metacoq-config
 /erasure/_CoqProject
 /erasure/_PluginProject
 /erasure/metacoq-config

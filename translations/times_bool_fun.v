@@ -1,5 +1,5 @@
 From MetaCoq Require Import Template.All Checker.All.
-From Translations Require Import translation_utils MiniHoTT.
+From MetaCoq.Translations Require Import translation_utils MiniHoTT.
 Import String Lists.List.ListNotations MonadNotation.
 Open Scope list_scope. Open Scope string_scope.
 

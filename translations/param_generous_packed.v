@@ -1,6 +1,6 @@
 (* -*- coq-prog-args: ("-type-in-type" "-top" "Translations.tsl_param3") -*-  *)
 From MetaCoq Require Import Template.All Checker.All.
-From Translations Require Import translation_utils.
+From MetaCoq.Translations Require Import translation_utils.
 Import String Lists.List.ListNotations MonadNotation.
 Open Scope list_scope. Open Scope string_scope.
 

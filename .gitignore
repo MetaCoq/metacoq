@@ -356,3 +356,4 @@ pcuic/src/pCUICReflect.mli
 template-coq/gen-src/cRelationClasses.mli.rej
 .DS_Store
 
+/translations/_CoqProject

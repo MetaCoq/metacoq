@@ -96,8 +96,8 @@ Documentation
 
 You may want to start by a demo: [demo.v](https://github.com/MetaCoq/metacoq/tree/coq-8.9/test-suite/demo.v)
 
-The 8.8 branch [documentation (coqdoc files)](html/Template.All.html)
-and pretty-printed HTML versions of the [translations](html/translations) are available.
+The 8.9 branch [documentation (light coqdoc files)](html/toc.html) is
+also available.
 
 ident vs. qualid. vs kername
 ---------------------------

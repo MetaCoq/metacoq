@@ -250,7 +250,7 @@ Section Validity.
 
     - (* Case *)
       right. red.
-      destruct X3.
+      destruct X2.
       + destruct i as [ctx [s [Heq Hs]]].
         exists s.
         unfold check_correct_arity in *.
@@ -260,7 +260,7 @@ Section Validity.
         simpl in H. subst pty.
         assert (#|args| = #|pctx|). admit. (* WF of case *)
         eapply type_mkApps. eauto.
-        destruct X5. destruct i as [ctx' [s' [Heq' Hs']]].
+        destruct X4. destruct i as [ctx' [s' [Heq' Hs']]].
         elimtype False.
         { clear -Heq'.
           revert Heq'.

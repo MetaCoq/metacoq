@@ -1,5 +1,5 @@
 From Coq Require Import Ascii String ZArith List Bool.
-From Coq Require Import MSetWeakList MSetFacts MSetProperties CRelationClasses.
+From Coq Require Import MSetWeakList MSetFacts MSetProperties RelationClasses.
 From MetaCoq.Template Require Import utils BasicAst config.
 Import ListNotations.
 
@@ -499,7 +499,7 @@ Qed.
 
 (** **** Lemmas about eq and leq **** *)
 
-(** We show that equality and inequality of universes form an equivalence and 
+(** We show that equality and inequality of universes form an equivalence and
     a partial order (one w.r.t. the other).
     We use classes from [CRelationClasses] for consistency with the rest of the
     development which uses relations in [Type] rather than [Prop].
@@ -632,7 +632,7 @@ Global Instance leq_universe_preorder φ : PreOrder (leq_universe φ) :=
 
 
 Global Instance leq_universe0_antisym φ
-  : Antisymmetric (eq_universe0 φ) (leq_universe0 φ).
+  : Antisymmetric _ (eq_universe0 φ) (leq_universe0 φ).
 Proof.
   intros t u tu ut. unfold leq_universe0, eq_universe0 in *.
   red in tu, ut.
@@ -643,7 +643,7 @@ Proof.
 Qed.
 
 Global Instance leq_universe_antisym φ
-  : Antisymmetric (eq_universe φ) (leq_universe φ).
+  : Antisymmetric _ (eq_universe φ) (leq_universe φ).
 Proof.
   intros t u tu ut. unfold leq_universe, eq_universe in *.
   destruct check_univs; [|trivial]. eapply leq_universe0_antisym; auto.

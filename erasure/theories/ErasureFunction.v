@@ -277,7 +277,7 @@ Next Obligation.
   inversion r; subst.
   - eapply invert_red_prod in r0 as (? & ? & [] & ?); eauto.
     edestruct H0. eauto.
-  - eauto. 
+  - eauto.
 Qed.
 
 Equations is_arity Γ (HΓ : ∥wf_local Σ Γ∥) T (HT : wellformed Σ Γ T) :
@@ -364,7 +364,7 @@ Qed.
 Next Obligation.
   Hint Constructors squash. destruct HΣ.
   eapply Is_conv_to_Arity_inv in H as [(? & ? & ? & ?) | (? & ?)]; eauto.
-Qed. 
+Qed.
 
 End fix_sigma.
 
@@ -605,11 +605,11 @@ Proof.
 
     pose proof (Prelim.monad_map_All2 _ _ _ brs a2 E2).
 
-    eapply All2_All_left in X4. 2:{ intros. destruct X5. destruct p0. destruct p0. exact e0. }
+    eapply All2_All_left in X3. 2:{ intros. destruct X4. destruct p0. destruct p0. exact e0. }
 
     eapply All2_impl.
     eapply All2_All_mix_left. eassumption. eassumption.
-    intros. destruct H4.
+    intros. destruct H5.
     destruct ?; inv e0. cbn. eauto.
   - econstructor.
     clear E.

@@ -386,12 +386,13 @@ Proof.
     rewrite closedn_subst_instance_constr.
     eauto using closed_upwards with arith.
 
-  - intuition auto. solve_all. unfold test_snd. simpl in *.
-    toProp; eauto.
-    apply closedn_mkApps; auto.
-    rewrite forallb_app. simpl. rewrite H2.
-    rewrite forallb_skipn; auto.
-    now apply closedn_mkApps_inv in H6.
+  - intuition auto.
+    + solve_all. unfold test_snd. simpl in *.
+      toProp; eauto.
+    + apply closedn_mkApps; auto.
+      rewrite forallb_app. simpl. rewrite H3.
+      rewrite forallb_skipn; auto.
+      now apply closedn_mkApps_inv in H7.
 
   - intuition auto.
     apply closedn_subst0.

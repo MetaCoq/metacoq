@@ -746,11 +746,11 @@ Proof.
   unfold check_correct_arity. intro H.
   inversion H; subst. simpl. rewrite lift_context_snoc0.
   constructor.
-  - apply All2_length in X0. destruct X0.
-    clear -X. apply (lift_eq_decl _ #|Γ''| (#|indctx| + #|Γ'|)) in X.
-    unfold lift_decl, map_decl in X; cbn in X.
+  - apply All2_length in H4. destruct H4.
+    clear -H2. apply (lift_eq_decl _ #|Γ''| (#|indctx| + #|Γ'|)) in H2.
+    unfold lift_decl, map_decl in H2; cbn in H2.
     assert (XX : lift #|Γ''| (#|indctx| + #|Γ'|) (mkApps (tInd ind u) (map (lift0 #|indctx|) (firstn npar args) ++ to_extended_list indctx)) = mkApps (tInd ind u) (map (lift0 #|lift_context #|Γ''| #|Γ'| indctx|) (firstn npar (map (lift #|Γ''| #|Γ'|) args)) ++ to_extended_list (lift_context #|Γ''| #|Γ'| indctx)));
-      [|now rewrite XX in X].
+      [|now rewrite XX in H2].
 
     rewrite -> lift_mkApps, map_app.
     rewrite -> firstn_map. rewrite -> to_extended_list_lift.
@@ -861,7 +861,7 @@ Proof.
     -- erewrite -> lift_declared_inductive; eauto.
     -- auto.
     -- auto.
-    -- revert X2.
+    -- revert H1.
        subst pars.
        erewrite lift_declared_inductive; eauto.
        apply lift_check_correct_arity.

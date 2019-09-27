@@ -249,7 +249,7 @@ Section Lemmata.
 
   Lemma eq_term_upto_univ_zipc :
     forall Re u v π,
-      Reflexive Re ->
+      RelationClasses.Reflexive Re ->
       eq_term_upto_univ Re Re u v ->
       eq_term_upto_univ Re Re (zipc u π) (zipc v π).
   Proof.
@@ -281,7 +281,7 @@ Section Lemmata.
 
   Lemma eq_term_upto_univ_zipp :
     forall Re u v π,
-      Reflexive Re ->
+      RelationClasses.Reflexive Re ->
       eq_term_upto_univ Re Re u v ->
       eq_term_upto_univ Re Re (zipp u π) (zipp v π).
   Proof.
@@ -306,7 +306,7 @@ Section Lemmata.
 
   Lemma eq_term_upto_univ_zipx :
     forall Re Γ u v π,
-      Reflexive Re ->
+      RelationClasses.Reflexive Re ->
       eq_term_upto_univ Re Re u v ->
       eq_term_upto_univ Re Re (zipx Γ u π) (zipx Γ v π).
   Proof.

@@ -167,6 +167,18 @@ Section Alpha.
     - apply nth_error_Some_length in h. assumption.
   Qed.
 
+  (* TODO MOVE *)
+  Lemma Forall2_eq :
+    forall A (l l' : list A),
+      Forall2 eq l l' ->
+      l = l'.
+  Proof.
+    intros A l l' h.
+    induction h.
+    - reflexivity.
+    - f_equal. all: auto.
+  Qed.
+
   Lemma typing_alpha :
     forall Σ Γ u v A,
       wf Σ.1 ->
@@ -276,19 +288,19 @@ Section Alpha.
         eapply eq_term_upto_univ_subst ; now auto.
     - intros cst u decl ? ? hdecl hcons v e.
       dependent destruction e.
-      apply All2_eq in r. apply map_inj in r ; revgoals.
+      apply Forall2_eq in r. apply map_inj in r ; revgoals.
       { intros x y h. inversion h. reflexivity. }
       subst.
       constructor ; auto.
     - intros ind u mdecl idecl isdecl ? ? hcons v e.
       dependent destruction e.
-      apply All2_eq in r. apply map_inj in r ; revgoals.
+      apply Forall2_eq in r. apply map_inj in r ; revgoals.
       { intros x y h. inversion h. reflexivity. }
       subst.
       econstructor ; eauto.
     - intros ind i u mdecl idecl cdecl isdecl ? ? ? v e.
       dependent destruction e.
-      apply All2_eq in r. apply map_inj in r ; revgoals.
+      apply Forall2_eq in r. apply map_inj in r ; revgoals.
       { intros x y h. inversion h. reflexivity. }
       subst.
       econstructor ; eauto.
@@ -708,40 +720,40 @@ Section Alpha.
                eq_term_upto_univ Re Rle t' u'.
   Proof.
     revert t u Rle. fix aux 4.
-    destruct 1; cbn; intros t'' u'' H H0;
-      inv H; inv H0; try econstructor; eauto.
-    - revert args'0 args'1 X X0.
+    destruct 1; cbn; intros t'' u'' H' H0';
+      inv H'; inv H0'; try econstructor; eauto.
+    - revert args'0 args'1 H2 H3.
       induction a; simpl; intros args0 args'0 H1 H2.
       + inv H1; inv H2; constructor; eauto.
       + inv H1; inv H2. constructor; eauto.
-    - apply All2_eq, map_inj in X.
-      apply All2_eq, map_inj in X0.
+    - apply Forall2_eq, map_inj in H2.
+      apply Forall2_eq, map_inj in H3.
       congruence.
-      all: intros x y H; now inv H. 
-    - apply All2_eq, map_inj in X.
-      apply All2_eq, map_inj in X0.
+      all: intros x y H; now inv H.
+    - apply Forall2_eq, map_inj in H2.
+      apply Forall2_eq, map_inj in H3.
       congruence.
-      all: intros x y H; now inv H. 
-    - apply All2_eq, map_inj in X.
-      apply All2_eq, map_inj in X0.
+      all: intros x y H; now inv H.
+    - apply Forall2_eq, map_inj in H3.
+      apply Forall2_eq, map_inj in H4.
       congruence.
-      all: intros x y H; now inv H. 
-    - revert brs'0 brs'1 X3 X6.
+      all: intros x y H; now inv H.
+    - revert brs'0 brs'1 H8 H11.
       induction a; simpl; intros args0 args'0 H1 H2.
       + inv H1; inv H2; constructor; eauto.
       + inv H1; inv H2. constructor; eauto.
-        destruct X3, X7, r. split; eauto. congruence.
-    - revert mfix'0 mfix'1 X X0.
+        destruct H5, H4, r. split; eauto. congruence.
+    - revert mfix'0 mfix'1 H2 H3.
       induction a; simpl; intros args0 args'0 H1 H2.
       + inv H1; inv H2; constructor; eauto.
       + inv H1; inv H2. constructor; eauto.
-        destruct X as [[? ?] ?], X1 as [[? ?] ?], r as [[? ?] ?].
+        destruct H3 as [[? ?] ?], H1 as [[? ?] ?], r as [[? ?] ?].
         repeat split; eauto. congruence.
-    - revert mfix'0 mfix'1 X X0.
+    - revert mfix'0 mfix'1 H2 H3.
       induction a; simpl; intros args0 args'0 H1 H2.
       + inv H1; inv H2; constructor; eauto.
       + inv H1; inv H2. constructor; eauto.
-        destruct X as [[? ?] ?], X1 as [[? ?] ?], r as [[? ?] ?].
+        destruct H3 as [[? ?] ?], H1 as [[? ?] ?], r as [[? ?] ?].
         repeat split; eauto. congruence.
   Qed.
 
@@ -823,7 +835,7 @@ Section Alpha.
 
 
   Lemma isWfArity_alpha Σ Γ u v :
-    wf Σ.1 -> 
+    wf Σ.1 ->
     isWfArity typing Σ Γ u ->
     u ≡ v ->
     isWfArity typing Σ Γ v.

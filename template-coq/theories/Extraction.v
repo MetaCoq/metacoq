@@ -24,12 +24,13 @@ Set Warnings "-extraction-opaque-accessed".
 Cd "gen-src".
 
 Require Import MetaCoq.Template.TemplateMonad.Extractable.
-From MetaCoq.Template Require Import Induction LiftSubst UnivSubst Pretty.
+From MetaCoq.Template Require Import config Induction LiftSubst UnivSubst Pretty.
 
 Recursive Extraction Library Extractable.
 Extraction Library Induction.
 Extraction Library LiftSubst.
 Extraction Library UnivSubst.
 Extraction Library Pretty.
+Extraction Library config.
 
 Cd "..".

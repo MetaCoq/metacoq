@@ -85,10 +85,10 @@ Proof.
   all: try now (econstructor; eauto).
   all: try now (econstructor; eapply Is_type_extends; eauto).
   - econstructor. all:eauto.
-    2:{ eauto. eapply All2_All_left in X4.
+    2:{ eauto. eapply All2_All_left in X3.
         2:{ intros ? ? [[[? ?] ?] ?]. exact e. }
-        eapply All2_All_mix_left in X4; eauto.
-        eapply All2_impl. exact X4.
+        eapply All2_All_mix_left in X3; eauto.
+        eapply All2_impl. exact X3.
         intros. destruct H as [? []].
         split; eauto. }
 
@@ -102,7 +102,7 @@ Proof.
     split; eauto.
   - eauto.
 Qed.
-    
+
 (** ** Weakening *)
 
 Lemma Is_type_weakening:
@@ -173,7 +173,7 @@ Proof.
     + eauto.
     + eapply h_forall_Γ0; eauto.
     + eapply All2_map.
-      eapply All2_All_left in X4.
+      eapply All2_All_left in X3.
       2:{ idtac. intros ? ? [[[[? ?] e0] ?] e']. exact e0. }
       eapply All2_impl. eapply All2_All_mix_left.
       eassumption. eassumption. intros.
@@ -214,7 +214,7 @@ Proof.
     now rewrite (All2_length _ _ H4).
   - eauto.
 Qed.
-      
+
 Lemma erases_weakening (Σ : global_env_ext) (Γ Γ' : PCUICAst.context) (t T : PCUICAst.term) t' :
   wf Σ ->
   wf_local Σ (Γ ,,, Γ') ->
@@ -359,19 +359,19 @@ Proof.
     + cbn. econstructor.
     + econstructor.
       eapply is_type_subst; eauto.
-  - depelim H4.
+  - depelim H5.
     + cbn. econstructor.
       * eauto.
-      * eapply H3; eauto.
+      * eapply H4; eauto.
       * eapply All2_map.
         eapply All2_impl_In; eauto.
-        intros. destruct H10, x, y. cbn in *. subst. split; eauto.
-        eapply All2_All_left in X4.
+        intros. destruct H11, x, y. cbn in *. subst. split; eauto.
+        eapply All2_All_left in X3.
         2:{ intros ? ? [[[[? ?] e1] ?] ?]. exact e1. }
 
-        eapply In_nth_error in H8 as [].
-        eapply nth_error_all in X4; eauto.
-        eapply X4; eauto.
+        eapply In_nth_error in H9 as [].
+        eapply nth_error_all in X3; eauto.
+        eapply X3; eauto.
 
   + econstructor.
     eapply is_type_subst; eauto.

@@ -82,14 +82,14 @@ Example of plugin built on top of this.
 Branches
 ========
 
-The [coq-8.8](https://github.com/MetaCoq/metacoq/tree/coq-8.8) branch is the active development branch. If possible, it's strongly recommended to use this branch.
+The [coq-8.9](https://github.com/MetaCoq/metacoq/tree/coq-8.9) branch is the active development branch. If possible, it's strongly recommended to use this branch.
 
 The branches [coq-8.6](https://github.com/MetaCoq/metacoq/tree/coq-8.6),
 [coq-8.7](https://github.com/MetaCoq/metacoq/tree/coq-8.7) are frozen.
-[coq-8.9](https://github.com/MetaCoq/metacoq/tree/coq-8.9) is also available.
+[coq-8.8](https://github.com/MetaCoq/metacoq/tree/coq-8.8) is also available.
 
 The branch [master](https://github.com/MetaCoq/metacoq/tree/master) tracks the current Coq `master` branch.
-
+(Currently not working)
 
 Documentation
 =============
@@ -279,7 +279,7 @@ Compile
 Once in the right environment, run `./configure.sh` for a global build or `./configure.sh local` for a local build. Then use:
 
 - `make` to compile the `template-coq` plugin, the `checker`, the `pcuic`
-  development and the `extraction` plugin. You can also selectively build
+  development and the `erasure` plugin. You can also selectively build
   each target.
 
 - `make translations` to compile the translation plugins
@@ -306,21 +306,25 @@ MetaCoq is split into multiple packages that get all installed using the
 `coq-metacoq` meta-package:
 
  - `coq-metacoq-template` for the Template Monad and quoting plugin
- - `coq-metacoq-checker` for the verified checker
- - `coq-metacoq-pcuic` for the PCUIC development
- - `coq-metacoq-extraction` for the verifed extraction.
+ - `coq-metacoq-checker` for the UNverified checker of template-coq terms
+ - `coq-metacoq-pcuic` for the PCUIC development and proof of the
+   Template-Coq -> PCUIC translation
+ - `coq-metacoq-safechecker` for the verified checker on PCUIC terms
+ - `coq-metacoq-erasure` for the verifed extraction from PCUIC to
+   untyped lambda-calculus.
+ - `coq-metacoq-translations` for example translations from type theory
+   to type theory: e.g. variants of parametricity.
 
-The `2.2alpha` versions of the package are for `Coq 8.8`.
-
-For some versions, it might be necessary to use beta or development
-versions of Coq, to get those you will need to activate the following repositories:
+The `1.0alpha` versions of the package are for `Coq 8.8` and `Coq 8.9`.
+There are also `.dev` packages available in the `extra-dev` repository
+of Coq, to get those you will need to activate the following repositories:
 
     opam repo add coq-core-dev https://coq.inria.fr/opam/core-dev
     opam repo add coq-extra-dev https://coq.inria.fr/opam/extra-dev
 
-
-Old standalone packages `template-coq-2.1~beta` and
-`template-coq-2.1~beta3` including everything together are for Coq 8.8.
+Old, deprecated standalone packages `template-coq-2.1~beta` and
+`template-coq-2.1~beta3` including previous versions of template-coq
+and parts of the MetaCoq development are for Coq 8.8.
 Package `template-coq-2.0~beta` is for Coq 8.7.
 
 How to Use

@@ -3260,20 +3260,18 @@ Section Conversion.
 
   Set Printing Coercions.
 
-  Coercion st_ := st.
-
   Equations(noeqns) isconv_full (s : state) (Γ : context)
             (t : term) (π1 : stack) (h1 : wtp Γ t π1)
             (π2 : stack) (h2 : wts Γ s t π2)
     : Ret s Γ t π1 π2 :=
-    isconv_full s Γ t π1 h1 π2 h2 :=
-      Fix_F (R := R)
-            (fun pp => wtp (ctx pp) (tm pp) (stk1 pp) -> wts (ctx pp) (st pp) (tm pp) (stk2 pp)
-                    -> Ret (st pp) (ctx pp) (tm pp) (stk1 pp) (stk2 pp)
+    isconv_full s Γ t π1 h1 π2 h2 hx :=
+      Fix_F (R := R Γ)
+            (fun pp => wtp Γ (tm pp) (stk1 pp) -> wts Γ (st pp) (tm pp) (stk2 pp)
+                    -> Ret (st pp) Γ (tm pp) (stk1 pp) (stk2 pp)
                     )
             (fun pp f => _)
-            (x := mkpack s Γ t π1 π2 _)
-             _ _ _ _.
+            (x := mkpack Γ s t π1 π2 _)
+            _ _ _ _.
   (* NOTE (Danil): something is wrong when destructing a record with primitive projections,
      the commented code below doesn't type check. For some reason, [Ret] is applied to something
      of type [pack] instead of [state] *)

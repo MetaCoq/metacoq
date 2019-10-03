@@ -533,9 +533,13 @@ Definition isequiv_adjointify {A B : Type} (f : A -> B) (g : B -> A)
            (issect : g∘ f == id) (isretr : f  ∘ g == id)  : IsEquiv f
   := BuildIsEquiv A B f g (issect' f g issect isretr) isretr
                   (is_adjoint' f g issect isretr).
-Monomorphic Definition foo' := @isequiv_adjointify.
-Time MetaCoq SafeCheck foo'.
-Time MetaCoq CoqCheck foo'.
+
+(* issue with polymotrphic universes *)
+Fail MetaCoq SafeCheck @isequiv_adjointify.
+
+Monomorphic Definition isequiv_adjointifyM := @isequiv_adjointify.
+Time MetaCoq SafeCheck isequiv_adjointifyM.
+Time MetaCoq CoqCheck isequiv_adjointifyM.
 
 Definition bignat := 10000.
 Time MetaCoq SafeCheck bignat.
@@ -551,10 +555,18 @@ Environment is well-formed and Const(Top.bignat,[]) has type: Ind(Coq.Init.Datat
 *)
 MetaCoq CoqCheck bignat.
 
-(* MetaCoq SafeCheck @issect'. *)
+(* issue with polymotrphic universes *)
 Fail MetaCoq SafeCheck @ap_pp.
-Fail MetaCoq SafeCheck @isequiv_adjointify.
+
+Monomorphic Definition ap_ppM := @ap_pp.
+Time MetaCoq SafeCheck ap_ppM.
+Time MetaCoq CoqCheck ap_ppM.
+
+(* issue with polymotrphic universes *)
 Fail MetaCoq SafeCheck @IsEquiv.
-MetaCoq CoqCheck IsEquiv.
-Fail Time MetaCoq SafeCheck @isequiv_adjointify.
-Time MetaCoq CoqCheck isequiv_adjointify.
+
+(* we need a type annotation here to avoid alebraic universe *)
+Monomorphic Definition IsEquivM := @IsEquiv : forall A B, (A -> B) -> Type.
+MetaCoq SafeCheck IsEquivM.
+Time MetaCoq CoqCheck IsEquivM.
+

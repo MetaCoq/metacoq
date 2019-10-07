@@ -555,8 +555,9 @@ revert s; induction n; simpl; intros.
 Qed.
 
 From MetaCoq.Template Require Import All.
+From MetaCoq.Template Require Import Loader.
 
-From MetaCoq Require Import Universes uGraph PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping TemplateToPCUIC.
+From MetaCoq Require Import Universes uGraph TemplateToPCUIC.
 
 Existing Instance config.default_checker_flags.
 From MetaCoq Require Import monad_utils.
@@ -568,7 +569,7 @@ Local Open Scope string_scope.
 From  MetaCoq Require Import PCUICSize.
 
 Program Fixpoint reify (S : global_env_ext) (G : context)
-   (P : term) { measure (PCUICSize.size P) }: option form :=
+   (P : term) { measure (size (trans P)) }: option form :=
    let (hd, args) := decompose_app P in
    match hd with
    | tRel n => 
@@ -632,16 +633,14 @@ Lemma reify_unf S G P :
 end.
 Admitted.
 
-From MetaCoq.Template Require Import Loader.
+Quote Definition MFalse := False.
+(* Definition MFalse := Eval compute in trans TFalse. *)
 
-Quote Definition TFalse := False.
-Definition MFalse := Eval compute in trans TFalse.
+Quote Definition Mand := and. 
+(* Definition Mand := Eval compute in trans Tand. *)
 
-Quote Definition Tand := and. 
-Definition Mand := Eval compute in trans Tand.
-
-Quote Definition Tor := or. 
-Definition Mor := Eval compute in trans Tor.
+Quote Definition Mor := or. 
+(* Definition Mor := Eval compute in trans Tor. *)
 
 Fixpoint Msem f (l:var->term) :=
    match f with
@@ -672,11 +671,9 @@ Section Test.
 
   Variable P Q: Prop.
   
-  Quote Definition TP := P. 
-  Definition MP := Eval compute in trans TP.
+  Quote Definition MP := P. 
 
-  Quote Definition TQ := Q. 
-  Definition MQ := Eval compute in trans TQ.
+  Quote Definition MQ := Q. 
 
   Definition formula_test := Imp (Var 0) (Or (Var 0) (And Fa (Var 1))).
 
@@ -685,15 +682,26 @@ Section Test.
   
   Definition Mformala_test := Eval compute in 
     Msem formula_test (can_val [cdecl_Type MP; cdecl_Type MQ]).
-
+ 
   Definition sem_formula_test := Eval compute in sem formula_test (can_val_Prop [P; Q]).
 
-  Quote Definition Tsem_formula_test := Eval compute in sem_formula_test. 
-  Definition Msem_formula_test := Eval compute in trans Tsem_formula_test.
+  Quote Definition Msem_formula_test := Eval compute in sem_formula_test. 
 
   Check eq_refl : Mformala_test = Msem_formula_test.
 
 End Test.
+
+Section Correctness.
+
+  Variable Mval : context.
+  Variable phi : form.  
+
+  Quote Definition t0 := nat.
+
+  Run TemplateProgram (val <- monad_map (fun X => tmUnquoteTyped Prop X.(decl_type)) Mval ;;
+                       P <- tmUnquoteTyped Prop (Msem phi (can_val Mval)) ;;
+                       tmLemma "correctness" (sem phi (can_val_Prop val) = P)).
+  
 (* junk *)
 
 (* 

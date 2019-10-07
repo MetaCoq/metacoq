@@ -554,6 +554,8 @@ revert s; induction n; simpl; intros.
      exists x; simpl; auto.
 Qed.
 
+From MetaCoq.Template Require Import All.
+
 From MetaCoq Require Import Universes uGraph PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping TemplateToPCUIC.
 
 Existing Instance config.default_checker_flags.
@@ -656,9 +658,42 @@ Fixpoint can_val (G : context) (v : var) : term :=
   match G, v  with
   | nil, _ => MFalse
   | cons P PS, 0 => P.(decl_type)
-  | cons P PS, S n => can_val PS v
+  | cons P PS, S n => can_val PS n
   end.
 
+Fixpoint can_val_Prop (G : list Prop ) (v : var) : Prop :=
+  match G, v  with
+  | nil, _ => False
+  | cons P PS, 0 => P
+  | cons P PS, S n => can_val_Prop PS n
+  end.
+
+Section Test.
+
+  Variable P Q: Prop.
+  
+  Quote Definition TP := P. 
+  Definition MP := Eval compute in trans TP.
+
+  Quote Definition TQ := Q. 
+  Definition MQ := Eval compute in trans TQ.
+
+  Definition formula_test := Imp (Var 0) (Or (Var 0) (And Fa (Var 1))).
+
+  Definition cdecl_Type (P:term) :=
+    {| decl_name := nAnon; decl_body := None; decl_type := P |}.
+  
+  Definition Mformala_test := Eval compute in 
+    Msem formula_test (can_val [cdecl_Type MP; cdecl_Type MQ]).
+
+  Definition sem_formula_test := Eval compute in sem formula_test (can_val_Prop [P; Q]).
+
+  Quote Definition Tsem_formula_test := Eval compute in sem_formula_test. 
+  Definition Msem_formula_test := Eval compute in trans Tsem_formula_test.
+
+  Check eq_refl : Mformala_test = Msem_formula_test.
+
+End Test.
 (* junk *)
 
 (* 

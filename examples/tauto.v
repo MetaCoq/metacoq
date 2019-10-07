@@ -1,6 +1,15 @@
+From MetaCoq.Template Require Import All.
+From MetaCoq.Template Require Import Loader.
+From MetaCoq Require Import Universes uGraph TemplateToPCUIC.
+Existing Instance config.default_checker_flags.
+From MetaCoq Require Import monad_utils.
+From Coq Require Import List.
+Import ListNotations.
+Import MonadNotation.
+
+Require Import Peano_dec.
 
 Definition var := nat.
-Require Import Peano_dec.
    
 (*Ltac mytauto :=
    assumption ||
@@ -125,8 +134,6 @@ destruct (IHf1_1 f2_1); [subst f1_1;destruct (IHf1_2 f2_2);
 Defined.
 
 Definition not f := Imp f Fa.
-
-From Coq Require Import List.
 
 Record seq := mkS { hyps : list form; concl : form }.
 
@@ -554,16 +561,7 @@ revert s; induction n; simpl; intros.
      exists x; simpl; auto.
 Qed.
 
-From MetaCoq.Template Require Import All.
-From MetaCoq.Template Require Import Loader.
 
-From MetaCoq Require Import Universes uGraph TemplateToPCUIC.
-
-Existing Instance config.default_checker_flags.
-From MetaCoq Require Import monad_utils.
-Import ListNotations.
-Import MonadNotation.
-Check (_ : Monad option).
 Require Import String.
 Local Open Scope string_scope.
 From  MetaCoq Require Import PCUICSize.
@@ -633,6 +631,8 @@ Lemma reify_unf S G P :
 end.
 Admitted.
 
+Quote Definition MProp := Prop.
+
 Quote Definition MFalse := False.
 (* Definition MFalse := Eval compute in trans TFalse. *)
 
@@ -650,6 +650,7 @@ Fixpoint Msem f (l:var->term) :=
   | And a b => mkApps Mand [Msem a l ;  Msem b l]
   | Or a b => mkApps Mor [Msem a l; Msem b l ]
   end.
+
 
 (* To Show : forall f l, Unquote (Msem f l) = sem f (fun x => Unquote (v x)) *)
 
@@ -691,13 +692,35 @@ Section Test.
 
 End Test.
 
+From MetaCoq.Checker Require Import WfInv Typing Weakening TypingWf
+     WeakeningEnv Substitution.
+
+Definition reify_correct S G P : S ;;; G |- P : MProp   ->
+  match reify S G P with Some phi => Msem phi (can_val G) = P
+                    | _ => True
+  end.
+Proof.
+  induction 1; rewrite reify_unf; cbn; try easy.
+Abort.  
+
 Section Correctness.
 
   Variable Mval : context.
+  Variable val : list Prop. 
   Variable phi : form.  
 
-  Quote Definition t0 := nat.
+  Axiom unquote : forall A (t:term), option A.
 
+  Parameter Mval_val_eq :
+    monad_map (fun X => unquote Prop X.(decl_type)) Mval = Some val.
+
+  Parameter Mval_val_eq :
+    monad_map (fun X => unquote Prop X.(decl_type)) Mval = Some val.
+  
+                       P <- tmUnquoteTyped Prop (Msem phi (can_val Mval)) ;;
+                       tmLemma "correctness" (sem phi (can_val_Prop val) = P)).
+
+  
   Run TemplateProgram (val <- monad_map (fun X => tmUnquoteTyped Prop X.(decl_type)) Mval ;;
                        P <- tmUnquoteTyped Prop (Msem phi (can_val Mval)) ;;
                        tmLemma "correctness" (sem phi (can_val_Prop val) = P)).

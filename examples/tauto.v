@@ -157,14 +157,26 @@ Definition is_leaf s :=
                                        if eq_form h cl then true else false))
                   false (hyps s).
 
-Fixpoint sem f (l:var->Prop) :=
+Class Propositional_Logic prop :=
+  { Pfalse : prop;
+    Pand : prop -> prop -> prop ;    
+    Por : prop -> prop -> prop ;
+    Pimpl : prop -> prop -> prop}.
+    
+
+Fixpoint semGen {A} `{Propositional_Logic A} f (l:var->A) :=
    match f with
-  | Fa => False
+  | Fa => Pfalse
   | Var x => l x
-  | Imp a b => sem a l -> sem b l
-  | And a b => sem a l /\ sem b l
-  | Or a b => sem a l \/ sem b l
+  | Imp a b => Pimpl (semGen a l) (semGen b l)
+  | And a b => Pand (semGen a l) (semGen b l)
+  | Or a b => Por (semGen a l) (semGen b l)
   end.
+
+Instance Propositional_Logic_Prop : Propositional_Logic Prop :=
+  {| Pfalse := False; Pand := and; Por := or; Pimpl := fun A B => A -> B |}.
+
+Definition sem := @semGen Prop _.
 
 Definition valid s :=
   forall l, (forall h, In h (hyps s) -> sem h l) -> sem (concl s) l.
@@ -455,20 +467,20 @@ Qed.
 
 Lemma step_sound s :
   valid_subgoal (decomp_step s) -> valid s.
-destruct s as (h,cl); simpl.
-unfold decomp_step; simpl.
-destruct cl; simpl; intros; try contradiction.
- apply on_hyps_sound; trivial.
- apply on_hyps_sound; trivial.
+
+  destruct s as (h,cl); simpl.
+  unfold decomp_step; simpl.
+  destruct cl; simpl; intros; try contradiction.
+  apply on_hyps_sound; trivial.
+  apply on_hyps_sound; trivial.
+  
+  destruct H as (sl,[ |[ ]],?); subst sl.
+  red; cbn; intros. apply (H0 _ (or_introl eq_refl)). 
+  simpl; intros.
+  destruct H2; subst; auto.
 
  destruct H as (sl,[ |[ ]],?); subst sl.
- red; simpl; intros.
- apply (H0 _ (or_introl eq_refl)).
- simpl; intros.
- destruct H2; subst; auto.
-
- destruct H as (sl,[ |[ ]],?); subst sl.
- split; simpl in *.
+ split; cbn in *.
   apply (H0 (mkS h cl1)); auto.
   apply (H0 (mkS h cl2)); auto.
 
@@ -642,15 +654,11 @@ Quote Definition Mand := and.
 Quote Definition Mor := or. 
 (* Definition Mor := Eval compute in trans Tor. *)
 
-Fixpoint Msem f (l:var->term) :=
-   match f with
-  | Fa => MFalse
-  | Var x => l x
-  | Imp a b => tProd nAnon (Msem a l) (Msem b l)
-  | And a b => mkApps Mand [Msem a l ;  Msem b l]
-  | Or a b => mkApps Mor [Msem a l; Msem b l ]
-  end.
+Instance Propositional_Logic_MetaCoq : Propositional_Logic term :=
+  {| Pfalse := MFalse; Pand := fun P Q => mkApps Mand [P;Q];
+     Por := fun P Q => mkApps Mor [P;Q]; Pimpl := fun P Q => tProd nAnon P Q |}.
 
+Definition Msem := @semGen term _.
 
 (* To Show : forall f l, Unquote (Msem f l) = sem f (fun x => Unquote (v x)) *)
 

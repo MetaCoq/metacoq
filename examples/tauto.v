@@ -150,15 +150,15 @@ Definition is_leaf s :=
                                        if eq_form h cl then true else false))
                   false (hyps s).
 
-
 Fixpoint sem f (l:var->Prop) :=
-  match f with
+   match f with
   | Fa => False
   | Var x => l x
   | Imp a b => sem a l -> sem b l
   | And a b => sem a l /\ sem b l
   | Or a b => sem a l \/ sem b l
   end.
+
 Definition valid s :=
   forall l, (forall h, In h (hyps s) -> sem h l) -> sem (concl s) l.
 
@@ -554,7 +554,7 @@ revert s; induction n; simpl; intros.
      exists x; simpl; auto.
 Qed.
 
-From MetaCoq Require Import Universes uGraph PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping.
+From MetaCoq Require Import Universes uGraph PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping TemplateToPCUIC.
 
 Existing Instance config.default_checker_flags.
 From MetaCoq Require Import monad_utils.
@@ -630,6 +630,38 @@ Lemma reify_unf S G P :
 end.
 Admitted.
 
+From MetaCoq.Template Require Import Loader.
+
+Quote Definition TFalse := False.
+Definition MFalse := Eval compute in trans TFalse.
+
+Quote Definition Tand := and. 
+Definition Mand := Eval compute in trans Tand.
+
+Quote Definition Tor := or. 
+Definition Mor := Eval compute in trans Tor.
+
+Fixpoint Msem f (l:var->term) :=
+   match f with
+  | Fa => MFalse
+  | Var x => l x
+  | Imp a b => tProd nAnon (Msem a l) (Msem b l)
+  | And a b => mkApps Mand [Msem a l ;  Msem b l]
+  | Or a b => mkApps Mor [Msem a l; Msem b l ]
+  end.
+
+(* To Show : forall f l, Unquote (Msem f l) = sem f (fun x => Unquote (v x)) *)
+
+Fixpoint can_val (G : context) (v : var) : term :=
+  match G, v  with
+  | nil, _ => MFalse
+  | cons P PS, 0 => P.(decl_type)
+  | cons P PS, S n => can_val PS v
+  end.
+
+(* junk *)
+
+(* 
 Fixpoint option_list_map {A B} (l : list A) (f : A -> option B) : option (list B) :=
   match l with
   | nil => Some nil
@@ -638,9 +670,10 @@ Fixpoint option_list_map {A B} (l : list A) (f : A -> option B) : option (list B
     xs' <- option_list_map xs f ;;
     ret (x' :: xs')
   end.
-  
-  From MetaCoq.Template Require Import utils.
-  Require Import ssreflect.
+
+From MetaCoq.Template Require Import utils.
+Require Import ssreflect.
+
 Lemma nth_error_option_list_map {A B} (l : list A) (f : A -> option B) l' :
   option_list_map l f = Some l' ->
   forall n x, nth_error l n = Some x -> 
@@ -655,12 +688,6 @@ Proof.
   intros.
 Admitted.
 
-Fixpoint can_val (G : context) (v : var) : Prop :=
-  match G, v  with
-  | nil, _ => False
-  | cons P PS, 0 => sem P (can_val PS)
-  | cons P PS, S n => can_val PS
-  end.
 
 Lemma sound_reify S G P f: 
 (*   S ;;; G |- P : s ->  *)
@@ -687,3 +714,4 @@ Proof.
     
 
 Admitted.
+*)

@@ -78,7 +78,7 @@ let tmDefinition (nm : ident) ?poly:(poly=false) ?opaque:(opaque=false) (typ : t
       Declare.declare_definition ~opaque:opaque ~kind:Decl_kinds.Definition nm ?types:typ
         (body, univs)
     in success (Global.env ()) evm (Names.Constant.canonical n)
-
+     
 let tmAxiom (nm : ident) ?poly:(poly=false) (typ : term) : kername tm =
   fun env evm success _fail ->
     let param =

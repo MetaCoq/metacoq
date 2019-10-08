@@ -248,7 +248,16 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     let (evm, _) = Typing.type_of env evm (EConstr.of_constr h) in
     k (env, evm, h)
   | TmBind (a,f) ->
-    run_template_program_rec ~intactic:intactic (fun (env, evm, ar) -> run_template_program_rec ~intactic:intactic k env (evm, Constr.mkApp (f, [|ar|]))) env (evm, a)
+     run_template_program_rec ~intactic:intactic (fun (env, evm, ar) -> run_template_program_rec ~intactic:intactic k env (evm, Constr.mkApp (f, [|ar|]))) env (evm, a)
+  | TmVariable (name, typ) ->
+    if intactic 
+    then not_in_tactic "tmVariable"
+    else
+      let name = unquote_ident (reduce_all env evm name) in
+      (* let evm,typ = denote_term evm (reduce_all env evm typ) in *)
+      let typ = Constrextern.extern_constr true env evm (EConstr.of_constr typ) in
+      (if ComAssumption.do_assumptions (Discharge, false, Definitional) Declaremods.NoInline [(false, ([(CAst.make name, None)], typ))] then () else ());
+      k (env, evm, Lazy.force unit_tt)
   | TmDefinition (opaque,name,s,typ,body) ->
     if intactic
     then not_in_tactic "tmDefinition"

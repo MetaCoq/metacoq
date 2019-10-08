@@ -16,8 +16,8 @@ Notation "( x ; y )" := (pair x y) : prod_scope.
 Notation " A × B " := (prod A B) : type_scope.
 Open Scope prod_scope.
 
-Quote Definition tprod := prod.
-Quote Definition tpair := @pair.
+MetaCoq Quote Definition tprod := prod.
+MetaCoq Quote Definition tpair := @pair.
 Definition prod_ind := Eval compute in
   match tprod with tInd i _ => i | _ => mkInd "bug: prod not an inductive" 0 end.
 Definition proj1 (t : term) : term
@@ -25,8 +25,8 @@ Definition proj1 (t : term) : term
 Definition proj2 (t : term) : term
   := tProj (prod_ind, 2, S 0) t.
 
-Quote Definition tbool := bool.
-Quote Definition ttrue := true.
+MetaCoq Quote Definition tbool := bool.
+MetaCoq Quote Definition ttrue := true.
 Definition timesBool (A : term) := tApp tprod [A; tbool].
 Definition pairTrue typ tm := tApp tpair [typ; tbool; tm; ttrue].
 
@@ -226,7 +226,7 @@ Tactic Notation "tIntro" ident(H)
 Definition NotFunext :=
   ((forall (A B : Set) (f g : A -> B), (forall x:A, f x = g x) -> f = g) -> False).
 
-Run TemplateProgram (TC <- TranslateRec emptyTC NotFunext ;;
+MetaCoq Run (TC <- TranslateRec emptyTC NotFunext ;;
                      tmDefinition "TC" TC ;;
                      Implement TC "notFunext" NotFunext).
 Next Obligation. 
@@ -238,7 +238,7 @@ Next Obligation.
   inversion H. 
 Defined.
 
-Run TemplateProgram (Implement TC "notη" ((forall (A B : Set) (f : A -> B), f = fun x => f x) -> False)).
+MetaCoq Run (Implement TC "notη" ((forall (A B : Set) (f : A -> B), f = fun x => f x) -> False)).
 
 Next Obligation.
   tIntro H. 
@@ -249,22 +249,22 @@ Defined.
 
 (* Require Import Vector Even. *)
 (* Definition SS := S. *)
-(* Run TemplateProgram (TC <- Translate emptyTC "nat" ;; *)
+(* MetaCoq Run (TC <- Translate emptyTC "nat" ;; *)
 (*                      TC <- Translate TC "even" ;; *)
 (*                      tmDefinition "TC2" TC). *)
 
 (* Inductive foo := *)
 (* | bar : (nat -> foo) -> foo. *)
 (* Definition bar' := bar. *)
-(* Run TemplateProgram (TranslateRec TC2 bar'). *)
+(* MetaCoq Run (TranslateRec TC2 bar'). *)
 
 
 Definition UIP := forall A (x y : A) (p q : x = y), p = q.
 
 
-Run TemplateProgram (tmQuoteRec UIP >>= tmPrint).
+MetaCoq Run (tmQuoteRec UIP >>= tmPrint).
 
-Run TemplateProgram (TC <- TranslateRec TC UIP ;;
+MetaCoq Run (TC <- TranslateRec TC UIP ;;
                      tmDefinition "eqTC" TC).
 
 Definition eqᵗ_eq {A} x y
@@ -302,7 +302,7 @@ Definition wFunext
   := forall A (B : A -> Type) (f g : forall x, B x), (forall x, f x = g x) -> f = g.
 
 
-Run TemplateProgram (TC <- TranslateRec eqTC (wFunext -> False) ;;
+MetaCoq Run (TC <- TranslateRec eqTC (wFunext -> False) ;;
                      tmDefinition "eqTC'" TC ;;
                      Implement TC "notwFunext" (wFunext -> False)).
 Next Obligation.
@@ -316,7 +316,7 @@ Defined.
 Definition wUnivalence
   := forall A B, Equiv A B -> A = B.
 
-Run TemplateProgram (TC <- Translate eqTC' "idpath" ;;
+MetaCoq Run (TC <- Translate eqTC' "idpath" ;;
                      TC <- ImplementExisting TC "paths_ind" ;;
                      tmDefinition "eqTC''" TC).
 Next Obligation.
@@ -324,7 +324,7 @@ Next Obligation.
   tIntro y. tIntro p. destruct p. exact t.
 Defined.
 
-Run TemplateProgram (TC <- TranslateRec eqTC'' wUnivalence ;;
+MetaCoq Run (TC <- TranslateRec eqTC'' wUnivalence ;;
                      tmDefinition "eqTC3" TC).
 
 Theorem preserves_wUnivalence : wUnivalence -> wUnivalenceᵗ.
@@ -350,7 +350,7 @@ Defined.
 
 Definition UA := forall A B, IsEquiv (paths_ind A (fun B _ => Equiv A B) (equiv_idmap A) B).
 
-Run TemplateProgram (TC <- Translate eqTC3 "isequiv_idmap" ;;
+MetaCoq Run (TC <- Translate eqTC3 "isequiv_idmap" ;;
                      TC <- Translate TC "equiv_idmap" ;;
                      TC <- Translate TC "UA" ;;
                      tmDefinition "eqTC4" TC).
@@ -368,7 +368,7 @@ Lemma eqᵗ_unit_unit (e e' : eqᵗ Type unit unit) : e = e'.
 Defined.
 
 
-Run TemplateProgram (Implement eqTC4 "notUA" (UA -> False)).
+MetaCoq Run (Implement eqTC4 "notUA" (UA -> False)).
 Next Obligation.
   unfold UAᵗ; tIntro ua.
   tSpecialize ua unit.

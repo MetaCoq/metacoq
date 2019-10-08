@@ -551,10 +551,18 @@ Environment is well-formed and Const(Top.bignat,[]) has type: Ind(Coq.Init.Datat
 *)
 MetaCoq CoqCheck bignat.
 
-(* MetaCoq SafeCheck @issect'. *)
-Fail MetaCoq SafeCheck @ap_pp.
-Fail MetaCoq SafeCheck @isequiv_adjointify.
-Fail MetaCoq SafeCheck @IsEquiv.
-MetaCoq CoqCheck IsEquiv.
-Fail Time MetaCoq SafeCheck @isequiv_adjointify.
+
+Monomorphic Definition issect'_m := @issect'.
+MetaCoq SafeCheck issect'_m.
+
+Monomorphic Definition ap_pp_m := @ap_pp.
+MetaCoq SafeCheck ap_pp_m.
+Time MetaCoq CoqCheck ap_pp_m.
+
+Monomorphic Definition isequiv_adjointify_m := @isequiv_adjointify.
+MetaCoq SafeCheck isequiv_adjointify_m.
 Time MetaCoq CoqCheck isequiv_adjointify.
+
+Monomorphic Definition IsEquiv_m := @IsEquiv.
+Fail MetaCoq SafeCheck IsEquiv_m.
+MetaCoq CoqCheck IsEquiv.

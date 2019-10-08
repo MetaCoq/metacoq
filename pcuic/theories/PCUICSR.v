@@ -375,8 +375,6 @@ Section SRContext.
         destruct p as [[? []]|[? []]].
         -- exists (vdef na b' t).
            split; cbnr.
-           eapply (weakening_red_0 wfΣ _ [_]); tas; cbnr.
-           apply refl_red.
         -- exists (vdef na b t').
            split; cbnr.
            eapply (weakening_red_0 wfΣ _ [_]); tas; cbnr.

@@ -16,6 +16,7 @@ Open Scope type_scope.
 Open Scope list_scope.
 Local Set Keyed Unification.
 
+
 (* todo: move this *)
 Arguments All_nil {_ _}.
 Arguments All_cons {_ _ _ _}.
@@ -397,6 +398,14 @@ Section Typecheck.
     left; destruct i. now exists (tSort x).
   Defined.
 
+  Lemma wat_wellformed {Γ T} :
+    ∥ isWfArity_or_Type Σ Γ T ∥ -> wellformed Σ Γ T.
+  Proof.
+    destruct HΣ as [wΣ]. intros [[X|X]].
+    right; now constructor.
+    now apply isType_wellformed.
+  Defined.
+
   Definition hnf := reduce_term RedFlags.default Σ HΣ.
 
   Theorem hnf_sound {Γ t h} : ∥ red (fst Σ) Γ t (hnf Γ t h) ∥.
@@ -519,17 +528,15 @@ Section Typecheck.
       now constructor; eapply type_reduction.
     Defined.
 
-    Program Definition infer_cumul Γ HΓ t A (hA : ∥ isType Σ Γ A ∥)
+    Program Definition infer_cumul Γ HΓ t A (hA : ∥ isWfArity_or_Type Σ Γ A ∥)
       : typing_result (∥ Σ ;;; Γ |- t : A ∥) :=
       A' <- infer Γ HΓ t ;;
       X <- convert_leq Γ A'.π1 A _ _ ;;
       ret _.
     Next Obligation. now eapply validity_wf. Qed.
-    Next Obligation. destruct hA; now apply isType_wellformed. Qed.
+    Next Obligation. destruct hA; now apply wat_wellformed. Qed.
     Next Obligation.
-      destruct hA as [[s hA]].
-      - destruct HΣ, HΓ, X, X0. constructor. econstructor; try eassumption.
-        right; eexists; eassumption.
+      destruct HΣ, HΓ, hA, X, X0. constructor. econstructor; eassumption.
     Qed.
   End InferAux.
 
@@ -695,19 +702,6 @@ Section Typecheck.
     repeat match goal with
            | H : ∥ _ ∥ |- _ => case H; clear H; intro H
            end; try eapply sq.
-
-  (* Definition sq_type_CoFix {Γ mfix n decl} : *)
-  (*   allow_cofix -> *)
-  (*   let types := fix_context mfix in *)
-  (*   nth_error mfix n = Some decl -> *)
-  (*   ∥ wf_local Σ (Γ ,,, types) ∥ -> *)
-  (*   All (fun d => ∥ Σ;;; Γ ,,, types |- dbody d : (lift0 #|types|) (dtype d) ∥) mfix -> *)
-  (*   ∥ Σ;;; Γ |- tCoFix mfix n : dtype decl ∥. *)
-  (* Proof. *)
-  (*   intros H types H0 H1 H2. *)
-  (*   apply All_sq in H2. sq. *)
-  (*   eapply type_CoFix; eauto. *)
-  (* Defined. *)
 
   Open Scope nat.
 
@@ -920,7 +914,7 @@ Section Typecheck.
   Next Obligation. sq; econstructor; cbn; easy. Defined.
   Next Obligation. sq; econstructor; eassumption. Defined.
   (* tLetIn *)
-  Next Obligation. sq; econstructor; eauto. Defined.
+  Next Obligation. sq. right. econstructor; eauto. Defined.
   Next Obligation. sq; econstructor; cbn; eauto. Defined.
   Next Obligation. sq; now econstructor. Defined.
 
@@ -933,11 +927,11 @@ Section Typecheck.
       apply destArity_app_Some in H1. destruct H1 as [ctx' [e1 e2]] ; subst.
       rewrite app_context_assoc in H2. cbn in H2.
       apply wf_local_app in H2.
-      inversion H2; subst. assumption.
+      inversion H2; subst. right. assumption.
     - destruct i as [s HH].
       eapply inversion_Prod in HH ; try assumption.
       destruct HH as [s1 [_ [HH _]]].
-      eexists. eassumption.
+      right. eexists. eassumption.
   Defined.
   Next Obligation.
     sq; econstructor. 2: eassumption.
@@ -960,7 +954,7 @@ Section Typecheck.
 
   (* tCase *)
   Next Obligation. now eapply validity_wf. Defined.
-  Next Obligation. inversion HH; assumption. Qed.
+  Next Obligation. inversion HH; sq; right; assumption. Qed.
   Next Obligation. inversion HH; assumption. Qed.
   Next Obligation.
     destruct HΣ, HΓ, X.
@@ -1006,7 +1000,7 @@ Section Typecheck.
     sq. cbn in *.
     apply wf_local_rel_app, fst in XX'. rewrite lift0_p in XX'.
     inversion XX'; subst. destruct X0 as [s HH].
-    exists s. change (tSort s) with (lift0 #|fix_context mfix| (tSort s)).
+    right. exists s. change (tSort s) with (lift0 #|fix_context mfix| (tSort s)).
     apply weakening; try assumption.
     apply wf_local_app_inv; assumption.
   Defined.
@@ -1035,7 +1029,7 @@ Section Typecheck.
     sq. cbn in *.
     apply wf_local_rel_app, fst in XX'. rewrite lift0_p in XX'.
     inversion XX'; subst. destruct X0 as [s HH].
-    exists s. change (tSort s) with (lift0 #|fix_context mfix| (tSort s)).
+    right. exists s. change (tSort s) with (lift0 #|fix_context mfix| (tSort s)).
     apply weakening; try assumption.
     apply wf_local_app_inv; assumption.
   Defined.
@@ -1077,7 +1071,7 @@ Section Typecheck.
     sq. econstructor; tas. econstructor; eauto.
   Qed.
   Next Obligation.
-    sq. econstructor; tea.
+    sq. right. econstructor; tea.
   Qed.
   Next Obligation.
     sq. econstructor; tas. econstructor; eauto.
@@ -1096,20 +1090,6 @@ Section Typecheck.
     split; auto.
   Defined.
 
-  Program Definition check_wellformed Γ (HΓ : ∥ wf_local Σ Γ ∥) A
-    : typing_result (wellformed Σ Γ A) :=
-    match infer Γ HΓ A with
-    | Checked (ty; Hty) => ret _
-    | TypeError e => match check_isWfArity Γ HΓ A with
-                    | Checked HA => ret (or_intror HA)
-                    | TypeError _ =>
-                      raise (Msg (string_of_term A ++ " is not wellformed. The type error is: " ++ string_of_type_error e))
-                    end
-    end.
-  Next Obligation.
-    left. destruct Hty. econstructor; eassumption.
-  Defined.
-
   Program Definition check_isType Γ (HΓ : ∥ wf_local Σ Γ ∥) A
     : typing_result (∥ isType Σ Γ A ∥) :=
     s <- infer Γ HΓ A ;;
@@ -1118,10 +1098,48 @@ Section Typecheck.
   Next Obligation. now eapply validity_wf. Defined.
   Next Obligation. sq. eexists. eapply type_reduction; tea. Defined.
 
-  (* A can't be a WAT *)
+
+  Lemma isType_isWAT_sq {Γ A} : ∥ isType Σ Γ A ∥ -> ∥ isWfArity_or_Type Σ Γ A ∥.
+  Proof.
+    intro; sq; now right.
+  Qed.
+
+  Equations check_isWAT Γ (HΓ : ∥ wf_local Σ Γ ∥) A
+    : typing_result (∥ isWfArity_or_Type Σ Γ A ∥) :=
+    check_isWAT Γ HΓ (tSort s) := ret _;
+    check_isWAT Γ HΓ (tProd na A B) :=
+      XX <- infer_type infer Γ HΓ A ;;
+      YY <- check_isWAT (Γ ,, vass na A) _ B ;;
+      ret _;
+    check_isWAT Γ HΓ (tLetIn na t A B) :=
+      XX <- infer_type infer Γ HΓ A ;;
+      YY <- infer_cumul infer Γ HΓ t A _ ;;
+      ZZ <- check_isWAT (Γ ,, vdef na t A) _ B ;;
+      ret _;
+    check_isWAT Γ HΓ A :=  XX <- check_isType Γ HΓ A ;; ret (isType_isWAT_sq XX).
+  Next Obligation.
+    sq. left. eexists. eexists. now split.
+  Qed.
+  Next Obligation.
+    sq. constructor; cbn; eauto.
+  Qed.
+  Next Obligation.
+    sq. eapply isWAT_tProd; tas. split; tas. econstructor; tea.
+  Qed.
+  Next Obligation.
+    sq. right. eexists; eassumption.
+  Qed.
+  Next Obligation.
+    sq. constructor; tas. eexists; eassumption.
+  Qed.
+  Next Obligation.
+    sq. eapply isWAT_tLetIn; tas. repeat split; tas. econstructor; tea.
+  Defined.
+
+
   Program Definition check Γ (HΓ : ∥ wf_local Σ Γ ∥) t A
     : typing_result (∥ Σ;;; Γ |- t : A ∥) :=
-    check_isType Γ HΓ A ;;
+    check_isWAT Γ HΓ A ;;
     infer_cumul infer Γ HΓ t A _.
 
 End Typecheck.

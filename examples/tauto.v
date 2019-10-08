@@ -577,34 +577,113 @@ Qed.
 Require Import String.
 Local Open Scope string_scope.
 From  MetaCoq Require Import PCUICSize.
+From MetaCoq.Checker Require Import WfInv Typing Weakening TypingWf
+     WeakeningEnv Substitution.
 
-Program Fixpoint reify (S : global_env_ext) (G : context)
-   (P : term) { measure (size (trans P)) }: option form :=
-   let (hd, args) := decompose_app P in
-   match hd with
-   | tRel n =>
-     match nth_error G n with
-     | Some decl =>
-        Some (Var n)
-     | None => None
-     end
-   | tConstruct ind i k =>
-     match ind.(inductive_mind), args with
-     | "Coq.Init.Logic.and", [A; B] =>
-     af <- reify S G A;;
-     bf <- reify S G B;;
-     ret (And af bf)
-     | "Coq.Init.Logic.or", [A; B] =>
-     af <- reify S G A;;
-     bf <- reify S G B;;
-     ret (Or af bf)
-     | "Coq.Init.Logic.False", [] =>
-     ret Fa
-     | _, _ => None
-     end
+Quote Definition MProp := Prop.
+
+Quote Definition MFalse := False.
+(* Definition MFalse := Eval compute in trans TFalse. *)
+
+Quote Definition MTrue := True.
+
+Quote Definition Mand := and.
+(* Definition Mand := Eval compute in trans Tand. *)
+
+Quote Definition Mor := or.
+(* Definition Mor := Eval compute in trans Tor. *)
+
+Definition tImpl (A B : term) :=
+  tProd nAnon A (lift0 1 B).
+
+Definition tAnd (A B : term) :=
+  tApp Mand [ A ; B ].
+
+Definition tOr (A B : term) :=
+  tApp Mor [ A ; B ].
+
+Inductive well_prop Σ Γ : term -> Type :=
+| well_prop_Rel :
+    forall n,
+      Σ ;;; Γ |- tRel n : MProp ->
+      well_prop Σ Γ (tRel n)
+
+| well_prop_Impl :
+    forall A B,
+      well_prop Σ Γ A ->
+      well_prop Σ Γ B ->
+      well_prop Σ Γ (tImpl A B)
+
+| well_prop_And :
+    forall A B,
+      well_prop Σ Γ A ->
+      well_prop Σ Γ B ->
+      well_prop Σ Γ (tAnd A B)
+
+| well_prop_Or :
+    forall A B,
+      well_prop Σ Γ A ->
+      well_prop Σ Γ B ->
+      well_prop Σ Γ (tOr A B)
+
+| well_prop_False : well_prop Σ Γ MFalse
+(* | well_prop_True : well_prop Σ Γ MTrue *) (* TODO *)
+.
+
+Fixpoint downlift (k : nat) (t : term) : option term :=
+  match t with
+  | tRel n =>
+    if k <? n then ret (tRel (n - 1) )
+    else if n =? k then None
+    else ret (tRel n)
   | tProd na A B =>
-    af <- reify S G A;;
-    bf <- reify S G B;;
+    A' <- downlift k A ;;
+    B' <- downlift (S k) B ;;
+    ret (tProd na A' B')
+  | tInd ind ui => ret (tInd ind ui)
+  | tApp u l =>
+    u' <- downlift k u ;;
+    l' <- monad_map (downlift k) l ;;
+    ret (tApp u' l')
+  | _ => None
+  end.
+
+Program Fixpoint reify (Σ : global_env_ext) (Γ : context)
+   (P : term) { measure (size (trans P)) }: option form :=
+  let (hd, args) := decompose_app P in
+  match hd with
+  | tRel n =>
+    match nth_error Γ n with
+    | Some decl => Some (Var n)
+    | None => None
+    end
+  | tInd ind [] =>
+    if string_dec ind.(inductive_mind) "Coq.Init.Logic.and" then
+      match args with
+      | [ A ; B ] =>
+        af <- reify Σ Γ A ;;
+        bf <- reify Σ Γ B ;;
+        ret (And af bf)
+      | _ => None
+      end
+    else if string_dec ind.(inductive_mind) "Coq.Init.Logic.or" then
+      match args with
+      | [ A ; B ] =>
+        af <- reify Σ Γ A ;;
+        bf <- reify Σ Γ B ;;
+        ret (Or af bf)
+      | _ => None
+      end
+    else if string_dec ind.(inductive_mind) "Coq.Init.Logic.False" then
+      match args with
+      | [] => ret Fa
+      | _ => None
+      end
+    else None
+  | tProd na A B =>
+    B' <- downlift 0 B ;;
+    af <- reify Σ Γ A ;;
+    bf <- reify Σ Γ B' ;;
     ret (Imp af bf)
   | _ => None
 end.
@@ -643,17 +722,6 @@ Lemma reify_unf S G P :
 end.
 Admitted.
 
-Quote Definition MProp := Prop.
-
-Quote Definition MFalse := False.
-(* Definition MFalse := Eval compute in trans TFalse. *)
-
-Quote Definition Mand := and.
-(* Definition Mand := Eval compute in trans Tand. *)
-
-Quote Definition Mor := or.
-(* Definition Mor := Eval compute in trans Tor. *)
-
 Instance Propositional_Logic_MetaCoq : Propositional_Logic term :=
   {| Pfalse := MFalse; Pand := fun P Q => mkApps Mand [P;Q];
      Por := fun P Q => mkApps Mor [P;Q]; Pimpl := fun P Q => tProd nAnon P Q |}.
@@ -676,11 +744,13 @@ Fixpoint can_val_Prop (G : list Prop ) (v : var) : Prop :=
   | cons P PS, S n => can_val_Prop PS n
   end. *)
 
-Definition can_val (Γ : context) (v : var) : term :=
+(* Definition can_val (Γ : context) (v : var) : term :=
   match nth_error Γ v with
   | Some P => P.(decl_type)
   | None => MFalse
-  end.
+  end. *)
+
+Definition can_val (v : var) : term := tRel v.
 
 Definition can_val_Prop (Γ : list Prop) (v : var) : Prop :=
   match nth_error Γ v with
@@ -711,9 +781,6 @@ Section Test.
   Check eq_refl : Mformala_test = Msem_formula_test.
 
 End Test.
-
-From MetaCoq.Checker Require Import WfInv Typing Weakening TypingWf
-     WeakeningEnv Substitution.
 
 Definition reify_correct :
   forall Σ Γ P φ,

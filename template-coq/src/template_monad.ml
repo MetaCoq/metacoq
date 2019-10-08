@@ -349,7 +349,7 @@ let next_action env evd (pgm : constr) : template_monad * _ =
   else if eq_gr ptmVariable then
     match args with
     | name::ty::[] -> (TmVariable (name,ty) , universes)
-    | _ -> monad_failure "tmVariable" 1
+    | _ -> monad_failure "tmVariable" 2
 
   else if eq_gr ttmInductive then
     match args with

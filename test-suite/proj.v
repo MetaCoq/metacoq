@@ -14,7 +14,7 @@ Quote Recursively Definition foo := (fst, snd).
 Program Definition eqnat : Eq nat := {| eq x y := true |}.
 Next Obligation. Admitted.
 
-Quote Recursively Definition eqnatr := eqnat.
+MetaCoq Quote Recursively Definition eqnatr := eqnat.
 
 Goal forall {A} {e : Eq A} x y, e.(eq _) x y = eq _ e x y.
 Proof.

@@ -10,7 +10,7 @@ Environment is well-formed and Ind(Coq.Init.Datatypes.nat,0,[]) has type: Sort([
 MetaCoq SafeCheck 3.
 MetaCoq SafeCheck (3 + 1).
 
-Quote Definition foo := (3 + 1).
+MetaCoq Quote Definition foo := (3 + 1).
 
 MetaCoq SafeCheck plus.
 MetaCoq CoqCheck Nat.add.

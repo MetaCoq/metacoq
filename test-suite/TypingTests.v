@@ -12,7 +12,7 @@ Require Import MetaCoq.Checker.All.
 
 Unset Template Cast Propositions.
 
-Quote Recursively Definition idq := @Coq.Classes.Morphisms.Proper.
+MetaCoq Quote Recursively Definition idq := @Coq.Classes.Morphisms.Proper.
 
 Existing Instance config.default_checker_flags.
 Existing Instance Checker.default_fuel.
@@ -21,7 +21,7 @@ Definition  test0 := Eval vm_compute in typecheck_program idq.
 
 Definition timpl x y := tProd nAnon x (LiftSubst.lift0 1 y).
 
-Quote Recursively Definition four := (2 + 2).
+MetaCoq Quote Recursively Definition four := (2 + 2).
 Unset Printing Matching.
 
 Ltac typecheck := try red; cbn; intros;
@@ -37,7 +37,7 @@ Ltac infer := try red;
           change (t' = Checked T); reflexivity]
   end.
 
-Quote Definition natr := nat.
+MetaCoq Quote Definition natr := nat.
 
 Definition type_program (p : program) (ty : term) :=
   let Σ := empty_ext (fst p) in
@@ -125,12 +125,12 @@ Module Test5.
 
   (* Time Template Check Plus1. *)
   (* Time Template Check Coq.ZArith.BinInt.Z.succ_pred. (* -> 16 s *) *)
-  (* Quote Recursively Definition plop := Coq.ZArith.BinInt.Z.succ_pred. *)
+  (* MetaCoq Quote Recursively Definition plop := Coq.ZArith.BinInt.Z.succ_pred. *)
   (* Eval native_compute in (typecheck_program plop). (* -> 31 min!! *) *)
 
 
   (* (* Too long with universes on *) *)
-  (* Quote Recursively Definition p_Plus1 := Plus1. *)
+  (* MetaCoq Quote Recursively Definition p_Plus1 := Plus1. *)
 
   (* Definition term := Plus1. *)
   (* Definition ast := p_Plus1. *)
@@ -153,19 +153,19 @@ Definition f1 := (forall (A:Type@{i}) (B: Prop), A -> B -> A).
 Definition f2 := (forall (A:Type@{i}) (B: Prop), A -> B -> B).
 (* : Prop *)
 
-Quote Definition f1' := (forall (A:Type@{i}) (B: Prop), A -> B -> A).
+MetaCoq Quote Definition f1' := (forall (A:Type@{i}) (B: Prop), A -> B -> A).
 
 Definition test1 := Eval lazy in infer' (empty_ext []) nil f1'.
 
-Quote Definition f2' := (forall (A:Type@{i}) (B: Prop), A -> B -> B).
+MetaCoq Quote Definition f2' := (forall (A:Type@{i}) (B: Prop), A -> B -> B).
 
 Definition test2 := Eval lazy in infer' (empty_ext []) nil f2'.
 
 Definition f := (forall (A:Type@{i}) (B: Type@{j}), A -> B -> A).
 (* : Type@{i+1, j+1} *)
 
-Quote Definition f' := (forall (A:Type@{i}) (B:Type@{j}), A -> B -> A).
+MetaCoq Quote Definition f' := (forall (A:Type@{i}) (B:Type@{j}), A -> B -> A). 
 
-Quote Definition f'' := (forall (B: Type@{j}), B -> B).
+MetaCoq Quote Definition f'' := (forall (B: Type@{j}), B -> B). 
 
 Definition test3 := Eval lazy in infer' (empty_ext []) nil f'.

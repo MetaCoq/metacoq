@@ -652,15 +652,13 @@ Fixpoint downlift (k : nat) (t : term) : option term :=
   | _ => None
   end.
 
-Definition inspect {A} (x : A) : { y : A | y = x } := exist _ x eq_refl.
-
 Equations reify (Σ : global_env_ext) (Γ : context) (P : term) : option form
   by wf (size (trans P)) lt :=
-  reify Σ Γ P with inspect (decompose_app P) := {
-  | @exist (hd, args) e1 with hd := {
-    | tRel n with inspect (nth_error Γ n) := {
-      | @exist (Some decl) e2 => Some (Var n) ;
-      | @exist None e2 => None
+  reify Σ Γ P with decompose_app P := {
+  | (hd, args) with hd := {
+    | tRel n with nth_error Γ n := {
+      | Some decl => Some (Var n) ;
+      | None => None
       } ;
     | tInd ind []
       with string_dec ind.(inductive_mind) "Coq.Init.Logic.and" := {
@@ -775,7 +773,7 @@ Admitted. *)
 
 Instance Propositional_Logic_MetaCoq : Propositional_Logic term :=
   {| Pfalse := MFalse; Pand := fun P Q => mkApps Mand [P;Q];
-     Por := fun P Q => mkApps Mor [P;Q]; Pimpl := fun P Q => tProd nAnon P Q |}.
+     Por := fun P Q => mkApps Mor [P;Q]; Pimpl := fun P Q => tImpl P Q |}.
 
 Definition Msem := @semGen term _.
 
@@ -861,32 +859,30 @@ Proof.
   - destruct IHh1 as [fA [r1 s1]].
     destruct IHh2 as [fB [r2 s2]].
     exists (Imp fA fB). split.
-    + simp reify. rewrite downlift_lift. simpl.
-
-  (* induction P using term_forall_list_ind in Σ, Γ, h, φ, e |- *.
-  all: rewrite reify_unf in e.
-  all: cbn in *.
-  all: try easy.
-  - destruct (nth_error Γ n) eqn:e'. 2: discriminate.
-    apply some_inj in e. subst.
-    unfold Msem. simpl.
-    unfold can_val. rewrite e'.
-    (* Is this really something we expect? *)
-    give_up.
-  - destruct (reify Σ Γ P1) as [f1|] eqn:e1. 2: discriminate.
-    destruct (reify Σ Γ P2) as [f2|] eqn:e2. 2: discriminate.
-    apply some_inj in e. subst. cbn. f_equal.
-    + (* Not true, but can be fixed. *)
-      give_up.
-    + (* NOT TRUE, P1 doesn't necessarilly have type Prop *)
-      give_up.
-    + (* From inversion of typing *)
-      admit.
-  - (* TODO After changing the definition bit. *)
-    admit.
-  - (* Same *)
-    admit. *)
-Abort.
+    + simp reify. rewrite downlift_lift.
+      simp reify in r1. rewrite r1. simpl.
+      rewrite r2. reflexivity.
+    + cbn. rewrite s1, s2. reflexivity.
+  - destruct IHh1 as [fA [r1 s1]].
+    destruct IHh2 as [fB [r2 s2]].
+    exists (And fA fB). split.
+    + simp reify.
+      simp reify in r1. rewrite r1.
+      simp reify in r2. rewrite r2.
+      simpl. reflexivity.
+    + cbn. rewrite s1, s2. reflexivity.
+  - destruct IHh1 as [fA [r1 s1]].
+    destruct IHh2 as [fB [r2 s2]].
+    exists (Or fA fB). split.
+    + simp reify.
+      simp reify in r1. rewrite r1.
+      simp reify in r2. rewrite r2.
+      simpl. reflexivity.
+    + cbn. rewrite s1, s2. reflexivity.
+  - exists Fa. split.
+    + simp reify. reflexivity.
+    + reflexivity.
+Qed.
 
 Section Correctness.
 

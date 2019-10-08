@@ -35,7 +35,7 @@ MetaCoq Erase ((fun (X : Set) (x : X) (e : x = x) =>
 
 (* (** Check the treatment of Prop <= Type *) *)
 MetaCoq Erase ((fun (X : Set) (x : X) => x) True I).
-Quote Recursively Definition foo := List.map.
+MetaCoq Quote Recursively Definition foo := List.map.
 
 Require Import List.
 Import ListNotations.

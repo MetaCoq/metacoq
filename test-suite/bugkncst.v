@@ -22,7 +22,7 @@ Require Import MetaCoq.Template.Ast.
 Unset Template Cast Propositions.
 
 (* Use template-coq to make a [program] from function defined above *)
-Time Quote Recursively Definition p_Plus1 := Plus1.
+Time MetaCoq Quote Recursively Definition p_Plus1 := Plus1.
 
 (** The program p_Plus1 is too big to read, so we define some
 *** diagnostic software **)

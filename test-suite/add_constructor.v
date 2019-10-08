@@ -69,7 +69,7 @@ Polymorphic Definition add_constructor (tm : Ast.term)
 (** * Examples *)
 Local Open Scope string.
 (** Here we add a silly constructor to bool. *)
-Run TemplateProgram (
+MetaCoq Run (
     add_constructor <% bool %> "foo" <% (fun x : Type => nat -> x -> bool -> x) %>).
 (* Inductive bool' : Set := *)
 (*     true' : bool' *)
@@ -83,7 +83,7 @@ Inductive tm :=
 | lam : tm -> tm
 | app : tm -> tm -> tm.
 
-Run TemplateProgram (add_constructor <%tm%> "letin" <% (fun tm' => tm' -> tm' -> tm') %>).
+MetaCoq Run (add_constructor <%tm%> "letin" <% (fun tm' => tm' -> tm' -> tm') %>).
 
 Print tm'.
 (* Inductive tm' : Type := *)
@@ -93,14 +93,14 @@ Print tm'.
 (*   | letin : tm' -> tm' -> tm' *)
 
 
-Run TemplateProgram (add_constructor <%@eq%> "foo'"
+MetaCoq Run (add_constructor <%@eq%> "foo'"
                     <% (fun (eq':forall A, A -> A -> Type) => forall A x y, nat -> eq' A x x -> bool -> eq' A x y) %>).
 
 Require Import Even.
-Run TemplateProgram (add_constructor <%@odd%> "foo''"
+MetaCoq Run (add_constructor <%@odd%> "foo''"
                     <%(fun (even' odd':nat -> Prop) => odd' 0)%>).
 
 Module A.
-Run TemplateProgram (add_constructor <%even%> "foo'"
+MetaCoq Run (add_constructor <%even%> "foo'"
                     <%(fun (even' odd':nat -> Prop) => even' 0)%>).
 End A.

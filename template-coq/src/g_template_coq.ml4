@@ -51,7 +51,7 @@ let run_template_program env evm pgm =
 (** ********* Commands ********* *)
 
 VERNAC COMMAND EXTEND Make_tests CLASSIFIED AS QUERY
-    | [ "Test" "Quote" constr(def) ] ->
+    | [ "MetaCoq" "Test" "Quote" constr(def) ] ->
       [ let (evm,env) = Pfedit.get_current_context () in
         let (evm, def) = Constrintern.interp_open_constr env evm def in
         let (evm, pgm) = EConstr.fresh_global env evm (Lazy.force Template_monad.ptmTestQuote) in
@@ -60,7 +60,7 @@ VERNAC COMMAND EXTEND Make_tests CLASSIFIED AS QUERY
 END;;
 
 VERNAC COMMAND EXTEND Make_vernac CLASSIFIED AS SIDEFF
-    | [ "Quote" "Definition" ident(name) ":=" constr(def) ] ->
+    | [ "MetaCoq" "Quote" "Definition" ident(name) ":=" constr(def) ] ->
       [ let (evm,env) = Pfedit.get_current_context () in
         let (evm, def) = Constrintern.interp_open_constr env evm def in
         let (evm, pgm) = EConstr.fresh_global env evm (Lazy.force Template_monad.ptmQuoteDefinition) in
@@ -69,7 +69,7 @@ VERNAC COMMAND EXTEND Make_vernac CLASSIFIED AS SIDEFF
 END;;
 
 VERNAC COMMAND EXTEND Make_vernac_reduce CLASSIFIED AS SIDEFF
-    | [ "Quote" "Definition" ident(name) ":=" "Eval" red_expr(rd) "in" constr(def) ] ->
+    | [ "MetaCoq" "Quote" "Definition" ident(name) ":=" "Eval" red_expr(rd) "in" constr(def) ] ->
       [ let (evm, env) = Pfedit.get_current_context () in
         let (evm, def) = Constrintern.interp_open_constr env evm def in
         (* TODO : implem quoting of tactic reductions so that we can use ptmQuoteDefinitionRed *)
@@ -81,7 +81,7 @@ VERNAC COMMAND EXTEND Make_vernac_reduce CLASSIFIED AS SIDEFF
 END;;
 
 VERNAC COMMAND EXTEND Make_recursive CLASSIFIED AS SIDEFF
-    | [ "Quote" "Recursively" "Definition" ident(name) ":=" constr(def) ] ->
+    | [ "MetaCoq" "Quote" "Recursively" "Definition" ident(name) ":=" constr(def) ] ->
       [ let (evm,env) = Pfedit.get_current_context () in
         let (evm, def) = Constrintern.interp_open_constr env evm def in
         let (evm, pgm) = EConstr.fresh_global env evm (Lazy.force Template_monad.ptmQuoteRecDefinition) in
@@ -90,7 +90,7 @@ VERNAC COMMAND EXTEND Make_recursive CLASSIFIED AS SIDEFF
 END;;
 
 VERNAC COMMAND EXTEND Unquote_vernac CLASSIFIED AS SIDEFF
-    | [ "Make" "Definition" ident(name) ":=" constr(def) ] ->
+    | [ "MetaCoq" "Unquote" "Definition" ident(name) ":=" constr(def) ] ->
       [ let (evm, env) = Pfedit.get_current_context () in
         let (evm, def) = Constrintern.interp_open_constr env evm def in
         let (evm, pgm) = EConstr.fresh_global env evm (Lazy.force Template_monad.ptmMkDefinition) in
@@ -99,7 +99,7 @@ VERNAC COMMAND EXTEND Unquote_vernac CLASSIFIED AS SIDEFF
 END;;
 
 VERNAC COMMAND EXTEND Unquote_inductive CLASSIFIED AS SIDEFF
-    | [ "Make" "Inductive" constr(def) ] ->
+    | [ "MetaCoq" "Unquote" "Inductive" constr(def) ] ->
       [ let (evm, env) = Pfedit.get_current_context () in
         let (evm, def) = Constrintern.interp_open_constr env evm def in
         let (evm, pgm) = EConstr.fresh_global env evm (Lazy.force Template_monad.ptmMkInductive) in
@@ -108,7 +108,7 @@ VERNAC COMMAND EXTEND Unquote_inductive CLASSIFIED AS SIDEFF
 END;;
 
 VERNAC COMMAND EXTEND Run_program CLASSIFIED AS SIDEFF
-    | [ "Run" "TemplateProgram" constr(def) ] ->
+    | [ "MetaCoq" "Run" constr(def) ] ->
       [ let (evm, env) = Pfedit.get_current_context () in
         let (evm, def) = Constrintern.interp_open_constr env evm def in
         let pgm = EConstr.to_constr evm def in
@@ -156,7 +156,7 @@ TACTIC EXTEND run_program
 END;;
 
 VERNAC COMMAND EXTEND Make_tests CLASSIFIED AS QUERY
-    | [ "Test" "Quote" constr(c) ] ->
+    | [ "MetaCoq" "Test" "Quote" constr(c) ] ->
       [ let (evm,env) = Pfedit.get_current_context () in
 	let c = Constrintern.interp_constr env evm c in
 	let result = Constr_quoter.TermReify.quote_term env (EConstr.to_constr evm (fst c)) in

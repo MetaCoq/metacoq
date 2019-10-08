@@ -5,47 +5,47 @@ Open Scope string.
 
 Set Printing Universes.
 
-Test Quote Type.
-Quote Definition a_random_univ := Type.
+MetaCoq Test Quote Type.
+MetaCoq Quote Definition a_random_univ := Type.
 Compute a_random_univ.
 
-Fail Make Definition t1 := (tSort ([]; _)).
-Fail Make Definition t1 := (tSort (Universe.make (Level.Level "Top.400"))).
+Fail MetaCoq Unquote Definition t1 := (tSort ([]; _)).
+Fail MetaCoq Unquote Definition t1 := (tSort (Universe.make (Level.Level "Top.400"))).
 
 Monomorphic Definition T := Type.
-(* Make Definition t1 := (tSort (Universe.make (Level.Level "Top.5"))). *)
+(* MetaCoq Unquote Definition t1 := (tSort (Universe.make (Level.Level "Top.5"))). *)
 
 Unset Strict Unquote Universe Mode.
-Make Definition t2 := (tSort fresh_universe).
-Make Definition t3 := (tSort (Universe.make (Level.Level "Top.400"))).
+MetaCoq Unquote Definition t2 := (tSort fresh_universe).
+MetaCoq Unquote Definition t3 := (tSort (Universe.make (Level.Level "Top.400"))).
 
 
 Monomorphic Universe i j.
 
 Set Strict Unquote Universe Mode.
-Test Quote (Type@{j} -> Type@{i}).
-Make Definition T'' := (tSort (Universe.make' (Level.Level "j", false))).
+MetaCoq Test Quote (Type@{j} -> Type@{i}).
+MetaCoq Unquote Definition T'' := (tSort (Universe.make' (Level.Level "j", false))).
 Unset Strict Unquote Universe Mode.
 
 
 Polymorphic Definition pidentity {A : Type} (a : A) := a.
-Test Quote @pidentity.
+MetaCoq Test Quote @pidentity.
 Polymorphic Definition selfpid := pidentity (@pidentity).
-Test Quote @selfpid.
+MetaCoq Test Quote @selfpid.
 
 Constraint i < j.
-Make Definition yuyu := (tConst "selfpid" [Level.Level "j"; Level.Level "i"]).
+MetaCoq Unquote Definition yuyu := (tConst "selfpid" [Level.Level "j"; Level.Level "i"]).
 
 
-Quote Definition t0 := nat.
-Run TemplateProgram (tmUnquoteTyped Type t0).
+MetaCoq Quote Definition t0 := nat.
+MetaCoq Run (tmUnquoteTyped Type t0).
 Definition ty : Type := Type.
-Run TemplateProgram (tmUnquoteTyped ty t0).
+MetaCoq Run (tmUnquoteTyped ty t0).
 
 Polymorphic Cumulative Inductive test := .
 Polymorphic Cumulative Record packType := {pk : Type}.
-Run TemplateProgram (α <- tmQuoteInductive "test" ;; tmPrint α).
-Run TemplateProgram (tmQuoteInductive "packType" >>= tmEval all >>= tmPrint).
+MetaCoq Run (α <- tmQuoteInductive "test" ;; tmPrint α).
+MetaCoq Run (tmQuoteInductive "packType" >>= tmEval all >>= tmPrint).
 Polymorphic Cumulative Record Category@{i j} :=
 { Obj : Type@{i}; Hom : Obj -> Obj -> Type@{j} }.
 Polymorphic  Record Functor@{i j} (C D : Category@{i j}):=
@@ -53,8 +53,8 @@ Polymorphic  Record Functor@{i j} (C D : Category@{i j}):=
 Polymorphic Definition Cat@{i j k l} : Category@{i j}
  := Build_Category@{i j} Category@{k l} Functor@{k l}.
 
-Run TemplateProgram (tmQuoteInductive "Category" >>= tmEval all >>= tmPrint).
-Run TemplateProgram (tmQuoteConstant "Cat" false >>= tmEval all >>= tmPrint).
+MetaCoq Run (tmQuoteInductive "Category" >>= tmEval all >>= tmPrint).
+MetaCoq Run (tmQuoteConstant "Cat" false >>= tmEval all >>= tmPrint).
 
 
 Polymorphic Cumulative Inductive list (A : Type) : Type :=
@@ -64,7 +64,7 @@ Set Printing Universes.
 
 Module to.
   (* TODO : fix this *)
- Run TemplateProgram (t <- tmQuoteInductive "list" ;;
+ MetaCoq Run (t <- tmQuoteInductive "list" ;;
                      t <- tmEval all (mind_body_to_entry t) ;;
                      tmPrint t ;;
                      tmMkInductive t).
@@ -72,8 +72,8 @@ End to.
 
 
 Definition f@{i j k} := fun (E:Type@{i}) => Type@{max(i,j)}.
-Quote Definition qf := Eval cbv in f.
-Make Definition uqf := qf.
+MetaCoq Quote Definition qf := Eval cbv in f.
+MetaCoq Unquote Definition uqf := qf.
 
 
 Inductive foo (A : Type) : Type :=
@@ -81,7 +81,7 @@ Inductive foo (A : Type) : Type :=
 (* Print Universes.*)
 (* Top.1 <= Coq.Init.Datatypes.44 *)
 
-Quote Recursively Definition qfoo := foo.
+MetaCoq Quote Recursively Definition qfoo := foo.
 Compute qfoo.
 
 Polymorphic Inductive foo2 (A : Type) : Type :=
@@ -93,7 +93,7 @@ Definition foo2_instance := foo2.
 (* Print Universes.*)
 (* Top.9 <= Coq.Init.Datatypes.44 *)
 
-Quote Recursively Definition qfoo2 := foo2.
+MetaCoq Quote Recursively Definition qfoo2 := foo2.
 Compute qfoo2.
 (* (Level.Var 0, Le, Level.Level "Coq.Init.Datatypes.44") *)
 
@@ -104,28 +104,28 @@ Polymorphic Inductive foo3@{i j k l} (A : Type@{i}) (B : Type@{j}) : Type@{k} :=
               i <= l
               i <= Coq.Init.Datatypes.44
               j <= l *)
-Quote Recursively Definition qfoo3 := foo3.
+MetaCoq Quote Recursively Definition qfoo3 := foo3.
 Compute qfoo3.
 
 Require Import MetaCoq.Template.monad_utils. Import MonadNotation.
 Require Import MetaCoq.Template.TemplateMonad.Core.
 
-Run TemplateProgram (tmQuoteInductive "foo" >>= tmPrint).
-Run TemplateProgram (tmQuoteInductive "foo2" >>= tmPrint).
-Run TemplateProgram (tmQuoteInductive "foo3" >>= tmPrint).
+MetaCoq Run (tmQuoteInductive "foo" >>= tmPrint).
+MetaCoq Run (tmQuoteInductive "foo2" >>= tmPrint).
+MetaCoq Run (tmQuoteInductive "foo3" >>= tmPrint).
 
 Polymorphic Definition TT@{i j} : Type@{j} := Type@{i}.
-Quote Recursively Definition qTT := TT.
+MetaCoq Quote Recursively Definition qTT := TT.
 
 Polymorphic Inductive TT2@{i j} : Type@{j} := tt2 : Type@{i} -> TT2.
-Quote Recursively Definition qTT2 := TT2.
+MetaCoq Quote Recursively Definition qTT2 := TT2.
 
 Require Import MetaCoq.Template.utils.
 Require Import List. Import ListNotations.
 
 Module toto.
 
-  (* Run TemplateProgram (en <- tmEval all (mind_body_to_entry (Build_minductive_decl 0 [{| *)
+  (* MetaCoq Run (en <- tmEval all (mind_body_to_entry (Build_minductive_decl 0 [{| *)
   (*  ind_name := "TT2"; *)
   (*  ind_type := tSort ((Level.Var 1, false) :: nil)%list; *)
   (*  ind_kelim := InProp :: (InSet :: InType :: nil)%list; *)
@@ -150,12 +150,12 @@ Print test.
 (* Print Universes. *)
 Unset Printing Universes. 
 
-Quote Definition qtest := Eval compute in (fun (T : Type@{i}) (T2 : Type@{j}) => T -> T2).
+MetaCoq Quote Definition qtest := Eval compute in (fun (T : Type@{i}) (T2 : Type@{j}) => T -> T2).
 Print qtest.
 
-Make Definition bla := qtest.
+MetaCoq Unquote Definition bla := qtest.
 Unset Strict Unquote Universe Mode.
-Make Definition bla' := (tLambda (nNamed "T") (tSort (Universe.make'' (Level.Level "Top.46", false) [])) (tLambda (nNamed "T2") (tSort (Universe.make'' (Level.Level "Top.477", false) [])) (tProd nAnon (tRel 1) (tRel 1)))).
+MetaCoq Unquote Definition bla' := (tLambda (nNamed "T") (tSort (Universe.make'' (Level.Level "Top.46", false) [])) (tLambda (nNamed "T2") (tSort (Universe.make'' (Level.Level "Top.477", false) [])) (tProd nAnon (tRel 1) (tRel 1)))).
 
 Set Printing Universes.
 Print bla.
@@ -179,22 +179,22 @@ Compute t.
 Compute (@t Type@{i} Type@{j}).
 (* Compute (@t@{i j i j}). *)
 
-Quote Definition qt := Eval compute in t.
+MetaCoq Quote Definition qt := Eval compute in t.
 Print qt.
 
-Make Definition t' := qt.
+MetaCoq Unquote Definition t' := qt.
 
 Polymorphic Definition Funtp@{i} (A B: Type@{i}) := A->B.
 
 Polymorphic Definition F@{i} := Type@{i}.
 
-Quote Definition qT := Eval compute in F.
+MetaCoq Quote Definition qT := Eval compute in F.
 Require Import List. Import ListNotations.
-Fail Make Definition T'2 := (tSort [(Level.Var 1, false)]).
+Fail MetaCoq Unquote Definition T'2 := (tSort [(Level.Var 1, false)]).
 
-Quote Recursively Definition qT' := F.
+MetaCoq Quote Recursively Definition qT' := F.
 
-Quote Definition qFuntp := Eval compute in Funtp.
+MetaCoq Quote Definition qFuntp := Eval compute in Funtp.
 Print qFuntp.
 (** the same thing is quoted in demo.v using the template-coq monad
 there the poly vars actually show up *)
@@ -206,7 +206,7 @@ Monomorphic Universe i1 j1.
 Definition f' := (forall (A:Type@{i1}) (B: Type@{j1}), A -> B -> A).
 (* : Type@{i1+1, j1+1} *)
 
-Quote Recursively Definition ff := f'.
+MetaCoq Quote Recursively Definition ff := f'.
 
 Require Import MetaCoq.Checker.All.
 Check (eq_refl : infer' (empty_ext (fst ff)) [] (snd ff) =

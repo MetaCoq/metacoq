@@ -8,9 +8,7 @@ open PeanoNat.Nat
 open Datatypes
 open PCUICSafeChecker
 
-let pr_char c = str (Char.escaped c)
-
-let pr_char_list = prlist_with_sep mt pr_char
+let pr_char_list l = str (Scanf.unescaped (Quoted.list_to_string l))
 
 let time prefix f x =
   let start = Unix.gettimeofday () in
@@ -19,12 +17,15 @@ let time prefix f x =
   let () = Feedback.msg_debug (prefix ++ str " executed in: " ++ Pp.real (stop -. start) ++ str "s") in
   res
 
-let check env evm c =
+let check env evm (c, ustate) =
   Feedback.msg_debug (str"Quoting");
   let term = time (str"Quoting") (Ast_quoter.quote_term_rec env) (EConstr.to_constr evm c) in
+  let uctx = UState.context_set ustate in
+  Feedback.msg_debug (str"Universes added: " ++ Printer.pr_universe_ctx_set evm uctx);
+  let uctx = Universes0.Monomorphic_ctx (Ast_quoter.quote_univ_contextset uctx) in
   let check = time (str"Checking")
       (SafeTemplateChecker.infer_and_print_template_program Config0.default_checker_flags)
-      term
+      term uctx
   in
   match check with
   | Coq_inl s -> Feedback.msg_info (pr_char_list s)
@@ -33,7 +34,7 @@ let check env evm c =
 VERNAC COMMAND EXTEND MetaCoqSafeCheck CLASSIFIED AS QUERY
 | [ "MetaCoq" "SafeCheck" constr(c) ] -> [
     let (evm,env) = Pfedit.get_current_context () in
-    let (c, _) = Constrintern.interp_constr env evm c in
+    let c = Constrintern.interp_constr env evm c in
     check env evm c
   ]
 END

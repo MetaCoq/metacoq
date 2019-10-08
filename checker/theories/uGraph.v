@@ -1310,11 +1310,17 @@ Section CheckLeq.
         intros v Hv; specialize (HH v Hv); rewrite val_cons; cbn in *; lia.
   Qed.
 
-  Definition try_leqb_universe (u1 u2 : universe) :=
-    negb check_univs || try_leqb_universe_n 0 u1 u2.
+  Definition check_leqb_universe (u1 u2 : universe) :=
+    negb check_univs
+    || Universe.is_prop u1
+    || Universe.equal u1 u2
+    || try_leqb_universe_n 0 u1 u2.
 
-  Definition try_eqb_universe (u1 u2 : universe) :=
-    negb check_univs || (try_leqb_universe_n 0 u1 u2 && try_leqb_universe_n 0 u2 u1).
+  Definition check_eqb_universe (u1 u2 : universe) :=
+    negb check_univs
+    || Universe.equal u1 u2
+    || (try_leqb_universe_n 0 u1 u2 && try_leqb_universe_n 0 u2 u1).
+
 
   Definition check_gc_constraint (gc : good_constraint) :=
     negb check_univs || match gc with
@@ -1464,12 +1470,71 @@ Section CheckLeq2.
       reflexivity. contradiction HG.
   Qed.
 
-
-  Lemma try_leqb_universe_spec u1 u2
-    : try_leqb_universe G u1 u2 -> leq_universe uctx.2 u1 u2.
+  Lemma val_is_prop u v :
+    Universe.is_prop u -> (val v u = -1)%Z.
   Proof.
-    unfold try_leqb_universe, leq_universe.
+    clear.
+    induction u.
+    - destruct a as [[] []]; inversion 1; reflexivity.
+    - intro H. cbn in H. apply andb_true_iff in H as [H1 H2].
+      rewrite val_cons. rewrite IHu; tas.
+      destruct a as [[] []]; inversion H1; reflexivity.
+  Qed.
+
+  Lemma val_minus_one u v :
+    (-1 <= val v u)%Z.
+  Proof.
+    clear.
+    induction u. cbn.
+    - destruct a as [[] []]; cbn; lia.
+    - rewrite val_cons.
+      destruct a as [[] []]; cbn; lia.
+  Qed.
+
+  Lemma val0_equal l1 l2 v :
+    Level.equal l1 l2 -> val0 v l1 = val0 v l2.
+  Proof.
+    clear.
+    destruct l1, l2; cbnr; try now inversion 1.
+    all: unfold Level.equal; cbn.
+    destruct (CompareSpec_string s s0); try now inversion 1. now subst.
+    case_eq (n ?= n0); intro H; try now inversion 1.
+    apply PeanoNat.Nat.compare_eq in H. now subst.
+  Qed.
+
+  Lemma val1_equal e1 e2 v :
+    Universe.Expr.equal e1 e2 -> val1 v e1 = val1 v e2.
+  Proof.
+    destruct e1 as [[] []], e2 as [[] []]; cbn; try now inversion 1.
+    all: try (rewrite andb_false_r; now inversion 1).
+    all: rewrite andb_true_r.
+    all: intro H; apply val0_equal with (v:=v) in H; cbn in H; lia.
+  Qed.
+
+  Lemma val_equal u1 u2 v :
+    Universe.equal u1 u2 -> val v u1 = val v u2.
+  Proof.
+    clear.
+    induction u1 in u2 |- *.
+    - destruct u2 as [a2|]; [|inversion 1]. cbn. apply val1_equal.
+    - destruct u2 as [|a2 u2]; [inversion 1|]. intro H. cbn in H.
+      apply andb_true_iff in H as [H1 H2].
+      rewrite !val_cons. erewrite IHu1; tea.
+      erewrite val1_equal; tea. reflexivity.
+  Qed.
+
+  Lemma check_leqb_universe_spec u1 u2
+    : check_leqb_universe G u1 u2 -> leq_universe uctx.2 u1 u2.
+  Proof.
+    unfold check_leqb_universe, leq_universe.
     destruct check_univs; cbn; [|trivial].
+    case_eq (Universe.is_prop u1). {
+      intros e _ v Hv. rewrite val_is_prop; tas.
+      apply val_minus_one. }
+    intros _.
+    case_eq (Universe.equal u1 u2). {
+      intros e _ v Hv. now erewrite val_equal; tea. }
+    intros _; cbn.
     intro H; unshelve eapply (try_leqb_universe_n_spec G uctx' Huctx' HC' HG'
                                                        _ _ _) in H.
     eapply gc_leq_universe_n_iff.
@@ -1488,11 +1553,14 @@ Section CheckLeq2.
   Qed.
 
 
-  Lemma try_eqb_universe_spec u1 u2
-    : try_eqb_universe G u1 u2 -> eq_universe uctx.2 u1 u2.
+  Lemma check_eqb_universe_spec u1 u2
+    : check_eqb_universe G u1 u2 -> eq_universe uctx.2 u1 u2.
   Proof.
-    unfold try_eqb_universe, eq_universe.
+    unfold check_eqb_universe, eq_universe.
     destruct check_univs; cbn; [|trivial].
+    case_eq (Universe.equal u1 u2). {
+      intros e _ v Hv. now erewrite val_equal; tea. }
+    intros _; cbn.
     intro H. apply andb_prop in H. destruct H as [H1 H2].
     unshelve eapply (try_leqb_universe_n_spec G uctx' Huctx' HC' HG'
                                               _ _ _) in H1.

@@ -137,8 +137,8 @@ Inductive type_error :=
 | UndeclaredConstant (c : string)
 | UndeclaredInductive (c : inductive)
 | UndeclaredConstructor (c : inductive) (i : nat)
-| NotCumulSmaller (Γ : context) (t u t' u' : term)
-| NotConvertible (Γ : context) (t u : term)
+| NotCumulSmaller (G : universes_graph) (t u t' u' : term)
+| NotConvertible (G : universes_graph) (t u : term)
 | NotASort (t : term)
 | NotAProduct (t t' : term)
 | NotAnInductive (t : term)
@@ -228,6 +228,19 @@ Fixpoint string_of_term (t : term) :=
   | tCoFix l n => "CoFix(" ++ (string_of_list (string_of_def string_of_term) l) ++ "," ++ string_of_nat n ++ ")"
   end.
 
+Definition print_no_prop_level := string_of_level ∘ level_of_no_prop.
+
+Definition print_edge '(l1, n, l2)
+  := "(" ++ print_no_prop_level l1 ++ ", " ++ string_of_nat n ++ ", "
+         ++ print_no_prop_level l2 ++ ")".
+
+Definition print_universes_graph (G : universes_graph) :=
+  let levels := wGraph.VSet.elements G.1.1 in
+  let edges := wGraph.EdgeSet.elements G.1.2 in
+  string_of_list print_no_prop_level levels
+  ++ "\n" ++ string_of_list print_edge edges.
+
+
 Definition string_of_type_error (e : type_error) : string :=
   match e with
   | UnboundRel n => "Unboound rel " ++ string_of_nat n
@@ -236,11 +249,11 @@ Definition string_of_type_error (e : type_error) : string :=
   | UndeclaredConstant c => "Undeclared constant " ++ c
   | UndeclaredInductive c => "Undeclared inductive " ++ (inductive_mind c)
   | UndeclaredConstructor c i => "Undeclared inductive " ++ (inductive_mind c)
-  | NotCumulSmaller Γ t u t' u' => "Terms are not <= for cumulativity: " ++
-      string_of_term t ++ " and " ++ string_of_term u ++ " after reduction: " ++
-      string_of_term t' ++ " and " ++ string_of_term u'
-  | NotConvertible Γ t u => "Terms are not convertible: " ++
-      string_of_term t ++ " and " ++ string_of_term u
+  | NotCumulSmaller G t u t' u' => "Terms are not <= for cumulativity:\n" ++
+      string_of_term t ++ "\nand:\n" ++ string_of_term u ++ "\nafter reduction:\n" ++
+      string_of_term t' ++ "\nand:\n" ++ string_of_term u' ++ "\nin universe graph:\n" ++ print_universes_graph G
+  | NotConvertible G t u => "Terms are not convertible:\n" ++
+      string_of_term t ++ "\nand:\n" ++ string_of_term u ++ "\nin universe graph:\n" ++ print_universes_graph G
   | NotASort t => "Not a sort"
   | NotAProduct t t' => "Not a product"
   | NotAnInductive t => "Not an inductive"
@@ -499,7 +512,7 @@ Section Typecheck.
       let t' := hnf Γ t ht in
       let u' := hnf Γ u hu in
       (* match leq_term (snd Σ) t' u' with true => ret _ | false => *)
-      raise (NotCumulSmaller Γ t u t' u')
+      raise (NotCumulSmaller G t u t' u')
       (* end *)
     end end.
   Next Obligation.
@@ -776,7 +789,7 @@ Section Typecheck.
       I <- reduce_to_ind Γ cty.π1 _ ;;
       let '(ind'; I') := I in let '(u; I'') := I' in let '(args; H) := I'' in
       check_eq_true (eqb ind ind')
-                    (NotConvertible Γ (tInd ind u) (tInd ind' u)) ;;
+                    (NotConvertible G (tInd ind u) (tInd ind' u)) ;;
       d <- lookup_ind_decl ind' ;;
       let '(decl; d') := d in let '(body; HH) := d' in
       check_eq_true (ind_npars decl =? par)
@@ -817,7 +830,7 @@ Section Typecheck.
             I <- reduce_to_ind Γ c_ty.π1 _ ;;
             let '(ind'; I') := I in let '(u; I'') := I' in let '(args; H) := I'' in
             check_eq_true (eqb ind ind')
-                          (NotConvertible Γ (tInd ind u) (tInd ind' u)) ;;
+                          (NotConvertible G (tInd ind u) (tInd ind' u)) ;;
             check_eq_true (ind_npars d.π1 =? n)
                           (Msg "not the right number of parameters") ;;
             check_eq_true (#|args| =? ind_npars d.π1) (* probably redundant *)
@@ -1536,21 +1549,29 @@ Section CheckEnv.
   Qed.
 
 
-  Program Definition typecheck_program (p : program)
-    : EnvCheck (∑ A, ∥ empty_ext (List.rev p.1) ;;; [] |- p.2  : A ∥) :=
+  Program Definition typecheck_program (p : program) φ Hφ
+    : EnvCheck (∑ A, ∥ (List.rev p.1, φ) ;;; [] |- p.2  : A ∥) :=
     let Σ := List.rev (fst p) in
     G <- check_wf_env Σ ;;
-    @infer_term (empty_ext Σ) (proj2 G.π2) _ G.π1 _ (snd p).
+    uctx <- check_udecl "toplevel term" Σ _ G.π1 (proj1 G.π2) φ ;;
+    let G' := add_uctx uctx.π1 G.π1 in
+    @infer_term (Σ, φ) (proj2 G.π2) Hφ G' _ (snd p).
   Next Obligation.
-    sq. repeat split.
-    - intros l Hl; now apply LevelSetFact.empty_iff in Hl.
-    - intros l Hl; now apply ConstraintSetFact.empty_iff in Hl.
-    - red. unfold global_ext_constraints; simpl.
-      apply wf_consistent in X. destruct X as [v Hv].
-      exists v. intros c Hc.
-      apply ConstraintSet.union_spec in Hc. destruct Hc.
-      apply ConstraintSetFact.empty_iff in H0; contradiction.
-      now apply Hv.
-  Defined.
+    (* todo: factorize with check_wf_env second obligation *)
+    sq. unfold is_graph_of_uctx, gc_of_uctx; simpl.
+    unfold gc_of_uctx in e. simpl in e.
+    case_eq (gc_of_constraints (constraints_of_udecl φ));
+      [|intro HH; rewrite HH in e; discriminate e].
+    intros ctrs' Hctrs'. rewrite Hctrs' in *.
+    cbn in e. inversion e; subst; clear e.
+    unfold global_ext_constraints; simpl.
+    rewrite gc_of_constraints_union. rewrite Hctrs'.
+    red in i. unfold gc_of_uctx in i; simpl in i.
+    case_eq (gc_of_constraints (global_constraints (List.rev p.1)));
+      [|intro HH; rewrite HH in i; cbn in i; contradiction i].
+    intros Σctrs HΣctrs; rewrite HΣctrs in *; simpl in *.
+    subst G. unfold global_ext_levels; simpl. rewrite no_prop_levels_union.
+    symmetry; apply add_uctx_make_graph.
+  Qed.
 
 End CheckEnv.

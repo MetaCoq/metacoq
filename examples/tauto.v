@@ -7,6 +7,10 @@ From Coq Require Import List.
 Import ListNotations.
 Import MonadNotation.
 
+From Equations Require Import Equations.
+
+Require Import Equations.Prop.DepElim.
+
 Require Import Peano_dec.
 
 Definition var := nat.
@@ -648,7 +652,55 @@ Fixpoint downlift (k : nat) (t : term) : option term :=
   | _ => None
   end.
 
-Program Fixpoint reify (Σ : global_env_ext) (Γ : context)
+Definition inspect {A} (x : A) : { y : A | y = x } := exist _ x eq_refl.
+
+Equations reify (Σ : global_env_ext) (Γ : context) (P : term) : option form
+  by wf (size (trans P)) lt :=
+  reify Σ Γ P with inspect (decompose_app P) := {
+  | @exist (hd, args) e1 with hd := {
+    | tRel n with inspect (nth_error Γ n) := {
+      | @exist (Some decl) e2 => Some (Var n) ;
+      | @exist None e2 => None
+      } ;
+    | tInd ind []
+      with string_dec ind.(inductive_mind) "Coq.Init.Logic.and" := {
+      | left e2 with args := {
+        | [ A ; B ] =>
+          af <- reify Σ Γ A ;;
+          bf <- reify Σ Γ B ;;
+          ret (And af bf) ;
+        | _ => None
+        } ;
+      | right _
+        with string_dec ind.(inductive_mind) "Coq.Init.Logic.or" := {
+        | left e2 with args := {
+          | [ A ; B ] =>
+            af <- reify Σ Γ A ;;
+            bf <- reify Σ Γ B ;;
+            ret (Or af bf) ;
+          | _ => None
+          } ;
+        | right _
+          with string_dec ind.(inductive_mind) "Coq.Init.Logic.False" := {
+          | left e2 with args := {
+            | [] => ret Fa ;
+            | _ => None
+            } ;
+          | right _ => None
+          }
+        }
+      } ;
+    | tProd na A B =>
+      B' <- downlift 0 B ;;
+      af <- reify Σ Γ A ;;
+      bf <- reify Σ Γ B' ;;
+      ret (Imp af bf) ;
+    | _ => None
+    }
+  }.
+Admit Obligations.
+
+(* Program Fixpoint reify (Σ : global_env_ext) (Γ : context)
    (P : term) { measure (size (trans P)) }: option form :=
   let (hd, args) := decompose_app P in
   match hd with
@@ -687,10 +739,9 @@ Program Fixpoint reify (Σ : global_env_ext) (Γ : context)
     ret (Imp af bf)
   | _ => None
 end.
+Admit Obligations. *)
 
-Admit Obligations.
-
-Lemma reify_unf S G P :
+(* Lemma reify_unf S G P :
   reify S G P =
   let (hd, args) := decompose_app P in
   match hd with
@@ -720,7 +771,7 @@ Lemma reify_unf S G P :
    ret (Imp af bf)
  | _ => None
 end.
-Admitted.
+Admitted. *)
 
 Instance Propositional_Logic_MetaCoq : Propositional_Logic term :=
   {| Pfalse := MFalse; Pand := fun P Q => mkApps Mand [P;Q];
@@ -758,7 +809,7 @@ Definition can_val_Prop (Γ : list Prop) (v : var) : Prop :=
   | None => False
   end.
 
-Section Test.
+(* Section Test.
 
   Variable P Q: Prop.
 
@@ -780,16 +831,39 @@ Section Test.
 
   Check eq_refl : Mformala_test = Msem_formula_test.
 
-End Test.
+End Test. *)
+
+Lemma inversion_Rel :
+  forall {Σ Γ n T},
+    Σ ;;; Γ |- tRel n : T ->
+    ∑ decl,
+      (wf_local Σ Γ) *
+      (nth_error Γ n = Some decl) *
+      (Σ ;;; Γ |- lift0 (S n) (decl_type decl) <= T).
+Admitted.
+
+Lemma downlift_lift :
+  forall t,
+    downlift 0 ((lift0 1) t) = Some t.
+Admitted.
 
 Definition reify_correct :
-  forall Σ Γ P φ,
-    Σ ;;; Γ |- P : MProp ->
-    reify Σ Γ P = Some φ ->
-    Msem φ (can_val Γ) = P.
+  forall Σ Γ P,
+    well_prop Σ Γ P ->
+    exists φ, reify Σ Γ P = Some φ /\ Msem φ can_val = P.
 Proof.
-  intros Σ Γ P φ h e.
-  induction P using term_forall_list_ind in Σ, Γ, h, φ, e |- *.
+  intros Σ Γ P h.
+  induction h.
+  - exists (Var n). split.
+    + simp reify. simpl. apply inversion_Rel in t as [? [[? e] ?]].
+      rewrite e. reflexivity.
+    + reflexivity.
+  - destruct IHh1 as [fA [r1 s1]].
+    destruct IHh2 as [fB [r2 s2]].
+    exists (Imp fA fB). split.
+    + simp reify. rewrite downlift_lift. simpl.
+
+  (* induction P using term_forall_list_ind in Σ, Γ, h, φ, e |- *.
   all: rewrite reify_unf in e.
   all: cbn in *.
   all: try easy.
@@ -811,7 +885,7 @@ Proof.
   - (* TODO After changing the definition bit. *)
     admit.
   - (* Same *)
-    admit.
+    admit. *)
 Abort.
 
 Section Correctness.

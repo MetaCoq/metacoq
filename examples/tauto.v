@@ -1,6 +1,6 @@
 From MetaCoq.Template Require Import All.
 From MetaCoq.Template Require Import Loader.
-From MetaCoq Require Import Universes uGraph TemplateToPCUIC.
+From MetaCoq Require Import Universes uGraph TemplateToPCUIC Induction.
 Existing Instance config.default_checker_flags.
 From MetaCoq Require Import monad_utils.
 From Coq Require Import List.
@@ -10,7 +10,7 @@ Import MonadNotation.
 Require Import Peano_dec.
 
 Definition var := nat.
-   
+
 (*Ltac mytauto :=
    assumption ||
   match goal with
@@ -104,7 +104,7 @@ Qed.
 Lemma A1 : A\/B -> A -> A/\C.
 Fail  tauto2.
 Abort.
-  
+
 Lemma eq_var (x y:var) : {x=y}+{x<>y}.
  apply eq_nat_dec.
 Defined.
@@ -159,10 +159,10 @@ Definition is_leaf s :=
 
 Class Propositional_Logic prop :=
   { Pfalse : prop;
-    Pand : prop -> prop -> prop ;    
+    Pand : prop -> prop -> prop ;
     Por : prop -> prop -> prop ;
     Pimpl : prop -> prop -> prop}.
-    
+
 
 Fixpoint semGen {A} `{Propositional_Logic A} f (l:var->A) :=
    match f with
@@ -231,7 +231,7 @@ Definition on_hyp h rh cl :=
   | Or a b => (mkS(a::rh)cl::mkS(b::rh)cl::nil)::nil
   | (Var _|Fa) => nil
   end.
-  
+
 Definition on_hyps s : subgoal :=
   List.flat_map (fun p:form*list form => let (h,rh) := p in
                                          on_hyp h rh (concl s))
@@ -324,12 +324,12 @@ revert f rh; induction h; simpl; intros.
 
    right.
    injection H0; intros; subst.
-   apply in_map_iff.  
+   apply in_map_iff.
    exists (f,l++rh2); simpl; auto.
    split; trivial.
    apply IHh.
    eauto.
-Qed.   
+Qed.
 
 
 Require Import Omega.
@@ -410,7 +410,7 @@ destruct cl; simpl.
   destruct 1 as [? | []]; subst sg; simpl.
   unfold seq_size; simpl.
   omega.
- 
+
  apply on_hyps_size; trivial.
 Qed.
 
@@ -432,15 +432,15 @@ destruct f; try (contradiction || destruct H as [ |[ ]]; subst sl).
   apply (H1 (And f1 f2)); simpl; auto.
   subst h.
   apply (H1 (And f1 f2)); simpl; auto.
-  
+
  destruct (H1 (Or f1 f2)); simpl; auto.
   apply H0 with (s:=mkS (f1::rh) cl); simpl; auto.
   destruct 1; auto.
-  subst h; auto.  
+  subst h; auto.
 
   apply H0 with (s:=mkS (f2::rh) cl); simpl; auto.
   destruct 1; auto.
-  subst h; auto.  
+  subst h; auto.
 Qed.
 
 Lemma on_hyps_sound s :
@@ -473,9 +473,9 @@ Lemma step_sound s :
   destruct cl; simpl; intros; try contradiction.
   apply on_hyps_sound; trivial.
   apply on_hyps_sound; trivial.
-  
+
   destruct H as (sl,[ |[ ]],?); subst sl.
-  red; cbn; intros. apply (H0 _ (or_introl eq_refl)). 
+  red; cbn; intros. apply (H0 _ (or_introl eq_refl)).
   simpl; intros.
   destruct H2; subst; auto.
 
@@ -506,8 +506,8 @@ revert s; induction n; simpl; intros.
  destruct (is_leaf s); auto.
  intros _.
  revert H.
- generalize (step_sound s).  
- induction (decomp_step s); simpl; intros.  
+ generalize (step_sound s).
+ induction (decomp_step s); simpl; intros.
   discriminate.
 
   assert ((fix tauto_and (ls : list seq) : result :=
@@ -582,30 +582,30 @@ Program Fixpoint reify (S : global_env_ext) (G : context)
    (P : term) { measure (size (trans P)) }: option form :=
    let (hd, args) := decompose_app P in
    match hd with
-   | tRel n => 
+   | tRel n =>
      match nth_error G n with
-     | Some decl => 
+     | Some decl =>
         Some (Var n)
      | None => None
      end
    | tConstruct ind i k =>
      match ind.(inductive_mind), args with
-     | "Coq.Init.Logic.and", [A; B] => 
+     | "Coq.Init.Logic.and", [A; B] =>
      af <- reify S G A;;
      bf <- reify S G B;;
      ret (And af bf)
-     | "Coq.Init.Logic.or", [A; B] => 
+     | "Coq.Init.Logic.or", [A; B] =>
      af <- reify S G A;;
      bf <- reify S G B;;
      ret (Or af bf)
-     | "Coq.Init.Logic.False", [] => 
-     ret Fa          
+     | "Coq.Init.Logic.False", [] =>
+     ret Fa
      | _, _ => None
      end
   | tProd na A B =>
     af <- reify S G A;;
     bf <- reify S G B;;
-    ret (Imp af bf)  
+    ret (Imp af bf)
   | _ => None
 end.
 
@@ -615,30 +615,30 @@ Lemma reify_unf S G P :
   reify S G P =
   let (hd, args) := decompose_app P in
   match hd with
-  | tRel n => 
+  | tRel n =>
     match nth_error G n with
-    | Some decl => 
+    | Some decl =>
        Some (Var n)
     | None => None
     end
   | tConstruct ind i k =>
     match ind.(inductive_mind), args with
-    | "Coq.Init.Logic.and", [A; B] => 
+    | "Coq.Init.Logic.and", [A; B] =>
     af <- reify S G A;;
     bf <- reify S G B;;
     ret (And af bf)
-    | "Coq.Init.Logic.or", [A; B] => 
+    | "Coq.Init.Logic.or", [A; B] =>
     af <- reify S G A;;
     bf <- reify S G B;;
     ret (Or af bf)
-    | "Coq.Init.Logic.False", [] => 
-    ret Fa          
+    | "Coq.Init.Logic.False", [] =>
+    ret Fa
     | _, _ => None
     end
  | tProd na A B =>
    af <- reify S G A;;
    bf <- reify S G B;;
-   ret (Imp af bf)  
+   ret (Imp af bf)
  | _ => None
 end.
 Admitted.
@@ -648,10 +648,10 @@ Quote Definition MProp := Prop.
 Quote Definition MFalse := False.
 (* Definition MFalse := Eval compute in trans TFalse. *)
 
-Quote Definition Mand := and. 
+Quote Definition Mand := and.
 (* Definition Mand := Eval compute in trans Tand. *)
 
-Quote Definition Mor := or. 
+Quote Definition Mor := or.
 (* Definition Mor := Eval compute in trans Tor. *)
 
 Instance Propositional_Logic_MetaCoq : Propositional_Logic term :=
@@ -662,7 +662,7 @@ Definition Msem := @semGen term _.
 
 (* To Show : forall f l, Unquote (Msem f l) = sem f (fun x => Unquote (v x)) *)
 
-Fixpoint can_val (G : context) (v : var) : term :=
+(* Fixpoint can_val (G : context) (v : var) : term :=
   match G, v  with
   | nil, _ => MFalse
   | cons P PS, 0 => P.(decl_type)
@@ -674,27 +674,39 @@ Fixpoint can_val_Prop (G : list Prop ) (v : var) : Prop :=
   | nil, _ => False
   | cons P PS, 0 => P
   | cons P PS, S n => can_val_Prop PS n
+  end. *)
+
+Definition can_val (Γ : context) (v : var) : term :=
+  match nth_error Γ v with
+  | Some P => P.(decl_type)
+  | None => MFalse
+  end.
+
+Definition can_val_Prop (Γ : list Prop) (v : var) : Prop :=
+  match nth_error Γ v with
+  | Some P => P
+  | None => False
   end.
 
 Section Test.
 
   Variable P Q: Prop.
-  
-  Quote Definition MP := P. 
 
-  Quote Definition MQ := Q. 
+  Quote Definition MP := P.
+
+  Quote Definition MQ := Q.
 
   Definition formula_test := Imp (Var 0) (Or (Var 0) (And Fa (Var 1))).
 
   Definition cdecl_Type (P:term) :=
     {| decl_name := nAnon; decl_body := None; decl_type := P |}.
-  
-  Definition Mformala_test := Eval compute in 
+
+  Definition Mformala_test := Eval compute in
     Msem formula_test (can_val [cdecl_Type MP; cdecl_Type MQ]).
- 
+
   Definition sem_formula_test := Eval compute in sem formula_test (can_val_Prop [P; Q]).
 
-  Quote Definition Msem_formula_test := Eval compute in sem_formula_test. 
+  Quote Definition Msem_formula_test := Eval compute in sem_formula_test.
 
   Check eq_refl : Mformala_test = Msem_formula_test.
 
@@ -703,19 +715,43 @@ End Test.
 From MetaCoq.Checker Require Import WfInv Typing Weakening TypingWf
      WeakeningEnv Substitution.
 
-Definition reify_correct S G P : S ;;; G |- P : MProp   ->
-  match reify S G P with Some phi => Msem phi (can_val G) = P
-                    | _ => True
-  end.
+Definition reify_correct :
+  forall Σ Γ P φ,
+    Σ ;;; Γ |- P : MProp ->
+    reify Σ Γ P = Some φ ->
+    Msem φ (can_val Γ) = P.
 Proof.
-  induction 1; rewrite reify_unf; cbn; try easy.
-Abort.  
+  intros Σ Γ P φ h e.
+  induction P using term_forall_list_ind in Σ, Γ, h, φ, e |- *.
+  all: rewrite reify_unf in e.
+  all: cbn in *.
+  all: try easy.
+  - destruct (nth_error Γ n) eqn:e'. 2: discriminate.
+    apply some_inj in e. subst.
+    unfold Msem. simpl.
+    unfold can_val. rewrite e'.
+    (* Is this really something we expect? *)
+    give_up.
+  - destruct (reify Σ Γ P1) as [f1|] eqn:e1. 2: discriminate.
+    destruct (reify Σ Γ P2) as [f2|] eqn:e2. 2: discriminate.
+    apply some_inj in e. subst. cbn. f_equal.
+    + (* Not true, but can be fixed. *)
+      give_up.
+    + (* NOT TRUE, P1 doesn't necessarilly have type Prop *)
+      give_up.
+    + (* From inversion of typing *)
+      admit.
+  - (* TODO After changing the definition bit. *)
+    admit.
+  - (* Same *)
+    admit.
+Abort.
 
 Section Correctness.
 
   Variable Mval : context.
-  Variable val : list Prop. 
-  Variable phi : form.  
+  Variable val : list Prop.
+  Variable phi : form.
 
   Axiom unquote : forall A (t:term), option A.
 
@@ -724,22 +760,22 @@ Section Correctness.
 
   Parameter Mval_val_eq :
     monad_map (fun X => unquote Prop X.(decl_type)) Mval = Some val.
-  
+
                        P <- tmUnquoteTyped Prop (Msem phi (can_val Mval)) ;;
                        tmLemma "correctness" (sem phi (can_val_Prop val) = P)).
 
-  
+
   Run TemplateProgram (val <- monad_map (fun X => tmUnquoteTyped Prop X.(decl_type)) Mval ;;
                        P <- tmUnquoteTyped Prop (Msem phi (can_val Mval)) ;;
                        tmLemma "correctness" (sem phi (can_val_Prop val) = P)).
-  
+
 (* junk *)
 
-(* 
+(*
 Fixpoint option_list_map {A B} (l : list A) (f : A -> option B) : option (list B) :=
   match l with
   | nil => Some nil
-  | cons x xs => 
+  | cons x xs =>
     x' <- f x;;
     xs' <- option_list_map xs f ;;
     ret (x' :: xs')
@@ -750,12 +786,12 @@ Require Import ssreflect.
 
 Lemma nth_error_option_list_map {A B} (l : list A) (f : A -> option B) l' :
   option_list_map l f = Some l' ->
-  forall n x, nth_error l n = Some x -> 
+  forall n x, nth_error l n = Some x ->
   nth_error l' n = f x.
 Proof.
   induction l in f, l' |- *; simpl; auto.
   move=> [] <- n x Hx. apply nth_error_Some_non_nil in Hx. congruence.
-  specialize (IHl f). 
+  specialize (IHl f).
   move=> Hfa. destruct (f a) eqn:Hfaeq.
   destruct (option_list_map _ _) eqn:Hol.
   injection Hfa. intros <-.  specialize (IHl l0 eq_refl).
@@ -763,15 +799,15 @@ Proof.
 Admitted.
 
 
-Lemma sound_reify S G P f: 
+Lemma sound_reify S G P f:
 (*   S ;;; G |- P : s ->  *)
   reify S G P = Some f ->
   S ;;; G |- sem f (can_val G) <= P.
 Proof.
-  
 
-Lemma sound S G G' A s f: 
-  S ;;; G |- A : s -> 
+
+Lemma sound S G G' A s f:
+  S ;;; G |- A : s ->
   S ;;; G |- s <= tSort Universe.type0m ->
   reify S G A = Some f ->
   option_list_map G (fun d => reify S G d.(decl_type)) = Some G' ->
@@ -785,7 +821,7 @@ Proof.
     injection reifyf. intros <-.
     red in validf. simpl in validf.
     eapply nth_error_option_list_map in validG.
-    
+
 
 Admitted.
 *)

@@ -1,0 +1,3 @@
+# HACKED FOR NOW
+-R ../template-coq/theories MetaCoq.Template -I ../template-coq/build -R ../checker/theories MetaCoq.Checker -R ../pcuic/theories MetaCoq.PCUIC
+-R . Top

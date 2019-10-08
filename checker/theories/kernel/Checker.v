@@ -199,7 +199,7 @@ Fixpoint eq_term `{checker_flags} (φ : universes_graph) (t u : term) {struct t}
   | tRel n, tRel n' => eq_nat n n'
   | tEvar ev args, tEvar ev' args' => eq_evar ev ev' && forallb2 (eq_term φ) args args'
   | tVar id, tVar id' => eq_string id id'
-  | tSort s, tSort s' => try_eqb_universe φ s s'
+  | tSort s, tSort s' => check_eqb_universe φ s s'
   | tCast f k T, tCast f' k' T' => eq_term φ f f' && eq_term φ T T'
   | tApp f args, tApp f' args' => eq_term φ f f' && forallb2 (eq_term φ) args args'
   | tConst c u, tConst c' u' => eq_constant c c' && eqb_univ_instance φ u u'
@@ -231,7 +231,7 @@ Fixpoint leq_term `{checker_flags} (φ : universes_graph) (t u : term) {struct t
   | tRel n, tRel n' => eq_nat n n'
   | tEvar ev args, tEvar ev' args' => eq_nat ev ev' && forallb2 (eq_term φ) args args'
   | tVar id, tVar id' => eq_string id id'
-  | tSort s, tSort s' => try_leqb_universe φ s s'
+  | tSort s, tSort s' => check_leqb_universe φ s s'
   | tApp f args, tApp f' args' => eq_term φ f f' && forallb2 (eq_term φ) args args'
   | tCast f k T, tCast f' k' T' => eq_term φ f f' && eq_term φ T T'
   | tConst c u, tConst c' u' => eq_constant c c' && eqb_univ_instance φ u u'
@@ -797,7 +797,7 @@ Lemma cumul_reduce_to_sort : forall `{checker_flags} {F:Fuel} Σ G Γ t s',
   is_graph_of_global_env_ext Σ G ->
     Σ ;;; Γ |- t <= tSort s' <~>
     { s'' & reduce_to_sort (fst Σ) Γ t = Checked s''
-            /\ try_leqb_universe G s'' s' = true }.
+            /\ check_leqb_universe G s'' s' = true }.
 Proof. intros. todo "Checker.cumul_reduce_to_sort". Defined.
 
 Lemma cumul_reduce_to_product : forall `{checker_flags} {F:Fuel} Σ Γ t na a b,

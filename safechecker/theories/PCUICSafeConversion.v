@@ -559,10 +559,10 @@ Section Conversion.
   Admitted.
 
   Definition leqb_term :=
-    eqb_term_upto_univ (try_eqb_universe G) (try_leqb_universe G).
+    eqb_term_upto_univ (check_eqb_universe G) (check_leqb_universe G).
 
   Definition eqb_term :=
-    eqb_term_upto_univ (try_eqb_universe G) (try_eqb_universe G).
+    eqb_term_upto_univ (check_eqb_universe G) (check_eqb_universe G).
 
   Lemma leqb_term_spec t u :
     leqb_term t u ->
@@ -570,10 +570,10 @@ Section Conversion.
   Proof.
     pose proof hΣ'.
     apply eqb_term_upto_univ_impl.
-    intros u1 u2; eapply (try_eqb_universe_spec G (global_ext_uctx Σ)); tas.
+    intros u1 u2; eapply (check_eqb_universe_spec G (global_ext_uctx Σ)); tas.
     now eapply wf_ext_global_uctx_invariants.
     now eapply global_ext_uctx_consistent.
-    intros u1 u2; eapply (try_leqb_universe_spec G (global_ext_uctx Σ)); tas.
+    intros u1 u2; eapply (check_leqb_universe_spec G (global_ext_uctx Σ)); tas.
     now eapply wf_ext_global_uctx_invariants.
     now eapply global_ext_uctx_consistent.
   Qed.
@@ -584,10 +584,10 @@ Section Conversion.
   Proof.
     pose proof hΣ'.
     apply eqb_term_upto_univ_impl.
-    intros u1 u2; eapply (try_eqb_universe_spec G (global_ext_uctx Σ)); tas.
+    intros u1 u2; eapply (check_eqb_universe_spec G (global_ext_uctx Σ)); tas.
     now eapply wf_ext_global_uctx_invariants.
     now eapply global_ext_uctx_consistent.
-    intros u1 u2; eapply (try_eqb_universe_spec G (global_ext_uctx Σ)); tas.
+    intros u1 u2; eapply (check_eqb_universe_spec G (global_ext_uctx Σ)); tas.
     now eapply wf_ext_global_uctx_invariants.
     now eapply global_ext_uctx_consistent.
   Qed.
@@ -1498,7 +1498,7 @@ Section Conversion.
 
   (* TODO MOVE *)
   Definition eqb_universe_instance u v :=
-    forallb2 (try_eqb_universe G) (map Universe.make u) (map Universe.make v).
+    forallb2 (check_eqb_universe G) (map Universe.make u) (map Universe.make v).
 
   (* TODO MOVE *)
   Lemma eqb_universe_instance_spec :
@@ -1510,7 +1510,7 @@ Section Conversion.
     unfold eqb_universe_instance in e.
     eapply forallb2_Forall2 in e.
     eapply Forall2_impl. 1: eassumption.
-    intros. eapply (try_eqb_universe_spec G (global_ext_uctx Σ)).
+    intros. eapply (check_eqb_universe_spec G (global_ext_uctx Σ)).
     all: auto.
     - eapply wf_ext_global_uctx_invariants.
       eapply hΣ'.

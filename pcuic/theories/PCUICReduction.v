@@ -59,6 +59,9 @@ Defined.
 Instance red_Transitive Σ Γ : Transitive (red Σ Γ).
 Proof. refine (red_trans _ _). Qed.
 
+Instance red_Reflexive Σ Γ : Reflexive (red Σ Γ)
+  := refl_red _ _.
+
 (** Generic method to show that a relation is closed by congruence using
     a notion of one-hole context. *)
 
@@ -1095,6 +1098,43 @@ Section ReductionCongruence.
 
   End Congruences.
 End ReductionCongruence.
+
+
+
+Lemma red_rel_all Σ Γ i body t :
+  option_map decl_body (nth_error Γ i) = Some (Some body) ->
+  red Σ Γ t (lift 1 i (t {i := body})).
+Proof.
+  induction t using term_forall_list_ind in Γ, i |- *; intro H; cbn;
+    eauto using red_prod, red_abs, red_app, red_letin, red_proj_c.
+  - case_eq (i <=? n); intro H0.
+    + apply Nat.leb_le in H0.
+      case_eq (n - i); intros; cbn.
+      * apply red1_red.
+        rewrite simpl_lift; cbn; try lia.
+        assert (n = i) by lia; subst. now constructor.
+      * cutrewrite (nth_error (@nil term) n0 = None);
+          [cbn|now destruct n0].
+        cutrewrite (i <=? n - 1 = true); try (apply Nat.leb_le; lia).
+        cutrewrite (S (n - 1) = n); try lia. auto.
+    + cbn. rewrite H0. auto.
+  - eapply red_evar. repeat eapply All2_map_right.
+    eapply All_All2; tea. intro; cbn; eauto.
+  - eapply reds_case; eauto. repeat eapply All2_map_right.
+    eapply All_All2; tea. intro; cbn; eauto.
+  - eapply red_fix_congr. repeat eapply All2_map_right.
+    eapply All_All2; tea. intros; cbn in *; utils.rdestruct; eauto.
+    rewrite map_length. eapply r0.
+    rewrite nth_error_app_context_ge; rewrite fix_context_length; try lia.
+    cutrewrite (#|m| + i - #|m| = i); tas; lia.
+  - eapply red_cofix_congr. repeat eapply All2_map_right.
+    eapply All_All2; tea. intros; cbn in *; utils.rdestruct; eauto.
+    rewrite map_length. eapply r0.
+    rewrite nth_error_app_context_ge; rewrite fix_context_length; try lia.
+    cutrewrite (#|m| + i - #|m| = i); tas; lia.
+Qed.
+
+
 
 Hint Resolve All_All2 : all.
 

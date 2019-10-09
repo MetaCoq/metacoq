@@ -777,7 +777,30 @@ Proof.
   all: simpl.
   all: try reflexivity.
   all: try easy.
-Admitted.
+  - induction H.
+    + reflexivity.
+    + simpl. eauto.
+  - rewrite IHt. f_equal. f_equal.
+    induction H.
+    + reflexivity.
+    + simpl. eauto.
+  - rewrite IHt1, IHt2. f_equal. f_equal.
+    induction H.
+    + reflexivity.
+    + simpl. eauto.
+  - generalize (#|m| + k). intro p.
+    induction H.
+    + reflexivity.
+    + simpl. unfold map_def. unfold def_size.
+      simpl.
+      intuition eauto.
+  - generalize (#|m| + k). intro p.
+    induction H.
+    + reflexivity.
+    + simpl. unfold map_def. unfold def_size.
+      simpl.
+      intuition eauto.
+Qed.
 
 Lemma tsize_subst :
   forall l k t,

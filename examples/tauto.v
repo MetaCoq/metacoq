@@ -771,79 +771,6 @@ Next Obligation.
   simpl in h1. omega.
 Qed.
 
-(* Program Fixpoint reify (Σ : global_env_ext) (Γ : context)
-   (P : term) { measure (size (trans P)) }: option form :=
-  let (hd, args) := decompose_app P in
-  match hd with
-  | tRel n =>
-    match nth_error Γ n with
-    | Some decl => Some (Var n)
-    | None => None
-    end
-  | tInd ind [] =>
-    if string_dec ind.(inductive_mind) "Coq.Init.Logic.and" then
-      match args with
-      | [ A ; B ] =>
-        af <- reify Σ Γ A ;;
-        bf <- reify Σ Γ B ;;
-        ret (And af bf)
-      | _ => None
-      end
-    else if string_dec ind.(inductive_mind) "Coq.Init.Logic.or" then
-      match args with
-      | [ A ; B ] =>
-        af <- reify Σ Γ A ;;
-        bf <- reify Σ Γ B ;;
-        ret (Or af bf)
-      | _ => None
-      end
-    else if string_dec ind.(inductive_mind) "Coq.Init.Logic.False" then
-      match args with
-      | [] => ret Fa
-      | _ => None
-      end
-    else None
-  | tProd na A B =>
-    B' <- downlift 0 B ;;
-    af <- reify Σ Γ A ;;
-    bf <- reify Σ Γ B' ;;
-    ret (Imp af bf)
-  | _ => None
-end.
-Admit Obligations. *)
-
-(* Lemma reify_unf S G P :
-  reify S G P =
-  let (hd, args) := decompose_app P in
-  match hd with
-  | tRel n =>
-    match nth_error G n with
-    | Some decl =>
-       Some (Var n)
-    | None => None
-    end
-  | tConstruct ind i k =>
-    match ind.(inductive_mind), args with
-    | "Coq.Init.Logic.and", [A; B] =>
-    af <- reify S G A;;
-    bf <- reify S G B;;
-    ret (And af bf)
-    | "Coq.Init.Logic.or", [A; B] =>
-    af <- reify S G A;;
-    bf <- reify S G B;;
-    ret (Or af bf)
-    | "Coq.Init.Logic.False", [] =>
-    ret Fa
-    | _, _ => None
-    end
- | tProd na A B =>
-   af <- reify S G A;;
-   bf <- reify S G B;;
-   ret (Imp af bf)
- | _ => None
-end.
-Admitted. *)
-
 Instance Propositional_Logic_MetaCoq : Propositional_Logic term :=
   {| Pfalse := MFalse; Pand := fun P Q => mkApps Mand [P;Q];
      Por := fun P Q => mkApps Mor [P;Q]; Pimpl := fun P Q => tImpl P Q |}.
@@ -852,25 +779,6 @@ Definition Msem := @semGen term _.
 
 (* To Show : forall f l, Unquote (Msem f l) = sem f (fun x => Unquote (v x)) *)
 
-(* Fixpoint can_val (G : context) (v : var) : term :=
-  match G, v  with
-  | nil, _ => MFalse
-  | cons P PS, 0 => P.(decl_type)
-  | cons P PS, S n => can_val PS n
-  end.
-
-Fixpoint can_val_Prop (G : list Prop ) (v : var) : Prop :=
-  match G, v  with
-  | nil, _ => False
-  | cons P PS, 0 => P
-  | cons P PS, S n => can_val_Prop PS n
-  end. *)
-
-(* Definition can_val (Γ : context) (v : var) : term :=
-  match nth_error Γ v with
-  | Some P => P.(decl_type)
-  | None => MFalse
-  end. *)
 
 Definition can_val (v : var) : term := tRel v.
 

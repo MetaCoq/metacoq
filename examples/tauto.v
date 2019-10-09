@@ -720,6 +720,14 @@ Fixpoint tsize t : nat :=
   | x => 1
   end.
 
+Lemma tsize_nonzero :
+  forall t, tsize t <> 0.
+Proof.
+  intro t. induction t.
+  all: simpl.
+  all: omega.
+Qed.
+
 (* Lemma mkApp_tsize :
   forall u v,
     tsize (mkApp u v) <= S (S (tsize u + tsize v)).
@@ -755,6 +763,35 @@ Proof.
   all: try reflexivity.
   all: omega.
 Qed.
+
+Lemma tsize_lift :
+  forall n k t,
+    tsize (lift n k t) = tsize t.
+Proof.
+  intros n k t.
+  induction t using term_forall_list_ind in n, k |- *.
+  { simpl. destruct (Nat.leb_spec k n0).
+    - reflexivity.
+    - reflexivity.
+  }
+  all: simpl.
+  all: try reflexivity.
+  all: try easy.
+Admitted.
+
+Lemma tsize_subst :
+  forall l k t,
+    tsize (subst l k t) <= list_size tsize l + tsize t.
+Proof.
+  intros l k t.
+  induction t using term_forall_list_ind in l, k |- *.
+  { simpl. destruct (Nat.leb_spec k n).
+    - destruct nth_error eqn:e.
+      + rewrite tsize_lift. admit.
+      + simpl. omega.
+    - simpl. omega.
+  }
+Admitted.
 
 Definition inspect {A} (x : A) : { y : A | y = x } := exist _ x eq_refl.
 
@@ -807,7 +844,10 @@ Next Obligation.
 Qed.
 Next Obligation.
   symmetry in e1. apply tsize_decompose_app in e1 as h1.
-  simpl in h1. (* NEED properties on size of subst *)
+  simpl in h1. eapply Nat.le_lt_trans.
+  - eapply tsize_subst.
+  - simpl. pose proof (tsize_nonzero A0).
+  (* NEED tsize_subst might not be precise enough *)
 Admitted.
 Next Obligation.
   symmetry in e1. apply tsize_decompose_app in e1 as h1.

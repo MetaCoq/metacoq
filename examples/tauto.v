@@ -709,18 +709,71 @@ Fixpoint downlift (k : nat) (t : term) : option term :=
   | t => Some t
   end.
 
+(* TODO MOVE *)
+Lemma Forall_monad_map :
+  forall {T} `{Monad T} {A B} {f : A -> T B} {l} {g},
+    Forall (fun x => f x = ret (g x)) l ->
+    monad_map f l = ret (map g l).
+Proof.
+  intros T m A B f l g h.
+  induction h.
+  - reflexivity.
+  - simpl. rewrite H. rewrite IHh.
+Abort.
+
 Lemma downlift_lift :
   forall t k,
     downlift k ((lift 1 k) t) = Some t.
 Proof.
   intros t k. induction t using term_forall_list_ind in k |- *.
   all: simpl.
+  all: try reflexivity.
+  { destruct (Nat.leb_spec k n).
+    - simpl. destruct (Nat.ltb_spec k (S n)). 2: omega.
+      f_equal. f_equal. omega.
+    - simpl. destruct (Nat.ltb_spec k n). 1: omega.
+      destruct (Nat.eqb_spec n k). 1: omega.
+      reflexivity.
+  }
+  -
 Admitted.
+
+(* TODO MOVE *)
+Lemma decompose_app_eq :
+  forall t f args,
+    decompose_app t = (f, args) ->
+    t = mkApps f args \/ t = tApp f args.
+Proof.
+  intros t f args e.
+  induction t in f, args, e |- *.
+  all: simpl in e.
+  all: try solve [
+    inversion e ;
+    left ;
+    reflexivity
+  ].
+  inversion e. subst. right. reflexivity.
+Qed.
+
+Lemma size_trans_decompose_app :
+  forall t f args,
+    decompose_app t = (f, args) ->
+    size (trans f) <= size (trans t).
+Proof.
+  intros t g args e.
+  apply decompose_app_eq in e as h.
+  destruct h as [h | h].
+  all: subst.
+  - admit.
+  - simpl. admit.
+Admitted.
+
+Definition inspect {A} (x : A) : { y : A | y = x } := exist _ x eq_refl.
 
 Equations reify (Σ : global_env_ext) (Γ : context) (P : term) : option form
   by wf (size (trans P)) lt :=
-  reify Σ Γ P with decompose_app P := {
-  | (hd, args) with hd := {
+  reify Σ Γ P with inspect (decompose_app P) := {
+  | @exist (hd, args) e1 with hd := {
     | tRel n with nth_error Γ n := {
       | Some decl => Some (Var n) ;
       | None => None
@@ -761,7 +814,22 @@ Equations reify (Σ : global_env_ext) (Γ : context) (P : term) : option form
     | _ => None
     }
   }.
-Admit Obligations.
+Next Obligation.
+  symmetry in e1. apply size_trans_decompose_app in e1 as h1.
+  simpl in h1. omega.
+Qed.
+Next Obligation.
+  symmetry in e1. apply size_trans_decompose_app in e1 as h1.
+  simpl in h1.
+Admitted.
+Next Obligation.
+Admitted.
+Next Obligation.
+Admitted.
+Next Obligation.
+Admitted.
+Next Obligation.
+Admitted.
 
 (* Program Fixpoint reify (Σ : global_env_ext) (Γ : context)
    (P : term) { measure (size (trans P)) }: option form :=

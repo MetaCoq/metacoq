@@ -701,10 +701,65 @@ Proof.
     rewrite list_size_map. reflexivity.
 Qed.
 
+Definition def_size (size : term -> nat) (x : def term) := size (dtype x) + size (dbody x).
+Definition mfixpoint_size (size : term -> nat) (l : mfixpoint term) :=
+  list_size (def_size size) l.
+
+Fixpoint tsize t : nat :=
+  match t with
+  | tRel i => 1
+  | tEvar ev args => S (list_size tsize args)
+  | tLambda na T M => S (tsize T + tsize M)
+  | tApp u v => S (tsize u + list_size tsize v)
+  | tProd na A B => S (tsize A + tsize B)
+  | tLetIn na b t b' => S (tsize b + tsize t + tsize b')
+  | tCase ind p c brs => S (tsize p + tsize c + list_size (fun x => tsize (snd x)) brs)
+  | tProj p c => S (tsize c)
+  | tFix mfix idx => S (mfixpoint_size tsize mfix)
+  | tCoFix mfix idx => S (mfixpoint_size tsize mfix)
+  | x => 1
+  end.
+
+(* Lemma mkApp_tsize :
+  forall u v,
+    tsize (mkApp u v) <= S (S (tsize u + tsize v)).
+Proof.
+  intros u v.
+  induction u in v |- *.
+  all: simpl. all: try omega.
+  rewrite list_size_app. simpl. omega.
+Qed.
+
+Lemma mkApps_tsize x l : tsize (mkApps x l) <= tsize x + list_size tsize l.
+Proof.
+  induction l in x |- *.
+  - simpl. omega.
+  - rewrite <- mkApps_mkApp. simpl.
+    rewrite IHl. rewrite mkApp_tsize.
+
+  simpl; simp list_size.
+  - omega.
+  - rewrite IHl. simpl. lia.
+Qed. *)
+
+Lemma tsize_decompose_app :
+  forall t f args,
+    decompose_app t = (f, args) ->
+    tsize f + list_size tsize args <= tsize t.
+Proof.
+  intros t f args e.
+  induction t in f, args, e |- *.
+  all: simpl in *.
+  all: inversion e ; subst.
+  all: simpl.
+  all: try reflexivity.
+  all: omega.
+Qed.
+
 Definition inspect {A} (x : A) : { y : A | y = x } := exist _ x eq_refl.
 
 Equations reify (Σ : global_env_ext) (Γ : context) (P : term) : option form
-  by wf (size (trans P)) lt :=
+  by wf (tsize P) lt :=
   reify Σ Γ P with inspect (decompose_app P) := {
   | @exist (hd, args) e1 with hd := {
     | tRel n with nth_error Γ n := {
@@ -747,27 +802,27 @@ Equations reify (Σ : global_env_ext) (Γ : context) (P : term) : option form
     }
   }.
 Next Obligation.
-  symmetry in e1. apply size_trans_decompose_app in e1 as h1.
+  symmetry in e1. apply tsize_decompose_app in e1 as h1.
   simpl in h1. omega.
 Qed.
 Next Obligation.
-  symmetry in e1. apply size_trans_decompose_app in e1 as h1.
-  simpl in h1. (* NEED properties on trans of subst *)
+  symmetry in e1. apply tsize_decompose_app in e1 as h1.
+  simpl in h1. (* NEED properties on size of subst *)
 Admitted.
 Next Obligation.
-  symmetry in e1. apply size_trans_decompose_app in e1 as h1.
+  symmetry in e1. apply tsize_decompose_app in e1 as h1.
   simpl in h1. omega.
 Qed.
 Next Obligation.
-  symmetry in e1. apply size_trans_decompose_app in e1 as h1.
+  symmetry in e1. apply tsize_decompose_app in e1 as h1.
   simpl in h1. omega.
 Qed.
 Next Obligation.
-  symmetry in e1. apply size_trans_decompose_app in e1 as h1.
+  symmetry in e1. apply tsize_decompose_app in e1 as h1.
   simpl in h1. omega.
 Qed.
 Next Obligation.
-  symmetry in e1. apply size_trans_decompose_app in e1 as h1.
+  symmetry in e1. apply tsize_decompose_app in e1 as h1.
   simpl in h1. omega.
 Qed.
 

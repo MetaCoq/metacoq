@@ -1,6 +1,7 @@
 From MetaCoq.Template Require Import All.
 From MetaCoq.Template Require Import Loader.
-From MetaCoq Require Import Universes uGraph TemplateToPCUIC Induction.
+From MetaCoq Require Import Universes uGraph TemplateToPCUIC TemplateToPCUICCorrectness
+  Induction.
 Existing Instance config.default_checker_flags.
 From MetaCoq Require Import monad_utils.
 From Coq Require Import List.
@@ -651,18 +652,54 @@ Proof.
   inversion e. subst. right. reflexivity.
 Qed.
 
+Lemma decompose_app_wf :
+  forall t f args,
+    Ast.wf t ->
+    decompose_app t = (f, args) ->
+    Ast.wf f /\ Forall Ast.wf args.
+Proof.
+  intros t f args w e.
+  induction t in f, args, w, e |- *.
+  all: simpl in e.
+  all: inversion e ; subst.
+  all: try solve [
+    split ; [
+      assumption
+    | constructor
+    ]
+  ].
+  inversion w. subst.
+  split. all: assumption.
+Qed.
+
+(* TODO MOVE *)
+Lemma list_size_map :
+  forall A B size (f : A -> B) l,
+    list_size size (map f l) = list_size (fun x => size (f x)) l.
+Proof.
+  intros A B size f l.
+  induction l in B, size, f |- *.
+  - reflexivity.
+  - simpl. f_equal. eauto.
+Qed.
+
 Lemma size_trans_decompose_app :
   forall t f args,
+    Ast.wf t ->
     decompose_app t = (f, args) ->
     size (trans f) + list_size (fun t => size (trans t)) args = size (trans t).
 Proof.
-  intros t f args e.
+  intros t f args w e.
   apply decompose_app_eq in e as h.
   destruct h as [h | h].
   all: subst.
-  - admit.
-  - simpl. admit.
-Admitted.
+  - apply decompose_app_wf in e as [? ?]. 2: assumption.
+    rewrite trans_mkApps by assumption.
+    rewrite PCUICAstUtils.mkApps_size.
+    rewrite list_size_map. reflexivity.
+  - simpl. rewrite PCUICAstUtils.mkApps_size.
+    rewrite list_size_map. reflexivity.
+Qed.
 
 Definition inspect {A} (x : A) : { y : A | y = x } := exist _ x eq_refl.
 

@@ -634,110 +634,6 @@ Inductive well_prop Σ Γ : term -> Type :=
 (* | well_prop_True : well_prop Σ Γ MTrue *) (* TODO *)
 .
 
-Definition monad_on_snd {T} `{Monad T} {A B C} (f : B -> T C) (p : A × B) :=
-  c <- f p.2 ;;
-  ret (p.1, c).
-
-Definition monad_map_def {T} `{Monad T} {A B : Set} (f g : A -> T B) (d : def A) :=
-  ty <- f d.(dtype) ;;
-  bo <- g d.(dbody) ;;
-  ret {|
-    dname := d.(dname) ;
-    dtype := ty ;
-    dbody := bo ;
-    rarg := d.(rarg)
-  |}.
-
-Definition foo : Monad option := _.
-Instance option_set_monad : Monad (option : Set -> Type) := {|
-  ret := fun (A : Set) (a : A) => (Some a : (option : Set -> Type) A) ;
-  bind := fun (A B : Set) (m : option A) (f : A -> option B) =>
-	    match m with
-        | Some a => f a
-        | None => None
-        end |}.
-
-Instance option_monad_eta : Monad (fun A : Set => option A) := _.
-
-Fixpoint downlift (k : nat) (t : term) : option term :=
-  match t with
-  | tRel n =>
-    if k <? n then ret (tRel (n - 1) )
-    else if n =? k then None
-    else ret (tRel n)
-  | tEvar ev args =>
-    args' <- monad_map (downlift k) args ;;
-    ret (tEvar ev args')
-  | tCast c kind t =>
-    c' <- downlift k c ;;
-    t' <- downlift k t ;;
-    ret (tCast c' kind t')
-  | tProd na A B =>
-    A' <- downlift k A ;;
-    B' <- downlift (S k) B ;;
-    ret (tProd na A' B')
-  | tLambda na A t =>
-    A' <- downlift k A ;;
-    t' <- downlift (S k) t ;;
-    ret (tLambda na A' t')
-  | tLetIn na B b t =>
-    B' <- downlift k B ;;
-    b' <- downlift k b ;;
-    t' <- downlift (S k) t ;;
-    ret (tLetIn na B' b' t')
-  | tApp u l =>
-    u' <- downlift k u ;;
-    l' <- monad_map (downlift k) l ;;
-    ret (tApp u' l')
-  | tCase ind p c brs =>
-    p' <- downlift k p ;;
-    c' <- downlift k c ;;
-    brs' <- monad_map (monad_on_snd (downlift k)) brs ;;
-    ret (tCase ind p' c' brs')
-  | tProj p c =>
-    c' <- downlift k c ;;
-    ret (tProj p c')
-  | tFix mfix idx =>
-    let k' := #|mfix| + k in
-    mfix' <- monad_map (monad_map_def (downlift k) (downlift k')) mfix ;;
-    ret (tFix mfix' idx)
-  | tCoFix mfix idx =>
-    let k' := #|mfix| + k in
-    (* mfix' <- monad_map (monad_map_def (downlift k) (downlift k')) mfix ;; *)
-    mfix' <- monad_map (monad_map_def (downlift k) (downlift k')) mfix ;;
-    ret (tCoFix mfix' idx)
-  | t => Some t
-  end.
-
-(* TODO MOVE *)
-Lemma Forall_monad_map :
-  forall {T} `{Monad T} {A B} {f : A -> T B} {l} {g},
-    Forall (fun x => f x = ret (g x)) l ->
-    monad_map f l = ret (map g l).
-Proof.
-  intros T m A B f l g h.
-  induction h.
-  - reflexivity.
-  - simpl. rewrite H. rewrite IHh.
-Abort.
-
-Lemma downlift_lift :
-  forall t k,
-    downlift k ((lift 1 k) t) = Some t.
-Proof.
-  intros t k. induction t using term_forall_list_ind in k |- *.
-  all: simpl.
-  all: try reflexivity.
-  { destruct (Nat.leb_spec k n).
-    - simpl. destruct (Nat.ltb_spec k (S n)). 2: omega.
-      f_equal. f_equal. omega.
-    - simpl. destruct (Nat.ltb_spec k n). 1: omega.
-      destruct (Nat.eqb_spec n k). 1: omega.
-      reflexivity.
-  }
-  -
-Admitted.
-
 (* TODO MOVE *)
 Lemma decompose_app_eq :
   forall t f args,
@@ -807,9 +703,8 @@ Equations reify (Σ : global_env_ext) (Γ : context) (P : term) : option form
         }
       } ;
     | tProd na A B =>
-      B' <- downlift 0 B ;;
       af <- reify Σ Γ A ;;
-      bf <- reify Σ Γ B' ;;
+      bf <- reify Σ Γ (subst0 [tRel 0] B) ;;
       ret (Imp af bf) ;
     | _ => None
     }
@@ -823,6 +718,8 @@ Next Obligation.
   simpl in h1.
 Admitted.
 Next Obligation.
+  symmetry in e1. apply size_trans_decompose_app in e1 as h1.
+  simpl in h1. (* NEED a better approximation *)
 Admitted.
 Next Obligation.
 Admitted.
@@ -973,6 +870,20 @@ Lemma inversion_Rel :
       (Σ ;;; Γ |- lift0 (S n) (decl_type decl) <= T).
 Admitted.
 
+Lemma well_prop_wf :
+  forall Σ Γ P,
+    well_prop Σ Γ P ->
+    Ast.wf P.
+Proof.
+  intros Σ Γ P h.
+  induction h.
+  all: try solve [ constructor ; auto using wf_lift ].
+  - constructor. all: try easy.
+    constructor.
+  - constructor. all: try easy.
+    constructor.
+Qed.
+
 Definition reify_correct :
   forall Σ Γ P,
     well_prop Σ Γ P ->
@@ -987,9 +898,12 @@ Proof.
   - destruct IHh1 as [fA [r1 s1]].
     destruct IHh2 as [fB [r2 s2]].
     exists (Imp fA fB). split.
-    + simp reify. rewrite downlift_lift.
-      simp reify in r1. rewrite r1. simpl.
-      rewrite r2. reflexivity.
+    + simp reify.
+      apply well_prop_wf in h2 as w2.
+      rewrite simpl_subst_k by auto.
+      simp reify in r1. rewrite r1.
+      simp reify in r2. rewrite r2.
+      reflexivity.
     + cbn. rewrite s1, s2. reflexivity.
   - destruct IHh1 as [fA [r1 s1]].
     destruct IHh2 as [fB [r2 s2]].

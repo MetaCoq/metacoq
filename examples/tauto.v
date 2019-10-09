@@ -802,17 +802,41 @@ Proof.
       intuition eauto.
 Qed.
 
+Lemma list_size_length :
+  forall l,
+    list_size tsize l >= #|l|.
+Proof.
+  intros l. induction l.
+  - auto.
+  - simpl. pose proof (tsize_nonzero a). omega.
+Qed.
+
+Lemma nth_error_list_size :
+  forall n l t,
+    nth_error l n = Some t ->
+    tsize t <= list_size tsize l + 1 - #|l|.
+Proof.
+  intros n l t e.
+  induction l in n, t, e |- *.
+  - destruct n. all: inversion e.
+  - destruct n.
+    + simpl in e. apply some_inj in e. subst.
+      simpl. pose proof (list_size_length l). omega.
+    + simpl in e. simpl.
+      eapply IHl in e. omega.
+Qed.
+
 Lemma tsize_subst :
   forall l k t,
-    tsize (subst l k t) <= list_size tsize l + tsize t.
+    tsize (subst l k t) <= list_size tsize l + tsize t - #|l|.
 Proof.
   intros l k t.
   induction t using term_forall_list_ind in l, k |- *.
   { simpl. destruct (Nat.leb_spec k n).
     - destruct nth_error eqn:e.
-      + rewrite tsize_lift. admit.
-      + simpl. omega.
-    - simpl. omega.
+      + rewrite tsize_lift. eapply nth_error_list_size in e. assumption.
+      + simpl. pose proof (list_size_length l). omega.
+    - simpl. pose proof (list_size_length l). omega.
   }
 Admitted.
 
@@ -869,9 +893,8 @@ Next Obligation.
   symmetry in e1. apply tsize_decompose_app in e1 as h1.
   simpl in h1. eapply Nat.le_lt_trans.
   - eapply tsize_subst.
-  - simpl. pose proof (tsize_nonzero A0).
-  (* NEED tsize_subst might not be precise enough *)
-Admitted.
+  - simpl. pose proof (tsize_nonzero A0). omega.
+Qed.
 Next Obligation.
   symmetry in e1. apply tsize_decompose_app in e1 as h1.
   simpl in h1. omega.

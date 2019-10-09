@@ -654,9 +654,9 @@ Qed.
 Lemma size_trans_decompose_app :
   forall t f args,
     decompose_app t = (f, args) ->
-    size (trans f) <= size (trans t).
+    size (trans f) + list_size (fun t => size (trans t)) args = size (trans t).
 Proof.
-  intros t g args e.
+  intros t f args e.
   apply decompose_app_eq in e as h.
   destruct h as [h | h].
   all: subst.
@@ -715,18 +715,24 @@ Next Obligation.
 Qed.
 Next Obligation.
   symmetry in e1. apply size_trans_decompose_app in e1 as h1.
-  simpl in h1.
+  simpl in h1. (* NEED properties on trans of subst *)
 Admitted.
 Next Obligation.
   symmetry in e1. apply size_trans_decompose_app in e1 as h1.
-  simpl in h1. (* NEED a better approximation *)
-Admitted.
+  simpl in h1. omega.
+Qed.
 Next Obligation.
-Admitted.
+  symmetry in e1. apply size_trans_decompose_app in e1 as h1.
+  simpl in h1. omega.
+Qed.
 Next Obligation.
-Admitted.
+  symmetry in e1. apply size_trans_decompose_app in e1 as h1.
+  simpl in h1. omega.
+Qed.
 Next Obligation.
-Admitted.
+  symmetry in e1. apply size_trans_decompose_app in e1 as h1.
+  simpl in h1. omega.
+Qed.
 
 (* Program Fixpoint reify (Σ : global_env_ext) (Γ : context)
    (P : term) { measure (size (trans P)) }: option form :=

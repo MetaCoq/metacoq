@@ -634,23 +634,88 @@ Inductive well_prop Σ Γ : term -> Type :=
 (* | well_prop_True : well_prop Σ Γ MTrue *) (* TODO *)
 .
 
+Definition monad_on_snd {T} `{Monad T} {A B C} (f : B -> T C) (p : A × B) :=
+  c <- f p.2 ;;
+  ret (p.1, c).
+
+Definition monad_map_def {T} `{Monad T} {A B : Set} (f g : A -> T B) (d : def A) :=
+  ty <- f d.(dtype) ;;
+  bo <- g d.(dbody) ;;
+  ret {|
+    dname := d.(dname) ;
+    dtype := ty ;
+    dbody := bo ;
+    rarg := d.(rarg)
+  |}.
+
+Definition foo : Monad option := _.
+Instance option_set_monad : Monad (option : Set -> Type) := {|
+  ret := fun (A : Set) (a : A) => (Some a : (option : Set -> Type) A) ;
+  bind := fun (A B : Set) (m : option A) (f : A -> option B) =>
+	    match m with
+        | Some a => f a
+        | None => None
+        end |}.
+
+Instance option_monad_eta : Monad (fun A : Set => option A) := _.
+
 Fixpoint downlift (k : nat) (t : term) : option term :=
   match t with
   | tRel n =>
     if k <? n then ret (tRel (n - 1) )
     else if n =? k then None
     else ret (tRel n)
+  | tEvar ev args =>
+    args' <- monad_map (downlift k) args ;;
+    ret (tEvar ev args')
+  | tCast c kind t =>
+    c' <- downlift k c ;;
+    t' <- downlift k t ;;
+    ret (tCast c' kind t')
   | tProd na A B =>
     A' <- downlift k A ;;
     B' <- downlift (S k) B ;;
     ret (tProd na A' B')
-  | tInd ind ui => ret (tInd ind ui)
+  | tLambda na A t =>
+    A' <- downlift k A ;;
+    t' <- downlift (S k) t ;;
+    ret (tLambda na A' t')
+  | tLetIn na B b t =>
+    B' <- downlift k B ;;
+    b' <- downlift k b ;;
+    t' <- downlift (S k) t ;;
+    ret (tLetIn na B' b' t')
   | tApp u l =>
     u' <- downlift k u ;;
     l' <- monad_map (downlift k) l ;;
     ret (tApp u' l')
-  | _ => None
+  | tCase ind p c brs =>
+    p' <- downlift k p ;;
+    c' <- downlift k c ;;
+    brs' <- monad_map (monad_on_snd (downlift k)) brs ;;
+    ret (tCase ind p' c' brs')
+  | tProj p c =>
+    c' <- downlift k c ;;
+    ret (tProj p c')
+  | tFix mfix idx =>
+    let k' := #|mfix| + k in
+    mfix' <- monad_map (monad_map_def (downlift k) (downlift k')) mfix ;;
+    ret (tFix mfix' idx)
+  | tCoFix mfix idx =>
+    let k' := #|mfix| + k in
+    (* mfix' <- monad_map (monad_map_def (downlift k) (downlift k')) mfix ;; *)
+    mfix' <- monad_map (monad_map_def (downlift k) (downlift k')) mfix ;;
+    ret (tCoFix mfix' idx)
+  | t => Some t
   end.
+
+Lemma downlift_lift :
+  forall t k,
+    downlift k ((lift 1 k) t) = Some t.
+Proof.
+  intros t k. induction t using term_forall_list_ind in k |- *.
+  all: simpl.
+Admitted.
 
 Equations reify (Σ : global_env_ext) (Γ : context) (P : term) : option form
   by wf (size (trans P)) lt :=
@@ -838,11 +903,6 @@ Lemma inversion_Rel :
       (wf_local Σ Γ) *
       (nth_error Γ n = Some decl) *
       (Σ ;;; Γ |- lift0 (S n) (decl_type decl) <= T).
-Admitted.
-
-Lemma downlift_lift :
-  forall t,
-    downlift 0 ((lift0 1) t) = Some t.
 Admitted.
 
 Definition reify_correct :

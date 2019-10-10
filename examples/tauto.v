@@ -827,20 +827,67 @@ Proof.
 Qed.
 
 Lemma tsize_downlift :
-  forall t,
-    tsize (TL.subst0 [tRel 0] t) = tsize t.
+  forall t k,
+    Ast.wf t ->
+    tsize (TL.subst [tRel 0] k t) = tsize t.
 Proof.
-  intro t.
-  induction t using term_forall_list_ind.
-  { simpl. destruct nth_error eqn:e.
-    - rewrite tsize_lift. destruct n.
-      + simpl in e. apply some_inj in e. subst. reflexivity.
-      + simpl in e. destruct n. all: discriminate.
+  intros t k h.
+  induction t using term_forall_list_ind in k, h |- *.
+  { simpl. destruct (Nat.leb_spec k n).
+    - destruct (n - k) as [|m].
+      + simpl. reflexivity.
+      + simpl. destruct m. all: reflexivity.
     - reflexivity.
   }
   all: simpl.
+  all: inversion h ; subst.
   all: try solve [ eauto ].
-Admitted.
+  - f_equal. clear h. induction H.
+    + reflexivity.
+    + simpl. inversion H1. subst. intuition eauto.
+  - rewrite IHt1, IHt2, IHt3 by assumption. reflexivity.
+  - rewrite <- mkApps_tApp.
+    + simpl. f_equal. rewrite IHt by assumption. f_equal.
+      clear - H H5. induction H.
+      * reflexivity.
+      * inversion H5. subst. simpl. intuition eauto.
+    + clear - H2. destruct t.
+      all: simpl in *.
+      all: try solve [ eauto ].
+      destruct (Nat.leb_spec k n).
+      * destruct (n - k) as [|m].
+        -- simpl. reflexivity.
+        -- simpl. destruct m. all: eauto.
+      * simpl. reflexivity.
+    + clear - H3. destruct l. 1: solve [ auto ].
+      simpl. reflexivity.
+  - f_equal. rewrite IHt1, IHt2 by assumption. f_equal.
+    clear - H H6. induction H.
+    * reflexivity.
+    * inversion H6. subst. simpl. intuition eauto.
+  - f_equal.
+    generalize (#|m| + k). intro p.
+    clear - H H1. induction H.
+    + reflexivity.
+    + inversion H1. subst.
+      unfold mfixpoint_size.
+      unfold map_def. unfold def_size.
+      simpl. intuition eauto.
+      rewrite H2, H3 by assumption.
+      f_equal. f_equal. unfold mfixpoint_size in H6. rewrite <- H6.
+      reflexivity.
+  - f_equal.
+    generalize (#|m| + k). intro p.
+    clear - H H1. induction H.
+    + reflexivity.
+    + inversion H1. subst.
+      unfold mfixpoint_size.
+      unfold map_def. unfold def_size.
+      simpl. intuition eauto.
+      rewrite H2, H3 by assumption.
+      f_equal. f_equal. unfold mfixpoint_size in H4. rewrite <- H4.
+      reflexivity.
+Qed.
 
 Definition inspect {A} (x : A) : { y : A | y = x } := exist _ x eq_refl.
 

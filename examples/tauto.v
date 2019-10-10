@@ -826,26 +826,21 @@ Proof.
       eapply IHl in e. omega.
 Qed.
 
-(* TODO Completely WRONG
-  Should probably state an equality for one substitution.
-*)
-Lemma tsize_subst :
-  forall l k t,
-    tsize (subst l k t) <= list_size tsize l + tsize t - #|l|.
+Lemma tsize_downlift :
+  forall t,
+    tsize (TL.subst0 [tRel 0] t) = tsize t.
 Proof.
-  intros l k t.
-  induction t using term_forall_list_ind in l, k |- *.
-  { simpl. destruct (Nat.leb_spec k n).
-    - destruct nth_error eqn:e.
-      + rewrite tsize_lift. eapply nth_error_list_size in e. assumption.
-      + simpl. pose proof (list_size_length l). omega.
-    - simpl. pose proof (list_size_length l). omega.
+  intro t.
+  induction t using term_forall_list_ind.
+  { simpl. destruct nth_error eqn:e.
+    - rewrite tsize_lift. destruct n.
+      + simpl in e. apply some_inj in e. subst. reflexivity.
+      + simpl in e. destruct n. all: discriminate.
+    - reflexivity.
   }
   all: simpl.
-  all: pose proof (list_size_length l).
-  all: try omega.
-  -
-Abort.
+  all: try solve [ eauto ].
+Admitted.
 
 Definition inspect {A} (x : A) : { y : A | y = x } := exist _ x eq_refl.
 
@@ -898,12 +893,8 @@ Next Obligation.
 Qed.
 Next Obligation.
   symmetry in e1. apply tsize_decompose_app in e1 as h1.
-  simpl in h1. (* eapply Nat.le_lt_trans.
-  - eapply tsize_subst.
-  - simpl. pose proof (tsize_nonzero A0). omega. *)
-  (* Actually, downlift would give a btter guarantee on the size *)
-(* Qed. *)
-Admitted.
+  simpl in h1. rewrite tsize_downlift. omega.
+Qed.
 Next Obligation.
   symmetry in e1. apply tsize_decompose_app in e1 as h1.
   simpl in h1. omega.

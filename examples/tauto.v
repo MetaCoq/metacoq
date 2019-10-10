@@ -826,6 +826,9 @@ Proof.
       eapply IHl in e. omega.
 Qed.
 
+(* TODO Completely WRONG
+  Should probably state an equality for one substitution.
+*)
 Lemma tsize_subst :
   forall l k t,
     tsize (subst l k t) <= list_size tsize l + tsize t - #|l|.
@@ -838,7 +841,11 @@ Proof.
       + simpl. pose proof (list_size_length l). omega.
     - simpl. pose proof (list_size_length l). omega.
   }
-Admitted.
+  all: simpl.
+  all: pose proof (list_size_length l).
+  all: try omega.
+  -
+Abort.
 
 Definition inspect {A} (x : A) : { y : A | y = x } := exist _ x eq_refl.
 
@@ -891,10 +898,12 @@ Next Obligation.
 Qed.
 Next Obligation.
   symmetry in e1. apply tsize_decompose_app in e1 as h1.
-  simpl in h1. eapply Nat.le_lt_trans.
+  simpl in h1. (* eapply Nat.le_lt_trans.
   - eapply tsize_subst.
-  - simpl. pose proof (tsize_nonzero A0). omega.
-Qed.
+  - simpl. pose proof (tsize_nonzero A0). omega. *)
+  (* Actually, downlift would give a btter guarantee on the size *)
+(* Qed. *)
+Admitted.
 Next Obligation.
   symmetry in e1. apply tsize_decompose_app in e1 as h1.
   simpl in h1. omega.

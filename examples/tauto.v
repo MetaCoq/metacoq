@@ -1011,7 +1011,8 @@ Next Obligation.
 Qed.
 Next Obligation.
   symmetry in e1. apply tsize_decompose_app in e1 as h1.
-  simpl in h1. rewrite tsize_downlift. omega.
+  simpl in h1. pose proof (tsize_downlift_le B0 0).
+  omega.
 Qed.
 Next Obligation.
   symmetry in e1. apply tsize_decompose_app in e1 as h1.

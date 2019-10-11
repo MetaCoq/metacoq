@@ -728,7 +728,7 @@ Proof.
   all: omega.
 Qed.
 
-(* Lemma mkApp_tsize :
+Lemma mkApp_tsize :
   forall u v,
     tsize (mkApp u v) <= S (S (tsize u + tsize v)).
 Proof.
@@ -738,17 +738,19 @@ Proof.
   rewrite list_size_app. simpl. omega.
 Qed.
 
-Lemma mkApps_tsize x l : tsize (mkApps x l) <= tsize x + list_size tsize l.
+Lemma mkApps_tsize :
+  forall t l,
+    tsize (mkApps t l) <= S (tsize t + list_size tsize l).
 Proof.
-  induction l in x |- *.
+  intros t l.
+  induction l as [| a l ih ] in t |- *.
   - simpl. omega.
-  - rewrite <- mkApps_mkApp. simpl.
-    rewrite IHl. rewrite mkApp_tsize.
-
-  simpl; simp list_size.
-  - omega.
-  - rewrite IHl. simpl. lia.
-Qed. *)
+  - destruct (Ast.isApp t) eqn:e.
+    + destruct t. all: try discriminate.
+      simpl. rewrite list_size_app. simpl. omega.
+    + rewrite <- mkApps_tApp by (rewrite ?e ; eauto).
+      simpl. omega.
+Qed.
 
 Lemma tsize_decompose_app :
   forall t f args,
@@ -887,6 +889,75 @@ Proof.
       rewrite H2, H3 by assumption.
       f_equal. f_equal. unfold mfixpoint_size in H4. rewrite <- H4.
       reflexivity.
+Qed.
+
+Local Ltac inst :=
+  lazymatch goal with
+  | h : forall k, _ <= tsize ?x |- context [ (TL.subst _ ?k ?x) ] =>
+    specialize (h k)
+  end.
+
+Lemma tsize_downlift_le :
+  forall t k,
+    tsize (TL.subst [tRel 0] k t) <= tsize t.
+Proof.
+  intros t k.
+  induction t using term_forall_list_ind in k |- *.
+  { simpl. destruct (Nat.leb_spec k n).
+    - destruct (n - k) as [|m].
+      + simpl. reflexivity.
+      + simpl. destruct m. all: reflexivity.
+    - reflexivity.
+  }
+  all: simpl.
+  all: try solve [ eauto ].
+  all: try solve [ repeat inst ; omega ].
+  - eapply le_n_S. induction H.
+    + reflexivity.
+    + simpl. repeat inst. omega.
+  - inst.
+    pose proof (mkApps_tsize (TL.subst [tRel 0] k t) (map (TL.subst [tRel 0] k) l)) as h.
+    assert (list_size tsize (map (TL.subst [tRel 0] k) l) <= list_size tsize l).
+    { clear - H. induction H.
+      - reflexivity.
+      - simpl. inst. omega.
+    }
+    omega.
+  - repeat inst.
+    assert (
+      list_size (fun x : nat × Tterm => tsize x.2)
+                (map (on_snd (TL.subst [tRel 0] k)) l)
+      <= list_size (fun x : nat × Tterm => tsize x.2) l
+    ).
+    { clear - H. induction H.
+    - reflexivity.
+    - simpl. inst. omega.
+  }
+  omega.
+  - eapply le_n_S.
+    generalize (#|m| + k). intro p.
+    clear - H. induction H.
+    + reflexivity.
+    + unfold mfixpoint_size.
+      unfold map_def. unfold def_size.
+      simpl.
+      intuition eauto.
+      unfold mfixpoint_size in IHForall.
+      unfold map_def in IHForall.
+      unfold def_size in IHForall.
+      repeat inst. omega.
+  - eapply le_n_S.
+    generalize (#|m| + k). intro p.
+    clear - H. induction H.
+    + reflexivity.
+    + unfold mfixpoint_size.
+      unfold map_def. unfold def_size.
+      simpl.
+      intuition eauto.
+      unfold mfixpoint_size in IHForall.
+      unfold map_def in IHForall.
+      unfold def_size in IHForall.
+      repeat inst. omega.
 Qed.
 
 Definition inspect {A} (x : A) : { y : A | y = x } := exist _ x eq_refl.

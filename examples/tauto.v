@@ -169,19 +169,19 @@ Class Propositional_Logic prop :=
     Pimpl : prop -> prop -> prop}.
 
 
-Fixpoint semGen {A} `{Propositional_Logic A} f (l:var->A) :=
+Fixpoint semGen A `{Propositional_Logic A} f (l:var->A) :=
    match f with
   | Fa => Pfalse
   | Var x => l x
-  | Imp a b => Pimpl (semGen a l) (semGen b l)
-  | And a b => Pand (semGen a l) (semGen b l)
-  | Or a b => Por (semGen a l) (semGen b l)
+  | Imp a b => Pimpl (semGen A a l) (semGen A b l)
+  | And a b => Pand (semGen A a l) (semGen A b l)
+  | Or a b => Por (semGen A a l) (semGen A b l)
   end.
 
 Instance Propositional_Logic_Prop : Propositional_Logic Prop :=
   {| Pfalse := False; Pand := and; Por := or; Pimpl := fun A B => A -> B |}.
 
-Definition sem := @semGen Prop _.
+Definition sem := semGen Prop.
 
 Definition valid s :=
   forall l, (forall h, In h (hyps s) -> sem h l) -> sem (concl s) l.
@@ -1035,7 +1035,7 @@ Instance Propositional_Logic_MetaCoq : Propositional_Logic term :=
   {| Pfalse := MFalse; Pand := fun P Q => mkApps Mand [P;Q];
      Por := fun P Q => mkApps Mor [P;Q]; Pimpl := fun P Q => tImpl P Q |}.
 
-Definition Msem := @semGen term _.
+Definition Msem := semGen term.
 
 (* To Show : forall f l, Unquote (Msem f l) = sem f (fun x => Unquote (v x)) *)
 
@@ -1137,6 +1137,56 @@ Proof.
     + reflexivity.
 Qed.
 
+
+Section Plugin.
+
+  Definition cdecl_Type (P:term) :=
+    {| decl_name := nAnon; decl_body := None; decl_type := P |}.
+
+  Definition trivial_hyp (h:list form) v : forall h : form, In h [] -> sem h v.
+    intro. destruct 1.
+  Qed. 
+
+  Transparent reify. 
+
+  Definition inhabit_formula gamma Mphi Gamma :
+    match reify (empty_ext []) gamma Mphi with
+      Some phi => 
+      match tauto (Top.size phi) {| hyps := []; concl := phi |} with 
+        Valid => sem (concl {| hyps := []; concl := phi |}) (can_val_Prop Gamma)
+      | _ => True end 
+    | None => True end.
+    destruct (reify (empty_ext []) gamma Mphi); try exact I.
+    destruct (tauto (Top.size f) {| hyps := []; concl := f |}) eqn : e ; try exact I.
+    exact (tauto_sound (Top.size f) (mkS [] f) e (can_val_Prop Gamma) (trivial_hyp [] _)).
+  Defined.
+
+  Fixpoint extract_form (P:term) (n : nat) : term * nat :=
+    match P with
+    | tProd _ (tSort _) P' =>
+      extract_form P' (S n)
+    | _ => (P,n)
+    end.
+
+  Fixpoint Prop_ctx (n:nat) :=
+    match n with O => []
+            | S n => cdecl_Type MProp :: Prop_ctx n
+    end.
+
+  Tactic Notation "tauto_tactic" ident(P0) ident(P1) ident(P2) :=
+    match goal with | |- ?T =>
+       intros P0 P1 P2;
+       let k x :=
+           exact (let Mphi := extract_form x 0 in inhabit_formula (Prop_ctx (snd Mphi)) (fst Mphi) [P2;P1;P0])
+       in
+       quote_term T k end.
+  
+  Lemma test : forall (A B C:Prop), (A->C)->(B->C)->A\/B->C.
+    tauto_tactic A B C.
+  Qed. 
+
+End Plugin.
+  
 Section Correctness.
 
   Variable Mval : context.
@@ -1215,3 +1265,5 @@ Proof.
 
 Admitted.
 *)
+
+  

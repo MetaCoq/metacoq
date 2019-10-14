@@ -1463,13 +1463,15 @@ Section Conversion.
       destArity Γ1 t1 = Some (Δ1, s1) ->
       exists Δ2 s2,
         destArity Γ2 t2 = Some (Δ2, s2) /\
+        ∥ eq_context_upto Re Δ1 Δ2 ∥ /\
         Rle s1 s2.
   Proof.
     intros Re Rle Γ1 Γ2 t1 t2 Δ1 s1 ht hΓ e.
     induction ht in Γ1, Γ2, Δ1, s1, hΓ, e |- *.
     all: try discriminate e.
     - simpl in *. inversion e. subst.
-      eexists _,_. eauto.
+      eexists _,_. intuition eauto.
+      constructor. assumption.
     - simpl in *.
       eapply IHht2 in e as h.
       + eassumption.
@@ -1481,16 +1483,48 @@ Section Conversion.
   Qed.
 
   (* TODO MOVE *)
+  Lemma isWfArity_eq_term_upto_univ :
+    forall Re Rle Γ u v,
+      Reflexive Re ->
+      isWfArity typing Σ Γ u ->
+      eq_term_upto_univ Re Rle u v ->
+      ∥ isWfArity typing Σ Γ v ∥.
+  Proof.
+    intros Re Rle Γ u v Re_refl [Δ [s [e1 e2]]] e.
+    eapply destArity_eq_term_upto_univ in e1 as h.
+    2: eassumption. 2: eapply eq_context_upto_refl. 2: assumption.
+    destruct h as [Δ' [s' [h1 [[h2] h3]]]].
+    constructor. eexists _,_. split.
+    - eassumption.
+    - (* TODO NEED welltyped_eq_term *)
+      admit.
+  Admitted.
+
+  (* TODO MOVE *)
+  Lemma wellformed_eq_term_upto_univ :
+    forall Re Rle Γ u v,
+      Reflexive Re ->
+      wellformed Σ Γ u ->
+      eq_term_upto_univ Re Rle u v ->
+      wellformed Σ Γ v.
+  Proof.
+    intros Re Rle Γ u v Re_refl [h|[h]] e.
+    - left. admit.
+    - right.
+      eapply isWfArity_eq_term_upto_univ. all: eassumption.
+  Admitted.
+
+  (* TODO MOVE *)
   Lemma wellformed_eq_term :
     forall Γ u v,
       wellformed Σ Γ u ->
       eq_term Σ u v ->
       wellformed Σ Γ v.
   Proof.
-    intros Γ u v [h|[[Δ [s [e1 e2]]]]] e.
-    - left. admit.
-    - right. constructor.
-  Admitted.
+    intros Γ u v h e.
+    eapply wellformed_eq_term_upto_univ. all: try eassumption.
+    eapply eq_universe_refl.
+  Qed.
 
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)

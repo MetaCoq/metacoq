@@ -1456,11 +1456,40 @@ Section Conversion.
   Qed.
 
   (* TODO MOVE *)
+  Lemma destArity_eq_term_upto_univ :
+    forall Re Rle Γ1 Γ2 t1 t2 Δ1 s1,
+      eq_term_upto_univ Re Rle t1 t2 ->
+      eq_context_upto Re Γ1 Γ2 ->
+      destArity Γ1 t1 = Some (Δ1, s1) ->
+      exists Δ2 s2,
+        destArity Γ2 t2 = Some (Δ2, s2) /\
+        Rle s1 s2.
+  Proof.
+    intros Re Rle Γ1 Γ2 t1 t2 Δ1 s1 ht hΓ e.
+    induction ht in Γ1, Γ2, Δ1, s1, hΓ, e |- *.
+    all: try discriminate e.
+    - simpl in *. inversion e. subst.
+      eexists _,_. eauto.
+    - simpl in *.
+      eapply IHht2 in e as h.
+      + eassumption.
+      + constructor. all: auto.
+    - simpl in *.
+      eapply IHht3 in e as h.
+      + eassumption.
+      + constructor. all: assumption.
+  Qed.
+
+  (* TODO MOVE *)
   Lemma wellformed_eq_term :
     forall Γ u v,
       wellformed Σ Γ u ->
       eq_term Σ u v ->
       wellformed Σ Γ v.
+  Proof.
+    intros Γ u v [h|[[Δ [s [e1 e2]]]]] e.
+    - left. admit.
+    - right. constructor.
   Admitted.
 
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)

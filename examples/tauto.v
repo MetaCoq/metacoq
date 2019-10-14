@@ -1174,16 +1174,24 @@ Section Plugin.
     end.
 
   Tactic Notation "tauto_tactic" ident(P0) ident(P1) ident(P2) :=
-    match goal with | |- ?T =>
-       intros P0 P1 P2;
-       let k x :=
-           exact (let Mphi := extract_form x 0 in inhabit_formula (Prop_ctx (snd Mphi)) (fst Mphi) [P2;P1;P0])
-       in
-       quote_term T k end.
+    clear; let H := fresh "H" in
+           match goal with | |- ?T =>
+              intros P0 P1 P2;
+              let k x :=
+                  pose proof (let Mphi := extract_form x 0 in inhabit_formula (Prop_ctx (snd Mphi)) (fst Mphi) [P2;P1;P0]) as H;
+                  compute in H
+                in
+                  quote_term T k
+           end; first [match goal with | H : True |- _ => fail 2 "Error : not solvable" end | 
+                       exact H ].
   
   Lemma test : forall (A B C:Prop), (A->C)->(B->C)->A\/B->C.
-    tauto_tactic A B C.
+    tauto_tactic A B C. 
   Qed. 
+
+  Lemma test2 : forall (A B C:Prop), (A->C)->(B->C)->A\/B->B.
+    Fail tauto_tactic A B C.
+  Abort. 
 
 End Plugin.
   

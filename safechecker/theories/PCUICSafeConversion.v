@@ -508,11 +508,72 @@ Section Conversion.
   Qed.
 
   (* TODO MOVE *)
+  Lemma forallb2_refl :
+    forall A (R : A -> A -> bool),
+      (forall x, R x x) ->
+      forall l, forallb2 R l l.
+  Proof.
+    intros A R R_refl l.
+    induction l.
+    - reflexivity.
+    - simpl. rewrite R_refl. assumption.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma forallb2_map :
+    forall A B (R : A -> A -> bool) f g (l : list B) (l' : list B),
+      forallb2 (fun x y => R (f x) (g y)) l l' ->
+      forallb2 R (map f l) (map g l').
+  Proof.
+    intros A B R f g l l' h.
+    induction l in l', h |- *.
+    - destruct l'. 2: discriminate. reflexivity.
+    - destruct l'. 1: discriminate. simpl in *.
+      apply andP in h as [e1 e2]. rewrite e1. simpl.
+      eapply IHl. assumption.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma eq_prod_refl :
+    forall A B (eqA : A -> A -> bool) (eqB : B -> B -> bool),
+      (forall a, eqA a a) ->
+      (forall b, eqB b b) ->
+      forall p, eq_prod eqA eqB p p.
+  Proof.
+    intros A B eqA eqB eqA_refl eqB_refl [a b].
+    simpl. rewrite eqA_refl. apply eqB_refl.
+  Qed.
+
+  (* TODO MOVE *)
   Lemma eqb_term_upto_univ_refl :
     forall (eqb leqb : universe -> universe -> bool) t,
       (forall u, eqb u u) ->
       (forall u, leqb u u) ->
       eqb_term_upto_univ eqb leqb t t.
+  Proof.
+    intros eqb leqb t eqb_refl leqb_refl.
+    induction t using term_forall_list_ind in leqb, leqb_refl |- *.
+    all: simpl.
+    all: rewrite ?Nat.eqb_refl, ?eq_string_refl, ?eq_inductive_refl.
+    all: repeat rewrite eq_prod_refl by (eauto using Nat.eqb_refl, eq_string_refl, eq_inductive_refl).
+    all: repeat lazymatch goal with
+         | ih : forall leqb, _ -> @?P leqb |- _ =>
+           rewrite ih by assumption ; clear ih
+         end.
+    all: simpl.
+    all: try solve [ eauto ].
+    - induction H.
+      + reflexivity.
+      + simpl. rewrite p by assumption. auto.
+    - eapply forallb2_map. eapply forallb2_refl.
+      intro l. eapply eqb_refl.
+    - eapply forallb2_map. eapply forallb2_refl.
+      intro l. eapply eqb_refl.
+    - eapply forallb2_map. eapply forallb2_refl.
+      intro l. eapply eqb_refl.
+    - admit.
+    - admit.
+    -
   Admitted.
 
   Definition leqb_term :=

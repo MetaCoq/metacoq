@@ -630,9 +630,65 @@ Section Conversion.
     intro t. eapply eqb_term_upto_univ_refl.
   Admitted.
 
+  (* TODO MOVE *)
+  Lemma NEL_forallb2_refl :
+    forall (A : Set) (R : A -> A -> bool),
+      (forall x, R x x) ->
+      forall l, NEL.forallb2 R l l.
+  Proof.
+    intros A R R_refl l.
+    induction l.
+    - simpl. apply R_refl.
+    - simpl. rewrite R_refl. assumption.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma Level_equal_refl :
+    forall l, Level.equal l l.
+  Proof.
+    intros [].
+    all: unfold Level.equal.
+    all: simpl.
+    1-2: reflexivity.
+    - rewrite (ssreflect.iffRL (string_compare_eq s s)). all: auto.
+    - rewrite Nat.compare_refl. reflexivity.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma Universe_Expr_equal_refl :
+    forall e, Universe.Expr.equal e e.
+  Proof.
+    intro e. destruct e as [[] b]. all: simpl.
+    - reflexivity.
+    - apply eqb_reflx.
+    - rewrite eqb_reflx. rewrite Level_equal_refl. reflexivity.
+    - rewrite Level_equal_refl, eqb_reflx. reflexivity.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma universe_equal_refl :
+    forall u, Universe.equal u u.
+  Proof.
+    intro u. unfold Universe.equal. eapply NEL_forallb2_refl.
+    apply Universe_Expr_equal_refl.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma check_eqb_universe_refl :
+    forall u, check_eqb_universe G u u.
+  Proof.
+    intro u. unfold check_eqb_universe.
+    rewrite universe_equal_refl.
+    rewrite ssrbool.orbT. reflexivity.
+  Qed.
+
+  (* TODO MOVE *)
   Lemma eqb_term_refl :
     forall t, eqb_term t t.
-  Admitted.
+  Proof.
+    intro t. eapply eqb_term_upto_univ_refl.
+    all: apply check_eqb_universe_refl.
+  Qed.
 
   Fixpoint eqb_ctx (Γ Δ : context) : bool :=
     match Γ, Δ with

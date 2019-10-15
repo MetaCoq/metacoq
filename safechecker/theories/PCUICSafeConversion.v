@@ -555,7 +555,8 @@ Section Conversion.
     induction t using term_forall_list_ind in leqb, leqb_refl |- *.
     all: simpl.
     all: rewrite ?Nat.eqb_refl, ?eq_string_refl, ?eq_inductive_refl.
-    all: repeat rewrite eq_prod_refl by (eauto using Nat.eqb_refl, eq_string_refl, eq_inductive_refl).
+    all: repeat rewrite eq_prod_refl
+          by (eauto using eq_prod_refl, Nat.eqb_refl, eq_string_refl, eq_inductive_refl).
     all: repeat lazymatch goal with
          | ih : forall leqb, _ -> @?P leqb |- _ =>
            rewrite ih by assumption ; clear ih
@@ -571,10 +572,23 @@ Section Conversion.
       intro l. eapply eqb_refl.
     - eapply forallb2_map. eapply forallb2_refl.
       intro l. eapply eqb_refl.
-    - admit.
-    - admit.
-    -
-  Admitted.
+    - induction X.
+      + reflexivity.
+      + simpl. rewrite Nat.eqb_refl. rewrite p0 by assumption.
+        assumption.
+    - induction X.
+      + reflexivity.
+      + simpl. rewrite Nat.eqb_refl.
+        destruct p as [e1 e2].
+        rewrite e1 by assumption. rewrite e2 by assumption.
+        assumption.
+    - induction X.
+      + reflexivity.
+      + simpl. rewrite Nat.eqb_refl.
+        destruct p as [e1 e2].
+        rewrite e1 by assumption. rewrite e2 by assumption.
+        assumption.
+  Qed.
 
   Definition leqb_term :=
     eqb_term_upto_univ (check_eqb_universe G) (check_leqb_universe G).

@@ -1501,7 +1501,7 @@ Section Conversion.
   Admitted.
 
   (* TODO MOVE *)
-  Lemma wellformed_eq_term_upto_univ :
+  (* Lemma wellformed_eq_term_upto_univ :
     forall Re Rle Γ u v,
       Reflexive Re ->
       wellformed Σ Γ u ->
@@ -1524,7 +1524,7 @@ Section Conversion.
     intros Γ u v h e.
     eapply wellformed_eq_term_upto_univ. all: try eassumption.
     eapply eq_universe_refl.
-  Qed.
+  Qed. *)
 
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)

@@ -1546,7 +1546,7 @@ Section Conversion.
           | @exist false _ with inspect (lookup_env Σ c) := {
             | @exist (Some (ConstantDecl n {| cst_body := Some body |})) eq3 :=
               isconv_red leq (subst_instance_constr u body) π1
-                             (subst_instance_constr u body) π2 aux ;
+                             (subst_instance_constr u' body) π2 aux ;
             (* Inductive or not found *)
             | @exist _ _ := no
             }
@@ -1660,17 +1660,10 @@ Section Conversion.
       eapply red_const. eassumption.
   Qed.
   Next Obligation.
-    eapply wellformed_eq_term.
-    - eapply red_wellformed ; auto.
-      + exact h2.
-      + constructor. eapply red_zipc.
-        eapply red_const. eassumption.
-    - eapply eq_term_zipc.
-      eapply eq_term_sym.
-      eapply eq_term_upto_univ_subst_instance_constr.
-      + intro. eapply eq_universe_refl.
-      + apply leq_term_SubstUnivPreserving.
-      + eapply eqb_universe_instance_spec. auto.
+    eapply red_wellformed ; auto.
+    - exact h2.
+    - constructor. eapply red_zipc.
+      eapply red_const. eassumption.
   Qed.
   Next Obligation.
     eapply R_cored. simpl.
@@ -1687,15 +1680,9 @@ Section Conversion.
       eapply red_zipp.
       eapply red_const. eassumption.
     - eapply conv_trans' ; try eassumption.
-      eapply conv_trans'.
-      + assumption.
-      + eapply red_conv_r ; try assumption.
-        eapply red_zipp.
-        eapply red_const. eassumption.
-      + eapply conv_conv. 1: auto.
-        constructor. constructor.
-        eapply eq_term_zipp. constructor.
-        eapply eqb_universe_instance_spec. auto.
+      eapply red_conv_r ; try assumption.
+      eapply red_zipp.
+      eapply red_const. eassumption.
   Qed.
 
   (* tLambda *)

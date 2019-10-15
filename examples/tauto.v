@@ -113,7 +113,8 @@ Abort.
 Lemma eq_var (x y:var) : {x=y}+{x<>y}.
  apply eq_nat_dec.
 Defined.
- Inductive form :=
+
+Inductive form :=
 | Var (x:var) | Fa | Imp (f1 f2:form) | And (f1 f2:form) | Or (f1 f2:form).
 
 Lemma eq_form (f1 f2:form) : {f1=f2}+{f1<>f2}.
@@ -1173,24 +1174,49 @@ Section Plugin.
             | S n => cdecl_Type MProp :: Prop_ctx n
     end.
 
-  Tactic Notation "tauto_tactic" ident(P0) ident(P1) ident(P2) :=
-    clear; let H := fresh "H" in
-           match goal with | |- ?T =>
-              intros P0 P1 P2;
-              let k x :=
-                  pose proof (let Mphi := extract_form x 0 in inhabit_formula (Prop_ctx (snd Mphi)) (fst Mphi) [P2;P1;P0]) as H;
-                  compute in H
-                in
-                  quote_term T k
-           end; first [match goal with | H : True |- _ => fail 2 "Error : not solvable" end | 
-                       exact H ].
-  
+  (* Tactic Notation "tauto_tactic" ident(P0) ident(P1) ident(P2) := *)
+  (*   clear; let H := fresh "H" in *)
+  (*          match goal with | |- ?T => *)
+  (*             intros P0 P1 P2; *)
+  (*             let k x := *)
+  (*                 pose proof (let Mphi := extract_form x 0 in inhabit_formula (Prop_ctx (snd Mphi)) (fst Mphi) [P2;P1;P0]) as H; *)
+  (*                 compute in H *)
+  (*               in *)
+  (*                 quote_term T k *)
+  (*          end; first [match goal with | H : True |- _ => fail 2 "Error : not solvable" end |  *)
+  (*                      exact H ]. *)
+
+  Ltac tauto_aux k l :=
+    match goal with | |- forall X:Prop, _ => 
+                      let H := fresh "H" in
+                      intros H; 
+                      tauto_aux k ltac:(constr:(H::l))
+    | |- _ => k l end.
+
+  Ltac Mtauto l T H :=
+    let k x :=
+        pose proof (let Mphi := extract_form x 0 in inhabit_formula (Prop_ctx (snd Mphi)) (fst Mphi) l) as H;
+        compute in H
+      in
+        quote_term T k.
+            
+  Ltac tauto_tactic :=
+    let L := fresh "L" in
+    let P := fresh "P" in
+    match goal with | |- ?T => tauto_aux
+                                 ltac:(fun l => pose (L:=l); pose (P:=T))
+                                        (@nil Prop) end;
+    let H := fresh "H" in
+    Mtauto L ltac:(eval compute in P) H;
+    first [match goal with | H : True |- _ => fail 2 "Error : not solvable" end |
+                                                   exact H].
+
   Lemma test : forall (A B C:Prop), (A->C)->(B->C)->A\/B->C.
-    tauto_tactic A B C. 
+    tauto_tactic.
   Qed. 
 
   Lemma test2 : forall (A B C:Prop), (A->C)->(B->C)->A\/B->B.
-    Fail tauto_tactic A B C.
+    Fail tauto_tactic.
   Abort. 
 
 End Plugin.

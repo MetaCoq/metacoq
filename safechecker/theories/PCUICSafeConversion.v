@@ -2302,7 +2302,11 @@ Section Conversion.
     - destruct ht as [ht].
       constructor. apply App_conv. all: assumption.
     - destruct ht as [ht]. constructor.
-  Admitted.
+      eapply cumul_trans.
+      + assumption.
+      + eapply cumul_App_l. eassumption.
+      + eapply cumul_App_r. assumption.
+  Qed.
 
   Definition Aux' Γ t1 args1 l1 π1 t2 π2 h2 :=
     forall u1 u2 ca1 a1 ρ2

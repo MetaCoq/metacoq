@@ -507,14 +507,6 @@ Section Conversion.
     eapply R_aux_stateR. all: simpl. all: auto.
   Qed.
 
-  (* TODO MOVE *)
-  Lemma eqb_term_upto_univ_refl :
-    forall (eqb leqb : universe -> universe -> bool) t,
-      (forall u, eqb u u) ->
-      (forall u, leqb u u) ->
-      eqb_term_upto_univ eqb leqb t t.
-  Admitted.
-
   Definition leqb_term :=
     eqb_term_upto_univ (check_eqb_universe G) (check_leqb_universe G).
 
@@ -549,15 +541,12 @@ Section Conversion.
     now eapply global_ext_uctx_consistent.
   Qed.
 
-  Lemma leqb_term_refl :
-    forall t, leqb_term t t.
-  Proof.
-    intro t. eapply eqb_term_upto_univ_refl.
-  Admitted.
-
   Lemma eqb_term_refl :
     forall t, eqb_term t t.
-  Admitted.
+  Proof.
+    intro t. eapply eqb_term_upto_univ_refl.
+    all: apply check_eqb_universe_refl.
+  Qed.
 
   Fixpoint eqb_ctx (Γ Δ : context) : bool :=
     match Γ, Δ with
@@ -1455,13 +1444,32 @@ Section Conversion.
       eapply hΣ'.
   Qed.
 
-  (* TODO MOVE *)
-  Lemma wellformed_eq_term :
-    forall Γ u v,
-      wellformed Σ Γ u ->
-      eq_term Σ u v ->
-      wellformed Σ Γ v.
-  Admitted.
+  (* TODO (RE)MOVE *)
+  Lemma destArity_eq_term_upto_univ :
+    forall Re Rle Γ1 Γ2 t1 t2 Δ1 s1,
+      eq_term_upto_univ Re Rle t1 t2 ->
+      eq_context_upto Re Γ1 Γ2 ->
+      destArity Γ1 t1 = Some (Δ1, s1) ->
+      exists Δ2 s2,
+        destArity Γ2 t2 = Some (Δ2, s2) /\
+        ∥ eq_context_upto Re Δ1 Δ2 ∥ /\
+        Rle s1 s2.
+  Proof.
+    intros Re Rle Γ1 Γ2 t1 t2 Δ1 s1 ht hΓ e.
+    induction ht in Γ1, Γ2, Δ1, s1, hΓ, e |- *.
+    all: try discriminate e.
+    - simpl in *. inversion e. subst.
+      eexists _,_. intuition eauto.
+      constructor. assumption.
+    - simpl in *.
+      eapply IHht2 in e as h.
+      + eassumption.
+      + constructor. all: auto.
+    - simpl in *.
+      eapply IHht3 in e as h.
+      + eassumption.
+      + constructor. all: assumption.
+  Qed.
 
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
@@ -1483,7 +1491,7 @@ Section Conversion.
           | @exist false _ with inspect (lookup_env Σ c) := {
             | @exist (Some (ConstantDecl n {| cst_body := Some body |})) eq3 :=
               isconv_red leq (subst_instance_constr u body) π1
-                             (subst_instance_constr u body) π2 aux ;
+                             (subst_instance_constr u' body) π2 aux ;
             (* Inductive or not found *)
             | @exist _ _ := no
             }
@@ -1597,17 +1605,10 @@ Section Conversion.
       eapply red_const. eassumption.
   Qed.
   Next Obligation.
-    eapply wellformed_eq_term.
-    - eapply red_wellformed ; auto.
-      + exact h2.
-      + constructor. eapply red_zipc.
-        eapply red_const. eassumption.
-    - eapply eq_term_zipc.
-      eapply eq_term_sym.
-      eapply eq_term_upto_univ_subst_instance_constr.
-      + intro. eapply eq_universe_refl.
-      + apply leq_term_SubstUnivPreserving.
-      + eapply eqb_universe_instance_spec. auto.
+    eapply red_wellformed ; auto.
+    - exact h2.
+    - constructor. eapply red_zipc.
+      eapply red_const. eassumption.
   Qed.
   Next Obligation.
     eapply R_cored. simpl.
@@ -1624,15 +1625,9 @@ Section Conversion.
       eapply red_zipp.
       eapply red_const. eassumption.
     - eapply conv_trans' ; try eassumption.
-      eapply conv_trans'.
-      + assumption.
-      + eapply red_conv_r ; try assumption.
-        eapply red_zipp.
-        eapply red_const. eassumption.
-      + eapply conv_conv. 1: auto.
-        constructor. constructor.
-        eapply eq_term_zipp. constructor.
-        eapply eqb_universe_instance_spec. auto.
+      eapply red_conv_r ; try assumption.
+      eapply red_zipp.
+      eapply red_const. eassumption.
   Qed.
 
   (* tLambda *)
@@ -2252,7 +2247,11 @@ Section Conversion.
     - destruct ht as [ht].
       constructor. apply App_conv. all: assumption.
     - destruct ht as [ht]. constructor.
-  Admitted.
+      eapply cumul_trans.
+      + assumption.
+      + eapply cumul_App_l. eassumption.
+      + eapply cumul_App_r. assumption.
+  Qed.
 
   Definition Aux' Γ t1 args1 l1 π1 t2 π2 h2 :=
     forall u1 u2 ca1 a1 ρ2

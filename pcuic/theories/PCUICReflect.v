@@ -163,6 +163,16 @@ Proof.
   subst. constructor. reflexivity.
 Defined.
 
+Lemma eq_prod_refl :
+  forall A B (eqA : A -> A -> bool) (eqB : B -> B -> bool),
+    (forall a, eqA a a) ->
+    (forall b, eqB b b) ->
+    forall p, eq_prod eqA eqB p p.
+Proof.
+  intros A B eqA eqB eqA_refl eqB_refl [a b].
+  simpl. rewrite eqA_refl. apply eqB_refl.
+Qed.
+
 Definition eq_bool b1 b2 : bool :=
   if b1 then b2 else negb b2.
 
@@ -241,7 +251,7 @@ Defined.
 Fixpoint eq_non_empty_list {A : Set} (eqA : A -> A -> bool) (l l' : non_empty_list A) : bool :=
   match l, l' with
   | NEL.sing a, NEL.sing a' => eqA a a'
-  | NEL.cons a l, NEL.cons a' l' => 
+  | NEL.cons a l, NEL.cons a' l' =>
     eqA a a' && eq_non_empty_list eqA l l'
   | _, _ => false
   end.

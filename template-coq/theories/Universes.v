@@ -59,6 +59,18 @@ Module Level.
 
   Definition equal (l1 l2 : Level.t) : bool
     := match compare l1 l2 with Eq => true | _ => false end.
+
+  Lemma equal_refl :
+    forall l, equal l l.
+  Proof.
+    intros [].
+    all: unfold equal.
+    all: simpl.
+    1-2: reflexivity.
+    - rewrite (ssreflect.iffRL (string_compare_eq s s)). all: auto.
+    - rewrite Nat.compare_refl. reflexivity.
+  Qed.
+
 End Level.
 
 Module LevelDecidableType.
@@ -132,6 +144,17 @@ Module Universe.
     Definition prop : t := (Level.prop, false).
     Definition set : t := (Level.set, false).
     Definition type1 : t := (Level.set, true).
+
+    Lemma equal_refl :
+      forall e, equal e e.
+    Proof.
+      intro e. destruct e as [[] b]. all: simpl.
+      - reflexivity.
+      - apply eqb_reflx.
+      - rewrite eqb_reflx. rewrite Level.equal_refl. reflexivity.
+      - rewrite Level.equal_refl, eqb_reflx. reflexivity.
+    Qed.
+
   End Expr.
 
   Definition t : Set := non_empty_list Expr.t.
@@ -205,6 +228,13 @@ Module Universe.
     (* Prop impredicativity *)
     if Universe.is_prop rangsort then rangsort
     else Universe.sup domsort rangsort.
+
+  Lemma equal_refl :
+    forall u, equal u u.
+  Proof.
+    intro u. unfold equal. eapply NEL.forallb2_refl.
+    apply Expr.equal_refl.
+  Qed.
 
 End Universe.
 

@@ -2,7 +2,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
      RelationClasses CRelationClasses CMorphisms Omega.
-From MetaCoq.Template Require Import config utils Universes UnivSubst.
+From MetaCoq.Template Require Import config utils AstUtils Universes UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst.
 
@@ -893,6 +893,51 @@ Proof.
            inversion bot. subst. inversion H0. subst. apply H3.
 Qed.
 
+Lemma eqb_term_upto_univ_refl :
+  forall (eqb leqb : universe -> universe -> bool) t,
+    (forall u, eqb u u) ->
+    (forall u, leqb u u) ->
+    eqb_term_upto_univ eqb leqb t t.
+Proof.
+  intros eqb leqb t eqb_refl leqb_refl.
+  induction t using term_forall_list_ind in leqb, leqb_refl |- *.
+  all: simpl.
+  all: rewrite -> ?Nat.eqb_refl, ?eq_string_refl, ?eq_inductive_refl.
+  all: repeat rewrite -> eq_prod_refl
+        by (eauto using eq_prod_refl, Nat.eqb_refl, eq_string_refl, eq_inductive_refl).
+  all: repeat lazymatch goal with
+      | ih : forall leqb, _ -> @?P leqb |- _ =>
+        rewrite -> ih by assumption ; clear ih
+      end.
+  all: simpl.
+  all: try solve [ eauto ].
+  - induction H.
+    + reflexivity.
+    + simpl. rewrite -> p by assumption. auto.
+  - eapply forallb2_map. eapply forallb2_refl.
+    intro l. eapply eqb_refl.
+  - eapply forallb2_map. eapply forallb2_refl.
+    intro l. eapply eqb_refl.
+  - eapply forallb2_map. eapply forallb2_refl.
+    intro l. eapply eqb_refl.
+  - induction X.
+    + reflexivity.
+    + simpl. rewrite Nat.eqb_refl. rewrite -> p0 by assumption.
+      assumption.
+  - induction X.
+    + reflexivity.
+    + simpl. rewrite Nat.eqb_refl.
+      destruct p as [e1 e2].
+      rewrite -> e1 by assumption. rewrite -> e2 by assumption.
+      assumption.
+  - induction X.
+    + reflexivity.
+    + simpl. rewrite -> Nat.eqb_refl.
+      destruct p as [e1 e2].
+      rewrite -> e1 by assumption. rewrite -> e2 by assumption.
+      assumption.
+Qed.
+
 (** ** Behavior on mkApps and it_mkLambda_or_LetIn **  *)
 
 Lemma eq_term_upto_univ_mkApps Re Rle u1 l1 u2 l2 :
@@ -945,7 +990,6 @@ Proof.
       * eassumption.
     + cbn. reflexivity.
 Qed.
-
 
 Lemma eq_term_upto_univ_it_mkLambda_or_LetIn Re Rle Γ :
   RelationClasses.Reflexive Re ->

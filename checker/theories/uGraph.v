@@ -1,4 +1,4 @@
-Require Import Nat Bool String BinInt List Relations Lia.
+Require Import Nat Bool String BinInt List Relations Lia ssrbool.
 Require Import MSetFacts MSetProperties.
 From MetaCoq.Template Require Import utils config Universes monad_utils.
 From MetaCoq.Checker Require Import wGraph.
@@ -733,7 +733,7 @@ Proof.
     2:{ split. intros [[l [H1 H2]]|H]. exists l. split; tas.
         apply InA_In_eq, VSetFact.elements_iff in H1; tas.
         now apply EdgeSetFact.empty_iff in H.
-        intros [l [H1 H2]]. left. exists l. split. 
+        intros [l [H1 H2]]. left. exists l. split.
         apply InA_In_eq, VSetFact.elements_1; tas. tas. }
     rewrite VSet.fold_spec. generalize EdgeSet.empty.
     induction (VSet.elements uctx.1).
@@ -1321,6 +1321,13 @@ Section CheckLeq.
     || Universe.equal u1 u2
     || (try_leqb_universe_n 0 u1 u2 && try_leqb_universe_n 0 u2 u1).
 
+  Lemma check_eqb_universe_refl :
+    forall u, check_eqb_universe u u.
+  Proof.
+    intro u. unfold check_eqb_universe.
+    rewrite Universe.equal_refl.
+    rewrite ssrbool.orbT. reflexivity.
+  Qed.
 
   Definition check_gc_constraint (gc : good_constraint) :=
     negb check_univs || match gc with
@@ -1425,7 +1432,7 @@ Section CheckLeq2.
     destruct (gc_of_constraints uctx.2) as [ctrs|].
     symmetry; exact HG. contradiction HG.
   Qed.
-  
+
 
   Definition level_declared l := LevelSet.In l uctx.1.
 

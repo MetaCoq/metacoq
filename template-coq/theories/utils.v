@@ -231,7 +231,32 @@ Section Forallb2.
     | [], [] => true
     | _, _ => false
     end.
+
 End Forallb2.
+
+Lemma forallb2_refl :
+  forall A (R : A -> A -> bool),
+    (forall x, R x x) ->
+    forall l, forallb2 R l l.
+Proof.
+  intros A R R_refl l.
+  induction l.
+  - reflexivity.
+  - simpl. rewrite R_refl. assumption.
+Qed.
+
+Lemma forallb2_map :
+  forall A B (R : A -> A -> bool) f g (l : list B) (l' : list B),
+    forallb2 (fun x y => R (f x) (g y)) l l' ->
+    forallb2 R (map f l) (map g l').
+Proof.
+  intros A B R f g l l' h.
+  induction l in l', h |- *.
+  - destruct l'. 2: discriminate. reflexivity.
+  - destruct l'. 1: discriminate. simpl in *.
+    apply andP in h as [e1 e2]. rewrite e1. simpl.
+    eapply IHl. assumption.
+Qed.
 
 Program Fixpoint safe_nth {A} (l : list A) (n : nat | n < List.length l) : A :=
   match l with
@@ -2316,6 +2341,17 @@ Module NEL.
     induction l; cbn; rewrite ?H; congruence.
   Defined.
 
+  Lemma forallb2_refl :
+    forall (A : Set) (R : A -> A -> bool),
+      (forall x, R x x) ->
+      forall l, forallb2 R l l.
+  Proof.
+    intros A R R_refl l.
+    induction l.
+    - simpl. apply R_refl.
+    - simpl. rewrite R_refl. assumption.
+  Qed.
+
 End NEL.
 
 Definition non_empty_list := NEL.t.
@@ -2756,7 +2792,7 @@ Qed.
 Lemma forallb_impl {A} (p q : pred A) l :
   (forall x, In x l -> p x -> q x) -> forallb p l -> forallb q l.
 Proof.
-  intros H0 H1. eapply forallb_forall. intros x H2. 
+  intros H0 H1. eapply forallb_forall. intros x H2.
   eapply forallb_forall in H1; tea.
   now eapply H0.
 Qed.

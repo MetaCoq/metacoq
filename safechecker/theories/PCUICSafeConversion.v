@@ -507,89 +507,6 @@ Section Conversion.
     eapply R_aux_stateR. all: simpl. all: auto.
   Qed.
 
-  (* TODO MOVE *)
-  Lemma forallb2_refl :
-    forall A (R : A -> A -> bool),
-      (forall x, R x x) ->
-      forall l, forallb2 R l l.
-  Proof.
-    intros A R R_refl l.
-    induction l.
-    - reflexivity.
-    - simpl. rewrite R_refl. assumption.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma forallb2_map :
-    forall A B (R : A -> A -> bool) f g (l : list B) (l' : list B),
-      forallb2 (fun x y => R (f x) (g y)) l l' ->
-      forallb2 R (map f l) (map g l').
-  Proof.
-    intros A B R f g l l' h.
-    induction l in l', h |- *.
-    - destruct l'. 2: discriminate. reflexivity.
-    - destruct l'. 1: discriminate. simpl in *.
-      apply andP in h as [e1 e2]. rewrite e1. simpl.
-      eapply IHl. assumption.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma eq_prod_refl :
-    forall A B (eqA : A -> A -> bool) (eqB : B -> B -> bool),
-      (forall a, eqA a a) ->
-      (forall b, eqB b b) ->
-      forall p, eq_prod eqA eqB p p.
-  Proof.
-    intros A B eqA eqB eqA_refl eqB_refl [a b].
-    simpl. rewrite eqA_refl. apply eqB_refl.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma eqb_term_upto_univ_refl :
-    forall (eqb leqb : universe -> universe -> bool) t,
-      (forall u, eqb u u) ->
-      (forall u, leqb u u) ->
-      eqb_term_upto_univ eqb leqb t t.
-  Proof.
-    intros eqb leqb t eqb_refl leqb_refl.
-    induction t using term_forall_list_ind in leqb, leqb_refl |- *.
-    all: simpl.
-    all: rewrite ?Nat.eqb_refl, ?eq_string_refl, ?eq_inductive_refl.
-    all: repeat rewrite eq_prod_refl
-          by (eauto using eq_prod_refl, Nat.eqb_refl, eq_string_refl, eq_inductive_refl).
-    all: repeat lazymatch goal with
-         | ih : forall leqb, _ -> @?P leqb |- _ =>
-           rewrite ih by assumption ; clear ih
-         end.
-    all: simpl.
-    all: try solve [ eauto ].
-    - induction H.
-      + reflexivity.
-      + simpl. rewrite p by assumption. auto.
-    - eapply forallb2_map. eapply forallb2_refl.
-      intro l. eapply eqb_refl.
-    - eapply forallb2_map. eapply forallb2_refl.
-      intro l. eapply eqb_refl.
-    - eapply forallb2_map. eapply forallb2_refl.
-      intro l. eapply eqb_refl.
-    - induction X.
-      + reflexivity.
-      + simpl. rewrite Nat.eqb_refl. rewrite p0 by assumption.
-        assumption.
-    - induction X.
-      + reflexivity.
-      + simpl. rewrite Nat.eqb_refl.
-        destruct p as [e1 e2].
-        rewrite e1 by assumption. rewrite e2 by assumption.
-        assumption.
-    - induction X.
-      + reflexivity.
-      + simpl. rewrite Nat.eqb_refl.
-        destruct p as [e1 e2].
-        rewrite e1 by assumption. rewrite e2 by assumption.
-        assumption.
-  Qed.
-
   Definition leqb_term :=
     eqb_term_upto_univ (check_eqb_universe G) (check_leqb_universe G).
 
@@ -624,65 +541,6 @@ Section Conversion.
     now eapply global_ext_uctx_consistent.
   Qed.
 
-  Lemma leqb_term_refl :
-    forall t, leqb_term t t.
-  Proof.
-    intro t. eapply eqb_term_upto_univ_refl.
-  Admitted.
-
-  (* TODO MOVE *)
-  Lemma NEL_forallb2_refl :
-    forall (A : Set) (R : A -> A -> bool),
-      (forall x, R x x) ->
-      forall l, NEL.forallb2 R l l.
-  Proof.
-    intros A R R_refl l.
-    induction l.
-    - simpl. apply R_refl.
-    - simpl. rewrite R_refl. assumption.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma Level_equal_refl :
-    forall l, Level.equal l l.
-  Proof.
-    intros [].
-    all: unfold Level.equal.
-    all: simpl.
-    1-2: reflexivity.
-    - rewrite (ssreflect.iffRL (string_compare_eq s s)). all: auto.
-    - rewrite Nat.compare_refl. reflexivity.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma Universe_Expr_equal_refl :
-    forall e, Universe.Expr.equal e e.
-  Proof.
-    intro e. destruct e as [[] b]. all: simpl.
-    - reflexivity.
-    - apply eqb_reflx.
-    - rewrite eqb_reflx. rewrite Level_equal_refl. reflexivity.
-    - rewrite Level_equal_refl, eqb_reflx. reflexivity.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma universe_equal_refl :
-    forall u, Universe.equal u u.
-  Proof.
-    intro u. unfold Universe.equal. eapply NEL_forallb2_refl.
-    apply Universe_Expr_equal_refl.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma check_eqb_universe_refl :
-    forall u, check_eqb_universe G u u.
-  Proof.
-    intro u. unfold check_eqb_universe.
-    rewrite universe_equal_refl.
-    rewrite ssrbool.orbT. reflexivity.
-  Qed.
-
-  (* TODO MOVE *)
   Lemma eqb_term_refl :
     forall t, eqb_term t t.
   Proof.
@@ -1586,7 +1444,7 @@ Section Conversion.
       eapply hΣ'.
   Qed.
 
-  (* TODO MOVE *)
+  (* TODO (RE)MOVE *)
   Lemma destArity_eq_term_upto_univ :
     forall Re Rle Γ1 Γ2 t1 t2 Δ1 s1,
       eq_term_upto_univ Re Rle t1 t2 ->
@@ -1612,50 +1470,6 @@ Section Conversion.
       + eassumption.
       + constructor. all: assumption.
   Qed.
-
-  (* TODO MOVE *)
-  Lemma isWfArity_eq_term_upto_univ :
-    forall Re Rle Γ u v,
-      Reflexive Re ->
-      isWfArity typing Σ Γ u ->
-      eq_term_upto_univ Re Rle u v ->
-      ∥ isWfArity typing Σ Γ v ∥.
-  Proof.
-    intros Re Rle Γ u v Re_refl [Δ [s [e1 e2]]] e.
-    eapply destArity_eq_term_upto_univ in e1 as h.
-    2: eassumption. 2: eapply eq_context_upto_refl. 2: assumption.
-    destruct h as [Δ' [s' [h1 [[h2] h3]]]].
-    constructor. eexists _,_. split.
-    - eassumption.
-    - (* TODO NEED welltyped_eq_term *)
-      admit.
-  Admitted.
-
-  (* TODO MOVE *)
-  (* Lemma wellformed_eq_term_upto_univ :
-    forall Re Rle Γ u v,
-      Reflexive Re ->
-      wellformed Σ Γ u ->
-      eq_term_upto_univ Re Rle u v ->
-      wellformed Σ Γ v.
-  Proof.
-    intros Re Rle Γ u v Re_refl [h|[h]] e.
-    - left. admit.
-    - right.
-      eapply isWfArity_eq_term_upto_univ. all: eassumption.
-  Admitted.
-
-  (* TODO MOVE *)
-  Lemma wellformed_eq_term :
-    forall Γ u v,
-      wellformed Σ Γ u ->
-      eq_term Σ u v ->
-      wellformed Σ Γ v.
-  Proof.
-    intros Γ u v h e.
-    eapply wellformed_eq_term_upto_univ. all: try eassumption.
-    eapply eq_universe_refl.
-  Qed. *)
 
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)

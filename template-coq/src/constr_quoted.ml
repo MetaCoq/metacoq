@@ -185,8 +185,8 @@ struct
 
   let (tcbv, tcbn, thnf, tall, tlazy, tunfold) = (r_template_monad "cbv", r_template_monad "cbn", r_template_monad "hnf", r_template_monad "all", r_template_monad "lazy", r_template_monad "unfold")
 
-  let (tglobal_reference, tConstRef, tIndRef, tConstructRef) =
-    (r_base_reify "global_reference", r_base_reify "ConstRef", r_base_reify "IndRef", r_base_reify "ConstructRef")
+  let (tglobal_reference, tVarRef, tConstRef, tIndRef, tConstructRef) =
+    (r_base_reify "global_reference", r_base_reify "VarRef", r_base_reify "ConstRef", r_base_reify "IndRef", r_base_reify "ConstructRef")
 
   let pkg_specif = ["Coq";"Init";"Specif"]
   let texistT = resolve_symbol pkg_specif "existT"

@@ -187,6 +187,7 @@ Proof. unfold app_context; now rewrite app_nil_r. Qed.
 
 Definition string_of_gref gr : string :=
   match gr with
+  | VarRef s => "Variable " ++ s
   | ConstRef s => s
   | IndRef (mkInd s n) =>
     "Inductive " ++ s ++ " " ++ (string_of_nat n)

@@ -10,6 +10,8 @@ From MetaCoq.Checker Require Import WfInv Typing Weakening TypingWf
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICEquality
      PCUICUnivSubst PCUICTyping PCUICGeneration TemplateToPCUIC.
+From Equations Require Import Equations.
+Require Import Equations.Prop.DepElim.
 
 Require Import String.
 Local Open Scope string_scope.

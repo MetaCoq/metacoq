@@ -3,7 +3,7 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From MetaCoq.Template Require Import config utils Universes BasicAst AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICReflect
-                          PCUICLiftSubst PCUICUnivSubst PCUICEquality.
+                          PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICUtils.
 
 From MetaCoq Require Export LibHypsNaming.
 
@@ -13,6 +13,9 @@ Require Import Relation_Operators Lexicographic_Product Wf_nat.
 Require Import ssreflect.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
+
+From Equations Require Import Equations.
+Require Import Equations.Prop.DepElim.
 
 (** * Typing derivations
 
@@ -1447,13 +1450,21 @@ Proof.
 Defined.
 Hint Resolve typing_wf_local : wf.
 
+Derive Signature for All_local_env.
+
+Set Equations With UIP.
+Derive NoConfusion for context_decl.
+Derive NoConfusion for list.
+Derive NoConfusion for All_local_env.
+
 Lemma size_wf_local_app `{checker_flags} {Σ} (Γ Γ' : context) (Hwf : wf_local Σ (Γ ,,, Γ')) :
   wf_local_size Σ (@typing_size _) _ (wf_local_app _ _ _ Hwf) <=
   wf_local_size Σ (@typing_size _) _ Hwf.
 Proof.
   induction Γ' in Γ, Hwf |- *; try lia. simpl. lia.
-  depelim Hwf. simpl. unfold eq_rect_r. simpl. specialize (IHΓ' _ Hwf). lia.
-  specialize (IHΓ' _ Hwf). simpl. unfold eq_rect_r. simpl. lia.
+  depelim Hwf.
+  - inversion H0. subst. noconf H4. simpl. unfold eq_rect_r. simpl. specialize (IHΓ' _ Hwf). lia.
+  - inversion H0. subst. noconf H4. specialize (IHΓ' _ Hwf). simpl. unfold eq_rect_r. simpl. lia.
 Qed.
 
 Lemma typing_wf_local_size `{checker_flags} {Σ} {Γ t T}
@@ -1504,6 +1515,7 @@ Proof.
     lia.
 Qed.
 
+Derive Signature for Alli.
 
 (** *** An induction principle ensuring the Σ declarations enjoy the same properties.
     Also theads the well-formedness of the local context and the induction principle for it,
@@ -1642,7 +1654,7 @@ Proof.
    otherwise it takes forever to execure the "pose", for some reason *)
   pose (@Fix_F ({ Σ : _ & { wfΣ : wf Σ.1 & { Γ : context & { wfΓ : wf_local Σ Γ &
                           { t : term & { T : term & Σ ;;; Γ |- t : T }}}}}})) as p0.
-  specialize (p0 (lexprod (MR lt (fun Σ => globenv_size (fst Σ)))
+  specialize (p0 (dlexprod (MR lt (fun Σ => globenv_size (fst Σ)))
                             (fun Σ => MR lt (fun x => typing_size (projT2 (projT2 (projT2 (projT2 (projT2 x))))))))) as p.
   set(foo := existT _ Σ (existT _ wfΣ (existT _ Γ (existT _ wfΓ (existT _ t (existT _ _ H))))) : { Σ : _ & { wfΣ : wf Σ.1 & { Γ : context & { wfΓ & { t : term & { T : term & Σ ;;; Γ |- t : T }}}}}}).
   change Σ with (projT1 foo).
@@ -1653,7 +1665,7 @@ Proof.
   match goal with
     |- let foo := _ in @?P foo => specialize (p (fun x => P x))
   end.
-  forward p; [ | apply p; apply wf_lexprod; intros; apply measure_wf; apply lt_wf].
+  forward p; [ | apply p; apply wf_dlexprod; intros; apply measure_wf; apply lt_wf].
   clear p.
   clear Σ wfΣ Γ wfΓ t T H.
   intros (Σ & wfΣ & Γ & wfΓ & t & t0 & H). simpl.
@@ -1926,9 +1938,10 @@ Proof.
                  simpl. lia.
              --- red. destruct t1. unshelve eapply X14. all: eauto.
                  simpl. lia.
-          ** auto. right.
-             exists u. intuition.
+          ** right.
+             exists u. intuition eauto. unshelve eapply X14. all: eauto. lia.
 Qed.
+Print Assumptions typing_ind_env.
 
 
 Ltac my_rename_hyp h th :=

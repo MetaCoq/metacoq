@@ -335,7 +335,7 @@ Proof.
   apply typing_ind_env; intros * wfΣ Γ wfΓ *; simpl; intros; rewrite -> ?andb_and in *; try solve [intuition auto].
 
   - pose proof (nth_error_Some_length H).
-    elim (Nat.ltb_spec n #|Γ|); intuition. clear H0.
+    elim (Nat.ltb_spec n #|Γ|); intuition auto. all: try lia. clear H0.
     eapply (nth_error_All_local_env_over H) in X0 as [HΓ Hdecl].
     destruct lookup_wf_local_decl; cbn in *.
     destruct decl as [na [b|] ty]; cbn in *.
@@ -348,7 +348,7 @@ Proof.
        rewrite skipn_length; try lia.
        now have->: #|Γ| - S n + S n = #|Γ| by lia.
 
-  - intuition.
+  - intuition auto.
     generalize (closedn_subst [u] #|Γ| 0 B). rewrite Nat.add_0_r.
     move=> Hs. apply: Hs => /=. rewrite H => //.
     rewrite Nat.add_1_r. auto.
@@ -357,11 +357,11 @@ Proof.
     eapply lookup_on_global_env in H; eauto.
     destruct H as [Σ' [HΣ' IH]].
     repeat red in IH. destruct decl, cst_body. simpl in *.
-    rewrite -> andb_and in IH. intuition.
+    rewrite -> andb_and in IH. intuition auto.
     eauto using closed_upwards with arith.
     simpl in *.
     repeat red in IH. destruct IH as [s Hs].
-    rewrite -> andb_and in Hs. intuition.
+    rewrite -> andb_and in Hs. intuition auto.
     eauto using closed_upwards with arith.
 
   - rewrite closedn_subst_instance_constr.
@@ -420,7 +420,7 @@ Proof.
     eapply closedn_lift_inv in H1; eauto. lia.
     subst types.
     now rewrite app_context_length fix_context_length in H0.
-    eapply nth_error_all in H; eauto. simpl in H. intuition. toProp.
+    eapply nth_error_all in H; eauto. simpl in H. intuition auto. toProp.
     subst types. rewrite app_context_length in H0.
     rewrite Nat.add_comm in H0.
     now eapply closedn_lift_inv in H0.
@@ -433,7 +433,7 @@ Proof.
     subst types.
     now rewrite -> app_context_length, fix_context_length in H1.
     eapply (nth_error_all) in H; eauto. simpl in *.
-    intuition. toProp.
+    intuition auto. toProp.
     subst types. rewrite app_context_length in H1.
     rewrite Nat.add_comm in H1.
     now eapply closedn_lift_inv in H1.

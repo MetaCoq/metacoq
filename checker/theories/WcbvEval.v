@@ -8,6 +8,9 @@ From MetaCoq.Checker Require Import WfInv Typing.
 Set Asymmetric Patterns.
 Require Import ssreflect ssrbool.
 
+Require Import Equations.Prop.DepElim.
+Require Import ssreflect.
+
 Local Ltac inv H := inversion H; subst.
 
 (* TODO fix lookup env *)
@@ -526,12 +529,16 @@ Section Wcbv.
   (*   eapply mkApps_nisApp in x => //; intuition subst; auto. eauto. *)
   (* Qed. *)
 
+  Derive Signature for All2.
+
   Lemma eval_atom_inj t t' : atom t -> eval t t' -> t = t'.
   Proof.
     intros Ha H; depind H; try solve_discr'; try now easy.
-    eapply atom_mkApps in Ha; intuition subst. discriminate.
-    eapply atom_mkApps in Ha; intuition subst. now depelim a.
+    - eapply atom_mkApps in Ha; intuition subst. discriminate.
+    - eapply atom_mkApps in Ha; intuition subst. now depelim a.
   Qed.
+
+  Derive Signature for eval.
 
   Lemma eval_LetIn {n b ty t v} :
     eval (tLetIn n b ty t) v ->
@@ -539,9 +546,9 @@ Section Wcbv.
       eval b b' * eval (t {0 := b'}) v.
   Proof.
     intros H; depind H; try solve_discr'; try now easy.
-    eapply mkApps_nisApp in x => //; intuition subst; auto. discriminate.
-    eapply mkApps_nisApp in x => //; intuition subst; auto.
-    now depelim a.
+    - symmetry in H1. apply mkApps_nisApp in H1 => //; intuition subst; auto.      discriminate.
+    - symmetry in H0. eapply mkApps_nisApp in H0 => //; intuition subst; auto.
+      now depelim a.
   Qed.
 
   Lemma eval_Const {c u v} :
@@ -553,10 +560,10 @@ Section Wcbv.
                  end.
   Proof.
     intros H; depind H; try solve_discr'; try now easy.
-    exists decl. intuition auto. now rewrite e.
-    exists decl. intuition auto. now rewrite e.
-    eapply mkApps_nisApp in x => //; intuition subst; auto. discriminate.
-    eapply mkApps_nisApp in x => //; intuition subst; auto. now depelim a.
+    - exists decl. intuition auto. now rewrite e.
+    - exists decl. intuition auto. now rewrite e.
+    - symmetry in H1. eapply mkApps_nisApp in H1 => //; intuition subst; auto.     discriminate.
+    - symmetry in H0. eapply mkApps_nisApp in H0 => //; intuition subst; auto.     now depelim a.
   Qed.
 
   (* Lemma eval_mkApps_tCoFix mfix idx l v : *)

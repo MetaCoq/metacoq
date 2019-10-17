@@ -2,7 +2,9 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From MetaCoq.Template Require Import config utils Ast AstUtils Induction utils LiftSubst UnivSubst.
-From MetaCoq.Checker Require Import Typing TypingWf Generation WeakeningEnv Closed Weakening.
+From MetaCoq.Checker Require Import Typing TypingWf Generation WeakeningEnv Closed Weakening Reflect.
+From Equations Require Import Equations.
+Require Import Equations.Prop.DepElim.
 Require Import ssreflect.
 
 (** * Substitution lemmas for typing derivations. *)
@@ -1112,11 +1114,11 @@ Proof.
   (* induction H using red1_ind_all in |- *; intros Γ0 Γ' Γ'' HeqΓ0 wfΓ Hs; try subst Γ; simpl; *)
   (*   autorewrite with subst; auto; *)
   (*   try solve [  econstructor; try eapply IHred1; try inv wfM; eauto; eauto ]. *)
-  - autorewrite with subst. rewrite distr_subst; auto.
+  (* - autorewrite with subst. rewrite distr_subst; auto.
     eapply red_beta.
 
   - autorewrite with subst. rewrite distr_subst; auto.
-    eapply red_zeta.
+    eapply red_zeta. *)
 
   - pose proof (subst_length _ _ _ _ Hs).
     elim (leb_spec_Set); intros Hn.
@@ -1779,7 +1781,8 @@ Proof.
       apply All_local_env_app_inv; intuition auto.
       clear -sub wfsubs a.
       induction ctx; try constructor; depelim a.
-      -- rewrite subst_context_snoc.
+      -- inversion H0. subst. noconf H4.
+         rewrite subst_context_snoc.
          unfold snoc.
          econstructor; auto.
          eapply IHctx. eapply a.
@@ -1790,7 +1793,8 @@ Proof.
          apply All_local_env_app_inv. split; auto.
          eapply IHctx. eapply a.
          now rewrite subst_context_app Nat.add_0_r app_context_assoc app_length in t0.
-      -- rewrite subst_context_snoc.
+      -- inversion H0. subst. noconf H4.
+         rewrite subst_context_snoc.
          constructor; auto.
          ++ eapply IHctx. eapply a.
          ++ simpl.

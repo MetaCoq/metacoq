@@ -2,8 +2,10 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega Lia.
 From MetaCoq.Template Require Import config utils Ast AstUtils Induction utils LiftSubst UnivSubst.
-From MetaCoq.Checker Require Import LibHypsNaming Typing TypingWf WeakeningEnv Closed.
+From MetaCoq.Checker Require Import LibHypsNaming Typing TypingWf WeakeningEnv Closed Reflect.
 Require Import ssreflect ssrbool.
+Require Import Equations.Prop.DepElim.
+Require Import ssreflect.
 
 (** * Weakening lemmas for typing derivations.
 
@@ -982,6 +984,8 @@ Proof.
   rewrite IHctx'. destruct a as [na [b|] ty]; reflexivity.
 Qed.
 
+Derive Signature for All_local_env_over.
+
 Lemma weakening_typing `{cf : checker_flags} Σ Γ Γ' Γ'' (t : term) :
   wf Σ.1 ->
   wf_local Σ (Γ ,,, Γ') ->
@@ -1252,6 +1256,7 @@ Proof.
       clear -wf a.
       induction ctx; try constructor; depelim a.
       -- rewrite lift_context_snoc.
+         inversion H. subst. noconf H3.
          constructor; auto.
          eapply IHctx. eapply a.
          simpl. destruct tu as [u tu]. exists u.
@@ -1263,6 +1268,7 @@ Proof.
          specialize (t0 eq_refl). simpl in t0.
          rewrite app_context_length lift_context_app app_context_assoc Nat.add_0_r in t0. apply t0.
       -- rewrite lift_context_snoc.
+         inversion H. subst. noconf H3.
          constructor; auto.
          ++ eapply IHctx. eapply a.
          ++ simpl.

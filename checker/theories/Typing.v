@@ -4,7 +4,11 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia ss
 From Coq Require Import String Wf Wellfounded Relation_Definitions Relation_Operators Lexicographic_Product Wf_nat.
 
 From MetaCoq.Template Require Import config utils Ast AstUtils Induction LiftSubst UnivSubst.
-From MetaCoq.Checker Require Import LibHypsNaming.
+From MetaCoq.Checker Require Import LibHypsNaming Reflect.
+
+From Equations Require Import Equations.
+Require Import Equations.Prop.DepElim.
+Require Import ssreflect.
 
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -1571,14 +1575,25 @@ Proof.
 Defined.
 Hint Resolve typing_wf_local : wf.
 
+Set Equations With UIP.
+Derive Signature for All_local_env.
+
 Lemma size_wf_local_app `{checker_flags} {Σ} (Γ Γ' : context) (Hwf : wf_local Σ (Γ ,,, Γ')) :
   wf_local_size Σ (@typing_size _) _ (wf_local_app _ _ _ Hwf) <=
   wf_local_size Σ (@typing_size _) _ Hwf.
 Proof.
-  induction Γ' in Γ, Hwf |- *; try lia. simpl. lia.
-  depelim Hwf. simpl. unfold eq_rect_r. simpl. specialize (IHΓ' _ Hwf). lia.
+  induction Γ' in Γ, Hwf |- *; try lia.
+  - simpl. lia.
+  - depelim Hwf.
+    (* + inversion H0. subst.
+      noconf H4. simpl in H1. unfold ",,,", ",," in H1.
+      noconf H1. simpl in H1. noconf H1.
+      simpl.
+     simpl. unfold eq_rect_r. simpl. specialize (IHΓ' _ Hwf). lia.
   specialize (IHΓ' _ Hwf). simpl. unfold eq_rect_r. simpl. lia.
-Qed.
+Qed. *)
+(* We need UIP on term and all, but it's only proved in PCUICReflect *)
+Admitted.
 
 Lemma typing_wf_local_size `{checker_flags} {Σ} {Γ t T}
       (d :Σ ;;; Γ |- t : T) :
@@ -2081,7 +2096,7 @@ Proof.
              --- red. destruct t1. unshelve eapply X14. all: eauto.
                  simpl. lia.
           ** auto. right.
-             exists u. intuition. unshelve eapply X14; eauto. lia.
+             exists u. intuition.
 Qed.
 
 Ltac my_rename_hyp h th :=
@@ -2155,10 +2170,10 @@ Proof.
   - simpl. destruct n; simpl; congruence.
   - destruct n.
     + red. simpl. intro HH; apply some_inj in HH; rewrite <- HH; tas.
-    + apply IHX. 
-  - destruct n. 
+    + apply IHX.
+  - destruct n.
     + red. simpl. intro HH; apply some_inj in HH; rewrite <- HH; tas.
-    + apply IHX. 
+    + apply IHX.
 Qed.
 
 Lemma All_local_env_app_inv `{checker_flags} (P : context -> term -> option term -> Type) l l' :

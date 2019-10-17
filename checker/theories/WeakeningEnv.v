@@ -3,6 +3,8 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega Lia.
 From MetaCoq.Template Require Import config utils Ast AstUtils Induction LiftSubst.
 From MetaCoq.Checker Require Import LibHypsNaming Typing.
+Require Import Equations.Prop.DepElim.
+Require Import ssreflect.
 
 (** * Weakening lemmas w.r.t. the global environment *)
 

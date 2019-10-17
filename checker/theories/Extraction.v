@@ -32,6 +32,7 @@ Extraction Library Compare_dec.
 Extraction Library MSetList.
 
 (** From checker *)
+Extraction Library Reflect.
 Extraction Library LiftSubst.
 Extraction Library UnivSubst.
 Extraction Library monad_utils.

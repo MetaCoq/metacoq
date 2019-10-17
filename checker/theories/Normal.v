@@ -7,6 +7,8 @@ Require Import String.
 Require Import ssreflect.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
+Require Import Equations.Prop.DepElim.
+Require Import ssreflect.
 
 Section Normal.
   Context (Σ : global_env).

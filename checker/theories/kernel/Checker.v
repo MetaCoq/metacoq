@@ -5,6 +5,8 @@ From MetaCoq.Template Require Import config Ast AstUtils monad_utils utils
      Induction LiftSubst UnivSubst.
 From MetaCoq.Checker Require Import Typing uGraph.
 Import MonadNotation.
+Require Import Equations.Prop.DepElim.
+Require Import ssreflect.
 
 (** * Coq type-checker for kernel terms
 

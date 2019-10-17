@@ -3,6 +3,8 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From MetaCoq.Template Require Import config utils Ast AstUtils.
 Require Import ssreflect ssrbool.
+Require Import Equations.Prop.DepElim.
+Require Import ssreflect.
 
 (** * Inversion lemmas for the well-formedness judgement *)
 

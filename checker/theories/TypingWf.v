@@ -4,6 +4,8 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From MetaCoq.Template Require Import config utils Ast AstUtils Induction LiftSubst UnivSubst.
 From MetaCoq.Checker Require Import Typing.
 Require Import ssreflect.
+Require Import Equations.Prop.DepElim.
+Require Import ssreflect.
 
 Set Asymmetric Patterns.
 
@@ -351,7 +353,7 @@ Qed.
 
 Lemma wf_it_mkProd_or_LetIn `{checker_flags} Σ Γ (wfΓ : wf_local Σ Γ)
   : All_local_env_over typing
-  (fun (Σ : global_env_ext) (Γ : context) (_ : wf_local Σ Γ) 
+  (fun (Σ : global_env_ext) (Γ : context) (_ : wf_local Σ Γ)
      (t T : term) (_ : Σ;;; Γ |- t : T) => Ast.wf t /\ Ast.wf T) Σ
          Γ wfΓ
 -> forall t, Ast.wf t -> Ast.wf (it_mkProd_or_LetIn Γ t).

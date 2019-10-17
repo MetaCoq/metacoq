@@ -115,7 +115,7 @@ Lemma eq_var (x y:var) : {x=y}+{x<>y}.
 Defined.
 
 Inductive form :=
-| Var (x:var) | Fa | Imp (f1 f2:form) | And (f1 f2:form) | Or (f1 f2:form).
+| Var (x:var) | Fa | Tr | Imp (f1 f2:form) | And (f1 f2:form) | Or (f1 f2:form).
 
 Lemma eq_form (f1 f2:form) : {f1=f2}+{f1<>f2}.
 revert f2; induction f1; destruct f2;
@@ -145,7 +145,7 @@ Record seq := mkS { hyps : list form; concl : form }.
 
 Fixpoint size f :=
   match f with
-  | Fa => 1
+  | Fa | Tr => 1
   | Var _ => 1
   | Imp f1 f2 => S (size f1 + size f2)
   | And f1 f2 => S (size f1 + size f2)
@@ -165,6 +165,7 @@ Definition is_leaf s :=
 
 Class Propositional_Logic prop :=
   { Pfalse : prop;
+    Ptrue : prop;
     Pand : prop -> prop -> prop ;
     Por : prop -> prop -> prop ;
     Pimpl : prop -> prop -> prop}.
@@ -173,6 +174,7 @@ Class Propositional_Logic prop :=
 Fixpoint semGen A `{Propositional_Logic A} f (l:var->A) :=
    match f with
   | Fa => Pfalse
+  | Tr => Ptrue
   | Var x => l x
   | Imp a b => Pimpl (semGen A a l) (semGen A b l)
   | And a b => Pand (semGen A a l) (semGen A b l)
@@ -180,7 +182,7 @@ Fixpoint semGen A `{Propositional_Logic A} f (l:var->A) :=
   end.
 
 Instance Propositional_Logic_Prop : Propositional_Logic Prop :=
-  {| Pfalse := False; Pand := and; Por := or; Pimpl := fun A B => A -> B |}.
+  {| Pfalse := False; Ptrue := True; Pand := and; Por := or; Pimpl := fun A B => A -> B |}.
 
 Definition sem := semGen Prop.
 
@@ -209,12 +211,11 @@ apply orb_true_elim in H; destruct H.
   destruct (eq_form (Var x) cl); [subst cl; trivial|discriminate].
 
   destruct H0.
-
+  destruct (eq_form Tr cl);[subst cl; trivial|discriminate].
   destruct (eq_form (Imp a1 a2) cl);[subst cl; trivial|discriminate].
   destruct (eq_form (And a1 a2) cl);[subst cl; trivial|discriminate].
   destruct (eq_form (Or a1 a2) cl);[subst cl; trivial|discriminate].
 Qed.
-
 
 Definition subgoal := list (list seq).
 
@@ -235,7 +236,7 @@ Definition on_hyp h rh cl :=
   | Imp a b => (mkS (b::rh) cl:: mkS rh a ::nil) :: nil
   | And a b => (mkS(a::b::rh)cl::nil)::nil
   | Or a b => (mkS(a::rh)cl::mkS(b::rh)cl::nil)::nil
-  | (Var _|Fa) => nil
+  | (Var _|Tr|Fa) => nil
   end.
 
 Definition on_hyps s : subgoal :=
@@ -353,6 +354,7 @@ unfold seq_size, on_hyp.
 destruct h1; simpl.
  contradiction.
  contradiction.
+ contradiction.
 
  destruct 1 as [? | []]; subst ls; simpl.
  destruct 1 as [?| [? | []]]; subst sg; simpl.
@@ -393,6 +395,7 @@ unfold decomp_step; simpl.
 destruct cl; simpl.
  apply on_hyps_size.
 
+ apply on_hyps_size.
  apply on_hyps_size.
 
  destruct 1 as [? | []]; subst ls; simpl.
@@ -477,6 +480,7 @@ Lemma step_sound s :
   destruct s as (h,cl); simpl.
   unfold decomp_step; simpl.
   destruct cl; simpl; intros; try contradiction.
+  apply on_hyps_sound; trivial.
   apply on_hyps_sound; trivial.
   apply on_hyps_sound; trivial.
 
@@ -633,7 +637,7 @@ Inductive well_prop Σ Γ : term -> Type :=
       well_prop Σ Γ (tOr A B)
 
 | well_prop_False : well_prop Σ Γ MFalse
-(* | well_prop_True : well_prop Σ Γ MTrue *) (* TODO *)
+| well_prop_True : well_prop Σ Γ MTrue
 .
 
 (* TODO MOVE *)
@@ -995,10 +999,16 @@ Equations reify (Σ : global_env_ext) (Γ : context) (P : term) : option form
             | [] => ret Fa ;
             | _ => None
             } ;
-          | right _ => None
-          }
+      | right _
+          with string_dec ind.(inductive_mind) "Coq.Init.Logic.True" := {
+          | left e2 with args := {
+            | [] => ret Tr ;
+            | _ => None
+            } ;
+              | right _ => None
+       }
         }
-      } ;
+      }} ;
     | tProd na A B =>
       af <- reify Σ Γ A ;;
       bf <- reify Σ Γ (subst0 [tRel 0] B) ;;
@@ -1033,13 +1043,12 @@ Next Obligation.
 Qed.
 
 Instance Propositional_Logic_MetaCoq : Propositional_Logic term :=
-  {| Pfalse := MFalse; Pand := fun P Q => mkApps Mand [P;Q];
+  {| Pfalse := MFalse; Ptrue := MTrue; Pand := fun P Q => mkApps Mand [P;Q];
      Por := fun P Q => mkApps Mor [P;Q]; Pimpl := fun P Q => tImpl P Q |}.
 
 Definition Msem := semGen term.
 
 (* To Show : forall f l, Unquote (Msem f l) = sem f (fun x => Unquote (v x)) *)
-
 
 Definition can_val (v : var) : term := tRel v.
 
@@ -1136,6 +1145,9 @@ Proof.
   - exists Fa. split.
     + simp reify. reflexivity.
     + reflexivity.
+  - exists Tr. split.
+    + simp reify. reflexivity.
+    + reflexivity.
 Qed.
 
 
@@ -1173,18 +1185,6 @@ Section Plugin.
     match n with O => []
             | S n => cdecl_Type MProp :: Prop_ctx n
     end.
-
-  (* Tactic Notation "tauto_tactic" ident(P0) ident(P1) ident(P2) := *)
-  (*   clear; let H := fresh "H" in *)
-  (*          match goal with | |- ?T => *)
-  (*             intros P0 P1 P2; *)
-  (*             let k x := *)
-  (*                 pose proof (let Mphi := extract_form x 0 in inhabit_formula (Prop_ctx (snd Mphi)) (fst Mphi) [P2;P1;P0]) as H; *)
-  (*                 compute in H *)
-  (*               in *)
-  (*                 quote_term T k *)
-  (*          end; first [match goal with | H : True |- _ => fail 2 "Error : not solvable" end |  *)
-  (*                      exact H ]. *)
 
   Ltac tauto_aux k l :=
     match goal with | |- forall X:Prop, _ => 

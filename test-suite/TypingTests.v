@@ -115,13 +115,13 @@ End Test4.
 Module Test5.
 
   (** A function defined using measure or well-founded relation **)
-  Function Plus1 (n: nat) {measure id n} : nat :=
+  (* Function Plus1 (n: nat) {measure id n} : nat :=
     match n with
     | 0 => 1
     | S p => S (Plus1 p)
     end.
   - intros. unfold id. abstract omega.
-  Defined.
+  Defined. *)
 
   (* Time Template Check Plus1. *)
   (* Time Template Check Coq.ZArith.BinInt.Z.succ_pred. (* -> 16 s *) *)
@@ -131,14 +131,14 @@ Module Test5.
 
   (* (* Too long with universes on *) *)
   (* Quote Recursively Definition p_Plus1 := Plus1. *)
-  
+
   (* Definition term := Plus1. *)
   (* Definition ast := p_Plus1. *)
   (* Set Printing Universes. *)
   (* (** Check typing *) *)
-  
+
   (* (* Yay! Typechecking an actually non-trivial term. (173s) *) *)
- 
+
   (* Make Definition inferred_type := ltac:(interp_infer ast). *)
   (* Definition inferred_type' := Eval cbv delta in inferred_type. *)
   (* Print inferred_type'. *)
@@ -153,19 +153,19 @@ Definition f1 := (forall (A:Type@{i}) (B: Prop), A -> B -> A).
 Definition f2 := (forall (A:Type@{i}) (B: Prop), A -> B -> B).
 (* : Prop *)
 
-Quote Definition f1' := (forall (A:Type@{i}) (B: Prop), A -> B -> A). 
+Quote Definition f1' := (forall (A:Type@{i}) (B: Prop), A -> B -> A).
 
 Eval lazy in infer' (empty_ext []) nil f1'.
 
-Quote Definition f2' := (forall (A:Type@{i}) (B: Prop), A -> B -> B). 
+Quote Definition f2' := (forall (A:Type@{i}) (B: Prop), A -> B -> B).
 
 Eval lazy in infer' (empty_ext []) nil f2'.
 
 Definition f := (forall (A:Type@{i}) (B: Type@{j}), A -> B -> A).
 (* : Type@{i+1, j+1} *)
 
-Quote Definition f' := (forall (A:Type@{i}) (B:Type@{j}), A -> B -> A). 
+Quote Definition f' := (forall (A:Type@{i}) (B:Type@{j}), A -> B -> A).
 
-Quote Definition f'' := (forall (B: Type@{j}), B -> B). 
+Quote Definition f'' := (forall (B: Type@{j}), B -> B).
 
 Eval lazy in infer' (empty_ext []) nil f'.

@@ -1162,15 +1162,19 @@ Section Plugin.
 
   Transparent reify. 
 
+  Inductive NotSolvable (s: string) : Prop := notSolvable: NotSolvable s.
+
+  Local Open Scope string_scope.
+
   Definition inhabit_formula gamma Mphi Gamma :
     match reify (empty_ext []) gamma Mphi with
       Some phi => 
       match tauto (Top.size phi) {| hyps := []; concl := phi |} with 
         Valid => sem (concl {| hyps := []; concl := phi |}) (can_val_Prop Gamma)
-      | _ => True end 
-    | None => True end.
-    destruct (reify (empty_ext []) gamma Mphi); try exact I.
-    destruct (tauto (Top.size f) {| hyps := []; concl := f |}) eqn : e ; try exact I.
+      | _ => NotSolvable "not a valid formula" end 
+    | None => NotSolvable "not a formaula" end.
+    destruct (reify (empty_ext []) gamma Mphi); try exact (notSolvable _).
+    destruct (tauto (Top.size f) {| hyps := []; concl := f |}) eqn : e; try exact (notSolvable _).
     exact (tauto_sound (Top.size f) (mkS [] f) e (can_val_Prop Gamma) (trivial_hyp [] _)).
   Defined.
 
@@ -1195,8 +1199,7 @@ Section Plugin.
 
   Ltac Mtauto l T H :=
     let k x :=
-        pose proof (let Mphi := extract_form x 0 in inhabit_formula (Prop_ctx (snd Mphi)) (fst Mphi) l) as H;
-        compute in H
+        pose proof (let Mphi := extract_form x 0 in inhabit_formula (Prop_ctx (snd Mphi)) (fst Mphi) l) as H; compute in H
       in
         quote_term T k.
             
@@ -1208,8 +1211,8 @@ Section Plugin.
                                         (@nil Prop) end;
     let H := fresh "H" in
     Mtauto L ltac:(eval compute in P) H;
-    first [match goal with | H : True |- _ => fail 2 "Error : not solvable" end |
-                                                   exact H].
+    first [match goal with | H : NotSolvable ?s |- _ => fail 2 s end
+         | exact H].
 
   Lemma test : forall (A B C:Prop), (A->C)->(B->C)->A\/B->C.
     tauto_tactic.

@@ -392,7 +392,8 @@ Module WeightedGraph (V : UsualOrderedType).
 
     Definition PosPaths x y := exists p : Paths x y, weight p > 0.
 
-    Definition acyclic_no_loop := forall x (p : Paths x x), weight p = 0.
+    Class acyclic_no_loop
+      := Build_acyclic_no_loop : forall x (p : Paths x x), weight p = 0.
 
     Definition acyclic_no_loop' := forall x, ~ (PosPaths x x).
 
@@ -1160,7 +1161,7 @@ Module WeightedGraph (V : UsualOrderedType).
       - intros [[x n] y] He; cbn. unfold lsp.
         simple refine (let H := lsp0_triangle_inequality
                                   (V G) (s G) x y n He _
-                       in _); [assumption| |clearbody H].
+                       in _); [|clearbody H].
         apply proj1 in HI. specialize (HI _ He); cbn in HI; intuition.
         destruct (lsp_s x) as [m Hm].
         + apply proj1 in HI. apply (HI _ He).
@@ -1282,8 +1283,6 @@ Module WeightedGraph (V : UsualOrderedType).
   End graph.
 
   Section graph2.
-    Existing Class invariants.
-    Existing Class acyclic_no_loop.
     Context (G : t) {HI : invariants G} {HG : acyclic_no_loop G}.
 
     Section subgraph.

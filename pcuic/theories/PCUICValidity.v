@@ -7,6 +7,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICUnivSubstitution PCUICConversion PCUICPrincipality.
 
 From Equations Require Import Equations.
+Require Import Equations.Prop.DepElim.
 Require Import ssreflect.
 
 Derive NoConfusion for term.

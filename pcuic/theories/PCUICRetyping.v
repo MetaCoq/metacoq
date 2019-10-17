@@ -7,6 +7,8 @@ Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 Import monad_utils.MonadNotation.
+From Equations Require Import Equations.
+Require Import Equations.Prop.DepElim.
 
 (** * Retyping
 

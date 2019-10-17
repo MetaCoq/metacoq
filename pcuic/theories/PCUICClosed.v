@@ -6,6 +6,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLif
      PCUICUnivSubst PCUICTyping PCUICWeakeningEnv.
 Require Import ssreflect ssrbool.
 
+Require Import Equations.Prop.DepElim.
+
 (** * Lemmas about the [closedn] predicate *)
 
 Definition closed_decl n d :=

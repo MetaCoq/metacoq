@@ -7,6 +7,9 @@ Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 
+From Equations Require Import Equations.
+Require Import Equations.Prop.DepElim.
+
 
 (** * Universe substitution
 

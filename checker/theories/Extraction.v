@@ -27,9 +27,31 @@ From MetaCoq.Checker Require All.
 Cd "src".
 
 (** From Coq: well-founded relations *)
-Extraction Library Wf.
+(* Extraction Library Wf.
 Extraction Library Compare_dec.
-Extraction Library MSetList.
+Extraction Library MSetList. *)
+
+Extraction Library Init.
+
+From Equations Require Import Equations.
+
+(* Should be in Equations *)
+Extraction Inline Equations.Prop.Classes.noConfusion.
+Extraction Inline Equations.Prop.Logic.eq_elim.
+Extraction Inline Equations.Prop.Logic.eq_elim_r.
+Extraction Inline Equations.Prop.Logic.transport.
+Extraction Inline Equations.Prop.Logic.transport_r.
+Extraction Inline Equations.Prop.Logic.False_rect_dep.
+Extraction Inline Equations.Prop.Logic.True_rect_dep.
+Extraction Inline Equations.Init.pr1.
+Extraction Inline Equations.Init.pr2.
+Extraction Inline Equations.Init.hidebody.
+Extraction Inline Equations.Prop.DepElim.solution_left.
+
+Extraction Library Signature.
+Extraction Library Classes.
+Extraction Library ssreflect.
+Extraction Library CMorphisms.
 
 (** From checker *)
 Extraction Library Reflect.

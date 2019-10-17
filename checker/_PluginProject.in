@@ -3,10 +3,10 @@
 -R theories MetaCoq.Checker
 
 # From Coq's stdlib
-# src/compare_dec.mli
-# src/compare_dec.ml
-# src/mSetList.mli
-# src/mSetList.ml
+src/compare_dec.mli
+src/compare_dec.ml
+src/mSetList.mli
+src/mSetList.ml
 
 # From Equations
 src/classes0.mli

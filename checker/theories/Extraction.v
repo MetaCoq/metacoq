@@ -27,9 +27,9 @@ From MetaCoq.Checker Require All.
 Cd "src".
 
 (** From Coq: well-founded relations *)
-(* Extraction Library Wf.
+Extraction Library Wf.
 Extraction Library Compare_dec.
-Extraction Library MSetList. *)
+Extraction Library MSetList.
 
 Extraction Library Init.
 

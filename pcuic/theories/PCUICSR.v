@@ -19,6 +19,9 @@ Require Import String.
 Set Asymmetric Patterns.
 Set SimplIsCbn.
 
+From Equations Require Import Equations.
+Require Import Equations.Prop.DepElim.
+
 Ltac rename_hyp h ht ::= my_rename_hyp h ht.
 
 (* Commented otherwise extraction would produce an axiom making the whole
@@ -67,41 +70,52 @@ Lemma type_tFix_inv {cf:checker_flags} (Σ : global_env_ext) Γ mfix idx T : wf 
   { T' & { rarg & {f & (unfold_fix mfix idx = Some (rarg, f)) * (Σ ;;; Γ |- f : T') * (Σ ;;; Γ |- T' <= T) }}}%type.
 Proof.
   intros wfΣ H. depind H.
-  unfold unfold_fix. rewrite e.
-  specialize (nth_error_all e a0) as [Hty ->].
-  destruct decl as [name ty body rarg]; simpl in *.
-  clear e.
-  eexists _, _, _. split. split. eauto.
-  eapply (substitution _ _ types _ [] _ _ wfΣ); simpl; eauto with wf.
-  - subst types. rename i into hguard. clear -a a0 hguard.
-    pose proof a0 as a0'. apply All_rev in a0'.
-    unfold fix_subst, fix_context. simpl.
-    revert a0'. rewrite <- (@List.rev_length _ mfix).
-    rewrite rev_mapi. unfold mapi.
-    assert (#|mfix| >= #|List.rev mfix|) by (rewrite List.rev_length; lia).
-    assert (He :0 = #|mfix| - #|List.rev mfix|) by (rewrite List.rev_length; auto with arith).
-    rewrite {3}He. clear He. revert H.
-    assert (forall i, i < #|List.rev mfix| -> nth_error (List.rev mfix) i = nth_error mfix (#|List.rev mfix| - S i)).
-    { intros. rewrite nth_error_rev. auto.
-      now rewrite List.rev_length List.rev_involutive. }
-    revert H.
-    generalize (List.rev mfix).
-    intros l Hi Hlen H.
-    induction H. simpl. constructor.
-    simpl. constructor. unfold mapi in IHAll.
-    simpl in Hlen. replace (S (#|mfix| - S #|l|)) with (#|mfix| - #|l|) by lia.
-    apply IHAll. intros. simpl in Hi. specialize (Hi (S i)). apply Hi. lia. lia.
-    clear IHAll. destruct p.
-    simpl in Hlen. assert ((Nat.pred #|mfix| - (#|mfix| - S #|l|)) = #|l|) by lia.
-    rewrite H0. rewrite simpl_subst_k. clear. induction l; simpl; auto with arith.
-    eapply type_Fix; auto.
-    simpl in Hi. specialize (Hi 0). forward Hi. lia. simpl in Hi.
-    rewrite Hi. f_equal. lia.
-  - subst types. rewrite simpl_subst_k. now rewrite fix_context_length fix_subst_length.
-    auto.
-  - destruct (IHtyping mfix idx wfΣ eq_refl) as [T' [rarg [f [[unf fty] Hcumul]]]].
-    exists T', rarg, f. intuition auto. eapply cumul_trans; eauto.
-    destruct b. eapply cumul_trans; eauto.
+  - unfold unfold_fix. rewrite e.
+    specialize (nth_error_all e a0) as [Hty ->].
+    destruct decl as [name ty body rarg]; simpl in *.
+    clear e.
+    eexists _, _, _. split.
+    + split.
+      * eauto.
+      * eapply (substitution _ _ types _ [] _ _ wfΣ); simpl; eauto with wf.
+        -- subst types. rename i into hguard. clear -a a0 hguard.
+           pose proof a0 as a0'. apply All_rev in a0'.
+           unfold fix_subst, fix_context. simpl.
+           revert a0'. rewrite <- (@List.rev_length _ mfix).
+           rewrite rev_mapi. unfold mapi.
+           assert (#|mfix| >= #|List.rev mfix|) by (rewrite List.rev_length; lia).
+           assert (He :0 = #|mfix| - #|List.rev mfix|) by (rewrite List.rev_length; auto with arith).
+           rewrite {3}He. clear He. revert H.
+           assert (forall i, i < #|List.rev mfix| -> nth_error (List.rev mfix) i = nth_error mfix (#|List.rev mfix| - S i)).
+           { intros. rewrite nth_error_rev. 1: auto.
+             now rewrite List.rev_length List.rev_involutive. }
+           revert H.
+           generalize (List.rev mfix).
+           intros l Hi Hlen H.
+           induction H.
+           ++ simpl. constructor.
+           ++ simpl. constructor.
+              ** unfold mapi in IHAll.
+                 simpl in Hlen. replace (S (#|mfix| - S #|l|)) with (#|mfix| - #|l|) by lia.
+                 apply IHAll.
+                 --- intros. simpl in Hi. specialize (Hi (S i)). apply Hi. lia.
+                 --- lia.
+              ** clear IHAll. destruct p.
+                 simpl in Hlen. assert ((Nat.pred #|mfix| - (#|mfix| - S #|l|)) = #|l|) by lia.
+                 rewrite H0. rewrite simpl_subst_k.
+                 --- clear. induction l; simpl; auto with arith.
+                 --- eapply type_Fix; auto.
+                     simpl in Hi. specialize (Hi 0). forward Hi.
+                     +++ lia.
+                     +++ simpl in Hi.
+                         rewrite Hi. f_equal. lia.
+    + subst types. rewrite simpl_subst_k.
+      * now rewrite fix_context_length fix_subst_length.
+      * auto.
+  - destruct (IHtyping wfΣ) as [T' [rarg [f [[unf fty] Hcumul]]]].
+    exists T', rarg, f. intuition auto.
+    + eapply cumul_trans; eauto.
+    + destruct b. eapply cumul_trans; eauto.
 Qed.
 
 (** The subject reduction property of the system: *)
@@ -118,7 +132,16 @@ Proof.
     | [H : (_ ;;; _ |- _ <= _) |- _ ] => idtac
     | _ =>
       depelim Hu; try solve [apply mkApps_Fix_spec in x; noconf x];
-      try solve [econstructor; eauto]
+      try solve [econstructor; eauto] ;
+      try solve [
+        match goal with
+        | h : _ = mkApps _ ?args |- _ =>
+          let e := fresh "e" in
+          apply (f_equal nApp) in h as e ; simpl in e ;
+          rewrite nApp_mkApps in e ; simpl in e ;
+          destruct args ; discriminate
+        end
+      ]
     end.
 
   - (* Rel *)
@@ -217,11 +240,10 @@ Proof.
       constructor; constructor ; auto. auto. }
 
   - (* Fixpoint unfolding *)
-    simpl in x.
     assert (args <> []) by (destruct args; simpl in *; congruence).
-    symmetry in x. apply mkApps_inj in x as [-> Hu]; auto.
+    apply mkApps_inj in H as [-> Hu]; auto.
     rewrite mkApps_nonempty; auto.
-    epose (last_nonempty_eq H). rewrite <- Hu in e1. rewrite <- e1.
+    epose (last_nonempty_eq H0). rewrite <- Hu in e1. rewrite <- e1.
     clear e1.
     specialize (type_mkApps_inv _ _ _ _ _ wfΣ typet) as [T' [U' [[appty spty] Hcumul]]].
     specialize (validity _ wfΣ _ wfΓ _ _ appty) as [_ vT'].
@@ -265,7 +287,8 @@ Proof.
   - (* Proj Constructor congruence *) admit.
   - (* Proj reduction *) admit.
   - (* Fix congruence *)
-    apply mkApps_Fix_spec in x. simpl in x. subst args.
+    symmetry in H.
+    apply mkApps_Fix_spec in H. simpl in H. subst args.
     simpl. destruct narg; discriminate.
   - (* Fix congruence *)
     admit.
@@ -461,7 +484,7 @@ Section SRContext.
         * invc H. invs wfΓ. destruct X2 as [s Ht]; exists s.
           eapply (weakening _ _ [_] _ (tSort _)); tas; cbnr.
           destruct p as [[? []]|[? []]]; constructor; cbn; tas.
-          now exists s. 
+          now exists s.
           eapply subject_reduction; tea; auto.
           exists s. eapply subject_reduction; tea; auto.
           econstructor; tea.
@@ -527,7 +550,7 @@ Section SRContext.
             eauto. }
         eapply X with (Γ ,,, fix_context mfix) ZZ.π1; tea. exact ZZ.π2.
       + eapply All_impl; tea.
-        intros; utils.rdestruct; eauto. 
+        intros; utils.rdestruct; eauto.
     - assert (XX: red1_ctx Σ.1 (Γ ,,, fix_context mfix) (Γ' ,,, fix_context mfix))
         by now eapply red1_ctx_app.
       econstructor; tea.
@@ -550,7 +573,7 @@ Section SRContext.
             eauto. }
         eapply X with (Γ ,,, fix_context mfix) ZZ.π1; tea. exact ZZ.π2.
       + eapply All_impl; tea.
-        intros; utils.rdestruct; eauto. 
+        intros; utils.rdestruct; eauto.
     - econstructor.
       + now eapply X2.
       + destruct X3 as [[[ctx [s [H1 H2]]] X3]|X3]; [left|right].
@@ -563,7 +586,7 @@ Section SRContext.
 
 
   Lemma wf_local_red1 {Σ Γ Γ'} :
-    wf Σ.1 -> 
+    wf Σ.1 ->
     red1_ctx Σ.1 Γ Γ' -> wf_local Σ Γ -> wf_local Σ Γ'.
   Proof.
     intro hΣ. induction 1; cbn in *.
@@ -578,9 +601,9 @@ Section SRContext.
         right; destruct X0; eexists; eapply subject_reduction1; tea.
         econstructor 2. eassumption. reflexivity.
     - intro H; inversion H; subst; constructor; cbn in *; auto.
-      + destruct X1 as [s Ht]. exists s. 
+      + destruct X1 as [s Ht]. exists s.
         eapply subject_reduction_ctx; tea.
-      + destruct X1 as [s Ht]. exists s. 
+      + destruct X1 as [s Ht]. exists s.
         eapply subject_reduction_ctx; tea.
       + eapply subject_reduction_ctx; tea.
   Qed.
@@ -595,7 +618,7 @@ Section SRContext.
 
 
   Lemma wf_local_red {Σ Γ Γ'} :
-    wf Σ.1 -> 
+    wf Σ.1 ->
     red_ctx Σ.1 Γ Γ' -> wf_local Σ Γ -> wf_local Σ Γ'.
   Proof.
     intros hΣ h. apply red_ctx_clos_rt_red1_ctx in h.

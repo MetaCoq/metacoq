@@ -13,6 +13,8 @@ Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 Local Set Keyed Unification.
 Set Asymmetric Patterns.
 
+Require Import Equations.Prop.DepElim.
+
 Derive NoConfusion for term.
 Derive Subterm for term.
 Derive Signature NoConfusion for All All2.
@@ -281,6 +283,8 @@ Section All2_local_env.
     end : pcuic.
 
   Ltac pcuic := eauto with pcuic.
+
+  Derive Signature for All2_local_env.
 
   Lemma All2_local_env_app':
     forall P (Γ Γ' Γ'' : context),
@@ -1220,16 +1224,20 @@ Section ParallelWeakening.
 
     - (* Contexts *)
       intros. subst.
-      eapply All2_local_env_over_app. auto.
-      eapply All2_local_env_over_app; pcuic.
-      eapply All2_local_env_app in X0; auto.
-      destruct X0.
-      induction a0; rewrite ?lift_context_snoc0; cbn; constructor; pcuic.
-      apply IHa0. now depelim predΓ'.
-      rewrite !app_context_length in H |- *. lia.
-      now rewrite !Nat.add_0_r.
-      apply IHa0; auto. now depelim predΓ'.
-      split; red; now rewrite !Nat.add_0_r.
+      eapply All2_local_env_over_app.
+      + eapply All2_local_env_over_app; pcuic.
+      + eapply All2_local_env_app in X0; auto.
+        destruct X0.
+        induction a0; rewrite ?lift_context_snoc0; cbn; constructor; pcuic.
+        * apply IHa0.
+          -- depelim predΓ'.
+             ++ hnf in H, H0. noconf H. noconf H0. assumption.
+             ++ hnf in H, H0. noconf H.
+          -- unfold ",,,". lia.
+        * now rewrite !Nat.add_0_r.
+        * apply IHa0; auto. depelim predΓ'.
+          all: hnf in H, H0. all: noconf H. noconf H0. assumption.
+        * split; red; now rewrite !Nat.add_0_r.
 
     - (* Beta *)
       specialize (forall_Γ _ (Γ'0,, vass na t0) eq_refl _ (Δ' ,, vass na t1) eq_refl heq_length _ _ X5).
@@ -1697,15 +1705,19 @@ Section ParallelSubstitution.
       eapply All2_local_env_app in X0 as [Xl Xr].
       2:{ rewrite !app_context_length. lia. }
       induction Xr; rewrite ?subst_context_snoc; constructor; pcuic. apply IHXr.
-      + depelim predΓ'. auto.
-      + depelim predΓ'. auto.
+      + depelim predΓ'. all: hnf in H, H0. all: noconf H. noconf H0. auto.
+      + depelim predΓ'. all: hnf in H, H0. all: noconf H. noconf H0. auto.
       + simpl in *. lia.
       + simpl in *.
         repeat red. rewrite !Nat.add_0_r. eapply p; eauto.
-      + depelim predΓ'. auto.
+      + depelim predΓ'. all: hnf in H, H0. all: noconf H.
+        noconf H0.
+        auto.
         simpl in *.
         repeat red. apply IHXr. simpl in *. pcuic. lia. lia.
-      + depelim predΓ'. auto.
+      + depelim predΓ'. all: hnf in H, H0. all: noconf H.
+        noconf H0.
+        auto.
         simpl in *. destruct p.
         split; repeat red.
         rewrite !Nat.add_0_r. simpl. eapply p; eauto.
@@ -1967,11 +1979,19 @@ Section ParallelSubstitution.
   Proof.
     intros wfΣ redM redN.
     pose proof (substitution_let_pred1 Σ Γ [vass na A] [] Δ [vass na' A'] [] [M] [M'] N N' wfΣ) as H.
-    forward H. constructor; auto with pcuic.
-    forward H by pcuic. constructor; pcuic. apply pred1_pred1_ctx in redN. depelim redN; pcuic.
-    simpl in H |- *. apply pred1_pred1_ctx in redN; pcuic. depelim redN; pcuic.
-    pose proof (pred1_pred1_ctx _ redN). depelim X.
-    apply H; pcuic. auto. constructor; pcuic.
+    forward H.
+    - constructor; auto with pcuic.
+      forward H by pcuic.
+      + constructor; pcuic. apply pred1_pred1_ctx in redN.
+        depelim redN. all: hnf in H, H0. all: noconf H.
+        noconf H0. pcuic.
+      + simpl in H |- *. apply pred1_pred1_ctx in redN; pcuic.
+        depelim redN. all: hnf in H, H0. all: noconf H.
+        noconf H0. pcuic.
+    - pose proof (pred1_pred1_ctx _ redN). depelim X.
+      all: hnf in H0, H1. all: noconf H0.
+      noconf H1.
+      apply H; pcuic. auto. constructor; pcuic.
   Qed.
 
   Lemma substitution0_let_pred1 {Σ Γ Δ na na' M M' A A' N N'} : wf Σ ->
@@ -1981,10 +2001,15 @@ Section ParallelSubstitution.
   Proof.
     intros wfΣ redM redN.
     pose proof (substitution_let_pred1 Σ Γ [vdef na M A] [] Δ [vdef na' M' A'] [] [M] [M'] N N' wfΣ) as H.
-    pose proof (pred1_pred1_ctx _ redN). depelim X. simpl in o.
-    forward H. pose proof (psubst_vdef Σ Γ Δ [] [] [] [] na na' M M' A A').
-    rewrite !subst_empty in X0. apply X0; pcuic. apply H; pcuic.
-    econstructor; auto with pcuic.
+    pose proof (pred1_pred1_ctx _ redN). depelim X.
+    all: hnf in H0, H1. all: noconf H0.
+    noconf H1.
+    simpl in o.
+    forward H.
+    - pose proof (psubst_vdef Σ Γ Δ [] [] [] [] na na' M M' A A').
+      rewrite !subst_empty in X0. apply X0; pcuic.
+    - apply H; pcuic.
+      econstructor; auto with pcuic.
   Qed.
 
 End ParallelSubstitution.

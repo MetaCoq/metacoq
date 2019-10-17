@@ -11,6 +11,9 @@ Set Asymmetric Patterns.
 
 Require Import ssreflect ssrbool.
 
+From Equations Require Import Equations.
+Require Import Equations.Prop.DepElim.
+
 Local Ltac inv H := inversion H; subst.
 
 (** * Weak-head call-by-value evaluation strategy.
@@ -423,6 +426,9 @@ Section Wcbv.
     destruct t; simpl; intuition auto; eapply implybT.
   Qed.
 
+  Derive Signature for All.
+  Derive Signature for eval.
+
   Lemma value_final e : value e -> eval e e.
   Proof.
     induction 1 using value_values_ind; simpl; auto using value.
@@ -445,7 +451,7 @@ Section Wcbv.
         easy.
       * now eapply eval_atom.
       * now eapply eval_atom.
-      * now eapply eval_atom. 
+      * now eapply eval_atom.
       * rewrite -mkApps_nested.
         eapply All_app in H0 as [Hl Hx]. depelim Hx.
         eapply All_app in X as [Hl' Hx']. depelim Hx'.
@@ -488,6 +494,17 @@ Section Wcbv.
   (*   - discriminate. *)
   (* Qed. *)
 
+  (* TODO MOVE *)
+  Lemma nApp_isApp_false :
+    forall u,
+      nApp u = 0 ->
+      isApp u = false.
+  Proof.
+    intros u e.
+    destruct u. all: simpl. all: try reflexivity.
+    discriminate.
+  Qed.
+
   Lemma eval_tRel n t :
     eval (tRel n) t ->
     (match option_map decl_body (nth_error Γ n) with
@@ -496,29 +513,46 @@ Section Wcbv.
      end).
   Proof.
     intros H; depind H; try rewrite e; try solve_discr; try now easy.
-    destruct (mkApps_elim f args).
-    change (tRel n) with (mkApps (tRel n) []) in x.
-    eapply mkApps_eq_inj in x => //. intuition subst. rewrite firstn_nil in H, IHeval1.
-    specialize (IHeval1 _ eq_refl). rewrite skipn_nil in e0. discriminate.
-    change (tRel n) with (mkApps (tRel n) []) in x.
-    eapply mkApps_eq_inj in x => //. intuition subst. specialize (IHeval _ eq_refl).
-    destruct option_map as [[o|]|] => //. depelim a. simpl in i. simpl. auto.
-    eapply mkApps_nisApp in x => //. intuition subst => //.
+    - destruct (mkApps_elim f args).
+      change (tRel n) with (mkApps (tRel n) []) in H1.
+      eapply mkApps_eq_inj in H1 => //. intuition subst.
+      rewrite firstn_nil in H, IHeval1.
+      specialize (IHeval1 _ _ eq_refl). rewrite skipn_nil in e0. discriminate.
+    - change (tRel n) with (mkApps (tRel n) []) in H0.
+      eapply mkApps_eq_inj in H0 => //.
+      + intuition subst.
+        specialize (IHeval _ _ eq_refl).
+        destruct option_map as [[o|]|] => //. depelim a. simpl in i.
+        simpl. auto.
+      + apply (f_equal nApp) in H0 as e. simpl in e.
+        rewrite nApp_mkApps in e. symmetry in e.
+        assert (nApp f = 0) as h by lia.
+        apply nApp_isApp_false in h. rewrite h. reflexivity.
   Qed.
 
   Lemma eval_tVar i t : eval (tVar i) t -> False.
   Proof.
     intros H; depind H; try solve_discr; try now easy.
-    eapply mkApps_nisApp in x => //; intuition subst; auto. discriminate.
-    eapply mkApps_nisApp in x => //; intuition subst; auto. depelim a. eauto.
+    - apply (f_equal nApp) in H1 as h. simpl in h.
+      rewrite nApp_mkApps in h. lia.
+    - apply (f_equal nApp) in H0 as h. simpl in h.
+      rewrite nApp_mkApps in h. depelim a.
+      + simpl in *. subst.
+        eapply IHeval. reflexivity.
+      + simpl in h. lia.
   Qed.
 
   Lemma eval_tEvar n l t : eval (tEvar n l) t -> False.
                           (* exists l', All2 eval l l' /\ (t = tEvar n l'). *)
   Proof.
     intros H; depind H; try solve_discr; try now easy.
-    eapply mkApps_nisApp in x => //; intuition subst; auto. discriminate.
-    eapply mkApps_nisApp in x => //; intuition subst; auto. eauto.
+    - apply (f_equal nApp) in H1 as h. simpl in h.
+      rewrite nApp_mkApps in h. lia.
+    - apply (f_equal nApp) in H0 as h. simpl in h.
+      rewrite nApp_mkApps in h. depelim a.
+      + simpl in *. subst.
+        eapply IHeval. reflexivity.
+      + simpl in h. lia.
   Qed.
 
   Lemma eval_atom_inj t t' : atom t -> eval t t' -> t = t'.
@@ -534,9 +568,13 @@ Section Wcbv.
       eval b b' * eval (t {0 := b'}) v.
   Proof.
     intros H; depind H; try solve_discr; try now easy.
-    eapply mkApps_nisApp in x => //; intuition subst; auto. discriminate.
-    eapply mkApps_nisApp in x => //; intuition subst; auto.
-    now depelim a.
+    - apply (f_equal nApp) in H1 as h. simpl in h.
+      rewrite nApp_mkApps in h. exfalso. lia.
+    - apply (f_equal nApp) in H0 as h. simpl in h.
+      rewrite nApp_mkApps in h. depelim a.
+      + simpl in *. subst.
+        eapply IHeval. reflexivity.
+      + simpl in h. exfalso. lia.
   Qed.
 
   Lemma eval_Const {c u v} :
@@ -548,10 +586,17 @@ Section Wcbv.
                  end.
   Proof.
     intros H; depind H; try solve_discr; try now easy.
-    exists decl. intuition auto. now rewrite e.
-    exists decl. intuition auto. now rewrite e.
-    eapply mkApps_nisApp in x => //; intuition subst; auto. discriminate.
-    eapply mkApps_nisApp in x => //; intuition subst; auto. now depelim a.
+    - exists decl. intuition auto. now rewrite e.
+    - exists decl. intuition auto. now rewrite e.
+    - apply (f_equal nApp) in H1 as h.
+      simpl in h. rewrite nApp_mkApps in h.
+      exfalso. lia.
+    - apply (f_equal nApp) in H0 as h.
+      simpl in h. rewrite nApp_mkApps in h.
+      destruct a.
+      + simpl in *. subst.
+        eapply IHeval. reflexivity.
+      + exfalso. simpl in h. lia.
   Qed.
 
   Lemma eval_mkApps_tCoFix mfix idx l v :
@@ -561,22 +606,23 @@ Section Wcbv.
     intros H.
     depind H; try solve_discr'.
     - destruct (mkApps_elim f [a]).
-      rewrite [tApp _ _](mkApps_nested f (firstn n l0) [a]) in x.
+      rewrite [tApp _ _](mkApps_nested f (firstn n l0) [a]) in H2.
       solve_discr'.
-      specialize (IHeval1 _ _ _ eq_refl).
+      specialize (IHeval1 _ _ _ _ eq_refl).
       firstorder eauto.
       solve_discr'.
     - destruct (mkApps_elim f args). solve_discr'.
-      specialize (IHeval1 _ _ _ eq_refl).
+      specialize (IHeval1 _ _ _ _ eq_refl).
       firstorder eauto. solve_discr.
     - destruct (mkApps_elim f args). solve_discr'.
-      specialize (IHeval _ _ _ eq_refl).
+      specialize (IHeval _ _ _ _ eq_refl).
       firstorder eauto. solve_discr.
     - destruct (mkApps_elim f [a]).
-      replace (tApp (mkApps f (firstn n l0)) a) with (mkApps f (firstn n l0 ++ [a])) in x.
+      replace (tApp (mkApps f (firstn n l0)) a)
+        with (mkApps f (firstn n l0 ++ [a])) in H1.
       2:now rewrite -mkApps_nested.
       solve_discr'.
-      specialize (IHeval1 _ _ _ eq_refl).
+      specialize (IHeval1 _ _ _ _ eq_refl).
       firstorder eauto. subst.
       exists (x ++ [a'])%list.
       split. eapply All2_app; auto.
@@ -618,9 +664,9 @@ Section Wcbv.
       * specialize (IHtv1 _ tv'1); try congruence. inv IHtv1.
         specialize (IHtv2 _ tv'2). subst.
         specialize (IHtv3 _ tv'3). now subst.
-      * rewrite [args](app_removelast_last a) in x.
+      * rewrite [args](app_removelast_last a) in H.
         destruct args; discriminate.
-        rewrite -mkApps_nested in x. simpl in x. injection x. intros. clear x.
+        rewrite -mkApps_nested in H. simpl in H. injection H. intros. clear H.
         subst.
         assert (eval (mkApps f0 (removelast args)) (mkApps (tFix mfix idx) (removelast args'))).
         eapply eval_fix_value. auto. admit.

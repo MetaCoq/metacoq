@@ -548,6 +548,10 @@ Fixpoint instantiate_params_subst params pars s ty :=
     end
   end.
 
+(* If [ty] is [Π params . B] *)
+(* and [⊢ pars : params] *)
+(* then [instantiate_params] is [B{pars}] *)
+
 Definition instantiate_params params pars ty :=
   match instantiate_params_subst (List.rev params) pars [] ty with
   | Some (s, ty) => Some (subst0 s ty)
@@ -651,17 +655,6 @@ Definition universes_decl_of_decl := on_udecl_decl (fun x => x).
 
 (* Definition LevelSet_add_list l := LevelSet.union (LevelSetProp.of_list l). *)
 
-Definition LevelSet_pair x y
-  := LevelSet.add y (LevelSet.singleton x).
-
-Lemma LevelSet_pair_In x y z :
-  LevelSet.In x (LevelSet_pair y z) -> x = y \/ x = z.
-Proof.
-  intro H. apply LevelSetFact.add_iff in H.
-  destruct H; [intuition|].
-  apply LevelSetFact.singleton_1 in H; intuition.
-Qed.
-
 Definition global_levels (Σ : global_env) : LevelSet.t
   := fold_right (fun decl lvls => LevelSet.union (monomorphic_levels_decl decl) lvls)
                 (LevelSet_pair Level.lSet Level.lProp) Σ.
@@ -696,6 +689,9 @@ Definition global_constraints (Σ : global_env) : constraints
                                 (monomorphic_constraints_decl decl) ctrs)
                ConstraintSet.empty Σ.
 
+Definition global_uctx (Σ : global_env) : ContextSet.t
+  := (global_levels Σ, global_constraints Σ).
+
 Definition global_ext_levels (Σ : global_env_ext) : LevelSet.t
   := LevelSet.union (levels_of_udecl (snd Σ)) (global_levels Σ.1).
 
@@ -703,6 +699,10 @@ Definition global_ext_constraints (Σ : global_env_ext) : constraints
   := ConstraintSet.union (constraints_of_udecl (snd Σ))
                          (global_constraints Σ.1).
 Coercion global_ext_constraints : global_env_ext >-> constraints.
+
+Definition global_ext_uctx (Σ : global_env_ext) : ContextSet.t
+  := (global_ext_levels Σ, global_ext_constraints Σ).
+
 
 Lemma prop_global_ext_levels Σ : LevelSet.In Level.prop (global_ext_levels Σ).
 Proof.

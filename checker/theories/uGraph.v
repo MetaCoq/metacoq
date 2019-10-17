@@ -1498,6 +1498,20 @@ Section CheckLeq2.
       destruct a as [[] []]; cbn; lia.
   Qed.
 
+  Lemma val_is_prop' u v :
+    (val v u = -1)%Z -> Universe.is_prop u.
+  Proof.
+    clear.
+    induction u.
+    - destruct a as [[] []]; cbnr; lia.
+    - intro H. cbn. rewrite val_cons in H.
+      apply andb_true_iff. split.
+      destruct a as [[] []]; cbn in *; try reflexivity; try lia.
+      apply IHu.
+      pose proof (val_minus_one u v).
+      lia.
+  Qed.
+
   Lemma val0_equal l1 l2 v :
     Level.equal l1 l2 -> val0 v l1 = val0 v l2.
   Proof.

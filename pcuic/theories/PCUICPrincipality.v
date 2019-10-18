@@ -181,6 +181,30 @@ Section Principality.
       red1 Σ Γ u v ->
       isArity u ->
       isArity v.
+  Proof.
+    intros Γ u v h a.
+    induction u in Γ, v, h, a |- *. all: try contradiction.
+    - dependent destruction h.
+      apply (f_equal nApp) in H as eq. simpl in eq.
+      rewrite nApp_mkApps in eq. simpl in eq.
+      destruct args. 2: discriminate.
+      simpl in H. discriminate.
+    - dependent destruction h.
+      + apply (f_equal nApp) in H as eq. simpl in eq.
+        rewrite nApp_mkApps in eq. simpl in eq.
+        destruct args. 2: discriminate.
+        simpl in H. discriminate.
+      + assumption.
+      + simpl in *. eapply IHu2. all: eassumption.
+    - dependent destruction h.
+      + simpl in *. admit.
+      + apply (f_equal nApp) in H as eq. simpl in eq.
+        rewrite nApp_mkApps in eq. simpl in eq.
+        destruct args. 2: discriminate.
+        simpl in H. discriminate.
+      + assumption.
+      + assumption.
+      + simpl in *. eapply IHu3. all: eassumption.
   Admitted.
 
   Lemma invert_cumul_arity_r :

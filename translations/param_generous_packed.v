@@ -276,7 +276,7 @@ Run TemplateProgram (TC <- Translate TC6 "equiv" ;;
 
 (* 244s (~ 4 min) to execute *)
 Check "go".
-Time
+(* Time
 Run TemplateProgram (H <- Implement TC7 "notUnivalence"
                      (exists A B, (equiv A B) × exists P, P A × ((P B) -> False)) ;;
                      tmPrint "done").
@@ -301,4 +301,4 @@ Next Obligation.
       refine ((true; (false; _)); tt). intro e; inversion e.
       intros [[[] [[] H]] _]. apply H; reflexivity.
   - cbn. intros [[[] [[] H]] _]. apply H; reflexivity.
-Defined.
+Defined. *)

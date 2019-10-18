@@ -5,7 +5,7 @@ From MetaCoq.Template Require Import config utils monad_utils.
 From MetaCoq.Erasure Require Import ELiftSubst ETyping EWcbvEval Extract Prelim
      ESubstitution EInversion EArities.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
-  PCUICWeakening PCUICSubstitution
+  PCUICWeakening PCUICSubstitution PCUICArities
   PCUICWcbvEval PCUICSR  PCUICInversion
   PCUICUnivSubstitution (* PCUICContextConversion *)
   PCUICUnivSubst PCUICWeakeningEnv.

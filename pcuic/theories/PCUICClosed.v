@@ -477,9 +477,9 @@ Proof.
            exists x1.
            clear -t X X0.
            revert t. generalize (cshape_args x1).
-           abstract (induction c; simpl; auto;
+           abstract(induction c; simpl; auto;
            destruct a as [na [b|] ty]; simpl in *; auto;
-           split; eauto; [apply IHc;apply t|apply X;simpl; auto;apply t]).
+           intuition eauto).
        --- simpl; intros. pose (onProjections X1 H0). simpl in *.
            destruct o0. constructor; auto. eapply Alli_impl; intuition eauto.
            unfold on_projection in *; simpl in *.

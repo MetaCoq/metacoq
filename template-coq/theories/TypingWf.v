@@ -537,7 +537,6 @@ Proof.
   - todo "simplify onConstructors"%string.
 Qed.
 
-(* TODO MOVE? Also dupplicate of PCUICClosed *)
 Lemma on_global_env_impl `{checker_flags} Σ P Q :
   (forall Σ Γ t T, on_global_env P Σ.1 -> P Σ Γ t T -> Q Σ Γ t T) ->
   on_global_env P Σ -> on_global_env Q Σ.
@@ -564,9 +563,9 @@ Proof.
            exists x1.
            clear -t X X0.
            revert t. generalize (cshape_args x1).
-           abstract (induction c; simpl; auto;
+           induction c; simpl; auto;
            destruct a as [na [b|] ty]; simpl in *; auto;
-           split; eauto; [apply IHc;apply t|apply X;simpl; auto;apply t]).
+           split; intuition eauto.
        --- simpl; intros. pose (onProjections X1 H0). simpl in *.
            destruct o0. constructor; auto. eapply Alli_impl; intuition eauto.
            unfold on_projection in *; simpl in *.

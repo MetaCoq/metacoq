@@ -7,7 +7,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICNormal PCUICSR
      PCUICGeneration PCUICReflect PCUICEquality PCUICInversion PCUICValidity
      PCUICWeakening PCUICPosition PCUICCumulativity PCUICSafeLemmata PCUICSN
-     PCUICPretty.
+     PCUICPretty PCUICArities.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeConversion.
 From Equations Require Import Equations.
 
@@ -233,7 +233,6 @@ Fixpoint string_of_conv_error Σ (e : ConversionError) : string :=
       "\ndo not have the same head when comparing for " ++
       string_of_conv_pb leq
   end.
-
 
 Definition string_of_type_error Σ (e : type_error) : string :=
   match e with
@@ -559,7 +558,7 @@ Section Typecheck.
   Defined.
 
 
-  Definition iscumul Γ := isconv_term RedFlags.default Σ HΣ Hφ G HG Γ Cumul.
+  Definition iscumul Γ := isconv_term Σ HΣ Hφ G HG Γ Cumul.
 
   Program Definition convert_leq Γ t u
           (ht : wellformed Σ Γ t) (hu : wellformed Σ Γ u)
@@ -1050,32 +1049,20 @@ Section Typecheck.
     change (eqb ind I = true) in H0.
     destruct (eqb_spec ind I) as [e|e]; [destruct e|discriminate].
     change (eqb (ind_npars d) par = true) in H1.
-    destruct (eqb_spec (ind_npars d) par) as [e|e]; [|discriminate]; subst.
-    eapply WfArity_build_case_predicate_type; tea.
-    2: symmetry; eassumption.
-    simpl in *. apply validity_term in t0; tea.
-    eapply isWfArity_or_Type_red in t0; tea.
-    destruct t0; [|assumption].
-    destruct i as [ctx [s [HH1 _]]]. cbn in HH1.
-    rewrite destArity_mkApps_Ind in HH1; discriminate.
-  Qed.
-  Next Obligation.
-    inversion HH; sq; right; assumption.
-  Qed.
-  Next Obligation.
-    inversion HH; assumption.
-  Qed.
-  Next Obligation.
-    rename Heq_anonymous into HH3.
-    clear Heq_anonymous2. destruct HΣ, HΓ, X.
-    change (eqb ind ind' = true) in H0.
-    destruct (eqb_spec ind ind') as [e|e]; [destruct e|discriminate].
-    change (eqb (ind_npars decl) par = true) in H1.
-    destruct (eqb_spec (ind_npars decl) par) as [e|e]; [|discriminate].
-    symmetry in HH3.
-    eapply (type_Case_valid_btys Σ Γ) in HH3; tea.
+    destruct (eqb_spec (ind_npars d) par) as [e|e]; [|discriminate].
+    rename Heq_anonymous into HH. symmetry in HH.
+    todo "case predicacte is well-typed".
+    (*eapply (type_Case_valid_btys Σ Γ) in HH; tea.
     eapply All_Forall, All_impl; tea. clear.
-    intros x XX; constructor; exists ps; exact XX.
+    intros x X; constructor; now exists ps.
+    eapply type_Cumul. eapply X4.
+    right.
+    unshelve epose (validity _ _ _ _ _ _ X4). eauto using typing_wf_local.
+    destruct p0.
+    eapply isWfArity_or_Type_red in i. 3:eapply X8. all:eauto.
+    destruct i. red in i. destruct i as [ctx [s' [eq ?]]].
+    rewrite destArity_tInd in eq. discriminate. apply i.
+    eapply red_cumul. apply X8.*)
   Defined.
   Next Obligation.
     rename Heq_anonymous2 into XX2. destruct wildcard'.
@@ -1084,9 +1071,20 @@ Section Typecheck.
     destruct (eqb_spec ind ind') as [e|e]; [destruct e|discriminate H0].
     change (eqb (ind_npars decl) par = true) in H1.
     destruct (eqb_spec (ind_npars decl) par) as [e|e]; [|discriminate]; subst.
-    assert (∥ All2 (fun x y  => ((fst x = fst y) *
+    depelim HH.
+    sq. right; auto.
+  Defined.
+  Next Obligation.
+    now depelim HH.
+  Defined.
+  Next Obligation.
+    todo "valid btys".
+(*    assert (∥ All2 (fun x y  => ((fst x = fst y) *
                               (Σ;;; Γ |- snd x : snd y))%type) brs btys ∥). {
-      eapply All2_sq. eapply All2_impl. eassumption.
+      depelim HH.
+      eapply All2_sq. eapply All2_impl.
+      specialize (check_branches brs _ HH).
+      eassumption.
       cbn; intros ? ? []. now sq. }
     destruct H as [H], X9, XX2 as [XX2]. sq.
     eapply type_Case' with (pty0:=pty'); tea.
@@ -1102,9 +1100,10 @@ Section Typecheck.
       destruct i as [ctx [s [HH1 _]]]. cbn in HH1.
       rewrite destArity_mkApps_Ind in HH1; discriminate.
     - eapply type_reduction; tea.
-    - symmetry; eassumption.
+    - symmetry; eassumption.*)
   Defined.
-
+  Next Obligation. todo "type_Case". Qed.
+  
   (* tProj *)
   Next Obligation. simpl; eauto using validity_wf. Qed.
   Next Obligation.
@@ -1124,7 +1123,7 @@ Section Typecheck.
     apply wf_local_rel_app, fst in XX'. rewrite lift0_p in XX'.
     inversion XX'; subst. destruct X0 as [s HH].
     right. exists s.
-    change (PCUICTerm.tSort s) with (lift0 #|fix_context mfix| (tSort s)).
+    change (tSort s) with (lift0 #|fix_context mfix| (tSort s)).
     apply weakening; try assumption.
     apply wf_local_app_inv; assumption.
   Defined.
@@ -1153,7 +1152,7 @@ Section Typecheck.
     sq. cbn in *.
     apply wf_local_rel_app, fst in XX'. rewrite lift0_p in XX'.
     inversion XX'; subst. destruct X0 as [s HH].
-    right. exists s. change (PCUICTerm.tSort s) with (lift0 #|fix_context mfix| (tSort s)).
+    right. exists s. change (tSort s) with (lift0 #|fix_context mfix| (tSort s)).
     apply weakening; try assumption.
     apply wf_local_app_inv; assumption.
   Defined.

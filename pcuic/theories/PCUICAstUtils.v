@@ -1,5 +1,5 @@
 From Coq Require Import Ascii String OrderedType Lia Program Arith.
-From MetaCoq.Template Require Import utils.
+From MetaCoq.Template Require Import utils uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICSize.
 Import List.ListNotations.
 Require Import ssreflect.
@@ -181,6 +181,90 @@ Proof.
   move=> Hty. rewrite it_mkProd_or_LetIn_app /=.
   case: x => [na [body|] ty'] /=; by rewrite IHctx' // /snoc -app_assoc.
 Qed.
+
+Lemma reln_list_lift_above l p Γ :
+  Forall (fun x => exists n, x = tRel n /\ p <= n /\ n < p + length Γ) l ->
+  Forall (fun x => exists n, x = tRel n /\ p <= n /\ n < p + length Γ) (reln l p Γ).
+Proof.
+  generalize (le_refl p).
+  generalize p at 1 3 5.
+  induction Γ in p, l |- *. simpl. auto.
+  intros. destruct a. destruct decl_body. simpl.
+  assert(p0 <= S p) by lia.
+  specialize (IHΓ l (S p) p0 H1). rewrite <- Nat.add_succ_comm, Nat.add_1_r.
+  simpl in *. rewrite <- Nat.add_succ_comm in H0. eauto.
+  simpl in *.
+  specialize (IHΓ (tRel p :: l) (S p) p0 ltac:(lia)). rewrite <- Nat.add_succ_comm, Nat.add_1_r.
+  eapply IHΓ. simpl in *. rewrite <- Nat.add_succ_comm in H0. auto.
+  simpl in *.
+  constructor. exists p. intuition lia. auto.
+Qed.
+
+Lemma to_extended_list_k_spec Γ k :
+  Forall (fun x => exists n, x = tRel n /\ k <= n /\ n < k + length Γ) (to_extended_list_k Γ k).
+Proof.
+  pose (reln_list_lift_above [] k Γ).
+  unfold to_extended_list_k.
+  forward f. constructor. apply f.
+Qed.
+
+Lemma to_extended_list_lift_above Γ :
+  Forall (fun x => exists n, x = tRel n /\ n < length Γ) (to_extended_list Γ).
+Proof.
+  pose (reln_list_lift_above [] 0 Γ).
+  unfold to_extended_list.
+  forward f. constructor. eapply Forall_impl; eauto. intros.
+  destruct H; eexists; intuition eauto.
+Qed.
+
+Fixpoint reln_alt p Γ :=
+  match Γ with
+  | [] => []
+  | {| decl_body := Some _ |} :: Γ => reln_alt (p + 1) Γ
+  | {| decl_body := None |} :: Γ => tRel p :: reln_alt (p + 1) Γ
+  end.
+
+Lemma reln_alt_eq l Γ k : reln l k Γ = List.rev (reln_alt k Γ) ++ l.
+Proof.
+  induction Γ in l, k |- *; simpl; auto.
+  destruct a as [na [body|] ty]; simpl.
+  now rewrite IHΓ.
+  now rewrite IHΓ -app_assoc.
+Qed.
+
+Lemma to_extended_list_k_cons d Γ k :
+  to_extended_list_k (d :: Γ) k =
+  match d.(decl_body) with
+  | None => to_extended_list_k Γ (S k) ++ [tRel k]
+  | Some b => to_extended_list_k Γ (S k)
+  end.
+Proof.
+  rewrite /to_extended_list_k reln_alt_eq. simpl.
+  destruct d as [na [body|] ty]. simpl.
+  now rewrite reln_alt_eq Nat.add_1_r.
+  simpl. rewrite reln_alt_eq.
+  now rewrite -app_assoc !app_nil_r Nat.add_1_r.
+Qed.
+
+Lemma context_assumptions_length_bound Γ : context_assumptions Γ <= #|Γ|.
+Proof.
+  induction Γ; simpl; auto. destruct a as [? [?|] ?]; simpl; auto.
+  lia.
+Qed.
+
+Lemma mapi_rec_compose {A B C} (g : nat -> B -> C) (f : nat -> A -> B) k l :
+  mapi_rec g (mapi_rec f l k) k = mapi_rec (fun k x => g k (f k x)) l k.
+Proof.
+  induction l in k |- *; simpl; auto. now rewrite IHl.
+Qed.
+
+Lemma mapi_compose {A B C} (g : nat -> B -> C) (f : nat -> A -> B) l :
+  mapi g (mapi f l) = mapi (fun k x => g k (f k x)) l.
+Proof. apply mapi_rec_compose. Qed.
+
+Ltac merge_All :=
+  unfold tFixProp, tCaseBrsProp in *;
+  repeat toAll.
 
 Hint Rewrite @map_def_id @map_id : map.
 
@@ -466,6 +550,76 @@ Proof.
 Qed.
 Close Scope string_scope.
 
+Lemma firstn_add {A} x y (args : list A) : firstn (x + y) args = firstn x args ++ firstn y (skipn x args).
+Proof.
+  induction x in y, args |- *. simpl. reflexivity.
+  simpl. destruct args. simpl.
+  now rewrite firstn_nil.
+  rewrite IHx. now rewrite app_comm_cons.
+Qed.
+
+
+Lemma rev_map_spec {A B} (f : A -> B) (l : list A) : 
+  rev_map f l = List.rev (map f l).
+Proof.
+  unfold rev_map.
+  rewrite -(app_nil_r (List.rev (map f l))).
+  generalize (@nil B).
+  induction l; simpl; auto. intros l0.
+  rewrite IHl. now rewrite -app_assoc.
+Qed.
+
+Lemma skipn_0 {A} (l : list A) : skipn 0 l = l.
+Proof. reflexivity. Qed.
+
+Lemma skipn_n_Sn {A} n s (x : A) xs : skipn n s = x :: xs -> skipn (S n) s = xs.
+Proof.
+  induction n in s, x, xs |- *.
+  - unfold skipn. now intros ->.
+  - destruct s; simpl. intros H; discriminate. apply IHn.
+Qed. 
+
+Lemma skipn_all {A} (l : list A) : skipn #|l| l = [].
+Proof.
+  induction l; simpl; auto.
+Qed.
+
+Lemma skipn_app_le {A} n (l l' : list A) : n <= #|l| -> skipn n (l ++ l') = skipn n l ++ l'.
+Proof.
+  induction l in n, l' |- *; simpl; auto.
+  intros Hn. destruct n; try lia. reflexivity.
+  intros Hn. destruct n. reflexivity.
+  rewrite !skipn_S. apply IHl. lia.
+Qed.
+
+Lemma firstn_ge {A} (l : list A) n : #|l| <= n -> firstn n l = l.
+Proof.
+  induction l in n |- *; simpl; intros; auto. now rewrite firstn_nil.
+  destruct n; simpl. lia. rewrite IHl; auto. lia.
+Qed.
+
+Lemma firstn_0 {A} (l : list A) n : n = 0 -> firstn n l = [].
+Proof.
+  intros ->. reflexivity.
+Qed.
+
+
+Arguments firstn : simpl nomatch.
+Arguments skipn : simpl nomatch.
+
+
+Lemma skipn_firstn_skipn {A} (l : list A) n : skipn n (firstn (S n) l) ++ skipn (S n) l = skipn n l.
+Proof.
+  induction l in n |- *; simpl; auto. now rewrite app_nil_r.
+  destruct n=> /=; auto.
+Qed.
+
+Lemma firstn_firstn_firstn {A} (l : list A) n : firstn n (firstn (S n) l) = firstn n l.
+Proof.
+  induction l in n |- *; simpl; auto.
+  destruct n=> /=; auto. now rewrite IHl.
+Qed.
+
 Lemma decompose_app_rec_inv' f l hd args :
   decompose_app_rec f l = (hd, args) ->
   ∑ n, ~~ isApp hd /\ l = skipn n args /\ f = mkApps hd (firstn n args).
@@ -546,3 +700,10 @@ Ltac solve_discr :=
         | [ H : is_true (application_atom (mkApps _ _)) |- _ ] =>
           destruct (application_atom_mkApps H); subst; try discriminate
         end)).
+
+(** Use a coercion for this common projection of the global context. *)
+Definition fst_ctx : global_env_ext -> global_env := fst.
+Coercion fst_ctx : global_env_ext >-> global_env.
+
+Definition empty_ext (Σ : global_env) : global_env_ext
+  := (Σ, Monomorphic_ctx ContextSet.empty).

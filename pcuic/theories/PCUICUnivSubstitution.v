@@ -22,6 +22,7 @@ Create HintDb univ_subst.
 
 Local Ltac aa := rdest; eauto with univ_subst.
 
+From MetaCoq.Template Require Import Universes uGraph.
 
 Lemma subst_instance_level_val u l v v'
       (H1 : forall s, valuation_mono v s = valuation_mono v' s)
@@ -34,7 +35,7 @@ Qed.
 Lemma eq_val v v'
       (H1 : forall s, valuation_mono v s = valuation_mono v' s)
       (H2 : forall n, valuation_poly v n = valuation_poly v' n)
-  : forall u, val v u = val v' u.
+  : forall u : Universe.t, val v u = val v' u.
 Proof.
   assert (He : forall e : UnivExpr.t, val v e = val v' e). {
     intros [|[[] b]]; cbnr; rewrite ?H1, ?H2; reflexivity. }
@@ -52,24 +53,6 @@ Proof.
   + eapply (forallb_nth _ _ _ Level.lSet Hu) in HH.
     destruct HH as [l [HH1 HH2]]. rewrite HH1. now apply ssrbool.negbTE.
 Qed.
-
-Lemma nth_error_Some' {A} l n : (exists x : A, nth_error l n = Some x) <-> n < length l.
-Proof.
-  revert n. induction l; destruct n; simpl.
-  - split; [now destruct 1 | inversion 1].
-  - split; [now destruct 1 | inversion 1].
-  - split; now auto with arith.
-  - rewrite IHl; split; auto with arith.
-Qed.
-
-Lemma nth_error_forallb {A} P l n :
-  @forallb A P l -> on_Some_or_None P (nth_error l n).
-Proof.
-  induction l in n |- *.
-  - intros _. destruct n; constructor.
-  - intro H; invs H. toProp H1 as [? ?]. destruct n; cbn; auto.
-Qed.
-
 
 Lemma subst_instance_univ_val u l v v'
       (Hu : forallb (negb ∘ Level.is_prop) u)

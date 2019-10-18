@@ -742,6 +742,25 @@ Proof.
   intros H'; eauto. rewrite <- Nat.add_succ_comm. eauto.
 Qed.
 
+Lemma nth_error_Some' {A} l n : (exists x : A, nth_error l n = Some x) <-> n < length l.
+Proof.
+  revert n. induction l; destruct n; simpl.
+  - split; [now destruct 1 | inversion 1].
+  - split; [now destruct 1 | inversion 1].
+  - split; now intuition eauto with arith.
+  - rewrite IHl; split; auto with arith.
+Qed.
+
+Lemma nth_error_forallb {A} P l n :
+  @forallb A P l -> on_Some_or_None P (nth_error l n).
+Proof.
+  induction l in n |- *.
+  - intros _. destruct n; constructor.
+  - intro H. apply forallb_Forall in H.
+    inv H. destruct n; cbn; auto.
+    now apply forallb_Forall in H1; eauto.
+Qed.
+
 Lemma All_map_id' {A} {P : A -> Type} {l} {f} :
   All P l ->
   (forall x, P x -> f x = x) ->
@@ -839,6 +858,41 @@ Proof.
   move=> [= <-]. now rewrite (IHHa _ E').
 Qed.
 
+(* todo: move *)
+Lemma All_mapi {A B} P f l k :
+  Alli (fun i x => P (f i x)) k l -> All P (@mapi_rec A B f l k).
+Proof.
+  induction 1; simpl; constructor; auto.
+Qed.
+
+Lemma All_Alli {A} {P : A -> Type} {Q : nat -> A -> Type} {l n} :
+  All P l ->
+  (forall n x, P x -> Q n x) ->
+  Alli Q n l.
+Proof.
+  intro H. revert n. induction H; constructor; eauto.
+Qed.
+
+Lemma All2_All_left_pack {A B} {P : A -> B -> Type} {l l'} :
+  All2 P l l' -> Alli (fun i x => ∑ y, (nth_error l i = Some x /\ nth_error l' i = Some y) * P x y) 0 l.
+Proof.
+  intros HF. induction HF; constructor; intuition eauto.
+  exists y; intuition eauto. clear -IHHF.
+  revert IHHF. generalize l at 1 3. intros. apply Alli_shift.
+  now simpl.
+Qed.
+
+Lemma map_option_out_All {A} P (l : list (option A)) l' :
+  (All (on_Some_or_None P) l) ->
+  map_option_out l = Some l' ->
+  All P l'.
+Proof.
+  induction 1 in l' |- *; cbn; inversion 1; subst; try constructor.
+  destruct x; [|discriminate].
+  case_eq (map_option_out l); [|intro e; rewrite e in H1; discriminate].
+  intros l0 e; rewrite e in H1; inversion H1; subst.
+  constructor; auto.
+Qed.
 
 Lemma Forall_forallb {A} P (l : list A) (p : A -> bool) :
   Forall P l ->

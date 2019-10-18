@@ -1,0 +1,2 @@
+TIMING=true
+COQEXTRAFLAGS=-q

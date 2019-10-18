@@ -326,9 +326,8 @@ Section ContextConversion.
       Σ ;;; Γ |- T = T' ->
       conv_decls Γ Γ' (vdef na b T) (vdef na' b' T').
 
-  Notation conv_context Γ Γ' := (context_relation conv_decls Γ Γ').
-
   Derive Signature for conv_decls.
+  Notation conv_context Γ Γ' := (context_relation conv_decls Γ Γ').
 
   Global Instance conv_ctx_refl : Reflexive (context_relation conv_decls).
   Proof.

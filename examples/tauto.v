@@ -1062,11 +1062,11 @@ Section Plugin.
             | S n => cdecl_Type MProp :: Prop_ctx n
     end.
 
-  Ltac tauto_aux k l :=
+  Ltac extract_form_tac k l :=
     match goal with | |- forall X:Prop, _ => 
                       let H := fresh "H" in
                       intros H; 
-                      tauto_aux k ltac:(constr:(H::l))
+                     extract_form_tac k ltac:(constr:(H::l))
     | |- _ => k l end.
 
   Ltac Mtauto l T H :=
@@ -1078,7 +1078,7 @@ Section Plugin.
   Ltac tauto :=
     let L := fresh "L" in
     let P := fresh "P" in
-    match goal with | |- ?T => tauto_aux
+    match goal with | |- ?T => extract_form_tac
                                  ltac:(fun l => pose (L:=l); pose (P:=T))
                                         (@nil Prop) end;
     let H := fresh "H" in

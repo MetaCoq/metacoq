@@ -16,100 +16,6 @@ Require Import Peano_dec.
 
 Definition var := nat.
 
-(*Ltac mytauto :=
-   assumption ||
-  match goal with
-  | |- ?A /\ ?B => idtac "/\-I"; (split; mytauto) || fail 99
-  | |- ?A -> ?B => idtac "=>-I"; (intro; mytauto) || fail 99
-  | |- True => idtac "T-I"; exact I
-  | H:?A/\?B |- _ => idtac "/\-E " H; (destruct H; try mytauto) || fail 99
-  | H:False |- _ => idtac "Fa-E"; destruct H
-
-  | |- ?A \/ ?B => (idtac "\/-I1"; left; mytauto) || (idtac "\/-I2"; right; mytauto)
-  | H:?A \/ ?B |- _ => idtac "\/-E" H; destruct H; mytauto
-  | H:?A -> ?B |- _ => idtac "cut" H;
-                       let a := fresh in
-                       cut A;
-                       [intro a; generalize (H a); clear H; intro H; mytauto
-                       |clear H; mytauto]
-  | _ => idtac "fail"; fail
-  end.*)
-Ltac tauto1 n :=
-   assumption ||
-  match goal with
-  | |- ?A /\ ?B => idtac n "/\-I"; split; tauto1 (S n)
-  | |- ?A -> ?B => idtac n "=>-I"; intro; tauto1 (S n)
-  | |- True => idtac "T-I"; exact I
-  | H:?A/\?B |- _ => idtac n "/\-E " H; destruct H; try tauto1 (S n)
-  | H:False |- _ => idtac n "Fa-E"; destruct H
-
-  | |- ?A \/ ?B => (idtac n "\/-I1"; left; tauto1 (S n)) || (idtac n "\/-I2"; right; tauto1 (S n))
-  | H:?A \/ ?B |- _ => idtac n "\/-E" H; destruct H; tauto1 (S n)
-  | H:?A -> ?B |- _ => idtac n "cut" H;
-                       let a := fresh in
-                       cut A;
-                       [intro a; generalize (H a); clear H; intro H; tauto1 (S n)
-                       |clear H; tauto1 (S n)]
-  | _ => idtac n "fail"; fail
-  end.
-
-Ltac tauto2n n :=
-   assumption ||
-  match goal with
-  | |- ?A /\ ?B => idtac n "/\-I"; (split; tauto2n (S n)) || fail 99
-  | |- ?A -> ?B => idtac n "=>-I"; (intro; tauto2n (S n)) || fail 99
-  | |- True => idtac "T-I"; exact I
-  | H:?A/\?B |- _ => idtac n "/\-E " H; (destruct H; try tauto2n (S n)) || fail 99
-  | H:False |- _ => idtac n "Fa-E"; destruct H
-
-  | |- ?A \/ ?B => (idtac n "\/-I1"; left; tauto2n (S n)) || (idtac n "\/-I2"; right; tauto2n (S n))
-  | H:?A \/ ?B |- _ => idtac n "\/-E" H; destruct H; tauto2n (S n)
-  | H:?A -> ?B |- _ => idtac n "cut" H;
-                       let a := fresh in
-                       cut A;
-                       [intro a; generalize (H a); clear H; intro H; tauto2n (S n)
-                       |clear H; tauto2n (S n)]
-  | _ => idtac n "fail"; fail
-  end.
-Ltac tauto2 := tauto2n 0.
-
-(*Set Ltac Debug On.*)
-Parameter A B C:Prop.
-Lemma L1 : False -> A.
-  tauto2.
-Qed.
-Lemma L2 : A /\ B -> A.
-  tauto2.
-Qed.
-Lemma L3 : A /\ B -> B.
-  tauto2.
-Qed.
-Lemma L4 : A /\ B -> B /\ A.
-  tauto2.
-Qed.
-Lemma L5 : A -> A \/ B.
-  tauto2.
-Qed.
-Lemma L5' : B -> A \/ B.
-  tauto2.
-Qed.
-Lemma L6 : (A->C)->(B->C)->A\/B->C.
-  tauto2.
-Qed.
-Lemma L7 : A -> (A->B) -> B.
-  tauto2.
-Qed.
-Lemma L8 : A -> (A->B) -> (B->C) -> B.
-  tauto2.
-Qed.
-Lemma L9 : A -> (A->B) -> (B->C) -> C.
-  tauto2.
-Qed.
-
-Lemma A1 : A\/B -> A -> A/\C.
-Fail  tauto2.
-Abort.
-
 Lemma eq_var (x y:var) : {x=y}+{x<>y}.
  apply eq_nat_dec.
 Defined.
@@ -252,14 +158,9 @@ Definition decomp_step s : subgoal :=
   | _ => on_hyps s
   end.
 
-
-(*
-Definition decomp_step s : subgoal :=
-  on_concl s ++ on_hyps s.
-*)
 Inductive result := Valid | CounterModel | Abort.
 
-Fixpoint tauto n s {struct n} :=
+Fixpoint tauto_proc n s {struct n} :=
   if is_leaf s then Valid else
     match n with
     | 0 => Abort
@@ -267,7 +168,7 @@ Fixpoint tauto n s {struct n} :=
       let fix tauto_and ls :=
           match ls with
           | nil => Valid
-          | s1::ls => match tauto n s1 with
+          | s1::ls => match tauto_proc n s1 with
                       | Valid => tauto_and ls
                       | s => s
                       end
@@ -285,7 +186,7 @@ Fixpoint tauto n s {struct n} :=
       tauto_or (decomp_step s)
 end.
 
-Definition tauto_s f := tauto (size f) (mkS nil f).
+Definition tauto_s f := tauto_proc (size f) (mkS nil f).
 
 Eval compute in tauto_s (Imp Fa (Var 0)).
 
@@ -506,7 +407,7 @@ Lemma step_sound s :
 Qed.
 
 Lemma tauto_sound n s :
-  tauto n s = Valid -> valid s.
+  tauto_proc n s = Valid -> valid s.
 revert s; induction n; simpl; intros.
  generalize (is_leaf_sound s).
  destruct (is_leaf s); auto.
@@ -524,7 +425,7 @@ revert s; induction n; simpl; intros.
             match ls with
             | nil => Valid
             | s1 :: ls0 =>
-                match tauto n s1 with
+                match tauto_proc n s1 with
                 | Valid => tauto_and ls0
                 | CounterModel => CounterModel
                 | Abort => Abort
@@ -539,7 +440,7 @@ revert s; induction n; simpl; intros.
                        match ls0 with
                        | nil => Valid
                        | s1 :: ls1 =>
-                           match tauto n s1 with
+                           match tauto_proc n s1 with
                            | Valid => tauto_and ls1
                            | CounterModel => CounterModel
                            | Abort => Abort
@@ -555,7 +456,7 @@ revert s; induction n; simpl; intros.
             match ls with
             | nil => Valid
             | s1 :: ls0 =>
-                match tauto n s1 with
+                match tauto_proc n s1 with
                 | Valid => tauto_and ls0
                 | CounterModel => CounterModel
                 | Abort => Abort
@@ -569,7 +470,7 @@ revert s; induction n; simpl; intros.
     contradiction.
 
     generalize (IHn a).
-    destruct (tauto n a); intros.
+    destruct (tauto_proc n a); intros.
      destruct H; auto.
      subst s1; auto.
 
@@ -593,15 +494,12 @@ From MetaCoq.Checker Require Import WfInv Typing Weakening TypingWf
 Quote Definition MProp := Prop.
 
 Quote Definition MFalse := False.
-(* Definition MFalse := Eval compute in trans TFalse. *)
 
 Quote Definition MTrue := True.
 
 Quote Definition Mand := and.
-(* Definition Mand := Eval compute in trans Tand. *)
 
 Quote Definition Mor := or.
-(* Definition Mor := Eval compute in trans Tor. *)
 
 Definition tImpl (A B : term) :=
   tProd nAnon A (lift0 1 B).
@@ -1022,7 +920,7 @@ Next Obligation.
 Qed.
 Next Obligation.
   symmetry in e1. apply tsize_decompose_app in e1 as h1.
-  simpl in h1. pose proof (tsize_downlift_le B0 0).
+  simpl in h1. pose proof (tsize_downlift_le B 0).
   omega.
 Qed.
 Next Obligation.
@@ -1048,8 +946,6 @@ Instance Propositional_Logic_MetaCoq : Propositional_Logic term :=
 
 Definition Msem := semGen term.
 
-(* To Show : forall f l, Unquote (Msem f l) = sem f (fun x => Unquote (v x)) *)
-
 Definition can_val (v : var) : term := tRel v.
 
 Definition can_val_Prop (Γ : list Prop) (v : var) : Prop :=
@@ -1057,30 +953,6 @@ Definition can_val_Prop (Γ : list Prop) (v : var) : Prop :=
   | Some P => P
   | None => False
   end.
-
-(* Section Test.
-
-  Variable P Q: Prop.
-
-  Quote Definition MP := P.
-
-  Quote Definition MQ := Q.
-
-  Definition formula_test := Imp (Var 0) (Or (Var 0) (And Fa (Var 1))).
-
-  Definition cdecl_Type (P:term) :=
-    {| decl_name := nAnon; decl_body := None; decl_type := P |}.
-
-  Definition Mformala_test := Eval compute in
-    Msem formula_test (can_val [cdecl_Type MP; cdecl_Type MQ]).
-
-  Definition sem_formula_test := Eval compute in sem formula_test (can_val_Prop [P; Q]).
-
-  Quote Definition Msem_formula_test := Eval compute in sem_formula_test.
-
-  Check eq_refl : Mformala_test = Msem_formula_test.
-
-End Test. *)
 
 Lemma inversion_Rel :
   forall {Σ Γ n T},
@@ -1169,12 +1041,12 @@ Section Plugin.
   Definition inhabit_formula gamma Mphi Gamma :
     match reify (empty_ext []) gamma Mphi with
       Some phi => 
-      match tauto (Top.size phi) {| hyps := []; concl := phi |} with 
+      match tauto_proc (Top.size phi) {| hyps := []; concl := phi |} with 
         Valid => sem (concl {| hyps := []; concl := phi |}) (can_val_Prop Gamma)
       | _ => NotSolvable "not a valid formula" end 
     | None => NotSolvable "not a formaula" end.
     destruct (reify (empty_ext []) gamma Mphi); try exact (notSolvable _).
-    destruct (tauto (Top.size f) {| hyps := []; concl := f |}) eqn : e; try exact (notSolvable _).
+    destruct (tauto_proc (Top.size f) {| hyps := []; concl := f |}) eqn : e; try exact (notSolvable _).
     exact (tauto_sound (Top.size f) (mkS [] f) e (can_val_Prop Gamma) (trivial_hyp [] _)).
   Defined.
 
@@ -1203,7 +1075,7 @@ Section Plugin.
       in
         quote_term T k.
             
-  Ltac tauto_tactic :=
+  Ltac tauto :=
     let L := fresh "L" in
     let P := fresh "P" in
     match goal with | |- ?T => tauto_aux
@@ -1215,92 +1087,12 @@ Section Plugin.
          | exact H].
 
   Lemma test : forall (A B C:Prop), (A->C)->(B->C)->A\/B->C.
-    tauto_tactic.
+    tauto.
   Qed. 
 
   Lemma test2 : forall (A B C:Prop), (A->C)->(B->C)->A\/B->B.
-    Fail tauto_tactic.
+    Fail tauto.
   Abort. 
 
 End Plugin.
-  
-Section Correctness.
-
-  Variable Mval : context.
-  Variable val : list Prop.
-  Variable phi : form.
-
-  Axiom unquote : forall A (t:term), option A.
-
-  Parameter Mval_val_eq :
-    monad_map (fun X => unquote Prop X.(decl_type)) Mval = Some val.
-
-  Parameter Mval_val_eq :
-    monad_map (fun X => unquote Prop X.(decl_type)) Mval = Some val.
-
-                       P <- tmUnquoteTyped Prop (Msem phi (can_val Mval)) ;;
-                       tmLemma "correctness" (sem phi (can_val_Prop val) = P)).
-
-
-  Run TemplateProgram (val <- monad_map (fun X => tmUnquoteTyped Prop X.(decl_type)) Mval ;;
-                       P <- tmUnquoteTyped Prop (Msem phi (can_val Mval)) ;;
-                       tmLemma "correctness" (sem phi (can_val_Prop val) = P)).
-
-(* junk *)
-
-(*
-Fixpoint option_list_map {A B} (l : list A) (f : A -> option B) : option (list B) :=
-  match l with
-  | nil => Some nil
-  | cons x xs =>
-    x' <- f x;;
-    xs' <- option_list_map xs f ;;
-    ret (x' :: xs')
-  end.
-
-From MetaCoq.Template Require Import utils.
-Require Import ssreflect.
-
-Lemma nth_error_option_list_map {A B} (l : list A) (f : A -> option B) l' :
-  option_list_map l f = Some l' ->
-  forall n x, nth_error l n = Some x ->
-  nth_error l' n = f x.
-Proof.
-  induction l in f, l' |- *; simpl; auto.
-  move=> [] <- n x Hx. apply nth_error_Some_non_nil in Hx. congruence.
-  specialize (IHl f).
-  move=> Hfa. destruct (f a) eqn:Hfaeq.
-  destruct (option_list_map _ _) eqn:Hol.
-  injection Hfa. intros <-.  specialize (IHl l0 eq_refl).
-  intros.
-Admitted.
-
-
-Lemma sound_reify S G P f:
-(*   S ;;; G |- P : s ->  *)
-  reify S G P = Some f ->
-  S ;;; G |- sem f (can_val G) <= P.
-Proof.
-
-
-Lemma sound S G G' A s f:
-  S ;;; G |- A : s ->
-  S ;;; G |- s <= tSort Universe.type0m ->
-  reify S G A = Some f ->
-  option_list_map G (fun d => reify S G d.(decl_type)) = Some G' ->
-  valid {| hyps := G'; concl := f|} ->
-  { p : term & S ;;; G |- p : A }.
-Proof.
-  intros tyA cums reifyf validG validf.
-  induction tyA in cums, reifyf, validG, validf |- *;
-  rewrite reify_unf in reifyf; simpl in reifyf.
-  - rewrite e in reifyf.
-    injection reifyf. intros <-.
-    red in validf. simpl in validf.
-    eapply nth_error_option_list_map in validG.
-
-
-Admitted.
-*)
-
   

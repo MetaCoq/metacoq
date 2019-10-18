@@ -176,6 +176,18 @@ Section Principality.
       + simpl. assumption.
   Qed.
 
+  Lemma isArity_subst :
+    forall u v k,
+      isArity u ->
+      isArity (u { k := v }).
+  Proof.
+    intros u v k h.
+    induction u in v, k, h |- *. all: try contradiction.
+    - simpl. constructor.
+    - simpl in *. eapply IHu2. assumption.
+    - simpl in *. eapply IHu3. assumption.
+  Qed.
+
   Lemma isArity_red1 :
     forall Γ u v,
       red1 Σ Γ u v ->
@@ -197,7 +209,7 @@ Section Principality.
       + assumption.
       + simpl in *. eapply IHu2. all: eassumption.
     - dependent destruction h.
-      + simpl in *. admit.
+      + simpl in *. apply isArity_subst. assumption.
       + apply (f_equal nApp) in H as eq. simpl in eq.
         rewrite nApp_mkApps in eq. simpl in eq.
         destruct args. 2: discriminate.
@@ -205,7 +217,7 @@ Section Principality.
       + assumption.
       + assumption.
       + simpl in *. eapply IHu3. all: eassumption.
-  Admitted.
+  Qed.
 
   Lemma invert_cumul_arity_r :
     forall (Γ : context) (C : term) T,

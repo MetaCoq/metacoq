@@ -10,6 +10,9 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICGeneration PCUICReflect PCUICEquality PCUICInversion PCUICValidity
      PCUICWeakening PCUICPosition PCUICCumulativity PCUICSafeLemmata PCUICSN.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeConversion.
+From Equations Require Import Equations.
+
+Require Import Equations.Prop.DepElim.
 
 Import MonadNotation.
 Open Scope type_scope.

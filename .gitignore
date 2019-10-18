@@ -342,6 +342,8 @@ pcuic/src/pCUICPretty.ml
 pcuic/src/pCUICPretty.mli
 pcuic/src/pCUICReflect.ml
 pcuic/src/pCUICReflect.mli
+pcuic/src/pCUICUtils.ml
+pcuic/src/pCUICUtils.mli
 
 /pcuic/src/ssreflect.mli
 /_opam

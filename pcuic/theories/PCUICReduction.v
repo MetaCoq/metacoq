@@ -7,6 +7,8 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping.
 
+Require Import Equations.Prop.DepElim.
+
 (* Type-valued relations. *)
 Require Import CRelationClasses.
 Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
@@ -492,6 +494,8 @@ Section ReductionCongruence.
         constructor. assumption.
     Qed.
 
+    Derive Signature for redl.
+
     Lemma red_case_one_brs :
       forall indn p c brs brs',
         OnOne2 (on_Trel_eq (red Σ Γ) snd fst) brs brs' ->
@@ -500,9 +504,9 @@ Section ReductionCongruence.
       intros indn p c brs brs' h.
       apply OnOne2_on_Trel_eq_red_redl in h.
       dependent induction h.
-      - apply list_map_swap_eq in x. subst. constructor.
+      - apply list_map_swap_eq in H. subst. constructor.
       - econstructor.
-        + eapply IHh. apply map_swap_invol.
+        + eapply IHh. rewrite <- map_swap_invol. reflexivity.
         + constructor. rewrite (map_swap_invol _ _ brs').
           eapply OnOne2_map.
           eapply OnOne2_impl ; eauto.
@@ -652,7 +656,7 @@ Section ReductionCongruence.
           - cbn. destruct a. cbn. f_equal. assumption.
         }
         econstructor.
-        + eapply IHh. apply el.
+        + eapply IHh. symmetry. apply el.
         + constructor. rewrite (el' mfix').
           eapply OnOne2_map.
           eapply OnOne2_impl ; eauto.
@@ -703,7 +707,7 @@ Section ReductionCongruence.
           - cbn. destruct a. cbn. f_equal. assumption.
         }
         econstructor.
-        + eapply IHh. apply el.
+        + eapply IHh. symmetry. apply el.
         + eapply fix_red_body. rewrite (el' mfix').
           eapply OnOne2_map.
           eapply OnOne2_impl ; eauto.
@@ -837,7 +841,7 @@ Section ReductionCongruence.
           - cbn. destruct a. cbn. f_equal. assumption.
         }
         econstructor.
-        + eapply IHh. apply el.
+        + eapply IHh. symmetry. apply el.
         + constructor. rewrite (el' mfix').
           eapply OnOne2_map.
           eapply OnOne2_impl ; eauto.
@@ -888,7 +892,7 @@ Section ReductionCongruence.
           - cbn. destruct a. cbn. f_equal. assumption.
         }
         econstructor.
-        + eapply IHh. apply el.
+        + eapply IHh. symmetry. apply el.
         + eapply cofix_red_body. rewrite (el' mfix').
           eapply OnOne2_map.
           eapply OnOne2_impl ; eauto.
@@ -1068,7 +1072,7 @@ Section ReductionCongruence.
           - cbn. f_equal. assumption.
         }
         econstructor.
-        + eapply IHh. apply el.
+        + eapply IHh. symmetry. apply el.
         + constructor. rewrite (el' l').
           eapply OnOne2_map.
           eapply OnOne2_impl ; eauto.

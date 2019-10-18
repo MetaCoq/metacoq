@@ -8,6 +8,9 @@ Require Import PeanoNat.
 Import Nat.
 Require Import ssreflect.
 
+From Equations Require Import Equations.
+Require Import Equations.Prop.DepElim.
+
 (** * Lifting and substitution for the AST
 
   Along with standard commutation lemmas.
@@ -997,6 +1000,8 @@ Proof.
     simpl. now apply IHl.
 Qed.
 
+Derive Signature for Peano.le.
+
 Lemma subst_consn_lt {A} {l : list A} {i} :
   i < #|l| ->
   { x : _ & (List.nth_error l i = Some x) /\ (forall σ, (l ⋅n σ) i = x) }%type.
@@ -1004,9 +1009,12 @@ Proof.
   induction l in i |- *; simpl.
   - intros H; elimtype False; depelim H.
   - intros H.
-    destruct i. simpl. exists a. split; auto.
-    specialize (IHl i). forward IHl. now depelim H. destruct IHl as [x [Hnth Hsubst_cons]].
-    exists x. simpl. split; auto.
+    destruct i.
+    + simpl. exists a. split; auto.
+    + specialize (IHl i). forward IHl.
+      * lia.
+      * destruct IHl as [x [Hnth Hsubst_cons]].
+        exists x. simpl. split; auto.
 Qed.
 
 Lemma idsn_length n : #|idsn n| = n.

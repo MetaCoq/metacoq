@@ -8,6 +8,8 @@ Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 Import monad_utils.MonadNotation.
+Require Import Equations.Prop.DepElim.
+Require Import ssreflect.
 
 Existing Instance default_checker_flags.
 

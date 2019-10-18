@@ -6,7 +6,7 @@ From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
      AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
-     PCUICReduction PCUICEquality.
+     PCUICReduction PCUICEquality PCUICUtils.
 From Equations Require Import Equations.
 
 Require Import Equations.Prop.DepElim.
@@ -351,10 +351,6 @@ Proof.
     all: destruct q ; try reflexivity.
     all: destruct c ; reflexivity.
 Qed.
-
-(* TODO Move somewhere else or use different definition *)
-Definition transitive {A} (R : A -> A -> Prop) :=
-  forall u v w, R u v -> R v w -> R u w.
 
 Lemma positionR_trans : transitive positionR.
 Proof.

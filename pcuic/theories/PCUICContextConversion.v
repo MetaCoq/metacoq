@@ -14,6 +14,9 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICParallelReduction PCUICEquality
      PCUICParallelReductionConfluence PCUICConfluence.
 
+From Equations Require Import Equations.
+Require Import Equations.Prop.DepElim.
+
 Set Asymmetric Patterns.
 Set SimplIsCbn.
 
@@ -127,13 +130,15 @@ Section ContextReduction.
     All2_local_env (on_decl (fun (Δ _ : context) (t u : term) => red Σ Δ t u)) Δ Δ.
   Proof. induction Δ as [|[na [b|] ty]]; econstructor; try red; auto. Qed.
 
+  Derive Signature for assumption_context.
+
   Lemma red1_red_ctxP_ass {Γ Γ' Δ} : assumption_context Δ ->
     red1_red_ctxP Γ Γ' ->
     red1_red_ctxP (Γ ,,, Δ) (Γ' ,,, Δ).
   Proof.
     induction Δ as [|[na [b|] ty] Δ]; intros; auto.
-    elimtype False. depelim H.
-    case; move => n b b' //. eapply IHΔ. now depelim H. apply X.
+    - elimtype False. depelim H. hnf in H0. noconf H0.
+    - case; move => n b b' //. eapply IHΔ. now depelim H. apply X.
   Qed.
 
   Lemma red1_red_ctx_aux {Γ Γ' T U} :
@@ -279,7 +284,7 @@ Section ContextReduction.
     - depelim X.
       intros n t t'. rewrite nth_error_nil //.
     - depelim X; red in o.
-      + specialize (IHΓ Γ' X).
+      + specialize (IHΓ _ X).
         case => n b b' /= //.
         simpl. apply IHΓ.
       + specialize (IHΓ _ X).
@@ -561,23 +566,24 @@ Section ContextConversion.
       destruct (red_eq_context_upto_l r1 e). destruct p.
       destruct (red_eq_context_upto_l r2 e). destruct p.
       exists (Δ ,, vass na' T'), (Δ' ,, vass na' x0).
-      split; [split|]; constructor; auto. red.
-      eapply PCUICConfluence.red_red_ctx; eauto.
-      eapply eq_term_upto_univ_trans with U'; eauto; tc.
+      split; [split|]; constructor; auto.
+      + red.
+        eapply PCUICConfluence.red_red_ctx; eauto.
+      + eapply eq_term_upto_univ_trans with U'; eauto; tc.
     - destruct IHHctx as [Δ [Δ' [[? ?] ?]]].
       depelim p.
-      * pose proof (conv_alt_red_ctx c r).
+      + pose proof (conv_alt_red_ctx c r).
         eapply conv_alt_red in X.
         destruct X as [T' [U' [[? ?] ?]]].
         pose proof (PCUICConfluence.red_red_ctx wfΣ _ _ _ _ r1 r).
         pose proof (PCUICConfluence.red_red_ctx wfΣ _ _ _ _ r2 r).
         destruct (red_eq_context_upto_l r1 e). destruct p.
         destruct (red_eq_context_upto_l r2 e). destruct p.
-        exists (Δ ,, vdef na' u T'), (Δ' ,, vdef na' u x0).
+        exists (Δ ,, vdef na' t T'), (Δ' ,, vdef na' t x0).
         split; [split|]; constructor; auto. red. split; auto. red. split; auto.
         eapply PCUICConfluence.red_red_ctx; eauto. reflexivity.
         eapply eq_term_upto_univ_trans with U'; eauto; tc.
-      * pose proof (conv_alt_red_ctx c r).
+      + pose proof (conv_alt_red_ctx c r).
         eapply conv_alt_red in X.
         destruct X as [t' [u' [[? ?] ?]]].
         pose proof (PCUICConfluence.red_red_ctx wfΣ _ _ _ _ r1 r).
@@ -593,12 +599,12 @@ Section ContextConversion.
         destruct (red_eq_context_upto_l rU e) as [U'' [? ?]].
         exists (Δ ,, vdef na' t' T'), (Δ' ,, vdef na' u'' U'').
         split; [split|]. all: constructor ; auto.
-        -- red. split; auto.
-        -- red. split.
-           ++ eapply PCUICConfluence.red_red_ctx; eauto.
-           ++ eapply PCUICConfluence.red_red_ctx; eauto.
-        -- eapply eq_term_upto_univ_trans with u'; eauto; tc.
-        -- eapply eq_term_upto_univ_trans with U'; eauto; tc.
+        * red. split; auto.
+        * red. split.
+          -- eapply PCUICConfluence.red_red_ctx; eauto.
+          -- eapply PCUICConfluence.red_red_ctx; eauto.
+        * eapply eq_term_upto_univ_trans with u'; eauto; tc.
+        * eapply eq_term_upto_univ_trans with U'; eauto; tc.
   Qed.
 
   Lemma conv_alt_conv_ctx Γ Γ' T U :

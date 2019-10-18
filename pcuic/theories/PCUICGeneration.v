@@ -10,6 +10,7 @@ Require Import String.
 From MetaCoq Require Import LibHypsNaming.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
+Require Import Equations.Prop.DepElim.
 
 Section Generation.
   Context `{cf : config.checker_flags}.
@@ -45,6 +46,11 @@ Section Generation.
     eapply type_Cumul; eauto. eauto.
   Qed.
 
+  Derive NoConfusion NoConfusionHom for term.
+  Derive NoConfusion NoConfusionHom for context_decl.
+  Derive NoConfusion NoConfusionHom for list.
+  Derive NoConfusion NoConfusionHom for option.
+
   Lemma type_it_mkLambda_or_LetIn :
     forall Σ Γ Δ t A,
       Σ ;;; Γ ,,, Δ |- t : A ->
@@ -55,13 +61,13 @@ Section Generation.
     - assumption.
     - simpl. cbn. eapply ih.
       simpl in h. pose proof (typing_wf_local h) as hc.
-      dependent induction hc ; inversion t1. subst.
-      cbn in t1, t2. destruct t1.
+      dependent induction hc. all: inversion H. subst.
+      cbn in t1, t0. destruct t0.
       econstructor ; eassumption.
     - simpl. cbn. eapply ih.
       pose proof (typing_wf_local h) as hc. cbn in hc.
-      dependent induction hc ; inversion t1. subst.
-      cbn in t1. destruct t1.
+      dependent induction hc. all: inversion H. subst.
+      cbn in t0. destruct t0.
       econstructor ; eassumption.
   Qed.
 

@@ -8,10 +8,22 @@ src/compare_dec.ml
 src/mSetList.mli
 src/mSetList.ml
 
+# From Equations
+src/classes0.mli
+src/classes0.ml
+src/signature.mli
+src/signature.ml
+# src/logic1.mli
+# src/logic1.ml
+src/init.mli
+src/init.ml
+
 src/liftSubst.ml
 src/liftSubst.mli
 src/monad_utils.ml
 src/monad_utils.mli
+src/reflect.ml
+src/reflect.mli
 src/retyping0.ml
 src/retyping0.mli
 src/typing0.ml

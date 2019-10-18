@@ -6,6 +6,9 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLif
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
 
+From Equations Require Import Equations.
+Require Import Equations.Prop.DepElim.
+
 Derive Signature for Alli.
 
 Lemma global_ext_constraints_app Σ Σ' φ

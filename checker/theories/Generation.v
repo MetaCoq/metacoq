@@ -2,13 +2,18 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega Lia.
 From MetaCoq.Template Require Import config utils Ast AstUtils Induction utils LiftSubst UnivSubst.
-From MetaCoq.Checker Require Import Typing.
+From MetaCoq.Checker Require Import Typing Reflect.
 Require Import ssreflect ssrbool.
+From Equations Require Import Equations.
+Require Import Equations.Prop.DepElim.
+Require Import ssreflect.
 
 (** * Substitution lemmas for typing derivations. *)
 
 Set Asymmetric Patterns.
 Close Scope string_scope.
+
+Derive Signature for typing.
 
 Lemma invert_type_App `{checker_flags} Σ Γ f u T :
   Σ ;;; Γ |- tApp f u : T ->
@@ -18,10 +23,10 @@ Lemma invert_type_App `{checker_flags} Σ Γ f u T :
 Proof.
   intros Hty.
   dependent induction Hty.
-  exists t_ty, t'. intuition.
-  specialize (IHHty _ _ eq_refl) as [T' [U' [H' H'']]].
-  exists T', U'. split; auto.
-  eapply cumul_trans; eauto.
+  - exists t_ty, t'. intuition.
+  - destruct IHHty as [T' [U' [H' H'']]].
+    exists T', U'. split; auto.
+    eapply cumul_trans; eauto.
 Qed.
 
 Lemma type_mkApp `{checker_flags} Σ Γ f u T T' :

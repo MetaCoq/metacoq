@@ -7,6 +7,8 @@ From MetaCoq.Checker Require Import Typing.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
+Require Import Equations.Prop.DepElim.
+Require Import ssreflect.
 
 Existing Instance config.default_checker_flags.
 

@@ -4,6 +4,8 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Omega Lia.
 From MetaCoq.Template Require Import config utils Ast AstUtils Induction utils LiftSubst.
 From MetaCoq.Checker Require Import Typing TypingWf WeakeningEnv.
 Require Import ssreflect ssrbool.
+Require Import Equations.Prop.DepElim.
+Require Import ssreflect.
 
 Definition closed_decl n d :=
   option_default (closedn n) d.(decl_body) true && closedn n d.(decl_type).

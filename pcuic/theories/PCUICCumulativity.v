@@ -12,6 +12,7 @@ Local Open Scope string_scope.
 Set Asymmetric Patterns.
 Require Import CRelationClasses.
 Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
+Require Import Equations.Prop.DepElim.
 
 Reserved Notation " Σ ;;; Γ |- t == u " (at level 50, Γ, t, u at next level).
 

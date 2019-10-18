@@ -57,6 +57,7 @@ Extraction Library CMorphisms.
 (*          PCUICChecker.type_of PCUICRetyping TemplateToPCUIC (* PCUICSafeLemmata *). *)
 Extraction Library PCUICAst.
 Extraction Library PCUICAstUtils.
+Extraction Library PCUICUtils.
 Extraction Library PCUICInduction.
 Extraction Library PCUICUnivSubst.
 Extraction Library PCUICLiftSubst.

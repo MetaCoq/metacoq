@@ -184,7 +184,7 @@ Ltac gc_of_constraint_tac :=
   | |- is_true (_ =? _) => apply PeanoNat.Nat.eqb_eq
   | |- is_true (gc_satisfies _ (GoodConstraintSet_pair _ _))
                => apply gc_satisfies_pair; cbn -[Nat.leb Nat.eqb]; split
-  (* | H : is_true false |- _ => discriminate H *)
+  | H : is_true false |- _ => discriminate H
   | H : is_true (if _ then true else false) |- _ => rewrite if_true_false in H
   | H : is_true (_ <? _) |- _ => apply PeanoNat.Nat.ltb_lt in H
   | H : is_true (_ <=? _) |- _ => apply PeanoNat.Nat.leb_le in H

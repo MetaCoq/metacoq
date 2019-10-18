@@ -13,6 +13,9 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
 
 Local Set Keyed Unification.
 
+From Equations Require Import Equations.
+Require Import Equations.Prop.DepElim.
+
 Module CS := ConstraintSet.
 Module LS := LevelSet.
 

@@ -202,7 +202,7 @@ Module Id1.
     : IDᵗ f -> forall A x, f A x = x.
   Proof.
     compute. intros H A x.
-    exact (H A (fun y => y = x) x (eq_refl x)).
+    exact (H A (fun y => y = x) x eq_refl).
   Qed.
 
   Definition toto := fun n : nat => (fun y => 0) (fun _ : Type =>  n).
@@ -307,17 +307,17 @@ Module Axioms.
     apply h.
   Defined.
 
-  
+
   Definition wFunext
     := forall A (B : A -> Type) (f g : forall x, B x), (forall x, f x = g x) -> f = g.
- 
+
 
   Run TemplateProgram (Translate eqTC "wFunext").
 
   Theorem wFunext_provably_parametric : forall h : wFunext, wFunextᵗ h.
   Proof.
     unfold wFunext, wFunextᵗ.
-    intros h A Aᵗ B Bᵗ f fᵗ g gᵗ X H. 
+    intros h A Aᵗ B Bᵗ f fᵗ g gᵗ X H.
     apply eq_eqᵗ.
     apply h; intro x.
     apply h; intro xᵗ.
@@ -400,7 +400,7 @@ Module Axioms.
   Lemma pathsᵗ_ok2 {A} {Aᵗ : A -> Type} {x y} {xᵗ : Aᵗ y} (p q : x = y) e r
         (Hr : e # (pathsᵗ_ok p) = r)
     : pathsᵗ (x = y) (pathsᵗ A Aᵗ x (transport Aᵗ p^ xᵗ) y xᵗ) p (pathsᵗ_ok p) q r e.
-    destruct e, p, Hr; reflexivity. 
+    destruct e, p, Hr; reflexivity.
   Defined.
 
   Definition apᵗ_idmap  {A} {Aᵗ : A -> Type} {x y xᵗ yᵗ} (p : x = y)
@@ -428,7 +428,7 @@ Module Axioms.
     intros x xᵗ; cbn. eapply pathsᵗ_ok2.
     set (coh x). set (q1 x) in *. set (q2 x) in *.
     clearbody p p1 p0; clear; cbn in *.
-    set (g x) in *. clearbody a. 
+    set (g x) in *. clearbody a.
     rewrite transport_pp.
     destruct p1. cbn in *.
     match goal with

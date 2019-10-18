@@ -3,6 +3,9 @@ Require Import Peano_dec Nat Bool List Structures.Equalities Lia
 (* Require Import ssrbool ssrfun. *)
 From MetaCoq.Template Require Import utils monad_utils.
 
+From Equations Require Import Equations.
+Require Import Equations.Prop.DepElim.
+
 Notation "p .1" := (fst p)
   (at level 2, left associativity, format "p .1") : pair_scope.
 Notation "p .2" := (snd p)
@@ -305,7 +308,7 @@ Module WeightedGraph (V : UsualOrderedType).
       destruct (V.compare y1 y2); cbn in *; inversion_clear H3;
         constructor; subst; intuition.
     Defined.
-    
+
     Definition eq_dec : forall x y : t, {x = y} + {x <> y}.
       unfold eq. decide equality. apply V.eq_dec.
       decide equality. apply PeanoNat.Nat.eq_dec. apply V.eq_dec.
@@ -452,21 +455,19 @@ Module WeightedGraph (V : UsualOrderedType).
       | paths_step x y z e p => negb (VSet.mem x (nodes p)) && is_simple p
       end.
 
-    Program Fixpoint to_simple {x y} (p : Paths x y) (Hp : is_simple p = true)
-            {struct p} : SimplePaths (nodes p) x y :=
-      match p with
-      | paths_refl x => spaths_refl _ _
-      | paths_step x y z e p => spaths_step _ e (to_simple p _)
-      end.
+    Equations(noeqns) to_simple {x y} (p : Paths x y) (Hp : is_simple p = true)
+      : SimplePaths (nodes p) x y :=
+      to_simple (paths_refl x) Hp := spaths_refl _ _ ;
+      to_simple (paths_step e p) Hp := spaths_step _ e (to_simple p _).
     Next Obligation.
-      split. eapply VSetProp.Add_add.
-      apply (JMeq.JMeq_congr is_simple) in Heq_p.
-      rewrite Hp in Heq_p. cbn in Heq_p; apply andb_prop, proj1 in Heq_p.
-      now apply negb_true_iff, VSetFact.not_mem_iff in Heq_p.
+      split.
+      - eapply VSetProp.Add_add.
+      - apply andP in Hp as [h1 h2].
+        apply negb_true_iff in h1. apply VSetFact.not_mem_iff in h1.
+        assumption.
     Defined.
     Next Obligation.
-      apply (JMeq.JMeq_congr is_simple) in Heq_p.
-      rewrite Hp in Heq_p. cbn in Heq_p; now apply andb_prop, proj2 in Heq_p.
+      apply andP in Hp as [? ?]. auto.
     Defined.
 
     Lemma weight_concat {x y z} (p : Paths x y) (q : Paths y z)
@@ -716,7 +717,7 @@ Module WeightedGraph (V : UsualOrderedType).
       intros x Hx. apply H.
       now apply VSetFact.union_2.
     Qed.
- 
+
     Lemma simplify_aux2 {s0 x} (Hx : VSet.mem x s0 = true)
           {s1 s2}
           (Hs : VSet.Equal (VSet.union s0 (VSet.add x s1)) s2)
@@ -840,7 +841,7 @@ Module WeightedGraph (V : UsualOrderedType).
       let base := if V.eq_dec x z then Some 0 else None in
       match fuel with
       | 0 => base
-      | S fuel => 
+      | S fuel =>
         match VSet.mem x s with
         | true =>
           let ds := List.map
@@ -912,7 +913,7 @@ Module WeightedGraph (V : UsualOrderedType).
         intros [m z]; cbn. erewrite IHn.
         reflexivity. now eapply VSetFact.remove_m.
     Qed.
-    
+
     Lemma lsp0_spec_le {s x y} (p : SimplePaths s x y)
       : (Some (sweight p) <= lsp0 s x y)%nbar.
     Proof.
@@ -960,7 +961,7 @@ Module WeightedGraph (V : UsualOrderedType).
       clearbody c; revert s e x y n.
       induction c using Wf_nat.lt_wf_ind.
       rename H into IH.
-      intros s e x y n H. 
+      intros s e x y n H.
       rewrite lsp0_eq in H; cbn -[lsp0] in H.
       case_eq (VSet.mem x s); intro Hx; rewrite Hx in H.
       - apply fold_max_In in H. destruct H.
@@ -1015,7 +1016,7 @@ Module WeightedGraph (V : UsualOrderedType).
       : (lsp0 s x y1 + Some n <= lsp0 s x y2)%nbar.
     Proof.
       case_eq (lsp0 s x y1); [|cbn; trivial].
-      intros m Hm. 
+      intros m Hm.
       apply lsp0_spec_eq in Hm.
       destruct Hm as [p Hp].
       case_eq (split' p).
@@ -1071,7 +1072,7 @@ Module WeightedGraph (V : UsualOrderedType).
         intro Hx; apply d. eapply snodes_Subset.
         eassumption.
     Defined.
-    
+
 
     Definition simplify2 {x z} (p : Paths x z) :  SimplePaths (nodes p) x z.
     Proof.
@@ -1107,8 +1108,8 @@ Module WeightedGraph (V : UsualOrderedType).
         destruct (VSet.mem x (snodes (simplify2 p))).
         + rewrite weight_SimplePaths_sub.
           pose proof (@weight_split _ _ _ (simplify2 p))
-               x (left (F0 (eq_refl true))).
-          set (q := split (simplify2 p) x (left (F0 (eq_refl true)))) in *.
+               x (left (F0 (eq_refl))).
+          set (q := split (simplify2 p) x (left (F0 (eq_refl)))) in *.
           destruct q as [q1 q2]; cbn in *.
           assert (sweight q1 + e.π1 = 0); [|lia].
           specialize (HG _ (paths_step e (to_paths q1))). cbn in HG.
@@ -1116,7 +1117,7 @@ Module WeightedGraph (V : UsualOrderedType).
         + rewrite weight_SimplePaths_sub. cbn.
           rewrite weight_reduce; intuition.
     Qed.
-            
+
     Lemma nodes_subset {x y} (p : Paths x y)
       : VSet.Subset (nodes p) (V G).
     Proof.
@@ -1179,7 +1180,7 @@ Module WeightedGraph (V : UsualOrderedType).
     Lemma lsp_codistance {HG : acyclic_no_loop} x y z
       : (lsp x y + lsp y z <= lsp x z)%nbar.
     Proof.
-      case_eq (lsp x y); [|cbn; trivial]. intros n Hn. 
+      case_eq (lsp x y); [|cbn; trivial]. intros n Hn.
       case_eq (lsp y z); [|cbn; trivial]. intros m Hm.
       destruct (lsp0_spec_eq _ Hn) as [p1 Hp1].
       destruct (lsp0_spec_eq _ Hm) as [p2 Hp2].
@@ -1295,7 +1296,7 @@ Module WeightedGraph (V : UsualOrderedType).
               (Hp_0 : lsp G (s G) y_0 = Some (sweight G p_0))
               (Hxs : lsp G x_0 (s G) = None)
               (Hx_0_0 : VSet.mem x_0 (snodes G p_0) = false).
-      
+
       Definition K := Peano.max kx (S ky).
 
       Let G' : t
@@ -1423,7 +1424,7 @@ Module WeightedGraph (V : UsualOrderedType).
             exact (HG (s G) (to_paths G py1)). }
           lia.
       Defined.
-      
+
     End subgraph.
 
     Lemma leq_vertices_caract0 {n x y} (Vy : VSet.In y (V G)) :
@@ -1441,7 +1442,7 @@ Module WeightedGraph (V : UsualOrderedType).
             -- destruct (V.eq_dec (s G) x).
                apply False_rect. apply Vx. subst; apply HI.
                now apply lsp_correctness.
-            -- intros e H. 
+            -- intros e H.
                destruct (V.eq_dec e..s x).
                apply False_rect, Vx; subst; now apply HI.
                destruct (V.eq_dec e..t x).
@@ -1499,7 +1500,7 @@ Module WeightedGraph (V : UsualOrderedType).
               ++ destruct (V.eq_dec (s G) y).
                  apply False_rect. apply Vy. subst; apply HI.
                  now apply lsp_correctness.
-              ++ intros e H. 
+              ++ intros e H.
                  destruct (V.eq_dec e..s y).
                  apply False_rect, Vy; subst; now apply HI.
                  destruct (V.eq_dec e..t y).
@@ -1524,7 +1525,7 @@ Module WeightedGraph (V : UsualOrderedType).
               -- destruct (V.eq_dec (s G) y).
                  apply False_rect. apply Vy. subst; apply HI.
                  unfold lsp; rewrite acyclic_lsp0_xx by assumption. reflexivity.
-              -- intros e H. 
+              -- intros e H.
                  destruct (V.eq_dec e..s y).
                  apply False_rect, Vy; subst; now apply HI.
                  destruct (V.eq_dec e..t y).
@@ -1556,7 +1557,7 @@ Module WeightedGraph (V : UsualOrderedType).
                   destruct (V.eq_dec (s G) x).
                   apply False_rect. apply Vx. subst; apply HI.
                   now apply lsp_correctness.
-               ++ intros e H. 
+               ++ intros e H.
                   destruct (V.eq_dec e..s y).
                   apply False_rect, Vy; subst; now apply HI.
                   destruct (V.eq_dec e..t y).

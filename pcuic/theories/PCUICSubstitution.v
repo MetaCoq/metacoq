@@ -10,6 +10,9 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLif
      PCUICReduction PCUICCumulativity PCUICWeakening.
 Require Import ssreflect.
 
+From Equations Require Import Equations.
+Require Import Equations.Prop.DepElim.
+
 Set Asymmetric Patterns.
 Local Set Keyed Unification.
 Close Scope string_scope.

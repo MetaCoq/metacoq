@@ -9,7 +9,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
      PCUICCumulativity PCUICSR PCUICEquality PCUICNameless PCUICConversion
      PCUICSafeLemmata PCUICNormal PCUICInversion PCUICReduction PCUICPosition
-     PCUICContextConversion PCUICConfluence PCUICSN PCUICAlpha.
+     PCUICContextConversion PCUICConfluence PCUICSN PCUICAlpha PCUICUtils.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce.
 From Equations Require Import Equations.
 

@@ -766,11 +766,7 @@ Lemma mkApps_notApp_inj :
 Proof.
   intros u u' l l' h h' e.
   eapply mkApps_nApp_inj.
-  - (* Below was the proof without ssreflect and now it has to be stupid
-       and not principled!!! :(
-     *)
-    (* rewrite 2!isApp_false_nApp by assumption. reflexivity. *)
-    do 2 (rewrite isApp_false_nApp ; [ assumption |]). reflexivity.
+  - rewrite -> 2!isApp_false_nApp by assumption. reflexivity.
   - assumption.
 Qed.
 

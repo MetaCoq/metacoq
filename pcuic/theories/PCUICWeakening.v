@@ -7,6 +7,9 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLif
      PCUICTyping PCUICWeakeningEnv PCUICClosed PCUICReduction.
 Require Import ssreflect ssrbool.
 
+From Equations Require Import Equations.
+Require Import Equations.Prop.DepElim.
+
 (** * Weakening lemmas for typing derivations.
 
   [weakening_*] proves weakening of typing, reduction etc... w.r.t. the *local* environment. *)

@@ -474,7 +474,7 @@ Proof.
     destruct c1 as (? & ? & ?). destruct H as [].
     eapply PCUICCumulativity.red_cumul_inv in X.
 
-    eapply invert_cumul_arity_l in H0 as (? & ? & ?). 2:eauto. 2:eauto. 2: eapply PCUICConversion.cumul_trans; eauto.
+    eapply invert_cumul_arity_l in H0 as (? & ? & ?). 2: eapply PCUICConversion.cumul_trans; eauto.
     destruct H.
     eapply typing_spine_red in t1. 2:{ eapply PCUICCumulativity.All_All2_refl.
                                                   clear. induction L; eauto. }

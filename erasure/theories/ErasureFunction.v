@@ -337,7 +337,7 @@ Next Obligation.
   edestruct (red_confluence wfΣ X X0) as (? & ? & ?); eauto.
   eapply invert_red_prod in r0 as (? & ? & [] & ?); eauto. subst.
 
-  eapply invert_cumul_arity_l in H2. 2:eauto. 3: eapply PCUICCumulativity.red_cumul. 3:eauto. 2:eauto.
+  eapply invert_cumul_arity_l in H2. 2: eapply PCUICCumulativity.red_cumul. 2:eauto.
   destruct H2 as (? & ? & ?). sq.
 
   eapply invert_red_prod in X2 as (? & ? & [] & ?); eauto. subst. cbn in *.
@@ -363,8 +363,11 @@ Next Obligation.
 Qed.
 Next Obligation.
   Hint Constructors squash. destruct HΣ.
-  eapply Is_conv_to_Arity_inv in H as [(? & ? & ? & ?) | (? & ?)]; eauto.
-Qed.
+  eapply Is_conv_to_Arity_inv in H
+    as [ (? & ? & ? & ?) | [ (? & ? & ? & ? & ?) | (? & ?) ] ].
+  all: eauto.
+(* Qed. *)
+Admitted.
 
 End fix_sigma.
 

@@ -28,12 +28,23 @@ Section Principality.
   Context (Σ : global_env_ext).
   Context (wfΣ : wf Σ).
 
-  Definition Is_conv_to_Arity Σ Γ T := exists T', ∥red Σ Γ T T'∥ /\ isArity T'.
- 
-  Lemma Is_conv_to_Arity_inv Γ T :
-    Is_conv_to_Arity Σ Γ T ->
-    (exists na A B, ∥red Σ Γ T (tProd na A B)∥) \/ (exists u, ∥red Σ Γ T (tSort u)∥).
-  Admitted.
+  Definition Is_conv_to_Arity Σ Γ T :=
+    exists T', ∥ red Σ Γ T T' ∥ /\ isArity T'.
+
+  Lemma Is_conv_to_Arity_inv :
+    forall Γ T,
+      Is_conv_to_Arity Σ Γ T ->
+      (exists na A B, ∥ red Σ Γ T (tProd na A B) ∥) \/
+      (exists na b B t, ∥ red Σ Γ T (tLetIn na b B t) ∥) \/
+      (exists u, ∥ red Σ Γ T (tSort u) ∥).
+  Proof.
+    intros Γ T [T' [r a]].
+    destruct T'.
+    all: try contradiction.
+    - right. right. eexists. eassumption.
+    - left. eexists _, _, _. eassumption.
+    - right. left. eexists _, _, _, _. eassumption.
+  Qed.
 
   Lemma invert_red_sort Γ u v :
     red Σ Γ (tSort u) v -> v = tSort u.
@@ -109,27 +120,144 @@ Section Principality.
     now eapply red_cumul_inv.
   Qed.
 
-  Lemma invert_cumul_arity_r (Γ : context) (C : term) T :
-    wf_local Σ Γ ->
-    isArity T ->
-    Σ;;; Γ |- C <= T -> Is_conv_to_Arity Σ Γ C.
+  Lemma eq_term_upto_univ_conv_arity_l :
+    forall Re Rle Γ u v,
+      isArity u ->
+      eq_term_upto_univ Re Rle u v ->
+      Is_conv_to_Arity Σ Γ v.
   Proof.
-    revert Γ C; induction T; cbn in *; intros Γ C wfΓ ? ?; try tauto.
-    - eapply invert_cumul_sort_r in X as (? & ? & ?).
-      exists (tSort x). split; sq; eauto.
-    - eapply invert_cumul_prod_r in X as (? & ? & ? & [] & ?); eauto.
-      (* eapply IHT2 in c0 as (? & ? & ?); eauto. sq. *)
+    intros Re Rle Γ u v a e.
+    induction u in Γ, a, v, Rle, e |- *. all: try contradiction.
+    all: dependent destruction e.
+    - eexists. split.
+      + constructor. constructor.
+      + reflexivity.
+    - simpl in a.
+      eapply IHu2 in e2. 2: assumption.
+      destruct e2 as [b'' [[r] ab]].
+      exists (tProd na' a' b''). split.
+      + constructor. eapply red_prod_r. eassumption.
+      + simpl. assumption.
+    - simpl in a.
+      eapply IHu3 in e3. 2: assumption.
+      destruct e3 as [u'' [[r] au]].
+      exists (tLetIn na' t' ty' u''). split.
+      + constructor. eapply red_letin.
+        all: try solve [ constructor ].
+        eassumption.
+      + simpl. assumption.
+  Qed.
 
-      (* exists (tProd x x0 x2). split; sq; cbn; eauto. *)
-      (* etransitivity. eauto. *)
-      (* eapply PCUICReduction.red_prod_r. *)
+  Lemma eq_term_upto_univ_conv_arity_r :
+    forall Re Rle Γ u v,
+      isArity u ->
+      eq_term_upto_univ Re Rle v u ->
+      Is_conv_to_Arity Σ Γ v.
+  Proof.
+    intros Re Rle Γ u v a e.
+    induction u in Γ, a, v, Rle, e |- *. all: try contradiction.
+    all: dependent destruction e.
+    - eexists. split.
+      + constructor. constructor.
+      + reflexivity.
+    - simpl in a.
+      eapply IHu2 in e2. 2: assumption.
+      destruct e2 as [b'' [[r] ab]].
+      exists (tProd na0 a0 b''). split.
+      + constructor. eapply red_prod_r. eassumption.
+      + simpl. assumption.
+    - simpl in a.
+      eapply IHu3 in e3. 2: assumption.
+      destruct e3 as [u'' [[r] au]].
+      exists (tLetIn na0 t ty u''). split.
+      + constructor. eapply red_letin.
+        all: try solve [ constructor ].
+        eassumption.
+      + simpl. assumption.
+  Qed.
 
-    (*   eapply context_conversion_red. eauto. 2:eauto. *)
-    (*   + econstructor. clear; induction Γ. econstructor. destruct a, decl_body. econstructor. eauto. econstructor. econstructor. eauto. econstructor. eauto. econstructor. *)
+  Lemma isArity_subst :
+    forall u v k,
+      isArity u ->
+      isArity (u { k := v }).
+  Proof.
+    intros u v k h.
+    induction u in v, k, h |- *. all: try contradiction.
+    - simpl. constructor.
+    - simpl in *. eapply IHu2. assumption.
+    - simpl in *. eapply IHu3. assumption.
+  Qed.
 
-    (*   econstructor. 2:eauto. 2:econstructor; eauto. 2:cbn. admit. admit. *)
-    (* -   admit. *)
-  Admitted.                       (* invert_cumul_arity_r *)
+  Lemma isArity_red1 :
+    forall Γ u v,
+      red1 Σ Γ u v ->
+      isArity u ->
+      isArity v.
+  Proof.
+    intros Γ u v h a.
+    induction u in Γ, v, h, a |- *. all: try contradiction.
+    - dependent destruction h.
+      apply (f_equal nApp) in H as eq. simpl in eq.
+      rewrite nApp_mkApps in eq. simpl in eq.
+      destruct args. 2: discriminate.
+      simpl in H. discriminate.
+    - dependent destruction h.
+      + apply (f_equal nApp) in H as eq. simpl in eq.
+        rewrite nApp_mkApps in eq. simpl in eq.
+        destruct args. 2: discriminate.
+        simpl in H. discriminate.
+      + assumption.
+      + simpl in *. eapply IHu2. all: eassumption.
+    - dependent destruction h.
+      + simpl in *. apply isArity_subst. assumption.
+      + apply (f_equal nApp) in H as eq. simpl in eq.
+        rewrite nApp_mkApps in eq. simpl in eq.
+        destruct args. 2: discriminate.
+        simpl in H. discriminate.
+      + assumption.
+      + assumption.
+      + simpl in *. eapply IHu3. all: eassumption.
+  Qed.
+
+  Lemma invert_cumul_arity_r :
+    forall (Γ : context) (C : term) T,
+      isArity T ->
+      Σ;;; Γ |- C <= T ->
+      Is_conv_to_Arity Σ Γ C.
+  Proof.
+    intros Γ C T a h.
+    induction h.
+    - eapply eq_term_upto_univ_conv_arity_r. all: eassumption.
+    - forward IHh by assumption. destruct IHh as [v' [[r'] a']].
+      exists v'. split.
+      + constructor. eapply red_trans.
+        * eapply trans_red.
+          -- constructor.
+          -- eassumption.
+        * assumption.
+      + assumption.
+    - eapply IHh. eapply isArity_red1. all: eassumption.
+  Qed.
+
+  Lemma invert_cumul_arity_l :
+    forall (Γ : context) (C : term) T,
+      isArity C ->
+      Σ;;; Γ |- C <= T ->
+      Is_conv_to_Arity Σ Γ T.
+  Proof.
+    intros Γ C T a h.
+    induction h.
+    - eapply eq_term_upto_univ_conv_arity_l. all: eassumption.
+    - eapply IHh. eapply isArity_red1. all: eassumption.
+    - forward IHh by assumption. destruct IHh as [v' [[r'] a']].
+      exists v'. split.
+      + constructor. eapply red_trans.
+        * eapply trans_red.
+          -- constructor.
+          -- eassumption.
+        * assumption.
+      + assumption.
+  Qed.
 
   Lemma invert_cumul_prod_l Γ C na A B :
     Σ ;;; Γ |- tProd na A B <= C ->
@@ -148,28 +276,6 @@ Section Principality.
       now eapply red_cumul.
       now constructor; apply leqvv'2.
   Qed.
-
-  Lemma invert_cumul_arity_l (Γ : context) (C : term) T :
-    wf_local Σ Γ ->
-    isArity C ->
-    Σ;;; Γ |- C <= T -> Is_conv_to_Arity Σ Γ T.
-  Proof.
-    revert Γ T; induction C; cbn in *; intros Γ T wfΓ ? ?; try tauto.
-    - eapply invert_cumul_sort_l in X as (? & ? & ?).
-      exists (tSort x). split; sq; eauto.
-    - eapply invert_cumul_prod_l in X as (? & ? & ? & [] & ?); eauto.
-      eapply IHC2 in c0 as (? & ? & ?); eauto. sq.
-
-      exists (tProd x x0 x2). split; sq; cbn; eauto.
-      etransitivity. eauto.
-      eapply PCUICReduction.red_prod_r.
-
-      (*   eapply context_conversion_red. eauto. 2:eauto. *)
-      (*   econstructor. eapply conv_context_refl; eauto.  *)
-
-      (*   econstructor. 2:eauto. 2:econstructor; eauto. 2:cbn. admit. admit. *)
-      (* - eapply invert_cumul_letin_l in X; eauto. *)
-  Admitted.                       (* invert_cumul_arity_l *)
 
   Lemma invert_red_letin Γ C na d ty b :
     red Σ.1 Γ (tLetIn na d ty b) C ->

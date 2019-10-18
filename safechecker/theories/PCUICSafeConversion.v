@@ -28,12 +28,6 @@ Module PSR := PCUICSafeReduce.
  *)
 
 
-Definition global_uctx (Σ : global_env) : ContextSet.t
-  := (global_levels Σ, global_constraints Σ).
-
-Definition global_ext_uctx (Σ : global_env_ext) : ContextSet.t
-  := (global_ext_levels Σ, global_ext_constraints Σ).
-
 Definition wf_global_uctx_invariants {cf:checker_flags} Σ
   : ∥ wf Σ ∥ -> global_uctx_invariants (global_uctx Σ).
 Proof.

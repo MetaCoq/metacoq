@@ -198,10 +198,9 @@ Proof.
   cbn in H3.
   eapply PCUICWeakeningEnv.on_declared_inductive in H1; eauto. destruct H1.
   depelim o0. cbn in *. unfold on_constructors in *.
-  eapply nth_error_alli in E7; eauto. cbn in E7.
-  depelim E7. cbn in *. destruct s.
-  depelim x2. cbn in *.
-  subst. admit. admit.
+  eapply All2_nth_error_Some in E7; eauto.
+  destruct E7 as [cs [? [XX1 XX2]]].
+  admit. admit.
 
   (* clear - H0 E4. unfold mapi in *. *)
   (* revert n x7 H0 E4. generalize 0 at 3. induction (ind_ctors x2); intros. *)

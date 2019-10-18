@@ -24,9 +24,6 @@ Add Search Blacklist "_graph_mut".
   substitution are costly here. No universe checking or conversion is done
   in particular. *)
 
-Definition global_ext_uctx (Σ : global_env_ext) : ContextSet.t
-  := (global_ext_levels Σ, global_ext_constraints Σ).
-
 Section TypeOf.
   Context {cf : checker_flags}.
   Context (Σ : global_env_ext).

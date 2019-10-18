@@ -252,9 +252,9 @@ Proof.
     eapply typed_liftn; eauto; eauto. constructor. simpl; lia.
     rewrite H0 in Heq'. rewrite Heq in Heq'. revert Heq'; intros [= <- <-].
     f_equal; auto.
-    apply (Alli_map_id onConstructors).
-    intros n1 [[x p] n']. intros [[s Hty] [cs Hargs]].
-    unfold on_pi2; f_equal; f_equal.
+    eapply All_map_id. eapply All2_All_left; tea.
+    intros [[x p] n'] y [[s Hty] [cs Hargs]]. 
+    unfold on_pi2; cbn; f_equal; f_equal.
     simpl in Hty.
     eapply typed_liftn. 4:eapply Hty. eauto. apply typing_wf_local in Hty; eauto. lia.
     destruct(eq_dec ind_projs []) as [Hp|Hp]. subst; auto. specialize (onProjections Hp).

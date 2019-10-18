@@ -371,20 +371,20 @@ Proof.
     intuition eauto using closed_upwards with arith.
 
   - destruct isdecl as [Hidecl Hcdecl].
-    eapply declared_inductive_inv in X0; eauto.
-    apply onConstructors in X0. repeat red in X0.
-    eapply nth_error_alli in Hcdecl; eauto.
-    repeat red in Hcdecl.
-    destruct Hcdecl as [[s Hs] _]. rewrite -> andb_and in Hs.
-    destruct Hs as [Hdecl _].
-    unfold type_of_constructor.
     apply closedn_subst0.
-    unfold inds. clear. simpl. induction #|ind_bodies mdecl|. constructor.
-    simpl. now rewrite IHn.
-    rewrite inds_length. unfold arities_context in Hdecl.
-    rewrite rev_map_length in Hdecl.
-    rewrite closedn_subst_instance_constr.
-    eauto using closed_upwards with arith.
+    + unfold inds. clear. simpl. induction #|ind_bodies mdecl|. constructor.
+      simpl. now rewrite IHn.
+    + rewrite inds_length.
+      rewrite closedn_subst_instance_constr.
+      eapply declared_inductive_inv in X0; eauto.
+      pose proof X0.(onConstructors) as XX.
+      eapply All2_nth_error_Some in Hcdecl; eauto.
+      destruct Hcdecl as [? [? ?]]. cbn in *.
+      destruct o as [[s Hs] _]. rewrite -> andb_and in Hs.
+      apply proj1 in Hs.
+      unfold arities_context in Hs.
+      rewrite rev_map_length in Hs.
+      eauto using closed_upwards with arith.
 
   - intuition auto.
     + solve_all. unfold test_snd. simpl in *.
@@ -462,9 +462,13 @@ Proof.
     destruct o0 as [onI onP onNP].
     constructor; auto.
     -- eapply Alli_impl. exact onI. eauto. intros.
-       unshelve econstructor. shelve. shelve.
-       --- apply onConstructors in X1. red in X1.
-           unfold on_constructor, on_type in *. eapply Alli_impl_trans; eauto.
+       refine {| ind_indices := X1.(ind_indices);
+                 ind_arity_eq := X1.(ind_arity_eq);
+                 ind_ctors_sort := X1.(ind_ctors_sort) |}.
+       --- apply onArity in X1. unfold on_type in *; simpl in *.
+           now eapply X.
+       --- pose proof X1.(onConstructors) as X11. red in X11.
+           unfold on_constructor, on_type in *. eapply All2_impl; eauto.
            simpl. intros. destruct X2 as (? & ? & ?).
            split. now eapply X.
            exists x1.
@@ -473,34 +477,18 @@ Proof.
            abstract (induction c; simpl; auto;
            destruct a as [na [b|] ty]; simpl in *; auto;
            split; eauto; [apply IHc;apply t|apply X;simpl; auto;apply t]).
-       --- apply (ind_arity_eq X1).
-       --- apply onArity in X1. unfold on_type in *; simpl in *.
-           now eapply X.
        --- simpl; intros. pose (onProjections X1 H0). simpl in *.
            destruct o0. constructor; auto. eapply Alli_impl; intuition eauto.
            unfold on_projection in *; simpl in *.
            now apply X.
-       --- generalize (ind_sorts X1).
-           (* all:todo "simplify constructor shapes"%string. *)
-           clear -X.
-           destruct (onConstructors X1); auto.
-           unfold check_ind_sorts.
-           destruct universe_family eqn:Heq; simpl; auto.
-           destruct tl; simpl. intros.
-           specialize (H0 _ H1). destruct o0; simpl in *; intuition auto.
-           destruct o as [? [? ?]]; simpl in *; intuition auto.
-           auto. intuition auto.
-           destruct o as [? [? ?]]. simpl in *. intuition auto.
-           clear -o0 H2.
-           induction o0; simpl; intuition auto.
-           destruct p as [? [? ?]]; simpl in *; intuition auto.
-           eapply IHo0; auto. red in H2. red. intuition auto.
-           intuition auto.
-           destruct o as [? [? ?]]; simpl in *; intuition auto.
-           clear -o0 H2.
-           induction o0; simpl; intuition auto.
-           destruct p as [? [? ?]]; simpl in *; intuition auto.
-           eapply IHo0; auto. red in H2. red. intuition auto.
+       --- destruct X1. simpl. unfold check_ind_sorts in *.
+           destruct universe_family; auto.
+           split. apply ind_sorts. destruct indices_matter; auto.
+           eapply type_local_ctx_impl. eapply ind_sorts. auto.
+           split; [apply fst in ind_sorts|apply snd in ind_sorts].
+           eapply Forall_impl; tea. auto.
+           destruct indices_matter; [|trivial].
+           eapply type_local_ctx_impl; tea. eauto.
     -- red in onP. red.
        eapply All_local_env_impl. eauto.
        intros. now apply X.

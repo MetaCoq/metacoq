@@ -1222,7 +1222,7 @@ Proof.
     clear decl'. intros n [na ty ke ct pr] hb. simpl.
     destruct (decompose_prod_assum [] ty) as [c t] eqn:e1.
     destruct (decompose_prod_assum [] ty.[⇑^0 σ]) as [c' t'] eqn:e2.
-    destruct hb as [indices s arity_eq onAr onConstr onProj sorts].
+    destruct hb as [indices s arity_eq onAr csorts onConstr onProj sorts].
     simpl in *.
     assert (e : ty.[⇑^0 σ] = ty).
     { destruct onAr as [s' h'].
@@ -1231,9 +1231,9 @@ Proof.
     rewrite e in e2. rewrite e1 in e2.
     revert e2. intros [= <- <-].
     rewrite e. f_equal.
-    + apply (Alli_map_id onConstr).
-      intros n1 [[x p] n'] [[s' hty] _].
-      unfold on_pi2. simpl. f_equal. f_equal.
+    + eapply All_map_id. eapply All2_All_left; tea.
+      intros [[x p] n'] y [[?s Hty] [cs Hargs]]. 
+      unfold on_pi2; cbn; f_equal; f_equal.
       eapply typed_inst. all: eauto.
     + destruct (eq_dec pr []) as [hp | hp]. all: subst. all: auto.
       specialize (onProj hp).
@@ -1467,15 +1467,15 @@ Proof.
   destruct hmdecl as [Σ' [wfΣ' decl']].
   red in decl'. destruct decl' as [h ? ? ?].
   eapply Alli_nth_error in h. 2: eassumption.
-  simpl in h. destruct h as [? ? ? ? h ? ?].
+  simpl in h. destruct h as [? ? ? ? ? h ? ?].
   unfold on_constructors in h.
   clear - h wfΣ'.
   induction h.
   - constructor.
   - econstructor.
-    + destruct hd as [[? t] ?].
-      unfold on_constructor in p. cbn in p.
-      destruct p as [[? ht] ?].
+    + destruct x as [[? t] ?].
+      unfold on_constructor in r. cbn in r.
+      destruct r as [[? ht] ?].
       eapply typecheck_closed in ht as [? e]. 2: auto.
       2: eapply typing_wf_local ; eauto.
       move/andP in e. destruct e. assumption.

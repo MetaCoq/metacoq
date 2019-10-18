@@ -1630,9 +1630,15 @@ Proof.
   induction l in n |- * ; constructor ; eauto.
 Qed.
 
+Definition on_some_or_none {A} (P : A -> Type) (o : option A) :=
+  match o with
+  | Some t => P t
+  | None => True
+  end.
+
 (* todo: move *)
 Lemma map_option_out_All {A} P (l : list (option A)) l' :
-  (All (on_some P) l) ->
+  (All (on_some_or_none P) l) ->
   map_option_out l = Some l' ->
   All P l'.
 Proof.
@@ -1650,6 +1656,20 @@ Proof.
   induction 1; simpl; constructor; tas.
 Qed.
 
+(* todo: move *)
+Lemma All_Alli {A} {P : A -> Type} {Q : nat -> A -> Type} {l n} :
+  All P l ->
+  (forall n x, P x -> Q n x) ->
+  Alli Q n l.
+Proof.
+  intro H. revert n. induction H; constructor; eauto.
+Qed.
+
+Lemma All2_All_left_pack {A B} {P : A -> B -> Type} {l l'} :
+  All2 P l l' -> All (fun x => ∑ y, P x y) l.
+Proof.
+  intros HF. induction HF; constructor; eauto.
+Qed.
 
 
 Lemma type_Case_valid_btys {cf:checker_flags} Σ Γ ind u npar p (* c brs *) args :
@@ -1674,18 +1694,17 @@ Proof.
   eapply map_option_out_All; tea. clear H2.
   apply All_mapi.
   apply PCUICWeakeningEnv.on_declared_inductive in isdecl as [oind oc].
-  apply onConstructors in oc.
-  eapply Alli_impl; tea.
-  intros n [[id ct] k] [Hct1 Hct2]; cbn in *.
+  pose proof oc.(onConstructors) as oc'.
+  eapply All_Alli. eapply All2_All_left_pack; tea. cbn.
+  intros n [[id ct] k] [cs [Hct1 Hct2]]; cbn in *.
   case_eq (instantiate_params (subst_instance_context u (ind_params mdecl)) pars
              ((subst0 (inds (inductive_mind ind) u (ind_bodies mdecl)))
-                (subst_instance_constr u ct))).
-  - intros ct' Hct'.
-    case_eq (decompose_prod_assum [] ct'); intros sign ccl e1.
-    case_eq (chop (ind_npars mdecl) (decompose_app ccl).2);
-      intros paramrels args0 e2; cbn.
+                (subst_instance_constr u ct))); [|trivial].
+  intros ct' Hct'.
+  case_eq (decompose_prod_assum [] ct'); intros sign ccl e1.
+  case_eq (chop (ind_npars mdecl) (decompose_app ccl).2);
+    intros paramrels args0 e2; cbn.
     admit.
-  - intro HH. cbn.
 Admitted.
 
 Lemma type_Case' {cf:checker_flags} Σ Γ ind u npar p c brs args :

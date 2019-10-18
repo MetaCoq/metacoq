@@ -751,7 +751,7 @@ Proof.
 Qed.
 
 
-Lemma make_graph_invariants uctx (Hi : global_gc_uctx_invariants uctx)
+Global Instance make_graph_invariants uctx (Hi : global_gc_uctx_invariants uctx)
   : invariants (make_graph uctx).
 Proof.
   split; [|split].
@@ -909,20 +909,16 @@ Section MakeGraph.
       apply make_graph_spec'. assumption.
   Defined.
 
-  Corollary consistent_no_loop : gc_consistent ctrs -> acyclic_no_loop G.
+  Global Instance consistent_no_loop : gc_consistent ctrs -> acyclic_no_loop G.
   Proof.
     intro. apply acyclic_caract1, make_graph_spec2.
     now apply make_graph_invariants. assumption.
   Defined.
 End MakeGraph.
 
-Existing Class invariants.
-Existing Instance make_graph_invariants.
-Existing Class acyclic_no_loop.
 Existing Class gc_consistent.
 Existing Class global_gc_uctx_invariants.
 Existing Class global_uctx_invariants.
-Existing Instance consistent_no_loop.
 Existing Instance gc_of_uctx_invariants.
 
 (** ** Check of consistency ** *)
@@ -1496,6 +1492,20 @@ Section CheckLeq2.
     - destruct a as [[] []]; cbn; lia.
     - rewrite val_cons.
       destruct a as [[] []]; cbn; lia.
+  Qed.
+
+  Lemma val_is_prop' u v :
+    (val v u = -1)%Z -> Universe.is_prop u.
+  Proof.
+    clear.
+    induction u.
+    - destruct a as [[] []]; cbnr; lia.
+    - intro H. cbn. rewrite val_cons in H.
+      apply andb_true_iff. split.
+      destruct a as [[] []]; cbn in *; try reflexivity; try lia.
+      apply IHu.
+      pose proof (val_minus_one u v).
+      lia.
   Qed.
 
   Lemma val0_equal l1 l2 v :

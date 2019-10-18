@@ -1233,6 +1233,7 @@ Arguments ind_indices {_ P Σ mind mdecl i idecl}.
 Arguments ind_sort {_ P Σ mind mdecl i idecl}.
 Arguments ind_arity_eq {_ P Σ mind mdecl i idecl}.
 Arguments onArity {_ P Σ mind mdecl i idecl}.
+Arguments ind_ctors_sort {_ P Σ mind mdecl i idecl}.
 Arguments onConstructors {_ P Σ mind mdecl i idecl}.
 Arguments onProjections {_ P Σ mind mdecl i idecl}.
 Arguments ind_sorts {_ P Σ mind mdecl i idecl}.
@@ -1683,10 +1684,15 @@ Proof.
     + red in Xg.
       destruct Xg as [onI onP onnp]; constructor; eauto.
       eapply Alli_impl; eauto. clear onI onP onnp; intros n x Xg.
-      unshelve eexists (ind_indices Xg) (ind_sort Xg) _.
-      ++ apply onConstructors in Xg.
-         eapply Alli_impl_trans; eauto. intros.
-         red in X14 |- *. destruct X14 as [[s Hs] [cs Hargsu]]. split; auto.
+      refine {| ind_indices := Xg.(ind_indices);
+                ind_arity_eq := Xg.(ind_arity_eq);
+                ind_ctors_sort := Xg.(ind_ctors_sort) |}.
+      ++ apply onArity in Xg. destruct Xg as [s Hs]. exists s; auto.
+         specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ localenv_nil (existT _ _ (existT _ _ Hs))))))).
+         simpl in IH. simpl. apply IH; constructor 1; simpl; lia.
+      ++ pose proof Xg.(onConstructors) as Xg'.
+         eapply All2_impl; eauto. intros.
+         red in X14 |- *. destruct X14 as [[s Hs] [cs Hargsu]]. split.
          pose proof (typing_wf_local (Σ:= (Σ, udecl)) Hs). simpl in Hs.
          specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ X14 (existT _ _ (existT _ _ Hs))))))).
          simpl in IH. red. simpl. exists s. simpl. apply IH; constructor 1; simpl; auto with arith.
@@ -1700,10 +1706,6 @@ Proof.
          pose proof (typing_wf_local Hu).
          specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ X14 (existT _ _ (existT _ _ Hu))))))).
          apply IH. simpl. constructor 1. simpl. auto with arith.
-      ++ apply (ind_arity_eq Xg).
-      ++ apply onArity in Xg. destruct Xg as [s Hs]. exists s; auto.
-         specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ localenv_nil (existT _ _ (existT _ _ Hs))))))).
-         simpl in IH. simpl. apply IH; constructor 1; simpl; lia.
       ++ intros Hprojs; pose proof (onProjections Xg Hprojs); auto. simpl in *.
          destruct X14; constructor; auto. eapply Alli_impl; eauto. clear on_projs0. intros.
          red in X14 |- *. unfold on_type in *; intuition eauto. simpl in *.
@@ -1711,21 +1713,30 @@ Proof.
          pose proof (typing_wf_local (Σ:= (Σ, udecl)) Hs).
          specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ X14 (existT _ _ (existT _ _ Hs))))))).
          simpl in IH. apply IH; constructor 1; simpl; lia.
-      ++ destruct Xg. simpl. unfold check_ind_sorts in *. destruct universe_family; auto.
-         +++ simpl. unfold Alli_impl_trans. clear -ind_sorts0. revert onConstructors0 ind_sorts0.
-             generalize (ind_ctors x).
-             intros ? onConstructors0. depelim onConstructors0; simpl; auto.
-             depelim onConstructors0; simpl; auto. red in o. destruct o as [[s Hs] [cshape Hcs]]; simpl; auto.
-         +++ simpl. revert onConstructors0 ind_sorts0.
-             generalize (ind_ctors x).
-             intros ? onConstructors0. clear. red in onConstructors0.
-             unfold Alli_impl_trans. simpl. induction onConstructors0; simpl; intuition auto.
-             destruct p as [[? ?] [? ?]]. simpl in *. auto.
-         +++ simpl. revert onConstructors0 ind_sorts0.
-             generalize (ind_ctors x).
-             intros ? onConstructors0. clear. red in onConstructors0.
-             unfold Alli_impl_trans. simpl. induction onConstructors0; simpl; intuition auto.
-             destruct p as [[? ?] [? ?]]. simpl in *. auto.
+      ++ destruct Xg. simpl. unfold check_ind_sorts in *.
+         destruct universe_family; auto.
+         +++ split. apply ind_sorts0. destruct indices_matter; auto.
+             eapply type_local_ctx_impl. eapply ind_sorts0.
+             intros. red in X14.
+             destruct T.
+             pose proof (typing_wf_local X14).
+             specialize (IH ((Σ, udecl); (X13; _; X17; _; _; X14))).
+             apply IH. simpl. constructor 1. simpl. auto with arith.
+             destruct X14 as [u Hu]. exists u.
+             pose proof (typing_wf_local Hu).
+             specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ X14 (existT _ _ (existT _ _ Hu))))))).
+             apply IH. simpl. constructor 1. simpl. auto with arith.
+         +++ split. apply ind_sorts0. destruct indices_matter; auto.
+             eapply type_local_ctx_impl. eapply ind_sorts0.
+             intros. red in X14.
+             destruct T.
+             pose proof (typing_wf_local X14).
+             specialize (IH ((Σ, udecl); (X13; _; X17; _; _; X14))).
+             apply IH. simpl. constructor 1. simpl. auto with arith.
+             destruct X14 as [u Hu]. exists u.
+             pose proof (typing_wf_local Hu).
+             specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ X14 (existT _ _ (existT _ _ Hu))))))).
+             apply IH. simpl. constructor 1. simpl. auto with arith.
       ++ red in onP |- *.
          eapply All_local_env_impl; eauto.
          intros. destruct T; simpl in X14.

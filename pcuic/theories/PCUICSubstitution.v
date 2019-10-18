@@ -400,9 +400,10 @@ Proof.
     eapply typed_subst; eauto. simpl; lia.
     rewrite H in Heq'. rewrite Heq in Heq'. revert Heq'; intros [= <- <-].
     f_equal; auto.
-    apply (Alli_map_id onConstructors).
-    intros n1 [[x p] n']. intros [[s Hty] Hpars].
-    unfold on_pi2; f_equal; f_equal. eapply typed_subst. 3:eapply Hty. eauto. simpl. lia.
+    eapply All_map_id. eapply All2_All_left; tea.
+    intros [[x p] n'] y [[s Hty] [cs Hargs]]. 
+    unfold on_pi2; cbn; f_equal; f_equal.
+    eapply typed_subst. 3:eapply Hty. eauto. simpl. lia.
     destruct (eq_dec ind_projs []) as [Hp|Hp]; subst; auto.
     specialize (onProjections Hp).
     apply on_projs in onProjections.
@@ -676,9 +677,9 @@ Proof.
   eapply wf_arities_context'; eauto.
 Qed.
 
-Lemma on_constructor_closed {cf:checker_flags}  {Σ mind mdecl u i idecl cdecl} :
+Lemma on_constructor_closed {cf:checker_flags}  {Σ mind mdecl u idecl cdecl cs} :
   wf Σ ->
-  on_constructor (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind mind) mdecl (inductive_ind mind) idecl i cdecl ->
+  on_constructor (lift_typing typing) (Σ, ind_universes mdecl) mdecl (inductive_ind mind) idecl cdecl cs ->
   let cty := subst0 (inds (inductive_mind mind) u (ind_bodies mdecl))
                     (subst_instance_constr u (snd (fst cdecl)))
   in closed cty.
@@ -859,19 +860,19 @@ Qed.
 
 
 Lemma Alli_map_option_out_mapi_Some_spec' {A B} (f g : nat -> A -> option B) h l t P :
-  Alli P 0 l ->
-  (forall i x t, P i x -> f i x = Some t -> g i x = Some (h t)) ->
+  All P l ->
+  (forall i x t, P x -> f i x = Some t -> g i x = Some (h t)) ->
   map_option_out (mapi f l) = Some t ->
   map_option_out (mapi g l) = Some (map h t).
 Proof.
   unfold mapi. generalize 0.
   move => n Ha Hfg. move: t.
-  induction Ha; try constructor; auto.
+  induction Ha in n |- *; try constructor; auto.
   destruct t; cbnr; discriminate.
-  move=> t /=. case E: (f n hd) => [b|]; try congruence.
+  move=> t /=. case E: (f n x) => [b|]; try congruence.
   rewrite (Hfg n _ _ p E).
   case E' : map_option_out => [b'|]; try congruence.
-  move=> [= <-]. now rewrite (IHHa _ E').
+  move=> [= <-]. now rewrite (IHHa _ _ E').
 Qed.
 
 Lemma map_subst_instance_constr_to_extended_list_k u ctx k :
@@ -895,15 +896,14 @@ Proof.
 Qed.
 
 Lemma subst_build_branches_type {cf:checker_flags}
-      n k Σ ind mdecl idecl args u p brs :
+      n k Σ ind mdecl idecl args u p brs cs :
   wf Σ ->
   declared_inductive Σ mdecl ind idecl ->
   closed_ctx (subst_instance_context u (ind_params mdecl)) ->
   on_inductive (lift_typing typing) (Σ, ind_universes mdecl)
                (inductive_mind ind) mdecl ->
   on_constructors (lift_typing typing) (Σ, ind_universes mdecl)
-            (inductive_mind ind) mdecl (inductive_ind ind) idecl
-            (ind_ctors idecl) ->
+                  mdecl (inductive_ind ind) idecl (ind_ctors idecl) cs ->
   map_option_out (build_branches_type ind mdecl idecl args u p) = Some brs ->
   map_option_out (build_branches_type ind mdecl
          idecl (map (subst n k) args) u (subst n k p)) =
@@ -911,8 +911,10 @@ Lemma subst_build_branches_type {cf:checker_flags}
 Proof.
   intros wfΣ wfidecl closedparams onmind Honcs.
   rewrite !build_branches_type_. cbn.
-  eapply Alli_map_option_out_mapi_Some_spec'; tea.
-  clear Honcs brs. intros j [[id t] i] [t' k'] Honc.
+  eapply Alli_map_option_out_mapi_Some_spec'.
+  eapply All2_All_left; tea. intros x y u'; exact (y; u').
+  clear Honcs brs.
+  intros j [[id t] i] [t' k'] [cs' Honc].
   case_eq (instantiate_params (subst_instance_context u (ind_params mdecl)) args
                               (subst0 (inds (inductive_mind ind) u
                                             (ind_bodies mdecl))
@@ -1017,7 +1019,7 @@ Proof.
     rewrite XX. cbn in *. apply some_inj in HH1.
     pose proof (subst_destArity [] t n k) as YY; rewrite HH1 in YY.
     cbn in YY; now rewrite YY.
-  - apply onConstructors in onind.
+  - pose proof onind.(onConstructors) as XX.
     eapply (subst_build_branches_type n k) in HH3; tea.
 Qed.
 
@@ -2064,7 +2066,7 @@ Proof.
 
   - eapply refine_type. econstructor; eauto.
     symmetry.
-    apply on_declared_constructor in isdecl as [_ onc]; auto.
+    destruct (on_declared_constructor wfΣ isdecl) as [? [cs [? onc]]].
     eapply on_constructor_closed in onc as clty; auto.
     unfold type_of_constructor.
     apply subst_closedn; eauto. eapply closed_upwards; eauto. lia.

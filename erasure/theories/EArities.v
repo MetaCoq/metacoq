@@ -223,14 +223,9 @@ Proof.
     (* eapply isArity_typing_spine_inv in t0; eauto. *)
     (* destruct t0 as (? & [] & ?). *)
     (* eapply PCUICCumulativity.red_cumul in X. *)
-    eapply PCUICWeakeningEnv.declared_constructor_inv in d.
-    2: eapply PCUICWeakeningEnv.weaken_env_prop_typing. 2:eauto. 2:eauto.
-    cbn in d.
-    (* eapply cumul_trans in X. 2:exact c2. *)
-    (* eapply invert_cumul_arity_r in X; eauto. *)
-    inv d. cbn in X0. destruct x5. destruct p. cbn in *.
-    destruct X0. destruct x5. cbn in *. subst.
-    unfold cshape_concl_head in *.
+    destruct (PCUICWeakeningEnv.on_declared_constructor _ d) as [XX [s [XX1 [Ht [cs XX2]]]]].
+    destruct cs; cbn in *.
+    destruct x5 as [[? ?] ?]; cbn in *; subst.
 
     rewrite <- it_mkProd_or_LetIn_app in c2.
     rewrite PCUICUnivSubst.subst_instance_constr_it_mkProd_or_LetIn in c2.

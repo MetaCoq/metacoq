@@ -1,94 +1,145 @@
 # PCUIC
 
+## General
+
+| File         | Description                                  |
+|--------------|----------------------------------------------|
+| [PCUICUtils] | General utility, not specific to type-theory |
+
+[PCUICUtils]: PCUICUtils.v
+
 ## Syntax
 
-[PCUICAst](PCUICAst.v) defines the syntax of terms of PCUIC: `term`.
-Utility functions on this syntax can be found in
-[PCUICAstUtils](PCUICAstUtils.v), while [PCUICInduction](PCUICInduction)
-provides induction principles on the syntax, while taking care of special
-constructors like `tCase` (pattern-maching), `tFix` (fixed points) and
-`tCoFix` (co-fixed points) which take lists of terms as arguments.
-[PCUICLiftSubst](PCUICLiftSubst.v) defines renaming, lifting and susbtitution.
-[PCUICUnivSubst](PCUICUnivSubst.v) defines universe substitution (for universe
-polymorphism).
-[PCUICReflect](PCUICReflect.v) contains the definition of the `ReflectEq` type
-class, coming with boolean equality `eqb` which reflects equality, and give
-many instances of that class.
+| File             | Description                                               |
+|-----------------|-----------------------------------------------------------|
+| [PCUICAst]       | Definition of the syntax of PCUIC                         |
+| [PCUICAstUtils]  | Utility on syntax                                         |
+| [PCUICInduction] | Induction principle on syntax                             |
+| [PCUICLiftSubst] | Definition of renaming, lifting and substitution          |
+| [PCUICUnivSubst] | Universe substitution (for universe polymorphism)         |
+| [PCUICReflect]   | Instances of equality reflection                          |
+
+[PCUICAst]: PCUICAst.v
+[PCUICAstUtils]: PCUICAstUtils.v
+[PCUICInduction]: PCUICInduction.v
+[PCUICLiftSubst]: PCUICLiftSubst.v
+[PCUICUnivSubst]: PCUICUnivSubst.v
+[PCUICReflect]: PCUICReflect.v
 
 ## Typing and Meta Theory
 
-Typing in PCUIC is defined in [PCUICTyping](PCUICTyping.v), it also comes
-with the definition of reduction, conversion and cumulativity.
-Some results about reduction (including the definition of parallel reduction)
-can be found in [PCUICReduction](PCUICReduction.v).
-In [PCUICPosition](PCUICPosition.v), we define the notion of `position` in a
-`term`, as well as the notion of `stack`, how they are related and a
-well-founded order on positions (in a given term).
-In [PCUICNameless](PCUICNameless.v) we define a notion of `nameless` terms
-(without any pretty-printing annotations) and the `nl` function to remove
-such names in a term.
-Weakening on environments is done in [PCUICWeakeningEnv](PCUICWeakeningEnv.v).
-The notion of closed terms is defined in [PCUICClosed](PCUICClosed.v).
-In [PCUICSigmaCalculus](PCUICSigmaCalculus.v) we show type
-preservation for σ-calculus instantiation.
-Then [PCUICWeakening](PCUICWeakening.v) contains the weakening lemma.
-Some properties on cumulativity are proven in
-[PCUICCumulativity](PCUICCumulativity.v), it also includes some other
-properties about `eq_term` but they can mainly be found in
-[PCUICEquality](PCUICEquality.v).
-[PCUICSubstitution](PCUICSubstitution.v) contains the substitution lemma.
-All inversion lemmata on typing are in [PCUICInversion](PCUICInversion.v).
-[PCUICGeneration](PCUICGeneration.v) on the other hand is about admissibility
-lemmata on typing, for instance typing of n-ary application `mkApps`.
-[PCUICParallelReduction](PCUICParallelReduction.v) and
-[PCUICParallelReductionConfluence](PCUICParallelReductionConfluence.v) have
-self-explanatory names, they define parallel reduction and show it is confluent
-as a stepping stone to prove confluence of the "usual" reduction in
-[PCUICConfluence](PCUICConfluence.v).
-We prove principality (if a term has two types, it can be typed with a subtype
-of both) in [PCUICPrincipality](PCUICPrincipality.v).
-[PCUICUnivSubstitution](PCUICUnivSubstitution.v) contains more universe
-substitution lemmata.
-[PCUICValidity](PCUICValidity.v) allows us to show that every type `A`
-such that `Γ ⊢ t : A` is *valid*, meaning it is sorted or a well-formed
-arity.
-Subject reduction is addressed in [PCUICSR](PCUICSR.v).
-[PCUICWcbvEval](PCUICWcbvEval.v) defines the weak head call by value
-evaluation strategy.
+| File             | Description                                               |
+|------------------|-----------------------------------------------------------|
+| [PCUICTyping]    | Definition of reduction, conversion and typing            |
+| [PCUICReduction] | Results on reduction (including parallel reduction)       |
+| [PCUICPosition]  | Notions of position and stack, well-order on positions    |
+| [PCUICNameless]  | Notion of terms without printing annotation               |
+| [PCUICWeakeningEnv] | Weakening on environments                              |
+| [PCUICClosed]    | Definition of closed terms                                |
+| [PCUICSigmaCalculus] | Type preservation for σ-calculus instantiation        |
+| [PCUICWeakening] | Weakening lemma                                           |
+| [PCUICCumulativity] | Some properties on cumulativity                        |
+| [PCUICEquality]  | Equality up to universes between terms                    |
+| [PCUICSubstitution] | Substitution lemma                                     |
+| [PCUICInversion] | Inversion lemmata on typing                               |
+| [PCUICGeneration] | Admissibility lemmata  (for instance `mkApps`)           |
+| [PCUICParallelReduction] | Definition of parallel reduction                  |
+| [PCUICParallelReductionConfluence] | Proof of confluence of the parallel reduction |
+| [PCUICConfluence] | Proof of confluence                                      |
+| [PCUICPrincipality] | Principality of typing                                 |
+| [PCUICUnivSubstitution] | Universe substitution lemmata                      |
+| [PCUICValidity] | Every type `A` such that `Γ ⊢ t : A` is *valid*, meaning it is sorted or a well-formed arity |
+| [PCUICSR] | Subject reduction |
+| [PCUICWcbvEval] | Weak-head call-by-value evaluation strategy |
+| [PCUICMetaTheory] |   |
 
-[PCUICMetaTheory](PCUICMetaTheory.v) sums up the meta-theory?
-(probably outdated)
+
+[PCUICTyping]: PCUICTyping.v
+[PCUICReduction]: PCUICReduction.v
+[PCUICPosition]: PCUICPosition.v
+[PCUICNameless]: PCUICNameless.v
+[PCUICWeakeningEnv]: PCUICWeakeningEnv.v
+[PCUICClosed]: PCUICClosed.v
+[PCUICSigmaCalculus]: PCUICSigmaCalculus.v
+[PCUICWeakening]: PCUICWeakening.v
+[PCUICCumulativity]: PCUICCumulativity.v
+[PCUICEquality]: PCUICEquality.v
+[PCUICSubstitution]: PCUICSubstitution.v
+[PCUICInversion]: PCUICInversion.v
+[PCUICGeneration]: PCUICGeneration.v
+[PCUICParallelReduction]: PCUICParallelReduction.v
+[PCUICParallelReductionConfluence]: PCUICParallelReductionConfluence.v
+[PCUICConfluence]: PCUICConfluence.v
+[PCUICPrincipality]: PCUICPrincipality.v
+[PCUICUnivSubstitution]: PCUICUnivSubstitution.v
+[PCUICValidity]: PCUICValidity.v
+[PCUICSR]: PCUICSR.v
+[PCUICWcbvEval]: PCUICWcbvEval.v
+[PCUICMetaTheory]: PCUICMetaTheory.v
 
 ## Fueled type checker
 
-[PCUICChecker](PCUICChecker.v) contains a fueled type checker for PCUIC
-whose completeness can be found in
-[PCUICCheckerCompleteness](PCUICCheckerCompleteness.v).
-[PCUICRetyping](PCUICRetyping.v) provides a `type_of` function to get the
-type of well-typed expression, it doesn't check again that the term is
-well-typed, so it can go faster.
+| File             | Description                                               |
+|------------------|-----------------------------------------------------------|
+| [PCUICChecker]   | Fueled type checker for PCUIC                             |
+| [PCUICCheckerCompleteness] | Completeness of the aforementioned checker      |
+| [PCUICRetyping]  | `type_of` function to get the type without re-checking it is well-typed |
 
-## Relation with TemplateCoq
+[PCUICChecker]: PCUICChecker.v
+[PCUICCheckerCompleteness]: PCUICCheckerCompleteness.v
+[PCUICRetyping]: PCUICRetyping.v
 
-[TemplateToPCUIC](TemplateToPCUIC.v), as the name implies, contains a
-translation from TemplateCoq syntax to PCUIC syntax.
-[TemplateToPCUICCorrectness](TemplateToPCUICCorrectness.v) shows that this
-translation is type-preserving.
+## Relation with Template-Coq
+
+| File              | Description                                              |
+|-------------------|----------------------------------------------------------|
+| [TemplateToPCUIC] | Translation from Template-Coq syntax to PUIC syntax      |
+| [TemplateToPCUICCorrectness] | Type preservation of the aformentioned translation |
+
+[TemplateToPCUIC]: TemplateToPCUIC.v
+[TemplateToPCUICCorrectness]: TemplateToPCUICCorrectness.v
 
 ## Erasure
 
-[PCUICErasedTerm](PCUICErasedTerm.v) contains the AST for the erased terms
-(proofs are identified).
-[PCUICElimination](PCUICElimination.v) defines information about elimination
-of proofs.
+| File               | Description                                             |
+|--------------------|---------------------------------------------------------|
+| [PCUICErasedTerm]  | AST for erased terms (proofs are identified)            |
+| [PCUICElimination] | Information about elimination of proofs                 |
+
+[PCUICErasedTerm]: PCUICErasedTerm.v
+[PCUICElimination]: PCUICElimination.v
 
 ## Preliminaries for Safe Checker
 
-In [PCUICNormal](PCUICNormal.v) we define the notion of (weak head) neutral and
-normal terms.
-[PCUICSafeLemmata](PCUICSafeLemmata.v) mostly contains lemmata that should be
-moved, but also the definition of `welltyped` and `wellformed` which are
-`Prop` variants of typing, stating that a term is well typed (or is an arity
-in the case of `wellformed`). The file includes lemmata about it.
-[PCUICSN](PCUICSN.v) defines the `normalisation` axiom as well-foundedness
-of the co-reduction, as well as related lemmata.
+| File               | Description                                             |
+|--------------------|---------------------------------------------------------|
+| [PCUICNormal]      | (Weak-head) neutral and normal forms                    |
+| [PCUICSafeLemmata] | Lemma-base for the safe checker                         |
+| [PCUICSN]          | Axiom of normalisation                                  |
+
+
+[PCUICNormal]: PCUICNormal.v
+[PCUICSafeLemmata]: PCUICSafeLemmata.v
+[PCUICSN]: PCUICSN.v
+
+## Other
+
+Some of the following files need to be sorted and/or explained.
+
+| File               | Description                                             |
+|--------------------|---------------------------------------------------------|
+| [Extraction]       |                                                         |
+| [PCUICAll]         |                                                         |
+| [PCUICAlpha]       | α-conversion (for printing annotations)                 |
+| [PCUICContextConversion] | Conversion of contexts                            |
+| [PCUICLoader]      |                                                         |
+| [PCUICPretty]      |                                                         |
+| [PCUICSize]        |                                                         |
+
+[Extraction]: Extraction.v
+[PCUICAll]: PCUICAll.v
+[PCUICAlpha]: PCUICAlpha.v
+[PCUICContextConversion]: PCUICContextConversion.v
+[PCUICLoader]: PCUICLoader.v
+[PCUICPretty]: PCUICPretty.v
+[PCUICSize]: PCUICSize.v

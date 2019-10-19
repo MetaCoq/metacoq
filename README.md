@@ -67,7 +67,7 @@ calculus has (partial) proofs of standard metatheoretical results:
 -----
 
 Implementation of a fuel-free and verified reduction machine, conversion
-checker and type checker for PCUIC. This relies on a postulate of 
+checker and type checker for PCUIC. This relies on a postulate of
 strong normalisation of the reduction relation of PCUIC on well-typed terms.
 The extracted safe checker is available in Coq through a new vernacular command:
 
@@ -102,10 +102,10 @@ Examples of translations built on top of this:
 Documentation
 =============
 
-- You may want to start with a [demo](https://github.com/MetaCoq/metacoq/tree/coq-8.9/test-suite/demo.v)
+- You may want to start with a [demo](https://github.com/MetaCoq/metacoq/tree/coq-8.9/test-suite/demo.v).
 - The 8.9 branch [documentation (as light coqdoc files)](html/toc.html).
 - An example Coq plugin built on the Template Monad, which can be used to
-  add a constructor to any inductive type is in [test-suite/add_constructor.v](https://github.com/MetaCoq/metacoq/tree/coq-8.9/test-suite/add_constructor.v)
+  add a constructor to any inductive type can be found in [test-suite/add_constructor.v](https://github.com/MetaCoq/metacoq/tree/coq-8.9/test-suite/add_constructor.v).
 - The test-suite files [test-suite/erasure_test.v](https://github.com/MetaCoq/metacoq/tree/coq-8.9/test-suite/erasure_test.v)
   and [test-suite/safechecker_test.v](https://github.com/MetaCoq/metacoq/tree/coq-8.9/test-suite/safechecker_test.v) show example
   uses (and current limitations of) the verified checker and erasure.
@@ -153,7 +153,7 @@ Papers
 - ["Coq Coq Correct! Verification of Type Checking and Erasure for Coq, in Coq"](https://www.irif.fr/~sozeau/research/publications/drafts/Coq_Coq_Correct.pdf).
   Matthieu Sozeau, Simon Boulier, Yannick Forster, Nicolas Tabareau
   and Théo Winterhalter. Submitted, July 2019.
-    
+
 - [A certifying extraction with time bounds from Coq to call-by-value λ-calculus](https://www.ps.uni-saarland.de/Publications/documents/ForsterKunze_2019_Certifying-extraction.pdf).
   Yannick Forster and Fabian Kunze.
   ITP 2019.
@@ -204,7 +204,7 @@ alt="Nicolas Tabareau" width="150px"/>
 src="https://github.com/MetaCoq/metacoq/raw/master/docs/assets/theo-winterhalter.jpg"
 alt="Théo Winterhalter" width="150px"/>
 
-<figcaption>MetaCoq is developed by (left to right) 
+<figcaption>MetaCoq is developed by (left to right)
 <a href="https://github.com/aa755">Abhishek Anand</a>,
 <a href="https://github.com/annenkov">Danil Annenkov</a>,
 <a href="https://github.com/simonboulier">Simon Boulier</a>,
@@ -237,7 +237,7 @@ Branches
 ========
 
 The [coq-8.9](https://github.com/MetaCoq/metacoq/tree/coq-8.9) branch is
-the active development branch. If possible, it's strongly recommended to use this branch.
+the active development branch. If possible, it is strongly recommended to use this branch.
 
 The branches [coq-8.6](https://github.com/MetaCoq/metacoq/tree/coq-8.6),
 [coq-8.7](https://github.com/MetaCoq/metacoq/tree/coq-8.7) are frozen.
@@ -286,7 +286,7 @@ Old, deprecated standalone packages `template-coq-2.1~beta` and
 `template-coq-2.1~beta3` including previous versions of template-coq
 and parts of the MetaCoq development are for Coq 8.8.
 Package `template-coq-2.0~beta` is for Coq 8.7.
-    
+
 Setting up an `opam` switch
 ---------------
 
@@ -346,7 +346,7 @@ To compile the library, you need:
 
 When using `opam` you can get those using `opam install --deps-only .`.
 
-You can test the installation of the packages locally using 
+You can test the installation of the packages locally using
 
     # opam install .
 

@@ -103,7 +103,7 @@ Documentation
 =============
 
 - You may want to start with a [demo](https://github.com/MetaCoq/metacoq/tree/coq-8.9/test-suite/demo.v).
-- The 8.9 branch [documentation (as light coqdoc files)](html/toc.html).
+- The 8.9 branch [documentation (as light coqdoc files)](https://metacoq.github.io/metacoq/html/toc.html).
 - An example Coq plugin built on the Template Monad, which can be used to
   add a constructor to any inductive type can be found in [test-suite/add_constructor.v](https://github.com/MetaCoq/metacoq/tree/coq-8.9/test-suite/add_constructor.v).
 - The test-suite files [test-suite/erasure_test.v](https://github.com/MetaCoq/metacoq/tree/coq-8.9/test-suite/erasure_test.v)

@@ -1,14 +1,24 @@
 # Safe Checker
 
-In [PCUICSafeReduce](SafeReduce.v) we define a function `reduce_stack` that
-implements weak-head reduction (parametrised by reduction flags `RedFlags.t`)
-for PCUIC terms, without *fuel* (it is defined by well-founded induction).
+Implementation of a fuel-free, correct type checker for PCUIC.
 
-In the same fashion, [PCUICSafeConversion](SafeConversion.v) contains a verifed
-implementation of a conversion checker.
+| File                  | Description                                          |
+|-----------------------|------------------------------------------------------|
+| [PCUICSafeReduce]     | Weak-head reduction machine                          |
+| [PCUICSafeConversion] | Conversion checker                                   |
+| [PCUICSafeChecker]    | Type inference and type checking                     |
+| [PCUICSafeRetyping]   | Fast type inference, assuming well-typedness         |
+| [SafeTemplateChecker] |                                                      |
+| [Loader]              |                                                      |
+| [Extraction]          |                                                      |
 
-Finally [PCUICSafeChecker](SafeChecker.v) deals with type inference for PCUIC,
-and thus type checking.
+[PCUICSafeReduce]: PCUICSafeReduce.v
+[PCUICSafeConversion]: PCUICSafeConversion.v
+[PCUICSafeChecker]: PCUICSafeChecker.v
+[PCUICSafeRetyping]: PCUICSafeRetyping.v
+[SafeTemplateChecker]: SafeTemplateChecker.v
+[Loader]: Loader.v
+[Extraction]: Extraction.v
 
 All of these are proven correct but not yet complete.
 They are suited for extraction which would remove the termination and

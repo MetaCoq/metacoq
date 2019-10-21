@@ -11,7 +11,7 @@
 ## Syntax
 
 | File             | Description                                               |
-|-----------------|-----------------------------------------------------------|
+|------------------|-----------------------------------------------------------|
 | [PCUICAst]       | Definition of the syntax of PCUIC                         |
 | [PCUICAstUtils]  | Utility on syntax                                         |
 | [PCUICInduction] | Induction principle on syntax                             |

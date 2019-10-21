@@ -507,16 +507,18 @@ Section Conversion.
   Definition eqb_term :=
     eqb_term_upto_univ (check_eqb_universe G) (check_eqb_universe G).
 
+  Context (Hcf : prop_sub_type).
+
   Lemma leqb_term_spec t u :
     leqb_term t u ->
     leq_term (global_ext_constraints Σ) t u.
   Proof.
     pose proof hΣ'.
     apply eqb_term_upto_univ_impl.
-    intros u1 u2; eapply (check_eqb_universe_spec G (global_ext_uctx Σ)); tas.
+    intros u1 u2; eapply (check_eqb_universe_spec Hcf G (global_ext_uctx Σ)); tas.
     now eapply wf_ext_global_uctx_invariants.
     now eapply global_ext_uctx_consistent.
-    intros u1 u2; eapply (check_leqb_universe_spec G (global_ext_uctx Σ)); tas.
+    intros u1 u2; eapply (check_leqb_universe_spec Hcf G (global_ext_uctx Σ)); tas.
     now eapply wf_ext_global_uctx_invariants.
     now eapply global_ext_uctx_consistent.
   Qed.
@@ -527,10 +529,10 @@ Section Conversion.
   Proof.
     pose proof hΣ'.
     apply eqb_term_upto_univ_impl.
-    intros u1 u2; eapply (check_eqb_universe_spec G (global_ext_uctx Σ)); tas.
+    intros u1 u2; eapply (check_eqb_universe_spec Hcf G (global_ext_uctx Σ)); tas.
     now eapply wf_ext_global_uctx_invariants.
     now eapply global_ext_uctx_consistent.
-    intros u1 u2; eapply (check_eqb_universe_spec G (global_ext_uctx Σ)); tas.
+    intros u1 u2; eapply (check_eqb_universe_spec Hcf G (global_ext_uctx Σ)); tas.
     now eapply wf_ext_global_uctx_invariants.
     now eapply global_ext_uctx_consistent.
   Qed.
@@ -1430,7 +1432,7 @@ Section Conversion.
     unfold eqb_universe_instance in e.
     eapply forallb2_Forall2 in e.
     eapply Forall2_impl. 1: eassumption.
-    intros. eapply (check_eqb_universe_spec G (global_ext_uctx Σ)).
+    intros. eapply (check_eqb_universe_spec Hcf G (global_ext_uctx Σ)).
     all: auto.
     - eapply wf_ext_global_uctx_invariants.
       eapply hΣ'.

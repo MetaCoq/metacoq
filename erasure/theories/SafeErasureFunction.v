@@ -199,7 +199,7 @@ Program Definition is_erasable (Sigma : PCUICAst.global_env_ext) (HΣ : ∥wf_ex
     ret (left _)
   else mlet (K; _) <- @type_of extraction_checker_flags Sigma _ _ Gamma T _ ;;
        mlet (u;_) <- @reduce_to_sort _ Sigma _ Gamma K _ ;;
-      match is_prop_sort u with true => ret (left _) | false => ret (right _) end
+      match Universe.is_prop u with true => ret (left _) | false => ret (right _) end
 .
 Next Obligation. sq; eauto. Qed.
 Next Obligation.
@@ -268,8 +268,8 @@ Next Obligation.
     eapply invert_red_sort in r.
     eapply invert_red_sort in r1. subst. inv r1.
 
-    eapply leq_universe_prop in l0 as []; cbn; eauto.
-    eapply leq_universe_prop in l as []; cbn; eauto.
+    eapply leq_universe_prop in l0; cbn; eauto.
+    eapply leq_universe_prop' in l; cbn; eauto.
     eauto using typing_wf_local.
 Qed.
 
@@ -281,7 +281,7 @@ Qed.
 (*     ret (left _) *)
 (*   else mlet (K; _) <-  @make_graph_and_infer _ _ HΣ Gamma HΓ T ;; *)
 (*        mlet (u;_) <- @reduce_to_sort _ Sigma _ Gamma K _ ;; *)
-(*       match is_prop_sort u with true => ret (left _) | false => ret (right _) end *)
+(*       match Universe.is_prop u with true => ret (left _) | false => ret (right _) end *)
 (* . *)
 (* Next Obligation. sq; eauto. Qed. *)
 (* Next Obligation. *)
@@ -368,7 +368,7 @@ Section Erase.
                                   E.dbody := dbody' |})) defs.
     Next Obligation.
       clear erase.
-      destruct (wf_ext_is_graph HΣ) as [].
+      destruct (wf_ext_is_graph (todo "FIXME prop_sub_type") HΣ) as [].
       apply Checked. todo "well-typed fix body".
     Defined.
       (* epose proof ((fix check_types (mfix : mfixpoint term) acc (Hacc : ∥ wf_local_rel Σ Γ acc ∥) {struct mfix} *)

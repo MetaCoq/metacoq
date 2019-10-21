@@ -14,9 +14,9 @@ Import MonadNotation.
 
 Existing Instance envcheck_monad.
 
-Program Definition infer_template_program {cf : checker_flags} (p : Ast.program) φ Hφ
+Program Definition infer_template_program {cf : checker_flags} (Hcf : prop_sub_type = true) (p : Ast.program) φ Hφ
   : EnvCheck (∑ A, ∥ (trans_global_decls (List.rev p.1), φ) ;;; [] |- trans p.2 : A ∥) :=
-  p <- typecheck_program (cf:=cf) (trans_global_decls p.1, trans p.2) φ Hφ ;;
+  p <- typecheck_program Hcf (trans_global_decls p.1, trans p.2) φ Hφ ;;
   ret (p.π1 ; _).
 
 Next Obligation.
@@ -112,10 +112,10 @@ Definition fix_program_universes (p : Ast.program) : Ast.program :=
   let '(Σ, t) := p in
   (fix_global_env_universes Σ, t).
 
-Program Definition infer_and_print_template_program {cf : checker_flags} (p : Ast.program) φ Hφ
+Program Definition infer_and_print_template_program {cf : checker_flags} (Hcf : prop_sub_type = true) (p : Ast.program) φ Hφ
   : string + string :=
   let p := fix_program_universes p in
-  match infer_template_program (cf:=cf) p φ Hφ return string + string with
+  match infer_template_program Hcf p φ Hφ return string + string with
   | CorrectDecl t =>
     inl ("Environment is well-formed and " ++ string_of_term (trans p.2) ++
          " has type: " ++ string_of_term t.π1)

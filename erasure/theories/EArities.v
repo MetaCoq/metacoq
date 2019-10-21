@@ -408,15 +408,15 @@ Proof.
 Qed.
 
 Lemma is_prop_sort_sup:
-  forall x1 x2 : universe, is_prop_sort (Universe.sup x1 x2) -> is_prop_sort x2.
+  forall x1 x2 : universe, Universe.is_prop (Universe.sup x1 x2) -> Universe.is_prop x2.
 Proof.
   induction x1; cbn; intros.
-  - inv H.
-  - inv H.
+  - apply andb_true_iff in H; apply H.
+  - apply IHx1. apply andb_true_iff in H. apply H.
 Qed.
 
 Lemma is_prop_sort_prod x2 x3 :
-  is_prop_sort (Universe.sort_of_product x2 x3) -> is_prop_sort x3.
+  Universe.is_prop (Universe.sort_of_product x2 x3) -> Universe.is_prop x3.
 Proof.
   intros. unfold Universe.sort_of_product in *. destruct ?; eauto.
   eapply is_prop_sort_sup in H. eauto.
@@ -424,9 +424,9 @@ Qed.
 
 Lemma sort_typing_spine:
   forall (Σ : global_env_ext) (Γ : context) (L : list term) (u : universe) (x x0 : term),
-    wf Σ ->
-    is_prop_sort u ->
-    typing_spine Σ Γ x L x0 -> Σ;;; Γ |- x : tSort u -> ∑ u', Σ;;; Γ |- x0 : tSort u' × is_prop_sort u'.
+    wf_ext Σ ->
+    Universe.is_prop u ->
+    typing_spine Σ Γ x L x0 -> Σ;;; Γ |- x : tSort u -> ∑ u', Σ;;; Γ |- x0 : tSort u' × Universe.is_prop u'.
 Proof.
   intros Σ Γ L u x x0 ? ? t1 c0.
   revert u H c0.
@@ -437,9 +437,9 @@ Proof.
     eapply subject_reduction in c0. 3:eauto. 2:eauto.
     eapply inversion_Prod in c0 as (? & ? & ? & ? & ?) ; auto.
     eapply PCUICConversion.cumul_Sort_inv in c0.
-    eapply leq_universe_prop in c0 as []; cbn; eauto.
-
-    eapply is_prop_sort_prod in H0. eapply IHt1. exact H0.
+    eapply leq_universe_prop in c0; cbn; eauto.
+    eapply is_prop_sort_prod in c0. 
+    eapply IHt1. exact c0.
     change (tSort x3) with ((tSort x3) {0 := hd}).
     eapply PCUICSubstitution.substitution0. 2:eauto. eauto.
     econstructor. eassumption. 2: now destruct c. right; eauto.
@@ -459,7 +459,7 @@ Proof.
 Qed.
 
 Lemma Is_type_app (Σ : global_env_ext) Γ t L T :
-  wf Σ ->
+  wf_ext Σ ->
   wf_local Σ Γ ->
   Σ ;;; Γ |- mkApps t L : T ->
   isErasable Σ Γ t ->
@@ -495,10 +495,11 @@ Proof.
     eapply cumul_prop2 in c0; eauto.
     econstructor. exists x0. split. eapply type_mkApps. 2:eassumption. eassumption. right.
     eapply sort_typing_spine in t1; eauto.
+  - eauto.
 Qed.
 
 Lemma Is_type_lambda (Σ : global_env_ext) Γ na T1 t :
-  wf Σ ->
+  wf_ext Σ ->
   wf_local Σ Γ ->
   isErasable Σ Γ (tLambda na T1 t) ->
   ∥isErasable Σ (vass na T1 :: Γ) t∥.
@@ -513,12 +514,9 @@ Proof.
   - sq. eapply cumul_prop1 in c; eauto.
     eapply inversion_Prod in c as (? & ? & ? & ? & ?) ; auto.
     eapply cumul_Sort_inv in c.
-    eapply leq_universe_prop in c as []; cbn; eauto.
+    eapply leq_universe_prop in c; cbn; eauto.
     eexists. split. eassumption. right. eexists. split. eassumption.
-    unfold Universe.sort_of_product in H.
-    destruct ?; eauto.
-
-    eapply is_prop_sort_sup; eauto.
+    now apply is_prop_sort_prod in c.
   - auto.
 Qed.
 

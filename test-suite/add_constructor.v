@@ -83,7 +83,7 @@ Inductive tm :=
 | lam : tm -> tm
 | app : tm -> tm -> tm.
 
-Run TemplateProgram (add_constructor <%tm%> "letin" <% (fun tm' => tm' -> tm' -> tm') %>).
+Run TemplateProgram (add_constructor <% tm %> "letin" <% fun tm' => tm' -> tm' -> tm' %>).
 
 Print tm'.
 (* Inductive tm' : Type := *)

@@ -196,7 +196,7 @@ Ltac gc_of_constraint_tac :=
 
 Section GC.
 
-Context `{cf : checker_flags}.
+Context `{cf : checker_flags} (Hcf : prop_sub_type = true).
 
 Lemma gc_of_constraint_spec v uc :
   satisfies0 v uc <-> on_Some (gc_satisfies v) (gc_of_constraint uc).
@@ -331,12 +331,13 @@ Lemma gc_leq_universe_n_iff n ctrs u u' :
 Proof.
   split.
   - intro H. case_eq (gc_of_constraints ctrs).
-    + intros ctrs' e. cbn. intros v Hv. apply H. apply gc_of_constraints_spec.
+    + intros ctrs' e. cbn. intros v Hv.
+      apply lle_le. apply H. apply gc_of_constraints_spec.
       rewrite e. assumption.
     + intro; exact I.
   - case_eq (gc_of_constraints ctrs); cbn.
     + intros ctrs' e H.
-      intros v Hv. apply H.
+      intros v Hv. apply le_lle; tas. apply H.
       apply gc_of_constraints_spec in Hv.
       rewrite e in Hv; assumption.
     + intros e _ v Hv.
@@ -929,10 +930,11 @@ Definition is_consistent `{checker_flags} uctx :=
   | None => false
   end.
 
-Lemma is_consistent_spec `{checker_flags} uctx (Huctx : global_uctx_invariants uctx)
+Lemma is_consistent_spec {cf:checker_flags} (Hcf : prop_sub_type = true)
+      uctx (Huctx : global_uctx_invariants uctx)
   : is_consistent uctx <-> consistent uctx.2.
 Proof.
-  etransitivity. 2: symmetry; apply gc_consistent_iff.
+  etransitivity. 2: symmetry; apply gc_consistent_iff; tas.
   unfold is_consistent; cbn.
   case_eq (gc_of_constraints uctx.2); cbn.
   2: intro; split; [discriminate|inversion 1].
@@ -948,7 +950,7 @@ Qed.
 
 (* This section: specif in term of gc_uctx *)
 Section CheckLeq.
-  Context {cf:checker_flags}.
+  Context {cf:checker_flags} (Hcf : prop_sub_type = true).
 
   Context (G : universes_graph)
           uctx (Huctx: global_gc_uctx_invariants uctx) (HC : gc_consistent uctx.2)
@@ -1390,7 +1392,7 @@ End CheckLeq.
 
 (* This section: specif in term of raw uctx *)
 Section CheckLeq2.
-  Context {cf:checker_flags}.
+  Context {cf:checker_flags} (Hcf : prop_sub_type = true).
 
   Definition is_graph_of_uctx G uctx
     := on_Some (fun uctx => make_graph uctx = G) (gc_of_uctx uctx).
@@ -1416,7 +1418,7 @@ Section CheckLeq2.
 
   Let HC' : gc_consistent uctx'.2.
     subst uctx'; cbn. clear Huctx'.
-    apply gc_consistent_iff in HC.
+    apply gc_consistent_iff in HC; tas.
     unfold is_graph_of_uctx, gc_of_uctx in *.
     destruct (gc_of_constraints uctx.2) as [ctrs|].
     exact HC. contradiction HG.
@@ -1466,7 +1468,7 @@ Section CheckLeq2.
     apply (leqb_univ_expr_n_spec G uctx' Huctx' HC' HG'); tas.
     - apply levels_gc_declared_declared; tas.
     - apply level_gc_declared_declared; tas.
-    - symmetry. etransitivity. apply gc_leq_universe_n_iff.
+    - symmetry. etransitivity. apply gc_leq_universe_n_iff; tas.
       subst uctx'; cbn; clear -HG.
       unfold is_graph_of_uctx, gc_of_uctx in *.
       destruct (gc_of_constraints uctx.2) as [ctrs|].
@@ -1547,14 +1549,14 @@ Section CheckLeq2.
     destruct check_univs; cbn; [|trivial].
     case_eq (Universe.is_prop u1). {
       intros e _ v Hv. rewrite val_is_prop; tas.
-      apply val_minus_one. }
+      apply le_lle; tas. apply val_minus_one. }
     intros _.
     case_eq (Universe.equal u1 u2). {
       intros e _ v Hv. now erewrite val_equal; tea. }
     intros _; cbn.
     intro H; unshelve eapply (try_leqb_universe_n_spec G uctx' Huctx' HC' HG'
                                                        _ _ _) in H.
-    eapply gc_leq_universe_n_iff.
+    eapply gc_leq_universe_n_iff; tas.
     unfold uctx' in H.
     unfold is_graph_of_uctx, gc_of_uctx in HG.
     destruct (gc_of_constraints uctx.2). cbn in *. exact H.
@@ -1565,8 +1567,8 @@ Section CheckLeq2.
     eq_universe0 φ u u' <-> leq_universe0 φ u u' /\ leq_universe0 φ u' u.
   Proof.
     split.
-    intro H; split; intros v Hv; specialize (H v Hv); lia.
-    intros [H1 H2] v Hv; specialize (H1 v Hv); specialize (H2 v Hv); lia.
+    intro H; split; intros v Hv; rewrite (H v Hv); reflexivity.
+    intros []; apply leq_universe0_antisym; assumption.
   Qed.
 
 
@@ -1613,8 +1615,8 @@ Section CheckLeq2.
     eapply (check_gc_constraints_spec _ uctx' Huctx' HC' HG') in HH.
     destruct check_univs; cbn; [|trivial].
     intros v Hv.
-    apply gc_of_constraints_spec.
-    apply gc_of_constraints_spec in Hv.
+    apply gc_of_constraints_spec; tas.
+    apply gc_of_constraints_spec in Hv; tas.
     rewrite Hctrs'; cbn. apply HH.
     clear -HG Hv.
     unfold is_graph_of_uctx, gc_of_uctx in HG.

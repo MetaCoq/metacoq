@@ -1,4 +1,4 @@
-From Coq Require Import Ascii String ZArith List Bool.
+From Coq Require Import Ascii String ZArith List Bool Lia.
 From Coq Require Import MSetWeakList MSetFacts MSetProperties RelationClasses.
 From MetaCoq.Template Require Import utils BasicAst config.
 Import ListNotations.
@@ -483,6 +483,48 @@ Section Univ.
 
 Context `{cf : checker_flags}.
 
+
+Lemma le_lle x y (Hcf : prop_sub_type = true) :
+  (x <= y)%Z -> (x <= y)%u.
+Proof.
+  unfold lle, llt. rewrite Hcf. lia.
+Qed.
+
+Lemma lle_le x y :
+  (x <= y)%u -> (x <= y)%Z.
+Proof.
+  unfold lle, llt. destruct prop_sub_type; lia.
+Qed.
+
+Lemma le_lle_0 x y :
+  (0 <= x)%Z -> (x <= y)%Z -> (x <= y)%u.
+Proof.
+  unfold lle, llt. destruct prop_sub_type; lia.
+Qed.
+
+Global Instance lle_Reflexive : Reflexive lle.
+Proof.
+  intro x. unfold lle. now right.
+Qed.
+
+Global Instance llt_Transitive : Transitive llt.
+Proof.
+  intros x y z p q. unfold llt in *.
+  destruct prop_sub_type; lia.
+Qed.
+
+Global Instance lle_Transitive : Transitive lle.
+Proof.
+  intros x y z p q. destruct p, q; subst; unfold lle; intuition.
+  left; etransitivity; eassumption.
+Qed.
+
+Global Instance lle_Antisymmetric : Antisymmetric _ eq lle.
+Proof.
+  intros x y p q. apply lle_le in p. apply lle_le in q. lia.
+Qed.
+
+
 Inductive satisfies0 (v : valuation) : univ_constraint -> Prop :=
 | satisfies0_Lt l l' : (val0 v l < val0 v l')%u -> satisfies0 v (l, Lt, l')
 | satisfies0_Le l l' : (val0 v l <= val0 v l')%u -> satisfies0 v (l, Le, l')
@@ -497,7 +539,7 @@ Definition eq_universe0 (φ : constraints) u u' :=
   forall v, satisfies v φ -> val v u = val v u'.
 
 Definition leq_universe_n n (φ : constraints) u u' :=
-  forall v, satisfies v φ -> (Z.of_nat n + val v u <= val v u')%Z.
+  forall v, satisfies v φ -> (Z.of_nat n + val v u <= val v u')%u.
 
 Definition leq_universe0 := leq_universe_n 0.
 Definition lt_universe := leq_universe_n 1.
@@ -618,14 +660,87 @@ Proof.
   rewrite !val_cons. rewrite IHs1. Lia.lia.
 Qed.
 
-Lemma leq_universe0_sup_l φ s1 s2 : leq_universe0 φ s1 (Universe.sup s1 s2).
+Lemma val_minus_one u v :
+  (-1 <= val v u)%Z.
 Proof.
-  intros v H. rewrite val_sup. Lia.lia.
+  induction u. cbn.
+  - destruct a as [[] []]; cbn; lia.
+  - rewrite val_cons; lia.
 Qed.
 
-Lemma leq_universe0_sup_r φ s1 s2 : leq_universe0 φ s2 (Universe.sup s1 s2).
+Lemma val_is_prop u v :
+  Universe.is_prop u <-> (val v u = -1)%Z.
 Proof.
-  intros v H. rewrite val_sup. Lia.lia.
+  split.
+  - induction u.
+    + destruct a as [[] []]; inversion 1; reflexivity.
+    + intro H. cbn in H. apply andb_true_iff in H as [H1 H2].
+      rewrite val_cons. rewrite IHu; tas.
+      destruct a as [[] []]; inversion H1; reflexivity.
+  - induction u.
+    + destruct a as [[] []]; cbnr; lia.
+    + intro H. cbn. rewrite val_cons in H.
+      apply andb_true_iff. split.
+      destruct a as [[] []]; cbn in *; try reflexivity; lia.
+      apply IHu.
+      pose proof (val_minus_one u v).
+      lia.
+Qed.
+
+Lemma val_is_prop_false u v :
+  Universe.is_prop u = false <-> (0 <= val v u)%Z.
+Proof.
+  split.
+  - induction u.
+    + destruct a as [[] []]; inversion 1; cbn; lia.
+    + intro H. cbn in H. apply andb_false_iff in H as [H|H]; rewrite val_cons.
+      destruct a as [[] []]; inversion H; cbn; lia.
+      specialize (IHu H); lia.
+  - induction u.
+    + destruct a as [[] []]; cbnr; lia.
+    + intro H. cbn. rewrite val_cons in H.
+      apply andb_false_iff. apply Z.max_le in H.
+      destruct H as [H|H]; [left|right].
+      destruct a as [[] []]; cbn in *; try reflexivity; lia.
+      now apply IHu.
+Qed.
+
+Lemma leq_universe0_sup_l φ s1 s2 :
+  prop_sub_type = true ->
+  leq_universe0 φ s1 (Universe.sup s1 s2).
+Proof.
+  intros Hcf v H. apply le_lle; tas.
+  rewrite val_sup. lia.
+Qed.
+
+Lemma leq_universe0_sup_r φ s1 s2 :
+  prop_sub_type = true ->
+  leq_universe0 φ s2 (Universe.sup s1 s2).
+Proof.
+  intros Hcf v H. apply le_lle; tas.
+  rewrite val_sup. lia.
+Qed.
+
+Lemma leq_universe0_sup_l' φ s1 s2 :
+  Universe.is_prop s1 = false ->
+  leq_universe0 φ s1 (Universe.sup s1 s2).
+Proof.
+  intros Hs2. case_eq prop_sub_type.
+  - apply leq_universe0_sup_l.
+  - intros Hcf v Hv; unfold lle, llt; rewrite Hcf. cbn.
+    apply val_is_prop_false with (v:=v) in Hs2.
+    rewrite val_sup. lia.
+Qed.
+
+Lemma leq_universe0_sup_r' φ s1 s2 :
+  Universe.is_prop s2 = false ->
+  leq_universe0 φ s2 (Universe.sup s1 s2).
+Proof.
+  intros Hs2. case_eq prop_sub_type.
+  - apply leq_universe0_sup_r.
+  - intros Hcf v Hv; unfold lle, llt; rewrite Hcf. cbn.
+    apply val_is_prop_false with (v:=v) in Hs2.
+    rewrite val_sup. lia.
 Qed.
 
 Lemma leq_universe_product φ s1 s2
@@ -634,7 +749,7 @@ Proof.
   unfold leq_universe; destruct check_univs; [cbn|constructor].
   unfold Universe.sort_of_product; case_eq (Universe.is_prop s2); intro eq.
   apply leq_universe0_refl.
-  apply leq_universe0_sup_r.
+  now apply leq_universe0_sup_r'.
 Qed.
 
 (* Rk: [leq_universe φ s1 (sort_of_product s1 s2)] does not hold due
@@ -643,7 +758,7 @@ Qed.
 Global Instance eq_universe_leq_universe φ : subrelation (eq_universe φ) (leq_universe φ).
 Proof.
   unfold eq_universe, leq_universe; destruct check_univs; [|intuition].
-  intros u u' HH v Hv. rewrite (HH v Hv). apply BinInt.Z.le_refl.
+  intros u u' HH v Hv. rewrite (HH v Hv). reflexivity.
 Qed.
 
 Global Instance eq_universe0_equivalence φ : Equivalence (eq_universe0 φ) :=
@@ -669,7 +784,7 @@ Proof.
   intros v sat.
   specialize (tu _ sat).
   specialize (ut _ sat).
-  simpl in tu, ut. Lia.lia.
+  simpl in tu, ut. now apply lle_Antisymmetric.
 Qed.
 
 Global Instance leq_universe_antisym φ
@@ -687,15 +802,18 @@ Proof.
   intros [l r]. now eapply leq_universe_antisym.
 Defined.
 
+
+Lemma eq_leq_universe φ u u' :
+  eq_universe0 φ u u' <-> leq_universe0 φ u u' /\ leq_universe0 φ u' u.
+Proof.
+  split.
+  intro H; split; intros v Hv; rewrite (H v Hv); cbnr.
+  intros [H1 H2]. now apply leq_universe0_antisym.
+Qed.
+
+
+
 (* This universe is a hack used in plugings to generate fresh universes *)
 Definition fresh_universe : universe. exact Universe.type0. Qed.
 
 End Univ.
-
-Definition is_prop_sort s :=
-  match Universe.level s with
-  | Some l => Level.is_prop l
-  | None => false
-  end.
-
-(* Check (_ : forall (cf : checker_flags) Σ, Reflexive (eq_universe Σ)). *)

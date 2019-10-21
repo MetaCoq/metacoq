@@ -9,7 +9,7 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICInduct
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 
-Definition Is_proof `{cf : checker_flags} Σ Γ t := ∑ T u, Σ ;;; Γ |- t : T × Σ ;;; Γ |- T : tSort u × is_prop_sort u.
+Definition Is_proof `{cf : checker_flags} Σ Γ t := ∑ T u, Σ ;;; Γ |- t : T × Σ ;;; Γ |- T : tSort u × Universe.is_prop u.
 
 Lemma declared_inductive_inj `{cf : checker_flags} {Σ mdecl mdecl' ind idecl idecl'} :
   declared_inductive Σ mdecl' ind idecl' ->
@@ -226,7 +226,7 @@ Variable Hcf : prop_sub_type = false.
 
 Lemma cumul_prop1 (Σ : global_env_ext) Γ A B u :
   wf Σ ->
-  is_prop_sort u -> Σ ;;; Γ |- B : tSort u ->
+  Universe.is_prop u -> Σ ;;; Γ |- B : tSort u ->
                                  Σ ;;; Γ |- A <= B -> Σ ;;; Γ |- A : tSort u.
 Proof.
   intros. induction X1.
@@ -237,22 +237,51 @@ Admitted.                       (* cumul_prop1 *)
 
 Lemma cumul_prop2 (Σ : global_env_ext) Γ A B u :
   wf Σ ->
-  is_prop_sort u -> Σ ;;; Γ |- A <= B ->
+  Universe.is_prop u -> Σ ;;; Γ |- A <= B ->
                              Σ ;;; Γ |- A : tSort u -> Σ ;;; Γ |- B : tSort u.
 Proof.
 Admitted.                       (* cumul_prop2 *)
 
-Lemma leq_universe_prop (Σ : global_env_ext) u1 u2 :
-  @check_univs cf = true ->
-  (* @prop_sub_type cf = false -> *)
-  wf Σ ->
-  @leq_universe cf (global_ext_constraints Σ) u1 u2 ->
-  (is_prop_sort u1 \/ is_prop_sort u2) ->
-  (is_prop_sort u1 /\ is_prop_sort u2).
+
+Require Import Lia uGraph.
+Lemma val_is_prop' u v :
+  (val v u = -1)%Z -> Universe.is_prop u.
 Proof.
-  intros. unfold leq_universe in *. (* rewrite H in H1. *)
-  (* unfold leq_universe0 in H1. *)
-  (* unfold leq_universe_n in H1. *)
-Admitted.                       (* leq_universe_prop *)
+  clear.
+  induction u.
+  - destruct a as [[] []]; cbnr; lia.
+  - intro H. cbn. rewrite val_cons in H.
+    apply andb_true_iff. split.
+    destruct a as [[] []]; cbn in *; try reflexivity; try lia.
+    apply IHu.
+    pose proof (val_minus_one u v).
+    lia.
+Qed.
+
+Lemma leq_universe_prop φ u1 u2 :
+  check_univs = true ->
+  consistent φ ->
+  leq_universe φ u1 u2 ->
+  Universe.is_prop u2 -> Universe.is_prop u1.
+Proof.
+  intros Hcf' Hφ Hu Hu2. unfold leq_universe in *. rewrite Hcf' in Hu.
+  destruct Hφ as [v Hv]. specialize (Hu v Hv).
+  pose proof (val_minus_one u1 v).
+  apply (val_is_prop' _ v). apply (val_is_prop _ v) in Hu2.
+  apply lle_le in Hu; lia.
+Qed.
+
+Lemma leq_universe_prop' φ u1 u2 :
+  check_univs = true ->
+  consistent φ ->
+  leq_universe φ u1 u2 ->
+  Universe.is_prop u1 -> Universe.is_prop u2.
+Proof.
+  intros Hcf' Hφ Hu Hu1. unfold leq_universe in *. rewrite Hcf' in Hu.
+  destruct Hφ as [v Hv]. specialize (Hu v Hv).
+  apply (val_is_prop' _ v).
+  rewrite (val_is_prop _ v Hu1) in Hu. unfold Z.of_nat in Hu; cbn in Hu.
+  unfold lle, llt in Hu. rewrite Hcf in Hu. lia.
+Qed.
 
 End no_prop_leq_type.

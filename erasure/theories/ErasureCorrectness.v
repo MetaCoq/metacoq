@@ -36,12 +36,11 @@ Proof.
 Qed.
 
 Lemma is_prop_subst_instance:
-  forall (u : universe_instance) (x0 : universe), is_prop_sort x0 -> is_prop_sort (UnivSubst.subst_instance_univ u x0).
+  forall (u : universe_instance) (x0 : universe), Universe.is_prop x0 -> Universe.is_prop (UnivSubst.subst_instance_univ u x0).
 Proof.
-  intros u x0 i. destruct x0; cbn in *; try congruence.
-  unfold is_prop_sort in *. unfold Universe.level in *.
-  destruct t. destruct t; cbn in *; try congruence.
-  destruct b; cbn in *; try congruence.
+  induction x0; intro Hx0.
+  destruct a as [[] []]; cbn in *; congruence.
+  destruct a as [[] []]; cbn in *; try congruence; auto.
 Qed.
 
 
@@ -934,7 +933,7 @@ Proof.
              intros. eapply (X2 x2 (S n)). eassumption.
         }
 
-        eapply eval_box_apps. eauto. eauto. eapply wf_ext_wf. eauto. eauto.
+        eapply eval_box_apps. eauto. eauto. tas. eauto. eauto.
         eapply subject_reduction. eauto. exact Hty.
         eapply PCUICReduction.red_mkApps. now eapply wcbeval_red.
         eapply All_All2_refl.
@@ -1060,7 +1059,7 @@ Proof.
              intros. eapply (X2 x2 (S n)). eassumption.
         }
 
-        eapply eval_box_apps. eauto. eauto. eapply wf_ext_wf. eauto. eauto.
+        eapply eval_box_apps. eauto. eauto. tas. eauto. eauto.
         eapply subject_reduction. eauto. exact Hty.
         eapply PCUICReduction.red_mkApps. now eapply wcbeval_red.
         eapply All_All2_refl.

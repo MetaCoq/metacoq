@@ -11,7 +11,7 @@ Import MonadNotation.
 
 Local Existing Instance extraction_checker_flags.
 
-Definition isErasable Σ Γ t := ∑ T, Σ ;;; Γ |- t : T × (isArity T + (∑ u, (Σ ;;; Γ |- T : tSort u) * is_prop_sort u))%type.
+Definition isErasable Σ Γ t := ∑ T, Σ ;;; Γ |- t : T × (isArity T + (∑ u, (Σ ;;; Γ |- T : tSort u) * Universe.is_prop u))%type.
 
 Module E := EAst.
 Local Notation Ret t := t.

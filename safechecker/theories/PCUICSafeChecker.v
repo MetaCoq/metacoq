@@ -358,23 +358,25 @@ Proof.
 Qed.
 
 
-Lemma wf_ext_gc_of_uctx {cf:checker_flags} {Σ : global_env_ext} (HΣ : ∥ wf_ext Σ ∥)
+Lemma wf_ext_gc_of_uctx {cf:checker_flags} (Hcf : prop_sub_type = true)
+      {Σ : global_env_ext} (HΣ : ∥ wf_ext Σ ∥)
   : ∑ uctx', gc_of_uctx (global_ext_uctx Σ) = Some uctx'.
 Proof.
   pose proof (global_ext_uctx_consistent _ HΣ) as HC.
   destruct Σ as [Σ φ].
   simpl in HC.
   unfold gc_of_uctx; simpl in *.
-  apply gc_consistent_iff in HC.
+  apply gc_consistent_iff in HC; tas.
   destruct (gc_of_constraints (global_ext_constraints (Σ, φ))).
   eexists; reflexivity.
   contradiction HC.
 Qed.
 
-Lemma wf_ext_is_graph {cf:checker_flags} {Σ : global_env_ext} (HΣ : ∥ wf_ext Σ ∥)
+Lemma wf_ext_is_graph {cf:checker_flags} (Hcf : prop_sub_type = true)
+      {Σ : global_env_ext} (HΣ : ∥ wf_ext Σ ∥)
   : ∑ G, is_graph_of_uctx G (global_ext_uctx Σ).
 Proof.
-  destruct (wf_ext_gc_of_uctx HΣ) as [uctx Huctx].
+  destruct (wf_ext_gc_of_uctx Hcf HΣ) as [uctx Huctx].
   exists (make_graph uctx). unfold is_graph_of_uctx. now rewrite Huctx.
 Defined.
 
@@ -384,7 +386,8 @@ Proof.
 Qed.
 
 Section Typecheck.
-  Context {cf : checker_flags} {Σ : global_env_ext} (HΣ : ∥ wf Σ ∥)
+  Context {cf : checker_flags} (Hcf : prop_sub_type = true)
+          {Σ : global_env_ext} (HΣ : ∥ wf Σ ∥)
           (Hφ : ∥ on_udecl Σ.1 Σ.2 ∥)
           (G : universes_graph) (HG : is_graph_of_uctx G (global_ext_uctx Σ)).
 
@@ -503,7 +506,7 @@ Section Typecheck.
   Defined.
 
 
-  Definition iscumul Γ := isconv_term RedFlags.default Σ HΣ Hφ G HG Γ Cumul.
+  Definition iscumul Γ := isconv_term RedFlags.default Σ HΣ Hφ G HG Hcf Γ Cumul.
 
   Program Definition convert_leq Γ t u
           (ht : wellformed Σ Γ t) (hu : wellformed Σ Γ u)
@@ -581,7 +584,7 @@ Section Typecheck.
   Proof.
     pose proof HΣ'.
     intros HH.
-    refine (check_constraints_spec G (global_ext_uctx Σ) _ _ HG _ HH).
+    refine (check_constraints_spec Hcf G (global_ext_uctx Σ) _ _ HG _ HH).
     now apply wf_ext_global_uctx_invariants.
     now apply global_ext_uctx_consistent.
   Qed.
@@ -1161,11 +1164,13 @@ Section Typecheck.
 End Typecheck.
 
 
-Definition infer' {cf:checker_flags} {Σ} (HΣ : ∥ wf_ext Σ ∥)
-  := infer (map_squash fst HΣ) (map_squash snd HΣ).
+Definition infer' {cf:checker_flags} (Hcf : prop_sub_type = true)
+           {Σ} (HΣ : ∥ wf_ext Σ ∥)
+  := infer Hcf (map_squash fst HΣ) (map_squash snd HΣ).
 
-Definition make_graph_and_infer {cf:checker_flags} {Σ} (HΣ : ∥ wf_ext Σ ∥)
-  := let '(G; HG) := wf_ext_is_graph HΣ in infer' HΣ G HG.
+Definition make_graph_and_infer {cf:checker_flags} (Hcf : prop_sub_type = true)
+           {Σ} (HΣ : ∥ wf_ext Σ ∥)
+  := let '(G; HG) := wf_ext_is_graph Hcf HΣ in infer' Hcf HΣ G HG.
 
 
 Print Assumptions infer.
@@ -1177,7 +1182,7 @@ From MetaCoq.Checker Require kernel.Checker.
 From MetaCoq.Checker Require Import wGraph.
 
 Section CheckEnv.
-  Context  {cf:checker_flags}.
+  Context  {cf:checker_flags} (Hcf : prop_sub_type = true).
 
   Inductive env_error :=
   | IllFormedDecl (e : string) (e : type_error)
@@ -1215,14 +1220,15 @@ Section CheckEnv.
 
   Definition check_wf_type id Σ HΣ HΣ' G HG t
     : EnvCheck (∑ u, ∥ Σ;;; [] |- t : tSort u ∥)
-    := wrap_error id (@infer_type _ Σ HΣ (@infer _ Σ HΣ HΣ' G HG) [] sq_wfl_nil t).
+    := wrap_error id (@infer_type _ Σ HΣ
+                                  (@infer _ Hcf Σ HΣ HΣ' G HG) [] sq_wfl_nil t).
 
   Definition check_wf_judgement id Σ HΣ HΣ' G HG t ty
     : EnvCheck (∥ Σ;;; [] |- t : ty ∥)
-    := wrap_error id (@check _ Σ HΣ HΣ' G HG [] sq_wfl_nil t ty).
+    := wrap_error id (@check _ Hcf Σ HΣ HΣ' G HG [] sq_wfl_nil t ty).
 
   Definition infer_term Σ HΣ HΣ' G HG t :=
-    wrap_error "toplevel term" (@infer _ Σ HΣ HΣ' G HG [] sq_wfl_nil t).
+    wrap_error "toplevel term" (@infer _ Hcf Σ HΣ HΣ' G HG [] sq_wfl_nil t).
 
   Program Fixpoint check_fresh id env : EnvCheck (∥ fresh_global id env ∥) :=
     match env with
@@ -1315,7 +1321,7 @@ Section CheckEnv.
       end
     | InductiveDecl id mdecl =>
       X1 <- monad_Alli (check_one_ind_body Σ HΣ HΣ' G HG id mdecl) _ _ ;;
-      X2 <- wrap_error id (check_context HΣ HΣ' G HG (ind_params mdecl)) ;;
+      X2 <- wrap_error id (check_context Hcf HΣ HΣ' G HG (ind_params mdecl)) ;;
       X3 <- wrap_error id (check_eq_nat (context_assumptions (ind_params mdecl))
                                        (ind_npars mdecl)
                                        (Msg "wrong number of parameters")) ;;
@@ -1392,7 +1398,7 @@ Section CheckEnv.
                      LevelSet.In l1 (LevelSet.union (levels_of_udecl udecl) (global_levels Σ)) /\
                      LevelSet.In l2 (LevelSet.union (levels_of_udecl udecl) (global_levels Σ)))
                   (constraints_of_udecl udecl)). {
-      clear -H0. apply ConstraintSet.for_all_spec in H0.
+      clear -H0 Hcf. apply ConstraintSet.for_all_spec in H0.
       2: now intros x y [].
       intros [[l ct] l'] Hl. specialize (H0 _ Hl). simpl in H0.
       apply andb_true_iff in H0. destruct H0 as [H H0].
@@ -1405,7 +1411,7 @@ Section CheckEnv.
       apply negb_true_iff in H. now apply LevelSetFact.not_mem_iff in H.
     - exact HH.
     - clear -H1. destruct udecl; trivial.
-    - clear -HΣ HH Huctx H2 HG. unfold gc_of_uctx, uctx_of_udecl in *.
+    - clear -Hcf HΣ HH Huctx H2 HG. unfold gc_of_uctx, uctx_of_udecl in *.
       simpl in *.
       unfold satisfiable_udecl.
       unfold is_graph_of_uctx in HG. unfold gc_of_uctx in *.
@@ -1417,7 +1423,7 @@ Section CheckEnv.
       case_eq (gc_of_constraints (constraints_of_udecl udecl));
         [|intro XX; rewrite XX in Huctx; discriminate Huctx].
       intros ctrs Hctrs. rewrite Hctrs in Huctx. simpl in *.
-      eapply (is_consistent_spec (global_ext_uctx (Σ, udecl))).
+      eapply (is_consistent_spec Hcf (global_ext_uctx (Σ, udecl))).
       { apply wf_global_uctx_invariants in HΣ.
         split.
         + clear -HΣ. cbn. apply LevelSet.union_spec; right.
@@ -1432,7 +1438,7 @@ Section CheckEnv.
       rewrite gc_of_constraints_union.
       rewrite HΣctrs, Hctrs.
       inversion Huctx; subst; clear Huctx.
-      clear -H2 cf. rewrite add_uctx_make_graph in H2.
+      clear -Hcf H2 cf. rewrite add_uctx_make_graph in H2.
       refine (eq_rect _ (fun G => wGraph.is_acyclic G = true) H2 _ _).
       apply graph_eq; try reflexivity.
       + simpl. unfold global_ext_levels. simpl.

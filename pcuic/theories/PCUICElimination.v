@@ -50,13 +50,13 @@ Definition Informative`{cf : checker_flags} (Σ : global_env_ext) (ind : inducti
        #|ind_ctors idecl| <= 1 /\
        squash (All (Is_proof Σ' Γ) (skipn (ind_npars mdecl) args)).
 
-Lemma elim_restriction_works_kelim1 `{cf : checker_flags} (Σ : global_env_ext) Γ T ind npar p c brs mind idecl : wf Σ ->
-  declared_inductive (fst Σ) mind ind idecl ->
-  Σ ;;; Γ |- tCase (ind, npar) p c brs : T ->
-  (Is_proof Σ Γ (tCase (ind, npar) p c brs) -> False) -> In InType (ind_kelim idecl).
-Admitted.
+(* Lemma elim_restriction_works_kelim1 `{cf : checker_flags} (Σ : global_env_ext) Γ T ind npar p c brs mind idecl : wf Σ -> *)
+(*   declared_inductive (fst Σ) mind ind idecl -> *)
+(*   Σ ;;; Γ |- tCase (ind, npar) p c brs : T -> *)
+(*   (Is_proof Σ Γ (tCase (ind, npar) p c brs) -> False) -> In InType (ind_kelim idecl). *)
+(* Admitted. *)
 
-Lemma elim_restriction_works_kelim2 `{cf : checker_flags} (Σ : global_env_ext) ind mind idecl : wf Σ ->
+Lemma elim_restriction_works_kelim `{cf : checker_flags} (Σ : global_env_ext) ind mind idecl : wf Σ ->
   declared_inductive (fst Σ) mind ind idecl ->
   In InType (ind_kelim idecl) -> Informative Σ ind.
 Admitted.
@@ -65,10 +65,7 @@ Lemma elim_restriction_works `{cf : checker_flags} (Σ : global_env_ext) Γ T in
   declared_inductive (fst Σ) mind ind idecl ->
   Σ ;;; Γ |- tCase (ind, npar) p c brs : T ->
   (Is_proof Σ Γ (tCase (ind, npar) p c brs) -> False) -> Informative Σ ind.
-Proof.
-  intros. eapply elim_restriction_works_kelim2; eauto.
-  eapply elim_restriction_works_kelim1; eauto.
-Qed.
+Admitted.
 
 Lemma declared_projection_projs_nonempty `{cf : checker_flags} {Σ : global_env_ext} { mind ind p a} :
   wf Σ ->
@@ -110,7 +107,7 @@ Lemma elim_restriction_works_proj `{cf : checker_flags} (Σ : global_env_ext) Γ
   Σ ;;; Γ |- tProj p c : T ->
   (Is_proof Σ Γ (tProj p c) -> False) -> Informative Σ (fst (fst p)).
 Proof.
-  intros. eapply elim_restriction_works_kelim2; eauto.
+  intros. eapply elim_restriction_works_kelim; eauto.
   eapply elim_restriction_works_proj_kelim1; eauto.
 Qed.
 
@@ -152,6 +149,16 @@ Lemma tCase_length_branch_inv `{cf : checker_flags} (Σ : global_env_ext) Γ ind
   Σ ;;; Γ |- tCase (ind, npar) p (mkApps (tConstruct ind n u) args) brs : T ->
   nth_error brs n = Some (m, t) ->
   (#|args| = npar + m)%nat.
+Proof.
+  intros. eapply inversion_Case in X0 as (u' & args' & mdecl' & idecl' & pty' & indctx' & pctx' & ps' & btys' & ? & ? & ? & ? & ? & ? & ? & ? & ?); eauto.
+  subst. unfold types_of_case in *.
+  destruct ?; try congruence.
+  destruct ?; try congruence.
+  destruct ?; try congruence.
+  destruct ?; try congruence.
+  destruct ?; try congruence.
+  destruct ?; try congruence. inversion e0. subst. clear e0. 
+  
 Admitted.
 
 Section no_prop_leq_type.
@@ -159,13 +166,23 @@ Section no_prop_leq_type.
 Context `{cf : checker_flags}.
 Variable Hcf : prop_sub_type = false.
 
+Lemma cumul_prop (Σ : global_env_ext) Γ A B u :
+  wf Σ ->
+  is_prop_sort u ->
+  (Σ ;;; Γ |- A : tSort u + (Σ ;;; Γ |- B : tSort u))%type ->
+  Σ ;;; Γ |- A <= B ->
+  ((Σ ;;; Γ |- A : tSort u) * (Σ ;;; Γ |- B : tSort u))%type.
+Admitted.
+
 Lemma cumul_prop1 (Σ : global_env_ext) Γ A B u :
   wf Σ ->
   is_prop_sort u ->
   Σ ;;; Γ |- B : tSort u ->
   Σ ;;; Γ |- A <= B ->
   Σ ;;; Γ |- A : tSort u.
-Admitted.
+Proof.
+  intros. eapply cumul_prop in X1; eauto. firstorder.
+Qed.
 
 Lemma cumul_prop2 (Σ : global_env_ext) Γ A B u :
   wf Σ ->
@@ -173,7 +190,9 @@ Lemma cumul_prop2 (Σ : global_env_ext) Γ A B u :
   Σ ;;; Γ |- A <= B ->
   Σ ;;; Γ |- A : tSort u ->
   Σ ;;; Γ |- B : tSort u.
-Admitted.
+Proof.
+  intros. eapply cumul_prop in X0; eauto. firstorder.  
+Qed.
 
 Lemma leq_universe_prop (Σ : global_env_ext) u1 u2 :
   @check_univs cf = true ->
@@ -183,9 +202,7 @@ Lemma leq_universe_prop (Σ : global_env_ext) u1 u2 :
   (is_prop_sort u1 \/ is_prop_sort u2) ->
   (is_prop_sort u1 /\ is_prop_sort u2).
 Proof.
-  intros. unfold leq_universe in *. (* rewrite H in H1. *)
-  (* unfold leq_universe0 in H1. *)
-  (* unfold leq_universe_n in H1. *)
+  intros. unfold leq_universe in *.
 Admitted.                       (* leq_universe_prop *)
 
 End no_prop_leq_type.

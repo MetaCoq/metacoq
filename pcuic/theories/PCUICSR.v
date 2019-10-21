@@ -52,18 +52,18 @@ Proof.
   - eapply inversion_App in Hf as [na' [A' [B' [Hf' [Ha HA''']]]]].
     eexists _, _; intuition eauto.
     econstructor; eauto. eapply validity; eauto with wf.
-    constructor.
-Admitted.
-
-(*   - specialize (IHu (tApp f a) T). *)
-(*     specialize (IHu Hf) as [T' [U' [[H' H''] H''']]]. *)
-(*     eapply inversion_App in H' as [na' [A' [B' [Hf' [Ha HA''']]]]]. *)
-(*     exists (tProd na' A' B'), U'. intuition; eauto. *)
-(*     econstructor. eapply validity; eauto with wf. *)
-(*     eapply cumul_refl'. auto. *)
-(*     clear -H'' HA'''. depind H''. *)
-(*     econstructor; eauto. eapply cumul_trans; eauto. *)
-(* Qed. *)
+    constructor. all:eauto.
+    eapply validity; eauto with wf.
+    eapply type_App; eauto.    
+  - specialize (IHu (tApp f a) T).
+    specialize (IHu Hf) as [T' [U' [[H' H''] H''']]].
+    eapply inversion_App in H' as [na' [A' [B' [Hf' [Ha HA''']]]]]. 2:{ eassumption. }
+    exists (tProd na' A' B'), U'. intuition; eauto.
+    econstructor. eapply validity; eauto with wf.
+    eapply cumul_refl'. auto.
+    clear -H'' HA''' wfΣ. depind H''.
+    econstructor; eauto. eapply cumul_trans; eauto.  
+Qed.
 
 Lemma type_tFix_inv {cf:checker_flags} (Σ : global_env_ext) Γ mfix idx T : wf Σ ->
   Σ ;;; Γ |- tFix mfix idx : T ->

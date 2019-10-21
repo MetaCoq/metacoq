@@ -2425,7 +2425,10 @@ Section Conversion.
     with inspect (reduce_stack RedFlags.default Σ hΣ Γ c ε _) := {
     | @exist (cred, ρ) eq with cc_viewc cred := {
       | ccview_construct ind' n ui with inspect (decompose_stack ρ) := {
-        | @exist (args, ξ) eq' := Some (iota_red par n args brs)
+        | @exist (args, ξ) eq' with inspect (eqb ind ind') := {
+          | @exist true eqi := Some (iota_red par n args brs) ;
+          | @exist false _ := None
+          }
         } ;
       | ccview_cofix mfix idx with inspect (unfold_cofix mfix idx) := {
         | @exist (Some (narg, fn)) eq2 with inspect (decompose_stack ρ) := {
@@ -2454,7 +2457,11 @@ Section Conversion.
     revert e.
     funelim (unfold_one_case Γ ind par p c brs h).
     all: intros eq ; noconf eq.
-    - match type of e with
+    - assert (ind0 = ind).
+      { change (eq_inductive ind ind0) with (eqb ind ind0) in e1.
+        destruct (eqb_spec ind ind0). all: easy.
+      } subst.
+      match type of e with
       | _ = reduce_stack ?f ?Σ ?hΣ ?Γ ?t ?π ?h =>
         pose proof (reduce_stack_sound f Σ hΣ Γ t π h) as [r] ;
         pose proof (reduce_stack_decompose f Σ hΣ Γ t π h) as d
@@ -2462,12 +2469,11 @@ Section Conversion.
       rewrite <- e in r.
       rewrite <- e in d. cbn in d. rewrite <- e0 in d. cbn in d. subst.
       cbn in r.
-      clear H. symmetry in e0. apply decompose_stack_eq in e0. subst.
+      clear H0. symmetry in e0. apply decompose_stack_eq in e0. subst.
       rewrite zipc_appstack in r. cbn in r.
-      assert (r' : ∥ red Σ Γ (tCase (ind, par) p c brs) (tCase (ind, par) p (mkApps (tConstruct ind0 n ui) l) brs) ∥).
+      assert (r' : ∥ red Σ Γ (tCase (ind, par) p c brs) (tCase (ind, par) p (mkApps (tConstruct ind n ui) l) brs) ∥).
       { constructor. eapply red_case_c. eassumption. }
       pose proof (red_wellformed _ hΣ h r') as h'.
-      eapply Case_Construct_ind_eq in h' ; eauto. subst.
       eapply cored_red_cored.
       + constructor. eapply red_iota.
       + eapply red_case_c. eassumption.
@@ -2497,7 +2503,10 @@ Section Conversion.
       | @exist (cred, ρ) eq with cc_viewc cred := {
         | ccview_construct ind' n ui with inspect (decompose_stack ρ) := {
           | @exist (args, ξ) eq' with inspect (nth_error args (pars + narg)) := {
-            | @exist (Some arg) eq2 := Some arg ;
+            | @exist (Some arg) eq2 with inspect (eqb i ind') := {
+              | @exist true eqi := Some arg ;
+              | @exist false _ := None
+              } ;
             | @exist None _ := None
             }
           } ;
@@ -2529,7 +2538,11 @@ Section Conversion.
     revert e.
     funelim (unfold_one_proj Γ p c h).
     all: intros eq ; noconf eq.
-    - match type of e with
+    - assert (i = ind).
+      { change (eq_inductive ind i) with (eqb ind i) in e2.
+        destruct (eqb_spec i ind). all: easy.
+      } subst.
+      match type of e with
       | _ = reduce_stack ?f ?Σ ?hΣ ?Γ ?t ?π ?h =>
         pose proof (reduce_stack_sound f Σ hΣ Γ t π h) as [r] ;
         pose proof (reduce_stack_decompose f Σ hΣ Γ t π h) as d
@@ -2537,11 +2550,10 @@ Section Conversion.
       rewrite <- e in r.
       rewrite <- e in d. cbn in d. rewrite <- e0 in d. cbn in d. subst.
       cbn in r.
-      clear H0. symmetry in e0. apply decompose_stack_eq in e0. subst.
+      clear H1. symmetry in e0. apply decompose_stack_eq in e0. subst.
       rewrite zipc_appstack in r. cbn in r.
-      pose proof (red_proj_c (i, n0, n) _ _ r) as r'.
+      pose proof (red_proj_c (ind, n0, n) _ _ r) as r'.
       pose proof (red_wellformed _ hΣ h (sq r')) as h'.
-      apply Proj_Constuct_ind_eq in h' ; auto. subst.
       eapply cored_red_cored.
       + constructor. eapply red_proj. eauto.
       + eapply red_proj_c. eassumption.

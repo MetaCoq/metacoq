@@ -503,7 +503,7 @@ Section Typecheck.
   Defined.
 
 
-  Definition iscumul Γ := isconv_term RedFlags.default Σ HΣ Hφ G HG Γ Cumul.
+  Definition iscumul Γ := isconv_term Σ HΣ Hφ G HG Γ Cumul.
 
   Program Definition convert_leq Γ t u
           (ht : wellformed Σ Γ t) (hu : wellformed Σ Γ u)

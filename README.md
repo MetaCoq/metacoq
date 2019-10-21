@@ -48,7 +48,7 @@ Check foo`). This checker uses _fuel_, so it must be passed a number
 of maximal reduction steps to perfom when calling conversion, and is
 NOT verified.
 
-[PCUIC](pcuic/theories)
+[PCUIC](pcuic/theories#pcuic)
 -----
 
 PCUIC, the Polymorphic Cumulative Calculus of Inductive Constructions is
@@ -63,7 +63,7 @@ calculus has (partial) proofs of standard metatheoretical results:
 
 - Validity, Subject Reduction and Principality.
 
-[Safe Checker](safechecker/theories)
+[Safe Checker](safechecker/theories#safe-checker)
 -----
 
 Implementation of a fuel-free and verified reduction machine, conversion

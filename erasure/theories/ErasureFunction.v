@@ -364,10 +364,9 @@ Qed.
 Next Obligation.
   Hint Constructors squash. destruct HΣ.
   eapply Is_conv_to_Arity_inv in H
-    as [ (? & ? & ? & ?) | [ (? & ? & ? & ? & ?) | (? & ?) ] ].
+    as [ (? & ? & ? & ?) | (? & ?) ].
   all: eauto.
-(* Qed. *)
-Admitted.
+Qed.
 
 End fix_sigma.
 

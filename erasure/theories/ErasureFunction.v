@@ -634,8 +634,6 @@ Proof.
     eapply p. eauto.
   - clear E. inv t; discriminate.
 Qed.
-Print Assumptions erases_erase.
-Print Assumptions erases_correct.
 
 Lemma erase_Some_typed {Σ wfΣ Γ wfΓ t r} :
   erase Σ wfΣ Γ wfΓ t = Checked r -> exists T, ∥Σ ;;; Γ |- t : T∥.
@@ -799,3 +797,6 @@ Proof.
   * eapply IHΣ. unfold erase_global. rewrite E2. reflexivity.
 Qed.
 
+
+Print Assumptions erases_erase.
+Print Assumptions erases_correct.

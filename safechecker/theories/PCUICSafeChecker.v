@@ -1279,17 +1279,6 @@ Section CheckEnv.
   Defined.
 
 
-  (* Definition Build_on_ind_body Σ mind mdecl i idecl ind_indices ind_sort *)
-  (*   : ind_type idecl = *)
-  (*     it_mkProd_or_LetIn (ind_params mdecl) *)
-  (*                        (it_mkProd_or_LetIn ind_indices (tSort ind_sort)) -> *)
-  (*     ∥ on_type (lift_typing typing) Σ [] (ind_type idecl) ∥ -> *)
-  (*     forall onConstructors : on_constructors P Σ mind mdecl i idecl (ind_ctors idecl), *)
-  (*       (ind_projs idecl <> [] -> *)
-  (*        on_projections P Σ mind mdecl i idecl ind_indices (ind_projs idecl)) -> *)
-  (*       check_ind_sorts P onConstructors ind_sort -> on_ind_body P Σ mind mdecl i idecl *)
-
-
   Lemma check_one_ind_body:
     forall Σ : global_env_ext,
       ∥ wf Σ ∥ ->

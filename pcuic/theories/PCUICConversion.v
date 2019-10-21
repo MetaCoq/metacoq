@@ -71,20 +71,6 @@ Proof. intros x y z. eapply cumul_trans. auto. Qed.
 
 Existing Class wf.
 
-Lemma congr_cumul_prod : forall `{checker_flags} Σ Γ na na' M1 M2 N1 N2,
-    Σ ;;; Γ |- M1 == N1 ->
-    Σ ;;; (Γ ,, vass na M1) |- M2 <= N2 ->
-    Σ ;;; Γ |- (tProd na M1 M2) <= (tProd na' N1 N2).
-Proof.
-  intros.
-Admitted.
-
-(* Should follow from context conversion + invariants on T and U *)
-(* Lemma conv_conv_alt `{cf : checker_flags} {Σ : global_env_ext} (wfΣ : wf Σ) Γ T U : *)
-(*   Σ ;;; Γ |- T = U -> Σ ;;; Γ |- T == U. *)
-(* Proof. *)
-(* Admitted. *)
-
 Lemma cumul_Sort_inv {cf:checker_flags} Σ Γ s s' :
   Σ ;;; Γ |- tSort s <= tSort s' -> leq_universe (global_ext_constraints Σ) s s'.
 Proof.
@@ -290,44 +276,6 @@ Proof.
   induction Γ; simpl; split; try constructor; auto. depelim H. constructor; auto. now eapply IHΓ.
   depelim H. now eapply IHΓ.
 Qed.
-
-Lemma it_mkProd_or_LetIn_ass_inv {cf : checker_flags} (Σ : global_env_ext) Γ ctx ctx' s s' :
-  wf Σ ->
-  assumption_context ctx ->
-  assumption_context ctx' ->
-  Σ ;;; Γ |- it_mkProd_or_LetIn ctx (tSort s) <= it_mkProd_or_LetIn ctx' (tSort s') ->
-  conv_context Σ ctx ctx' * leq_term Σ (tSort s) (tSort s').
-Proof.
-  intros wfΣ.
-  revert Γ ctx' s s'.
-  induction ctx using rev_ind.
-  intros. destruct ctx' using rev_ind. simpl in X.
-  - eapply cumul_Sort_inv in X. split; constructor; auto.
-  - destruct x as [na [b|] ty]. elimtype False.
-    apply assumption_context_app in H0.
-    destruct H0. inv a0.
-    rewrite it_mkProd_or_LetIn_app in X.
-    apply assumption_context_app in H0 as [H0 _].
-    specialize (IHctx' H0).
-    simpl in IHctx'. simpl in X. unfold mkProd_or_LetIn in X. simpl in X.
-    eapply cumul_Sort_Prod_inv in X. depelim X.
-  - intros.
-    rewrite it_mkProd_or_LetIn_app in X.
-    simpl in X.
-    eapply assumption_context_app in H as [H H'].
-    destruct x as [na [b|] ty]. elimtype False. inv H'.
-    rewrite /mkProd_or_LetIn /= in X.
-    destruct ctx' using rev_ind.
-    simpl in X.
-    now eapply cumul_Prod_Sort_inv in X.
-    eapply assumption_context_app in H0 as [H0 Hx].
-    destruct x as [na' [b'|] ty']; [elimtype False; inv Hx|].
-    rewrite it_mkProd_or_LetIn_app in X.
-    rewrite /= /mkProd_or_LetIn /= in X.
-    eapply cumul_Prod_Prod_inv in X as [Hdom Hcodom]; auto.
-    specialize (IHctx (Γ ,, vass na' ty') l0 s s' H H0 Hcodom). clear IHctx'.
-    intuition auto.
-Admitted.
 
 (** Injectivity of products, the essential property of cumulativity needed for subject reduction. *)
 Lemma cumul_Prod_inv {cf:checker_flags} Σ Γ na na' A B A' B' :
@@ -818,7 +766,7 @@ Section Inversions.
       Σ ;;; Γ |- tLetIn na ty t u == tLetIn na ty t u'.
   Proof.
     induction 1.
-    - constructor 1. now constructor. 
+    - constructor 1. now constructor.
     - econstructor 2; tea. now constructor.
     - econstructor 3; tea. now constructor.
   Qed.

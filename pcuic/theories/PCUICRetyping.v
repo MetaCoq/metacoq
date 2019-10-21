@@ -194,64 +194,12 @@ Section TypeOf.
     | try eassumption
     ].
 
-  Theorem type_of_sound :
+  (* Theorem type_of_sound :
     forall {Γ t A B},
       Σ ;;; Γ |- t : A ->
       type_of Γ t = Checked B ->
       (Σ ;;; Γ |- t : B) * (Σ ;;; Γ |- B <= A).
-  Proof.
-    intros Γ t A B h eq. revert B eq.
-    induction h ; intros T eq.
-    - cbn in eq. rewrite e in eq.
-      inversion eq. subst. clear eq.
-      split.
-      + econstructor ; eassumption.
-      + eapply cumul_refl'.
-    - cbn in eq. inversion eq. subst. clear eq.
-      split.
-      + (* Proving Typeᵢ : Typeᵢ₊₁ shouldn't be hard... *)
-        admit.
-      + (* destruct l. all: cbn. all: econstructor. all: cbn. all: try reflexivity. *)
-        admit.
-    - go eq.
-      split.
-      + econstructor ; try eassumption ; try ih ; try cih.
-        (* Again we're missing result on how to type sorts... *)
-        left. red. exists [], a.
-        unfold app_context; simpl; intuition auto with pcuic.
-        eapply typing_wf_local; tea.
-        left. red. exists [], a0. unfold app_context; simpl; intuition auto with pcuic.
-        eapply typing_wf_local; tea.
-      + (* Sorts again *)
-        simpl.
-        admit.
-    - go eq. split.
-      + econstructor ; try eassumption ; try ih ; try cih.
-      + eapply congr_cumul_prod.
-        * eapply conv_alt_refl. reflexivity.
-        * ih.
-    - go eq. split.
-      + econstructor ; try eassumption ; try ih ; try cih.
-      + eapply congr_cumul_letin. all: try eapply cumul_refl'.
-        ih.
-    - go eq. split.
-      + econstructor ; try eassumption ; try ih ; try cih.
-        all: admit.
-      + (* eapply cumul_subst. *)
-        admit.
-    - simpl in eq. split.
-      + admit.
-      + admit.
-    - admit.
-    - admit.
-    - admit.
-    - admit.
-    - admit.
-    - admit.
-    - split.
-      + ih.
-      + eapply cumul_trans ; try eassumption.
-  Admitted.
+  Admitted. *)
 
 
 

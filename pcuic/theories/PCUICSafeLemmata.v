@@ -697,17 +697,6 @@ Section Lemmata.
       eapply cumul_zippx. assumption.
   Qed.
 
-
-  Lemma cored_nl :
-    forall Γ u v,
-      cored Σ Γ u v ->
-      cored Σ (nlctx Γ) (nl u) (nl v).
-  Proof.
-    intros Γ u v H. induction H.
-    - constructor 1. admit.
-    - econstructor 2; tea. admit.
-  Admitted.
-
   Derive Signature for Acc.
 
   Lemma wf_fun :
@@ -1237,61 +1226,6 @@ Section Lemmata.
       + assumption.
   Qed.
 
-  (* TODO MOVE It needs wf Σ entirely *)
-  Lemma subject_conversion :
-    forall Γ u v A B,
-      Σ ;;; Γ |- u : A ->
-      Σ ;;; Γ |- v : B ->
-      Σ ;;; Γ |- u == v ->
-      ∑ C,
-        Σ ;;; Γ |- u : C ×
-        Σ ;;; Γ |- v : C.
-  Proof.
-    intros Γ u v A B hu hv h.
-    (* apply conv_conv_alt in h. *)
-    (* apply conv_alt_red in h as [u' [v' [? [? ?]]]]. *)
-    (* pose proof (subject_reduction _ Γ _ _ _ hΣ hu r) as hu'. *)
-    (* pose proof (subject_reduction _ Γ _ _ _ hΣ hv r0) as hv'. *)
-    (* pose proof (typing_alpha _ _ _ _ hu' e) as hv''. *)
-    (* pose proof (principal_typing _ hv' hv'') as [C [? [? hvC]]]. *)
-    (* apply eq_term_sym in e as e'. *)
-    (* pose proof (typing_alpha _ _ _ _ hvC e') as huC. *)
-    (* Not clear.*)
-  Abort.
-
-  Lemma welltyped_zipc_replace :
-    forall Γ u v π,
-      welltyped Σ Γ (zipc v π) ->
-      welltyped Σ (Γ ,,, stack_context π) u ->
-      Σ ;;; Γ ,,, stack_context π |- u == v ->
-      welltyped Σ Γ (zipc u π).
-  Proof.
-    destruct hΣ as [wΣ].
-    intros Γ u v π hv hu heq.
-    induction π in u, v, hu, hv, heq |- *.
-    - simpl in *. assumption.
-    - simpl in *. eapply IHπ.
-      + eassumption.
-      + zip fold in hv. apply welltyped_context in hv.
-        simpl in hv.
-        destruct hv as [Tv hv].
-        destruct hu as [Tu hu].
-        apply inversion_App in hv as ihv ; auto.
-        destruct ihv as [na [A' [B' [hv' [ht ?]]]]].
-        (* Seems to be derivable (tediously) from some principal type lemma. *)
-        admit.
-      + (* Congruence *)
-        admit.
-  Admitted.
-
-  Lemma wellformed_zipc_replace :
-    forall Γ u v π,
-      wellformed Σ Γ (zipc v π) ->
-      wellformed Σ (Γ ,,, stack_context π) u ->
-      Σ ;;; Γ ,,, stack_context π |- u == v ->
-      wellformed Σ Γ (zipc u π).
-  Admitted.
-
   Derive Signature for typing.
 
   Lemma cored_zipc :
@@ -1440,27 +1374,6 @@ Lemma type_Case_valid_btys {cf:checker_flags} Σ Γ ind u npar p (* c brs *) arg
     (* Σ ;;; Γ |- c : mkApps (tInd ind u) args -> *)
     (* All2 (fun x y => (fst x = fst y) × (Σ ;;; Γ |- snd x : snd y)) brs btys -> *)
     All (fun x => Σ ;;; Γ |- snd x : tSort ps) btys.
-Proof.
-  intros mdecl idecl isdecl H0 pars pty X indctx pctx ps btys toc.
-  apply types_of_case_spec in toc.
-  destruct toc as [s' [_ [H1 H2]]].
-  pose proof (PCUICClosed.destArity_spec [] pty) as Hpty; rewrite H1 in Hpty;
-    cbn in Hpty; subst; clear H1.
-  unfold build_branches_type in H2.
-  eapply map_option_out_All; tea. clear H2.
-  apply All_mapi.
-  apply PCUICWeakeningEnv.on_declared_inductive in isdecl as [oind oc].
-  pose proof oc.(onConstructors) as oc'.
-  eapply All_Alli. eapply All2_All_left_pack; tea. cbn.
-  intros n [[id ct] k] [cs [Hct1 Hct2]]; cbn in *.
-  case_eq (instantiate_params (subst_instance_context u (ind_params mdecl)) pars
-             ((subst0 (inds (inductive_mind ind) u (ind_bodies mdecl)))
-                (subst_instance_constr u ct))); [|trivial].
-  intros ct' Hct'.
-  case_eq (decompose_prod_assum [] ct'); intros sign ccl e1.
-  case_eq (chop (ind_npars mdecl) (decompose_app ccl).2);
-    intros paramrels args0 e2; cbn.
-    admit.
 Admitted.
 
 Lemma type_Case' {cf:checker_flags} Σ Γ ind u npar p c brs args :
@@ -1514,40 +1427,9 @@ Proof.
       eexists. econstructor; eassumption.
 Defined.
 
-
 Lemma isWAT_tLetIn {cf:checker_flags} {Σ : global_env_ext} (HΣ' : wf Σ)
       {Γ} (HΓ : wf_local Σ Γ) {na t A B}
   : isWfArity_or_Type Σ Γ (tLetIn na t A B)
     <~> (isType Σ Γ A × (Σ ;;; Γ |- t : A)
                       × isWfArity_or_Type Σ (Γ,, vdef na t A) B).
-Proof.
-  split; intro HH.
-  - destruct HH as [[ctx [s [H1 H2]]]|[s H]].
-    + cbn in H1. apply destArity_app_Some in H1.
-      destruct H1 as [ctx' [H1 HH]]; subst ctx.
-      rewrite app_context_assoc in H2. repeat split.
-      * apply wf_local_app in H2. inversion H2; subst. assumption.
-      * apply wf_local_app in H2. inversion H2; subst. assumption.
-      * left. exists ctx', s. split; tas.
-    + apply inversion_LetIn in H; tas. destruct H as [s1 [A' [HA [Ht [HB H]]]]].
-      repeat split; tas. eexists; eassumption.
-      apply cumul_Sort_r_inv in H.
-      destruct H as [s' [H H']].
-      right. exists s'. eapply type_reduction; tea.
-      constructor; tas. eexists; tea.
-      apply invert_red_letin in H; tas.
-      destruct H as [[? [? [? [? [[[H ?] ?] ?]]]]]|H].
-      * apply invert_red_sort in H; inv H.
-      * etransitivity.
-        2: apply weakening_red_0 with (Γ' := [_]) (N := tSort _);
-          tea; reflexivity.
-        exact (red_rel_all _ (Γ ,, vdef na t A) 0 t A' eq_refl).
-  - destruct HH as [HA [Ht [[ctx [s [H1 H2]]]|HB]]].
-    + left. exists ([vdef na t A] ,,, ctx), s. split.
-      cbn. now rewrite destArity_app, H1.
-      now rewrite app_context_assoc.
-    + right. destruct HB as [sB HB].
-      eexists. eapply type_reduction; tas. econstructor; tea.
-      apply HA.π2. apply red1_red.
-      apply red_zeta with (b':=tSort sB).
-Defined.
+Admitted.

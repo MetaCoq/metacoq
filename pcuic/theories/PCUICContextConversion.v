@@ -644,34 +644,11 @@ Section ContextConversion.
     now split.
   Qed.
 
-  Lemma conv_isWfArity_or_Type Γ Γ' T U :
-    conv_context Γ' Γ ->
-    Σ ;;; Γ |- T = U ->
-    isWfArity_or_Type Σ Γ T ->
-    isWfArity_or_Type Σ Γ' U.
-  Proof.
-  Admitted.
 End ContextConversion.
 
 Notation conv_context Σ Γ Γ' := (context_relation (conv_decls Σ) Γ Γ').
 
 Hint Resolve conv_ctx_refl : pcuic.
-
-(* Lemma wf_local_conv_ctx {cf:checker_flags} Σ Γ Δ (wfΓ : wf_local Σ Γ) : wf Σ -> *)
-(*   All_local_env_over typing *)
-(*     (fun (Σ : global_env_ext) (Γ : context) wfΓ (t T : term) Ht => *)
-(*        forall Γ' : context, conv_context Σ Γ Γ' -> Σ;;; Γ' |- t : T) Σ Γ wfΓ -> *)
-(*   conv_context Σ Γ Δ -> wf_local Σ Δ. *)
-(* Proof. *)
-(*   intros wfΣ wfredctx. revert Δ. *)
-(*   induction wfredctx; intros Δ wfred; unfold vass, vdef in *; depelim wfred. *)
-(*   - constructor; eauto. *)
-(*   - simpl. constructor. auto. red. depelim c. apply i. *)
-(*   - simpl. depelim c. constructor; auto; hnf. *)
-(*     eapply type_Cumul; eauto. eapply cumul_conv_ctx; eauto. *)
-(*     eapply conv_alt_conv in c; auto. apply c. *)
-(*     constructor; auto. *)
-(* Qed. *)
 
 Lemma conv_context_sym {cf:checker_flags} Σ Γ Γ' :
   wf Σ.1 (* -> wf_local Σ Γ *) -> conv_context Σ Γ Γ' -> conv_context Σ Γ' Γ.
@@ -688,101 +665,16 @@ Proof.
     eapply conv_alt_sym, conv_alt_conv_ctx; eauto.
 Qed.
 
-(** Maybe need to prove it later *)
-Lemma conv_context_trans {cf:checker_flags} Σ :
-  wf Σ.1 -> CRelationClasses.Transitive (fun Γ Γ' => conv_context Σ Γ Γ').
-Proof.
-  intros wfΣ.
-  eapply context_relation_trans.
-  intros.
-  depelim X2; depelim X3; try constructor; auto.
-  eapply conv_alt_trans; eauto.
-  eapply conv_alt_conv_ctx => //. apply c0.
-  apply conv_context_sym => //. pcuic. admit.
-  eapply conv_alt_trans; eauto.
-  eapply conv_alt_conv_ctx => //. apply c0.
-  apply conv_context_sym => //. admit.
-Admitted.
-
 (* Hint Immediate wf_local_conv_ctx : pcuic. *)
 Hint Constructors conv_decls : pcuic.
 
-Lemma context_conversion {cf:checker_flags} : env_prop
-                             (fun Σ Γ t T =>
-                                forall Γ', conv_context Σ Γ Γ' -> wf_local Σ Γ' -> Σ ;;; Γ' |- t : T).
-Proof.
-  apply typing_ind_env; intros Σ wfΣ Γ wfΓ; intros **; rename_all_hyps;
-    try solve [econstructor; eauto].
-
-  - pose proof heq_nth_error.
-    eapply (context_relation_nth X0) in H as [d' [Hnth [Hrel Hconv]]].
-    eapply type_Cumul.
-    * econstructor. auto. eauto.
-    * admit.
-    * unshelve eapply nth_error_All_local_env_over in X. 3:eapply heq_nth_error.
-      destruct X. red in o.
-      depelim Hconv; simpl in *.
-      + rewrite -(firstn_skipn (S n) Γ').
-        eapply weakening_cumul0; auto.
-        pose proof (nth_error_Some_length Hnth).
-        rewrite firstn_length_le; lia.
-        apply conv_alt_sym in c => //.
-        eapply cumul_conv_ctx; eauto. eapply conv_alt_conv in c. apply c. auto.
-      + simpl in *.
-        rewrite -(firstn_skipn (S n) Γ').
-        eapply weakening_cumul0; auto. rewrite firstn_length_le; auto.
-        pose proof heq_nth_error. eapply nth_error_Some_length in Hnth. lia.
-        eapply conv_alt_cumul; auto. eapply conv_alt_sym; auto.
-        eapply conv_alt_conv_ctx; eauto.
-      + simpl in *. auto.
-        rewrite -(firstn_skipn (S n) Γ').
-        eapply weakening_cumul0; auto. rewrite firstn_length_le; auto.
-        pose proof heq_nth_error. eapply nth_error_Some_length in Hnth. lia.
-        eapply conv_alt_cumul; auto. eapply conv_alt_sym; auto.
-        eapply conv_alt_conv_ctx; eauto.
-  - constructor; pcuic.
-    eapply forall_Γ'0. repeat (constructor; pcuic).
-    constructor; auto. red. eexists; eapply forall_Γ'; auto.
-  - econstructor; pcuic.
-    eapply forall_Γ'0; repeat (constructor; pcuic).
-  - econstructor; pcuic.
-    eapply forall_Γ'1; repeat (constructor; pcuic).
-  - econstructor; pcuic. intuition auto. eapply isdecl. eapply isdecl.
-    eauto. solve_all.
-  - econstructor; pcuic.
-    eapply All_local_env_app_inv. split; auto.
-    eapply All_local_env_app in X. subst types.
-    destruct X as [? ?]. clear -X1 X2 a0.
-    induction a0; constructor; pcuic. destruct t0. exists x; intuition eauto.
-    eapply b; eauto. (* conv_context_app *) admit.
-    eapply All_local_env_app_inv; split; auto.
-    destruct t0. exists x; intuition auto.
-    eapply b0. admit.
-    eapply All_local_env_app_inv; split; auto.
-    eapply t1; auto. admit.
-    eapply All_local_env_app_inv; split; auto.
-    solve_all. subst types. apply b. admit.
-    eapply All_local_env_app_inv; split; auto.
-    admit.
-  - econstructor; pcuic.
-    eapply All_local_env_app_inv. split; auto.
-    eapply All_local_env_app in X. subst types.
-    destruct X as [? ?]. clear -X1 X2 a0.
-    induction a0; constructor; pcuic. destruct t0. exists x; intuition eauto.
-    eapply b; eauto. (* conv_context_app *) admit.
-    eapply All_local_env_app_inv; split; auto.
-    destruct t0. exists x; intuition auto.
-    eapply b0. admit.
-    eapply All_local_env_app_inv; split; auto.
-    eapply t1; auto. admit.
-    eapply All_local_env_app_inv; split; auto.
-    solve_all. subst types. apply b. admit.
-    eapply All_local_env_app_inv; split; auto.
-    admit.
-  - econstructor; eauto.
-    destruct X2. destruct i. left. admit.
-    right. destruct s as [s [ty ?]]. exists s. eauto.
-    eapply cumul_conv_ctx; eauto.
+Lemma context_conversion {cf:checker_flags} :
+  env_prop (fun Σ Γ t T =>
+    forall Γ',
+      conv_context Σ Γ Γ' ->
+      wf_local Σ Γ' ->
+      Σ ;;; Γ' |- t : T
+  ).
 Admitted.
 
 

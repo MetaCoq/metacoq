@@ -373,7 +373,10 @@ Section Reduce.
       | true with inspect (reduce c (Case (ind, par) p brs π) _) := {
         | @exist (@exist (t,π') prf) eq with inspect (decompose_stack π') := {
           | @exist (args, ρ) prf' with cc_viewc t := {
-            | ccview_construct ind' c' _ := rec reduce (iota_red par c' args brs) π ;
+            | ccview_construct ind' c' ui with inspect (eqb ind ind') := {
+              | @exist true eqi := rec reduce (iota_red par c' args brs) π ;
+              | @exist false _ := give (tCase (ind, par) p (mkApps (tConstruct ind' c' ui) args) brs) π
+              } ;
             | ccview_cofix mfix idx with inspect (unfold_cofix mfix idx) := {
               | @exist (Some (narg, fn)) eq' :=
                 rec reduce (tCase (ind, par) p (mkApps fn args) brs) π ;
@@ -392,7 +395,10 @@ Section Reduce.
           | @exist (args, ρ) prf' with cc_viewc t := {
             | ccview_construct ind' c' ui
               with inspect (nth_error args (pars + narg)) := {
-              | @exist (Some arg) eqa := rec reduce arg π ;
+              | @exist (Some arg) eqa with inspect (eqb i ind') := {
+                | @exist true eqi := rec reduce arg π ;
+                | @exist false _ := give (tProj (i, pars, narg) (mkApps (tConstruct ind' c' ui) args)) π
+                } ;
               (* | @exist None eqa := False_rect _ _ *)
               | @exist None eqa := give (tProj (i, pars, narg) (mkApps (tConstruct ind' c' ui) args)) π
               } ;
@@ -631,25 +637,22 @@ Section Reduce.
     eapply positionR_poscat_nonil. discriminate.
   Qed.
   Next Obligation.
+    assert (ind' = ind).
+    { change (eq_inductive ind ind') with (eqb ind ind') in eqi.
+      destruct (eqb_spec ind ind'). all: easy.
+    } subst.
     unfold Pr in p0. cbn in p0.
     pose proof p0 as hh.
     rewrite <- prf' in hh. cbn in hh. subst.
     eapply R_Req_R.
     - econstructor. econstructor. eapply red1_context.
       eapply red_iota.
-    - instantiate (4 := ind'). instantiate (2 := p).
-      instantiate (1 := wildcard9).
+    - instantiate (4 := ind). instantiate (2 := p). instantiate (1 := ui).
       destruct r.
       + inversion e.
         subst.
         cbn in prf'. inversion prf'. subst. clear prf'.
         cbn.
-        assert (ind = ind').
-        { clear - h flags hΣ.
-          apply wellformed_context in h ; auto.
-          simpl in h.
-          eapply Case_Construct_ind_eq with (args := []) ; eauto.
-        } subst.
         reflexivity.
       + clear eq. dependent destruction r.
         * cbn in H.
@@ -665,13 +668,6 @@ Section Reduce.
           { clear - h H flags hΣ.
             eapply cored_wellformed ; try eassumption.
           }
-          assert (ind = ind').
-          { clear - h' flags hΣ H.
-            zip fold in h'.
-            apply wellformed_context in h'.
-            cbn in h'.
-            apply Case_Construct_ind_eq in h'. all: eauto.
-          } subst.
           exact H.
         * cbn in H0. inversion H0. subst. clear H0.
           symmetry in prf'.
@@ -679,13 +675,27 @@ Section Reduce.
           rewrite zipc_appstack in H2. cbn in H2.
           apply zipc_inj in H2.
           inversion H2. subst.
-          assert (ind = ind').
-          { clear - h flags H hΣ.
-            apply wellformed_context in h.
-            cbn in h.
-            apply Case_Construct_ind_eq in h. all: eauto.
-          } subst.
           reflexivity.
+  Qed.
+  Next Obligation.
+    clear eq reduce h.
+    destruct r.
+    - inversion H. subst.
+      clear H.
+      cbn in prf'. inversion prf'. subst. reflexivity.
+    - unfold Pr in p0. cbn in p0.
+      rewrite <- prf' in p0. cbn in p0. subst.
+      dependent destruction H.
+      + cbn in H. symmetry in prf'.
+        pose proof (decompose_stack_eq _ _ _ prf'). subst.
+        rewrite zipc_appstack in H. cbn in H.
+        right. econstructor. assumption.
+      + cbn in H0. inversion H0. subst. clear H0.
+        symmetry in prf'.
+        pose proof (decompose_stack_eq _ _ _ prf'). subst.
+        rewrite zipc_appstack in H2. cbn in H2.
+        apply zipc_inj in H2. inversion H2. subst.
+        reflexivity.
   Qed.
   Next Obligation.
     unfold Pr in p0. cbn in p0.
@@ -776,6 +786,10 @@ Section Reduce.
     constructor.
   Qed.
   Next Obligation.
+    assert (ind' = i).
+    { change (eq_inductive i ind') with (eqb i ind') in eqi.
+      destruct (eqb_spec i ind'). all: easy.
+    } subst.
     left.
     apply Req_red in r as hr.
     pose proof (red_wellformed _ hΣ h hr) as hh.
@@ -788,9 +802,27 @@ Section Reduce.
     do 2 zip fold. eapply cored_context.
     constructor.
     cbn in hh. rewrite zipc_appstack in hh. cbn in hh.
-    zip fold in hh. apply wellformed_context in hh.
-    simpl in hh. apply Proj_Constuct_ind_eq in hh. all: eauto.
+    zip fold in hh. apply wellformed_context in hh. 2: assumption.
     subst. constructor. eauto.
+  Qed.
+  Next Obligation.
+    clear eq.
+    dependent destruction r.
+    - inversion H. subst. cbn in prf'. inversion prf'. subst.
+      cbn. reflexivity.
+    - unfold Pr in p. cbn in p.
+      rewrite <- prf' in p. cbn in p. subst.
+      dependent destruction H.
+      + cbn in H. symmetry in prf'.
+        pose proof (decompose_stack_eq _ _ _ prf'). subst.
+        rewrite zipc_appstack in H. cbn in H.
+        right. econstructor. assumption.
+      + cbn in H0. inversion H0. subst. clear H0.
+        symmetry in prf'.
+        pose proof (decompose_stack_eq _ _ _ prf'). subst.
+        rewrite zipc_appstack in H2. cbn in H2.
+        apply zipc_inj in H2. inversion H2. subst.
+        reflexivity.
   Qed.
   Next Obligation.
     clear eq.

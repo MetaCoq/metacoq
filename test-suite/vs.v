@@ -1,6 +1,7 @@
 (* basic.v *)
 
 Require Import BinPos.
+Require Import Lia.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -16,7 +17,7 @@ End option.
 Arguments omap [A B].
 Arguments obnd [A B].
 
-Definition isSome {A : Type} (o : option A) := 
+Definition isSome {A : Type} (o : option A) :=
   match o with Some _ => true | _ => false end.
 
 Section comp.
@@ -86,11 +87,11 @@ intros; destruct (Psucc_pred n) as [Hpred | Hpred]; try contradiction;
   pattern n at 2; rewrite <- Hpred; rewrite nat_of_P_succ_morphism; omega.
 Defined.
 
-Ltac Ppred_tac n := 
-  apply Ppred_decrease; destruct n; 
+Ltac Ppred_tac n :=
+  apply Ppred_decrease; destruct n;
   let H := fresh "H" in intro H; try (inversion H||inversion H1); congruence.
 
-Definition Pleb (x y : positive) := 
+Definition Pleb (x y : positive) :=
   match Pcompare x y Eq with
     | Lt => true
     | Eq => true
@@ -110,7 +111,7 @@ Qed.
 
 Require Import NArith.
 
-Definition Nleb (x y : N) := 
+Definition Nleb (x y : N) :=
   match Ncompare x y with
     | Lt => true
     | Eq => true
@@ -129,7 +130,7 @@ Qed.
 Section revc.
 Variables (A : Type) (c : A -> A -> comparison).
 
-Definition revc a1 a2 := 
+Definition revc a1 a2 :=
   match c a1 a2 with
     | Gt => Lt
     | Eq => Eq
@@ -153,7 +154,7 @@ Module Ident <: UsualOrderedType := Positive_as_OT.
 Definition minid : Ident.t := xH.
 Definition id2pos: Ident.t -> positive := fun x => x.
 Lemma minid_eq: id2pos minid = 1%positive.
-Proof. reflexivity. Qed. 
+Proof. reflexivity. Qed.
 Lemma Ilt_morphism: forall x y, Ident.lt x y -> Plt (id2pos x) (id2pos y).
 Proof. auto. Qed.
 Definition another_var: Ident.t -> Ident.t := Psucc.
@@ -193,8 +194,8 @@ Inductive space_atom :=
 | Lseg : expr -> expr -> space_atom.
 
 (** assertion:
-An assertion is composed of a list of pure atoms [pi], and a list of spatial 
-atoms [sigma].  [sigma] is interpreted as the _spatial_ conjunction of the 
+An assertion is composed of a list of pure atoms [pi], and a list of spatial
+atoms [sigma].  [sigma] is interpreted as the _spatial_ conjunction of the
 atoms, whereas [pi] asserts the conjunction of its pure atoms. *)
 
 Inductive assertion : Type :=
@@ -202,7 +203,7 @@ Inductive assertion : Type :=
 
 (** entailment:
 An entailment is just a pair of assertions. Entailments are interpreted as:
-In all models (pairs of heaps [h] and stacks [s]), the interpretation of the 
+In all models (pairs of heaps [h] and stacks [s]), the interpretation of the
 assertion on the left implies the interpretation of the assertion on the right. *)
 
 Inductive entailment : Type :=
@@ -215,18 +216,18 @@ Definition subst_var (i: var) (t: expr) (j: var) :=
   if Ident.eq_dec i j then t else Var j.
 
 Definition subst_expr (i: var) (t: expr) (t': expr) :=
-  match t' with 
-    | Nil => Nil 
+  match t' with
+    | Nil => Nil
     | Var j => if Ident.eq_dec i j then t else t'
   end.
 
 Definition subst_pn (i: var) (t: expr) (a: pn_atom) :=
  match a with
-   | Equ t1 t2 => Equ (subst_expr i t t1) (subst_expr i t t2) 
-   | Nequ t1 t2 => Nequ (subst_expr i t t1) (subst_expr i t t2) 
+   | Equ t1 t2 => Equ (subst_expr i t t1) (subst_expr i t t2)
+   | Nequ t1 t2 => Nequ (subst_expr i t t1) (subst_expr i t t2)
  end.
 
-Definition subst_pns (i: var) (t: expr) (pa: list pn_atom) 
+Definition subst_pns (i: var) (t: expr) (pa: list pn_atom)
   : list pn_atom := map (subst_pn i t) pa.
 
 Definition subst_space (i: var) (t: expr) (a: space_atom) :=
@@ -235,7 +236,7 @@ Definition subst_space (i: var) (t: expr) (a: space_atom) :=
     | Lseg t1 t2 => Lseg (subst_expr i t t1) (subst_expr i t t2)
   end.
 
-Definition subst_spaces (i: var) (t: expr) 
+Definition subst_spaces (i: var) (t: expr)
   : list space_atom -> list space_atom := map (subst_space i t).
 
 Definition subst_assertion (i: var) (e: expr) (a: assertion) :=
@@ -250,7 +251,7 @@ Require Import Sorted.
 Require Import Coq.Sorting.Mergesort.
 Require Import Permutation.
 
-Definition StrictCompSpec {A} (eq lt: A -> A -> Prop) 
+Definition StrictCompSpec {A} (eq lt: A -> A -> Prop)
                           (cmp: A -> A -> comparison) :=
   StrictOrder lt /\ forall x y, CompSpec eq lt x y (cmp x y).
 
@@ -271,7 +272,7 @@ intros.
 Qed.
 
 Lemma eq_comp: forall {A} lt cmp,
-        StrictCompSpec Logic.eq lt cmp -> 
+        StrictCompSpec Logic.eq lt cmp ->
        forall x y: A,   (x = y <-> Eq = cmp x y).
 Proof.
  intros.
@@ -281,7 +282,7 @@ Proof.
 Qed.
 
 Lemma gt_comp: forall {A} lt cmp,
-        StrictCompSpec Logic.eq lt cmp -> 
+        StrictCompSpec Logic.eq lt cmp ->
         forall x y: A,   (lt x y <-> Gt = cmp y x).
 Proof.
 intros.
@@ -322,7 +323,7 @@ Definition isGe (c: comparison) := match c with Lt => False | _ => True end.
 Definition isGeq cc := match cc with Lt => false | _ => true end.
 
 
-Fixpoint insert {A: Type} (cmp: A -> A -> comparison) (a: A) (l: list A) 
+Fixpoint insert {A: Type} (cmp: A -> A -> comparison) (a: A) (l: list A)
   : list A:=
   match l with
   | h :: t => if isGeq (cmp a h)
@@ -335,18 +336,18 @@ Fixpoint rsort {A: Type} (cmp: A -> A -> comparison) (l: list A) : list A :=
   match l with nil => nil | h::t => insert cmp h (rsort cmp t)
   end.
 
-Fixpoint insert_uniq {A: Type} (cmp: A -> A -> comparison) (a: A) (l: list A) 
+Fixpoint insert_uniq {A: Type} (cmp: A -> A -> comparison) (a: A) (l: list A)
   : list A:=
   match l with
   | h :: t => match cmp a h with
-              | Eq => l 
+              | Eq => l
               | Gt => a :: l
               | Lt => h :: (insert_uniq cmp a t)
               end
   | nil => a::nil
   end.
 
-Fixpoint rsort_uniq {A: Type} (cmp: A -> A -> comparison) (l: list A) 
+Fixpoint rsort_uniq {A: Type} (cmp: A -> A -> comparison) (l: list A)
   : list A :=
   match l with nil => nil | h::t => insert_uniq cmp h (rsort_uniq cmp t)
   end.
@@ -356,12 +357,12 @@ Lemma perm_insert {T} cmp (a : T) l : Permutation (insert cmp a l) (a :: l).
 Proof with auto.
 induction l; simpl; auto.
 destruct (isGeq (cmp a a0)); try repeat constructor.
-apply Permutation_refl. 
+apply Permutation_refl.
 apply Permutation_sym; apply Permutation_trans with (l' := a0 :: a :: l).
 apply perm_swap. constructor; apply Permutation_sym...
 Qed.
 
-Fixpoint compare_list {A: Type} (f: A -> A -> comparison) (xl yl : list A) 
+Fixpoint compare_list {A: Type} (f: A -> A -> comparison) (xl yl : list A)
   : comparison :=
   match xl , yl with
   | x :: xl', y :: yl' => match f x y with
@@ -371,10 +372,10 @@ Fixpoint compare_list {A: Type} (f: A -> A -> comparison) (xl yl : list A)
   | nil , _ :: _ => Lt
   | _ :: _ , nil => Gt
   | nil, nil => Eq
-  end.    
- 
+  end.
+
 Lemma Forall_sortu:
-  forall  {A} (f: A -> Prop) (cmp: A -> A -> comparison) l, 
+  forall  {A} (f: A -> Prop) (cmp: A -> A -> comparison) l,
     Forall f l -> Forall f  (rsort_uniq cmp l).
 Proof.
 induction l;  intros; try constructor.
@@ -399,7 +400,7 @@ rewrite <- IHl.
 remember (rsort_uniq R l) as l'.
 clear - EQ.
 induction l'; simpl. intuition.
-case_eq (R a a0); intros; simpl in *; subst; intuition. 
+case_eq (R a a0); intros; simpl in *; subst; intuition.
 symmetry in H; rewrite <- EQ in H.
 simpl; subst; intuition.
 Qed.
@@ -436,16 +437,16 @@ Definition prio (gamma delta: list pure_atom) : var :=
     list_prio var2 gamma (list_prio var1 delta var0).
 
 (** clause:
-clauses are either pure (no spatial atoms), negative spatial (spatial atom on the left) 
+clauses are either pure (no spatial atoms), negative spatial (spatial atom on the left)
 or positive spatial. *)
 
-Inductive clause : Type := 
+Inductive clause : Type :=
 | PureClause : forall (gamma : list pure_atom) (delta : list pure_atom)
                          (priority : var)
                          (prio_ok: prio gamma delta = priority), clause
-| PosSpaceClause : forall (gamma : list pure_atom) (delta : list pure_atom) 
+| PosSpaceClause : forall (gamma : list pure_atom) (delta : list pure_atom)
   (sigma : list space_atom), clause
-| NegSpaceClause : forall (gamma : list pure_atom) (sigma : list space_atom) 
+| NegSpaceClause : forall (gamma : list pure_atom) (sigma : list space_atom)
   (delta : list pure_atom), clause.
 
 Definition expr_cmp e e' : comparison :=
@@ -462,16 +463,16 @@ Proof.
   destruct e; try reflexivity.
   cbn. apply (proj2 (Pos.compare_eq_iff v v)). reflexivity.
 Qed.
-  
+
 Lemma var_cspec : StrictCompSpec (@Logic.eq var) Ident.lt Ident.compare.
 Proof. split; [apply Ident.lt_strorder|apply Ident.compare_spec]. Qed.
 Hint Resolve var_cspec.
 
 Definition pure_atom_cmp (a a': pure_atom) : comparison :=
  match a, a' with
-   | Eqv e1 e2, Eqv e1' e2' => 
-     match expr_cmp e1 e1' with 
-       Eq => expr_cmp e2 e2' | c => c 
+   | Eqv e1 e2, Eqv e1' e2' =>
+     match expr_cmp e1 e1' with
+       Eq => expr_cmp e2 e2' | c => c
      end
  end.
 
@@ -480,14 +481,14 @@ Lemma pure_atom_cmp_rfl:
 Proof.
   destruct a. cbn. rewrite expr_cmp_rfl. rewrite expr_cmp_rfl. reflexivity.
 Qed.
-                                            
+
 Lemma compare_list_pure_atom_cmp_rfl:
   forall delta, compare_list pure_atom_cmp delta delta = Eq.
 Proof.
   induction delta. try reflexivity.
   cbn. rewrite pure_atom_cmp_rfl. assumption.
-Qed.  
-  
+Qed.
+
 Hint Rewrite @comp_refl using solve[auto] : comp.
 
 Ltac comp_tac :=
@@ -496,9 +497,9 @@ Ltac comp_tac :=
   || solve [eapply comp_trans;  eauto]
   || subst
  || match goal with
-  | H: Lt = ?A |- context [?A] => rewrite <- H 
-  | H: Gt = ?A |- context [?A] => rewrite <- H 
-  | H: Eq = ?A |- context [?A] => rewrite <- H 
+  | H: Lt = ?A |- context [?A] => rewrite <- H
+  | H: Gt = ?A |- context [?A] => rewrite <- H
+  | H: Eq = ?A |- context [?A] => rewrite <- H
  end.
 
 
@@ -506,7 +507,7 @@ Ltac comp_tac :=
 
 Definition expr_order (t t': expr) := isGe (expr_cmp t t').
 
-Inductive max_expr (t : expr) : pure_atom -> Prop := 
+Inductive max_expr (t : expr) : pure_atom -> Prop :=
 | mexpr_left : forall t', expr_order t t' -> max_expr t (Eqv t t')
 | mexpr_right : forall t', expr_order t t' -> max_expr t (Eqv t' t).
 
@@ -515,41 +516,41 @@ Definition order_eqv_pure_atom (a: pure_atom) :=
     | Eqv i j => match expr_cmp i j with Lt => Eqv j i | _ => Eqv i j end
   end.
 
-Definition nonreflex_atom a := 
-  match a with Eqv i j => match expr_cmp i j with Eq => false | _ => true end 
+Definition nonreflex_atom a :=
+  match a with Eqv i j => match expr_cmp i j with Eq => false | _ => true end
   end.
 
-Definition normalize_atoms pa := 
+Definition normalize_atoms pa :=
   rsort_uniq pure_atom_cmp (map order_eqv_pure_atom pa).
 
 Definition mkPureClause (gamma delta: list pure_atom) : clause :=
   PureClause gamma delta _ (eq_refl _).
 
 Definition order_eqv_clause (c: clause) :=
-  match c with 
-  | PureClause pa pa' _ _ => 
+  match c with
+  | PureClause pa pa' _ _ =>
     mkPureClause (normalize_atoms (filter nonreflex_atom pa))
                  (normalize_atoms pa')
-  | PosSpaceClause pa pa' sa' => 
-    PosSpaceClause (normalize_atoms (filter nonreflex_atom pa)) 
+  | PosSpaceClause pa pa' sa' =>
+    PosSpaceClause (normalize_atoms (filter nonreflex_atom pa))
                    (normalize_atoms pa') sa'
-  | NegSpaceClause pa sa pa' => 
-    NegSpaceClause (normalize_atoms (filter nonreflex_atom pa)) sa 
+  | NegSpaceClause pa sa pa' =>
+    NegSpaceClause (normalize_atoms (filter nonreflex_atom pa)) sa
                    (normalize_atoms pa')
   end.
 
-Definition mk_pureL (a: pn_atom) : clause := 
+Definition mk_pureL (a: pn_atom) : clause :=
  match a with
  | Equ x y => mkPureClause nil (order_eqv_pure_atom(Eqv x y)::nil)
  | Nequ x y => mkPureClause (order_eqv_pure_atom(Eqv x y)::nil) nil
  end.
 
 Fixpoint mk_pureR (al: list pn_atom) : list pure_atom * list pure_atom :=
- match al with 
+ match al with
  | nil => (nil,nil)
- | Equ x y :: l' => match mk_pureR l' with (p,n) => 
+ | Equ x y :: l' => match mk_pureR l' with (p,n) =>
                       (order_eqv_pure_atom(Eqv x y)::p, n) end
- | Nequ x y :: l' => match mk_pureR l' with (p,n) => 
+ | Nequ x y :: l' => match mk_pureR l' with (p,n) =>
                        (p, order_eqv_pure_atom(Eqv x y)::n) end
  end.
 
@@ -561,7 +562,7 @@ Definition cnf (en: entailment) : list clause :=
   Entailment (Assertion pureL spaceL) (Assertion pureR spaceR) =>
    match mk_pureR pureR with (p,n) =>
      map mk_pureL pureL ++ (PosSpaceClause nil nil spaceL :: nil) ++
-       match spaceL, spaceR with 
+       match spaceL, spaceR with
        | nil, nil => mkPureClause p n :: nil
        | _, _ => NegSpaceClause p spaceR n :: nil
        end
@@ -584,22 +585,22 @@ Definition norm_pure_atom (a : pure_atom) :=
 
 Definition subst_pure (i: var) (t: expr) (a: pure_atom) :=
  match a with
-   | Eqv t1 t2 => Eqv (subst_expr i t t1) (subst_expr i t t2) 
+   | Eqv t1 t2 => Eqv (subst_expr i t t1) (subst_expr i t t2)
  end.
 
-Definition subst_pures (i: var) (t: expr) (pa: list pure_atom) 
+Definition subst_pures (i: var) (t: expr) (pa: list pure_atom)
   : list pure_atom := map (subst_pure i t) pa.
 
 Definition compare_space_atom (a b : space_atom) : comparison :=
  match a , b with
   | Next i j , Next i' j' => match expr_cmp i i' with Eq => expr_cmp j j' | c => c end
-  | Next i j, Lseg i' j' => 
+  | Next i j, Lseg i' j' =>
     match expr_cmp i i' with
     | Lt => Lt
     | Eq => Lt
     | Gt => Gt
     end
-  | Lseg i j, Next i' j' => 
+  | Lseg i j, Next i' j' =>
     match expr_cmp i i' with
     | Lt => Lt
     | Eq => Gt
@@ -613,7 +614,7 @@ Definition compare_clause (cl1 cl2 : clause) : comparison :=
   match cl1 , cl2 with
   | PureClause neg pos _ _ , PureClause neg' pos' _ _ =>
     match compare_list pure_atom_cmp neg neg' with
-    | Eq => compare_list pure_atom_cmp pos pos' 
+    | Eq => compare_list pure_atom_cmp pos pos'
     | c => c
     end
   | PureClause _ _ _ _ , _ => Lt
@@ -645,17 +646,17 @@ Proof.
       rewrite compare_list_pure_atom_cmp_rfl.
       rewrite pure_atom_cmp_rfl.
       rewrite compare_list_pure_atom_cmp_rfl. reflexivity.
-  - 
+  -
 ****)
-    
-Definition rev_cmp {A : Type} (cmp : A -> A -> comparison) := 
+
+Definition rev_cmp {A : Type} (cmp : A -> A -> comparison) :=
   fun a b => match cmp a b with Eq => Eq | Lt => Gt | Gt => Lt end.
 
-Lemma rev_cmp_eq : forall {A : Type} (cmp : A -> A -> comparison) (x y : A), 
-  (forall x0 y0 : A, Eq = cmp x0 y0 -> x0 = y0) -> 
+Lemma rev_cmp_eq : forall {A : Type} (cmp : A -> A -> comparison) (x y : A),
+  (forall x0 y0 : A, Eq = cmp x0 y0 -> x0 = y0) ->
   Eq = rev_cmp cmp x y -> x = y.
 Proof.
-intros until y; intros H H1. 
+intros until y; intros H H1.
 unfold rev_cmp in H1. remember (cmp x y) as b.
 destruct b;try solve[congruence].
 apply H; auto.
@@ -664,8 +665,8 @@ Qed.
 Definition prio1000 := Z2id 1000.
 Definition prio1001 := Z2id 1001.
 
-Definition clause_prio (cl : clause) : var := 
-  match cl with 
+Definition clause_prio (cl : clause) : var :=
+  match cl with
   | PureClause gamma delta prio _ => prio
   | PosSpaceClause _ _ _ => prio1000
   | NegSpaceClause gamma sigma delta => prio1001
@@ -689,16 +690,16 @@ Proof.
 Admitted.
 Hint Resolve clause_cspec'.
 
-Definition clause_length (cl : clause) : Z := 
-  match cl with 
+Definition clause_length (cl : clause) : Z :=
+  match cl with
   | PureClause gamma delta _ _ => Zlength gamma + Zlength delta
-  | PosSpaceClause gamma delta sigma => 
+  | PosSpaceClause gamma delta sigma =>
       Zlength gamma + Zlength delta + Zlength sigma
-  | NegSpaceClause gamma sigma delta => 
+  | NegSpaceClause gamma sigma delta =>
       Zlength gamma + Zlength sigma + Zlength delta
   end%Z.
 
-Definition compare_clause_length (cl1 cl2 : clause) := 
+Definition compare_clause_length (cl1 cl2 : clause) :=
    Zcompare (clause_length cl1) (clause_length cl2).
 
 Definition compare_clause'1 (cl1 cl2 : clause) : comparison :=
@@ -708,8 +709,8 @@ Definition compare_clause'1 (cl1 cl2 : clause) : comparison :=
   end.
 
 
-Module OrderedClause <: OrderedType 
-  with Definition t:=clause 
+Module OrderedClause <: OrderedType
+  with Definition t:=clause
   with Definition compare:=compare_clause'.
 
 Definition t := clause.
@@ -802,20 +803,20 @@ Module M1 : MSetInterface_S_Ext
 Definition mem_add (x: elt) (s: t) : option t :=
  if mem x s then None else Some (add x s).
 
-Lemma mem_add_spec: 
+Lemma mem_add_spec:
     forall x s, mem_add x s = if mem x s then None else Some (add x s).
 Proof. auto. Qed.
 End M1.
 
 (* Second implementation *)
-Module M := MSetRBT.Make(OrderedClause). 
+Module M := MSetRBT.Make(OrderedClause).
 
-Definition clause_list2set (l : list clause) : M.t := 
+Definition clause_list2set (l : list clause) : M.t :=
   fold_left (fun s0 c => M.add c s0) l M.empty.
 
 Definition empty_clause : clause := mkPureClause nil nil.
 
-Definition remove_trivial_atoms := filter (fun a => 
+Definition remove_trivial_atoms := filter (fun a =>
   match a with
   | Eqv e1 e2 => match expr_cmp e1 e2 with
                  | Eq => false
@@ -823,8 +824,8 @@ Definition remove_trivial_atoms := filter (fun a =>
                  end
   end).
 
-Definition subst_pures_delete (i: var) (e: expr) 
-  : list pure_atom -> list pure_atom := 
+Definition subst_pures_delete (i: var) (e: expr)
+  : list pure_atom -> list pure_atom :=
   remove_trivial_atoms oo subst_pures i e.
 
 Definition isEq cc := match cc with Eq => true | _ => false end.
@@ -838,8 +839,8 @@ Definition eq_space_atomlist (a b : list space_atom) : bool :=
 Definition eq_var i j : bool := isEq (Ident.compare i j).
 
 Definition drop_reflex_lseg : list space_atom -> list space_atom :=
-  filter (fun sa => 
-                    match sa with 
+  filter (fun sa =>
+                    match sa with
                     | Lseg (Var x) (Var y) => negb (eq_var x y)
                     | Lseg Nil Nil => false
                     | _ => true
@@ -853,13 +854,13 @@ Definition greater_than_expr (i: var) (e: expr) :=
   end.
 
 Definition greatereq_than_expr (i: var) (e: expr) :=
-  match e with 
-  | Var j => match Ident.compare i j with Gt => true | Eq => true | Lt => false 
+  match e with
+  | Var j => match Ident.compare i j with Gt => true | Eq => true | Lt => false
              end
   | Nil => true
   end.
 
-Definition greater_than_atom (s u : pure_atom) := 
+Definition greater_than_atom (s u : pure_atom) :=
   match s , u with
   | Eqv s t , Eqv u v =>
     ((expr_lt u s && (expr_geq s v || expr_geq t v)) ||
@@ -872,18 +873,18 @@ Definition greater_than_atoms (s : pure_atom) (delta : list pure_atom) :=
   forallb (fun u => greater_than_atom s u) delta.
 
 Definition greater_than_all (i: var) : list pure_atom -> bool :=
-  forallb (fun a => match a with Eqv x y => 
+  forallb (fun a => match a with Eqv x y =>
              andb (greater_than_expr i x) (greater_than_expr i y) end).
 
 Definition subst_clause i e cl : clause :=
   match cl with
-  | PureClause pa pa' _ _ => 
+  | PureClause pa pa' _ _ =>
       mkPureClause (subst_pures_delete i e pa) (subst_pures i e pa')
   | NegSpaceClause pa sa pa' =>
-      NegSpaceClause (subst_pures_delete i e pa) (subst_spaces i e sa) 
+      NegSpaceClause (subst_pures_delete i e pa) (subst_spaces i e sa)
                      (subst_pures i e pa')
   | PosSpaceClause pa pa' sa' =>
-      PosSpaceClause (subst_pures_delete i e pa) (subst_pures i e pa') 
+      PosSpaceClause (subst_pures_delete i e pa) (subst_pures i e pa')
                      (subst_spaces i e sa')
   end.
 
@@ -894,7 +895,7 @@ Definition ocons {A : Type} (o : option A) l :=
   match o with Some a => a :: l | None => l end.
 
 Fixpoint omapl {A B : Type} (f : A -> option B) (l : list A) : list B :=
-  match l with 
+  match l with
   | a :: l' => ocons (f a) (omapl f l')
   | nil => nil
   end.
@@ -905,9 +906,9 @@ Fixpoint merge {A: Type} (cmp : A -> A -> comparison) l1 l2 :=
   | [], _ => l2
   | _, [] => l1
   | a1::l1', a2::l2' =>
-      match cmp a1 a2 with 
-      | Eq => a1 :: merge cmp l1' l2' 
-      | Gt => a1 :: merge cmp l1' l2 
+      match cmp a1 a2 with
+      | Eq => a1 :: merge cmp l1' l2'
+      | Gt => a1 :: merge cmp l1' l2
       | _ => a2 :: merge_aux l2' end
   end
   in merge_aux l2.
@@ -951,7 +952,7 @@ Lemma Melements_spec1: forall (s: M.t) x, List.In x (M.elements s) <-> M.In x s.
 Proof.
 intros.
 rewrite <- M.elements_spec1.
-induction (M.elements s); intuition; 
+induction (M.elements s); intuition;
 try solve [inversion H].
 simpl in H1. destruct H1; subst.
 constructor; auto.
@@ -974,13 +975,13 @@ Require Coq.Logic.ClassicalFacts.
 
 (** The following [Require Export] gives us functional extensionality for dependent function types:
 <<
-Axiom functional_extensionality_dep : forall {A} {B : A -> Type}, 
-  forall (f g : forall x : A, B x), 
+Axiom functional_extensionality_dep : forall {A} {B : A -> Type},
+  forall (f g : forall x : A, B x),
   (forall x, f x = g x) -> f = g.
->> 
+>>
 and, as a corollary, functional extensionality for non-dependent functions:
 <<
-Lemma functional_extensionality {A B} (f g : A -> B) : 
+Lemma functional_extensionality {A B} (f g : A -> B) :
   (forall x, f x = g x) -> f = g.
 >>
 *)
@@ -1018,7 +1019,7 @@ Proof.
 Focus 2.
 unfold Basics.flip; apply extensionality; intro x;
 apply prop_ext; rewrite <- (H x).
-clear; intuition. 
+clear; intuition.
 apply SetoidList.In_InA; auto.
 apply eq_equivalence.
 rewrite SetoidList.InA_alt in H.
@@ -1027,14 +1028,14 @@ subst; auto.
 (* End Focus 2 *)
  clear H.
  generalize (M.elements_spec2w s); intro.
- remember (M.elements s) as l. 
+ remember (M.elements s) as l.
  clear s Heql.
  induction H.
  replace (Basics.flip (@List.In M.elt) (@nil clause)) with (@Empty_set M.elt).
  constructor 1.
  apply extensionality; intro; apply prop_ext; intuition; inversion H.
  simpl.
- replace (Basics.flip (@List.In M.elt) (@cons clause x l)) 
+ replace (Basics.flip (@List.In M.elt) (@cons clause x l))
    with (Add M.elt (Basics.flip (@List.In _) l) x).
  constructor 2; auto.
  contradict H.
@@ -1051,7 +1052,7 @@ subst; auto.
  apply H.
 Qed.
 
-Lemma remove_decreases: 
+Lemma remove_decreases:
   forall giv unselected,
   M.In giv unselected ->
   M.cardinal  (M.remove giv unselected)  < M.cardinal  unselected.
@@ -1088,7 +1089,7 @@ apply H1; apply Singleton_intro.
 auto.
 Qed.
 
-(** a second comparison function on clauses that meets the requirements 
+(** a second comparison function on clauses that meets the requirements
    of model generation *)
 
 Definition pure_atom2pn_atom (b : bool) (a : pure_atom) :=
@@ -1099,17 +1100,17 @@ Definition pure_atom2pn_atom (b : bool) (a : pure_atom) :=
 Definition pn_atom_cmp (a1 a2 : pn_atom) : comparison :=
   match a1, a2 with
   | Equ e1 e2, Equ e1' e2' => pure_atom_cmp (Eqv e1 e2) (Eqv e1' e2')
-  | Nequ e1 e2, Equ e1' e2' => 
+  | Nequ e1 e2, Equ e1' e2' =>
     if expr_eq e1 e1' then Gt else pure_atom_cmp (Eqv e1 e2) (Eqv e1' e2')
-  | Equ e1 e2, Nequ e1' e2' => 
+  | Equ e1 e2, Nequ e1' e2' =>
     if expr_eq e1 e1' then Lt else pure_atom_cmp (Eqv e1 e2) (Eqv e1' e2')
   | Nequ e1 e2, Nequ e1' e2' => pure_atom_cmp (Eqv e1 e2) (Eqv e1' e2')
   end.
 
 Definition pure_clause2pn_list (c : clause) :=
   match c with
-  | PureClause gamma delta _ _ => 
-    rsort pn_atom_cmp 
+  | PureClause gamma delta _ _ =>
+    rsort pn_atom_cmp
       (map (pure_atom2pn_atom false) gamma ++ map (pure_atom2pn_atom true) delta)
   | _ => nil
   end.
@@ -1128,9 +1129,9 @@ Inductive ce_type := CexpL | CexpR | CexpEf.
 
 Module DebuggingHooks.
 
-(* To add a new debugging hook, do the following: 
-   -define a new function equal to the identity on the type of whatever 
-   value you want to report 
+(* To add a new debugging hook, do the following:
+   -define a new function equal to the identity on the type of whatever
+   value you want to report
    -define a corresponding ML function with the same name in
      extract/debugging.ml to do the actual reporting
 *)
@@ -1150,7 +1151,7 @@ Definition print_spatial_model (c: clause) (R: list (var * expr)) := c.
 
 Definition print_spatial_model2 (c c': clause) (R: list (var * expr)) := c'.
 
-Definition print_ce_clause (R: list (var * expr)) (cl : clause) (ct : ce_type) 
+Definition print_ce_clause (R: list (var * expr)) (cl : clause) (ct : ce_type)
   := (R, cl, ct).
 
 End DebuggingHooks.
@@ -1164,17 +1165,17 @@ Hint Unfold print_new_pures_set print_wf_set print_inferred_list print_spatial_m
 (* model_type.v *)
 
 (* cclosure.v *)
-(** A little module for doing naive congruence closure; we don't need anything 
-    much fancier because in practice, for spatial entailments, we only discover 
+(** A little module for doing naive congruence closure; we don't need anything
+    much fancier because in practice, for spatial entailments, we only discover
     a few new equalities in each call to the superposition subsystem.
 
-    Pure entailments are another matter entirely, but for now we seem to be fine 
+    Pure entailments are another matter entirely, but for now we seem to be fine
     on those (see, eg, test/test.pure.entailments.sf) *)
 
 Section cclosure.
 Context (A B : Type).
-Variables 
-  (A_cmp : A -> A -> comparison) 
+Variables
+  (A_cmp : A -> A -> comparison)
   (B_cmp : B -> B -> comparison)
   (fAB : A -> B).
 
@@ -1186,16 +1187,16 @@ Fixpoint lookC (a: A) (cs: canons) : B :=
   match cs with nil => fAB a
   | (a1, b1)::cs' => if isEq (A_cmp a a1) then b1
                      else lookC a cs'
-  end. 
+  end.
 
 Fixpoint rewriteC (b1 b2 : B) (cs: canons) : canons :=
   match cs with nil => nil
-  | (a1, b1')::cs' => 
+  | (a1, b1')::cs' =>
     let new_cs := rewriteC b1 b2 cs' in
     if isEq (B_cmp b1 b1') then (a1, b2)::new_cs else (a1, b1')::new_cs end.
 
 Definition mergeC (a1 a2 : A) (cs: canons) : canons :=
-  match lookC a1 cs, lookC a2 cs with b1, b2 => 
+  match lookC a1 cs, lookC a2 cs with b1, b2 =>
     if isEq (B_cmp b1 b2) then cs
     else (a1, b2)::(a2, b2)::rewriteC b1 b2 cs end.
 
@@ -1207,8 +1208,8 @@ Notation expr_merge := (mergeC _ _ expr_cmp expr_cmp (@id _)).
 (* used internally *)
 Local Notation expr_rewriteC := (rewriteC expr _ expr_cmp).
 
-Fixpoint cclose_aux (l : list clause) : list (expr * expr) := 
-  match l with 
+Fixpoint cclose_aux (l : list clause) : list (expr * expr) :=
+  match l with
   | PureClause nil [Eqv s t] _ _ :: l' => expr_merge s t (cclose_aux l')
   | _ => nil
   end.
@@ -1223,21 +1224,21 @@ Module Type SUPERPOSITION.
 
 Definition model := list (var * expr).
 
-Inductive superposition_result : Type := 
+Inductive superposition_result : Type :=
 | Valid : superposition_result
 | C_example : model -> M.t -> superposition_result
 | Aborted : list clause -> superposition_result.
 
 (** check:
 -Check a pure entailment of the form [Pi ==> Pi']
--Returns, when a [C_example] is found, the model exhibiting the [C_example] and 
+-Returns, when a [C_example] is found, the model exhibiting the [C_example] and
  the final clause set (i.e., the set of clauses derived during proof search)
 *)
 
 Parameter check : entailment -> superposition_result * list clause * M.t*M.t.
 
 (** check_clauseset:
-Just like check, except we operate instead on an initial _set_ of clauses. 
+Just like check, except we operate instead on an initial _set_ of clauses.
 This function is the one called by the main theorem prover, veristar.v. *)
 
 Parameter check_clauseset : M.t -> superposition_result * list clause * M.t*M.t.
@@ -1260,11 +1261,11 @@ End SUPERPOSITION.
 (** Module Superposition:
  *)
 
-Module Superposition <: SUPERPOSITION. 
+Module Superposition <: SUPERPOSITION.
 
 Definition model := list (var * expr).
 
-Inductive superposition_result : Type := 
+Inductive superposition_result : Type :=
 | Valid : superposition_result
 | C_example : model -> M.t -> superposition_result
 | Aborted : list clause -> superposition_result.
@@ -1282,16 +1283,16 @@ Fixpoint ef_aux neg u0 u v pos0 pos l0 : list clause :=
   match pos with
   | (Eqv s t as a2) :: pos' =>
     if expr_eq s u && greater_than_all u0 neg
-    then mkPureClause 
+    then mkPureClause
            (insu_atm (norm_pure_atom (Eqv v t)) neg)
-           (insu_atm (norm_pure_atom (Eqv u t)) 
+           (insu_atm (norm_pure_atom (Eqv u t))
                  (merge pure_atom_cmp (List.rev pos0) pos)) ::
              ef_aux neg u0 u v (insu_atm a2 pos0) pos' l0
     else l0
   | nil => l0
   end.
 
-Definition ef (cty : ce_type) (c : clause) l0 : list clause := 
+Definition ef (cty : ce_type) (c : clause) l0 : list clause :=
   match cty, c with
   | CexpEf, PureClause neg (Eqv (Var u0 as u) v :: pos) _ _ =>
     if greater_than_all u0 neg then ef_aux neg u0 u v nil pos l0
@@ -1305,37 +1306,37 @@ left and right superposition *)
 Definition sp (cty : ce_type) (c d : clause) l0 : list clause :=
   match cty, c, d with
   (* negative (left) superposition *)
-  | CexpL, PureClause (Eqv s' v :: neg') pos' _ _, 
+  | CexpL, PureClause (Eqv s' v :: neg') pos' _ _,
            PureClause neg (Eqv (Var s0 as s) t :: pos) _ _ =>
-    if expr_eq s s' && expr_lt t s && expr_lt v s' && 
-       pure_atom_gt1 (Eqv s t) pos && greater_than_all s0 neg 
-    then mkPureClause 
+    if expr_eq s s' && expr_lt t s && expr_lt v s' &&
+       pure_atom_gt1 (Eqv s t) pos && greater_than_all s0 neg
+    then mkPureClause
       (insu_atm (norm_pure_atom (Eqv t v)) (merge pure_atom_cmp neg neg'))
       (merge pure_atom_cmp pos pos') :: l0
     else l0
   (* positive (right) superposition *)
-  | CexpR, PureClause neg (Eqv (Var s0 as s) t :: pos) _ _, 
-           PureClause neg' (Eqv (Var s'0 as s') v :: pos') _ _ => 
-    if expr_eq s s' && expr_lt t s && expr_lt v s' && 
-       pure_atom_gt1 (Eqv s t) pos && pure_atom_gt1 (Eqv s' v) pos' && 
+  | CexpR, PureClause neg (Eqv (Var s0 as s) t :: pos) _ _,
+           PureClause neg' (Eqv (Var s'0 as s') v :: pos') _ _ =>
+    if expr_eq s s' && expr_lt t s && expr_lt v s' &&
+       pure_atom_gt1 (Eqv s t) pos && pure_atom_gt1 (Eqv s' v) pos' &&
        pure_atom_gt (Eqv s t) (Eqv s' v) &&
-       greater_than_all s0 neg && greater_than_all s'0 neg'       
-    then mkPureClause 
-      (merge pure_atom_cmp neg neg') 
+       greater_than_all s0 neg && greater_than_all s'0 neg'
+    then mkPureClause
+      (merge pure_atom_cmp neg neg')
       (insu_atm (norm_pure_atom (Eqv t v)) (merge pure_atom_cmp pos pos')) :: l0
     else l0
   | _, _, _ => l0
   end.
 
 (** Retractive rules:
-    -demodulation (simplification by positive unit clauses), 
+    -demodulation (simplification by positive unit clauses),
     -equality resolution *)
 
 (* u[s->t] *)
 Definition rewrite_expr s t u := if expr_eq s u then t else u.
 
 Definition rewrite_by s t atm :=
-  match atm with Eqv u v => 
+  match atm with Eqv u v =>
     if expr_eq s u then if expr_eq s v then norm_pure_atom (Eqv t t)
                         else norm_pure_atom (Eqv t v)
     else if expr_eq s v then norm_pure_atom (Eqv u t)
@@ -1343,13 +1344,13 @@ Definition rewrite_by s t atm :=
   end.
 
 Definition rewrite_in_space s t atm :=
-  match atm with 
+  match atm with
   | Next u v => Next (rewrite_expr s t u) (rewrite_expr s t v)
   | Lseg u v => Lseg (rewrite_expr s t u) (rewrite_expr s t v)
   end.
 
 Definition rewrite_clause_in_space c atm :=
-  match c with 
+  match c with
   | PureClause nil [Eqv s t] _ _ => rewrite_in_space s t atm
   | _ => atm
   end.
@@ -1359,7 +1360,7 @@ Definition rewrite_clause_in_space c atm :=
 Definition demodulate (c d : clause) : clause :=
   match c, d with
   | PureClause nil [Eqv s t] _ _, PureClause neg pos _ _ =>
-      mkPureClause (map (rewrite_by s t) neg) (map (rewrite_by s t) pos)  
+      mkPureClause (map (rewrite_by s t) neg) (map (rewrite_by s t) pos)
   | PureClause nil [Eqv s t] _ _, PosSpaceClause neg pos space =>
       PosSpaceClause (map (rewrite_by s t) neg) (map (rewrite_by s t) pos)
           (map (rewrite_in_space s t) space)
@@ -1369,7 +1370,7 @@ Definition demodulate (c d : clause) : clause :=
   | _, _ => d
   end.
 
-(** Delete resolved negative atoms, i.e., atoms of the form [Eqv x x] 
+(** Delete resolved negative atoms, i.e., atoms of the form [Eqv x x]
     lying in negative positions.  This is called equality resolution by some. *)
 
 Definition delete_resolved (c : clause) : clause :=
@@ -1384,32 +1385,32 @@ Definition delete_resolved (c : clause) : clause :=
 
 Definition not_taut (c: clause) :=
   negb (match c with
-        | PureClause neg pos _ _ => 
-          existsb (fun a => existsb (fun b => 
+        | PureClause neg pos _ _ =>
+          existsb (fun a => existsb (fun b =>
                      pure_atom_eq a b) pos) neg ||
-          existsb (fun a => 
+          existsb (fun a =>
             match a with Eqv e1 e2 => expr_eq e1 e2 end) pos
         | _ => false end).
 
-(** Rewrite [c] by positive unit clauses in [l]. Delete resolved atoms 
-    from the resulting clause. Argument [l] is already sorted so no need to 
+(** Rewrite [c] by positive unit clauses in [l]. Delete resolved atoms
+    from the resulting clause. Argument [l] is already sorted so no need to
     re-sort. *)
 
 Definition simplify (l : list clause) (c : clause) : clause :=
   delete_resolved (fold_left (fun d c => demodulate c d) l c).
 
-Definition simplify_atoms (l : list clause) (atms : list space_atom) 
+Definition simplify_atoms (l : list clause) (atms : list space_atom)
   : list space_atom :=
   fold_left (fun atms d => map (rewrite_clause_in_space d) atms) l atms.
 
-(** Derive clauses from clause [c] and clauses [l] using [cty] inferences alone. 
-    Forward-simplify any resulting clauses using facts in [l] (note: we do no 
-    backward simplification here since this would greatly complicate the termination 
+(** Derive clauses from clause [c] and clauses [l] using [cty] inferences alone.
+    Forward-simplify any resulting clauses using facts in [l] (note: we do no
+    backward simplification here since this would greatly complicate the termination
     proof). *)
 
 Definition infer (cty : ce_type) (c : clause) (l : list clause) : list clause :=
-  print_inferred_list (rsort_uniq compare_clause 
-    (filter not_taut (map (simplify nil) 
+  print_inferred_list (rsort_uniq compare_clause
+    (filter not_taut (map (simplify nil)
       (ef cty c (fold_left (fun l0 d => sp cty c d l0) l nil))))).
 
 (** Model generation: build a candidate model for clauses [l] *)
@@ -1418,7 +1419,7 @@ Definition apply_model (R : model) (cl : clause) : clause :=
   fold_right (fun ve => subst_clause (fst ve) (snd ve)) cl R.
 
 Definition is_model_of (R : model) (gamma delta : list pure_atom) : bool :=
-  match fold_right (fun ve => subst_pures_delete (fst ve) (snd ve)) 
+  match fold_right (fun ve => subst_pures_delete (fst ve) (snd ve))
                (remove_trivial_atoms gamma) R,
           fold_right (fun ve => subst_pures (fst ve) (snd ve)) delta R with
   | _::_, _ => true
@@ -1429,9 +1430,9 @@ Definition is_model_of (R : model) (gamma delta : list pure_atom) : bool :=
 
 Definition is_model_of_PI (R: model) (nc : (*negative spatial*) clause) : bool :=
  match nc with NegSpaceClause pi_plus _ pi_minus =>
-  match fold_right (fun ve => 
+  match fold_right (fun ve =>
           subst_pures_delete (fst ve) (snd ve)) (remove_trivial_atoms pi_plus) R,
-        fold_right (fun ve => 
+        fold_right (fun ve =>
           subst_pures (fst ve) (snd ve)) pi_minus R with
   | nil , pi_minus' => forallb nonreflex_atom pi_minus'
   | _ :: _ , _ => false
@@ -1441,23 +1442,23 @@ Definition is_model_of_PI (R: model) (nc : (*negative spatial*) clause) : bool :
 
 (** Is there a rewrite rule [v'->r] in [R] s.t. [v==v']? *)
 
-Definition reduces (R: model) (v : var) := 
+Definition reduces (R: model) (v : var) :=
   existsb (fun ve' => if Ident.eq_dec v (fst ve') then true else false) R.
 
-(** Does clause [cl] generate a new rewrite rule that must be added to the 
-    candidate model [R]? If so, return the rewrite rule paired with [cl]. Otherwise 
-    [cl] is a c-example for the current candidate model (invariant: [clause_generate 
-    R cl] is only called when [R] is [not] already a model for [cl]) so determine which 
+(** Does clause [cl] generate a new rewrite rule that must be added to the
+    candidate model [R]? If so, return the rewrite rule paired with [cl]. Otherwise
+    [cl] is a c-example for the current candidate model (invariant: [clause_generate
+    R cl] is only called when [R] is [not] already a model for [cl]) so determine which
     type of c-example [cl] is, and return that as a value of [ce_type]. *)
 
-Definition clause_generate (R : model) (cl : clause) 
+Definition clause_generate (R : model) (cl : clause)
   : (var * expr * clause) + ce_type :=
-  match cl with 
-  | PureClause gamma (Eqv (Var l' as l) r :: delta) _ _ as c' => 
-      if greater_than_expr l' r && greater_than_all l' gamma && 
-         greater_than_atoms (Eqv l r) delta 
+  match cl with
+  | PureClause gamma (Eqv (Var l' as l) r :: delta) _ _ as c' =>
+      if greater_than_expr l' r && greater_than_all l' gamma &&
+         greater_than_atoms (Eqv l r) delta
       then if reduces R l' then inr _ CexpR
-           else if is_model_of (List.rev R) nil (map (rewrite_by l r) delta) 
+           else if is_model_of (List.rev R) nil (map (rewrite_by l r) delta)
                 then inr _ CexpEf else inl _ (l', r, cl)
       else inr _ CexpL
   | _ => inr _ CexpL
@@ -1466,20 +1467,20 @@ Definition clause_generate (R : model) (cl : clause)
 (** Construct a candidate model for [l] or fail with (1) the partial model built
     so far (for debugging); (2) the clause that failed; and (3) its [ce_type]. *)
 
-Fixpoint partial_mod (R : model) (acc l : list clause) 
+Fixpoint partial_mod (R : model) (acc l : list clause)
   : (model * list clause) + (model * clause * ce_type) :=
-  match l with 
+  match l with
   | nil => inl _ (R, acc)
-  | (PureClause gamma delta _ _) as cl :: l' => 
+  | (PureClause gamma delta _ _) as cl :: l' =>
       if is_model_of (List.rev R) gamma delta then partial_mod R acc l'
-      else match clause_generate R cl with 
+      else match clause_generate R cl with
            | (inl (v, exp, cl')) => partial_mod ((v, exp) :: R) (cl' :: acc) l'
            | (inr cty) => inr _ (print_ce_clause R cl cty)
            end
   | _ => inl _ (R, acc)
   end.
 
-Definition is_empty_clause (cl : clause) := 
+Definition is_empty_clause (cl : clause) :=
   match cl with PureClause nil nil _ _ => true | _ => false end.
 
 Definition is_unit_clause (cl : clause) :=
@@ -1497,27 +1498,32 @@ Require Import Recdef.
 
 (** The Superpose main loop *)
 
-Function main (n : positive) (units l : list clause) {measure nat_of_P n} 
+Function main (n : positive) (units l : list clause) {measure nat_of_P n}
   : superposition_result * list clause * M.t*M.t :=
   if Pos.eqb n 1 then (Aborted l, units, M.empty, M.empty)
-  else if existsb is_empty_clause (map delete_resolved l) 
-       then (Valid, units, M.empty, M.empty) 
+  else if existsb is_empty_clause (map delete_resolved l)
+       then (Valid, units, M.empty, M.empty)
        else match partition is_unit_clause l with (us, rs) =>
               let us' := cclose us in
-              let l' := filter not_taut (map (simplify 
+              let l' := filter not_taut (map (simplify
                                 (print_eqs_list us')) rs) in
                 match partial_mod nil nil l' with
-                | inl (R, selected) => 
-                  (C_example R (clause_list2set selected), cclose (us'++units), 
+                | inl (R, selected) =>
+                  (C_example R (clause_list2set selected), cclose (us'++units),
                       clause_list2set l', M.empty)
-                | inr (R, cl, cty) => 
-                  let r := infer cty cl l' in 
+                | inr (R, cl, cty) =>
+                  let r := infer cty cl l' in
                     main (Ppred n) (cclose (us'++units))
-                         (print_pures_list 
+                         (print_pures_list
                            (rsort (rev_cmp compare_clause2) (r ++ l')))
                 end
             end.
-Proof. Admitted.
+Proof.
+  intro n.
+  destruct (Pos.eqb_spec n 1).
+  - easy.
+  - intros. lia.
+Qed.
 Print Assumptions main.
 Check main.
 Check positive ->
@@ -1543,14 +1549,14 @@ Definition purecnf (en: entailment) : M.t :=
     end
   end.
 
-Definition check (ent : entailment) 
-  : superposition_result * list clause * M.t*M.t := 
-  main 1000000000 nil (print_pures_list 
+Definition check (ent : entailment)
+  : superposition_result * list clause * M.t*M.t :=
+  main 1000000000 nil (print_pures_list
     (rsort (rev_cmp compare_clause2) (M.elements (purecnf ent)))).
 
-Definition check_clauseset (s : M.t) 
-  : superposition_result * list clause * M.t*M.t := 
-  main 1000000000 nil (print_pures_list 
+Definition check_clauseset (s : M.t)
+  : superposition_result * list clause * M.t*M.t :=
+  main 1000000000 nil (print_pures_list
     (rsort (rev_cmp compare_clause2) (M.elements (M.filter not_taut s)))).
 
 End Superposition.
@@ -1562,30 +1568,30 @@ Module HeapResolve.
 
 Definition normalize1_3 (pc sc : clause) : clause :=
   match pc , sc with
-  | PureClause gamma (Eqv (Var x) y :: delta) _ _, 
+  | PureClause gamma (Eqv (Var x) y :: delta) _ _,
     PosSpaceClause gamma' delta' sigma =>
-        PosSpaceClause (rsort_uniq pure_atom_cmp (gamma++gamma')) 
-                       (rsort_uniq pure_atom_cmp (delta++delta')) 
+        PosSpaceClause (rsort_uniq pure_atom_cmp (gamma++gamma'))
+                       (rsort_uniq pure_atom_cmp (delta++delta'))
                        (subst_spaces x y sigma)
-  | PureClause gamma (Eqv (Var x) y :: delta) _ _, 
+  | PureClause gamma (Eqv (Var x) y :: delta) _ _,
     NegSpaceClause gamma' sigma delta' =>
-         NegSpaceClause (rsort_uniq pure_atom_cmp (gamma++gamma')) 
-                        (subst_spaces x y sigma) 
+         NegSpaceClause (rsort_uniq pure_atom_cmp (gamma++gamma'))
+                        (subst_spaces x y sigma)
                         (rsort_uniq pure_atom_cmp (delta++delta'))
   | _ , _  => sc
   end.
 
 Definition normalize2_4 (sc : clause) : clause :=
   match sc with
-  | PosSpaceClause gamma delta sigma => 
+  | PosSpaceClause gamma delta sigma =>
         PosSpaceClause gamma delta (drop_reflex_lseg sigma)
-  | NegSpaceClause gamma sigma delta => 
+  | NegSpaceClause gamma sigma delta =>
         NegSpaceClause gamma (drop_reflex_lseg sigma) delta
   | _ => sc
   end.
 
 Definition norm (s:  M.t) (sc: clause) : clause :=
-  normalize2_4 (List.fold_right normalize1_3 sc 
+  normalize2_4 (List.fold_right normalize1_3 sc
     (rsort (rev_cmp compare_clause2) (M.elements s))).
 
 (** Wellformedness Rules *)
@@ -1602,8 +1608,8 @@ Fixpoint do_well1_2 (sc: list space_atom) : list (list pure_atom) :=
 Fixpoint next_in_dom (x : Ident.t) (sc : list space_atom) : bool :=
   match sc with
   | nil => false
-  | Next (Var x') y :: sc' => 
-    if Ident.eq_dec x x' then true 
+  | Next (Var x') y :: sc' =>
+    if Ident.eq_dec x x' then true
     else next_in_dom x sc'
   | _ :: sc' => next_in_dom x sc'
   end.
@@ -1612,20 +1618,20 @@ Fixpoint next_in_dom (x : Ident.t) (sc : list space_atom) : bool :=
 Fixpoint next_in_dom1 (x : Ident.t) (y : expr) (sc : list space_atom) : bool :=
   match sc with
   | nil => false
-  | Next (Var x') y' :: sc' => 
-    if Ident.eq_dec x x' then if expr_eq y y' then true 
+  | Next (Var x') y' :: sc' =>
+    if Ident.eq_dec x x' then if expr_eq y y' then true
     else next_in_dom1 x y sc' else next_in_dom1 x y sc'
   | _ :: sc' => next_in_dom1 x y sc'
   end.
 
 (** Next x ? \in sc, ?<>y *)
 
-Fixpoint next_in_dom2 (x : Ident.t) (y : expr) (sc : list space_atom) 
+Fixpoint next_in_dom2 (x : Ident.t) (y : expr) (sc : list space_atom)
   : option expr :=
   match sc with
   | nil => None
-  | Next (Var x') y' :: sc' => 
-    if Ident.eq_dec x x' then if expr_eq y y' then next_in_dom2 x y sc' 
+  | Next (Var x') y' :: sc' =>
+    if Ident.eq_dec x x' then if expr_eq y y' then next_in_dom2 x y sc'
                                  else Some y'
     else next_in_dom2 x y sc'
   | _ :: sc' => next_in_dom2 x y sc'
@@ -1633,32 +1639,32 @@ Fixpoint next_in_dom2 (x : Ident.t) (y : expr) (sc : list space_atom)
 
 Fixpoint do_well3 (sc: list space_atom) : list (list pure_atom) :=
   match sc with
-  | Next (Var x) y :: sc' => 
-    if next_in_dom x sc' 
+  | Next (Var x) y :: sc' =>
+    if next_in_dom x sc'
       then nil :: do_well3 sc'
       else do_well3 sc'
-  | _ :: sc' => do_well3 sc' 
+  | _ :: sc' => do_well3 sc'
   | nil => nil
   end.
 
 (** Lseg x ?, ?<>y *)
 
-Fixpoint lseg_in_dom2 (x : Ident.t) (y : expr) (sc : list space_atom) 
+Fixpoint lseg_in_dom2 (x : Ident.t) (y : expr) (sc : list space_atom)
   : option expr :=
   match sc with
-  | Lseg (Var x' as x0) y0 :: sc' => 
-    if Ident.eq_dec x x' 
+  | Lseg (Var x' as x0) y0 :: sc' =>
+    if Ident.eq_dec x x'
       then if negb (expr_eq y0 y) then Some y0 else lseg_in_dom2 x y sc'
       else lseg_in_dom2 x y sc'
   | _ :: sc' => lseg_in_dom2 x y sc'
   | nil => None
   end.
 
-Fixpoint lseg_in_dom_atoms (x : Ident.t) (sc : list space_atom) 
+Fixpoint lseg_in_dom_atoms (x : Ident.t) (sc : list space_atom)
   : list pure_atom :=
   match sc with
-  | Lseg (Var x' as x0) y0 :: sc' => 
-    if Ident.eq_dec x x' 
+  | Lseg (Var x' as x0) y0 :: sc' =>
+    if Ident.eq_dec x x'
       then order_eqv_pure_atom (Eqv x0 y0) :: lseg_in_dom_atoms x sc'
       else lseg_in_dom_atoms x sc'
   | _ :: sc' => lseg_in_dom_atoms x sc'
@@ -1667,14 +1673,14 @@ Fixpoint lseg_in_dom_atoms (x : Ident.t) (sc : list space_atom)
 
 Fixpoint do_well4_5 (sc : list space_atom) : list (list pure_atom) :=
   match sc with
-  | Next (Var x') y :: sc' => 
-    let atms := map (fun a => [a]) (lseg_in_dom_atoms x' sc') in 
+  | Next (Var x') y :: sc' =>
+    let atms := map (fun a => [a]) (lseg_in_dom_atoms x' sc') in
       atms ++ do_well4_5 sc'
   | Lseg (Var x' as x0) y :: sc' =>
     let l0 := lseg_in_dom_atoms x' sc' in
       match l0 with
       | nil => do_well4_5 sc'
-      | _ :: _ => 
+      | _ :: _ =>
         let atms := map (fun a => normalize_atoms [Eqv x0 y; a]) l0 in
           atms ++ do_well4_5 sc'
       end
@@ -1686,11 +1692,11 @@ Definition do_well (sc : list space_atom) : list (list pure_atom) :=
   do_well1_2 sc ++ do_well3 sc ++ do_well4_5 sc.
 
 Definition do_wellformed (sc: clause) : M.t :=
- match sc with 
+ match sc with
  | PosSpaceClause gamma delta sigma =>
    let sigma' := rsort (rev_cmp compare_space_atom) sigma in
-     clause_list2set 
-       (map (fun ats => mkPureClause gamma (normalize_atoms (ats++delta))) 
+     clause_list2set
+       (map (fun ats => mkPureClause gamma (normalize_atoms (ats++delta)))
          (do_well sigma'))
  | _ => M.empty
  end.
@@ -1700,7 +1706,7 @@ Definition do_wellformed (sc: clause) : M.t :=
 Definition spatial_resolution (pc nc : clause) : M.t :=
   match pc , nc with
   | PosSpaceClause gamma' delta' sigma' , NegSpaceClause gamma sigma delta =>
-    match eq_space_atomlist (rsort compare_space_atom sigma) 
+    match eq_space_atomlist (rsort compare_space_atom sigma)
                             (rsort compare_space_atom sigma') with
     | true => M.singleton (order_eqv_clause (mkPureClause (gamma++gamma') (delta++delta')))
     | false => M.empty
@@ -1708,16 +1714,16 @@ Definition spatial_resolution (pc nc : clause) : M.t :=
   | _ , _ => M.empty
   end.
 
-Fixpoint unfolding1' (sigma0 sigma1 sigma2 : list space_atom) 
+Fixpoint unfolding1' (sigma0 sigma1 sigma2 : list space_atom)
   : list (pure_atom * list space_atom) :=
   match sigma2 with
-  | Lseg (Var x' as x) z :: sigma2' => 
-    if next_in_dom1 x' z sigma1 
+  | Lseg (Var x' as x) z :: sigma2' =>
+    if next_in_dom1 x' z sigma1
     (*need to reinsert since replacing lseg with next doesn't always preserve
     sorted order*)
-      then 
-        (Eqv x z, 
-          insert (rev_cmp compare_space_atom) (Next x z) (rev sigma0 ++ sigma2')) 
+      then
+        (Eqv x z,
+          insert (rev_cmp compare_space_atom) (Next x z) (rev sigma0 ++ sigma2'))
         :: unfolding1' (Lseg x z :: sigma0) sigma1 sigma2'
       else unfolding1' (Lseg x z :: sigma0) sigma1 sigma2'
   | a :: sigma2' => unfolding1' (a :: sigma0) sigma1 sigma2'
@@ -1728,22 +1734,22 @@ Definition unfolding1 (sc1 sc2 : clause) : list clause :=
   match sc1 , sc2 with
   | PosSpaceClause gamma delta sigma1 , NegSpaceClause gamma' sigma2 delta' =>
     let l0 := unfolding1' nil sigma1 sigma2 in
-    let build_clause p := 
-      match p with (atm, sigma2') => 
-        NegSpaceClause gamma' sigma2' 
+    let build_clause p :=
+      match p with (atm, sigma2') =>
+        NegSpaceClause gamma' sigma2'
           (insert_uniq pure_atom_cmp (order_eqv_pure_atom atm) delta')
       end in
       map build_clause l0
   | _ , _ => nil
   end.
 
-Fixpoint unfolding2' (sigma0 sigma1 sigma2 : list space_atom) 
+Fixpoint unfolding2' (sigma0 sigma1 sigma2 : list space_atom)
   : list (pure_atom * list space_atom) :=
   match sigma2 with
-  | Lseg (Var x' as x) z :: sigma2' => 
+  | Lseg (Var x' as x) z :: sigma2' =>
     match next_in_dom2 x' z sigma1 with
     | Some y =>
-      (Eqv x z, 
+      (Eqv x z,
           insert (rev_cmp compare_space_atom) (Next x y)
             (insert (rev_cmp compare_space_atom) (Lseg y z) (rev sigma0 ++ sigma2')))
         :: unfolding2' (Lseg x z :: sigma0) sigma1 sigma2'
@@ -1757,9 +1763,9 @@ Definition unfolding2 (sc1 sc2 : clause) : list clause :=
   match sc1 , sc2 with
   | PosSpaceClause gamma delta sigma1 , NegSpaceClause gamma' sigma2 delta' =>
     let l0 := unfolding2' nil sigma1 sigma2 in
-    let build_clause p := 
-      match p with (atm, sigma2') => 
-        NegSpaceClause gamma' sigma2' 
+    let build_clause p :=
+      match p with (atm, sigma2') =>
+        NegSpaceClause gamma' sigma2'
           (insert_uniq pure_atom_cmp (order_eqv_pure_atom atm) delta')
       end in
       map build_clause l0
@@ -1769,7 +1775,7 @@ Definition unfolding2 (sc1 sc2 : clause) : list clause :=
 Fixpoint unfolding3' (sigma0 sigma1 sigma2 : list space_atom) :
   list (list space_atom) :=
   match sigma2 with
-  | Lseg (Var x' as x) Nil :: sigma2' => 
+  | Lseg (Var x' as x) Nil :: sigma2' =>
     match lseg_in_dom2 x' Nil sigma1 with
     | Some y =>
           insert (rev_cmp compare_space_atom) (Lseg x y)
@@ -1792,10 +1798,10 @@ Definition unfolding3 (sc1 sc2 : clause) : list clause :=
 
 (** NPR's rule given in the paper. Confirmed unsound by NP.*)
 
-Fixpoint unfolding4NPR' (sigma0 sigma1 sigma2 : list space_atom) 
+Fixpoint unfolding4NPR' (sigma0 sigma1 sigma2 : list space_atom)
   : list (list space_atom) :=
   match sigma2 with
-  | Lseg (Var x' as x) (Var z' as z) :: sigma2' => 
+  | Lseg (Var x' as x) (Var z' as z) :: sigma2' =>
     match lseg_in_dom2 x' z sigma1 with
     | Some y =>
       if next_in_dom z' sigma1 then
@@ -1825,7 +1831,7 @@ Definition unfolding4 (sc1 sc2 : clause) : list clause :=
   | PosSpaceClause gamma delta sigma1 , NegSpaceClause gamma' sigma2 delta' =>
     let l0 := unfolding4NPR' nil sigma1 sigma2 in
     let GG' := rsort_uniq pure_atom_cmp (gamma ++ gamma') in
-    let DD' := rsort_uniq pure_atom_cmp (delta ++ delta') in    
+    let DD' := rsort_uniq pure_atom_cmp (delta ++ delta') in
     let build_clause sigma2' := NegSpaceClause GG' sigma2' DD' in
       map build_clause l0
   | _ , _ => nil
@@ -1834,17 +1840,17 @@ Definition unfolding4 (sc1 sc2 : clause) : list clause :=
 
 (** Unsound rule as given in NPR's paper *)
 
-Fixpoint unfolding5NPR' (sigma0 sigma1 sigma2 : list space_atom) 
+Fixpoint unfolding5NPR' (sigma0 sigma1 sigma2 : list space_atom)
   : list (pure_atom * list space_atom) :=
   match sigma2 with
-  | Lseg (Var x' as x) (Var z' as z) :: sigma2' => 
+  | Lseg (Var x' as x) (Var z' as z) :: sigma2' =>
     match lseg_in_dom2 x' z sigma1 with
     | Some y =>
       let atms := lseg_in_dom_atoms z' sigma1 in
-      let build_res atm := 
-        (atm, 
+      let build_res atm :=
+        (atm,
           insert (rev_cmp compare_space_atom) (Lseg x y)
-            (insert (rev_cmp compare_space_atom) (Lseg y z) 
+            (insert (rev_cmp compare_space_atom) (Lseg y z)
               (rev sigma0 ++ sigma2'))) in
         map build_res atms ++ unfolding5NPR' (Lseg x z :: sigma0) sigma1 sigma2'
     | None => unfolding5NPR' (Lseg x z :: sigma0) sigma1 sigma2'
@@ -1852,14 +1858,14 @@ Fixpoint unfolding5NPR' (sigma0 sigma1 sigma2 : list space_atom)
   | a :: sigma2' => unfolding5NPR' (a :: sigma0) sigma1 sigma2'
   | nil => nil
   end.
- 
+
 Definition unfolding5NPR (sc1 sc2 : clause) : list clause :=
   match sc1 , sc2 with
   | PosSpaceClause gamma delta sigma1 , NegSpaceClause gamma' sigma2 delta' =>
     let l0 := unfolding5NPR' nil sigma1 sigma2 in
-    let build_clause p := 
-      match p with (atm, sigma2') => 
-        NegSpaceClause gamma' sigma2' 
+    let build_clause p :=
+      match p with (atm, sigma2') =>
+        NegSpaceClause gamma' sigma2'
           (insert_uniq pure_atom_cmp (order_eqv_pure_atom atm) delta')
       end in
       map build_clause l0
@@ -1868,17 +1874,17 @@ Definition unfolding5NPR (sc1 sc2 : clause) : list clause :=
 
 (** Rule as given in NPR's paper, corrected variable uses *)
 
-Fixpoint unfolding5NPRALT' (sigma0 sigma1 sigma2 : list space_atom) 
+Fixpoint unfolding5NPRALT' (sigma0 sigma1 sigma2 : list space_atom)
   : list (pure_atom * list space_atom) :=
   match sigma2 with
-  | Lseg (Var x' as x) (Var z' as z) :: sigma2' => 
+  | Lseg (Var x' as x) (Var z' as z) :: sigma2' =>
     match lseg_in_dom2 x' z sigma1, lseg_in_dom2 x' z sigma1 with
     | Some y, _ =>
       let atms := lseg_in_dom_atoms z' sigma1 in
-      let build_res atm := 
-        (atm, 
+      let build_res atm :=
+        (atm,
           insert (rev_cmp compare_space_atom) (Lseg x y)
-            (insert (rev_cmp compare_space_atom) (Lseg y z) 
+            (insert (rev_cmp compare_space_atom) (Lseg y z)
               (rev sigma0 ++ sigma2'))) in
         map build_res atms ++ unfolding5NPR' (Lseg x z :: sigma0) sigma1 sigma2'
     | None, _ => unfolding5NPR' (Lseg x z :: sigma0) sigma1 sigma2'
@@ -1886,7 +1892,7 @@ Fixpoint unfolding5NPRALT' (sigma0 sigma1 sigma2 : list space_atom)
   | a :: sigma2' => unfolding5NPR' (a :: sigma0) sigma1 sigma2'
   | nil => nil
   end.
- 
+
 (** Our version - also suggested by NP in his reply. *)
 
 Definition unfolding5 (sc1 sc2 : clause) : list clause :=
@@ -1894,33 +1900,33 @@ Definition unfolding5 (sc1 sc2 : clause) : list clause :=
   | PosSpaceClause gamma delta sigma1 , NegSpaceClause gamma' sigma2 delta' =>
     let l0 := unfolding5NPR' nil sigma1 sigma2 in
     let GG' := rsort_uniq pure_atom_cmp (gamma ++ gamma') in
-    let DD' := rsort_uniq pure_atom_cmp (delta ++ delta') in  
-    let build_clause p := 
-      match p with (atm, sigma2') => 
-        NegSpaceClause GG' sigma2' 
+    let DD' := rsort_uniq pure_atom_cmp (delta ++ delta') in
+    let build_clause p :=
+      match p with (atm, sigma2') =>
+        NegSpaceClause GG' sigma2'
           (insert_uniq pure_atom_cmp (order_eqv_pure_atom atm) DD')
       end in
       map build_clause l0
   | _ , _ => nil
-  end. 
+  end.
 
 (** Same as unfolding5NPR', but with added side-condition *)
 
-Fixpoint unfolding6NPR' (sigma0 sigma1 sigma2 : list space_atom) 
+Fixpoint unfolding6NPR' (sigma0 sigma1 sigma2 : list space_atom)
   : list (pure_atom * list space_atom) :=
   match sigma2 with
-  | Lseg (Var x' as x) (Var z' as z) :: sigma2' => 
+  | Lseg (Var x' as x) (Var z' as z) :: sigma2' =>
     if Ident.eq_dec x' z' then unfolding6NPR' sigma0 sigma1 sigma2' else
     match lseg_in_dom2 x' z sigma1 with
     | Some y =>
       let atms := lseg_in_dom_atoms z' sigma1 in
-      let build_res atm := 
-        (atm, 
+      let build_res atm :=
+        (atm,
           insert (rev_cmp compare_space_atom) (Lseg x y)
-            (insert (rev_cmp compare_space_atom) (Lseg y z) 
+            (insert (rev_cmp compare_space_atom) (Lseg y z)
               (rev sigma0 ++ sigma2'))) in
         map build_res atms ++ unfolding6NPR' (Lseg x z :: sigma0) sigma1 sigma2'
-    | None => 
+    | None =>
        unfolding6NPR' (Lseg x z :: sigma0) sigma1 sigma2'
     end
   | a :: sigma2' => unfolding6NPR' (a :: sigma0) sigma1 sigma2'
@@ -1932,15 +1938,15 @@ Definition unfolding6 (sc1 sc2 : clause) : list clause :=
   | PosSpaceClause gamma delta sigma1 , NegSpaceClause gamma' sigma2 delta' =>
     let l0 := unfolding6NPR' nil sigma1 sigma2 in
     let GG' := rsort_uniq pure_atom_cmp (gamma ++ gamma') in
-    let DD' := rsort_uniq pure_atom_cmp (delta ++ delta') in  
-    let build_clause p := 
-      match p with (atm, sigma2') => 
-        NegSpaceClause GG' sigma2' 
+    let DD' := rsort_uniq pure_atom_cmp (delta ++ delta') in
+    let build_clause p :=
+      match p with (atm, sigma2') =>
+        NegSpaceClause GG' sigma2'
           (insert_uniq pure_atom_cmp (order_eqv_pure_atom atm) DD')
       end in
       (map build_clause l0)
   | _ , _ => nil
-  end. 
+  end.
 
 Definition mem_add (x: M.elt) (s: M.t) : option M.t :=
  if M.mem x s then None else Some (M.add x s).
@@ -1957,7 +1963,7 @@ Fixpoint add_list_to_set (l: list M.elt) (s: M.t) : option M.t :=
  | nil => None
  end.
 
-Definition do_unfold' pc nc l := 
+Definition do_unfold' pc nc l :=
   unfolding1 pc nc ++
   unfolding2 pc nc ++ unfolding3 pc nc ++
   unfolding4 pc nc ++ unfolding6 pc nc ++ l.
@@ -1972,8 +1978,8 @@ Fixpoint do_unfold (n: nat) (pc : clause) (s : M.t) : M.t :=
    end
   end.
 
-Definition unfolding (pc nc : clause) : M.t := 
-  M.fold (fun c => M.union (spatial_resolution pc c)) 
+Definition unfolding (pc nc : clause) : M.t :=
+  M.fold (fun c => M.union (spatial_resolution pc c))
             (do_unfold 500 pc (M.add nc M.empty)) M.empty.
 
 End HeapResolve.
@@ -2010,12 +2016,12 @@ Definition pureb c := match c with PureClause _ _ _ _ => true | _ => false end.
 
 Definition pure_clauses := filter pureb.
 
-Definition is_empty_clause (c : clause) := 
+Definition is_empty_clause (c : clause) :=
   match c with PureClause nil nil _ _ => true | _ => false end.
 
 Definition pures := M.filter pureb.
 
-Lemma Ppred_decrease n : 
+Lemma Ppred_decrease n :
   (n<>1)%positive -> (nat_of_P (Ppred n)<nat_of_P n)%nat.
 Proof.
 intros; destruct (Psucc_pred n) as [Hpred | Hpred]; try contradiction;
@@ -2043,7 +2049,7 @@ Fixpoint sublistg (l1 l2: list A) :=
 
 Fixpoint sublist (l1 l2: list A) :=
   match l1, l2 with
-  | a::l1', b::l2' => 
+  | a::l1', b::l2' =>
     if isEq (cmp a b) then sublistg l1' l2' else sublist l1 l2'
   | nil, _ => true
   | _::_, nil => false
@@ -2052,8 +2058,8 @@ Fixpoint sublist (l1 l2: list A) :=
 End RedundancyElim.
 
 Definition impl_pure_clause (c d: clause) :=
-  match c, d with PureClause gamma delta _ _, PureClause gamma' delta' _ _ => 
-    andb (sublist pure_atom_cmp gamma gamma') 
+  match c, d with PureClause gamma delta _ _, PureClause gamma' delta' _ _ =>
+    andb (sublist pure_atom_cmp gamma gamma')
              (sublist pure_atom_cmp delta delta')
   | _, _ => false
   end.
@@ -2061,13 +2067,13 @@ Definition impl_pure_clause (c d: clause) :=
 Definition relim1 (c: clause) (s: M.t) :=
   M.filter (fun d => negb (impl_pure_clause c d)) s.
 
-Definition incorp (s t : M.t) := 
+Definition incorp (s t : M.t) :=
   M.union s (M.fold (fun c t0 => relim1 c t0) s t).
 
 (** The main loop of the prover *)
 
 (**************************
-          Lemma the_loop_termination1: 
+          Lemma the_loop_termination1:
 forall (n : positive) (sigma : list space_atom) (nc : clause) (s : M.t),
 (n =? 1)%positive = false ->
 forall (p : superposition_result * list clause * M.t) (t : M.t)
@@ -2141,19 +2147,19 @@ isEq
         s_star) s_star) = false -> Pos.to_nat (Pos.pred n) < Pos.to_nat n.
 Admitted.
 ************************)
-  
+
 (* begin show *)
 
-Function the_loop 
-  (n: positive) (sigma: list space_atom) (nc: clause) 
+Function the_loop
+  (n: positive) (sigma: list space_atom) (nc: clause)
   (s: M.t) (cl: clause) {measure nat_of_P n} : veristar_result :=
   if Pos.eqb n 1 then Aborted (M.elements s) cl
   else match check_clauseset s with
   | (Superposition.Valid, units, _, _) => Valid
-  | (Superposition.C_example R selected, units, s_star, _) => 
+  | (Superposition.C_example R selected, units, s_star, _) =>
          let sigma' := simplify_atoms units sigma in
-         let nc' := simplify units nc in 
-         let c := print_spatial_model (norm (print_wf_set selected) 
+         let nc' := simplify units nc in
+         let c := print_spatial_model (norm (print_wf_set selected)
                       (PosSpaceClause nil nil sigma')) R in
          let nu_s := incorp (print_wf_set (do_wellformed c)) s_star in
          if isEq (M.compare nu_s s_star)
@@ -2181,16 +2187,16 @@ Print Assumptions the_loop.
 
 Definition check_entailment (ent: entailment) : veristar_result :=
   let s := clause_list2set (pure_clauses (map order_eqv_clause (cnf ent)))
-  in match ent with 
+  in match ent with
      | Entailment (Assertion pi sigma) (Assertion pi' sigma') =>
-       match mk_pureR pi, mk_pureR pi' with 
+       match mk_pureR pi, mk_pureR pi' with
        | (piplus, piminus), (pi'plus, pi'minus) =>
            the_loop 1000000000 sigma (NegSpaceClause pi'plus sigma' pi'minus)
              (print_new_pures_set s) empty_clause
        end
      end.
 
-End VeriStar. 
+End VeriStar.
 Check VeriStar.check_entailment.
 
 
@@ -2202,7 +2208,7 @@ Definition a := Var 1%positive.
 Definition b := Var 2%positive.
 Definition c := Var 3%positive.
 Definition d := Var 4%positive.
-Definition e := Var 5%positive. 
+Definition e := Var 5%positive.
 
 Definition example_ent : entailment := Entailment
   (Assertion [Nequ c e] [Lseg a b ; Lseg a c ; Next c d ; Lseg d e])
@@ -2212,13 +2218,13 @@ Local Open Scope positive_scope.
 
 Definition x (p : positive) := Var p.
 
-(*           
+(*
           ex868(x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13)
   [x9 |-> x3 * lseg(x7, x8) * lseg(x1, x6) * x10 |-> x2 * x3 |-> x7 * lseg(x5, x10) * x4 |-> x9 * x13 |-> x5 * lseg(x8, x5) * x11 |-> x12 * x12 |-> x11 * x2 |-> x4 * lseg(x6, x3)] { } [lseg(x2, x10) * lseg(x12, x11) * lseg(x11, x12) * lseg(x6, x3) * lseg(x1, x6) * lseg(x13, x5) * lseg(x10, x2)]*)
 
 
 Definition harder_ent :=
-  Entailment 
+  Entailment
     (Assertion
        []
        [Next (x 9) (x 3);
@@ -2226,15 +2232,15 @@ Definition harder_ent :=
          Lseg (x 1) (x 6);
          Next (x 10) (x 2);
          Next (x 3) (x 7);
-         Lseg (x 5) (x 10);    
+         Lseg (x 5) (x 10);
          Next (x 4) (x 9);
          Next (x 13) (x 5);
-         Lseg (x 8) (x 5); 
-         Next (x 11) (x 12);   
-         Next (x 12) (x 11);   
-         Next (x 2) (x 4); 
-         Lseg (x 6) (x 3)])   
-    (Assertion 
+         Lseg (x 8) (x 5);
+         Next (x 11) (x 12);
+         Next (x 12) (x 11);
+         Next (x 2) (x 4);
+         Lseg (x 6) (x 3)])
+    (Assertion
        []
        [Lseg (x 2) (x 10);
          Lseg (x 12) (x 11);
@@ -2252,7 +2258,7 @@ Definition harder_ent :=
       x15 |-> x13 * x1 |-> x17 * x5 |-> x18 * lseg(x8, x5) * x7 |-> x13 * x14 |-> x2 *
       x18 |-> x6 * x12 |-> x17 * lseg(x13, x8) * x9 |-> x10]
 
-     
+
      { }
 
 
@@ -2261,7 +2267,7 @@ Definition harder_ent :=
  *)
 
 Definition harder_ent2 :=
-  Entailment 
+  Entailment
     (Assertion
        []
        [Next (x 2) (x 13); Lseg (x 3) (x 6); Lseg (x 10) (x 5); Next (x 4) (x 20); Next (x 16) (x 11);
@@ -2273,27 +2279,27 @@ Definition harder_ent2 :=
        [Lseg (x 15) (x 2); Lseg (x 4) (x 6); Lseg (x 19) (x 13); Lseg (x 10) (x 5); Lseg (x 7) (x 13);
         Lseg (x 2) (x 13); Lseg (x 16) (x 11); Lseg (x 3) (x 6); Lseg (x 12) (x 17); Lseg (x 9) (x 10)]).
 
-(* ex948(x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20) 
+(* ex948(x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19, x20)
 
-[x1 |-> x14 * x14 |-> x19 * x5 |-> x8 * x13 |-> x18 * lseg(x18, x13) * lseg(x15, x2) * 
- x17 |-> x15 * x20 |-> x6 * x6 |-> x13 * lseg(x11, x19) * x7 |-> x12 * x10 |-> x17 * 
- lseg(x16, x20) * x2 |-> x20 * x19 |-> x4 * lseg(x9, x3) * lseg(x8, x12) * lseg(x12, x20) * 
- x4 |-> x6 * x3 |-> x20] 
+[x1 |-> x14 * x14 |-> x19 * x5 |-> x8 * x13 |-> x18 * lseg(x18, x13) * lseg(x15, x2) *
+ x17 |-> x15 * x20 |-> x6 * x6 |-> x13 * lseg(x11, x19) * x7 |-> x12 * x10 |-> x17 *
+ lseg(x16, x20) * x2 |-> x20 * x19 |-> x4 * lseg(x9, x3) * lseg(x8, x12) * lseg(x12, x20) *
+ x4 |-> x6 * x3 |-> x20]
 
-{ } 
+{ }
 
-[lseg(x6, x18) * lseg(x4, x6) * lseg(x7, x6) * lseg(x1, x4) * 
- lseg(x11, x19) * lseg(x18, x13) * lseg(x16, x20) * lseg(x10, x20) * lseg(x5, x12) * 
+[lseg(x6, x18) * lseg(x4, x6) * lseg(x7, x6) * lseg(x1, x4) *
+ lseg(x11, x19) * lseg(x18, x13) * lseg(x16, x20) * lseg(x10, x20) * lseg(x5, x12) *
  lseg(x3, x20) * lseg(x9, x3)] *)
 
 
 Definition harder_ent3 :=
-  Entailment 
+  Entailment
     (Assertion
        []
        [Next (x 1) (x 14); Next (x 14) (x 19); Next (x 5) (x 8); Next (x 13) (x 18); Lseg (x 18) (x 13); Lseg (x 15) (x 2);
         Next (x 17) (x 15); Next (x 20) (x 6); Next (x 6) (x 13); Lseg (x 11) (x 19); Next (x 7) (x 12); Next (x 10) (x 17);
-        Lseg (x 16) (x 20); Next (x 2) (x 20); Next (x 19) (x 4); Lseg (x 9) (x 3); Lseg (x 8) (x 12); Lseg (x 12) (x 20); 
+        Lseg (x 16) (x 20); Next (x 2) (x 20); Next (x 19) (x 4); Lseg (x 9) (x 3); Lseg (x 8) (x 12); Lseg (x 12) (x 20);
        Next (x 4) (x 6); Next (x 3) (x 20)])
     (Assertion
        []
@@ -2306,7 +2312,7 @@ Compute cnf harder_ent.
 Compute cnf harder_ent2.
 Compute cnf harder_ent3.
 (* Compute check_entailment example_ent.
-    ... doesn't work, because of opaque termination proofs ... 
+    ... doesn't work, because of opaque termination proofs ...
  *)
 
 Definition example_myent := Entailment
@@ -2345,7 +2351,7 @@ Definition myMain :=
                         example1_myfail; example1_myfail;
                           example_ent; harder_ent;
                             harder_ent2; harder_ent3].
-Extraction "myMain" myMain.                        
+Extraction "myMain" myMain.
 
 Definition ce_harder_ent := check_entailment harder_ent.
 Definition ce_harder_ent2 := check_entailment harder_ent.
@@ -2361,12 +2367,12 @@ Definition main :=
 (*  map
     check_entailment
     [example_myent;
-      example_ent; 
+      example_ent;
       harder_ent] *)
        (*
         harder_ent;
         harder_ent2;
-        harder_ent3 *).        
+        harder_ent3 *).
 
 Extraction "vs" main.
 

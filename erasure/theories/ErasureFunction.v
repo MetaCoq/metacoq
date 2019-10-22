@@ -364,10 +364,9 @@ Qed.
 Next Obligation.
   Hint Constructors squash. destruct HΣ.
   eapply Is_conv_to_Arity_inv in H
-    as [ (? & ? & ? & ?) | [ (? & ? & ? & ? & ?) | (? & ?) ] ].
+    as [ (? & ? & ? & ?) | (? & ?) ].
   all: eauto.
-(* Qed. *)
-Admitted.
+Qed.
 
 End fix_sigma.
 
@@ -635,7 +634,6 @@ Proof.
     eapply p. eauto.
   - clear E. inv t; discriminate.
 Qed.
-Print Assumptions erases_erase.
 
 Lemma erase_Some_typed {Σ wfΣ Γ wfΓ t r} :
   erase Σ wfΣ Γ wfΓ t = Checked r -> exists T, ∥Σ ;;; Γ |- t : T∥.
@@ -799,3 +797,6 @@ Proof.
   * eapply IHΣ. unfold erase_global. rewrite E2. reflexivity.
 Qed.
 
+
+Print Assumptions erases_erase.
+Print Assumptions erases_correct.

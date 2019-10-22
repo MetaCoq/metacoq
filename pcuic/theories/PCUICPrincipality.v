@@ -31,19 +31,59 @@ Section Principality.
   Definition Is_conv_to_Arity Σ Γ T :=
     exists T', ∥ red Σ Γ T T' ∥ /\ isArity T'.
 
+  Lemma arity_red_to_prod_or_sort :
+    forall Γ T,
+      isArity T ->
+      (exists na A B, ∥ red Σ Γ T (tProd na A B) ∥) \/
+      (exists u, ∥ red Σ Γ T (tSort u) ∥).
+  Proof.
+    intros Γ T a.
+    induction T in Γ, a |- *. all: try contradiction.
+    - right. eexists. constructor. constructor.
+    - left. eexists _,_,_. constructor. constructor.
+    - simpl in a. eapply IHT3 in a as [[na' [A [B [r]]]] | [u [r]]].
+      + left. eexists _,_,_. constructor.
+        eapply red_trans.
+        * eapply red1_red. eapply red_zeta.
+        * eapply untyped_substitution_red with (s := [T1]) (Γ' := []) in r.
+          -- simpl in r. eassumption.
+          -- assumption.
+          -- instantiate (1 := [],, vdef na T1 T2).
+             replace (untyped_subslet Γ [T1] ([],, vdef na T1 T2))
+              with (untyped_subslet Γ [subst0 [] T1] ([],, vdef na T1 T2))
+              by (now rewrite subst_empty).
+             eapply untyped_cons_let_def.
+             constructor.
+      + right. eexists. constructor.
+        eapply red_trans.
+        * eapply red1_red. eapply red_zeta.
+        * eapply untyped_substitution_red with (s := [T1]) (Γ' := []) in r.
+          -- simpl in r. eassumption.
+          -- assumption.
+          -- replace (untyped_subslet Γ [T1] ([],, vdef na T1 T2))
+              with (untyped_subslet Γ [subst0 [] T1] ([],, vdef na T1 T2))
+              by (now rewrite subst_empty).
+            eapply untyped_cons_let_def.
+            constructor.
+  Qed.
+
   Lemma Is_conv_to_Arity_inv :
     forall Γ T,
       Is_conv_to_Arity Σ Γ T ->
       (exists na A B, ∥ red Σ Γ T (tProd na A B) ∥) \/
-      (exists na b B t, ∥ red Σ Γ T (tLetIn na b B t) ∥) \/
       (exists u, ∥ red Σ Γ T (tSort u) ∥).
   Proof.
     intros Γ T [T' [r a]].
-    destruct T'.
+    induction T'.
     all: try contradiction.
-    - right. right. eexists. eassumption.
+    - right. eexists. eassumption.
     - left. eexists _, _, _. eassumption.
-    - right. left. eexists _, _, _, _. eassumption.
+    - destruct r as [r1].
+      eapply arity_red_to_prod_or_sort in a as [[na' [A [B [r2]]]] | [u [r2]]].
+      + left. eexists _,_,_. constructor.
+        eapply red_trans. all: eassumption.
+      + right. eexists. constructor.
+        eapply red_trans. all: eassumption.
   Qed.
 
   Lemma invert_red_sort Γ u v :

@@ -37,7 +37,7 @@ instructions.
 | Paper section                |  Coq  (`module`/theories/`file`.v)                                           |
 |------------------------------|---------------------------------------------------|
 | 2.1: Syntax                  |  pcuic PCUICAst                                   |
-| 2.2: Typing and reduction    |  pcuic CUICTyping                                 |
+| 2.2: Typing and reduction    |  pcuic PCUICTyping                                 |
 | 2.2.1: Universes             |  template-coq Universes    (shared with pcuic)    |
 | 2.3: Metatheory              |  pcuic                                            |
 | 2.3.1: Subst. and weak.      |  pcuic  PCUICSubstitution PCUICWeakening PCUICWeakeningEnv |
@@ -51,7 +51,7 @@ instructions.
 | 3.5: Typechecking            |  safechecker PCUICSafeChecker                          |
 | 3.6: Extracted checker       |  test-suite safechecker_test                           |
 | 4.1: Erasure AST             |  erasure EAst EWcbvEval                                |   
-| 4.2: Erasure Function        |  erasure SafeErasureFunction                           |
+| 4.2: Erasure Function        |  erasure ErasureFunction                           |
 | 4.3: Erasure Correctness     |  erasure ErasureCorrectness                            |
 | Extracted erasure            |  test-suite erasure_test                               |
 

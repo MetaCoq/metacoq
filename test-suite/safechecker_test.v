@@ -12,8 +12,8 @@ MetaCoq SafeCheck (3 + 1).
 
 Quote Definition foo := (3 + 1).
 
-Time MetaCoq SafeCheck plus.
-Time MetaCoq CoqCheck Nat.add.
+MetaCoq SafeCheck plus.
+MetaCoq CoqCheck Nat.add.
 
 Require Import MetaCoq.SafeChecker.SafeTemplateChecker.
 
@@ -22,8 +22,8 @@ Definition bool_list := List.map negb (cons true (cons false nil)).
 Set Printing Universes.
 (* Universe issues: undeclared universes from sections *)
 (* Quote Recursively Definition boolq := bool_list. *)
-Time MetaCoq SafeCheck bool_list.
-Time MetaCoq CoqCheck bool_list.
+MetaCoq SafeCheck bool_list.
+MetaCoq CoqCheck bool_list.
 
 (* Even with universe checking disabled, we get:
 Error: Type error: Msgundeclared level, while checking MetaCoq.Template.Universes.LevelSet.Raw.elt
@@ -35,6 +35,10 @@ Type error: Terms are not <= for cumulativity: Sort([Coq.Init.Datatypes.23,Coq.I
 *)
 
 (* Unset Universe Minimization ToSet. *)
+
+Definition bignat := 10000.
+MetaCoq SafeCheck bignat.
+MetaCoq CoqCheck bignat.
 
 Set Universe Polymorphism.
 
@@ -533,32 +537,15 @@ Definition isequiv_adjointify {A B : Type} (f : A -> B) (g : B -> A)
            (issect : g∘ f == id) (isretr : f  ∘ g == id)  : IsEquiv f
   := BuildIsEquiv A B f g (issect' f g issect isretr) isretr
                   (is_adjoint' f g issect isretr).
-Monomorphic Definition foo' := @isequiv_adjointify.
-Time MetaCoq SafeCheck foo'.
-Time MetaCoq CoqCheck foo'.
-
-Definition bignat := 10000.
-Time MetaCoq SafeCheck bignat.
-(*
-Debug: Quoting
-Debug: Quoting executed in: 0.0130159854889s
-Debug: Checking executed in: 0.0271821022034s
-Environment is well-formed and Const(Top.bignat,[]) has type: Ind(Coq.Init.Datatypes.nat,0,[])
-
-<infomsg>Finished transaction in 0.04 secs (0.039u,0.s) (successful)</infomsg>
-
-************************************
-*)
-MetaCoq CoqCheck bignat.
 
 
 MetaCoq SafeCheck @issect'.
 
 MetaCoq SafeCheck @ap_pp.
-Time MetaCoq CoqCheck ap_pp.
+MetaCoq CoqCheck ap_pp.
 
 MetaCoq SafeCheck @isequiv_adjointify.
-Time MetaCoq CoqCheck isequiv_adjointify.
+MetaCoq CoqCheck isequiv_adjointify.
 
 MetaCoq SafeCheck @IsEquiv.
 MetaCoq CoqCheck IsEquiv.

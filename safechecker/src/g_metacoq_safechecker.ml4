@@ -23,9 +23,11 @@ let check env evm (c, ustate) =
   let uctx = UState.context_set ustate in
   Feedback.msg_debug (str"Universes added: " ++ Printer.pr_universe_ctx_set evm uctx);
   let uctx = Universes0.Monomorphic_ctx (Ast_quoter.quote_univ_contextset uctx) in
-  let check = time (str"Checking")
-      (SafeTemplateChecker.infer_and_print_template_program Config0.default_checker_flags)
-      term uctx
+  let check =
+    time (str"Checking")
+      (SafeTemplateChecker.infer_and_print_template_program
+        Config0.default_checker_flags term)
+      uctx
   in
   match check with
   | Coq_inl s -> Feedback.msg_info (pr_char_list s)

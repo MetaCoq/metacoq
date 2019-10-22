@@ -29,7 +29,32 @@ If you only want to browse the files a "light" documentation is available in
 
 Otherwise, to run interactively, the development can be compiled with
 Coq 8.9.1 and Equations 1.2. Detailed [installation instructions](#installation-instructions)
-are below, what follows is a short summary.
+are below, what follows is a short summary of the development and installation
+instructions.
+
+### Correspondence of the paper sections with the code
+
+| Paper section                |  Coq  (`module`/theories/`file`.v)                                           |
+|------------------------------|---------------------------------------------------|
+| 2.1: Syntax                  |  pcuic PCUICAst                                   |
+| 2.2: Typing and reduction    |  pcuic CUICTyping                                 |
+| 2.2.1: Universes             |  template-coq Universes    (shared with pcuic)    |
+| 2.3: Metatheory              |  pcuic                                            |
+| 2.3.1: Subst. and weak.      |  pcuic  PCUICSubstitution PCUICWeakening PCUICWeakeningEnv |
+| 2.3.2: Confluence            |  pcuic  PCUICParallelReduction PCUICParallelReductionConfluence  | 
+| 2.3.3: SR and Validity       |  pcuic  PCUICSR PCUICValidity PCUICPrincipality        |
+| 2.3.4: SN                    |  pcuic  PCUICSN                                        |
+| 3.1: Positions and stacks    |  pcuic PCUICPosition                                   |
+| 3.2: Reduction               |  safechecker PCUICSafeReduce                           |
+| 3.3: Universe graph          |  checker uGraph / checker wGraph (shared with pcuic)   | 
+| 3.5: Cumulativity            |  safechecker PCUICSafeConversion                       |
+| 3.5: Typechecking            |  safechecker PCUICSafeChecker                          |
+| 3.6: Extracted checker       |  test-suite safechecker_test                           |
+| 4.1: Erasure AST             |  erasure EAst EWcbvEval                                |   
+| 4.2: Erasure Function        |  erasure SafeErasureFunction                           |
+| 4.3: Erasure Correctness     |  erasure ErasureCorrectness                            |
+| Extracted erasure            |  test-suite erasure_test                               |
+
 
 If you don't have Coq installed, the easiest way to get both is to use the 
 `opam` package manager. First install `opam` from your package manager 

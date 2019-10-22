@@ -1,0 +1,401 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<title>MetaCoq.Template.Ast</title>
+</head>
+
+<body>
+
+<div id="page">
+
+<div id="header">
+</div>
+
+<div id="main">
+
+<h1 class="libtitle">Library MetaCoq.Template.Ast</h1>
+
+<div class="code">
+
+<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+<a name="lab116"></a><h1 class="section">AST of Coq kernel terms and kernel data structures</h1>
+
+
+<div class="paragraph"> </div>
+
+<a name="lab117"></a><h2 class="section">Basic data-types:</h2>
+
+
+<div class="paragraph"> </div>
+
+      We reflect identifiers <span class="inlinecode"><a class="idref" href="MetaCoq.Template.BasicAst.html#ident"><span class="id" title="definition">ident</span></a></span>, sort families <span class="inlinecode"><a class="idref" href="MetaCoq.Template.Universes.html#sort_family"><span class="id" title="inductive">sort_family</span></a></span>, names
+    <span class="inlinecode"><a class="idref" href="MetaCoq.Template.BasicAst.html#name"><span class="id" title="inductive">name</span></a></span>, cast kinds <span class="inlinecode"><a class="idref" href="MetaCoq.Template.BasicAst.html#cast_kind"><span class="id" title="inductive">cast_kind</span></a></span>, inductives <span class="inlinecode"><a class="idref" href="MetaCoq.Template.BasicAst.html#inductive"><span class="id" title="record">inductive</span></a></span> and primitive
+    projections <span class="inlinecode"><a class="idref" href="MetaCoq.Template.BasicAst.html#projection"><span class="id" title="definition">projection</span></a></span> and (co)-fixpoint blocks <span class="inlinecode"><a class="idref" href="MetaCoq.Template.BasicAst.html#mfixpoint"><span class="id" title="definition">mfixpoint</span></a></span> and
+    <span class="inlinecode"><a class="idref" href="MetaCoq.Template.BasicAst.html#def"><span class="id" title="record">def</span></a></span>. These are defined in the <span class="inlinecode"><span class="id" title="library">BasicAst</span></span> file.
+
+<div class="paragraph"> </div>
+
+<a name="lab118"></a><h2 class="section">Terms:</h2>
+
+
+<div class="paragraph"> </div>
+
+      The AST is <span class="inlinecode"><a class="idref" href="MetaCoq.Template.Ast.html#term"><span class="id" title="inductive">term</span></a></span> <span class="inlinecode">:</span> <span class="inlinecode"><span class="id" title="keyword">Set</span></span>
+
+<div class="paragraph"> </div>
+
+      Smart constructors <span class="inlinecode"><a class="idref" href="MetaCoq.Template.Ast.html#mkApp"><span class="id" title="definition">mkApp</span></a></span>, <span class="inlinecode"><a class="idref" href="MetaCoq.Template.Ast.html#mkApps"><span class="id" title="definition">mkApps</span></a></span> maintain the invariant
+    of no nested or empty n-ary applications.
+      List in fixpoints and cofixpoint should be non-empty.
+
+<div class="paragraph"> </div>
+
+<a name="lab119"></a><h2 class="section">Kernel interface: entries and declarations</h2>
+
+
+<div class="paragraph"> </div>
+
+      Kernel input declarations for constants <span class="inlinecode"><a class="idref" href="MetaCoq.Template.Ast.html#constant_entry"><span class="id" title="inductive">constant_entry</span></a></span> and mutual
+    inductives <span class="inlinecode"><a class="idref" href="MetaCoq.Template.Ast.html#mutual_inductive_entry"><span class="id" title="record">mutual_inductive_entry</span></a></span>. Kernel safe declarations for
+    constants <span class="inlinecode"><span class="id" title="var">constand_decl</span></span> and inductives <span class="inlinecode"><span class="id" title="var">minductive_decl</span></span>.
+
+<div class="paragraph"> </div>
+
+<a name="lab120"></a><h2 class="section">Environments of declarations</h2>
+
+
+<div class="paragraph"> </div>
+
+      The global environment <span class="inlinecode"><a class="idref" href="MetaCoq.Template.Ast.html#global_env_ext"><span class="id" title="definition">global_env_ext</span></a></span>: a list of <span class="inlinecode"><a class="idref" href="MetaCoq.Template.Ast.html#global_decl"><span class="id" title="inductive">global_decl</span></a></span> and
+    a universe graph <span class="inlinecode"><a class="idref" href="MetaCoq.Template.Universes.html#UContext.constraints"><span class="id" title="definition">constraints</span></a></span>.  
+</div>
+<div class="code">
+
+<br/>
+
+<br/>
+<span class="id" title="keyword">Inductive</span> <a name="term"><span class="id" title="inductive">term</span></a> : <span class="id" title="keyword">Set</span> :=<br/>
+| <a name="tRel"><span class="id" title="constructor">tRel</span></a> (<span class="id" title="var">n</span> : <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#nat"><span class="id" title="inductive">nat</span></a>)<br/>
+| <a name="tVar"><span class="id" title="constructor">tVar</span></a> (<span class="id" title="var">id</span> : <a class="idref" href="MetaCoq.Template.BasicAst.html#ident"><span class="id" title="definition">ident</span></a>) <br/>
+| <a name="tEvar"><span class="id" title="constructor">tEvar</span></a> (<span class="id" title="var">ev</span> : <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#nat"><span class="id" title="inductive">nat</span></a>) (<span class="id" title="var">args</span> : <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#list"><span class="id" title="inductive">list</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#term"><span class="id" title="inductive">term</span></a>)<br/>
+| <a name="tSort"><span class="id" title="constructor">tSort</span></a> (<span class="id" title="var">s</span> : <a class="idref" href="MetaCoq.Template.Universes.html#universe"><span class="id" title="definition">universe</span></a>)<br/>
+| <a name="tCast"><span class="id" title="constructor">tCast</span></a> (<span class="id" title="var">t</span> : <a class="idref" href="MetaCoq.Template.Ast.html#term"><span class="id" title="inductive">term</span></a>) (<span class="id" title="var">kind</span> : <a class="idref" href="MetaCoq.Template.BasicAst.html#cast_kind"><span class="id" title="inductive">cast_kind</span></a>) (<span class="id" title="var">v</span> : <a class="idref" href="MetaCoq.Template.Ast.html#term"><span class="id" title="inductive">term</span></a>)<br/>
+| <a name="tProd"><span class="id" title="constructor">tProd</span></a> (<span class="id" title="var">na</span> : <a class="idref" href="MetaCoq.Template.BasicAst.html#name"><span class="id" title="inductive">name</span></a>) (<span class="id" title="var">ty</span> : <a class="idref" href="MetaCoq.Template.Ast.html#term"><span class="id" title="inductive">term</span></a>) (<span class="id" title="var">body</span> : <a class="idref" href="MetaCoq.Template.Ast.html#term"><span class="id" title="inductive">term</span></a>)<br/>
+| <a name="tLambda"><span class="id" title="constructor">tLambda</span></a> (<span class="id" title="var">na</span> : <a class="idref" href="MetaCoq.Template.BasicAst.html#name"><span class="id" title="inductive">name</span></a>) (<span class="id" title="var">ty</span> : <a class="idref" href="MetaCoq.Template.Ast.html#term"><span class="id" title="inductive">term</span></a>) (<span class="id" title="var">body</span> : <a class="idref" href="MetaCoq.Template.Ast.html#term"><span class="id" title="inductive">term</span></a>)<br/>
+| <a name="tLetIn"><span class="id" title="constructor">tLetIn</span></a> (<span class="id" title="var">na</span> : <a class="idref" href="MetaCoq.Template.BasicAst.html#name"><span class="id" title="inductive">name</span></a>) (<span class="id" title="var">def</span> : <a class="idref" href="MetaCoq.Template.Ast.html#term"><span class="id" title="inductive">term</span></a>) (<span class="id" title="var">def_ty</span> : <a class="idref" href="MetaCoq.Template.Ast.html#term"><span class="id" title="inductive">term</span></a>) (<span class="id" title="var">body</span> : <a class="idref" href="MetaCoq.Template.Ast.html#term"><span class="id" title="inductive">term</span></a>)<br/>
+| <a name="tApp"><span class="id" title="constructor">tApp</span></a> (<span class="id" title="var">f</span> : <a class="idref" href="MetaCoq.Template.Ast.html#term"><span class="id" title="inductive">term</span></a>) (<span class="id" title="var">args</span> : <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#list"><span class="id" title="inductive">list</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#term"><span class="id" title="inductive">term</span></a>)<br/>
+| <a name="tConst"><span class="id" title="constructor">tConst</span></a> (<span class="id" title="var">c</span> : <a class="idref" href="MetaCoq.Template.BasicAst.html#kername"><span class="id" title="definition">kername</span></a>) (<span class="id" title="var">u</span> : <a class="idref" href="MetaCoq.Template.Universes.html#universe_instance"><span class="id" title="definition">universe_instance</span></a>)<br/>
+| <a name="tInd"><span class="id" title="constructor">tInd</span></a> (<span class="id" title="var">ind</span> : <a class="idref" href="MetaCoq.Template.BasicAst.html#inductive"><span class="id" title="record">inductive</span></a>) (<span class="id" title="var">u</span> : <a class="idref" href="MetaCoq.Template.Universes.html#universe_instance"><span class="id" title="definition">universe_instance</span></a>)<br/>
+| <a name="tConstruct"><span class="id" title="constructor">tConstruct</span></a> (<span class="id" title="var">ind</span> : <a class="idref" href="MetaCoq.Template.BasicAst.html#inductive"><span class="id" title="record">inductive</span></a>) (<span class="id" title="var">idx</span> : <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#nat"><span class="id" title="inductive">nat</span></a>) (<span class="id" title="var">u</span> : <a class="idref" href="MetaCoq.Template.Universes.html#universe_instance"><span class="id" title="definition">universe_instance</span></a>)<br/>
+| <a name="tCase"><span class="id" title="constructor">tCase</span></a> (<span class="id" title="var">ind_and_nbparams</span>: <a class="idref" href="MetaCoq.Template.BasicAst.html#inductive"><span class="id" title="record">inductive</span></a><a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#11c698c8685bb8ab1cf725545c085ac4"><span class="id" title="notation">×</span></a><a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#nat"><span class="id" title="inductive">nat</span></a>) (<span class="id" title="var">type_info</span>:<a class="idref" href="MetaCoq.Template.Ast.html#term"><span class="id" title="inductive">term</span></a>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">discr</span>:<a class="idref" href="MetaCoq.Template.Ast.html#term"><span class="id" title="inductive">term</span></a>) (<span class="id" title="var">branches</span> : <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#list"><span class="id" title="inductive">list</span></a> (<a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#nat"><span class="id" title="inductive">nat</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#11c698c8685bb8ab1cf725545c085ac4"><span class="id" title="notation">×</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#term"><span class="id" title="inductive">term</span></a>))<br/>
+| <a name="tProj"><span class="id" title="constructor">tProj</span></a> (<span class="id" title="var">proj</span> : <a class="idref" href="MetaCoq.Template.BasicAst.html#projection"><span class="id" title="definition">projection</span></a>) (<span class="id" title="var">t</span> : <a class="idref" href="MetaCoq.Template.Ast.html#term"><span class="id" title="inductive">term</span></a>)<br/>
+| <a name="tFix"><span class="id" title="constructor">tFix</span></a> (<span class="id" title="var">mfix</span> : <a class="idref" href="MetaCoq.Template.BasicAst.html#mfixpoint"><span class="id" title="definition">mfixpoint</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#term"><span class="id" title="inductive">term</span></a>) (<span class="id" title="var">idx</span> : <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#nat"><span class="id" title="inductive">nat</span></a>)<br/>
+| <a name="tCoFix"><span class="id" title="constructor">tCoFix</span></a> (<span class="id" title="var">mfix</span> : <a class="idref" href="MetaCoq.Template.BasicAst.html#mfixpoint"><span class="id" title="definition">mfixpoint</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#term"><span class="id" title="inductive">term</span></a>) (<span class="id" title="var">idx</span> : <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#nat"><span class="id" title="inductive">nat</span></a>).<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <a name="mkApps"><span class="id" title="definition">mkApps</span></a> <span class="id" title="var">t</span> <span class="id" title="var">us</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <a class="idref" href="MetaCoq.Template.Ast.html#us"><span class="id" title="variable">us</span></a> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#nil"><span class="id" title="constructor">nil</span></a> ⇒ <a class="idref" href="MetaCoq.Template.Ast.html#t"><span class="id" title="variable">t</span></a><br/>
+&nbsp;&nbsp;| <span class="id" title="var">_</span> ⇒ <span class="id" title="keyword">match</span> <a class="idref" href="MetaCoq.Template.Ast.html#t"><span class="id" title="variable">t</span></a> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <a class="idref" href="MetaCoq.Template.Ast.html#tApp"><span class="id" title="constructor">tApp</span></a> <span class="id" title="var">f</span> <span class="id" title="var">args</span> ⇒ <a class="idref" href="MetaCoq.Template.Ast.html#tApp"><span class="id" title="constructor">tApp</span></a> <span class="id" title="var">f</span> (<span class="id" title="var">args</span> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#bc347c51eaf667706ae54503b26d52c6"><span class="id" title="notation">++</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#us"><span class="id" title="variable">us</span></a>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">_</span> ⇒ <a class="idref" href="MetaCoq.Template.Ast.html#tApp"><span class="id" title="constructor">tApp</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#t"><span class="id" title="variable">t</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#us"><span class="id" title="variable">us</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span><br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <a name="mkApp"><span class="id" title="definition">mkApp</span></a> <span class="id" title="var">t</span> <span class="id" title="var">u</span> := <span class="id" title="keyword">Eval</span> <span class="id" title="var">cbn</span> <span class="id" title="tactic">in</span> <a class="idref" href="MetaCoq.Template.Ast.html#mkApps"><span class="id" title="definition">mkApps</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#t"><span class="id" title="variable">t</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Lists.List.html#ddd65c2f7ee73ecec433744948d846bb"><span class="id" title="notation">[</span></a><a class="idref" href="MetaCoq.Template.Ast.html#u"><span class="id" title="variable">u</span></a><a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Lists.List.html#ddd65c2f7ee73ecec433744948d846bb"><span class="id" title="notation">]</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <a name="isApp"><span class="id" title="definition">isApp</span></a> <span class="id" title="var">t</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <a class="idref" href="MetaCoq.Template.Ast.html#t"><span class="id" title="variable">t</span></a> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| <a class="idref" href="MetaCoq.Template.Ast.html#tApp"><span class="id" title="constructor">tApp</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span> ⇒ <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#true"><span class="id" title="constructor">true</span></a><br/>
+&nbsp;&nbsp;| <span class="id" title="var">_</span> ⇒ <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#false"><span class="id" title="constructor">false</span></a><br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <a name="isLambda"><span class="id" title="definition">isLambda</span></a> <span class="id" title="var">t</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <a class="idref" href="MetaCoq.Template.Ast.html#t"><span class="id" title="variable">t</span></a> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| <a class="idref" href="MetaCoq.Template.Ast.html#tLambda"><span class="id" title="constructor">tLambda</span></a> <span class="id" title="var">_</span> <span class="id" title="var">_</span> <span class="id" title="var">_</span> ⇒ <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#true"><span class="id" title="constructor">true</span></a><br/>
+&nbsp;&nbsp;| <span class="id" title="var">_</span> ⇒ <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#false"><span class="id" title="constructor">false</span></a><br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Well-formed terms: invariants which are not ensured by the OCaml type system 
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Inductive</span> <a name="wf"><span class="id" title="inductive">wf</span></a> : <a class="idref" href="MetaCoq.Template.Ast.html#term"><span class="id" title="inductive">term</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#1c93e43e07fbeaeb6a625cb6614beb5d"><span class="id" title="notation">→</span></a> <span class="id" title="keyword">Prop</span> :=<br/>
+| <a name="wf_tRel"><span class="id" title="constructor">wf_tRel</span></a> <span class="id" title="var">n</span> : <a class="idref" href="MetaCoq.Template.Ast.html#wf"><span class="id" title="inductive">wf</span></a> (<a class="idref" href="MetaCoq.Template.Ast.html#tRel"><span class="id" title="constructor">tRel</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#n"><span class="id" title="variable">n</span></a>)<br/>
+| <a name="wf_tVar"><span class="id" title="constructor">wf_tVar</span></a> <span class="id" title="var">id</span> : <a class="idref" href="MetaCoq.Template.Ast.html#wf"><span class="id" title="inductive">wf</span></a> (<a class="idref" href="MetaCoq.Template.Ast.html#tVar"><span class="id" title="constructor">tVar</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#id"><span class="id" title="variable">id</span></a>)<br/>
+| <a name="wf_tEvar"><span class="id" title="constructor">wf_tEvar</span></a> <span class="id" title="var">n</span> <span class="id" title="var">l</span> : <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Lists.List.html#Forall"><span class="id" title="inductive">Forall</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#wf"><span class="id" title="inductive">wf</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#l"><span class="id" title="variable">l</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#1c93e43e07fbeaeb6a625cb6614beb5d"><span class="id" title="notation">→</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#wf"><span class="id" title="inductive">wf</span></a> (<a class="idref" href="MetaCoq.Template.Ast.html#tEvar"><span class="id" title="constructor">tEvar</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#n"><span class="id" title="variable">n</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#l"><span class="id" title="variable">l</span></a>)<br/>
+| <a name="wf_tSort"><span class="id" title="constructor">wf_tSort</span></a> <span class="id" title="var">u</span> : <a class="idref" href="MetaCoq.Template.Ast.html#wf"><span class="id" title="inductive">wf</span></a> (<a class="idref" href="MetaCoq.Template.Ast.html#tSort"><span class="id" title="constructor">tSort</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#u"><span class="id" title="variable">u</span></a>)<br/>
+| <a name="wf_tCast"><span class="id" title="constructor">wf_tCast</span></a> <span class="id" title="var">t</span> <span class="id" title="var">k</span> <span class="id" title="var">t'</span> : <a class="idref" href="MetaCoq.Template.Ast.html#wf"><span class="id" title="inductive">wf</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#t"><span class="id" title="variable">t</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#1c93e43e07fbeaeb6a625cb6614beb5d"><span class="id" title="notation">→</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#wf"><span class="id" title="inductive">wf</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#t'"><span class="id" title="variable">t'</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#1c93e43e07fbeaeb6a625cb6614beb5d"><span class="id" title="notation">→</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#wf"><span class="id" title="inductive">wf</span></a> (<a class="idref" href="MetaCoq.Template.Ast.html#tCast"><span class="id" title="constructor">tCast</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#t"><span class="id" title="variable">t</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#k"><span class="id" title="variable">k</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#t'"><span class="id" title="variable">t'</span></a>)<br/>
+| <a name="wf_tProd"><span class="id" title="constructor">wf_tProd</span></a> <span class="id" title="var">na</span> <span class="id" title="var">t</span> <span class="id" title="var">b</span> : <a class="idref" href="MetaCoq.Template.Ast.html#wf"><span class="id" title="inductive">wf</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#t"><span class="id" title="variable">t</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#1c93e43e07fbeaeb6a625cb6614beb5d"><span class="id" title="notation">→</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#wf"><span class="id" title="inductive">wf</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#b"><span class="id" title="variable">b</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#1c93e43e07fbeaeb6a625cb6614beb5d"><span class="id" title="notation">→</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#wf"><span class="id" title="inductive">wf</span></a> (<a class="idref" href="MetaCoq.Template.Ast.html#tProd"><span class="id" title="constructor">tProd</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#na"><span class="id" title="variable">na</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#t"><span class="id" title="variable">t</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#b"><span class="id" title="variable">b</span></a>)<br/>
+| <a name="wf_tLambda"><span class="id" title="constructor">wf_tLambda</span></a> <span class="id" title="var">na</span> <span class="id" title="var">t</span> <span class="id" title="var">b</span> : <a class="idref" href="MetaCoq.Template.Ast.html#wf"><span class="id" title="inductive">wf</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#t"><span class="id" title="variable">t</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#1c93e43e07fbeaeb6a625cb6614beb5d"><span class="id" title="notation">→</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#wf"><span class="id" title="inductive">wf</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#b"><span class="id" title="variable">b</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#1c93e43e07fbeaeb6a625cb6614beb5d"><span class="id" title="notation">→</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#wf"><span class="id" title="inductive">wf</span></a> (<a class="idref" href="MetaCoq.Template.Ast.html#tLambda"><span class="id" title="constructor">tLambda</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#na"><span class="id" title="variable">na</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#t"><span class="id" title="variable">t</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#b"><span class="id" title="variable">b</span></a>)<br/>
+| <a name="wf_tLetIn"><span class="id" title="constructor">wf_tLetIn</span></a> <span class="id" title="var">na</span> <span class="id" title="var">t</span> <span class="id" title="var">b</span> <span class="id" title="var">b'</span> : <a class="idref" href="MetaCoq.Template.Ast.html#wf"><span class="id" title="inductive">wf</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#t"><span class="id" title="variable">t</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#1c93e43e07fbeaeb6a625cb6614beb5d"><span class="id" title="notation">→</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#wf"><span class="id" title="inductive">wf</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#b"><span class="id" title="variable">b</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#1c93e43e07fbeaeb6a625cb6614beb5d"><span class="id" title="notation">→</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#wf"><span class="id" title="inductive">wf</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#b'"><span class="id" title="variable">b'</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#1c93e43e07fbeaeb6a625cb6614beb5d"><span class="id" title="notation">→</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#wf"><span class="id" title="inductive">wf</span></a> (<a class="idref" href="MetaCoq.Template.Ast.html#tLetIn"><span class="id" title="constructor">tLetIn</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#na"><span class="id" title="variable">na</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#t"><span class="id" title="variable">t</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#b"><span class="id" title="variable">b</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#b'"><span class="id" title="variable">b'</span></a>)<br/>
+| <a name="wf_tApp"><span class="id" title="constructor">wf_tApp</span></a> <span class="id" title="var">t</span> <span class="id" title="var">u</span> : <a class="idref" href="MetaCoq.Template.Ast.html#isApp"><span class="id" title="definition">isApp</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#t"><span class="id" title="variable">t</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#6cd0f7b28b6092304087c7049437bb1a"><span class="id" title="notation">=</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#false"><span class="id" title="constructor">false</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#1c93e43e07fbeaeb6a625cb6614beb5d"><span class="id" title="notation">→</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#u"><span class="id" title="variable">u</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#a0a5068f83a704fcfbda8cd473a6cfea"><span class="id" title="notation">≠</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#nil"><span class="id" title="constructor">nil</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#1c93e43e07fbeaeb6a625cb6614beb5d"><span class="id" title="notation">→</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#wf"><span class="id" title="inductive">wf</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#t"><span class="id" title="variable">t</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#1c93e43e07fbeaeb6a625cb6614beb5d"><span class="id" title="notation">→</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Lists.List.html#Forall"><span class="id" title="inductive">Forall</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#wf"><span class="id" title="inductive">wf</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#u"><span class="id" title="variable">u</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#1c93e43e07fbeaeb6a625cb6614beb5d"><span class="id" title="notation">→</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#wf"><span class="id" title="inductive">wf</span></a> (<a class="idref" href="MetaCoq.Template.Ast.html#tApp"><span class="id" title="constructor">tApp</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#t"><span class="id" title="variable">t</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#u"><span class="id" title="variable">u</span></a>)<br/>
+| <a name="wf_tConst"><span class="id" title="constructor">wf_tConst</span></a> <span class="id" title="var">k</span> <span class="id" title="var">u</span> : <a class="idref" href="MetaCoq.Template.Ast.html#wf"><span class="id" title="inductive">wf</span></a> (<a class="idref" href="MetaCoq.Template.Ast.html#tConst"><span class="id" title="constructor">tConst</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#k"><span class="id" title="variable">k</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#u"><span class="id" title="variable">u</span></a>)<br/>
+| <a name="wf_tInd"><span class="id" title="constructor">wf_tInd</span></a> <span class="id" title="var">i</span> <span class="id" title="var">u</span> : <a class="idref" href="MetaCoq.Template.Ast.html#wf"><span class="id" title="inductive">wf</span></a> (<a class="idref" href="MetaCoq.Template.Ast.html#tInd"><span class="id" title="constructor">tInd</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#i"><span class="id" title="variable">i</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#u"><span class="id" title="variable">u</span></a>)<br/>
+| <a name="wf_tConstruct"><span class="id" title="constructor">wf_tConstruct</span></a> <span class="id" title="var">i</span> <span class="id" title="var">k</span> <span class="id" title="var">u</span> : <a class="idref" href="MetaCoq.Template.Ast.html#wf"><span class="id" title="inductive">wf</span></a> (<a class="idref" href="MetaCoq.Template.Ast.html#tConstruct"><span class="id" title="constructor">tConstruct</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#i"><span class="id" title="variable">i</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#k"><span class="id" title="variable">k</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#u"><span class="id" title="variable">u</span></a>)<br/>
+| <a name="wf_tCase"><span class="id" title="constructor">wf_tCase</span></a> <span class="id" title="var">ci</span> <span class="id" title="var">p</span> <span class="id" title="var">c</span> <span class="id" title="var">brs</span> : <a class="idref" href="MetaCoq.Template.Ast.html#wf"><span class="id" title="inductive">wf</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#p"><span class="id" title="variable">p</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#1c93e43e07fbeaeb6a625cb6614beb5d"><span class="id" title="notation">→</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#wf"><span class="id" title="inductive">wf</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#c"><span class="id" title="variable">c</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#1c93e43e07fbeaeb6a625cb6614beb5d"><span class="id" title="notation">→</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Lists.List.html#Forall"><span class="id" title="inductive">Forall</span></a> (<a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Program.Basics.html#compose"><span class="id" title="definition">Program.Basics.compose</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#wf"><span class="id" title="inductive">wf</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#snd"><span class="id" title="definition">snd</span></a>) <a class="idref" href="MetaCoq.Template.Ast.html#brs"><span class="id" title="variable">brs</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#1c93e43e07fbeaeb6a625cb6614beb5d"><span class="id" title="notation">→</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#wf"><span class="id" title="inductive">wf</span></a> (<a class="idref" href="MetaCoq.Template.Ast.html#tCase"><span class="id" title="constructor">tCase</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#ci"><span class="id" title="variable">ci</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#p"><span class="id" title="variable">p</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#c"><span class="id" title="variable">c</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#brs"><span class="id" title="variable">brs</span></a>)<br/>
+| <a name="wf_tProj"><span class="id" title="constructor">wf_tProj</span></a> <span class="id" title="var">p</span> <span class="id" title="var">t</span> : <a class="idref" href="MetaCoq.Template.Ast.html#wf"><span class="id" title="inductive">wf</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#t"><span class="id" title="variable">t</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#1c93e43e07fbeaeb6a625cb6614beb5d"><span class="id" title="notation">→</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#wf"><span class="id" title="inductive">wf</span></a> (<a class="idref" href="MetaCoq.Template.Ast.html#tProj"><span class="id" title="constructor">tProj</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#p"><span class="id" title="variable">p</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#t"><span class="id" title="variable">t</span></a>)<br/>
+| <a name="wf_tFix"><span class="id" title="constructor">wf_tFix</span></a> <span class="id" title="var">mfix</span> <span class="id" title="var">k</span> : <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Lists.List.html#Forall"><span class="id" title="inductive">Forall</span></a> (<span class="id" title="keyword">fun</span> <span class="id" title="var">def</span> ⇒ <a class="idref" href="MetaCoq.Template.Ast.html#wf"><span class="id" title="inductive">wf</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#def"><span class="id" title="variable">def</span></a>.(<a class="idref" href="MetaCoq.Template.BasicAst.html#dtype"><span class="id" title="projection">dtype</span></a>) <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#ba2b0e492d2b4675a0acf3ea92aabadd"><span class="id" title="notation">∧</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#wf"><span class="id" title="inductive">wf</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#def"><span class="id" title="variable">def</span></a>.(<a class="idref" href="MetaCoq.Template.BasicAst.html#dbody"><span class="id" title="projection">dbody</span></a>) <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#ba2b0e492d2b4675a0acf3ea92aabadd"><span class="id" title="notation">∧</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#isLambda"><span class="id" title="definition">isLambda</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#def"><span class="id" title="variable">def</span></a>.(<a class="idref" href="MetaCoq.Template.BasicAst.html#dbody"><span class="id" title="projection">dbody</span></a>) <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#6cd0f7b28b6092304087c7049437bb1a"><span class="id" title="notation">=</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#true"><span class="id" title="constructor">true</span></a>) <a class="idref" href="MetaCoq.Template.Ast.html#mfix"><span class="id" title="variable">mfix</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#1c93e43e07fbeaeb6a625cb6614beb5d"><span class="id" title="notation">→</span></a><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="MetaCoq.Template.Ast.html#wf"><span class="id" title="inductive">wf</span></a> (<a class="idref" href="MetaCoq.Template.Ast.html#tFix"><span class="id" title="constructor">tFix</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#mfix"><span class="id" title="variable">mfix</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#k"><span class="id" title="variable">k</span></a>)<br/>
+| <a name="wf_tCoFix"><span class="id" title="constructor">wf_tCoFix</span></a> <span class="id" title="var">mfix</span> <span class="id" title="var">k</span> : <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Lists.List.html#Forall"><span class="id" title="inductive">Forall</span></a> (<span class="id" title="keyword">fun</span> <span class="id" title="var">def</span> ⇒ <a class="idref" href="MetaCoq.Template.Ast.html#wf"><span class="id" title="inductive">wf</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#def"><span class="id" title="variable">def</span></a>.(<a class="idref" href="MetaCoq.Template.BasicAst.html#dtype"><span class="id" title="projection">dtype</span></a>) <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#ba2b0e492d2b4675a0acf3ea92aabadd"><span class="id" title="notation">∧</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#wf"><span class="id" title="inductive">wf</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#def"><span class="id" title="variable">def</span></a>.(<a class="idref" href="MetaCoq.Template.BasicAst.html#dbody"><span class="id" title="projection">dbody</span></a>)) <a class="idref" href="MetaCoq.Template.Ast.html#mfix"><span class="id" title="variable">mfix</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#1c93e43e07fbeaeb6a625cb6614beb5d"><span class="id" title="notation">→</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#wf"><span class="id" title="inductive">wf</span></a> (<a class="idref" href="MetaCoq.Template.Ast.html#tCoFix"><span class="id" title="constructor">tCoFix</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#mfix"><span class="id" title="variable">mfix</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#k"><span class="id" title="variable">k</span></a>).<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+<a name="lab121"></a><h2 class="section">Entries</h2>
+
+
+<div class="paragraph"> </div>
+
+  The kernel accepts these inputs and typechecks them to produce
+  declarations. Reflects <span class="inlinecode"><span class="id" title="var">kernel</span>/<span class="id" title="var">entries.mli</span></span>.
+
+<div class="paragraph"> </div>
+
+<a name="lab122"></a><h3 class="section">Constant and axiom entries</h3>
+
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Record</span> <a name="parameter_entry"><span class="id" title="record">parameter_entry</span></a> := {<br/>
+&nbsp;&nbsp;<a name="parameter_entry_type"><span class="id" title="projection">parameter_entry_type</span></a>      : <a class="idref" href="MetaCoq.Template.Ast.html#term"><span class="id" title="inductive">term</span></a>;<br/>
+&nbsp;&nbsp;<a name="parameter_entry_universes"><span class="id" title="projection">parameter_entry_universes</span></a> : <a class="idref" href="MetaCoq.Template.Universes.html#universes_decl"><span class="id" title="inductive">universes_decl</span></a> }.<br/>
+
+<br/>
+<span class="id" title="keyword">Record</span> <a name="definition_entry"><span class="id" title="record">definition_entry</span></a> := {<br/>
+&nbsp;&nbsp;<a name="definition_entry_type"><span class="id" title="projection">definition_entry_type</span></a>      : <a class="idref" href="MetaCoq.Template.Ast.html#term"><span class="id" title="inductive">term</span></a>;<br/>
+&nbsp;&nbsp;<a name="definition_entry_body"><span class="id" title="projection">definition_entry_body</span></a>      : <a class="idref" href="MetaCoq.Template.Ast.html#term"><span class="id" title="inductive">term</span></a>;<br/>
+&nbsp;&nbsp;<a name="definition_entry_universes"><span class="id" title="projection">definition_entry_universes</span></a> : <a class="idref" href="MetaCoq.Template.Universes.html#universes_decl"><span class="id" title="inductive">universes_decl</span></a>;<br/>
+&nbsp;&nbsp;<a name="definition_entry_opaque"><span class="id" title="projection">definition_entry_opaque</span></a>    : <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#bool"><span class="id" title="inductive">bool</span></a> }.<br/>
+
+<br/>
+<span class="id" title="keyword">Inductive</span> <a name="constant_entry"><span class="id" title="inductive">constant_entry</span></a> :=<br/>
+| <a name="ParameterEntry"><span class="id" title="constructor">ParameterEntry</span></a>  (<span class="id" title="var">p</span> : <a class="idref" href="MetaCoq.Template.Ast.html#parameter_entry"><span class="id" title="record">parameter_entry</span></a>)<br/>
+| <a name="DefinitionEntry"><span class="id" title="constructor">DefinitionEntry</span></a> (<span class="id" title="var">def</span> : <a class="idref" href="MetaCoq.Template.Ast.html#definition_entry"><span class="id" title="record">definition_entry</span></a>).<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+<a name="lab123"></a><h3 class="section">Inductive entries</h3>
+
+<div class="paragraph"> </div>
+
+ This is the representation of mutual inductives.
+    nearly copied from <span class="inlinecode"><span class="id" title="var">kernel</span>/<span class="id" title="var">entries.mli</span></span>
+
+<div class="paragraph"> </div>
+
+  Assume the following definition in concrete syntax:
+
+<div class="paragraph"> </div>
+
+<br/>
+<span class="inlinecode">&nbsp;&nbsp;<span class="id" title="keyword">Inductive</span> <span class="id" title="var">I1</span> (<a class="idref" href="MetaCoq.Checker.Typing.html#x1"><span class="id" title="variable">x1</span></a>:<a class="idref" href="MetaCoq.SafeChecker.PCUICSafeChecker.html#X1"><span class="id" title="variable">X1</span></a>) ... (<span class="id" title="var">xn</span>:<span class="id" title="var">Xn</span>) : <a class="idref" href="MetaCoq.PCUIC.PCUICConversion.html#A1"><span class="id" title="variable">A1</span></a> := <span class="id" title="var">c11</span> : <span class="id" title="var">T11</span> | ... | <span class="id" title="var">c1n1</span> : <span class="id" title="var">T1n1</span><br/>
+&nbsp;&nbsp;...<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">with</span>      <span class="id" title="var">Ip</span> (<a class="idref" href="MetaCoq.Checker.Typing.html#x1"><span class="id" title="variable">x1</span></a>:<a class="idref" href="MetaCoq.SafeChecker.PCUICSafeChecker.html#X1"><span class="id" title="variable">X1</span></a>) ... (<span class="id" title="var">xn</span>:<span class="id" title="var">Xn</span>) : <span class="id" title="var">Ap</span> := <span class="id" title="var">cp1</span> : <span class="id" title="var">Tp1</span>  ... | <span class="id" title="var">cpnp</span> : <span class="id" title="var">Tpnp</span>.
+<div class="paragraph"> </div>
+
+</span>
+<div class="paragraph"> </div>
+
+  then, in <span class="inlinecode"><a class="idref" href="MetaCoq.Checker.Normal.html#i"><span class="id" title="variable">i</span></a></span>th block, <span class="inlinecode"><a class="idref" href="MetaCoq.Template.Ast.html#mind_entry_params"><span class="id" title="projection">mind_entry_params</span></a></span> is <span class="inlinecode"><span class="id" title="var">xn</span>:<span class="id" title="var">Xn</span>;...;<a class="idref" href="MetaCoq.Checker.Typing.html#x1"><span class="id" title="variable">x1</span></a>:<a class="idref" href="MetaCoq.SafeChecker.PCUICSafeChecker.html#X1"><span class="id" title="variable">X1</span></a></span>;
+  <span class="inlinecode"><a class="idref" href="MetaCoq.Template.Ast.html#mind_entry_arity"><span class="id" title="projection">mind_entry_arity</span></a></span> is <span class="inlinecode"><span class="id" title="var">Ai</span></span>, defined in context <span class="inlinecode"><a class="idref" href="MetaCoq.Checker.Typing.html#x1"><span class="id" title="variable">x1</span></a>:<a class="idref" href="MetaCoq.SafeChecker.PCUICSafeChecker.html#X1"><span class="id" title="variable">X1</span></a>;...;<span class="id" title="var">xn</span>:<span class="id" title="var">Xn</span></span>;
+  <span class="inlinecode"><a class="idref" href="MetaCoq.Template.Ast.html#mind_entry_lc"><span class="id" title="projection">mind_entry_lc</span></a></span> is <span class="inlinecode"><span class="id" title="var">Ti1</span>;...;<span class="id" title="var">Tini</span></span>, defined in context
+  <span class="inlinecode"><span class="id" title="var">A'1</span>;...;<span class="id" title="var">A'p</span>;<a class="idref" href="MetaCoq.Checker.Typing.html#x1"><span class="id" title="variable">x1</span></a>:<a class="idref" href="MetaCoq.SafeChecker.PCUICSafeChecker.html#X1"><span class="id" title="variable">X1</span></a>;...;<span class="id" title="var">xn</span>:<span class="id" title="var">Xn</span></span> where <span class="inlinecode"><span class="id" title="var">A'i</span></span> is <span class="inlinecode"><span class="id" title="var">Ai</span></span> generalized over
+  <span class="inlinecode"><a class="idref" href="MetaCoq.Checker.Typing.html#x1"><span class="id" title="variable">x1</span></a>:<a class="idref" href="MetaCoq.SafeChecker.PCUICSafeChecker.html#X1"><span class="id" title="variable">X1</span></a>;...;<span class="id" title="var">xn</span>:<span class="id" title="var">Xn</span></span>.
+
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Inductive</span> <a name="local_entry"><span class="id" title="inductive">local_entry</span></a> : <span class="id" title="keyword">Set</span> :=<br/>
+| <a name="LocalDef"><span class="id" title="constructor">LocalDef</span></a> : <a class="idref" href="MetaCoq.Template.Ast.html#term"><span class="id" title="inductive">term</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#1c93e43e07fbeaeb6a625cb6614beb5d"><span class="id" title="notation">→</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#local_entry"><span class="id" title="inductive">local_entry</span></a> <br/>
+| <a name="LocalAssum"><span class="id" title="constructor">LocalAssum</span></a> : <a class="idref" href="MetaCoq.Template.Ast.html#term"><span class="id" title="inductive">term</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#1c93e43e07fbeaeb6a625cb6614beb5d"><span class="id" title="notation">→</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#local_entry"><span class="id" title="inductive">local_entry</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Record</span> <a name="one_inductive_entry"><span class="id" title="record">one_inductive_entry</span></a> : <span class="id" title="keyword">Set</span> := {<br/>
+&nbsp;&nbsp;<a name="mind_entry_typename"><span class="id" title="projection">mind_entry_typename</span></a> : <a class="idref" href="MetaCoq.Template.BasicAst.html#ident"><span class="id" title="definition">ident</span></a>;<br/>
+&nbsp;&nbsp;<a name="mind_entry_arity"><span class="id" title="projection">mind_entry_arity</span></a> : <a class="idref" href="MetaCoq.Template.Ast.html#term"><span class="id" title="inductive">term</span></a>;<br/>
+&nbsp;&nbsp;<a name="mind_entry_template"><span class="id" title="projection">mind_entry_template</span></a> : <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#bool"><span class="id" title="inductive">bool</span></a>; <br/>
+&nbsp;&nbsp;<a name="mind_entry_consnames"><span class="id" title="projection">mind_entry_consnames</span></a> : <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#list"><span class="id" title="inductive">list</span></a> <a class="idref" href="MetaCoq.Template.BasicAst.html#ident"><span class="id" title="definition">ident</span></a>;<br/>
+&nbsp;&nbsp;<a name="mind_entry_lc"><span class="id" title="projection">mind_entry_lc</span></a> : <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#list"><span class="id" title="inductive">list</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#term"><span class="id" title="inductive">term</span></a>  }.<br/>
+
+<br/>
+<span class="id" title="keyword">Record</span> <a name="mutual_inductive_entry"><span class="id" title="record">mutual_inductive_entry</span></a> := {<br/>
+&nbsp;&nbsp;<a name="mind_entry_record"><span class="id" title="projection">mind_entry_record</span></a>    : <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#option"><span class="id" title="inductive">option</span></a> (<a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#option"><span class="id" title="inductive">option</span></a> <a class="idref" href="MetaCoq.Template.BasicAst.html#ident"><span class="id" title="definition">ident</span></a>);<br/>
+&nbsp;&nbsp;<br/>
+&nbsp;&nbsp;<a name="mind_entry_finite"><span class="id" title="projection">mind_entry_finite</span></a>    : <a class="idref" href="MetaCoq.Template.BasicAst.html#recursivity_kind"><span class="id" title="inductive">recursivity_kind</span></a>;<br/>
+&nbsp;&nbsp;<a name="mind_entry_params"><span class="id" title="projection">mind_entry_params</span></a>    : <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#list"><span class="id" title="inductive">list</span></a> (<a class="idref" href="MetaCoq.Template.BasicAst.html#ident"><span class="id" title="definition">ident</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#11c698c8685bb8ab1cf725545c085ac4"><span class="id" title="notation">×</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#local_entry"><span class="id" title="inductive">local_entry</span></a>);<br/>
+&nbsp;&nbsp;<a name="mind_entry_inds"><span class="id" title="projection">mind_entry_inds</span></a>      : <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#list"><span class="id" title="inductive">list</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#one_inductive_entry"><span class="id" title="record">one_inductive_entry</span></a>;<br/>
+&nbsp;&nbsp;<a name="mind_entry_universes"><span class="id" title="projection">mind_entry_universes</span></a> : <a class="idref" href="MetaCoq.Template.Universes.html#universes_decl"><span class="id" title="inductive">universes_decl</span></a>;<br/>
+&nbsp;&nbsp;<a name="mind_entry_private"><span class="id" title="projection">mind_entry_private</span></a>   : <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#option"><span class="id" title="inductive">option</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#bool"><span class="id" title="inductive">bool</span></a><br/>
+&nbsp;&nbsp; }.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+<a name="lab124"></a><h2 class="section">Declarations</h2>
+
+<div class="paragraph"> </div>
+
+<a name="lab125"></a><h3 class="section">The context of De Bruijn indices</h3>
+
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Record</span> <a name="context_decl"><span class="id" title="record">context_decl</span></a> := <a name="mkdecl"><span class="id" title="constructor">mkdecl</span></a> {<br/>
+&nbsp;&nbsp;<a name="decl_name"><span class="id" title="projection">decl_name</span></a> : <a class="idref" href="MetaCoq.Template.BasicAst.html#name"><span class="id" title="inductive">name</span></a> ;<br/>
+&nbsp;&nbsp;<a name="decl_body"><span class="id" title="projection">decl_body</span></a> : <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#option"><span class="id" title="inductive">option</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#term"><span class="id" title="inductive">term</span></a> ;<br/>
+&nbsp;&nbsp;<a name="decl_type"><span class="id" title="projection">decl_type</span></a> : <a class="idref" href="MetaCoq.Template.Ast.html#term"><span class="id" title="inductive">term</span></a> }.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Local (de Bruijn) variable binding 
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Definition</span> <a name="vass"><span class="id" title="definition">vass</span></a> <span class="id" title="var">x</span> <span class="id" title="var">A</span> := {| <a class="idref" href="MetaCoq.Template.Ast.html#mkdecl"><span class="id" title="constructor">decl_name</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#mkdecl"><span class="id" title="constructor">:=</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#mkdecl"><span class="id" title="constructor">x</span></a><a class="idref" href="MetaCoq.Template.Ast.html#mkdecl"><span class="id" title="constructor">;</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#mkdecl"><span class="id" title="constructor">decl_body</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#mkdecl"><span class="id" title="constructor">:=</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#mkdecl"><span class="id" title="constructor">None</span></a><a class="idref" href="MetaCoq.Template.Ast.html#mkdecl"><span class="id" title="constructor">;</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#mkdecl"><span class="id" title="constructor">decl_type</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#mkdecl"><span class="id" title="constructor">:=</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#mkdecl"><span class="id" title="constructor">A</span></a> |}.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Local (de Bruijn) let-binding 
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Definition</span> <a name="vdef"><span class="id" title="definition">vdef</span></a> <span class="id" title="var">x</span> <span class="id" title="var">t</span> <span class="id" title="var">A</span> := {| <a class="idref" href="MetaCoq.Template.Ast.html#mkdecl"><span class="id" title="constructor">decl_name</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#mkdecl"><span class="id" title="constructor">:=</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#mkdecl"><span class="id" title="constructor">x</span></a><a class="idref" href="MetaCoq.Template.Ast.html#mkdecl"><span class="id" title="constructor">;</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#mkdecl"><span class="id" title="constructor">decl_body</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#mkdecl"><span class="id" title="constructor">:=</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#mkdecl"><span class="id" title="constructor">Some</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#mkdecl"><span class="id" title="constructor">t</span></a><a class="idref" href="MetaCoq.Template.Ast.html#mkdecl"><span class="id" title="constructor">;</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#mkdecl"><span class="id" title="constructor">decl_type</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#mkdecl"><span class="id" title="constructor">:=</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#mkdecl"><span class="id" title="constructor">A</span></a> |}.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Local (de Bruijn) context 
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Definition</span> <a name="context"><span class="id" title="definition">context</span></a> := <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#list"><span class="id" title="inductive">list</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#context_decl"><span class="id" title="record">context_decl</span></a>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Last declaration first 
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Definition</span> <a name="snoc"><span class="id" title="definition">snoc</span></a> {<span class="id" title="var">A</span>} (<span class="id" title="var">Γ</span> : <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#list"><span class="id" title="inductive">list</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#A"><span class="id" title="variable">A</span></a>) (<span class="id" title="var">d</span> : <a class="idref" href="MetaCoq.Template.Ast.html#A"><span class="id" title="variable">A</span></a>) := <a class="idref" href="MetaCoq.Template.Ast.html#d"><span class="id" title="variable">d</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#cbcf67aac0c2a85b8d93d37de9969adf"><span class="id" title="notation">::</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#1b004e48cd1f64e22d5c000cf0d7f047"><span class="id" title="variable">Γ</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Notation</span> <a name="b66601545ff7e22c5dcb7c86aa0cca21"><span class="id" title="notation">&quot;</span></a> Γ ,, d " := (<a class="idref" href="MetaCoq.Template.Ast.html#snoc"><span class="id" title="definition">snoc</span></a> <span class="id" title="var">Γ</span> <span class="id" title="var">d</span>) (<span class="id" title="tactic">at</span> <span class="id" title="keyword">level</span> 20, <span class="id" title="var">d</span> <span class="id" title="tactic">at</span> <span class="id" title="var">next</span> <span class="id" title="keyword">level</span>).<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+<a name="lab126"></a><h3 class="section">Environments</h3>
+
+<div class="paragraph"> </div>
+
+ See <span class="inlinecode"><a class="idref" href="MetaCoq.Template.Ast.html#one_inductive_body"><span class="id" title="record">one_inductive_body</span></a></span> from <span class="inlinecode"><span class="id" title="var">declarations.ml</span></span>. 
+</div>
+<div class="code">
+<span class="id" title="keyword">Record</span> <a name="one_inductive_body"><span class="id" title="record">one_inductive_body</span></a> := {<br/>
+&nbsp;&nbsp;<a name="ind_name"><span class="id" title="projection">ind_name</span></a> : <a class="idref" href="MetaCoq.Template.BasicAst.html#ident"><span class="id" title="definition">ident</span></a>;<br/>
+&nbsp;&nbsp;<a name="ind_type"><span class="id" title="projection">ind_type</span></a> : <a class="idref" href="MetaCoq.Template.Ast.html#term"><span class="id" title="inductive">term</span></a>; <br/>
+&nbsp;&nbsp;<a name="ind_kelim"><span class="id" title="projection">ind_kelim</span></a> : <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#list"><span class="id" title="inductive">list</span></a> <a class="idref" href="MetaCoq.Template.Universes.html#sort_family"><span class="id" title="inductive">sort_family</span></a>; <br/>
+&nbsp;&nbsp;<a name="ind_ctors"><span class="id" title="projection">ind_ctors</span></a> : <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#list"><span class="id" title="inductive">list</span></a> (<a class="idref" href="MetaCoq.Template.BasicAst.html#ident"><span class="id" title="definition">ident</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#11c698c8685bb8ab1cf725545c085ac4"><span class="id" title="notation">×</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#term"><span class="id" title="inductive">term</span></a> <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#11c698c8685bb8ab1cf725545c085ac4"><span class="id" title="notation">×</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#nat"><span class="id" title="inductive">nat</span></a> );<br/>
+&nbsp;&nbsp;<a name="ind_projs"><span class="id" title="projection">ind_projs</span></a> : <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#list"><span class="id" title="inductive">list</span></a> (<a class="idref" href="MetaCoq.Template.BasicAst.html#ident"><span class="id" title="definition">ident</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#11c698c8685bb8ab1cf725545c085ac4"><span class="id" title="notation">×</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#term"><span class="id" title="inductive">term</span></a>)  }.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+See <span class="inlinecode"><a class="idref" href="MetaCoq.Template.Ast.html#mutual_inductive_body"><span class="id" title="record">mutual_inductive_body</span></a></span> from <span class="inlinecode"><span class="id" title="var">declarations.ml</span></span>. 
+</div>
+<div class="code">
+<span class="id" title="keyword">Record</span> <a name="mutual_inductive_body"><span class="id" title="record">mutual_inductive_body</span></a> := {<br/>
+&nbsp;&nbsp;<a name="ind_finite"><span class="id" title="projection">ind_finite</span></a> : <a class="idref" href="MetaCoq.Template.BasicAst.html#recursivity_kind"><span class="id" title="inductive">recursivity_kind</span></a>;<br/>
+&nbsp;&nbsp;<a name="ind_npars"><span class="id" title="projection">ind_npars</span></a> : <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#nat"><span class="id" title="inductive">nat</span></a>;<br/>
+&nbsp;&nbsp;<a name="ind_params"><span class="id" title="projection">ind_params</span></a> : <a class="idref" href="MetaCoq.Template.Ast.html#context"><span class="id" title="definition">context</span></a>;<br/>
+&nbsp;&nbsp;<a name="ind_bodies"><span class="id" title="projection">ind_bodies</span></a> : <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#list"><span class="id" title="inductive">list</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#one_inductive_body"><span class="id" title="record">one_inductive_body</span></a>;<br/>
+&nbsp;&nbsp;<a name="ind_universes"><span class="id" title="projection">ind_universes</span></a> : <a class="idref" href="MetaCoq.Template.Universes.html#universes_decl"><span class="id" title="inductive">universes_decl</span></a> }.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+See <span class="inlinecode"><a class="idref" href="MetaCoq.Template.Ast.html#constant_body"><span class="id" title="record">constant_body</span></a></span> from <span class="inlinecode"><span class="id" title="var">declarations.ml</span></span> 
+</div>
+<div class="code">
+<span class="id" title="keyword">Record</span> <a name="constant_body"><span class="id" title="record">constant_body</span></a> := {<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a name="cst_type"><span class="id" title="projection">cst_type</span></a> : <a class="idref" href="MetaCoq.Template.Ast.html#term"><span class="id" title="inductive">term</span></a>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a name="cst_body"><span class="id" title="projection">cst_body</span></a> : <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#option"><span class="id" title="inductive">option</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#term"><span class="id" title="inductive">term</span></a>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a name="cst_universes"><span class="id" title="projection">cst_universes</span></a> : <a class="idref" href="MetaCoq.Template.Universes.html#universes_decl"><span class="id" title="inductive">universes_decl</span></a> }.<br/>
+
+<br/>
+<span class="id" title="keyword">Inductive</span> <a name="global_decl"><span class="id" title="inductive">global_decl</span></a> :=<br/>
+| <a name="ConstantDecl"><span class="id" title="constructor">ConstantDecl</span></a> : <a class="idref" href="MetaCoq.Template.BasicAst.html#kername"><span class="id" title="definition">kername</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#1c93e43e07fbeaeb6a625cb6614beb5d"><span class="id" title="notation">→</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#constant_body"><span class="id" title="record">constant_body</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#1c93e43e07fbeaeb6a625cb6614beb5d"><span class="id" title="notation">→</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#global_decl"><span class="id" title="inductive">global_decl</span></a><br/>
+| <a name="InductiveDecl"><span class="id" title="constructor">InductiveDecl</span></a> : <a class="idref" href="MetaCoq.Template.BasicAst.html#kername"><span class="id" title="definition">kername</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#1c93e43e07fbeaeb6a625cb6614beb5d"><span class="id" title="notation">→</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#mutual_inductive_body"><span class="id" title="record">mutual_inductive_body</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#1c93e43e07fbeaeb6a625cb6614beb5d"><span class="id" title="notation">→</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#global_decl"><span class="id" title="inductive">global_decl</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <a name="global_env"><span class="id" title="definition">global_env</span></a> := <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#list"><span class="id" title="inductive">list</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#global_decl"><span class="id" title="inductive">global_decl</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <a name="global_env_ext"><span class="id" title="definition">global_env_ext</span></a> := <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#list"><span class="id" title="inductive">list</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#global_decl"><span class="id" title="inductive">global_decl</span></a> <a class="idref" href="MetaCoq.Template.utils.html#52eddd74560fa276f934634af83eeaf4"><span class="id" title="notation">×</span></a> <a class="idref" href="MetaCoq.Template.Universes.html#universes_decl"><span class="id" title="inductive">universes_decl</span></a>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+<a name="lab127"></a><h3 class="section">Programs</h3>
+
+
+<div class="paragraph"> </div>
+
+  A set of declarations and a term, as produced by <span class="inlinecode"><span class="id" title="var">Quote</span></span> <span class="inlinecode"><span class="id" title="var">Recursively</span></span>. 
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Definition</span> <a name="program"><span class="id" title="definition">program</span></a> : <span class="id" title="keyword">Type</span> := <a class="idref" href="MetaCoq.Template.Ast.html#global_env"><span class="id" title="definition">global_env</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#11c698c8685bb8ab1cf725545c085ac4"><span class="id" title="notation">×</span></a> <a class="idref" href="MetaCoq.Template.Ast.html#term"><span class="id" title="inductive">term</span></a>.<br/>
+</div>
+</div>
+
+<div id="footer">
+<hr/><a href="index.html">Index</a><hr/>This page has been generated by <a href="http://coq.inria.fr/">coqdoc</a>
+</div>
+
+</div>
+
+</body>
+</html>

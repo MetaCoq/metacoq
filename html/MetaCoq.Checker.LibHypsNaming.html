@@ -1,0 +1,269 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<title>MetaCoq.Checker.LibHypsNaming</title>
+</head>
+
+<body>
+
+<div id="page">
+
+<div id="header">
+</div>
+
+<div id="main">
+
+<h1 class="libtitle">Library MetaCoq.Checker.LibHypsNaming</h1>
+
+<div class="code">
+
+<br/>
+</div>
+
+<div class="doc">
+This file is a set of tactical (mainly "!! t" where t is a tactic)
+    and tactics (!intros, !destruct etc), that automatically rename
+    new hypothesis after applying a tactic. The names chosen for
+    hypothesis is programmable using Ltac. See examples in comment
+    below.
+
+<div class="paragraph"> </div>
+
+    Comments welcome. 
+</div>
+<div class="code">
+
+<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+<a name="lab3"></a><h2 class="section">The custom renaming tactic</h2>
+
+  This tactic should be redefined along a coq development, it should
+  return a fresh name build from an hypothesis h and its type th. It
+  should fail if no name is found, so that the fallback scheme is
+  called.
+
+<div class="paragraph"> </div>
+
+  Typical use, in increasing order of complexity, approximatively
+  equivalent to the decreasing order of interest.
+
+<div class="paragraph"> </div>
+
+<pre>
+Ltac my_rename_hyp h th :=
+  match th with
+    | (ind1 _ _ _ _) =&gt; fresh "ind1"
+    | (ind2 _ _) =&gt; fresh "ind2"
+    | f1 _ _ = true =&gt; fresh "f_eq_true"
+    | f1 _ _ = false =&gt; fresh "f_eq_false"
+    | f1 _ _ = _ =&gt; fresh "f_eq"
+    | ind3 ?h ?x =&gt; fresh "ind3_" h
+    | ind3 _ ?x =&gt; fresh "ind3" (* if fresh h failed above *)
+
+    (* Sometime we want to look for the name of another hypothesis to
+       name h. For example here we want to rename hypothesis h into
+       "type_of_foo" if there is some H of type [type_of foo = Some
+       h]. *)
+    | type =&gt; (* See if we find something of which h is the type: *)
+              match reverse goal with
+              | H: type_of ?x = Some h =&gt; fresh "type_of_" x
+              end
+
+    | _ =&gt; previously_defined_renaming_tac1 th (* cumulative with previously defined renaming tactics *)
+    | _ =&gt; previously_defined_renaming_tac2 th
+  end.
+
+(* Overwrite the definition of rename_hyp using the ::= operator. :*)
+
+Ltac rename_hyp ::= my_rename_hyp.</pre>
+ 
+</div>
+<div class="code">
+
+<br/>
+
+<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+<a name="lab4"></a><h2 class="section">The default fallback renaming strategy</h2>
+
+  This is used if the user-defined renaming scheme fails to give a name
+  to a hypothesis. <span class="inlinecode"><span class="id" title="var">th</span></span> is the type of the hypothesis. 
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Inductive</span> <a name="HypPrefixes"><span class="id" title="inductive">HypPrefixes</span></a> :=<br/>
+&nbsp;&nbsp;| <a name="HypNone"><span class="id" title="constructor">HypNone</span></a><br/>
+&nbsp;&nbsp;| <a name="HypH_"><span class="id" title="constructor">HypH_</span></a><br/>
+&nbsp;&nbsp;| <a name="HypH"><span class="id" title="constructor">HypH</span></a>.<br/>
+
+<br/>
+
+<br/>
+
+<br/>
+
+<br/>
+
+<br/>
+
+<br/>
+
+<br/>
+
+<br/>
+
+<br/>
+
+<br/>
+
+<br/>
+
+<br/>
+
+<br/>
+
+<br/>
+
+<br/>
+<span class="id" title="keyword">Tactic Notation</span> "!!" <span class="id" title="var">tactic3</span>(<span class="id" title="var">Tac</span>) := (<span class="id" title="var">rename_new_hyps</span> <span class="id" title="var">Tac</span>).<br/>
+<span class="id" title="keyword">Tactic Notation</span> "!!" <span class="id" title="var">tactic3</span>(<span class="id" title="var">Tac</span>) <span class="id" title="keyword">constr</span>(<span class="id" title="var">h</span>) :=<br/>
+&nbsp;&nbsp;(<span class="id" title="var">rename_new_hyps</span> (<span class="id" title="var">Tac</span> <span class="id" title="var">h</span>)).<br/>
+
+<br/>
+
+<br/>
+
+<br/>
+
+<br/>
+<span class="id" title="keyword">Tactic Notation</span> "!!!" <span class="id" title="var">tactic3</span>(<span class="id" title="var">Tac</span>) := !! (<span class="id" title="var">subst_new_hyps</span> <span class="id" title="var">Tac</span>).<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+<a name="lab5"></a><h2 class="section">Renaming Tacticals</h2>
+
+<div class="paragraph"> </div>
+
+ <span class="inlinecode">!!</span> <span class="inlinecode"><span class="id" title="var">tactic</span></span> (resp. <span class="inlinecode">!!</span> <span class="inlinecode"><span class="id" title="var">tactic</span></span> <span class="inlinecode"><a class="idref" href="MetaCoq.Erasure.ErasureFunction.html#h"><span class="id" title="variable">h</span></a></span> and <font size=-2>&#9744;</font>:: tactic h1 h2) performs
+  <span class="inlinecode"><span class="id" title="var">tactic</span></span> (resp. <span class="inlinecode"><span class="id" title="var">tactic</span></span> <span class="inlinecode"><a class="idref" href="MetaCoq.Erasure.ErasureFunction.html#h"><span class="id" title="variable">h</span></a></span> and <span class="inlinecode"><span class="id" title="var">tactic</span></span> <span class="inlinecode"><a class="idref" href="MetaCoq.PCUIC.PCUICSafeLemmata.html#h1"><span class="id" title="variable">h1</span></a></span> <span class="inlinecode"><a class="idref" href="MetaCoq.PCUIC.PCUICSafeLemmata.html#h2"><span class="id" title="variable">h2</span></a></span>) and renames all new
+  hypothesis. During the process all previously known hypothesis (but
+  <span class="inlinecode"><a class="idref" href="MetaCoq.Erasure.ErasureFunction.html#h"><span class="id" title="variable">h</span></a></span>, <span class="inlinecode"><a class="idref" href="MetaCoq.PCUIC.PCUICSafeLemmata.html#h1"><span class="id" title="variable">h1</span></a></span> and <span class="inlinecode"><a class="idref" href="MetaCoq.PCUIC.PCUICSafeLemmata.html#h2"><span class="id" title="variable">h2</span></a></span>) are marked. It may happen that this mark get in
+  the way during the execution of <tt>tactic</tt>. We might try to find a
+  better way to mark hypothesis. 
+</div>
+<div class="code">
+
+<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+<a name="lab6"></a><h2 class="section">Specific redefinition of usual tactics.</h2>
+
+<div class="paragraph"> </div>
+
+ Note that for example !!induction h doesn not work because
+ "destruct" is not a ltac function by itself, it is already a
+ notation. Hence the special definitions below for this kind of
+ tactics: induction ddestruct inversion etc. 
+</div>
+<div class="code">
+
+<br/>
+
+<br/>
+ 
+<br/>
+&nbsp;<span class="id" title="keyword">Tactic Notation</span> "decomp" <span class="id" title="keyword">constr</span>(<span class="id" title="var">c</span>) :=<br/>
+&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="keyword">goal</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;| <span class="id" title="var">_</span> ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">h</span> := <span class="id" title="tactic">fresh</span> "h_decomp" <span class="id" title="tactic">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">pose</span> <span class="id" title="var">proof</span> <span class="id" title="var">c</span> <span class="id" title="keyword">as</span> <span class="id" title="var">h</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(!! (<span class="id" title="tactic">idtac</span>;<span class="id" title="var">decomp_ex</span> <span class="id" title="var">c</span>)); <span class="id" title="tactic">try</span> <span class="id" title="tactic">clear</span> <span class="id" title="var">h</span> <br/>
+&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Tactic Notation</span> "!induction" <span class="id" title="keyword">constr</span>(<span class="id" title="var">h</span>) := !! (<span class="id" title="tactic">induction</span> <span class="id" title="var">h</span>).<br/>
+<span class="id" title="keyword">Tactic Notation</span> "!destruct" <span class="id" title="keyword">constr</span>(<span class="id" title="var">h</span>) := !! (<span class="id" title="tactic">destruct</span> <span class="id" title="var">h</span>).<br/>
+
+<br/>
+<span class="id" title="keyword">Tactic Notation</span> "!destruct" <span class="id" title="keyword">constr</span>(<span class="id" title="var">h</span>) "!eqn:" <span class="id" title="var">ident</span>(<span class="id" title="var">id</span>) :=<br/>
+&nbsp;&nbsp;(!!(<span class="id" title="tactic">destruct</span> <span class="id" title="var">h</span> <span class="id" title="var">eqn</span>:<span class="id" title="var">id</span>; <span class="id" title="var">revert</span> <span class="id" title="var">id</span>));<span class="id" title="tactic">intro</span> <span class="id" title="var">id</span>.<br/>
+<span class="id" title="keyword">Tactic Notation</span> "!destruct" <span class="id" title="keyword">constr</span>(<span class="id" title="var">h</span>) "!eqn:?" := (!!(<span class="id" title="tactic">destruct</span> <span class="id" title="var">h</span> <span class="id" title="var">eqn</span>:?)).<br/>
+
+<br/>
+<span class="id" title="keyword">Tactic Notation</span> "!inversion" <span class="id" title="var">hyp</span>(<span class="id" title="var">h</span>) := !!! (<span class="id" title="tactic">inversion</span> <span class="id" title="var">h</span>).<br/>
+<span class="id" title="keyword">Tactic Notation</span> "!invclear" <span class="id" title="var">hyp</span>(<span class="id" title="var">h</span>) := !!! (<span class="id" title="tactic">inversion</span> <span class="id" title="var">h</span>;<span class="id" title="tactic">clear</span> <span class="id" title="var">h</span>).<br/>
+<span class="id" title="keyword">Tactic Notation</span> "!assert" <span class="id" title="keyword">constr</span>(<span class="id" title="var">h</span>) := !! (<span class="id" title="tactic">assert</span> <span class="id" title="var">h</span>).<br/>
+
+<br/>
+<span class="id" title="keyword">Tactic Notation</span> "!intros" := !!<span class="id" title="tactic">intros</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Tactic Notation</span> "!intro" := !!<span class="id" title="tactic">intro</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Tactic Notation</span> "!intros" "until" <span class="id" title="var">ident</span>(<span class="id" title="var">id</span>)<br/>
+&nbsp;&nbsp;:= <span class="id" title="tactic">intros</span> <span class="id" title="tactic">until</span> <span class="id" title="var">id</span>; !<span class="id" title="tactic">intros</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Tactic Notation</span> "!intros" <span class="id" title="var">simple_intropattern</span>(<span class="id" title="var">id1</span>)<br/>
+&nbsp;&nbsp;:= !! <span class="id" title="tactic">intro</span> <span class="id" title="var">id1</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Tactic Notation</span> "!intros" <span class="id" title="var">ident</span>(<span class="id" title="var">id1</span>) <span class="id" title="var">ident</span>(<span class="id" title="var">id2</span>)<br/>
+&nbsp;&nbsp;:= <span class="id" title="tactic">intros</span> <span class="id" title="var">id1</span> <span class="id" title="var">id2</span>; !<span class="id" title="tactic">intros</span>.<br/>
+<span class="id" title="keyword">Tactic Notation</span> "!intros" <span class="id" title="var">ident</span>(<span class="id" title="var">id1</span>) <span class="id" title="var">ident</span>(<span class="id" title="var">id2</span>) <span class="id" title="var">ident</span>(<span class="id" title="var">id3</span>)<br/>
+&nbsp;&nbsp;:= <span class="id" title="tactic">intros</span> <span class="id" title="var">id1</span> <span class="id" title="var">id2</span> <span class="id" title="var">id3</span>; !!<span class="id" title="tactic">intros</span>.<br/>
+<span class="id" title="keyword">Tactic Notation</span> "!intros" <span class="id" title="var">ident</span>(<span class="id" title="var">id1</span>) <span class="id" title="var">ident</span>(<span class="id" title="var">id2</span>) <span class="id" title="var">ident</span>(<span class="id" title="var">id3</span>) <span class="id" title="var">ident</span>(<span class="id" title="var">id4</span>)<br/>
+&nbsp;&nbsp;:= <span class="id" title="tactic">intros</span> <span class="id" title="var">id1</span> <span class="id" title="var">id2</span> <span class="id" title="var">id3</span> <span class="id" title="var">id4</span>; !!<span class="id" title="tactic">intros</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Tactic Notation</span> "!intros" <span class="id" title="var">ident</span>(<span class="id" title="var">id1</span>) <span class="id" title="var">ident</span>(<span class="id" title="var">id2</span>) <span class="id" title="var">ident</span>(<span class="id" title="var">id3</span>) <span class="id" title="var">ident</span>(<span class="id" title="var">id4</span>) <span class="id" title="var">ident</span>(<span class="id" title="var">id5</span>)<br/>
+&nbsp;&nbsp;:= <span class="id" title="tactic">intros</span> <span class="id" title="var">id1</span> <span class="id" title="var">id2</span> <span class="id" title="var">id3</span> <span class="id" title="var">id4</span> <span class="id" title="var">id5</span>; !!<span class="id" title="tactic">intros</span>.<br/>
+<span class="id" title="keyword">Tactic Notation</span> "!intros" <span class="id" title="var">ident</span>(<span class="id" title="var">id1</span>) <span class="id" title="var">ident</span>(<span class="id" title="var">id2</span>) <span class="id" title="var">ident</span>(<span class="id" title="var">id3</span>) <span class="id" title="var">ident</span>(<span class="id" title="var">id4</span>) <span class="id" title="var">ident</span>(<span class="id" title="var">id5</span>) <span class="id" title="var">ident</span>(<span class="id" title="var">id6</span>)<br/>
+&nbsp;&nbsp;:= <span class="id" title="tactic">intros</span> <span class="id" title="var">id1</span> <span class="id" title="var">id2</span> <span class="id" title="var">id3</span> <span class="id" title="var">id4</span> <span class="id" title="var">id5</span> <span class="id" title="var">id6</span>; !!<span class="id" title="tactic">intros</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Some more tactic not specially dedicated to renaming. 
+</div>
+<div class="code">
+
+<br/>
+
+<br/>
+
+<br/>
+
+<br/>
+
+<br/>
+</div>
+</div>
+
+<div id="footer">
+<hr/><a href="index.html">Index</a><hr/>This page has been generated by <a href="http://coq.inria.fr/">coqdoc</a>
+</div>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<title>MetaCoq.Translations.sigma</title>
+</head>
+
+<body>
+
+<div id="page">
+
+<div id="header">
+</div>
+
+<div id="main">
+
+<h1 class="libtitle">Library MetaCoq.Translations.sigma</h1>
+
+<div class="code">
+
+<br/>
+
+<br/>
+<span class="id" title="keyword">Record</span> <span class="id" title="var">sigma</span> <span class="id" title="var">A</span> <span class="id" title="var">B</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="var">mk_sig</span> { π1 : <span class="id" title="var">A</span> ; π2 : <span class="id" title="var">B</span> π1 }.<br/>
+
+<br/>
+
+<br/>
+<span class="id" title="keyword">Notation</span> &quot;{ x  &amp;&amp;  P }" := (<span class="id" title="var">sigma</span> (<span class="id" title="keyword">fun</span> <span class="id" title="var">x</span> ⇒ <span class="id" title="var">P</span>)) : <span class="id" title="var">type_scope</span>.<br/>
+<span class="id" title="keyword">Notation</span> &quot;{ t : A &amp;&amp; P }" := (<span class="id" title="var">sigma</span> <span class="id" title="var">A</span> (<span class="id" title="keyword">fun</span> <span class="id" title="var">t</span> ⇒ <span class="id" title="var">P</span>)) : <span class="id" title="var">type_scope</span>.<br/>
+<span class="id" title="keyword">Notation</span> &quot;( x ; y )" := (<span class="id" title="var">mk_sig</span> <span class="id" title="var">x</span> <span class="id" title="var">y</span>) : <span class="id" title="var">sigma_scope</span>.<br/>
+<span class="id" title="keyword">Notation</span> &quot;x .1" := (π1 <span class="id" title="var">x</span>) (<span class="id" title="tactic">at</span> <span class="id" title="keyword">level</span> 2, <span class="id" title="tactic">left</span> <span class="id" title="keyword">associativity</span>, <span class="id" title="var">format</span> "x .1") : <span class="id" title="var">sigma_scope</span>.<br/>
+<span class="id" title="keyword">Notation</span> &quot;x .2" := (π2 <span class="id" title="var">x</span>) (<span class="id" title="tactic">at</span> <span class="id" title="keyword">level</span> 2, <span class="id" title="tactic">left</span> <span class="id" title="keyword">associativity</span>, <span class="id" title="var">format</span> "x .2") : <span class="id" title="var">sigma_scope</span>.<br/>
+<span class="id" title="keyword">Notation</span> &quot;'∃' x .. y , p" := (<span class="id" title="var">sigma</span> <span class="id" title="var">_</span> (<span class="id" title="keyword">fun</span> <span class="id" title="var">x</span> ⇒ .. (<span class="id" title="var">sigma</span> <span class="id" title="var">_</span> (<span class="id" title="keyword">fun</span> <span class="id" title="var">y</span> ⇒ <span class="id" title="var">p</span>)) ..))<br/>
+&nbsp;&nbsp;(<span class="id" title="tactic">at</span> <span class="id" title="keyword">level</span> 200, <span class="id" title="var">x</span> <span class="id" title="var">binder</span>, <span class="id" title="tactic">right</span> <span class="id" title="keyword">associativity</span>,<br/>
+&nbsp;&nbsp;&nbsp;<span class="id" title="var">format</span> "'[' '∃'  '/  ' x  ..  y ,  '/  ' p ']'")<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: <span class="id" title="var">type_scope</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Notation</span> &quot; A × B " := (<span class="id" title="var">sigma</span> <span class="id" title="var">A</span> (<span class="id" title="keyword">fun</span> <span class="id" title="var">_</span> ⇒ <span class="id" title="var">B</span>)) (<span class="id" title="tactic">at</span> <span class="id" title="keyword">level</span> 80, <span class="id" title="tactic">right</span> <span class="id" title="keyword">associativity</span>) : <span class="id" title="var">type_scope</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <span class="id" title="var">pair</span> (<span class="id" title="var">typ1</span> <span class="id" title="var">typ2</span> <span class="id" title="var">t1</span> <span class="id" title="var">t2</span> : <span class="id" title="var">term</span>) : <span class="id" title="var">term</span><br/>
+&nbsp;&nbsp;:= <span class="id" title="var">tApp</span> <span class="id" title="var">tPair</span> [ <span class="id" title="var">typ1</span> ; <span class="id" title="var">typ2</span> ; <span class="id" title="var">t1</span> ; <span class="id" title="var">t2</span>].<br/>
+<span class="id" title="keyword">Definition</span> <span class="id" title="var">pack</span> (<span class="id" title="var">t</span> <span class="id" title="var">u</span> : <span class="id" title="var">term</span>) : <span class="id" title="var">term</span><br/>
+&nbsp;&nbsp;:= <span class="id" title="var">tApp</span> <span class="id" title="var">tSigma</span> [ <span class="id" title="var">t</span> ; <span class="id" title="var">u</span> ].<br/>
+<span class="id" title="keyword">Definition</span> <span class="id" title="var">sigma_ind</span> := <span class="id" title="keyword">Eval</span> <span class="id" title="tactic">compute</span> <span class="id" title="tactic">in</span> <span class="id" title="keyword">match</span> <span class="id" title="var">tSigma</span> <span class="id" title="keyword">with</span> <span class="id" title="var">tInd</span> <span class="id" title="var">i</span> <span class="id" title="var">_</span> ⇒ <span class="id" title="var">i</span> | <span class="id" title="var">_</span> ⇒  <span class="id" title="var">mkInd</span> "bug: sigma not an inductive"%<span class="id" title="var">string</span> 0 <span class="id" title="keyword">end</span>.<br/>
+<span class="id" title="keyword">Definition</span> <span class="id" title="var">proj1</span> (<span class="id" title="var">t</span> : <span class="id" title="var">term</span>) : <span class="id" title="var">term</span><br/>
+&nbsp;&nbsp;:= <span class="id" title="var">tProj</span> (<span class="id" title="var">sigma_ind</span>, 2, 0) <span class="id" title="var">t</span>.<br/>
+<span class="id" title="keyword">Definition</span> <span class="id" title="var">proj2</span> (<span class="id" title="var">t</span> : <span class="id" title="var">term</span>) : <span class="id" title="var">term</span><br/>
+&nbsp;&nbsp;:= <span class="id" title="var">tProj</span> (<span class="id" title="var">sigma_ind</span>, 2, 1) <span class="id" title="var">t</span>.<br/>
+<span class="id" title="keyword">Definition</span> <span class="id" title="var">proj</span> (<span class="id" title="var">b</span> : <span class="id" title="var">bool</span>) (<span class="id" title="var">t</span> : <span class="id" title="var">term</span>) : <span class="id" title="var">term</span><br/>
+&nbsp;&nbsp;:= <span class="id" title="var">tProj</span> (<span class="id" title="var">sigma_ind</span>, 2, <span class="id" title="keyword">if</span> <span class="id" title="var">b</span> <span class="id" title="keyword">then</span> 0 <span class="id" title="keyword">else</span> 1) <span class="id" title="var">t</span>.<br/>
+</div>
+</div>
+
+<div id="footer">
+<hr/><a href="index.html">Index</a><hr/>This page has been generated by <a href="http://coq.inria.fr/">coqdoc</a>
+</div>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<title>MetaCoq.PCUIC.PCUICErasedTerm</title>
+</head>
+
+<body>
+
+<div id="page">
+
+<div id="header">
+</div>
+
+<div id="main">
+
+<h1 class="libtitle">Library MetaCoq.PCUIC.PCUICErasedTerm</h1>
+
+<div class="code">
+
+<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Erased terms
+
+<div class="paragraph"> </div>
+
+  These are the terms produced by erasure:
+  compared to kernel terms, all proofs are translated to <span class="inlinecode"><a class="idref" href="MetaCoq.Erasure.EAst.html#tBox"><span class="id" title="constructor">tBox</span></a></span> and
+  casts are removed.
+
+</div>
+<div class="code">
+<span class="id" title="keyword">Inductive</span> <span class="id" title="var">term</span> : <span class="id" title="keyword">Set</span> :=<br/>
+| <span class="id" title="var">tBox</span> (<span class="id" title="var">t</span> : <span class="id" title="var">term</span>) <br/>
+| <span class="id" title="var">tRel</span> (<span class="id" title="var">n</span> : <span class="id" title="var">nat</span>)<br/>
+| <span class="id" title="var">tVar</span> (<span class="id" title="var">id</span> : <span class="id" title="var">ident</span>) <br/>
+| <span class="id" title="var">tEvar</span> (<span class="id" title="var">ev</span> : <span class="id" title="var">nat</span>) (<span class="id" title="var">args</span> : <span class="id" title="var">list</span> <span class="id" title="var">term</span>)<br/>
+| <span class="id" title="var">tSort</span> (<span class="id" title="var">s</span> : <span class="id" title="var">universe</span>)<br/>
+| <span class="id" title="var">tProd</span> (<span class="id" title="var">na</span> : <span class="id" title="var">name</span>) (<span class="id" title="var">ty</span> : <span class="id" title="var">term</span>) (<span class="id" title="var">body</span> : <span class="id" title="var">term</span>)<br/>
+| <span class="id" title="var">tLambda</span> (<span class="id" title="var">na</span> : <span class="id" title="var">name</span>) (<span class="id" title="var">ty</span> : <span class="id" title="var">term</span>) (<span class="id" title="var">body</span> : <span class="id" title="var">term</span>)<br/>
+| <span class="id" title="var">tLetIn</span> (<span class="id" title="var">na</span> : <span class="id" title="var">name</span>) (<span class="id" title="var">def</span> : <span class="id" title="var">term</span>) (<span class="id" title="var">def_ty</span> : <span class="id" title="var">term</span>) (<span class="id" title="var">body</span> : <span class="id" title="var">term</span>)<br/>
+| <span class="id" title="var">tApp</span> (<span class="id" title="var">f</span> : <span class="id" title="var">term</span>) (<span class="id" title="var">args</span> : <span class="id" title="var">list</span> <span class="id" title="var">term</span>)<br/>
+| <span class="id" title="var">tConst</span> (<span class="id" title="var">c</span> : <span class="id" title="var">kername</span>) (<span class="id" title="var">u</span> : <span class="id" title="var">universe_instance</span>)<br/>
+| <span class="id" title="var">tInd</span> (<span class="id" title="var">ind</span> : <span class="id" title="var">inductive</span>) (<span class="id" title="var">u</span> : <span class="id" title="var">universe_instance</span>)<br/>
+| <span class="id" title="var">tConstruct</span> (<span class="id" title="var">ind</span> : <span class="id" title="var">inductive</span>) (<span class="id" title="var">idx</span> : <span class="id" title="var">nat</span>) (<span class="id" title="var">u</span> : <span class="id" title="var">universe_instance</span>)<br/>
+| <span class="id" title="var">tCase</span> (<span class="id" title="var">ind_and_nbparams</span>: <span class="id" title="var">inductive</span>×<span class="id" title="var">nat</span>) (<span class="id" title="var">type_info</span>:<span class="id" title="var">term</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">discr</span>:<span class="id" title="var">term</span>) (<span class="id" title="var">branches</span> : <span class="id" title="var">list</span> (<span class="id" title="var">nat</span> × <span class="id" title="var">term</span>))<br/>
+| <span class="id" title="var">tProj</span> (<span class="id" title="var">proj</span> : <span class="id" title="var">projection</span>) (<span class="id" title="var">t</span> : <span class="id" title="var">term</span>)<br/>
+| <span class="id" title="var">tFix</span> (<span class="id" title="var">mfix</span> : <span class="id" title="var">mfixpoint</span> <span class="id" title="var">term</span>) (<span class="id" title="var">idx</span> : <span class="id" title="var">nat</span>)<br/>
+| <span class="id" title="var">tCoFix</span> (<span class="id" title="var">mfix</span> : <span class="id" title="var">mfixpoint</span> <span class="id" title="var">term</span>) (<span class="id" title="var">idx</span> : <span class="id" title="var">nat</span>).<br/>
+</div>
+</div>
+
+<div id="footer">
+<hr/><a href="index.html">Index</a><hr/>This page has been generated by <a href="http://coq.inria.fr/">coqdoc</a>
+</div>
+
+</div>
+
+</body>
+</html>

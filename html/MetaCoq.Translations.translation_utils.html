@@ -1,0 +1,426 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<title>MetaCoq.Translations.translation_utils</title>
+</head>
+
+<body>
+
+<div id="page">
+
+<div id="header">
+</div>
+
+<div id="main">
+
+<h1 class="libtitle">Library MetaCoq.Translations.translation_utils</h1>
+
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Axiom</span> <span class="id" title="var">todo</span> : <span class="id" title="keyword">∀</span> {<span class="id" title="var">A</span>}, <span class="id" title="var">A</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <span class="id" title="var">tsl_table</span> := <span class="id" title="var">list</span> (<span class="id" title="var">global_reference</span> × <span class="id" title="var">term</span>).<br/>
+
+<br/>
+<span class="id" title="keyword">Fixpoint</span> <span class="id" title="var">lookup_tsl_table</span> (<span class="id" title="var">E</span> : <span class="id" title="var">tsl_table</span>) (<span class="id" title="var">gr</span> : <span class="id" title="var">global_reference</span>)<br/>
+&nbsp;&nbsp;: <span class="id" title="var">option</span> <span class="id" title="var">term</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">E</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">nil</span> ⇒ <span class="id" title="var">None</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">hd</span> :: <span class="id" title="var">tl</span> ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">if</span> <span class="id" title="var">gref_eq_dec</span> <span class="id" title="var">gr</span> (<span class="id" title="var">fst</span> <span class="id" title="var">hd</span>) <span class="id" title="keyword">then</span> <span class="id" title="var">Some</span> (<span class="id" title="var">snd</span> <span class="id" title="var">hd</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">else</span> <span class="id" title="var">lookup_tsl_table</span> <span class="id" title="var">tl</span> <span class="id" title="var">gr</span><br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <span class="id" title="var">tsl_context</span> := (<span class="id" title="var">global_env_ext</span> × <span class="id" title="var">tsl_table</span>)%<span class="id" title="keyword">type</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <span class="id" title="var">emptyTC</span> : <span class="id" title="var">tsl_context</span> := (<span class="id" title="var">empty_ext</span> [], []).<br/>
+
+<br/>
+<span class="id" title="keyword">Inductive</span> <span class="id" title="var">tsl_error</span> :=<br/>
+| <span class="id" title="var">NotEnoughFuel</span><br/>
+| <span class="id" title="var">TranslationNotFound</span> (<span class="id" title="var">id</span> : <span class="id" title="var">ident</span>)<br/>
+| <span class="id" title="var">TranslationNotHandeled</span><br/>
+| <span class="id" title="var">TypingError</span> (<span class="id" title="var">t</span> : <span class="id" title="var">type_error</span>).<br/>
+
+<br/>
+<span class="id" title="keyword">Inductive</span> <span class="id" title="var">tsl_result</span> <span class="id" title="var">A</span> :=<br/>
+| <span class="id" title="var">Success</span> : <span class="id" title="var">A</span> → <span class="id" title="var">tsl_result</span> <span class="id" title="var">A</span><br/>
+| <span class="id" title="var">Error</span> : <span class="id" title="var">tsl_error</span> → <span class="id" title="var">tsl_result</span> <span class="id" title="var">A</span>.<br/>
+
+<br/>
+
+<br/>
+<span class="id" title="keyword">Instance</span> <span class="id" title="var">tsl_monad</span> : <span class="id" title="var">Monad</span> <span class="id" title="var">tsl_result</span> :=<br/>
+&nbsp;&nbsp;{| <span class="id" title="var">ret</span> <span class="id" title="var">A</span> <span class="id" title="var">a</span> := <span class="id" title="var">Success</span> <span class="id" title="var">a</span> ;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">bind</span> <span class="id" title="var">A</span> <span class="id" title="var">B</span> <span class="id" title="var">m</span> <span class="id" title="var">f</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">m</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Success</span> <span class="id" title="var">a</span> ⇒ <span class="id" title="var">f</span> <span class="id" title="var">a</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Error</span> <span class="id" title="var">e</span> ⇒ <span class="id" title="var">Error</span> <span class="id" title="var">e</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span><br/>
+&nbsp;&nbsp;|}.<br/>
+
+<br/>
+<span class="id" title="keyword">Instance</span> <span class="id" title="var">monad_exc</span> : <span class="id" title="var">MonadExc</span> <span class="id" title="var">tsl_error</span> <span class="id" title="var">tsl_result</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id" title="var">raise</span> <span class="id" title="var">A</span> <span class="id" title="var">e</span> := <span class="id" title="var">Error</span> <span class="id" title="var">e</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">catch</span> <span class="id" title="var">A</span> <span class="id" title="var">m</span> <span class="id" title="var">f</span> :=<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">m</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Success</span> <span class="id" title="var">a</span> ⇒ <span class="id" title="var">m</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Error</span> <span class="id" title="var">t</span> ⇒ <span class="id" title="var">f</span> <span class="id" title="var">t</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span><br/>
+&nbsp;&nbsp;}.<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <span class="id" title="var">lookup_tsl_table'</span> <span class="id" title="var">E</span> <span class="id" title="var">gr</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">lookup_tsl_table</span> <span class="id" title="var">E</span> <span class="id" title="var">gr</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">Some</span> <span class="id" title="var">t</span> ⇒ <span class="id" title="var">ret</span> <span class="id" title="var">t</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">None</span> ⇒ <span class="id" title="var">raise</span> (<span class="id" title="var">TranslationNotFound</span> (<span class="id" title="var">string_of_gref</span> <span class="id" title="var">gr</span>))<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Class</span> <span class="id" title="var">Translation</span> :=<br/>
+&nbsp;&nbsp;{ <span class="id" title="var">tsl_id</span> : <span class="id" title="var">ident</span> → <span class="id" title="var">ident</span> ;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tsl_tm</span> : <span class="id" title="var">tsl_context</span> → <span class="id" title="var">term</span> → <span class="id" title="var">tsl_result</span> <span class="id" title="var">term</span> ;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tsl_ty</span> : <span class="id" title="var">option</span> (<span class="id" title="var">tsl_context</span> → <span class="id" title="var">term</span> → <span class="id" title="var">tsl_result</span> <span class="id" title="var">term</span>) ;<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tsl_ind</span> : <span class="id" title="var">tsl_context</span> → <span class="id" title="var">string</span> → <span class="id" title="var">kername</span> → <span class="id" title="var">mutual_inductive_body</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ <span class="id" title="var">tsl_result</span> (<span class="id" title="var">tsl_table</span> × <span class="id" title="var">list</span> <span class="id" title="var">mutual_inductive_body</span>) }.<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <span class="id" title="var">tsl_ident</span> (<span class="id" title="var">id</span> : <span class="id" title="var">ident</span>) : <span class="id" title="var">ident</span> := (<span class="id" title="var">id</span> ++ "ᵗ")%<span class="id" title="var">string</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <span class="id" title="var">tsl_name</span> <span class="id" title="var">tsl_ident</span> <span class="id" title="var">n</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">n</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">nAnon</span> ⇒ <span class="id" title="var">nAnon</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">nNamed</span> <span class="id" title="var">n</span> ⇒ <span class="id" title="var">nNamed</span> (<span class="id" title="var">tsl_ident</span> <span class="id" title="var">n</span>)<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <span class="id" title="var">tmDebug</span> {<span class="id" title="var">A</span>} : <span class="id" title="var">A</span> → <span class="id" title="var">TemplateMonad</span> <span class="id" title="var">unit</span><br/>
+&nbsp;&nbsp;:= <span class="id" title="var">tmPrint</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <span class="id" title="var">add_global_decl</span> <span class="id" title="var">d</span> (<span class="id" title="var">Σ</span> : <span class="id" title="var">global_env_ext</span>) : <span class="id" title="var">global_env_ext</span><br/>
+&nbsp;&nbsp;:= (<span class="id" title="var">d</span> :: <span class="id" title="var">Σ</span>.1, <span class="id" title="var">Σ</span>.2).<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <span class="id" title="var">Translate</span> {<span class="id" title="var">tsl</span> : <span class="id" title="var">Translation</span>} (<span class="id" title="var">ΣE</span> : <span class="id" title="var">tsl_context</span>) (<span class="id" title="var">id</span> : <span class="id" title="var">ident</span>)<br/>
+&nbsp;&nbsp;: <span class="id" title="var">TemplateMonad</span> <span class="id" title="var">tsl_context</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="var">tmDebug</span> ("Translate" ++ <span class="id" title="var">id</span>);;<br/>
+&nbsp;&nbsp;<span class="id" title="var">gr</span> &lt;- <span class="id" title="var">tmAbout</span> <span class="id" title="var">id</span> ;;<br/>
+&nbsp;&nbsp;<span class="id" title="var">tmDebug</span> <span class="id" title="var">gr</span>;;<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">gr</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">None</span> ⇒ <span class="id" title="var">fail_nf</span> (<span class="id" title="var">id</span> ++ " not found")<br/>
+&nbsp;&nbsp;| <span class="id" title="var">Some</span> (<span class="id" title="var">ConstructRef</span> (<span class="id" title="var">mkInd</span> <span class="id" title="var">kn</span> <span class="id" title="var">n</span>) <span class="id" title="var">_</span>)<br/>
+&nbsp;&nbsp;| <span class="id" title="var">Some</span> (<span class="id" title="var">IndRef</span> (<span class="id" title="var">mkInd</span> <span class="id" title="var">kn</span> <span class="id" title="var">n</span>)) ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">mp</span> &lt;- <span class="id" title="var">tmCurrentModPath</span> <span class="id" title="var">tt</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">d</span> &lt;- <span class="id" title="var">tmQuoteInductive</span> <span class="id" title="var">id</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">d'</span> &lt;- <span class="id" title="var">tmEval</span> <span class="id" title="tactic">lazy</span> (<span class="id" title="var">tsl_ind</span> <span class="id" title="var">ΣE</span> <span class="id" title="var">mp</span> <span class="id" title="var">kn</span> <span class="id" title="var">d</span>) ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">d'</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Error</span> <span class="id" title="var">e</span> ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">print_nf</span> <span class="id" title="var">e</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">fail_nf</span> ("Translation error during the translation of the inductive " ++ <span class="id" title="var">id</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Success</span> (<span class="id" title="var">E</span>, <span class="id" title="var">decls</span>) ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">monad_iter</span> <span class="id" title="var">tmMkInductive'</span> <span class="id" title="var">decls</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">Σ'</span> := <span class="id" title="var">add_global_decl</span> (<span class="id" title="var">InductiveDecl</span> <span class="id" title="var">kn</span> <span class="id" title="var">d</span>) (<span class="id" title="var">fst</span> <span class="id" title="var">ΣE</span>) <span class="id" title="tactic">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">E'</span> := (<span class="id" title="var">E</span> ++ (<span class="id" title="var">snd</span> <span class="id" title="var">ΣE</span>))%<span class="id" title="var">list</span> <span class="id" title="tactic">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Σ'</span> &lt;- <span class="id" title="var">tmEval</span> <span class="id" title="tactic">lazy</span> <span class="id" title="var">Σ'</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">E'</span> &lt;- <span class="id" title="var">tmEval</span> <span class="id" title="tactic">lazy</span> <span class="id" title="var">E'</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmMsg</span> (<span class="id" title="var">kn</span> ++ " has been translated.") ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">ret</span> (<span class="id" title="var">Σ'</span>, <span class="id" title="var">E'</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<br/>
+&nbsp;&nbsp;| <span class="id" title="var">Some</span> (<span class="id" title="var">ConstRef</span> <span class="id" title="var">kn</span>) ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">e</span> &lt;- <span class="id" title="var">tmQuoteConstant</span> <span class="id" title="var">kn</span> <span class="id" title="var">true</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">e</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">ParameterEntry</span> <span class="id" title="var">_</span> ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">fail_nf</span> (<span class="id" title="var">id</span> ++ " is an axiom, not a definition. Use Implement Existing.")<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">DefinitionEntry</span> {| <span class="id" title="var">definition_entry_type</span> := <span class="id" title="var">A</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">definition_entry_universes</span> := <span class="id" title="var">univs</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">definition_entry_body</span> := <span class="id" title="var">t</span> |} ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmDebug</span> <span class="id" title="var">t</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">t'</span> &lt;- <span class="id" title="var">tmEval</span> <span class="id" title="tactic">lazy</span> (<span class="id" title="var">tsl_tm</span> <span class="id" title="var">ΣE</span> <span class="id" title="var">t</span>) ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmDebug</span> <span class="id" title="var">t'</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">t'</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Error</span> <span class="id" title="var">e</span> ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">print_nf</span> <span class="id" title="var">e</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">fail_nf</span> ("Translation error during the translation of the body of " ++ <span class="id" title="var">id</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Success</span> <span class="id" title="var">t'</span> ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">id'</span> &lt;- <span class="id" title="var">tmEval</span> <span class="id" title="var">all</span> (<span class="id" title="var">tsl_id</span> <span class="id" title="var">id</span>) ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmDebug</span> "here" ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmDebug</span> <span class="id" title="var">id'</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmDebug</span> <span class="id" title="var">t'</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmMkDefinition</span> <span class="id" title="var">id'</span> <span class="id" title="var">t'</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmDebug</span> "doneu" ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">decl</span> := {| <span class="id" title="var">cst_universes</span> := <span class="id" title="var">univs</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">cst_type</span> := <span class="id" title="var">A</span>; <span class="id" title="var">cst_body</span> := <span class="id" title="var">Some</span> <span class="id" title="var">t</span> |} <span class="id" title="tactic">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">Σ'</span> := <span class="id" title="var">add_global_decl</span> (<span class="id" title="var">ConstantDecl</span> <span class="id" title="var">kn</span> <span class="id" title="var">decl</span>) (<span class="id" title="var">fst</span> <span class="id" title="var">ΣE</span>) <span class="id" title="tactic">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">E'</span> := (<span class="id" title="var">ConstRef</span> <span class="id" title="var">kn</span>, <span class="id" title="var">tConst</span> <span class="id" title="var">id'</span> []) :: (<span class="id" title="var">snd</span> <span class="id" title="var">ΣE</span>) <span class="id" title="tactic">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Σ'</span> &lt;- <span class="id" title="var">tmEval</span> <span class="id" title="tactic">lazy</span> <span class="id" title="var">Σ'</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">E'</span> &lt;- <span class="id" title="var">tmEval</span> <span class="id" title="tactic">lazy</span> <span class="id" title="var">E'</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">print_nf</span> (<span class="id" title="var">id</span> ++ " has been translated as " ++ <span class="id" title="var">id'</span>) ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">ret</span> (<span class="id" title="var">Σ'</span>, <span class="id" title="var">E'</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span><br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <span class="id" title="var">Implement</span> {<span class="id" title="var">tsl</span> : <span class="id" title="var">Translation</span>} (<span class="id" title="var">ΣE</span> : <span class="id" title="var">tsl_context</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">id</span> : <span class="id" title="var">ident</span>) (<span class="id" title="var">A</span> : <span class="id" title="keyword">Type</span>)<br/>
+&nbsp;&nbsp;: <span class="id" title="var">TemplateMonad</span> (<span class="id" title="var">tsl_context</span>) :=<br/>
+&nbsp;&nbsp;<span class="id" title="var">tA</span>  &lt;- <span class="id" title="var">tmQuote</span> <span class="id" title="var">A</span> ;;<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">tsl_ty</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">None</span> ⇒ <span class="id" title="var">tmFail</span> "No implementation of tsl_ty provided for this translation."<br/>
+&nbsp;&nbsp;| <span class="id" title="var">Some</span> <span class="id" title="var">tsl_ty</span> ⇒ <br/>
+&nbsp;&nbsp;<span class="id" title="var">tA'</span> &lt;- <span class="id" title="var">tmEval</span> <span class="id" title="tactic">lazy</span> (<span class="id" title="var">tsl_ty</span> <span class="id" title="var">ΣE</span> <span class="id" title="var">tA</span>) ;;<br/>
+&nbsp;&nbsp;<span class="id" title="var">print_nf</span> <span class="id" title="var">tA'</span> ;;<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">tA'</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">Error</span> <span class="id" title="var">e</span> ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">print_nf</span> <span class="id" title="var">e</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmFail</span> "Translation error during the translation of the type."<br/>
+&nbsp;&nbsp;| <span class="id" title="var">Success</span> <span class="id" title="var">tA'</span> ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">id'</span> &lt;- <span class="id" title="var">tmEval</span> <span class="id" title="var">all</span> (<span class="id" title="var">tsl_id</span> <span class="id" title="var">id</span>) ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmBind</span> (<span class="id" title="var">tmUnquoteTyped</span> <span class="id" title="keyword">Type</span> <span class="id" title="var">tA'</span>) (<span class="id" title="keyword">fun</span> <span class="id" title="var">A'</span> ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmLemma</span> <span class="id" title="var">id'</span> <span class="id" title="var">A'</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmAxiom</span> <span class="id" title="var">id</span> <span class="id" title="var">A</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">gr</span> &lt;- <span class="id" title="var">tmAbout</span> <span class="id" title="var">id</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">gr</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Some</span> (<span class="id" title="var">ConstRef</span> <span class="id" title="var">kn</span>) ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">decl</span> := {| <span class="id" title="var">cst_universes</span> := <span class="id" title="var">Monomorphic_ctx</span> <span class="id" title="var">ContextSet.empty</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">cst_type</span> := <span class="id" title="var">tA</span>; <span class="id" title="var">cst_body</span> := <span class="id" title="var">None</span> |} <span class="id" title="tactic">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">Σ'</span> := <span class="id" title="var">add_global_decl</span> (<span class="id" title="var">ConstantDecl</span> <span class="id" title="var">kn</span> <span class="id" title="var">decl</span>) (<span class="id" title="var">fst</span> <span class="id" title="var">ΣE</span>) <span class="id" title="tactic">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">E'</span> := (<span class="id" title="var">ConstRef</span> <span class="id" title="var">kn</span>, <span class="id" title="var">tConst</span> <span class="id" title="var">id'</span> []) :: (<span class="id" title="var">snd</span> <span class="id" title="var">ΣE</span>) <span class="id" title="tactic">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">print_nf</span> (<span class="id" title="var">id</span> ++ " has been translated as " ++ <span class="id" title="var">id'</span>) ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">ret</span> (<span class="id" title="var">Σ'</span>, <span class="id" title="var">E'</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">_</span> ⇒ <span class="id" title="var">fail_nf</span> (<span class="id" title="var">id</span> ++ " was not found or is not a constant. This is a bug.")<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span>)<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span><br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <span class="id" title="var">body_constant_entry</span> (<span class="id" title="var">e</span> : <span class="id" title="var">constant_entry</span>) : <span class="id" title="var">option</span> <span class="id" title="var">term</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">e</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">ParameterEntry</span> <span class="id" title="var">_</span> ⇒ <span class="id" title="var">None</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">DefinitionEntry</span> {| <span class="id" title="var">definition_entry_body</span> := <span class="id" title="var">t</span> |} ⇒ <span class="id" title="var">Some</span> <span class="id" title="var">t</span><br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <span class="id" title="var">ImplementExisting</span> {<span class="id" title="var">tsl</span> : <span class="id" title="var">Translation</span>} (<span class="id" title="var">ΣE</span> : <span class="id" title="var">tsl_context</span>) (<span class="id" title="var">id</span> : <span class="id" title="var">ident</span>)<br/>
+&nbsp;&nbsp;: <span class="id" title="var">TemplateMonad</span> <span class="id" title="var">tsl_context</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="var">gr</span> &lt;- <span class="id" title="var">tmAbout</span> <span class="id" title="var">id</span> ;;<br/>
+&nbsp;&nbsp;<span class="id" title="var">id'</span> &lt;- <span class="id" title="var">tmEval</span> <span class="id" title="var">all</span> (<span class="id" title="var">tsl_id</span> <span class="id" title="var">id</span>) ;;<br/>
+&nbsp;&nbsp;<span class="id" title="var">mp</span> &lt;- <span class="id" title="var">tmCurrentModPath</span> <span class="id" title="var">tt</span> ;;<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">tsl_ty</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">None</span> ⇒ <span class="id" title="var">tmFail</span> "No implementation of tsl_ty provided for this translation."<br/>
+&nbsp;&nbsp;| <span class="id" title="var">Some</span> <span class="id" title="var">tsl_ty</span> ⇒ <br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">gr</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">None</span> ⇒ <span class="id" title="var">fail_nf</span> (<span class="id" title="var">id</span> ++ " not found")<br/>
+&nbsp;&nbsp;| <span class="id" title="var">Some</span> (<span class="id" title="var">ConstRef</span> <span class="id" title="var">kn</span>) ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">e</span> &lt;- <span class="id" title="var">tmQuoteConstant</span> <span class="id" title="var">kn</span> <span class="id" title="var">true</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">e</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">ParameterEntry</span>  {| <span class="id" title="var">parameter_entry_type</span> := <span class="id" title="var">A</span>  |}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">DefinitionEntry</span> {| <span class="id" title="var">definition_entry_type</span> := <span class="id" title="var">A</span> |} ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmDebug</span> "plop1" ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">ΣE</span> &lt;- <span class="id" title="var">tmEval</span> <span class="id" title="tactic">lazy</span> <span class="id" title="var">ΣE</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmDebug</span> <span class="id" title="var">ΣE</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tA'</span> &lt;- <span class="id" title="var">tmEval</span> <span class="id" title="tactic">lazy</span> (<span class="id" title="var">tsl_ty</span> <span class="id" title="var">ΣE</span> <span class="id" title="var">A</span>) ;;  <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmDebug</span> "plop" ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">tA'</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Error</span> <span class="id" title="var">e</span> ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">print_nf</span> <span class="id" title="var">e</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">fail_nf</span> ("Translation error during the translation of the type of " ++ <span class="id" title="var">id</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Success</span> <span class="id" title="var">tA'</span> ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmDebug</span> "plop2" ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmBind</span> (<span class="id" title="var">tmUnquoteTyped</span> <span class="id" title="keyword">Type</span> <span class="id" title="var">tA'</span>) (<span class="id" title="keyword">fun</span> <span class="id" title="var">A'</span> ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmDebug</span> "plop3" ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmLemma</span> <span class="id" title="var">id'</span> <span class="id" title="var">A'</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">decl</span> := {| <span class="id" title="var">cst_universes</span> := <span class="id" title="var">Monomorphic_ctx</span> <span class="id" title="var">ContextSet.empty</span>;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">cst_type</span> := <span class="id" title="var">A</span>; <span class="id" title="var">cst_body</span> := <span class="id" title="var">body_constant_entry</span> <span class="id" title="var">e</span> |} <span class="id" title="tactic">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">Σ'</span> := <span class="id" title="var">add_global_decl</span> (<span class="id" title="var">ConstantDecl</span> <span class="id" title="var">kn</span> <span class="id" title="var">decl</span>) (<span class="id" title="var">fst</span> <span class="id" title="var">ΣE</span>) <span class="id" title="tactic">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">E'</span> := (<span class="id" title="var">ConstRef</span> <span class="id" title="var">kn</span>, <span class="id" title="var">tConst</span> <span class="id" title="var">id'</span> []) :: (<span class="id" title="var">snd</span> <span class="id" title="var">ΣE</span>) <span class="id" title="tactic">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">print_nf</span> (<span class="id" title="var">id</span> ++ " has been translated as " ++ <span class="id" title="var">id'</span>) ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">ret</span> (<span class="id" title="var">Σ'</span>, <span class="id" title="var">E'</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">Some</span> (<span class="id" title="var">IndRef</span> (<span class="id" title="var">mkInd</span> <span class="id" title="var">kn</span> <span class="id" title="var">n</span>)) ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">d</span> &lt;- <span class="id" title="var">tmQuoteInductive</span> <span class="id" title="var">kn</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">List.nth_error</span> (<span class="id" title="var">ind_bodies</span> <span class="id" title="var">d</span>) <span class="id" title="var">n</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">None</span> ⇒ <span class="id" title="var">fail_nf</span> ("The declaration of "<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;++ <span class="id" title="var">id</span> ++ " has not enough bodies. This is a bug.")<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Some</span> {| <span class="id" title="var">ind_type</span> := <span class="id" title="var">A</span> |} ⇒ <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tA'</span> &lt;- <span class="id" title="var">tmEval</span> <span class="id" title="tactic">lazy</span> (<span class="id" title="var">tsl_ty</span> <span class="id" title="var">ΣE</span> <span class="id" title="var">A</span>) ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">tA'</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Error</span> <span class="id" title="var">e</span> ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">print_nf</span> <span class="id" title="var">e</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">fail_nf</span> ("Translation error during the translation of the type of " ++ <span class="id" title="var">id</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Success</span> <span class="id" title="var">tA'</span> ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">id'</span> &lt;- <span class="id" title="var">tmEval</span> <span class="id" title="var">all</span> (<span class="id" title="var">tsl_id</span> <span class="id" title="var">id</span>) ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmBind</span> (<span class="id" title="var">tmUnquoteTyped</span> <span class="id" title="keyword">Type</span> <span class="id" title="var">tA'</span>) (<span class="id" title="keyword">fun</span> <span class="id" title="var">A'</span> ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmLemma</span> <span class="id" title="var">id'</span> <span class="id" title="var">A'</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">Σ'</span> := <span class="id" title="var">add_global_decl</span> (<span class="id" title="var">InductiveDecl</span> <span class="id" title="var">kn</span> <span class="id" title="var">d</span>) (<span class="id" title="var">fst</span> <span class="id" title="var">ΣE</span>) <span class="id" title="tactic">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">E'</span> := (<span class="id" title="var">IndRef</span> (<span class="id" title="var">mkInd</span> <span class="id" title="var">kn</span> <span class="id" title="var">n</span>), <span class="id" title="var">tConst</span> <span class="id" title="var">id'</span> []) :: (<span class="id" title="var">snd</span> <span class="id" title="var">ΣE</span>) <span class="id" title="tactic">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">print_nf</span> (<span class="id" title="var">id</span> ++ " has been translated as " ++ <span class="id" title="var">id'</span>) ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">ret</span> (<span class="id" title="var">Σ'</span>, <span class="id" title="var">E'</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span><br/>
+<br/>
+&nbsp;&nbsp;| <span class="id" title="var">Some</span> (<span class="id" title="var">ConstructRef</span> (<span class="id" title="var">mkInd</span> <span class="id" title="var">kn</span> <span class="id" title="var">n</span>) <span class="id" title="var">k</span>) ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">d</span> &lt;- <span class="id" title="var">tmQuoteInductive</span> <span class="id" title="var">kn</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmDebug</span> "plop1" ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">List.nth_error</span> (<span class="id" title="var">ind_bodies</span> <span class="id" title="var">d</span>) <span class="id" title="var">n</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">None</span> ⇒ <span class="id" title="var">fail_nf</span> ("The declaration of "<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;++ <span class="id" title="var">id</span> ++ " has not enough bodies. This is a bug.")<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Some</span> {| <span class="id" title="var">ind_ctors</span> := <span class="id" title="var">ctors</span> |} ⇒ <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmDebug</span> "plop2" ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">List.nth_error</span> <span class="id" title="var">ctors</span> <span class="id" title="var">k</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">None</span> ⇒ <span class="id" title="var">fail_nf</span> ("The body of "<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;++ <span class="id" title="var">id</span> ++ " has not enough constructors. This is a bug.")<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Some</span> (<span class="id" title="var">_</span>, <span class="id" title="var">ty</span>, <span class="id" title="var">_</span>) ⇒  <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmDebug</span> "plop3" ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">A</span> := <span class="id" title="var">subst0</span> (<span class="id" title="var">inds</span> <span class="id" title="var">kn</span> []  (<span class="id" title="var">ind_bodies</span> <span class="id" title="var">d</span>)) <span class="id" title="var">ty</span> <span class="id" title="tactic">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmDebug</span> "plop4" ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tA'</span> &lt;- <span class="id" title="var">tmEval</span> <span class="id" title="tactic">lazy</span> (<span class="id" title="var">tsl_ty</span> <span class="id" title="var">ΣE</span> <span class="id" title="var">A</span>) ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmDebug</span> "plop5" ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">tA'</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Error</span> <span class="id" title="var">e</span> ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">print_nf</span> <span class="id" title="var">e</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">fail_nf</span> ("Translation error during the translation of the type of " ++ <span class="id" title="var">id</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Success</span> <span class="id" title="var">tA'</span> ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmDebug</span> "plop6" ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">id'</span> &lt;- <span class="id" title="var">tmEval</span> <span class="id" title="var">all</span> (<span class="id" title="var">tsl_id</span> <span class="id" title="var">id</span>) ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmBind</span> (<span class="id" title="var">tmUnquoteTyped</span> <span class="id" title="keyword">Type</span> <span class="id" title="var">tA'</span>) (<span class="id" title="keyword">fun</span> <span class="id" title="var">A'</span> ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmDebug</span> "plop7" ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmLemma</span> <span class="id" title="var">id'</span> <span class="id" title="var">A'</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">E'</span> := (<span class="id" title="var">ConstructRef</span> (<span class="id" title="var">mkInd</span> <span class="id" title="var">kn</span> <span class="id" title="var">n</span>) <span class="id" title="var">k</span>, <span class="id" title="var">tConst</span> <span class="id" title="var">id'</span> []) :: (<span class="id" title="var">snd</span> <span class="id" title="var">ΣE</span>) <span class="id" title="tactic">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">print_nf</span> (<span class="id" title="var">id</span> ++ " has been translated as " ++ <span class="id" title="var">id'</span>) ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">ret</span> (<span class="id" title="var">fst</span> <span class="id" title="var">ΣE</span>, <span class="id" title="var">E'</span>))<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span><br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span><br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+
+<br/>
+<span class="id" title="keyword">Fixpoint</span> <span class="id" title="var">string_of_ascii_list</span> <span class="id" title="var">l</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">l</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">nil</span> ⇒ <span class="id" title="var">EmptyString</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">a</span> :: <span class="id" title="var">s</span> ⇒ <span class="id" title="var">String</span> <span class="id" title="var">a</span> (<span class="id" title="var">string_of_ascii_list</span> <span class="id" title="var">s</span>)<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <span class="id" title="var">string_of_ascii_list_rev</span> <span class="id" title="var">l</span> := <span class="id" title="var">string_of_ascii_list</span> (<span class="id" title="var">rev</span> <span class="id" title="var">l</span>).<br/>
+
+<br/>
+
+<br/>
+<span class="id" title="keyword">Fixpoint</span> <span class="id" title="var">split_string_aux</span> (<span class="id" title="var">sep</span> : <span class="id" title="var">ascii</span>) (<span class="id" title="var">s</span> : <span class="id" title="var">string</span>) (<span class="id" title="var">acc</span> : <span class="id" title="var">list</span> <span class="id" title="var">ascii</span>)<br/>
+&nbsp;&nbsp;: <span class="id" title="var">list</span> <span class="id" title="var">string</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">s</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">EmptyString</span> ⇒ [<span class="id" title="var">string_of_ascii_list_rev</span> <span class="id" title="var">acc</span>]<br/>
+&nbsp;&nbsp;| <span class="id" title="var">String</span> <span class="id" title="var">a</span> <span class="id" title="var">s</span> ⇒ <span class="id" title="keyword">if</span> <span class="id" title="var">Ascii.ascii_dec</span> <span class="id" title="var">a</span> <span class="id" title="var">sep</span> <span class="id" title="keyword">then</span> (<span class="id" title="var">string_of_ascii_list_rev</span> <span class="id" title="var">acc</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:: (<span class="id" title="var">split_string_aux</span> <span class="id" title="var">sep</span> <span class="id" title="var">s</span> [])<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">else</span> <span class="id" title="var">split_string_aux</span> <span class="id" title="var">sep</span> <span class="id" title="var">s</span> (<span class="id" title="var">a</span> :: <span class="id" title="var">acc</span>)<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <span class="id" title="var">split_string</span> (<span class="id" title="var">sep</span> : <span class="id" title="var">Ascii.ascii</span>) (<span class="id" title="var">s</span> : <span class="id" title="var">string</span>) : <span class="id" title="var">list</span> <span class="id" title="var">string</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="var">split_string_aux</span> <span class="id" title="var">sep</span> <span class="id" title="var">s</span> [].<br/>
+
+<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <span class="id" title="var">ident_of_kn</span> (<span class="id" title="var">kn</span> : <span class="id" title="var">kername</span>) : <span class="id" title="var">ident</span><br/>
+&nbsp;&nbsp;:= <span class="id" title="var">last</span> (<span class="id" title="var">split_string</span> "."%<span class="id" title="var">char</span> <span class="id" title="var">kn</span>) <span class="id" title="var">kn</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <span class="id" title="var">tsl_kn</span> (<span class="id" title="var">tsl_ident</span> : <span class="id" title="var">ident</span> → <span class="id" title="var">ident</span>) (<span class="id" title="var">kn</span> : <span class="id" title="var">kername</span>) <span class="id" title="var">mp</span><br/>
+&nbsp;&nbsp;:= <span class="id" title="var">mp</span> ++ "." ++ (<span class="id" title="var">tsl_ident</span> (<span class="id" title="var">ident_of_kn</span> <span class="id" title="var">kn</span>)).<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <span class="id" title="var">TranslateRec</span> {<span class="id" title="var">tsl</span> : <span class="id" title="var">Translation</span>} (<span class="id" title="var">ΣE</span> : <span class="id" title="var">tsl_context</span>) {<span class="id" title="var">A</span>} (<span class="id" title="var">t</span> : <span class="id" title="var">A</span>) := <br/>
+&nbsp;&nbsp;<span class="id" title="var">p</span> &lt;- <span class="id" title="var">tmQuoteRec</span> <span class="id" title="var">t</span> ;;<br/>
+&nbsp;&nbsp;<span class="id" title="var">tmPrint</span> "~~~~~~~~~~~~~~~~~~" ;;<br/>
+&nbsp;&nbsp;<span class="id" title="var">monad_fold_left</span> (<span class="id" title="keyword">fun</span> <span class="id" title="var">ΣE</span> <span class="id" title="var">decl</span> ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">print_nf</span> ("Translating " ++ <span class="id" title="var">global_decl_ident</span> <span class="id" title="var">decl</span>) ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">decl</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">ConstantDecl</span> <span class="id" title="var">kn</span> <span class="id" title="var">decl</span> ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">lookup_tsl_table</span> (<span class="id" title="var">snd</span> <span class="id" title="var">ΣE</span>) (<span class="id" title="var">ConstRef</span> <span class="id" title="var">kn</span>) <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Some</span> <span class="id" title="var">_</span> ⇒ <span class="id" title="var">print_nf</span> (<span class="id" title="var">kn</span> ++ " was already translated") ;; <span class="id" title="var">ret</span> <span class="id" title="var">ΣE</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">None</span> ⇒ <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">decl</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| {| <span class="id" title="var">cst_body</span> := <span class="id" title="var">None</span> |} ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">fail_nf</span> (<span class="id" title="var">kn</span> ++ " is an axiom. Use Implement Existing.")<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| {| <span class="id" title="var">cst_type</span> := <span class="id" title="var">A</span>; <span class="id" title="var">cst_body</span> := <span class="id" title="var">Some</span> <span class="id" title="var">t</span>; <span class="id" title="var">cst_universes</span> := <span class="id" title="var">univs</span> |} ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmDebug</span> "go";;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">t'</span> &lt;- <span class="id" title="var">tmEval</span> <span class="id" title="tactic">lazy</span> (<span class="id" title="var">tsl_tm</span> <span class="id" title="var">ΣE</span> <span class="id" title="var">t</span>) ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmDebug</span> "done";;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">t'</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Error</span> <span class="id" title="var">e</span> ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">print_nf</span> <span class="id" title="var">e</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">fail_nf</span> ("Translation error during the translation of the body of "<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;++ <span class="id" title="var">kn</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Success</span> <span class="id" title="var">t'</span> ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">id</span> := <span class="id" title="var">ident_of_kn</span> <span class="id" title="var">kn</span> <span class="id" title="tactic">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">id'</span> := <span class="id" title="var">tsl_ident</span> <span class="id" title="var">id</span> <span class="id" title="tactic">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmDebug</span> "here";;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmDebug</span> <span class="id" title="var">id'</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmDebug</span> <span class="id" title="var">t'</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmMkDefinition</span> <span class="id" title="var">id'</span> <span class="id" title="var">t'</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmDebug</span> "there";;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">Σ'</span> := <span class="id" title="var">add_global_decl</span> (<span class="id" title="var">ConstantDecl</span> <span class="id" title="var">kn</span> <span class="id" title="var">decl</span>) (<span class="id" title="var">fst</span> <span class="id" title="var">ΣE</span>) <span class="id" title="tactic">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">E'</span> := (<span class="id" title="var">ConstRef</span> <span class="id" title="var">kn</span>, <span class="id" title="var">tConst</span> <span class="id" title="var">id'</span> []) :: (<span class="id" title="var">snd</span> <span class="id" title="var">ΣE</span>) <span class="id" title="tactic">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Σ'</span> &lt;- <span class="id" title="var">tmEval</span> <span class="id" title="tactic">lazy</span> <span class="id" title="var">Σ'</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">E'</span> &lt;- <span class="id" title="var">tmEval</span> <span class="id" title="tactic">lazy</span> <span class="id" title="var">E'</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">print_nf</span>  (<span class="id" title="var">id</span> ++ " has been translated as " ++ <span class="id" title="var">id'</span>) ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">ret</span> (<span class="id" title="var">Σ'</span>, <span class="id" title="var">E'</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span><br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">InductiveDecl</span> <span class="id" title="var">kn</span> <span class="id" title="var">d</span> ⇒ <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">lookup_tsl_table</span> (<span class="id" title="var">snd</span> <span class="id" title="var">ΣE</span>) (<span class="id" title="var">IndRef</span> (<span class="id" title="var">mkInd</span> <span class="id" title="var">kn</span> 0)) <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Some</span> <span class="id" title="var">_</span> ⇒ <span class="id" title="var">print_nf</span> (<span class="id" title="var">kn</span> ++ " was already translated") ;; <span class="id" title="var">ret</span> <span class="id" title="var">ΣE</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">None</span> ⇒ <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmDebug</span> "go'";;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">mp</span> &lt;- <span class="id" title="var">tmCurrentModPath</span> <span class="id" title="var">tt</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">d'</span> &lt;- <span class="id" title="var">tmEval</span> <span class="id" title="tactic">lazy</span> (<span class="id" title="var">tsl_ind</span> <span class="id" title="var">ΣE</span> <span class="id" title="var">mp</span> <span class="id" title="var">kn</span> <span class="id" title="var">d</span>) ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">tmDebug</span> "done'";;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">d'</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Error</span> <span class="id" title="var">e</span> ⇒ <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">print_nf</span> <span class="id" title="var">e</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">fail_nf</span> ("Translation error during the translation of the inductive "<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;++ <span class="id" title="var">kn</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <span class="id" title="var">Success</span> (<span class="id" title="var">E</span>, <span class="id" title="var">decls</span>) ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">monad_iter</span> <span class="id" title="var">tmMkInductive'</span> <span class="id" title="var">decls</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">Σ'</span> := <span class="id" title="var">add_global_decl</span> (<span class="id" title="var">InductiveDecl</span> <span class="id" title="var">kn</span> <span class="id" title="var">d</span>) (<span class="id" title="var">fst</span> <span class="id" title="var">ΣE</span>) <span class="id" title="tactic">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">E'</span> := (<span class="id" title="var">E</span> ++ (<span class="id" title="var">snd</span> <span class="id" title="var">ΣE</span>))%<span class="id" title="var">list</span> <span class="id" title="tactic">in</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Σ'</span> &lt;- <span class="id" title="var">tmEval</span> <span class="id" title="tactic">lazy</span> <span class="id" title="var">Σ'</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">E'</span> &lt;- <span class="id" title="var">tmEval</span> <span class="id" title="tactic">lazy</span> <span class="id" title="var">E'</span> ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">print_nf</span>  (<span class="id" title="var">kn</span> ++ " has been translated.") ;;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">ret</span> (<span class="id" title="var">Σ'</span>, <span class="id" title="var">E'</span>)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">end</span>)<br/>
+&nbsp;&nbsp;(<span class="id" title="var">fst</span> <span class="id" title="var">p</span>) <span class="id" title="var">ΣE</span>.<br/>
+</div>
+</div>
+
+<div id="footer">
+<hr/><a href="index.html">Index</a><hr/>This page has been generated by <a href="http://coq.inria.fr/">coqdoc</a>
+</div>
+
+</div>
+
+</body>
+</html>

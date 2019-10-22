@@ -1,0 +1,78 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<title>MetaCoq.Erasure.EWndEval</title>
+</head>
+
+<body>
+
+<div id="page">
+
+<div id="header">
+</div>
+
+<div id="main">
+
+<h1 class="libtitle">Library MetaCoq.Erasure.EWndEval</h1>
+
+<div class="code">
+
+<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+<a name="lab55"></a><h1 class="section">1-step non-deterministic weak reduction</h1>
+
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Section</span> <a name="Wnd"><span class="id" title="section">Wnd</span></a>.<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">Context</span> (<span class="id" title="var">Σ</span> : <a class="idref" href="MetaCoq.Erasure.EAst.html#global_declarations"><span class="id" title="definition">global_declarations</span></a>).<br/>
+
+<br/>
+<span class="id" title="keyword">Inductive</span> <a name="Wnd"><span class="id" title="inductive">Wnd</span></a> : <a class="idref" href="MetaCoq.Erasure.EAst.html#term"><span class="id" title="inductive">term</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#1c93e43e07fbeaeb6a625cb6614beb5d"><span class="id" title="notation">→</span></a> <a class="idref" href="MetaCoq.Erasure.EAst.html#term"><span class="id" title="inductive">term</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#1c93e43e07fbeaeb6a625cb6614beb5d"><span class="id" title="notation">→</span></a> <span class="id" title="keyword">Prop</span> :=<br/>
+&nbsp;<br/>
+</div>
+
+<div class="doc">
+Constant unfolding 
+</div>
+<div class="code">
+| <a name="wConst"><span class="id" title="constructor">wConst</span></a> <span class="id" title="var">c</span> <span class="id" title="var">decl</span> <span class="id" title="var">body</span> (<span class="id" title="var">isdecl</span>: <a class="idref" href="MetaCoq.Erasure.ETyping.html#declared_constant"><span class="id" title="definition">declared_constant</span></a> <a class="idref" href="MetaCoq.Erasure.EWndEval.html#a26e6525ed2bec34b90ce0e9d1d3167f"><span class="id" title="variable">Σ</span></a> <a class="idref" href="MetaCoq.Erasure.EWndEval.html#c"><span class="id" title="variable">c</span></a> <a class="idref" href="MetaCoq.Erasure.EWndEval.html#decl"><span class="id" title="variable">decl</span></a>):<br/>
+&nbsp;&nbsp;&nbsp;<a class="idref" href="MetaCoq.Erasure.EWndEval.html#decl"><span class="id" title="variable">decl</span></a>.(<a class="idref" href="MetaCoq.Erasure.EAst.html#cst_body"><span class="id" title="projection">cst_body</span></a>) <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#6cd0f7b28b6092304087c7049437bb1a"><span class="id" title="notation">=</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Datatypes.html#Some"><span class="id" title="constructor">Some</span></a> <a class="idref" href="MetaCoq.Erasure.EWndEval.html#body"><span class="id" title="variable">body</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Logic.html#1c93e43e07fbeaeb6a625cb6614beb5d"><span class="id" title="notation">→</span></a> <a class="idref" href="MetaCoq.Erasure.EWndEval.html#Wnd"><span class="id" title="inductive">Wnd</span></a> (<a class="idref" href="MetaCoq.Erasure.EAst.html#tConst"><span class="id" title="constructor">tConst</span></a> <a class="idref" href="MetaCoq.Erasure.EWndEval.html#c"><span class="id" title="variable">c</span></a>) <a class="idref" href="MetaCoq.Erasure.EWndEval.html#body"><span class="id" title="variable">body</span></a><br/>
+</div>
+
+<div class="doc">
+Beta 
+</div>
+<div class="code">
+| <a name="wBeta"><span class="id" title="constructor">wBeta</span></a> <span class="id" title="var">na</span> <span class="id" title="var">a</span> <span class="id" title="var">b</span>: <a class="idref" href="MetaCoq.Erasure.EWndEval.html#Wnd"><span class="id" title="inductive">Wnd</span></a> (<a class="idref" href="MetaCoq.Erasure.EAst.html#tApp"><span class="id" title="constructor">tApp</span></a> (<a class="idref" href="MetaCoq.Erasure.EAst.html#tLambda"><span class="id" title="constructor">tLambda</span></a> <a class="idref" href="MetaCoq.Erasure.EWndEval.html#na"><span class="id" title="variable">na</span></a> <a class="idref" href="MetaCoq.Erasure.EWndEval.html#b"><span class="id" title="variable">b</span></a>) <a class="idref" href="MetaCoq.Erasure.EWndEval.html#a"><span class="id" title="variable">a</span></a>) (<a class="idref" href="MetaCoq.Erasure.ELiftSubst.html#subst10"><span class="id" title="abbreviation">subst10</span></a> <a class="idref" href="MetaCoq.Erasure.EWndEval.html#a"><span class="id" title="variable">a</span></a> <a class="idref" href="MetaCoq.Erasure.EWndEval.html#b"><span class="id" title="variable">b</span></a>)<br/>
+</div>
+
+<div class="doc">
+Let 
+</div>
+<div class="code">
+| <a name="wLet"><span class="id" title="constructor">wLet</span></a> <span class="id" title="var">na</span> <span class="id" title="var">b0</span> <span class="id" title="var">b1</span>: <a class="idref" href="MetaCoq.Erasure.EWndEval.html#Wnd"><span class="id" title="inductive">Wnd</span></a> (<a class="idref" href="MetaCoq.Erasure.EAst.html#tLetIn"><span class="id" title="constructor">tLetIn</span></a> <a class="idref" href="MetaCoq.Erasure.EWndEval.html#na"><span class="id" title="variable">na</span></a> <a class="idref" href="MetaCoq.Erasure.EWndEval.html#b0"><span class="id" title="variable">b0</span></a> <a class="idref" href="MetaCoq.Erasure.EWndEval.html#b1"><span class="id" title="variable">b1</span></a>) (<a class="idref" href="MetaCoq.Erasure.ELiftSubst.html#subst10"><span class="id" title="abbreviation">subst10</span></a> <a class="idref" href="MetaCoq.Erasure.EWndEval.html#b0"><span class="id" title="variable">b0</span></a> <a class="idref" href="MetaCoq.Erasure.EWndEval.html#b1"><span class="id" title="variable">b1</span></a>).<br/>
+
+<br/>
+<span class="id" title="keyword">End</span> <a class="idref" href="MetaCoq.Erasure.EWndEval.html#Wnd"><span class="id" title="section">Wnd</span></a>.<br/>
+
+<br/>
+</div>
+</div>
+
+<div id="footer">
+<hr/><a href="index.html">Index</a><hr/>This page has been generated by <a href="http://coq.inria.fr/">coqdoc</a>
+</div>
+
+</div>
+
+</body>
+</html>

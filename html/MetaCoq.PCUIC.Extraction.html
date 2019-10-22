@@ -1,0 +1,96 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<title>MetaCoq.PCUIC.Extraction</title>
+</head>
+
+<body>
+
+<div id="page">
+
+<div id="header">
+</div>
+
+<div id="main">
+
+<h1 class="libtitle">Library MetaCoq.PCUIC.Extraction</h1>
+
+<div class="code">
+</div>
+
+<div class="doc">
+Extraction setup for the pcuic phase of MetaCoq.
+
+<div class="paragraph"> </div>
+
+    Any extracted code planning to link with the plugin's OCaml reifier
+    should use these same directives for consistency.
+
+</div>
+<div class="code">
+
+<br/>
+
+<br/>
+<span class="id" title="keyword">Extract</span> <span class="id" title="keyword">Inductive</span> <a class="idref" href="http://coq.inria.fr/distrib/V8.9.1/stdlib//Coq.Init.Decimal.html#int"><span class="id" title="inductive">Decimal.int</span></a> ⇒ <span class="id" title="var">unit</span> [ "(fun _ -&gt; ())" "(fun _ -&gt; ())" ] "(fun _ _ _ -&gt; assert false)".<br/>
+
+<br/>
+<span class="id" title="keyword">Extraction</span> <span class="id" title="var">Blacklist</span> <span class="id" title="var">config</span> <span class="id" title="var">uGraph</span> <span class="id" title="var">universes</span> <span class="id" title="var">Ast</span> <span class="id" title="var">String</span> <span class="id" title="var">List</span> <span class="id" title="var">Logic</span> <span class="id" title="var">Logic0</span> <span class="id" title="var">Nat</span> <span class="id" title="var">Int</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">UnivSubst</span> <span class="id" title="var">Typing</span> <span class="id" title="var">Checker</span> <span class="id" title="var">Retyping</span> <span class="id" title="var">OrderedType</span> <span class="id" title="var">Classes</span> <span class="id" title="var">equality</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Cd</span> "src".<br/>
+
+<br/>
+<span class="id" title="keyword">Extraction</span> <span class="id" title="var">Library</span> <span class="id" title="var">Init</span>.<br/>
+
+<br/>
+
+<br/>
+<span class="id" title="keyword">Extraction</span> <span class="id" title="keyword">Inline</span> <span class="id" title="var">Equations.Prop.Classes.noConfusion</span>.<br/>
+<span class="id" title="keyword">Extraction</span> <span class="id" title="keyword">Inline</span> <span class="id" title="var">Equations.Prop.Logic.eq_elim</span>.<br/>
+<span class="id" title="keyword">Extraction</span> <span class="id" title="keyword">Inline</span> <span class="id" title="var">Equations.Prop.Logic.eq_elim_r</span>.<br/>
+<span class="id" title="keyword">Extraction</span> <span class="id" title="keyword">Inline</span> <span class="id" title="var">Equations.Prop.Logic.transport</span>.<br/>
+<span class="id" title="keyword">Extraction</span> <span class="id" title="keyword">Inline</span> <span class="id" title="var">Equations.Prop.Logic.transport_r</span>.<br/>
+<span class="id" title="keyword">Extraction</span> <span class="id" title="keyword">Inline</span> <span class="id" title="var">Equations.Prop.Logic.False_rect_dep</span>.<br/>
+<span class="id" title="keyword">Extraction</span> <span class="id" title="keyword">Inline</span> <span class="id" title="var">Equations.Prop.Logic.True_rect_dep</span>.<br/>
+<span class="id" title="keyword">Extraction</span> <span class="id" title="keyword">Inline</span> <span class="id" title="var">Equations.Init.pr1</span>.<br/>
+<span class="id" title="keyword">Extraction</span> <span class="id" title="keyword">Inline</span> <span class="id" title="var">Equations.Init.pr2</span>.<br/>
+<span class="id" title="keyword">Extraction</span> <span class="id" title="keyword">Inline</span> <span class="id" title="var">Equations.Init.hidebody</span>.<br/>
+<span class="id" title="keyword">Extraction</span> <span class="id" title="keyword">Inline</span> <span class="id" title="var">Equations.Prop.DepElim.solution_left</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Extraction</span> <span class="id" title="var">Library</span> <span class="id" title="var">Signature</span>.<br/>
+<span class="id" title="keyword">Extraction</span> <span class="id" title="var">Library</span> <span class="id" title="var">Classes</span>.<br/>
+<span class="id" title="keyword">Extraction</span> <span class="id" title="var">Library</span> <span class="id" title="var">ssreflect</span>.<br/>
+<span class="id" title="keyword">Extraction</span> <span class="id" title="var">Library</span> <span class="id" title="var">CMorphisms</span>.<br/>
+<span class="id" title="keyword">Extraction</span> <span class="id" title="var">Library</span> <span class="id" title="var">PCUICAst</span>.<br/>
+<span class="id" title="keyword">Extraction</span> <span class="id" title="var">Library</span> <span class="id" title="var">PCUICAstUtils</span>.<br/>
+<span class="id" title="keyword">Extraction</span> <span class="id" title="var">Library</span> <span class="id" title="var">PCUICUtils</span>.<br/>
+<span class="id" title="keyword">Extraction</span> <span class="id" title="var">Library</span> <span class="id" title="var">PCUICInduction</span>.<br/>
+<span class="id" title="keyword">Extraction</span> <span class="id" title="var">Library</span> <span class="id" title="var">PCUICUnivSubst</span>.<br/>
+<span class="id" title="keyword">Extraction</span> <span class="id" title="var">Library</span> <span class="id" title="var">PCUICLiftSubst</span>.<br/>
+<span class="id" title="keyword">Extraction</span> <span class="id" title="var">Library</span> <span class="id" title="var">PCUICReflect</span>.<br/>
+<span class="id" title="keyword">Extraction</span> <span class="id" title="var">Library</span> <span class="id" title="var">EqDecInstances</span>.<br/>
+<span class="id" title="keyword">Extraction</span> <span class="id" title="var">Library</span> <span class="id" title="var">PCUICEquality</span>.<br/>
+<span class="id" title="keyword">Extraction</span> <span class="id" title="var">Library</span> <span class="id" title="var">PCUICTyping</span>.<br/>
+<span class="id" title="keyword">Extraction</span> <span class="id" title="var">Library</span> <span class="id" title="var">PCUICChecker</span>.<br/>
+<span class="id" title="keyword">Extraction</span> <span class="id" title="var">Library</span> <span class="id" title="var">PCUICRetyping</span>.<br/>
+<span class="id" title="keyword">Extraction</span> <span class="id" title="var">Library</span> <span class="id" title="var">PCUICMetaTheory</span>.<br/>
+<span class="id" title="keyword">Extraction</span> <span class="id" title="var">Library</span> <span class="id" title="var">TemplateToPCUIC</span>.<br/>
+<span class="id" title="keyword">Extraction</span> <span class="id" title="var">Library</span> <span class="id" title="var">PCUICPretty</span>.<br/>
+<span class="id" title="keyword">Cd</span> "..".<br/>
+</div>
+</div>
+
+<div id="footer">
+<hr/><a href="index.html">Index</a><hr/>This page has been generated by <a href="http://coq.inria.fr/">coqdoc</a>
+</div>
+
+</div>
+
+</body>
+</html>

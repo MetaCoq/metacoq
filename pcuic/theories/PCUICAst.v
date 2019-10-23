@@ -3,7 +3,7 @@
 Require Import Coq.Strings.String.
 Require Import Coq.PArith.BinPos.
 Require Import List. Import ListNotations.
-From MetaCoq.Template Require Export Universes BasicAst.
+From MetaCoq.Template Require Export Universes BasicAst Environment.
 
 (* Declare Scope pcuic.*)
 Delimit Scope pcuic with pcuic.
@@ -119,32 +119,13 @@ Record mutual_inductive_entry := {
 
 
 
-(** ** Declarations *)
+  Module PCUICTerm <: Term.
 
-(** *** The context of De Bruijn indices *)
+    Definition term := term.
 
-Record context_decl := {
-  decl_name : name ;
-  decl_body : option term ;
-  decl_type : term }.
+  End PCUICTerm.
 
-(** Local (de Bruijn) variable binding *)
-
-Definition vass x A := {| decl_name := x; decl_body := None; decl_type := A |}.
-
-(** Local (de Bruijn) let-binding *)
-
-Definition vdef x t A := {| decl_name := x; decl_body := Some t; decl_type := A |}.
-
-(** Local (de Bruijn) context *)
-
-Definition context := list context_decl.
-
-(** Last declaration first *)
-
-Definition snoc {A} (Γ : list A) (d : A) := d :: Γ.
-
-Notation " Γ ,, d " := (snoc Γ d) (at level 20, d at next level) : pcuic.
+   Module Export PCUICEnvironment := Environment PCUICTerm.
 
 (** *** Environments *)
 

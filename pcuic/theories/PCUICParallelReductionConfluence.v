@@ -1017,7 +1017,7 @@ Section Confluence.
 
     Lemma rho_ctx_over_length Δ Γ : #|rho_ctx_over Δ Γ| = #|Γ|.
     Proof.
-      induction Γ; simpl; auto. destruct a. destruct decl_body; simpl; auto with arith.
+      induction Γ; simpl; auto. destruct a. destruct decl_body0; simpl; auto with arith.
     Qed.
 
     Lemma rho_ctx_over_app Γ' Γ Δ :

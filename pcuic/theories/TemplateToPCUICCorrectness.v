@@ -18,6 +18,7 @@ Local Open Scope string_scope.
 Set Asymmetric Patterns.
 
 Module T := Template.Ast.
+Module TE := Template.Ast.TemplateEnvironment.
 Module TTy := Checker.Typing.
 
 Local Existing Instance default_checker_flags.
@@ -106,7 +107,7 @@ Proof.
 Qed.
 
 Notation Tterm := Template.Ast.term.
-Notation Tcontext := Template.Ast.context.
+Notation Tcontext := Template.Ast.TemplateEnvironment.context.
 
 Lemma trans_subst_instance_constr u t : trans (Template.UnivSubst.subst_instance_constr u t) =
                                         subst_instance_constr u (trans t).
@@ -197,8 +198,8 @@ Lemma trans_destArity ctx t :
 Proof.
   intros wf; revert ctx.
   induction wf using Template.Induction.term_wf_forall_list_ind; intros ctx; simpl; trivial.
-  apply (IHwf0 (T.vass n t :: ctx)).
-  apply (IHwf1 (T.vdef n t t0 :: ctx)).
+  apply (IHwf0 (TE.vass n t :: ctx)).
+  apply (IHwf1 (TE.vdef n t t0 :: ctx)).
 Qed.
 
 Lemma Alli_map_option_out_mapi_Some_spec {A B B'} (f : nat -> A -> option B) (g' : B -> B')

@@ -1287,7 +1287,7 @@ Definition eq_context `{checker_flags} φ (Γ Δ : context) :=
 Lemma lift_eq_decl `{checker_flags} ϕ n k d d' :
   eq_decl ϕ d d' -> eq_decl ϕ (lift_decl n k d) (lift_decl n k d').
 Proof.
-  destruct d, d', decl_body, decl_body0;
+  destruct d, d', decl_body0, decl_body1;
     unfold eq_decl, map_decl; cbn; intuition auto using lift_eq_term.
 Qed.
 

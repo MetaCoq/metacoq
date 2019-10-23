@@ -1582,7 +1582,7 @@ Definition lift_context n k (Γ : context) : context :=
 
 Lemma lift_decl0 k d : map_decl (lift 0 k) d = d.
 Proof.
-  destruct d; destruct decl_body; unfold map_decl; simpl;
+  destruct d; destruct decl_body0; unfold map_decl; simpl;
   f_equal; now rewrite ?lift0_id.
 Qed.
 

@@ -2045,7 +2045,7 @@ Section All_local_env.
     All_local_env P (l ,,, l').
   Proof.
     induction l'; simpl; auto. intuition.
-    intuition. destruct a. destruct decl_body.
+    intuition. destruct a. destruct decl_body0.
     inv b. econstructor; eauto. inv b; econstructor; eauto. Qed.
 
 

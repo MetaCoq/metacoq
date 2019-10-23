@@ -37,8 +37,8 @@ Fixpoint trans (t : Ast.term) : term :=
     tCoFix mfix' idx
   end.
 
-Definition trans_decl (d : Ast.context_decl) :=
-  let 'Ast.mkdecl na b t := d in
+Definition trans_decl (d : TemplateEnvironment.context_decl) :=
+  let 'TemplateEnvironment.mkdecl na b t := d in
   {| decl_name := na;
      decl_body := option_map trans b;
      decl_type := trans t |}.

@@ -27,7 +27,7 @@ Lemma it_mkProd_isArity:
     isArity (it_mkProd_or_LetIn l A).
 Proof.
   induction l; cbn; intros; eauto.
-  eapply IHl. destruct a, decl_body; cbn; eauto.
+  eapply IHl. destruct a, decl_body0; cbn; eauto.
 Qed.
 
 Lemma isArity_ind_type (Σ : global_env_ext) mind ind idecl :
@@ -105,7 +105,7 @@ Lemma it_mkProd_arity :
 Proof.
   induction l; cbn; intros.
   - eauto.
-  - eapply IHl in H. destruct a, decl_body; cbn in *; eauto.
+  - eapply IHl in H. destruct a, decl_body0; cbn in *; eauto.
 Qed.
 
 Lemma isArity_mkApps t L : isArity (mkApps t L) -> isArity t /\ L = [].
@@ -159,24 +159,24 @@ Proof.
         -- exists (l ++ [N2])%list. now rewrite <- mkApps_nested.
   - rewrite it_mkProd_or_LetIn_app in X.
     cbn in X.
-    destruct x, decl_body; cbn in *.
+    destruct x, decl_body0; cbn in *.
     + dependent destruction X.
       * unfold subst1. rewrite subst_it_mkProd_or_LetIn, subst_mkApps. eauto.
       * destruct args using rev_ind; try rewrite <- mkApps_nested in x; cbn in x; inv x.
-      * eexists (l ++ [Build_context_decl decl_name (Some r) decl_type])%list, l0.
+      * eexists (l ++ [mkdecl decl_name0 (Some r) decl_type0])%list, l0.
         now rewrite it_mkProd_or_LetIn_app.
-      * eexists (l ++ [Build_context_decl decl_name (Some t0) r])%list, l0.
+      * eexists (l ++ [mkdecl decl_name0 (Some t0) r])%list, l0.
         now rewrite it_mkProd_or_LetIn_app.
       * eapply IHL in X as (? & ? & ?). subst.
-        eexists (x ++ [Build_context_decl decl_name (Some t0) decl_type])%list, x0.
+        eexists (x ++ [mkdecl decl_name0 (Some t0) decl_type0])%list, x0.
         rewrite it_mkProd_or_LetIn_app. reflexivity.
     + dependent destruction X.
       * eapply (f_equal decompose_app) in x.
         rewrite decompose_app_mkApps in x; cbn; eauto. cbn in x. inv x.
-      * eexists (l ++ [Build_context_decl decl_name None N1])%list, l0.
+      * eexists (l ++ [mkdecl decl_name0 None N1])%list, l0.
         now rewrite it_mkProd_or_LetIn_app.
       * eapply IHL in X as (? & ? & ?). subst.
-        eexists (x ++ [Build_context_decl decl_name None decl_type])%list, x0.
+        eexists (x ++ [mkdecl decl_name0 None decl_type0])%list, x0.
         rewrite it_mkProd_or_LetIn_app. reflexivity.
 Qed.
 
@@ -205,7 +205,7 @@ Proof.
   - cbn. assert (decompose_app (tProd x x0 x1) = decompose_app (mkApps (tInd i u) x3)) by now rewrite H0.
     rewrite decompose_app_mkApps in H; cbn; eauto. cbn in H. inv H.
   - rewrite it_mkProd_or_LetIn_app in *. cbn in *.
-    destruct x, decl_body; cbn in H0; try now inv H0.
+    destruct x, decl_body0; cbn in H0; try now inv H0.
 Qed.
 
 

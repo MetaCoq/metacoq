@@ -19,6 +19,7 @@ Require Import Lia.
 Local Existing Instance extraction_checker_flags.
 
 Module PA := PCUICAst.
+Module PE := PCUICAst.PCUICEnvironment.
 Module P := PCUICWcbvEval.
 
 Ltac inv H := inversion H; subst; clear H.
@@ -321,16 +322,16 @@ Qed.
 
 (** ** Prelim on typing *)
 
-Inductive red_decls Σ Γ Γ' : forall (x y : PCUICAst.context_decl), Type :=
+Inductive red_decls Σ Γ Γ' : forall (x y : PE.context_decl), Type :=
 | conv_vass na na' T T' : isType Σ Γ' T' -> red Σ Γ T T' ->
-                      red_decls Σ Γ Γ' (PCUICAst.vass na T) (PCUICAst.vass na' T')
+                      red_decls Σ Γ Γ' (PE.vass na T) (PE.vass na' T')
 
 | conv_vdef_type na na' b T T' : isType Σ Γ' T' -> red Σ Γ T T' ->
-                             red_decls Σ Γ Γ' (PCUICAst.vdef na b T) (PCUICAst.vdef na' b T')
+                             red_decls Σ Γ Γ' (PE.vdef na b T) (PE.vdef na' b T')
 
 | conv_vdef_body na na' b b' T : isType Σ Γ' T ->
                                  Σ ;;; Γ' |- b' : T -> red Σ Γ b b' ->
-                                                  red_decls Σ Γ Γ' (PCUICAst.vdef na b T) (PCUICAst.vdef na' b' T).
+                                                  red_decls Σ Γ Γ' (PE.vdef na b T) (PE.vdef na' b' T).
 
 Notation red_context Σ := (context_relation (red_decls Σ)).
 
@@ -341,7 +342,7 @@ Lemma conv_context_app (Σ : global_env_ext) (Γ1 Γ2 Γ1' : context) :
 Proof.
   intros. induction Γ2.
   - cbn; eauto.
-  - destruct a. destruct decl_body.
+  - destruct a. destruct decl_body0.
     + cbn. econstructor. inv X0. eauto. econstructor.
       depelim X0.
       eapply PCUICCumulativity.conv_alt_refl; reflexivity.

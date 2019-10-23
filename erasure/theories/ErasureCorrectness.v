@@ -20,6 +20,7 @@ Import MonadNotation.
 Require Import Lia.
 
 Module PA := PCUICAst.
+Module PE := PCUICAst.PCUICEnvironment.
 Module P := PCUICWcbvEval.
 
 Local Existing Instance config.extraction_checker_flags.
@@ -123,8 +124,8 @@ Qed.
 
 Lemma erases_context_conversion :
 env_prop
-  (fun (Σ : PCUICAst.global_env_ext) (Γ : PCUICAst.context) (t T : PCUICAst.term) =>
-      forall Γ' : PCUICAst.context,
+  (fun (Σ : PCUICAst.global_env_ext) (Γ : PE.context) (t T : PCUICAst.term) =>
+      forall Γ' : PE.context,
         PCUICContextConversion.conv_context Σ Γ Γ' ->
         wf_local Σ Γ' ->
         forall t', erases Σ Γ t t' -> erases Σ Γ' t t').
@@ -506,7 +507,7 @@ Proof.
           now eapply conv_alt_cumul. auto. auto. }
       inv Hvf'.
       * assert (Σ;;; [] |- PCUICLiftSubst.subst1 a' 0 b ⇝ℇ subst1 vu' 0 t').
-        eapply (erases_subst Σ [] [PCUICAst.vass na t] [] b [a'] t'); eauto.
+        eapply (erases_subst Σ [] [PE.vass na t] [] b [a'] t'); eauto.
         econstructor. econstructor. rewrite parsubst_empty. eassumption.
         eapply IHeval3 in H2 as (v' & Hv' & He_v').
         -- exists v'. split; eauto.
@@ -514,7 +515,7 @@ Proof.
         -- eapply substitution0; eauto.
       * exists tBox. split.
         eapply Is_type_lambda in X1; eauto. destruct X1. econstructor.
-        eapply (is_type_subst Σ [] [PCUICAst.vass na _] [] _ [a']) in X1 ; auto.
+        eapply (is_type_subst Σ [] [PE.vass na _] [] _ [a']) in X1 ; auto.
         cbn in X1.
         eapply Is_type_eval.
         eauto. eapply H1. eassumption.
@@ -543,7 +544,7 @@ Proof.
         simpl. eapply subject_reduction_eval; auto. eauto. eauto.
       }
       assert (Σ;;; [] |- PCUICLiftSubst.subst1 b0' 0 b1 ⇝ℇ subst1 vt1' 0 t2'). {
-        eapply (erases_subst Σ [] [PCUICAst.vdef na b0' t] [] b1 [b0'] t2'); eauto.
+        eapply (erases_subst Σ [] [PE.vdef na b0' t] [] b1 [b0'] t2'); eauto.
         enough (subslet Σ [] [PCUICLiftSubst.subst [] 0 b0'] [vdef na b0' t]).
         now rewrite parsubst_empty in X1.
         econstructor. econstructor.

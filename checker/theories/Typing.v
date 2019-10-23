@@ -2181,8 +2181,9 @@ Lemma All_local_env_app_inv `{checker_flags} (P : context -> term -> option term
   All_local_env P (l ,,, l').
 Proof.
   induction l'; simpl; auto. intuition.
-  intuition. destruct a. destruct decl_body.
-  inv b. econstructor; eauto. inv b; econstructor; eauto. Qed.
+  intuition. destruct a. destruct decl_body0.
+  inv b. econstructor; eauto. inv b; econstructor; eauto.
+Qed.
 
 Lemma All_local_env_map `{checker_flags} (P : context -> term -> option term -> Type) f l :
   (forall u, f (tSort u) = tSort u) ->

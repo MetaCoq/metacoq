@@ -37,7 +37,7 @@ Definition lift_context n k (Γ : context) : context :=
 
 Lemma lift_decl0 k d : map_decl (lift 0 k) d = d.
 Proof.
-  destruct d; destruct decl_body; unfold map_decl; simpl;
+  destruct d; destruct decl_body0; unfold map_decl; simpl;
   f_equal; now rewrite ?lift0_id.
 Qed.
 
@@ -588,7 +588,7 @@ Proof.
   unfold to_extended_list, to_extended_list_k. generalize 0. generalize (@nil term) at 1 2.
   induction c in n, k |- *; simpl; intros. reflexivity.
   rewrite -> lift_context_snoc0. unfold snoc. simpl.
-  destruct a. destruct decl_body. unfold lift_decl, map_decl. simpl.
+  destruct a. destruct decl_body0. unfold lift_decl, map_decl. simpl.
   now rewrite -> IHc. simpl. apply IHc.
 Qed.
 
@@ -916,8 +916,8 @@ Qed.
 Lemma lift_eq_decl `{checker_flags} ϕ n k d d' :
   eq_decl ϕ d d' -> eq_decl ϕ (lift_decl n k d) (lift_decl n k d').
 Proof.
-  destruct d, d', decl_body, decl_body0;
-    unfold eq_decl, map_decl; cbn; intuition auto using lift_eq_term.
+  destruct d, d', decl_body0, decl_body1.
+  all: unfold eq_decl, map_decl; cbn; intuition auto using lift_eq_term.
 Qed.
 
 Lemma lift_eq_context `{checker_flags} φ l l' n k :

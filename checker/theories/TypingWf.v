@@ -368,7 +368,7 @@ Lemma it_mkProd_or_LetIn_wf Γ t
   : Ast.wf (it_mkProd_or_LetIn Γ t) -> Ast.wf t.
 Proof.
   revert t. induction Γ; [trivial|]. intros t XX.
-  destruct a, decl_body; simpl in *.
+  destruct a, decl_body0; simpl in *.
   apply IHΓ in XX. now inv XX.
   apply IHΓ in XX. now inv XX.
 Qed.

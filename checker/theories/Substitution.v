@@ -63,7 +63,7 @@ Fixpoint make_context_subst ctx args s :=
 
 Lemma subst_decl0 Γ k d : on_local_decl wf_decl_pred Γ d -> map_decl (subst [] k) d = d.
 Proof.
-  unfold wf_decl_pred; intros Hd; destruct d; destruct decl_body;
+  unfold wf_decl_pred; intros Hd; destruct d; destruct decl_body0;
     unfold on_local_decl in Hd; unfold subst_decl, map_decl; simpl in *;
     f_equal; simpl; rewrite subst_empty; intuition trivial.
 Qed.
@@ -581,7 +581,7 @@ Proof.
   generalize (@nil term) at 1 2.
   induction c in n, k |- *; simpl; intros. reflexivity.
   rewrite subst_context_snoc. unfold snoc. simpl.
-  destruct a. destruct decl_body. unfold subst_decl, map_decl. simpl.
+  destruct a. destruct decl_body0. unfold subst_decl, map_decl. simpl.
   now rewrite IHc. simpl. apply IHc.
 Qed.
 
@@ -1436,7 +1436,7 @@ Qed.
 Lemma subst_eq_decl `{checker_flags} ϕ l k d d' :
   eq_decl ϕ d d' -> eq_decl ϕ (subst_decl l k d) (subst_decl l k d').
 Proof.
-  destruct d, d', decl_body, decl_body0;
+  destruct d, d', decl_body0, decl_body1;
     unfold eq_decl, map_decl; cbn; intuition auto using subst_eq_term.
 Qed.
 

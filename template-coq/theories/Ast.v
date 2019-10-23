@@ -3,7 +3,7 @@
 Require Import Coq.Strings.String.
 Require Import Coq.PArith.BinPos.
 Require Import List. Import ListNotations.
-From MetaCoq.Template Require Import utils.
+From MetaCoq.Template Require Import utils Environment.
 From MetaCoq.Template Require Export Universes.
 
 (** * AST of Coq kernel terms and kernel data structures
@@ -167,33 +167,13 @@ Record mutual_inductive_entry := {
      module. Not handled by Template Coq yet. *) }.
 
 
+Module TemplateTerm <: Term.
 
-(** ** Declarations *)
+  Definition term := term.
 
-(** *** The context of De Bruijn indices *)
+End TemplateTerm.
 
-Record context_decl := mkdecl {
-  decl_name : name ;
-  decl_body : option term ;
-  decl_type : term }.
-
-(** Local (de Bruijn) variable binding *)
-
-Definition vass x A := {| decl_name := x; decl_body := None; decl_type := A |}.
-
-(** Local (de Bruijn) let-binding *)
-
-Definition vdef x t A := {| decl_name := x; decl_body := Some t; decl_type := A |}.
-
-(** Local (de Bruijn) context *)
-
-Definition context := list context_decl.
-
-(** Last declaration first *)
-
-Definition snoc {A} (Γ : list A) (d : A) := d :: Γ.
-
-Notation " Γ ,, d " := (snoc Γ d) (at level 20, d at next level).
+Module Export TemplateEnvironment := Environment TemplateTerm.
 
 (** *** Environments *)
 

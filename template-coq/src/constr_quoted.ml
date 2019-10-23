@@ -50,9 +50,13 @@ struct
   type quoted_program = Constr.t (* of type Ast.program *)
 
   let resolve_symbol (path : string list) (tm : string) : Constr.t Lazy.t =
-    gen_constant_in_modules contrib_name [path] tm
+    lazy (
+      let tm_ref = Coqlib.find_reference "template-coq reification" path tm in
+      UnivGen.constr_of_global tm_ref
+    )
+    (* gen_constant_in_modules contrib_name [path] tm *)
 
-  let resolve_symbol_p (path : string list) (tm : string) : Globnames.global_reference Lazy.t =
+  let resolve_symbol_p (path : string list) (tm : string) : Names.GlobRef.t Lazy.t =
     lazy (Coqlib.gen_reference_in_modules contrib_name [path] tm)
 
   let pkg_datatypes = ["Coq";"Init";"Datatypes"]

@@ -6,6 +6,7 @@ theories/utils.v
 theories/config.v
 theories/Universes.v
 theories/BasicAst.v
+theories/Environment.v
 theories/Ast.v
 theories/AstUtils.v
 theories/Induction.v

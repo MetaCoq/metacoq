@@ -1,7 +1,0 @@
--arg "-w '-notation-overridden'" -R . UnivalentParametricity
-HoTT.v
-CanonicalEq.v
-Transportable.v
-URTactics.v
-UR.v
-FP.v

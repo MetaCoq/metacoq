@@ -5,8 +5,8 @@
 Require Import HoTT.
 
 Set Universe Polymorphism.
-Set Primitive Projections.
-Set Polymorphic Inductive Cumulativity. 
+(* Set Primitive Projections. *)
+(* Set Polymorphic Inductive Cumulativity.  *)
 Unset Universe Minimization ToSet.
 
 Class Canonical_eq@{i} (A:Type@{i}) :=

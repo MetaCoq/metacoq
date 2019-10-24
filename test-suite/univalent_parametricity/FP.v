@@ -6,7 +6,7 @@ Set Polymorphic Inductive Cumulativity.
 
 Set Universe Polymorphism.
 
-Require Import HoTT CanonicalEq URTactics UnivalentParametricity.theories.UR UnivalentParametricity.theories.Transportable.
+Require Import HoTT CanonicalEq URTactics UR Transportable.
 
 
 (*! Establishing FP for Type !*)
@@ -412,5 +412,17 @@ Defined.
 
 
 
+From MetaCoq.Template Require Import Loader.
+From MetaCoq.SafeChecker Require Import Loader.
+
+Local Open Scope string_scope.
+
+From Coq Require Import String.
+
+ MetaCoq SafeCheck @URType_IsEq.
+
+
+MetaCoq SafeCheck @FP_forall.
+MetaCoq CoqCheck FP_forall.
 
 

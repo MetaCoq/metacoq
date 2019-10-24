@@ -4,12 +4,12 @@
 (************************************************************************)
 
 Require Import HoTT CanonicalEq.
-Require Import UnivalentParametricity.theories.Transportable.
+Require Import Transportable.
 Require Import URTactics.
 
 Set Universe Polymorphism.
-Set Primitive Projections.
-Set Polymorphic Inductive Cumulativity. 
+(* Set Primitive Projections. *)
+(* Set Polymorphic Inductive Cumulativity.  *)
 Unset Universe Minimization ToSet.
 
 (* basic classes for univalent relations *)
@@ -145,7 +145,7 @@ Definition UR_Type_equiv (A A' : Type) (eA : A ⋈ A') (eA': A ≃ A')
   eA =
   Build_UR_Type _ _ eA' (Ur eA)
                 (transport_eq (fun X => UR_Coh A A' X _) e (Ur_Coh eA)) _ _. 
-  destruct e. reflexivity.
+  destruct e. destruct eA. reflexivity.
 Defined. 
 
 Definition UR_Type_eq (A A' : Type) (eA eA': A ⋈ A')

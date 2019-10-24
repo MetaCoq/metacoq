@@ -104,7 +104,7 @@ Qed.
 
 Lemma subst_decl0 k d : map_decl (subst [] k) d = d.
 Proof.
-  destruct d; destruct decl_body0;
+  destruct d; destruct decl_body;
     unfold subst_decl, map_decl; simpl in *;
     f_equal; simpl; rewrite subst_empty; intuition trivial.
 Qed.
@@ -404,7 +404,7 @@ Proof.
     rewrite H in Heq'. rewrite Heq in Heq'. revert Heq'; intros [= <- <-].
     f_equal; auto.
     eapply All_map_id. eapply All2_All_left; tea.
-    intros [[x p] n'] y [[s Hty] [cs Hargs]].
+    intros [[x p] n'] y [[s Hty] [cs Hargs]]. 
     unfold on_pi2; cbn; f_equal; f_equal.
     eapply typed_subst. 3:eapply Hty. eauto. simpl. lia.
     destruct (eq_dec ind_projs []) as [Hp|Hp]; subst; auto.
@@ -610,7 +610,7 @@ Proof.
   generalize (@nil term) at 1 2.
   induction c in n, k |- *; simpl; intros. reflexivity.
   rewrite subst_context_snoc. unfold snoc. simpl.
-  destruct a. destruct decl_body0. unfold subst_decl, map_decl. simpl.
+  destruct a. destruct decl_body. unfold subst_decl, map_decl. simpl.
   now rewrite IHc. simpl. apply IHc.
 Qed.
 
@@ -1569,7 +1569,7 @@ Qed.
 Lemma subst_eq_decl `{checker_flags} ϕ l k d d' :
   eq_decl ϕ d d' -> eq_decl ϕ (subst_decl l k d) (subst_decl l k d').
 Proof.
-  destruct d, d', decl_body0, decl_body1;
+  destruct d, d', decl_body, decl_body0;
     unfold eq_decl, map_decl; cbn; intuition auto using subst_eq_term.
 Qed.
 

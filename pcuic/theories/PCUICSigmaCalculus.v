@@ -167,7 +167,7 @@ Proof.
   destruct d. unfold map_decl.
   autorewrite with sigma.
   f_equal.
-  simpl. destruct decl_body0.
+  simpl. destruct decl_body.
   - simpl. f_equal. autorewrite with sigma. reflexivity.
   - reflexivity.
 Qed.
@@ -183,7 +183,7 @@ Proof.
   - autorewrite with sigma. rewrite IHΓ. f_equal.
     destruct a. unfold inst_decl. unfold map_decl. simpl.
     f_equal.
-    + destruct decl_body0. 2: reflexivity.
+    + destruct decl_body. 2: reflexivity.
       simpl. f_equal. eapply inst_ext. intro j.
       unfold ren, shiftn, Upn, subst_consn, shift, shiftk, subst_compose.
       destruct (Nat.ltb_spec j #|Γ|).
@@ -1232,7 +1232,7 @@ Proof.
     revert e2. intros [= <- <-].
     rewrite e. f_equal.
     + eapply All_map_id. eapply All2_All_left; tea.
-      intros [[x p] n'] y [[?s Hty] [cs Hargs]].
+      intros [[x p] n'] y [[?s Hty] [cs Hargs]]. 
       unfold on_pi2; cbn; f_equal; f_equal.
       eapply typed_inst. all: eauto.
     + destruct (eq_dec pr []) as [hp | hp]. all: subst. all: auto.

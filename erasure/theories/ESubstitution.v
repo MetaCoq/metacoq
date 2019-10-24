@@ -13,7 +13,6 @@ Import MonadNotation.
 Local Set Keyed Unification.
 
 Module PA := PCUICAst.
-Module PE := PCUICAst.PCUICEnvironment.
 Module P := PCUICWcbvEval.
 Local Existing Instance config.extraction_checker_flags.
 
@@ -107,7 +106,7 @@ Qed.
 (** ** Weakening *)
 
 Lemma Is_type_weakening:
-  forall (Σ : global_env_ext) (Γ Γ' Γ'' : PE.context),
+  forall (Σ : global_env_ext) (Γ Γ' Γ'' : PCUICAst.context),
     wf_local Σ (Γ ,,, Γ') ->
     wf Σ ->
     wf_local Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') ->
@@ -133,7 +132,7 @@ Proof.
   intros. now subst.
 Qed.
 
-Lemma erases_weakening' (Σ : global_env_ext) (Γ Γ' Γ'' : PE.context) (t T : PCUICAst.term) t' :
+Lemma erases_weakening' (Σ : global_env_ext) (Γ Γ' Γ'' : PCUICAst.context) (t T : PCUICAst.term) t' :
     wf Σ ->
     wf_local Σ (Γ ,,, Γ') ->
     wf_local Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') ->
@@ -158,14 +157,14 @@ Proof.
   all:cbn.
   - destruct ?; econstructor.
   - econstructor.
-    unfold app_context, PE.snoc in *.
-    pose proof (h_forall_Γ0 (Γ) (PE.vass n t :: Γ') Γ'').
+    unfold app_context, PCUICAst.snoc in *.
+    pose proof (h_forall_Γ0 (Γ) (PCUICAst.vass n t :: Γ') Γ'').
     rewrite lift_context_snoc0, <- plus_n_O in *.
     eapply H; eauto. cbn. econstructor.
     eauto. cbn. exists s1. eapply weakening_typing with (T := tSort s1); eauto.
   - econstructor.
     + eapply h_forall_Γ0; eauto.
-    + pose proof (h_forall_Γ1 Γ (PE.vdef n b b_ty :: Γ') Γ'').
+    + pose proof (h_forall_Γ1 Γ (PCUICAst.vdef n b b_ty :: Γ') Γ'').
       rewrite lift_context_snoc0, <- plus_n_O in *.
       eapply H; eauto. cbn. econstructor.
       eauto. cbn. 2: cbn; eapply weakening_typing; eauto.
@@ -216,7 +215,7 @@ Proof.
   - eauto.
 Qed.
 
-Lemma erases_weakening (Σ : global_env_ext) (Γ Γ' : PE.context) (t T : PCUICAst.term) t' :
+Lemma erases_weakening (Σ : global_env_ext) (Γ Γ' : PCUICAst.context) (t T : PCUICAst.term) t' :
   wf Σ ->
   wf_local Σ (Γ ,,, Γ') ->
   Σ ;;; Γ |- t : T ->
@@ -296,7 +295,7 @@ Proof.
   revert Γ Γ' Δ t' s Hs HΔ He eqw.
   revert Σ HΣ Γ0 X t T Ht.
   eapply (typing_ind_env (fun Σ Γ0 t T =>
-                            forall (Γ Γ' : PE.context) Δ t' (s : list PCUICAst.term),
+                            forall (Γ Γ' : PCUICAst.context) Δ t' (s : list PCUICAst.term),
                               wf_local Σ (Γ ,,, subst_context s 0 Δ) ->
                               subslet Σ Γ s Γ' ->
                               Σ;;; Γ ,,, Γ' ,,, Δ |- t ⇝ℇ t' ->
@@ -324,7 +323,7 @@ Proof.
     eapply is_type_subst; eauto.
   - inv H1.
     + cbn. econstructor.
-      specialize (H0 Γ Γ' (PE.vass n t :: Δ) t'0 s).
+      specialize (H0 Γ Γ' (PCUICAst.vass n t :: Δ) t'0 s).
       (* unfold app_context, snoc in *. *)
       rewrite subst_context_snoc0 in *.
       eapply H0; eauto.
@@ -335,7 +334,7 @@ Proof.
   - inv H2.
     + cbn. econstructor.
       eauto.
-      specialize (H1 Γ Γ' (PE.vdef n b b_ty :: Δ) t2' s).
+      specialize (H1 Γ Γ' (PCUICAst.vdef n b b_ty :: Δ) t2' s).
       rewrite subst_context_snoc0 in *.
       eapply H1; eauto.
       cbn. econstructor. eauto.

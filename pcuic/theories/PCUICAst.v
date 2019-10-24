@@ -125,7 +125,8 @@ Record mutual_inductive_entry := {
 
   End PCUICTerm.
 
-   Module Export PCUICEnvironment := Environment PCUICTerm.
+  Module PCUICEnvironment := Environment PCUICTerm.
+  Include PCUICEnvironment.
 
 (** *** Environments *)
 

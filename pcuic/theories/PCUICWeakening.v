@@ -256,7 +256,7 @@ Proof.
     rewrite H0 in Heq'. rewrite Heq in Heq'. revert Heq'; intros [= <- <-].
     f_equal; auto.
     eapply All_map_id. eapply All2_All_left; tea.
-    intros [[x p] n'] y [[s Hty] [cs Hargs]].
+    intros [[x p] n'] y [[s Hty] [cs Hargs]]. 
     unfold on_pi2; cbn; f_equal; f_equal.
     simpl in Hty.
     eapply typed_liftn. 4:eapply Hty. eauto. apply typing_wf_local in Hty; eauto. lia.
@@ -542,7 +542,7 @@ Proof.
   unfold to_extended_list, to_extended_list_k. generalize 0. generalize (@nil term) at 1 2.
   induction c in n, k |- *; simpl; intros. reflexivity.
   rewrite -> lift_context_snoc0. unfold snoc. simpl.
-  destruct a. destruct decl_body0. unfold lift_decl, map_decl. simpl.
+  destruct a. destruct decl_body. unfold lift_decl, map_decl. simpl.
   now rewrite -> IHc. simpl. apply IHc.
 Qed.
 

@@ -173,7 +173,8 @@ Module TemplateTerm <: Term.
 
 End TemplateTerm.
 
-Module Export TemplateEnvironment := Environment TemplateTerm.
+Module TemplateEnvironment := Environment TemplateTerm.
+Include TemplateEnvironment.
 
 (** *** Environments *)
 

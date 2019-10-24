@@ -432,7 +432,7 @@ Proof.
   generalize (le_refl p).
   generalize p at 1 3 5.
   induction Γ in p, l |- *. simpl. auto.
-  intros. destruct a. destruct decl_body0. simpl.
+  intros. destruct a. destruct decl_body. simpl.
   assert(p0 <= S p) by lia.
   specialize (IHΓ l (S p) p0 H1). rewrite <- Nat.add_succ_comm, Nat.add_1_r.
   simpl in *. rewrite <- Nat.add_succ_comm in H0. eauto.

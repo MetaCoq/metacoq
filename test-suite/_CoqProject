@@ -36,3 +36,9 @@ vs.v
 erasure_test.v
 safechecker_test.v
 erasure_live_test.v
+univalent_parametricity/HoTT.v
+univalent_parametricity/CanonicalEq.v
+univalent_parametricity/Transportable.v
+univalent_parametricity/URTactics.v
+univalent_parametricity/UR.v
+univalent_parametricity/FP.v

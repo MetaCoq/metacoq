@@ -873,7 +873,8 @@ Proof.
       rewrite nl_lookup_env, H. reflexivity.
     + destruct decl as [? [?|] ?].
       all: cbn in *.
-      all: congruence.
+      * f_equal. f_equal. congruence.
+      * discriminate.
   - rewrite nl_mkApps. cbn. constructor.
     rewrite nth_error_map, H. reflexivity.
   - constructor. eapply OnOne2_map, OnOne2_impl. 1: eassumption.

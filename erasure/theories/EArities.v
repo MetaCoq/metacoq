@@ -163,20 +163,20 @@ Proof.
     + dependent destruction X.
       * unfold subst1. rewrite subst_it_mkProd_or_LetIn, subst_mkApps. eauto.
       * destruct args using rev_ind; try rewrite <- mkApps_nested in x; cbn in x; inv x.
-      * eexists (l ++ [Build_context_decl decl_name (Some r) decl_type])%list, l0.
+      * eexists (l ++ [mkdecl decl_name (Some r) decl_type])%list, l0.
         now rewrite it_mkProd_or_LetIn_app.
-      * eexists (l ++ [Build_context_decl decl_name (Some t0) r])%list, l0.
+      * eexists (l ++ [mkdecl decl_name (Some t0) r])%list, l0.
         now rewrite it_mkProd_or_LetIn_app.
       * eapply IHL in X as (? & ? & ?). subst.
-        eexists (x ++ [Build_context_decl decl_name (Some t0) decl_type])%list, x0.
+        eexists (x ++ [mkdecl decl_name (Some t0) decl_type])%list, x0.
         rewrite it_mkProd_or_LetIn_app. reflexivity.
     + dependent destruction X.
       * eapply (f_equal decompose_app) in x.
         rewrite decompose_app_mkApps in x; cbn; eauto. cbn in x. inv x.
-      * eexists (l ++ [Build_context_decl decl_name None N1])%list, l0.
+      * eexists (l ++ [mkdecl decl_name None N1])%list, l0.
         now rewrite it_mkProd_or_LetIn_app.
       * eapply IHL in X as (? & ? & ?). subst.
-        eexists (x ++ [Build_context_decl decl_name None decl_type])%list, x0.
+        eexists (x ++ [mkdecl decl_name None decl_type])%list, x0.
         rewrite it_mkProd_or_LetIn_app. reflexivity.
 Qed.
 

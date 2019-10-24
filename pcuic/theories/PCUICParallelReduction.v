@@ -1264,7 +1264,7 @@ Section ParallelWeakening.
         assert (#|Γ''| + S i = S (#|Γ''| + i)) as -> by lia.
         econstructor; auto.
         rewrite H0. rewrite <- weaken_nth_error_ge; auto. rewrite Heq.
-        simpl in H. simpl. congruence.
+        simpl in H. simpl. f_equal. auto.
         lia.
 
       + (* Local variable *)

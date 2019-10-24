@@ -2,6 +2,7 @@ open Names
 open Constr
 open BasicAst
 open Ast0
+open TemplateEnvironment
 open Quoted
 open Quoter
 open Ast_quoter

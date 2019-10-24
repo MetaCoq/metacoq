@@ -4,6 +4,7 @@
 open Constr
 open BasicAst
 open Ast0
+open TemplateEnvironment
 open Quoted
 open Quoter
 
@@ -192,8 +193,8 @@ struct
   let mkProj p c = Coq_tProj (p,c)
 
 
-  let mkMonomorphic_ctx tm = Universes0.Monomorphic_ctx tm 
-  let mkPolymorphic_ctx tm = Universes0.Polymorphic_ctx tm 
+  let mkMonomorphic_ctx tm = Universes0.Monomorphic_ctx tm
+  let mkPolymorphic_ctx tm = Universes0.Polymorphic_ctx tm
   let mkCumulative_ctx tm var = Universes0.Cumulative_ctx (tm, var)
 
 

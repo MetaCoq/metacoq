@@ -56,6 +56,9 @@ struct
     )
     (* gen_constant_in_modules contrib_name [path] tm *)
 
+  let old_resolve_symbol (path : string list) (tm : string) : Constr.t Lazy.t =
+    lazy (Universes.constr_of_global (Coqlib.gen_reference_in_modules contrib_name [path] tm))
+
   let resolve_symbol_p (path : string list) (tm : string) : Names.GlobRef.t Lazy.t =
     lazy (Coqlib.gen_reference_in_modules contrib_name [path] tm)
 
@@ -72,7 +75,7 @@ struct
 
   let r_base_reify = resolve_symbol pkg_base_reify
   let r_reify = resolve_symbol pkg_reify
-  let r_template_monad = resolve_symbol pkg_template_monad
+  let r_template_monad = old_resolve_symbol pkg_template_monad
   let r_template_monad_p = resolve_symbol_p pkg_template_monad
 
   let tString = resolve_symbol pkg_string "String"

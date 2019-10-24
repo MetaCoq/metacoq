@@ -1,22 +1,20 @@
+From Coq Require Import Bool String List Lia PeanoNat Peano_dec.
 From MetaCoq.Template Require Import All.
-From MetaCoq.Template Require Import Loader.
-From MetaCoq Require Import Universes uGraph TemplateToPCUIC TemplateToPCUICCorrectness
-  Induction.
-Existing Instance config.default_checker_flags.
-From MetaCoq Require Import monad_utils.
-From Coq Require Import List.
-Import ListNotations.
-Import MonadNotation.
-
+From MetaCoq.Checker Require Import Typing.
 From Equations Require Import Equations.
-
 Require Import Equations.Prop.DepElim.
 
-Require Import Peano_dec.
+Import ListNotations.
+Import MonadNotation.
+Local Open Scope list_scope.
+
+Existing Instance config.default_checker_flags.
+
 
 Definition var := nat.
 
 Lemma eq_var (x y:var) : {x=y}+{x<>y}.
+Proof.
  apply eq_nat_dec.
 Defined.
 
@@ -24,25 +22,9 @@ Inductive form :=
 | Var (x:var) | Fa | Tr | Imp (f1 f2:form) | And (f1 f2:form) | Or (f1 f2:form).
 
 Lemma eq_form (f1 f2:form) : {f1=f2}+{f1<>f2}.
-revert f2; induction f1; destruct f2;
-    try (left; reflexivity) || (right; discriminate).
- destruct (eq_var x x0); [ subst x0; auto | ].
- right; intro h; injection h; intros; elim n; auto.
-
- destruct (IHf1_1 f2_1); [subst f1_1;destruct (IHf1_2 f2_2);
-                   [subst f1_2;left;auto|right]|right].
-  intro h; injection h; intros; elim n; auto.
-  intro h; injection h; intros; elim n; auto.
-
- destruct (IHf1_1 f2_1); [subst f1_1;destruct (IHf1_2 f2_2);
-                   [subst f1_2;left;auto|right]|right].
-  intro h; injection h; intros; elim n; auto.
-  intro h; injection h; intros; elim n; auto.
-
-destruct (IHf1_1 f2_1); [subst f1_1;destruct (IHf1_2 f2_2);
-                   [subst f1_2;left;auto|right]|right].
-  intro h; injection h; intros; elim n; auto.
-  intro h; injection h; intros; elim n; auto.
+Proof.
+  decide equality.
+  decide equality.
 Defined.
 
 Definition not f := Imp f Fa.
@@ -96,10 +78,9 @@ Definition sem := semGen Prop.
 Definition valid s :=
   forall l, (forall h, In h (hyps s) -> sem h l) -> sem (concl s) l.
 
-Import Bool.
-
 Lemma is_leaf_sound s :
   is_leaf s = true -> valid s.
+Proof.
 unfold is_leaf.
 destruct s as (h,cl); simpl.
 induction h; simpl; intros.
@@ -209,6 +190,7 @@ Eval compute in tauto_s (Imp (Var 0) (Imp (Imp (Var 0) (Var 1))
 
 Lemma pick_hyp_def {A} (f:A) rh h :
   In (f,rh) (pick_hyp h) <-> exists rh1 rh2, rh=rh1++rh2 /\ h = rh1++f::rh2.
+Proof.
 revert f rh; induction h; simpl; intros.
  split; intros.
   contradiction.
@@ -241,17 +223,17 @@ revert f rh; induction h; simpl; intros.
 Qed.
 
 
-Require Import Omega.
-
 Lemma hyps_size_app h1 h2 :
   hyps_size (h1++h2) = hyps_size h1 + hyps_size h2.
+Proof.
 induction h1; simpl; trivial.
 rewrite IHh1.
-omega.
+lia.
 Qed.
 
 Lemma on_hyp_size h1 rh cl ls sg :
   In ls (on_hyp h1 rh cl) -> In sg ls -> seq_size sg < size h1 + hyps_size rh + size cl.
+Proof.
 unfold seq_size, on_hyp.
 destruct h1; simpl.
  contradiction.
@@ -260,21 +242,22 @@ destruct h1; simpl.
 
  destruct 1 as [? | []]; subst ls; simpl.
  destruct 1 as [?| [? | []]]; subst sg; simpl.
-  omega.
-  omega.
+  lia.
+  lia.
 
  destruct 1 as [? | []]; subst ls; simpl.
  destruct 1 as [? | []]; subst sg; simpl.
- omega.
+ lia.
 
  destruct 1 as [? | []]; subst ls; simpl.
  destruct 1 as [?| [? | []]]; subst sg; simpl.
-  omega.
-  omega.
+  lia.
+  lia.
 Qed.
 
 Lemma on_hyps_size s ls sg :
   In ls (on_hyps s) -> In sg ls -> seq_size sg < seq_size s.
+Proof.
 destruct s as (h,cl); simpl.
 unfold on_hyps; simpl.
 intros.
@@ -286,12 +269,13 @@ specialize on_hyp_size with (1:=H1) (2:=H0); intro.
 unfold seq_size at 2; simpl.
 subst rh h.
 rewrite hyps_size_app in H |- *; simpl.
-omega.
+lia.
 Qed.
 
 
 Lemma decomp_step_size s ls sg :
   In ls (decomp_step s) -> In sg ls -> seq_size sg < seq_size s.
+Proof.
 destruct s as (h,cl).
 unfold decomp_step; simpl.
 destruct cl; simpl.
@@ -303,30 +287,31 @@ destruct cl; simpl.
  destruct 1 as [? | []]; subst ls; simpl.
  destruct 1 as [? | []]; subst sg; simpl.
  unfold seq_size; simpl.
- omega.
+ lia.
 
  destruct 1 as [? | []]; subst ls; simpl.
  destruct 1 as [?| [? | []]]; subst sg; simpl.
   unfold seq_size; simpl.
-  omega.
+  lia.
 
   unfold seq_size; simpl.
-  omega.
+  lia.
 
  destruct 1 as [?| [? |? ]]; try subst ls; simpl.
   destruct 1 as [? | []]; subst sg; simpl.
   unfold seq_size; simpl.
-  omega.
+  lia.
 
   destruct 1 as [? | []]; subst sg; simpl.
   unfold seq_size; simpl.
-  omega.
+  lia.
 
  apply on_hyps_size; trivial.
 Qed.
 
 Lemma on_hyp_sound f rh cl :
   valid_subgoal (on_hyp f rh cl) -> valid (mkS (f::rh) cl).
+Proof.
 unfold on_hyp, valid_subgoal, valid; simpl; intros (sl,?,?) l ?.
 (*assert (sem f l).
  auto.*)
@@ -357,6 +342,7 @@ Qed.
 Lemma on_hyps_sound s :
   valid_subgoal (on_hyps s) ->
   valid s.
+Proof.
 destruct s as (h,cl); simpl.
 intros (sl, ?,?).
 unfold on_hyps in H.
@@ -378,7 +364,7 @@ Qed.
 
 Lemma step_sound s :
   valid_subgoal (decomp_step s) -> valid s.
-
+Proof.
   destruct s as (h,cl); simpl.
   unfold decomp_step; simpl.
   destruct cl; simpl; intros; try contradiction.
@@ -409,6 +395,7 @@ Qed.
 
 Lemma tauto_sound n s :
   tauto_proc n s = Valid -> valid s.
+Proof.
 revert s; induction n; simpl; intros.
  generalize (is_leaf_sound s).
  destruct (is_leaf s); auto.
@@ -486,12 +473,6 @@ revert s; induction n; simpl; intros.
 Qed.
 
 
-Require Import String.
-Local Open Scope string_scope.
-From  MetaCoq Require Import PCUICSize.
-From MetaCoq.Checker Require Import WfInv Typing Weakening TypingWf
-     WeakeningEnv Substitution.
-
 Quote Definition MProp := Prop.
 
 Quote Definition MFalse := False.
@@ -510,6 +491,7 @@ Definition tAnd (A B : term) :=
 
 Definition tOr (A B : term) :=
   tApp Mor [ A ; B ].
+
 
 Inductive well_prop Σ Γ : term -> Type :=
 | well_prop_Rel :
@@ -576,34 +558,6 @@ Proof.
   split. all: assumption.
 Qed.
 
-(* TODO MOVE *)
-Lemma list_size_map :
-  forall A B size (f : A -> B) l,
-    list_size size (map f l) = list_size (fun x => size (f x)) l.
-Proof.
-  intros A B size f l.
-  induction l in B, size, f |- *.
-  - reflexivity.
-  - simpl. f_equal. eauto.
-Qed.
-
-Lemma size_trans_decompose_app :
-  forall t f args,
-    Ast.wf t ->
-    decompose_app t = (f, args) ->
-    size (trans f) + list_size (fun t => size (trans t)) args = size (trans t).
-Proof.
-  intros t f args w e.
-  apply decompose_app_eq in e as h.
-  destruct h as [h | h].
-  all: subst.
-  - apply decompose_app_wf in e as [? ?]. 2: assumption.
-    rewrite trans_mkApps by assumption.
-    rewrite PCUICAstUtils.mkApps_size.
-    rewrite list_size_map. reflexivity.
-  - simpl. rewrite PCUICAstUtils.mkApps_size.
-    rewrite list_size_map. reflexivity.
-Qed.
 
 Definition def_size (size : term -> nat) (x : def term) := size (dtype x) + size (dbody x).
 Definition mfixpoint_size (size : term -> nat) (l : mfixpoint term) :=
@@ -629,7 +583,7 @@ Lemma tsize_nonzero :
 Proof.
   intro t. induction t.
   all: simpl.
-  all: omega.
+  all: lia.
 Qed.
 
 Lemma mkApp_tsize :
@@ -638,8 +592,8 @@ Lemma mkApp_tsize :
 Proof.
   intros u v.
   induction u in v |- *.
-  all: simpl. all: try omega.
-  rewrite list_size_app. simpl. omega.
+  all: simpl. all: try lia.
+  rewrite list_size_app. simpl. lia.
 Qed.
 
 Lemma mkApps_tsize :
@@ -648,12 +602,11 @@ Lemma mkApps_tsize :
 Proof.
   intros t l.
   induction l as [| a l ih ] in t |- *.
-  - simpl. omega.
+  - simpl. lia.
   - destruct (Ast.isApp t) eqn:e.
     + destruct t. all: try discriminate.
-      simpl. rewrite list_size_app. simpl. omega.
-    + rewrite <- mkApps_tApp by (rewrite ?e ; eauto).
-      simpl. omega.
+      simpl. rewrite list_size_app. simpl. lia.
+    + rewrite mkApps_tApp; eauto. discriminate.
 Qed.
 
 Lemma tsize_decompose_app :
@@ -667,7 +620,7 @@ Proof.
   all: inversion e ; subst.
   all: simpl.
   all: try reflexivity.
-  all: omega.
+  all: lia.
 Qed.
 
 Lemma tsize_lift :
@@ -714,7 +667,7 @@ Lemma list_size_length :
 Proof.
   intros l. induction l.
   - auto.
-  - simpl. pose proof (tsize_nonzero a). omega.
+  - simpl. pose proof (tsize_nonzero a). lia.
 Qed.
 
 Lemma nth_error_list_size :
@@ -727,15 +680,15 @@ Proof.
   - destruct n. all: inversion e.
   - destruct n.
     + simpl in e. apply some_inj in e. subst.
-      simpl. pose proof (list_size_length l). omega.
+      simpl. pose proof (list_size_length l). lia.
     + simpl in e. simpl.
-      eapply IHl in e. omega.
+      eapply IHl in e. lia.
 Qed.
 
 Lemma tsize_downlift :
   forall t k,
     Ast.wf t ->
-    tsize (TL.subst [tRel 0] k t) = tsize t.
+    tsize (subst [tRel 0] k t) = tsize t.
 Proof.
   intros t k h.
   induction t using term_forall_list_ind in k, h |- *.
@@ -752,7 +705,7 @@ Proof.
     + reflexivity.
     + simpl. inversion H1. subst. intuition eauto.
   - rewrite IHt1, IHt2, IHt3 by assumption. reflexivity.
-  - rewrite <- mkApps_tApp.
+  - rewrite mkApps_tApp; eauto.
     + simpl. f_equal. rewrite IHt by assumption. f_equal.
       clear - H H5. induction H.
       * reflexivity.
@@ -765,8 +718,8 @@ Proof.
         -- simpl. reflexivity.
         -- simpl. destruct m. all: eauto.
       * simpl. reflexivity.
-    + clear - H3. destruct l. 1: solve [ auto ].
-      simpl. reflexivity.
+    + clear - H3. destruct l. contradiction.
+      discriminate.
   - f_equal. rewrite IHt1, IHt2 by assumption. f_equal.
     clear - H H6. induction H.
     * reflexivity.
@@ -797,13 +750,14 @@ Qed.
 
 Local Ltac inst :=
   lazymatch goal with
-  | h : forall k, _ <= tsize ?x |- context [ (TL.subst _ ?k ?x) ] =>
+  | h : forall k, _ <= tsize ?x |- context [ (subst _ ?k ?x) ] =>
     specialize (h k)
   end.
 
+
 Lemma tsize_downlift_le :
   forall t k,
-    tsize (TL.subst [tRel 0] k t) <= tsize t.
+    tsize (subst [tRel 0] k t) <= tsize t.
 Proof.
   intros t k.
   induction t using term_forall_list_ind in k |- *.
@@ -815,29 +769,29 @@ Proof.
   }
   all: simpl.
   all: try solve [ eauto ].
-  all: try solve [ repeat inst ; omega ].
+  all: try solve [ repeat inst ; lia ].
   - eapply le_n_S. induction H.
     + reflexivity.
-    + simpl. repeat inst. omega.
+    + simpl. repeat inst. lia.
   - inst.
-    pose proof (mkApps_tsize (TL.subst [tRel 0] k t) (map (TL.subst [tRel 0] k) l)) as h.
-    assert (list_size tsize (map (TL.subst [tRel 0] k) l) <= list_size tsize l).
+    pose proof (mkApps_tsize (subst [tRel 0] k t) (map (subst [tRel 0] k) l)) as h.
+    assert (list_size tsize (map (subst [tRel 0] k) l) <= list_size tsize l).
     { clear - H. induction H.
       - reflexivity.
-      - simpl. inst. omega.
+      - simpl. inst. lia.
     }
-    omega.
+    lia.
   - repeat inst.
     assert (
-      list_size (fun x : nat × Tterm => tsize x.2)
-                (map (on_snd (TL.subst [tRel 0] k)) l)
-      <= list_size (fun x : nat × Tterm => tsize x.2) l
+      list_size (fun x : nat × term => tsize x.2)
+                (map (on_snd (subst [tRel 0] k)) l)
+      <= list_size (fun x : nat × term => tsize x.2) l
     ).
     { clear - H. induction H.
     - reflexivity.
-    - simpl. inst. omega.
+    - simpl. inst. lia.
   }
-  omega.
+  lia.
   - eapply le_n_S.
     generalize (#|m| + k). intro p.
     clear - H. induction H.
@@ -849,7 +803,7 @@ Proof.
       unfold mfixpoint_size in IHForall.
       unfold map_def in IHForall.
       unfold def_size in IHForall.
-      repeat inst. omega.
+      repeat inst. lia.
   - eapply le_n_S.
     generalize (#|m| + k). intro p.
     clear - H. induction H.
@@ -861,7 +815,7 @@ Proof.
       unfold mfixpoint_size in IHForall.
       unfold map_def in IHForall.
       unfold def_size in IHForall.
-      repeat inst. omega.
+      repeat inst. lia.
 Qed.
 
 Definition inspect {A} (x : A) : { y : A | y = x } := exist _ x eq_refl.
@@ -917,28 +871,28 @@ Equations reify (Σ : global_env_ext) (Γ : context) (P : term) : option form
   }.
 Next Obligation.
   symmetry in e1. apply tsize_decompose_app in e1 as h1.
-  simpl in h1. omega.
+  simpl in h1. lia.
 Qed.
 Next Obligation.
   symmetry in e1. apply tsize_decompose_app in e1 as h1.
   simpl in h1. pose proof (tsize_downlift_le B 0).
-  omega.
+  lia.
 Qed.
 Next Obligation.
   symmetry in e1. apply tsize_decompose_app in e1 as h1.
-  simpl in h1. omega.
+  simpl in h1. lia.
 Qed.
 Next Obligation.
   symmetry in e1. apply tsize_decompose_app in e1 as h1.
-  simpl in h1. omega.
+  simpl in h1. lia.
 Qed.
 Next Obligation.
   symmetry in e1. apply tsize_decompose_app in e1 as h1.
-  simpl in h1. omega.
+  simpl in h1. lia.
 Qed.
 Next Obligation.
   symmetry in e1. apply tsize_decompose_app in e1 as h1.
-  simpl in h1. omega.
+  simpl in h1. lia.
 Qed.
 
 Instance Propositional_Logic_MetaCoq : Propositional_Logic term :=
@@ -1042,13 +996,13 @@ Section Plugin.
   Definition inhabit_formula gamma Mphi Gamma :
     match reify (empty_ext []) gamma Mphi with
       Some phi => 
-      match tauto_proc (Top.size phi) {| hyps := []; concl := phi |} with 
+      match tauto_proc (size phi) {| hyps := []; concl := phi |} with 
         Valid => sem (concl {| hyps := []; concl := phi |}) (can_val_Prop Gamma)
       | _ => NotSolvable "not a valid formula" end 
     | None => NotSolvable "not a formaula" end.
     destruct (reify (empty_ext []) gamma Mphi); try exact (notSolvable _).
-    destruct (tauto_proc (Top.size f) {| hyps := []; concl := f |}) eqn : e; try exact (notSolvable _).
-    exact (tauto_sound (Top.size f) (mkS [] f) e (can_val_Prop Gamma) (trivial_hyp [] _)).
+    destruct (tauto_proc (size f) {| hyps := []; concl := f |}) eqn : e; try exact (notSolvable _).
+    exact (tauto_sound (size f) (mkS [] f) e (can_val_Prop Gamma) (trivial_hyp [] _)).
   Defined.
 
   Fixpoint extract_form (P:term) (n : nat) : term * nat :=
@@ -1096,4 +1050,3 @@ Section Plugin.
   Abort. 
 
 End Plugin.
-  

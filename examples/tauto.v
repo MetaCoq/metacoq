@@ -970,10 +970,10 @@ Proof.
       simpl. reflexivity.
     + cbn. rewrite s1, s2. reflexivity.
   - exists Fa. split.
-    + simp reify. reflexivity.
+    + rewrite reify_unfold_eq. reflexivity.
     + reflexivity.
   - exists Tr. split.
-    + simp reify. reflexivity.
+    + rewrite reify_unfold_eq. reflexivity.
     + reflexivity.
 Qed.
 

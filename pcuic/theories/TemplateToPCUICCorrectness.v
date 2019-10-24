@@ -805,9 +805,10 @@ Proof.
   destruct Σ.
   unfold trans_global, TTy.global_ext_levels, global_ext_levels; simpl.
   f_equal. clear u.
-  induction l. reflexivity.
-  simpl. rewrite IHl. f_equal. clear.
-  destruct a; reflexivity.
+  induction g.
+  - reflexivity.
+  - simpl. rewrite IHg. f_equal. clear.
+    destruct a; reflexivity.
 Qed.
 
 Lemma global_ext_constraints_trans Σ
@@ -816,9 +817,10 @@ Proof.
   destruct Σ.
   unfold trans_global, TTy.global_ext_constraints, global_ext_constraints; simpl.
   f_equal. clear u.
-  induction l. reflexivity.
-  simpl. rewrite IHl. f_equal. clear.
-  destruct a; reflexivity.
+  induction g.
+  - reflexivity.
+  - simpl. rewrite IHg. f_equal. clear.
+    destruct a; reflexivity.
 Qed.
 
 Lemma trans_cumul (Σ : Ast.global_env_ext) Γ T U :

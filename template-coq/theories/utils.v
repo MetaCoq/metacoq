@@ -2853,3 +2853,96 @@ Proof.
   - dependent destruction h2.
     forward IHh1 ; auto.
 Qed.
+
+
+Section ListSize.
+  Context {A} (size : A -> nat).
+
+  Fixpoint list_size (l : list A) : nat :=
+    match l with
+    | [] =>  0
+    | a :: v => S (size a + list_size v)
+    end.
+
+  Lemma list_size_app (l l' : list A)
+    : list_size (l ++ l') = list_size l + list_size l'.
+  Proof.
+    induction l; simpl. reflexivity.
+    rewrite IHl; lia.
+  Qed.
+
+  Lemma list_size_rev (l : list A)
+    : list_size (rev l) = list_size l.
+  Proof.
+    induction l; simpl. reflexivity.
+    rewrite rev_cons list_size_app IHl; cbn; lia.
+  Qed.
+
+End ListSize.
+
+Section ListSizeMap.
+  Context {A} (sizeA : A -> nat).
+  Context {B} (sizeB : B -> nat).
+
+  Lemma list_size_map (f : A -> B) l :
+    list_size sizeB (map f l) = list_size (fun x => sizeB (f x)) l.
+  Proof.
+    induction l; simpl; eauto.
+  Qed.
+
+  Lemma list_size_mapi_rec_eq (l : list A) (f : nat -> A -> B) k :
+    (forall i x, sizeB (f i x) = sizeA x) ->
+    list_size sizeB (mapi_rec f l k) = list_size sizeA l.
+  Proof.
+    intro H. induction l in k |- *. reflexivity.
+    simpl. rewrite IHl. rewrite H. lia.
+  Qed.
+
+  Lemma list_size_mapi_eq (l : list A) (f : nat -> A -> B) :
+    (forall i x, sizeB (f i x) = sizeA x) ->
+    list_size sizeB (mapi f l) = list_size sizeA l.
+  Proof.
+    unfold mapi. intros. now apply list_size_mapi_rec_eq.
+  Qed.
+
+  Lemma list_size_map_eq (l : list A) (f : A -> B) :
+    (forall x, sizeA x = sizeB (f x)) ->
+    list_size sizeB (map f l) = list_size sizeA l.
+  Proof.
+    intros.
+    induction l; simpl; auto.
+  Qed.
+
+  Lemma list_size_mapi_rec_le (l : list A) (f : nat -> A -> B) k :
+    (forall i x, sizeB (f i x) <= sizeA x) ->
+    list_size sizeB (mapi_rec f l k) <= list_size sizeA l.
+  Proof.
+    intro H. induction l in k |- *. reflexivity.
+    simpl. specialize (H k a). specialize (IHl (S k)). lia.
+  Qed.
+
+  Lemma list_size_mapi_le (l : list A) (f : nat -> A -> B) :
+    (forall i x, sizeB (f i x) <= sizeA x) ->
+    list_size sizeB (mapi f l) <= list_size sizeA l.
+  Proof.
+    unfold mapi. intros. now apply list_size_mapi_rec_le.
+  Qed.
+
+  Lemma list_size_map_le (l : list A) (f : A -> B) :
+    (forall x, sizeB (f x) <= sizeA x) ->
+    list_size sizeB (map f l) <= list_size sizeA l.
+  Proof.
+    intros.
+    induction l; simpl; auto. specialize (H a).
+    lia.
+  Qed.
+
+End ListSizeMap.
+
+Lemma list_size_map_hom {A} (size : A -> nat) (l : list A) (f : A -> A) :
+  (forall x, size x = size (f x)) ->
+  list_size size (map f l) = list_size size l.
+Proof.
+  intros.
+  induction l; simpl; auto.
+Defined.

@@ -1,4 +1,4 @@
-all: template-coq checker pcuic safechecker erasure
+all: template-coq checker pcuic safechecker erasure examples
 
 .PHONY: all template-coq checker pcuic erasure install html clean mrproper .merlin test-suite translations
 
@@ -26,6 +26,7 @@ clean:
 	$(MAKE) -C pcuic clean
 	$(MAKE) -C safechecker clean
 	$(MAKE) -C erasure clean
+	$(MAKE) -C examples clean
 	$(MAKE) -C test-suite clean
 	$(MAKE) -C translations clean
 
@@ -35,6 +36,7 @@ mrproper:
 	$(MAKE) -C safechecker mrproper
 	$(MAKE) -C erasure mrproper
 	$(MAKE) -C checker mrproper
+	$(MAKE) -C examples mrproper
 	$(MAKE) -C test-suite mrproper
 	$(MAKE) -C translations mrproper
 
@@ -59,6 +61,9 @@ erasure: template-coq safechecker pcuic
 
 checker: template-coq
 	$(MAKE) -C checker
+
+examples: template-coq checker
+	$(MAKE) -C examples
 
 test-suite: template-coq checker safechecker erasure
 	$(MAKE) -C test-suite

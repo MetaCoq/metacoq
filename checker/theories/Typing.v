@@ -3,7 +3,7 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia ssreflect.
 From Coq Require Import String Wf Wellfounded Relation_Definitions Relation_Operators Lexicographic_Product Wf_nat.
 
-From MetaCoq.Template Require Import config utils Ast AstUtils Induction LiftSubst UnivSubst.
+From MetaCoq.Template Require Import config utils Ast AstUtils Induction LiftSubst UnivSubst EnvironmentTyping.
 From MetaCoq.Checker Require Import LibHypsNaming Reflect.
 
 From Equations Require Import Equations.
@@ -58,42 +58,6 @@ Proof.
   - now rewrite IHtl subst_context_length.
   - rewrite IHtl app_length. simpl. lia.
 Qed.
-
-(** ** Environment lookup *)
-
-Definition global_decl_ident d :=
-  match d with
-  | ConstantDecl id _ => id
-  | InductiveDecl id _ => id
-  end.
-
-Fixpoint lookup_env (Σ : global_env) (id : ident) : option global_decl :=
-  match Σ with
-  | nil => None
-  | hd :: tl =>
-    if ident_eq id (global_decl_ident hd) then Some hd
-    else lookup_env tl id
-  end.
-
-Definition declared_constant (Σ : global_env) (id : ident) decl : Prop :=
-  lookup_env Σ id = Some (ConstantDecl id decl).
-
-Definition declared_minductive Σ mind decl :=
-  lookup_env Σ mind = Some (InductiveDecl mind decl).
-
-Definition declared_inductive Σ mdecl ind decl :=
-  declared_minductive Σ (inductive_mind ind) mdecl /\
-  List.nth_error mdecl.(ind_bodies) (inductive_ind ind) = Some decl.
-
-Definition declared_constructor Σ mdecl idecl cstr cdecl : Prop :=
-  declared_inductive Σ mdecl (fst cstr) idecl /\
-  List.nth_error idecl.(ind_ctors) (snd cstr) = Some cdecl.
-
-Definition declared_projection Σ mdecl idecl (proj : projection) pdecl : Prop :=
-  declared_inductive Σ mdecl (fst (fst proj)) idecl /\
-  List.nth_error idecl.(ind_projs) (snd proj) = Some pdecl /\
-  mdecl.(ind_npars) = snd (fst proj).
-
 
 (** Inductive substitution, to produce a constructors' type *)
 Definition inds ind u (l : list one_inductive_body) :=
@@ -187,6 +151,8 @@ Definition tDummy := tVar "".
 Definition iota_red npar c args brs :=
   (mkApps (snd (List.nth c brs (0, tDummy))) (List.skipn npar args)).
 
+Module TemplateLookup := Lookup TemplateTerm.
+Include TemplateLookup.
 
 (** *** One step strong beta-zeta-iota-fix-delta reduction
 

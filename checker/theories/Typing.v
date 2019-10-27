@@ -151,7 +151,7 @@ Definition tDummy := tVar "".
 Definition iota_red npar c args brs :=
   (mkApps (snd (List.nth c brs (0, tDummy))) (List.skipn npar args)).
 
-Module TemplateLookup := Lookup TemplateTerm.
+Module TemplateLookup := Lookup TemplateTerm TemplateEnvironment.
 Include TemplateLookup.
 
 (** *** One step strong beta-zeta-iota-fix-delta reduction

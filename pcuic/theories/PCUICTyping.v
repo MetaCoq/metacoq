@@ -66,7 +66,7 @@ Proof.
   - rewrite IHtl app_length. simpl. lia.
 Qed.
 
-Module PCUICLookup := Lookup PCUICTerm.
+Module PCUICLookup := Lookup PCUICTerm PCUICEnvironment.
 Include PCUICLookup.
 
 (** Inductive substitution, to produce a constructors' type *)

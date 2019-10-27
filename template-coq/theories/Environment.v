@@ -91,3 +91,6 @@ Module Environment (T : Term).
 
 End Environment.
 
+Module Type EnvironmentSig (T : Term).
+ Include Environment T.
+End EnvironmentSig.

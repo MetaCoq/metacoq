@@ -6,9 +6,7 @@ Require Import ssreflect.
 
 Set Asymmetric Patterns.
 
-Module Lookup (T : Term).
-
-  Module E := Environment T.
+Module Lookup (T : Term) (E : EnvironmentSig T).
 
   Import T E.
 

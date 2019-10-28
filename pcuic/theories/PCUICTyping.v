@@ -602,66 +602,6 @@ Proof.
   all: intros [s' [HH1 [HH2 HH3]]]; inversion HH1; inversion HH2; now inversion HH3.
 Qed.
 
-(* Definition LevelSet_add_list l := LevelSet.union (LevelSetProp.of_list l). *)
-
-Definition global_levels (Σ : global_env) : LevelSet.t
-  := fold_right (fun decl lvls => LevelSet.union (monomorphic_levels_decl decl) lvls)
-                (LevelSet_pair Level.lSet Level.lProp) Σ.
-
-Lemma global_levels_Set Σ :
-  LevelSet.mem Level.lSet (global_levels Σ) = true.
-Proof.
-  induction Σ; simpl. reflexivity.
-  apply LevelSet.mem_spec, LevelSet.union_spec; right.
-  now apply LevelSet.mem_spec in IHΣ.
-Qed.
-
-Lemma global_levels_Prop Σ :
-  LevelSet.mem Level.lProp (global_levels Σ) = true.
-Proof.
-  induction Σ; simpl. reflexivity.
-  apply LevelSet.mem_spec, LevelSet.union_spec; right.
-  now apply LevelSet.mem_spec in IHΣ.
-Qed.
-
-(** One can compute the constraints associated to a global environment or its
-    extension by folding over its constituent definitions.
-
-    We make *only* the second of these computations an implicit coercion
-    for more readability. Note that [fst_ctx] is also a coercion which goes
-    from a [global_env_ext] to a [global_env]: coercion coherence would *not*
-    be ensured if we added [global_constraints] as well as a coercion, as it
-    would forget the extension's constraints. *)
-
-Definition global_constraints (Σ : global_env) : constraints
-  := fold_right (fun decl ctrs => ConstraintSet.union
-                                (monomorphic_constraints_decl decl) ctrs)
-               ConstraintSet.empty Σ.
-
-Definition global_uctx (Σ : global_env) : ContextSet.t
-  := (global_levels Σ, global_constraints Σ).
-
-Definition global_ext_levels (Σ : global_env_ext) : LevelSet.t
-  := LevelSet.union (levels_of_udecl (snd Σ)) (global_levels Σ.1).
-
-Definition global_ext_constraints (Σ : global_env_ext) : constraints
-  := ConstraintSet.union (constraints_of_udecl (snd Σ))
-                         (global_constraints Σ.1).
-Coercion global_ext_constraints : global_env_ext >-> constraints.
-
-Definition global_ext_uctx (Σ : global_env_ext) : ContextSet.t
-  := (global_ext_levels Σ, global_ext_constraints Σ).
-
-
-Lemma prop_global_ext_levels Σ : LevelSet.In Level.prop (global_ext_levels Σ).
-Proof.
-  destruct Σ as [Σ φ]; cbn.
-  apply LevelSetFact.union_3. cbn -[global_levels]; clear φ.
-  induction Σ.
-  - cbn. now apply LevelSetFact.add_1.
-  - simpl. now apply LevelSetFact.union_3.
-Qed.
-
 
 (** Check that [uctx] instantiated at [u] is consistent with
     the current universe graph. *)

@@ -630,42 +630,6 @@ Definition types_of_case ind mdecl idecl params u p pty :=
   | None => None
   end.
 
-(* Definition LevelSet_add_list l := LevelSet.union (LevelSetProp.of_list l). *)
-
-Definition LevelSet_pair x y
-  := LevelSet.add y (LevelSet.singleton x).
-
-
-Definition global_levels (Σ : global_env) : LevelSet.t
-  := fold_right (fun decl lvls => LevelSet.union (monomorphic_levels_decl decl) lvls)
-                (LevelSet_pair Level.lSet Level.lProp) Σ.
-
-Definition global_constraints (Σ : global_env) : constraints
-  := fold_right (fun decl ctrs => ConstraintSet.union
-                                (monomorphic_constraints_decl decl) ctrs)
-               ConstraintSet.empty Σ.
-
-Definition global_ext_levels (Σ : global_env_ext) : LevelSet.t
-  := LevelSet.union (levels_of_udecl (snd Σ)) (global_levels Σ.1).
-
-Definition global_ext_constraints (Σ : global_env_ext) : constraints
-  := ConstraintSet.union (constraints_of_udecl (snd Σ))
-                         (global_constraints Σ.1).
-
-Definition global_ext_uctx (Σ : global_env_ext) : ContextSet.t
-  := (global_ext_levels Σ, global_ext_constraints Σ).
-
-
-Lemma prop_global_ext_levels Σ : LevelSet.In Level.prop (global_ext_levels Σ).
-Proof.
-  destruct Σ as [Σ φ]; cbn.
-  apply LevelSetFact.union_3. cbn -[global_levels]; clear φ.
-  induction Σ.
-  - cbn. now apply LevelSetFact.add_1.
-  - simpl. now apply LevelSetFact.union_3.
-Qed.
-
-
 (** Check that [uctx] instantiated at [u] is consistent with the current universe graph. *)
 
 Definition consistent_instance `{checker_flags} (φ : constraints) uctx (u : universe_instance) :=

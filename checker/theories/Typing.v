@@ -695,69 +695,8 @@ Definition check_correct_arity `{checker_flags} φ decl ind u ctx pars pctx :=
 
 (** ** Typing relation *)
 
-Section TypeLocal.
-  Context (typing : forall (Γ : context), term -> option term -> Type).
-
-  Inductive All_local_env : context -> Type :=
-  | localenv_nil :
-      All_local_env []
-
-  | localenv_cons_abs Γ na t :
-      All_local_env Γ ->
-      typing Γ t None ->
-      All_local_env (Γ ,, vass na t)
-
-  | localenv_cons_def Γ na b t :
-      All_local_env Γ ->
-      typing Γ t None ->
-      typing Γ b (Some t) ->
-      All_local_env (Γ ,, vdef na b t).
-End TypeLocal.
-
-(** Well-formedness of local environments embeds a sorting for each variable *)
-
-Definition lift_typing (P : global_env_ext -> context -> term -> term -> Type) :
-  (global_env_ext -> context -> term -> option term -> Type) :=
-  fun Σ Γ t T =>
-    match T with
-    | Some T => P Σ Γ t T
-    | None => { s : universe & P Σ Γ t (tSort s) }
-    end.
-
-Definition on_local_decl (P : context -> term -> option term -> Type) Γ d :=
-  match d.(decl_body) with
-  | Some b => P Γ b (Some d.(decl_type))
-  | None => P Γ d.(decl_type) None
-  end.
-
-Section TypeLocalOver.
-  Context (typing : forall (Σ : global_env_ext) (Γ : context), term -> term -> Type).
-  Context (property : forall (Σ : global_env_ext) (Γ : context),
-              All_local_env (lift_typing typing Σ) Γ ->
-              forall (t T : term), typing Σ Γ t T -> Type).
-
-  Inductive All_local_env_over (Σ : global_env_ext) :
-    forall (Γ : context), All_local_env (lift_typing typing Σ) Γ -> Type :=
-  | localenv_over_nil :
-      All_local_env_over Σ [] (localenv_nil _)
-
-  | localenv_over_cons_abs Γ na t
-      (all : All_local_env (lift_typing typing Σ) Γ) :
-      All_local_env_over Σ Γ all ->
-      forall (tu : lift_typing typing Σ Γ t None),
-        property Σ Γ all _ _ (projT2 tu) ->
-        All_local_env_over Σ (Γ ,, vass na t)
-                           (localenv_cons_abs _ Γ na t all tu)
-
-  | localenv_over_cons_def Γ na b t
-      (all : All_local_env (lift_typing typing Σ) Γ) (tb : typing Σ Γ b t) :
-      All_local_env_over Σ Γ all ->
-      property Σ Γ all _ _ tb ->
-      forall (tu : lift_typing typing Σ Γ t None),
-        property Σ Γ all _ _ (projT2 tu) ->
-        All_local_env_over Σ (Γ ,, vdef na b t)
-                           (localenv_cons_def _ Γ na b t all tu tb).
-End TypeLocalOver.
+Module TemplateEnvTyping := EnvTyping TemplateTerm TemplateEnvironment.
+Include TemplateEnvTyping.
 
 Section WfArity.
   Context (typing : forall (Σ : global_env_ext) (Γ : context), term -> term -> Type).
@@ -772,7 +711,6 @@ Section WfArity.
   Definition isWfArity_prop Σ (Γ : context) T :=
     { wfa : isWfArity Σ Γ T & All_local_env_over typing property Σ _ (snd (projT2 (projT2 wfa))) }.
 End WfArity.
-
 
 (* AXIOM GUARD CONDITION *)
 Axiom fix_guard : mfixpoint term -> bool.
@@ -1533,14 +1471,18 @@ Proof.
   - simpl. congruence.
   - intros [=]. subst d Γ0.
     exists w. simpl. destruct l. exists x. exists t0. pose (typing_size_pos t0).
-    simpl. lia.
+    simpl. split.
+    + lia.
+    + auto with arith.
   - intros [=]. subst d Γ0.
     exists w. simpl. simpl in l. destruct l as [u h].
     simpl in l0.
     exists u, l0, h. simpl.
     pose (typing_size_pos h).
     pose (typing_size_pos l0).
-    lia.
+    intuition eauto.
+    all: try lia.
+    auto with arith.
 Qed.
 
 

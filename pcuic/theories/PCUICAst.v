@@ -122,6 +122,7 @@ Record mutual_inductive_entry := {
   Module PCUICTerm <: Term.
 
     Definition term := term.
+    Definition tSort := tSort.
 
   End PCUICTerm.
 

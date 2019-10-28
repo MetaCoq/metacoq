@@ -14,6 +14,29 @@ Generalizable Variables Σ Γ t T.
 
 Definition extends (Σ Σ' : global_env) := { Σ'' & Σ' = (Σ'' ++ Σ)%list }.
 
+Lemma weakening_env_global_ext_levels Σ Σ' φ (H : extends Σ Σ') l
+  : LevelSet.In l (global_ext_levels (Σ, φ))
+    -> LevelSet.In l (global_ext_levels (Σ', φ)).
+Proof.
+  unfold global_ext_levels; simpl.
+  intros Hl. apply LevelSet.union_spec in Hl.
+  apply LevelSet.union_spec.
+  destruct Hl as [Hl|Hl]; [now left|right]. clear φ.
+  destruct H as [Σ'' eq]; subst.
+  induction Σ'' in l, Hl |- *.
+  - now rewrite app_nil_l.
+  - simpl. apply LevelSet.union_spec. right; eauto.
+Qed.
+Hint Resolve weakening_env_global_ext_levels : extends.
+
+Lemma weakening_env_global_ext_levels' Σ Σ' φ (H : extends Σ Σ') l
+  : LevelSet.mem l (global_ext_levels (Σ, φ))
+    -> LevelSet.mem l (global_ext_levels (Σ', φ)).
+Proof.
+  intro HH. apply LevelSet.mem_spec in HH.
+  now eapply LevelSet.mem_spec, weakening_env_global_ext_levels.
+Qed.
+
 Lemma lookup_env_Some_fresh Σ c decl :
   lookup_env Σ c = Some decl -> ~ (fresh_global c Σ).
 Proof.
@@ -220,21 +243,6 @@ Proof.
   induction 1; intros; simpl; econstructor; eauto.
 Qed.
 
-Lemma weakening_env_global_ext_levels Σ Σ' φ (H : extends Σ Σ') l
-  : LevelSet.In l (global_ext_levels (Σ, φ))
-    -> LevelSet.In l (global_ext_levels (Σ', φ)).
-Proof.
-  unfold global_ext_levels; simpl.
-  intros Hl. apply LevelSet.union_spec in Hl.
-  apply LevelSet.union_spec.
-  destruct Hl as [Hl|Hl]; [now left|right]. clear φ.
-  destruct H as [Σ'' eq]; subst.
-  induction Σ'' in l, Hl |- *.
-  - now rewrite app_nil_l.
-  - simpl. apply LevelSet.union_spec. right; eauto.
-Qed.
-Hint Resolve weakening_env_global_ext_levels : extends.
-
 Lemma weakening_env_global_ext_constraints Σ Σ' φ (H : extends Σ Σ')
   : ConstraintSet.Subset (global_ext_constraints (Σ, φ))
                          (global_ext_constraints (Σ', φ)).
@@ -275,17 +283,22 @@ Proof.
   apply eq_context_subset.
 Qed.
 
-Lemma weakening_env_consistent_instance {cf:checker_flags} Σ Σ' φ ctrs u (H : extends Σ Σ')
-  : consistent_instance_ext (Σ, φ) ctrs u
-    -> consistent_instance_ext (Σ', φ) ctrs u.
+Lemma weakening_env_consistent_instance {cf:checker_flags} :
+  forall Σ Σ' φ ctrs u,
+    extends Σ Σ' ->
+    consistent_instance_ext (Σ, φ) ctrs u ->
+    consistent_instance_ext (Σ', φ) ctrs u.
 Proof.
-    unfold consistent_instance_ext, consistent_instance.
-    intros X.
-    destruct ctrs; tas. 2: destruct ctx as [cst _].
-    all: destruct (AUContext.repr cst).
-    all: destruct X as [X1 [X2 X3]]; repeat split; tas.
-    all: eapply valid_subset.
-    all: try eapply weakening_env_global_ext_constraints; tea.
+  intros Σ Σ' φ ctrs u he.
+  unfold consistent_instance_ext, consistent_instance.
+  intros hc.
+  destruct ctrs. 1: assumption. 2: destruct ctx as [cst _].
+  all: destruct (AUContext.repr cst).
+  all: destruct hc as [? [h2 [? ?]]] ; repeat split ; tas.
+  1,3: eapply forallb_Forall in h2 ; eapply forallb_Forall, Forall_impl ; tea ;
+    intros ? ? ; now eapply weakening_env_global_ext_levels'.
+  all: eapply valid_subset; tea;
+    now eapply weakening_env_global_ext_constraints.
 Qed.
 Hint Resolve weakening_env_consistent_instance : extends.
 

@@ -630,22 +630,6 @@ Definition types_of_case ind mdecl idecl params u p pty :=
   | None => None
   end.
 
-(** Check that [uctx] instantiated at [u] is consistent with the current universe graph. *)
-
-Definition consistent_instance `{checker_flags} (φ : constraints) uctx (u : universe_instance) :=
-  match uctx with
-  | Monomorphic_ctx c => List.length u = 0
-  | Polymorphic_ctx c
-  | Cumulative_ctx (c, _) => (* FIXME Cumulative *)
-    let '(inst, cstrs) := AUContext.repr c in
-    List.length u = List.length inst /\
-    forallb (negb ∘ Level.is_prop) u /\
-    valid_constraints φ (subst_instance_cstrs u cstrs)
-  end.
-
-Definition consistent_instance_ext `{checker_flags}
-  := consistent_instance ∘ global_ext_constraints.
-
 
 Reserved Notation " Σ ;;; Γ |- t : T " (at level 50, Γ, t, T at next level).
 Reserved Notation " Σ ;;; Γ |- t <= u " (at level 50, Γ, t, u at next level).

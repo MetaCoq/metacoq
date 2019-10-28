@@ -1,6 +1,6 @@
 From Coq Require Import Ascii String Bool OrderedType Lia List Program Arith.
-From MetaCoq.Template Require Import utils BasicAst AstUtils.
-From MetaCoq.Template Require Import Universes Environment.
+From MetaCoq.Template Require Import config utils BasicAst AstUtils.
+From MetaCoq.Template Require Import Universes Environment UnivSubst.
 Import List.ListNotations.
 Require Import ssreflect.
 
@@ -131,6 +131,25 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     - cbn. now apply LevelSetFact.add_1.
     - simpl. now apply LevelSetFact.union_3.
   Qed.
+
+  (** Check that [uctx] instantiated at [u] is consistent with
+    the current universe graph. *)
+
+  Definition consistent_instance `{checker_flags} (lvs : LevelSet.t) (φ : constraints) uctx (u : universe_instance) :=
+    match uctx with
+    | Monomorphic_ctx c => List.length u = 0
+    | Polymorphic_ctx c
+    | Cumulative_ctx (c, _) => (* FIXME Cumulative *)
+      (* no prop levels in instances *)
+      forallb (negb ∘ Level.is_prop) u /\
+      (* levels of the instance already declared *)
+      forallb (fun l => LevelSet.mem l lvs) u /\
+      List.length u = List.length c.1 /\
+      valid_constraints φ (subst_instance_cstrs u c.2)
+    end.
+
+  Definition consistent_instance_ext `{checker_flags} Σ :=
+    consistent_instance (global_ext_levels Σ) (global_ext_constraints Σ).
 
 End Lookup.
 

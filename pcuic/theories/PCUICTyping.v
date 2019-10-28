@@ -603,26 +603,6 @@ Proof.
 Qed.
 
 
-(** Check that [uctx] instantiated at [u] is consistent with
-    the current universe graph. *)
-
-Definition consistent_instance `{checker_flags} (lvs : LevelSet.t) (φ : constraints) uctx (u : universe_instance) :=
-  match uctx with
-  | Monomorphic_ctx c => List.length u = 0
-  | Polymorphic_ctx c
-  | Cumulative_ctx (c, _) => (* FIXME Cumulative *)
-    (* no prop levels in instances *)
-    forallb (negb ∘ Level.is_prop) u /\
-    (* levels of the instance already declared *)
-    forallb (fun l => LevelSet.mem l lvs) u /\
-    List.length u = List.length c.1 /\
-    valid_constraints φ (subst_instance_cstrs u c.2)
-  end.
-
-Definition consistent_instance_ext `{checker_flags} Σ
-  := consistent_instance (global_ext_levels Σ) (global_ext_constraints Σ).
-
-
 Reserved Notation " Σ ;;; Γ |- t : T " (at level 50, Γ, t, T at next level).
 Reserved Notation " Σ ;;; Γ |- t <= u " (at level 50, Γ, t, u at next level).
 

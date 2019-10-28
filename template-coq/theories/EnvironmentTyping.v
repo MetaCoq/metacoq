@@ -55,6 +55,20 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     now destruct (AstUtils.ident_eq_spec c k). auto.
   Qed.
 
+  Definition on_udecl_decl {A} (F : universes_decl -> A) d : A :=
+  match d with
+  | ConstantDecl  _ cb => F cb.(cst_universes)
+  | InductiveDecl _ mb => F mb.(ind_universes)
+  end.
+
+  Definition monomorphic_udecl_decl := on_udecl_decl monomorphic_udecl.
+
+  Definition monomorphic_levels_decl := fst ∘ monomorphic_udecl_decl.
+
+  Definition monomorphic_constraints_decl := snd ∘ monomorphic_udecl_decl.
+
+  Definition universes_decl_of_decl := on_udecl_decl (fun x => x).
+
 End Lookup.
 
 Module Type Typing (T : Term).

@@ -1,11 +1,14 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega Lia.
-From MetaCoq.Template Require Import config utils Ast AstUtils Induction utils LiftSubst UnivSubst.
-From MetaCoq.Checker Require Import LibHypsNaming Typing TypingWf WeakeningEnv Closed Reflect.
+From MetaCoq.Template Require Import config utils Ast AstUtils Induction utils
+  LiftSubst UnivSubst.
+From MetaCoq.Checker Require Import LibHypsNaming Typing TypingWf WeakeningEnv
+  Closed Reflect.
 Require Import ssreflect ssrbool.
+
+From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
-Require Import ssreflect.
 
 (** * Weakening lemmas for typing derivations.
 
@@ -292,14 +295,12 @@ Proof.
     eapply typed_liftn; eauto; eauto. constructor. simpl; lia.
     rewrite H0 in Heq'. rewrite Heq in Heq'. revert Heq'; intros [= <- <-].
     f_equal; auto.
-    apply (Alli_map_id onConstructors).
-    intros n1 [[x p] n']. intros [[s Hty] [cs Hargs]].
-    unfold on_pi2; f_equal; f_equal.
+    eapply All_map_id. eapply All2_All_left; tea.
+    intros [[x p] n'] y [[s Hty] [cs Hargs]].
+    unfold on_pi2; cbn; f_equal; f_equal.
     simpl in Hty.
-    eapply typed_liftn; eauto; eauto. apply typing_wf_local in Hty; eauto. lia.
-    assert((ind_projs = []) + (ind_projs <> [])) as [Hp|Hp].
-    { destruct ind_projs; [left|right]; congruence. }
-    subst; auto. specialize (onProjections Hp).
+    eapply typed_liftn. 4:eapply Hty. eauto. apply typing_wf_local in Hty; eauto. lia.
+    destruct(eq_dec ind_projs []) as [Hp|Hp]. subst; auto. specialize (onProjections Hp).
     destruct onProjections as [_ _ _ onProjections].
     apply (Alli_map_id onProjections).
     intros n1 [x p].
@@ -380,7 +381,7 @@ Proof.
   pose proof (onProjections Hmdecl) as onp; eauto. forward onp.
   now eapply nth_error_Some_non_nil in Hpdecl.
   eapply on_projs, nth_error_alli in onp; eauto.
-  move: onp => /= => [[]] _ [] _ /andb_and[Hd _]. simpl in Hd.
+  move: onp => /= /andb_and[Hd _]. simpl in Hd.
   rewrite smash_context_length in Hd. simpl in *. rewrite H0 in Hd.
   destruct pdecl as [id ty]. unfold on_snd; simpl in *.
   f_equal. eapply lift_closed.
@@ -585,7 +586,8 @@ Hint Rewrite lift_it_mkProd_or_LetIn : lift.
 Lemma to_extended_list_lift n k c :
   to_extended_list (lift_context n k c) = to_extended_list c.
 Proof.
-  unfold to_extended_list, to_extended_list_k. generalize 0. generalize (@nil term) at 1 2.
+  unfold to_extended_list, to_extended_list_k. generalize 0.
+  generalize (@nil TemplateTerm.term) at 1 2.
   induction c in n, k |- *; simpl; intros. reflexivity.
   rewrite -> lift_context_snoc0. unfold snoc. simpl.
   destruct a. destruct decl_body. unfold lift_decl, map_decl. simpl.

@@ -368,35 +368,30 @@ Proof.
   destruct Hdecl as [onI onP onnP]; constructor; eauto.
   - eapply Alli_impl; eauto. intros.
     destruct X. unshelve econstructor; eauto.
-    unfold on_constructors in *. eapply Alli_impl_trans; eauto.
-    intros ik [[id t] ar]. unfold on_constructor, on_type in *; intuition eauto.
-    destruct b. exists x0.
-    -- induction (cshape_args x0); simpl in *; auto.
-       destruct a0 as [na [b|] ty]; simpl in *; intuition eauto.
     -- unfold on_type in *; intuition eauto.
+    -- unfold on_constructors in *. eapply All2_impl; eauto.
+      intros. unfold on_constructor, on_type in *; intuition eauto.
+      destruct b as [cs Hcs]. exists cs.
+      induction (cshape_args cs); simpl in *; auto.
+      destruct a0 as [na [b|] ty]; simpl in *; intuition eauto.
     -- intros Hprojs; destruct onProjections; try constructor; auto.
-       eapply Alli_impl; eauto. intros ip [id trm].
-       unfold on_projection, on_type; eauto.
-    -- unfold Alli_impl_trans. simpl.
-       revert onConstructors ind_sorts. generalize (ind_ctors x).
-       unfold Alli_rect.
-       unfold check_ind_sorts. destruct universe_family; auto.
-       --- intros ? onCs. depelim onCs; simpl; auto. depelim onCs; simpl; auto.
-           destruct hd as [[? ?] ?]. unfold prod_rect; simpl.
-           destruct o as [? [? ?]]. simpl. auto.
-       --- intros ? onCs. clear onI. induction onCs; simpl; intuition auto.
-           destruct hd as [[? ?] ?]. unfold prod_rect; simpl.
-           destruct p as [? [? ?]]. simpl in *. auto.
-           destruct Hext; subst; simpl; auto.
-           clear H2.
-           eapply leq_universe_subset; eauto.
-           eapply global_ext_constraints_app; tas.
-       --- intros ? onCs. clear onI. induction onCs; simpl; intuition auto.
-           destruct hd as [[? ?] ?]. unfold prod_rect; simpl.
-           destruct p as [? [? ?]]. simpl in *. auto.
-           destruct Hext; subst; simpl; auto. clear H2.
-           eapply leq_universe_subset; eauto.
-           eapply global_ext_constraints_app; tas.
+      eapply Alli_impl; eauto. intros ip [id trm].
+      unfold on_projection, on_type; eauto.
+    -- unfold check_ind_sorts in *. destruct universe_family; auto.
+      --- split; [apply fst in ind_sorts|apply snd in ind_sorts].
+          eapply Forall_impl; tea; cbn.
+          intros. eapply leq_universe_subset; tea.
+          apply weakening_env_global_ext_constraints; tea.
+          destruct indices_matter; [|trivial]. clear -ind_sorts HPΣ wfΣ' Hext.
+          induction ind_indices; simpl in *; auto.
+          destruct a as [na [b|] ty]; simpl in *; intuition eauto.
+      --- split; [apply fst in ind_sorts|apply snd in ind_sorts].
+          eapply Forall_impl; tea; cbn.
+          intros. eapply leq_universe_subset; tea.
+          apply weakening_env_global_ext_constraints; tea.
+          destruct indices_matter; [|trivial]. clear -ind_sorts HPΣ wfΣ' Hext.
+          induction ind_indices; simpl in *; auto.
+          destruct a as [na [b|] ty]; simpl in *; intuition eauto.
   - red in onP |- *. eapply All_local_env_impl; eauto.
 Qed.
 
@@ -451,17 +446,23 @@ Proof.
   apply Hidecl.
 Qed.
 
-Lemma declared_constructor_inv `{checker_flags} Σ P mdecl idecl ref cdecl :
-  weaken_env_prop (lift_typing P) ->
-  wf Σ -> Forall_decls_typing P Σ ->
-  declared_constructor Σ mdecl idecl ref cdecl ->
-  on_constructor (lift_typing P) (Σ, ind_universes mdecl) (inductive_mind (fst ref)) mdecl (inductive_ind (fst ref)) idecl (snd ref) cdecl.
+Lemma declared_constructor_inv `{checker_flags} Σ P mdecl idecl ref cdecl
+  (HP : weaken_env_prop (lift_typing P))
+  (wfΣ : wf Σ)
+  (HΣ : Forall_decls_typing P Σ)
+  (Hdecl : declared_constructor Σ mdecl idecl ref cdecl) :
+  ∑ ind_ctor_sort,
+  nth_error (declared_inductive_inv Σ P ref.1 mdecl idecl HP
+                wfΣ HΣ (proj1 Hdecl)).(ind_ctors_sort) ref.2 = Some ind_ctor_sort
+  × on_constructor (lift_typing P) (Σ, ind_universes mdecl) mdecl
+                   (inductive_ind ref.1) idecl cdecl ind_ctor_sort.
 Proof.
   intros.
-  destruct H0 as [Hidecl Hcdecl].
-  eapply declared_inductive_inv in Hidecl; eauto.
-  apply onConstructors in Hidecl.
-  eapply nth_error_alli in Hidecl; eauto.
+  destruct Hdecl as [Hidecl Hcdecl].
+  set (declared_inductive_inv Σ P ref.1 mdecl idecl HP wfΣ HΣ
+                              (proj1 (conj Hidecl Hcdecl))) as HH.
+  clearbody HH. pose proof HH.(onConstructors) as HH'.
+  eapply All2_nth_error_Some in Hcdecl; tea.
 Qed.
 
 Lemma declared_projection_inv `{checker_flags} Σ P mdecl idecl ref pdecl :
@@ -519,16 +520,26 @@ Proof.
   apply (declared_inductive_inv _ _ _ mdecl idecl weaken_env_prop_typing wfΣ wfΣ Hdecl).
 Qed.
 
-Lemma on_declared_constructor `{checker_flags} {Σ ref mdecl idecl cdecl} :
-  wf Σ ->
-  declared_constructor Σ mdecl idecl ref cdecl ->
-  on_inductive (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind (fst ref)) mdecl *
-  on_ind_body (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind (fst ref)) mdecl (inductive_ind (fst ref)) idecl *
-  on_constructor (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind (fst ref)) mdecl (inductive_ind (fst ref)) idecl (snd ref) cdecl.
+Lemma on_declared_constructor `{checker_flags} {Σ ref mdecl idecl cdecl}
+  (wfΣ : wf Σ)
+  (Hdecl : declared_constructor Σ mdecl idecl ref cdecl) :
+  on_inductive (lift_typing typing) (Σ, ind_universes mdecl)
+               (inductive_mind (fst ref)) mdecl *
+  on_ind_body (lift_typing typing) (Σ, ind_universes mdecl)
+              (inductive_mind (fst ref)) mdecl (inductive_ind (fst ref)) idecl *
+  ∑ ind_ctor_sort,
+     nth_error
+      (ind_ctors_sort
+         (declared_inductive_inv Σ typing ref.1 mdecl idecl weaken_env_prop_typing
+            wfΣ wfΣ (proj1 Hdecl))) ref.2 = Some ind_ctor_sort
+    ×  on_constructor (lift_typing typing) (Σ, ind_universes mdecl)
+                 mdecl (inductive_ind (fst ref))
+                 idecl cdecl ind_ctor_sort.
 Proof.
-  intros wfΣ Hdecl.
-  split. destruct Hdecl as [Hidecl Hcdecl]. now apply on_declared_inductive in Hidecl.
-  apply (declared_constructor_inv _ _ mdecl idecl ref cdecl weaken_env_prop_typing wfΣ wfΣ Hdecl).
+  split. destruct Hdecl as [Hidecl Hcdecl].
+  now apply on_declared_inductive in Hidecl.
+  apply (declared_constructor_inv _ _ mdecl idecl ref cdecl
+                                  weaken_env_prop_typing wfΣ wfΣ Hdecl).
 Qed.
 
 Lemma on_declared_projection `{checker_flags} {Σ ref mdecl idecl pdecl} :

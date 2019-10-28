@@ -9,7 +9,14 @@ Set Asymmetric Patterns.
 Module Type Term.
 
   Parameter (term : Set).
+
+  Parameter (tRel : nat -> term).
   Parameter (tSort : universe -> term).
+  Parameter (tProd : name -> term -> term -> term).
+  Parameter (tLetIn : name -> term -> term -> term -> term).
+  Parameter (tInd : inductive -> universe_instance -> term).
+
+  Parameter (mkApps : term -> list term -> term).
 
 End Term.
 
@@ -89,6 +96,49 @@ Module Environment (T : Term).
     A set of declarations and a term, as produced by [Quote Recursively]. *)
 
   Definition program : Type := global_env * term.
+
+  (* TODO MOVE AstUtils factorisation *)
+
+  Definition app_context (Γ Γ' : context) : context := (Γ' ++ Γ)%list.
+  Notation " Γ  ,,, Γ' " :=
+    (app_context Γ Γ') (at level 25, Γ' at next level, left associativity).
+
+  Definition mkProd_or_LetIn d t :=
+    match d.(decl_body) with
+    | None => tProd d.(decl_name) d.(decl_type) t
+    | Some b => tLetIn d.(decl_name) b d.(decl_type) t
+    end.
+
+  Definition it_mkProd_or_LetIn (l : context) (t : term) :=
+    List.fold_left (fun acc d => mkProd_or_LetIn d acc) l t.
+
+  Fixpoint reln (l : list term) (p : nat) (Γ0 : list context_decl) {struct Γ0} : list term :=
+    match Γ0 with
+    | [] => l
+    | {| decl_body := Some _ |} :: hyps => reln l (p + 1) hyps
+    | {| decl_body := None |} :: hyps => reln (tRel p :: l) (p + 1) hyps
+    end.
+
+  Definition to_extended_list_k Γ k := reln [] k Γ.
+  Definition to_extended_list Γ := to_extended_list_k Γ 0.
+
+  Definition arities_context (l : list one_inductive_body) :=
+    rev_map (fun ind => vass (nNamed ind.(ind_name)) ind.(ind_type)) l.
+
+  Fixpoint context_assumptions (Γ : context) :=
+    match Γ with
+    | [] => 0
+    | d :: Γ =>
+      match d.(decl_body) with
+      | Some _ => context_assumptions Γ
+      | None => S (context_assumptions Γ)
+      end
+    end.
+
+  Lemma app_context_nil_l Γ : [] ,,, Γ = Γ.
+  Proof.
+    unfold app_context. rewrite app_nil_r. reflexivity.
+  Qed.
 
 End Environment.
 

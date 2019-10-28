@@ -3,8 +3,9 @@ From Equations Require Import Equations.
 From Coq Require Import Bool String List BinPos Compare_dec Omega Lia.
 Require Import Coq.Program.Syntax Coq.Program.Basics.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICEquality
-     PCUICTyping PCUICWeakeningEnv PCUICClosed PCUICReduction.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
+  PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICTyping PCUICWeakeningEnv
+  PCUICClosed PCUICReduction.
 Require Import ssreflect ssrbool.
 
 From Equations Require Import Equations.
@@ -256,7 +257,7 @@ Proof.
     rewrite H0 in Heq'. rewrite Heq in Heq'. revert Heq'; intros [= <- <-].
     f_equal; auto.
     eapply All_map_id. eapply All2_All_left; tea.
-    intros [[x p] n'] y [[s Hty] [cs Hargs]]. 
+    intros [[x p] n'] y [[s Hty] [cs Hargs]].
     unfold on_pi2; cbn; f_equal; f_equal.
     simpl in Hty.
     eapply typed_liftn. 4:eapply Hty. eauto. apply typing_wf_local in Hty; eauto. lia.

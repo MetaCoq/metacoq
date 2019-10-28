@@ -661,10 +661,10 @@ Proof.
   induction h.
   - constructor.
   - simpl. unfold map_decl_anon. cbn. constructor. 1: assumption.
-    eexists. eassumption.
+    eexists. exact p.
   - simpl. unfold map_decl_anon. cbn. constructor.
     + assumption.
-    + eexists. eassumption.
+    + eexists. exact p0.
     + assumption.
 Qed.
 

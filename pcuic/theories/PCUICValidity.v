@@ -225,11 +225,11 @@ Section Validity.
         simpl in b. eapply cumul_trans. auto. 2:eauto.
         constructor. constructor. simpl. apply leq_universe_product. auto.
 
-    - eapply declared_constant_inv in H; pcuic.
+    - (* eapply declared_constant_inv in H; pcuic.
       destruct decl as [ty [b|] univs]. red in H. simpl in *.
       destruct Σ as [Σ φ].
       eapply (isWfArity_or_Type_subst_instance (_, _)); pcuic. simpl.
-      repeat red in H; simpl in *. simpl in *.
+      repeat red in H; simpl in *. simpl in *. *)
       (* For Simon *)
       admit.
       (* apply isWfArity_or_Type_subst_instance; pcuic. *)

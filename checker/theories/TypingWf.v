@@ -480,21 +480,112 @@ Proof.
 Qed.
 Hint Resolve typing_all_wf_decl : wf.
 
+(* TODO MOVE? *)
+Definition sort_irrelevant
+  (P : global_env_ext -> context -> term -> option term -> Type) :=
+  forall Σ Γ b s s', P Σ Γ (tSort s) b -> P Σ Γ (tSort s') b.
+
+Derive Signature for on_global_env.
+Derive Signature for Alli.
+
+(* TODO MOVE? *)
+Lemma on_global_env_mix `{checker_flags} {Σ P Q} :
+  sort_irrelevant Q ->
+  on_global_env P Σ ->
+  on_global_env Q Σ ->
+  on_global_env (fun Σ Γ t T => (P Σ Γ t T * Q Σ Γ t T)%type) Σ.
+Proof.
+  intros iQ hP hQ.
+  induction hP in Q, iQ, hQ |- *.
+  1: constructor.
+  dependent destruction hQ.
+  constructor.
+  - eapply IHhP. all: eauto.
+  - assumption.
+  - assumption.
+  (* - destruct d. all: simpl in *.
+    + destruct c as [ty [bo|] un]. all: simpl in *.
+      all: unfold on_constant_decl in *.
+      all: simpl in *.
+      * intuition eauto.
+      * unfold on_type in *. intuition eauto.
+    + destruct o0 as [oi op onpars ong].
+      destruct o2 as [oi' op' onpars' ong'].
+      constructor. all: auto.
+      * clear - oi oi'. revert oi oi'.
+        generalize (TemplateEnvironment.ind_bodies m).
+        intros l h1 h2.
+        induction h1 in h2 |- *. 1: constructor.
+        dependent destruction h2.
+        constructor. 2: auto.
+        destruct p, o. econstructor.
+        -- eassumption.
+        -- unfold on_type in *. intuition eauto.
+        -- admit.
+        -- *)
+  - todo "simplify onConstructors"%string.
+Qed.
+
+(* TODO MOVE? Also dupplicate of PCUICClosed *)
+Lemma on_global_env_impl `{checker_flags} Σ P Q :
+  (forall Σ Γ t T, on_global_env P Σ.1 -> P Σ Γ t T -> Q Σ Γ t T) ->
+  on_global_env P Σ -> on_global_env Q Σ.
+Proof.
+  intros X X0.
+  simpl in *. induction X0; constructor; auto.
+  clear IHX0. destruct d; simpl.
+  - destruct c; simpl. destruct cst_body; simpl in *.
+    red in o |- *. simpl in *. now eapply X.
+    red in o |- *. simpl in *. now eapply X.
+  - red in o. simpl in *.
+    destruct o0 as [onI onP onNP].
+    constructor; auto.
+    -- eapply Alli_impl. exact onI. eauto. intros.
+       refine {| ind_indices := X1.(ind_indices);
+                 ind_arity_eq := X1.(ind_arity_eq);
+                 ind_ctors_sort := X1.(ind_ctors_sort) |}.
+       --- apply onArity in X1. unfold on_type in *; simpl in *.
+           now eapply X.
+       --- pose proof X1.(onConstructors) as X11. red in X11.
+           unfold on_constructor, on_type in *. eapply All2_impl; eauto.
+           simpl. intros. destruct X2 as (? & ? & ?).
+           split. now eapply X.
+           exists x1.
+           clear -t X X0.
+           revert t. generalize (cshape_args x1).
+           abstract (induction c; simpl; auto;
+           destruct a as [na [b|] ty]; simpl in *; auto;
+           split; eauto; [apply IHc;apply t|apply X;simpl; auto;apply t]).
+       --- simpl; intros. pose (onProjections X1 H0). simpl in *.
+           destruct o0. constructor; auto. eapply Alli_impl; intuition eauto.
+           unfold on_projection in *; simpl in *.
+           now apply X.
+       --- destruct X1. simpl. unfold check_ind_sorts in *.
+           destruct universe_family; auto.
+           split. apply ind_sorts. destruct indices_matter; auto.
+           eapply type_local_ctx_impl. eapply ind_sorts. auto.
+           split; [apply fst in ind_sorts|apply snd in ind_sorts].
+           eapply Forall_impl; tea. auto.
+           destruct indices_matter; [|trivial].
+           eapply type_local_ctx_impl; tea. eauto.
+    -- red in onP. red.
+       eapply All_local_env_impl. eauto.
+       intros. now apply X.
+Qed.
+
 Lemma typing_wf_sigma {cf:checker_flags} Σ (wfΣ : wf Σ) :
   on_global_env (fun _ => wf_decl_pred) Σ.
 Proof.
   intros.
   pose proof (env_prop_sigma _ typing_wf_gen _ wfΣ). red in X.
   unfold lift_typing in X. do 2 red in wfΣ.
-  (* unshelve eapply (on_global_env_mix _ wfΣ) in X.
+  unshelve eapply (on_global_env_mix _ wfΣ) in X.
   red. intros. destruct b; intuition auto with wf.
   destruct X0 as [u Hu]. exists u. intuition auto with wf.
   clear wfΣ.
   eapply on_global_env_impl; eauto; simpl; intros. clear X.
   destruct X1 as [Hty Ht].
   destruct T. apply Ht. destruct Ht; wf.
-Qed. *)
-  todo "typing_wf_sigma"%string.
 Qed.
 
 Lemma typing_wf {cf:checker_flags} Σ (wfΣ : wf Σ.1) Γ t T :

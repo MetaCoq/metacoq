@@ -93,14 +93,14 @@ Definition it_mkLambda_or_LetIn (l : context) (t : term) :=
 
 (** Make a prod/let-in string of abstractions from a context [Γ], ending with term [t]. *)
 
-Definition mkProd_or_LetIn d t :=
+(* Definition mkProd_or_LetIn d t :=
   match d.(decl_body) with
   | None => tProd d.(decl_name) d.(decl_type) t
   | Some b => tLetIn d.(decl_name) b d.(decl_type) t
-  end.
+  end. *)
 
-Definition it_mkProd_or_LetIn (l : context) (t : term) :=
-  List.fold_left (fun acc d => mkProd_or_LetIn d acc) l t.
+(* Definition it_mkProd_or_LetIn (l : context) (t : term) :=
+  List.fold_left (fun acc d => mkProd_or_LetIn d acc) l t. *)
 
 Definition map_decl f (d : context_decl) :=
   {| decl_name := d.(decl_name);
@@ -148,8 +148,9 @@ Lemma map_dbody {A B : Set} (f : A -> B) (g : A -> B) (d : def A) :
   g (dbody d) = dbody (map_def f g d).
 Proof. destruct d; reflexivity. Qed.
 
-Definition app_context (Γ Γ' : context) : context := (Γ' ++ Γ)%list.
-Notation " Γ  ,,, Γ' " := (app_context Γ Γ') (at level 25, Γ' at next level, left associativity).
+(* TODO Deal with copy in Environment functor *)
+(* Definition app_context (Γ Γ' : context) : context := (Γ' ++ Γ)%list.
+Notation " Γ  ,,, Γ' " := (app_context Γ Γ') (at level 25, Γ' at next level, left associativity). *)
 
 Lemma app_context_assoc Γ Γ' Γ'' : Γ ,,, (Γ' ,,, Γ'') = Γ ,,, Γ' ,,, Γ''.
 Proof. unfold app_context; now rewrite app_assoc. Qed.
@@ -182,8 +183,8 @@ Proof. apply nth_error_app_ge. Qed.
 Lemma nth_error_app_context_lt v Γ Γ' : v < #|Γ'| -> nth_error (Γ ,,, Γ') v = nth_error Γ' v.
 Proof. apply nth_error_app_lt. Qed.
 
-Lemma app_context_nil_l Γ : [] ,,, Γ = Γ.
-Proof. unfold app_context; now rewrite app_nil_r. Qed.
+(* Lemma app_context_nil_l Γ : [] ,,, Γ = Γ.
+Proof. unfold app_context; now rewrite app_nil_r. Qed. *)
 
 Definition string_of_gref gr : string :=
   match gr with
@@ -351,8 +352,8 @@ Proof.
                                                 (snd (fst x))) ind_ctors).
 Defined.
 
-Definition arities_context (l : list one_inductive_body) :=
-  rev_map (fun ind => vass (nNamed ind.(ind_name)) ind.(ind_type)) l.
+(* Definition arities_context (l : list one_inductive_body) :=
+  rev_map (fun ind => vass (nNamed ind.(ind_name)) ind.(ind_type)) l. *)
 
 Lemma arities_context_length l : #|arities_context l| = #|l|.
 Proof. unfold arities_context. now rewrite rev_map_length. Qed.
@@ -415,7 +416,7 @@ Proof.
   case: x => [na [body|] ty'] /=; by rewrite IHctx' // /snoc -app_assoc.
 Qed.
 
-Fixpoint reln (l : list term) (p : nat) (Γ0 : list context_decl) {struct Γ0} : list term :=
+(* Fixpoint reln (l : list term) (p : nat) (Γ0 : list context_decl) {struct Γ0} : list term :=
   match Γ0 with
   | [] => l
   | {| decl_body := Some _ |} :: hyps => reln l (p + 1) hyps
@@ -423,7 +424,7 @@ Fixpoint reln (l : list term) (p : nat) (Γ0 : list context_decl) {struct Γ0} :
   end.
 
 Definition to_extended_list_k Γ k := reln [] k Γ.
-Definition to_extended_list Γ := to_extended_list_k Γ 0.
+Definition to_extended_list Γ := to_extended_list_k Γ 0. *)
 
 Lemma reln_list_lift_above l p Γ :
   Forall (fun x => exists n, x = tRel n /\ p <= n /\ n < p + length Γ) l ->
@@ -496,7 +497,7 @@ Definition polymorphic_instance uctx :=
   | Cumulative_ctx (c, _) => fst (AUContext.repr c)
   end.
 
-Fixpoint context_assumptions (Γ : context) :=
+(* Fixpoint context_assumptions (Γ : context) :=
   match Γ with
   | [] => 0
   | d :: Γ =>
@@ -504,7 +505,7 @@ Fixpoint context_assumptions (Γ : context) :=
     | Some _ => context_assumptions Γ
     | None => S (context_assumptions Γ)
     end
-  end.
+  end. *)
 
 Definition map_one_inductive_body npars arities f (n : nat) m :=
   match m with

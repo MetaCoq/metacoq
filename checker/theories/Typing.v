@@ -3,7 +3,7 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia ssreflect.
 From Coq Require Import String Wf Wellfounded Relation_Definitions Relation_Operators Lexicographic_Product Wf_nat.
 
-From MetaCoq.Template Require Import config utils Ast AstUtils Induction LiftSubst UnivSubst.
+From MetaCoq.Template Require Import config utils Ast AstUtils Induction LiftSubst UnivSubst EnvironmentTyping.
 From MetaCoq.Checker Require Import LibHypsNaming Reflect.
 
 From Equations Require Import Equations.
@@ -58,42 +58,6 @@ Proof.
   - now rewrite IHtl subst_context_length.
   - rewrite IHtl app_length. simpl. lia.
 Qed.
-
-(** ** Environment lookup *)
-
-Definition global_decl_ident d :=
-  match d with
-  | ConstantDecl id _ => id
-  | InductiveDecl id _ => id
-  end.
-
-Fixpoint lookup_env (Σ : global_env) (id : ident) : option global_decl :=
-  match Σ with
-  | nil => None
-  | hd :: tl =>
-    if ident_eq id (global_decl_ident hd) then Some hd
-    else lookup_env tl id
-  end.
-
-Definition declared_constant (Σ : global_env) (id : ident) decl : Prop :=
-  lookup_env Σ id = Some (ConstantDecl id decl).
-
-Definition declared_minductive Σ mind decl :=
-  lookup_env Σ mind = Some (InductiveDecl mind decl).
-
-Definition declared_inductive Σ mdecl ind decl :=
-  declared_minductive Σ (inductive_mind ind) mdecl /\
-  List.nth_error mdecl.(ind_bodies) (inductive_ind ind) = Some decl.
-
-Definition declared_constructor Σ mdecl idecl cstr cdecl : Prop :=
-  declared_inductive Σ mdecl (fst cstr) idecl /\
-  List.nth_error idecl.(ind_ctors) (snd cstr) = Some cdecl.
-
-Definition declared_projection Σ mdecl idecl (proj : projection) pdecl : Prop :=
-  declared_inductive Σ mdecl (fst (fst proj)) idecl /\
-  List.nth_error idecl.(ind_projs) (snd proj) = Some pdecl /\
-  mdecl.(ind_npars) = snd (fst proj).
-
 
 (** Inductive substitution, to produce a constructors' type *)
 Definition inds ind u (l : list one_inductive_body) :=
@@ -187,6 +151,8 @@ Definition tDummy := tVar "".
 Definition iota_red npar c args brs :=
   (mkApps (snd (List.nth c brs (0, tDummy))) (List.skipn npar args)).
 
+Module TemplateLookup := Lookup TemplateTerm TemplateEnvironment.
+Include TemplateLookup.
 
 (** *** One step strong beta-zeta-iota-fix-delta reduction
 
@@ -664,72 +630,6 @@ Definition types_of_case ind mdecl idecl params u p pty :=
   | None => None
   end.
 
-Definition on_udecl_decl {A} (F : universes_decl -> A) d : A :=
-  match d with
-  | ConstantDecl  _ cb => F cb.(cst_universes)
-  | InductiveDecl _ mb => F mb.(ind_universes)
-  end.
-
-Definition monomorphic_udecl_decl := on_udecl_decl monomorphic_udecl.
-
-Definition monomorphic_levels_decl := fst ∘ monomorphic_udecl_decl.
-
-Definition monomorphic_constraints_decl := snd ∘ monomorphic_udecl_decl.
-
-Definition universes_decl_of_decl := on_udecl_decl (fun x => x).
-
-(* Definition LevelSet_add_list l := LevelSet.union (LevelSetProp.of_list l). *)
-
-Definition LevelSet_pair x y
-  := LevelSet.add y (LevelSet.singleton x).
-
-
-Definition global_levels (Σ : global_env) : LevelSet.t
-  := fold_right (fun decl lvls => LevelSet.union (monomorphic_levels_decl decl) lvls)
-                (LevelSet_pair Level.lSet Level.lProp) Σ.
-
-Definition global_constraints (Σ : global_env) : constraints
-  := fold_right (fun decl ctrs => ConstraintSet.union
-                                (monomorphic_constraints_decl decl) ctrs)
-               ConstraintSet.empty Σ.
-
-Definition global_ext_levels (Σ : global_env_ext) : LevelSet.t
-  := LevelSet.union (levels_of_udecl (snd Σ)) (global_levels Σ.1).
-
-Definition global_ext_constraints (Σ : global_env_ext) : constraints
-  := ConstraintSet.union (constraints_of_udecl (snd Σ))
-                         (global_constraints Σ.1).
-
-Definition global_ext_uctx (Σ : global_env_ext) : ContextSet.t
-  := (global_ext_levels Σ, global_ext_constraints Σ).
-
-
-Lemma prop_global_ext_levels Σ : LevelSet.In Level.prop (global_ext_levels Σ).
-Proof.
-  destruct Σ as [Σ φ]; cbn.
-  apply LevelSetFact.union_3. cbn -[global_levels]; clear φ.
-  induction Σ.
-  - cbn. now apply LevelSetFact.add_1.
-  - simpl. now apply LevelSetFact.union_3.
-Qed.
-
-
-(** Check that [uctx] instantiated at [u] is consistent with the current universe graph. *)
-
-Definition consistent_instance `{checker_flags} (φ : constraints) uctx (u : universe_instance) :=
-  match uctx with
-  | Monomorphic_ctx c => List.length u = 0
-  | Polymorphic_ctx c
-  | Cumulative_ctx (c, _) => (* FIXME Cumulative *)
-    let '(inst, cstrs) := AUContext.repr c in
-    List.length u = List.length inst /\
-    forallb (negb ∘ Level.is_prop) u /\
-    valid_constraints φ (subst_instance_cstrs u cstrs)
-  end.
-
-Definition consistent_instance_ext `{checker_flags}
-  := consistent_instance ∘ global_ext_constraints.
-
 
 Reserved Notation " Σ ;;; Γ |- t : T " (at level 50, Γ, t, T at next level).
 Reserved Notation " Σ ;;; Γ |- t <= u " (at level 50, Γ, t, u at next level).
@@ -795,69 +695,8 @@ Definition check_correct_arity `{checker_flags} φ decl ind u ctx pars pctx :=
 
 (** ** Typing relation *)
 
-Section TypeLocal.
-  Context (typing : forall (Γ : context), term -> option term -> Type).
-
-  Inductive All_local_env : context -> Type :=
-  | localenv_nil :
-      All_local_env []
-
-  | localenv_cons_abs Γ na t :
-      All_local_env Γ ->
-      typing Γ t None ->
-      All_local_env (Γ ,, vass na t)
-
-  | localenv_cons_def Γ na b t :
-      All_local_env Γ ->
-      typing Γ t None ->
-      typing Γ b (Some t) ->
-      All_local_env (Γ ,, vdef na b t).
-End TypeLocal.
-
-(** Well-formedness of local environments embeds a sorting for each variable *)
-
-Definition lift_typing (P : global_env_ext -> context -> term -> term -> Type) :
-  (global_env_ext -> context -> term -> option term -> Type) :=
-  fun Σ Γ t T =>
-    match T with
-    | Some T => P Σ Γ t T
-    | None => { s : universe & P Σ Γ t (tSort s) }
-    end.
-
-Definition on_local_decl (P : context -> term -> option term -> Type) Γ d :=
-  match d.(decl_body) with
-  | Some b => P Γ b (Some d.(decl_type))
-  | None => P Γ d.(decl_type) None
-  end.
-
-Section TypeLocalOver.
-  Context (typing : forall (Σ : global_env_ext) (Γ : context), term -> term -> Type).
-  Context (property : forall (Σ : global_env_ext) (Γ : context),
-              All_local_env (lift_typing typing Σ) Γ ->
-              forall (t T : term), typing Σ Γ t T -> Type).
-
-  Inductive All_local_env_over (Σ : global_env_ext) :
-    forall (Γ : context), All_local_env (lift_typing typing Σ) Γ -> Type :=
-  | localenv_over_nil :
-      All_local_env_over Σ [] (localenv_nil _)
-
-  | localenv_over_cons_abs Γ na t
-      (all : All_local_env (lift_typing typing Σ) Γ) :
-      All_local_env_over Σ Γ all ->
-      forall (tu : lift_typing typing Σ Γ t None),
-        property Σ Γ all _ _ (projT2 tu) ->
-        All_local_env_over Σ (Γ ,, vass na t)
-                           (localenv_cons_abs _ Γ na t all tu)
-
-  | localenv_over_cons_def Γ na b t
-      (all : All_local_env (lift_typing typing Σ) Γ) (tb : typing Σ Γ b t) :
-      All_local_env_over Σ Γ all ->
-      property Σ Γ all _ _ tb ->
-      forall (tu : lift_typing typing Σ Γ t None),
-        property Σ Γ all _ _ (projT2 tu) ->
-        All_local_env_over Σ (Γ ,, vdef na b t)
-                           (localenv_cons_def _ Γ na b t all tu tb).
-End TypeLocalOver.
+Module TemplateEnvTyping := EnvTyping TemplateTerm TemplateEnvironment.
+Include TemplateEnvTyping.
 
 Section WfArity.
   Context (typing : forall (Σ : global_env_ext) (Γ : context), term -> term -> Type).
@@ -872,7 +711,6 @@ Section WfArity.
   Definition isWfArity_prop Σ (Γ : context) T :=
     { wfa : isWfArity Σ Γ T & All_local_env_over typing property Σ _ (snd (projT2 (projT2 wfa))) }.
 End WfArity.
-
 
 (* AXIOM GUARD CONDITION *)
 Axiom fix_guard : mfixpoint term -> bool.
@@ -897,12 +735,14 @@ Axiom fix_guard_subst :
     fix_guard mfix ->
     fix_guard mfix'.
 
+(* AXIOM INDUCTIVE GUARD CONDITION *)
 Axiom ind_guard : mutual_inductive_body -> bool.
 
 Extract Constant fix_guard => "fun m -> assert false".
 Extract Constant fix_guard_red1 => "fun s g m m' i -> assert false".
 Extract Constant fix_guard_lift => "fun m n k -> assert false".
 Extract Constant fix_guard_subst => "fun m s k -> assert false".
+
 Extract Constant ind_guard => "fun m -> assert false".
 
 
@@ -1025,10 +865,6 @@ Notation wf_local Σ Γ := (All_local_env (lift_typing typing Σ) Γ).
 
 (** ** Typechecking of global environments *)
 
-
-Definition isType `{checker_flags} (Σ : global_env_ext) (Γ : context) (t : term) :=
-  { s : _ & Σ ;;; Γ |- t : tSort s }.
-
 Definition has_nparams npars ty :=
   decompose_prod_n_assum [] npars ty <> None.
 
@@ -1036,437 +872,22 @@ Definition unlift_opt_pred (P : global_env_ext -> context -> option term -> term
   (global_env_ext -> context -> term -> term -> Type) :=
   fun Σ Γ t T => P Σ Γ (Some t) T.
 
-(** *** Typing of inductive declarations *)
+Module TemplateTyping <: Typing TemplateTerm TemplateEnvironment TemplateEnvTyping.
 
-Section GlobalMaps.
-  Context {cf: checker_flags}.
-  Context (P : global_env_ext -> context -> term -> option term -> Type).
+  Definition ind_guard := ind_guard.
+  Definition typing := @typing.
+  Definition smash_context := smash_context.
 
-  Section TypeCtx.
+End TemplateTyping.
 
-    (** For well-formedness of inductive declarations we need a way to check that a given
-        context is typable in [Prop]. *)
-    Context (Σ : global_env_ext) (Γ : context).
-
-    Fixpoint type_local_ctx (Δ : context) (u : universe) : Type :=
-      match Δ with
-      | [] => u = Universe.type0m
-      | {| decl_body := None; decl_type := t |} :: Δ => (type_local_ctx Δ u * (P Σ (Γ ,,, Δ) t (Some (tSort u))))
-      | {| decl_body := Some _ |} :: Δ => type_local_ctx Δ u
-      end.
-  End TypeCtx.
-
-  Implicit Types (mdecl : mutual_inductive_body) (idecl : one_inductive_body) (cdecl : ident * term * nat).
-
-  Definition on_type Σ Γ T := P Σ Γ T None.
-
-  Record constructor_shape mdecl i idecl cdecl :=
-    { cshape_args : context;
-      (* Arguments (with lets) *)
-      cshape_args_univ : universe;
-      (* The argument's context must be well-typed in some universe. *)
-      cshape_concl_head := tRel (#|mdecl.(ind_bodies)| - S i + #|mdecl.(ind_params)| + #|cshape_args|);
-      (* Conclusion head: reference to the current inductive in the block *)
-      cshape_indices : list term;
-      (* Indices of the constructor, whose length should be the real arguments length of the inductive *)
-      cshape_eq : snd (fst cdecl) =
-                  it_mkProd_or_LetIn mdecl.(ind_params)
-                 (it_mkProd_or_LetIn cshape_args
-                  (mkApps cshape_concl_head (to_extended_list_k mdecl.(ind_params) #|cshape_args| ++ cshape_indices)))
-      (* The type of the constructor canonically has this shape: parameters, real arguments ending
-         with a reference to the inductive applied to the (non-lets) parameters and arguments *)
-    }.
-  Arguments cshape_args {mdecl i idecl cdecl}.
-  Arguments cshape_args_univ {mdecl i idecl cdecl}.
-
-  Definition on_constructor (Σ : global_env_ext) (mind : kername)
-             (mdecl : mutual_inductive_body)
-             (i : nat) (idecl : one_inductive_body)
-             (c : nat) (cdecl : ident * term * nat) : Type :=
-    let constructor_type := snd (fst cdecl) in
-    on_type Σ (arities_context mdecl.(ind_bodies)) constructor_type *
-    { cs : constructor_shape mdecl i idecl cdecl &
-           type_local_ctx Σ (arities_context mdecl.(ind_bodies) ,,, mdecl.(ind_params))
-                          cs.(cshape_args) cs.(cshape_args_univ) }.
-
-  Definition on_constructors (Σ : global_env_ext) mind mdecl i idecl l :=
-    Alli (on_constructor Σ mind mdecl i idecl) 0 l.
-
-  (** Projections have their parameter context smashed to avoid costly computations
-      during type-checking. *)
-
-  Definition on_projection (Σ : global_env_ext) mind mdecl (i : nat) (idecl : one_inductive_body)
-             (k : nat) (p : ident * term) :=
-    let ctx := smash_context [] mdecl.(ind_params) in
-    let Γ := ctx,, vass (nNamed idecl.(ind_name))
-                (mkApps (tInd (mkInd mind i) (polymorphic_instance mdecl.(ind_universes)))
-                        (to_extended_list ctx))
-    in on_type Σ Γ (snd p).
-
-  Record on_projections (Σ : global_env_ext) mind mdecl i idecl (ictx : context) (l : list (ident * term)) : Type :=
-    { on_projs_record : #|idecl.(ind_ctors)| = 1;
-      (** The inductive must be a record *)
-      on_projs_noidx : #|ictx| = 0;
-      (** The inductive cannot have indices *)
-      on_projs_elim : List.Exists (fun sf => sf = InType) idecl.(ind_kelim);
-      (** This ensures that all projections are definable *)
-      on_projs : Alli (on_projection Σ mind mdecl i idecl) 0 l }.
-
-  Definition is_prop_elim l :=
-    match l with
-    | [InProp] => true
-    | _ => false
-    end.
-
-  Definition is_all_elim l :=
-    match l with
-    | [InProp;InSet;InType] => true
-    | _ => false
-    end.
-
-  Definition leb_sort_family x y :=
-    match x, y with
-    | InProp, _ => true
-    | InSet, InProp => false
-    | InType, (InProp | InSet) => false
-    | _, _ => true
-    end.
-
-  Section CheckSmaller.
-    Context {Σ : global_env_ext} {mind : kername} {mdecl : mutual_inductive_body}
-            {i : nat} {idecl : one_inductive_body} (indu : universe).
-
-    Fixpoint check_constructors_smaller {k cstrs}
-             (onConstructors : Alli (on_constructor Σ mind mdecl i idecl) k cstrs) : Prop :=
-      match onConstructors with
-      | Alli_nil => True
-      | Alli_cons cstr l onc cstrs =>
-        (* The constructor's arguments bounding universe. *)
-        let cstru := cshape_args_univ (snd onc).π1 in
-        (* Just check it is smaller and continue *)
-        leq_universe (global_ext_constraints Σ) cstru indu /\ check_constructors_smaller cstrs
-      end.
-  End CheckSmaller.
-
-
-  (** This ensures that all sorts in kelim are lower
-      or equal to the top elimination sort, if set.
-      For inductives in Type we do not check [kelim] currently. *)
-
-  Definition check_ind_sorts {Σ mind mdecl i idecl cstrs}
-             (onConstructors : on_constructors Σ mind mdecl i idecl cstrs) u : Prop :=
-    match universe_family u with
-    | InProp =>
-      (** The inductive is declared in the impredicative sort Prop *)
-      let topsort :=
-          match onConstructors with
-          | Alli_nil => (* Empty inductive proposition: *) InType
-          | Alli_cons cstr nil onc Alli_nil =>
-            match universe_family (cshape_args_univ (snd onc).π1) with
-            | InProp => (* Not squashed: all arguments are in Prop *) InType
-            | _ => (* Squashed: some arguments are higher than Prop, restrict to Prop *) InProp
-            end
-          | _ => (* Squashed: at least 2 constructors *) InProp
-          end
-      in
-      (** No universe-checking to do: any size of constructor argument is allowed,
-          however elimination restrictions apply. *)
-      forall x, In x idecl.(ind_kelim) -> leb_sort_family x topsort
-    | _ =>
-      (** The inductive is predicative: check that all constructors arguments are
-          smaller than the declared universe. *)
-      check_constructors_smaller u onConstructors
-    end.
-
-  Record on_ind_body
-         (Σ : global_env_ext) (mind : kername) mdecl (i : nat) idecl :=
-    { (** The type of the inductive must be an arity, sharing the same params
-          as the rest of the block, and maybe having a contexxt of indices. *)
-      ind_indices : context; ind_sort : universe;
-      ind_arity_eq : idecl.(ind_type) = it_mkProd_or_LetIn mdecl.(ind_params)
-                                       (it_mkProd_or_LetIn ind_indices (tSort ind_sort));
-      (** It must be well-typed in the empty context. *)
-      onArity : on_type Σ [] idecl.(ind_type);
-      (** Constructors are well-typed *)
-      onConstructors : on_constructors Σ mind mdecl i idecl idecl.(ind_ctors);
-      (** Projections, if any, are well-typed *)
-      onProjections : idecl.(ind_projs) <> [] -> on_projections Σ mind mdecl i idecl ind_indices idecl.(ind_projs);
-      (** The universes and elimination sorts must be correct w.r.t.
-          the universe of the inductive and the universes in its constructors, which
-          are declared in [on_constructors]. *)
-      ind_sorts : check_ind_sorts onConstructors ind_sort;
-    }.
-
-  Definition on_context Σ ctx :=
-    All_local_env (P Σ) ctx.
-
-  (** We allow empty blocks for simplicity (no well-typed reference to them can be made). *)
-
-  Record on_inductive Σ ind mdecl :=
-    { onInductives : Alli (on_ind_body Σ ind mdecl) 0 mdecl.(ind_bodies);
-      (** We check that the context of parameters is well-formed and that
-          the size annotation counts assumptions only (no let-ins). *)
-      onParams : on_context Σ mdecl.(ind_params);
-      onNpars : context_assumptions mdecl.(ind_params) = mdecl.(ind_npars);
-      onGuard : ind_guard mdecl
-    }.
-
-  (** *** Typing of constant declarations *)
-
-  Definition on_constant_decl Σ d :=
-    match d.(cst_body) with
-    | Some trm => P Σ [] trm (Some d.(cst_type))
-    | None => on_type Σ [] d.(cst_type)
-    end.
-
-  Definition on_global_decl Σ decl :=
-    match decl with
-    | ConstantDecl id d => on_constant_decl Σ d
-    | InductiveDecl ind inds => on_inductive Σ ind inds
-    end.
-
-  (** *** Typing of global environment
-
-      All declarations should be typeable and the global
-      set of universe constraints should be consistent. *)
-
-  (** Well-formed global environments have no name clash. *)
-
-  Definition fresh_global (s : string) : global_env -> Prop :=
-    Forall (fun g => global_decl_ident g <> s).
-
-  Definition satisfiable_udecl `{checker_flags} Σ φ
-    := consistent (global_ext_constraints (Σ, φ)).
-
-  (* Check that: *)
-  (*   - declared levels are fresh *)
-  (*   - all levels used in constraints are declared *)
-  (*   - level used in monomorphic contexts are only monomorphic *)
-  Definition on_udecl `{checker_flags} Σ (udecl : universes_decl)
-    := let levels := levels_of_udecl udecl in
-       let global_levels := global_levels Σ in
-       let all_levels := LevelSet.union levels global_levels in
-       LevelSet.For_all (fun l => ~ LevelSet.In l global_levels) levels
-       /\ ConstraintSet.For_all (fun '(l1,_,l2) => LevelSet.In l1 all_levels
-                                               /\ LevelSet.In l2 all_levels)
-                               (constraints_of_udecl udecl)
-       /\ match udecl with
-         | Monomorphic_ctx ctx =>  LevelSet.For_all (fun l => match l with
-                                                          | Level.Var _ => false
-                                                          | _ => true
-                                                          end) (fst ctx)
-         | _ => True
-         end
-       /\ satisfiable_udecl Σ udecl.
-
-
-  Inductive on_global_env `{checker_flags} : global_env -> Type :=
-  | globenv_nil : on_global_env []
-  | globenv_decl Σ d :
-      on_global_env Σ ->
-      fresh_global (global_decl_ident d) Σ ->
-      let udecl := universes_decl_of_decl d in
-      on_udecl Σ udecl ->
-      on_global_decl (Σ, udecl) d ->
-      on_global_env (Σ ,, d).
-
-  Definition on_global_env_ext `{checker_flags} (g : global_env_ext) :=
-    on_global_env (fst g) × on_udecl (fst g) (snd g).
-
-End GlobalMaps.
-
-Arguments cshape_args {mdecl i idecl cdecl}.
-Arguments cshape_args_univ {mdecl i idecl cdecl}.
-Arguments ind_indices {_ P Σ mind mdecl i idecl}.
-Arguments ind_sort {_ P Σ mind mdecl i idecl}.
-Arguments ind_arity_eq {_ P Σ mind mdecl i idecl}.
-Arguments onArity {_ P Σ mind mdecl i idecl}.
-Arguments onConstructors {_ P Σ mind mdecl i idecl}.
-Arguments onProjections {_ P Σ mind mdecl i idecl}.
-Arguments ind_sorts {_ P Σ mind mdecl i idecl}.
-
-Definition sort_irrelevant (P : global_env_ext -> context -> term -> option term -> Type) :=
-  forall Σ Γ b s s', P Σ Γ (tSort s) b -> P Σ Γ (tSort s') b.
-
-Lemma All_local_env_impl (P Q : context -> term -> option term -> Type) l :
-  All_local_env P l ->
-  (forall Γ t T, P Γ t T -> Q Γ t T) ->
-  All_local_env Q l.
-Proof.
-  induction 1; intros; simpl; econstructor; eauto.
-Qed.
-
-Lemma on_global_env_mix `{checker_flags} {Σ P Q} :
-  sort_irrelevant Q ->
-  on_global_env P Σ -> on_global_env Q Σ -> on_global_env (fun Σ Γ t T => (P Σ Γ t T * Q Σ Γ t T)%type) Σ.
-  todo "simplify onConstructors".
-(*
-  intros HQ X X0.
-  simpl in *. induction X in X0 | *. inv X0. constructor; auto.
-  inv X0. constructor; auto.
-  clear IHX.
-  destruct d; simpl.
-   destruct c; simpl. destruct cst_body; simpl in *.
-    red in o, X2 | *. simpl in *.
-    split; auto.
-    red in o, X2 | *. simpl in *.
-    split; auto.
-   destruct o0, X2. constructor; intuition.
-    2:{ red in onParams0, onParams1 | *.
-        revert onParams0 onParams1.
-        clear onNpars0 onNpars1.
-        induction (ind_params m). constructor.
-        intros HH1. inv HH1.
-        intros H2. inv H2.
-        econstructor. eauto. now split.
-        intros HH1. inv HH1.
-        econstructor; eauto; red; intuition eauto. }
-    clear onParams0 onParams1 onNpars0 onNpars1.
-    solve_all. eapply Alli_impl; eauto. clear onInductives1.
-    intros.
-    destruct x; simpl in *.
-    destruct X0 as [Xl Xr].
-    unshelve econstructor; cbn. shelve. shelve.
-    + apply onConstructors in Xl; apply onConstructors in Xr.
-      simpl in *. unfold on_constructors in *.
-      solve_all. eapply Alli_impl; eauto. clear Xr.
-      cbn; intros n0 x X0. unfold on_constructor, on_type in *.
-      simpl in *; intuition eauto.
-      admit.
-    + exact (ind_arity_eq Xl).
-    + apply onArity in Xl; apply onArity in Xr; cbn in *.
-      unfold on_type in *; intuition.
-    + intro HH; pose proof (onProjections Xl HH) as Xl';
-        pose proof (onProjections Xr HH) as Xr'; cbn in *.
-      inversion Xl'; subst.
-      econstructor; cbn in *; tas.
-      inversion Xr'; subst.
-      solve_all.
-    + admit.
-      (* simpl. intuition eauto. *)
-      (* red in a, b | *. simpl in *. destruct (decompose_prod_assum [] ind_type). *)
-      (* intuition. unfold on_type in *. eauto. *)
-Admitted.
-*)
-Qed.
-
-Lemma Alli_impl_trans :  forall (A : Type) (P Q : nat -> A -> Type) (l : list A) (n : nat),
-       Alli P n l -> (forall (n0 : nat) (x : A), P n0 x -> Q n0 x) -> Alli Q n l.
-Proof.
-  induction 1; constructor; auto.
-Defined.
-
-Lemma on_global_env_impl `{checker_flags} Σ P Q :
-  (forall Σ Γ t T, on_global_env P Σ.1 -> P Σ Γ t T -> Q Σ Γ t T) ->
-  on_global_env P Σ -> on_global_env Q Σ.
-Proof.
-  intros X X0.
-  simpl in *. induction X0; constructor; auto.
-  clear IHX0. destruct d; simpl.
-  - destruct c; simpl. destruct cst_body; simpl in *.
-    red in o |- *. simpl in *. now eapply X.
-    red in o |- *. simpl in *. now eapply X.
-  - red in o. simpl in *.
-    destruct o0 as [onI onP onNP].
-    constructor; auto.
-    -- eapply Alli_impl. exact onI. eauto. intros.
-       unshelve econstructor. shelve. shelve.
-       --- apply onConstructors in X1. red in X1.
-           unfold on_constructor, on_type in *. eapply Alli_impl_trans; eauto.
-           simpl. intros. destruct X2 as (? & ? & ?).
-           split. now eapply X.
-           exists x1.
-           clear -t X X0.
-           revert t. generalize (cshape_args x1).
-           abstract (induction c; simpl; auto;
-           destruct a as [na [b|] ty]; simpl in *; auto;
-           split; eauto; [apply IHc;apply t|apply X;simpl; auto;apply t]).
-       --- apply (ind_arity_eq X1).
-       --- apply onArity in X1. unfold on_type in *; simpl in *.
-           now eapply X.
-       --- simpl; intros. pose (onProjections X1 H0). simpl in *.
-           destruct o0. constructor; auto. eapply Alli_impl; intuition eauto.
-           unfold on_projection in *; simpl in *.
-           now apply X.
-       --- generalize (ind_sorts X1).
-           (* all:todo "simplify constructor shapes"%string. *)
-           clear -X.
-           destruct (onConstructors X1); auto.
-           unfold check_ind_sorts.
-           destruct universe_family eqn:Heq; simpl; auto.
-           destruct tl; simpl. intros.
-           specialize (H0 _ H1). destruct o0; simpl in *; intuition auto.
-           destruct o as [? [? ?]]; simpl in *; intuition auto.
-           auto. intuition auto.
-           destruct o as [? [? ?]]. simpl in *. intuition auto.
-           clear -o0 H2.
-           induction o0; simpl; intuition auto.
-           destruct p as [? [? ?]]; simpl in *; intuition auto.
-           eapply IHo0; auto. red in H2. red. intuition auto.
-           intuition auto.
-           destruct o as [? [? ?]]; simpl in *; intuition auto.
-           clear -o0 H2.
-           induction o0; simpl; intuition auto.
-           destruct p as [? [? ?]]; simpl in *; intuition auto.
-           eapply IHo0; auto. red in H2. red. intuition auto.
-    -- red in onP. red.
-       eapply All_local_env_impl. eauto.
-       intros. now apply X.
-Qed.
-
-Lemma on_global_env_proj `{checker_flags} {Σ P Q} :
-  on_global_env (fun Σ Γ t T => (P Σ Γ t T * Q Σ Γ t T)%type) Σ -> on_global_env P Σ.
-Proof.
-  intros. eapply on_global_env_impl. intros. 2:eauto. simpl in X1; intuition.
-Qed.
-
-(** This predicate enforces that there exists typing derivations for every typable term in env. *)
-
-Definition Forall_decls_typing `{checker_flags}
-           (P : global_env_ext -> context -> term -> term -> Type)
-  := on_global_env (lift_typing P).
-
-(** *** Typing of local environments *)
-
-Definition type_local_decl `{checker_flags} Σ Γ d :=
-  match d.(decl_body) with
-  | None => isType Σ Γ d.(decl_type)
-  | Some body => Σ ;;; Γ |- body : d.(decl_type)
-  end.
-
-(** ** Induction principle for typing up-to a global environment *)
-
-(** With this combinator we get for all typeable terms of the global contexts
-    a proof that any typing implies P. *)
-
-Lemma refine_type `{checker_flags} Σ Γ t T U : Σ ;;; Γ |- t : T -> T = U -> Σ ;;; Γ |- t : U.
-Proof. now intros Ht ->. Qed.
-
-Inductive Forall_typing_spine `{checker_flags} Σ Γ (P : term -> term -> Type) :
-  forall (T : term) (t : list term) (U : term), typing_spine Σ Γ T t U -> Type :=
-| Forall_type_spine_nil T : Forall_typing_spine Σ Γ P T [] T (type_spine_nil Σ Γ T)
-| Forall_type_spine_cons hd tl na A B s T B' tls
-   (typrod : Σ ;;; Γ |- tProd na A B : tSort s)
-   (cumul : Σ ;;; Γ |- T <= tProd na A B) (ty : Σ ;;; Γ |- hd : A) :
-    P (tProd na A B) (tSort s) -> P hd A -> Forall_typing_spine Σ Γ P (B {0 := hd}) tl B' tls ->
-    Forall_typing_spine Σ Γ P T (hd :: tl) B'
-      (type_spine_cons Σ Γ hd tl na A B s T B' typrod cumul ty tls).
-
-Section wf_local_size.
-  Context `{checker_flags} (Σ : global_env_ext).
-  Context (fn : forall (Σ : global_env_ext) (Γ : context) (t T : term), typing Σ Γ t T -> size).
-
-  Fixpoint wf_local_size Γ (w : wf_local Σ Γ) : size :=
-    match w with
-    | localenv_nil => 0
-
-    | localenv_cons_abs Γ na t wfΓ tty =>
-      (fn _ _ t _ (projT2 tty) + wf_local_size _ wfΓ)%nat
-
-    | localenv_cons_def Γ na b t wfΓ tty tty' =>
-      (fn _ _ t _ (projT2 tty) + fn _ _ b t tty' + wf_local_size _ wfΓ)%nat
-    end.
-End wf_local_size.
+Module TemplateDeclarationTyping :=
+  DeclarationTyping
+    TemplateTerm
+    TemplateEnvironment
+    TemplateEnvTyping
+    TemplateTyping
+    TemplateLookup.
+Include TemplateDeclarationTyping.
 
 Section Typing_Spine_size.
   Context `{checker_flags}.
@@ -1633,14 +1054,18 @@ Proof.
   - simpl. congruence.
   - intros [=]. subst d Γ0.
     exists w. simpl. destruct l. exists x. exists t0. pose (typing_size_pos t0).
-    simpl. lia.
+    simpl. split.
+    + lia.
+    + auto with arith.
   - intros [=]. subst d Γ0.
     exists w. simpl. simpl in l. destruct l as [u h].
     simpl in l0.
     exists u, l0, h. simpl.
     pose (typing_size_pos h).
     pose (typing_size_pos l0).
-    lia.
+    intuition eauto.
+    all: try lia.
+    auto with arith.
 Qed.
 
 
@@ -1650,21 +1075,15 @@ Qed.
     on typing judgments in application spines, fix and cofix blocks.
  *)
 
-Arguments localenv_nil {_}.
-Arguments localenv_cons_abs {_ _ _ _} _ _.
-Arguments localenv_cons_def {_ _ _ _ _} _ _ _.
-
-Lemma type_local_ctx_impl (P Q : global_env_ext -> context -> term -> option term -> Type) Σ Γ Δ u :
-  type_local_ctx P Σ Γ Δ u ->
-  (forall Γ t T, P Σ Γ t T -> Q Σ Γ t T) ->
-  type_local_ctx Q Σ Γ Δ u.
-Proof.
-  intros HP HPQ. revert HP; induction Δ in Γ, HPQ |- *; simpl; auto.
-  destruct a as [na [b|] ty]; simpl; auto.
-  intros. intuition auto.
-Qed.
-
-
+Inductive Forall_typing_spine `{checker_flags} Σ Γ (P : term -> term -> Type) :
+  forall (T : term) (t : list term) (U : term), typing_spine Σ Γ T t U -> Type :=
+| Forall_type_spine_nil T : Forall_typing_spine Σ Γ P T [] T (type_spine_nil Σ Γ T)
+| Forall_type_spine_cons hd tl na A B s T B' tls
+   (typrod : Σ ;;; Γ |- tProd na A B : tSort s)
+   (cumul : Σ ;;; Γ |- T <= tProd na A B) (ty : Σ ;;; Γ |- hd : A) :
+    P (tProd na A B) (tSort s) -> P hd A -> Forall_typing_spine Σ Γ P (B {0 := hd}) tl B' tls ->
+    Forall_typing_spine Σ Γ P T (hd :: tl) B'
+      (type_spine_cons Σ Γ hd tl na A B s T B' typrod cumul ty tls).
 
 Lemma typing_ind_env `{cf : checker_flags} :
   forall (P : global_env_ext -> context -> term -> term -> Type)
@@ -1841,60 +1260,70 @@ Proof.
       forward IH. constructor 1. simpl; lia. exists s. eapply IH.
     + red in Xg.
       destruct Xg as [onI onP onnp]; constructor; eauto.
-      eapply Alli_impl; eauto. clear onI onP onnp; intros n x Xg.
-      unshelve eexists (ind_indices Xg) (ind_sort Xg) _.
-      ++ apply onConstructors in Xg.
-         eapply Alli_impl_trans; eauto. intros.
-         red in X14 |- *. destruct X14 as [[s Hs] [cs Hargsu]]. split; auto.
-         pose proof (typing_wf_local (Σ:= (Σ, _)) Hs). simpl in Hs.
-         specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ X14 (existT _ _ (existT _ _ Hs))))))).
-         simpl in IH. red. simpl. exists s. simpl. apply IH; constructor 1; simpl; auto with arith.
-         exists cs.
-         eapply type_local_ctx_impl; eauto. simpl. intros. red in X14.
-         destruct T.
-         pose proof (typing_wf_local X14).
-         specialize (IH ((Σ, udecl); (X13; _; X17; _; _; X14))).
-         apply IH. simpl. constructor 1. simpl. auto with arith.
-         destruct X14 as [u Hu]. exists u.
-         pose proof (typing_wf_local Hu).
-         specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ X14 (existT _ _ (existT _ _ Hu))))))).
-         apply IH. simpl. constructor 1. simpl. auto with arith.
-      ++ apply (ind_arity_eq Xg).
-      ++ apply onArity in Xg. destruct Xg as [s Hs]. exists s; auto.
-         specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ localenv_nil (existT _ _ (existT _ _ Hs))))))).
-         simpl in IH. simpl. apply IH; constructor 1; simpl; lia.
-      ++ intros Hprojs; pose proof (onProjections Xg Hprojs); auto. simpl in *.
-         destruct X14; constructor; auto. eapply Alli_impl; eauto. clear on_projs0. intros.
-         red in X14 |- *. unfold on_type in *; intuition eauto. simpl in *.
-         destruct X14 as [s Hs]. exists s.
-         pose proof (typing_wf_local (Σ:= (Σ, udecl)) Hs).
-         specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ X14 (existT _ _ (existT _ _ Hs))))))).
-         simpl in IH. apply IH; constructor 1; simpl; lia.
-      ++ destruct Xg. simpl. unfold check_ind_sorts in *. destruct universe_family; auto.
-         +++ simpl. unfold Alli_impl_trans. clear -ind_sorts0. revert onConstructors0 ind_sorts0.
-             generalize (ind_ctors x).
-             intros ? onConstructors0. depelim onConstructors0; simpl; auto.
-             depelim onConstructors0; simpl; auto. red in o. destruct o as [[s Hs] [cshape Hcs]]; simpl; auto.
-         +++ simpl. revert onConstructors0 ind_sorts0.
-             generalize (ind_ctors x).
-             intros ? onConstructors0. clear. red in onConstructors0.
-             unfold Alli_impl_trans. simpl. induction onConstructors0; simpl; intuition auto.
-             destruct p as [[? ?] [? ?]]. simpl in *. auto.
-         +++ simpl. revert onConstructors0 ind_sorts0.
-             generalize (ind_ctors x).
-             intros ? onConstructors0. clear. red in onConstructors0.
-             unfold Alli_impl_trans. simpl. induction onConstructors0; simpl; intuition auto.
-             destruct p as [[? ?] [? ?]]. simpl in *. auto.
-      ++ red in onP |- *.
-         eapply All_local_env_impl; eauto.
-         intros. destruct T; simpl in X14.
-         specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ (typing_wf_local (Σ:=(Σ,udecl)) X14)
-                                                                           (existT _ _ (existT _ _ X14))))))).
-         simpl in IH. apply IH. constructor 1. simpl. lia.
-         destruct X14 as [u Hu].
-         specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ (typing_wf_local (Σ:=(Σ,udecl)) Hu)
-                                                                           (existT _ _ (existT _ _ Hu))))))).
-         simpl in IH. simpl. exists u. apply IH. constructor 1. simpl. lia.
+      * eapply Alli_impl; eauto. clear onI onP onnp; intros n x Xg.
+        refine {| ind_indices := Xg.(ind_indices);
+                  ind_arity_eq := Xg.(ind_arity_eq);
+                  ind_ctors_sort := Xg.(ind_ctors_sort) |}.
+        -- apply onArity in Xg. destruct Xg as [s Hs]. exists s; auto.
+          specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ localenv_nil (existT _ _ (existT _ _ Hs))))))).
+          simpl in IH. simpl. apply IH; constructor 1; simpl; lia.
+        -- pose proof Xg.(onConstructors) as Xg'.
+           eapply All2_impl; eauto. intros.
+           red in X14 |- *. destruct X14 as [[s Hs] [cs Hargsu]]. split.
+           pose proof (typing_wf_local (Σ:= (Σ, udecl)) Hs). simpl in Hs.
+           specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ X14 (existT _ _ (existT _ _ Hs))))))).
+           simpl in IH. red. simpl. exists s. simpl. apply IH; constructor 1; simpl; auto with arith.
+           exists cs.
+           eapply type_local_ctx_impl; eauto. simpl. intros. red in X14.
+           destruct T.
+           pose proof (typing_wf_local X14).
+           specialize (IH ((Σ, udecl); (X13; _; X17; _; _; X14))).
+           apply IH. simpl. constructor 1. simpl. auto with arith.
+           destruct X14 as [u Hu]. exists u.
+           pose proof (typing_wf_local Hu).
+           specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ X14 (existT _ _ (existT _ _ Hu))))))).
+           apply IH. simpl. constructor 1. simpl. auto with arith.
+        -- intros Hprojs; pose proof (onProjections Xg Hprojs); auto. simpl in *.
+           destruct X14; constructor; auto. eapply Alli_impl; eauto. clear on_projs0. intros.
+           red in X14 |- *. unfold on_type in *; intuition eauto. simpl in *.
+           destruct X14 as [s Hs]. exists s.
+           pose proof (typing_wf_local (Σ:= (Σ, udecl)) Hs).
+           specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ X14 (existT _ _ (existT _ _ Hs))))))).
+           simpl in IH. apply IH; constructor 1; simpl; lia.
+        -- destruct Xg. simpl. unfold check_ind_sorts in *.
+          destruct universe_family; auto.
+          ++ split. apply ind_sorts0. destruct indices_matter; auto.
+             eapply type_local_ctx_impl. eapply ind_sorts0.
+             intros. red in X14.
+             destruct T.
+             pose proof (typing_wf_local X14).
+             specialize (IH ((Σ, udecl); (X13; _; X17; _; _; X14))).
+             apply IH. simpl. constructor 1. simpl. auto with arith.
+             destruct X14 as [u Hu]. exists u.
+             pose proof (typing_wf_local Hu).
+             specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ X14 (existT _ _ (existT _ _ Hu))))))).
+             apply IH. simpl. constructor 1. simpl. auto with arith.
+          ++ split. apply ind_sorts0. destruct indices_matter; auto.
+             eapply type_local_ctx_impl. eapply ind_sorts0.
+             intros. red in X14.
+             destruct T.
+             pose proof (typing_wf_local X14).
+             specialize (IH ((Σ, udecl); (X13; _; X17; _; _; X14))).
+             apply IH. simpl. constructor 1. simpl. auto with arith.
+             destruct X14 as [u Hu]. exists u.
+             pose proof (typing_wf_local Hu).
+             specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ X14 (existT _ _ (existT _ _ Hu))))))).
+             apply IH. simpl. constructor 1. simpl. auto with arith.
+      * red in onP |- *.
+        eapply All_local_env_impl; eauto.
+        intros. destruct T; simpl in X14.
+        specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ (typing_wf_local (Σ:=(Σ, udecl)) X14)
+                                                                        (existT _ _ (existT _ _ X14))))))).
+        simpl in IH. apply IH. constructor 1. simpl. lia.
+        destruct X14 as [u Hu].
+        specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ (typing_wf_local (Σ:=(Σ, udecl)) Hu)
+                                                                        (existT _ _ (existT _ _ Hu))))))).
+        simpl in IH. simpl. exists u. apply IH. constructor 1. simpl. lia.
 
   - assert (forall Γ (wfΓ : wf_local Σ Γ) t T (Hty : Σ ;;; Γ |- t : T),
                typing_size Hty < typing_size H ->
@@ -2081,22 +1510,23 @@ Proof.
        ++ eapply IHa0. intros.
          eapply (X _ X0 _ _ Hty). simpl; lia.
     -- eapply X12; eauto.
-       ++ eapply (X14 _ wfΓ _ _ H); simpl. destruct s as [s | [u Hu]]; lia.
-       ++ simpl in X14, X13.
-          destruct s as [s | [u Hu]].
-          ** left.
-             red. exists s. red in s. revert X14.
-             generalize (snd (projT2 (projT2 s))).
-             induction a; simpl in *; intros X14 *; constructor.
-             --- apply IHa. intros. eapply (X14 _ wfΓ0 _ _ Hty). lia.
-             --- red. eapply (X14 _ a _ _ (projT2 t1)). lia.
-             --- apply IHa. intros. eapply (X14 _ wfΓ0 _ _ Hty). lia.
-             --- red. destruct t1. unshelve eapply X14. all: eauto.
-                 simpl. lia.
-             --- red. destruct t1. unshelve eapply X14. all: eauto.
-                 simpl. lia.
-          ** auto. right.
-             exists u. intuition.
+      ++ eapply (X14 _ wfΓ _ _ H); simpl. destruct s as [s | [u Hu]]; lia.
+      ++ simpl in X14, X13.
+        destruct s as [s | [u Hu]].
+        ** left.
+            red. exists s. red in s. revert X14.
+            generalize (snd (projT2 (projT2 s))).
+            induction a; simpl in *; intros X14 *; constructor.
+            --- apply IHa. intros. eapply (X14 _ wfΓ0 _ _ Hty). lia.
+            --- red. eapply (X14 _ a _ _ (projT2 t1)). clear.
+                destruct t1. simpl. lia.
+            --- apply IHa. intros. eapply (X14 _ wfΓ0 _ _ Hty). lia.
+            --- red. destruct t1. unshelve eapply X14. all: eauto.
+                simpl. lia.
+            --- red. destruct t1. unshelve eapply X14. all: eauto.
+                simpl. lia.
+        ** right.
+            exists u. intuition eauto. unshelve eapply X14. all: eauto. lia.
 Qed.
 
 Ltac my_rename_hyp h th :=

@@ -125,7 +125,8 @@ Section Alpha.
       simpl in e. apply some_inj in e. subst.
       inversion hΓ. subst. simpl in X0.
       destruct X0 as [s h].
-      exists s. change (tSort s) with (lift0 1 (tSort s)).
+      exists s. unfold PCUICTerm.tSort.
+      change (tSort s) with (lift0 1 (tSort s)).
       eapply PCUICWeakening.weakening with (Γ' := [ vass na ty ]).
       all: assumption.
     - destruct Γ. 1: discriminate.
@@ -133,7 +134,9 @@ Section Alpha.
       specialize IHi with (2 := e).
       destruct IHi as [s h].
       + inversion hΓ. all: auto.
-      + exists s. change (tSort s) with (lift0 1 (lift0 (S i) (tSort s))).
+      + exists s.
+        unfold PCUICTerm.tSort. (* TODO Why do I have to do this? *)
+        change (tSort s) with (lift0 1 (lift0 (S i) (tSort s))).
         rewrite simpl_lift0.
         eapply PCUICWeakening.weakening with (Γ' := [ c ]).
         all: assumption.

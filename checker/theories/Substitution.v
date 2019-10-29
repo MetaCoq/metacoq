@@ -278,32 +278,59 @@ Proof.
     + eapply typed_subst in t1 as [Ht HT]; eauto. lia.
 Qed.
 
+(* TODO MOVE *)
+Lemma wf_Forall_decls_typing_wf `{checker_flags} :
+  forall Σ,
+    wf Σ ->
+    Forall_decls_typing (fun (_ : global_env_ext) (_ : context) (t T : term) =>
+      Ast.wf t /\ Ast.wf T
+    ) Σ.
+Proof.
+  intros Σ h.
+  apply typing_wf_sigma in h as ?.
+  eapply on_global_env_impl. 2: eassumption.
+  intros Σ' Γ t [T|] h1 h2. all: cbn in *.
+  - hnf in h2. assumption.
+  - hnf in h2. exists fresh_universe. intuition eauto.
+    constructor.
+Qed.
+
 Lemma subst_declared_constant `{H:checker_flags} Σ cst decl n k u :
   wf Σ ->
   declared_constant Σ cst decl ->
-  map_constant_body (subst n k) (map_constant_body (UnivSubst.subst_instance_constr u) decl) =
-  map_constant_body (UnivSubst.subst_instance_constr u) decl.
+  map_constant_body (subst n k) (map_constant_body (subst_instance_constr u) decl) =
+  map_constant_body (subst_instance_constr u) decl.
 Proof.
-  intros.
-  eapply declared_decl_closed in H0; eauto.
+  intros wΣ h.
+  apply declared_constant_wf in h as w.
+  2: eapply wf_Forall_decls_typing_wf. 2: assumption.
+  destruct w as [wty wbo].
+  eapply declared_decl_closed in h ; eauto.
   unfold map_constant_body.
-  do 2 red in H0. destruct decl as [ty [body|] univs]; simpl in *.
-  rewrite -> andb_and in H0. intuition.
-  rewrite <- (closedn_subst_instance_constr 0 body u) in H2.
-  rewrite <- (closedn_subst_instance_constr 0 ty u) in H4.
-  f_equal. apply subst_closedn; eauto using closed_upwards with arith wf.
-  f_equal. apply subst_closedn; eauto using closed_upwards with arith wf.
-  red in H0. f_equal.
-  intuition. simpl in H3.
-  rewrite <- (closedn_subst_instance_constr 0 ty u) in H3.
-  eapply subst_closedn; eauto using closed_upwards with arith wf.
-  rewrite andb_true_r in H3. eauto using closed_upwards with arith wf.
+  do 2 red in h. destruct decl as [ty [body|] univs]. all: simpl in *.
+  - rewrite -> andb_and in h. destruct h as [h1 h2].
+    rewrite <- (closedn_subst_instance_constr 0 body u) in h1.
+    rewrite <- (closedn_subst_instance_constr 0 ty u) in h2.
+    f_equal.
+    + apply subst_closedn.
+      * apply wf_subst_instance_constr. assumption.
+      * eauto using closed_upwards with arith wf.
+    + f_equal. apply subst_closedn.
+      * apply wf_subst_instance_constr. assumption.
+      * eauto using closed_upwards with arith wf.
+  - red in h. f_equal.
+    simpl in *.
+    rewrite <- (closedn_subst_instance_constr 0 ty u) in h.
+    rewrite andb_true_r in h.
+    eapply subst_closedn.
+    + apply wf_subst_instance_constr. assumption.
+    + eauto using closed_upwards with arith wf.
 Qed.
 
 Definition subst_mutual_inductive_body n k m :=
   map_mutual_inductive_body (fun k' => subst n (k' + k)) m.
 
-Lemma subst_declared_minductive `{cf:checker_flags} Σ cst decl n k :
+Lemma subst_declared_minductive {cf:checker_flags} Σ cst decl n k :
   wf Σ ->
   declared_minductive Σ cst decl ->
   subst_mutual_inductive_body n k decl = decl.
@@ -330,12 +357,11 @@ Proof.
     eapply typed_subst; eauto. simpl; lia.
     rewrite H in Heq'. rewrite Heq in Heq'. revert Heq'; intros [= <- <-].
     f_equal; auto.
-    apply (Alli_map_id onConstructors).
-    intros n1 [[x p] n']. intros [[s Hty] Hpars].
-    unfold on_pi2; f_equal; f_equal. eapply typed_subst. 3:eapply Hty. eauto. simpl. lia.
-    assert((ind_projs = []) + (ind_projs <> [])) as [Hp|Hp].
-    { destruct ind_projs; [left|right]; congruence. }
-    subst; auto.
+    eapply All_map_id. eapply All2_All_left; tea.
+    intros [[x p] n'] y [[s Hty] [cs Hargs]].
+    unfold on_pi2; cbn; f_equal; f_equal.
+    eapply typed_subst. 3:eapply Hty. eauto. simpl. lia.
+    destruct (eq_dec ind_projs []) as [Hp|Hp]; subst; auto.
     specialize (onProjections Hp).
     apply on_projs in onProjections.
     apply (Alli_map_id onProjections).
@@ -405,12 +431,71 @@ Proof.
   intros. now apply wf_subst_instance_constr.
 Qed.
 
-Lemma subst_declared_projection `{checker_flags} Σ c mdecl idecl pdecl n k :
-  wf Σ -> All Ast.wf n ->
+(* TODO MOVE *)
+Lemma Forall_impl' :
+  forall A (P Q : A -> Prop) l,
+    @Forall A (fun x => P x -> Q x) l ->
+    Forall P l ->
+    Forall Q l.
+Proof.
+  intros A P Q l h1 h2.
+  induction h2 in h1 |- *.
+  - constructor.
+  - inversion h1. subst. constructor.
+    + eauto.
+    + eauto.
+Qed.
+
+(* TODO MOVE *)
+Derive Signature for Ast.wf.
+
+(* TODO MOVE *)
+Lemma wf_subst_instance_constr_inv :
+  forall u c,
+    Ast.wf (subst_instance_constr u c) ->
+    Ast.wf c.
+Proof.
+  intros u c h.
+  induction c in c, h |- * using term_forall_list_ind.
+  all: simpl in *.
+  all: dependent destruction h.
+  all: try solve [ constructor ; auto using Forall_map_inv ].
+  - constructor. eapply Forall_map_inv in H0.
+    eapply Forall_impl'. all: eauto. apply H.
+  - constructor.
+    + destruct c. all: simpl in *. all: try reflexivity.
+      congruence.
+    + destruct l. 2: discriminate. assumption.
+    + eapply IHc. assumption.
+    + eapply Forall_map_inv in H2.
+      eapply Forall_impl'. all: eauto. apply H.
+  - constructor. all: auto.
+    eapply Forall_map_inv in H0.
+    eapply Forall_impl'. all: eauto. apply H.
+  - constructor. eapply Forall_map_inv in H0.
+    eapply Forall_impl'. 2: eassumption.
+    unfold compose. unfold map_def. simpl.
+    eapply Forall_impl. 1: eapply H. simpl.
+    intros [na ty bo ra] h1 h2. simpl in *.
+    intuition eauto.
+    destruct bo. all: try discriminate.
+    reflexivity.
+  - constructor. eapply Forall_map_inv in H0.
+    eapply Forall_impl'. 2: eassumption.
+    unfold compose. unfold map_def. simpl.
+    eapply Forall_impl. 1: eapply H. simpl.
+    intros [na ty bo ra] h1 h2. simpl in *.
+    intuition eauto.
+Qed.
+
+Lemma subst_declared_projection {cf:checker_flags} Σ c mdecl idecl pdecl n k :
+  wf Σ ->
   declared_projection Σ mdecl idecl c pdecl ->
   on_snd (subst n (S (ind_npars mdecl + k))) pdecl = pdecl.
 Proof.
-  intros wfΣ wfn Hd.
+  intros wfΣ Hd.
+  eapply declared_projection_wf with (u := []) in Hd as w.
+  2: eapply wf_Forall_decls_typing_wf. 2: assumption.
   destruct Hd as [[Hmdecl Hidecl] [Hpdecl Hnpar]].
   eapply declared_decl_closed in Hmdecl; auto.
   simpl in Hmdecl.
@@ -425,9 +510,11 @@ Proof.
   hnf in onp. simpl in onp.
   rewrite smash_context_length in onp. simpl in onp.
   rewrite Hnpars in onp.
-  move: onp => [] _ [] wfty /andb_and[Hb Ht].
+  move: onp => /andb_and[Hb Ht].
   destruct pdecl as [id ty]. unfold on_snd; simpl in *.
-  f_equal. eapply subst_closedn; auto. eapply closed_upwards; eauto. lia.
+  f_equal. eapply subst_closedn.
+  - eapply wf_subst_instance_constr_inv. eassumption.
+  - eapply closed_upwards; eauto. lia.
 Qed.
 
 Lemma subst_fix_context:
@@ -578,7 +665,7 @@ Lemma to_extended_list_k_subst n k c k' :
   to_extended_list_k (subst_context n k c) k' = to_extended_list_k c k'.
 Proof.
   unfold to_extended_list_k. revert k'.
-  generalize (@nil term) at 1 2.
+  generalize (@nil TemplateTerm.term) at 1 2.
   induction c in n, k |- *; simpl; intros. reflexivity.
   rewrite subst_context_snoc. unfold snoc. simpl.
   destruct a. destruct decl_body. unfold subst_decl, map_decl. simpl.
@@ -643,25 +730,29 @@ Proof.
   apply X.
 Qed.
 
-Lemma on_constructor_closed_wf `{checker_flags} {Σ mind mdecl u i idecl cdecl} :
+Lemma on_constructor_closed_wf `{checker_flags} {Σ mind mdecl u idecl cdecl cs} :
   wf Σ ->
-  on_constructor (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind mind) mdecl (inductive_ind mind) idecl i cdecl ->
+  on_constructor (lift_typing typing) (Σ, ind_universes mdecl) mdecl (inductive_ind mind) idecl cdecl cs ->
   let cty := subst0 (inds (inductive_mind mind) u (ind_bodies mdecl))
                     (subst_instance_constr u (snd (fst cdecl)))
-  in closed cty = true /\ Ast.wf cty.
+  in closed cty /\ Ast.wf cty.
 Proof.
   intros wfΣ [[s Hs] Hparams].
   pose proof (typing_wf_local Hs).
+  apply typing_wf in Hs as w. 2: assumption.
+  destruct w as [w _].
   destruct cdecl as [[id cty] car].
-  pose proof (typing_wf (Σ, ind_universes mdecl) wfΣ _ _ _ Hs) as [wfty _].
   eapply (env_prop_typing _ typecheck_closed) in Hs; eauto.
   rewrite arities_context_length in Hs.
   rewrite -> andb_and in *. simpl in *.
-  destruct Hs as [Hs _]. split; auto.
-  eapply (closedn_subst _ 0 0).
-  clear. unfold inds. induction #|ind_bodies mdecl|; simpl; try constructor; auto.
-  simpl. now rewrite -> inds_length, closedn_subst_instance_constr.
-  apply wf_subst; auto with wf.
+  destruct Hs as [Hs _]. split.
+  - eapply (closedn_subst _ 0 0).
+    + clear. unfold inds.
+      induction #|ind_bodies mdecl|; simpl; try constructor; auto.
+    + simpl. now rewrite -> inds_length, closedn_subst_instance_constr.
+  - apply wf_subst.
+    + auto with wf.
+    + apply wf_subst_instance_constr. assumption.
 Qed.
 
 Lemma on_projection_closed_wf `{checker_flags} {Σ mind mdecl u i idecl pdecl} :
@@ -871,7 +962,7 @@ Lemma subst_types_of_case `{CF:checker_flags} Σ ind mdecl idecl args u p pty in
   types_of_case ind mdecl idecl args u p pty = Some (indctx, pctx, ps, btys) ->
   types_of_case ind mdecl idecl (map (f []) args) u (f [] p) (f [] pty) =
   Some (f_ctx indctx, f_ctx pctx, ps, map (on_snd (f [])) btys).
-Proof.
+(* Proof.
   simpl. intros wfΣ wfn wfargs wfpty wfdecl wfidecl. simpl.
   pose proof (on_declared_inductive wfΣ wfidecl) as [onmind onind].
   apply onParams in onmind as Hparams.
@@ -986,6 +1077,8 @@ Proof.
     -- apply All_map. solve_all. now apply wf_subst_instance_constr. }
   specialize (H0 _ Hbrs). now rewrite H0.
   solve_all.
+Qed. *)
+  todo "subst_types_of_case"%string.
 Qed.
 
 Hint Unfold subst1 : subst.
@@ -1524,7 +1617,7 @@ Theorem substitution `{checker_flags} Σ Γ Γ' s Δ (t : term) T :
   Σ ;;; Γ ,,, Γ' ,,, Δ |- t : T ->
   wf_local Σ (Γ ,,, subst_context s 0 Δ) ->
   Σ ;;; Γ ,,, subst_context s 0 Δ |- subst s #|Δ| t : subst s #|Δ| T.
-Proof.
+(* Proof.
   intros HΣ Hs Ht.
   pose proof (typing_wf_local Ht).
   generalize_eqs Ht. intros eqw. rewrite <- eqw in X.
@@ -1819,6 +1912,8 @@ Proof.
     + right; exists u; intuition eauto.
     + eapply substitution_cumul; eauto.
       now eapply typing_wf in X0.
+Qed. *)
+  todo "substitution"%string.
 Qed.
 
 Theorem substitution_alt `{checker_flags} Σ Γ Γ' s Δ (t : term) T :

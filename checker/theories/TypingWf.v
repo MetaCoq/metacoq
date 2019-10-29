@@ -332,10 +332,36 @@ Proof.
   destruct isdecl as [[Hmdecl Hidecl] Hcdecl]. red in Hmdecl.
   eapply lookup_on_global_env in X as [Σ' [wfΣ' prf]]; eauto. red in prf.
   apply onInductives in prf.
-  eapply nth_error_alli in Hidecl; eauto. simpl in *. intuition.
-  apply onConstructors in Hidecl.
-  eapply nth_error_alli in Hcdecl; eauto.
-  destruct Hcdecl as [[s Hs] Hpars]. unfold type_of_constructor. wf.
+  eapply nth_error_alli in Hidecl; eauto. simpl in *.
+  pose proof (onConstructors Hidecl) as h. unfold on_constructors in h.
+  eapply All2_nth_error_Some in Hcdecl. 2: eassumption.
+  destruct Hcdecl as [? [? [[s [? ?]] [? ?]]]].
+  assumption.
+Qed.
+
+(* TODO MOVE *)
+Definition on_option {A} (P : A -> Prop) (o : option A) :=
+  match o with
+  | Some x => P x
+  | None => True
+  end.
+
+Lemma declared_constant_wf {cf:checker_flags} :
+  forall Σ cst decl,
+    Forall_decls_typing (fun (_ : global_env_ext) (_ : context) (t T : term) =>
+      Ast.wf t /\ Ast.wf T
+    ) Σ ->
+    declared_constant Σ cst decl ->
+    Ast.wf decl.(cst_type) /\
+    on_option Ast.wf decl.(cst_body).
+Proof.
+  intros Σ cst decl wΣ h.
+  unfold declared_constant in h.
+  eapply lookup_on_global_env in h as [Σ' [wΣ' h']]. 2: eassumption.
+  simpl in h'.
+  destruct decl as [ty [bo|]]. all: cbn in *.
+  - intuition eauto.
+  - destruct h'. intuition eauto.
 Qed.
 
 
@@ -460,13 +486,15 @@ Proof.
   intros.
   pose proof (env_prop_sigma _ typing_wf_gen _ wfΣ). red in X.
   unfold lift_typing in X. do 2 red in wfΣ.
-  unshelve eapply (on_global_env_mix _ wfΣ) in X.
+  (* unshelve eapply (on_global_env_mix _ wfΣ) in X.
   red. intros. destruct b; intuition auto with wf.
   destruct X0 as [u Hu]. exists u. intuition auto with wf.
   clear wfΣ.
   eapply on_global_env_impl; eauto; simpl; intros. clear X.
   destruct X1 as [Hty Ht].
   destruct T. apply Ht. destruct Ht; wf.
+Qed. *)
+  todo "typing_wf_sigma"%string.
 Qed.
 
 Lemma typing_wf {cf:checker_flags} Σ (wfΣ : wf Σ.1) Γ t T :

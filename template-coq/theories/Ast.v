@@ -171,6 +171,14 @@ Module TemplateTerm <: Term.
 
   Definition term := term.
 
+  Definition tRel := tRel.
+  Definition tSort := tSort.
+  Definition tProd := tProd.
+  Definition tLetIn := tLetIn.
+  Definition tInd := tInd.
+
+  Definition mkApps := mkApps.
+
 End TemplateTerm.
 
 Module TemplateEnvironment := Environment TemplateTerm.

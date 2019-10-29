@@ -54,6 +54,7 @@ Extraction Library ssreflect.
 Extraction Library CMorphisms.
 
 (** From checker *)
+Extraction Library EnvironmentTyping.
 Extraction Library Reflect.
 Extraction Library LiftSubst.
 Extraction Library UnivSubst.

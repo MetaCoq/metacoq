@@ -1016,7 +1016,8 @@ Section Typecheck.
     sq. cbn in *.
     apply wf_local_rel_app, fst in XX'. rewrite lift0_p in XX'.
     inversion XX'; subst. destruct X0 as [s HH].
-    right. exists s. change (tSort s) with (lift0 #|fix_context mfix| (tSort s)).
+    right. exists s.
+    change (PCUICTerm.tSort s) with (lift0 #|fix_context mfix| (tSort s)).
     apply weakening; try assumption.
     apply wf_local_app_inv; assumption.
   Defined.
@@ -1045,7 +1046,7 @@ Section Typecheck.
     sq. cbn in *.
     apply wf_local_rel_app, fst in XX'. rewrite lift0_p in XX'.
     inversion XX'; subst. destruct X0 as [s HH].
-    right. exists s. change (tSort s) with (lift0 #|fix_context mfix| (tSort s)).
+    right. exists s. change (PCUICTerm.tSort s) with (lift0 #|fix_context mfix| (tSort s)).
     apply weakening; try assumption.
     apply wf_local_app_inv; assumption.
   Defined.

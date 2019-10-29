@@ -231,10 +231,6 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T).
                              (localenv_cons_def all tu tb).
   End TypeLocalOver.
 
-  (* AXIOM INDUCTIVE GUARD CONDITION *)
-  Axiom ind_guard : mutual_inductive_body -> bool.
-  Extract Constant ind_guard => "fun m -> assert false".
-
 End EnvTyping.
 
 Module Type EnvTypingSig (T : Term) (E : EnvironmentSig T).
@@ -244,6 +240,8 @@ End EnvTypingSig.
 Module Type Typing (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E).
 
   Import T E ET.
+
+  Parameter (ind_guard : mutual_inductive_body -> bool).
 
   Parameter (typing : forall `{checker_flags}, global_env_ext -> context -> term -> term -> Type).
 

@@ -735,10 +735,15 @@ Axiom fix_guard_subst :
     fix_guard mfix ->
     fix_guard mfix'.
 
+(* AXIOM INDUCTIVE GUARD CONDITION *)
+Axiom ind_guard : mutual_inductive_body -> bool.
+
 Extract Constant fix_guard => "fun m -> assert false".
 Extract Constant fix_guard_red1 => "fun s g m m' i -> assert false".
 Extract Constant fix_guard_lift => "fun m n k -> assert false".
 Extract Constant fix_guard_subst => "fun m s k -> assert false".
+
+Extract Constant ind_guard => "fun m -> assert false".
 
 
 Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
@@ -869,6 +874,7 @@ Definition unlift_opt_pred (P : global_env_ext -> context -> option term -> term
 
 Module TemplateTyping <: Typing TemplateTerm TemplateEnvironment TemplateEnvTyping.
 
+  Definition ind_guard := ind_guard.
   Definition typing := @typing.
   Definition smash_context := smash_context.
 

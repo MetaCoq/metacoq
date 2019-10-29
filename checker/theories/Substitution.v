@@ -1078,7 +1078,8 @@ Lemma subst_types_of_case `{CF:checker_flags} Σ ind mdecl idecl args u p pty in
   specialize (H0 _ Hbrs). now rewrite H0.
   solve_all.
 Qed. *)
-Admitted.
+  todo "subst_types_of_case"%string.
+Qed.
 
 Hint Unfold subst1 : subst.
 Hint Rewrite subst_mkApps distr_subst: subst.
@@ -1912,7 +1913,8 @@ Theorem substitution `{checker_flags} Σ Γ Γ' s Δ (t : term) T :
     + eapply substitution_cumul; eauto.
       now eapply typing_wf in X0.
 Qed. *)
-Admitted.
+  todo "substitution"%string.
+Qed.
 
 Theorem substitution_alt `{checker_flags} Σ Γ Γ' s Δ (t : term) T :
   wf Σ.1 -> subs Σ Γ s Γ' ->

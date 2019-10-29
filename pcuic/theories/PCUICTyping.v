@@ -688,6 +688,9 @@ Axiom fix_guard_subst :
     fix_guard mfix ->
     fix_guard mfix'.
 
+(* AXIOM INDUCTIVE GUARD CONDITION *)
+Axiom ind_guard : mutual_inductive_body -> bool.
+
 Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
 | type_Rel n decl :
     All_local_env (lift_typing typing Σ) Γ ->

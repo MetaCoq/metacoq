@@ -494,7 +494,8 @@ Proof.
   destruct X1 as [Hty Ht].
   destruct T. apply Ht. destruct Ht; wf.
 Qed. *)
-Admitted.
+  todo "typing_wf_sigma"%string.
+Qed.
 
 Lemma typing_wf {cf:checker_flags} Σ (wfΣ : wf Σ.1) Γ t T :
   Σ ;;; Γ |- t : T -> Ast.wf t /\ Ast.wf T.

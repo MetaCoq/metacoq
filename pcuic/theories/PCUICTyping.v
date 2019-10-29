@@ -807,6 +807,7 @@ Definition unlift_opt_pred (P : global_env_ext -> context -> option term -> term
 
 Module PCUICTyping <: Typing PCUICTerm PCUICEnvironment PCUICEnvTyping.
 
+  Definition ind_guard := ind_guard.
   Definition typing := @typing.
   Definition smash_context := smash_context.
 
@@ -1421,7 +1422,7 @@ Proof.
              generalize (snd (projT2 (projT2 s))).
              induction a; simpl in *; intros X14 *; constructor.
              --- apply IHa. intros. eapply (X14 _ wfΓ0 _ _ Hty). lia.
-             --- red. eapply (X14 _ a _ _ (projT2 t1)). lia.
+             --- red. eapply (X14 _ a _ _ (projT2 t1)). destruct t1. simpl. lia.
              --- apply IHa. intros. eapply (X14 _ wfΓ0 _ _ Hty). lia.
              --- red. destruct t1. unshelve eapply X14. all: eauto.
                  simpl. lia.
@@ -1500,13 +1501,18 @@ Section All_local_env.
   Qed.
 
   Definition wf_local_rel_app {Σ Γ1 Γ2 Γ3} :
-    wf_local_rel Σ Γ1 (Γ2 ,,, Γ3)
-    -> wf_local_rel Σ Γ1 Γ2 * wf_local_rel Σ (Γ1 ,,, Γ2) Γ3.
+    wf_local_rel Σ Γ1 (Γ2 ,,, Γ3) ->
+    wf_local_rel Σ Γ1 Γ2 * wf_local_rel Σ (Γ1 ,,, Γ2) Γ3.
   Proof.
-    intros HH; apply All_local_env_app in HH.
-    destruct HH as [H1 H2].
-    split. exact H1. eapply All_local_env_impl. exact H2.
-    intros Γ t [] X; cbn in *; now rewrite <- app_context_assoc.
+    intros h. apply All_local_env_app in h as [h1 h2].
+    split.
+    - exact h1.
+    - eapply All_local_env_impl. 1: exact h2.
+      intros Γ t [T|] h.
+      all: cbn in *.
+      all: change PCUICEnvironment.app_context with app_context in *.
+      all: rewrite <- app_context_assoc.
+      all: auto.
   Defined.
 
 
@@ -1535,11 +1541,14 @@ Section All_local_env.
     wf_local_rel Σ Γ1 Γ2 -> wf_local_rel Σ (Γ1 ,,, Γ2) Γ3
     -> wf_local_rel Σ Γ1 (Γ2 ,,, Γ3).
   Proof.
-    intros H1 H2. eapply All_local_env_app_inv.
-    split. assumption.
-    eapply All_local_env_impl. eassumption.
-    intros Γ t []; cbn;
-      now rewrite app_context_assoc.
+    intros h1 h2. eapply All_local_env_app_inv.
+    split.
+    - assumption.
+    - eapply All_local_env_impl.
+      + eassumption.
+      + change PCUICEnvironment.app_context with app_context.
+        intros Γ t []; cbn;
+        now rewrite app_context_assoc.
   Defined.
 
 

@@ -260,7 +260,8 @@ Proof.
     intros [[x p] n'] y [[s Hty] [cs Hargs]].
     unfold on_pi2; cbn; f_equal; f_equal.
     simpl in Hty.
-    eapply typed_liftn. 4:eapply Hty. eauto. apply typing_wf_local in Hty; eauto. lia.
+    eapply typed_liftn. 4:eapply Hty. eauto. apply typing_wf_local in Hty; eauto.
+    change PCUICEnvironment.arities_context with arities_context. lia.
     destruct(eq_dec ind_projs []) as [Hp|Hp]. subst; auto. specialize (onProjections Hp).
     destruct onProjections as [_ _ _ onProjections].
     apply (Alli_map_id onProjections).
@@ -343,7 +344,9 @@ Proof.
   now eapply nth_error_Some_non_nil in Hpdecl.
   eapply on_projs, nth_error_alli in onp; eauto.
   move: onp => /= /andb_and[Hd _]. simpl in Hd.
-  rewrite smash_context_length in Hd. simpl in *. rewrite H0 in Hd.
+  rewrite smash_context_length in Hd. simpl in *.
+  change PCUICEnvironment.context_assumptions with context_assumptions in H0.
+  rewrite H0 in Hd.
   destruct pdecl as [id ty]. unfold on_snd; simpl in *.
   f_equal. eapply lift_closed.
   eapply closed_upwards; eauto. lia.

@@ -398,20 +398,22 @@ Proof.
 
   - intuition auto.
     apply closedn_subst0.
-    simpl. apply closedn_mkApps_inv in H2.
-    rewrite forallb_rev H1. apply H2.
-    rewrite closedn_subst_instance_constr.
-    eapply declared_projection_inv in isdecl as H'; eauto.
-    apply on_declared_projection in isdecl as [[Hmdecl Hidecl] Hpdecl]; auto.
-    red in Hpdecl.
-    destruct Hpdecl as [s Hs]. simpl in *.
-    apply onNpars in Hmdecl.
-    cbn in H'; destruct H'.
-    simpl in *.
-    rewrite List.rev_length H0.
-    rewrite andb_true_r in i. rewrite <- Hmdecl.
-    rewrite smash_context_length in i. simpl in i.
-    eapply closed_upwards; eauto. lia.
+    + simpl. apply closedn_mkApps_inv in H2.
+      rewrite forallb_rev H1. apply H2.
+    + rewrite closedn_subst_instance_constr.
+      eapply declared_projection_inv in isdecl as H'; eauto.
+      apply on_declared_projection in isdecl as [[Hmdecl Hidecl] Hpdecl]; auto.
+      red in Hpdecl.
+      destruct Hpdecl as [s Hs]. simpl in *.
+      apply onNpars in Hmdecl.
+      cbn in H'; destruct H'.
+      simpl in *.
+      rewrite List.rev_length H0.
+      rewrite andb_true_r in i. rewrite <- Hmdecl.
+      rewrite smash_context_length in i. simpl in i.
+      eapply closed_upwards; eauto.
+      change PCUICEnvironment.context_assumptions with context_assumptions.
+      lia.
 
   - clear H0.
     split. solve_all.

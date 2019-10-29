@@ -952,133 +952,236 @@ Qed.
 
 Hint Resolve All_Forall : wf.
 
-Lemma subst_types_of_case `{CF:checker_flags} Σ ind mdecl idecl args u p pty indctx pctx ps btys n k :
-  let f (ctx : context) := subst n (#|ctx| + k) in
-  let f_ctx := subst_context n k in
+(* TODO Duplicate of PCUICSubstitution *)
+Lemma Alli_map_option_out_mapi_Some_spec' {A B} (f g : nat -> A -> option B) h l t P :
+  All P l ->
+  (forall i x t, P x -> f i x = Some t -> g i x = Some (h t)) ->
+  map_option_out (mapi f l) = Some t ->
+  map_option_out (mapi g l) = Some (map h t).
+Proof.
+  unfold mapi. generalize 0.
+  move => n Ha Hfg. move: t.
+  induction Ha in n |- *; try constructor; auto.
+  destruct t; cbnr; discriminate.
+  move=> t /=. case E: (f n x) => [b|]; try congruence.
+  rewrite (Hfg n _ _ p E).
+  case E' : map_option_out => [b'|]; try congruence.
+  move=> [= <-]. now rewrite (IHHa _ _ E').
+Qed.
+
+Lemma on_constructor_closed {cf:checker_flags}  {Σ mind mdecl u idecl cdecl cs} :
   wf Σ ->
-  All Ast.wf n -> All Ast.wf args ->
-  Ast.wf pty -> Ast.wf (ind_type idecl) ->
+  on_constructor (lift_typing typing) (Σ, ind_universes mdecl) mdecl (inductive_ind mind) idecl cdecl cs ->
+  let cty := subst0 (inds (inductive_mind mind) u (ind_bodies mdecl))
+                    (subst_instance_constr u (snd (fst cdecl)))
+  in closed cty.
+Proof.
+  intros wfΣ [[s Hs] Hparams].
+  pose proof (typing_wf_local Hs).
+  destruct cdecl as [[id cty] car].
+  eapply (env_prop_typing _ typecheck_closed) in Hs; eauto.
+  rewrite arities_context_length in Hs.
+  rewrite -> andb_and in *. simpl in *.
+  destruct Hs as [Hs _].
+  eapply (closedn_subst _ 0 0).
+  clear. unfold inds. induction #|ind_bodies mdecl|; simpl; try constructor; auto.
+  simpl. now rewrite -> inds_length, closedn_subst_instance_constr.
+Qed.
+
+(* TODO Duplicate of PCUICSubstitution? *)
+Lemma map_subst_instance_constr_to_extended_list_k u ctx k :
+  to_extended_list_k (subst_instance_context u ctx) k
+  = to_extended_list_k ctx k.
+Proof.
+  unfold to_extended_list_k.
+  cut (map (subst_instance_constr u) [] = []); [|reflexivity].
+  generalize (@nil TemplateTerm.term); intros l Hl.
+  induction ctx in k, l, Hl |- *; cbnr.
+  destruct a as [? [] ?]; cbnr; eauto.
+Qed.
+
+Lemma subst_instance_context_assumptions u ctx :
+  context_assumptions (subst_instance_context u ctx)
+  = context_assumptions ctx.
+Proof.
+  induction ctx; cbnr.
+  destruct (decl_body a); cbn; now rewrite IHctx.
+Qed.
+
+Lemma subst_build_branches_type {cf:checker_flags}
+      n k Σ ind mdecl idecl args u p brs cs :
+  wf Σ ->
+  All Ast.wf args ->
+  Ast.wf (ind_type idecl) ->
+  All Ast.wf n ->
   declared_inductive Σ mdecl ind idecl ->
-  types_of_case ind mdecl idecl args u p pty = Some (indctx, pctx, ps, btys) ->
-  types_of_case ind mdecl idecl (map (f []) args) u (f [] p) (f [] pty) =
-  Some (f_ctx indctx, f_ctx pctx, ps, map (on_snd (f [])) btys).
-(* Proof.
-  simpl. intros wfΣ wfn wfargs wfpty wfdecl wfidecl. simpl.
-  pose proof (on_declared_inductive wfΣ wfidecl) as [onmind onind].
-  apply onParams in onmind as Hparams.
-  assert (wfparams : Forall wf_decl (ind_params mdecl)).
-  { eapply typing_all_wf_decl ; eauto; tas. }
-  assert(closedparams : closed_ctx (ind_params mdecl)).
-  { eapply closed_wf_local; eauto. simpl. auto. }
-  epose proof (subst_declared_inductive _ ind mdecl idecl n k wfΣ).
-  forward H ; auto. rewrite <- H at 2.
-  unfold types_of_case.
-  pose proof (subst_instantiate_params n k (ind_params mdecl) args (ind_type idecl)) as hs.
-  rewrite -> ind_type_map. simpl.
-  case_eq (instantiate_params (ind_params mdecl) args (ind_type idecl)) ; try discriminate.
-  intros ity eq. rewrite eq in hs. erewrite hs ; trivial.
-  clear hs.
-  pose proof (subst_destArity [] ity n k) ; trivial. simpl in H0.
-  forward H0. eapply wf_instantiate_params. 4:eauto. all:eauto. solve_all.
-  unfold subst_context, fold_context in H0. simpl in H0.
-  destruct (destArity [] ity) as [[ctx'' s''] | ] ; try congruence.
-  rewrite H0. clear H0.
-  pose proof (subst_destArity [] pty n k); trivial. simpl in H0.
-  unfold subst_context, fold_context in H0. simpl in H0. forward H0 by auto.
-  destruct (destArity [] pty) as [[ctx' s'] | ]; try congruence. auto.
-  rewrite H0. clear H0.
-  destruct map_option_out eqn:Hbrs; try congruence.
-  intros [= -> -> -> ->].
-  assert(forall brs,
-         map_option_out (build_branches_type ind mdecl idecl args u p) = Some brs ->
-         map_option_out (build_branches_type ind mdecl
-         (map_one_inductive_body (context_assumptions (ind_params mdecl))
-            (length (arities_context (ind_bodies mdecl))) (fun k' => subst n (k' + k))
-            (inductive_ind ind) idecl) (map (subst n k) args) u (subst n k p)) =
-         Some (map (on_snd (subst n k)) brs)).
-  { intros brs.
-    unfold build_branches_type.
-    rewrite ind_ctors_map.
-    intros Heq. apply (f_equal (option_map (map (on_snd (subst n k))))) in Heq.
-    simpl in Heq.
-    rewrite <- map_option_out_map_option_map in Heq.
-    rewrite map_mapi in Heq. rewrite mapi_map.
-    apply onConstructors in onind.
-    red in onind.
-    eapply Alli_map_option_out_mapi_Some_spec in onind. eauto. 2:eauto.
-    clear Heq onind.
-    intros i [[id t] arity] [ar t']. simpl.
-    rewrite <- subst_subst_instance_constr.
-    rewrite -> subst0_inds_subst.
-    intros Honc.
-    destruct (on_constructor_closed_wf wfΣ (u:=u) Honc) as [clt wft].
-    simpl in *.
-    eapply (closed_upwards k) in clt; try lia.
-    rewrite (subst_closedn (map (subst_instance_constr u) n) k _ wft clt).
-    rewrite <- (subst_closedn n k _ wft clt) at 2.
-    case Heq : instantiate_params => [ty|] /=; try congruence.
-    remember (subst0 (inds (inductive_mind ind) u (ind_bodies mdecl)) (subst_instance_constr u t)) as
-        ty'.
-    eapply subst_instantiate_params in Heq as Heq'. rewrite -> Heq'. all:auto with wf.
-    eapply instantiate_params_make_context_subst in Heq.
-    destruct Heq as [ctx' [ty'' [s' [Hty [Hsubst Ht0]]]]].
-    subst ty. simpl.
-    rewrite Heqty' in Hty.
-    destruct Honc as [o [c _]]. destruct c.
-    simpl in *. rewrite cshape_eq in Hty.
-    rewrite -> !subst_instance_constr_it_mkProd_or_LetIn in Hty.
-    rewrite !subst_it_mkProd_or_LetIn in Hty.
-    assert(#|subst_context (inds (inductive_mind ind) u (ind_bodies mdecl)) 0
-             (subst_instance_context u (ind_params mdecl))| = #|ind_params mdecl|).
-    now rewrite subst_context_length subst_instance_context_length.
-    rewrite <- H0 in Hty.
-    rewrite decompose_prod_n_assum_it_mkProd in Hty.
-    injection Hty. clear Hty.
-    intros Heqty'' <-. revert Heqty''.
-    rewrite !subst_instance_context_length Nat.add_0_r.
-
-    rewrite (subst_cstr_concl_head ind u mdecl cshape_args cshape_indices).
-    destruct wfidecl as [Hmdecl Hnth].
+  closed_ctx (subst_instance_context u (ind_params mdecl)) ->
+  on_inductive (lift_typing typing) (Σ, ind_universes mdecl)
+               (inductive_mind ind) mdecl ->
+  on_constructors (lift_typing typing) (Σ, ind_universes mdecl)
+                  mdecl (inductive_ind ind) idecl (ind_ctors idecl) cs ->
+  map_option_out (build_branches_type ind mdecl idecl args u p) = Some brs ->
+  map_option_out (build_branches_type ind mdecl
+         idecl (map (subst n k) args) u (subst n k p)) =
+         Some (map (on_snd (subst n k)) brs).
+Proof.
+  intros wfΣ wargs widecl wn wfidecl closedparams onmind Honcs.
+  assert (wc : Forall wf_decl (subst_instance_context u (ind_params mdecl))).
+  { assert (h : Forall wf_decl (ind_params mdecl)).
+    { eapply typing_all_wf_decl ; revgoals.
+      - apply onParams in onmind.
+        unfold on_context in onmind.
+        change TemplateEnvironment.ind_params with ind_params in onmind.
+        eassumption.
+      - simpl. assumption.
+    }
+    clear - h. induction h. 1: constructor.
+    simpl. constructor. 2: assumption.
+    destruct x as [na [bo|] ty].
+    all: unfold map_decl. all: unfold wf_decl in *. all: simpl in *.
+    all: intuition eauto with wf.
+  }
+  rewrite !build_branches_type_. cbn.
+  eapply Alli_map_option_out_mapi_Some_spec'.
+  eapply All2_All_left; tea. intros x y u'; exact (y; u').
+  clear Honcs brs.
+  intros j [[id t] i] [t' k'] [cs' Honc].
+  case_eq (instantiate_params (subst_instance_context u (ind_params mdecl)) args
+                              (subst0 (inds (inductive_mind ind) u
+                                            (ind_bodies mdecl))
+                                      (subst_instance_constr u t)));
+    [|discriminate].
+  intros ty Heq; cbn.
+  pose proof (on_constructor_closed_wf wfΣ (u:=u) Honc) as [clt wt].
+  cbn in clt. cbn in wt.
+  eapply (closed_upwards k) in clt; try lia.
+  remember (subst0 (inds (inductive_mind ind) u (ind_bodies mdecl))
+                   (subst_instance_constr u t)) as ty'.
+  apply (subst_instantiate_params n k) in Heq as Heq'.
+  all: auto using Forall_All with wf.
+  erewrite subst_closedn in Heq'; tas.
+  rewrite Heq'.
+  eapply instantiate_params_make_context_subst in Heq.
+  destruct Heq as [ctx' [ty'' [s' [Hty [Hsubst Ht0]]]]].
+  subst ty; simpl.
+  rewrite Heqty' in Hty.
+  destruct Honc as [o [[] _]]; simpl in *.
+  rewrite cshape_eq in Hty.
+  rewrite -> !subst_instance_constr_it_mkProd_or_LetIn in Hty.
+  rewrite !subst_it_mkProd_or_LetIn in Hty.
+  assert (H0: #|subst_context (inds (inductive_mind ind) u (ind_bodies mdecl)) 0
+                (subst_instance_context u (ind_params mdecl))|
+          = #|subst_instance_context u (ind_params mdecl)|).
+  { now rewrite subst_context_length. }
+  rewrite <- H0 in Hty.
+  rewrite decompose_prod_n_assum_it_mkProd in Hty.
+  injection Hty. clear Hty.
+  intros Heqty'' <-. revert Heqty''.
+  rewrite !subst_instance_context_length Nat.add_0_r.
+  rewrite subst_context_length subst_instance_context_length.
+  rewrite (subst_cstr_concl_head ind u mdecl cshape_args cshape_indices).
+  - destruct wfidecl as [Hmdecl Hnth].
     now apply nth_error_Some_length in Hnth.
-    intros <-. rewrite !subst_it_mkProd_or_LetIn !subst_mkApps /=.
-    rewrite !decompose_prod_assum_it_mkProd /=; try by rewrite is_ind_app_head_mkApps.
+  - intros <-. rewrite !subst_it_mkProd_or_LetIn !subst_mkApps /=.
+    rewrite !decompose_prod_assum_it_mkProd /=;
+          try by rewrite is_ind_app_head_mkApps.
     rewrite !decompose_app_mkApps; try by reflexivity.
-    simpl. rewrite !map_app !subst_context_length !subst_instance_context_length Nat.add_0_r.
-    rewrite !(subst_to_extended_list_k _ _ args) //.
-    eapply wf_make_context_subst in Hsubst; eauto. solve_all.
-
-    pose proof Hsubst as Hsubst'.
-    apply make_context_subst_spec in Hsubst'.
+    simpl. rewrite !map_app !subst_context_length
+                  !subst_instance_context_length Nat.add_0_r.
+    eapply subst_to_extended_list_k with (k:=#|cshape_args|) in Hsubst as XX.
+    2:{ eapply wf_make_context_subst. 3: eassumption.
+        all: auto using Forall_All with wf.
+    }
+    rewrite map_subst_instance_constr_to_extended_list_k in XX.
+    rewrite !XX; clear XX.
+    apply make_context_subst_spec in Hsubst as Hsubst'.
     rewrite rev_involutive in Hsubst'.
-    pose proof (context_subst_assumptions_length _ _ _ Hsubst').
-
+    pose proof (context_subst_assumptions_length _ _ _ Hsubst') as H1.
     case E: chop => [l l'].
     have chopm := (chop_map _ _ _ _ _ E).
     move: E chopm.
     rewrite chop_n_app ?map_length.
-    rewrite <- H1. apply onNpars in onmind. lia.
+    { rewrite <- H1. apply onNpars in onmind.
+      now rewrite subst_instance_context_assumptions.
+    }
     move=> [= <- <-] chopm.
     move: {chopm}(chopm _ (subst n (#|cshape_args| + k))).
     rewrite map_app.
     move=> chopm; rewrite {}chopm /=.
-    move=> <-. f_equal.
+    inversion 1; subst. f_equal. unfold on_snd; cbn; f_equal.
     rewrite !app_nil_r /on_snd /=.
     rewrite subst_it_mkProd_or_LetIn !subst_context_length !subst_mkApps
             !subst_instance_context_length !map_app.
-    f_equal. f_equal. f_equal.
+    f_equal. f_equal.
     -- rewrite -> commut_lift_subst_rec. arith_congr. lia.
     -- f_equal. simpl. f_equal.
-       rewrite !subst_mkApps /= !map_app. f_equal.
-       f_equal.
-       rewrite /to_extended_list -to_extended_list_k_map_subst.
-       rewrite !subst_context_length subst_instance_context_length. lia.
-       now rewrite to_extended_list_k_subst.
-    -- solve_all.
-    -- apply All_map. solve_all. now apply wf_subst_instance_constr. }
-  specialize (H0 _ Hbrs). now rewrite H0.
-  solve_all.
-Qed. *)
-  todo "subst_types_of_case"%string.
+      rewrite !subst_mkApps /= !map_app. f_equal.
+      f_equal.
+      rewrite /to_extended_list -to_extended_list_k_map_subst.
+      rewrite !subst_context_length subst_instance_context_length. lia.
+      now rewrite to_extended_list_k_subst.
+Qed.
+
+Lemma subst_types_of_case {cf:checker_flags} (Σ : global_env) ind mdecl idecl args u p pty indctx pctx ps btys n k :
+  let f (ctx : context) := subst n (#|ctx| + k) in
+  let f_ctx := subst_context n k in
+  wf Σ ->
+  All Ast.wf n ->
+  All Ast.wf args ->
+  Ast.wf pty ->
+  Ast.wf (ind_type idecl) ->
+  declared_inductive Σ mdecl ind idecl ->
+  types_of_case ind mdecl idecl args u p pty = Some (indctx, pctx, ps, btys) ->
+  types_of_case ind mdecl idecl (map (f []) args) u (f [] p) (f [] pty) =
+  Some (f_ctx indctx, f_ctx pctx, ps, map (on_snd (f [])) btys).
+Proof.
+  simpl. intros wfΣ w1 w2 w3 w4 wfidecl.
+  pose proof (on_declared_inductive wfΣ wfidecl) as [onmind onind].
+  apply onParams in onmind as Hparams.
+  assert(closedparams : closed_ctx (subst_instance_context u (ind_params mdecl))).
+  { change closed_ctx with (closedn_ctx 0).
+    rewrite closedn_subst_instance_context.
+    eapply closed_wf_local; eauto. eauto.
+  }
+  epose proof (subst_declared_inductive _ ind mdecl idecl n k wfΣ).
+  forward H by auto.
+  assert (closedtype : closed (subst_instance_constr u (ind_type idecl))).
+  { apply onArity in onind. destruct onind as [? HH].
+    apply typecheck_closed in HH; auto. destruct HH as [_ HH].
+    apply andb_and in HH. destruct HH as [HH _].
+    now rewrite closedn_subst_instance_constr.
+  }
+  intro HH. apply* types_of_case_spec in HH.
+  destruct HH as [s' [HH1 [HH2 HH3]]].
+  exists s'. repeat split.
+  2: pose proof (subst_destArity [] pty n k) as XX; now rewrite HH2 in XX.
+  - case_eq (instantiate_params (subst_instance_context u (ind_params mdecl)) args
+                                (subst_instance_constr u (ind_type idecl)));
+      intros * XX; rewrite XX in HH1; [|discriminate].
+    assert (wc : Forall wf_decl (subst_instance_context u (ind_params mdecl))).
+    { assert (h : Forall wf_decl (ind_params mdecl)).
+      { eapply typing_all_wf_decl ; revgoals.
+        - unfold on_context in Hparams.
+          change TemplateEnvironment.ind_params with ind_params in Hparams.
+          eassumption.
+        - simpl. assumption.
+      }
+      clear - h. induction h. 1: constructor.
+      simpl. constructor. 2: assumption.
+      destruct x as [na [bo|] ty].
+      all: unfold map_decl. all: unfold wf_decl in *. all: simpl in *.
+      all: intuition eauto with wf.
+    }
+    eapply wf_instantiate_params in XX as wt. all: auto with wf.
+    apply (subst_instantiate_params n k) in XX. all: try auto using Forall_All with wf.
+    rewrite subst_closedn in XX. all: try auto with wf.
+    + eapply closed_upwards. 1: eassumption. lia.
+    + rewrite XX. cbn in *. apply some_inj in HH1.
+      pose proof (subst_destArity [] t n k) as YY; rewrite HH1 in YY.
+      cbn in YY. rewrite -> YY by assumption. reflexivity.
+  - pose proof onind.(onConstructors) as XX.
+    eapply (subst_build_branches_type n k) in HH3.
+    all: eauto with wf.
 Qed.
 
 Hint Unfold subst1 : subst.

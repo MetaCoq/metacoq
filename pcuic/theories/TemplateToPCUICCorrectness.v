@@ -1038,8 +1038,6 @@ Proof.
     -- rewrite trans_mkApps in X4; auto with wf.
        eapply typing_wf in X3; auto. intuition. eapply wf_mkApps_inv in H4; auto.
     -- apply All2_map. solve_all.
-       (* TODO Update type_Case for TemplateCoq *)
-       admit.
 
   - destruct pdecl as [arity ty]; simpl in *.
     pose proof (TypingWf.declared_projection_wf _ _ u _ _ _ isdecl).

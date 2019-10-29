@@ -1307,18 +1307,21 @@ Proof.
        simpl in X14. forward X14; auto. lia. apply X14.
 
     -- eapply X8; eauto.
-       eapply (X14 _ wfΓ _ _ H); eauto. simpl; auto with arith.
-       eapply (X14 _ wfΓ _ _ H); eauto. simpl; auto with arith. simpl in *.
-       eapply (X14 _ wfΓ _ _ H0); eauto. lia.
-       clear X13. revert a wfΓ X14. simpl. clear. intros.
-       induction a; simpl in *. constructor.
-       destruct r as [[? ?] ?]. constructor. intuition eauto.
-       eapply (X14 _ wfΓ _ _ t); eauto. simpl; auto with arith.
-       lia.
-       eapply (X14 _ wfΓ _ _ t0); eauto. simpl; auto with arith.
-       lia.
-       apply IHa. auto. intros.
-       eapply (X14 _ wfΓ0 _ _ Hty). lia.
+       ++ eapply (X14 _ wfΓ _ _ H); eauto. simpl; auto with arith.
+       ++ eapply (X14 _ wfΓ _ _ H); eauto. simpl; auto with arith.
+       ++ simpl in *.
+          eapply (X14 _ wfΓ _ _ H0); eauto. lia.
+       ++ clear X13. revert a wfΓ X14. simpl. clear. intros.
+          induction a; simpl in *.
+          ** constructor.
+          ** destruct r as [[? ?] ?]. constructor.
+             --- intuition eauto.
+                 +++ eapply (X14 _ wfΓ _ _ t); eauto. simpl; auto with arith.
+                     lia.
+                 +++ eapply (X14 _ wfΓ _ _ t0); eauto. simpl; auto with arith.
+                     lia.
+             --- apply IHa. auto. intros.
+                 eapply (X14 _ wfΓ0 _ _ Hty). lia.
 
     -- eapply X9; eauto.
        specialize (X14 [] localenv_nil _ _ (type_Prop _)).

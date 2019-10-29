@@ -305,15 +305,16 @@ Proof.
     rename_all_hyps; try solve [econstructor; eauto 2 with extends].
 
   - econstructor; eauto 2 with extends.
-    eapply check_correct_arity_subset; tea.
-    apply weakening_env_global_ext_constraints; tas.
-    close_Forall. intros; intuition eauto with extends.
+    + eapply check_correct_arity_subset; tea.
+      apply weakening_env_global_ext_constraints; tas.
+    + close_Forall. intros; intuition eauto with extends.
   - econstructor; eauto with extends.
-    eapply All_local_env_impl. eapply X.
-    clear -wfΣ' extΣ. simpl; intros.
-    unfold lift_typing in *; destruct T; intuition eauto with extends.
-    destruct X as [u [tyu Hu]]. exists u. eauto.
-    eapply All_impl; eauto; simpl; intuition eauto with extends.
+    + eapply All_local_env_impl.
+      * eapply X.
+      * clear -wfΣ' extΣ. simpl; intros.
+        unfold lift_typing in *; destruct T; intuition eauto with extends.
+        destruct X as [u [tyu Hu]]. exists u. eauto.
+    + eapply All_impl; eauto; simpl; intuition eauto with extends.
   - econstructor; eauto with extends. auto.
     eapply All_local_env_impl. eapply X.
     clear -wfΣ' extΣ. simpl; intros.

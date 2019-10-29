@@ -1232,7 +1232,7 @@ Proof.
     revert e2. intros [= <- <-].
     rewrite e. f_equal.
     + eapply All_map_id. eapply All2_All_left; tea.
-      intros [[x p] n'] y [[?s Hty] [cs Hargs]]. 
+      intros [[x p] n'] y [[?s Hty] [cs Hargs]].
       unfold on_pi2; cbn; f_equal; f_equal.
       eapply typed_inst. all: eauto.
     + destruct (eq_dec pr []) as [hp | hp]. all: subst. all: auto.
@@ -1554,6 +1554,7 @@ Proof.
   eapply on_projs, nth_error_alli in onp. 2: eassumption.
   move: onp => /= /andb_and[hd _]. simpl in hd.
   rewrite smash_context_length in hd. simpl in *.
+  change PCUICEnvironment.context_assumptions with context_assumptions in e.
   rewrite e in hd. assumption.
 Qed.
 

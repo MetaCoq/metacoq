@@ -291,7 +291,7 @@ Proof.
 Qed.
 
 Lemma trans_it_mkProd_or_LetIn ctx t :
-  trans (Template.AstUtils.it_mkProd_or_LetIn ctx t) =
+  trans (Template.Ast.it_mkProd_or_LetIn ctx t) =
   it_mkProd_or_LetIn (map trans_decl ctx) (trans t).
 Proof.
   induction ctx in t |- *; simpl; auto.
@@ -750,7 +750,7 @@ Proof.
     apply (OnOne2_All_mix_left Hwf) in X.
     solve_all.
     red. rewrite <- !map_dtype. rewrite <- !map_dbody. intuition eauto.
-    unfold Template.AstUtils.app_context, trans_local in b0.
+    unfold Template.Ast.app_context, trans_local in b0.
     simpl in a. rewrite -> map_app in b0.
     unfold app_context. unfold Checker.Typing.fix_context in b0.
     rewrite map_rev map_mapi in b0. simpl in b0.
@@ -779,7 +779,7 @@ Proof.
     apply (OnOne2_All_mix_left Hwf) in X.
     solve_all.
     red. rewrite <- !map_dtype. rewrite <- !map_dbody. intuition eauto.
-    unfold Template.AstUtils.app_context, trans_local in b0.
+    unfold Template.Ast.app_context, trans_local in b0.
     simpl in a. rewrite -> map_app in b0.
     unfold app_context. unfold Checker.Typing.fix_context in b0.
     rewrite map_rev map_mapi in b0. simpl in b0.
@@ -1072,7 +1072,7 @@ Proof.
     -- apply All_map. eapply All_impl; eauto.
        unfold compose. simpl. intuition eauto 3 with wf.
        rewrite H1. rewrite /trans_local map_length.
-       unfold Template.AstUtils.app_context in b.
+       unfold Template.Ast.app_context in b.
        rewrite /trans_local map_app in b.
        rewrite <- trans_lift. apply b.
        destruct (dbody x); simpl in *; congruence.
@@ -1094,7 +1094,7 @@ Proof.
     -- apply All_map. eapply All_impl; eauto.
        unfold compose. simpl. intuition eauto 3 with wf.
        rewrite H1. rewrite /trans_local map_length.
-       unfold Template.AstUtils.app_context in b.
+       unfold Template.Ast.app_context in b.
        rewrite /trans_local map_app in b.
        rewrite <- trans_lift. apply b.
     -- destruct decl; reflexivity.

@@ -805,20 +805,20 @@ Definition unlift_opt_pred (P : global_env_ext -> context -> option term -> term
   fun Σ Γ t T => P Σ Γ (Some t) T.
 
 
-Module PCUICTyping <: Typing PCUICTerm PCUICEnvironment PCUICEnvTyping.
+Module PCUICTypingDef <: Typing PCUICTerm PCUICEnvironment PCUICEnvTyping.
 
   Definition ind_guard := ind_guard.
   Definition typing := @typing.
   Definition smash_context := smash_context.
 
-End PCUICTyping.
+End PCUICTypingDef.
 
 Module PCUICDeclarationTyping :=
   DeclarationTyping
     PCUICTerm
     PCUICEnvironment
     PCUICEnvTyping
-    PCUICTyping
+    PCUICTypingDef
     PCUICLookup.
 Include PCUICDeclarationTyping.
 

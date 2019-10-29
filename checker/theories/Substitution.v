@@ -1720,7 +1720,7 @@ Theorem substitution `{checker_flags} Σ Γ Γ' s Δ (t : term) T :
   Σ ;;; Γ ,,, Γ' ,,, Δ |- t : T ->
   wf_local Σ (Γ ,,, subst_context s 0 Δ) ->
   Σ ;;; Γ ,,, subst_context s 0 Δ |- subst s #|Δ| t : subst s #|Δ| T.
-(* Proof.
+Proof.
   intros HΣ Hs Ht.
   pose proof (typing_wf_local Ht).
   generalize_eqs Ht. intros eqw. rewrite <- eqw in X.
@@ -1831,10 +1831,11 @@ Theorem substitution `{checker_flags} Σ Γ Γ' s Δ (t : term) T :
 
   - eapply refine_type. econstructor; eauto.
     symmetry.
-    apply on_declared_constructor in isdecl as [_ onc]; auto.
-    eapply on_constructor_closed_wf in onc as [clty wfty]; auto.
+    destruct (on_declared_constructor wfΣ isdecl) as [? [cs [? onc]]].
+    eapply on_constructor_closed_wf in onc as [clty wty]; auto.
     unfold type_of_constructor.
-    apply subst_closedn; eauto. eapply closed_upwards; eauto. lia.
+    apply subst_closedn. 1: eauto with wf.
+    eapply closed_upwards; eauto. lia.
 
   - rewrite subst_mkApps map_app map_skipn.
     specialize (X2 Γ Γ' Δ s sub eq_refl wfsubs).
@@ -2015,8 +2016,6 @@ Theorem substitution `{checker_flags} Σ Γ Γ' s Δ (t : term) T :
     + right; exists u; intuition eauto.
     + eapply substitution_cumul; eauto.
       now eapply typing_wf in X0.
-Qed. *)
-  todo "substitution"%string.
 Qed.
 
 Theorem substitution_alt `{checker_flags} Σ Γ Γ' s Δ (t : term) T :

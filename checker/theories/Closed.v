@@ -1,7 +1,8 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega Lia.
-From MetaCoq.Template Require Import config utils Ast AstUtils Induction utils LiftSubst.
+From MetaCoq.Template Require Import config utils Ast AstUtils Induction utils
+  LiftSubst UnivSubst.
 From MetaCoq.Checker Require Import Typing TypingWf WeakeningEnv.
 Require Import ssreflect ssrbool.
 Require Import Equations.Prop.DepElim.
@@ -445,4 +446,21 @@ Proof.
   case: d => na [body|] ty; rewrite /closed_decl /=.
   move/andP => [cb cty] k' lek'. do 2 rewrite (@closed_upwards k) //.
   move=> cty k' lek'; rewrite (@closed_upwards k) //.
+Qed.
+
+Lemma rev_subst_instance_context u Γ :
+  List.rev (subst_instance_context u Γ) = subst_instance_context u (List.rev Γ).
+Proof.
+  unfold subst_instance_context, map_context.
+  now rewrite map_rev.
+Qed.
+
+Lemma closedn_subst_instance_context k Γ u :
+  closedn_ctx k (subst_instance_context u Γ) = closedn_ctx k Γ.
+Proof.
+  unfold closedn_ctx; f_equal.
+  rewrite rev_subst_instance_context.
+  rewrite mapi_map. apply mapi_ext.
+  intros n [? [] ?]; unfold closed_decl; cbn.
+  all: now rewrite !closedn_subst_instance_constr.
 Qed.

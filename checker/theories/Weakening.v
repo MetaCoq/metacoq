@@ -675,8 +675,9 @@ Lemma lift_types_of_case ind mdecl idecl args u p pty indctx pctx ps btys n k :
   let f_ctx := lift_context n k in
   Forall wf_decl mdecl.(ind_params) ->
   Forall Ast.wf args ->
-  Ast.wf pty -> Ast.wf (ind_type idecl) ->
-  closed_ctx mdecl.(ind_params) ->
+  Ast.wf pty ->
+  Ast.wf (ind_type idecl) ->
+  closed_ctx (subst_instance_context u (ind_params mdecl)) ->
   types_of_case ind mdecl idecl args u p pty = Some (indctx, pctx, ps, btys) ->
   types_of_case ind mdecl (map_one_inductive_body (context_assumptions mdecl.(ind_params))
                                                   (length (arities_context mdecl.(ind_bodies)))
@@ -684,19 +685,34 @@ Lemma lift_types_of_case ind mdecl idecl args u p pty indctx pctx ps btys n k :
                 (map (f 0) args) u (f 0 p) (f 0 pty) =
   Some (f_ctx indctx, f_ctx pctx, ps, map (on_snd (f 0)) btys).
 Proof.
-  simpl. intros wfpars wfargs wfpty wfdecl closedpars.
+  simpl. intros w1 w2 w3 w4 closedpars.
   unfold types_of_case.
   rewrite -> ind_type_map. simpl.
-  pose proof (lift_instantiate_params n k (ind_params mdecl) args (ind_type idecl)) as H.
-  erewrite <- H ; trivial. clear H.
-  case_eq (instantiate_params (ind_params mdecl) args (ind_type idecl)) ; try discriminate.
+  epose proof (lift_instantiate_params n k _ args (subst_instance_constr u (ind_type idecl))) as H.
+  rewrite <- lift_subst_instance_constr.
+  erewrite <- H; trivial. clear H.
+  case_eq (instantiate_params (subst_instance_context u (ind_params mdecl)) args (subst_instance_constr u (ind_type idecl))) ; try discriminate.
   intros ity eq. simpl.
   pose proof (lift_destArity [] ity n k); trivial. simpl in H.
-  forward H. eapply wf_instantiate_params; eauto.
-  unfold lift_context, fold_context in H. simpl in H. simpl. rewrite -> H. clear H.
+  unfold lift_context, fold_context in H. simpl in H. simpl. rewrite -> H.
+  2:{ eapply wf_instantiate_params. 4: eassumption.
+      - clear - w1. induction w1.
+        + constructor.
+        + simpl. constructor.
+          * destruct x as [na [bo|] ty].
+            -- unfold map_decl. unfold wf_decl in *. simpl in *.
+               intuition eauto with wf.
+            -- unfold map_decl. unfold wf_decl in *. simpl in *.
+               intuition eauto with wf.
+          * assumption.
+      - assumption.
+      - auto with wf.
+  }
+  clear H.
   destruct destArity as [[ctx s] | ]; try congruence.
   pose proof (lift_destArity [] pty n k); trivial. simpl in H.
-  unfold lift_context, fold_context in H. simpl in H. rewrite -> H. clear H.
+  unfold lift_context, fold_context in H. simpl in H.
+  rewrite -> H by assumption. clear H.
   destruct destArity as [[ctx' s'] | ]; try congruence.
   assert(forall brs,
          build_branches_type ind mdecl idecl args u p = brs ->
@@ -707,7 +723,7 @@ Proof.
          map (option_map (on_snd (lift n k))) brs).
   { unfold build_branches_type. simpl. intros brs. intros <-.
     rewrite -> ind_ctors_map.
-    rewrite -> mapi_map, map_mapi. f_equal. extensionality i. extensionality x.
+    rewrite -> mapi_map, map_mapi. eapply mapi_ext. intros i x.
     destruct x as [[id t] arity]. simpl.
     rewrite <- lift_subst_instance_constr.
     rewrite subst0_inds_lift.
@@ -738,7 +754,6 @@ Proof.
   intros [= -> -> -> <-].
   - reflexivity.
   - congruence.
-  - auto.
 Qed.
 
 Lemma weakening_red1 `{CF:checker_flags} Σ Γ Γ' Γ'' M N :
@@ -1077,27 +1092,34 @@ Proof.
     specialize (IHc _ _ _ wf eq_refl).
     specialize (IHp _ _ _ wf eq_refl).
     simpl. econstructor.
-    4:{ pose proof (on_declared_inductive wfΣ isdecl) as [onmind onind].
-        apply onParams in onmind as Hparams.
-        eapply lift_types_of_case in heq_types_of_case.
-        simpl in heq_types_of_case. subst pars. rewrite -> firstn_map. eapply heq_types_of_case.
-        -- eapply typing_all_wf_decl. 2: eauto. tas.
-        -- subst pars. eapply All_Forall. eapply All_firstn.
-           apply typing_wf in typec as [_ X3]; eauto.
-           now (apply (Forall_All); apply wf_mkApps_inv in X3).
-        -- eapply typing_wf in typep; wf.
-        -- wf.
-        -- destruct isdecl as [Hmdecl Hidecl].
-           eapply on_declared_minductive in Hmdecl; eauto.
-           eapply onParams in Hmdecl.
-           eapply closed_wf_local in Hmdecl; eauto. }
+    4:{ eapply lift_types_of_case in heq_types_of_case.
+        - simpl in heq_types_of_case. subst pars. rewrite -> firstn_map.
+          eapply heq_types_of_case.
+        - subst. eapply typing_all_wf_decl ; revgoals.
+          + destruct isdecl as [Hmdecl Hidecl].
+            eapply on_declared_minductive in Hmdecl. 2: assumption.
+            apply onParams in Hmdecl. unfold on_context in Hmdecl.
+            change TemplateEnvironment.ind_params with ind_params in Hmdecl.
+            eassumption.
+          + simpl. assumption.
+        - subst pars. eapply All_Forall. eapply All_firstn.
+          apply typing_wf in typec as [_ X3]; eauto.
+          now (apply (Forall_All); apply wf_mkApps_inv in X3).
+        - eapply typing_wf in typep; wf.
+        - wf.
+        - destruct isdecl as [Hmdecl Hidecl].
+          eapply on_declared_minductive in Hmdecl; eauto.
+          eapply onParams in Hmdecl.
+          change closed_ctx with (closedn_ctx 0).
+          rewrite closedn_subst_instance_context.
+          eapply closed_wf_local in Hmdecl; eauto. }
     -- erewrite -> lift_declared_inductive; eauto.
     -- auto.
     -- auto.
     -- revert H1.
-       subst pars.
-       erewrite lift_declared_inductive; eauto.
-       apply lift_check_correct_arity.
+      subst pars.
+      erewrite lift_declared_inductive; eauto.
+      apply lift_check_correct_arity.
     -- destruct idecl; simpl in *; auto.
     -- now rewrite -> !lift_mkApps in IHc.
     -- solve_all.

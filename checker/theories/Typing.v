@@ -597,11 +597,21 @@ Definition instantiate_params params pars ty :=
   | None => None
   end.
 
+Lemma instantiate_params_ params pars ty :
+  instantiate_params params pars ty
+  = option_map (fun '(s, ty) => subst0 s ty)
+               (instantiate_params_subst (List.rev params) pars [] ty).
+Proof.
+  unfold instantiate_params.
+  repeat (destruct ?; cbnr).
+Qed.
+
+(* [params], [p] and output are already instanciated by [u] *)
 Definition build_branches_type ind mdecl idecl params u p :=
   let inds := inds (inductive_mind ind) u mdecl.(ind_bodies) in
   let branch_type i '(id, t, ar) :=
     let ty := subst0 inds (subst_instance_constr u t) in
-    match instantiate_params mdecl.(ind_params) params ty with
+    match instantiate_params (subst_instance_context u mdecl.(ind_params)) params ty with
     | Some ty =>
       let '(sign, ccl) := decompose_prod_assum [] ty in
       let nargs := List.length sign in
@@ -614,9 +624,31 @@ Definition build_branches_type ind mdecl idecl params u p :=
     end
   in mapi branch_type idecl.(ind_ctors).
 
+Lemma build_branches_type_ ind mdecl idecl params u p :
+  build_branches_type ind mdecl idecl params u p
+  = let inds := inds (inductive_mind ind) u mdecl.(ind_bodies) in
+    let branch_type i '(id, t, ar) :=
+        let ty := subst0 inds (subst_instance_constr u t) in
+        option_map (fun ty =>
+         let '(sign, ccl) := decompose_prod_assum [] ty in
+         let nargs := List.length sign in
+         let allargs := snd (decompose_app ccl) in
+         let '(paramrels, args) := chop mdecl.(ind_npars) allargs in
+         let cstr := tConstruct ind i u in
+         let args := (args ++ [mkApps cstr (paramrels ++ to_extended_list sign)])%list in
+         (ar, it_mkProd_or_LetIn sign (mkApps (lift0 nargs p) args)))
+                  (instantiate_params (subst_instance_context u mdecl.(ind_params))
+                                      params ty)
+    in mapi branch_type idecl.(ind_ctors).
+Proof.
+  apply mapi_ext. intros ? [[? ?] ?]; cbnr.
+  repeat (destruct ?; cbnr).
+Qed.
+
+(* [params], [p], [pty] and output already instanciated by [u] *)
 Definition types_of_case ind mdecl idecl params u p pty :=
   let brtys := build_branches_type ind mdecl idecl params u p in
-  match instantiate_params mdecl.(ind_params) params idecl.(ind_type) with
+  match instantiate_params (subst_instance_context u mdecl.(ind_params)) params (subst_instance_constr u idecl.(ind_type)) with
   | Some ity =>
     match
       destArity [] ity,
@@ -629,6 +661,22 @@ Definition types_of_case ind mdecl idecl params u p pty :=
     end
   | None => None
   end.
+
+Lemma types_of_case_spec ind mdecl idecl pars u p pty indctx pctx ps btys :
+  types_of_case ind mdecl idecl pars u p pty
+  = Some (indctx, pctx, ps, btys)
+  <~> ∑ s', option_map (destArity [])
+                     (instantiate_params (subst_instance_context u (ind_params mdecl)) pars (subst_instance_constr u (ind_type idecl)))
+          = Some (Some (indctx, s'))
+          /\ destArity [] pty = Some (pctx, ps)
+          /\ map_option_out (build_branches_type ind mdecl idecl pars u p)
+            = Some btys.
+Proof.
+  unfold types_of_case.
+  repeat (destruct ?; cbn).
+  all: split; [try discriminate; inversion 1; subst; eexists; repeat split|].
+  all: intros [s' [HH1 [HH2 HH3]]]; inversion HH1; inversion HH2; now inversion HH3.
+Qed.
 
 
 Reserved Notation " Σ ;;; Γ |- t : T " (at level 50, Γ, t, T at next level).
@@ -811,16 +859,14 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     check_correct_arity (global_ext_constraints Σ) idecl ind u indctx pars pctx ->
     existsb (leb_sort_family (universe_family ps)) idecl.(ind_kelim) ->
     Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
-    All2 (fun x y => (fst x = fst y) * (Σ ;;; Γ |- snd x : snd y)) brs btys ->
+    All2 (fun x y => (fst x = fst y) * (Σ ;;; Γ |- snd x : snd y) * (Σ ;;; Γ |- snd y : tSort ps)) brs btys ->
     Σ ;;; Γ |- tCase (ind, npar) p c brs : mkApps p (List.skipn npar args ++ [c])
 
 | type_Proj p c u :
     forall mdecl idecl pdecl (isdecl : declared_projection Σ.1 mdecl idecl p pdecl) args,
     Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ->
-    (** Actually ensured by typing + validity, but necessary for weakening and substitution. *)
     #|args| = ind_npars mdecl ->
     let ty := snd pdecl in
-    (* FIXME: what about lets in the parameters of the inductive type? *)
     Σ ;;; Γ |- tProj p c : subst0 (c :: List.rev args) (subst_instance_constr u ty)
 
 | type_Fix mfix n decl :
@@ -830,8 +876,6 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     All_local_env (lift_typing typing Σ) (Γ ,,, types) ->
     All (fun d => (Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype))
     * (isLambda d.(dbody) = true)%type) mfix ->
-    (** TODO check well-formed fix *)
-    (* Missing check on rarg *)
     Σ ;;; Γ |- tFix mfix n : decl.(dtype)
 
 | type_CoFix mfix n decl :
@@ -840,7 +884,6 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     nth_error mfix n = Some decl ->
     All_local_env (lift_typing typing Σ) (Γ ,,, types) ->
     All (fun d => Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype)) mfix ->
-    (** TODO check well-formed cofix *)
     Σ ;;; Γ |- tCoFix mfix n : decl.(dtype)
 
 | type_Conv t A B :
@@ -922,20 +965,21 @@ Proof.
     | H1 : size |- _  => exact (S H1)
     | _ => exact 1
     end.
-  exact (S (wf_local_size _ typing_size _ a)).
-  exact (S (wf_local_size _ typing_size _ a)).
-  exact (S (Nat.max d (typing_spine_size typing_size _ _ _ _ _ t0))).
-  exact (S (S (wf_local_size _ typing_size _ a))).
-  exact (S (S (wf_local_size _ typing_size _ a))).
-  exact (S (S (wf_local_size _ typing_size _ a))).
-  exact (S (Nat.max d1 (Nat.max d2
-                                (all2_size _ (fun x y p => typing_size Σ Γ (snd x) (snd y) (snd p)) a)))).
-  exact (S (Nat.max (wf_local_size _ typing_size _ a) (all_size _ (fun x p => typing_size Σ _ _ _ (fst p)) a0))).
-  exact (S (Nat.max (wf_local_size _ typing_size _ a) (all_size _ (fun x p => typing_size Σ _ _ _ p) a0))).
-  destruct s. red in i.
-  exact (S (Nat.max (wf_local_size _ typing_size _ (snd (projT2 (projT2 i)))) d)).
-  destruct s as [u Hu]. apply typing_size in Hu.
-  exact (S (Nat.max d Hu)).
+  - exact (S (wf_local_size _ typing_size _ a)).
+  - exact (S (wf_local_size _ typing_size _ a)).
+  - exact (S (Nat.max d (typing_spine_size typing_size _ _ _ _ _ t0))).
+  - exact (S (S (wf_local_size _ typing_size _ a))).
+  - exact (S (S (wf_local_size _ typing_size _ a))).
+  - exact (S (S (wf_local_size _ typing_size _ a))).
+  - exact (S (Nat.max d1 (Nat.max d2
+      (all2_size _ (fun x y p => Nat.max (typing_size Σ Γ (snd x) (snd y) (snd (fst p))) (typing_size _ _ _ _ (snd p))) a)))).
+  - exact (S (Nat.max (wf_local_size _ typing_size _ a) (all_size _ (fun x p => typing_size Σ _ _ _ (fst p)) a0))).
+  - exact (S (Nat.max (wf_local_size _ typing_size _ a) (all_size _ (fun x p => typing_size Σ _ _ _ p) a0))).
+  - destruct s.
+    + red in i.
+      exact (S (Nat.max (wf_local_size _ typing_size _ (snd (projT2 (projT2 i)))) d)).
+    + destruct s as [u Hu]. apply typing_size in Hu.
+      exact (S (Nat.max d Hu)).
 Defined.
 
 Lemma typing_size_pos `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t : T) : typing_size d > 0.
@@ -1154,23 +1198,28 @@ Lemma typing_ind_env `{cf : checker_flags} :
         P Σ Γ (tConstruct ind i u) (type_of_constructor mdecl cdecl (ind, i) u)) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (ind : inductive) u (npar : nat)
-            (p c : term) (brs : list (nat * term))
-            (args : list term) (mdecl : mutual_inductive_body) (idecl : one_inductive_body)
-            (isdecl : declared_inductive (fst Σ) mdecl ind idecl),
-        Forall_decls_typing P Σ.1 -> All_local_env_over typing Pdecl Σ Γ wfΓ ->
-        ind_npars mdecl = npar ->
-        let pars := firstn npar args in
-        forall (pty : term), Σ ;;; Γ |- p : pty ->
-        forall indctx pctx ps btys,
-        types_of_case ind mdecl idecl pars u p pty = Some (indctx, pctx, ps, btys) ->
-        check_correct_arity (global_ext_constraints Σ) idecl ind u indctx pars pctx ->
-        existsb (leb_sort_family (universe_family ps)) (ind_kelim idecl) ->
-        P Σ Γ p pty ->
-        Σ;;; Γ |- c : mkApps (tInd ind u) args ->
-        P Σ Γ c (mkApps (tInd ind u) args) ->
-        All2 (fun x y : nat * term => (fst x = fst y) * (Σ;;; Γ |- snd x : snd y)
-                                         * P Σ Γ (snd x) (snd y))%type brs btys ->
-        P Σ Γ (tCase (ind, npar) p c brs) (mkApps p (skipn npar args ++ [c]))) ->
+        (p c : term) (brs : list (nat * term))
+        (args : list term) (mdecl : mutual_inductive_body) (idecl : one_inductive_body)
+        (isdecl : declared_inductive (fst Σ) mdecl ind idecl),
+          Forall_decls_typing P Σ.1 -> All_local_env_over typing Pdecl Σ Γ wfΓ ->
+          ind_npars mdecl = npar ->
+          let pars := firstn npar args in
+          forall (pty : term), Σ ;;; Γ |- p : pty ->
+          forall indctx pctx ps btys,
+          types_of_case ind mdecl idecl pars u p pty = Some (indctx, pctx, ps, btys) ->
+          check_correct_arity (global_ext_constraints Σ) idecl ind u indctx pars pctx ->
+          existsb (leb_sort_family (universe_family ps)) (ind_kelim idecl) ->
+          P Σ Γ p pty ->
+          Σ;;; Γ |- c : mkApps (tInd ind u) args ->
+          P Σ Γ c (mkApps (tInd ind u) args) ->
+          All2 (fun x y : nat * term =>
+                  (fst x = fst y) *
+                  (Σ;;; Γ |- snd x : snd y) *
+                  P Σ Γ (snd x) (snd y) *
+                  (Σ ;;; Γ |- snd y : tSort ps) *
+                  P Σ Γ (snd y) (tSort ps)
+          )%type brs btys ->
+          P Σ Γ (tCase (ind, npar) p c brs) (mkApps p (skipn npar args ++ [c]))) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : projection) (c : term) u
           mdecl idecl pdecl (isdecl : declared_projection Σ.1 mdecl idecl p pdecl) args,
@@ -1405,16 +1454,21 @@ Proof.
        simpl in X14. forward X14; auto. lia. apply X14.
 
     -- eapply X8; eauto.
-       eapply (X14 _ wfΓ _ _ H); eauto. simpl; auto with arith.
-       eapply (X14 _ wfΓ _ _ H); eauto. simpl; auto with arith. simpl in *.
-       eapply (X14 _ wfΓ _ _ H0); eauto. lia.
-       clear X13. revert a wfΓ X14. simpl. clear. intros.
-       induction a; simpl in *. constructor.
-       destruct r. constructor. split; auto.
-       eapply (X14 _ wfΓ _ _ t); eauto. simpl; auto with arith.
-       lia.
-       apply IHa. auto. intros.
-       eapply (X14 _ wfΓ0 _ _ Hty). lia.
+       ++ eapply (X14 _ wfΓ _ _ H); eauto. simpl; auto with arith.
+       ++ eapply (X14 _ wfΓ _ _ H); eauto. simpl; auto with arith.
+       ++ simpl in *.
+         eapply (X14 _ wfΓ _ _ H0); eauto. lia.
+       ++ clear X13. revert a wfΓ X14. simpl. clear. intros.
+         induction a; simpl in *.
+         ** constructor.
+         ** destruct r as [[? ?] ?]. constructor.
+             --- intuition eauto.
+             +++ eapply (X14 _ wfΓ _ _ t); eauto. simpl; auto with arith.
+                 lia.
+             +++ eapply (X14 _ wfΓ _ _ t0); eauto. simpl; auto with arith.
+                 lia.
+             --- apply IHa. auto. intros.
+                 eapply (X14 _ wfΓ0 _ _ Hty). lia.
 
     -- eapply X9; eauto.
        specialize (X14 [] localenv_nil _ _ (type_Prop _)).

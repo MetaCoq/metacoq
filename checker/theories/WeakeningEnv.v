@@ -325,9 +325,9 @@ Proof.
     induction X1. constructor. econstructor; eauto with extends.
     eapply weakening_env_cumul in cumul; eauto.
   - econstructor; eauto 2 with extends.
-    eapply check_correct_arity_subset; tea.
-    apply weakening_env_global_ext_constraints; tas.
-    close_Forall. intros; intuition eauto with extends.
+    + eapply check_correct_arity_subset; tea.
+      apply weakening_env_global_ext_constraints; tas.
+    + close_Forall. intros; intuition eauto with extends.
   - econstructor; eauto with extends.
     eapply All_local_env_impl. eapply X.
     clear -wfΣ' extΣ. simpl; intros.

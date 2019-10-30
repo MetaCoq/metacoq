@@ -850,54 +850,54 @@ Lemma lift_eq_term_upto_univ Re Rl n k T U :
   eq_term_upto_univ Re Rl T U ->
   eq_term_upto_univ Re Rl (lift n k T) (lift n k U).
 Proof.
-  induction T in n, k, U, Rl |- * using term_forall_list_ind;
+  induction T in n, k, U, Rl |- * using term_forall_list_rect;
     inversion 1; simpl; try (now constructor).
   - destruct (k <=? n0); constructor.
-  - constructor. clear -H H4.
-    induction l in H, args', H4 |- *.
+  - constructor. subst. clear - X H3.
+    induction l in X, args', H3 |- *.
+    + inversion H3; constructor.
+    + inversion H3. inversion X. subst.
+      simpl. constructor. all: easy.
+  - constructor. easy. clear - X H4.
+    induction l in X, args', H4 |- *.
     + inversion H4; constructor.
-    + inversion H4; inversion H; subst.
+    + inversion H4; inversion X; subst.
       now constructor.
-  - constructor. easy. clear -H H5.
-    induction l in H, args', H5 |- *.
-    + inversion H5; constructor.
-    + inversion H5; inversion H; subst.
-      now constructor.
-  - constructor; try easy. clear -H H8.
-    induction l in H, brs', H8 |- *.
-    + inversion H8; constructor.
-    + inversion H8; inversion H; subst.
+  - constructor; try easy. clear - X H7.
+    induction l in X, brs', H7 |- *.
+    + inversion H7; constructor.
+    + inversion H7; inversion X; subst.
       constructor. cbn; easy.
       easy.
-  - constructor; try easy. clear -H H4.
-    assert (XX:forall k k', Forall2
-                         (fun x y  => eq_term_upto_univ Re Re (dtype x) (dtype y) /\
-                                   eq_term_upto_univ Re Re (dbody x) (dbody y) /\
+  - constructor; try easy. clear - X H3.
+    assert (XX:forall k k', All2
+                         (fun x y  => eq_term_upto_univ Re Re (dtype x) (dtype y) ×
+                        eq_term_upto_univ Re Re (dbody x) (dbody y) ×
                                    rarg x = rarg y)
                          (map (map_def (lift n k) (lift n (#|m| + k'))) m)
                          (map (map_def (lift n k) (lift n (#|mfix'| + k'))) mfix'));
       [|now apply XX]. clear k.
-    induction m in H, mfix', H4 |- *.
-    + inversion H4; constructor.
-    + inversion H4; inversion H; subst.
+    induction m in X, mfix', H3 |- *.
+    + inversion H3; constructor.
+    + inversion H3; inversion X; subst.
       simpl. constructor. split. cbn; easy.
-      cbn; erewrite Forall2_length by eassumption.
+      cbn; erewrite All2_length by eassumption.
       easy.
       unfold tFixProp in IHm. cbn.
       rewrite !plus_n_Sm. now apply IHm.
-  - constructor; try easy. clear -H H4.
-    assert (XX:forall k k', Forall2
-                         (fun x y  => eq_term_upto_univ Re Re (dtype x) (dtype y) /\
-                                   eq_term_upto_univ Re Re (dbody x) (dbody y) /\
+  - constructor; try easy. clear - X H3.
+    assert (XX:forall k k', All2
+                         (fun x y  => eq_term_upto_univ Re Re (dtype x) (dtype y) ×
+                            eq_term_upto_univ Re Re (dbody x) (dbody y) ×
                                    rarg x = rarg y)
                          (map (map_def (lift n k) (lift n (#|m| + k'))) m)
                          (map (map_def (lift n k) (lift n (#|mfix'| + k'))) mfix'));
       [|now apply XX]. clear k.
-    induction m in H, mfix', H4 |- *.
-    + inversion H4; constructor.
-    + inversion H4; inversion H; subst.
+    induction m in X, mfix', H3 |- *.
+    + inversion H3; constructor.
+    + inversion H3; inversion X; subst.
       simpl. constructor. split. cbn; easy.
-      cbn; erewrite Forall2_length by eassumption.
+      cbn; erewrite All2_length by eassumption.
       easy.
       unfold tFixProp in IHm. cbn.
       rewrite !plus_n_Sm. now apply IHm.
@@ -946,7 +946,7 @@ Proof.
   - inversion H0.
   - inversion H0.
   - inversion H0; subst. constructor.
-    + apply All2_Forall2, Forall2_length in H6. rewrite H6.
+    + apply All2_length in H6. rewrite H6.
       now apply lift_eq_decl.
     + now apply IHl.
 Qed.
@@ -964,7 +964,7 @@ Proof.
   unfold check_correct_arity. intro H.
   inversion H; subst. simpl. rewrite lift_context_snoc0.
   constructor.
-  - apply All2_Forall2, Forall2_length in H4. destruct H4.
+  - apply All2_length in H4. destruct H4.
     clear -H2. apply (lift_eq_decl _ #|Γ''| (#|indctx| + #|Γ'|)) in H2.
     unfold lift_decl, map_decl in H2; cbn in H2.
     assert (XX : lift #|Γ''| (#|indctx| + #|Γ'|) (mkApps (tInd ind u) (map (lift0 #|indctx|) (firstn npar args) ++ to_extended_list indctx)) = mkApps (tInd ind u) (map (lift0 #|lift_context #|Γ''| #|Γ'| indctx|) (firstn npar (map (lift #|Γ''| #|Γ'|) args)) ++ to_extended_list (lift_context #|Γ''| #|Γ'| indctx)));

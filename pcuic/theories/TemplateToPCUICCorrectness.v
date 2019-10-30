@@ -562,17 +562,22 @@ Admitted.
 (* Qed. *)
 
 
-Lemma trans_eq_term_list ϕ T U :
-  List.Forall T.wf T -> List.Forall T.wf U -> Forall2 (TTy.eq_term ϕ) T U ->
-  All2 (eq_term ϕ) (List.map trans T) (List.map trans U).
+Lemma trans_eq_term_list :
+  forall φ l l',
+    List.Forall T.wf l ->
+    List.Forall T.wf l' ->
+    All2 (TTy.eq_term φ) l l' ->
+    All2 (eq_term φ) (List.map trans l) (List.map trans l').
 Proof.
-(*   intros H H0 H1. eapply All2_map. *)
-(*   pose proof (Forall_Forall2_and H1 H) as H2. *)
-(*   pose proof (Forall_Forall2_and' H2 H0) as H3. *)
-(*   apply (Forall2_impl H3). *)
-(*   intuition auto using trans_eq_term. *)
-(* Qed. *)
-Admitted.
+  intros φ l l' w w' h.
+  eapply All2_map.
+  apply Forall_All in w. apply Forall_All in w'.
+  pose proof (All2_All_mix_left w h) as h1.
+  pose proof (All2_All_mix_right w' h1) as h2.
+  simpl in h2.
+  apply (All2_impl h2).
+  intuition auto using trans_eq_term.
+Qed.
 
 Lemma leq_term_mkApps ϕ t u t' u' :
   eq_term ϕ t t' -> All2 (eq_term ϕ) u u' ->

@@ -438,12 +438,12 @@ Inductive red Σ Γ M : term -> Type :=
   phase of casts before checking equality. *)
 
 
-Inductive eq_term_upto_univ (Re Rle : universe -> universe -> Prop) : term -> term -> Prop :=
+Inductive eq_term_upto_univ (Re Rle : universe -> universe -> Prop) : term -> term -> Type :=
 | eq_Rel n  :
     eq_term_upto_univ Re Rle (tRel n) (tRel n)
 
 | eq_Evar e args args' :
-    Forall2 (eq_term_upto_univ Re Re) args args' ->
+    All2 (eq_term_upto_univ Re Re) args args' ->
     eq_term_upto_univ Re Rle (tEvar e args) (tEvar e args')
 
 | eq_Var id :
@@ -460,7 +460,7 @@ Inductive eq_term_upto_univ (Re Rle : universe -> universe -> Prop) : term -> te
 
 | eq_App t t' args args' :
     eq_term_upto_univ Re Rle t t' ->
-    Forall2 (eq_term_upto_univ Re Re) args args' ->
+    All2 (eq_term_upto_univ Re Re) args args' ->
     eq_term_upto_univ Re Rle (tApp t args) (tApp t' args')
 
 | eq_Const c u u' :
@@ -494,8 +494,8 @@ Inductive eq_term_upto_univ (Re Rle : universe -> universe -> Prop) : term -> te
 | eq_Case ind par p p' c c' brs brs' :
     eq_term_upto_univ Re Re p p' ->
     eq_term_upto_univ Re Re c c' ->
-    Forall2 (fun x y =>
-      fst x = fst y /\
+    All2 (fun x y =>
+      fst x = fst y ×
       eq_term_upto_univ Re Re (snd x) (snd y)
     ) brs brs' ->
     eq_term_upto_univ Re Rle (tCase (ind, par) p c brs) (tCase (ind, par) p' c' brs')
@@ -505,17 +505,17 @@ Inductive eq_term_upto_univ (Re Rle : universe -> universe -> Prop) : term -> te
     eq_term_upto_univ Re Rle (tProj p c) (tProj p c')
 
 | eq_Fix mfix mfix' idx :
-    Forall2 (fun x y =>
-      eq_term_upto_univ Re Re x.(dtype) y.(dtype) /\
-      eq_term_upto_univ Re Re x.(dbody) y.(dbody) /\
+    All2 (fun x y =>
+      eq_term_upto_univ Re Re x.(dtype) y.(dtype) ×
+      eq_term_upto_univ Re Re x.(dbody) y.(dbody) ×
       x.(rarg) = y.(rarg)
     ) mfix mfix' ->
     eq_term_upto_univ Re Rle (tFix mfix idx) (tFix mfix' idx)
 
 | eq_CoFix mfix mfix' idx :
-    Forall2 (fun x y =>
-      eq_term_upto_univ Re Re x.(dtype) y.(dtype) /\
-      eq_term_upto_univ Re Re x.(dbody) y.(dbody) /\
+    All2 (fun x y =>
+      eq_term_upto_univ Re Re x.(dtype) y.(dtype) ×
+      eq_term_upto_univ Re Re x.(dbody) y.(dbody) ×
       x.(rarg) = y.(rarg)
     ) mfix mfix' ->
     eq_term_upto_univ Re Rle (tCoFix mfix idx) (tCoFix mfix' idx).

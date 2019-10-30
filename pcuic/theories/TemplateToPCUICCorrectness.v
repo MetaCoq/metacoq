@@ -682,7 +682,6 @@ Proof.
     + eapply ih2. all: auto.
 Qed.
 
-
 Lemma trans_eq_term_list :
   forall φ l l',
     List.Forall T.wf l ->
@@ -742,65 +741,151 @@ Proof.
       * assumption.
 Qed.
 
-Lemma trans_eq_term_upto_univ Re Rle T U :
-  T.wf T -> T.wf U -> TTy.eq_term_upto_univ Re Rle T U ->
-  eq_term_upto_univ Re Rle (trans T) (trans U).
+(* TODO REMOVE trans_eq_term *)
+Lemma trans_eq_term_upto_univ :
+  forall Re Rle t u,
+    T.wf t ->
+    T.wf u ->
+    TTy.eq_term_upto_univ Re Rle t u ->
+    eq_term_upto_univ Re Rle (trans t) (trans u).
 Proof.
-  intros HT HU H.
-  revert U HU H.
-
-(* First need an eliminator to Type for wf template-coq terms *)
-(*
-  induction HT in Rle |- * using Template.Induction.term_wf_forall_list_ind.
-  all: intros U HU HH.
+  intros Re Rle  t u wt wu e.
+  induction t using Induction.term_forall_list_rect in Rle, wt, u, wu, e |- *.
+  all: dependent destruction e.
+  all: simpl.
+  all: try solve [ constructor ; auto ].
   all: try solve [
-    inversion HH ; subst ; simpl ;
-    repeat constructor ;
-    inversion_clear HU ; try easy
+    constructor ;
+    match goal with
+    | ih : forall Rle (u : Tterm), _ |- _ =>
+      eapply ih ; [
+        inversion wt ; assumption
+      | inversion wu ; assumption
+      | assumption
+      ]
+    end
   ].
-  - dependent destruction HH. simpl.
-    dependent destruction HU.
-    econstructor.
-    eapply Forall2_map. eapply Forall2_impl.
-    + eapply Forall_Forall2_and. 2: eassumption.
-      eapply Forall_Forall2_and'. all: eassumption.
-    + simpl. intros x y [H2 [HHH H4]].
-      eapply H2 ; eauto.
-  - dependent destruction HH. simpl.
-    dependent destruction HU.
-    eapply eq_term_upto_univ_mkApps.
-    + eapply IHHT ; eauto.
-    + eapply Forall2_map. eapply Forall2_impl.
-      * eapply Forall_Forall2_and. 2: eassumption.
-        eapply Forall_Forall2_and'. all: eassumption.
-      * simpl. intros x y [H7 [? ?]].
-        eapply H7 ; eauto.
-  - dependent destruction HH. simpl.
-    dependent destruction HU.
-    econstructor.
-    all: try solve [ repeat econstructor ; easy ].
-    eapply Forall2_map. eapply Forall2_impl.
-    + eapply Forall_Forall2_and. 2: eassumption.
-      eapply Forall_Forall2_and'. all: eassumption.
-    + simpl. intros x y [H2 [[? ?] ?]].
-      split ; eauto.
-  - dependent destruction HH. simpl.
-    dependent destruction HU.
-    econstructor.
-    eapply Forall2_map. eapply Forall2_impl.
-    eapply Forall_Forall2_and. 2: exact H.
-    eapply Forall_Forall2_and. 2: exact H0.
-    eapply Forall_Forall2_and'; eassumption.
-    cbn. now intros x y [? [? ?]].
-  - dependent destruction HH. simpl.
-    dependent destruction HU.
-    econstructor.
-    eapply Forall2_map. eapply Forall2_impl.
-    eapply Forall_Forall2_and. 2: exact H.
-    eapply Forall_Forall2_and'; eassumption.
-    cbn. now intros x y [? [? ?]].
-*)
-Admitted.
+  - constructor.
+    assert (w1 : All T.wf l).
+    { eapply Forall_All. inversion wt. assumption. }
+    assert (w2 : All T.wf args').
+    { eapply Forall_All. inversion wu. assumption. }
+    pose proof (All2_All_mix_left X a) as h1. simpl in h1.
+    pose proof (All2_All_mix_left w1 h1) as h2.
+    pose proof (All2_All_mix_right w2 h2) as h3.
+    simpl in h3.
+    eapply All2_map.
+    eapply All2_impl. 1: exact h3.
+    simpl.
+    intros ? ? [[? [ih ?]] ?].
+    simpl in *.
+    eapply ih. all: auto.
+  - constructor.
+    + constructor. 2: constructor.
+      eapply IHt2.
+      * inversion wt. assumption.
+      * inversion wu. assumption.
+      * assumption.
+    + eapply IHt1.
+      * inversion wt. assumption.
+      * inversion wu. assumption.
+      * assumption.
+  - eapply eq_term_upto_univ_mkApps.
+    + eapply IHt.
+      * inversion wt. assumption.
+      * inversion wu. assumption.
+      * assumption.
+    + pose proof (All2_All_mix_left X a) as h.
+      simpl in h.
+      assert (wl : Forall T.wf l).
+      { inversion wt. assumption. }
+      assert (wargs' : Forall T.wf args').
+      { inversion wu. assumption. }
+      apply Forall_All in wl.
+      apply Forall_All in wargs'.
+      pose proof (All2_All_mix_left wl h) as h1.
+      pose proof (All2_All_mix_right wargs' h1) as h2.
+      simpl in h2.
+      eapply All2_map.
+      eapply All2_impl. 1: exact h2.
+      simpl.
+      intros u v [[? [ih ?]] ?].
+      eapply ih. all: auto.
+  - constructor.
+    all: try solve [
+      match goal with
+      | ih : forall Rle u, _ |- _ =>
+        eapply ih ; [
+          inversion wt ; assumption
+        | inversion wu ; assumption
+        | assumption
+        ]
+      end
+    ].
+    assert (wl : All (T.wf ∘ snd) l).
+    { eapply Forall_All. inversion wt. assumption. }
+    assert (wbrs' : All (T.wf ∘ snd) brs').
+    { eapply Forall_All. inversion wu. assumption. }
+    pose proof (All2_All_mix_left X a) as h1. simpl in h1.
+    pose proof (All2_All_mix_left wl h1) as h2.
+    pose proof (All2_All_mix_right wbrs' h2) as h3.
+    simpl in h3.
+    eapply All2_map.
+    eapply All2_impl. 1: exact h3.
+    simpl.
+    intros [n u] [m v] [[? [ih [? ?]]] ?]. simpl in *.
+    intuition eauto.
+  - constructor.
+    assert (
+      w1 :
+        All (fun def =>
+          T.wf (dtype def) /\
+          T.wf (dbody def) /\
+          T.isLambda (dbody def) = true
+        ) m
+    ).
+    { eapply Forall_All. inversion wt. assumption. }
+    assert (
+      w2 :
+        All (fun def =>
+          T.wf (dtype def) /\
+          T.wf (dbody def) /\
+          T.isLambda (dbody def) = true
+        ) mfix'
+    ).
+    { eapply Forall_All. inversion wu. assumption. }
+    pose proof (All2_All_mix_left X a) as h1. simpl in h1.
+    pose proof (All2_All_mix_left w1 h1) as h2.
+    pose proof (All2_All_mix_right w2 h2) as h3.
+    simpl in h3.
+    eapply All2_map.
+    eapply All2_impl. 1: exact h3.
+    simpl.
+    intros [? ? ? ?] [? ? ? ?] [[[? [? ?]] [[ih1 ih2] [? [? ?]]]] [? [? ?]]].
+    simpl in *.
+    intuition eauto.
+  - constructor.
+    assert (
+      w1 :
+        All (fun def => T.wf (dtype def) /\ T.wf (dbody def)) m
+    ).
+    { eapply Forall_All. inversion wt. assumption. }
+    assert (
+      w2 :
+        All (fun def => T.wf (dtype def) /\ T.wf (dbody def)) mfix'
+    ).
+    { eapply Forall_All. inversion wu. assumption. }
+    pose proof (All2_All_mix_left X a) as h1. simpl in h1.
+    pose proof (All2_All_mix_left w1 h1) as h2.
+    pose proof (All2_All_mix_right w2 h2) as h3.
+    simpl in h3.
+    eapply All2_map.
+    eapply All2_impl. 1: exact h3.
+    simpl.
+    intros [? ? ? ?] [? ? ? ?] [[[? ?] [[ih1 ih2] [? [? ?]]]] [? ?]].
+    simpl in *.
+    intuition eauto.
+Qed.
 
 Lemma trans_leq_term ϕ T U :
   T.wf T -> T.wf U -> TTy.leq_term ϕ T U ->

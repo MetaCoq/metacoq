@@ -437,6 +437,8 @@ Inductive red Σ Γ M : term -> Type :=
   We hence implement first an equality which considers casts and do a stripping
   phase of casts before checking equality. *)
 
+Definition R_universe_instance R :=
+  fun u u' => Forall2 R (List.map Universe.make u) (List.map Universe.make u').
 
 Inductive eq_term_upto_univ (Re Rle : universe -> universe -> Prop) : term -> term -> Type :=
 | eq_Rel n  :
@@ -464,15 +466,15 @@ Inductive eq_term_upto_univ (Re Rle : universe -> universe -> Prop) : term -> te
     eq_term_upto_univ Re Rle (tApp t args) (tApp t' args')
 
 | eq_Const c u u' :
-    Forall2 Rle (List.map Universe.make u) (List.map Universe.make u') ->
+    R_universe_instance Re u u' ->
     eq_term_upto_univ Re Rle (tConst c u) (tConst c u')
 
 | eq_Ind i u u' :
-    Forall2 Rle (List.map Universe.make u) (List.map Universe.make u') ->
+    R_universe_instance Re u u' ->
     eq_term_upto_univ Re Rle (tInd i u) (tInd i u')
 
 | eq_Construct i k u u' :
-    Forall2 Rle (List.map Universe.make u) (List.map Universe.make u') ->
+    R_universe_instance Re u u' ->
     eq_term_upto_univ Re Rle (tConstruct i k u) (tConstruct i k u')
 
 | eq_Lambda na na' ty ty' t t' :

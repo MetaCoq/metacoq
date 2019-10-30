@@ -138,6 +138,7 @@ Lemma eq_term_upto_univ_morphism0 (Re Re' : _ -> _ -> Prop)
 Proof.
   fix aux 3.
   destruct 1; constructor; eauto.
+  all: unfold R_universe_instance in *.
   all: match goal with
        | H : All2 _ _ _ |- _ => induction H; constructor; eauto
        | H : Forall2 _ _ _ |- _ => induction H; constructor; eauto
@@ -152,6 +153,7 @@ Lemma eq_term_upto_univ_morphism (Re Re' Rle Rle' : _ -> _ -> Prop)
 Proof.
   fix aux 3.
   destruct 1; constructor; eauto using eq_term_upto_univ_morphism0.
+  all: unfold R_universe_instance in *.
   all: match goal with
        | H : Forall2 _ _ _ |- _ => induction H; constructor;
                                    eauto using eq_term_upto_univ_morphism0

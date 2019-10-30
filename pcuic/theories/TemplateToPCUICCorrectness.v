@@ -361,6 +361,16 @@ Proof.
   - simpl in *. give_up.
 Abort.
 
+(* Lemma trans_build_branches_type :
+  forall ind mdecl idecl args u p brtys,
+    map_option_out (TTy.build_branches_type ind mdecl idecl args u p)
+    = Some brtys ->
+    map_option_out
+      (build_branches_type ind (trans_minductive_body mdecl)
+        (trans_one_ind_body idecl) (map trans args) u
+        (trans p))
+    = Some (map (on_snd trans) brtys). *)
+
 Lemma trans_types_of_case (Σ : T.global_env) ind mdecl idecl args p u pty indctx pctx ps btys :
   T.wf p -> T.wf pty -> T.wf (T.ind_type idecl) ->
   All T.wf args ->
@@ -456,6 +466,9 @@ Proof.
         change (map trans_decl) with trans_local in he.
         rewrite trans_local_subst_instance_context in he.
         rewrite he.
+
+        rewrite List.rev_length map_length in hctx''.
+
         (* apply PCUICSubstitution.instantiate_params_subst_make_context_subst
           in he as [ctx''' [hs0 hdecomp]].
         rewrite List.rev_length map_length in hdecomp.
@@ -488,6 +501,18 @@ Proof.
   (* specialize (H1 _ eq_refl). rewrite H1. *)
   (* congruence. *)
   (* intros. discriminate. *)
+
+        admit.
+  }
+  match goal with
+  | |- context [ map_option_out ?t ] =>
+    destruct (map_option_out t) eqn: e1
+  end. 2: discriminate.
+  specialize hb with (1 := eq_refl).
+  rewrite hb.
+  intro h. apply some_inj in h.
+  inversion h. subst.
+  reflexivity.
 Admitted.
 
 Hint Constructors T.wf : wf.

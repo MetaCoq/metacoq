@@ -528,38 +528,159 @@ Proof.
   rewrite mkApps_app. simpl. reflexivity.
 Qed.
 
-Lemma trans_eq_term ϕ T U :
-  T.wf T -> T.wf U -> TTy.eq_term ϕ T U ->
-  eq_term ϕ (trans T) (trans U).
+Derive Signature for TTy.eq_term_upto_univ.
+
+Lemma trans_eq_term :
+  forall φ t u,
+    T.wf t ->
+    T.wf u ->
+    TTy.eq_term φ t u ->
+    eq_term φ (trans t) (trans u).
 Proof.
-  intros HT HU H.
-(* TODO move eq_term to type in Template as well *)
-Admitted.
-(*   revert U HU H; induction HT using Template.Induction.term_wf_forall_list_ind; intros U HU HH; inversion HH; subst; simpl; repeat constructor; unfold eq_term in *; *)
-(*     inversion_clear HU; try easy. *)
-(*   - eapply Forall2_map. eapply Forall2_impl. *)
-(*     eapply Forall_Forall2_and. 2: eassumption. *)
-(*     eapply Forall_Forall2_and'; eassumption. *)
-(*     cbn. now intros x y [? [? ?]]. *)
-(*   - eapply PCUICCumulativity.eq_term_mkApps; unfold eq_term. easy. *)
-(*     eapply Forall2_map. eapply Forall2_impl. *)
-(*     eapply Forall_Forall2_and. 2: eassumption. *)
-(*     eapply Forall_Forall2_and'; eassumption. *)
-(*     cbn. now intros x y [? [? ?]]. *)
-(*   - eapply Forall2_map. eapply Forall2_impl. *)
-(*     eapply Forall_Forall2_and. 2: eassumption. *)
-(*     eapply Forall_Forall2_and'; eassumption. *)
-(*     cbn. intros x y [? [? ?]]. split ; easy. *)
-(*   - eapply Forall2_map. eapply Forall2_impl. *)
-(*     eapply Forall_Forall2_and. 2: exact H. *)
-(*     eapply Forall_Forall2_and. 2: exact H0. *)
-(*     eapply Forall_Forall2_and'; eassumption. *)
-(*     cbn. now intros x y [? [? ?]]. *)
-(*   - eapply Forall2_map. eapply Forall2_impl. *)
-(*     eapply Forall_Forall2_and. 2: exact H. *)
-(*     eapply Forall_Forall2_and'; eassumption. *)
-(*     cbn. now intros x y [? [? ?]]. *)
-(* Qed. *)
+  intros φ t u wt wu e.
+  induction t using Induction.term_forall_list_rect in wt, u, wu, e |- *.
+  all: dependent destruction e.
+  all: simpl.
+  all: try solve [ constructor ; auto ].
+  all: try solve [
+    constructor ;
+    match goal with
+    | ih : forall u : Tterm, _ |- _ =>
+      eapply ih ; [
+        inversion wt ; assumption
+      | inversion wu ; assumption
+      | assumption
+      ]
+    end
+  ].
+  - constructor.
+    assert (wl : Forall T.wf l).
+    { inversion wt. assumption. }
+    assert (wargs' : Forall T.wf args').
+    { inversion wu. assumption. }
+    induction H in wl, args', wargs', a |- *.
+    + dependent destruction a. constructor.
+    + dependent destruction a. simpl.
+      constructor.
+      * eapply p.
+        -- inversion wl. assumption.
+        -- inversion wargs'. assumption.
+        -- assumption.
+      * eapply IHAll.
+        -- assumption.
+        -- inversion wl. assumption.
+        -- inversion wargs'. assumption.
+  - constructor.
+    + constructor. 2: constructor.
+      eapply IHt2.
+      * inversion wt. assumption.
+      * inversion wu. assumption.
+      * assumption.
+    + eapply IHt1.
+      * inversion wt. assumption.
+      * inversion wu. assumption.
+      * assumption.
+  - eapply PCUICCumulativity.eq_term_mkApps.
+    + eapply IHt.
+      * inversion wt. assumption.
+      * inversion wu. assumption.
+      * assumption.
+    + pose proof (All2_All_mix_left H a) as h.
+      simpl in h.
+      assert (wl : Forall T.wf l).
+      { inversion wt. assumption. }
+      assert (wargs' : Forall T.wf args').
+      { inversion wu. assumption. }
+      apply Forall_All in wl.
+      apply Forall_All in wargs'.
+      pose proof (All2_All_mix_left wl h) as h1.
+      pose proof (All2_All_mix_right wargs' h1) as h2.
+      simpl in h2.
+      eapply All2_map.
+      eapply All2_impl. 1: exact h2.
+      simpl.
+      intros u v [[? [ih ?]] ?].
+      eapply ih. all: auto.
+  - constructor.
+    all: try solve [
+      match goal with
+      | ih : forall u : Tterm, _ |- _ =>
+        eapply ih ; [
+          inversion wt ; assumption
+        | inversion wu ; assumption
+        | assumption
+        ]
+      end
+    ].
+    assert (wl : All (T.wf ∘ snd) l).
+    { eapply Forall_All. inversion wt. assumption. }
+    assert (wbrs' : All (T.wf ∘ snd) brs').
+    { eapply Forall_All. inversion wu. assumption. }
+    pose proof (All2_All_mix_left X a) as h1. simpl in h1.
+    pose proof (All2_All_mix_left wl h1) as h2.
+    pose proof (All2_All_mix_right wbrs' h2) as h3.
+    simpl in h3.
+    eapply All2_map.
+    eapply All2_impl. 1: exact h3.
+    simpl.
+    intros [n u] [m v] [[? [ih [? ?]]] ?]. simpl in *.
+    intuition eauto.
+    eapply ih. all: auto.
+  - constructor.
+    assert (
+      w1 :
+        All (fun def =>
+          T.wf (dtype def) /\
+          T.wf (dbody def) /\
+          T.isLambda (dbody def) = true
+        ) m
+    ).
+    { eapply Forall_All. inversion wt. assumption. }
+    assert (
+      w2 :
+        All (fun def =>
+          T.wf (dtype def) /\
+          T.wf (dbody def) /\
+          T.isLambda (dbody def) = true
+        ) mfix'
+    ).
+    { eapply Forall_All. inversion wu. assumption. }
+    pose proof (All2_All_mix_left X a) as h1. simpl in h1.
+    pose proof (All2_All_mix_left w1 h1) as h2.
+    pose proof (All2_All_mix_right w2 h2) as h3.
+    simpl in h3.
+    eapply All2_map.
+    eapply All2_impl. 1: exact h3.
+    simpl.
+    intros [? ? ? ?] [? ? ? ?] [[[? [? ?]] [[ih1 ih2] [? [? ?]]]] [? [? ?]]].
+    simpl in *.
+    intuition eauto.
+    + eapply ih1. all: auto.
+    + eapply ih2. all: auto.
+  - constructor.
+    assert (
+      w1 :
+        All (fun def => T.wf (dtype def) /\ T.wf (dbody def)) m
+    ).
+    { eapply Forall_All. inversion wt. assumption. }
+    assert (
+      w2 :
+        All (fun def => T.wf (dtype def) /\ T.wf (dbody def)) mfix'
+    ).
+    { eapply Forall_All. inversion wu. assumption. }
+    pose proof (All2_All_mix_left X a) as h1. simpl in h1.
+    pose proof (All2_All_mix_left w1 h1) as h2.
+    pose proof (All2_All_mix_right w2 h2) as h3.
+    simpl in h3.
+    eapply All2_map.
+    eapply All2_impl. 1: exact h3.
+    simpl.
+    intros [? ? ? ?] [? ? ? ?] [[[? ?] [[ih1 ih2] [? [? ?]]]] [? ?]].
+    simpl in *.
+    intuition eauto.
+    + eapply ih1. all: auto.
+    + eapply ih2. all: auto.
+Qed.
 
 
 Lemma trans_eq_term_list :

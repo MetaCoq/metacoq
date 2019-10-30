@@ -345,6 +345,22 @@ Proof.
     reflexivity.
 Qed.
 
+Lemma trans_decompose_prod_assum :
+  forall Γ t,
+    let '(Δ, c) := AstUtils.decompose_prod_assum Γ t in
+    decompose_prod_assum (trans_local Γ) (trans t) = (trans_local Δ, trans c).
+Proof.
+  intros Γ t.
+  destruct AstUtils.decompose_prod_assum as [Δ c] eqn:e.
+  induction t in Γ, Δ, c, e |- *.
+  (* all: simpl in *. *)
+  all: try solve [ inversion e ; subst ; reflexivity ].
+  - eapply IHt1 in e as e'. give_up.
+  - eapply IHt2 in e as e'. assumption.
+  - eapply IHt3 in e as e'. assumption.
+  - simpl in *. give_up.
+Abort.
+
 Lemma trans_types_of_case (Σ : T.global_env) ind mdecl idecl args p u pty indctx pctx ps btys :
   T.wf p -> T.wf pty -> T.wf (T.ind_type idecl) ->
   All T.wf args ->

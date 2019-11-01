@@ -2853,3 +2853,6 @@ Proof.
   - dependent destruction h2.
     forward IHh1 ; auto.
 Qed.
+
+Notation on_Trel_eq R f g :=
+  (fun x y => (R (f x) (f y) * (g x = g y)))%type.

@@ -1390,12 +1390,12 @@ Proof.
     now rewrite subst_context_snoc0 in IHred1.
 
   - constructor.
-    induction X; constructor; auto.
-    intuition auto; eauto.
-    forward b. inv wfM. now inv H1.
-    specialize (b _ _ _ eq_refl).
-    destruct hd, hd'; simpl in *. now eapply b.
-    eapply IHX. inv wfM; eauto. inv H1; eauto with wf.
+    induction X. all: simpl. all: constructor.
+    + intuition auto. simpl. eapply b0. all: auto.
+      inversion wfM. subst. inversion H5. subst. auto.
+    + eapply IHX. inversion wfM. subst.
+      constructor. all: auto.
+      inversion H5. subst. assumption.
 
   - forward IHred1; try now inv wfM.
     assert(All (Ast.wf ∘ subst s #|Γ''|) M2).

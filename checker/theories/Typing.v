@@ -230,7 +230,9 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
 
 | case_red_pred ind p p' c brs : red1 Σ Γ p p' -> red1 Σ Γ (tCase ind p c brs) (tCase ind p' c brs)
 | case_red_discr ind p c c' brs : red1 Σ Γ c c' -> red1 Σ Γ (tCase ind p c brs) (tCase ind p c' brs)
-| case_red_brs ind p c brs brs' : OnOne2 (fun x y => red1 Σ Γ (snd x) (snd y)) brs brs' -> red1 Σ Γ (tCase ind p c brs) (tCase ind p c brs')
+| case_red_brs ind p c brs brs' :
+    OnOne2 (on_Trel_eq (red1 Σ Γ) snd fst) brs brs' ->
+    red1 Σ Γ (tCase ind p c brs) (tCase ind p c brs')
 
 | proj_red p c c' : red1 Σ Γ c c' -> red1 Σ Γ (tProj p c) (tProj p c')
 
@@ -320,8 +322,8 @@ Lemma red1_ind_all :
         red1 Σ Γ c c' -> P Γ c c' -> P Γ (tCase ind p c brs) (tCase ind p c' brs)) ->
 
        (forall (Γ : context) (ind : inductive * nat) (p c : term) (brs brs' : list (nat * term)),
-           OnOne2 (fun x y : nat * term => red1 Σ Γ (snd x) (snd y) * P Γ (snd x) (snd y)) brs brs' ->
-           P Γ (tCase ind p c brs) (tCase ind p c brs')) ->
+          OnOne2 (on_Trel_eq (Trel_conj (red1 Σ Γ) (P Γ)) snd fst) brs brs' ->
+          P Γ (tCase ind p c brs) (tCase ind p c brs')) ->
 
        (forall (Γ : context) (p : projection) (c c' : term), red1 Σ Γ c c' -> P Γ c c' -> P Γ (tProj p c) (tProj p c')) ->
 
@@ -385,8 +387,8 @@ Proof.
   - revert brs brs' o.
     fix auxl 3.
     intros l l' Hl. destruct Hl.
-    constructor. split; auto.
-    constructor. auto.
+    + constructor. intuition eauto.
+    + constructor. auto.
 
   - revert M2 N2 o.
     fix auxl 3.

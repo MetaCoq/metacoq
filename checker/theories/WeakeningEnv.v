@@ -84,7 +84,8 @@ Qed.
 Hint Resolve extends_wf_local : extends.
 
 Lemma weakening_env_red1 `{CF:checker_flags} Σ Σ' Γ M N :
-  wf Σ' -> extends Σ Σ' ->
+  wf Σ' ->
+  extends Σ Σ' ->
   red1 Σ Γ M N ->
   red1 Σ' Γ M N.
 Proof.

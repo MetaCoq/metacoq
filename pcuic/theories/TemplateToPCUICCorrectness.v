@@ -1009,7 +1009,8 @@ Ltac wf_inv H := try apply wf_inv in H; simpl in H; repeat destruct_conjs.
 Lemma trans_red1 Σ Γ T U :
   TTy.on_global_env (fun Σ => wf_decl_pred) Σ ->
   List.Forall wf_decl Γ ->
-  T.wf T -> TTy.red1 Σ Γ T U ->
+  T.wf T ->
+  TTy.red1 Σ Γ T U ->
   red1 (map trans_global_decl Σ) (trans_local Γ) (trans T) (trans U).
 Proof.
   intros wfΣ wfΓ Hwf.
@@ -1060,10 +1061,11 @@ Proof.
 
   - constructor. apply IHX. constructor; hnf; simpl; auto. auto.
 
-  - constructor. solve_all. solve_all.
+  - constructor. solve_all.
     apply OnOne2_map. apply (OnOne2_All_mix_left H1) in X. clear H1.
-    solve_all. red. simpl. simpl in *. split; auto. apply b1. solve_all. simpl. auto.
-    admit. (* Need to update template-coq's red1 with annotation preservation *)
+    solve_all. red. unfold compose in *. simpl in *.
+    intuition eauto.
+    apply b2. all: solve_all.
 
   - rewrite !trans_mkApps; auto with wf. eapply wf_red1 in X; auto.
     apply PCUICSubstitution.red1_mkApps_l. auto.

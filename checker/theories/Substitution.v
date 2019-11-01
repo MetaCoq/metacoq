@@ -1433,40 +1433,49 @@ Proof.
 
   - constructor.
     rewrite -> (OnOne2_length X). generalize (#|mfix1|).
-    induction X; simpl; constructor; auto.
-    intuition. eapply b; eauto.
-    inv wfM. inv H. intuition; auto.
-    apply IHX. inv wfM. inv H. intuition.
+    induction X. all: simpl. all: constructor. all: simpl.
+    + intuition eauto.
+      * eapply b0. all: eauto.
+        inv wfM. inv H. intuition eauto.
+      * inversion b. auto.
+    + eapply IHX. constructor.
+      apply wf_fix in wfM. inv wfM. assumption.
 
   - apply wf_fix in wfM.
     apply fix_red_body. rewrite !subst_fix_context.
-    solve_all. apply (OnOne2_All_mix_left wfM) in X. clear wfM.
+    solve_all. apply (OnOne2_All_mix_left wfM) in X. (* clear wfM. *)
     rewrite <- (OnOne2_length X).
-    eapply OnOne2_map. unfold on_Trel; solve_all.
-    specialize (X Γ0 Γ' (Γ'' ,,, fix_context mfix0)).
-    rewrite app_context_assoc in X. specialize (X eq_refl).
-    rewrite -> app_context_length, fix_context_length in *.
-    rewrite -> subst_context_app in *.
-    rewrite -> app_context_assoc, Nat.add_0_r in *.
-    auto.
+    eapply OnOne2_map. unfold on_Trel. solve_all.
+    + specialize (X Γ0 Γ' (Γ'' ,,, fix_context mfix0)).
+      rewrite app_context_assoc in X. specialize (X eq_refl).
+      rewrite -> app_context_length, fix_context_length in *.
+      rewrite -> subst_context_app in *.
+      rewrite -> app_context_assoc, Nat.add_0_r in *.
+      auto.
+    + inversion b0. auto.
 
-  - apply wf_cofix in wfM. constructor.
+  - constructor.
     rewrite -> (OnOne2_length X). generalize (#|mfix1|).
-    induction X; simpl; constructor; auto.
-    intuition. eapply b; eauto. now inv wfM.
-    apply IHX. now inv wfM; inv H0.
+    induction X. all: simpl. all: constructor. all: simpl.
+    + intuition eauto.
+      * eapply b0. all: eauto.
+        inv wfM. inv H. intuition eauto.
+      * inversion b. auto.
+    + eapply IHX. constructor.
+      apply wf_cofix in wfM. inv wfM. assumption.
 
-  - apply wf_cofix in wfM.
-    apply cofix_red_body. rewrite !subst_fix_context.
-    solve_all. apply (OnOne2_All_mix_left wfM) in X. clear wfM.
-    rewrite <- (OnOne2_length X).
-    eapply OnOne2_map. unfold on_Trel; solve_all.
-    specialize (X Γ0 Γ' (Γ'' ,,, fix_context mfix0)).
-    rewrite app_context_assoc in X. specialize (X eq_refl).
-    rewrite -> app_context_length, fix_context_length in *.
-    rewrite -> subst_context_app in *.
-    rewrite -> app_context_assoc, Nat.add_0_r in *.
-    auto.
+    - apply wf_cofix in wfM.
+      apply cofix_red_body. rewrite !subst_fix_context.
+      solve_all. apply (OnOne2_All_mix_left wfM) in X. (* clear wfM. *)
+      rewrite <- (OnOne2_length X).
+      eapply OnOne2_map. unfold on_Trel. solve_all.
+      + specialize (X Γ0 Γ' (Γ'' ,,, fix_context mfix0)).
+        rewrite app_context_assoc in X. specialize (X eq_refl).
+        rewrite -> app_context_length, fix_context_length in *.
+        rewrite -> subst_context_app in *.
+        rewrite -> app_context_assoc, Nat.add_0_r in *.
+        auto.
+      + inversion b0. auto.
 Qed.
 
 Lemma eq_term_upto_univ_refl Re Rle :

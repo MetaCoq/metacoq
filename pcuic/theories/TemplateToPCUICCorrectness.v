@@ -1006,6 +1006,8 @@ Proof.
 Qed.
 Ltac wf_inv H := try apply wf_inv in H; simpl in H; repeat destruct_conjs.
 
+Derive Signature for All.
+
 Lemma trans_red1 Σ Γ T U :
   TTy.on_global_env (fun Σ => wf_decl_pred) Σ ->
   List.Forall wf_decl Γ ->
@@ -1087,62 +1089,73 @@ Proof.
   - constructor. apply OnOne2_map. repeat toAll.
     apply (OnOne2_All_mix_left Hwf) in X. clear Hwf.
     solve_all.
-    red. rewrite <- !map_dtype. rewrite <- !map_dbody. intuition eauto.
-    eapply b0; solve_all; eauto. rewrite b. auto. simpl.
-    admit. (* Annotation preservation *)
+    red. rewrite <- !map_dtype. rewrite <- !map_dbody.
+    inversion b0. clear b0.
+    intuition eauto.
+    + eapply b. all: solve_all.
+    + unfold map_def. simpl.
+      f_equal. 2: auto.
+      f_equal. assumption.
 
   - apply fix_red_body. apply OnOne2_map. repeat toAll.
     apply (OnOne2_All_mix_left Hwf) in X.
     solve_all.
     red. rewrite <- !map_dtype. rewrite <- !map_dbody. intuition eauto.
-    unfold Template.Ast.app_context, trans_local in b0.
-    simpl in a. rewrite -> map_app in b0.
-    unfold app_context. unfold Checker.Typing.fix_context in b0.
-    rewrite map_rev map_mapi in b0. simpl in b0.
-    unfold fix_context. rewrite mapi_map. simpl.
-    forward b0.
-    { clear b0. solve_all. eapply All_app_inv; auto.
-      apply All_rev. apply All_mapi. simpl.
-      clear -Hwf; generalize 0 at 2; induction mfix0; constructor; hnf; simpl; auto.
-      intuition auto. depelim a. simpl. depelim Hwf. simpl in *. intuition auto.
-      now eapply LiftSubst.wf_lift.
-      depelim a. simpl. depelim Hwf. simpl in *. intuition auto. }
-    forward b0 by auto.
-    eapply (refine_red1_Γ); [|apply b0].
-    f_equal. f_equal. apply mapi_ext; intros [] [].
-    rewrite lift0_p. simpl. rewrite LiftSubst.lift0_p. reflexivity.
-    rewrite trans_lift. simpl. reflexivity. simpl.
-    rewrite b. admit.
+    + unfold Template.Ast.app_context, trans_local in b.
+      simpl in a. rewrite -> map_app in b.
+      unfold app_context. unfold Checker.Typing.fix_context in b.
+      rewrite map_rev map_mapi in b. simpl in b.
+      unfold fix_context. rewrite mapi_map. simpl.
+      forward b.
+      { clear b. solve_all. eapply All_app_inv; auto.
+        apply All_rev. apply All_mapi.
+        clear -Hwf; generalize 0 at 2; induction mfix0; constructor; hnf; simpl; auto.
+        intuition auto. depelim a. simpl. depelim Hwf. simpl in *. intuition auto.
+        now eapply LiftSubst.wf_lift.
+        depelim a. simpl. depelim Hwf. simpl in *. intuition auto.
+      }
+      forward b by auto.
+      eapply (refine_red1_Γ); [|apply b].
+      f_equal. f_equal. apply mapi_ext; intros [] [].
+      rewrite lift0_p. simpl. rewrite LiftSubst.lift0_p. reflexivity.
+      rewrite trans_lift. simpl. reflexivity.
+    + simpl. inversion b0. reflexivity.
 
-  - constructor. solve_all. apply OnOne2_map. repeat toAll.
+  - constructor. apply OnOne2_map. repeat toAll.
     apply (OnOne2_All_mix_left Hwf) in X. clear Hwf.
     solve_all.
-    red. rewrite <- !map_dtype. rewrite <- !map_dbody. intuition eauto.
-    apply b0. toAll. auto. auto. rewrite b. auto. simpl. admit.
+    red. rewrite <- !map_dtype. rewrite <- !map_dbody.
+    inversion b0. clear b0.
+    intuition eauto.
+    + eapply b. all: solve_all.
+    + unfold map_def. simpl.
+      f_equal. 2: auto.
+      f_equal. assumption.
 
   - apply cofix_red_body. apply OnOne2_map. repeat toAll.
     apply (OnOne2_All_mix_left Hwf) in X.
     solve_all.
     red. rewrite <- !map_dtype. rewrite <- !map_dbody. intuition eauto.
-    unfold Template.Ast.app_context, trans_local in b0.
-    simpl in a. rewrite -> map_app in b0.
-    unfold app_context. unfold Checker.Typing.fix_context in b0.
-    rewrite map_rev map_mapi in b0. simpl in b0.
-    unfold fix_context. rewrite mapi_map. simpl.
-    forward b0.
-    { solve_all. eapply All_app_inv; auto.
-      apply All_rev. apply All_mapi. simpl.
-      clear -Hwf; generalize 0 at 2; induction mfix0; constructor; hnf; simpl; auto.
-      intuition auto. depelim a. simpl. depelim Hwf. simpl in *. intuition auto.
-      now eapply LiftSubst.wf_lift.
-      depelim a. simpl. depelim Hwf. simpl in *. intuition auto. }
-    forward b0 by auto.
-    eapply (refine_red1_Γ); [|apply b0].
-    f_equal. f_equal. apply mapi_ext; intros [] [].
-    rewrite lift0_p. simpl. rewrite LiftSubst.lift0_p. reflexivity.
-    rewrite trans_lift. simpl. reflexivity. simpl.
-    rewrite b. admit.
-Admitted.
+    + unfold Template.Ast.app_context, trans_local in b.
+      simpl in a. rewrite -> map_app in b.
+      unfold app_context. unfold Checker.Typing.fix_context in b.
+      rewrite map_rev map_mapi in b. simpl in b.
+      unfold fix_context. rewrite mapi_map. simpl.
+      forward b.
+      { clear b. solve_all. eapply All_app_inv; auto.
+        apply All_rev. apply All_mapi.
+        clear -Hwf; generalize 0 at 2; induction mfix0; constructor; hnf; simpl; auto.
+        intuition auto. depelim a. simpl. depelim Hwf. simpl in *. intuition auto.
+        now eapply LiftSubst.wf_lift.
+        depelim a. simpl. depelim Hwf. simpl in *. intuition auto.
+      }
+      forward b by auto.
+      eapply (refine_red1_Γ); [|apply b].
+      f_equal. f_equal. apply mapi_ext; intros [] [].
+      rewrite lift0_p. simpl. rewrite LiftSubst.lift0_p. reflexivity.
+      rewrite trans_lift. simpl. reflexivity.
+    + simpl. inversion b0. reflexivity.
+Qed.
 
 Lemma global_ext_levels_trans Σ
   : global_ext_levels (trans_global Σ) = TTy.global_ext_levels Σ.

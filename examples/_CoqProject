@@ -1,0 +1,8 @@
+-I ../template-coq/build
+-Q ../template-coq/theories MetaCoq.Template
+-Q ../checker/theories MetaCoq.Checker
+-R . MetaCoq.Examples
+
+demo.v
+add_constructor.v
+tauto.v

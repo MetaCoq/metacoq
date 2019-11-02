@@ -60,9 +60,9 @@ Program Fixpoint check_wf_env_only_univs (Σ : global_env)
   | nil => ret (init_graph; _)
   | d :: Σ =>
     G <- check_wf_env_only_univs Σ ;;
-    check_fresh (PCUICTyping.global_decl_ident d) Σ ;;
+    check_fresh (PCUICReduction.global_decl_ident d) Σ ;;
     let udecl := universes_decl_of_decl d in
-    uctx <- check_udecl (PCUICTyping.global_decl_ident d) Σ _ G.π1 (proj1 G.π2) udecl ;;
+    uctx <- check_udecl (PCUICReduction.global_decl_ident d) Σ _ G.π1 (proj1 G.π2) udecl ;;
     let G' := add_uctx uctx.π1 G.π1 in
     assume_wf_decl (Σ, udecl) _ _ G' _ d ;;
     match udecl with

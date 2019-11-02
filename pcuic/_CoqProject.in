@@ -39,6 +39,7 @@ theories/PCUICCheckerCompleteness.v
 theories/PCUICRetyping.v
 theories/PCUICElimination.v
 theories/PCUICSN.v
+theories/PCUICConversionLemmas.v
 
 theories/PCUICSigmaCalculus.v
 

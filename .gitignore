@@ -355,6 +355,10 @@ pcuic/src/pCUICUtils.mli
 /erasure/src/pCUICSafeRetyping.mli
 /erasure/src/safeErasureFunction.ml
 /erasure/src/safeErasureFunction.mli
+erasure/src/pCUICConversion.ml
+erasure/src/pCUICConversion.mli
+erasure/src/pCUICReduction.ml
+erasure/src/pCUICReduction.mli
 
 template-coq/gen-src/cRelationClasses.mli.rej
 .DS_Store

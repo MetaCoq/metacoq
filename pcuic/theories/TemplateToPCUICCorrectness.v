@@ -978,7 +978,7 @@ Proof.
     clear H1 X0 H H0. revert H2.
     induction X1. econstructor; eauto.
     (* Need updated typing_spine in template-coq *) admit.
-    simpl in p.
+    reflexivity. simpl in p.
     destruct (TypingWf.typing_wf _ wfΣ _ _ _ typrod) as [wfAB _].
     intros wfT.
     econstructor; eauto. right. exists s; eauto.

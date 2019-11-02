@@ -55,7 +55,7 @@ Lemma Informative_extends:
   forall (Σ : global_env_ext) (ind : inductive)
     (mdecl : PCUICAst.mutual_inductive_body) (idecl : PCUICAst.one_inductive_body),
 
-    PCUICTyping.declared_inductive (fst Σ) mdecl ind idecl ->
+    PCUICReduction.declared_inductive (fst Σ) mdecl ind idecl ->
     forall (Σ' : global_env) (u0 : universe_instance),
       wf Σ' ->
       extends Σ Σ' ->
@@ -68,7 +68,7 @@ Proof.
 
   eapply weakening_env_declared_inductive in H; eauto.
   destruct H, H1.
-  unfold PCUICTyping.declared_minductive in *.
+  unfold PCUICReduction.declared_minductive in *.
 
   eapply extends_lookup in H1; eauto.
   rewrite H1 in H. inversion H. subst. clear H.

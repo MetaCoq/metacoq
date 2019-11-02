@@ -300,7 +300,7 @@ Lemma subslet_fix_subst `{cf : checker_flags} Σ mfix1 T n :
   wf Σ.1 ->
   Σ ;;; [] |- tFix mfix1 n : T ->
   (* wf_local Σ (PCUICLiftSubst.fix_context mfix1) -> *)
-  subslet Σ [] (PCUICTyping.fix_subst mfix1) (PCUICLiftSubst.fix_context mfix1).
+  subslet Σ [] (fix_subst mfix1) (PCUICLiftSubst.fix_context mfix1).
 Proof.
   intro hΣ.
   unfold fix_subst, PCUICLiftSubst.fix_context.
@@ -343,8 +343,6 @@ Proof.
   - cbn; eauto.
   - destruct a. destruct decl_body.
     + cbn. econstructor. inv X0. eauto. econstructor.
-      depelim X0.
-      eapply PCUICCumulativity.conv_alt_refl; reflexivity.
-    + cbn. econstructor. inv X0. eauto. econstructor.
-      eapply PCUICCumulativity.conv_alt_refl; reflexivity.
+      depelim X0. reflexivity.
+    + cbn. econstructor. inv X0. eauto. econstructor. reflexivity.
 Qed.

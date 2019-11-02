@@ -114,12 +114,13 @@ Section Validity.
       typing_spine Σ Γ T' u U ×
       Σ ;;; Γ |- U <= T.
   Proof.
-    induction u in f, fty, T |- *. simpl. intros. exists T, T. intuition auto. constructor.
-    admit. auto.
-    intros Hf Hty. simpl in Hty.
-    specialize (IHu _ fty _ Hf) as [T' [U' [H' [H'' H''']]]].
-    simpl in Hf.
-    econstructor.
+    induction u in f, fty, T |- *.
+    - simpl. intros. exists T, T. intuition auto; try reflexivity. constructor.
+      admit. reflexivity.
+    - intros Hf Hty. simpl in Hty.
+      specialize (IHu _ fty _ Hf) as [T' [U' [H' [H'' H''']]]].
+      simpl in Hf.
+      econstructor.
 
   Admitted.
   (*   eapply invert_type_App in H' as (fA & fB & fna & Hf). intuition. *)
@@ -337,12 +338,12 @@ Lemma inversion_mkApps :
 Proof.
   intros cf Σ Γ t l T hΣ h.
   induction l in t, T, h |- *.
-  - cbn in h. exists T, T. repeat split ; auto.
+  - cbn in h. exists T, T. repeat split ; auto; try reflexivity.
     constructor.
     + eapply validity' ; eauto.
     + apply cumul_refl'.
   - simpl in h. eapply IHl in h as [C [U [h1 [h2 h3]]]].
-    apply inversion_App in h1 as [na [A [B [ht [ha hc]]]]].
+    apply inversion_App in h1 as [na [A [B [ht [ha hc]]]]]; tas.
     eexists (tProd na A B), _. split ; [| split].
     + assumption.
     + econstructor. 2: eapply cumul_refl'.

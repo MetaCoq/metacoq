@@ -8,7 +8,7 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICInduct
      PCUICWeakening PCUICSubstitution PCUICChecker PCUICRetyping PCUICMetaTheory
      PCUICWcbvEval PCUICSR  PCUICClosed PCUICInversion PCUICUnivSubstitution
      PCUICEquality PCUICConversion (* PCUICContextConversion *) PCUICElimination
-     PCUICUnivSubst PCUICWeakeningEnv.
+     PCUICUnivSubst PCUICWeakeningEnv PCUICConversionLemmas.
 
 Require Import String.
 Local Open Scope string_scope.
@@ -82,7 +82,7 @@ Notation "Σ ⊢ s ▷ t" := (Ee.eval Σ s t) (at level 50, s, t at next level) 
 
 Lemma Is_type_conv_context (Σ : global_env_ext) (Γ : context) t (Γ' : context) :
   wf Σ -> wf_local Σ Γ -> wf_local Σ Γ' ->
-  PCUICContextConversion.conv_context Σ Γ Γ' -> isErasable Σ Γ t -> isErasable Σ Γ' t.
+  conv_context Σ Γ Γ' -> isErasable Σ Γ t -> isErasable Σ Γ' t.
 Proof.
   intros.
   destruct X3 as (? & ? & ?). red.
@@ -96,7 +96,7 @@ Lemma wf_local_rel_conv:
   forall Σ : global_env × universes_decl,
     wf Σ.1 ->
     forall Γ Γ' : context,
-      PCUICContextConversion.context_relation (PCUICContextConversion.conv_decls Σ) Γ Γ' ->
+      context_relation (conv_decls Σ) Γ Γ' ->
       forall Γ0 : context, wf_local Σ Γ' -> wf_local_rel Σ Γ Γ0 -> wf_local_rel Σ Γ' Γ0.
 Proof.
   intros Σ wfΣ Γ Γ' X1 Γ0 ? w0. induction w0.
@@ -125,7 +125,7 @@ Lemma erases_context_conversion :
 env_prop
   (fun (Σ : PCUICAst.global_env_ext) (Γ : PCUICAst.context) (t T : PCUICAst.term) =>
       forall Γ' : PCUICAst.context,
-        PCUICContextConversion.conv_context Σ Γ Γ' ->
+        conv_context Σ Γ Γ' ->
         wf_local Σ Γ' ->
         forall t', erases Σ Γ t t' -> erases Σ Γ' t t').
 Proof.
@@ -134,13 +134,13 @@ Proof.
   Hint Resolve Is_type_conv_context.
   all: try now (econstructor; eauto).
   - econstructor. eapply h_forall_Γ'0.
-    econstructor. eauto. constructor. eapply conv_alt_refl, eq_term_refl.
+    econstructor. eauto. now constructor.
     constructor; auto.
     exists s1.
     eapply PCUICContextConversion.context_conversion. 3:eauto. all:eauto.
   - econstructor. eauto. eapply h_forall_Γ'1.
     econstructor. eauto. constructor.
-    eapply PCUICCumulativity.conv_alt_refl; reflexivity.
+    reflexivity.
     constructor; auto. exists s1.
     eapply PCUICContextConversion.context_conversion with Γ; eauto.
     eapply PCUICContextConversion.context_conversion with Γ; eauto.
@@ -384,7 +384,7 @@ Qed.
 Lemma lookup_env_erases (Σ : global_env_ext) c decl Σ' :
   wf Σ ->
   erases_global Σ Σ' ->
-  PCUICTyping.lookup_env (fst Σ) c = Some (ConstantDecl c decl) ->
+  PCUICReduction.lookup_env (fst Σ) c = Some (ConstantDecl c decl) ->
   exists decl', ETyping.lookup_env Σ' c = Some (EAst.ConstantDecl c decl') /\
            erases_constant_body (Σ.1, cst_universes decl)  decl decl'.
 Proof.
@@ -502,8 +502,8 @@ Proof.
         assert (Σ ;;; [] |- a' : t). {
           eapply subject_reduction_eval; eauto.
           eapply cumul_Prod_inv in c0 as [].
-          econstructor. eassumption. eauto. eapply conv_alt_sym in c0; eauto.
-          now eapply conv_alt_cumul. auto. auto. }
+          econstructor. eassumption. eauto. eapply conv_sym in c0; eauto.
+          now eapply conv_cumul. auto. auto. }
       inv Hvf'.
       * assert (Σ;;; [] |- PCUICLiftSubst.subst1 a' 0 b ⇝ℇ subst1 vu' 0 t').
         eapply (erases_subst Σ [] [PCUICAst.vass na t] [] b [a'] t'); eauto.
@@ -531,11 +531,11 @@ Proof.
 
     inv He.
     + eapply IHeval1 in H6 as (vt1' & Hvt2' & He_vt1'); eauto.
-      assert (Hc : PCUICContextConversion.conv_context Σ ([],, vdef na b0 t) [vdef na b0' t]). {
+      assert (Hc : conv_context Σ ([],, vdef na b0 t) [vdef na b0' t]). {
         econstructor. econstructor. econstructor.
-        eapply PCUICCumulativity.red_conv_alt.
+        eapply PCUICCumulativity.red_conv.
         eapply wcbeval_red; eauto.
-        eapply PCUICCumulativity.conv_alt_refl; reflexivity.
+        reflexivity.
       }
       assert (Σ;;; [vdef na b0' t] |- b1 : x0). {
         cbn in *. eapply PCUICContextConversion.context_conversion. 3:eauto. all:cbn; eauto.

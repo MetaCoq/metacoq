@@ -170,7 +170,7 @@ Next Obligation.
 
      eapply conv_context_refl; eauto. econstructor.
 
-     eapply PCUICConversion.conv_sym, red_conv; eauto.
+     eapply conv_sym, red_conv; eauto.
   ++ sq. etransitivity. eassumption.
 
      eapply context_conversion_red; eauto. econstructor.
@@ -179,7 +179,7 @@ Next Obligation.
 
      econstructor.
 
-     eapply PCUICConversion.conv_sym, red_conv; eauto.
+     eapply conv_sym, red_conv; eauto.
 Qed.
 
 Next Obligation.
@@ -255,11 +255,9 @@ Next Obligation.
     eapply cumul_prop1 in c; eauto.
     eapply cumul_prop2 in c0; eauto.
 
-    eapply type_reduction in X0; eauto.
+    eapply type_reduction in X0; eauto using typing_wf_local.
 
     eapply principal_typing in c0 as (? & ? & ? & ?). 2:eauto. 2:{ exact X0. }
-
-    eapply cumul_prop1 in c; eauto.
 
     destruct (invert_cumul_sort_r _ _ _ _ c0) as (? & ? & ?).
     destruct (invert_cumul_sort_r _ _ _ _ c1) as (? & ? & ?).
@@ -270,7 +268,6 @@ Next Obligation.
 
     eapply leq_universe_prop in l0 as []; cbn; eauto.
     eapply leq_universe_prop in l as []; cbn; eauto.
-    eauto using typing_wf_local.
 Qed.
 
 (* Program Definition is_erasable (Sigma : PCUICAst.global_env_ext) (HΣ : ∥wf_ext Sigma∥) (Gamma : context) (HΓ : ∥wf_local Sigma Gamma∥) (t : PCUICAst.term) : *)

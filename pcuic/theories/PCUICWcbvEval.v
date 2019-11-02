@@ -807,7 +807,7 @@ Proof.
 
   - eapply red_mkApps; auto.
 
-  - redt _. eapply red1_red. eapply PCUICTyping.red_cofix_case; eauto. eauto.
+  - redt _. eapply red1_red. eapply PCUICReduction.red_cofix_case; eauto. eauto.
 
   - redt _. 2:eauto.
     redt (tProj _ (mkApps _ _)). eapply red_proj_c. eauto.

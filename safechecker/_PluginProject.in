@@ -55,8 +55,8 @@ src/pCUICNormal.ml
 # src/pCUICWeakeningEnv.mli
 # src/pCUICWeakening.mli
 # src/pCUICWeakening.ml
-# src/pCUICReduction.mli
-# src/pCUICReduction.ml
+src/pCUICReduction.mli
+src/pCUICReduction.ml
 # src/pCUICSubstitution.ml
 # src/pCUICSubstitution.mli
 # src/pCUICNameless.mli
@@ -65,8 +65,8 @@ src/pCUICNormal.ml
 # src/pCUICGeneration.ml
 # src/pCUICContextConversion.mli
 # src/pCUICContextConversion.ml
-# src/pCUICConversion.mli
-# src/pCUICConversion.ml
+src/pCUICConversion.mli
+src/pCUICConversion.ml
 src/pCUICSafeLemmata.mli
 src/pCUICSafeLemmata.ml
 src/templateToPCUIC.mli

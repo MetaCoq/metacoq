@@ -1,7 +1,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICMetaTheory PCUICWcbvEval PCUICLiftSubst PCUICInversion PCUICSR PCUICNormal PCUICSafeLemmata PCUICPrincipality PCUICGeneration PCUICSubstitution PCUICElimination PCUICEquality PCUICContextConversion PCUICConversion.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICMetaTheory PCUICWcbvEval PCUICLiftSubst PCUICInversion PCUICSR PCUICNormal PCUICSafeLemmata PCUICPrincipality PCUICGeneration PCUICSubstitution PCUICElimination PCUICEquality PCUICContextConversion PCUICConversion PCUICConfluence PCUICConversionLemmas.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker.
 
 From MetaCoq.Erasure Require EAst ELiftSubst ETyping EWcbvEval Extract.
@@ -124,11 +124,11 @@ Lemma typing_spine_red :
 Proof.
   intros Σ Γ args args' X wf T x x0 t0 c x1 c0 ?. revert args' X.
   dependent induction t0; intros.
-  - inv X. econstructor. eauto. eapply PCUICConversion.cumul_trans. assumption.
-    eauto. eapply PCUICConversion.cumul_trans. assumption. eauto. eauto.
+  - inv X. econstructor. eauto. eapply cumul_trans. assumption.
+    eauto. eapply cumul_trans. assumption. eauto. eauto.
   - inv X. econstructor.
     + eauto.
-    + eapply PCUICConversion.cumul_trans ; eauto.
+    + eapply cumul_trans ; eauto.
     + eapply subject_reduction; eauto.
     + eapply IHt0; eauto.
       eapply PCUICCumulativity.red_cumul_inv.
@@ -314,7 +314,6 @@ Proof.
   induction Γ; try econstructor.
   intros wfΣ wfΓ; depelim wfΓ; econstructor; eauto;
   constructor; auto.
-  - constructor; eapply cumul_refl; reflexivity.
 Qed.
 
 Lemma context_conversion_red1 (Σ : global_env_ext) Γ Γ' s t : wf Σ -> (* Σ ;;; Γ' |- t : T -> *)
@@ -453,7 +452,7 @@ Proof.
     eapply invert_cumul_prod_r in c as (? & ? & ? & [] & ?); eauto.
     eapply subject_reduction in c0. 3:eauto. 2:eauto.
     eapply inversion_Prod in c0 as (? & ? & ? & ? & ?) ; auto.
-    eapply PCUICConversion.cumul_Sort_inv in c0.
+    eapply cumul_Sort_inv in c0.
     eapply leq_universe_prop in c0 as []; cbn; eauto.
 
     eapply is_prop_sort_prod in H0. eapply IHt1. exact H0.
@@ -491,7 +490,7 @@ Proof.
     destruct c1 as (? & ? & ?). destruct H as [].
     eapply PCUICCumulativity.red_cumul_inv in X.
 
-    eapply invert_cumul_arity_l in H0 as (? & ? & ?). 2: eapply PCUICConversion.cumul_trans; eauto.
+    eapply invert_cumul_arity_l in H0 as (? & ? & ?). 2: eapply cumul_trans; eauto.
     destruct H.
     eapply typing_spine_red in t1. 2:{ eapply PCUICCumulativity.All_All2_refl.
                                                   clear. induction L; eauto. }

@@ -11,7 +11,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICSubstitution PCUICClosed PCUICCumulativity PCUICGeneration PCUICReduction
      PCUICParallelReduction PCUICEquality PCUICAlpha
      PCUICValidity PCUICParallelReductionConfluence PCUICConfluence
-     PCUICContextConversion PCUICUnivSubstitution
+     PCUICContextConversion PCUICUnivSubstitution PCUICConversionLemmas
      PCUICConversion PCUICInversion PCUICPrincipality.
 
 Require Import ssreflect ssrbool.
@@ -46,7 +46,7 @@ Lemma type_mkApps_inv {cf:checker_flags} (Σ : global_env_ext) Γ f u T : wf Σ 
 Proof.
   intros wfΣ; induction u in f, T |- *. simpl. intros.
   { exists T, T. intuition auto. constructor. eapply validity; auto.
-    now eapply typing_wf_local. eauto. eapply cumul_refl'. }
+    now eapply typing_wf_local. eauto. all: eapply cumul_refl'. }
   intros Hf. simpl in Hf.
   destruct u. simpl in Hf.
   - eapply inversion_App in Hf as [na' [A' [B' [Hf' [Ha HA''']]]]].
@@ -111,7 +111,7 @@ Proof.
                          rewrite Hi. f_equal. lia.
     + subst types. rewrite simpl_subst_k.
       * now rewrite fix_context_length fix_subst_length.
-      * auto.
+      * reflexivity.
   - destruct (IHtyping wfΣ) as [T' [rarg [f [[unf fty] Hcumul]]]].
     exists T', rarg, f. intuition auto.
     + eapply cumul_trans; eauto.
@@ -158,13 +158,13 @@ Proof.
   - (* Prod *)
     constructor; eauto.
     eapply (context_conversion _ wfΣ _ _ _ _ typeb).
-    constructor; auto with pcuic.
+    constructor; auto with pcuic. reflexivity.
     constructor; auto. exists s1; auto.
 
   - (* Lambda *)
     eapply type_Cumul. eapply type_Lambda; eauto.
     eapply (context_conversion _ wfΣ _ _ _ _ typeb).
-    constructor; auto with pcuic.
+    constructor; auto with pcuic. reflexivity.
     constructor; auto. exists s1; auto.
     assert (Σ ;;; Γ |- tLambda n t b : tProd n t bty). econstructor; eauto.
     edestruct (validity _ wfΣ _ wfΓ _ _ X0). apply i.
@@ -184,7 +184,8 @@ Proof.
     eapply type_Cumul.
     econstructor; eauto.
     eapply (context_conversion _ wfΣ _ _ _ _ typeb').
-    constructor. auto with pcuic. constructor; eauto. constructor; auto.
+    constructor. auto with pcuic. reflexivity.
+    constructor; eauto. constructor; auto.
     now exists s1. red. auto.
     assert (Σ ;;; Γ |- tLetIn n b b_ty b' : tLetIn n b b_ty b'_ty). econstructor; eauto.
     edestruct (validity _ wfΣ _ wfΓ _ _ X0). apply i.
@@ -198,7 +199,8 @@ Proof.
     eapply type_Cumul. eauto. right; exists s1; auto.
     apply red_cumul; eauto.
     eapply (context_conversion _ wfΣ _ _ _ _ typeb').
-    constructor. auto with pcuic. constructor; eauto. constructor; auto.
+    constructor. auto with pcuic. reflexivity.
+    constructor; eauto. constructor; auto.
     exists s1; auto. red; eauto.
     eapply type_Cumul. eauto. right. exists s1; auto. eapply red_cumul. now eapply red1_red.
     assert (Σ ;;; Γ |- tLetIn n b b_ty b' : tLetIn n b b_ty b'_ty). econstructor; eauto.
@@ -215,7 +217,7 @@ Proof.
 
     eapply type_Cumul; eauto.
     unshelve eapply (context_conversion _ wfΣ _ _ _ _ Hb); eauto with wf.
-    constructor. auto with pcuic. constructor ; eauto.
+    constructor. auto with pcuic. reflexivity. constructor ; eauto.
     constructor; auto with pcuic. red; eauto.
     admit.
     clear -wfΣ i.
@@ -347,7 +349,7 @@ Section SRContext.
     intros Σ Γ t u hΣ h.
     induction h.
     - eapply cumul_refl'.
-    - eapply PCUICConversion.cumul_trans ; try eassumption.
+    - eapply cumul_trans ; try eassumption.
       eapply cumul_red_l.
       + eassumption.
       + eapply cumul_refl'.

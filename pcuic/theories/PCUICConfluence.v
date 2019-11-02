@@ -8,8 +8,7 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICReduction PCUICWeakening
      PCUICSubstitution PCUICEquality PCUICReflect PCUICClosed
-     PCUICParallelReduction PCUICParallelReductionConfluence
-     PCUICCumulativity.
+     PCUICParallelReduction PCUICParallelReductionConfluence.
 
 (* Type-valued relations. *)
 Require Import CRelationClasses.
@@ -2723,17 +2722,34 @@ End ConfluenceFacts.
 
 Arguments red_confluence {cf} {Σ} wfΣ {Γ t u v}.
 
-(** We can now derive transitivity of the conversion relation *)
-Lemma conv_alt_trans `{cf : checker_flags} (Σ : global_env_ext) {Γ t u v} :
-  wf Σ ->
-  Σ ;;; Γ |- t == u ->
-  Σ ;;; Γ |- u == v ->
-  Σ ;;; Γ |- t == v.
+
+
+(** We can now derive transitivity of the conversion and cumulativity relations *)
+Instance conv_trans `{cf : checker_flags} (Σ : global_env_ext) {Γ} :
+  wf Σ -> Transitive (conv Σ Γ).
 Proof.
-  intros wfΣ X0 X1.
-  eapply conv_alt_red in X0 as [t' [u' [[tt' uu'] eq]]].
-  eapply conv_alt_red in X1 as [u'' [v' [[uu'' vv'] eq']]].
-  eapply conv_alt_red.
+  intros wfΣ t u v X0 X1.
+  eapply conv_alt in X0 as [t' [u' [tt' [uu' eq]]]].
+  eapply conv_alt in X1 as [u'' [v' [uu'' [vv' eq']]]].
+  eapply conv_alt.
+  destruct (red_confluence wfΣ uu' uu'') as [u'nf [ul ur]].
+  eapply red_eq_term_upto_univ_r in ul as [tnf [redtnf ?]]; tea; tc.
+  eapply red_eq_term_upto_univ_l in ur as [unf [redunf ?]]; tea; tc.
+  exists tnf, unf.
+  intuition auto.
+  now transitivity t'.
+  now transitivity v'.
+  now transitivity u'nf.
+Qed.
+
+
+Instance cumul_trans `{cf : checker_flags} (Σ : global_env_ext) {Γ} :
+  wf Σ -> Transitive (cumul Σ Γ).
+Proof.
+  intros wfΣ t u v X0 X1.
+  eapply cumul_alt in X0 as [t' [u' [tt' [uu' eq]]]].
+  eapply cumul_alt in X1 as [u'' [v' [uu'' [vv' eq']]]].
+  eapply cumul_alt.
   destruct (red_confluence wfΣ uu' uu'') as [u'nf [ul ur]].
   eapply red_eq_term_upto_univ_r in ul as [tnf [redtnf ?]]; tea; tc.
   eapply red_eq_term_upto_univ_l in ur as [unf [redunf ?]]; tea; tc.

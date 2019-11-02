@@ -4,7 +4,8 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
-     PCUICSubstitution PCUICClosed PCUICCumulativity PCUICConversion PCUICGeneration.
+     PCUICSubstitution PCUICClosed PCUICCumulativity PCUICConversionLemmas
+     PCUICConfluence PCUICGeneration.
 Require Import ssreflect ssrbool.
 Require Import String.
 From MetaCoq Require Import LibHypsNaming.
@@ -49,13 +50,13 @@ Section Inversion.
     dependent induction h ; [
       repeat insum ;
       repeat intimes ;
-      [ first [ eassumption | reflexivity ] .. | eapply cumul_refl' ]
+      [ first [ eassumption | reflexivity ] .. | reflexivity ]
     | repeat outsum ;
       repeat outtimes ;
       repeat insum ;
       repeat intimes ;
       [ first [ eassumption | reflexivity ] ..
-      | eapply cumul_trans ; eassumption ]
+      | etransitivity ; eassumption ]
     ].
 
   Derive Signature for typing.
@@ -258,7 +259,7 @@ Section Inversion.
   Proof.
     intros Γ Δ t T h.
     induction Δ as [| [na [b|] A] Δ ih ] in Γ, t, h |- *.
-    - eexists. split ; eauto.
+    - eexists. split ; eauto. reflexivity.
     - simpl. apply ih in h. cbn in h.
       destruct h as [B [h c]].
       apply inversion_LetIn in h as hh.

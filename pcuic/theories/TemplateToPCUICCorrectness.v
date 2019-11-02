@@ -1249,11 +1249,19 @@ Lemma typing_wf_wf:
 Proof.
   intros Σ wf.
   red. unfold TTy.lift_typing.
-  induction wf. constructor. constructor; auto.
-  red. red in o0. destruct d; auto. hnf. destruct c as [ty [d|] ?] => /=.
-  red in o0. simpl in o0. eapply typing_wf; eauto. simpl. auto. red.
-  destruct o0. exists x; simpl in *; auto. eapply typing_wf; eauto. eauto.
-  destruct o0. admit.
+  induction wf. 1: constructor.
+  constructor. all: auto.
+  red. red in o0.
+  destruct d.
+  - hnf. destruct c as [ty [d|] ?] => /=.
+    + red in o0. simpl in *. eapply typing_wf. 2: eassumption.
+      simpl. auto.
+    + red. simpl in *. destruct o0 as [s ?].
+      exists s. simpl in *. eapply typing_wf. 2: eassumption. auto.
+  - simpl in *. destruct o0. constructor. all: auto.
+    (* + eapply Alli_impl. 1: eassumption.
+      intros ? [? ? ? ? ?] []. simpl in *.
+      econstructor. all: eauto. *)
   (* General implication lemma would be nicer: Simon *)
 Admitted.
 
@@ -1303,15 +1311,20 @@ Proof.
 Qed.
 
 Theorem template_to_pcuic (Σ : T.global_env_ext) Γ t T :
-  TTy.wf Σ -> TTy.typing Σ Γ t T ->
+  TTy.wf Σ ->
+  TTy.typing Σ Γ t T ->
   typing (trans_global Σ) (trans_local Γ) (trans t) (trans T).
 Proof.
-  simpl; intros.
+  intros X X0.
   pose proof (TTy.typing_wf_local X0).
   revert Σ X Γ X1 t T X0.
-  apply (TTy.typing_ind_env
-           (fun Σ Γ t T => typing (trans_global Σ) (trans_local Γ) (trans t) (trans T))%type); simpl; intros;
-    auto; try solve [econstructor; eauto with trans].
+  apply (TTy.typing_ind_env (fun Σ Γ t T =>
+    typing (trans_global Σ) (trans_local Γ) (trans t) (trans T)
+  )%type).
+  all: simpl.
+  all: intros.
+  all: auto.
+  all: try solve [ econstructor; eauto with trans ].
 
   - rewrite trans_lift.
     eapply refine_type. eapply type_Rel; eauto.

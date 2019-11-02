@@ -230,7 +230,9 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
 
 | case_red_pred ind p p' c brs : red1 Σ Γ p p' -> red1 Σ Γ (tCase ind p c brs) (tCase ind p' c brs)
 | case_red_discr ind p c c' brs : red1 Σ Γ c c' -> red1 Σ Γ (tCase ind p c brs) (tCase ind p c' brs)
-| case_red_brs ind p c brs brs' : OnOne2 (fun x y => red1 Σ Γ (snd x) (snd y)) brs brs' -> red1 Σ Γ (tCase ind p c brs) (tCase ind p c brs')
+| case_red_brs ind p c brs brs' :
+    OnOne2 (on_Trel_eq (red1 Σ Γ) snd fst) brs brs' ->
+    red1 Σ Γ (tCase ind p c brs) (tCase ind p c brs')
 
 | proj_red p c c' : red1 Σ Γ c c' -> red1 Σ Γ (tProj p c) (tProj p c')
 
@@ -248,20 +250,20 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
 | cast_red M1 k M2 : red1 Σ Γ (tCast M1 k M2) M1
 
 | fix_red_ty mfix0 mfix1 idx :
-    OnOne2 (fun d0 d1 => red1 Σ Γ (dtype d0) (dtype d1) * (dbody d0 = dbody d1))%type mfix0 mfix1 ->
+    OnOne2 (on_Trel_eq (red1 Σ Γ) dtype (fun x => (dname x, dbody x, rarg x))) mfix0 mfix1 ->
     red1 Σ Γ (tFix mfix0 idx) (tFix mfix1 idx)
 
 | fix_red_body mfix0 mfix1 idx :
-    OnOne2 (fun d0 d1 => red1 Σ (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1) * (dtype d0 = dtype d1))
-           mfix0 mfix1 ->
+    OnOne2 (on_Trel_eq (red1 Σ (Γ ,,, fix_context mfix0)) dbody (fun x => (dname x, dtype x, rarg x)))
+      mfix0 mfix1 ->
     red1 Σ Γ (tFix mfix0 idx) (tFix mfix1 idx)
 
 | cofix_red_ty mfix0 mfix1 idx :
-    OnOne2 (fun d0 d1 => red1 Σ Γ (dtype d0) (dtype d1) * (dbody d0 = dbody d1))%type mfix0 mfix1 ->
+    OnOne2 (on_Trel_eq (red1 Σ Γ) dtype (fun x => (dname x, dbody x, rarg x))) mfix0 mfix1 ->
     red1 Σ Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx)
 
 | cofix_red_body mfix0 mfix1 idx :
-    OnOne2 (fun d0 d1 => red1 Σ (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1) * (dtype d0 = dtype d1))%type mfix0 mfix1 ->
+    OnOne2 (on_Trel_eq (red1 Σ (Γ ,,, fix_context mfix0)) dbody (fun x => (dname x, dtype x, rarg x))) mfix0 mfix1 ->
     red1 Σ Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx).
 
 Lemma red1_ind_all :
@@ -320,8 +322,8 @@ Lemma red1_ind_all :
         red1 Σ Γ c c' -> P Γ c c' -> P Γ (tCase ind p c brs) (tCase ind p c' brs)) ->
 
        (forall (Γ : context) (ind : inductive * nat) (p c : term) (brs brs' : list (nat * term)),
-           OnOne2 (fun x y : nat * term => red1 Σ Γ (snd x) (snd y) * P Γ (snd x) (snd y)) brs brs' ->
-           P Γ (tCase ind p c brs) (tCase ind p c brs')) ->
+          OnOne2 (on_Trel_eq (Trel_conj (red1 Σ Γ) (P Γ)) snd fst) brs brs' ->
+          P Γ (tCase ind p c brs) (tCase ind p c brs')) ->
 
        (forall (Γ : context) (p : projection) (c c' : term), red1 Σ Γ c c' -> P Γ c c' -> P Γ (tProj p c) (tProj p c')) ->
 
@@ -347,22 +349,23 @@ Lemma red1_ind_all :
            P Γ (tCast M1 k M2) M1) ->
 
        (forall (Γ : context) (mfix0 mfix1 : list (def term)) (idx : nat),
-        OnOne2 (fun d0 d1 : def term => red1 Σ Γ (dtype d0) (dtype d1) * (dbody d0 = dbody d1) * P Γ (dtype d0) (dtype d1)) mfix0 mfix1 ->
-        P Γ (tFix mfix0 idx) (tFix mfix1 idx)) ->
+          OnOne2 (on_Trel_eq (Trel_conj (red1 Σ Γ) (P Γ)) dtype (fun x => (dname x, dbody x, rarg x))) mfix0 mfix1 ->
+          P Γ (tFix mfix0 idx) (tFix mfix1 idx)) ->
 
        (forall (Γ : context) (mfix0 mfix1 : list (def term)) (idx : nat),
-        OnOne2 (fun d0 d1 : def term =>
-                  red1 Σ (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1) * (dtype d0 = dtype d1) *
-                  P (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1)) mfix0 mfix1 ->
-        P Γ (tFix mfix0 idx) (tFix mfix1 idx)) ->
+          OnOne2 (on_Trel_eq (Trel_conj (red1 Σ (Γ ,,, fix_context mfix0))
+          (P (Γ ,,, fix_context mfix0))) dbody
+            (fun x => (dname x, dtype x, rarg x))) mfix0 mfix1 ->
+          P Γ (tFix mfix0 idx) (tFix mfix1 idx)) ->
 
        (forall (Γ : context) (mfix0 mfix1 : list (def term)) (idx : nat),
-        OnOne2 (fun d0 d1 : def term => red1 Σ Γ (dtype d0) (dtype d1) * (dbody d0 = dbody d1) *
-                                        P Γ (dtype d0) (dtype d1)) mfix0 mfix1 ->
+        OnOne2 (on_Trel_eq (Trel_conj (red1 Σ Γ) (P Γ)) dtype (fun x => (dname x, dbody x, rarg x))) mfix0 mfix1 ->
         P Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx)) ->
 
        (forall (Γ : context) (mfix0 mfix1 : list (def term)) (idx : nat),
-        OnOne2 (fun d0 d1 : def term => red1 Σ (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1) * (dtype d0 = dtype d1) * P (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1)) mfix0 mfix1 ->
+          OnOne2 (on_Trel_eq (Trel_conj (red1 Σ (Γ ,,, fix_context mfix0))
+          (P (Γ ,,, fix_context mfix0))) dbody
+         (fun x => (dname x, dtype x, rarg x))) mfix0 mfix1 ->
         P Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx)) ->
 
        forall (Γ : context) (t t0 : term), red1 Σ Γ t t0 -> P Γ t t0.
@@ -385,8 +388,8 @@ Proof.
   - revert brs brs' o.
     fix auxl 3.
     intros l l' Hl. destruct Hl.
-    constructor. split; auto.
-    constructor. auto.
+    + constructor. intuition eauto.
+    + constructor. auto.
 
   - revert M2 N2 o.
     fix auxl 3.
@@ -437,13 +440,15 @@ Inductive red Σ Γ M : term -> Type :=
   We hence implement first an equality which considers casts and do a stripping
   phase of casts before checking equality. *)
 
+Definition R_universe_instance R :=
+  fun u u' => Forall2 R (List.map Universe.make u) (List.map Universe.make u').
 
-Inductive eq_term_upto_univ (Re Rle : universe -> universe -> Prop) : term -> term -> Prop :=
+Inductive eq_term_upto_univ (Re Rle : universe -> universe -> Prop) : term -> term -> Type :=
 | eq_Rel n  :
     eq_term_upto_univ Re Rle (tRel n) (tRel n)
 
 | eq_Evar e args args' :
-    Forall2 (eq_term_upto_univ Re Re) args args' ->
+    All2 (eq_term_upto_univ Re Re) args args' ->
     eq_term_upto_univ Re Rle (tEvar e args) (tEvar e args')
 
 | eq_Var id :
@@ -460,19 +465,19 @@ Inductive eq_term_upto_univ (Re Rle : universe -> universe -> Prop) : term -> te
 
 | eq_App t t' args args' :
     eq_term_upto_univ Re Rle t t' ->
-    Forall2 (eq_term_upto_univ Re Re) args args' ->
+    All2 (eq_term_upto_univ Re Re) args args' ->
     eq_term_upto_univ Re Rle (tApp t args) (tApp t' args')
 
 | eq_Const c u u' :
-    Forall2 Rle (List.map Universe.make u) (List.map Universe.make u') ->
+    R_universe_instance Re u u' ->
     eq_term_upto_univ Re Rle (tConst c u) (tConst c u')
 
 | eq_Ind i u u' :
-    Forall2 Rle (List.map Universe.make u) (List.map Universe.make u') ->
+    R_universe_instance Re u u' ->
     eq_term_upto_univ Re Rle (tInd i u) (tInd i u')
 
 | eq_Construct i k u u' :
-    Forall2 Rle (List.map Universe.make u) (List.map Universe.make u') ->
+    R_universe_instance Re u u' ->
     eq_term_upto_univ Re Rle (tConstruct i k u) (tConstruct i k u')
 
 | eq_Lambda na na' ty ty' t t' :
@@ -494,8 +499,8 @@ Inductive eq_term_upto_univ (Re Rle : universe -> universe -> Prop) : term -> te
 | eq_Case ind par p p' c c' brs brs' :
     eq_term_upto_univ Re Re p p' ->
     eq_term_upto_univ Re Re c c' ->
-    Forall2 (fun x y =>
-      fst x = fst y /\
+    All2 (fun x y =>
+      fst x = fst y ×
       eq_term_upto_univ Re Re (snd x) (snd y)
     ) brs brs' ->
     eq_term_upto_univ Re Rle (tCase (ind, par) p c brs) (tCase (ind, par) p' c' brs')
@@ -505,17 +510,17 @@ Inductive eq_term_upto_univ (Re Rle : universe -> universe -> Prop) : term -> te
     eq_term_upto_univ Re Rle (tProj p c) (tProj p c')
 
 | eq_Fix mfix mfix' idx :
-    Forall2 (fun x y =>
-      eq_term_upto_univ Re Re x.(dtype) y.(dtype) /\
-      eq_term_upto_univ Re Re x.(dbody) y.(dbody) /\
+    All2 (fun x y =>
+      eq_term_upto_univ Re Re x.(dtype) y.(dtype) ×
+      eq_term_upto_univ Re Re x.(dbody) y.(dbody) ×
       x.(rarg) = y.(rarg)
     ) mfix mfix' ->
     eq_term_upto_univ Re Rle (tFix mfix idx) (tFix mfix' idx)
 
 | eq_CoFix mfix mfix' idx :
-    Forall2 (fun x y =>
-      eq_term_upto_univ Re Re x.(dtype) y.(dtype) /\
-      eq_term_upto_univ Re Re x.(dbody) y.(dbody) /\
+    All2 (fun x y =>
+      eq_term_upto_univ Re Re x.(dtype) y.(dtype) ×
+      eq_term_upto_univ Re Re x.(dbody) y.(dbody) ×
       x.(rarg) = y.(rarg)
     ) mfix mfix' ->
     eq_term_upto_univ Re Rle (tCoFix mfix idx) (tCoFix mfix' idx).

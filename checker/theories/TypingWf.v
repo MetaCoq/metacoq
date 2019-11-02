@@ -184,10 +184,14 @@ Proof. intro H. revert n. induction H; constructor; eauto. Qed.
 Lemma wf_red1 {cf:checker_flags} Σ Γ M N :
   on_global_env (fun Σ => wf_decl_pred) Σ ->
   List.Forall wf_decl Γ ->
-  Ast.wf M -> red1 Σ Γ M N -> Ast.wf N.
+  Ast.wf M ->
+  red1 Σ Γ M N ->
+  Ast.wf N.
 Proof.
   intros wfΣ wfΓ wfM H.
-  induction H using red1_ind_all in wfM, wfΓ |- *; inv wfM; try solve[ constructor; auto with wf ].
+  induction H using red1_ind_all in wfM, wfΓ |- *.
+  all: inv wfM.
+  all: try solve[ constructor; auto with wf ].
 
   - inv H1. inv H2.
     eauto with wf.
@@ -233,24 +237,34 @@ Proof.
   - constructor; auto. solve_all.
     pose proof H as H'. revert H.
     apply (OnOne2_All_All X). clear X.
-    intros. destruct X as [[Hred <-] Hwf].
-    intuition. 2: apply red1_isLambda in Hred; auto.
-    apply Hwf; tas. solve_all. apply All_app_inv; auto. unfold fix_context.
-    apply All_rev. eapply All_mapi.
-    eapply All_Alli. exact H'.
-    cbn. intros n x0 H1. constructor; cbn. exact I.
-    apply wf_lift, H1.
+    intros [na bo ty ra] [nb bb tb rb] [[r ih] e] [? [? ?]].
+    simpl in *.
+    inversion e. subst. clear e.
+    intuition eauto.
+    + eapply ih. 2: assumption.
+      solve_all. apply All_app_inv. 2: assumption.
+      unfold fix_context. apply All_rev. eapply All_mapi.
+      eapply All_Alli. 1: exact H'.
+      cbn. unfold wf_decl. simpl.
+      intros ? [? ? ? ?] ?. simpl in *.
+      intuition eauto with wf.
+    + eapply red1_isLambda. all: eassumption.
   - constructor; auto.
     induction X; inv H; constructor; intuition auto; congruence.
   - constructor; auto. solve_all.
     pose proof H as H'. revert H.
     apply (OnOne2_All_All X). clear X.
-    intros. destruct X as [[Hred <-] Hwf].
-    intuition. apply Hwf. solve_all. apply All_app_inv; auto. unfold fix_context.
-    apply All_rev. eapply All_mapi.
-    eapply All_Alli. exact H'.
-    cbn. intros n x0 H1'. constructor; cbn. exact I.
-    apply wf_lift, H1'. assumption.
+    intros [na bo ty ra] [nb bb tb rb] [[r ih] e] [? ?].
+    simpl in *.
+    inversion e. subst. clear e.
+    intuition eauto.
+    eapply ih. 2: assumption.
+    solve_all. apply All_app_inv. 2: assumption.
+    unfold fix_context. apply All_rev. eapply All_mapi.
+    eapply All_Alli. 1: exact H'.
+    cbn. unfold wf_decl. simpl.
+    intros ? [? ? ? ?] ?. simpl in *.
+    intuition eauto with wf.
 Qed.
 
 Ltac wf := intuition try (eauto with wf || congruence || solve [constructor]).

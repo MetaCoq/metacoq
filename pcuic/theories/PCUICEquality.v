@@ -35,8 +35,8 @@ Section CRelationLemmas.
 
 End CRelationLemmas.
 
-Definition R_universe_instance R
-  := fun u u' => Forall2 R (List.map Universe.make u) (List.map Universe.make u').
+Definition R_universe_instance R :=
+  fun u u' => Forall2 R (List.map Universe.make u) (List.map Universe.make u').
 
 Lemma R_universe_instance_impl R R' :
   RelationClasses.subrelation R R' ->

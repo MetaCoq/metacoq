@@ -84,7 +84,8 @@ Qed.
 Hint Resolve extends_wf_local : extends.
 
 Lemma weakening_env_red1 `{CF:checker_flags} Σ Σ' Γ M N :
-  wf Σ' -> extends Σ Σ' ->
+  wf Σ' ->
+  extends Σ Σ' ->
   red1 Σ Γ M N ->
   red1 Σ' Γ M N.
 Proof.
@@ -138,12 +139,12 @@ Lemma eq_term_upto_univ_morphism0 (Re Re' : _ -> _ -> Prop)
 Proof.
   fix aux 3.
   destruct 1; constructor; eauto.
+  all: unfold R_universe_instance in *.
   all: match goal with
+       | H : All2 _ _ _ |- _ => induction H; constructor; eauto
        | H : Forall2 _ _ _ |- _ => induction H; constructor; eauto
        end.
-  - destruct H1. split; eauto.
-  - destruct H as [? [? ?]]. repeat split; eauto.
-  - destruct H as [? [? ?]]. repeat split; eauto.
+  all: intuition eauto.
 Qed.
 
 Lemma eq_term_upto_univ_morphism (Re Re' Rle Rle' : _ -> _ -> Prop)
@@ -153,13 +154,18 @@ Lemma eq_term_upto_univ_morphism (Re Re' Rle Rle' : _ -> _ -> Prop)
 Proof.
   fix aux 3.
   destruct 1; constructor; eauto using eq_term_upto_univ_morphism0.
+  all: unfold R_universe_instance in *.
   all: match goal with
        | H : Forall2 _ _ _ |- _ => induction H; constructor;
                                    eauto using eq_term_upto_univ_morphism0
+       | H : All2 _ _ _ |- _ => induction H; constructor;
+                                eauto using eq_term_upto_univ_morphism0
        end.
-  - destruct H1. split; eauto using eq_term_upto_univ_morphism0.
-  - destruct H as [? [? ?]]. repeat split; eauto using eq_term_upto_univ_morphism0.
-  - destruct H as [? [? ?]]. repeat split; eauto using eq_term_upto_univ_morphism0.
+  - destruct r. split; eauto using eq_term_upto_univ_morphism0.
+  - destruct r as [? [? ?]].
+    repeat split; eauto using eq_term_upto_univ_morphism0.
+  - destruct r as [? [? ?]].
+    repeat split; eauto using eq_term_upto_univ_morphism0.
 Qed.
 
 Lemma leq_term_subset {cf:checker_flags} ctrs ctrs' t u

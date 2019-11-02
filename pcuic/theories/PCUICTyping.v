@@ -276,12 +276,12 @@ Qed.
 
 Reserved Notation " Σ ;;; Γ |- t : T " (at level 50, Γ, t, T at next level).
 
-Definition check_correct_arity `{checker_flags} φ decl ind u ctx pars pctx :=
+Definition check_correct_arity `{checker_flags} Σ Γ decl ind u ctx pars pctx :=
   let inddecl :=
       {| decl_name := nNamed decl.(ind_name);
          decl_body := None;
          decl_type := mkApps (tInd ind u) (map (lift0 #|ctx|) pars ++ to_extended_list ctx) |}
-  in eq_context φ (inddecl :: ctx) pctx.
+  in conv_context Σ (Γ ,,, ctx ,, inddecl) (Γ ,,, pctx).
 
 (** ** Typing relation *)
 
@@ -399,7 +399,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     let pars := List.firstn npar args in
     forall pty, Σ ;;; Γ |- p : pty ->
     forall indctx pctx ps btys, types_of_case ind mdecl idecl pars u p pty = Some (indctx, pctx, ps, btys) ->
-    check_correct_arity (global_ext_constraints Σ) idecl ind u indctx pars pctx ->
+    check_correct_arity Σ Γ idecl ind u indctx pars pctx ->
     existsb (leb_sort_family (universe_family ps)) idecl.(ind_kelim) ->
     Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
     All2 (fun x y => (fst x = fst y) * (Σ ;;; Γ |- snd x : snd y) * (Σ ;;; Γ |- snd y : tSort ps)) brs btys ->
@@ -728,7 +728,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         forall (pty : term), Σ ;;; Γ |- p : pty ->
         forall indctx pctx ps btys,
         types_of_case ind mdecl idecl pars u p pty = Some (indctx, pctx, ps, btys) ->
-        check_correct_arity (global_ext_constraints Σ) idecl ind u indctx pars pctx ->
+        check_correct_arity Σ Γ idecl ind u indctx pars pctx ->
         existsb (leb_sort_family (universe_family ps)) (ind_kelim idecl) ->
         P Σ Γ p pty ->
         Σ;;; Γ |- c : mkApps (tInd ind u) args ->

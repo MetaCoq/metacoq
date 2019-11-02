@@ -3,8 +3,7 @@ From Equations Require Import Equations.
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils AstUtils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICTyping PCUICWeakeningEnv
-     PCUICWeakening PCUICClosed PCUICReduction.
+     PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICConversion PCUICReduction.
 Require Import ssreflect ssrbool.
 Require Import String.
 From MetaCoq Require Import LibHypsNaming.
@@ -173,7 +172,7 @@ Definition conv_cum `{cf : checker_flags} leq Σ Γ u v :=
   end.
 
 Lemma conv_conv_cum_l `{cf : checker_flags} :
-  forall (Σ : global_env_ext) leq Γ u v, wf Σ ->
+  forall (Σ : global_env_ext) leq Γ u v,
       Σ ;;; Γ |- u = v ->
       conv_cum leq Σ Γ u v.
 Proof.
@@ -183,11 +182,11 @@ Proof.
 Qed.
 
 Lemma conv_conv_cum_r `{cf : checker_flags} :
-  forall (Σ : global_env_ext) leq Γ u v, wf Σ ->
+  forall (Σ : global_env_ext) leq Γ u v,
       Σ ;;; Γ |- u = v ->
       conv_cum leq Σ Γ v u.
 Proof.
-  intros Σ [] Γ u v wfΣ h.
+  intros Σ [] Γ u v h.
   - cbn. constructor. apply conv_sym; auto.
   - cbn. constructor. apply conv_cumul. auto. now apply conv_sym.
 Qed.
@@ -207,3 +206,49 @@ Proof.
   - eapply cumul_red_r ; try eassumption.
     econstructor. assumption.
 Qed.
+
+
+
+
+Section ContextRelationLemmas.
+  Context {cf:checker_flags} (Σ : global_env_ext).
+
+  Global Instance conv_decls_refl Γ Γ' : Reflexive (conv_decls Σ Γ Γ').
+  Proof.
+    intros [na [bo|] ty]; now constructor.
+  Qed.
+
+  Global Instance conv_decls_sym Γ Γ' : Symmetric (conv_decls Σ Γ Γ').
+  Proof.
+    intros d d'. elim; intros; now constructor.
+  Qed.
+
+  Lemma context_relation_refl P (H : forall Γ Γ', Reflexive (P Γ Γ')) :
+    Reflexive (context_relation P).
+  Proof.
+    unfold Reflexive in *.
+    elim. constructor.
+    intros [na [bo|] ty] Γ H'; constructor; auto.
+  Qed.
+
+  Global Instance conv_ctx_refl : Reflexive (context_relation (conv_decls Σ)).
+  Proof.
+    apply context_relation_refl.
+    apply conv_decls_refl.
+  Qed.
+
+  Lemma context_relation_impl P Q
+        (H : forall Γ Γ', subrelation (P Γ Γ') (Q Γ Γ'))
+  : subrelation (context_relation P) (context_relation Q).
+  Proof.
+    unfold inclusion in *.
+    intros Γ Γ'. induction 1; constructor; auto.
+  Qed.
+
+  Lemma context_relation_length P Γ Γ' :
+    context_relation P Γ Γ' -> #|Γ| = #|Γ'|.
+  Proof.
+    induction 1; cbn; congruence.
+  Qed.
+
+End ContextRelationLemmas.

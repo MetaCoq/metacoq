@@ -674,12 +674,6 @@ Section Inversions.
   Qed.
 
 
-  Lemma context_relation_length P Γ Γ' :
-    context_relation P Γ Γ' -> #|Γ| = #|Γ'|.
-  Proof.
-    induction 1; cbn; congruence.
-  Qed.
-
 
   Lemma conv_cum_Lambda leq Γ na1 na2 A1 A2 t1 t2 :
       Σ ;;; Γ |- A1 = A2 ->

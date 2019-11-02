@@ -2,7 +2,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From MetaCoq.Template Require Import config utils AstUtils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICTyping.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICTyping PCUICCumulativity.
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
 
@@ -121,13 +121,6 @@ Proof.
   eapply eq_decl_subset; eassumption. assumption.
 Qed.
 
-Lemma check_correct_arity_subset {cf:checker_flags} φ φ' decl ind u ctx pars pctx
-  : ConstraintSet.Subset φ φ' -> check_correct_arity φ decl ind u ctx pars pctx
-    -> check_correct_arity φ' decl ind u ctx pars pctx.
-Proof.
-  apply eq_context_subset.
-Qed.
-
 Ltac my_rename_hyp h th :=
   match th with
   | (extends ?t _) => fresh "ext" t
@@ -207,6 +200,27 @@ Proof.
     assumption.
   - econstructor 2; eauto. eapply weakening_env_red1; eauto. exists Σ''; eauto.
   - econstructor 3; eauto. eapply weakening_env_red1; eauto. exists Σ''; eauto.
+Qed.
+
+Lemma weakening_env_conv `{CF:checker_flags} Σ Σ' φ Γ M N :
+  wf Σ' -> extends Σ Σ' ->
+  conv (Σ, φ) Γ M N -> conv (Σ', φ) Γ M N.
+Proof.
+  intros wfΣ [Σ'' ->].
+  induction 1; simpl.
+  - econstructor. eapply eq_term_subset. eapply global_ext_constraints_app.
+    assumption.
+  - econstructor 2; eauto. eapply weakening_env_red1; eauto. exists Σ''; eauto.
+  - econstructor 3; eauto. eapply weakening_env_red1; eauto. exists Σ''; eauto.
+Qed.
+
+
+Lemma check_correct_arity_extends {cf:checker_flags} Σ Σ' φ Γ decl ind u ctx pars pctx
+  : wf Σ' -> extends Σ Σ' -> check_correct_arity (Σ, φ) Γ decl ind u ctx pars pctx
+    -> check_correct_arity (Σ', φ) Γ decl ind u ctx pars pctx.
+Proof.
+  intros wf ext. unfold check_correct_arity. apply context_relation_impl.
+  intros Δ Δ' d d'. elim; intros; constructor; eapply weakening_env_conv; tea.
 Qed.
 
 (* Lemma weakening_env_consistent_universe_context_instance `{checker_flags} : *)
@@ -305,8 +319,7 @@ Proof.
     rename_all_hyps; try solve [econstructor; eauto 2 with extends].
 
   - econstructor; eauto 2 with extends.
-    + eapply check_correct_arity_subset; tea.
-      apply weakening_env_global_ext_constraints; tas.
+    + destruct Σ; eapply check_correct_arity_extends; tea.
     + close_Forall. intros; intuition eauto with extends.
   - econstructor; eauto with extends.
     + eapply All_local_env_impl.

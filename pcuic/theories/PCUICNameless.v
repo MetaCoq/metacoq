@@ -1124,20 +1124,21 @@ Proof.
         now rewrite <- subst_instance_context_nlctx.
         apply nl_subst_instance_constr.
     + clear -H1. unfold check_correct_arity in *.
-      rewrite global_ext_constraints_nlg.
-      inversion H1; subst. cbn. constructor.
-      * clear -H2. destruct H2 as [H1 H2]; cbn in *.
-        destruct y as [? [?|] ?]; cbn in *; [contradiction|].
-        split; cbn; tas. apply nl_eq_term in H2.
-        refine (eq_rect _ (fun d => eq_term _ d _) H2 _ _).
-        clear. rewrite nl_mkApps, map_app, firstn_map, !map_map.
-        f_equal. rewrite nl_to_extended_list. f_equal.
-        apply map_ext. intro; rewrite nl_lift; cbn.
-        unfold nlctx; now rewrite map_length.
-      * eapply All2_map, All2_impl; tea.
-        apply nl_eq_decl'.
+      admit.
+      (* rewrite global_ext_constraints_nlg. *)
+      (* inversion H1; subst. cbn. constructor. *)
+      (* * clear -H2. destruct H2 as [H1 H2]; cbn in *. *)
+      (*   destruct y as [? [?|] ?]; cbn in *; [contradiction|]. *)
+      (*   split; cbn; tas. apply nl_eq_term in H2. *)
+      (*   refine (eq_rect _ (fun d => eq_term _ d _) H2 _ _). *)
+      (*   clear. rewrite nl_mkApps, map_app, firstn_map, !map_map. *)
+      (*   f_equal. rewrite nl_to_extended_list. f_equal. *)
+      (*   apply map_ext. intro; rewrite nl_lift; cbn. *)
+      (*   unfold nlctx; now rewrite map_length. *)
+      (* * eapply All2_map, All2_impl; tea. *)
+      (*   apply nl_eq_decl'. *)
     + rewrite nl_mkApps in *; eassumption.
-    + clear -X5. eapply All2_map, All2_impl; tea. cbn.
+    + clear -X6. eapply All2_map, All2_impl; tea. cbn.
       clear. intros x y [[[? ?] ?] ?]. intuition eauto.
   - destruct pdecl as [pdecl1 pdecl2]; simpl.
     rewrite map_rev.
@@ -1200,7 +1201,7 @@ Proof.
         eapply nlg_wf_local. eassumption.
       * destruct s as [? [? ?]]; eauto.
     + now apply nl_cumul.
-Qed.
+Admitted.
 
 Corollary reflect_nleq_term :
   forall t t',

@@ -17,6 +17,10 @@ src/signature.ml
 # src/logic1.ml
 src/init.mli
 src/init.ml
+# src/relation0.ml
+# src/relation0.mli
+# src/relation_Properties.ml
+# src/relation_Properties.mli
 
 src/liftSubst.ml
 src/liftSubst.mli
@@ -28,6 +32,10 @@ src/environmentTyping.ml
 src/environmentTyping.mli
 src/retyping0.ml
 src/retyping0.mli
+src/reduction0.mli
+src/reduction0.ml
+src/conversion0.mli
+src/conversion0.ml
 src/typing0.ml
 src/typing0.mli
 src/typingWf.ml

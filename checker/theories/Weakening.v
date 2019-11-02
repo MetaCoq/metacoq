@@ -960,25 +960,26 @@ Lemma lift_check_correct_arity:
       φ idecl ind u (lift_context #|Γ''| #|Γ'| indctx) (firstn npar (map (lift #|Γ''| #|Γ'|) args))
       (lift_context #|Γ''| #|Γ'| pctx).
 Proof.
-  intros cf φ Γ' ind u npar args idecl Γ'' indctx pctx.
-  unfold check_correct_arity. intro H.
-  inversion H; subst. simpl. rewrite lift_context_snoc0.
-  constructor.
-  - apply All2_Forall2, Forall2_length in H4. destruct H4.
-    clear -H2. apply (lift_eq_decl _ #|Γ''| (#|indctx| + #|Γ'|)) in H2.
-    unfold lift_decl, map_decl in H2; cbn in H2.
-    assert (XX : lift #|Γ''| (#|indctx| + #|Γ'|) (mkApps (tInd ind u) (map (lift0 #|indctx|) (firstn npar args) ++ to_extended_list indctx)) = mkApps (tInd ind u) (map (lift0 #|lift_context #|Γ''| #|Γ'| indctx|) (firstn npar (map (lift #|Γ''| #|Γ'|) args)) ++ to_extended_list (lift_context #|Γ''| #|Γ'| indctx)));
-      [|now rewrite XX in H2].
+(*   intros cf φ Γ' ind u npar args idecl Γ'' indctx pctx. *)
+(*   unfold check_correct_arity. intro H. *)
+(*   inversion H; subst. simpl. rewrite lift_context_snoc0. *)
+(*   constructor. *)
+(*   - apply All2_Forall2, Forall2_length in H3. destruct H4. *)
+(*     clear -H2. apply (lift_eq_decl _ #|Γ''| (#|indctx| + #|Γ'|)) in H2. *)
+(*     unfold lift_decl, map_decl in H2; cbn in H2. *)
+(*     assert (XX : lift #|Γ''| (#|indctx| + #|Γ'|) (mkApps (tInd ind u) (map (lift0 #|indctx|) (firstn npar args) ++ to_extended_list indctx)) = mkApps (tInd ind u) (map (lift0 #|lift_context #|Γ''| #|Γ'| indctx|) (firstn npar (map (lift #|Γ''| #|Γ'|) args)) ++ to_extended_list (lift_context #|Γ''| #|Γ'| indctx))); *)
+(*       [|now rewrite XX in H2]. *)
 
-    rewrite -> lift_mkApps, map_app.
-    rewrite -> firstn_map. rewrite -> to_extended_list_lift.
-    erewrite <- (to_extended_list_map_lift #|Γ''|).
-    rewrite -> lift_context_length.
-    rewrite -> !map_map_compose. f_equal. f_equal. apply map_ext.
-    intros. unfold compose. rewrite (permute_lift _ _ _ _ 0). omega.
-    f_equal. omega.
-  - now apply lift_eq_context.
-Qed.
+(*     rewrite -> lift_mkApps, map_app. *)
+(*     rewrite -> firstn_map. rewrite -> to_extended_list_lift. *)
+(*     erewrite <- (to_extended_list_map_lift #|Γ''|). *)
+(*     rewrite -> lift_context_length. *)
+(*     rewrite -> !map_map_compose. f_equal. f_equal. apply map_ext. *)
+(*     intros. unfold compose. rewrite (permute_lift _ _ _ _ 0). omega. *)
+(*     f_equal. omega. *)
+(*   - now apply lift_eq_context. *)
+(* Qed. *)
+Admitted.
 
 Lemma wf_ind_type `{checker_flags} Σ mdecl ind idecl :
   wf Σ -> declared_inductive Σ mdecl ind idecl -> Ast.wf (ind_type idecl).
@@ -1116,7 +1117,7 @@ Proof.
     -- erewrite -> lift_declared_inductive; eauto.
     -- auto.
     -- auto.
-    -- revert H1.
+    -- revert X2.
       subst pars.
       erewrite lift_declared_inductive; eauto.
       apply lift_check_correct_arity.

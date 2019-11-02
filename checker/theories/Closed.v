@@ -322,9 +322,9 @@ Proof.
   - intuition auto. solve_all. unfold test_snd. simpl in *.
     toProp; eauto.
     apply closedn_mkApps; auto.
-    rewrite forallb_app. simpl. rewrite H3.
+    rewrite forallb_app. simpl. rewrite H2.
     rewrite forallb_skipn; auto.
-    now apply closedn_mkApps_inv in H7.
+    now apply closedn_mkApps_inv in H6.
 
   - intuition auto.
     apply closedn_subst0.

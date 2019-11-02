@@ -18,7 +18,8 @@ Extract Constant utils.ascii_compare =>
  "fun x y -> match Char.compare x y with 0 -> Eq | x when x < 0 -> Lt | _ -> Gt".
 
 Extraction Blacklist config uGraph Universes Ast String List Nat Int
-           UnivSubst Typing Checker Retyping OrderedType Logic Common Equality.
+           Reduction Conversion
+           UnivSubst Typing Checker Retyping OrderedType Logic (* Logic0 *) Common Equality.
 Set Warnings "-extraction-opaque-accessed".
 
 Require Export MetaCoq.Template.Ast.
@@ -48,9 +49,12 @@ Extraction Inline Equations.Init.pr2.
 Extraction Inline Equations.Init.hidebody.
 Extraction Inline Equations.Prop.DepElim.solution_left.
 
+(* Extraction Library Logic. *)
 Extraction Library Signature.
 Extraction Library Classes.
+(* Extraction Library Relation_Properties. *)
 Extraction Library ssreflect.
+(* Extraction Library Relation. *)
 Extraction Library CMorphisms.
 
 (** From checker *)
@@ -59,6 +63,8 @@ Extraction Library Reflect.
 Extraction Library LiftSubst.
 Extraction Library UnivSubst.
 Extraction Library monad_utils.
+Extraction Library Reduction.
+Extraction Library Conversion.
 Extraction Library Typing.
 Extraction Library TypingWf.
 Extraction Library wGraph.

@@ -7,6 +7,8 @@ theories/wGraph.v
 theories/uGraph.v
 theories/LibHypsNaming.v
 theories/WfInv.v
+theories/Reduction.v
+theories/Conversion.v
 theories/Typing.v
 theories/TypingWf.v
 theories/Generation.v

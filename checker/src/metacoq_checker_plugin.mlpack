@@ -5,6 +5,8 @@ WGraph
 Monad_utils
 UGraph0
 EnvironmentTyping
+Reduction0
+Conversion0
 Typing0
 Checker0
 Retyping0

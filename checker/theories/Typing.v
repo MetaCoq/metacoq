@@ -5,6 +5,7 @@ From Coq Require Import String Wf Wellfounded Relation_Definitions Relation_Oper
 
 From MetaCoq.Template Require Import config utils Ast AstUtils Induction LiftSubst UnivSubst EnvironmentTyping.
 From MetaCoq.Checker Require Import LibHypsNaming Reflect.
+From MetaCoq.Checker Require Export Reduction Conversion.
 
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
@@ -83,479 +84,6 @@ Qed.
 Definition type_of_constructor mdecl (cdecl : ident * term * nat) (c : inductive * nat) (u : list Level.t) :=
   let mind := inductive_mind (fst c) in
   subst0 (inds mind u mdecl.(ind_bodies)) (subst_instance_constr u (snd (fst cdecl))).
-
-(** ** Reduction *)
-
-(** *** Helper functions for reduction *)
-
-Definition fix_subst (l : mfixpoint term) :=
-  let fix aux n :=
-      match n with
-      | 0 => []
-      | S n => tFix l n :: aux n
-      end
-  in aux (List.length l).
-
-Definition unfold_fix (mfix : mfixpoint term) (idx : nat) :=
-  match List.nth_error mfix idx with
-  | Some d => Some (d.(rarg), subst0 (fix_subst mfix) d.(dbody))
-  | None => None
-  end.
-
-Definition cofix_subst (l : mfixpoint term) :=
-  let fix aux n :=
-      match n with
-      | 0 => []
-      | S n => tCoFix l n :: aux n
-      end
-  in aux (List.length l).
-
-Definition unfold_cofix (mfix : mfixpoint term) (idx : nat) :=
-  match List.nth_error mfix idx with
-  | Some d => Some (d.(rarg), subst0 (cofix_subst mfix) d.(dbody))
-  | None => None
-  end.
-
-Definition isConstruct_app t :=
-  match fst (decompose_app t) with
-  | tConstruct _ _ _ => true
-  | _ => false
-  end.
-
-Definition is_constructor n ts :=
-  match List.nth_error ts n with
-  | Some a => isConstruct_app a
-  | None => false
-  end.
-
-Lemma fix_subst_length mfix : #|fix_subst mfix| = #|mfix|.
-Proof.
-  unfold fix_subst. generalize (tFix mfix). intros.
-  induction mfix; simpl; auto.
-Qed.
-
-Lemma cofix_subst_length mfix : #|cofix_subst mfix| = #|mfix|.
-Proof.
-  unfold cofix_subst. generalize (tCoFix mfix). intros.
-  induction mfix; simpl; auto.
-Qed.
-
-Definition fix_context (m : mfixpoint term) : context :=
-  List.rev (mapi (fun i d => vass d.(dname) (lift0 i d.(dtype))) m).
-
-Lemma fix_context_length mfix : #|fix_context mfix| = #|mfix|.
-Proof. unfold fix_context. now rewrite List.rev_length mapi_length. Qed.
-
-Definition tDummy := tVar "".
-
-Definition iota_red npar c args brs :=
-  (mkApps (snd (List.nth c brs (0, tDummy))) (List.skipn npar args)).
-
-Module TemplateLookup := Lookup TemplateTerm TemplateEnvironment.
-Include TemplateLookup.
-
-(** *** One step strong beta-zeta-iota-fix-delta reduction
-
-  Inspired by the reduction relation from Coq in Coq [Barras'99].
-*)
-
-Local Open Scope type_scope.
-Arguments OnOne2 {A} P%type l l'.
-
-Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
-(** Reductions *)
-(** Beta *)
-| red_beta na t b a l :
-    red1 Σ Γ (tApp (tLambda na t b) (a :: l)) (mkApps (subst10 a b) l)
-
-(** Let *)
-| red_zeta na b t b' :
-    red1 Σ Γ (tLetIn na b t b') (subst10 b b')
-
-| red_rel i body :
-    option_map decl_body (nth_error Γ i) = Some (Some body) ->
-    red1 Σ Γ (tRel i) (lift0 (S i) body)
-
-(** Case *)
-| red_iota ind pars c u args p brs :
-    red1 Σ Γ (tCase (ind, pars) p (mkApps (tConstruct ind c u) args) brs)
-         (iota_red pars c args brs)
-
-(** Fix unfolding, with guard *)
-| red_fix mfix idx args narg fn :
-    unfold_fix mfix idx = Some (narg, fn) ->
-    is_constructor narg args = true ->
-    red1 Σ Γ (tApp (tFix mfix idx) args) (tApp fn args)
-
-(** CoFix-case unfolding *)
-| red_cofix_case ip p mfix idx args narg fn brs :
-    unfold_cofix mfix idx = Some (narg, fn) ->
-    red1 Σ Γ (tCase ip p (mkApps (tCoFix mfix idx) args) brs)
-         (tCase ip p (mkApps fn args) brs)
-
-(** CoFix-proj unfolding *)
-| red_cofix_proj p mfix idx args narg fn :
-    unfold_cofix mfix idx = Some (narg, fn) ->
-    red1 Σ Γ (tProj p (mkApps (tCoFix mfix idx) args))
-         (tProj p (mkApps fn args))
-(* FIXME: We should really be dual to Fix: ask directly
-   for the constructor, applied, and project the argument:
-
-    unfold_cofix mfix idx = Some (narg, mkApps (tConstruct ind c u) args') ->
-    nth_error args' (pars + narg) = Some arg ->
-    red1 Σ Γ (tProj (i, pars, narg) (mkApps (tCoFix mfix idx) args))
-             (mkApps arg args)
-
-    Otherwise confluence fails, AFAICT.
-
-    (tProj (i, pars, narg) (mkApps fn args))
-*)
-(** Constant unfolding *)
-| red_delta c decl body (isdecl : declared_constant Σ c decl) u :
-    decl.(cst_body) = Some body ->
-    red1 Σ Γ (tConst c u) (subst_instance_constr u body)
-
-(** Proj *)
-| red_proj i pars narg args k u arg:
-    nth_error args (pars + narg) = Some arg ->
-    red1 Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i k u) args)) arg
-
-
-| abs_red_l na M M' N : red1 Σ Γ M M' -> red1 Σ Γ (tLambda na M N) (tLambda na M' N)
-| abs_red_r na M M' N : red1 Σ (Γ ,, vass na N) M M' -> red1 Σ Γ (tLambda na N M) (tLambda na N M')
-
-| letin_red_def na b t b' r : red1 Σ Γ b r -> red1 Σ Γ (tLetIn na b t b') (tLetIn na r t b')
-| letin_red_ty na b t b' r : red1 Σ Γ t r -> red1 Σ Γ (tLetIn na b t b') (tLetIn na b r b')
-| letin_red_body na b t b' r : red1 Σ (Γ ,, vdef na b t) b' r -> red1 Σ Γ (tLetIn na b t b') (tLetIn na b t r)
-
-| case_red_pred ind p p' c brs : red1 Σ Γ p p' -> red1 Σ Γ (tCase ind p c brs) (tCase ind p' c brs)
-| case_red_discr ind p c c' brs : red1 Σ Γ c c' -> red1 Σ Γ (tCase ind p c brs) (tCase ind p c' brs)
-| case_red_brs ind p c brs brs' : OnOne2 (fun x y => red1 Σ Γ (snd x) (snd y)) brs brs' -> red1 Σ Γ (tCase ind p c brs) (tCase ind p c brs')
-
-| proj_red p c c' : red1 Σ Γ c c' -> red1 Σ Γ (tProj p c) (tProj p c')
-
-| app_red_l M1 N1 M2 : red1 Σ Γ M1 N1 -> red1 Σ Γ (tApp M1 M2) (mkApps N1 M2)
-| app_red_r M2 N2 M1 : OnOne2 (red1 Σ Γ) M2 N2 -> red1 Σ Γ (tApp M1 M2) (tApp M1 N2)
-
-| prod_red_l na M1 M2 N1 : red1 Σ Γ M1 N1 -> red1 Σ Γ (tProd na M1 M2) (tProd na N1 M2)
-| prod_red_r na M2 N2 M1 : red1 Σ (Γ ,, vass na M1) M2 N2 ->
-                               red1 Σ Γ (tProd na M1 M2) (tProd na M1 N2)
-
-| evar_red ev l l' : OnOne2 (red1 Σ Γ) l l' -> red1 Σ Γ (tEvar ev l) (tEvar ev l')
-
-| cast_red_l M1 k M2 N1 : red1 Σ Γ M1 N1 -> red1 Σ Γ (tCast M1 k M2) (tCast N1 k M2)
-| cast_red_r M2 k N2 M1 : red1 Σ Γ M2 N2 -> red1 Σ Γ (tCast M1 k M2) (tCast M1 k N2)
-| cast_red M1 k M2 : red1 Σ Γ (tCast M1 k M2) M1
-
-| fix_red_ty mfix0 mfix1 idx :
-    OnOne2 (fun d0 d1 => red1 Σ Γ (dtype d0) (dtype d1) * (dbody d0 = dbody d1))%type mfix0 mfix1 ->
-    red1 Σ Γ (tFix mfix0 idx) (tFix mfix1 idx)
-
-| fix_red_body mfix0 mfix1 idx :
-    OnOne2 (fun d0 d1 => red1 Σ (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1) * (dtype d0 = dtype d1))
-           mfix0 mfix1 ->
-    red1 Σ Γ (tFix mfix0 idx) (tFix mfix1 idx)
-
-| cofix_red_ty mfix0 mfix1 idx :
-    OnOne2 (fun d0 d1 => red1 Σ Γ (dtype d0) (dtype d1) * (dbody d0 = dbody d1))%type mfix0 mfix1 ->
-    red1 Σ Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx)
-
-| cofix_red_body mfix0 mfix1 idx :
-    OnOne2 (fun d0 d1 => red1 Σ (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1) * (dtype d0 = dtype d1))%type mfix0 mfix1 ->
-    red1 Σ Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx).
-
-Lemma red1_ind_all :
-  forall (Σ : global_env) (P : context -> term -> term -> Type),
-       (forall (Γ : context) (na : name) (t b a : term) (l : list term),
-        P Γ (tApp (tLambda na t b) (a :: l)) (mkApps (b {0 := a}) l)) ->
-       (forall (Γ : context) (na : name) (b t b' : term), P Γ (tLetIn na b t b') (b' {0 := b})) ->
-
-       (forall (Γ : context) (i : nat) (body : term),
-        option_map decl_body (nth_error Γ i) = Some (Some body) -> P Γ (tRel i) ((lift0 (S i)) body)) ->
-
-       (forall (Γ : context) (ind : inductive) (pars c : nat) (u : universe_instance) (args : list term)
-          (p : term) (brs : list (nat * term)),
-        P Γ (tCase (ind, pars) p (mkApps (tConstruct ind c u) args) brs) (iota_red pars c args brs)) ->
-
-       (forall (Γ : context) (mfix : mfixpoint term) (idx : nat) (args : list term) (narg : nat) (fn : term),
-        unfold_fix mfix idx = Some (narg, fn) ->
-        is_constructor narg args = true -> P Γ (tApp (tFix mfix idx) args) (tApp fn args)) ->
-       (forall (Γ : context) (ip : inductive * nat) (p : term) (mfix : mfixpoint term) (idx : nat)
-          (args : list term) (narg : nat) (fn : term) (brs : list (nat * term)),
-        unfold_cofix mfix idx = Some (narg, fn) ->
-        P Γ (tCase ip p (mkApps (tCoFix mfix idx) args) brs) (tCase ip p (mkApps fn args) brs)) ->
-
-       (forall (Γ : context) (p : projection) (mfix : mfixpoint term) (idx : nat) (args : list term)
-          (narg : nat) (fn : term),
-        unfold_cofix mfix idx = Some (narg, fn) -> P Γ (tProj p (mkApps (tCoFix mfix idx) args)) (tProj p (mkApps fn args))) ->
-
-       (forall (Γ : context) (c : ident) (decl : constant_body) (body : term),
-        declared_constant Σ c decl ->
-        forall u : universe_instance, cst_body decl = Some body -> P Γ (tConst c u) (subst_instance_constr u body)) ->
-
-       (forall (Γ : context) (i : inductive) (pars narg : nat) (args : list term) (k : nat) (u : universe_instance)
-         (arg : term),
-           nth_error args (pars + narg) = Some arg ->
-           P Γ (tProj (i, pars, narg) (mkApps (tConstruct i k u) args)) arg) ->
-
-       (forall (Γ : context) (na : name) (M M' N : term),
-        red1 Σ Γ M M' -> P Γ M M' -> P Γ (tLambda na M N) (tLambda na M' N)) ->
-
-       (forall (Γ : context) (na : name) (M M' N : term),
-        red1 Σ (Γ,, vass na N) M M' -> P (Γ,, vass na N) M M' -> P Γ (tLambda na N M) (tLambda na N M')) ->
-
-       (forall (Γ : context) (na : name) (b t b' r : term),
-        red1 Σ Γ b r -> P Γ b r -> P Γ (tLetIn na b t b') (tLetIn na r t b')) ->
-
-       (forall (Γ : context) (na : name) (b t b' r : term),
-        red1 Σ Γ t r -> P Γ t r -> P Γ (tLetIn na b t b') (tLetIn na b r b')) ->
-
-       (forall (Γ : context) (na : name) (b t b' r : term),
-        red1 Σ (Γ,, vdef na b t) b' r -> P (Γ,, vdef na b t) b' r -> P Γ (tLetIn na b t b') (tLetIn na b t r)) ->
-
-       (forall (Γ : context) (ind : inductive * nat) (p p' c : term) (brs : list (nat * term)),
-        red1 Σ Γ p p' -> P Γ p p' -> P Γ (tCase ind p c brs) (tCase ind p' c brs)) ->
-
-       (forall (Γ : context) (ind : inductive * nat) (p c c' : term) (brs : list (nat * term)),
-        red1 Σ Γ c c' -> P Γ c c' -> P Γ (tCase ind p c brs) (tCase ind p c' brs)) ->
-
-       (forall (Γ : context) (ind : inductive * nat) (p c : term) (brs brs' : list (nat * term)),
-           OnOne2 (fun x y : nat * term => red1 Σ Γ (snd x) (snd y) * P Γ (snd x) (snd y)) brs brs' ->
-           P Γ (tCase ind p c brs) (tCase ind p c brs')) ->
-
-       (forall (Γ : context) (p : projection) (c c' : term), red1 Σ Γ c c' -> P Γ c c' -> P Γ (tProj p c) (tProj p c')) ->
-
-       (forall (Γ : context) (M1 N1 : term) (M2 : list term), red1 Σ Γ M1 N1 -> P Γ M1 N1 -> P Γ (tApp M1 M2) (mkApps N1 M2)) ->
-
-       (forall (Γ : context) (M2 N2 : list term) (M1 : term), OnOne2 (fun x y => red1 Σ Γ x y * P Γ x y)%type M2 N2 -> P Γ (tApp M1 M2) (tApp M1 N2)) ->
-
-       (forall (Γ : context) (na : name) (M1 M2 N1 : term),
-        red1 Σ Γ M1 N1 -> P Γ M1 N1 -> P Γ (tProd na M1 M2) (tProd na N1 M2)) ->
-
-       (forall (Γ : context) (na : name) (M2 N2 M1 : term),
-        red1 Σ (Γ,, vass na M1) M2 N2 -> P (Γ,, vass na M1) M2 N2 -> P Γ (tProd na M1 M2) (tProd na M1 N2)) ->
-
-       (forall (Γ : context) (ev : nat) (l l' : list term), OnOne2 (fun x y => red1 Σ Γ x y * P Γ x y) l l' -> P Γ (tEvar ev l) (tEvar ev l')) ->
-
-       (forall (Γ : context) (M1 : term) (k : cast_kind) (M2 N1 : term),
-        red1 Σ Γ M1 N1 -> P Γ M1 N1 -> P Γ (tCast M1 k M2) (tCast N1 k M2)) ->
-
-       (forall (Γ : context) (M2 : term) (k : cast_kind) (N2 M1 : term),
-        red1 Σ Γ M2 N2 -> P Γ M2 N2 -> P Γ (tCast M1 k M2) (tCast M1 k N2)) ->
-
-       (forall (Γ : context) (M1 : term) (k : cast_kind) (M2 : term),
-           P Γ (tCast M1 k M2) M1) ->
-
-       (forall (Γ : context) (mfix0 mfix1 : list (def term)) (idx : nat),
-        OnOne2 (fun d0 d1 : def term => red1 Σ Γ (dtype d0) (dtype d1) * (dbody d0 = dbody d1) * P Γ (dtype d0) (dtype d1)) mfix0 mfix1 ->
-        P Γ (tFix mfix0 idx) (tFix mfix1 idx)) ->
-
-       (forall (Γ : context) (mfix0 mfix1 : list (def term)) (idx : nat),
-        OnOne2 (fun d0 d1 : def term =>
-                  red1 Σ (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1) * (dtype d0 = dtype d1) *
-                  P (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1)) mfix0 mfix1 ->
-        P Γ (tFix mfix0 idx) (tFix mfix1 idx)) ->
-
-       (forall (Γ : context) (mfix0 mfix1 : list (def term)) (idx : nat),
-        OnOne2 (fun d0 d1 : def term => red1 Σ Γ (dtype d0) (dtype d1) * (dbody d0 = dbody d1) *
-                                        P Γ (dtype d0) (dtype d1)) mfix0 mfix1 ->
-        P Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx)) ->
-
-       (forall (Γ : context) (mfix0 mfix1 : list (def term)) (idx : nat),
-        OnOne2 (fun d0 d1 : def term => red1 Σ (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1) * (dtype d0 = dtype d1) * P (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1)) mfix0 mfix1 ->
-        P Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx)) ->
-
-       forall (Γ : context) (t t0 : term), red1 Σ Γ t t0 -> P Γ t t0.
-Proof.
-  intros. rename X29 into Xlast. revert Γ t t0 Xlast.
-  fix aux 4. intros Γ t T.
-  move aux at top.
-  destruct 1; match goal with
-              | |- P _ (tFix _ _) (tFix _ _) => idtac
-              | |- P _ (tCoFix _ _) (tCoFix _ _) => idtac
-              | |- P _ (tApp (tFix _ _) _) _ => idtac
-              | |- P _ (tCase _ _ (mkApps (tCoFix _ _) _) _) _ => idtac
-              | |- P _ (tProj _ (mkApps (tCoFix _ _) _)) _ => idtac
-              | H : _ |- _ => eapply H; eauto
-              end.
-  - eapply X3; eauto.
-  - eapply X4; eauto.
-  - eapply X5; eauto.
-
-  - revert brs brs' o.
-    fix auxl 3.
-    intros l l' Hl. destruct Hl.
-    constructor. split; auto.
-    constructor. auto.
-
-  - revert M2 N2 o.
-    fix auxl 3.
-    intros l l' Hl. destruct Hl.
-    constructor. split; auto.
-    constructor. auto.
-
-  - revert l l' o.
-    fix auxl 3.
-    intros l l' Hl. destruct Hl.
-    constructor. split; auto.
-    constructor. auto.
-
-  - eapply X25.
-    revert mfix0 mfix1 o; fix auxl 3; intros l l' Hl; destruct Hl;
-      constructor; try split; auto; intuition.
-
-  - eapply X26.
-    revert o. generalize (fix_context mfix0). intros c H28.
-    revert mfix0 mfix1 H28; fix auxl 3; intros l l' Hl;
-    destruct Hl; constructor; try split; auto; intuition.
-
-  - eapply X27.
-    revert mfix0 mfix1 o; fix auxl 3; intros l l' Hl; destruct Hl;
-      constructor; try split; auto; intuition.
-
-  - eapply X28.
-    revert o. generalize (fix_context mfix0). intros c H28.
-    revert mfix0 mfix1 H28; fix auxl 3; intros l l' Hl; destruct Hl;
-      constructor; try split; auto; intuition.
-Defined.
-
-(** *** Reduction
-
-  The reflexive-transitive closure of 1-step reduction. *)
-
-Inductive red Σ Γ M : term -> Type :=
-| refl_red : red Σ Γ M M
-| trans_red : forall (P : term) N, red Σ Γ M P -> red1 Σ Γ P N -> red Σ Γ M N.
-
-(** ** Term equality and cumulativity *)
-
-(* ** Syntactic equality up-to universes
-
-  We shouldn't look at printing annotations nor casts.
-  It is however not possible to write a structurally recursive definition
-  for syntactic equality up-to casts due to the [tApp (tCast f _ _) args] case.
-  We hence implement first an equality which considers casts and do a stripping
-  phase of casts before checking equality. *)
-
-
-Inductive eq_term_upto_univ (Re Rle : universe -> universe -> Prop) : term -> term -> Prop :=
-| eq_Rel n  :
-    eq_term_upto_univ Re Rle (tRel n) (tRel n)
-
-| eq_Evar e args args' :
-    Forall2 (eq_term_upto_univ Re Re) args args' ->
-    eq_term_upto_univ Re Rle (tEvar e args) (tEvar e args')
-
-| eq_Var id :
-    eq_term_upto_univ Re Rle (tVar id) (tVar id)
-
-| eq_Sort s s' :
-    Rle s s' ->
-    eq_term_upto_univ Re Rle (tSort s) (tSort s')
-
-| eq_Cast f f' k T T' :
-    eq_term_upto_univ Re Re f f' ->
-    eq_term_upto_univ Re Re T T' ->
-    eq_term_upto_univ Re Rle (tCast f k T) (tCast f' k T')
-
-| eq_App t t' args args' :
-    eq_term_upto_univ Re Rle t t' ->
-    Forall2 (eq_term_upto_univ Re Re) args args' ->
-    eq_term_upto_univ Re Rle (tApp t args) (tApp t' args')
-
-| eq_Const c u u' :
-    Forall2 Rle (List.map Universe.make u) (List.map Universe.make u') ->
-    eq_term_upto_univ Re Rle (tConst c u) (tConst c u')
-
-| eq_Ind i u u' :
-    Forall2 Rle (List.map Universe.make u) (List.map Universe.make u') ->
-    eq_term_upto_univ Re Rle (tInd i u) (tInd i u')
-
-| eq_Construct i k u u' :
-    Forall2 Rle (List.map Universe.make u) (List.map Universe.make u') ->
-    eq_term_upto_univ Re Rle (tConstruct i k u) (tConstruct i k u')
-
-| eq_Lambda na na' ty ty' t t' :
-    eq_term_upto_univ Re Re ty ty' ->
-    eq_term_upto_univ Re Rle t t' ->
-    eq_term_upto_univ Re Rle (tLambda na ty t) (tLambda na' ty' t')
-
-| eq_Prod na na' a a' b b' :
-    eq_term_upto_univ Re Re a a' ->
-    eq_term_upto_univ Re Rle b b' ->
-    eq_term_upto_univ Re Rle (tProd na a b) (tProd na' a' b')
-
-| eq_LetIn na na' ty ty' t t' u u' :
-    eq_term_upto_univ Re Re ty ty' ->
-    eq_term_upto_univ Re Re t t' ->
-    eq_term_upto_univ Re Rle u u' ->
-    eq_term_upto_univ Re Rle (tLetIn na ty t u) (tLetIn na' ty' t' u')
-
-| eq_Case ind par p p' c c' brs brs' :
-    eq_term_upto_univ Re Re p p' ->
-    eq_term_upto_univ Re Re c c' ->
-    Forall2 (fun x y =>
-      fst x = fst y /\
-      eq_term_upto_univ Re Re (snd x) (snd y)
-    ) brs brs' ->
-    eq_term_upto_univ Re Rle (tCase (ind, par) p c brs) (tCase (ind, par) p' c' brs')
-
-| eq_Proj p c c' :
-    eq_term_upto_univ Re Re c c' ->
-    eq_term_upto_univ Re Rle (tProj p c) (tProj p c')
-
-| eq_Fix mfix mfix' idx :
-    Forall2 (fun x y =>
-      eq_term_upto_univ Re Re x.(dtype) y.(dtype) /\
-      eq_term_upto_univ Re Re x.(dbody) y.(dbody) /\
-      x.(rarg) = y.(rarg)
-    ) mfix mfix' ->
-    eq_term_upto_univ Re Rle (tFix mfix idx) (tFix mfix' idx)
-
-| eq_CoFix mfix mfix' idx :
-    Forall2 (fun x y =>
-      eq_term_upto_univ Re Re x.(dtype) y.(dtype) /\
-      eq_term_upto_univ Re Re x.(dbody) y.(dbody) /\
-      x.(rarg) = y.(rarg)
-    ) mfix mfix' ->
-    eq_term_upto_univ Re Rle (tCoFix mfix idx) (tCoFix mfix' idx).
-
-Definition eq_term `{checker_flags} φ :=
-  eq_term_upto_univ (eq_universe φ) (eq_universe φ).
-
-(* ** Syntactic cumulativity up-to universes
-
-  We shouldn't look at printing annotations *)
-
-Definition leq_term `{checker_flags} φ :=
-  eq_term_upto_univ (eq_universe φ) (leq_universe φ).
-
-Fixpoint strip_casts t :=
-  match t with
-  | tEvar ev args => tEvar ev (List.map strip_casts args)
-  | tLambda na T M => tLambda na (strip_casts T) (strip_casts M)
-  | tApp u v => mkApps (strip_casts u) (List.map (strip_casts) v)
-  | tProd na A B => tProd na (strip_casts A) (strip_casts B)
-  | tCast c kind t => strip_casts c
-  | tLetIn na b t b' => tLetIn na (strip_casts b) (strip_casts t) (strip_casts b')
-  | tCase ind p c brs =>
-    let brs' := List.map (on_snd (strip_casts)) brs in
-    tCase ind (strip_casts p) (strip_casts c) brs'
-  | tProj p c => tProj p (strip_casts c)
-  | tFix mfix idx =>
-    let mfix' := List.map (map_def strip_casts strip_casts) mfix in
-    tFix mfix' idx
-  | tCoFix mfix idx =>
-    let mfix' := List.map (map_def strip_casts strip_casts) mfix in
-    tCoFix mfix' idx
-  | tRel _ | tVar _ | tSort _ | tConst _ _ | tInd _ _ | tConstruct _ _ _ => t
-  end.
-
-Definition eq_term_nocast `{checker_flags} (φ : constraints) (t u : term) :=
-  eq_term φ (strip_casts t) (strip_casts u).
-
-Definition leq_term_nocast `{checker_flags} (φ : constraints) (t u : term) :=
-  leq_term φ (strip_casts t) (strip_casts u).
 
 (** ** Utilities for typing *)
 
@@ -729,7 +257,7 @@ Definition eq_opt_term `{checker_flags} φ (t u : option term) :=
   end.
 
 Definition eq_decl `{checker_flags} φ (d d' : context_decl) :=
-  eq_opt_term φ d.(decl_body) d'.(decl_body) * eq_term φ d.(decl_type) d'.(decl_type).
+  eq_opt_term φ d.(decl_body) d'.(decl_body) × eq_term φ d.(decl_type) d'.(decl_type).
 
 Definition eq_context `{checker_flags} φ (Γ Δ : context) :=
   All2 (eq_decl φ) Γ Δ.
@@ -739,7 +267,7 @@ Definition check_correct_arity `{checker_flags} φ decl ind u ctx pars pctx :=
       {| decl_name := nNamed decl.(ind_name);
          decl_body := None;
          decl_type := mkApps (tInd ind u) (map (lift0 #|ctx|) pars ++ to_extended_list ctx) |}
-  in eq_context φ (inddecl :: ctx) pctx.
+  in conv_context φ (inddecl :: ctx) pctx.
 
 (** ** Typing relation *)
 
@@ -750,7 +278,7 @@ Section WfArity.
   Context (typing : forall (Σ : global_env_ext) (Γ : context), term -> term -> Type).
 
   Definition isWfArity Σ (Γ : context) T :=
-    { ctx & { s & (destArity [] T = Some (ctx, s)) * All_local_env (lift_typing typing Σ) (Γ ,,, ctx) } }.
+    { ctx & { s & (destArity [] T = Some (ctx, s)) × All_local_env (lift_typing typing Σ) (Γ ,,, ctx) } }.
 
   Context (property : forall (Σ : global_env_ext) (Γ : context),
               All_local_env (lift_typing typing Σ) Γ ->
@@ -856,7 +384,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     let pars := List.firstn npar args in
     forall pty, Σ ;;; Γ |- p : pty ->
     forall indctx pctx ps btys, types_of_case ind mdecl idecl pars u p pty = Some (indctx, pctx, ps, btys) ->
-    check_correct_arity (global_ext_constraints Σ) idecl ind u indctx pars pctx ->
+    check_correct_arity Σ idecl ind u indctx pars pctx ->
     existsb (leb_sort_family (universe_family ps)) idecl.(ind_kelim) ->
     Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
     All2 (fun x y => (fst x = fst y) * (Σ ;;; Γ |- snd x : snd y) * (Σ ;;; Γ |- snd y : tSort ps)) brs btys ->
@@ -1207,7 +735,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
           forall (pty : term), Σ ;;; Γ |- p : pty ->
           forall indctx pctx ps btys,
           types_of_case ind mdecl idecl pars u p pty = Some (indctx, pctx, ps, btys) ->
-          check_correct_arity (global_ext_constraints Σ) idecl ind u indctx pars pctx ->
+          check_correct_arity Σ idecl ind u indctx pars pctx ->
           existsb (leb_sort_family (universe_family ps)) (ind_kelim idecl) ->
           P Σ Γ p pty ->
           Σ;;; Γ |- c : mkApps (tInd ind u) args ->

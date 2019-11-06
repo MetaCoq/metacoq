@@ -279,6 +279,19 @@ Fixpoint string_of_conv_error Σ (e : ConversionError) : string :=
       string_of_conv_pb leq
   end.
 
+Definition string_of_context_decl (d : context_decl) :=
+  match d.(decl_body) with
+  | Some body =>
+    string_of_name d.(decl_name)
+      ++ " := " ++ string_of_term body
+      ++ " : " ++ string_of_term d.(decl_type)
+  | None =>
+    string_of_name d.(decl_name)
+      ++ " : " ++ string_of_term d.(decl_type)
+  end.
+
+Definition string_of_context (Γ : context) :=
+  string_of_list string_of_context_decl Γ.
 
 Definition string_of_type_error Σ (e : type_error) : string :=
   match e with
@@ -761,14 +774,14 @@ Section Typecheck.
     - eapply check_constraints_spec; eauto.
   Qed.
 
+  Definition map2_option {A} (R : A -> A -> bool) : option A -> option A -> bool :=
+    fun t u => match t, u with
+            | Some t, Some u => R t u
+            | None, None => true
+            | _, _ => false
+            end.
 
-  Definition eqb_opt_term (t u : option term) :=
-    match t, u with
-    | Some t, Some u => eqb_term G t u
-    | None, None => true
-    | _, _ => false
-    end.
-
+  Definition eqb_opt_term := map2_option (eqb_term G).
 
   Lemma eqb_opt_term_spec t u
     : eqb_opt_term t u -> eq_opt_term (global_ext_constraints Σ) t u.
@@ -777,14 +790,17 @@ Section Typecheck.
     apply eqb_term_spec; tea. trivial.
   Qed.
 
-  Definition eqb_decl (d d' : context_decl) :=
-    eqb_opt_term d.(decl_body) d'.(decl_body) && eqb_term G d.(decl_type) d'.(decl_type).
+  Definition map2_decl (R : term -> term -> bool) : context_decl -> context_decl -> bool :=
+    fun d d' => map2_option R d.(decl_body) d'.(decl_body)
+             && R d.(decl_type) d'.(decl_type).
+
+  Definition eqb_decl := map2_decl (eqb_term G).
 
   Lemma eqb_decl_spec d d'
     : eqb_decl d d' -> eq_decl (global_ext_constraints Σ) d d'.
   Proof.
     unfold eqb_decl, eq_decl.
-    intro H. utils.toProp. apply eqb_opt_term_spec in H.
+    intro H. unfold map2_decl in H. utils.toProp. apply eqb_opt_term_spec in H.
     eapply eqb_term_spec in H0; tea. now split.
   Qed.
 

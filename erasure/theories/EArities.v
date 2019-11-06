@@ -36,7 +36,9 @@ Lemma isArity_ind_type (Σ : global_env_ext) mind ind idecl :
   isArity (ind_type idecl).
 Proof.
   intros. eapply PCUICWeakeningEnv.declared_inductive_inv with (P := typing) in H; eauto.
-  - inv H. rewrite ind_arity_eq. rewrite <- it_mkProd_or_LetIn_app.
+  - inv H. rewrite ind_arity_eq.
+    change PCUICEnvironment.it_mkProd_or_LetIn with it_mkProd_or_LetIn.
+    rewrite <- it_mkProd_or_LetIn_app.
     clear.
     eapply it_mkProd_isArity. econstructor.
   - eapply PCUICWeakeningEnv.weaken_env_prop_typing.
@@ -163,20 +165,20 @@ Proof.
     + dependent destruction X.
       * unfold subst1. rewrite subst_it_mkProd_or_LetIn, subst_mkApps. eauto.
       * destruct args using rev_ind; try rewrite <- mkApps_nested in x; cbn in x; inv x.
-      * eexists (l ++ [Build_context_decl decl_name (Some r) decl_type])%list, l0.
+      * eexists (l ++ [mkdecl decl_name (Some r) decl_type])%list, l0.
         now rewrite it_mkProd_or_LetIn_app.
-      * eexists (l ++ [Build_context_decl decl_name (Some t0) r])%list, l0.
+      * eexists (l ++ [mkdecl decl_name (Some t0) r])%list, l0.
         now rewrite it_mkProd_or_LetIn_app.
       * eapply IHL in X as (? & ? & ?). subst.
-        eexists (x ++ [Build_context_decl decl_name (Some t0) decl_type])%list, x0.
+        eexists (x ++ [mkdecl decl_name (Some t0) decl_type])%list, x0.
         rewrite it_mkProd_or_LetIn_app. reflexivity.
     + dependent destruction X.
       * eapply (f_equal decompose_app) in x.
         rewrite decompose_app_mkApps in x; cbn; eauto. cbn in x. inv x.
-      * eexists (l ++ [Build_context_decl decl_name None N1])%list, l0.
+      * eexists (l ++ [mkdecl decl_name None N1])%list, l0.
         now rewrite it_mkProd_or_LetIn_app.
       * eapply IHL in X as (? & ? & ?). subst.
-        eexists (x ++ [Build_context_decl decl_name None decl_type])%list, x0.
+        eexists (x ++ [mkdecl decl_name None decl_type])%list, x0.
         rewrite it_mkProd_or_LetIn_app. reflexivity.
 Qed.
 
@@ -214,11 +216,19 @@ Lemma tConstruct_no_Type (Σ : global_env_ext) ind c u x1 : wf Σ ->
   Is_proof Σ [] (mkApps (tConstruct ind c u) x1).
 Proof.
   intros wfΣ (? & ? & [ | (? & ? & ?)]).
-  - exfalso. eapply type_mkApps_inv in t as (? & ? & [] & ?); eauto.
-    assert (HWF : isWfArity_or_Type Σ [] x2). eapply PCUICValidity.validity. eauto. econstructor.
-    eapply type_mkApps. 2:eauto. eauto.
+  - exfalso.
+    eapply type_mkApps_inv in t as (? & ? & [] & ?); eauto.
+    assert (HWF : isWfArity_or_Type Σ [] x2).
+    { eapply PCUICValidity.validity.
+      - eauto.
+      - econstructor.
+      - eapply type_mkApps. 2:eauto. eauto.
+    }
     eapply inversion_Construct in t as (? & ? & ? & ? & ? & ? & ?) ; auto. (* destruct x5. destruct p. cbn in *. *)
-    assert (HL : #|ind_bodies x3| > 0). destruct d. destruct H. destruct (ind_bodies x3); cbn; try omega. rewrite nth_error_nil in H1. inv H1.
+    assert (HL : #|ind_bodies x3| > 0).
+    { destruct d. destruct H. destruct (ind_bodies x3); cbn; try omega.
+      rewrite nth_error_nil in H1. inv H1.
+    }
     eapply invert_cumul_arity_r in c0; eauto.
     (* eapply isArity_typing_spine_inv in t0; eauto. *)
     (* destruct t0 as (? & [] & ?). *)
@@ -227,6 +237,9 @@ Proof.
     destruct cs; cbn in *.
     destruct x5 as [[? ?] ?]; cbn in *; subst.
 
+    change PCUICEnvironment.it_mkProd_or_LetIn with it_mkProd_or_LetIn in c2.
+    change PCUICEnvironment.ind_params with ind_params in *.
+    change PCUICEnvironment.to_extended_list_k with to_extended_list_k in *.
     rewrite <- it_mkProd_or_LetIn_app in c2.
     rewrite PCUICUnivSubst.subst_instance_constr_it_mkProd_or_LetIn in c2.
     rewrite PCUICUnivSubst.subst_instance_constr_mkApps in c2.
@@ -235,24 +248,28 @@ Proof.
     cbn in c2.
     rewrite PCUICUnivSubst.subst_instance_context_length in *.
     rewrite app_length in *.
-    destruct (Nat.leb_spec (#|cshape_args| + #|ind_params x3| + 0) (#|ind_bodies x3| - S (inductive_ind ind) + #|ind_params x3| + #|cshape_args|)).
-    2:omega. clear H.
+    destruct (Nat.leb_spec (#|cshape_args| + #|ind_params x3| + 0) (#|ind_bodies x3| - S (inductive_ind ind) + #|ind_params x3| + #|cshape_args|)). 2:omega.
+    clear H.
     assert ((#|ind_bodies x3| - S (inductive_ind ind) + #|ind_params x3| +
                                                                          #|cshape_args| - (#|cshape_args| + #|ind_params x3| + 0)) < #|inds (inductive_mind ind) u (ind_bodies x3)|).
-    rewrite inds_length. omega.
+    { rewrite inds_length. omega. }
     eapply nth_error_Some in H.
     destruct ?; try congruence.
     (* destruct c2 as (? & [] & ?). *)
     eapply inds_nth_error in E as [].
     subst. cbn in *. revert c2.
-    generalize (subst_context (inds (inductive_mind ind) u (ind_bodies x3)) 0
-                              (PCUICUnivSubst.subst_instance_context u (cshape_args ++ ind_params x3)%list)).
-    generalize ((map
-             (subst (inds (inductive_mind ind) u (ind_bodies x3))
-                (#|cshape_args| + #|ind_params x3| + 0))
-             (map (PCUICUnivSubst.subst_instance_constr u)
-                  (to_extended_list_k (ind_params x3) #|cshape_args| ++ cshape_indices)))).
-    generalize ({| inductive_mind := inductive_mind ind; inductive_ind := x5 |}).
+    match goal with
+    | |- context [ it_mkProd_or_LetIn ?c _ ] =>
+      generalize c
+    end.
+    match goal with
+    | |- context [ mkApps _ ?l ] =>
+      generalize l
+    end.
+    match goal with
+    | |- context [ tInd ?i _ ] =>
+      generalize i
+    end.
     clear - wfΣ HWF t0 c0. intros.
     destruct c0 as (? & [] & ?).
     eapply typing_spine_red in t0. 3:auto. 2:{ eapply PCUICCumulativity.All_All2_refl. clear. induction x1; eauto. }
@@ -262,7 +279,7 @@ Proof.
 
     (* assert ((Σ;;; [] |- it_mkProd_or_LetIn c (mkApps (tInd i u) l) <= x0) + (Σ;;; [] |- x0 <= it_mkProd_or_LetIn c (mkApps (tInd i u) l))) by eauto. clear c2. *)
     rename c2 into X.
-    revert c l X.
+    revert c l X H.
     depind t0; intros; subst.
     + eapply (cumul_trans _ _ _ _ _) in c; tea.
       eapply invert_cumul_arity_r in c; eauto.

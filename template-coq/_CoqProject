@@ -6,12 +6,14 @@ theories/utils.v
 theories/config.v
 theories/Universes.v
 theories/BasicAst.v
+theories/Environment.v
 theories/Ast.v
 theories/AstUtils.v
 theories/Induction.v
 theories/LiftSubst.v
 theories/UnivSubst.v
 theories/Pretty.v
+theories/EnvironmentTyping.v
 
 # The Template monad
 theories/TemplateMonad.v

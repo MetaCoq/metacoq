@@ -14,6 +14,29 @@ Generalizable Variables Σ Γ t T.
 
 Definition extends (Σ Σ' : global_env) := { Σ'' & Σ' = (Σ'' ++ Σ)%list }.
 
+Lemma weakening_env_global_ext_levels Σ Σ' φ (H : extends Σ Σ') l
+  : LevelSet.In l (global_ext_levels (Σ, φ))
+    -> LevelSet.In l (global_ext_levels (Σ', φ)).
+Proof.
+  unfold global_ext_levels; simpl.
+  intros Hl. apply LevelSet.union_spec in Hl.
+  apply LevelSet.union_spec.
+  destruct Hl as [Hl|Hl]; [now left|right]. clear φ.
+  destruct H as [Σ'' eq]; subst.
+  induction Σ'' in l, Hl |- *.
+  - now rewrite app_nil_l.
+  - simpl. apply LevelSet.union_spec. right; eauto.
+Qed.
+Hint Resolve weakening_env_global_ext_levels : extends.
+
+Lemma weakening_env_global_ext_levels' Σ Σ' φ (H : extends Σ Σ') l
+  : LevelSet.mem l (global_ext_levels (Σ, φ))
+    -> LevelSet.mem l (global_ext_levels (Σ', φ)).
+Proof.
+  intro HH. apply LevelSet.mem_spec in HH.
+  now eapply LevelSet.mem_spec, weakening_env_global_ext_levels.
+Qed.
+
 Lemma lookup_env_Some_fresh Σ c decl :
   lookup_env Σ c = Some decl -> ~ (fresh_global c Σ).
 Proof.
@@ -61,7 +84,8 @@ Qed.
 Hint Resolve extends_wf_local : extends.
 
 Lemma weakening_env_red1 `{CF:checker_flags} Σ Σ' Γ M N :
-  wf Σ' -> extends Σ Σ' ->
+  wf Σ' ->
+  extends Σ Σ' ->
   red1 Σ Γ M N ->
   red1 Σ' Γ M N.
 Proof.
@@ -115,12 +139,12 @@ Lemma eq_term_upto_univ_morphism0 (Re Re' : _ -> _ -> Prop)
 Proof.
   fix aux 3.
   destruct 1; constructor; eauto.
+  all: unfold R_universe_instance in *.
   all: match goal with
+       | H : All2 _ _ _ |- _ => induction H; constructor; eauto
        | H : Forall2 _ _ _ |- _ => induction H; constructor; eauto
        end.
-  - destruct H1. split; eauto.
-  - destruct H as [? [? ?]]. repeat split; eauto.
-  - destruct H as [? [? ?]]. repeat split; eauto.
+  all: intuition eauto.
 Qed.
 
 Lemma eq_term_upto_univ_morphism (Re Re' Rle Rle' : _ -> _ -> Prop)
@@ -130,13 +154,18 @@ Lemma eq_term_upto_univ_morphism (Re Re' Rle Rle' : _ -> _ -> Prop)
 Proof.
   fix aux 3.
   destruct 1; constructor; eauto using eq_term_upto_univ_morphism0.
+  all: unfold R_universe_instance in *.
   all: match goal with
        | H : Forall2 _ _ _ |- _ => induction H; constructor;
                                    eauto using eq_term_upto_univ_morphism0
+       | H : All2 _ _ _ |- _ => induction H; constructor;
+                                eauto using eq_term_upto_univ_morphism0
        end.
-  - destruct H1. split; eauto using eq_term_upto_univ_morphism0.
-  - destruct H as [? [? ?]]. repeat split; eauto using eq_term_upto_univ_morphism0.
-  - destruct H as [? [? ?]]. repeat split; eauto using eq_term_upto_univ_morphism0.
+  - destruct r. split; eauto using eq_term_upto_univ_morphism0.
+  - destruct r as [? [? ?]].
+    repeat split; eauto using eq_term_upto_univ_morphism0.
+  - destruct r as [? [? ?]].
+    repeat split; eauto using eq_term_upto_univ_morphism0.
 Qed.
 
 Lemma leq_term_subset {cf:checker_flags} ctrs ctrs' t u
@@ -220,21 +249,6 @@ Proof.
   induction 1; intros; simpl; econstructor; eauto.
 Qed.
 
-Lemma weakening_env_global_ext_levels Σ Σ' φ (H : extends Σ Σ') l
-  : LevelSet.In l (global_ext_levels (Σ, φ))
-    -> LevelSet.In l (global_ext_levels (Σ', φ)).
-Proof.
-  unfold global_ext_levels; simpl.
-  intros Hl. apply LevelSet.union_spec in Hl.
-  apply LevelSet.union_spec.
-  destruct Hl as [Hl|Hl]; [now left|right]. clear φ.
-  destruct H as [Σ'' eq]; subst.
-  induction Σ'' in l, Hl |- *.
-  - now rewrite app_nil_l.
-  - simpl. apply LevelSet.union_spec. right; eauto.
-Qed.
-Hint Resolve weakening_env_global_ext_levels : extends.
-
 Lemma weakening_env_global_ext_constraints Σ Σ' φ (H : extends Σ Σ')
   : ConstraintSet.Subset (global_ext_constraints (Σ, φ))
                          (global_ext_constraints (Σ', φ)).
@@ -275,17 +289,22 @@ Proof.
   apply eq_context_subset.
 Qed.
 
-Lemma weakening_env_consistent_instance {cf:checker_flags} Σ Σ' φ ctrs u (H : extends Σ Σ')
-  : consistent_instance_ext (Σ, φ) ctrs u
-    -> consistent_instance_ext (Σ', φ) ctrs u.
+Lemma weakening_env_consistent_instance {cf:checker_flags} :
+  forall Σ Σ' φ ctrs u,
+    extends Σ Σ' ->
+    consistent_instance_ext (Σ, φ) ctrs u ->
+    consistent_instance_ext (Σ', φ) ctrs u.
 Proof.
-    unfold consistent_instance_ext, consistent_instance.
-    intros X.
-    destruct ctrs; tas. 2: destruct ctx as [cst _].
-    all: destruct (AUContext.repr cst).
-    all: destruct X as [X1 [X2 X3]]; repeat split; tas.
-    all: eapply valid_subset.
-    all: try eapply weakening_env_global_ext_constraints; tea.
+  intros Σ Σ' φ ctrs u he.
+  unfold consistent_instance_ext, consistent_instance.
+  intros hc.
+  destruct ctrs. 1: assumption. 2: destruct ctx as [cst _].
+  all: destruct (AUContext.repr cst).
+  all: destruct hc as [? [h2 [? ?]]] ; repeat split ; tas.
+  1,3: eapply forallb_Forall in h2 ; eapply forallb_Forall, Forall_impl ; tea ;
+    intros ? ? ; now eapply weakening_env_global_ext_levels'.
+  all: eapply valid_subset; tea;
+    now eapply weakening_env_global_ext_constraints.
 Qed.
 Hint Resolve weakening_env_consistent_instance : extends.
 
@@ -312,9 +331,9 @@ Proof.
     induction X1. constructor. econstructor; eauto with extends.
     eapply weakening_env_cumul in cumul; eauto.
   - econstructor; eauto 2 with extends.
-    eapply check_correct_arity_subset; tea.
-    apply weakening_env_global_ext_constraints; tas.
-    close_Forall. intros; intuition eauto with extends.
+    + eapply check_correct_arity_subset; tea.
+      apply weakening_env_global_ext_constraints; tas.
+    + close_Forall. intros; intuition eauto with extends.
   - econstructor; eauto with extends.
     eapply All_local_env_impl. eapply X.
     clear -wfΣ' extΣ. simpl; intros.
@@ -355,35 +374,30 @@ Proof.
   destruct Hdecl as [onI onP onnP]; constructor; eauto.
   - eapply Alli_impl; eauto. intros.
     destruct X. unshelve econstructor; eauto.
-    unfold on_constructors in *. eapply Alli_impl_trans; eauto.
-    intros ik [[id t] ar]. unfold on_constructor, on_type in *; intuition eauto.
-    destruct b. exists x0.
-    -- induction (cshape_args x0); simpl in *; auto.
-       destruct a0 as [na [b|] ty]; simpl in *; intuition eauto.
     -- unfold on_type in *; intuition eauto.
+    -- unfold on_constructors in *. eapply All2_impl; eauto.
+      intros. unfold on_constructor, on_type in *; intuition eauto.
+      destruct b as [cs Hcs]. exists cs.
+      induction (cshape_args cs); simpl in *; auto.
+      destruct a0 as [na [b|] ty]; simpl in *; intuition eauto.
     -- intros Hprojs; destruct onProjections; try constructor; auto.
-       eapply Alli_impl; eauto. intros ip [id trm].
-       unfold on_projection, on_type; eauto.
-    -- unfold Alli_impl_trans. simpl.
-       revert onConstructors ind_sorts. generalize (ind_ctors x).
-       unfold Alli_rect.
-       unfold check_ind_sorts. destruct universe_family; auto.
-       --- intros ? onCs. depelim onCs; simpl; auto. depelim onCs; simpl; auto.
-           destruct hd as [[? ?] ?]. unfold prod_rect; simpl.
-           destruct o as [? [? ?]]. simpl. auto.
-       --- intros ? onCs. clear onI. induction onCs; simpl; intuition auto.
-           destruct hd as [[? ?] ?]. unfold prod_rect; simpl.
-           destruct p as [? [? ?]]. simpl in *. auto.
-           destruct Hext; subst; simpl; auto.
-           clear H2.
-           eapply leq_universe_subset; eauto.
-           eapply global_ext_constraints_app; tas.
-       --- intros ? onCs. clear onI. induction onCs; simpl; intuition auto.
-           destruct hd as [[? ?] ?]. unfold prod_rect; simpl.
-           destruct p as [? [? ?]]. simpl in *. auto.
-           destruct Hext; subst; simpl; auto. clear H2.
-           eapply leq_universe_subset; eauto.
-           eapply global_ext_constraints_app; tas.
+      eapply Alli_impl; eauto. intros ip [id trm].
+      unfold on_projection, on_type; eauto.
+    -- unfold check_ind_sorts in *. destruct universe_family; auto.
+      --- split; [apply fst in ind_sorts|apply snd in ind_sorts].
+          eapply Forall_impl; tea; cbn.
+          intros. eapply leq_universe_subset; tea.
+          apply weakening_env_global_ext_constraints; tea.
+          destruct indices_matter; [|trivial]. clear -ind_sorts HPΣ wfΣ' Hext.
+          induction ind_indices; simpl in *; auto.
+          destruct a as [na [b|] ty]; simpl in *; intuition eauto.
+      --- split; [apply fst in ind_sorts|apply snd in ind_sorts].
+          eapply Forall_impl; tea; cbn.
+          intros. eapply leq_universe_subset; tea.
+          apply weakening_env_global_ext_constraints; tea.
+          destruct indices_matter; [|trivial]. clear -ind_sorts HPΣ wfΣ' Hext.
+          induction ind_indices; simpl in *; auto.
+          destruct a as [na [b|] ty]; simpl in *; intuition eauto.
   - red in onP |- *. eapply All_local_env_impl; eauto.
 Qed.
 
@@ -438,17 +452,23 @@ Proof.
   apply Hidecl.
 Qed.
 
-Lemma declared_constructor_inv `{checker_flags} Σ P mdecl idecl ref cdecl :
-  weaken_env_prop (lift_typing P) ->
-  wf Σ -> Forall_decls_typing P Σ ->
-  declared_constructor Σ mdecl idecl ref cdecl ->
-  on_constructor (lift_typing P) (Σ, ind_universes mdecl) (inductive_mind (fst ref)) mdecl (inductive_ind (fst ref)) idecl (snd ref) cdecl.
+Lemma declared_constructor_inv `{checker_flags} Σ P mdecl idecl ref cdecl
+  (HP : weaken_env_prop (lift_typing P))
+  (wfΣ : wf Σ)
+  (HΣ : Forall_decls_typing P Σ)
+  (Hdecl : declared_constructor Σ mdecl idecl ref cdecl) :
+  ∑ ind_ctor_sort,
+  nth_error (declared_inductive_inv Σ P ref.1 mdecl idecl HP
+                wfΣ HΣ (proj1 Hdecl)).(ind_ctors_sort) ref.2 = Some ind_ctor_sort
+  × on_constructor (lift_typing P) (Σ, ind_universes mdecl) mdecl
+                   (inductive_ind ref.1) idecl cdecl ind_ctor_sort.
 Proof.
   intros.
-  destruct H0 as [Hidecl Hcdecl].
-  eapply declared_inductive_inv in Hidecl; eauto.
-  apply onConstructors in Hidecl.
-  eapply nth_error_alli in Hidecl; eauto.
+  destruct Hdecl as [Hidecl Hcdecl].
+  set (declared_inductive_inv Σ P ref.1 mdecl idecl HP wfΣ HΣ
+                              (proj1 (conj Hidecl Hcdecl))) as HH.
+  clearbody HH. pose proof HH.(onConstructors) as HH'.
+  eapply All2_nth_error_Some in Hcdecl; tea.
 Qed.
 
 Lemma declared_projection_inv `{checker_flags} Σ P mdecl idecl ref pdecl :
@@ -506,16 +526,26 @@ Proof.
   apply (declared_inductive_inv _ _ _ mdecl idecl weaken_env_prop_typing wfΣ wfΣ Hdecl).
 Qed.
 
-Lemma on_declared_constructor `{checker_flags} {Σ ref mdecl idecl cdecl} :
-  wf Σ ->
-  declared_constructor Σ mdecl idecl ref cdecl ->
-  on_inductive (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind (fst ref)) mdecl *
-  on_ind_body (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind (fst ref)) mdecl (inductive_ind (fst ref)) idecl *
-  on_constructor (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind (fst ref)) mdecl (inductive_ind (fst ref)) idecl (snd ref) cdecl.
+Lemma on_declared_constructor `{checker_flags} {Σ ref mdecl idecl cdecl}
+  (wfΣ : wf Σ)
+  (Hdecl : declared_constructor Σ mdecl idecl ref cdecl) :
+  on_inductive (lift_typing typing) (Σ, ind_universes mdecl)
+               (inductive_mind (fst ref)) mdecl *
+  on_ind_body (lift_typing typing) (Σ, ind_universes mdecl)
+              (inductive_mind (fst ref)) mdecl (inductive_ind (fst ref)) idecl *
+  ∑ ind_ctor_sort,
+     nth_error
+      (ind_ctors_sort
+         (declared_inductive_inv Σ typing ref.1 mdecl idecl weaken_env_prop_typing
+            wfΣ wfΣ (proj1 Hdecl))) ref.2 = Some ind_ctor_sort
+    ×  on_constructor (lift_typing typing) (Σ, ind_universes mdecl)
+                 mdecl (inductive_ind (fst ref))
+                 idecl cdecl ind_ctor_sort.
 Proof.
-  intros wfΣ Hdecl.
-  split. destruct Hdecl as [Hidecl Hcdecl]. now apply on_declared_inductive in Hidecl.
-  apply (declared_constructor_inv _ _ mdecl idecl ref cdecl weaken_env_prop_typing wfΣ wfΣ Hdecl).
+  split. destruct Hdecl as [Hidecl Hcdecl].
+  now apply on_declared_inductive in Hidecl.
+  apply (declared_constructor_inv _ _ mdecl idecl ref cdecl
+                                  weaken_env_prop_typing wfΣ wfΣ Hdecl).
 Qed.
 
 Lemma on_declared_projection `{checker_flags} {Σ ref mdecl idecl pdecl} :

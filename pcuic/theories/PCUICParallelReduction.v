@@ -63,6 +63,14 @@ Definition on_local_decl (P : context -> term -> Type)
   | None => P Γ t
   end.
 
+(* TODO: remove List.rev *)
+Lemma list_size_rev {A} size (l : list A)
+  : list_size size (List.rev l) = list_size size l.
+Proof.
+  induction l; simpl. reflexivity.
+  rewrite list_size_app IHl; cbn; lia.
+Qed.
+
 Lemma term_forall_ctx_list_ind :
   forall (P : context -> term -> Type),
 
@@ -1264,7 +1272,7 @@ Section ParallelWeakening.
         assert (#|Γ''| + S i = S (#|Γ''| + i)) as -> by lia.
         econstructor; auto.
         rewrite H0. rewrite <- weaken_nth_error_ge; auto. rewrite Heq.
-        simpl in H. simpl. congruence.
+        simpl in H. simpl. f_equal. auto.
         lia.
 
       + (* Local variable *)

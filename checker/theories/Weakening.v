@@ -1,11 +1,14 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega Lia.
-From MetaCoq.Template Require Import config utils Ast AstUtils Induction utils LiftSubst UnivSubst.
-From MetaCoq.Checker Require Import LibHypsNaming Typing TypingWf WeakeningEnv Closed Reflect.
+From MetaCoq.Template Require Import config utils Ast AstUtils Induction utils
+  LiftSubst UnivSubst.
+From MetaCoq.Checker Require Import LibHypsNaming Typing TypingWf WeakeningEnv
+  Closed Reflect.
 Require Import ssreflect ssrbool.
+
+From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
-Require Import ssreflect.
 
 (** * Weakening lemmas for typing derivations.
 
@@ -292,14 +295,12 @@ Proof.
     eapply typed_liftn; eauto; eauto. constructor. simpl; lia.
     rewrite H0 in Heq'. rewrite Heq in Heq'. revert Heq'; intros [= <- <-].
     f_equal; auto.
-    apply (Alli_map_id onConstructors).
-    intros n1 [[x p] n']. intros [[s Hty] [cs Hargs]].
-    unfold on_pi2; f_equal; f_equal.
+    eapply All_map_id. eapply All2_All_left; tea.
+    intros [[x p] n'] y [[s Hty] [cs Hargs]].
+    unfold on_pi2; cbn; f_equal; f_equal.
     simpl in Hty.
-    eapply typed_liftn; eauto; eauto. apply typing_wf_local in Hty; eauto. lia.
-    assert((ind_projs = []) + (ind_projs <> [])) as [Hp|Hp].
-    { destruct ind_projs; [left|right]; congruence. }
-    subst; auto. specialize (onProjections Hp).
+    eapply typed_liftn. 4:eapply Hty. eauto. apply typing_wf_local in Hty; eauto. lia.
+    destruct(eq_dec ind_projs []) as [Hp|Hp]. subst; auto. specialize (onProjections Hp).
     destruct onProjections as [_ _ _ onProjections].
     apply (Alli_map_id onProjections).
     intros n1 [x p].
@@ -380,7 +381,7 @@ Proof.
   pose proof (onProjections Hmdecl) as onp; eauto. forward onp.
   now eapply nth_error_Some_non_nil in Hpdecl.
   eapply on_projs, nth_error_alli in onp; eauto.
-  move: onp => /= => [[]] _ [] _ /andb_and[Hd _]. simpl in Hd.
+  move: onp => /= /andb_and[Hd _]. simpl in Hd.
   rewrite smash_context_length in Hd. simpl in *. rewrite H0 in Hd.
   destruct pdecl as [id ty]. unfold on_snd; simpl in *.
   f_equal. eapply lift_closed.
@@ -585,7 +586,8 @@ Hint Rewrite lift_it_mkProd_or_LetIn : lift.
 Lemma to_extended_list_lift n k c :
   to_extended_list (lift_context n k c) = to_extended_list c.
 Proof.
-  unfold to_extended_list, to_extended_list_k. generalize 0. generalize (@nil term) at 1 2.
+  unfold to_extended_list, to_extended_list_k. generalize 0.
+  generalize (@nil TemplateTerm.term) at 1 2.
   induction c in n, k |- *; simpl; intros. reflexivity.
   rewrite -> lift_context_snoc0. unfold snoc. simpl.
   destruct a. destruct decl_body. unfold lift_decl, map_decl. simpl.
@@ -673,8 +675,9 @@ Lemma lift_types_of_case ind mdecl idecl args u p pty indctx pctx ps btys n k :
   let f_ctx := lift_context n k in
   Forall wf_decl mdecl.(ind_params) ->
   Forall Ast.wf args ->
-  Ast.wf pty -> Ast.wf (ind_type idecl) ->
-  closed_ctx mdecl.(ind_params) ->
+  Ast.wf pty ->
+  Ast.wf (ind_type idecl) ->
+  closed_ctx (subst_instance_context u (ind_params mdecl)) ->
   types_of_case ind mdecl idecl args u p pty = Some (indctx, pctx, ps, btys) ->
   types_of_case ind mdecl (map_one_inductive_body (context_assumptions mdecl.(ind_params))
                                                   (length (arities_context mdecl.(ind_bodies)))
@@ -682,19 +685,34 @@ Lemma lift_types_of_case ind mdecl idecl args u p pty indctx pctx ps btys n k :
                 (map (f 0) args) u (f 0 p) (f 0 pty) =
   Some (f_ctx indctx, f_ctx pctx, ps, map (on_snd (f 0)) btys).
 Proof.
-  simpl. intros wfpars wfargs wfpty wfdecl closedpars.
+  simpl. intros w1 w2 w3 w4 closedpars.
   unfold types_of_case.
   rewrite -> ind_type_map. simpl.
-  pose proof (lift_instantiate_params n k (ind_params mdecl) args (ind_type idecl)) as H.
-  erewrite <- H ; trivial. clear H.
-  case_eq (instantiate_params (ind_params mdecl) args (ind_type idecl)) ; try discriminate.
+  epose proof (lift_instantiate_params n k _ args (subst_instance_constr u (ind_type idecl))) as H.
+  rewrite <- lift_subst_instance_constr.
+  erewrite <- H; trivial. clear H.
+  case_eq (instantiate_params (subst_instance_context u (ind_params mdecl)) args (subst_instance_constr u (ind_type idecl))) ; try discriminate.
   intros ity eq. simpl.
   pose proof (lift_destArity [] ity n k); trivial. simpl in H.
-  forward H. eapply wf_instantiate_params; eauto.
-  unfold lift_context, fold_context in H. simpl in H. simpl. rewrite -> H. clear H.
+  unfold lift_context, fold_context in H. simpl in H. simpl. rewrite -> H.
+  2:{ eapply wf_instantiate_params. 4: eassumption.
+      - clear - w1. induction w1.
+        + constructor.
+        + simpl. constructor.
+          * destruct x as [na [bo|] ty].
+            -- unfold map_decl. unfold wf_decl in *. simpl in *.
+               intuition eauto with wf.
+            -- unfold map_decl. unfold wf_decl in *. simpl in *.
+               intuition eauto with wf.
+          * assumption.
+      - assumption.
+      - auto with wf.
+  }
+  clear H.
   destruct destArity as [[ctx s] | ]; try congruence.
   pose proof (lift_destArity [] pty n k); trivial. simpl in H.
-  unfold lift_context, fold_context in H. simpl in H. rewrite -> H. clear H.
+  unfold lift_context, fold_context in H. simpl in H.
+  rewrite -> H by assumption. clear H.
   destruct destArity as [[ctx' s'] | ]; try congruence.
   assert(forall brs,
          build_branches_type ind mdecl idecl args u p = brs ->
@@ -705,7 +723,7 @@ Proof.
          map (option_map (on_snd (lift n k))) brs).
   { unfold build_branches_type. simpl. intros brs. intros <-.
     rewrite -> ind_ctors_map.
-    rewrite -> mapi_map, map_mapi. f_equal. extensionality i. extensionality x.
+    rewrite -> mapi_map, map_mapi. eapply mapi_ext. intros i x.
     destruct x as [[id t] arity]. simpl.
     rewrite <- lift_subst_instance_constr.
     rewrite subst0_inds_lift.
@@ -736,7 +754,6 @@ Proof.
   intros [= -> -> -> <-].
   - reflexivity.
   - congruence.
-  - auto.
 Qed.
 
 Lemma weakening_red1 `{CF:checker_flags} Σ Γ Γ' Γ'' M N :
@@ -802,85 +819,91 @@ Proof.
 
   - constructor.
     rewrite -> (OnOne2_length X). generalize (#|mfix1|).
-    induction X; simpl; constructor; intuition; eauto.
+    induction X. all: simpl. all: constructor. 2: solve [ eauto ].
+    simpl. intuition eauto.
+    inversion b. eauto.
 
   - apply fix_red_body. rewrite !lift_fix_context.
     rewrite <- (OnOne2_length X).
-    eapply OnOne2_map. unfold on_Trel; solve_all.
-    specialize (b Γ0 (Γ' ,,, fix_context mfix0)).
-    rewrite app_context_assoc in b. specialize (b Γ'' eq_refl).
-    rewrite -> app_context_length, fix_context_length in *.
-    rewrite -> lift_context_app in *.
-    rewrite -> app_context_assoc, Nat.add_0_r in *.
-    auto.
+    eapply OnOne2_map. unfold on_Trel. solve_all.
+    + specialize (b0 Γ0 (Γ' ,,, fix_context mfix0)).
+      rewrite app_context_assoc in b0. specialize (b0 Γ'' eq_refl).
+      rewrite -> app_context_length, fix_context_length in *.
+      rewrite -> lift_context_app in *.
+      rewrite -> app_context_assoc, Nat.add_0_r in *.
+      auto.
+    + inversion b. eauto.
 
   - constructor.
     rewrite -> (OnOne2_length X). generalize (#|mfix1|).
-    induction X; simpl; constructor; intuition; eauto.
+    induction X. all: simpl. all: constructor. 2: solve [ eauto ].
+    simpl. intuition eauto.
+    inversion b. eauto.
 
   - apply cofix_red_body. rewrite !lift_fix_context.
     rewrite <- (OnOne2_length X).
-    eapply OnOne2_map. unfold on_Trel; solve_all.
-    specialize (b Γ0 (Γ' ,,, fix_context mfix0)).
-    rewrite app_context_assoc in b. specialize (b Γ'' eq_refl).
-    rewrite -> app_context_length, fix_context_length in *.
-    rewrite -> lift_context_app in *.
-    rewrite -> app_context_assoc, Nat.add_0_r in *.
-    auto.
+    eapply OnOne2_map. unfold on_Trel. solve_all.
+    + specialize (b0 Γ0 (Γ' ,,, fix_context mfix0)).
+      rewrite app_context_assoc in b0. specialize (b0 Γ'' eq_refl).
+      rewrite -> app_context_length, fix_context_length in *.
+      rewrite -> lift_context_app in *.
+      rewrite -> app_context_assoc, Nat.add_0_r in *.
+      auto.
+    + inversion b. eauto.
 Qed.
 
 Lemma lift_eq_term_upto_univ Re Rl n k T U :
   eq_term_upto_univ Re Rl T U ->
   eq_term_upto_univ Re Rl (lift n k T) (lift n k U).
 Proof.
-  induction T in n, k, U, Rl |- * using term_forall_list_ind;
+  induction T in n, k, U, Rl |- * using term_forall_list_rect;
     inversion 1; simpl; try (now constructor).
   - destruct (k <=? n0); constructor.
-  - constructor. clear -H H4.
-    induction l in H, args', H4 |- *.
+  - constructor. subst. clear - X H3.
+    induction l in X, args', H3 |- *.
+    + inversion H3; constructor.
+    + inversion H3. inversion X. subst.
+      simpl. constructor. all: easy.
+  - constructor. easy. clear - X H4.
+    induction l in X, args', H4 |- *.
     + inversion H4; constructor.
-    + inversion H4; inversion H; subst.
+    + inversion H4; inversion X; subst.
       now constructor.
-  - constructor. easy. clear -H H5.
-    induction l in H, args', H5 |- *.
-    + inversion H5; constructor.
-    + inversion H5; inversion H; subst.
-      now constructor.
-  - constructor; try easy. clear -H H8.
-    induction l in H, brs', H8 |- *.
-    + inversion H8; constructor.
-    + inversion H8; inversion H; subst.
+  - constructor; try easy. clear - X H7.
+    induction l in X, brs', H7 |- *.
+    + inversion H7; constructor.
+    + inversion H7; inversion X; subst.
       constructor. cbn; easy.
       easy.
-  - constructor; try easy. clear -H H4.
-    assert (XX:forall k k', Forall2
-                         (fun x y  => eq_term_upto_univ Re Re (dtype x) (dtype y) /\
-                                   eq_term_upto_univ Re Re (dbody x) (dbody y) /\
+  - constructor; try easy. clear - X H3.
+    assert (XX:forall k k', All2
+                         (fun x y  => eq_term_upto_univ Re Re (dtype x) (dtype y) ×
+                        eq_term_upto_univ Re Re (dbody x) (dbody y) ×
                                    rarg x = rarg y)
                          (map (map_def (lift n k) (lift n (#|m| + k'))) m)
                          (map (map_def (lift n k) (lift n (#|mfix'| + k'))) mfix'));
       [|now apply XX]. clear k.
-    induction m in H, mfix', H4 |- *.
-    + inversion H4; constructor.
-    + inversion H4; inversion H; subst.
+    induction m in X, mfix', H3 |- *.
+    + inversion H3; constructor.
+    + inversion H3; inversion X; subst.
       simpl. constructor. split. cbn; easy.
-      cbn; erewrite Forall2_length by eassumption.
+      cbn; erewrite All2_length by eassumption.
       easy.
       unfold tFixProp in IHm. cbn.
       rewrite !plus_n_Sm. now apply IHm.
-  - constructor; try easy. clear -H H4.
-    assert (XX:forall k k', Forall2
-                         (fun x y  => eq_term_upto_univ Re Re (dtype x) (dtype y) /\
-                                   eq_term_upto_univ Re Re (dbody x) (dbody y) /\
+  - constructor; try easy. clear - X H3.
+    assert (XX:forall k k', All2
+                         (fun x y  => eq_term_upto_univ Re Re (dtype x) (dtype y) ×
+                            eq_term_upto_univ Re Re (dbody x) (dbody y) ×
                                    rarg x = rarg y)
                          (map (map_def (lift n k) (lift n (#|m| + k'))) m)
                          (map (map_def (lift n k) (lift n (#|mfix'| + k'))) mfix'));
       [|now apply XX]. clear k.
-    induction m in H, mfix', H4 |- *.
-    + inversion H4; constructor.
-    + inversion H4; inversion H; subst.
+    induction m in X, mfix', H3 |- *.
+    + inversion H3; constructor.
+    + inversion H3; inversion X; subst.
       simpl. constructor. split. cbn; easy.
-      cbn; erewrite Forall2_length by eassumption.
+      cbn; erewrite All2_length by eassumption.
       easy.
       unfold tFixProp in IHm. cbn.
       rewrite !plus_n_Sm. now apply IHm.
@@ -929,7 +952,7 @@ Proof.
   - inversion H0.
   - inversion H0.
   - inversion H0; subst. constructor.
-    + apply All2_Forall2, Forall2_length in H6. rewrite H6.
+    + apply All2_length in H6. rewrite H6.
       now apply lift_eq_decl.
     + now apply IHl.
 Qed.
@@ -947,7 +970,7 @@ Proof.
   unfold check_correct_arity. intro H.
   inversion H; subst. simpl. rewrite lift_context_snoc0.
   constructor.
-  - apply All2_Forall2, Forall2_length in H4. destruct H4.
+  - apply All2_length in H4. destruct H4.
     clear -H2. apply (lift_eq_decl _ #|Γ''| (#|indctx| + #|Γ'|)) in H2.
     unfold lift_decl, map_decl in H2; cbn in H2.
     assert (XX : lift #|Γ''| (#|indctx| + #|Γ'|) (mkApps (tInd ind u) (map (lift0 #|indctx|) (firstn npar args) ++ to_extended_list indctx)) = mkApps (tInd ind u) (map (lift0 #|lift_context #|Γ''| #|Γ'| indctx|) (firstn npar (map (lift #|Γ''| #|Γ'|) args)) ++ to_extended_list (lift_context #|Γ''| #|Γ'| indctx)));
@@ -1075,27 +1098,34 @@ Proof.
     specialize (IHc _ _ _ wf eq_refl).
     specialize (IHp _ _ _ wf eq_refl).
     simpl. econstructor.
-    4:{ pose proof (on_declared_inductive wfΣ isdecl) as [onmind onind].
-        apply onParams in onmind as Hparams.
-        eapply lift_types_of_case in heq_types_of_case.
-        simpl in heq_types_of_case. subst pars. rewrite -> firstn_map. eapply heq_types_of_case.
-        -- eapply typing_all_wf_decl. 2: eauto. tas.
-        -- subst pars. eapply All_Forall. eapply All_firstn.
-           apply typing_wf in typec as [_ X3]; eauto.
-           now (apply (Forall_All); apply wf_mkApps_inv in X3).
-        -- eapply typing_wf in typep; wf.
-        -- wf.
-        -- destruct isdecl as [Hmdecl Hidecl].
-           eapply on_declared_minductive in Hmdecl; eauto.
-           eapply onParams in Hmdecl.
-           eapply closed_wf_local in Hmdecl; eauto. }
+    4:{ eapply lift_types_of_case in heq_types_of_case.
+        - simpl in heq_types_of_case. subst pars. rewrite -> firstn_map.
+          eapply heq_types_of_case.
+        - subst. eapply typing_all_wf_decl ; revgoals.
+          + destruct isdecl as [Hmdecl Hidecl].
+            eapply on_declared_minductive in Hmdecl. 2: assumption.
+            apply onParams in Hmdecl. unfold on_context in Hmdecl.
+            change TemplateEnvironment.ind_params with ind_params in Hmdecl.
+            eassumption.
+          + simpl. assumption.
+        - subst pars. eapply All_Forall. eapply All_firstn.
+          apply typing_wf in typec as [_ X3]; eauto.
+          now (apply (Forall_All); apply wf_mkApps_inv in X3).
+        - eapply typing_wf in typep; wf.
+        - wf.
+        - destruct isdecl as [Hmdecl Hidecl].
+          eapply on_declared_minductive in Hmdecl; eauto.
+          eapply onParams in Hmdecl.
+          change closed_ctx with (closedn_ctx 0).
+          rewrite closedn_subst_instance_context.
+          eapply closed_wf_local in Hmdecl; eauto. }
     -- erewrite -> lift_declared_inductive; eauto.
     -- auto.
     -- auto.
     -- revert H1.
-       subst pars.
-       erewrite lift_declared_inductive; eauto.
-       apply lift_check_correct_arity.
+      subst pars.
+      erewrite lift_declared_inductive; eauto.
+      apply lift_check_correct_arity.
     -- destruct idecl; simpl in *; auto.
     -- now rewrite -> !lift_mkApps in IHc.
     -- solve_all.

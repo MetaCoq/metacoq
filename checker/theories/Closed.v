@@ -1,7 +1,8 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega Lia.
-From MetaCoq.Template Require Import config utils Ast AstUtils Induction utils LiftSubst.
+From MetaCoq.Template Require Import config utils Ast AstUtils Induction utils
+  LiftSubst UnivSubst.
 From MetaCoq.Checker Require Import Typing TypingWf WeakeningEnv.
 Require Import ssreflect ssrbool.
 Require Import Equations.Prop.DepElim.
@@ -303,20 +304,20 @@ Proof.
     intuition eauto using closed_upwards with arith.
 
   - destruct isdecl as [Hidecl Hcdecl].
-    eapply declared_inductive_inv in X0; eauto.
-    apply onConstructors in X0. repeat red in X0.
-    eapply nth_error_alli in Hcdecl; eauto.
-    repeat red in Hcdecl.
-    destruct Hcdecl as [[s Hs] _]. rewrite -> andb_and in Hs.
-    destruct Hs as [Hdecl _].
-    unfold type_of_constructor.
     apply closedn_subst0.
-    unfold inds. clear. simpl. induction #|ind_bodies mdecl|. constructor.
-    simpl. now rewrite IHn.
-    rewrite inds_length. unfold arities_context in Hdecl.
-    rewrite rev_map_length in Hdecl.
-    rewrite closedn_subst_instance_constr.
-    eauto using closed_upwards with arith.
+    + unfold inds. clear. simpl. induction #|ind_bodies mdecl|. constructor.
+      simpl. now rewrite IHn.
+    + rewrite inds_length.
+      rewrite closedn_subst_instance_constr.
+      eapply declared_inductive_inv in X0; eauto.
+      pose proof X0.(onConstructors) as XX.
+      eapply All2_nth_error_Some in Hcdecl; eauto.
+      destruct Hcdecl as [? [? ?]]. cbn in *.
+      destruct o as [[s Hs] _]. rewrite -> andb_and in Hs.
+      apply proj1 in Hs.
+      unfold arities_context in Hs.
+      rewrite rev_map_length in Hs.
+      eauto using closed_upwards with arith.
 
   - intuition auto. solve_all. unfold test_snd. simpl in *.
     toProp; eauto.
@@ -379,29 +380,64 @@ Proof.
     + destruct s. rewrite andb_true_r in p. intuition auto.
 Qed.
 
+Lemma on_global_env_impl `{checker_flags} Σ P Q :
+  (forall Σ Γ t T, on_global_env P Σ.1 -> P Σ Γ t T -> Q Σ Γ t T) ->
+  on_global_env P Σ -> on_global_env Q Σ.
+Proof.
+  intros X X0.
+  simpl in *. induction X0; constructor; auto.
+  clear IHX0. destruct d; simpl.
+  - destruct c; simpl. destruct cst_body; simpl in *.
+    red in o |- *. simpl in *. now eapply X.
+    red in o |- *. simpl in *. now eapply X.
+  - red in o. simpl in *.
+    destruct o0 as [onI onP onNP].
+    constructor; auto.
+    -- eapply Alli_impl. exact onI. eauto. intros.
+       refine {| ind_indices := X1.(ind_indices);
+                 ind_arity_eq := X1.(ind_arity_eq);
+                 ind_ctors_sort := X1.(ind_ctors_sort) |}.
+       --- apply onArity in X1. unfold on_type in *; simpl in *.
+           now eapply X.
+       --- pose proof X1.(onConstructors) as X11. red in X11.
+           unfold on_constructor, on_type in *. eapply All2_impl; eauto.
+           simpl. intros. destruct X2 as (? & ? & ?).
+           split. now eapply X.
+           exists x1.
+           clear -t X X0.
+           revert t. generalize (cshape_args x1).
+           abstract (induction c; simpl; auto;
+           destruct a as [na [b|] ty]; simpl in *; auto;
+           split; eauto; [apply IHc;apply t|apply X;simpl; auto;apply t]).
+       --- simpl; intros. pose (onProjections X1 H0). simpl in *.
+           destruct o0. constructor; auto. eapply Alli_impl; intuition eauto.
+           unfold on_projection in *; simpl in *.
+           now apply X.
+       --- destruct X1. simpl. unfold check_ind_sorts in *.
+           destruct universe_family; auto.
+           split. apply ind_sorts. destruct indices_matter; auto.
+           eapply type_local_ctx_impl. eapply ind_sorts. auto.
+           split; [apply fst in ind_sorts|apply snd in ind_sorts].
+           eapply Forall_impl; tea. auto.
+           destruct indices_matter; [|trivial].
+           eapply type_local_ctx_impl; tea. eauto.
+    -- red in onP. red.
+       eapply All_local_env_impl. eauto.
+       intros. now apply X.
+Qed.
 
 Lemma declared_decl_closed `{checker_flags} (Σ : global_env) cst decl :
   wf Σ ->
   lookup_env Σ cst = Some decl ->
-  on_global_decl (fun Σ Γ b t =>
-                    match t with Some t => Ast.wf t | None => True end /\ Ast.wf b /\
-                    closedn #|Γ| b && option_default (closedn #|Γ|) t true)
+  on_global_decl (fun Σ Γ b t => closedn #|Γ| b && option_default (closedn #|Γ|) t true)
                  (Σ, universes_decl_of_decl decl) decl.
 Proof.
   intros.
   eapply weaken_lookup_on_global_env; try red; eauto.
   eapply on_global_env_impl; cycle 1.
-  eapply on_global_env_mix.
-  2:apply (env_prop_sigma _ typecheck_closed _ X).
-  2:apply (env_prop_sigma _ typing_wf_gen _ X).
-  red; intros. unfold lift_typing in *. destruct b; intuition auto with wf.
-  destruct X0 as [s0 Hs0]. exists s0. intuition auto with wf.
-  intros.
-  simpl in X1. destruct X1 as [Hcl Hwf]. red in Hcl, Hwf.
-  destruct T; simpl; intuition auto.
-  destruct Hwf; simpl; intuition auto.
-  destruct Hwf; simpl; intuition auto.
-  destruct Hcl; simpl; intuition auto.
+  apply (env_prop_sigma _ typecheck_closed _ X).
+  red; intros. unfold lift_typing in *. destruct T; intuition auto with wf.
+  destruct X1 as [s0 Hs0]. simpl. toProp; intuition.
 Qed.
 
 Require Import ssreflect ssrbool.
@@ -410,4 +446,21 @@ Proof.
   case: d => na [body|] ty; rewrite /closed_decl /=.
   move/andP => [cb cty] k' lek'. do 2 rewrite (@closed_upwards k) //.
   move=> cty k' lek'; rewrite (@closed_upwards k) //.
+Qed.
+
+Lemma rev_subst_instance_context u Γ :
+  List.rev (subst_instance_context u Γ) = subst_instance_context u (List.rev Γ).
+Proof.
+  unfold subst_instance_context, map_context.
+  now rewrite map_rev.
+Qed.
+
+Lemma closedn_subst_instance_context k Γ u :
+  closedn_ctx k (subst_instance_context u Γ) = closedn_ctx k Γ.
+Proof.
+  unfold closedn_ctx; f_equal.
+  rewrite rev_subst_instance_context.
+  rewrite mapi_map. apply mapi_ext.
+  intros n [? [] ?]; unfold closed_decl; cbn.
+  all: now rewrite !closedn_subst_instance_constr.
 Qed.

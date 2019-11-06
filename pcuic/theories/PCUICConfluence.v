@@ -1179,6 +1179,8 @@ Section RedPred.
   Proof with pcuic.
     induction 1 using red1_ind_all; intros; pcuic.
     - econstructor; pcuic. eauto.
+    - econstructor; pcuic. eauto.
+    - econstructor; pcuic. eauto.
       unfold on_Trel.
       (* TODO fix OnOne2 use in red1 to use onTrel_eq to have equality on annotation *)
       eapply OnOne2_All2 ...

@@ -24,6 +24,8 @@ src/monad_utils.ml
 src/monad_utils.mli
 src/reflect.ml
 src/reflect.mli
+src/environmentTyping.ml
+src/environmentTyping.mli
 src/retyping0.ml
 src/retyping0.mli
 src/typing0.ml

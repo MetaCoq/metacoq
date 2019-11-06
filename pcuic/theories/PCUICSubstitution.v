@@ -5,9 +5,10 @@
 From Coq Require Import Bool String List BinPos Compare_dec Arith Lia.
 Require Import Coq.Program.Syntax Coq.Program.Basics.
 From MetaCoq.Template Require Import utils config AstUtils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICEquality
-     PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICClosed
-     PCUICReduction PCUICCumulativity PCUICWeakening.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
+  PCUICLiftSubst PCUICEquality
+  PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICClosed
+  PCUICReduction PCUICWeakening PCUICCumulativity.
 Require Import ssreflect.
 
 From Equations Require Import Equations.
@@ -404,9 +405,11 @@ Proof.
     rewrite H in Heq'. rewrite Heq in Heq'. revert Heq'; intros [= <- <-].
     f_equal; auto.
     eapply All_map_id. eapply All2_All_left; tea.
-    intros [[x p] n'] y [[s Hty] [cs Hargs]]. 
+    intros [[x p] n'] y [[s Hty] [cs Hargs]].
     unfold on_pi2; cbn; f_equal; f_equal.
-    eapply typed_subst. 3:eapply Hty. eauto. simpl. lia.
+    eapply typed_subst. 3:eapply Hty. eauto. simpl.
+    change PCUICEnvironment.arities_context with arities_context.
+    lia.
     destruct (eq_dec ind_projs []) as [Hp|Hp]; subst; auto.
     specialize (onProjections Hp).
     apply on_projs in onProjections.
@@ -490,6 +493,7 @@ Proof.
   eapply nth_error_alli in onp; eauto.
   hnf in onp. simpl in onp.
   rewrite smash_context_length in onp. simpl in onp.
+  change PCUICEnvironment.context_assumptions with context_assumptions in Hnpars.
   rewrite Hnpars in onp.
   move: onp => /andb_and[Hb Ht].
   destruct pdecl as [id ty]. unfold on_snd; simpl in *.

@@ -31,6 +31,7 @@ Utils
 Config0
 Universes0
 BasicAst
+Environment
 Ast0
 AstUtils
 LiftSubst

@@ -9,8 +9,6 @@
 -Q ../erasure/theories MetaCoq.Erasure
 -R . MetaCoq.TestSuite
 
-demo.v
-add_constructor.v
 bug1.v
 bug2.v
 bug5.v

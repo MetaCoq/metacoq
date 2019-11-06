@@ -367,5 +367,6 @@ test-suite/myMain.ml
 
 template-coq/Makefile.plugin-e
 template-coq/Makefile.template-e
+pcuic/Makefile.plugin-e
 erasure/Makefile.plugin-e
 safechecker/Makefile.plugin-e

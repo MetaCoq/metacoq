@@ -20,12 +20,11 @@ Cd "src".
 
 Extraction Library Init.
 
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICUnivSubst PCUICInduction PCUICLiftSubst PCUICTyping
-     PCUICNormal PCUICSafeLemmata PCUICEquality
-     (* PCUICWeakeningEnv *)
-     (* PCUICWeakening *)
-     (* PCUICSubstitution *) PCUICPretty
-     PCUICChecker PCUICRetyping PCUICMetaTheory TemplateToPCUIC.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICUnivSubst
+  PCUICInduction PCUICLiftSubst PCUICTyping PCUICNormal PCUICSafeLemmata
+  PCUICEquality (* PCUICWeakeningEnv *) (* PCUICWeakening *)
+  (* PCUICSubstitution *) PCUICPretty PCUICChecker PCUICRetyping PCUICMetaTheory
+  TemplateToPCUIC.
 From Equations Require Import Equations.
 
 (* Should be in Equations *)

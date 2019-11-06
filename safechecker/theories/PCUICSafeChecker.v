@@ -243,6 +243,19 @@ Definition print_universes_graph (G : universes_graph) :=
   string_of_list print_no_prop_level levels
   ++ "\n" ++ string_of_list print_edge edges.
 
+Definition string_of_context_decl (d : context_decl) :=
+  match d.(decl_body) with
+  | Some body =>
+    string_of_name d.(decl_name)
+      ++ " := " ++ string_of_term body
+      ++ " : " ++ string_of_term d.(decl_type)
+  | None =>
+    string_of_name d.(decl_name)
+      ++ " : " ++ string_of_term d.(decl_type)
+  end.
+
+Definition string_of_context (Γ : context) :=
+  string_of_list string_of_context_decl Γ.
 
 Definition string_of_type_error (e : type_error) : string :=
   match e with
@@ -661,14 +674,14 @@ Section Typecheck.
     - eapply check_constraints_spec; eauto.
   Qed.
 
+  Definition map2_option {A} (R : A -> A -> bool) : option A -> option A -> bool :=
+    fun t u => match t, u with
+            | Some t, Some u => R t u
+            | None, None => true
+            | _, _ => false
+            end.
 
-  Definition eqb_opt_term (t u : option term) :=
-    match t, u with
-    | Some t, Some u => eqb_term G t u
-    | None, None => true
-    | _, _ => false
-    end.
-
+  Definition eqb_opt_term := map2_option (eqb_term G).
 
   Lemma eqb_opt_term_spec t u
     : eqb_opt_term t u -> eq_opt_term (global_ext_constraints Σ) t u.
@@ -677,14 +690,17 @@ Section Typecheck.
     apply eqb_term_spec; tea. trivial.
   Qed.
 
-  Definition eqb_decl (d d' : context_decl) :=
-    eqb_opt_term d.(decl_body) d'.(decl_body) && eqb_term G d.(decl_type) d'.(decl_type).
+  Definition map2_decl (R : term -> term -> bool) : context_decl -> context_decl -> bool :=
+    fun d d' => map2_option R d.(decl_body) d'.(decl_body)
+             && R d.(decl_type) d'.(decl_type).
+
+  Definition eqb_decl := map2_decl (eqb_term G).
 
   Lemma eqb_decl_spec d d'
     : eqb_decl d d' -> eq_decl (global_ext_constraints Σ) d d'.
   Proof.
     unfold eqb_decl, eq_decl.
-    intro H. utils.toProp. apply eqb_opt_term_spec in H.
+    intro H. unfold map2_decl in H. utils.toProp. apply eqb_opt_term_spec in H.
     eapply eqb_term_spec in H0; tea. now split.
   Qed.
 
@@ -699,20 +715,81 @@ Section Typecheck.
     cbn. apply eqb_decl_spec.
   Qed.
 
-  Definition check_correct_arity decl ind u ctx pars pctx :=
+  Definition isconv Γ := isconv_term RedFlags.default Σ HΣ Hφ G HG Γ Conv.
+
+  Fixpoint bcontext_relation
+           (P : context -> context -> context_decl -> context_decl -> bool)
+           (Γ Γ' : context) : bool :=
+    match Γ, Γ' with
+    | [], [] => true
+    | {| decl_name := na ; decl_body := None; decl_type := T |} :: Γ,
+      {| decl_name := na'; decl_body := None; decl_type := U |} :: Γ' =>
+      P Γ Γ' (vass na T) (vass na' U) &&  bcontext_relation P Γ Γ'
+    | {| decl_name := na ; decl_body := Some t; decl_type := T |} :: Γ,
+      {| decl_name := na'; decl_body := Some u; decl_type := U |} :: Γ' =>
+      P Γ Γ' (vdef na t T) (vdef na' u U) &&  bcontext_relation P Γ Γ'
+    | _, _ => false
+    end.
+
+  Require Import PCUICContextConversion.
+
+  Lemma reflect_context_relation P p
+        (HP : forall Γ Γ' d d', reflect (P Γ Γ' d d') (p Γ Γ' d d')) Γ Γ'
+    : reflectT (context_relation P Γ Γ') (bcontext_relation p Γ Γ').
+  Proof.
+    induction Γ as [|d Γ] in Γ' |- *.
+    - destruct Γ'; repeat constructor. inversion 1.
+    - destruct Γ' as [|[na' [bd'|] ty'] Γ'], d as [na [bd|] ty]; simpl.
+      all: try (constructor; inversion 1).
+      + destruct (HP Γ Γ' (vdef na bd ty) (vdef na' bd' ty')); cbn.
+        * destruct (IHΓ Γ'); constructor. now constructor.
+          now inversion 1.
+        * constructor. now inversion 1.
+      + destruct (HP Γ Γ' (vass na ty) (vass na' ty')); cbn.
+        * destruct (IHΓ Γ'); constructor. now constructor.
+          now inversion 1.
+        * constructor. now inversion 1.
+  Qed.
+
+  (* Equations bconv_context (Γ Γ' : context) *)
+  (*   : typing_result (∥ conv_context Σ Γ Γ' ∥) := *)
+  (*   bconv_context [] [] := ret _ ; *)
+  (*   bconv_context ({| decl_name := na ; decl_body := None; decl_type := T |} :: Γ ) *)
+  (*                 ({| decl_name := na'; decl_body := None; decl_type := U |} :: Γ') *)
+  (*     := match isconv Γ T _ U _ with *)
+  (*        | true => bconv_context Γ Γ' ;; ret _ *)
+  (*        | false => raise (Msg "not conv in conv_ctx") *)
+  (*        end; *)
+  (*   bconv_context _ _ := raise (Msg "not same length in conv_ctx"). *)
+  (* Next Obligation. *)
+  (*   repeat constructor. *)
+  (* Qed. *)
+  (* Next Obligation. *)
+  (* Abort. *)
+
+
+  Definition isconv0 Γ t1 t2 : bool
+    := isconv_term RedFlags.default Σ HΣ Hφ G HG Γ Conv
+                   t1 (todo "ee") t2 (todo "rr").
+
+  Definition bconv_decl Γ := map2_decl (isconv0 Γ).
+
+  Definition bconv_context Γ := bcontext_relation (fun Δ _ => bconv_decl (Γ ,,, Δ)).
+
+  Definition check_correct_arity Γ decl ind u ctx pars pctx :=
     let inddecl :=
         {| decl_name := nNamed decl.(ind_name);
            decl_body := None;
            decl_type := mkApps (tInd ind u) (map (lift0 #|ctx|) pars ++ to_extended_list ctx) |}
-    in eqb_context (inddecl :: ctx) pctx.
+    in bconv_context Γ (inddecl :: ctx) pctx.
 
-  Lemma check_correct_arity_spec decl ind u ctx pars pctx
-    : check_correct_arity decl ind u ctx pars pctx
+  Lemma check_correct_arity_spec Γ decl ind u ctx pars pctx
+    : check_correct_arity Γ decl ind u ctx pars pctx
       -> PCUICTyping.check_correct_arity (global_ext_constraints Σ) decl ind u ctx pars pctx.
   Proof.
-    apply eqb_context_spec.
-  Qed.
-
+  (*   apply eqb_context_spec. *)
+  (* Qed. *)
+  Admitted.
 
   Ltac sq :=
     repeat match goal with
@@ -802,8 +879,16 @@ Section Typecheck.
       | None => raise (Msg "not the type of a case")
       | Some (indctx, pctx, ps, btys) =>
         check_eq_true
-          (check_correct_arity body ind u indctx (firstn par args) pctx)
-          (Msg "not correct arity") ;;
+          (check_correct_arity Γ body ind u indctx (firstn par args) pctx)
+          (let inddecl := {|
+                 decl_name := nNamed (ind_name body);
+                 decl_body := None;
+                 decl_type := mkApps (tInd ind u)
+                                     (map (lift0 #|indctx|) (firstn par args)
+                                          ++ to_extended_list indctx) |} in
+           Msg ("not correct arity. indctx:\n"
+                                 ++ string_of_context (inddecl :: indctx)
+                                 ++ "\npctx:\n" ++ string_of_context pctx)) ;;
         check_eq_true
           (existsb (leb_sort_family (universe_family ps)) (ind_kelim body))
           (Msg "cannot eliminate over this sort") ;;
@@ -994,7 +1079,7 @@ Section Typecheck.
     constructor. eapply type_Case'; tea.
     - apply beq_nat_true; assumption.
     - symmetry; eassumption.
-    - apply check_correct_arity_spec; assumption.
+    - eapply check_correct_arity_spec; eassumption.
     - eapply type_reduction; eassumption.
   Defined.
 

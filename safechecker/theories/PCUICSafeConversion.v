@@ -3145,15 +3145,15 @@ Section Conversion.
     apply R_Acc. assumption.
   Qed.
 
-  (* TODO Change to stay with meaningful booleans *)
   Definition isconv Γ leq t1 π1 h1 t2 π2 h2 hx :=
-    if isconv_full Reduction Γ t1 π1 h1 t2 π2 h2 leq hx I I I
-    then true
-    else false.
+    match isconv_full Reduction Γ t1 π1 h1 t2 π2 h2 leq hx I I I with
+    | Success _ => Success I
+    | Error e => Error e
+    end.
 
   Theorem isconv_sound :
     forall Γ leq t1 π1 h1 t2 π2 h2 hx,
-      isconv Γ leq t1 π1 h1 t2 π2 h2 hx ->
+      isconv Γ leq t1 π1 h1 t2 π2 h2 hx = Success I ->
       conv leq Σ (Γ ,,, stack_context π1) (zipp t1 π1) (zipp t2 π2).
   Proof.
     unfold isconv.
@@ -3168,7 +3168,7 @@ Section Conversion.
 
   Theorem isconv_term_sound :
     forall Γ leq t1 h1 t2 h2,
-      isconv_term Γ leq t1 h1 t2 h2 ->
+      isconv_term Γ leq t1 h1 t2 h2 = Success I ->
       conv leq Σ Γ t1 t2.
   Proof.
     intros Γ leq t1 h1 t2 h2.

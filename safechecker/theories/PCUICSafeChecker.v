@@ -140,7 +140,7 @@ Inductive type_error :=
 | UndeclaredConstant (c : string)
 | UndeclaredInductive (c : inductive)
 | UndeclaredConstructor (c : inductive) (i : nat)
-| NotCumulSmaller (G : universes_graph) (t u t' u' : term)
+| NotCumulSmaller (G : universes_graph) (t u t' u' : term) (e : ConversionError)
 | NotConvertible (G : universes_graph) (t u : term)
 | NotASort (t : term)
 | NotAProduct (t t' : term)
@@ -243,20 +243,86 @@ Definition print_universes_graph (G : universes_graph) :=
   string_of_list print_no_prop_level levels
   ++ "\n" ++ string_of_list print_edge edges.
 
+Definition string_of_conv_pb (c : conv_pb) : string :=
+  match c with
+  | Conv => "conversion"
+  | Cumul => "cumulativity"
+  end.
+
+Fixpoint string_of_conv_error (e : ConversionError) : string :=
+  match e with
+  | NotFoundConstants c1 c2 =>
+      "Both constants " ++ c1 ++ " and " ++ c2 ++
+      " are not found in the environment."
+  | NotFoundConstant c =>
+      "Constant " ++ c ++
+      " common in both terms is not found in the environment."
+  | LambdaNotConvertibleTypes na A1 t1 na' A2 t2 e =>
+      "When comparing " ++ string_of_term (tLambda na A1 t1) ++
+      "\nand " ++ string_of_term (tLambda na' A2 t2) ++
+      "types are not convertible:\n" ++
+      string_of_conv_error e
+  | ProdNotConvertibleDomains na A1 B1 na' A2 B2 e =>
+      "When comparing " ++ string_of_term (tProd na A1 B1) ++
+      "\nand " ++ string_of_term (tProd na' A2 B2) ++
+      "domains are not convertible:\n" ++
+      string_of_conv_error e
+  | DistinctStuckCase ind par p c brs ind' par' p' c' brs' =>
+      "The two pattern-matching " ++
+      string_of_term (tCase (ind, par) p c brs) ++
+      "\nand " ++ string_of_term (tCase (ind', par') p' c' brs') ++
+      "\ncorrespond to syntactically distinct stuck terms."
+  | DistinctStuckProj p c p' c' =>
+      "The two projections " ++
+      string_of_term (tProj p c) ++
+      "\nand " ++ string_of_term (tProj p' c') ++
+      "\ncorrespond to syntactically distinct stuck terms."
+  | CannotUnfoldFix mfix idx mfix' idx' =>
+      "The two fixed-points " ++
+      string_of_term (tFix mfix idx) ++
+      "\nand " ++ string_of_term (tFix mfix' idx') ++
+      "\ncorrespond to syntactically distinct terms that can't be unfolded."
+  | DistinctCoFix mfix idx mfix' idx' =>
+      "The two cofixed-points " ++
+      string_of_term (tCoFix mfix idx) ++
+      "\nand " ++ string_of_term (tCoFix mfix' idx') ++
+      "\ncorrespond to syntactically distinct terms."
+  | StackHeadError leq t1 args1 u1 l1 t2 u2 l2 e =>
+      "TODO stackheaderror"
+  | StackTailError leq t1 args1 u1 l1 t2 u2 l2 e =>
+      "TODO stacktailerror"
+  | StackMismatch t1 args1 l1 t2 l2 =>
+      "Convertible terms " ++
+      string_of_term t1 ++
+      "\nand " ++ string_of_term t2 ++
+      "are convertible/convertible (TODO) but applied to a different number" ++
+      " of arguments."
+  | HeadMistmatch leq t1 t2 =>
+      "Terms " ++
+      string_of_term t1 ++
+      "\nand " ++ string_of_term t2 ++
+      "do not have the same head when comparing for " ++
+      string_of_conv_pb leq
+  end.
+
 
 Definition string_of_type_error (e : type_error) : string :=
   match e with
-  | UnboundRel n => "Unboound rel " ++ string_of_nat n
+  | UnboundRel n => "Unbound rel " ++ string_of_nat n
   | UnboundVar id => "Unbound var " ++ id
   | UnboundEvar ev => "Unbound evar " ++ string_of_nat ev
   | UndeclaredConstant c => "Undeclared constant " ++ c
   | UndeclaredInductive c => "Undeclared inductive " ++ (inductive_mind c)
   | UndeclaredConstructor c i => "Undeclared inductive " ++ (inductive_mind c)
-  | NotCumulSmaller G t u t' u' => "Terms are not <= for cumulativity:\n" ++
-      string_of_term t ++ "\nand:\n" ++ string_of_term u ++ "\nafter reduction:\n" ++
-      string_of_term t' ++ "\nand:\n" ++ string_of_term u' ++ "\nin universe graph:\n" ++ print_universes_graph G
+  | NotCumulSmaller G t u t' u' e => "Terms are not <= for cumulativity:\n" ++
+      string_of_term t ++ "\nand:\n" ++ string_of_term u ++
+      "\nafter reduction:\n" ++
+      string_of_term t' ++ "\nand:\n" ++ string_of_term u' ++
+      "\nerror:\n" ++ string_of_conv_error e ++
+      "\nin universe graph:\n" ++ print_universes_graph G
   | NotConvertible G t u => "Terms are not convertible:\n" ++
-      string_of_term t ++ "\nand:\n" ++ string_of_term u ++ "\nin universe graph:\n" ++ print_universes_graph G
+      string_of_term t ++ "\nand:\n" ++ string_of_term u ++
+      "\nin universe graph:\n" ++ print_universes_graph G
   | NotASort t => "Not a sort"
   | NotAProduct t t' => "Not a product"
   | NotAnInductive t => "Not an inductive"
@@ -510,12 +576,12 @@ Section Typecheck.
     : typing_result (∥ Σ ;;; Γ |- t <= u ∥) :=
     match leqb_term G t u with true => ret _ | false =>
     match iscumul Γ t ht u hu with
-    | true => ret _
-    | false => (* fallback *)  (* nico *)
+    | Success _ => ret _
+    | Error e => (* fallback *)  (* nico *)
       let t' := hnf Γ t ht in
       let u' := hnf Γ u hu in
       (* match leq_term (snd Σ) t' u' with true => ret _ | false => *)
-      raise (NotCumulSmaller G t u t' u')
+      raise (NotCumulSmaller G t u t' u' e)
       (* end *)
     end end.
   Next Obligation.

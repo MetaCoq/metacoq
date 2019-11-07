@@ -121,13 +121,6 @@ Proof.
   eapply eq_decl_subset; eassumption. assumption.
 Qed.
 
-Lemma check_correct_arity_subset {cf:checker_flags} φ φ' decl ind u ctx pars pctx
-  : ConstraintSet.Subset φ φ' -> check_correct_arity φ decl ind u ctx pars pctx
-    -> check_correct_arity φ' decl ind u ctx pars pctx.
-Proof.
-  apply eq_context_subset.
-Qed.
-
 Ltac my_rename_hyp h th :=
   match th with
   | (extends ?t _) => fresh "ext" t
@@ -306,9 +299,7 @@ Proof.
     rename_all_hyps; try solve [econstructor; eauto 2 with extends].
 
   - econstructor; eauto 2 with extends.
-    + eapply check_correct_arity_subset; tea.
-      apply weakening_env_global_ext_constraints; tas.
-    + close_Forall. intros; intuition eauto with extends.
+    close_Forall. intros; intuition eauto with extends.
   - econstructor; eauto with extends.
     + eapply All_local_env_impl.
       * eapply X.

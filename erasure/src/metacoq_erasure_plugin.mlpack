@@ -25,6 +25,7 @@ PCUICReduction
 PCUICNormal
 PCUICPosition
 PCUICChecker
+PCUICPretty
 PCUICRetyping
 PCUICMetaTheory
 TemplateToPCUIC

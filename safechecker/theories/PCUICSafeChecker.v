@@ -8,7 +8,8 @@ From MetaCoq.Checker Require Import uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICNormal PCUICSR
      PCUICGeneration PCUICReflect PCUICEquality PCUICInversion PCUICValidity
-     PCUICWeakening PCUICPosition PCUICCumulativity PCUICSafeLemmata PCUICSN.
+     PCUICWeakening PCUICPosition PCUICCumulativity PCUICSafeLemmata PCUICSN
+     PCUICPretty.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeConversion.
 From Equations Require Import Equations.
 
@@ -204,32 +205,32 @@ Definition string_of_def {A : Set} (f : A -> string) (def : def A) :=
 Definition string_of_inductive (i : inductive) :=
   (inductive_mind i) ++ "," ++ string_of_nat (inductive_ind i).
 
-Fixpoint string_of_term (t : term) :=
+(* Fixpoint print_term (t : term) :=
   match t with
   | tRel n => "#" ++ string_of_nat n
   | tVar n => "Var(" ++ n ++ ")"
   | tEvar ev args => "Evar(" ++ string_of_nat ev ++ "TODO" ++ ")"
   | tSort s => "Sort(" ++ string_of_sort s ++ ")"
   | tProd na b t => "Pi (" ++ string_of_name na ++ " : " ++
-                            string_of_term b ++ ") (" ++ string_of_term t ++ ")"
-  | tLambda na b t => "Lam (" ++ string_of_name na ++ " : " ++ string_of_term b
-                                ++ ") (" ++ string_of_term t ++ ")"
-  | tLetIn na b t' t => "LetIn(" ++ string_of_name na ++ "," ++ string_of_term b
-                                 ++ "," ++ string_of_term t' ++ "," ++ string_of_term t ++ ")"
-  | tApp f l => string_of_term f ++ " @ (" ++ string_of_term l ++ ")"
+                            print_term b ++ ") (" ++ print_term t ++ ")"
+  | tLambda na b t => "Lam (" ++ string_of_name na ++ " : " ++ print_term b
+                                ++ ") (" ++ print_term t ++ ")"
+  | tLetIn na b t' t => "LetIn(" ++ string_of_name na ++ "," ++ print_term b
+                                 ++ "," ++ print_term t' ++ "," ++ print_term t ++ ")"
+  | tApp f l => print_term f ++ " @ (" ++ print_term l ++ ")"
   | tConst c u => "Const(" ++ c ++ "," ++ string_of_universe_instance u ++ ")"
   | tInd i u => "Ind(" ++ string_of_inductive i ++ "," ++ string_of_universe_instance u ++ ")"
   | tConstruct i n u => "Construct(" ++ string_of_inductive i ++ "," ++ string_of_nat n ++ ","
                                     ++ string_of_universe_instance u ++ ")"
   | tCase (ind, i) t p brs =>
-    "Case(" ++ string_of_inductive ind ++ "," ++ string_of_nat i ++ "," ++ string_of_term t ++ ","
-            ++ string_of_term p ++ "," ++ string_of_list (fun b => string_of_term (snd b)) brs ++ ")"
+    "Case(" ++ string_of_inductive ind ++ "," ++ string_of_nat i ++ "," ++ print_term t ++ ","
+            ++ print_term p ++ "," ++ string_of_list (fun b => print_term (snd b)) brs ++ ")"
   | tProj (ind, i, k) c =>
     "Proj(" ++ string_of_inductive ind ++ "," ++ string_of_nat i ++ "," ++ string_of_nat k ++ ","
-            ++ string_of_term c ++ ")"
-  | tFix l n => "Fix(" ++ (string_of_list (string_of_def string_of_term) l) ++ "," ++ string_of_nat n ++ ")"
-  | tCoFix l n => "CoFix(" ++ (string_of_list (string_of_def string_of_term) l) ++ "," ++ string_of_nat n ++ ")"
-  end.
+            ++ print_term c ++ ")"
+  | tFix l n => "Fix(" ++ (string_of_list (string_of_def print_term) l) ++ "," ++ string_of_nat n ++ ")"
+  | tCoFix l n => "CoFix(" ++ (string_of_list (string_of_def print_term) l) ++ "," ++ string_of_nat n ++ ")"
+  end. *)
 
 Definition print_no_prop_level := string_of_level ∘ level_of_no_prop.
 
@@ -259,7 +260,10 @@ Definition string_of_context_decl (d : context_decl) :=
       ++ " : " ++ string_of_term d.(decl_type)
   end.
 
-Fixpoint string_of_conv_error (e : ConversionError) : string :=
+Definition print_term Σ Γ t :=
+  print_term Σ Γ true false t.
+
+Fixpoint string_of_conv_error Σ (e : ConversionError) : string :=
   match e with
   | NotFoundConstants c1 c2 =>
       "Both constants " ++ c1 ++ " and " ++ c2 ++
@@ -267,51 +271,53 @@ Fixpoint string_of_conv_error (e : ConversionError) : string :=
   | NotFoundConstant c =>
       "Constant " ++ c ++
       " common in both terms is not found in the environment."
-  | LambdaNotConvertibleTypes na A1 t1 na' A2 t2 e =>
-      "When comparing " ++ string_of_term (tLambda na A1 t1) ++
-      "\nand " ++ string_of_term (tLambda na' A2 t2) ++
+  | LambdaNotConvertibleTypes Γ1 na A1 t1 Γ2 na' A2 t2 e =>
+      "When comparing " ++ print_term Σ Γ1 (tLambda na A1 t1) ++
+      "\nand " ++ print_term Σ Γ2 (tLambda na' A2 t2) ++
       "types are not convertible:\n" ++
-      string_of_conv_error e
-  | ProdNotConvertibleDomains na A1 B1 na' A2 B2 e =>
-      "When comparing " ++ string_of_term (tProd na A1 B1) ++
-      "\nand " ++ string_of_term (tProd na' A2 B2) ++
+      string_of_conv_error Σ e
+  | ProdNotConvertibleDomains Γ1 na A1 B1 Γ2 na' A2 B2 e =>
+      "When comparing " ++ print_term Σ Γ1 (tProd na A1 B1) ++
+      "\nand " ++ print_term Σ Γ2 (tProd na' A2 B2) ++
       "domains are not convertible:\n" ++
-      string_of_conv_error e
-  | DistinctStuckCase ind par p c brs ind' par' p' c' brs' =>
+      string_of_conv_error Σ e
+  | DistinctStuckCase Γ ind par p c brs Γ' ind' par' p' c' brs' =>
       "The two pattern-matching " ++
-      string_of_term (tCase (ind, par) p c brs) ++
-      "\nand " ++ string_of_term (tCase (ind', par') p' c' brs') ++
+      print_term Σ Γ (tCase (ind, par) p c brs) ++
+      "\nand " ++ print_term Σ Γ' (tCase (ind', par') p' c' brs') ++
       "\ncorrespond to syntactically distinct stuck terms."
-  | DistinctStuckProj p c p' c' =>
+  | DistinctStuckProj Γ p c Γ' p' c' =>
       "The two projections " ++
-      string_of_term (tProj p c) ++
-      "\nand " ++ string_of_term (tProj p' c') ++
+      print_term Σ Γ (tProj p c) ++
+      "\nand " ++ print_term Σ Γ' (tProj p' c') ++
       "\ncorrespond to syntactically distinct stuck terms."
-  | CannotUnfoldFix mfix idx mfix' idx' =>
+  | CannotUnfoldFix Γ mfix idx Γ' mfix' idx' =>
       "The two fixed-points " ++
-      string_of_term (tFix mfix idx) ++
-      "\nand " ++ string_of_term (tFix mfix' idx') ++
+      print_term Σ Γ (tFix mfix idx) ++
+      "\nand " ++ print_term Σ Γ' (tFix mfix' idx') ++
       "\ncorrespond to syntactically distinct terms that can't be unfolded."
-  | DistinctCoFix mfix idx mfix' idx' =>
+  | DistinctCoFix Γ mfix idx Γ' mfix' idx' =>
       "The two cofixed-points " ++
-      string_of_term (tCoFix mfix idx) ++
-      "\nand " ++ string_of_term (tCoFix mfix' idx') ++
+      print_term Σ Γ (tCoFix mfix idx) ++
+      "\nand " ++ print_term Σ Γ' (tCoFix mfix' idx') ++
       "\ncorrespond to syntactically distinct terms."
-  | StackHeadError leq t1 args1 u1 l1 t2 u2 l2 e =>
-      "StackHeadError: " ++ string_of_conv_error e
-  | StackTailError leq t1 args1 u1 l1 t2 u2 l2 e =>
-      "StackTailError: " ++ string_of_conv_error e
-  | StackMismatch t1 args1 l1 t2 l2 =>
+  | StackHeadError leq Γ1 t1 args1 u1 l1 Γ2 t2 u2 l2 e =>
+      "TODO stackheaderror\n" ++
+      string_of_conv_error Σ e
+  | StackTailError leq Γ1 t1 args1 u1 l1 Γ2 t2 u2 l2 e =>
+      "TODO stacktailerror\n" ++
+      string_of_conv_error Σ e
+  | StackMismatch Γ1 t1 args1 l1 Γ2 t2 l2 =>
       "Convertible terms " ++
-      string_of_term t1 ++
-      "\nand " ++ string_of_term t2 ++
+      print_term Σ Γ1 t1 ++
+      "\nand " ++ print_term Σ Γ2 t2 ++
       "are convertible/convertible (TODO) but applied to a different number" ++
       " of arguments."
-  | HeadMistmatch leq t1 t2 =>
+  | HeadMistmatch leq Γ1 t1 Γ2 t2 =>
       "Terms " ++
-      string_of_term t1 ++
-      "\nand " ++ string_of_term t2 ++
-      "do not have the same head when comparing for " ++
+      print_term Σ Γ1 t1 ++
+      "\nand " ++ print_term Σ Γ2 t2 ++
+      " do not have the same head when comparing for " ++
       string_of_conv_pb leq
   end.
 
@@ -319,7 +325,7 @@ Fixpoint string_of_conv_error (e : ConversionError) : string :=
 Definition string_of_context (Γ : context) :=
   string_of_list string_of_context_decl Γ.
 
-Definition string_of_type_error (e : type_error) : string :=
+Definition string_of_type_error Σ (e : type_error) : string :=
   match e with
   | UnboundRel n => "Unbound rel " ++ string_of_nat n
   | UnboundVar id => "Unbound var " ++ id
@@ -328,13 +334,13 @@ Definition string_of_type_error (e : type_error) : string :=
   | UndeclaredInductive c => "Undeclared inductive " ++ (inductive_mind c)
   | UndeclaredConstructor c i => "Undeclared inductive " ++ (inductive_mind c)
   | NotCumulSmaller G t u t' u' e => "Terms are not <= for cumulativity:\n" ++
-      string_of_term t ++ "\nand:\n" ++ string_of_term u ++
+      print_term Σ [] t ++ "\nand:\n" ++ print_term Σ [] u ++
       "\nafter reduction:\n" ++
-      string_of_term t' ++ "\nand:\n" ++ string_of_term u' ++
-      "\nerror:\n" ++ string_of_conv_error e ++
+      print_term Σ [] t' ++ "\nand:\n" ++ print_term Σ [] u' ++
+      "\nerror:\n" ++ string_of_conv_error Σ e ++
       "\nin universe graph:\n" ++ print_universes_graph G
   | NotConvertible G t u => "Terms are not convertible:\n" ++
-      string_of_term t ++ "\nand:\n" ++ string_of_term u ++
+      print_term Σ [] t ++ "\nand:\n" ++ print_term Σ [] u ++
       "\nin universe graph:\n" ++ print_universes_graph G
   | NotASort t => "Not a sort"
   | NotAProduct t t' => "Not a product"
@@ -1250,7 +1256,7 @@ Section Typecheck.
   Program Definition check_isWfArity Γ (HΓ : ∥ wf_local Σ Γ ∥) A
     : typing_result (∥ isWfArity typing Σ Γ A ∥) :=
     match destArity [] A with
-    | None => raise (Msg (string_of_term A ++ " is not an arity"))
+    | None => raise (Msg (print_term Σ Γ A ++ " is not an arity"))
     | Some (ctx, s) => XX <- check_context (Γ ,,, ctx) ;;
                       ret _
     end.

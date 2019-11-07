@@ -69,6 +69,10 @@ src/pCUICNormal.ml
 # src/pCUICContextConversion.ml
 # src/pCUICConversion.mli
 # src/pCUICConversion.ml
+src/pCUICChecker.ml
+src/pCUICChecker.mli
+src/pCUICPretty.mli
+src/pCUICPretty.ml
 src/pCUICSafeLemmata.mli
 src/pCUICSafeLemmata.ml
 src/templateToPCUIC.mli

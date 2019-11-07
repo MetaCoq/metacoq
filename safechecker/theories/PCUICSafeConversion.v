@@ -651,44 +651,56 @@ Section Conversion.
   | NotFoundConstant (c : kername)
 
   | LambdaNotConvertibleTypes
-      (na : name) (A1 t1 : term)
-      (na' : name) (A2 t2 : term)
+      (Γ1 : context) (na : name) (A1 t1 : term)
+      (Γ2 : context) (na' : name) (A2 t2 : term)
       (e : ConversionError)
 
   | ProdNotConvertibleDomains
-      (na : name) (A1 B1 : term)
-      (na' : name) (A2 B2 : term)
+      (Γ1 : context) (na : name) (A1 B1 : term)
+      (Γ2 : context) (na' : name) (A2 B2 : term)
       (e : ConversionError)
 
   | DistinctStuckCase
-    (ind : inductive) (par : nat) (p c : term) (brs : list (nat × term))
-    (ind' : inductive) (par' : nat) (p' c' : term) (brs' : list (nat × term))
+      (Γ : context)
+      (ind : inductive) (par : nat) (p c : term) (brs : list (nat × term))
+      (Γ' : context)
+      (ind' : inductive) (par' : nat) (p' c' : term) (brs' : list (nat × term))
 
-  | DistinctStuckProj (p : projection) (c : term) (p' : projection) (c' : term)
+  | DistinctStuckProj
+      (Γ : context) (p : projection) (c : term)
+      (Γ' : context) (p' : projection) (c' : term)
 
   | CannotUnfoldFix
-    (mfix : mfixpoint term) (idx : nat)
-    (mfix' : mfixpoint term) (idx' : nat)
+      (Γ : context) (mfix : mfixpoint term) (idx : nat)
+      (Γ' : context) (mfix' : mfixpoint term) (idx' : nat)
 
   | DistinctCoFix
-      (mfix : mfixpoint term) (idx : nat)
-      (mfix' : mfixpoint term) (idx' : nat)
+      (Γ : context) (mfix : mfixpoint term) (idx : nat)
+      (Γ' : context) (mfix' : mfixpoint term) (idx' : nat)
 
-  | StackHeadError (leq : conv_pb)
+  | StackHeadError
+      (leq : conv_pb)
+      (Γ1 : context)
       (t1 : term) (args1 : list term) (u1 : term) (l1 : list term)
+      (Γ2 : context)
       (t2 : term) (u2 : term) (l2 : list term)
       (e : ConversionError)
 
   | StackTailError (leq : conv_pb)
+      (Γ1 : context)
       (t1 : term) (args1 : list term) (u1 : term) (l1 : list term)
+      (Γ2 : context)
       (t2 : term) (u2 : term) (l2 : list term)
       (e : ConversionError)
 
   | StackMismatch
-      (t1 : term) (args1 l1 : list term)
-      (t2 : term) (l2 : list term)
+      (Γ1 : context) (t1 : term) (args1 l1 : list term)
+      (Γ2 : context) (t2 : term) (l2 : list term)
 
-  | HeadMistmatch (leq : conv_pb) (t1 t2 : term).
+  | HeadMistmatch
+      (leq : conv_pb)
+      (Γ1 : context) (t1 : term)
+      (Γ2 : context) (t2 : term).
 
   Inductive ConversionResult (P : Prop) :=
   | Success (h : P)
@@ -1557,7 +1569,12 @@ Section Conversion.
         isconv_red leq
                    t1 (Lambda_tm na A1 π1)
                    t2 (Lambda_tm na' A2 π2) aux ;
-      | Error e := Error (LambdaNotConvertibleTypes na A1 t1 na' A2 t2 e)
+      | Error e :=
+        Error (
+          LambdaNotConvertibleTypes
+            (Γ ,,, stack_context π1) na A1 t1
+            (Γ ,,, stack_context π2) na' A2 t2 e
+        )
       } ;
 
     | prog_view_Prod na A1 B1 na' A2 B2
@@ -1566,7 +1583,12 @@ Section Conversion.
         isconv_red leq
                    B1 (Prod_r na A1 π1)
                    B2 (Prod_r na' A2 π2) aux ;
-      | Error e := Error (ProdNotConvertibleDomains na A1 B1 na' A2 B2 e)
+      | Error e :=
+        Error (
+          ProdNotConvertibleDomains
+            (Γ ,,, stack_context π1) na A1 B1
+            (Γ ,,, stack_context π2) na' A2 B2 e
+        )
       } ;
 
     | prog_view_Case ind par p c brs ind' par' p' c' brs'
@@ -1575,7 +1597,12 @@ Section Conversion.
       | @exist false _ with inspect (reduce_term RedFlags.default Σ hΣ (Γ ,,, stack_context π1) c _) := {
         | @exist cred eq1 with inspect (reduce_term RedFlags.default Σ hΣ (Γ ,,, stack_context π2) c' _) := {
            | @exist cred' eq2 with inspect (eqb_term cred c && eqb_term cred' c') := {
-              | @exist true eq3 := Error (DistinctStuckCase ind par p c brs ind' par' p' c' brs') ;
+              | @exist true eq3 :=
+                Error (
+                  DistinctStuckCase
+                    (Γ ,,, stack_context π1) ind par p c brs
+                    (Γ ,,, stack_context π2) ind' par' p' c' brs'
+                ) ; (* TODO Probaby incomplete *)
               | @exist false eq3 :=
                 isconv_red leq (tCase (ind, par) p cred brs) π1
                                (tCase (ind', par') p' cred' brs') π2 aux
@@ -1586,7 +1613,12 @@ Section Conversion.
 
     | prog_view_Proj p c p' c' with inspect (eqb_term (tProj p c) (tProj p' c')) := {
       | @exist true eq1 := isconv_args leq (tProj p c) π1 (tProj p' c') π2 aux ;
-      | @exist false _ := Error (DistinctStuckProj p c p' c') (* TODO Probably incomplete *)
+      | @exist false _ :=
+        Error (
+          DistinctStuckProj
+            (Γ ,,, stack_context π1) p c
+            (Γ ,,, stack_context π2) p' c'
+        ) (* TODO Probably incomplete *)
       } ;
 
     | prog_view_Fix mfix idx mfix' idx'
@@ -1610,7 +1642,12 @@ Section Conversion.
                 isconv_prog leq (tFix mfix idx) π1 fn' (ρ +++ θ') aux
               }
             } ;
-          | _ := Error (CannotUnfoldFix mfix idx mfix' idx')
+          | _ :=
+            Error (
+              CannotUnfoldFix
+                (Γ ,,, stack_context π1) mfix idx
+                (Γ ,,, stack_context π2) mfix' idx'
+            )
           }
         }
       } ;
@@ -1618,7 +1655,12 @@ Section Conversion.
     | prog_view_CoFix mfix idx mfix' idx'
       with inspect (eqb_term (tCoFix mfix idx) (tCoFix mfix' idx')) := {
       | @exist true eq1 := isconv_args leq (tCoFix mfix idx) π1 (tCoFix mfix' idx') π2 aux ;
-      | @exist false _ := Error (DistinctCoFix mfix idx mfix' idx') (* TODO Is it complete? *)
+      | @exist false _ :=
+        Error (
+          DistinctCoFix
+            (Γ ,,, stack_context π1) mfix idx
+            (Γ ,,, stack_context π2) mfix' idx'
+        ) (* TODO Is it complete? *)
       } ;
 
     | prog_view_other t1 t2 h :=
@@ -2320,15 +2362,31 @@ Section Conversion.
     with aux u1 u2 args1 l1 (coApp t2 (appstack l2 π2)) _ _ _ _ Conv _ I I I := {
     | Success H1 with _isconv_args' leq Γ t1 (args1 ++ [u1]) l1 π1 _ _ (tApp t2 u2) l2 π2 _ _ _ _ _ := {
       | Success H2 := yes ;
-      | Error e := Error (StackTailError leq t1 args1 u1 l1 t2 u2 l2 e)
+      | Error e :=
+        Error (
+          StackTailError
+            leq
+            (Γ ,,, stack_context π1) t1 args1 u1 l1
+            (Γ ,,, stack_context π2) t2 u2 l2 e
+        )
       } ;
-    | Error e := Error (StackHeadError leq t1 args1 u1 l1 t2 u2 l2 e)
+    | Error e :=
+      Error (
+        StackHeadError
+          leq
+          (Γ ,,, stack_context π1) t1 args1 u1 l1
+          (Γ ,,, stack_context π2) t2 u2 l2 e
+      )
     } ;
 
     _isconv_args' leq Γ t1 args1 [] π1 h1 hπ1 t2 [] π2 h2 hπ2 hx h aux := yes ;
 
     _isconv_args' leq Γ t1 args1 l1 π1 h1 hπ1 t2 l2 π2 h2 hπ2 hx h aux :=
-      Error (StackMismatch t1 args1 l1 t2 l2).
+      Error (
+        StackMismatch
+          (Γ ,,, stack_context π1) t1 args1 l1
+          (Γ ,,, stack_context π2) t2 l2
+      ).
   Next Obligation.
     unfold zipp.
     case_eq (decompose_stack π1). intros l1 ρ1 e1.
@@ -2775,11 +2833,23 @@ Section Conversion.
       | @exist None _ with inspect leq := {
         | @exist Conv eq1 with inspect (eqb_term t1 t2) := {
           | @exist true eq2 := isconv_args Conv t1 π1 t2 π2 aux ;
-          | @exist false _ := Error (HeadMistmatch Conv t1 t2)
+          | @exist false _ :=
+            Error (
+              HeadMistmatch
+                Conv
+                (Γ ,,, stack_context π1) t1
+                (Γ ,,, stack_context π2) t2
+            )
           } ;
         | @exist Cumul eq1 with inspect (leqb_term t1 t2) := {
           | @exist true eq2 := isconv_args Cumul t1 π1 t2 π2 aux ;
-          | @exist false _ := Error (HeadMistmatch Cumul t1 t2)
+          | @exist false _ :=
+            Error (
+              HeadMistmatch
+                Cumul
+                (Γ ,,, stack_context π1) t1
+                (Γ ,,, stack_context π2) t2
+            )
           }
         }
       }

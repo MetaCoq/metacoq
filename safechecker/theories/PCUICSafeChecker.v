@@ -298,9 +298,9 @@ Fixpoint string_of_conv_error (e : ConversionError) : string :=
       "\nand " ++ string_of_term (tCoFix mfix' idx') ++
       "\ncorrespond to syntactically distinct terms."
   | StackHeadError leq t1 args1 u1 l1 t2 u2 l2 e =>
-      "TODO stackheaderror"
+      "StackHeadError: " ++ string_of_conv_error e
   | StackTailError leq t1 args1 u1 l1 t2 u2 l2 e =>
-      "TODO stacktailerror"
+      "StackTailError: " ++ string_of_conv_error e
   | StackMismatch t1 args1 l1 t2 l2 =>
       "Convertible terms " ++
       string_of_term t1 ++

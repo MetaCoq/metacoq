@@ -660,10 +660,10 @@ Section Conversion.
       (Γ2 : context) (na' : name) (A2 B2 : term)
       (e : ConversionError)
 
-  | DistinctStuckCase
-      (Γ : context)
+  | CaseOnDifferentInd
+      (Γ1 : context)
       (ind : inductive) (par : nat) (p c : term) (brs : list (nat × term))
-      (Γ' : context)
+      (Γ2 : context)
       (ind' : inductive) (par' : nat) (p' c' : term) (brs' : list (nat × term))
 
   | DistinctStuckProj
@@ -1597,12 +1597,39 @@ Section Conversion.
       | @exist false _ with inspect (reduce_term RedFlags.default Σ hΣ (Γ ,,, stack_context π1) c _) := {
         | @exist cred eq1 with inspect (reduce_term RedFlags.default Σ hΣ (Γ ,,, stack_context π2) c' _) := {
            | @exist cred' eq2 with inspect (eqb_term cred c && eqb_term cred' c') := {
-              | @exist true eq3 :=
-                Error (
-                  DistinctStuckCase
-                    (Γ ,,, stack_context π1) ind par p c brs
-                    (Γ ,,, stack_context π2) ind' par' p' c' brs'
-                ) ; (* TODO Probaby incomplete *)
+              | @exist true eq3 with inspect (eqb (ind, par) (ind', par')) := {
+                | @exist true eq4
+                  with isconv_red_raw Conv
+                        p (Case_p (ind, par) c brs π1)
+                        p' (Case_p (ind',par') c' brs' π2)
+                        aux := {
+                  | Success h1
+                    with isconv_red_raw Conv
+                          c (Case (ind, par) p brs π1)
+                          c' (Case (ind', par') p' brs' π2)
+                          aux := {
+                    | Success h2 with inspect (forallb2
+                    (fun x y : nat × term =>
+                     eqb x.1 y.1 && eqb_term_upto_univ (check_eqb_universe G) (check_eqb_universe G) x.2 y.2) brs brs') := {
+                      (* TODO Deal with branches properly *)
+                      | @exist true eq5 := yes ;
+                      | @exist false _ := Error (
+                        CaseOnDifferentInd
+                          (Γ ,,, stack_context π1) ind par p c brs
+                          (Γ ,,, stack_context π2) ind' par' p' c' brs'
+                      )
+                      } ;
+                    | Error e := Error e
+                    } ;
+                  | Error e := Error e
+                  } ;
+                | @exist false _ :=
+                  Error (
+                    CaseOnDifferentInd
+                      (Γ ,,, stack_context π1) ind par p c brs
+                      (Γ ,,, stack_context π2) ind' par' p' c' brs'
+                  )
+                } ;
               | @exist false eq3 :=
                 isconv_red leq (tCase (ind, par) p cred brs) π1
                                (tCase (ind', par') p' cred' brs') π2 aux
@@ -1838,6 +1865,24 @@ Section Conversion.
       as [uni [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]].
     left. eexists. eassumption.
   Qed.
+  Next Obligation.
+    eapply R_positionR. all: simpl.
+    1: reflexivity.
+    rewrite <- app_nil_r.
+    eapply positionR_poscat. constructor.
+  Qed.
+  Next Obligation.
+    eapply R_positionR. all: simpl.
+    1: reflexivity.
+    rewrite <- app_nil_r.
+    eapply positionR_poscat. constructor.
+  Qed.
+  Next Obligation.
+    destruct h1 as [h1].
+    destruct h2 as [h2].
+    unfold zipp in h1, h2. simpl in h1, h2.
+    (* Let's not do a proof that will change soon *)
+  Admitted.
   Next Obligation.
     eapply red_wellformed ; auto.
     - exact h1.

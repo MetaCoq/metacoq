@@ -1243,67 +1243,89 @@ Section CheckLeq.
       split; intros HH v Hv; specialize (HH v Hv); cbn in *; lia.
   Qed.
 
-
-  Fixpoint leqb_univ_expr_n n (u : universe) (e2 : Universe.Expr.t) :=
+  Fixpoint leqb_expr_univ_n n (e1 : Universe.Expr.t) (u : universe) :=
     match u with
-    | NEL.sing e1 => leqb_expr_n n e1 e2
-    | NEL.cons e1 u => leqb_expr_n n e1 e2 && leqb_univ_expr_n n u e2
+    | NEL.sing e2 => leqb_expr_n n e1 e2
+    | NEL.cons e2 u => leqb_expr_n n e1 e2 || leqb_expr_univ_n n e1 u
     end.
+
 
   Definition gc_levels_declared (u : universe)
     := List.Forall (fun e => gc_level_declared e.1) (NEL.to_list u).
 
-  Lemma leqb_univ_expr_n_spec0 n u e2
-    : leqb_univ_expr_n n u e2
-      -> gc_leq_universe_n n uctx.2 u (Universe.make' e2).
+  Lemma leqb_expr_univ_n_spec0 n e1 u
+    : leqb_expr_univ_n n e1 u
+      -> gc_leq_universe_n n uctx.2 (Universe.make' e1) u.
   Proof.
-    induction u; cbn.
+    induction u in e1 |- *; cbn.
     - apply leqb_expr_n_spec0; tas.
-    - intro HH. apply andb_true_iff in HH.
-      destruct HH as [H1 H2]. apply IHu in H2; tas.
+    - intro HH. apply orb_true_iff in HH.
+      destruct HH as [H1|H1].
       eapply leqb_expr_n_spec0 in H1; tas.
-      intros v Hv; specialize (H1 v Hv); specialize (H2 v Hv).
-      rewrite val_cons; cbn in *; lia.
-  Qed.
-
-  Lemma leqb_univ_expr_n_spec n u e2
-        (Hu  : gc_levels_declared u)
-        (He2 : gc_level_declared e2.1)
-    : leqb_univ_expr_n n u e2
-      <-> gc_leq_universe_n n uctx.2 u (Universe.make' e2).
-  Proof.
-    induction u; cbn.
-    - apply leqb_expr_n_spec; tas. now inversion Hu.
-    - etransitivity. apply andb_true_iff.
-      inversion_clear Hu.
-      etransitivity. eapply and_iff_compat_l. apply IHu; tas.
-      etransitivity. eapply and_iff_compat_r. eapply leqb_expr_n_spec; tas.
-      split.
-      + intros [H1 H2] v Hv; specialize (H1 v Hv); specialize (H2 v Hv).
+      2: apply IHu in H1; tas.
+      all: intros v Hv; specialize (H1 v Hv);
         rewrite val_cons; cbn in *; lia.
-      + intro HH; split; intros v Hv; specialize (HH v Hv);
-        rewrite val_cons in HH; cbn in *; lia.
   Qed.
 
-  Definition leqb_univ_expr u e2 :=
-    negb check_univs || leqb_univ_expr_n 0 u e2.
+  Lemma leqb_expr_univ_n_spec n e1 u
+        (He1 : gc_level_declared e1.1)
+        (Hu  : gc_levels_declared u)
+    : leqb_expr_univ_n n e1 u
+      <-> gc_leq_universe_n n uctx.2 (Universe.make' e1) u.
+  Proof.
+  (*   induction u; cbn. *)
+  (*   - apply leqb_expr_n_spec; tas. now inversion Hu. *)
+  (*   - etransitivity. apply andb_true_iff. *)
+  (*     inversion_clear Hu. *)
+  (*     etransitivity. eapply and_iff_compat_l. apply IHu; tas. *)
+  (*     etransitivity. eapply and_iff_compat_r. eapply leqb_expr_n_spec; tas. *)
+  (*     split. *)
+  (*     + intros [H1 H2] v Hv; specialize (H1 v Hv); specialize (H2 v Hv). *)
+  (*       rewrite val_cons; cbn in *; lia. *)
+  (*     + intro HH; split; intros v Hv; specialize (HH v Hv); *)
+  (*       rewrite val_cons in HH; cbn in *; lia. *)
+  (* Qed. *)
+  Admitted.
+
+  Definition leqb_expr_univ e1 u :=
+    negb check_univs || leqb_expr_univ_n 0 e1 u.
 
 
   (* This function is correct but not complete! *)
   Fixpoint try_leqb_universe_n n (u1 u2 : universe) :=
-    match u2 with
-    | NEL.sing e => leqb_univ_expr_n n u1 e
-    | NEL.cons e u2 => leqb_univ_expr_n n u1 e || try_leqb_universe_n n u1 u2
+    match u1 with
+    | NEL.sing e => leqb_expr_univ_n n e u2
+    | NEL.cons e u1 => leqb_expr_univ_n n e u2 && try_leqb_universe_n n u1 u2
     end.
 
   Lemma try_leqb_universe_n_spec n u1 u2
     : try_leqb_universe_n n u1 u2 -> gc_leq_universe_n n uctx.2 u1 u2.
   Proof.
-    induction u2; cbn.
-    - apply leqb_univ_expr_n_spec0; tas.
-    - intro HH; apply orb_true_iff in HH; destruct HH as [HH|HH];
-        [apply leqb_univ_expr_n_spec0 in HH; tas|apply IHu2 in HH; tas];
-        intros v Hv; specialize (HH v Hv); rewrite val_cons; cbn in *; lia.
+    induction u1; cbn.
+    - apply leqb_expr_univ_n_spec0; tas.
+    - intro HH; apply andb_true_iff in HH; destruct HH as [H1 H2].
+      apply IHu1 in H2. apply leqb_expr_univ_n_spec0 in H1.
+      intros v Hv; specialize (H1 v Hv); specialize (H2 v Hv);
+        rewrite val_cons; cbn in *; try lia.
+  Qed.
+
+  Lemma try_leqb_universe_n_spec' n u1 u2
+        (Hu1  : gc_levels_declared u1)
+        (Hu2  : gc_levels_declared u2)
+    : try_leqb_universe_n n u1 u2
+      <-> gc_leq_universe_n n uctx.2 u1 u2.
+  Proof.
+    induction u1; cbn.
+    - apply leqb_expr_univ_n_spec; tas. now inversion Hu1.
+    - inversion_clear Hu1.
+      etransitivity. apply andb_and. etransitivity.
+      eapply and_iff_compat_l. apply IHu1; tea. etransitivity.
+      eapply and_iff_compat_r. eapply leqb_expr_univ_n_spec; tea.
+      clear; split.
+      + intros [H1 H2] v Hv; specialize (H1 v Hv); specialize (H2 v Hv).
+        rewrite val_cons. cbn in H1. lia.
+      + intros HH; split; intros v Hv; specialize (HH v Hv); cbn;
+          rewrite val_cons in HH; lia.
   Qed.
 
   Definition check_leqb_universe (u1 u2 : universe) :=
@@ -1456,16 +1478,16 @@ Section CheckLeq2.
   Qed.
 
 
-  Lemma leqb_univ_expr_n_spec' n u e2
+  Lemma leqb_univ_expr_n_spec' n e1 u
+        (He1 : level_declared e1.1)
         (Hu : levels_declared u)
-        (He2 : level_declared e2.1)
-    : leqb_univ_expr_n G n u e2
-      <-> leq_universe_n n uctx.2 u (Universe.make' e2).
+    : leqb_expr_univ_n G n e1 u
+      <-> leq_universe_n n uctx.2 (Universe.make' e1) u.
   Proof.
     etransitivity.
-    apply (leqb_univ_expr_n_spec G uctx' Huctx' HC' HG'); tas.
-    - apply levels_gc_declared_declared; tas.
+    apply (leqb_expr_univ_n_spec G uctx' Huctx' HC' HG'); tas.
     - apply level_gc_declared_declared; tas.
+    - apply levels_gc_declared_declared; tas.
     - symmetry. etransitivity. apply gc_leq_universe_n_iff.
       subst uctx'; cbn; clear -HG.
       unfold is_graph_of_uctx, gc_of_uctx in *.

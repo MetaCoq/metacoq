@@ -8,7 +8,8 @@ From MetaCoq.Checker Require Import uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICNormal PCUICSR
      PCUICGeneration PCUICReflect PCUICEquality PCUICInversion PCUICValidity
-     PCUICWeakening PCUICPosition PCUICCumulativity PCUICSafeLemmata PCUICSN.
+     PCUICWeakening PCUICPosition PCUICCumulativity PCUICSafeLemmata PCUICSN
+     PCUICContextConversion.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeConversion.
 From Equations Require Import Equations.
 
@@ -715,81 +716,96 @@ Section Typecheck.
     cbn. apply eqb_decl_spec.
   Qed.
 
+  (* FIXME: use iscumul instead of isconv *)
+
   Definition isconv Γ := isconv_term RedFlags.default Σ HΣ Hφ G HG Γ Conv.
 
-  Fixpoint bcontext_relation
-           (P : context -> context -> context_decl -> context_decl -> bool)
-           (Γ Γ' : context) : bool :=
-    match Γ, Γ' with
-    | [], [] => true
-    | {| decl_name := na ; decl_body := None; decl_type := T |} :: Γ,
-      {| decl_name := na'; decl_body := None; decl_type := U |} :: Γ' =>
-      P Γ Γ' (vass na T) (vass na' U) &&  bcontext_relation P Γ Γ'
-    | {| decl_name := na ; decl_body := Some t; decl_type := T |} :: Γ,
-      {| decl_name := na'; decl_body := Some u; decl_type := U |} :: Γ' =>
-      P Γ Γ' (vdef na t T) (vdef na' u U) &&  bcontext_relation P Γ Γ'
-    | _, _ => false
-    end.
-
-  Require Import PCUICContextConversion.
-
-  Lemma reflect_context_relation P p
-        (HP : forall Γ Γ' d d', reflect (P Γ Γ' d d') (p Γ Γ' d d')) Γ Γ'
-    : reflectT (context_relation P Γ Γ') (bcontext_relation p Γ Γ').
-  Proof.
-    induction Γ as [|d Γ] in Γ' |- *.
-    - destruct Γ'; repeat constructor. inversion 1.
-    - destruct Γ' as [|[na' [bd'|] ty'] Γ'], d as [na [bd|] ty]; simpl.
-      all: try (constructor; inversion 1).
-      + destruct (HP Γ Γ' (vdef na bd ty) (vdef na' bd' ty')); cbn.
-        * destruct (IHΓ Γ'); constructor. now constructor.
-          now inversion 1.
-        * constructor. now inversion 1.
-      + destruct (HP Γ Γ' (vass na ty) (vass na' ty')); cbn.
-        * destruct (IHΓ Γ'); constructor. now constructor.
-          now inversion 1.
-        * constructor. now inversion 1.
+  Equations bcumul_context Δ (Γ Γ' : context) (HΓ : wf_local Σ (Δ ,,, Γ))
+                                              (HΓ' : wf_local Σ (Δ ,,, Γ'))
+    : typing_result (∥ conv_context Σ (Δ ,,, Γ) (Δ ,,, Γ') ∥) :=
+    bcumul_context Δ [] [] _ _ := ret _ ;
+    bcumul_context Δ ({| decl_name := na ; decl_body := None; decl_type := T |} :: Γ )
+                  ({| decl_name := na'; decl_body := None; decl_type := U |} :: Γ')
+                  HΓ HΓ'
+      := bcumul_context Δ Γ Γ' _ _ ;;
+         let b := isconv (Δ ,,, Γ) T _ U _ in
+         match b as x return b = x -> _ with
+         | true => fun e => ret _
+         | false => fun _ => raise (NotCumulSmaller G T U T U)
+         end eq_refl;
+    bcumul_context Δ ({| decl_name := na ; decl_body := Some t; decl_type := T |} :: Γ )
+                  ({| decl_name := na'; decl_body := Some u; decl_type := U |} :: Γ')
+                  HΓ HΓ'
+      := bcumul_context Δ Γ Γ' _ _ ;;
+         let b := isconv (Δ ,,, Γ) T _ U _ in
+         match b as x return b = x -> _ with
+         | true => fun e => let b' := isconv (Δ ,,, Γ) t _ u _ in
+                        match b' as x return b' = x -> _ with
+                        | true => fun e => ret _
+                        | false => fun _ => raise (NotCumulSmaller G t u t u)
+                        end eq_refl
+         | false => fun _ => raise (NotCumulSmaller G T U T U)
+         end eq_refl;
+    bcumul_context _ _ _ _ _ := raise (Msg "contexts are not in cumulativity relation
+                                          because they don't have the same shap").
+  Next Obligation.
+    now constructor.
+  Qed.
+  Next Obligation.
+    now inv HΓ.
+  Qed.
+  Next Obligation.
+    now inv HΓ'.
+  Qed.
+  Next Obligation.
+    inv HΓ. eapply isType_wellformed; eassumption.
+  Qed.
+  Next Obligation.
+    destruct HΣ, y. inv HΓ'. inv HΓ.
+    eapply isType_wellformed, context_conversion_isType; tea.
+    now symmetry.
+  Qed.
+  Next Obligation.
+    inv HΓ. left. eapply iswelltyped; eassumption.
+  Qed.
+  Next Obligation.
+    destruct HΣ, y. inv HΓ. inv HΓ'.
+    left. eapply iswelltyped.
+    eapply context_conversion; tea. now symmetry.
+  Qed.
+  Next Obligation.
+    apply isconv_sound in e.
+    apply isconv_sound in e0.
+    destruct e, e0, y. constructor; constructor; tas.
+    now constructor.
+  Qed.
+  Next Obligation.
+    now inv HΓ.
+  Qed.
+  Next Obligation.
+    now inv HΓ'.
+  Qed.
+  Next Obligation.
+    inv HΓ. eapply isType_wellformed; eassumption.
+  Qed.
+  Next Obligation.
+    destruct HΣ, y. inv HΓ'. inv HΓ.
+    eapply isType_wellformed, context_conversion_isType; tea.
+    now symmetry.
+  Qed.
+  Next Obligation.
+    apply isconv_sound in e.
+    destruct e, y. constructor; constructor; tas.
+    now constructor.
   Qed.
 
-  (* Equations bconv_context (Γ Γ' : context) *)
-  (*   : typing_result (∥ conv_context Σ Γ Γ' ∥) := *)
-  (*   bconv_context [] [] := ret _ ; *)
-  (*   bconv_context ({| decl_name := na ; decl_body := None; decl_type := T |} :: Γ ) *)
-  (*                 ({| decl_name := na'; decl_body := None; decl_type := U |} :: Γ') *)
-  (*     := match isconv Γ T _ U _ with *)
-  (*        | true => bconv_context Γ Γ' ;; ret _ *)
-  (*        | false => raise (Msg "not conv in conv_ctx") *)
-  (*        end; *)
-  (*   bconv_context _ _ := raise (Msg "not same length in conv_ctx"). *)
-  (* Next Obligation. *)
-  (*   repeat constructor. *)
-  (* Qed. *)
-  (* Next Obligation. *)
-  (* Abort. *)
-
-
-  Definition isconv0 Γ t1 t2 : bool
-    := isconv_term RedFlags.default Σ HΣ Hφ G HG Γ Conv
-                   t1 (todo "ee") t2 (todo "rr").
-
-  Definition bconv_decl Γ := map2_decl (isconv0 Γ).
-
-  Definition bconv_context Γ := bcontext_relation (fun Δ _ => bconv_decl (Γ ,,, Δ)).
-
+  (* [check_branch_types] in [typeops.ml] *)
   Definition check_correct_arity Γ decl ind u ctx pars pctx :=
     let inddecl :=
         {| decl_name := nNamed decl.(ind_name);
            decl_body := None;
            decl_type := mkApps (tInd ind u) (map (lift0 #|ctx|) pars ++ to_extended_list ctx) |}
-    in bconv_context Γ (inddecl :: ctx) pctx.
-
-  Lemma check_correct_arity_spec Γ decl ind u ctx pars pctx
-    : check_correct_arity Γ decl ind u ctx pars pctx
-      -> PCUICTyping.check_correct_arity (global_ext_constraints Σ) decl ind u ctx pars pctx.
-  Proof.
-  (*   apply eqb_context_spec. *)
-  (* Qed. *)
-  Admitted.
+    in bcumul_context Γ (inddecl :: ctx) pctx.
 
   Ltac sq :=
     repeat match goal with
@@ -878,17 +894,7 @@ Section Typecheck.
       match types_of_case ind decl body (firstn par args) u p pty.π1 with
       | None => raise (Msg "not the type of a case")
       | Some (indctx, pctx, ps, btys) =>
-        check_eq_true
-          (check_correct_arity Γ body ind u indctx (firstn par args) pctx)
-          (let inddecl := {|
-                 decl_name := nNamed (ind_name body);
-                 decl_body := None;
-                 decl_type := mkApps (tInd ind u)
-                                     (map (lift0 #|indctx|) (firstn par args)
-                                          ++ to_extended_list indctx) |} in
-           Msg ("not correct arity. indctx:\n"
-                                 ++ string_of_context (inddecl :: indctx)
-                                 ++ "\npctx:\n" ++ string_of_context pctx)) ;;
+        check_correct_arity Γ body ind u indctx (firstn par args) pctx _ _ ;;
         check_eq_true
           (existsb (leb_sort_family (universe_family ps)) (ind_kelim body))
           (Msg "cannot eliminate over this sort") ;;
@@ -1055,6 +1061,8 @@ Section Typecheck.
 
   (* tCase *)
   Next Obligation. now eapply validity_wf. Defined.
+  Next Obligation. Admitted.
+  Next Obligation. Admitted.
   Next Obligation. inversion HH; sq; right; assumption. Qed.
   Next Obligation. inversion HH; assumption. Qed.
   Next Obligation.
@@ -1075,11 +1083,11 @@ Section Typecheck.
                               (Σ;;; Γ |- snd x : snd y))%type) brs btys ∥). {
       eapply All2_sq. eapply All2_impl. eassumption.
       cbn; intros ? ? []. now sq. }
-    destruct HΣ, HΓ, X9, X8, X5, X, H.
+    destruct HΣ, HΓ, X9, X8, X5, X, H, H2.
     constructor. eapply type_Case'; tea.
     - apply beq_nat_true; assumption.
     - symmetry; eassumption.
-    - eapply check_correct_arity_spec; eassumption.
+    - assumption.
     - eapply type_reduction; eassumption.
   Defined.
 

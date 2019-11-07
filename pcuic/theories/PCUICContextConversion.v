@@ -747,3 +747,49 @@ Proof.
   intros h. eapply eq_context_upto_conv_context; tea.
   reflexivity.
 Qed.
+
+
+Lemma context_conversion_isType {cf:checker_flags} {Σ Γ T Γ'} :
+    wf Σ.1 ->
+    wf_local Σ Γ' ->
+    isType Σ Γ T ->
+    conv_context Σ Γ Γ' ->
+    isType Σ Γ' T.
+Proof.
+  intros hΣ hΓ' [s h] e. exists s.
+  eapply context_conversion'; tea.
+Qed.
+
+Fixpoint bcontext_relation
+         (P : context -> context -> context_decl -> context_decl -> bool)
+         (Γ Γ' : context) : bool :=
+  match Γ, Γ' with
+  | [], [] => true
+  | {| decl_name := na ; decl_body := None; decl_type := T |} :: Γ,
+    {| decl_name := na'; decl_body := None; decl_type := U |} :: Γ' =>
+    P Γ Γ' (vass na T) (vass na' U) &&  bcontext_relation P Γ Γ'
+  | {| decl_name := na ; decl_body := Some t; decl_type := T |} :: Γ,
+    {| decl_name := na'; decl_body := Some u; decl_type := U |} :: Γ' =>
+    P Γ Γ' (vdef na t T) (vdef na' u U) &&  bcontext_relation P Γ Γ'
+  | _, _ => false
+  end.
+
+Require Import PCUICReflect.
+
+Lemma reflect_context_relation P p
+      (HP : forall Γ Γ' d d', reflect (P Γ Γ' d d') (p Γ Γ' d d')) Γ Γ'
+  : reflectT (context_relation P Γ Γ') (bcontext_relation p Γ Γ').
+Proof.
+  induction Γ as [|d Γ] in Γ' |- *.
+  - destruct Γ'; repeat constructor. inversion 1.
+  - destruct Γ' as [|[na' [bd'|] ty'] Γ'], d as [na [bd|] ty]; simpl.
+    all: try (constructor; inversion 1).
+    + destruct (HP Γ Γ' (vdef na bd ty) (vdef na' bd' ty')); cbn.
+      * destruct (IHΓ Γ'); constructor. now constructor.
+        now inversion 1.
+      * constructor. now inversion 1.
+    + destruct (HP Γ Γ' (vass na ty) (vass na' ty')); cbn.
+      * destruct (IHΓ Γ'); constructor. now constructor.
+        now inversion 1.
+      * constructor. now inversion 1.
+Qed.

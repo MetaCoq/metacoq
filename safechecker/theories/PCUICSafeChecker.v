@@ -261,50 +261,52 @@ Fixpoint string_of_conv_error Σ (e : ConversionError) : string :=
   | NotFoundConstant c =>
       "Constant " ++ c ++
       " common in both terms is not found in the environment."
-  | LambdaNotConvertibleTypes na A1 t1 na' A2 t2 e =>
-      "When comparing " ++ print_term Σ [] (tLambda na A1 t1) ++
-      "\nand " ++ print_term Σ [] (tLambda na' A2 t2) ++
+  | LambdaNotConvertibleTypes Γ1 na A1 t1 Γ2 na' A2 t2 e =>
+      "When comparing " ++ print_term Σ Γ1 (tLambda na A1 t1) ++
+      "\nand " ++ print_term Σ Γ2 (tLambda na' A2 t2) ++
       "types are not convertible:\n" ++
       string_of_conv_error Σ e
-  | ProdNotConvertibleDomains na A1 B1 na' A2 B2 e =>
-      "When comparing " ++ print_term Σ [] (tProd na A1 B1) ++
-      "\nand " ++ print_term Σ [] (tProd na' A2 B2) ++
+  | ProdNotConvertibleDomains Γ1 na A1 B1 Γ2 na' A2 B2 e =>
+      "When comparing " ++ print_term Σ Γ1 (tProd na A1 B1) ++
+      "\nand " ++ print_term Σ Γ2 (tProd na' A2 B2) ++
       "domains are not convertible:\n" ++
       string_of_conv_error Σ e
-  | DistinctStuckCase ind par p c brs ind' par' p' c' brs' =>
+  | DistinctStuckCase Γ ind par p c brs Γ' ind' par' p' c' brs' =>
       "The two pattern-matching " ++
-      print_term Σ [] (tCase (ind, par) p c brs) ++
-      "\nand " ++ print_term Σ [] (tCase (ind', par') p' c' brs') ++
+      print_term Σ Γ (tCase (ind, par) p c brs) ++
+      "\nand " ++ print_term Σ Γ' (tCase (ind', par') p' c' brs') ++
       "\ncorrespond to syntactically distinct stuck terms."
-  | DistinctStuckProj p c p' c' =>
+  | DistinctStuckProj Γ p c Γ' p' c' =>
       "The two projections " ++
-      print_term Σ [] (tProj p c) ++
-      "\nand " ++ print_term Σ [] (tProj p' c') ++
+      print_term Σ Γ (tProj p c) ++
+      "\nand " ++ print_term Σ Γ' (tProj p' c') ++
       "\ncorrespond to syntactically distinct stuck terms."
-  | CannotUnfoldFix mfix idx mfix' idx' =>
+  | CannotUnfoldFix Γ mfix idx Γ' mfix' idx' =>
       "The two fixed-points " ++
-      print_term Σ [] (tFix mfix idx) ++
-      "\nand " ++ print_term Σ [] (tFix mfix' idx') ++
+      print_term Σ Γ (tFix mfix idx) ++
+      "\nand " ++ print_term Σ Γ' (tFix mfix' idx') ++
       "\ncorrespond to syntactically distinct terms that can't be unfolded."
-  | DistinctCoFix mfix idx mfix' idx' =>
+  | DistinctCoFix Γ mfix idx Γ' mfix' idx' =>
       "The two cofixed-points " ++
-      print_term Σ [] (tCoFix mfix idx) ++
-      "\nand " ++ print_term Σ [] (tCoFix mfix' idx') ++
+      print_term Σ Γ (tCoFix mfix idx) ++
+      "\nand " ++ print_term Σ Γ' (tCoFix mfix' idx') ++
       "\ncorrespond to syntactically distinct terms."
-  | StackHeadError leq t1 args1 u1 l1 t2 u2 l2 e =>
-      "TODO stackheaderror"
-  | StackTailError leq t1 args1 u1 l1 t2 u2 l2 e =>
-      "TODO stacktailerror"
-  | StackMismatch t1 args1 l1 t2 l2 =>
+  | StackHeadError leq Γ1 t1 args1 u1 l1 Γ2 t2 u2 l2 e =>
+      "TODO stackheaderror\n" ++
+      string_of_conv_error Σ e
+  | StackTailError leq Γ1 t1 args1 u1 l1 Γ2 t2 u2 l2 e =>
+      "TODO stacktailerror\n" ++
+      string_of_conv_error Σ e
+  | StackMismatch Γ1 t1 args1 l1 Γ2 t2 l2 =>
       "Convertible terms " ++
-      print_term Σ [] t1 ++
-      "\nand " ++ print_term Σ [] t2 ++
+      print_term Σ Γ1 t1 ++
+      "\nand " ++ print_term Σ Γ2 t2 ++
       "are convertible/convertible (TODO) but applied to a different number" ++
       " of arguments."
-  | HeadMistmatch leq t1 t2 =>
+  | HeadMistmatch leq Γ1 t1 Γ2 t2 =>
       "Terms " ++
-      print_term Σ [] t1 ++
-      "\nand " ++ print_term Σ [] t2 ++
+      print_term Σ Γ1 t1 ++
+      "\nand " ++ print_term Σ Γ2 t2 ++
       " do not have the same head when comparing for " ++
       string_of_conv_pb leq
   end.

@@ -8,7 +8,8 @@ From MetaCoq.Checker Require Import uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICNormal PCUICSR
      PCUICGeneration PCUICReflect PCUICEquality PCUICInversion PCUICValidity
-     PCUICWeakening PCUICPosition PCUICCumulativity PCUICSafeLemmata PCUICSN.
+     PCUICWeakening PCUICPosition PCUICCumulativity PCUICSafeLemmata PCUICSN
+     PCUICPretty.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeConversion.
 From Equations Require Import Equations.
 
@@ -140,8 +141,8 @@ Inductive type_error :=
 | UndeclaredConstant (c : string)
 | UndeclaredInductive (c : inductive)
 | UndeclaredConstructor (c : inductive) (i : nat)
-| NotCumulSmaller (G : universes_graph) (t u t' u' : term)
-| NotConvertible (G : universes_graph) (t u : term)
+| NotCumulSmaller (G : universes_graph) (Γ : context) (t u t' u' : term) (e : ConversionError)
+| NotConvertible (G : universes_graph) (Γ : context) (t u : term)
 | NotASort (t : term)
 | NotAProduct (t t' : term)
 | NotAnInductive (t : term)
@@ -204,33 +205,6 @@ Definition string_of_def {A : Set} (f : A -> string) (def : def A) :=
 Definition string_of_inductive (i : inductive) :=
   (inductive_mind i) ++ "," ++ string_of_nat (inductive_ind i).
 
-Fixpoint string_of_term (t : term) :=
-  match t with
-  | tRel n => "#" ++ string_of_nat n
-  | tVar n => "Var(" ++ n ++ ")"
-  | tEvar ev args => "Evar(" ++ string_of_nat ev ++ "TODO" ++ ")"
-  | tSort s => "Sort(" ++ string_of_sort s ++ ")"
-  | tProd na b t => "Pi (" ++ string_of_name na ++ " : " ++
-                            string_of_term b ++ ") (" ++ string_of_term t ++ ")"
-  | tLambda na b t => "Lam (" ++ string_of_name na ++ " : " ++ string_of_term b
-                                ++ ") (" ++ string_of_term t ++ ")"
-  | tLetIn na b t' t => "LetIn(" ++ string_of_name na ++ "," ++ string_of_term b
-                                 ++ "," ++ string_of_term t' ++ "," ++ string_of_term t ++ ")"
-  | tApp f l => string_of_term f ++ " @ (" ++ string_of_term l ++ ")"
-  | tConst c u => "Const(" ++ c ++ "," ++ string_of_universe_instance u ++ ")"
-  | tInd i u => "Ind(" ++ string_of_inductive i ++ "," ++ string_of_universe_instance u ++ ")"
-  | tConstruct i n u => "Construct(" ++ string_of_inductive i ++ "," ++ string_of_nat n ++ ","
-                                    ++ string_of_universe_instance u ++ ")"
-  | tCase (ind, i) t p brs =>
-    "Case(" ++ string_of_inductive ind ++ "," ++ string_of_nat i ++ "," ++ string_of_term t ++ ","
-            ++ string_of_term p ++ "," ++ string_of_list (fun b => string_of_term (snd b)) brs ++ ")"
-  | tProj (ind, i, k) c =>
-    "Proj(" ++ string_of_inductive ind ++ "," ++ string_of_nat i ++ "," ++ string_of_nat k ++ ","
-            ++ string_of_term c ++ ")"
-  | tFix l n => "Fix(" ++ (string_of_list (string_of_def string_of_term) l) ++ "," ++ string_of_nat n ++ ")"
-  | tCoFix l n => "CoFix(" ++ (string_of_list (string_of_def string_of_term) l) ++ "," ++ string_of_nat n ++ ")"
-  end.
-
 Definition print_no_prop_level := string_of_level ∘ level_of_no_prop.
 
 Definition print_edge '(l1, n, l2)
@@ -243,20 +217,91 @@ Definition print_universes_graph (G : universes_graph) :=
   string_of_list print_no_prop_level levels
   ++ "\n" ++ string_of_list print_edge edges.
 
+Definition string_of_conv_pb (c : conv_pb) : string :=
+  match c with
+  | Conv => "conversion"
+  | Cumul => "cumulativity"
+  end.
 
-Definition string_of_type_error (e : type_error) : string :=
+Definition print_term Σ Γ t :=
+  print_term Σ Γ true false t.
+
+Fixpoint string_of_conv_error Σ (e : ConversionError) : string :=
   match e with
-  | UnboundRel n => "Unboound rel " ++ string_of_nat n
+  | NotFoundConstants c1 c2 =>
+      "Both constants " ++ c1 ++ " and " ++ c2 ++
+      " are not found in the environment."
+  | NotFoundConstant c =>
+      "Constant " ++ c ++
+      " common in both terms is not found in the environment."
+  | LambdaNotConvertibleTypes Γ1 na A1 t1 Γ2 na' A2 t2 e =>
+      "When comparing\n" ++ print_term Σ Γ1 (tLambda na A1 t1) ++
+      "\nand\n" ++ print_term Σ Γ2 (tLambda na' A2 t2) ++
+      "\ntypes are not convertible:\n" ++
+      string_of_conv_error Σ e
+  | ProdNotConvertibleDomains Γ1 na A1 B1 Γ2 na' A2 B2 e =>
+      "When comparing\n" ++ print_term Σ Γ1 (tProd na A1 B1) ++
+      "\nand\n" ++ print_term Σ Γ2 (tProd na' A2 B2) ++
+      "\ndomains are not convertible:\n" ++
+      string_of_conv_error Σ e
+  | DistinctStuckCase Γ ind par p c brs Γ' ind' par' p' c' brs' =>
+      "The two pattern-matching\n" ++
+      print_term Σ Γ (tCase (ind, par) p c brs) ++
+      "\nand\n" ++ print_term Σ Γ' (tCase (ind', par') p' c' brs') ++
+      "\ncorrespond to syntactically distinct stuck terms."
+  | DistinctStuckProj Γ p c Γ' p' c' =>
+      "The two projections\n" ++
+      print_term Σ Γ (tProj p c) ++
+      "\nand\n" ++ print_term Σ Γ' (tProj p' c') ++
+      "\ncorrespond to syntactically distinct stuck terms."
+  | CannotUnfoldFix Γ mfix idx Γ' mfix' idx' =>
+      "The two fixed-points\n" ++
+      print_term Σ Γ (tFix mfix idx) ++
+      "\nand\n" ++ print_term Σ Γ' (tFix mfix' idx') ++
+      "\ncorrespond to syntactically distinct terms that can't be unfolded."
+  | DistinctCoFix Γ mfix idx Γ' mfix' idx' =>
+      "The two cofixed-points\n" ++
+      print_term Σ Γ (tCoFix mfix idx) ++
+      "\nand\n" ++ print_term Σ Γ' (tCoFix mfix' idx') ++
+      "\ncorrespond to syntactically distinct terms."
+  | StackHeadError leq Γ1 t1 args1 u1 l1 Γ2 t2 u2 l2 e =>
+      "TODO stackheaderror\n" ++
+      string_of_conv_error Σ e
+  | StackTailError leq Γ1 t1 args1 u1 l1 Γ2 t2 u2 l2 e =>
+      "TODO stacktailerror\n" ++
+      string_of_conv_error Σ e
+  | StackMismatch Γ1 t1 args1 l1 Γ2 t2 l2 =>
+      "Convertible terms\n" ++
+      print_term Σ Γ1 t1 ++
+      "\nand\n" ++ print_term Σ Γ2 t2 ++
+      "are convertible/convertible (TODO) but applied to a different number" ++
+      " of arguments."
+  | HeadMistmatch leq Γ1 t1 Γ2 t2 =>
+      "Terms\n" ++
+      print_term Σ Γ1 t1 ++
+      "\nand\n" ++ print_term Σ Γ2 t2 ++
+      "\ndo not have the same head when comparing for " ++
+      string_of_conv_pb leq
+  end.
+
+
+Definition string_of_type_error Σ (e : type_error) : string :=
+  match e with
+  | UnboundRel n => "Unbound rel " ++ string_of_nat n
   | UnboundVar id => "Unbound var " ++ id
   | UnboundEvar ev => "Unbound evar " ++ string_of_nat ev
   | UndeclaredConstant c => "Undeclared constant " ++ c
   | UndeclaredInductive c => "Undeclared inductive " ++ (inductive_mind c)
   | UndeclaredConstructor c i => "Undeclared inductive " ++ (inductive_mind c)
-  | NotCumulSmaller G t u t' u' => "Terms are not <= for cumulativity:\n" ++
-      string_of_term t ++ "\nand:\n" ++ string_of_term u ++ "\nafter reduction:\n" ++
-      string_of_term t' ++ "\nand:\n" ++ string_of_term u' ++ "\nin universe graph:\n" ++ print_universes_graph G
-  | NotConvertible G t u => "Terms are not convertible:\n" ++
-      string_of_term t ++ "\nand:\n" ++ string_of_term u ++ "\nin universe graph:\n" ++ print_universes_graph G
+  | NotCumulSmaller G Γ t u t' u' e => "Terms are not <= for cumulativity:\n" ++
+      print_term Σ Γ t ++ "\nand:\n" ++ print_term Σ Γ u ++
+      "\nafter reduction:\n" ++
+      print_term Σ Γ t' ++ "\nand:\n" ++ print_term Σ Γ u' ++
+      "\nerror:\n" ++ string_of_conv_error Σ e ++
+      "\nin universe graph:\n" ++ print_universes_graph G
+  | NotConvertible G Γ t u => "Terms are not convertible:\n" ++
+      print_term Σ Γ t ++ "\nand:\n" ++ print_term Σ Γ u ++
+      "\nin universe graph:\n" ++ print_universes_graph G
   | NotASort t => "Not a sort"
   | NotAProduct t t' => "Not a product"
   | NotAnInductive t => "Not an inductive"
@@ -510,12 +555,12 @@ Section Typecheck.
     : typing_result (∥ Σ ;;; Γ |- t <= u ∥) :=
     match leqb_term G t u with true => ret _ | false =>
     match iscumul Γ t ht u hu with
-    | true => ret _
-    | false => (* fallback *)  (* nico *)
+    | Success _ => ret _
+    | Error e => (* fallback *)  (* nico *)
       let t' := hnf Γ t ht in
       let u' := hnf Γ u hu in
       (* match leq_term (snd Σ) t' u' with true => ret _ | false => *)
-      raise (NotCumulSmaller G t u t' u')
+      raise (NotCumulSmaller G Γ t u t' u' e)
       (* end *)
     end end.
   Next Obligation.
@@ -792,7 +837,7 @@ Section Typecheck.
       I <- reduce_to_ind Γ cty.π1 _ ;;
       let '(ind'; I') := I in let '(u; I'') := I' in let '(args; H) := I'' in
       check_eq_true (eqb ind ind')
-                    (NotConvertible G (tInd ind u) (tInd ind' u)) ;;
+                    (NotConvertible G Γ (tInd ind u) (tInd ind' u)) ;;
       d <- lookup_ind_decl ind' ;;
       let '(decl; d') := d in let '(body; HH) := d' in
       check_eq_true (ind_npars decl =? par)
@@ -833,7 +878,7 @@ Section Typecheck.
             I <- reduce_to_ind Γ c_ty.π1 _ ;;
             let '(ind'; I') := I in let '(u; I'') := I' in let '(args; H) := I'' in
             check_eq_true (eqb ind ind')
-                          (NotConvertible G (tInd ind u) (tInd ind' u)) ;;
+                          (NotConvertible G Γ (tInd ind u) (tInd ind' u)) ;;
             check_eq_true (ind_npars d.π1 =? n)
                           (Msg "not the right number of parameters") ;;
             check_eq_true (#|args| =? ind_npars d.π1) (* probably redundant *)
@@ -1098,7 +1143,7 @@ Section Typecheck.
   Program Definition check_isWfArity Γ (HΓ : ∥ wf_local Σ Γ ∥) A
     : typing_result (∥ isWfArity typing Σ Γ A ∥) :=
     match destArity [] A with
-    | None => raise (Msg (string_of_term A ++ " is not an arity"))
+    | None => raise (Msg (print_term Σ Γ A ++ " is not an arity"))
     | Some (ctx, s) => XX <- check_context (Γ ,,, ctx) ;;
                       ret _
     end.

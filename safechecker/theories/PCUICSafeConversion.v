@@ -645,6 +645,70 @@ Section Conversion.
     (∥ Σ ;;; Γ ,,, stack_context π |- zipp t π == zipp t' π' ∥)
       (only parsing).
 
+  Inductive ConversionError :=
+  | NotFoundConstants (c1 c2 : kername)
+
+  | NotFoundConstant (c : kername)
+
+  | LambdaNotConvertibleTypes
+      (Γ1 : context) (na : name) (A1 t1 : term)
+      (Γ2 : context) (na' : name) (A2 t2 : term)
+      (e : ConversionError)
+
+  | ProdNotConvertibleDomains
+      (Γ1 : context) (na : name) (A1 B1 : term)
+      (Γ2 : context) (na' : name) (A2 B2 : term)
+      (e : ConversionError)
+
+  | DistinctStuckCase
+      (Γ : context)
+      (ind : inductive) (par : nat) (p c : term) (brs : list (nat × term))
+      (Γ' : context)
+      (ind' : inductive) (par' : nat) (p' c' : term) (brs' : list (nat × term))
+
+  | DistinctStuckProj
+      (Γ : context) (p : projection) (c : term)
+      (Γ' : context) (p' : projection) (c' : term)
+
+  | CannotUnfoldFix
+      (Γ : context) (mfix : mfixpoint term) (idx : nat)
+      (Γ' : context) (mfix' : mfixpoint term) (idx' : nat)
+
+  | DistinctCoFix
+      (Γ : context) (mfix : mfixpoint term) (idx : nat)
+      (Γ' : context) (mfix' : mfixpoint term) (idx' : nat)
+
+  | StackHeadError
+      (leq : conv_pb)
+      (Γ1 : context)
+      (t1 : term) (args1 : list term) (u1 : term) (l1 : list term)
+      (Γ2 : context)
+      (t2 : term) (u2 : term) (l2 : list term)
+      (e : ConversionError)
+
+  | StackTailError (leq : conv_pb)
+      (Γ1 : context)
+      (t1 : term) (args1 : list term) (u1 : term) (l1 : list term)
+      (Γ2 : context)
+      (t2 : term) (u2 : term) (l2 : list term)
+      (e : ConversionError)
+
+  | StackMismatch
+      (Γ1 : context) (t1 : term) (args1 l1 : list term)
+      (Γ2 : context) (t2 : term) (l2 : list term)
+
+  | HeadMistmatch
+      (leq : conv_pb)
+      (Γ1 : context) (t1 : term)
+      (Γ2 : context) (t2 : term).
+
+  Inductive ConversionResult (P : Prop) :=
+  | Success (h : P)
+  | Error (e : ConversionError).
+
+  Arguments Success {_} _.
+  Arguments Error {_} _.
+
   (* Definition Ret s Γ t π t' π' :=
     forall leq,
       conv_stack_ctx Γ π π' ->
@@ -667,7 +731,7 @@ Section Conversion.
       (match s with Fallback | Term => isred (t, π) | _ => True end) ->
       (match s with Fallback | Term => isred (t', π') | _ => True end) ->
       (match s with Args => conv leq Σ (Γ ,,, stack_context π) t t' | _ => True end) ->
-      { b : bool | if b then conv_term leq Γ t π t' π' else True }.
+      ConversionResult (conv_term leq Γ t π t' π').
 
   Definition Aux s Γ t1 π1 t2 π2 h2 :=
      forall s' t1' π1' t2' π2'
@@ -679,10 +743,16 @@ Section Conversion.
          (mkpack Γ s t1 π1 t2 π2 h2) ->
        Ret s' Γ t1' π1' t2' π2'.
 
-  Notation no := (exist false I) (only parsing).
-  Notation yes := (exist true _) (only parsing).
+  Notation yes := (Success _) (only parsing).
 
-  Notation repack e := (let '(exist b h) := e in exist b _) (only parsing).
+  (* TODO NOTE
+     repack could also take another argument of type
+     ConversionError -> ConversionError
+     to keep a full error trace (we currently only do it partially).
+  *)
+  Notation repack e :=
+    (match e with Success h => Success _ | Error er => Error er end)
+    (only parsing).
 
   Notation isconv_red_raw leq t1 π1 t2 π2 aux :=
     (aux Reduction t1 π1 t2 π2 _ _ _ _ leq _ I I I) (only parsing).
@@ -707,7 +777,7 @@ Section Conversion.
             (t2 : term) (π2 : stack) (h2 : wtp Γ t2 π2)
             (hx : conv_stack_ctx Γ π1 π2)
             (aux : Aux Reduction Γ t1 π1 t2 π2 h2)
-    : { b : bool | if b then conv_term leq Γ t1 π1 t2 π2 else True } :=
+    : ConversionResult (conv_term leq Γ t1 π1 t2 π2) :=
 
     _isconv_red Γ leq t1 π1 h1 t2 π2 h2 hx aux
     with inspect (decompose_stack π1) := {
@@ -939,7 +1009,6 @@ Section Conversion.
   Qed.
   Next Obligation.
     destruct hΣ as [wΣ].
-    destruct b ; auto.
     unfold zipp. rewrite <- e1. rewrite <- e2.
 
     match type of eq1 with
@@ -1335,7 +1404,7 @@ Section Conversion.
             (h2 : wtp Γ (tConst c' u') π2)
             (hx : conv_stack_ctx Γ π1 π2)
             (aux : Aux Term Γ (tConst c u) π1 (tConst c' u') π2 h2)
-    : { b : bool | if b then conv_term leq Γ (tConst c u) π1 (tConst c' u') π2 else True } :=
+    : ConversionResult (conv_term leq Γ (tConst c u) π1 (tConst c' u') π2) :=
 
     unfold_constants Γ leq c u π1 h1 c' u' π2 h2 hx aux
     with inspect (lookup_env Σ c') := {
@@ -1347,7 +1416,7 @@ Section Conversion.
         isconv_red leq (subst_instance_constr u b) π1
                         (tConst c' u') π2 aux ;
       (* Both Inductive or not found *)
-      | _ := no
+      | _ := Error (NotFoundConstants c c')
       }
     }.
   Next Obligation.
@@ -1364,7 +1433,6 @@ Section Conversion.
   Qed.
   Next Obligation.
     destruct hΣ.
-    destruct b0 ; auto.
     eapply conv_trans' ; try eassumption.
     eapply red_conv_r ; try assumption.
     eapply red_zipp. eapply red_const. eassumption.
@@ -1380,7 +1448,6 @@ Section Conversion.
   Qed.
   Next Obligation.
     destruct hΣ as [wΣ].
-    destruct b0 ; auto.
     eapply conv_trans' ; try eassumption.
     eapply red_conv_l ; try assumption.
     eapply red_zipp. eapply red_const. eassumption.
@@ -1395,7 +1462,6 @@ Section Conversion.
   Qed.
   Next Obligation.
     destruct hΣ as [wΣ].
-    destruct b0 ; auto.
     eapply conv_trans' ; try eassumption.
     eapply red_conv_l ; try assumption.
     eapply red_zipp. eapply red_const. eassumption.
@@ -1410,7 +1476,6 @@ Section Conversion.
   Qed.
   Next Obligation.
     destruct hΣ as [wΣ].
-    destruct b0 ; auto.
     eapply conv_trans' ; try eassumption.
     eapply red_conv_l ; try assumption.
     eapply red_zipp. eapply red_const. eassumption.
@@ -1471,7 +1536,7 @@ Section Conversion.
             (hx : conv_stack_ctx Γ π1 π2)
             (ir1 : isred (t1, π1)) (ir2 : isred (t2, π2))
             (aux : Aux Term Γ t1 π1 t2 π2 h2)
-    : { b : bool | if b then conv_term leq Γ t1 π1 t2 π2 else True } :=
+    : ConversionResult (conv_term leq Γ t1 π1 t2 π2) :=
 
     _isconv_prog Γ leq t1 π1 h1 t2 π2 h2 hx ir1 ir2 aux with prog_viewc t1 t2 := {
     | prog_view_App _ _ _ _ :=
@@ -1480,14 +1545,14 @@ Section Conversion.
     | prog_view_Const c u c' u' with eq_dec c c' := {
       | left eq1 with inspect (eqb_universe_instance u u') := {
         | @exist true eq2 with isconv_args_raw leq (tConst c u) π1 (tConst c' u') π2 aux := {
-          | @exist true h := yes ;
+          | Success h := yes ;
           (* Unfold both constants at once *)
-          | @exist false _ with inspect (lookup_env Σ c) := {
+          | Error e with inspect (lookup_env Σ c) := {
             | @exist (Some (ConstantDecl n {| cst_body := Some body |})) eq3 :=
               isconv_red leq (subst_instance_constr u body) π1
                              (subst_instance_constr u' body) π2 aux ;
             (* Inductive or not found *)
-            | @exist _ _ := no
+            | @exist _ _ := Error (NotFoundConstant c)
             }
           } ;
         (* If universes are different, we unfold one of the constants *)
@@ -1500,30 +1565,44 @@ Section Conversion.
     | prog_view_Lambda na A1 t1 na' A2 t2
       with isconv_red_raw Conv A1 (Lambda_ty na t1 π1)
                                  A2 (Lambda_ty na' t2 π2) aux := {
-      | @exist true h :=
+      | Success h :=
         isconv_red leq
                    t1 (Lambda_tm na A1 π1)
                    t2 (Lambda_tm na' A2 π2) aux ;
-      | @exist false _ := no
+      | Error e :=
+        Error (
+          LambdaNotConvertibleTypes
+            (Γ ,,, stack_context π1) na A1 t1
+            (Γ ,,, stack_context π2) na' A2 t2 e
+        )
       } ;
 
     | prog_view_Prod na A1 B1 na' A2 B2
       with isconv_red_raw Conv A1 (Prod_l na B1 π1) A2 (Prod_l na' B2 π2) aux := {
-      | @exist true h :=
+      | Success h :=
         isconv_red leq
                    B1 (Prod_r na A1 π1)
                    B2 (Prod_r na' A2 π2) aux ;
-      | @exist false _ := no
+      | Error e :=
+        Error (
+          ProdNotConvertibleDomains
+            (Γ ,,, stack_context π1) na A1 B1
+            (Γ ,,, stack_context π2) na' A2 B2 e
+        )
       } ;
 
-    (* TODO leq or Conv? *)
     | prog_view_Case ind par p c brs ind' par' p' c' brs'
       with inspect (eqb_term (tCase (ind, par) p c brs) (tCase (ind', par') p' c' brs')) := {
       | @exist true eq1 := isconv_args leq (tCase (ind, par) p c brs) π1 (tCase (ind', par') p' c' brs') π2 aux ;
       | @exist false _ with inspect (reduce_term RedFlags.default Σ hΣ (Γ ,,, stack_context π1) c _) := {
         | @exist cred eq1 with inspect (reduce_term RedFlags.default Σ hΣ (Γ ,,, stack_context π2) c' _) := {
            | @exist cred' eq2 with inspect (eqb_term cred c && eqb_term cred' c') := {
-              | @exist true eq3 := no ;
+              | @exist true eq3 :=
+                Error (
+                  DistinctStuckCase
+                    (Γ ,,, stack_context π1) ind par p c brs
+                    (Γ ,,, stack_context π2) ind' par' p' c' brs'
+                ) ; (* TODO Probaby incomplete *)
               | @exist false eq3 :=
                 isconv_red leq (tCase (ind, par) p cred brs) π1
                                (tCase (ind', par') p' cred' brs') π2 aux
@@ -1532,13 +1611,16 @@ Section Conversion.
         }
       } ;
 
-    (* TODO leq or Conv? *)
     | prog_view_Proj p c p' c' with inspect (eqb_term (tProj p c) (tProj p' c')) := {
       | @exist true eq1 := isconv_args leq (tProj p c) π1 (tProj p' c') π2 aux ;
-      | @exist false _ := no
+      | @exist false _ :=
+        Error (
+          DistinctStuckProj
+            (Γ ,,, stack_context π1) p c
+            (Γ ,,, stack_context π2) p' c'
+        ) (* TODO Probably incomplete *)
       } ;
 
-    (* TODO leq or Conv? *)
     | prog_view_Fix mfix idx mfix' idx'
       with inspect (eqb_term (tFix mfix idx) (tFix mfix' idx')) := {
       | @exist true eq1 := isconv_args leq (tFix mfix idx) π1 (tFix mfix' idx') π2 aux ;
@@ -1560,16 +1642,25 @@ Section Conversion.
                 isconv_prog leq (tFix mfix idx) π1 fn' (ρ +++ θ') aux
               }
             } ;
-          | _ := no
+          | _ :=
+            Error (
+              CannotUnfoldFix
+                (Γ ,,, stack_context π1) mfix idx
+                (Γ ,,, stack_context π2) mfix' idx'
+            )
           }
         }
       } ;
 
-    (* TODO leq or Conv? *)
     | prog_view_CoFix mfix idx mfix' idx'
       with inspect (eqb_term (tCoFix mfix idx) (tCoFix mfix' idx')) := {
       | @exist true eq1 := isconv_args leq (tCoFix mfix idx) π1 (tCoFix mfix' idx') π2 aux ;
-      | @exist false _ := no
+      | @exist false _ :=
+        Error (
+          DistinctCoFix
+            (Γ ,,, stack_context π1) mfix idx
+            (Γ ,,, stack_context π2) mfix' idx'
+        ) (* TODO Is it complete? *)
       } ;
 
     | prog_view_other t1 t2 h :=
@@ -1612,7 +1703,6 @@ Section Conversion.
   Qed.
   Next Obligation.
     destruct hΣ.
-    destruct b ; auto.
     eapply conv_trans'.
     - assumption.
     - eapply red_conv_l ; try assumption.
@@ -1643,7 +1733,6 @@ Section Conversion.
     assumption.
   Qed.
   Next Obligation.
-    destruct b ; auto.
     destruct h0 as [h0].
     destruct hx as [hx].
 
@@ -1689,7 +1778,6 @@ Section Conversion.
   Qed.
   Next Obligation.
     destruct hΣ as [wΣ].
-    destruct b ; auto.
     destruct h0 as [h0].
     destruct hx as [hx].
     unfold zipp in h0. simpl in h0.
@@ -1847,7 +1935,6 @@ Section Conversion.
   Qed.
   Next Obligation.
     destruct hΣ as [wΣ].
-    destruct b ; auto.
     destruct hx as [hx].
     match type of h with
     | context [ reduce_term ?f ?Σ ?hΣ ?Γ c ?h ] =>
@@ -2006,7 +2093,6 @@ Section Conversion.
   Qed.
   Next Obligation.
     destruct hΣ as [wΣ].
-    destruct b ; auto.
     apply unfold_one_fix_red_zipp in eq1 as r1.
     destruct r1 as [r1].
     match type of eq3 with
@@ -2152,7 +2238,6 @@ Section Conversion.
   Qed.
   Next Obligation.
     destruct hΣ as [wΣ].
-    destruct b ; auto.
     apply unfold_one_fix_red_zipp in eq1 as r1.
     destruct r1 as [r1].
     match type of eq3 with
@@ -2272,19 +2357,36 @@ Section Conversion.
             (hx : conv_stack_ctx Γ π1 π2)
             (h : conv leq Σ (Γ ,,, stack_context π1) (mkApps t1 args1) t2)
             (aux : Aux' Γ t1 args1 l1 π1 t2 (appstack l2 π2) h2)
-    : { b : bool | if b then conv_term leq Γ (mkApps t1 args1) (appstack l1 π1) t2 (appstack l2 π2) else True } by struct l1 :=
+    : ConversionResult (conv_term leq Γ (mkApps t1 args1) (appstack l1 π1) t2 (appstack l2 π2)) by struct l1 :=
     _isconv_args' leq Γ t1 args1 (u1 :: l1) π1 h1 hπ1 t2 (u2 :: l2) π2 h2 hπ2 hx h aux
     with aux u1 u2 args1 l1 (coApp t2 (appstack l2 π2)) _ _ _ _ Conv _ I I I := {
-    | @exist true H1 with _isconv_args' leq Γ t1 (args1 ++ [u1]) l1 π1 _ _ (tApp t2 u2) l2 π2 _ _ _ _ _ := {
-      | @exist true H2 := yes ;
-      | @exist false _ := no
+    | Success H1 with _isconv_args' leq Γ t1 (args1 ++ [u1]) l1 π1 _ _ (tApp t2 u2) l2 π2 _ _ _ _ _ := {
+      | Success H2 := yes ;
+      | Error e :=
+        Error (
+          StackTailError
+            leq
+            (Γ ,,, stack_context π1) t1 args1 u1 l1
+            (Γ ,,, stack_context π2) t2 u2 l2 e
+        )
       } ;
-    | @exist false _ := no
+    | Error e :=
+      Error (
+        StackHeadError
+          leq
+          (Γ ,,, stack_context π1) t1 args1 u1 l1
+          (Γ ,,, stack_context π2) t2 u2 l2 e
+      )
     } ;
 
     _isconv_args' leq Γ t1 args1 [] π1 h1 hπ1 t2 [] π2 h2 hπ2 hx h aux := yes ;
 
-    _isconv_args' leq Γ t1 args1 l1 π1 h1 hπ1 t2 l2 π2 h2 hπ2 hx h aux := no.
+    _isconv_args' leq Γ t1 args1 l1 π1 h1 hπ1 t2 l2 π2 h2 hπ2 hx h aux :=
+      Error (
+        StackMismatch
+          (Γ ,,, stack_context π1) t1 args1 l1
+          (Γ ,,, stack_context π2) t2 l2
+      ).
   Next Obligation.
     unfold zipp.
     case_eq (decompose_stack π1). intros l1 ρ1 e1.
@@ -2369,12 +2471,12 @@ Section Conversion.
            (hx : conv_stack_ctx Γ π1 π2)
            (he : conv leq Σ (Γ ,,, stack_context π1) t1 t2)
            (aux : Aux Args Γ t1 π1 t2 π2 h2)
-    : { b : bool | if b then conv_term leq Γ t1 π1 t2 π2 else True } :=
+    : ConversionResult (conv_term leq Γ t1 π1 t2 π2) :=
     _isconv_args leq Γ t1 π1 h1 t2 π2 h2 hx he aux with inspect (decompose_stack π1) := {
     | @exist (l1, θ1) eq1 with inspect (decompose_stack π2) := {
       | @exist (l2, θ2) eq2 with _isconv_args' leq Γ t1 [] l1 θ1 _ _ t2 l2 θ2 _ _ _ _ _ := {
-        | @exist true h := yes ;
-        | @exist false _ := no
+        | Success h := yes ;
+        | Error e := Error e (* TODO Is it sufficient? *)
         }
       }
     }.
@@ -2710,7 +2812,7 @@ Section Conversion.
             (ir1 : isred (t1, π1)) (ir2 : isred (t2, π2))
             (hx : conv_stack_ctx Γ π1 π2)
             (aux : Aux Fallback Γ t1 π1 t2 π2 h2)
-    : { b : bool | if b then conv_term leq Γ t1 π1 t2 π2 else True } :=
+    : ConversionResult (conv_term leq Γ t1 π1 t2 π2) :=
     _isconv_fallback Γ leq t1 π1 h1 t2 π2 h2 ir1 ir2 hx aux
     with inspect (reducible_head Γ t1 π1 h1) := {
     | @exist (Some (rt1, ρ1)) eq1 with inspect (decompose_stack ρ1) := {
@@ -2731,11 +2833,23 @@ Section Conversion.
       | @exist None _ with inspect leq := {
         | @exist Conv eq1 with inspect (eqb_term t1 t2) := {
           | @exist true eq2 := isconv_args Conv t1 π1 t2 π2 aux ;
-          | @exist false _ := no
+          | @exist false _ :=
+            Error (
+              HeadMistmatch
+                Conv
+                (Γ ,,, stack_context π1) t1
+                (Γ ,,, stack_context π2) t2
+            )
           } ;
         | @exist Cumul eq1 with inspect (leqb_term t1 t2) := {
           | @exist true eq2 := isconv_args Cumul t1 π1 t2 π2 aux ;
-          | @exist false _ := no
+          | @exist false _ :=
+            Error (
+              HeadMistmatch
+                Cumul
+                (Γ ,,, stack_context π1) t1
+                (Γ ,,, stack_context π2) t2
+            )
           }
         }
       }
@@ -2851,7 +2965,6 @@ Section Conversion.
   Qed.
   Next Obligation.
     destruct hΣ as [wΣ].
-    destruct b ; auto.
     apply reducible_head_red_zipp in eq1 as r1. destruct r1 as [r1].
     apply reducible_head_decompose in eq1 as d1.
     rewrite <- eq2 in d1. cbn in d1.
@@ -2998,7 +3111,6 @@ Section Conversion.
   Qed.
   Next Obligation.
     destruct hΣ as [wΣ].
-    destruct b ; auto.
     apply reducible_head_red_zipp in eq1 as r1. destruct r1 as [r1].
     apply reducible_head_decompose in eq1 as d1.
     rewrite <- eq2 in d1. cbn in d1.
@@ -3104,19 +3216,21 @@ Section Conversion.
   Qed.
 
   Definition isconv Γ leq t1 π1 h1 t2 π2 h2 hx :=
-    let '(exist b _) :=
-      isconv_full Reduction Γ t1 π1 h1 t2 π2 h2 leq hx I I I
-    in b.
+    match isconv_full Reduction Γ t1 π1 h1 t2 π2 h2 leq hx I I I with
+    | Success _ => Success I
+    | Error e => Error e
+    end.
 
   Theorem isconv_sound :
     forall Γ leq t1 π1 h1 t2 π2 h2 hx,
-      isconv Γ leq t1 π1 h1 t2 π2 h2 hx ->
+      isconv Γ leq t1 π1 h1 t2 π2 h2 hx = Success I ->
       conv leq Σ (Γ ,,, stack_context π1) (zipp t1 π1) (zipp t2 π2).
   Proof.
     unfold isconv.
     intros Γ leq t1 π1 h1 t2 π2 h2 hx.
-    destruct isconv_full as [[]] ; auto.
-    discriminate.
+    destruct isconv_full as [].
+    - auto.
+    - discriminate.
   Qed.
 
   Definition isconv_term Γ leq t1 (h1 : wellformed Σ Γ t1) t2 (h2 : wellformed Σ Γ t2) :=
@@ -3124,7 +3238,7 @@ Section Conversion.
 
   Theorem isconv_term_sound :
     forall Γ leq t1 h1 t2 h2,
-      isconv_term Γ leq t1 h1 t2 h2 ->
+      isconv_term Γ leq t1 h1 t2 h2 = Success I ->
       conv leq Σ Γ t1 t2.
   Proof.
     intros Γ leq t1 h1 t2 h2.

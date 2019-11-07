@@ -122,7 +122,7 @@ Program Definition infer_and_print_template_program {cf : checker_flags} (p : As
   | EnvError (AlreadyDeclared id) =>
     inr ("Already declared: " ++ id)
   | EnvError (IllFormedDecl id e) =>
-    inr ("Type error: " ++ PCUICSafeChecker.string_of_type_error e ++ ", while checking " ++ id)
+    inr ("Type error: " ++ PCUICSafeChecker.string_of_type_error (trans_global (AstUtils.empty_ext (fst p))) e ++ ", while checking " ++ id)
   end.
 
 (* Program Definition check_template_program {cf : checker_flags} (p : Ast.program) (ty : Ast.term) *)

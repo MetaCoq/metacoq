@@ -835,8 +835,9 @@ Section Typecheck.
 
 
   Definition isconv0 Γ t1 t2 : bool
-    := isconv_term RedFlags.default Σ HΣ Hφ G HG Γ Conv
-                   t1 (todo "ee") t2 (todo "rr").
+    := if isconv_term RedFlags.default Σ HΣ Hφ G HG Γ Conv
+                   t1 (todo "ee") t2 (todo "rr")
+      then true else false.
 
   Definition bconv_decl Γ := map2_decl (isconv0 Γ).
 

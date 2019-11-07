@@ -429,29 +429,7 @@ MetaCoq SafeCheck @can_eq.
 MetaCoq SafeCheck @transport_eq.
 MetaCoq SafeCheck @can_eq_eq.
 
-Fail MetaCoq SafeCheck Canonical_eq_eq.
-
-Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0])
-@ (Pi (x : #14) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (y : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#15) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#15) @ (#11) @ (#10)) @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))))
-
-@ (Lam (x : #14) (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.e_inv,[Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#15) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#15) @ (#11) @ (#10)) @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Pi (x : #15) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#16) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#16) @ (#12) @ (#11)) @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @ (#15) @ (Lam (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#15) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#15) @ (#11) @ (#10)) @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.funext,[Var 0,Var 0,Var 0]) @ (#15) @ (Lam (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#15) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#15) @ (#11) @ (#10)) @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Lam (y : #15) (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.e_inv,[Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#16) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#16) @ (#12) @ (#11)) @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Pi (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#17) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#17) @ (#13) @ (#12)) @ (#2) @ (#1) @ (#0)) @ (#0))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) @ (Lam (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#16) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#16) @ (#12) @ (#11)) @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.funext,[Var 0,Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) @ (Lam (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#16) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#16) @ (#12) @ (#11)) @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Lam (E : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Case(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,2,Lam (y : #17) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#18) @ (#3) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#19) @ (#4) @ (#1)) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#19) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#19) @ (#15) @ (#14)) @ (#4) @ (#1) @ (#0)) @ (#0))),#0,[Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq_refl,[Var 0]) @ (#17) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#17) @ (#13) @ (#12)) @ (#2)]))))))) @ (Lam (x : #14) (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.e_inv,[Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#15) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#15) @ (#11) @ (#5)) @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Pi (x : #15) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#16) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#16) @ (#12) @ (#6)) @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @ (#15) @ (Lam (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#15) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#15) @ (#11) @ (#5)) @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.funext,[Var 0,Var 0,Var 0]) @ (#15) @ (Lam (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#15) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#15) @ (#11) @ (#5)) @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Lam (y : #15) (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.e_inv,[Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#16) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#16) @ (#12) @ (#6)) @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Pi (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#17) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#17) @ (#13) @ (#7)) @ (#2) @ (#1) @ (#0)) @ (#0))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) @ (Lam (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#16) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#16) @ (#12) @ (#6)) @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.funext,[Var 0,Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) @ (Lam (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#16) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#16) @ (#12) @ (#6)) @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Lam (E : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Case(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,2,Lam (y : #17) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#18) @ (#3) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#19) @ (#4) @ (#1)) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#19) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#19) @ (#15) @ (#9)) @ (#4) @ (#1) @ (#0)) @ (#0))),#0,[Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq_refl,[Var 0]) @ (#17) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#17) @ (#13) @ (#7)) @ (#2)])))))))
-
-and:
-
-Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : #14) (Lam (x : #15) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (y : #16) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#18) @ (#2) @ (#1)))) @ (#12 @ (#0)) @ (Lam (y : #16) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#1) @ (#0)) (#0)))) @ (#0))) @ (Lam (x : #14) (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.e_inv,[Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (#11 @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Pi (x : #15) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (#12 @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @ (#15) @ (Lam (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (#11 @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.funext,[Var 0,Var 0,Var 0]) @ (#15) @ (Lam (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (#11 @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Lam (y : #15) (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.e_inv,[Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (#12 @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Pi (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)) @ (#13 @ (#2) @ (#1) @ (#0)) @ (#0))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) @ (Lam (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (#12 @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.funext,[Var 0,Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) @ (Lam (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (#12 @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Lam (E : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Case(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,2,Lam (y : #17) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#18) @ (#3) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#19) @ (#4) @ (#1)) @ (#15 @ (#4) @ (#1) @ (#0)) @ (#0))),#0,[#12 @ (#2)]))))))) @ (Lam (x : #14) (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.e_inv,[Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (#11 @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Pi (x : #15) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (#12 @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @ (#15) @ (Lam (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (#11 @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.funext,[Var 0,Var 0,Var 0]) @ (#15) @ (Lam (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (#11 @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Lam (y : #15) (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.e_inv,[Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (#12 @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Pi (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)) @ (#13 @ (#2) @ (#1) @ (#0)) @ (#0))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) @ (Lam (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (#12 @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.funext,[Var 0,Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) @ (Lam (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (#12 @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Lam (E : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Case(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,2,Lam (y : #17) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#18) @ (#3) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#19) @ (#4) @ (#1)) @ (#15 @ (#4) @ (#1) @ (#0)) @ (#0))),#0,[#7 @ (#2)])))))))
-
-after reduction:
-
-Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : #14) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (y : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#15) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#15) @ (#11) @ (#10)) @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))))) @ (Lam (x : #14) (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.e_inv,[Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#15) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#15) @ (#11) @ (#10)) @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Pi (x : #15) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#16) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#16) @ (#12) @ (#11)) @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @ (#15) @ (Lam (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#15) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#15) @ (#11) @ (#10)) @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.funext,[Var 0,Var 0,Var 0]) @ (#15) @ (Lam (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#15) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#15) @ (#11) @ (#10)) @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Lam (y : #15) (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.e_inv,[Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#16) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#16) @ (#12) @ (#11)) @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Pi (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#17) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#17) @ (#13) @ (#12)) @ (#2) @ (#1) @ (#0)) @ (#0))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) @ (Lam (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#16) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#16) @ (#12) @ (#11)) @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.funext,[Var 0,Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) @ (Lam (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#16) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#16) @ (#12) @ (#11)) @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Lam (E : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Case(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,2,Lam (y : #17) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#18) @ (#3) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#19) @ (#4) @ (#1)) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#19) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#19) @ (#15) @ (#14)) @ (#4) @ (#1) @ (#0)) @ (#0))),#0,[Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq_refl,[Var 0]) @ (#17) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#17) @ (#13) @ (#12)) @ (#2)]))))))) @ (Lam (x : #14) (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.e_inv,[Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#15) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#15) @ (#11) @ (#5)) @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Pi (x : #15) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#16) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#16) @ (#12) @ (#6)) @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @ (#15) @ (Lam (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#15) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#15) @ (#11) @ (#5)) @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.funext,[Var 0,Var 0,Var 0]) @ (#15) @ (Lam (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#15) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#15) @ (#11) @ (#5)) @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Lam (y : #15) (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.e_inv,[Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#16) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#16) @ (#12) @ (#6)) @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Pi (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#17) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#17) @ (#13) @ (#7)) @ (#2) @ (#1) @ (#0)) @ (#0))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) @ (Lam (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#16) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#16) @ (#12) @ (#6)) @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.funext,[Var 0,Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) @ (Lam (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#16) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#16) @ (#12) @ (#6)) @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Lam (E : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Case(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,2,Lam (y : #17) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#18) @ (#3) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#19) @ (#4) @ (#1)) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#19) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#19) @ (#15) @ (#9)) @ (#4) @ (#1) @ (#0)) @ (#0))),#0,[Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq_refl,[Var 0]) @ (#17) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#17) @ (#13) @ (#7)) @ (#2)])))))))
-
-and:
-
-Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : #14) (Lam (x : #15) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (y : #16) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#18) @ (#2) @ (#1)))) @ (#12 @ (#0)) @ (Lam (y : #16) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#1) @ (#0)) (#0)))) @ (#0))) @ (Lam (x : #14) (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.e_inv,[Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (#11 @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Pi (x : #15) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (#12 @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @ (#15) @ (Lam (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (#11 @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.funext,[Var 0,Var 0,Var 0]) @ (#15) @ (Lam (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (#11 @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Lam (y : #15) (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.e_inv,[Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (#12 @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Pi (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)) @ (#13 @ (#2) @ (#1) @ (#0)) @ (#0))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) @ (Lam (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (#12 @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.funext,[Var 0,Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) @ (Lam (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (#12 @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Lam (E : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Case(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,2,Lam (y : #17) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#18) @ (#3) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#19) @ (#4) @ (#1)) @ (#15 @ (#4) @ (#1) @ (#0)) @ (#0))),#0,[#12 @ (#2)]))))))) @ (Lam (x : #14) (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.e_inv,[Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (#11 @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Pi (x : #15) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (#12 @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @ (#15) @ (Lam (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (#11 @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.funext,[Var 0,Var 0,Var 0]) @ (#15) @ (Lam (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (#11 @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Lam (y : #15) (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.e_inv,[Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (#12 @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Pi (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)) @ (#13 @ (#2) @ (#1) @ (#0)) @ (#0))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) @ (Lam (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (#12 @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.funext,[Var 0,Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) @ (Lam (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (#12 @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Lam (E : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Case(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,2,Lam (y : #17) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#18) @ (#3) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#19) @ (#4) @ (#1)) @ (#15 @ (#4) @ (#1) @ (#0)) @ (#0))),#0,[#7 @ (#2)])))))))
-in universe graph:
-[Set,Var 0]
-[(Set, 0, Var 0)], while checking MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq_eq
-
-
+MetaCoq SafeCheck Canonical_eq_eq.
 
 
 Fail MetaCoq SafeCheck @URType_IsEq.
@@ -462,7 +440,871 @@ MetaCoq CoqCheck FP_forall.
 
 
 
+Error:
+Type error: Terms are not <= for cumulativity:
+Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : #14) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (y : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#15) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#15) @ (#11) @ (#10)) @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))))) @ (Lam (x : #14) (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.e_inv,[Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#15) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#15) @ (#11) @ (#10)) @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Pi (x : #15) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#16) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#16) @ (#12) @ (#11)) @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @ (#15) @ (Lam (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#15) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#15) @ (#11) @ (#10)) @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.funext,[Var 0,Var 0,Var 0]) @ (#15) @ (Lam (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#15) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#15) @ (#11) @ (#10)) @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Lam (y : #15) (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.e_inv,[Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#16) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#16) @ (#12) @ (#11)) @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Pi (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#17) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#17) @ (#13) @ (#12)) @ (#2) @ (#1) @ (#0)) @ (#0))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) @ (Lam (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#16) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#16) @ (#12) @ (#11)) @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.funext,[Var 0,Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) @ (Lam (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#16) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#16) @ (#12) @ (#11)) @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Lam (E : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Case(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,2,Lam (y : #17) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#18) @ (#3) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#19) @ (#4) @ (#1)) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#19) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#19) @ (#15) @ (#14)) @ (#4) @ (#1) @ (#0)) @ (#0))),#0,[Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq_refl,[Var 0]) @ (#17) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#17) @ (#13) @ (#12)) @ (#2)]))))))) @ (Lam (x : #14) (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.e_inv,[Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#15) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#15) @ (#11) @ (#5)) @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Pi (x : #15) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#16) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#16) @ (#12) @ (#6)) @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @ (#15) @ (Lam (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#15) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#15) @ (#11) @ (#5)) @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.funext,[Var 0,Var 0,Var 0]) @ (#15) @ (Lam (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#15) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#15) @ (#11) @ (#5)) @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Lam (y : #15) (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.e_inv,[Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#16) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#16) @ (#12) @ (#6)) @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Pi (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#17) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#17) @ (#13) @ (#7)) @ (#2) @ (#1) @ (#0)) @ (#0))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) @ (Lam (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#16) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#16) @ (#12) @ (#6)) @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.funext,[Var 0,Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) @ (Lam (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#16) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#16) @ (#12) @ (#6)) @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Lam (E : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Case(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,2,Lam (y : #17) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#18) @ (#3) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#19) @ (#4) @ (#1)) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#19) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#19) @ (#15) @ (#9)) @ (#4) @ (#1) @ (#0)) @ (#0))),#0,[Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq_refl,[Var 0]) @ (#17) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#17) @ (#13) @ (#7)) @ (#2)])))))))
+and:
+Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : #14) (Lam (x : #15) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (y : #16) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#18) @ (#2) @ (#1)))) @ (#12 @ (#0)) @ (Lam (y : #16) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#1) @ (#0)) (#0)))) @ (#0))) @ (Lam (x : #14) (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.e_inv,[Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (#11 @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Pi (x : #15) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (#12 @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @ (#15) @ (Lam (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (#11 @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.funext,[Var 0,Var 0,Var 0]) @ (#15) @ (Lam (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (#11 @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Lam (y : #15) (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.e_inv,[Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (#12 @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Pi (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)) @ (#13 @ (#2) @ (#1) @ (#0)) @ (#0))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) @ (Lam (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (#12 @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.funext,[Var 0,Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) @ (Lam (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (#12 @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Lam (E : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Case(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,2,Lam (y : #17) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#18) @ (#3) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#19) @ (#4) @ (#1)) @ (#15 @ (#4) @ (#1) @ (#0)) @ (#0))),#0,[#12 @ (#2)]))))))) @ (Lam (x : #14) (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.e_inv,[Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (#11 @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Pi (x : #15) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (#12 @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @ (#15) @ (Lam (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (#11 @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.funext,[Var 0,Var 0,Var 0]) @ (#15) @ (Lam (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (#11 @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Lam (y : #15) (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.e_inv,[Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (#12 @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Pi (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)) @ (#13 @ (#2) @ (#1) @ (#0)) @ (#0))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) @ (Lam (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (#12 @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.funext,[Var 0,Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) @ (Lam (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (#12 @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Lam (E : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Case(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,2,Lam (y : #17) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#18) @ (#3) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#19) @ (#4) @ (#1)) @ (#15 @ (#4) @ (#1) @ (#0)) @ (#0))),#0,[#7 @ (#2)])))))))
+after reduction:
+Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : #14) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (y : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#15) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#15) @ (#11) @ (#10)) @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))))) @ (Lam (x : #14) (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.e_inv,[Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#15) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#15) @ (#11) @ (#10)) @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Pi (x : #15) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#16) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#16) @ (#12) @ (#11)) @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @ (#15) @ (Lam (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#15) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#15) @ (#11) @ (#10)) @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.funext,[Var 0,Var 0,Var 0]) @ (#15) @ (Lam (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#15) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#15) @ (#11) @ (#10)) @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Lam (y : #15) (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.e_inv,[Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#16) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#16) @ (#12) @ (#11)) @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Pi (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#17) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#17) @ (#13) @ (#12)) @ (#2) @ (#1) @ (#0)) @ (#0))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) @ (Lam (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#16) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#16) @ (#12) @ (#11)) @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.funext,[Var 0,Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) @ (Lam (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#16) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#16) @ (#12) @ (#11)) @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Lam (E : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Case(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,2,Lam (y : #17) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#18) @ (#3) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#19) @ (#4) @ (#1)) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#19) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#19) @ (#15) @ (#14)) @ (#4) @ (#1) @ (#0)) @ (#0))),#0,[Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq_refl,[Var 0]) @ (#17) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#17) @ (#13) @ (#12)) @ (#2)]))))))) @ (Lam (x : #14) (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.e_inv,[Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#15) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#15) @ (#11) @ (#5)) @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Pi (x : #15) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#16) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#16) @ (#12) @ (#6)) @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @ (#15) @ (Lam (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#15) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#15) @ (#11) @ (#5)) @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.funext,[Var 0,Var 0,Var 0]) @ (#15) @ (Lam (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#15) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#15) @ (#11) @ (#5)) @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Lam (y : #15) (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.e_inv,[Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#16) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#16) @ (#12) @ (#6)) @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Pi (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#17) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#17) @ (#13) @ (#7)) @ (#2) @ (#1) @ (#0)) @ (#0))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) @ (Lam (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#16) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#16) @ (#12) @ (#6)) @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.funext,[Var 0,Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) @ (Lam (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#16) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#16) @ (#12) @ (#6)) @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Lam (E : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Case(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,2,Lam (y : #17) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#18) @ (#3) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#19) @ (#4) @ (#1)) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#19) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#19) @ (#15) @ (#9)) @ (#4) @ (#1) @ (#0)) @ (#0))),#0,[Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq_refl,[Var 0]) @ (#17) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#17) @ (#13) @ (#7)) @ (#2)])))))))
+and:
+Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : #14) (Lam (x : #15) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (y : #16) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#18) @ (#2) @ (#1)))) @ (#12 @ (#0)) @ (Lam (y : #16) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#1) @ (#0)) (#0)))) @ (#0))) @ (Lam (x : #14) (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.e_inv,[Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (#11 @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Pi (x : #15) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (#12 @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @ (#15) @ (Lam (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (#11 @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.funext,[Var 0,Var 0,Var 0]) @ (#15) @ (Lam (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (#11 @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Lam (y : #15) (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.e_inv,[Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (#12 @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Pi (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)) @ (#13 @ (#2) @ (#1) @ (#0)) @ (#0))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) @ (Lam (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (#12 @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.funext,[Var 0,Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) @ (Lam (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (#12 @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Lam (E : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Case(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,2,Lam (y : #17) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#18) @ (#3) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#19) @ (#4) @ (#1)) @ (#15 @ (#4) @ (#1) @ (#0)) @ (#0))),#0,[#12 @ (#2)]))))))) @ (Lam (x : #14) (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.e_inv,[Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (#11 @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Pi (x : #15) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (#12 @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @ (#15) @ (Lam (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (#11 @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.funext,[Var 0,Var 0,Var 0]) @ (#15) @ (Lam (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (#11 @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0)))) @ (Lam (y : #15) (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.e_inv,[Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (#12 @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Pi (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)) @ (#13 @ (#2) @ (#1) @ (#0)) @ (#0))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) @ (Lam (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (#12 @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.funext,[Var 0,Var 0,Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) @ (Lam (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1))) @ (#12 @ (#1) @ (#0)) @ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))) @ (Lam (E : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Case(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,2,Lam (y : #17) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#18) @ (#3) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#19) @ (#4) @ (#1)) @ (#15 @ (#4) @ (#1) @ (#0)) @ (#0))),#0,[#7 @ (#2)])))))))
+error:
 
-(Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (y : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#2) @ (#1)))) @ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @ (#15) @ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @ (#15) @ (#11) @ (#10)) @ (#0)) @ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#16) @ (#1) @ (#0)) (#0))))
+StackTailError: StackHeadError: The two pattern-matching
+Case(MetaCoq.TestSuite.univalent_parametricity.HoTT.IsEquiv,0,3,Lam (IsEquiv : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.IsEquiv,0,[Var 0,Var 0]) @
+ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (Pi (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#16) @
+ (#1) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#17) @
+ (#2) @
+ (#1)))) @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @
+ (#15) @
+ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @
+ (#15) @
+ (#11) @
+ (#10)) @
+ (#0)) @
+ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#16) @
+ (#1) @
+ (#0)) (#0)))) @
+ (Pi (x : #15) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#16) @
+ (#1) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#17) @
+ (#2) @
+ (#1))) @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @
+ (#16) @
+ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @
+ (#16) @
+ (#12) @
+ (#11)) @
+ (#1) @
+ (#0)) @
+ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#16) @
+ (#1) @
+ (#0)) (#0)))) @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @
+ (#15) @
+ (Lam (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#16) @
+ (#1) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#17) @
+ (#2) @
+ (#1)))) @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @
+ (#15) @
+ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @
+ (#15) @
+ (#11) @
+ (#10)) @
+ (#0)) @
+ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#16) @
+ (#1) @
+ (#0)) (#0))))) (Pi (_ : Pi (x : #16) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#17) @
+ (#2) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#18) @
+ (#3) @
+ (#1))) @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @
+ (#17) @
+ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @
+ (#17) @
+ (#13) @
+ (#12)) @
+ (#2) @
+ (#0)) @
+ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#17) @
+ (#2) @
+ (#0)) (#0)))) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (Pi (x : #17) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#18) @
+ (#3) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#19) @
+ (#4) @
+ (#1)))) @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @
+ (#17) @
+ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @
+ (#17) @
+ (#13) @
+ (#12)) @
+ (#2)) @
+ (Lam (y : #17) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#18) @
+ (#3) @
+ (#0)) (#0))))),Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.funext,[Var 0,Var 0,Var 0]) @
+ (#15) @
+ (Lam (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#16) @
+ (#1) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#17) @
+ (#2) @
+ (#1)))) @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @
+ (#15) @
+ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @
+ (#15) @
+ (#11) @
+ (#10)) @
+ (#0)) @
+ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#16) @
+ (#1) @
+ (#0)) (#0))),[Lam (e_inv : Pi (_ : Pi (x : #15) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#16) @
+ (#1) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#17) @
+ (#2) @
+ (#1))) @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @
+ (#16) @
+ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @
+ (#16) @
+ (#12) @
+ (#11)) @
+ (#1) @
+ (#0)) @
+ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#16) @
+ (#1) @
+ (#0)) (#0)))) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (Pi (x : #16) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#17) @
+ (#2) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#18) @
+ (#3) @
+ (#1)))) @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @
+ (#16) @
+ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @
+ (#16) @
+ (#12) @
+ (#11)) @
+ (#1)) @
+ (Lam (y : #16) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#17) @
+ (#2) @
+ (#0)) (#0))))) (Lam (e_sect : Pi (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (Pi (x : #16) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#17) @
+ (#2) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#18) @
+ (#3) @
+ (#1)))) @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @
+ (#16) @
+ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @
+ (#16) @
+ (#12) @
+ (#11)) @
+ (#1)) @
+ (Lam (y : #16) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#17) @
+ (#2) @
+ (#0)) (#0)))) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (Pi (x : #17) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#18) @
+ (#3) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#19) @
+ (#4) @
+ (#1)))) @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @
+ (#17) @
+ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @
+ (#17) @
+ (#13) @
+ (#12)) @
+ (#2)) @
+ (Lam (y : #17) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#18) @
+ (#3) @
+ (#0)) (#0)))) @
+ (#1 @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @
+ (#17) @
+ (Lam (x : #17) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#18) @
+ (#3) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#19) @
+ (#4) @
+ (#1)))) @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @
+ (#17) @
+ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @
+ (#17) @
+ (#13) @
+ (#12)) @
+ (#2)) @
+ (Lam (y : #17) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#18) @
+ (#3) @
+ (#0)) (#0))) @
+ (#0))) @
+ (#0))) (Lam (e_retr : Pi (y : Pi (x : #17) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#18) @
+ (#3) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#19) @
+ (#4) @
+ (#1))) @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @
+ (#18) @
+ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @
+ (#18) @
+ (#14) @
+ (#13)) @
+ (#3) @
+ (#0)) @
+ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#18) @
+ (#3) @
+ (#0)) (#0)))) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (Pi (x : #18) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#19) @
+ (#4) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#1))) @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @
+ (#19) @
+ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @
+ (#19) @
+ (#15) @
+ (#14)) @
+ (#4) @
+ (#0)) @
+ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#19) @
+ (#4) @
+ (#0)) (#0)))) @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @
+ (#18) @
+ (Lam (x : #18) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#19) @
+ (#4) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#1)))) @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @
+ (#18) @
+ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @
+ (#18) @
+ (#14) @
+ (#13)) @
+ (#3)) @
+ (Lam (y : #18) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#19) @
+ (#4) @
+ (#0)) (#0))) @
+ (#2 @
+ (#0))) @
+ (#0))) (Lam (e_adj : Pi (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (Pi (x : #18) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#19) @
+ (#4) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#1)))) @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @
+ (#18) @
+ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @
+ (#18) @
+ (#14) @
+ (#13)) @
+ (#3)) @
+ (Lam (y : #18) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#19) @
+ (#4) @
+ (#0)) (#0)))) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (Pi (x : #19) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#21) @
+ (#6) @
+ (#1))) @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @
+ (#20) @
+ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @
+ (#20) @
+ (#16) @
+ (#15)) @
+ (#5) @
+ (#0)) @
+ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#0)) (#0)))) @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @
+ (#19) @
+ (Lam (x : #19) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#21) @
+ (#6) @
+ (#1)))) @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @
+ (#19) @
+ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @
+ (#19) @
+ (#15) @
+ (#14)) @
+ (#4)) @
+ (Lam (y : #19) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#0)) (#0))) @
+ (#3 @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @
+ (#19) @
+ (Lam (x : #19) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#21) @
+ (#6) @
+ (#1)))) @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @
+ (#19) @
+ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @
+ (#19) @
+ (#15) @
+ (#14)) @
+ (#4)) @
+ (Lam (y : #19) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#0)) (#0))) @
+ (#0)))) @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @
+ (#19) @
+ (Lam (x : #19) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#21) @
+ (#6) @
+ (#1)))) @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @
+ (#19) @
+ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @
+ (#19) @
+ (#15) @
+ (#14)) @
+ (#4)) @
+ (Lam (y : #19) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#0)) (#0))) @
+ (#0))) @
+ (#1 @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @
+ (#19) @
+ (Lam (x : #19) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#21) @
+ (#6) @
+ (#1)))) @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @
+ (#19) @
+ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @
+ (#19) @
+ (#15) @
+ (#14)) @
+ (#4)) @
+ (Lam (y : #19) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#0)) (#0))) @
+ (#0))) @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.ap,[Var 0,Var 0]) @
+ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (Pi (x : #19) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#21) @
+ (#6) @
+ (#1)))) @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @
+ (#19) @
+ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @
+ (#19) @
+ (#15) @
+ (#14)) @
+ (#4)) @
+ (Lam (y : #19) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#0)) (#0)))) @
+ (Pi (x : #19) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#21) @
+ (#6) @
+ (#1))) @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @
+ (#20) @
+ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @
+ (#20) @
+ (#16) @
+ (#15)) @
+ (#5) @
+ (#0)) @
+ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#0)) (#0)))) @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @
+ (#19) @
+ (Lam (x : #19) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#21) @
+ (#6) @
+ (#1)))) @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @
+ (#19) @
+ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @
+ (#19) @
+ (#15) @
+ (#14)) @
+ (#4)) @
+ (Lam (y : #19) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#0)) (#0)))) @
+ (#3 @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @
+ (#19) @
+ (Lam (x : #19) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#21) @
+ (#6) @
+ (#1)))) @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.can_eq,[Var 0]) @
+ (#19) @
+ (Construct(MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq,0,0,[Var 0]) @
+ (#19) @
+ (#15) @
+ (#14)) @
+ (#4)) @
+ (Lam (y : #19) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#0)) (#0))) @
+ (#0))) @
+ (#0) @
+ (#2 @
+ (#0))))) (#3))))])
 
-(Lam (x : #15) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (Pi (y : #16) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#1) @ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#18) @ (#2) @ (#1)))) @ (#12 @ (#0)) @ (Lam (y : #16) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @ (#17) @ (#1) @ (#0)) (#0)))) @ (#0))
+and
+
+Case(MetaCoq.TestSuite.univalent_parametricity.HoTT.IsEquiv,0,3,Lam (IsEquiv : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.IsEquiv,0,[Var 0,Var 0]) @
+ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (Pi (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#16) @
+ (#1) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#17) @
+ (#2) @
+ (#1)))) @
+ (#11 @
+ (#0)) @
+ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#16) @
+ (#1) @
+ (#0)) (#0)))) @
+ (Pi (x : #15) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#16) @
+ (#1) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#17) @
+ (#2) @
+ (#1))) @
+ (#12 @
+ (#1) @
+ (#0)) @
+ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#16) @
+ (#1) @
+ (#0)) (#0)))) @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @
+ (#15) @
+ (Lam (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#16) @
+ (#1) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#17) @
+ (#2) @
+ (#1)))) @
+ (#11 @
+ (#0)) @
+ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#16) @
+ (#1) @
+ (#0)) (#0))))) (Pi (_ : Pi (x : #16) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#17) @
+ (#2) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#18) @
+ (#3) @
+ (#1))) @
+ (#13 @
+ (#2) @
+ (#0)) @
+ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#17) @
+ (#2) @
+ (#0)) (#0)))) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (Pi (x : #17) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#18) @
+ (#3) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#19) @
+ (#4) @
+ (#1)))) @
+ (#13 @
+ (#2)) @
+ (Lam (y : #17) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#18) @
+ (#3) @
+ (#0)) (#0))))),Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.funext,[Var 0,Var 0,Var 0]) @
+ (#15) @
+ (Lam (x : #15) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#16) @
+ (#1) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#17) @
+ (#2) @
+ (#1)))) @
+ (#11 @
+ (#0)) @
+ (Lam (y : #15) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#16) @
+ (#1) @
+ (#0)) (#0))),[Lam (e_inv : Pi (_ : Pi (x : #15) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#16) @
+ (#1) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#17) @
+ (#2) @
+ (#1))) @
+ (#12 @
+ (#1) @
+ (#0)) @
+ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#16) @
+ (#1) @
+ (#0)) (#0)))) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (Pi (x : #16) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#17) @
+ (#2) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#18) @
+ (#3) @
+ (#1)))) @
+ (#12 @
+ (#1)) @
+ (Lam (y : #16) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#17) @
+ (#2) @
+ (#0)) (#0))))) (Lam (e_sect : Pi (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (Pi (x : #16) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#17) @
+ (#2) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#18) @
+ (#3) @
+ (#1)))) @
+ (#12 @
+ (#1)) @
+ (Lam (y : #16) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#17) @
+ (#2) @
+ (#0)) (#0)))) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (Pi (x : #17) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#18) @
+ (#3) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#19) @
+ (#4) @
+ (#1)))) @
+ (#13 @
+ (#2)) @
+ (Lam (y : #17) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#18) @
+ (#3) @
+ (#0)) (#0)))) @
+ (#1 @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @
+ (#17) @
+ (Lam (x : #17) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#18) @
+ (#3) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#19) @
+ (#4) @
+ (#1)))) @
+ (#13 @
+ (#2)) @
+ (Lam (y : #17) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#18) @
+ (#3) @
+ (#0)) (#0))) @
+ (#0))) @
+ (#0))) (Lam (e_retr : Pi (y : Pi (x : #17) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#18) @
+ (#3) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#19) @
+ (#4) @
+ (#1))) @
+ (#14 @
+ (#3) @
+ (#0)) @
+ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#18) @
+ (#3) @
+ (#0)) (#0)))) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (Pi (x : #18) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#19) @
+ (#4) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#1))) @
+ (#15 @
+ (#4) @
+ (#0)) @
+ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#19) @
+ (#4) @
+ (#0)) (#0)))) @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @
+ (#18) @
+ (Lam (x : #18) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#19) @
+ (#4) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#1)))) @
+ (#14 @
+ (#3)) @
+ (Lam (y : #18) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#19) @
+ (#4) @
+ (#0)) (#0))) @
+ (#2 @
+ (#0))) @
+ (#0))) (Lam (e_adj : Pi (x : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (Pi (x : #18) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#19) @
+ (#4) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#1)))) @
+ (#14 @
+ (#3)) @
+ (Lam (y : #18) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#19) @
+ (#4) @
+ (#0)) (#0)))) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (Pi (x : #19) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#21) @
+ (#6) @
+ (#1))) @
+ (#16 @
+ (#5) @
+ (#0)) @
+ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#0)) (#0)))) @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @
+ (#19) @
+ (Lam (x : #19) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#21) @
+ (#6) @
+ (#1)))) @
+ (#15 @
+ (#4)) @
+ (Lam (y : #19) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#0)) (#0))) @
+ (#3 @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @
+ (#19) @
+ (Lam (x : #19) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#21) @
+ (#6) @
+ (#1)))) @
+ (#15 @
+ (#4)) @
+ (Lam (y : #19) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#0)) (#0))) @
+ (#0)))) @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @
+ (#19) @
+ (Lam (x : #19) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#21) @
+ (#6) @
+ (#1)))) @
+ (#15 @
+ (#4)) @
+ (Lam (y : #19) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#0)) (#0))) @
+ (#0))) @
+ (#1 @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @
+ (#19) @
+ (Lam (x : #19) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#21) @
+ (#6) @
+ (#1)))) @
+ (#15 @
+ (#4)) @
+ (Lam (y : #19) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#0)) (#0))) @
+ (#0))) @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.ap,[Var 0,Var 0]) @
+ (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (Pi (x : #19) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#21) @
+ (#6) @
+ (#1)))) @
+ (#15 @
+ (#4)) @
+ (Lam (y : #19) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#0)) (#0)))) @
+ (Pi (x : #19) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#21) @
+ (#6) @
+ (#1))) @
+ (#16 @
+ (#5) @
+ (#0)) @
+ (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#0)) (#0)))) @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @
+ (#19) @
+ (Lam (x : #19) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#21) @
+ (#6) @
+ (#1)))) @
+ (#15 @
+ (#4)) @
+ (Lam (y : #19) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#0)) (#0)))) @
+ (#3 @
+ (Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.apD10,[Var 0,Var 0,Var 0]) @
+ (#19) @
+ (Lam (x : #19) (Pi (_ : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#0)) (Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#21) @
+ (#6) @
+ (#1)))) @
+ (#15 @
+ (#4)) @
+ (Lam (y : #19) (Lam (e : Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var 0]) @
+ (#20) @
+ (#5) @
+ (#0)) (#0))) @
+ (#0))) @
+ (#0) @
+ (#2 @
+ (#0))))) (#3))))])
+
+correspond to syntactically distinct stuck terms.
+in universe graph:
+[Set,Var 0]
+[(Set, 0, Var 0)], while checking MetaCoq.TestSuite.univalent_parametricity.CanonicalEq.Canonical_eq_eq

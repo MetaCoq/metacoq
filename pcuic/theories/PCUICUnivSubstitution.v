@@ -1124,15 +1124,16 @@ Proof.
         now rewrite map_option_out_map_option_map, E3.
     + clear -X2 X HSub wfΣ' H2. destruct HSub as [_ HSub]; cbn in *.
       eapply consistent_instance_valid_constraints in H2 as H2'; aa; simpl in *.
-      eapply eq_context_subst_instance in X2; aa.
-      refine (transport (fun c => eq_context _ c _) _ X2). clear.
-      cbn. f_equal. unfold map_decl; cbn. f_equal.
-      rewrite subst_instance_constr_mkApps. f_equal.
-      rewrite !map_app. f_equal.
-      * rewrite firstn_map, !map_map. eapply map_ext.
-        rewrite subst_instance_context_length.
-        intro; symmetry; apply lift_subst_instance_constr.
-      * apply subst_instance_to_extended_list.
+      exact (todo "convconv").
+      (* eapply eq_context_subst_instance in X2; aa. *)
+      (* refine (transport (fun c => eq_context _ c _) _ X2). clear. *)
+      (* cbn. f_equal. unfold map_decl; cbn. f_equal. *)
+      (* rewrite subst_instance_constr_mkApps. f_equal. *)
+      (* rewrite !map_app. f_equal. *)
+      (* * rewrite firstn_map, !map_map. eapply map_ext. *)
+      (*   rewrite subst_instance_context_length. *)
+      (*   intro; symmetry; apply lift_subst_instance_constr. *)
+      (* * apply subst_instance_to_extended_list. *)
     + clear -H1 H2.
       induction (ind_kelim idecl) as [|a l]; try discriminate; cbn in *.
       apply* orb_true_iff in H1.

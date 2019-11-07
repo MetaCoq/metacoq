@@ -122,10 +122,10 @@ Qed.
 Require Import ssreflect.
 
 Lemma forall_decls_declared_constant Σ cst decl :
-  TTy.declared_constant Σ cst decl ->
+  TemplateLookup.declared_constant Σ cst decl ->
   declared_constant (trans_global_decls Σ) cst (trans_constant_body decl).
 Proof.
-  unfold declared_constant, TTy.declared_constant.
+  unfold declared_constant, TemplateLookup.declared_constant.
   induction Σ => //; try discriminate.
   case: a => // /= k b; case: (ident_eq cst k); auto.
   - by move => [=] -> ->.
@@ -133,10 +133,10 @@ Proof.
 Qed.
 
 Lemma forall_decls_declared_minductive Σ cst decl :
-  TTy.declared_minductive Σ cst decl ->
+  TemplateLookup.declared_minductive Σ cst decl ->
   declared_minductive (trans_global_decls Σ) cst (trans_minductive_body decl).
 Proof.
-  unfold declared_minductive, TTy.declared_minductive.
+  unfold declared_minductive, TemplateLookup.declared_minductive.
   induction Σ => //; try discriminate.
   case: a => // /= k b; case: (ident_eq cst k); auto.
   - by discriminate.
@@ -144,10 +144,10 @@ Proof.
 Qed.
 
 Lemma forall_decls_declared_inductive Σ mdecl ind decl :
-  TTy.declared_inductive Σ mdecl ind decl ->
+  TemplateLookup.declared_inductive Σ mdecl ind decl ->
   declared_inductive (trans_global_decls Σ) (trans_minductive_body mdecl) ind (trans_one_ind_body decl).
 Proof.
-  unfold declared_inductive, TTy.declared_inductive.
+  unfold declared_inductive, TemplateLookup.declared_inductive.
   move=> [decl' Hnth].
   pose proof (forall_decls_declared_minductive _ _ _ decl').
   eexists. eauto. destruct decl'; simpl in *.
@@ -156,11 +156,11 @@ Proof.
 Qed.
 
 Lemma forall_decls_declared_constructor Σ cst mdecl idecl decl :
-  TTy.declared_constructor Σ mdecl idecl cst decl ->
+  TemplateLookup.declared_constructor Σ mdecl idecl cst decl ->
   declared_constructor (trans_global_decls Σ) (trans_minductive_body mdecl) (trans_one_ind_body idecl)
                     cst ((fun '(x, y, z) => (x, trans y, z)) decl).
 Proof.
-  unfold declared_constructor, TTy.declared_constructor.
+  unfold declared_constructor, TemplateLookup.declared_constructor.
   move=> [decl' Hnth].
   pose proof (forall_decls_declared_inductive _ _ _ _ decl'). split; auto.
   destruct idecl; simpl.
@@ -168,11 +168,11 @@ Proof.
 Qed.
 
 Lemma forall_decls_declared_projection Σ cst mdecl idecl decl :
-  TTy.declared_projection Σ mdecl idecl cst decl ->
+  TemplateLookup.declared_projection Σ mdecl idecl cst decl ->
   declared_projection (trans_global_decls Σ) (trans_minductive_body mdecl) (trans_one_ind_body idecl)
                     cst ((fun '(x, y) => (x, trans y)) decl).
 Proof.
-  unfold declared_constructor, TTy.declared_constructor.
+  unfold declared_constructor, TemplateLookup.declared_constructor.
   move=> [decl' [Hnth Hnpar]].
   pose proof (forall_decls_declared_inductive _ _ _ _ decl'). split; auto.
   destruct idecl; simpl.
@@ -304,7 +304,7 @@ Lemma trans_types_of_case (Σ : T.global_env) ind mdecl idecl args p u pty indct
   T.wf p -> T.wf pty -> T.wf (T.ind_type idecl) ->
   All Ast.wf args ->
   TTy.wf Σ ->
-  TTy.declared_inductive Σ mdecl ind idecl ->
+  TemplateLookup.declared_inductive Σ mdecl ind idecl ->
   TTy.types_of_case ind mdecl idecl args u p pty = Some (indctx, pctx, ps, btys) ->
   types_of_case ind (trans_minductive_body mdecl) (trans_one_ind_body idecl)
   (map trans args) u (trans p) (trans pty) =
@@ -397,7 +397,7 @@ Proof.
 Qed.
 
 Lemma trans_eq_term ϕ T U :
-  T.wf T -> T.wf U -> TTy.eq_term ϕ T U ->
+  T.wf T -> T.wf U -> Conversion.eq_term ϕ T U ->
   eq_term ϕ (trans T) (trans U).
 Proof.
   intros HT HU H.
@@ -431,7 +431,7 @@ Admitted.
 
 
 Lemma trans_eq_term_list ϕ T U :
-  List.Forall T.wf T -> List.Forall T.wf U -> Forall2 (TTy.eq_term ϕ) T U ->
+  List.Forall T.wf T -> List.Forall T.wf U -> Forall2 (Conversion.eq_term ϕ) T U ->
   All2 (eq_term ϕ) (List.map trans T) (List.map trans U).
 Proof.
 (*   intros H H0 H1. eapply All2_map. *)
@@ -485,7 +485,7 @@ Proof.
 Qed.
 
 Lemma trans_eq_term_upto_univ Re Rle T U :
-  T.wf T -> T.wf U -> TTy.eq_term_upto_univ Re Rle T U ->
+  T.wf T -> T.wf U -> Conversion.eq_term_upto_univ Re Rle T U ->
   eq_term_upto_univ Re Rle (trans T) (trans U).
 Proof.
   intros HT HU H.
@@ -545,7 +545,7 @@ Proof.
 Admitted.
 
 Lemma trans_leq_term ϕ T U :
-  T.wf T -> T.wf U -> TTy.leq_term ϕ T U ->
+  T.wf T -> T.wf U -> Conversion.leq_term ϕ T U ->
   leq_term ϕ (trans T) (trans U).
 Proof.
   intros HT HU H.
@@ -575,10 +575,10 @@ Qed.
 Lemma trans_iota_red pars ind c u args brs :
   T.wf (Template.Ast.mkApps (Template.Ast.tConstruct ind c u) args) ->
   List.Forall (compose T.wf snd) brs ->
-  trans (TTy.iota_red pars c args brs) =
+  trans (Reduction.iota_red pars c args brs) =
   iota_red pars c (List.map trans args) (List.map (on_snd trans) brs).
 Proof.
-  unfold TTy.iota_red, iota_red. intros wfapp wfbrs.
+  unfold Reduction.iota_red, iota_red. intros wfapp wfbrs.
   rewrite trans_mkApps.
 
   - induction wfbrs in c |- *.
@@ -592,20 +592,20 @@ Qed.
 Lemma trans_unfold_fix mfix idx narg fn :
   List.Forall (fun def : def Tterm => T.wf (dtype def) /\ T.wf (dbody def) /\
               T.isLambda (dbody def) = true) mfix ->
-  TTy.unfold_fix mfix idx = Some (narg, fn) ->
+  Reduction.unfold_fix mfix idx = Some (narg, fn) ->
   unfold_fix (map (map_def trans trans) mfix) idx = Some (narg, trans fn).
 Proof.
-  unfold TTy.unfold_fix, unfold_fix. intros wffix.
+  unfold Reduction.unfold_fix, unfold_fix. intros wffix.
   rewrite nth_error_map. destruct (nth_error mfix idx) eqn:Hdef => //.
   intros [= <- <-]. simpl.
   destruct isLambda eqn:isl => //.
   repeat f_equal.
   rewrite trans_subst. clear Hdef.
-  unfold TTy.fix_subst. generalize mfix at 2.
+  unfold Reduction.fix_subst. generalize mfix at 2.
   induction mfix0. constructor. simpl. repeat (constructor; auto).
   apply (nth_error_forall Hdef) in wffix. simpl in wffix; intuition.
   f_equal. clear Hdef.
-  unfold fix_subst, TTy.fix_subst. rewrite map_length.
+  unfold fix_subst, Reduction.fix_subst. rewrite map_length.
   generalize mfix at 1 3.
   induction wffix; trivial.
   simpl; intros mfix. f_equal.
@@ -618,18 +618,18 @@ Qed.
 
 Lemma trans_unfold_cofix mfix idx narg fn :
   List.Forall (fun def : def Tterm => T.wf (dtype def) /\ T.wf (dbody def)) mfix ->
-  TTy.unfold_cofix mfix idx = Some (narg, fn) ->
+  Reduction.unfold_cofix mfix idx = Some (narg, fn) ->
   unfold_cofix (map (map_def trans trans) mfix) idx = Some (narg, trans fn).
 Proof.
-  unfold TTy.unfold_cofix, unfold_cofix. intros wffix.
+  unfold Reduction.unfold_cofix, unfold_cofix. intros wffix.
   rewrite nth_error_map. destruct (nth_error mfix idx) eqn:Hdef.
   intros [= <- <-]. simpl. repeat f_equal.
   rewrite trans_subst. clear Hdef.
-  unfold TTy.cofix_subst. generalize mfix at 2.
+  unfold Reduction.cofix_subst. generalize mfix at 2.
   induction mfix0. constructor. simpl. repeat (constructor; auto).
   apply (nth_error_forall Hdef) in wffix. simpl in wffix; intuition.
   f_equal. clear Hdef.
-  unfold cofix_subst, TTy.cofix_subst. rewrite map_length.
+  unfold cofix_subst, Reduction.cofix_subst. rewrite map_length.
   generalize mfix at 1 3.
   induction wffix; trivial.
   simpl; intros mfix. f_equal.
@@ -640,10 +640,10 @@ Definition isApp t := match t with tApp _ _ => true | _ => false end.
 
 Lemma trans_is_constructor:
   forall (args : list Tterm) (narg : nat),
-    Checker.Typing.is_constructor narg args = true -> is_constructor narg (map trans args) = true.
+    Reduction.is_constructor narg args = true -> is_constructor narg (map trans args) = true.
 Proof.
   intros args narg.
-  unfold Checker.Typing.is_constructor, is_constructor.
+  unfold Reduction.is_constructor, is_constructor.
   rewrite nth_error_map. destruct nth_error. simpl. intros.
   destruct t; try discriminate || reflexivity. simpl in H.
   destruct t; try discriminate || reflexivity.
@@ -666,11 +666,11 @@ Ltac wf_inv H := try apply wf_inv in H; simpl in H; repeat destruct_conjs.
 Lemma trans_red1 Σ Γ T U :
   TTy.on_global_env (fun Σ => wf_decl_pred) Σ ->
   List.Forall wf_decl Γ ->
-  T.wf T -> TTy.red1 Σ Γ T U ->
+  T.wf T -> Reduction.red1 Σ Γ T U ->
   red1 (map trans_global_decl Σ) (trans_local Γ) (trans T) (trans U).
 Proof.
   intros wfΣ wfΓ Hwf.
-  induction 1 using Checker.Typing.red1_ind_all; wf_inv Hwf; simpl in *;
+  induction 1 using Reduction.red1_ind_all; wf_inv Hwf; simpl in *;
     try solve [econstructor; eauto].
 
   - simpl. wf_inv H1. apply Forall_All in H2. inv H2.
@@ -752,7 +752,7 @@ Proof.
     red. rewrite <- !map_dtype. rewrite <- !map_dbody. intuition eauto.
     unfold Template.Ast.app_context, trans_local in b0.
     simpl in a. rewrite -> map_app in b0.
-    unfold app_context. unfold Checker.Typing.fix_context in b0.
+    unfold app_context. unfold Reduction.fix_context in b0.
     rewrite map_rev map_mapi in b0. simpl in b0.
     unfold fix_context. rewrite mapi_map. simpl.
     forward b0.
@@ -781,7 +781,7 @@ Proof.
     red. rewrite <- !map_dtype. rewrite <- !map_dbody. intuition eauto.
     unfold Template.Ast.app_context, trans_local in b0.
     simpl in a. rewrite -> map_app in b0.
-    unfold app_context. unfold Checker.Typing.fix_context in b0.
+    unfold app_context. unfold Reduction.fix_context in b0.
     rewrite map_rev map_mapi in b0. simpl in b0.
     unfold fix_context. rewrite mapi_map. simpl.
     forward b0.
@@ -800,10 +800,10 @@ Proof.
 Admitted.
 
 Lemma global_ext_levels_trans Σ
-  : global_ext_levels (trans_global Σ) = TTy.global_ext_levels Σ.
+  : global_ext_levels (trans_global Σ) = TemplateLookup.global_ext_levels Σ.
 Proof.
   destruct Σ.
-  unfold trans_global, TTy.global_ext_levels, global_ext_levels; simpl.
+  unfold trans_global, TemplateLookup.global_ext_levels, global_ext_levels; simpl.
   f_equal. clear u.
   induction g.
   - reflexivity.
@@ -812,10 +812,10 @@ Proof.
 Qed.
 
 Lemma global_ext_constraints_trans Σ
-  : global_ext_constraints (trans_global Σ) = TTy.global_ext_constraints Σ.
+  : global_ext_constraints (trans_global Σ) = TemplateLookup.global_ext_constraints Σ.
 Proof.
   destruct Σ.
-  unfold trans_global, TTy.global_ext_constraints, global_ext_constraints; simpl.
+  unfold trans_global, TemplateLookup.global_ext_constraints, global_ext_constraints; simpl.
   f_equal. clear u.
   induction g.
   - reflexivity.
@@ -906,21 +906,22 @@ Admitted.
 
 Hint Resolve trans_wf_local : trans.
 
-Lemma check_correct_arity_trans (Σ : T.global_env_ext) idecl ind u indctx npar args pctx :
-  TTy.check_correct_arity (TTy.global_ext_constraints Σ) idecl ind u indctx (firstn npar args) pctx ->
-  check_correct_arity (global_ext_constraints (trans_global Σ)) (trans_one_ind_body idecl) ind u
+Lemma check_correct_arity_trans (Σ : T.global_env_ext) Γ idecl ind u indctx npar args pctx :
+  TTy.check_correct_arity Σ idecl ind u indctx (firstn npar args) pctx ->
+  check_correct_arity (trans_global Σ) (trans_local Γ) (trans_one_ind_body idecl) ind u
                       (trans_local indctx) (firstn npar (map trans args))
                       (trans_local pctx).
 Proof.
   destruct idecl; simpl in *. unfold TTy.check_correct_arity, check_correct_arity in *.
   simpl. (* Types of cases check *)
   clear. simpl. induction pctx; simpl. intros.
-  depelim H. intros H. depelim H. constructor; auto.
-  red. red in e. intuition auto.
-  red. simpl. red in a0. simpl in *. destruct a as [? [?|] ?]; simpl in *; try discriminate; auto.
-  red in a0. simpl in *. destruct a as [? [?|] ?]; simpl in *; try discriminate; try tauto.
-  red. eapply trans_eq_term in b.
-  rewrite trans_mkApps in b. constructor. admit.
+  (* depelim H. intros H. depelim H. constructor; auto. *)
+  (* red. red in e. intuition auto. *)
+  (* red. simpl. red in a0. simpl in *. destruct a as [? [?|] ?]; simpl in *; try discriminate; auto. *)
+  (* red in a0. simpl in *. destruct a as [? [?|] ?]; simpl in *; try discriminate; try tauto. *)
+  (* red. eapply trans_eq_term in b. *)
+  (* rewrite trans_mkApps in b. constructor. admit. *)
+  todo "convconv -> template".
 Admitted.
 
 Axiom fix_guard_trans :
@@ -1018,25 +1019,27 @@ Proof.
        destruct cdecl as [[id t] p]; simpl; auto.
 
   - rewrite trans_mkApps; auto with wf trans. apply typing_wf in X1; intuition auto.
-    solve_all. apply typing_wf in X3; auto. intuition auto.
-    apply wf_mkApps_inv in H4.
+    solve_all. apply typing_wf in X4; auto. intuition auto.
+    apply wf_mkApps_inv in H3.
     apply All_app_inv. apply All_skipn. solve_all. constructor; auto.
     rewrite map_app map_skipn.
     eapply type_Case.
     apply forall_decls_declared_inductive; eauto. destruct mdecl; auto.
-    eapply X2.
+    eapply X3.
     rewrite firstn_map.
     eapply trans_types_of_case; eauto.
     -- eapply typing_wf in X1; intuition auto.
     -- eapply typing_wf in X1; intuition auto.
     -- eapply declared_inductive_wf in isdecl; eauto.
        apply typing_wf_wf; auto.
-    -- eapply typing_wf in X3; intuition auto.
-       eapply wf_mkApps_inv in H4. apply All_firstn. solve_all.
-    -- revert H1. apply check_correct_arity_trans.
+    -- eapply typing_wf in X4; intuition auto.
+       eapply wf_mkApps_inv in H3. apply All_firstn. solve_all.
+    -- revert H1.
+       exact (todo "convcon").
+       (* apply check_correct_arity_trans. *)
     -- destruct idecl; simpl in *; auto.
-    -- rewrite trans_mkApps in X4; auto with wf.
-       eapply typing_wf in X3; auto. intuition. eapply wf_mkApps_inv in H4; auto.
+    -- rewrite trans_mkApps in X5; auto with wf.
+       eapply typing_wf in X4; auto. intuition. eapply wf_mkApps_inv in H3; auto.
     -- apply All2_map. solve_all.
 
   - destruct pdecl as [arity ty]; simpl in *.
@@ -1055,8 +1058,8 @@ Proof.
 
   - eapply refine_type.
     assert (fix_context (map (map_def trans trans) mfix) =
-            trans_local (TTy.fix_context mfix)).
-    { unfold trans_local, TTy.fix_context.
+            trans_local (Reduction.fix_context mfix)).
+    { unfold trans_local, Reduction.fix_context.
       rewrite map_rev map_mapi /fix_context mapi_map.
       f_equal. apply mapi_ext; intros i x.
       simpl. rewrite trans_lift. reflexivity. }
@@ -1078,8 +1081,8 @@ Proof.
 
   - eapply refine_type.
     assert (fix_context (map (map_def trans trans) mfix) =
-            trans_local (TTy.fix_context mfix)).
-    { unfold trans_local, TTy.fix_context.
+            trans_local (Reduction.fix_context mfix)).
+    { unfold trans_local, Reduction.fix_context.
       rewrite map_rev map_mapi /fix_context mapi_map.
       f_equal. apply mapi_ext => i x.
       simpl. rewrite trans_lift. reflexivity. }

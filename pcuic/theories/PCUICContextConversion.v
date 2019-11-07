@@ -670,7 +670,9 @@ Proof.
   - econstructor; pcuic.
     eapply forall_Γ'1; repeat (constructor; pcuic). reflexivity.
   - econstructor; pcuic. intuition auto. eapply isdecl. eapply isdecl.
-    eauto. solve_all.
+    2: solve_all.
+    unfold check_correct_arity in X2. clear -X2.
+    exact (todo "convconv").
   - econstructor; pcuic.
     eapply All_local_env_app_inv. split; auto.
     eapply All_local_env_app in X. subst types.

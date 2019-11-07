@@ -34,17 +34,17 @@ Section Validity.
       clear -wfΣ wfΓ isdecl a b.
       induction b; rewrite ?lift_context_snoc; econstructor; simpl; auto.
       + destruct t0 as [u Hu]. exists u. rewrite Nat.add_0_r.
-        unshelve eapply (weakening_typing Σ (skipn n Γ) Γ0 (firstn n Γ) t _ _ _ (tSort u)); eauto with wf.
+        unshelve eapply (weakening_typing Σ (skipn n Γ) Γ0 (firstn n Γ) t _ _ (tSort u)); eauto with wf.
         apply All_local_env_app_inv. intuition eauto.
       + destruct t0 as [u Hu]. exists u. rewrite Nat.add_0_r.
-        unshelve eapply (weakening_typing Σ (skipn n Γ) Γ0 (firstn n Γ) t _ _ _ (tSort u)); eauto with wf.
+        unshelve eapply (weakening_typing Σ (skipn n Γ) Γ0 (firstn n Γ) t _ _ (tSort u)); eauto with wf.
         apply All_local_env_app_inv. intuition eauto.
       + rewrite Nat.add_0_r.
-        unshelve eapply (weakening_typing Σ (skipn n Γ) Γ0 (firstn n Γ) b _ _ _ t); eauto with wf.
+        unshelve eapply (weakening_typing Σ (skipn n Γ) Γ0 (firstn n Γ) b _ _ t); eauto with wf.
         eapply All_local_env_app_inv. intuition eauto.
     - right. destruct i as [u Hu]. exists u.
       rewrite {3}H.
-      unshelve eapply (weakening_typing Σ (skipn n Γ) [] (firstn n Γ) ty _ _ _ (tSort u)); eauto with wf.
+      unshelve eapply (weakening_typing Σ (skipn n Γ) [] (firstn n Γ) ty _ _ (tSort u)); eauto with wf.
   Qed.
 
   Lemma destArity_it_mkProd_or_LetIn ctx ctx' t :
@@ -252,7 +252,7 @@ Section Validity.
 
     - (* Case *)
       right. red.
-      destruct X2.
+      destruct X3.
       + destruct i as [ctx [s [Heq Hs]]].
         exists s.
         unfold check_correct_arity in *.
@@ -262,7 +262,7 @@ Section Validity.
         simpl in H. subst pty.
         assert (#|args| = #|pctx|). admit. (* WF of case *)
         eapply type_mkApps. eauto.
-        destruct X4. destruct i as [ctx' [s' [Heq' Hs']]].
+        destruct X5. destruct i as [ctx' [s' [Heq' Hs']]].
         elimtype False.
         { clear -Heq'.
           revert Heq'.

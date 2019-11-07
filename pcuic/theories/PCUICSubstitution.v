@@ -1588,35 +1588,35 @@ Proof.
   now apply IHl.
 Qed.
 
-Lemma subst_check_correct_arity:
-  forall (cf : checker_flags) φ (ind : inductive) (u : universe_instance)
-         (npar : nat) (args : list term) (idecl : one_inductive_body)
-         (indctx pctx : list context_decl) s k,
-    check_correct_arity φ idecl ind u indctx (firstn npar args) pctx ->
-    check_correct_arity
-      φ idecl ind u (subst_context s k indctx) (firstn npar (map (subst s k) args))
-      (subst_context s k pctx).
-Proof.
-  intros cf Σ ind u npar args idecl indctx pctx s k.
-  unfold check_correct_arity.
-  inversion_clear 1.
-  rewrite subst_context_snoc. constructor.
-  - apply All2_length in H1. destruct H1.
-    apply (subst_eq_decl _ s (#|indctx| + k)) in H0.
-    unfold subst_decl, map_decl in H0; cbn in H0.
-    assert (XX : subst s (#|indctx| + k) (mkApps (tInd ind u) (map (lift0 #|indctx|) (firstn npar args) ++ to_extended_list indctx)) = mkApps (tInd ind u) (map (lift0 #|subst_context s k indctx|) (firstn npar (map (subst s k) args)) ++ to_extended_list (subst_context s k indctx)) );
-      [|now rewrite XX in H0].
-    clear H0.
-    rewrite -> subst_mkApps; simpl. f_equal. rewrite map_app.
-    rewrite -> firstn_map.
-    rewrite !map_map_compose. cbn. f_equal.
-    + eapply map_ext.
-      intros. unfold compose. rewrite commut_lift_subst_rec. lia.
-      rewrite subst_context_length. f_equal. lia.
-    + rewrite /to_extended_list to_extended_list_k_subst.
-      rewrite <- (to_extended_list_k_map_subst s). reflexivity. lia.
-  - now apply subst_eq_context.
-Qed.
+(* Lemma subst_check_correct_arity Σ: *)
+(*   forall (cf : checker_flags) φ (ind : inductive) (u : universe_instance) *)
+(*          (npar : nat) (args : list term) (idecl : one_inductive_body) *)
+(*          (indctx pctx : list context_decl) s k, *)
+(*     check_correct_arity Σ φ idecl ind u indctx (firstn npar args) pctx -> *)
+(*     check_correct_arity Σ *)
+(*       φ idecl ind u (subst_context s k indctx) (firstn npar (map (subst s k) args)) *)
+(*       (subst_context s k pctx). *)
+(* Proof. *)
+(*   intros cf  ind u npar args idecl indctx pctx s k. *)
+(*   unfold check_correct_arity. *)
+(*   inversion_clear 1. *)
+(*   rewrite subst_context_snoc. constructor. *)
+(*   - apply All2_length in H1. destruct H1. *)
+(*     apply (subst_eq_decl _ s (#|indctx| + k)) in H0. *)
+(*     unfold subst_decl, map_decl in H0; cbn in H0. *)
+(*     assert (XX : subst s (#|indctx| + k) (mkApps (tInd ind u) (map (lift0 #|indctx|) (firstn npar args) ++ to_extended_list indctx)) = mkApps (tInd ind u) (map (lift0 #|subst_context s k indctx|) (firstn npar (map (subst s k) args)) ++ to_extended_list (subst_context s k indctx)) ); *)
+(*       [|now rewrite XX in H0]. *)
+(*     clear H0. *)
+(*     rewrite -> subst_mkApps; simpl. f_equal. rewrite map_app. *)
+(*     rewrite -> firstn_map. *)
+(*     rewrite !map_map_compose. cbn. f_equal. *)
+(*     + eapply map_ext. *)
+(*       intros. unfold compose. rewrite commut_lift_subst_rec. lia. *)
+(*       rewrite subst_context_length. f_equal. lia. *)
+(*     + rewrite /to_extended_list to_extended_list_k_subst. *)
+(*       rewrite <- (to_extended_list_k_map_subst s). reflexivity. lia. *)
+(*   - now apply subst_eq_context. *)
+(* Qed. *)
 
 Lemma substitution_red `{cf : checker_flags} (Σ : global_env_ext) Γ Δ Γ' s M N :
   wf Σ -> subslet Σ Γ s Δ -> wf_local Σ Γ ->
@@ -2079,8 +2079,8 @@ Proof.
     apply subst_closedn; eauto. eapply closed_upwards; eauto. lia.
 
   - rewrite subst_mkApps map_app map_skipn.
-    specialize (X2 Γ Γ' Δ s sub eq_refl wfsubs).
-    specialize (X4 Γ Γ' Δ s sub eq_refl wfsubs).
+    specialize (X3 Γ Γ' Δ s sub eq_refl wfsubs).
+    specialize (X5 Γ Γ' Δ s sub eq_refl wfsubs).
     simpl. econstructor.
     4:{ eapply subst_types_of_case in H0.
         simpl in H1. subst pars. rewrite firstn_map. eapply H0; eauto.
@@ -2089,9 +2089,10 @@ Proof.
     -- eauto.
     -- eauto.
     -- revert H1. subst pars.
-       apply subst_check_correct_arity.
+       (* apply subst_check_correct_arity. *)
+       exact (todo "convconv").
     -- destruct idecl; simpl in *; auto.
-    -- now rewrite !subst_mkApps in X4.
+    -- now rewrite !subst_mkApps in X5.
     -- solve_all.
 
   - specialize (X2 Γ Γ' Δ s sub eq_refl wfsubs).

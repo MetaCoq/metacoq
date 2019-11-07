@@ -189,7 +189,7 @@ Section Inversion.
         Σ ;;; Γ |- p : pty ×
         types_of_case ind mdecl idecl pars u p pty =
         Some (indctx, pctx, ps, btys) ×
-        check_correct_arity (global_ext_constraints Σ)
+        check_correct_arity Σ Γ
         idecl ind u indctx pars pctx ×
         existsb (leb_sort_family (universe_family ps)) (ind_kelim idecl) ×
         Σ ;;; Γ |- c : mkApps (tInd ind u) args ×

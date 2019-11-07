@@ -528,6 +528,9 @@ Section SRContext.
              constructor. eauto.
              exists tu.π1. eauto. cbn. eauto.
     - econstructor; tea; eauto.
+      (* unfold check_correct_arity in *. *)
+      (* etransitivity. *)
+      exact (todo "convconv").
       eapply All2_impl; tea; cbn.
       intros; utils.rdestruct; eauto.
     - assert (XX: red1_ctx Σ.1 (Γ ,,, fix_context mfix) (Γ' ,,, fix_context mfix))

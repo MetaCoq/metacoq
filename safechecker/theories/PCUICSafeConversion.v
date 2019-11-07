@@ -2211,7 +2211,7 @@ Section Conversion.
   Qed.
   Next Obligation.
     destruct hΣ.
-    eapply conv_conv_cum_l. 1: assumption.
+    eapply conv_conv_cum_l.
     constructor.
     eapply eqb_term_spec. auto.
   Qed.

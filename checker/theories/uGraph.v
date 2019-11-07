@@ -1267,25 +1267,31 @@ Section CheckLeq.
         rewrite val_cons; cbn in *; lia.
   Qed.
 
+
+  Conjecture gc_leq_universe_n_cons : forall n e1 e2 u,
+      gc_level_declared e2.1 ->
+      gc_levels_declared u ->
+      gc_leq_universe_n n uctx.2 (Universe.make' e1) (NEL.cons e2 u) ->
+      gc_leq_universe_n n uctx.2 (Universe.make' e1) (Universe.make' e2)
+      \/ gc_leq_universe_n n uctx.2 (Universe.make' e1) u.
+
   Lemma leqb_expr_univ_n_spec n e1 u
         (He1 : gc_level_declared e1.1)
         (Hu  : gc_levels_declared u)
     : leqb_expr_univ_n n e1 u
       <-> gc_leq_universe_n n uctx.2 (Universe.make' e1) u.
   Proof.
-  (*   induction u; cbn. *)
-  (*   - apply leqb_expr_n_spec; tas. now inversion Hu. *)
-  (*   - etransitivity. apply andb_true_iff. *)
-  (*     inversion_clear Hu. *)
-  (*     etransitivity. eapply and_iff_compat_l. apply IHu; tas. *)
-  (*     etransitivity. eapply and_iff_compat_r. eapply leqb_expr_n_spec; tas. *)
-  (*     split. *)
-  (*     + intros [H1 H2] v Hv; specialize (H1 v Hv); specialize (H2 v Hv). *)
-  (*       rewrite val_cons; cbn in *; lia. *)
-  (*     + intro HH; split; intros v Hv; specialize (HH v Hv); *)
-  (*       rewrite val_cons in HH; cbn in *; lia. *)
-  (* Qed. *)
-  Admitted.
+    induction u; cbn.
+    - apply leqb_expr_n_spec; tas. now inversion Hu.
+    - etransitivity. apply orb_true_iff.
+      inversion_clear Hu.
+      etransitivity. eapply or_iff_compat_l. apply IHu; tas.
+      etransitivity. eapply or_iff_compat_r. eapply leqb_expr_n_spec; tas.
+      split.
+      + intros [H1|H1] v Hv; specialize (H1 v Hv);
+          rewrite val_cons; cbn in *; lia.
+      + apply gc_leq_universe_n_cons; tas.
+  Qed.
 
   Definition leqb_expr_univ e1 u :=
     negb check_univs || leqb_expr_univ_n 0 e1 u.

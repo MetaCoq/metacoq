@@ -394,7 +394,7 @@ Proof.
     + solve_all. unfold test_snd. simpl in *.
       toProp; eauto.
     + apply closedn_mkApps; auto.
-      rewrite forallb_app. simpl. rewrite H3.
+      rewrite forallb_app. simpl. rewrite H1.
       rewrite forallb_skipn; auto.
       now apply closedn_mkApps_inv in H7.
 

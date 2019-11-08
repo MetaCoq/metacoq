@@ -1587,14 +1587,20 @@ Section Conversion.
   Next Obligation.
     destruct h1 as [h1].
     apply All2_length in h1 as e1.
-    todo "foo"%string.
+    zip fold in h. apply wellformed_context in h. 2: assumption.
+    clear aux.
+    zip fold in h'. apply wellformed_context in h'. 2: assumption.
+    simpl in *.
+    todo "Number of branches"%string.
     (* We should be able to conclude that something is wrong
-        from typing of two cases with different number of branches.
+       from typing of two cases with different number of branches.
+       It might be best to wait for the new typing rule of case
+       to get that the number of branches is only dependent on the inductive.
     *)
   Qed.
   Next Obligation.
     (* Symmetric case of the previous one, so should do a lemma *)
-    todo "same"%string.
+    todo "Number of branches"%string.
   Qed.
   Next Obligation.
     eapply R_positionR. all: simpl.

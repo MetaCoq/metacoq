@@ -325,6 +325,8 @@ checker/src/wf.mli
 /erasure/src/safeTemplateErasure.mli
 /erasure/src/templateToPCUIC.ml
 /erasure/src/templateToPCUIC.mli
+erasure/src/eqdepFacts.mli
+erasure/src/eqdepFacts.ml
 /erasure/src/ePretty.ml
 /erasure/src/ePretty.mli
 /pcuic/src/PCUICPretty.ml

@@ -666,6 +666,13 @@ Section Conversion.
       (Γ2 : context)
       (ind' : inductive) (par' : nat) (p' c' : term) (brs' : list (nat × term))
 
+  | CaseBranchNumMismatch
+      (ind : inductive) (par : nat)
+      (Γ : context) (p c : term) (brs1 : list (nat × term))
+      (m : nat) (br : term) (brs2 : list (nat × term))
+      (Γ' : context) (p' c' : term) (brs1' : list (nat × term))
+      (m' : nat) (br' : term) (brs2' : list (nat × term))
+
   | DistinctStuckProj
       (Γ : context) (p : projection) (c : term)
       (Γ' : context) (p' : projection) (c' : term)
@@ -1530,6 +1537,204 @@ Section Conversion.
       + constructor. all: assumption.
   Qed.
 
+  Equations isconv_branches (Γ : context)
+    (ind : inductive) (par : nat)
+    (p c : term) (brs1 brs2 : list (nat × term))
+    (π : stack) (h : wtp Γ (tCase (ind, par) p c (brs1 ++ brs2)) π)
+    (p' c' : term) (brs1' brs2' : list (nat × term))
+    (π' : stack) (h' : wtp Γ (tCase (ind, par) p' c' (brs1' ++ brs2')) π')
+    (hx : conv_stack_ctx Γ π π')
+    (h1 : ∥ All2 (fun u v => u.1 = v.1 × Σ ;;; Γ ,,, stack_context π |- u.2 == v.2) brs1 brs1' ∥)
+    (aux : Aux Term Γ (tCase (ind, par) p c (brs1 ++ brs2)) π (tCase (ind, par) p' c' (brs1' ++ brs2')) π' h')
+    : ConversionResult (∥ All2 (fun u v => u.1 = v.1 × Σ ;;; Γ ,,, stack_context π |- u.2 == v.2) brs2 brs2' ∥)
+    by struct brs2 :=
+
+    isconv_branches Γ ind par
+      p c brs1 ((m, br) :: brs2) π h
+      p' c' brs1' ((m', br') :: brs2') π' h' hx h1 aux
+    with inspect (eqb m m') := {
+    | @exist true eq1
+      with isconv_red_raw Conv
+              br (Case_brs (ind, par) p c m brs1 brs2 π)
+              br' (Case_brs (ind, par) p' c' m' brs1' brs2' π')
+      aux := {
+      | Success h2
+        with isconv_branches Γ ind par
+              p c (brs1 ++ [(m,br)]) brs2 π _
+              p' c' (brs1' ++ [(m', br')]) brs2' π' _ hx _ _ := {
+        | Success h3 := yes ;
+        | Error e := Error e
+        } ;
+      | Error e := Error e
+      } ;
+    | @exist false _ := Error (
+        CaseBranchNumMismatch ind par
+          (Γ ,,, stack_context π) p c brs1 m br brs2
+          (Γ ,,, stack_context π') p' c' brs1' m' br' brs2'
+      )
+    } ;
+
+    isconv_branches Γ ind par
+      p c brs1 [] π h
+      p' c' brs1' [] π' h' hx h1 aux := yes ;
+
+    isconv_branches Γ ind par
+      p c brs1 brs2 π h
+      p' c' brs1' brs2' π' h' hx h1 aux := False_rect _ _.
+  Next Obligation.
+    constructor. constructor.
+  Qed.
+  Next Obligation.
+    destruct h1 as [h1].
+    apply All2_length in h1 as e1.
+    todo "foo"%string.
+    (* We should be able to conclude that something is wrong
+        from typing of two cases with different number of branches.
+    *)
+  Qed.
+  Next Obligation.
+    (* Symmetric case of the previous one, so should do a lemma *)
+    todo "same"%string.
+  Qed.
+  Next Obligation.
+    eapply R_positionR. all: simpl.
+    1: reflexivity.
+    rewrite <- app_nil_r. eapply positionR_poscat.
+    constructor.
+  Qed.
+  Next Obligation.
+    rewrite <- app_assoc. simpl. assumption.
+  Qed.
+  Next Obligation.
+    rewrite <- app_assoc. simpl. assumption.
+  Qed.
+  Next Obligation.
+    destruct h1 as [h1], h2 as [h2].
+    constructor. apply All2_app.
+    - assumption.
+    - constructor. 2: constructor.
+      simpl.
+      change (m =? m') with (eqb m m') in eq1.
+      destruct (eqb_spec m m'). 2: discriminate.
+      intuition eauto.
+  Qed.
+  Next Obligation.
+    unshelve eapply aux. all: try eassumption.
+    clear aux.
+    lazymatch goal with
+    | h : R _ _ ?r1 |- R _ _ ?r2 =>
+      assert (e : r1 = r2)
+    end.
+    { clear H0.
+      match goal with
+      | |- {| wth := ?x |} = _ =>
+        generalize x
+      end.
+      rewrite <- !app_assoc. simpl.
+      intro w.
+      f_equal.
+      eapply proof_irrelevance.
+    }
+    rewrite <- e. assumption.
+  Qed.
+  Next Obligation.
+    destruct h1 as [h1], h2 as [h2], h3 as [h3].
+    change (m =? m') with (eqb m m') in eq1.
+    destruct (eqb_spec m m'). 2: discriminate.
+    constructor. constructor. all: intuition eauto.
+  Qed.
+
+  Equations isconv_branches' (Γ : context)
+    (ind : inductive) (par : nat)
+    (p c : term) (brs : list (nat × term))
+    (π : stack) (h : wtp Γ (tCase (ind, par) p c brs) π)
+    (ind' : inductive) (par' : nat)
+    (p' c' : term) (brs' : list (nat × term))
+    (π' : stack) (h' : wtp Γ (tCase (ind', par') p' c' brs') π')
+    (hx : conv_stack_ctx Γ π π')
+    (ei : ind = ind') (ep : par = par')
+    (aux : Aux Term Γ (tCase (ind, par) p c brs) π (tCase (ind', par') p' c' brs') π' h')
+    : ConversionResult (∥ All2 (fun u v => u.1 = v.1 ×  Σ ;;; Γ ,,, stack_context π |- u.2 == v.2) brs brs' ∥) :=
+
+    isconv_branches' Γ ind par p c brs π h ind' par' p' c' brs' π' h' hx ei ep aux :=
+      isconv_branches Γ ind par p c [] brs π _ p' c' [] brs' π' _ _ _ _.
+  Next Obligation.
+    constructor. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply aux. all: eassumption.
+  Qed.
+
+  (* TODO MOVE in PCUICConversion *)
+  Lemma conv_Case_p :
+    forall Γ indn c brs u v,
+      Σ ;;; Γ |- u == v ->
+      Σ ;;; Γ |- tCase indn u c brs == tCase indn v c brs.
+  Proof.
+    intros Γ [ind n] c brs u v h.
+    induction h.
+    - constructor. constructor.
+      + assumption.
+      + eapply eq_term_refl.
+      + eapply All2_same.
+        intros. split ; eauto. reflexivity.
+    - eapply conv_alt_red_l ; eauto.
+      constructor. assumption.
+    - eapply conv_alt_red_r ; eauto.
+      constructor. assumption.
+  Qed.
+
+  (* TODO MOVE in PCUICConversion *)
+  Lemma conv_Case_one_brs :
+    forall Γ indn p c brs brs',
+      OnOne2 (fun u v => u.1 = v.1 × Σ ;;; Γ |- u.2 == v.2) brs brs' ->
+      Σ ;;; Γ |- tCase indn p c brs == tCase indn p c brs'.
+  Proof.
+    intros Γ [ind n] p c brs brs' h.
+    induction h as [[m u] [k v] brs [? h] | f g h i j].
+    - simpl in *. subst. induction h.
+      + constructor. constructor.
+        * eapply eq_term_refl.
+        * eapply eq_term_refl.
+        * constructor.
+          -- simpl. intuition eauto.
+          -- eapply All2_same.
+             intros. split ; eauto. reflexivity.
+      + eapply conv_alt_red_l ; eauto.
+        constructor. constructor. simpl.
+        intuition eauto.
+      + eapply conv_alt_red_r ; eauto.
+        constructor. constructor. simpl.
+        intuition eauto.
+    -
+  Admitted.
+
+  (* TODO MOVE in PCUICConversion *)
+  Lemma conv_Case_brs :
+    forall Γ indn p c brs brs',
+      All2 (fun u v => u.1 = v.1 × Σ ;;; Γ |- u.2 == v.2) brs brs' ->
+      Σ ;;; Γ |- tCase indn p c brs == tCase indn p c brs'.
+  Admitted.
+
+  (* TODO MOVE in PCUICConversion *)
+  Lemma conv_Case :
+    forall Γ indn p p' c c' brs brs',
+      wf Σ ->
+      Σ ;;; Γ |- p == p' ->
+      Σ ;;; Γ |- c == c' ->
+      All2 (fun u v => u.1 = v.1 × Σ ;;; Γ |- u.2 == v.2) brs brs' ->
+      Σ ;;; Γ |- tCase indn p c brs == tCase indn p' c' brs'.
+  Proof.
+    intros Γ [ind n] p p' c c' brs brs' wΣ hp hc hbrs.
+    eapply conv_alt_trans.
+    - assumption.
+    - eapply conv_Case_p. eassumption.
+    - eapply conv_alt_trans.
+      + assumption.
+      + eapply conv_Case_c. eassumption.
+      + apply conv_Case_brs. assumption.
+  Qed.
+
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
             (t2 : term) (π2 : stack) (h2 : wtp Γ t2 π2)
@@ -1564,7 +1769,7 @@ Section Conversion.
 
     | prog_view_Lambda na A1 t1 na' A2 t2
       with isconv_red_raw Conv A1 (Lambda_ty na t1 π1)
-                                 A2 (Lambda_ty na' t2 π2) aux := {
+                               A2 (Lambda_ty na' t2 π2) aux := {
       | Success h :=
         isconv_red leq
                    t1 (Lambda_tm na A1 π1)
@@ -1608,16 +1813,13 @@ Section Conversion.
                           c (Case (ind, par) p brs π1)
                           c' (Case (ind', par') p' brs' π2)
                           aux := {
-                    | Success h2 with inspect (forallb2
-                    (fun x y : nat × term =>
-                     eqb x.1 y.1 && eqb_term_upto_univ (check_eqb_universe G) (check_eqb_universe G) x.2 y.2) brs brs') := {
-                      (* TODO Deal with branches properly *)
-                      | @exist true eq5 := yes ;
-                      | @exist false _ := Error (
-                        CaseOnDifferentInd
-                          (Γ ,,, stack_context π1) ind par p c brs
-                          (Γ ,,, stack_context π2) ind' par' p' c' brs'
-                      )
+                    | Success h2 with isconv_branches' Γ ind par p c brs π1 _ ind' par' p' c' brs' π2 _ _ _ _ aux := {
+                      | Success h3
+                        with isconv_args_raw leq (tCase (ind, par) p c brs) π1 (tCase (ind', par') p' c' brs') π2 aux := {
+                        | Success h4 := yes ;
+                        | Error e := Error e
+                        } ;
+                      | Error e := Error e
                       } ;
                     | Error e := Error e
                     } ;
@@ -1878,11 +2080,34 @@ Section Conversion.
     eapply positionR_poscat. constructor.
   Qed.
   Next Obligation.
-    destruct h1 as [h1].
-    destruct h2 as [h2].
+    change (eq_inductive ind ind') with (eqb ind ind') in eq4.
+    destruct (eqb_spec ind ind'). 2: discriminate.
+    assumption.
+  Qed.
+  Next Obligation.
+    change (eq_inductive ind ind') with (eqb ind ind') in eq4.
+    destruct (eqb_spec ind ind'). 2: discriminate.
+    change (Nat.eqb par par') with (eqb par par') in eq4.
+    destruct (eqb_spec par par'). 2: discriminate.
+    assumption.
+  Qed.
+  Next Obligation.
+    eapply R_stateR. all: simpl. all: try reflexivity.
+    constructor.
+  Qed.
+  Next Obligation.
+    destruct h1 as [h1], h2 as [h2], h3 as [h3].
     unfold zipp in h1, h2. simpl in h1, h2.
-    (* Let's not do a proof that will change soon *)
-  Admitted.
+    destruct hΣ as [wΣ].
+    eapply conv_conv. 1: assumption.
+    constructor.
+    change (eq_inductive ind ind') with (eqb ind ind') in eq4.
+    destruct (eqb_spec ind ind'). 2: discriminate.
+    change (Nat.eqb par par') with (eqb par par') in eq4.
+    destruct (eqb_spec par par'). 2: discriminate.
+    subst.
+    eapply conv_Case. all: assumption.
+  Qed.
   Next Obligation.
     eapply red_wellformed ; auto.
     - exact h1.

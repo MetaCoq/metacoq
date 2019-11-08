@@ -10,6 +10,8 @@ src/classes0.ml
 #src/compare_dec.ml
 src/mSetList.mli
 src/mSetList.ml
+src/eqdepFacts.mli
+src/eqdepFacts.ml
 
 src/monad_utils.ml
 src/monad_utils.mli

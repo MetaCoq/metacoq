@@ -254,11 +254,23 @@ Fixpoint string_of_conv_error Σ (e : ConversionError) : string :=
       "\nand\n" ++ print_term Σ Γ2 (tProd na' A2 B2) ++
       "\ndomains are not convertible:\n" ++
       string_of_conv_error Σ e
-  | DistinctStuckCase Γ ind par p c brs Γ' ind' par' p' c' brs' =>
-      "The two pattern-matching\n" ++
+  | CaseOnDifferentInd Γ ind par p c brs Γ' ind' par' p' c' brs' =>
+      "The two stuck pattern-matching\n" ++
       print_term Σ Γ (tCase (ind, par) p c brs) ++
       "\nand\n" ++ print_term Σ Γ' (tCase (ind', par') p' c' brs') ++
-      "\ncorrespond to syntactically distinct stuck terms."
+      "\nare done on distinct inductive types."
+  | CaseBranchNumMismatch
+      ind par Γ p c brs1 m br brs2 Γ' p' c' brs1' m' br' brs2' =>
+      "The two stuck pattern-matching\n" ++
+      print_term Σ Γ (tCase (ind, par) p c (brs1 ++ (m,br) :: brs2)) ++
+      "\nand\n" ++
+      print_term Σ Γ' (tCase (ind, par) p' c' (brs1' ++ (m',br') :: brs2')) ++
+      "\nhave a mistmatch in the branch number " ++ string_of_nat #|brs1| ++
+      "\nthe number of parameters do not coincide\n" ++
+      print_term Σ Γ br ++
+      "\nhas " ++ string_of_nat m ++ " parameters while\n" ++
+      print_term Σ Γ br' ++
+      "\nhas " ++ string_of_nat m' ++ "."
   | DistinctStuckProj Γ p c Γ' p' c' =>
       "The two projections\n" ++
       print_term Σ Γ (tProj p c) ++

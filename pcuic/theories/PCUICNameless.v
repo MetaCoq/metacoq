@@ -429,8 +429,14 @@ Fixpoint nlstack (π : stack) : stack :=
     Fix (map (map_def_anon nl nl) f) n (map nl args) (nlstack ρ)
   | CoFix f n args ρ =>
     CoFix (map (map_def_anon nl nl) f) n (map nl args) (nlstack ρ)
+  | Case_p indn c brs ρ =>
+    Case_p indn (nl c) (map (on_snd nl) brs) (nlstack ρ)
   | Case indn p brs ρ =>
     Case indn (nl p) (map (on_snd nl) brs) (nlstack ρ)
+  | Case_brs indn p c m brs1 brs2 ρ =>
+    Case_brs
+      indn (nl p) (nl c) m
+      (map (on_snd nl) brs1) (map (on_snd nl) brs2) (nlstack ρ)
   | Proj p ρ =>
     Proj p (nlstack ρ)
   | Prod_l na B ρ =>
@@ -470,7 +476,8 @@ Lemma stack_position_nlstack :
 Proof.
   intros ρ.
   induction ρ.
-  all: (simpl ; rewrite ?IHρ ; reflexivity).
+  all: try solve [ simpl ; rewrite ?IHρ ; reflexivity ].
+  simpl. rewrite IHρ. rewrite map_length. reflexivity.
 Qed.
 
 Lemma nl_it_mkLambda_or_LetIn :
@@ -582,10 +589,12 @@ Proof.
   intros t π.
   induction π in t |- *.
   all: try solve [ simpl ; rewrite ?IHπ ; reflexivity ].
-  all: solve [
+  all: try solve [
     simpl ; rewrite IHπ ; cbn ; f_equal ;
     rewrite nl_mkApps ; reflexivity
   ].
+  simpl. rewrite IHπ. cbn. f_equal.
+  rewrite map_app. cbn. reflexivity.
 Qed.
 
 Lemma nl_zipx :

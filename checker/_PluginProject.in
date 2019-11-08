@@ -7,6 +7,8 @@ src/compare_dec.mli
 src/compare_dec.ml
 src/mSetList.mli
 src/mSetList.ml
+src/eqdepFacts.mli
+src/eqdepFacts.ml
 
 # From Equations
 src/classes0.mli

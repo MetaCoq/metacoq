@@ -30,6 +30,7 @@ Cd "src".
 Extraction Library Wf.
 Extraction Library Compare_dec.
 Extraction Library MSetList.
+Extraction Library EqdepFacts.
 
 Extraction Library Init.
 

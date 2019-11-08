@@ -1074,8 +1074,6 @@ Proof.
     eapply type_Case with  (mdecl0:=nl_mutual_inductive_body mdecl)
                            (idecl0:=nl_one_inductive_body idecl)
                            (btys0:=map (on_snd nl) btys)
-                           (indctx0:=nlctx indctx)
-                           (pctx0:=nlctx pctx)
                            (u0:=u)
     ; tea.
     + destruct isdecl as [HH1 HH2]. split.
@@ -1083,69 +1081,71 @@ Proof.
       * replace (ind_bodies (nl_mutual_inductive_body mdecl)) with
             (map nl_one_inductive_body (ind_bodies mdecl)); [|now destruct mdecl].
         rewrite nth_error_map, HH2. reflexivity.
-    + clear -H0. unfold types_of_case in *.
-      set (params := instantiate_params
-                       (subst_instance_context u (ind_params mdecl))
-                       (firstn npar args)
-                       (subst_instance_constr u (ind_type idecl))) in H0.
-      replace (instantiate_params _ _ _) with (option_map nl params).
-      * destruct params; [|discriminate]. simpl.
-        case_eq (destArity [] t);
-          [|intro HH; rewrite HH in H0; discriminate].
-        intros [Δ s] H. rewrite H in H0.
-        apply nl_destArity in H. cbn in H; rewrite H; clear H.
-        case_eq (destArity [] pty);
-          [|intro HH; rewrite HH in H0; discriminate].
-        intros [Δ' s'] H. rewrite H in H0.
-        apply nl_destArity in H. cbn in H; rewrite H; clear H.
-        case_eq (map_option_out (build_branches_type ind mdecl idecl
-                                                     (firstn npar args) u p));
-          [|intro HH; rewrite HH in H0; discriminate].
-        intros tys H; rewrite H in H0.
-        inversion H0; subst; clear H0.
-        replace (map_option_out (build_branches_type ind (nl_mutual_inductive_body mdecl) (nl_one_inductive_body idecl) (firstn npar (map nl args)) u (nl p)))
-          with (option_map (map (on_snd nl)) (map_option_out (build_branches_type ind mdecl idecl (firstn npar args) u p))).
-        now rewrite H.
-        rewrite <- map_option_out_map_option_map. f_equal.
-        rewrite firstn_map. generalize (firstn npar args); intro args'. clear.
-        unfold build_branches_type. simpl.
-        rewrite mapi_map, map_mapi. apply mapi_ext.
-        intros n [[id t] k].
-        rewrite <- nl_subst_instance_constr, <- nl_inds, <- nl_subst.
-        rewrite subst_instance_context_nlctx.
-        rewrite <- nl_instantiate_params.
-        destruct (instantiate_params _ _ _); [|reflexivity].
-        cbn. change (@nil context_decl) with (nlctx []) at 2.
-        rewrite nl_decompose_prod_assum.
-        destruct (decompose_prod_assum [] t0); cbn.
-        rewrite nl_decompose_app.
-        destruct (decompose_app t1) as [t11 t12]; cbn.
-        case_eq (chop (ind_npars mdecl) t12).
-        intros paramrels args eq.
-        erewrite chop_map; tea. cbn.
-        unfold on_snd. cbn. f_equal. f_equal.
-        rewrite nl_it_mkProd_or_LetIn, nl_mkApps, nl_lift.
-        unfold nlctx at 3; rewrite map_length. f_equal. f_equal.
-        rewrite map_app. cbn. rewrite nl_mkApps. cbn. repeat f_equal.
-        rewrite map_app. f_equal. apply nl_to_extended_list.
-      * rewrite firstn_map. cbn. subst params.
-        rewrite nl_instantiate_params. f_equal.
-        now rewrite <- subst_instance_context_nlctx.
-        apply nl_subst_instance_constr.
-    + clear -H1. unfold check_correct_arity in *.
-      rewrite global_ext_constraints_nlg.
-      inversion H1; subst. cbn. constructor.
-      * clear -H2. destruct H2 as [H1 H2]; cbn in *.
-        destruct y as [? [?|] ?]; cbn in *; [contradiction|].
-        split; cbn; tas. apply nl_eq_term in H2.
-        refine (eq_rect _ (fun d => eq_term _ d _) H2 _ _).
-        clear. rewrite nl_mkApps, map_app, firstn_map, !map_map.
-        f_equal. rewrite nl_to_extended_list. f_equal.
-        apply map_ext. intro; rewrite nl_lift; cbn.
-        unfold nlctx; now rewrite map_length.
-      * eapply All2_map, All2_impl; tea.
-        apply nl_eq_decl'.
+    + exact (todo "build_case_predicate_type Nameless").
+    (* + clear -H0. unfold types_of_case in *. *)
+    (*   set (params := instantiate_params *)
+    (*                    (subst_instance_context u (ind_params mdecl)) *)
+    (*                    (firstn npar args) *)
+    (*                    (subst_instance_constr u (ind_type idecl))) in H0. *)
+    (*   replace (instantiate_params _ _ _) with (option_map nl params). *)
+    (*   * destruct params; [|discriminate]. simpl. *)
+    (*     case_eq (destArity [] t); *)
+    (*       [|intro HH; rewrite HH in H0; discriminate]. *)
+    (*     intros [Δ s] H. rewrite H in H0. *)
+    (*     apply nl_destArity in H. cbn in H; rewrite H; clear H. *)
+    (*     case_eq (destArity [] pty); *)
+    (*       [|intro HH; rewrite HH in H0; discriminate]. *)
+    (*     intros [Δ' s'] H. rewrite H in H0. *)
+    (*     apply nl_destArity in H. cbn in H; rewrite H; clear H. *)
+    (*     case_eq (map_option_out (build_branches_type ind mdecl idecl *)
+    (*                                                  (firstn npar args) u p)); *)
+    (*       [|intro HH; rewrite HH in H0; discriminate]. *)
+    (*     intros tys H; rewrite H in H0. *)
+    (*     inversion H0; subst; clear H0. *)
+    (*     replace (map_option_out (build_branches_type ind (nl_mutual_inductive_body mdecl) (nl_one_inductive_body idecl) (firstn npar (map nl args)) u (nl p))) *)
+    (*       with (option_map (map (on_snd nl)) (map_option_out (build_branches_type ind mdecl idecl (firstn npar args) u p))). *)
+    (*     now rewrite H. *)
+    (*     rewrite <- map_option_out_map_option_map. f_equal. *)
+    (*     rewrite firstn_map. generalize (firstn npar args); intro args'. clear. *)
+    (*     unfold build_branches_type. simpl. *)
+    (*     rewrite mapi_map, map_mapi. apply mapi_ext. *)
+    (*     intros n [[id t] k]. *)
+    (*     rewrite <- nl_subst_instance_constr, <- nl_inds, <- nl_subst. *)
+    (*     rewrite subst_instance_context_nlctx. *)
+    (*     rewrite <- nl_instantiate_params. *)
+    (*     destruct (instantiate_params _ _ _); [|reflexivity]. *)
+    (*     cbn. change (@nil context_decl) with (nlctx []) at 2. *)
+    (*     rewrite nl_decompose_prod_assum. *)
+    (*     destruct (decompose_prod_assum [] t0); cbn. *)
+    (*     rewrite nl_decompose_app. *)
+    (*     destruct (decompose_app t1) as [t11 t12]; cbn. *)
+    (*     case_eq (chop (ind_npars mdecl) t12). *)
+    (*     intros paramrels args eq. *)
+    (*     erewrite chop_map; tea. cbn. *)
+    (*     unfold on_snd. cbn. f_equal. f_equal. *)
+    (*     rewrite nl_it_mkProd_or_LetIn, nl_mkApps, nl_lift. *)
+    (*     unfold nlctx at 3; rewrite map_length. f_equal. f_equal. *)
+    (*     rewrite map_app. cbn. rewrite nl_mkApps. cbn. repeat f_equal. *)
+    (*     rewrite map_app. f_equal. apply nl_to_extended_list. *)
+    (*   * rewrite firstn_map. cbn. subst params. *)
+    (*     rewrite nl_instantiate_params. f_equal. *)
+    (*     now rewrite <- subst_instance_context_nlctx. *)
+    (*     apply nl_subst_instance_constr. *)
+    (* + clear -H1. unfold check_correct_arity in *. *)
+    (*   rewrite global_ext_constraints_nlg. *)
+    (*   inversion H1; subst. cbn. constructor. *)
+    (*   * clear -H2. destruct H2 as [H1 H2]; cbn in *. *)
+    (*     destruct y as [? [?|] ?]; cbn in *; [contradiction|]. *)
+    (*     split; cbn; tas. apply nl_eq_term in H2. *)
+    (*     refine (eq_rect _ (fun d => eq_term _ d _) H2 _ _). *)
+    (*     clear. rewrite nl_mkApps, map_app, firstn_map, !map_map. *)
+    (*     f_equal. rewrite nl_to_extended_list. f_equal. *)
+    (*     apply map_ext. intro; rewrite nl_lift; cbn. *)
+    (*     unfold nlctx; now rewrite map_length. *)
+    (*   * eapply All2_map, All2_impl; tea. *)
+    (*     apply nl_eq_decl'. *)
     + rewrite nl_mkApps in *; eassumption.
+    + exact (todo "build_branches_type Nameless").
     + clear -X5. eapply All2_map, All2_impl; tea. cbn.
       clear. intros x y [[[? ?] ?] ?]. intuition eauto.
   - destruct pdecl as [pdecl1 pdecl2]; simpl.

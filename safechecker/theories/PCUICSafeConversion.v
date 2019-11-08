@@ -2016,8 +2016,8 @@ Section Conversion.
     zip fold in h1. apply wellformed_context in h1 ; auto. simpl in h1.
     destruct h1 as [[T h1] | [[ctx [s [h1 _]]]]] ; [| discriminate ].
     apply inversion_Case in h1 as hh ; auto.
-    destruct hh
-      as [uni [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]].
+    destruct hh as [uni [args [mdecl [idecl [ps [pty [btys
+                                 [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]].
     left. eexists. eassumption.
   Qed.
   Next Obligation.
@@ -2026,8 +2026,8 @@ Section Conversion.
     zip fold in h2. apply wellformed_context in h2 ; auto. simpl in h2.
     destruct h2 as [[T h2] | [[ctx [s [h2 _]]]]] ; [| discriminate ].
     apply inversion_Case in h2 as hh ; auto.
-    destruct hh
-      as [uni [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]].
+    destruct hh as [uni [args [mdecl [idecl [ps [pty [btys
+                                 [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]].
     left. eexists. eassumption.
   Qed.
   Next Obligation.
@@ -2783,8 +2783,8 @@ Section Conversion.
     destruct hΣ as [wΣ].
     cbn. destruct h as [[T h] | [[ctx [s [h1 _]]]]]; [| discriminate ].
     apply inversion_Case in h ; auto.
-    destruct h as
-        [u [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [? [? ?]]]]]]]]]]]]]]]]].
+    destruct h as [uni [args [mdecl [idecl [ps [pty [btys
+                                 [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]].
     left; eexists. eassumption.
   Qed.
 

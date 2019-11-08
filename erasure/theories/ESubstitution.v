@@ -362,7 +362,7 @@ Proof.
   - depelim H5.
     + cbn. econstructor.
       * eauto.
-      * eapply H4; eauto.
+      * eapply H3; eauto.
       * eapply All2_map.
         eapply All2_impl_In; eauto.
         intros. destruct H11, x, y. cbn in *. subst. split; eauto.

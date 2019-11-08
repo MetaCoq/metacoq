@@ -179,27 +179,25 @@ Section Inversion.
   Qed.
 
   Lemma inversion_Case :
-    forall {Γ ind npar p c brs T},
-      Σ ;;; Γ |- tCase (ind, npar) p c brs : T ->
-      ∑ u args mdecl idecl pty indctx pctx ps btys,
+    forall {Γ indnpar p c brs T},
+      Σ ;;; Γ |- tCase indnpar p c brs : T ->
+      ∑ u args mdecl idecl ps pty btys,
+        let ind := indnpar.1 in
+        let npar := indnpar.2 in
         declared_inductive Σ mdecl ind idecl ×
         ind_npars mdecl = npar ×
-        let pars := firstn npar args in
+        let params := firstn npar args in
+        build_case_predicate_type ind mdecl idecl params u ps = Some pty ×
         Σ ;;; Γ |- p : pty ×
-        types_of_case ind mdecl idecl pars u p pty =
-        Some (indctx, pctx, ps, btys) ×
-        check_correct_arity (global_ext_constraints Σ)
-        idecl ind u indctx pars pctx ×
         existsb (leb_sort_family (universe_family ps)) (ind_kelim idecl) ×
-        Σ ;;; Γ |- c : mkApps (tInd ind u) args ×
-        All2 (fun x y =>
-          (fst x = fst y) *
-          (Σ ;;; Γ |- snd x : snd y) *
-          (Σ ;;; Γ |- snd y : tSort ps)
-        ) brs btys ×
+        Σ;;; Γ |- c : mkApps (tInd ind u) args ×
+        map_option_out (build_branches_type ind mdecl idecl params u p)
+                     = Some btys ×
+        All2 (fun br bty => (br.1 = bty.1 × Σ ;;; Γ |- br.2 : bty.2)
+                           × Σ ;;; Γ |- bty.2 : tSort ps) brs btys ×
         Σ ;;; Γ |- mkApps p (skipn npar args ++ [c]) <= T.
   Proof.
-    intros Γ ind npar p c brs T h. invtac h.
+    intros Γ indnpar p c brs T h. invtac h.
   Qed.
 
   Lemma inversion_Proj :

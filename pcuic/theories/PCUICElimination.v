@@ -57,16 +57,16 @@ Lemma elim_restriction_works_kelim1 `{cf : checker_flags} (Σ : global_env_ext) 
 Proof.
   intros wfΣ. intros.
   assert (HT := X).
-  eapply inversion_Case in X as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?); tas.
-  unfold types_of_case in e0.
+  eapply inversion_Case in X as [uni [args [mdecl [idecl' [ps [pty [btys
+                                   [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]].
   repeat destruct ?; try congruence. subst. inv e0.
   eapply declared_inductive_inj in d as []. 2:exact H. subst.
-  enough (universe_family x6 = InType). rewrite H1 in i.
+  enough (universe_family ps = InType). rewrite H1 in i.
   eapply existsb_exists in i as (? & ? & ?).
-  destruct x1; tas; discriminate.
+  destruct x; tas; discriminate.
 
-  destruct (universe_family x6) eqn:Eu.
-  - exfalso. eapply H0. exists T. exists x6. split. admit.
+  destruct (universe_family ps) eqn:Eu.
+  - exfalso. eapply H0. exists T. exists ps. split. admit.
     split. (* 2:{ eapply universe_family_is_prop_sort; eauto. } *)
     admit. admit.
   - admit. (* no idea what to do for Set *)
@@ -139,30 +139,20 @@ Proof.
   eapply elim_restriction_works_proj_kelim1; eauto.
 Qed.
 
-Lemma length_of_btys {ind mdecl' idecl' args' u' p pty indctx pctx ps btys} :
-  types_of_case ind mdecl' idecl' (firstn (ind_npars mdecl') args') u' p pty = Some (indctx, pctx, ps, btys) ->
-  #|btys| = #|ind_ctors idecl'|.
+Lemma length_of_btys {ind mdecl' idecl' args' u' p} :
+  #|build_branches_type ind mdecl' idecl' args' u' p| = #|ind_ctors idecl'|.
 Proof.
-  intros. unfold types_of_case in *.
-  destruct ?; try congruence.
-  destruct ?; try congruence.
-  destruct ?; try congruence.
-  destruct ?; try congruence.
-  destruct ?; try congruence.
-  destruct ?; try congruence. inversion H; subst.  unfold build_branches_type in *.
-  unfold mapi in *.
-  clear - E4. revert btys E4. generalize 0 at 3. induction ((ind_ctors idecl')); cbn; intros.
-  - cbn in E4. inversion E4. subst. reflexivity.
-  - cbn in E4.
-    destruct ?; try congruence.
-    destruct ?; try congruence.
-    destruct ?; try congruence.
-    destruct ?; try congruence.
-    destruct ?; try congruence.
-    destruct ?; try congruence.
-    destruct ?; try congruence.
-    subst. inversion E4. subst. cbn. f_equal.
-    eapply IHl.  eauto.
+  unfold build_branches_type. now rewrite mapi_length.
+Qed.
+
+Lemma length_map_option_out {A} l l' :
+  @map_option_out A l = Some l' -> #|l| = #|l'|.
+Proof.
+  induction l as [|[x|] l] in l' |- *.
+  - destruct l'; [reflexivity|discriminate].
+  - cbn. destruct (map_option_out l); [|discriminate].
+    destruct l'; [discriminate|]. inversion 1; subst; cbn; eauto.
+  - discriminate.
 Qed.
 
 Lemma map_option_Some X (L : list (option X)) t : map_option_out L = Some t -> All2 (fun x y => x = Some y) L t.
@@ -179,31 +169,32 @@ Lemma tCase_length_branch_inv `{cf : checker_flags} (Σ : global_env_ext) Γ ind
   (#|args| = npar + m)%nat.
 Proof.
   intros.
-  eapply inversion_Case in X0 as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?). subst.
-  pose proof (length_of_btys e0).
+  eapply inversion_Case in X0 as [uni [args' [mdecl [idecl [ps [pty [btys
+                                 [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]].
+  apply length_map_option_out in ht0 as Hl. rewrite length_of_btys in Hl.
   eapply type_mkApps_inv in t1 as (? & ? & [] & ?); eauto.
   eapply inversion_Construct in t1 as (? & ? & ? & ? & ? & ? & ?); eauto.
   destruct d0. cbn in *.
   eapply declared_inductive_inj in d as []; eauto. subst.
 
-  unfold types_of_case in e0.
-  repeat destruct ?; try congruence. destruct p0, p1; subst. inv E3. inv E1. inv e0.
-  unfold build_branches_type in *.
-  assert (exists t', nth_error x7 n = Some (m, t')).
-  eapply All2_nth_error_Some in H as (? & ?). 2:eassumption. destruct p0.
-  rewrite e. destruct p0 as [[? ?] ?]. cbn in *. subst. destruct x1. cbn. eauto.
-  destruct H3.
-  eapply map_option_Some in E4.
-  eapply All2_nth_error_Some_r in E4 as (? & ? & ?); eauto.
-  subst.
-  rewrite nth_error_mapi in e. destruct (nth_error (ind_ctors x11) n) eqn:E7; try now inv e.
-  cbn in e. inv e. destruct p0. destruct p0.
-  cbn in H3.
-  eapply PCUICWeakeningEnv.on_declared_inductive in H1; eauto. destruct H1.
-  depelim o0. cbn in *. unfold on_constructors in *.
-  eapply All2_nth_error_Some in E7; eauto.
-  destruct E7 as [cs [? [XX1 XX2]]].
-  admit. admit.
+  (* unfold types_of_case in e0. *)
+  (* repeat destruct ?; try congruence. destruct p0, p1; subst. inv E3. inv E1. inv e0. *)
+  (* unfold build_branches_type in *. *)
+  (* assert (exists t', nth_error x7 n = Some (m, t')). *)
+  (* eapply All2_nth_error_Some in H as (? & ?). 2:eassumption. destruct p0. *)
+  (* rewrite e. destruct p0 as [[? ?] ?]. cbn in *. subst. destruct x1. cbn. eauto. *)
+  (* destruct H3. *)
+  (* eapply map_option_Some in E4. *)
+  (* eapply All2_nth_error_Some_r in E4 as (? & ? & ?); eauto. *)
+  (* subst. *)
+  (* rewrite nth_error_mapi in e. destruct (nth_error (ind_ctors x11) n) eqn:E7; try now inv e. *)
+  (* cbn in e. inv e. destruct p0. destruct p0. *)
+  (* cbn in H3. *)
+  (* eapply PCUICWeakeningEnv.on_declared_inductive in H1; eauto. destruct H1. *)
+  (* depelim o0. cbn in *. unfold on_constructors in *. *)
+  (* eapply All2_nth_error_Some in E7; eauto. *)
+  (* destruct E7 as [cs [? [XX1 XX2]]]. *)
+  (* admit. admit. *)
 
   (* clear - H0 E4. unfold mapi in *. *)
   (* revert n x7 H0 E4. generalize 0 at 3. induction (ind_ctors x2); intros. *)

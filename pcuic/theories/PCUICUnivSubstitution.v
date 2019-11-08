@@ -1098,42 +1098,31 @@ Proof.
       cbn. now rewrite IHn.
     + symmetry; apply subst_instance_constr_two.
 
-  - intros ind u npar p c brs args mdecl idecl isdecl X X0 H pty X1 indctx pctx ps
-           btys H0 X2 H1 X3 X4 X5 X6 u0 univs wfΣ' HSub H2.
+  - intros ind u npar p c brs args mdecl idecl isdecl X X0 H ps pty H0 X1
+           X2 H1 X3 X4 btys H2 X5 u0 univs X6 HSub H4. 
     rewrite subst_instance_constr_mkApps in *.
     rewrite map_app. cbn. rewrite map_skipn.
     eapply type_Case with (u1:=subst_instance_instance u0 u)
-                          (indctx0:=subst_instance_context u0 indctx)
                           (ps0 :=subst_instance_univ u0 ps)
-                          (pctx0:=subst_instance_context u0 pctx)
                           (btys0:=map (on_snd (subst_instance_constr u0)) btys);
       eauto.
-    + clear -H0 H2. rewrite firstn_map.
-      apply* types_of_case_spec in H0. destruct H0 as [s' [E1 [E2 E3]]].
-      eexists. repeat split.
-      2: now rewrite (subst_instance_destArity []), E2.
-      * rewrite <- subst_instance_constr_two, <- subst_instance_context_two.
-        set (param' := subst_instance_context u (ind_params mdecl)) in *.
-        set (type' := subst_instance_constr u (ind_type idecl)) in *.
-        rewrite <- subst_instance_instantiate_params.
-        destruct (instantiate_params param' (firstn npar args) type');
-          [|discriminate].
-        cbn in *. apply some_inj in E1.
-        rewrite (subst_instance_destArity []), E1; reflexivity.
-      * rewrite <- subst_instance_build_branches_type.
-        now rewrite map_option_out_map_option_map, E3.
-    + clear -X2 X HSub wfΣ' H2. destruct HSub as [_ HSub]; cbn in *.
-      eapply consistent_instance_valid_constraints in H2 as H2'; aa; simpl in *.
-      eapply eq_context_subst_instance in X2; aa.
-      refine (transport (fun c => eq_context _ c _) _ X2). clear.
-      cbn. f_equal. unfold map_decl; cbn. f_equal.
-      rewrite subst_instance_constr_mkApps. f_equal.
-      rewrite !map_app. f_equal.
-      * rewrite firstn_map, !map_map. eapply map_ext.
-        rewrite subst_instance_context_length.
-        intro; symmetry; apply lift_subst_instance_constr.
-      * apply subst_instance_to_extended_list.
-    + clear -H1 H2.
+    + clear -H0. rewrite firstn_map. unfold build_case_predicate_type. simpl.
+      rewrite <- subst_instance_constr_two, <- subst_instance_context_two.
+      set (param' := subst_instance_context u (ind_params mdecl)) in *.
+      set (type' := subst_instance_constr u (ind_type idecl)) in *.
+      rewrite <- subst_instance_instantiate_params.
+      destruct (instantiate_params param' (firstn npar args) type');
+        [|discriminate].
+      simpl. rewrite (subst_instance_destArity []).
+      destruct (destArity [] t) as [[ctx s'] ?|]; [|discriminate]. 
+      apply some_inj in H0; subst; simpl in *. f_equal.
+      rewrite subst_instance_constr_it_mkProd_or_LetIn. f_equal; cbn.
+      f_equal. rewrite subst_instance_constr_mkApps; cbn.
+      f_equal. rewrite map_app. f_equal.
+      * rewrite !map_map, subst_instance_context_length; apply map_ext. clear.
+        intro. now apply lift_subst_instance_constr.
+      * symmetry; apply subst_instance_to_extended_list.
+    + clear -H1 H4.
       induction (ind_kelim idecl) as [|a l]; try discriminate; cbn in *.
       apply* orb_true_iff in H1.
       destruct H1 as [H1|H1]; [left|right; now eapply IHl].
@@ -1145,8 +1134,10 @@ Proof.
          now rewrite HH.
       ++ destruct a; inv H1.
          destruct ?; constructor.
-    + apply X5 in H2; tea.
-      rewrite subst_instance_constr_mkApps in H2; eassumption.
+    + eapply X4 in H4; tea.
+      rewrite subst_instance_constr_mkApps in H4; eassumption.
+    + cbn. rewrite firstn_map. rewrite <- subst_instance_build_branches_type.
+      now rewrite map_option_out_map_option_map, H2.
     + eapply All2_map with (f := (on_snd (subst_instance_constr u0)))
                            (g:= (on_snd (subst_instance_constr u0))).
       eapply All2_impl. eassumption. intros.

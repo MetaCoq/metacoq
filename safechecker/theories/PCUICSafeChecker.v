@@ -441,6 +441,68 @@ Proof.
   intros []; constructor; auto.
 Qed.
 
+(* From valid_btys *)
+Lemma inversion_WAT_indapp {cf:checker_flags} Σ Γ ind u args :
+    forall mdecl idecl (isdecl : declared_inductive Σ.1 mdecl ind idecl),
+    wf Σ.1 ->
+    isType Σ Γ (mkApps (tInd ind u) args) ->
+    mdecl.(ind_npars) <= #|args| /\ inductive_ind ind < #|ind_bodies mdecl| /\
+    consistent_instance_ext Σ (ind_universes mdecl) u.
+Proof.
+Admitted.
+
+
+Lemma wf_local_vass {cf:checker_flags} Σ {Γ na A} s :
+  Σ ;;; Γ |- A : tSort s -> wf_local Σ (Γ ,, vass na A).
+Proof.
+  intro X; apply typing_wf_local in X as Y.
+  constructor; tea. eexists; eassumption.
+Qed.
+
+Lemma WfArity_build_case_predicate_type {cf:checker_flags} Σ
+      Γ ind u args mdecl idecl ps pty :
+  wf Σ.1 ->
+  declared_inductive Σ.1 mdecl ind idecl ->
+  isType Σ Γ (mkApps (tInd ind u) args) ->
+  let params := firstn (ind_npars mdecl) args in
+  build_case_predicate_type ind mdecl idecl params u ps = Some pty ->
+  isWfArity typing Σ Γ pty.
+Proof.
+  intros wfΣ isdecl X params XX. unfold build_case_predicate_type in XX.
+  case_eq (instantiate_params
+             (subst_instance_context u (ind_params mdecl))
+             params (subst_instance_constr u (ind_type idecl)));
+    [|intro e; rewrite e in XX; discriminate].
+  intros ipars Hipars; rewrite Hipars in XX; simpl in XX.
+  case_eq (destArity [] ipars);
+    [|intro e; rewrite e in XX; discriminate].
+  intros [ictx is] Hictxs; rewrite Hictxs in XX; apply some_inj in XX.
+  subst pty. eexists _, _.
+  rewrite destArity_it_mkProd_or_LetIn. split. reflexivity.
+  simpl. eapply wf_local_vass.
+  eapply type_mkApps. econstructor; tea.
+  * admit.
+  * eapply inversion_WAT_indapp with (mdecl0:=mdecl) in X; tea.
+    apply X.
+  * eapply PCUICWeakeningEnv.on_declared_inductive in isdecl as oind; tea.
+    rewrite oind.2.(ind_arity_eq). cbn.
+    admit.
+Admitted.
+
+Lemma destArity_mkApps_None ctx t l :
+  destArity ctx t = None -> destArity ctx (mkApps t l) = None.
+Proof.
+  induction l in t |- *. trivial.
+  intros H. cbn. apply IHl. reflexivity.
+Qed.
+
+Lemma destArity_mkApps_Ind ctx ind u l :
+  destArity ctx (mkApps (tInd ind u) l) = None.
+Proof.
+    apply destArity_mkApps_None. reflexivity.
+Qed.
+
+
 Section Typecheck.
   Context {cf : checker_flags} {Σ : global_env_ext} (HΣ : ∥ wf Σ ∥)
           (Hφ : ∥ on_udecl Σ.1 Σ.2 ∥)
@@ -757,20 +819,6 @@ Section Typecheck.
     cbn. apply eqb_decl_spec.
   Qed.
 
-  Definition check_correct_arity decl ind u ctx pars pctx :=
-    let inddecl :=
-        {| decl_name := nNamed decl.(ind_name);
-           decl_body := None;
-           decl_type := mkApps (tInd ind u) (map (lift0 #|ctx|) pars ++ to_extended_list ctx) |}
-    in eqb_context (inddecl :: ctx) pctx.
-
-  Lemma check_correct_arity_spec decl ind u ctx pars pctx
-    : check_correct_arity decl ind u ctx pars pctx
-      -> PCUICTyping.check_correct_arity (global_ext_constraints Σ) decl ind u ctx pars pctx.
-  Proof.
-    apply eqb_context_spec.
-  Qed.
-
 
   Ltac sq :=
     repeat match goal with
@@ -778,6 +826,8 @@ Section Typecheck.
            end; try eapply sq.
 
   Open Scope nat.
+
+  Obligation Tactic := program_simplify ; eauto.
 
   Program Fixpoint infer (Γ : context) (HΓ : ∥ wf_local Σ Γ ∥) (t : term) {struct t}
     : typing_result ({ A : term & ∥ Σ ;;; Γ |- t : A ∥ }) :=
@@ -794,7 +844,8 @@ Section Typecheck.
     | tSort u =>
           match u with
           | NEL.sing (l, false) =>
-            check_eq_true (LevelSet.mem l (global_ext_levels Σ)) (Msg ("undeclared level " ++ string_of_level l));;
+            check_eq_true (LevelSet.mem l (global_ext_levels Σ))
+                          (Msg ("undeclared level " ++ string_of_level l));;
             ret (tSort (Universe.super l); _)
           | _ => raise (Msg (string_of_sort u ++ " is not a level"))
           end
@@ -850,37 +901,50 @@ Section Typecheck.
       I <- reduce_to_ind Γ cty.π1 _ ;;
       let '(ind'; I') := I in let '(u; I'') := I' in let '(args; H) := I'' in
       check_eq_true (eqb ind ind')
+                    (* bad case info *)
                     (NotConvertible G Γ (tInd ind u) (tInd ind' u)) ;;
       d <- lookup_ind_decl ind' ;;
       let '(decl; d') := d in let '(body; HH) := d' in
       check_eq_true (ind_npars decl =? par)
                     (Msg "not the right number of parameters") ;;
       pty <- infer Γ HΓ p ;;
-      match types_of_case ind decl body (firstn par args) u p pty.π1 with
-      | None => raise (Msg "not the type of a case")
-      | Some (indctx, pctx, ps, btys) =>
-        check_eq_true
-          (check_correct_arity body ind u indctx (firstn par args) pctx)
-          (Msg "not correct arity") ;;
+      match destArity [] pty.π1 with
+      | None => raise (Msg "the type of the return predicate of a Case is not an arity")
+      | Some (pctx, ps) =>
         check_eq_true
           (existsb (leb_sort_family (universe_family ps)) (ind_kelim body))
           (Msg "cannot eliminate over this sort") ;;
-        (fix check_branches (brs btys : list (nat * term))
-          (HH : Forall (squash ∘ (isType Σ Γ) ∘ snd) btys) {struct brs}
-            : typing_result
-              (All2 (fun x y => fst x = fst y /\ ∥ Σ ;;; Γ |- snd x : snd y ∥) brs btys)
-                    := match brs, btys with
-                       | [], [] => ret (All2_nil _)
-                       | (n, t) :: brs , (m, A) :: btys =>
-                         W <- check_dec (Msg "not nat eq")
-                                       (EqDecInstances.nat_eqdec n m) ;;
-                         Z <- infer_cumul infer Γ HΓ t A _ ;;
-                         X <- check_branches brs btys _ ;;
-                         ret (All2_cons _ _ _ _ _ (conj _ _) X)
-                       | [], _ :: _
-                       | _ :: _, [] => raise (Msg "wrong number of branches")
-                       end) brs btys _ ;;
-          ret (mkApps p (List.skipn par args ++ [c]); _)
+        let params := firstn par args in
+        match build_case_predicate_type ind decl body params u ps with
+        | None => raise (Msg "failure in build_case_predicate_type")
+        | Some pty' =>
+          (* We could avoid one useless sort comparison by only comparing *)
+          (* the contexts [pctx] and [indctx] (what is done in Coq). *)
+          match iscumul Γ pty.π1 _ pty' _ with
+          | Error e => raise (NotCumulSmaller G Γ pty.π1 pty' pty.π1 pty' e)
+          | Success _ =>
+            match map_option_out (build_branches_type ind decl body params u p) with
+            | None => raise (Msg "failure in build_branches_type")
+            | Some btys => 
+              (fix check_branches (brs btys : list (nat * term))
+                (HH : Forall (squash ∘ (isType Σ Γ) ∘ snd) btys) {struct brs}
+                  : typing_result
+                    (All2 (fun br bty => br.1 = bty.1 /\ ∥ Σ ;;; Γ |- br.2 : bty.2 ∥) brs btys)
+                          := match brs, btys with
+                             | [], [] => ret (All2_nil _)
+                             | (n, t) :: brs , (m, A) :: btys =>
+                               W <- check_dec (Msg "not nat eq")
+                                             (EqDecInstances.nat_eqdec n m) ;;
+                               Z <- infer_cumul infer Γ HΓ t A _ ;;
+                               X <- check_branches brs btys _ ;;
+                               ret (All2_cons _ _ _ _ _ (conj _ _) X)
+                             | [], _ :: _
+                             | _ :: _, [] => raise (Msg "wrong number of branches")
+                             end) brs btys _ ;;
+                ret (mkApps p (List.skipn par args ++ [c]); _)
+            end
+          end
+        end
       end
 
     | tProj (ind, n, k) c =>
@@ -940,7 +1004,6 @@ Section Typecheck.
         ret (dtype decl; _)
       end
 
-
     | tCoFix mfix n =>
       (* to add when generalizing to all flags *)
       allowcofix <- check_eq_true allow_cofix (Msg "cofix not allowed") ;;
@@ -978,24 +1041,46 @@ Section Typecheck.
       end
     end.
 
-  Next Obligation. sq; now econstructor. Defined.
-  Next Obligation. sq; econstructor; tas.
+  Next Obligation. intros; sq; now econstructor. Defined.
+  Next Obligation. intros; sq; econstructor; tas.
                    now apply LevelSetFact.mem_2. Defined.
   (* tProd *)
-  Next Obligation. sq; econstructor; cbn; easy. Defined.
-  Next Obligation. sq; econstructor; eassumption. Defined.
+  Next Obligation.
+    (* intros Γ HΓ t na A B Heq_t [s ?];  *)
+      sq; econstructor; cbn; easy. Defined.
+  Next Obligation.
+    (* intros Γ HΓ t na A B Heq_t [s1 ?] [s2 ?]; *)
+    sq; econstructor; eassumption.
+  Defined.
   (* tLambda *)
-  Next Obligation. sq; econstructor; cbn; easy. Defined.
-  Next Obligation. sq; econstructor; eassumption. Defined.
+  Next Obligation.
+    (* intros Γ HΓ t0 na A t Heq_t [s ?]; *)
+      sq; econstructor; cbn; easy.
+  Defined.
+  Next Obligation.
+    (* intros Γ HΓ t0 na A t Heq_t [s ?] [B ?]; *)
+      sq; econstructor; eassumption.
+  Defined.
   (* tLetIn *)
-  Next Obligation. sq. right. econstructor; eauto. Defined.
-  Next Obligation. sq; econstructor; cbn; eauto. Defined.
-  Next Obligation. sq; now econstructor. Defined.
+  Next Obligation.
+    (* intros Γ HΓ t n b b_ty b' Heq_t [? ?]; *)
+      sq; right. econstructor; eauto.
+  Defined.
+  Next Obligation.
+    (* intros Γ HΓ t n b b_ty b' Heq_t [? ?] H0; *)
+    sq; econstructor; cbn; eauto.
+  Defined.
+  Next Obligation.
+    (* intros Γ HΓ t n b b_ty b' Heq_t [? ?] H0 [? ?]; *)
+    sq; econstructor; eassumption.
+  Defined.
 
   (* tApp *)
-  Next Obligation. now eapply validity_wf. Defined.
+  Next Obligation. simpl; eauto using validity_wf. Qed.
   Next Obligation.
-    sq. eapply type_reduction in X1 ; try eassumption.
+    (* intros Γ HΓ t0 t u Heq_t [A X1] [na [a [b hab]]]; *)
+    cbn in *; sq.
+    eapply type_reduction in X1 ; try eassumption.
     eapply validity_term in X1 ; try assumption. destruct X1.
     - destruct i as [ctx [s [H1 H2]]]. cbn in H1.
       apply destArity_app_Some in H1. destruct H1 as [ctx' [e1 e2]] ; subst.
@@ -1008,58 +1093,101 @@ Section Typecheck.
       right. eexists. eassumption.
   Defined.
   Next Obligation.
-    sq; econstructor. 2: eassumption.
+    (* intros Γ HΓ t0 t u Heq_t [A X1] [na [a [b hab]]] H; *)
+    cbn in *; sq; econstructor.
+    2: eassumption.
     eapply type_reduction; eassumption.
   Defined.
 
   (* tConst *)
   Next Obligation.
+    (* intros Γ HΓ t cst u Heq_t wildcard' d HH H.  *)
+    rename Heq_anonymous into HH.
     sq; constructor; try assumption.
-    symmetry in Heq_anonymous.
+    symmetry in HH.
     etransitivity. eassumption.
-    now rewrite (lookup_env_id _ _ _ Heq_anonymous).
+    now rewrite (lookup_env_id _ _ _ HH).
   Defined.
 
   (* tInd *)
-  Next Obligation. sq; econstructor; eassumption. Defined.
+  Next Obligation.
+    (* intros Γ HΓ t ind u Heq_t [? [? ?]] H; *)
+    sq; econstructor; eassumption.
+  Defined.
 
   (* tConstruct *)
-  Next Obligation. sq; econstructor; try eassumption. now split. Defined.
+  Next Obligation.
+    (* intros Γ HΓ t ind k u Heq_t [? [? ?]] cdecl HH H; *)
+    sq; econstructor; tea. now split.
+  Defined.
 
   (* tCase *)
-  Next Obligation. now eapply validity_wf. Defined.
-  Next Obligation. inversion HH; sq; right; assumption. Qed.
-  Next Obligation. inversion HH; assumption. Qed.
+  Next Obligation. simpl; eauto using validity_wf. Qed.
+  Next Obligation. simpl; eauto using validity_wf. Qed.
   Next Obligation.
-    destruct HΣ, HΓ, X.
+    right. destruct X, X9. sq.
     change (eqb ind I = true) in H0.
-    destruct (eqb_spec ind I) as [e|e]; [destruct e|discriminate H0].
+    destruct (eqb_spec ind I) as [e|e]; [destruct e|discriminate].
     change (eqb (ind_npars d) par = true) in H1.
-    destruct (eqb_spec (ind_npars d) par) as [e|e]; [|discriminate].
-    rename Heq_anonymous into HH. symmetry in HH.
-    eapply (type_Case_valid_btys Σ Γ) in HH; tea.
+    destruct (eqb_spec (ind_npars d) par) as [e|e]; [|discriminate]; subst.
+    eapply WfArity_build_case_predicate_type; tea.
+    2: symmetry; eassumption.
+    simpl in *. apply validity_term in t0; tea.
+    eapply isWfArity_or_Type_red in t0; tea.
+    destruct t0; [|assumption].
+    destruct i as [ctx [s [HH1 _]]]. cbn in HH1.
+    rewrite destArity_mkApps_Ind in HH1; discriminate.
+  Qed.
+  Next Obligation.
+    inversion HH; sq; right; assumption.
+  Qed.
+  Next Obligation.
+    inversion HH; assumption.
+  Qed.
+  Next Obligation.
+    rename Heq_anonymous into HH3.
+    clear Heq_anonymous2. destruct HΣ, HΓ, X.
+    change (eqb ind ind' = true) in H0.
+    destruct (eqb_spec ind ind') as [e|e]; [destruct e|discriminate].
+    change (eqb (ind_npars decl) par = true) in H1.
+    destruct (eqb_spec (ind_npars decl) par) as [e|e]; [|discriminate].
+    symmetry in HH3.
+    eapply (type_Case_valid_btys Σ Γ) in HH3; tea.
     eapply All_Forall, All_impl; tea. clear.
-    intros x X; constructor; now exists ps.
+    intros x XX; constructor; exists ps; exact XX.
   Defined.
   Next Obligation.
-    change (eqb ind I = true) in H0.
-    destruct (eqb_spec ind I) as [e|e]; [destruct e|discriminate H0].
+    rename Heq_anonymous2 into XX2. destruct wildcard'.
+    symmetry in XX2. simpl in *. eapply isconv_sound in XX2.
+    change (eqb ind ind' = true) in H0.
+    destruct (eqb_spec ind ind') as [e|e]; [destruct e|discriminate H0].
+    change (eqb (ind_npars decl) par = true) in H1.
+    destruct (eqb_spec (ind_npars decl) par) as [e|e]; [|discriminate]; subst.
     assert (∥ All2 (fun x y  => ((fst x = fst y) *
                               (Σ;;; Γ |- snd x : snd y))%type) brs btys ∥). {
       eapply All2_sq. eapply All2_impl. eassumption.
       cbn; intros ? ? []. now sq. }
-    destruct HΣ, HΓ, X9, X8, X5, X, H.
-    constructor. eapply type_Case'; tea.
-    - apply beq_nat_true; assumption.
+    destruct H as [H], X9, XX2 as [XX2]. sq.
+    eapply type_Case' with (pty0:=pty'); tea.
+    - reflexivity.
     - symmetry; eassumption.
-    - apply check_correct_arity_spec; assumption.
-    - eapply type_reduction; eassumption.
+    - econstructor; tea.
+      rename Heq_anonymous1 into XX. left.
+      eapply WfArity_build_case_predicate_type; tea.
+      2: symmetry; eassumption.
+      simpl in *. apply validity_term in X9; tea.
+      eapply isWfArity_or_Type_red in X9; tea.
+      destruct X9; [|assumption].
+      destruct i as [ctx [s [HH1 _]]]. cbn in HH1.
+      rewrite destArity_mkApps_Ind in HH1; discriminate.
+    - eapply type_reduction; tea.
+    - symmetry; eassumption.
   Defined.
 
   (* tProj *)
-  Next Obligation. now eapply validity_wf. Defined.
+  Next Obligation. simpl; eauto using validity_wf. Qed.
   Next Obligation.
-    sq; eapply type_Proj with (pdecl := (i, t0)).
+    simpl in *; sq; eapply type_Proj with (pdecl := (i, t0)).
     - split. eassumption. split. symmetry; eassumption. cbn in *.
       now apply beq_nat_true.
     - cbn. destruct (ssrbool.elimT (eqb_spec ind I)); [assumption|].
@@ -1171,7 +1299,7 @@ Section Typecheck.
     s' <- reduce_to_sort Γ s.π1 _ ;;
     ret _.
   Next Obligation. now eapply validity_wf. Defined.
-  Next Obligation. sq. eexists. eapply type_reduction; tea. Defined.
+  Next Obligation. destruct X0. sq. eexists. eapply type_reduction; tea. Defined.
 
 
   Lemma isType_isWAT_sq {Γ A} : ∥ isType Σ Γ A ∥ -> ∥ isWfArity_or_Type Σ Γ A ∥.

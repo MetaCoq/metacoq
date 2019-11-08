@@ -253,41 +253,43 @@ Section Validity.
 
     - (* Case *)
       right. red.
-      destruct X2.
-      + destruct i as [ctx [s [Heq Hs]]].
-        exists s.
-        unfold check_correct_arity in *.
-        assert (ctx = pctx). admit. (* WF of cases *)
-        subst ctx.
-        pose proof (PCUICClosed.destArity_spec [] pty). rewrite Heq in H.
-        simpl in H. subst pty.
-        assert (#|args| = #|pctx|). admit. (* WF of case *)
-        eapply type_mkApps. eauto.
-        destruct X4. destruct i as [ctx' [s' [Heq' Hs']]].
-        elimtype False.
-        { clear -Heq'.
-          revert Heq'.
-          assert (destArity [] (tInd ind u) = None) by reflexivity.
-          revert H.
-          generalize (tInd ind u). clear. induction args.
-          intros. simpl in Heq'. congruence.
-          intros. unshelve eapply (IHargs _ _ Heq').
-          reflexivity. }
-        destruct i as [si Hi].
-        eapply (invert_type_mkApps _ _ (tInd ind u)) in Hi; pcuic.
-        2:{ econstructor; eauto. admit. (* universes *) }
-        2:{ destruct Σ as [Σ φ]. eapply (isWfArity_or_Type_subst_instance (_, _)); pcuic.
-            admit.
-            eapply on_declared_inductive in isdecl as [dm di].
-            destruct di.
-            right. red in onArity.
-            red in onArity.
-            destruct onArity as [s' Hs'].
-            now exists s'. simpl; auto. }
-        admit.
+      (* destruct X2. *)
+      (* + destruct i as [ctx [s [Heq Hs]]]. *)
+      (*   exists s. *)
+      (*   unfold check_correct_arity in *. *)
+      (*   assert (ctx = pctx). admit. (* WF of cases *) *)
+      (*   subst ctx. *)
+      (*   pose proof (PCUICClosed.destArity_spec [] pty). rewrite Heq in H. *)
+      (*   simpl in H. subst pty. *)
+      (*   assert (#|args| = #|pctx|). admit. (* WF of case *) *)
+      (*   eapply type_mkApps. eauto. *)
+      (*   destruct X4. destruct i as [ctx' [s' [Heq' Hs']]]. *)
+      (*   elimtype False. *)
+      (*   { clear -Heq'. *)
+      (*     revert Heq'. *)
+      (*     assert (destArity [] (tInd ind u) = None) by reflexivity. *)
+      (*     revert H. *)
+      (*     generalize (tInd ind u). clear. induction args. *)
+      (*     intros. simpl in Heq'. congruence. *)
+      (*     intros. unshelve eapply (IHargs _ _ Heq'). *)
+      (*     reflexivity. } *)
+      (*   destruct i as [si Hi]. *)
+      (*   eapply (invert_type_mkApps _ _ (tInd ind u)) in Hi; pcuic. *)
+      (*   2:{ econstructor; eauto. admit. (* universes *) } *)
+      (*   2:{ destruct Σ as [Σ φ]. eapply (isWfArity_or_Type_subst_instance (_, _)); pcuic. *)
+      (*       admit. *)
+      (*       eapply on_declared_inductive in isdecl as [dm di]. *)
+      (*       destruct di. *)
+      (*       right. red in onArity. *)
+      (*       red in onArity. *)
+      (*       destruct onArity as [s' Hs']. *)
+      (*       now exists s'. simpl; auto. } *)
+      (*   admit. *)
 
-      + destruct i as [ui Hi]. exists ui.
-        admit. (* Same idea *)
+      (* + destruct i as [ui Hi]. exists ui. *)
+      (*   admit. (* Same idea *) *)
+
+      admit.
 
     - (* Proj *)
       right.

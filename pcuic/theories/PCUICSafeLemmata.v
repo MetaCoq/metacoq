@@ -435,22 +435,22 @@ Section Lemmata.
       destruct h as [B h].
       destruct indn.
       apply inversion_Case in h as hh ; auto.
-      destruct hh
-        as [uni [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]].
+      destruct hh as [uni [args [mdecl [idecl [ps [pty [btys
+                                 [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]].
       eexists. eassumption.
     - simpl. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [B h].
       destruct indn.
       apply inversion_Case in h as hh ; auto.
-      destruct hh
-        as [uni [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]].
+      destruct hh as [uni [args [mdecl [idecl [ps [pty [btys
+                                 [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]].
       eexists. eassumption.
     - simpl. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [B h].
       destruct indn.
       apply inversion_Case in h as hh ; auto.
-      destruct hh
-        as [uni [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [a ?]]]]]]]]]]]]]]]]].
+      destruct hh as [uni [args [mdecl [idecl [ps [pty [btys
+                                 [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]].
       apply All2_app_inv in a as [[? ?] [[? ?] ha]].
       inversion ha. subst.
       intuition eauto. simpl in *.
@@ -1439,9 +1439,9 @@ Section Lemmata.
     intros Γ ind ind' npar pred i u brs args [[A h]|[[ctx [s [e _]]]]];
       [|discriminate].
     apply inversion_Case in h as ih ; auto.
-    destruct ih
-      as [uni [args' [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]].
-    apply Construct_Ind_ind_eq in ht0. eauto.
+    destruct ih as [uni [args' [mdecl [idecl [ps [pty [btys
+                                 [? [? [? [? [? [X [ht0 [? ?]]]]]]]]]]]]]]].
+    apply Construct_Ind_ind_eq in X. eauto.
   Qed.
 
   Lemma Proj_Constuct_ind_eq :
@@ -1596,22 +1596,17 @@ Lemma type_Case_valid_btys {cf:checker_flags} Σ Γ ind u npar p (* c brs *) arg
     forall mdecl idecl (isdecl : declared_inductive Σ.1 mdecl ind idecl),
     mdecl.(ind_npars) = npar ->
     let pars := List.firstn npar args in
-    forall pty, Σ ;;; Γ |- p : pty ->
-    forall indctx pctx ps btys, types_of_case ind mdecl idecl pars u p pty
-                           = Some (indctx, pctx, ps, btys) ->
+    forall pty ps btys, Σ ;;; Γ |- p : pty ->
+    map_option_out (build_branches_type ind mdecl idecl pars u p) = Some btys ->
     (* check_correct_arity (global_ext_constraints Σ) idecl ind u indctx pars pctx -> *)
     (* List.Exists (fun sf => universe_family ps = sf) idecl.(ind_kelim) -> *)
     (* Σ ;;; Γ |- c : mkApps (tInd ind u) args -> *)
     (* All2 (fun x y => (fst x = fst y) × (Σ ;;; Γ |- snd x : snd y)) brs btys -> *)
     All (fun x => Σ ;;; Γ |- snd x : tSort ps) btys.
 Proof.
-  intros mdecl idecl isdecl H0 pars pty X indctx pctx ps btys toc.
-  apply types_of_case_spec in toc.
-  destruct toc as [s' [_ [H1 H2]]].
-  pose proof (PCUICClosed.destArity_spec [] pty) as Hpty; rewrite H1 in Hpty;
-    cbn in Hpty; subst; clear H1.
-  unfold build_branches_type in H2.
-  eapply map_option_out_All; tea. clear H2.
+  intros mdecl idecl isdecl H0 pars pty ps btys X Hbbt.
+  unfold build_branches_type in Hbbt.
+  eapply map_option_out_All; tea; clear Hbbt.
   apply All_mapi.
   apply PCUICWeakeningEnv.on_declared_inductive in isdecl as [oind oc].
   2: admit.
@@ -1629,23 +1624,25 @@ Proof.
     admit.
 Admitted.
 
-Lemma type_Case' {cf:checker_flags} Σ Γ ind u npar p c brs args :
+Lemma type_Case' {cf:checker_flags} Σ Γ indnpar u p c brs args :
+    let ind := indnpar.1 in
+    let npar := indnpar.2 in
     forall mdecl idecl (isdecl : declared_inductive Σ.1 mdecl ind idecl),
     mdecl.(ind_npars) = npar ->
-    let pars := List.firstn npar args in
-    forall pty, Σ ;;; Γ |- p : pty ->
-    forall indctx pctx ps btys, types_of_case ind mdecl idecl pars u p pty
-                           = Some (indctx, pctx, ps, btys) ->
-    check_correct_arity (global_ext_constraints Σ) idecl ind u indctx pars pctx ->
+    let params := List.firstn npar args in
+    forall ps pty, build_case_predicate_type ind mdecl idecl params u ps = Some pty ->
+    Σ ;;; Γ |- p : pty ->
     existsb (leb_sort_family (universe_family ps)) idecl.(ind_kelim) ->
     Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
-    All2 (fun x y => (fst x = fst y) × (Σ ;;; Γ |- snd x : snd y)) brs btys ->
-    Σ ;;; Γ |- tCase (ind, npar) p c brs : mkApps p (List.skipn npar args ++ [c]).
+    forall btys, map_option_out (build_branches_type ind mdecl idecl params u p)
+            = Some btys ->
+    All2 (fun br bty => (br.1 = bty.1) × (Σ ;;; Γ |- br.2 : bty.2)) brs btys ->
+    Σ ;;; Γ |- tCase indnpar p c brs : mkApps p (skipn npar args ++ [c]).
 Proof.
-  intros mdecl idecl isdecl H pars pty X indctx pctx ps btys H0 X0 H1 X1 X2.
+  intros ind npar mdecl idecl isdecl H params ps pty H0 X H1 X0 btys H2 X1. 
   econstructor; tea.
-  eapply type_Case_valid_btys in H0; tea.
-  eapply All2_All_mix_right; tas.
+  eapply type_Case_valid_btys in X; tea.
+  eapply All2_All_mix_right; tea.
 Qed.
 
 

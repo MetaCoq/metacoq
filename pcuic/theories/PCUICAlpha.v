@@ -82,34 +82,33 @@ Section Alpha.
           -- apply All2_same. intro. apply eq_term_upto_univ_refl ; auto.
   Qed.
 
-  Lemma types_of_case_eq_term :
-    forall ind mdecl idecl npar args u p p' pty indctx pctx ps btys,
-      types_of_case ind mdecl idecl (firstn npar args) u p pty =
-      Some (indctx, pctx, ps, btys) ->
-      eq_term_upto_univ eq eq p p' ->
-      ∑ btys',
-        types_of_case ind mdecl idecl (firstn npar args) u p' pty =
-        Some (indctx, pctx, ps, btys') ×
-        All2 (on_Trel_eq (eq_term_upto_univ eq eq) snd fst) btys btys'.
-  Proof.
-    intros ind mdecl idecl npar args u p p' pty indctx pctx ps btys htc e.
-    unfold types_of_case in *.
-    case_eq (instantiate_params (subst_instance_context u (ind_params mdecl)) (firstn npar args) (subst_instance_constr u (ind_type idecl))) ;
-      try solve [ intro bot ; rewrite bot in htc ; discriminate htc ].
-    intros ity eity. rewrite eity in htc.
-    case_eq (destArity [] ity) ;
-      try solve [ intro bot ; rewrite bot in htc ; discriminate htc ].
-    intros [args0 ?] ear. rewrite ear in htc.
-    case_eq (destArity [] pty) ;
-      try solve [ intro bot ; rewrite bot in htc ; discriminate htc ].
-    intros [args' s'] ear'. rewrite ear' in htc.
-    case_eq (map_option_out (build_branches_type ind mdecl idecl (firstn npar args) u p)) ;
-      try solve [ intro bot ; rewrite bot in htc ; discriminate htc ].
-    intros brtys ebrtys. rewrite ebrtys in htc.
-    eapply build_branches_type_eq_term in ebrtys as [brtys' [ebrtys' he]] ; eauto.
-    inversion htc. subst. clear htc.
-    rewrite ebrtys'. intuition eauto.
-  Qed.
+  (* Lemma types_of_case_eq_term : *)
+  (*   forall ind mdecl idecl npar args u p p' pty indctx pctx ps btys, *)
+  (*     build_case_predicate_type ind mdecl idecl params u ps = Some pty -> *)
+  (*     eq_term_upto_univ eq eq p p' -> *)
+  (*     ∑ btys', *)
+  (*       types_of_case ind mdecl idecl (firstn npar args) u p' pty = *)
+  (*       Some (indctx, pctx, ps, btys') × *)
+  (*       All2 (on_Trel_eq (eq_term_upto_univ eq eq) snd fst) btys btys'. *)
+  (* Proof. *)
+  (*   intros ind mdecl idecl npar args u p p' pty indctx pctx ps btys htc e. *)
+  (*   unfold types_of_case in *. *)
+  (*   case_eq (instantiate_params (subst_instance_context u (ind_params mdecl)) (firstn npar args) (subst_instance_constr u (ind_type idecl))) ; *)
+  (*     try solve [ intro bot ; rewrite bot in htc ; discriminate htc ]. *)
+  (*   intros ity eity. rewrite eity in htc. *)
+  (*   case_eq (destArity [] ity) ; *)
+  (*     try solve [ intro bot ; rewrite bot in htc ; discriminate htc ]. *)
+  (*   intros [args0 ?] ear. rewrite ear in htc. *)
+  (*   case_eq (destArity [] pty) ; *)
+  (*     try solve [ intro bot ; rewrite bot in htc ; discriminate htc ]. *)
+  (*   intros [args' s'] ear'. rewrite ear' in htc. *)
+  (*   case_eq (map_option_out (build_branches_type ind mdecl idecl (firstn npar args) u p)) ; *)
+  (*     try solve [ intro bot ; rewrite bot in htc ; discriminate htc ]. *)
+  (*   intros brtys ebrtys. rewrite ebrtys in htc. *)
+  (*   eapply build_branches_type_eq_term in ebrtys as [brtys' [ebrtys' he]] ; eauto. *)
+  (*   inversion htc. subst. clear htc. *)
+  (*   rewrite ebrtys'. intuition eauto. *)
+  (* Qed. *)
 
   (* TODO MOVE *)
   Lemma wf_local_nth_error_vass :
@@ -181,6 +180,17 @@ Section Alpha.
     - reflexivity.
     - f_equal. all: auto.
   Qed.
+
+Lemma All2_trans' {A B C}
+      (P : A -> B -> Type) (Q : B -> C -> Type) (R : A -> C -> Type)
+      (H : forall x y z, P x y × Q y z -> R x z) {l1 l2 l3}
+  : All2 P l1 l2 -> All2 Q l2 l3 -> All2 R l1 l3.
+Proof.
+  induction 1 in l3 |- *.
+  - inversion 1; constructor.
+  - inversion 1; subst. constructor; eauto.
+Qed.
+
 
   Lemma typing_alpha :
     forall Σ Γ u v A,
@@ -307,45 +317,36 @@ Section Alpha.
       { intros x y h. inversion h. reflexivity. }
       subst.
       econstructor ; eauto.
-    - intros ind u npar p c brs args mdecl idecl isdecl X X0 H pars pty X1
-             indctx pctx ps btys htc H1 H2 ihp hc ihc ihbrs v e.
+    - intros ind u npar p c brs args mdecl idecl isdecl X X0 H pars ps pty
+             Hcpt X1 X2 H1 X3 X4 btys Hbbt Hbrs v e.
+      (* intros ind u npar p c brs args mdecl idecl isdecl X X0 H pars pty X1 *)
+      (*        indctx pctx ps btys htc H1 H2 ihp hc ihc ihbrs v e. *)
       dependent destruction e.
-      eapply types_of_case_eq_term in htc as htc' ; eauto.
-      destruct htc' as [btys' [ebtys' he]].
+      (* eapply types_of_case_eq_term in htc as htc' ; eauto. *)
+      (* destruct htc' as [btys' [ebtys' he]]. *)
       econstructor.
-      + econstructor. all: try eassumption.
-        * eapply ihp. assumption.
-        * eapply ihc. assumption.
-        * assert (All2 (fun x y => (fst x = fst y × Σ ;;; Γ |- snd x : snd y) × (Σ ;;; Γ |- y.2 : tSort ps)) brs' btys)
-            as hty.
-          { clear - ihbrs a.
-            induction ihbrs in brs', a |- *.
-            - dependent destruction a. constructor.
-            - dependent destruction a.
-              constructor. all: auto.
-              destruct p, r as [[[? ?] ?] ?]. intuition eauto.
-              transitivity (fst x) ; eauto.
-          }
-          clear - he hty ihbrs.
-          induction hty in brs, ihbrs, btys', he |- *.
-          -- dependent destruction he. constructor.
-          -- dependent destruction he.
-             dependent destruction ihbrs.
-             destruct r. destruct p1.
-             destruct p.
-             destruct p0 as [[[? ?] ?] ihy].
-             constructor ; eauto. intuition eauto.
-             ++ solve [ etransitivity ; eauto ].
-             ++ econstructor.
-                ** eassumption.
-                ** right. eexists. eapply ihy. assumption.
-                ** constructor.
-                   eapply eq_term_leq_term.
-                   eapply upto_names_impl_eq_term. assumption.
+      + eapply build_branches_type_eq_term in Hbbt; tea.
+        destruct Hbbt as [btys' [Hbbt1 Hbbt2]].
+        econstructor; tea; eauto.
+        unshelve eapply All2_trans'; [..|eassumption].
+        * exact (fun br bty : nat × term =>
+                   (((br.1 = bty.1 × Σ;;; Γ |- br.2 : bty.2)
+                       × (forall v : term, upto_names' br.2 v -> Σ;;; Γ |- v : bty.2))
+                      × Σ;;; Γ |- bty.2 : tSort ps)
+                     × (forall v : term, upto_names' bty.2 v -> Σ;;; Γ |- v : tSort ps)).
+        * clear. intros x y z X; rdestruct; cbn in *.
+          congruence. 2: eauto. econstructor; tea. 
+          right. exists ps. eauto. constructor.
+          now eapply upto_names_impl_leq_term.
+        * eapply All2_trans'; [..|eassumption].
+          2: apply All2_sym; tea.
+          clear. intros x y z X; rdestruct; cbn in *; eauto. congruence.
+          intros v H. unshelve eapply (upto_names_trans _ _ _ _) in H; tea.
+          eauto.
       + eapply validity_term ; eauto.
         instantiate (1 := tCase (ind, npar) p c brs).
         econstructor ; eauto.
-        apply All2_prod_inv in ihbrs as [a1 a4].
+        apply All2_prod_inv in Hbrs as [a1 a4].
         apply All2_prod_inv in a1 as [a1 a3].
         apply All2_prod_inv in a1 as [a1 a2].
         apply All2_prod. all: assumption.

@@ -3,12 +3,13 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia ssreflect.
 From Coq Require Import String Wf Wellfounded Relation_Definitions Relation_Operators Lexicographic_Product Wf_nat.
 
-From MetaCoq.Template Require Import config utils Ast AstUtils Induction LiftSubst UnivSubst EnvironmentTyping.
+From MetaCoq.Template Require Import config utils monad_utils Ast AstUtils Induction LiftSubst UnivSubst EnvironmentTyping.
 From MetaCoq.Checker Require Import LibHypsNaming Reflect.
 
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 Require Import ssreflect.
+Import MonadNotation.
 
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -59,6 +60,9 @@ Proof.
   - rewrite IHtl app_length. simpl. lia.
 Qed.
 
+Module TemplateLookup := Lookup TemplateTerm TemplateEnvironment.
+Include TemplateLookup.
+
 (** Inductive substitution, to produce a constructors' type *)
 Definition inds ind u (l : list one_inductive_body) :=
   let fix aux n :=
@@ -98,7 +102,13 @@ Definition fix_subst (l : mfixpoint term) :=
 
 Definition unfold_fix (mfix : mfixpoint term) (idx : nat) :=
   match List.nth_error mfix idx with
-  | Some d => Some (d.(rarg), subst0 (fix_subst mfix) d.(dbody))
+  | Some d =>
+    if isLambda d.(dbody) then
+      Some (d.(rarg), subst0 (fix_subst mfix) d.(dbody))
+    else None (* We don't unfold ill-formed fixpoints, which would
+                 render confluence unprovable, creating an infinite
+                 number of critical pairs between unfoldings of fixpoints.
+                 e.g. [fix f := f] is not allowed. *)
   | None => None
   end.
 
@@ -114,12 +124,6 @@ Definition unfold_cofix (mfix : mfixpoint term) (idx : nat) :=
   match List.nth_error mfix idx with
   | Some d => Some (d.(rarg), subst0 (cofix_subst mfix) d.(dbody))
   | None => None
-  end.
-
-Definition isConstruct_app t :=
-  match fst (decompose_app t) with
-  | tConstruct _ _ _ => true
-  | _ => false
   end.
 
 Definition is_constructor n ts :=
@@ -151,8 +155,6 @@ Definition tDummy := tVar "".
 Definition iota_red npar c args brs :=
   (mkApps (snd (List.nth c brs (0, tDummy))) (List.skipn npar args)).
 
-Module TemplateLookup := Lookup TemplateTerm TemplateEnvironment.
-Include TemplateLookup.
 
 (** *** One step strong beta-zeta-iota-fix-delta reduction
 
@@ -422,6 +424,7 @@ Proof.
       constructor; try split; auto; intuition.
 Defined.
 
+
 (** *** Reduction
 
   The reflexive-transitive closure of 1-step reduction. *)
@@ -574,115 +577,6 @@ Fixpoint destArity Γ (t : term) :=
   | _ => None
   end.
 
-(** Compute the type of a case from the predicate [p], actual parameters [pars] and
-    an inductive declaration. *)
-
-Fixpoint instantiate_params_subst params pars s ty :=
-  match params with
-  | [] => match pars with
-          | [] => Some (s, ty)
-          | _ :: _ => None (* Too many arguments to substitute *)
-          end
-  | d :: params =>
-    match d.(decl_body), ty with
-    | None, tProd _ _ B =>
-      match pars with
-      | hd :: tl => instantiate_params_subst params tl (hd :: s) B
-      | [] => None (* Not enough arguments to substitute *)
-      end
-    | Some b, tLetIn _ _ _ b' => instantiate_params_subst params pars (subst0 s b :: s) b'
-    | _, _ => None (* Not enough products in the type *)
-    end
-  end.
-
-
-Definition instantiate_params params pars ty :=
-  match instantiate_params_subst (List.rev params) pars [] ty with
-  | Some (s, ty) => Some (subst0 s ty)
-  | None => None
-  end.
-
-Lemma instantiate_params_ params pars ty :
-  instantiate_params params pars ty
-  = option_map (fun '(s, ty) => subst0 s ty)
-               (instantiate_params_subst (List.rev params) pars [] ty).
-Proof.
-  unfold instantiate_params.
-  repeat (destruct ?; cbnr).
-Qed.
-
-(* [params], [p] and output are already instanciated by [u] *)
-Definition build_branches_type ind mdecl idecl params u p :=
-  let inds := inds (inductive_mind ind) u mdecl.(ind_bodies) in
-  let branch_type i '(id, t, ar) :=
-    let ty := subst0 inds (subst_instance_constr u t) in
-    match instantiate_params (subst_instance_context u mdecl.(ind_params)) params ty with
-    | Some ty =>
-      let '(sign, ccl) := decompose_prod_assum [] ty in
-      let nargs := List.length sign in
-      let allargs := snd (decompose_app ccl) in
-      let '(paramrels, args) := chop mdecl.(ind_npars) allargs in
-      let cstr := tConstruct ind i u in
-      let args := (args ++ [mkApps cstr (paramrels ++ to_extended_list sign)])%list in
-      Some (ar, it_mkProd_or_LetIn sign (mkApps (lift0 nargs p) args))
-    | None => None
-    end
-  in mapi branch_type idecl.(ind_ctors).
-
-Lemma build_branches_type_ ind mdecl idecl params u p :
-  build_branches_type ind mdecl idecl params u p
-  = let inds := inds (inductive_mind ind) u mdecl.(ind_bodies) in
-    let branch_type i '(id, t, ar) :=
-        let ty := subst0 inds (subst_instance_constr u t) in
-        option_map (fun ty =>
-         let '(sign, ccl) := decompose_prod_assum [] ty in
-         let nargs := List.length sign in
-         let allargs := snd (decompose_app ccl) in
-         let '(paramrels, args) := chop mdecl.(ind_npars) allargs in
-         let cstr := tConstruct ind i u in
-         let args := (args ++ [mkApps cstr (paramrels ++ to_extended_list sign)])%list in
-         (ar, it_mkProd_or_LetIn sign (mkApps (lift0 nargs p) args)))
-                  (instantiate_params (subst_instance_context u mdecl.(ind_params))
-                                      params ty)
-    in mapi branch_type idecl.(ind_ctors).
-Proof.
-  apply mapi_ext. intros ? [[? ?] ?]; cbnr.
-  repeat (destruct ?; cbnr).
-Qed.
-
-(* [params], [p], [pty] and output already instanciated by [u] *)
-Definition types_of_case ind mdecl idecl params u p pty :=
-  let brtys := build_branches_type ind mdecl idecl params u p in
-  match instantiate_params (subst_instance_context u mdecl.(ind_params)) params (subst_instance_constr u idecl.(ind_type)) with
-  | Some ity =>
-    match
-      destArity [] ity,
-      destArity [] pty,
-      map_option_out brtys
-    with
-    | Some (args, s), Some (args', s'), Some brtys =>
-      Some (args, args', s', brtys)
-    | _, _, _ => None
-    end
-  | None => None
-  end.
-
-Lemma types_of_case_spec ind mdecl idecl pars u p pty indctx pctx ps btys :
-  types_of_case ind mdecl idecl pars u p pty
-  = Some (indctx, pctx, ps, btys)
-  <~> ∑ s', option_map (destArity [])
-                     (instantiate_params (subst_instance_context u (ind_params mdecl)) pars (subst_instance_constr u (ind_type idecl)))
-          = Some (Some (indctx, s'))
-          /\ destArity [] pty = Some (pctx, ps)
-          /\ map_option_out (build_branches_type ind mdecl idecl pars u p)
-            = Some btys.
-Proof.
-  unfold types_of_case.
-  repeat (destruct ?; cbn).
-  all: split; [try discriminate; inversion 1; subst; eexists; repeat split|].
-  all: intros [s' [HH1 [HH2 HH3]]]; inversion HH1; inversion HH2; now inversion HH3.
-Qed.
-
 
 Reserved Notation " Σ ;;; Γ |- t : T " (at level 50, Γ, t, T at next level).
 Reserved Notation " Σ ;;; Γ |- t <= u " (at level 50, Γ, t, u at next level).
@@ -739,13 +633,6 @@ Definition eq_decl `{checker_flags} φ (d d' : context_decl) :=
 Definition eq_context `{checker_flags} φ (Γ Δ : context) :=
   All2 (eq_decl φ) Γ Δ.
 
-Definition check_correct_arity `{checker_flags} φ decl ind u ctx pars pctx :=
-  let inddecl :=
-      {| decl_name := nNamed decl.(ind_name);
-         decl_body := None;
-         decl_type := mkApps (tInd ind u) (map (lift0 #|ctx|) pars ++ to_extended_list ctx) |}
-  in eq_context φ (inddecl :: ctx) pctx.
-
 (** ** Typing relation *)
 
 Module TemplateEnvTyping := EnvTyping TemplateTerm TemplateEnvironment.
@@ -798,6 +685,96 @@ Extract Constant fix_guard_subst => "fun m s k -> assert false".
 
 Extract Constant ind_guard => "fun m -> assert false".
 
+
+(** Compute the type of a case from the predicate [p], actual parameters [pars] and
+    an inductive declaration. *)
+
+Fixpoint instantiate_params_subst params pars s ty :=
+  match params with
+  | [] => match pars with
+          | [] => Some (s, ty)
+          | _ :: _ => None (* Too many arguments to substitute *)
+          end
+  | d :: params =>
+    match d.(decl_body), ty with
+    | None, tProd _ _ B =>
+      match pars with
+      | hd :: tl => instantiate_params_subst params tl (hd :: s) B
+      | [] => None (* Not enough arguments to substitute *)
+      end
+    | Some b, tLetIn _ _ _ b' => instantiate_params_subst params pars (subst0 s b :: s) b'
+    | _, _ => None (* Not enough products in the type *)
+    end
+  end.
+
+(* If [ty] is [Π params . B] *)
+(* and [⊢ pars : params] *)
+(* then [instantiate_params] is [B{pars}] *)
+
+Definition instantiate_params (params : context) (pars : list term) (ty : term) : option term :=
+  match instantiate_params_subst (List.rev params) pars [] ty with
+  | Some (s, ty) => Some (subst0 s ty)
+  | None => None
+  end.
+
+Lemma instantiate_params_ params pars ty :
+  instantiate_params params pars ty
+  = option_map (fun '(s, ty) => subst0 s ty)
+               (instantiate_params_subst (List.rev params) pars [] ty).
+Proof.
+  unfold instantiate_params.
+  repeat (destruct ?; cbnr).
+Qed.
+
+(* [params], [p] and output are already instanciated by [u] *)
+Definition build_branches_type ind mdecl idecl params u p : list (option (nat × term)) :=
+  let inds := inds ind.(inductive_mind) u mdecl.(ind_bodies) in
+  let branch_type i '(id, t, ar) :=
+    let ty := subst0 inds (subst_instance_constr u t) in
+    match instantiate_params (subst_instance_context u mdecl.(ind_params)) params ty with
+    | Some ty =>
+      let '(sign, ccl) := decompose_prod_assum [] ty in
+      let nargs := List.length sign in
+      let allargs := snd (decompose_app ccl) in
+      let '(paramrels, args) := chop mdecl.(ind_npars) allargs in
+      let cstr := tConstruct ind i u in
+      let args := (args ++ [mkApps cstr (paramrels ++ to_extended_list sign)])%list in
+      Some (ar, it_mkProd_or_LetIn sign (mkApps (lift0 nargs p) args))
+    | None => None
+    end
+  in mapi branch_type idecl.(ind_ctors).
+
+Lemma build_branches_type_ ind mdecl idecl params u p :
+  build_branches_type ind mdecl idecl params u p
+  = let inds := inds ind.(inductive_mind) u mdecl.(ind_bodies) in
+    let branch_type i '(id, t, ar) :=
+        let ty := subst0 inds (subst_instance_constr u t) in
+        option_map (fun ty =>
+         let '(sign, ccl) := decompose_prod_assum [] ty in
+         let nargs := List.length sign in
+         let allargs := snd (decompose_app ccl) in
+         let '(paramrels, args) := chop mdecl.(ind_npars) allargs in
+         let cstr := tConstruct ind i u in
+         let args := (args ++ [mkApps cstr (paramrels ++ to_extended_list sign)])%list in
+         (ar, it_mkProd_or_LetIn sign (mkApps (lift0 nargs p) args)))
+                  (instantiate_params (subst_instance_context u mdecl.(ind_params))
+                                      params ty)
+    in mapi branch_type idecl.(ind_ctors).
+Proof.
+  apply mapi_ext. intros ? [[? ?] ?]; cbnr.
+  repeat (destruct ?; cbnr).
+Qed.
+
+(* [params] and output already instanciated by [u] *)
+Definition build_case_predicate_type ind mdecl idecl params u ps : option term :=
+  X <- instantiate_params (subst_instance_context u (ind_params mdecl)) params
+                         (subst_instance_constr u (ind_type idecl)) ;;
+  X <- destArity [] X ;;
+  let inddecl :=
+      {| decl_name := nNamed idecl.(ind_name);
+         decl_body := None;
+         decl_type := mkApps (tInd ind u) (map (lift0 #|X.1|) params ++ to_extended_list X.1) |} in
+  ret (it_mkProd_or_LetIn (X.1 ,, inddecl) (tSort ps)).
 
 Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
 | type_Rel n decl :
@@ -855,17 +832,19 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     consistent_instance_ext Σ mdecl.(ind_universes) u ->
     Σ ;;; Γ |- (tConstruct ind i u) : type_of_constructor mdecl cdecl (ind, i) u
 
-| type_Case ind u npar p c brs args :
+| type_Case indnpar u p c brs args :
+    let ind := indnpar.1 in
+    let npar := indnpar.2 in
     forall mdecl idecl (isdecl : declared_inductive Σ.1 mdecl ind idecl),
     mdecl.(ind_npars) = npar ->
-    let pars := List.firstn npar args in
-    forall pty, Σ ;;; Γ |- p : pty ->
-    forall indctx pctx ps btys, types_of_case ind mdecl idecl pars u p pty = Some (indctx, pctx, ps, btys) ->
-    check_correct_arity (global_ext_constraints Σ) idecl ind u indctx pars pctx ->
+    let params := List.firstn npar args in
+    forall ps pty, build_case_predicate_type ind mdecl idecl params u ps = Some pty ->
+    Σ ;;; Γ |- p : pty ->
     existsb (leb_sort_family (universe_family ps)) idecl.(ind_kelim) ->
     Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
-    All2 (fun x y => (fst x = fst y) * (Σ ;;; Γ |- snd x : snd y) * (Σ ;;; Γ |- snd y : tSort ps)) brs btys ->
-    Σ ;;; Γ |- tCase (ind, npar) p c brs : mkApps p (List.skipn npar args ++ [c])
+    forall btys, map_option_out (build_branches_type ind mdecl idecl params u p) = Some btys ->
+    All2 (fun br bty => (br.1 = bty.1) * (Σ ;;; Γ |- br.2 : bty.2) * (Σ ;;; Γ |- bty.2 : tSort ps)) brs btys ->
+    Σ ;;; Γ |- tCase indnpar p c brs : mkApps p (skipn npar args ++ [c])
 
 | type_Proj p c u :
     forall mdecl idecl pdecl (isdecl : declared_projection Σ.1 mdecl idecl p pdecl) args,
@@ -919,6 +898,7 @@ Definition has_nparams npars ty :=
 Definition unlift_opt_pred (P : global_env_ext -> context -> option term -> term -> Type) :
   (global_env_ext -> context -> term -> term -> Type) :=
   fun Σ Γ t T => P Σ Γ (Some t) T.
+
 
 Module TemplateTyping <: Typing TemplateTerm TemplateEnvironment TemplateEnvTyping.
 
@@ -1070,11 +1050,12 @@ Lemma typing_wf_local_size `{checker_flags} {Σ} {Γ t T}
   wf_local_size Σ (@typing_size _) _ (typing_wf_local d) < typing_size d.
 Proof.
   induction d; simpl; try lia.
-  pose proof (size_wf_local_app _ _ a).
-  eapply Nat.le_lt_trans. eauto. subst types. lia.
-  pose proof (size_wf_local_app _ _ a).
-  eapply Nat.le_lt_trans. eauto. subst types. lia.
-  destruct s as [s | [u Hu]]; try lia.
+  - destruct indnpar as [ind' npar']; cbn in *; subst ind npar. lia.
+  - pose proof (size_wf_local_app _ _ a).
+    eapply Nat.le_lt_trans. eauto. subst types. lia.
+  - pose proof (size_wf_local_app _ _ a).
+    eapply Nat.le_lt_trans. eauto. subst types. lia.
+  - destruct s as [s | [u Hu]]; try lia.
 Qed.
 
 Lemma wf_local_inv `{checker_flags} {Σ Γ'} (w : wf_local Σ Γ') :
@@ -1203,28 +1184,24 @@ Lemma typing_ind_env `{cf : checker_flags} :
         P Σ Γ (tConstruct ind i u) (type_of_constructor mdecl cdecl (ind, i) u)) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (ind : inductive) u (npar : nat)
-        (p c : term) (brs : list (nat * term))
-        (args : list term) (mdecl : mutual_inductive_body) (idecl : one_inductive_body)
-        (isdecl : declared_inductive (fst Σ) mdecl ind idecl),
-          Forall_decls_typing P Σ.1 -> All_local_env_over typing Pdecl Σ Γ wfΓ ->
-          ind_npars mdecl = npar ->
-          let pars := firstn npar args in
-          forall (pty : term), Σ ;;; Γ |- p : pty ->
-          forall indctx pctx ps btys,
-          types_of_case ind mdecl idecl pars u p pty = Some (indctx, pctx, ps, btys) ->
-          check_correct_arity (global_ext_constraints Σ) idecl ind u indctx pars pctx ->
-          existsb (leb_sort_family (universe_family ps)) (ind_kelim idecl) ->
-          P Σ Γ p pty ->
-          Σ;;; Γ |- c : mkApps (tInd ind u) args ->
-          P Σ Γ c (mkApps (tInd ind u) args) ->
-          All2 (fun x y : nat * term =>
-                  (fst x = fst y) *
-                  (Σ;;; Γ |- snd x : snd y) *
-                  P Σ Γ (snd x) (snd y) *
-                  (Σ ;;; Γ |- snd y : tSort ps) *
-                  P Σ Γ (snd y) (tSort ps)
-          )%type brs btys ->
-          P Σ Γ (tCase (ind, npar) p c brs) (mkApps p (skipn npar args ++ [c]))) ->
+            (p c : term) (brs : list (nat * term))
+            (args : list term) (mdecl : mutual_inductive_body) (idecl : one_inductive_body)
+            (isdecl : declared_inductive (fst Σ) mdecl ind idecl),
+        Forall_decls_typing P Σ.1 -> All_local_env_over typing Pdecl Σ Γ wfΓ ->
+        ind_npars mdecl = npar ->
+        let params := firstn npar args in
+        forall ps pty, build_case_predicate_type ind mdecl idecl params u ps = Some pty ->
+        Σ ;;; Γ |- p : pty ->
+        P Σ Γ p pty ->
+        existsb (leb_sort_family (universe_family ps)) idecl.(ind_kelim) ->
+        Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
+        P Σ Γ c (mkApps (tInd ind u) args) ->
+        forall btys, map_option_out (build_branches_type ind mdecl idecl params u p) = Some btys ->
+        All2 (fun br bty => (br.1 = bty.1) *
+                         (Σ ;;; Γ |- br.2 : bty.2) * P Σ Γ br.2 bty.2 *
+                         (Σ ;;; Γ |- bty.2 : tSort ps) * P Σ Γ bty.2 (tSort ps))
+             brs btys ->
+        P Σ Γ (tCase (ind, npar) p c brs) (mkApps p (skipn npar args ++ [c]))) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : projection) (c : term) u
           mdecl idecl pdecl (isdecl : declared_projection Σ.1 mdecl idecl p pdecl) args,
@@ -1458,7 +1435,9 @@ Proof.
        specialize (X14 [] localenv_nil _ _ (type_Prop _)).
        simpl in X14. forward X14; auto. lia. apply X14.
 
-    -- eapply X8; eauto.
+    -- destruct indnpar as [ind' npar'];
+         cbn in ind; cbn in npar; subst ind; subst npar.
+       eapply X8; eauto.
        ++ eapply (X14 _ wfΓ _ _ H); eauto. simpl; auto with arith.
        ++ eapply (X14 _ wfΓ _ _ H); eauto. simpl; auto with arith.
        ++ simpl in *.

@@ -8,13 +8,15 @@ Require Import ssreflect ssrbool.
 Require Import Equations.Prop.DepElim.
 Require Import ssreflect.
 
+(** * Lemmas about the [closedn] predicate *)
+
 Definition closed_decl n d :=
   option_default (closedn n) d.(decl_body) true && closedn n d.(decl_type).
 
-Definition closed_ctx ctx :=
-  forallb id (mapi (fun k d => closed_decl k d) (List.rev ctx)).
+Definition closedn_ctx n ctx :=
+  forallb id (mapi (fun k d => closed_decl (n + k) d) (List.rev ctx)).
 
-(** * Lemmas about the [closedn] predicate *)
+Notation closed_ctx ctx := (closedn_ctx 0 ctx).
 
 Lemma closedn_lift n k k' t : closedn k t -> closedn (k + n) (lift n k' t).
 Proof.
@@ -154,7 +156,6 @@ Proof.
     do 3 (f_equal; intuition eauto).
 Qed.
 
-Require Import ssreflect.
 
 
 Lemma destArity_spec ctx T :
@@ -168,8 +169,21 @@ Proof.
   specialize (IHT3 (ctx,, vdef na T1 T2)). now destruct destArity.
 Qed.
 
-Definition closedn_ctx n ctx :=
-  forallb id (mapi (fun k d => closed_decl (n + k) d) (List.rev ctx)).
+Lemma closedn_All_local_closed:
+  forall (cf : checker_flags) (Σ : global_env_ext) (ctx : list context_decl)
+         (wfΓ' : wf_local Σ ctx),
+    All_local_env_over typing
+    (fun (Σ0 : global_env_ext) (Γ0 : context) (_ : wf_local Σ0 Γ0) (t T : term) (_ : Σ0;;; Γ0 |- t : T) =>
+       closedn #|Γ0| t && closedn #|Γ0| T) Σ ctx wfΓ' ->
+    closedn_ctx 0 ctx.
+Proof.
+  intros cf Σ Γ al.
+  induction 1. constructor.
+  rewrite /closedn_ctx /= mapi_app forallb_app /= [forallb _ _]IHX /id /closed_decl /=.
+  now rewrite Nat.add_0_r List.rev_length p.
+  rewrite /closedn_ctx /= mapi_app forallb_app /= [forallb _ _]IHX /id /closed_decl /=.
+  now rewrite Nat.add_0_r List.rev_length p.
+Qed.
 
 Lemma closedn_ctx_cons n d Γ : closedn_ctx n (d :: Γ) -> closedn_ctx n Γ && closed_decl (n + #|Γ|) d.
 Proof.
@@ -187,22 +201,6 @@ Proof.
   rewrite List.rev_length.
   f_equal. eapply mapi_ext. intros.
   f_equal. lia.
-Qed.
-
-Lemma closedn_All_local_closed:
-  forall (cf : checker_flags) (Σ : global_env_ext) (ctx : list context_decl)
-         (wfΓ' : wf_local Σ ctx),
-    All_local_env_over typing
-    (fun (Σ0 : global_env_ext) (Γ0 : context) (_ : wf_local Σ0 Γ0) (t T : term) (_ : Σ0;;; Γ0 |- t : T) =>
-       closedn #|Γ0| t && closedn #|Γ0| T) Σ ctx wfΓ' ->
-    closedn_ctx 0 ctx.
-Proof.
-  intros cf Σ Γ al.
-  induction 1. constructor.
-  rewrite /closedn_ctx /= mapi_app forallb_app /= [forallb _ _]IHX /id /closed_decl /=.
-  now rewrite Nat.add_0_r List.rev_length p.
-  rewrite /closedn_ctx /= mapi_app forallb_app /= [forallb _ _]IHX /id /closed_decl /=.
-  now rewrite Nat.add_0_r List.rev_length p.
 Qed.
 
 Lemma closedn_mkProd_or_LetIn (Γ : context) d T :
@@ -296,7 +294,6 @@ Proof.
     rewrite -> andb_and in Hs. intuition.
     eauto using closed_upwards with arith.
 
-
   - rewrite closedn_subst_instance_constr.
     eapply declared_inductive_inv in X0; eauto.
     apply onArity in X0. repeat red in X0.
@@ -322,7 +319,7 @@ Proof.
   - intuition auto. solve_all. unfold test_snd. simpl in *.
     toProp; eauto.
     apply closedn_mkApps; auto.
-    rewrite forallb_app. simpl. rewrite H3.
+    rewrite forallb_app. simpl. rewrite H1.
     rewrite forallb_skipn; auto.
     now apply closedn_mkApps_inv in H7.
 
@@ -426,6 +423,7 @@ Proof.
        intros. now apply X.
 Qed.
 
+
 Lemma declared_decl_closed `{checker_flags} (Σ : global_env) cst decl :
   wf Σ ->
   lookup_env Σ cst = Some decl ->
@@ -440,13 +438,13 @@ Proof.
   destruct X1 as [s0 Hs0]. simpl. toProp; intuition.
 Qed.
 
-Require Import ssreflect ssrbool.
 Lemma closed_decl_upwards k d : closed_decl k d -> forall k', k <= k' -> closed_decl k' d.
 Proof.
   case: d => na [body|] ty; rewrite /closed_decl /=.
   move/andP => [cb cty] k' lek'. do 2 rewrite (@closed_upwards k) //.
   move=> cty k' lek'; rewrite (@closed_upwards k) //.
 Qed.
+
 
 Lemma rev_subst_instance_context u Γ :
   List.rev (subst_instance_context u Γ) = subst_instance_context u (List.rev Γ).

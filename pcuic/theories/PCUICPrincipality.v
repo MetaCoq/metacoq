@@ -788,9 +788,9 @@ Section Principality.
       specialize (IHu1 _ _ _ t t1). clear t t1.
       specialize (IHu2 _ _ _ t0 t2). clear t0 t2.
       repeat outsum. repeat outtimes.
-      eapply invert_cumul_ind_r in c3 as [u' [x0' [redr [redu ?]]]].
-      eapply invert_cumul_ind_r in c4 as [u'' [x9' [redr' [redu' ?]]]].
-      assert (All2 (fun a a' => Σ ;;; Γ |- a == a') x0 x9).
+      eapply invert_cumul_ind_r in c1 as [u' [x0' [redr [redu ?]]]].
+      eapply invert_cumul_ind_r in c2 as [u'' [x9' [redr' [redu' ?]]]].
+      assert (All2 (fun a a' => Σ ;;; Γ |- a == a') x0 x7).
       { destruct (red_confluence wfΣ redr redr').
         destruct p.
         eapply red_mkApps_tInd in r as [args' [? ?]]; auto.
@@ -808,21 +808,22 @@ Section Principality.
         intros ? ? ?. eapply conv_alt_sym. assumption. auto.
       }
       clear redr redr' a1 a2.
-      exists (mkApps u1 (skipn (ind_npars x10) x9 ++ [u2])); repeat split; auto.
+      exists (mkApps u1 (skipn (ind_npars x8) x7 ++ [u2])); repeat split; auto.
 
-      2:{ revert e2.
-          rewrite /types_of_case.
-          destruct instantiate_params eqn:Heq => //.
-          destruct (destArity [] t1) as [[args s']|] eqn:eqar => //.
-          destruct (destArity [] x12) as [[args' s'']|] eqn:eqx12 => //.
-          destruct (destArity [] x2) as [[ctxx2 sx2]|] eqn:eqx2 => //.
-          destruct map_option_out eqn:eqbrs => //.
-          intros [=]. subst.
-          eapply (type_Case _ _ _ x8). eauto. repeat split; eauto. auto.
-          eapply t0. rewrite /types_of_case.
-          rewrite Heq eqar eqx2 eqbrs. reflexivity.
-          admit. admit. eapply type_Cumul. eauto.
-          all:admit. }
+      (* 2:{ revert e2. *)
+      (*     rewrite /types_of_case. *)
+      (*     destruct instantiate_params eqn:Heq => //. *)
+      (*     destruct (destArity [] t1) as [[args s']|] eqn:eqar => //. *)
+      (*     destruct (destArity [] x12) as [[args' s'']|] eqn:eqx12 => //. *)
+      (*     destruct (destArity [] x2) as [[ctxx2 sx2]|] eqn:eqx2 => //. *)
+      (*     destruct map_option_out eqn:eqbrs => //. *)
+      (*     intros [=]. subst. *)
+      (*     eapply (type_Case _ _ _ x8). eauto. repeat split; eauto. auto. *)
+      (*     eapply t0. rewrite /types_of_case. *)
+      (*     rewrite Heq eqar eqx2 eqbrs. reflexivity. *)
+      (*     admit. admit. eapply type_Cumul. eauto. *)
+      (*     all:admit. } *)
+      admit.
 
       admit.
 

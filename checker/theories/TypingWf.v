@@ -104,8 +104,10 @@ Proof.
   unfold unfold_fix in Hf. inv Hwf.
   destruct nth_error eqn:eqnth; try congruence.
   pose proof (nth_error_forall eqnth H). simpl in H0.
+  destruct H0 as [ _ [ wfd islamd ] ].
+  rewrite islamd in Hf.
   injection Hf. intros <- <-.
-  destruct H0 as [ _ [ wfd islamd ] ]. apply (isLambda_subst (fix_subst mfix) 0) in islamd.
+  apply (isLambda_subst (fix_subst mfix) 0) in islamd.
   apply isLambda_isApp in islamd. split; try congruence.
   apply wf_subst; auto. clear wfd islamd Hf eqnth.
   assert(forall n, Ast.wf (tFix mfix n)). constructor; auto.

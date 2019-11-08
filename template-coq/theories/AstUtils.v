@@ -763,3 +763,10 @@ Coercion fst_ctx : global_env_ext >-> global_env.
 
 Definition empty_ext (Σ : global_env) : global_env_ext
   := (Σ, Monomorphic_ctx ContextSet.empty).
+
+
+Definition isConstruct_app t :=
+  match fst (decompose_app t) with
+  | tConstruct _ _ _ => true
+  | _ => false
+  end.

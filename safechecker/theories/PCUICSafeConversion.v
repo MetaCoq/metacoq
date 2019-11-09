@@ -1690,6 +1690,24 @@ Section Conversion.
       constructor. assumption.
   Qed.
 
+  (* TODO MOVE *)
+  Lemma OnOne2_split :
+    forall A (P : A -> A -> Type) l l',
+      OnOne2 P l l' ->
+      ∑ x y u v,
+        P x y ×
+        l = u ++ x :: v ×
+        l' = u ++ y :: v.
+  Proof.
+    intros A P l l' h.
+    induction h.
+    - exists hd, hd', [], tl.
+      intuition eauto.
+    - destruct IHh as [x [y [u [v ?]]]].
+      exists x, y, (hd :: u), v.
+      intuition eauto. all: subst. all: reflexivity.
+  Qed.
+
   (* TODO MOVE in PCUICConversion *)
   Lemma conv_Case_one_brs :
     forall Γ indn p c brs brs',
@@ -1697,29 +1715,32 @@ Section Conversion.
       Σ ;;; Γ |- tCase indn p c brs == tCase indn p c brs'.
   Proof.
     intros Γ [ind n] p c brs brs' h.
-    induction h as [[m u] [k v] brs [? h] | f g h i j].
-    - simpl in *. subst. induction h.
-      + constructor. constructor.
-        * eapply eq_term_refl.
-        * eapply eq_term_refl.
+    apply OnOne2_split in h as [[m br] [[m' br'] [l1 [l2 [[? h] [? ?]]]]]].
+    simpl in *. subst.
+    induction h.
+    - constructor. constructor.
+      + reflexivity.
+      + reflexivity.
+      + apply All2_app.
+        * apply All2_same. intros. intuition reflexivity.
         * constructor.
-          -- simpl. intuition eauto.
-          -- eapply All2_same.
-             intros. split ; eauto. reflexivity.
-      + eapply conv_alt_red_l ; eauto.
-        constructor. constructor. simpl.
-        intuition eauto.
-      + eapply conv_alt_red_r ; eauto.
-        constructor. constructor. simpl.
-        intuition eauto.
-    -
-  Admitted.
+          -- simpl. intuition reflexivity.
+          -- apply All2_same. intros. intuition reflexivity.
+    - eapply conv_alt_red_l ; eauto.
+      constructor. apply OnOne2_app. constructor. simpl.
+      intuition eauto.
+    - eapply conv_alt_red_r ; eauto.
+      constructor. apply OnOne2_app. constructor. simpl.
+      intuition eauto.
+  Qed.
 
   (* TODO MOVE in PCUICConversion *)
   Lemma conv_Case_brs :
     forall Γ indn p c brs brs',
       All2 (fun u v => u.1 = v.1 × Σ ;;; Γ |- u.2 == v.2) brs brs' ->
       Σ ;;; Γ |- tCase indn p c brs == tCase indn p c brs'.
+  Proof.
+    (* use All2_many_OnOne2 *)
   Admitted.
 
   (* TODO MOVE in PCUICConversion *)

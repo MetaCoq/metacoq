@@ -638,6 +638,24 @@ Section Inversions.
     eapply conv_App_r; tea.
   Qed.
 
+  Lemma conv_Case_p :
+    forall Γ indn c brs u v,
+      Σ ;;; Γ |- u == v ->
+      Σ ;;; Γ |- tCase indn u c brs == tCase indn v c brs.
+  Proof.
+    intros Γ [ind n] c brs u v h.
+    induction h.
+    - constructor. constructor.
+      + assumption.
+      + eapply eq_term_refl.
+      + eapply All2_same.
+        intros. split ; eauto. reflexivity.
+    - eapply conv_alt_red_l ; eauto.
+      constructor. assumption.
+    - eapply conv_alt_red_r ; eauto.
+      constructor. assumption.
+  Qed.
+
   Lemma conv_Case_c :
     forall Γ indn p brs u v,
       Σ ;;; Γ |- u == v ->
@@ -654,6 +672,65 @@ Section Inversions.
       constructor. assumption.
     - eapply conv_alt_red_r ; eauto.
       constructor. assumption.
+  Qed.
+
+  Lemma conv_Case_one_brs :
+    forall Γ indn p c brs brs',
+      OnOne2 (fun u v => u.1 = v.1 × Σ ;;; Γ |- u.2 == v.2) brs brs' ->
+      Σ ;;; Γ |- tCase indn p c brs == tCase indn p c brs'.
+  Proof.
+    intros Γ [ind n] p c brs brs' h.
+    apply OnOne2_split in h as [[m br] [[m' br'] [l1 [l2 [[? h] [? ?]]]]]].
+    simpl in *. subst.
+    induction h.
+    - constructor. constructor.
+      + reflexivity.
+      + reflexivity.
+      + apply All2_app.
+        * apply All2_same. intros. intuition reflexivity.
+        * constructor.
+          -- simpl. intuition reflexivity.
+          -- apply All2_same. intros. intuition reflexivity.
+    - eapply conv_alt_red_l ; eauto.
+      constructor. apply OnOne2_app. constructor. simpl.
+      intuition eauto.
+    - eapply conv_alt_red_r ; eauto.
+      constructor. apply OnOne2_app. constructor. simpl.
+      intuition eauto.
+  Qed.
+
+  Lemma conv_Case_brs :
+    forall Γ indn p c brs brs',
+      wf Σ ->
+      All2 (fun u v => u.1 = v.1 × Σ ;;; Γ |- u.2 == v.2) brs brs' ->
+      Σ ;;; Γ |- tCase indn p c brs == tCase indn p c brs'.
+  Proof.
+    intros Γ [ind n] p c brs brs' wΣ h.
+    apply All2_many_OnOne2 in h.
+    induction h.
+    - apply conv_alt_refl. reflexivity.
+    - eapply conv_alt_trans.
+      + assumption.
+      + eassumption.
+      + apply conv_Case_one_brs. assumption.
+  Qed.
+
+  Lemma conv_Case :
+    forall Γ indn p p' c c' brs brs',
+      wf Σ ->
+      Σ ;;; Γ |- p == p' ->
+      Σ ;;; Γ |- c == c' ->
+      All2 (fun u v => u.1 = v.1 × Σ ;;; Γ |- u.2 == v.2) brs brs' ->
+      Σ ;;; Γ |- tCase indn p c brs == tCase indn p' c' brs'.
+  Proof.
+    intros Γ [ind n] p p' c c' brs brs' wΣ hp hc hbrs.
+    eapply conv_alt_trans.
+    - assumption.
+    - eapply conv_Case_p. eassumption.
+    - eapply conv_alt_trans.
+      + assumption.
+      + eapply conv_Case_c. eassumption.
+      + apply conv_Case_brs. all: assumption.
   Qed.
 
   Lemma conv_Proj_c :
@@ -818,7 +895,7 @@ Section Inversions.
       Σ ;;; Γ |- tLetIn na ty t u == tLetIn na ty t u'.
   Proof.
     induction 1.
-    - constructor 1. now constructor. 
+    - constructor 1. now constructor.
     - econstructor 2; tea. now constructor.
     - econstructor 3; tea. now constructor.
   Qed.

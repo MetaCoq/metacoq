@@ -41,6 +41,31 @@ Ltac rdestruct H :=
 
 Definition nodelta_flags := RedFlags.mk true true true false true true.
 
+(* TODO MOVE *)
+Lemma All2_app_inv_both :
+  forall A B (P : A -> B -> Type) l1 l2 r1 r2,
+    #|l1| = #|r1| ->
+    All2 P (l1 ++ l2) (r1 ++ r2) ->
+    All2 P l1 r1 × All2 P l2 r2.
+Proof.
+  intros A B P l1 l2 r1 r2 e h.
+  apply All2_app_inv in h as [[w1 w2] [[e1 h1] h2]].
+  assert (e2 : r1 = w1 × r2 = w2).
+  { apply All2_length in h1. rewrite h1 in e.
+    clear - e e1.
+    induction r1 in r2, w1, w2, e, e1 |- *.
+    - destruct w1. 2: discriminate.
+      intuition eauto.
+    - destruct w1. 1: discriminate.
+      simpl in e. apply Nat.succ_inj in e.
+      simpl in e1. inversion e1. subst.
+      eapply IHr1 in e. 2: eassumption.
+      intuition eauto. f_equal. assumption.
+  }
+  destruct e2 as [? ?]. subst.
+  intuition auto.
+Qed.
+
 Section Lemmata.
   Context {cf : checker_flags}.
   Context (flags : RedFlags.t).
@@ -51,11 +76,19 @@ Section Lemmata.
       eq_term φ u v.
   Proof.
     intros Σ u v π h.
-    revert u v h. induction π ; intros u v h.
-    all: solve [
+    induction π in u, v, h |- *.
+    all: try solve [
              simpl in h ; try apply IHπ in h ;
              cbn in h ; inversion h ; subst ; assumption
            ].
+    simpl in h. apply IHπ in h.
+    inversion h. subst.
+    match goal with
+    | h : All2 _ _ _ |- _ => rename h into a
+    end.
+    apply All2_app_inv_both in a. 2: reflexivity.
+    destruct a as [_ a]. inversion a. subst.
+    intuition eauto.
   Qed.
 
   Lemma eq_term_zipx_inv :
@@ -84,10 +117,28 @@ Section Lemmata.
     - assumption.
     - simpl. apply IHπ. destruct indn as [i n].
       constructor.
+      + assumption.
+      + apply eq_term_upto_univ_refl. all: assumption.
+      + eapply All2_same.
+        intros. split ; auto. apply eq_term_upto_univ_refl. all: assumption.
+    - simpl. apply IHπ. destruct indn as [i n].
+      constructor.
       + apply eq_term_upto_univ_refl. all: assumption.
       + assumption.
       + eapply All2_same.
         intros. split ; auto. apply eq_term_upto_univ_refl. all: assumption.
+    - simpl. apply IHπ. destruct indn as [i n].
+      constructor.
+      + apply eq_term_upto_univ_refl. all: assumption.
+      + apply eq_term_upto_univ_refl. all: assumption.
+      + apply All2_app.
+        * eapply All2_same.
+          intros. split ; auto. apply eq_term_upto_univ_refl. all: assumption.
+        * constructor.
+          -- simpl. intuition eauto.
+          -- eapply All2_same.
+             intros. split ; auto. apply eq_term_upto_univ_refl.
+             all: assumption.
   Qed.
 
   Lemma eq_term_zipc :
@@ -385,6 +436,23 @@ Section Lemmata.
         as [uni [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]].
       eexists. eassumption.
     - simpl. cbn in h. cbn in IHπ. apply IHπ in h.
+      destruct h as [B h].
+      destruct indn.
+      apply inversion_Case in h as hh ; auto.
+      destruct hh
+        as [uni [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]].
+      eexists. eassumption.
+    - simpl. cbn in h. cbn in IHπ. apply IHπ in h.
+      destruct h as [B h].
+      destruct indn.
+      apply inversion_Case in h as hh ; auto.
+      destruct hh
+        as [uni [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [a ?]]]]]]]]]]]]]]]]].
+      apply All2_app_inv in a as [[? ?] [[? ?] ha]].
+      inversion ha. subst.
+      intuition eauto. simpl in *.
+      eexists. eassumption.
+    - simpl. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [T' h].
       apply inversion_Proj in h
         as [uni [mdecl [idecl [pdecl [args [? [? [? ?]]]]]]]] ; auto.
@@ -437,6 +505,18 @@ Section Lemmata.
       ].
       + destruct indn.
         apply inversion_Case in h' ; auto. cbn in h'. rdestruct h'.
+        left. econstructor. eassumption.
+      + destruct indn.
+        apply inversion_Case in h' ; auto. cbn in h'. rdestruct h'.
+        left. econstructor. eassumption.
+      + destruct indn.
+        apply inversion_Case in h' ; auto. cbn in h'. rdestruct h'.
+        match goal with
+        | h : All2 _ _ _ |- _ => rename h into a
+        end.
+        apply All2_app_inv in a as [[? ?] [[? ?] ha]].
+        inversion ha. subst. intuition eauto.
+        simpl in *.
         left. econstructor. eassumption.
       + apply inversion_Proj in h' ; auto.
         cbn in h'. rdestruct h'.
@@ -515,13 +595,19 @@ Section Lemmata.
       Σ ;;; Γ |- zippx u ρ <= zippx v ρ.
   Proof.
     intros Γ u v ρ h.
-    revert u v h. induction ρ ; intros u v h.
+    induction ρ in u, v, h |- *.
     - cbn. assumption.
     - unfold zippx. simpl.
       case_eq (decompose_stack ρ). intros l π e.
       unfold zippx in IHρ. rewrite e in IHρ.
       apply IHρ.
       eapply cumul_App_l. assumption.
+    - unfold zippx. simpl.
+      eapply cumul_it_mkLambda_or_LetIn.
+      assumption.
+    - unfold zippx. simpl.
+      eapply cumul_it_mkLambda_or_LetIn.
+      assumption.
     - unfold zippx. simpl.
       eapply cumul_it_mkLambda_or_LetIn.
       assumption.
@@ -646,6 +732,12 @@ Section Lemmata.
       unfold zippx in IHρ. rewrite e in IHρ.
       apply IHρ.
       eapply conv_App_l. assumption.
+    - unfold zippx. simpl.
+      eapply conv_alt_it_mkLambda_or_LetIn.
+      assumption.
+    - unfold zippx. simpl.
+      eapply conv_alt_it_mkLambda_or_LetIn.
+      assumption.
     - unfold zippx. simpl.
       eapply conv_alt_it_mkLambda_or_LetIn.
       assumption.

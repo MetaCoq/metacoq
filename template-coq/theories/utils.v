@@ -2211,6 +2211,23 @@ Proof.
     + constructor ; eauto.
 Qed.
 
+Lemma OnOne2_split :
+  forall A (P : A -> A -> Type) l l',
+    OnOne2 P l l' ->
+    ∑ x y u v,
+      P x y ×
+      (l = u ++ x :: v /\
+      l' = u ++ y :: v).
+Proof.
+  intros A P l l' h.
+  induction h.
+  - exists hd, hd', [], tl.
+    intuition eauto.
+  - destruct IHh as [x [y [u [v ?]]]].
+    exists x, y, (hd :: u), v.
+    intuition eauto. all: subst. all: reflexivity.
+Qed.
+
 Lemma All2_skipn :
   forall A B R l l' n,
     @All2 A B R l l' ->

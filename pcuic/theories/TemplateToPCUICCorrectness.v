@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 Set Warnings "-notation-overridden".
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
+From Coq Require Import Bool String List Program BinPos Compare_dec ZArith.
 From MetaCoq.Template Require Import config utils AstUtils BasicAst Ast.
 (* For two lemmata wf_instantiate_params_subst_term and
    wf_instantiate_params_subst_ctx, maybe they should be moved *)

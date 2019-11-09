@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Omega Lia.
+From Coq Require Import Bool String List Program BinPos Compare_dec ZArith Lia.
 From MetaCoq.Template Require Import config utils Ast AstUtils Induction utils
   LiftSubst UnivSubst.
 From MetaCoq.Checker Require Import LibHypsNaming Typing TypingWf WeakeningEnv
@@ -981,8 +981,8 @@ Proof.
     erewrite <- (to_extended_list_map_lift #|Γ''|).
     rewrite -> lift_context_length.
     rewrite -> !map_map_compose. f_equal. f_equal. apply map_ext.
-    intros. unfold compose. rewrite (permute_lift _ _ _ _ 0). omega.
-    f_equal. omega.
+    intros. unfold compose. rewrite (permute_lift _ _ _ _ 0). lia.
+    f_equal. lia.
   - now apply lift_eq_context.
 Qed.
 
@@ -1028,7 +1028,7 @@ Proof.
     intros Σ wfΣ Γ0; !!intros; subst Γ0; simpl in *; try solve [econstructor; eauto].
 
   - elim (leb_spec_Set); intros Hn.
-    + rewrite -> simpl_lift; try omega. rewrite -> Nat.add_succ_r.
+    + rewrite -> simpl_lift; try lia. rewrite -> Nat.add_succ_r.
       constructor. auto.
       now rewrite <- (weaken_nth_error_ge Hn).
     + assert (forall t, lift0 (S n) (lift #|Γ''| (#|Γ'| - S n) t) = lift #|Γ''| #|Γ'| (lift0 (S n) t)).

@@ -1,5 +1,4 @@
-From Coq Require Import Ascii String Bool OrderedType Lia List Program Arith
-     Omega.
+From Coq Require Import Ascii String Bool OrderedType Lia List Program Arith.
 From MetaCoq.Template Require Import utils AstUtils.
 From MetaCoq.Template Require Import BasicAst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICSize.
@@ -719,8 +718,8 @@ Lemma nApp_mkApps :
 Proof.
   intros t l.
   induction l in t |- *.
-  - simpl. omega.
-  - simpl. rewrite IHl. cbn. omega.
+  - simpl. lia.
+  - simpl. rewrite IHl. cbn. lia.
 Qed.
 
 Lemma decompose_app_eq_mkApps :
@@ -732,7 +731,7 @@ Proof.
   apply decompose_app_notApp in e.
   apply isApp_false_nApp in e.
   rewrite nApp_mkApps in e.
-  destruct l' ; cbn in e ; try omega.
+  destruct l' ; cbn in e ; try lia.
   reflexivity.
 Qed.
 
@@ -747,10 +746,10 @@ Proof.
   - cbn in e. subst.
     destruct l' ; auto.
     exfalso.
-    rewrite nApp_mkApps in h. cbn in h. omega.
+    rewrite nApp_mkApps in h. cbn in h. lia.
   - destruct l'.
     + cbn in e. subst. exfalso.
-      rewrite nApp_mkApps in h. cbn in h. omega.
+      rewrite nApp_mkApps in h. cbn in h. lia.
     + cbn in e. apply IHl in e.
       * destruct e as [e1 e2].
         inversion e1. subst. auto.

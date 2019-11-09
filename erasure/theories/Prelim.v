@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
+From Coq Require Import Bool String List Program BinPos Compare_dec ZArith.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
 From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst Extract EArities.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICInduction
@@ -155,7 +155,8 @@ Qed.
 Lemma All2_right_triv {A B} {l : list A} {l' : list B} P :
   All P l' -> #|l| = #|l'| -> All2 (fun _ b => P b) l l'.
 Proof.
-  induction 1 in l |- *; cbn; intros; destruct l; cbn in *; try omega; econstructor; eauto.
+  induction 1 in l |- *; cbn; intros; destruct l; cbn in * ;
+  try (exfalso ; lia) ; econstructor; eauto.
 Qed.
 
 Lemma All_repeat {A} {n P} x :
@@ -194,9 +195,9 @@ Proof.
   revert L2; induction L1; cbn; intros.
   - destruct L2; inv H. econstructor.
   - destruct L2; inv H. econstructor.
-    eapply (X 0); cbn; eauto. omega.
+    eapply (X 0); cbn; eauto. lia.
     eapply IHL1. eauto.
-    intros. eapply (X (S n)); cbn; eauto. omega.
+    intros. eapply (X (S n)); cbn; eauto. lia.
 Qed.
 
 Lemma All2_nth_error {A B} {P : A -> B -> Type} {l l'} n t t' :
@@ -281,7 +282,7 @@ Proof.
   - destruct n; inv H.
   - destruct n.
     + cbn. now rewrite <- minus_n_O.
-    + cbn. rewrite IHm. omega. reflexivity.
+    + cbn. rewrite IHm. lia. reflexivity.
 Qed.
 
 Lemma efix_subst_nth mfix n :
@@ -293,7 +294,7 @@ Proof.
   - destruct n; inv H.
   - destruct n.
     + cbn. now rewrite <- minus_n_O.
-    + cbn. rewrite IHm. omega. reflexivity.
+    + cbn. rewrite IHm. lia. reflexivity.
 Qed.
 
 Lemma subslet_fix_subst `{cf : checker_flags} Σ mfix1 T n :
@@ -315,7 +316,7 @@ Proof.
       rewrite PCUICLiftSubst.simpl_subst_k. clear. induction l; cbn; try congruence.
       eapply inversion_Fix in X as (? & ? & ? & ? & ?) ; auto.
       econstructor; eauto. destruct H. subst.
-      rewrite <- app_assoc. rewrite nth_error_app_ge. omega.
+      rewrite <- app_assoc. rewrite nth_error_app_ge. lia.
       rewrite minus_diag. cbn. reflexivity. eapply p.
 Qed.
 

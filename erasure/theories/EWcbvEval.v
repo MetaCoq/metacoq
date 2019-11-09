@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 Set Warnings "-notation-overridden".
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
+From Coq Require Import Bool String List Program BinPos Compare_dec.
 From MetaCoq.Template Require Import config utils Ast.
 From MetaCoq.PCUIC Require Import PCUICAstUtils.
 From MetaCoq.Erasure Require Import EAst EAstUtils EInduction ELiftSubst ETyping.
@@ -167,11 +167,11 @@ Section Wcbv.
   | eval_atom t : atom t -> eval t t.
 
   Hint Constructors eval.
-  
+
   (* Scheme Minimality for eval Sort Type. *)
   Definition eval_evals_ind :
     forall P : term -> term -> Prop,
-      (forall a t t', eval a tBox -> P a tBox -> eval t t' -> P t t' -> eval (tApp a t) tBox -> P (tApp a t) tBox ) -> 
+      (forall a t t', eval a tBox -> P a tBox -> eval t t' -> P t t' -> eval (tApp a t) tBox -> P (tApp a t) tBox ) ->
       (forall (f : term) (na : name) (b a a' res : term),
           eval f (tLambda na b) ->
           P f (tLambda na b) -> eval a a' -> P a a' -> eval (b {0 := a'}) res -> P (b {0 := a'}) res -> P (tApp f a) res) ->
@@ -182,7 +182,7 @@ Section Wcbv.
           forall (res : term),
             cst_body decl = Some body ->
             eval body res -> P body res -> P (tConst c) res) ->
-      (forall (ind : inductive) (pars : nat) (discr : term) (c : nat) 
+      (forall (ind : inductive) (pars : nat) (discr : term) (c : nat)
               (args : list term) (brs : list (nat × term)) (res : term),
           eval discr (mkApps (tConstruct ind c) args) ->
           P discr (mkApps (tConstruct ind c) args) ->
@@ -237,7 +237,7 @@ Section Wcbv.
                                forall t t0, eval t t0 -> _ => fail 1
                              | _ => eapply H
                              end end; eauto].
-    - eapply Hbox; eauto. 
+    - eapply Hbox; eauto.
     - eapply Hcase; eauto.
     - eapply Hfix; eauto.
       clear -H3 eval_evals_ind.
@@ -286,7 +286,7 @@ Section Wcbv.
     - apply H; auto.
     - eapply H0; auto.
       revert l H3. fix aux 2. destruct 1. constructor; auto.
-      constructor. eauto. eauto. 
+      constructor. eauto. eauto.
     - eapply H1; eauto.
       clear H3. revert args H2. fix aux 2. destruct 1. constructor; auto.
       constructor. now eapply value_values_ind. now apply aux.
@@ -326,7 +326,7 @@ Section Wcbv.
     value_head t = (~~ (isLambda t || isFix t || isBox t)) && atom t.
   Proof.
     destruct t; intuition auto.
-  Qed.    
+  Qed.
 
   Lemma isFixApp_mkApps f args : ~~ isApp f -> isFixApp (mkApps f args) = isFixApp f.
   Proof.
@@ -347,7 +347,7 @@ Section Wcbv.
     induction 1 using eval_evals_ind; simpl; auto using value.
     (* eapply (value_app (tEvar n l') []). constructor. constructor. *)
     - eapply value_stuck_fix => //.
-      now eapply Forall2_right in H1. 
+      now eapply Forall2_right in H1.
     - destruct (mkApps_elim f' [a']).
       eapply value_mkApps_inv in IHeval1 => //.
       destruct IHeval1; intuition subst.
@@ -363,12 +363,12 @@ Section Wcbv.
         rewrite /isFixApp in H0. simpl in H0.
         rewrite orb_true_r orb_true_l in H0. easy.
   Qed.
-  
+
   (* Lemma eval_to_value e e' : eval e e' -> value e'. *)
   (* Proof. *)
   (*   induction 1 using eval_ind; simpl; auto using value. *)
   (*   - eapply value_stuck_fix => //. *)
-      
+
   (*     eapply Forall2_right. *)
   (*     eauto. *)
   (*     admit. *)
@@ -378,7 +378,7 @@ Section Wcbv.
   (*     * rewrite H3. *)
   (*       simpl. rewrite H3 in H. simpl in *. *)
   (*       apply (value_app f0 [a']). destruct f0; simpl in * |- *; try congruence. *)
-        
+
   (*       constructor; auto. constructor. constructor; auto. *)
   (*     * rewrite [tApp _ _](mkApps_nested _ (firstn n l) [a']). *)
   (*       constructor 2; auto. eapply All_app_inv; auto. *)
@@ -389,7 +389,7 @@ Section Wcbv.
   (*       rewrite orb_true_r orb_true_l in H. easy. *)
   (* Qed. *)
   (* Admitted. *)
-  
+
   (* Lemma value_final e : value e -> eval e e. *)
   (* Proof. *)
   (*   induction 1 using value_values_ind; simpl; auto using value. *)

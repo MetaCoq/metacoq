@@ -1,5 +1,5 @@
-From Coq Require Import Bool Program List Ascii String OrderedType Arith Lia Omega
-     ssreflect Utf8.
+From Coq Require Import Bool Program List Ascii String OrderedType Arith Lia
+  ZArith ssreflect Utf8.
 Global Set Asymmetric Patterns.
 
 Import ListNotations.
@@ -1861,7 +1861,7 @@ Proof.
     + cbn in h. inversion h.
   - destruct l.
     + reflexivity.
-    + simpl. apply IHn. cbn in h. omega.
+    + simpl. apply IHn. cbn in h. lia.
 Qed.
 
 Lemma nat_rev_ind (max : nat) :
@@ -1873,20 +1873,20 @@ Proof.
   intros P hmax hS.
   assert (h : forall n, P (max - n)).
   { intros n. induction n.
-    - apply hmax. omega.
+    - apply hmax. lia.
     - destruct (Nat.leb_spec0 max n).
-      + replace (max - S n) with 0 by omega.
-        replace (max - n) with 0 in IHn by omega.
+      + replace (max - S n) with 0 by lia.
+        replace (max - n) with 0 in IHn by lia.
         assumption.
-      + replace (max - n) with (S (max - S n)) in IHn by omega.
+      + replace (max - n) with (S (max - S n)) in IHn by lia.
         apply hS.
-        * omega.
+        * lia.
         * assumption.
   }
   intro n.
   destruct (Nat.leb_spec0 max n).
-  - apply hmax. omega.
-  - replace n with (max - (max - n)) by omega. apply h.
+  - apply hmax. lia.
+  - replace n with (max - (max - n)) by lia. apply h.
 Qed.
 
 Lemma strong_nat_ind :
@@ -1897,10 +1897,10 @@ Proof.
   intros P h n.
   assert (forall m, m < n -> P m).
   { induction n ; intros m hh.
-    - omega.
+    - lia.
     - destruct (Nat.eqb_spec n m).
       + subst. eapply h. assumption.
-      + eapply IHn. omega.
+      + eapply IHn. lia.
   }
   eapply h. assumption.
 Qed.
@@ -2403,7 +2403,13 @@ Qed.
 Lemma All2_right_triv {A B} {l : list A} {l' : list B} P :
   All P l' -> #|l| = #|l'| -> All2 (fun _ b => P b) l l'.
 Proof.
-  induction 1 in l |- *; cbn; intros; destruct l; cbn in *; try omega; econstructor; eauto.
+  induction 1 in l |- *.
+  all: cbn.
+  all: intros.
+  all: destruct l.
+  all: cbn in *.
+  all: try (exfalso ; lia).
+  all: try solve [ econstructor; eauto ].
 Qed.
 
 Lemma All_repeat {A} {n P} x :
@@ -2438,9 +2444,9 @@ Proof.
   revert L2; induction L1; cbn; intros.
   - destruct L2; inv H. econstructor.
   - destruct L2; inversion H. econstructor.
-    eapply (X 0); cbn; eauto. omega.
+    eapply (X 0); cbn; eauto. lia.
     eapply IHL1. eauto.
-    intros. eapply (X (S n)); cbn; eauto. omega.
+    intros. eapply (X (S n)); cbn; eauto. lia.
 Qed.
 
 Lemma All2_nth_error {A B} {P : A -> B -> Type} {l l'} n t t' :
@@ -2515,7 +2521,7 @@ Proof.
   - rewrite firstn_skipn. reflexivity.
   - apply All2_firstn with (n := #|r1|) in h.
     rewrite firstn_app in h. rewrite firstn_all in h.
-    replace (#|r1| - #|r1|) with 0 in h by omega. cbn in h.
+    replace (#|r1| - #|r1|) with 0 in h by lia. cbn in h.
     rewrite app_nil_r in h. assumption.
   - apply All2_skipn with (n := #|r1|) in h.
     rewrite skipn_all_app in h. assumption.

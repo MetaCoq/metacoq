@@ -1,5 +1,4 @@
-From Coq Require Import Ascii String Bool OrderedType Lia List Program Arith
-     Omega.
+From Coq Require Import Ascii String Bool OrderedType Lia List Program Arith.
 From MetaCoq.Template Require Import utils AstUtils.
 From MetaCoq.Template Require Import BasicAst.
 From MetaCoq.PCUIC Require Import PCUICAst.

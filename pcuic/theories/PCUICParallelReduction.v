@@ -2,7 +2,7 @@
 Require Import ssreflect ssrbool.
 From MetaCoq Require Import LibHypsNaming.
 From Equations Require Import Equations.
-From Coq Require Import Bool String List Program BinPos Compare_dec Omega String Lia.
+From Coq Require Import Bool String List Program BinPos Compare_dec String Lia.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICSize
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICReduction PCUICWeakening PCUICSubstitution.

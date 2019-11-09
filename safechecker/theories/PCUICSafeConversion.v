@@ -1737,11 +1737,19 @@ Section Conversion.
   (* TODO MOVE in PCUICConversion *)
   Lemma conv_Case_brs :
     forall Γ indn p c brs brs',
+      wf Σ ->
       All2 (fun u v => u.1 = v.1 × Σ ;;; Γ |- u.2 == v.2) brs brs' ->
       Σ ;;; Γ |- tCase indn p c brs == tCase indn p c brs'.
   Proof.
-    (* use All2_many_OnOne2 *)
-  Admitted.
+    intros Γ [ind n] p c brs brs' wΣ h.
+    apply All2_many_OnOne2 in h.
+    induction h.
+    - apply conv_alt_refl. reflexivity.
+    - eapply conv_alt_trans.
+      + assumption.
+      + eassumption.
+      + apply conv_Case_one_brs. assumption.
+  Qed.
 
   (* TODO MOVE in PCUICConversion *)
   Lemma conv_Case :

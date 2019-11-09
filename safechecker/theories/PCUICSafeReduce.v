@@ -14,6 +14,8 @@ Require Import Equations.Prop.DepElim.
 Import MonadNotation.
 Open Scope type_scope.
 
+Set Default Goal Selector "!".
+
 (** * Reduction machine for PCUIC without fuel
 
   We subsume the reduction machine of PCUICChecker without relying on fuel.
@@ -55,14 +57,14 @@ Section Measure.
     destruct HΣ as [wΣ].
     revert h. induction r ; intros h.
     - destruct h as [A|A]; [left|right].
-      destruct A as [A HA]. exists A.
-      eapply subject_reduction1 ; eassumption.
-      sq; eapply isWfArity_red1 ; eassumption.
+      + destruct A as [A HA]. exists A.
+        eapply subject_reduction1 ; eassumption.
+      + sq. eapply isWfArity_red1. all: eassumption.
     - specialize IHr with (1 := ltac:(eassumption)).
       destruct IHr as [A|A]; [left|right].
-      destruct A as [A HA]. exists A.
-      eapply subject_reduction1 ; eassumption.
-      sq; eapply isWfArity_red1 ; eassumption.
+      + destruct A as [A HA]. exists A.
+        eapply subject_reduction1 ; eassumption.
+      + sq. eapply isWfArity_red1 ; eassumption.
   Qed.
 
   Lemma red_wellformed :
@@ -667,7 +669,7 @@ Section Reduce.
           assert (ind = ind').
           { clear - h' flags hΣ H.
             zip fold in h'.
-            apply wellformed_context in h'.
+            apply wellformed_context in h'. 2: assumption.
             cbn in h'.
             apply Case_Construct_ind_eq in h'. all: eauto.
           } subst.
@@ -680,7 +682,7 @@ Section Reduce.
           inversion H2. subst.
           assert (ind = ind').
           { clear - h flags H hΣ.
-            apply wellformed_context in h.
+            apply wellformed_context in h. 2: assumption.
             cbn in h.
             apply Case_Construct_ind_eq in h. all: eauto.
           } subst.
@@ -787,7 +789,7 @@ Section Reduce.
     do 2 zip fold. eapply cored_context.
     constructor.
     cbn in hh. rewrite zipc_appstack in hh. cbn in hh.
-    zip fold in hh. apply wellformed_context in hh.
+    zip fold in hh. apply wellformed_context in hh. 2: assumption.
     simpl in hh. apply Proj_Constuct_ind_eq in hh. all: eauto.
     subst. constructor. eauto.
   Qed.
@@ -801,7 +803,8 @@ Section Reduce.
     pose proof (red_wellformed _ hΣ h hr) as hh.
     cbn in hh. rewrite zipc_appstack in hh. cbn in hh.
     zip fold in hh.
-    apply wellformed_context in hh. simpl in hh.
+    apply wellformed_context in hh. 2: assumption.
+    simpl in hh.
     apply Proj_red_cond in hh. all: eauto.
   Qed.
   Next Obligation.

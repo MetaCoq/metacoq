@@ -1,5 +1,5 @@
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
+From Coq Require Import Bool String List Program BinPos Compare_dec ZArith Lia.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICMetaTheory PCUICWcbvEval PCUICLiftSubst PCUICInversion PCUICSR PCUICNormal PCUICSafeLemmata PCUICPrincipality PCUICGeneration PCUICSubstitution PCUICElimination PCUICEquality PCUICContextConversion PCUICConversion.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker.
@@ -226,7 +226,7 @@ Proof.
     }
     eapply inversion_Construct in t as (? & ? & ? & ? & ? & ? & ?) ; auto. (* destruct x5. destruct p. cbn in *. *)
     assert (HL : #|ind_bodies x3| > 0).
-    { destruct d. destruct H. destruct (ind_bodies x3); cbn; try omega.
+    { destruct d. destruct H. destruct (ind_bodies x3); cbn; try lia.
       rewrite nth_error_nil in H1. inv H1.
     }
     eapply invert_cumul_arity_r in c0; eauto.
@@ -248,11 +248,11 @@ Proof.
     cbn in c2.
     rewrite PCUICUnivSubst.subst_instance_context_length in *.
     rewrite app_length in *.
-    destruct (Nat.leb_spec (#|cshape_args| + #|ind_params x3| + 0) (#|ind_bodies x3| - S (inductive_ind ind) + #|ind_params x3| + #|cshape_args|)). 2:omega.
+    destruct (Nat.leb_spec (#|cshape_args| + #|ind_params x3| + 0) (#|ind_bodies x3| - S (inductive_ind ind) + #|ind_params x3| + #|cshape_args|)). 2:lia.
     clear H.
     assert ((#|ind_bodies x3| - S (inductive_ind ind) + #|ind_params x3| +
                                                                          #|cshape_args| - (#|cshape_args| + #|ind_params x3| + 0)) < #|inds (inductive_mind ind) u (ind_bodies x3)|).
-    { rewrite inds_length. omega. }
+    { rewrite inds_length. lia. }
     eapply nth_error_Some in H.
     destruct ?; try congruence.
     (* destruct c2 as (? & [] & ?). *)

@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
+From Coq Require Import Bool String List Program BinPos Compare_dec.
 From MetaCoq.Template Require Import config utils Ast Induction LiftSubst UnivSubst.
 From MetaCoq.Template Require AstUtils.
 From MetaCoq.Checker Require Import Typing.

@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
+From Coq Require Import Bool String List Program BinPos Compare_dec.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICChecker PCUICRetyping PCUICMetaTheory PCUICWcbvEval PCUICElimination.
 From MetaCoq.Erasure Require EAst ELiftSubst ETyping.
@@ -39,7 +39,7 @@ Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :
   | erases_tLambda : forall (na : name) (b t : term) (t' : E.term),
                      Σ;;; (vass na b :: Γ) |- t ⇝ℇ t' ->
                      Σ;;; Γ |- tLambda na b t ⇝ℇ E.tLambda na t'
-  | erases_tLetIn : forall (na : name) (t1 : term) (t1' : E.term) 
+  | erases_tLetIn : forall (na : name) (t1 : term) (t1' : E.term)
                       (T t2 : term) (t2' : E.term),
                     Σ;;; Γ |- t1 ⇝ℇ t1' ->
                     Σ;;; (vdef na t1 T :: Γ) |- t2 ⇝ℇ t2' ->
@@ -52,7 +52,7 @@ Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :
   | erases_tConstruct : forall (kn : inductive) (k : nat) (n : universe_instance),
                         Σ;;; Γ |- tConstruct kn k n ⇝ℇ E.tConstruct kn k
   | erases_tCase1 : forall (ind : inductive) (npar : nat) (T c : term)
-                      (brs : list (nat × term)) (c' : E.term) 
+                      (brs : list (nat × term)) (c' : E.term)
                       (brs' : list (nat × E.term)),
                     Informative Σ ind ->
                     Σ;;; Γ |- c ⇝ℇ c' ->
@@ -69,7 +69,7 @@ Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :
                     (fun (d : def term) (d' : E.def E.term) =>
                      dname d = E.dname d'
                      × rarg d = E.rarg d'
-                       × Σ;;; Γ ,,, PCUICLiftSubst.fix_context mfix |- 
+                       × Σ;;; Γ ,,, PCUICLiftSubst.fix_context mfix |-
                          dbody d ⇝ℇ E.dbody d') mfix mfix' ->
                   Σ;;; Γ |- tFix mfix n ⇝ℇ E.tFix mfix' n
   | erases_tCoFix : forall (mfix : mfixpoint term) (n : nat) (mfix' : list (E.def E.term)),
@@ -77,7 +77,7 @@ Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :
                       (fun (d : def term) (d' : E.def E.term) =>
                        dname d = E.dname d'
                        × rarg d = E.rarg d'
-                         × Σ;;; Γ ,,, PCUICLiftSubst.fix_context mfix |- 
+                         × Σ;;; Γ ,,, PCUICLiftSubst.fix_context mfix |-
                            dbody d ⇝ℇ E.dbody d') mfix mfix' ->
                     Σ;;; Γ |- tCoFix mfix n ⇝ℇ E.tCoFix mfix' n
   | erases_box : forall t : term, isErasable Σ Γ t -> Σ;;; Γ |- t ⇝ℇ E.tBox where "Σ ;;; Γ |- s ⇝ℇ t" := (erases Σ Γ s t).
@@ -103,7 +103,7 @@ Definition erases_mutual_inductive_body (Σ : global_env_ext) (mib : mutual_indu
   let arities := arities_context bds in
   Forall2 (erases_one_inductive_body Σ mib.(ind_npars) arities) bds (mib'.(E.ind_bodies)) /\
   mib.(ind_npars) = mib'.(E.ind_npars).
-  
+
 Inductive erases_global_decls : global_env -> E.global_declarations -> Prop :=
 | erases_global_nil : erases_global_decls [] []
 | erases_global_cnst Σ cb cb' kn Σ' :

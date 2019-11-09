@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
+From Coq Require Import Bool String List Program BinPos Compare_dec.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICInduction
      PCUICWeakening PCUICSubstitution PCUICRetyping PCUICMetaTheory PCUICWcbvEval
@@ -82,7 +82,7 @@ Proof.
   intros ?. intros. inversion o.
   eapply declared_inductive_inj in H as []; eauto; subst.
   clear - onConstructors ind_sorts. try dependent induction onConstructors.
-  (* - cbn. split. omega. econstructor. admit. *)
+  (* - cbn. split. lia. econstructor. admit. *)
   (* -  *)
 Admitted.                       (* elim_restriction_works *)
 

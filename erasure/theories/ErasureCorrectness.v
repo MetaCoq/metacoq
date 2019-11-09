@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
+From Coq Require Import Bool String List Program BinPos Compare_dec ZArith.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
 From MetaCoq.Erasure Require Import EAst ELiftSubst ETyping EWcbvEval Extract Prelim
      ESubstitution EInversion EArities.
@@ -620,9 +620,9 @@ Proof.
         eapply H10 in X0 as []; eauto. 2: exists []; now destruct Σ.
 
         destruct (ind_ctors idecl'). cbn in H4. destruct c; inv H2.
-        destruct l; cbn in *; try omega. destruct c as [ | []]; cbn in H2; inv H2.
+        destruct l; cbn in *; try lia. destruct c as [ | []]; cbn in H2; inv H2.
 
-        destruct btys as [ | ? []]; cbn in H3; try omega. clear H3 H4. destruct H7.
+        destruct btys as [ | ? []]; cbn in H3; try lia. clear H3 H4. destruct H7.
         (* eapply H7 in d1. *) inv a. inv X2. inv H12. inv H8. destruct H4. destruct x4, y; cbn in *; subst.
         destruct X1. subst. destruct p0; cbn in *.
 
@@ -658,12 +658,12 @@ Proof.
         2: reflexivity.
 
         enough (#|skipn (ind_npars mdecl') (x1 ++ x2)| = n0) as <- by eauto.
-        rewrite skipn_length. rewrite extr_env_wf'0. omega.
-        rewrite extr_env_wf'0. omega.
+        rewrite skipn_length. rewrite extr_env_wf'0. lia.
+        rewrite extr_env_wf'0. lia.
       * subst. unfold iota_red in *.
         destruct (nth_error brs c) eqn:Hnth.
         2:{ eapply nth_error_None in Hnth. erewrite All2_length in Hnth. 2:exact a. rewrite H3 in Hnth.
-            eapply nth_error_Some_length in H2. cbn in H2. omega.
+            eapply nth_error_Some_length in H2. cbn in H2. lia.
         }
         rewrite <- nth_default_eq in *. unfold nth_default in *.
         rewrite Hnth in *.
@@ -692,9 +692,9 @@ Proof.
            eapply H10 in X0 as []; eauto. 2: exists []; now destruct Σ.
 
            destruct (ind_ctors idecl'). cbn in H4. destruct c; inv H2.
-           destruct l; cbn in *; try omega. destruct c as [ | []]; cbn in H2; inv H2.
+           destruct l; cbn in *; try lia. destruct c as [ | []]; cbn in H2; inv H2.
 
-           destruct btys as [ | ? []]; cbn in H3; try omega. clear H3 H4. destruct H8.
+           destruct btys as [ | ? []]; cbn in H3; try lia. clear H3 H4. destruct H8.
            (* eapply H7 in d1. *) inv a. inv X2. inv H12. inv H9. destruct H4. destruct x1, y; cbn in *; subst.
            destruct X1. subst. destruct p0; cbn in *. destruct x3. inv e. inv Hnth. cbn in *.
 
@@ -730,8 +730,8 @@ Proof.
            2: reflexivity.
 
            enough (#|skipn (ind_npars mdecl') args| = n2) as <- by eauto.
-           rewrite skipn_length. rewrite extr_env_wf'0. omega.
-           rewrite extr_env_wf'0. omega. eauto.
+           rewrite skipn_length. rewrite extr_env_wf'0. lia.
+           rewrite extr_env_wf'0. lia. eauto.
     + exists tBox. split. econstructor.
       eapply Is_type_eval; eauto. econstructor; eauto.
     + auto.
@@ -813,7 +813,7 @@ Proof.
           clear a0. subst.
           assert (forall x n, nth_error x3 n = Some x -> ∑ T,  Σ;;; [] |- x : T).
           { intros. eapply typing_spine_inv with (arg := n + #|x2|) in t0 as [].
-            2:{ rewrite nth_error_app2. 2:omega. rewrite Nat.add_sub. eassumption. }
+            2:{ rewrite nth_error_app2. 2:lia. rewrite Nat.add_sub. eassumption. }
             eauto.
           }
           clear - X3 a1 H7. revert X3 x4 H7; induction a1; intros.
@@ -958,7 +958,7 @@ Proof.
           clear a0. subst.
           assert (forall x n, nth_error x3 n = Some x -> ∑ T,  Σ;;; [] |- x : T).
           { intros. eapply typing_spine_inv with (arg := n + #|x2|) in t0 as [].
-            2:{ rewrite nth_error_app2. 2:omega. rewrite Nat.add_sub. eassumption. }
+            2:{ rewrite nth_error_app2. 2:lia. rewrite Nat.add_sub. eassumption. }
             eauto.
           }
           clear - X3 a1 H4. revert X3 x4 H4; induction a1; intros.

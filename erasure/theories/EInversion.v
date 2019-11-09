@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Omega Lia.
+From Coq Require Import Bool String List Program BinPos Compare_dec Lia.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping
      PCUICWeakening PCUICSubstitution PCUICChecker PCUICRetyping PCUICMetaTheory

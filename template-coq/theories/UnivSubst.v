@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
+From Coq Require Import Bool String List Program BinPos Compare_dec ZArith.
 From MetaCoq Require Import utils Ast AstUtils Induction LiftSubst.
 Require Import String Lia.
 Local Open Scope string_scope.
@@ -222,7 +222,7 @@ Section UniverseClosedSubst.
 End UniverseClosedSubst.
 
 Section SubstInstanceClosed.
-  (** Substitution of a universe-closed instance of the right size 
+  (** Substitution of a universe-closed instance of the right size
       produces a universe-closed term. *)
 
   Context (u : universe_instance) (Hcl : closedu_instance 0 u).

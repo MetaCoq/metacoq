@@ -1,4 +1,4 @@
-From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
+From Coq Require Import Bool String List Program BinPos Compare_dec.
 From MetaCoq.Template Require Import config utils Ast.
 From MetaCoq.Erasure Require Import EAst EInduction ELiftSubst ETyping.
 From MetaCoq.Template Require AstUtils.
@@ -28,7 +28,7 @@ Inductive Wnd : term -> term -> Prop :=
 
 End Wnd.
 
-(********************************  
+(********************************
 | sConst: forall (s:string) (t:Term),
     LookupDfn s p t -> wndEval (TConst s) t
 | sBeta: forall (nm:name) (bod arg:Term),
@@ -52,7 +52,7 @@ End Wnd.
 | sProj: forall bod r npars nargs args arg x ind,
     canonicalP bod = Some (r, npars, nargs, args) ->
     List.nth_error args (npars + arg) = Some x ->
-    wndEval (TProj (ind, npars, arg) bod) x          
+    wndEval (TProj (ind, npars, arg) bod) x
 (*** congruence steps ***)
 (** no xi rules: sLambdaR, sLetInR,
  *** no congruence on Case branches ***)

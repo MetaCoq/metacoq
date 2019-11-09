@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 From Equations Require Import Equations.
-From Coq Require Import Bool String List BinPos Compare_dec Omega Lia.
+From Coq Require Import Bool String List BinPos Compare_dec ZArith Lia.
 Require Import Coq.Program.Syntax Coq.Program.Basics.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst
@@ -930,14 +930,14 @@ Proof.
   induction params in pars, s, t, σ, s', t', h |- *.
   - simpl in *. destruct pars. 2: discriminate.
     simpl. inversion h. subst. clear h.
-    f_equal. f_equal. f_equal. f_equal. omega.
+    f_equal. f_equal. f_equal. f_equal. lia.
   - simpl in *. destruct (decl_body a).
     + simpl. destruct t. all: try discriminate.
       simpl. eapply IHparams with (σ := σ) in h.
       simpl in h.
       replace (#|s| + S #|params|)
         with (S (#|s| + #|params|))
-        by omega.
+        by lia.
       rewrite <- h. f_equal.
       * f_equal. autorewrite with sigma.
         eapply inst_ext. intro i.
@@ -956,9 +956,9 @@ Proof.
               autorewrite with sigma.
               rewrite <- subst_ids. eapply inst_ext. intro j.
               cbn. unfold ids. rewrite map_length.
-              replace (#|s| + j - #|s|) with j by omega.
+              replace (#|s| + j - #|s|) with j by lia.
               rewrite nth_error_map.
-              erewrite (iffRL (nth_error_None _ _)) by omega.
+              erewrite (iffRL (nth_error_None _ _)) by lia.
               simpl. reflexivity.
       * autorewrite with sigma. reflexivity.
     + simpl. destruct t. all: try discriminate.
@@ -966,7 +966,7 @@ Proof.
       simpl. eapply IHparams with (σ := σ) in h. simpl in h.
       replace (#|s| + S #|params|)
         with (S (#|s| + #|params|))
-        by omega.
+        by lia.
       rewrite <- h.
       f_equal. autorewrite with sigma. reflexivity.
 Qed.
@@ -1038,9 +1038,9 @@ Proof.
     simpl. autorewrite with sigma. rewrite <- subst_ids.
     eapply inst_ext. intro j.
     cbn. unfold ids.
-    replace (#|s'| + j - #|s'|) with j by omega.
+    replace (#|s'| + j - #|s'|) with j by lia.
     rewrite nth_error_map.
-    erewrite (iffRL (nth_error_None _ _)) by omega.
+    erewrite (iffRL (nth_error_None _ _)) by lia.
     simpl. reflexivity.
 Qed.
 

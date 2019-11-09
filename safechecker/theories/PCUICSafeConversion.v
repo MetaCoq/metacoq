@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
-     Classes.RelationClasses Omega.
+     Classes.RelationClasses.
 From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
      AstUtils UnivSubst.
 From MetaCoq.Checker Require Import uGraph.
@@ -1157,7 +1157,7 @@ Section Conversion.
         pose proof (eq_sym e0) as eql.
         apply decompose_stack_at_length in eql. subst.
         rewrite nth_error_app_ge by auto.
-        replace (#|l| - #|l|) with 0 by omega. cbn.
+        replace (#|l| - #|l|) with 0 by lia. cbn.
         case_eq (decompose_stack s0). intros l0 s1 ee.
         rewrite ee in hd.
         pose proof (decompose_stack_eq _ _ _ ee). subst.
@@ -1206,7 +1206,7 @@ Section Conversion.
         pose proof (eq_sym e0) as eql.
         apply decompose_stack_at_length in eql. subst.
         rewrite nth_error_app_ge by auto.
-        replace (#|l| - #|l|) with 0 by omega. cbn.
+        replace (#|l| - #|l|) with 0 by lia. cbn.
         case_eq (decompose_stack s0). intros l0 s1 ee.
         rewrite ee in hd.
         pose proof (decompose_stack_eq _ _ _ ee). subst.
@@ -1249,7 +1249,7 @@ Section Conversion.
         pose proof (eq_sym e0) as eql.
         apply decompose_stack_at_length in eql. subst.
         rewrite nth_error_app_ge by auto.
-        replace (#|l| - #|l|) with 0 by omega. cbn.
+        replace (#|l| - #|l|) with 0 by lia. cbn.
         case_eq (decompose_stack s0). intros l0 s1 ee.
         rewrite ee in hd.
         pose proof (decompose_stack_eq _ _ _ ee). subst.
@@ -1292,7 +1292,7 @@ Section Conversion.
         pose proof (eq_sym e0) as eql.
         apply decompose_stack_at_length in eql. subst.
         rewrite nth_error_app_ge by auto.
-        replace (#|l| - #|l|) with 0 by omega. cbn.
+        replace (#|l| - #|l|) with 0 by lia. cbn.
         case_eq (decompose_stack s0). intros l0 s1 ee.
         rewrite ee in hd.
         pose proof (decompose_stack_eq _ _ _ ee). subst.

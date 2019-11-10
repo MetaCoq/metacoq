@@ -23,6 +23,8 @@ Import MonadNotation.
 Local Set Keyed Unification.
 Set Equations With UIP.
 
+Set Default Goal Selector "!".
+
 Arguments sq {_} _.
 
 Notation "( x ; y )" := (existT _ x y).
@@ -306,10 +308,11 @@ Section Lemmata.
     destruct hΣ as [hΣ'].
     assert (Γ ≡Γ nlctx Γ) by apply upto_names_nlctx.
     intros [[A hu]|[[ctx [s [X1 X2]]]]]; [left|right].
-    - exists A. eapply context_conversion'; tea.
-      eapply wf_local_alpha with Γ; tea.
-      now eapply typing_wf_local.
-      now eapply upto_names_conv_context.
+    - exists A. eapply context_conversion'. all: try eassumption.
+      1:{ eapply wf_local_alpha with Γ. all: try eassumption.
+          eapply typing_wf_local. eassumption.
+      }
+      eapply upto_names_conv_context. assumption.
     - constructor. exists ctx, s. split; tas.
       eapply wf_local_alpha; tea.
       now eapply eq_context_upto_cat.
@@ -862,9 +865,9 @@ Section Lemmata.
       welltyped Σ Γ (it_mkLambda_or_LetIn Δ t) <->
       welltyped Σ (Γ ,,, Δ) t.
   Proof.
-    intros; split.
-    apply welltyped_it_mkLambda_or_LetIn.
-    apply it_mkLambda_or_LetIn_welltyped.
+    intros. split.
+    - apply welltyped_it_mkLambda_or_LetIn.
+    - apply it_mkLambda_or_LetIn_welltyped.
   Qed.
 
   Lemma isWfArity_it_mkLambda_or_LetIn :
@@ -1397,7 +1400,7 @@ Section Lemmata.
     eapply inversion_mkApps in h ; auto.
     destruct h as [T [U [hC [hs hc]]]].
     apply inversion_Construct in hC
-      as [mdecl [idecl [cdecl [hΓ [isdecl [const htc]]]]]].
+      as [mdecl [idecl [cdecl [hΓ [isdecl [const htc]]]]]]. 2: assumption.
     unfold type_of_constructor in htc. simpl in htc.
     destruct i as [mind nind]. simpl in *.
     destruct cdecl as [[cna ct] cn]. cbn in htc.
@@ -1417,9 +1420,11 @@ Section Lemmata.
   Proof.
     intros Γ i pars narg i' c u l [[T h]|[[ctx [s [e _]]]]];
       [|discriminate].
-    apply inversion_Proj in h.
+    destruct hΣ as [wΣ].
+    apply inversion_Proj in h. 2: assumption.
     destruct h as [uni [mdecl [idecl [pdecl [args' [d [hc [? ?]]]]]]]].
-    eapply on_declared_projection in d. destruct d as [? [? ?]].
+    eapply on_declared_projection in d. 2: assumption.
+    destruct d as [? [? ?]].
     simpl in *.
     destruct p.
     destruct o0.
@@ -1531,8 +1536,9 @@ Proof.
     intros l0 Hl0 HH0 HH1.
     inversion HH0; subst; clear HH0.
     inversion HH1; subst.
-    constructor. now rewrite Hb in H0.
-    now eapply IHl.
+    constructor.
+    + now rewrite Hb in H0.
+    + now eapply IHl.
 Qed.
 
 (* todo: move *)
@@ -1608,15 +1614,17 @@ Proof.
   eapply map_option_out_All; tea. clear H2.
   apply All_mapi.
   apply PCUICWeakeningEnv.on_declared_inductive in isdecl as [oind oc].
+  2: admit.
   pose proof oc.(onConstructors) as oc'.
-  eapply All_Alli. eapply All2_All_left_pack; tea. cbn.
+  eapply All_Alli. 1: eapply All2_All_left_pack; tea.
+  cbn.
   intros n [[id ct] k] [cs [Hct1 Hct2]]; cbn in *.
   case_eq (instantiate_params (subst_instance_context u (ind_params mdecl)) pars
              ((subst0 (inds (inductive_mind ind) u (ind_bodies mdecl)))
                 (subst_instance_constr u ct))); [|trivial].
-  intros ct' Hct'.
-  case_eq (decompose_prod_assum [] ct'); intros sign ccl e1.
-  case_eq (chop (ind_npars mdecl) (decompose_app ccl).2);
+  - intros ct' Hct'.
+    case_eq (decompose_prod_assum [] ct'); intros sign ccl e1.
+    case_eq (chop (ind_npars mdecl) (decompose_app ccl).2);
     intros paramrels args0 e2; cbn.
     admit.
 Admitted.
@@ -1663,11 +1671,13 @@ Proof.
       * apply wf_local_app in H2. inversion H2; subst. assumption.
       * left. exists ctx', s. split; tas.
     + apply inversion_Prod in H; tas. destruct H as [s1 [s2 [HA [HB Hs]]]].
-      split. eexists; tea. right. eexists; tea.
+      split.
+      * eexists; tea.
+      * right. eexists; tea.
   - destruct HH as [HA [[ctx [s [H1 H2]]]|HB]].
     + left. exists ([vass na A] ,,, ctx), s. split.
-      cbn. now rewrite destArity_app, H1.
-      now rewrite app_context_assoc.
+      * cbn. now rewrite destArity_app, H1.
+      * now rewrite app_context_assoc.
     + right. destruct HA as [sA HA], HB as [sB HB].
       eexists. econstructor; eassumption.
 Defined.
@@ -1688,11 +1698,11 @@ Proof.
       * apply wf_local_app in H2. inversion H2; subst. assumption.
       * left. exists ctx', s. split; tas.
     + apply inversion_LetIn in H; tas. destruct H as [s1 [A' [HA [Ht [HB H]]]]].
-      repeat split; tas. eexists; eassumption.
+      repeat split; tas. 1: eexists; eassumption.
       apply cumul_Sort_r_inv in H.
       destruct H as [s' [H H']].
       right. exists s'. eapply type_reduction; tea.
-      constructor; tas. eexists; tea.
+      1:{ constructor; tas. eexists; tea. }
       apply invert_red_letin in H; tas.
       destruct H as [[? [? [? [? [[[H ?] ?] ?]]]]]|H].
       * apply invert_red_sort in H; inv H.
@@ -1702,10 +1712,12 @@ Proof.
         exact (red_rel_all _ (Γ ,, vdef na t A) 0 t A' eq_refl).
   - destruct HH as [HA [Ht [[ctx [s [H1 H2]]]|HB]]].
     + left. exists ([vdef na t A] ,,, ctx), s. split.
-      cbn. now rewrite destArity_app, H1.
-      now rewrite app_context_assoc.
+      * cbn. now rewrite destArity_app, H1.
+      * now rewrite app_context_assoc.
     + right. destruct HB as [sB HB].
-      eexists. eapply type_reduction; tas. econstructor; tea.
-      apply HA.π2. apply red1_red.
-      apply red_zeta with (b':=tSort sB).
+      eexists. eapply type_reduction; tas.
+      * econstructor; tea.
+        apply HA.π2.
+      * apply red1_red.
+        apply red_zeta with (b':=tSort sB).
 Defined.

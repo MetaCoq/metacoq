@@ -29,8 +29,8 @@ If you only want to browse the files a "light" documentation is available in
 
 Otherwise, to run interactively, the development can be compiled with
 Coq 8.9.1 and Equations 1.2. Detailed [installation instructions](#installation-instructions)
-are below, what follows is a short summary of the development and installation
-instructions.
+for the version of the package on `opam` are below, what follows is a short summary of 
+the development and installation instructions for the popl artifact sources version.
 
 ### Correspondence of the paper sections with the code
 
@@ -58,13 +58,16 @@ instructions.
 
 If you don't have Coq installed, the easiest way to get both is to use the 
 `opam` package manager. First install `opam` from your package manager 
-(or using the instructions below) and then issue the command at the 
-root of the directory:
+(or using the instructions below), add the `released` repository of Coq: 
+
+    # opam repo add coq-released https://coq.inria.fr/opam/released
+
+Then issue the following command at the root of the directory:
 
     # opam install .
     
 This should install Coq 8.9.1, Equations 1.2 and all the MetaCoq
-packages. 
+packages.
 
 BEWARE: remove any previous installation of MetaCoq in `coqc
 -where`/user-contrib before trying to compile anything, otherwise Coq 

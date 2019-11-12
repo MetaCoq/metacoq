@@ -3,7 +3,7 @@ From MetaCoq.Template Require Import All.
 From MetaCoq.Checker Require Import Typing.
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
-
+Set Keyed Unification.
 Import ListNotations.
 Import MonadNotation.
 Local Open Scope list_scope.

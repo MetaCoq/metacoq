@@ -9,6 +9,7 @@ Require Import ssreflect.
 
 (** * Substitution lemmas for typing derivations. *)
 
+Set Keyed Unification.
 Set Asymmetric Patterns.
 Close Scope string_scope.
 

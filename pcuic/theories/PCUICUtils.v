@@ -7,6 +7,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICRef
 
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
+Set Keyed Unification.
 
 Definition transitive {A} (R : A -> A -> Prop) :=
   forall u v w, R u v -> R v w -> R u w.

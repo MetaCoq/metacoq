@@ -10,7 +10,7 @@ Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 Import MonadNotation.
-
+Set Keyed Unification.
 Require Import Extract.
 
 Local Existing Instance extraction_checker_flags.

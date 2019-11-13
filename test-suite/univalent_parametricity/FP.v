@@ -435,5 +435,12 @@ MetaCoq SafeCheck Canonical_eq_eq.
 MetaCoq SafeCheck @URType_IsEq.
 
 
-Fail MetaCoq SafeCheck @FP_forall.
+Fail MetaCoq SafeCheck FP_forall.
+(*
+The command has indeed failed with message:
+Type error: Msg: not correct arity. indctx:
+[eq : App(App(App(Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var0]),Rel(14)),Rel(7)),Rel(0)),_ : Rel(13)]
+pctx:
+[e0 := App(App(App(App(Const(MetaCoq.TestSuite.univalent_parametricity.HoTT.inverse,[Var0]),Rel(15)),Rel(8)),Rel(1)),Rel(0)) : App(App(App(Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var0]),Rel(15)),Rel(1)),Rel(8)),e : App(App(App(Ind(MetaCoq.TestSuite.univalent_parametricity.HoTT.eq,0,[Var0]),Rel(14)),Rel(7)),Rel(0)),y : Rel(13)], while checking Top.Transportable_Forall
+*)
 MetaCoq CoqCheck FP_forall.

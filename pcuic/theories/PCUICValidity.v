@@ -137,7 +137,9 @@ Section Validity.
 
     - destruct (nth_error_All_local_env_over heq_nth_error X) as [HΓ' Hd].
       destruct decl as [na [b|] ty]; cbn -[skipn] in *.
-      + eapply isWfArity_or_Type_lift; eauto. clear HΓ'; now apply nth_error_Some_length in heq_nth_error.
+      + destruct Hd as [Hd _].
+        eapply isWfArity_or_Type_lift; eauto. clear HΓ'. 
+        now apply nth_error_Some_length in heq_nth_error.
       + destruct lookup_wf_local_decl; cbn -[skipn] in *.
         destruct o. right. exists x0. simpl in Hd.
         rewrite <- (firstn_skipn (S n) Γ).

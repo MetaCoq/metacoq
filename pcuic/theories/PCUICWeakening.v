@@ -1069,3 +1069,12 @@ Proof.
   forward t0; eauto.
   forward t0; eauto. now eapply wf_local_app in HΓΓ'.
 Qed.
+
+(** Variant with more freedom on the length to apply it in backward-chainings. *)
+Lemma weakening_length {cf:checker_flags} Σ Γ Γ' t T n :
+  wf Σ.1 ->
+  n = #|Γ'| ->
+  wf_local Σ (Γ ,,, Γ') ->
+  Σ ;;; Γ |- t : T ->
+  Σ ;;; Γ ,,, Γ' |- (lift0 n) t : (lift0 n) T.
+Proof. intros wfΣ ->; now apply weakening. Qed.

@@ -341,7 +341,9 @@ Proof.
     eapply (nth_error_All_local_env_over H) in X0 as [HΓ Hdecl].
     destruct lookup_wf_local_decl; cbn in *.
     destruct decl as [na [b|] ty]; cbn in *.
-    -- move/andb_and: Hdecl => [] _.
+    -- rewrite andb_true_r in Hdecl.
+       destruct Hdecl as [Hdecl Hdecl']. 
+       move/andb_and: Hdecl => [] _.
        rewrite skipn_length; try lia.
        move/(closedn_lift (S n)).
        now have->: #|Γ| - S n + S n = #|Γ| by lia.

@@ -242,7 +242,7 @@ struct
          let p' = Q.quote_proj ind pars arg in
          let kn = Names.Constant.canonical (Names.Projection.constant p) in
          let t', acc = quote_term acc env c in
-         (Q.mkProj p' t', add_constant kn acc)
+         (Q.mkProj p' t', add_inductive (Projection.inductive p) acc)
       | Constr.Meta _ -> failwith "Meta not supported by TemplateCoq"
       in
       let in_prop, env' = env in
@@ -383,13 +383,13 @@ struct
 	if Mindset.mem t !visited_types then ()
 	else
 	  begin
+	    visited_types := Mindset.add t !visited_types ;
 	    let (result,acc) =
               try quote_type acc env mi
               with e ->
                 Feedback.msg_debug (str"Exception raised while checking " ++ MutInd.print mi);
                 raise e
             in
-	    visited_types := Mindset.add t !visited_types ;
 	    constants := result :: !constants
 	  end
       | Const kn ->

@@ -1580,7 +1580,7 @@ Section All_local_env.
 
   Definition on_local_decl_glob (P : term -> option term -> Type) d :=
     match d.(decl_body) with
-    | Some b => P b (Some d.(decl_type))
+    | Some b => (P b (Some d.(decl_type)) * P d.(decl_type) None)%type
     | None => P d.(decl_type) None
     end.
 
@@ -1595,7 +1595,8 @@ Section All_local_env.
       + simpl. exists wfΓ. injection eq; intros <-. apply t0.
       + apply IHwfΓ. auto with arith.
     - destruct n.
-      + exists wfΓ. injection eq; intros <-. apply t1.
+      + exists wfΓ. injection eq; intros <-.
+        simpl. split; auto.
       + apply IHwfΓ. apply eq.
   Defined.
 
@@ -1603,10 +1604,10 @@ Section All_local_env.
              (P : forall Σ Γ (wfΓ : wf_local Σ Γ) t T, Σ ;;; Γ |- t : T -> Type)
              (wfΓ : wf_local Σ Γ) {d} (H : on_local_decl_glob (lift_typing typing Σ Γ) d) :=
     match d as d' return (on_local_decl_glob (lift_typing typing Σ Γ) d') -> Type with
-    | {| decl_name := na; decl_body := Some b; decl_type := ty |} => fun H => P Σ Γ wfΓ b ty H
+    | {| decl_name := na; decl_body := Some b; decl_type := ty |} =>
+      fun H => (P Σ Γ wfΓ b ty H.1 * P Σ Γ wfΓ _ _ (projT2 (snd H)))%type
     | {| decl_name := na; decl_body := None; decl_type := ty |} => fun H => P Σ Γ wfΓ _ _ (projT2 H)
     end H.
-
 
   Lemma nth_error_All_local_env_over {P Σ Γ n decl} (eq : nth_error Γ n = Some decl) {wfΓ : All_local_env (lift_typing typing Σ) Γ} :
     All_local_env_over typing P Σ Γ wfΓ ->
@@ -1621,7 +1622,6 @@ Section All_local_env.
     - destruct n. noconf eq. simpl. split; auto.
       apply IHX.
   Defined.
-
 
   Lemma All_local_env_prod_inv :
     forall P Q Γ,

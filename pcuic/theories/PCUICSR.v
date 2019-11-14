@@ -150,10 +150,10 @@ Proof.
     pose proof (nth_error_All_local_env_over heq_nth_error X); eauto.
     destruct lookup_wf_local_decl; cbn in *.
     rewrite <- (firstn_skipn (S n) Γ).
-    assert(S n = #|firstn (S n) Γ|).
+    eapply weakening_length; auto.
     { rewrite firstn_length_le; auto. apply nth_error_Some_length in heq_nth_error. auto with arith. }
-    rewrite {3 4}H. apply weakening; auto.
     now unfold app_context; rewrite firstn_skipn.
+    apply o.
 
   - (* Prod *)
     constructor; eauto.

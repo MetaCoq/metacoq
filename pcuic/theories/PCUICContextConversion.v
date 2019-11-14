@@ -718,60 +718,6 @@ Qed.
 
 Hint Constructors conv_decls : pcuic.
 
-
-  Definition on_local_decl_glob (P : term -> option term -> Type) d :=
-    match d.(decl_body) with
-    | Some b => (P b (Some d.(decl_type)) * P d.(decl_type) None)%type
-    | None => P d.(decl_type) None
-    end.
-
-  Definition lookup_wf_local_decl {Γ P} (wfΓ : All_local_env P Γ) (n : nat)
-             {decl} (eq : nth_error Γ n = Some decl) :
-    ∑ Pskip : All_local_env P (skipn (S n) Γ),
-             on_local_decl_glob (P (skipn (S n) Γ)) decl.
-  Proof.
-    induction wfΓ in n, decl, eq |- *; simpl.
-    - elimtype False. destruct n; depelim eq.
-    - destruct n.
-      + simpl. exists wfΓ. injection eq; intros <-. apply t0.
-      + apply IHwfΓ. auto with arith.
-    - destruct n.
-      + exists wfΓ. injection eq; intros <-.
-        simpl. split; auto.
-      + apply IHwfΓ. apply eq.
-  Defined.
-
-  Definition on_wf_local_decl {cf:checker_flags} {Σ Γ}
-             (P : forall Σ Γ (wfΓ : wf_local Σ Γ) t T, Σ ;;; Γ |- t : T -> Type)
-             (wfΓ : wf_local Σ Γ) {d} (H : on_local_decl_glob (lift_typing typing Σ Γ) d) :=
-    match d as d' return (on_local_decl_glob (lift_typing typing Σ Γ) d') -> Type with
-    | {| decl_name := na; decl_body := Some b; decl_type := ty |} =>
-      fun H => (P Σ Γ wfΓ b ty H.1 * P Σ Γ wfΓ _ _ (projT2 (snd H)))%type
-    | {| decl_name := na; decl_body := None; decl_type := ty |} => fun H => P Σ Γ wfΓ _ _ (projT2 H)
-    end H.
-
-  Lemma nth_error_All_local_env_over {cf:checker_flags} {P Σ Γ n decl} (eq : nth_error Γ n = Some decl) {wfΓ : All_local_env (lift_typing typing Σ) Γ} :
-    All_local_env_over typing P Σ Γ wfΓ ->
-    let Γ' := skipn (S n) Γ in
-    let p := lookup_wf_local_decl wfΓ n eq in
-    (All_local_env_over typing P Σ Γ' (projT1 p) * on_wf_local_decl P (projT1 p) (projT2 p))%type.
-  Proof.
-    induction 1 in n, decl, eq |- *. simpl.
-    - destruct n; simpl; elimtype False; discriminate eq.
-    - destruct n. cbn [skipn]. noconf eq. split. apply X. simpl. apply p.
-      simpl. apply IHX.
-    - destruct n. noconf eq. simpl. split; auto.
-      apply IHX.
-  Defined.
-
-Lemma weakening_length {cf:checker_flags} Σ Γ Γ' t T n :
-  wf Σ.1 ->
-  n = #|Γ'| ->
-  wf_local Σ (Γ ,,, Γ') ->
-  Σ ;;; Γ |- t : T ->
-  Σ ;;; Γ ,,, Γ' |- (lift0 n) t : (lift0 n) T.
-Proof. intros wfΣ ->; now apply weakening. Qed.
-
 Lemma context_relation_app {P} Γ Γ' Δ Δ' :
   #|Δ| = #|Δ'| ->
   context_relation P (Γ ,,, Δ) (Γ' ,,, Δ') ->

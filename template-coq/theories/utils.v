@@ -1736,12 +1736,15 @@ Proof. induction 1; simpl; auto. Qed.
 Lemma Forall2_app_r {A} (P : A -> A -> Prop) l l' r r' : Forall2 P (l ++ [r]) (l' ++ [r']) ->
                                                          (Forall2 P l l') /\ (P r r').
 Proof.
-  induction l in l', r |- *. simpl. intros. destruct l'. simpl in *.
-  depelim H; intuition auto.
-  depelim H. destruct l'; depelim H0.
-  intros.
-  depelim l'; depelim H. destruct l; depelim H0.
-  specialize (IHl _ _ H0). intuition auto.
+  induction l in l', r |- *; simpl; intros; destruct l'; simpl in *; inversion H; subst.
+  - intuition. 
+  - destruct l'; cbn in *.
+    + inversion H5. 
+    + inversion H5.
+  - destruct l; cbn in *.
+    + inversion H5. 
+    + inversion H5.
+  - specialize (IHl _ _ H5). intuition auto.
 Qed.
 
 Lemma Forall2_map_inv :
@@ -2176,17 +2179,21 @@ Lemma OnOne2_impl_exist_and_All :
 Proof.
   intros A l1 l2 l3 R1 R2 R3 h1 h2 h.
   induction h1 in l3, h2 |- *.
-  - dependent destruction h2.
-    specialize (h _ _ _ p r) as hh.
+  - destruct l3.
+    + inversion h2.
+    + inversion h2. subst. 
+    specialize (h _ _ _ p X) as hh.
     destruct hh as [? [? ?]].
     eexists. constructor.
-    + constructor. eassumption.
-    + constructor ; eauto.
-  - dependent destruction h2.
-    specialize (IHh1 _ h2). destruct IHh1 as [? [? ?]].
+      * constructor. eassumption.
+      * constructor ; eauto.
+  - destruct l3.
+    + inversion h2.
+    + inversion h2. subst. 
+    specialize (IHh1 _ X0). destruct IHh1 as [? [? ?]].
     eexists. constructor.
-    + eapply OnOne2_tl. eassumption.
-    + constructor ; eauto.
+      * eapply OnOne2_tl. eassumption.
+      * constructor ; eauto.
 Qed.
 
 Lemma OnOne2_impl_exist_and_All_r :
@@ -2198,17 +2205,21 @@ Lemma OnOne2_impl_exist_and_All_r :
 Proof.
   intros A l1 l2 l3 R1 R2 R3 h1 h2 h.
   induction h1 in l3, h2 |- *.
-  - dependent destruction h2.
-    specialize (h _ _ _ p r) as hh.
-    destruct hh as [? [? ?]].
-    eexists. split.
-    + constructor. eassumption.
-    + constructor ; eauto.
-  - dependent destruction h2.
-    specialize (IHh1 _ h2). destruct IHh1 as [? [? ?]].
-    eexists. split.
-    + eapply OnOne2_tl. eassumption.
-    + constructor ; eauto.
+  - destruct l3.
+    + inversion h2.
+    + inversion h2. subst. 
+      specialize (h _ _ _ p X) as hh.
+      destruct hh as [? [? ?]].
+      eexists. split.
+      * constructor. eassumption.
+      * constructor ; eauto.
+  - destruct l3.
+    + inversion h2.
+    + inversion h2. subst. 
+      specialize (IHh1 _ X0). destruct IHh1 as [? [? ?]].
+      eexists. split.
+      * eapply OnOne2_tl. eassumption.
+      * constructor ; eauto.
 Qed.
 
 Lemma OnOne2_split :

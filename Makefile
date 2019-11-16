@@ -84,3 +84,4 @@ ci-local:
 
 ci-opam:
 	opam install -y .
+	opam remove coq-metacoq coq-metacoq-template

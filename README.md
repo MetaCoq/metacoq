@@ -55,6 +55,8 @@ the development and installation instructions for the popl artifact sources vers
 | 4.3: Erasure Correctness     |  erasure ErasureCorrectness                            |
 | Extracted erasure            |  test-suite erasure_test                               |
 
+The `pcuic/theories/README.md` and `safechecker/theories/README.md` also provide detailed
+summaries of the files in these two modules.
 
 If you don't have Coq installed, the easiest way to get both is to use the 
 `opam` package manager. First install `opam` from your package manager 

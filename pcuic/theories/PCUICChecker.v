@@ -79,14 +79,14 @@ Section lookups.
 
   Definition lookup_constant_type Σ cst u :=
     match lookup_env Σ cst with
-    | Some (ConstantDecl _ {| cst_type := ty; cst_universes := uctx |}) =>
+    | Some (ConstantDecl {| cst_type := ty; cst_universes := uctx |}) =>
       ret (subst_instance_constr u ty)
     |  _ => raise (UndeclaredConstant cst)
     end.
 
   Definition lookup_ind_decl ind i :=
     match lookup_env Σ ind with
-    | Some (InductiveDecl _ {| ind_bodies := l; ind_universes := uctx |}) =>
+    | Some (InductiveDecl {| ind_bodies := l; ind_universes := uctx |}) =>
       match nth_error l i with
       | Some body => ret (l, uctx, body)
       | None => raise (UndeclaredInductive (mkInd ind i))

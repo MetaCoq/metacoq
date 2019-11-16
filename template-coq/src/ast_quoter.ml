@@ -210,13 +210,13 @@ struct
   let mk_constant_body ty tm uctx =
     {cst_type = ty; cst_body = tm; cst_universes = uctx}
 
-  let mk_inductive_decl kn bdy = InductiveDecl (kn, bdy)
+  let mk_inductive_decl bdy = InductiveDecl bdy
 
-  let mk_constant_decl kn bdy = ConstantDecl (kn, bdy)
+  let mk_constant_decl bdy = ConstantDecl bdy
 
-  let empty_global_declartions () = []
+  let empty_global_declarations () = []
 
-  let add_global_decl a b = a :: b
+  let add_global_decl kn a b = (kn, a) :: b
 
   let mk_program decls tm = (decls, tm)
 

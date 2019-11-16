@@ -91,12 +91,12 @@ sig
 
   val mk_constant_body : t (* type *) -> t option (* body *) -> quoted_universes_decl -> quoted_constant_body
 
-  val mk_inductive_decl : quoted_kernel_name -> quoted_mutual_inductive_body -> quoted_global_decl
+  val mk_inductive_decl : quoted_mutual_inductive_body -> quoted_global_decl
 
-  val mk_constant_decl : quoted_kernel_name -> quoted_constant_body -> quoted_global_decl
+  val mk_constant_decl : quoted_constant_body -> quoted_global_decl
 
-  val empty_global_declartions : unit -> quoted_global_env
-  val add_global_decl : quoted_global_decl -> quoted_global_env -> quoted_global_env
+  val empty_global_declarations : unit -> quoted_global_env
+  val add_global_decl : quoted_kernel_name -> quoted_global_decl -> quoted_global_env -> quoted_global_env
 
   val mk_program : quoted_global_env -> t -> quoted_program
 end
@@ -356,7 +356,7 @@ struct
       let bodies = List.map Q.mk_one_inductive_body (List.rev ls) in
       let finite = Q.quote_mind_finiteness mib.Declarations.mind_finite in
       let mind = Q.mk_mutual_inductive_body finite nparams paramsctx bodies uctx in
-      Q.mk_inductive_decl ref_name mind, acc
+      ref_name, Q.mk_inductive_decl mind, acc
     in ((fun acc env -> quote_term acc (false, env)),
         (fun acc env -> quote_minductive_type acc (false, env)))
 
@@ -366,7 +366,7 @@ struct
 
   let quote_mind_decl env trm =
     let (_,fn) = quote_term_remember (fun _ () -> ()) (fun _ () -> ()) in
-    fst (fn () env trm)
+    let (_, indd, _) = fn () env trm in indd
 
   type defType =
     Ind of Names.inductive
@@ -384,13 +384,13 @@ struct
 	else
 	  begin
 	    visited_types := Mindset.add t !visited_types ;
-	    let (result,acc) =
+	    let (kn,d,acc) =
               try quote_type acc env mi
               with e ->
                 Feedback.msg_debug (str"Exception raised while checking " ++ MutInd.print mi);
                 raise e
             in
-	    constants := result :: !constants
+	    constants := (kn,d) :: !constants
 	  end
       | Const kn ->
 	if Names.KNset.mem kn !visited_terms then ()
@@ -429,8 +429,8 @@ struct
                  raise e)
             in
             let cst_bdy = Q.mk_constant_body ty tm uctx in
-            let decl = Q.mk_constant_decl (Q.quote_kn kn) cst_bdy in
-            constants := decl :: !constants
+            let decl = Q.mk_constant_decl cst_bdy in            
+            constants := (Q.quote_kn kn, decl) :: !constants
 	  end
     in
     let (quote_rem,quote_typ) =
@@ -445,7 +445,7 @@ struct
       (x,y)
     in
     let (tm, _) = quote_rem () env trm in
-    let decls =  List.fold_left (fun acc d -> Q.add_global_decl d acc) (Q.empty_global_declartions ()) !constants in
+    let decls =  List.fold_left (fun acc (kn, d) -> Q.add_global_decl kn d acc) (Q.empty_global_declarations ()) !constants in
     Q.mk_program decls tm
 
   let quote_one_ind envA envC (mi:Entries.one_inductive_entry) =

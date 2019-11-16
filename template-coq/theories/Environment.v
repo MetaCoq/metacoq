@@ -81,10 +81,10 @@ Module Environment (T : Term).
       cst_universes : universes_decl }.
 
   Inductive global_decl :=
-  | ConstantDecl : kername -> constant_body -> global_decl
-  | InductiveDecl : kername -> mutual_inductive_body -> global_decl.
+  | ConstantDecl : constant_body -> global_decl
+  | InductiveDecl : mutual_inductive_body -> global_decl.
 
-  Definition global_env := list global_decl.
+  Definition global_env := list (kername * global_decl).
 
   (** A context of global declarations + global universe constraints,
       i.e. a global environment *)

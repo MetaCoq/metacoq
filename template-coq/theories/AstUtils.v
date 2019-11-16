@@ -313,7 +313,7 @@ Fixpoint remove_arity (n : nat) (t : term) : term :=
 Fixpoint lookup_mind_decl (id : ident) (decls : global_env)
  := match decls with
     | nil => None
-    | InductiveDecl kn d :: tl =>
+    | (kn, InductiveDecl d) :: tl =>
       if string_compare kn id is Eq then Some d else lookup_mind_decl id tl
     | _ :: tl => lookup_mind_decl id tl
     end.

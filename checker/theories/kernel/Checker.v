@@ -63,7 +63,7 @@ Section Reduce.
   | tConst c u =>
     if RedFlags.delta flags then
       match lookup_env Σ c with
-      | Some (ConstantDecl _ {| cst_body := Some body |}) =>
+      | Some (ConstantDecl {| cst_body := Some body |}) =>
         let body' := subst_instance_constr u body in
         reduce_stack Γ n body' stack
       | _ => ret (t, stack)
@@ -295,7 +295,7 @@ Section Conversion.
       end
     | tConst c _ => (* TODO Universes *)
       match lookup_env Σ c with
-      | Some (ConstantDecl _ {| cst_body := Some body |}) => Some body
+      | Some (ConstantDecl {| cst_body := Some body |}) => Some body
       | _ => None
       end
     | _ => None
@@ -361,17 +361,17 @@ Section Conversion.
         if b then ret true (* FO optim *)
         else
           match lookup_env c with (* Unfold both bodies at once *)
-          | Some (ConstantDecl _ {| cst_body := Some body |}) =>
+          | Some (ConstantDecl {| cst_body := Some body |}) =>
             isconv n leq Γ body l1 body l2
           | _ => ret false
           end
       else
         match lookup_env c' with
-        | Some (ConstantDecl _ {| cst_body := Some body |}) =>
+        | Some (ConstantDecl {| cst_body := Some body |}) =>
           isconv n leq Γ t1 l1 body l2
         | _ =>
           match lookup_env c with
-          | Some (ConstantDecl _ {| cst_body := Some body |}) =>
+          | Some (ConstantDecl {| cst_body := Some body |}) =>
             isconv n leq Γ body l1 t2 l2
           | _ => ret false
           end
@@ -633,14 +633,14 @@ Section Typecheck2.
 
   Definition lookup_constant_type cst u :=
     match lookup_env Σ cst with
-    | Some (ConstantDecl _ {| cst_type := ty; cst_universes := uctx |}) =>
+    | Some (ConstantDecl {| cst_type := ty; cst_universes := uctx |}) =>
       ret (subst_instance_constr u ty)
     |  _ => raise (UndeclaredConstant cst)
     end.
 
   Definition lookup_constant_type_cstrs cst u :=
     match lookup_env Σ cst with
-    | Some (ConstantDecl _ {| cst_type := ty; cst_universes := uctx |}) =>
+    | Some (ConstantDecl {| cst_type := ty; cst_universes := uctx |}) =>
       let cstrs := polymorphic_constraints uctx in
       ret (subst_instance_constr u ty, subst_instance_cstrs u cstrs)
       |  _ => raise (UndeclaredConstant cst)
@@ -648,7 +648,7 @@ Section Typecheck2.
 
   Definition lookup_ind_decl ind i :=
     match lookup_env Σ ind with
-    | Some (InductiveDecl _ {| ind_bodies := l; ind_universes := uctx |}) =>
+    | Some (InductiveDecl {| ind_bodies := l; ind_universes := uctx |}) =>
       match nth_error l i with
       | Some body => ret (l, uctx, body)
       | None => raise (UndeclaredInductive (mkInd ind i))
@@ -816,14 +816,6 @@ Lemma cumul_reduce_to_ind : forall `{checker_flags} {F:Fuel} Σ Γ t i u args,
        cumul Σ Γ (mkApps (tInd i u) args') (mkApps (tInd i u) args))%type }.
 Proof. intros. todo "Checker.cumul_reduce_to_ind". Defined.
 
-Lemma lookup_env_id {Σ id decl} : lookup_env Σ id = Some decl -> id = global_decl_ident decl.
-Proof.
-  unfold lookup_env.
-  induction Σ; simpl; intros; try discriminate; trivial.
-  revert H. destruct (ident_eq_spec id (global_decl_ident a)). now intros [= ->].
-  apply IHΣ.
-Qed.
-
 Lemma lookup_constant_type_declared Σ cst u decl (isdecl : declared_constant Σ cst decl) :
   lookup_constant_type_cstrs Σ cst u =
   Checked (subst_instance_constr u decl.(cst_type),
@@ -841,7 +833,7 @@ Proof.
   unfold lookup_constant_type_cstrs, lookup_env, declared_constant.
   destruct Typing.lookup_env eqn:Hlook; try discriminate.
   destruct g eqn:Hg; intros; try discriminate. destruct c.
-  injection H as eq. subst T. rewrite (lookup_env_id Hlook). simpl.
+  injection H as eq. subst T. simpl.
   eexists. split; eauto.
 Qed.
 
@@ -1053,10 +1045,10 @@ Extract Constant infer_correct => "(fun f sigma ctx t ty -> assert false)".
 
 Definition default_fuel : Fuel := 2 ^ 14.
 
-Fixpoint fresh id env : bool :=
+Fixpoint fresh id (env : global_env) : bool :=
   match env with
   | nil => true
-  | cons g env => negb (eq_constant (global_decl_ident g) id) && fresh id env
+  | cons g env => negb (eq_constant g.1 id) && fresh id env
   end.
 
 Section Checker.
@@ -1097,25 +1089,25 @@ Section Checker.
   Definition infer_term Σ G t :=
     wrap_error "" (infer Σ G [] t).
 
-  Definition check_wf_decl Σ G (g : global_decl) : EnvCheck () :=
+  Definition check_wf_decl Σ G kn (g : global_decl) : EnvCheck () :=
     match g with
-    | ConstantDecl id cst =>
+    | ConstantDecl cst =>
       match cst.(cst_body) with
-      | Some term => check_wf_judgement id Σ G term cst.(cst_type)
-      | None => check_wf_type id Σ G cst.(cst_type)
+      | Some term => check_wf_judgement kn Σ G term cst.(cst_type)
+      | None => check_wf_type kn Σ G cst.(cst_type)
       end
-    | InductiveDecl id inds =>
+    | InductiveDecl inds =>
       List.fold_left (fun acc body =>
                         acc ;; check_wf_type body.(ind_name) Σ G body.(ind_type))
                      inds.(ind_bodies) (ret ())
     end.
 
-  Fixpoint check_fresh id env : EnvCheck () :=
+  Fixpoint check_fresh id (env : global_env) : EnvCheck () :=
     match env with
     | [] => ret ()
     | g :: env =>
       check_fresh id env;;
-      if eq_constant id (global_decl_ident g) then
+      if eq_constant id g.1 then
         EnvError (AlreadyDeclared id)
       else ret ()
     end.
@@ -1130,8 +1122,8 @@ Section Checker.
   (* FIXME : universe polym declarations *)
   Definition global_decl_univs d :=
     match d with
-    | ConstantDecl _ cb => monomorphic_constraints cb.(cst_universes)
-    | InductiveDecl _ mb => monomorphic_constraints mb.(ind_universes)
+    | ConstantDecl cb => monomorphic_constraints cb.(cst_universes)
+    | InductiveDecl mb => monomorphic_constraints mb.(ind_universes)
     end.
 
   Definition add_gc_constraints ctrs  (G : universes_graph) : universes_graph
@@ -1145,15 +1137,15 @@ Section Checker.
     | [] => ret init_graph
     | g :: env =>
       G <- check_wf_env env ;;
-      match gc_of_constraints (global_decl_univs g) with
+      match gc_of_constraints (global_decl_univs g.2) with
       | None =>
-        EnvError (IllFormedDecl (global_decl_ident g)
-                             (UnsatisfiableConstraints (global_decl_univs g)))
+        EnvError (IllFormedDecl g.1
+                             (UnsatisfiableConstraints (global_decl_univs g.2)))
       | Some ctrs =>
-        wrap_error "" (check_consistent_constraints G (global_decl_univs g)) ;;
+        wrap_error "" (check_consistent_constraints G (global_decl_univs g.2)) ;;
         let G' := add_gc_constraints ctrs G in
-        check_wf_decl env G' g ;;
-        check_fresh (global_decl_ident g) env ;;
+        check_wf_decl env G' g.1 g.2 ;;
+        check_fresh g.1 env ;;
         ret G'
       end
     end.

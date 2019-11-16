@@ -41,11 +41,9 @@ Lemma lookup_env_Some_fresh Σ c decl :
   lookup_env Σ c = Some decl -> ~ (fresh_global c Σ).
 Proof.
   induction Σ; cbn. congruence.
-  case_eq (ident_eq c (global_decl_ident a)).
-  - intros H0 H1 H2. inv H2.
-    rewrite <- (reflect_iff _ _ (ident_eq_spec _ _)) in H0.
-    congruence.
-  - intros H0 H1 H2. apply IHΣ; tas.
+  destruct (ident_eq_spec c a.1).
+  - subst c. intros [= <-]. intros H2. inv H2. contradiction.
+  - intros H1 H2. apply IHΣ; tas.
     now inv H2.
 Qed.
 
@@ -58,11 +56,9 @@ Proof.
   inv wfΣ'. simpl in X0. apply X.
   intros HΣ. specialize (IHΣ'' HΣ).
   inv wfΣ'. simpl in *.
-  destruct (ident_eq c (global_decl_ident a)) eqn:Heq'.
-  eapply lookup_env_Some_fresh in IHΣ''; eauto.
-  rewrite <- (reflect_iff _ _ (ident_eq_spec _ _)) in Heq'.
-  rewrite <- Heq' in H0. contradiction.
-  auto.
+  destruct (ident_eq_spec c kn); subst.
+  eapply lookup_env_Some_fresh in IHΣ''; eauto. contradiction.
+  assumption.
 Qed.
 Hint Resolve extends_lookup : extends.
 
@@ -349,11 +345,11 @@ Definition weaken_env_prop `{checker_flags}
            (P : global_env_ext -> context -> term -> option term -> Type) :=
   forall Σ Σ' φ, wf Σ' -> extends Σ Σ' -> forall Γ t T, P (Σ, φ) Γ t T -> P (Σ', φ) Γ t T.
 
-Lemma weakening_on_global_decl `{checker_flags} P Σ Σ' φ decl :
+Lemma weakening_on_global_decl `{checker_flags} P Σ Σ' φ kn decl :
   weaken_env_prop P ->
   wf Σ' -> extends Σ Σ' ->
-  on_global_decl P (Σ, φ) decl ->
-  on_global_decl P (Σ', φ) decl.
+  on_global_decl P (Σ, φ) kn decl ->
+  on_global_decl P (Σ', φ) kn decl.
 Proof.
   unfold weaken_env_prop.
   intros HPΣ wfΣ' Hext Hdecl.
@@ -396,14 +392,14 @@ Lemma weakening_env_lookup_on_global_env `{checker_flags} P Σ Σ' c decl :
   weaken_env_prop P ->
   wf Σ' -> extends Σ Σ' -> on_global_env P Σ ->
   lookup_env Σ c = Some decl ->
-  on_global_decl P (Σ', universes_decl_of_decl decl) decl.
+  on_global_decl P (Σ', universes_decl_of_decl decl) c decl.
 Proof.
   intros HP wfΣ Hext HΣ.
   induction HΣ; simpl. congruence.
   assert (HH: extends Σ Σ'). {
     destruct Hext as [Σ'' HΣ''].
-    exists ((Σ'' ++ [d])%list). now rewrite <- app_assoc. }
-  destruct ident_eq.
+    exists ((Σ'' ++ [(kn, d)])%list). now rewrite <- app_assoc. }
+  destruct (ident_eq_spec c kn); subst.
   - intros [= ->].
     clear Hext; eapply weakening_on_global_decl; eauto.
   - now apply IHHΣ.
@@ -413,7 +409,7 @@ Lemma weaken_lookup_on_global_env `{checker_flags} P Σ c decl :
   weaken_env_prop P ->
   wf Σ -> on_global_env P Σ ->
   lookup_env Σ c = Some decl ->
-  on_global_decl P (Σ, universes_decl_of_decl decl) decl.
+  on_global_decl P (Σ, universes_decl_of_decl decl) c decl.
 Proof.
   intros. eapply weakening_env_lookup_on_global_env; eauto.
   exists []; simpl; destruct Σ; eauto.

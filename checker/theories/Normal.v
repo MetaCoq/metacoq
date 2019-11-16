@@ -34,7 +34,7 @@ Section Normal.
        | ne_var v : neutral Γ (tVar v)
        | ne_evar n l : neutral Γ (tEvar n l)
        | ne_const c u decl :
-           lookup_env Σ c = Some (ConstantDecl c decl) -> decl.(cst_body) = None ->
+           lookup_env Σ c = Some (ConstantDecl decl) -> decl.(cst_body) = None ->
            neutral Γ (tConst c u)
        | ne_app f v : neutral Γ f -> Forall (normal Γ) v -> neutral Γ (tApp f v)
        | ne_case i p c brs : neutral Γ c -> Forall (compose (normal Γ) snd) brs ->
@@ -58,7 +58,7 @@ Section Normal.
   | whne_var v : whne Γ (tVar v)
   | whne_evar n l : whne Γ (tEvar n l)
   | whne_const c u decl :
-      lookup_env Σ c = Some (ConstantDecl c decl) -> decl.(cst_body) = None ->
+      lookup_env Σ c = Some (ConstantDecl decl) -> decl.(cst_body) = None ->
       whne Γ (tConst c u)
   | whne_app f v : whne Γ f -> whne Γ (tApp f v)
   | whne_case i p c brs : whne Γ c -> whne Γ (tCase i p c brs)

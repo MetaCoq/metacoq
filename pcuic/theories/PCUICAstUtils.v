@@ -200,8 +200,8 @@ Definition isConstruct_app t :=
 Fixpoint lookup_mind_decl (id : ident) (decls : global_env)
  := match decls with
     | nil => None
-    | InductiveDecl kn d :: tl =>
-      if string_compare kn id is Eq then Some d else lookup_mind_decl id tl
+    | (kn, InductiveDecl d) :: tl =>
+      if ident_eq kn id then Some d else lookup_mind_decl id tl
     | _ :: tl => lookup_mind_decl id tl
     end.
 

@@ -349,7 +349,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
           let t = TermReify.quote_mind_decl env ind in
           let _, args = Constr.destApp t in
           (match args with
-           | [|kn; decl|] ->
+           | [|decl|] ->
              k (env, evm, decl)
            | _ -> bad_term_verb t "anomaly in quoting of inductive types")
         (* quote_mut_ind produce an entry rather than a decl *)

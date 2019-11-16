@@ -1133,7 +1133,7 @@ Proof.
     cbn in IH'; forward IH'. constructor 1; cbn. lia.
     apply IH'; auto.
   - simpl. simpl in *.
-    destruct g; simpl.
+    destruct d; simpl.
     + destruct c; simpl in *.
       destruct cst_body; simpl in *.
       simpl.
@@ -1448,10 +1448,11 @@ Section All_local_env.
   Lemma lookup_on_global_env P Σ c decl :
     on_global_env P Σ ->
     lookup_env Σ c = Some decl ->
-    { Σ' & { wfΣ' : on_global_env P Σ'.1 & on_global_decl P Σ' decl } }.
+    { Σ' & { wfΣ' : on_global_env P Σ'.1 & on_global_decl P Σ' c decl } }.
   Proof.
     induction 1; simpl. congruence.
-    destruct ident_eq. intros [= ->].
+    destruct (ident_eq_spec c kn); subst.
+    intros [= ->].
     exists (Σ, udecl). exists X. auto.
     apply IHX.
   Qed.

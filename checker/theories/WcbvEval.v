@@ -13,15 +13,6 @@ Require Import ssreflect.
 
 Local Ltac inv H := inversion H; subst.
 
-(* TODO fix lookup env *)
-Lemma lookup_env_cst_inv {Σ c k cst} :
-  lookup_env Σ c = Some (ConstantDecl k cst) -> c = k.
-Proof.
-  induction Σ. simpl. discriminate.
-  simpl. destruct AstUtils.ident_eq eqn:Heq. intros [= ->]. simpl in Heq.
-  now destruct (AstUtils.ident_eq_spec c k). auto.
-Qed.
-
 (** * Weak-head call-by-value evaluation strategy.
 
   The [wcbveval] inductive relation specifies weak cbv evaluation.  It
@@ -98,7 +89,7 @@ Definition isAxiom Σ x :=
   match x with
   | tConst c u =>
     match lookup_env Σ c with
-    | Some (ConstantDecl _ {| cst_body := None |}) => true
+    | Some (ConstantDecl {| cst_body := None |}) => true
     | _ => false
     end
   | _ => false
@@ -441,8 +432,7 @@ Section Wcbv.
       destruct g eqn:Heq' => //.
       destruct c0 as [? [b|] ?] eqn:Heq'' => //. subst.
       intros. eapply eval_axiom. red.
-      rewrite Heq.
-      move: (lookup_env_cst_inv Heq) => ->. reflexivity.
+      now rewrite Heq.
       easy.
     * now eapply eval_atom.
     * now eapply eval_atom.

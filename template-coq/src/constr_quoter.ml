@@ -248,17 +248,21 @@ struct
     let tm = quote_optionl tTerm tm in
     constr_mkApp (tBuild_constant_body, [|ty; tm; uctx|])
 
-  let mk_inductive_decl kn mind =
-    constr_mkApp (tInductiveDecl, [|kn; mind|])
+  let mk_inductive_decl mind =
+    constr_mkApp (tInductiveDecl, [|mind|])
 
-  let mk_constant_decl kn bdy =
-    constr_mkApp (tConstantDecl, [|kn; bdy|])
+  let mk_constant_decl bdy =
+    constr_mkApp (tConstantDecl, [|bdy|])
 
-  let empty_global_declartions () =
-    constr_mkAppl (c_nil, [| tglobal_decl |])
+  let global_pairty () = 
+    constr_mkAppl (prod_type, [| tident; tglobal_decl |])
+    
+  let empty_global_declarations () =
+    constr_mkApp (c_nil, [| global_pairty () |])
 
-  let add_global_decl d l =
-    constr_mkApp (c_cons, [|Lazy.force tglobal_decl; d; l|])
+  let add_global_decl kn d l =
+    let pair = pairl tident tglobal_decl kn d in
+    constr_mkApp (c_cons, [| global_pairty (); pair; l|])
 
   let mk_program f s = pairl tglobal_env tTerm f s
 

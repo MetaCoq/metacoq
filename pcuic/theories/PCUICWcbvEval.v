@@ -99,7 +99,7 @@ Definition isAxiom Σ x :=
   match x with
   | tConst c u =>
     match lookup_env Σ c with
-    | Some (ConstantDecl _ {| cst_body := None |}) => true
+    | Some (ConstantDecl {| cst_body := None |}) => true
     | _ => false
     end
   | _ => false

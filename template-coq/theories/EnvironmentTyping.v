@@ -12,25 +12,19 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
 
   (** ** Environment lookup *)
 
-  Definition global_decl_ident d :=
-    match d with
-    | ConstantDecl id _ => id
-    | InductiveDecl id _ => id
-    end.
-
   Fixpoint lookup_env (Σ : global_env) (id : ident) : option global_decl :=
     match Σ with
     | nil => None
-    | hd :: tl =>
-      if ident_eq id (global_decl_ident hd) then Some hd
+    | d :: tl =>
+      if ident_eq id d.1 then Some d.2
       else lookup_env tl id
     end.
 
   Definition declared_constant (Σ : global_env) (id : ident) decl : Prop :=
-    lookup_env Σ id = Some (ConstantDecl id decl).
+    lookup_env Σ id = Some (ConstantDecl decl).
 
   Definition declared_minductive Σ mind decl :=
-    lookup_env Σ mind = Some (InductiveDecl mind decl).
+    lookup_env Σ mind = Some (InductiveDecl decl).
 
   Definition declared_inductive Σ mdecl ind decl :=
     declared_minductive Σ (inductive_mind ind) mdecl /\
@@ -46,19 +40,10 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     List.nth_error idecl.(ind_projs) (snd proj) = Some pdecl /\
     mdecl.(ind_npars) = snd (fst proj).
 
-  (* TODO fix lookup env *)
-  Lemma lookup_env_cst_inv {Σ c k cst} :
-    lookup_env Σ c = Some (ConstantDecl k cst) -> c = k.
-  Proof.
-    induction Σ. simpl. discriminate.
-    simpl. destruct AstUtils.ident_eq eqn:Heq. intros [= ->]. simpl in Heq.
-    now destruct (AstUtils.ident_eq_spec c k). auto.
-  Qed.
-
   Definition on_udecl_decl {A} (F : universes_decl -> A) d : A :=
   match d with
-  | ConstantDecl  _ cb => F cb.(cst_universes)
-  | InductiveDecl _ mb => F mb.(ind_universes)
+  | ConstantDecl cb => F cb.(cst_universes)
+  | InductiveDecl mb => F mb.(ind_universes)
   end.
 
   Definition monomorphic_udecl_decl := on_udecl_decl monomorphic_udecl.
@@ -73,7 +58,7 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
 
   Definition global_levels (Σ : global_env) : LevelSet.t :=
     fold_right
-      (fun decl lvls => LevelSet.union (monomorphic_levels_decl decl) lvls)
+      (fun decl lvls => LevelSet.union (monomorphic_levels_decl decl.2) lvls)
       (LevelSet_pair Level.lSet Level.lProp) Σ.
 
   Lemma global_levels_Set Σ :
@@ -103,7 +88,7 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
 
   Definition global_constraints (Σ : global_env) : constraints :=
     fold_right (fun decl ctrs =>
-        ConstraintSet.union (monomorphic_constraints_decl decl) ctrs
+        ConstraintSet.union (monomorphic_constraints_decl decl.2) ctrs
       ) ConstraintSet.empty Σ.
 
   Definition global_uctx (Σ : global_env) : ContextSet.t :=
@@ -439,10 +424,10 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       | None => on_type Σ [] d.(cst_type)
       end.
 
-    Definition on_global_decl Σ decl :=
+    Definition on_global_decl Σ kn decl :=
       match decl with
-      | ConstantDecl id d => on_constant_decl Σ d
-      | InductiveDecl ind inds => on_inductive Σ ind inds
+      | ConstantDecl d => on_constant_decl Σ d
+      | InductiveDecl inds => on_inductive Σ kn inds
       end.
 
     (** *** Typing of global environment
@@ -453,7 +438,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
     (** Well-formed global environments have no name clash. *)
 
     Definition fresh_global (s : string) : global_env -> Prop :=
-      Forall (fun g => global_decl_ident g <> s).
+      Forall (fun g => g.1 <> s).
 
     Definition satisfiable_udecl `{checker_flags} Σ φ
       := consistent (global_ext_constraints (Σ, φ)).
@@ -479,13 +464,13 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
 
     Inductive on_global_env `{checker_flags} : global_env -> Type :=
     | globenv_nil : on_global_env []
-    | globenv_decl Σ d :
+    | globenv_decl Σ kn d :
         on_global_env Σ ->
-        fresh_global (global_decl_ident d) Σ ->
+        fresh_global kn Σ ->
         let udecl := universes_decl_of_decl d in
         on_udecl Σ udecl ->
-        on_global_decl (Σ, udecl) d ->
-        on_global_env (Σ ,, d).
+        on_global_decl (Σ, udecl) kn d ->
+        on_global_env (Σ ,, (kn, d)).
 
     Definition on_global_env_ext `{checker_flags} (Σ : global_env_ext) :=
       on_global_env Σ.1 × on_udecl Σ.1 Σ.2.

@@ -833,11 +833,11 @@ Proof.
     7:{ cbn. rewrite -> firstn_map.
         erewrite lift_build_branches_type; tea.
         rewrite map_option_out_map_option_map.
-        erewrite heq_map_option_out. reflexivity. }
+        subst params. erewrite heq_map_option_out. reflexivity. }
     all: eauto.
     -- erewrite -> lift_declared_inductive; eauto.
     -- simpl. erewrite firstn_map, lift_build_case_predicate_type; tea.
-       erewrite heq_build_case_predicate_type; reflexivity.
+       subst params. erewrite heq_build_case_predicate_type; reflexivity.
     -- destruct idecl; simpl in *; auto.
     -- now rewrite -> !lift_mkApps in IHc.
     -- solve_all.

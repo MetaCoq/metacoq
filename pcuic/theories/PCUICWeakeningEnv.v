@@ -135,11 +135,10 @@ Lemma lookup_env_Some_fresh `{checker_flags} Σ c decl :
   lookup_env Σ c = Some decl -> ~ (fresh_global c Σ).
 Proof.
   induction Σ; cbn. congruence.
-  case_eq (ident_eq c (global_decl_ident a)).
-  - intros H0 H1 H2. inv H2.
-    rewrite <- (reflect_iff _ _ (ident_eq_spec _ _)) in H0.
-    congruence.
-  - intros H0 H1 H2. apply IHΣ; tas.
+  destruct (ident_eq_spec c a.1); subst.
+  - intros [= <-] H2. inv H2.
+    contradiction.
+  - intros H1 H2. apply IHΣ; tas.
     now inv H2.
 Qed.
 
@@ -152,7 +151,7 @@ Proof.
   inv wfΣ'. simpl in X0. apply X.
   intros HΣ. specialize (IHΣ'' HΣ).
   inv wfΣ'. simpl in *.
-  destruct (ident_eq c (global_decl_ident a)) eqn:Heq'.
+  destruct (ident_eq c kn) eqn:Heq'.
   eapply lookup_env_Some_fresh in IHΣ''; eauto.
   rewrite <- (reflect_iff _ _ (ident_eq_spec _ _)) in Heq'.
   rewrite <- Heq' in H0. contradiction.
@@ -325,11 +324,11 @@ Definition weaken_env_prop `{checker_flags}
            (P : global_env_ext -> context -> term -> option term -> Type) :=
   forall Σ Σ' φ, wf Σ' -> extends Σ Σ' -> forall Γ t T, P (Σ, φ) Γ t T -> P (Σ', φ) Γ t T.
 
-Lemma weakening_on_global_decl `{checker_flags} P Σ Σ' φ decl :
+Lemma weakening_on_global_decl `{checker_flags} P Σ Σ' φ kn decl :
   weaken_env_prop P ->
   wf Σ' -> extends Σ Σ' ->
-  on_global_decl P (Σ, φ) decl ->
-  on_global_decl P (Σ', φ) decl.
+  on_global_decl P (Σ, φ) kn decl ->
+  on_global_decl P (Σ', φ) kn decl.
 Proof.
   unfold weaken_env_prop.
   intros HPΣ wfΣ' Hext Hdecl.
@@ -372,15 +371,15 @@ Lemma weakening_env_lookup_on_global_env `{checker_flags} P Σ Σ' c decl :
   weaken_env_prop P ->
   wf Σ' -> extends Σ Σ' -> on_global_env P Σ ->
   lookup_env Σ c = Some decl ->
-  on_global_decl P (Σ', universes_decl_of_decl decl) decl.
+  on_global_decl P (Σ', universes_decl_of_decl decl) c decl.
 Proof.
   intros HP wfΣ Hext HΣ.
   induction HΣ; simpl. congruence.
   assert (HH: extends Σ Σ'). {
     destruct Hext as [Σ'' HΣ''].
-    exists ((Σ'' ++ [d])%list). now rewrite <- app_assoc. }
-  destruct ident_eq.
-  - intros [= ->].
+    exists ((Σ'' ++ [(kn, d)])%list). now rewrite <- app_assoc. }
+  destruct (ident_eq_spec c kn).
+  - intros [= ->]. subst.
     clear Hext; eapply weakening_on_global_decl; eauto.
   - now apply IHHΣ.
 Qed.
@@ -389,7 +388,7 @@ Lemma weaken_lookup_on_global_env `{checker_flags} P Σ c decl :
   weaken_env_prop P ->
   wf Σ -> on_global_env P Σ ->
   lookup_env Σ c = Some decl ->
-  on_global_decl P (Σ, universes_decl_of_decl decl) decl.
+  on_global_decl P (Σ, universes_decl_of_decl decl) c decl.
 Proof.
   intros. eapply weakening_env_lookup_on_global_env; eauto.
   exists []; simpl; destruct Σ; eauto.
@@ -583,8 +582,8 @@ Lemma weaken_lookup_on_global_env' `{checker_flags} Σ c decl :
 Proof.
   intros wfΣ HH.
   induction wfΣ; simpl. discriminate.
-  cbn in HH. subst udecl. destruct (ident_eq c (global_decl_ident d)).
-  - apply some_inj in HH; destruct HH.
+  cbn in HH. subst udecl. destruct (ident_eq_spec c kn).
+  - apply some_inj in HH; destruct HH. subst.
     clear -o. unfold on_udecl, on_udecl_prop in *.
     destruct o as [H1 [H2 [H3 H4]]]. repeat split.
     + clear -H2. intros [[? ?] ?] Hc. specialize (H2 _ Hc).
@@ -598,11 +597,11 @@ Proof.
       * auto.
       * intros l Hl. simpl. replace (monomorphic_levels_decl d) with ctx.1.
         -- apply LevelSet.union_spec; now left.
-        -- clear -eq. destruct d as [? c|? c]; cbn in *.
+        -- clear -eq. destruct d as [c|c]; cbn in *.
            all: destruct c; cbn in *; now rewrite eq.
       * simpl. replace (monomorphic_constraints_decl d) with ctx.2.
         -- intros c Hc; apply ConstraintSet.union_spec; now left.
-        -- clear -eq. destruct d as [? c|? c]; cbn in *.
+        -- clear -eq. destruct d as [c|c]; cbn in *.
            all: destruct c; cbn in *; now rewrite eq.
       * clear -eq H4. destruct H4 as [v Hv]. exists v.
       intros c Hc; apply (Hv c).
@@ -610,7 +609,7 @@ Proof.
       2: apply ConstraintSet.union_spec in Hc; destruct Hc as [Hc|Hc].
       -- apply ConstraintSet.union_spec. simpl in *. left; now rewrite eq.
       -- apply ConstraintSet.union_spec; left. simpl.
-         destruct d as [? [? ? []]|? [? ? ? ? []]]; simpl in *; tas;
+         destruct d as [[? ? []]|[? ? ? ? []]]; simpl in *; tas;
            now apply ConstraintSet.empty_spec in Hc.
       -- apply ConstraintSet.union_spec; now right.
   - specialize (IHwfΣ HH). revert IHwfΣ o; clear.
@@ -635,7 +634,7 @@ Proof.
           2: apply ConstraintSet.union_spec in Hc; destruct Hc as [Hc|Hc];
             simpl in *.
           -- apply H2 in Hc. apply ConstraintSet.union_spec; now right.
-          -- clear -Hc. destruct d as [? [? ? []]|? [? ? ? ? []]]; cbn in *.
+          -- clear -Hc. destruct d as [[? ? []]|[? ? ? ? []]]; cbn in *.
              all: try (apply ConstraintSet.empty_spec in Hc; contradiction).
              all: apply ConstraintSet.union_spec; now left.
           -- apply ConstraintSet.union_spec; now right.

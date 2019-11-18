@@ -265,12 +265,12 @@ Qed.
 Lemma not_var_global_levels Σ (hΣ : wf Σ) :
   LS.For_all (negb ∘ Level.is_var) (global_levels Σ).
 Proof.
-  induction hΣ as [|Σ d hΣ IH HH univs Hu Hd].
+  induction hΣ as [|Σ kn d hΣ IH HH univs Hu Hd].
   - intros l Hl. apply LevelSet_pair_In in Hl.
     destruct Hl as [Hl|Hl]; subst; reflexivity.
   - subst univs. intros l Hl. simpl in Hl; apply LS.union_spec in Hl.
     destruct Hl as [Hl|Hl]; auto. clear -Hu Hl.
-    destruct d as [? [? ? [φ|?|?]]|? [? ? ? ? [φ|?|?]]]; cbn in *;
+    destruct d as [[? ? [φ|?|?]]|[? ? ? ? [φ|?|?]]]; cbn in *;
       unfold monomorphic_levels_decl in *; cbn in *;
       try now apply LS.empty_spec in Hl.
     all: destruct Hu as [_ [_ [Hu _]]];
@@ -298,17 +298,16 @@ Lemma levels_global_constraint Σ (hΣ : wf Σ) c :
   -> LS.In c.1.1 (global_levels Σ)
     /\ LS.In c.2 (global_levels Σ).
 Proof.
-  induction hΣ as [|Σ d hΣ IH HH univs Hu Hd].
+  induction hΣ as [|Σ kn d hΣ IH HH univs Hu Hd].
   - intro H; now apply CS.empty_spec in H.
   - subst univs. intro Hc. simpl in *; apply CS.union_spec in Hc.
     destruct Hc as [Hc|Hc]; auto. clear -Hu Hc.
-    + destruct d as [? [? ? [φ|?|?]]|? [? ? ? ? [φ|?|?]]]; cbn in *;
+    + destruct d as [[? ? [φ|?|?]]|[? ? ? ? [φ|?|?]]]; cbn in *;
         unfold monomorphic_levels_decl, monomorphic_constraints_decl in *; cbn in *;
           try now apply CS.empty_spec in Hc.
       all: destruct Hu as [_ [Hu [_ _]]].
       all: destruct c as [[l1 c] l2]; exact (Hu _ Hc).
     + split; apply LS.union_spec; now right.
-
 Qed.
 
 Lemma levels_global_ext_constraint Σ φ (hΣ : wf_ext_wk (Σ, φ)) c :

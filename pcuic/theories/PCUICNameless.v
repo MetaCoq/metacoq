@@ -412,13 +412,13 @@ Definition nl_mutual_inductive_body m :=
 
 Definition nl_global_decl (d : global_decl) : global_decl :=
   match d with
-  | ConstantDecl kn cb => ConstantDecl kn (nl_constant_body cb)
-  | InductiveDecl kn mib => InductiveDecl kn (nl_mutual_inductive_body mib)
+  | ConstantDecl cb => ConstantDecl (nl_constant_body cb)
+  | InductiveDecl mib => InductiveDecl (nl_mutual_inductive_body mib)
   end.
 
 Definition nlg (Σ : global_env_ext) : global_env_ext :=
   let '(Σ, φ) := Σ in
-  (map nl_global_decl Σ, φ).
+  (map (on_snd nl_global_decl) Σ, φ).
 
 Fixpoint nlstack (π : stack) : stack :=
   match π with
@@ -616,7 +616,7 @@ Proof.
   simpl. clear - g.
   induction g. 1: reflexivity.
   simpl. f_equal. 2: assumption.
-  destruct a. all: reflexivity.
+  destruct a. simpl. destruct g0. all: reflexivity.
 Qed.
 
 Lemma global_ext_constraints_nlg :
@@ -628,21 +628,18 @@ Proof.
   f_equal. simpl. clear - g.
   induction g. 1: reflexivity.
   simpl. f_equal. 2: assumption.
-  destruct a. all: reflexivity.
+  destruct a as [kn []]; reflexivity.
 Qed.
 
 Lemma nl_lookup_env :
   forall Σ c,
-    lookup_env (map nl_global_decl Σ) c
+    lookup_env (map (on_snd nl_global_decl) Σ) c
     = option_map nl_global_decl (lookup_env Σ c).
 Proof.
   intros Σ c.
   induction Σ. 1: reflexivity.
   simpl.
-  replace (global_decl_ident (nl_global_decl a))
-    with (global_decl_ident a)
-    by (destruct a ; reflexivity).
-  destruct (ident_eq c (global_decl_ident a)).
+  destruct (ident_eq c a.1).
   - reflexivity.
   - assumption.
 Qed.
@@ -822,7 +819,7 @@ Qed.
 Lemma nl_red1 :
   forall Σ Γ M N,
     red1 Σ Γ M N ->
-    red1 (map nl_global_decl Σ) (nlctx Γ) (nl M) (nl N).
+    red1 (map (on_snd nl_global_decl) Σ) (nlctx Γ) (nl M) (nl N).
 Proof.
   intros Σ Γ M N h.
   induction h using red1_ind_all.

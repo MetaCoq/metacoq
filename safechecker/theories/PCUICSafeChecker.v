@@ -259,14 +259,14 @@ Fixpoint string_of_conv_error Σ (e : ConversionError) : string :=
       print_term Σ Γ (tCoFix mfix idx) ++
       "\nand\n" ++ print_term Σ Γ' (tCoFix mfix' idx') ++
       "\ncorrespond to syntactically distinct terms."
-  | StackHeadError leq t1 args1 u1 l1 t2 u2 l2 e =>
-      "StackHeadError: " ++ string_of_conv_error e
-  | StackTailError leq t1 args1 u1 l1 t2 u2 l2 e =>
-      "StackTailError: " ++ string_of_conv_error e
-  | StackMismatch t1 args1 l1 t2 l2 =>
+  | StackHeadError leq Γ1 t1 args1 u1 l1 Γ2 t2 u2 l2 e =>
+      "StackHeadError: " ++ string_of_conv_error Σ e
+  | StackTailError leq Γ1 t1 args1 u1 l1 Γ2 t2 u2 l2 e =>
+      "StackTailError: " ++ string_of_conv_error Σ e
+  | StackMismatch Γ1 t1 args1 l1 Γ2 t2 l2 =>
       "Convertible terms\n" ++
-      string_of_term t1 ++
-      "\nand\n" ++ string_of_term t2 ++
+      print_term Σ Γ1 t1 ++
+      "\nand\n" ++ print_term Σ Γ2 t2 ++
       "are convertible/convertible (TODO) but applied to a different number" ++
       " of arguments."
   | HeadMistmatch leq Γ1 t1 Γ2 t2 =>

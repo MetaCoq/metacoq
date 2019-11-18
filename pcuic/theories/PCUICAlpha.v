@@ -82,34 +82,6 @@ Section Alpha.
           -- apply All2_same. intro. apply eq_term_upto_univ_refl ; auto.
   Qed.
 
-  (* Lemma types_of_case_eq_term : *)
-  (*   forall ind mdecl idecl npar args u p p' pty indctx pctx ps btys, *)
-  (*     build_case_predicate_type ind mdecl idecl params u ps = Some pty -> *)
-  (*     eq_term_upto_univ eq eq p p' -> *)
-  (*     ∑ btys', *)
-  (*       types_of_case ind mdecl idecl (firstn npar args) u p' pty = *)
-  (*       Some (indctx, pctx, ps, btys') × *)
-  (*       All2 (on_Trel_eq (eq_term_upto_univ eq eq) snd fst) btys btys'. *)
-  (* Proof. *)
-  (*   intros ind mdecl idecl npar args u p p' pty indctx pctx ps btys htc e. *)
-  (*   unfold types_of_case in *. *)
-  (*   case_eq (instantiate_params (subst_instance_context u (ind_params mdecl)) (firstn npar args) (subst_instance_constr u (ind_type idecl))) ; *)
-  (*     try solve [ intro bot ; rewrite bot in htc ; discriminate htc ]. *)
-  (*   intros ity eity. rewrite eity in htc. *)
-  (*   case_eq (destArity [] ity) ; *)
-  (*     try solve [ intro bot ; rewrite bot in htc ; discriminate htc ]. *)
-  (*   intros [args0 ?] ear. rewrite ear in htc. *)
-  (*   case_eq (destArity [] pty) ; *)
-  (*     try solve [ intro bot ; rewrite bot in htc ; discriminate htc ]. *)
-  (*   intros [args' s'] ear'. rewrite ear' in htc. *)
-  (*   case_eq (map_option_out (build_branches_type ind mdecl idecl (firstn npar args) u p)) ; *)
-  (*     try solve [ intro bot ; rewrite bot in htc ; discriminate htc ]. *)
-  (*   intros brtys ebrtys. rewrite ebrtys in htc. *)
-  (*   eapply build_branches_type_eq_term in ebrtys as [brtys' [ebrtys' he]] ; eauto. *)
-  (*   inversion htc. subst. clear htc. *)
-  (*   rewrite ebrtys'. intuition eauto. *)
-  (* Qed. *)
-
   (* TODO MOVE *)
   Lemma wf_local_nth_error_vass :
     forall Σ Γ i na ty,

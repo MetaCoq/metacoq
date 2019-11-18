@@ -427,6 +427,10 @@ Fixpoint nlstack (π : stack) : stack :=
     App (nl u) (nlstack ρ)
   | Fix f n args ρ =>
     Fix (map (map_def_anon nl nl) f) n (map nl args) (nlstack ρ)
+  | Fix_mfix_ty na bo ra mfix1 mfix2 idx ρ =>
+    Fix_mfix_ty nAnon (nl bo) ra (map (map_def_anon nl nl) mfix1) (map (map_def_anon nl nl) mfix2) idx (nlstack ρ)
+  | Fix_mfix_bd na ty ra mfix1 mfix2 idx ρ =>
+    Fix_mfix_bd nAnon (nl ty) ra (map (map_def_anon nl nl) mfix1) (map (map_def_anon nl nl) mfix2) idx (nlstack ρ)
   | CoFix f n args ρ =>
     CoFix (map (map_def_anon nl nl) f) n (map nl args) (nlstack ρ)
   | Case_p indn c brs ρ =>
@@ -477,7 +481,9 @@ Proof.
   intros ρ.
   induction ρ.
   all: try solve [ simpl ; rewrite ?IHρ ; reflexivity ].
-  simpl. rewrite IHρ. rewrite map_length. reflexivity.
+  - simpl. rewrite IHρ. rewrite map_length. reflexivity.
+  - simpl. rewrite IHρ. rewrite map_length. reflexivity.
+  - simpl. rewrite IHρ. rewrite map_length. reflexivity.
 Qed.
 
 Lemma nl_it_mkLambda_or_LetIn :
@@ -511,14 +517,6 @@ Proof.
   - reflexivity.
   - simpl. f_equal. apply ih.
   - simpl. f_equal. apply ih.
-Qed.
-
-Lemma nlctx_stack_context :
-  forall ρ,
-    nlctx (stack_context ρ) = stack_context (nlstack ρ).
-Proof.
-  intro ρ. induction ρ.
-  all: (simpl ; rewrite ?IHρ ; reflexivity).
 Qed.
 
 Lemma nl_subst_instance_constr :
@@ -593,8 +591,12 @@ Proof.
     simpl ; rewrite IHπ ; cbn ; f_equal ;
     rewrite nl_mkApps ; reflexivity
   ].
-  simpl. rewrite IHπ. cbn. f_equal.
-  rewrite map_app. cbn. reflexivity.
+  - simpl. rewrite IHπ. cbn. f_equal.
+    rewrite map_app. cbn. reflexivity.
+  - simpl. rewrite IHπ. cbn. f_equal.
+    rewrite map_app. cbn. reflexivity.
+  - simpl. rewrite IHπ. cbn. f_equal.
+    rewrite map_app. cbn. reflexivity.
 Qed.
 
 Lemma nl_zipx :
@@ -711,6 +713,47 @@ Proof.
       * unfold map_def_anon, map_def. simpl.
         f_equal. all: eapply p.
       * assumption.
+Qed.
+
+Lemma nlctx_fix_context_alt :
+  forall l,
+    nlctx (fix_context_alt l) =
+    fix_context_alt (map (fun d => (nAnon, nl d.2)) l).
+Proof.
+  intro l.
+  unfold fix_context_alt. unfold nlctx.
+  rewrite map_rev. f_equal.
+  rewrite map_mapi. rewrite mapi_map.
+  eapply mapi_ext.
+  intros n [na t]. simpl.
+  unfold map_decl_anon. unfold vass.
+  simpl.
+  rewrite nl_lift. reflexivity.
+Qed.
+
+Lemma map_def_sig_nl :
+  forall m,
+    map (fun d : name × term => (nAnon, nl d.2)) (map def_sig m) =
+    map def_sig (map (map_def_anon nl nl) m).
+Proof.
+  intro m.
+  rewrite 2!map_map. eapply map_ext.
+  intros [na ty bo ra]. simpl.
+  unfold def_sig, map_def_anon. simpl.
+  reflexivity.
+Qed.
+
+Lemma nlctx_stack_context :
+  forall ρ,
+    nlctx (stack_context ρ) = stack_context (nlstack ρ).
+Proof.
+  intro ρ. induction ρ.
+  all: try (simpl ; rewrite ?IHρ ; reflexivity).
+  simpl. rewrite nlctx_app_context. rewrite IHρ.
+  rewrite nlctx_fix_context_alt.
+  rewrite map_app. simpl.
+  rewrite 2!map_def_sig_nl.
+  reflexivity.
 Qed.
 
 Lemma nl_subst :

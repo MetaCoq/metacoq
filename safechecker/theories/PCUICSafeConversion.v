@@ -1799,14 +1799,18 @@ Section Conversion.
         }
       } ;
 
-    | prog_view_Proj p c p' c' with inspect (eqb_term (tProj p c) (tProj p' c')) := {
-      | @exist true eq1 := isconv_args leq (tProj p c) π1 (tProj p' c') π2 aux ;
+    | prog_view_Proj p c p' c' with inspect (eqb p p') := {
+      | @exist true eq1
+        with isconv_red_raw Conv c (Proj p π1) c' (Proj p' π2) aux := {
+        | Success h1 := isconv_args leq (tProj p c) π1 (tProj p' c') π2 aux ;
+        | Error e := Error e
+        } ;
       | @exist false _ :=
         Error (
           DistinctStuckProj
             (Γ ,,, stack_context π1) p c
             (Γ ,,, stack_context π2) p' c'
-        ) (* TODO Probably incomplete *)
+        )
       } ;
 
     | prog_view_Fix mfix idx mfix' idx'
@@ -2198,15 +2202,23 @@ Section Conversion.
 
   (* tProj *)
   Next Obligation.
+    eapply R_aux_positionR. all: simpl.
+    - reflexivity.
+    - rewrite <- app_nil_r. apply positionR_poscat. constructor.
+  Qed.
+  Next Obligation.
     unshelve eapply R_stateR.
     all: try reflexivity.
     simpl. constructor.
   Qed.
   Next Obligation.
     destruct hΣ.
+    destruct h1 as [h].
+    change (true = eqb p p') in eq1.
+    destruct (eqb_spec p p'). 2: discriminate. subst.
     eapply conv_conv. 1: assumption.
-    constructor. constructor.
-    eapply eqb_term_spec. auto.
+    constructor.
+    eapply conv_Proj_c. assumption.
   Qed.
 
   (* tFix *)

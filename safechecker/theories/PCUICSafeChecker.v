@@ -262,10 +262,11 @@ Fixpoint string_of_conv_error Σ (e : ConversionError) : string :=
       print_term Σ Γ br' ++
       "\nhas " ++ string_of_nat m' ++ "."
   | DistinctStuckProj Γ p c Γ' p' c' =>
-      "The two projections\n" ++
+      "The two stuck projections\n" ++
       print_term Σ Γ (tProj p c) ++
-      "\nand\n" ++ print_term Σ Γ' (tProj p' c') ++
-      "\ncorrespond to syntactically distinct stuck terms."
+      "\nand\n" ++
+      print_term Σ Γ' (tProj p' c') ++
+      "\nare syntactically different."
   | CannotUnfoldFix Γ mfix idx Γ' mfix' idx' =>
       "The two fixed-points\n" ++
       print_term Σ Γ (tFix mfix idx) ++

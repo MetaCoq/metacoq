@@ -65,12 +65,12 @@ Definition trans_minductive_body md :=
 
 Definition trans_global_decl (d : Ast.global_decl) :=
   match d with
-  | Ast.ConstantDecl kn bd => ConstantDecl kn (trans_constant_body bd)
-  | Ast.InductiveDecl kn bd => InductiveDecl kn (trans_minductive_body bd)
+  | Ast.ConstantDecl bd => ConstantDecl (trans_constant_body bd)
+  | Ast.InductiveDecl bd => InductiveDecl (trans_minductive_body bd)
   end.
 
-Definition trans_global_decls d :=
-  List.map trans_global_decl d.
+Definition trans_global_decls (d : Ast.global_env) :=
+  List.map (on_snd trans_global_decl) d.
 
 Definition trans_global (Σ : Ast.global_env_ext) :=
   (trans_global_decls (fst Σ), snd Σ).

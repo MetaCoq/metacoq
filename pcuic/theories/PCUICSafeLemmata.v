@@ -213,24 +213,10 @@ Section Lemmata.
 
   Hint Resolve eq_term_upto_univ_refl : core.
 
-  Lemma lookup_env_ConstantDecl_inv :
-    forall Σ k k' ty bo uni,
-      Some (ConstantDecl k' {| cst_type := ty ; cst_body := bo; cst_universes := uni |})
-      = lookup_env Σ k ->
-      k = k'.
-  Proof.
-    intros Σ k k' ty bo uni h.
-    induction Σ in h |- *.
-    - cbn in h. discriminate.
-    - cbn in h. destruct (ident_eq_spec k (global_decl_ident a)).
-      + subst. inversion h. reflexivity.
-      + apply IHΣ in h. assumption.
-  Qed.
-
   Lemma fresh_global_nl :
     forall Σ k,
       fresh_global k Σ ->
-      fresh_global k (map nl_global_decl Σ).
+      fresh_global k (map (on_snd nl_global_decl) Σ).
   Proof.
     intros Σ k h. eapply Forall_map.
     eapply Forall_impl ; try eassumption.
@@ -987,49 +973,28 @@ Section Lemmata.
   (* Qed. *)
   Abort.
 
-  Lemma lookup_env_const_name :
-    forall {c c' d},
-      lookup_env Σ c' = Some (ConstantDecl c d) ->
-      c' = c.
-  Proof.
-    intros c c' d e. clear hΣ.
-    destruct Σ as [Σ' ?]. cbn in e.
-    induction Σ'.
-    - cbn in e. discriminate.
-    - destruct a.
-      + cbn in e. destruct (ident_eq_spec c' k).
-        * subst. inversion e. reflexivity.
-        * apply IHΣ'. assumption.
-      + cbn in e. destruct (ident_eq_spec c' k).
-        * inversion e.
-        * apply IHΣ'. assumption.
-  Qed.
-
   Lemma red_const :
-    forall {Γ n c u cty cb cu},
-      Some (ConstantDecl n {| cst_type := cty ; cst_body := Some cb ; cst_universes := cu |})
+    forall {Γ c u cty cb cu},
+      Some (ConstantDecl {| cst_type := cty ; cst_body := Some cb ; cst_universes := cu |})
       = lookup_env Σ c ->
       red (fst Σ) Γ (tConst c u) (subst_instance_constr u cb).
   Proof.
-    intros Γ n c u cty cb cu e.
-    symmetry in e.
-    pose proof (lookup_env_const_name e). subst.
+    intros Γ c u cty cb cu e.
     econstructor.
     - econstructor.
     - econstructor.
-      + exact e.
+      + symmetry in e.  exact e.
       + reflexivity.
   Qed.
 
   Lemma cored_const :
-    forall {Γ n c u cty cb cu},
-      Some (ConstantDecl n {| cst_type := cty ; cst_body := Some cb ; cst_universes := cu |})
+    forall {Γ c u cty cb cu},
+      Some (ConstantDecl {| cst_type := cty ; cst_body := Some cb ; cst_universes := cu |})
       = lookup_env Σ c ->
       cored (fst Σ) Γ (subst_instance_constr u cb) (tConst c u).
   Proof.
-    intros Γ n c u cty cb cu e.
+    intros Γ c u cty cb cu e.
     symmetry in e.
-    pose proof (lookup_env_const_name e). subst.
     econstructor.
     econstructor.
     - exact e.

@@ -797,14 +797,6 @@ Section Confluence.
       rewrite !app_context_assoc. cbn. intuition.
   Qed.
 
-  Lemma lookup_env_cst_inv {Σ c k cst} :
-    lookup_env Σ c = Some (ConstantDecl k cst) -> c = k.
-  Proof.
-    induction Σ. simpl. discriminate.
-    simpl. destruct AstUtils.ident_eq eqn:Heq. intros [= ->]. simpl in Heq.
-    now destruct (AstUtils.ident_eq_spec c k). auto.
-  Qed.
-
   Definition isLambda_or_Fix_app t :=
     match fst (decompose_app t) with
     | tLambda _ _ _ => true
@@ -964,7 +956,7 @@ Section Confluence.
         end
       | tConst c u =>
         match lookup_env Σ c with
-        | Some (ConstantDecl id decl) =>
+        | Some (ConstantDecl decl) =>
           match decl.(cst_body) with
           | Some body => subst_instance_constr u body
           | None => tConst c u
@@ -2963,7 +2955,7 @@ Section Confluence.
 
     - (* Constant unfolding *)
       simpl.
-      case e: lookup_env => [[kn decl|kn decl]|] //.
+      case e: lookup_env => [[decl|decl]|] //.
       case eb: cst_body => [b|] //.
       rewrite rename_inst inst_closed0 //.
       apply declared_decl_closed in e => //.
@@ -4105,9 +4097,8 @@ Section Confluence.
     - simpl. simpl in X0. red in H. rewrite H heq_cst_body. now eapply pred1_refl_gen.
 
     - simpl in *. destruct (lookup_env Σ c) eqn:Heq; pcuic. destruct g; pcuic.
-      destruct cst_body eqn:Heq'; pcuic. econstructor; eauto. red.
-      pose proof (lookup_env_cst_inv Heq). subst. eapply Heq.
-
+      destruct cst_body eqn:Heq'; pcuic.
+      
     - simpl in *. rewrite decompose_app_mkApps; auto.
       rewrite rho_mkApps; auto.
       rewrite decompose_app_mkApps; auto.

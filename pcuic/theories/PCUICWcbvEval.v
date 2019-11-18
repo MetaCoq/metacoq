@@ -446,8 +446,7 @@ Section Wcbv.
         destruct g eqn:Heq' => //.
         destruct c as [? [b|] ?] eqn:Heq'' => //. subst.
         eapply eval_axiom. red.
-        rewrite Heq.
-        move: (lookup_env_cst_inv Heq) => ->. reflexivity.
+        rewrite Heq. reflexivity.
         easy.
       * now eapply eval_atom.
       * now eapply eval_atom.

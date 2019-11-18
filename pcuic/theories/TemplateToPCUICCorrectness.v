@@ -128,8 +128,7 @@ Proof.
   unfold declared_constant, TTy.declared_constant.
   induction Σ => //; try discriminate.
   case: a => // /= k b; case: (ident_eq cst k); auto.
-  - by move => [=] -> ->.
-  - by discriminate.
+  - by move => [=] ->.
 Qed.
 
 Lemma forall_decls_declared_minductive Σ cst decl :
@@ -139,8 +138,7 @@ Proof.
   unfold declared_minductive, TTy.declared_minductive.
   induction Σ => //; try discriminate.
   case: a => // /= k b; case: (ident_eq cst k); auto.
-  - by discriminate.
-  - by move => [=] -> ->.
+  - by move => [=] ->.
 Qed.
 
 Lemma forall_decls_declared_inductive Σ mdecl ind decl :
@@ -1028,7 +1026,7 @@ Lemma trans_red1 Σ Γ T U :
   List.Forall wf_decl Γ ->
   T.wf T ->
   TTy.red1 Σ Γ T U ->
-  red1 (map trans_global_decl Σ) (trans_local Γ) (trans T) (trans U).
+  red1 (map (on_snd trans_global_decl) Σ) (trans_local Γ) (trans T) (trans U).
 Proof.
   intros wfΣ wfΓ Hwf.
   induction 1 using Checker.Typing.red1_ind_all; wf_inv Hwf; simpl in *;
@@ -1181,7 +1179,7 @@ Proof.
   induction g.
   - reflexivity.
   - simpl. rewrite IHg. f_equal. clear.
-    destruct a; reflexivity.
+    destruct a as [? []]; reflexivity.
 Qed.
 
 Lemma global_ext_constraints_trans Σ
@@ -1193,7 +1191,7 @@ Proof.
   induction g.
   - reflexivity.
   - simpl. rewrite IHg. f_equal. clear.
-    destruct a; reflexivity.
+    destruct a as [? []]; reflexivity.
 Qed.
 
 Lemma trans_cumul (Σ : Ast.global_env_ext) Γ T U :

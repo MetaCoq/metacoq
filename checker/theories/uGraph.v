@@ -1144,11 +1144,104 @@ Section CheckLeq.
       => rewrite !(no_prop_of_level_is_prop H) in *
     end.
 
-  Opaque Z.of_nat.
 
-  Conjecture constraint_strengthening : forall l l',
-      (forall v, gc_satisfies v uctx.2 -> (val0 v l <= val0 v l' + 1)%Z) ->
-      forall v, gc_satisfies v uctx.2 -> (val0 v l <= val0 v l')%Z.
+  Lemma val0_valuation_of_labelling L (l : no_prop_level) :
+    correct_labelling G L ->
+    val0 (valuation_of_labelling L) l = Z.of_nat (L l)
+    \/ val0 (valuation_of_labelling L) l = (Z.of_nat (L l) + 1)%Z.
+  Proof.
+    intros X. red in X. subst G. simpl in X.
+    destruct l as [|[l|l]]; cbn.
+    - now left; rewrite X..1.
+    - generalize (L (mLevel l)). clear. intro.
+      destruct n. now right. left.
+      rewrite <- Pos.of_nat_succ. lia.
+    - left. reflexivity.
+  Qed.
+
+  (* Lemma val0_valuation_of_labelling L (l : no_prop_level) : *)
+  (*   correct_labelling G L -> *)
+  (*   L l <> 0 -> *)
+  (*   val0 (valuation_of_labelling L) l = Z.of_nat (L l). *)
+  (* Proof. *)
+  (*   intros X Hl. red in X. subst G. simpl in X. *)
+  (*   destruct l as [|[l|l]]; cbn. *)
+  (*   - now rewrite X..1. *)
+  (*   - revert Hl. generalize (L (mLevel l)). clear. intro. *)
+  (*     destruct n; simpl; try lia. intros _. *)
+  (*     f_equal. destruct n; try lia. *)
+  (*     rewrite SuccNat2Pos.inj_succ. f_equal. *)
+  (*     now rewrite Pos.of_nat_succ. *)
+  (*   - reflexivity. *)
+  (* Qed. *)
+
+  Lemma gc_level_declared_make_graph (l : no_prop_level) :
+    gc_level_declared l -> VSet.In l (wGraph.V G).
+  Proof.
+    intros Hl. red in Hl. rewrite no_prop_of_level_no_prop in Hl; cbn in Hl.
+    subst G; assumption.
+  Qed.
+
+
+  Lemma constraint_strengthening (l1 l2 : no_prop_level) :
+    gc_level_declared l1 -> gc_level_declared l2 ->
+    (forall v, gc_satisfies v uctx.2 -> (val0 v l1 <= val0 v l2 + 1)%Z) ->
+    forall v, gc_satisfies v uctx.2 -> (val0 v l1 <= val0 v l2)%Z.
+  Proof.
+    intros Hl1 Hl2 Hl12.
+    change (gc_leq_universe_n 0 uctx.2 (Universe.make l1) (Universe.make l2)).
+    apply gc_level_declared_make_graph in Hl1 as Hl1'.
+    apply gc_level_declared_make_graph in Hl2 as Hl2'.
+    assert (HG1 : invariants G) by (subst; exact _).
+    assert (HG2 : acyclic_no_loop G) by (subst; exact _).
+    apply leq_universe_vertices0. 
+    apply leq_vertices_caract0; tas.
+    case_eq (lsp G l1 l2); [cbn; intros; lia|].
+    pose (K := 12). intro HH. exfalso.
+    apply correct_labelling_lsp_G' with (K:=K) in HH as HH1; tas.
+    set (G' := wGraph.G' G l2 l1 K) in HH1; cbn in HH1.
+    assert (Hs : wGraph.s G = lSet) by now subst G.
+    rewrite Hs in HH1.
+    pose proof (make_graph_spec' _ Huctx
+                                 (fun x => option_get 0 (lsp G' lSet x))) as HH2.
+    forward HH2; [now subst G|].
+    specialize (Hl12 _ HH2); cbn in Hl12; clear HH2.
+    assert (HG'1 : invariants G'). {
+      subst G'; apply HI'; subst G; auto. }
+    assert (HG'2 : acyclic_no_loop G'). {
+      subst G'; apply HG'; subst G; auto. }
+    apply lsp_s in Hl1' as Hl1G; tas.
+    destruct Hl1G as [n1 Hn1]; rewrite Hs in Hn1.
+    apply lsp_s in Hl2' as Hl2G; tas.
+    destruct Hl2G as [n2 Hn2]; rewrite Hs in Hn2.
+    pose proof (lsp_G'_incr G l2 l1 K lSet l1) as Xl1.
+    rewrite Hn1 in Xl1.
+    replace (wGraph.G' G l2 l1 K) with G' in Xl1; [|now subst G].
+    case_eq (lsp G' lSet l1);
+      [|intro XX; now rewrite XX in Xl1].
+    intros n1' Hn1'; rewrite Hn1' in *; cbn in *.
+    pose proof (lsp_G'_incr G l2 l1 K lSet l2) as Xl2.
+    rewrite Hn2 in Xl2.
+    replace (wGraph.G' G l2 l1 K) with G' in Xl2; [|now subst G].
+    case_eq (lsp G' lSet l2);
+      [|intro XX; now rewrite XX in Xl2].
+    intros n2' Hn2'; rewrite Hn2' in *; cbn in *.
+    pose proof (lsp_G'_sx G l2 l1 Hl1' Hl2' HH K) as XX.
+    replace (lsp (wGraph.G' G l2 l1 K) (wGraph.s G) l2) with (Some n2') in XX;
+      [|subst G G'; congruence].
+    replace (lsp (wGraph.G' G l2 l1 K) (wGraph.s G) l1) with (Some n1') in XX;
+      [|subst G G'; congruence]; cbn in XX.
+    destruct (val0_valuation_of_labelling
+                (fun x => option_get 0%nat (lsp G' lSet x)) l1 HH1) as [H|H];
+      rewrite H, Hn1' in Hl12;
+      destruct (val0_valuation_of_labelling
+                  (fun x => option_get 0%nat (lsp G' lSet x)) l2 HH1) as [H0|H0];
+      rewrite H0, Hn2' in Hl12;
+      cbn in Hl12; lia.
+  Qed.
+
+
+  Opaque Z.of_nat.
 
   Lemma leqb_expr_n_spec0 n e e'
     : leqb_expr_n n e e'
@@ -1209,7 +1302,9 @@ Section CheckLeq.
         * unfold gc_leq_universe_n. cbn.
           unfold val1; cbn. repeat rew_no_prop; cbn. split.
           -- intros HH v Hv; specialize (HH v Hv); lia.
-          -- apply constraint_strengthening.
+          -- intros _ v _.
+             destruct l; try discriminate. cbn.
+             destruct l'; cbn; try lia.
         * split; intros HH v Hv; specialize (HH v Hv); cbn in *;
             unfold val1 in *; cbn in *; repeat rew_no_prop; cbn in *; try lia.
       + split; intros HH v Hv; specialize (HH v Hv); cbn in *;
@@ -1220,13 +1315,20 @@ Section CheckLeq.
           unfold val1 in *; cbn in *; repeat rew_no_prop; cbn in *; try lia.
       + split; intros HH v Hv; specialize (HH v Hv); cbn in *;
           unfold val1 in *; cbn in *; repeat rew_no_prop; cbn in *; try lia.
-    - case_eq (no_prop_of_level l'); [intros l0 Hl|intros Hl]; rew_no_prop;
+    - case_eq (no_prop_of_level l'); [intros l'0 Hl'|intros Hl']; rew_no_prop;
           cbn; (etransitivity; [eapply leqb_level_n_spec; tas|]).
       + destruct n.
         * unfold gc_leq_universe_n. cbn.
           unfold val1; cbn. repeat rew_no_prop; cbn. split.
           -- intros HH v Hv; specialize (HH v Hv); lia.
-          -- apply constraint_strengthening.
+          -- case_eq (no_prop_of_level l) ;[intros l0 Hl|intros Hl].
+             ++ rewrite <- (no_prop_of_level_inv Hl) in *.
+                rewrite <- (no_prop_of_level_inv Hl') in *.
+                clear Hl Hl'; cbn in *.
+                now apply constraint_strengthening.
+             ++ intros _ v _.
+                destruct l; try discriminate; cbn.
+                destruct l'; cbn; try lia.
         * split; intros HH v Hv; specialize (HH v Hv); cbn in *;
             unfold val1 in *; cbn in *; repeat rew_no_prop; cbn in *; try lia.
       + split; intros HH v Hv; specialize (HH v Hv); cbn in *;
@@ -1643,66 +1745,3 @@ Section CheckLeq2.
 
 
 End CheckLeq2.
-
-
-(* Extract Constant constrained_dec => "(fun g ctrs l -> assert false)". *)
-
-
-(* Definition G := make_graph *)
-(*   (GoodConstraintSet.add (gc_lt (mVar 0) (mVar 1)) *)
-(*  (GoodConstraintSet_pair (gc_lt_set 0) (gc_eq_set 1))). *)
-
-(* Compute (lsp G lSet (mVar 0)). *)
-(* Compute (lsp G lSet (mVar 1)). *)
-(* Compute (lsp G lSet lSet). *)
-
-(* Section Test. *)
-
-(*   Definition get_graph G0 := match G0 with *)
-(*                              | Some φ => φ *)
-(*                              | None => init_graph *)
-(*                              end. *)
-
-(*   Definition G0 := make_graph ConstraintSet.empty. *)
-(*   Check (eq_refl : G0 = Some _). *)
-(*   Definition G := get_graph G0. *)
-
-(*   Local Existing Instance default_checker_flags. *)
-
-(*   Check (eq_refl : check_leq G Universe.type0m Universe.type0 = true). *)
-(*   Check (eq_refl : check_lt G Universe.type0m Universe.type0 = true). *)
-(*   Check (eq_refl : check_lt G Universe.type0m Universe.type0m = false). *)
-(*   Check (eq_refl : check_lt G Universe.type0 Universe.type0m = false). *)
-(*   Check (eq_refl : check_lt G Universe.type0 Universe.type0 = false). *)
-(*   Check (eq_refl : no_universe_inconsistency G = true). *)
-
-(*   Definition ctrs0 := ConstraintSet.add (Level.Level "Top.0", Lt, Level.Level "Top.1") *)
-(*                                         (ConstraintSet.singleton (Level.Var 0, Lt, Level.Var 1)). *)
-(*   Definition G'0 := make_graph ctrs0. *)
-(*   Check (eq_refl : G'0 = Some _). *)
-(*   Definition G' := get_graph G'0. *)
-
-(*   Check (eq_refl : check_lt G' (Universe.make (Level.Level "Top.0")) (Universe.make (Level.Var 0)) = false). *)
-(*   Check (eq_refl : check_leq G' (Universe.make (Level.Level "Top.1")) (Universe.make (Level.lProp)) = false). *)
-(*   Check (eq_refl : check_leq G' (Universe.super (Level.Level "Top.1")) (Universe.make (Level.Level "Top.1")) = false). *)
-(*   Check (eq_refl : check_lt G' (Universe.make (Level.Level "Top.1")) (Universe.super (Level.Level "Top.1")) = true). *)
-(*   Check (eq_refl : check_lt G' (Universe.make (Level.Level "Top.1")) (Universe.make (Level.Level "Top.1")) = false). *)
-(*   Check (eq_refl : check_eq G' (Universe.make (Level.Level "Top.1")) (Universe.make (Level.Level "Top.1")) = true). *)
-(*   Check (eq_refl : no_universe_inconsistency G = true). *)
-
-(*   Check (eq_refl : check_lt G' (Universe.make (Level.Var 1)) (Universe.make (Level.Var 0)) = false). *)
-(*   Check (eq_refl : check_leq G' (Universe.make (Level.Var 0)) (Universe.make (Level.Var 1)) = true). *)
-(*   Check (eq_refl : check_lt G' (Universe.make (Level.Var 0)) (Universe.make (Level.Var 1)) = true). *)
-(*   Check (eq_refl : check_leq G' Universe.type1 Universe.type0 = false). *)
-(*   Check (eq_refl : check_lt G' Universe.type1 Universe.type1 = false). *)
-
-
-(*   Definition ctrs1 := ConstraintSet.add (Level.Var 1, Eq, Level.Var 2) *)
-(*                                         (ConstraintSet.add (Level.Var 2, Le, Level.lSet) ctrs0). *)
-(*   Definition G''0 := make_graph ctrs1. *)
-(*   Check (eq_refl : G''0 = Some _). *)
-(*   Definition G'' := get_graph G''0. *)
-
-(*   Check (eq_refl : no_universe_inconsistency G'' = false). *)
-
-(* End Test. *)

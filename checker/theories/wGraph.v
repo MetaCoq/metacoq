@@ -6,10 +6,6 @@ From MetaCoq.Template Require Import utils monad_utils.
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 
-Notation "p .1" := (fst p)
-  (at level 2, left associativity, format "p .1") : pair_scope.
-Notation "p .2" := (snd p)
-  (at level 2, left associativity, format "p .2") : pair_scope.
 Notation "p ..1" := (proj1 p)
   (at level 2, left associativity, format "p ..1") : pair_scope.
 Notation "p ..2" := (proj2 p)
@@ -251,6 +247,12 @@ Module Nbar.
   Lemma le_plus_r n m : m <= Some n + m.
   Proof.
     destruct m; cbn; lia.
+  Qed.
+
+  Lemma le_antisymm {n m} : n <= m -> m <= n -> n = m.
+  Proof.
+    destruct n, m; cbn; try easy.
+    intros. f_equal. now apply PeanoNat.Nat.le_antisymm.
   Qed.
 
 End Nbar.
@@ -1283,24 +1285,27 @@ Module WeightedGraph (V : UsualOrderedType).
     (* Qed. *)
   End graph.
 
+  Definition spaths_one {G s x y k} (Hx : VSet.In x s)
+             (Hk : EdgeSet.In (x, k, y) (E G))
+    : SimplePaths G s x y.
+  Proof.
+    econstructor. 3: constructor. now apply DisjointAdd_remove1.
+    exists k. assumption.
+  Defined.
+
+
+
   Section graph2.
     Context (G : t) {HI : invariants G} {HG : acyclic_no_loop G}.
 
     Section subgraph.
-      Context (n : nat) {x_0 y_0 : V.t} (Vx : VSet.In x_0 (V G))
-              (Vy : VSet.In y_0 (V G)) (kx ky : nat)
-              (Hkx : lsp G (s G) x_0 = Some kx)
-              (Hky : lsp G (s G) y_0 = Some ky)
-              (Hle : leq_vertices G n x_0 y_0)
-              (p_0 : SimplePaths G (V G) (s G) y_0)
-              (Hp_0 : lsp G (s G) y_0 = Some (sweight G p_0))
-              (Hxs : lsp G x_0 (s G) = None)
-              (Hx_0_0 : VSet.mem x_0 (snodes G p_0) = false).
+      Context (y_0 x_0 : V.t) (Vx : VSet.In x_0 (V G))
+              (Vy : VSet.In y_0 (V G))
+              (Hxs : lsp G x_0 y_0 = None)
+              (K : nat).
 
-      Definition K := Peano.max kx (S ky).
-
-      Let G' : t
-        := (V G, EdgeSet.add (s G, K, x_0) (E G), s G).
+      Local Definition G' : t
+        := (V G, EdgeSet.add (y_0, K, x_0) (E G), s G).
 
       Definition to_G' {u v} (q : Paths G u v) : Paths G' u v.
       Proof.
@@ -1310,11 +1315,11 @@ Module WeightedGraph (V : UsualOrderedType).
         exists e.π1. cbn. apply EdgeSet.add_spec; right. exact e.π2.
       Defined.
 
-      Local Instance HI' : invariants G'.
+      Global Instance HI' : invariants G'.
       Proof.
         split.
         - cbn. intros e He. apply EdgeSet.add_spec in He; destruct He as [He|He].
-          subst; cbn. split. apply HI. assumption.
+          subst; cbn. split; assumption.
           now apply HI.
         - split. apply HI.
           intros z Hz. pose proof (HI..2..2 z Hz).
@@ -1322,11 +1327,11 @@ Module WeightedGraph (V : UsualOrderedType).
       Qed.
 
       Definition from_G' {S u v} (q : SimplePaths G' S u v)
-        : SimplePaths G S u v + (SimplePaths G S u (s G) * SimplePaths G S x_0 v).
+        : SimplePaths G S u v + (SimplePaths G S u y_0 * SimplePaths G S x_0 v).
       Proof.
         clear -q. induction q.
         - left; constructor.
-        - induction (Edge.eq_dec (s G, K, x_0) (x, e.π1, y)) as [XX|XX].
+        - induction (Edge.eq_dec (y_0, K, x_0) (x, e.π1, y)) as [XX|XX].
           + right. split.
             * rewrite (fst_eq (fst_eq XX)); constructor.
             * eapply SimplePaths_sub.
@@ -1358,23 +1363,23 @@ Module WeightedGraph (V : UsualOrderedType).
         induction q.
         - reflexivity.
         - simpl.
-          destruct (Edge.eq_dec (s G, K, x_0) (x, e.π1, y)) as [XX|XX]; simpl.
+          destruct (Edge.eq_dec (y_0, K, x_0) (x, e.π1, y)) as [XX|XX]; simpl.
           + destruct (fst_eq (fst_eq XX)). simpl.
             inversion XX. rewrite weight_SimplePaths_sub.
             destruct (from_G' q) as [q'|[q1 q2]]; simpl.
             * destruct (snd_eq XX); cbn.
               destruct e as [e He]; cbn in *; lia.
-            * inversion XX; subst; clear XX.
+            * subst y.
               simple refine (let XX := lsp0_spec_le
                                          G (simplify2' G (to_paths G q1)) in _).
-              unfold lsp in *; rewrite Hxs in XX; inversion XX.
+              unfold lsp in *. rewrite Hxs in XX; inversion XX.
           + destruct (from_G' q) as [q'|[q1 q2]]; simpl.
             * lia.
             * rewrite weight_SimplePaths_sub; lia.
       Qed.
 
 
-      Local Instance HG' : acyclic_no_loop G'.
+      Global Instance HG' : acyclic_no_loop G'.
       Proof.
         apply acyclic_caract2. exact _. intros x Hx.
         pose proof (lsp0_spec_le G' (spaths_refl G' (V G') x)) as H; cbn in H.
@@ -1391,41 +1396,99 @@ Module WeightedGraph (V : UsualOrderedType).
       Qed.
 
 
-      Lemma lsp_xy_le_n : (Some n <= lsp G x_0 y_0)%nbar.
+      Lemma lsp_G'_yx : (Some K <= lsp G' y_0 x_0)%nbar.
       Proof.
-        assert (XX : correct_labelling G (option_get 0 ∘ lsp G' (s G'))). {
-          pose proof (lsp_correctness G') as XX. split.
-          exact XX..1.
-          intros e He; apply XX; cbn.
-          apply EdgeSet.add_spec; now right. }
-        specialize (Hle _ XX); clear XX; cbn in Hle.
-        assert (XX: (Some K <= lsp G' (s G) x_0)%nbar). {
-          etransitivity. shelve. unshelve eapply lsp0_spec_le.
-          unshelve econstructor. 5: constructor. exact (VSet.remove (s G) (V G')).
-          apply DisjointAdd_remove1. apply HI.
-          exists K. apply EdgeSet.add_spec; now left.
-          Unshelve. simpl. lia. }
-        destruct (lsp_s G' _ Vx) as [kx' Hkx'].
-        cbn in Hkx'; rewrite Hkx' in *; cbn in *.
-        destruct (lsp_s G' _ Vy) as [ky' Hky'].
-        cbn in Hky'; rewrite Hky' in *; cbn in *.
-        destruct (lsp0_spec_eq _ _ Hky') as [py Hpy].
-        pose proof (from_G'_weight py) as H.
-        destruct (from_G' py) as [py'|[py1 py2]].
-        - pose proof (lsp0_spec_le _ py') as HH.
-          cbn in HH; unfold lsp in Hky; rewrite Hky in HH; cbn in *.
-          unfold K in *; lia.
-        - pose proof (lsp0_spec_le _ py2) as HH; cbn in HH.
-          case_eq (lsp G x_0 y_0);
-            [|intro ZZ; unfold lsp in ZZ; rewrite ZZ in HH; inversion HH].
-          intros kxy Hkxy. unfold lsp in Hkxy; rewrite Hkxy in HH; cbn in *.
-          assert (YY : sweight py1 = 0). {
-            rewrite sweight_weight.
-            exact (HG (s G) (to_paths G py1)). }
-          lia.
+        unshelve refine (transport (fun K => (Some K <= _)%nbar) _ (lsp0_spec_le _ _)).
+        - eapply spaths_one; tas.
+          apply EdgeSet.add_spec. now left.
+        - cbn. lia.
+      Qed.
+
+      Lemma lsp_G'_sx : (lsp G' (s G) y_0 + Some K <= lsp G' (s G) x_0)%nbar.
+      Proof.
+        etransitivity. 2: eapply lsp_codistance; try exact _.
+        apply plus_le_compat_l. apply lsp_G'_yx.
+      Qed.
+
+      Lemma correct_labelling_lsp_G'
+        : correct_labelling G (option_get 0 ∘ lsp G' (s G')).
+      Proof.
+        pose proof (lsp_correctness G') as XX.
+        split. exact XX..1.
+        intros e He; apply XX; cbn.
+        apply EdgeSet.add_spec; now right.
+      Qed.
+
+      Definition sto_G' {S u v} (p : SimplePaths G S u v)
+        : SimplePaths G' S u v.
+      Proof.
+        clear -p. induction p.
+        - constructor.
+        - econstructor; tea. exists e.π1.
+          apply EdgeSet.add_spec. right. exact e.π2.
       Defined.
 
+
+      Lemma sto_G'_weight {S u v} (p : SimplePaths G S u v)
+        : sweight (sto_G' p) = sweight p.
+      Proof.
+        clear.
+        induction p. reflexivity.
+        simpl. now rewrite IHp.
+      Qed.
+
+      Lemma lsp_G'_incr x y : (lsp G x y <= lsp G' x y)%nbar.
+      Proof.
+        case_eq (lsp G x y); cbn; [|trivial].
+        intros kxy Hkxy. apply lsp0_spec_eq in Hkxy.
+        destruct Hkxy as [pxy Hkxy].
+        etransitivity. 2: eapply (lsp0_spec_le _ (sto_G' pxy)).
+        rewrite sto_G'_weight. now rewrite Hkxy.
+      Qed.
+
+      Lemma lsp_G'_spec_left x :
+        lsp G' y_0 x = max (lsp G y_0 x) (Some K + lsp G x_0 x)%nbar.
+      Proof.
+        apply Nbar.le_antisymm.
+        - case_eq (lsp G' y_0 x); [|cbn; trivial].
+          intros k Hk.
+          apply lsp0_spec_eq in Hk; destruct Hk as [p' Hk].
+          subst k.
+          rewrite (from_G'_weight p').
+          destruct (from_G' p') as [p|[p1 p2]].
+          + apply max_le'. left. apply lsp0_spec_le.
+          + apply max_le'. right.
+            apply (plus_le_compat (Some (sweight p1 + K)) _ (Some (sweight p2))).
+            * cbn. now rewrite sweight_weight, HG.
+            * apply lsp0_spec_le.
+        - apply max_lub. apply lsp_G'_incr.
+          case_eq (lsp G x_0 x); cbn; [intros k Hk|trivial].
+          apply lsp0_spec_eq in Hk. destruct Hk as [p Hk].
+          unshelve refine (transport (fun K => (Some K <= _)%nbar)
+                                     _ (lsp0_spec_le _ _)).
+          eapply SimplePaths_sub. shelve.
+          pose (p' := sto_G' p).
+          unshelve econstructor.
+          + exact (snodes G' p').
+          + shelve.
+          + apply DisjointAdd_add2.
+            intro HH. eapply left, split in HH.
+            destruct HH as [p1 _].
+            apply from_G' in p1. destruct p1 as [p1|[p1 p2]].
+            all: epose proof (lsp0_spec_le _ (SimplePaths_sub _ _ p1)) as HH;
+              unfold lsp in Hxs; now erewrite Hxs in HH.
+          + exists K. apply EdgeSet.add_spec. now left.
+          + exact (reduce _ p').
+          + rewrite weight_SimplePaths_sub. cbn.
+            now rewrite weight_reduce, sto_G'_weight, Hk.
+          Unshelve.
+          2-3: now apply VSetProp.subset_remove_3.
+          apply VSetProp.subset_add_3. assumption.
+          apply snodes_Subset.
+      Qed.
+
     End subgraph.
+
 
     Lemma leq_vertices_caract0 {n x y} (Vy : VSet.In y (V G)) :
       leq_vertices G n x y <-> (Some n <= lsp G x y)%nbar.
@@ -1452,30 +1515,35 @@ Module WeightedGraph (V : UsualOrderedType).
             destruct (V.eq_dec x x) as [Hx|Hx]; [|now apply Hx].
             destruct (V.eq_dec y x) as [Hy|Hy].
             now subst. lia. }
-        destruct (lsp_s G y Vy) as [k Hk].
+        destruct (lsp_s G y Vy) as [ky Hky].
         case_eq (lsp G x (s G)).
-        * intros m Hm. etransitivity.
+        + intros m Hm. etransitivity.
           2: exact (lsp_codistance G x (s G) y).
           rewrite Hm. etransitivity. 2: eapply le_plus_r.
           specialize (Hle _ (lsp_correctness G)); cbn in Hle.
-          rewrite Hk in *. cbn in *; lia.
-        * intros Hxs. destruct (lsp0_spec_eq G _ Hk) as [p Hp]; subst.
-          case_eq (VSet.mem x (snodes G p)); intro Hx.
-          -- apply VSet.mem_spec in Hx.
-             pose proof (weight_split G p (Hu:=left Hx)).
-             set (pp := split G p x (left Hx)) in *;
-               destruct pp as [p1 p2]; cbn in *.
-             specialize (Hle _ (lsp_correctness G)); cbn in Hle.
-             rewrite Hk in Hle; cbn in Hle. etransitivity.
-             2: eapply (lsp0_spec_le G p2). cbn.
-             destruct (lsp_s G x Vx) as [m Hm].
-             rewrite Hm in Hle.
-             simple refine (let XX := lsp0_spec_le G (SimplePaths_sub G _ p1) in _).
-             exact (V G). apply VSetProp.subset_remove_3; reflexivity.
-             rewrite weight_SimplePaths_sub in XX.
-             unfold lsp in Hm; rewrite Hm in XX; cbn in XX.
-             cbn in Hle; lia.
-          -- eapply lsp_xy_le_n; try eassumption.
+          rewrite Hky in *. cbn in *; lia.
+        + intros Hxs.
+          destruct (lsp_s G _ Vx) as [kx Hkx].
+          pose (K := Peano.max kx (S ky)).
+          unshelve epose proof (correct_labelling_lsp_G' _ _ _ _ Hxs K) as XX;
+            tas; try apply HI.
+          set (G' := G' (s G) x K) in XX.
+          assert (HI' : invariants G'). {
+            eapply HI'; tas. apply HI. }
+          specialize (Hle _ XX); clear XX; cbn in Hle.
+          assert (XX: (Some K <= lsp G' (s G) x)%nbar). {
+            apply lsp_G'_yx. apply HI. }
+          destruct (lsp_s G' _ Vx) as [kx' Hkx'].
+          cbn in Hkx'; rewrite Hkx' in *; cbn in *.
+          destruct (lsp_s G' _ Vy) as [ky' Hky'].
+          cbn in Hky'; rewrite Hky' in *; cbn in *.
+          assert (Hle' : K + n <= ky') by lia; clear Hle.
+          enough ((Some ky' <= Some K + lsp G x y)%nbar) as HH. {
+            revert HH. destruct (lsp G x y); cbn; lia. }
+          unshelve erewrite (lsp_G'_spec_left (s G) x _ Hxs K) in Hky'. apply HI.
+          apply eq_max in Hky'. destruct Hky' as [H|H].
+          -- rewrite Hky in H. apply some_inj in H; subst; lia.
+          -- rewrite <- H. reflexivity.
       - case_eq (lsp G x y).
         * intros m Hm l Hl. rewrite Hm in Hle.
           apply (lsp0_spec_eq G) in Hm. destruct Hm as [p Hp].
@@ -1483,6 +1551,7 @@ Module WeightedGraph (V : UsualOrderedType).
           rewrite <- sweight_weight, Hp in XX. cbn in Hle; lia.
         * intro X; rewrite X in Hle; inversion Hle.
     Defined.
+
 
     Lemma leq_vertices_caract {n x y} :
       leq_vertices G n x y <-> (if VSet.mem y (V G) then Some n <= lsp G x y
@@ -1514,13 +1583,17 @@ Module WeightedGraph (V : UsualOrderedType).
           intros Hxs; apply False_rect.
           case_eq (VSet.mem x (V G)); intro Vx.
           * apply VSet.mem_spec in Vx.
-            pose (G' := (V G, EdgeSet.add (s G, K 0 0, x) (E G), s G)).
-            pose proof (HI' Vx 0 0 : invariants G') as HI'.
-            pose proof (HG' Vx 0 0 Hxs : acyclic_no_loop G') as HG'.
+            pose (K := 1).
+            unshelve epose proof (correct_labelling_lsp_G' _ _ _ _ Hxs K) as X;
+              tas; try apply HI.
+            set (G' := G' (s G) x K) in X.
+            assert (HI' : invariants G'). {
+              eapply HI'; tas. apply HI. }
+            assert (HG' : acyclic_no_loop G'). {
+              eapply HG'; tas. apply HI. }
             pose (l := fun z => if V.eq_dec z y then 0
                              else option_get 0 (lsp G' (s G) z)).
             assert (XX : correct_labelling G l). {
-              pose proof (lsp_correctness G') as XX.
               subst l; split.
               -- destruct (V.eq_dec (s G) y).
                  apply False_rect. apply Vy. subst; apply HI.
@@ -1530,8 +1603,7 @@ Module WeightedGraph (V : UsualOrderedType).
                  apply False_rect, Vy; subst; now apply HI.
                  destruct (V.eq_dec e..t y).
                  apply False_rect, Vy; subst; now apply HI.
-                 cbn in XX. apply XX.
-                 apply EdgeSet.add_spec. now right. }
+                 now apply X. }
             specialize (Hle _ XX); subst l; cbn in *.
             destruct (V.eq_dec y y) as [_|?]; [|contradiction].
             destruct (V.eq_dec x y) as [Hy|Hy]. contradiction.

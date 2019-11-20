@@ -26,7 +26,7 @@ Notation type_tFix_inv := PCUICInversion.inversion_Fix.
 
 Derive Signature for Forall2.
 Lemma eval_box_apps:
-  forall (Σ' : list E.global_decl) (e : E.term) (x x' : list E.term),
+  forall (Σ' : E.global_declarations) (e : E.term) (x x' : list E.term),
     Forall2 (eval Σ') x x' ->
     eval Σ' e tBox -> eval Σ' (mkApps e x) tBox.
 Proof.

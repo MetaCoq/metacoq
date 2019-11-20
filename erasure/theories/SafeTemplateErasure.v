@@ -49,7 +49,7 @@ Definition assume_wf_decl {cf : checker_flags} (Σ : global_env_ext) :
   ∥ on_udecl Σ.1 Σ.2 ∥ ->
   forall G : universes_graph,
     is_graph_of_uctx G (global_ext_uctx Σ) ->
-    forall d : global_decl, EnvCheck (∥ on_global_decl (lift_typing typing) Σ d ∥).
+    forall kn (d : global_decl), EnvCheck (∥ on_global_decl (lift_typing typing) Σ kn d ∥).
 Proof.
   intros. apply CorrectDecl. constructor. todo "assumed correct global declaration".
 Defined.
@@ -60,11 +60,11 @@ Program Fixpoint check_wf_env_only_univs (Σ : global_env)
   | nil => ret (init_graph; _)
   | d :: Σ =>
     G <- check_wf_env_only_univs Σ ;;
-    check_fresh (PCUICTyping.global_decl_ident d) Σ ;;
-    let udecl := universes_decl_of_decl d in
-    uctx <- check_udecl (PCUICTyping.global_decl_ident d) Σ _ G.π1 (proj1 G.π2) udecl ;;
+    check_fresh d.1 Σ ;;
+    let udecl := universes_decl_of_decl d.2 in
+    uctx <- check_udecl d.1 Σ _ G.π1 (proj1 G.π2) udecl ;;
     let G' := add_uctx uctx.π1 G.π1 in
-    assume_wf_decl (Σ, udecl) _ _ G' _ d ;;
+    assume_wf_decl (Σ, udecl) _ _ G' _ d.1 d.2 ;;
     match udecl with
         | Monomorphic_ctx _ => ret (G'; _)
         | Polymorphic_ctx _ => ret (G.π1; _)
@@ -78,7 +78,7 @@ Program Fixpoint check_wf_env_only_univs (Σ : global_env)
   Next Obligation.
     sq. unfold is_graph_of_uctx, gc_of_uctx; simpl.
     unfold gc_of_uctx in e. simpl in e.
-    case_eq (gc_of_constraints (constraints_of_udecl (universes_decl_of_decl d)));
+    case_eq (gc_of_constraints (constraints_of_udecl (universes_decl_of_decl g)));
       [|intro HH; rewrite HH in e; discriminate e].
     intros ctrs' Hctrs'. rewrite Hctrs' in *.
     cbn in e. inversion e; subst; clear e.
@@ -95,15 +95,15 @@ Program Fixpoint check_wf_env_only_univs (Σ : global_env)
     split; sq. 2: constructor; tas.
     unfold is_graph_of_uctx, gc_of_uctx; simpl.
     unfold gc_of_uctx in e. simpl in e.
-    case_eq (gc_of_constraints (constraints_of_udecl (universes_decl_of_decl d)));
+    case_eq (gc_of_constraints (constraints_of_udecl (universes_decl_of_decl g)));
       [|intro HH; rewrite HH in e; discriminate e].
     intros ctrs' Hctrs'. rewrite Hctrs' in *.
     cbn in e. inversion e; subst; clear e.
     unfold global_ext_constraints; simpl.
     rewrite gc_of_constraints_union.
-    assert (eq: monomorphic_constraints_decl d
-                = constraints_of_udecl (universes_decl_of_decl d)). {
-      destruct d. destruct c, cst_universes; try discriminate; reflexivity.
+    assert (eq: monomorphic_constraints_decl g
+                = constraints_of_udecl (universes_decl_of_decl g)). {
+      destruct g. destruct c, cst_universes; try discriminate; reflexivity.
       destruct m, ind_universes; try discriminate; reflexivity. }
     rewrite eq; clear eq. rewrite Hctrs'.
     red in i. unfold gc_of_uctx in i; simpl in i.
@@ -111,21 +111,21 @@ Program Fixpoint check_wf_env_only_univs (Σ : global_env)
       [|intro HH; rewrite HH in i; cbn in i; contradiction i].
     intros Σctrs HΣctrs; rewrite HΣctrs in *; simpl in *.
     subst G. unfold global_ext_levels; simpl. rewrite no_prop_levels_union.
-    assert (eq: monomorphic_levels_decl d
-                = levels_of_udecl (universes_decl_of_decl d)). {
-      destruct d. destruct c, cst_universes; try discriminate; reflexivity.
+    assert (eq: monomorphic_levels_decl g
+                = levels_of_udecl (universes_decl_of_decl g)). {
+      destruct g. destruct c, cst_universes; try discriminate; reflexivity.
       destruct m, ind_universes; try discriminate; reflexivity. }
     rewrite eq. symmetry; apply add_uctx_make_graph.
   Qed.
   Next Obligation.
     split; sq. 2: constructor; tas.
     unfold global_uctx; simpl.
-    assert (eq1: monomorphic_levels_decl d = LevelSet.empty). {
-      destruct d. destruct c, cst_universes; try discriminate; reflexivity.
+    assert (eq1: monomorphic_levels_decl g = LevelSet.empty). {
+      destruct g. destruct c, cst_universes; try discriminate; reflexivity.
       destruct m, ind_universes; try discriminate; reflexivity. }
     rewrite eq1; clear eq1.
-    assert (eq1: monomorphic_constraints_decl d = ConstraintSet.empty). {
-      destruct d. destruct c, cst_universes; try discriminate; reflexivity.
+    assert (eq1: monomorphic_constraints_decl g = ConstraintSet.empty). {
+      destruct g. destruct c, cst_universes; try discriminate; reflexivity.
       destruct m, ind_universes; try discriminate; reflexivity. }
     rewrite eq1; clear eq1.
     assumption.
@@ -133,12 +133,12 @@ Program Fixpoint check_wf_env_only_univs (Σ : global_env)
   Next Obligation.
     split; sq. 2: constructor; tas.
     unfold global_uctx; simpl.
-    assert (eq1: monomorphic_levels_decl d = LevelSet.empty). {
-      destruct d. destruct c, cst_universes; try discriminate; reflexivity.
+    assert (eq1: monomorphic_levels_decl g = LevelSet.empty). {
+      destruct g. destruct c, cst_universes; try discriminate; reflexivity.
       destruct m, ind_universes; try discriminate; reflexivity. }
     rewrite eq1; clear eq1.
-    assert (eq1: monomorphic_constraints_decl d = ConstraintSet.empty). {
-      destruct d. destruct c, cst_universes; try discriminate; reflexivity.
+    assert (eq1: monomorphic_constraints_decl g = ConstraintSet.empty). {
+      destruct g. destruct c, cst_universes; try discriminate; reflexivity.
       destruct m, ind_universes; try discriminate; reflexivity. }
     rewrite eq1; clear eq1.
     assumption.

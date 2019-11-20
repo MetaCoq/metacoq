@@ -54,10 +54,10 @@ let lookup_ind_decl _UU03a3_ ind i =
   match lookup_env _UU03a3_ ind with
   | Some g ->
     (match g with
-     | PCUICEnvironment.ConstantDecl (_, _) ->
+     | PCUICEnvironment.ConstantDecl _ ->
        raise (Obj.magic monad_exc) (UndeclaredInductive { inductive_mind =
          ind; inductive_ind = i })
-     | PCUICEnvironment.InductiveDecl (_, m) ->
+     | PCUICEnvironment.InductiveDecl m ->
        let { PCUICEnvironment.ind_finite = _; PCUICEnvironment.ind_npars = _;
          PCUICEnvironment.ind_params = _; PCUICEnvironment.ind_bodies = l;
          PCUICEnvironment.ind_universes = uctx } = m

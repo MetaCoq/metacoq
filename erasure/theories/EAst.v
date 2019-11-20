@@ -192,10 +192,10 @@ Record constant_body := {
     cst_body : option term }.
 
 Inductive global_decl :=
-| ConstantDecl : kername -> constant_body -> global_decl
-| InductiveDecl : kername -> mutual_inductive_body -> global_decl.
+| ConstantDecl : constant_body -> global_decl
+| InductiveDecl : mutual_inductive_body -> global_decl.
 
-Definition global_declarations := list global_decl.
+Definition global_declarations := list (kername * global_decl).
 
 (** A context of global declarations +
     i.e. a global environment *)

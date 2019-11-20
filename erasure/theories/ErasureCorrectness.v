@@ -384,8 +384,8 @@ Qed.
 Lemma lookup_env_erases (Σ : global_env_ext) c decl Σ' :
   wf Σ ->
   erases_global Σ Σ' ->
-  PCUICTyping.lookup_env (fst Σ) c = Some (ConstantDecl c decl) ->
-  exists decl', ETyping.lookup_env Σ' c = Some (EAst.ConstantDecl c decl') /\
+  PCUICTyping.lookup_env (fst Σ) c = Some (ConstantDecl decl) ->
+  exists decl', ETyping.lookup_env Σ' c = Some (EAst.ConstantDecl decl') /\
            erases_constant_body (Σ.1, cst_universes decl)  decl decl'.
 Proof.
   unfold erases_global. destruct Σ; simpl.

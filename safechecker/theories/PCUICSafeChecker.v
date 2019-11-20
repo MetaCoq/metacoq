@@ -150,17 +150,6 @@ Inductive type_error :=
 | UnsatisfiedConstraints (c : ConstraintSet.t)
 | Msg (s : string).
 
-Lemma lookup_env_id Σ id decl
-  : lookup_env Σ id = Some decl -> id = global_decl_ident decl.
-Proof.
-  induction Σ; cbn. inversion 1.
-  destruct (ident_eq_spec id (global_decl_ident a)).
-  - inversion 1. now destruct H1.
-  - easy.
-Qed.
-
-
-
 Local Open Scope string_scope.
 Definition string_of_list_aux {A} (f : A -> string) (l : list A) : string :=
   let fix aux l :=
@@ -681,7 +670,7 @@ Section Typecheck.
     : typing_result
         ({decl & {body & declared_inductive (fst Σ) decl ind body}}) :=
     match lookup_env (fst Σ) ind.(inductive_mind) with
-    | Some (InductiveDecl _ decl) =>
+    | Some (InductiveDecl decl) =>
       match nth_error decl.(ind_bodies) ind.(inductive_ind) with
       | Some body => ret (decl; body; _)
       | None => raise (UndeclaredInductive ind)
@@ -691,8 +680,7 @@ Section Typecheck.
   Next Obligation.
     split.
     - symmetry in Heq_anonymous0.
-      etransitivity. eassumption.
-      erewrite (lookup_env_id _ _ _ Heq_anonymous0); reflexivity.
+      etransitivity. eassumption. reflexivity.
     - now symmetry.
   Defined.
 
@@ -874,7 +862,7 @@ Section Typecheck.
 
     | tConst cst u =>
           match lookup_env (fst Σ) cst with
-          | Some (ConstantDecl _ d) =>
+          | Some (ConstantDecl d) =>
             check_consistent_instance d.(cst_universes) u ;;
             let ty := subst_instance_constr u d.(cst_type) in
             ret (ty; _)
@@ -1105,8 +1093,7 @@ Section Typecheck.
     rename Heq_anonymous into HH.
     sq; constructor; try assumption.
     symmetry in HH.
-    etransitivity. eassumption.
-    now rewrite (lookup_env_id _ _ _ HH).
+    etransitivity. eassumption. reflexivity.
   Defined.
 
   (* tInd *)
@@ -1416,15 +1403,15 @@ Section CheckEnv.
     | [] => ret (sq (Forall_nil _))
     | g :: env =>
       p <- check_fresh id env;;
-      match eq_constant id (global_decl_ident g) with
+      match eq_constant id g.1 with
       | true => EnvError (AlreadyDeclared id)
       | false => ret _
       end
     end.
   Next Obligation.
-    sq. constructor; tas.
-    change (false = eqb id (global_decl_ident g)) in Heq_anonymous.
-    destruct (eqb_spec id (global_decl_ident g)); [discriminate|].
+    sq. constructor; tas. simpl.
+    change (false = eqb id k) in Heq_anonymous.
+    destruct (eqb_spec id k); [discriminate|].
     easy.
   Defined.
 
@@ -1492,15 +1479,15 @@ Section CheckEnv.
 
 
   Program Definition check_wf_decl (Σ : global_env_ext) HΣ HΣ' G HG
-             (d : global_decl)
-    : EnvCheck (∥ on_global_decl (lift_typing typing) Σ d ∥) :=
+             id (d : global_decl)
+    : EnvCheck (∥ on_global_decl (lift_typing typing) Σ id d ∥) :=
     match d with
-    | ConstantDecl id cst =>
+    | ConstantDecl cst =>
       match cst.(cst_body) with
       | Some term => check_wf_judgement id Σ HΣ HΣ' G HG term cst.(cst_type) ;; ret _
       | None => check_wf_type id Σ HΣ HΣ' G HG cst.(cst_type) ;; ret _
       end
-    | InductiveDecl id mdecl =>
+    | InductiveDecl mdecl =>
       X1 <- monad_Alli (check_one_ind_body Σ HΣ HΣ' G HG id mdecl) _ _ ;;
       X2 <- wrap_error id (check_context HΣ HΣ' G HG (ind_params mdecl)) ;;
       X3 <- wrap_error id (check_eq_nat (context_assumptions (ind_params mdecl))
@@ -1634,11 +1621,11 @@ Section CheckEnv.
     | [] => ret (init_graph; _)
     | d :: Σ =>
         G <- check_wf_env Σ ;;
-        check_fresh (global_decl_ident d) Σ ;;
-        let udecl := universes_decl_of_decl d in
-        uctx <- check_udecl (global_decl_ident d) Σ _ G.π1 (proj1 G.π2) udecl ;;
+        check_fresh d.1 Σ ;;
+        let udecl := universes_decl_of_decl d.2 in
+        uctx <- check_udecl d.1 Σ _ G.π1 (proj1 G.π2) udecl ;;
         let G' := add_uctx uctx.π1 G.π1 in
-        check_wf_decl (Σ, udecl) _ _ G' _ d ;;
+        check_wf_decl (Σ, udecl) _ _ G' _ d.1 d.2 ;;
         match udecl with
         | Monomorphic_ctx _ => ret (G'; _)
         | Polymorphic_ctx _ => ret (G.π1; _)
@@ -1652,7 +1639,7 @@ Section CheckEnv.
   Next Obligation.
     sq. unfold is_graph_of_uctx, gc_of_uctx; simpl.
     unfold gc_of_uctx in e. simpl in e.
-    case_eq (gc_of_constraints (constraints_of_udecl (universes_decl_of_decl d)));
+    case_eq (gc_of_constraints (constraints_of_udecl (universes_decl_of_decl g)));
       [|intro HH; rewrite HH in e; discriminate e].
     intros ctrs' Hctrs'. rewrite Hctrs' in *.
     cbn in e. inversion e; subst; clear e.
@@ -1669,15 +1656,15 @@ Section CheckEnv.
     split; sq. 2: constructor; tas.
     unfold is_graph_of_uctx, gc_of_uctx; simpl.
     unfold gc_of_uctx in e. simpl in e.
-    case_eq (gc_of_constraints (constraints_of_udecl (universes_decl_of_decl d)));
+    case_eq (gc_of_constraints (constraints_of_udecl (universes_decl_of_decl g)));
       [|intro HH; rewrite HH in e; discriminate e].
     intros ctrs' Hctrs'. rewrite Hctrs' in *.
     cbn in e. inversion e; subst; clear e.
     unfold global_ext_constraints; simpl.
     rewrite gc_of_constraints_union.
-    assert (eq: monomorphic_constraints_decl d
-                = constraints_of_udecl (universes_decl_of_decl d)). {
-      destruct d. destruct c, cst_universes; try discriminate; reflexivity.
+    assert (eq: monomorphic_constraints_decl g
+                = constraints_of_udecl (universes_decl_of_decl g)). {
+      destruct g. destruct c, cst_universes; try discriminate; reflexivity.
       destruct m, ind_universes; try discriminate; reflexivity. }
     rewrite eq; clear eq. rewrite Hctrs'.
     red in i. unfold gc_of_uctx in i; simpl in i.
@@ -1685,21 +1672,21 @@ Section CheckEnv.
       [|intro HH; rewrite HH in i; cbn in i; contradiction i].
     intros Σctrs HΣctrs; rewrite HΣctrs in *; simpl in *.
     subst G. unfold global_ext_levels; simpl. rewrite no_prop_levels_union.
-    assert (eq: monomorphic_levels_decl d
-                = levels_of_udecl (universes_decl_of_decl d)). {
-      destruct d. destruct c, cst_universes; try discriminate; reflexivity.
+    assert (eq: monomorphic_levels_decl g
+                = levels_of_udecl (universes_decl_of_decl g)). {
+      destruct g. destruct c, cst_universes; try discriminate; reflexivity.
       destruct m, ind_universes; try discriminate; reflexivity. }
     rewrite eq. symmetry; apply add_uctx_make_graph.
   Qed.
   Next Obligation.
     split; sq. 2: constructor; tas.
     unfold global_uctx; simpl.
-    assert (eq1: monomorphic_levels_decl d = LevelSet.empty). {
-      destruct d. destruct c, cst_universes; try discriminate; reflexivity.
+    assert (eq1: monomorphic_levels_decl g = LevelSet.empty). {
+      destruct g. destruct c, cst_universes; try discriminate; reflexivity.
       destruct m, ind_universes; try discriminate; reflexivity. }
     rewrite eq1; clear eq1.
-    assert (eq1: monomorphic_constraints_decl d = ConstraintSet.empty). {
-      destruct d. destruct c, cst_universes; try discriminate; reflexivity.
+    assert (eq1: monomorphic_constraints_decl g = ConstraintSet.empty). {
+      destruct g. destruct c, cst_universes; try discriminate; reflexivity.
       destruct m, ind_universes; try discriminate; reflexivity. }
     rewrite eq1; clear eq1.
     assumption.
@@ -1707,12 +1694,12 @@ Section CheckEnv.
   Next Obligation.
     split; sq. 2: constructor; tas.
     unfold global_uctx; simpl.
-    assert (eq1: monomorphic_levels_decl d = LevelSet.empty). {
-      destruct d. destruct c, cst_universes; try discriminate; reflexivity.
+    assert (eq1: monomorphic_levels_decl g = LevelSet.empty). {
+      destruct g. destruct c, cst_universes; try discriminate; reflexivity.
       destruct m, ind_universes; try discriminate; reflexivity. }
     rewrite eq1; clear eq1.
-    assert (eq1: monomorphic_constraints_decl d = ConstraintSet.empty). {
-      destruct d. destruct c, cst_universes; try discriminate; reflexivity.
+    assert (eq1: monomorphic_constraints_decl g = ConstraintSet.empty). {
+      destruct g. destruct c, cst_universes; try discriminate; reflexivity.
       destruct m, ind_universes; try discriminate; reflexivity. }
     rewrite eq1; clear eq1.
     assumption.
@@ -1729,7 +1716,7 @@ Section CheckEnv.
       exists v. intros ct Hc. apply Hv. simpl in *.
       apply ConstraintSet.union_spec in Hc. destruct Hc.
       apply ConstraintSet.union_spec; simpl.
-      + left. destruct g.
+      + left. destruct d.
         destruct c, cst_universes. assumption.
         1-2: apply ConstraintSetFact.empty_iff in H; contradiction.
         destruct m, ind_universes. assumption.

@@ -335,10 +335,10 @@ Section Reduce.
 
     | red_view_Const c u π with RedFlags.delta flags := {
       | true with inspect (lookup_env (fst Σ) c) := {
-        | @exist (Some (ConstantDecl _ {| cst_body := Some body |})) eq :=
+        | @exist (Some (ConstantDecl {| cst_body := Some body |})) eq :=
           let body' := subst_instance_constr u body in
           rec reduce body' π ;
-        | @exist (Some (InductiveDecl _ _)) eq := False_rect _ _ ;
+        | @exist (Some (InductiveDecl _)) eq := False_rect _ _ ;
         | @exist (Some _) eq := give (tConst c u) π ;
         | @exist None eq := False_rect _ _
         } ;
@@ -455,20 +455,10 @@ Section Reduce.
   Next Obligation.
     left. econstructor. eapply red1_context.
     econstructor.
-    (* Should be a lemma! *)
-    - unfold declared_constant. rewrite <- eq. f_equal.
-      f_equal. clear - eq.
-      revert c wildcard0 body wildcard1 wildcard2 eq.
-      set (Σ' := fst Σ). clearbody Σ'. clear Σ. rename Σ' into Σ.
-      induction Σ ; intros c na t body univ eq.
-      + cbn in eq. discriminate.
-      + cbn in eq. revert eq.
-        case_eq (ident_eq c (global_decl_ident a)).
-        * intros e eq. inversion eq. subst. clear eq.
-          cbn in e. revert e. destruct (ident_eq_spec c na) ; easy.
-        * intros e eq. eapply IHg. eassumption.
+    - unfold declared_constant. rewrite <- eq. reflexivity.
     - cbn. reflexivity.
   Qed.
+
   Next Obligation.
     destruct hΣ as [wΣ].
     eapply wellformed_context in h ; auto. simpl in h.
@@ -639,7 +629,7 @@ Section Reduce.
     - econstructor. econstructor. eapply red1_context.
       eapply red_iota.
     - instantiate (4 := ind'). instantiate (2 := p).
-      instantiate (1 := wildcard9).
+      instantiate (1 := wildcard7).
       destruct r.
       + inversion e.
         subst.

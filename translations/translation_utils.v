@@ -109,7 +109,7 @@ Definition Translate {tsl : Translation} (ΣE : tsl_context) (id : ident)
       fail_nf ("Translation error during the translation of the inductive " ++ id)
     | Success (E, decls) =>
       monad_iter tmMkInductive' decls ;;
-      let Σ' := add_global_decl (InductiveDecl kn d) (fst ΣE) in
+      let Σ' := add_global_decl (kn,InductiveDecl d) (fst ΣE) in
       let E' := (E ++ (snd ΣE))%list in
       Σ' <- tmEval lazy Σ' ;;
       E' <- tmEval lazy E' ;;
@@ -141,7 +141,7 @@ Definition Translate {tsl : Translation} (ΣE : tsl_context) (id : ident)
             tmDebug "doneu" ;;
         let decl := {| cst_universes := univs;
                        cst_type := A; cst_body := Some t |} in
-        let Σ' := add_global_decl (ConstantDecl kn decl) (fst ΣE) in
+        let Σ' := add_global_decl (kn, ConstantDecl decl) (fst ΣE) in
         let E' := (ConstRef kn, tConst id' []) :: (snd ΣE) in
         Σ' <- tmEval lazy Σ' ;;
         E' <- tmEval lazy E' ;;
@@ -175,7 +175,7 @@ Definition Implement {tsl : Translation} (ΣE : tsl_context)
       | Some (ConstRef kn) =>
         let decl := {| cst_universes := Monomorphic_ctx ContextSet.empty;
                        cst_type := tA; cst_body := None |} in
-        let Σ' := add_global_decl (ConstantDecl kn decl) (fst ΣE) in
+        let Σ' := add_global_decl (kn, ConstantDecl decl) (fst ΣE) in
         let E' := (ConstRef kn, tConst id' []) :: (snd ΣE) in
         print_nf (id ++ " has been translated as " ++ id') ;;
         ret (Σ', E')
@@ -222,7 +222,7 @@ Definition ImplementExisting {tsl : Translation} (ΣE : tsl_context) (id : ident
         tmLemma id' A' ;;
         let decl := {| cst_universes := Monomorphic_ctx ContextSet.empty;
                        cst_type := A; cst_body := body_constant_entry e |} in
-        let Σ' := add_global_decl (ConstantDecl kn decl) (fst ΣE) in
+        let Σ' := add_global_decl (kn, ConstantDecl decl) (fst ΣE) in
         let E' := (ConstRef kn, tConst id' []) :: (snd ΣE) in
         print_nf (id ++ " has been translated as " ++ id') ;;
         ret (Σ', E'))
@@ -243,7 +243,7 @@ Definition ImplementExisting {tsl : Translation} (ΣE : tsl_context) (id : ident
         id' <- tmEval all (tsl_id id) ;;
         tmBind (tmUnquoteTyped Type tA') (fun A' =>
         tmLemma id' A' ;;
-        let Σ' := add_global_decl (InductiveDecl kn d) (fst ΣE) in
+        let Σ' := add_global_decl (kn, InductiveDecl d) (fst ΣE) in
         let E' := (IndRef (mkInd kn n), tConst id' []) :: (snd ΣE) in
         print_nf (id ++ " has been translated as " ++ id') ;;
         ret (Σ', E'))
@@ -329,10 +329,10 @@ Definition tsl_kn (tsl_ident : ident -> ident) (kn : kername) mp
 Definition TranslateRec {tsl : Translation} (ΣE : tsl_context) {A} (t : A) := 
   p <- tmQuoteRec t ;;
   tmPrint "~~~~~~~~~~~~~~~~~~" ;;
-  monad_fold_left (fun ΣE decl =>
-    print_nf ("Translating " ++ global_decl_ident decl) ;;
+  monad_fold_left (fun ΣE '(kn, decl) =>
+    print_nf ("Translating " ++ kn) ;;
     match decl with
-    | ConstantDecl kn decl =>
+    | ConstantDecl decl =>
       match lookup_tsl_table (snd ΣE) (ConstRef kn) with
       | Some _ => print_nf (kn ++ " was already translated") ;; ret ΣE
       | None => 
@@ -357,7 +357,7 @@ Definition TranslateRec {tsl : Translation} (ΣE : tsl_context) {A} (t : A) :=
             tmDebug t' ;;
             tmMkDefinition id' t' ;;
             tmDebug "there";;
-            let Σ' := add_global_decl (ConstantDecl kn decl) (fst ΣE) in
+            let Σ' := add_global_decl (kn, ConstantDecl decl) (fst ΣE) in
             let E' := (ConstRef kn, tConst id' []) :: (snd ΣE) in
             Σ' <- tmEval lazy Σ' ;;
             E' <- tmEval lazy E' ;;
@@ -367,7 +367,7 @@ Definition TranslateRec {tsl : Translation} (ΣE : tsl_context) {A} (t : A) :=
         end
       end
 
-    | InductiveDecl kn d => 
+    | InductiveDecl d => 
       match lookup_tsl_table (snd ΣE) (IndRef (mkInd kn 0)) with
       | Some _ => print_nf (kn ++ " was already translated") ;; ret ΣE
       | None => 
@@ -382,7 +382,7 @@ Definition TranslateRec {tsl : Translation} (ΣE : tsl_context) {A} (t : A) :=
                       ++ kn)
          | Success (E, decls) =>
            monad_iter tmMkInductive' decls ;;
-           let Σ' := add_global_decl (InductiveDecl kn d) (fst ΣE) in
+           let Σ' := add_global_decl (kn, InductiveDecl d) (fst ΣE) in
            let E' := (E ++ (snd ΣE))%list in
            Σ' <- tmEval lazy Σ' ;;
            E' <- tmEval lazy E' ;;

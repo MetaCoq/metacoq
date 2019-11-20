@@ -51,19 +51,16 @@ Fixpoint pocc_term (n:nat) (t:term): bool :=
   end.
   (** does [tConst str] occur anywhere in a program? **)
 
-Definition bound_global_decl (d : global_decl) : bool :=
-  match d with
-  | ConstantDecl kn _
-  | InductiveDecl kn _ => if string_dec str kn then true else false
-  end.
+Definition bound_global_decl (d : kername * global_decl) : bool :=
+  if string_dec str (fst d) then true else false.
 
 Definition bound_program (p : program) := List.existsb bound_global_decl (fst p).
 
-Definition pocc_global_decl (d : global_decl) : bool :=
-match d with
-| ConstantDecl kn {| cst_type := ty;  cst_body := Some t |} => pocc_term 2000 ty || pocc_term 2000 t
-| ConstantDecl kn {| cst_type := ty;  cst_body := None |} => pocc_term 2000 ty
-| InductiveDecl kn _ => false
+Definition pocc_global_decl (d : kername * global_decl) : bool :=
+match snd d with
+| ConstantDecl {| cst_type := ty;  cst_body := Some t |} => pocc_term 2000 ty || pocc_term 2000 t
+| ConstantDecl {| cst_type := ty;  cst_body := None |} => pocc_term 2000 ty
+| InductiveDecl _ => false
 end.
 
 Definition pocc_program p := pocc_term 2000 (snd p) || List.existsb pocc_global_decl (fst p).

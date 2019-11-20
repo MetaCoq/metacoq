@@ -50,7 +50,7 @@ Proof.
       * split.
         -- inversion HΣ; subst.
            destruct H2 as [HH1 [HH HH3]].
-           subst udecl. destruct a as [kn decl|kn decl]; simpl in *.
+           subst udecl. destruct d as [decl|decl]; simpl in *.
            ++ destruct decl; simpl in *.
               destruct cst_universes ; [
                 eapply (HH (l, ct, l') Hctr)
@@ -65,7 +65,7 @@ Proof.
               ].
         -- inversion HΣ. subst.
            destruct H2 as [HH1 [HH HH3]].
-           subst udecl. destruct a as [kn decl|kn decl].
+           subst udecl. destruct d as [decl|decl].
            all: simpl in *.
            ++ destruct decl. simpl in *.
               destruct cst_universes ; [
@@ -1438,11 +1438,11 @@ Section Conversion.
 
     unfold_constants Γ leq c u π1 h1 c' u' π2 h2 hx aux
     with inspect (lookup_env Σ c') := {
-    | @exist (Some (ConstantDecl n {| cst_body := Some b |})) eq1 :=
+    | @exist (Some (ConstantDecl {| cst_body := Some b |})) eq1 :=
       isconv_red leq (tConst c u) π1 (subst_instance_constr u' b) π2 aux ;
     (* Inductive or not found *)
     | _ with inspect (lookup_env Σ c) := {
-      | @exist (Some (ConstantDecl n {| cst_body := Some b |})) eq1 :=
+      | @exist (Some (ConstantDecl {| cst_body := Some b |})) eq1 :=
         isconv_red leq (subst_instance_constr u b) π1
                         (tConst c' u') π2 aux ;
       (* Both Inductive or not found *)
@@ -1712,7 +1712,7 @@ Section Conversion.
           | Success h := yes ;
           (* Unfold both constants at once *)
           | Error e with inspect (lookup_env Σ c) := {
-            | @exist (Some (ConstantDecl n {| cst_body := Some body |})) eq3 :=
+            | @exist (Some (ConstantDecl {| cst_body := Some body |})) eq3 :=
               isconv_red leq (subst_instance_constr u body) π1
                              (subst_instance_constr u' body) π2 aux ;
             (* Inductive or not found *)
@@ -2925,7 +2925,7 @@ Section Conversion.
 
     reducible_head Γ (tConst c u) π h
     with inspect (lookup_env Σ c) := {
-    | @exist (Some (ConstantDecl _ {| cst_body := Some body |})) eq :=
+    | @exist (Some (ConstantDecl {| cst_body := Some body |})) eq :=
       Some (subst_instance_constr u body, π) ;
     | @exist _ _ := None
     } ;
@@ -2953,7 +2953,6 @@ Section Conversion.
     - constructor. unfold zipp.
       case_eq (decompose_stack π). intros l s eq.
       eapply red_mkApps_f.
-      apply lookup_env_ConstantDecl_inv in e as ?. subst.
       eapply trans_red.
       + constructor.
       + eapply red_delta.
@@ -2988,7 +2987,6 @@ Section Conversion.
     - constructor. unfold zippx.
       case_eq (decompose_stack π). intros l s eq.
       eapply red_it_mkLambda_or_LetIn. eapply red_mkApps_f.
-      apply lookup_env_ConstantDecl_inv in e as ?. subst.
       eapply trans_red.
       + constructor.
       + eapply red_delta.
@@ -3021,7 +3019,6 @@ Section Conversion.
     all: intro ee ; noconf ee.
     - eapply unfold_one_fix_cored. eassumption.
     - repeat zip fold. eapply cored_context.
-      apply lookup_env_ConstantDecl_inv in e as ?. subst.
       constructor. eapply red_delta.
       + unfold declared_constant. eauto.
       + reflexivity.

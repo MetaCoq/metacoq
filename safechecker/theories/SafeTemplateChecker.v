@@ -53,8 +53,8 @@ Definition update_mib_universes univs mib :=
 
 Definition update_universes (univs : ContextSet.t) (cb : Ast.global_decl)  :=
   match cb with
-  | Ast.ConstantDecl kn cb  => Ast.ConstantDecl kn (update_cst_universes univs cb)
-  | Ast.InductiveDecl kn mib => Ast.InductiveDecl kn (update_mib_universes univs mib)
+  | Ast.ConstantDecl cb => Ast.ConstantDecl (update_cst_universes univs cb)
+  | Ast.InductiveDecl mib => Ast.InductiveDecl (update_mib_universes univs mib)
   end.
 
 Definition is_unbound_level declared (l : Level.t) :=
@@ -100,11 +100,11 @@ Section FoldMap.
 End FoldMap.
 
 Definition fix_global_env_universes (Σ : Ast.global_env) : Ast.global_env :=
-  let fix_decl decl declared :=
+  let fix_decl '(kn, decl) declared :=
     let '(declu, declcstrs) := Typing.monomorphic_udecl_decl decl in
     let declared := LevelSet.union declu declared in
     let dangling := dangling_universes declared declcstrs in
-    (update_universes (LevelSet.union declu dangling, declcstrs) decl, LevelSet.union declared dangling)
+    ((kn, update_universes (LevelSet.union declu dangling, declcstrs) decl), LevelSet.union declared dangling)
   in
   fst (fold_map_left fix_decl Σ LevelSet.empty).
 

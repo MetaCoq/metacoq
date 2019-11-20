@@ -95,7 +95,7 @@ Section TypeOf.
 
     | tConst cst u => fun wf =>
           match lookup_env (fst Σ) cst with
-          | Some (ConstantDecl _ d) =>
+          | Some (ConstantDecl d) =>
             let ty := subst_instance_constr u d.(cst_type) in
             ret (ty; _)
           |  _ => raise (UndeclaredConstant cst)

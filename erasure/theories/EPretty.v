@@ -30,23 +30,9 @@ Section print_term.
       end.
   End Map2.
 
-  Definition global_decl_ident d :=
-    match d with
-    | ConstantDecl id _ => id
-    | InductiveDecl id _ => id
-    end.
-
-  Fixpoint lookup_env (Σ : global_context) (id : ident) : option global_decl :=
-    match Σ with
-    | nil => None
-    | hd :: tl =>
-      if ident_eq id (global_decl_ident hd) then Some hd
-      else lookup_env tl id
-    end.
-
   Definition lookup_ind_decl ind i :=
     match lookup_env Σ ind with
-    | Some (InductiveDecl _ {| ind_bodies := l |}) =>
+    | Some (InductiveDecl {| ind_bodies := l |}) =>
       match nth_error l i with
       | Some body => Some body
       | None => None

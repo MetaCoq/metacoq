@@ -17,25 +17,19 @@ Set Asymmetric Patterns.
  *)
 (** ** Environment lookup *)
 
-Definition global_decl_ident d :=
-  match d with
-  | ConstantDecl id _ => id
-  | InductiveDecl id _ => id
-  end.
-
 Fixpoint lookup_env (Σ : global_declarations) (id : ident) : option global_decl :=
   match Σ with
   | nil => None
   | hd :: tl =>
-    if ident_eq id (global_decl_ident hd) then Some hd
+    if ident_eq id hd.1 then Some hd.2
     else lookup_env tl id
   end.
 
 Definition declared_constant (Σ : global_declarations) (id : ident) decl : Prop :=
-  lookup_env Σ id = Some (ConstantDecl id decl).
+  lookup_env Σ id = Some (ConstantDecl decl).
 
 Definition declared_minductive Σ mind decl :=
-  lookup_env Σ mind = Some (InductiveDecl mind decl).
+  lookup_env Σ mind = Some (InductiveDecl decl).
 
 Definition declared_inductive Σ mdecl ind decl :=
   declared_minductive Σ (inductive_mind ind) mdecl /\

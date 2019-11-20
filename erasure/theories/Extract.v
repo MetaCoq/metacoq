@@ -109,11 +109,11 @@ Inductive erases_global_decls : global_env -> E.global_declarations -> Prop :=
 | erases_global_cnst Σ cb cb' kn Σ' :
     erases_constant_body (Σ, cst_universes cb) cb cb' ->
     erases_global_decls Σ Σ' ->
-    erases_global_decls (ConstantDecl kn cb :: Σ) (E.ConstantDecl kn cb' :: Σ')
+    erases_global_decls ((kn, ConstantDecl cb) :: Σ) ((kn, E.ConstantDecl cb') :: Σ')
 | erases_global_ind Σ univs mib mib' kn Σ' :
     erases_mutual_inductive_body (Σ, univs) mib mib' ->
     erases_global_decls Σ Σ' ->
-    erases_global_decls (InductiveDecl kn mib :: Σ) (E.InductiveDecl kn mib' :: Σ').
+    erases_global_decls ((kn, InductiveDecl mib) :: Σ) ((kn, E.InductiveDecl mib') :: Σ').
 
 Definition erases_global Σ Σ' := erases_global_decls Σ Σ'.
 
@@ -134,8 +134,8 @@ Definition option_is_none {A} (o : option A) :=
 
 Definition is_axiom_decl g :=
   match g with
-  | ConstantDecl kn cb => option_is_none cb.(cst_body)
-  | InductiveDecl kn ind => false
+  | ConstantDecl cb => option_is_none cb.(cst_body)
+  | InductiveDecl ind => false
   end.
 
 Definition axiom_free Σ :=
@@ -146,7 +146,7 @@ Definition computational_ind Σ ind :=
   let 'mkInd mind n := ind in
   let mib := lookup_env Σ mind in
   match mib with
-  | Some (InductiveDecl kn decl) =>
+  | Some (InductiveDecl decl) =>
     match List.nth_error decl.(ind_bodies) n with
     | Some body =>
       match destArity [] body.(ind_type) with

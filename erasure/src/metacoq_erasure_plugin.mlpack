@@ -42,10 +42,10 @@ SafeTemplateChecker
 
 EAst
 EAstUtils
-EPretty
-Extract
 ELiftSubst
 ETyping
+EPretty
+Extract
 ErasureFunction
 SafeErasureFunction
 SafeTemplateErasure

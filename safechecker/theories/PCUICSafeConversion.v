@@ -2211,6 +2211,243 @@ Section Conversion.
     intuition eauto.
   Qed.
 
+  (* TODO MOVE *)
+  Lemma conv_Fix_one_type :
+    forall Γ mfix mfix' idx,
+      wf Σ.1 ->
+      OnOne2 (fun u v =>
+        Σ ;;; Γ |- dtype u == dtype v ×
+        dbody u = dbody v ×
+        rarg u = rarg v
+      ) mfix mfix' ->
+      Σ ;;; Γ |- tFix mfix idx == tFix mfix' idx.
+  Proof.
+    intros Γ mfix mfix' idx wΣ h.
+    apply OnOne2_split in h
+      as [[na ty bo ra] [[na' ty' bo' ra'] [l1 [l2 [[h [? ?]] [? ?]]]]]].
+    simpl in *. subst.
+    induction h.
+    - constructor. constructor.
+      apply All2_app.
+      + apply All2_same. intros. intuition reflexivity.
+      + constructor.
+        * simpl. intuition reflexivity.
+        * apply All2_same. intros. intuition reflexivity.
+    - eapply conv_alt_red_l ; eauto.
+      constructor. apply OnOne2_app. constructor. simpl.
+      intuition eauto.
+    - eapply conv_alt_red_r ; eauto.
+      constructor. apply OnOne2_app. constructor. simpl.
+      intuition eauto.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma conv_Fix_types :
+    forall Γ mfix mfix' idx,
+      wf Σ.1 ->
+      All2 (fun u v =>
+        Σ ;;; Γ |- dtype u == dtype v ×
+        dbody u = dbody v ×
+        rarg u = rarg v
+      ) mfix mfix' ->
+      Σ ;;; Γ |- tFix mfix idx == tFix mfix' idx.
+  Proof.
+    intros Γ mfix mfix' idx wΣ h.
+    apply All2_many_OnOne2 in h.
+    induction h.
+    - apply conv_alt_refl. reflexivity.
+    - eapply conv_alt_trans.
+      + assumption.
+      + eassumption.
+      + apply conv_Fix_one_type. all: assumption.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma conv_Fix_one_body :
+    forall Γ mfix mfix' idx,
+      wf Σ.1 ->
+      OnOne2 (fun u v =>
+        dtype u = dtype v ×
+        Σ ;;; Γ ,,, fix_context mfix |- dbody u == dbody v ×
+        rarg u = rarg v
+      ) mfix mfix' ->
+      Σ ;;; Γ |- tFix mfix idx == tFix mfix' idx.
+  Proof.
+    intros Γ mfix mfix' idx wΣ h.
+    apply OnOne2_split in h
+      as [[na ty bo ra] [[na' ty' bo' ra'] [l1 [l2 [[? [h ?]] [? ?]]]]]].
+    simpl in *. subst.
+    induction h.
+    - constructor. constructor.
+      apply All2_app.
+      + apply All2_same. intros. intuition reflexivity.
+      + constructor.
+        * simpl. intuition reflexivity.
+        * apply All2_same. intros. intuition reflexivity.
+    - eapply conv_alt_red_l ; eauto.
+      eapply fix_red_body. apply OnOne2_app. constructor. simpl.
+      intuition eauto.
+      rewrite fix_context_fix_context_alt in r.
+      rewrite map_app in r. simpl in r.
+      unfold def_sig at 2 in r. simpl in r.
+      rewrite fix_context_fix_context_alt.
+      rewrite map_app. simpl.
+      unfold def_sig at 2. simpl.
+      assumption.
+    - rewrite fix_context_fix_context_alt in r.
+      rewrite map_app in r. simpl in r.
+      unfold def_sig at 2 in r. simpl in r.
+      eapply red1_eq_context_upto_l in r as [v' [r e]].
+      4:{
+        instantiate (1 := Γ ,,, fix_context_alt (map def_sig l1 ++ (na', ty') :: map def_sig l2)).
+        eapply eq_context_upto_cat.
+        - eapply eq_context_upto_refl. instantiate (1 := eq). auto.
+        - unfold fix_context_alt. eapply eq_context_upto_rev'.
+          rewrite 2!mapi_app. cbn.
+          eapply eq_context_upto_cat.
+          + constructor.
+            * eapply eq_term_upto_univ_refl. all: auto.
+            * eapply eq_context_upto_refl. auto.
+          + eapply eq_context_upto_refl. auto.
+      }
+      2: auto.
+      2:{ intros ? ? ? e. apply eq_univ_make in e. subst. reflexivity. }
+      eapply conv_alt_trans. 1: assumption. 1: eassumption.
+      eapply conv_alt_red_r ; revgoals.
+      + eapply fix_red_body. apply OnOne2_app. constructor. simpl.
+        split.
+        * rewrite fix_context_fix_context_alt.
+          rewrite map_app. simpl.
+          unfold def_sig at 2. simpl.
+          instantiate (1 := mkdef _ na' ty' v' ra'). simpl.
+          exact r.
+        * simpl. reflexivity.
+      + constructor. constructor.
+        apply All2_app.
+        * apply All2_same. intros. intuition reflexivity.
+        * constructor.
+          -- simpl. intuition eauto.
+             ++ eapply eq_term_upto_univ_refl.
+                all: apply eq_universe_refl.
+             ++ eapply upto_names_impl. 3: assumption.
+                all: apply eq_universe_refl.
+          -- apply All2_same. intros. intuition reflexivity.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma conv_Fix_bodies :
+    forall Γ mfix mfix' idx,
+      wf Σ.1 ->
+      All2 (fun u v =>
+        dtype u = dtype v ×
+        Σ ;;; Γ ,,, fix_context mfix |- dbody u == dbody v ×
+        rarg u = rarg v
+      ) mfix mfix' ->
+      Σ ;;; Γ |- tFix mfix idx == tFix mfix' idx.
+  Proof.
+    intros Γ mfix mfix' idx wΣ h.
+    assert (thm :
+      Σ ;;; Γ |- tFix mfix idx == tFix mfix' idx ×
+      eq_context_upto eq (Γ ,,, fix_context mfix) (Γ ,,, fix_context mfix')
+    ).
+    { apply All2_many_OnOne2 in h.
+      induction h.
+      - split.
+        + apply conv_alt_refl. reflexivity.
+        + eapply eq_context_upto_refl. auto.
+      - destruct IHh.
+        split.
+        + eapply conv_alt_trans.
+          * assumption.
+          * eassumption.
+          * apply conv_Fix_one_body. 1: assumption.
+            eapply OnOne2_impl. 1: eassumption.
+            intros [na ty bo ra] [na' ty' bo' ra'] [? [hh ?]].
+            simpl in *. intuition eauto.
+            eapply conv_alt_eq_context_upto. 2: eassumption.
+            eapply eq_context_impl. 2: eassumption.
+            intros ? ? []. eapply eq_universe_refl.
+        + eapply eq_ctx_trans.
+          * intros ? ? ? [] []. reflexivity.
+          * eassumption.
+          * apply OnOne2_split in r
+              as [[na ty bo ra] [[na' ty' bo' ra'] [l1 [l2 [[? [? ?]] [? ?]]]]]].
+            simpl in *. subst.
+            rewrite 2!fix_context_fix_context_alt.
+            rewrite 2!map_app. simpl.
+            unfold def_sig at 2 5. simpl.
+            eapply eq_context_upto_cat.
+            -- eapply eq_context_upto_refl. auto.
+            -- eapply eq_context_upto_rev'.
+               rewrite 2!mapi_app. cbn.
+               eapply eq_context_upto_cat.
+               ++ constructor.
+                  ** eapply eq_term_upto_univ_refl. all: auto.
+                  ** eapply eq_context_upto_refl. auto.
+               ++ eapply eq_context_upto_refl. auto.
+    }
+    apply thm.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma conv_Fix :
+    forall Γ mfix mfix' idx,
+      wf Σ.1 ->
+      All2 (fun u v =>
+        Σ;;; Γ |- dtype u == dtype v ×
+        Σ;;; Γ ,,, fix_context mfix |- dbody u == dbody v ×
+        rarg u = rarg v
+      ) mfix mfix' ->
+      Σ ;;; Γ |- tFix mfix idx == tFix mfix' idx.
+  Proof.
+    intros Γ mfix mfix' idx wΣ h.
+    assert (h' : ∑ mfix'',
+      All2 (fun u v =>
+        Σ;;; Γ |- dtype u == dtype v ×
+        dbody u = dbody v ×
+        rarg u = rarg v
+      ) mfix'' mfix' ×
+      All2 (fun u v =>
+        dtype u = dtype v ×
+        Σ;;; Γ ,,, fix_context mfix |- dbody u == dbody v ×
+        rarg u = rarg v
+      ) mfix mfix''
+    ).
+    { set (P1 := fun u v => Σ ;;; Γ |- u == v).
+      set (P2 := fun u v => Σ ;;; Γ ,,, fix_context mfix |- u == v).
+      change (
+        All2 (fun u v =>
+          P1 u.(dtype) v.(dtype) ×
+          P2 u.(dbody) v.(dbody) ×
+          rarg u = rarg v
+        ) mfix mfix'
+      ) in h.
+      change (
+        ∑ mfix'',
+          All2 (fun u v =>
+            P1 u.(dtype) v.(dtype) × dbody u = dbody v × rarg u = rarg v
+          ) mfix'' mfix' ×
+          All2 (fun u v =>
+            dtype u = dtype v × P2 u.(dbody) v.(dbody) × rarg u = rarg v
+          ) mfix mfix''
+      ).
+      clearbody P1 P2.
+      induction h.
+      - exists []. split. all: constructor.
+      - destruct IHh as [l'' [h1 h2]].
+        eexists (mkdef _ (dname x) _ _ _ :: l''). split.
+        + constructor. 2: assumption.
+          simpl. intuition eauto.
+        + constructor. 2: assumption.
+          intuition eauto.
+    }
+    destruct h' as [mfix'' [h1 h2]].
+    eapply conv_alt_trans.
+    - assumption.
+    - eapply conv_Fix_bodies. all: eassumption.
+    - eapply conv_Fix_types. all: assumption.
+  Qed.
+
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
             (t2 : term) (π2 : stack) (h2 : wtp Γ t2 π2)
@@ -2351,12 +2588,21 @@ Section Conversion.
                 isconv_prog leq (tFix mfix idx) π1 fn' (ρ +++ θ') aux
               }
             } ;
-          | _ :=
-            Error (
-              CannotUnfoldFix
-                (Γ ,,, stack_context π1) mfix idx
-                (Γ ,,, stack_context π2) mfix' idx'
-            )
+          | _ with inspect (eqb idx idx') := {
+            | @exist true eq4 with isconv_fix Γ mfix idx π1 _ mfix' idx' π2 _ _ _ aux := {
+              | Success h1 with isconv_args_raw leq (tFix mfix idx) π1 (tFix mfix' idx') π2 aux := {
+                | Success h2 := yes ;
+                | Error e := Error e
+                } ;
+              | Error e := Error e
+              } ;
+            | @exist false _ :=
+              Error (
+                CannotUnfoldFix
+                  (Γ ,,, stack_context π1) mfix idx
+                  (Γ ,,, stack_context π2) mfix' idx'
+              )
+            }
           }
         }
       } ;
@@ -2369,7 +2615,7 @@ Section Conversion.
           DistinctCoFix
             (Γ ,,, stack_context π1) mfix idx
             (Γ ,,, stack_context π2) mfix' idx'
-        ) (* TODO Is it complete? *)
+        ) (* TODO Incomplete *)
       } ;
 
     | prog_view_other t1 t2 h :=
@@ -3049,6 +3295,26 @@ Section Conversion.
         assumption.
     - assumption.
     - assumption.
+  Qed.
+  Next Obligation.
+    change (true = eqb idx idx') in eq4.
+    destruct (eqb_spec idx idx'). 2: discriminate.
+    assumption.
+  Qed.
+  Next Obligation.
+    eapply R_stateR.
+    all: simpl.
+    all: try reflexivity.
+    constructor.
+  Qed.
+  Next Obligation.
+    destruct h1 as [h1].
+    destruct hΣ.
+    eapply conv_conv_l. 1: assumption.
+    change (true = eqb idx idx') in eq4.
+    destruct (eqb_spec idx idx'). 2: discriminate.
+    subst.
+    eapply conv_Fix. all: assumption.
   Qed.
 
   (* tCoFix *)

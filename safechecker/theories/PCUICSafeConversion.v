@@ -2155,26 +2155,61 @@ Section Conversion.
       assumption.
   Qed.
 
-  (* Equations isconv_branches' (Γ : context)
-    (ind : inductive) (par : nat)
-    (p c : term) (brs : list (nat × term))
-    (π : stack) (h : wtp Γ (tCase (ind, par) p c brs) π)
-    (ind' : inductive) (par' : nat)
-    (p' c' : term) (brs' : list (nat × term))
-    (π' : stack) (h' : wtp Γ (tCase (ind', par') p' c' brs') π')
+  Equations isconv_fix (Γ : context)
+    (mfix : mfixpoint term) (idx : nat) (π : stack)
+    (h : wtp Γ (tFix mfix idx) π)
+    (mfix' : mfixpoint term) (idx' : nat) (π' : stack)
+    (h' : wtp Γ (tFix mfix' idx') π')
     (hx : conv_stack_ctx Γ π π')
-    (ei : ind = ind') (ep : par = par')
-    (aux : Aux Term Γ (tCase (ind, par) p c brs) π (tCase (ind', par') p' c' brs') π' h')
-    : ConversionResult (∥ All2 (fun u v => u.1 = v.1 ×  Σ ;;; Γ ,,, stack_context π |- u.2 == v.2) brs brs' ∥) :=
+    (ei : idx = idx')
+    (aux : Aux Term Γ (tFix mfix idx) π (tFix mfix' idx') π' h')
+    : ConversionResult (∥ All2 (fun u v =>
+          Σ ;;; Γ ,,, stack_context π |- u.(dtype) == v.(dtype) ×
+          Σ ;;; Γ ,,, stack_context π ,,, fix_context mfix |- u.(dbody) == v.(dbody) ×
+          u.(rarg) = v.(rarg)
+      ) mfix mfix' ∥) :=
 
-    isconv_branches' Γ ind par p c brs π h ind' par' p' c' brs' π' h' hx ei ep aux :=
-      isconv_branches Γ ind par p c [] brs π _ p' c' [] brs' π' _ _ _ _.
+    isconv_fix Γ mfix idx π h mfix' idx' π' h' hx ei aux
+    with
+      isconv_fix_types Γ idx
+        [] mfix π _
+        [] mfix' π' _
+        hx _ _
+    := {
+    | Success h1
+      with
+        isconv_fix_bodies Γ idx
+          [] mfix π _
+          [] mfix' π' _
+          hx _ _ _
+      := {
+      | Success h2 := yes ;
+      | Error e := Error e
+      } ;
+    | Error e := Error e
+    }.
+
   Next Obligation.
     constructor. constructor.
   Qed.
   Next Obligation.
     unshelve eapply aux. all: eassumption.
-  Qed. *)
+  Qed.
+  Next Obligation.
+    constructor. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply aux. all: eassumption.
+  Qed.
+  Next Obligation.
+    destruct h1 as [h1], h2 as [h2].
+    constructor.
+    rewrite fix_context_fix_context_alt.
+    pose proof (PCUICParallelReductionConfluence.All2_mix h1 h2) as h3.
+    eapply All2_impl. 1: exact h3.
+    intros [? ? ? ?] [? ? ? ?] ?. simpl in *.
+    intuition eauto.
+  Qed.
 
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)

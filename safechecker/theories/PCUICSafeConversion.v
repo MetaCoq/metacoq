@@ -705,6 +705,10 @@ Section Conversion.
       (Γ : context) (u : def term) (mfix1 mfix2 : mfixpoint term)
       (Γ' : context) (v : def term) (mfix1' mfix2' : mfixpoint term)
 
+  | FixMfixMismatch (idx : nat)
+      (Γ : context) (mfix : mfixpoint term)
+      (Γ' : context) (mfix' : mfixpoint term)
+
   | DistinctCoFix
       (Γ : context) (mfix : mfixpoint term) (idx : nat)
       (Γ' : context) (mfix' : mfixpoint term) (idx' : nat)
@@ -1747,25 +1751,18 @@ Section Conversion.
 
     isconv_fix_types Γ idx mfix1 [] π h mfix1' [] π' h' hx h1 aux := yes ;
 
+    (* TODO It might be more efficient to check the lengths first
+       and then conclude this case is not possible.
+    *)
     isconv_fix_types Γ idx mfix1 mfix2 π h mfix1' mfix2' π' h' hx h1 aux :=
-      False_rect _ _.
+      Error (
+        FixMfixMismatch idx
+          (Γ ,,, stack_context π) (mfix1 ++ mfix2)
+          (Γ ,,, stack_context π') (mfix1' ++ mfix2')
+      ).
 
   Next Obligation.
     constructor. constructor.
-  Qed.
-  Next Obligation.
-    destruct h1 as [h1].
-    apply All2_length in h1 as e1.
-    zip fold in h. apply wellformed_context in h. 2: assumption.
-    clear aux.
-    zip fold in h'. apply wellformed_context in h'. 2: assumption.
-    simpl in *.
-    todo "Number of mfix"%string.
-    (* We should be able to conclude that something is wrong here. *)
-  Qed.
-  Next Obligation.
-    (* Symmetric case of the previous one, so should do a lemma *)
-    todo "Number of mfix"%string.
   Qed.
   Next Obligation.
     destruct u. assumption.

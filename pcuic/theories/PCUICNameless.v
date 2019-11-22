@@ -89,21 +89,6 @@ Local Ltac ih :=
     eapply ih ; assumption
   end.
 
-Lemma eq_univ_make :
-  forall u u',
-    Forall2 eq (map Universe.make u) (map Universe.make u') ->
-    u = u'.
-Proof.
-  intros u u' h.
-  revert u' h.
-  induction u ; intros u' h.
-  - destruct u' ; inversion h. reflexivity.
-  - destruct u' ; inversion h. subst.
-    f_equal.
-    + inversion H2. reflexivity.
-    + eapply IHu. assumption.
-Qed.
-
 Lemma nameless_eq_term_spec :
   forall u v,
     nameless u ->

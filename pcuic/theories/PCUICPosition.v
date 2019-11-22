@@ -800,24 +800,6 @@ Proof.
     + intros H0 h. discriminate.
 Qed.
 
-(* TODO MOVE *)
-(* The current fix_context asks for too much information. *)
-Definition fix_context_alt (l : list (name × term)) : context :=
-  List.rev (mapi (fun i d => vass d.1 (lift0 i d.2)) l).
-
-Definition def_sig (d : def term) : name × term :=
-  (d.(dname), d.(dtype)).
-
-Lemma fix_context_fix_context_alt :
-  forall m,
-    fix_context m = fix_context_alt (map def_sig m).
-Proof.
-  intros m.
-  unfold fix_context_alt, fix_context.
-  f_equal. rewrite mapi_map. eapply mapi_ext.
-  intros i [na ty bo ra]. simpl. reflexivity.
-Qed.
-
 Fixpoint stack_context π : context :=
   match π with
   | ε => []

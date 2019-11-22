@@ -1737,12 +1737,12 @@ Lemma Forall2_app_r {A} (P : A -> A -> Prop) l l' r r' : Forall2 P (l ++ [r]) (l
                                                          (Forall2 P l l') /\ (P r r').
 Proof.
   induction l in l', r |- *; simpl; intros; destruct l'; simpl in *; inversion H; subst.
-  - intuition. 
+  - intuition.
   - destruct l'; cbn in *.
-    + inversion H5. 
+    + inversion H5.
     + inversion H5.
   - destruct l; cbn in *.
-    + inversion H5. 
+    + inversion H5.
     + inversion H5.
   - specialize (IHl _ _ H5). intuition auto.
 Qed.
@@ -2181,7 +2181,7 @@ Proof.
   induction h1 in l3, h2 |- *.
   - destruct l3.
     + inversion h2.
-    + inversion h2. subst. 
+    + inversion h2. subst.
     specialize (h _ _ _ p X) as hh.
     destruct hh as [? [? ?]].
     eexists. constructor.
@@ -2189,7 +2189,7 @@ Proof.
       * constructor ; eauto.
   - destruct l3.
     + inversion h2.
-    + inversion h2. subst. 
+    + inversion h2. subst.
     specialize (IHh1 _ X0). destruct IHh1 as [? [? ?]].
     eexists. constructor.
       * eapply OnOne2_tl. eassumption.
@@ -2207,7 +2207,7 @@ Proof.
   induction h1 in l3, h2 |- *.
   - destruct l3.
     + inversion h2.
-    + inversion h2. subst. 
+    + inversion h2. subst.
       specialize (h _ _ _ p X) as hh.
       destruct hh as [? [? ?]].
       eexists. split.
@@ -2215,7 +2215,7 @@ Proof.
       * constructor ; eauto.
   - destruct l3.
     + inversion h2.
-    + inversion h2. subst. 
+    + inversion h2. subst.
       specialize (IHh1 _ X0). destruct IHh1 as [? [? ?]].
       eexists. split.
       * eapply OnOne2_tl. eassumption.
@@ -2890,6 +2890,92 @@ Qed.
 
 Notation on_Trel_eq R f g :=
   (fun x y => (R (f x) (f y) * (g x = g y)))%type.
+
+  Inductive All2i {A B : Type} (R : nat -> A -> B -> Type) (n : nat)
+  : list A -> list B -> Type :=
+| All2i_nil : All2i R n [] []
+| All2i_cons :
+    forall x y l r,
+      R n x y ->
+      All2i R (S n) l r ->
+      All2i R n (x :: l) (y :: r).
+
+(* Derive Signature for All2i. *)
+
+Lemma All2i_impl :
+  forall A B R R' n l l',
+    @All2i A B R n l l' ->
+    (forall i x y, R i x y -> R' i x y) ->
+    All2i R' n l l'.
+Proof.
+  intros A B R R' n l l' ha h.
+  induction ha. 1: constructor.
+  constructor. 2: assumption.
+  eapply h. assumption.
+Qed.
+
+Lemma All2i_mapi :
+  forall A B C D R f g l l',
+    @All2i A B (fun i x y => R i (f i x) (g i y)) 0 l l' ->
+    @All2i C D R 0 (mapi f l) (mapi g l').
+Proof.
+  intros A B C D R f g l l' h.
+  unfold mapi.
+  revert h.
+  generalize 0. intros n h.
+  induction h. 1: constructor.
+  simpl. constructor. all: assumption.
+Qed.
+
+Lemma All2i_app :
+  forall A B R n l1 l2 r1 r2,
+    @All2i A B R n l1 r1 ->
+    All2i R (n + #|l1|) l2 r2 ->
+    All2i R n (l1 ++ l2) (r1 ++ r2).
+Proof.
+  intros A B R n l1 l2 r1 r2 h1 h2.
+  induction h1 in r2, l2, h2 |- *.
+  - simpl in *. replace (n + 0)%nat with n in h2 by lia. assumption.
+  - simpl in *. constructor. 1: assumption.
+    eapply IHh1. replace (S (n + #|l|))%nat with (n + S #|l|)%nat by lia.
+    assumption.
+Qed.
+
+(* Lemma All2i_fnat :
+  forall A B R n l r f,
+    (forall n, f (S n) = S (f n)) ->
+    @All2i A B R (f n) l r ->
+    All2i (fun i x y => R (f i) x y) n l r.
+Proof.
+  intros A B R n l r f hf h.
+  remember (f n) as m eqn:e.
+  induction h in n, e |- *. 1: constructor.
+  constructor.
+  - rewrite <- e. assumption.
+  - eapply IHh. rewrite hf. auto.
+
+  (* dependent induction h. 1: constructor.
+  constructor. 1: assumption.
+  eapply IHh. *)
+Qed. *)
+
+Lemma All2i_rev :
+  forall A B R l l' n,
+    @All2i A B R n l l' ->
+    All2i (fun i x y => R (n + #|l| - (S i)) x y) 0 (List.rev l) (List.rev l').
+Proof.
+  intros A B R l l' n h.
+  induction h. 1: constructor.
+  simpl. apply All2i_app.
+  - eapply All2i_impl. 1: eassumption.
+    simpl. intros ? ? ? ?.
+    replace (n + S #|l| - S i) with (n + #|l| - i) by lia.
+    assumption.
+  - simpl. constructor. 2: constructor.
+    rewrite List.rev_length.
+    replace (n + S #|l| - S #|l|) with n by lia.
+    assumption.
+Qed.
 
 Section ListSize.
   Context {A} (size : A -> nat).

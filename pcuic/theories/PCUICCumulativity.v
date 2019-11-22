@@ -202,6 +202,23 @@ Proof.
   apply conv_alt_sym in H; auto. now apply conv_alt_cumul.
 Qed.
 
+(* TODO Probably not the right place
+   but conv_alt is not defined in PCUICWeakening *)
+Lemma weakening_conv_alt `{cf:checker_flags} :
+  forall Σ Γ Γ' Γ'' M N,
+    wf Σ.1 ->
+    Σ ;;; Γ ,,, Γ' |- M == N ->
+    Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' |- lift #|Γ''| #|Γ'| M == lift #|Γ''| #|Γ'| N.
+Proof.
+  intros Σ Γ Γ' Γ'' M N wfΣ. induction 1.
+  - constructor.
+    now apply lift_eq_term.
+  - eapply PCUICWeakening.weakening_red1 in r ; auto.
+    econstructor 2 ; eauto.
+  - eapply PCUICWeakening.weakening_red1 in r ; auto.
+    econstructor 3 ; eauto.
+Qed.
+
 Inductive conv_pb :=
 | Conv
 | Cumul.

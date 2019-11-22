@@ -701,6 +701,14 @@ Section Conversion.
       (Γ : context) (mfix : mfixpoint term) (idx : nat)
       (Γ' : context) (mfix' : mfixpoint term) (idx' : nat)
 
+  | FixRargMismatch (idx : nat)
+      (Γ : context) (u : def term) (mfix1 mfix2 : mfixpoint term)
+      (Γ' : context) (v : def term) (mfix1' mfix2' : mfixpoint term)
+
+  | FixMfixMismatch (idx : nat)
+      (Γ : context) (mfix : mfixpoint term)
+      (Γ' : context) (mfix' : mfixpoint term)
+
   | DistinctCoFix
       (Γ : context) (mfix : mfixpoint term) (idx : nat)
       (Γ' : context) (mfix' : mfixpoint term) (idx' : nat)
@@ -1694,6 +1702,412 @@ Section Conversion.
     unshelve eapply aux. all: eassumption.
   Qed.
 
+  Equations isconv_fix_types (Γ : context)
+    (idx : nat)
+    (mfix1 mfix2 : mfixpoint term) (π : stack)
+    (h : wtp Γ (tFix (mfix1 ++ mfix2) idx) π)
+    (mfix1' mfix2' : mfixpoint term) (π' : stack)
+    (h' : wtp Γ (tFix (mfix1' ++ mfix2') idx) π')
+    (hx : conv_stack_ctx Γ π π')
+    (h1 : ∥ All2 (fun u v =>
+                   Σ ;;; Γ ,,, stack_context π |- u.(dtype) == v.(dtype) ×
+                   u.(rarg) = v.(rarg)
+            ) mfix1 mfix1' ∥)
+    (aux : Aux Term Γ (tFix (mfix1 ++ mfix2) idx) π (tFix (mfix1' ++ mfix2') idx) π' h')
+    : ConversionResult (∥ All2 (fun u v =>
+          Σ ;;; Γ ,,, stack_context π |- u.(dtype) == v.(dtype) ×
+          u.(rarg) = v.(rarg)
+      ) mfix2 mfix2' ∥)
+    by struct mfix2 :=
+
+    isconv_fix_types
+      Γ idx mfix1 (u :: mfix2) π h mfix1' (v :: mfix2') π' h' hx h1 aux
+    with inspect (eqb u.(rarg) v.(rarg)) := {
+    | @exist true eq1
+      with isconv_red_raw Conv
+             u.(dtype)
+             (Fix_mfix_ty u.(dname) u.(dbody) u.(rarg) mfix1 mfix2 idx π)
+             v.(dtype)
+             (Fix_mfix_ty v.(dname) v.(dbody) v.(rarg) mfix1' mfix2' idx π')
+             aux
+      := {
+      | Success h2 with
+          isconv_fix_types Γ idx
+            (mfix1 ++ [u]) mfix2 π _
+            (mfix1' ++ [v]) mfix2' π' _
+            hx _ _
+        := {
+        | Success h3 := yes ;
+        | Error e := Error e
+        } ;
+      | Error e := Error e
+      } ;
+    | @exist false _ := Error (
+        FixRargMismatch idx
+          (Γ ,,, stack_context π) u mfix1 mfix2
+          (Γ ,,, stack_context π') v mfix1' mfix2'
+      )
+    } ;
+
+    isconv_fix_types Γ idx mfix1 [] π h mfix1' [] π' h' hx h1 aux := yes ;
+
+    (* TODO It might be more efficient to check the lengths first
+       and then conclude this case is not possible.
+    *)
+    isconv_fix_types Γ idx mfix1 mfix2 π h mfix1' mfix2' π' h' hx h1 aux :=
+      Error (
+        FixMfixMismatch idx
+          (Γ ,,, stack_context π) (mfix1 ++ mfix2)
+          (Γ ,,, stack_context π') (mfix1' ++ mfix2')
+      ).
+
+  Next Obligation.
+    constructor. constructor.
+  Qed.
+  Next Obligation.
+    destruct u. assumption.
+  Qed.
+  Next Obligation.
+    destruct v. assumption.
+  Qed.
+  Next Obligation.
+    eapply R_positionR. all: simpl.
+    - destruct u. reflexivity.
+    - rewrite <- app_nil_r. eapply positionR_poscat.
+      constructor.
+  Qed.
+  Next Obligation.
+    rewrite <- app_assoc. simpl. assumption.
+  Qed.
+  Next Obligation.
+    rewrite <- app_assoc. simpl. assumption.
+  Qed.
+  Next Obligation.
+    destruct hx as [hx], h1 as [h1], h2 as [h2].
+    destruct hΣ as [wΣ].
+    unfold zipp in h2. simpl in h2.
+    constructor.
+    apply All2_app. 1: assumption.
+    constructor. 2: constructor.
+    change (true = eqb u.(rarg) v.(rarg)) in eq1.
+    destruct (eqb_spec u.(rarg) v.(rarg)). 2: discriminate.
+    clear eq1.
+    intuition eauto.
+  Qed.
+  Next Obligation.
+    unshelve eapply aux. all: try eassumption.
+    clear aux.
+    lazymatch goal with
+    | h : R _ _ ?r1 |- R _ _ ?r2 =>
+      rename h into hr ;
+      assert (e : r1 = r2)
+    end.
+    { clear hr.
+      match goal with
+      | |- {| wth := ?x |} = _ =>
+        generalize x
+      end.
+      rewrite <- !app_assoc. simpl.
+      intro w.
+      f_equal.
+      eapply proof_irrelevance.
+    }
+    rewrite <- e. assumption.
+  Qed.
+  Next Obligation.
+    destruct hx as [hx], h1 as [h1], h2 as [h2], h3 as [h3].
+    destruct hΣ as [wΣ].
+    unfold zipp in h2. simpl in h2.
+    constructor.
+    constructor. 2: assumption.
+    change (true = eqb u.(rarg) v.(rarg)) in eq1.
+    destruct (eqb_spec u.(rarg) v.(rarg)). 2: discriminate.
+    clear eq1.
+    intuition eauto.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma conv_context_decl :
+    forall Γ Δ d d',
+      conv_context Σ Γ Δ ->
+      conv_decls Σ Γ Δ d d' ->
+      conv_context Σ (Γ ,, d) (Δ ,, d').
+  Proof.
+    intros Γ Δ d d' hx h.
+    destruct h.
+    all: constructor. all: try assumption.
+    all: constructor. all: assumption.
+  Qed.
+
+  Equations isconv_fix_bodies (Γ : context) (idx : nat)
+    (mfix1 mfix2 : mfixpoint term) (π : stack)
+    (h : wtp Γ (tFix (mfix1 ++ mfix2) idx) π)
+    (mfix1' mfix2' : mfixpoint term) (π' : stack)
+    (h' : wtp Γ (tFix (mfix1' ++ mfix2') idx) π')
+    (hx : conv_stack_ctx Γ π π')
+    (h1 : ∥ All2 (fun u v => Σ ;;; Γ ,,, stack_context π ,,, fix_context_alt (map def_sig mfix1 ++ map def_sig mfix2) |- u.(dbody) == v.(dbody)) mfix1 mfix1' ∥)
+    (ha : ∥ All2 (fun u v =>
+                    Σ ;;; Γ ,,, stack_context π |- u.(dtype) == v.(dtype) ×
+                    u.(rarg) = v.(rarg)
+           ) (mfix1 ++ mfix2) (mfix1' ++ mfix2') ∥)
+    (aux : Aux Term Γ (tFix (mfix1 ++ mfix2) idx) π (tFix (mfix1' ++ mfix2') idx) π' h')
+    : ConversionResult (∥ All2 (fun u v => Σ ;;; Γ ,,, stack_context π ,,, fix_context_alt (map def_sig mfix1 ++ map def_sig mfix2) |- u.(dbody) == v.(dbody)) mfix2 mfix2' ∥)
+    by struct mfix2 :=
+
+  isconv_fix_bodies Γ idx mfix1 (u :: mfix2) π h mfix1' (v :: mfix2') π' h' hx h1 ha aux
+  with isconv_red_raw Conv
+        u.(dbody)
+        (Fix_mfix_bd u.(dname) u.(dtype) u.(rarg) mfix1 mfix2 idx π)
+        v.(dbody)
+        (Fix_mfix_bd v.(dname) v.(dtype) v.(rarg) mfix1' mfix2' idx π')
+        aux
+  := {
+  | Success h2
+    with isconv_fix_bodies Γ idx
+           (mfix1 ++ [u]) mfix2 π _
+           (mfix1' ++ [v]) mfix2' π' _
+           hx _ _ _
+    := {
+    | Success h3 := yes ;
+    | Error e := Error e
+    } ;
+  | Error e := Error e
+  } ;
+
+  isconv_fix_bodies Γ idx mfix1 [] π h mfix1' [] π' h' hx h1 ha aux := yes ;
+
+  isconv_fix_bodies Γ idx mfix1 mfix2 π h mfix1' mfix2' π' h' hx h1 ha aux :=
+    False_rect _ _.
+
+  Next Obligation.
+    constructor. constructor.
+  Qed.
+  Next Obligation.
+    destruct h1 as [h1], ha as [ha].
+    apply All2_length in h1 as e1.
+    apply All2_length in ha as ea.
+    rewrite !app_length in ea. simpl in ea. lia.
+  Qed.
+  Next Obligation.
+    destruct h1 as [h1], ha as [ha].
+    apply All2_length in h1 as e1.
+    apply All2_length in ha as ea.
+    rewrite !app_length in ea. simpl in ea. lia.
+  Qed.
+  Next Obligation.
+    destruct u. assumption.
+  Qed.
+  Next Obligation.
+    destruct v. assumption.
+  Qed.
+  Next Obligation.
+    eapply R_positionR. all: simpl.
+    - destruct u. reflexivity.
+    - rewrite <- app_nil_r. eapply positionR_poscat.
+      constructor.
+  Qed.
+  Next Obligation.
+    destruct hΣ as [wΣ], ha as [ha], hx as [hx].
+    clear - wΣ ha hx. constructor.
+    change (dname u, dtype u) with (def_sig u).
+    change (dname v, dtype v) with (def_sig v).
+    repeat match goal with
+    | |- context [ ?f ?x :: map ?f ?l ] =>
+      change (f x :: map f l) with (map f (x :: l))
+    end.
+    rewrite <- 2!map_app.
+    revert ha.
+    generalize (mfix1 ++ u :: mfix2). intro Δ.
+    generalize (mfix1' ++ v :: mfix2'). intro Δ'.
+    intro ha.
+    rewrite !app_context_assoc.
+    revert hx ha.
+    generalize (Γ ,,, stack_context π').
+    generalize (Γ ,,, stack_context π).
+    clear Γ. intros Γ Γ' hx ha.
+    assert (h :
+      All2
+        (fun d d' => conv_alt Σ Γ d.2 d'.2)
+        (map def_sig Δ) (map def_sig Δ')
+    ).
+    { apply All2_map. eapply All2_impl. 1: eassumption.
+      intros [na ty bo ra] [na' ty' bo' ra'] [? ?].
+      simpl in *. assumption.
+    }
+    clear ha.
+    revert h.
+    generalize (map def_sig Δ). clear Δ. intro Δ.
+    generalize (map def_sig Δ'). clear Δ'. intro Δ'.
+    intro h.
+    unfold fix_context_alt.
+    match goal with
+    | |- conv_context _ (_ ,,, List.rev ?l) (_ ,,, List.rev ?l') =>
+      assert (hi :
+        All2i (fun i d d' =>
+          forall Ξ Θ,
+            #|Ξ| = i ->
+            conv_decls Σ (Γ ,,, Ξ) Θ d d'
+        ) 0 l l'
+      )
+    end.
+    { eapply All2i_mapi.
+      generalize 0 at 3. intro n.
+      induction h in n |- *. 1: constructor.
+      constructor. 2: eapply IHh.
+      intros Ξ Θ eΞ. constructor.
+      rewrite <- eΞ.
+      eapply @weakening_conv_alt with (Γ' := []). all: assumption.
+    }
+    clear h.
+    revert hi.
+    match goal with
+    | |- context [ conv_context _ (_ ,,, List.rev ?l) (_ ,,, List.rev ?l') ] =>
+      generalize l' ;
+      generalize l
+    end.
+    clear Δ Δ'. intros Δ Δ' h.
+    apply All2i_rev in h. simpl in h.
+    revert h.
+    rewrite <- (List.rev_length Δ).
+    generalize (List.rev Δ). clear Δ. intro Δ.
+    generalize (List.rev Δ'). clear Δ'. intro Δ'.
+    intro h.
+    set (ln := #|Δ|) in *.
+    set (m := 0) in *.
+    assert (e : ln - m = #|Δ|) by lia.
+    clearbody ln m.
+    induction h.
+    - assumption.
+    - simpl in *.
+      eapply conv_context_decl.
+      + eapply IHh. lia.
+      + eapply r0. lia.
+  Qed.
+  Next Obligation.
+    rewrite <- app_assoc. simpl. assumption.
+  Qed.
+  Next Obligation.
+    rewrite <- app_assoc. simpl. assumption.
+  Qed.
+  Next Obligation.
+    destruct hx as [hx], h1 as [h1], h2 as [h2], ha as [ha].
+    destruct hΣ as [wΣ].
+    unfold zipp in h2. simpl in h2.
+    constructor.
+    apply All2_app.
+    - eapply All2_impl. 1: exact h1.
+      simpl. intros [? ? ? ?] [? ? ? ?] hh.
+      simpl in *.
+      rewrite map_app. simpl.
+      rewrite <- !app_assoc. simpl.
+      assumption.
+    - constructor. 2: constructor.
+      rewrite map_app. simpl.
+      rewrite <- !app_assoc. simpl.
+      destruct u as [na ty bo ra], v as [na' ty' bo' ra']. simpl in *.
+      unfold def_sig at 2. simpl.
+      rewrite app_context_assoc in h2.
+      assumption.
+  Qed.
+  Next Obligation.
+    destruct ha as [ha].
+    constructor.
+    rewrite <- !app_assoc. simpl. assumption.
+  Qed.
+  Next Obligation.
+    unshelve eapply aux. all: try eassumption.
+    clear aux.
+    lazymatch goal with
+    | h : R _ _ ?r1 |- R _ _ ?r2 =>
+      rename h into hr ;
+      assert (e : r1 = r2)
+    end.
+    { clear hr.
+      match goal with
+      | |- {| wth := ?x |} = _ =>
+        generalize x
+      end.
+      rewrite <- !app_assoc. simpl.
+      intro w.
+      f_equal.
+      eapply proof_irrelevance.
+    }
+    rewrite <- e. assumption.
+  Qed.
+  Next Obligation.
+    destruct hx as [hx], h1 as [h1], h2 as [h2], h3 as [h3].
+    destruct hΣ as [wΣ].
+    unfold zipp in h2. simpl in h2.
+    constructor.
+    constructor.
+    - destruct u as [na ty bo ra], v as [na' ty' bo' ra']. simpl in *.
+      unfold def_sig at 2. simpl.
+      rewrite app_context_assoc in h2.
+      assumption.
+    - eapply All2_impl. 1: exact h3.
+      simpl. intros [? ? ? ?] [? ? ? ?] hh.
+      simpl in *.
+      rewrite map_app in hh. simpl in hh.
+      rewrite <- !app_assoc in hh. simpl in hh.
+      assumption.
+  Qed.
+
+  Equations isconv_fix (Γ : context)
+    (mfix : mfixpoint term) (idx : nat) (π : stack)
+    (h : wtp Γ (tFix mfix idx) π)
+    (mfix' : mfixpoint term) (idx' : nat) (π' : stack)
+    (h' : wtp Γ (tFix mfix' idx') π')
+    (hx : conv_stack_ctx Γ π π')
+    (ei : idx = idx')
+    (aux : Aux Term Γ (tFix mfix idx) π (tFix mfix' idx') π' h')
+    : ConversionResult (∥ All2 (fun u v =>
+          Σ ;;; Γ ,,, stack_context π |- u.(dtype) == v.(dtype) ×
+          Σ ;;; Γ ,,, stack_context π ,,, fix_context mfix |- u.(dbody) == v.(dbody) ×
+          u.(rarg) = v.(rarg)
+      ) mfix mfix' ∥) :=
+
+    isconv_fix Γ mfix idx π h mfix' idx' π' h' hx ei aux
+    with
+      isconv_fix_types Γ idx
+        [] mfix π _
+        [] mfix' π' _
+        hx _ _
+    := {
+    | Success h1
+      with
+        isconv_fix_bodies Γ idx
+          [] mfix π _
+          [] mfix' π' _
+          hx _ _ _
+      := {
+      | Success h2 := yes ;
+      | Error e := Error e
+      } ;
+    | Error e := Error e
+    }.
+
+  Next Obligation.
+    constructor. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply aux. all: eassumption.
+  Qed.
+  Next Obligation.
+    constructor. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply aux. all: eassumption.
+  Qed.
+  Next Obligation.
+    destruct h1 as [h1], h2 as [h2].
+    constructor.
+    rewrite fix_context_fix_context_alt.
+    pose proof (PCUICParallelReductionConfluence.All2_mix h1 h2) as h3.
+    eapply All2_impl. 1: exact h3.
+    intros [? ? ? ?] [? ? ? ?] ?. simpl in *.
+    intuition eauto.
+  Qed.
+
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
             (t2 : term) (π2 : stack) (h2 : wtp Γ t2 π2)
@@ -1834,12 +2248,21 @@ Section Conversion.
                 isconv_prog leq (tFix mfix idx) π1 fn' (ρ +++ θ') aux
               }
             } ;
-          | _ :=
-            Error (
-              CannotUnfoldFix
-                (Γ ,,, stack_context π1) mfix idx
-                (Γ ,,, stack_context π2) mfix' idx'
-            )
+          | _ with inspect (eqb idx idx') := {
+            | @exist true eq4 with isconv_fix Γ mfix idx π1 _ mfix' idx' π2 _ _ _ aux := {
+              | Success h1 with isconv_args_raw leq (tFix mfix idx) π1 (tFix mfix' idx') π2 aux := {
+                | Success h2 := yes ;
+                | Error e := Error e
+                } ;
+              | Error e := Error e
+              } ;
+            | @exist false _ :=
+              Error (
+                CannotUnfoldFix
+                  (Γ ,,, stack_context π1) mfix idx
+                  (Γ ,,, stack_context π2) mfix' idx'
+              )
+            }
           }
         }
       } ;
@@ -1852,7 +2275,7 @@ Section Conversion.
           DistinctCoFix
             (Γ ,,, stack_context π1) mfix idx
             (Γ ,,, stack_context π2) mfix' idx'
-        ) (* TODO Is it complete? *)
+        ) (* TODO Incomplete *)
       } ;
 
     | prog_view_other t1 t2 h :=
@@ -2532,6 +2955,26 @@ Section Conversion.
         assumption.
     - assumption.
     - assumption.
+  Qed.
+  Next Obligation.
+    change (true = eqb idx idx') in eq4.
+    destruct (eqb_spec idx idx'). 2: discriminate.
+    assumption.
+  Qed.
+  Next Obligation.
+    eapply R_stateR.
+    all: simpl.
+    all: try reflexivity.
+    constructor.
+  Qed.
+  Next Obligation.
+    destruct h1 as [h1].
+    destruct hΣ.
+    eapply conv_conv_l. 1: assumption.
+    change (true = eqb idx idx') in eq4.
+    destruct (eqb_spec idx idx'). 2: discriminate.
+    subst.
+    eapply conv_Fix. all: assumption.
   Qed.
 
   (* tCoFix *)

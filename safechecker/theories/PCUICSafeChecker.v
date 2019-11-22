@@ -261,6 +261,19 @@ Fixpoint string_of_conv_error Σ (e : ConversionError) : string :=
       print_term Σ Γ (tFix mfix idx) ++
       "\nand\n" ++ print_term Σ Γ' (tFix mfix' idx') ++
       "\ncorrespond to syntactically distinct terms that can't be unfolded."
+  | FixRargMismatch idx Γ u mfix1 mfix2 Γ' v mfix1' mfix2' =>
+      "The two fixed-points\n" ++
+      print_term Σ Γ (tFix (mfix1 ++ u :: mfix2)%list idx) ++
+      "\nand\n" ++ print_term Σ Γ' (tFix (mfix1' ++ v :: mfix2')%list idx) ++
+      "\nhave a mismatch in the function number " ++ string_of_nat #|mfix1| ++
+      ": arguments " ++ string_of_nat u.(rarg) ++
+      " and " ++ string_of_nat v.(rarg) ++ "are different."
+  | FixMfixMismatch idx Γ mfix Γ' mfix' =>
+      "The two fixed-points\n" ++
+      print_term Σ Γ (tFix mfix idx) ++
+      "\nand\n" ++
+      print_term Σ Γ' (tFix mfix' idx) ++
+      "\nhave a different number of mutually defined functions."
   | DistinctCoFix Γ mfix idx Γ' mfix' idx' =>
       "The two cofixed-points\n" ++
       print_term Σ Γ (tCoFix mfix idx) ++

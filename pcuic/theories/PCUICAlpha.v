@@ -24,7 +24,7 @@ Section Alpha.
 
   Lemma build_branches_type_eq_term :
     forall p p' ind mdecl idecl pars u brtys,
-      eq_term_upto_univ eq eq p p' ->
+      eq_term_upto eq eq p p' ->
       map_option_out
         (build_branches_type ind mdecl idecl pars u p) =
       Some brtys ->
@@ -32,7 +32,7 @@ Section Alpha.
         map_option_out
           (build_branches_type ind mdecl idecl pars u p') =
         Some brtys' ×
-        All2 (on_Trel_eq (eq_term_upto_univ eq eq) snd fst) brtys brtys'.
+        All2 (on_Trel_eq (eq_term_upto eq eq) snd fst) brtys brtys'.
   Proof.
     intros p p' ind mdecl idecl pars u brtys e hb.
     unfold build_branches_type in *.
@@ -76,10 +76,10 @@ Section Alpha.
         * reflexivity.
         * constructor ; auto.
           simpl. split ; auto.
-          eapply eq_term_upto_univ_it_mkProd_or_LetIn ; auto.
-          eapply eq_term_upto_univ_mkApps.
-          -- eapply eq_term_upto_univ_lift. assumption.
-          -- apply All2_same. intro. apply eq_term_upto_univ_refl ; auto.
+          eapply eq_term_upto_it_mkProd_or_LetIn ; auto.
+          eapply eq_term_upto_mkApps.
+          -- eapply eq_term_upto_lift. assumption.
+          -- apply All2_same. intro. apply eq_term_upto_refl ; auto.
   Qed.
 
   (* TODO MOVE *)
@@ -168,13 +168,13 @@ Qed.
     forall Σ Γ u v A,
       wf Σ.1 ->
       Σ ;;; Γ |- u : A ->
-      eq_term_upto_univ eq eq u v ->
+      eq_term_upto eq eq u v ->
       Σ ;;; Γ |- v : A.
   Proof.
     assert (tm :
       env_prop (fun Σ Γ u A =>
                   forall v,
-                    eq_term_upto_univ eq eq u v ->
+                    eq_term_upto eq eq u v ->
                     Σ ;;; Γ |- v : A)
     ).
     eapply typing_ind_env.
@@ -239,7 +239,7 @@ Qed.
                 ** eapply ihb. assumption.
                 ** right. eexists. eapply ihB. assumption.
                 ** eapply cumul_refl.
-                   eapply eq_term_upto_univ_impl. 3: eassumption.
+                   eapply eq_term_upto_impl. 3: eassumption.
                    all: intros x ? [].
                    --- eapply eq_universe_refl.
                    --- eapply leq_universe_refl.
@@ -270,7 +270,7 @@ Qed.
         eapply eq_term_leq_term.
         apply eq_term_sym.
         eapply upto_names_impl_eq_term.
-        eapply eq_term_upto_univ_subst ; now auto.
+        eapply eq_term_upto_subst ; now auto.
     - intros cst u decl ? ? hdecl hcons v e.
       dependent destruction e.
       apply Forall2_eq in r. apply map_inj in r ; revgoals.
@@ -307,7 +307,7 @@ Qed.
                       × Σ;;; Γ |- bty.2 : tSort ps)
                      × (forall v : term, upto_names' bty.2 v -> Σ;;; Γ |- v : tSort ps)).
         * clear. intros x y z X; rdestruct; cbn in *.
-          congruence. 2: eauto. econstructor; tea. 
+          congruence. 2: eauto. econstructor; tea.
           right. exists ps. eauto. constructor.
           now eapply upto_names_impl_leq_term.
         * eapply All2_trans'; [..|eassumption].
@@ -342,10 +342,10 @@ Qed.
         eapply eq_term_leq_term.
         apply eq_term_sym.
         eapply upto_names_impl_eq_term.
-        eapply eq_term_upto_univ_substs ; auto; try reflexivity.
+        eapply eq_term_upto_substs ; auto; try reflexivity.
         * constructor ; auto.
           eapply All2_same.
-          intro. eapply eq_term_upto_univ_refl ; auto.
+          intro. eapply eq_term_upto_refl ; auto.
     - intros mfix n decl types hnth hguard hwf ihmfix v e.
       dependent destruction e.
       eapply All2_nth_error_Some in hnth as hnth' ; eauto.
@@ -360,7 +360,7 @@ Qed.
           induction a in n |- *.
           - constructor.
           - simpl. constructor.
-            + eapply eq_term_upto_univ_lift. apply r.
+            + eapply eq_term_upto_lift. apply r.
             + eapply IHa.
         }
         clearbody Δ Ξ.
@@ -403,7 +403,7 @@ Qed.
               -- eapply ih2. assumption.
               -- right. eexists. eapply ih1. assumption.
               -- eapply cumul_refl.
-                 eapply eq_term_upto_univ_impl. 3: eassumption.
+                 eapply eq_term_upto_impl. 3: eassumption.
                  all: intros ? ? [].
                  ++ eapply eq_universe_refl.
                  ++ eapply leq_universe_refl.
@@ -447,7 +447,7 @@ Qed.
             induction a in n |- *.
             - constructor.
             - simpl. constructor.
-              + eapply eq_term_upto_univ_lift. apply r.
+              + eapply eq_term_upto_lift. apply r.
               + eapply IHa.
           }
           clearbody Δ Ξ.
@@ -481,8 +481,8 @@ Qed.
                                          eapply eq_context_upto_refl. auto.
                                     ++++ intros ? ? []. eapply eq_universe_refl.
                        +++ eapply cumul_refl. rewrite <- el.
-                           eapply eq_term_upto_univ_lift.
-                           eapply eq_term_upto_univ_impl.
+                           eapply eq_term_upto_lift.
+                           eapply eq_term_upto_impl.
                            3: intuition eauto.
                            all: intros ? ? [].
                            *** eapply eq_universe_refl.
@@ -521,7 +521,7 @@ Qed.
           induction a in n |- *.
           - constructor.
           - simpl. constructor.
-            + eapply eq_term_upto_univ_lift. apply r.
+            + eapply eq_term_upto_lift. apply r.
             + eapply IHa.
         }
         clearbody Δ Ξ.
@@ -564,7 +564,7 @@ Qed.
               -- eapply ih2. assumption.
               -- right. eexists. eapply ih1. assumption.
               -- eapply cumul_refl.
-                 eapply eq_term_upto_univ_impl. 3: eassumption.
+                 eapply eq_term_upto_impl. 3: eassumption.
                  all: intros ? ? [].
                  ++ eapply eq_universe_refl.
                  ++ eapply leq_universe_refl.
@@ -608,7 +608,7 @@ Qed.
             induction a in n |- *.
             - constructor.
             - simpl. constructor.
-              + eapply eq_term_upto_univ_lift. apply r.
+              + eapply eq_term_upto_lift. apply r.
               + eapply IHa.
           }
           clearbody Δ Ξ.
@@ -641,8 +641,8 @@ Qed.
                                     eapply eq_context_upto_refl. auto.
                                ---- intros ? ? []. eapply eq_universe_refl.
                    --- eapply cumul_refl. rewrite <- el.
-                       eapply eq_term_upto_univ_lift.
-                       eapply eq_term_upto_univ_impl.
+                       eapply eq_term_upto_lift.
+                       eapply eq_term_upto_impl.
                        3: intuition eauto.
                        all: intros ? ? [].
                        +++ eapply eq_universe_refl.
@@ -685,15 +685,15 @@ Qed.
   Proof.
     intros Σ Γ u A hΣ h.
     eapply typing_alpha ; eauto.
-    eapply eq_term_upto_univ_tm_nl. all: auto.
+    eapply eq_term_upto_tm_nl. all: auto.
   Qed.
 
   Local Ltac inv H := inversion H; subst; clear H.
 
-  Lemma upto_names_eq_term_upto_univ Re Rle t u
-    : eq_term_upto_univ Re Rle t u ->
+  Lemma upto_names_eq_term_upto Re Rle t u
+    : eq_term_upto Re Rle t u ->
       forall t' u', t ≡ t' -> u ≡ u' ->
-               eq_term_upto_univ Re Rle t' u'.
+               eq_term_upto Re Rle t' u'.
   Proof.
     revert t u Rle. fix aux 4.
     destruct 1; cbn; intros t'' u'' H' H0';
@@ -736,13 +736,13 @@ Qed.
   Lemma upto_names_leq_term φ t u t' u'
     : t ≡ t' -> u ≡ u' -> leq_term φ t u -> leq_term φ t' u'.
   Proof.
-    intros; eapply upto_names_eq_term_upto_univ; eassumption.
+    intros; eapply upto_names_eq_term_upto; eassumption.
   Qed.
 
   Lemma upto_names_eq_term φ t u t' u'
     : t ≡ t' -> u ≡ u' -> eq_term φ t u -> eq_term φ t' u'.
   Proof.
-    intros; eapply upto_names_eq_term_upto_univ; eassumption.
+    intros; eapply upto_names_eq_term_upto; eassumption.
   Qed.
 
   Definition upto_names_decl := eq_decl_upto eq.
@@ -828,7 +828,7 @@ Qed.
   Lemma upto_names_nl t
     : t ≡ nl t.
   Proof.
-    eapply eq_term_upto_univ_tm_nl; exact _.
+    eapply eq_term_upto_tm_nl; exact _.
   Qed.
 
   Lemma upto_names_nlctx Γ

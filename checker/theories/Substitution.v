@@ -1465,10 +1465,10 @@ Proof.
       + inversion b0. auto.
 Qed.
 
-Lemma eq_term_upto_univ_refl Re Rle :
+Lemma eq_term_upto_refl Re Rle :
   RelationClasses.Reflexive Re ->
   RelationClasses.Reflexive Rle ->
-  forall t, eq_term_upto_univ Re Rle t t.
+  forall t, eq_term_upto Re Rle t t.
 Proof.
   intros hRe hRle.
   induction t in Rle, hRle |- * using term_forall_list_rect; simpl;
@@ -1489,7 +1489,7 @@ Qed.
 
 Lemma eq_term_refl `{checker_flags} φ t : eq_term φ t t.
 Proof.
-  apply eq_term_upto_univ_refl.
+  apply eq_term_upto_refl.
   - intro; apply eq_universe_refl.
   - intro; apply eq_universe_refl.
 Qed.
@@ -1497,7 +1497,7 @@ Qed.
 
 Lemma leq_term_refl `{checker_flags} φ t : leq_term φ t t.
 Proof.
-  apply eq_term_upto_univ_refl.
+  apply eq_term_upto_refl.
   - intro; apply eq_universe_refl.
   - intro; apply leq_universe_refl.
 Qed.
@@ -1512,8 +1512,8 @@ Proof.
   all: try (apply Forall_True, eq_universe_leq_universe).
 Qed.
 
-Lemma eq_term_upto_univ_App `{checker_flags} Re Rle f f' :
-  eq_term_upto_univ Re Rle f f' ->
+Lemma eq_term_upto_App `{checker_flags} Re Rle f f' :
+  eq_term_upto Re Rle f f' ->
   isApp f = isApp f'.
 Proof.
   inversion 1; reflexivity.
@@ -1526,14 +1526,14 @@ Proof.
   inversion 1; reflexivity.
 Qed.
 
-Lemma eq_term_upto_univ_mkApps `{checker_flags} Re Rle f l f' l' :
-  eq_term_upto_univ Re Rle f f' ->
-  All2 (eq_term_upto_univ Re Re) l l' ->
-  eq_term_upto_univ Re Rle (mkApps f l) (mkApps f' l').
+Lemma eq_term_upto_mkApps `{checker_flags} Re Rle f l f' l' :
+  eq_term_upto Re Rle f f' ->
+  All2 (eq_term_upto Re Re) l l' ->
+  eq_term_upto Re Rle (mkApps f l) (mkApps f' l').
 Proof.
   induction l in f, f' |- *; intro e; inversion_clear 1.
   - assumption.
-  - pose proof (eq_term_upto_univ_App _ _ _ _ e).
+  - pose proof (eq_term_upto_App _ _ _ _ e).
     case_eq (isApp f).
     + intro X; rewrite X in H0.
       destruct f; try discriminate.
@@ -1554,7 +1554,7 @@ Lemma leq_term_mkApps `{checker_flags} φ f l f' l' :
   All2 (eq_term φ) l l' ->
   leq_term φ (mkApps f l) (mkApps f' l').
 Proof.
-  eapply eq_term_upto_univ_mkApps.
+  eapply eq_term_upto_mkApps.
 Qed.
 
 Lemma leq_term_App `{checker_flags} φ f f' :
@@ -1564,22 +1564,22 @@ Proof.
   inversion 1; reflexivity.
 Qed.
 
-Lemma subst_eq_term_upto_univ `{checker_flags} Re Rle n k T U :
+Lemma subst_eq_term_upto `{checker_flags} Re Rle n k T U :
   RelationClasses.Reflexive Re ->
   RelationClasses.Reflexive Rle ->
-  eq_term_upto_univ Re Rle T U ->
-  eq_term_upto_univ Re Rle (subst n k T) (subst n k U).
+  eq_term_upto Re Rle T U ->
+  eq_term_upto Re Rle (subst n k T) (subst n k U).
 Proof.
   intros hRe hRle h.
   induction T in n, k, U, h, Rle, hRle |- * using term_forall_list_rect.
   all: simpl ; inversion h ; simpl.
-  all: try (eapply eq_term_upto_univ_refl ; easy).
+  all: try (eapply eq_term_upto_refl ; easy).
   all: try (constructor ; easy).
   - constructor.
     eapply All2_map. eapply All2_impl' ; try eassumption.
     eapply All_impl ; try eassumption.
     cbn. intros x HH y HH'. now eapply HH.
-  - subst. eapply eq_term_upto_univ_mkApps. all: try easy.
+  - subst. eapply eq_term_upto_mkApps. all: try easy.
     eapply All2_map. eapply All2_impl' ; try eassumption.
     eapply All_impl ; try eassumption.
     cbn. intros x HH y HH'. now eapply HH.
@@ -1607,7 +1607,7 @@ Lemma subst_eq_term `{checker_flags} ϕ n k T U :
   eq_term ϕ (subst n k T) (subst n k U).
 Proof.
   intros Hleq.
-  eapply subst_eq_term_upto_univ.
+  eapply subst_eq_term_upto.
   - intro. eapply eq_universe_refl.
   - intro. eapply eq_universe_refl.
   - assumption.
@@ -1618,7 +1618,7 @@ Lemma subst_leq_term `{checker_flags} ϕ n k T U :
   leq_term ϕ (subst n k T) (subst n k U).
 Proof.
   intros Hleq.
-  eapply subst_eq_term_upto_univ.
+  eapply subst_eq_term_upto.
   - intro. eapply eq_universe_refl.
   - intro. eapply leq_universe_refl.
   - assumption.

@@ -50,7 +50,7 @@ Qed.
 Lemma leq_term_subset {cf:checker_flags} ctrs ctrs' t u
   : ConstraintSet.Subset ctrs ctrs' -> leq_term ctrs t u -> leq_term ctrs' t u.
 Proof.
-  intro H. apply eq_term_upto_univ_impl.
+  intro H. apply eq_term_upto_impl.
   intros t' u'; eapply eq_universe_subset; assumption.
   intros t' u'; eapply leq_universe_subset; assumption.
 Qed.
@@ -100,7 +100,7 @@ Lemma eq_term_subset {cf:checker_flags} φ φ' t t'
   : ConstraintSet.Subset φ φ'
     -> eq_term φ t t' ->  eq_term φ' t t'.
 Proof.
-  intro H. apply eq_term_upto_univ_impl.
+  intro H. apply eq_term_upto_impl.
   all: intros u u'; eapply eq_universe_subset; assumption.
 Qed.
 

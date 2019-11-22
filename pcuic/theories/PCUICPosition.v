@@ -124,7 +124,7 @@ Definition dlet_in na A b t (p : pos t) : pos (tLetIn na A b t) :=
 Lemma eq_term_upto_valid_pos :
   forall {u v p Re Rle},
     validpos u p ->
-    eq_term_upto_univ Re Rle u v ->
+    eq_term_upto Re Rle u v ->
     validpos v p.
 Proof.
   intros u v p Re Rle vp e.

@@ -129,9 +129,9 @@ Proof.
 Qed.
 
 
-Lemma eq_term_upto_univ_morphism0 (Re Re' : _ -> _ -> Prop)
+Lemma eq_term_upto_morphism0 (Re Re' : _ -> _ -> Prop)
       (Hre : forall t u, Re t u -> Re' t u)
-  : forall t u, eq_term_upto_univ Re Re t u -> eq_term_upto_univ Re' Re' t u.
+  : forall t u, eq_term_upto Re Re t u -> eq_term_upto Re' Re' t u.
 Proof.
   fix aux 3.
   destruct 1; constructor; eauto.
@@ -143,31 +143,31 @@ Proof.
   all: intuition eauto.
 Qed.
 
-Lemma eq_term_upto_univ_morphism (Re Re' Rle Rle' : _ -> _ -> Prop)
+Lemma eq_term_upto_morphism (Re Re' Rle Rle' : _ -> _ -> Prop)
       (Hre : forall t u, Re t u -> Re' t u)
       (Hrle : forall t u, Rle t u -> Rle' t u)
-  : forall t u, eq_term_upto_univ Re Rle t u -> eq_term_upto_univ Re' Rle' t u.
+  : forall t u, eq_term_upto Re Rle t u -> eq_term_upto Re' Rle' t u.
 Proof.
   fix aux 3.
-  destruct 1; constructor; eauto using eq_term_upto_univ_morphism0.
+  destruct 1; constructor; eauto using eq_term_upto_morphism0.
   all: unfold R_universe_instance in *.
   all: match goal with
        | H : Forall2 _ _ _ |- _ => induction H; constructor;
-                                   eauto using eq_term_upto_univ_morphism0
+                                   eauto using eq_term_upto_morphism0
        | H : All2 _ _ _ |- _ => induction H; constructor;
-                                eauto using eq_term_upto_univ_morphism0
+                                eauto using eq_term_upto_morphism0
        end.
-  - destruct r. split; eauto using eq_term_upto_univ_morphism0.
+  - destruct r. split; eauto using eq_term_upto_morphism0.
   - destruct r as [? [? ?]].
-    repeat split; eauto using eq_term_upto_univ_morphism0.
+    repeat split; eauto using eq_term_upto_morphism0.
   - destruct r as [? [? ?]].
-    repeat split; eauto using eq_term_upto_univ_morphism0.
+    repeat split; eauto using eq_term_upto_morphism0.
 Qed.
 
 Lemma leq_term_subset {cf:checker_flags} ctrs ctrs' t u
   : ConstraintSet.Subset ctrs ctrs' -> leq_term ctrs t u -> leq_term ctrs' t u.
 Proof.
-  intro H. apply eq_term_upto_univ_morphism.
+  intro H. apply eq_term_upto_morphism.
   intros t' u'; eapply eq_universe_subset; assumption.
   intros t' u'; eapply leq_universe_subset; assumption.
 Qed.
@@ -257,7 +257,7 @@ Lemma eq_term_subset {cf:checker_flags} φ φ' t t'
   : ConstraintSet.Subset φ φ'
     -> eq_term φ t t' ->  eq_term φ' t t'.
 Proof.
-  intro H. apply eq_term_upto_univ_morphism.
+  intro H. apply eq_term_upto_morphism.
   all: intros u u'; eapply eq_universe_subset; assumption.
 Qed.
 

@@ -349,10 +349,10 @@ Section ContextConversion.
   Proof.
     intros tu tt' uu'.
     pose proof tu as tu2.
-    eapply red_eq_term_upto_univ_l in tu; try exact tt'; tc.
+    eapply red_eq_term_upto_l in tu; try exact tt'; tc.
     destruct tu as [u'' [uu'' t'u'']].
     destruct (red_confluence wfΣ uu' uu'') as [unf [ul ur]].
-    eapply red_eq_term_upto_univ_r in t'u''; try exact ur; tc.
+    eapply red_eq_term_upto_r in t'u''; try exact ur; tc.
     destruct t'u'' as [t'' [t't'' t''unf]].
     exists t'', unf. intuition auto.
   Qed.
@@ -363,10 +363,10 @@ Section ContextConversion.
   Proof.
     intros tu tt' uu'.
     pose proof tu as tu2.
-    eapply red_eq_term_upto_univ_l in tu; try exact tt'; tc.
+    eapply red_eq_term_upto_l in tu; try exact tt'; tc.
     destruct tu as [u'' [uu'' t'u'']].
     destruct (red_confluence wfΣ uu' uu'') as [unf [ul ur]].
-    eapply red_eq_term_upto_univ_r in t'u''; try exact ur; tc.
+    eapply red_eq_term_upto_r in t'u''; try exact ur; tc.
     destruct t'u'' as [t'' [t't'' t''unf]].
     exists t'', unf. intuition auto.
   Qed.
@@ -380,11 +380,11 @@ Section ContextConversion.
     apply cumul_alt in H as [v [v' [[redl redr] leq]]].
     destruct (red_red_ctx Σ wfΣ redl Hctx) as [lnf [redl0 redr0]].
     apply cumul_alt.
-    eapply red_eq_term_upto_univ_l in leq; tea; tc.
+    eapply red_eq_term_upto_l in leq; tea; tc.
     destruct leq as [? [? ?]].
     destruct (red_red_ctx _ wfΣ redr Hctx) as [rnf [redl1 redr1]].
     destruct (red_confluence wfΣ r redr1). destruct p.
-    edestruct (red_eq_term_upto_univ_r Σ (eq_universe_leq_universe _) e r0) as [lnf' [? ?]].
+    edestruct (red_eq_term_upto_r Σ (eq_universe_leq_universe _) e r0) as [lnf' [? ?]].
     exists lnf', x0. intuition auto. now transitivity lnf.
     now transitivity rnf.
   Qed.
@@ -429,7 +429,7 @@ Section ContextConversion.
     eq_context_upto Re Γ Δ ->
     ∑ v',
     red Σ Δ u v' *
-    eq_term_upto_univ Re Re v v'.
+    eq_term_upto Re Re v v'.
   Proof.
     intros r HΓ.
     eapply red_alt in r.
@@ -439,11 +439,11 @@ Section ContextConversion.
     - exists x. split; auto. reflexivity.
     - destruct IHr1 as [v' [? ?]].
       destruct IHr2 as [v'' [? ?]].
-      unshelve eapply (red_eq_term_upto_univ_l Σ _ (u:=y) (v:=v'') (u':=v')) in e; tc. all:pcuic.
+      unshelve eapply (red_eq_term_upto_l Σ _ (u:=y) (v:=v'') (u':=v')) in e; tc. all:pcuic.
       destruct e as [? [? ?]].
       exists x0; split; eauto.
       now transitivity v'.
-      eapply eq_term_upto_univ_trans with v''; auto.
+      eapply eq_term_upto_trans with v''; auto.
   Qed.
 
   Definition eq_universe_leq_universe' φ u u'
@@ -463,9 +463,9 @@ Section ContextConversion.
     eapply cumul_alt in X as [t0 [u0 [[redl redr] eq]]].
     eapply cumul_alt in X0 as [u1 [v0 [[redl' redr'] eq']]].
     destruct (red_confluence wfΣ redr redl') as [unf [nfl nfr]].
-    eapply red_eq_term_upto_univ_r in eq; tc;eauto with pcuic.
+    eapply red_eq_term_upto_r in eq; tc;eauto with pcuic.
     destruct eq as [t1 [red'0 eq2]].
-    eapply red_eq_term_upto_univ_l in eq'; tc;eauto with pcuic.
+    eapply red_eq_term_upto_l in eq'; tc;eauto with pcuic.
     destruct eq' as [v1 [red'1 eq1]].
     exists t1, unf, v1.
     repeat split.
@@ -560,7 +560,7 @@ Section ContextConversion.
       split; [split|]; constructor; auto.
       + red.
         eapply PCUICConfluence.red_red_ctx; eauto.
-      + eapply eq_term_upto_univ_trans with U'; eauto; tc.
+      + eapply eq_term_upto_trans with U'; eauto; tc.
     - destruct IHHctx as [Δ [Δ' [[? ?] ?]]].
       depelim p.
       + pose proof (conv_alt_red_ctx c r).
@@ -573,7 +573,7 @@ Section ContextConversion.
         exists (Δ ,, vdef na' t T'), (Δ' ,, vdef na' t x0).
         split; [split|]; constructor; auto. red. split; auto. red. split; auto.
         eapply PCUICConfluence.red_red_ctx; eauto. reflexivity.
-        eapply eq_term_upto_univ_trans with U'; eauto; tc.
+        eapply eq_term_upto_trans with U'; eauto; tc.
       + pose proof (conv_alt_red_ctx c r).
         eapply conv_alt_red in X.
         destruct X as [t' [u' [[? ?] ?]]].
@@ -594,8 +594,8 @@ Section ContextConversion.
         * red. split.
           -- eapply PCUICConfluence.red_red_ctx; eauto.
           -- eapply PCUICConfluence.red_red_ctx; eauto.
-        * eapply eq_term_upto_univ_trans with u'; eauto; tc.
-        * eapply eq_term_upto_univ_trans with U'; eauto; tc.
+        * eapply eq_term_upto_trans with u'; eauto; tc.
+        * eapply eq_term_upto_trans with U'; eauto; tc.
   Qed.
 
   Lemma conv_alt_conv_ctx Γ Γ' T U :
@@ -629,7 +629,7 @@ Section ContextConversion.
     conv_context Γ' Γ ->
     Σ ;;; Γ' |- T <= U.
   Proof.
-    intros H Hctx. 
+    intros H Hctx.
     apply conv_context_red_context in Hctx => //.
     destruct Hctx as [Δ [Δ' [[l r] elr]]].
     eapply cumul_red_ctx_inv in l; eauto.
@@ -695,13 +695,13 @@ Proof.
   depelim X2; depelim X3; try constructor; auto.
   * eapply conv_alt_trans; eauto.
     eapply conv_alt_conv_ctx => //. apply c0.
-    apply conv_context_sym => //. 
+    apply conv_context_sym => //.
   * eapply conv_alt_trans; eauto.
     eapply conv_alt_conv_ctx => //. apply c0.
-    apply conv_context_sym => //. 
+    apply conv_context_sym => //.
   * eapply conv_alt_trans; eauto.
     eapply conv_alt_conv_ctx => //. apply c0.
-    apply conv_context_sym => //. 
+    apply conv_context_sym => //.
   * eapply conv_alt_trans; eauto.
     eapply conv_alt_conv_ctx => //; eauto.
     apply conv_context_sym => //.
@@ -755,12 +755,12 @@ Proof.
   - constructor.
   - constructor; tas.
     constructor. eapply conv_alt_refl.
-    eapply eq_term_upto_univ_impl; tea.
+    eapply eq_term_upto_impl; tea.
   - constructor; tas.
     constructor. eapply conv_alt_refl.
-    eapply eq_term_upto_univ_impl; tea.
+    eapply eq_term_upto_impl; tea.
     eapply conv_alt_refl.
-    eapply eq_term_upto_univ_impl; tea.
+    eapply eq_term_upto_impl; tea.
 Qed.
 
 Lemma eq_context_upto_univ_conv_context {cf:checker_flags} Σ Γ Δ :
@@ -944,7 +944,7 @@ Proof.
   eapply typing_wf_local. eassumption.
 Qed.
 
-(* 
+(*
 Lemma conv_isWfArity_or_Type {cf:checker_flags} Σ Γ Γ' T U :
 wf Σ.1  ->
 conv_context Σ Γ' Γ ->

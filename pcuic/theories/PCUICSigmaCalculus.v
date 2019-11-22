@@ -287,10 +287,10 @@ Section Renaming.
 
 Context `{checker_flags}.
 
-Lemma eq_term_upto_univ_rename :
+Lemma eq_term_upto_rename :
   forall Re Rle u v f,
-    eq_term_upto_univ Re Rle u v ->
-    eq_term_upto_univ Re Rle (rename f u) (rename f v).
+    eq_term_upto Re Rle u v ->
+    eq_term_upto Re Rle (rename f u) (rename f v).
 Proof.
   intros Re Rle u v f h.
   induction u in v, Rle, f, h |- * using term_forall_list_ind.
@@ -1155,10 +1155,10 @@ Proof.
     (*   * reflexivity. *)
     (*   * constructor ; auto. *)
     (*     simpl. split ; auto. *)
-    (*     eapply eq_term_upto_univ_it_mkProd_or_LetIn ; auto. *)
-    (*     eapply eq_term_upto_univ_mkApps. *)
-    (*     -- eapply eq_term_upto_univ_lift. assumption. *)
-    (*     -- apply All2_same. intro. apply eq_term_upto_univ_refl ; auto. *)
+    (*     eapply eq_term_upto_it_mkProd_or_LetIn ; auto. *)
+    (*     eapply eq_term_upto_mkApps. *)
+    (*     -- eapply eq_term_upto_lift. assumption. *)
+    (*     -- apply All2_same. intro. apply eq_term_upto_refl ; auto. *)
 Admitted.
 
 Lemma typed_inst :
@@ -1567,7 +1567,7 @@ Lemma cumul_rename :
 Proof.
   intros Σ Γ Δ f A B hΣ hf h.
   induction h.
-  - eapply cumul_refl. eapply eq_term_upto_univ_rename. assumption.
+  - eapply cumul_refl. eapply eq_term_upto_rename. assumption.
   - eapply cumul_red_l.
     + eapply red1_rename. all: try eassumption.
       apply hf.
@@ -2083,10 +2083,10 @@ Proof.
     (*   * reflexivity. *)
     (*   * constructor ; auto. *)
     (*     simpl. split ; auto. *)
-    (*     eapply eq_term_upto_univ_it_mkProd_or_LetIn ; auto. *)
-    (*     eapply eq_term_upto_univ_mkApps. *)
-    (*     -- eapply eq_term_upto_univ_lift. assumption. *)
-    (*     -- apply All2_same. intro. apply eq_term_upto_univ_refl ; auto. *)
+    (*     eapply eq_term_upto_it_mkProd_or_LetIn ; auto. *)
+    (*     eapply eq_term_upto_mkApps. *)
+    (*     -- eapply eq_term_upto_lift. assumption. *)
+    (*     -- apply All2_same. intro. apply eq_term_upto_refl ; auto. *)
 Admitted.
 
 (* Lemma types_of_case_inst : *)
@@ -2204,7 +2204,7 @@ Proof.
     (* NEED Commutation *)
     admit.
   - intros Σ wfΣ Γ wfΓ ind u npar p c brs args mdecl idecl isdecl X X0 a pars
-           ps pty htoc X1 ihp H2 X3 ihc btys H3 ihbtys Δ σ hΔ hσ. 
+           ps pty htoc X1 ihp H2 X3 ihc btys H3 ihbtys Δ σ hΔ hσ.
     autorewrite with sigma. simpl.
     rewrite map_app. simpl.
     rewrite map_skipn.

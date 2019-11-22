@@ -598,10 +598,10 @@ Definition precompose_subst_instance_instance__2 Rle u i i'
   := equiv_inv _ _ (precompose_subst_instance_instance Rle u i i').
 
 
-Global Instance eq_term_upto_univ_subst_instance
+Global Instance eq_term_upto_subst_instance
          (Re Rle : constraints -> universe -> universe -> Prop)
       {he: SubstUnivPreserved Re} {hle: SubstUnivPreserved Rle}
-  : SubstUnivPreserved (fun φ => eq_term_upto_univ (Re φ) (Rle φ)).
+  : SubstUnivPreserved (fun φ => eq_term_upto (Re φ) (Rle φ)).
 Proof.
   intros φ φ' u Hu HH t t'.
   specialize (he _ _ _ Hu HH).
@@ -1098,7 +1098,7 @@ Proof.
     + symmetry; apply subst_instance_constr_two.
 
   - intros ind u npar p c brs args mdecl idecl isdecl X X0 H ps pty H0 X1
-           X2 H1 X3 X4 btys H2 X5 u0 univs X6 HSub H4. 
+           X2 H1 X3 X4 btys H2 X5 u0 univs X6 HSub H4.
     rewrite subst_instance_constr_mkApps in *.
     rewrite map_app. cbn. rewrite map_skipn.
     eapply type_Case with (u1:=subst_instance_instance u0 u)
@@ -1113,7 +1113,7 @@ Proof.
       destruct (instantiate_params param' (firstn npar args) type');
         [|discriminate].
       simpl. rewrite (subst_instance_destArity []).
-      destruct (destArity [] t) as [[ctx s'] ?|]; [|discriminate]. 
+      destruct (destArity [] t) as [[ctx s'] ?|]; [|discriminate].
       apply some_inj in H0; subst; simpl in *. f_equal.
       rewrite subst_instance_constr_it_mkProd_or_LetIn. f_equal; cbn.
       f_equal. rewrite subst_instance_constr_mkApps; cbn.

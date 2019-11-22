@@ -29,9 +29,9 @@ Proof.
   eapply cumul_alt in X0 as [w [w' [[redl' redr'] eq']]].
   destruct (red_confluence wfΣ redr redl') as [nf [nfl nfr]].
   eapply cumul_alt.
-  eapply red_eq_term_upto_univ_r in eq; tc;eauto with pcuic.
+  eapply red_eq_term_upto_r in eq; tc;eauto with pcuic.
   destruct eq as [v'0 [red'0 eq2]].
-  eapply red_eq_term_upto_univ_l in eq'; tc;eauto with pcuic.
+  eapply red_eq_term_upto_l in eq'; tc;eauto with pcuic.
   destruct eq' as [v'1 [red'1 eq1]].
   exists v'0, v'1.
   split. split; auto.
@@ -135,7 +135,7 @@ Proof.
   intros wfΣ H; depind H; auto.
   - inv l. eexists (u' {0 := t'}); intuition eauto. eapply red1_red. constructor.
     transitivity (codom {0 := t'}).
-    { constructor. eapply eq_term_upto_univ_subst; trivial. auto with pcuic. reflexivity. }
+    { constructor. eapply eq_term_upto_subst; trivial. auto with pcuic. reflexivity. }
     constructor. now eapply subst_leq_term.
   - depelim r.
     * exists u; intuition auto.
@@ -171,8 +171,8 @@ Proof.
   intros wfΣ H; depind H; auto.
   - inv l. eexists (u {0 := t0}); intuition eauto. eapply red1_red. constructor.
     transitivity (codom {0 := t0}).
-    { constructor. eapply eq_term_upto_univ_subst; trivial. auto with pcuic. reflexivity. }
-    constructor. eapply eq_term_upto_univ_subst; auto with pcuic. reflexivity.
+    { constructor. eapply eq_term_upto_subst; trivial. auto with pcuic. reflexivity. }
+    constructor. eapply eq_term_upto_subst; auto with pcuic. reflexivity.
   - specialize (IHcumul wfΣ).
     destruct IHcumul as [codom' [reddom' leq]] => //.
     exists codom'; intuition auto.
@@ -839,7 +839,7 @@ Section Inversions.
           rewrite 2!mapi_app. cbn.
           eapply eq_context_upto_cat.
           + constructor.
-            * eapply eq_term_upto_univ_refl. all: auto.
+            * eapply eq_term_upto_refl. all: auto.
             * eapply eq_context_upto_refl. auto.
           + eapply eq_context_upto_refl. auto.
       }
@@ -860,7 +860,7 @@ Section Inversions.
         * apply All2_same. intros. intuition reflexivity.
         * constructor.
           -- simpl. intuition eauto.
-             ++ eapply eq_term_upto_univ_refl.
+             ++ eapply eq_term_upto_refl.
                 all: apply eq_universe_refl.
              ++ eapply upto_names_impl. 3: assumption.
                 all: apply eq_universe_refl.
@@ -914,7 +914,7 @@ Section Inversions.
                rewrite 2!mapi_app. cbn.
                eapply eq_context_upto_cat.
                ++ constructor.
-                  ** eapply eq_term_upto_univ_refl. all: auto.
+                  ** eapply eq_term_upto_refl. all: auto.
                   ** eapply eq_context_upto_refl. auto.
                ++ eapply eq_context_upto_refl. auto.
     }

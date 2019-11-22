@@ -140,7 +140,7 @@ Section Alpha.
     apply cored_alt in r.
     destruct r as [r].
     induction r in u, v, hu, hv.
-    - eapply red1_eq_term_upto_univ_r in r. 9: eassumption.
+    - eapply red1_eq_term_upto_r in r. 9: eassumption.
       (* all: auto. *)
       (* They should be automatic... *)
       all: try eapply eq_universe_refl.
@@ -240,14 +240,14 @@ Section Alpha.
       RelationClasses.Transitive Re ->
       RelationClasses.Transitive Rle ->
       RelationClasses.subrelation Re Rle ->
-      eq_term_upto_univ Re Rle u u' ->
+      eq_term_upto Re Rle u u' ->
       cored Σ Γ v u ->
-      exists v', cored Σ Γ v' u' /\ ∥ eq_term_upto_univ Re Rle v v' ∥.
+      exists v', cored Σ Γ v' u' /\ ∥ eq_term_upto Re Rle v v' ∥.
   Proof.
     intros Re Rle Γ u v u' X X0 X1 X2 X3 X4 X5 e h.
     apply cored_alt in h as [h].
     induction h in u', e |- *.
-    - eapply red1_eq_term_upto_univ_l in r. 8: eauto. all: auto.
+    - eapply red1_eq_term_upto_l in r. 8: eauto. all: auto.
       destruct r as [? [? ?]].
       eexists. split.
       + constructor. eassumption.
@@ -267,7 +267,7 @@ Section Alpha.
       SubstUnivPreserving Re ->
       eq_context_upto Re Γ Δ ->
       cored Σ Γ u v ->
-      exists u', cored Σ Δ u' v /\ ∥ eq_term_upto_univ Re Re u u' ∥.
+      exists u', cored Σ Δ u' v /\ ∥ eq_term_upto Re Re u u' ∥.
   Proof.
     intros Re Γ Δ u v hRe1 hRe2 hRe3 hRe4 e h.
     apply cored_alt in h as [h].
@@ -283,7 +283,7 @@ Section Alpha.
       + destruct r2 as [y'' [r2' [e2']]].
         exists y''. split.
         * eapply cored_trans'. all: eassumption.
-        * constructor. eapply eq_term_upto_univ_trans. all: eauto.
+        * constructor. eapply eq_term_upto_trans. all: eauto.
       + intros ? ? ?. assumption.
   Qed.
 
@@ -295,13 +295,13 @@ Section Alpha.
     induction Γ as [| [na [b|] A] Γ ih ].
     - constructor.
     - simpl. constructor.
-      + eapply eq_term_upto_univ_tm_nl.
+      + eapply eq_term_upto_tm_nl.
         all: auto.
-      + simpl. eapply eq_term_upto_univ_tm_nl.
+      + simpl. eapply eq_term_upto_tm_nl.
         all: auto.
       + assumption.
     - simpl. constructor.
-      + simpl. eapply eq_term_upto_univ_tm_nl.
+      + simpl. eapply eq_term_upto_tm_nl.
         all: auto.
       + assumption.
   Qed.

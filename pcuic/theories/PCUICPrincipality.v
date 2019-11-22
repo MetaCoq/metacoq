@@ -160,10 +160,10 @@ Section Principality.
     now eapply red_cumul_inv.
   Qed.
 
-  Lemma eq_term_upto_univ_conv_arity_l :
+  Lemma eq_term_upto_conv_arity_l :
     forall Re Rle Γ u v,
       isArity u ->
-      eq_term_upto_univ Re Rle u v ->
+      eq_term_upto Re Rle u v ->
       Is_conv_to_Arity Σ Γ v.
   Proof.
     intros Re Rle Γ u v a e.
@@ -188,10 +188,10 @@ Section Principality.
       + simpl. assumption.
   Qed.
 
-  Lemma eq_term_upto_univ_conv_arity_r :
+  Lemma eq_term_upto_conv_arity_r :
     forall Re Rle Γ u v,
       isArity u ->
-      eq_term_upto_univ Re Rle v u ->
+      eq_term_upto Re Rle v u ->
       Is_conv_to_Arity Σ Γ v.
   Proof.
     intros Re Rle Γ u v a e.
@@ -267,7 +267,7 @@ Section Principality.
   Proof.
     intros Γ C T a h.
     induction h.
-    - eapply eq_term_upto_univ_conv_arity_r. all: eassumption.
+    - eapply eq_term_upto_conv_arity_r. all: eassumption.
     - forward IHh by assumption. destruct IHh as [v' [[r'] a']].
       exists v'. split.
       + constructor. eapply red_trans.
@@ -287,7 +287,7 @@ Section Principality.
   Proof.
     intros Γ C T a h.
     induction h.
-    - eapply eq_term_upto_univ_conv_arity_l. all: eassumption.
+    - eapply eq_term_upto_conv_arity_l. all: eassumption.
     - eapply IHh. eapply isArity_red1. all: eassumption.
     - forward IHh by assumption. destruct IHh as [v' [[r'] a']].
       exists v'. split.
@@ -428,7 +428,7 @@ Section Principality.
     intros Γ ind ui l T h.
     eapply cumul_alt in h as [v [v' [[redv redv'] leqvv']]].
     eapply invert_red_ind in redv as [l' [? ha]]. subst.
-    eapply eq_term_upto_univ_mkApps_l_inv in leqvv'
+    eapply eq_term_upto_mkApps_l_inv in leqvv'
       as [u [l'' [[e ?] ?]]].
     subst.
     dependent destruction e.
@@ -452,7 +452,7 @@ Section Principality.
     intros Γ ind ui l T h.
     eapply cumul_alt in h as [v [v' [[redv redv'] leqvv']]].
     eapply invert_red_ind in redv' as [l' [? ?]]. subst.
-    eapply eq_term_upto_univ_mkApps_r_inv in leqvv'
+    eapply eq_term_upto_mkApps_r_inv in leqvv'
       as [u [l'' [[e ?] ?]]].
     subst.
     dependent destruction e.
@@ -535,12 +535,12 @@ Section Principality.
   Qed.
 
   (* Duplicate *)
-  (* Lemma eq_term_upto_univ_mkApps_r_inv : *)
+  (* Lemma eq_term_upto_mkApps_r_inv : *)
   (*   forall Re Rle u l t, *)
-  (*     eq_term_upto_univ Re Rle t (mkApps u l) -> *)
+  (*     eq_term_upto Re Rle t (mkApps u l) -> *)
   (*     ∑ u' l', *)
-  (*   eq_term_upto_univ Re Rle u' u * *)
-  (*   All2 (eq_term_upto_univ Re Re) l' l * *)
+  (*   eq_term_upto Re Rle u' u * *)
+  (*   All2 (eq_term_upto Re Re) l' l * *)
   (*   (t = mkApps u' l'). *)
   (* Proof. *)
   (*   intros Re Rle u l t h. *)
@@ -566,7 +566,7 @@ Section Principality.
   (*   intros H. eapply cumul_alt in H. *)
   (*   destruct H as [v [v' [[redv redv'] leq]]]. *)
   (*   eapply red_mkApps_tInd in redv' as [args' [-> ?]]; eauto. *)
-  (*   apply eq_term_upto_univ_mkApps_r_inv in leq as [u' [l' [[eqhd eqargs] Heq]]]. *)
+  (*   apply eq_term_upto_mkApps_r_inv in leq as [u' [l' [[eqhd eqargs] Heq]]]. *)
   (*   subst v. depelim eqhd. *)
   (*   exists u0, l'. split; auto. *)
   (*   clear -eqargs a0. *)

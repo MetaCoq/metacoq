@@ -769,9 +769,9 @@ Proof.
     + inversion b. eauto.
 Qed.
 
-Lemma lift_eq_term_upto_univ Re Rl n k T U :
-  eq_term_upto_univ Re Rl T U ->
-  eq_term_upto_univ Re Rl (lift n k T) (lift n k U).
+Lemma lift_eq_term_upto Re Rl n k T U :
+  eq_term_upto Re Rl T U ->
+  eq_term_upto Re Rl (lift n k T) (lift n k U).
 Proof.
   induction T in n, k, U, Rl |- * using term_forall_list_rect;
     inversion 1; simpl; try (now constructor).
@@ -794,8 +794,8 @@ Proof.
       easy.
   - constructor; try easy. clear - X H3.
     assert (XX:forall k k', All2
-                         (fun x y  => eq_term_upto_univ Re Re (dtype x) (dtype y) ×
-                        eq_term_upto_univ Re Re (dbody x) (dbody y) ×
+                         (fun x y  => eq_term_upto Re Re (dtype x) (dtype y) ×
+                        eq_term_upto Re Re (dbody x) (dbody y) ×
                                    rarg x = rarg y)
                          (map (map_def (lift n k) (lift n (#|m| + k'))) m)
                          (map (map_def (lift n k) (lift n (#|mfix'| + k'))) mfix'));
@@ -810,8 +810,8 @@ Proof.
       rewrite !plus_n_Sm. now apply IHm.
   - constructor; try easy. clear - X H3.
     assert (XX:forall k k', All2
-                         (fun x y  => eq_term_upto_univ Re Re (dtype x) (dtype y) ×
-                            eq_term_upto_univ Re Re (dbody x) (dbody y) ×
+                         (fun x y  => eq_term_upto Re Re (dtype x) (dtype y) ×
+                            eq_term_upto Re Re (dbody x) (dbody y) ×
                                    rarg x = rarg y)
                          (map (map_def (lift n k) (lift n (#|m| + k'))) m)
                          (map (map_def (lift n k) (lift n (#|mfix'| + k'))) mfix'));
@@ -830,13 +830,13 @@ Qed.
 Lemma lift_eq_term `{checker_flags} ϕ n k T U :
   eq_term ϕ T U -> eq_term ϕ (lift n k T) (lift n k U).
 Proof.
-  apply lift_eq_term_upto_univ.
+  apply lift_eq_term_upto.
 Qed.
 
 Lemma lift_leq_term `{checker_flags} ϕ n k T U :
   leq_term ϕ T U -> leq_term ϕ (lift n k T) (lift n k U).
 Proof.
-  apply lift_eq_term_upto_univ.
+  apply lift_eq_term_upto.
 Qed.
 
 Lemma weakening_cumul `{CF:checker_flags} Σ Γ Γ' Γ'' M N :

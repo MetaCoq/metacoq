@@ -1542,9 +1542,9 @@ Section Conversion.
   Qed.
 
   (* TODO (RE)MOVE *)
-  Lemma destArity_eq_term_upto_univ :
+  Lemma destArity_eq_term_upto :
     forall Re Rle Γ1 Γ2 t1 t2 Δ1 s1,
-      eq_term_upto_univ Re Rle t1 t2 ->
+      eq_term_upto Re Rle t1 t2 ->
       eq_context_upto Re Γ1 Γ2 ->
       destArity Γ1 t1 = Some (Δ1, s1) ->
       exists Δ2 s2,

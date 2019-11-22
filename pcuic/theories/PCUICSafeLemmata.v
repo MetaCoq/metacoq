@@ -128,62 +128,62 @@ Section Lemmata.
     eassumption.
   Qed.
 
-  Lemma eq_term_upto_univ_zipc :
+  Lemma eq_term_upto_zipc :
     forall Re u v π,
       RelationClasses.Reflexive Re ->
-      eq_term_upto_univ Re Re u v ->
-      eq_term_upto_univ Re Re (zipc u π) (zipc v π).
+      eq_term_upto Re Re u v ->
+      eq_term_upto Re Re (zipc u π) (zipc v π).
   Proof.
     intros Re u v π he h.
     induction π in u, v, h |- *.
     all: try solve [
                simpl ; try apply IHπ ;
-               cbn ; constructor ; try apply eq_term_upto_univ_refl ; assumption
+               cbn ; constructor ; try apply eq_term_upto_refl ; assumption
              ].
     - assumption.
     - simpl. apply IHπ. constructor.
       apply All2_app.
       + apply All2_same.
-        intros. split ; auto. split. all: apply eq_term_upto_univ_refl.
+        intros. split ; auto. split. all: apply eq_term_upto_refl.
         all: assumption.
       + constructor.
         * simpl. intuition eauto. reflexivity.
         * apply All2_same.
-          intros. split ; auto. split. all: apply eq_term_upto_univ_refl.
+          intros. split ; auto. split. all: apply eq_term_upto_refl.
           all: assumption.
     - simpl. apply IHπ. constructor.
       apply All2_app.
       + apply All2_same.
-        intros. split ; auto. split. all: apply eq_term_upto_univ_refl.
+        intros. split ; auto. split. all: apply eq_term_upto_refl.
         all: assumption.
       + constructor.
         * simpl. intuition eauto. reflexivity.
         * apply All2_same.
-          intros. split ; auto. split. all: apply eq_term_upto_univ_refl.
+          intros. split ; auto. split. all: apply eq_term_upto_refl.
           all: assumption.
     - simpl. apply IHπ. destruct indn as [i n].
       constructor.
       + assumption.
-      + apply eq_term_upto_univ_refl. all: assumption.
+      + apply eq_term_upto_refl. all: assumption.
       + eapply All2_same.
-        intros. split ; auto. apply eq_term_upto_univ_refl. all: assumption.
+        intros. split ; auto. apply eq_term_upto_refl. all: assumption.
     - simpl. apply IHπ. destruct indn as [i n].
       constructor.
-      + apply eq_term_upto_univ_refl. all: assumption.
+      + apply eq_term_upto_refl. all: assumption.
       + assumption.
       + eapply All2_same.
-        intros. split ; auto. apply eq_term_upto_univ_refl. all: assumption.
+        intros. split ; auto. apply eq_term_upto_refl. all: assumption.
     - simpl. apply IHπ. destruct indn as [i n].
       constructor.
-      + apply eq_term_upto_univ_refl. all: assumption.
-      + apply eq_term_upto_univ_refl. all: assumption.
+      + apply eq_term_upto_refl. all: assumption.
+      + apply eq_term_upto_refl. all: assumption.
       + apply All2_app.
         * eapply All2_same.
-          intros. split ; auto. apply eq_term_upto_univ_refl. all: assumption.
+          intros. split ; auto. apply eq_term_upto_refl. all: assumption.
         * constructor.
           -- simpl. intuition eauto.
           -- eapply All2_same.
-             intros. split ; auto. apply eq_term_upto_univ_refl.
+             intros. split ; auto. apply eq_term_upto_refl.
              all: assumption.
   Qed.
 
@@ -193,21 +193,21 @@ Section Lemmata.
       eq_term (global_ext_constraints Σ) (zipc u π) (zipc v π).
   Proof.
     intros Σ u v π h.
-    eapply eq_term_upto_univ_zipc.
+    eapply eq_term_upto_zipc.
     - intro. eapply eq_universe_refl.
     - assumption.
   Qed.
 
-  Lemma eq_term_upto_univ_zipp :
+  Lemma eq_term_upto_zipp :
     forall Re u v π,
       RelationClasses.Reflexive Re ->
-      eq_term_upto_univ Re Re u v ->
-      eq_term_upto_univ Re Re (zipp u π) (zipp v π).
+      eq_term_upto Re Re u v ->
+      eq_term_upto Re Re (zipp u π) (zipp v π).
   Proof.
     intros Re u v π he h.
     unfold zipp.
     case_eq (decompose_stack π). intros l ρ e.
-    eapply eq_term_upto_univ_mkApps.
+    eapply eq_term_upto_mkApps.
     - assumption.
     - apply All2_same. intro. reflexivity.
   Qed.
@@ -218,20 +218,20 @@ Section Lemmata.
       eq_term (global_ext_constraints Σ) (zipp u π) (zipp v π).
   Proof.
     intros Σ u v π h.
-    eapply eq_term_upto_univ_zipp.
+    eapply eq_term_upto_zipp.
     - intro. eapply eq_universe_refl.
     - assumption.
   Qed.
 
-  Lemma eq_term_upto_univ_zipx :
+  Lemma eq_term_upto_zipx :
     forall Re Γ u v π,
       RelationClasses.Reflexive Re ->
-      eq_term_upto_univ Re Re u v ->
-      eq_term_upto_univ Re Re (zipx Γ u π) (zipx Γ v π).
+      eq_term_upto Re Re u v ->
+      eq_term_upto Re Re (zipx Γ u π) (zipx Γ v π).
   Proof.
     intros Re Γ u v π he h.
-    eapply eq_term_upto_univ_it_mkLambda_or_LetIn ; auto.
-    eapply eq_term_upto_univ_zipc ; auto.
+    eapply eq_term_upto_it_mkLambda_or_LetIn ; auto.
+    eapply eq_term_upto_zipc ; auto.
   Qed.
 
   Lemma eq_term_zipx :
@@ -240,7 +240,7 @@ Section Lemmata.
       eq_term φ (zipx Γ u π) (zipx Γ v π).
   Proof.
     intros Σ Γ u v π h.
-    eapply eq_term_upto_univ_zipx ; auto.
+    eapply eq_term_upto_zipx ; auto.
     intro. eapply eq_universe_refl.
   Qed.
 
@@ -255,7 +255,7 @@ Section Lemmata.
 
   Derive Signature for cored.
 
-  Hint Resolve eq_term_upto_univ_refl : core.
+  Hint Resolve eq_term_upto_refl : core.
 
   Lemma fresh_global_nl :
     forall Σ k,
@@ -311,7 +311,7 @@ Section Lemmata.
 
   Lemma welltyped_alpha Γ u v :
       welltyped Σ Γ u ->
-      eq_term_upto_univ eq eq u v ->
+      eq_term_upto eq eq u v ->
       welltyped Σ Γ v.
   Proof.
     intros [A h] e.
@@ -321,7 +321,7 @@ Section Lemmata.
 
   Lemma wellformed_alpha Γ u v :
       wellformed Σ Γ u ->
-      eq_term_upto_univ eq eq u v ->
+      eq_term_upto eq eq u v ->
       wellformed Σ Γ v.
   Proof.
     destruct hΣ as [hΣ'].
@@ -1738,7 +1738,7 @@ Lemma type_Case' {cf:checker_flags} Σ Γ indnpar u p c brs args :
     All2 (fun br bty => (br.1 = bty.1) × (Σ ;;; Γ |- br.2 : bty.2)) brs btys ->
     Σ ;;; Γ |- tCase indnpar p c brs : mkApps p (skipn npar args ++ [c]).
 Proof.
-  intros ind npar mdecl idecl isdecl H params ps pty H0 X H1 X0 btys H2 X1. 
+  intros ind npar mdecl idecl isdecl H params ps pty H0 X H1 X0 btys H2 X1.
   econstructor; tea.
   eapply type_Case_valid_btys in X; tea.
   eapply All2_All_mix_right; tea.

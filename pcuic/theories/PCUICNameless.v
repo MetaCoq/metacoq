@@ -84,7 +84,7 @@ Local Ltac anonify :=
 
 Local Ltac ih :=
   lazymatch goal with
-  | ih : forall v : term, _ -> _ -> eq_term_upto_univ _ _ _ _ -> ?u = _
+  | ih : forall v : term, _ -> _ -> eq_term_upto _ _ _ _ -> ?u = _
     |- ?u = ?v =>
     eapply ih ; assumption
   end.
@@ -93,7 +93,7 @@ Lemma nameless_eq_term_spec :
   forall u v,
     nameless u ->
     nameless v ->
-    eq_term_upto_univ eq eq u v ->
+    eq_term_upto eq eq u v ->
     u = v.
 Proof.
   intros u v hu hv e.
@@ -202,10 +202,10 @@ Proof.
         eapply IHm. assumption.
 Qed.
 
-Lemma nl_eq_term_upto_univ :
+Lemma nl_eq_term_upto :
   forall Re Rle t t',
-    eq_term_upto_univ Re Rle t t' ->
-    eq_term_upto_univ Re Rle (nl t) (nl t').
+    eq_term_upto Re Rle t t' ->
+    eq_term_upto Re Rle (nl t) (nl t').
 Proof.
   intros Re Rle t t' h.
   revert t t' Rle h. fix aux 4.
@@ -243,7 +243,7 @@ Lemma nl_leq_term {cf:checker_flags} :
     leq_term φ t t' ->
     leq_term φ (nl t) (nl t').
 Proof.
-  intros. apply nl_eq_term_upto_univ. assumption.
+  intros. apply nl_eq_term_upto. assumption.
 Qed.
 
 Lemma nl_eq_term {cf:checker_flags} :
@@ -251,32 +251,32 @@ Lemma nl_eq_term {cf:checker_flags} :
     eq_term φ t t' ->
     eq_term φ (nl t) (nl t').
 Proof.
-  intros. apply nl_eq_term_upto_univ. assumption.
+  intros. apply nl_eq_term_upto. assumption.
 Qed.
 
 Corollary eq_term_nl_eq :
   forall u v,
-    eq_term_upto_univ eq eq u v ->
+    eq_term_upto eq eq u v ->
     nl u = nl v.
 Proof.
   intros u v h.
   eapply nameless_eq_term_spec.
   - eapply nl_spec.
   - eapply nl_spec.
-  - now eapply nl_eq_term_upto_univ.
+  - now eapply nl_eq_term_upto.
 Qed.
 
 Local Ltac ih3 :=
   lazymatch goal with
-  | ih : forall Rle v, eq_term_upto_univ _ _ (nl ?u) _ -> _
-    |- eq_term_upto_univ _ _ ?u _ =>
+  | ih : forall Rle v, eq_term_upto _ _ (nl ?u) _ -> _
+    |- eq_term_upto _ _ ?u _ =>
     eapply ih ; assumption
   end.
 
-Lemma eq_term_upto_univ_nl_inv :
+Lemma eq_term_upto_nl_inv :
   forall Re Rle u v,
-    eq_term_upto_univ Re Rle (nl u) (nl v) ->
-    eq_term_upto_univ Re Rle u v.
+    eq_term_upto Re Rle (nl u) (nl v) ->
+    eq_term_upto Re Rle u v.
 Proof.
   intros Re Rle u v h.
   induction u in v, h, Rle |- * using term_forall_list_ind.
@@ -333,16 +333,16 @@ Proof.
   - simpl. rewrite nl_spec, ih. reflexivity.
 Qed.
 
-Lemma eq_term_upto_univ_tm_nl :
+Lemma eq_term_upto_tm_nl :
   forall Re Rle u,
     Reflexive Re ->
     Reflexive Rle ->
-    eq_term_upto_univ Re Rle u (nl u).
+    eq_term_upto Re Rle u (nl u).
 Proof.
   intros Re Rle u hRe hRle.
   induction u in Rle, hRle |- * using term_forall_list_ind.
   all: try solve [
-    simpl ; try apply eq_term_upto_univ_refl ; auto ; constructor ; eauto
+    simpl ; try apply eq_term_upto_refl ; auto ; constructor ; eauto
   ].
   - simpl. constructor.
     induction l.
@@ -370,7 +370,7 @@ Corollary eq_term_tm_nl :
   forall `{checker_flags} G u, eq_term G u (nl u).
 Proof.
   intros flags G u.
-  eapply eq_term_upto_univ_tm_nl.
+  eapply eq_term_upto_tm_nl.
   - intro. eapply eq_universe_refl.
   - intro. eapply eq_universe_refl.
 Qed.
@@ -1196,7 +1196,7 @@ Proof.
     + eapply fix_guard_eq_term with (idx:=n). eassumption.
       constructor. clear. induction mfix. constructor.
       simpl. constructor; tas. cbn.
-      repeat split; now apply eq_term_upto_univ_tm_nl.
+      repeat split; now apply eq_term_upto_tm_nl.
     + now rewrite nth_error_map, H.
     + rewrite XX. revert X. clear.
       induction 1; simpl; econstructor; tas; cbn in *.
@@ -1244,9 +1244,9 @@ Proof.
   destruct (reflect_upto_names t t').
   - constructor. eapply eq_term_nl_eq. assumption.
   - constructor. intro bot. apply f.
-    apply eq_term_upto_univ_nl_inv.
+    apply eq_term_upto_nl_inv.
     rewrite bot.
-    apply eq_term_upto_univ_refl.
+    apply eq_term_upto_refl.
     all: auto.
 Qed.
 

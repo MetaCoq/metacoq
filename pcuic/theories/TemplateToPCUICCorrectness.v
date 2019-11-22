@@ -533,7 +533,7 @@ Proof.
   rewrite mkApps_app. simpl. reflexivity.
 Qed.
 
-Derive Signature for TTy.eq_term_upto_univ.
+Derive Signature for TTy.eq_term_upto.
 
 Lemma trans_eq_term :
   forall φ t u,
@@ -718,21 +718,21 @@ Proof.
   simpl in *. apply IHu. assumption. constructor; assumption.
 Qed.
 
-Lemma eq_term_upto_univ_App `{checker_flags} Re Rle f f' :
-  eq_term_upto_univ Re Rle f f' ->
+Lemma eq_term_upto_App `{checker_flags} Re Rle f f' :
+  eq_term_upto Re Rle f f' ->
   isApp f = isApp f'.
 Proof.
   inversion 1; reflexivity.
 Qed.
 
-Lemma eq_term_upto_univ_mkApps `{checker_flags} Re Rle f l f' l' :
-  eq_term_upto_univ Re Rle f f' ->
-  All2 (eq_term_upto_univ Re Re) l l' ->
-  eq_term_upto_univ Re Rle (mkApps f l) (mkApps f' l').
+Lemma eq_term_upto_mkApps `{checker_flags} Re Rle f l f' l' :
+  eq_term_upto Re Rle f f' ->
+  All2 (eq_term_upto Re Re) l l' ->
+  eq_term_upto Re Rle (mkApps f l) (mkApps f' l').
 Proof.
   induction l in f, f', l' |- *; intro e; inversion_clear 1.
   - assumption.
-  - pose proof (eq_term_upto_univ_App _ _ _ _ e).
+  - pose proof (eq_term_upto_App _ _ _ _ e).
     case_eq (isApp f).
     + intro X; rewrite X in H0.
       destruct f; try discriminate.
@@ -747,12 +747,12 @@ Proof.
 Qed.
 
 (* TODO REMOVE trans_eq_term *)
-Lemma trans_eq_term_upto_univ :
+Lemma trans_eq_term_upto :
   forall Re Rle t u,
     T.wf t ->
     T.wf u ->
-    TTy.eq_term_upto_univ Re Rle t u ->
-    eq_term_upto_univ Re Rle (trans t) (trans u).
+    TTy.eq_term_upto Re Rle t u ->
+    eq_term_upto Re Rle (trans t) (trans u).
 Proof.
   intros Re Rle  t u wt wu e.
   induction t using Induction.term_forall_list_rect in Rle, wt, u, wu, e |- *.
@@ -795,7 +795,7 @@ Proof.
       * inversion wt. assumption.
       * inversion wu. assumption.
       * assumption.
-  - eapply eq_term_upto_univ_mkApps.
+  - eapply eq_term_upto_mkApps.
     + eapply IHt.
       * inversion wt. assumption.
       * inversion wu. assumption.
@@ -897,7 +897,7 @@ Lemma trans_leq_term ϕ T U :
   leq_term ϕ (trans T) (trans U).
 Proof.
   intros HT HU H.
-  eapply trans_eq_term_upto_univ ; eauto.
+  eapply trans_eq_term_upto ; eauto.
 Qed.
 
 (* Lemma wf_mkApps t u : T.wf (T.mkApps t u) -> List.Forall T.wf u. *)

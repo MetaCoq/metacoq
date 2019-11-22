@@ -21,13 +21,13 @@ Ltac tc := try typeclasses eauto 10.
 Set Asymmetric Patterns.
 
 
-Lemma red1_eq_context_upto_l Σ Re Γ Δ u v :
+Lemma red1_eq_context_upto_l Σ Re ηpred Γ Δ u v :
   RelationClasses.Reflexive Re ->
   SubstUnivPreserving Re ->
   red1 Σ Γ u v ->
-  eq_context_upto Re Γ Δ ->
+  eq_context_upto Re ηpred Γ Δ ->
   ∑ v', red1 Σ Δ u v' *
-        eq_term_upto Re Re v v'.
+        eq_term_upto Re Re ηpred v v'.
 Proof.
   intros he he' h e.
   induction h in Δ, e |- * using red1_ind_all.
@@ -48,7 +48,7 @@ Proof.
   all: try solve [
     match goal with
     | r : red1 _ (?Γ ,, ?d) _ _ |- _ =>
-      assert (e' : eq_context_upto Re (Γ,, d) (Δ,, d)) ; [
+      assert (e' : eq_context_upto Re ηpred (Γ,, d) (Δ,, d)) ; [
         constructor ; eauto ;
         eapply eq_term_upto_refl ; eauto
       |
@@ -63,7 +63,7 @@ Proof.
   ].
   - assert (h : ∑ b',
                 (option_map decl_body (nth_error Δ i) = Some (Some b')) *
-                eq_term_upto Re Re body b').
+                eq_term_upto Re Re ηpred body b').
     { induction i in Γ, Δ, H, e |- *.
       - destruct e.
         + cbn in *. discriminate.
@@ -102,7 +102,7 @@ Proof.
       OnOne2 (on_Trel_eq (red1 Σ Δ) snd fst) brs brs0 *
       All2 (fun x y =>
                 (fst x = fst y) *
-                eq_term_upto Re Re (snd x) (snd y))%type
+                eq_term_upto Re Re ηpred (snd x) (snd y))%type
        brs' brs0
     ).
     { induction X.
@@ -132,7 +132,7 @@ Proof.
     + econstructor. all: try eapply eq_term_upto_refl ; eauto.
   - assert (h : ∑ ll,
       OnOne2 (red1 Σ Δ) l ll *
-      All2 (eq_term_upto Re Re) l' ll
+      All2 (eq_term_upto Re Re ηpred) l' ll
     ).
     { induction X.
       - destruct p as [p1 p2].
@@ -162,8 +162,8 @@ Proof.
         ) mfix0 mfix'
       *
       All2 (fun x y =>
-        eq_term_upto Re Re (dtype x) (dtype y) *
-        eq_term_upto Re Re (dbody x) (dbody y) *
+        eq_term_upto Re Re ηpred (dtype x) (dtype y) *
+        eq_term_upto Re Re ηpred (dbody x) (dbody y) *
         (rarg x = rarg y))%type mfix1 mfix').
     { induction X.
       - destruct p as [[p1 p2] p3].
@@ -196,8 +196,8 @@ Proof.
           (d'.(dname), d'.(dtype), d'.(rarg))
         ) mfix0 mfix' *
       All2 (fun x y =>
-        eq_term_upto Re Re (dtype x) (dtype y) *
-        eq_term_upto Re Re (dbody x) (dbody y) *
+        eq_term_upto Re Re ηpred (dtype x) (dtype y) *
+        eq_term_upto Re Re ηpred (dbody x) (dbody y) *
         (rarg x = rarg y))%type mfix1 mfix').
     { (* Maybe we should use a lemma using firstn or skipn to keep
          fix_context intact. Anything general?
@@ -211,9 +211,9 @@ Proof.
       ((fun L (x y : def term) =>
        (red1 Σ (Γ ,,, fix_context L) (dbody x) (dbody y)
         × (forall Δ : context,
-           eq_context_upto Re (Γ ,,, fix_context L) Δ ->
+           eq_context_upto Re ηpred (Γ ,,, fix_context L) Δ ->
            ∑ v' : term,
-             red1 Σ Δ (dbody x) v' × eq_term_upto Re Re (dbody y) v'))
+             red1 Σ Δ (dbody x) v' × eq_term_upto Re Re ηpred (dbody y) v'))
        × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)) mfix0) mfix0 mfix1
       ) in X.
       Fail induction X using OnOne2_ind_l.
@@ -221,9 +221,9 @@ Proof.
       refine (OnOne2_ind_l _ (fun (L : mfixpoint term) (x y : def term) =>
     ((red1 Σ (Γ ,,, fix_context L) (dbody x) (dbody y)
      × (forall Δ0 : context,
-        eq_context_upto Re (Γ ,,, fix_context L) Δ0 ->
+        eq_context_upto Re ηpred (Γ ,,, fix_context L) Δ0 ->
         ∑ v' : term,
-          red1 Σ Δ0 (dbody x) v' × eq_term_upto Re Re (dbody y) v'))
+          red1 Σ Δ0 (dbody x) v' × eq_term_upto Re Re ηpred (dbody y) v'))
     × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)))
   (fun L mfix0 mfix1 o => ∑ mfix' : list (def term),
   OnOne2
@@ -232,12 +232,14 @@ Proof.
        × (dname d, dtype d, rarg d) = (dname d', dtype d', rarg d')) mfix0 mfix'
     × All2
         (fun x y : def term =>
-         (eq_term_upto Re Re (dtype x) (dtype y)
-          × eq_term_upto Re Re (dbody x) (dbody y)) ×
+         (eq_term_upto Re Re ηpred (dtype x) (dtype y)
+          × eq_term_upto Re Re ηpred (dbody x) (dbody y)) ×
          rarg x = rarg y) mfix1 mfix') _ _).
       - intros L x y l [[p1 p2] p3].
         assert (
-           e' : eq_context_upto Re (Γ ,,, fix_context L) (Δ ,,, fix_context L)
+           e' :
+            eq_context_upto Re ηpred
+              (Γ ,,, fix_context L) (Δ ,,, fix_context L)
         ).
         { eapply eq_context_upto_cat ; eauto.
           eapply eq_context_upto_refl. assumption.
@@ -271,8 +273,8 @@ Proof.
           (d'.(dname), d'.(dbody), d'.(rarg))
         ) mfix0 mfix' *
       All2 (fun x y =>
-        eq_term_upto Re Re (dtype x) (dtype y) *
-        eq_term_upto Re Re (dbody x) (dbody y) *
+        eq_term_upto Re Re ηpred (dtype x) (dtype y) *
+        eq_term_upto Re Re ηpred (dbody x) (dbody y) *
         (rarg x = rarg y))%type mfix1 mfix'
     ).
     { induction X.
@@ -306,8 +308,8 @@ Proof.
           (d'.(dname), d'.(dtype), d'.(rarg))
         ) mfix0 mfix' *
       All2 (fun x y =>
-        eq_term_upto Re Re (dtype x) (dtype y) *
-        eq_term_upto Re Re (dbody x) (dbody y) *
+        eq_term_upto Re Re ηpred (dtype x) (dtype y) *
+        eq_term_upto Re Re ηpred (dbody x) (dbody y) *
         (rarg x = rarg y))%type mfix1 mfix').
     { (* Maybe we should use a lemma using firstn or skipn to keep
          fix_context intact. Anything general?
@@ -321,9 +323,9 @@ Proof.
       ((fun L (x y : def term) =>
        (red1 Σ (Γ ,,, fix_context L) (dbody x) (dbody y)
         × (forall Δ : context,
-           eq_context_upto Re (Γ ,,, fix_context L) Δ ->
+           eq_context_upto Re ηpred (Γ ,,, fix_context L) Δ ->
            ∑ v' : term,
-             red1 Σ Δ (dbody x) v' × eq_term_upto Re Re (dbody y) v' ))
+             red1 Σ Δ (dbody x) v' × eq_term_upto Re Re ηpred (dbody y) v' ))
        × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)) mfix0) mfix0 mfix1
       ) in X.
       Fail induction X using OnOne2_ind_l.
@@ -331,9 +333,9 @@ Proof.
       refine (OnOne2_ind_l _ (fun (L : mfixpoint term) (x y : def term) =>
     (red1 Σ (Γ ,,, fix_context L) (dbody x) (dbody y)
      × (forall Δ0 : context,
-        eq_context_upto Re (Γ ,,, fix_context L) Δ0 ->
+        eq_context_upto Re ηpred (Γ ,,, fix_context L) Δ0 ->
         ∑ v' : term,
-           red1 Σ Δ0 (dbody x) v' × eq_term_upto Re Re (dbody y) v' ))
+           red1 Σ Δ0 (dbody x) v' × eq_term_upto Re Re ηpred (dbody y) v' ))
     × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)) (fun L mfix0 mfix1 o => ∑ mfix' : list (def term),
   (OnOne2
       (fun d d' : def term =>
@@ -341,12 +343,12 @@ Proof.
        × (dname d, dtype d, rarg d) = (dname d', dtype d', rarg d')) mfix0 mfix'
     × All2
         (fun x y : def term =>
-         (eq_term_upto Re Re (dtype x) (dtype y)
-          × eq_term_upto Re Re (dbody x) (dbody y)) ×
+         (eq_term_upto Re Re ηpred (dtype x) (dtype y)
+          × eq_term_upto Re Re ηpred (dbody x) (dbody y)) ×
          rarg x = rarg y) mfix1 mfix')) _ _).
       - intros L x y l [[p1 p2] p3].
         assert (
-           e' : eq_context_upto Re (Γ ,,, fix_context L) (Δ ,,, fix_context L)
+           e' : eq_context_upto Re ηpred (Γ ,,, fix_context L) (Δ ,,, fix_context L)
         ).
         { eapply eq_context_upto_cat ; eauto.
           eapply eq_context_upto_refl. assumption.
@@ -376,17 +378,17 @@ Proof.
 Qed.
 
 
-Lemma red1_eq_term_upto_l Σ Re Rle Γ u v u' :
+Lemma red1_eq_term_upto_l Σ Re Rle ηpred Γ u v u' :
   RelationClasses.Reflexive Re ->
   SubstUnivPreserving Re ->
   RelationClasses.Reflexive Rle ->
   RelationClasses.Transitive Re ->
   RelationClasses.Transitive Rle ->
   RelationClasses.subrelation Re Rle ->
-  eq_term_upto Re Rle u u' ->
+  eq_term_upto Re Rle ηpred u u' ->
   red1 Σ Γ u v ->
   ∑ v', red1 Σ Γ u' v' *
-        eq_term_upto Re Rle v v'.
+        eq_term_upto Re Rle ηpred v v'.
 Proof.
   unfold RelationClasses.subrelation.
   intros he he' hle tRe tRle hR e h.
@@ -406,7 +408,7 @@ Proof.
     clear h ;
     lazymatch goal with
     | r : red1 _ (?Γ,, vass ?na ?A) ?u ?v,
-      e : eq_term_upto _ _ ?A ?B
+      e : eq_term_upto _ _ _ ?A ?B
       |- _ =>
       let hh := fresh "hh" in
       eapply red1_eq_context_upto_l in r as hh ; revgoals ; [
@@ -445,7 +447,7 @@ Proof.
     + constructor.
     + eapply eq_term_upto_mkApps.
       * eapply All2_nth
-          with (P := fun x y => eq_term_upto Re Rle (snd x) (snd y)).
+          with (P := fun x y => eq_term_upto Re Rle ηpred (snd x) (snd y)).
         -- solve_all.
            eapply eq_term_upto_leq ; eauto.
         -- cbn. eapply eq_term_upto_refl ; eauto.
@@ -545,8 +547,8 @@ Proof.
     clear h.
     lazymatch goal with
     | r : red1 _ (?Γ,, vdef ?na ?a ?A) ?u ?v,
-      e1 : eq_term_upto _ _ ?A ?B,
-      e2 : eq_term_upto _ _ ?a ?b
+      e1 : eq_term_upto _ _ _ ?A ?B,
+      e2 : eq_term_upto _ _ _ ?a ?b
       |- _ =>
       let hh := fresh "hh" in
       eapply red1_eq_context_upto_l in r as hh ; revgoals ; [
@@ -570,7 +572,7 @@ Proof.
                OnOne2 (on_Trel_eq (red1 Σ Γ) snd fst) brs'0 brs0 *
                All2 (fun x y =>
                        (fst x = fst y) *
-                       (eq_term_upto Re Re (snd x) (snd y))
+                       (eq_term_upto Re Re ηpred (snd x) (snd y))
                        )%type brs' brs0
            ).
     { induction X in a, brs'0 |- *.
@@ -596,7 +598,7 @@ Proof.
   - dependent destruction e.
     assert (h : ∑ args,
                OnOne2 (red1 Σ Γ) args' args *
-               All2 (eq_term_upto Re Re) l' args
+               All2 (eq_term_upto Re Re ηpred) l' args
            ).
     { induction X in a, args' |- *.
       - destruct p as [p1 p2].
@@ -624,8 +626,8 @@ Proof.
                    (d1.(dname), d1.(dbody), d1.(rarg))
                  ) mfix' mfix *
                All2 (fun x y =>
-                 eq_term_upto Re Re x.(dtype) y.(dtype) *
-                 eq_term_upto Re Re x.(dbody) y.(dbody) *
+                 eq_term_upto Re Re ηpred x.(dtype) y.(dtype) *
+                 eq_term_upto Re Re ηpred x.(dbody) y.(dbody) *
                  (x.(rarg) = y.(rarg)))%type mfix1 mfix
            ).
     { induction X in a, mfix' |- *.
@@ -658,8 +660,8 @@ Proof.
                    (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)
                  ) mfix' mfix *
                All2 (fun x y =>
-                 eq_term_upto Re Re x.(dtype) y.(dtype) *
-                 eq_term_upto Re Re x.(dbody) y.(dbody) *
+                 eq_term_upto Re Re ηpred x.(dtype) y.(dtype) *
+                 eq_term_upto Re Re ηpred x.(dbody) y.(dbody) *
                  (x.(rarg) = y.(rarg))
                ) mfix1 mfix
            ).
@@ -669,14 +671,14 @@ Proof.
            RelationClasses.Reflexive Rle ->
            RelationClasses.Transitive Rle ->
            (forall u u'0 : universe, Re u u'0 -> Rle u u'0) ->
-           eq_term_upto Re Rle (dbody x) u' ->
+           eq_term_upto Re Rle ηpred (dbody x) u' ->
            ∑ v' : term,
              red1 Σ (Γ ,,, fix_context L) u' v'
-                  × eq_term_upto Re Rle (dbody y) v' ))
+                  × eq_term_upto Re Rle ηpred (dbody y) v' ))
        × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)) (fun L mfix0 mfix1 o => forall mfix', All2
       (fun x y : def term =>
-       (eq_term_upto Re Re (dtype x) (dtype y)
-        × eq_term_upto Re Re (dbody x) (dbody y)) ×
+       (eq_term_upto Re Re ηpred (dtype x) (dtype y)
+        × eq_term_upto Re Re ηpred (dbody x) (dbody y)) ×
        rarg x = rarg y) mfix0 mfix' -> ∑ mfix : list (def term),
   ( OnOne2
       (fun x y : def term =>
@@ -684,8 +686,8 @@ Proof.
        × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)) mfix' mfix ) *
   ( All2
       (fun x y : def term =>
-       (eq_term_upto Re Re (dtype x) (dtype y)
-        × eq_term_upto Re Re (dbody x) (dbody y)) ×
+       (eq_term_upto Re Re ηpred (dtype x) (dtype y)
+        × eq_term_upto Re Re ηpred (dbody x) (dbody y)) ×
        rarg x = rarg y) mfix1 mfix )) _ _ _ _ X).
       - clear X. intros L x y l [[p1 p2] p3] mfix' h.
         dependent destruction h. destruct p as [[h1 h2] h3].
@@ -713,14 +715,14 @@ Proof.
                   (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)
                ) mfix' mfix ×
         All2 (fun x y =>
-                eq_term_upto Re Re x.(dtype) y.(dtype) *
-                eq_term_upto Re Re x.(dbody) y.(dbody) *
+                eq_term_upto Re Re ηpred x.(dtype) y.(dtype) *
+                eq_term_upto Re Re ηpred x.(dbody) y.(dbody) *
                 (x.(rarg) = y.(rarg))
              ) mfix1 mfix %type
     ).
     { clear X.
       assert (hc : eq_context_upto
-                     Re
+                     Re ηpred
                      (Γ ,,, fix_context mfix0)
                      (Γ ,,, fix_context mfix')
              ).
@@ -768,8 +770,8 @@ Proof.
                    (d1.(dname), d1.(dbody), d1.(rarg))
                  ) mfix' mfix *
                All2 (fun x y =>
-                 eq_term_upto Re Re x.(dtype) y.(dtype) *
-                 eq_term_upto Re Re x.(dbody) y.(dbody) *
+                 eq_term_upto Re Re ηpred x.(dtype) y.(dtype) *
+                 eq_term_upto Re Re ηpred x.(dbody) y.(dbody) *
                  (x.(rarg) = y.(rarg)))%type mfix1 mfix
            ).
     { induction X in a, mfix' |- *.
@@ -802,8 +804,8 @@ Proof.
                    (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)
                  ) mfix' mfix *
                All2 (fun x y =>
-                 eq_term_upto Re Re x.(dtype) y.(dtype) *
-                 eq_term_upto Re Re x.(dbody) y.(dbody) *
+                 eq_term_upto Re Re ηpred x.(dtype) y.(dtype) *
+                 eq_term_upto Re Re ηpred x.(dbody) y.(dbody) *
                  (x.(rarg) = y.(rarg))
                ) mfix1 mfix
            ).
@@ -813,14 +815,14 @@ Proof.
            RelationClasses.Reflexive Rle ->
            RelationClasses.Transitive Rle ->
            (forall u u'0 : universe, Re u u'0 -> Rle u u'0) ->
-           eq_term_upto Re Rle (dbody x) u' ->
+           eq_term_upto Re Rle ηpred (dbody x) u' ->
            ∑ v' : term,
              red1 Σ (Γ ,,, fix_context L) u' v'
-               × eq_term_upto Re Rle (dbody y) v'))
+               × eq_term_upto Re Rle ηpred (dbody y) v'))
        × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)) (fun L mfix0 mfix1 o => forall mfix', All2
       (fun x y : def term =>
-       (eq_term_upto Re Re (dtype x) (dtype y)
-        × eq_term_upto Re Re (dbody x) (dbody y)) ×
+       (eq_term_upto Re Re ηpred (dtype x) (dtype y)
+        × eq_term_upto Re Re ηpred (dbody x) (dbody y)) ×
        rarg x = rarg y) mfix0 mfix' -> ∑ mfix : list (def term),
   ( OnOne2
       (fun x y : def term =>
@@ -828,8 +830,8 @@ Proof.
        × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)) mfix' mfix ) *
   ( All2
       (fun x y : def term =>
-       (eq_term_upto Re Re (dtype x) (dtype y)
-        × eq_term_upto Re Re (dbody x) (dbody y)) ×
+       (eq_term_upto Re Re ηpred (dtype x) (dtype y)
+        × eq_term_upto Re Re ηpred (dbody x) (dbody y)) ×
        rarg x = rarg y) mfix1 mfix )) _ _ _ _ X).
       - clear X. intros L x y l [[p1 p2] p3] mfix' h.
         dependent destruction h. destruct p as [[h1 h2] h3].
@@ -856,14 +858,14 @@ Proof.
                   (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)
                ) mfix' mfix ×
         All2 (fun x y =>
-                eq_term_upto Re Re x.(dtype) y.(dtype) *
-                eq_term_upto Re Re x.(dbody) y.(dbody) *
+                eq_term_upto Re Re ηpred x.(dtype) y.(dtype) *
+                eq_term_upto Re Re ηpred x.(dbody) y.(dbody) *
                 (x.(rarg) = y.(rarg))
              ) mfix1 mfix
     ).
     { clear X.
       assert (hc : eq_context_upto
-                     Re
+                     Re ηpred
                      (Γ ,,, fix_context mfix0)
                      (Γ ,,, fix_context mfix')
              ).
@@ -904,23 +906,23 @@ Proof.
     + constructor. all: eauto.
 Qed.
 
-Lemma red1_eq_context_upto_r Σ Re Γ Δ u v :
+Lemma red1_eq_context_upto_r Σ Re ηpred Γ Δ u v :
   RelationClasses.Reflexive Re ->
   RelationClasses.Symmetric Re ->
   SubstUnivPreserving Re ->
   red1 Σ Γ u v ->
-  eq_context_upto Re Δ Γ ->
+  eq_context_upto Re ηpred Δ Γ ->
   ∑ v', red1 Σ Δ u v' *
-        eq_term_upto Re Re v' v.
+        eq_term_upto Re Re ηpred v' v.
 Proof.
   intros.
-  destruct (red1_eq_context_upto_l Σ Re Γ Δ u v); auto.
+  destruct (red1_eq_context_upto_l Σ Re ηpred Γ Δ u v); auto.
   now apply eq_context_upto_sym.
   exists x. intuition auto.
   now eapply eq_term_upto_sym.
 Qed.
 
-Lemma red1_eq_term_upto_r Σ Re Rle Γ u v u' :
+Lemma red1_eq_term_upto_r Σ Re Rle ηpred Γ u v u' :
   RelationClasses.Reflexive Re ->
   SubstUnivPreserving Re ->
   RelationClasses.Reflexive Rle ->
@@ -928,13 +930,13 @@ Lemma red1_eq_term_upto_r Σ Re Rle Γ u v u' :
   RelationClasses.Transitive Re ->
   RelationClasses.Transitive Rle ->
   RelationClasses.subrelation Re Rle ->
-  eq_term_upto Re Rle u' u ->
+  eq_term_upto Re Rle ηpred u' u ->
   red1 Σ Γ u v ->
   ∑ v', red1 Σ Γ u' v' ×
-        eq_term_upto Re Rle v' v.
+        eq_term_upto Re Rle ηpred v' v.
 Proof.
   intros he he' hle tRe tRle hR e h uv.
-  destruct (red1_eq_term_upto_l Σ Re (flip Rle) Γ u v u'); auto.
+  destruct (red1_eq_term_upto_l Σ Re (flip Rle) ηpred Γ u v u'); auto.
   - now eapply flip_Transitive.
   - intros x y X. symmetry in X. apply e. auto.
   - eapply eq_term_upto_flip; eauto.
@@ -954,10 +956,11 @@ Section RedEq.
           {trre : RelationClasses.Transitive Re}
           {trle : RelationClasses.Transitive Rle}.
   Context (inclre : RelationClasses.subrelation Re Rle).
+  Context (ηpred : term -> Prop).
 
   Lemma red_eq_term_upto_r {Γ T V U} :
-    eq_term_upto Re Rle T U -> red Σ Γ U V ->
-    ∑ T', red Σ Γ T T' * eq_term_upto Re Rle T' V.
+    eq_term_upto Re Rle ηpred T U -> red Σ Γ U V ->
+    ∑ T', red Σ Γ T T' * eq_term_upto Re Rle ηpred T' V.
   Proof.
     intros eq r.
     apply red_alt in r.
@@ -971,11 +974,11 @@ Section RedEq.
   Qed.
 
   Lemma red_eq_term_upto_l {Γ u v u'} :
-    eq_term_upto Re Rle u u' ->
+    eq_term_upto Re Rle ηpred u u' ->
     red Σ Γ u v ->
     ∑ v',
     red Σ Γ u' v' *
-    eq_term_upto Re Rle v v'.
+    eq_term_upto Re Rle ηpred v v'.
   Proof.
     intros eq r.
     eapply red_alt in r.

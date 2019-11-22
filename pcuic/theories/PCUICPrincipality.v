@@ -161,12 +161,12 @@ Section Principality.
   Qed.
 
   Lemma eq_term_upto_conv_arity_l :
-    forall Re Rle Γ u v,
+    forall Re Rle ηpred Γ u v,
       isArity u ->
-      eq_term_upto Re Rle u v ->
+      eq_term_upto Re Rle ηpred u v ->
       Is_conv_to_Arity Σ Γ v.
   Proof.
-    intros Re Rle Γ u v a e.
+    intros Re Rle ηpred Γ u v a e.
     induction u in Γ, a, v, Rle, e |- *. all: try contradiction.
     all: dependent destruction e.
     - eexists. split.
@@ -189,12 +189,12 @@ Section Principality.
   Qed.
 
   Lemma eq_term_upto_conv_arity_r :
-    forall Re Rle Γ u v,
+    forall Re Rle ηpred Γ u v,
       isArity u ->
-      eq_term_upto Re Rle v u ->
+      eq_term_upto Re Rle ηpred v u ->
       Is_conv_to_Arity Σ Γ v.
   Proof.
-    intros Re Rle Γ u v a e.
+    intros Re Rle ηpred Γ u v a e.
     induction u in Γ, a, v, Rle, e |- *. all: try contradiction.
     all: dependent destruction e.
     - eexists. split.

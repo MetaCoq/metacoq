@@ -129,12 +129,12 @@ Section Lemmata.
   Qed.
 
   Lemma eq_term_upto_zipc :
-    forall Re u v π,
+    forall Re ηpred u v π,
       RelationClasses.Reflexive Re ->
-      eq_term_upto Re Re u v ->
-      eq_term_upto Re Re (zipc u π) (zipc v π).
+      eq_term_upto Re Re ηpred u v ->
+      eq_term_upto Re Re ηpred (zipc u π) (zipc v π).
   Proof.
-    intros Re u v π he h.
+    intros Re ηpred u v π he h.
     induction π in u, v, h |- *.
     all: try solve [
                simpl ; try apply IHπ ;
@@ -199,12 +199,12 @@ Section Lemmata.
   Qed.
 
   Lemma eq_term_upto_zipp :
-    forall Re u v π,
+    forall Re ηpred u v π,
       RelationClasses.Reflexive Re ->
-      eq_term_upto Re Re u v ->
-      eq_term_upto Re Re (zipp u π) (zipp v π).
+      eq_term_upto Re Re ηpred u v ->
+      eq_term_upto Re Re ηpred (zipp u π) (zipp v π).
   Proof.
-    intros Re u v π he h.
+    intros Re ηpred u v π he h.
     unfold zipp.
     case_eq (decompose_stack π). intros l ρ e.
     eapply eq_term_upto_mkApps.
@@ -224,12 +224,12 @@ Section Lemmata.
   Qed.
 
   Lemma eq_term_upto_zipx :
-    forall Re Γ u v π,
+    forall Re ηpred Γ u v π,
       RelationClasses.Reflexive Re ->
-      eq_term_upto Re Re u v ->
-      eq_term_upto Re Re (zipx Γ u π) (zipx Γ v π).
+      eq_term_upto Re Re ηpred u v ->
+      eq_term_upto Re Re ηpred (zipx Γ u π) (zipx Γ v π).
   Proof.
-    intros Re Γ u v π he h.
+    intros Re ηpred Γ u v π he h.
     eapply eq_term_upto_it_mkLambda_or_LetIn ; auto.
     eapply eq_term_upto_zipc ; auto.
   Qed.
@@ -311,7 +311,7 @@ Section Lemmata.
 
   Lemma welltyped_alpha Γ u v :
       welltyped Σ Γ u ->
-      eq_term_upto eq eq u v ->
+      eq_term_upto eq eq no_η u v ->
       welltyped Σ Γ v.
   Proof.
     intros [A h] e.
@@ -321,7 +321,7 @@ Section Lemmata.
 
   Lemma wellformed_alpha Γ u v :
       wellformed Σ Γ u ->
-      eq_term_upto eq eq u v ->
+      eq_term_upto eq eq no_η u v ->
       wellformed Σ Γ v.
   Proof.
     destruct hΣ as [hΣ'].

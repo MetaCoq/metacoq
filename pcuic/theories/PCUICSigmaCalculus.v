@@ -288,11 +288,11 @@ Section Renaming.
 Context `{checker_flags}.
 
 Lemma eq_term_upto_rename :
-  forall Re Rle u v f,
-    eq_term_upto Re Rle u v ->
-    eq_term_upto Re Rle (rename f u) (rename f v).
+  forall Re Rle ηpred u v f,
+    eq_term_upto Re Rle ηpred u v ->
+    eq_term_upto Re Rle ηpred (rename f u) (rename f v).
 Proof.
-  intros Re Rle u v f h.
+  intros Re Rle ηpred u v f h.
   induction u in v, Rle, f, h |- * using term_forall_list_ind.
   all: dependent destruction h.
   all: try solve [

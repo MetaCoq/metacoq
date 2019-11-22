@@ -718,21 +718,21 @@ Proof.
   simpl in *. apply IHu. assumption. constructor; assumption.
 Qed.
 
-Lemma eq_term_upto_App `{checker_flags} Re Rle f f' :
-  eq_term_upto Re Rle f f' ->
+Lemma eq_term_upto_App `{checker_flags} Re Rle ηpred f f' :
+  eq_term_upto Re Rle ηpred f f' ->
   isApp f = isApp f'.
 Proof.
   inversion 1; reflexivity.
 Qed.
 
-Lemma eq_term_upto_mkApps `{checker_flags} Re Rle f l f' l' :
-  eq_term_upto Re Rle f f' ->
-  All2 (eq_term_upto Re Re) l l' ->
-  eq_term_upto Re Rle (mkApps f l) (mkApps f' l').
+Lemma eq_term_upto_mkApps `{checker_flags} Re Rle ηpred f l f' l' :
+  eq_term_upto Re Rle ηpred f f' ->
+  All2 (eq_term_upto Re Re ηpred) l l' ->
+  eq_term_upto Re Rle ηpred (mkApps f l) (mkApps f' l').
 Proof.
   induction l in f, f', l' |- *; intro e; inversion_clear 1.
   - assumption.
-  - pose proof (eq_term_upto_App _ _ _ _ e).
+  - pose proof (eq_term_upto_App _ _ _ _ _ e).
     case_eq (isApp f).
     + intro X; rewrite X in H0.
       destruct f; try discriminate.
@@ -748,13 +748,13 @@ Qed.
 
 (* TODO REMOVE trans_eq_term *)
 Lemma trans_eq_term_upto :
-  forall Re Rle t u,
+  forall Re Rle ηpred t u,
     T.wf t ->
     T.wf u ->
     TTy.eq_term_upto Re Rle t u ->
-    eq_term_upto Re Rle (trans t) (trans u).
+    eq_term_upto Re Rle ηpred (trans t) (trans u).
 Proof.
-  intros Re Rle  t u wt wu e.
+  intros Re Rle ηpred t u wt wu e.
   induction t using Induction.term_forall_list_rect in Rle, wt, u, wu, e |- *.
   all: dependent destruction e.
   all: simpl.

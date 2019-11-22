@@ -384,7 +384,7 @@ Section ContextConversion.
     destruct leq as [? [? ?]].
     destruct (red_red_ctx _ wfΣ redr Hctx) as [rnf [redl1 redr1]].
     destruct (red_confluence wfΣ r redr1). destruct p.
-    edestruct (red_eq_term_upto_r Σ (eq_universe_leq_universe _) e r0) as [lnf' [? ?]].
+    edestruct (red_eq_term_upto_r Σ (eq_universe_leq_universe _) unrestricted_η e r0) as [lnf' [? ?]].
     exists lnf', x0. intuition auto. now transitivity lnf.
     now transitivity rnf.
   Qed.
@@ -423,13 +423,13 @@ Section ContextConversion.
 
   Arguments red_ctx : clear implicits.
 
-  Lemma red_eq_context_upto_l {Re Γ Δ u v}
+  Lemma red_eq_context_upto_l {Re ηpred Γ Δ u v}
         `{RelationClasses.Reflexive _ Re} `{RelationClasses.Transitive _ Re} `{SubstUnivPreserving Re} :
     red Σ Γ u v ->
-    eq_context_upto Re Γ Δ ->
+    eq_context_upto Re ηpred Γ Δ ->
     ∑ v',
     red Σ Δ u v' *
-    eq_term_upto Re Re v v'.
+    eq_term_upto Re Re ηpred v v'.
   Proof.
     intros r HΓ.
     eapply red_alt in r.
@@ -439,7 +439,7 @@ Section ContextConversion.
     - exists x. split; auto. reflexivity.
     - destruct IHr1 as [v' [? ?]].
       destruct IHr2 as [v'' [? ?]].
-      unshelve eapply (red_eq_term_upto_l Σ _ (u:=y) (v:=v'') (u':=v')) in e; tc. all:pcuic.
+      unshelve eapply (red_eq_term_upto_l Σ _ _ (u:=y) (v:=v'') (u':=v')) in e; tc. all:pcuic.
       destruct e as [? [? ?]].
       exists x0; split; eauto.
       now transitivity v'.
@@ -475,7 +475,7 @@ Section ContextConversion.
   Qed.
 
   Lemma conv_alt_eq_context_upto {Γ Δ T U} :
-    eq_context_upto (eq_universe Σ) Γ Δ ->
+    eq_context_upto (eq_universe Σ) unrestricted_η Γ Δ ->
     Σ ;;; Γ |- T == U ->
     Σ ;;; Δ |- T == U.
   Proof.
@@ -491,7 +491,7 @@ Section ContextConversion.
   Qed.
 
   Lemma cumul_eq_context_upto {Γ Δ T U} :
-    eq_context_upto (eq_universe (global_ext_constraints Σ)) Γ Δ ->
+    eq_context_upto (eq_universe (global_ext_constraints Σ)) unrestricted_η Γ Δ ->
     Σ ;;; Γ |- T <= U ->
     Σ ;;; Δ |- T <= U.
   Proof.
@@ -506,6 +506,7 @@ Section ContextConversion.
     apply eq_term_leq_term. now apply eq_term_sym.
     eapply leq_term_trans with nf'; auto.
     now apply eq_term_leq_term.
+    all: auto.
   Qed.
 
   Lemma conv_alt_red_ctx {Γ Γ' T U} :
@@ -542,7 +543,10 @@ Section ContextConversion.
 
   Lemma conv_context_red_context Γ Γ' :
     conv_context Γ Γ' ->
-    ∑ Δ Δ', red_ctx Σ Γ Δ * red_ctx Σ Γ' Δ' * eq_context_upto (eq_universe Σ) Δ Δ'.
+    ∑ Δ Δ',
+      red_ctx Σ Γ Δ *
+      red_ctx Σ Γ' Δ' *
+      eq_context_upto (eq_universe Σ) unrestricted_η Δ Δ'.
   Proof.
     intros Hctx.
     induction Hctx.
@@ -747,24 +751,27 @@ Proof.
 Qed.
 
 
-Lemma eq_context_upto_conv_context {cf:checker_flags} (Σ : global_env_ext) Re :
+Lemma eq_context_upto_conv_context {cf:checker_flags} (Σ : global_env_ext) Re ηpred :
   RelationClasses.subrelation Re (eq_universe Σ) ->
-  subrelation (eq_context_upto Re) (fun Γ Γ' => conv_context Σ Γ Γ').
+  subrelation (eq_context_upto Re ηpred) (fun Γ Γ' => conv_context Σ Γ Γ').
 Proof.
   intros HRe Γ Δ h. induction h.
   - constructor.
   - constructor; tas.
     constructor. eapply conv_alt_refl.
     eapply eq_term_upto_impl; tea.
+    intros. constructor.
   - constructor; tas.
     constructor. eapply conv_alt_refl.
     eapply eq_term_upto_impl; tea.
+    1:{ intros. constructor. }
     eapply conv_alt_refl.
     eapply eq_term_upto_impl; tea.
+    intros. constructor.
 Qed.
 
 Lemma eq_context_upto_univ_conv_context {cf:checker_flags} Σ Γ Δ :
-    eq_context_upto (eq_universe (global_ext_constraints Σ)) Γ Δ ->
+    eq_context_upto (eq_universe (global_ext_constraints Σ)) unrestricted_η Γ Δ ->
     conv_context Σ Γ Δ.
 Proof.
   intros h. eapply eq_context_upto_conv_context; tea.

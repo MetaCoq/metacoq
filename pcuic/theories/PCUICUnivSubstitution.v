@@ -599,9 +599,9 @@ Definition precompose_subst_instance_instance__2 Rle u i i'
 
 
 Global Instance eq_term_upto_subst_instance
-         (Re Rle : constraints -> universe -> universe -> Prop)
+         (Re Rle : constraints -> universe -> universe -> Prop) ηpred
       {he: SubstUnivPreserved Re} {hle: SubstUnivPreserved Rle}
-  : SubstUnivPreserved (fun φ => eq_term_upto (Re φ) (Rle φ)).
+  : SubstUnivPreserved (fun φ => eq_term_upto (Re φ) (Rle φ) ηpred).
 Proof.
   intros φ φ' u Hu HH t t'.
   specialize (he _ _ _ Hu HH).

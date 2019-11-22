@@ -122,12 +122,12 @@ Definition dlet_in na A b t (p : pos t) : pos (tLetIn na A b t) :=
   exist (let_in :: ` p) (proj2_sig p).
 
 Lemma eq_term_upto_valid_pos :
-  forall {u v p Re Rle},
+  forall {u v p Re Rle ηpred},
     validpos u p ->
-    eq_term_upto Re Rle u v ->
+    eq_term_upto Re Rle ηpred u v ->
     validpos v p.
 Proof.
-  intros u v p Re Rle vp e.
+  intros u v p Re Rle ηpred vp e.
   induction p as [| c p ih ] in u, v, Re, Rle, vp, e |- *.
   - reflexivity.
   - destruct c, u. all: try discriminate.

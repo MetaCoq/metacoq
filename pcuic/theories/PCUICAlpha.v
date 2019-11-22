@@ -24,7 +24,7 @@ Section Alpha.
 
   Lemma build_branches_type_eq_term :
     forall p p' ind mdecl idecl pars u brtys,
-      eq_term_upto eq eq p p' ->
+      eq_term_upto eq eq no_η p p' ->
       map_option_out
         (build_branches_type ind mdecl idecl pars u p) =
       Some brtys ->
@@ -32,7 +32,7 @@ Section Alpha.
         map_option_out
           (build_branches_type ind mdecl idecl pars u p') =
         Some brtys' ×
-        All2 (on_Trel_eq (eq_term_upto eq eq) snd fst) brtys brtys'.
+        All2 (on_Trel_eq (eq_term_upto eq eq no_η) snd fst) brtys brtys'.
   Proof.
     intros p p' ind mdecl idecl pars u brtys e hb.
     unfold build_branches_type in *.
@@ -168,13 +168,13 @@ Qed.
     forall Σ Γ u v A,
       wf Σ.1 ->
       Σ ;;; Γ |- u : A ->
-      eq_term_upto eq eq u v ->
+      eq_term_upto eq eq no_η u v ->
       Σ ;;; Γ |- v : A.
   Proof.
     assert (tm :
       env_prop (fun Σ Γ u A =>
                   forall v,
-                    eq_term_upto eq eq u v ->
+                    eq_term_upto eq eq no_η u v ->
                     Σ ;;; Γ |- v : A)
     ).
     eapply typing_ind_env.
@@ -239,7 +239,8 @@ Qed.
                 ** eapply ihb. assumption.
                 ** right. eexists. eapply ihB. assumption.
                 ** eapply cumul_refl.
-                   eapply eq_term_upto_impl. 3: eassumption.
+                   eapply eq_term_upto_impl. 4: eassumption.
+                   3:{ intros. constructor. }
                    all: intros x ? [].
                    --- eapply eq_universe_refl.
                    --- eapply leq_universe_refl.
@@ -353,7 +354,7 @@ Qed.
       destruct hh as [[ety ebo] era].
       assert (hwf' : wf_local Σ (Γ ,,, fix_context mfix')).
       { rename types into Δ. set (Ξ := fix_context mfix').
-        assert (e : eq_context_upto eq Δ Ξ).
+        assert (e : eq_context_upto eq no_η Δ Ξ).
         { eapply eq_context_upto_rev'.
           clear - a.
           unfold mapi. generalize 0 at 2 4. intro n.
@@ -380,6 +381,7 @@ Qed.
               eapply eq_context_impl ; revgoals.
               -- eapply eq_context_upto_cat. 2: eassumption.
                  eapply eq_context_upto_refl. auto.
+              -- intros. constructor.
               -- intros ? ? []. eapply eq_universe_refl.
         - simpl in *. inversion hwf. subst.
           constructor.
@@ -394,6 +396,7 @@ Qed.
               eapply eq_context_impl ; revgoals.
               -- eapply eq_context_upto_cat. 2: eassumption.
                  eapply eq_context_upto_refl. auto.
+              -- intros. constructor.
               -- intros ? ? []. eapply eq_universe_refl.
           + simpl in *. destruct X0 as [? [? ih1]]. destruct X1 as [? ih2].
             eapply context_conversion'.
@@ -403,7 +406,8 @@ Qed.
               -- eapply ih2. assumption.
               -- right. eexists. eapply ih1. assumption.
               -- eapply cumul_refl.
-                 eapply eq_term_upto_impl. 3: eassumption.
+                 eapply eq_term_upto_impl. 4: eassumption.
+                 3:{ intros. constructor. }
                  all: intros ? ? [].
                  ++ eapply eq_universe_refl.
                  ++ eapply leq_universe_refl.
@@ -411,6 +415,7 @@ Qed.
               eapply eq_context_impl ; revgoals.
               -- eapply eq_context_upto_cat. 2: eassumption.
                  eapply eq_context_upto_refl. auto.
+              -- intros. constructor.
               -- intros ? ? []. eapply eq_universe_refl.
       }
       eapply type_Cumul.
@@ -440,7 +445,7 @@ Qed.
             rewrite fix_context_length. assumption.
           }
           rename types into Δ. set (Ξ := fix_context mfix') in *.
-          assert (e : eq_context_upto eq Δ Ξ).
+          assert (e : eq_context_upto eq no_η Δ Ξ).
           { eapply eq_context_upto_rev'.
             clear - a.
             unfold mapi. generalize 0 at 2 4. intro n.
@@ -479,11 +484,13 @@ Qed.
                                     ++++ eapply eq_context_upto_cat.
                                          2: eassumption.
                                          eapply eq_context_upto_refl. auto.
+                                    ++++ intros. constructor.
                                     ++++ intros ? ? []. eapply eq_universe_refl.
                        +++ eapply cumul_refl. rewrite <- el.
                            eapply eq_term_upto_lift.
                            eapply eq_term_upto_impl.
-                           3: intuition eauto.
+                           4: intuition eauto.
+                           3:{ intros. constructor. }
                            all: intros ? ? [].
                            *** eapply eq_universe_refl.
                            *** eapply leq_universe_refl.
@@ -491,6 +498,7 @@ Qed.
                        eapply eq_context_impl ; revgoals.
                        +++ eapply eq_context_upto_cat. 2: eassumption.
                            eapply eq_context_upto_refl. auto.
+                       +++ intros. constructor.
                        +++ intros ? ? []. eapply eq_universe_refl.
                 ** eapply isLambda_eq_term_l.
                    --- eassumption.
@@ -514,7 +522,7 @@ Qed.
       assert (hwf' : wf_local Σ (Γ ,,, fix_context mfix')).
       { set (Δ := fix_context mfix) in *.
         set (Ξ := fix_context mfix').
-        assert (e : eq_context_upto eq Δ Ξ).
+        assert (e : eq_context_upto eq no_η Δ Ξ).
         { eapply eq_context_upto_rev'.
           clear - a.
           unfold mapi. generalize 0 at 2 4. intro n.
@@ -541,6 +549,7 @@ Qed.
               eapply eq_context_impl ; revgoals.
               -- eapply eq_context_upto_cat. 2: eassumption.
                  eapply eq_context_upto_refl. auto.
+              -- intros. constructor.
               -- intros ? ? []. eapply eq_universe_refl.
         - simpl in *. inversion hwf. subst.
           constructor.
@@ -555,6 +564,7 @@ Qed.
               eapply eq_context_impl ; revgoals.
               -- eapply eq_context_upto_cat. 2: eassumption.
                  eapply eq_context_upto_refl. auto.
+              -- intros. constructor.
               -- intros ? ? []. eapply eq_universe_refl.
           + simpl in *. destruct X0 as [? [? ih1]]. destruct X1 as [? ih2].
             eapply context_conversion'.
@@ -564,7 +574,8 @@ Qed.
               -- eapply ih2. assumption.
               -- right. eexists. eapply ih1. assumption.
               -- eapply cumul_refl.
-                 eapply eq_term_upto_impl. 3: eassumption.
+                 eapply eq_term_upto_impl. 4: eassumption.
+                 3:{ intros. constructor. }
                  all: intros ? ? [].
                  ++ eapply eq_universe_refl.
                  ++ eapply leq_universe_refl.
@@ -572,6 +583,7 @@ Qed.
               eapply eq_context_impl ; revgoals.
               -- eapply eq_context_upto_cat. 2: eassumption.
                  eapply eq_context_upto_refl. auto.
+              -- intros. constructor.
               -- intros ? ? []. eapply eq_universe_refl.
       }
       eapply type_Cumul.
@@ -601,7 +613,7 @@ Qed.
           }
           set (Δ := fix_context mfix) in *.
           set (Ξ := fix_context mfix') in *.
-          assert (e : eq_context_upto eq Δ Ξ).
+          assert (e : eq_context_upto eq no_η Δ Ξ).
           { eapply eq_context_upto_rev'.
             clear - a.
             unfold mapi. generalize 0 at 2 4. intro n.
@@ -639,11 +651,13 @@ Qed.
                                ---- eapply eq_context_upto_cat.
                                     2: eassumption.
                                     eapply eq_context_upto_refl. auto.
+                               ---- intros. constructor.
                                ---- intros ? ? []. eapply eq_universe_refl.
                    --- eapply cumul_refl. rewrite <- el.
                        eapply eq_term_upto_lift.
                        eapply eq_term_upto_impl.
-                       3: intuition eauto.
+                       4: intuition eauto.
+                       3:{ intros. constructor. }
                        all: intros ? ? [].
                        +++ eapply eq_universe_refl.
                        +++ eapply leq_universe_refl.
@@ -651,6 +665,7 @@ Qed.
                    eapply eq_context_impl ; revgoals.
                    --- eapply eq_context_upto_cat. 2: eassumption.
                        eapply eq_context_upto_refl. auto.
+                   --- intros. constructor.
                    --- intros ? ? []. eapply eq_universe_refl.
              ++ eapply IHa.
                 ** assumption.
@@ -690,10 +705,10 @@ Qed.
 
   Local Ltac inv H := inversion H; subst; clear H.
 
-  Lemma upto_names_eq_term_upto Re Rle t u
-    : eq_term_upto Re Rle t u ->
+  Lemma upto_names_eq_term_upto Re Rle ηpred t u
+    : eq_term_upto Re Rle ηpred t u ->
       forall t' u', t ≡ t' -> u ≡ u' ->
-               eq_term_upto Re Rle t' u'.
+               eq_term_upto Re Rle ηpred t' u'.
   Proof.
     revert t u Rle. fix aux 4.
     destruct 1; cbn; intros t'' u'' H' H0';
@@ -745,9 +760,9 @@ Qed.
     intros; eapply upto_names_eq_term_upto; eassumption.
   Qed.
 
-  Definition upto_names_decl := eq_decl_upto eq.
+  Definition upto_names_decl := eq_decl_upto eq no_η.
 
-  Definition upto_names_ctx := eq_context_upto eq.
+  Definition upto_names_ctx := eq_context_upto eq no_η.
 
   Infix "≡Γ" := upto_names_ctx (at level 60).
 

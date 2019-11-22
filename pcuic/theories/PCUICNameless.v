@@ -84,7 +84,7 @@ Local Ltac anonify :=
 
 Local Ltac ih :=
   lazymatch goal with
-  | ih : forall v : term, _ -> _ -> eq_term_upto _ _ _ _ -> ?u = _
+  | ih : forall v : term, _ -> _ -> eq_term_upto _ _ _ _ _ -> ?u = _
     |- ?u = ?v =>
     eapply ih ; assumption
   end.
@@ -93,7 +93,7 @@ Lemma nameless_eq_term_spec :
   forall u v,
     nameless u ->
     nameless v ->
-    eq_term_upto eq eq u v ->
+    eq_term_upto eq eq no_η u v ->
     u = v.
 Proof.
   intros u v hu hv e.
@@ -203,11 +203,11 @@ Proof.
 Qed.
 
 Lemma nl_eq_term_upto :
-  forall Re Rle t t',
-    eq_term_upto Re Rle t t' ->
-    eq_term_upto Re Rle (nl t) (nl t').
+  forall Re Rle ηpred t t',
+    eq_term_upto Re Rle ηpred t t' ->
+    eq_term_upto Re Rle ηpred (nl t) (nl t').
 Proof.
-  intros Re Rle t t' h.
+  intros Re Rle ηpred t t' h.
   revert t t' Rle h. fix aux 4.
   intros t t' Rle h.
   destruct h.
@@ -256,7 +256,7 @@ Qed.
 
 Corollary eq_term_nl_eq :
   forall u v,
-    eq_term_upto eq eq u v ->
+    eq_term_upto eq eq no_η u v ->
     nl u = nl v.
 Proof.
   intros u v h.
@@ -268,17 +268,17 @@ Qed.
 
 Local Ltac ih3 :=
   lazymatch goal with
-  | ih : forall Rle v, eq_term_upto _ _ (nl ?u) _ -> _
-    |- eq_term_upto _ _ ?u _ =>
+  | ih : forall Rle v, eq_term_upto _ _ _ (nl ?u) _ -> _
+    |- eq_term_upto _ _ _ ?u _ =>
     eapply ih ; assumption
   end.
 
 Lemma eq_term_upto_nl_inv :
-  forall Re Rle u v,
-    eq_term_upto Re Rle (nl u) (nl v) ->
-    eq_term_upto Re Rle u v.
+  forall Re Rle ηpred u v,
+    eq_term_upto Re Rle ηpred (nl u) (nl v) ->
+    eq_term_upto Re Rle ηpred u v.
 Proof.
-  intros Re Rle u v h.
+  intros Re Rle ηpred u v h.
   induction u in v, h, Rle |- * using term_forall_list_ind.
   all: dependent destruction h.
   all: destruct v ; try discriminate.
@@ -334,12 +334,12 @@ Proof.
 Qed.
 
 Lemma eq_term_upto_tm_nl :
-  forall Re Rle u,
+  forall Re Rle ηpred u,
     Reflexive Re ->
     Reflexive Rle ->
-    eq_term_upto Re Rle u (nl u).
+    eq_term_upto Re Rle ηpred u (nl u).
 Proof.
-  intros Re Rle u hRe hRle.
+  intros Re Rle ηpred u hRe hRle.
   induction u in Rle, hRle |- * using term_forall_list_ind.
   all: try solve [
     simpl ; try apply eq_term_upto_refl ; auto ; constructor ; eauto

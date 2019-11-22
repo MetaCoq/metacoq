@@ -862,7 +862,7 @@ Section Inversions.
           -- simpl. intuition eauto.
              ++ eapply eq_term_upto_refl.
                 all: apply eq_universe_refl.
-             ++ eapply upto_names_impl. 3: assumption.
+             ++ eapply upto_names_impl. 3: eassumption.
                 all: apply eq_universe_refl.
           -- apply All2_same. intros. intuition reflexivity.
   Qed.
@@ -880,7 +880,7 @@ Section Inversions.
     intros Γ mfix mfix' idx wΣ h.
     assert (thm :
       Σ ;;; Γ |- tFix mfix idx == tFix mfix' idx ×
-      eq_context_upto eq (Γ ,,, fix_context mfix) (Γ ,,, fix_context mfix')
+      eq_context_upto eq no_η (Γ ,,, fix_context mfix) (Γ ,,, fix_context mfix')
     ).
     { apply All2_many_OnOne2 in h.
       induction h.
@@ -897,7 +897,8 @@ Section Inversions.
             intros [na ty bo ra] [na' ty' bo' ra'] [? [hh ?]].
             simpl in *. intuition eauto.
             eapply conv_alt_eq_context_upto. 2: eassumption.
-            eapply eq_context_impl. 2: eassumption.
+            eapply eq_context_impl. 3: eassumption.
+            2:{ intros. constructor. }
             intros ? ? []. eapply eq_universe_refl.
         + eapply eq_ctx_trans.
           * intros ? ? ? [] []. reflexivity.

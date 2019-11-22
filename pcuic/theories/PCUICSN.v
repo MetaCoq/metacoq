@@ -232,7 +232,7 @@ Section Alpha.
   Qed.
 
   Lemma cored_eq_term_upto :
-    forall Re Rle Γ u v u',
+    forall Re Rle ηpred Γ u v u',
       RelationClasses.Reflexive Re ->
       SubstUnivPreserving Re ->
       RelationClasses.Reflexive Rle ->
@@ -240,11 +240,11 @@ Section Alpha.
       RelationClasses.Transitive Re ->
       RelationClasses.Transitive Rle ->
       RelationClasses.subrelation Re Rle ->
-      eq_term_upto Re Rle u u' ->
+      eq_term_upto Re Rle ηpred u u' ->
       cored Σ Γ v u ->
-      exists v', cored Σ Γ v' u' /\ ∥ eq_term_upto Re Rle v v' ∥.
+      exists v', cored Σ Γ v' u' /\ ∥ eq_term_upto Re Rle ηpred v v' ∥.
   Proof.
-    intros Re Rle Γ u v u' X X0 X1 X2 X3 X4 X5 e h.
+    intros Re Rle ηpred Γ u v u' X X0 X1 X2 X3 X4 X5 e h.
     apply cored_alt in h as [h].
     induction h in u', e |- *.
     - eapply red1_eq_term_upto_l in r. 8: eauto. all: auto.
@@ -260,16 +260,16 @@ Section Alpha.
   Qed.
 
   Lemma cored_eq_context_upto :
-    forall Re Γ Δ u v,
+    forall Re ηpred Γ Δ u v,
       RelationClasses.Reflexive Re ->
       RelationClasses.Symmetric Re ->
       RelationClasses.Transitive Re ->
       SubstUnivPreserving Re ->
-      eq_context_upto Re Γ Δ ->
+      eq_context_upto Re ηpred Γ Δ ->
       cored Σ Γ u v ->
-      exists u', cored Σ Δ u' v /\ ∥ eq_term_upto Re Re u u' ∥.
+      exists u', cored Σ Δ u' v /\ ∥ eq_term_upto Re Re ηpred u u' ∥.
   Proof.
-    intros Re Γ Δ u v hRe1 hRe2 hRe3 hRe4 e h.
+    intros Re ηpred Γ Δ u v hRe1 hRe2 hRe3 hRe4 e h.
     apply cored_alt in h as [h].
     induction h.
     - eapply red1_eq_context_upto_l in r. all: eauto.
@@ -289,7 +289,7 @@ Section Alpha.
 
   Lemma eq_context_upto_nlctx :
     forall Γ,
-      eq_context_upto eq Γ (nlctx Γ).
+      eq_context_upto eq no_η Γ (nlctx Γ).
   Proof.
     intros Γ.
     induction Γ as [| [na [b|] A] Γ ih ].

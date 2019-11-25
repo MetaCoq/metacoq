@@ -93,56 +93,220 @@ Ltac sq := try (destruct HΣ as [wfΣ]; clear HΣ);
          | H : ∥ _ ∥ |- _ => destruct H
          end; try eapply sq.
 
+Section Normal.
+
+  Context (flags : RedFlags.t).
+
+  (* TODO: blocked fixes are missing! *)
+  
+  Inductive normal (Γ : context) : term -> Prop :=
+  | nf_ne t : neutral Γ t -> normal Γ t
+  | nf_sort s : normal Γ (tSort s)
+  | nf_prod na A B : normal Γ A -> normal (Γ ,, vass na A) B ->
+                     normal Γ (tProd na A B)
+  | nf_lam na A B : normal Γ A -> normal (Γ ,, vass na A) B ->
+                    normal Γ (tLambda na A B)
+  | nf_cstrapp i n u v : All (normal Γ) v -> normal Γ (mkApps (tConstruct i n u) v)
+  | nf_indapp i u v : All (normal Γ) v -> normal Γ (mkApps (tInd i u) v)
+  | nf_fix mfix idx : All (compose (normal (Γ ,,, fix_context mfix)) dbody) mfix ->
+                      All (compose (normal Γ) dtype) mfix ->
+                      normal Γ (tFix mfix idx)
+  | nf_cofix mfix idx : All (compose (normal (Γ ,,, fix_context mfix)) dbody) mfix ->
+                      All (compose (normal Γ) dtype) mfix ->
+                        normal Γ (tCoFix mfix idx)
+
+  with neutral (Γ : context) : term -> Prop :=
+  | ne_rel i :
+      option_map decl_body (nth_error Γ i) = Some None ->
+      neutral Γ (tRel i)
+  | ne_var v : neutral Γ (tVar v)
+  | ne_evar n l : All (normal Γ) l -> neutral Γ (tEvar n l)
+  | ne_const c u decl :
+      lookup_env Σ c = Some (ConstantDecl c decl) -> decl.(cst_body) = None ->
+      neutral Γ (tConst c u)
+  | ne_app f v : neutral Γ f -> normal Γ v -> neutral Γ (tApp f v)
+  | ne_case i p c brs : neutral Γ c -> normal Γ p -> All (compose (normal Γ) snd) brs ->
+                        neutral Γ (tCase i p c brs)
+  | ne_proj p c : neutral Γ c -> neutral Γ (tProj p c).
+
+End Normal.
+
 Hint Constructors normal neutral.
 
 Derive Signature for normal.
 Derive Signature for neutral.
 
-(* Definition normal_neutral_dec Γ t : ({normal Σ Γ t} + {~ (normal Σ Γ t)}) * ({neutral Σ Γ t} + {~ (neutral Σ Γ t)}). *)
-(* Proof. *)
-(*   induction t in Γ |- *; split; eauto. *)
-(*   all: try now (right; intros H; depelim H). *)
-(*   - destruct (option_map decl_body (nth_error Γ n)) as [ [ | ] | ] eqn:E. *)
-(*     + right. intros H. depelim H. depelim H. congruence. admit. admit. *)
-(*     + eauto. *)
-(*     + right. intros H. depelim H. depelim H. congruence. admit. admit. *)
-(*   - destruct (option_map decl_body (nth_error Γ n)) as [ [ | ] | ] eqn:E. *)
-(*     + right. intros H. depelim H. congruence.  *)
-(*     + eauto. *)
-(*     + right. intros H. depelim H. congruence. *)
-(*   - destruct (IHt1 Γ) as [[] _]; *)
-(*       [destruct (IHt2 (Γ,, vass na t1)) as [[] _]|]; eauto. *)
-(*     + right. intros H. depelim H. depelim H. eauto. admit. admit. *)
-(*     + right. intros H. depelim H. depelim H. eauto. admit. admit. *)
-(*   - destruct (IHt1 Γ) as [[] _]; *)
-(*       [destruct (IHt2 (Γ,, vass na t1)) as [[] _]|]; eauto. *)
-(*     + right. intros H. depelim H. depelim H. eauto. admit. admit. *)
-(*     + right. intros H. depelim H. depelim H. eauto. admit. admit. *)
-(*   - right. intros H. depelim H. depelim H. admit. admit. *)
-(*   - destruct (IHt1 Γ) as [_ []]; *)
-(*       [destruct (IHt2 Γ) as [[] _]|]; eauto. *)
-(*     + right. intros H. depelim H. depelim H. eauto. admit. admit. *)
-(*     + right. intros H. depelim H. depelim H. eauto. admit. admit. *)
-(*   - destruct (IHt1 Γ) as [_ []]; *)
-(*       [destruct (IHt2 Γ) as [[] _]|]; eauto. *)
-(*     + right. intros H. depelim H. eauto.  *)
-(*     + right. intros H. depelim H. eauto. *)
-(*   - destruct (lookup_env Σ k) as [[] | ] eqn:E. *)
-(*     + destruct (cst_body c) eqn:E2. *)
-(*       * right. intros H. depelim H. depelim H. congruence. admit. admit. *)
-(*       * destruct (string_dec k k0). subst. left. eauto.  *)
-(*         right. intros H. depelim H. depelim H. congruence. admit. admit. *)
-(*     +   right. intros H. depelim H. depelim H. congruence. admit. admit. *)
-(*     +   right. intros H. depelim H. depelim H. congruence. admit. admit. *)
-(*   - destruct (lookup_env Σ k) as [[] | ] eqn:E. *)
-(*     + destruct (cst_body c) eqn:E2. *)
-(*       * right. intros H. depelim H. congruence.  *)
-(*       * destruct (string_dec k k0). subst. left. eauto.  *)
-(*         right. intros H. depelim H. congruence. *)
-(*     +   right. intros H. depelim H. congruence. *)
-(*     +   right. intros H. depelim H. congruence. *)
-(*   - *)
-(* Admitted. *)
+Ltac d := match goal with
+         | [ H : normal _ (?f ?a) |- _ ] => depelim H
+         | [ H : neutral _ (?f ?a)|- _ ] => depelim H
+         end.
+
+Lemma OnOn2_contra A  (P : A -> A -> Type) l1 l2 : (forall x y, P x y -> False) -> OnOne2 P l1 l2 -> False.
+Proof.
+  intros. induction X; eauto.
+Qed.
+
+Notation decision P := ({P} + {~P}).
+
+Lemma dec_All X (L : list X) P : All (fun x => decision (P x)) L ->
+                                 All P L + (All P L -> False).
+Proof.
+  intros. induction X0.
+  - left. econstructor.
+  - destruct p.
+    + destruct IHX0. firstorder. right. inversion 1. subst. eauto.
+    + right. inversion 1; subst; eauto.
+Defined.
+
+Lemma normal_nf Γ t t' : normal Γ t \/ neutral Γ t -> red1 Σ Γ t t' -> False.
+Proof.
+  intros. induction X using red1_ind_all; destruct H.
+  all: repeat match goal with
+         | [ H : normal _ (?f ?a) |- _ ] => depelim H
+         | [ H : neutral _ (?f ?a)|- _ ] => depelim H
+         end.
+  all: try congruence.
+  Ltac help := try repeat match goal with
+                  | [ H0 : _ = mkApps _ _ |- _ ] => 
+                    eapply (f_equal decompose_app) in H0;
+                      rewrite !decompose_app_mkApps in H0; cbn in *; congruence
+                  | [ H1 : tApp _ _ = mkApps _ ?args |- _ ] =>
+                    destruct args using rev_ind; cbn in *; [ inv H1 |
+                                                             rewrite <- mkApps_nested in H1; cbn in *; inv H1
+                                                    ]
+                  | [ H0 : mkApps _ _ = _ |- _ ] => symmetry in H0
+                         end.
+  all: help.
+  all: try tauto.
+  all: try now (clear - H; depind H; help; eauto).
+  - destruct args using rev_ind; cbn in *; [ inv H1 |
+                                             rewrite <- mkApps_nested in H1; cbn in *; inv H1
+                                           ].
+    destruct narg; inv H3.
+  - eapply OnOne2_All_mix_left in X; try eassumption.
+    eapply OnOn2_contra; try eassumption.
+    firstorder.
+  - eapply OnOne2_All_mix_left in X; try eassumption.
+    eapply OnOn2_contra; try eassumption.
+    firstorder.
+  - eapply IHX. left.
+    eapply nf_cstrapp. now eapply All_app in H as [H _].
+  - eapply IHX. left.
+    eapply nf_indapp. now eapply All_app in H as [H _].
+  - eapply IHX. left.
+    eapply All_app in H as [_ H]. now inv H.
+  - eapply IHX. left.
+    eapply All_app in H as [_ H]. now inv H.
+  - eapply OnOne2_All_mix_left in X; try eassumption.
+    eapply OnOn2_contra; try eassumption.
+    firstorder.
+  - eapply OnOne2_All_mix_left in X; try eassumption.
+    eapply OnOn2_contra; try eassumption.
+    firstorder.
+  - eapply OnOne2_All_mix_left in X; try eassumption.
+    eapply OnOn2_contra; try eassumption.
+    firstorder.
+  - eapply OnOne2_All_mix_left in X. 2:exact H.
+    eapply OnOn2_contra; try eassumption.
+    firstorder.
+  - eapply OnOne2_All_mix_left in X. 2:exact H0.
+    eapply OnOn2_contra; try eassumption.
+    firstorder.
+  - eapply OnOne2_All_mix_left in X. 2:exact H.
+    eapply OnOn2_contra; try eassumption.
+    firstorder.
+Qed.
+
+Hint Constructors normal neutral.
+    
+Definition normal_neutral_dec Γ t : ({normal Γ t} + {~ (normal Γ t)}) * ({neutral Γ t} + {~ (neutral Γ t)}).
+Proof.
+  induction t using term_forall_list_ind in Γ |- *; split; eauto.
+  all: try now (right; intros H; depelim H).
+  - destruct (option_map decl_body (nth_error Γ n)) as [ [ | ] | ] eqn:E.
+    + right. intros H. depelim H. depelim H. congruence. help. help.
+    + eauto.
+    + right. intros H. depelim H. depelim H. congruence. help. help.
+  - destruct (option_map decl_body (nth_error Γ n)) as [ [ | ] | ] eqn:E.
+    + right. intros H. depelim H. congruence.
+    + eauto.
+    + right. intros H. depelim H. congruence.
+  - todo "evar".
+  - todo "evar".
+  - destruct (IHt1 Γ) as [[] _];
+      [destruct (IHt2 (Γ,, vass n t1)) as [[] _]|]; eauto.
+    + right. intros H. depelim H. depelim H. eauto. help. help.
+    + right. intros H. depelim H. depelim H. eauto. help. help.
+  - destruct (IHt1 Γ) as [[] _];
+      [destruct (IHt2 (Γ,, vass n t1)) as [[] _]|]; eauto.
+    + right. intros H. depelim H. depelim H. eauto. help. help.
+    + right. intros H. depelim H. depelim H. eauto. help. help.
+  - right. intros H. depelim H. depelim H. help. help.
+  - destruct (IHt1 Γ) as [_ []];
+      [destruct (IHt2 Γ) as [[] _]|]; eauto.
+    + right. intros H. depelim H. depelim H. eauto.
+      * help. eapply n0. eapply All_app in H as [_ H]. inv H. eauto.
+      * help. eapply n0. eapply All_app in H as [_ H]. inv H. eauto.
+    + (* destruct t1. *)
+      (* * right. intros H. eapply n. econstructor. *)
+      (* * help. eapply n.  *)
+
+      (*   eapply All_app in H as [_ H]. inv H. eauto. *)
+      (* * help. eapply n0. eapply All_app in H as [_ H]. inv H. eauto. *)
+      todo "TODO". 
+  - destruct (IHt1 Γ) as [_ []];
+      [destruct (IHt2 Γ) as [[] _]|]; eauto.
+    + right. intros H. depelim H. eauto.
+    + right. intros H. depelim H. eauto.
+  - destruct (lookup_env Σ s) as [[] | ] eqn:E.
+    + destruct (cst_body c) eqn:E2.
+      * right. intros H. depelim H. depelim H. congruence. help. help.
+      * destruct (string_dec s k). subst. left. eauto.
+        right. intros H. depelim H. depelim H. congruence. help. help.
+    +   right. intros H. depelim H. depelim H. congruence. help. help.
+    +   right. intros H. depelim H. depelim H. congruence. help. help.
+  - destruct (lookup_env Σ s) as [[] | ] eqn:E.
+    + destruct (cst_body c) eqn:E2.
+      * right. intros H. depelim H. congruence.
+      * destruct (string_dec s k). subst. left. eauto.
+        right. intros H. depelim H. congruence.
+    +   right. intros H. depelim H. congruence.
+    +   right. intros H. depelim H. congruence.
+  - left. eapply nf_indapp with (v := []). econstructor.
+  - left. eapply nf_cstrapp with (v := []). econstructor.
+  - todo "case".
+  - todo "case".
+  - destruct (IHt Γ) as [_ []].
+    + eauto.
+    + right. intros H. depelim H. depelim H. eauto. help. help.
+  - destruct (IHt Γ) as [_ []].
+    + eauto.
+    + right. intros H. depelim H. eauto.
+  - hnf in X.
+
+    destruct dec_All with (P := (normal Γ ∘ dtype)) (L := m).
+    eapply All_impl. eassumption. cbn. intros. eapply H.
+
+    destruct dec_All with (P := normal (Γ ,,, fix_context m) ∘ dbody) (L := m).
+    eapply All_impl. exact X. cbn. intros. eapply H.
+
+    + left. eapply nf_fix. eauto. eauto.
+    + right. intros H. depelim H. depelim H. help. help. eauto.
+    + right. intros H. depelim H. depelim H. help. help. eauto.
+  - hnf in X.
+
+    destruct dec_All with (P := (normal Γ ∘ dtype)) (L := m).
+    eapply All_impl. eassumption. cbn. intros. eapply H.
+
+    destruct dec_All with (P := normal (Γ ,,, fix_context m) ∘ dbody) (L := m).
+    eapply All_impl. exact X. cbn. intros. eapply H.
+
+    + left. eapply nf_cofix. eauto. eauto.
+    + right. intros H. depelim H. depelim H. help. help. eauto.
+    + right. intros H. depelim H. depelim H. help. help. eauto.
+Defined.
+
+Definition normal_dec Γ t := fst (normal_neutral_dec Γ t).
 
 Lemma mkApps_tFix_inv t mfix n L :
   t = mkApps (tFix mfix n) L ->
@@ -157,58 +321,58 @@ Proof.
 Qed.
 
 Notation err := (TypeError  (Msg "hnf did not return normal form")).
-Program Fixpoint normal_dec Γ t : typing_result (forall t', red1 Σ Γ t t' -> False) :=
-  match t with
-  | tRel n => match option_map decl_body (nth_error Γ n) with
-               Some (Some body) => err
-             | _ => ret _
-             end
-  | tVar n => ret _
-  | tSort u => ret _
-  | tProd na A B => H1 <- normal_dec Γ A ;;
-                      H2 <- normal_dec (Γ,, vass na A) B;;
-                      ret _
-  | tLambda na A B => H1 <- normal_dec Γ A ;;
-                      H2 <- normal_dec (Γ,, vass na A) B;;
-                      ret _
-  | tLetIn _ _ _ _ => err
-  | tConst c u => match lookup_env Σ c  with Some (ConstantDecl (Build_constant_body _ (Some _) _)) => err
-                                       | _ => ret _
-                 end
-  | tInd _ _ => ret _
-  | tConstruct _ _ _ => ret _
-  | tCase _ _ _ _ => err
-  | tProj _ _ => err
-  (* | tFix _ _ => ret _ *)
-  (* | tCoFix _ _ => ret _ *)
-  | _ => TypeError (Msg "not implemented")
-  end.
-Next Obligation.
-  intros; depelim X; try congruence; eapply mkApps_tFix_inv in H0 as [(? & ? & ?) | [] ]; congruence.
-Qed.
-Next Obligation.
-  intros; depelim X; try congruence; try eapply mkApps_tFix_inv in H as [(? & ? & ?) | [] ]; try congruence.
-Qed.
-Next Obligation.
-  intros; depelim X; try congruence; try eapply mkApps_tFix_inv in H as [(? & ? & ?) | [] ]; try congruence.
-Qed.
-Next Obligation.
-  intros; depelim X; try congruence; try eapply mkApps_tFix_inv in H as [(? & ? & ?) | [] ]; try congruence; eauto.
-Qed.
-Next Obligation.
-  intros; depelim X; try congruence; try eapply mkApps_tFix_inv in H as [(? & ? & ?) | []]; try congruence; eauto.
-Qed.
-Next Obligation.
-  intros; depelim X; try congruence; try eapply mkApps_tFix_inv in H0 as [(? & ? & ?) | [] ]; try congruence; eauto.
-  unfold declared_constant in *. rewrite isdecl in H. destruct decl. destruct cst_body; cbn in *; firstorder congruence.
-Qed.
-Next Obligation.
-  intros; depelim X; try congruence; try eapply mkApps_tFix_inv in H as [(? & ? & ?) | [] ]; try congruence; eauto.
-Qed.
-Next Obligation.
-  intros; depelim X; try congruence; try eapply mkApps_tFix_inv in H as [(? & ? & ?) | [] ]; try congruence; eauto.
-Qed.
-Solve All Obligations with firstorder congruence.
+(* Program Fixpoint normal_dec Γ t : typing_result (forall t', red1 Σ Γ t t' -> False) := *)
+(*   match t with *)
+(*   | tRel n => match option_map decl_body (nth_error Γ n) with *)
+(*                Some (Some body) => err *)
+(*              | _ => ret _ *)
+(*              end *)
+(*   | tVar n => ret _ *)
+(*   | tSort u => ret _ *)
+(*   | tProd na A B => H1 <- normal_dec Γ A ;; *)
+(*                       H2 <- normal_dec (Γ,, vass na A) B;; *)
+(*                       ret _ *)
+(*   | tLambda na A B => H1 <- normal_dec Γ A ;; *)
+(*                       H2 <- normal_dec (Γ,, vass na A) B;; *)
+(*                       ret _ *)
+(*   | tLetIn _ _ _ _ => err *)
+(*   | tConst c u => match lookup_env Σ c  with Some (ConstantDecl _ (Build_constant_body _ (Some _) _)) => err *)
+(*                                        | _ => ret _ *)
+(*                  end *)
+(*   | tInd _ _ => ret _ *)
+(*   | tConstruct _ _ _ => ret _ *)
+(*   | tCase _ _ _ _ => err *)
+(*   | tProj _ _ => err *)
+(*   (* | tFix _ _ => ret _ *) *)
+(*   (* | tCoFix _ _ => ret _ *) *)
+(*   | _ => TypeError (Msg "not implemented") *)
+(*   end. *)
+(* Next Obligation. *)
+(*   intros; depelim X; try congruence; eapply mkApps_tFix_inv in H0 as [(? & ? & ?) | [] ]; congruence. *)
+(* Qed. *)
+(* Next Obligation. *)
+(*   intros; depelim X; try congruence; try eapply mkApps_tFix_inv in H as [(? & ? & ?) | [] ]; try congruence. *)
+(* Qed. *)
+(* Next Obligation. *)
+(*   intros; depelim X; try congruence; try eapply mkApps_tFix_inv in H as [(? & ? & ?) | [] ]; try congruence. *)
+(* Qed. *)
+(* Next Obligation. *)
+(*   intros; depelim X; try congruence; try eapply mkApps_tFix_inv in H as [(? & ? & ?) | [] ]; try congruence; eauto. *)
+(* Qed. *)
+(* Next Obligation. *)
+(*   intros; depelim X; try congruence; try eapply mkApps_tFix_inv in H as [(? & ? & ?) | []]; try congruence; eauto. *)
+(* Qed. *)
+(* Next Obligation. *)
+(*   intros; depelim X; try congruence; try eapply mkApps_tFix_inv in H0 as [(? & ? & ?) | [] ]; try congruence; eauto. *)
+(*   unfold declared_constant in *. rewrite isdecl in H. destruct decl. destruct cst_body; cbn in *; firstorder congruence. *)
+(* Qed. *)
+(* Next Obligation. *)
+(*   intros; depelim X; try congruence; try eapply mkApps_tFix_inv in H as [(? & ? & ?) | [] ]; try congruence; eauto. *)
+(* Qed. *)
+(* Next Obligation. *)
+(*   intros; depelim X; try congruence; try eapply mkApps_tFix_inv in H as [(? & ? & ?) | [] ]; try congruence; eauto. *)
+(* Qed. *)
+(* Solve All Obligations with firstorder congruence. *)
 
 Inductive red' (Σ : global_env) (Γ : context) : term -> term -> Type :=
   refl_red' M : red' Σ Γ M M
@@ -235,7 +399,7 @@ Program Definition reduce_to_sort' Γ t (h : wellformed Σ Γ t)
   | _ =>
     match hnf HΣ Γ t h with
     | tSort u => ret (inl (u; _))
-    | t' => match normal_dec Γ t' with Checked H => ret (inr _) | TypeError t => TypeError t end
+    | t' => match normal_dec Γ t' with left H => ret (inr _) | right t => err end
     end
   end.
 Next Obligation.
@@ -251,7 +415,7 @@ Next Obligation.
   inversion r; subst.
   - eapply invert_red_sort in r0; eauto.
     edestruct H0. eauto.
-  - eauto.
+  - eapply normal_nf. left; eassumption. eauto.    
 Qed.
 
 Program Definition reduce_to_prod' Γ t (h : wellformed Σ Γ t)
@@ -261,7 +425,7 @@ Program Definition reduce_to_prod' Γ t (h : wellformed Σ Γ t)
   | _ =>
     match hnf HΣ Γ t h with
     | tProd na a b => ret (inl (na; a; b; _))
-    | t' => match normal_dec Γ t' with Checked H => ret (inr _) | _ => TypeError (Msg "hnf did not return normal form") end
+    | t' => match normal_dec Γ t' with left H => ret (inr _) | right t => err end
     end
   end.
 Next Obligation.
@@ -277,7 +441,7 @@ Next Obligation.
   inversion r; subst.
   - eapply invert_red_prod in r0 as (? & ? & [] & ?); eauto.
     edestruct H0. eauto.
-  - eauto.
+  - eapply normal_nf. left; eassumption. eauto.    
 Qed.
 
 Equations is_arity Γ (HΓ : ∥wf_local Σ Γ∥) T (HT : wellformed Σ Γ T) :
@@ -691,14 +855,14 @@ Program Definition erase_mutual_inductive_body Σ wfΣ
 Program Fixpoint erase_global_decls Σ : ∥ wf Σ ∥ -> typing_result E.global_declarations := fun wfΣ =>
   match Σ with
   | [] => ret []
-  | (kn, ConstantDecl cb) :: Σ =>
+  | ConstantDecl kn cb :: Σ =>
     cb' <- erase_constant_body (Σ, cst_universes cb) _ cb;;
     Σ' <- erase_global_decls Σ _;;
-    ret ((kn, E.ConstantDecl cb') :: Σ')
-  | (kn, InductiveDecl mib) :: Σ =>
+    ret (E.ConstantDecl kn cb' :: Σ')
+  | InductiveDecl kn mib :: Σ =>
     mib' <- erase_mutual_inductive_body (Σ, ind_universes mib) _ mib _ ;;
     Σ' <- erase_global_decls Σ _;;
-    ret ((kn, E.InductiveDecl mib') :: Σ')
+    ret (E.InductiveDecl kn mib' :: Σ')
   end.
 Next Obligation.
   sq. split. cbn.
@@ -735,14 +899,14 @@ Proof.
   - inv H. econstructor.
   - cbn in H. unfold bind in *. cbn in *. repeat destruct ?; try congruence.
     + inv H. inv E.
-      unfold erase_constant_body in E2.
-      unfold bind in E2. cbn in E2. repeat destruct ?; try congruence.
-      inv E2. econstructor.
+      unfold erase_constant_body in E1.
+      unfold bind in E1. cbn in E1. repeat destruct ?; try congruence.
+      inv E1. econstructor.
       * unfold optM in E0. destruct ?; try congruence.
         -- unfold erases_constant_body.
           cbn. cbn in *.
            destruct ( erase (Σ, _)
-           (erase_global_decls_obligation_1 ((k, ConstantDecl c) :: Σ)
+           (erase_global_decls_obligation_1 (ConstantDecl k c :: Σ)
               (sq w) k c Σ eq_refl) [] wf_local_nil t) eqn:E5;
              rewrite E5 in E0; inv E0.
            rewrite E1.
@@ -755,8 +919,8 @@ Proof.
            rewrite E1 in X0. cbn in X0. eassumption.
         -- cbn. inv E0. unfold erases_constant_body.
            rewrite E1. cbn. econstructor.
-      * eapply IHΣ. unfold erase_global. rewrite E3. reflexivity.
-    + inv H. inv E. inv E2.
+      * eapply IHΣ. unfold erase_global. rewrite E2. reflexivity.
+    + inv H. inv E. inv E1.
       unfold erase_mutual_inductive_body, bind in H0. cbn in H0.
       destruct ?; try congruence. inv H0.
       econstructor.
@@ -795,6 +959,6 @@ Proof.
 
            eapply erases_erase.
            2:{ eauto. } eauto.
-  * eapply IHΣ. unfold erase_global. rewrite E3. reflexivity.
+  * eapply IHΣ. unfold erase_global. rewrite E2. reflexivity.
 Qed.
 

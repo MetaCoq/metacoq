@@ -66,6 +66,7 @@ Extraction Library PCUICEquality.
 Extraction Library PCUICTyping.
 Extraction Library PCUICChecker.
 Extraction Library PCUICRetyping.
+Extraction Library PCUICInduction.
 Extraction Library PCUICMetaTheory.
 Extraction Library TemplateToPCUIC.
 Extraction Library PCUICPretty.

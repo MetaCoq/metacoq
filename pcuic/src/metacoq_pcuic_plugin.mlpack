@@ -12,6 +12,7 @@ PCUICReflect
 PCUICEquality
 PCUICTyping
 PCUICChecker
+PCUICInduction
 PCUICPretty
 PCUICRetyping
 PCUICMetaTheory

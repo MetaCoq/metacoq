@@ -33,6 +33,9 @@ MetaCoq Erase ((fun (X : Set) (x : X) (e : x = x) =>
                   | eq_refl => true
                   end)).
 
+
+MetaCoq Erase (ltac:(let x := eval cbv in plus in exact x)).
+
 (* (** Check the treatment of Prop <= Type *) *)
 MetaCoq Erase ((fun (X : Set) (x : X) => x) True I).
 Quote Recursively Definition foo := List.map.

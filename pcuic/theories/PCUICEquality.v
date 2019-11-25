@@ -11,6 +11,8 @@ From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 Set Equations With UIP.
 
+Set Default Goal Selector "!".
+
 Local Open Scope type_scope.
 
 Section CRelationLemmas.
@@ -52,8 +54,9 @@ Proof.
   intros H x y xy. eapply Forall2_impl ; tea.
 Qed.
 
-(** ** Syntactic equality up-to universes
-  We don't look at printing annotations *)
+(** ** Syntactic equality up to universes and η
+  (ignoring printing annotations)
+*)
 
 Inductive eq_term_upto (Re Rle : universe -> universe -> Prop) (ηpred : term -> Prop) : term -> term -> Type :=
 | eq_Rel n  :
@@ -130,7 +133,183 @@ Inductive eq_term_upto (Re Rle : universe -> universe -> Prop) (ηpred : term ->
       eq_term_upto Re Re ηpred x.(dbody) y.(dbody) *
       (x.(rarg) = y.(rarg))
     ) mfix mfix' ->
-    eq_term_upto Re Rle ηpred (tCoFix mfix idx) (tCoFix mfix' idx).
+    eq_term_upto Re Rle ηpred (tCoFix mfix idx) (tCoFix mfix' idx)
+
+| eq_eta_l na A t u :
+    ηpred u ->
+    eq_term_upto Re Rle ηpred (tApp (lift0 1 u) (tRel 0)) t ->
+    eq_term_upto Re Rle ηpred u (tLambda na A t)
+
+| eq_eta_r na A t u :
+    ηpred u ->
+    eq_term_upto Re Rle ηpred t (tApp (lift0 1 u) (tRel 0)) ->
+    eq_term_upto Re Rle ηpred (tLambda na A t) u.
+
+(* Induction principle (not dependent) *)
+Lemma eq_term_upto_all_rect :
+  forall (Re : universe -> universe -> Prop)
+    (P : forall (Rle : universe -> universe -> Prop) (ηpred : term -> Prop),
+      term -> term -> Type),
+
+    (forall Rle ηpred (n : nat),
+      P Rle ηpred (tRel n) (tRel n)
+    ) ->
+    (forall Rle ηpred (e : nat) (args args' : list term),
+      All2 (Trel_conj (eq_term_upto Re Re ηpred) (P Re ηpred)) args args' ->
+      P Rle ηpred (tEvar e args) (tEvar e args')
+    ) ->
+    (forall Rle ηpred (id : ident),
+      P Rle ηpred (tVar id) (tVar id)
+    ) ->
+    (forall (Rle : _ -> _ -> Prop) ηpred (s s' : universe),
+      Rle s s' ->
+      P Rle ηpred (tSort s) (tSort s')
+    ) ->
+    (forall Rle ηpred (t t' u u' : term),
+      eq_term_upto Re Rle ηpred t t' ->
+      P Rle ηpred t t' ->
+      eq_term_upto Re Re ηpred u u' ->
+      P Re ηpred u u' ->
+      P Rle ηpred (tApp t u) (tApp t' u')
+    ) ->
+    (forall (Rle : universe -> universe -> Prop) (ηpred : term -> Prop)
+      (c : kername) (u u' : list Level.t) (r : R_universe_instance Re u u'),
+      P Rle ηpred (tConst c u) (tConst c u')
+    ) ->
+    (forall (Rle : universe -> universe -> Prop) (ηpred : term -> Prop)
+      (i : inductive) (u u' : list Level.t),
+      R_universe_instance Re u u' ->
+      P Rle ηpred (tInd i u) (tInd i u')
+    ) ->
+    (forall (Rle : universe -> universe -> Prop) (ηpred : term -> Prop)
+      (i : inductive) (k : nat) (u u' : list Level.t),
+      R_universe_instance Re u u' ->
+      P Rle ηpred (tConstruct i k u) (tConstruct i k u')
+    ) ->
+    (forall (Rle : universe -> universe -> Prop) (ηpred : term -> Prop)
+      (na na' : name) (ty ty' t t' : term),
+      eq_term_upto Re Re ηpred ty ty' ->
+      P Re ηpred ty ty' ->
+      eq_term_upto Re Rle ηpred t t' ->
+      P Rle ηpred t t' ->
+      P Rle ηpred (tLambda na ty t) (tLambda na' ty' t')
+    ) ->
+    (forall (Rle : universe -> universe -> Prop) (ηpred : term -> Prop)
+      (na na' : name) (a a' b b' : term),
+      eq_term_upto Re Re ηpred a a' ->
+      P Re ηpred a a' ->
+      eq_term_upto Re Rle ηpred b b' ->
+      P Rle ηpred b b' ->
+      P Rle ηpred (tProd na a b) (tProd na' a' b')
+    ) ->
+    (forall (Rle : universe -> universe -> Prop) (ηpred : term -> Prop)
+      (na na' : name) (t t' ty ty' u u' : term),
+      eq_term_upto Re Re ηpred t t' ->
+      P Re ηpred t t' ->
+      eq_term_upto Re Re ηpred ty ty' ->
+      P Re ηpred ty ty' ->
+      eq_term_upto Re Rle ηpred u u' ->
+      P Rle ηpred u u' ->
+      P Rle ηpred (tLetIn na t ty u) (tLetIn na' t' ty' u')
+    ) ->
+    (forall (Rle : universe -> universe -> Prop) (ηpred : term -> Prop)
+      indn (p p' c c' : term) (brs brs' : list (nat × term)),
+      eq_term_upto Re Re ηpred p p' ->
+      P Re ηpred p p' ->
+      eq_term_upto Re Re ηpred c c' ->
+      P Re ηpred c c' ->
+      All2 (fun x y : nat × term =>
+        x.1 = y.1 ×
+        eq_term_upto Re Re ηpred x.2 y.2 ×
+        P Re ηpred x.2 y.2
+      ) brs brs' ->
+      P Rle ηpred (tCase indn p c brs) (tCase indn p' c' brs')
+    ) ->
+    (forall (Rle : universe -> universe -> Prop) (ηpred : term -> Prop)
+      (p : projection) (c c' : term),
+      eq_term_upto Re Re ηpred c c' ->
+      P Re ηpred c c' ->
+      P Rle ηpred (tProj p c) (tProj p c')
+    ) ->
+    (forall (Rle : universe -> universe -> Prop) (ηpred : term -> Prop)
+      (mfix mfix' : list (def term)) (idx : nat),
+      All2 (fun x y : def term =>
+        eq_term_upto Re Re ηpred (dtype x) (dtype y) ×
+        P Re ηpred (dtype x) (dtype y) ×
+        eq_term_upto Re Re ηpred (dbody x) (dbody y) ×
+        P Re ηpred (dbody x) (dbody y) ×
+        rarg x = rarg y
+      ) mfix mfix' ->
+      P Rle ηpred (tFix mfix idx) (tFix mfix' idx)
+    ) ->
+    (forall (Rle : universe -> universe -> Prop) (ηpred : term -> Prop)
+      (mfix mfix' : list (def term)) (idx : nat),
+      All2 (fun x y : def term =>
+        eq_term_upto Re Re ηpred (dtype x) (dtype y) ×
+        P Re ηpred (dtype x) (dtype y) ×
+        eq_term_upto Re Re ηpred (dbody x) (dbody y) ×
+        P Re ηpred (dbody x) (dbody y) ×
+        rarg x = rarg y
+      ) mfix mfix' ->
+      P Rle ηpred (tCoFix mfix idx) (tCoFix mfix' idx)
+    ) ->
+    (forall (Rle : universe -> universe -> Prop) (ηpred : term -> Prop)
+      (na : name) (A t u : term) (η : ηpred u),
+      eq_term_upto Re Rle ηpred (tApp ((lift0 1) u) (tRel 0)) t ->
+      P Rle ηpred (tApp ((lift0 1) u) (tRel 0)) t ->
+      P Rle ηpred u (tLambda na A t)
+    ) ->
+    (forall (Rle : universe -> universe -> Prop) (ηpred : term -> Prop)
+      (na : name) (A t u : term) (η : ηpred u),
+      eq_term_upto Re Rle ηpred t (tApp ((lift0 1) u) (tRel 0)) ->
+      P Rle ηpred t (tApp ((lift0 1) u) (tRel 0)) ->
+      P Rle ηpred (tLambda na A t) u
+    ) ->
+    forall (Rle : universe -> universe -> Prop) (ηpred : term -> Prop)
+      (u v : term),
+      eq_term_upto Re Rle ηpred u v ->
+      P Rle ηpred u v.
+Proof.
+  intros Re P hRel hEvar hVar hSort hApp hConst hInd hConstruct hLambda hProd
+    hLetIn hCase hProj hFix hCoFix hEtaL hEtaR Rle ηpred u v e.
+  revert Rle u v e.
+  fix aux 4.
+  intros Rle u v e.
+  move aux at top.
+  destruct e.
+  all: try solve [
+    match goal with
+    | H : _ |- _ => eapply H ; auto
+    end
+  ].
+  - eapply hEvar.
+    revert args args' a. fix auxl 3.
+    intros l l' h.
+    destruct h. 1: constructor.
+    constructor.
+    + split. all: auto.
+    + auto.
+  - eapply hLambda.
+    all: auto.
+  - eapply hCase. all: auto.
+    revert brs brs' a. fix auxl 3.
+    intros l l' h. destruct h. 1: constructor.
+    constructor.
+    + intuition auto.
+    + auto.
+  - eapply hFix.
+    revert mfix mfix' a. fix auxl 3.
+    intros l l' h. destruct h. 1: constructor.
+    constructor.
+    + intuition auto.
+    + auto.
+  - eapply hCoFix.
+    revert mfix mfix' a. fix auxl 3.
+    intros l l' h. destruct h. 1: constructor.
+    constructor.
+    + intuition auto.
+    + auto.
+Qed.
 
 Definition unrestricted_η (t : term) := True.
 Definition no_η (t : term) := False.
@@ -205,37 +384,22 @@ Instance eq_term_upto_sym Re Rle ηpred :
   Symmetric (eq_term_upto Re Rle ηpred).
 Proof.
   intros he hle u v e.
-  induction u in Rle, hle, v, e |- * using term_forall_list_ind.
-  all: dependent destruction e.
+  induction e using eq_term_upto_all_rect.
   all: try solve [
     econstructor ; eauto ;
     try eapply Forall2_symP ; eauto
   ].
+  - econstructor. induction H. 1: constructor.
+    intuition eauto.
+  - econstructor. all: eauto.
+    induction H. 1: constructor.
+    intuition eauto.
   - econstructor.
-    eapply All2_All_mix_left in X as h; eauto.
-    clear a X.
-    induction h.
-    + constructor.
-    + destruct r as [h1 h2]. eapply h1 in h2 ; auto.
-  - econstructor; eauto.
-    eapply All2_All_mix_left in X as h; eauto.
-    clear a X.
-    induction h.
-    + constructor.
-    + destruct r as [h1 [h2 h3]]. eapply h1 in h3 ; auto.
+    induction H. 1: constructor.
+    intuition eauto.
   - econstructor.
-    eapply All2_All_mix_left in X as h; eauto.
-    clear a X.
-    induction h.
-    + constructor.
-    + destruct r as [[h1 h2] [[h3 h4] h5]].
-      eapply h1 in h3 ; auto.
-  - econstructor.
-    eapply All2_All_mix_left in X as h; eauto.
-    clear a X.
-    induction h.
-    + constructor.
-    + destruct r as [[h1 h2] [[h3 h4] h5]]. eapply h1 in h3 ; auto.
+    induction H. 1: constructor.
+    intuition eauto.
 Qed.
 
 Instance eq_term_sym `{checker_flags} φ : Symmetric (eq_term φ).
@@ -250,9 +414,17 @@ Instance eq_term_upto_trans Re Rle ηpred :
   Transitive (eq_term_upto Re Rle ηpred).
 Proof.
   intros he hle u v w e1 e2.
-  induction u in Rle, hle, v, w, e1, e2 |- * using term_forall_list_ind.
-  all: dependent destruction e1.
+  induction e1 in w, e2 |- * using eq_term_upto_all_rect.
   all: try solve [ eauto ].
+  - (* dependent induction e2.
+    + constructor. admit.
+    + eapply eq_eta_l. 1: admit. *)
+  dependent destruction e2.
+    2:{ eapply eq_eta_l. 1: admit.
+        simpl in *.
+        dependent destruction e2.
+        1: admit. eapply eq_eta_l. 1: admit.
+        (* This is never going to end... *)
   all: try solve [
     dependent destruction e2 ; econstructor ; eauto ;
     try eapply Forall2_trans ; eauto

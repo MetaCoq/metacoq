@@ -1066,27 +1066,28 @@ Section Reduce.
     case_eq (decompose_app t).
     intros u l e hl h d.
     induction h.
-    - assumption.
-    - apply decompose_app_inv in e. subst.
-      (* Inversion on ht *)
-      admit.
-    - apply decompose_app_inv in e. subst.
-      (* Inversion on ht *)
-      admit.
-    - cbn in hl. specialize (hl eq_refl). subst.
-      apply decompose_app_inv in e. subst. cbn in ht.
-      (* Inversion on ht *)
-      admit.
-    - apply decompose_app_eq_mkApps in e. subst.
-      cbn in d. simp discr_construct in d. easy.
-    - apply decompose_app_inv in e. subst.
-      (* Inversion on ht *)
-      admit.
-    - apply decompose_app_inv in e. subst.
-      (* Not very clear now.
-         Perhaps we ought to show whnf of the mkApps entirely.
-         And have a special whne case for Fix that don't reduce?
-       *)
+    (* - assumption. *)
+    (* - apply decompose_app_inv in e. subst. *)
+    (*   (* Inversion on ht *) *)
+    (*   admit. *)
+    (* - apply decompose_app_inv in e. subst. *)
+    (*   (* Inversion on ht *) *)
+    (*   admit. *)
+    (* - admit. *)
+    (* - cbn in hl. specialize (hl eq_refl). subst. *)
+    (*   apply decompose_app_inv in e. subst. cbn in ht. *)
+    (*   (* Inversion on ht *) *)
+    (*   admit. *)
+    (* - apply decompose_app_eq_mkApps in e. subst. *)
+    (*   cbn in d. simp discr_construct in d. easy. *)
+    (* - apply decompose_app_inv in e. subst. *)
+    (*   (* Inversion on ht *) *)
+    (*   admit. *)
+    (* - apply decompose_app_inv in e. subst. *)
+    (*   (* Not very clear now. *)
+    (*      Perhaps we ought to show whnf of the mkApps entirely. *)
+    (*      And have a special whne case for Fix that don't reduce? *)
+    (*    *) *)
   Abort.
 
   Scheme Acc_ind' := Induction for Acc Sort Prop.

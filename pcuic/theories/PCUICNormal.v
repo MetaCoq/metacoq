@@ -69,12 +69,10 @@ Section Normal.
   (* Relative to reduction flags *)
   Inductive whnf (Γ : context) : term -> Prop :=
   | whnf_ne t : whne Γ t -> whnf Γ t
-  | whnf_sort s : whnf Γ (tSort s)
-  | whnf_prod na A B : whnf Γ (tProd na A B)
   | whnf_lam na A B : whnf Γ (tLambda na A B)
   | whnf_cstrapp i n u v : whnf Γ (mkApps (tConstruct i n u) v)
   | whnf_indapp i u v : whnf Γ (mkApps (tInd i u) v)
-  | whnf_fix mfix idx : whnf Γ (tFix mfix idx)
+  | whnf_fix mfix idx args : head_arg_is_constructor mfix idx args = false -> whnf Γ (mkApps (tFix mfix idx) args)
   | whnf_cofix mfix idx : whnf Γ (tCoFix mfix idx)
 
   with whne (Γ : context) : term -> Prop :=
@@ -91,6 +89,10 @@ Section Normal.
 
   | whne_evar n l :
       whne Γ (tEvar n l)
+
+  | whne_sort s : whne Γ (tSort s)
+
+  | whne_prod na A B : whne Γ (tProd na A B)
 
   | whne_letin_nozeta na B b t :
       RedFlags.zeta flags = false ->
@@ -136,6 +138,14 @@ Section Normal.
     - simpl. eapply IHargs. econstructor. assumption.
   Qed.
 
+  Lemma whnf_mkApps :
+    forall Γ t args,
+      whne Γ t ->
+      whnf Γ (mkApps t args).
+  Proof.
+    intros. econstructor. now eapply whne_mkApps.
+  Qed.
+  
   Lemma whne_mkApps_inv :
     forall Γ t l,
       whne Γ (mkApps t l) ->
@@ -146,10 +156,8 @@ Section Normal.
     - assumption.
     - simpl in h. apply IHl in h. inversion h. assumption.
   Qed.
-
+  
 End Normal.
-
-Hint Constructors normal neutral.
 
 Derive Signature for normal.
 Derive Signature for neutral.
@@ -232,6 +240,8 @@ Proof.
     eapply OnOn2_contra; try eassumption.
     firstorder.
 Qed.
+
+Hint Constructors normal neutral.
 
 Lemma normal_mk_Apps_inv:
   forall (Σ : global_env) (Γ : context) (t : term) (v : list term), ~ isApp t -> normal Σ Γ (mkApps t v) -> normal Σ Γ t /\ Forall (normal Σ Γ) v.
@@ -422,3 +432,126 @@ Defined.
 
 Definition normal_dec Σ Γ t := fst (normal_neutral_dec Σ Γ t).
 Definition neutral_dec Σ Γ t := snd (normal_neutral_dec Σ Γ t).
+
+Hint Constructors whnf whne.
+
+Lemma whnf_mkApps_inv flags :
+  forall Σ Γ t l,
+    ~ isApp t ->
+    whnf flags Σ Γ (mkApps t l) ->
+    whnf flags Σ Γ t.
+Proof.
+  intros Σ Γ t l Hr h.
+  induction l using rev_ind.
+  - assumption.
+  - rewrite <- mkApps_nested in h. cbn in h. depelim h. depelim H. eauto.
+    + change (tApp (mkApps t l) x0) with (mkApps (mkApps t l) [x0]) in *.
+      rewrite mkApps_nested in x.
+      eapply (f_equal decompose_app) in x.
+      rewrite !decompose_app_mkApps in x; cbn in *; try congruence. firstorder. inv x.
+      eapply whnf_cstrapp with (v := []).
+    + change (tApp (mkApps t l) x0) with (mkApps (mkApps t l) [x0]) in *.
+      rewrite mkApps_nested in x.
+      eapply (f_equal decompose_app) in x.
+      rewrite !decompose_app_mkApps in x; cbn in *; try congruence. firstorder. inv x.
+      eapply whnf_indapp with (v := []).
+    + change (tApp (mkApps t l) x0) with (mkApps (mkApps t l) [x0]) in *.
+      rewrite mkApps_nested in x.
+      eapply (f_equal decompose_app) in x.
+      rewrite !decompose_app_mkApps in x; cbn in *; try congruence. firstorder. inv x.
+      eapply whnf_fix with (args := []).
+      unfold head_arg_is_constructor. destruct ?. destruct p. destruct n. all:eauto.
+Qed.
+
+Definition whnf_whne_dec flags Σ Γ t : ({whnf flags Σ Γ t} + {~ (whnf flags Σ  Γ t)}) * ({whne flags Σ Γ t} + {~ (whne flags Σ Γ t)}).
+Proof.
+  induction t using term_forall_mkApps_ind in Γ |- *; split; eauto.
+  all: try now (right; intros H; depelim H).
+  - destruct (RedFlags.zeta flags) eqn:Er.
+    + destruct (option_map decl_body (nth_error Γ n)) as [ [ | ] | ] eqn:E.
+      * right. intros H. depelim H. depelim H. congruence. congruence. help. help. help.
+      * eauto.
+      * right. intros H. depelim H. depelim H. congruence. congruence. help. help. help.
+    + eauto.
+  - destruct (RedFlags.zeta flags) eqn:Er.
+    + destruct (option_map decl_body (nth_error Γ n)) as [ [ | ] | ] eqn:E.
+      * right. intros H. depelim H. congruence. congruence. 
+      * eauto.
+      * right. intros H. depelim H. congruence. congruence. 
+    + eauto.
+  - destruct (RedFlags.zeta flags) eqn:Er; eauto.
+    right. intros ?. depelim H. depelim H. congruence. help. help. help.
+  - destruct (RedFlags.zeta flags) eqn:Er; eauto.
+    right. intros ?. depelim H. congruence. 
+  - destruct (IHt Γ) as [[] _].
+    + destruct t. all:eauto using whnf_mkApps, All_Forall.
+      all: try now left; eapply whnf_mkApps; depelim w; eauto; help.
+      * destruct v as [ | ? v].
+        -- eauto.
+        -- right. intros ?. depelim H1. depelim H1. all:help. clear IHl.
+           eapply whne_mkApps_inv in H1; eauto. 
+           depelim H1.
+      * destruct (head_arg_is_constructor mfix idx v) eqn:E.
+        -- right. intros ?. depelim H1. depelim H1. all:help. clear IHv.
+           eapply whne_mkApps_inv in H1; eauto. depelim H1.
+        -- left. depelim w. all:help. depelim H1.
+           eapply (f_equal decompose_app) in x;
+             rewrite !decompose_app_mkApps in x; cbn in *; try firstorder congruence.  inv x.
+           eauto.
+      * destruct v as [ | ? v].
+        -- eauto.
+        -- right. intros ?. depelim H1. depelim H1. all:help. clear IHl.
+           eapply whne_mkApps_inv in H1; eauto. 
+           depelim H1.
+    + right. intros ?. eapply n. 
+      now eapply whnf_mkApps_inv.
+  - destruct v using rev_ind.
+    + cbn. eapply IHt.
+    + rewrite <- mkApps_nested. cbn.
+      eapply All_app in H0 as []. eapply IHv in a. inv a0. clear H3.
+      rename H2 into IHt2.
+      revert a.
+      generalize (mkApps t v) as t1. intros t1 IHt1.
+      destruct (IHt1) as [];
+      [destruct (IHt2 Γ) as [[] _]|]; eauto.
+      * right. intros HH. depelim HH. eauto.
+  - destruct (RedFlags.delta flags) eqn:Er; eauto.
+    destruct (lookup_env Σ s) as [[] | ] eqn:E.
+    + destruct (cst_body c) eqn:E2.
+      * right. intros H. depelim H. depelim H. congruence. congruence. help. help. help.
+      * destruct (string_dec s k). subst. left. eauto.
+        right. intros H. depelim H. depelim H. congruence. congruence. help. help. help.
+    +   right. intros H. depelim H. depelim H. congruence. congruence. help. help. help.
+    +   right. intros H. depelim H. depelim H. congruence. congruence. help. help. help.
+  - destruct (RedFlags.delta flags) eqn:Er; eauto.
+    destruct (lookup_env Σ s) as [[] | ] eqn:E.
+    + destruct (cst_body c) eqn:E2.
+      * right. intros H. depelim H. congruence. congruence.
+      * destruct (string_dec s k). subst. left. eauto.
+        right. intros H. depelim H. congruence. congruence.
+    +   right. intros H. depelim H. congruence. congruence.
+    +   right. intros H. depelim H. congruence. congruence.
+  - left. eapply whnf_indapp with (v := []). 
+  - left. eapply whnf_cstrapp with (v := []). 
+  - destruct (RedFlags.iota flags) eqn:Eq; eauto.
+    destruct (IHt2 Γ) as [_ []].
+    + eauto. 
+    + right. intros ?. depelim H. depelim H. all:help. eauto. congruence.
+  -  destruct (RedFlags.iota flags) eqn:Eq; eauto.
+     destruct (IHt2 Γ) as [_ []].
+    + eauto. 
+    + right. intros ?. depelim H. all:help. eauto. congruence.
+  - destruct (RedFlags.iota flags) eqn:Eq; eauto.
+    destruct (IHt Γ) as [_ []].
+    + eauto.
+    + right. intros H. depelim H. depelim H. eauto. congruence. help. help. help.
+  - destruct (RedFlags.iota flags) eqn:Eq; eauto.
+    destruct (IHt Γ) as [_ []].
+    + eauto.
+    + right. intros H. depelim H. eauto. congruence.
+  - left. eapply whnf_fix with (args := []).
+    unfold head_arg_is_constructor. destruct unfold_fix. destruct p. destruct n0. all:eauto.    
+Defined.
+
+Definition whnf_dec flags Σ Γ t := fst (whnf_whne_dec flags Σ Γ t).
+Definition whne_dec flags Σ Γ t := snd (whnf_whne_dec flags Σ Γ t).

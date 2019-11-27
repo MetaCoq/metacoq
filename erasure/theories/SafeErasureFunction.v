@@ -117,58 +117,6 @@ Proof.
 Qed.
 
 Notation err := (TypeError  (Msg "hnf did not return normal form")).
-(* Program Fixpoint normal_dec Γ t : typing_result (forall t', red1 Σ Γ t t' -> False) := *)
-(*   match t with *)
-(*   | tRel n => match option_map decl_body (nth_error Γ n) with *)
-(*                Some (Some body) => err *)
-(*              | _ => ret _ *)
-(*              end *)
-(*   | tVar n => ret _ *)
-(*   | tSort u => ret _ *)
-(*   | tProd na A B => H1 <- normal_dec Γ A ;; *)
-(*                       H2 <- normal_dec (Γ,, vass na A) B;; *)
-(*                       ret _ *)
-(*   | tLambda na A B => H1 <- normal_dec Γ A ;; *)
-(*                       H2 <- normal_dec (Γ,, vass na A) B;; *)
-(*                       ret _ *)
-(*   | tLetIn _ _ _ _ => err *)
-(*   | tConst c u => match lookup_env Σ c  with Some (ConstantDecl _ (Build_constant_body _ (Some _) _)) => err *)
-(*                                        | _ => ret _ *)
-(*                  end *)
-(*   | tInd _ _ => ret _ *)
-(*   | tConstruct _ _ _ => ret _ *)
-(*   | tCase _ _ _ _ => err *)
-(*   | tProj _ _ => err *)
-(*   (* | tFix _ _ => ret _ *) *)
-(*   (* | tCoFix _ _ => ret _ *) *)
-(*   | _ => TypeError (Msg "not implemented in normality decider") *)
-(*   end. *)
-(* Next Obligation. *)
-(*   intros; depelim X; try congruence; eapply mkApps_tFix_inv in H0 as [(? & ? & ?) | [] ]; congruence. *)
-(* Qed. *)
-(* Next Obligation. *)
-(*   intros; depelim X; try congruence; try eapply mkApps_tFix_inv in H as [(? & ? & ?) | [] ]; try congruence. *)
-(* Qed. *)
-(* Next Obligation. *)
-(*   intros; depelim X; try congruence; try eapply mkApps_tFix_inv in H as [(? & ? & ?) | [] ]; try congruence. *)
-(* Qed. *)
-(* Next Obligation. *)
-(*   intros; depelim X; try congruence; try eapply mkApps_tFix_inv in H as [(? & ? & ?) | [] ]; try congruence; eauto. *)
-(* Qed. *)
-(* Next Obligation. *)
-(*   intros; depelim X; try congruence; try eapply mkApps_tFix_inv in H as [(? & ? & ?) | []]; try congruence; eauto. *)
-(* Qed. *)
-(* Next Obligation. *)
-(*   intros; depelim X; try congruence; try eapply mkApps_tFix_inv in H0 as [(? & ? & ?) | [] ]; try congruence; eauto. *)
-(*   unfold declared_constant in *. rewrite isdecl in H. destruct decl. destruct cst_body; cbn in *; firstorder congruence. *)
-(* Qed. *)
-(* Next Obligation. *)
-(*   intros; depelim X; try congruence; try eapply mkApps_tFix_inv in H as [(? & ? & ?) | [] ]; try congruence; eauto. *)
-(* Qed. *)
-(* Next Obligation. *)
-(*   intros; depelim X; try congruence; try eapply mkApps_tFix_inv in H as [(? & ? & ?) | [] ]; try congruence; eauto. *)
-(* Qed. *)
-(* Solve All Obligations with firstorder congruence. *)
 
 Inductive red' (Σ : global_env) (Γ : context) : term -> term -> Type :=
   refl_red' M : red' Σ Γ M M
@@ -188,6 +136,112 @@ Proof.
   - etransitivity. eassumption. econstructor. eauto. econstructor.
 Qed.
 
+Lemma whnf_pres1 Γ t t' :
+  red1 Σ Γ t t' ->
+  (whnf RedFlags.default Σ Γ t -> whnf RedFlags.default Σ Γ t') /\
+  (whne RedFlags.default Σ Γ t -> whne RedFlags.default Σ Γ t').
+Proof.
+  intros. induction X; split; intros.
+  all: repeat match goal with
+              | [ H : whnf _ _ _ (?f ?a) |- _ ] => depelim H
+              | [ H : whne _ _ _ (?f ?a)|- _ ] => depelim H
+              end.
+  all:try (cbn in *; congruence).
+  all:do 2 help.
+  all: try now eapply whne_mkApps_inv in H; depelim H.
+  all: try destruct IHX; eauto.
+  - eapply (f_equal decompose_app) in H0;
+      rewrite !decompose_app_mkApps in H0; cbn in *; try firstorder congruence. 
+    inv H0. unfold head_arg_is_constructor in *. rewrite e in H. congruence.
+  - clear IHv. admit.
+  - clear IHv. admit.
+  - clear IHargs. admit.
+  - clear IHv.
+    rewrite <- mkApps_snoc. eauto.
+  - rewrite <- mkApps_snoc. eauto.
+  - clear IHargs. rewrite <- mkApps_snoc.
+    eapply whnf_fix. admit.
+  - eapply (f_equal decompose_app) in H0;
+      rewrite !decompose_app_mkApps in H0; cbn in *; try firstorder congruence. 
+    inv H0. eapply whnf_fix with (args := []).
+    unfold head_arg_is_constructor. destruct ?. destruct p. destruct n. all:eauto.
+  - eapply (f_equal decompose_app) in H0;
+      rewrite !decompose_app_mkApps in H0; cbn in *; try firstorder congruence. 
+    inv H0. eapply whnf_fix with (args := []).
+    unfold head_arg_is_constructor. destruct ?. destruct p. destruct n. all:eauto.
+Admitted.    
+
+Lemma whnf_pres Γ t t' :
+  red Σ Γ t t' ->
+  whnf RedFlags.default Σ Γ t -> whnf RedFlags.default Σ Γ t'.
+Proof.
+  induction 1; intros.
+  - eauto.
+  - eapply whnf_pres1; eauto.
+Qed.
+
+Lemma whnf_red1_sort Γ t u :
+  whnf RedFlags.default Σ Γ t ->
+  red1 Σ Γ t (tSort u) -> t = tSort u.
+Proof.
+  intros. remember (tSort u) as t'. 
+  induction X using red1_ind_all.
+  all: repeat match goal with
+         | [ H : whnf _ _ _ (?f ?a) |- _ ] => depelim H
+         | [ H : whne _ _ _ (?f ?a)|- _ ] => depelim H
+         end.
+  all:try (cbn in *; congruence).
+  all:do 2 help.
+  - eapply whne_mkApps_inv in H. depelim H.
+  - rewrite <- mkApps_nested in Heqt'. inv Heqt'.
+  - eapply (f_equal decompose_app) in H0;
+      rewrite !decompose_app_mkApps in H0; cbn in *; try firstorder congruence.
+    inv H0. unfold head_arg_is_constructor in *. rewrite H1 in H. congruence.
+  - eapply whne_mkApps_inv in H. depelim H.
+Qed.
+
+Lemma whnf_red_sort Γ t u :
+  whnf RedFlags.default Σ Γ t ->
+  red Σ Γ t (tSort u) -> t = tSort u.
+Proof.
+  intros. remember (tSort u) as t'. induction X.
+  - eauto.
+  - subst. eapply whnf_red1_sort in r. subst. eauto.
+    eapply whnf_pres; eauto.
+Qed.
+
+Lemma whnf_red1_prod Γ t na t1 t2 :
+  whnf RedFlags.default Σ Γ t ->
+  red1 Σ Γ t (tProd na t1 t2) -> exists t1 t2, t = tProd na t1 t2.
+Proof.
+  intros. remember (tProd na t1 t2) as t'. 
+  induction X using red1_ind_all.
+  all: repeat match goal with
+         | [ H : whnf _ _ _ (?f ?a) |- _ ] => depelim H
+         | [ H : whne _ _ _ (?f ?a)|- _ ] => depelim H
+         end.
+  all:try (cbn in *; congruence).
+  all:do 2 help.
+  - eapply whne_mkApps_inv in H. depelim H.
+  - rewrite <- mkApps_nested in Heqt'. inv Heqt'.
+  - eapply (f_equal decompose_app) in H0;
+      rewrite !decompose_app_mkApps in H0; cbn in *; try firstorder congruence.
+    inv H0. unfold head_arg_is_constructor in *. rewrite H1 in H. congruence.
+  - eapply whne_mkApps_inv in H. depelim H.
+  - inv Heqt'. eauto.
+  - inv Heqt'. eauto.    
+Qed.
+
+Lemma whnf_red_prod  Γ t na t1 t2 :
+  whnf RedFlags.default Σ Γ t ->
+  red Σ Γ t (tProd na t1 t2) -> exists t1 t2, t = tProd na t1 t2.
+Proof.
+  intros. remember (tProd na t1 t2) as t'. revert t1 t2 Heqt'. induction X; intros.
+  - eauto.
+  - subst. eapply whnf_red1_prod in r as (? & ? & ?). subst. eauto.
+    eapply whnf_pres; eauto.
+Qed.
+
 Program Definition reduce_to_sort' Γ t (h : wellformed Σ Γ t)
   : typing_result ((∑ u, ∥ red (fst Σ) Γ t (tSort u) ∥) + ((∑ u, ∥ red (fst Σ) Γ t (tSort u) ∥) -> False)) :=
   match t with
@@ -195,7 +249,7 @@ Program Definition reduce_to_sort' Γ t (h : wellformed Σ Γ t)
   | _ =>
     match hnf HΣ Γ t h with
     | tSort u => ret (inl (u; _))
-    | t' => match normal_dec Σ Γ t' with left H => ret (inr _) | right _ => TypeError (Msg ("reduction did not return normal form for term:" ++ PCUICPretty.print_term Σ Γ true false t ++ "which was found to be " ++ PCUICPretty.print_term Σ Γ true false t'))%string end
+    | t' => match whnf_dec RedFlags.default Σ Γ t' with left H => ret (inr _) | right _ => TypeError (Msg ("reduction did not return normal form for term:" ++ PCUICPretty.print_term Σ Γ true false t ++ "which was found to be " ++ PCUICPretty.print_term Σ Γ true false t'))%string end
     end
   end.
 Next Obligation.
@@ -207,11 +261,8 @@ Next Obligation.
   repeat match goal with [H : squash (red _ _ _ _ ) |- _ ] => destruct H end.
   destruct HΣ.
   eapply PCUICConfluence.red_confluence in X as [t'' []]. 3:exact X0. 2:eauto.
-  eapply red_red' in r.
-  inversion r; subst.
-  - eapply invert_red_sort in r0; eauto.
-    edestruct H0. eauto.
-  - eapply normal_nf. left; eassumption. eauto.    
+  eapply invert_red_sort in r0; eauto. subst.
+  eapply whnf_red_sort in r. congruence. eauto.
 Qed.
 
 Program Definition reduce_to_prod' Γ t (h : wellformed Σ Γ t)
@@ -221,7 +272,7 @@ Program Definition reduce_to_prod' Γ t (h : wellformed Σ Γ t)
   | _ =>
     match hnf HΣ Γ t h with
     | tProd na a b => ret (inl (na; a; b; _))
-    | t' => match normal_dec Σ Γ t' with left H => ret (inr _) | right _ => TypeError (Msg ("reduction did not return normal form for term:" ++ PCUICPretty.print_term Σ Γ true false t ++ "which was found to be " ++ PCUICPretty.print_term Σ Γ true false t'))%string end
+    | t' => match whnf_dec RedFlags.default Σ Γ t' with left H => ret (inr _) | right _ => TypeError (Msg ("reduction did not return normal form for term:" ++ PCUICPretty.print_term Σ Γ true false t ++ "which was found to be " ++ PCUICPretty.print_term Σ Γ true false t'))%string end
     end
   end.
 Next Obligation.
@@ -233,11 +284,8 @@ Next Obligation.
   repeat match goal with [H : squash (red _ _ _ _ ) |- _ ] => destruct H end.
   destruct HΣ.
   eapply PCUICConfluence.red_confluence in X1 as [t'' []]. 3:exact X2. 2:eauto.
-  eapply red_red' in r.
-  inversion r; subst.
-  - eapply invert_red_prod in r0 as (? & ? & [] & ?); eauto.
-    edestruct H0. eauto.
-  - eapply normal_nf. left; eassumption. eauto.    
+  eapply invert_red_prod in r0 as (? & ? & [] & ?); eauto. subst.
+  eapply whnf_red_prod in r as (? & ? & ?). congruence. eauto.
 Qed.
 
 Equations is_arity Γ (HΓ : ∥wf_local Σ Γ∥) T (HT : wellformed Σ Γ T) :

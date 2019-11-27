@@ -30,6 +30,9 @@ Section Normal.
 
   Context (flags : RedFlags.t).
   Context (Σ : global_env).
+
+  Definition head_arg_is_constructor mfix idx args :=
+    match unfold_fix mfix idx with Some (narg, body) => is_constructor narg args | None => false end.
   
   Inductive normal (Γ : context) : term -> Prop :=
   | nf_ne t : neutral Γ t -> normal Γ t
@@ -37,9 +40,11 @@ Section Normal.
                     normal Γ (tLambda na A B)
   | nf_cstrapp i n u v : All (normal Γ) v -> normal Γ (mkApps (tConstruct i n u) v)
   | nf_indapp i u v : All (normal Γ) v -> normal Γ (mkApps (tInd i u) v)
-  | nf_fix mfix idx : All (compose (normal (Γ ,,, PCUICLiftSubst.fix_context mfix)) dbody) mfix ->
-                      All (compose (normal Γ) dtype) mfix ->
-                      normal Γ (tFix mfix idx)
+  | nf_fix mfix idx args : All (compose (normal (Γ ,,, PCUICLiftSubst.fix_context mfix)) dbody) mfix ->
+                           All (normal Γ) args ->
+                           head_arg_is_constructor mfix idx args = false ->
+                           All (compose (normal Γ) dtype) mfix ->
+                      normal Γ (mkApps (tFix mfix idx) args)
   | nf_cofix mfix idx : All (compose (normal (Γ ,,, PCUICLiftSubst.fix_context mfix)) dbody) mfix ->
                       All (compose (normal Γ) dtype) mfix ->
                         normal Γ (tCoFix mfix idx)
@@ -160,7 +165,7 @@ Proof.
          | [ H : neutral _ _ (?f ?a)|- _ ] => depelim H
          end.
   all: try congruence.
-  Ltac help := try repeat match goal with
+  Ltac help' := try repeat match goal with
                   | [ H0 : _ = mkApps _ _ |- _ ] => 
                     eapply (f_equal decompose_app) in H0;
                       rewrite !decompose_app_mkApps in H0; cbn in *; firstorder congruence
@@ -168,14 +173,15 @@ Proof.
                     destruct args using rev_ind; cbn in *; [ inv H1 |
                                                              rewrite <- mkApps_nested in H1; cbn in *; inv H1
                                                     ]
-                  | [ H0 : mkApps _ _ = _ |- _ ] => symmetry in H0
-                         end.
+                          end.
+  Ltac help := help'; try match goal with | [ H0 : mkApps _ _ = _ |- _ ] => symmetry in H0 end; help'.
   all: help.
   all: try tauto.
   all: try now (clear - H; depind H; help; eauto).
-  - destruct args using rev_ind; cbn in ; [ inv x |
-                                             rewrite <- mkApps_nested in x; cbn in *; inv x ].
-    destruct narg; inv H2.
+  - eapply (f_equal decompose_app) in x;
+      rewrite !decompose_app_mkApps in x; cbn in *; try firstorder congruence.
+    inv x. unfold head_arg_is_constructor in H1.
+    rewrite H3 in H1. congruence.
   - eapply OnOne2_All_mix_left in X; try eassumption.
     eapply OnOn2_contra; try eassumption.
     firstorder.
@@ -186,20 +192,37 @@ Proof.
     eapply nf_cstrapp. now eapply All_app in H as [H _].
   - eapply IHX. left.
     eapply nf_indapp. now eapply All_app in H as [H _].
+  - clear IHargs.
+    eapply IHX. left.
+    eapply nf_fix.
+    + eauto.
+    + eapply All_app in H0. eapply H0.
+    + unfold head_arg_is_constructor in *.
+      destruct unfold_fix; eauto. destruct p.
+      unfold is_constructor in *.
+      destruct (nth_error args n) eqn:E; eauto.
+      erewrite nth_error_app_left in H1; eauto.
+    + eauto.
   - eapply IHX. left.
     eapply All_app in H as [_ H]. now inv H.
   - eapply IHX. left.
     eapply All_app in H as [_ H]. now inv H.
+  - eapply IHX. left.
+    eapply All_app in H0 as [_ H0]. now inv H0.
   - eapply OnOne2_All_mix_left in X; try eassumption.
     eapply OnOn2_contra; try eassumption.
     firstorder.
   - eapply OnOne2_All_mix_left in X; try eassumption.
     eapply OnOn2_contra; try eassumption.
     firstorder.
-  - eapply OnOne2_All_mix_left in X; try eassumption.
+  - eapply (f_equal decompose_app) in x;
+      rewrite !decompose_app_mkApps in x; cbn in *; try firstorder congruence. inv x.
+    eapply OnOne2_All_mix_left in X; try eassumption.
     eapply OnOn2_contra; try eassumption.
     firstorder.
-  - eapply OnOne2_All_mix_left in X. 2:exact H.
+  - eapply (f_equal decompose_app) in x;
+      rewrite !decompose_app_mkApps in x; cbn in *; try firstorder congruence. inv x.
+    eapply OnOne2_All_mix_left in X. 2:exact H.
     eapply OnOn2_contra; try eassumption.
     firstorder.
   - eapply OnOne2_All_mix_left in X. 2:exact H0.
@@ -232,6 +255,18 @@ Proof.
       rewrite !decompose_app_mkApps in x; cbn in *; try congruence. firstorder. inv x.
       split. eapply nf_indapp with (v := []). econstructor.
       now eapply All_Forall.
+    + change (tApp (mkApps t v) x0) with (mkApps (mkApps t v) [x0]) in *.
+      rewrite mkApps_nested in x.
+      eapply (f_equal decompose_app) in x.
+      rewrite !decompose_app_mkApps in x; cbn in *; try congruence. firstorder. inv x.
+      split. eapply nf_fix with (args := []).
+      * eauto.
+      * econstructor.
+      * unfold head_arg_is_constructor in *.
+        destruct unfold_fix; eauto. destruct p.
+        unfold is_constructor in *. destruct n; reflexivity.
+      * eauto.
+      * now eapply All_Forall.
 Qed.
 
 Lemma neutral_mk_Apps_inv:
@@ -261,9 +296,9 @@ Proof.
   induction t using term_forall_mkApps_ind in Γ |- *; split; eauto.
   all: try now (right; intros H; depelim H).
   - destruct (option_map decl_body (nth_error Γ n)) as [ [ | ] | ] eqn:E.
-    + right. intros H. depelim H. depelim H. congruence. help. help.
+    + right. intros H. depelim H. depelim H. congruence. help. help. help.
     + eauto.
-    + right. intros H. depelim H. depelim H. congruence. help. help.
+    + right. intros H. depelim H. depelim H. congruence. help. help. help.
   - destruct (option_map decl_body (nth_error Γ n)) as [ [ | ] | ] eqn:E.
     + right. intros H. depelim H. congruence.
     + eauto.
@@ -272,17 +307,17 @@ Proof.
   - todo "evar".
   - destruct (IHt1 Γ) as [[] _];
       [destruct (IHt2 (Γ,, vass n t1)) as [[] _]|]; eauto.
-    + right. intros H. depelim H. depelim H. eauto. help. help.
-    + right. intros H. depelim H. depelim H. eauto. help. help.
+    + right. intros H. depelim H. depelim H. eauto. help. help. help.
+    + right. intros H. depelim H. depelim H. eauto. help. help. help.
   - destruct (IHt1 Γ) as [[] _];
       [destruct (IHt2 (Γ,, vass n t1)) as [[] _]|]; eauto.
     + right. intros H. depelim H. eauto. 
     + right. intros H. depelim H. eauto.
   - destruct (IHt1 Γ) as [[] _];
       [destruct (IHt2 (Γ,, vass n t1)) as [[] _]|]; eauto.
-    + right. intros H. depelim H. depelim H. eauto. help. help.
-    + right. intros H. depelim H. depelim H. eauto. help. help.
-  - right. intros H. depelim H. depelim H. help. help.
+    + right. intros H. depelim H. depelim H. eauto. help. help. help.
+    + right. intros H. depelim H. depelim H. eauto. help. help. help.
+  - right. intros H. depelim H. depelim H. help. help. help.
   - destruct (IHt Γ) as [[] _].
     + destruct dec_All with (P := (normal Σ Γ)) (L := v).
       -- eapply All_impl. eassumption. intros ? ?. apply H1.
@@ -293,8 +328,14 @@ Proof.
             ** right. intros ?. depelim H1. depelim H1. all:help. clear IHl.
                eapply neutral_mk_Apps_inv in H1 as []; eauto.
                depelim H1.
-         ++ todo "check narg".
-         ++ todo "check narg".
+         ++ destruct (head_arg_is_constructor mfix idx v) eqn:E.
+            ** right. intros ?. depelim H1. depelim H1. all:help. clear IHv.
+               eapply neutral_mk_Apps_inv in H1 as []; eauto. depelim H1.
+            ** left. depelim n. all:help. depelim H1.
+               eapply (f_equal decompose_app) in x;
+                 rewrite !decompose_app_mkApps in x; cbn in *; try firstorder congruence.  inv x.
+               eauto.
+         ++ todo "cofix".
       -- right. intros ?. eapply f. eapply Forall_All.
          now eapply normal_mk_Apps_inv.
     + right. intros ?. eapply n. now eapply normal_mk_Apps_inv.
@@ -311,11 +352,11 @@ Proof.
       * right. intros HH. depelim HH. eauto.
   - destruct (lookup_env Σ s) as [[] | ] eqn:E.
     + destruct (cst_body c) eqn:E2.
-      * right. intros H. depelim H. depelim H. congruence. help. help.
+      * right. intros H. depelim H. depelim H. congruence. help. help. help.
       * destruct (string_dec s k). subst. left. eauto.
-        right. intros H. depelim H. depelim H. congruence. help. help.
-    +   right. intros H. depelim H. depelim H. congruence. help. help.
-    +   right. intros H. depelim H. depelim H. congruence. help. help.
+        right. intros H. depelim H. depelim H. congruence. help. help. help.
+    +   right. intros H. depelim H. depelim H. congruence. help. help. help.
+    +   right. intros H. depelim H. depelim H. congruence. help. help. help.
   - destruct (lookup_env Σ s) as [[] | ] eqn:E.
     + destruct (cst_body c) eqn:E2.
       * right. intros H. depelim H. congruence.
@@ -325,11 +366,25 @@ Proof.
     +   right. intros H. depelim H. congruence.
   - left. eapply nf_indapp with (v := []). econstructor.
   - left. eapply nf_cstrapp with (v := []). econstructor.
-  - todo "case".
-  - todo "case".
+  - destruct (IHt2 Γ) as [_ []].
+    + destruct (IHt1 Γ) as [[] _].
+      * destruct dec_All with(L := l) (P := (normal Σ Γ ∘ @snd nat term)).
+        -- eapply All_impl. eassumption. intros ? ?. eapply H.
+        -- eauto.
+        -- right. intros ?. depelim H. depelim H. all:help. eauto.
+      * right. intros ?. depelim H. depelim H. all:help. eauto.
+    + right. intros ?. depelim H. depelim H. all:help. eauto.
+  -  destruct (IHt2 Γ) as [_ []].
+    + destruct (IHt1 Γ) as [[] _].
+      * destruct dec_All with(L := l) (P := (normal Σ Γ ∘ @snd nat term)).
+        -- eapply All_impl. eassumption. intros ? ?. eapply H.
+        -- eauto.
+        -- right. intros ?. depelim H. all:help. eauto.
+      * right. intros ?. depelim H. all:help. eauto.
+    + right. intros ?. depelim H. all:help. eauto.
   - destruct (IHt Γ) as [_ []].
     + eauto.
-    + right. intros H. depelim H. depelim H. eauto. help. help.
+    + right. intros H. depelim H. depelim H. eauto. help. help. help.
   - destruct (IHt Γ) as [_ []].
     + eauto.
     + right. intros H. depelim H. eauto.
@@ -341,9 +396,17 @@ Proof.
     destruct dec_All with (P := normal Σ  (Γ ,,, PCUICLiftSubst.fix_context m) ∘ dbody) (L := m).
     eapply All_impl. exact X. cbn. intros. eapply H.
 
-    + left. eapply nf_fix. eauto. eauto.
-    + right. intros H. depelim H. depelim H. help. help. eauto.
-    + right. intros H. depelim H. depelim H. help. help. eauto.
+    + left. eapply nf_fix with (args := []). eauto. eauto. unfold head_arg_is_constructor.
+      destruct unfold_fix; eauto. destruct p.
+      unfold is_constructor. destruct n0; eauto. eauto.
+    + right. intros H. depelim H. depelim H. help. help. eapply f.
+      eapply (f_equal decompose_app) in x;
+        rewrite !decompose_app_mkApps in x; cbn in *; try firstorder congruence.  inv x.
+      eauto.
+    + right. intros H. depelim H. depelim H. help. help. 
+      eapply (f_equal decompose_app) in x;
+        rewrite !decompose_app_mkApps in x; cbn in *; try firstorder congruence.  inv x.
+      eauto.      
   - hnf in X.
 
     destruct dec_All with (P := (normal Σ Γ ∘ dtype)) (L := m).
@@ -353,9 +416,8 @@ Proof.
     eapply All_impl. exact X. cbn. intros. eapply H.
 
     + left. eapply nf_cofix. eauto. eauto.
-    + right. intros H. depelim H. depelim H. help. help. eauto.
-    + right. intros H. depelim H. depelim H. help. help. eauto.
-      Unshelve. repeat econstructor.
+    + right. intros H. depelim H. depelim H. help. help. help. eauto.
+    + right. intros H. depelim H. depelim H. help. help. help. eauto.
 Defined.
 
 Definition normal_dec Σ Γ t := fst (normal_neutral_dec Σ Γ t).

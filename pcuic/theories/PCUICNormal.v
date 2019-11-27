@@ -33,9 +33,6 @@ Section Normal.
   
   Inductive normal (Γ : context) : term -> Prop :=
   | nf_ne t : neutral Γ t -> normal Γ t
-  | nf_sort s : normal Γ (tSort s)
-  | nf_prod na A B : normal Γ A -> normal (Γ ,, vass na A) B ->
-                     normal Γ (tProd na A B)
   | nf_lam na A B : normal Γ A -> normal (Γ ,, vass na A) B ->
                     normal Γ (tLambda na A B)
   | nf_cstrapp i n u v : All (normal Γ) v -> normal Γ (mkApps (tConstruct i n u) v)
@@ -53,6 +50,9 @@ Section Normal.
       neutral Γ (tRel i)
   | ne_var v : neutral Γ (tVar v)
   | ne_evar n l : All (normal Γ) l -> neutral Γ (tEvar n l)
+  | ne_sort s : neutral Γ (tSort s)
+  | ne_prod na A B : normal Γ A -> normal (Γ ,, vass na A) B ->
+                     neutral Γ (tProd na A B)
   | ne_const c u decl :
       lookup_env Σ c = Some (ConstantDecl decl) -> decl.(cst_body) = None ->
       neutral Γ (tConst c u)
@@ -144,7 +144,6 @@ Section Normal.
 
 End Normal.
 
-
 Hint Constructors normal neutral.
 
 Derive Signature for normal.
@@ -235,6 +234,18 @@ Proof.
       now eapply All_Forall.
 Qed.
 
+Lemma neutral_mk_Apps_inv:
+  forall (Σ : global_env) (Γ : context) (t : term) (v : list term), ~ isApp t -> neutral Σ Γ (mkApps t v) -> neutral Σ Γ t /\ Forall (normal Σ Γ) v.
+Proof.
+  intros Σ Γ t v H H1.
+  induction v using rev_ind.
+  - split. eapply H1. econstructor. 
+  - rewrite <- mkApps_nested in H1. cbn in H1. depelim H1. 
+    split.
+    + firstorder.
+    + eapply app_Forall. firstorder. firstorder.
+Qed.
+
 Lemma normal_mkApps Σ Γ t v :
   neutral Σ Γ t -> Forall (normal Σ Γ) v -> normal Σ Γ (mkApps t v).
 Proof.
@@ -265,6 +276,10 @@ Proof.
     + right. intros H. depelim H. depelim H. eauto. help. help.
   - destruct (IHt1 Γ) as [[] _];
       [destruct (IHt2 (Γ,, vass n t1)) as [[] _]|]; eauto.
+    + right. intros H. depelim H. eauto. 
+    + right. intros H. depelim H. eauto.
+  - destruct (IHt1 Γ) as [[] _];
+      [destruct (IHt2 (Γ,, vass n t1)) as [[] _]|]; eauto.
     + right. intros H. depelim H. depelim H. eauto. help. help.
     + right. intros H. depelim H. depelim H. eauto. help. help.
   - right. intros H. depelim H. depelim H. help. help.
@@ -273,12 +288,11 @@ Proof.
       -- eapply All_impl. eassumption. intros ? ?. apply H1.
       -- destruct t. all:eauto using normal_mkApps, All_Forall.
          all: try now (left; depelim n; help; eauto).
-         ++ todo "move to neutral".
-         ++ todo "move to neutral".
          ++ destruct v as [ | ? v].
             ** eauto.
-            ** right. intros ?. eapply normal_nf. left; exact H1.
-               cbn. todo "fact on red1".
+            ** right. intros ?. depelim H1. depelim H1. all:help. clear IHl.
+               eapply neutral_mk_Apps_inv in H1 as []; eauto.
+               depelim H1.
          ++ todo "check narg".
          ++ todo "check narg".
       -- right. intros ?. eapply f. eapply Forall_All.

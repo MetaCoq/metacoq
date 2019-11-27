@@ -852,6 +852,18 @@ Proof.
   apply IHl. inv H; auto.
 Qed.
 
+Notation decision P := ({P} + {~P}).
+
+Lemma dec_All X (L : list X) P : All (fun x => decision (P x)) L ->
+                                 All P L + (All P L -> False).
+Proof.
+  intros. induction X0.
+  - left. econstructor.
+  - destruct p.
+    + destruct IHX0. left; econstructor; eauto. right. inversion 1. subst. eauto.
+    + right. inversion 1; subst; eauto.
+Defined.
+
 Lemma All_Forall {A : Type} (P : A -> Prop) l :
   All P l -> Forall P l.
 Proof. induction 1; constructor; auto. Qed.
@@ -864,6 +876,11 @@ Qed.
 Lemma All_forallb {A} (p : pred A) l : All (is_true ∘ p) l -> is_true (forallb p l).
 Proof.
   move/All_Forall. apply forallb_Forall.
+Qed.
+
+Lemma OnOn2_contra A  (P : A -> A -> Type) l1 l2 : (forall x y, P x y -> False) -> OnOne2 P l1 l2 -> False.
+Proof.
+  intros. induction X; eauto.
 Qed.
 
 Lemma OnOne2_All_mix_left {A} {P : A -> A -> Type} {Q : A -> Type} {l l'} :
@@ -3000,6 +3017,12 @@ Section ListSize.
     rewrite rev_cons list_size_app IHl; cbn; lia.
   Qed.
 
+  Lemma list_size_length (l : list A)
+    : list_size l >= length l.
+  Proof.
+    induction l; simpl; lia.
+  Qed.    
+  
 End ListSize.
 
 Section ListSizeMap.

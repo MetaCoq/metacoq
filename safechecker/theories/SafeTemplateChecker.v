@@ -119,10 +119,10 @@ Program Definition infer_and_print_template_program {cf : checker_flags} (p : As
   | CorrectDecl t =>
     inl ("Environment is well-formed and " ++ string_of_term (trans p.2) ++
          " has type: " ++ string_of_term t.π1)
-  | EnvError (AlreadyDeclared id) =>
+  | EnvError Σ (AlreadyDeclared id) =>
     inr ("Already declared: " ++ id)
-  | EnvError (IllFormedDecl id e) =>
-    inr ("Type error: " ++ PCUICSafeChecker.string_of_type_error (trans_global (AstUtils.empty_ext (fst p))) e ++ ", while checking " ++ id)
+  | EnvError Σ (IllFormedDecl id e) =>
+    inr ("Type error: " ++ PCUICSafeChecker.string_of_type_error Σ e ++ ", while checking " ++ id)
   end.
 
 (* Program Definition check_template_program {cf : checker_flags} (p : Ast.program) (ty : Ast.term) *)

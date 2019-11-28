@@ -1372,8 +1372,8 @@ Section CheckEnv.
 
   Inductive EnvCheck (A : Type) :=
   | CorrectDecl (a : A)
-  | EnvError (e : env_error).
-  Global Arguments EnvError {A} e.
+  | EnvError (Σ : global_env_ext) (e : env_error).
+  Global Arguments EnvError {A} Σ e.
   Global Arguments CorrectDecl {A} a.
 
   Instance envcheck_monad : Monad EnvCheck :=
@@ -1381,35 +1381,35 @@ Section CheckEnv.
        bind A B m f :=
          match m with
          | CorrectDecl a => f a
-         | EnvError e => EnvError e
+         | EnvError g e => EnvError g e
          end
     |}.
 
-  Instance envcheck_monad_exc : MonadExc env_error EnvCheck :=
-    { raise A e := EnvError e;
+  Instance envcheck_monad_exc : MonadExc (global_env_ext * env_error) EnvCheck :=
+    { raise A '(g, e) := EnvError g e;
       catch A m f :=
         match m with
         | CorrectDecl a => m
-        | EnvError t => f t
+        | EnvError g t => f (g, t)
         end
     }.
 
-  Definition wrap_error {A} (id : string) (check : typing_result A) : EnvCheck A :=
+  Definition wrap_error {A} Σ (id : string) (check : typing_result A) : EnvCheck A :=
     match check with
     | Checked a => CorrectDecl a
-    | TypeError e => EnvError (IllFormedDecl id e)
+    | TypeError e => EnvError Σ (IllFormedDecl id e)
     end.
 
   Definition check_wf_type id Σ HΣ HΣ' G HG t
     : EnvCheck (∑ u, ∥ Σ;;; [] |- t : tSort u ∥)
-    := wrap_error id (@infer_type _ Σ HΣ (@infer _ Σ HΣ HΣ' G HG) [] sq_wfl_nil t).
+    := wrap_error Σ id (@infer_type _ Σ HΣ (@infer _ Σ HΣ HΣ' G HG) [] sq_wfl_nil t).
 
   Definition check_wf_judgement id Σ HΣ HΣ' G HG t ty
     : EnvCheck (∥ Σ;;; [] |- t : ty ∥)
-    := wrap_error id (@check _ Σ HΣ HΣ' G HG [] sq_wfl_nil t ty).
+    := wrap_error Σ id (@check _ Σ HΣ HΣ' G HG [] sq_wfl_nil t ty).
 
   Definition infer_term Σ HΣ HΣ' G HG t :=
-    wrap_error "toplevel term" (@infer _ Σ HΣ HΣ' G HG [] sq_wfl_nil t).
+    wrap_error Σ "toplevel term" (@infer _ Σ HΣ HΣ' G HG [] sq_wfl_nil t).
 
   Program Fixpoint check_fresh id env : EnvCheck (∥ fresh_global id env ∥) :=
     match env with
@@ -1417,7 +1417,7 @@ Section CheckEnv.
     | g :: env =>
       p <- check_fresh id env;;
       match eq_constant id g.1 with
-      | true => EnvError (AlreadyDeclared id)
+      | true => EnvError (empty_ext env) (AlreadyDeclared id)
       | false => ret _
       end
     end.
@@ -1502,11 +1502,11 @@ Section CheckEnv.
       end
     | InductiveDecl mdecl =>
       X1 <- monad_Alli (check_one_ind_body Σ HΣ HΣ' G HG id mdecl) _ _ ;;
-      X2 <- wrap_error id (check_context HΣ HΣ' G HG (ind_params mdecl)) ;;
-      X3 <- wrap_error id (check_eq_nat (context_assumptions (ind_params mdecl))
+      X2 <- wrap_error Σ id (check_context HΣ HΣ' G HG (ind_params mdecl)) ;;
+      X3 <- wrap_error Σ id (check_eq_nat (context_assumptions (ind_params mdecl))
                                        (ind_npars mdecl)
                                        (Msg "wrong number of parameters")) ;;
-      X4 <- wrap_error id (check_eq_true (ind_guard mdecl) (Msg "guard"));;
+      X4 <- wrap_error Σ id (check_eq_true (ind_guard mdecl) (Msg "guard"));;
       ret (Build_on_inductive_sq X1 X2 X3 X4)
     end.
   Next Obligation.
@@ -1554,23 +1554,23 @@ Section CheckEnv.
     let levels := levels_of_udecl udecl in
     let global_levels := global_levels Σ in
     let all_levels := LevelSet.union levels global_levels in
-    check_eq_true (LevelSet.for_all (fun l => negb (LevelSet.mem l global_levels))
-                                    levels) (IllFormedDecl id (Msg ("non fresh level in " ++ Pretty.print_lset levels)));;
+    check_eq_true (LevelSet.for_all (fun l => negb (LevelSet.mem l global_levels)) levels) 
+       (empty_ext Σ, IllFormedDecl id (Msg ("non fresh level in " ++ Pretty.print_lset levels)));;
     check_eq_true (ConstraintSet.for_all (fun '(l1, _, l2) => LevelSet.mem l1 all_levels && LevelSet.mem l2 all_levels) (constraints_of_udecl udecl))
-                                    (IllFormedDecl id (Msg ("non declared level in " ++ Pretty.print_lset levels ++
+                                    (empty_ext Σ, IllFormedDecl id (Msg ("non declared level in " ++ Pretty.print_lset levels ++
                                     " |= " ++ Pretty.print_constraint_set (constraints_of_udecl udecl))));;
     check_eq_true match udecl with
                   | Monomorphic_ctx ctx
                     => LevelSet.for_all (negb ∘ Level.is_var) ctx.1
                   | _ => true
-                  end (IllFormedDecl id (Msg "Var level in monomorphic context")) ;;
+                  end (empty_ext Σ, IllFormedDecl id (Msg "Var level in monomorphic context")) ;;
     (* TODO: could be optimized by reusing G *)
     match gc_of_uctx (uctx_of_udecl udecl) as X' return (X' = _ -> EnvCheck _) with
     | None => fun _ =>
-      raise (IllFormedDecl id (Msg "constraints trivially not satisfiable"))
+      raise (empty_ext Σ, IllFormedDecl id (Msg "constraints trivially not satisfiable"))
     | Some uctx' => fun Huctx =>
       check_eq_true (wGraph.is_acyclic (add_uctx uctx' G))
-                    (IllFormedDecl id (Msg "constraints not satisfiable"));;
+                    (empty_ext Σ, IllFormedDecl id (Msg "constraints not satisfiable"));;
                                  ret (uctx'; (conj _ _))
     end eq_refl.
   Next Obligation.

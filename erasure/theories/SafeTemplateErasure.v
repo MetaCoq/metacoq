@@ -23,8 +23,8 @@ Program Definition erase_template_program_check (p : Ast.program)
   : EnvCheck (EAst.global_context * EAst.term) :=
   let Σ := List.rev (trans_global (AstUtils.empty_ext p.1)).1 in
   G <- check_wf_env Σ ;;
-  Σ' <- wrap_error "erasure of the global context" (erase_global Σ _) ;;
-  t <- wrap_error ("During erasure of " ++ string_of_term (trans p.2)) (erase (empty_ext Σ) _ nil _ (trans p.2));;
+  Σ' <- wrap_error (PCUICAstUtils.empty_ext Σ) "erasure of the global context" (erase_global Σ _) ;;
+  t <- wrap_error (PCUICAstUtils.empty_ext Σ) ("During erasure of " ++ string_of_term (trans p.2)) (erase (empty_ext Σ) _ nil _ (trans p.2));;
   ret (Monad:=envcheck_monad) (Σ', t).
 
 Next Obligation.
@@ -148,8 +148,8 @@ Program Definition erase_template_program (p : Ast.program)
   : EnvCheck (EAst.global_context * EAst.term) :=
   let Σ := List.rev (trans_global (AstUtils.empty_ext p.1)).1 in
   G <- check_wf_env_only_univs Σ ;;
-  Σ' <- wrap_error "erasure of the global context" (SafeErasureFunction.erase_global Σ _) ;;
-  t <- wrap_error ("During erasure of " ++ string_of_term (trans p.2)) (SafeErasureFunction.erase (empty_ext Σ) _ nil (trans p.2) _);;
+  Σ' <- wrap_error (PCUICAstUtils.empty_ext Σ) "erasure of the global context" (SafeErasureFunction.erase_global Σ _) ;;
+  t <- wrap_error (PCUICAstUtils.empty_ext Σ) ("During erasure of " ++ string_of_term (trans p.2)) (SafeErasureFunction.erase (empty_ext Σ) _ nil (trans p.2) _);;
   ret (Monad:=envcheck_monad) (Σ', t).
 
 Next Obligation.
@@ -175,10 +175,10 @@ Program Definition erase_and_print_template_program_check {cf : checker_flags} (
   | CorrectDecl (Σ', t) =>
     inl ("Environment is well-formed and " ++ Pretty.print_term (AstUtils.empty_ext p.1) [] true p.2 ++
          " erases to: " ++ nl ++ EPretty.print_term Σ' [] true false t)
-  | EnvError (AlreadyDeclared id) =>
+  | EnvError Σ' (AlreadyDeclared id) =>
     inr ("Already declared: " ++ id)
-  | EnvError (IllFormedDecl id e) =>
-    inr ("Type error: " ++ PCUICSafeChecker.string_of_type_error (trans_global (AstUtils.empty_ext (fst p))) e ++ ", while checking " ++ id)
+  | EnvError Σ' (IllFormedDecl id e) =>
+    inr ("Type error: " ++ PCUICSafeChecker.string_of_type_error Σ' e ++ ", while checking " ++ id)
   end.
 
 (** This uses the retyping-based erasure *)
@@ -189,10 +189,10 @@ Program Definition erase_and_print_template_program {cf : checker_flags} (p : As
   | CorrectDecl (Σ', t) =>
     inl ("Environment is well-formed and " ++ Pretty.print_term (AstUtils.empty_ext p.1) [] true p.2 ++
          " erases to: " ++ nl ++ EPretty.print_term Σ' [] true false t)
-  | EnvError (AlreadyDeclared id) =>
+  | EnvError Σ' (AlreadyDeclared id) =>
     inr ("Already declared: " ++ id)
-  | EnvError (IllFormedDecl id e) =>
-    inr ("Type error: " ++ PCUICSafeChecker.string_of_type_error (trans_global (AstUtils.empty_ext (fst p))) e ++ ", while checking " ++ id)
+  | EnvError Σ' (IllFormedDecl id e) =>
+    inr ("Type error: " ++ PCUICSafeChecker.string_of_type_error Σ' e ++ ", while checking " ++ id)
   end.
 
 (* Program Definition check_template_program {cf : checker_flags} (p : Ast.program) (ty : Ast.term) *)

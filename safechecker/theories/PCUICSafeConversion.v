@@ -1114,6 +1114,7 @@ Section Conversion.
         * eapply conv_context_sym. all: auto.
   Qed.
 
+  Opaque reduce_stack.
   Equations unfold_one_fix (Γ : context) (mfix : mfixpoint term)
             (idx : nat) (π : stack) (h : wtp Γ (tFix mfix idx) π)
     : option (term * stack) :=
@@ -1141,6 +1142,7 @@ Section Conversion.
     destruct hh as [na [A' [B' [? [? ?]]]]].
     left. eexists. eassumption.
   Qed.
+  Transparent reduce_stack.
 
   Derive NoConfusion NoConfusionHom for option.
 
@@ -2108,6 +2110,7 @@ Section Conversion.
     intuition eauto.
   Qed.
 
+  Opaque reduce_stack.
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
             (t2 : term) (π2 : stack) (h2 : wtp Γ t2 π2)
@@ -2996,7 +2999,7 @@ Section Conversion.
     all: try reflexivity.
     simpl. constructor.
   Qed.
-
+  
   (* TODO MOVE *)
   Lemma App_conv' :
     forall leq Γ t1 t2 u1 u2,
@@ -3926,5 +3929,6 @@ Section Conversion.
     unfold isconv_term. intro h.
     apply isconv_sound in h. apply h.
   Qed.
+  Transparent reduce_stack.
 
 End Conversion.

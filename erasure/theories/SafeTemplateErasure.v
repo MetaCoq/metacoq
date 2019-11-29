@@ -1,5 +1,25 @@
 (* Distributed under the terms of the MIT license.   *)
 
+From MetaCoq.Erasure Require Import EAst.
+
+Fixpoint opt_cases (t : term) :=
+  match t with
+  | tBox => tBox
+  | tRel n => tRel n
+  | tVar n => tVar n
+  | tEvar n l => tEvar n (List.map opt_cases l)
+  | tLambda na t => tLambda na (opt_cases t)
+  | tLetIn na t1 t2 => tLetIn na (opt_cases t1) (opt_cases t2)
+  | tApp t1 t2 => tApp (opt_cases t1) (opt_cases t2)
+  | tConst k => tConst k
+  | tConstruct i n => tConstruct i n
+  | tCase p tBox ((a, b) :: _) => mkApps b (List.repeat tBox a)
+  | tCase p t brs => tCase p (opt_cases t) (List.map (fun '(n, t) => (n, opt_cases t)) brs)
+  | tProj p t => tProj p (opt_cases t)
+  | tFix mfix id => tFix (List.map (fun d => Build_def term (dname d) (opt_cases (dbody d)) (rarg d)) mfix) id
+  | tCoFix mfix id => tCoFix (List.map (fun d => Build_def term (dname d) (opt_cases (dbody d)) (rarg d)) mfix) id
+  end.
+
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From MetaCoq.Template Require Import config monad_utils utils BasicAst AstUtils
      UnivSubst Pretty.
@@ -25,7 +45,7 @@ Program Definition erase_template_program_check (p : Ast.program)
   G <- check_wf_env Σ ;;
   Σ' <- wrap_error (PCUICAstUtils.empty_ext Σ) "erasure of the global context" (erase_global Σ _) ;;
   t <- wrap_error (PCUICAstUtils.empty_ext Σ) ("During erasure of " ++ string_of_term (trans p.2)) (erase (empty_ext Σ) _ nil _ (trans p.2));;
-  ret (Monad:=envcheck_monad) (Σ', t).
+  ret (Monad:=envcheck_monad) (Σ', opt_cases t).
 
 Next Obligation.
   unfold trans_global.
@@ -150,7 +170,7 @@ Program Definition erase_template_program (p : Ast.program)
   G <- check_wf_env_only_univs Σ ;;
   Σ' <- wrap_error (PCUICAstUtils.empty_ext Σ) "erasure of the global context" (SafeErasureFunction.erase_global Σ _) ;;
   t <- wrap_error (PCUICAstUtils.empty_ext Σ) ("During erasure of " ++ string_of_term (trans p.2)) (SafeErasureFunction.erase (empty_ext Σ) _ nil (trans p.2) _);;
-  ret (Monad:=envcheck_monad) (Σ', t).
+  ret (Monad:=envcheck_monad) (Σ', opt_cases t).
 
 Next Obligation.
   unfold trans_global.

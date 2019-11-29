@@ -1,6 +1,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec ZArith.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
+From Equations Require Import Equations.
 From MetaCoq.Checker Require Import uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICTyping PCUICMetaTheory PCUICWcbvEval PCUICLiftSubst PCUICInversion
@@ -8,14 +9,16 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICValidity PCUICPrincipality PCUICElimination PCUICSN.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker PCUICSafeRetyping.
 From MetaCoq.Erasure Require EAst ELiftSubst ETyping EWcbvEval Extract ErasureCorrectness.
-From Equations Require Import Equations.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 Import MonadNotation.
 Local Set Keyed Unification.
 
-Require Import EArities Extract Prelim.
+From MetaCoq.Erasure Require Import EArities Extract Prelim.
+
+Set Equations Transparent.
+
 Section fix_sigma.
 Local Existing Instance extraction_checker_flags.
 Variable Σ : global_env_ext.
@@ -31,13 +34,13 @@ Lemma wf_cod : WellFounded cod.
 Proof.
   clear HΣ.
   sq. intros ?. induction a; econstructor; cbn in *; intros; try tauto; subst. eauto.
-Qed.
+Defined.
 
 Lemma wf_cod' : WellFounded (Relation_Operators.clos_trans _ cod).
 Proof.
   clear HΣ.
   eapply Subterm.WellFounded_trans_clos. exact wf_cod.
-Qed.
+Defined.
 
 Lemma Acc_no_loop X (R : X -> X -> Prop) t : Acc R t -> R t t -> False.
 Proof.
@@ -49,8 +52,8 @@ Ltac sq' := try (destruct HΣ; clear HΣ);
          | H : ∥ _ ∥ |- _ => destruct H; try clear H
          end; try eapply sq.
 
-Instance wf_reduction : WellFounded term_rel.
-Proof.
+Definition wf_reduction_aux : WellFounded term_rel.
+Proof.    
   intros (Γ & s & H). sq'.
   induction (normalisation' Σ Γ s X H) as [s _ IH].
   induction (wf_cod' s) as [s _ IH_sub] in Γ, H, IH |- *.
@@ -88,6 +91,14 @@ Grab Existential Variables.
      rewrite destArity_app_aux. rewrite e. cbn. reflexivity.
 Qed.
 
+Instance wf_reduction : WellFounded term_rel.
+Proof.
+  refine (Wf.Acc_intro_generator 1000 _).
+  exact wf_reduction_aux.
+Defined.
+Opaque wf_reduction.
+Opaque Acc_intro_generator.
+Opaque Wf.Acc_intro_generator.
 Ltac sq := try (destruct HΣ as [wfΣ]; clear HΣ);
   repeat match goal with
          | H : ∥ _ ∥ |- _ => destruct H
@@ -186,7 +197,7 @@ Next Obligation.
 Admitted. (* reduce to prod, if it returns a TypeError (NotAProduct _) just means it is not an arity *)
 
 End fix_sigma.
-
+Transparent wf_reduction.
 Local Existing Instance extraction_checker_flags.
 Definition wf_ext_wf Σ : wf_ext Σ -> wf Σ := fst.
 Hint Resolve wf_ext_wf.
@@ -462,7 +473,9 @@ Section Erase.
 
 End Erase.
 
-Require Import ErasureCorrectness.
+From MetaCoq Require Import ErasureCorrectness.
+
+Opaque wf_reduction.
 Arguments iswelltyped {cf Σ Γ t A}.
 Lemma erases_erase (Σ : global_env_ext) Γ t T (wfΣ : ∥wf_ext Σ∥) t' :
   Σ ;;; Γ |- t : T ->
@@ -548,6 +561,8 @@ Proof.
     (* eapply p. eauto. *)
   (* - clear E. inv t; discriminate. *)
 Admitted.
+
+Transparent wf_reduction.
 
 Lemma erase_Some_typed {Σ wfΣ Γ t wft r} :
   erase Σ wfΣ Γ t wft = Checked r -> exists T, ∥Σ ;;; Γ |- t : T∥.

@@ -16,6 +16,8 @@ Open Scope type_scope.
 
 Set Default Goal Selector "!".
 
+Set Equations Transparent.
+
 (** * Reduction machine for PCUIC without fuel
 
   We subsume the reduction machine of PCUICChecker without relying on fuel.
@@ -171,6 +173,26 @@ Section Measure.
   Qed.
 
 End Measure.
+
+(* Added by Julien Forest on 13/11/20 in Coq stdlib, adapted to subset case by M. Sozeau *)
+Section Acc_sidecond_generator.
+  Context {A : Type} {R : A -> A -> Prop} {P : A -> Prop}.
+  Variable Pimpl : forall x y, P x -> R y x -> P y.
+  (* *Lazily* add 2^n - 1 Acc_intro on top of wf.
+     Needed for fast reductions using Function and Program Fixpoint
+     and probably using Fix and Fix_F_2
+   *)
+  Fixpoint Acc_intro_generator n (acc : forall t, P t -> Acc R t) : forall t, P t -> Acc R t :=
+    match n with
+        | O => acc
+        | S n => fun x Px =>
+                   Acc_intro x (fun y Hy => Acc_intro_generator n (Acc_intro_generator n acc) y (Pimpl _ _ Px Hy))
+    end.
+End Acc_sidecond_generator.
+(** We leave it opaque for now, as some simplification tactics
+  might otherwise unfold the large Acc proof. Don't forget to make it transparent
+  when computing. *)
+Opaque Acc_intro_generator.
 
 Section Reduce.
 
@@ -888,24 +910,6 @@ Section Reduce.
     apply_funelim (red_discr t π). all: easy.
   Qed.
 
-(* Added by Julien Forest on 13/11/20 in Coq stdlib, adapted to subset case by M. Sozeau *)
-Section Acc_sidecond_generator.
-  Context {A : Type} {R : A -> A -> Prop} {P : A -> Prop}.
-  Variable Pimpl : forall x y, P x -> R y x -> P y.
-  (* *Lazily* add 2^n - 1 Acc_intro on top of wf.
-     Needed for fast reductions using Function and Program Fixpoint
-     and probably using Fix and Fix_F_2
-   *)
-  Fixpoint Acc_intro_generator n (acc : forall t, P t -> Acc R t) : forall t, P t -> Acc R t :=
-    match n with
-        | O => acc
-        | S n => fun x Px =>
-                   Acc_intro x (fun y Hy => Acc_intro_generator n (Acc_intro_generator n acc) y (Pimpl _ _ Px Hy))
-    end.
-
-
-End Acc_sidecond_generator.
-
   Lemma wellformed_R_pres Γ :
     forall x y : term × stack, wellformed Σ Γ (zip x) -> R Σ Γ y x -> wellformed Σ Γ (zip y).
   Proof. intros. todo "wellformed_R_pres proof"%string. Admitted.
@@ -932,21 +936,21 @@ End Acc_sidecond_generator.
           inversion H1. subst. inversion H2. subst. clear H1 H2.
           intros. cbn. rewrite H3. assumption.
   Defined.
-  Next Obligation.
+(*   Next Obligation.
     destruct hΣ.
     eapply R_Acc. all: assumption.
   Defined.
+ *) 
   (* Replace the last obligation by the following to run inside Coq. *)
-  (* Next Obligation.
-    destruct hΣ.
+  Next Obligation.
     revert h. generalize (t, π).
     refine (Acc_intro_generator
               (R:=fun x y => R Σ Γ x y)
-              (P:=fun x => wellformed Σ Γ (zip x)) (fun x y Px Hy => _) 12 _).
-    simpl in *. eapply wellformed_R_pres; eauto.
-    intros; eapply R_Acc; eassumption.
-  Defined. *)
-
+              (P:=fun x => wellformed Σ Γ (zip x)) (fun x y Px Hy => _) 1000 _).
+    - simpl in *. eapply wellformed_R_pres; eauto.
+    - destruct hΣ. intros; eapply R_Acc; eassumption.
+  Defined.
+  
   Definition reduce_stack Γ t π h :=
     let '(exist ts _) := reduce_stack_full Γ t π h in ts.
 

@@ -372,15 +372,13 @@ Proof.
   - destruct (lookup_env Σ s) as [[] | ] eqn:E.
     + destruct (cst_body c) eqn:E2.
       * right. intros H. depelim H. depelim H. congruence. help. help. help.
-      * destruct (string_dec s k). subst. left. eauto.
-        right. intros H. depelim H. depelim H. congruence. help. help. help.
+      * eauto. 
     +   right. intros H. depelim H. depelim H. congruence. help. help. help.
     +   right. intros H. depelim H. depelim H. congruence. help. help. help.
   - destruct (lookup_env Σ s) as [[] | ] eqn:E.
     + destruct (cst_body c) eqn:E2.
       * right. intros H. depelim H. congruence.
-      * destruct (string_dec s k). subst. left. eauto.
-        right. intros H. depelim H. congruence.
+      * eauto. 
     +   right. intros H. depelim H. congruence.
     +   right. intros H. depelim H. congruence.
   - left. eapply nf_indapp with (v := []). econstructor.
@@ -534,16 +532,14 @@ Proof.
     destruct (lookup_env Σ s) as [[] | ] eqn:E.
     + destruct (cst_body c) eqn:E2.
       * right. intros H. depelim H. depelim H. congruence. congruence. all:help.
-      * destruct (string_dec s k). subst. left. eauto.
-        right. intros H. depelim H. depelim H. congruence. congruence. all:help.
+      * eauto. 
     +   right. intros H. depelim H. depelim H. congruence. congruence. all:help.
     +   right. intros H. depelim H. depelim H. congruence. congruence. all:help.
   - destruct (RedFlags.delta flags) eqn:Er; eauto.
     destruct (lookup_env Σ s) as [[] | ] eqn:E.
     + destruct (cst_body c) eqn:E2.
       * right. intros H. depelim H. congruence. congruence.
-      * destruct (string_dec s k). subst. left. eauto.
-        right. intros H. depelim H. congruence. congruence.
+      * eauto.
     +   right. intros H. depelim H. congruence. congruence.
     +   right. intros H. depelim H. congruence. congruence.
   - left. eapply whnf_indapp with (v := []). 

@@ -482,15 +482,15 @@ Section Erase.
   Qed.    
   Next Obligation.
     destruct Ht, HΣ.
-    eapply inversion_Case in X as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? ); eauto.
+    eapply inversion_Case in X as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? ); eauto.
   Qed.
   Next Obligation.
     todo "inversion".
   Qed.
   Next Obligation.
     eapply Forall_All. sq'. destruct Ht.
-    eapply inversion_Case in X0 as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? ); eauto.
-    eapply All_Forall. destruct p0.
+    eapply inversion_Case in X0 as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? ); eauto.
+    eapply All_Forall. 
     eapply All2_All_left. eassumption. intros. econstructor. eapply X0.
   Qed.
   Next Obligation.

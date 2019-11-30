@@ -417,7 +417,6 @@ Proof.
   now apply le_n_S.
 Qed.
 
-
 Lemma wf_ext_gc_of_uctx {cf:checker_flags} {Σ : global_env_ext} (HΣ : ∥ wf_ext Σ ∥)
   : ∑ uctx', gc_of_uctx (global_ext_uctx Σ) = Some uctx'.
 Proof.
@@ -429,7 +428,7 @@ Proof.
   destruct (gc_of_constraints (global_ext_constraints (Σ, φ))).
   eexists; reflexivity.
   contradiction HC.
-Qed.
+Defined.
 
 Lemma wf_ext_is_graph {cf:checker_flags} {Σ : global_env_ext} (HΣ : ∥ wf_ext Σ ∥)
   : ∑ G, is_graph_of_uctx G (global_ext_uctx Σ).

@@ -35,3 +35,4 @@ extractable.v
 vs.v
 erasure_test.v
 safechecker_test.v
+erasure_live_test.v

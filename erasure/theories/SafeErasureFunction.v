@@ -439,12 +439,12 @@ Section Erase.
                      ret (E.tApp f' l')
       ; erase Γ (tCase ip p c brs) Ht _ :=
           c' <- erase Γ c _;;
-          if is_box c' then
-            match brs with
-            | (a, b) :: brs => b' <- erase Γ b _ ;; ret (E.mkApps b' (repeat E.tBox a))
-            | [] => ret (E.tCase ip c' [])
-            end
-          else
+          (* if is_box c' then *)
+          (*   match brs with *)
+          (*   | (a, b) :: brs => b' <- erase Γ b _ ;; ret (E.mkApps b' (repeat E.tBox a)) *)
+          (*   | [] => ret (E.tCase ip c' []) *)
+          (*   end *)
+          (* else *)
             brs' <- monad_map_all (T :=typing_result) (fun x H => x' <- erase Γ (snd x) H;; ret (fst x, x')) (l := brs) _;;
             ret (E.tCase ip c' brs')
       ; erase Γ (tProj p c) Ht _ :=
@@ -483,9 +483,6 @@ Section Erase.
   Next Obligation.
     destruct Ht, HΣ.
     eapply inversion_Case in X as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? ); eauto.
-  Qed.
-  Next Obligation.
-    todo "inversion".
   Qed.
   Next Obligation.
     eapply Forall_All. sq'. destruct Ht.

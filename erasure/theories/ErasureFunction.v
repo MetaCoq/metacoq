@@ -604,14 +604,14 @@ Program Definition erase_mutual_inductive_body Σ wfΣ
 Program Fixpoint erase_global_decls Σ : ∥ wf Σ ∥ -> typing_result E.global_declarations := fun wfΣ =>
   match Σ with
   | [] => ret []
-  | ConstantDecl kn cb :: Σ =>
+  | (kn, ConstantDecl cb) :: Σ =>
     cb' <- erase_constant_body (Σ, cst_universes cb) _ cb;;
     Σ' <- erase_global_decls Σ _;;
-    ret (E.ConstantDecl kn cb' :: Σ')
-  | InductiveDecl kn mib :: Σ =>
+    ret ((kn, E.ConstantDecl cb') :: Σ')
+  | (kn, InductiveDecl mib) :: Σ =>
     mib' <- erase_mutual_inductive_body (Σ, ind_universes mib) _ mib _ ;;
     Σ' <- erase_global_decls Σ _;;
-    ret (E.InductiveDecl kn mib' :: Σ')
+    ret ((kn, E.InductiveDecl mib') :: Σ')
   end.
 Next Obligation.
   sq. split. cbn.
@@ -648,14 +648,14 @@ Proof.
   - inv H. econstructor.
   - cbn in H. unfold bind in *. cbn in *. repeat destruct ?; try congruence.
     + inv H. inv E.
-      unfold erase_constant_body in E1.
-      unfold bind in E1. cbn in E1. repeat destruct ?; try congruence.
-      inv E1. econstructor.
+      unfold erase_constant_body in E2.
+      unfold bind in E2. cbn in E2. repeat destruct ?; try congruence.
+      inv E2. econstructor.
       * unfold optM in E0. destruct ?; try congruence.
         -- unfold erases_constant_body.
           cbn. cbn in *.
            destruct ( erase (Σ, _)
-           (erase_global_decls_obligation_1 (ConstantDecl k c :: Σ)
+           (erase_global_decls_obligation_1 ((k, ConstantDecl c) :: Σ)
               (sq w) k c Σ eq_refl) [] wf_local_nil t) eqn:E5;
              rewrite E5 in E0; inv E0.
            rewrite E1.
@@ -668,8 +668,8 @@ Proof.
            rewrite E1 in X0. cbn in X0. eassumption.
         -- cbn. inv E0. unfold erases_constant_body.
            rewrite E1. cbn. econstructor.
-      * eapply IHΣ. unfold erase_global. rewrite E2. reflexivity.
-    + inv H. inv E. inv E1.
+      * eapply IHΣ. unfold erase_global. rewrite E3. reflexivity.
+    + inv H. inv E. inv E2.
       unfold erase_mutual_inductive_body, bind in H0. cbn in H0.
       destruct ?; try congruence. inv H0.
       econstructor.
@@ -708,6 +708,6 @@ Proof.
 
            eapply erases_erase.
            2:{ eauto. } eauto.
-  * eapply IHΣ. unfold erase_global. rewrite E2. reflexivity.
+  * eapply IHΣ. unfold erase_global. rewrite E3. reflexivity.
 Qed.
 

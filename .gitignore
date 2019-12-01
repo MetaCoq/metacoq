@@ -372,3 +372,5 @@ template-coq/Makefile.template-e
 pcuic/Makefile.plugin-e
 erasure/Makefile.plugin-e
 safechecker/Makefile.plugin-e
+erasure/src/pCUICInduction.ml
+erasure/src/pCUICInduction.mli

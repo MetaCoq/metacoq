@@ -44,7 +44,7 @@ Require Import List.
 Import ListNotations.
 MetaCoq Erase (map negb [true; false]).
 
-Definition bignat := 10000.
+Definition bignat := 100.
 MetaCoq Erase bignat.
 
 Require Import vs.

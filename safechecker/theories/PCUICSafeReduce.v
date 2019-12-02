@@ -383,7 +383,10 @@ Section Reduce.
                 | @exist (l, θ) eq4 :=
                   rec reduce fn (appstack args (App (mkApps (tConstruct ind n ui) l) ρ))
                 } ;
-              | view_other t ht := give (tFix mfix idx) π
+              | view_other t ht with inspect (decompose_stack ρ') := {
+                | @exist (l,θ) eq4 :=
+                  give (tFix mfix idx) (appstack args (App (mkApps t l) ρ))
+                }
               }
             } ;
           | _ := give (tFix mfix idx) π
@@ -638,6 +641,13 @@ Section Reduce.
     rewrite e. cbn. reflexivity.
   Qed.
 
+  Next Obligation.
+    todo "prove Req"%string.
+  Qed.
+  Next Obligation.
+    todo "prove Pr"%string.
+  Qed.
+    
   (* tCase *)
   Next Obligation.
     right. unfold posR. cbn.

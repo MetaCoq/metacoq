@@ -436,6 +436,12 @@ Fixpoint nlstack (π : stack) : stack :=
     Lambda_ty nAnon (nl b) (nlstack ρ)
   | Lambda_tm na A ρ =>
     Lambda_tm nAnon (nl A) (nlstack ρ)
+  | LetIn_bd na B u ρ =>
+    LetIn_bd nAnon (nl B) (nl u) (nlstack ρ)
+  | LetIn_ty na b u ρ =>
+    LetIn_ty nAnon (nl b) (nl u) (nlstack ρ)
+  | LetIn_in na b B ρ =>
+    LetIn_in nAnon (nl b) (nl B) (nlstack ρ)
   | coApp t ρ =>
     coApp (nl t) (nlstack ρ)
   end.

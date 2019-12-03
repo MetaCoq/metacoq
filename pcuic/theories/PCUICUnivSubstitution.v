@@ -8,13 +8,15 @@ Require Import Coq.Program.Syntax Coq.Program.Basics.
 From MetaCoq.Template Require Import utils config AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICEquality
-     PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICClosed
+     PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICClosed PCUICPosition
      PCUICReduction PCUICCumulativity PCUICWeakening.
 
 Local Set Keyed Unification.
 
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
+
+Set Default Goal Selector "!".
 
 Module CS := ConstraintSet.
 Module LS := LevelSet.
@@ -126,25 +128,25 @@ Proof.
   - generalize (CS.elements ctrs), CS.empty.
     induction l; cbn.
     + firstorder.
-    + intros t. etransitivity. eapply IHl. split; intros [HH|HH].
+    + intros t. etransitivity. 1: eapply IHl.
+      split; intros [HH|HH].
       * destruct a as [[l1 a] l2]. apply CS.add_spec in HH.
-        destruct HH as [HH|HH].
+        destruct HH as [HH|HH]. 2: now left.
         right; eexists. split; [|left; reflexivity]. assumption.
-        now left.
       * destruct HH as [c' ?]. right; exists c'; intuition.
       * left. destruct a as [[l1 a] l2]. apply CS.add_spec.
         now right.
       * destruct HH as [c' [HH1 [?|?]]]; subst.
-        left; destruct c' as [[l1 c'] l2];
-          apply CS.add_spec; now left.
-        right; exists c'; intuition.
+        -- left. destruct c' as [[l1 c'] l2];
+           apply CS.add_spec; now left.
+        -- right. exists c'. intuition.
   - rewrite ConstraintSetFact.empty_iff.
     transitivity (exists c', c = subst_instance_cstr u c'
                         /\ In c' (CS.elements ctrs)).
-    intuition.
+    1: intuition.
     apply iff_ex; intro. apply and_iff_compat_l. symmetry.
-    etransitivity. eapply CS.elements_spec1.
-    etransitivity. eapply SetoidList.InA_alt.
+    etransitivity. 1: eapply CS.elements_spec1.
+    etransitivity. 1: eapply SetoidList.InA_alt.
     split; intro; eauto.
     now destruct H as [? [[] ?]].
 Qed.
@@ -167,8 +169,8 @@ Proof.
     exists c''. subst; now rewrite subst_instance_cstr_two.
   - apply In_subst_instance_cstrs in Hc; destruct Hc as [c' [eq Hc']].
     exists (subst_instance_cstr u2 c'). split.
-    now rewrite subst_instance_cstr_two.
-    now apply In_subst_instance_cstrs'.
+    + now rewrite subst_instance_cstr_two.
+    + now apply In_subst_instance_cstrs'.
 Qed.
 
 
@@ -177,7 +179,7 @@ Lemma consistent_instance_no_prop lvs φ uctx u :
   -> forallb (fun x => negb (Level.is_prop x)) u.
 Proof.
   unfold consistent_instance. destruct uctx as [ctx|ctx|ctx].
-  destruct u; [reflexivity|discriminate].
+  1: destruct u; [reflexivity|discriminate].
   2: destruct ctx as [ctx ?].
   all: destruct (AUContext.repr ctx); intro H; apply H.
 Qed.
@@ -189,7 +191,7 @@ Lemma consistent_instance_declared lvs φ uctx u :
   -> forallb (fun l => LS.mem l lvs) u.
 Proof.
   unfold consistent_instance. destruct uctx as [ctx|ctx|ctx].
-  destruct u; [reflexivity|discriminate].
+  1: destruct u; [reflexivity|discriminate].
   2: destruct ctx as [ctx ?].
   all: destruct (AUContext.repr ctx); intro H; apply H.
 Qed.
@@ -202,8 +204,10 @@ Proof.
   apply SetoidList.InA_alt in H.
   destruct H as [? [? H]]; subst. revert H.
   unfold mapi; generalize 0.
-  induction φ1; cbn. trivial.
-  intros n [H|H]. discriminate. eauto.
+  induction φ1; cbn. 1: trivial.
+  intros n [H|H].
+  - discriminate.
+  - eauto.
 Qed.
 
 Global Instance satisfies_equal_sets v :
@@ -230,10 +234,10 @@ Proof.
   destruct l; aa; cbn.
   rewrite Znat.Z2Nat.id; auto.
   apply (forallb_nth' n Level.lSet) in Hu.
-    destruct Hu as [[?l [HH1 HH2]]|HH1]; rewrite HH1; cbn.
-    destruct l; try discriminate; cbn.
+  destruct Hu as [[?l [HH1 HH2]]|HH1]; rewrite HH1; cbn.
+  - destruct l; try discriminate; cbn.
     apply Zorder.Zle_0_nat.
-    reflexivity.
+  - reflexivity.
 Qed.
 
 Lemma satisfies0_subst_instance_ctr u v c
@@ -301,8 +305,9 @@ Proof.
   induction hΣ as [|Σ kn d hΣ IH HH univs Hu Hd].
   - intro H; now apply CS.empty_spec in H.
   - subst univs. intro Hc. simpl in *; apply CS.union_spec in Hc.
-    destruct Hc as [Hc|Hc]; auto. clear -Hu Hc.
-    + destruct d as [[? ? [φ|?|?]]|[? ? ? ? [φ|?|?]]]; cbn in *;
+    destruct Hc as [Hc|Hc]; auto.
+    + clear -Hu Hc.
+      destruct d as [[? ? [φ|?|?]]|[? ? ? ? [φ|?|?]]]; cbn in *;
         unfold monomorphic_levels_decl, monomorphic_constraints_decl in *; cbn in *;
           try now apply CS.empty_spec in Hc.
       all: destruct Hu as [_ [Hu [_ _]]].
@@ -332,8 +337,8 @@ Lemma monomorphic_global_constraint Σ (hΣ : wf Σ) c :
 Proof.
   intros H. apply levels_global_constraint in H; tas.
   apply andb_and. split; destruct H as [H1 H2].
-  now apply not_var_global_levels in H1.
-  now apply not_var_global_levels in H2.
+  - now apply not_var_global_levels in H1.
+  - now apply not_var_global_levels in H2.
 Qed.
 
 Lemma monomorphic_global_constraint_ext Σ φ
@@ -343,8 +348,8 @@ Lemma monomorphic_global_constraint_ext Σ φ
 Proof.
   intros H. apply levels_global_ext_constraint in H; tas.
   apply andb_and. split; destruct H as [H1 H2].
-  now apply not_var_global_ext_levels in H1.
-  now apply not_var_global_ext_levels in H2.
+  - now apply not_var_global_ext_levels in H1.
+  - now apply not_var_global_ext_levels in H2.
 Qed.
 
 Hint Resolve monomorphic_global_constraint monomorphic_global_constraint_ext
@@ -372,9 +377,10 @@ Lemma equal_subst_instance_cstrs_mono u cstrs :
   CS.Equal (subst_instance_cstrs u cstrs) cstrs.
 Proof.
   intros HH c. etransitivity.
-  eapply In_subst_instance_cstrs. split; intro H.
-  destruct H as [c' [eq Hc']]. subst; rewrite subst_instance_monom_cstr; aa.
-  exists c. rewrite subst_instance_monom_cstr; aa.
+  - eapply In_subst_instance_cstrs.
+  - split; intro H.
+    + destruct H as [c' [eq Hc']]. subst; rewrite subst_instance_monom_cstr; aa.
+    + exists c. rewrite subst_instance_monom_cstr; aa.
 Qed.
 
 Lemma subst_instance_cstrs_union u φ φ' :
@@ -446,7 +452,7 @@ Proof.
       destruct l; cbnr; aa.
       eapply (forallb_nth' n Level.lSet) in H2'.
       destruct H2' as [[? [H2 ?]]|H2]; rewrite H2; auto. }
-    induction inst; cbnr. rewrite HH; cbn. apply IHinst.
+    induction inst; cbnr. rewrite HH; cbn. 1: apply IHinst.
     all: apply andP in H; try apply H.
   + rewrite forallb_map. apply forallb_forall.
     intros l Hl. unfold global_ext_levels, compose in *; simpl in *.
@@ -463,7 +469,7 @@ Proof.
        -- apply LevelSet_mem_union; right; apply global_levels_Set.
        -- apply LS.mem_spec in H.
           destruct φ as [φ|[φ1 φ2]|[[φ1 φ2] φ3]]; simpl in *.
-          apply Hφ in H. now apply LS.mem_spec.
+          1: apply Hφ in H. 1: now apply LS.mem_spec.
           all: now apply monomorphic_level_notin_AUContext in H.
        -- apply consistent_instance_declared in H2.
           apply (forallb_nth' n Level.lSet) in H2.
@@ -520,9 +526,9 @@ Proof.
   - destruct φ as [φ|[φ1 φ2]|[[φ1 φ2] ?]].
     + cbn. apply satisfies_subst_instance_ctr; tas.
       rewrite equal_subst_instance_cstrs_mono; aa.
-      rewrite <- Hsub in Hv; assumption.
-      intros c Hc; eapply monomorphic_global_constraint_ext; tea.
-      apply CS.union_spec; now left.
+      * rewrite <- Hsub in Hv; assumption.
+      * intros c Hc; eapply monomorphic_global_constraint_ext; tea.
+        apply CS.union_spec; now left.
     + destruct HH as [_ [_ [_ H1]]].
       unfold valid_constraints in H1; rewrite Hcf in H1.
       apply satisfies_subst_instance_ctr; aa.
@@ -585,9 +591,11 @@ Proof.
   unfold R_universe_instance, subst_instance_instance.
   replace (map Universe.make (map (subst_instance_level u) i))
     with (map (subst_instance_univ u) (map Universe.make i)).
-  replace (map Universe.make (map (subst_instance_level u) i'))
-    with (map (subst_instance_univ u) (map Universe.make i')).
-  split. apply Forall2_map_inv. apply Forall2_map.
+  1: replace (map Universe.make (map (subst_instance_level u) i'))
+      with (map (subst_instance_univ u) (map Universe.make i')).
+  1: split.
+  1: apply Forall2_map_inv.
+  1: apply Forall2_map.
   all: rewrite !map_map; apply map_ext; reflexivity.
 Qed.
 
@@ -683,7 +691,11 @@ Proof.
     + now rewrite nth_overflow.
     + eapply (forallb_nth _ _ _ Level.lSet Hu) in HH.
       destruct HH as [?l [HH1 HH2]]. rewrite HH1. now apply ssrbool.negbTE. }
-  induction l. apply He. cbn. f_equal. apply He. apply IHl.
+  induction l.
+  - apply He.
+  - cbn. f_equal.
+    + apply He.
+    + apply IHl.
 Qed.
 
 Lemma is_small_subst_instance_univ u l
@@ -692,10 +704,11 @@ Proof.
   assert (He : forall a, Universe.Expr.is_small a ->
              Universe.Expr.is_small (subst_instance_level_expr u a)). {
     intros [[] []]; cbn; auto. }
-  induction l. apply He.
+  induction l. 1: apply He.
   intro HH; cbn in HH; apply andP in HH; destruct HH as [H1 H2].
-  cbn. apply andb_and; split. now apply He.
-  now apply IHl.
+  cbn. apply andb_and; split.
+  - now apply He.
+  - now apply IHl.
 Qed.
 
 
@@ -733,7 +746,7 @@ Lemma fix_subst_subst_instance u mfix :
   = fix_subst (subst_instance u mfix).
 Proof.
   unfold fix_subst. rewrite map_length.
-  generalize #|mfix|. induction n. reflexivity.
+  generalize #|mfix|. induction n. 1: reflexivity.
   simpl. rewrite IHn; reflexivity.
 Qed.
 
@@ -743,7 +756,7 @@ Lemma cofix_subst_subst_instance u mfix :
   = cofix_subst (subst_instance u mfix).
 Proof.
   unfold cofix_subst. rewrite map_length.
-  generalize #|mfix|. induction n. reflexivity.
+  generalize #|mfix|. induction n. 1: reflexivity.
   simpl. rewrite IHn; reflexivity.
 Qed.
 
@@ -812,27 +825,27 @@ Proof.
       eapply isConstruct_app_subst_instance.
   - cbn. rewrite !subst_instance_constr_mkApps.
     unfold unfold_cofix in *. destruct (nth_error mfix idx) eqn:E.
-    inversion H.
-    econstructor. fold subst_instance_constr.
-    unfold unfold_cofix.
-    rewrite nth_error_map, E. cbn.
-    rewrite <- subst_subst_instance_constr.
-    now rewrite cofix_subst_subst_instance.
-    econstructor. fold subst_instance_constr.
-    inversion H.
+    + inversion H.
+      econstructor. fold subst_instance_constr.
+      unfold unfold_cofix.
+      rewrite nth_error_map, E. cbn.
+      rewrite <- subst_subst_instance_constr.
+      now rewrite cofix_subst_subst_instance.
+    + econstructor. fold subst_instance_constr.
+      inversion H.
   - cbn. unfold unfold_cofix in *.
     destruct nth_error eqn:E; inversion H.
     rewrite !subst_instance_constr_mkApps.
     econstructor. fold subst_instance_constr.
     unfold unfold_cofix.
     rewrite nth_error_map. destruct nth_error; cbn.
-    rewrite <- subst_subst_instance_constr, cofix_subst_subst_instance.
+    1: rewrite <- subst_subst_instance_constr, cofix_subst_subst_instance.
     all: now inversion E.
   - cbn. rewrite subst_instance_constr_two. econstructor; eauto.
   - cbn. rewrite !subst_instance_constr_mkApps.
     econstructor. now rewrite nth_error_map, H.
   - cbn. econstructor; eauto.
-    eapply OnOne2_map. eapply OnOne2_impl. eassumption.
+    eapply OnOne2_map. eapply OnOne2_impl. 1: eassumption.
     firstorder.
   - cbn; econstructor;
     eapply OnOne2_map; eapply OnOne2_impl; [ eassumption | firstorder].
@@ -861,7 +874,89 @@ Proof.
     Grab Existential Variables. all:repeat econstructor.
 Qed.
 
+Fixpoint subst_instance_stack l π :=
+  match π with
+  | ε => ε
+  | App u π =>
+      App (subst_instance_constr l u) (subst_instance_stack l π)
+  | Fix mfix idx args π =>
+      let mfix' := List.map (map_def (subst_instance_constr l) (subst_instance_constr l)) mfix in
+      Fix mfix' idx (map (subst_instance_constr l) args) (subst_instance_stack l π)
+  | Fix_mfix_ty na bo ra mfix1 mfix2 idx π =>
+      let mfix1' := List.map (map_def (subst_instance_constr l) (subst_instance_constr l)) mfix1 in
+      let mfix2' := List.map (map_def (subst_instance_constr l) (subst_instance_constr l)) mfix2 in
+      Fix_mfix_ty na (subst_instance_constr l bo) ra mfix1' mfix2' idx (subst_instance_stack l π)
+  | Fix_mfix_bd na ty ra mfix1 mfix2 idx π =>
+      let mfix1' := List.map (map_def (subst_instance_constr l) (subst_instance_constr l)) mfix1 in
+      let mfix2' := List.map (map_def (subst_instance_constr l) (subst_instance_constr l)) mfix2 in
+      Fix_mfix_bd na (subst_instance_constr l ty) ra mfix1' mfix2' idx (subst_instance_stack l π)
+  | CoFix mfix idx args π =>
+      let mfix' := List.map (map_def (subst_instance_constr l) (subst_instance_constr l)) mfix in
+      CoFix mfix' idx (map (subst_instance_constr l) args) (subst_instance_stack l π)
+  | Case_p indn c brs π =>
+      let brs' := List.map (on_snd (subst_instance_constr l)) brs in
+      Case_p indn (subst_instance_constr l c) brs' (subst_instance_stack l π)
+  | Case indn pred brs π =>
+      let brs' := List.map (on_snd (subst_instance_constr l)) brs in
+      Case indn (subst_instance_constr l pred) brs' (subst_instance_stack l π)
+  | Case_brs indn pred c m brs1 brs2 π =>
+      let brs1' := List.map (on_snd (subst_instance_constr l)) brs1 in
+      let brs2' := List.map (on_snd (subst_instance_constr l)) brs2 in
+      Case_brs indn (subst_instance_constr l pred) (subst_instance_constr l c) m brs1' brs2' (subst_instance_stack l π)
+  | Proj p π =>
+      Proj p (subst_instance_stack l π)
+  | Prod_l na B π =>
+      Prod_l na (subst_instance_constr l B) (subst_instance_stack l π)
+  | Prod_r na A π =>
+      Prod_r na (subst_instance_constr l A) (subst_instance_stack l π)
+  | Lambda_ty na b π =>
+      Lambda_ty na (subst_instance_constr l b) (subst_instance_stack l π)
+  | Lambda_tm na A π =>
+      Lambda_tm na (subst_instance_constr l A) (subst_instance_stack l π)
+  | LetIn_bd na B u π =>
+      LetIn_bd na (subst_instance_constr l B) (subst_instance_constr l u) (subst_instance_stack l π)
+  | LetIn_ty na b u π =>
+      LetIn_ty na (subst_instance_constr l b) (subst_instance_constr l u) (subst_instance_stack l π)
+  | LetIn_in na b B π =>
+      LetIn_in na (subst_instance_constr l b) (subst_instance_constr l B) (subst_instance_stack l π)
+  | coApp u π =>
+      coApp (subst_instance_constr l u) (subst_instance_stack l π)
+  end.
 
+Lemma subst_instance_constr_zipc :
+  forall l t π,
+    subst_instance_constr l (zipc t π) =
+    zipc (subst_instance_constr l t) (subst_instance_stack l π).
+Proof.
+  intros l t π.
+  induction π in l, t |- *.
+  all: try reflexivity.
+  all: try solve [
+    simpl ; rewrite IHπ ; cbn ; reflexivity
+  ].
+  - simpl. rewrite IHπ. cbn. f_equal.
+    rewrite subst_instance_constr_mkApps. cbn. reflexivity.
+  - simpl. rewrite IHπ. cbn. f_equal. f_equal.
+    rewrite map_app. cbn. reflexivity.
+  - simpl. rewrite IHπ. cbn. f_equal. f_equal.
+    rewrite map_app. cbn. reflexivity.
+  - simpl. rewrite IHπ. cbn. f_equal. f_equal.
+    rewrite subst_instance_constr_mkApps. cbn. reflexivity.
+  - simpl. rewrite IHπ. cbn. f_equal. f_equal.
+    rewrite map_app. cbn. reflexivity.
+Qed.
+
+Lemma eta_expands_subst_instance_constr :
+  forall l u v,
+    eta_expands u v ->
+    eta_expands (subst_instance_constr l u) (subst_instance_constr l v).
+Proof.
+  intros l u v [na [A [f [π [? ?]]]]]. subst.
+  rewrite 2!subst_instance_constr_zipc. cbn.
+  eexists _, _, _, _. intuition eauto.
+  f_equal. f_equal. f_equal.
+  rewrite lift_subst_instance_constr. reflexivity.
+Qed.
 
 Lemma cumul_subst_instance (Σ : global_env_ext) Γ u A B univs :
   forallb (fun x => negb (Level.is_prop x)) u ->
@@ -874,8 +969,12 @@ Proof.
   intros Hu HH X0. induction X0.
   - econstructor.
     eapply leq_term_subst_instance; tea.
-  - econstructor 2. eapply red1_subst_instance; cbn; eauto. eauto.
-  - econstructor 3. eauto. eapply red1_subst_instance; cbn; eauto.
+  - econstructor 2. 1: eapply red1_subst_instance; cbn; eauto. eauto.
+  - econstructor 3. 1: eauto. eapply red1_subst_instance; cbn; eauto.
+  - eapply cumul_eta_l. 2: eauto.
+    eapply eta_expands_subst_instance_constr. assumption.
+  - eapply cumul_eta_r. 1: eauto.
+    eapply eta_expands_subst_instance_constr. assumption.
 Qed.
 
 Global Instance eq_decl_subst_instance : SubstUnivPreserved eq_decl.
@@ -968,7 +1067,8 @@ Lemma subst_instance_decompose_prod_assum u Γ t :
   = decompose_prod_assum (subst_instance_context u Γ) (subst_instance_constr u t).
 Proof.
   induction t in Γ |- *; cbnr.
-  apply IHt2. apply IHt3.
+  - apply IHt2.
+  - apply IHt3.
 Qed.
 
 Lemma subst_instance_decompose_app_rec u Γ t
@@ -1070,14 +1170,18 @@ Proof.
     now rewrite nth_error_map, eq.
   - intros l X Hl u univs wfΣ' HSub H.
     rewrite subst_instance_univ_super, subst_instance_univ_make.
-    econstructor. aa. destruct HSub. eapply LevelIn_subst_instance; eauto.
-    eapply consistent_instance_no_prop; eassumption.
+    + econstructor.
+      * aa.
+      * destruct HSub. eapply LevelIn_subst_instance; eauto.
+    + eapply consistent_instance_no_prop; eassumption.
   - intros n t0 b s1 s2 X X0 X1 X2 X3 u univs wfΣ' HSub H.
     rewrite product_subst_instance; aa. econstructor.
-    eapply X1; eauto.
-    eapply X3; eauto.
+    + eapply X1; eauto.
+    + eapply X3; eauto.
   - intros n t0 b s1 bty X X0 X1 X2 X3 u univs wfΣ' HSub H.
-    econstructor. eapply X1; aa. eapply X3; aa.
+    econstructor.
+    + eapply X1; aa.
+    + eapply X3; aa.
   - intros n b b_ty b' s1 b'_ty X X0 X1 X2 X3 X4 X5 u univs wfΣ' HSub H.
     econstructor; eauto. eapply X5; aa.
   - intros t0 na A B u X X0 X1 X2 X3 u0 univs wfΣ' HSub H.
@@ -1090,15 +1194,16 @@ Proof.
   - intros. rewrite subst_instance_constr_two. econstructor; [aa|aa|].
     clear X X0; cbn in *.
     eapply consistent_ext_trans; eauto.
-  - intros. eapply meta_conv. econstructor; aa. clear.
+  - intros. eapply meta_conv. 1: econstructor; aa.
+    clear.
     unfold type_of_constructor; cbn.
     rewrite <- subst_subst_instance_constr. f_equal.
-    + unfold inds. induction #|ind_bodies mdecl|. reflexivity.
+    + unfold inds. induction #|ind_bodies mdecl|. 1: reflexivity.
       cbn. now rewrite IHn.
     + symmetry; apply subst_instance_constr_two.
 
   - intros ind u npar p c brs args mdecl idecl isdecl X X0 H ps pty H0 X1
-           X2 H1 X3 X4 btys H2 X5 u0 univs X6 HSub H4. 
+           X2 H1 X3 X4 btys H2 X5 u0 univs X6 HSub H4.
     rewrite subst_instance_constr_mkApps in *.
     rewrite map_app. cbn. rewrite map_skipn.
     eapply type_Case with (u1:=subst_instance_instance u0 u)
@@ -1113,7 +1218,7 @@ Proof.
       destruct (instantiate_params param' (firstn npar args) type');
         [|discriminate].
       simpl. rewrite (subst_instance_destArity []).
-      destruct (destArity [] t) as [[ctx s'] ?|]; [|discriminate]. 
+      destruct (destArity [] t) as [[ctx s'] ?|]; [|discriminate].
       apply some_inj in H0; subst; simpl in *. f_equal.
       rewrite subst_instance_constr_it_mkProd_or_LetIn. f_equal; cbn.
       f_equal. rewrite subst_instance_constr_mkApps; cbn.
@@ -1139,11 +1244,13 @@ Proof.
       now rewrite map_option_out_map_option_map, H2.
     + eapply All2_map with (f := (on_snd (subst_instance_constr u0)))
                            (g:= (on_snd (subst_instance_constr u0))).
-      eapply All2_impl. eassumption. intros.
+      eapply All2_impl. 1: eassumption.
+      intros.
       simpl in X7. destruct X7 as [[[? ?] ?] ?]. intuition eauto.
-      cbn. eauto. cbn.
-      destruct x, y; cbn in *; subst.
-      eapply t1; assumption.
+      * cbn. eauto.
+      * cbn.
+        destruct x, y; cbn in *; subst.
+        eapply t1; assumption.
 
   - intros p c u mdecl idecl pdecl isdecl args X X0 X1 X2 H u0 univs wfΣ' HSub H0.
     rewrite <- subst_subst_instance_constr. cbn.
@@ -1191,17 +1298,18 @@ Proof.
         rewrite <- map_dtype. eapply X3.
 
   - intros t0 A B X X0 X1 X2 X3 u univs wfΣ' HSub H.
-    econstructor. eapply X1; aa.
+    econstructor.
+    + eapply X1; aa.
     + destruct X2; [left|right].
       * clear -i H wfΣ' HSub. destruct i as [[ctx [s [H1 H2]]] HH]; cbn in HH.
         exists (subst_instance_context u ctx), (subst_instance_univ u s). split.
-        now rewrite (subst_instance_destArity []), H1.
+        1: now rewrite (subst_instance_destArity []), H1.
         rewrite <- subst_instance_context_app. unfold app_context in *.
         revert H2 HH. generalize (ctx ++ Γ).
         induction 1; simpl; constructor; auto; cbn in *.
-        eexists. eapply p; tas.
-        eexists. eapply p0; tas.
-        eapply p; tas.
+        -- eexists. eapply p; tas.
+        -- eexists. eapply p0; tas.
+        -- eapply p; tas.
       * aa.
     + destruct HSub. eapply cumul_subst_instance; aa.
 Qed.
@@ -1216,7 +1324,7 @@ Lemma typing_subst_instance' Σ φ Γ t T u univs :
             |- subst_instance_constr u t : subst_instance_constr u T.
 Proof.
   intros X X0 X1.
-  eapply (typing_subst_instance (Σ, univs)); tas. apply X.
+  eapply (typing_subst_instance (Σ, univs)); tas. 1: apply X.
   eapply typing_wf_local; eassumption.
 Qed.
 
@@ -1227,8 +1335,9 @@ Definition global_context_set Σ : ContextSet.t
 Lemma global_context_set_sub_ext Σ φ :
   sub_context_set (global_context_set Σ) (global_ext_context_set (Σ, φ)).
 Proof.
-  split. cbn. apply LevelSetProp.union_subset_2.
-  apply ConstraintSetProp.union_subset_2.
+  split.
+  - cbn. apply LevelSetProp.union_subset_2.
+  - apply ConstraintSetProp.union_subset_2.
 Qed.
 
 
@@ -1241,7 +1350,7 @@ Proof.
   intros X1 X2; pose proof (weaken_lookup_on_global_env' _ _ _ X1 X2) as XX.
   set (φ := universes_decl_of_decl decl) in *; clearbody φ. clear -XX.
   destruct φ as [φ|φ|φ].
-  split; apply XX.
+  1: split; apply XX.
   all: split;
     [apply LevelSetProp.subset_empty|apply ConstraintSetProp.subset_empty].
 Qed.
@@ -1256,9 +1365,9 @@ Lemma typing_subst_instance'' Σ φ Γ t T u univs :
             |- subst_instance_constr u t : subst_instance_constr u T.
 Proof.
   intros X X0 X1.
-  eapply (typing_subst_instance (Σ, univs)); tas. apply X.
-  eapply typing_wf_local; eassumption.
-  etransitivity; tea. apply global_context_set_sub_ext.
+  eapply (typing_subst_instance (Σ, univs)); tas. 1: apply X.
+  - eapply typing_wf_local; eassumption.
+  - etransitivity; tea. apply global_context_set_sub_ext.
 Qed.
 
 
@@ -1271,9 +1380,10 @@ Lemma typing_subst_instance_decl Σ Γ t T c decl u :
             |- subst_instance_constr u t : subst_instance_constr u T.
 Proof.
   destruct Σ as [Σ φ]. intros X X0 X1 X2.
-  eapply typing_subst_instance''; tea. split; tas.
-  eapply weaken_lookup_on_global_env'; tea.
-  eapply weaken_lookup_on_global_env''; tea.
+  eapply typing_subst_instance''; tea.
+  - split; tas.
+    eapply weaken_lookup_on_global_env'; tea.
+  - eapply weaken_lookup_on_global_env''; tea.
 Qed.
 
 End CheckerFlags.

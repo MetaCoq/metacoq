@@ -23,6 +23,8 @@ Require Import CMorphisms CRelationClasses.
 Set Equations With UIP.
 Set Printing Universes.
 
+Set Default Goal Selector "!".
+
 Section Principality.
   Context {cf : checker_flags}.
   Context (Σ : global_env_ext).
@@ -91,10 +93,10 @@ Section Principality.
   Proof.
     intros H; apply red_alt in H.
     generalize_eqs H.
-    induction H; simplify *. depind r.
-    solve_discr.
-    reflexivity.
-    eapply IHclos_refl_trans2. f_equal. auto.
+    induction H; simplify *.
+    - depind r. solve_discr.
+    - reflexivity.
+    - eapply IHclos_refl_trans2. auto.
   Qed.
 
   Lemma invert_cumul_sort_r Γ C u :
@@ -126,19 +128,22 @@ Section Principality.
     intros H. apply red_alt in H.
     generalize_eqs H. revert na A B.
     induction H; simplify_dep_elim.
-    depelim r. solve_discr.
-    do 2 eexists. repeat split; eauto with pcuic.
-    do 2 eexists. repeat split; eauto with pcuic.
-    do 2 eexists. repeat split; eauto with pcuic.
-    specialize (IHclos_refl_trans1 _ _ _ eq_refl).
-    destruct IHclos_refl_trans1 as (? & ? & (-> & ?) & ?). auto.
-    specialize (IHclos_refl_trans2 _ _ _ eq_refl).
-    destruct IHclos_refl_trans2 as (? & ? & (-> & ?) & ?).
-    do 2 eexists. repeat split; eauto with pcuic.
-    now transitivity x.
-    transitivity x0; auto.
-    eapply PCUICConfluence.red_red_ctx. eauto. eauto.
-    constructor. eapply All2_local_env_red_refl. red. auto.
+    - depelim r.
+      + solve_discr.
+      + do 2 eexists. repeat split; eauto with pcuic.
+      + do 2 eexists. repeat split; eauto with pcuic.
+    - do 2 eexists. repeat split; eauto with pcuic.
+    - specialize (IHclos_refl_trans1 _ _ _ eq_refl).
+      destruct IHclos_refl_trans1 as (? & ? & (-> & ?) & ?).
+      specialize (IHclos_refl_trans2 _ _ _ eq_refl).
+      destruct IHclos_refl_trans2 as (? & ? & (-> & ?) & ?).
+      do 2 eexists. repeat split; eauto with pcuic.
+      + now transitivity x.
+      + transitivity x0; auto.
+        eapply PCUICConfluence.red_red_ctx. 1: auto. 1: eauto.
+        constructor.
+        * eapply All2_local_env_red_refl.
+        * red. auto.
   Qed.
 
   Lemma invert_cumul_prod_r Γ C na A B :
@@ -152,12 +157,12 @@ Section Principality.
     eapply invert_red_prod in redv' as (A' & B' & ((-> & Ha') & ?)) => //.
     depelim leqvv'.
     do 3 eexists; intuition eauto.
-    eapply conv_alt_trans with A'; auto.
-    eapply conv_alt_sym; auto.
-    constructor; auto.
-    eapply cumul_trans with B'; auto.
-    constructor. eapply leqvv'2.
-    now eapply red_cumul_inv.
+    - eapply conv_alt_trans with A'; auto.
+      eapply conv_alt_sym; auto.
+      constructor; auto.
+    - eapply cumul_trans with B'; auto.
+      + constructor. eapply leqvv'2.
+      + now eapply red_cumul_inv.
   Qed.
 
   Lemma eq_term_upto_univ_conv_arity_l :
@@ -277,7 +282,10 @@ Section Principality.
         * assumption.
       + assumption.
     - eapply IHh. eapply isArity_red1. all: eassumption.
-  Qed.
+    - admit.
+    - admit.
+  (* Qed. *)
+  Admitted.
 
   Lemma invert_cumul_arity_l :
     forall (Γ : context) (C : term) T,
@@ -297,7 +305,10 @@ Section Principality.
           -- eassumption.
         * assumption.
       + assumption.
-  Qed.
+    - admit.
+    - admit.
+  (* Qed. *)
+  Admitted.
 
   Lemma invert_cumul_prod_l Γ C na A B :
     Σ ;;; Γ |- tProd na A B <= C ->
@@ -313,8 +324,8 @@ Section Principality.
     - eapply conv_alt_trans with A'; auto.
       now constructor.
     - eapply cumul_trans with B'; eauto.
-      now eapply red_cumul.
-      now constructor; apply leqvv'2.
+      + now eapply red_cumul.
+      + now constructor; apply leqvv'2.
   Qed.
 
   Lemma invert_red_letin Γ C na d ty b :
@@ -585,9 +596,9 @@ Section Principality.
   Proof.
     intros hA hB.
     induction u in Γ, A, B, hA, hB |- * using term_forall_list_rec.
-    - apply inversion_Rel in hA as iA.
+    - apply inversion_Rel in hA as iA. 2: auto.
       destruct iA as [decl [? [e ?]]].
-      apply inversion_Rel in hB as iB.
+      apply inversion_Rel in hB as iB. 2: auto.
       destruct iB as [decl' [? [e' ?]]].
       rewrite e' in e. inversion e. subst. clear e.
       repeat insum. repeat intimes.
@@ -595,14 +606,14 @@ Section Principality.
       constructor ; assumption.
     - apply inversion_Var in hA. destruct hA.
     - apply inversion_Evar in hA. destruct hA.
-    - apply inversion_Sort in hA as iA.
-      apply inversion_Sort in hB as iB.
+    - apply inversion_Sort in hA as iA. 2: auto.
+      apply inversion_Sort in hB as iB. 2: auto.
       repeat outsum. repeat outtimes. subst.
       inversion e. subst.
       repeat insum. repeat intimes.
       all: try eassumption.
       (* * left; eexists _, _; intuition auto. *)
-      * constructor ; assumption.
+      constructor ; assumption.
     - apply inversion_Prod in hA as [dom1 [codom1 iA]]; auto.
       apply inversion_Prod in hB as [dom2 [codom2 iB]]=> //.
       repeat outsum. repeat outtimes.
@@ -614,20 +625,20 @@ Section Principality.
       destruct (cumul_sort_confluence c1 c2) as [codom' [codom'dom [leq0' leq1']]].
       exists (tSort (Universe.sort_of_product dom' codom')).
       repeat split.
-      * eapply cumul_trans. auto. 2:eapply c0.
+      + eapply cumul_trans. 1: auto. 2:eapply c0.
         constructor. constructor.
         apply leq_universe_product_mon; auto.
-      * eapply cumul_trans. auto. 2:eapply c.
+      + eapply cumul_trans. 1: auto. 2:eapply c.
         constructor. constructor.
         apply leq_universe_product_mon; auto.
       (* * left; eexists _, _; intuition eauto. now eapply typing_wf_local in t4. *)
-      * eapply type_Prod.
-        eapply type_Cumul; eauto.
-        left; eapply isWfArity_sort. now eapply typing_wf_local in t1.
-        eapply conv_alt_cumul; auto.
-        eapply type_Cumul; eauto.
-        left; eapply isWfArity_sort. now eapply typing_wf_local in t3.
-        eapply conv_alt_cumul; auto.
+      + eapply type_Prod.
+        * eapply type_Cumul; eauto.
+          -- left; eapply isWfArity_sort. now eapply typing_wf_local in t1.
+          -- eapply conv_alt_cumul; auto.
+        * eapply type_Cumul; eauto.
+          -- left; eapply isWfArity_sort. now eapply typing_wf_local in t3.
+          -- eapply conv_alt_cumul; auto.
 
     - apply inversion_Lambda in hA => //.
       apply inversion_Lambda in hB => //.
@@ -638,14 +649,14 @@ Section Principality.
       apply invert_cumul_prod_l in c as [na'' [A'' [B'' [[redA' u1eq'] ?]]]] => //.
       exists (tProd n u1 x3).
       repeat split; auto.
-      * eapply cumul_trans with (tProd na' A' B'); auto.
-        eapply congr_cumul_prod => //.
-        eapply cumul_trans with x2 => //.
-        now eapply red_cumul_inv.
-      * eapply cumul_trans with (tProd na'' A'' B''); auto.
-        eapply congr_cumul_prod => //.
-        eapply cumul_trans with x0 => //.
-        now eapply red_cumul_inv.
+      + eapply cumul_trans with (tProd na' A' B'); auto.
+        * eapply congr_cumul_prod => //.
+          eapply cumul_trans with x2 => //.
+        * now eapply red_cumul_inv.
+      + eapply cumul_trans with (tProd na'' A'' B''); auto.
+        * eapply congr_cumul_prod => //.
+          eapply cumul_trans with x0 => //.
+        * now eapply red_cumul_inv.
       (* * destruct i as [[ctx [s [? ?]]]|?]. *)
       (*   ** left; eexists _, s. simpl. intuition eauto. *)
       (*      generalize (destArity_spec [] x3). rewrite e. *)
@@ -655,7 +666,7 @@ Section Principality.
       (*   ** right. red. destruct i as [s us]. *)
       (*      exists (Universe.sort_of_product x s). *)
       (*      eapply type_Prod; auto. *)
-      * eapply type_Lambda; eauto.
+      + eapply type_Lambda; eauto.
 
     - eapply inversion_LetIn in hA; auto.
       eapply inversion_LetIn in hB; auto.
@@ -665,34 +676,36 @@ Section Principality.
       specialize (IHu3 _ _ _ t4 t1) as [C' ?].
       repeat outtimes.
       exists (tLetIn n u1 u2 C'). repeat split.
-      * clear IHu1 IHu2.
+      + clear IHu1 IHu2.
         eapply invert_cumul_letin_l in c0 => //.
         eapply invert_cumul_letin_l in c => //.
-        eapply cumul_trans with (C' {0 := u1}). auto.
-        eapply red_cumul. eapply red_step.
-        econstructor. auto.
-        eapply cumul_trans with (bty {0 := u1}) => //.
-        eapply (substitution_cumul Σ Γ [vdef n u1 u2] []) => //.
-        constructor; auto.
-        now eapply typing_wf_local in t3.
-        red. exists tty' => //.
-        pose proof (cons_let_def Σ Γ [] [] n u1 u2).
-        rewrite !subst_empty in X. apply X. constructor.
-        auto.
-      * clear IHu1 IHu2.
+        eapply cumul_trans with (C' {0 := u1}). 1: auto.
+        * eapply red_cumul. eapply red_step.
+          -- econstructor.
+          -- auto.
+        * eapply cumul_trans with (bty {0 := u1}) => //.
+          eapply (substitution_cumul Σ Γ [vdef n u1 u2] []) => //.
+          -- constructor; auto.
+             ++ now eapply typing_wf_local in t3.
+             ++ red. exists tty' => //.
+          -- pose proof (cons_let_def Σ Γ [] [] n u1 u2).
+             rewrite !subst_empty in X. apply X. 1: constructor.
+             auto.
+      + clear IHu1 IHu2.
         eapply invert_cumul_letin_l in c0 => //.
         eapply invert_cumul_letin_l in c => //.
-        eapply cumul_trans with (C' {0 := u1}). auto.
-        eapply red_cumul. eapply red_step.
-        econstructor. auto.
-        eapply cumul_trans with (bty' {0 := u1}) => //.
-        eapply (substitution_cumul Σ Γ [vdef n u1 u2] []) => //.
-        constructor; auto.
-        now eapply typing_wf_local in t3.
-        red. exists tty' => //.
-        pose proof (cons_let_def Σ Γ [] [] n u1 u2).
-        rewrite !subst_empty in X. apply X. constructor.
-        auto.
+        eapply cumul_trans with (C' {0 := u1}). 1: auto.
+        * eapply red_cumul. eapply red_step.
+          -- econstructor.
+          -- auto.
+        * eapply cumul_trans with (bty' {0 := u1}) => //.
+          eapply (substitution_cumul Σ Γ [vdef n u1 u2] []) => //.
+          -- constructor; auto.
+             ++ now eapply typing_wf_local in t3.
+             ++ red. exists tty' => //.
+          -- pose proof (cons_let_def Σ Γ [] [] n u1 u2).
+             rewrite !subst_empty in X. apply X. 1: constructor.
+             auto.
       (* * destruct i as [[ctx' [s' [? ?]]]|[s Hs]]. *)
       (*   ** left. red. simpl. *)
       (*      generalize (destArity_spec [] C'); rewrite e. *)
@@ -703,7 +716,7 @@ Section Principality.
       (*   ** right. exists s. eapply type_Cumul. econstructor; eauto. *)
       (*      left. red. exists [], s. intuition auto. now eapply typing_wf_local in t2. *)
       (*      eapply red_cumul. eapply red1_red. constructor. *)
-      * eapply type_LetIn; eauto.
+      + eapply type_LetIn; eauto.
 
     - eapply inversion_App in hA as [na [dom [codom [tydom [tyarg tycodom]]]]] => //.
       eapply inversion_App in hB as [na' [dom' [codom' [tydom' [tyarg' tycodom']]]]] => //.
@@ -718,31 +731,37 @@ Section Principality.
       eapply invert_red_prod in redr as [? [? [[? ?] ?]]] => //. noconf e.
       assert(Σ ;;; Γ |- A' == A'').
       { apply conv_alt_trans with x3 => //.
-        now eapply red_conv_alt. apply conv_alt_sym; auto. }
+        - now eapply red_conv_alt.
+        - apply conv_alt_sym; auto.
+      }
       assert(Σ ;;; Γ ,, vass x1 A' |- B' == B'').
       { apply conv_alt_trans with x4 => //.
-        now eapply red_conv_alt. apply conv_alt_sym; auto.
-        eapply conv_alt_conv_ctx; eauto. constructor; auto. eapply conv_ctx_refl.
-        constructor. now eapply conv_alt_sym. }
+        - now eapply red_conv_alt.
+        - apply conv_alt_sym; auto.
+          eapply conv_alt_conv_ctx; eauto.
+          constructor; auto. 1: eapply conv_ctx_refl.
+          constructor. now eapply conv_alt_sym.
+      }
       exists (B' {0 := u2}).
       repeat split.
-      * eapply cumul_trans with (codom {0 := u2}) => //.
+      + eapply cumul_trans with (codom {0 := u2}) => //.
         eapply substitution_cumul0 => //. eapply c1.
-      * eapply cumul_trans with (B'' {0 := u2}); eauto.
-        eapply substitution_cumul0 => //. eapply conv_alt_cumul in X0; eauto.
-        eapply cumul_trans with (codom' {0 := u2}) => //.
-        eapply substitution_cumul0 => //. eauto.
-      * eapply type_App.
+      + eapply cumul_trans with (B'' {0 := u2}); eauto.
+        * eapply substitution_cumul0 => //. eapply conv_alt_cumul in X0; eauto.
+        * eapply cumul_trans with (codom' {0 := u2}) => //.
+          eapply substitution_cumul0 => //. eauto.
+      + eapply type_App.
         2:eapply tyarg.
-        eapply type_Cumul. eapply t0.
-        instantiate (1 := x1).
-        (* Needs to show wf arity preservation? needing validity? or just inversion on tydom ? *)
-        admit.
-        eapply cumul_trans with (tProd x1 A' B')=> //.
-        eapply red_cumul; eauto.
-        eapply congr_cumul_prod.
-        eapply conv_alt_sym; eauto.
-        eapply cumul_refl'.
+        eapply type_Cumul.
+        * eapply t0.
+        * instantiate (1 := x1).
+          (* Needs to show wf arity preservation? needing validity? or just inversion on tydom ? *)
+          admit.
+        * eapply cumul_trans with (tProd x1 A' B')=> //.
+          -- eapply red_cumul; eauto.
+          -- eapply congr_cumul_prod.
+             ++ eapply conv_alt_sym; eauto.
+             ++ eapply cumul_refl'.
 
     - eapply inversion_Const in hA as [decl ?] => //.
       eapply inversion_Const in hB as [decl' ?] => //.
@@ -803,9 +822,9 @@ Section Principality.
         apply All2_sym in a4.
         pose proof (All2_trans _ (conv_alt_transitive _) _ _ _ X a4).
         eapply (All2_impl (Q:=fun x y => Σ ;;; Γ |- y == x)) in a2; auto using conv_sym, red_conv.
-        apply All2_sym in a2.
-        apply (All2_trans _ (conv_alt_transitive _) _ _ _ X0 a2).
-        intros ? ? ?. eapply conv_alt_sym. assumption. auto.
+        - apply All2_sym in a2.
+          apply (All2_trans _ (conv_alt_transitive _) _ _ _ X0 a2).
+        - intros ? ? ?. eapply conv_alt_sym. all: assumption.
       }
       clear redr redr' a1 a2.
       exists (mkApps u1 (skipn (ind_npars x8) x7 ++ [u2])); repeat split; auto.
@@ -823,9 +842,9 @@ Section Principality.
       (*     rewrite Heq eqar eqx2 eqbrs. reflexivity. *)
       (*     admit. admit. eapply type_Cumul. eauto. *)
       (*     all:admit. } *)
-      admit.
+      + admit.
 
-      admit.
+      + admit.
 
     - destruct s as [[ind k] pars]; simpl in *.
       eapply inversion_Proj in hA=>//.
@@ -843,15 +862,18 @@ Section Principality.
       eapply invert_cumul_ind_r in c2 as [u'' [x9' [redr' [redu' ?]]]].
       exists (subst0 (u :: List.rev x3) (subst_instance_constr x t2)).
       repeat split; auto.
-      admit.
-
-      eapply refine_type. eapply type_Proj. repeat split; eauto.
-      simpl. eapply type_Cumul. eapply t0.
-      right. 2:eapply red_cumul; eauto.
-      admit. rewrite H3. simpl. simpl in H0.
-      rewrite -H0. admit.
-      simpl.
-      admit.
+      + admit.
+      + eapply refine_type.
+        * eapply type_Proj.
+          -- repeat split; eauto.
+          -- simpl. eapply type_Cumul.
+             1: eapply t0.
+             1: right.
+             2:eapply red_cumul; eauto.
+             admit.
+          -- rewrite H3. simpl. simpl in H0.
+             rewrite -H0. admit.
+        * simpl. admit.
 
     - eapply inversion_Fix in hA as [decl [hguard [nthe [wfΓ [? ?]]]]]=>//.
       eapply inversion_Fix in hB as [decl' [hguard' [nthe' [wfΓ' [? ?]]]]]=>//.

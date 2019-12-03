@@ -337,7 +337,8 @@ Next Obligation.
   edestruct (red_confluence wfΣ X X0) as (? & ? & ?); eauto.
   eapply invert_red_prod in r0 as (? & ? & [] & ?); eauto. subst.
 
-  eapply invert_cumul_arity_l in H2. 2: eapply PCUICCumulativity.red_cumul. 2:eauto.
+  eapply invert_cumul_arity_l in H2. 2: eauto.
+  2: eapply PCUICCumulativity.red_cumul. 2:eauto.
   destruct H2 as (? & ? & ?). sq.
 
   eapply invert_red_prod in X2 as (? & ? & [] & ?); eauto. subst. cbn in *.

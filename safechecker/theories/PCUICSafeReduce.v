@@ -383,7 +383,10 @@ Section Reduce.
                 | @exist (l, θ) eq4 :=
                   rec reduce fn (appstack args (App (mkApps (tConstruct ind n ui) l) ρ))
                 } ;
-              | view_other t ht := give (tFix mfix idx) π
+              | view_other t ht with inspect (decompose_stack ρ') := {
+                | @exist (l, θ) eq4 :=
+                  give (tFix mfix idx) (appstack args (App (mkApps t l) ρ))
+                }
               }
             } ;
           | _ := give (tFix mfix idx) π
@@ -547,7 +550,7 @@ Section Reduce.
     case_eq (decompose_stack ρ). intros l' θ' e'.
     pose proof (decompose_stack_eq _ _ _ e'). subst.
     rewrite H in e. rewrite decompose_stack_appstack in e.
-    cbn in e. rewrite e' in e. inversion e. subst. clear e.
+    cbn in e. rewrite e' in e. cbn in e. inversion e. subst. clear e.
 
     case_eq (decompose_stack ρ'). intros ll s e1.
     pose proof (decompose_stack_eq _ _ _ e1). subst.
@@ -636,6 +639,54 @@ Section Reduce.
     subst.
     rewrite decompose_stack_appstack. cbn.
     rewrite e. cbn. reflexivity.
+  Qed.
+  Next Obligation.
+    case_eq (decompose_stack π). intros ll π' e.
+    pose proof (decompose_stack_eq _ _ _ e). subst.
+    clear eq3. symmetry in eq2.
+    pose proof (decompose_stack_at_eq _ _ _ _ _ eq2) as e2.
+    pose proof (decompose_stack_at_length _ _ _ _ _ eq2).
+    case_eq (decompose_stack ρ). intros l' θ' e'.
+    pose proof (decompose_stack_eq _ _ _ e'). subst.
+    rewrite e2 in e. rewrite decompose_stack_appstack in e.
+    cbn in e. rewrite e' in e. cbn in e. inversion e. subst. clear e.
+    symmetry in eq4. apply decompose_stack_eq in eq4 as ?. subst.
+
+    rewrite e2.
+    destruct r as [r | r].
+    - inversion r. subst.
+      destruct l. 2: discriminate.
+      cbn in *. subst.
+      left. reflexivity.
+    - unfold Pr in p. cbn in p.
+      rewrite eq4 in p. simpl in p. subst.
+      dependent destruction r.
+      + cbn in H. rewrite zipc_appstack in H.
+        cbn in H. rewrite !zipc_appstack in H.
+        right. left. cbn. rewrite !zipc_appstack. cbn.
+        rewrite !zipc_appstack. assumption.
+      + cbn in H0. inversion H0.
+        rewrite !zipc_appstack in H2. cbn in H2.
+        rewrite zipc_appstack in H2.
+        apply zipc_inj in H2. apply PCUICAstUtils.mkApps_inj in H2.
+        inversion H2. subst.
+        left. reflexivity.
+  Qed.
+  Next Obligation.
+    symmetry in eq4. clear eq3.
+    unfold Pr in p. cbn in p.
+    rewrite eq4 in p. simpl in p. subst.
+    unfold Pr. cbn.
+    rewrite decompose_stack_appstack. cbn.
+    case_eq (decompose_stack π). intros ll π' e. cbn.
+    pose proof (decompose_stack_eq _ _ _ e). subst.
+    symmetry in eq2.
+    pose proof (decompose_stack_at_eq _ _ _ _ _ eq2) as e2.
+    pose proof (decompose_stack_at_length _ _ _ _ _ eq2).
+    case_eq (decompose_stack ρ). intros l' θ' e'. cbn.
+    pose proof (decompose_stack_eq _ _ _ e'). subst.
+    rewrite e2 in e. rewrite decompose_stack_appstack in e.
+    cbn in e. rewrite e' in e. cbn in e. inversion e. reflexivity.
   Qed.
 
   (* tCase *)
@@ -940,7 +991,7 @@ Section Reduce.
     destruct hΣ.
     eapply R_Acc. all: assumption.
   Defined.
- *) 
+ *)
   (* Replace the last obligation by the following to run inside Coq. *)
   Next Obligation.
     revert h. generalize (t, π).
@@ -950,7 +1001,7 @@ Section Reduce.
     - simpl in *. eapply wellformed_R_pres; eauto.
     - destruct hΣ. intros; eapply R_Acc; eassumption.
   Defined.
-  
+
   Definition reduce_stack Γ t π h :=
     let '(exist ts _) := reduce_stack_full Γ t π h in ts.
 

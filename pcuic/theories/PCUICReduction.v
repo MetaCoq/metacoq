@@ -6,7 +6,7 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Utf8 String
   ZArith Lia.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICLiftSubst PCUICUnivSubst PCUICTyping.
+     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICPosition.
 
 Require Import Equations.Prop.DepElim.
 
@@ -1163,3 +1163,99 @@ Ltac OnOne2_All2 :=
   end.
 
 Hint Extern 0 (All2 _ _ _) => OnOne2_All2; intuition auto with pred : pred.
+
+(* TODO Find a better place for this. *)
+Section Stacks.
+
+  Context (Σ : global_env_ext).
+  Context `{checker_flags}.
+
+  Lemma red1_context :
+    forall Γ t u π,
+      red1 Σ (Γ ,,, stack_context π) t u ->
+      red1 Σ Γ (zip (t, π)) (zip (u, π)).
+  Proof.
+    intros Γ t u π h.
+    cbn. revert t u h.
+    induction π ; intros u v h.
+    all: try solve [ cbn ; apply IHπ ; constructor ; assumption ].
+    - cbn. assumption.
+    - cbn. apply IHπ. constructor.
+      apply OnOne2_app. constructor.
+      simpl. intuition eauto.
+    - cbn. apply IHπ. eapply fix_red_body.
+      apply OnOne2_app. constructor.
+      simpl in *.
+      rewrite fix_context_fix_context_alt.
+      rewrite map_app. cbn. unfold def_sig at 2. simpl.
+      rewrite app_context_assoc in h.
+      intuition eauto.
+    - cbn. apply IHπ. constructor.
+      apply OnOne2_app. constructor.
+      simpl. intuition eauto.
+  Qed.
+
+  Corollary red_context :
+    forall Γ t u π,
+      red Σ (Γ ,,, stack_context π) t u ->
+      red Σ Γ (zip (t, π)) (zip (u, π)).
+  Proof.
+    intros Γ t u π h. induction h.
+    - constructor.
+    - econstructor.
+      + eapply IHh.
+      + eapply red1_context. assumption.
+  Qed.
+
+  Lemma red1_zipp :
+    forall Γ t u π,
+      red1 Σ Γ t u ->
+      red1 Σ Γ (zipp t π) (zipp u π).
+  Proof.
+    intros Γ t u π h.
+    unfold zipp.
+    case_eq (decompose_stack π). intros l ρ e.
+    eapply red1_mkApps_f.
+    assumption.
+  Qed.
+
+  Lemma red_zipp :
+    forall Γ t u π,
+      red Σ Γ t u ->
+      red Σ Γ (zipp t π) (zipp u π).
+  Proof.
+    intros Γ t u π h. induction h.
+    - constructor.
+    - econstructor.
+      + eapply IHh.
+      + eapply red1_zipp. assumption.
+  Qed.
+
+  Lemma red1_zippx :
+    forall Γ t u π,
+      red1 Σ (Γ ,,, stack_context π) t u ->
+      red1 Σ Γ (zippx t π) (zippx u π).
+  Proof.
+    intros Γ t u π h.
+    unfold zippx.
+    case_eq (decompose_stack π). intros l ρ e.
+    eapply red1_it_mkLambda_or_LetIn.
+    eapply red1_mkApps_f.
+    pose proof (decompose_stack_eq _ _ _ e). subst.
+    rewrite stack_context_appstack in h.
+    assumption.
+  Qed.
+
+  Corollary red_zippx :
+    forall Γ t u π,
+      red Σ (Γ ,,, stack_context π) t u ->
+      red Σ Γ (zippx t π) (zippx u π).
+  Proof.
+    intros Γ t u π h. induction h.
+    - constructor.
+    - econstructor.
+      + eapply IHh.
+      + eapply red1_zippx. assumption.
+  Qed.
+
+End Stacks.

@@ -4,9 +4,9 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Lia.
 From MetaCoq.Template Require Import config utils AstUtils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
-     PCUICSubstitution
-     PCUICReduction PCUICCumulativity PCUICConfluence PCUICParallelReductionConfluence
-     PCUICEquality PCUICContextConversion.
+     PCUICSubstitution PCUICPosition PCUICReduction PCUICCumulativity
+     PCUICConfluence  PCUICParallelReductionConfluence PCUICEquality
+     PCUICContextConversion.
 Require Import ssreflect ssrbool.
 Require Import String.
 From MetaCoq Require Import LibHypsNaming.

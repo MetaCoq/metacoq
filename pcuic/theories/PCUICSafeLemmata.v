@@ -566,6 +566,18 @@ Section Lemmata.
       destruct hh as [s1 [B [? [? ?]]]].
       eexists. eassumption.
     - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
+      destruct h as [U h].
+      apply inversion_LetIn in h as [s [A [? [? [? ?]]]]]. 2: auto.
+      eexists. eassumption.
+    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
+      destruct h as [U h].
+      apply inversion_LetIn in h as [s [A [? [? [? ?]]]]]. 2: auto.
+      eexists. eassumption.
+    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
+      destruct h as [U h].
+      apply inversion_LetIn in h as [s [A [? [? [? ?]]]]]. 2: auto.
+      eexists. eassumption.
+    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [B h].
       apply inversion_App in h as hh ; auto.
       destruct hh as [na [A' [B' [? [? ?]]]]].
@@ -581,7 +593,7 @@ Section Lemmata.
     intros Γ [t π] [[A h]|h].
     - destruct (welltyped_context Γ (t, π) (iswelltyped h)) as [? ?].
       left. econstructor. eassumption.
-    - induction π in t, h |- *.
+    - simpl. induction π in t, h |- *.
       all: try (specialize (IHπ _ h)).
       all: simpl in *.
       1: right ; assumption.
@@ -676,6 +688,30 @@ Section Lemmata.
         left. eexists. eassumption.
       + apply inversion_Lambda in h' ; auto. rdestruct h'.
         left. eexists. eassumption.
+      + apply inversion_LetIn in h'. 2: auto. rdestruct h'.
+        left. eexists. eassumption.
+      + cbn in h1. apply destArity_app_Some in h1 as [Δ' [h1 h1']].
+        subst. rewrite app_context_assoc in h2. simpl in h2.
+        left. apply wf_local_app in h2.
+        inversion h2. subst. cbn in *.
+        eexists. eassumption.
+      + apply inversion_LetIn in h'. 2: auto. rdestruct h'.
+        left. eexists. eassumption.
+      + cbn in h1. apply destArity_app_Some in h1 as [Δ' [h1 h1']].
+        subst. rewrite app_context_assoc in h2. simpl in h2.
+        left. apply wf_local_app in h2.
+        inversion h2. subst. cbn in *.
+        match goal with
+        | h : ∃ s : universe, _ |- _ =>
+          destruct h
+        end.
+        eexists. eassumption.
+      + apply inversion_LetIn in h'. 2: auto. rdestruct h'.
+        left. eexists. eassumption.
+      + cbn in h1. apply destArity_app_Some in h1 as [Δ' [h1 h1']].
+        subst. rewrite app_context_assoc in h2. simpl in h2.
+        right. constructor. exists Δ', s.
+        split. all: auto.
   Qed.
 
   Lemma cored_red :
@@ -754,6 +790,9 @@ Section Lemmata.
       eapply cumul_it_mkLambda_or_LetIn. cbn.
       eapply cumul_Lambda_r.
       assumption.
+    - unfold zippx. simpl.
+      eapply cumul_it_mkLambda_or_LetIn. cbn.
+      eapply cumul_LetIn_bo. assumption.
   Qed.
 
   Lemma conv_LetIn_bo :
@@ -863,6 +902,9 @@ Section Lemmata.
       eapply conv_alt_it_mkLambda_or_LetIn. cbn.
       eapply conv_Lambda_r.
       assumption.
+    - unfold zippx. simpl.
+      eapply conv_alt_it_mkLambda_or_LetIn. cbn.
+      eapply conva_LetIn_bo. assumption.
   Qed.
 
   Lemma conv_zippx :
@@ -1331,6 +1373,8 @@ Section Lemmata.
   (* Let bindings are not injective, so it_mkLambda_or_LetIn is not either.
      However, when they are all lambdas they become injective for conversion.
      stack_contexts only produce lambdas so we can use this property on them.
+     It only applies to stacks manipulated by conversion/reduction which are
+     indeed let-free.
    *)
   Fixpoint let_free_context (Γ : context) :=
     match Γ with
@@ -1364,15 +1408,39 @@ Section Lemmata.
       rewrite ih. rewrite andb_true_r. reflexivity.
   Qed.
 
+  Fixpoint let_free_stack (π : stack) :=
+    match π with
+    | ε => true
+    | App u ρ => let_free_stack ρ
+    | Fix f n args ρ => let_free_stack ρ
+    | Fix_mfix_ty na bo ra mfix1 mfix2 idx ρ => let_free_stack ρ
+    | Fix_mfix_bd na ty ra mfix1 mfix2 idx ρ => let_free_stack ρ
+    | CoFix f n args ρ => let_free_stack ρ
+    | Case_p indn c brs ρ => let_free_stack ρ
+    | Case indn p brs ρ => let_free_stack ρ
+    | Case_brs indn p c m brs1 brs2 ρ => let_free_stack ρ
+    | Proj p ρ => let_free_stack ρ
+    | Prod_l na B ρ => let_free_stack ρ
+    | Prod_r na A ρ => let_free_stack ρ
+    | Lambda_ty na u ρ => let_free_stack ρ
+    | Lambda_tm na A ρ => let_free_stack ρ
+    | LetIn_bd na B u ρ => let_free_stack ρ
+    | LetIn_ty na b u ρ => let_free_stack ρ
+    | LetIn_in na b B ρ => false
+    | coApp u ρ => let_free_stack ρ
+    end.
+
   Lemma let_free_stack_context :
     forall π,
+      let_free_stack π ->
       let_free_context (stack_context π).
   Proof.
-    intros π.
+    intros π h.
     induction π.
-    all: try solve [ simpl ; rewrite ?IHπ ; reflexivity ].
+    all: try solve [ simpl ; rewrite ?IHπ by auto ; reflexivity ].
+    2: discriminate.
     simpl. rewrite let_free_context_app.
-    rewrite IHπ. rewrite andb_true_r. rewrite let_free_context_rev.
+    rewrite IHπ by auto. rewrite andb_true_r. rewrite let_free_context_rev.
     match goal with
     | |- context [ mapi ?f ?l ] =>
       generalize l
@@ -1738,7 +1806,7 @@ Lemma type_Case' {cf:checker_flags} Σ Γ indnpar u p c brs args :
     All2 (fun br bty => (br.1 = bty.1) × (Σ ;;; Γ |- br.2 : bty.2)) brs btys ->
     Σ ;;; Γ |- tCase indnpar p c brs : mkApps p (skipn npar args ++ [c]).
 Proof.
-  intros ind npar mdecl idecl isdecl H params ps pty H0 X H1 X0 btys H2 X1. 
+  intros ind npar mdecl idecl isdecl H params ps pty H0 X H1 X0 btys H2 X1.
   econstructor; tea.
   eapply type_Case_valid_btys in X; tea.
   eapply All2_All_mix_right; tea.

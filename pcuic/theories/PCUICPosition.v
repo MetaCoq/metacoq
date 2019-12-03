@@ -15,6 +15,8 @@ Local Set Keyed Unification.
 
 Import MonadNotation.
 
+Set Default Goal Selector "!".
+
 (* A choice is a local position.
    We define positions in a non dependent way to make it more practical.
  *)
@@ -31,7 +33,8 @@ Inductive choice :=
 | lam_tm
 | prod_l
 | prod_r
-(* | let_bd *)
+| let_bd
+| let_ty
 | let_in.
 
 Derive NoConfusion NoConfusionHom EqDec for choice.
@@ -70,8 +73,9 @@ Fixpoint validpos t (p : position) {struct p} :=
     | lam_tm, tLambda na A t => validpos t p
     | prod_l, tProd na A B => validpos A p
     | prod_r, tProd na A B => validpos B p
-    (* | let_bd, tLetIn na A b t => validpos b p *)
-    | let_in, tLetIn na A b t => validpos t p
+    | let_bd, tLetIn na b B t => validpos b p
+    | let_ty, tLetIn na b B t => validpos B p
+    | let_in, tLetIn na b B t => validpos t p
     | _, _ => false
     end
   end.
@@ -118,7 +122,13 @@ Definition dprod_l na A B (p : pos A) : pos (tProd na A B) :=
 Definition dprod_r na A B (p : pos B) : pos (tProd na A B) :=
   exist (prod_r :: ` p) (proj2_sig p).
 
-Definition dlet_in na A b t (p : pos t) : pos (tLetIn na A b t) :=
+Definition dlet_bd na b B t (p : pos b) : pos (tLetIn na b B t) :=
+  exist (let_bd :: ` p) (proj2_sig p).
+
+Definition dlet_ty na b B t (p : pos B) : pos (tLetIn na b B t) :=
+  exist (let_ty :: ` p) (proj2_sig p).
+
+Definition dlet_in na b B t (p : pos t) : pos (tLetIn na b B t) :=
   exist (let_in :: ` p) (proj2_sig p).
 
 Lemma eq_term_upto_valid_pos :
@@ -191,9 +201,25 @@ Proof.
     dependent destruction h. cbn in e.
     eapply (ih2 (exist p0 e)). assumption.
   }
-  assert (forall na A b t p, Acc posR p -> Acc posR (dlet_in na A b t p))
+  assert (forall na b B t p, Acc posR p -> Acc posR (dlet_bd na b B t p))
+    as Acc_let_bd.
+  { intros na b B t p h.
+    induction h as [p ih1 ih2].
+    constructor. intros [q e] h.
+    dependent destruction h. cbn in e.
+    eapply (ih2 (exist p0 e)). assumption.
+  }
+  assert (forall na b B t p, Acc posR p -> Acc posR (dlet_ty na b B t p))
+    as Acc_let_ty.
+  { intros na b B t p h.
+    induction h as [p ih1 ih2].
+    constructor. intros [q e] h.
+    dependent destruction h. cbn in e.
+    eapply (ih2 (exist p0 e)). assumption.
+  }
+  assert (forall na b B t p, Acc posR p -> Acc posR (dlet_in na b B t p))
     as Acc_let_in.
-  { intros na A b t p h.
+  { intros na b B t p h.
     induction h as [p ih1 ih2].
     constructor. intros [q e] h.
     dependent destruction h. cbn in e.
@@ -362,11 +388,19 @@ Proof.
       unfold posR in h. cbn in h.
       dependent destruction h.
       destruct c ; noconf e'.
-      eapply Acc_let_in with (p := exist p0 e').
-      eapply IHt3.
+      * eapply Acc_let_bd with (p := exist p0 e').
+        eapply IHt1.
+      * eapply Acc_let_ty with (p := exist p0 e').
+        eapply IHt2.
+      * eapply Acc_let_in with (p := exist p0 e').
+        eapply IHt3.
     + destruct c ; noconf e.
-      eapply Acc_let_in with (p := exist q e).
-      eapply IHt3.
+      * eapply Acc_let_bd with (p := exist q e).
+        eapply IHt1.
+      * eapply Acc_let_ty with (p := exist q e).
+        eapply IHt2.
+      * eapply Acc_let_in with (p := exist q e).
+        eapply IHt3.
   - destruct q as [q e]. destruct q as [| c q].
     + constructor. intros [p e'] h.
       unfold posR in h. cbn in h.
@@ -498,7 +532,9 @@ Fixpoint atpos t (p : position) {struct p} : term :=
     | lam_tm, tLambda na A t => atpos t p
     | prod_l, tProd na A B => atpos A p
     | prod_r, tProd na A B => atpos B p
-    | let_in, tLetIn na A b t => atpos t p
+    | let_bd, tLetIn na b B t => atpos b p
+    | let_ty, tLetIn na b B t => atpos B p
+    | let_in, tLetIn na b B t => atpos t p
     | _, _ => tRel 0
     end
   end.
@@ -639,6 +675,9 @@ Inductive stack : Type :=
 | Prod_r (na : name) (A : term) (π : stack)
 | Lambda_ty (na : name) (b : term) (π : stack)
 | Lambda_tm (na : name) (A : term) (π : stack)
+| LetIn_bd (na : name) (B t : term) (π : stack)
+| LetIn_ty (na : name) (b t : term) (π : stack)
+| LetIn_in (na : name) (b B : term) (π : stack)
 | coApp (t : term) (π : stack).
 
 Notation "'ε'" := (Empty).
@@ -667,6 +706,9 @@ Fixpoint zipc t stack :=
   | Prod_r na A π => zipc (tProd na A t) π
   | Lambda_ty na b π => zipc (tLambda na t b) π
   | Lambda_tm na A π => zipc (tLambda na A t) π
+  | LetIn_bd na B u π => zipc (tLetIn na t B u) π
+  | LetIn_ty na b u π => zipc (tLetIn na b t u) π
+  | LetIn_in na b B π => zipc (tLetIn na b B t) π
   | coApp u π => zipc (tApp u t) π
   end.
 
@@ -818,6 +860,9 @@ Fixpoint stack_context π : context :=
   | Prod_r na A π => stack_context π ,, vass na A
   | Lambda_ty na u π => stack_context π
   | Lambda_tm na A π => stack_context π ,, vass na A
+  | LetIn_bd na B u π => stack_context π
+  | LetIn_ty na b u π => stack_context π
+  | LetIn_in na b B π => stack_context π ,, vdef na b B
   | coApp u π => stack_context π
   end.
 
@@ -850,6 +895,9 @@ Fixpoint stack_position π : position :=
   | Prod_r na A ρ => stack_position ρ ++ [ prod_r ]
   | Lambda_ty na u ρ => stack_position ρ ++ [ lam_ty ]
   | Lambda_tm na A ρ => stack_position ρ ++ [ lam_tm ]
+  | LetIn_bd na B u ρ => stack_position ρ ++ [ let_bd ]
+  | LetIn_ty na b u ρ => stack_position ρ ++ [ let_ty ]
+  | LetIn_in na b B ρ => stack_position ρ ++ [ let_in ]
   | coApp u ρ => stack_position ρ ++ [ app_r ]
   end.
 
@@ -1141,6 +1189,9 @@ Section Stacks.
     | Prod_r na A ρ => Prod_r na A (stack_cat ρ θ)
     | Lambda_ty na u ρ => Lambda_ty na u (stack_cat ρ θ)
     | Lambda_tm na A ρ => Lambda_tm na A (stack_cat ρ θ)
+    | LetIn_bd na B u ρ => LetIn_bd na B u (stack_cat ρ θ)
+    | LetIn_ty na b u ρ => LetIn_ty na b u (stack_cat ρ θ)
+    | LetIn_in na b B ρ => LetIn_in na b B (stack_cat ρ θ)
     | coApp u ρ => coApp u (stack_cat ρ θ)
     end.
 

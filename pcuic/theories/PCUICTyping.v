@@ -429,7 +429,7 @@ Fixpoint subst_app (t : term) (us : list term) : term :=
 (* [eta_expands u v] states v is an expansion of u *)
 Definition eta_expands u v : Type :=
   ∑ na A t π,
-    u = zipc t π ×
+    u = zipc t π /\
     v = zipc (tLambda na A (tApp (lift0 1 t) (tRel 0))) π.
 
 Definition eta_eq :=

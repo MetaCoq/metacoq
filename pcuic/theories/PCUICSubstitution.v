@@ -6,7 +6,7 @@ From Coq Require Import Bool String List BinPos Compare_dec Arith Lia.
 Require Import Coq.Program.Syntax Coq.Program.Basics.
 From MetaCoq.Template Require Import utils config AstUtils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-  PCUICLiftSubst PCUICEquality
+  PCUICLiftSubst PCUICEquality PCUICPosition
   PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICClosed
   PCUICReduction PCUICWeakening PCUICCumulativity.
 Require Import ssreflect.
@@ -1693,11 +1693,113 @@ Qed.
 
 (** The cumulativity relation is substitutive, yay! *)
 
+Fixpoint subst_stack s k π :=
+  match π with
+  | ε => ε
+  | App u π =>
+      let k' := #|stack_context π| + k in
+      App (subst s k' u) (subst_stack s k π)
+  | Fix mfix idx args π =>
+      let k' := #|stack_context π| + k in
+      let k'' := #|mfix| + k' in
+      let mfix' := List.map (map_def (subst s k') (subst s k'')) mfix in
+      Fix mfix' idx (map (subst s k') args) (subst_stack s k π)
+  | Fix_mfix_ty na bo ra mfix1 mfix2 idx π =>
+      let k' := #|stack_context π| + k in
+      let k'' := #|mfix1| + S #|mfix2| + k' in
+      let mfix1' := List.map (map_def (subst s k') (subst s k'')) mfix1 in
+      let mfix2' := List.map (map_def (subst s k') (subst s k'')) mfix2 in
+      Fix_mfix_ty na (subst s k'' bo) ra mfix1' mfix2' idx (subst_stack s k π)
+  | Fix_mfix_bd na ty ra mfix1 mfix2 idx π =>
+      let k' := #|stack_context π| + k in
+      let k'' := #|mfix1| + S #|mfix2| + k' in
+      let mfix1' := List.map (map_def (subst s k') (subst s k'')) mfix1 in
+      let mfix2' := List.map (map_def (subst s k') (subst s k'')) mfix2 in
+      Fix_mfix_bd na (subst s k' ty) ra mfix1' mfix2' idx (subst_stack s k π)
+  | CoFix mfix idx args π =>
+      let k' := #|stack_context π| + k in
+      let k'' := #|mfix| + k' in
+      let mfix' := List.map (map_def (subst s k') (subst s k'')) mfix in
+      CoFix mfix' idx (map (subst s k') args) (subst_stack s k π)
+  | Case_p indn c brs π =>
+      let k' := #|stack_context π| + k in
+      let brs' := List.map (on_snd (subst s k')) brs in
+      Case_p indn (subst s k' c) brs' (subst_stack s k π)
+  | Case indn pred brs π =>
+      let k' := #|stack_context π| + k in
+      let brs' := List.map (on_snd (subst s k')) brs in
+      Case indn (subst s k' pred) brs' (subst_stack s k π)
+  | Case_brs indn pred c m brs1 brs2 π =>
+      let k' := #|stack_context π| + k in
+      let brs1' := List.map (on_snd (subst s k')) brs1 in
+      let brs2' := List.map (on_snd (subst s k')) brs2 in
+      Case_brs indn (subst s k' pred) (subst s k' c) m brs1' brs2' (subst_stack s k π)
+  | Proj p π =>
+      Proj p (subst_stack s k π)
+  | Prod_l na B π =>
+      let k' := #|stack_context π| + k in
+      Prod_l na (subst s (S k') B) (subst_stack s k π)
+  | Prod_r na A π =>
+      let k' := #|stack_context π| + k in
+      Prod_r na (subst s k' A) (subst_stack s k π)
+  | Lambda_ty na b π =>
+      let k' := #|stack_context π| + k in
+      Lambda_ty na (subst s (S k') b) (subst_stack s k π)
+  | Lambda_tm na A π =>
+      let k' := #|stack_context π| + k in
+      Lambda_tm na (subst s k' A) (subst_stack s k π)
+  | LetIn_bd na B u π =>
+      let k' := #|stack_context π| + k in
+      LetIn_bd na (subst s k' B) (subst s (S k') u) (subst_stack s k π)
+  | LetIn_ty na b u π =>
+      let k' := #|stack_context π| + k in
+      LetIn_ty na (subst s k' b) (subst s (S k') u) (subst_stack s k π)
+  | LetIn_in na b B π =>
+      let k' := #|stack_context π| + k in
+      LetIn_in na (subst s k' b) (subst s k' B) (subst_stack s k π)
+  | coApp u π =>
+      let k' := #|stack_context π| + k in
+      coApp (subst s k' u) (subst_stack s k π)
+  end.
+
+Lemma subst_zipc :
+  forall s k t π,
+    let k' := #|stack_context π| + k in
+    subst s k (zipc t π) =
+    zipc (subst s k' t) (subst_stack s k π).
+Proof.
+  intros s k t π k'.
+  induction π in s, k, t, k' |- *.
+  all: try reflexivity.
+  all: try solve [
+    simpl ; rewrite IHπ ; cbn ; reflexivity
+  ].
+  - simpl. rewrite IHπ. cbn. f_equal.
+    rewrite subst_mkApps. cbn. reflexivity.
+  - simpl. rewrite IHπ. cbn. f_equal. f_equal.
+    rewrite map_app. rewrite !app_length. cbn. reflexivity.
+  - simpl. rewrite IHπ. cbn. f_equal. f_equal.
+    rewrite map_app. rewrite !app_length. cbn. f_equal.
+    unfold map_def at 1. cbn. f_equal.
+    rewrite fix_context_alt_length.
+    rewrite !app_length. cbn. rewrite !map_length.
+    f_equal. f_equal. lia.
+  - simpl. rewrite IHπ. cbn. f_equal. f_equal.
+    rewrite subst_mkApps. cbn. reflexivity.
+  - simpl. rewrite IHπ. cbn. f_equal. f_equal.
+    rewrite map_app. cbn. reflexivity.
+Qed.
+
 Lemma eta_expands_subst :
   forall s k u v,
     eta_expands u v ->
     eta_expands (subst s k u) (subst s k v).
-Admitted.
+Proof.
+  intros s k u v [na [A [t [π [e1 e2]]]]]. subst.
+  rewrite 2!subst_zipc. cbn.
+  rewrite commut_lift_subst.
+  eexists _, _, _, _. intuition reflexivity.
+Qed.
 
 Lemma substitution_untyped_cumul {cf:checker_flags} Σ Γ Γ' Γ'' s M N :
   wf Σ.1 -> untyped_subslet Γ s Γ' ->

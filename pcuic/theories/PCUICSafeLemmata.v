@@ -795,22 +795,6 @@ Section Lemmata.
       eapply cumul_LetIn_bo. assumption.
   Qed.
 
-  Lemma conv_LetIn_bo :
-    forall Γ na ty t u u',
-      Σ ;;; Γ ,, vdef na ty t |- u == u' ->
-      Σ ;;; Γ |- tLetIn na ty t u == tLetIn na ty t u'.
-  Proof.
-    intros Γ na ty t u u' h.
-    induction h.
-    - eapply conv_alt_refl. constructor.
-      all: try eapply eq_term_refl.
-      assumption.
-    - eapply conv_alt_red_l ; try eassumption.
-      econstructor. assumption.
-    - eapply conv_alt_red_r ; try eassumption.
-      econstructor. assumption.
-  Qed.
-
   Lemma conv_alt_it_mkLambda_or_LetIn :
     forall Δ Γ u v,
       Σ ;;; (Δ ,,, Γ) |- u == v ->
@@ -904,7 +888,7 @@ Section Lemmata.
       assumption.
     - unfold zippx. simpl.
       eapply conv_alt_it_mkLambda_or_LetIn. cbn.
-      eapply conva_LetIn_bo. assumption.
+      eapply conv_LetIn_bo. assumption.
   Qed.
 
   Lemma conv_zippx :

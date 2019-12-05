@@ -11,6 +11,8 @@ Require Import Equations.Prop.DepElim.
 
 Derive Signature for Alli.
 
+Set Default Goal Selector "!".
+
 Lemma global_ext_constraints_app Σ Σ' φ
   : ConstraintSet.Subset (global_ext_constraints (Σ, φ))
                          (global_ext_constraints (Σ' ++ Σ, φ)).
@@ -51,8 +53,8 @@ Lemma leq_term_subset {cf:checker_flags} ctrs ctrs' t u
   : ConstraintSet.Subset ctrs ctrs' -> leq_term ctrs t u -> leq_term ctrs' t u.
 Proof.
   intro H. apply eq_term_upto_univ_impl.
-  intros t' u'; eapply eq_universe_subset; assumption.
-  intros t' u'; eapply leq_universe_subset; assumption.
+  - intros t' u'. eapply eq_universe_subset; assumption.
+  - intros t' u'. eapply leq_universe_subset; assumption.
 Qed.
 
 (** * Weakening lemmas w.r.t. the global environment *)
@@ -118,7 +120,8 @@ Lemma eq_context_subset {cf:checker_flags} φ φ' Γ Γ'
     -> eq_context φ Γ Γ' ->  eq_context φ' Γ Γ'.
 Proof.
   intros Hφ. induction 1; constructor.
-  eapply eq_decl_subset; eassumption. assumption.
+  - eapply eq_decl_subset; eassumption.
+  - assumption.
 Qed.
 
 Ltac my_rename_hyp h th :=
@@ -134,7 +137,7 @@ Ltac rename_hyp h ht ::= my_rename_hyp h ht.
 Lemma lookup_env_Some_fresh `{checker_flags} Σ c decl :
   lookup_env Σ c = Some decl -> ~ (fresh_global c Σ).
 Proof.
-  induction Σ; cbn. congruence.
+  induction Σ; cbn. 1: congruence.
   destruct (ident_eq_spec c a.1); subst.
   - intros [= <-] H2. inv H2.
     contradiction.
@@ -143,19 +146,23 @@ Proof.
 Qed.
 
 Lemma extends_lookup `{checker_flags} Σ Σ' c decl :
-  wf Σ' -> extends Σ Σ' -> lookup_env Σ c = Some decl -> lookup_env Σ' c = Some decl.
+  wf Σ' ->
+  extends Σ Σ' ->
+  lookup_env Σ c = Some decl ->
+  lookup_env Σ' c = Some decl.
 Proof.
   intros wfΣ' [Σ'' ->]. simpl.
-  induction Σ'' in wfΣ', c, decl |- *. simpl. auto.
-  specialize (IHΣ'' c decl). forward IHΣ''.
-  inv wfΣ'. simpl in X0. apply X.
-  intros HΣ. specialize (IHΣ'' HΣ).
-  inv wfΣ'. simpl in *.
-  destruct (ident_eq c kn) eqn:Heq'.
-  eapply lookup_env_Some_fresh in IHΣ''; eauto.
-  rewrite <- (reflect_iff _ _ (ident_eq_spec _ _)) in Heq'.
-  rewrite <- Heq' in H0. contradiction.
-  auto.
+  induction Σ'' in wfΣ', c, decl |- *.
+  - simpl. auto.
+  - specialize (IHΣ'' c decl). forward IHΣ''.
+    + inv wfΣ'. simpl in X0. apply X.
+    + intros HΣ. specialize (IHΣ'' HΣ).
+      inv wfΣ'. simpl in *.
+      destruct (ident_eq c kn) eqn:Heq'.
+      * eapply lookup_env_Some_fresh in IHΣ''; eauto.
+        rewrite <- (reflect_iff _ _ (ident_eq_spec _ _)) in Heq'.
+        rewrite <- Heq' in H0. contradiction.
+      * auto.
 Qed.
 Hint Resolve extends_lookup : extends.
 
@@ -191,15 +198,20 @@ Proof.
 Qed.
 
 Lemma weakening_env_cumul `{CF:checker_flags} Σ Σ' φ Γ M N :
-  wf Σ' -> extends Σ Σ' ->
-  cumul (Σ, φ) Γ M N -> cumul (Σ', φ) Γ M N.
+  wf Σ' ->
+  extends Σ Σ' ->
+  cumul (Σ, φ) Γ M N ->
+  cumul (Σ', φ) Γ M N.
 Proof.
   intros wfΣ [Σ'' ->].
   induction 1; simpl.
-  - econstructor. eapply leq_term_subset. eapply global_ext_constraints_app.
-    assumption.
+  - econstructor. eapply leq_term_subset.
+    + eapply global_ext_constraints_app.
+    + assumption.
   - econstructor 2; eauto. eapply weakening_env_red1; eauto. exists Σ''; eauto.
   - econstructor 3; eauto. eapply weakening_env_red1; eauto. exists Σ''; eauto.
+  - eapply cumul_eta_l. all: eassumption.
+  - eapply cumul_eta_r. all: eassumption.
 Qed.
 
 (* Lemma weakening_env_consistent_universe_context_instance `{checker_flags} : *)
@@ -306,17 +318,18 @@ Proof.
         unfold lift_typing in *; destruct T; intuition eauto with extends.
         destruct X as [u [tyu Hu]]. exists u. eauto.
     + eapply All_impl; eauto; simpl; intuition eauto with extends.
-  - econstructor; eauto with extends. auto.
-    eapply All_local_env_impl. eapply X.
-    clear -wfΣ' extΣ. simpl; intros.
-    unfold lift_typing in *; destruct T; intuition eauto with extends.
-    destruct X as [u [tyu Hu]]. exists u. eauto.
-    eapply All_impl; eauto; simpl; intuition eauto with extends.
-  - econstructor. eauto.
-    destruct X2 as [isB|[u [Hu Ps]]].
-    + left; auto. destruct isB. destruct x as [ctx [u [Heq Hu]]].
-      exists ctx, u. split; eauto with extends.
-    + right. exists u. eapply Ps; auto.
+  - econstructor; eauto with extends.
+    + eapply All_local_env_impl.
+      * eapply X.
+      * clear -wfΣ' extΣ. simpl; intros.
+        unfold lift_typing in *; destruct T; intuition eauto with extends.
+        destruct X as [u [tyu Hu]]. exists u. eauto.
+    + eapply All_impl; eauto; simpl; intuition eauto with extends.
+  - econstructor. 1: eauto.
+    + destruct X2 as [isB|[u [Hu Ps]]].
+      * left. auto. destruct isB. destruct x as [ctx [u [Heq Hu]]].
+        exists ctx, u. split; eauto with extends.
+      * right. exists u. eapply Ps; auto.
     + destruct Σ as [Σ φ]. eapply weakening_env_cumul in cumulA; eauto.
 Qed.
 
@@ -332,36 +345,40 @@ Lemma weakening_on_global_decl `{checker_flags} P Σ Σ' φ kn decl :
 Proof.
   unfold weaken_env_prop.
   intros HPΣ wfΣ' Hext Hdecl.
-  destruct decl. destruct c. destruct cst_body. simpl in *.
-  red in Hdecl |- *. simpl in *.
-  eapply HPΣ; eauto.
-  eapply HPΣ; eauto.
+  destruct decl.
+  1:{
+    destruct c. destruct cst_body.
+    - simpl in *.
+      red in Hdecl |- *. simpl in *.
+      eapply HPΣ; eauto.
+    - eapply HPΣ; eauto.
+  }
   simpl in *.
   destruct Hdecl as [onI onP onnP]; constructor; eauto.
   - eapply Alli_impl; eauto. intros.
     destruct X. unshelve econstructor; eauto.
-    -- unfold on_type in *; intuition eauto.
-    -- unfold on_constructors in *. eapply All2_impl; eauto.
-       intros. unfold on_constructor, on_type in *; intuition eauto.
-       destruct b as [cs Hcs]. exists cs.
-       induction (cshape_args cs); simpl in *; auto.
-       destruct a0 as [na [b|] ty]; simpl in *; intuition eauto.
-    -- intros Hprojs; destruct onProjections; try constructor; auto.
-       eapply Alli_impl; eauto. intros ip [id trm].
-       unfold on_projection, on_type; eauto.
-    -- unfold check_ind_sorts in *. destruct universe_family; auto.
-       --- split; [apply fst in ind_sorts|apply snd in ind_sorts].
-           eapply Forall_impl; tea; cbn.
+    + unfold on_type in *; intuition eauto.
+    + unfold on_constructors in *. eapply All2_impl; eauto.
+      intros. unfold on_constructor, on_type in *; intuition eauto.
+      destruct b as [cs Hcs]. exists cs.
+      induction (cshape_args cs); simpl in *; auto.
+      destruct a0 as [na [b|] ty]; simpl in *; intuition eauto.
+    + intros Hprojs; destruct onProjections; try constructor; auto.
+      eapply Alli_impl; eauto. intros ip [id trm].
+      unfold on_projection, on_type; eauto.
+    + unfold check_ind_sorts in *. destruct universe_family; auto.
+      * split; [apply fst in ind_sorts|apply snd in ind_sorts].
+        -- eapply Forall_impl; tea; cbn.
            intros. eapply leq_universe_subset; tea.
            apply weakening_env_global_ext_constraints; tea.
-           destruct indices_matter; [|trivial]. clear -ind_sorts HPΣ wfΣ' Hext.
+        -- destruct indices_matter; [|trivial]. clear -ind_sorts HPΣ wfΣ' Hext.
            induction ind_indices; simpl in *; auto.
            destruct a as [na [b|] ty]; simpl in *; intuition eauto.
-       --- split; [apply fst in ind_sorts|apply snd in ind_sorts].
-           eapply Forall_impl; tea; cbn.
+      * split; [apply fst in ind_sorts|apply snd in ind_sorts].
+        -- eapply Forall_impl; tea; cbn.
            intros. eapply leq_universe_subset; tea.
            apply weakening_env_global_ext_constraints; tea.
-           destruct indices_matter; [|trivial]. clear -ind_sorts HPΣ wfΣ' Hext.
+        -- destruct indices_matter; [|trivial]. clear -ind_sorts HPΣ wfΣ' Hext.
            induction ind_indices; simpl in *; auto.
            destruct a as [na [b|] ty]; simpl in *; intuition eauto.
   - red in onP |- *. eapply All_local_env_impl; eauto.
@@ -374,10 +391,11 @@ Lemma weakening_env_lookup_on_global_env `{checker_flags} P Σ Σ' c decl :
   on_global_decl P (Σ', universes_decl_of_decl decl) c decl.
 Proof.
   intros HP wfΣ Hext HΣ.
-  induction HΣ; simpl. congruence.
+  induction HΣ; simpl. 1: congruence.
   assert (HH: extends Σ Σ'). {
     destruct Hext as [Σ'' HΣ''].
-    exists ((Σ'' ++ [(kn, d)])%list). now rewrite <- app_assoc. }
+    exists ((Σ'' ++ [(kn, d)])%list). now rewrite <- app_assoc.
+  }
   destruct (ident_eq_spec c kn).
   - intros [= ->]. subst.
     clear Hext; eapply weakening_on_global_decl; eauto.
@@ -458,15 +476,17 @@ Proof.
   destruct H0 as [Hidecl [Hcdecl Hnpar]].
   eapply declared_inductive_inv in Hidecl; eauto.
   pose proof (onProjections Hidecl). apply on_projs in X2.
-  eapply nth_error_alli in X2; eauto.
+  1: eapply nth_error_alli in X2; eauto.
   eapply nth_error_Some_length in Hcdecl.
-  destruct (ind_projs idecl); simpl in *. lia. congruence.
+  destruct (ind_projs idecl); simpl in *.
+  - lia.
+  - congruence.
 Qed.
 
 Lemma wf_extends `{checker_flags} {Σ Σ'} : wf Σ' -> extends Σ Σ' -> wf Σ.
 Proof.
   intros HΣ' [Σ'' ->]. simpl in *.
-  induction Σ''. auto.
+  induction Σ''. 1: auto.
   inv HΣ'. auto.
 Qed.
 
@@ -474,10 +494,10 @@ Lemma weaken_env_prop_typing `{checker_flags} : weaken_env_prop (lift_typing typ
 Proof.
   red. intros * wfΣ' Hext *.
   destruct T; simpl.
-  intros Ht. pose proof (wf_extends wfΣ' Hext).
-  eapply (weakening_env (_, _)); eauto. eapply typing_wf_local in Ht; eauto.
-  intros [s Ht]. pose proof (wf_extends wfΣ' Hext). exists s.
-  eapply (weakening_env (_, _)); eauto. eapply typing_wf_local in Ht; eauto.
+  - intros Ht. pose proof (wf_extends wfΣ' Hext).
+    eapply (weakening_env (_, _)); eauto. eapply typing_wf_local in Ht; eauto.
+  - intros [s Ht]. pose proof (wf_extends wfΣ' Hext). exists s.
+    eapply (weakening_env (_, _)); eauto. eapply typing_wf_local in Ht; eauto.
 Qed.
 
 Lemma weaken_wf_local `{checker_flags} (Σ : global_env_ext) Σ' Γ :
@@ -520,8 +540,9 @@ Lemma on_declared_inductive `{checker_flags} {Σ ref mdecl idecl} :
   on_ind_body (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind ref) mdecl (inductive_ind ref) idecl.
 Proof.
   intros wfΣ Hdecl.
-  split. destruct Hdecl as [Hmdecl _]. now apply on_declared_minductive in Hmdecl.
-  apply (declared_inductive_inv _ _ _ mdecl idecl weaken_env_prop_typing wfΣ wfΣ Hdecl).
+  split.
+  - destruct Hdecl as [Hmdecl _]. now apply on_declared_minductive in Hmdecl.
+  - apply (declared_inductive_inv _ _ _ mdecl idecl weaken_env_prop_typing wfΣ wfΣ Hdecl).
 Qed.
 
 Lemma on_declared_constructor `{checker_flags} {Σ ref mdecl idecl cdecl}
@@ -540,9 +561,10 @@ Lemma on_declared_constructor `{checker_flags} {Σ ref mdecl idecl cdecl}
                  mdecl (inductive_ind (fst ref))
                  idecl cdecl ind_ctor_sort.
 Proof.
-  split. destruct Hdecl as [Hidecl Hcdecl].
-  now apply on_declared_inductive in Hidecl.
-  apply (declared_constructor_inv _ _ mdecl idecl ref cdecl
+  split.
+  - destruct Hdecl as [Hidecl Hcdecl].
+    now apply on_declared_inductive in Hidecl.
+  - apply (declared_constructor_inv _ _ mdecl idecl ref cdecl
                                   weaken_env_prop_typing wfΣ wfΣ Hdecl).
 Qed.
 
@@ -555,8 +577,9 @@ Lemma on_declared_projection `{checker_flags} {Σ ref mdecl idecl pdecl} :
                 (inductive_ind (fst (fst ref))) idecl (snd ref) pdecl.
 Proof.
   intros wfΣ Hdecl.
-  split. destruct Hdecl as [Hidecl Hcdecl]. now apply on_declared_inductive in Hidecl.
-  apply (declared_projection_inv _ _ mdecl idecl ref pdecl weaken_env_prop_typing wfΣ wfΣ Hdecl).
+  split.
+  - destruct Hdecl as [Hidecl Hcdecl]. now apply on_declared_inductive in Hidecl.
+  - apply (declared_projection_inv _ _ mdecl idecl ref pdecl weaken_env_prop_typing wfΣ wfΣ Hdecl).
 Qed.
 
 
@@ -581,17 +604,17 @@ Lemma weaken_lookup_on_global_env' `{checker_flags} Σ c decl :
   on_udecl_prop Σ (universes_decl_of_decl decl).
 Proof.
   intros wfΣ HH.
-  induction wfΣ; simpl. discriminate.
+  induction wfΣ; simpl. 1: discriminate.
   cbn in HH. subst udecl. destruct (ident_eq_spec c kn).
   - apply some_inj in HH; destruct HH. subst.
     clear -o. unfold on_udecl, on_udecl_prop in *.
     destruct o as [H1 [H2 [H3 H4]]]. repeat split.
     + clear -H2. intros [[? ?] ?] Hc. specialize (H2 _ Hc).
       destruct H2 as [H H']. simpl. split.
-      apply LevelSet.union_spec in H. apply LevelSet.union_spec.
-      destruct H; [now left|right]. apply LevelSet.union_spec; now right.
-      apply LevelSet.union_spec in H'. apply LevelSet.union_spec.
-      destruct H'; [now left|right]. apply LevelSet.union_spec; now right.
+      * apply LevelSet.union_spec in H. apply LevelSet.union_spec.
+        destruct H; [now left|right]. apply LevelSet.union_spec; now right.
+      * apply LevelSet.union_spec in H'. apply LevelSet.union_spec.
+        destruct H'; [now left|right]. apply LevelSet.union_spec; now right.
     + revert H3. case_eq (universes_decl_of_decl d); trivial.
       intros ctx eq Hctx. repeat split.
       * auto.
@@ -618,10 +641,10 @@ Proof.
     destruct HH as [H1 H2]. split.
     + clear -H1. intros [[? ?] ?] Hc. specialize (H1 _ Hc).
       destruct H1 as [H H']. simpl. split.
-      apply LevelSet.union_spec in H. apply LevelSet.union_spec.
-      destruct H; [now left|right]. apply LevelSet.union_spec; now right.
-      apply LevelSet.union_spec in H'. apply LevelSet.union_spec.
-      destruct H'; [now left|right]. apply LevelSet.union_spec; now right.
+      * apply LevelSet.union_spec in H. apply LevelSet.union_spec.
+        destruct H; [now left|right]. apply LevelSet.union_spec; now right.
+      * apply LevelSet.union_spec in H'. apply LevelSet.union_spec.
+        destruct H'; [now left|right]. apply LevelSet.union_spec; now right.
     + destruct d'; trivial. repeat split.
       * destruct H2; auto.
       * intros l Hl. apply H2 in Hl.

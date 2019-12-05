@@ -12,6 +12,8 @@ From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 Set Equations With UIP.
 
+Set Default Goal Selector "!".
+
 (* TODO Maybe remove later? *)
 Require PCUICWeakening.
 
@@ -1558,6 +1560,7 @@ Proof.
   rewrite e in hd. assumption.
 Qed.
 
+(* TODO UPDATE We need to add rename_stack *)
 Lemma cumul_rename :
   forall Σ Γ Δ f A B,
     wf Σ.1 ->
@@ -1576,7 +1579,9 @@ Proof.
     + eassumption.
     + eapply red1_rename. all: try eassumption.
       apply hf.
-Qed.
+  - eapply cumul_eta_l.
+(* Qed. *)
+Admitted.
 
 Lemma typing_rename :
   forall Σ Γ Δ f t A,
@@ -2204,7 +2209,7 @@ Proof.
     (* NEED Commutation *)
     admit.
   - intros Σ wfΣ Γ wfΓ ind u npar p c brs args mdecl idecl isdecl X X0 a pars
-           ps pty htoc X1 ihp H2 X3 ihc btys H3 ihbtys Δ σ hΔ hσ. 
+           ps pty htoc X1 ihp H2 X3 ihc btys H3 ihbtys Δ σ hΔ hσ.
     autorewrite with sigma. simpl.
     rewrite map_app. simpl.
     rewrite map_skipn.

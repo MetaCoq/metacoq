@@ -7,7 +7,7 @@ Require Import config Universes monad_utils utils BasicAst AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICPosition
      PCUICNormal PCUICInversion PCUICCumulativity PCUICSafeLemmata
-     PCUICGeneration PCUICValidity PCUICSR PCUICSN PCUICUtils.
+     PCUICGeneration PCUICValidity PCUICSR PCUICSN PCUICUtils PCUICReduction.
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 

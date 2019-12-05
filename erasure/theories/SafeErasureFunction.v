@@ -53,7 +53,7 @@ Ltac sq' := try (destruct HΣ; clear HΣ);
          end; try eapply sq.
 
 Definition wf_reduction_aux : WellFounded term_rel.
-Proof.    
+Proof.
   intros (Γ & s & H). sq'.
   induction (normalisation' Σ Γ s X H) as [s _ IH].
   induction (wf_cod' s) as [s _ IH_sub] in Γ, H, IH |- *.
@@ -160,7 +160,8 @@ Next Obligation.
   edestruct (red_confluence wfΣ X0 X) as (? & ? & ?); eauto.
   eapply invert_red_prod in r as (? & ? & [] & ?); eauto. subst.
 
-  eapply invert_cumul_arity_l in H2. 2: eapply PCUICCumulativity.red_cumul. 2:eauto.
+  eapply invert_cumul_arity_l in H2. 2: eauto.
+  2: eapply PCUICCumulativity.red_cumul. 2:eauto.
   destruct H2 as (? & ? & ?). sq.
 
   eapply invert_red_prod in X2 as (? & ? & [] & ?); eauto. subst. cbn in *.

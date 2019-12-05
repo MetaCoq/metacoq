@@ -4,7 +4,8 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From MetaCoq.Template Require Import config utils monad_utils Universes BasicAst AstUtils
 UnivSubst EnvironmentTyping.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICUtils.
+PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICUtils
+PCUICPosition.
 
 From MetaCoq Require Export LibHypsNaming.
 
@@ -16,7 +17,9 @@ Local Open Scope string_scope.
 Set Asymmetric Patterns.
 
 From Equations Require Import Equations.
+Require Import CRelationClasses.
 Require Import Equations.Prop.DepElim.
+Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 Import MonadNotation.
 
 (** * Typing derivations
@@ -153,23 +156,6 @@ Qed.
 
 Lemma fix_context_length mfix : #|fix_context mfix| = #|mfix|.
 Proof. unfold fix_context. now rewrite List.rev_length mapi_length. Qed.
-
-(* The current fix_context asks for too much information. *)
-Definition fix_context_alt (l : list (name × term)) : context :=
-  List.rev (mapi (fun i d => vass d.1 (lift0 i d.2)) l).
-
-Definition def_sig (d : def term) : name × term :=
-  (d.(dname), d.(dtype)).
-
-Lemma fix_context_fix_context_alt :
-  forall m,
-    fix_context m = fix_context_alt (map def_sig m).
-Proof.
-  intros m.
-  unfold fix_context_alt, fix_context.
-  f_equal. rewrite mapi_map. eapply mapi_ext.
-  intros i [na ty bo ra]. simpl. reflexivity.
-Qed.
 
 Definition tDummy := tVar "".
 
@@ -438,6 +424,16 @@ Fixpoint subst_app (t : term) (us : list term) : term :=
   | _, _ => mkApps t us
   end.
 
+(** *** η-conversion *)
+
+(* [eta_expands u v] states v is an expansion of u *)
+Definition eta_expands u v : Type :=
+  ∑ na A t π,
+    u = zipc t π /\
+    v = zipc (tLambda na A (tApp (lift0 1 t) (tRel 0))) π.
+
+Definition eta_eq :=
+  clos_refl_sym_trans eta_expands.
 
 (** ** Utilities for typing *)
 
@@ -516,6 +512,8 @@ Inductive cumul `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> 
 | cumul_refl t u : leq_term (global_ext_constraints Σ) t u -> Σ ;;; Γ |- t <= u
 | cumul_red_l t u v : red1 Σ.1 Γ t v -> Σ ;;; Γ |- v <= u -> Σ ;;; Γ |- t <= u
 | cumul_red_r t u v : Σ ;;; Γ |- t <= v -> red1 Σ.1 Γ u v -> Σ ;;; Γ |- t <= u
+| cumul_eta_l t u v : eta_expands t v -> Σ ;;; Γ |- v <= u -> Σ ;;; Γ |- t <= u
+| cumul_eta_r t u v : Σ ;;; Γ |- t <= v -> eta_expands u v -> Σ ;;; Γ |- t <= u
 
 where " Σ ;;; Γ |- t <= u " := (cumul Σ Γ t u) : type_scope.
 
@@ -1444,7 +1442,6 @@ Ltac my_rename_hyp h th :=
 Ltac rename_hyp h ht ::= my_rename_hyp h ht.
 
 
-From Equations Require Import Equations.
 Section All_local_env.
   (** * Lemmas about All_local_env *)
 

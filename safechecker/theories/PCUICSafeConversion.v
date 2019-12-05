@@ -9,7 +9,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
      PCUICCumulativity PCUICSR PCUICEquality PCUICNameless PCUICConversion
      PCUICSafeLemmata PCUICNormal PCUICInversion PCUICReduction PCUICPosition
-     PCUICContextConversion PCUICConfluence PCUICSN PCUICAlpha PCUICUtils.
+     PCUICContextConversion PCUICConfluence PCUICSN PCUICAlpha PCUICUtils
+     PCUICReduction.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce.
 From Equations Require Import Equations.
 
@@ -863,7 +864,7 @@ Section Conversion.
     rewrite 2!zipc_appstack in r1. cbn in r1.
 
     eapply red_wellformed ; try assumption ; revgoals.
-    - constructor. zip fold. eapply PCUICPosition.red_context. eassumption.
+    - constructor. zip fold. eapply red_context. eassumption.
     - cbn. assumption.
   Qed.
   Next Obligation.
@@ -894,7 +895,7 @@ Section Conversion.
     rewrite 2!zipc_appstack in r2. cbn in r2.
 
     eapply red_wellformed ; try assumption ; revgoals.
-    - constructor. zip fold. eapply PCUICPosition.red_context. eassumption.
+    - constructor. zip fold. eapply red_context. eassumption.
     - cbn. assumption.
   Qed.
   Next Obligation.
@@ -1265,7 +1266,7 @@ Section Conversion.
     end.
     rewrite <- e1 in r1. cbn in r1.
     rewrite <- e1 in hd. cbn in hd.
-    do 2 zip fold. constructor. eapply PCUICPosition.red_context.
+    do 2 zip fold. constructor. eapply red_context.
     econstructor.
     - eapply app_reds_r. exact r1.
     - repeat lazymatch goal with
@@ -2693,7 +2694,7 @@ Section Conversion.
     case_eq (decompose_stack ρ). intros l ξ e.
     rewrite e in d2. cbn in d2. subst.
     pose proof (red_wellformed _ hΣ h1 r1) as hh.
-    apply PCUICPosition.red_context in r2.
+    apply red_context in r2.
     pose proof (decompose_stack_eq _ _ _ (eq_sym eq2)). subst.
     rewrite zipc_appstack in hh. cbn in r2.
     pose proof (red_wellformed _ hΣ hh (sq r2)) as hh2.
@@ -2710,7 +2711,7 @@ Section Conversion.
     rewrite <- eq3 in r2.
     eapply R_cored. simpl.
     eapply red_cored_cored ; try eassumption.
-    apply PCUICPosition.red_context in r2. cbn in r2.
+    apply red_context in r2. cbn in r2.
     rewrite zipc_stack_cat.
     pose proof (decompose_stack_eq _ _ _ (eq_sym eq2)). subst.
     rewrite zipc_appstack in r2. cbn in r2.
@@ -2838,7 +2839,7 @@ Section Conversion.
     case_eq (decompose_stack ρ). intros l ξ e.
     rewrite e in d2. cbn in d2. subst.
     pose proof (red_wellformed _ hΣ h2 r1) as hh.
-    apply PCUICPosition.red_context in r2.
+    apply red_context in r2.
     pose proof (decompose_stack_eq _ _ _ (eq_sym eq2)). subst.
     rewrite zipc_appstack in hh. cbn in r2.
     pose proof (red_wellformed _ hΣ hh (sq r2)) as hh'.
@@ -2859,7 +2860,7 @@ Section Conversion.
     pose proof (decompose_stack_eq _ _ _ (eq_sym eq2)). subst.
     rewrite zipc_appstack in r2. cbn in r2.
     rewrite zipc_appstack.
-    do 2 zip fold. eapply PCUICPosition.red_context.
+    do 2 zip fold. eapply red_context.
     assumption.
   Qed.
   Next Obligation.
@@ -2999,7 +3000,7 @@ Section Conversion.
     all: try reflexivity.
     simpl. constructor.
   Qed.
-  
+
   (* TODO MOVE *)
   Lemma App_conv' :
     forall leq Γ t1 t2 u1 u2,
@@ -3580,7 +3581,7 @@ Section Conversion.
     apply decompose_stack_eq in eq2'. subst.
     rewrite stack_context_appstack in r2.
     eapply red_wellformed ; auto ; revgoals.
-    - constructor. zip fold. eapply PCUICPosition.red_context. eassumption.
+    - constructor. zip fold. eapply red_context. eassumption.
     - rewrite zipc_appstack in r1. cbn.
       eapply red_wellformed ; auto ; revgoals.
       + constructor. eassumption.
@@ -3612,7 +3613,7 @@ Section Conversion.
     rewrite 2!zipc_appstack in r1.
     rewrite stack_context_appstack in r2.
     eapply red_cored_cored ; try eassumption.
-    repeat zip fold. eapply PCUICPosition.red_context. assumption.
+    repeat zip fold. eapply red_context. assumption.
   Qed.
   Next Obligation.
     apply reducible_head_decompose in eq1 as d1.
@@ -3726,7 +3727,7 @@ Section Conversion.
     apply decompose_stack_eq in eq2'. subst.
     rewrite stack_context_appstack in r2.
     eapply red_wellformed ; auto ; revgoals.
-    - constructor. zip fold. eapply PCUICPosition.red_context. eassumption.
+    - constructor. zip fold. eapply red_context. eassumption.
     - rewrite zipc_appstack in r1. cbn.
       eapply red_wellformed ; auto ; revgoals.
       + constructor. eassumption.
@@ -3758,7 +3759,7 @@ Section Conversion.
     rewrite 2!zipc_appstack in r1.
     rewrite stack_context_appstack in r2.
     eapply red_cored_cored ; try eassumption.
-    repeat zip fold. eapply PCUICPosition.red_context. assumption.
+    repeat zip fold. eapply red_context. assumption.
   Qed.
   Next Obligation.
     apply reducible_head_decompose in eq1 as d1.

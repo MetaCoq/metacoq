@@ -1152,7 +1152,7 @@ Section Stacks.
   (* Maybe a stack should be a list! *)
   Fixpoint stack_cat (ρ θ : stack) : stack :=
     match ρ with
-    | Empty => θ
+    | ε => θ
     | App u ρ => App u (stack_cat ρ θ)
     | Fix f n args ρ => Fix f n args (stack_cat ρ θ)
     | Fix_mfix_ty na bo ra mfix1 mfix2 idx ρ =>
@@ -1185,6 +1185,164 @@ Section Stacks.
     revert ρ. induction args ; intros ρ.
     - reflexivity.
     - simpl. rewrite IHargs. reflexivity.
+  Qed.
+
+  Lemma stack_cat_nil_r :
+    forall π,
+      π +++ ε = π.
+  Proof.
+    intro π.
+    induction π.
+    all: simpl.
+    all: rewrite ?IHπ.
+    all: reflexivity.
+  Qed.
+
+  Lemma stack_cat_assoc :
+    forall π ρ θ,
+      (π +++ ρ) +++ θ = π +++ (ρ +++ θ).
+  Proof.
+    intros π ρ θ.
+    induction π in ρ, θ |- *.
+    all: simpl.
+    all: rewrite ?IHπ.
+    all: reflexivity.
+  Qed.
+
+  Fixpoint rev_stack π :=
+    match π with
+    | ε => ε
+    | App u ρ => rev_stack ρ +++ App u ε
+    | Fix f n args ρ => rev_stack ρ +++ Fix f n args ε
+    | Fix_mfix_ty na bo ra mfix1 mfix2 idx ρ =>
+        rev_stack ρ +++ Fix_mfix_ty na bo ra mfix1 mfix2 idx ε
+    | Fix_mfix_bd na ty ra mfix1 mfix2 idx ρ =>
+        rev_stack ρ +++ Fix_mfix_bd na ty ra mfix1 mfix2 idx ε
+    | CoFix f n args ρ => rev_stack ρ +++ CoFix f n args ε
+    | Case_p indn c brs ρ => rev_stack ρ +++ Case_p indn c brs ε
+    | Case indn p brs ρ => rev_stack ρ +++ Case indn p brs ε
+    | Case_brs indn p c m brs1 brs2 ρ =>
+        rev_stack ρ +++ Case_brs indn p c m brs1 brs2 ε
+    | Proj p ρ => rev_stack ρ +++ Proj p ε
+    | Prod_l na B ρ => rev_stack ρ +++ Prod_l na B ε
+    | Prod_r na A ρ => rev_stack ρ +++ Prod_r na A ε
+    | Lambda_ty na u ρ => rev_stack ρ +++ Lambda_ty na u ε
+    | Lambda_tm na A ρ => rev_stack ρ +++ Lambda_tm na A ε
+    | LetIn_bd na B u ρ => rev_stack ρ +++ LetIn_bd na B u ε
+    | LetIn_ty na b u ρ => rev_stack ρ +++ LetIn_ty na b u ε
+    | LetIn_in na b B ρ => rev_stack ρ +++ LetIn_in na b B ε
+    | coApp u ρ => rev_stack ρ +++ coApp u ε
+    end.
+
+  Lemma rev_stack_app :
+    forall π ρ,
+      rev_stack (π +++ ρ) = rev_stack ρ +++ rev_stack π.
+  Proof.
+    intros π ρ.
+    induction π in ρ |- *.
+    all: simpl.
+    1:{ rewrite stack_cat_nil_r. reflexivity. }
+    all: rewrite IHπ.
+    all: rewrite stack_cat_assoc.
+    all: reflexivity.
+  Qed.
+
+  Lemma rev_stack_invol :
+    forall π,
+      rev_stack (rev_stack π) = π.
+  Proof.
+    intro π.
+    induction π.
+    all: simpl.
+    1: reflexivity.
+    all: rewrite rev_stack_app.
+    all: rewrite IHπ.
+    all: reflexivity.
+  Qed.
+
+  (* Induction principle for stacks, in reverse order *)
+  Lemma stack_rev_rect :
+    forall (P : stack -> Type),
+      P ε ->
+      (forall t π,
+        P π ->
+        P (π +++ App t ε)
+      ) ->
+      (forall mfix idx args π,
+        P π ->
+        P (π +++ Fix mfix idx args ε)
+      ) ->
+      (forall na bo ra mfix1 mfix2 id π,
+        P π ->
+        P (π +++ Fix_mfix_ty na bo ra mfix1 mfix2 id ε)
+      ) ->
+      (forall na ty ra mfix1 mfix2 id π,
+        P π ->
+        P (π +++ Fix_mfix_bd na ty ra mfix1 mfix2 id ε)
+      ) ->
+      (forall mfix idx args π,
+        P π ->
+        P (π +++ CoFix mfix idx args ε)
+      ) ->
+      (forall indn c brs π,
+        P π ->
+        P (π +++ Case_p indn c brs ε)
+      ) ->
+      (forall indn p brs π,
+        P π ->
+        P (π +++ Case indn p brs ε)
+      ) ->
+      (forall indn p c m brs1 brs2 π,
+        P π ->
+        P (π +++ Case_brs indn p c m brs1 brs2 ε)
+      ) ->
+      (forall p π,
+        P π ->
+        P (π +++ Proj p ε)
+      ) ->
+      (forall na B π,
+        P π ->
+        P (π +++ Prod_l na B ε)
+      ) ->
+      (forall na A π,
+        P π ->
+        P (π +++ Prod_r na A ε)
+      ) ->
+      (forall na b π,
+        P π ->
+        P (π +++ Lambda_ty na b ε)
+      ) ->
+      (forall na A π,
+        P π ->
+        P (π +++ Lambda_tm na A ε)
+      ) ->
+      (forall na B t π,
+        P π ->
+        P (π +++ LetIn_bd na B t ε)
+      ) ->
+      (forall na b t π,
+        P π ->
+        P (π +++ LetIn_ty na b t ε)
+      ) ->
+      (forall na b B π,
+        P π ->
+        P (π +++ LetIn_in na b B ε)
+      ) ->
+      (forall t π,
+        P π ->
+        P (π +++ coApp t ε)
+      ) ->
+      forall π, P π.
+  Proof.
+    intros P hε hApp hFix hFixty hFixbd hCoFix hCasep hCase hCasebrs hProj
+      hProdl hProdr hLamty hLamtm hLetbd hLetty hLetin hcoApp.
+    assert (h : forall π, P (rev_stack π)).
+    { intro π. induction π.
+      all: eauto.
+    }
+    intro π.
+    rewrite <- rev_stack_invol.
+    apply h.
   Qed.
 
   Lemma decompose_stack_twice :

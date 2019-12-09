@@ -63,9 +63,21 @@ Tactic Notation "apply*" constr(H) "in" hyp(H')
 
 Ltac cbnr := cbn; try reflexivity.
 
+Ltac rdestruct H :=
+  match type of H with
+  | _ \/ _ => destruct H as [H|H]; [rdestruct H|rdestruct H]
+  | _ /\ _ => let H' := fresh H in
+            destruct H as [H|H']; [rdestruct H|rdestruct H']
+  | _ × _ => let H' := fresh H in
+            destruct H as [H H']; rdestruct H; rdestruct H'
+  | sigT _ => let H' := fresh H in
+             destruct H as [H H']; rdestruct H; rdestruct H'
+  | _ => idtac
+  end.
+
 (* This is an attempt to overcome the fact that auto/eauto *)
 (* do not deal with products *)
-Ltac rdestruct :=
+Ltac rdest :=
   repeat match goal with
   | H : _ /\ _ |- _ => destruct H
   | H : _ × _ |- _ => destruct H

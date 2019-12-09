@@ -1403,7 +1403,7 @@ Proof.
   intros ref hRe t.
   induction t using term_forall_list_ind; intros u1 u2 hu.
   all: cbn; try constructor; eauto using subst_equal_inst_inst.
-  all: eapply All2_map, All_All2; tea; cbn; intros; rdestruct; eauto.
+  all: eapply All2_map, All_All2; tea; cbn; intros; rdest; eauto.
 Qed.
 
 Instance leq_term_SubstUnivPreserving {cf:checker_flags} φ :

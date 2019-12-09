@@ -821,14 +821,6 @@ Ltac simplify_sets :=
     => apply EdgeSetFact.empty_iff in H; contradiction
   end.
 
-Ltac rdestruct H :=
-  match type of H with
-  | _ \/ _ => destruct H as [H|H]; [rdestruct H|rdestruct H]
-  | _ /\ _ => let H' := fresh H in
-            destruct H as [H|H']; [rdestruct H|rdestruct H']
-  | _ => idtac
-  end.
-
 Definition labelling_of_valuation (v : valuation) : labelling
   := fun x => match x with
            | lSet => 0

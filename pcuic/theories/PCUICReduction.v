@@ -1139,12 +1139,12 @@ Proof.
   - eapply red_case; eauto. repeat eapply All2_map_right.
     eapply All_All2; tea. intro; cbn; eauto.
   - eapply red_fix_congr. repeat eapply All2_map_right.
-    eapply All_All2; tea. intros; cbn in *; utils.rdestruct; eauto.
+    eapply All_All2; tea. intros; cbn in *; rdest; eauto.
     rewrite map_length. eapply r0.
     rewrite nth_error_app_context_ge; rewrite fix_context_length; try lia.
     cutrewrite (#|m| + i - #|m| = i); tas; lia.
   - eapply red_cofix_congr. repeat eapply All2_map_right.
-    eapply All_All2; tea. intros; cbn in *; utils.rdestruct; eauto.
+    eapply All_All2; tea. intros; cbn in *; rdest; eauto.
     rewrite map_length. eapply r0.
     rewrite nth_error_app_context_ge; rewrite fix_context_length; try lia.
     cutrewrite (#|m| + i - #|m| = i); tas; lia.

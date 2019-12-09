@@ -23,7 +23,7 @@ Module LS := LevelSet.
 
 Create HintDb univ_subst.
 
-Local Ltac aa := rdestruct; eauto with univ_subst.
+Local Ltac aa := rdest; eauto with univ_subst.
 
 
 Section CheckerFlags.

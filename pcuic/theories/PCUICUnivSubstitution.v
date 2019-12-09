@@ -1218,7 +1218,7 @@ Proof.
       destruct (instantiate_params param' (firstn npar args) type');
         [|discriminate].
       simpl. rewrite (subst_instance_destArity []).
-      destruct (destArity [] t) as [[ctx s'] ?|]; [|discriminate].
+      destruct (destArity [] t) as [[ctx s']|]; [|discriminate].
       apply some_inj in H0; subst; simpl in *. f_equal.
       rewrite subst_instance_constr_it_mkProd_or_LetIn. f_equal; cbn.
       f_equal. rewrite subst_instance_constr_mkApps; cbn.

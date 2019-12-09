@@ -527,7 +527,7 @@ Section SRContext.
              exists tu.π1. eauto. cbn. eauto.
     - econstructor; tea; eauto.
       eapply All2_impl; tea; cbn.
-      intros; utils.rdestruct; eauto.
+      intros; rdest; eauto.
     - assert (XX: red1_ctx Σ.1 (Γ ,,, fix_context mfix) (Γ' ,,, fix_context mfix))
         by now eapply red1_ctx_app.
       econstructor; tea.
@@ -550,7 +550,7 @@ Section SRContext.
             eauto. }
         eapply X with (Γ ,,, fix_context mfix) ZZ.π1; tea. exact ZZ.π2.
       + eapply All_impl; tea.
-        intros; utils.rdestruct; eauto.
+        intros; rdest; eauto.
     - assert (XX: red1_ctx Σ.1 (Γ ,,, fix_context mfix) (Γ' ,,, fix_context mfix))
         by now eapply red1_ctx_app.
       econstructor; tea.
@@ -573,14 +573,14 @@ Section SRContext.
             eauto. }
         eapply X with (Γ ,,, fix_context mfix) ZZ.π1; tea. exact ZZ.π2.
       + eapply All_impl; tea.
-        intros; utils.rdestruct; eauto.
+        intros; rdest; eauto.
     - econstructor.
       + now eapply X2.
       + destruct X3 as [[[ctx [s [H1 H2]]] X3]|X3]; [left|right].
         * cbn in *. exists ctx, s. split; eauto.
           eapply X; tea.
           now apply red1_ctx_app.
-        * utils.rdestruct; eauto.
+        * rdest; eauto.
       + eapply cumul_red_ctx; tea. now apply red1_red_ctx.
   Qed.
 

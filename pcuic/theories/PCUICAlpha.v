@@ -306,13 +306,13 @@ Qed.
                        × (forall v : term, upto_names' br.2 v -> Σ;;; Γ |- v : bty.2))
                       × Σ;;; Γ |- bty.2 : tSort ps)
                      × (forall v : term, upto_names' bty.2 v -> Σ;;; Γ |- v : tSort ps)).
-        * clear. intros x y z X; rdestruct; cbn in *.
+        * clear. intros x y z X; rdest; cbn in *.
           congruence. 2: eauto. econstructor; tea. 
           right. exists ps. eauto. constructor.
           now eapply upto_names_impl_leq_term.
         * eapply All2_trans'; [..|eassumption].
           2: apply All2_sym; tea.
-          clear. intros x y z X; rdestruct; cbn in *; eauto. congruence.
+          clear. intros x y z X; rdest; cbn in *; eauto. congruence.
           intros v H. unshelve eapply (upto_names_trans _ _ _ _) in H; tea.
           eauto.
       + eapply validity_term ; eauto.

@@ -25,20 +25,6 @@ Set Equations With UIP.
 
 Set Default Goal Selector "!".
 
-Arguments sq {_} _.
-
-Notation "( x ; y )" := (existT _ x y).
-
-Ltac rdestruct H :=
-  match type of H with
-  | _ /\ _ => let H' := fresh H in
-            destruct H as [H H']; rdestruct H; rdestruct H'
-  | _ × _ => let H' := fresh H in
-            destruct H as [H H']; rdestruct H; rdestruct H'
-  | sigT _ => let H' := fresh H in
-             destruct H as [H H']; rdestruct H; rdestruct H'
-  | _ => idtac
-  end.
 
 
 Definition nodelta_flags := RedFlags.mk true true true false true true.

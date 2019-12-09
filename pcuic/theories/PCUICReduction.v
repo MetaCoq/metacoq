@@ -400,6 +400,17 @@ Section ReductionCongruence.
       now eapply (red_ctx (tCtxLambda_r _ _ tCtxHole)).
     Qed.
 
+    Lemma red_app_r u v1 v2 :
+        red Σ Γ v1 v2 ->
+        red Σ Γ (tApp u v1) (tApp u v2).
+    Proof.
+      intro h. revert u. induction h ; intros u.
+      - constructor.
+      - econstructor.
+        + eapply IHh.
+        + constructor. assumption.
+    Qed.
+
     Lemma red_app M0 M1 N0 N1 :
       red Σ Γ M0 M1 ->
       red Σ Γ N0 N1 ->
@@ -575,7 +586,7 @@ Section ReductionCongruence.
       simpl. constructor. auto.
     Qed.
 
-    Lemma reds_case :
+    Lemma red_case :
       forall indn p c brs p' c' brs',
         red Σ Γ p p' ->
         red Σ Γ c c' ->
@@ -1125,7 +1136,7 @@ Proof.
     + cbn. rewrite H0. auto.
   - eapply red_evar. repeat eapply All2_map_right.
     eapply All_All2; tea. intro; cbn; eauto.
-  - eapply reds_case; eauto. repeat eapply All2_map_right.
+  - eapply red_case; eauto. repeat eapply All2_map_right.
     eapply All_All2; tea. intro; cbn; eauto.
   - eapply red_fix_congr. repeat eapply All2_map_right.
     eapply All_All2; tea. intros; cbn in *; utils.rdestruct; eauto.

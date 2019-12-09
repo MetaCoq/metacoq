@@ -748,7 +748,7 @@ Tactic Notation "redt" uconstr(y) := eapply (transitivity (R:=red _ _) (y:=y)).
 (*     eapply red1_red. econstructor; eauto. *)
 
 (*   - redt (tCase (ind, pars) p _ brs). *)
-(*     eapply reds_case; eauto. *)
+(*     eapply red_case; eauto. *)
 (*     eapply All2_same. intros. split; auto. *)
 (*     redt (iota_red _ _ _ _); eauto. *)
 (*     eapply red1_red. econstructor. *)

@@ -341,12 +341,12 @@ Proof.
   -
     eapply PCUICReduction.red_letin; eauto. eapply IHX0; eauto.
     econstructor. eauto. econstructor.
-  -     eapply PCUICReduction.reds_case; eauto. clear.
+  -     eapply PCUICReduction.red_case; eauto. clear.
     eapply PCUICCumulativity.All_All2_refl. induction brs; eauto.
-  -     eapply PCUICReduction.reds_case; eauto. clear.
+  -     eapply PCUICReduction.red_case; eauto. clear.
     eapply PCUICCumulativity.All_All2_refl. induction brs; eauto.
   - destruct ind.
-    eapply PCUICReduction.reds_case; eauto.
+    eapply PCUICReduction.red_case; eauto.
     clear - HΣ X HT.
     induction X.
     + econstructor. destruct p. destruct p.

@@ -113,7 +113,7 @@ Arguments sq {_} _.
 
 Ltac sq :=
   repeat match goal with
-  | H : ∥ _ ∥ |- _ => destruct H
+  | H : ∥ _ ∥ |- _ => case H; clear H; intro H
   end; try eapply sq.
 
 Definition on_snd {A B C} (f : B -> C) (p : A * B) :=
@@ -623,6 +623,8 @@ Inductive All (A : Type) (P : A -> Type) : list A -> Type :=
   | All_cons : forall (x : A) (l : list A),
                   P x -> All A P l -> All A P (x :: l).
 Arguments All {A} P l.
+Arguments All_nil {_ _}.
+Arguments All_cons {_ _ _ _}.
 
 Inductive Alli {A} (P : nat -> A -> Type) (n : nat) : list A -> Type :=
 | Alli_nil : Alli P n []
@@ -2976,6 +2978,22 @@ Proof.
     rewrite List.rev_length.
     replace (n + S #|l| - S #|l|) with n by lia.
     assumption.
+Qed.
+
+Lemma All_sq {A} {P : A -> Type} {l}
+  : All (fun x => ∥ P x ∥) l -> ∥ All P l ∥.
+Proof.
+  induction 1.
+  - repeat constructor.
+  - sq; now constructor.
+Qed.
+
+Lemma All2_sq {A B} {R : A -> B -> Type} {l1 l2}
+  : All2 (fun x y => ∥ R x y ∥) l1 l2 -> ∥ All2 R l1 l2 ∥.
+Proof.
+  induction 1.
+  - repeat constructor.
+  - sq; now constructor.
 Qed.
 
 Section ListSize.

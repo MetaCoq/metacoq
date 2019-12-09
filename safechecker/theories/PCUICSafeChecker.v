@@ -21,26 +21,6 @@ Open Scope list_scope.
 Local Set Keyed Unification.
 
 
-(* todo: move this *)
-Arguments All_nil {_ _}.
-Arguments All_cons {_ _ _ _}.
-
-Lemma All_sq {A} {P : A -> Type} {l}
-  : All (fun x => ∥ P x ∥) l -> ∥ All P l ∥.
-Proof.
-  induction 1.
-  - repeat constructor.
-  - sq; now constructor.
-Qed.
-
-Lemma All2_sq {A B} {R : A -> B -> Type} {l1 l2}
-  : All2 (fun x y => ∥ R x y ∥) l1 l2 -> ∥ All2 R l1 l2 ∥.
-Proof.
-  induction 1.
-  - repeat constructor.
-  - sq; now constructor.
-Qed.
-
 
 Lemma weakening_sq `{cf : checker_flags} {Σ Γ} Γ' {t T} :
   ∥ wf Σ.1 ∥ -> ∥ wf_local Σ (Γ ,,, Γ') ∥ ->
@@ -819,11 +799,6 @@ Section Typecheck.
     cbn. apply eqb_decl_spec.
   Qed.
 
-
-  Ltac sq :=
-    repeat match goal with
-           | H : ∥ _ ∥ |- _ => case H; clear H; intro H
-           end; try eapply sq.
 
   Open Scope nat.
 

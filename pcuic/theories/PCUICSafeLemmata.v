@@ -1138,19 +1138,6 @@ Section Lemmata.
   Derive Signature for cumul.
   Derive Signature for red1.
 
-  Lemma app_reds_r :
-    forall Γ u v1 v2,
-      red Σ Γ v1 v2 ->
-      red Σ Γ (tApp u v1) (tApp u v2).
-  Proof.
-    intros Γ u v1 v2 h.
-    revert u. induction h ; intros u.
-    - constructor.
-    - econstructor.
-      + eapply IHh.
-      + constructor. assumption.
-  Qed.
-
   Lemma app_cored_r :
     forall Γ u v1 v2,
       cored Σ Γ v1 v2 ->

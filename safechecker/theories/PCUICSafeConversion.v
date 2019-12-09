@@ -1176,7 +1176,7 @@ Section Conversion.
     rewrite stack_context_appstack in r1.
     rewrite stack_context_appstack.
     econstructor.
-    - eapply app_reds_r. exact r1.
+    - eapply red_app_r. exact r1.
     - repeat lazymatch goal with
       | |- context [ tApp (mkApps ?t ?l) ?u ] =>
         replace (tApp (mkApps t l) u) with (mkApps t (l ++ [u]))
@@ -1225,7 +1225,7 @@ Section Conversion.
     pose proof (decompose_stack_eq _ _ _ e'). subst.
     rewrite stack_context_appstack in r1.
     econstructor.
-    - eapply app_reds_r. exact r1.
+    - eapply red_app_r. exact r1.
     - repeat lazymatch goal with
       | |- context [ tApp (mkApps ?t ?l) ?u ] =>
         replace (tApp (mkApps t l) u) with (mkApps t (l ++ [u]))
@@ -1268,7 +1268,7 @@ Section Conversion.
     rewrite <- e1 in hd. cbn in hd.
     do 2 zip fold. constructor. eapply red_context.
     econstructor.
-    - eapply app_reds_r. exact r1.
+    - eapply red_app_r. exact r1.
     - repeat lazymatch goal with
       | |- context [ tApp (mkApps ?t ?l) ?u ] =>
         replace (tApp (mkApps t l) u) with (mkApps t (l ++ [u]))
@@ -1311,7 +1311,7 @@ Section Conversion.
     rewrite <- e1 in hd. cbn in hd.
     do 2 zip fold. eapply cored_context.
     eapply cored_red_trans.
-    - eapply app_reds_r. exact r1.
+    - eapply red_app_r. exact r1.
     - repeat lazymatch goal with
       | |- context [ tApp (mkApps ?t ?l) ?u ] =>
         replace (tApp (mkApps t l) u) with (mkApps t (l ++ [u]))
@@ -2507,7 +2507,7 @@ Section Conversion.
       end.
       constructor.
       eapply red_zipc.
-      eapply reds_case.
+      eapply red_case.
       + constructor.
       + assumption.
       + clear.
@@ -2522,7 +2522,7 @@ Section Conversion.
       end.
       constructor.
       eapply red_zipc.
-      eapply reds_case.
+      eapply red_case.
       + constructor.
       + assumption.
       + clear.
@@ -2609,7 +2609,7 @@ Section Conversion.
     - assumption.
     - eapply red_conv_l ; try assumption.
       eapply red_zipp.
-      eapply reds_case.
+      eapply red_case.
       + constructor.
       + eassumption.
       + instantiate (1 := brs).
@@ -2620,7 +2620,7 @@ Section Conversion.
       + assumption.
       + eapply red_conv_r. 1: assumption.
         eapply red_zipp.
-        eapply reds_case. 2: eassumption.
+        eapply red_case. 2: eassumption.
         * constructor.
         * clear.
           induction brs' ; eauto.

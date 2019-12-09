@@ -1118,7 +1118,7 @@ Proof.
       * apply red1_red.
         rewrite simpl_lift; cbn; try lia.
         assert (n = i) by lia; subst. now constructor.
-      * cutrewrite (nth_error (@nil term) n0 = None);
+      * cutrewrite (nth_error (nil term) n0 = None);
           [cbn|now destruct n0].
         cutrewrite (i <=? n - 1 = true); try (apply Nat.leb_le; lia).
         cutrewrite (S (n - 1) = n); try lia. auto.

@@ -1396,7 +1396,7 @@ Qed.
 Lemma nth_error_app_left {A} (l l' : list A) n t : nth_error l n = Some t -> nth_error (l ++ l') n = Some t.
 Proof. induction l in n |- *; destruct n; simpl; try congruence. auto. Qed.
 
-Lemma nth_error_nil {A} n : nth_error (@nil A) n = None.
+Lemma nth_error_nil {A} n : nth_error (nil A) n = None.
 Proof. destruct n; auto. Qed.
 Hint Rewrite @nth_error_nil.
 
@@ -2545,7 +2545,7 @@ Lemma rev_app :
 Proof.
   intros A l l'.
   induction l in l' |- *.
-  - simpl. change (rev (@nil A)) with (@nil A).
+  - simpl. change (rev (nil A)) with (nil A).
     rewrite app_nil_r. reflexivity.
   - simpl. rewrite rev_cons. rewrite IHl.
     rewrite rev_cons. rewrite app_assoc. reflexivity.

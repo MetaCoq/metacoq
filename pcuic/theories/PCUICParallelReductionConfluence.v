@@ -815,7 +815,7 @@ Section Confluence.
     ~~ isLambda_or_Fix_app t ->
     forall l', ~~ isLambda_or_Fix_app (fst (decompose_app_rec t l')).
   Proof.
-    unfold isLambda_or_Fix_app, decompose_app. generalize (@nil term).
+    unfold isLambda_or_Fix_app, decompose_app. generalize (nil term).
     induction t; simpl;
       try intros ? H ? [= <- <-]; simpl; try congruence.
     intros. rewrite !fst_decompose_app_rec. rewrite fst_decompose_app_rec in H.
@@ -2498,7 +2498,7 @@ Section Confluence.
     apply decompose_app_rec_inv in eapp. rewrite - !mkApps_nested in eapp.
     simpl in eapp. noconf eapp. simpl in H0. noconf H0.
     apply mkApps_eq_inj in H0 => //. destruct H0; subst.
-    replace (decompose_app hd) with (hd, @nil term).
+    replace (decompose_app hd) with (hd, nil term).
     rewrite -Heq'. rewrite !map_app - !mkApps_nested. simpl map.
     destruct hd; auto.
     - simpl in Hlam. discriminate.
@@ -2612,8 +2612,8 @@ Section Confluence.
   Lemma isConstruct_app_rename r t :
     isConstruct_app t = isConstruct_app (rename r t).
   Proof.
-    unfold isConstruct_app. unfold decompose_app. generalize (@nil term) at 1.
-    change (@nil term) with (map (rename r) []). generalize (@nil term).
+    unfold isConstruct_app. unfold decompose_app. generalize (nil term) at 1.
+    change (nil term) with (map (rename r) []). generalize (nil term).
     induction t; simpl; auto.
     intros l l0. specialize (IHt1 (t2 :: l) (t2 :: l0)).
     now rewrite IHt1.

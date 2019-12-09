@@ -832,7 +832,7 @@ Lemma nl_decompose_app :
 Proof.
   intro t.
   unfold decompose_app.
-  change [] with (map nl []) at 1. generalize (@nil term).
+  change [] with (map nl []) at 1. generalize (nil term).
   induction t. all: try reflexivity.
   intro l. cbn. change (nl t2 :: map nl l) with (map nl (t2 :: l)).
   apply IHt1.
@@ -999,7 +999,7 @@ Proof.
   { replace (List.rev (nlctx params)) with (nlctx (List.rev params))
       by (unfold nlctx ; rewrite map_rev ; reflexivity).
     change [] with (map nl []) at 2.
-    generalize (List.rev params), (@nil term). clear.
+    generalize (List.rev params), (nil term). clear.
     intros params l.
     induction params in ty, args, l |- *.
     - destruct args. all: reflexivity.
@@ -1058,7 +1058,7 @@ Lemma nl_to_extended_list:
 Proof.
   intros indctx. unfold to_extended_list, to_extended_list_k.
   change [] with (map nl []) at 2.
-  generalize (@nil term), 0.
+  generalize (nil term), 0.
   induction indctx.
   - reflexivity.
   - simpl. intros l n.
@@ -1163,7 +1163,7 @@ Proof.
     (*     rewrite subst_instance_context_nlctx. *)
     (*     rewrite <- nl_instantiate_params. *)
     (*     destruct (instantiate_params _ _ _); [|reflexivity]. *)
-    (*     cbn. change (@nil context_decl) with (nlctx []) at 2. *)
+    (*     cbn. change (nil context_decl) with (nlctx []) at 2. *)
     (*     rewrite nl_decompose_prod_assum. *)
     (*     destruct (decompose_prod_assum [] t0); cbn. *)
     (*     rewrite nl_decompose_app. *)

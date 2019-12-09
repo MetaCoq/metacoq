@@ -1,4 +1,4 @@
-From MetaCoq.Template Require Import All TemplateMonad.Core Monad monad_utils.
+From MetaCoq.Template Require Import All TemplateMonad.Core monad_utils.
 From MetaCoq.Checker Require Import All.
 Require Import List.
 Import ListNotations MonadNotation String.

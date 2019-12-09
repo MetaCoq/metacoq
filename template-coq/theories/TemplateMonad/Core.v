@@ -58,6 +58,15 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=
 | tmInferInstance : option reductionStrategy -> forall A : Type@{t}, TemplateMonad (option A)
 .
 
+From MetaCoq.Template Require Import monad_utils.
+
+(** This allow to use notations of MonadNotation *)
+Instance TemplateMonad_Monad : Monad TemplateMonad :=
+{| ret := @tmReturn ; bind := @tmBind |}.
+
+Import MonadNotation.
+
+
 Polymorphic Definition tmDefinitionRed
 : ident -> option reductionStrategy -> forall {A:Type}, A -> TemplateMonad A :=
   @tmDefinitionRed_ false.
@@ -66,10 +75,10 @@ Polymorphic Definition tmOpaqueDefinitionRed
   @tmDefinitionRed_ true.
 
 Definition print_nf {A} (msg : A) : TemplateMonad unit
-  := tmBind (tmEval all msg) tmPrint.
+  := tmEval all msg >>= tmPrint.
 
 Definition fail_nf {A} (msg : string) : TemplateMonad A
-  := tmBind (tmEval all msg) tmFail.
+  := tmEval all msg >>= tmFail.
 
 Definition tmMkInductive' (mind : mutual_inductive_body) : TemplateMonad unit
   := tmMkInductive (mind_body_to_entry mind).
@@ -77,15 +86,17 @@ Definition tmMkInductive' (mind : mutual_inductive_body) : TemplateMonad unit
 Definition tmAxiom id := tmAxiomRed id None.
 Definition tmDefinition id {A} t := @tmDefinitionRed_ false id None A t.
 
-(* Don't remove. Constants used in the implem of the plugin *)
-Definition tmTestQuote {A} (t : A) := tmBind (tmQuote t) tmPrint.
-Definition tmQuoteDefinition id {A} (t : A) := tmBind (tmQuote t) (tmDefinition id).
+(** Don't remove. Constants used in the implem of the plugin *)
+Definition tmTestQuote {A} (t : A) := tmQuote t >>= tmPrint.
+
+Definition tmQuoteDefinition id {A} (t : A) := tmQuote t >>= tmDefinition id.
 Definition tmQuoteDefinitionRed id rd {A} (t : A)
-  := tmBind (tmEval rd t) (tmQuoteDefinition id).
+  := tmEval rd t >>= tmQuoteDefinition id.
 Definition tmQuoteRecDefinition id {A} (t : A)
-  := tmBind (tmQuoteRec t) (tmDefinition id).
+  := tmQuoteRec t >>= tmDefinition id.
+
 Definition tmMkDefinition id (tm : term) : TemplateMonad unit
-  := tmBind (tmUnquote tm)
-            (fun t' => tmBind (tmEval (unfold "Template.TemplateMonad.Common.my_projT2") (my_projT2 t'))
-            (fun t'' => tmBind (tmDefinitionRed id (Some (unfold "Template.TemplateMonad.Common.my_projT1")) t'')
-            (fun _ => tmReturn tt))).
+  := t' <- tmUnquote tm ;;
+     t'' <- tmEval (unfold "Template.TemplateMonad.Common.my_projT2") (my_projT2 t') ;;
+     tmDefinitionRed id (Some (unfold "Template.TemplateMonad.Common.my_projT1")) t'' ;;
+     tmReturn tt.

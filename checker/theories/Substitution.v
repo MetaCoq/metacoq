@@ -670,7 +670,7 @@ Lemma to_extended_list_k_subst n k c k' :
   to_extended_list_k (subst_context n k c) k' = to_extended_list_k c k'.
 Proof.
   unfold to_extended_list_k. revert k'.
-  generalize (@nil TemplateTerm.term) at 1 2.
+  generalize (nil TemplateTerm.term) at 1 2.
   induction c in n, k |- *; simpl; intros. reflexivity.
   rewrite subst_context_snoc. unfold snoc. simpl.
   destruct a. destruct decl_body. unfold subst_decl, map_decl. simpl.
@@ -1000,7 +1000,7 @@ Lemma map_subst_instance_constr_to_extended_list_k u ctx k :
 Proof.
   unfold to_extended_list_k.
   cut (map (subst_instance_constr u) [] = []); [|reflexivity].
-  generalize (@nil TemplateTerm.term); intros l Hl.
+  generalize (nil TemplateTerm.term); intros l Hl.
   induction ctx in k, l, Hl |- *; cbnr.
   destruct a as [? [] ?]; cbnr; eauto.
 Qed.

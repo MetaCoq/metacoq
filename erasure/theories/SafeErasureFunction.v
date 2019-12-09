@@ -401,7 +401,7 @@ Section Erase.
       (* destruct X. econstructor. *)
     (*   sq'. eapply wf_local_local_rel. *)
     (*   eapply wf_local_rel_app_inv. eapply wf_local_rel_local. eauto. *)
-    (*   change fix_context with (fix_context_i #|@nil context_decl|). *)
+    (*   change fix_context with (fix_context_i #|nil context_decl|). *)
     (*   now rewrite app_context_nil_l. *)
     (*   sq. econstructor 2. exact t. *)
     (*   Unshelve. all:sq'; eauto. firstorder. *)

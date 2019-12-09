@@ -572,7 +572,7 @@ Hint Rewrite lift_it_mkProd_or_LetIn : lift.
 Lemma to_extended_list_lift n k c :
   to_extended_list (lift_context n k c) = to_extended_list c.
 Proof.
-  unfold to_extended_list, to_extended_list_k. generalize 0. generalize (@nil term) at 1 2.
+  unfold to_extended_list, to_extended_list_k. generalize 0. generalize (nil term) at 1 2.
   induction c in n, k |- *; simpl; intros. 1: reflexivity.
   rewrite -> lift_context_snoc0. unfold snoc. simpl.
   destruct a. destruct decl_body.

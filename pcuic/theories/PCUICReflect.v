@@ -303,7 +303,7 @@ Derive NoConfusion NoConfusionHom for term.
 Derive EqDec for term.
 Next Obligation.
   revert y.
-  induction x using term_forall_list_rec ; intro t ;
+  induction x using term_forall_list_ind ; intro t ;
     destruct t ; try (right ; discriminate).
   all: term_dec_tac term_dec.
   - revert l0. induction H ; intro l0.
@@ -312,7 +312,7 @@ Next Obligation.
       * right. discriminate.
     + destruct l0.
       * right. discriminate.
-      * destruct (IHForallT l0) ; nodec.
+      * destruct (IHAll l0) ; nodec.
         destruct (p t) ; nodec.
         subst. left. inversion e. reflexivity.
   - destruct (IHx1 t1) ; nodec.

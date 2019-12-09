@@ -27,6 +27,7 @@ Open Scope pair_scope.
 Notation "x × y" := (prod x y )(at level 80, right associativity).
 
 Notation "#| l |" := (List.length l) (at level 0, l at level 99, format "#| l |").
+Arguments nil {_}, _.
 
 Tactic Notation "destruct" "?" :=
   let E := fresh "E" in

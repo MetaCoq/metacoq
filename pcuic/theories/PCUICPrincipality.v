@@ -595,7 +595,7 @@ Section Principality.
     ∑ C, Σ ;;; Γ |- C <= A  ×  Σ ;;; Γ |- C <= B × Σ ;;; Γ |- u : C.
   Proof.
     intros hA hB.
-    induction u in Γ, A, B, hA, hB |- * using term_forall_list_rec.
+    induction u in Γ, A, B, hA, hB |- * using term_forall_list_ind.
     - apply inversion_Rel in hA as iA. 2: auto.
       destruct iA as [decl [? [e ?]]].
       apply inversion_Rel in hB as iB. 2: auto.

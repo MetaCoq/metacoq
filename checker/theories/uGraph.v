@@ -946,6 +946,8 @@ Section CheckLeq.
           uctx (Huctx: global_gc_uctx_invariants uctx) (HC : gc_consistent uctx.2)
           (HG : G = make_graph uctx).
 
+  Arguments Z.of_nat : simpl never.
+
   (** ** Check of leq ** *)
 
   Lemma val_level_of_variable_level v (l : variable_level)
@@ -1070,7 +1072,7 @@ Section CheckLeq.
         * intros _ v Hv; cbn.
           destruct l'; inversion Hl'; cbn; lia.
         * intro HH; apply leqb_no_prop_n_spec0 in HH.
-          intros v Hv; specialize (HH v Hv); cbn - [Z.of_nat] in *.
+          intros v Hv; specialize (HH v Hv); cbn in *.
           erewrite <- (no_prop_of_level_inv Hl'); lia.
       + destruct l'; inversion 1. intro HH; toProp.
         subst. intros v Hv; lia.
@@ -1101,7 +1103,7 @@ Section CheckLeq.
           destruct l'; inversion Hl'; cbn; lia.
         * etransitivity. eapply leqb_no_prop_n_spec; tas.
           apply Huctx.
-          split; intros HH v Hv; specialize (HH v Hv); cbn - [Z.of_nat] in *.
+          split; intros HH v Hv; specialize (HH v Hv); cbn in *.
           -- erewrite <- (no_prop_of_level_inv Hl'); lia.
           -- erewrite (no_prop_of_level_inv Hl'); lia.
       + destruct l'; inversion 1. split; intro HH; toProp.
@@ -1197,7 +1199,7 @@ Section CheckLeq.
     apply leq_universe_vertices0. 
     apply leq_vertices_caract0; tas.
     case_eq (lsp G l1 l2); [cbn; intros; lia|].
-    pose (K := 12). intro HH. exfalso.
+    pose (K := 3). intro HH; cbn.
     apply correct_labelling_lsp_G' with (K:=K) in HH as HH1; tas.
     set (G' := wGraph.G' G l2 l1 K) in HH1; cbn in HH1.
     assert (Hs : wGraph.s G = lSet) by now subst G.
@@ -1241,8 +1243,6 @@ Section CheckLeq.
   Qed.
 
 
-  Opaque Z.of_nat.
-
   Lemma leqb_expr_n_spec0 n e e'
     : leqb_expr_n n e e'
       -> gc_leq_universe_n n uctx.2 (Universe.make' e) (Universe.make' e').
@@ -1250,8 +1250,8 @@ Section CheckLeq.
     unfold leqb_expr_n.
     destruct e as [l []], e' as [l' []]; cbn.
     - case_eq (no_prop_of_level l); [intros l0 Hl|intros Hl]; rew_no_prop;
-        (case_eq (no_prop_of_level l'); [intros l0' Hl'|intros Hl']); rew_no_prop; cbn;
-          intro HH; apply leqb_level_n_spec0 in HH; tas.
+        (case_eq (no_prop_of_level l'); [intros l0' Hl'|intros Hl']); rew_no_prop;
+          cbn; intro HH; apply leqb_level_n_spec0 in HH; tas.
       + intros v Hv; specialize (HH v Hv); cbn in *;
           unfold val1 in *; cbn in *; repeat rew_no_prop; cbn in *; try lia.
       + intros v Hv; specialize (HH v Hv); cbn in *;
@@ -1362,12 +1362,148 @@ Section CheckLeq.
   Qed.
 
 
-  Conjecture gc_leq_universe_n_cons : forall n e1 e2 u,
-      gc_level_declared e2.1 ->
+  (* Lemma gc_leq_universe_n_cons0 : forall n l1 l2 l3, *)
+  (*     gc_level_declared l1 -> *)
+  (*     gc_level_declared l2 -> *)
+  (*     gc_level_declared l3 -> *)
+  (*     gc_leq_universe_n n uctx.2 (Universe.make l1) *)
+  (*                       (NEL.cons (l2, false) (Universe.make l3)) -> *)
+  (*     gc_leq_universe_n n uctx.2 (Universe.make l1) (Universe.make l2) *)
+  (*     \/ gc_leq_universe_n n uctx.2 (Universe.make l1) (Universe.make l3). *)
+  (* Admitted. *)
+
+  Definition NEL_head {A} (l : NEL.t A) : A :=
+    match l with
+    | NEL.sing x => x
+    | NEL.cons x _ => x
+    end.
+
+  Lemma gc_leq_universe_n_cons0 n e k (u : universe) :
       gc_levels_declared u ->
-      gc_leq_universe_n n uctx.2 (Universe.make' e1) (NEL.cons e2 u) ->
-      gc_leq_universe_n n uctx.2 (Universe.make' e1) (Universe.make' e2)
-      \/ gc_leq_universe_n n uctx.2 (Universe.make' e1) u.
+      gc_leq_universe_n n uctx.2 (Universe.make' e) u ->
+      (forall v, gc_satisfies v uctx.2 -> val1 v e = k) ->
+      exists e', In e' u
+            /\ gc_leq_universe_n n uctx.2 (Universe.make' e) (Universe.make' e').
+    Admitted.
+
+Require Import ssreflect.
+
+Lemma correct_labelling_lsp {x y n} (e : lsp G x y = Some n) :
+  forall l, correct_labelling G l -> l x + n <= l y.
+Proof.
+  eapply lsp0_spec_eq in e as [p Hp].
+  intros l Hl; eapply correct_labelling_Paths with (p:= to_paths _ p) in Hl.
+  now rewrite <- sweight_weight, Hp in Hl.
+Qed.
+
+Definition NEL_tail {A} (l : NEL.t A) : list A :=
+  match l with
+  | NEL.sing _ => []
+  | NEL.cons _ l => NEL.to_list l
+  end.
+
+Definition NEL_decompose {A} (l : NEL.t A) : A * list A :=
+  (NEL_head l, NEL_tail l).
+
+Lemma NEL_cons'_correct {A} (l : NEL.t A) x :
+  NEL.cons' x (NEL.to_list l) = NEL.cons x l.
+Proof.
+  induction l in x |- *; cbnr. now rewrite IHl.
+Qed.
+
+
+Lemma NEL_decompose_correct {A} (l : NEL.t A) :
+  let '(hd, tl) := NEL_decompose l in
+  l = NEL.cons' hd tl.
+Proof.
+  destruct l; cbnr. now rewrite NEL_cons'_correct.
+Qed.
+
+  Lemma gc_leq_universe_n_constructor n e (u : universe) :
+      gc_level_declared e.1 ->
+      gc_levels_declared u ->
+      gc_leq_universe_n n uctx.2 (Universe.make' e) u ->
+      exists e', In e' u
+            /\ gc_leq_universe_n n uctx.2 (Universe.make' e) (Universe.make' e').
+  Proof.
+    intros He Hu HH. destruct e as [e be]; cbn in *.
+    case_eq (no_prop_of_level e).
+    2:{ intro H. destruct e; try discriminate.
+        eapply gc_leq_universe_n_cons0; tea.
+        intros v _; cbn. unfold val1. cbn.
+        rewrite andbC. reflexivity. }
+    intros le Hle. rewrite <- (no_prop_of_level_inv Hle) in *; clear e Hle.
+    apply gc_level_declared_make_graph in He as He'.
+    (* apply gc_level_declared_make_graph in Hl2 as Hl2'. *)
+    assert (HG1 : invariants G) by (subst; exact _).
+    assert (HG2 : acyclic_no_loop G) by (subst; exact _).
+    (* apply leq_universe_vertices0.  *)
+    (* apply leq_vertices_caract0; tas. *)
+    (* case_eq (lsp G l1 l2); [cbn; intros; lia|]. *)
+    (* pose (K := 3). intro HH; cbn. *)
+    (* apply correct_labelling_lsp_G' with (K:=K) in HH as HH1; tas. *)
+    (* set (G' := wGraph.G' G l2 l1 K) in HH1; cbn in HH1. *)
+    assert (Hs : wGraph.s G = lSet) by now subst G.
+    (* rewrite Hs in HH1. *)
+    (* pose proof (make_graph_spec' _ Huctx *)
+    (*                              (fun x => option_get 0 (lsp G' lSet x))) as HH2. *)
+    (* forward HH2; [now subst G|]. *)
+    (* specialize (Hl12 _ HH2); cbn in Hl12; clear HH2. *)
+    (* assert (HG'1 : invariants G'). { *)
+    (*   subst G'; apply HI'; subst G; auto. } *)
+    (* assert (HG'2 : acyclic_no_loop G'). { *)
+    (*   subst G'; apply HG'; subst G; auto. } *)
+    (* apply lsp_s in Hl1' as Hl1G; tas. *)
+    (* destruct Hl1G as [n1 Hn1]; rewrite Hs in Hn1. *)
+    (* apply lsp_s in Hl2' as Hl2G; tas. *)
+    (* destruct Hl2G as [n2 Hn2]; rewrite Hs in Hn2. *)
+    (* pose proof (lsp_G'_incr G l2 l1 K lSet l1) as Xl1. *)
+    (* rewrite Hn1 in Xl1. *)
+    (* replace (wGraph.G' G l2 l1 K) with G' in Xl1; [|now subst G]. *)
+    (* case_eq (lsp G' lSet l1); *)
+    (*   [|intro XX; now rewrite XX in Xl1]. *)
+    case_eq (lsp G le lSet).
+    - intros ne Hne.
+      pose proof (lsp_s_inv G _ He') as H; rewrite Hs Hne in H; cbn in H.
+      destruct ne; [clear H|lia].
+      eapply gc_leq_universe_n_cons0; tea.
+      intros v Hv. unfold val1. cbn.
+      have -> : val0 v le = 0%Z; [|reflexivity].
+      eapply (make_graph_spec _ v) in Hv.
+      eapply correct_labelling_lsp in Hne; [|subst G; exact Hv].
+      cbn in Hne. rewrite <- labelling_of_valuation_val0. lia.
+    - intro H.
+      pose proof (NEL_decompose_correct u) as eu.
+      destruct (NEL_decompose u) as [u1 u2].
+
+      pose K := option_get .
+
+      rewrite
+
+
+    (* intros n e1 e2 u. induction u in n, e1, e2 |- *. *)
+    (* - intros H H0 H1.  cbn in *. *)
+  Admitted.
+
+  (* Conjecture gc_leq_universe_n_cons : forall n e1 e2 u, *)
+  (*     gc_level_declared e2.1 -> *)
+  (*     gc_levels_declared u -> *)
+  (*     gc_leq_universe_n n uctx.2 (Universe.make' e1) (NEL.cons e2 u) -> *)
+  (*     gc_leq_universe_n n uctx.2 (Universe.make' e1) (Universe.make' e2) *)
+  (*     \/ gc_leq_universe_n n uctx.2 (Universe.make' e1) u. *)
+
+  Lemma gc_leq_universe_n_In n e1 e (u : universe) :
+    In e u ->
+    gc_leq_universe_n n uctx.2 (Universe.make' e1) (Universe.make' e) ->
+    gc_leq_universe_n n uctx.2 (Universe.make' e1) u.
+  Proof.
+    induction u; cbn.
+    - intros [He|[]] HH; subst; assumption.
+    - intros [He|He] HH v Hv.
+      + specialize (HH v Hv); subst; rewrite val_cons. cbn in *; lia.
+      + apply IHu in HH; tas. specialize (HH v Hv).
+        rewrite val_cons. cbn in *. lia.
+  Qed.
 
   Lemma leqb_expr_univ_n_spec n e1 u
         (He1 : gc_level_declared e1.1)
@@ -1384,7 +1520,13 @@ Section CheckLeq.
       split.
       + intros [H1|H1] v Hv; specialize (H1 v Hv);
           rewrite val_cons; cbn in *; lia.
-      + apply gc_leq_universe_n_cons; tas.
+      + intro HH; apply gc_leq_universe_n_cons in HH.
+        2: now constructor.
+        destruct HH as [e [He HH]].
+        destruct He as [He|He].
+        * left; now subst a.
+        * right. eapply gc_leq_universe_n_In; eassumption.
+          (* apply gc_leq_universe_n_cons; tas. *)
   Qed.
 
   Definition leqb_expr_univ e1 u :=
@@ -1392,14 +1534,14 @@ Section CheckLeq.
 
 
   (* This function is correct but not complete! *)
-  Fixpoint try_leqb_universe_n n (u1 u2 : universe) :=
+  Fixpoint leqb_universe_n n (u1 u2 : universe) :=
     match u1 with
     | NEL.sing e => leqb_expr_univ_n n e u2
-    | NEL.cons e u1 => leqb_expr_univ_n n e u2 && try_leqb_universe_n n u1 u2
+    | NEL.cons e u1 => leqb_expr_univ_n n e u2 && leqb_universe_n n u1 u2
     end.
 
-  Lemma try_leqb_universe_n_spec n u1 u2
-    : try_leqb_universe_n n u1 u2 -> gc_leq_universe_n n uctx.2 u1 u2.
+  Lemma leqb_universe_n_spec n u1 u2
+    : leqb_universe_n n u1 u2 -> gc_leq_universe_n n uctx.2 u1 u2.
   Proof.
     induction u1; cbn.
     - apply leqb_expr_univ_n_spec0; tas.
@@ -1409,10 +1551,10 @@ Section CheckLeq.
         rewrite val_cons; cbn in *; try lia.
   Qed.
 
-  Lemma try_leqb_universe_n_spec' n u1 u2
+  Lemma leqb_universe_n_spec' n u1 u2
         (Hu1  : gc_levels_declared u1)
         (Hu2  : gc_levels_declared u2)
-    : try_leqb_universe_n n u1 u2
+    : leqb_universe_n n u1 u2
       <-> gc_leq_universe_n n uctx.2 u1 u2.
   Proof.
     induction u1; cbn.
@@ -1430,14 +1572,14 @@ Section CheckLeq.
 
   Definition check_leqb_universe (u1 u2 : universe) :=
     negb check_univs
-    || Universe.is_prop u1
+    || (prop_sub_type && Universe.is_prop u1)
     || Universe.equal u1 u2
-    || try_leqb_universe_n 0 u1 u2.
+    || leqb_universe_n 0 u1 u2.
 
   Definition check_eqb_universe (u1 u2 : universe) :=
     negb check_univs
     || Universe.equal u1 u2
-    || (try_leqb_universe_n 0 u1 u2 && try_leqb_universe_n 0 u2 u1).
+    || (leqb_universe_n 0 u1 u2 && leqb_universe_n 0 u2 u1).
 
   Lemma check_eqb_universe_refl :
     forall u, check_eqb_universe u u.
@@ -1464,11 +1606,10 @@ Section CheckLeq.
     | None => false
     end.
 
-  Lemma toto l : level_of_no_prop (vtn l) = level_of_variable l.
+  Lemma level_of_no_prop_vtn l : level_of_no_prop (vtn l) = level_of_variable l.
+  Proof.
     destruct l; reflexivity.
   Qed.
-
-  Transparent Z.of_nat.
 
   Lemma check_gc_constraint_spec gc
     : check_gc_constraint gc
@@ -1482,10 +1623,10 @@ Section CheckLeq.
       pose proof (val_level_of_variable_level v l').
       destruct l, l'; cbn in *; lia.
     - intros HH v Hv; apply leqb_no_prop_n_spec0 in HH.
-      specialize (HH v Hv). cbn -[Z.of_nat] in HH. unfold gc_satisfies0. toProp.
+      specialize (HH v Hv). cbn in HH. unfold gc_satisfies0. toProp.
       pose proof (val_level_of_variable_level v l) as H1.
       pose proof (val_level_of_variable_level v l') as H2.
-      rewrite !toto in *.
+      rewrite !level_of_no_prop_vtn in *.
       rewrite H1, H2 in HH. clear -HH. lia.
     - intros HH v Hv; apply leqb_no_prop_n_spec0 in HH.
       specialize (HH v Hv). cbn in HH. unfold gc_satisfies0. toProp.
@@ -1673,8 +1814,8 @@ Section CheckLeq2.
     intros _.
     case_eq (Universe.equal u1 u2). {
       intros e _ v Hv. now erewrite val_equal; tea. }
-    intros _; cbn.
-    intro H; unshelve eapply (try_leqb_universe_n_spec G uctx' Huctx' HC' HG'
+    rewrite andbC; cbn; intros _.
+    intro H; unshelve eapply (leqb_universe_n_spec G uctx' Huctx' HC' HG'
                                                        _ _ _) in H.
     eapply gc_leq_universe_n_iff.
     unfold uctx' in H.
@@ -1701,9 +1842,9 @@ Section CheckLeq2.
       intros e _ v Hv. now erewrite val_equal; tea. }
     intros _; cbn.
     intro H. apply andb_prop in H. destruct H as [H1 H2].
-    unshelve eapply (try_leqb_universe_n_spec G uctx' Huctx' HC' HG'
+    unshelve eapply (leqb_universe_n_spec G uctx' Huctx' HC' HG'
                                               _ _ _) in H1.
-    unshelve eapply (try_leqb_universe_n_spec G uctx' Huctx' HC' HG'
+    unshelve eapply (leqb_universe_n_spec G uctx' Huctx' HC' HG'
                                               _ _ _) in H2.
     unfold uctx' in H1, H2.
     unfold is_graph_of_uctx, gc_of_uctx in HG.

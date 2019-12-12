@@ -1298,6 +1298,16 @@ Module WeightedGraph (V : UsualOrderedType).
   Section graph2.
     Context (G : t) {HI : invariants G} {HG : acyclic_no_loop G}.
 
+    Lemma lsp_s_inv x (Hx : VSet.In x (V G))
+      : (lsp G x (s G) <= Some 0)%nbar.
+    Proof.
+      pose proof (lsp_codistance G (s G) x (s G)) as H.
+      destruct (lsp_s G x Hx) as [n Hn]; rewrite Hn in H.
+      destruct (lsp G x (s G)); cbn; trivial. 
+      unfold lsp in *; rewrite acyclic_lsp0_xx in H; tas.
+      cbn in H; lia.
+    Qed.
+
     Section subgraph.
       Context (y_0 x_0 : V.t) (Vx : VSet.In x_0 (V G))
               (Vy : VSet.In y_0 (V G))

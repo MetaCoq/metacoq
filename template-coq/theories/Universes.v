@@ -689,6 +689,8 @@ Defined.
 
 (* This universe is a hack used in plugings to generate fresh universes *)
 Definition fresh_universe : universe. exact Universe.type0. Qed.
+(* This level is a hack used in plugings to generate fresh levels *)
+Definition fresh_level : Level.t. exact Level.set. Qed.
 
 End Univ.
 

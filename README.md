@@ -135,8 +135,8 @@ Options
 the unquoting of a universe level fails if this level does not exists.
 Otherwise the level is added to the current context. It is on by default.
 
-There is also an "opaque" universe `fresh_universe` which is unquoted to
-a fresh level when `Strict Unquote Universe Mode` is off.
+There is also an "opaque" universe `fresh_universe` and an opaque level `fresh_level` which are unquoted to
+a fresh universe and a fresh level when `Strict Unquote Universe Mode` is off.
 
 Papers
 ======

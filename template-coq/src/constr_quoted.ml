@@ -119,6 +119,7 @@ struct
   let lSet = resolve_symbol pkg_level "lSet"
   let tsort_family = resolve_symbol pkg_univ "sort_family"
   let lfresh_universe = resolve_symbol pkg_univ "fresh_universe"
+  let lfresh_level = resolve_symbol pkg_univ "fresh_level"
   let sfProp = resolve_symbol pkg_univ "InProp"
   let sfSet = resolve_symbol pkg_univ "InSet"
   let sfType = resolve_symbol pkg_univ "InType"

@@ -172,7 +172,14 @@ struct
 
   let unquote_level evm trm (* of type level *) : Evd.evar_map * Univ.Level.t =
     let (h,args) = app_full trm [] in
-    if constr_equall h lProp then
+    if constr_equall h lfresh_level then
+      if !strict_unquote_universe_mode then
+        CErrors.user_err ~hdr:"unquote_level" (str "It is not possible to unquote a fresh level in Strict Unquote Universe Mode.")
+      else
+        let evm, l = Evd.new_univ_level_variable (Evd.UnivFlexible false) evm in
+        Feedback.msg_info (str"Fresh level " ++ Level.pr l ++ str" was added to the context.");
+        evm, l
+    else if constr_equall h lProp then
       match args with
       | [] -> evm, Univ.Level.prop
       | _ -> bad_term_verb trm "unquote_level"

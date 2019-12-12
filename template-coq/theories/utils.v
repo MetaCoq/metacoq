@@ -22,6 +22,11 @@ Notation "p .1" := (fst p)
   (at level 2, left associativity, format "p .1") : pair_scope.
 Notation "p .2" := (snd p)
   (at level 2, left associativity, format "p .2") : pair_scope.
+
+Notation "p .p1" := (proj1 p)
+  (at level 2, left associativity, format "p '.p1'") : pair_scope.
+Notation "p .p2" := (proj2 p)
+  (at level 2, left associativity, format "p '.p2'") : pair_scope.
 Open Scope pair_scope.
 
 Notation "x × y" := (prod x y )(at level 80, right associativity).

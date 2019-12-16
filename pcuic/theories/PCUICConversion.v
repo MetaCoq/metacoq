@@ -80,6 +80,106 @@ Proof. intros x y z. eapply cumul_trans. auto. Qed.
 
 Existing Class wf.
 
+(* Properties about η
+   Maybe they should be moved somewhere else.
+*)
+Section Eta.
+
+  Context `{cf : checker_flags}.
+  Context {Σ : global_env_ext}.
+  Context {hΣ : wf Σ}.
+
+  (* TODO MOVE *)
+  Fixpoint isFixApp t : bool :=
+    match t with
+    | tApp f u => isFixApp f
+    | tFix mfix idx => true
+    | _ => false
+    end.
+
+  (* TODO MOVE *)
+  Lemma isFixApp_mkApps :
+    forall t l,
+      isFixApp (mkApps t l) = isFixApp t.
+  Proof.
+    intros t l. induction l in t |- *.
+    - cbn. reflexivity.
+    - cbn. rewrite IHl. reflexivity.
+  Qed.
+
+  Definition eta_expansions :=
+    clos_refl_trans eta_expands.
+
+  Lemma eta_postpone :
+    forall Γ t u v,
+      eta_expands t u ->
+      red1 Σ Γ u v ->
+      ∑ w,
+        red Σ Γ t w ×
+        eta_expansions w v.
+  Proof.
+    intros Γ t u v [na [A [f [π [e1 e2]]]]] r. subst.
+    induction π in Γ, v, na, A, f, r |- * using stack_rev_rect.
+    - simpl in *. dependent destruction r.
+      + exfalso. apply (f_equal isFixApp) in H. rewrite isFixApp_mkApps in H.
+        cbn in H. discriminate.
+      + eexists. split ; revgoals.
+        * eapply rt_step. eexists _, _, _, ε. cbn. intuition reflexivity.
+        * constructor.
+      + dependent destruction r.
+        all: try (cbn in H ; noconf H).
+        * destruct f. all: try discriminate.
+          cbn in H. noconf H.
+          eexists. split. 1: constructor.
+          (* We have a problem here because the type is not the same! *)
+          give_up.
+        *
+  Abort.
+
+  (* Lemma red1_eta_expands :
+    forall Γ t u v,
+      red1 Σ Γ t u ->
+      eta_expands u v ->
+      ∑ w,
+        eta_expands t w ×
+        red1 Σ Γ w v.
+  Proof.
+    intros Γ t u v r e.
+    induction r in v, e |- *.
+    - destruct e as [na' [A [f [π [e1 e2]]]]]. subst.
+      induction π in Γ, na, t, b, a, na', A, f, e1 |- * using stack_rev_rect.
+      + cbn in *. subst. eexists. split.
+        * eexists _, _, _, ε. intuition reflexivity.
+        * cbn. eapply abs_red_r. eapply app_red_l.
+          replace (lift0 1 (b {0 := a}))
+            with (subst10 (lift0 1 a) (lift 1 1 b)).
+          -- apply red_beta.
+          -- rewrite distr_lift_subst. cbn. reflexivity.
+      + clear IHπ. rewrite zipc_stack_cat in e1. cbn in e1.
+        rewrite zipc_stack_cat. cbn.
+
+    intros Γ t u v r [na [A [f [π [? ?]]]]]. subst.
+    induction π in Γ, t, f, na, A, r |- * using stack_rev_rect.
+    - simpl in *.
+      eexists _. split.
+      2:{
+        apply abs_red_r. eapply app_red_l.
+        eapply weakening_red1 with (Γ' := []) (Γ'' := [vass na A]).
+        1: assumption.
+        eassumption.
+      }
+      cbn. eexists _, _, _, ε. cbn. intuition reflexivity.
+    - rewrite zipc_stack_cat in r.
+      rewrite zipc_stack_cat.
+      cbn in *.
+      dependent destruction r.
+      (* Maybe it's not the proper way to do this...
+         It might more appropriate when doing the other one.
+         Here it will work with a lot of overlay.
+      *) *)
+
+End Eta.
+
 Lemma congr_cumul_prod : forall `{checker_flags} Σ Γ na na' M1 M2 N1 N2,
     Σ ;;; Γ |- M1 == N1 ->
     Σ ;;; (Γ ,, vass na M1) |- M2 <= N2 ->

@@ -102,10 +102,10 @@ Examples of translations built on top of this:
 Documentation
 =============
 
-- You may want to start with a [demo](https://github.com/MetaCoq/metacoq/tree/coq-8.9/test-suite/demo.v).
+- You may want to start with a [demo](https://github.com/MetaCoq/metacoq/tree/coq-8.9/examples/demo.v).
 - The 8.9 branch [documentation (as light coqdoc files)](https://metacoq.github.io/metacoq/html/toc.html).
 - An example Coq plugin built on the Template Monad, which can be used to
-  add a constructor to any inductive type can be found in [test-suite/add_constructor.v](https://github.com/MetaCoq/metacoq/tree/coq-8.9/test-suite/add_constructor.v).
+  add a constructor to any inductive type can be found in [examples/add_constructor.v](https://github.com/MetaCoq/metacoq/tree/coq-8.9/examples/add_constructor.v).
 - The test-suite files [test-suite/erasure_test.v](https://github.com/MetaCoq/metacoq/tree/coq-8.9/test-suite/erasure_test.v)
   and [test-suite/safechecker_test.v](https://github.com/MetaCoq/metacoq/tree/coq-8.9/test-suite/safechecker_test.v) show example
   uses (and current limitations of) the verified checker and erasure.

@@ -4,11 +4,11 @@ From Coq Require Import Bool String List Program BinPos Compare_dec ZArith.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
 From MetaCoq.Erasure Require Import EAst ELiftSubst ETyping EWcbvEval Extract Prelim
      ESubstitution EInversion EArities.
-From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICInduction
-     PCUICWeakening PCUICSubstitution PCUICChecker PCUICRetyping PCUICMetaTheory
-     PCUICWcbvEval PCUICSR  PCUICClosed PCUICInversion PCUICUnivSubstitution
-     PCUICEquality PCUICConversion (* PCUICContextConversion *) PCUICElimination
-     PCUICUnivSubst PCUICWeakeningEnv.
+From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
+  PCUICInduction PCUICWeakening PCUICSubstitution PCUICChecker PCUICRetyping
+  PCUICMetaTheory PCUICWcbvEval PCUICSR  PCUICClosed PCUICInversion
+  PCUICUnivSubstitution PCUICEquality (* PCUICContextConversion *)
+  PCUICElimination PCUICUnivSubst PCUICWeakeningEnv.
 
 Require Import String.
 Local Open Scope string_scope.
@@ -501,7 +501,7 @@ Proof.
         eapply inversion_Lambda in X0 as (? & ? & ? & ? & ?).
         assert (Σ ;;; [] |- a' : t). {
           eapply subject_reduction_eval; eauto.
-          eapply cumul_Prod_inv in c0 as [].
+          eapply PCUICConversion.cumul_Prod_inv in c0 as [].
           econstructor. eassumption. eauto. eapply conv_alt_sym in c0; eauto.
           now eapply conv_alt_cumul. auto. auto. }
       inv Hvf'.

@@ -25,8 +25,14 @@ Module MonadNotation.
   Notation "'mlet' x <- c1 ;; c2" := (@bind _ _ _ _ c1 (fun x => c2))
     (at level 100, c1 at next level, right associativity, x pattern) : monad_scope.
 
+  Notation "'mlet' ' pat <- c1 ;; c2" := (@bind _ _ _ _ c1 (fun x => match x with pat => c2 end))
+    (at level 100, pat pattern, c1 at next level, right associativity) : monad_scope.
+
   Notation "x <- c1 ;; c2" := (@bind _ _ _ _ c1 (fun x => c2))
     (at level 100, c1 at next level, right associativity) : monad_scope.
+
+  Notation "' pat <- c1 ;; c2" := (@bind _ _ _ _ c1 (fun x => match x with pat => c2 end))
+    (at level 100, pat pattern, c1 at next level, right associativity) : monad_scope.
 
   Notation "e1 ;; e2" := (_ <- e1%monad ;; e2%monad)%monad
     (at level 100, right associativity) : monad_scope.

@@ -17,6 +17,8 @@ Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 
+Set Default Goal Selector "!".
+
 (** * Parallel reduction and confluence *)
 
 (** For this notion of reductions, theses are the atoms that reduce to themselves:
@@ -42,16 +44,18 @@ Hint Resolve red1_red refl_red.
 
 Lemma red_step Σ Γ t u v : red1 Σ Γ t u -> red Σ Γ u v -> red Σ Γ t v.
 Proof.
-  induction 2. econstructor; auto.
-  econstructor 2; eauto.
+  induction 2.
+  - econstructor; auto.
+  - econstructor 2; eauto.
 Qed.
 
 Lemma red_alt@{i j +} Σ Γ t u : red Σ Γ t u <~> clos_refl_trans@{i j} (red1 Σ Γ) t u.
 Proof.
-  split. intros H. apply clos_rt_rtn1_iff.
-  induction H; econstructor; eauto.
-  intros H. apply clos_rt_rtn1_iff in H.
-  induction H; econstructor; eauto.
+  split.
+  - intros H. apply clos_rt_rtn1_iff.
+    induction H; econstructor; eauto.
+  - intros H. apply clos_rt_rtn1_iff in H.
+    induction H; econstructor; eauto.
 Qed.
 
 Lemma red_trans Σ Γ t u v : red Σ Γ t u -> red Σ Γ u v -> red Σ Γ t v.
@@ -200,9 +204,10 @@ Section ReductionCongruence.
 
   Lemma contextual_closure_red Γ t u : contextual_closure (red Σ) Γ t u -> red Σ Γ t u.
   Proof.
-    induction 1. constructor.
+    induction 1. 1: constructor.
     apply red_alt in r. apply clos_rt_rt1n in r.
-    induction r. constructor. apply clos_rt_rt1n_iff in r0. apply red_alt in r0.
+    induction r. 1: constructor.
+    apply clos_rt_rt1n_iff in r0. apply red_alt in r0.
     eapply red_step; eauto. clear r0 IHr z.
     set (P := fun ctx t => forall Γ y, red1 Σ (hole_context ctx Γ) x y ->
                                      red1 Σ Γ t (fill_context y ctx)).
@@ -228,7 +233,9 @@ Section ReductionCongruence.
 
   Theorem red_contextual_closure_equiv Γ t u : red Σ Γ t u <~> contextual_closure (red Σ) Γ t u.
   Proof.
-    split. apply red_contextual_closure. apply contextual_closure_red.
+    split.
+    - apply red_contextual_closure.
+    - apply contextual_closure_red.
   Qed.
 
   (* Lemma contextual_closure_trans (R : context -> term -> term -> Type) Γ : *)
@@ -396,8 +403,8 @@ Section ReductionCongruence.
                                                red Σ Γ (tLambda na M N) (tLambda na M' N').
     Proof.
       intros. eapply (transitivity (y := tLambda na M' N)).
-      now apply (red_ctx (tCtxLambda_l _ tCtxHole _)).
-      now eapply (red_ctx (tCtxLambda_r _ _ tCtxHole)).
+      - now apply (red_ctx (tCtxLambda_l _ tCtxHole _)).
+      - now eapply (red_ctx (tCtxLambda_r _ _ tCtxHole)).
     Qed.
 
     Lemma red_app_r u v1 v2 :
@@ -417,8 +424,8 @@ Section ReductionCongruence.
       red Σ Γ (tApp M0 N0) (tApp M1 N1).
     Proof.
       intros; eapply (transitivity (y := tApp M1 N0)).
-      now apply (red_ctx (tCtxApp_l tCtxHole _)).
-      now eapply (red_ctx (tCtxApp_r _ tCtxHole)).
+      - now apply (red_ctx (tCtxApp_l tCtxHole _)).
+      - now eapply (red_ctx (tCtxApp_r _ tCtxHole)).
     Qed.
 
     Fixpoint mkApps_context l :=
@@ -467,7 +474,7 @@ Section ReductionCongruence.
       red Σ Γ (mkApps M0 N0) (mkApps M1 N1).
     Proof.
       intros.
-      induction X0 in M0, M1, X |- *. auto.
+      induction X0 in M0, M1, X |- *. 1: auto.
       simpl. eapply IHX0. now eapply red_app.
     Qed.
 
@@ -476,10 +483,10 @@ Section ReductionCongruence.
       red Σ Γ (tLetIn na d0 t0 b0) (tLetIn na d1 t1 b1).
     Proof.
       intros; eapply (transitivity (y := tLetIn na d1 t0 b0)).
-      now apply (red_ctx (tCtxLetIn_l _ tCtxHole _ _)).
-      eapply (transitivity (y := tLetIn na d1 t1 b0)).
-      now eapply (red_ctx (tCtxLetIn_b _ _ tCtxHole _)).
-      now eapply (red_ctx (tCtxLetIn_r _ _ _ tCtxHole)).
+      - now apply (red_ctx (tCtxLetIn_l _ tCtxHole _ _)).
+      - eapply (transitivity (y := tLetIn na d1 t1 b0)).
+        + now eapply (red_ctx (tCtxLetIn_b _ _ tCtxHole _)).
+        + now eapply (red_ctx (tCtxLetIn_r _ _ _ tCtxHole)).
     Qed.
 
     Lemma red_case_p :
@@ -578,12 +585,13 @@ Section ReductionCongruence.
                             (firstn x l ++ [a'] ++ skipn (S x) l)%list.
     Proof.
       induction 1.
-      simpl. intros x a a' Hnth. now rewrite nth_error_nil in Hnth.
-      intros.
-      destruct x0. simpl. constructor. simpl in H, H0. now noconf H; noconf H0.
-      simpl in H, H0.
-      specialize (IHX _ _ _ H H0).
-      simpl. constructor. auto.
+      - simpl. intros x a a' Hnth. now rewrite nth_error_nil in Hnth.
+      - intros.
+        destruct x0.
+        + simpl. constructor. simpl in H, H0. now noconf H; noconf H0.
+        + simpl in H, H0.
+          specialize (IHX _ _ _ H H0).
+          simpl. constructor. auto.
     Qed.
 
     Lemma red_case :

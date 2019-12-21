@@ -1410,3 +1410,14 @@ Section Stacks.
 End Stacks.
 
 Notation "ρ +++ θ" := (stack_cat ρ θ) (at level 20).
+
+(* Context closure *)
+Definition context_clos (R : term -> term -> Type) u v :=
+  ∑ u' v' π,
+    R u' v' ×
+    (u = zipc u' π /\ v = zipc v' π).
+
+Definition context_env_clos (R : context -> term -> term -> Type) Γ u v :=
+  ∑ u' v' π,
+    R (Γ ,,, stack_context π) u' v' ×
+    (u = zipc u' π /\ v = zipc v' π).

@@ -1270,3 +1270,106 @@ Section Stacks.
   Qed.
 
 End Stacks.
+
+(* Properties about context closure *)
+
+(** Reductions at top level *)
+Inductive tred1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
+
+(** Beta *)
+| tred_beta na t b a :
+    tred1 Σ Γ (tApp (tLambda na t b) a) (subst10 a b)
+
+(** Let *)
+| tred_zeta na b t b' :
+    tred1 Σ Γ (tLetIn na b t b') (subst10 b b')
+
+| tred_rel i body :
+    option_map decl_body (nth_error Γ i) = Some (Some body) ->
+    tred1 Σ Γ (tRel i) (lift0 (S i) body)
+
+(** Case *)
+| tred_iota ind pars c u args p brs :
+    tred1 Σ Γ (tCase (ind, pars) p (mkApps (tConstruct ind c u) args) brs)
+         (iota_red pars c args brs)
+
+(** Fix unfolding, with guard *)
+| tred_fix mfix idx args narg fn :
+    unfold_fix mfix idx = Some (narg, fn) ->
+    is_constructor narg args = true ->
+    tred1 Σ Γ (mkApps (tFix mfix idx) args) (mkApps fn args)
+
+(** CoFix-case unfolding *)
+| tred_cofix_case ip p mfix idx args narg fn brs :
+    unfold_cofix mfix idx = Some (narg, fn) ->
+    tred1 Σ Γ (tCase ip p (mkApps (tCoFix mfix idx) args) brs)
+         (tCase ip p (mkApps fn args) brs)
+
+(** CoFix-proj unfolding *)
+| tred_cofix_proj p mfix idx args narg fn :
+    unfold_cofix mfix idx = Some (narg, fn) ->
+    tred1 Σ Γ (tProj p (mkApps (tCoFix mfix idx) args))
+         (tProj p (mkApps fn args))
+
+(** Constant unfolding *)
+| tred_delta c decl body (isdecl : declared_constant Σ c decl) u :
+    decl.(cst_body) = Some body ->
+    tred1 Σ Γ (tConst c u) (subst_instance_constr u body)
+
+(** Proj *)
+| tred_proj i pars narg args k u arg:
+    nth_error args (pars + narg) = Some arg ->
+    tred1 Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i k u) args)) arg.
+
+Definition ctred1 Σ :=
+  context_env_clos (tred1 Σ).
+
+(* TODO Prove context_clos_impl using subrelation *)
+
+Lemma tred1_red1 :
+  forall Σ Γ u v,
+    tred1 Σ Γ u v ->
+    red1 Σ Γ u v.
+Proof.
+  intros Σ Γ u v h.
+  destruct h.
+  all: solve [
+    econstructor ; eauto
+  ].
+Qed.
+
+Lemma ctred1_red1 :
+  forall Σ Γ u v,
+    ctred1 Σ Γ u v ->
+    red1 Σ Γ u v.
+Proof.
+  intros Σ Γ u' v' [u [v [π [h [? ?]]]]]. subst.
+  induction π in Γ, u, v, h |- * using stack_rev_rect.
+  all: try solve [
+    rewrite 2!zipc_stack_cat ; cbn ;
+    rewrite stack_context_stack_cat in h ; cbn in h ;
+    rewrite ?app_context_nil_l ?app_context_assoc in h ;
+    econstructor ; eapply IHπ ; eassumption
+  ].
+  - cbn. eapply tred1_red1. assumption.
+  - rewrite 2!zipc_stack_cat. cbn.
+    rewrite stack_context_stack_cat in h. cbn in h.
+    rewrite app_context_nil_l in h.
+    eapply fix_red_ty. eapply OnOne2_app. constructor. cbn.
+    intuition auto.
+  - rewrite 2!zipc_stack_cat. cbn.
+    rewrite stack_context_stack_cat in h. cbn in h.
+    rewrite app_context_nil_l in h.
+    eapply fix_red_body. eapply OnOne2_app. constructor. cbn.
+    intuition auto.
+    eapply IHπ.
+    rewrite fix_context_fix_context_alt.
+    rewrite map_app. cbn. unfold def_sig at 2. cbn.
+    rewrite app_context_assoc in h.
+    assumption.
+  - rewrite 2!zipc_stack_cat. cbn.
+    rewrite stack_context_stack_cat in h. cbn in h.
+    rewrite app_context_nil_l in h.
+    econstructor. eapply OnOne2_app. constructor. cbn.
+    intuition auto.
+Qed.

@@ -433,6 +433,8 @@ Record extraction_pre (Σ : global_env_ext) : Type
     extr_env_wf' : wf_ext Σ }.
 
 Hint Constructors PCUICWcbvEval.eval erases : core.
+Arguments extr_env_wf' {Σ}.
+Arguments extr_env_axiom_free' {Σ}.
 
 Definition EisConstruct_app :=
   fun t => match (EAstUtils.decompose_app t).1 with

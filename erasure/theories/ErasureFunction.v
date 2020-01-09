@@ -807,3 +807,23 @@ Proof.
            2:{ eauto. } eauto.
   * eapply IHΣ. unfold erase_global. rewrite E3. reflexivity.
 Qed.
+
+Lemma wf_ext_wf_squash {Σ} : wf_ext Σ -> ∥ wf Σ ∥.
+Proof.
+  intros wf; now constructor.
+Defined.
+
+Lemma erase_correct (Σ : global_env_ext) (wfΣ : wf_ext Σ) t T v Σ' t' :
+  axiom_free Σ.1 ->
+  Σ ;;; [] |- t : T ->
+  erase_global Σ (wf_ext_wf_squash wfΣ) = Checked Σ' ->
+  erase Σ (sq wfΣ) [] (sq localenv_nil) t = Checked t' ->
+  Σ;;; [] |- t ▷ v ->
+  exists v', Σ;;; [] |- v ⇝ℇ v' /\ Σ' ⊢ t' ▷ v'.
+Proof.
+  intros axiomfree Ht HΣ' Ht'.
+  assert (extraction_pre Σ) by now constructor.
+  eapply erases_erase in Ht'; eauto.
+  eapply erase_global_correct in HΣ'.
+  eapply erases_correct; eauto.
+Qed.

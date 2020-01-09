@@ -442,6 +442,9 @@ Record extraction_pre (Σ : global_env_ext) : Type
   { extr_env_axiom_free' : axiom_free (fst Σ);
     extr_env_wf' : wf_ext Σ }.
 
+Arguments extr_env_wf' {Σ}.
+Arguments extr_env_axiom_free' {Σ}.
+
 Hint Constructors PCUICWcbvEval.eval erases.
 
 Definition EisConstruct_app :=

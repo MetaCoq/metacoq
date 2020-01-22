@@ -156,12 +156,6 @@ Proof. intros. subst k. rewrite simpl_subst_rec; auto. now rewrite Nat.add_0_r. 
 
 (** All2 lemmas *)
 
-(* Duplicate *)
-Lemma All2_app {A} {P : A -> A -> Type} {l l' r r'} :
-  All2 P l l' -> All2 P r r' ->
-  All2 P (l ++ r) (l' ++ r').
-Proof. induction 1; simpl; auto. Qed.
-
 Definition All2_prop_eq Γ Γ' {A B} (f : A -> term) (g : A -> B) (rel : forall (Γ Γ' : context) (t t' : term), Type) :=
   All2 (on_Trel_eq (rel Γ Γ') f g).
 

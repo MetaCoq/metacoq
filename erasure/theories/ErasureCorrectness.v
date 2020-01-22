@@ -134,13 +134,12 @@ Proof.
   Hint Resolve Is_type_conv_context.
   all: try now (econstructor; eauto).
   - econstructor. eapply h_forall_Γ'0.
-    econstructor. eauto. constructor. eapply conv_alt_refl, eq_term_refl.
+    econstructor. eauto. now constructor.
     constructor; auto.
     exists s1.
     eapply PCUICContextConversion.context_conversion. 3:eauto. all:eauto.
   - econstructor. eauto. eapply h_forall_Γ'1.
-    econstructor. eauto. constructor.
-    eapply PCUICCumulativity.conv_alt_refl; reflexivity.
+    econstructor. eauto. now constructor.
     constructor; auto. exists s1.
     eapply PCUICContextConversion.context_conversion with Γ; eauto.
     eapply PCUICContextConversion.context_conversion with Γ; eauto.
@@ -502,8 +501,8 @@ Proof.
         assert (Σ ;;; [] |- a' : t). {
           eapply subject_reduction_eval; eauto.
           eapply PCUICConversion.cumul_Prod_inv in c0 as [].
-          econstructor. eassumption. eauto. eapply conv_alt_sym in c0; eauto.
-          now eapply conv_alt_cumul. auto. auto. }
+          econstructor. eassumption. eauto. eapply conv_sym in c0; eauto.
+          now eapply conv_cumul. auto. auto. }
       inv Hvf'.
       * assert (Σ;;; [] |- PCUICLiftSubst.subst1 a' 0 b ⇝ℇ subst1 vu' 0 t').
         eapply (erases_subst Σ [] [PCUICAst.vass na t] [] b [a'] t'); eauto.
@@ -533,9 +532,8 @@ Proof.
     + eapply IHeval1 in H6 as (vt1' & Hvt2' & He_vt1'); eauto.
       assert (Hc : PCUICContextConversion.conv_context Σ ([],, vdef na b0 t) [vdef na b0' t]). {
         econstructor. econstructor. econstructor.
-        eapply PCUICCumulativity.red_conv_alt.
-        eapply wcbeval_red; eauto.
-        eapply PCUICCumulativity.conv_alt_refl; reflexivity.
+        eapply PCUICCumulativity.red_conv.
+        eapply wcbeval_red; eauto. reflexivity.
       }
       assert (Σ;;; [vdef na b0' t] |- b1 : x0). {
         cbn in *. eapply PCUICContextConversion.context_conversion. 3:eauto. all:cbn; eauto.

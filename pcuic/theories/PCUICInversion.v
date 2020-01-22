@@ -256,7 +256,7 @@ Section Inversion.
   Proof.
     intros Γ Δ t T h.
     induction Δ as [| [na [b|] A] Δ ih ] in Γ, t, h |- *.
-    - eexists. split ; eauto.
+    - eexists. split ; eauto. reflexivity.
     - simpl. apply ih in h. cbn in h.
       destruct h as [B [h c]].
       apply inversion_LetIn in h as hh.

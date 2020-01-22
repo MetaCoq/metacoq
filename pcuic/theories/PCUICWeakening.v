@@ -1228,3 +1228,23 @@ Lemma weakening_length {cf:checker_flags} Σ Γ Γ' t T n :
   Σ ;;; Γ |- t : T ->
   Σ ;;; Γ ,,, Γ' |- (lift0 n) t : (lift0 n) T.
 Proof. intros wfΣ ->; now apply weakening. Qed.
+
+
+Lemma weakening_conv `{cf:checker_flags} :
+  forall Σ Γ Γ' Γ'' M N,
+    wf Σ.1 ->
+    Σ ;;; Γ ,,, Γ' |- M = N ->
+    Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' |- lift #|Γ''| #|Γ'| M = lift #|Γ''| #|Γ'| N.
+Proof.
+  intros Σ Γ Γ' Γ'' M N wfΣ. induction 1.
+  - constructor.
+    now apply lift_eq_term.
+  - eapply weakening_red1 in r ; auto.
+    econstructor 2 ; eauto.
+  - eapply weakening_red1 in r ; auto.
+    econstructor 3 ; eauto.
+  - eapply conv_eta_l. 2: eassumption.
+    eapply weakening_eta_expands. assumption.
+  - eapply conv_eta_r. 1: eassumption.
+    eapply weakening_eta_expands. assumption.
+Qed.

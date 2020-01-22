@@ -20,7 +20,7 @@ Require Import Equations.Prop.DepElim.
 Set Asymmetric Patterns.
 Set SimplIsCbn.
 
-Hint Resolve eq_universe_leq_universe.
+
 
 (* Commented otherwise extraction would produce an axiom making the whole
    extracted code unusable *)
@@ -314,34 +314,34 @@ Section ContextConversion.
   Inductive conv_decls (Γ Γ' : context) : forall (x y : context_decl), Type :=
   | conv_vass na na' T T' :
       (* isType Σ Γ' T' -> *)
-      Σ ;;; Γ |- T == T' ->
+      Σ ;;; Γ |- T = T' ->
       conv_decls Γ Γ' (vass na T) (vass na' T')
 
   | conv_vdef_type na na' b T T' :
       (* isType Σ Γ' T' -> *)
-      Σ ;;; Γ |- T == T' ->
+      Σ ;;; Γ |- T = T' ->
       conv_decls Γ Γ' (vdef na b T) (vdef na' b T')
 
   | conv_vdef_body na na' b b' T T' :
       (* isType Σ Γ' T' -> *)
       (* Σ ;;; Γ' |- b' : T' -> *)
-      Σ ;;; Γ |- b == b' ->
-      Σ ;;; Γ |- T == T' ->
+      Σ ;;; Γ |- b = b' ->
+      Σ ;;; Γ |- T = T' ->
       conv_decls Γ Γ' (vdef na b T) (vdef na' b' T').
 
   Notation conv_context Γ Γ' := (context_relation conv_decls Γ Γ').
 
-  Lemma conv_ctx_refl Γ : conv_context Γ Γ.
+  Global Instance conv_ctx_refl : Reflexive (context_relation conv_decls).
   Proof.
-    induction Γ; try econstructor.
+    intro Γ; induction Γ; try econstructor.
     destruct a as [na [b|] ty]; econstructor; eauto;
       constructor; pcuic; eapply conv_refl'.
   Qed.
 
-  Global Instance conv_ctx_refl' : Reflexive (context_relation conv_decls)
-    := conv_ctx_refl.
+  Definition conv_ctx_refl' Γ : conv_context Γ Γ
+    := conv_ctx_refl Γ.
 
-  Hint Resolve conv_ctx_refl : pcuic.
+  Hint Resolve conv_ctx_refl' : pcuic.
 
   Lemma fill_le {Γ t t' u u'} :
     leq_term Σ t u -> red Σ Γ t t' -> red Σ Γ u u' ->
@@ -408,8 +408,8 @@ Section ContextConversion.
     @red_ctx Σ Γ Γ' ->
     Σ ;;; Γ' |- T = U.
   Proof.
-    intros H Hctx.
-    split; eapply cumul_red_ctx; eauto; eapply H.
+    intros H Hctx. apply cumul2_conv.
+    split; eapply cumul_red_ctx; eauto; eapply conv_cumul2 in H; eapply H.
   Qed.
 
   Lemma conv_red_ctx_inv {Γ Γ' T U} :
@@ -417,8 +417,8 @@ Section ContextConversion.
     @red_ctx Σ Γ' Γ ->
     Σ ;;; Γ' |- T = U.
   Proof.
-    intros H Hctx.
-    split; eapply cumul_red_ctx_inv; eauto; eapply H.
+    intros H Hctx. apply cumul2_conv.
+    split; eapply cumul_red_ctx_inv; eauto; eapply conv_cumul2 in H; eapply H.
   Qed.
 
   Arguments red_ctx : clear implicits.
@@ -446,11 +446,6 @@ Section ContextConversion.
       eapply eq_term_upto_univ_trans with v''; auto.
   Qed.
 
-  Definition eq_universe_leq_universe' φ u u'
-    := eq_universe_leq_universe φ u u'.
-
-  Hint Resolve eq_universe_leq_universe' : pcuic.
-
   Lemma cumul_trans_red_leqterm {Γ t u v} :
     Σ ;;; Γ |- t <= u -> Σ ;;; Γ |- u <= v ->
     ∑ l o r, red Σ Γ t l *
@@ -474,10 +469,10 @@ Section ContextConversion.
     transitivity v0; auto. eapply eq2. eapply eq1.
   Qed.
 
-  Lemma conv_alt_eq_context_upto {Γ Δ T U} :
+  Lemma conv_eq_context_upto {Γ Δ T U} :
     eq_context_upto (eq_universe Σ) Γ Δ ->
-    Σ ;;; Γ |- T == U ->
-    Σ ;;; Δ |- T == U.
+    Σ ;;; Γ |- T = U ->
+    Σ ;;; Δ |- T = U.
   Proof.
     intros eqctx cum.
     eapply conv_alt_red in cum as [nf [nf' [[redl redr] ?]]].
@@ -509,9 +504,9 @@ Section ContextConversion.
   Qed.
 
   Lemma conv_alt_red_ctx {Γ Γ' T U} :
-    Σ ;;; Γ |- T == U ->
+    Σ ;;; Γ |- T = U ->
     @red_ctx Σ Γ Γ' ->
-    Σ ;;; Γ' |- T == U.
+    Σ ;;; Γ' |- T = U.
   Proof.
     intros H Hctx.
     eapply conv_alt_red in H. apply conv_alt_red.
@@ -527,9 +522,9 @@ Section ContextConversion.
   Qed.
 
   Lemma conv_alt_red_ctx_inv Γ Γ' T U :
-    Σ ;;; Γ |- T == U ->
+    Σ ;;; Γ |- T = U ->
     red_ctx Σ Γ' Γ ->
-    Σ ;;; Γ' |- T == U.
+    Σ ;;; Γ' |- T = U.
   Proof.
     intros H Hctx.
     apply conv_alt_red in H as [v [v' [[redl redr] leq]]].
@@ -598,17 +593,17 @@ Section ContextConversion.
         * eapply eq_term_upto_univ_trans with U'; eauto; tc.
   Qed.
 
-  Lemma conv_alt_conv_ctx Γ Γ' T U :
-    Σ ;;; Γ |- T == U ->
+  Lemma conv_conv_ctx Γ Γ' T U :
+    Σ ;;; Γ |- T = U ->
     conv_context Γ Γ' ->
-    Σ ;;; Γ' |- T == U.
+    Σ ;;; Γ' |- T = U.
   Proof.
     intros H Hctx.
     apply conv_context_red_context in Hctx => //.
     destruct Hctx as [Δ [Δ' [[l r] elr]]].
     eapply conv_alt_red_ctx in l; eauto.
     eapply conv_alt_red_ctx_inv in r; eauto.
-    eapply conv_alt_eq_context_upto; eauto.
+    eapply conv_eq_context_upto; eauto.
   Qed.
 
   Lemma cumul_conv_ctx Γ Γ' T U :
@@ -638,22 +633,11 @@ Section ContextConversion.
     now symmetry.
   Qed.
 
-  Lemma conv_conv_ctx Γ Γ' T U :
-    Σ ;;; Γ |- T = U ->
-    conv_context Γ Γ' ->
-    Σ ;;; Γ' |- T = U.
-  Proof.
-    intros H Hctx. destruct H.
-    eapply cumul_conv_ctx in c; eauto.
-    eapply cumul_conv_ctx in c0; eauto.
-    now split.
-  Qed.
-
 End ContextConversion.
 
 Notation conv_context Σ Γ Γ' := (context_relation (conv_decls Σ) Γ Γ').
 
-Hint Resolve conv_ctx_refl : pcuic.
+Hint Resolve conv_ctx_refl' : pcuic.
 
 (* Lemma wf_local_conv_ctx {cf:checker_flags} Σ Γ Δ (wfΓ : wf_local Σ Γ) : wf Σ -> *)
 (*   All_local_env_over typing *)
@@ -671,50 +655,22 @@ Hint Resolve conv_ctx_refl : pcuic.
 (*     constructor; auto. *)
 (* Qed. *)
 
-Lemma conv_context_sym {cf:checker_flags} Σ Γ Γ' :
-  wf Σ.1 -> conv_context Σ Γ Γ' -> conv_context Σ Γ' Γ.
+Instance conv_context_sym {cf:checker_flags} Σ :
+  wf Σ.1 -> Symmetric (fun Γ Γ' => conv_context Σ Γ Γ').
 Proof.
+  intros HΣ Γ Γ'.
   induction Γ in Γ' |- *; try econstructor.
-  intros wfΣ conv; depelim conv; econstructor; eauto;
+  intros conv; depelim conv; econstructor; eauto;
   constructor; pcuic. intros.
-  depelim X0; constructor; pcuic.
+  depelim X; constructor; pcuic.
   - depelim c. constructor.
-    eapply conv_alt_sym, conv_alt_conv_ctx; eauto.
+    eapply conv_sym, conv_conv_ctx; eauto.
   - depelim c; constructor; auto.
-    eapply conv_alt_sym, conv_alt_conv_ctx; eauto.
-    eapply conv_alt_sym, conv_alt_conv_ctx; eauto.
-    eapply conv_alt_sym, conv_alt_conv_ctx; eauto.
+    eapply conv_sym, conv_conv_ctx; eauto.
+    eapply conv_sym, conv_conv_ctx; eauto.
+    eapply conv_sym, conv_conv_ctx; eauto.
 Qed.
 
-Lemma conv_context_trans {cf:checker_flags} Σ :
-  wf Σ.1 -> CRelationClasses.Transitive (fun Γ Γ' => conv_context Σ Γ Γ').
-Proof.
-  intros wfΣ.
-  eapply context_relation_trans.
-  intros.
-  depelim X2; depelim X3; try constructor; auto.
-  * eapply conv_alt_trans; eauto.
-    eapply conv_alt_conv_ctx => //. apply c0.
-    apply conv_context_sym => //. 
-  * eapply conv_alt_trans; eauto.
-    eapply conv_alt_conv_ctx => //. apply c0.
-    apply conv_context_sym => //. 
-  * eapply conv_alt_trans; eauto.
-    eapply conv_alt_conv_ctx => //. apply c0.
-    apply conv_context_sym => //. 
-  * eapply conv_alt_trans; eauto.
-    eapply conv_alt_conv_ctx => //; eauto.
-    apply conv_context_sym => //.
-  * eapply conv_alt_trans; eauto.
-    eapply conv_alt_conv_ctx => //; eauto.
-    apply conv_context_sym => //.
-  * eapply conv_alt_trans; eauto.
-    eapply conv_alt_conv_ctx => //; eauto.
-    apply conv_context_sym => //.
-  * eapply conv_alt_trans; eauto.
-    eapply conv_alt_conv_ctx => //; eauto.
-    apply conv_context_sym => //.
-Qed.
 
 Hint Constructors conv_decls : pcuic.
 
@@ -754,12 +710,12 @@ Proof.
   intros HRe Γ Δ h. induction h.
   - constructor.
   - constructor; tas.
-    constructor. eapply conv_alt_refl.
+    constructor. eapply conv_refl.
     eapply eq_term_upto_univ_impl; tea.
   - constructor; tas.
-    constructor. eapply conv_alt_refl.
+    constructor. eapply conv_refl.
     eapply eq_term_upto_univ_impl; tea.
-    eapply conv_alt_refl.
+    eapply conv_refl.
     eapply eq_term_upto_univ_impl; tea.
 Qed.
 
@@ -778,7 +734,7 @@ Proof.
   intros HΔ.
   induction Δ; auto.
   destruct a as [na [b|] ty]; constructor; auto;
-    constructor; apply conv_alt_refl; apply eq_term_refl.
+    constructor; apply conv_refl; apply eq_term_refl.
 Qed.
 
 Lemma context_conversion {cf:checker_flags} :
@@ -824,20 +780,20 @@ Proof.
         eapply weakening_cumul0; auto.
         pose proof (nth_error_Some_length Hnth).
         rewrite firstn_length_le; lia.
-        apply conv_alt_sym in c => //.
-        eapply cumul_conv_ctx; eauto. eapply conv_alt_conv in c. apply c. auto.
+        apply conv_sym in c => //.
+        eapply cumul_conv_ctx; eauto. eapply conv_cumul, c.
       + simpl in *.
         rewrite -(firstn_skipn (S n) Γ').
         eapply weakening_cumul0; auto. rewrite firstn_length_le; auto.
         pose proof heq_nth_error. eapply nth_error_Some_length in Hnth. lia.
-        eapply conv_alt_cumul; auto. eapply conv_alt_sym; auto.
-        eapply conv_alt_conv_ctx; eauto.
+        eapply conv_cumul; auto. eapply conv_sym; auto.
+        eapply conv_conv_ctx; eauto.
       + simpl in *. auto.
         rewrite -(firstn_skipn (S n) Γ').
         eapply weakening_cumul0; auto. rewrite firstn_length_le; auto.
         pose proof heq_nth_error. eapply nth_error_Some_length in Hnth. lia.
-        eapply conv_alt_cumul; auto. eapply conv_alt_sym; auto.
-        eapply conv_alt_conv_ctx; eauto.
+        eapply conv_cumul; auto. eapply conv_sym; auto.
+        eapply conv_conv_ctx; eauto.
   - constructor; pcuic.
     eapply forall_Γ'0. repeat (constructor; pcuic).
     constructor; auto. red. eexists; eapply forall_Γ'; auto.

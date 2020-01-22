@@ -3212,21 +3212,11 @@ Section Confluence.
     intros. rewrite - {1}(map_id brs1). eapply All2_map, All2_sym, All2_impl; pcuic.
   Qed.
 
-  Lemma All2_app_r {A} (P : A -> A -> Type) l l' r r' : All2 P (l ++ [r]) (l' ++ [r']) ->
-                                                        (All2 P l l') * (P r r').
-  Proof. induction l in l', r |- *. simpl. intros. destruct l'. simpl in *.
-         depelim X; intuition auto.
-         depelim X. destruct l'; depelim X.
-         intros.
-         depelim l'; depelim X. destruct l; depelim X.
-         specialize (IHl _ _ X). intuition auto.
-  Qed.
-
-  Lemma All2_map_left {A B} (P : A -> A -> Type) l l' (f : B -> A) :
+  Lemma All2_map_left' {A B} (P : A -> A -> Type) l l' (f : B -> A) :
     All2 (fun x y => P (f x) y) l l' -> All2 P (map f l) l'.
   Proof. intros. rewrite - (map_id l'). eapply All2_map; eauto. Qed.
 
-  Lemma All2_map_right {A B} (P : A -> A -> Type) l l' (f : B -> A) :
+  Lemma All2_map_right' {A B} (P : A -> A -> Type) l l' (f : B -> A) :
     All2 P l (map f l') ->  All2 (fun x y => P x (f y)) l l'.
   Proof.
     induction l in l' |- *. intros. depelim X. destruct l'; try discriminate.
@@ -3234,24 +3224,6 @@ Section Confluence.
     destruct l'; intros H; depelim H; try discriminate.
     specialize (IHl _ H). constructor; auto.
   Qed.
-
-  Lemma mapi_rec_compose {A B C} (g : nat -> B -> C) (f : nat -> A -> B) k l :
-    mapi_rec g (mapi_rec f l k) k = mapi_rec (fun k x => g k (f k x)) l k.
-  Proof.
-    induction l in k |- *; simpl; auto. now rewrite IHl.
-  Qed.
-
-  Lemma mapi_compose {A B C} (g : nat -> B -> C) (f : nat -> A -> B) l :
-    mapi g (mapi f l) = mapi (fun k x => g k (f k x)) l.
-  Proof. apply mapi_rec_compose. Qed.
-
-
-  Lemma All2_refl_All {A} (P : A -> A -> Type) l : All2 P l l -> All (fun x => P x x) l.
-  Proof.
-    induction l; intros H; depelim H. constructor. constructor; auto.
-  Qed.
-  Lemma mapi_cst_map {A B} (f : A -> B) l : mapi (fun _ => f) l = map f l.
-  Proof. unfold mapi. generalize 0. induction l; cbn; auto. intros. now rewrite IHl. Qed.
 
   Lemma All_All2_telescopei_gen (Γ Γ' Δ Δ' : context) (m m' : mfixpoint term) :
     #|Δ| = #|Δ'| ->
@@ -3317,18 +3289,18 @@ Section Confluence.
     intros HΓ a.
     rewrite - fold_fix_context_rho_ctx in a.
     unfold map_fix in a.
-    eapply All2_map_right in a.
+    eapply All2_map_right' in a.
     rewrite - fold_fix_context_rho_ctx.
     unfold fix_context. unfold map_fix.
     eapply local_env_telescope.
     cbn.
-    rewrite - (mapi_compose
-                 (fun n decl => lift_decl n 0 decl)
-                 (fun n def => vass (dname def) (dtype def))).
+    rewrite - (mapi_mapi
+                 (fun n def => vass (dname def) (dtype def))
+                 (fun n decl => lift_decl n 0 decl)).
     rewrite mapi_map. simpl.
-    rewrite - (mapi_compose
-                 (fun n decl => lift_decl n 0 decl)
-                 (fun n def => vass (dname def) (rho (rho_ctx Γ) (dtype def)))).
+    rewrite - (mapi_mapi
+                 (fun n def => vass (dname def) (rho (rho_ctx Γ) (dtype def)))
+                 (fun n decl => lift_decl n 0 decl)).
     eapply All2_telescope_mapi.
     rewrite !mapi_cst_map.
     eapply All_All2_telescopei; eauto.

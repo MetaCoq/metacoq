@@ -1050,19 +1050,6 @@ Proof.
     rewrite !app_context_assoc. cbn. intuition.
 Qed.
 
-Lemma mapi_rec_compose {A B C} (g : nat -> B -> C) (f : nat -> A -> B) k l :
-  mapi_rec g (mapi_rec f l k) k = mapi_rec (fun k x => g k (f k x)) l k.
-Proof.
-  induction l in k |- *; simpl; auto. now rewrite IHl.
-Qed.
-
-Lemma mapi_compose {A B C} (g : nat -> B -> C) (f : nat -> A -> B) l :
-  mapi g (mapi f l) = mapi (fun k x => g k (f k x)) l.
-Proof. apply mapi_rec_compose. Qed.
-
-Lemma mapi_cst_map {A B} (f : A -> B) l : mapi (fun _ => f) l = map f l.
-Proof. unfold mapi. generalize 0. induction l; cbn; auto. intros. now rewrite IHl. Qed.
-
 Lemma All_All2_telescopei_gen P (Γ Γ' Δ Δ' : context) (m m' : mfixpoint term) :
   (forall Δ Δ' x y,
     All2_local_env_over P Γ Γ' Δ Δ' ->
@@ -1115,9 +1102,9 @@ Proof.
   intros Hweak a. unfold fix_context.
   eapply local_env_telescope.
   cbn.
-  rewrite - !(mapi_compose
-                (fun n decl => lift_decl n 0 decl)
-                (fun n def => vass (dname def) (dtype def))).
+  rewrite - !(mapi_mapi
+                (fun n def => vass (dname def) (dtype def))
+                (fun n decl => lift_decl n 0 decl)).
   eapply All2_telescope_mapi.
   rewrite !mapi_cst_map.
   eapply All_All2_telescopei; eauto.
@@ -2723,23 +2710,5 @@ End ConfluenceFacts.
 
 Arguments red_confluence {cf} {Σ} wfΣ {Γ t u v}.
 
-(** We can now derive transitivity of the conversion relation *)
-Lemma conv_alt_trans `{cf : checker_flags} (Σ : global_env_ext) {Γ t u v} :
-  wf Σ ->
-  Σ ;;; Γ |- t == u ->
-  Σ ;;; Γ |- u == v ->
-  Σ ;;; Γ |- t == v.
-Proof.
-  intros wfΣ X0 X1.
-  eapply conv_alt_red in X0 as [t' [u' [[tt' uu'] eq]]].
-  eapply conv_alt_red in X1 as [u'' [v' [[uu'' vv'] eq']]].
-  eapply conv_alt_red.
-  destruct (red_confluence wfΣ uu' uu'') as [u'nf [ul ur]].
-  eapply red_eq_term_upto_univ_r in ul as [tnf [redtnf ?]]; tea; tc.
-  eapply red_eq_term_upto_univ_l in ur as [unf [redunf ?]]; tea; tc.
-  exists tnf, unf.
-  intuition auto.
-  now transitivity t'.
-  now transitivity v'.
-  now transitivity u'nf.
-Qed.
+(** We can now derive transitivity of the conversion relation,
+    see [PCUICConversion.v] *)

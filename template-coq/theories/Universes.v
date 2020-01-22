@@ -687,6 +687,16 @@ Proof.
   intros [l r]. now eapply leq_universe_antisym.
 Defined.
 
+
+Definition eq_universe_leq_universe' {cf} φ u u'
+  := @eq_universe_leq_universe cf φ u u'.
+Definition leq_universe_refl' φ u
+  := @leq_universe_refl φ u.
+
+Hint Resolve eq_universe_leq_universe' leq_universe_refl'.
+
+
+
 (* This universe is a hack used in plugings to generate fresh universes *)
 Definition fresh_universe : universe. exact Universe.type0. Qed.
 (* This level is a hack used in plugings to generate fresh levels *)

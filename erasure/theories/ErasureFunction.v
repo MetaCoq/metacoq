@@ -350,7 +350,7 @@ Next Obligation.
 
      eapply conv_context_refl; eauto. econstructor.
 
-     eapply PCUICConversion.conv_sym, red_conv; eauto.
+     eapply conv_sym, red_conv; eauto.
 
   ++ sq. etransitivity. eassumption.
 
@@ -360,7 +360,7 @@ Next Obligation.
 
      econstructor.
 
-     eapply PCUICConversion.conv_sym, red_conv; eauto.
+     eapply conv_sym, red_conv; eauto.
 Qed.
 Next Obligation.
   Hint Constructors squash. destruct HΣ.
@@ -438,6 +438,7 @@ Next Obligation.
 
        eapply leq_universe_prop in l0 as []; cbn; eauto.
        eapply leq_universe_prop in l as []; cbn; eauto.
+       reflexivity.
   - sq. econstructor. eauto.
 Qed.
 
@@ -804,4 +805,3 @@ Proof.
            2:{ eauto. } eauto.
   * eapply IHΣ. unfold erase_global. rewrite E3. reflexivity.
 Qed.
-

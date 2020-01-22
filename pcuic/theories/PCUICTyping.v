@@ -417,13 +417,6 @@ Inductive red Σ Γ M : term -> Type :=
 | refl_red : red Σ Γ M M
 | trans_red : forall (P : term) N, red Σ Γ M P -> red1 Σ Γ P N -> red Σ Γ M N.
 
-Fixpoint subst_app (t : term) (us : list term) : term :=
-  match t, us with
-  | tLambda _ A t, u :: us => subst_app (t {0 := u}) us
-  | _, [] => t
-  | _, _ => mkApps t us
-  end.
-
 (** *** η-conversion *)
 
 (* [eta_expands u v] states v is an expansion of u *)
@@ -505,6 +498,7 @@ Qed.
 
 Reserved Notation " Σ ;;; Γ |- t : T " (at level 50, Γ, t, T at next level).
 Reserved Notation " Σ ;;; Γ |- t <= u " (at level 50, Γ, t, u at next level).
+Reserved Notation " Σ ;;; Γ |- t = u " (at level 50, Γ, t, u at next level).
 
 (** ** Cumulativity *)
 
@@ -522,10 +516,16 @@ where " Σ ;;; Γ |- t <= u " := (cumul Σ Γ t u) : type_scope.
    Defined as cumulativity in both directions.
  *)
 
-Definition conv `{checker_flags} Σ Γ T U : Type :=
-  (Σ ;;; Γ |- T <= U) * (Σ ;;; Γ |- U <= T).
 
-Notation " Σ ;;; Γ |- t = u " := (conv Σ Γ t u) (at level 50, Γ, t, u at next level) : type_scope.
+Inductive conv `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
+| conv_refl t u : eq_term (global_ext_constraints Σ) t u -> Σ ;;; Γ |- t = u
+| conv_red_l t u v : red1 Σ Γ t v -> Σ ;;; Γ |- v = u -> Σ ;;; Γ |- t = u
+| conv_red_r t u v : Σ ;;; Γ |- t = v -> red1 (fst Σ) Γ u v -> Σ ;;; Γ |- t = u
+| conv_eta_l t u v : eta_expands t v -> Σ ;;; Γ |- v = u -> Σ ;;; Γ |- t = u
+| conv_eta_r t u v : Σ ;;; Γ |- t = v -> eta_expands u v -> Σ ;;; Γ |- t = u
+where " Σ ;;; Γ |- t = u " := (@conv _ Σ Γ t u) : type_scope.
+
+Hint Resolve cumul_refl conv_refl : pcuic.
 
 
 (** ** Typing relation *)

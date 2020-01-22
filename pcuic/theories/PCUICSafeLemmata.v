@@ -257,8 +257,8 @@ Section Lemmata.
   (* Lemma conv_context : *)
   (*   forall Σ Γ u v ρ, *)
   (*     wf Σ.1 -> *)
-  (*     Σ ;;; Γ ,,, stack_context ρ |- u == v -> *)
-  (*     Σ ;;; Γ |- zipc u ρ == zipc v ρ. *)
+  (*     Σ ;;; Γ ,,, stack_context ρ |- u = v -> *)
+  (*     Σ ;;; Γ |- zipc u ρ = zipc v ρ. *)
   (* Proof. *)
   (*   intros Σ Γ u v ρ hΣ h. *)
   (*   induction ρ in u, v, h |- *. *)
@@ -783,8 +783,8 @@ Section Lemmata.
 
   Lemma conv_alt_it_mkLambda_or_LetIn :
     forall Δ Γ u v,
-      Σ ;;; (Δ ,,, Γ) |- u == v ->
-      Σ ;;; Δ |- it_mkLambda_or_LetIn Γ u == it_mkLambda_or_LetIn Γ v.
+      Σ ;;; (Δ ,,, Γ) |- u = v ->
+      Σ ;;; Δ |- it_mkLambda_or_LetIn Γ u = it_mkLambda_or_LetIn Γ v.
   Proof.
     intros Δ Γ u v h. revert Δ u v h.
     induction Γ as [| [na [b|] A] Γ ih ] ; intros Δ u v h.
@@ -797,8 +797,8 @@ Section Lemmata.
 
   Lemma conv_alt_it_mkProd_or_LetIn :
     forall Δ Γ B B',
-      Σ ;;; (Δ ,,, Γ) |- B == B' ->
-      Σ ;;; Δ |- it_mkProd_or_LetIn Γ B == it_mkProd_or_LetIn Γ B'.
+      Σ ;;; (Δ ,,, Γ) |- B = B' ->
+      Σ ;;; Δ |- it_mkProd_or_LetIn Γ B = it_mkProd_or_LetIn Γ B'.
   Proof.
     intros Δ Γ B B' h.
     induction Γ as [| [na [b|] A] Γ ih ] in Δ, B, B', h |- *.
@@ -811,8 +811,8 @@ Section Lemmata.
 
   Lemma conv_zipp :
     forall Γ u v ρ,
-      Σ ;;; Γ |- u == v ->
-      Σ ;;; Γ |- zipp u ρ == zipp v ρ.
+      Σ ;;; Γ |- u = v ->
+      Σ ;;; Γ |- zipp u ρ = zipp v ρ.
   Proof.
     intros Γ u v ρ h.
     unfold zipp.
@@ -835,10 +835,10 @@ Section Lemmata.
     - simpl.  eapply IHl. eapply cumul_App_l. assumption.
   Qed.
 
-  Lemma conv_zipp' :
+  Lemma conv_cum_zipp' :
     forall leq Γ u v π,
-      conv leq Σ Γ u v ->
-      conv leq Σ Γ (zipp u π) (zipp v π).
+      conv_cum leq Σ Γ u v ->
+      conv_cum leq Σ Γ (zipp u π) (zipp v π).
   Proof.
     intros leq Γ u v π h.
     destruct leq.
@@ -848,8 +848,8 @@ Section Lemmata.
 
   Lemma conv_alt_zippx :
     forall Γ u v ρ,
-      Σ ;;; (Γ ,,, stack_context ρ) |- u == v ->
-      Σ ;;; Γ |- zippx u ρ == zippx v ρ.
+      Σ ;;; (Γ ,,, stack_context ρ) |- u = v ->
+      Σ ;;; Γ |- zippx u ρ = zippx v ρ.
   Proof.
     intros Γ u v ρ h.
     revert u v h. induction ρ ; intros u v h.
@@ -879,16 +879,16 @@ Section Lemmata.
 
   Lemma conv_zippx :
     forall Γ u v ρ,
-      Σ ;;; Γ ,,, stack_context ρ |- u == v ->
-      Σ ;;; Γ |- zippx u ρ == zippx v ρ.
+      Σ ;;; Γ ,,, stack_context ρ |- u = v ->
+      Σ ;;; Γ |- zippx u ρ = zippx v ρ.
   Proof.
     intros Γ u v ρ uv. eapply conv_alt_zippx ; assumption.
   Qed.
 
-  Lemma conv_zippx' :
+  Lemma conv_cum_zippx' :
     forall Γ leq u v ρ,
-      conv leq Σ (Γ ,,, stack_context ρ) u v ->
-      conv leq Σ Γ (zippx u ρ) (zippx v ρ).
+      conv_cum leq Σ (Γ ,,, stack_context ρ) u v ->
+      conv_cum leq Σ Γ (zippx u ρ) (zippx v ρ).
   Proof.
     intros Γ leq u v ρ h.
     destruct leq.
@@ -1323,8 +1323,8 @@ Section Lemmata.
     assumption.
   Qed.
 
-  Hint Resolve conv_alt_refl conv_alt_red : core.
-  Hint Resolve conv_ctx_refl: core.
+  Hint Resolve conv_refl conv_alt_red : core.
+  Hint Resolve conv_refl : core.
 
 
   (* Let bindings are not injective, so it_mkLambda_or_LetIn is not either.
@@ -1470,7 +1470,7 @@ Section Lemmata.
     forall Γ u v A B,
       Σ ;;; Γ |- u : A ->
       Σ ;;; Γ |- v : B ->
-      Σ ;;; Γ |- u == v ->
+      Σ ;;; Γ |- u = v ->
       ∑ C,
         Σ ;;; Γ |- u : C ×
         Σ ;;; Γ |- v : C.
@@ -1491,7 +1491,7 @@ Section Lemmata.
     forall Γ u v π,
       welltyped Σ Γ (zipc v π) ->
       welltyped Σ (Γ ,,, stack_context π) u ->
-      Σ ;;; Γ ,,, stack_context π |- u == v ->
+      Σ ;;; Γ ,,, stack_context π |- u = v ->
       welltyped Σ Γ (zipc u π).
   Proof.
     destruct hΣ as [wΣ].
@@ -1516,7 +1516,7 @@ Section Lemmata.
     forall Γ u v π,
       wellformed Σ Γ (zipc v π) ->
       wellformed Σ (Γ ,,, stack_context π) u ->
-      Σ ;;; Γ ,,, stack_context π |- u == v ->
+      Σ ;;; Γ ,,, stack_context π |- u = v ->
       wellformed Σ Γ (zipc u π).
   Admitted.
 
@@ -1624,17 +1624,17 @@ Section Lemmata.
     assumption.
   Qed.
 
-  Lemma conv_context_convp :
+  Lemma conv_cum_context_convp :
     forall Γ Γ' leq u v,
-      conv leq Σ Γ u v ->
+      conv_cum leq Σ Γ u v ->
       conv_context Σ Γ Γ' ->
-      conv leq Σ Γ' u v.
+      conv_cum leq Σ Γ' u v.
   Proof.
     intros Γ Γ' leq u v h hx.
     destruct hΣ.
     destruct leq.
     - simpl. destruct h. constructor.
-      eapply conv_alt_conv_ctx. all: eauto.
+      eapply conv_conv_ctx. all: eauto.
     - simpl in *. destruct h. constructor.
       eapply cumul_conv_ctx. all: eauto.
   Qed.

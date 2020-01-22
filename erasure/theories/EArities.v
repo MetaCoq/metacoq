@@ -272,7 +272,7 @@ Proof.
     end.
     clear - wfΣ HWF t0 c0. intros.
     destruct c0 as (? & [] & ?).
-    eapply typing_spine_red in t0. 3:auto. 2:{ eapply PCUICCumulativity.All_All2_refl. clear. induction x1; eauto. }
+    eapply typing_spine_red in t0. 3:auto. 2:{ eapply All_All2_refl. clear. induction x1; eauto. }
     2: eapply PCUICCumulativity.red_cumul. 2: eassumption. 2:eapply PCUICCumulativity.cumul_refl'.
     clear - wfΣ t0 H c2.
     2:{ eapply isWfArity_or_Type_red; eassumption. }
@@ -314,7 +314,6 @@ Proof.
   induction Γ; try econstructor.
   intros wfΣ wfΓ; depelim wfΓ; econstructor; eauto;
   constructor; auto.
-  - constructor; eapply cumul_refl; reflexivity.
 Qed.
 
 Lemma context_conversion_red1 (Σ : global_env_ext) Γ Γ' s t : wf Σ -> (* Σ ;;; Γ' |- t : T -> *)
@@ -342,16 +341,16 @@ Proof.
     eapply PCUICReduction.red_letin; eauto. eapply IHX0; eauto.
     econstructor. eauto. econstructor.
   -     eapply PCUICReduction.red_case; eauto. clear.
-    eapply PCUICCumulativity.All_All2_refl. induction brs; eauto.
+    eapply All_All2_refl. induction brs; eauto.
   -     eapply PCUICReduction.red_case; eauto. clear.
-    eapply PCUICCumulativity.All_All2_refl. induction brs; eauto.
+    eapply All_All2_refl. induction brs; eauto.
   - destruct ind.
     eapply PCUICReduction.red_case; eauto.
     clear - HΣ X HT.
     induction X.
     + econstructor. destruct p. destruct p.
       split; eauto.
-      eapply PCUICCumulativity.All_All2_refl.
+      eapply All_All2_refl.
       induction tl; eauto.
     + econstructor.  repeat econstructor.
       eassumption.
@@ -494,7 +493,7 @@ Proof.
     eapply invert_cumul_arity_l in H0 as (? & ? & ?). 2: eauto.
     2: eapply PCUICConversion.cumul_trans; eauto.
     destruct H.
-    eapply typing_spine_red in t1. 2:{ eapply PCUICCumulativity.All_All2_refl.
+    eapply typing_spine_red in t1. 2:{ eapply All_All2_refl.
                                                   clear. induction L; eauto. }
 
     2:eauto. 2:eauto. 2: eapply PCUICCumulativity.red_cumul_inv. 2:eauto. 2:eauto.
@@ -502,7 +501,7 @@ Proof.
     assert (t11 := t1).
     eapply isArity_typing_spine in t1 as (? & ? & ?). 2:eauto. 2:eauto. 2:eauto.
     sq. exists x5. split. eapply type_mkApps. eapply type_reduction in t0; eauto. 2:eauto.
-    eapply typing_spine_red. eapply PCUICCumulativity.All_All2_refl.
+    eapply typing_spine_red. eapply All_All2_refl.
     clear. induction L; eauto. eauto. eauto. 2:eapply PCUICCumulativity.cumul_refl'.
     eapply PCUICCumulativity.red_cumul. eauto.
 

@@ -115,7 +115,7 @@ Section Validity.
       Σ ;;; Γ |- U <= T.
   Proof.
     induction u in f, fty, T |- *. simpl. intros. exists T, T. intuition auto. constructor.
-    admit. auto.
+    admit. reflexivity. reflexivity.
     intros Hf Hty. simpl in Hty.
     specialize (IHu _ fty _ Hf) as [T' [U' [H' [H'' H''']]]].
     simpl in Hf.
@@ -345,6 +345,7 @@ Proof.
     constructor.
     + eapply validity' ; eauto.
     + apply cumul_refl'.
+    + reflexivity.
   - simpl in h. eapply IHl in h as [C [U [h1 [h2 h3]]]].
     apply inversion_App in h1 as [na [A [B [ht [ha hc]]]]].
     eexists (tProd na A B), _. split ; [| split].

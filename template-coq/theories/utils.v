@@ -1537,6 +1537,12 @@ Lemma mapi_mapi {A B C} (g : nat -> A -> B) (f : nat -> B -> C) (l : list A) :
   mapi f (mapi g l) = mapi (fun n x => f n (g n x)) l.
 Proof. unfold mapi. generalize 0. induction l; simpl; try congruence. Qed.
 
+
+Lemma mapi_cst_map {A B} (f : A -> B) l : mapi (fun _ => f) l = map f l.
+Proof.
+  unfold mapi. generalize 0. induction l; cbn; auto. intros. now rewrite IHl.
+Qed.
+
 Lemma mapi_rec_ext {A B} (f g : nat -> A -> B) (l : list A) n :
   (forall k x, n <= k -> k < length l + n -> f k x = g k x) ->
   mapi_rec f l n = mapi_rec g l n.
@@ -3006,6 +3012,23 @@ Proof.
   induction 1.
   - repeat constructor.
   - sq; now constructor.
+Qed.
+
+Lemma All_All2_refl {A : Type} {R} {l : list A} :
+  All (fun x : A => R x x) l -> All2 R l l.
+Proof.
+  induction 1; constructor; auto.
+Qed.
+
+Lemma All2_app_r {A} (P : A -> A -> Type) l l' r r' :
+  All2 P (l ++ [r]) (l' ++ [r']) -> (All2 P l l') * (P r r').
+Proof.
+  induction l in l', r |- *. simpl. intros. destruct l'. simpl in *.
+  depelim X; intuition auto.
+  depelim X. destruct l'; depelim X.
+  intros.
+  depelim l'; depelim X. destruct l; depelim X.
+  specialize (IHl _ _ X). intuition auto.
 Qed.
 
 Section ListSize.

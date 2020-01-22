@@ -45,8 +45,8 @@ Lemma type_mkApps_inv {cf:checker_flags} (Σ : global_env_ext) Γ f u T : wf Σ 
   { T' & { U & ((Σ ;;; Γ |- f : T') * (typing_spine Σ Γ T' u U) * (Σ ;;; Γ |- U <= T))%type } }.
 Proof.
   intros wfΣ; induction u in f, T |- *. simpl. intros.
-  { exists T, T. intuition auto. constructor. eapply validity; auto.
-    now eapply typing_wf_local. eauto. eapply cumul_refl'. }
+  { exists T, T. intuition auto. constructor. eapply validity; eauto with wf.
+    all: reflexivity. }
   intros Hf. simpl in Hf.
   destruct u. simpl in Hf.
   - eapply inversion_App in Hf as [na' [A' [B' [Hf' [Ha HA''']]]]].
@@ -111,7 +111,7 @@ Proof.
                          rewrite Hi. f_equal. lia.
     + subst types. rewrite simpl_subst_k.
       * now rewrite fix_context_length fix_subst_length.
-      * auto.
+      * reflexivity.
   - destruct (IHtyping wfΣ) as [T' [rarg [f [[unf fty] Hcumul]]]].
     exists T', rarg, f. intuition auto.
     + eapply cumul_trans; eauto.
@@ -122,8 +122,6 @@ Qed.
 
 Definition SR_red1 {cf:checker_flags} (Σ : global_env_ext) Γ t T :=
   forall u (Hu : red1 Σ Γ t u), Σ ;;; Γ |- u : T.
-
-Hint Resolve conv_ctx_refl : pcuic.
 
 Lemma sr_red1 {cf:checker_flags} : env_prop SR_red1.
 Proof.

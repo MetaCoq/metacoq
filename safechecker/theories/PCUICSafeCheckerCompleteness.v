@@ -59,6 +59,14 @@ Arguments lookup_ind_decl _ _ : clear implicits.
 Section Lemmas.
   Context {cf : checker_flags} (Σ : global_env_ext) (HΣ : wf Σ).
 
+  (* todo: replace the one of SR *)
+  Lemma type_reduction {Γ t A B}
+    : Σ ;;; Γ |- t : A -> red (fst Σ) Γ A B -> Σ ;;; Γ |- t : B.
+  Proof.
+    intro H.
+    eapply type_reduction; pcuic.
+  Qed.
+
   Definition principal_type Γ t A
     := Σ ;;; Γ |- t : A × (forall B, Σ ;;; Γ |- t : B -> Σ ;;; Γ |- A <= B).
 
@@ -66,7 +74,7 @@ Section Lemmas.
     red Σ Γ A A' -> principal_type Γ t A -> principal_type Γ t A'.
   Proof.
     intros Hr [H1 H2]. split.
-    - eapply type_reduction; tea. pcuic.
+    - eapply type_reduction; tea.
     - intros B HB. etransitivity. 2: now eapply H2.
       now apply red_cumul_inv.
   Qed.
@@ -118,11 +126,26 @@ Section Lemmas.
     destruct H1 as [_ H1], H2 as [_ H2].
     rewrite H1 in H2. now inversion H2.
   Qed.
+
+
+  Lemma inversion_mkApps_tInd_npars {Γ c ind u l mdecl idecl} :
+    declared_inductive Σ.1 mdecl ind idecl ->
+    Σ ;;; Γ |- c : mkApps (tInd ind u) l ->
+    #|l| = ind_npars mdecl.
+  Proof.
+  Admitted.
+
 End Lemmas.
 
 
 Lemma eq_eqb {A} `{ReflectEq A} {x y : A} :
   x = y -> eqb x y.
+Proof.
+  now destruct (eqb_spec x y).
+Qed.
+
+Lemma eqb_eq {A} `{ReflectEq A} {x y : A} :
+  eqb x y -> x = y.
 Proof.
   now destruct (eqb_spec x y).
 Qed.
@@ -167,9 +190,10 @@ Section Complete.
   Admitted.
 
   Lemma convert_leq_principal_type {Γ t A B HA HB}
-        (H1 : principal_type Σ Γ t A) (H2 : Σ;;; Γ |- t : B)
+        (H1 : ∥ principal_type Σ Γ t A ∥) (H2 : Σ;;; Γ |- t : B)
     : forall E, @convert_leq cf Σ HΣ Hφ G HG Γ A B HA HB = TypeError E -> False.
   Proof.
+    destruct H1 as [H1].
     apply H1 in H2. eapply convert_leq_complete in H2.
     intros E e; now rewrite e in H2.
   Qed.
@@ -181,10 +205,10 @@ Section Complete.
   Admitted.
 
   Lemma reduce_to_prod_principal_type {Γ t T na A B HT}
-        (H1 : principal_type Σ Γ t T) (H2 : Σ;;; Γ |- t : tProd na A B)
+        (H1 : ∥ principal_type Σ Γ t T ∥) (H2 : Σ;;; Γ |- t : tProd na A B)
     : forall E, @reduce_to_prod cf Σ HΣ Γ T HT = TypeError E -> False.
   Proof.
-    pose proof HΣ as HΣ'; destruct HΣ' as [HΣ'].
+    pose proof HΣ as HΣ'; destruct HΣ' as [HΣ'], H1 as [H1].
     apply H1 in H2. eapply cumul_Prod_r_inv in H2; tas.
     destruct H2 as [na' [A' [B' [[H2 H3] H4]]]].
     eapply reduce_to_prod_complete in H2.
@@ -245,12 +269,50 @@ Section Complete.
     discriminate.
   Qed.
 
+  (* from valid_btys PR *)
+  Lemma isWAT_tProd {Γ} (HΓ : wf_local Σ Γ) {na A B}
+    : isWfArity_or_Type Σ Γ (tProd na A B)
+      <~> (isType Σ Γ A × isWfArity_or_Type Σ (Γ,, vass na A) B).
+  Proof.
+  Admitted.
+
+
+  Lemma mkApps_tInd_eq_ind {i i' u u' l l'} :
+    mkApps (tInd i u) l = mkApps (tInd i' u') l' -> i = i'.
+  Proof.
+    intro H; apply mkApps_eq_inj in H; cbnr.
+    destruct H as [H _]. now inversion H.
+  Qed.
+
+
+  Lemma typing_ind_eq_ind {Γ c i i' u args T u' l} :
+    Σ ;;; Γ |- c : mkApps (tInd i u) args ->
+    Σ ;;; Γ |- c : T ->
+    red Σ.1 Γ T (mkApps (tInd i' u') l) ->
+    i = i'.
+  Proof.
+    destruct HΣ.
+    intros H1 H2 H3.
+    unshelve eapply (type_reduction _ _ H2) in H3; pcuic; clear H2.
+    destruct (principal_typing _ _ H1 H3) as [C [HC1 [HC2 HC3]]].
+    apply invert_cumul_ind_r in HC1; tas.
+    apply invert_cumul_ind_r in HC2; tas.
+    destruct HC1 as [? [? [HC1 ?]]], HC2 as [? [? [HC2 ?]]].
+    destruct (PCUICConfluence.red_confluence _ HC1 HC2) as [C' [Y1 Y2]].
+    apply invert_red_ind in Y1; tas.
+    apply invert_red_ind in Y2; tas.
+    destruct Y1 as [? [Y1 _]], Y2 as [? [Y2 _]]; rewrite Y1 in Y2.
+    now apply mkApps_tInd_eq_ind in Y2.
+  Qed.
+
+
 
   Ltac espec H := let HH := fresh H in
                   epose proof (H _) as HH;
                   try (clear H; rename HH into H).
 
   Ltac tac1 :=
+    let XX := fresh "XX" in
     match goal with
     | |- context H [infer ?X1 ?X2 ?X3 ?X4 ?X5 ?X6 ?X7] =>
       case_eq (infer X1 X2 X3 X4 X5 X6 X7);
@@ -276,37 +338,44 @@ Section Complete.
     | |- context H [lookup_ind_decl ?X1 ?X2] =>
       case_eq (lookup_ind_decl X1 X2);
       [intros [?decl [?body ?Hind]]|intros ?E]
+    end;
+    simpl;
+    match goal with
+    | IHtyping : forall HΓ, match infer _ _ _ _ _ _?A with
+                       | Checked _ => _
+                       | TypeError _ => _
+                       end
+    |- infer _ _ _ _ _ _ ?A = _ -> _
+      => espec IHtyping; intro XX; rewrite XX in IHtyping
+    | |- _ => intro XX
     end.
 
   Ltac eq_decl :=
-    match goal with
-        | [H1 : declared_inductive _ _ ?ind _,
-           H2 : declared_inductive _ _ ?ind _ |- _] => 
-          destruct (declared_inductive_eq_mdecl _ H1 H2);
-          destruct (declared_inductive_eq_idecl _ H1 H2)
-        | [H1 : declared_constant _ ?cst _,
-           H2 : declared_constant _ ?cst _ |- _] => 
-          destruct (PCUICWeakeningEnv.declared_constant_inj _ _ H1 H2)
-    end.
+    repeat match goal with
+           | H : declared_constructor _ _ _ _ _ |- _ => destruct H
+           | H : declared_projection _ _ _ _ _ |- _ => destruct H
+           end;
+    repeat match goal with
+           | [H1 : declared_inductive _ _ ?ind _,
+              H2 : declared_inductive _ _ ?ind _ |- _] => 
+             destruct (declared_inductive_eq_mdecl _ H1 H2);
+             destruct (declared_inductive_eq_idecl _ H1 H2)
+           | [H1 : declared_constant _ ?cst _,
+              H2 : declared_constant _ ?cst _ |- _] => 
+             destruct (PCUICWeakeningEnv.declared_constant_inj _ _ H1 H2)
+           end.
 
+  (* only on secondary goals which can always start by exalso *)
   Ltac tac2 :=
-    try eapply reduce_to_sort_type; tea;
-    try eapply reduce_to_ind_ind; tea;
-    try eapply (convert_leq_principal_type _ _ _); tea;
-    try eapply (reduce_to_prod_principal_type _ _ _); tea;
-    try eapply (lookup_ind_decl_error _ _); tea;
-    try eq_decl;
-    try eapply check_consistent_instance_error; tea;
-    let XX := fresh "XX" in intro XX;
-    try match goal with
-    | [H : forall HΓ : ∥ wf_local _ _ ∥, _ |- _ ]
-      => espec H; rewrite XX in H
-    end;
-    try contradiction.
+    exfalso;
+    eq_decl;
+    eauto using reduce_to_sort_type, convert_leq_principal_type,
+                reduce_to_prod_principal_type, check_consistent_instance_error,
+                lookup_ind_decl_error, reduce_to_ind_ind.
 
+  Ltac tac0 := simpl; unfold infer_type, infer_cumul; simpl.
 
-  Ltac tac := simpl; unfold infer_type, infer_cumul; simpl;
-              repeat (tac1; tac2; simpl); [try (sq'; split)|..].
+  Ltac tac := tac0; repeat (tac1; [|tac2; shelve]); try (sq'; split).
 
 
   Local Arguments Msg {_}.
@@ -314,6 +383,7 @@ Section Complete.
   Local Arguments infer {_} Σ {_ _} G {_} Γ {_} t.
   Local Arguments convert_leq {_} Σ {_ _} G {_} Γ t u {_ _}.
   Local Arguments reduce_to_prod {_} Σ {_} Γ t {_}.
+  Local Arguments reduce_to_ind {_} Σ {_} Γ t {_}.
 
   Lemma infer_complete {Γ t A} (H : Σ ;;; Γ |- t : A)
     (* : forall HΓ, ∑ A Ht, infer HΣ Hφ G HG Γ HΓ t = Checked (A; Ht). *)
@@ -329,8 +399,8 @@ Section Complete.
       + now constructor.
       + intros B HH. apply inversion_Rel in HH; tas.
         destruct HH as [decl' [? [ee' HH]]]. congruence.
-    - tac.
-      3:{ simpl. apply LevelSetFact.mem_1 in i. rewrite i in XX. discriminate. }
+    - unshelve tac.
+      { apply LevelSetFact.mem_1 in i. rewrite i in XX. discriminate. }
       + now constructor.
       + intros B HH. apply inversion_Sort in HH; tas.
         destruct HH as [l' [? [? [e HH]]]]. inversion e. congruence.
@@ -338,7 +408,6 @@ Section Complete.
       + econstructor.
         * eapply type_reduction; tea.
         * eapply type_reduction; tea.
-          constructor; tas; eexists; eassumption.
       + intros C HC. eapply inversion_Prod in HC; tas.
         destruct HC as [s1' [s2' [H1 [H2 H3]]]].
         etransitivity; [|eassumption].
@@ -361,17 +430,39 @@ Section Complete.
         destruct HC as [s [A' [H1' [H2 [H3 H4]]]]].
         etransitivity; [|eassumption].
         apply cumul_LetIn_bo. now eapply IHtyping3.
-    - tac.
+    - unshelve tac.
+      { revert XX2.
+        pose proof HΣ.
+        change (myid (∥ wf Σ ∥)) in HΣ.
+        change (myid (∥ on_udecl Σ.1 Σ.2 ∥)) in Hφ.
+        sq'. eapply convert_leq_principal_type; tea.
+        constructor; eassumption.
+        clear XX XX0 XX1 E.
+        econstructor.
+        - exact H0.
+        - apply validity_term in HT; tas.
+          eapply isWfArity_or_Type_red in HT; [|tea..].
+          apply isWAT_tProd in HT; tas. right; apply HT.
+        - eapply (principal_type_red _ _ HAB) in IHtyping1.
+          apply IHtyping1 in H. apply cumul_Prod_Prod_inv in H; tas.
+          apply conv_cumul. symmetry. apply H. }
       + econstructor.
         eapply type_reduction; tea.
-        econstructor; tea. admit.
+        econstructor; tea.
+        { eapply (type_reduction _ _ IHtyping1.1) in HAB as HAB'.
+          apply validity_term in HAB'; tas.
+          eapply isWAT_tProd in HAB'; tas.
+          right. apply HAB'. }
       + intros C HC. eapply inversion_App in HC; tas.
         destruct HC as [na' [A' [B' [H1 [H2 H3]]]]].
         etransitivity; [|eassumption].
         unfold subst1.
         eapply PCUICSubstitution.substitution_cumul
           with (Γ':=[vass na' A'])(Γ'':=[]); tea.
-        * constructor; tas. cbn. pcuic. admit.
+        * constructor; tas. cbn.
+        { apply validity_term in H1; tas.
+          eapply isWAT_tProd in H1; tas.
+          apply H1. }
         * repeat constructor. rewrite subst_empty; tea.
         * eapply (principal_type_red _ _ HAB) in IHtyping1.
           apply IHtyping1 in H1.
@@ -389,33 +480,53 @@ Section Complete.
         destruct HC as [mdecl' [idecl' [HΓ' [isdecl' [Hu HC]]]]].
         now eq_decl.
     - tac; destruct isdecl as [isdecl iscdecl]; cbn in iscdecl; eq_decl.
-      2:{ exfalso. eapply check_consistent_instance_error in XX0; tas. }
       dest_dep_match (nth_error (ind_ctors idecl) i).
-      sq'. split.
+      sq'; split.
       + econstructor; tea. split; tea.
       + intros C HC. eapply inversion_Construct in HC; tas.
         destruct HC
           as [mdecl' [idecl' [cdecl' [HΓ' [[isdecl' isdecl''] [Hu HC]]]]]].
         repeat eq_decl. rewrite iscdecl in isdecl''. now inversion isdecl''.
-    - admit.
-    - destruct p as [[p1 p2] p3]. pose proof isdecl.
-      tac; destruct isdecl as [isdecl [ispdecl Hpars]]; cbn in *; eq_decl.
-      2:{ exfalso. cbn in Hpars.
-          rewrite (proj2 (Nat.eqb_eq _ _) Hpars) in XX1. discriminate. }
-      dest_dep_match (nth_error (ind_projs idecl) p3).
-      tac.
-      3: { eq_decl. repeat eq_decl. admit. }
-      3: { assert (p1 = i) by admit; subst.
-           rewrite eq_inductive_refl in XX3. discriminate. }
-      + econstructor; tea. cbn.
-        eapply type_reduction; tea.
-        assert (p1 = i) by admit; now subst.
-        now apply Nat.eqb_eq.
-      +
-      revert XX1. tac2.
-      destruct IHtyping as [HH].
-      cbn in H; eapply (principal_typing_ind _ _ H) in HH.
 
+    - todo "tCase".
+
+    - destruct p as [[p1 p2] p3].
+      unshelve tac.
+      { rewrite (proj2 (Nat.eqb_eq _ _) (proj2 H1)) in XX1. discriminate. }
+      destruct isdecl as [isdecl [ispdecl Hpars]]; cbn in *; eq_decl.
+      dest_dep_match (nth_error (ind_projs idecl) p3).
+      unshelve tac.
+      { sq'. match goal with
+               | H1 : _ ;;; _ |- ?c : mkApps (tInd _ _) _,
+                 H2 : _ ;;; _ |- ?c : ?T,
+                 H3 : red _ _ ?T (mkApps (tInd _ _) _) |- _
+                 => destruct (typing_ind_eq_ind H1 H2 H3)
+               end.
+          rewrite (eq_inductive_refl p1) in XX3. discriminate. }
+      { sq'. assert (HH: (#|l| =? ind_npars mdecl)%nat);
+                 [|rewrite HH in XX4; discriminate].
+          apply Nat.eqb_eq.
+          clear XX2 XX3.
+          unshelve eapply (type_reduction _ _ HT) in Ht; tas.
+          change (eqb p1 i = true) in ee1.
+          apply eqb_eq in ee1; destruct ee1.
+          eapply inversion_mkApps_tInd_npars; tea. }
+      + clear XX XX0 XX1 XX2 XX3 XX4. econstructor; cbn.
+        * repeat split; cbn; tea. apply Hind. apply Hind.
+        * eapply type_reduction; tea. 
+          change (eqb p1 i = true) in ee1.
+          apply eqb_eq in ee1; now destruct ee1.
+        * now apply Nat.eqb_eq in ee2. 
+      + intros C HC. eapply inversion_Proj in HC; tas.
+        destruct HC as [u' [mdecl' [idecl' [pdecl' [args' [H1 [H2 [H3 H4]]]]]]]].
+        etransitivity; [|eassumption].
+        todo "pouet".
+
+    - todo "Fix".
+    - todo "coFix".
+
+    - apply IHtyping.
+  Qed.
 
 
 (* renommmer inv lemmas *)

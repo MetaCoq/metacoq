@@ -628,35 +628,6 @@ Section Typecheck.
     assumption.
   Qed.
 
-  Section InferAux.
-    Variable (infer : forall Γ (HΓ : ∥ wf_local Σ Γ ∥) (t : term),
-                 typing_result ({ A : term & ∥ Σ ;;; Γ |- t : A ∥ })).
-
-    Program Definition infer_type Γ HΓ t
-      : typing_result ({u : universe & ∥ Σ ;;; Γ |- t : tSort u ∥}) :=
-      tx <- infer Γ HΓ t ;;
-      u <- reduce_to_sort Γ tx.π1 _ ;;
-      ret (u.π1; _).
-    Next Obligation.
-      eapply validity_wf; eassumption.
-    Defined.
-    Next Obligation.
-      destruct HΣ, HΓ, X, X0.
-      now constructor; eapply type_reduction.
-    Defined.
-
-    Program Definition infer_cumul Γ HΓ t A (hA : ∥ isWfArity_or_Type Σ Γ A ∥)
-      : typing_result (∥ Σ ;;; Γ |- t : A ∥) :=
-      A' <- infer Γ HΓ t ;;
-      X <- convert_leq Γ A'.π1 A _ _ ;;
-      ret _.
-    Next Obligation. now eapply validity_wf. Qed.
-    Next Obligation. destruct hA; now apply wat_wellformed. Qed.
-    Next Obligation.
-      destruct HΣ, HΓ, hA, X, X0. constructor. econstructor; eassumption.
-    Qed.
-  End InferAux.
-
 
   Program Definition lookup_ind_decl ind
     : typing_result
@@ -800,6 +771,150 @@ Section Typecheck.
   Qed.
 
 
+  Section InferAux.
+    Variable (infer : forall Γ (HΓ : ∥ wf_local Σ Γ ∥) (t : term),
+                 typing_result ({ A : term & ∥ Σ ;;; Γ |- t : A ∥ })).
+
+    Program Definition infer_type Γ HΓ t
+      : typing_result ({u : universe & ∥ Σ ;;; Γ |- t : tSort u ∥}) :=
+      tx <- infer Γ HΓ t ;;
+      u <- reduce_to_sort Γ tx.π1 _ ;;
+      ret (u.π1; _).
+    Next Obligation.
+      eapply validity_wf; eassumption.
+    Defined.
+    Next Obligation.
+      destruct HΣ, HΓ, X, X0.
+      now constructor; eapply type_reduction.
+    Defined.
+
+    Program Definition infer_cumul Γ HΓ t A (hA : ∥ isWfArity_or_Type Σ Γ A ∥)
+      : typing_result (∥ Σ ;;; Γ |- t : A ∥) :=
+      A' <- infer Γ HΓ t ;;
+      X <- convert_leq Γ A'.π1 A _ _ ;;
+      ret _.
+    Next Obligation. now eapply validity_wf. Qed.
+    Next Obligation. destruct hA; now apply wat_wellformed. Qed.
+    Next Obligation.
+      destruct HΣ, HΓ, hA, X, X0. constructor. econstructor; eassumption.
+    Qed.
+
+    Program Definition check_branches Γ HΓ :=
+      fix check_branches (brs btys : list (nat * term))
+          (HH : Forall (squash ∘ (isType Σ Γ) ∘ snd) btys) {struct brs}
+      : typing_result
+          (All2 (fun br bty => br.1 = bty.1 /\ ∥ Σ ;;; Γ |- br.2 : bty.2 ∥) brs btys)
+        := match brs, btys with
+           | [], [] => ret (All2_nil _)
+           | (n, t) :: brs , (m, A) :: btys =>
+             W <- check_dec (Msg "not nat eq") (EqDecInstances.nat_eqdec n m) ;;
+             Z <- infer_cumul Γ HΓ t A _ ;;
+             X <- check_branches brs btys _ ;;
+             ret (All2_cons _ _ _ _ _ (conj _ _) X)
+           | [], _ :: _
+           | _ :: _, [] => raise (Msg "wrong number of branches")
+           end.
+    Next Obligation.
+      inversion HH; sq; right; assumption.
+    Qed.
+    Next Obligation.
+      inversion HH; assumption.
+    Qed.
+
+    Program Definition check_types_fix Γ HΓ :=
+      fix check_types (mfix : mfixpoint term) acc (Hacc : ∥ wf_local_rel Σ Γ acc ∥)
+          {struct mfix}
+      : typing_result (∥ wf_local_rel Σ (Γ ,,, acc) (fix_context_i #|acc| mfix) ∥)
+        := match mfix with
+           | [] => ret (sq wf_local_rel_nil)
+           | def :: mfix =>
+             (* probably not tail recursive but needed
+                so that next line terminates *)
+             W <- infer_type Γ HΓ (dtype def) ;;
+             let W' := weakening_sq acc _ _ W.π2 in
+             Z <- check_types mfix
+               (acc ,, vass (dname def) ((lift0 #|acc|) (dtype def)))
+               (wf_local_rel_abs_sq Hacc (W.π1; W')) ;;
+              ret (wf_local_rel_app_inv_sq
+                     (wf_local_rel_abs_sq (sq wf_local_rel_nil) (W.π1; W')) Z)
+           end.
+    Next Obligation. sq; now eapply All_local_env_app_inv. Defined.
+
+    Program Definition check_bodies_fix Γ (HΓ : ∥ wf_local Σ Γ ∥) mfix
+            (XX : ∥ wf_local_rel Σ Γ (fix_context mfix) ∥) :=
+      fix check_bodies (mfix' : mfixpoint term)
+          (XX' : ∥ wf_local_rel Σ Γ (fix_context mfix') ∥) {struct mfix'}
+      : typing_result
+          (All (fun d => ∥ Σ ;;; Γ ,,, fix_context mfix
+                      |- dbody d : (lift0 #|fix_context mfix|) (dtype d) ∥
+                                  /\ isLambda (dbody d) = true) mfix')
+        := match mfix' with
+           | [] => ret All_nil
+           | def :: mfix' =>
+             W1 <- infer_cumul (Γ ,,, fix_context mfix) _ (dbody def)
+                              (lift0 #|fix_context mfix| (dtype def)) _ ;;
+             W2 <- check_eq_true (isLambda (dbody def)) (Msg "not a lambda") ;;
+             Z <- check_bodies mfix' _ ;;
+             ret (All_cons (conj W1 W2) Z)
+           end.
+    Next Obligation. sq; now eapply All_local_env_app_inv. Defined.
+    Next Obligation.
+      sq. cbn in *.
+      apply wf_local_rel_app, fst in XX'. rewrite lift0_p in XX'.
+      inversion XX'; subst. destruct X0 as [s HH].
+      right. exists s.
+      change (PCUICTerm.tSort s) with (lift0 #|fix_context mfix| (tSort s)).
+      apply weakening; try assumption.
+      apply wf_local_app_inv; assumption.
+    Defined.
+    Next Obligation.
+      clear -XX' HΣ. sq.
+      change (wf_local_rel Σ Γ ([vass (dname def) ((lift0 0) (dtype def))] ,,, fix_context_i 1 mfix')) in XX'.
+      rewrite lift0_p in XX'.
+      pose proof (lift_fix_context mfix' 0 1 0) as e; cbn in e;
+        rewrite e in XX' by reflexivity; clear e.
+      pose proof (strengthening_wf_local_rel Σ Γ [] [vass (dname def) (dtype def)] (fix_context mfix')) as Y.
+      now rewrite !app_context_nil_l in Y.
+    Qed.
+
+    (* the same as check_bodies_fix but w/o the lambda check *)
+    Program Definition check_bodies_cofix Γ (HΓ : ∥ wf_local Σ Γ ∥) mfix
+            (XX : ∥ wf_local_rel Σ Γ (fix_context mfix) ∥) :=
+      fix check_bodies (mfix' : mfixpoint term)
+          (XX' : ∥ wf_local_rel Σ Γ (fix_context mfix') ∥) {struct mfix'}
+      : typing_result
+          (All (fun d => ∥ Σ ;;; Γ ,,, fix_context mfix
+                      |- dbody d : (lift0 #|fix_context mfix|) (dtype d) ∥) mfix')
+        := match mfix' with
+           | [] => ret All_nil
+           | def :: mfix' =>
+             W1 <- infer_cumul (Γ ,,, fix_context mfix) _ (dbody def)
+                              (lift0 #|fix_context mfix| (dtype def)) _ ;;
+             Z <- check_bodies mfix' _ ;;
+             ret (All_cons W1 Z)
+           end.
+  Next Obligation. sq; now eapply All_local_env_app_inv. Defined.
+  Next Obligation.
+    sq. cbn in *.
+    apply wf_local_rel_app, fst in XX'. rewrite lift0_p in XX'.
+    inversion XX'; subst. destruct X0 as [s HH].
+    right. exists s.
+    change (PCUICTerm.tSort s) with (lift0 #|fix_context mfix| (tSort s)).
+    apply weakening; try assumption.
+    apply wf_local_app_inv; assumption.
+  Defined.
+  Next Obligation.
+    clear -XX' HΣ. sq.
+    change (wf_local_rel Σ Γ ([vass (dname def) ((lift0 0) (dtype def))] ,,, fix_context_i 1 mfix')) in XX'.
+    rewrite lift0_p in XX'.
+    pose proof (lift_fix_context mfix' 0 1 0) as e; cbn in e;
+      rewrite e in XX' by reflexivity; clear e.
+    pose proof (strengthening_wf_local_rel Σ Γ [] [vass (dname def) (dtype def)] (fix_context mfix')) as Y.
+    now rewrite !app_context_nil_l in Y.
+  Qed.
+
+  End InferAux.
+
   Open Scope nat.
 
   Obligation Tactic := program_simplify ; eauto.
@@ -901,21 +1016,7 @@ Section Typecheck.
             match map_option_out (build_branches_type ind decl body params u p) with
             | None => raise (Msg "failure in build_branches_type")
             | Some btys => 
-              (fix check_branches (brs btys : list (nat * term))
-                (HH : Forall (squash ∘ (isType Σ Γ) ∘ snd) btys) {struct brs}
-                  : typing_result
-                    (All2 (fun br bty => br.1 = bty.1 /\ ∥ Σ ;;; Γ |- br.2 : bty.2 ∥) brs btys)
-                          := match brs, btys with
-                             | [], [] => ret (All2_nil _)
-                             | (n, t) :: brs , (m, A) :: btys =>
-                               W <- check_dec (Msg "not nat eq")
-                                             (EqDecInstances.nat_eqdec n m) ;;
-                               Z <- infer_cumul infer Γ HΓ t A _ ;;
-                               X <- check_branches brs btys _ ;;
-                               ret (All2_cons _ _ _ _ _ (conj _ _) X)
-                             | [], _ :: _
-                             | _ :: _, [] => raise (Msg "wrong number of branches")
-                             end) brs btys _ ;;
+              check_branches infer Γ HΓ brs btys _ ;;
                 ret (mkApps p (List.skipn par args ++ [c]); _)
             end
           end
@@ -945,36 +1046,8 @@ Section Typecheck.
       match nth_error mfix n with
       | None => raise (IllFormedFix mfix n)
       | Some decl =>
-        XX <- (fix check_types (mfix : mfixpoint term) acc (Hacc : ∥ wf_local_rel Σ Γ acc ∥) {struct mfix}
-              : typing_result (∥ wf_local_rel Σ (Γ ,,, acc) (fix_context_i #|acc| mfix) ∥)
-              := match mfix with
-                 | [] => ret (sq wf_local_rel_nil)
-                 | def :: mfix =>
-       (* probably not tail recursive but needed so that next line terminates *)
-                   W <- infer_type infer Γ HΓ (dtype def) ;;
-                   let W' := weakening_sq acc _ _ W.π2 in
-                   Z <- check_types mfix
-                     (acc ,, vass (dname def) ((lift0 #|acc|) (dtype def)))
-                     (wf_local_rel_abs_sq Hacc (W.π1; W')) ;;
-                   ret (wf_local_rel_app_inv_sq
-                          (wf_local_rel_abs_sq (sq wf_local_rel_nil) (W.π1; W')) Z)
-                 end)
-           mfix [] (sq wf_local_rel_nil);;
-        YY <- (fix check_bodies (mfix' : mfixpoint term)
-                  (XX' : ∥ wf_local_rel Σ Γ (fix_context mfix') ∥) {struct mfix'}
- : typing_result (All (fun d =>
- ∥ Σ ;;; Γ ,,, fix_context mfix |- dbody d : (lift0 #|fix_context mfix|) (dtype d) ∥
-   /\ isLambda (dbody d) = true) mfix')
-              := match mfix' with
-                 | [] => ret All_nil
-                 | def :: mfix' =>
-                   W1 <- infer_cumul infer (Γ ,,, fix_context mfix) _ (dbody def)
-                                    (lift0 #|fix_context mfix| (dtype def)) _ ;;
-                   W2 <- check_eq_true (isLambda (dbody def))
-                                      (Msg "not a lambda") ;;
-                   Z <- check_bodies mfix' _ ;;
-                   ret (All_cons (conj W1 W2) Z)
-                 end) mfix _ ;;
+        XX <- check_types_fix infer Γ HΓ mfix [] (sq wf_local_rel_nil);;
+        YY <- check_bodies_fix infer Γ HΓ mfix XX mfix _ ;;
         guarded <- check_eq_true (fix_guard mfix) (Msg "Unguarded fixpoint") ;;
         ret (dtype decl; _)
       end
@@ -985,33 +1058,8 @@ Section Typecheck.
       match nth_error mfix n with
       | None => raise (IllFormedFix mfix n)
       | Some decl =>
-        XX <- (fix check_types (mfix : mfixpoint term) acc (Hacc : ∥ wf_local_rel Σ Γ acc ∥) {struct mfix}
-              : typing_result (∥ wf_local_rel Σ (Γ ,,, acc) (fix_context_i #|acc| mfix) ∥)
-              := match mfix with
-                 | [] => ret (sq wf_local_rel_nil)
-                 | def :: mfix =>
-       (* probably not tail recursive but needed so that next line terminates *)
-                   W <- infer_type infer Γ HΓ (dtype def) ;;
-                   let W' := weakening_sq acc _ _ W.π2 in
-                   Z <- check_types mfix
-                     (acc ,, vass (dname def) ((lift0 #|acc|) (dtype def)))
-                     (wf_local_rel_abs_sq Hacc (W.π1; W')) ;;
-                   ret (wf_local_rel_app_inv_sq
-                          (wf_local_rel_abs_sq (sq wf_local_rel_nil) (W.π1; W')) Z)
-                 end)
-           mfix [] (sq wf_local_rel_nil);;
-        YY <- (fix check_bodies (mfix' : mfixpoint term) (XX' : ∥ wf_local_rel Σ Γ (fix_context mfix') ∥) {struct mfix'}
- : typing_result (All (fun d =>
- ∥ Σ ;;; Γ ,,, fix_context mfix |- dbody d : (lift0 #|fix_context mfix|) (dtype d) ∥
-   ) mfix')
-              := match mfix' with
-                 | [] => ret All_nil
-                 | def :: mfix' =>
-                   W1 <- infer_cumul infer (Γ ,,, fix_context mfix) _ (dbody def)
-                                    (lift0 #|fix_context mfix| (dtype def)) _ ;;
-                   Z <- check_bodies mfix' _ ;;
-                   ret (All_cons W1 Z)
-                 end) mfix _ ;;
+        XX <- check_types_fix infer Γ HΓ mfix [] (sq wf_local_rel_nil);;
+        YY <- check_bodies_cofix infer Γ HΓ mfix XX mfix _ ;;
         ret (dtype decl; _)
       end
     end.
@@ -1113,12 +1161,6 @@ Section Typecheck.
     rewrite destArity_mkApps_Ind in HH1; discriminate.
   Qed.
   Next Obligation.
-    inversion HH; sq; right; assumption.
-  Qed.
-  Next Obligation.
-    inversion HH; assumption.
-  Qed.
-  Next Obligation.
     rename Heq_anonymous into HH3.
     clear Heq_anonymous2. destruct HΣ, HΓ, X.
     change (eqb ind ind' = true) in H0.
@@ -1170,26 +1212,6 @@ Section Typecheck.
   Defined.
 
   (* tFix *)
-  Next Obligation. sq; now eapply All_local_env_app_inv. Defined.
-  Next Obligation. sq; now eapply All_local_env_app_inv. Defined.
-  Next Obligation.
-    sq. cbn in *.
-    apply wf_local_rel_app, fst in XX'. rewrite lift0_p in XX'.
-    inversion XX'; subst. destruct X0 as [s HH].
-    right. exists s.
-    change (PCUICTerm.tSort s) with (lift0 #|fix_context mfix| (tSort s)).
-    apply weakening; try assumption.
-    apply wf_local_app_inv; assumption.
-  Defined.
-  Next Obligation.
-    clear -XX' HΣ. sq.
-    change (wf_local_rel Σ Γ ([vass (dname def) ((lift0 0) (dtype def))] ,,, fix_context_i 1 mfix')) in XX'.
-    rewrite lift0_p in XX'.
-    pose proof (lift_fix_context mfix' 0 1 0) as e; cbn in e;
-      rewrite e in XX' by reflexivity; clear e.
-    pose proof (strengthening_wf_local_rel Σ Γ [] [vass (dname def) (dtype def)] (fix_context mfix')) as Y.
-    now rewrite !app_context_nil_l in Y.
-  Qed.
   Next Obligation.
     assert (∥ All (fun d => ((Σ;;; Γ ,,, fix_context mfix |- dbody d : (lift0 #|fix_context mfix|) (dtype d)) * (isLambda (dbody d) = true))%type) mfix ∥). {
       eapply All_sq, All_impl.  exact YY.
@@ -1200,25 +1222,6 @@ Section Typecheck.
   Qed.
 
   (* tCoFix *)
-  Next Obligation. sq; now eapply All_local_env_app_inv. Defined.
-  Next Obligation. sq; now eapply All_local_env_app_inv. Defined.
-  Next Obligation.
-    sq. cbn in *.
-    apply wf_local_rel_app, fst in XX'. rewrite lift0_p in XX'.
-    inversion XX'; subst. destruct X0 as [s HH].
-    right. exists s. change (PCUICTerm.tSort s) with (lift0 #|fix_context mfix| (tSort s)).
-    apply weakening; try assumption.
-    apply wf_local_app_inv; assumption.
-  Defined.
-  Next Obligation.
-    clear -XX' HΣ. sq.
-    change (wf_local_rel Σ Γ ([vass (dname def) ((lift0 0) (dtype def))] ,,, fix_context_i 1 mfix')) in XX'.
-    rewrite lift0_p in XX'.
-    pose proof (lift_fix_context mfix' 0 1 0) as e; cbn in e;
-      rewrite e in XX' by reflexivity; clear e.
-    pose proof (strengthening_wf_local_rel Σ Γ [] [vass (dname def) (dtype def)] (fix_context mfix')) as Y.
-    now rewrite !app_context_nil_l in Y.
-  Defined.
   Next Obligation.
     apply All_sq in YY.
     sq. econstructor; eauto.

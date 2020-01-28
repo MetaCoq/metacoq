@@ -56,6 +56,20 @@ Axiom reduce_to_ind_complete :
 
 Arguments lookup_ind_decl _ _ : clear implicits.
 
+
+Lemma eq_eqb {A} `{ReflectEq A} {x y : A} :
+  x = y -> eqb x y.
+Proof.
+  now destruct (eqb_spec x y).
+Qed.
+
+Lemma eqb_eq {A} `{ReflectEq A} {x y : A} :
+  eqb x y -> x = y.
+Proof.
+  now destruct (eqb_spec x y).
+Qed.
+
+
 Section Lemmas.
   Context {cf : checker_flags} (Σ : global_env_ext) (HΣ : wf Σ).
 
@@ -135,20 +149,93 @@ Section Lemmas.
   Proof.
   Admitted.
 
+
+  (* from valid_btys PR *)
+  Lemma isWAT_tProd {Γ} (HΓ : wf_local Σ Γ) {na A B}
+    : isWfArity_or_Type Σ Γ (tProd na A B)
+      <~> (isType Σ Γ A × isWfArity_or_Type Σ (Γ,, vass na A) B).
+  Proof.
+  Admitted.
+
+
+  Lemma mkApps_tInd_eq_ind {i i' u u' l l'} :
+    mkApps (tInd i u) l = mkApps (tInd i' u') l' -> i = i'.
+  Proof.
+    intro H; apply mkApps_eq_inj in H; cbnr.
+    destruct H as [H _]. now inversion H.
+  Qed.
+
+  Lemma mkApps_tInd_eq_ind2 {i i' u u' l l'} :
+    mkApps (tInd i u) l = mkApps (tInd i' u') l' -> u = u'.
+  Proof.
+    intro H; apply mkApps_eq_inj in H; cbnr.
+    destruct H as [H _]. now inversion H.
+  Qed.
+
+  Lemma mkApps_tInd_eq_ind3 {i i' u u' l l'} :
+    mkApps (tInd i u) l = mkApps (tInd i' u') l' -> l = l'.
+  Proof.
+    intro H; apply mkApps_eq_inj in H; cbnr.
+    apply H.
+  Qed.
+
+
+  Lemma typing_ind_eq_ind {Γ c i i' u args T u' l} :
+    Σ ;;; Γ |- c : mkApps (tInd i u) args ->
+    Σ ;;; Γ |- c : T ->
+    red Σ.1 Γ T (mkApps (tInd i' u') l) ->
+    i = i'.
+  Proof.
+    intros H1 H2 H3.
+    unshelve eapply (type_reduction H2) in H3; pcuic; clear H2.
+    destruct (principal_typing _ _ H1 H3) as [C [HC1 [HC2 HC3]]].
+    apply invert_cumul_ind_r in HC1; tas.
+    apply invert_cumul_ind_r in HC2; tas.
+    destruct HC1 as [? [? [HC1 ?]]], HC2 as [? [? [HC2 ?]]].
+    destruct (PCUICConfluence.red_confluence _ HC1 HC2) as [C' [Y1 Y2]].
+    apply invert_red_ind in Y1; tas.
+    apply invert_red_ind in Y2; tas.
+    destruct Y1 as [? [Y1 _]], Y2 as [? [Y2 _]]; rewrite Y1 in Y2.
+    now apply mkApps_tInd_eq_ind in Y2.
+  Qed.
+
+
+  Lemma invert_cumul_ind Γ ind ui ui' l l' :
+    Σ ;;; Γ |- mkApps (tInd ind ui) l <= mkApps (tInd ind ui') l' ->
+        R_universe_instance (eq_universe Σ) ui' ui ×
+        All2 (fun a a' => Σ ;;; Γ |- a = a') l l'.
+  Proof.
+    intro H; eapply invert_cumul_ind_r in H; tas.
+    destruct H as [ui'' [l'' [H1 [H2 H3]]]].
+    eapply PCUICConfluence.red_mkApps_tInd in H1; tas.
+    destruct H1 as [l''' [H1 H1']].
+    apply mkApps_tInd_eq_ind2 in H1 as HH; destruct HH.
+    apply mkApps_tInd_eq_ind3 in H1; destruct H1.
+    split.
+    - now symmetry.
+    - apply All2_sym in H3. eapply PCUICAlpha.All2_trans'; tea.
+      clear -HΣ. intros x y z [H1 H2]. 
+      etransitivity; [|symmetry; eassumption]. now eapply red_conv.
+  Qed.
+
+  (* Lemma substitution_cumul' Γ Γ' Γ'' s s' M N : *)
+  (*   wf_local Σ (Γ ,,, Γ' ,,, Γ'') -> *)
+  (*   PCUICSubstitution.subslet Σ Γ s Γ' -> *)
+  (*   Σ ;;; Γ ,,, Γ' ,,, Γ'' |- M <= N -> *)
+  (*   All2 (conv Σ Γ) s s' -> *)
+  (*   Σ ;;; Γ ,,, subst_context s 0 Γ'' |- subst s #|Γ''| M <= subst s' #|Γ''| N. *)
+  (* Admitted. *)
+
+
+  Lemma substitution_conv {Γ M M' u u' l l'} :
+    Σ ;;; Γ |- M = M' ->
+    R_universe_instance (eq_universe Σ) u u' ->
+    All2 (fun a a' : term => Σ;;; Γ |- a = a') l l' ->
+    Σ;;; Γ |- (subst0 l) (subst_instance_constr u M) =
+             (subst0 l') (subst_instance_constr u' M').
+  Admitted.
+
 End Lemmas.
-
-
-Lemma eq_eqb {A} `{ReflectEq A} {x y : A} :
-  x = y -> eqb x y.
-Proof.
-  now destruct (eqb_spec x y).
-Qed.
-
-Lemma eqb_eq {A} `{ReflectEq A} {x y : A} :
-  eqb x y -> x = y.
-Proof.
-  now destruct (eqb_spec x y).
-Qed.
 
 
 Section Complete.
@@ -269,42 +356,22 @@ Section Complete.
     discriminate.
   Qed.
 
-  (* from valid_btys PR *)
-  Lemma isWAT_tProd {Γ} (HΓ : wf_local Σ Γ) {na A B}
-    : isWfArity_or_Type Σ Γ (tProd na A B)
-      <~> (isType Σ Γ A × isWfArity_or_Type Σ (Γ,, vass na A) B).
+
+  Definition check_types_fix_complete infer
+  (infer_complete : forall {Γ t A} (H : Σ ;;; Γ |- t : A) (HΓ : ∥ wf_local Σ Γ ∥),
+      match @infer cf Σ HΣ Hφ G HG Γ HΓ t with
+      | Checked (A; Ht) => ∥ principal_type Σ Γ t A ∥
+      | TypeError _ => False
+      end)
+  Γ HΓ mfix acc (XX : ∥ wf_local_rel Σ Γ acc ∥) :
+    wf_local_rel Σ (Γ ,,, acc) (fix_context_i #|acc| mfix)
+    -> check_types_fix HΣ Hφ (infer cf Σ HΣ Hφ G HG) Γ HΓ mfix acc XX.
   Proof.
-  Admitted.
-
-
-  Lemma mkApps_tInd_eq_ind {i i' u u' l l'} :
-    mkApps (tInd i u) l = mkApps (tInd i' u') l' -> i = i'.
-  Proof.
-    intro H; apply mkApps_eq_inj in H; cbnr.
-    destruct H as [H _]. now inversion H.
-  Qed.
-
-
-  Lemma typing_ind_eq_ind {Γ c i i' u args T u' l} :
-    Σ ;;; Γ |- c : mkApps (tInd i u) args ->
-    Σ ;;; Γ |- c : T ->
-    red Σ.1 Γ T (mkApps (tInd i' u') l) ->
-    i = i'.
-  Proof.
-    destruct HΣ.
-    intros H1 H2 H3.
-    unshelve eapply (type_reduction _ _ H2) in H3; pcuic; clear H2.
-    destruct (principal_typing _ _ H1 H3) as [C [HC1 [HC2 HC3]]].
-    apply invert_cumul_ind_r in HC1; tas.
-    apply invert_cumul_ind_r in HC2; tas.
-    destruct HC1 as [? [? [HC1 ?]]], HC2 as [? [? [HC2 ?]]].
-    destruct (PCUICConfluence.red_confluence _ HC1 HC2) as [C' [Y1 Y2]].
-    apply invert_red_ind in Y1; tas.
-    apply invert_red_ind in Y2; tas.
-    destruct Y1 as [? [Y1 _]], Y2 as [? [Y2 _]]; rewrite Y1 in Y2.
-    now apply mkApps_tInd_eq_ind in Y2.
-  Qed.
-
+    intro HH. depind HH.
+    - destruct mfix; cbn in *. reflexivity.
+      symmetry in H. now apply app_cons_not_nil in H.
+    - destruct mfix; cbn in *; [discriminate|].
+  Abort.
 
 
   Ltac espec H := let HH := fresh H in
@@ -365,7 +432,7 @@ Section Complete.
              destruct (PCUICWeakeningEnv.declared_constant_inj _ _ H1 H2)
            end.
 
-  (* only on secondary goals which can always start by exalso *)
+  (* only on secondary goals which can always start by exfalso *)
   Ltac tac2 :=
     exfalso;
     eq_decl;
@@ -500,7 +567,7 @@ Section Complete.
                | H1 : _ ;;; _ |- ?c : mkApps (tInd _ _) _,
                  H2 : _ ;;; _ |- ?c : ?T,
                  H3 : red _ _ ?T (mkApps (tInd _ _) _) |- _
-                 => destruct (typing_ind_eq_ind H1 H2 H3)
+                 => destruct (typing_ind_eq_ind _ _ H1 H2 H3)
                end.
           rewrite (eq_inductive_refl p1) in XX3. discriminate. }
       { sq'. assert (HH: (#|l| =? ind_npars mdecl)%nat);
@@ -519,10 +586,30 @@ Section Complete.
         * now apply Nat.eqb_eq in ee2. 
       + intros C HC. eapply inversion_Proj in HC; tas.
         destruct HC as [u' [mdecl' [idecl' [pdecl' [args' [H1 [H2 [H3 H4]]]]]]]].
-        etransitivity; [|eassumption].
-        todo "pouet".
+        etransitivity; [|eassumption]. clear H4 XX2 XX3 XX4.
+        apply (principal_type_red _ _ Ht) in IHtyping.
+        cbn in H2; apply IHtyping in H2.
+        change (eqb p1 i = true) in ee1.
+        apply eqb_eq in ee1; destruct ee1.
+        eapply invert_cumul_ind in H2; tas. destruct H2 as [H2 H2'].
+        destruct H1 as [H1 [H1' H1'']]; cbn in *. eq_decl.
+        rewrite <- ee0 in H1'. apply some_inj in H1'; destruct H1'.
+        clear -HΣ0 H2 H2'. eapply conv_cumul, substitution_conv; tea.
+        reflexivity. now symmetry.
+        constructor. reflexivity. now apply All2_rev.
 
-    - todo "Fix".
+    - unshelve tac.
+      { rewrite i in XX. discriminate. }
+      dest_dep_match (nth_error mfix n).
+      case_eq (check_types_fix HΣ Hφ (infer Σ (HΣ:=HΣ)(Hφ:=Hφ)G(HG:=HG)) Γ HΓ mfix [] (sq wf_local_rel_nil)).
+      2:{
+      unfold check_types_fix.
+      unshelve tac.
+
+
+
+
+ todo "Fix".
     - todo "coFix".
 
     - apply IHtyping.

@@ -122,11 +122,13 @@ let tmFreshName (nm : ident) : ident tm =
 
 let tmAbout (qualid : qualid) : global_reference option tm =
   fun env evd success _fail ->
-    try
-      let gr = Smartlocate.locate_global_with_alias qualid in
-      success env evd (Some gr)
-    with
-      Not_found -> success env evd None
+    let opt =
+      try
+        Some (Smartlocate.locate_global_with_alias qualid)
+      with
+        Not_found -> None
+    in success env evd opt
+
 
 let tmAboutString (s : string) : global_reference option tm =
   fun env evd success fail ->

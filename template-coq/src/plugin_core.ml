@@ -5,7 +5,7 @@ type ident   = Names.Id.t (* Template.BasicAst.ident *)
 type qualid  = Libnames.qualid (* Template.BasicAst.qualid *)
 type kername = Names.KerName.t (* Template.BasicAst.kername *)
 type reduction_strategy = Redexpr.red_expr (* Template.TemplateMonad.Common.reductionStrategy *)
-type global_reference = Globnames.global_reference (* Template.Ast.global_reference *)
+type global_reference = Names.GlobRef.t (* Template.Ast.global_reference *)
 type term = Constr.t  (* Template.Ast.term *)
 type mutual_inductive_body = Declarations.mutual_inductive_body (* Template.Ast.mutual_inductive_body *)
 type constant_entry = Declarations.constant_body (* Template.Ast.constant_entry *)
@@ -98,7 +98,7 @@ let tmAxiom (nm : ident) ?poly:(poly=false) (typ : term) : kername tm =
 let tmLemma (nm : ident) ?poly:(poly=false)(ty : term) : kername tm =
   fun env evm success _fail ->
     let kind = (Decl_kinds.Global, poly, Decl_kinds.Definition) in
-    let hole = CAst.make (Constrexpr.CHole (None, Misctypes.IntroAnonymous, None)) in
+    let hole = CAst.make (Constrexpr.CHole (None, Namegen.IntroAnonymous, None)) in
     let evm, (c, _) = Constrintern.interp_casted_constr_evars_impls env evm hole (EConstr.of_constr ty) in
     Obligations.check_evars env evm;
     let obls, _, c, cty = Obligations.eterm_obligations env nm evm 0 (EConstr.to_constr evm c) ty in

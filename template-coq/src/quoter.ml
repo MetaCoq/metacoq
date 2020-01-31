@@ -252,14 +252,14 @@ struct
           try Retyping.get_type_of env' Evd.empty trm
           with e ->
             Feedback.msg_debug (str"Anomaly trying to get the type of: " ++
-                                  Termops.print_constr_env (snd env) Evd.empty trm);
+                                Printer.pr_econstr_env (snd env) Evd.empty trm);
             raise e
         in
         let sf =
           try Retyping.get_sort_family_of env' Evd.empty ty
           with e ->
             Feedback.msg_debug (str"Anomaly trying to get the sort of: " ++
-                                  Termops.print_constr_env (snd env) Evd.empty ty);
+                                Printer.pr_econstr_env (snd env) Evd.empty ty);
             raise e
         in
         if sf == Term.InProp then

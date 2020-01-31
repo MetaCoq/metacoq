@@ -1,9 +1,7 @@
 open Univ
 open Entries
-open Names
 open Pp
 open Tm_util
-open Quoted
 
 (** The reifier to Coq values *)
 module ConstrQuoted =
@@ -57,7 +55,7 @@ struct
     (* gen_constant_in_modules contrib_name [path] tm *)
 
   let old_resolve_symbol (path : string list) (tm : string) : Constr.t Lazy.t =
-    lazy (Universes.constr_of_global (Coqlib.gen_reference_in_modules contrib_name [path] tm))
+    lazy (UnivGen.constr_of_global (Coqlib.gen_reference_in_modules contrib_name [path] tm))
 
   let resolve_symbol_p (path : string list) (tm : string) : Names.GlobRef.t Lazy.t =
     lazy (Coqlib.gen_reference_in_modules contrib_name [path] tm)
@@ -159,8 +157,8 @@ struct
   let tACumulativityInfomake = resolve_symbol (ext_pkg_univ "ACumulativityInfo") "make"
   let tConstraintSet = resolve_symbol (ext_pkg_univ "ConstraintSet") "t_"
   let tLevelSet = resolve_symbol (ext_pkg_univ "LevelSet") "t_"
-  let tConstraintSetempty = lazy (Universes.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "ConstraintSet") "empty"))
-  let tConstraintSetadd = lazy (Universes.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "ConstraintSet") "add"))
+  let tConstraintSetempty = lazy (UnivGen.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "ConstraintSet") "empty"))
+  let tConstraintSetadd = lazy (UnivGen.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "ConstraintSet") "add"))
   let tmake_univ_constraint = resolve_symbol pkg_univ "make_univ_constraint"
   let tinit_graph = resolve_symbol pkg_ugraph "init_graph"
   let tadd_global_constraints = resolve_symbol pkg_ugraph  "add_global_constraints"

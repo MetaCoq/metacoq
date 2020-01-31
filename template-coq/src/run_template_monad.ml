@@ -310,7 +310,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     let name = reduce_all env evm name in
     let poly = Flags.is_universe_polymorphism () in
     let kind = (Decl_kinds.Global, poly, Decl_kinds.Definition) in
-    let hole = CAst.make (Constrexpr.CHole (None, Misctypes.IntroAnonymous, None)) in
+    let hole = CAst.make (Constrexpr.CHole (None, Namegen.IntroAnonymous, None)) in
     let evm, (c, _) = Constrintern.interp_casted_constr_evars_impls env evm hole (EConstr.of_constr typ) in
     let ident = unquote_ident name in
     Obligations.check_evars env evm;
@@ -427,7 +427,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
          let evm, typ = Evarsolve.refresh_universes (Some false) env evm typ in
          let make_typed_term typ term evm =
            match Lazy.force texistT_typed_term with
-           | ConstructRef ctor ->
+           | GlobRef.ConstructRef ctor ->
               let (evm,c) = Evarutil.new_global evm (Lazy.force texistT_typed_term) in
               let term = Constr.mkApp
                (EConstr.to_constr evm c, [|typ; t'|]) in
@@ -440,10 +440,8 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
       end
   | TmUnquoteTyped (typ, t) ->
        let evm, t' = denote_term evm (reduce_all env evm t) in
-       let evdref = ref evm in
        (* let t' = Typing.e_solve_evars env evdref (EConstr.of_constr t') in *)
-       Typing.e_check env evdref (EConstr.of_constr t') (EConstr.of_constr typ);
-       let evm = !evdref in
+       let evm = Typing.check env evm (EConstr.of_constr t') (EConstr.of_constr typ) in
        k (env, evm, t')
   | TmFreshName name ->
     let name' = Namegen.next_ident_away_from (unquote_ident name) (fun id -> Nametab.exists_cci (Lib.make_path id)) in

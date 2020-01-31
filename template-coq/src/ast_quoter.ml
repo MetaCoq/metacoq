@@ -342,7 +342,7 @@ struct
       | Utils.NEL.Coq_cons ((l,b), q) -> Univ.Universe.sup (aux q) (unquote_level_expr l b)
     in evd, aux trm
 
-  let quote_global_reference : Globnames.global_reference -> quoted_global_reference = function
+  let quote_global_reference : Names.GlobRef.t -> quoted_global_reference = function
     | Globnames.VarRef _ -> CErrors.user_err (Pp.str "VarRef unsupported")
     | Globnames.ConstRef c ->
       let kn = quote_kn (Names.Constant.canonical c) in

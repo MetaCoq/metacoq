@@ -1,13 +1,12 @@
 open Univ
 open Names
 open GlobRef
-open Constr_quoter
 open Pp
 
 open Tm_util
 
 
-let resolve_symbol_p (path : string list) (tm : string) : global_reference Lazy.t =
+let resolve_symbol_p (path : string list) (tm : string) : GlobRef.t Lazy.t =
   lazy (Coqlib.gen_reference_in_modules contrib_name [path] tm)
 
 let pkg_template_monad_prop = ["MetaCoq";"Template";"TemplateMonad";"Core"]
@@ -207,7 +206,7 @@ let next_action env evd (pgm : constr) : template_monad * _ =
     with _ ->
       CErrors.user_err (str "Invalid argument or not yet implemented. The argument must be a TemplateProgram: " ++ Printer.pr_constr_env env evd coConstr)
   in
-  let eq_gr t = Globnames.eq_gr glob_ref (Lazy.force t) in
+  let eq_gr t = Names.GlobRef.equal glob_ref (Lazy.force t) in
   if eq_gr ptmReturn || eq_gr ttmReturn then
     match args with
     | _::h::[] ->

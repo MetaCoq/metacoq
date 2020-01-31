@@ -1,11 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
-From MetaCoq.Template Require Import config utils Ast AstUtils Induction LiftSubst UnivSubst.
-From MetaCoq.Checker Require Import Typing.
-Require Import ssreflect.
-Require Import Equations.Prop.DepElim.
-Require Import ssreflect.
+From MetaCoq.Template Require Import config utils Ast AstUtils Induction LiftSubst UnivSubst Typing.
 
 Set Asymmetric Patterns.
 
@@ -501,8 +497,6 @@ Definition sort_irrelevant
   (P : global_env_ext -> context -> term -> option term -> Type) :=
   forall Σ Γ b s s', P Σ Γ (tSort s) b -> P Σ Γ (tSort s') b.
 
-Derive Signature for on_global_env.
-Derive Signature for Alli.
 
 (* TODO MOVE? *)
 Lemma on_global_env_mix `{checker_flags} {Σ P Q} :
@@ -608,4 +602,70 @@ Lemma typing_wf {cf:checker_flags} Σ (wfΣ : wf Σ.1) Γ t T :
   Σ ;;; Γ |- t : T -> Ast.wf t /\ Ast.wf T.
 Proof.
   intros. eapply typing_wf_gen in X; intuition eauto with wf.
+Qed.
+
+Lemma wf_instantiate_params_subst_term :
+  forall params args s t ctx t',
+    Ast.wf t ->
+    instantiate_params_subst params args s t = Some (ctx, t') ->
+    Ast.wf t'.
+Proof.
+  intros params args s t ctx t' h e.
+  revert args s t ctx t' h e.
+  induction params ; intros args s t ctx t' h e.
+  - destruct args ; try discriminate. cbn in e. inversion e.
+    subst. assumption.
+  - destruct a as [na [bo|] ty].
+    + cbn in e. destruct t ; try discriminate.
+      eapply IHparams ; try exact e.
+      dependent destruction h. assumption.
+    + cbn in e. destruct t ; try discriminate.
+      destruct args ; try discriminate.
+      eapply IHparams ; try exact e.
+      dependent destruction h. assumption.
+Qed.
+
+Lemma wf_instantiate_params_subst_ctx :
+  forall params args s t ctx t',
+    Forall Ast.wf args ->
+    Forall wf_decl params ->
+    Forall Ast.wf s ->
+    instantiate_params_subst params args s t = Some (ctx, t') ->
+    Forall Ast.wf ctx.
+Proof.
+  intros params args s t ctx t' ha hp hx e.
+  revert args s t ctx t' ha hp hx e.
+  induction params ; intros args s t ctx t' ha hp hx e.
+  - destruct args ; try discriminate. cbn in e. inversion e.
+    subst. assumption.
+  - destruct a as [na [bo|] ty].
+    + cbn in e. destruct t ; try discriminate.
+      dependent destruction hp. destruct H as [h1 h2]. simpl in h1, h2.
+      eapply IHparams ; try exact e ; try assumption.
+      constructor ; try assumption.
+      eapply wf_subst ; assumption.
+    + cbn in e. destruct t ; try discriminate.
+      destruct args ; try discriminate.
+      dependent destruction hp. simpl in *.
+      dependent destruction ha.
+      eapply IHparams ; try exact e ; try assumption.
+      constructor ; assumption.
+Qed.
+
+Lemma wf_instantiate_params :
+  forall params args t t',
+    Forall wf_decl params ->
+    Forall Ast.wf args ->
+    Ast.wf t ->
+    instantiate_params params args t = Some t' ->
+    Ast.wf t'.
+Proof.
+  intros params args t t' hparamas hargs ht e.
+  unfold instantiate_params in e. revert e.
+  case_eq (instantiate_params_subst (List.rev params) args [] t) ; try discriminate.
+  intros [ctx u] eq e. inversion e. subst. clear e.
+  apply wf_instantiate_params_subst_term in eq as h1 ; trivial.
+  apply wf_instantiate_params_subst_ctx in eq as h2 ; trivial.
+  - eapply wf_subst ; trivial.
+  - eapply rev_Forall. assumption.
 Qed.

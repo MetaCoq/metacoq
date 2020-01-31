@@ -50,10 +50,10 @@ mrproper:
 template-coq:
 	$(MAKE) -C template-coq
 
-pcuic: template-coq checker
+pcuic: template-coq
 	$(MAKE) -C pcuic
 
-safechecker: template-coq checker pcuic
+safechecker: template-coq pcuic
 	$(MAKE) -C safechecker
 
 erasure: template-coq safechecker pcuic

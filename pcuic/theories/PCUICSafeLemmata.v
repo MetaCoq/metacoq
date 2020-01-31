@@ -3,7 +3,7 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
      Classes.CRelationClasses ProofIrrelevance.
 From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
-     AstUtils UnivSubst.
+     AstUtils UnivSubst uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
      PCUICCumulativity PCUICSR PCUICPosition PCUICEquality PCUICNameless
@@ -1640,8 +1640,6 @@ Section Lemmata.
   Qed.
 
 End Lemmata.
-
-From MetaCoq.Checker Require Import uGraph.
 
 (* todo: move *)
 Lemma map_option_out_mapi :

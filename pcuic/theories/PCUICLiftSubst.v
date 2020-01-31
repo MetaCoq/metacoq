@@ -18,6 +18,7 @@ Require Import Equations.Prop.DepElim.
   a term is closed. *)
 
 Set Asymmetric Patterns.
+Derive Signature for Peano.le.
 
 (** Shift a renaming [f] by [k]. *)
 Definition shiftn k f :=
@@ -999,8 +1000,6 @@ Proof.
     now rewrite (proj2 (nth_error_None l #|l|)).
     simpl. now apply IHl.
 Qed.
-
-Derive Signature for Peano.le.
 
 Lemma subst_consn_lt {A} {l : list A} {i} :
   i < #|l| ->

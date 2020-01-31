@@ -2,8 +2,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec ZArith.
 From MetaCoq.Template Require Import config Ast AstUtils monad_utils utils
-     Induction LiftSubst UnivSubst.
-From MetaCoq.Checker Require Import Typing uGraph.
+     Induction LiftSubst UnivSubst uGraph Typing.
 Import MonadNotation.
 Require Import Equations.Prop.DepElim.
 Require Import ssreflect.

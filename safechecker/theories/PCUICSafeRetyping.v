@@ -1,8 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec.
-From MetaCoq.Template Require Import config monad_utils utils.
-From MetaCoq.Checker Require Import uGraph.
+From MetaCoq.Template Require Import config monad_utils utils uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICSafeLemmata
      PCUICUnivSubst PCUICTyping PCUICChecker PCUICConversion PCUICCumulativity PCUICSN PCUICValidity.

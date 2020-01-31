@@ -3,8 +3,7 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
      Classes.RelationClasses.
 From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
-     AstUtils UnivSubst.
-From MetaCoq.Checker Require Import uGraph.
+     AstUtils UnivSubst uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
      PCUICCumulativity PCUICSR PCUICEquality PCUICNameless PCUICConversion

@@ -1,5 +1,10 @@
 CAMLFLAGS+=-open Metacoq_template_plugin # Loads the extractable monad
 CAMLFLAGS+=-w -33 # Unused opens
+CAMLFLAGS+=-w -32 # Unused value
+CAMLFLAGS+=-w -39 # Unused rec flag
+CAMLFLAGS+=-w -26 # Unused variable
+CAMLFLAGS+=-w -34 # Unused type
+CAMLFLAGS+=-w -20 # Unused argument
 CAMLFLAGS+=-bin-annot #	For merlin
 
 # Clean the source directory of all extracted filess

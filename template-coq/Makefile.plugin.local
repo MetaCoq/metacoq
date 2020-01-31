@@ -1,5 +1,11 @@
 CAMLFLAGS+=-w -33 # Unused opens
+CAMLFLAGS+=-w -32 # Unused value
+CAMLFLAGS+=-w -39 # Unused rec flag
+CAMLFLAGS+=-w -26 # Unused variable
+CAMLFLAGS+=-w -34 # Unused type
 CAMLFLAGS+=-bin-annot # For merlin
+
+INSTALLDEFAULTROOT=MetaCoq/Template
 
 post-all::
 	cp gen-src/metacoq_template_plugin.cm* build/

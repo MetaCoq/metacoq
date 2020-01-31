@@ -1,7 +1,6 @@
 Require Import Nat Bool String BinInt List Relations Lia ssrbool.
 Require Import MSetFacts MSetProperties.
-From MetaCoq.Template Require Import utils config Universes monad_utils.
-From MetaCoq.Checker Require Import wGraph.
+From MetaCoq.Template Require Import utils config Universes monad_utils wGraph.
 
 Import ListNotations.
 Import ConstraintType MonadNotation.

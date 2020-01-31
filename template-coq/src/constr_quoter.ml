@@ -313,7 +313,7 @@ struct
     | None -> constr_mkApp (cNone, [| opType |])
 
 
-  let quote_global_reference : Globnames.global_reference -> quoted_global_reference = function
+  let quote_global_reference : Names.GlobRef.t -> quoted_global_reference = function
     | Globnames.VarRef _ -> CErrors.user_err (str "VarRef unsupported")
     | Globnames.ConstRef c ->
        let kn = quote_kn (Names.Constant.canonical c) in

@@ -13,11 +13,10 @@ let ltac_lcall tac args =
     (* Loc.tag @@ Names.Id.of_string tac *)
   in
   Tacexpr.TacArg(Loc.tag @@ Tacexpr.TacCall
-                              (Loc.tag (Misctypes.ArgVar (CAst.make ?loc:location name),args)))
+                              (Loc.tag (Locus.ArgVar (CAst.make ?loc:location name),args)))
 
 open Tacexpr
 open Tacinterp
-open Misctypes
 open Stdarg
 open Tacarg
 
@@ -34,7 +33,7 @@ let ltac_apply (f : Value.t) (args: Tacinterp.Value.t list) =
   let fold arg (i, vars, lfun) =
     let id = Names.Id.of_string ("x" ^ string_of_int i) in
     let (l,n) = (Loc.tag id) in
-    let x = Reference (ArgVar (CAst.make ?loc:l n)) in
+    let x = Reference (Locus.ArgVar (CAst.make ?loc:l n)) in
     (succ i, x :: vars, Id.Map.add id arg lfun)
   in
   let (_, args, lfun) = List.fold_right fold args (0, [], Id.Map.empty) in
@@ -50,7 +49,7 @@ let run_template_program env evm pgm =
 
 (** ********* Commands ********* *)
 
-VERNAC COMMAND EXTEND Make_tests CLASSIFIED AS QUERY
+VERNAC COMMAND EXTEND TemplateCoq_Test_Quote CLASSIFIED AS QUERY
     | [ "Test" "Quote" constr(def) ] ->
       [ let (evm,env) = Pfedit.get_current_context () in
         let (evm, def) = Constrintern.interp_open_constr env evm def in
@@ -59,7 +58,7 @@ VERNAC COMMAND EXTEND Make_tests CLASSIFIED AS QUERY
         run_template_program env evm pgm ]
 END;;
 
-VERNAC COMMAND EXTEND Make_vernac CLASSIFIED AS SIDEFF
+VERNAC COMMAND EXTEND TemplateCoq_Quote_Definition CLASSIFIED AS SIDEFF
     | [ "Quote" "Definition" ident(name) ":=" constr(def) ] ->
       [ let (evm,env) = Pfedit.get_current_context () in
         let (evm, def) = Constrintern.interp_open_constr env evm def in
@@ -68,7 +67,7 @@ VERNAC COMMAND EXTEND Make_vernac CLASSIFIED AS SIDEFF
         run_template_program env evm pgm ]
 END;;
 
-VERNAC COMMAND EXTEND Make_vernac_reduce CLASSIFIED AS SIDEFF
+VERNAC COMMAND EXTEND TemplateCoq_Quote_Definition_Eval CLASSIFIED AS SIDEFF
     | [ "Quote" "Definition" ident(name) ":=" "Eval" red_expr(rd) "in" constr(def) ] ->
       [ let (evm, env) = Pfedit.get_current_context () in
         let (evm, def) = Constrintern.interp_open_constr env evm def in
@@ -80,7 +79,7 @@ VERNAC COMMAND EXTEND Make_vernac_reduce CLASSIFIED AS SIDEFF
         run_template_program env evm pgm ]
 END;;
 
-VERNAC COMMAND EXTEND Make_recursive CLASSIFIED AS SIDEFF
+VERNAC COMMAND EXTEND TemplateCoq_Quote_Recursively_Definition CLASSIFIED AS SIDEFF
     | [ "Quote" "Recursively" "Definition" ident(name) ":=" constr(def) ] ->
       [ let (evm,env) = Pfedit.get_current_context () in
         let (evm, def) = Constrintern.interp_open_constr env evm def in
@@ -89,7 +88,7 @@ VERNAC COMMAND EXTEND Make_recursive CLASSIFIED AS SIDEFF
         run_template_program env evm pgm ]
 END;;
 
-VERNAC COMMAND EXTEND Unquote_vernac CLASSIFIED AS SIDEFF
+VERNAC COMMAND EXTEND TemplateCoq_Make_Definition CLASSIFIED AS SIDEFF
     | [ "Make" "Definition" ident(name) ":=" constr(def) ] ->
       [ let (evm, env) = Pfedit.get_current_context () in
         let (evm, def) = Constrintern.interp_open_constr env evm def in
@@ -98,7 +97,7 @@ VERNAC COMMAND EXTEND Unquote_vernac CLASSIFIED AS SIDEFF
         run_template_program env evm pgm ]
 END;;
 
-VERNAC COMMAND EXTEND Unquote_inductive CLASSIFIED AS SIDEFF
+VERNAC COMMAND EXTEND TemplateCoq_Make_Inductive CLASSIFIED AS SIDEFF
     | [ "Make" "Inductive" constr(def) ] ->
       [ let (evm, env) = Pfedit.get_current_context () in
         let (evm, def) = Constrintern.interp_open_constr env evm def in
@@ -107,7 +106,7 @@ VERNAC COMMAND EXTEND Unquote_inductive CLASSIFIED AS SIDEFF
         run_template_program env evm pgm ]
 END;;
 
-VERNAC COMMAND EXTEND Run_program CLASSIFIED AS SIDEFF
+VERNAC COMMAND EXTEND TemplateCoq_Run_Template_Program CLASSIFIED AS SIDEFF
     | [ "Run" "TemplateProgram" constr(def) ] ->
       [ let (evm, env) = Pfedit.get_current_context () in
         let (evm, def) = Constrintern.interp_open_constr env evm def in
@@ -118,7 +117,7 @@ END;;
 
 (** ********* Tactics ********* *)
 
-TACTIC EXTEND get_goal
+TACTIC EXTEND TemplateCoq_quote_term
     | [ "quote_term" constr(c) tactic(tac) ] ->
       [ (** quote the given term, pass the result to t **)
         Proofview.Goal.nf_enter begin fun gl ->
@@ -129,7 +128,7 @@ TACTIC EXTEND get_goal
   end ]
 END;;
 
-TACTIC EXTEND denote_term
+TACTIC EXTEND TemplateCoq_denote_term
     | [ "denote_term" constr(c) tactic(tac) ] ->
       [ Proofview.Goal.enter (begin fun gl ->
          let evm = Proofview.Goal.sigma gl in
@@ -139,7 +138,7 @@ TACTIC EXTEND denote_term
       end) ]
 END;;
 
-TACTIC EXTEND run_program
+TACTIC EXTEND TemplateCoq_run_template_program
     | [ "run_template_program" constr(c) tactic(tac) ] ->
       [ Proofview.Goal.enter (begin fun gl ->
          let env = Proofview.Goal.env gl in
@@ -153,13 +152,4 @@ TACTIC EXTEND run_program
               (ltac_apply tac (List.map to_ltac_val [EConstr.of_constr t]))
          | None -> Proofview.tclUNIT ()
        end) ]
-END;;
-
-VERNAC COMMAND EXTEND Make_tests CLASSIFIED AS QUERY
-    | [ "Test" "Quote" constr(c) ] ->
-      [ let (evm,env) = Pfedit.get_current_context () in
-	let c = Constrintern.interp_constr env evm c in
-	let result = Constr_quoter.TermReify.quote_term env (EConstr.to_constr evm (fst c)) in
-        Feedback.msg_notice (Tm_util.pr_constr result) ;
-	() ]
 END;;

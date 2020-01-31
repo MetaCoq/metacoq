@@ -1,8 +1,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec ZArith.
-From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
+From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils uGraph.
 From Equations Require Import Equations.
-From MetaCoq.Checker Require Import uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICTyping PCUICMetaTheory PCUICWcbvEval PCUICLiftSubst PCUICInversion
      PCUICConfluence PCUICCumulativity PCUICSR PCUICNormal PCUICSafeLemmata
@@ -480,6 +479,7 @@ Section Erase.
 
 End Erase.
 
+Local Arguments bind _ _ _ _ ! _.
 From MetaCoq Require Import ErasureCorrectness.
 
 Opaque wf_reduction.

@@ -3,12 +3,7 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia ssreflect.
 From Coq Require Import String Wf Wellfounded Relation_Definitions Relation_Operators Lexicographic_Product Wf_nat.
 
-From MetaCoq.Template Require Import config utils monad_utils Ast AstUtils Induction LiftSubst UnivSubst EnvironmentTyping.
-From MetaCoq.Checker Require Import LibHypsNaming Reflect.
-
-From Equations Require Import Equations.
-Require Import Equations.Prop.DepElim.
-Require Import ssreflect.
+From MetaCoq.Template Require Import config utils monad_utils Ast AstUtils Induction LiftSubst UnivSubst EnvironmentTyping LibHypsNaming.
 Import MonadNotation.
 
 Local Open Scope string_scope.
@@ -1024,9 +1019,6 @@ Proof.
   induction 1; eauto using wf_local_app.
 Defined.
 Hint Resolve typing_wf_local : wf.
-
-Set Equations With UIP.
-Derive Signature for All_local_env.
 
 Lemma size_wf_local_app `{checker_flags} {Σ} (Γ Γ' : context) (Hwf : wf_local Σ (Γ ,,, Γ')) :
   wf_local_size Σ (@typing_size _) _ (wf_local_app _ _ _ Hwf) <=

@@ -1,6 +1,13 @@
 -I src
 -R theories MetaCoq.Template
 
+# utils
+theories/utils/LibHypsNaming.v
+theories/utils/wGraph.v
+
+# common
+theories/common/uGraph.v
+
 # Basic Ast files
 theories/utils.v
 theories/config.v
@@ -14,6 +21,9 @@ theories/LiftSubst.v
 theories/UnivSubst.v
 theories/Pretty.v
 theories/EnvironmentTyping.v
+theories/WfInv.v
+theories/Typing.v
+theories/TypingWf.v
 
 # The Template monad
 theories/TemplateMonad.v

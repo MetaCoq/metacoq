@@ -46,18 +46,6 @@ Notation "'eta_compose'" := (fun g f x => g (f x)).
 (* \circ *)
 Notation "g ∘ f" := (eta_compose g f).
 
-Tactic Notation "destruct" "?" :=
-  let E := fresh "E" in
-  match goal with
-    [ |- context[match ?X with _ => _ end]] => destruct X eqn:E
-  | [ H : context[match ?X with _ => _ end] |- _] => destruct X eqn:E
-  end.
-
-Tactic Notation "destruct" "?" "in" hyp(H) :=
-  let e := fresh "E" in
-  match type of H with context [match ?x with _ => _ end] => destruct x eqn:e
-  end.
-
 Tactic Notation "apply*" constr(H) "in" hyp(H')
   := apply H in H'; [..|apply H].
 

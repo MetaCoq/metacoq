@@ -331,6 +331,8 @@ Section ContextConversion.
 
   Notation conv_context Γ Γ' := (context_relation conv_decls Γ Γ').
 
+  Derive Signature for conv_decls.
+
   Global Instance conv_ctx_refl : Reflexive (context_relation conv_decls).
   Proof.
     intro Γ; induction Γ; try econstructor.

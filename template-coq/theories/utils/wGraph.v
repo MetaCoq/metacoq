@@ -1,10 +1,6 @@
 Require Import Peano_dec Nat Bool List Structures.Equalities Lia
         MSets.MSetList MSetFacts MSetProperties.
-(* Require Import ssrbool ssrfun. *)
 From MetaCoq.Template Require Import utils monad_utils.
-
-From Equations Require Import Equations.
-Require Import Equations.Prop.DepElim.
 
 Notation "p .1" := (fst p)
   (at level 2, left associativity, format "p .1") : pair_scope.
@@ -455,20 +451,29 @@ Module WeightedGraph (V : UsualOrderedType).
       | paths_step x y z e p => negb (VSet.mem x (nodes p)) && is_simple p
       end.
 
-    Equations(noeqns) to_simple {x y} (p : Paths x y) (Hp : is_simple p = true)
-      : SimplePaths (nodes p) x y :=
-      to_simple (paths_refl x) Hp := spaths_refl _ _ ;
-      to_simple (paths_step e p) Hp := spaths_step _ e (to_simple p _).
+    Program Definition to_simple : forall {x y} (p : Paths x y),
+        is_simple p = true -> SimplePaths (nodes p) x y
+      := fix to_simple x y p (Hp : is_simple p = true) {struct p} :=
+           match
+             p in Paths t t0
+             return is_simple p = true -> SimplePaths (nodes p) t t0
+           with
+           | paths_refl x =>
+             fun _ => spaths_refl (nodes (paths_refl x)) x
+           | @paths_step x y z e p0 =>
+             fun Hp0 => spaths_step _ e (to_simple y z p0 _)
+           end Hp.
     Next Obligation.
       split.
       - eapply VSetProp.Add_add.
-      - apply andP in Hp as [h1 h2].
+      - apply andP in Hp0 as [h1 h2].
         apply negb_true_iff in h1. apply VSetFact.not_mem_iff in h1.
         assumption.
     Defined.
     Next Obligation.
-      apply andP in Hp as [? ?]. auto.
+      apply andP in Hp0 as [? ?]. auto.
     Defined.
+
 
     Lemma weight_concat {x y z} (p : Paths x y) (q : Paths y z)
       : weight (concat p q) = weight p + weight q.
@@ -878,8 +883,6 @@ Module WeightedGraph (V : UsualOrderedType).
         apply VSet.mem_spec, VSetProp.remove_cardinal_1 in HH.
         lia.
     Qed.
-
-    (* From Equations Require Import Equations. *)
 
     (* Equations lsp0 (s : VSet.t) (x z : V.t) : Nbar.t by wf (VSet.cardinal s) *)
     (*   := *)

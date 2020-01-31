@@ -2,8 +2,8 @@
 Set Warnings "-notation-overridden".
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia CRelationClasses.
-From MetaCoq.Template Require Import config utils Ast AstUtils Induction LiftSubst UnivSubst.
-From MetaCoq.Checker Require Import WfInv Typing.
+From MetaCoq.Template Require Import config utils Ast AstUtils Induction LiftSubst UnivSubst WfInv Typing.
+From MetaCoq.Checker Require Import Reflect.
 
 Set Asymmetric Patterns.
 Require Import ssreflect ssrbool.
@@ -443,24 +443,22 @@ Section Wcbv.
     induction 1 using value_values_ind; simpl; auto using value.
     - now constructor.
     - assert (All2 eval l l).
-      { induction X; constructor; auto. eapply IHX. now depelim H0. }
+      { induction X; constructor; auto. eapply IHX. now inversion H0. }
       move/implyP: (value_head_spec t).
       move/(_ H) => Ht.
       induction l using rev_ind. simpl.
       now eapply value_head_final.
-      eapply All_app in H0 as [Hl Hx]. depelim Hx.
-      eapply All_app in X as [Hl' Hx']. depelim Hx'.
-      eapply All2_app_inv_r in X0 as [Hl'' [Hx'' [? [? ?]]]]. depelim a0. depelim a0.
+      eapply All_app in H0 as [Hl Hx]. inv Hx.
+      eapply All_app in X as [Hl' Hx']. inv Hx'.
+      eapply All2_app_r in X0 as [Hl'' Hx''].
       pose proof (value_head_nApp H).
       rewrite -{1}mkApps_tApp => //. rewrite is_empty_app /= // andb_false_r //.
       eapply eval_app_cong; auto. rewrite is_empty_app /= andb_false_r //.
       now eapply value_head_final.
-      assert (All2 eval l l).
-      { clear -Hl'. induction Hl'; constructor; auto. }
       eapply All2_app; auto.
     - destruct f; try discriminate.
       assert (All2 eval args args).
-      { clear H0. induction X; constructor; auto. eapply IHX. now depelim H. }
+      { clear H0. induction X; constructor; auto. eapply IHX. now inversion H. }
       eapply eval_fix_value => //.
       constructor; auto.
   Qed.

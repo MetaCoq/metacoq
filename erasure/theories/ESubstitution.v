@@ -150,7 +150,7 @@ Proof.
     forall t',
     Σ;;; Γ0 |- t ⇝ℇ t' ->
     _));
-    intros Σ wfΣ Γ0; !!intros; subst Γ0.
+    intros Σ wfΣ Γ0; intros; subst Γ0.
   all: match goal with [ H : erases _ _ ?a _ |- _ ] => tryif is_var a then idtac else inv H end.
   all: try now (cbn; econstructor; eauto).
   all: try now (econstructor; eapply Is_type_weakening; eauto).
@@ -158,20 +158,20 @@ Proof.
   - destruct ?; econstructor.
   - econstructor.
     unfold app_context, PCUICAst.snoc in *.
-    pose proof (h_forall_Γ0 (Γ) (PCUICAst.vass n t :: Γ') Γ'').
+    pose proof (H0 Γ (PCUICAst.vass n t :: Γ') Γ'').
     rewrite lift_context_snoc0, <- plus_n_O in *.
-    eapply H; eauto. cbn. econstructor.
+    eapply H1; eauto. cbn. econstructor.
     eauto. cbn. exists s1. eapply weakening_typing with (T := tSort s1); eauto.
   - econstructor.
-    + eapply h_forall_Γ0; eauto.
-    + pose proof (h_forall_Γ1 Γ (PCUICAst.vdef n b b_ty :: Γ') Γ'').
+    + eapply H0; eauto.
+    + pose proof (H1 Γ (PCUICAst.vdef n b b_ty :: Γ') Γ'').
       rewrite lift_context_snoc0, <- plus_n_O in *.
-      eapply H; eauto. cbn. econstructor.
+      eapply H2; eauto. cbn. econstructor.
       eauto. cbn. 2: cbn; eapply weakening_typing; eauto.
       eapply weakening_typing in X0; eauto.
   - econstructor.
     + eauto.
-    + eapply h_forall_Γ0; eauto.
+    + eapply H3; eauto.
     + eapply All2_map.
       eapply All2_All_left in X3.
       2:{ idtac. intros ? ? [[[[? ?] e0] ?] e']. exact e0. }
@@ -205,13 +205,13 @@ Proof.
         eassumption. }
     rewrite app_length in *.
     subst types. rewrite fix_context_length in *.
-    rewrite (All2_length _ _ H4) in *.
+    rewrite (All2_length _ _ H5) in *.
     eapply erases_ctx_ext. eapply e4.
     rewrite lift_context_app. unfold app_context.
     rewrite !app_assoc. repeat f_equal.
     rewrite <- lift_fix_context.
     rewrite <- plus_n_O.
-    now rewrite (All2_length _ _ H4).
+    now rewrite (All2_length _ _ H5).
   - eauto.
 Qed.
 

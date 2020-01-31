@@ -4,9 +4,8 @@ Set Warnings "-notation-overridden".
 
 From Coq Require Import Bool String List Program BinPos Compare_dec.
 From MetaCoq.Template Require Import config utils AstUtils BasicAst Ast.
-From MetaCoq.Checker Require Import WfInv Typing Weakening TypingWf.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst
-     PCUICUnivSubst PCUICTyping PCUICGeneration.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils.
+
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.

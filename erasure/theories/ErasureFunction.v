@@ -1,7 +1,6 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec.
-From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
-From MetaCoq.Checker Require Import uGraph.
+From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICTyping PCUICMetaTheory PCUICWcbvEval PCUICLiftSubst PCUICInversion
      PCUICConfluence PCUICCumulativity PCUICSR PCUICNormal PCUICSafeLemmata
@@ -565,6 +564,7 @@ Section Erase.
 End Erase.
 
 Require Import ErasureCorrectness.
+Local Arguments bind _ _ _ _ ! _.
 
 Lemma erases_erase (Σ : global_env_ext) Γ t T (wfΣ : ∥wf_ext Σ∥) (wfΓ : ∥wf_local Σ Γ∥) t' :
   Σ ;;; Γ |- t : T ->

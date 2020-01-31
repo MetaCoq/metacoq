@@ -27,6 +27,13 @@ BinNums
 Equality0
 CRelationClasses
 Compare_dec
+MCList
+MCRelations
+MCOption
+MCProd
+MCString
+MCCompare
+All_Forall
 Utils
 Config0
 Universes0

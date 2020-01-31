@@ -15,7 +15,7 @@ From MetaCoq.SafeChecker Require Import PCUICSafeChecker PCUICSafeConversion Saf
    https://github.com/coq/coq/issues/7017. *)
 Extract Inductive Decimal.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
 
-Extract Constant utils.ascii_compare =>
+Extract Constant ascii_compare =>
  "fun x y -> match Char.compare x y with 0 -> Eq | x when x < 0 -> Lt | _ -> Gt".
 
 Extraction Blacklist config uGraph Universes Ast String List Nat Int

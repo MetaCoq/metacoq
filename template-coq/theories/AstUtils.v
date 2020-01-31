@@ -692,7 +692,7 @@ Qed.
 
 
 Lemma map_def_test_spec {A B : Set}
-      (P P' : A -> Prop) (p p' : pred A) (f f' g g' : A -> B) (x : def A) :
+      (P P' : A -> Prop) (p p' : A -> bool) (f f' g g' : A -> B) (x : def A) :
   P x.(dtype) -> P' x.(dbody) -> (forall x, P x -> p x -> f x = g x) ->
   (forall x, P' x -> p' x -> f' x = g' x) ->
   test_def p p' x ->

@@ -1,7 +1,7 @@
 Require Import Coq.Strings.String.
 Require Import Coq.Lists.List.
 From MetaCoq.Template Require Import
-     Ast Loader.
+     Ast Loader utils.
 From MetaCoq.Template.TemplateMonad Require Import
      Common Extractable.
 
@@ -11,7 +11,7 @@ Notation "<% x %>" := (ltac:(let p y := exact y in quote_term x p))
    (only parsing).
 
 Run TemplateProgram
-    (tmBind (tmReturn 1) (fun x => tmMsg (utils.string_of_nat x))).
+    (tmBind (tmReturn 1) (fun x => tmMsg (string_of_nat x))).
 
 Run TemplateProgram
     (tmPrint <% 1 + 1 : nat %>).
@@ -46,7 +46,7 @@ Print blah0.
 
 Run TemplateProgram
     (tmBind (tmQuoteInductive "Coq.Init.Datatypes.nat")
-            (fun mi => tmMsg (utils.string_of_nat (length mi.(ind_bodies))))).
+            (fun mi => tmMsg (string_of_nat (length mi.(ind_bodies))))).
 
 Definition empty_constraints : ConstraintSet.t_.
   econstructor.

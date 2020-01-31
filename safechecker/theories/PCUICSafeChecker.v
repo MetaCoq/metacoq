@@ -61,10 +61,10 @@ Fixpoint monad_All2 {T E} {M : Monad T} {M' : MonadExc E T} wrong_sizes
          {A B R} (f : forall x y, T (R x y)) l1 l2
   : T (@All2 A B R l1 l2)
   := match l1, l2 with
-     | [], [] => ret (All2_nil R)
+     | [], [] => ret All2_nil
      | a :: l1, b :: l2 => X <- f a b ;;
                           Y <- monad_All2 wrong_sizes f l1 l2 ;;
-                          ret (All2_cons R a b l1 l2 X Y)
+                          ret (All2_cons X Y)
      | _, _ => raise wrong_sizes
      end.
 
@@ -904,13 +904,13 @@ Section Typecheck.
                   : typing_result
                     (All2 (fun br bty => br.1 = bty.1 /\ ∥ Σ ;;; Γ |- br.2 : bty.2 ∥) brs btys)
                           := match brs, btys with
-                             | [], [] => ret (All2_nil _)
+                             | [], [] => ret All2_nil
                              | (n, t) :: brs , (m, A) :: btys =>
                                W <- check_dec (Msg "not nat eq")
                                              (EqDecInstances.nat_eqdec n m) ;;
                                Z <- infer_cumul infer Γ HΓ t A _ ;;
                                X <- check_branches brs btys _ ;;
-                               ret (All2_cons _ _ _ _ _ (conj _ _) X)
+                               ret (All2_cons (conj _ _) X)
                              | [], _ :: _
                              | _ :: _, [] => raise (Msg "wrong number of branches")
                              end) brs btys _ ;;
@@ -1425,7 +1425,7 @@ Section CheckEnv.
   Program Fixpoint monad_Alli {T} {M : Monad T} {A} {P} (f : forall n x, T (∥ P n x ∥)) l n
     : T (∥ @Alli A P n l ∥)
     := match l with
-       | [] => ret (sq (Alli_nil _ _))
+       | [] => ret (sq Alli_nil)
        | a :: l => X <- f n a ;;
                     Y <- monad_Alli f l (S n) ;;
                     ret _

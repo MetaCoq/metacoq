@@ -2,7 +2,17 @@
 -R theories MetaCoq.Template
 
 # utils
+theories/utils/All_Forall.v
+theories/utils/MCArith.v
+theories/utils/MCCompare.v
+theories/utils/MCEquality.v
 theories/utils/LibHypsNaming.v
+theories/utils/MCList.v
+theories/utils/MCOption.v
+theories/utils/MCProd.v
+theories/utils/MCRelations.v
+theories/utils/MCSquash.v
+theories/utils/MCString.v
 theories/utils/wGraph.v
 
 # common

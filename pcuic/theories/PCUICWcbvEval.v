@@ -243,17 +243,17 @@ Section Wcbv.
       (forall i : nat, option_map decl_body (nth_error Γ i) = Some None -> P (tRel i) (tRel i)) ->
       (forall (c : ident) (decl : constant_body) (body : term),
           declared_constant Σ c decl ->
-          forall (u : universe_instance) (res : term),
+          forall (u : Instance.t) (res : term),
             cst_body decl = Some body ->
             eval (subst_instance_constr u body) res -> P (subst_instance_constr u body) res -> P (tConst c u) res) ->
       (forall (c : ident) (decl : constant_body),
-          declared_constant Σ c decl -> forall u : universe_instance, cst_body decl = None -> P (tConst c u) (tConst c u)) ->
-      (forall (ind : inductive) (pars : nat) (discr : term) (c : nat) (u : universe_instance)
+          declared_constant Σ c decl -> forall u : Instance.t, cst_body decl = None -> P (tConst c u) (tConst c u)) ->
+      (forall (ind : inductive) (pars : nat) (discr : term) (c : nat) (u : Instance.t)
               (args : list term) (p : term) (brs : list (nat × term)) (res : term),
           eval discr (mkApps (tConstruct ind c u) args) ->
           P discr (mkApps (tConstruct ind c u) args) ->
           eval (iota_red pars c args brs) res -> P (iota_red pars c args brs) res -> P (tCase (ind, pars) p discr brs) res) ->
-      (forall (i : inductive) (pars arg : nat) (discr : term) (args : list term) (k : nat) (u : universe_instance)
+      (forall (i : inductive) (pars arg : nat) (discr : term) (args : list term) (k : nat) (u : Instance.t)
               (a res : term),
           eval discr (mkApps (tConstruct i k u) args) ->
           P discr (mkApps (tConstruct i k u) args) ->
@@ -376,7 +376,7 @@ Section Wcbv.
     - now eapply atom_mkApps in H.
     - intros * isapp appeq. move: (value_head_nApp H) => Ht.
       apply mkApps_eq_inj in appeq; intuition subst; auto.
-    - intros * isapp appeq. move: (isStuckfix_nApp H1) => Hf.
+    - intros * isapp appeq. move: (isStuckfix_nApp H) => Hf.
       apply mkApps_eq_inj in appeq; intuition subst; auto.
   Qed.
 
@@ -403,7 +403,7 @@ Section Wcbv.
       destruct decl as [? [b|] ?]; try discriminate.
       constructor. constructor.
     - eapply value_stuck_fix => //.
-      now eapply All2_right in H.
+      now eapply All2_right in X1.
     - destruct (mkApps_elim f' [a']).
       eapply value_mkApps_inv in IHX1 => //.
       destruct IHX1; intuition subst.
@@ -433,8 +433,7 @@ Section Wcbv.
   Proof.
     induction 1 using value_values_ind; simpl; auto using value.
     - now constructor.
-    - assert (All2 eval l l).
-      { induction X; constructor; auto. eapply IHX. now depelim H0. }
+    - apply All_All2_refl in X0 as X1.
       move/implyP: (value_head_spec t).
       move/(_ H) => Ht.
       induction l using rev_ind. simpl.
@@ -452,9 +451,9 @@ Section Wcbv.
       * now eapply eval_atom.
       * now eapply eval_atom.
       * rewrite -mkApps_nested.
-        eapply All_app in H0 as [Hl Hx]. depelim Hx.
-        eapply All_app in X as [Hl' Hx']. depelim Hx'.
-        eapply All2_app_inv_r in X0 as [Hl'' [Hx'' [? [? ?]]]]. depelim a0. depelim a0.
+        eapply All_app in X as [Hl Hx]. depelim Hx.
+        eapply All_app in X0 as [Hl' Hx']. depelim Hx'.
+        eapply All2_app_inv_r in X1 as [Hl'' [Hx'' [? [? ?]]]]. depelim a0. depelim a0.
         eapply eval_app_cong; auto.
         eapply IHl; auto.
         now eapply All_All2.
@@ -466,8 +465,7 @@ Section Wcbv.
         rewrite orb_false_r.
         destruct t; auto.
     - destruct f; try discriminate.
-      assert (All2 eval args args).
-      { clear H0. induction X; constructor; auto. eapply IHX. now depelim H. }
+      apply All_All2_refl in X0.
       eapply eval_fix_value => //.
       constructor; auto.
   Qed.

@@ -11,7 +11,7 @@ From MetaCoq Require Import LibHypsNaming.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
      PCUICSubstitution PCUICClosed PCUICCumulativity PCUICGeneration PCUICReduction
-     PCUICParallelReduction PCUICEquality
+     PCUICParallelReduction PCUICEquality PCUICUnivSubstitution
      PCUICParallelReductionConfluence PCUICConfluence.
 
 From Equations Require Import Equations.

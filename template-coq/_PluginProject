@@ -64,24 +64,24 @@ gen-src/mCCompare.ml
 gen-src/mCCompare.mli
 gen-src/mCList.ml
 gen-src/mCList.mli
+gen-src/mCOption.ml
+gen-src/mCOption.mli
 gen-src/mCProd.ml
 gen-src/mCProd.mli
 gen-src/mCRelations.ml
 gen-src/mCRelations.mli
 gen-src/mCString.ml
 gen-src/mCString.mli
-gen-src/mCOption.ml
-gen-src/mCOption.mli
 gen-src/mSetDecide.ml
 gen-src/mSetDecide.mli
 gen-src/mSetFacts.ml
 gen-src/mSetFacts.mli
 gen-src/mSetInterface.ml
 gen-src/mSetInterface.mli
+gen-src/mSetList.ml
+gen-src/mSetList.mli
 gen-src/mSetProperties.ml
 gen-src/mSetProperties.mli
-gen-src/mSetWeakList.ml
-gen-src/mSetWeakList.mli
 gen-src/nat0.ml
 gen-src/nat0.mli
 gen-src/orderedType0.ml
@@ -113,8 +113,6 @@ gen-src/universes0.ml
 gen-src/universes0.mli
 gen-src/univSubst0.ml
 gen-src/univSubst0.mli
-gen-src/utils.ml
-gen-src/utils.mli
 
 gen-src/metacoq_template_plugin.mlpack
 

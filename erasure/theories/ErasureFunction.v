@@ -245,7 +245,7 @@ Next Obligation.
   pose proof (hnf_sound HΣ (h := h)).
   repeat match goal with [H : squash (red _ _ _ _ ) |- _ ] => destruct H end.
   destruct HΣ.
-  eapply PCUICConfluence.red_confluence in X as [t'' []]. 3:exact X0. 2:eauto.
+  eapply PCUICConfluence.red_confluence in X0 as [t'' []]. 3:exact X1. 2:eauto.
   eapply red_red' in r.
   inversion r; subst.
   - eapply invert_red_sort in r0; eauto.
@@ -271,7 +271,7 @@ Next Obligation.
   pose proof (hnf_sound HΣ (h := h)).
   repeat match goal with [H : squash (red _ _ _ _ ) |- _ ] => destruct H end.
   destruct HΣ.
-  eapply PCUICConfluence.red_confluence in X1 as [t'' []]. 3:exact X2. 2:eauto.
+  eapply PCUICConfluence.red_confluence in X2 as [t'' []]. 3:exact X3. 2:eauto.
   eapply red_red' in r.
   inversion r; subst.
   - eapply invert_red_prod in r0 as (? & ? & [] & ?); eauto.
@@ -388,7 +388,7 @@ Program Definition is_erasable (Sigma : PCUICAst.global_env_ext) (HΣ : ∥wf_ex
     ret (left _)
   else mlet (K; _) <-  @make_graph_and_infer _ _ HΣ Gamma HΓ T ;;
        mlet (u;_) <- @reduce_to_sort _ Sigma _ Gamma K _ ;;
-      match is_prop_sort u with true => ret (left _) | false => ret (right _) end
+      match Universe.is_prop u with true => ret (left _) | false => ret (right _) end
 .
 Next Obligation. sq; eauto. Qed.
 Next Obligation.
@@ -615,11 +615,11 @@ Proof.
 
     pose proof (Prelim.monad_map_All2 _ _ _ brs a2 E2).
 
-    eapply All2_All_left in X3. 2:{ intros. destruct X4. destruct p0. destruct p0. exact e0. }
+    eapply All2_All_left in X3. 2:{ intros. destruct X5. destruct p0. destruct p0. exact e0. }
 
     eapply All2_impl.
     eapply All2_All_mix_left. eassumption. eassumption.
-    intros. destruct H5.
+    intros. destruct H.
     destruct ?; inv e0. cbn. eauto.
   - econstructor.
     clear E.
@@ -635,7 +635,7 @@ Proof.
     pose proof (Prelim.monad_map_All2 _ _ _ mfix a1 E1).
     eapply All2_impl. eapply All2_All_mix_left. exact X0. eassumption.
 
-    intros. destruct X1. cbn in *. unfold bind in e. cbn in e.
+    intros. destruct X2. cbn in *. unfold bind in e. cbn in e.
     repeat destruct ?; try congruence; inv e.
 
     cbn. repeat split; eauto.
@@ -773,10 +773,10 @@ Proof.
         eapply All2_Forall2.
         eapply All2_impl. eassumption.
 
-        intros. cbn in H0.
-        unfold erase_one_inductive_body, bind in H0. cbn in H0.
+        intros. cbn in H.
+        unfold erase_one_inductive_body, bind in H. cbn in H.
         repeat destruct ?; try congruence.
-        inv H0.
+        inv H.
         unfold erases_one_inductive_body. cbn. destruct ?; cbn.
         (* unfold lift_opt_typing in E. *)
         (* destruct decompose_prod_n_assum eqn:E6; inv E. cbn. *)
@@ -786,7 +786,7 @@ Proof.
            eapply All2_impl_In. eassumption.
            intros. destruct x0, p, y, p. cbn in *.
            destruct ?; try congruence.
-           inv H4. split; eauto.
+           inv H1. split; eauto.
 
            (* pose (t' := t). inv t'. cbn in *. *)
            destruct (erase_Some_typed E6) as [? []].
@@ -794,9 +794,9 @@ Proof.
            eapply erases_erase. 2:eauto. eauto.
         -- eapply All2_Forall2.
            eapply All2_impl_In. eassumption.
-           intros. cbn in H2. destruct x0, y.
+           intros. cbn in H1. destruct x0, y.
            destruct ?; try congruence;
-             inv H4. split; eauto.
+             inv H1. split; eauto.
 
            (* pose (t' := t). inv t'. cbn in *. *)
            destruct (erase_Some_typed E6) as [? []].

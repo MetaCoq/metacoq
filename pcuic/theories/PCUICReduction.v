@@ -75,7 +75,7 @@ Instance red_Reflexive Σ Γ : Reflexive (red Σ Γ)
 Section ReductionCongruence.
   Context {Σ : global_env}.
 
-  Inductive term_context : Set :=
+  Inductive term_context :=
   | tCtxHole : term_context
   | tCtxEvar      : nat -> list_context -> term_context
   | tCtxProd_l      : name -> term_context (* the type *) -> term -> term_context
@@ -100,19 +100,19 @@ Section ReductionCongruence.
   (* | tCtxFix       : mfixpoint_context -> nat -> term_context harder because types of fixpoints are necessary *)
   (* | tCtxCoFix     : mfixpoint_context -> nat -> term_context *)
 
-  with list_context : Set :=
+  with list_context :=
    | tCtxHead : term_context -> list term -> list_context
    | tCtxTail : term -> list_context -> list_context
 
-  with list_nat_context : Set :=
+  with list_nat_context :=
    | tCtxHead_nat : (nat * term_context) -> list (nat * term) -> list_nat_context
    | tCtxTail_nat : (nat * term) -> list_nat_context -> list_nat_context.
 
-  (* with mfixpoint_context : Set := *)
+  (* with mfixpoint_context := *)
   (*  | tCtxHead_mfix : def_context -> list (def term) -> mfixpoint_context *)
   (*  | tCtxTail_mfix : def term -> mfixpoint_context -> mfixpoint_context *)
 
-  (* with def_context : Set := *)
+  (* with def_context := *)
   (*  | tCtxType : name -> term_context -> term -> nat -> def_context *)
   (*  | tCtxDef : name -> term -> term_context -> nat -> def_context. *)
 

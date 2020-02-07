@@ -67,7 +67,7 @@ Proof.
     rewrite ?IHt ?IHt1 ?IHt2 ;
     easy
   ].
-  - simpl. f_equal. induction H.
+  - simpl. f_equal. induction X.
     + reflexivity.
     + simpl. f_equal ; easy.
   - simpl. rewrite IHt1 IHt2. f_equal.

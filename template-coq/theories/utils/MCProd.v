@@ -25,6 +25,10 @@ Open Scope pair_scope.
 Notation "x × y" := (prod x y )(at level 80, right associativity).
 
 
+Notation "p .p1" := (proj1 p) (at level 2, left associativity, format "p .p1").
+Notation "p .p2" := (proj2 p) (at level 2, left associativity, format "p .p2").
+
+
 Definition on_snd {A B C} (f : B -> C) (p : A * B) :=
   (fst p, f (snd p)).
 
@@ -74,3 +78,15 @@ Proof. apply andb_true_iff. Qed.
 
 Lemma andP {b b'} : is_true (b && b') -> is_true b /\ is_true b'.
 Proof. apply andb_and. Qed.
+
+Definition fst_eq {A B} {x x' : A} {y y' : B}
+  : (x, y) = (x', y') -> x = x'.
+Proof.
+  inversion 1; reflexivity.
+Qed.
+
+Definition snd_eq {A B} {x x' : A} {y y' : B}
+  : (x, y) = (x', y') -> y = y'.
+Proof.
+  inversion 1; reflexivity.
+Qed.

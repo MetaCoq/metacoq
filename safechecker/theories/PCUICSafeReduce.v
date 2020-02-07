@@ -274,7 +274,7 @@ Section Reduce.
     discr_construct (tConstruct ind n ui) := False ;
     discr_construct _ := True.
 
-  Inductive construct_view : term -> Set :=
+  Inductive construct_view : term -> Type :=
   | view_construct : forall ind n ui, construct_view (tConstruct ind n ui)
   | view_other : forall t, discr_construct t -> construct_view t.
 
@@ -294,7 +294,7 @@ Section Reduce.
     red_discr (tProj _ _) _ := False ;
     red_discr _ _ := True.
 
-  Inductive red_view : term -> stack -> Set :=
+  Inductive red_view : term -> stack -> Type :=
   | red_view_Rel c π : red_view (tRel c) π
   | red_view_LetIn A b B c π : red_view (tLetIn A b B c) π
   | red_view_Const c u π : red_view (tConst c u) π
@@ -321,7 +321,7 @@ Section Reduce.
     discr_construct_cofix (tCoFix mfix idx) := False ;
     discr_construct_cofix _ := True.
 
-  Inductive construct_cofix_view : term -> Set :=
+  Inductive construct_cofix_view : term -> Type :=
   | ccview_construct : forall ind n ui, construct_cofix_view (tConstruct ind n ui)
   | ccview_cofix : forall mfix idx, construct_cofix_view (tCoFix mfix idx)
   | ccview_other : forall t, discr_construct_cofix t -> construct_cofix_view t.

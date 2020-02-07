@@ -42,9 +42,6 @@ Register MetaCoq.Template.TemplateMonad.Common.existT_typed_term as metacoq.sigm
 
 (* Ast *)
 
-Register MetaCoq.Template.utils.NEL.sing as metacoq.nel.sing.
-Register MetaCoq.Template.utils.NEL.cons as metacoq.nel.cons.
-
 Register MetaCoq.Template.BasicAst.nAnon as metacoq.ast.nAnon.
 Register MetaCoq.Template.BasicAst.nNamed as metacoq.ast.nNamed.
 Register MetaCoq.Template.BasicAst.ident as metacoq.ast.ident.
@@ -78,13 +75,23 @@ Register MetaCoq.Template.Universes.InType as metacoq.ast.InType.
 Register MetaCoq.Template.Universes.ConstraintType.Le as metacoq.ast.constraints.Le.
 Register MetaCoq.Template.Universes.ConstraintType.Lt as metacoq.ast.constraints.Lt.
 Register MetaCoq.Template.Universes.ConstraintType.Eq as metacoq.ast.constraints.Eq.
-Register MetaCoq.Template.Universes.Universe.make'' as metacoq.ast.universe.make.
+Register MetaCoq.Template.Universes.Universe.from_kernel_repr as metacoq.ast.universe.from_kernel_repr.
+Register MetaCoq.Template.Universes.Universe.to_kernel_repr as metacoq.ast.universe.to_kernel_repr.
 Register MetaCoq.Template.Universes.LevelSetProp.of_list as metacoq.ast.universe.of_list.
 Register MetaCoq.Template.Universes.Level.t as metacoq.ast.level.t.
 Register MetaCoq.Template.Universes.Level.Level as metacoq.ast.level.Level.
 Register MetaCoq.Template.Universes.Level.lProp as metacoq.ast.level.lProp.
 Register MetaCoq.Template.Universes.Level.lSet as metacoq.ast.level.lSet.
 Register MetaCoq.Template.Universes.Level.Var as metacoq.ast.level.Var.
+
+Register MetaCoq.Template.Universes.NoPropLevel.Level as metacoq.ast.noproplevel.Level.
+Register MetaCoq.Template.Universes.NoPropLevel.lSet as metacoq.ast.noproplevel.lSet.
+Register MetaCoq.Template.Universes.NoPropLevel.Var as metacoq.ast.noproplevel.Var.
+Register MetaCoq.Template.Universes.UnivExpr.lProp as metacoq.ast.univexpr.prop.
+Register MetaCoq.Template.Universes.UnivExpr.npe as metacoq.ast.univexpr.npe.
+
+Register MetaCoq.Template.Universes.UnivExprSet.Mkt as metacoq.ast.univexprset.mkt.
+Register MetaCoq.Template.Universes.Universe.Build_t as metacoq.ast.universe.build.
 
 Register MetaCoq.Template.Universes.Variance.t as metacoq.ast.variance.t.
 Register MetaCoq.Template.Universes.Variance.Irrelevant as metacoq.ast.variance.Irrelevant.
@@ -105,7 +112,7 @@ Register MetaCoq.Template.Universes.AUContext.t as metacoq.ast.AUContext.t.
 Register MetaCoq.Template.Universes.AUContext.make as metacoq.ast.AUContext.make.
 
 Register MetaCoq.Template.Universes.LevelSet.t_ as metacoq.ast.LevelSet.t.
-Register MetaCoq.Template.Universes.make_univ_constraint as metacoq.ast.make_univ_constraint.
+Register MetaCoq.Template.Universes.UnivConstraint.make as metacoq.ast.make_univ_constraint.
 
 Register MetaCoq.Template.common.uGraph.init_graph as metacoq.ast.graph.init.
 (* FIXME wrong! *)

@@ -9,7 +9,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICReduction PCUICWeakening
      PCUICSubstitution PCUICEquality PCUICReflect PCUICClosed
      PCUICParallelReduction PCUICParallelReductionConfluence
-     PCUICCumulativity.
+     PCUICCumulativity PCUICUnivSubstitution.
 
 (* Type-valued relations. *)
 Require Import CRelationClasses.
@@ -668,7 +668,7 @@ Proof.
         × (forall Rle (u' : term),
            RelationClasses.Reflexive Rle ->
            RelationClasses.Transitive Rle ->
-           (forall u u'0 : universe, Re u u'0 -> Rle u u'0) ->
+           (forall u u'0 : Universe.t, Re u u'0 -> Rle u u'0) ->
            eq_term_upto_univ Re Rle (dbody x) u' ->
            ∑ v' : term,
              red1 Σ (Γ ,,, fix_context L) u' v'
@@ -812,7 +812,7 @@ Proof.
         × (forall Rle (u' : term),
            RelationClasses.Reflexive Rle ->
            RelationClasses.Transitive Rle ->
-           (forall u u'0 : universe, Re u u'0 -> Rle u u'0) ->
+           (forall u u'0 : Universe.t, Re u u'0 -> Rle u u'0) ->
            eq_term_upto_univ Re Rle (dbody x) u' ->
            ∑ v' : term,
              red1 Σ (Γ ,,, fix_context L) u' v'
@@ -946,7 +946,7 @@ Qed.
 
 Section RedEq.
   Context (Σ : global_env_ext).
-  Context {Re Rle : universe -> universe -> Prop}
+  Context {Re Rle : Universe.t -> Universe.t -> Prop}
           {refl : RelationClasses.Reflexive Re}
           {refl': RelationClasses.Reflexive Rle}
           {pres : SubstUnivPreserving Re}
@@ -1009,23 +1009,23 @@ Instance clos_refl_trans_Signature (A : Type) (R : Relation.relation A) (x H : A
   clos_refl_trans_sig_pack A R x H.
 Unset Universe Polymorphism.
 
-(* Derive Signature for red1. *)
+Derive Signature for red1.
 
-Definition red1_sig@{} (Σ : global_env) (index : sigma (fun _ : context => sigma (fun _ : term => term))) :=
-  let Γ := pr1 index in let H := pr1 (pr2 index) in let H0 := pr2 (pr2 index) in red1 Σ Γ H H0.
+(* Definition red1_sig@{} (Σ : global_env) (index : sigma (fun _ : context => sigma (fun _ : term => term))) := *)
+(*   let Γ := pr1 index in let H := pr1 (pr2 index) in let H0 := pr2 (pr2 index) in red1 Σ Γ H H0. *)
 
-Universe red1u.
+(* Universe red1u. *)
 
-Definition red1_sig_pack@{} (Σ : global_env) (Γ : context) (H H0 : term) (red1_var : red1 Σ Γ H H0)
-  : sigma@{red1u} (fun index : sigma (fun _ : context => sigma (fun _ : term => term)) =>
-        red1 Σ (pr1 index) (pr1 (pr2 index)) (pr2 (pr2 index)))
-  :=
-     {| pr1 := {| pr1 := Γ; pr2 := {| pr1 := H; pr2 := H0 |} |}; pr2 := red1_var |}.
+(* Definition red1_sig_pack@{} (Σ : global_env) (Γ : context) (H H0 : term) (red1_var : red1 Σ Γ H H0) *)
+(*   : sigma@{red1u} (fun index : sigma (fun _ : context => sigma (fun _ : term => term)) => *)
+(*         red1 Σ (pr1 index) (pr1 (pr2 index)) (pr2 (pr2 index))) *)
+(*   := *)
+(*      {| pr1 := {| pr1 := Γ; pr2 := {| pr1 := H; pr2 := H0 |} |}; pr2 := red1_var |}. *)
 
-Instance red1_Signature@{} (Σ : global_env) (Γ : context) (H H0 : term)
-     : Signature@{red1u} (red1 Σ Γ H H0) (sigma (fun _ : context => sigma (fun _ : term => term))) (red1_sig Σ) :=
-  red1_sig_pack Σ Γ H H0.
-(** FIXME Equations *)
+(* Instance red1_Signature@{} (Σ : global_env) (Γ : context) (H H0 : term) *)
+(*      : Signature@{red1u} (red1 Σ Γ H H0) (sigma (fun _ : context => sigma (fun _ : term => term))) (red1_sig Σ) := *)
+(*   red1_sig_pack Σ Γ H H0. *)
+(* (** FIXME Equations *)  ==> seems fixed now that term is not in Set anymore *)
 
 Lemma local_env_telescope P Γ Γ' Δ Δ' :
   All2_telescope (on_decl P) Γ Γ' Δ Δ' ->
@@ -2394,8 +2394,8 @@ Section RedConfluence.
     option_map decl_body (nth_error Γ' n) = Some d.
   Proof.
     move: Γ' n d; induction Γ; destruct n; simpl; intros; try congruence.
-    noconf H. depelim H0. simpl. now rewrite -e.
-    depelim H0. simpl. apply IHΓ; auto.
+    noconf H. depelim X. simpl. now rewrite -e.
+    depelim X. simpl. apply IHΓ; auto.
   Qed.
 
   Lemma decl_type_eq_context_upto_names Γ Γ' n d :
@@ -2404,8 +2404,8 @@ Section RedConfluence.
     option_map decl_type (nth_error Γ' n) = Some d.
   Proof.
     move: Γ' n d; induction Γ; destruct n; simpl; intros; try congruence.
-    noconf H. depelim H0. simpl. now rewrite -e0.
-    depelim H0. simpl. apply IHΓ; auto.
+    noconf H. depelim X. simpl. now rewrite -e0.
+    depelim X. simpl. apply IHΓ; auto.
   Qed.
 
   Lemma eq_context_upto_names_app Γ Γ' Δ :
@@ -2466,17 +2466,17 @@ Section RedConfluence.
     red_ctx Γ' Δ'.
   Proof.
     intros.
-    induction H in H0, Δ, Δ', X |- *. depelim X. depelim H0. constructor.
+    induction X in X0, Δ, Δ', X1 |- *. depelim X1. depelim X0. constructor.
     destruct x as [na b ty], y as [na' b' ty']; simpl in *.
     subst.
-    depelim X. depelim H0. hnf in H1. noconf H1.
+    depelim X1. depelim X0. hnf in H. noconf H.
     red in o. simpl in *. subst.
     destruct y as [? [b'|] ?]; noconf e.
-    constructor; auto. eapply IHeq_context_upto_names; eauto.
+    constructor; auto. eapply IHX; eauto.
     red. eapply red_eq_context_upto_names; eauto.
-    hnf in H1. noconf H1. destruct o. depelim H0. simpl in *.
+    hnf in H. noconf H. destruct o. depelim X0. simpl in *.
     destruct y as [? [b'|] ?]; noconf e. subst; simpl in *.
-    constructor. eapply IHeq_context_upto_names; eauto.
+    constructor. eapply IHX; eauto.
     red.
     split; eauto using red_eq_context_upto_names.
   Qed.
@@ -2487,7 +2487,7 @@ Section RedConfluence.
     reduce_goal.
     split.
     intros. eapply eq_context_upto_names_red_ctx; eauto.
-    intros. symmetry in H, H0. eapply eq_context_upto_names_red_ctx; eauto.
+    intros. symmetry in X, X0. eapply eq_context_upto_names_red_ctx; eauto.
   Qed.
 
   Lemma clos_rt_red1_alpha_out x y :

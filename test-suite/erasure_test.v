@@ -17,7 +17,7 @@ Environment is well-formed and Construct(Coq.Init.Datatypes.bool,0,0,[]) erases 
 Construct(Coq.Init.Datatypes.bool,0,0)
 *)
 
-MetaCoq Erase (exist _ 0 (eq_refl 0) : {x : nat | x = 0}).
+MetaCoq Erase (exist _ 0 (eq_refl) : {x : nat | x = 0}).
 (* (* *)
 (* Environment is well-formed and exist nat (fun x : nat => eq nat x O) O (eq_refl nat O):sig nat (fun x : nat => eq nat x O) erases to: *)
 (* (fun f => f) (exist ∎ ∎ O ∎) *)

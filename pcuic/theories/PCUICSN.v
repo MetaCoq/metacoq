@@ -9,7 +9,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICPosition
      PCUICNormal PCUICInversion PCUICCumulativity PCUICSafeLemmata
      PCUICGeneration PCUICValidity PCUICSR PCUICAlpha PCUICNameless
-     PCUICEquality PCUICConfluence.
+     PCUICEquality PCUICConfluence PCUICUnivSubstitution.
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 
@@ -323,7 +323,7 @@ Section Alpha.
     - intros ? ? ? []. auto.
     - intros ? ? ? r. apply Forall2_eq in r. apply map_inj in r.
       + subst. reflexivity.
-      + intros ? ? H. inversion H. reflexivity.
+      + apply Universe.make_inj.
   Qed.
 
   Lemma cored_cored' :

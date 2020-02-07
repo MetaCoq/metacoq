@@ -670,7 +670,7 @@ Section Confluence.
       | _ => True }.
   Transparent discr_construct_cofix.
 
-  Inductive construct_cofix_view : term -> Set :=
+  Inductive construct_cofix_view : term -> Type :=
   | construct_cofix_construct c u i : construct_cofix_view (tConstruct c u i)
   | construct_cofix_cofix mfix idx : construct_cofix_view (tCoFix mfix idx)
   | construct_cofix_other t : discr_construct_cofix t -> construct_cofix_view t.
@@ -685,7 +685,7 @@ Section Confluence.
     isConstruct _ => false.
   Transparent isConstruct.
 
-  Inductive construct_view : term -> Set :=
+  Inductive construct_view : term -> Type :=
   | construct_construct c u i : construct_view (tConstruct c u i)
   | construct_other t : ~~ isConstruct t -> construct_view t.
 
@@ -700,7 +700,7 @@ Section Confluence.
     | _ => false
     end.
 
-  Inductive fix_app_view : term -> Set :=
+  Inductive fix_app_view : term -> Type :=
   | fix_app_fix mfix i l : l <> [] -> fix_app_view (mkApps (tFix mfix i) l)
   | fix_app_other t : ~~ isFix_app t -> fix_app_view t.
 
@@ -708,8 +708,8 @@ Section Confluence.
   Proof.
     induction t; try solve [apply fix_app_other; simpl; auto].
     destruct IHt1. pose proof (fix_app_fix mfix i (l ++ [t2])).
-    forward H. intros eq. destruct l; discriminate.
-    now rewrite -mkApps_nested in H.
+    forward X. intros eq. destruct l; discriminate.
+    now rewrite -mkApps_nested in X.
     destruct t; try solve [apply fix_app_other; simpl; auto].
     apply (fix_app_fix mfix idx [t2]). congruence.
   Qed.
@@ -721,7 +721,7 @@ Section Confluence.
     | _ => false
     end.
 
-  Inductive fix_lambda_view : term -> Set :=
+  Inductive fix_lambda_view : term -> Type :=
   | fix_lambda_lambda na b t : fix_lambda_view (tLambda na b t)
   | fix_lambda_fix mfix i : fix_lambda_view (tFix mfix i)
   | fix_lambda_other t : ~~ isFixLambda t -> fix_lambda_view t.
@@ -1248,9 +1248,9 @@ Section Confluence.
       rewrite rho_ctx_over_app. simpl.
       unfold app_context. unfold app_context in IHm.
       erewrite <- IHm. simpl. cbn.
-      depelim H. rewrite -e.
+      depelim X. rewrite -e.
       rewrite - app_assoc.
-      f_equal. now depelim H.
+      f_equal. now depelim X.
     Qed.
 
     Lemma fold_fix_context_over' Γ m :
@@ -1838,7 +1838,7 @@ Section Confluence.
     - simpl. rewrite inst_closed0.
       rewrite closedn_subst_instance_constr; auto.
       eapply declared_decl_closed in H; auto. hnf in H. rewrite H0 in H.
-      toProp; auto.
+      rtoProp; auto.
       econstructor; eauto with pcuic.
 
     - (* Proj-Construct *)
@@ -2036,7 +2036,7 @@ Section Confluence.
     | _ => True
     end.
 
-  Inductive fix_view : term -> Set :=
+  Inductive fix_view : term -> Type :=
   | fix_fix mfix i : fix_view (tFix mfix i)
   | fix_other t : discr_fix t -> fix_view t.
 
@@ -2064,7 +2064,7 @@ Section Confluence.
     | _ => false
     end.
 
-  Inductive lambda_app_view : term -> Set :=
+  Inductive lambda_app_view : term -> Type :=
   | lambda_app_fix na t b a : lambda_app_view (tApp (tLambda na t b) a)
   | lambda_app_other t : ~~ lambda_app_discr t -> lambda_app_view t.
 
@@ -2777,7 +2777,7 @@ Section Confluence.
   Proof. apply decompose_app_rec_rename. Qed.
 
   (* TODO rename isConstruct to isConstruct *)
-  Lemma nisConstruct_elim {A} {t} {a : inductive -> nat -> universe_instance -> A} {b : A} :
+  Lemma nisConstruct_elim {A} {t} {a : inductive -> nat -> Instance.t -> A} {b : A} :
     ~~ isConstruct t ->
     match t with
     | tConstruct ind n u => a ind n u
@@ -2873,7 +2873,7 @@ Section Confluence.
         destruct (nth_error _ (rarg d)) eqn:Hisc.
         simpl option_map. cbv beta iota.
         assert (rho Δ (rename r t0) = rename r (rho Γ t0)) as ->.
-        eapply nth_error_all in H3; eauto. now simpl in H3.
+        eapply nth_error_all in X; eauto. now simpl in X.
         simpl.
         assert (Hbod: ∀ (Γ Δ : list context_decl) (r : nat → nat),
                    renaming Γ Δ r → rename r (rho Γ (dbody d)) = rho Δ (rename r (dbody d))).
@@ -2903,7 +2903,7 @@ Section Confluence.
           rewrite map_fix_subst // !map_map_compose.
           assert (0 < list_size size l).
           { destruct l; simpl; auto. congruence. lia. }
-          clear -H H2 H4.
+          clear -H H2 H3.
           unfold fix_subst. generalize #|mfix|.
           induction n; simpl; auto.
           rewrite IHn. f_equal.

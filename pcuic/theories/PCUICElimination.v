@@ -9,7 +9,7 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICInduct
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 
-Definition Is_proof `{cf : checker_flags} Σ Γ t := ∑ T u, Σ ;;; Γ |- t : T × Σ ;;; Γ |- T : tSort u × is_prop_sort u.
+Definition Is_proof `{cf : checker_flags} Σ Γ t := ∑ T u, Σ ;;; Γ |- t : T × Σ ;;; Γ |- T : tSort u × Universe.is_prop u.
 
 Lemma declared_inductive_inj `{cf : checker_flags} {Σ mdecl mdecl' ind idecl idecl'} :
   declared_inductive Σ mdecl' ind idecl' ->
@@ -217,7 +217,7 @@ Variable Hcf : prop_sub_type = false.
 
 Lemma cumul_prop1 (Σ : global_env_ext) Γ A B u :
   wf Σ ->
-  is_prop_sort u -> Σ ;;; Γ |- B : tSort u ->
+  Universe.is_prop u -> Σ ;;; Γ |- B : tSort u ->
                                  Σ ;;; Γ |- A <= B -> Σ ;;; Γ |- A : tSort u.
 Proof.
   intros. induction X1.
@@ -228,7 +228,7 @@ Admitted.                       (* cumul_prop1 *)
 
 Lemma cumul_prop2 (Σ : global_env_ext) Γ A B u :
   wf Σ ->
-  is_prop_sort u -> Σ ;;; Γ |- A <= B ->
+  Universe.is_prop u -> Σ ;;; Γ |- A <= B ->
                              Σ ;;; Γ |- A : tSort u -> Σ ;;; Γ |- B : tSort u.
 Proof.
 Admitted.                       (* cumul_prop2 *)
@@ -238,8 +238,8 @@ Lemma leq_universe_prop (Σ : global_env_ext) u1 u2 :
   (* @prop_sub_type cf = false -> *)
   wf Σ ->
   @leq_universe cf (global_ext_constraints Σ) u1 u2 ->
-  (is_prop_sort u1 \/ is_prop_sort u2) ->
-  (is_prop_sort u1 /\ is_prop_sort u2).
+  (Universe.is_prop u1 \/ Universe.is_prop u2) ->
+  (Universe.is_prop u1 /\ Universe.is_prop u2).
 Proof.
   intros. unfold leq_universe in *. (* rewrite H in H1. *)
   (* unfold leq_universe0 in H1. *)

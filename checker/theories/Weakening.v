@@ -709,23 +709,23 @@ Proof.
   induction T in n, k, U, Rl |- * using term_forall_list_rect;
     inversion 1; simpl; try (now constructor).
   - destruct (k <=? n0); constructor.
-  - constructor. subst. clear - X H3.
-    induction l in X, args', H3 |- *.
-    + inversion H3; constructor.
-    + inversion H3. inversion X. subst.
+  - constructor. subst. clear - X X1.
+    induction l in X, args', X1 |- *.
+    + inversion X1; constructor.
+    + inversion X1. inversion X. subst.
       simpl. constructor. all: easy.
-  - constructor. easy. clear - X H4.
-    induction l in X, args', H4 |- *.
-    + inversion H4; constructor.
-    + inversion H4; inversion X; subst.
+  - constructor. easy. clear - X X2.
+    induction l in X, args', X2 |- *.
+    + inversion X2; constructor.
+    + inversion X2; inversion X; subst.
       now constructor.
-  - constructor; try easy. clear - X H7.
-    induction l in X, brs', H7 |- *.
-    + inversion H7; constructor.
-    + inversion H7; inversion X; subst.
+  - constructor; try easy. clear - X X3.
+    induction l in X, brs', X3 |- *.
+    + inversion X3; constructor.
+    + inversion X3; inversion X; subst.
       constructor. cbn; easy.
       easy.
-  - constructor; try easy. clear - X H3.
+  - constructor; try easy. clear - X X1.
     assert (XX:forall k k', All2
                          (fun x y  => eq_term_upto_univ Re Re (dtype x) (dtype y) ×
                         eq_term_upto_univ Re Re (dbody x) (dbody y) ×
@@ -733,15 +733,15 @@ Proof.
                          (map (map_def (lift n k) (lift n (#|m| + k'))) m)
                          (map (map_def (lift n k) (lift n (#|mfix'| + k'))) mfix'));
       [|now apply XX]. clear k.
-    induction m in X, mfix', H3 |- *.
-    + inversion H3; constructor.
-    + inversion H3; inversion X; subst.
+    induction m in X, mfix', X1 |- *.
+    + inversion X1; constructor.
+    + inversion X1; inversion X; subst.
       simpl. constructor. split. cbn; easy.
       cbn; erewrite All2_length by eassumption.
       easy.
       unfold tFixProp in IHm. cbn.
       rewrite !plus_n_Sm. now apply IHm.
-  - constructor; try easy. clear - X H3.
+  - constructor; try easy. clear - X X1.
     assert (XX:forall k k', All2
                          (fun x y  => eq_term_upto_univ Re Re (dtype x) (dtype y) ×
                             eq_term_upto_univ Re Re (dbody x) (dbody y) ×
@@ -749,9 +749,9 @@ Proof.
                          (map (map_def (lift n k) (lift n (#|m| + k'))) m)
                          (map (map_def (lift n k) (lift n (#|mfix'| + k'))) mfix'));
       [|now apply XX]. clear k.
-    induction m in X, mfix', H3 |- *.
-    + inversion H3; constructor.
-    + inversion H3; inversion X; subst.
+    induction m in X, mfix', X1 |- *.
+    + inversion X1; constructor.
+    + inversion X1; inversion X; subst.
       simpl. constructor. split. cbn; easy.
       cbn; erewrite All2_length by eassumption.
       easy.
@@ -799,10 +799,10 @@ Lemma lift_eq_context `{checker_flags} φ l l' n k :
 Proof.
   induction l in l', n, k |- *; intros; destruct l'; rewrite -> ?lift_context_snoc0.
   - constructor.
-  - inversion H0.
-  - inversion H0.
-  - inversion H0; subst. constructor.
-    + apply All2_length in H6. rewrite H6.
+  - inversion X.
+  - inversion X.
+  - inversion X; subst. constructor.
+    + apply All2_length in X1. rewrite X1.
       now apply lift_eq_decl.
     + now apply IHl.
 Qed.

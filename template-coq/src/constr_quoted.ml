@@ -82,9 +82,6 @@ struct
   let c_nil = resolve "metacoq.list.nil"
   let c_cons = resolve "metacoq.list.cons"
 
-  let nel_sing = resolve "metacoq.nel.sing"
-  let nel_cons = resolve "metacoq.nel.cons"
-
   let prod_type = resolve "metacoq.prod.type"
   let c_pair = resolve "metacoq.prod.intro"
 
@@ -135,8 +132,17 @@ struct
   let tunivLe = ast "constraints.Le"
   let tunivLt = ast "constraints.Lt"
   let tunivEq = ast "constraints.Eq"
-  let tmake_universe = ast "universe.make"
+  let tMktUnivExprSet = ast "univexprset.mkt"
+  let tBuild_Universe = ast "universe.build"
+  let tfrom_kernel_repr = ast "universe.from_kernel_repr"
+  let tto_kernel_repr = ast "universe.to_kernel_repr"
   let tLevelSet_of_list = ast "universe.of_list"
+
+  let noprop_tSet = ast "noproplevel.lSet"
+  let noprop_tLevel = ast "noproplevel.Level"
+  let noprop_tLevelVar = ast "noproplevel.Var"
+  let univexpr_lProp = ast "univexpr.prop"
+  let univexpr_npe = ast "univexpr.npe"
 
   (* let tunivcontext = resolve_symbol pkg_univ "universe_context" *)
   let tVariance = ast "variance.t"

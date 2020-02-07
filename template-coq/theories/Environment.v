@@ -8,13 +8,13 @@ Set Asymmetric Patterns.
 
 Module Type Term.
 
-  Parameter (term : Set).
+  Parameter (term : Type).
 
   Parameter (tRel : nat -> term).
-  Parameter (tSort : universe -> term).
+  Parameter (tSort : Universe.t -> term).
   Parameter (tProd : name -> term -> term -> term).
   Parameter (tLetIn : name -> term -> term -> term -> term).
-  Parameter (tInd : inductive -> universe_instance -> term).
+  Parameter (tInd : inductive -> Instance.t -> term).
 
   Parameter (mkApps : term -> list term -> term).
 

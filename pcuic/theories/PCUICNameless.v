@@ -43,7 +43,7 @@ Fixpoint nameless (t : term) : bool :=
     forallb (test_def nameless nameless) mfix
   end.
 
-Definition map_def_anon {A B : Set} (tyf bodyf : A -> B) (d : def A) := {|
+Definition map_def_anon {A B} (tyf bodyf : A -> B) (d : def A) := {|
   dname := nAnon ;
   dtype := tyf d.(dtype) ;
   dbody := bodyf d.(dbody) ;
@@ -111,10 +111,10 @@ Proof.
       reflexivity.
     + destruct args' ; try solve [ inversion h ].
       inversion h. subst.
-      inversion H. subst.
+      inversion X. subst.
       cbn in hu, hv. destruct_andb.
       f_equal.
-      * eapply H2 ; assumption.
+      * eapply H0 ; assumption.
       * eapply IHl ; assumption.
   - f_equal ; try solve [ ih ].
     eapply eq_univ_make. assumption.
@@ -130,8 +130,8 @@ Proof.
       cbn in h1, h2. destruct_andb.
       inversion X. subst.
       f_equal.
-      * destruct a, p0. cbn in *. destruct H6. subst.
-        f_equal. eapply H11 ; assumption.
+      * destruct a, p0. cbn in *. destruct X0. subst.
+        f_equal. eapply H8; assumption.
       * eapply IHl ; assumption.
   - f_equal ; try solve [ ih ].
     revert mfix' H1 H2 H H0 a.
@@ -141,9 +141,9 @@ Proof.
       inversion X. subst.
       cbn in h1, h2, h3, h4. destruct_andb.
       f_equal.
-      * destruct a, d. cbn in *. destruct H2 as [[? ?] ?].
-        destruct H1 as [Hty Hbod].
-        unfold test_def in H7, H. cbn in H7, H.
+      * destruct a, d. cbn in *. destruct X0 as [[? ?] ?].
+        destruct H0 as [Hty Hbod].
+        unfold test_def in H4, H. cbn in H4, H.
         destruct_andb. anonify.
         f_equal.
         -- eapply Hty; assumption.
@@ -158,9 +158,9 @@ Proof.
       inversion X. subst.
       cbn in h1, h2, h3, h4. destruct_andb.
       f_equal.
-      * destruct a, d. cbn in *. destruct H2 as [[? ?] ?].
-        destruct H1 as [Hty Hbod].
-        unfold test_def in H7, H. cbn in H7, H.
+      * destruct a, d. cbn in *. destruct X0 as [[? ?] ?].
+        destruct H0 as [Hty Hbod].
+        unfold test_def in H4, H. cbn in H4, H.
         destruct_andb. anonify.
         f_equal.
         -- eapply Hty; assumption.
@@ -188,7 +188,7 @@ Proof.
       * cbn. eapply IHm. inversion X. subst. assumption.
     + induction m.
       * reflexivity.
-      * cbn. inversion X. subst. destruct H1.
+      * cbn. inversion X. subst. destruct H0.
         repeat (eapply andb_true_intro ; split).
         all: try assumption.
         eapply IHm. assumption.
@@ -198,7 +198,7 @@ Proof.
       * cbn. eapply IHm. inversion X. subst. assumption.
     + induction m.
       * reflexivity.
-      * cbn. inversion X. subst. destruct H1.
+      * cbn. inversion X. subst. destruct H0.
         repeat (eapply andb_true_intro ; split).
         all: try assumption.
         eapply IHm. assumption.
@@ -519,7 +519,7 @@ Proof.
   intros u b.
   induction b using term_forall_list_ind.
   all: try (simpl ; rewrite ?IHb, ?IHb1, ?IHb2, ?IHb3 ; reflexivity).
-  - simpl. f_equal. induction H.
+  - simpl. f_equal. rename X into H; induction H.
     + reflexivity.
     + simpl. rewrite p, IHAll. reflexivity.
   - simpl. rewrite IHb1, IHb2. f_equal.
@@ -678,7 +678,7 @@ Proof.
   all: simpl.
   all: try congruence.
   - destruct (_ <=? _). all: reflexivity.
-  - f_equal. induction H.
+  - f_equal. rename X into H; induction H.
     + reflexivity.
     + simpl. f_equal.
       * eapply p.
@@ -758,7 +758,7 @@ Proof.
     rewrite nth_error_map. destruct (nth_error _ _).
     + simpl. apply nl_lift.
     + rewrite map_length. reflexivity.
-  - f_equal. induction H.
+  - f_equal. rename X into H; induction H.
     + reflexivity.
     + simpl. f_equal.
       * eapply p.
@@ -1261,50 +1261,50 @@ Proof.
     + now apply nl_cumul.
 Qed.
 
-Corollary reflect_nleq_term :
-  forall t t',
-    reflect (nl t = nl t') (nleq_term t t').
-Proof.
-  intros t t'.
-  destruct (reflect_upto_names t t').
-  - constructor. eapply eq_term_nl_eq. assumption.
-  - constructor. intro bot. apply f.
-    apply eq_term_upto_univ_nl_inv.
-    rewrite bot.
-    apply eq_term_upto_univ_refl.
-    all: auto.
-Qed.
+(* Corollary reflect_nleq_term : *)
+(*   forall t t', *)
+(*     reflect (nl t = nl t') (nleq_term t t'). *)
+(* Proof. *)
+(*   intros t t'. *)
+(*   destruct (reflect_upto_names t t'). *)
+(*   - constructor. eapply eq_term_nl_eq. assumption. *)
+(*   - constructor. intro bot. apply f. *)
+(*     apply eq_term_upto_univ_nl_inv. *)
+(*     rewrite bot. *)
+(*     apply eq_term_upto_univ_refl. *)
+(*     all: auto. *)
+(* Qed. *)
 
-Lemma nleq_term_it_mkLambda_or_LetIn :
-  forall Γ u v,
-    nleq_term u v ->
-    nleq_term (it_mkLambda_or_LetIn Γ u) (it_mkLambda_or_LetIn Γ v).
-Proof.
-  intros Γ u v h.
-  induction Γ as [| [na [b|] A] Γ ih ] in u, v, h |- *.
-  - assumption.
-  - simpl. cbn. apply ih.
-    eapply ssrbool.introT.
-    + eapply reflect_nleq_term.
-    + cbn. f_equal.
-      eapply ssrbool.elimT.
-      * eapply reflect_nleq_term.
-      * assumption.
-  - simpl. cbn. apply ih.
-    eapply ssrbool.introT.
-    + eapply reflect_nleq_term.
-    + cbn. f_equal.
-      eapply ssrbool.elimT.
-      * eapply reflect_nleq_term.
-      * assumption.
-Qed.
+(* Lemma nleq_term_it_mkLambda_or_LetIn : *)
+(*   forall Γ u v, *)
+(*     nleq_term u v -> *)
+(*     nleq_term (it_mkLambda_or_LetIn Γ u) (it_mkLambda_or_LetIn Γ v). *)
+(* Proof. *)
+(*   intros Γ u v h. *)
+(*   induction Γ as [| [na [b|] A] Γ ih ] in u, v, h |- *. *)
+(*   - assumption. *)
+(*   - simpl. cbn. apply ih. *)
+(*     eapply ssrbool.introT. *)
+(*     + eapply reflect_nleq_term. *)
+(*     + cbn. f_equal. *)
+(*       eapply ssrbool.elimT. *)
+(*       * eapply reflect_nleq_term. *)
+(*       * assumption. *)
+(*   - simpl. cbn. apply ih. *)
+(*     eapply ssrbool.introT. *)
+(*     + eapply reflect_nleq_term. *)
+(*     + cbn. f_equal. *)
+(*       eapply ssrbool.elimT. *)
+(*       * eapply reflect_nleq_term. *)
+(*       * assumption. *)
+(* Qed. *)
 
 Lemma nl_two M :
   nl (nl M) = nl M.
 Proof.
   induction M using term_forall_list_ind; cbnr.
   all: rewrite ?IHM1, ?IHM2, ?IHM3, ?IHM; cbnr.
-  - f_equal. induction H; cbnr. congruence.
+  - f_equal. induction X; cbnr. congruence.
   - f_equal. induction X; cbnr. f_equal; tas.
     destruct x; unfold on_snd; simpl in *. congruence.
   - f_equal. induction X; cbnr. f_equal; tas.
@@ -1515,3 +1515,30 @@ Proof.
 (*     + cbn. congruence. *)
 (* Qed. *)
 Admitted.
+
+
+  (* Lemma nleq_term_zipc : *)
+  (*   forall u v π, *)
+  (*     nleq_term u v -> *)
+  (*     nleq_term (zipc u π) (zipc v π). *)
+  (* Proof. *)
+  (*   intros u v π h. *)
+  (*   eapply ssrbool.introT. *)
+  (*   - eapply reflect_nleq_term. *)
+  (*   - cbn. rewrite 2!nl_zipc. f_equal. *)
+  (*     eapply ssrbool.elimT. *)
+  (*     + eapply reflect_nleq_term. *)
+  (*     + assumption. *)
+  (* Qed. *)
+
+  (* Lemma nleq_term_zipx : *)
+  (*   forall Γ u v π, *)
+  (*     nleq_term u v -> *)
+  (*     nleq_term (zipx Γ u π) (zipx Γ v π). *)
+  (* Proof. *)
+  (*   intros Γ u v π h. *)
+  (*   unfold zipx. *)
+  (*   eapply nleq_term_it_mkLambda_or_LetIn. *)
+  (*   eapply nleq_term_zipc. *)
+  (*   assumption. *)
+  (* Qed. *)

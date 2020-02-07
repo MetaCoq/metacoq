@@ -605,9 +605,9 @@ Section Principality.
     - apply inversion_Sort in hA as iA. 2: auto.
       apply inversion_Sort in hB as iB. 2: auto.
       repeat outsum. repeat outtimes. subst.
-      inversion e. subst.
-      repeat insum. repeat intimes.
-      all: try eassumption.
+      assert (x0 = x) as ee. {
+        clear -e. destruct x, x0; cbnr; invs e; reflexivity. }
+      subst. repeat insum. repeat intimes; tea.
       (* * left; eexists _, _; intuition auto. *)
       constructor ; assumption.
     - apply inversion_Prod in hA as [dom1 [codom1 iA]]; auto.

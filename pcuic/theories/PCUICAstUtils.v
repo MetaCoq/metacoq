@@ -100,14 +100,14 @@ Proof. destruct decl; reflexivity. Qed.
 Lemma map_cst_body f decl : option_map f (cst_body decl) = cst_body (map_constant_body f decl).
 Proof. destruct decl; reflexivity. Qed.
 
-Definition map_def {A B : Set} (tyf bodyf : A -> B) (d : def A) :=
+Definition map_def {A B} (tyf bodyf : A -> B) (d : def A) :=
   {| dname := d.(dname); dtype := tyf d.(dtype); dbody := bodyf d.(dbody); rarg := d.(rarg) |}.
 
-Lemma map_dtype {A B : Set} (f : A -> B) (g : A -> B) (d : def A) :
+Lemma map_dtype {A B} (f : A -> B) (g : A -> B) (d : def A) :
   f (dtype d) = dtype (map_def f g d).
 Proof. destruct d; reflexivity. Qed.
 
-Lemma map_dbody {A B : Set} (f : A -> B) (g : A -> B) (d : def A) :
+Lemma map_dbody {A B} (f : A -> B) (g : A -> B) (d : def A) :
   g (dbody d) = dbody (map_def f g d).
 Proof. destruct d; reflexivity. Qed.
 
@@ -513,13 +513,13 @@ Lemma ind_projs_map f npars_ass arities n oib :
   map (on_snd (f (S npars_ass))) (ind_projs oib).
 Proof. destruct oib; simpl. reflexivity. Qed.
 
-Definition test_def {A : Set} (tyf bodyf : A -> bool) (d : def A) :=
+Definition test_def {A} (tyf bodyf : A -> bool) (d : def A) :=
   tyf d.(dtype) && bodyf d.(dbody).
 
 Definition tCaseBrsProp {A} (P : A -> Type) (l : list (nat * A)) :=
   All (fun x => P (snd x)) l.
 
-Definition tFixProp {A : Set} (P P' : A -> Type) (m : mfixpoint A) :=
+Definition tFixProp {A} (P P' : A -> Type) (m : mfixpoint A) :=
   All (fun x : def A => P x.(dtype) * P' x.(dbody))%type m.
 
 
@@ -528,21 +528,21 @@ Ltac merge_All :=
   repeat toAll.
 
 
-Lemma map_def_map_def {A B C : Set} (f f' : B -> C) (g g' : A -> B) (d : def A) :
+Lemma map_def_map_def {A B C} (f f' : B -> C) (g g' : A -> B) (d : def A) :
   map_def f f' (map_def g g' d) = map_def (fun x => f (g x)) (fun x => f' (g' x)) d.
 Proof.
   destruct d; reflexivity.
 Qed.
 
-Lemma compose_map_def {A B C : Set} (f f' : B -> C) (g g' : A -> B) :
+Lemma compose_map_def {A B C} (f f' : B -> C) (g g' : A -> B) :
   compose (A:=def A) (map_def f f') (map_def g g') = map_def (compose f g) (compose f' g').
 Proof. reflexivity. Qed.
 
-Lemma map_def_id {t : Set} x : map_def (@id t) (@id t) x = x.
+Lemma map_def_id {t} x : map_def (@id t) (@id t) x = x.
 Proof. now destruct x. Qed.
 Hint Rewrite @map_def_id @map_id : map.
 
-Lemma map_def_spec {A B : Set} (P P' : A -> Type) (f f' g g' : A -> B) (x : def A) :
+Lemma map_def_spec {A B} (P P' : A -> Type) (f f' g g' : A -> B) (x : def A) :
   P' x.(dbody) -> P x.(dtype) -> (forall x, P x -> f x = g x) ->
   (forall x, P' x -> f' x = g' x) ->
   map_def f f' x = map_def g g' x.
@@ -551,7 +551,7 @@ Proof.
   rewrite !H // !H0 //.
 Qed.
 
-Lemma case_brs_map_spec {A B : Set} {P : A -> Type} {l} {f g : A -> B} :
+Lemma case_brs_map_spec {A B} {P : A -> Type} {l} {f g : A -> B} :
   tCaseBrsProp P l -> (forall x, P x -> f x = g x) ->
   map (on_snd f) l = map (on_snd g) l.
 Proof.
@@ -560,7 +560,7 @@ Proof.
   apply on_snd_eq_spec; eauto.
 Qed.
 
-Lemma tfix_map_spec {A B : Set} {P P' : A -> Type} {l} {f f' g g' : A -> B} :
+Lemma tfix_map_spec {A B} {P P' : A -> Type} {l} {f f' g g' : A -> B} :
   tFixProp P P' l -> (forall x, P x -> f x = g x) ->
   (forall x, P' x -> f' x = g' x) ->
   map (map_def f f') l = map (map_def g g') l.
@@ -572,7 +572,7 @@ Proof.
 Qed.
 
 
-Lemma map_def_test_spec {A B : Set}
+Lemma map_def_test_spec {A B}
       (P P' : A -> Type) (p p' : pred A) (f f' g g' : A -> B) (x : def A) :
   P x.(dtype) -> P' x.(dbody) -> (forall x, P x -> p x -> f x = g x) ->
   (forall x, P' x -> p' x -> f' x = g' x) ->
@@ -584,7 +584,7 @@ Proof.
   rewrite !H // !H0 //; intuition auto.
 Qed.
 
-Lemma case_brs_forallb_map_spec {A B : Set} {P : A -> Type} {p : A -> bool}
+Lemma case_brs_forallb_map_spec {A B} {P : A -> Type} {p : A -> bool}
       {l} {f g : A -> B} :
   tCaseBrsProp P l ->
   forallb (test_snd p) l ->
@@ -597,7 +597,7 @@ Proof.
   eapply on_snd_test_spec; eauto.
 Qed.
 
-Lemma tfix_forallb_map_spec {A B : Set} {P P' : A -> Prop} {p p'} {l} {f f' g g' : A -> B} :
+Lemma tfix_forallb_map_spec {A B} {P P' : A -> Prop} {p p'} {l} {f f' g g' : A -> B} :
   tFixProp P P' l ->
   forallb (test_def p p') l ->
   (forall x, P x -> p x -> f x = g x) ->

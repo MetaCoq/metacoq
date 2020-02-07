@@ -688,7 +688,7 @@ Section Lemmata.
         left. apply wf_local_app in h2.
         inversion h2. subst. cbn in *.
         match goal with
-        | h : ∃ s : universe, _ |- _ =>
+        | h : ∃ s : Universe.t, _ |- _ =>
           destruct h
         end.
         eexists. eassumption.
@@ -1295,32 +1295,6 @@ Section Lemmata.
     - simpl in e. cbn in e.
       apply ih in e.
       inversion e. reflexivity.
-  Qed.
-
-  Lemma nleq_term_zipc :
-    forall u v π,
-      nleq_term u v ->
-      nleq_term (zipc u π) (zipc v π).
-  Proof.
-    intros u v π h.
-    eapply ssrbool.introT.
-    - eapply reflect_nleq_term.
-    - cbn. rewrite 2!nl_zipc. f_equal.
-      eapply ssrbool.elimT.
-      + eapply reflect_nleq_term.
-      + assumption.
-  Qed.
-
-  Lemma nleq_term_zipx :
-    forall Γ u v π,
-      nleq_term u v ->
-      nleq_term (zipx Γ u π) (zipx Γ v π).
-  Proof.
-    intros Γ u v π h.
-    unfold zipx.
-    eapply nleq_term_it_mkLambda_or_LetIn.
-    eapply nleq_term_zipc.
-    assumption.
   Qed.
 
   Hint Resolve conv_refl conv_alt_red : core.

@@ -226,13 +226,13 @@ Proof.
   unfold eq_inductive, eqb; cbn. now rewrite eq_string_refl Nat.eqb_refl.
 Defined.
 
-Definition eq_def {A : Set} `{ReflectEq A} (d1 d2 : def A) : bool :=
+Definition eq_def {A} `{ReflectEq A} (d1 d2 : def A) : bool :=
   match d1, d2 with
   | mkdef n1 t1 b1 a1, mkdef n2 t2 b2 a2 =>
     eqb n1 n2 && eqb t1 t2 && eqb b1 b2 && eqb a1 a2
   end.
 
-#[program] Instance reflect_def : forall {A : Set} `{ReflectEq A}, ReflectEq (def A) := {
+#[program] Instance reflect_def : forall {A} `{ReflectEq A}, ReflectEq (def A) := {
   eqb := eq_def
 }.
 Next Obligation.
@@ -244,25 +244,6 @@ Next Obligation.
   destruct (eqb_spec b1 b2) ; nodec.
   destruct (eqb_spec a1 a2) ; nodec.
   cbn. constructor. subst. reflexivity.
-Defined.
-
-Fixpoint eq_non_empty_list {A : Set} (eqA : A -> A -> bool) (l l' : non_empty_list A) : bool :=
-  match l, l' with
-  | NEL.sing a, NEL.sing a' => eqA a a'
-  | NEL.cons a l, NEL.cons a' l' =>
-    eqA a a' && eq_non_empty_list eqA l l'
-  | _, _ => false
-  end.
-
-#[program] Instance reflect_non_empty_list :
-  forall {A : Set} `{ReflectEq A}, ReflectEq (non_empty_list A) :=
-  { eqb := eq_non_empty_list eqb }.
-Next Obligation.
-  induction x, y; cbn.
-  destruct (eqb_spec a a0); constructor; congruence.
-  constructor; congruence.
-  constructor; congruence.
-  destruct (eqb_spec a a0), (IHx y); constructor; congruence.
 Defined.
 
 Fixpoint eq_cast_kind (c c' : cast_kind) : bool :=
@@ -293,13 +274,16 @@ Local Ltac fcase c :=
   let e := fresh "e" in
   case c ; intro e ; [ subst ; try (left ; reflexivity) | finish ].
 
+Instance eq_dec_univ : EqDec Universe.t.
+Admitted.
+
 Local Ltac term_dec_tac term_dec :=
   repeat match goal with
          | t : term, u : term |- _ => fcase (term_dec t u)
-         | u : universe, u' : universe |- _ => fcase (eq_dec u u')
-         | x : universe_instance, y : universe_instance |- _ =>
+         | u : Universe.t, u' : Universe.t |- _ => fcase (eq_dec u u')
+         | x : Instance.t, y : Instance.t |- _ =>
            fcase (eq_dec x y)
-         | x : list Level.t, y : universe_instance |- _ =>
+         | x : list Level.t, y : Instance.t |- _ =>
            fcase (eq_dec x y)
          | n : nat, m : nat |- _ => fcase (Nat.eq_dec n m)
          | i : ident, i' : ident |- _ => fcase (string_dec i i')
@@ -315,18 +299,18 @@ Local Ltac term_dec_tac term_dec :=
 
 Derive NoConfusion NoConfusionHom for term.
 
-Derive EqDec for term.
-Next Obligation.
-  induction x using term_forall_list_rect ; intro t ;
+Instance EqDec_term : EqDec term.
+Proof.
+  intro x; induction x using term_forall_list_rect ; intro t ;
     destruct t ; try (right ; discriminate).
   all: term_dec_tac term_dec.
-  - induction H in args |- *.
+  - induction X in args |- *.
     + destruct args.
       * left. reflexivity.
       * right. discriminate.
     + destruct args.
       * right. discriminate.
-      * destruct (IHAll args) ; nodec.
+      * destruct (IHX args) ; nodec.
         destruct (p t) ; nodec.
         subst. left. inversion e. reflexivity.
   - destruct (IHx1 t1) ; nodec.
@@ -343,11 +327,11 @@ Next Obligation.
     destruct (IHx3 t3) ; nodec.
     subst. left. reflexivity.
   - destruct (IHx t) ; nodec.
-    subst. induction H in args |- *.
+    subst. induction X in args |- *.
     + destruct args. all: nodec.
       left. reflexivity.
     + destruct args. all: nodec.
-      destruct (IHAll args). all: nodec.
+      destruct (IHX args). all: nodec.
       destruct (p t0). all: nodec.
       subst. inversion e. subst.
       left. reflexivity.

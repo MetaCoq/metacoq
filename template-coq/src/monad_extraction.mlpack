@@ -19,6 +19,7 @@ Extractable
 List0
 Logic0
 MSetWeakList
+MSetList
 MSetProperties
 MSetFacts
 Nat0

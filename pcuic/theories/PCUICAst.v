@@ -15,18 +15,18 @@ Open Scope pcuic.
    In particular, it has binary applications and all terms are well-formed.
    Casts are absent as well. *)
 
-Inductive term : Set :=
+Inductive term :=
 | tRel (n : nat)
 | tVar (i : ident) (* For free variables (e.g. in a goal) *)
 | tEvar (n : nat) (l : list term)
-| tSort (u : universe)
+| tSort (u : Universe.t)
 | tProd (na : name) (A B : term)
 | tLambda (na : name) (A t : term)
 | tLetIn (na : name) (b B t : term) (* let na := b : B in t *)
 | tApp (u v : term)
-| tConst (k : kername) (ui : universe_instance)
-| tInd (ind : inductive) (ui : universe_instance)
-| tConstruct (ind : inductive) (n : nat) (ui : universe_instance)
+| tConst (k : kername) (ui : Instance.t)
+| tInd (ind : inductive) (ui : Instance.t)
+| tConstruct (ind : inductive) (n : nat) (ui : Instance.t)
 | tCase (indn : inductive * nat) (p c : term) (brs : list (nat * term)) (* # of parameters/type info/discriminee/branches *)
 | tProj (p : projection) (c : term)
 | tFix (mfix : mfixpoint term) (idx : nat)
@@ -93,11 +93,11 @@ Inductive constant_entry :=
   [x1:X1;...;xn:Xn].
 *)
 
-Inductive local_entry : Set :=
+Inductive local_entry :=
 | LocalDef : term -> local_entry (* local let binding *)
 | LocalAssum : term -> local_entry.
 
-Record one_inductive_entry : Set := {
+Record one_inductive_entry := {
   mind_entry_typename : ident;
   mind_entry_arity : term;
   mind_entry_template : bool; (* template polymorphism *)

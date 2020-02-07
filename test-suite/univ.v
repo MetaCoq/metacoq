@@ -24,7 +24,7 @@ Monomorphic Universe i j.
 
 Set Strict Unquote Universe Mode.
 Test Quote (Type@{j} -> Type@{i}).
-Make Definition T'' := (tSort (Universe.make' (Level.Level "j", false))).
+Make Definition T'' := (tSort (Universe.make (Level.Level "j"))).
 Unset Strict Unquote Universe Mode.
 
 
@@ -170,7 +170,7 @@ Print qtest.
 
 Make Definition bla := qtest.
 Unset Strict Unquote Universe Mode.
-Make Definition bla' := (tLambda (nNamed "T") (tSort (Universe.make'' (Level.Level "Top.46", false) [])) (tLambda (nNamed "T2") (tSort (Universe.make'' (Level.Level "Top.477", false) [])) (tProd nAnon (tRel 1) (tRel 1)))).
+Make Definition bla' := (tLambda (nNamed "T") (tSort (Universe.make (Level.Level "Top.46"))) (tLambda (nNamed "T2") (tSort (Universe.make (Level.Level "Top.477"))) (tProd nAnon (tRel 1) (tRel 1)))).
 
 Set Printing Universes.
 Print bla.
@@ -224,11 +224,10 @@ Definition f' := (forall (A:Type@{i1}) (B: Type@{j1}), A -> B -> A).
 Quote Recursively Definition ff := f'.
 
 Require Import MetaCoq.Checker.All.
+Compute (infer' (empty_ext (fst ff)) [] (snd ff)).
 Check (eq_refl : infer' (empty_ext (fst ff)) [] (snd ff) =
-         Checked (tSort
-                    (NEL.cons (Level.Level _, true)
-                              (NEL.sing (Level.Level _, true))))).
+         Checked (tSort (Universe.from_kernel_repr (Level.Level _, true) [(Level.Level _, true)]))).
 Open Scope string_scope.
-Check (eq_refl : infer [] init_graph [] ((tProd (nNamed "A") (tSort (Universe.make' (Level.Level "Toto.85", false))) (tProd (nNamed "B") (tSort (Universe.make' (Level.Level "Toto.86", false))) (tProd nAnon (tRel 1) (tProd nAnon (tRel 1) (tRel 3)))))) = Checked (tSort _)).
+Check (eq_refl : infer [] init_graph [] ((tProd (nNamed "A") (tSort (Universe.make (Level.Level _))) (tProd (nNamed "B") (tSort (Universe.make (Level.Level _))) (tProd nAnon (tRel 1) (tProd nAnon (tRel 1) (tRel 3)))))) = Checked (tSort _)).
 
-Make Definition t4 := (tSort (Universe.make (fresh_level))).
+(* Make Definition t4 := (tSort (Universe.make (fresh_level))). *)

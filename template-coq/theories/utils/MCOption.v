@@ -12,6 +12,18 @@ Definition on_some {A} (P : A -> Type) (o : option A) :=
   | None => False
   end.
 
+Definition on_Some {A} (P : A -> Prop) : option A -> Prop :=
+  fun x => match x with
+        | Some x => P x
+        | None => False
+        end.
+
+Definition on_Some_or_None {A} (P : A -> Prop) : option A -> Prop :=
+  fun x => match x with
+        | Some x => P x
+        | None => True
+        end.
+
 Definition option_default {A B} (f : A -> B) (o : option A) (b : B) :=
   match o with Some x => f x | None => b end.
 
@@ -40,4 +52,16 @@ Proof.
   destruct a; simpl in *; congruence.
   simpl. destruct a; reflexivity.
   destruct a; simpl in *; congruence.
+Qed.
+
+Lemma option_map_two {A B C} (f : A -> B) (g : B -> C) x
+  : option_map g (option_map f x) = option_map (fun x => g (f x)) x.
+Proof.
+  destruct x; reflexivity.
+Qed.
+
+Lemma option_map_ext {A B} (f g : A -> B) (H : forall x, f x = g x)
+  : forall z, option_map f z = option_map g z.
+Proof.
+  intros []; cbn; congruence.
 Qed.

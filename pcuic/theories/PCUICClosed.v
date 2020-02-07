@@ -26,7 +26,7 @@ Proof.
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
     simpl closed in *; solve_all;
     unfold compose, test_def, test_snd in *;
-      try solve [simpl lift; simpl closed; f_equal; auto; repeat (toProp; solve_all)]; try easy.
+      try solve [simpl lift; simpl closed; f_equal; auto; repeat (rtoProp; solve_all)]; try easy.
 
   - elim (Nat.leb_spec k' n0); intros. simpl.
     elim (Nat.ltb_spec); auto. apply Nat.ltb_lt in H. lia.
@@ -41,7 +41,7 @@ Proof.
   induction t in n, k, k' |- * using term_forall_list_ind; intros;
     simpl in *;
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc in *;
-    simpl closed in *; repeat (toProp; solve_all); try change_Sk;
+    simpl closed in *; repeat (rtoProp; solve_all); try change_Sk;
     unfold compose, test_def, on_snd, test_snd in *; simpl in *; eauto with all.
 
   - revert H0.
@@ -51,8 +51,8 @@ Proof.
   - specialize (IHt2 n (S k) (S k')). eauto with all.
   - specialize (IHt2 n (S k) (S k')). eauto with all.
   - specialize (IHt3 n (S k) (S k')). eauto with all.
-  - toProp. solve_all. specialize (b0 n (#|m| + k) (#|m| + k')). eauto with all.
-  - toProp. solve_all. specialize (b0 n (#|m| + k) (#|m| + k')). eauto with all.
+  - rtoProp. solve_all. specialize (b0 n (#|m| + k) (#|m| + k')). eauto with all.
+  - rtoProp. solve_all. specialize (b0 n (#|m| + k) (#|m| + k')). eauto with all.
 Qed.
 
 Lemma closedn_mkApps k f u:
@@ -81,7 +81,7 @@ Proof.
   induction t in k' |- * using term_forall_list_ind; intros;
     simpl in *;
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
-    simpl closed in *; try change_Sk; repeat (toProp; solve_all);
+    simpl closed in *; try change_Sk; repeat (rtoProp; solve_all);
     unfold compose, test_def, on_snd, test_snd in *; simpl in *; eauto with all.
 
   - elim (Nat.leb_spec k' n); intros. simpl.
@@ -100,10 +100,10 @@ Proof.
     rewrite <- Nat.add_succ_comm in IHt2. eauto.
   - specialize (IHt3 (S k')).
     rewrite <- Nat.add_succ_comm in IHt3. eauto.
-  - toProp; solve_all. rewrite -> !Nat.add_assoc in *.
+  - rtoProp; solve_all. rewrite -> !Nat.add_assoc in *.
     specialize (b0 (#|m| + k')). unfold is_true. rewrite <- b0. f_equal. lia.
     unfold is_true. rewrite <- H0. f_equal. lia.
-  - toProp; solve_all. rewrite -> !Nat.add_assoc in *.
+  - rtoProp; solve_all. rewrite -> !Nat.add_assoc in *.
     specialize (b0 (#|m| + k')). unfold is_true. rewrite <- b0. f_equal. lia.
     unfold is_true. rewrite <- H0. f_equal. lia.
 Qed.
@@ -165,7 +165,7 @@ Proof.
   induction t in σ, k, Hs |- * using term_forall_list_ind; intros; sigma;
     simpl in *;
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc in *;
-    simpl closed in *; repeat (toProp; f_equal; solve_all); try change_Sk;
+    simpl closed in *; repeat (rtoProp; f_equal; solve_all); try change_Sk;
     unfold compose, test_def, on_snd, test_snd in *; simpl in *; eauto with all.
 
   - revert Hs.
@@ -178,9 +178,9 @@ Proof.
   - specialize (IHt2 σ (S k) H0). rewrite -{2}IHt2. now sigma.
   - specialize (IHt2 σ (S k) H0). rewrite -{2}IHt2. now sigma.
   - specialize (IHt3 σ (S k) H0). rewrite -{2}IHt3. now sigma.
-  - toProp. specialize (b0 σ (#|m| + k) H0). eapply map_def_id_spec; auto.
+  - rtoProp. specialize (b0 σ (#|m| + k) H0). eapply map_def_id_spec; auto.
     revert b0. now sigma.
-  - toProp. specialize (b0 σ (#|m| + k) H0). eapply map_def_id_spec; auto.
+  - rtoProp. specialize (b0 σ (#|m| + k) H0). eapply map_def_id_spec; auto.
     revert b0. now sigma.
 Qed.
 
@@ -392,7 +392,7 @@ Proof.
 
   - intuition auto.
     + solve_all. unfold test_snd. simpl in *.
-      toProp; eauto.
+      rtoProp; eauto.
     + apply closedn_mkApps; auto.
       rewrite forallb_app. simpl. rewrite H1.
       rewrite forallb_skipn; auto.
@@ -420,26 +420,26 @@ Proof.
   - clear H0.
     split. solve_all.
     destruct x; simpl in *.
-    unfold test_def. simpl. toProp.
+    unfold test_def. simpl. rtoProp.
     split.
     rewrite -> app_context_length in *. rewrite -> Nat.add_comm in *.
     eapply closedn_lift_inv in H1; eauto. lia.
     subst types.
     now rewrite app_context_length fix_context_length in H0.
-    eapply nth_error_all in H; eauto. simpl in H. intuition auto. toProp.
+    eapply nth_error_all in H; eauto. simpl in H. intuition auto. rtoProp.
     subst types. rewrite app_context_length in H0.
     rewrite Nat.add_comm in H0.
     now eapply closedn_lift_inv in H0.
 
   - split. solve_all. destruct x; simpl in *.
-    unfold test_def. simpl. toProp.
+    unfold test_def. simpl. rtoProp.
     split.
     rewrite -> app_context_length in *. rewrite -> Nat.add_comm in *.
     eapply closedn_lift_inv in H2; eauto. lia.
     subst types.
     now rewrite -> app_context_length, fix_context_length in H1.
     eapply (nth_error_all) in H; eauto. simpl in *.
-    intuition auto. toProp.
+    intuition auto. rtoProp.
     subst types. rewrite app_context_length in H1.
     rewrite Nat.add_comm in H1.
     now eapply closedn_lift_inv in H1.
@@ -512,7 +512,7 @@ Proof.
   eapply on_global_env_impl; cycle 1.
   apply (env_prop_sigma _ typecheck_closed _ X).
   red; intros. unfold lift_typing in *. destruct T; intuition auto with wf.
-  destruct X1 as [s0 Hs0]. simpl. toProp; intuition.
+  destruct X1 as [s0 Hs0]. simpl. rtoProp; intuition.
 Qed.
 
 Lemma closed_decl_upwards k d : closed_decl k d -> forall k', k <= k' -> closed_decl k' d.

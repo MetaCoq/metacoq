@@ -300,7 +300,7 @@ Proof.
 Qed.
 
 Lemma declared_projection_wf {cf:checker_flags}:
-  forall (Σ : global_env) (p : projection) (u : universe_instance)
+  forall (Σ : global_env) (p : projection) (u : Instance.t)
          (mdecl : mutual_inductive_body) (idecl : one_inductive_body) (pdecl : ident * term),
     declared_projection Σ mdecl idecl p pdecl ->
     Forall_decls_typing (fun (_ : global_env_ext) (_ : context) (t T : term) => Ast.wf t /\ Ast.wf T) Σ ->

@@ -76,7 +76,7 @@ Proof.
   induction l => /= // [=] Ha Hl; constructor; auto.
 Qed.
 
-Lemma forall_map_id_spec {A} {P : A -> Prop} {l} {f : A -> A} :
+Lemma forall_map_id_spec {A} {l} {f : A -> A} :
   Forall (fun x => f x = x) l <-> map f l = l.
 Proof.
   rewrite -{3}(map_id l). apply forall_map_spec.
@@ -808,14 +808,6 @@ Lemma forallb_skipn {A} (p : A -> bool) n l :
 Proof.
   induction l in n |- *; destruct n; simpl; try congruence.
   intros. apply IHl. rewrite -> andb_and in H; intuition.
-Qed.
-
-Lemma forallb_rev {A} (p : A -> bool) l :
-  forallb p (List.rev l) = forallb p l.
-Proof.
-  induction l using rev_ind; simpl; try congruence.
-  rewrite rev_unit forallb_app. simpl. rewrite <- IHl.
-  now rewrite andb_comm andb_true_r.
 Qed.
 
 Lemma Forall_forallb_eq_forallb {A} (P : A -> Prop) (p q : A -> bool) l :
@@ -1637,4 +1629,56 @@ Proof.
   intros.
   depelim l'; depelim X. destruct l; depelim X.
   specialize (IHl _ _ X). intuition auto.
+Qed.
+
+Lemma Forall2_eq {A} l l'
+  : @Forall2 A A eq l l' -> l = l'.
+Proof.
+  induction 1; congruence.
+Qed.
+
+Lemma Forall2_map' {A B A' B'} (R : A' -> B' -> Prop) (f : A -> A') (g : B -> B') l l'
+  : Forall2 R (map f l) (map g l') -> Forall2 (fun x y => R (f x) (g y)) l l'.
+Proof.
+  induction l in l' |- *.
+  - destruct l'; inversion 1. constructor.
+  - destruct l'; inversion 1. constructor; auto.
+Qed.
+
+Lemma Forall2_same :
+  forall A (P : A -> A -> Prop) l,
+    (forall x, P x x) ->
+    Forall2 P l l.
+Proof.
+  intros A P l h.
+  induction l.
+  - constructor.
+  - constructor.
+    + eapply h.
+    + assumption.
+Qed.
+
+Lemma Forall2_sym :
+  forall A (P : A -> A -> Prop) l l',
+    Forall2 P l l' ->
+    Forall2 (fun x y => P y x) l' l.
+Proof.
+  intros A P l l' h.
+  induction h.
+  - constructor.
+  - constructor. all: auto.
+Qed.
+
+Lemma forallb2_Forall2 :
+  forall A (p : A -> A -> bool) l l',
+    forallb2 p l l' ->
+    Forall2 (fun x y => p x y) l l'.
+Proof.
+  intros A p l l' h.
+  induction l in l', h |- *.
+  - destruct l'. 2: discriminate.
+    constructor.
+  - destruct l'. 1: discriminate.
+    simpl in h. apply andP in h as [? ?].
+    constructor. all: auto.
 Qed.

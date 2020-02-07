@@ -6,15 +6,15 @@ src/classes0.mli
 src/classes0.ml
 
 # From Coq's stdlib
-#src/compare_dec.mli
-#src/compare_dec.ml
-src/mSetList.mli
-src/mSetList.ml
+src/mSetWeakList.mli
+src/mSetWeakList.ml
 src/eqdepFacts.mli
 src/eqdepFacts.ml
 
 src/monad_utils.ml
 src/monad_utils.mli
+src/utils.ml
+src/utils.mli
 src/uGraph0.ml
 src/uGraph0.mli
 src/wGraph.ml

@@ -107,7 +107,7 @@ struct
     let levels = Universe.map (fun (l,i) -> pairl tlevel bool_type (quote_level l) (quote_bool (i > 0))) s in
     let hd = List.hd levels in
     let tl = to_coq_list (prodl tlevel bool_type) (List.tl levels) in
-    constr_mkApp (tmake_universe, [| hd ; tl |])
+    constr_mkApp (tfrom_kernel_repr, [| hd ; tl |])
 
   let quote_levelset s =
     let levels = LSet.elements s in

@@ -109,7 +109,7 @@ Section TypeOf.
       end
     end.
 
-  Definition sort_of (Γ : context) (t : term) : typing_result universe :=
+  Definition sort_of (Γ : context) (t : term) : typing_result Universe.t :=
     ty <- type_of Γ t;;
     type_of_as_sort type_of Γ ty.
 

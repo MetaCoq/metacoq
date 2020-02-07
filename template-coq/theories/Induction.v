@@ -139,7 +139,7 @@ Qed.
 Definition tCaseBrsType {A} (P : A -> Type) (l : list (nat * A)) :=
   All (fun x => P (snd x)) l.
 
-Definition tFixType {A : Set} (P P' : A -> Type) (m : mfixpoint A) :=
+Definition tFixType {A} (P P' : A -> Type) (m : mfixpoint A) :=
   All (fun x : def A => P x.(dtype) * P' x.(dbody))%type m.
 
 Lemma term_forall_list_rect :

@@ -42,7 +42,7 @@ Section print_term.
                   string_of_level l1 ++ " " ++ print_constraint_type d ++ " " ++ string_of_level l2)
                " /\ " (ConstraintSet.elements t).
 
-  Definition print_def {A : Set} (f : A -> string) (g : A -> string) (def : def A) :=
+  Definition print_def {A} (f : A -> string) (g : A -> string) (def : def A) :=
     string_of_name (dname def) ++ " { struct " ++ string_of_nat (rarg def) ++ " }" ++
                    " : " ++ f (dtype def) ++ " := " ++ nl ++ g (dbody def).
 

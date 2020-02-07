@@ -255,6 +255,14 @@ Lemma if_true_false (b : bool) : (if b then true else false) = b.
   destruct b; reflexivity.
 Qed.
 
+Lemma iff_is_true_eq_bool (b b' : bool) :
+  (b <-> b') -> b = b'.
+Proof.
+  destruct b, b'; cbnr; intros [H1 H2];
+    try specialize (H1 eq_refl); try specialize (H2 eq_refl);
+      discriminate.
+Qed.
+
 Ltac tas := try assumption.
 Ltac tea := try eassumption.
 

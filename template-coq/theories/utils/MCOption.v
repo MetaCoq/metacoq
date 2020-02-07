@@ -12,6 +12,18 @@ Definition on_some {A} (P : A -> Type) (o : option A) :=
   | None => False
   end.
 
+Definition on_Some {A} (P : A -> Prop) : option A -> Prop :=
+  fun x => match x with
+        | Some x => P x
+        | None => False
+        end.
+
+Definition on_Some_or_None {A} (P : A -> Prop) : option A -> Prop :=
+  fun x => match x with
+        | Some x => P x
+        | None => True
+        end.
+
 Definition option_default {A B} (f : A -> B) (o : option A) (b : B) :=
   match o with Some x => f x | None => b end.
 

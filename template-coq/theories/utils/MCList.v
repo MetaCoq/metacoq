@@ -1,4 +1,4 @@
-From Coq Require Import List Program Arith Lia.
+From Coq Require Import List Program Arith Lia SetoidList.
 
 Import ListNotations.
 
@@ -756,3 +756,9 @@ Proof.
   intros.
   induction l; simpl; auto.
 Defined.
+
+Lemma InA_In_eq {A} x (l : list A) : InA Logic.eq x l <-> In x l.
+Proof.
+  etransitivity. eapply InA_alt.
+  firstorder. now subst.
+Qed.

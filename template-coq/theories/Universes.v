@@ -1,14 +1,16 @@
-From Coq Require Import Ascii String ZArith List Bool.
-From Coq Require Import MSetWeakList MSetFacts MSetProperties RelationClasses.
+From Coq Require Import Ascii String ZArith List Bool Lia.
+From Coq Require Import MSetList MSetFacts MSetProperties RelationClasses.
 From MetaCoq.Template Require Import utils BasicAst config.
 Import ListNotations.
 
 Module Level.
-  Inductive t : Set :=
+  Inductive t_ : Set :=
   | lProp
   | lSet
   | Level (_ : string)
   | Var (_ : nat) (* these are debruijn indices *).
+
+  Definition t := t_.
 
   Definition set : t := lSet.
   Definition prop : t := lProp.
@@ -50,41 +52,88 @@ Module Level.
     | _, Level _ => Gt
     | Var n, Var m => Nat.compare n m
     end.
-  (** Comparison function *)
+
+  Definition eq : t -> t -> Prop := eq.
+  Definition eq_equiv : Equivalence eq := _.
 
   Definition eq_dec (l1 l2 : t) : {l1 = l2}+{l1 <> l2}.
   Proof.
     decide equality. apply string_dec. apply Peano_dec.eq_nat_dec.
   Defined.
 
+  Inductive lt_ : t -> t -> Prop :=
+  | ltPropSet : lt_ lProp lSet
+  | ltPropLevel s : lt_ lProp (Level s)
+  | ltPropVar n : lt_ lProp (Var n)
+  | ltSetLevel s : lt_ lSet (Level s)
+  | ltSetVar n : lt_ lSet (Var n)
+  | ltLevelLevel s s' : string_lt s s' -> lt_ (Level s) (Level s')
+  | ltLevelVar s n : lt_ (Level s) (Var n)
+  | ltVarVar n n' : Nat.lt n n' -> lt_ (Var n) (Var n').
+
+  Definition lt := lt_.
+
+  Definition lt_strorder : StrictOrder lt.
+  Proof.
+    constructor.
+    - intros [| | |] X; inversion X.
+      eapply string_lt_irreflexive; tea.
+      eapply Nat.lt_irrefl; tea.
+    - intros [| | |] [| | |] [| | |] X1 X2;
+        inversion X1; inversion X2; constructor.
+      eapply transitive_string_lt; tea.
+      etransitivity; tea.
+  Qed.
+
+  Definition lt_compat : Proper (eq ==> eq ==> iff) lt.
+  Proof.
+    intros x y e z t e'. unfold eq in *; subst. reflexivity.
+  Qed.
+
+  Definition compare_spec :
+    forall x y : t, CompareSpec (eq x y) (lt x y) (lt y x) (compare x y).
+  Proof.
+    intros [] []; repeat constructor.
+    - eapply CompareSpec_Proper.
+      5: eapply CompareSpec_string. 4: reflexivity.
+      all: split; [now inversion 1|]. now intros ->.
+      all: intro; now constructor.
+    - eapply CompareSpec_Proper.
+      5: eapply Nat.compare_spec. 4: reflexivity.
+      all: split; [now inversion 1|]. now intros ->.
+      all: intro; now constructor.
+  Qed.
+
+  (* Bonus *)
   Definition equal (l1 l2 : Level.t) : bool
     := match compare l1 l2 with Eq => true | _ => false end.
 
-  Lemma equal_refl :
-    forall l, equal l l.
+  Global Instance equal_refl : Reflexive equal.
   Proof.
-    intros [].
-    all: unfold equal.
-    all: simpl.
-    1-2: reflexivity.
+    intros []; unfold equal; cbnr.
     - rewrite (ssreflect.iffRL (string_compare_eq s s)). all: auto.
     - rewrite Nat.compare_refl. reflexivity.
   Qed.
 
+  Lemma equal_spec l l' : reflect (eq l l') (equal l l').
+  Proof.
+    destruct l, l'; cbn; try constructor; try reflexivity; try discriminate.
+    - apply iff_reflect. unfold equal; cbn.
+      destruct (CompareSpec_string s s0); split; intro HH;
+        try reflexivity; try discriminate; try congruence.
+      all: inversion HH; subst; now apply string_lt_irreflexive in H.
+    - apply iff_reflect. unfold equal; cbn.
+      destruct (Nat.compare_spec n n0); split; intro HH;
+        try reflexivity; try discriminate; try congruence.
+      all: inversion HH; subst; now apply Nat.lt_irrefl in H.
+  Qed.
+
+  Definition eq_leibniz (x y : t) : eq x y -> x = y := id.
 End Level.
 
-Module LevelDecidableType.
-   Definition t : Type := Level.t.
-   Definition eq : t -> t -> Prop := eq.
-   Definition eq_refl : forall x : t, eq x x := @eq_refl _.
-   Definition eq_sym : forall x y : t, eq x y -> eq y x := @eq_sym _.
-   Definition eq_trans : forall x y z : t, eq x y -> eq y z -> eq x z := @eq_trans _.
-   Definition eq_equiv : RelationClasses.Equivalence eq := _.
-   Definition eq_dec : forall x y : t, {eq x y} + {~ eq x y} := Level.eq_dec.
-End LevelDecidableType.
-Module LevelSet <: (MSetInterface.WSetsOn LevelDecidableType) := MSets.MSetWeakList.Make LevelDecidableType.
-Module LevelSetFact := WFactsOn LevelDecidableType LevelSet.
-Module LevelSetProp := WPropertiesOn LevelDecidableType LevelSet.
+Module LevelSet := MSets.MSetList.MakeWithLeibniz Level.
+Module LevelSetFact := WFactsOn Level LevelSet.
+Module LevelSetProp := WPropertiesOn Level LevelSet.
 
 Definition LevelSet_pair x y
   := LevelSet.add y (LevelSet.singleton x).
@@ -104,124 +153,314 @@ Proof.
   apply orb_true_iff.
 Qed.
 
-Definition universe_level := Level.t.
+
+
+Module UnivExpr.
+  (* level+1 if true. Except if Prop -> boolean ignored *)
+  Definition t : Set := Level.t * bool.
+
+  (* Warning: (lProp, true) represents also Prop *)
+  Definition is_small (e : t) : bool :=
+    match e with
+    | (Level.lProp, _)
+    | (Level.lSet, false) => true
+    | _ => false
+    end.
+
+  Definition is_level (e : t) : bool :=
+    match e with
+    | (Level.lProp, _)
+    | (_, false) => true
+    | _ => false
+    end.
+
+  Definition is_prop (e : t) : bool :=
+    match e with
+    | (Level.lProp, _) => true
+    | _ => false
+    end.
+
+  (* Equality is quotienting modulo (Prop,true) and (Prop,false) *)
+  Definition equal (e1 e2 : t) : bool
+    := match e1, e2 with
+       | (Level.lProp, _), (Level.lProp, _) => true
+       | (l1, b1), (l2, b2) => Level.equal l1 l2 && Bool.eqb b1 b2
+       end.
+
+  Definition get_level (e : t) : Level.t := fst e.
+
+  Definition prop : t := (Level.prop, false).
+  Definition set : t := (Level.set, false).
+  Definition type1 : t := (Level.set, true).
+
+  Global Instance equal_refl : Reflexive equal.
+  Proof.
+    intro e. destruct e as [[] b]. all: simpl.
+    - reflexivity.
+    - apply eqb_reflx.
+    - rewrite eqb_reflx. rewrite Level.equal_refl. reflexivity.
+    - rewrite Level.equal_refl, eqb_reflx. reflexivity.
+  Qed.
+
+  Global Instance equal_sym : Symmetric equal.
+  Proof.
+    intros [[] y] [[] y'] e; cbn in *; try reflexivity; try discriminate.
+    - apply eqb_true_iff. now apply (proj1 (eqb_true_iff _ _)) in e.
+    - apply andb_true_iff in e. destruct e as [e1 e2].
+      apply eqb_prop in e2; subst. rewrite eqb_reflx, andb_true_r.
+      destruct (Level.equal_spec (Level.Level s) (Level.Level s0));
+        [|discriminate]. now destruct e.
+    - apply andb_true_iff in e. destruct e as [e1 e2].
+      apply eqb_prop in e2; subst. rewrite eqb_reflx, andb_true_r.
+      destruct (Level.equal_spec (Level.Var n) (Level.Var n0));
+        [|discriminate]. now destruct e.
+  Qed.
+
+  Global Instance equal_trans : Transitive equal.
+    intros [[] y] [[] y'][[] y''] e e'; cbn in *;
+      try reflexivity; try discriminate.
+    - apply eqb_true_iff. apply eqb_prop in e. apply eqb_prop in e'. congruence.
+    - apply andb_true_iff in e. destruct e as [e1 e2].
+      apply eqb_prop in e2; subst.
+      apply andb_true_iff in e'. destruct e' as [e1' e2'].
+      apply eqb_prop in e2'; subst.
+      rewrite eqb_reflx, andb_true_r.
+      destruct (Level.equal_spec (Level.Level s) (Level.Level s0));
+        [|discriminate]. now destruct e.
+    - apply andb_true_iff in e. destruct e as [e1 e2].
+      apply eqb_prop in e2; subst.
+      apply andb_true_iff in e'. destruct e' as [e1' e2'].
+      apply eqb_prop in e2'; subst.
+      rewrite eqb_reflx, andb_true_r.
+      destruct (Level.equal_spec (Level.Var n) (Level.Var n0));
+        [|discriminate]. now destruct e.
+  Qed.
+
+  Definition eq : t -> t -> Prop := equal.
+
+  Definition eq_equiv : Equivalence eq.
+  Proof. constructor; exact _. Defined.
+
+  Inductive lt_ : t -> t -> Prop :=
+  | ltUnivExprSet : lt_ (Level.lSet, false) (Level.lSet, true)
+  | ltUnivExprLevel s : lt_ (Level.Level s, false) (Level.Level s, true)
+  | ltUnivExprVar n : lt_ (Level.Var n, false) (Level.Var n, true)
+  | ltUnivExpr l l' b b' : Level.lt l l' -> lt_ (l, b) (l', b').
+
+  Definition lt := lt_.
+
+  Definition lt_strorder : StrictOrder lt.
+  Proof.
+    constructor.
+    - intros x X; inversion X.
+      eapply Level.lt_strorder; eassumption.
+    - intros x y z X1 X2; invs X1; invs X2; constructor; tea.
+      etransitivity; tea.
+  Qed.
+
+  Definition lt_compat : Proper (eq ==> eq ==> iff) lt.
+  Proof.
+    intros x y e z t e'. unfold eq in *.
+    split; intro H.
+    - destruct x as [[] []], y as [[] []]; try discriminate;
+      destruct z as [[] []], t as [[] []]; try discriminate; invs H; cbn in *;
+        rewrite ?andb_true_r, ?andb_false_r in *.
+      all: try match goal with
+      | H : Level.lt ?X ?X |- _ => exfalso; eapply Level.lt_strorder; eassumption
+      end.
+      all: repeat match goal with
+           | e : is_true (Level.equal _ _) |- _
+             => apply (reflect_iff _ _ (Level.equal_spec _ _)) in e; invs e
+           end; try discriminate.
+      all: try (constructor; eassumption).
+    - destruct x as [[] []], y as [[] []]; try discriminate;
+      destruct z as [[] []], t as [[] []]; try discriminate; invs H; cbn in *;
+        rewrite ?andb_true_r, ?andb_false_r in *.
+      all: try match goal with
+      | H : Level.lt ?X ?X |- _ => exfalso; eapply Level.lt_strorder; eassumption
+      end.
+      all: repeat match goal with
+           | e : is_true (Level.equal _ _) |- _
+             => apply (reflect_iff _ _ (Level.equal_spec _ _)) in e; invs e
+           end; try discriminate.
+      all: try (constructor; eassumption).
+  Qed.
+
+  Definition compare (x y : t) : comparison :=
+    match x, y with
+    | (Level.lProp, _), (Level.lProp, _) => Eq
+    | (Level.lProp, _), _ => Lt
+    | (Level.lSet, _), (Level.lProp, _) => Gt
+    | (Level.lSet, b1), (Level.lSet, b2) => bool_compare b1 b2
+    | (Level.lSet, _), _ => Lt
+    | (Level.Level _, _), (Level.lProp, _) => Gt
+    | (Level.Level _, _), (Level.lSet, _) => Gt
+    | (Level.Level s1, b1), (Level.Level s2, b2) =>
+      match string_compare s1 s2 with
+      | Eq => bool_compare b1 b2
+      | x => x
+      end
+    | (Level.Level _, _), (Level.Var _, _) => Lt
+    | (Level.Var s1, b1), (Level.Var s2, b2) =>
+      match Nat.compare s1 s2 with
+      | Eq => bool_compare b1 b2
+      | x => x
+      end
+    | (Level.Var _, _), _ => Gt
+    end.
+
+  Definition compare_spec :
+    forall x y : t, CompareSpec (eq x y) (lt x y) (lt y x) (compare x y).
+  Proof.
+    intros [[] []] [[] []]; cbn; repeat constructor.
+    1-4: destruct (CompareSpec_string s s0); subst; now repeat constructor.
+    1-4: destruct (Nat.compare_spec n n0); subst; now repeat constructor.
+  Qed.
+
+  Definition eq_dec (l1 l2 : t) : {eq l1 l2}+{~ eq l1 l2}.
+  Proof.
+    unfold eq. destruct (equal l1 l2); [left|right]. reflexivity.
+    discriminate.
+  Defined.
+End UnivExpr.
+
+Module UnivExprSet := MSets.MSetList.Make UnivExpr.
+Module UnivExprSetFact := WFactsOn UnivExpr UnivExprSet.
+Module UnivExprSetProp := WPropertiesOn UnivExpr UnivExprSet.
+
+Coercion UnivExprSet.elements : UnivExprSet.t >-> list.
 
 
 Module Universe.
-  Module Expr.
-    (* level+1 if true. Except if Prop -> boolean ignored *)
-    Definition t : Set := Level.t * bool.
 
-    (* Warning: (lProp, true) represents also Prop *)
-    Definition is_small (e : t) : bool :=
-      match e with
-      | (Level.lProp, _)
-      | (Level.lSet, false) => true
-      | _ => false
-      end.
+  Record t := { t_set : UnivExprSet.t ;
+                      t_ne  : UnivExprSet.is_empty t_set = false }.
 
-    Definition is_level (e : t) : bool :=
-      match e with
-      | (Level.lProp, _)
-      | (_, false) => true
-      | _ => false
-      end.
-
-    Definition is_prop (e : t) : bool :=
-      match e with
-      | (Level.lProp, _) => true
-      | _ => false
-      end.
-
-    Definition equal (e1 e2 : t) : bool
-      := match e1, e2 with
-         | (Level.lProp, _), (Level.lProp, _) => true
-         | (l1, b1), (l2, b2) => Level.equal l1 l2 && Bool.eqb b1 b2
-         end.
-
-    Definition get_level (e : t) : Level.t := fst e.
-
-    Definition prop : t := (Level.prop, false).
-    Definition set : t := (Level.set, false).
-    Definition type1 : t := (Level.set, true).
-
-    Lemma equal_refl :
-      forall e, equal e e.
-    Proof.
-      intro e. destruct e as [[] b]. all: simpl.
-      - reflexivity.
-      - apply eqb_reflx.
-      - rewrite eqb_reflx. rewrite Level.equal_refl. reflexivity.
-      - rewrite Level.equal_refl, eqb_reflx. reflexivity.
-    Qed.
-
-  End Expr.
-
-  Definition t : Set := non_empty_list Expr.t.
+  Coercion t_set : t >-> UnivExprSet.t.
 
   Definition equal (u1 u2 : t) : bool :=
-    NEL.forallb2 Expr.equal u1 u2.
+    UnivExprSet.equal u1.(t_set) u2.(t_set).
 
   Definition make (l : Level.t) : t
-    := NEL.sing (l, false).
+    := {| t_set := UnivExprSet.singleton (l, false);
+          t_ne := eq_refl |}.
   (** Create a universe representing the given level. *)
 
-  Definition make' (e : Expr.t) : t
-    := NEL.sing e.
+  Definition make' (e : UnivExpr.t) : t
+    := {| t_set := UnivExprSet.singleton e;
+          t_ne := eq_refl |}.
 
-  Definition make'' (e : Expr.t) (u : list Expr.t) : t
-    := NEL.cons' e u.
+  Program Definition add (e : UnivExpr.t) (u : t) : t
+    := {| t_set := UnivExprSet.add e u;
+          t_ne := _ |}.
+  Next Obligation.
+    apply not_true_is_false. intro H.
+    apply UnivExprSetFact.is_empty_2 in H.
+    eapply H. eapply UnivExprSet.add_spec.
+    left; reflexivity.
+  Qed.
 
-  (* FIXME: take duplicates in account *)
-  Definition is_level (u : t) : bool :=
-    match u with
-    | NEL.sing e => Expr.is_level e
-    | _ => false
-    end.
-  (** Test if the universe is a level or an algebraic universe. *)
+  Definition add_list : list UnivExpr.t -> t -> t
+    := List.fold_left (fun u e => add e u).
 
-  Definition is_levels (u : t) : bool :=
-    NEL.forallb Expr.is_level u.
+  Definition is_levels : t -> bool
+    := UnivExprSet.for_all UnivExpr.is_level.
   (** Test if the universe is a lub of levels or contains +n's. *)
 
+  Definition is_level (u : t) : bool :=
+    (UnivExprSet.cardinal u =? 1) &&  is_levels u.
+  (** Test if the universe is a level or an algebraic universe. *)
+
   Definition level (u : t) : option Level.t :=
-    match u with
-    | NEL.sing (Level.lProp, _) => Some Level.lProp
-    | NEL.sing (l, false) => Some l
+    match UnivExprSet.elements u with
+    | [(Level.lProp, _)] => Some Level.lProp
+    | [(l, false)] => Some l
     | _ => None
     end.
   (** Try to get a level out of a universe, returns [None] if it
       is an algebraic universe. *)
 
-  (* Definition levels (u : t) : list Level.t := *)
-  (*   LevelSet.elements (NEL.fold_left (fun s '(l, _) => LevelSet.add l s) *)
-  (*                                u LevelSet.empty). *)
-  (* (** Get the levels inside the universe, forgetting about increments *) *)
+  Definition is_small  : t -> bool :=
+    UnivExprSet.for_all UnivExpr.is_small.
 
-  Definition is_small (u : t) : bool :=
-    NEL.forallb Expr.is_small u.
-
-  Definition is_prop (u : t) : bool :=
-    NEL.forallb Expr.is_prop u.
+  Definition is_prop  : t -> bool :=
+    UnivExprSet.for_all UnivExpr.is_prop.
 
   Definition type0m : t := make Level.prop.
   Definition type0 : t := make Level.set.
-  Definition type1  :t := make' Expr.type1.
+  Definition type1 : t := make' UnivExpr.type1.
 
   Definition super (l : Level.t) : t :=
     if Level.is_small l then type1
     else make' (l, true).
   (** The universe strictly above FOR TYPING (not cumulativity) *)
 
+  Program Definition exprs (u : t) : UnivExpr.t * list UnivExpr.t
+    := match UnivExprSet.elements u with
+       | [] => False_rect _ _
+       | e :: l => (e, l)
+       end.
+  Next Obligation.
+    destruct u as [u1 u2]; cbn in *. revert u2.
+    apply eq_true_false_abs.
+    unfold UnivExprSet.is_empty, UnivExprSet.Raw.is_empty,
+    UnivExprSet.elements, UnivExprSet.Raw.elements in *.
+    rewrite <- Heq_anonymous; reflexivity.
+  Qed.
+
+  Lemma exprs_make' e : Universe.exprs (Universe.make' e) = (e, []).
+  Proof. reflexivity. Defined.
+
+  Lemma exprs_make l : Universe.exprs (Universe.make l) = ((l, false), []).
+  Proof. reflexivity. Defined.
+
+
+  Lemma exprs_spec u :
+    let '(e, u') := Universe.exprs u in
+    e :: u' = u.
+  Proof.
+    destruct u as [u1 u2].
+    pose (l := UnivExprSet.elements u1).
+    unfold Universe.exprs; cbn.
+    change (let '(e, u') :=
+                match l return l = u1 -> UnivExpr.t × list UnivExpr.t with
+                | [] => fun Heq_anonymous : [] = u1 =>
+                    False_rect (UnivExpr.t × list UnivExpr.t)
+                               (exprs_obligation_1
+                                  {| Universe.t_set := u1; Universe.t_ne := u2 |}
+                                  Heq_anonymous)
+                | e :: l0 => fun _ : e :: l0 = u1 => (e, l0)
+                end eq_refl in e :: u' = u1).
+    set (e := eq_refl). clearbody e. change (l = u1) in e.
+    destruct l.
+    - exfalso. revert u2. apply eq_true_false_abs.
+      unfold UnivExprSet.is_empty, UnivExprSet.Raw.is_empty,
+      UnivExprSet.elements, UnivExprSet.Raw.elements in *.
+      rewrite <- e; reflexivity.
+    - assumption.
+  Qed.
+
+  Lemma exprs_spec' u :
+    (Universe.exprs u).1 :: (Universe.exprs u).2 = u.
+  Proof.
+    pose proof (exprs_spec u).
+    now destruct (Universe.exprs u).
+  Qed.
+
+  Lemma exprs_spec'' u :
+    (Universe.exprs u).1 :: (Universe.exprs u).2 = UnivExprSet.this u.(t_set).
+  Proof.
+    apply exprs_spec'.
+  Qed.
+
+
   Definition try_suc (u : t) : t :=
-    NEL.map (fun '(l, b) =>  (l, true)) u.
+    let '((lv, _), l) := exprs u in
+    let l := List.map (fun '(e, _) => (e, true)) l in
+    add_list l (make' (lv, true)).
 
-  (* FIXME: don't duplicate *)
-  Definition sup (u1 u2 : t) : t := NEL.app u1 u2.
+  Definition sup (u : t) : t -> t := add_list (UnivExprSet.elements u).
   (** The l.u.b. of 2 universes (naive because of duplicates) *)
-
-  (* Definition existsb (P : Expr.t -> bool) (u : t) : bool := NEL.existsb P u. *)
-  Definition for_all (P : Expr.t -> bool) (u : t) : bool := NEL.forallb P u.
 
   (** Type of product *)
   Definition sort_of_product (domsort rangsort : t) :=
@@ -229,18 +468,14 @@ Module Universe.
     if Universe.is_prop rangsort then rangsort
     else Universe.sup domsort rangsort.
 
-  Lemma equal_refl :
-    forall u, equal u u.
+  Lemma equal_refl u : equal u u.
   Proof.
-    intro u. unfold equal. eapply NEL.forallb2_refl.
-    apply Expr.equal_refl.
+    apply UnivExprSet.equal_spec. reflexivity.
   Qed.
 
 End Universe.
 
-Definition universe := Universe.t.
-Definition universe_coercion : universe -> list Universe.Expr.t := NEL.to_list.
-Coercion universe_coercion : universe >-> list.
+Coercion Universe.t_set : Universe.t >-> UnivExprSet.t.
 
 
 (** Sort families *)
@@ -257,48 +492,116 @@ Definition leb_sort_family x y :=
 
 (** Family of a universe [u]. *)
 
-Definition universe_family (u : universe) :=
+Definition universe_family (u : Universe.t) :=
   if Universe.is_prop u then InProp
   else if Universe.is_small u then InSet
   else InType.
 
 
 Module ConstraintType.
-  Inductive t : Set := Lt | Le | Eq.
-End ConstraintType.
-
-Definition constraint_type := ConstraintType.t.
-Definition univ_constraint : Set := universe_level * ConstraintType.t * universe_level.
-
-Module UnivConstraintDec.
-  Definition t : Set := univ_constraint.
+  Inductive t_ : Set := Lt | Le | Eq.
+  Definition t := t_.
   Definition eq : t -> t -> Prop := eq.
   Definition eq_equiv : RelationClasses.Equivalence eq := _.
-  Definition eq_dec : forall x y : t, {eq x y} + {~ eq x y}.
-    unfold eq.
-    decide equality. decide equality. apply string_dec. apply Peano_dec.eq_nat_dec.
-    decide equality. decide equality. apply LevelDecidableType.eq_dec.
+
+  Inductive lt_ : t -> t -> Prop :=
+  | LtLe : lt_ Lt Le
+  | LtEq : lt_ Lt Eq
+  | LeEq : lt_ Le Eq.
+  Definition lt := lt_.
+
+  Lemma lt_strorder : StrictOrder lt.
+  Proof.
+    constructor.
+    - intros []; intro X; inversion X.
+    - intros ? ? ? X Y; invs X; invs Y; constructor.
+  Qed.
+
+  Lemma lt_compat : Proper (eq ==> eq ==> iff) lt.
+  Proof.
+    intros ? ? X ? ? Y; invs X; invs Y. reflexivity.
+  Qed.
+
+  Definition compare (x y : t) : comparison :=
+    match x, y with
+    | Lt, Lt => Datatypes.Eq
+    | Lt, _  => Datatypes.Lt
+    | Le, Lt => Datatypes.Gt
+    | Le, Le => Datatypes.Eq
+    | Le, Eq => Datatypes.Lt
+    | Eq, Eq => Datatypes.Eq
+    | Eq, _  => Datatypes.Gt
+    end.
+
+  Lemma compare_spec x y : CompareSpec (eq x y) (lt x y) (lt y x) (compare x y).
+  Proof.
+    destruct x, y; repeat constructor.
+  Qed.
+
+  Lemma eq_dec x y : {eq x y} + {~ eq x y}.
+  Proof.
+    unfold eq. decide equality.
+  Qed.
+End ConstraintType.
+
+Module UnivConstraint.
+  Definition t : Set := Level.t * ConstraintType.t * Level.t.
+  Definition eq : t -> t -> Prop := eq.
+  Definition eq_equiv : RelationClasses.Equivalence eq := _.
+
+  Inductive lt_ : t -> t -> Prop :=
+  | lt_Level2 l1 t l2 l2' : Level.lt l2 l2' -> lt_ (l1, t, l2) (l1, t, l2')
+  | lt_Cstr l1 t t' l2 l2' : ConstraintType.lt t t' -> lt_ (l1, t, l2) (l1, t', l2')
+  | lt_Level1 l1 l1' t t' l2 l2' : Level.lt l1 l1' -> lt_ (l1, t, l2) (l1', t', l2').
+  Definition lt := lt_.
+
+  Lemma lt_strorder : StrictOrder lt.
+  Proof.
+    constructor.
+    - intros []; intro X; inversion X; subst;
+        try (eapply Level.lt_strorder; eassumption).
+      eapply ConstraintType.lt_strorder; eassumption.
+    - intros ? ? ? X Y; invs X; invs Y; constructor; tea.
+      etransitivity; eassumption.
+      2: etransitivity; eassumption.
+      eapply ConstraintType.lt_strorder; eassumption.
+  Qed.
+
+  Lemma lt_compat : Proper (eq ==> eq ==> iff) lt.
+  Proof.
+    intros ? ? X ? ? Y; invs X; invs Y. reflexivity.
+  Qed.
+
+  Definition compare : t -> t -> comparison :=
+    fun '(l1, t, l2) '(l1', t', l2') =>
+      Pos.switch_Eq (Pos.switch_Eq (Level.compare l2 l2')
+                                   (ConstraintType.compare t t'))
+                    (Level.compare l1 l1').
+
+  Lemma compare_spec x y
+    : CompareSpec (eq x y) (lt x y) (lt y x) (compare x y).
+  Proof.
+    destruct x as [[l1 t] l2], y as [[l1' t'] l2']; cbn.
+    destruct (Level.compare_spec l1 l1'); cbn; repeat constructor; tas.
+    invs H.
+    destruct (ConstraintType.compare_spec t t'); cbn; repeat constructor; tas.
+    invs H.
+    destruct (Level.compare_spec l2 l2'); cbn; repeat constructor; tas.
+    invs H. reflexivity.
+  Qed.
+
+  Lemma eq_dec x y : {eq x y} + {~ eq x y}.
+  Proof.
+    unfold eq. repeat decide equality.
   Defined.
-End UnivConstraintDec.
-Module ConstraintSet <: MSetInterface.WSetsOn UnivConstraintDec := MSets.MSetWeakList.Make UnivConstraintDec.
-Module ConstraintSetFact := MSetFacts.WFactsOn UnivConstraintDec ConstraintSet.
-Module ConstraintSetProp := MSetProperties.WPropertiesOn UnivConstraintDec
-                                                         ConstraintSet.
 
-Definition make_univ_constraint : universe_level -> constraint_type -> universe_level -> univ_constraint
-  := fun x y z => (x, y, z).
+  Definition eq_leibniz (x y : t) : eq x y -> x = y := id.
+End UnivConstraint.
 
-(** Needs to be in Type because template polymorphism of MSets does not allow setting
-    the lowest universe *)
-Definition constraints : Type := ConstraintSet.t.  (* list univ_constraint *)
-
-Definition empty_constraint : constraints := ConstraintSet.empty.
-
-(* Definition constraint_function A : Type := A -> A -> constraints -> constraints. *)
-(* val enforce_eq : universe constraint_function *)
-(* val enforce_leq : universe constraint_function *)
-(* val enforce_eq_level : universe_level constraint_function *)
-(* val enforce_leq_level : universe_level constraint_function *)
+Module ConstraintSet := MSets.MSetList.MakeWithLeibniz UnivConstraint.
+Module ConstraintSetFact := MSetFacts.WFactsOn UnivConstraint ConstraintSet.
+Module ConstraintSetProp
+:= MSetProperties.WPropertiesOn UnivConstraint ConstraintSet.
 
 
 (** {6 Universe instances} *)
@@ -323,13 +626,10 @@ Module Instance.
     forallb2 f i j.
 End Instance.
 
-Definition universe_instance := Instance.t.
-
-(* val enforce_eq_instances : universe_instance constraint_function *)
 
 
 Module UContext.
-  Definition t := universe_instance × constraints.
+  Definition t := Instance.t × ConstraintSet.t.
 
   Definition make : Instance.t -> ConstraintSet.t -> t := pair.
 
@@ -337,15 +637,16 @@ Module UContext.
   (* val is_empty : t -> bool *)
 
   Definition instance : t -> Instance.t := fst.
-  Definition constraints : t -> constraints := snd.
+  Definition constraints : t -> ConstraintSet.t := snd.
 
   Definition dest : t -> Instance.t * ConstraintSet.t := fun x => x.
 End UContext.
 
 Module AUContext.
-  Definition t := list ident × constraints.
+  Definition t := list ident × ConstraintSet.t.
 
-  Definition make (ids : list ident) (ctrs : constraints) : t := (ids, ctrs).
+  Definition make (ids : list ident) (ctrs : ConstraintSet.t) : t
+    := (ids, ctrs).
   Definition repr '((u, cst) : t) : UContext.t :=
     (mapi (fun i _ => Level.Var i) u, cst).
 
@@ -354,7 +655,7 @@ Module AUContext.
 End AUContext.
 
 Module ContextSet.
-  Definition t := LevelSet.t × constraints.
+  Definition t := LevelSet.t × ConstraintSet.t.
 
   Definition empty : t := (LevelSet.empty, ConstraintSet.empty).
 
@@ -436,9 +737,6 @@ Definition constraints_of_udecl u :=
 
 (** * Valuations *)
 
-Import Level ConstraintType.
-
-
 (** A valuation is a universe level (nat) given for each
     universe variable (Level.t).
     It is >= for polymorphic universes and > 0 for monomorphic universes. *)
@@ -449,21 +747,28 @@ Record valuation :=
 
 Definition val0 (v : valuation) (l : Level.t) : Z :=
   match l with
-  | lProp => -1
-  | lSet => 0
-  | Level s => Z.pos (v.(valuation_mono) s)
-  | Var x => Z.of_nat (v.(valuation_poly) x)
+  | Level.lProp => -1
+  | Level.lSet => 0
+  | Level.Level s => Z.pos (v.(valuation_mono) s)
+  | Level.Var x => Z.of_nat (v.(valuation_poly) x)
   end.
 
-Definition val1 v (e : Universe.Expr.t) : Z :=
+Definition val1 v (e : UnivExpr.t) : Z :=
   let n := val0 v (fst e) in
-  if snd e && negb (is_prop (fst e)) then n + 1 else n.
+  if snd e && negb (Level.is_prop (fst e)) then n + 1 else n.
 
-Definition val (v : valuation) (u : universe) : Z :=
-  match u with
-  | NEL.sing e => val1 v e
-  | NEL.cons e u => NEL.fold_left (fun n e => Z.max (val1 v e) n) u (val1 v e)
-  end.
+Lemma universe_non_empty_list (u : Universe.t) : (u : list _) <> [].
+Proof.
+  destruct u as [u1 u2]; cbn; intro e.
+  unfold UnivExprSet.is_empty, UnivExprSet.elements, UnivExprSet.Raw.elements in *.
+  rewrite e in u2; discriminate.
+Qed.
+
+
+Definition val (v : valuation) (u : Universe.t) : Z :=
+  let '(e, u) := Universe.exprs u in
+  List.fold_left (fun n e => Z.max (val1 v e) n) u (val1 v e).
+
 
 Definition llt `{checker_flags} (x y : Z) : Prop :=
   if prop_sub_type
@@ -479,24 +784,28 @@ Definition lle `{checker_flags} (x y : Z) : Prop :=
 
 Notation "x <= y" := (lle x y) : univ_scope.
 
+
 Section Univ.
 
 Context `{cf : checker_flags}.
 
-Inductive satisfies0 (v : valuation) : univ_constraint -> Prop :=
-| satisfies0_Lt l l' : (val0 v l < val0 v l')%u -> satisfies0 v (l, Lt, l')
-| satisfies0_Le l l' : (val0 v l <= val0 v l')%u -> satisfies0 v (l, Le, l')
-| satisfies0_Eq l l' : val0 v l = val0 v l' -> satisfies0 v (l, Eq, l').
+Inductive satisfies0 (v : valuation) : UnivConstraint.t -> Prop :=
+| satisfies0_Lt l l' : (val0 v l < val0 v l')%u
+                       -> satisfies0 v (l, ConstraintType.Lt, l')
+| satisfies0_Le l l' : (val0 v l <= val0 v l')%u
+                       -> satisfies0 v (l, ConstraintType.Le, l')
+| satisfies0_Eq l l' : val0 v l = val0 v l'
+                       -> satisfies0 v (l, ConstraintType.Eq, l').
 
-Definition satisfies v : constraints -> Prop :=
+Definition satisfies v : ConstraintSet.t -> Prop :=
   ConstraintSet.For_all (satisfies0 v).
 
 Definition consistent ctrs := exists v, satisfies v ctrs.
 
-Definition eq_universe0 (φ : constraints) u u' :=
+Definition eq_universe0 (φ : ConstraintSet.t) u u' :=
   forall v, satisfies v φ -> val v u = val v u'.
 
-Definition leq_universe_n n (φ : constraints) u u' :=
+Definition leq_universe_n n (φ : ConstraintSet.t) u u' :=
   forall v, satisfies v φ -> (Z.of_nat n + val v u <= val v u')%Z.
 
 Definition leq_universe0 := leq_universe_n 0.
@@ -600,32 +909,88 @@ Proof.
 Qed.
 
 
-Lemma val_cons v e s
-  : val v (NEL.cons e s) = Z.max (val1 v e) (val v s).
+Lemma val_fold_right u v :
+  val v u = fold_right (fun e x => Z.max (val1 v e) x) (val1 v (Universe.exprs u).1)
+                       (List.rev (Universe.exprs u).2).
 Proof.
-  cbn. generalize (val1 v e); clear e.
-  induction s.
-  intro; cbn. apply Z.max_comm.
-  intro; cbn in *. rewrite !IHs. Lia.lia.
-Defined.
+  unfold val.
+  destruct (Universe.exprs u).
+  now rewrite fold_left_rev_right.
+Qed.
+
+Lemma rev_Forall A P l :
+  Forall P l <-> Forall P (@List.rev A l).
+Admitted.
+
+Lemma rev_Exists A P l :
+  Exists P l <-> Exists P (@List.rev A l).
+Admitted.
+
+Lemma Forall_cons A P x (l : list A) :
+  Forall P (x :: l) <-> P x /\ Forall P l.
+Proof. split; inversion 1; auto. Qed.
+
+Lemma val_caract u v k :
+  val v u = k
+  <-> Forall (fun e => val1 v e <= k)%Z u /\ Exists (fun e => val1 v e = k) u.
+Proof.
+  Set Printing Coercions.
+  rewrite val_fold_right.
+  unfold UnivExprSet.elements, UnivExprSet.Raw.elements.
+  rewrite <- (Universe.exprs_spec'' u).
+  destruct (Universe.exprs u) as [e l]; clear u; cbn.
+  symmetry. etransitivity.
+  { eapply and_iff_compat_l. etransitivity. eapply Exists_cons.
+    eapply or_iff_compat_l. eapply rev_Exists. }
+  etransitivity.
+  { eapply and_iff_compat_r. etransitivity. eapply Forall_cons.
+    eapply and_iff_compat_l. eapply rev_Forall. }
+  induction (List.rev l); cbn.
+  - split.
+    + intros [_ [H|H]]; tas. inversion H.
+    + intros ->. repeat constructor. reflexivity.
+  - split.
+Admitted.
+
+Lemma val_add v e s
+  : val v (Universe.add e s) = Z.max (val1 v e) (val v s).
+Proof.
+  apply val_caract. split.
+  - apply Forall_forall. intros x H. eapply In_InA in H.
+    eapply UnivExprSet.elements_spec1 in H.
+    unfold Universe.add in H. cbn in H.
+    apply UnivExprSet.add_spec in H.
+
+ (*   rewrite val_fold_right. *)
+(*   cbn. generalize (val1 v e); clear e. *)
+(*   induction s. *)
+(*   intro; cbn. apply Z.max_comm. *)
+(*   intro; cbn in *. rewrite !IHs. lia. *)
+(* Defined. *)
+Admitted.
 
 Lemma val_sup v s1 s2 :
   val v (Universe.sup s1 s2) = Z.max (val v s1) (val v s2).
 Proof.
-  induction s1.
-  unfold Universe.sup, NEL.app. now rewrite val_cons.
-  change (Universe.sup (NEL.cons a s1) s2) with (NEL.cons a (Universe.sup s1 s2)).
-  rewrite !val_cons. rewrite IHs1. Lia.lia.
-Qed.
+  unfold Universe.sup, Universe.add_list.
+  (* rewrite <- fold_left_rev_right. *)
+  (* destruct (UnivExprSet.elements s1). *)
+ (* cbn. Set Printing Coercions. *)
+  (* induction s1. *)
+(*   unfold Universe.sup, NEL.app. now rewrite val_cons. *)
+(*   change (Universe.sup (NEL.cons a s1) s2) with (NEL.cons a (Universe.sup s1 s2)). *)
+(*   rewrite !val_cons. rewrite IHs1. lia. *)
+(* Qed. *)
+Admitted.
 
 Lemma leq_universe0_sup_l φ s1 s2 : leq_universe0 φ s1 (Universe.sup s1 s2).
 Proof.
-  intros v H. rewrite val_sup. Lia.lia.
+  intros v H. rewrite val_sup. lia.
 Qed.
 
 Lemma leq_universe0_sup_r φ s1 s2 : leq_universe0 φ s2 (Universe.sup s1 s2).
 Proof.
-  intros v H. rewrite val_sup. Lia.lia.
+  intros v H. rewrite val_sup. lia.
 Qed.
 
 Lemma leq_universe_product φ s1 s2
@@ -669,7 +1034,7 @@ Proof.
   intros v sat.
   specialize (tu _ sat).
   specialize (ut _ sat).
-  simpl in tu, ut. Lia.lia.
+  simpl in tu, ut. lia.
 Qed.
 
 Global Instance leq_universe_antisym φ
@@ -696,18 +1061,107 @@ Definition leq_universe_refl' φ u
 Hint Resolve eq_universe_leq_universe' leq_universe_refl'.
 
 
-
 (* This universe is a hack used in plugings to generate fresh universes *)
-Definition fresh_universe : universe. exact Universe.type0. Qed.
+Definition fresh_universe : Universe.t. exact Universe.type0. Qed.
 (* This level is a hack used in plugings to generate fresh levels *)
 Definition fresh_level : Level.t. exact Level.set. Qed.
 
 End Univ.
 
-Definition is_prop_sort s :=
-  match Universe.level s with
-  | Some l => Level.is_prop l
-  | None => false
-  end.
+Lemma val1_is_prop e v :
+  UnivExpr.is_prop e -> (val1 v e = -1)%Z.
+Proof.
+  destruct e as [[] []]; try reflexivity; discriminate.
+Qed.
 
-(* Check (_ : forall (cf : checker_flags) Σ, Reflexive (eq_universe Σ)). *)
+Lemma for_all_this (P : UnivExpr.t -> bool) u :
+  UnivExprSet.for_all P u = forallb P (UnivExprSet.this u).
+Proof.
+  unfold UnivExprSet.for_all.
+  induction (UnivExprSet.this u); cbnr.
+  destruct (P a); cbnr. assumption.
+Qed.
+
+Lemma val_is_prop u v :
+  Universe.is_prop u -> (val v u = -1)%Z.
+Proof.
+  unfold Universe.is_prop. rewrite for_all_this.
+  rewrite val_fold_right.
+  rewrite <- (Universe.exprs_spec'' u).
+  destruct (Universe.exprs u) as [e l]; simpl.
+  intro H; apply andb_true_iff in H; destruct H as [He H]; revert H.
+  rewrite <- forallb_rev. induction (List.rev l); simpl.
+  - intros _. apply val1_is_prop; assumption.
+  - intro H; apply andb_true_iff in H; destruct H as [H1 H2].
+    apply val1_is_prop with (v:=v) in H1. now rewrite IHl0, H1.
+Qed.
+
+
+Lemma val1_minus_one e v :
+  (-1 <= val1 v e)%Z.
+Proof.
+  destruct e as [[] []]; cbn; lia.
+Qed.
+
+Lemma val_minus_one u v :
+  (-1 <= val v u)%Z.
+Proof.
+  rewrite val_fold_right.
+  destruct (Universe.exprs u) as [e u']; clear u; cbn.
+  induction (List.rev u'); simpl.
+  - apply val1_minus_one.
+  - pose proof (val1_minus_one a v). lia.
+Qed.
+
+Lemma val1_is_prop' e v :
+  (val1 v e <= -1)%Z -> UnivExpr.is_prop e.
+Proof.
+  destruct e as [[] []]; cbnr; lia.
+Qed.
+
+Lemma val_is_prop' u v :
+  (val v u <= -1)%Z -> Universe.is_prop u.
+Proof.
+  unfold Universe.is_prop. rewrite for_all_this.
+  rewrite val_fold_right.
+  rewrite <- (Universe.exprs_spec'' u).
+  destruct (Universe.exprs u) as [e l]; simpl.
+  rewrite <- forallb_rev.
+  induction (List.rev l); cbn.
+  - rewrite andb_true_r. apply val1_is_prop'.
+  - intro H. forward IHl0; [lia|].
+    specialize (val1_is_prop' a v) as H'. forward H'; [lia|].
+    apply andb_true_iff. apply andb_true_iff in IHl0.
+    intuition.
+Qed.
+
+Lemma val0_equal l1 l2 v :
+  Level.equal l1 l2 -> val0 v l1 = val0 v l2.
+Proof.
+  destruct l1, l2; cbnr; try now inversion 1.
+  all: unfold Level.equal; cbn.
+  destruct (CompareSpec_string s s0); try now inversion 1. now subst.
+  case_eq (n ?= n0); intro H; try now inversion 1.
+  apply PeanoNat.Nat.compare_eq in H. now subst.
+Qed.
+
+Lemma val1_equal e1 e2 v :
+  UnivExpr.equal e1 e2 -> val1 v e1 = val1 v e2.
+Proof.
+  destruct e1 as [[] []], e2 as [[] []]; cbn; try now inversion 1.
+  all: try (rewrite andb_false_r; now inversion 1).
+  all: rewrite andb_true_r.
+  all: intro H; apply val0_equal with (v:=v) in H; cbn in H; lia.
+Qed.
+
+Lemma val_equal u1 u2 v :
+  Universe.equal u1 u2 -> val v u1 = val v u2.
+Proof.
+(*   induction u1 in u2 |- *. *)
+(*   - destruct u2 as [a2|]; [|inversion 1]. cbn. apply val1_equal. *)
+(*   - destruct u2 as [|a2 u2]; [inversion 1|]. intro H. cbn in H. *)
+(*     apply andb_true_iff in H as [H1 H2]. *)
+(*     rewrite !val_cons. erewrite IHu1; tea. *)
+(*     erewrite val1_equal; tea. reflexivity. *)
+(* Qed. *)
+Admitted.

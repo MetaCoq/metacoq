@@ -11,7 +11,7 @@ Import MonadNotation.
 
 Local Existing Instance extraction_checker_flags.
 
-Definition isErasable Σ Γ t := ∑ T, Σ ;;; Γ |- t : T × (isArity T + (∑ u, (Σ ;;; Γ |- T : tSort u) * is_prop_sort u))%type.
+Definition isErasable Σ Γ t := ∑ T, Σ ;;; Γ |- t : T × (isArity T + (∑ u, (Σ ;;; Γ |- T : tSort u) * Universe.is_prop u))%type.
 
 Module E := EAst.
 Local Notation Ret t := t.
@@ -47,9 +47,9 @@ Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :
   | erases_tApp : forall (f u : term) (f' u' : E.term),
                   Σ;;; Γ |- f ⇝ℇ f' ->
                   Σ;;; Γ |- u ⇝ℇ u' -> Σ;;; Γ |- tApp f u ⇝ℇ E.tApp f' u'
-  | erases_tConst : forall (kn : kername) (u : universe_instance),
+  | erases_tConst : forall (kn : kername) (u : Instance.t),
                     Σ;;; Γ |- tConst kn u ⇝ℇ E.tConst kn
-  | erases_tConstruct : forall (kn : inductive) (k : nat) (n : universe_instance),
+  | erases_tConstruct : forall (kn : inductive) (k : nat) (n : Instance.t),
                         Σ;;; Γ |- tConstruct kn k n ⇝ℇ E.tConstruct kn k
   | erases_tCase1 : forall (ind : inductive) (npar : nat) (T c : term)
                       (brs : list (nat × term)) (c' : E.term)

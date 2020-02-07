@@ -42,7 +42,7 @@ Section TypeOf.
   Section SortOf.
     Context (type_of : forall Γ t, welltyped Σ Γ t -> typing_result (∑ T, ∥ Σ ;;; Γ |- t : T ∥)).
 
-    Program Definition type_of_as_sort Γ t (wf : welltyped Σ Γ t) : typing_result universe :=
+    Program Definition type_of_as_sort Γ t (wf : welltyped Σ Γ t) : typing_result Universe.t :=
       tx <- type_of Γ t wf ;;
       wfs <- @reduce_to_sort cf Σ hΣ Γ (projT1 tx) _ ;;
       ret (m:=typing_result) (projT1 wfs).

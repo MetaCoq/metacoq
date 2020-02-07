@@ -129,50 +129,8 @@ Inductive type_error :=
 | Msg (s : string).
 
 Local Open Scope string_scope.
-Definition string_of_list_aux {A} (f : A -> string) (l : list A) : string :=
-  let fix aux l :=
-      match l return string with
-      | nil => ""
-      | cons a nil => f a
-      | cons a l => f a ++ "," ++ aux l
-      end
-  in aux l.
 
-Definition string_of_list {A} (f : A -> string) (l : list A) : string :=
-  "[" ++ string_of_list_aux f l ++ "]".
-
-Definition string_of_level (l : Level.t) : string :=
-  match l with
-  | Level.lProp => "Prop"
-  | Level.lSet => "Set"
-  | Level.Level s => s
-  | Level.Var n => "Var " ++ string_of_nat n
-  end.
-
-Definition string_of_level_expr (l : Level.t * bool) : string :=
-  let '(l, b) := l in
-  string_of_level l ++ (if b then "+1" else "").
-
-Definition string_of_sort (u : universe) :=
-  string_of_list string_of_level_expr u.
-
-Definition string_of_name (na : name) :=
-  match na with
-  | nAnon => "_"
-  | nNamed n => n
-  end.
-
-Definition string_of_universe_instance u :=
-  string_of_list string_of_level u.
-
-Definition string_of_def {A : Set} (f : A -> string) (def : def A) :=
-  "(" ++ string_of_name (dname def) ++ "," ++ f (dtype def) ++ "," ++ f (dbody def) ++ ","
-      ++ string_of_nat (rarg def) ++ ")".
-
-Definition string_of_inductive (i : inductive) :=
-  (inductive_mind i) ++ "," ++ string_of_nat (inductive_ind i).
-
-Definition print_no_prop_level := string_of_level ∘ level_of_no_prop.
+Definition print_no_prop_level := string_of_level ∘ NoPropLevel.to_level.
 
 Definition print_edge '(l1, n, l2)
   := "(" ++ print_no_prop_level l1 ++ ", " ++ string_of_nat n ++ ", "
@@ -631,7 +589,7 @@ Section Typecheck.
                  typing_result ({ A : term & ∥ Σ ;;; Γ |- t : A ∥ })).
 
     Program Definition infer_type Γ HΓ t
-      : typing_result ({u : universe & ∥ Σ ;;; Γ |- t : tSort u ∥}) :=
+      : typing_result ({u : Universe.t & ∥ Σ ;;; Γ |- t : tSort u ∥}) :=
       tx <- infer Γ HΓ t ;;
       u <- reduce_to_sort Γ tx.π1 _ ;;
       ret (u.π1; _).
@@ -684,9 +642,9 @@ Section Typecheck.
     now apply global_ext_uctx_consistent.
   Qed.
 
-  Lemma is_graph_of_uctx_levels l :
+  Lemma is_graph_of_uctx_levels (l : NoPropLevel.t) :
     wGraph.VSet.mem l (uGraph.wGraph.V G) ->
-    LevelSet.mem l (global_ext_levels Σ).
+    LevelSet.mem (NoPropLevel.to_level l) (global_ext_levels Σ).
   Proof.
     unfold is_graph_of_uctx in HG.
     case_eq (gc_of_uctx (global_ext_uctx Σ)); [intros [lvs cts] XX|intro XX];
@@ -698,7 +656,7 @@ Section Typecheck.
     apply LevelSetProp.FM.elements_2.
     unfold no_prop_levels in H.
     rewrite LevelSet.fold_spec in H.
-    cut (SetoidList.InA eq (level_of_no_prop l) (LevelSet.elements lvs)
+    cut (SetoidList.InA eq (NoPropLevel.to_level l) (LevelSet.elements lvs)
          \/ wGraph.VSet.In l wGraph.VSet.empty). {
       intros [|H0]; [trivial|].
       now apply wGraph.VSet.empty_spec in H0. }
@@ -719,7 +677,7 @@ Section Typecheck.
          check_eq_nat #|u| 0 (Msg "monomorphic instance should be of length 0")
        | Polymorphic_ctx (inst, cstrs) =>
          let '(inst, cstrs) := AUContext.repr (inst, cstrs) in
-         check_eq_true (forallb (fun l => match no_prop_of_level l with
+         check_eq_true (forallb (fun l => match NoPropLevel.of_level l with
                                        | Some l => wGraph.VSet.mem l (uGraph.wGraph.V G)
                                        | None => false
                                        end) u)
@@ -768,7 +726,7 @@ Section Typecheck.
     : eqb_decl d d' -> eq_decl (global_ext_constraints Σ) d d'.
   Proof.
     unfold eqb_decl, eq_decl.
-    intro H. utils.toProp. apply eqb_opt_term_spec in H.
+    intro H. rtoProp. apply eqb_opt_term_spec in H.
     eapply eqb_term_spec in H0; tea. now split.
   Qed.
 
@@ -801,12 +759,12 @@ Section Typecheck.
     | tEvar ev args => raise (UnboundEvar ev)
 
     | tSort u =>
-          match u with
-          | NEL.sing (l, false) =>
+          match Universe.get_is_level u with
+          | Some l =>
             check_eq_true (LevelSet.mem l (global_ext_levels Σ))
                           (Msg ("undeclared level " ++ string_of_level l));;
             ret (tSort (Universe.super l); _)
-          | _ => raise (Msg (string_of_sort u ++ " is not a level"))
+          | None  => raise (Msg (string_of_sort u ++ " is not a level"))
           end
 
     | tProd na A B =>
@@ -1000,9 +958,15 @@ Section Typecheck.
       end
     end.
 
+  (* tRel *)
   Next Obligation. intros; sq; now econstructor. Defined.
-  Next Obligation. intros; sq; econstructor; tas.
-                   now apply LevelSetFact.mem_2. Defined.
+  (* tSort *)
+  Next Obligation.
+    symmetry in Heq_anonymous.
+    apply get_is_level_correct in Heq_anonymous.
+    subst u. sq; econstructor; tas.
+    now apply LevelSetFact.mem_2.
+  Defined.
   (* tProd *)
   Next Obligation.
     (* intros Γ HΓ t na A B Heq_t [s ?];  *)
@@ -1383,14 +1347,22 @@ Section CheckEnv.
     easy.
   Defined.
 
+  (* todo move *)
+  Definition VariableLevel_get_noprop (l : NoPropLevel.t) : option VariableLevel.t
+    := match l with
+       | NoPropLevel.lSet => None
+       | NoPropLevel.Level s => Some (VariableLevel.Level s)
+       | NoPropLevel.Var n => Some (VariableLevel.Var n)
+       end.
+
   Definition add_uctx (uctx : wGraph.VSet.t × GoodConstraintSet.t)
              (G : universes_graph) : universes_graph
     := let levels := wGraph.VSet.union uctx.1 G.1.1 in
        let edges := wGraph.VSet.fold
                       (fun l E =>
-                         match l with
-                         | lSet => E
-                         | vtn ll => wGraph.EdgeSet.add (edge_of_level ll) E
+                         match VariableLevel_get_noprop l with
+                         | None => E
+                         | Some ll => wGraph.EdgeSet.add (edge_of_level ll) E
                          end)
                       uctx.1 G.1.2 in
        let edges := GoodConstraintSet.fold

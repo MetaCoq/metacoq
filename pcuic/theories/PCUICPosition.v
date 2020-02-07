@@ -681,7 +681,17 @@ Inductive stack : Type :=
 
 Notation "'ε'" := (Empty).
 
-Derive NoConfusion NoConfusionHom EqDec for stack.
+Derive NoConfusion NoConfusionHom for stack.
+
+Instance EqDec_def {A} : EqDec A -> EqDec (def A).
+Proof.
+  intros X x y. decide equality; apply eq_dec.
+Defined.
+
+Instance EqDec_stack : EqDec stack.
+Proof.
+  intros x y. decide equality; apply eq_dec.
+Defined.
 
 Instance reflect_stack : ReflectEq stack :=
   let h := EqDec_ReflectEq stack in _.

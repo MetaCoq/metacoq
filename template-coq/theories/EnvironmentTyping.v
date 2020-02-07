@@ -86,7 +86,7 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
       be ensured if we added [global_constraints] as well as a coercion, as it
       would forget the extension's constraints. *)
 
-  Definition global_constraints (Σ : global_env) : constraints :=
+  Definition global_constraints (Σ : global_env) : ConstraintSet.t :=
     fold_right (fun decl ctrs =>
         ConstraintSet.union (monomorphic_constraints_decl decl.2) ctrs
       ) ConstraintSet.empty Σ.
@@ -97,18 +97,18 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
   Definition global_ext_levels (Σ : global_env_ext) : LevelSet.t :=
     LevelSet.union (levels_of_udecl (snd Σ)) (global_levels Σ.1).
 
-  Definition global_ext_constraints (Σ : global_env_ext) : constraints :=
+  Definition global_ext_constraints (Σ : global_env_ext) : ConstraintSet.t :=
     ConstraintSet.union
       (constraints_of_udecl (snd Σ))
       (global_constraints Σ.1).
 
-  Coercion global_ext_constraints : global_env_ext >-> constraints.
+  Coercion global_ext_constraints : global_env_ext >-> ConstraintSet.t.
 
   Definition global_ext_uctx (Σ : global_env_ext) : ContextSet.t :=
     (global_ext_levels Σ, global_ext_constraints Σ).
 
 
-  Lemma prop_global_ext_levels Σ : LevelSet.In Level.prop (global_ext_levels Σ).
+  Lemma prop_global_ext_levels Σ : LevelSet.In Level.lProp (global_ext_levels Σ).
   Proof.
     destruct Σ as [Σ φ]; cbn.
     apply LevelSetFact.union_3. cbn -[global_levels]; clear φ.
@@ -120,7 +120,7 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
   (** Check that [uctx] instantiated at [u] is consistent with
     the current universe graph. *)
 
-  Definition consistent_instance `{checker_flags} (lvs : LevelSet.t) (φ : constraints) uctx (u : universe_instance) :=
+  Definition consistent_instance `{checker_flags} (lvs : LevelSet.t) (φ : ConstraintSet.t) uctx (u : Instance.t) :=
     match uctx with
     | Monomorphic_ctx c => List.length u = 0
     | Polymorphic_ctx c =>
@@ -177,7 +177,7 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T).
     fun Σ Γ t T =>
       match T with
       | Some T => P Σ Γ t T
-      | None => { s : universe & P Σ Γ t (tSort s) }
+      | None => { s : Universe.t & P Σ Γ t (tSort s) }
       end.
 
   Definition on_local_decl (P : context -> term -> option term -> Type) Γ d :=
@@ -255,7 +255,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
 
     (** For well-formedness of inductive declarations we need a way to check that a assumptions
         of a given context is typable in a sort [u]. *)
-    Fixpoint type_local_ctx Σ (Γ Δ : context) (u : universe) : Type :=
+    Fixpoint type_local_ctx Σ (Γ Δ : context) (u : Universe.t) : Type :=
       match Δ with
       | [] => True
       | {| decl_body := None ; decl_type := t |} :: Δ =>
@@ -373,7 +373,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       { (** The type of the inductive must be an arity, sharing the same params
             as the rest of the block, and maybe having a context of indices. *)
         ind_indices : context;
-        ind_sort : universe;
+        ind_sort : Universe.t;
         ind_arity_eq : idecl.(ind_type)
                       = it_mkProd_or_LetIn mdecl.(ind_params)
                                 (it_mkProd_or_LetIn ind_indices (tSort ind_sort));
@@ -382,7 +382,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
         onArity : on_type Σ [] idecl.(ind_type);
 
         (** There is a sort bounding the indices and arguments for each constructor *)
-        ind_ctors_sort : list universe;
+        ind_ctors_sort : list Universe.t;
 
         (** Constructors are well-typed *)
         onConstructors :

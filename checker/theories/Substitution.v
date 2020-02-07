@@ -34,7 +34,7 @@ Inductive subs `{cf : checker_flags} Σ (Γ : context) : list term -> context ->
 (** Linking a context (with let-ins), an instance (reversed substitution)
     for its assumptions and a well-formed substitution for it. *)
 
-Inductive context_subst : context -> list term -> list term -> Set :=
+Inductive context_subst : context -> list term -> list term -> Type :=
 | context_subst_nil : context_subst [] [] []
 | context_subst_ass Γ args s na t a :
     context_subst Γ args s ->
@@ -920,7 +920,7 @@ Proof.
     f_equal.
     rewrite (lift_to_extended_list_k _ _ 1) map_map_compose.
     pose proof (to_extended_list_k_spec Γ k).
-    solve_all. destruct H3 as [n [-> Hn]].
+    solve_all. destruct H2 as [n [-> Hn]].
     rewrite /compose /lift (subst_app_decomp [a] s k); auto with wf.
     rewrite subst_rel_gt. simpl; lia.
     repeat (f_equal; simpl; try lia).
@@ -929,7 +929,7 @@ Proof.
     rewrite -IHcontext_subst // to_extended_list_k_cons /=.
     rewrite (lift_to_extended_list_k _ _ 1) map_map_compose.
     pose proof (to_extended_list_k_spec Γ k).
-    solve_all. destruct H3 as [n [-> Hn]].
+    solve_all. destruct H2 as [n [-> Hn]].
     rewrite /compose /lift (subst_app_decomp [subst0 s b] s k); auto with wf.
     rewrite subst_rel_gt. simpl; lia.
     repeat (f_equal; simpl; try lia).
@@ -943,7 +943,7 @@ Proof.
   induction 1. constructor.
   eapply All_app in wfargs as [wfargs wfa]. inv wfa. inv wfctx.
   constructor; intuition auto.
-  inv wfctx. red in H0. constructor; solve_all. apply wf_subst. solve_all. intuition auto with wf.
+  inv wfctx. red in H. constructor; solve_all. apply wf_subst. solve_all. intuition auto with wf.
 Qed.
 
 Lemma wf_make_context_subst ctx args s' :
@@ -1235,7 +1235,7 @@ Lemma red1_mkApps_l Σ Γ M1 N1 M2 :
 Proof.
   induction M2 in M1, N1 |- *. simpl; auto.
   intros. specialize (IHM2 (mkApp M1 a) (mkApp N1 a)).
-  inv H0.
+  inv X.
   forward IHM2. apply wf_mkApp; auto.
   forward IHM2. auto.
   rewrite <- !mkApps_mkApp; auto.
@@ -1247,17 +1247,17 @@ Lemma red1_mkApps_r Σ Γ M1 M2 N2 :
   Ast.wf M1 -> All Ast.wf M2 ->
   OnOne2 (red1 Σ Γ) M2 N2 -> red1 Σ Γ (mkApps M1 M2) (mkApps M1 N2).
 Proof.
-  intros. induction X in M1, H, H0 |- *.
-  inv H0.
+  intros. induction X0 in M1, H, X |- *.
+  inv X.
   destruct (isApp M1) eqn:Heq. destruct M1; try discriminate.
   simpl. constructor. apply OnOne2_app. constructor. auto.
   rewrite mkApps_tApp; try congruence.
   rewrite mkApps_tApp; try congruence.
   constructor. constructor. auto.
-  inv H0.
-  specialize (IHX (mkApp M1 hd)). forward IHX.
-  apply wf_mkApp; auto. forward IHX; auto.
-  now rewrite !mkApps_mkApp in IHX.
+  inv X.
+  specialize (IHX0 (mkApp M1 hd)). forward IHX0.
+  apply wf_mkApp; auto. forward IHX0; auto.
+  now rewrite !mkApps_mkApp in IHX0.
 Qed.
 
 Lemma wf_fix :
@@ -1402,11 +1402,11 @@ Proof.
     now apply All_map.
     assert(Ast.wf M1). now inv wfM.
     assert(All Ast.wf M2). eapply Forall_All. now inv wfM.
-    clear -X H1 H2 wfΓ Hs.
+    clear -X H0 X1 wfΓ Hs.
     induction X; constructor; auto.
     intuition.
-    eapply b; eauto. now inv H2.
-    apply IHX. now inv H2.
+    eapply b; eauto. now inv X1.
+    apply IHX. now inv X1.
 
   - forward IHred1. now inv wfM.
     constructor. specialize (IHred1 _ _ (Γ'' ,, vass na M1) eq_refl).
@@ -1592,13 +1592,13 @@ Proof.
     eapply All2_map.
     eapply All2_impl'. eassumption.
     eapply All_impl. eassumption.
-    cbn. apply All2_length in H3 as e. rewrite e.
+    cbn. apply All2_length in X0 as e. rewrite e.
     intros x [] y []; now split.
   - constructor.
     eapply All2_map.
     eapply All2_impl'. eassumption.
     eapply All_impl. eassumption.
-    cbn. apply All2_length in H3 as e. rewrite e.
+    cbn. apply All2_length in X0 as e. rewrite e.
     intros x [] y []; now split.
 Qed.
 
@@ -1638,7 +1638,7 @@ Lemma subst_eq_context `{checker_flags} φ l l' n k :
 Proof.
   induction l in l', n, k |- *; inversion 1. constructor.
   rewrite !subst_context_snoc. constructor.
-  apply All2_length in H5 as e. rewrite e.
+  apply All2_length in X1 as e. rewrite e.
   now apply subst_eq_decl.
   now apply IHl.
 Qed.

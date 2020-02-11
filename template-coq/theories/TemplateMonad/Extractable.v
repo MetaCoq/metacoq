@@ -52,7 +52,7 @@ Cumulative Inductive TM@{t} : Type@{t} -> Type :=
 | tmQuoteConstant (nm : kername) (bypass_opacity : bool)
   : TM constant_entry
 
-| tmQuoteUniverses : TM constraints
+| tmQuoteUniverses : TM ConstraintSet.t
 
 (* unquote before making the definition *)
 (* FIXME take an optional universe context as well *)

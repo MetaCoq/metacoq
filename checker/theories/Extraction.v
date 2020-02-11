@@ -28,8 +28,7 @@ Cd "src".
 
 (** From Coq: well-founded relations *)
 Extraction Library Wf.
-Extraction Library Compare_dec.
-Extraction Library MSetList.
+Extraction Library MSetWeakList.
 Extraction Library EqdepFacts.
 
 Extraction Library Init.
@@ -55,6 +54,7 @@ Extraction Library ssreflect.
 Extraction Library CMorphisms.
 
 (** From checker *)
+Extraction Library utils.
 Extraction Library EnvironmentTyping.
 Extraction Library Reflect.
 Extraction Library LiftSubst.

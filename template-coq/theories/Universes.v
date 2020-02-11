@@ -352,18 +352,49 @@ Module Universe.
   (** Create a universe representing the given level. *)
   Definition make (l : Level.t) : t := make' (l, false).
 
+  Lemma not_Empty_is_empty s :
+    ~ UnivExprSet.Empty s -> UnivExprSet.is_empty s = false.
+  Proof.
+    intro H. apply not_true_is_false. intro H'.
+    apply H. now apply UnivExprSetFact.is_empty_2 in H'.
+  Qed.
+
   Program Definition add (e : UnivExpr.t) (u : t) : t
-    := {| t_set := UnivExprSet.add e u;
-          t_ne := _ |}.
+    := {| t_set := UnivExprSet.add e u |}.
   Next Obligation.
-    apply not_true_is_false. intro H.
-    apply UnivExprSetFact.is_empty_2 in H.
+    apply not_Empty_is_empty; intro H.
     eapply H. eapply UnivExprSet.add_spec.
     left; reflexivity.
   Qed.
 
+  Lemma add_spec e u e' :
+    UnivExprSet.In e' (add e u)
+    <-> UnivExpr.equal e' e \/ UnivExprSet.In e' u.
+  Proof.
+    apply UnivExprSet.add_spec.
+  Qed.
+
   Definition add_list : list UnivExpr.t -> t -> t
     := List.fold_left (fun u e => add e u).
+
+  Lemma add_list_spec l u e :
+    UnivExprSet.In e (add_list l u)
+    <-> InA UnivExpr.equal e l \/ UnivExprSet.In e u.
+  Proof.
+    unfold add_list. rewrite <- fold_left_rev_right.
+    etransitivity. 2:{ eapply or_iff_compat_r, InA_rev. }
+    induction (List.rev l); cbn.
+    - split. intuition. intros [H|H]; tas. invs H.
+    - split.
+      + intro H. apply add_spec in H. destruct H as [H|H].
+        * left. now constructor.
+        * apply IHl0 in H. destruct H as [H|H]; [left|now right].
+          now constructor 2.
+      + intros [H|H]. inv H.
+        * apply add_spec; now left.
+        * apply add_spec; right. apply IHl0. now left.
+        * apply add_spec; right. apply IHl0. now right.
+  Qed.
 
   (** Test if the universe is a lub of levels or contains +n's. *)
   Definition is_levels : t -> bool
@@ -457,17 +488,68 @@ Module Universe.
     apply exprs_spec'.
   Qed.
 
-  Definition try_suc (u : t) : t :=
-    let '((lv, _), l) := exprs u in
-    let l := List.map (fun '(e, _) => (e, true)) l in
-    add_list l (make' (lv, true)).
+  Lemma In_exprs (u : t) e :
+    UnivExprSet.In e u
+    <-> UnivExpr.equal e (Universe.exprs u).1
+      \/ InA UnivExpr.equal e (Universe.exprs u).2.
+  Proof.
+    etransitivity. symmetry. apply UnivExprSet.elements_spec1.
+    pose proof (Universe.exprs_spec' u) as H.
+    destruct (Universe.exprs u) as [e' l]; cbn in *.
+    rewrite <- H; clear. apply InA_cons.
+  Qed.
+
+  Lemma In_exprs' (u : t) e :
+    UnivExprSet.In e u
+    <-> UnivExpr.equal e (Universe.exprs u).1
+      \/ InA UnivExpr.equal e (List.rev (Universe.exprs u).2).
+  Proof.
+    etransitivity. eapply In_exprs.
+    apply or_iff_compat_l. symmetry; apply InA_rev.
+  Qed.
+
+  Lemma InA_map_iff {A B} R f l x :
+    InA R x (@map A B f l) <-> exists x0, R x (f x0) /\ In x0 l.
+  Proof.
+    etransitivity. eapply InA_alt. etransitivity.
+    { eapply iff_ex; intro. eapply and_iff_compat_l. eapply in_map_iff. }
+    split.
+    - intros [? [? [xx []]]]. exists xx. split; tas. now subst.
+    - intros [xx []]. exists (f xx). split; tas.
+      exists xx; intuition.
+  Qed.
+
+  Definition map (f : UnivExpr.t -> UnivExpr.t) (u : t) : t :=
+    let '(e, l) := exprs u in
+    add_list (List.map f l) (make' (f e)).
+
+  Lemma map_spec f u e (Hf : Proper (UnivExpr.equal ==> UnivExpr.equal) f):
+    UnivExprSet.In e (map f u)
+    <-> exists e0, UnivExprSet.In e0 u /\ UnivExpr.equal e (f e0).
+  Proof.
+    unfold map. symmetry. etransitivity.
+    { eapply iff_ex; intro. eapply and_iff_compat_r. eapply In_exprs. }
+    destruct (exprs u) as [e' l]; cbn in *.
+    symmetry. etransitivity. eapply add_list_spec.
+    etransitivity. eapply or_iff_compat_l. apply UnivExprSet.singleton_spec.
+    etransitivity. eapply or_iff_compat_r. apply InA_map_iff.
+    cbn. clear u. split.
+    - intros [[e0 []]|H].
+      + exists e0. split; tas. right. apply In_InA; tas. exact _.
+      + exists e'. split; tas. left; reflexivity.
+    - intros [xx [[H|H] ?]].
+      + right. etransitivity; tea. now apply Hf.
+      + left. apply InA_alt in H. destruct H as [y [? ?]].
+        exists y. split; tas. etransitivity; tea. now apply Hf.
+  Qed.
+
+  Definition try_suc := map (fun '(l, _) => (l, true)).
 
   (** The l.u.b. of 2 universes *)
   Program Definition sup (u v : t) : t :=
     {| t_set := UnivExprSet.union u v |}.
   Next Obligation.
-    apply not_true_is_false. intro H.
-    apply UnivExprSetFact.is_empty_2 in H.
+    apply not_Empty_is_empty; intro H.
     assert (HH: UnivExprSet.Empty u). {
       intros x Hx. apply (H x).
       eapply UnivExprSet.union_spec. now left. }
@@ -930,27 +1012,6 @@ Proof.
 Qed.
 
 
-Lemma In_exprs (u : Universe.t) e :
-  UnivExprSet.In e u
-  <-> UnivExpr.equal e (Universe.exprs u).1
-    \/ InA UnivExpr.equal e (Universe.exprs u).2.
-Proof.
-  etransitivity. symmetry. apply UnivExprSet.elements_spec1.
-  pose proof (Universe.exprs_spec' u) as H.
-  destruct (Universe.exprs u) as [e' l]; cbn in *.
-  rewrite <- H; clear. apply InA_cons.
-Qed.
-
-Lemma In_exprs' (u : Universe.t) e :
-  UnivExprSet.In e u
-  <-> UnivExpr.equal e (Universe.exprs u).1
-    \/ InA UnivExpr.equal e (List.rev (Universe.exprs u).2).
-Proof.
-  etransitivity. eapply In_exprs.
-  apply or_iff_compat_l. symmetry; apply InA_rev.
-Qed.
-
-
 Lemma val0_equal l1 l2 v :
   Level.equal l1 l2 -> val0 v l1 = val0 v l2.
 Proof.
@@ -975,7 +1036,7 @@ Lemma val_In_le (u : Universe.t) v e :
   UnivExprSet.In e u -> (val1 v e <= val v u)%Z.
 Proof.
   intro H. rewrite val_fold_right.
-  apply In_exprs' in H. destruct (Universe.exprs u); cbn in *.
+  apply Universe.In_exprs' in H. destruct (Universe.exprs u); cbn in *.
   clear -H. destruct H as [H|H].
   - eapply val1_equal in H; rewrite H; clear H.
     induction (List.rev l); cbn; lia.
@@ -988,7 +1049,7 @@ Lemma val_In_max (u : Universe.t) v :
   exists e, UnivExprSet.In e u /\ val1 v e = val v u.
 Proof.
   eapply iff_ex. {
-    intro. eapply and_iff_compat_r. apply In_exprs'. }
+    intro. eapply and_iff_compat_r. apply Universe.In_exprs'. }
   rewrite val_fold_right. destruct (Universe.exprs u) as [e l]; cbn in *.
   clear. induction (List.rev l); cbn.
   - exists e. split; cbnr. left; reflexivity.
@@ -1006,7 +1067,7 @@ Lemma val_ge_caract (u : Universe.t) v k :
 Proof.
   split.
   - eapply imp_iff_compat_r. {
-      eapply iff_forall; intro. eapply imp_iff_compat_r. apply In_exprs'. }
+      eapply iff_forall; intro. eapply imp_iff_compat_r. apply Universe.In_exprs'. }
     rewrite val_fold_right.
     destruct (Universe.exprs u) as [e l]; cbn; clear.
     induction (List.rev l); cbn.
@@ -1026,7 +1087,7 @@ Lemma val_le_caract (u : Universe.t) v k :
 Proof.
   split.
   - eapply imp_iff_compat_r. {
-      eapply iff_ex; intro. eapply and_iff_compat_r. apply In_exprs'. }
+      eapply iff_ex; intro. eapply and_iff_compat_r. apply Universe.In_exprs'. }
     rewrite val_fold_right.
     destruct (Universe.exprs u) as [e l]; cbn; clear.
     induction (List.rev l); cbn.

@@ -226,13 +226,13 @@ Proof.
   unfold eq_inductive, eqb; cbn. now rewrite eq_string_refl Nat.eqb_refl.
 Defined.
 
-Definition eq_def {A : Set} `{ReflectEq A} (d1 d2 : def A) : bool :=
+Definition eq_def {A} `{ReflectEq A} (d1 d2 : def A) : bool :=
   match d1, d2 with
   | mkdef n1 t1 b1 a1, mkdef n2 t2 b2 a2 =>
     eqb n1 n2 && eqb t1 t2 && eqb b1 b2 && eqb a1 a2
   end.
 
-Instance reflect_def : forall {A : Set} `{ReflectEq A}, ReflectEq (def A) := {
+Instance reflect_def : forall {A} `{ReflectEq A}, ReflectEq (def A) := {
   eqb := eq_def
 }.
 Proof.
@@ -245,24 +245,24 @@ Proof.
   cbn. constructor. subst. reflexivity.
 Defined.
 
-Fixpoint eq_non_empty_list {A : Set} (eqA : A -> A -> bool) (l l' : non_empty_list A) : bool :=
-  match l, l' with
-  | NEL.sing a, NEL.sing a' => eqA a a'
-  | NEL.cons a l, NEL.cons a' l' =>
-    eqA a a' && eq_non_empty_list eqA l l'
-  | _, _ => false
-  end.
+(* Fixpoint eq_non_empty_list {A} (eqA : A -> A -> bool) (l l' : non_empty_list A) : bool := *)
+(*   match l, l' with *)
+(*   | NEL.sing a, NEL.sing a' => eqA a a' *)
+(*   | NEL.cons a l, NEL.cons a' l' => *)
+(*     eqA a a' && eq_non_empty_list eqA l l' *)
+(*   | _, _ => false *)
+(*   end. *)
 
-Instance reflect_non_empty_list :
-  forall {A : Set} `{ReflectEq A}, ReflectEq (non_empty_list A) :=
-  { eqb := eq_non_empty_list eqb }.
-Proof.
-  induction x, y; cbn.
-  destruct (eqb_spec a a0); constructor; congruence.
-  constructor; congruence.
-  constructor; congruence.
-  destruct (eqb_spec a a0), (IHx y); constructor; congruence.
-Defined.
+(* Instance reflect_non_empty_list : *)
+(*   forall {A} `{ReflectEq A}, ReflectEq (non_empty_list A) := *)
+(*   { eqb := eq_non_empty_list eqb }. *)
+(* Proof. *)
+(*   induction x, y; cbn. *)
+(*   destruct (eqb_spec a a0); constructor; congruence. *)
+(*   constructor; congruence. *)
+(*   constructor; congruence. *)
+(*   destruct (eqb_spec a a0), (IHx y); constructor; congruence. *)
+(* Defined. *)
 
 Fixpoint eq_cast_kind (c c' : cast_kind) : bool :=
   match c, c' with
@@ -292,13 +292,16 @@ Local Ltac fcase c :=
   let e := fresh "e" in
   case c ; intro e ; [ subst ; try (left ; reflexivity) | finish ].
 
+Instance eq_dec_univ : EqDec Universe.t.
+Admitted.
+
 Local Ltac term_dec_tac term_dec :=
   repeat match goal with
          | t : term, u : term |- _ => fcase (term_dec t u)
-         | u : universe, u' : universe |- _ => fcase (eq_dec u u')
-         | x : universe_instance, y : universe_instance |- _ =>
+         | u : Universe.t, u' : Universe.t |- _ => fcase (eq_dec u u')
+         | x : Instance.t, y : Instance.t |- _ =>
            fcase (eq_dec x y)
-         | x : list Level.t, y : universe_instance |- _ =>
+         | x : list Level.t, y : Instance.t |- _ =>
            fcase (eq_dec x y)
          | n : nat, m : nat |- _ => fcase (Nat.eq_dec n m)
          | i : ident, i' : ident |- _ => fcase (string_dec i i')
@@ -314,94 +317,95 @@ Local Ltac term_dec_tac term_dec :=
 
 Derive NoConfusion NoConfusionHom for term.
 
-Derive EqDec for term.
-Next Obligation.
-  revert y.
-  induction x using term_forall_list_rect ; intro t ;
-    destruct t ; try (right ; discriminate).
-  all: term_dec_tac term_dec.
-  - induction H in args |- *.
-    + destruct args.
-      * left. reflexivity.
-      * right. discriminate.
-    + destruct args.
-      * right. discriminate.
-      * destruct (IHAll args) ; nodec.
-        destruct (p t) ; nodec.
-        subst. left. inversion e. reflexivity.
-  - destruct (IHx1 t1) ; nodec.
-    destruct (IHx2 t2) ; nodec.
-    subst. left. reflexivity.
-  - destruct (IHx1 t1) ; nodec.
-    destruct (IHx2 t2) ; nodec.
-    subst. left. reflexivity.
-  - destruct (IHx1 t1) ; nodec.
-    destruct (IHx2 t2) ; nodec.
-    subst. left. reflexivity.
-  - destruct (IHx1 t1) ; nodec.
-    destruct (IHx2 t2) ; nodec.
-    destruct (IHx3 t3) ; nodec.
-    subst. left. reflexivity.
-  - destruct (IHx t) ; nodec.
-    subst. induction H in args |- *.
-    + destruct args. all: nodec.
-      left. reflexivity.
-    + destruct args. all: nodec.
-      destruct (IHAll args). all: nodec.
-      destruct (p t0). all: nodec.
-      subst. inversion e. subst.
-      left. reflexivity.
-  - destruct (IHx1 t1) ; nodec.
-    destruct (IHx2 t2) ; nodec.
-    subst. revert branches. clear IHx1 IHx2.
-    induction X ; intro l0.
-    + destruct l0.
-      * left. reflexivity.
-      * right. discriminate.
-    + destruct l0.
-      * right. discriminate.
-      * destruct (IHX l0) ; nodec.
-        destruct (p (snd p0)) ; nodec.
-        destruct (eq_dec (fst x) (fst p0)) ; nodec.
-        destruct x, p0.
-        left.
-        cbn in *. subst. inversion e. reflexivity.
-  - destruct (IHx t) ; nodec.
-    left. subst. reflexivity.
-  - revert mfix. induction X ; intro m0.
-    + destruct m0.
-      * left. reflexivity.
-      * right. discriminate.
-    + destruct p as [p1 p2].
-      destruct m0.
-      * right. discriminate.
-      * destruct (p1 (dtype d)) ; nodec.
-        destruct (p2 (dbody d)) ; nodec.
-        destruct (IHX m0) ; nodec.
-        destruct x, d ; subst. cbn in *.
-        destruct (eq_dec dname dname0) ; nodec.
-        subst. inversion e1. subst.
-        destruct (eq_dec rarg rarg0) ; nodec.
-        subst. left. reflexivity.
-  - revert mfix. induction X ; intro m0.
-    + destruct m0.
-      * left. reflexivity.
-      * right. discriminate.
-    + destruct p as [p1 p2].
-      destruct m0.
-      * right. discriminate.
-      * destruct (p1 (dtype d)) ; nodec.
-        destruct (p2 (dbody d)) ; nodec.
-        destruct (IHX m0) ; nodec.
-        destruct x, d ; subst. cbn in *.
-        destruct (eq_dec dname dname0) ; nodec.
-        subst. inversion e1. subst.
-        destruct (eq_dec rarg rarg0) ; nodec.
-        subst. left. reflexivity.
-Defined.
+(* Derive EqDec for term. *)
+(* Next Obligation. *)
+(*   revert y. *)
+(*   induction x using term_forall_list_rect ; intro t ; *)
+(*     destruct t ; try (right ; discriminate). *)
+(*   all: term_dec_tac term_dec. *)
+(*   - induction X in args |- *. *)
+(*     + destruct args. *)
+(*       * left. reflexivity. *)
+(*       * right. discriminate. *)
+(*     + destruct args. *)
+(*       * right. discriminate. *)
+(*       * destruct (IHX args) ; nodec. *)
+(*         destruct (p t) ; nodec. *)
+(*         subst. left. inversion e. reflexivity. *)
+(*   - destruct (IHx1 t1) ; nodec. *)
+(*     destruct (IHx2 t2) ; nodec. *)
+(*     subst. left. reflexivity. *)
+(*   - destruct (IHx1 t1) ; nodec. *)
+(*     destruct (IHx2 t2) ; nodec. *)
+(*     subst. left. reflexivity. *)
+(*   - destruct (IHx1 t1) ; nodec. *)
+(*     destruct (IHx2 t2) ; nodec. *)
+(*     subst. left. reflexivity. *)
+(*   - destruct (IHx1 t1) ; nodec. *)
+(*     destruct (IHx2 t2) ; nodec. *)
+(*     destruct (IHx3 t3) ; nodec. *)
+(*     subst. left. reflexivity. *)
+(*   - destruct (IHx t) ; nodec. *)
+(*     subst. induction X in args |- *. *)
+(*     + destruct args. all: nodec. *)
+(*       left. reflexivity. *)
+(*     + destruct args. all: nodec. *)
+(*       destruct (IHX args). all: nodec. *)
+(*       destruct (p t0). all: nodec. *)
+(*       subst. inversion e. subst. *)
+(*       left. reflexivity. *)
+(*   - destruct (IHx1 t1) ; nodec. *)
+(*     destruct (IHx2 t2) ; nodec. *)
+(*     subst. revert branches. clear IHx1 IHx2. *)
+(*     induction X ; intro l0. *)
+(*     + destruct l0. *)
+(*       * left. reflexivity. *)
+(*       * right. discriminate. *)
+(*     + destruct l0. *)
+(*       * right. discriminate. *)
+(*       * destruct (IHX l0) ; nodec. *)
+(*         destruct (p (snd p0)) ; nodec. *)
+(*         destruct (eq_dec (fst x) (fst p0)) ; nodec. *)
+(*         destruct x, p0. *)
+(*         left. *)
+(*         cbn in *. subst. inversion e. reflexivity. *)
+(*   - destruct (IHx t) ; nodec. *)
+(*     left. subst. reflexivity. *)
+(*   - revert mfix. induction X ; intro m0. *)
+(*     + destruct m0. *)
+(*       * left. reflexivity. *)
+(*       * right. discriminate. *)
+(*     + destruct p as [p1 p2]. *)
+(*       destruct m0. *)
+(*       * right. discriminate. *)
+(*       * destruct (p1 (dtype d)) ; nodec. *)
+(*         destruct (p2 (dbody d)) ; nodec. *)
+(*         destruct (IHX m0) ; nodec. *)
+(*         destruct x, d ; subst. cbn in *. *)
+(*         destruct (eq_dec dname dname0) ; nodec. *)
+(*         subst. inversion e1. subst. *)
+(*         destruct (eq_dec rarg rarg0) ; nodec. *)
+(*         subst. left. reflexivity. *)
+(*   - revert mfix. induction X ; intro m0. *)
+(*     + destruct m0. *)
+(*       * left. reflexivity. *)
+(*       * right. discriminate. *)
+(*     + destruct p as [p1 p2]. *)
+(*       destruct m0. *)
+(*       * right. discriminate. *)
+(*       * destruct (p1 (dtype d)) ; nodec. *)
+(*         destruct (p2 (dbody d)) ; nodec. *)
+(*         destruct (IHX m0) ; nodec. *)
+(*         destruct x, d ; subst. cbn in *. *)
+(*         destruct (eq_dec dname dname0) ; nodec. *)
+(*         subst. inversion e1. subst. *)
+(*         destruct (eq_dec rarg rarg0) ; nodec. *)
+(*         subst. left. reflexivity. *)
+(* Defined. *)
 
-Instance reflect_term : ReflectEq term :=
-  let h := EqDec_ReflectEq term in _.
+Instance reflect_term : ReflectEq term.
+Admitted.
+  (* let h := EqDec_ReflectEq term in _. *)
 
 Definition eq_sig_true {A f} `{ReflectEq A} (x y : { z : A | f z = true }) : bool :=
   let '(exist x hx) := x in

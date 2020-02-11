@@ -36,19 +36,19 @@ From MetaCoq.Template Require Export Universes.
 
 From MetaCoq.Template Require Export BasicAst.
 
-Inductive term : Set :=
+Inductive term : Type :=
 | tRel (n : nat)
 | tVar (id : ident) (* For free variables (e.g. in a goal) *)
 | tEvar (ev : nat) (args : list term)
-| tSort (s : universe)
+| tSort (s : Universe.t)
 | tCast (t : term) (kind : cast_kind) (v : term)
 | tProd (na : name) (ty : term) (body : term)
 | tLambda (na : name) (ty : term) (body : term)
 | tLetIn (na : name) (def : term) (def_ty : term) (body : term)
 | tApp (f : term) (args : list term)
-| tConst (c : kername) (u : universe_instance)
-| tInd (ind : inductive) (u : universe_instance)
-| tConstruct (ind : inductive) (idx : nat) (u : universe_instance)
+| tConst (c : kername) (u : Instance.t)
+| tInd (ind : inductive) (u : Instance.t)
+| tConstruct (ind : inductive) (idx : nat) (u : Instance.t)
 | tCase (ind_and_nbparams: inductive*nat) (type_info:term)
         (discr:term) (branches : list (nat * term))
 | tProj (proj : projection) (t : term)
@@ -142,11 +142,11 @@ Inductive constant_entry :=
   [x1:X1;...;xn:Xn].
 *)
 
-Inductive local_entry : Set :=
+Inductive local_entry :=
 | LocalDef : term -> local_entry (* local let binding *)
 | LocalAssum : term -> local_entry.
 
-Record one_inductive_entry : Set := {
+Record one_inductive_entry := {
   mind_entry_typename : ident;
   mind_entry_arity : term;
   mind_entry_template : bool; (* template polymorphism *)

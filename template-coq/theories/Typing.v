@@ -272,7 +272,7 @@ Lemma red1_ind_all :
        (forall (Γ : context) (i : nat) (body : term),
         option_map decl_body (nth_error Γ i) = Some (Some body) -> P Γ (tRel i) ((lift0 (S i)) body)) ->
 
-       (forall (Γ : context) (ind : inductive) (pars c : nat) (u : universe_instance) (args : list term)
+       (forall (Γ : context) (ind : inductive) (pars c : nat) (u : Instance.t) (args : list term)
           (p : term) (brs : list (nat * term)),
         P Γ (tCase (ind, pars) p (mkApps (tConstruct ind c u) args) brs) (iota_red pars c args brs)) ->
 
@@ -290,9 +290,9 @@ Lemma red1_ind_all :
 
        (forall (Γ : context) (c : ident) (decl : constant_body) (body : term),
         declared_constant Σ c decl ->
-        forall u : universe_instance, cst_body decl = Some body -> P Γ (tConst c u) (subst_instance_constr u body)) ->
+        forall u : Instance.t, cst_body decl = Some body -> P Γ (tConst c u) (subst_instance_constr u body)) ->
 
-       (forall (Γ : context) (i : inductive) (pars narg : nat) (args : list term) (k : nat) (u : universe_instance)
+       (forall (Γ : context) (i : inductive) (pars narg : nat) (args : list term) (k : nat) (u : Instance.t)
          (arg : term),
            nth_error args (pars + narg) = Some arg ->
            P Γ (tProj (i, pars, narg) (mkApps (tConstruct i k u) args)) arg) ->
@@ -441,7 +441,7 @@ Inductive red Σ Γ M : term -> Type :=
 Definition R_universe_instance R :=
   fun u u' => Forall2 R (List.map Universe.make u) (List.map Universe.make u').
 
-Inductive eq_term_upto_univ (Re Rle : universe -> universe -> Prop) : term -> term -> Type :=
+Inductive eq_term_upto_univ (Re Rle : Universe.t -> Universe.t -> Prop) : term -> term -> Type :=
 | eq_Rel n  :
     eq_term_upto_univ Re Rle (tRel n) (tRel n)
 
@@ -554,10 +554,10 @@ Fixpoint strip_casts t :=
   | tRel _ | tVar _ | tSort _ | tConst _ _ | tInd _ _ | tConstruct _ _ _ => t
   end.
 
-Definition eq_term_nocast `{checker_flags} (φ : constraints) (t u : term) :=
+Definition eq_term_nocast `{checker_flags} (φ : ConstraintSet.t) (t u : term) :=
   eq_term φ (strip_casts t) (strip_casts u).
 
-Definition leq_term_nocast `{checker_flags} (φ : constraints) (t u : term) :=
+Definition leq_term_nocast `{checker_flags} (φ : ConstraintSet.t) (t u : term) :=
   leq_term φ (strip_casts t) (strip_casts u).
 
 (** ** Utilities for typing *)
@@ -1120,10 +1120,10 @@ Lemma typing_ind_env `{cf : checker_flags} :
         P Σ Γ (tSort (Universe.make l)) (tSort (Universe.super l))) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (c : term) (k : cast_kind)
-            (t : term) (s : universe),
+            (t : term) (s : Universe.t),
         Σ ;;; Γ |- t : tSort s -> P Σ Γ t (tSort s) -> Σ ;;; Γ |- c : t -> P Σ Γ c t -> P Σ Γ (tCast c k t) t) ->
 
-    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (n : name) (t b : term) (s1 s2 : universe),
+    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (n : name) (t b : term) (s1 s2 : Universe.t),
         All_local_env_over typing Pdecl Σ Γ wfΓ ->
         Σ ;;; Γ |- t : tSort s1 ->
         P Σ Γ t (tSort s1) ->
@@ -1131,14 +1131,14 @@ Lemma typing_ind_env `{cf : checker_flags} :
         P Σ (Γ,, vass n t) b (tSort s2) -> P Σ Γ (tProd n t b) (tSort (Universe.sort_of_product s1 s2))) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (n : name) (t b : term)
-            (s1 : universe) (bty : term),
+            (s1 : Universe.t) (bty : term),
         All_local_env_over typing Pdecl Σ Γ wfΓ ->
         Σ ;;; Γ |- t : tSort s1 ->
         P Σ Γ t (tSort s1) ->
         Σ ;;; Γ,, vass n t |- b : bty -> P Σ (Γ,, vass n t) b bty -> P Σ Γ (tLambda n t b) (tProd n t bty)) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (n : name) (b b_ty b' : term)
-            (s1 : universe) (b'_ty : term),
+            (s1 : Universe.t) (b'_ty : term),
         All_local_env_over typing Pdecl Σ Γ wfΓ ->
         Σ ;;; Γ |- b_ty : tSort s1 ->
         P Σ Γ b_ty (tSort s1) ->

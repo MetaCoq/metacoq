@@ -8,7 +8,7 @@ Set Asymmetric Patterns.
 
 Module Type Term.
 
-  Parameter (term : Set).
+  Parameter (term : Type).
 
   Parameter (tRel : nat -> term).
   Parameter (tSort : Universe.t -> term).

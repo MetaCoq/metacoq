@@ -15,7 +15,7 @@ struct
   type quoted_int = Datatypes.nat
   type quoted_bool = bool
   type quoted_name = name
-  type quoted_sort = Universes0.universe
+  type quoted_sort = Universes0.Universe.t
   type quoted_cast_kind = cast_kind
   type quoted_kernel_name = char list
   type quoted_inductive = inductive
@@ -23,9 +23,9 @@ struct
   type quoted_global_reference = global_reference
 
   type quoted_sort_family = Universes0.sort_family
-  type quoted_constraint_type = Universes0.constraint_type
-  type quoted_univ_constraint = Universes0.univ_constraint
-  type quoted_univ_constraints = Universes0.constraints
+  type quoted_constraint_type = Universes0.ConstraintType.t
+  type quoted_univ_constraint = Universes0.UnivConstraint.t
+  type quoted_univ_constraints = Universes0.ConstraintSet.t
   type quoted_univ_instance = Universes0.Instance.t
   type quoted_univ_context = Universes0.UContext.t
   type quoted_univ_contextset = Universes0.ContextSet.t
@@ -73,7 +73,7 @@ struct
          | Some x -> Universes0.Level.Var (quote_int x)
          | None -> Universes0.Level.Level (string_to_list (Univ.Level.to_string l))
 
-  let quote_universe s : Universes0.universe =
+  let quote_universe s : Universes0.Universe.t =
     let univs = Univ.Universe.map (fun (l,i) -> Universes0.Universe.make' (quote_level l, i > 0)) s in
     List.fold_left Universes0.Universe.sup (List.hd univs) (List.tl univs)
 
@@ -329,18 +329,16 @@ struct
       Univ.Level.make dp idx
     | Universes0.Level.Var n -> Univ.Level.var (unquote_int n)
 
-  let unquote_level_expr (trm : Universes0.Level.t) (b : quoted_bool) : Univ.Universe.t =
-    let l = unquote_level trm in
+  let unquote_level_expr (trm : Universes0.Level.t * quoted_bool) : Univ.Universe.t =
+    let l = unquote_level (fst trm) in
     let u = Univ.Universe.make l in
-    if b && not (Univ.Level.is_prop l) then Univ.Universe.super u
+    if snd trm && not (Univ.Level.is_prop l) then Univ.Universe.super u
     else u
 
   let unquote_universe evd (trm : Universes0.Universe.t) =
-    (* | [] -> Evd.new_univ_variable (Evd.UnivFlexible false) evd *)
-    let rec aux = function
-      | Utils.NEL.Coq_sing (l,b) -> unquote_level_expr l b
-      | Utils.NEL.Coq_cons ((l,b), q) -> Univ.Universe.sup (aux q) (unquote_level_expr l b)
-    in evd, aux trm
+    let (e, l) = Universes0.Universe.exprs trm in
+    evd, List.fold_left (fun s t -> Univ.Universe.sup (unquote_level_expr t) s)
+                        (unquote_level_expr e) l
 
   let quote_global_reference : Names.GlobRef.t -> quoted_global_reference = function
     | Globnames.VarRef _ -> CErrors.user_err (Pp.str "VarRef unsupported")

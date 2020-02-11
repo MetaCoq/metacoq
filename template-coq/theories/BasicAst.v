@@ -17,7 +17,7 @@ Definition projection : Set := inductive * nat (* params *) * nat (* argument *)
 
 (** Parametrized by term because term is not yet defined *)
 
-Record def (term : Set) : Set := mkdef {
+Record def term := mkdef {
   dname : name; (* the name **)
   dtype : term;
   dbody : term; (* the body (a lambda term). Note, this may mention other (mutually-defined) names **)
@@ -28,7 +28,7 @@ Arguments dtype {term} _.
 Arguments dbody {term} _.
 Arguments rarg {term} _.
 
-Definition mfixpoint (term : Set) : Set :=
+Definition mfixpoint term :=
   list (def term).
 
 (** The kind of a cast *)

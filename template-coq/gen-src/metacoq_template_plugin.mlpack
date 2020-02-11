@@ -21,7 +21,7 @@ OrderedType0
 MSetInterface
 MSetFacts
 MSetDecide
-MSetWeakList
+MSetList
 MSetProperties
 BinNums
 Equality0
@@ -34,7 +34,6 @@ MCProd
 MCString
 MCCompare
 All_Forall
-Utils
 Config0
 Universes0
 BasicAst

@@ -14,7 +14,7 @@ struct
   type quoted_int = Datatypes.nat
   type quoted_bool = bool
   type quoted_name = name
-  type quoted_sort = Universes0.universe
+  type quoted_sort = Universes0.Universe.t
   type quoted_cast_kind = cast_kind
   type quoted_kernel_name = char list
   type quoted_inductive = inductive
@@ -22,9 +22,9 @@ struct
   type quoted_global_reference = global_reference
 
   type quoted_sort_family = Universes0.sort_family
-  type quoted_constraint_type = Universes0.constraint_type
-  type quoted_univ_constraint = Universes0.univ_constraint
-  type quoted_univ_constraints = Universes0.constraints
+  type quoted_constraint_type = Universes0.ConstraintType.t
+  type quoted_univ_constraint = Universes0.UnivConstraint.t
+  type quoted_univ_constraints = Universes0.ConstraintSet.t
   type quoted_univ_instance = Universes0.Instance.t
   type quoted_univ_context = Universes0.UContext.t
   type quoted_univ_contextset = Universes0.ContextSet.t

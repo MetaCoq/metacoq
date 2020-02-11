@@ -546,7 +546,7 @@ Section Typecheck.
     | None => raise (NotEnoughFuel fuel)
     end.
 
-  Definition reduce_to_sort Γ (t : term) : typing_result universe :=
+  Definition reduce_to_sort Γ (t : term) : typing_result Universe.t :=
     match t with
     | tSort s => ret s
     | _ =>

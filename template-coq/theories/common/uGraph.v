@@ -1,5 +1,5 @@
 Require Import Nat Bool String BinInt List Relations Lia ssrbool.
-Require Import MSetFacts MSetProperties.
+Require Import MSetWeakList MSetFacts MSetProperties.
 From MetaCoq.Template Require Import utils config Universes monad_utils wGraph.
 
 Import ListNotations.
@@ -18,37 +18,73 @@ Ltac toProp :=
 
 
 
+Module VariableLevel.
+  Inductive t := mLevel (_ : string) | mVar (_ : nat).
+  Definition lt : t -> t -> Prop :=
+    fun x y => match x, y with
+            | mLevel _, mVar _ => True
+            | mLevel s, mLevel s' => string_lt s s'
+            | mVar n, mVar n' => n < n'
+            | mVar _, mLevel _ => False
+            end.
+  Definition lt_strorder : StrictOrder lt.
+    split.
+    - intros [s|n] H; cbn in H.
+      unfold string_lt in H.
+      pose proof (string_compare_eq s s). intuition.
+      rewrite H in *. discriminate. intuition.
+    - intros [s1|n1] [s2|n2] [s3|n3]; cbn; intuition.
+      eapply transitive_string_lt; eassumption.
+  Qed.
+  Definition lt_compat : Proper (Logic.eq ==> Logic.eq ==> iff) lt.
+    intros x y [] z t []; reflexivity.
+  Qed.
+  Definition compare : t -> t -> comparison :=
+    fun x y => match x, y with
+            | mLevel _, mVar _ => Datatypes.Lt
+            | mLevel s, mLevel s' => string_compare s s'
+            | mVar n, mVar n' => Nat.compare n n'
+            | mVar _, mLevel _ => Datatypes.Gt
+            end.
+  Definition compare_spec :
+    forall x y : t, CompareSpec (x = y) (lt x y) (lt y x) (compare x y).
+    intros [s|n] [s'|n']; cbn; try now constructor.
+    - eapply CompareSpec_Proper. 2-4: reflexivity.
+      2: apply CompareSpec_string.
+      split; congruence.
+    - eapply CompareSpec_Proper. 2-4: reflexivity.
+      2: apply PeanoNat.Nat.compare_spec.
+      split; congruence.
+  Qed.
+  Definition eq_dec : forall x y : t, {x = y} + {x <> y}.
+    intros [s|n] [s'|n']; try now constructor.
+    destruct (string_dec s s'); [left|right]; congruence.
+    destruct (PeanoNat.Nat.eq_dec n n'); [left|right]; congruence.
+  Defined.
+End VariableLevel.
 
-Inductive variable_level := mLevel (_ : string) | mVar (_ : nat).
-
-Inductive good_constraint :=
-(* l <= l' *)
-| gc_le : variable_level -> variable_level -> good_constraint
-(* l < l' *)
-| gc_lt : variable_level -> variable_level -> good_constraint
-(* Set < Var n *)
-| gc_lt_set : nat -> good_constraint
-(* Set = Var n *)
-| gc_eq_set : nat -> good_constraint.
-
-(* Move to MSetList ? *)
-Require Import MSetWeakList.
-Module GoodConstraintDec.
-  Definition t : Set := good_constraint.
+Module GoodConstraint.
+  Inductive t_ :=
+  (* l <= l' *)
+  | gc_le : VariableLevel.t -> VariableLevel.t -> t_
+  (* l < l' *)
+  | gc_lt : VariableLevel.t -> VariableLevel.t -> t_
+  (* Set < Var n *)
+  | gc_lt_set : nat -> t_
+  (* Set = Var n *)
+  | gc_eq_set : nat -> t_.
+  Definition t : Set := t_.
   Definition eq : t -> t -> Prop := Logic.eq.
   Definition eq_equiv : RelationClasses.Equivalence eq := _.
-  Definition variable_level_dec : forall x y : variable_level, {x = y} + {x <> y}.
-    decide equality. apply string_dec. apply Peano_dec.eq_nat_dec.
-  Defined.
   Definition eq_dec : forall x y : t, {eq x y} + {~ eq x y}.
     unfold eq.
-    decide equality. all: try apply variable_level_dec.
+    decide equality. all: try apply VariableLevel.eq_dec.
     all: apply Peano_dec.eq_nat_dec.
   Defined.
-End GoodConstraintDec.
-Module GoodConstraintSet := MSets.MSetWeakList.Make GoodConstraintDec.
-Module GoodConstraintSetFact := WFactsOn GoodConstraintDec GoodConstraintSet.
-Module GoodConstraintSetProp := WPropertiesOn GoodConstraintDec GoodConstraintSet.
+End GoodConstraint.
+Module GoodConstraintSet := Make GoodConstraint.
+Module GoodConstraintSetFact := WFactsOn GoodConstraint GoodConstraintSet.
+Module GoodConstraintSetProp := WPropertiesOn GoodConstraint GoodConstraintSet.
 
 Definition GoodConstraintSet_pair x y
   := GoodConstraintSet.add y (GoodConstraintSet.singleton x).
@@ -62,13 +98,16 @@ Proof.
   apply GoodConstraintSetFact.singleton_1 in H; intuition.
 Qed.
 
-Definition gc_val0 (v : valuation) (l : variable_level) : nat :=
+Import VariableLevel GoodConstraint.
+
+
+Definition gc_val0 (v : valuation) (l : VariableLevel.t) : nat :=
   match l with
   | mLevel s => Pos.to_nat (v.(valuation_mono) s)
   | mVar x => v.(valuation_poly) x
   end.
 
-Definition gc_satisfies0 v (gc : good_constraint) : bool :=
+Definition gc_satisfies0 v (gc : GoodConstraint.t) : bool :=
   match gc with
   | gc_le l l' => gc_val0 v l <=? gc_val0 v l'
   | gc_lt l l' => gc_val0 v l <? gc_val0 v l'
@@ -85,7 +124,7 @@ Lemma gc_satisfies_pair v gc1 gc2 :
   (gc_satisfies0 v gc1 /\ gc_satisfies0 v gc2) <->
   gc_satisfies v (GoodConstraintSet_pair gc1 gc2).
 Proof.
-  cbn; destruct (GoodConstraintDec.eq_dec gc2 gc1); cbn;
+  cbn; destruct (GoodConstraint.eq_dec gc2 gc1); cbn;
     rewrite if_true_false.
   now destruct e. symmetry. apply andb_and.
 Defined.
@@ -93,7 +132,8 @@ Defined.
 (* None -> not satisfiable *)
 (* Some empty -> useless *)
 (* else: singleton or two elements set (l = l' -> {l<=l', l'<=l}) *)
-Definition gc_of_constraint `{checker_flags} (uc : UnivConstraint.t) : option GoodConstraintSet.t
+Definition gc_of_constraint `{checker_flags} (uc : UnivConstraint.t)
+  : option GoodConstraintSet.t
   := let empty := Some GoodConstraintSet.empty in
      let singleton := fun x => Some (GoodConstraintSet.singleton x) in
      let pair := fun x y => Some (GoodConstraintSet_pair x y) in
@@ -184,7 +224,6 @@ Proof.
   - destruct 1 ; destruct l, l' ; try constructor ; try reflexivity.
     all: cbn -[Nat.leb Nat.eqb GoodConstraintSet_pair] in *.
     all: unfold lle, llt in *.
-    (* all: unfold gc_of_constraint in *. *)
     all: destruct prop_sub_type.
     all: try solve [ repeat gc_of_constraint_tac ; lia ].
     all: try solve [ cbn ; easy ].
@@ -210,13 +249,6 @@ Definition add_gc_of_constraint uc (S : option GoodConstraintSet.t)
   := S1 <- S ;;
      S2 <- gc_of_constraint uc ;;
      ret (GoodConstraintSet.union S1 S2).
-  (* := match S with *)
-  (*    | None => None *)
-  (*    | Some S1 => match gc_of_constraint uc with *)
-  (*                | None => None *)
-  (*                | Some S2 => Some (GoodConstraintSet.union S1 S2) *)
-  (*                end *)
-  (*    end. *)
 
 Definition gc_of_constraints (ctrs : ConstraintSet.t) : option GoodConstraintSet.t
   := ConstraintSet.fold add_gc_of_constraint
@@ -370,57 +402,10 @@ End GC.
 
 (* no_prop_levels of the graph are levels which are not Prop *)
 (* vtn : "variable to no_prop" *)
-Inductive no_prop_level := lSet | vtn (l : variable_level).
-
-Coercion vtn : variable_level >-> no_prop_level.
-
-Module VariableLevel.
-  Definition t := variable_level.
-  Definition lt : t -> t -> Prop :=
-    fun x y => match x, y with
-            | mLevel _, mVar _ => True
-            | mLevel s, mLevel s' => string_lt s s'
-            | mVar n, mVar n' => n < n'
-            | mVar _, mLevel _ => False
-            end.
-  Definition lt_strorder : StrictOrder lt.
-    split.
-    - intros [s|n] H; cbn in H.
-      unfold string_lt in H.
-      pose proof (string_compare_eq s s). intuition.
-      rewrite H in *. discriminate. intuition.
-    - intros [s1|n1] [s2|n2] [s3|n3]; cbn; intuition.
-      eapply transitive_string_lt; eassumption.
-  Qed.
-  Definition lt_compat : Proper (Logic.eq ==> Logic.eq ==> iff) lt.
-    intros x y [] z t []; reflexivity.
-  Qed.
-  Definition compare : t -> t -> comparison :=
-    fun x y => match x, y with
-            | mLevel _, mVar _ => Datatypes.Lt
-            | mLevel s, mLevel s' => string_compare s s'
-            | mVar n, mVar n' => Nat.compare n n'
-            | mVar _, mLevel _ => Datatypes.Gt
-            end.
-  Definition compare_spec :
-    forall x y : t, CompareSpec (x = y) (lt x y) (lt y x) (compare x y).
-    intros [s|n] [s'|n']; cbn; try now constructor.
-    - eapply CompareSpec_Proper. 2-4: reflexivity.
-      2: apply CompareSpec_string.
-      split; congruence.
-    - eapply CompareSpec_Proper. 2-4: reflexivity.
-      2: apply PeanoNat.Nat.compare_spec.
-      split; congruence.
-  Qed.
-  Definition eq_dec : forall x y : t, {x = y} + {x <> y}.
-    intros [s|n] [s'|n']; try now constructor.
-    destruct (string_dec s s'); [left|right]; congruence.
-    destruct (PeanoNat.Nat.eq_dec n n'); [left|right]; congruence.
-  Defined.
-End VariableLevel.
-
 Module NoPropLevel.
-  Definition t : Set := no_prop_level.
+  Inductive t_ := lSet | vtn (l : VariableLevel.t).
+  Definition t : Set := t_.
+  Definition vtn' : VariableLevel.t -> t := vtn.
   Definition eq : t -> t -> Prop := Logic.eq.
   Definition eq_equiv : RelationClasses.Equivalence eq := _.
   Definition lt : t -> t -> Prop :=
@@ -457,6 +442,40 @@ Module NoPropLevel.
   Defined.
 End NoPropLevel.
 
+Import NoPropLevel.
+
+Coercion vtn : VariableLevel.t >-> NoPropLevel.t_.
+Coercion vtn' : VariableLevel.t >-> NoPropLevel.t.
+
+Definition no_prop_of_level (l : Level.t) : option NoPropLevel.t :=
+  match l with
+  | Level.lProp => None
+  | Level.lSet => Some lSet
+  | Level.Level s => Some (vtn (mLevel s))
+  | Level.Var n => Some (vtn (mVar n))
+  end.
+
+Definition level_of_variable (l : VariableLevel.t) : Level.t :=
+  match l with
+  | mLevel s => Level.Level s
+  | mVar n => Level.Var n
+  end.
+
+Definition level_of_no_prop (l : NoPropLevel.t) : Level.t :=
+  match l with
+  | lSet => Level.lSet
+  | vtn l => level_of_variable l
+  end.
+
+Coercion level_of_no_prop : NoPropLevel.t >-> Level.t.
+
+Lemma no_prop_of_level_no_prop l
+  : no_prop_of_level (level_of_no_prop l) = Some l.
+Proof.
+  destruct l; try reflexivity.
+  destruct l; try reflexivity.
+Qed.
+
 
 
 Module Import wGraph := wGraph.WeightedGraph NoPropLevel.
@@ -474,21 +493,13 @@ Proof.
   rewrite H; constructor.
 Defined.
 
-
-Definition no_prop_of_level l :=
-  match l with
-  | Level.lProp => None
-  | Level.lSet => Some lSet
-  | Level.Level s => Some (vtn (mLevel s))
-  | Level.Var n => Some (vtn (mVar n))
-  end.
-
 Definition no_prop_levels (X : LevelSet.t) : VSet.t
   := LevelSet.fold (fun l X => match no_prop_of_level l with
                             | Some l => VSet.add l X
                             | None => X
                             end)
                    X VSet.empty.
+
 
 Definition declared : Level.t -> LevelSet.t -> Prop := LevelSet.In.
 
@@ -513,28 +524,7 @@ Definition gc_of_uctx `{checker_flags} (uctx : ContextSet.t)
      ret (no_prop_levels uctx.1, ctrs).
 
 
-Definition level_of_variable l : Level.t :=
-  match l with
-  | mLevel s => Level.Level s
-  | mVar n => Level.Var n
-  end.
-
-Definition level_of_no_prop l : Level.t :=
-  match l with
-  | lSet => Level.lSet
-  | vtn l => level_of_variable l
-  end.
-
-Coercion level_of_no_prop : no_prop_level >-> Level.t.
-
-Lemma no_prop_of_level_no_prop l
-  : no_prop_of_level (level_of_no_prop l) = Some l.
-Proof.
-  destruct l; try reflexivity.
-  destruct l; try reflexivity.
-Qed.
-
-Lemma no_prop_levels_no_prop_level (l : no_prop_level) levels
+Lemma no_prop_levels_no_prop_level (l : NoPropLevel.t) levels
   : declared l levels ->  VSet.In l (no_prop_levels levels).
 Proof.
   unfold no_prop_levels, declared. rewrite LevelSet.fold_spec.
@@ -629,7 +619,7 @@ Proof.
 Qed.
 
 
-Definition edge_of_level (l : variable_level) : EdgeSet.elt :=
+Definition edge_of_level (l : VariableLevel.t) : EdgeSet.elt :=
   match l with
   | mLevel l => (lSet, 1, vtn (mLevel l))
   | mVar n => (lSet, 0, vtn (mVar n))
@@ -640,7 +630,7 @@ Definition EdgeSet_pair x y
 Definition EdgeSet_triple x y z
   := EdgeSet.add z (EdgeSet_pair x y).
 
-Definition edge_of_constraint (gc : good_constraint) : EdgeSet.elt :=
+Definition edge_of_constraint (gc : GoodConstraint.t) : EdgeSet.elt :=
   match gc with
   | gc_le l l' => (vtn l, 0, vtn l')
   | gc_lt l l' => (vtn l, 1, vtn l')
@@ -927,20 +917,20 @@ Section CheckLeq.
 
   (** ** Check of leq ** *)
 
-  Lemma val_level_of_variable_level v (l : variable_level)
+  Lemma val_level_of_variable_level v (l : VariableLevel.t)
     : val0 v l = Z.of_nat (gc_val0 v l).
   Proof.
     destruct l; cbn; lia.
   Qed.
 
-  Lemma labelling_of_valuation_val0 v (l : no_prop_level)
+  Lemma labelling_of_valuation_val0 v (l : NoPropLevel.t)
     : Z.of_nat (labelling_of_valuation v l) = val0 v l.
   Proof.
     destruct l; cbn. reflexivity.
     destruct l; cbn; rewrite ?Z_of_pos_alt; reflexivity.
   Qed.
 
-  Lemma leq_universe_vertices0 n (l l' : no_prop_level)
+  Lemma leq_universe_vertices0 n (l l' : NoPropLevel.t)
     : leq_vertices G n l l'
       -> gc_leq_universe_n n uctx.2 (Universe.make l) (Universe.make l').
   Proof.
@@ -950,7 +940,7 @@ Section CheckLeq.
     rewrite <- !labelling_of_valuation_val0. lia.
   Qed.
 
-  Lemma leq_universe_vertices1 n l l'
+  Lemma leq_universe_vertices1 n (l l' : NoPropLevel.t)
         (Hl : VSet.In l (wGraph.V G)) (Hl' : VSet.In l' (wGraph.V G))
     : gc_leq_universe_n n uctx.2 (Universe.make l) (Universe.make l')
       -> leq_vertices G n l l'.
@@ -964,22 +954,7 @@ Section CheckLeq.
     cbn in *; lia.
   Qed.
 
-  (* Definition update_valuation v l k := *)
-  (*   match l with *)
-  (*   | mLevel s => {| valuation_mono := fun s' => if string_dec s s' then k else *)
-  (*                                               v.(valuation_mono) s'; *)
-  (*                 valuation_poly := v.(valuation_poly)|} *)
-  (*   | mVar n => {| valuation_mono := v.(valuation_mono); *)
-  (*                 valuation_poly := fun n' => if n =? n' then Pos.to_nat k else *)
-  (*                                            v.(valuation_poly) n' |} *)
-  (*   end. *)
-
-  (* Lemma Zpos_to_pos z : (z <= Z.pos (Z.to_pos z))%Z. *)
-  (* Proof. *)
-  (*   destruct z; cbn; lia. *)
-  (* Qed. *)
-
-  Lemma leq_universe_vertices n (l l' : no_prop_level)
+  Lemma leq_universe_vertices n (l l' : NoPropLevel.t)
         (Hl : VSet.In l (wGraph.V G)) (Hl' : VSet.In l' (wGraph.V G))
     : gc_leq_universe_n n uctx.2 (Universe.make l) (Universe.make l')
       <-> leq_vertices G n l l'.
@@ -990,7 +965,7 @@ Section CheckLeq.
   Qed.
 
 
-  Definition leqb_no_prop_n n (l l' : no_prop_level)
+  Definition leqb_no_prop_n n (l l' : NoPropLevel.t)
     := leqb_vertices G n l l'.
 
 
@@ -1002,7 +977,7 @@ Section CheckLeq.
     apply leqb_vertices_correct; tas; subst G; exact _.
   Qed.
 
-  Lemma leqb_no_prop_n_spec n l l'
+  Lemma leqb_no_prop_n_spec n (l l' : NoPropLevel.t)
         (Hl : VSet.In l uctx.1) (Hl' : VSet.In l' uctx.1)
     : leqb_no_prop_n n l l'
       <-> gc_leq_universe_n n uctx.2 (Universe.make l) (Universe.make l').
@@ -1136,8 +1111,8 @@ Section CheckLeq.
     unfold leqb_expr_n.
     destruct e as [l []], e' as [l' []]; cbn.
     - case_eq (no_prop_of_level l); [intros l0 Hl|intros Hl]; rew_no_prop;
-        (case_eq (no_prop_of_level l'); [intros l0' Hl'|intros Hl']); rew_no_prop; cbn;
-          intro HH; apply leqb_level_n_spec0 in HH; tas.
+        (case_eq (no_prop_of_level l'); [intros l0' Hl'|intros Hl']); rew_no_prop;
+          cbn; intro HH; apply leqb_level_n_spec0 in HH; tas.
       + intros v Hv; specialize (HH v Hv); cbn in *;
           unfold val1 in *; cbn in *; repeat rew_no_prop; cbn in *; try lia.
       + intros v Hv; specialize (HH v Hv); cbn in *;
@@ -1246,12 +1221,12 @@ Section CheckLeq.
     unfold leqb_univ_expr_n, gc_leq_universe_n, val.
     case_eq (Universe.exprs u). intros e u' ee.
     assert (Hu': gc_level_declared e.1 /\ Forall (fun e => gc_level_declared e.1) u'). {
-      pose proof (exprs_spec' u) as H. red in Hu.
+      pose proof (Universe.exprs_spec' u) as H. red in Hu.
       rewrite ee in H; cbn in H; rewrite <- H in Hu.
       invs Hu. now split. }
     clear u ee Hu. destruct Hu' as [Hu Hu'].
     rewrite <- !fold_left_rev_right in *.
-    rewrite exprs_make'; cbn.
+    rewrite Universe.exprs_make'; cbn.
     transitivity (forall v, gc_satisfies v uctx.2 -> (Z.of_nat n +
       fold_right (fun e0 n0 => Z.max (val1 v e0) n0) (val1 v e) (List.rev u') <=
       val1 v e2)%Z).
@@ -1316,7 +1291,7 @@ Section CheckLeq.
     rewrite ssrbool.orbT. reflexivity.
   Qed.
 
-  Definition check_gc_constraint (gc : good_constraint) :=
+  Definition check_gc_constraint (gc : GoodConstraint.t) :=
     negb check_univs || match gc with
                        | gc_le l l' => leqb_no_prop_n 0 l l'
                        | gc_lt l l' => leqb_no_prop_n 1 l l'
@@ -1333,6 +1308,7 @@ Section CheckLeq.
     | None => false
     end.
 
+  (* TODO: rename :-)  *)
   Lemma toto l : level_of_no_prop (vtn l) = level_of_variable l.
     destruct l; reflexivity.
   Qed.
@@ -1516,19 +1492,6 @@ Section CheckLeq2.
   Qed.
 
 
-  (* Lemma check_gc_constraints_spec ctrs *)
-  (*   : check_gc_constraints ctrs *)
-  (*     -> if check_univs then forall v, gc_satisfies v uctx.2 -> gc_satisfies v ctrs else True. *)
-  (* Proof. *)
-  (*   pose proof check_gc_constraint_spec as XX. *)
-  (*   unfold check_gc_constraint. destruct check_univs; [cbn|trivial]. *)
-  (*   intros HH v Hv. *)
-  (*   apply GoodConstraintSet.for_all_spec. now intros x y []. *)
-  (*   apply GoodConstraintSet.for_all_spec in HH. 2: now intros x y []. *)
-  (*   intros gc Hgc. specialize (HH gc Hgc). *)
-  (*   apply XX; assumption. *)
-  (* Qed. *)
-
   Lemma check_constraints_spec ctrs
     : check_constraints G ctrs -> valid_constraints uctx.2 ctrs.
   Proof.
@@ -1548,66 +1511,3 @@ Section CheckLeq2.
 
 
 End CheckLeq2.
-
-
-(* Extract Constant constrained_dec => "(fun g ctrs l -> assert false)". *)
-
-
-(* Definition G := make_graph *)
-(*   (GoodConstraintSet.add (gc_lt (mVar 0) (mVar 1)) *)
-(*  (GoodConstraintSet_pair (gc_lt_set 0) (gc_eq_set 1))). *)
-
-(* Compute (lsp G lSet (mVar 0)). *)
-(* Compute (lsp G lSet (mVar 1)). *)
-(* Compute (lsp G lSet lSet). *)
-
-(* Section Test. *)
-
-(*   Definition get_graph G0 := match G0 with *)
-(*                              | Some φ => φ *)
-(*                              | None => init_graph *)
-(*                              end. *)
-
-(*   Definition G0 := make_graph ConstraintSet.empty. *)
-(*   Check (eq_refl : G0 = Some _). *)
-(*   Definition G := get_graph G0. *)
-
-(*   Local Existing Instance default_checker_flags. *)
-
-(*   Check (eq_refl : check_leq G Universe.type0m Universe.type0 = true). *)
-(*   Check (eq_refl : check_lt G Universe.type0m Universe.type0 = true). *)
-(*   Check (eq_refl : check_lt G Universe.type0m Universe.type0m = false). *)
-(*   Check (eq_refl : check_lt G Universe.type0 Universe.type0m = false). *)
-(*   Check (eq_refl : check_lt G Universe.type0 Universe.type0 = false). *)
-(*   Check (eq_refl : no_universe_inconsistency G = true). *)
-
-(*   Definition ctrs0 := ConstraintSet.add (Level.Level "Top.0", Lt, Level.Level "Top.1") *)
-(*                                         (ConstraintSet.singleton (Level.Var 0, Lt, Level.Var 1)). *)
-(*   Definition G'0 := make_graph ctrs0. *)
-(*   Check (eq_refl : G'0 = Some _). *)
-(*   Definition G' := get_graph G'0. *)
-
-(*   Check (eq_refl : check_lt G' (Universe.make (Level.Level "Top.0")) (Universe.make (Level.Var 0)) = false). *)
-(*   Check (eq_refl : check_leq G' (Universe.make (Level.Level "Top.1")) (Universe.make (Level.lProp)) = false). *)
-(*   Check (eq_refl : check_leq G' (Universe.super (Level.Level "Top.1")) (Universe.make (Level.Level "Top.1")) = false). *)
-(*   Check (eq_refl : check_lt G' (Universe.make (Level.Level "Top.1")) (Universe.super (Level.Level "Top.1")) = true). *)
-(*   Check (eq_refl : check_lt G' (Universe.make (Level.Level "Top.1")) (Universe.make (Level.Level "Top.1")) = false). *)
-(*   Check (eq_refl : check_eq G' (Universe.make (Level.Level "Top.1")) (Universe.make (Level.Level "Top.1")) = true). *)
-(*   Check (eq_refl : no_universe_inconsistency G = true). *)
-
-(*   Check (eq_refl : check_lt G' (Universe.make (Level.Var 1)) (Universe.make (Level.Var 0)) = false). *)
-(*   Check (eq_refl : check_leq G' (Universe.make (Level.Var 0)) (Universe.make (Level.Var 1)) = true). *)
-(*   Check (eq_refl : check_lt G' (Universe.make (Level.Var 0)) (Universe.make (Level.Var 1)) = true). *)
-(*   Check (eq_refl : check_leq G' Universe.type1 Universe.type0 = false). *)
-(*   Check (eq_refl : check_lt G' Universe.type1 Universe.type1 = false). *)
-
-
-(*   Definition ctrs1 := ConstraintSet.add (Level.Var 1, Eq, Level.Var 2) *)
-(*                                         (ConstraintSet.add (Level.Var 2, Le, Level.lSet) ctrs0). *)
-(*   Definition G''0 := make_graph ctrs1. *)
-(*   Check (eq_refl : G''0 = Some _). *)
-(*   Definition G'' := get_graph G''0. *)
-
-(*   Check (eq_refl : no_universe_inconsistency G'' = false). *)
-
-(* End Test. *)

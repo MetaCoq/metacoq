@@ -153,7 +153,7 @@ Definition string_of_level_expr (l : Level.t * bool) : string :=
   let '(l, b) := l in
   string_of_level l ++ (if b then "+1" else "").
 
-Definition string_of_sort (u : universe) :=
+Definition string_of_sort (u : Universe.t) :=
   string_of_list string_of_level_expr u.
 
 Definition string_of_name (na : name) :=
@@ -631,7 +631,7 @@ Section Typecheck.
                  typing_result ({ A : term & ∥ Σ ;;; Γ |- t : A ∥ })).
 
     Program Definition infer_type Γ HΓ t
-      : typing_result ({u : universe & ∥ Σ ;;; Γ |- t : tSort u ∥}) :=
+      : typing_result ({u : Universe.t & ∥ Σ ;;; Γ |- t : tSort u ∥}) :=
       tx <- infer Γ HΓ t ;;
       u <- reduce_to_sort Γ tx.π1 _ ;;
       ret (u.π1; _).
@@ -684,9 +684,9 @@ Section Typecheck.
     now apply global_ext_uctx_consistent.
   Qed.
 
-  Lemma is_graph_of_uctx_levels l :
+  Lemma is_graph_of_uctx_levels (l : NoPropLevel.t) :
     wGraph.VSet.mem l (uGraph.wGraph.V G) ->
-    LevelSet.mem l (global_ext_levels Σ).
+    LevelSet.mem (level_of_no_prop l) (global_ext_levels Σ).
   Proof.
     unfold is_graph_of_uctx in HG.
     case_eq (gc_of_uctx (global_ext_uctx Σ)); [intros [lvs cts] XX|intro XX];
@@ -815,8 +815,8 @@ Section Typecheck.
     | tEvar ev args => raise (UnboundEvar ev)
 
     | tSort u =>
-          match u with
-          | NEL.sing (l, false) =>
+          match Universe.exprs u with
+          | ((l, false), []) =>
             check_eq_true (LevelSet.mem l (global_ext_levels Σ))
                           (Msg ("undeclared level " ++ string_of_level l));;
             ret (tSort (Universe.super l); _)
@@ -1014,9 +1014,17 @@ Section Typecheck.
       end
     end.
 
+  (* tRel *)
   Next Obligation. intros; sq; now econstructor. Defined.
-  Next Obligation. intros; sq; econstructor; tas.
-                   now apply LevelSetFact.mem_2. Defined.
+  (* tSort *)
+  Next Obligation.
+    assert (HH : u = Universe.make l). {
+      apply eq_universe_iff'.
+      rewrite <- (Universe.exprs_spec' u).
+      rewrite <- Heq_anonymous. reflexivity. }
+    subst u. sq; econstructor; tas.
+    now apply LevelSetFact.mem_2.
+  Defined.
   (* tProd *)
   Next Obligation.
     (* intros Γ HΓ t na A B Heq_t [s ?];  *)
@@ -1403,8 +1411,8 @@ Section CheckEnv.
        let edges := wGraph.VSet.fold
                       (fun l E =>
                          match l with
-                         | lSet => E
-                         | vtn ll => wGraph.EdgeSet.add (edge_of_level ll) E
+                         | NoPropLevel.lSet => E
+                         | NoPropLevel.vtn ll => wGraph.EdgeSet.add (edge_of_level ll) E
                          end)
                       uctx.1 G.1.2 in
        let edges := GoodConstraintSet.fold

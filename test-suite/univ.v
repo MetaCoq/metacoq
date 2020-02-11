@@ -210,9 +210,7 @@ Quote Recursively Definition ff := f'.
 
 Require Import MetaCoq.Checker.All.
 Check (eq_refl : infer' (empty_ext (fst ff)) [] (snd ff) =
-         Checked (tSort
-                    (NEL.cons (Level.Level _, true)
-                              (NEL.sing (Level.Level _, true))))).
+         Checked (tSort (Universe.make'' (Level.Level _, true) [(Level.Level _, true)]))).
 Open Scope string_scope.
 Check (eq_refl : infer [] init_graph [] ((tProd (nNamed "A") (tSort (Universe.make' (Level.Level "Toto.85", false))) (tProd (nNamed "B") (tSort (Universe.make' (Level.Level "Toto.86", false))) (tProd nAnon (tRel 1) (tProd nAnon (tRel 1) (tRel 3)))))) = Checked (tSort _)).
 

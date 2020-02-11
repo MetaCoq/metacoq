@@ -216,7 +216,7 @@ Program Definition is_erasable (Sigma : PCUICAst.global_env_ext) (HΣ : ∥wf_ex
     ret (left _)
   else mlet (K; _) <- @type_of extraction_checker_flags Sigma _ _ Gamma T _ ;;
        mlet (u;_) <- @reduce_to_sort _ Sigma _ Gamma K _ ;;
-      match is_prop_sort u with true => ret (left _) | false => ret (right _) end
+      match Universe.is_prop u with true => ret (left _) | false => ret (right _) end
 .
 Next Obligation. sq; eauto. Qed.
 Next Obligation.
@@ -298,7 +298,7 @@ Qed.
 (*     ret (left _) *)
 (*   else mlet (K; _) <-  @make_graph_and_infer _ _ HΣ Gamma HΓ T ;; *)
 (*        mlet (u;_) <- @reduce_to_sort _ Sigma _ Gamma K _ ;; *)
-(*       match is_prop_sort u with true => ret (left _) | false => ret (right _) end *)
+(*       match Universe.is_prop u with true => ret (left _) | false => ret (right _) end *)
 (* . *)
 (* Next Obligation. sq; eauto. Qed. *)
 (* Next Obligation. *)

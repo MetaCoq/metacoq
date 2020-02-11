@@ -698,7 +698,7 @@ Qed.
     revert t u Rle. fix aux 4.
     destruct 1; cbn; intros t'' u'' H' H0';
       inv H'; inv H0'; try econstructor; eauto.
-    - revert args'0 args'1 H2 H3.
+    - revert args'0 args'1 X X0.
       induction a; simpl; intros args0 args'0 H1 H2.
       + inv H1; inv H2; constructor; eauto.
       + inv H1; inv H2. constructor; eauto.
@@ -714,22 +714,22 @@ Qed.
       apply Forall2_eq, map_inj in H4.
       congruence.
       all: intros x y H; now inv H.
-    - revert brs'0 brs'1 H8 H11.
+    - revert brs'0 brs'1 X3 X6.
       induction a; simpl; intros args0 args'0 H1 H2.
       + inv H1; inv H2; constructor; eauto.
       + inv H1; inv H2. constructor; eauto.
-        destruct H5, H4, r. split; eauto. congruence.
-    - revert mfix'0 mfix'1 H2 H3.
+        destruct X3, X7, r. split; eauto. congruence.
+    - revert mfix'0 mfix'1 X X0.
       induction a; simpl; intros args0 args'0 H1 H2.
       + inv H1; inv H2; constructor; eauto.
       + inv H1; inv H2. constructor; eauto.
-        destruct H3 as [[? ?] ?], H1 as [[? ?] ?], r as [[? ?] ?].
+        destruct X as [[? ?] ?], X1 as [[? ?] ?], r as [[? ?] ?].
         repeat split; eauto. congruence.
-    - revert mfix'0 mfix'1 H2 H3.
+    - revert mfix'0 mfix'1 X X0.
       induction a; simpl; intros args0 args'0 H1 H2.
       + inv H1; inv H2; constructor; eauto.
       + inv H1; inv H2. constructor; eauto.
-        destruct H3 as [[? ?] ?], H1 as [[? ?] ?], r as [[? ?] ?].
+        destruct X as [[? ?] ?], X1 as [[? ?] ?], r as [[? ?] ?].
         repeat split; eauto. congruence.
   Qed.
 

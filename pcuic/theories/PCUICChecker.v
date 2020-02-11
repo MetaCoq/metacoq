@@ -38,7 +38,7 @@ Inductive type_error :=
 | NotAnInductive (t : term)
 | IllFormedFix (m : mfixpoint term) (i : nat)
 | UnsatisfiedConstraints (c : ConstraintSet.t)
-| CannotTakeSuccessor (u : universe)
+| CannotTakeSuccessor (u : Universe.t)
 | NotEnoughFuel (n : nat).
 
 

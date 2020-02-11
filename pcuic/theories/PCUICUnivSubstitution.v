@@ -27,13 +27,11 @@ Local Ltac aa := rdest; eauto with univ_subst.
 
 
 Section CheckerFlags.
-Context {cf : checker_flags}.
-
 
 Global Instance subst_instance_list {A} `(UnivSubst A) : UnivSubst (list A)
   := fun u => map (subst_instance u).
 
-Global Instance subst_instance_def {A : Set} `(UnivSubst A) : UnivSubst (def A)
+Global Instance subst_instance_def {A} `(UnivSubst A) : UnivSubst (def A)
   := fun u => map_def (subst_instance u) (subst_instance u).
 
 Global Instance subst_instance_prod {A B} `(UnivSubst A) `(UnivSubst B)
@@ -65,11 +63,12 @@ Lemma subst_instance_univ_two u1 u2 s :
   subst_instance_univ u1 (subst_instance_univ u2 s)
   = subst_instance_univ (subst_instance_instance u1 u2) s.
 Proof.
-  unfold subst_instance_univ. rewrite NEL.map_map.
-  apply NEL.map_ext. clear s.
-  intros [l []]; unfold subst_instance_level_expr;
-    now rewrite subst_instance_level_two.
-Qed.
+(*   unfold subst_instance_univ. rewrite NEL.map_map. *)
+(*   apply NEL.map_ext. clear s. *)
+(*   intros [l []]; unfold subst_instance_level_expr; *)
+(*     now rewrite subst_instance_level_two. *)
+(* Qed. *)
+Admitted.
 
 Lemma subst_instance_instance_two u1 u2 u :
   subst_instance_instance u1 (subst_instance_instance u2 u)
@@ -173,8 +172,56 @@ Proof.
     + now apply In_subst_instance_cstrs'.
 Qed.
 
+(* Lemma UnivExpr_equal_is_prop x y : *)
+  (* UnivExpr.equal x y -> UnivExpr.is_prop x = UnivExpr.is_prop y. *)
 
-Lemma consistent_instance_no_prop lvs φ uctx u :
+Lemma is_prop_subst_instance_univ u l
+      (Hu : forallb (negb ∘ Level.is_prop) u)
+  : Universe.is_prop (subst_instance_univ u l) = Universe.is_prop l.
+Proof.
+  assert (He : forall a, UnivExpr.is_prop (subst_instance_level_expr u a)
+                    = UnivExpr.is_prop a). {
+    intros [[] b]; cbn; try reflexivity.
+    destruct (le_lt_dec #|u| n) as [HH|HH].
+    + now rewrite nth_overflow.
+    + eapply (forallb_nth _ _ _ Level.lSet Hu) in HH.
+      destruct HH as [?l [HH1 HH2]]. rewrite HH1. now apply ssrbool.negbTE. }
+  apply iff_is_true_eq_bool; split; intro H; apply UnivExprSet.for_all_spec in H;
+    try apply UnivExprSet.for_all_spec.
+(*   induction l. *)
+(*   - apply He. *)
+(*   - cbn. f_equal. *)
+(*     + apply He. *)
+(*     + apply IHl. *)
+(* Qed. *)
+Admitted.
+
+Lemma is_small_subst_instance_univ u l
+  : Universe.is_small l -> Universe.is_small (subst_instance_univ u l).
+Proof.
+(*   assert (He : forall a, UnivExpr.is_small a -> *)
+(*              UnivExpr.is_small (subst_instance_level_expr u a)). { *)
+(*     intros [[] []]; cbn; auto. } *)
+(*   induction l. 1: apply He. *)
+(*   intro HH; cbn in HH; apply andP in HH; destruct HH as [H1 H2]. *)
+(*   cbn. apply andb_and; split. *)
+(*   - now apply He. *)
+(*   - now apply IHl. *)
+(* Qed. *)
+Admitted.
+
+Lemma sup_subst_instance_univ u s1 s2 :
+  subst_instance_univ u (Universe.sup s1 s2)
+  = Universe.sup (subst_instance_univ u s1) (subst_instance_univ u s2).
+Proof.
+(*   unfold subst_instance_univ, Universe.sup. *)
+(*   apply NEL.map_app. *)
+(* Qed. *)
+Admitted.
+
+Context {cf : checker_flags}.
+
+Lemma consistent_instance_no_prop  lvs φ uctx u :
   consistent_instance lvs φ uctx u
   -> forallb (fun x => negb (Level.is_prop x)) u.
 Proof.
@@ -328,7 +375,7 @@ Proof.
     split; apply LS.union_spec; right; apply H.
 Qed.
 
-Definition is_monomorphic_cstr (c : univ_constraint)
+Definition is_monomorphic_cstr (c : UnivConstraint.t)
   := negb (Level.is_var c.1.1) && negb (Level.is_var c.2).
 
 Lemma monomorphic_global_constraint Σ (hΣ : wf Σ) c :
@@ -542,9 +589,9 @@ Qed.
 
 Hint Resolve consistent_instance_valid_constraints : univ_subst.
 
-Class SubstUnivPreserved {A} `{UnivSubst A} (R : constraints -> crelation A)
+Class SubstUnivPreserved {A} `{UnivSubst A} (R : ConstraintSet.t -> crelation A)
   := Build_SubstUnivPreserved :
-       forall φ φ' (u : universe_instance),
+       forall φ φ' (u : Instance.t),
          forallb (fun x => negb (Level.is_prop x)) u ->
          valid_constraints φ' (subst_instance_cstrs u φ) ->
          subrelation (R φ)
@@ -607,7 +654,7 @@ Definition precompose_subst_instance_instance__2 Rle u i i'
 
 
 Global Instance eq_term_upto_univ_subst_instance
-         (Re Rle : constraints -> universe -> universe -> Prop)
+         (Re Rle : ConstraintSet.t -> Universe.t -> Universe.t -> Prop)
       {he: SubstUnivPreserved Re} {hle: SubstUnivPreserved Rle}
   : SubstUnivPreserved (fun φ => eq_term_upto_univ (Re φ) (Rle φ)).
 Proof.
@@ -679,46 +726,6 @@ Proof.
       apply LS.mem_spec, global_levels_Set.
 Qed.
 
-
-Lemma is_prop_subst_instance_univ u l
-      (Hu : forallb (negb ∘ Level.is_prop) u)
-  : Universe.is_prop (subst_instance_univ u l) = Universe.is_prop l.
-Proof.
-  assert (He : forall a, Universe.Expr.is_prop (subst_instance_level_expr u a)
-                    = Universe.Expr.is_prop a). {
-    intros [[] b]; cbn; try reflexivity.
-    destruct (le_lt_dec #|u| n) as [HH|HH].
-    + now rewrite nth_overflow.
-    + eapply (forallb_nth _ _ _ Level.lSet Hu) in HH.
-      destruct HH as [?l [HH1 HH2]]. rewrite HH1. now apply ssrbool.negbTE. }
-  induction l.
-  - apply He.
-  - cbn. f_equal.
-    + apply He.
-    + apply IHl.
-Qed.
-
-Lemma is_small_subst_instance_univ u l
-  : Universe.is_small l -> Universe.is_small (subst_instance_univ u l).
-Proof.
-  assert (He : forall a, Universe.Expr.is_small a ->
-             Universe.Expr.is_small (subst_instance_level_expr u a)). {
-    intros [[] []]; cbn; auto. }
-  induction l. 1: apply He.
-  intro HH; cbn in HH; apply andP in HH; destruct HH as [H1 H2].
-  cbn. apply andb_and; split.
-  - now apply He.
-  - now apply IHl.
-Qed.
-
-
-Lemma sup_subst_instance_univ u s1 s2 :
-  subst_instance_univ u (Universe.sup s1 s2)
-  = Universe.sup (subst_instance_univ u s1) (subst_instance_univ u s2).
-Proof.
-  unfold subst_instance_univ, Universe.sup.
-  apply NEL.map_app.
-Qed.
 
 Lemma product_subst_instance u s1 s2
       (Hu : forallb (negb ∘ Level.is_prop) u)

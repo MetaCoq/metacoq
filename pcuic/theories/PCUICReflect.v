@@ -248,24 +248,31 @@ Proof.
   cbn. constructor. subst. reflexivity.
 Defined.
 
-Fixpoint eq_non_empty_list {A : Set} (eqA : A -> A -> bool) (l l' : non_empty_list A) : bool :=
-  match l, l' with
-  | NEL.sing a, NEL.sing a' => eqA a a'
-  | NEL.cons a l, NEL.cons a' l' =>
-    eqA a a' && eq_non_empty_list eqA l l'
-  | _, _ => false
-  end.
-
-Instance reflect_non_empty_list :
-  forall {A : Set} `{ReflectEq A}, ReflectEq (non_empty_list A) :=
-  { eqb := eq_non_empty_list eqb }.
+(* TODO: move *)
+Lemma eq_universe_iff (u v : Universe.t) :
+  u = v <-> u = v :> UnivExprSet.t.
 Proof.
-  induction x, y; cbn.
-  destruct (eqb_spec a a0); constructor; congruence.
-  constructor; congruence.
-  constructor; congruence.
-  destruct (eqb_spec a a0), (IHx y); constructor; congruence.
-Defined.
+  destruct u, v; cbn; split. now inversion 1.
+  intros ->. f_equal. apply uip.
+Qed.
+Lemma eq_universe_iff' (u v : Universe.t) :
+  u = v <-> u = v :> list _.
+Proof.
+  etransitivity. apply eq_universe_iff.
+  destruct u as [[u1 u2] ?], v as [[v1 v2] ?]; cbn; clear; split.
+  now inversion 1. intros ->. f_equal. apply uip.
+Qed.
+
+Instance eq_dec_UnivExpr : EqDec UnivExpr.t.
+Proof. intros e e'. repeat decide equality. Qed.
+
+Instance eq_dec_univ : EqDec Universe.t.
+Proof.
+  intros u v. assert (H : {u = v :> list _} + {~ u = v :> list _}). {
+    repeat decide equality. }
+  destruct H as [H|H]; [left; now apply eq_universe_iff' in H|right].
+  intro X; apply H; now apply eq_universe_iff' in X.
+Qed.
 
 Local Ltac finish :=
   let h := fresh "h" in
@@ -282,10 +289,10 @@ Local Ltac fcase c :=
 Local Ltac term_dec_tac term_dec :=
   repeat match goal with
          | t : term, u : term |- _ => fcase (term_dec t u)
-         | u : universe, u' : universe |- _ => fcase (eq_dec u u')
-         | x : universe_instance, y : universe_instance |- _ =>
+         | u : Universe.t, u' : Universe.t |- _ => fcase (eq_dec u u')
+         | x : Instance.t, y : Instance.t |- _ =>
            fcase (eq_dec x y)
-         | x : list Level.t, y : universe_instance |- _ =>
+         | x : list Level.t, y : Instance.t |- _ =>
            fcase (eq_dec x y)
          | n : nat, m : nat |- _ => fcase (Nat.eq_dec n m)
          | i : ident, i' : ident |- _ => fcase (string_dec i i')
@@ -300,13 +307,12 @@ Local Ltac term_dec_tac term_dec :=
 
 Derive NoConfusion NoConfusionHom for term.
 
-Derive EqDec for term.
-Next Obligation.
-  revert y.
-  induction x using term_forall_list_ind ; intro t ;
+(* Derive EqDec for term. *)
+Instance EqDec_term : EqDec term.
+  intro x. induction x using term_forall_list_ind ; intro t ;
     destruct t ; try (right ; discriminate).
   all: term_dec_tac term_dec.
-  - revert l0. induction H ; intro l0.
+  - revert l0. rename X into H; induction H ; intro l0.
     + destruct l0.
       * left. reflexivity.
       * right. discriminate.

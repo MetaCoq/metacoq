@@ -36,7 +36,7 @@ Definition wf_global_uctx_invariants {cf:checker_flags} Σ :
 Proof.
   intros [HΣ]. split.
   - cbn. unfold global_levels.
-    cut (LevelSet.In lSet (LevelSet_pair Level.lSet Level.lProp)).
+    cut (LevelSet.In Level.lSet (LevelSet_pair Level.lSet Level.lProp)).
     + generalize (LevelSet_pair Level.lSet Level.lProp).
       clear HΣ. induction Σ; simpl. 1: easy.
       intros X H. apply LevelSet.union_spec. now right.
@@ -93,7 +93,7 @@ Definition wf_ext_global_uctx_invariants {cf:checker_flags} Σ :
 Proof.
   intros [HΣ]. split.
   - apply LevelSet.union_spec. right. unfold global_levels.
-    cut (LevelSet.In lSet (LevelSet_pair Level.lSet Level.lProp)).
+    cut (LevelSet.In Level.lSet (LevelSet_pair Level.lSet Level.lProp)).
     + generalize (LevelSet_pair Level.lSet Level.lProp).
       induction Σ.1; simpl. 1: easy.
       intros X H. apply LevelSet.union_spec. now right.
@@ -1357,7 +1357,7 @@ Section Conversion.
     prog_discr (tCoFix _ _) (tCoFix _ _) := False ;
     prog_discr _ _ := True.
 
-  Inductive prog_view : term -> term -> Set :=
+  Inductive prog_view : term -> term -> Type :=
   | prog_view_App u1 v1 u2 v2 :
       prog_view (tApp u1 v1) (tApp u2 v2)
 
@@ -1435,9 +1435,9 @@ Section Conversion.
   Qed.
 
   Equations(noeqns) unfold_constants (Γ : context) (leq : conv_pb)
-            (c : kername) (u : universe_instance) (π1 : stack)
+            (c : kername) (u : Instance.t) (π1 : stack)
             (h1 : wtp Γ (tConst c u) π1)
-            (c' : kername) (u' : universe_instance) (π2 : stack)
+            (c' : kername) (u' : Instance.t) (π2 : stack)
             (h2 : wtp Γ (tConst c' u') π2)
             (hx : conv_stack_ctx Γ π1 π2)
             (aux : Aux Term Γ (tConst c u) π1 (tConst c' u') π2 h2)

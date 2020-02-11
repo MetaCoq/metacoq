@@ -46,7 +46,7 @@ Qed.
 
 Lemma isWfArity_prod_inv:
   forall (Σ : global_env_ext) (Γ : context) (x : name) (x0 x1 : term),
-    isWfArity typing Σ Γ (tProd x x0 x1) -> (∑ s : universe, Σ;;; Γ |- x0 : tSort s) ×   isWfArity typing Σ (Γ,, vass x x0) x1
+    isWfArity typing Σ Γ (tProd x x0 x1) -> (∑ s : Universe.t, Σ;;; Γ |- x0 : tSort s) ×   isWfArity typing Σ (Γ,, vass x x0) x1
 .
   intros. destruct X as (? & ? & ? & ?). cbn in e.
   eapply destArity_app_Some in e as (? & ? & ?); subst.
@@ -199,7 +199,7 @@ Proof.
 Qed.
 
 Lemma invert_it_Ind_eq_prod:
-  forall (u : universe_instance) (i : inductive) (x : name) (x0 x1 : term) (x2 : context) (x3 : list term),
+  forall (u : Instance.t) (i : inductive) (x : name) (x0 x1 : term) (x2 : context) (x3 : list term),
     tProd x x0 x1 = it_mkProd_or_LetIn x2 (mkApps (tInd i u) x3) -> exists (L' : context) (l' : list term), x1 = it_mkProd_or_LetIn L' (mkApps (tInd i u) l').
 Proof.
   intros u i x x0 x1 x2 x3 H0.
@@ -424,25 +424,27 @@ Proof.
 Qed.
 
 Lemma is_prop_sort_sup:
-  forall x1 x2 : universe, is_prop_sort (Universe.sup x1 x2) -> is_prop_sort x2.
+  forall x1 x2 : Universe.t, Universe.is_prop (Universe.sup x1 x2) -> Universe.is_prop x2.
 Proof.
-  induction x1; cbn; intros.
-  - inv H.
-  - inv H.
-Qed.
+(*   induction x1; cbn; intros. *)
+(*   - inv H. *)
+(*   - inv H. *)
+(* Qed. *)
+Admitted.
 
 Lemma is_prop_sort_prod x2 x3 :
-  is_prop_sort (Universe.sort_of_product x2 x3) -> is_prop_sort x3.
+  Universe.is_prop (Universe.sort_of_product x2 x3) -> Universe.is_prop x3.
 Proof.
-  intros. unfold Universe.sort_of_product in *. destruct ?; eauto.
-  eapply is_prop_sort_sup in H. eauto.
-Qed.
+(*   intros. unfold Universe.sort_of_product in *. destruct ?; eauto. *)
+(*   eapply is_prop_sort_sup in H. eauto. *)
+(* Qed. *)
+Admitted.
 
 Lemma sort_typing_spine:
-  forall (Σ : global_env_ext) (Γ : context) (L : list term) (u : universe) (x x0 : term),
+  forall (Σ : global_env_ext) (Γ : context) (L : list term) (u : Universe.t) (x x0 : term),
     wf Σ ->
-    is_prop_sort u ->
-    typing_spine Σ Γ x L x0 -> Σ;;; Γ |- x : tSort u -> ∑ u', Σ;;; Γ |- x0 : tSort u' × is_prop_sort u'.
+    Universe.is_prop u ->
+    typing_spine Σ Γ x L x0 -> Σ;;; Γ |- x : tSort u -> ∑ u', Σ;;; Γ |- x0 : tSort u' × Universe.is_prop u'.
 Proof.
   intros Σ Γ L u x x0 ? ? t1 c0.
   revert u H c0.
@@ -532,10 +534,7 @@ Proof.
     eapply cumul_Sort_inv in c.
     eapply leq_universe_prop in c as []; cbn; eauto.
     eexists. split. eassumption. right. eexists. split. eassumption.
-    unfold Universe.sort_of_product in H.
-    destruct ?; eauto.
-
-    eapply is_prop_sort_sup; eauto.
+    eapply is_prop_sort_prod; eassumption.
   - auto.
 Qed.
 

@@ -564,7 +564,7 @@ Proof.
     { inversion wt. assumption. }
     assert (wargs' : Forall T.wf args').
     { inversion wu. assumption. }
-    induction H in wl, args', wargs', a |- *.
+    rename X into H; induction H in wl, args', wargs', a |- *.
     + dependent destruction a. constructor.
     + dependent destruction a. simpl.
       constructor.
@@ -591,7 +591,7 @@ Proof.
       * inversion wt. assumption.
       * inversion wu. assumption.
       * assumption.
-    + pose proof (All2_All_mix_left H a) as h.
+    + pose proof (All2_All_mix_left X a) as h.
       simpl in h.
       assert (wl : Forall T.wf l).
       { inversion wt. assumption. }
@@ -1089,7 +1089,7 @@ Proof.
   - apply Forall_All in H2. clear H H0 H1. revert M1. induction X.
     simpl. intuition. inv H2. specialize (X H).
     apply PCUICSubstitution.red1_mkApps_l. apply app_red_r. auto.
-    inv H2. specialize (IHX H0).
+    inv H2. specialize (IHX X0).
     simpl. intros.
     eapply (IHX (T.tApp M1 [hd])).
 
@@ -1216,7 +1216,7 @@ Definition Tlift_typing (P : Template.Ast.global_env_ext -> Tcontext -> Tterm ->
   fun Σ Γ t T =>
     match T with
     | Some T => P Σ Γ t T
-    | None => { s : universe & P Σ Γ t (T.tSort s) }
+    | None => { s : Universe.t & P Σ Γ t (T.tSort s) }
     end.
 
 Lemma trans_wf_local:

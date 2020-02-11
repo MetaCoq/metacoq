@@ -56,19 +56,6 @@ struct
     else
       not_supported_verb trm "unquote_list"
 
-  let rec unquote_non_empty_list trm =
-    let (h,args) = app_full trm [] in
-    if constr_equall h nel_sing then
-      match args with
-        _ :: x :: [] -> [x]
-      | _ -> bad_term_verb trm "unquote_non_empty_list"
-    else if constr_equall h nel_cons then
-      match args with
-        _ :: x :: xs :: [] -> x :: unquote_non_empty_list xs
-      | _ -> bad_term_verb trm "unquote_non_empty_list"
-    else
-      not_supported_verb trm "unquote_non_empty_list"
-
   (* Unquote Coq nat to OCaml int *)
   let rec unquote_nat trm =
     let (h,args) = app_full trm [] in
@@ -206,20 +193,32 @@ struct
 
 
   let unquote_universe evm trm (* of type universe *) =
-    if constr_equall trm lfresh_universe then
+    let (h,args) = app_full trm [] in
+    if constr_equall h lfresh_universe then
       if !strict_unquote_universe_mode then
         CErrors.user_err ~hdr:"unquote_universe" (str "It is not possible to unquote a fresh universe in Strict Unquote Universe Mode.")
       else
         let evm, u = Evd.new_univ_variable (Evd.UnivFlexible false) evm in
         Feedback.msg_info (str"Fresh universe " ++ Universe.pr u ++ str" was added to the context.");
         evm, u
+    else if constr_equall h tBuild_Universe then
+      match args with
+        x :: _ :: [] -> (let (h,args) = app_full x [] in
+                         if constr_equall h tMktUnivExprSet then
+                           match args with
+                             x :: _ :: [] -> (let levels = List.map unquote_pair (unquote_list x) in
+                                              match levels with
+                                              | [] -> assert false
+                                              | (l,b)::q -> List.fold_left (fun (evm,u) (l,b) -> let evm, u' = unquote_level_expr evm l b
+                                                                             in evm, Univ.Universe.sup u u')
+                                                              (unquote_level_expr evm l b) q)
+                           | _ -> bad_term_verb trm "unquote_universe 0"
+                         else
+                           not_supported_verb trm "unquote_universe 0")
+      | _ -> bad_term_verb trm "unquote_universe 1"
     else
-      let levels = List.map unquote_pair (unquote_non_empty_list trm) in
-      match levels with
-      | [] -> assert false
-      | (l,b)::q -> List.fold_left (fun (evm,u) (l,b) -> let evm, u' = unquote_level_expr evm l b
-                                     in evm, Univ.Universe.sup u u')
-                      (unquote_level_expr evm l b) q
+      not_supported_verb trm "unquote_universe 1"
+
 
   let unquote_universe_instance evm trm (* of type universe_instance *) =
     let l = unquote_list trm in

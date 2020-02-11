@@ -35,7 +35,7 @@ Inductive subs {cf:checker_flags} (Σ : global_env_ext) (Γ : context) : list te
 (** Linking a context (with let-ins), an instance (reversed substitution)
     for its assumptions and a well-formed substitution for it. *)
 
-Inductive context_subst : context -> list term -> list term -> Set :=
+Inductive context_subst : context -> list term -> list term -> Type :=
 | context_subst_nil : context_subst [] [] []
 | context_subst_ass Γ args s na t a :
     context_subst Γ args s ->
@@ -1098,10 +1098,10 @@ Proof.
   - intros [= <-]. intros [= ->].
     simpl. auto.
   - intros. destruct decl as [na' [b|] ty]; cbn in *. 2: auto.
-    specialize (IHuntyped_subslet _ H0 H1). intuition auto.
+    specialize (IHX _ H H0). intuition auto.
   - intros [= <-]. intros [= <-].
     simpl. split; auto.
-  - apply IHuntyped_subslet.
+  - apply IHX.
 Qed.
 
 (* Lemma red1_mkApp Σ Γ M1 N1 M2 : *)

@@ -20,7 +20,7 @@ Require Import Equations.Prop.DepElim.
   in particular. *)
 
 Axiom reduce_to_sort :
-  global_env -> context -> term -> typing_result universe.
+  global_env -> context -> term -> typing_result Universe.t.
 Axiom reduce_to_prod :
   global_env -> context -> term -> typing_result (term × term).
 
@@ -106,7 +106,7 @@ Section TypeOf.
       end
     end.
 
-  Definition sort_of (Γ : context) (t : term) : typing_result universe :=
+  Definition sort_of (Γ : context) (t : term) : typing_result Universe.t :=
     ty <- type_of Γ t;;
     type_of_as_sort type_of Γ ty.
 

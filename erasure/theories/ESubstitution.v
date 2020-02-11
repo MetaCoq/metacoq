@@ -56,7 +56,7 @@ Lemma Informative_extends:
     (mdecl : PCUICAst.mutual_inductive_body) (idecl : PCUICAst.one_inductive_body),
 
     PCUICTyping.declared_inductive (fst Σ) mdecl ind idecl ->
-    forall (Σ' : global_env) (u0 : universe_instance),
+    forall (Σ' : global_env) (u0 : Instance.t),
       wf Σ' ->
       extends Σ Σ' ->
       Informative Σ ind -> Informative (Σ', Σ.2) ind.
@@ -96,8 +96,8 @@ Proof.
   - econstructor. destruct isdecl. 2:eauto.
     eapply Informative_extends; eauto.
   - econstructor.
-    eapply All2_All_mix_left in H4; eauto.
-    eapply All2_impl. exact H4.
+    eapply All2_All_mix_left in X1; eauto.
+    eapply All2_impl. exact X1.
     intros ? ? [[[]] [? []]].
     split; eauto.
   - eauto.
@@ -205,13 +205,13 @@ Proof.
         eassumption. }
     rewrite app_length in *.
     subst types. rewrite fix_context_length in *.
-    rewrite (All2_length _ _ H5) in *.
+    rewrite (All2_length _ _ X2) in *.
     eapply erases_ctx_ext. eapply e4.
     rewrite lift_context_app. unfold app_context.
     rewrite !app_assoc. repeat f_equal.
     rewrite <- lift_fix_context.
     rewrite <- plus_n_O.
-    now rewrite (All2_length _ _ H5).
+    now rewrite (All2_length _ _ X2).
   - eauto.
 Qed.
 
@@ -306,15 +306,15 @@ Proof.
     intros Σ wfΣ Γ0 wfΓ0; intros; simpl in * |-; subst Γ0.
   - inv H0.
     + cbn. destruct ?. destruct ?.
-      * eapply All2_nth_error_Some in H2; eauto.
-        destruct H2 as (? & ? & ?).
+      * eapply All2_nth_error_Some in X2; eauto.
+        destruct X2 as (? & ? & ?).
         rewrite e.
         erewrite <- subst_context_length.
         eapply substlet_typable in X1 as []. 2:exact E0.
         eapply erases_weakening; eauto.
       * erewrite All2_length; eauto.
-        eapply All2_nth_error_None in H2; eauto.
-        rewrite H2. econstructor.
+        eapply All2_nth_error_None in X2; eauto.
+        rewrite X2. econstructor.
       * econstructor.
     + econstructor.
       eapply is_type_subst; eauto.
@@ -365,11 +365,11 @@ Proof.
       * eapply H3; eauto.
       * eapply All2_map.
         eapply All2_impl_In; eauto.
-        intros. destruct H11, x, y. cbn in *. subst. split; eauto.
+        intros. destruct H9, x, y. cbn in *. subst. split; eauto.
         eapply All2_All_left in X3.
         2:{ intros ? ? [[[[? ?] e1] ?] ?]. exact e1. }
 
-        eapply In_nth_error in H9 as [].
+        eapply In_nth_error in H7 as [].
         eapply nth_error_all in X3; eauto.
         eapply X3; eauto.
 
@@ -386,7 +386,7 @@ Proof.
       eapply All2_map.
       eapply All2_impl_In.
       eassumption.
-      intros. destruct H4 as (? & ? & ?).
+      intros. destruct H3 as (? & ? & ?).
       repeat split; eauto.
       eapply In_nth_error in H1 as [].
       eapply nth_error_all in X0; eauto.
@@ -413,7 +413,7 @@ Proof.
       eapply All2_map.
       eapply All2_impl_In.
       eassumption.
-      intros. destruct H4 as (? & ? & ?).
+      intros. destruct H3 as (? & ? & ?).
       repeat split; eauto.
       eapply In_nth_error in H1 as [].
       eapply nth_error_all in X0; eauto.

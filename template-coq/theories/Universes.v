@@ -396,6 +396,9 @@ Module Universe.
         * apply add_spec; right. apply IHl0. now right.
   Qed.
 
+  Definition make'' (e : UnivExpr.t) (l : list UnivExpr.t) : t
+    := add_list l (make' e).
+
   (** Test if the universe is a lub of levels or contains +n's. *)
   Definition is_levels : t -> bool
     := UnivExprSet.for_all UnivExpr.is_level.
@@ -643,6 +646,8 @@ Module UnivConstraint.
   Definition t : Set := Level.t * ConstraintType.t * Level.t.
   Definition eq : t -> t -> Prop := eq.
   Definition eq_equiv : RelationClasses.Equivalence eq := _.
+
+  Definition make l1 ct l2 : t := (l1, ct, l2).
 
   Inductive lt_ : t -> t -> Prop :=
   | lt_Level2 l1 t l2 l2' : Level.lt l2 l2' -> lt_ (l1, t, l2) (l1, t, l2')

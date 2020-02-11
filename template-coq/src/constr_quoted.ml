@@ -90,8 +90,6 @@ struct
   let tlist = resolve_symbol pkg_datatypes "list"
   let c_nil = resolve_symbol pkg_datatypes "nil"
   let c_cons = resolve_symbol pkg_datatypes "cons"
-  let nel_sing = resolve_symbol ["MetaCoq";"Template";"utils";"NEL"] "sing"
-  let nel_cons = resolve_symbol ["MetaCoq";"Template";"utils";"NEL"] "cons"
   let prod_type = resolve_symbol pkg_datatypes "prod"
   let sum_type = resolve_symbol pkg_datatypes "sum"
   let option_type = resolve_symbol pkg_datatypes "option"
@@ -139,6 +137,8 @@ struct
   let tunivLe = resolve_symbol (ext_pkg_univ "ConstraintType") "Le"
   let tunivLt = resolve_symbol (ext_pkg_univ "ConstraintType") "Lt"
   let tunivEq = resolve_symbol (ext_pkg_univ "ConstraintType") "Eq"
+  let tMktUnivExprSet = resolve_symbol (ext_pkg_univ "UnivExprSet") "Mkt"
+  let tBuild_Universe = resolve_symbol (ext_pkg_univ "Universe") "Build_t"
   let tmake_universe = resolve_symbol (ext_pkg_univ "Universe") "make''"
   let tLevelSet_of_list = resolve_symbol (ext_pkg_univ "LevelSetProp") "of_list"
 
@@ -159,7 +159,7 @@ struct
   let tLevelSet = resolve_symbol (ext_pkg_univ "LevelSet") "t_"
   let tConstraintSetempty = lazy (UnivGen.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "ConstraintSet") "empty"))
   let tConstraintSetadd = lazy (UnivGen.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "ConstraintSet") "add"))
-  let tmake_univ_constraint = resolve_symbol pkg_univ "make_univ_constraint"
+  let tmake_univ_constraint = resolve_symbol (ext_pkg_univ "UnivConstraint") "make"
   let tinit_graph = resolve_symbol pkg_ugraph "init_graph"
   let tadd_global_constraints = resolve_symbol pkg_ugraph  "add_global_constraints"
 

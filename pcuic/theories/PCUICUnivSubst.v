@@ -113,13 +113,13 @@ Section Closedu.
     | _ => true
     end.
 
-  Definition closedu_level_expr (s : Universe.Expr.t) :=
+  Definition closedu_level_expr (s : UnivExpr.t) :=
     closedu_level (fst s).
 
-  Definition closedu_universe (u : universe) :=
+  Definition closedu_universe (u : Universe.t) :=
     forallb closedu_level_expr u.
 
-  Definition closedu_instance (u : universe_instance) :=
+  Definition closedu_instance (u : Instance.t) :=
     forallb closedu_level u.
 
   Fixpoint closedu (t : term) : bool :=
@@ -147,102 +147,105 @@ Section Closedu.
 
 End Closedu.
 
-Require Import ssreflect ssrbool.
+(* Require Import ssreflect ssrbool. *)
 
-(** Universe-closed terms are unaffected by universe substitution. *)
+(* (** Universe-closed terms are unaffected by universe substitution. *) *)
 
-Section UniverseClosedSubst.
-  Lemma closedu_subst_instance_level u t : closedu_level 0 t -> subst_instance_level u t = t.
-  Proof.
-    destruct t => /=; auto.
-    move/Nat.ltb_spec0. intro H. inversion H.
-  Qed.
+(* Section UniverseClosedSubst. *)
+(*   Lemma closedu_subst_instance_level u t : closedu_level 0 t -> subst_instance_level u t = t. *)
+(*   Proof. *)
+(*     destruct t => /=; auto. *)
+(*     move/Nat.ltb_spec0. intro H. inversion H. *)
+(*   Qed. *)
 
-  Lemma closedu_subst_instance_level_expr u t : closedu_level_expr 0 t -> subst_instance_level_expr u t = t.
-  Proof.
-    destruct t as [l n].
-    rewrite /closedu_level_expr /subst_instance_level_expr /=.
-    move/(closedu_subst_instance_level u) => //. congruence.
-  Qed.
+(*   Lemma closedu_subst_instance_level_expr u t : closedu_level_expr 0 t -> subst_instance_level_expr u t = t. *)
+(*   Proof. *)
+(*     destruct t as [l n]. *)
+(*     rewrite /closedu_level_expr /subst_instance_level_expr /=. *)
+(*     move/(closedu_subst_instance_level u) => //. congruence. *)
+(*   Qed. *)
 
-  Lemma closedu_subst_instance_univ u t : closedu_universe 0 t -> subst_instance_univ u t = t.
-  Proof.
-    rewrite /closedu_universe /subst_instance_univ => H.
-    pose proof (proj1 (forallb_forall _ t) H) as HH; clear H.
-    induction t; cbn; f_equal.
-    1-2: now apply closedu_subst_instance_level_expr, HH; cbn.
-    apply IHt. intros x Hx; apply HH. now right.
-  Qed.
-  Hint Resolve closedu_subst_instance_level_expr closedu_subst_instance_level closedu_subst_instance_univ : terms.
+(*   Lemma closedu_subst_instance_univ u t : closedu_universe 0 t -> subst_instance_univ u t = t. *)
+(*   Proof. *)
+(*     rewrite /closedu_universe /subst_instance_univ => H. *)
+(*     apply eq_universe_iff. *)
 
-  Lemma closedu_subst_instance_instance u t : closedu_instance 0 t -> subst_instance_instance u t = t.
-  Proof.
-    rewrite /closedu_instance /subst_instance_instance => H. solve_all.
-    now apply (closedu_subst_instance_level u).
-  Qed.
-  Hint Resolve closedu_subst_instance_instance : terms.
+(*     apply Universe_map_idmap. *)
+(*     pose proof (proj1 (forallb_forall _ t) H) as HH; clear H. *)
+(*     induction t; cbn; f_equal. *)
+(*     1-2: now apply closedu_subst_instance_level_expr, HH; cbn. *)
+(*     apply IHt. intros x Hx; apply HH. now right. *)
+(*   Qed. *)
+(*   Hint Resolve closedu_subst_instance_level_expr closedu_subst_instance_level closedu_subst_instance_univ : terms. *)
 
-  Lemma closedu_subst_instance_constr u t : closedu 0 t -> subst_instance_constr u t = t.
-  Proof.
-    induction t in |- * using term_forall_list_ind; simpl; auto; intros H';
-      rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
-      try f_equal; eauto with terms; unfold test_def in *;
-        try solve [f_equal; eauto; repeat (toProp; solve_all)].
-  Qed.
-End UniverseClosedSubst.
+(*   Lemma closedu_subst_instance_instance u t : closedu_instance 0 t -> subst_instance_instance u t = t. *)
+(*   Proof. *)
+(*     rewrite /closedu_instance /subst_instance_instance => H. solve_all. *)
+(*     now apply (closedu_subst_instance_level u). *)
+(*   Qed. *)
+(*   Hint Resolve closedu_subst_instance_instance : terms. *)
 
-Section SubstInstanceClosed.
-  (** Substitution of a universe-closed instance of the right size
-      produces a universe-closed term. *)
+(*   Lemma closedu_subst_instance_constr u t : closedu 0 t -> subst_instance_constr u t = t. *)
+(*   Proof. *)
+(*     induction t in |- * using term_forall_list_ind; simpl; auto; intros H'; *)
+(*       rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length; *)
+(*       try f_equal; eauto with terms; unfold test_def in *; *)
+(*         try solve [f_equal; eauto; repeat (toProp; solve_all)]. *)
+(*   Qed. *)
+(* End UniverseClosedSubst. *)
 
-  Context (u : universe_instance) (Hcl : closedu_instance 0 u).
+(* Section SubstInstanceClosed. *)
+(*   (** Substitution of a universe-closed instance of the right size *)
+(*       produces a universe-closed term. *) *)
 
-  Lemma subst_instance_level_closedu t :
-    closedu_level #|u| t -> closedu_level 0 (subst_instance_level u t).
-  Proof.
-    destruct t => /=; auto.
-    move/Nat.ltb_spec0. intro H.
-    red in Hcl. unfold closedu_instance in Hcl.
-    eapply forallb_nth in Hcl; eauto. destruct Hcl as [x [Hn Hx]]. now rewrite -> Hn.
-  Qed.
+(*   Context (u : Instance.t) (Hcl : closedu_instance 0 u). *)
 
-  Lemma subst_instance_level_expr_closedu t :
-    closedu_level_expr #|u| t
-    -> closedu_level_expr 0 (subst_instance_level_expr u t).
-  Proof.
-    destruct t as [l n].
-    rewrite /closedu_level_expr /subst_instance_level_expr /=.
-    move/(subst_instance_level_closedu) => //.
-  Qed.
+(*   Lemma subst_instance_level_closedu t : *)
+(*     closedu_level #|u| t -> closedu_level 0 (subst_instance_level u t). *)
+(*   Proof. *)
+(*     destruct t => /=; auto. *)
+(*     move/Nat.ltb_spec0. intro H. *)
+(*     red in Hcl. unfold closedu_instance in Hcl. *)
+(*     eapply forallb_nth in Hcl; eauto. destruct Hcl as [x [Hn Hx]]. now rewrite -> Hn. *)
+(*   Qed. *)
 
-  Lemma subst_instance_univ_closedu t :
-    closedu_universe #|u| t -> closedu_universe 0 (subst_instance_univ u t).
-  Proof.
-    rewrite /closedu_universe /subst_instance_univ => H.
-    eapply (forallb_Forall (closedu_level_expr #|u|)) in H; auto.
-    unfold universe_coercion; rewrite NEL.map_to_list forallb_map.
-    eapply Forall_forallb; eauto.
-    now move=> x /(subst_instance_level_expr_closedu).
-  Qed.
-  Hint Resolve subst_instance_level_expr_closedu subst_instance_level_closedu subst_instance_univ_closedu : terms.
+(*   Lemma subst_instance_level_expr_closedu t : *)
+(*     closedu_level_expr #|u| t *)
+(*     -> closedu_level_expr 0 (subst_instance_level_expr u t). *)
+(*   Proof. *)
+(*     destruct t as [l n]. *)
+(*     rewrite /closedu_level_expr /subst_instance_level_expr /=. *)
+(*     move/(subst_instance_level_closedu) => //. *)
+(*   Qed. *)
 
-  Lemma subst_instance_instance_closedu t :
-    closedu_instance #|u| t -> closedu_instance 0 (subst_instance_instance u t).
-  Proof.
-    rewrite /closedu_instance /subst_instance_instance => H.
-    eapply (forallb_Forall (closedu_level #|u|)) in H; auto.
-    rewrite forallb_map. eapply Forall_forallb; eauto.
-    simpl. now move=> x /(subst_instance_level_closedu).
-  Qed.
-  Hint Resolve subst_instance_instance_closedu : terms.
+(*   Lemma subst_instance_univ_closedu t : *)
+(*     closedu_universe #|u| t -> closedu_universe 0 (subst_instance_univ u t). *)
+(*   Proof. *)
+(*     rewrite /closedu_universe /subst_instance_univ => H. *)
+(*     eapply (forallb_Forall (closedu_level_expr #|u|)) in H; auto. *)
+(*     unfold universe_coercion; rewrite NEL.map_to_list forallb_map. *)
+(*     eapply Forall_forallb; eauto. *)
+(*     now move=> x /(subst_instance_level_expr_closedu). *)
+(*   Qed. *)
+(*   Hint Resolve subst_instance_level_expr_closedu subst_instance_level_closedu subst_instance_univ_closedu : terms. *)
 
-  Lemma subst_instance_constr_closedu t :
-    closedu #|u| t -> closedu 0 (subst_instance_constr u t).
-  Proof.
-    induction t in |- * using term_forall_list_ind; simpl; auto; intros H';
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?forallb_map;
-    try f_equal; auto with terms;
-    unfold test_def, map_def, compose in *;
-    try solve [f_equal; eauto; repeat (toProp; solve_all); intuition auto with terms].
-  Qed.
-End SubstInstanceClosed.
+(*   Lemma subst_instance_instance_closedu t : *)
+(*     closedu_instance #|u| t -> closedu_instance 0 (subst_instance_instance u t). *)
+(*   Proof. *)
+(*     rewrite /closedu_instance /subst_instance_instance => H. *)
+(*     eapply (forallb_Forall (closedu_level #|u|)) in H; auto. *)
+(*     rewrite forallb_map. eapply Forall_forallb; eauto. *)
+(*     simpl. now move=> x /(subst_instance_level_closedu). *)
+(*   Qed. *)
+(*   Hint Resolve subst_instance_instance_closedu : terms. *)
+
+(*   Lemma subst_instance_constr_closedu t : *)
+(*     closedu #|u| t -> closedu 0 (subst_instance_constr u t). *)
+(*   Proof. *)
+(*     induction t in |- * using term_forall_list_ind; simpl; auto; intros H'; *)
+(*     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?forallb_map; *)
+(*     try f_equal; auto with terms; *)
+(*     unfold test_def, map_def, compose in *; *)
+(*     try solve [f_equal; eauto; repeat (toProp; solve_all); intuition auto with terms]. *)
+(*   Qed. *)
+(* End SubstInstanceClosed. *)

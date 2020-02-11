@@ -592,7 +592,7 @@ Section ParallelReduction.
   (*         All2_local_env (on_decl pred1) Γ Γ' -> *)
   (*         All2_local_env (on_decl P) Γ Γ' -> *)
   (*         P Γ Γ' (tRel i) (tRel i)) -> *)
-  (*     (forall (Γ Γ' : context) (ind : inductive) (pars c : nat) (u : universe_instance) (args0 args1 : list term) *)
+  (*     (forall (Γ Γ' : context) (ind : inductive) (pars c : nat) (u : Instance.t) (args0 args1 : list term) *)
   (*             (p : term) (brs0 brs1 : list (nat * term)), *)
   (*         All2_local_env (on_decl pred1) Γ Γ' -> *)
   (*         All2_local_env (on_decl P) Γ Γ' -> *)
@@ -624,13 +624,13 @@ Section ParallelReduction.
   (*         All2_local_env (on_decl pred1) Γ Γ' -> *)
   (*         All2_local_env (on_decl P) Γ Γ' -> *)
   (*         declared_constant Σ c decl -> *)
-  (*         forall u : universe_instance, cst_body decl = Some body -> *)
+  (*         forall u : Instance.t, cst_body decl = Some body -> *)
   (*                                       P Γ Γ' (tConst c u) (subst_instance_constr u body)) -> *)
-  (*     (forall (Γ Γ' : context) (c : ident) (u : universe_instance), *)
+  (*     (forall (Γ Γ' : context) (c : ident) (u : Instance.t), *)
   (*         All2_local_env (on_decl pred1) Γ Γ' -> *)
   (*         All2_local_env (on_decl P) Γ Γ' -> *)
   (*         P Γ Γ' (tConst c u) (tConst c u)) -> *)
-  (*     (forall (Γ Γ' : context) (i : inductive) (pars narg : nat) (k : nat) (u : universe_instance) *)
+  (*     (forall (Γ Γ' : context) (i : inductive) (pars narg : nat) (k : nat) (u : Instance.t) *)
   (*             (args0 args1 : list term) (arg1 : term), *)
   (*         All2_local_env (on_decl pred1) Γ Γ' -> *)
   (*         All2_local_env (on_decl P) Γ Γ' -> *)
@@ -770,7 +770,7 @@ Section ParallelReduction.
           All2_local_env (on_decl pred1) Γ Γ' ->
           Pctx Γ Γ' ->
           P Γ Γ' (tRel i) (tRel i)) ->
-      (forall (Γ Γ' : context) (ind : inductive) (pars c : nat) (u : universe_instance) (args0 args1 : list term)
+      (forall (Γ Γ' : context) (ind : inductive) (pars c : nat) (u : Instance.t) (args0 args1 : list term)
               (p : term) (brs0 brs1 : list (nat * term)),
           All2_local_env (on_decl pred1) Γ Γ' ->
           Pctx Γ Γ' ->
@@ -818,13 +818,13 @@ Section ParallelReduction.
           All2_local_env (on_decl pred1) Γ Γ' ->
           Pctx Γ Γ' ->
           declared_constant Σ c decl ->
-          forall u : universe_instance, cst_body decl = Some body ->
+          forall u : Instance.t, cst_body decl = Some body ->
                                         P Γ Γ' (tConst c u) (subst_instance_constr u body)) ->
-      (forall (Γ Γ' : context) (c : ident) (u : universe_instance),
+      (forall (Γ Γ' : context) (c : ident) (u : Instance.t),
           All2_local_env (on_decl pred1) Γ Γ' ->
           Pctx Γ Γ' ->
           P Γ Γ' (tConst c u) (tConst c u)) ->
-      (forall (Γ Γ' : context) (i : inductive) (pars narg : nat) (k : nat) (u : universe_instance)
+      (forall (Γ Γ' : context) (i : inductive) (pars narg : nat) (k : nat) (u : Instance.t)
               (args0 args1 : list term) (arg1 : term),
           All2_local_env (on_decl pred1) Γ Γ' ->
           Pctx Γ Γ' ->

@@ -351,7 +351,7 @@ Inductive T : Type :=
 Quote Recursively Definition TT := T.
 
 Unset Strict Unquote Universe Mode.
-Make Definition t := (tSort (NEL.sing (Level.Level "Top.20000", false))).
+Make Definition t := (tSort (Universe.make' (Level.Level "Top.20000", false))).
 Make Definition t' := (tSort fresh_universe).
 Make Definition myProp := (tSort (Universe.make' (Level.lProp, false))).
 Make Definition myProp' := (tSort Universe.type0m).

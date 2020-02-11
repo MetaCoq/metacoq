@@ -372,4 +372,4 @@ let next_action env evd (pgm : constr) : template_monad * _ =
        (TmInferInstanceTerm typ, universes)
     | _ -> monad_failure "tmInferInstance" 2
 
-  else CErrors.user_err (str "Invalid argument or not yet implemented. The argument must be a TemplateProgram: " ++ pr_constr coConstr)
+  else CErrors.user_err (str "Invalid argument or not yet implemented. The argument must be a TemplateProgram: " ++ Printer.pr_constr_env env evd coConstr)

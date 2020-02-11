@@ -14,7 +14,7 @@ src/denoter.ml
 src/denote.ml
 src/constr_denoter.ml
 
-src/g_template_coq.ml4
+src/g_template_coq.mlg
 src/template_coq.mlpack
 src/template_monad.mli
 src/template_monad.ml

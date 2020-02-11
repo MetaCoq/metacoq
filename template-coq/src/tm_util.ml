@@ -2,10 +2,10 @@ open Pp
 
 let contrib_name = "template-coq"
 
-let gen_constant_in_modules locstr dirs s =
+let gen_constant_in_modules s =
   lazy (
-    let tm_ref = Coqlib.find_reference "template-coq term util" locstr dirs in
-    UnivGen.constr_of_global tm_ref
+    let tm_ref = Coqlib.lib_ref s in
+    UnivGen.constr_of_monomorphic_global tm_ref
   )
   (* lazy (Universes.constr_of_global (Coqlib.gen_reference_in_modules locstr dirs s)) *)
 
@@ -23,19 +23,15 @@ let rec app_full trm acc =
     Constr.App (f, xs) -> app_full f (Array.to_list xs @ acc)
   | _ -> (trm, acc)
 
-let pr_constr trm =
-  let (evm, env) = Pfedit.get_current_context () in
-  Printer.pr_constr_env env evm trm
+let not_supported env sigma trm =
+  CErrors.user_err (str "Not Supported:" ++ spc () ++ Printer.pr_constr_env env sigma trm)
 
-let not_supported trm =
-  CErrors.user_err (str "Not Supported:" ++ spc () ++ pr_constr trm)
+let not_supported_verb env sigma trm rs =
+  CErrors.user_err (str "Not Supported raised at " ++ str rs ++ str ":" ++ spc () ++ Printer.pr_constr_env env sigma trm)
 
-let not_supported_verb trm rs =
-  CErrors.user_err (str "Not Supported raised at " ++ str rs ++ str ":" ++ spc () ++ pr_constr trm)
+let bad_term env sigma trm =
+  CErrors.user_err (str "Bad term:" ++ spc () ++ Printer.pr_constr_env env sigma trm)
 
-let bad_term trm =
-  CErrors.user_err (str "Bad term:" ++ spc () ++ pr_constr trm)
-
-let bad_term_verb trm rs =
-  CErrors.user_err (str "Bad term:" ++ spc () ++ pr_constr trm
+let bad_term_verb env sigma trm rs =
+  CErrors.user_err (str "Bad term:" ++ spc () ++ Printer.pr_constr_env env sigma trm
                     ++ spc () ++ str " Error: " ++ str rs)

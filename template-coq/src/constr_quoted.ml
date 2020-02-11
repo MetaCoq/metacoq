@@ -50,7 +50,7 @@ struct
   let resolve_symbol (path : string list) (tm : string) : Constr.t Lazy.t =
     lazy (
       let tm_ref = Coqlib.find_reference "template-coq reification" path tm in
-      UnivGen.constr_of_global tm_ref
+      UnivGen.constr_of_monomorphic_global tm_ref
     )
     (* gen_constant_in_modules contrib_name [path] tm *)
 

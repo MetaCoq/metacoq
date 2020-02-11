@@ -47,9 +47,9 @@ struct
   type quoted_global_env = Constr.t (* of type Ast.global_env *)
   type quoted_program = Constr.t (* of type Ast.program *)
 
-  let resolve_symbol (path : string list) (tm : string) : Constr.t Lazy.t =
+  let resolve (tm : string) : Constr.t Lazy.t =
     lazy (
-      let tm_ref = Coqlib.find_reference "template-coq reification" path tm in
+      let tm_ref = Coqlib.find_ref tm in
       UnivGen.constr_of_monomorphic_global tm_ref
     )
     (* gen_constant_in_modules contrib_name [path] tm *)
@@ -60,8 +60,6 @@ struct
   let resolve_symbol_p (path : string list) (tm : string) : Names.GlobRef.t Lazy.t =
     lazy (Coqlib.gen_reference_in_modules contrib_name [path] tm)
 
-  let pkg_datatypes = ["Coq";"Init";"Datatypes"]
-  let pkg_string = ["Coq";"Strings";"String"]
   let pkg_base_reify = ["MetaCoq";"Template";"BasicAst"]
   let pkg_reify = ["MetaCoq";"Template";"Ast"]
   let pkg_template_monad = ["MetaCoq";"Template";"TemplateMonad"]
@@ -71,38 +69,42 @@ struct
   let pkg_ugraph = ["MetaCoq";"Template";"uGraph"]
   let ext_pkg_univ s = List.append pkg_univ [s]
 
-  let r_base_reify = resolve_symbol pkg_base_reify
-  let r_reify = resolve_symbol pkg_reify
   let r_template_monad = old_resolve_symbol pkg_template_monad
   let r_template_monad_p = resolve_symbol_p pkg_template_monad
 
-  let tString = resolve_symbol pkg_string "String"
-  let tEmptyString = resolve_symbol pkg_string "EmptyString"
-  let tO = resolve_symbol pkg_datatypes "O"
-  let tS = resolve_symbol pkg_datatypes "S"
-  let tnat = resolve_symbol pkg_datatypes "nat"
-  let ttrue = resolve_symbol pkg_datatypes "true"
-  let cSome = resolve_symbol pkg_datatypes "Some"
-  let cNone = resolve_symbol pkg_datatypes "None"
-  let tfalse = resolve_symbol pkg_datatypes "false"
-  let unit_tt = resolve_symbol pkg_datatypes "tt"
-  let tAscii = resolve_symbol ["Coq";"Strings";"Ascii"] "Ascii"
-  let tlist = resolve_symbol pkg_datatypes "list"
-  let c_nil = resolve_symbol pkg_datatypes "nil"
-  let c_cons = resolve_symbol pkg_datatypes "cons"
-  let nel_sing = resolve_symbol ["MetaCoq";"Template";"utils";"NEL"] "sing"
-  let nel_cons = resolve_symbol ["MetaCoq";"Template";"utils";"NEL"] "cons"
-  let prod_type = resolve_symbol pkg_datatypes "prod"
-  let sum_type = resolve_symbol pkg_datatypes "sum"
-  let option_type = resolve_symbol pkg_datatypes "option"
-  let bool_type = resolve_symbol pkg_datatypes "bool"
-  let cInl = resolve_symbol pkg_datatypes "inl"
-  let cInr = resolve_symbol pkg_datatypes "inr"
+  let tString = resolve "metacoq.string.cons"
+  let tEmptyString = resolve "metacoq.string.nil"
+  let tO = resolve "metacoq.nat.zero"
+  let tS = resolve "metacoq.nat.succ"
+  let tnat = resolve "metacoq.nat.type"
+  let bool_type = resolve "metacoq.bool.type"
+  let ttrue = resolve "metacoq.bool.true"
+  let tfalse = resolve "metacoq.bool.false"
+  let option_type = resolve "metacoq.option.type"
+  let cSome = resolve "metacoq.option.some"
+  let cNone = resolve "metacoq.option.none"
+
+  let unit_tt = resolve "metacoq.unit.intro"
+  
+  let tAscii = resolve "metacoq.ascii.type"
+  let tlist = resole "metacoq.list.type"
+  let c_nil = resolve "metacoq.list.nil"
+  let c_cons = resolve "metacoq.list.cons"
+
+  let nel_sing = resolve "metacoq.nel.sing"
+  let nel_cons = resolve "metacoq.nel.cons"
+
+  let prod_type = resolve "metacoq.prod.type"
+  let c_pair = resolve "metacoq.prod.intro"
+
+  let sum_type = resolve "metacoq.sum.type"
+  let cInl = resolve "metacoq.sum.inl"
+  let cInr = resolve "metacoq.sum.inr"
+
   let constr_mkApp (h, a) = Constr.mkApp (Lazy.force h, a)
   let constr_mkAppl (h, a) = Constr.mkApp (Lazy.force h, Array.map Lazy.force a)
   let prod a b = constr_mkApp (prod_type, [| a ; b |])
   let prodl a b = prod (Lazy.force a) (Lazy.force b)
-  let c_pair = resolve_symbol pkg_datatypes "pair"
   let pair a b f s = constr_mkApp (c_pair, [| a ; b ; f ; s |])
   let pairl a b f s = pair (Lazy.force a) (Lazy.force b) f s
 

@@ -154,24 +154,12 @@ struct
     let inst' = quote_univ_instance (UContext.instance uctx) in
     let const' = quote_univ_constraints (UContext.constraints uctx) in
     constr_mkApp (tUContextmake, [|inst'; const'|])
-
-  let quote_cumulative_univ_context cumi =
-    let uctx = Univ.CumulativityInfo.univ_context cumi in
-    let inst = Univ.UContext.instance uctx in
-    let const = Univ.UContext.constraints uctx in
-    let var = Univ.CumulativityInfo.variance cumi in
-    let uctx' = quote_ucontext inst const in
-    let var' = quote_cuminfo_variance var in
-    let listvar = constr_mkAppl (tlist, [| tVariance |]) in
-    let cumi' = pair (Lazy.force tUContext) listvar uctx' var' in
-    constr_mkApp (cCumulative_ctx, [| cumi' |])
-
+  
  let quote_abstract_univ_context uctx =
-    let arr = Univ.Instance.to_array (AUContext.instance uctx) in
-    let idents = to_coq_listl tident (CArray.map_to_list (fun na -> quote_string (Univ.Level.to_string na)) arr) in
+    let arr = (AUContext.names uctx) in
+    let idents = to_coq_listl tname (CArray.map_to_list quote_name arr) in
     let const' = quote_univ_constraints (UContext.constraints (AUContext.repr uctx)) in
     constr_mkApp (tAUContextmake, [|idents; const'|])
-
 
   let mkMonomorphic_ctx t =
     constr_mkApp (cMonomorphic_ctx, [|t|])
@@ -179,15 +167,10 @@ struct
   let mkPolymorphic_ctx t =
     constr_mkApp (cPolymorphic_ctx, [|t|])
 
-  let mkCumulative_ctx t v =
-    let v = to_coq_listl tVariance v in
-    constr_mkApp (cCumulative_ctx,
-                  [|constr_mkApp (tACumulativityInfomake, [|t; v|])|])
-
-  let quote_inductive_universes uctx =
+  (* let quote_inductive_universes uctx =
     match uctx with
     | Entries.Monomorphic_entry uctx -> quote_univ_context (Univ.ContextSet.to_context uctx)
-    | Entries.Polymorphic_entry uctx -> quote_abstract_univ_context_aux uctx
+    | Entries.Polymorphic_entry (names, uctx) -> quote_abstract_univ_context_aux uctx *)
 
   let quote_ugraph (g : UGraph.t) =
     let inst' = quote_univ_instance Univ.Instance.empty in
@@ -239,9 +222,15 @@ struct
     let e = mk_proj_list e in
     constr_mkApp (tBuild_one_inductive_body, [| a; b; c; d; e |])
 
-  let mk_mutual_inductive_body finite npars params inds uctx =
+  let to_coq_option ty f ind =
+    match ind with
+    | None -> constr_mkApp (cNone, [| ty |])
+    | Some x -> constr_mkApp (cSome, [| ty; f x |])
+
+  let mk_mutual_inductive_body finite npars params inds uctx var =
     let inds = to_coq_listl tone_inductive_body inds in
-    constr_mkApp (tBuild_mutual_inductive_body, [|finite; npars; params; inds; uctx|])
+    let var = to_coq_option (constr_mkAppl (tlist, [| tVariance |])) (to_coq_listl tVariance) var in
+    constr_mkApp (tBuild_mutual_inductive_body, [|finite; npars; params; inds; uctx; var|])
 
   let mk_constant_body ty tm uctx =
     let tm = quote_optionl tTerm tm in
@@ -275,16 +264,6 @@ struct
     let consnames = to_coq_listl tident consnames in
     let constypes = to_coq_listl tTerm constypes in
     constr_mkApp (tBuild_one_inductive_entry, [| iname; arity; templatePoly; consnames; constypes |])
-
-  let quote_mind_params l =
-    let pair i l = pairl tident tlocal_entry i l in
-    let map (id, ob) =
-      match ob with
-      | Left b -> pair id (constr_mkApp (tLocalDef,[|b|]))
-      | Right t -> pair id (constr_mkApp (tLocalAssum,[|t|]))
-    in
-    let the_prod = constr_mkAppl (prod_type,[|tident; tlocal_entry|]) in
-    to_coq_list the_prod (List.map map l)
 
   let quote_mutual_inductive_entry (mf, mp, is, mpol) =
     let is = to_coq_listl tOne_inductive_entry (List.map make_one_inductive_entry is) in

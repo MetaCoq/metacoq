@@ -23,15 +23,20 @@ let rec app_full trm acc =
     Constr.App (f, xs) -> app_full f (Array.to_list xs @ acc)
   | _ -> (trm, acc)
 
-let not_supported env sigma trm =
-  CErrors.user_err (str "Not Supported:" ++ spc () ++ Printer.pr_constr_env env sigma trm)
+let not_supported trm =
+  let env = Global.env () in
+  CErrors.user_err (str "Not Supported:" ++ spc () ++ Printer.pr_constr_env env (Evd.from_env env) trm)
 
-let not_supported_verb env sigma trm rs =
-  CErrors.user_err (str "Not Supported raised at " ++ str rs ++ str ":" ++ spc () ++ Printer.pr_constr_env env sigma trm)
+let not_supported_verb trm rs =
+  let env = Global.env () in
+  CErrors.user_err (str "Not Supported raised at " ++ str rs ++ str ":" ++ spc () ++ 
+    Printer.pr_constr_env env (Evd.from_env env) trm)
 
-let bad_term env sigma trm =
-  CErrors.user_err (str "Bad term:" ++ spc () ++ Printer.pr_constr_env env sigma trm)
+let bad_term trm =
+  let env = Global.env () in
+  CErrors.user_err (str "Bad term:" ++ spc () ++ Printer.pr_constr_env env (Evd.from_env env) trm)
 
-let bad_term_verb env sigma trm rs =
-  CErrors.user_err (str "Bad term:" ++ spc () ++ Printer.pr_constr_env env sigma trm
+let bad_term_verb trm rs =
+  let env = Global.env () in
+  CErrors.user_err (str "Bad term:" ++ spc () ++ Printer.pr_constr_env env (Evd.from_env env) trm
                     ++ spc () ++ str " Error: " ++ str rs)

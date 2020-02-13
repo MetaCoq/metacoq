@@ -151,7 +151,7 @@ struct
       | n :: dp ->
         let num = int_of_string n in
         let dp = DirPath.make (List.map Id.of_string dp) in
-        let l = Univ.Level.make dp num in
+        let l = Univ.Level.make (Univ.Level.UGlobal.make dp num) in
         try
           let evm = Evd.add_global_univ evm l in
           if !strict_unquote_universe_mode then
@@ -165,8 +165,8 @@ struct
         evm, Evd.universe_of_name evm (Id.of_string s)
       with Not_found ->
       try
-        let univ, k = Nametab.locate_universe (Libnames.qualid_of_string s) in
-        evm, Univ.Level.make univ k
+        let univ = Nametab.locate_universe (Libnames.qualid_of_string s) in
+        evm, Univ.Level.make univ
       with Not_found ->
         CErrors.user_err ~hdr:"unquote_level" (str ("Level "^s^" is not a declared level."))
 
@@ -189,7 +189,7 @@ struct
       | _ -> bad_term_verb trm "unquote_level"
     else if constr_equall h tLevel then
       match args with
-      | s :: [] -> debug (fun () -> str "Unquoting level " ++ pr_constr trm);
+      | s :: [] -> debug (fun () -> str "Unquoting level " ++ Printer.pr_constr_env (Global.env ()) evm trm);
         get_level evm (unquote_string s)
       | _ -> bad_term_verb trm "unquote_level"
     else if constr_equall h tLevelVar then

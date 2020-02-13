@@ -34,7 +34,8 @@ let run (c : 'a tm) env evm (k : Environ.env -> Evd.evar_map -> 'a -> unit) : un
   c env evm k (fun x -> CErrors.user_err x)
 
 let run_vernac (c : 'a tm) : unit =
-  let (evm,env) = Pfedit.get_current_context () in
+  let env = Global.env () in 
+  let evm = Evd.from_env env in
   run c env evm (fun _ _ _ -> ())
 
 let with_env_evm (c : Environ.env -> Evd.evar_map -> 'a tm) : 'a tm =
@@ -70,10 +71,7 @@ let tmEval (rd : reduction_strategy) (t : term) : term tm =
 
 let tmDefinition (nm : ident) ?poly:(poly=false) ?opaque:(opaque=false) (typ : term option) (body : term) : kername tm =
   fun env evm success _fail ->
-    let univs =
-      if poly
-      then Entries.Polymorphic_const_entry (Evd.to_universe_context evm)
-      else Entries.Monomorphic_const_entry (Evd.universe_context_set evm) in
+    let univs = Evd.univ_entry ~poly evm in
     let n =
       Declare.declare_definition ~opaque:opaque ~kind:Decl_kinds.Definition nm ?types:typ
         (body, univs)
@@ -82,11 +80,8 @@ let tmDefinition (nm : ident) ?poly:(poly=false) ?opaque:(opaque=false) (typ : t
 let tmAxiom (nm : ident) ?poly:(poly=false) (typ : term) : kername tm =
   fun env evm success _fail ->
     let param =
-      let entry =
-        if poly
-        then Entries.Polymorphic_const_entry (Evd.to_universe_context evm)
-        else Entries.Monomorphic_const_entry (Evd.universe_context_set evm)
-      in Entries.ParameterEntry (None, (typ, entry), None)
+      let entry = Evd.univ_entry ~poly evm
+       in Entries.ParameterEntry (None, (typ, entry), None)
     in
     let n =
       Declare.declare_constant nm
@@ -104,7 +99,7 @@ let tmLemma (nm : ident) ?poly:(poly=false)(ty : term) : kername tm =
     let obls, _, c, cty = Obligations.eterm_obligations env nm evm 0 (EConstr.to_constr evm c) ty in
     (* let evm = Evd.minimize_universes evm in *)
     let ctx = Evd.evar_universe_context evm in
-    let hook = Lemmas.mk_hook (fun _ gr _ ->
+    let hook = Lemmas.mk_hook (fun _ _ _ gr ->
         let env = Global.env () in
         let evm = Evd.from_env env in
         let evm, t = Evd.fresh_global env evm gr in

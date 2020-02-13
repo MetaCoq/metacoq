@@ -64,6 +64,24 @@ Definition mkApps t us :=
         end
   end.
 
+
+Module TemplateTerm <: Term.
+
+Definition term := term.
+
+Definition tRel := tRel.
+Definition tSort := tSort.
+Definition tProd := tProd.
+Definition tLetIn := tLetIn.
+Definition tInd := tInd.
+
+Definition mkApps := mkApps.
+
+End TemplateTerm.
+
+Module TemplateEnvironment := Environment TemplateTerm.
+Include TemplateEnvironment.
+
 Definition mkApp t u := Eval cbn in mkApps t [u].
 
 Definition isApp t :=
@@ -107,14 +125,18 @@ Inductive wf : term -> Prop :=
 
 (** *** Constant and axiom entries *)
 
+Inductive universes_entry :=
+| Monomorphic_entry (ctx : ContextSet.t)
+| Polymorphic_entry (names : list name) (ctx : UContext.t).
+
 Record parameter_entry := {
   parameter_entry_type      : term;
-  parameter_entry_universes : universes_decl }.
+  parameter_entry_universes : universes_entry }.
 
 Record definition_entry := {
   definition_entry_type      : term;
   definition_entry_body      : term;
-  definition_entry_universes : universes_decl;
+  definition_entry_universes : universes_entry;
   definition_entry_opaque    : bool }.
 
 
@@ -142,10 +164,6 @@ Inductive constant_entry :=
   [x1:X1;...;xn:Xn].
 *)
 
-Inductive local_entry : Set :=
-| LocalDef : term -> local_entry (* local let binding *)
-| LocalAssum : term -> local_entry.
-
 Record one_inductive_entry : Set := {
   mind_entry_typename : ident;
   mind_entry_arity : term;
@@ -159,28 +177,10 @@ Record mutual_inductive_entry := {
      If so, is it primitive, using binder name [ident]
      for the record in primitive projections ? *)
   mind_entry_finite    : recursivity_kind;
-  mind_entry_params    : list (ident * local_entry);
+  mind_entry_params    : context;
   mind_entry_inds      : list one_inductive_entry;
-  mind_entry_universes : universes_decl;
+  mind_entry_universes : universes_entry;
   mind_entry_variance  : option (list Universes.Variance.t);
   mind_entry_private   : option bool
   (* Private flag for sealing an inductive definition in an enclosing
      module. Not handled by Template Coq yet. *) }.
-
-
-Module TemplateTerm <: Term.
-
-  Definition term := term.
-
-  Definition tRel := tRel.
-  Definition tSort := tSort.
-  Definition tProd := tProd.
-  Definition tLetIn := tLetIn.
-  Definition tInd := tInd.
-
-  Definition mkApps := mkApps.
-
-End TemplateTerm.
-
-Module TemplateEnvironment := Environment TemplateTerm.
-Include TemplateEnvironment.

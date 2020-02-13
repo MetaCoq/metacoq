@@ -143,10 +143,6 @@ Register MetaCoq.Template.Ast.constant_entry as metacoq.ast.constant_entry.
 Register MetaCoq.Template.Ast.ParameterEntry as metacoq.ast.ParameterEntry.
 Register MetaCoq.Template.Ast.DefinitionEntry as metacoq.ast.DefinitionEntry.
 
-Register MetaCoq.Template.Ast.local_entry as metacoq.ast.local_entry.
-Register MetaCoq.Template.Ast.LocalDef as metacoq.ast.LocalDef.
-Register MetaCoq.Template.Ast.LocalAssum as metacoq.ast.LocalAssum.
-
 Register MetaCoq.Template.Ast.one_inductive_entry as metacoq.ast.one_inductive_entry.
 Register MetaCoq.Template.Ast.Build_one_inductive_entry as metacoq.ast.Build_one_inductive_entry.
 Register MetaCoq.Template.Ast.mutual_inductive_entry as metacoq.ast.mutual_inductive_entry.

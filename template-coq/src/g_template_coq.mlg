@@ -5,6 +5,7 @@ DECLARE PLUGIN "template_coq"
 
 {
 
+open Attributes
 open Ltac_plugin
 open Names
 
@@ -14,13 +15,14 @@ let ltac_lcall tac args =
   let (location, name) = Loc.tag (Names.Id.of_string tac)
     (* Loc.tag @@ Names.Id.of_string tac *)
   in
-  Tacexpr.TacArg(Loc.tag @@ Tacexpr.TacCall
-                              (Loc.tag (Locus.ArgVar (CAst.make ?loc:location name),args)))
+  Tacexpr.TacArg(CAst.make ?loc:location (Tacexpr.TacCall
+                              (CAst.make (Locus.ArgVar (CAst.make ?loc:location name),args))))
 
 open Tacexpr
 open Tacinterp
 open Stdarg
 open Tacarg
+open Genredexpr
 
 let _ = Goptions.declare_bool_option {
   Goptions.optdepr = false;
@@ -46,76 +48,80 @@ let ltac_apply (f : Value.t) (args: Tacinterp.Value.t list) =
 let to_ltac_val c = Tacinterp.Value.of_constr c
 
 
-let run_template_program env evm pgm =
-  Run_template_monad.run_template_program_rec (fun _ -> ()) env (evm, pgm)
+let run_template_program env evm ~poly pgm =
+  Run_template_monad.run_template_program_rec ~poly (fun _ -> ()) env (evm, pgm)
 
+let fresh_env () = 
+  let env = Global.env () in
+  let sigma = Evd.from_env env in
+  env, sigma
 }
  
 (** ********* Commands ********* *)
 
 VERNAC COMMAND EXTEND TemplateCoq_Test_Quote CLASSIFIED AS QUERY
-    | [ "Test" "Quote" constr(def) ] ->
-      { let (evm,env) = Pfedit.get_current_context () in
+    | #[ poly = polymorphic ] [ "Test" "Quote" constr(def) ] ->
+      { let (env, evm) = fresh_env () in
         let (evm, def) = Constrintern.interp_open_constr env evm def in
         let (evm, pgm) = EConstr.fresh_global env evm (Lazy.force Template_monad.ptmTestQuote) in
         let pgm = Constr.mkApp (EConstr.to_constr evm pgm, [|Constr.mkRel 0; EConstr.to_constr evm def|]) in
-        run_template_program env evm pgm }
+        run_template_program env evm ~poly pgm }
 END
 
 VERNAC COMMAND EXTEND TemplateCoq_Quote_Definition CLASSIFIED AS SIDEFF
-    | [ "Quote" "Definition" ident(name) ":=" constr(def) ] ->
-      { let (evm,env) = Pfedit.get_current_context () in
+    | #[ poly = polymorphic ] [ "Quote" "Definition" ident(name) ":=" constr(def) ] ->
+      { let (env, evm) = fresh_env () in
         let (evm, def) = Constrintern.interp_open_constr env evm def in
         let (evm, pgm) = EConstr.fresh_global env evm (Lazy.force Template_monad.ptmQuoteDefinition) in
         let pgm = Constr.mkApp (EConstr.to_constr evm pgm, [|Constr_quoter.TemplateCoqQuoter.quote_ident name; Constr.mkRel 0; EConstr.to_constr evm def|]) in
-        run_template_program env evm pgm }
+        run_template_program env evm ~poly pgm }
 END
 
 VERNAC COMMAND EXTEND TemplateCoq_Quote_Definition_Eval CLASSIFIED AS SIDEFF
-    | [ "Quote" "Definition" ident(name) ":=" "Eval" red_expr(rd) "in" constr(def) ] ->
-      { let (evm, env) = Pfedit.get_current_context () in
+  | #[ poly = polymorphic ] [ "Quote" "Definition" ident(name) ":=" "Eval" red_expr(rd) "in" constr(def) ] ->
+      { let (env, evm) = fresh_env () in
         let (evm, def) = Constrintern.interp_open_constr env evm def in
         (* TODO : implem quoting of tactic reductions so that we can use ptmQuoteDefinitionRed *)
         let (evm, rd) = Tacinterp.interp_redexp env evm rd in
-	let (evm, def) = Quoter.reduce env evm rd (EConstr.to_constr evm def) in
+	      let (evm, def) = Quoter.reduce env evm rd (EConstr.to_constr evm def) in
         let (evm, pgm) = EConstr.fresh_global env evm (Lazy.force Template_monad.ptmQuoteDefinition) in
         let pgm = Constr.mkApp (EConstr.to_constr evm pgm, [|Constr_quoter.TemplateCoqQuoter.quote_ident name; Constr.mkRel 0; def|]) in
-        run_template_program env evm pgm }
+        run_template_program env evm ~poly pgm }
 END
 
 VERNAC COMMAND EXTEND TemplateCoq_Quote_Recursively_Definition CLASSIFIED AS SIDEFF
-    | [ "Quote" "Recursively" "Definition" ident(name) ":=" constr(def) ] ->
-      { let (evm,env) = Pfedit.get_current_context () in
+  | #[ poly = polymorphic ] [ "Quote" "Recursively" "Definition" ident(name) ":=" constr(def) ] ->
+      { let (env, evm) = fresh_env () in
         let (evm, def) = Constrintern.interp_open_constr env evm def in
         let (evm, pgm) = EConstr.fresh_global env evm (Lazy.force Template_monad.ptmQuoteRecDefinition) in
         let pgm = Constr.mkApp (EConstr.to_constr evm pgm, [|Constr_quoter.TemplateCoqQuoter.quote_ident name; Constr.mkRel 0; EConstr.to_constr evm def|]) in
-        run_template_program env evm pgm }
+        run_template_program env evm ~poly pgm }
 END
 
 VERNAC COMMAND EXTEND TemplateCoq_Make_Definition CLASSIFIED AS SIDEFF
-    | [ "Make" "Definition" ident(name) ":=" constr(def) ] ->
-      { let (evm, env) = Pfedit.get_current_context () in
+  | #[ poly = polymorphic ] [ "Make" "Definition" ident(name) ":=" constr(def) ] ->
+      { let (env, evm) = fresh_env () in
         let (evm, def) = Constrintern.interp_open_constr env evm def in
         let (evm, pgm) = EConstr.fresh_global env evm (Lazy.force Template_monad.ptmMkDefinition) in
         let pgm = Constr.mkApp (EConstr.to_constr evm pgm, [|Constr_quoter.TemplateCoqQuoter.quote_ident name; EConstr.to_constr evm def|]) in
-        run_template_program env evm pgm }
+        run_template_program env evm ~poly pgm }
 END
 
 VERNAC COMMAND EXTEND TemplateCoq_Make_Inductive CLASSIFIED AS SIDEFF
-    | [ "Make" "Inductive" constr(def) ] ->
-      { let (evm, env) = Pfedit.get_current_context () in
+  | #[ poly = polymorphic ] [ "Make" "Inductive" constr(def) ] ->
+      { let (env, evm) = fresh_env () in
         let (evm, def) = Constrintern.interp_open_constr env evm def in
         let (evm, pgm) = EConstr.fresh_global env evm (Lazy.force Template_monad.ptmMkInductive) in
         let pgm = Constr.mkApp (EConstr.to_constr evm pgm, [|EConstr.to_constr evm def|]) in
-        run_template_program env evm pgm }
+        run_template_program env evm ~poly pgm }
 END
 
 VERNAC COMMAND EXTEND TemplateCoq_Run_Template_Program CLASSIFIED AS SIDEFF
-    | [ "Run" "TemplateProgram" constr(def) ] ->
-      { let (evm, env) = Pfedit.get_current_context () in
+  | #[ poly = polymorphic ] [ "Run" "TemplateProgram" constr(def) ] ->
+      { let (env, evm) = fresh_env () in
         let (evm, def) = Constrintern.interp_open_constr env evm def in
         let pgm = EConstr.to_constr evm def in
-        run_template_program env evm pgm }
+        run_template_program env evm ~poly pgm }
 END
 
 
@@ -123,8 +129,8 @@ END
 
 TACTIC EXTEND TemplateCoq_quote_term
     | [ "quote_term" constr(c) tactic(tac) ] ->
-      { (** quote the given term, pass the result to t **)
-        Proofview.Goal.nf_enter begin fun gl ->
+      { (* quote the given term, pass the result to t *)
+        Proofview.Goal.enter begin fun gl ->
           let env = Proofview.Goal.env gl in
           let c = EConstr.to_constr (Proofview.Goal.sigma gl) c in
 	  let c = Constr_quoter.TermReify.quote_term env c in
@@ -144,11 +150,13 @@ END
 
 TACTIC EXTEND TemplateCoq_run_template_program
     | [ "run_template_program" constr(c) tactic(tac) ] ->
-      { roofview.Goal.enter (begin fun gl ->
+      { let open Proofview.Notations in
+        Proofview.tclProofInfo [@ocaml.warning "-3"] >>= fun (name, poly) ->
+        Proofview.Goal.enter (begin fun gl ->
          let env = Proofview.Goal.env gl in
          let evm = Proofview.Goal.sigma gl in
          let ret = ref None in
-         Run_template_monad.run_template_program_rec ~intactic:true (fun x -> ret := Some x) env (evm, EConstr.to_constr evm c);
+         Run_template_monad.run_template_program_rec ~poly ~intactic:true (fun x -> ret := Some x) env (evm, EConstr.to_constr evm c);
          match !ret with
            Some (env, evm, t) ->
             Proofview.tclTHEN

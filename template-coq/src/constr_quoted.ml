@@ -30,7 +30,7 @@ struct
   type quoted_variance = Constr.t (* of type Universes.Variance.t *)
   type quoted_universes_decl = Constr.t (* of type Universes.universes_decl *)
 
-  type quoted_mind_params = Constr.t (* of type list (Ast.ident * list (ident * local_entry)local_entry) *)
+  type quoted_universes_entry = Constr.t (* of type Ast.universes_entry *)
   type quoted_ind_entry = quoted_ident * t * quoted_bool * quoted_ident list * t list
   type quoted_definition_entry = t * t option * quoted_universes_decl
   type quoted_mind_entry = Constr.t (* of type Ast.mutual_inductive_entry *)
@@ -157,7 +157,6 @@ struct
   let tadd_global_constraints = ast "graph.add_global_constraints"
 
   let (tdef,tmkdef) = (ast "def", ast "mkdef")
-  let (tLocalDef,tLocalAssum,tlocal_entry) = (ast "LocalDef", ast "LocalAssum", ast "local_entry")
 
   let (cFinite,cCoFinite,cBiFinite) = (ast "Finite", ast "CoFinite", ast "BiFinite")
   let tone_inductive_body = ast "one_inductive_body"
@@ -355,6 +354,13 @@ struct
     let uctx = Univ.AUContext.repr uctx in
     quote_abstract_univ_context_aux uctx
 
+  let mkMonomorphic_entry ctx = 
+     constr_mkApp (cMonomorphic_entry, [| ctx |])
+  
+  let mkPolymorphic_entry names ctx = 
+     let names = to_coq_list (Lazy.force tname) names in
+     constr_mkApp (cPolymorphic_entry, [| names; ctx |])
+    
   let quote_inductive_universes uctx =
     match uctx with
     | Monomorphic_entry uctx -> 

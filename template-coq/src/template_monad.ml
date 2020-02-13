@@ -3,12 +3,6 @@ open Names
 open GlobRef
 open Pp
 
-open Tm_util
-
-
-let resolve_symbol_p (path : string list) (tm : string) : GlobRef.t Lazy.t =
-  lazy (Coqlib.gen_reference_in_modules contrib_name [path] tm)
-
 let resolve (tm : string) : GlobRef.t Lazy.t =
   lazy (Coqlib.lib_ref tm)
 

@@ -9,12 +9,11 @@ open Tm_util
 let resolve_symbol_p (path : string list) (tm : string) : GlobRef.t Lazy.t =
   lazy (Coqlib.gen_reference_in_modules contrib_name [path] tm)
 
-let pkg_template_monad_prop = ["MetaCoq";"Template";"TemplateMonad";"Core"]
-let pkg_template_monad_type = ["MetaCoq";"Template";"TemplateMonad";"Extractable"]
+let resolve (tm : string) : GlobRef.t Lazy.t =
+  lazy (Coqlib.lib_ref tm)
 
-let r_template_monad_prop_p = resolve_symbol_p pkg_template_monad_prop
-let r_template_monad_type_p = resolve_symbol_p pkg_template_monad_type
-
+let r_template_monad_prop_p s = resolve ("metacoq.templatemonad.prop." ^ s)
+let r_template_monad_type_p s = resolve ("metacoq.templatemonad.type." ^ s)
 
 (* for "Core" *)
 let (ptmReturn,

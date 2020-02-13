@@ -378,37 +378,9 @@ Module Variance.
   (* val sup : t -> t -> t *)
 End Variance.
 
-(** Universe info for cumulative inductive types: A context of
-   universe levels with universe constraints, representing local
-   universe variables and constraints, together with an array of
-   Variance.t.
-
-    This data structure maintains the invariant that the variance
-   array has the same length as the universe instance. *)
-Module ACumulativityInfo.
-  Definition t := AUContext.t × list Variance.t.
-
-  Definition make ctx var : t := (ctx, var).
-  (* Definition empty : t := (AUContext.empty, nil). *)
-  (* val is_empty : t -> bool *)
-
-  Definition univ_context : t -> AUContext.t := fst.
-  Definition variance : t -> list Variance.t := snd.
-
-  (** This function takes a universe context representing constraints
-     of an inductive and produces a CumulativityInfo.t with the
-     trivial subtyping relation. *)
-  (* val from_universe_context : UContext.t -> t *)
-
-  (* val leq_constraints : t -> Instance.t constraint_function *)
-  (* val eq_constraints : t -> Instance.t constraint_function *)
-End ACumulativityInfo.
-
 Inductive universes_decl : Type :=
 | Monomorphic_ctx (ctx : ContextSet.t)
-| Polymorphic_ctx (cst : AUContext.t)
-| Cumulative_ctx (ctx : ACumulativityInfo.t).
-
+| Polymorphic_ctx (cst : AUContext.t).
 
 Definition monomorphic_udecl u :=
   match u with
@@ -422,15 +394,13 @@ Definition monomorphic_constraints φ := (monomorphic_udecl φ).2.
 Definition levels_of_udecl u :=
   match u with
   | Monomorphic_ctx ctx => fst ctx
-  | Polymorphic_ctx ctx
-  | Cumulative_ctx (ctx, _) => AUContext.levels ctx
+  | Polymorphic_ctx ctx => AUContext.levels ctx
   end.
 
 Definition constraints_of_udecl u :=
   match u with
   | Monomorphic_ctx ctx => snd ctx
-  | Polymorphic_ctx ctx
-  | Cumulative_ctx (ctx, _) => snd (AUContext.repr ctx)
+  | Polymorphic_ctx ctx => snd (AUContext.repr ctx)
   end.
 
 

@@ -123,8 +123,7 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
   Definition consistent_instance `{checker_flags} (lvs : LevelSet.t) (φ : constraints) uctx (u : universe_instance) :=
     match uctx with
     | Monomorphic_ctx c => List.length u = 0
-    | Polymorphic_ctx c
-    | Cumulative_ctx (c, _) => (* FIXME Cumulative *)
+    | Polymorphic_ctx c =>
       (* no prop levels in instances *)
       forallb (negb ∘ Level.is_prop) u /\
       (* levels of the instance already declared *)

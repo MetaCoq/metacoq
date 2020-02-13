@@ -72,7 +72,8 @@ Module Environment (T : Term).
     ind_npars : nat;
     ind_params : context;
     ind_bodies : list one_inductive_body ;
-    ind_universes : universes_decl }.
+    ind_universes : universes_decl;
+    ind_variance : option (list Universes.Variance.t) }.
 
   (** See [constant_body] from [declarations.ml] *)
   Record constant_body := {

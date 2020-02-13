@@ -327,6 +327,7 @@ Proof.
             mind_entry_params := _;
             mind_entry_inds := _;
             mind_entry_universes := decl.(ind_universes);
+            mind_entry_variance := decl.(ind_variance);
             mind_entry_private := None |}.
   - refine (match List.hd_error decl.(ind_bodies) with
             | Some i0 => List.rev _
@@ -493,8 +494,7 @@ Qed.
 Definition polymorphic_instance uctx :=
   match uctx with
   | Monomorphic_ctx c => Instance.empty
-  | Polymorphic_ctx c
-  | Cumulative_ctx (c, _) => fst (AUContext.repr c)
+  | Polymorphic_ctx c => fst (AUContext.repr c)
   end.
 
 (* Fixpoint context_assumptions (Γ : context) :=
@@ -605,12 +605,12 @@ Qed.
 
 Definition map_mutual_inductive_body f m :=
   match m with
-  | Build_mutual_inductive_body finite ind_npars ind_pars ind_bodies ind_universes =>
+  | Build_mutual_inductive_body finite ind_npars ind_pars ind_bodies ind_universes ind_variance =>
     let arities := arities_context ind_bodies in
     let pars := fold_context f ind_pars in
     Build_mutual_inductive_body finite ind_npars pars
       (mapi (map_one_inductive_body (context_assumptions pars) (length arities) f) ind_bodies)
-      ind_universes
+      ind_universes ind_variance
   end.
 
 Lemma ind_type_map f npars_ass arities n oib :

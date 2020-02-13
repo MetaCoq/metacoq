@@ -162,6 +162,7 @@ Record mutual_inductive_entry := {
   mind_entry_params    : list (ident * local_entry);
   mind_entry_inds      : list one_inductive_entry;
   mind_entry_universes : universes_decl;
+  mind_entry_variance  : option (list Universes.Variance.t);
   mind_entry_private   : option bool
   (* Private flag for sealing an inductive definition in an enclosing
      module. Not handled by Template Coq yet. *) }.

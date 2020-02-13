@@ -83,9 +83,9 @@ sig
   type quoted_variance
   type quoted_universes_decl
 
-  type quoted_mind_params
+  type quoted_universes_entry
   type quoted_ind_entry = quoted_ident * t * quoted_bool * quoted_ident list * t list
-  type quoted_definition_entry = t * t option * quoted_universes_decl
+  type quoted_definition_entry = t * t option * quoted_universes_entry
   type quoted_mind_entry
   type quoted_mind_finiteness
   type quoted_entry

@@ -186,10 +186,8 @@ struct
 
   let quote_inductive_universes uctx =
     match uctx with
-    | Entries.Monomorphic_ind_entry uctx -> quote_univ_context (Univ.ContextSet.to_context uctx)
-    | Entries.Polymorphic_ind_entry uctx -> quote_abstract_univ_context_aux uctx
-    | Entries.Cumulative_ind_entry info ->
-      quote_abstract_univ_context_aux (CumulativityInfo.univ_context info) (* FIXME lossy *)
+    | Entries.Monomorphic_entry uctx -> quote_univ_context (Univ.ContextSet.to_context uctx)
+    | Entries.Polymorphic_entry uctx -> quote_abstract_univ_context_aux uctx
 
   let quote_ugraph (g : UGraph.t) =
     let inst' = quote_univ_instance Univ.Instance.empty in
@@ -204,6 +202,7 @@ struct
     | Sorts.InProp -> Lazy.force sfProp
     | Sorts.InSet -> Lazy.force sfSet
     | Sorts.InType -> Lazy.force sfType
+    | Sorts.InSProp -> failwith "SProp is not supported"
 
   let quote_context_decl na b t =
     constr_mkApp (tmkdecl, [| na; quote_optionl tTerm b; t |])

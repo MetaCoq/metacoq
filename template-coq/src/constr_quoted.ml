@@ -49,28 +49,17 @@ struct
 
   let resolve (tm : string) : Constr.t Lazy.t =
     lazy (
-      let tm_ref = Coqlib.find_ref tm in
+      let tm_ref = Coqlib.lib_ref tm in
       UnivGen.constr_of_monomorphic_global tm_ref
     )
     (* gen_constant_in_modules contrib_name [path] tm *)
 
-  let old_resolve_symbol (path : string list) (tm : string) : Constr.t Lazy.t =
-    lazy (UnivGen.constr_of_global (Coqlib.gen_reference_in_modules contrib_name [path] tm))
+  let resolve_ref (tm : string) : Names.GlobRef.t Lazy.t =
+    lazy (Coqlib.lib_ref tm)
 
-  let resolve_symbol_p (path : string list) (tm : string) : Names.GlobRef.t Lazy.t =
-    lazy (Coqlib.gen_reference_in_modules contrib_name [path] tm)
-
-  let pkg_base_reify = ["MetaCoq";"Template";"BasicAst"]
-  let pkg_reify = ["MetaCoq";"Template";"Ast"]
-  let pkg_template_monad = ["MetaCoq";"Template";"TemplateMonad"]
-  let pkg_univ = ["MetaCoq";"Template";"Universes"]
-  let pkg_level = ["MetaCoq";"Template";"Universes";"Level"]
-  let pkg_variance = ["MetaCoq";"Template";"Universes";"Variance"]
-  let pkg_ugraph = ["MetaCoq";"Template";"uGraph"]
-  let ext_pkg_univ s = List.append pkg_univ [s]
-
-  let r_template_monad = old_resolve_symbol pkg_template_monad
-  let r_template_monad_p = resolve_symbol_p pkg_template_monad
+  let ast s = resolve ("metacoq.ast." ^ s)
+  let template s = resolve ("metacoq.template." ^ s)
+  let template_ref s = resolve_ref ("metacoq.template." ^ s)
 
   let tString = resolve "metacoq.string.cons"
   let tEmptyString = resolve "metacoq.string.nil"
@@ -87,7 +76,7 @@ struct
   let unit_tt = resolve "metacoq.unit.intro"
   
   let tAscii = resolve "metacoq.ascii.type"
-  let tlist = resole "metacoq.list.type"
+  let tlist = resolve "metacoq.list.type"
   let c_nil = resolve "metacoq.list.nil"
   let c_cons = resolve "metacoq.list.cons"
 
@@ -101,6 +90,9 @@ struct
   let cInl = resolve "metacoq.sum.inl"
   let cInr = resolve "metacoq.sum.inr"
 
+  let texistT = resolve "metacoq.sigma.intro"
+  let texistT_typed_term = resolve_ref "metacoq.sigma.typed_term"
+
   let constr_mkApp (h, a) = Constr.mkApp (Lazy.force h, a)
   let constr_mkAppl (h, a) = Constr.mkApp (Lazy.force h, Array.map Lazy.force a)
   let prod a b = constr_mkApp (prod_type, [| a ; b |])
@@ -109,96 +101,94 @@ struct
   let pairl a b f s = pair (Lazy.force a) (Lazy.force b) f s
 
     (* reify the constructors in Template.Ast.v, which are the building blocks of reified terms *)
-  let nAnon = r_base_reify "nAnon"
-  let nNamed = r_base_reify "nNamed"
-  let kVmCast = r_base_reify "VmCast"
-  let kNative = r_base_reify "NativeCast"
-  let kCast = r_base_reify "Cast"
-  let kRevertCast = r_base_reify "RevertCast"
-  let lProp = resolve_symbol pkg_level "lProp"
-  let lSet = resolve_symbol pkg_level "lSet"
-  let tsort_family = resolve_symbol pkg_univ "sort_family"
-  let lfresh_universe = resolve_symbol pkg_univ "fresh_universe"
-  let lfresh_level = resolve_symbol pkg_univ "fresh_level"
-  let sfProp = resolve_symbol pkg_univ "InProp"
-  let sfSet = resolve_symbol pkg_univ "InSet"
-  let sfType = resolve_symbol pkg_univ "InType"
-  let tident = r_base_reify "ident"
-  let tname = r_base_reify "name"
-  let tIndTy = r_base_reify "inductive"
-  let tmkInd = r_base_reify "mkInd"
-  let tmkdecl = r_reify "mkdecl"
+  let nAnon = ast "nAnon"
+  let nNamed = ast "nNamed"
+  let kVmCast = ast "VmCast"
+  let kNative = ast "NativeCast"
+  let kCast = ast "Cast"
+  let kRevertCast = ast "RevertCast"
+  let lProp = ast "level.lProp"
+  let lSet = ast "level.lSet"
+  let tsort_family = ast "sort_family"
+  let lfresh_universe = ast "fresh_universe"
+  let lfresh_level = ast "fresh_level"
+  let sfProp = ast "InProp"
+  let sfSet = ast "InSet"
+  let sfType = ast "InType"
+  let tident = ast "ident"
+  let tname = ast "name"
+  let tIndTy = ast "inductive"
+  let tmkInd = ast "mkInd"
+  let tmkdecl = ast "mkdecl"
   let (tTerm,tRel,tVar,tEvar,tSort,tCast,tProd,
        tLambda,tLetIn,tApp,tCase,tFix,tConstructor,tConst,tInd,tCoFix,tProj) =
-    (r_reify "term", r_reify "tRel", r_reify "tVar", r_reify "tEvar",
-     r_reify "tSort", r_reify "tCast", r_reify "tProd", r_reify "tLambda",
-     r_reify "tLetIn", r_reify "tApp", r_reify "tCase", r_reify "tFix",
-     r_reify "tConstruct", r_reify "tConst", r_reify "tInd", r_reify "tCoFix", r_reify "tProj")
+    (ast "term", ast "tRel", ast "tVar", ast "tEvar",
+     ast "tSort", ast "tCast", ast "tProd", ast "tLambda",
+     ast "tLetIn", ast "tApp", ast "tCase", ast "tFix",
+     ast "tConstruct", ast "tConst", ast "tInd", ast "tCoFix", ast "tProj")
 
-  let tlevel = resolve_symbol pkg_level "t"
-  let tLevel = resolve_symbol pkg_level "Level"
-  let tLevelVar = resolve_symbol pkg_level "Var"
-  let tunivLe = resolve_symbol (ext_pkg_univ "ConstraintType") "Le"
-  let tunivLt = resolve_symbol (ext_pkg_univ "ConstraintType") "Lt"
-  let tunivEq = resolve_symbol (ext_pkg_univ "ConstraintType") "Eq"
-  let tmake_universe = resolve_symbol (ext_pkg_univ "Universe") "make''"
-  let tLevelSet_of_list = resolve_symbol (ext_pkg_univ "LevelSetProp") "of_list"
+  let tlevel = ast "level.t"
+  let tLevel = ast "level.Level"
+  let tLevelVar = ast "level.Var"
+  let tunivLe = ast "constraints.Le"
+  let tunivLt = ast "constraints.Lt"
+  let tunivEq = ast "constraints.Eq"
+  let tmake_universe = ast "universe.make"
+  let tLevelSet_of_list = ast "universe.of_list"
 
   (* let tunivcontext = resolve_symbol pkg_univ "universe_context" *)
-  let tVariance = resolve_symbol pkg_variance "t"
-  let cIrrelevant = resolve_symbol pkg_variance "Irrelevant"
-  let cCovariant = resolve_symbol pkg_variance "Covariant"
-  let cInvariant = resolve_symbol pkg_variance "Invariant"
-  let cMonomorphic_ctx = resolve_symbol pkg_univ "Monomorphic_ctx"
-  let cPolymorphic_ctx = resolve_symbol pkg_univ "Polymorphic_ctx"
-  let cCumulative_ctx = resolve_symbol pkg_univ "Cumulative_ctx"
-  let tUContext = resolve_symbol (ext_pkg_univ "UContext") "t"
-  let tAUContext = resolve_symbol (ext_pkg_univ "AUContext") "t"
-  let tUContextmake = resolve_symbol (ext_pkg_univ "UContext") "make"
-  let tAUContextmake = resolve_symbol (ext_pkg_univ "AUContext") "make"
-  let tACumulativityInfomake = resolve_symbol (ext_pkg_univ "ACumulativityInfo") "make"
-  let tConstraintSet = resolve_symbol (ext_pkg_univ "ConstraintSet") "t_"
-  let tLevelSet = resolve_symbol (ext_pkg_univ "LevelSet") "t_"
-  let tConstraintSetempty = lazy (UnivGen.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "ConstraintSet") "empty"))
-  let tConstraintSetadd = lazy (UnivGen.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "ConstraintSet") "add"))
-  let tmake_univ_constraint = resolve_symbol pkg_univ "make_univ_constraint"
-  let tinit_graph = resolve_symbol pkg_ugraph "init_graph"
-  let tadd_global_constraints = resolve_symbol pkg_ugraph  "add_global_constraints"
+  let tVariance = ast "variance.t"
+  let cIrrelevant = ast "variance.Irrelevant"
+  let cCovariant = ast "variance.Covariant"
+  let cInvariant = ast "variance.Invariant"
+  let cMonomorphic_ctx = ast "Monomorphic_ctx"
+  let cPolymorphic_ctx = ast "Polymorphic_ctx"
+  let tUContext = ast "UContext.t"
+  let tAUContext = ast "AUContext.t"
+  let tUContextmake = ast "UContext.make"
+  let tAUContextmake = ast "AUContext.make"
+  let tConstraintSet = ast "ConstraintSet.t_"
+  let tConstraintSetempty = ast "ConstraintSet.empty"
+  let tConstraintSetadd = ast "ConstraintSet.add"
+  let tLevelSet = ast "LevelSet.t"
+  let tmake_univ_constraint = ast "make_univ_constraint"
+  let tinit_graph = ast "graph.init"
+  (* FIXME this doesn't exist! *)
+  let tadd_global_constraints = ast "graph.add_global_constraints"
 
-  let (tdef,tmkdef) = (r_base_reify "def", r_base_reify "mkdef")
-  let (tLocalDef,tLocalAssum,tlocal_entry) = (r_reify "LocalDef", r_reify "LocalAssum", r_reify "local_entry")
+  let (tdef,tmkdef) = (ast "def", ast "mkdef")
+  let (tLocalDef,tLocalAssum,tlocal_entry) = (ast "LocalDef", ast "LocalAssum", ast "local_entry")
 
-  let (cFinite,cCoFinite,cBiFinite) = (r_base_reify "Finite", r_base_reify "CoFinite", r_base_reify "BiFinite")
-  let tone_inductive_body = r_reify "one_inductive_body"
-  let tBuild_one_inductive_body = r_reify "Build_one_inductive_body"
-  let tBuild_mutual_inductive_body = r_reify "Build_mutual_inductive_body"
-  let tBuild_constant_body = r_reify "Build_constant_body"
-  let tglobal_decl = r_reify "global_decl"
-  let tConstantDecl = r_reify "ConstantDecl"
-  let tInductiveDecl = r_reify "InductiveDecl"
-  let tglobal_env = r_reify "global_env"
-
-  let tcontext_decl = r_reify "context_decl"
-  let tcontext = r_reify "context"
-
-  let tMutual_inductive_entry = r_reify "mutual_inductive_entry"
-  let tOne_inductive_entry = r_reify "one_inductive_entry"
-  let tBuild_mutual_inductive_entry = r_reify "Build_mutual_inductive_entry"
-  let tBuild_one_inductive_entry = r_reify "Build_one_inductive_entry"
-  let tConstant_entry = r_reify "constant_entry"
-  let cParameterEntry = r_reify "ParameterEntry"
-  let cDefinitionEntry = r_reify "DefinitionEntry"
-  let cParameter_entry = r_reify "Build_parameter_entry"
-  let cDefinition_entry = r_reify "Build_definition_entry"
-
-  let (tcbv, tcbn, thnf, tall, tlazy, tunfold) = (r_template_monad "cbv", r_template_monad "cbn", r_template_monad "hnf", r_template_monad "all", r_template_monad "lazy", r_template_monad "unfold")
+  let (cFinite,cCoFinite,cBiFinite) = (ast "Finite", ast "CoFinite", ast "BiFinite")
+  let tone_inductive_body = ast "one_inductive_body"
+  let tBuild_one_inductive_body = ast "Build_one_inductive_body"
+  let tBuild_mutual_inductive_body = ast "Build_mutual_inductive_body"
+  let tBuild_constant_body = ast "Build_constant_body"
+  let tglobal_decl = ast "global_decl"
+  let tConstantDecl = ast "ConstantDecl"
+  let tInductiveDecl = ast "InductiveDecl"
+  let tglobal_env = ast "global_env"
 
   let (tglobal_reference, tConstRef, tIndRef, tConstructRef) =
-    (r_base_reify "global_reference", r_base_reify "ConstRef", r_base_reify "IndRef", r_base_reify "ConstructRef")
+    (ast "global_reference", ast "ConstRef", ast "IndRef", ast "ConstructRef")
 
-  let pkg_specif = ["Coq";"Init";"Specif"]
-  let texistT = resolve_symbol pkg_specif "existT"
-  let texistT_typed_term = r_template_monad_p "existT_typed_term"
+  let tcontext_decl = ast "context_decl"
+  let tcontext = ast "context"
+
+  let tMutual_inductive_entry = ast "mutual_inductive_entry"
+  let tOne_inductive_entry = ast "one_inductive_entry"
+  let tBuild_mutual_inductive_entry = ast "Build_mutual_inductive_entry"
+  let tBuild_one_inductive_entry = ast "Build_one_inductive_entry"
+  let tConstant_entry = ast "constant_entry"
+  let cParameterEntry = ast "ParameterEntry"
+  let cDefinitionEntry = ast "DefinitionEntry"
+  let cParameter_entry = ast "Build_parameter_entry"
+  let cDefinition_entry = ast "Build_definition_entry"
+  let cPolymorphic_entry = ast "Monomorphic_entry"
+  let cMonomorphic_entry = ast "Polymorphic_entry"
+
+  let (tcbv, tcbn, thnf, tall, tlazy, tunfold) = 
+    (template "cbv", template "cbn", template "hnf", template "all", template "lazy", template "unfold")
 
   let constr_equall h t = Constr.equal h (Lazy.force t)
 
@@ -348,16 +338,13 @@ struct
     let const = Univ.UContext.constraints uctx in
     constr_mkApp (cMonomorphic_ctx, [| quote_ucontext inst const |])
 
-  let quote_cumulative_univ_context cumi =
-    let uctx = Univ.CumulativityInfo.univ_context cumi in
-    let inst = Univ.UContext.instance uctx in
-    let const = Univ.UContext.constraints uctx in
-    let var = Univ.CumulativityInfo.variance cumi in
-    let uctx' = quote_ucontext inst const in
-    let var' = quote_cuminfo_variance var in
+  let quote_variance var =
     let listvar = constr_mkAppl (tlist, [| tVariance |]) in
-    let cumi' = pair (Lazy.force tUContext) listvar uctx' var' in
-    constr_mkApp (cCumulative_ctx, [| cumi' |])
+    match var with
+    | None -> constr_mkApp (cNone, [| listvar |])
+    | Some var ->
+     let var' = quote_cuminfo_variance var in
+      constr_mkApp (cSome, [| listvar; var' |])
 
   let quote_abstract_univ_context_aux uctx =
     let inst = Univ.UContext.instance uctx in
@@ -370,10 +357,14 @@ struct
 
   let quote_inductive_universes uctx =
     match uctx with
-    | Monomorphic_ind_entry uctx -> quote_univ_context (Univ.ContextSet.to_context uctx)
-    | Polymorphic_ind_entry uctx -> quote_abstract_univ_context_aux uctx
-    | Cumulative_ind_entry info ->
-      quote_abstract_univ_context_aux (CumulativityInfo.univ_context info) (* FIXME lossy *)
+    | Monomorphic_entry uctx -> 
+      let ctx = quote_univ_context (Univ.ContextSet.to_context uctx) in
+      constr_mkApp (cMonomorphic_entry, [| ctx |])
+    | Polymorphic_entry (names, uctx) ->
+      let names = CArray.map_to_list quote_name names in
+      let names = to_coq_list (Lazy.force tname) names in
+      let ctx = quote_univ_context uctx in
+      constr_mkApp (cPolymorphic_entry, [| names; ctx |])
 
   let quote_ugraph (g : UGraph.t) =
     let inst' = quote_univ_instance Univ.Instance.empty in
@@ -384,10 +375,13 @@ struct
   let quote_sort s =
     quote_universe (Sorts.univ_of_sort s)
 
+  let unsupported_sprop () = CErrors.user_err (Pp.str "SProp sort not supported")
+
   let quote_sort_family = function
     | Sorts.InProp -> sfProp
     | Sorts.InSet -> sfSet
     | Sorts.InType -> sfType
+    | Sorts.InSProp -> unsupported_sprop ()
 
   let quote_context_decl na b t =
     constr_mkApp (tmkdecl, [| na; quote_option (Lazy.force tTerm) b; t |])

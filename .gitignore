@@ -372,3 +372,10 @@ template-coq/Makefile.template-e
 pcuic/Makefile.plugin-e
 erasure/Makefile.plugin-e
 safechecker/Makefile.plugin-e
+erasure/src/g_metacoq_erasure.ml
+erasure/src/pCUICChecker.ml
+erasure/src/pCUICChecker.mli
+erasure/src/pCUICPretty.ml
+erasure/src/pCUICPretty.mli
+erasure/src/byte.mli
+erasure/src/byte.ml

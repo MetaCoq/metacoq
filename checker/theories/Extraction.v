@@ -9,6 +9,7 @@ Require Import MetaCoq.Template.utils.
 Require Import FSets.
 Require Import ExtrOcamlBasic.
 Require Import ExtrOcamlString ExtrOcamlZInt.
+Require Import MetaCoq.Template.utils.MCCompare.
 
 (* Ignore [Decimal.int] before the extraction issue is solved:
    https://github.com/coq/coq/issues/7017. *)
@@ -18,21 +19,13 @@ Extract Constant ascii_compare =>
  "fun x y -> match Char.compare x y with 0 -> Eq | x when x < 0 -> Lt | _ -> Gt".
 
 Extraction Blacklist config uGraph Universes Ast String List Nat Int
-           UnivSubst Typing Checker Retyping OrderedType Logic Common Equality.
+           UnivSubst Typing Checker Retyping OrderedType Logic Common Equality utils.
 Set Warnings "-extraction-opaque-accessed".
 
 Require Export MetaCoq.Template.Ast.
 From MetaCoq.Checker Require All.
 
 Cd "src".
-
-(** From Coq: well-founded relations *)
-Extraction Library Wf.
-Extraction Library Compare_dec.
-Extraction Library MSetList.
-Extraction Library EqdepFacts.
-
-Extraction Library Init.
 
 From Equations Require Import Equations.
 
@@ -49,22 +42,6 @@ Extraction Inline Equations.Init.pr2.
 Extraction Inline Equations.Init.hidebody.
 Extraction Inline Equations.Prop.DepElim.solution_left.
 
-Extraction Library Signature.
-Extraction Library Classes.
-Extraction Library ssreflect.
-Extraction Library CMorphisms.
-
-(** From checker *)
-Extraction Library EnvironmentTyping.
-Extraction Library Reflect.
-Extraction Library LiftSubst.
-Extraction Library UnivSubst.
-Extraction Library monad_utils.
-Extraction Library Typing.
-Extraction Library TypingWf.
-Extraction Library wGraph.
-Extraction Library uGraph.
-Extraction Library Checker.
-Extraction Library Retyping.
+Separate Extraction Checker.typecheck_program Checker.infer' Retyping.sort_of.
 
 Cd "..".

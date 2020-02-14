@@ -28,10 +28,10 @@ let check env evm c =
 }
 
 VERNAC COMMAND EXTEND MetaCoqCheck CLASSIFIED AS QUERY
-| #[ poly = polymorphic ] [ "MetaCoq" "Check" constr(c) ] -> [
+| #[ poly = polymorphic ] [ "MetaCoq" "Check" constr(c) ] -> {
     let env = Global.env () in
     let evm = Evd.from_env env in
     let (c, _) = Constrintern.interp_constr env evm c in
     check env evm c
-  ]
+  }
 END

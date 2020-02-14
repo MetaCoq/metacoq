@@ -52,8 +52,8 @@ gen-src/equality0.ml
 gen-src/equality0.mli
 gen-src/extractable.ml
 gen-src/extractable.mli
-gen-src/induction.ml
-gen-src/induction.mli
+#gen-src/induction.ml
+#gen-src/induction.mli
 gen-src/liftSubst.ml
 gen-src/liftSubst.mli
 gen-src/list0.ml

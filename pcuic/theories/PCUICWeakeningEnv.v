@@ -292,12 +292,11 @@ Lemma weakening_env_consistent_instance {cf:checker_flags} Σ Σ' φ ctrs u (H :
 Proof.
     unfold consistent_instance_ext, consistent_instance.
     intros X.
-    destruct ctrs; tas. 2: destruct ctx as [cst _].
-    all: destruct (AUContext.repr cst).
-    all: destruct X as [X1 [X2 [X3 X4]]]; repeat split; tas.
-    1,3: eapply forallb_Forall in X2; eapply forallb_Forall, Forall_impl; tea;
-      intros x H0; now eapply weakening_env_global_ext_levels'.
-    all: eapply valid_subset; tea;
+    destruct ctrs; tas.
+    intuition auto.
+    - eapply forallb_Forall in H2; eapply forallb_Forall, Forall_impl; tea.
+      intros x ?; now eapply weakening_env_global_ext_levels'.
+    - eapply valid_subset; tea;
       now eapply weakening_env_global_ext_constraints.
 Qed.
 Hint Resolve weakening_env_consistent_instance : extends.

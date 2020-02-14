@@ -287,12 +287,12 @@ Proof.
   intros Σ Σ' φ ctrs u he.
   unfold consistent_instance_ext, consistent_instance.
   intros hc.
-  destruct ctrs. 1: assumption. 2: destruct ctx as [cst _].
-  all: destruct (AUContext.repr cst).
-  all: destruct hc as [? [h2 [? ?]]] ; repeat split ; tas.
-  1,3: eapply forallb_Forall in h2 ; eapply forallb_Forall, Forall_impl ; tea ;
-    intros ? ? ; now eapply weakening_env_global_ext_levels'.
-  all: eapply valid_subset; tea;
+  destruct ctrs=> //.
+  destruct cst as [nas cst]; simpl in *.
+  intuition auto.
+  eapply forallb_Forall in H1. eapply forallb_Forall, Forall_impl; tea.
+  intros ? ? ; now eapply weakening_env_global_ext_levels'.
+  eapply valid_subset; tea;
     now eapply weakening_env_global_ext_constraints.
 Qed.
 Hint Resolve weakening_env_consistent_instance : extends.

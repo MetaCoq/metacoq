@@ -72,11 +72,11 @@ Definition eq_option {A} `{ReflectEq A} (u v : option A) : bool :=
   | _, _ => false
   end.
 
-Instance reflect_option : forall {A}, ReflectEq A -> ReflectEq (option A) := {
+#[program] Instance reflect_option : forall {A}, ReflectEq A -> ReflectEq (option A) := {
   eqb := eq_option
 }.
-Proof.
-  intros x y. destruct x, y.
+Next Obligation.
+  destruct x, y.
   all: cbn.
   all: try solve [ constructor ; easy ].
   destruct (eqb_spec a a0) ; nodec.
@@ -92,11 +92,11 @@ Fixpoint eq_list {A} (eqA : A -> A -> bool) (l l' : list A) : bool :=
   | _, _ => false
   end.
 
-Instance reflect_list : forall {A}, ReflectEq A -> ReflectEq (list A) := {
+#[program] Instance reflect_list : forall {A}, ReflectEq A -> ReflectEq (list A) := {
   eqb := eq_list eqb
 }.
-Proof.
-  intro x. induction x ; intro y ; destruct y.
+Next Obligation.
+  revert y; induction x ; intro y ; destruct y.
   - cbn. constructor. reflexivity.
   - cbn. constructor. discriminate.
   - cbn. constructor. discriminate.
@@ -105,10 +105,12 @@ Proof.
     subst. constructor. reflexivity.
 Defined.
 
-Instance reflect_string : ReflectEq string := {
+Local Obligation Tactic := idtac.
+
+#[program] Instance reflect_string : ReflectEq string := {
   eqb := eq_string
 }.
-Proof.
+Next Obligation.
   intros s s'. destruct (string_dec s s').
   - subst. rewrite eq_string_refl. constructor. reflexivity.
   - assert (string_compare s s' <> Eq).
@@ -132,10 +134,10 @@ Definition eq_level l1 l2 :=
   | _, _ => false
   end.
 
-Instance reflect_level : ReflectEq Level.t := {
+#[program] Instance reflect_level : ReflectEq Level.t := {
   eqb := eq_level
 }.
-Proof.
+Next Obligation.
   intros x y. destruct x, y.
   all: unfold eq_level.
   all: try solve [ constructor ; reflexivity ].
@@ -152,11 +154,11 @@ Definition eq_prod {A B} (eqA : A -> A -> bool) (eqB : B -> B -> bool) x y :=
   if eqA a1 a2 then eqB b1 b2
   else false.
 
-Instance reflect_prod : forall {A B}, ReflectEq A -> ReflectEq B -> ReflectEq (A * B) := {
+#[program] Instance reflect_prod : forall {A B}, ReflectEq A -> ReflectEq B -> ReflectEq (A * B) := {
   eqb := eq_prod eqb eqb
 }.
-Proof.
-  intros [x y] [u v].
+Next Obligation.
+  intros A B RA RB [x y] [u v].
   unfold eq_prod.
   destruct (eqb_spec x u) ; nodec.
   destruct (eqb_spec y v) ; nodec.
@@ -176,10 +178,10 @@ Qed.
 Definition eq_bool b1 b2 : bool :=
   if b1 then b2 else negb b2.
 
-Instance reflect_bool : ReflectEq bool := {
+#[program] Instance reflect_bool : ReflectEq bool := {
   eqb := eq_bool
 }.
-Proof.
+Next Obligation.
   intros x y. unfold eq_bool.
   destruct x, y.
   all: constructor.
@@ -194,10 +196,10 @@ Definition eq_name na nb :=
   | _, _ => false
   end.
 
-Instance reflect_name : ReflectEq name := {
+#[program] Instance reflect_name : ReflectEq name := {
   eqb := eq_name
 }.
-Proof.
+Next Obligation.
   intros x y. destruct x, y.
   - cbn. constructor. reflexivity.
   - cbn. constructor. discriminate.
@@ -212,10 +214,10 @@ Definition eq_inductive ind ind' :=
     eqb m m' && eqb n n'
   end.
 
-Instance reflect_inductive : ReflectEq inductive := {
+#[program] Instance reflect_inductive : ReflectEq inductive := {
   eqb := eq_inductive
 }.
-Proof.
+Next Obligation.
   intros i i'. destruct i as [m n], i' as [m' n'].
   unfold eq_inductive.
   destruct (eqb_spec m m') ; nodec.
@@ -235,11 +237,11 @@ Definition eq_def {A : Set} `{ReflectEq A} (d1 d2 : def A) : bool :=
     eqb n1 n2 && eqb t1 t2 && eqb b1 b2 && eqb a1 a2
   end.
 
-Instance reflect_def : forall {A : Set} `{ReflectEq A}, ReflectEq (def A) := {
+#[program] Instance reflect_def : forall {A : Set} `{ReflectEq A}, ReflectEq (def A) := {
   eqb := eq_def
 }.
-Proof.
-  intros x y. destruct x as [n1 t1 b1 a1], y as [n2 t2 b2 a2].
+Next Obligation.
+  intros A RA x y. destruct x as [n1 t1 b1 a1], y as [n2 t2 b2 a2].
   unfold eq_def.
   destruct (eqb_spec n1 n2) ; nodec.
   destruct (eqb_spec t1 t2) ; nodec.
@@ -256,11 +258,11 @@ Fixpoint eq_non_empty_list {A : Set} (eqA : A -> A -> bool) (l l' : non_empty_li
   | _, _ => false
   end.
 
-Instance reflect_non_empty_list :
+#[program]  Instance reflect_non_empty_list :
   forall {A : Set} `{ReflectEq A}, ReflectEq (non_empty_list A) :=
   { eqb := eq_non_empty_list eqb }.
-Proof.
-  induction x, y; cbn.
+Next Obligation.
+  intros A RA. induction x, y; cbn.
   destruct (eqb_spec a a0); constructor; congruence.
   constructor; congruence.
   constructor; congruence.
@@ -302,7 +304,6 @@ Derive NoConfusion NoConfusionHom for term.
 
 Derive EqDec for term.
 Next Obligation.
-  revert y.
   induction x using term_forall_list_ind ; intro t ;
     destruct t ; try (right ; discriminate).
   all: term_dec_tac term_dec.
@@ -385,11 +386,11 @@ Definition eq_sig_true {A f} `{ReflectEq A} (x y : { z : A | f z = true }) : boo
   let '(exist y hy) := y in
   eqb x y.
 
-Instance reflect_sig_true {A f} `{ReflectEq A} : ReflectEq ({ z : A | f z = true }) := {
+#[program] Instance reflect_sig_true {A f} `{ReflectEq A} : ReflectEq ({ z : A | f z = true }) := {
   eqb := eq_sig_true
 }.
-Proof.
-  intros [x hx] [y hy]. simpl.
+Next Obligation.
+  intros A F RA [x hx] [y hy]. simpl.
   destruct (eqb_spec x y) ; nodec. subst.
   constructor. pose proof (uip hx hy). subst. reflexivity.
 Defined.

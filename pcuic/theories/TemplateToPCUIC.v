@@ -60,7 +60,8 @@ Definition trans_minductive_body md :=
      ind_npars := md.(Ast.ind_npars);
      ind_params := trans_local md.(Ast.ind_params);
      ind_bodies := map trans_one_ind_body md.(Ast.ind_bodies);
-     ind_universes := md.(Ast.ind_universes) |}.
+     ind_universes := md.(Ast.ind_universes);
+     ind_variance := md.(Ast.ind_variance) |}.
 
 Definition trans_global_decl (d : Ast.global_decl) :=
   match d with

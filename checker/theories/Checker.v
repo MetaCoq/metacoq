@@ -626,8 +626,7 @@ Section Typecheck2.
   Definition polymorphic_constraints u :=
     match u with
     | Monomorphic_ctx _ => ConstraintSet.empty
-    | Polymorphic_ctx ctx
-    | Cumulative_ctx (ctx, _) => snd (AUContext.repr ctx)
+    | Polymorphic_ctx ctx => snd (AUContext.repr ctx)
     end.
 
   Definition lookup_constant_type cst u :=
@@ -1114,8 +1113,7 @@ Section Checker.
   Definition monomorphic_constraints u :=
     match u with
     | Monomorphic_ctx ctx => snd ctx
-    | Polymorphic_ctx ctx
-    | Cumulative_ctx (ctx, _) => ConstraintSet.empty
+    | Polymorphic_ctx ctx => ConstraintSet.empty
     end.
 
   (* FIXME : universe polym declarations *)

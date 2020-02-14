@@ -47,6 +47,7 @@ Register MetaCoq.Template.utils.NEL.cons as metacoq.nel.cons.
 
 Register MetaCoq.Template.BasicAst.nAnon as metacoq.ast.nAnon.
 Register MetaCoq.Template.BasicAst.nNamed as metacoq.ast.nNamed.
+Register MetaCoq.Template.BasicAst.ident as metacoq.ast.ident.
 Register MetaCoq.Template.BasicAst.name as metacoq.ast.name.
 Register MetaCoq.Template.BasicAst.inductive as metacoq.ast.inductive.
 Register MetaCoq.Template.BasicAst.mkInd as metacoq.ast.mkInd.

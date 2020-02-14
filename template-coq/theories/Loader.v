@@ -1,6 +1,7 @@
-Require Template.TemplateMonad.Core.
-Require Template.TemplateMonad.Extractable.
-Require Template.BasicAst Template.Ast.
+From MetaCoq Require Template.TemplateMonad.Core
+  Template.TemplateMonad.Extractable
+  Template.BasicAst Template.Ast
+  Template.Constants.
 
 Declare ML Module "template_coq".
 

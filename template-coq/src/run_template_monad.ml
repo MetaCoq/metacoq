@@ -369,11 +369,11 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
                else
                  with_env_evm (fun env evm ->
                      let cd = Environ.lookup_constant cnst env in
-                     tmReturn (TermReify.quote_constant_body bypass env evm cd))
+                     tmReturn (TermReify.quote_constant_entry bypass env evm cd))
              | Some _ ->
                tmFail (str "\"" ++ str name ++ str "\" does not refer to a constant"))
        in
-       Plugin_core.run cmd env evm (fun a b c -> k (a,b, quote_constant_entry c))
+       Plugin_core.run cmd env evm (fun a b c -> k (a,b,c))
      end
   | TmQuoteUnivs ->
     let univs = Environ.universes env in

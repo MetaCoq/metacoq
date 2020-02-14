@@ -32,7 +32,9 @@ struct
 
   type quoted_universes_entry = Constr.t (* of type Ast.universes_entry *)
   type quoted_ind_entry = quoted_ident * t * quoted_bool * quoted_ident list * t list
-  type quoted_definition_entry = t * t option * quoted_universes_decl
+  type quoted_definition_entry = Constr.t (* of type Ast.definition_entry *)
+  type quoted_parameter_entry = Constr.t (* of type Ast.parameter_entry *)
+  type quoted_constant_entry = Constr.t (* of type Ast.constant_entry *)
   type quoted_mind_entry = Constr.t (* of type Ast.mutual_inductive_entry *)
   type quoted_mind_finiteness = Constr.t (* of type Ast.mutual_inductive_entry ?? *)
   type quoted_entry = Constr.t (* of type option (constant_entry + mutual_inductive_entry) *)
@@ -181,8 +183,8 @@ struct
   let tConstant_entry = ast "constant_entry"
   let cParameterEntry = ast "ParameterEntry"
   let cDefinitionEntry = ast "DefinitionEntry"
-  let cParameter_entry = ast "Build_parameter_entry"
-  let cDefinition_entry = ast "Build_definition_entry"
+  let cBuild_parameter_entry = ast "Build_parameter_entry"
+  let cBuild_definition_entry = ast "Build_definition_entry"
   let cPolymorphic_entry = ast "Monomorphic_entry"
   let cMonomorphic_entry = ast "Polymorphic_entry"
 

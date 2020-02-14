@@ -32,10 +32,12 @@ struct
   type quoted_abstract_univ_context = Universes0.AUContext.t
   type quoted_variance = Universes0.Variance.t
   type quoted_universes_decl = Universes0.universes_decl
+  type quoted_universes_entry = Ast0.universes_entry
 
-  type quoted_mind_params = (ident * local_entry) list
   type quoted_ind_entry = quoted_ident * t * quoted_bool * quoted_ident list * t list
-  type quoted_definition_entry = t * t option * quoted_universes_decl
+  type quoted_definition_entry = Ast0.definition_entry
+  type quoted_parameter_entry = Ast0.parameter_entry
+  type quoted_constant_entry = Ast0.constant_entry
   type quoted_mind_entry = mutual_inductive_entry
   type quoted_mind_finiteness = recursivity_kind
   type quoted_entry = (constant_entry, quoted_mind_entry) sum option
@@ -85,6 +87,7 @@ struct
     | Sorts.InProp -> Universes0.InProp
     | Sorts.InSet -> Universes0.InSet
     | Sorts.InType -> Universes0.InType
+    | Sorts.InSProp -> failwith "SProp sort not supported"
 
   let quote_cast_kind = function
     | DEFAULTcast -> Cast
@@ -195,17 +198,16 @@ struct
 
   let mkMonomorphic_ctx tm = Universes0.Monomorphic_ctx tm
   let mkPolymorphic_ctx tm = Universes0.Polymorphic_ctx tm
-  let mkCumulative_ctx tm var = Universes0.Cumulative_ctx (tm, var)
-
 
   let mk_one_inductive_body (id, ty, kel, ctr, proj) =
     let ctr = List.map (fun (a, b, c) -> ((a, b), c)) ctr in
     { ind_name = id; ind_type = ty;
       ind_kelim = kel; ind_ctors = ctr; ind_projs = proj }
 
-  let mk_mutual_inductive_body finite npars params inds uctx =
+  let mk_mutual_inductive_body finite npars params inds uctx variance =
     {ind_finite = finite;
-     ind_npars = npars; ind_params = params; ind_bodies = inds; ind_universes = uctx}
+     ind_npars = npars; ind_params = params; ind_bodies = inds; 
+     ind_universes = uctx; ind_variance = variance}
 
   let mk_constant_body ty tm uctx =
     {cst_type = ty; cst_body = tm; cst_universes = uctx}
@@ -225,13 +227,6 @@ struct
     | Declarations.CoFinite -> CoFinite
     | Declarations.BiFinite -> BiFinite
 
-  let quote_mind_params l =
-    let map (id, body) =
-      match body with
-      | Left ty -> (id, LocalAssum ty)
-      | Right trm -> (id, LocalDef trm)
-    in List.map map l
-
   let quote_one_inductive_entry (id, ar, b, consnames, constypes) =
     { mind_entry_typename = id;
       mind_entry_arity = ar;
@@ -239,30 +234,36 @@ struct
       mind_entry_consnames = consnames;
       mind_entry_lc = constypes }
 
-  let quote_mutual_inductive_entry (mf, mp, is, univs) =
+  let quote_mutual_inductive_entry (mf, mp, is, univs, variance) =
     { mind_entry_record = None;
       mind_entry_finite = mf;
       mind_entry_params = mp;
       mind_entry_inds = List.map quote_one_inductive_entry is;
       mind_entry_universes = univs;
+      mind_entry_variance = variance;
       mind_entry_private = None }
 
-  let quote_constant_entry (ty, body, ctx) : constant_entry =
-    match body with
-    | None -> ParameterEntry { parameter_entry_type = ty;
-                               parameter_entry_universes = ctx }
-    | Some b -> DefinitionEntry { definition_entry_type = ty;
-                                  definition_entry_body = b;
-                                  definition_entry_universes = ctx;
-                                  definition_entry_opaque = false }
+  let quote_definition_entry ty body ctx = 
+    { definition_entry_type = ty;
+      definition_entry_body = body;
+      definition_entry_universes = ctx;
+      definition_entry_opaque = false }
 
+  let quote_parameter_entry ty ctx =
+    { parameter_entry_type = ty;
+      parameter_entry_universes = ctx }
+  
+  let quote_constant_entry = function
+    | Left ce -> DefinitionEntry ce
+    | Right pe -> ParameterEntry pe
+(* 
   let quote_entry e =
     match e with
     | Some (Left (ty, body, ctx)) ->
       Some (Left (quote_constant_entry (ty, body, ctx)))
     | Some (Right mind_entry) ->
        Some (Right mind_entry)
-    | None -> None
+    | None -> None *)
 
   let inspectTerm (t : term) :  (term, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_univ_instance, quoted_proj) structure_of_term =
    match t with
@@ -304,11 +305,11 @@ struct
 
   let unquote_inductive (q: quoted_inductive) : Names.inductive =
     let { inductive_mind = na; inductive_ind = i } = q in
-    let comps = CString.split '.' (list_to_string na) in
+    let comps = CString.split_on_char '.' (list_to_string na) in
     let comps = List.map Id.of_string comps in
     let id, dp = CList.sep_last comps in
-    let dp = DirPath.make (List.rev dp) in
-    let mind = Globnames.encode_mind dp id in
+    let dp = ModPath.MPfile (DirPath.make (List.rev dp)) in
+    let mind = Names.MutInd.make2 dp (Label.of_id id) in
     (mind, unquote_int i)
 
   (*val unquote_univ_instance :  quoted_univ_instance -> Univ.Instance.t *)
@@ -322,11 +323,11 @@ struct
     | Universes0.Level.Coq_lSet -> Univ.Level.set
     | Universes0.Level.Level s ->
       let s = list_to_string s in
-      let comps = CString.split '.' s in
+      let comps = CString.split_on_char '.' s in
       let last, dp = CList.sep_last comps in
       let dp = DirPath.make (List.map Id.of_string comps) in
       let idx = int_of_string last in
-      Univ.Level.make dp idx
+      Univ.Level.make (Univ.Level.UGlobal.make dp idx)
     | Universes0.Level.Var n -> Univ.Level.var (unquote_int n)
 
   let unquote_level_expr (trm : Universes0.Level.t) (b : quoted_bool) : Univ.Universe.t =
@@ -356,6 +357,10 @@ struct
        let n = quote_int n in
        let k = (quote_int (k - 1)) in
        BasicAst.ConstructRef (quote_inductive (kn,n), k)
+
+  let mkPolymorphic_entry names c = Polymorphic_entry (names, c)
+  let mkMonomorphic_entry c = Monomorphic_entry c
+  
 end
 
 module TemplateASTReifier = Reify(TemplateASTQuoter)

@@ -134,7 +134,7 @@ Record parameter_entry := {
   parameter_entry_universes : universes_entry }.
 
 Record definition_entry := {
-  definition_entry_type      : term;
+  definition_entry_type      : option term;
   definition_entry_body      : term;
   definition_entry_universes : universes_entry;
   definition_entry_opaque    : bool }.

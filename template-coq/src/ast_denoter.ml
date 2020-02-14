@@ -31,10 +31,12 @@ struct
   type quoted_abstract_univ_context = Universes0.AUContext.t
   type quoted_variance = Universes0.Variance.t
   type quoted_universes_decl = Universes0.universes_decl
+  type quoted_universes_entry = Ast0.universes_entry
 
-  type quoted_mind_params = (ident * local_entry) list
   type quoted_ind_entry = quoted_ident * t * quoted_bool * quoted_ident list * t list
-  type quoted_definition_entry = t * t option * quoted_universes_decl
+  type quoted_definition_entry = Ast0.definition_entry
+  type quoted_parameter_entry = Ast0.parameter_entry
+  type quoted_constant_entry = Ast0.constant_entry
   type quoted_mind_entry = mutual_inductive_entry
   type quoted_mind_finiteness = recursivity_kind
   type quoted_entry = (constant_entry, quoted_mind_entry) sum option

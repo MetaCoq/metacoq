@@ -54,11 +54,11 @@ let to_kername (s : char list) : Names.KerName.t =
 let quote_rel_decl env = function
   | Context.Rel.Declaration.LocalAssum (na, t) ->
     let t' = Ast_quoter.quote_term env t in
-    Ast_quoter.quote_context_decl (Ast_quoter.quote_name na) None t'
+    Ast_quoter.quote_context_decl (Ast_quoter.quote_name (Context.binder_name na)) None t'
   | Context.Rel.Declaration.LocalDef (na, b, t) ->
     let b' = Ast_quoter.quote_term env b in
     let t' = Ast_quoter.quote_term env t in
-    Ast_quoter.quote_context_decl (Ast_quoter.quote_name na) (Some b') t'
+    Ast_quoter.quote_context_decl (Ast_quoter.quote_name (Context.binder_name na)) (Some b') t'
 
 (* todo(gmm): this definition adapted from quoter.ml *)
 let quote_rel_context env ctx =
@@ -77,7 +77,7 @@ let of_mib (env : Environ.env) (t : Names.MutInd.t) (mib : Plugin_core.mutual_in
   let indtys =
     (CArray.map_to_list (fun oib ->
          let ty = Inductive.type_of_inductive env ((mib,oib),inst) in
-         (Context.Rel.Declaration.LocalAssum (Names.Name oib.mind_typename, ty))) mib.mind_packets)
+         (Context.Rel.Declaration.LocalAssum (Context.annotR (Names.Name oib.mind_typename), ty))) mib.mind_packets)
   in
   let envind = Environ.push_rel_context (List.rev indtys) env in
   let (ls,acc) =
@@ -101,11 +101,11 @@ let of_mib (env : Environ.env) (t : Names.MutInd.t) (mib : Plugin_core.mutual_in
 	in
         let projs, acc =
           match mib.mind_record with
-          | PrimRecord [|id, labels, ps|] ->
+          | PrimRecord [|id, labels, rel, ps|] ->
             let ctxwolet = Termops.smash_rel_context mib.mind_params_ctxt in
             let indty = Constr.mkApp (Constr.mkIndU ((t,0),inst),
                                       Context.Rel.to_extended_vect Constr.mkRel 0 ctxwolet) in
-            let indbinder = Context.Rel.Declaration.LocalAssum (Names.Name id,indty) in
+            let indbinder = Context.Rel.Declaration.LocalAssum (Context.annotR(Names.Name id),indty) in
             let envpars = Environ.push_rel_context (indbinder :: ctxwolet) env in
             let ps, acc = CArray.fold_right2 (fun cst pb (ls,acc) ->
                 let ty = quote_term envpars pb in
@@ -121,28 +121,29 @@ let of_mib (env : Environ.env) (t : Names.MutInd.t) (mib : Plugin_core.mutual_in
   in
   let nparams = Ast_quoter.quote_int mib.mind_nparams in
   let paramsctx = quote_rel_context env mib.mind_params_ctxt in
-  let uctx = quote_declarations_inductive_universes mib.mind_universes in
+  let uctx = quote_universes_decl mib.mind_universes in
   let bodies = List.map Ast_quoter.mk_one_inductive_body (List.rev ls) in
   let finite = quote_mind_finiteness mib.mind_finite in
-  Ast_quoter.mk_mutual_inductive_body finite nparams paramsctx bodies uctx
+  let variance = Option.map (CArray.map_to_list quote_variance) mib.mind_variance in
+  Ast_quoter.mk_mutual_inductive_body finite nparams paramsctx bodies uctx variance
 
 let to_mie (x : Ast0.mutual_inductive_entry) : Plugin_core.mutual_inductive_entry =
   failwith "to_mie"
 
 (* note(gmm): code taken from quoter.ml (quote_entry_aux) *)
 let of_constant_entry (env : Environ.env) (cd : Plugin_core.constant_entry) : Ast0.constant_entry =
+  let open Entries in
   let open Declarations in
-  let ty = quote_term env cd.const_type in
-  let body = match cd.const_body with
-    | Undef _ -> None
-    | Def cs -> Some (Ast_quoter.quote_term env (Mod_subst.force_constr cs))
-    | OpaqueDef cs ->
-      if true
-      then Some (Ast_quoter.quote_term env (Opaqueproof.force_proof (Global.opaque_tables ()) cs))
-      else None
-  in
-  let uctx = quote_constant_uctx cd.const_universes in
-  Ast_quoter.quote_constant_entry (ty, body, uctx)
+  match cd with
+  | DefinitionEntry d ->
+    Ast0.(DefinitionEntry {definition_entry_type = Option.map (Ast_quoter.quote_term env) d.const_entry_type;
+          definition_entry_body = Ast_quoter.quote_term env (fst (fst (Future.force d.const_entry_body)));
+          definition_entry_universes = quote_universes_entry d.const_entry_universes;
+          definition_entry_opaque = d.const_entry_opaque })
+  | ParameterEntry (ctx, (typ, univs), inline) ->
+    Ast0.(ParameterEntry {parameter_entry_type = Ast_quoter.quote_term env typ;
+          parameter_entry_universes = quote_universes_entry univs })
+  | PrimitiveEntry _ -> failwith "Primitives not supported"
 
 (* what about the overflow?
   efficiency? extract to bigint using Coq directives and convert to int here? *)

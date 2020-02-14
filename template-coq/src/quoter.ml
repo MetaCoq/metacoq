@@ -69,10 +69,14 @@ sig
   val quote_mind_finiteness : Declarations.recursivity_kind -> quoted_mind_finiteness
   val quote_mutual_inductive_entry :
     quoted_mind_finiteness * quoted_context (* params *) * quoted_ind_entry list *
-    quoted_universes_entry ->
+    quoted_universes_entry * quoted_variance list option ->
     quoted_mind_entry
 
-  val quote_entry : (quoted_definition_entry, quoted_mind_entry) sum option -> quoted_entry
+  val quote_definition_entry : t option -> t -> quoted_universes_entry -> quoted_definition_entry
+  val quote_parameter_entry : t -> quoted_universes_entry -> quoted_parameter_entry
+  val quote_constant_entry : (quoted_definition_entry, quoted_parameter_entry) sum -> quoted_constant_entry
+
+  (* val quote_entry : (quoted_constant_entry, quoted_mind_entry) sum option > quoted_entry *)
 
   val quote_context_decl : quoted_name -> t option -> t -> quoted_context_decl
   val quote_context : quoted_context_decl list -> quoted_context
@@ -472,7 +476,8 @@ since  [absrt_info] is a private type *)
     let envA = Environ.push_rel_context t.mind_entry_params env in
     let is = List.map (quote_one_ind envA envC) t.mind_entry_inds in
     let uctx = quote_universes_entry t.mind_entry_universes in
-    Q.quote_mutual_inductive_entry (mf, mp, is, uctx)
+    let variance = Option.map (CArray.map_to_list Q.quote_variance) t.mind_entry_variance in
+    Q.quote_mutual_inductive_entry (mf, mp, is, uctx, variance)
 
   let quote_constant_body bypass env evm (cd : constant_body) =
     let ty = quote_term env cd.const_type in
@@ -494,26 +499,31 @@ since  [absrt_info] is a private type *)
     in
     (ty, body, quote_universes_entry uctx)
 
-  let quote_entry_aux bypass env evm (name:string) =
-    let (dp, nm) = split_name name in
-    let entry =
-      match Nametab.locate (Libnames.make_qualid dp nm) with
-      | Globnames.ConstRef c ->
-        let cd = Environ.lookup_constant c env in
-        (*CHANGE :  template polymorphism for definitions was removed.
-                    See: https://github.com/coq/coq/commit/d9530632321c0b470ece6337cda2cf54d02d61eb *)
-        Some (Left (quote_constant_body bypass env evm cd))
-      | Globnames.IndRef ni ->
-        let c = Environ.lookup_mind (fst ni) env in (* FIX: For efficienctly, we should also export (snd ni)*)
-        let miq = quote_mut_ind env c in
-        Some (Right miq)
-      | Globnames.ConstructRef _ -> None (* FIX?: return the enclusing mutual inductive *)
-      | Globnames.VarRef _ -> None
-    in entry
+  let quote_constant_entry bypass env evm cd =
+    let (ty, body, univs) = quote_constant_body bypass env evm cd in
+    match body with
+    | None -> Q.quote_constant_entry (Right (Q.quote_parameter_entry ty univs))
+    | Some body -> Q.quote_constant_entry (Left (Q.quote_definition_entry (Some ty) body univs))
 
-  let quote_entry bypass env evm t =
-    let entry = quote_entry_aux bypass env evm t in
-    Q.quote_entry entry
+  (* let quote_entry_aux bypass env evm (name:string) =
+    let (dp, nm) = split_name name in
+    match Nametab.locate (Libnames.make_qualid dp nm) with
+    | Globnames.ConstRef c ->
+      let cd = Environ.lookup_constant c env in
+      (*CHANGE :  template polymorphism for definitions was removed.
+                  See: https://github.com/coq/coq/commit/d9530632321c0b470ece6337cda2cf54d02d61eb *)
+      Q.quote_entry (Left (quote_constant_entry bypass env evm cd))
+    | Globnames.IndRef ni ->
+      let c = Environ.lookup_mind (fst ni) env in (* FIX: For efficienctly, we should also export (snd ni)*)
+      let miq = quote_mut_ind env c in
+      Q.quote_entry (Right miq)
+    | Globnames.ConstructRef _ -> raise Not_found (* FIX?: return the enclusing mutual inductive *)
+    | Globnames.VarRef _ -> raise Not_found
+
+
+  let quote_entry_of bypass env evm t =
+    try Some (quote_entry_aux bypass env evm t)
+    with Not_found -> None *)
 
   let quote_ugraph (g : UGraph.t) =
     Q.quote_univ_constraints (fst (UGraph.constraints_of_universes g))

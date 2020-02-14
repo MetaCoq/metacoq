@@ -265,22 +265,24 @@ struct
     let constypes = to_coq_listl tTerm constypes in
     constr_mkApp (tBuild_one_inductive_entry, [| iname; arity; templatePoly; consnames; constypes |])
 
-  let quote_mutual_inductive_entry (mf, mp, is, mpol) =
+  let quote_mutual_inductive_entry (mf, mp, is, mpol, var) =
     let is = to_coq_listl tOne_inductive_entry (List.map make_one_inductive_entry is) in
     let mpr = constr_mkAppl (cNone, [|bool_type|]) in
-    let mr = constr_mkApp (cNone, [|constr_mkAppl (option_type, [|tident|])|])  in
-    constr_mkApp (tBuild_mutual_inductive_entry, [| mr; mf; mp; is; mpol; mpr |])
+    let mr = constr_mkApp (cNone, [|constr_mkAppl (option_type, [|tident|])|]) in
+    let var = quote_option (constr_mkAppl (tlist, [| tVariance |])) (Option.map (to_coq_listl tVariance) var) in
+    constr_mkApp (tBuild_mutual_inductive_entry, [| mr; mf; mp; is; mpol; var; mpr |])
 
+  let quote_parameter_entry ty univs = 
+    constr_mkApp (cBuild_parameter_entry, [|ty; univs|])
 
-  let quote_constant_entry (ty, body, ctx) =
-    match body with
-    | None ->
-      constr_mkApp (cParameterEntry, [| constr_mkApp (cParameter_entry, [|ty; ctx|]) |])
-    | Some body ->
-      constr_mkApp (cDefinitionEntry,
-                  [| constr_mkApp (cDefinition_entry, [|ty;body;ctx;Lazy.force tfalse (*FIXME*)|]) |])
+  let quote_definition_entry ty body univs = 
+    constr_mkApp (cBuild_definition_entry, [| quote_option (Lazy.force tTerm) ty; body; univs|])
 
-  let quote_entry decl =
+  let quote_constant_entry = function
+    | Left ce ->  constr_mkApp (cDefinitionEntry, [| ce |])
+    | Right pe -> constr_mkApp (cParameterEntry, [| pe |])
+
+  let quote_entry decl = 
     let opType = constr_mkAppl(sum_type, [|tConstant_entry;tMutual_inductive_entry|]) in
     let mkSome c t = constr_mkApp (cSome, [|opType; constr_mkAppl (c, [|tConstant_entry;tMutual_inductive_entry; lazy t|] )|]) in
     let mkSomeDef = mkSome cInl in

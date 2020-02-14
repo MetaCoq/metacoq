@@ -8,7 +8,7 @@ type reduction_strategy = Redexpr.red_expr (* Template.TemplateMonad.Common.redu
 type global_reference = Names.GlobRef.t (* Template.Ast.global_reference *)
 type term = Constr.t  (* Template.Ast.term *)
 type mutual_inductive_body = Declarations.mutual_inductive_body (* Template.Ast.mutual_inductive_body *)
-type constant_entry = Declarations.constant_body (* Template.Ast.constant_entry *)
+type constant_entry = Safe_typing.private_constants Entries.constant_entry (* Template.Ast.constant_entry *)
 type mutual_inductive_entry = Entries.mutual_inductive_entry (* Template.Ast.mutual_inductive_entry *)
 
 let default_flags = Redops.make_red_flag Genredexpr.[FBeta;FMatch;FFix;FCofix;FZeta;FDeltaBut []]
@@ -148,13 +148,53 @@ let tmQuoteUniverses : UGraph.t tm =
   fun env evm success _fail ->
     success env evm (Environ.universes env)
 
+let universes_entry_of_decl ?withctx d =
+  let open Declarations in
+  let open Entries in
+  match d with
+  | Monomorphic ctx -> 
+    (match withctx with
+    | Some ctx' -> Monomorphic_entry (Univ.ContextSet.union ctx ctx')
+    | None -> Monomorphic_entry ctx)
+  | Polymorphic ctx -> 
+    assert(Option.is_empty withctx);
+    Polymorphic_entry (Univ.AUContext.names ctx, Univ.AUContext.repr ctx)
+
+let constant_entry_of_cb (cb : Declarations.constant_body) =
+  let open Declarations in
+  let open Entries in
+  let secctx = match cb.const_hyps with [] -> None | l -> Some l in
+  let with_body_opaque b ?withctx opaque =
+    Entries.{ const_entry_secctx = secctx;
+    const_entry_feedback = None;
+    const_entry_type = Some cb.const_type;
+    const_entry_body = Future.from_val ((b, Univ.ContextSet.empty), Safe_typing.empty_private_constants);
+    const_entry_universes = universes_entry_of_decl ?withctx cb.const_universes;
+    const_entry_opaque = opaque;
+    const_entry_inline_code = cb.const_inline_code }
+  in
+  let parameter inline =
+    (secctx, (cb.const_type, universes_entry_of_decl cb.const_universes), inline)
+  in
+  match cb.const_body with
+  | Def b -> DefinitionEntry (with_body_opaque (Mod_subst.force_constr b) false)
+  | Undef inline -> ParameterEntry (parameter inline)
+  | OpaqueDef pr -> 
+    let opaquetab = Global.opaque_tables () in
+    let proof = Opaqueproof.force_proof opaquetab pr in
+    let ctx = Opaqueproof.force_constraints opaquetab pr in
+    DefinitionEntry (with_body_opaque proof ~withctx:ctx true)
+  | Primitive _ -> failwith "Primitives not supported by TemplateCoq"
+
+
 (* get the definition associated to a kername *)
 let tmQuoteConstant (kn : kername) (bypass : bool) : constant_entry tm =
   fun env evd success fail ->
     (* todo(gmm): there is a bug here *)
     try
       let cnst = Environ.lookup_constant (Names.Constant.make1 kn) env in
-      success env evd cnst
+      let entry = constant_entry_of_cb cnst in
+      success env evd entry
     with
       Not_found -> fail Pp.(str "constant not found " ++ Names.KerName.print kn)
 

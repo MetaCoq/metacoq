@@ -146,7 +146,7 @@ struct
 
   let get_level evm s =
     if CString.string_contains ~where:s ~what:"." then
-      match List.rev (CString.split '.' s) with
+      match List.rev (CString.split_on_char '.' s) with
       | [] -> CErrors.anomaly (str"Invalid universe name " ++ str s ++ str".")
       | n :: dp ->
         let num = int_of_string n in

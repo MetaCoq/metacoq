@@ -67,7 +67,6 @@ Program Fixpoint check_wf_env_only_univs (Σ : global_env)
     match udecl with
         | Monomorphic_ctx _ => ret (G'; _)
         | Polymorphic_ctx _ => ret (G.π1; _)
-        | Cumulative_ctx _ => ret (G.π1; _)
         end
     end.
   Next Obligation.
@@ -115,19 +114,6 @@ Program Fixpoint check_wf_env_only_univs (Σ : global_env)
       destruct g. destruct c, cst_universes; try discriminate; reflexivity.
       destruct m, ind_universes; try discriminate; reflexivity. }
     rewrite eq. symmetry; apply add_uctx_make_graph.
-  Qed.
-  Next Obligation.
-    split; sq. 2: constructor; tas.
-    unfold global_uctx; simpl.
-    assert (eq1: monomorphic_levels_decl g = LevelSet.empty). {
-      destruct g. destruct c, cst_universes; try discriminate; reflexivity.
-      destruct m, ind_universes; try discriminate; reflexivity. }
-    rewrite eq1; clear eq1.
-    assert (eq1: monomorphic_constraints_decl g = ConstraintSet.empty). {
-      destruct g. destruct c, cst_universes; try discriminate; reflexivity.
-      destruct m, ind_universes; try discriminate; reflexivity. }
-    rewrite eq1; clear eq1.
-    assumption.
   Qed.
   Next Obligation.
     split; sq. 2: constructor; tas.

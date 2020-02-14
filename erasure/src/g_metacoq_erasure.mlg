@@ -2,6 +2,8 @@
 
 DECLARE PLUGIN "metacoq_erasure_plugin"
 
+{
+
 open Stdarg
 open Pp
 open PeanoNat.Nat
@@ -41,11 +43,13 @@ let check env evm c =
   match erase with
   | Coq_inl s -> Feedback.msg_info (pr_char_list s)
   | Coq_inr s -> CErrors.user_err ~hdr:"metacoq" (pr_char_list s)
+}
 
 VERNAC COMMAND EXTEND MetaCoqErase CLASSIFIED AS QUERY
-| [ "MetaCoq" "Erase" constr(c) ] -> [
-    let (evm,env) = Pfedit.get_current_context () in
+| [ "MetaCoq" "Erase" constr(c) ] -> {
+    let env = Global.env () in
+    let evm = Evd.from_env env in
     let (c, _) = Constrintern.interp_constr env evm c in
     check env evm c
-  ]
+  }
 END

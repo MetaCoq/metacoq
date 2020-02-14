@@ -43,7 +43,7 @@ src/wGraph.mli
 src/checker0.mli
 src/checker0.ml
 
-src/g_metacoq_checker.ml4
+src/g_metacoq_checker.mlg
 src/metacoq_checker_plugin.mlpack
 
 theories/Loader.v

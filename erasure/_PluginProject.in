@@ -115,7 +115,7 @@ src/ePretty.ml
 
 src/safeTemplateErasure.mli
 src/safeTemplateErasure.ml
-src/g_metacoq_erasure.ml4
+src/g_metacoq_erasure.mlg
 src/metacoq_erasure_plugin.mlpack
 
 theories/Loader.v

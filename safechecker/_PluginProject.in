@@ -88,7 +88,7 @@ src/pCUICSafeChecker.ml
 src/safeTemplateChecker.mli
 src/safeTemplateChecker.ml
 
-src/g_metacoq_safechecker.ml4
+src/g_metacoq_safechecker.mlg
 src/metacoq_safechecker_plugin.mlpack
 
 theories/Loader.v

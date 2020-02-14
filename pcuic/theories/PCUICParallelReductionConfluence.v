@@ -1561,7 +1561,7 @@ Section Confluence.
       destruct t0; try discriminate || reflexivity.
       destruct t0; try discriminate || reflexivity.
     Qed.
-    Hint Resolve inst_is_constructor.
+    Hint Resolve inst_is_constructor : core.
 
     Lemma map_fix_subst f g mfix :
       (forall n, tFix (map (map_def f g) mfix) n = f (tFix mfix n)) ->
@@ -2020,7 +2020,7 @@ Section Confluence.
     induction 1.
     intros. rewrite shiftn0. apply H.
     intros. simpl.
-    rewrite shiftnS. apply shiftn1_renaming. apply IHAll2i; try lia. auto.
+    rewrite shiftnS. apply shiftn1_renaming. apply IHX; try lia. auto.
     apply r0.
   Qed.
 

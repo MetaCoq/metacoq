@@ -116,7 +116,7 @@ Proof.
   generalize #|mfix| at 2 3. induction n0; auto. simpl.
   f_equal. apply IHn0.
 Qed.
-Hint Resolve lift_unfold_fix.
+Hint Resolve lift_unfold_fix : pcuic.
 
 Lemma lift_unfold_cofix n k mfix idx narg fn :
   unfold_cofix mfix idx = Some (narg, fn) ->
@@ -131,13 +131,13 @@ Proof.
   generalize #|mfix| at 2 3. induction n0; auto. simpl.
   f_equal. apply IHn0.
 Qed.
-Hint Resolve lift_unfold_cofix.
+Hint Resolve lift_unfold_cofix : pcuic.
 
 Lemma decompose_app_rec_lift n k t l :
   let (f, a) := decompose_app_rec t l in
   decompose_app_rec (lift n k t) (map (lift n k) l)  = (lift n k f, map (lift n k) a).
 Proof.
-  induction t in k, l |- *; simpl; auto.
+  induction t in k, l |- *; simpl; auto with pcuic.
 
   - destruct Nat.leb; reflexivity.
   - specialize (IHt1 k (t2 :: l)).
@@ -164,7 +164,7 @@ Proof.
   eapply decompose_app_lift in Heq as ->.
   destruct t0; try discriminate || reflexivity.
 Qed.
-Hint Resolve lift_is_constructor.
+Hint Resolve lift_is_constructor : core.
 
 Hint Rewrite lift_subst_instance_constr : lift.
 Hint Rewrite lift_mkApps : lift.
@@ -602,7 +602,7 @@ Proof.
   remember (Γ ,,, Γ') as Γ0. revert Γ Γ' Γ'' HeqΓ0.
   induction H using red1_ind_all in |- *; intros Γ0 Γ' Γ'' HeqΓ0; try subst Γ; simpl;
     autorewrite with lift;
-    try solve [  econstructor; eauto ].
+    try solve [  econstructor; eauto with pcuic ].
 
   - elim (leb_spec_Set); intros Hn.
     + rewrite -> simpl_lift; try lia. rewrite -> Nat.add_succ_r.
@@ -614,7 +614,7 @@ Proof.
       rewrite -> (weaken_nth_error_lt Hn).
       now unfold lift_decl; rewrite -> option_map_decl_body_map_decl, H.
 
-  - econstructor; eauto.
+  - econstructor; eauto with pcuic.
     rewrite H0. f_equal.
     eapply (lookup_on_global_env _ _ _ _ wfΣ) in H.
     destruct H as [Σ' [wfΣ' decl']].

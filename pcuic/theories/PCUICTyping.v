@@ -868,7 +868,7 @@ Definition wf_ext `{checker_flags} := on_global_env_ext (lift_typing typing).
 Lemma wf_ext_wf {cf:checker_flags} Σ : wf_ext Σ -> wf Σ.
 Proof. intro H; apply H. Qed.
 
-Hint Resolve wf_ext_wf.
+Hint Resolve wf_ext_wf : core.
 
 Lemma wf_ext_consistent {cf:checker_flags} Σ :
   wf_ext Σ -> consistent Σ.
@@ -876,7 +876,7 @@ Proof.
   intros [? [? [? [? ?]]]]; assumption.
 Qed.
 
-Hint Resolve wf_ext_consistent.
+Hint Resolve wf_ext_consistent : core.
 
 
 Definition env_prop `{checker_flags} (P : forall Σ Γ t T, Type) :=

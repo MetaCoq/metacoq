@@ -395,7 +395,7 @@ Definition nl_mutual_inductive_body m :=
     m.(ind_npars)
     (nlctx m.(ind_params))
     (map nl_one_inductive_body m.(ind_bodies))
-    m.(ind_universes).
+    m.(ind_universes) m.(ind_variance).
 
 Definition nl_global_decl (d : global_decl) : global_decl :=
   match d with

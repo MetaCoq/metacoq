@@ -40,7 +40,7 @@ Definition atom t :=
 
 Lemma red1_red (Σ : global_env) Γ t u : red1 Σ Γ t u -> red Σ Γ t u.
 Proof. econstructor; eauto. constructor. Qed.
-Hint Resolve red1_red refl_red.
+Hint Resolve red1_red refl_red : core pcuic.
 
 Lemma red_step Σ Γ t u v : red1 Σ Γ t u -> red Σ Γ u v -> red Σ Γ t v.
 Proof.

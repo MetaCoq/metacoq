@@ -178,10 +178,9 @@ Lemma consistent_instance_no_prop lvs φ uctx u :
   consistent_instance lvs φ uctx u
   -> forallb (fun x => negb (Level.is_prop x)) u.
 Proof.
-  unfold consistent_instance. destruct uctx as [ctx|ctx|ctx].
+  unfold consistent_instance. destruct uctx as [ctx|ctx].
   1: destruct u; [reflexivity|discriminate].
-  2: destruct ctx as [ctx ?].
-  all: destruct (AUContext.repr ctx); intro H; apply H.
+  intuition auto.
 Qed.
 
 Hint Resolve consistent_instance_no_prop : univ_subst.
@@ -190,10 +189,9 @@ Lemma consistent_instance_declared lvs φ uctx u :
   consistent_instance lvs φ uctx u
   -> forallb (fun l => LS.mem l lvs) u.
 Proof.
-  unfold consistent_instance. destruct uctx as [ctx|ctx|ctx].
+  unfold consistent_instance. destruct uctx as [ctx|ctx].
   1: destruct u; [reflexivity|discriminate].
-  2: destruct ctx as [ctx ?].
-  all: destruct (AUContext.repr ctx); intro H; apply H.
+  intuition auto.
 Qed.
 
 Lemma monomorphic_level_notin_AUContext s φ :
@@ -274,7 +272,7 @@ Proof.
     destruct Hl as [Hl|Hl]; subst; reflexivity.
   - subst univs. intros l Hl. simpl in Hl; apply LS.union_spec in Hl.
     destruct Hl as [Hl|Hl]; auto. clear -Hu Hl.
-    destruct d as [[? ? [φ|?|?]]|[? ? ? ? [φ|?|?]]]; cbn in *;
+    destruct d as [[? ? [φ|?]]|[? ? ? ? [φ|?]]]; cbn in *;
       unfold monomorphic_levels_decl in *; cbn in *;
       try now apply LS.empty_spec in Hl.
     all: destruct Hu as [_ [_ [Hu _]]];
@@ -307,7 +305,7 @@ Proof.
   - subst univs. intro Hc. simpl in *; apply CS.union_spec in Hc.
     destruct Hc as [Hc|Hc]; auto.
     + clear -Hu Hc.
-      destruct d as [[? ? [φ|?|?]]|[? ? ? ? [φ|?|?]]]; cbn in *;
+      destruct d as [[? ? [φ|?]]|[? ? ? ? [φ|?]]]; cbn in *;
         unfold monomorphic_levels_decl, monomorphic_constraints_decl in *; cbn in *;
           try now apply CS.empty_spec in Hc.
       all: destruct Hu as [_ [Hu [_ _]]].
@@ -468,7 +466,7 @@ Proof.
        -- apply LevelSet_mem_union; right; apply global_levels_Prop.
        -- apply LevelSet_mem_union; right; apply global_levels_Set.
        -- apply LS.mem_spec in H.
-          destruct φ as [φ|[φ1 φ2]|[[φ1 φ2] φ3]]; simpl in *.
+          destruct φ as [φ|[φ1 φ2]]; simpl in *.
           1: apply Hφ in H. 1: now apply LS.mem_spec.
           all: now apply monomorphic_level_notin_AUContext in H.
        -- apply consistent_instance_declared in H2.
@@ -477,7 +475,7 @@ Proof.
           apply LevelSet_mem_union; right; apply global_levels_Set.
   + unfold consistent_instance_ext, consistent_instance in H2.
     unfold valid_constraints in *; destruct check_univs; [|trivial].
-    destruct φ as [φ|[φ1 φ2]|[[φ1 φ2] φ3]]; simpl in *.
+    destruct φ as [φ|[φ1 φ2]]; simpl in *.
     * intros v Hv. rewrite <- subst_instance_cstrs_two.
       apply satisfies_subst_instance_ctr; tas.
       apply H3. apply satisfies_subst_instance_ctr; tas.
@@ -487,8 +485,6 @@ Proof.
       -- apply satisfies_union in Hv; apply Hv.
     * destruct H2 as [_ [_ [_ H2]]].
       eapply consistent_ext_trans_polymorphic_case_aux; try eassumption.
-    * destruct H2 as [_ [_ [_ H2]]].
-      eapply (consistent_ext_trans_polymorphic_case_aux HΣφ); eassumption.
 Qed.
 
 Lemma consistent_ext_trans Σ φ φ' udecl inst inst' :
@@ -498,12 +494,10 @@ Lemma consistent_ext_trans Σ φ φ' udecl inst inst' :
   consistent_instance_ext (Σ, φ') φ inst' ->
   consistent_instance_ext (Σ, φ') udecl (subst_instance_instance inst' inst).
 Proof.
-  intros HΣφ Hφ H1 H2. destruct udecl as [?|udecl|[udecl ?]].
+  intros HΣφ Hφ H1 H2. destruct udecl as [?|udecl].
   - (* udecl monomorphic *)
     cbn; now rewrite subst_instance_instance_length.
   - (* udecl polymorphic *)
-    eapply consistent_ext_trans_polymorphic_cases; eassumption.
-  - (* udecl cumulative *)
     eapply consistent_ext_trans_polymorphic_cases; eassumption.
 Qed.
 
@@ -523,15 +517,12 @@ Proof.
   unfold valid_constraints; case_eq check_univs; [intro Hcf|trivial].
   intros v Hv. apply satisfies_subst_instance_ctr; tas.
   apply satisfies_union; simpl; split.
-  - destruct φ as [φ|[φ1 φ2]|[[φ1 φ2] ?]].
+  - destruct φ as [φ|[φ1 φ2]].
     + cbn. apply satisfies_subst_instance_ctr; tas.
       rewrite equal_subst_instance_cstrs_mono; aa.
       * rewrite <- Hsub in Hv; assumption.
       * intros c Hc; eapply monomorphic_global_constraint_ext; tea.
         apply CS.union_spec; now left.
-    + destruct HH as [_ [_ [_ H1]]].
-      unfold valid_constraints in H1; rewrite Hcf in H1.
-      apply satisfies_subst_instance_ctr; aa.
     + destruct HH as [_ [_ [_ H1]]].
       unfold valid_constraints in H1; rewrite Hcf in H1.
       apply satisfies_subst_instance_ctr; aa.
@@ -668,7 +659,7 @@ Proof.
     apply LS.mem_spec, global_levels_Set.
   - apply LS.union_spec in H; destruct H as [H|H]; simpl in *.
     + apply H0. destruct Σ as [? φ]; cbn in *; clear -H.
-      destruct φ as [?|?|[? ?]]; tas;
+      destruct φ as [?|?]; tas;
         now apply monomorphic_level_notin_AUContext in H.
     + apply LS.union_spec; now right.
   - apply consistent_instance_declared in H'.
@@ -1349,9 +1340,9 @@ Lemma weaken_lookup_on_global_env'' Σ c decl :
 Proof.
   intros X1 X2; pose proof (weaken_lookup_on_global_env' _ _ _ X1 X2) as XX.
   set (φ := universes_decl_of_decl decl) in *; clearbody φ. clear -XX.
-  destruct φ as [φ|φ|φ].
-  1: split; apply XX.
-  all: split;
+  destruct φ as [φ|φ].
+  - split; apply XX.
+  - split;
     [apply LevelSetProp.subset_empty|apply ConstraintSetProp.subset_empty].
 Qed.
 

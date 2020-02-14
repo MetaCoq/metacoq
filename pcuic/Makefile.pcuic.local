@@ -1,3 +1,3 @@
 post-all::
-	echo "All done, moving extraction files!"
-	./clean_extraction.sh
+	# echo "All done, moving extraction files!"
+	# ./clean_extraction.sh

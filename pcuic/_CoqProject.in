@@ -47,4 +47,7 @@ theories/PCUICSafeLemmata.v
 theories/TemplateToPCUIC.v
 theories/TemplateToPCUICCorrectness.v
 # theories/All.v
-theories/Extraction.v
+
+# To do separate extraction of the files, not working currently
+# due to ssreflect's definition of [over].
+# theories/Extraction.v

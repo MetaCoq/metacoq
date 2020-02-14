@@ -48,7 +48,8 @@ Definition update_mib_universes univs mib :=
      Ast.ind_universes := match mib.(Ast.ind_universes) with
                           | Monomorphic_ctx _ => Monomorphic_ctx univs
                           | x => x
-                          end |}.
+                          end;
+     Ast.ind_variance := mib.(Ast.ind_variance) |}.
 
 Definition update_universes (univs : ContextSet.t) (cb : Ast.global_decl)  :=
   match cb with

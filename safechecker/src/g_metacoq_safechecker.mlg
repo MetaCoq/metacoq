@@ -2,6 +2,8 @@
 
 DECLARE PLUGIN "metacoq_safechecker_plugin"
 
+{
+
 open Stdarg
 open Pp
 open PeanoNat.Nat
@@ -32,23 +34,32 @@ let check env evm (c, ustate) =
   match check with
   | Coq_inl s -> Feedback.msg_info (pr_char_list s)
   | Coq_inr s -> CErrors.user_err ~hdr:"metacoq" (pr_char_list s)
+}
 
 VERNAC COMMAND EXTEND MetaCoqSafeCheck CLASSIFIED AS QUERY
-| [ "MetaCoq" "SafeCheck" constr(c) ] -> [
-    let (evm,env) = Pfedit.get_current_context () in
+| [ "MetaCoq" "SafeCheck" constr(c) ] -> {
+    let env = Global.env () in
+    let evm = Evd.from_env env in
     let c = Constrintern.interp_constr env evm c in
     check env evm c
-  ]
+  }
 END
+
+{
 
 let retypecheck_term_dependencies env gr =
   let typecheck env c = ignore (Typeops.infer env c) in
   let typecheck_constant c =
     let auctx = Environ.constant_context env c in
-    let fakeinst = Univ.AUContext.instance auctx in
-    let cu = (c, fakeinst) in
+    let names = Univ.AUContext.names auctx in
+    let dp = Names.DirPath.make [Names.Id.of_string "MetaCoq"; Names.Id.of_string "Retypecheck"] in
+    let fake_level i _ =
+     Univ.Level.make (Univ.Level.UGlobal.make dp i)
+    in
+    let fake_inst = Univ.Instance.of_array (Array.mapi fake_level names) in
+    let cu = (c, fake_inst) in
     let cbody, ctype, cstrs = Environ.constant_value_and_type env cu in
-    let env' = Environ.push_context (Univ.UContext.make (fakeinst, cstrs)) env in
+    let env' = Environ.push_context (Univ.UContext.make (fake_inst, cstrs)) env in
     typecheck env' ctype;
     Option.iter (typecheck env') cbody
   in
@@ -64,6 +75,7 @@ let retypecheck_term_dependencies env gr =
         | Constant c -> typecheck_constant c
         | Positive mi -> () (* typecheck_inductive mi *)
         | Guarded c -> typecheck_constant c
+        | TemplatePolymorphic mi -> ()
       end
     | Opaque c | Transparent c -> typecheck_constant c
   in Printer.ContextObjectMap.iter process_object deps
@@ -73,10 +85,12 @@ let kern_check env evm gr =
     let () = time (str"Coq kernel checking") (retypecheck_term_dependencies env) gr in
     Feedback.msg_info (Printer.pr_global gr ++ str " and all its dependencies are well-typed.")
   with e -> raise e
+}
 
 VERNAC COMMAND EXTEND MetaCoqCoqCheck CLASSIFIED AS QUERY
-| [ "MetaCoq" "CoqCheck" global(c) ] -> [
-    let (evm,env) = Pfedit.get_current_context () in
+| [ "MetaCoq" "CoqCheck" global(c) ] -> {
+    let env = Global.env () in
+    let evm = Evd.from_env env in
     kern_check env evm (Nametab.global c)
-  ]
+  }
 END

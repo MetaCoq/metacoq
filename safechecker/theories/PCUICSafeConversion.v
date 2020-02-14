@@ -55,12 +55,10 @@ Proof.
               destruct cst_universes ; [
                 eapply (HH (l, ct, l') Hctr)
               | apply ConstraintSetFact.empty_iff in Hctr ; contradiction
-              | apply ConstraintSetFact.empty_iff in Hctr; contradiction
               ].
            ++ destruct decl. simpl in *.
               destruct ind_universes ; [
                 eapply (HH (l, ct, l') Hctr)
-              | apply ConstraintSetFact.empty_iff in Hctr; contradiction
               | apply ConstraintSetFact.empty_iff in Hctr; contradiction
               ].
         -- inversion HΣ. subst.
@@ -71,12 +69,10 @@ Proof.
               destruct cst_universes ; [
                 eapply (HH (l, ct, l') Hctr)
               | apply ConstraintSetFact.empty_iff in Hctr; contradiction
-              | apply ConstraintSetFact.empty_iff in Hctr; contradiction
               ].
            ++ destruct decl. simpl in *.
               destruct ind_universes; [
                 eapply (HH (l, ct, l') Hctr)
-              | apply ConstraintSetFact.empty_iff in Hctr; contradiction
               | apply ConstraintSetFact.empty_iff in Hctr; contradiction
               ].
       * inversion HΣ. subst.

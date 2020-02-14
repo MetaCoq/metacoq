@@ -717,8 +717,7 @@ Section Typecheck.
     := match uctx with
        | Monomorphic_ctx _ =>
          check_eq_nat #|u| 0 (Msg "monomorphic instance should be of length 0")
-       | Polymorphic_ctx (inst, cstrs)
-       | Cumulative_ctx ((inst, cstrs), _) =>
+       | Polymorphic_ctx (inst, cstrs) =>
          let '(inst, cstrs) := AUContext.repr (inst, cstrs) in
          check_eq_true (forallb (fun l => match no_prop_of_level l with
                                        | Some l => wGraph.VSet.mem l (uGraph.wGraph.V G)
@@ -746,19 +745,6 @@ Section Typecheck.
     - now rewrite mapi_length in X.
     - eapply check_constraints_spec; eauto.
   Qed.
-  Next Obligation.
-    eapply forallb_All in H. eapply All_forallb'; tea.
-    clear. intros []; cbnr; trivial.
-  Qed.
-  Next Obligation.
-    repeat split.
-    - eapply forallb_All in H. eapply All_forallb'; tea.
-      intros []; simpl. discriminate.
-      all: apply is_graph_of_uctx_levels.
-    - now rewrite mapi_length in X.
-    - eapply check_constraints_spec; eauto.
-  Qed.
-
 
   Definition eqb_opt_term (t u : option term) :=
     match t, u with
@@ -1611,7 +1597,6 @@ Section CheckEnv.
         match udecl with
         | Monomorphic_ctx _ => ret (G'; _)
         | Polymorphic_ctx _ => ret (G.π1; _)
-        | Cumulative_ctx _ => ret (G.π1; _)
         end
     end.
   Next Obligation.
@@ -1673,20 +1658,6 @@ Section CheckEnv.
     rewrite eq1; clear eq1.
     assumption.
   Qed.
-  Next Obligation.
-    split; sq. 2: constructor; tas.
-    unfold global_uctx; simpl.
-    assert (eq1: monomorphic_levels_decl g = LevelSet.empty). {
-      destruct g. destruct c, cst_universes; try discriminate; reflexivity.
-      destruct m, ind_universes; try discriminate; reflexivity. }
-    rewrite eq1; clear eq1.
-    assert (eq1: monomorphic_constraints_decl g = ConstraintSet.empty). {
-      destruct g. destruct c, cst_universes; try discriminate; reflexivity.
-      destruct m, ind_universes; try discriminate; reflexivity. }
-    rewrite eq1; clear eq1.
-    assumption.
-  Qed.
-
 
   Lemma wf_consistent Σ : wf Σ -> consistent (global_constraints Σ).
   Proof.
@@ -1700,9 +1671,9 @@ Section CheckEnv.
       apply ConstraintSet.union_spec; simpl.
       + left. destruct d.
         destruct c, cst_universes. assumption.
-        1-2: apply ConstraintSetFact.empty_iff in H; contradiction.
+        apply ConstraintSetFact.empty_iff in H; contradiction.
         destruct m, ind_universes. assumption.
-        1-2: apply ConstraintSetFact.empty_iff in H; contradiction.
+        apply ConstraintSetFact.empty_iff in H; contradiction.
       + apply ConstraintSet.union_spec; simpl.
         now right.
   Qed.

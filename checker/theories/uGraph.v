@@ -759,8 +759,8 @@ Proof.
     destruct He as [[l [Hl He]]|[gc [Hgc He]]].
     + subst e. split. rewrite source_edge_of_level. apply Hi.
       rewrite target_edge_of_level; tas.
-    + subst e. split. destruct gc; try apply (Hi..2 _ Hgc). apply Hi.
-      destruct gc; try apply (Hi..2 _ Hgc). apply Hi.
+    + subst e. split. destruct gc; try apply (Hi.p2 _ Hgc). apply Hi.
+      destruct gc; try apply (Hi.p2 _ Hgc). apply Hi.
   - apply Hi.
   - cbn. intros l Hl. sq. destruct l. constructor.
     econstructor. 2: constructor.
@@ -872,7 +872,7 @@ Section MakeGraph.
       intros x y []; reflexivity.
       intros gc Hgc.
       pose proof (proj2 (make_graph_E uctx (edge_of_constraint gc)) (or_intror (ex_intro _ gc (conj Hgc eq_refl)))) as XX.
-      specialize (H..2 _ XX).
+      specialize (H.p2 _ XX).
       destruct gc; intro HH; try apply PeanoNat.Nat.leb_le.
       4: apply PeanoNat.Nat.eqb_eq.
       cbn in *; unfold gc_val0; lia.
@@ -1154,7 +1154,7 @@ Section CheckLeq.
   Proof.
     intros X. red in X. subst G. simpl in X.
     destruct l as [|[l|l]]; cbn.
-    - now left; rewrite X..1.
+    - now left; rewrite X.p1.
     - generalize (L (mLevel l)). clear. intro.
       destruct n. now right. left.
       rewrite <- Pos.of_nat_succ. lia.
@@ -1168,7 +1168,7 @@ Section CheckLeq.
   (* Proof. *)
   (*   intros X Hl. red in X. subst G. simpl in X. *)
   (*   destruct l as [|[l|l]]; cbn. *)
-  (*   - now rewrite X..1. *)
+  (*   - now rewrite X.p1. *)
   (*   - revert Hl. generalize (L (mLevel l)). clear. intro. *)
   (*     destruct n; simpl; try lia. intros _. *)
   (*     f_equal. destruct n; try lia. *)
@@ -1378,13 +1378,100 @@ Section CheckLeq.
     | NEL.cons x _ => x
     end.
 
+  Definition no_prop_expr := no_prop_level × bool.
+
+  Definition no_prop_univ := list no_prop_expr.
+
+  Definition lab1 (l : labelling) (e : no_prop_expr) :=
+    if e.2 then S (l e.1) else l e.1.
+
+  Definition lab (l : labelling) (u : no_prop_univ) :=
+    List.fold_right (fun e n => Z.max n (Z.of_nat (lab1 l e))) (-1)%Z u.
+
+  Fixpoint fold_left {A} {B : Set} (f : A -> B -> A) (l : t B) (a0 : A) : A :=
+    match l with
+    | [b] => f a0 b
+    | b :: l => fold_left f l (f a0 b)
+    end.
+
+  Fixpoint NEL_ fold_right {A} {B : Set} (f : B -> A -> A) (x0 : A) (l : NEL.t B) : A
+
+
+  Definition no_prop_of_univ (u : universe) : no_prop_univ :=
+    NEL.fold_left (fun L e => match no_prop_of_level e.1 with
+                           | Some l => (l, e.2) :: L
+                           | None => L
+                           end) u [].
+
+  Lemma val_no_prop_of_univ v u :
+    lab (labelling_of_valuation v) (no_prop_of_univ u) = val v u.
+  Proof.
+    unfold lab, val.
+    destruct u as [e|[l b] u]; simpl.
+    - destruct e as [[] []]; cbnr; lia.
+    - simpl. cbn.
+  Admitted.
+
+  Lemma In_prop_pro_univ (u : universe) e :
+    In e (no_prop_of_univ u) -> In (level_of_no_prop e.1, e.2) u.
+  Proof.
+    induction u as [e'|e' u].
+    - destruct e' as [[] b]; cbn. intros [].
+      all: intros [<-|[]]; left; reflexivity.
+    - cbn. simpl. cbn.
+    intros u e H1.
+
+  Definition Nbar_suc : Nbar.t -> Nbar.t := option_map S.
+
+  Definition lsp_e G s (e : no_prop_expr) :=
+    if e.2 then Nbar_suc (lsp G s e.1) else lsp G s e.1.
+
+  Lemma gc_leq_universe_n_cons000 k (u : universe) :
+      gc_levels_declared u ->
+      (forall v, gc_satisfies v uctx.2 -> (Z.of_nat k <= val v u)%Z) ->
+      exists e', In e' u
+            /\ forall v, gc_satisfies v uctx.2 -> (Z.of_nat k <= val1 v e')%Z.
+  Proof.
+    intros Hu Hku.
+    case_eq (existsb (fun e => Nbar.le_dec (Some k) (lsp_e G lSet e))
+                     (no_prop_of_univ u)).
+    - intro H; apply existsb_exists in H as [e [H1 H2]].
+      exists (level_of_no_prop e.1, e.2). split.
+        
+
+  Admitted.
+
+  Lemma gc_leq_universe_n_cons00 k (u : universe) :
+      gc_levels_declared u ->
+      (forall v, gc_satisfies v uctx.2 -> (k <= val v u)%Z) ->
+      exists e', In e' u
+            /\ forall v, gc_satisfies v uctx.2 -> (k <= val1 v e')%Z.
+  Proof.
+    intros Hu Hku.
+    destruct (ZArith_dec.Z_le_gt_dec k (-1)).
+    - exists (NEL_head u). split.
+      destruct u; now constructor.
+      intros v Hv. destruct (NEL_head u) as [[] []]; cbn; lia.
+    - pose proof (gc_leq_universe_n_cons000 (Z.to_nat k) u Hu) as H.
+      rewrite Znat.Z2Nat.id in H; [|lia]. now apply H.
+  Qed.
+
   Lemma gc_leq_universe_n_cons0 n e k (u : universe) :
       gc_levels_declared u ->
       gc_leq_universe_n n uctx.2 (Universe.make' e) u ->
       (forall v, gc_satisfies v uctx.2 -> val1 v e = k) ->
       exists e', In e' u
             /\ gc_leq_universe_n n uctx.2 (Universe.make' e) (Universe.make' e').
-    Admitted.
+  Proof.
+    unfold gc_leq_universe_n. cbn.
+    intros Hu Heu He.
+    pose proof (gc_leq_universe_n_cons00 (Z.of_nat n + k) u Hu) as XX.
+    forward XX. {
+      intros v Hv. specialize (Heu v Hv). specialize (He v Hv).
+      now rewrite He in Heu. }
+    destruct XX as [e' [X1 X2]]. exists e'. split; tas.
+    intros v Hv. specialize (X2 v Hv). now rewrite (He v Hv).
+  Qed.
 
 Require Import ssreflect.
 

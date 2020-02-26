@@ -1416,6 +1416,18 @@ Import Nbar.
   (*       rewrite val_cons. cbn in *. lia. *)
   (* Qed. *)
 
+  Lemma leqb_expr_S_n_Prop_Set n e
+        (He : gc_expr_declared e)
+    : leqb_expr_n (Datatypes.S n) UnivExpr.prop e = leqb_expr_n n UnivExpr.set e.
+  Proof.
+    destruct e as [|[l []]]; cbnr.
+    destruct n; cbnr.
+    symmetry. apply leqb_no_prop_n_spec; tas. apply Huctx.
+    intros v Hv; cbn.
+    destruct l; cbn; lled; lia.
+  Qed.
+
+
   Lemma leqb_expr_univ_n_spec n e1 u
         (He1 : gc_expr_declared e1)
         (Hu  : gc_levels_declared u)
@@ -1435,13 +1447,27 @@ Import Nbar.
       split. apply Hu. apply Universe.In_exprs. left. now rewrite ee.
       apply Forall_forall. intros e' He'. apply Hu.
       apply Universe.In_exprs. right. now rewrite ee. }
-    pose proof (no_prop_not_zero_le_zero _ _ Hp) as Hp'; clear Hp.
-    red in HH; cbn in HH.
-    assert (H: forall v, gc_satisfies v uctx.2 -> (Z.of_nat n + val v e1 <=
-               fold_right (fun e x => Z.max (val v e) x) (val v e) (List.rev u'))%u). {
-      intro v; specialize (HH v); rewrite val_fold_right, ee in HH; apply HH. }
-
-    destruct e1 as [|[l1 b1]]. exact (todo "Prop case").
+    (* We replace the Prop+1 case by Set *)
+    assert (exists l1 b1 n', let e1' := UnivExpr.npe (l1, b1) in
+                        gc_expr_declared e1' /\
+                        gc_leq_universe_n n' uctx.2 (Universe.make' e1') u /\
+                        fold_left (fun b e2 => leqb_expr_n n e1 e2 || b) u'
+                                  (leqb_expr_n n e1 e) =
+                        fold_left (fun b e2 => leqb_expr_n n' e1' e2 || b) u'
+                                  (leqb_expr_n n' e1' e)) as XX. {
+      destruct e1 as [|[l1 b1]]; [|exists l1, b1, n; repeat split; tas].
+      destruct n as [|n]; [discriminate|]; clear Hp.
+      exists NoPropLevel.lSet, false, n. repeat split.
+      - apply Huctx.
+      - intros v Hv; specialize (HH v Hv); cbn in *. lled; lia.
+      - clear ee u Hu HH. rewrite <- !fold_left_rev_right.
+        destruct Hu' as [He Hu']. apply rev_Forall in Hu'.
+        induction (List.rev u'); cbn -[leqb_expr_n].
+        + apply leqb_expr_S_n_Prop_Set; tas.
+        + inv Hu'. f_equal. apply leqb_expr_S_n_Prop_Set; tas.
+          apply IHl; tas. }
+    clear He1 HH Hp.
+    destruct XX as [l1 [b1 [n' [He1 [HH XX]]]]]; rewrite XX; clear XX e1.
     apply gc_leq_universe_n_sup in HH; tas.
     2:{ red. now rewrite NoPropLevel.of_to_level. }
     destruct HH as [e' [He' HH]]. apply leqb_expr_n_spec in HH; tas.
@@ -1449,19 +1475,10 @@ Import Nbar.
     apply Universe.In_exprs in He'. rewrite ee in He'; cbn in He'.
     rewrite <- !fold_left_rev_right.
     clear -He' HH. destruct He' as [H|H]; [subst|].
-    - induction (List.rev u'); tas; cbn. now rewrite IHl, orb_true_r.
+    - induction (List.rev u'); tas. cbn -[leqb_expr_n]. now rewrite IHl, orb_true_r.
     - apply In_rev in H. change (@In UnivExpr.t e' (List.rev u')) in H.
       induction (List.rev u'); tas; cbn -[leqb_expr_n]; invs H.
       now rewrite HH. now rewrite IHl, orb_true_r.
-
-    (* clear HH u ee Hu. destruct Hu' as [Hu Hu']. *)
-    (* rewrite <- !fold_left_rev_right. apply rev_Forall in Hu'. *)
-    (* induction (List.rev u'); simpl in *. *)
-    (* - apply leqb_expr_n_spec; tas. *)
-    (* - inversion_clear Hu'. *)
-    (*   case_eq (leqb_expr_n n e1 a); cbnr. intro He1a. *)
-    (*   apply IHl; tas. intros v Hv. specialize (Hp' v). specialize (H v Hv). *)
-    (*   exact (todo "atomic"). *)
   Qed.
 
 
@@ -2052,4 +2069,3 @@ End CheckLeq2.
   (*            apply UnivExpr_val_is_prop_false with (v:=v) in Hpa. *)
   (*            lled; lia. *)
   (* Qed. *)
-

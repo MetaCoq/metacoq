@@ -16,7 +16,6 @@ env:
   global:
   - NJOBS=2
   - COMPILER="4.07.1"
-  - CAMLP5_VER="7.05"
   - FINDLIB_VER="1.8.0"
   - EQUATIONS_VER="1.2.1+8.10"
   - COQ_VER="8.10.1"
@@ -33,7 +32,7 @@ install:
 - eval $(opam config env)
 - opam config list
 - opam repo add coq-released https://coq.inria.fr/opam/released || echo "coq-released registered"
-- opam install -j ${NJOBS} -y camlp5.${CAMLP5_VER} ocamlfind.${FINDLIB_VER} coq.${COQ_VER} coq-equations.${EQUATIONS_VER}
+- opam install -j ${NJOBS} -y ocamlfind.${FINDLIB_VER} coq.${COQ_VER} coq-equations.${EQUATIONS_VER}
 - opam list
 
 matrix:

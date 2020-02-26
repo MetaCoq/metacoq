@@ -132,10 +132,9 @@ struct
     (Universes0.LevelSetProp.of_list levels, quote_univ_constraints constraints)
 
   let quote_abstract_univ_context uctx =
-    let uctx = Univ.AUContext.repr uctx in
-    let levels = CArray.map_to_list (fun l -> string_to_list (Univ.Level.to_string l))
-        (Univ.Instance.to_array (Univ.UContext.instance uctx)) in
-    let constraints = Univ.UContext.constraints uctx in
+    let names = Univ.AUContext.names uctx in
+    let levels = CArray.map_to_list quote_name names in
+    let constraints = Univ.UContext.constraints (Univ.AUContext.repr uctx) in
     (levels, quote_univ_constraints constraints)
 
   let quote_context_decl na b t =

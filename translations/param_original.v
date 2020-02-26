@@ -123,7 +123,8 @@ Definition tsl_mind_body (E : tsl_table) (mp : string) (kn : kername)
   refine (_, [{| ind_npars := 2 * mind.(ind_npars);
                  ind_params := _;
                  ind_bodies := _;
-                 ind_universes := mind.(ind_universes)|}]).  (* FIXME always ok? *)
+                 ind_universes := mind.(ind_universes);
+                 ind_variance := mind.(ind_variance)|}]).  (* FIXME always ok? *)
   - refine (let kn' := tsl_kn tsl_ident kn mp in
             fold_left_i (fun E i ind => _ :: _ ++ E)%list mind.(ind_bodies) []).
     + (* ind *)
@@ -170,7 +171,8 @@ Instance param : Translation :=
      tsl_tm := fun ΣE t => ret (tsl_rec1 (snd ΣE) t) ;
      (* Implement and Implement Existing cannot be used with this translation *)
      tsl_ty := None ;
-     tsl_ind := fun ΣE mp kn mind => ret (tsl_mind_body (snd ΣE) mp kn mind) |}.
+     tsl_ind := fun ΣE mp kn mind => 
+     ret (tsl_mind_body (snd ΣE) mp kn mind) |}.
 
 
 
@@ -219,7 +221,6 @@ Module Id1.
     := param_ID_identity my_id my_idᵗ.
 End Id1.
 
-
 Module Id2.
   Definition ID := forall A x y (p : x = y :> A), x = y.
 
@@ -245,7 +246,7 @@ Module Id2.
   Definition free_thm_myf : forall A x y p, myf A x y p = p
     := param_ID_identity myf myfᵗ.
 End Id2.
-
+*)
 
 
 

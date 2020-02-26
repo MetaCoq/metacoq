@@ -152,7 +152,8 @@ Definition tsl_mind_body (ΣE : tsl_context) (mp : string) (kn : kername)
                [{| ind_npars := mind.(ind_npars);
                    ind_params := _;
                    ind_bodies := snd LI;
-                   ind_universes := mind.(ind_universes)|}])). (* FIXME always ok? *)
+                   ind_universes := mind.(ind_universes); 
+                   ind_variance := mind.(ind_variance)|}])). (* FIXME always ok? *)
   intros i ind.
   simple refine (let ind_type' := _ in
                  let ctors' := List.split (mapi _ ind.(ind_ctors)) in

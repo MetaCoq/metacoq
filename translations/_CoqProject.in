@@ -6,7 +6,7 @@ sigma.v
 MiniHoTT.v
 MiniHoTT_paths.v
 translation_utils.v
-param_original.v
+#param_original.v
 param_cheap_packed.v
 param_generous_packed.v
 #param_generous_unpacked.v

@@ -124,6 +124,18 @@ let denote_ucontextset evm trm (* of type ContextSet.t *) : _ * ContextSet.t =
   let evm, c = unquote_constraints evm c in
   evm, (i, c)
 
+let denote_names evm trm : _ * Name.t array =
+  let l = unquote_list trm in
+  evm, CArray.map_of_list unquote_name l
+
+let denote_ucontext evm trm (* of type UContext.t *) : _ * UContext.t =
+  let l, c = unquote_pair trm in
+  let l = unquote_list l in
+  let evm, vars = map_evm unquote_level evm l in
+  let vars = Instance.of_array (Array.of_list vars) in
+  let evm, c = unquote_constraints evm c in
+  evm, (UContext.make (vars, c))
+
 let denote_aucontext evm trm (* of type AUContext.t *) : _ * AUContext.t =
   let i, c = unquote_pair trm in
   let l = unquote_list i in
@@ -148,11 +160,11 @@ type universe_context_type =
   | Monomorphic_uctx of Univ.ContextSet.t
   | Polymorphic_uctx of Univ.AUContext.t
 
-let to_entry_inductive_universes = function
+let _to_entry_inductive_universes = function
   | Monomorphic_uctx ctx -> Monomorphic_entry ctx
   | Polymorphic_uctx ctx -> Polymorphic_entry (AUContext.names ctx, AUContext.repr ctx)
 
-let denote_universes_decl evm trm (* of type universes_decl *) : _ * universe_context_type =
+let _denote_universes_decl evm trm (* of type universes_decl *) : _ * universe_context_type =
   let (h, args) = app_full trm [] in
   match args with
   | ctx :: [] -> if constr_equall h cMonomorphic_ctx then
@@ -162,9 +174,25 @@ let denote_universes_decl evm trm (* of type universes_decl *) : _ * universe_co
                    let evm, ctx = denote_aucontext evm ctx in
                    evm, Polymorphic_uctx ctx
                  else
-                   not_supported_verb trm "denote_universe_context"
-  | _ -> bad_term_verb trm "denote_universe_context"
+                   not_supported_verb trm "denote_universes_decl"
+  | _ -> bad_term_verb trm "denote_universes_decl"
 
+let denote_universes_entry evm trm (* of type universes_entry *) : _ * Entries.universes_entry =
+  let (h, args) = app_full trm [] in
+  match args with
+  | ctx :: [] -> if constr_equall h cMonomorphic_entry then
+                   let evm, ctx = denote_ucontextset evm ctx in
+                   evm, Monomorphic_entry ctx
+                 else
+                   not_supported_verb trm "denote_universes_entry"
+  | names :: ctx :: [] ->
+     if constr_equall h cPolymorphic_entry then
+       let evm, names = denote_names evm names in
+       let evm, ctx = denote_ucontext evm ctx in
+        evm, Polymorphic_entry (names, ctx)
+     else
+      not_supported_verb trm "denote_universes_entry"
+  | _ -> bad_term_verb trm "denote_universes_entry"
 
 
 let unquote_one_inductive_entry evm trm (* of type one_inductive_entry *) : _ * Entries.one_inductive_entry =
@@ -217,14 +245,14 @@ let unquote_mutual_inductive_entry evm trm (* of type mutual_inductive_entry *) 
        let finite = denote_mind_entry_finite finite in
        let evm, params = denote_context evm params in
        let evm, inds = map_evm unquote_one_inductive_entry evm (unquote_list inds) in
-       let evm, univs = denote_universes_decl evm univs in
+       let evm, univs = denote_universes_entry evm univs in
        let evm, variance = denote_variances evm variance in
        let priv = unquote_map_option unquote_bool priv in
        evm, { mind_entry_record = record;
               mind_entry_finite = finite;
               mind_entry_params = params;
               mind_entry_inds = inds;
-              mind_entry_universes = to_entry_inductive_universes univs;
+              mind_entry_universes = univs;
               mind_entry_variance = variance;
               mind_entry_private = priv }
     | _ -> bad_term_verb trm "unquote_mutual_inductive_entry"
@@ -306,7 +334,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
     let name = reduce_all env evm name in
     let kind = (Decl_kinds.Global, poly, Decl_kinds.Definition) in
     let hole = CAst.make (Constrexpr.CHole (None, Namegen.IntroAnonymous, None)) in
-    let evm, (c, _) = Constrintern.interp_casted_constr_evars_impls env evm hole (EConstr.of_constr typ) in
+    let evm, (c, _) = Constrintern.interp_casted_constr_evars_impls ~program_mode:true env evm hole (EConstr.of_constr typ) in
     let ident = unquote_ident name in
     Obligations.check_evars env evm;
        let obls, _, c, cty = Obligations.eterm_obligations env ident evm 0 (EConstr.to_constr evm c) typ in
@@ -369,7 +397,8 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
                else
                  with_env_evm (fun env evm ->
                      let cd = Environ.lookup_constant cnst env in
-                     tmReturn (TermReify.quote_constant_entry bypass env evm cd))
+                     let cb = TermReify.quote_constant_body bypass env evm cd in
+                     tmReturn cb)
              | Some _ ->
                tmFail (str "\"" ++ str name ++ str "\" does not refer to a constant"))
        in

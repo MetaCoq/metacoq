@@ -185,7 +185,7 @@ struct
     | Sorts.InProp -> Lazy.force sfProp
     | Sorts.InSet -> Lazy.force sfSet
     | Sorts.InType -> Lazy.force sfType
-    | Sorts.InSProp -> failwith "SProp is not supported"
+    | Sorts.InSProp -> Lazy.force sfProp (* FIXME SProp *)
 
   let quote_context_decl na b t =
     constr_mkApp (tmkdecl, [| na; quote_optionl tTerm b; t |])

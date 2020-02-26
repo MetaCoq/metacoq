@@ -479,7 +479,7 @@ since  [absrt_info] is a private type *)
     let variance = Option.map (CArray.map_to_list Q.quote_variance) t.mind_entry_variance in
     Q.quote_mutual_inductive_entry (mf, mp, is, uctx, variance)
 
-  let quote_constant_body bypass env evm (cd : constant_body) =
+  let quote_constant_body_aux bypass env evm (cd : constant_body) =
     let ty = quote_term env cd.const_type in
     let body =
       match cd.const_body with
@@ -491,16 +491,20 @@ since  [absrt_info] is a private type *)
         else None
       | Primitive _ -> failwith "Primitive types not supported by TemplateCoq"
     in
-    let uctx = 
-      match cd.const_universes with
+    (ty, body)
+
+  let quote_constant_body bypass env evm cd =
+    let ty, body = quote_constant_body_aux bypass env evm cd in
+    Q.mk_constant_body ty body (quote_universes_decl cd.const_universes)
+
+  let quote_constant_entry bypass env evm cd =
+    let (ty, body) = quote_constant_body_aux bypass env evm cd in
+    let uctx = match cd.const_universes with
       | Polymorphic auctx -> 
         Polymorphic_entry (Univ.AUContext.names auctx, Univ.AUContext.repr auctx)
       | Monomorphic ctx -> Monomorphic_entry ctx
     in
-    (ty, body, quote_universes_entry uctx)
-
-  let quote_constant_entry bypass env evm cd =
-    let (ty, body, univs) = quote_constant_body bypass env evm cd in
+    let univs = quote_universes_entry uctx in
     match body with
     | None -> Q.quote_constant_entry (Right (Q.quote_parameter_entry ty univs))
     | Some body -> Q.quote_constant_entry (Left (Q.quote_definition_entry (Some ty) body univs))

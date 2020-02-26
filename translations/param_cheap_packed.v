@@ -160,7 +160,8 @@ Definition tsl_mind_body (ΣE : tsl_context) (mp : string)
                  bodies <- _ ;;
                  ret (_, [{| ind_npars := mind.(ind_npars);
                              ind_bodies := bodies ;
-                 ind_universes := mind.(ind_universes)|}])).  (* FIXME always ok? *)
+                 ind_universes := mind.(ind_universes);
+                 ind_variance := mind.(ind_variance) |}])).  (* FIXME always ok? *)
   (* L is [(tInd n, tRel 0); ... ; (tInd 0, tRel n)] *)
   simple refine (let L : list term := _ in _).
 

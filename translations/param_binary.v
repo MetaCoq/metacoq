@@ -155,7 +155,8 @@ Definition tsl_mind_body (E : tsl_table) (mp : string) (kn : kername)
   refine (_, [{| ind_npars := 3 * mind.(ind_npars);
                  ind_params := _;
                  ind_bodies := _;
-                 ind_universes := mind.(ind_universes)|}]).  (* FIXME always ok? *)
+                 ind_universes := mind.(ind_universes);
+                 ind_variance := mind.(ind_variance)|}]).  (* FIXME always ok? *)
   - refine (let kn' := tsl_kn tsl_ident kn mp in
             fold_left_i (fun E i ind => _ :: _ ++ E)%list mind.(ind_bodies) []).
     + (* ind *)

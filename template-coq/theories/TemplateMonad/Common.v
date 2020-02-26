@@ -7,8 +7,8 @@ Set Primitive Projections.
 Set Printing Universes.
 
 (** Reduction strategy to apply, beware [cbv], [cbn] and [lazy] are _strong_. *)
-
-Variant reductionStrategy : Set :=
+ 
+Monomorphic Variant reductionStrategy : Set :=
   cbv | cbn | hnf | all | lazy | unfold (i : ident).
 
 Record typed_term : Type := existT_typed_term
@@ -35,7 +35,7 @@ Record TMInstance@{t u r} :=
 (* Quote the body of a definition or inductive. Its name need not be fully quaified *)
 ; tmQuoteInductive : kername -> TemplateMonad mutual_inductive_body
 ; tmQuoteUniverses : TemplateMonad constraints
-; tmQuoteConstant : kername -> bool (* bypass opacity? *) -> TemplateMonad constant_entry
+; tmQuoteConstant : kername -> bool (* bypass opacity? *) -> TemplateMonad constant_body
 (* unquote before making the definition *)
 (* FIXME take an optional universe context as well *)
 ; tmMkInductive : mutual_inductive_entry -> TemplateMonad unit
@@ -43,10 +43,10 @@ Record TMInstance@{t u r} :=
 ; tmExistingInstance : ident -> TemplateMonad unit
 }.
 
-Variant import_status : Set :=
+Monomorphic Variant import_status : Set :=
 | ImportDefaultBehavior
 | ImportNeedQualified.
 
-Variant locality :=
+Monomorphic Variant locality :=
 | Discharge
 | Global (_ : import_status).

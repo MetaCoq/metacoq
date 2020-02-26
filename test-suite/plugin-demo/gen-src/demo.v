@@ -1,10 +1,10 @@
 Require Import Coq.Lists.List.
-From Template Require Import
+From MetaCoq.Template Require Import
      Ast
      Loader
      TemplateMonad.Extractable.
 Import TemplateMonad.Extractable.
-Require Import Template.BasicAst Template.AstUtils Ast.
+From MetaCoq Require Import Template.BasicAst Template.AstUtils Ast.
 
 
 Let TemplateMonad := TM.

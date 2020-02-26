@@ -8,6 +8,7 @@ type reduction_strategy = Redexpr.red_expr (* Template.TemplateMonad.Common.redu
 type global_reference = Names.GlobRef.t (* Template.Ast.global_reference *)
 type term = Constr.t  (* Template.Ast.term *)
 type mutual_inductive_body = Declarations.mutual_inductive_body (* Template.Ast.mutual_inductive_body *)
+type constant_body = Declarations.constant_body
 type constant_entry = Safe_typing.private_constants Entries.constant_entry (* Template.Ast.constant_entry *)
 type mutual_inductive_entry = Entries.mutual_inductive_entry (* Template.Ast.mutual_inductive_entry *)
 
@@ -93,8 +94,11 @@ let tmAxiom (nm : ident) ?poly:(poly=false) (typ : term) : kername tm =
 let tmLemma (nm : ident) ?poly:(poly=false)(ty : term) : kername tm =
   fun env evm success _fail ->
     let kind = (Decl_kinds.Global, poly, Decl_kinds.Definition) in
-    let hole = CAst.make (Constrexpr.CHole (None, Namegen.IntroAnonymous, None)) in
-    let evm, (c, _) = Constrintern.interp_casted_constr_evars_impls env evm hole (EConstr.of_constr ty) in
+    let hole = CAst.make (Constrexpr.CHole (Some Evar_kinds.(QuestionMark default_question_mark), Namegen.IntroAnonymous, None)) in
+    Feedback.msg_debug (Pp.str "interp_casted called");
+    let evm, (c, _) =
+      try Constrintern.interp_casted_constr_evars_impls ~program_mode:true env evm hole (EConstr.of_constr ty)
+      with e -> Feedback.msg_debug (Pp.str "interp_casted raised"); raise e in
     Obligations.check_evars env evm;
     let obls, _, c, cty = Obligations.eterm_obligations env nm evm 0 (EConstr.to_constr evm c) ty in
     (* let evm = Evd.minimize_universes evm in *)
@@ -160,7 +164,7 @@ let universes_entry_of_decl ?withctx d =
     assert(Option.is_empty withctx);
     Polymorphic_entry (Univ.AUContext.names ctx, Univ.AUContext.repr ctx)
 
-let constant_entry_of_cb (cb : Declarations.constant_body) =
+let _constant_entry_of_cb (cb : Declarations.constant_body) =
   let open Declarations in
   let open Entries in
   let secctx = match cb.const_hyps with [] -> None | l -> Some l in
@@ -188,13 +192,12 @@ let constant_entry_of_cb (cb : Declarations.constant_body) =
 
 
 (* get the definition associated to a kername *)
-let tmQuoteConstant (kn : kername) (bypass : bool) : constant_entry tm =
+let tmQuoteConstant (kn : kername) (bypass : bool) : Declarations.constant_body tm =
   fun env evd success fail ->
     (* todo(gmm): there is a bug here *)
     try
       let cnst = Environ.lookup_constant (Names.Constant.make1 kn) env in
-      let entry = constant_entry_of_cb cnst in
-      success env evd entry
+      success env evd cnst
     with
       Not_found -> fail Pp.(str "constant not found " ++ Names.KerName.print kn)
 

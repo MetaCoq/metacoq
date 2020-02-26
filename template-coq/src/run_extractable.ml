@@ -145,6 +145,26 @@ let of_constant_entry (env : Environ.env) (cd : Plugin_core.constant_entry) : As
           parameter_entry_universes = quote_universes_entry univs })
   | PrimitiveEntry _ -> failwith "Primitives not supported"
 
+let get_constant_body b =
+  let open Declarations in
+  match b with
+  | Def b -> Some (Mod_subst.force_constr b)
+  | Undef inline -> None
+  | OpaqueDef pr -> 
+    let opaquetab = Global.opaque_tables () in
+    let proof = Opaqueproof.force_proof opaquetab pr in
+    let ctx = Opaqueproof.force_constraints opaquetab pr in
+    Some proof
+  | Primitive _ -> failwith "Primitives not supported by TemplateCoq"
+
+(* note(gmm): code taken from quoter.ml (quote_entry_aux) *)
+let of_constant_body (env : Environ.env) (cd : Plugin_core.constant_body) : Ast0.constant_body =
+  let open Declarations in
+  let {const_body = body; const_type = typ; const_universes = univs} = cd in
+  Ast0.({cst_type = Ast_quoter.quote_term env typ;
+         cst_body = Option.map (Ast_quoter.quote_term env) (get_constant_body body);
+         cst_universes = quote_universes_decl univs})
+
 (* what about the overflow?
   efficiency? extract to bigint using Coq directives and convert to int here? *)
 let of_nat (t : Datatypes.nat) : int =
@@ -171,8 +191,8 @@ let tmOfConstr (t : Constr.t) : Ast0.term tm =
 let tmOfMib (ti : Names.MutInd.t) (t : Plugin_core.mutual_inductive_body) : Ast0.mutual_inductive_body tm =
   Plugin_core.with_env_evm (fun env _ -> tmReturn (of_mib env ti t))
 
-let tmOfConstantEntry (t : Plugin_core.constant_entry) : Ast0.constant_entry tm =
-  Plugin_core.with_env_evm (fun env _ -> tmReturn (of_constant_entry env t))
+let tmOfConstantBody (t : Plugin_core.constant_body) : Ast0.constant_body tm =
+  Plugin_core.with_env_evm (fun env _ -> tmReturn (of_constant_body env t))
 
 (*
 let dbg = function
@@ -241,7 +261,7 @@ let rec interp_tm (t : 'a coq_TM) : 'a tm =
     tmMap (fun x -> failwith "tmQuoteUniverses") tmQuoteUniverses
   | Coq_tmQuoteConstant (kn, b) ->
     tmBind (tmQuoteConstant (to_kername kn) b)
-           (fun x -> Obj.magic (tmOfConstantEntry x))
+           (fun x -> Obj.magic (tmOfConstantBody x))
   | Coq_tmInductive i ->
     tmMap (fun _ -> Obj.magic ()) (tmInductive (to_mie i))
   | Coq_tmExistingInstance k ->

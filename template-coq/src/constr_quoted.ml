@@ -77,7 +77,7 @@ struct
 
   let unit_tt = resolve "metacoq.unit.intro"
   
-  let tAscii = resolve "metacoq.ascii.type"
+  let tAscii = resolve "metacoq.ascii.intro"
   let tlist = resolve "metacoq.list.type"
   let c_nil = resolve "metacoq.list.nil"
   let c_cons = resolve "metacoq.list.cons"
@@ -185,8 +185,8 @@ struct
   let cDefinitionEntry = ast "DefinitionEntry"
   let cBuild_parameter_entry = ast "Build_parameter_entry"
   let cBuild_definition_entry = ast "Build_definition_entry"
-  let cPolymorphic_entry = ast "Monomorphic_entry"
-  let cMonomorphic_entry = ast "Polymorphic_entry"
+  let cMonomorphic_entry = ast "Monomorphic_entry"
+  let cPolymorphic_entry = ast "Polymorphic_entry"
 
   let (tcbv, tcbn, thnf, tall, tlazy, tunfold) = 
     (template "cbv", template "cbn", template "hnf", template "all", template "lazy", template "unfold")

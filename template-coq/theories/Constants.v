@@ -137,8 +137,8 @@ Register MetaCoq.Template.Ast.Build_parameter_entry as metacoq.ast.Build_paramet
 Register MetaCoq.Template.Ast.definition_entry as metacoq.ast.definition_entry.
 Register MetaCoq.Template.Ast.Build_definition_entry as metacoq.ast.Build_definition_entry.
 
-Register MetaCoq.Template.Universes.Monomorphic_ctx as metacoq.ast.Monomorphic_entry.
-Register MetaCoq.Template.Universes.Polymorphic_ctx as metacoq.ast.Polymorphic_entry.
+Register MetaCoq.Template.Ast.Monomorphic_entry as metacoq.ast.Monomorphic_entry.
+Register MetaCoq.Template.Ast.Polymorphic_entry as metacoq.ast.Polymorphic_entry.
 
 Register MetaCoq.Template.Ast.constant_entry as metacoq.ast.constant_entry.
 Register MetaCoq.Template.Ast.ParameterEntry as metacoq.ast.ParameterEntry.
@@ -150,6 +150,7 @@ Register MetaCoq.Template.Ast.mutual_inductive_entry as metacoq.ast.mutual_induc
 Register MetaCoq.Template.Ast.Build_mutual_inductive_entry as metacoq.ast.Build_mutual_inductive_entry.
 
 Register MetaCoq.Template.Ast.context_decl as metacoq.ast.context_decl.
+Register MetaCoq.Template.Ast.mkdecl as metacoq.ast.mkdecl.
 Register MetaCoq.Template.Ast.context as metacoq.ast.context.
 
 Register MetaCoq.Template.Ast.one_inductive_body as metacoq.ast.one_inductive_body.
@@ -157,7 +158,7 @@ Register MetaCoq.Template.Ast.Build_one_inductive_body as metacoq.ast.Build_one_
 Register MetaCoq.Template.Ast.mutual_inductive_body as metacoq.ast.mutual_inductive_body.
 Register MetaCoq.Template.Ast.Build_mutual_inductive_body as metacoq.ast.Build_mutual_inductive_body.
 Register MetaCoq.Template.Ast.constant_body as metacoq.ast.constant_body.
-Register MetaCoq.Template.Ast.constant_body as metacoq.ast.Build_constant_body.
+Register MetaCoq.Template.Ast.Build_constant_body as metacoq.ast.Build_constant_body.
 
 Register MetaCoq.Template.Ast.global_decl as metacoq.ast.global_decl.
 Register MetaCoq.Template.Ast.ConstantDecl as metacoq.ast.ConstantDecl.

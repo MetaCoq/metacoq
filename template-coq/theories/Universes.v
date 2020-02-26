@@ -343,9 +343,9 @@ Module UContext.
 End UContext.
 
 Module AUContext.
-  Definition t := list ident × constraints.
+  Definition t := list name × constraints.
 
-  Definition make (ids : list ident) (ctrs : constraints) : t := (ids, ctrs).
+  Definition make (ids : list name) (ctrs : constraints) : t := (ids, ctrs).
   Definition repr '((u, cst) : t) : UContext.t :=
     (mapi (fun i _ => Level.Var i) u, cst).
 

@@ -50,7 +50,7 @@ Cumulative Inductive TM@{t} : Type@{t} -> Type :=
 | tmQuoteInductive (nm : kername) (* nm is the kernel name of the mutind *)
   : TM mutual_inductive_body
 | tmQuoteConstant (nm : kername) (bypass_opacity : bool)
-  : TM constant_entry
+  : TM constant_body
 
 | tmQuoteUniverses : TM constraints
 

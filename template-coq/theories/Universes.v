@@ -593,7 +593,7 @@ Module Universe.
   (*   apply exprs_spec'. *)
   (* Qed. *)
 
-  Lemma In_exprs (u : t) e :
+  Lemma In_exprs (u : t) (e : UnivExpr.t) :
     UnivExprSet.In e u
     <-> e = (Universe.exprs u).1 \/ In e (Universe.exprs u).2.
   Proof.
@@ -604,7 +604,7 @@ Module Universe.
     eapply or_iff_compat_l. apply InA_In_eq.
   Qed.
 
-  Lemma In_exprs_rev (u : t) e :
+  Lemma In_exprs_rev (u : t) (e : UnivExpr.t) :
     UnivExprSet.In e u
     <-> e = (Universe.exprs u).1 \/ In e (List.rev (Universe.exprs u).2).
   Proof.
@@ -828,15 +828,13 @@ Proof.
       exists e'. split; tas. apply UnivExprSet.union_spec. now right.
 Qed.
 
+Ltac proper := let H := fresh in try (intros ? ? H; destruct H; reflexivity).
 
 Lemma for_all_elements (P : UnivExpr.t -> bool) u :
   UnivExprSet.for_all P u = forallb P (UnivExprSet.elements u).
 Proof.
-  unfold UnivExprSet.for_all, UnivExprSet.elements, UnivExprSet.Raw.elements.
-  induction (UnivExprSet.this u); cbnr.
-  destruct (P a); cbnr. assumption.
+  apply UnivExprSetFact.for_all_b; proper.
 Qed.
-
 
 Lemma val_minus_one u v :
   (-1 <= val v u)%Z.

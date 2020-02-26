@@ -82,6 +82,9 @@ Module Nbar.
     | Some n, Some m => Some (n + m)
     | _, _ => None
     end.
+
+  Definition S : t -> t := option_map S.
+
   Definition le (n m : t) : Prop :=
     match n, m with
     | Some n, Some m => n <= m
@@ -89,12 +92,21 @@ Module Nbar.
     | None, _ => True
     end.
 
+  Definition lt (n m : t) : Prop :=
+    match n, m with
+    | Some n, Some m => n < m
+    | None, Some _ => True
+    | _, None => False
+    end.
+
   Arguments max _ _ : simpl nomatch.
   Arguments add _ _ : simpl nomatch.
   Arguments le _ _ : simpl nomatch.
+  Arguments lt _ _ : simpl nomatch.
 
   Infix "+" := add : nbar_scope.
   Infix "<=" := le : nbar_scope.
+  Infix "<" := lt : nbar_scope.
   Delimit Scope nbar_scope with nbar.
   Bind Scope nbar_scope with t.
 
@@ -243,6 +255,13 @@ Module Nbar.
     all: intuition.
   Defined.
 
+  Lemma le_lt_dec n m : ({n <= m} + {m < n})%nbar.
+  Proof.
+    destruct n as [n|], m as [m|]; cbn.
+    apply Compare_dec.le_lt_dec.
+    all: (right; constructor) || (left; constructor).
+  Defined.
+
   Lemma le_plus_r n m : m <= Some n + m.
   Proof.
     destruct m; cbn; lia.
@@ -376,7 +395,7 @@ Module WeightedGraph (V : UsualOrderedType).
     Fixpoint length {x y} (p : Paths x y) :=
       match p with
       | paths_refl x => 0
-      | paths_step x y z e p => S (length p)
+      | paths_step x y z e p => Datatypes.S (length p)
       end.
 
     (* Global Instance Paths_refl : CRelationClasses.Reflexive Paths := paths_refl. *)
@@ -851,7 +870,7 @@ Module WeightedGraph (V : UsualOrderedType).
       let base := if V.eq_dec x z then Some 0 else None in
       match fuel with
       | 0 => base
-      | S fuel =>
+      | Datatypes.S fuel =>
         match VSet.mem x s with
         | true =>
           let ds := List.map
@@ -1010,6 +1029,14 @@ Module WeightedGraph (V : UsualOrderedType).
       induction p. cbn; lia.
       apply proj2 in Hl.
       specialize (Hl (x, e.π1, y) e.π2). cbn in *; lia.
+    Qed.
+
+    Lemma correct_labelling_lsp {x y n} (e : lsp x y = Some n) :
+      forall l, correct_labelling l -> l x + n <= l y.
+    Proof.
+      eapply lsp0_spec_eq in e as [p Hp].
+      intros l Hl; eapply correct_labelling_Paths with (p:= to_paths p) in Hl.
+      now rewrite <- sweight_weight, Hp in Hl.
     Qed.
 
     Lemma acyclic_labelling l : correct_labelling l -> acyclic_no_loop.
@@ -1503,7 +1530,7 @@ Module WeightedGraph (V : UsualOrderedType).
       - assert (Vx : VSet.In x (V G)). {
           case_eq (VSet.mem x (V G)); intro Vx; [now apply VSet.mem_spec in Vx|].
           apply False_rect. apply VSetFact.not_mem_iff in Vx.
-          pose (K := S (option_get 0 (lsp G (s G) y))).
+          pose (K := Datatypes.S (option_get 0 (lsp G (s G) y))).
           pose (l := fun z => if V.eq_dec z x then K
                            else option_get 0 (lsp G (s G) z)).
           unshelve refine (let XX := Hle l _ in _); subst l K.
@@ -1530,7 +1557,7 @@ Module WeightedGraph (V : UsualOrderedType).
           rewrite Hky in *. cbn in *; lia.
         + intros Hxs.
           destruct (lsp_s G _ Vx) as [kx Hkx].
-          pose (K := Peano.max kx (S ky)).
+          pose (K := Peano.max kx (Datatypes.S ky)).
           unshelve epose proof (correct_labelling_lsp_G' _ _ _ _ Hxs K) as XX;
             tas; try apply HI.
           set (G' := G' (s G) x K) in XX.

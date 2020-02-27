@@ -81,7 +81,7 @@ Definition elemb (n : nat) := existsb (fun m => Nat.eqb n m).
 
 Require Import ZArith.
 
-Lemma Ppred_decrease n : (n<>1)%positive -> (nat_of_P (Ppred n)<nat_of_P n)%nat.
+Lemma Ppred_decrease n : (n<>1)%positive -> (nat_of_P (Pos.pred n)<nat_of_P n)%nat.
 Proof.
 intros; destruct (Psucc_pred n) as [Hpred | Hpred]; try contradiction;
   pattern n at 2; rewrite <- Hpred; rewrite nat_of_P_succ_morphism; omega.
@@ -98,9 +98,9 @@ Definition Pleb (x y : positive) :=
     | Gt => false
   end.
 
-Lemma Pleb_Ple (x y : positive) : Pleb x y = true <-> Ple x y.
+Lemma Pleb_Ple (x y : positive) : Pleb x y = true <-> Pos.le x y.
 Proof.
-unfold Pleb, Ple; split; intro H1.
+unfold Pleb, Pos.le; split; intro H1.
 intro H2. unfold Pos.compare in H2. rewrite H2 in H1.
 discriminate.
 unfold Pos.compare in H1.
@@ -112,15 +112,15 @@ Qed.
 Require Import NArith.
 
 Definition Nleb (x y : N) :=
-  match Ncompare x y with
+  match N.compare x y with
     | Lt => true
     | Eq => true
     | Gt => false
   end.
 
-Lemma Nleb_Nle (x y : N) : Nleb x y = true <-> Nle x y.
+Lemma Nleb_Nle (x y : N) : Nleb x y = true <-> N.le x y.
 Proof.
-unfold Nleb, Nle.  split; intro H1.
+unfold Nleb, N.le.  split; intro H1.
 intro H2. rewrite H2 in H1. discriminate.
 remember ((x ?= y)%N) as b; destruct b; auto.
 Qed.
@@ -155,9 +155,9 @@ Definition minid : Ident.t := xH.
 Definition id2pos: Ident.t -> positive := fun x => x.
 Lemma minid_eq: id2pos minid = 1%positive.
 Proof. reflexivity. Qed.
-Lemma Ilt_morphism: forall x y, Ident.lt x y -> Plt (id2pos x) (id2pos y).
+Lemma Ilt_morphism: forall x y, Ident.lt x y -> Pos.lt (id2pos x) (id2pos y).
 Proof. auto. Qed.
-Definition another_var: Ident.t -> Ident.t := Psucc.
+Definition another_var: Ident.t -> Ident.t := Pos.succ.
 
 Definition Z2id (z : Z) : Ident.t :=
   match z with
@@ -700,7 +700,7 @@ Definition clause_length (cl : clause) : Z :=
   end%Z.
 
 Definition compare_clause_length (cl1 cl2 : clause) :=
-   Zcompare (clause_length cl1) (clause_length cl2).
+   Z.compare (clause_length cl1) (clause_length cl2).
 
 Definition compare_clause'1 (cl1 cl2 : clause) : comparison :=
   match compare_clause_length cl1 cl2 with
@@ -1486,7 +1486,7 @@ Definition is_empty_clause (cl : clause) :=
 Definition is_unit_clause (cl : clause) :=
   match cl with PureClause nil (a :: nil) _ _ => true | _ => false end.
 
-Lemma Ppred_decrease n : (n<>1)%positive -> (nat_of_P (Ppred n)<nat_of_P n)%nat.
+Lemma Ppred_decrease n : (n<>1)%positive -> (nat_of_P (Pos.pred n)<nat_of_P n)%nat.
 Proof.
 intros; destruct (Psucc_pred n) as [Hpred | Hpred]; try contradiction;
 pattern n at 2; rewrite <- Hpred; rewrite nat_of_P_succ_morphism; omega.
@@ -1513,7 +1513,7 @@ Function main (n : positive) (units l : list clause) {measure nat_of_P n}
                       clause_list2set l', M.empty)
                 | inr (R, cl, cty) =>
                   let r := infer cty cl l' in
-                    main (Ppred n) (cclose (us'++units))
+                    main (Pos.pred n) (cclose (us'++units))
                          (print_pures_list
                            (rsort (rev_cmp compare_clause2) (r ++ l')))
                 end
@@ -2022,7 +2022,7 @@ Definition is_empty_clause (c : clause) :=
 Definition pures := M.filter pureb.
 
 Lemma Ppred_decrease n :
-  (n<>1)%positive -> (nat_of_P (Ppred n)<nat_of_P n)%nat.
+  (n<>1)%positive -> (nat_of_P (Pos.pred n)<nat_of_P n)%nat.
 Proof.
 intros; destruct (Psucc_pred n) as [Hpred | Hpred]; try contradiction;
   pattern n at 2; rewrite <- Hpred; rewrite nat_of_P_succ_morphism; omega.
@@ -2168,9 +2168,9 @@ Function the_loop
                    let pcns_u := pures (unfolding c c') in
                    let s_star' := incorp (print_unfold_set pcns_u) nu_s in
                    if isEq (M.compare nu_s s_star') then C_example R
-                   else the_loop (Ppred n) sigma' nc' s_star' c
+                   else the_loop (Pos.pred n) sigma' nc' s_star' c
               else C_example R
-         else the_loop (Ppred n) sigma' nc' nu_s c
+         else the_loop (Pos.pred n) sigma' nc' nu_s c
   | (Superposition.Aborted l, units, _, _) => Aborted l cl
        end.
 Admitted.

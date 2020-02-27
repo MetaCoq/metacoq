@@ -18,7 +18,7 @@ bug8.v
 bugkncst.v
 case.v
 castprop.v
-CheckerTest.v
+# CheckerTest.v disabled
 cofix.v
 evars.v
 hnf_ctor.v

@@ -67,7 +67,8 @@ Run TemplateProgram
                        ; mind_entry_lc := tProd nAnon <% bool %> (tRel 1) ::
                                           tProd nAnon <% string %> (tRel 1) :: nil
                        |} :: nil
-                  ; mind_entry_universes := Monomorphic_ctx (LevelSet.empty, empty_constraints)
+                  ; mind_entry_universes := Monomorphic_entry (LevelSet.empty, empty_constraints)
+                  ; mind_entry_variance := None
                   ; mind_entry_private := None |}).
 Print thing.
 

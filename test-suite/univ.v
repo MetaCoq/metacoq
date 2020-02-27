@@ -62,14 +62,14 @@ nil : list A | cons : A -> list A -> list A.
 
 Set Printing Universes.
 
-Module to.
+(*Module to.
   (* TODO : fix this *)
  Run TemplateProgram (t <- tmQuoteInductive "list" ;;
                      t <- tmEval all (mind_body_to_entry t) ;;
                      tmPrint t ;;
                      tmMkInductive t).
 End to.
-
+*)
 
 Definition f@{i j k} := fun (E:Type@{i}) => Type@{max(i,j)}.
 Quote Definition qf := Eval cbv in f.

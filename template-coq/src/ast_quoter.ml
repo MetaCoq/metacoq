@@ -87,7 +87,7 @@ struct
     | Sorts.InProp -> Universes0.InProp
     | Sorts.InSet -> Universes0.InSet
     | Sorts.InType -> Universes0.InType
-    | Sorts.InSProp -> failwith "SProp sort not supported"
+    | Sorts.InSProp -> Universes0.InProp (* FIXME "SProp sort not supported" *)
 
   let quote_cast_kind = function
     | DEFAULTcast -> Cast

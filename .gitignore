@@ -379,3 +379,7 @@ erasure/src/pCUICPretty.ml
 erasure/src/pCUICPretty.mli
 erasure/src/byte.mli
 erasure/src/byte.ml
+myMain.ml
+myMain.mli
+vs.ml
+vs.mli

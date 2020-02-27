@@ -383,13 +383,11 @@ struct
   let quote_sort s =
     quote_universe (Sorts.univ_of_sort s)
 
-  let unsupported_sprop () = CErrors.user_err (Pp.str "SProp sort not supported")
-
   let quote_sort_family = function
     | Sorts.InProp -> sfProp
     | Sorts.InSet -> sfSet
     | Sorts.InType -> sfType
-    | Sorts.InSProp -> unsupported_sprop ()
+    | Sorts.InSProp -> sfProp  (* FIXME SProp support *)
 
   let quote_context_decl na b t =
     constr_mkApp (tmkdecl, [| na; quote_option (Lazy.force tTerm) b; t |])

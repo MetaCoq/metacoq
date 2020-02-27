@@ -1348,7 +1348,7 @@ Import Nbar.
           end.
           assert (val (valuation_of_labelling lab) li = Z.of_nat ni) as XX. {
             rewrite val_valuation_of_labelling''; tas.
-            subst lab; cbn. now rewrite Hni.
+            subst lab; cbn; now rewrite Hni.
             { red. now rewrite NoPropLevel.of_to_level. } }
           rewrite XX in H; clear Hni XX.
           cbn in H; destruct b, bi; lia. }
@@ -1371,7 +1371,7 @@ Import Nbar.
       destruct bi, b; lled; lia.
 
     (* case where there is no path from l to Set *)
-    - intros Hlab.
+    - intros HlSet. subst e.
       assert (UnivExprSet.for_all
                 (fun ei => match ei with
                         | UnivExpr.lProp => true
@@ -1383,11 +1383,51 @@ Import Nbar.
                         end)%nbar
                 u = false) as HH. {
         apply not_true_iff_false; intro HH.
-
-        pose (K := 12).
         assert (Hl' : VSet.In l (wGraph.V G)). {
           red in Hl; rewrite NoPropLevel.of_to_level in Hl; cbn in Hl;
             now subst G. }
+        destruct (lsp_s G _ Hl') as [nl Hnl]; cbn in Hnl.
+
+        assert (exists K, nl <= K /\
+                     UnivExprSet.For_all
+                       (fun ei => match ei with
+                                 | UnivExpr.lProp => True
+                                 | UnivExpr.npe (li, bi) =>
+                                   match lsp G (wGraph.s G) li with
+                                   | None => True
+                                   | Some ni => (if bi then 1 else 0) + ni < K
+                                   end
+                                 end) u) as XX. {
+          exists (UnivExprSet.fold
+               (fun ei K => match ei with
+                         | UnivExpr.lProp => K
+                         | UnivExpr.npe (li, bi) =>
+                           match lsp G (wGraph.s G) li with
+                           | None => K
+                           | Some ni => Nat.max K (Datatypes.S
+                                                    ((if bi then 1 else 0) + ni))
+                           end
+                         end) u nl).
+          clear -Hu HG HG1. split.
+          - rewrite UnivExprSet.fold_spec. rewrite <- fold_left_rev_right.
+            induction (List.rev (UnivExprSet.elements u)). reflexivity.
+            cbn. destruct a as [|[li bi]]; tas.
+            destruct (lsp G (wGraph.s G) li); tas; lia.
+          - intros [|[li bi]] Hei; trivial.
+            specialize (Hu _ Hei); cbn in Hu.
+            destruct (lsp_s G li) as [ni' Hni'].
+            { now subst G. }
+            rewrite Hni'.
+            rewrite UnivExprSet.fold_spec. rewrite <- fold_left_rev_right.
+            apply UnivExprSetFact.elements_1, InA_In_eq, in_rev in Hei.
+            (* todo remove InAeq_In in wGraph *)
+            change (In (UnivExpr.npe (li, bi))
+                       (@List.rev UnivExprSet.elt (UnivExprSet.elements u))) in Hei.
+            induction (List.rev (UnivExprSet.elements u)); inv Hei.
+            + subst a; cbn. rewrite Hni'. lia.
+            + specialize (IHl H). cbn. destruct a as [|[li' bi']]; [lia|].
+              destruct (lsp G (wGraph.s G) li'); lia. }
+        destruct XX as [K [HK1 HK2]].
         assert (Hs' : VSet.In lSet (wGraph.V G)). {
           rewrite <- Hs; apply HG1. }
         set (G' := wGraph.G' G lSet l K) in *.
@@ -1395,43 +1435,49 @@ Import Nbar.
           subst G'; apply HI'; tas. }
         assert (HG'2 : acyclic_no_loop G'). {
           subst G'; apply HG'; tas. }
-        apply correct_labelling_lsp_G' with (K:=K) in Hlab; tas.
-        fold G' in Hlab. cbn in Hlab.
+        apply correct_labelling_lsp_G' with (K:=K) in HlSet as Hlab; tas.
+        fold G' in Hlab; cbn in Hlab.
         set (lab := fun x => option_get 0 (lsp G' (wGraph.s G) x)) in *.
+        pose proof (make_graph_spec' _ Huctx lab) as Hv.
+        forward Hv; [now rewrite <- HG|].
+        specialize (H _ Hv); clear Hv.
+        rewrite Universe.val_make' in H.
+        rewrite val_valuation_of_labelling' in H; tas.
 
-(*       rewrite HG in Hlab. apply make_graph_spec' in Hlab as HH'; tas. *)
-(*       specialize (H _ HH'); clear HH'. *)
-(*       rewrite Universe.val_make' in H. *)
-(*       subst e. rewrite val_valuation_of_labelling' in H; tas. *)
-(*       rewrite val_fold_right in H. *)
-(*       apply UnivExprSet.for_all_spec in HH. *)
-(*       apply UnivExprSet_For_all_exprs in HH. *)
-(*       destruct HH as [HH1 HH2]. *)
-(*       apply UnivExprSet_For_all_exprs in Hu; destruct Hu as [Hu1 Hu2]. *)
-(*       destruct (Universe.exprs u) as [u1 u2]; cbn in *. clear u. *)
-(*       apply rev_Forall in HH2. *)
-(*       induction (List.rev u2); cbn in *. *)
-(*       - clear HH2. destruct u1 as [|[l1 b1]]. *)
-(*         + destruct b; cbn in *; lled; lia. *)
-(*         + rewrite val_valuation_of_labelling' in H; tas. *)
-(*           2:{ cbn in Hu1. red. rewrite NoPropLevel.of_to_level; apply Hu1. } *)
-(*           2:{ now subst G. } *)
-(*           match goal with *)
-(*           | H : ssrbool.is_left ?X = true |- _ => *)
-(*             destruct X as [HH'|?]; [|discriminate]; clear H *)
-(*           end. *)
-(*           destruct b, b1; cbn in *. *)
-(*           pose proof (lsp_codistance G' (wGraph.s G) l l1) as XX. *)
-(*           subst lab; cbn in H. *)
-(*           destruct (lsp_s G' _ Hl') as [nl Hnl]; cbn in Hnl; rewrite Hnl in *. *)
-(*           destruct (lsp_s G' l1) as [nl1 Hnl1]. *)
-(*           admit. *)
-(*           cbn in Hnl1; rewrite Hnl1 in *; cbn in *. *)
-(*           all: admit. *)
-(*       - admit. *)
-(*       - admit. *)
+        apply lle_le in H. apply val_le_caract in H.
+        destruct H as [ei [Hei H]].
+        apply UnivExprSet.for_all_spec in HH; proper.
+        specialize (HH _ Hei); cbn in HH.
+        specialize (Hu _ Hei).
+        destruct ei as [|[li bi]]; cbn in H; [destruct b; lia|].
+        rewrite val_valuation_of_labelling'' in H; tas.
+        2:{ red. now rewrite NoPropLevel.of_to_level. }
+        match goal with
+        | H : ssrbool.is_left ?X = true |- _ =>
+          destruct X as [HH'|HH']; try discriminate; clear H
+        end.
+        assert (lab l = K) as XX. {
+          subst lab; cbn. subst G'. rewrite Hs in *.
+          rewrite lsp_G'_spec_left; tas. rewrite Hnl.
+          unfold lsp. rewrite acyclic_lsp0_xx; tas. cbn; lia. }
+        rewrite XX in H; clear XX Hnl Hl Hl'.
+        destruct (lsp_s G li) as [ni Hni].
+        { now subst G. }
+        specialize (HK2 _ Hei); cbn in HK2. rewrite Hni in HK2.
 
-      exact (todo ""). }
+        case_eq (lsp G l li).
+        - intros ki Hki. rewrite Hki in HH'; cbn in HH'.
+          assert (lab li = K + ki) as XX. {
+            subst lab; cbn. subst G'. rewrite Hs in *.
+            rewrite lsp_G'_spec_left; tas. rewrite Hki.
+            rewrite Hni; cbn; lia. }
+          rewrite XX in H. destruct b, bi; cbn in *; lia.
+
+        - intro Hki.
+          assert (lab li = ni) as XX. {
+            subst lab; cbn. subst G'. rewrite Hs in *.
+            rewrite lsp_G'_spec_left; tas. now rewrite Hki, Hni. }
+          rewrite XX in H. destruct b, bi; lia. }
 
     apply UnivExprSet_for_all_false in HH.
     apply UnivExprSet.exists_spec in HH; proper.
@@ -1446,9 +1492,9 @@ Import Nbar.
     intros nl Hnl v Hv; rewrite Hnl in HH'.
     apply make_graph_spec in Hv; tas. rewrite <- HG in Hv.
     apply (correct_labelling_lsp _ Hnl) in Hv.
-    subst e. rewrite !val_labelling_of_valuation.
+    rewrite !val_labelling_of_valuation.
     destruct bi, b; cbn in *; lled; lia.
-Qed.
+  Qed.
 
   (* Lemma gc_leq_universe_n_In n e1 e (u : Universe.t) : *)
   (*   UnivExprSet.In e u -> *)

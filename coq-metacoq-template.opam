@@ -1,7 +1,7 @@
 opam-version: "2.0"
 maintainer: "matthieu.sozeau@inria.fr"
 homepage: "https://metacoq.github.io/metacoq"
-dev-repo: "git+https://github.com/MetaCoq/metacoq.git#coq-8.8"
+dev-repo: "git+https://github.com/MetaCoq/metacoq.git#coq-8.10"
 bug-reports: "https://github.com/MetaCoq/metacoq/issues"
 authors: ["Abhishek Anand <aa755@cs.cornell.edu>"
           "Simon Boulier <simon.boulier@inria.fr>"
@@ -23,7 +23,7 @@ install: [
 ]
 depends: [
   "ocaml" {> "4.02.3"}
-  "coq" {>= "8.9" & < "8.10~"}
+  "coq" {>= "8.10" & < "8.11~"}
 ]
 synopsis: "A quoting and unquoting library for Coq in Coq"
 description: """

@@ -810,14 +810,6 @@ Proof.
   intros. apply IHl. rewrite -> andb_and in H; intuition.
 Qed.
 
-Lemma forallb_rev {A} (p : A -> bool) l :
-  forallb p (List.rev l) = forallb p l.
-Proof.
-  induction l using rev_ind; simpl; try congruence.
-  rewrite rev_unit forallb_app. simpl. rewrite <- IHl.
-  now rewrite andb_comm andb_true_r.
-Qed.
-
 Lemma Forall_forallb_eq_forallb {A} (P : A -> Prop) (p q : A -> bool) l :
   Forall P l ->
   (forall x, P x -> p x = q x) ->

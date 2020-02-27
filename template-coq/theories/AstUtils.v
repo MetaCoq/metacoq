@@ -29,12 +29,15 @@ Definition string_of_level (l : Level.t) : string :=
   | Level.Var n => "Var" ++ string_of_nat n
   end.
 
-Definition string_of_level_expr (l : Level.t * bool) : string :=
-  let '(l, b) := l in
-  string_of_level l ++ (if b then "+1" else "").
+Definition string_of_level_expr (e : UnivExpr.t) : string :=
+  match e with
+  | UnivExpr.lProp => "Prop"
+  | UnivExpr.npe (l, b) => string_of_level l ++ (if b then "+1" else "")
+  end.
 
 Definition string_of_sort (u : Universe.t) :=
-  string_of_list string_of_level_expr u.
+  string_of_list string_of_level_expr (UnivExprSet.elements u).
+
 Definition string_of_name (na : name) :=
   match na with
   | nAnon => "Anonymous"

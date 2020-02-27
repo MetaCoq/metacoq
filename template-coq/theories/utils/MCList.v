@@ -1,4 +1,4 @@
-From Coq Require Import List Program Arith Lia SetoidList.
+From Coq Require Import Bool List Program Arith Lia SetoidList.
 
 Import ListNotations.
 
@@ -761,4 +761,22 @@ Lemma InA_In_eq {A} x (l : list A) : InA Logic.eq x l <-> In x l.
 Proof.
   etransitivity. eapply InA_alt.
   firstorder. now subst.
+Qed.
+
+Lemma forallb_rev {A} (p : A -> bool) l :
+  forallb p (List.rev l) = forallb p l.
+Proof.
+  induction l using rev_ind; simpl; try congruence.
+  rewrite rev_unit forallb_app. simpl. rewrite <- IHl.
+  now rewrite andb_comm andb_true_r.
+Qed.
+
+Lemma fold_left_andb_forallb {A} P l x :
+  fold_left (fun b x => P x && b) l (P x) = @forallb A P (x :: l).
+Proof.
+  cbn. rewrite <- fold_left_rev_right. rewrite <- forallb_rev.
+  induction (List.rev l); cbn.
+  - now rewrite andb_true_r.
+  - rewrite IHl0. rewrite !andb_assoc.
+    f_equal. now rewrite andb_comm.
 Qed.

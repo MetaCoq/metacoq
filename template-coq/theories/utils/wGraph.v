@@ -5,35 +5,6 @@ From MetaCoq.Template Require Import utils monad_utils.
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 
-Notation "p ..1" := (proj1 p)
-  (at level 2, left associativity, format "p ..1") : pair_scope.
-Notation "p ..2" := (proj2 p)
-  (at level 2, left associativity, format "p ..2") : pair_scope.
-Open Scope pair_scope.
-(* Coercion pair_of_and P Q (PandQ : P /\ Q) := (proj1 PandQ, proj2 PandQ). *)
-(* Coercion isSome T (u : option T) := if u is Some _ then true else false. *)
-(* Coercion is_inl A B (u : A + B) := if u is inl _ then true else false. *)
-Coercion is_left A B (u : {A} + {B}) := match u with left _ => true | _ => false end.
-(* Coercion is_inleft A B (u : A + {B}) := if u is inleft _ then true else false. *)
-
-Definition fst_eq {A B} {x x' : A} {y y' : B}
-  : (x, y) = (x', y') -> x = x'.
-Proof.
-  inversion 1; reflexivity.
-Qed.
-
-Definition snd_eq {A B} {x x' : A} {y y' : B}
-  : (x, y) = (x', y') -> y = y'.
-Proof.
-  inversion 1; reflexivity.
-Qed.
-
-Lemma InAeq_In {A} (l : list A) x :
-  InA eq x l <-> In x l.
-Proof.
-  etransitivity. eapply InA_alt. firstorder. now subst.
-Defined.
-
 Lemma fold_max_In n m l (H : fold_left max l n = m)
   : n = m \/ In m l.
 Proof.
@@ -60,8 +31,6 @@ Proof.
   left; lia. right. apply Exists_exists.
   eexists. split. eassumption. reflexivity.
 Qed.
-
-(* Definition is_Some {A} (x : option A) := exists a, x = Some a. *)
 
 Definition eq_max n m k : max n m = k -> n = k \/ m = k.
   intro; lia.
@@ -584,14 +553,14 @@ Module WeightedGraph (V : UsualOrderedType).
       repeat split. 2: intros [H0|H0].
      - intro H0. apply VSet.remove_spec in H0.
        destruct H0 as [H0 H1].
-       pose proof ((H..1 y0)..1 H0) as H2.
+       pose proof ((H.p1 y0).p1 H0) as H2.
        destruct H2; [now left|right].
        apply VSetFact.remove_2; intuition.
      - subst. apply VSet.remove_spec. split; [|assumption].
-       apply H..1. left; reflexivity.
+       apply H.p1. left; reflexivity.
      - apply VSet.remove_spec in H0; destruct H0 as [H0 H1].
        apply VSet.remove_spec; split; [|assumption].
-       apply H..1. right; assumption.
+       apply H.p1. right; assumption.
      - intro H0. apply VSet.remove_spec in H0; destruct H0 as [H0 _].
        apply H; assumption.
     Qed.
@@ -790,7 +759,7 @@ Module WeightedGraph (V : UsualOrderedType).
                                           (DisjointAdd_remove1 (VSetFact.mem_2 XX)))
                                       (simplify_aux2 XX Hs))
               | false => fun XX => (simplify q (add_end p e
-                            (DisjointAdd_add2 ((VSetFact.not_mem_iff _ _)..2 XX)))
+                            (DisjointAdd_add2 ((VSetFact.not_mem_iff _ _).p2 XX)))
                                          (simplify_aux3 Hs))
               end eq_refl
       end.
@@ -803,7 +772,7 @@ Module WeightedGraph (V : UsualOrderedType).
     (*   | paths_step y y' _ e q => *)
     (*     fun p => match VSet.mem y s with *)
     (*           | true => let '(p1, p2) := split p in *)
-    (*                    if 0 <? sweight (p2..2) then (_; p2) *)
+    (*                    if 0 <? sweight (p2.p2) then (_; p2) *)
     (*                    else simplify q (@add_end _ _ _ p1 _ e _) *)
     (*           | false => @simplify _ _ _ q (@add_end _ _ _ p _ e _) *)
     (*           end *)
@@ -816,7 +785,7 @@ Module WeightedGraph (V : UsualOrderedType).
     (* Defined. *)
 
     (* Lemma weight_simplify (HG : acyclic_no_loop) {s x y} q (p : SimplePaths s x y) *)
-    (*   : 0 < weight q \/ 0 < sweight p -> 0 < sweight (simplify q p)..2..2. *)
+    (*   : 0 < weight q \/ 0 < sweight p -> 0 < sweight (simplify q p).p2.p2. *)
     (* Proof. *)
     (*   revert s p; induction q. *)
     (*   - cbn. intuition. *)
@@ -824,7 +793,7 @@ Module WeightedGraph (V : UsualOrderedType).
     (*     set (F := proj2 (VSetFact.not_mem_iff s x)); clearbody F. *)
     (*     destruct (VSet.mem x s). *)
     (*     + case_eq (split p); intros p1 p2 Hp. *)
-    (*       case_eq (0 <? sweight p2..2); intro eq. *)
+    (*       case_eq (0 <? sweight p2.p2); intro eq. *)
     (*       cbn. apply PeanoNat.Nat.leb_le in eq. lia. *)
     (*       eapply IHq. rewrite weight_add_end. *)
     (*       pose proof (weight_split p) as X; rewrite Hp in X. *)
@@ -970,14 +939,14 @@ Module WeightedGraph (V : UsualOrderedType).
           assert (XX: VSet.Equal (VSet.remove x s') s0). {
             clear -d.
             intro a; split; intro Ha.
-            * apply VSet.remove_spec in Ha. pose proof (d..1 a).
+            * apply VSet.remove_spec in Ha. pose proof (d.p1 a).
               intuition.
             * apply VSet.remove_spec. split.
               apply d. right; assumption.
               intro H. apply proj2 in d. apply d. subst; assumption. }
           rewrite (lsp0_VSet_Equal XX); reflexivity.
         + apply filter_In. split.
-          apply InAeq_In, EdgeSet.elements_spec1. exact e.π2.
+          apply InA_In_eq, EdgeSet.elements_spec1. exact e.π2.
           cbn. destruct (V.eq_dec x x); [reflexivity|contradiction].
     Qed.
 
@@ -1014,7 +983,7 @@ Module WeightedGraph (V : UsualOrderedType).
                apply VSetProp.Add_remove.
                apply VSet.mem_spec; assumption.
             -- eexists.
-               apply (EdgeSet.elements_spec1 _ _)..1, InAeq_In; eassumption.
+               apply (EdgeSet.elements_spec1 _ _).p1, InA_In_eq; eassumption.
             -- cbn. now apply some_inj in H1.
           * subst. clear -Hx. apply VSet.mem_spec in Hx.
             apply VSetProp.remove_cardinal_1 in Hx. lia.
@@ -1355,7 +1324,7 @@ Module WeightedGraph (V : UsualOrderedType).
           subst; cbn. split; assumption.
           now apply HI.
         - split. apply HI.
-          intros z Hz. pose proof (HI..2..2 z Hz).
+          intros z Hz. pose proof (HI.p2.p2 z Hz).
           sq; now apply to_G'.
       Qed.
 
@@ -1447,7 +1416,7 @@ Module WeightedGraph (V : UsualOrderedType).
         : correct_labelling G (option_get 0 ∘ lsp G' (s G')).
       Proof.
         pose proof (lsp_correctness G') as XX.
-        split. exact XX..1.
+        split. exact XX.p1.
         intros e He; apply XX; cbn.
         apply EdgeSet.add_spec; now right.
       Qed.

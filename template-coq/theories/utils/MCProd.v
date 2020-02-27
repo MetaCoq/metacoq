@@ -76,3 +76,15 @@ Proof. apply andb_true_iff. Qed.
 
 Lemma andP {b b'} : is_true (b && b') -> is_true b /\ is_true b'.
 Proof. apply andb_and. Qed.
+
+Definition fst_eq {A B} {x x' : A} {y y' : B}
+  : (x, y) = (x', y') -> x = x'.
+Proof.
+  inversion 1; reflexivity.
+Qed.
+
+Definition snd_eq {A B} {x x' : A} {y y' : B}
+  : (x, y) = (x', y') -> y = y'.
+Proof.
+  inversion 1; reflexivity.
+Qed.

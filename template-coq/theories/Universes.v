@@ -329,6 +329,12 @@ Module UnivExpr.
     | npe (l, _) => l
     end.
 
+  Definition get_noprop (e : UnivExpr.t) :=
+    match e with
+    | lProp => None
+    | npe (l, _) => Some l
+    end.
+
   Definition make (l : Level.t) : t :=
     match NoPropLevel.of_level l with
     | None => lProp
@@ -894,12 +900,6 @@ Proof.
 Qed.
 
 
-(* todo move *)
-Lemma uip_bool (b1 b2 : bool) (p q : b1 = b2) : p = q.
-Proof.
-  destruct q. apply Eqdep_dec.UIP_refl_bool.
-Qed.
-
 Lemma eq_univ (u v : Universe.t) :
   u = v :> UnivExprSet.t -> u = v.
 Proof.
@@ -1366,6 +1366,14 @@ Context {cf:checker_flags}.
     unfold leq_universe. destruct check_univs ; auto.
     intros h1 h2.
     eapply leq_universe0_trans ; eauto.
+  Qed.
+
+  Lemma eq_leq_universe φ u u' :
+    eq_universe0 φ u u' <-> leq_universe0 φ u u' /\ leq_universe0 φ u' u.
+  Proof.
+    split.
+    intro H; split; intros v Hv; specialize (H v Hv); lled; lia.
+    intros [H1 H2] v Hv; specialize (H1 v Hv); specialize (H2 v Hv); lled; lia.
   Qed.
 
 

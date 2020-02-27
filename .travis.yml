@@ -27,7 +27,7 @@ install:
 - opam --version
 - opam update
 - opam init -j ${NJOBS} -n -y --compiler=$COMPILER
-- opam switch create ${COMPILER}
+- opam switch create ${COMPILER} || echo "switch already exists"
 - opam switch set ${COMPILER}
 - eval $(opam config env)
 - opam config list

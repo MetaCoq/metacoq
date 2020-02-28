@@ -61,19 +61,18 @@ let () = Vernacextend.vernac_extend ~command:"TemplateCoq_Test_Quote" ~classifie
                                      Vernacextend.TyTerminal ("Quote", 
                                      Vernacextend.TyNonTerminal (Extend.TUentry (Genarg.get_arg_tag wit_constr), 
                                      Vernacextend.TyNil))), (let coqpp_body def
-                                                            poly ~st = 
-                                                            let () = 
-                                                            
+                                                            poly = Vernacextend.VtDefault (fun () -> 
+                                                                   
 # 64 "src/g_template_coq.mlg"
         let (env, evm) = fresh_env () in
         let (evm, def) = Constrintern.interp_open_constr env evm def in
         let (evm, pgm) = EConstr.fresh_global env evm (Lazy.force Template_monad.ptmTestQuote) in
         let pgm = Constr.mkApp (EConstr.to_constr evm pgm, [|Constr.mkRel 0; EConstr.to_constr evm def|]) in
         run_template_program env evm ~poly pgm 
-                                                             in st in fun def
-                                                            ~atts ~st
+                                                                   ) in fun def
+                                                            ~atts
                                                             -> coqpp_body def
-                                                            (Attributes.parse polymorphic atts) ~st), None))]
+                                                            (Attributes.parse polymorphic atts)), None))]
 
 let () = Vernacextend.vernac_extend ~command:"TemplateCoq_Quote_Definition" ~classifier:(fun _ -> Vernacextend.classify_as_sideeff) ?entry:None 
          [(Vernacextend.TyML (false, Vernacextend.TyTerminal ("Quote", 
@@ -82,16 +81,17 @@ let () = Vernacextend.vernac_extend ~command:"TemplateCoq_Quote_Definition" ~cla
                                      Vernacextend.TyTerminal (":=", Vernacextend.TyNonTerminal (
                                                                     Extend.TUentry (Genarg.get_arg_tag wit_constr), 
                                                                     Vernacextend.TyNil))))), 
-         (let coqpp_body name def poly ~st = let () = 
+         (let coqpp_body name def
+         poly = Vernacextend.VtDefault (fun () -> 
 # 73 "src/g_template_coq.mlg"
         let (env, evm) = fresh_env () in
         let (evm, def) = Constrintern.interp_open_constr env evm def in
         let (evm, pgm) = EConstr.fresh_global env evm (Lazy.force Template_monad.ptmQuoteDefinition) in
         let pgm = Constr.mkApp (EConstr.to_constr evm pgm, [|Constr_quoter.TemplateCoqQuoter.quote_ident name; Constr.mkRel 0; EConstr.to_constr evm def|]) in
         run_template_program env evm ~poly pgm 
-                                              in st in fun name
-         def ~atts ~st -> coqpp_body name def
-         (Attributes.parse polymorphic atts) ~st), None))]
+                ) in fun name
+         def ~atts -> coqpp_body name def
+         (Attributes.parse polymorphic atts)), None))]
 
 let () = Vernacextend.vernac_extend ~command:"TemplateCoq_Quote_Definition_Eval" ~classifier:(fun _ -> Vernacextend.classify_as_sideeff) ?entry:None 
          [(Vernacextend.TyML (false, Vernacextend.TyTerminal ("Quote", 
@@ -104,7 +104,8 @@ let () = Vernacextend.vernac_extend ~command:"TemplateCoq_Quote_Definition_Eval"
                                                                     Vernacextend.TyNonTerminal (
                                                                     Extend.TUentry (Genarg.get_arg_tag wit_constr), 
                                                                     Vernacextend.TyNil)))))))), 
-         (let coqpp_body name rd def poly ~st = let () = 
+         (let coqpp_body name rd def
+         poly = Vernacextend.VtDefault (fun () -> 
 # 82 "src/g_template_coq.mlg"
         let (env, evm) = fresh_env () in
         let (evm, def) = Constrintern.interp_open_constr env evm def in
@@ -114,9 +115,9 @@ let () = Vernacextend.vernac_extend ~command:"TemplateCoq_Quote_Definition_Eval"
         let (evm, pgm) = EConstr.fresh_global env evm (Lazy.force Template_monad.ptmQuoteDefinition) in
         let pgm = Constr.mkApp (EConstr.to_constr evm pgm, [|Constr_quoter.TemplateCoqQuoter.quote_ident name; Constr.mkRel 0; def|]) in
         run_template_program env evm ~poly pgm 
-                                                 in st in fun name
-         rd def ~atts ~st -> coqpp_body name rd def
-         (Attributes.parse polymorphic atts) ~st), None))]
+                ) in fun name
+         rd def ~atts -> coqpp_body name rd def
+         (Attributes.parse polymorphic atts)), None))]
 
 let () = Vernacextend.vernac_extend ~command:"TemplateCoq_Quote_Recursively_Definition" ~classifier:(fun _ -> Vernacextend.classify_as_sideeff) ?entry:None 
          [(Vernacextend.TyML (false, Vernacextend.TyTerminal ("Quote", 
@@ -126,16 +127,17 @@ let () = Vernacextend.vernac_extend ~command:"TemplateCoq_Quote_Recursively_Defi
                                      Vernacextend.TyTerminal (":=", Vernacextend.TyNonTerminal (
                                                                     Extend.TUentry (Genarg.get_arg_tag wit_constr), 
                                                                     Vernacextend.TyNil)))))), 
-         (let coqpp_body name def poly ~st = let () = 
+         (let coqpp_body name def
+         poly = Vernacextend.VtDefault (fun () -> 
 # 94 "src/g_template_coq.mlg"
         let (env, evm) = fresh_env () in
         let (evm, def) = Constrintern.interp_open_constr env evm def in
         let (evm, pgm) = EConstr.fresh_global env evm (Lazy.force Template_monad.ptmQuoteRecDefinition) in
         let pgm = Constr.mkApp (EConstr.to_constr evm pgm, [|Constr_quoter.TemplateCoqQuoter.quote_ident name; Constr.mkRel 0; EConstr.to_constr evm def|]) in
         run_template_program env evm ~poly pgm 
-                                              in st in fun name
-         def ~atts ~st -> coqpp_body name def
-         (Attributes.parse polymorphic atts) ~st), None))]
+                ) in fun name
+         def ~atts -> coqpp_body name def
+         (Attributes.parse polymorphic atts)), None))]
 
 let () = Vernacextend.vernac_extend ~command:"TemplateCoq_Make_Definition" ~classifier:(fun _ -> Vernacextend.classify_as_sideeff) ?entry:None 
          [(Vernacextend.TyML (false, Vernacextend.TyTerminal ("Make", 
@@ -144,53 +146,52 @@ let () = Vernacextend.vernac_extend ~command:"TemplateCoq_Make_Definition" ~clas
                                      Vernacextend.TyTerminal (":=", Vernacextend.TyNonTerminal (
                                                                     Extend.TUentry (Genarg.get_arg_tag wit_constr), 
                                                                     Vernacextend.TyNil))))), 
-         (let coqpp_body name def poly ~st = let () = 
+         (let coqpp_body name def
+         poly = Vernacextend.VtDefault (fun () -> 
 # 103 "src/g_template_coq.mlg"
         let (env, evm) = fresh_env () in
         let (evm, def) = Constrintern.interp_open_constr env evm def in
         let (evm, pgm) = EConstr.fresh_global env evm (Lazy.force Template_monad.ptmMkDefinition) in
         let pgm = Constr.mkApp (EConstr.to_constr evm pgm, [|Constr_quoter.TemplateCoqQuoter.quote_ident name; EConstr.to_constr evm def|]) in
         run_template_program env evm ~poly pgm 
-                                              in st in fun name
-         def ~atts ~st -> coqpp_body name def
-         (Attributes.parse polymorphic atts) ~st), None))]
+                ) in fun name
+         def ~atts -> coqpp_body name def
+         (Attributes.parse polymorphic atts)), None))]
 
 let () = Vernacextend.vernac_extend ~command:"TemplateCoq_Make_Inductive" ~classifier:(fun _ -> Vernacextend.classify_as_sideeff) ?entry:None 
          [(Vernacextend.TyML (false, Vernacextend.TyTerminal ("Make", 
                                      Vernacextend.TyTerminal ("Inductive", 
                                      Vernacextend.TyNonTerminal (Extend.TUentry (Genarg.get_arg_tag wit_constr), 
                                      Vernacextend.TyNil))), (let coqpp_body def
-                                                            poly ~st = 
-                                                            let () = 
-                                                            
+                                                            poly = Vernacextend.VtDefault (fun () -> 
+                                                                   
 # 112 "src/g_template_coq.mlg"
         let (env, evm) = fresh_env () in
         let (evm, def) = Constrintern.interp_open_constr env evm def in
         let (evm, pgm) = EConstr.fresh_global env evm (Lazy.force Template_monad.ptmMkInductive) in
         let pgm = Constr.mkApp (EConstr.to_constr evm pgm, [|EConstr.to_constr evm def|]) in
         run_template_program env evm ~poly pgm 
-                                                             in st in fun def
-                                                            ~atts ~st
+                                                                   ) in fun def
+                                                            ~atts
                                                             -> coqpp_body def
-                                                            (Attributes.parse polymorphic atts) ~st), None))]
+                                                            (Attributes.parse polymorphic atts)), None))]
 
 let () = Vernacextend.vernac_extend ~command:"TemplateCoq_Run_Template_Program" ~classifier:(fun _ -> Vernacextend.classify_as_sideeff) ?entry:None 
          [(Vernacextend.TyML (false, Vernacextend.TyTerminal ("Run", 
                                      Vernacextend.TyTerminal ("TemplateProgram", 
                                      Vernacextend.TyNonTerminal (Extend.TUentry (Genarg.get_arg_tag wit_constr), 
                                      Vernacextend.TyNil))), (let coqpp_body def
-                                                            poly ~st = 
-                                                            let () = 
-                                                            
+                                                            poly = Vernacextend.VtDefault (fun () -> 
+                                                                   
 # 121 "src/g_template_coq.mlg"
         let (env, evm) = fresh_env () in
         let (evm, def) = Constrintern.interp_open_constr env evm def in
         let pgm = EConstr.to_constr evm def in
         run_template_program env evm ~poly pgm 
-                                                             in st in fun def
-                                                            ~atts ~st
+                                                                   ) in fun def
+                                                            ~atts
                                                             -> coqpp_body def
-                                                            (Attributes.parse polymorphic atts) ~st), None))]
+                                                            (Attributes.parse polymorphic atts)), None))]
 
 let () = Tacentries.tactic_extend __coq_plugin_name "TemplateCoq_quote_term" ~level:0 
          [(Tacentries.TyML (Tacentries.TyIdent ("quote_term", Tacentries.TyArg (

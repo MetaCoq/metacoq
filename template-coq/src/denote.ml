@@ -51,10 +51,10 @@ struct
         let evm, u = D.unquote_universe_instance evm u in
         (try
            match Nametab.locate s with
-           | Globnames.ConstRef c -> evm, Constr.mkConstU (c, u)
-           | Globnames.IndRef _ -> CErrors.user_err (str"The constant " ++ Libnames.pr_qualid s ++ str" is an inductive, use tInd.")
-           | Globnames.VarRef _ -> CErrors.user_err (str"The constant " ++ Libnames.pr_qualid s ++ str" is a variable, use tVar.")
-           | Globnames.ConstructRef _ -> CErrors.user_err (str"The constant " ++ Libnames.pr_qualid s ++ str" is a constructor, use tConstructor.")
+           | Names.GlobRef.ConstRef c -> evm, Constr.mkConstU (c, u)
+           | Names.GlobRef.IndRef _ -> CErrors.user_err (str"The constant " ++ Libnames.pr_qualid s ++ str" is an inductive, use tInd.")
+           | Names.GlobRef.VarRef _ -> CErrors.user_err (str"The constant " ++ Libnames.pr_qualid s ++ str" is a variable, use tVar.")
+           | Names.GlobRef.ConstructRef _ -> CErrors.user_err (str"The constant " ++ Libnames.pr_qualid s ++ str" is a constructor, use tConstructor.")
          with
            Not_found -> CErrors.user_err (str"Constant not found: " ++ Libnames.pr_qualid s))
       | ACoq_tConstruct (i,idx,u) ->
@@ -216,10 +216,10 @@ end
  *       let (dp, nm) = split_name s in
  *       (try
  *          match Nametab.locate (Libnames.make_qualid dp nm) with
- *          | Globnames.ConstRef c ->  CErrors.user_err (str "this not an inductive constant. use tConst instead of tInd : " ++ str s)
- *          | Globnames.IndRef i -> (fst i, unquote_nat  num)
- *          | Globnames.VarRef _ -> CErrors.user_err (str "the constant is a variable. use tVar : " ++ str s)
- *          | Globnames.ConstructRef _ -> CErrors.user_err (str "the constant is a consructor. use tConstructor : " ++ str s)
+ *          | Names.GlobRef.ConstRef c ->  CErrors.user_err (str "this not an inductive constant. use tConst instead of tInd : " ++ str s)
+ *          | Names.GlobRef.IndRef i -> (fst i, unquote_nat  num)
+ *          | Names.GlobRef.VarRef _ -> CErrors.user_err (str "the constant is a variable. use tVar : " ++ str s)
+ *          | Names.GlobRef.ConstructRef _ -> CErrors.user_err (str "the constant is a consructor. use tConstructor : " ++ str s)
  *        with
  *          Not_found ->   CErrors.user_err (str "Constant not found : " ++ str s))
  *     | _ -> assert false
@@ -263,10 +263,10 @@ end
  *        let evm, u = unquote_universe_instance evm u in
  *        (try
  *           match Nametab.locate s with
- *           | Globnames.ConstRef c -> evm, Constr.mkConstU (c, u)
- *           | Globnames.IndRef _ -> CErrors.user_err (str"The constant " ++ Libnames.pr_qualid s ++ str" is an inductive, use tInd.")
- *           | Globnames.VarRef _ -> CErrors.user_err (str"The constant " ++ Libnames.pr_qualid s ++ str" is a variable, use tVar.")
- *           | Globnames.ConstructRef _ -> CErrors.user_err (str"The constant " ++ Libnames.pr_qualid s ++ str" is a constructor, use tConstructor.")
+ *           | Names.GlobRef.ConstRef c -> evm, Constr.mkConstU (c, u)
+ *           | Names.GlobRef.IndRef _ -> CErrors.user_err (str"The constant " ++ Libnames.pr_qualid s ++ str" is an inductive, use tInd.")
+ *           | Names.GlobRef.VarRef _ -> CErrors.user_err (str"The constant " ++ Libnames.pr_qualid s ++ str" is a variable, use tVar.")
+ *           | Names.GlobRef.ConstructRef _ -> CErrors.user_err (str"The constant " ++ Libnames.pr_qualid s ++ str" is a constructor, use tConstructor.")
  *         with
  *           Not_found -> CErrors.user_err (str"Constant not found: " ++ Libnames.pr_qualid s))
  *     | ACoq_tConstruct (i,idx,u) ->
@@ -585,7 +585,7 @@ end
  *        let name = unquote_string name in
  *        let (dp, nm) = split_name name in
  *        (match Nametab.locate (Libnames.make_qualid dp nm) with
- *         | Globnames.IndRef ni ->
+ *         | Names.GlobRef.IndRef ni ->
  *            let t = TermReify.quote_mind_decl env (fst ni) in
  *            let _, args = Constr.destApp t in
  *            (match args with

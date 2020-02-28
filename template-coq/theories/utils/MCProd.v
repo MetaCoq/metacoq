@@ -14,6 +14,8 @@ Notation "( x ; y ; z ; t ; u ; v )" := (x ; ( y ; (z ; (t ; (u ; v))))).
 Notation "x .π1" := (@projT1 _ _ x) (at level 3, format "x '.π1'").
 Notation "x .π2" := (@projT2 _ _ x) (at level 3, format "x '.π2'").
 
+Declare Scope pair_scope.
+
 Notation "p .1" := (fst p)
   (at level 2, left associativity, format "p .1") : pair_scope.
 Notation "p .2" := (snd p)

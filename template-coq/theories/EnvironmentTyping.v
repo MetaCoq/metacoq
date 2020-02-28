@@ -328,7 +328,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
         on_projs_noidx : #|indices| = 0;
         (** The inductive cannot have indices *)
 
-        on_projs_elim : List.Exists (fun sf => sf = InType) idecl.(ind_kelim);
+        on_projs_elim : idecl.(ind_kelim) = InType;
         (** This ensures that all projections are definable *)
 
         on_projs : Alli (on_projection Σ mind mdecl i idecl) 0 idecl.(ind_projs) }.
@@ -359,7 +359,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
         (** The inductive is declared in the impredicative sort Prop *)
         (** No universe-checking to do: any size of constructor argument is allowed,
             however elimination restrictions apply. *)
-        forall x, In x kelim -> leb_sort_family x (elim_sort_prop_ind ind_ctors_sort)
+        leb_sort_family kelim (elim_sort_prop_ind ind_ctors_sort)
       | _ =>
         (** The inductive is predicative: check that all constructors arguments are
             smaller than the declared universe. *)

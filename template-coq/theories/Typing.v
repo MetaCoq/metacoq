@@ -835,7 +835,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     let params := List.firstn npar args in
     forall ps pty, build_case_predicate_type ind mdecl idecl params u ps = Some pty ->
     Σ ;;; Γ |- p : pty ->
-    existsb (leb_sort_family (universe_family ps)) idecl.(ind_kelim) ->
+    leb_sort_family (universe_family ps) idecl.(ind_kelim) ->
     Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
     forall btys, map_option_out (build_branches_type ind mdecl idecl params u p) = Some btys ->
     All2 (fun br bty => (br.1 = bty.1) * (Σ ;;; Γ |- br.2 : bty.2) * (Σ ;;; Γ |- bty.2 : tSort ps)) brs btys ->
@@ -1041,7 +1041,9 @@ Lemma typing_wf_local_size `{checker_flags} {Σ} {Γ t T}
       (d :Σ ;;; Γ |- t : T) :
   wf_local_size Σ (@typing_size _) _ (typing_wf_local d) < typing_size d.
 Proof.
-  induction d; simpl; try lia.
+  induction d; simpl;
+  change (fun (x : global_env_ext) (x0 : context) (x1 x2 : term)
+  (x3 : x;;; x0 |- x1 : x2) => typing_size x3) with (@typing_size H); try lia.
   - destruct indnpar as [ind' npar']; cbn in *; subst ind npar. lia.
   - pose proof (size_wf_local_app _ _ a).
     eapply Nat.le_lt_trans. eauto. subst types. lia.
@@ -1185,7 +1187,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         forall ps pty, build_case_predicate_type ind mdecl idecl params u ps = Some pty ->
         Σ ;;; Γ |- p : pty ->
         P Σ Γ p pty ->
-        existsb (leb_sort_family (universe_family ps)) idecl.(ind_kelim) ->
+        leb_sort_family (universe_family ps) idecl.(ind_kelim) ->
         Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
         P Σ Γ c (mkApps (tInd ind u) args) ->
         forall btys, map_option_out (build_branches_type ind mdecl idecl params u p) = Some btys ->
@@ -1707,4 +1709,4 @@ Proof.
 Defined.
 
 Definition wf_ext_wf `{checker_flags} Σ : wf_ext Σ -> wf Σ.1 := fst.
-Hint Immediate wf_ext_wf.
+Hint Immediate wf_ext_wf : core.

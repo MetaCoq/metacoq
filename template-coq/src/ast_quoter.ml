@@ -343,15 +343,15 @@ struct
     in evd, aux trm
 
   let quote_global_reference : Names.GlobRef.t -> quoted_global_reference = function
-    | Globnames.VarRef _ -> CErrors.user_err (Pp.str "VarRef unsupported")
-    | Globnames.ConstRef c ->
+    | Names.GlobRef.VarRef _ -> CErrors.user_err (Pp.str "VarRef unsupported")
+    | Names.GlobRef.ConstRef c ->
       let kn = quote_kn (Names.Constant.canonical c) in
       BasicAst.ConstRef kn
-    | Globnames.IndRef (i, n) ->
+    | Names.GlobRef.IndRef (i, n) ->
       let kn = quote_kn (Names.MutInd.canonical i) in
       let n = quote_int n in
       BasicAst.IndRef (quote_inductive (kn,n))
-    | Globnames.ConstructRef ((i, n), k) ->
+    | Names.GlobRef.ConstructRef ((i, n), k) ->
        let kn = quote_kn (Names.MutInd.canonical i) in
        let n = quote_int n in
        let k = (quote_int (k - 1)) in

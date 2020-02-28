@@ -60,7 +60,7 @@ Module Environment (T : Term).
   Record one_inductive_body := {
     ind_name : ident;
     ind_type : term; (* Closed arity *)
-    ind_kelim : list sort_family; (* Allowed elimination sorts *)
+    ind_kelim : sort_family; (* Top allowed elimination sort *)
     ind_ctors : list (ident * term (* Under context of arities of the mutual inductive *)
                       * nat (* arity, w/o lets, w/o parameters *));
     ind_projs : list (ident * term) (* names and types of projections, if any.

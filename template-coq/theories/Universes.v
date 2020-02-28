@@ -3,6 +3,9 @@ From Coq Require Import MSetWeakList MSetFacts MSetProperties RelationClasses.
 From MetaCoq.Template Require Import utils BasicAst config.
 Import ListNotations.
 
+Declare Scope univ_scope.
+Delimit Scope univ_scope with u.
+
 Module Level.
   Inductive t : Set :=
   | lProp
@@ -440,9 +443,8 @@ Definition llt `{checker_flags} (x y : Z) : Prop :=
   then (x < y)%Z
   else (0 <= x /\ x < y)%Z.
 
-Notation "x < y" := (llt x y) : univ_scope.
+  Notation "x < y" := (llt x y) : univ_scope.
 
-Delimit Scope univ_scope with u.
 
 Definition lle `{checker_flags} (x y : Z) : Prop :=
   (x < y)%u \/ x = y.
@@ -663,9 +665,7 @@ Definition eq_universe_leq_universe' {cf} φ u u'
 Definition leq_universe_refl' φ u
   := @leq_universe_refl φ u.
 
-Hint Resolve eq_universe_leq_universe' leq_universe_refl'.
-
-
+Hint Resolve eq_universe_leq_universe' leq_universe_refl' : core.
 
 (* This universe is a hack used in plugings to generate fresh universes *)
 Definition fresh_universe : universe. exact Universe.type0. Qed.

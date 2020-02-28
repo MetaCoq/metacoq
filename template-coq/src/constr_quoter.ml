@@ -217,7 +217,6 @@ struct
     pair (prodl tIndTy tnat) (Lazy.force tnat) (pairl tIndTy tnat ind pars) args
 
   let mk_one_inductive_body (a, b, c, d, e) =
-    let c = to_coq_listl tsort_family c in
     let d = mk_ctor_list d in
     let e = mk_proj_list e in
     constr_mkApp (tBuild_one_inductive_body, [| a; b; c; d; e |])
@@ -294,15 +293,15 @@ struct
 
 
   let quote_global_reference : Names.GlobRef.t -> quoted_global_reference = function
-    | Globnames.VarRef _ -> CErrors.user_err (str "VarRef unsupported")
-    | Globnames.ConstRef c ->
+    | Names.GlobRef.VarRef _ -> CErrors.user_err (str "VarRef unsupported")
+    | Names.GlobRef.ConstRef c ->
        let kn = quote_kn (Names.Constant.canonical c) in
        constr_mkApp (tConstRef, [|kn|])
-    | Globnames.IndRef (i, n) ->
+    | Names.GlobRef.IndRef (i, n) ->
        let kn = quote_kn (Names.MutInd.canonical i) in
        let n = quote_int n in
        constr_mkApp (tIndRef, [|quote_inductive (kn ,n)|])
-    | Globnames.ConstructRef ((i, n), k) ->
+    | Names.GlobRef.ConstructRef ((i, n), k) ->
        let kn = quote_kn (Names.MutInd.canonical i) in
        let n = quote_int n in
        let k = (quote_int (k - 1)) in

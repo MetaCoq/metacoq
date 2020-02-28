@@ -94,6 +94,7 @@ Module Nbar.
   Arguments add _ _ : simpl nomatch.
   Arguments le _ _ : simpl nomatch.
 
+  Declare Scope nbar_scope.
   Infix "+" := add : nbar_scope.
   Infix "<=" := le : nbar_scope.
   Delimit Scope nbar_scope with nbar.
@@ -453,7 +454,7 @@ Module WeightedGraph (V : UsualOrderedType).
 
     Program Definition to_simple : forall {x y} (p : Paths x y),
         is_simple p = true -> SimplePaths (nodes p) x y
-      := fix to_simple x y p (Hp : is_simple p = true) {struct p} :=
+      := fix to_simple {x y} p (Hp : is_simple p = true) {struct p} :=
            match
              p in Paths t t0
              return is_simple p = true -> SimplePaths (nodes p) t t0
@@ -461,7 +462,7 @@ Module WeightedGraph (V : UsualOrderedType).
            | paths_refl x =>
              fun _ => spaths_refl (nodes (paths_refl x)) x
            | @paths_step x y z e p0 =>
-             fun Hp0 => spaths_step _ e (to_simple y z p0 _)
+             fun Hp0 => spaths_step _ e (to_simple p0 _)
            end Hp.
     Next Obligation.
       split.

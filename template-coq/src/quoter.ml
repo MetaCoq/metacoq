@@ -81,7 +81,7 @@ sig
   val quote_context_decl : quoted_name -> t option -> t -> quoted_context_decl
   val quote_context : quoted_context_decl list -> quoted_context
 
-  val mk_one_inductive_body : quoted_ident * t (* ind type *) * quoted_sort_family list
+  val mk_one_inductive_body : quoted_ident * t (* ind type *) * quoted_sort_family
                                  * (quoted_ident * t (* constr type *) * quoted_int) list
                                  * (quoted_ident * t (* projection type *)) list
                                  -> quoted_one_inductive_body
@@ -137,7 +137,7 @@ struct
     | Monomorphic ctx -> Q.mkMonomorphic_ctx (Q.quote_univ_contextset ctx)
     | Polymorphic ctx -> Q.mkPolymorphic_ctx (Q.quote_abstract_univ_context ctx)
 
-  let quote_inductive' (ind, i) =
+  let quote_inductive' (ind, i) : Q.quoted_inductive =
     Q.quote_inductive (Q.quote_kn (Names.MutInd.canonical ind), Q.quote_int i)
     
   let quote_rel_decl quote_term acc env = function
@@ -245,6 +245,7 @@ struct
          (Q.mkProj p' t', add_inductive (Projection.inductive p) acc)
       | Constr.Meta _ -> failwith "Meta not supported by TemplateCoq"
       | Constr.Int _ -> failwith "Native integers not supported by TemplateCoq"
+      | Constr.Float _ -> failwith "Native floating point numbers not supported by TemplateCoq"
       in
       let in_prop, env' = env in
       if is_cast_prop () && not in_prop then
@@ -332,7 +333,7 @@ struct
                in ps, acc
             | _ -> [], acc
           in
-          let sf = List.map Q.quote_sort_family oib.Declarations.mind_kelim in
+          let sf = Q.quote_sort_family oib.Declarations.mind_kelim in
 	  (Q.quote_ident oib.mind_typename, indty, sf, (List.rev reified_ctors), projs) :: ls, acc)
 	  ([],acc) (Array.to_list mib.mind_packets)
       in
@@ -390,35 +391,41 @@ struct
         | Undef _ -> None
         | Primitive _ -> CErrors.user_err Pp.(str "Primitives are unsupported by TemplateCoq")
 	      | Def cs -> Some (Mod_subst.force_constr cs)
-	      | OpaqueDef lc -> Some (Opaqueproof.force_proof (Global.opaque_tables ()) lc)
-            in
-            let tm, acc =
-              match body with
-              | None -> None, acc
-              | Some tm -> try let (tm, acc) = quote_term acc (Global.env ()) tm in
-                               (Some tm, acc)
-                           with e ->
-                             Feedback.msg_debug (str"Exception raised while checking body of " ++ KerName.print kn);
-                 raise e
-            in
-            let uctx = quote_universes_decl cd.const_universes in
-            let ty, acc =
-              let ty = cd.const_type
-                         (*CHANGE :  template polymorphism for definitions was removed.
-                          See: https://github.com/coq/coq/commit/d9530632321c0b470ece6337cda2cf54d02d61eb *)
-                (* match cd.const_type with
-	         * | RegularArity ty -> ty
-	         * | TemplateArity (ctx,ar) ->
-                 *    Constr.it_mkProd_or_LetIn (Constr.mkSort (Sorts.Type ar.template_level)) ctx *)
-              in
-              (try quote_term acc (Global.env ()) ty
-               with e ->
-                 Feedback.msg_debug (str"Exception raised while checking type of " ++ KerName.print kn);
-                 raise e)
-            in
-            let cst_bdy = Q.mk_constant_body ty tm uctx in
-            let decl = Q.mk_constant_decl cst_bdy in            
-            constants := (Q.quote_kn kn, decl) :: !constants
+	      | OpaqueDef lc -> 
+          let c, univs = Opaqueproof.force_proof Library.indirect_accessor (Environ.opaque_tables env) lc in
+          let () = match univs with
+          | Opaqueproof.PrivateMonomorphic () -> ()
+          | Opaqueproof.PrivatePolymorphic (n, csts) -> if not (Univ.ContextSet.is_empty csts && Int.equal n 0) then 
+            CErrors.user_err Pp.(str "Private polymorphic universes not supported by TemplateCoq")
+          in Some c
+        in
+        let tm, acc =
+          match body with
+          | None -> None, acc
+          | Some tm -> try let (tm, acc) = quote_term acc (Global.env ()) tm in
+                            (Some tm, acc)
+                        with e ->
+                          Feedback.msg_debug (str"Exception raised while checking body of " ++ KerName.print kn);
+              raise e
+        in
+        let uctx = quote_universes_decl cd.const_universes in
+        let ty, acc =
+          let ty = cd.const_type
+                      (*CHANGE :  template polymorphism for definitions was removed.
+                      See: https://github.com/coq/coq/commit/d9530632321c0b470ece6337cda2cf54d02d61eb *)
+            (* match cd.const_type with
+        * | RegularArity ty -> ty
+        * | TemplateArity (ctx,ar) ->
+              *    Constr.it_mkProd_or_LetIn (Constr.mkSort (Sorts.Type ar.template_level)) ctx *)
+          in
+          (try quote_term acc (Global.env ()) ty
+            with e ->
+              Feedback.msg_debug (str"Exception raised while checking type of " ++ KerName.print kn);
+              raise e)
+        in
+        let cst_bdy = Q.mk_constant_body ty tm uctx in
+        let decl = Q.mk_constant_decl cst_bdy in            
+        constants := (Q.quote_kn kn, decl) :: !constants
 	  end
     in
     let (quote_rem,quote_typ) =
@@ -457,8 +464,8 @@ struct
 
   (* CHANGE: this is the only way (ugly) I found to construct [absrt_info] with empty fields,
 since  [absrt_info] is a private type *)
-  let empty_segment = Lib.section_segment_of_reference (Globnames.VarRef (Names.Id.of_string "blah"))
-
+  let empty_segment = Lib.section_segment_of_reference (Names.GlobRef.VarRef (Names.Id.of_string "blah"))
+(*
   let quote_mut_ind env (mi:Declarations.mutual_inductive_body) =
    let t= Discharge.process_inductive empty_segment (Names.Cmap.empty,Names.Mindmap.empty) mi in
     let mf = Q.quote_mind_finiteness t.mind_entry_finite in
@@ -477,9 +484,9 @@ since  [absrt_info] is a private type *)
     let is = List.map (quote_one_ind envA envC) t.mind_entry_inds in
     let uctx = quote_universes_entry t.mind_entry_universes in
     let variance = Option.map (CArray.map_to_list Q.quote_variance) t.mind_entry_variance in
-    Q.quote_mutual_inductive_entry (mf, mp, is, uctx, variance)
+    Q.quote_mutual_inductive_entry (mf, mp, is, uctx, variance) *)
 
-  let quote_constant_body_aux bypass env evm (cd : constant_body) =
+  let quote_constant_body_aux bypass env evm (cd : Opaqueproof.opaque constant_body) =
     let ty = quote_term env cd.const_type in
     let body =
       match cd.const_body with
@@ -487,7 +494,7 @@ since  [absrt_info] is a private type *)
       | Def cs -> Some (quote_term env (Mod_subst.force_constr cs))
       | OpaqueDef cs ->
         if bypass
-        then Some (quote_term env (Opaqueproof.force_proof (Global.opaque_tables ()) cs))
+        then Some (quote_term env (fst (Opaqueproof.force_proof Library.indirect_accessor (Environ.opaque_tables env) cs)))
         else None
       | Primitive _ -> failwith "Primitive types not supported by TemplateCoq"
     in

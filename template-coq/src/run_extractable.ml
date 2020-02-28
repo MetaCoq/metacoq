@@ -45,10 +45,10 @@ let of_kername : Names.KerName.t -> char list =
 (* TODO: check that [s] was fully qualified *)
 let to_kername (s : char list) : Names.KerName.t =
   match Nametab.locate (Ast_quoter.unquote_kn s) with
-   | Globnames.VarRef vr -> failwith "not yet implemented"
-   | Globnames.ConstRef c -> Names.Constant.canonical c
-   | Globnames.IndRef i -> Names.MutInd.canonical (fst i)
-   | Globnames.ConstructRef c -> failwith "not yet implemented"
+   | Names.GlobRef.VarRef vr -> failwith "not yet implemented"
+   | Names.GlobRef.ConstRef c -> Names.Constant.canonical c
+   | Names.GlobRef.IndRef i -> Names.MutInd.canonical (fst i)
+   | Names.GlobRef.ConstructRef c -> failwith "not yet implemented"
 
 (* todo(gmm): this definition adapted from quoter.ml *)
 let quote_rel_decl env = function
@@ -82,42 +82,42 @@ let of_mib (env : Environ.env) (t : Names.MutInd.t) (mib : Plugin_core.mutual_in
   let envind = Environ.push_rel_context (List.rev indtys) env in
   let (ls,acc) =
     List.fold_left (fun (ls,acc) oib ->
-	let named_ctors =
-	  CList.combine3
-	    (Array.to_list oib.mind_consnames)
-	    (Array.to_list oib.mind_user_lc)
-	    (Array.to_list oib.mind_consnrealargs)
-	in
-        let indty = Inductive.type_of_inductive env ((mib,oib),inst) in
-        let indty = Ast_quoter.quote_term env indty in
-	let (reified_ctors,acc) =
-	  List.fold_left (fun (ls,acc) (nm,ty,ar) ->
-	      Tm_util.debug (fun () -> Pp.(str "opt_hnf_ctor_types:" ++ spc () ++
-                                   bool !opt_hnf_ctor_types)) ;
-	      let ty = if !opt_hnf_ctor_types then hnf_type envind ty else ty in
-	      let ty = quote_term acc ty in
-	      ((Ast_quoter.quote_ident nm, ty, Ast_quoter.quote_int ar) :: ls, acc))
-	    ([],acc) named_ctors
-	in
-        let projs, acc =
-          match mib.mind_record with
-          | PrimRecord [|id, labels, rel, ps|] ->
-            let ctxwolet = Termops.smash_rel_context mib.mind_params_ctxt in
-            let indty = Constr.mkApp (Constr.mkIndU ((t,0),inst),
-                                      Context.Rel.to_extended_vect Constr.mkRel 0 ctxwolet) in
-            let indbinder = Context.Rel.Declaration.LocalAssum (Context.annotR(Names.Name id),indty) in
-            let envpars = Environ.push_rel_context (indbinder :: ctxwolet) env in
-            let ps, acc = CArray.fold_right2 (fun cst pb (ls,acc) ->
-                let ty = quote_term envpars pb in
-                let kn = cst in
-                let na = Ast_quoter.quote_ident (Names.Label.to_id kn) in
-                ((na, ty) :: ls, acc)) labels ps ([],acc)
-            in ps, acc
-          | _ -> [], acc
-        in
-        let sf = List.map Ast_quoter.quote_sort_family oib.mind_kelim in
-	(Ast_quoter.quote_ident oib.mind_typename, indty, sf, (List.rev reified_ctors), projs) :: ls, acc)
-      ([],env) (Array.to_list mib.mind_packets)
+    let named_ctors =
+      CList.combine3
+        (Array.to_list oib.mind_consnames)
+        (Array.to_list oib.mind_user_lc)
+        (Array.to_list oib.mind_consnrealargs)
+    in
+    let indty = Inductive.type_of_inductive env ((mib,oib),inst) in
+    let indty = Ast_quoter.quote_term env indty in
+    let (reified_ctors,acc) =
+      List.fold_left (fun (ls,acc) (nm,ty,ar) ->
+          Tm_util.debug (fun () -> Pp.(str "opt_hnf_ctor_types:" ++ spc () ++
+                                      bool !opt_hnf_ctor_types)) ;
+          let ty = if !opt_hnf_ctor_types then hnf_type envind ty else ty in
+          let ty = quote_term acc ty in
+          ((Ast_quoter.quote_ident nm, ty, Ast_quoter.quote_int ar) :: ls, acc))
+        ([],acc) named_ctors
+    in
+    let projs, acc =
+      match mib.mind_record with
+      | PrimRecord [|id, labels, rel, ps|] ->
+        let ctxwolet = Termops.smash_rel_context mib.mind_params_ctxt in
+        let indty = Constr.mkApp (Constr.mkIndU ((t,0),inst),
+                                  Context.Rel.to_extended_vect Constr.mkRel 0 ctxwolet) in
+        let indbinder = Context.Rel.Declaration.LocalAssum (Context.annotR(Names.Name id),indty) in
+        let envpars = Environ.push_rel_context (indbinder :: ctxwolet) env in
+        let ps, acc = CArray.fold_right2 (fun cst pb (ls,acc) ->
+            let ty = quote_term envpars pb in
+            let kn = cst in
+            let na = Ast_quoter.quote_ident (Names.Label.to_id kn) in
+            ((na, ty) :: ls, acc)) labels ps ([],acc)
+        in ps, acc
+      | _ -> [], acc
+    in
+    let sf = Ast_quoter.quote_sort_family oib.mind_kelim in
+    (Ast_quoter.quote_ident oib.mind_typename, indty, sf, (List.rev reified_ctors), projs) :: ls, acc)
+        ([],env) (Array.to_list mib.mind_packets)
   in
   let nparams = Ast_quoter.quote_int mib.mind_nparams in
   let paramsctx = quote_rel_context env mib.mind_params_ctxt in
@@ -130,21 +130,6 @@ let of_mib (env : Environ.env) (t : Names.MutInd.t) (mib : Plugin_core.mutual_in
 let to_mie (x : Ast0.mutual_inductive_entry) : Plugin_core.mutual_inductive_entry =
   failwith "to_mie"
 
-(* note(gmm): code taken from quoter.ml (quote_entry_aux) *)
-let of_constant_entry (env : Environ.env) (cd : Plugin_core.constant_entry) : Ast0.constant_entry =
-  let open Entries in
-  let open Declarations in
-  match cd with
-  | DefinitionEntry d ->
-    Ast0.(DefinitionEntry {definition_entry_type = Option.map (Ast_quoter.quote_term env) d.const_entry_type;
-          definition_entry_body = Ast_quoter.quote_term env (fst (fst (Future.force d.const_entry_body)));
-          definition_entry_universes = quote_universes_entry d.const_entry_universes;
-          definition_entry_opaque = d.const_entry_opaque })
-  | ParameterEntry (ctx, (typ, univs), inline) ->
-    Ast0.(ParameterEntry {parameter_entry_type = Ast_quoter.quote_term env typ;
-          parameter_entry_universes = quote_universes_entry univs })
-  | PrimitiveEntry _ -> failwith "Primitives not supported"
-
 let get_constant_body b =
   let open Declarations in
   match b with
@@ -152,8 +137,8 @@ let get_constant_body b =
   | Undef inline -> None
   | OpaqueDef pr -> 
     let opaquetab = Global.opaque_tables () in
-    let proof = Opaqueproof.force_proof opaquetab pr in
-    let ctx = Opaqueproof.force_constraints opaquetab pr in
+    let proof, _ = Opaqueproof.force_proof Library.indirect_accessor opaquetab pr in
+    let ctx = Opaqueproof.force_constraints Library.indirect_accessor opaquetab pr in (* FIXME delayed univs skipped *)
     Some proof
   | Primitive _ -> failwith "Primitives not supported by TemplateCoq"
 

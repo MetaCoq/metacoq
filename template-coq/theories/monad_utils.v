@@ -17,6 +17,7 @@ Class MonadExc E (m : Type -> Type) : Type :=
 
 
 Module MonadNotation.
+  Declare Scope monad_scope.
   Delimit Scope monad_scope with monad.
 
   Notation "c >>= f" := (@bind _ _ _ _ c f) (at level 50, left associativity) : monad_scope.

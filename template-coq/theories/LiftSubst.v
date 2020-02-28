@@ -341,8 +341,8 @@ Proof.
   simpl in H. discriminate.
 Qed.
 
-Hint Unfold compose.
-Hint Transparent compose.
+Hint Unfold compose : core.
+Hint Transparent compose : core.
 
 Lemma simpl_subst_rec :
   forall M (H : wf M) N n p k,

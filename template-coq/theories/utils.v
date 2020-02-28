@@ -124,6 +124,7 @@ Module NEL.
   Arguments sing {A} _.
   Arguments cons {A} _ _.
 
+  Declare Scope nel_scope.
   Infix "::" := cons : nel_scope.
   Notation "[ x ]" := (sing x) : nel_scope.
   Delimit Scope nel_scope with nel.

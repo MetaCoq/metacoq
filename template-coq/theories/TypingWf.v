@@ -144,7 +144,7 @@ Lemma wf_nth:
 Proof.
   intros n args H. induction H in n; destruct n; simpl; try constructor; auto.
 Qed.
-Hint Resolve wf_nth.
+Hint Resolve wf_nth : core.
 
 Lemma red1_isLambda Σ Γ t u :
   red1 Σ Γ t u -> isLambda t -> isLambda u.

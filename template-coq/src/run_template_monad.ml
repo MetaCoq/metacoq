@@ -263,7 +263,7 @@ let unquote_mutual_inductive_entry evm trm (* of type mutual_inductive_entry *) 
 let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (mind: Constr.t) : unit =
   let mind = reduce_all env evm mind in
   let evm, mind = unquote_mutual_inductive_entry evm mind in
-  ignore (ComInductive.declare_mutual_inductive_with_eliminations mind Names.Id.Map.empty [])
+  ignore (DeclareInd.declare_mutual_inductive_with_eliminations mind Names.Id.Map.empty [])
 
 let not_in_tactic s =
   CErrors.user_err  (str ("You can not use " ^ s ^ " in a tactic."))
@@ -284,10 +284,13 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
       let name = unquote_ident (reduce_all env evm name) in
       let opaque = unquote_bool (reduce_all env evm opaque) in
       let evm, typ = (match unquote_option s with Some s -> let red = unquote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
-      let univs = Evd.univ_entry ~poly evm in
-      let n = Declare.declare_definition ~kind:Decl_kinds.Definition ~opaque name ~types:typ (body, univs) in
+      let evm, def = DeclareDef.prepare_definition ~opaque ~allow_evars:false ~poly evm
+        UState.default_univ_decl ~types:(Some (EConstr.of_constr typ)) ~body:(EConstr.of_constr body) in
+      let n = DeclareDef.declare_definition ~kind:(Decls.IsDefinition Decls.Definition)
+         ~scope:(DeclareDef.Global Declare.ImportDefaultBehavior) ~name Names.Id.Map.empty def [] in
       let env = Global.env () in
-      k (env, evm, Constr.mkConst n)
+      let evm, c = Evarutil.new_global evm n in
+      k (env, evm, EConstr.to_constr evm c)
   | TmDefinitionTerm (opaque, name, typ, body) ->
     if intactic
     then not_in_tactic "tmDefinition"
@@ -317,8 +320,8 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
       let name = unquote_ident (reduce_all env evm name) in
       let evm, typ = (match unquote_option s with Some s -> let red = unquote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
       let univs = Evd.univ_entry ~poly evm in
-      let param = Entries.ParameterEntry (None, (typ, univs), None) in
-      let n = Declare.declare_constant name (param, Decl_kinds.IsDefinition Decl_kinds.Definition) in
+      let param = Declare.ParameterEntry (None, (typ, univs), None) in
+      let n = Declare.declare_constant ~name ~kind:Decls.(IsDefinition Definition) param in
       let env = Global.env () in
       k (env, evm, Constr.mkConst n)
   | TmAxiomTerm (name,typ) ->
@@ -332,26 +335,20 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
 
   | TmLemma (name,typ) ->
     let name = reduce_all env evm name in
-    let kind = (Decl_kinds.Global, poly, Decl_kinds.Definition) in
+    let kind = Decls.(Definition) in
     let hole = CAst.make (Constrexpr.CHole (None, Namegen.IntroAnonymous, None)) in
     let evm, (c, _) = Constrintern.interp_casted_constr_evars_impls ~program_mode:true env evm hole (EConstr.of_constr typ) in
     let ident = unquote_ident name in
     Obligations.check_evars env evm;
-       let obls, _, c, cty = Obligations.eterm_obligations env ident evm 0 (EConstr.to_constr evm c) typ in
+       let obls, _, c, cty = Obligations.eterm_obligations env ident evm 0 c (EConstr.of_constr typ) in
        (* let evm = Evd.minimize_universes evm in *)
        let ctx = Evd.evar_universe_context evm in
-       let hook = Lemmas.mk_hook (fun _ _ _ gr -> 
+       let hook = DeclareDef.Hook.make (fun { DeclareDef.Hook.S.dref = gr } ->
           let env = Global.env () in
           let evm = Evd.from_env env in
           let evm, t = Evd.fresh_global env evm gr in 
           k (env, evm, EConstr.to_constr evm t)) in  (* todo better *)
-  ignore (Obligations.add_definition ident ~term:c cty ctx ~kind ~hook obls)
-    (* let kind = Decl_kinds.(Global, Flags.use_polymorphic_flag (), DefinitionBody Definition) in *)
-    (* Lemmas.start_proof (unquote_ident name) kind evm (EConstr.of_constr typ) *)
-    (* (Lemmas.mk_hook (fun _ gr -> *)
-    (* let evm, t = Evd.fresh_global env evm gr in k (env, evm, t) *)
-    (* k (env, evm, unit_tt) *)
-    (* )); *)
+    ignore (Obligations.add_definition ~name:ident ~term:c cty ctx ~poly ~kind ~hook obls)
 
   | TmQuote (false, trm) ->
     (* user should do the reduction (using tmEval) if they want *)
@@ -364,7 +361,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
        let name = unquote_string (reduce_all env evm name) in
        let (dp, nm) = Quoted.split_name name in
        (match Nametab.locate (Libnames.make_qualid dp nm) with
-        | Globnames.IndRef (ind, _) ->
+        | Names.GlobRef.IndRef (ind, _) ->
           let _ =
             let kn = Names.KerName.to_string (Names.MutInd.canonical ind) in
             if strict && kn <> name then
@@ -390,7 +387,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
          tmBind (tmAboutString name)
            (function
                None -> tmFail (str "not found: " ++ str name)
-             | Some (Globnames.ConstRef cnst) ->
+             | Some (Names.GlobRef.ConstRef cnst) ->
                let kn = KerName.to_string (Names.Constant.canonical cnst) in
                if strict && kn <> name then
                  tmFail (str "strict mode not canonical: \"" ++ str name ++ str "\" <> \"" ++ str kn ++ str "\"")

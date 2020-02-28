@@ -264,7 +264,7 @@ Proof.
   induction 1; constructor; auto.
 Qed.
 
-Hint Constructors All All2.
+Hint Constructors All All2 : core.
 
 Lemma All_rev_map {A B} (P : A -> Type) f (l : list B) : All (compose P f) l -> All P (rev_map f l).
 Proof. induction 1. constructor. rewrite rev_map_cons. apply All_app_inv; auto. Qed.

@@ -3,7 +3,7 @@ MetaCoq
 
 <img src="https://github.com/MetaCoq/metacoq/raw/master/docs/assets/LOGO.png" alt="MetaCoq" width="50px"/>
 
-[![Build Status](https://travis-ci.org/MetaCoq/metacoq.svg?branch=coq-8.9)](https://travis-ci.org/MetaCoq/metacoq)
+[![Build Status](https://travis-ci.org/MetaCoq/metacoq.svg?branch=coq-8.10)](https://travis-ci.org/MetaCoq/metacoq)
 [![Gitter](https://badges.gitter.im/coq/metacoq.svg)](https://gitter.im/coq/metacoq?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 MetaCoq is a project formalizing Coq in Coq and providing tools for
@@ -96,18 +96,18 @@ After importing `MetaCoq.Erasure.Loader`.
 
 Examples of translations built on top of this:
 
-- a parametricity plugin in [translations/param_original.v](https://github.com/MetaCoq/metacoq/tree/coq-8.9/translations/param_original.v)
-- a plugin to negate funext in [translations/times_bool_fun.v](https://github.com/MetaCoq/metacoq/tree/coq-8.9/translations/times_bool_fun.v)
+- a parametricity plugin in [translations/param_original.v](https://github.com/MetaCoq/metacoq/tree/coq-8.10/translations/param_original.v)
+- a plugin to negate funext in [translations/times_bool_fun.v](https://github.com/MetaCoq/metacoq/tree/coq-8.10/translations/times_bool_fun.v)
 
 Documentation
 =============
 
-- You may want to start with a [demo](https://github.com/MetaCoq/metacoq/tree/coq-8.9/examples/demo.v).
-- The 8.9 branch [documentation (as light coqdoc files)](https://metacoq.github.io/metacoq/html/toc.html).
+- You may want to start with a [demo](https://github.com/MetaCoq/metacoq/tree/coq-8.10/examples/demo.v).
+- The 8.10 branch [documentation (as light coqdoc files)](https://metacoq.github.io/metacoq/html/toc.html).
 - An example Coq plugin built on the Template Monad, which can be used to
-  add a constructor to any inductive type can be found in [examples/add_constructor.v](https://github.com/MetaCoq/metacoq/tree/coq-8.9/examples/add_constructor.v).
-- The test-suite files [test-suite/erasure_test.v](https://github.com/MetaCoq/metacoq/tree/coq-8.9/test-suite/erasure_test.v)
-  and [test-suite/safechecker_test.v](https://github.com/MetaCoq/metacoq/tree/coq-8.9/test-suite/safechecker_test.v) show example
+  add a constructor to any inductive type can be found in [examples/add_constructor.v](https://github.com/MetaCoq/metacoq/tree/coq-8.10/examples/add_constructor.v).
+- The test-suite files [test-suite/erasure_test.v](https://github.com/MetaCoq/metacoq/tree/coq-8.10/test-suite/erasure_test.v)
+  and [test-suite/safechecker_test.v](https://github.com/MetaCoq/metacoq/tree/coq-8.10/test-suite/safechecker_test.v) show example
   uses (and current limitations of) the verified checker and erasure.
 
 ident vs. qualid. vs kername
@@ -236,7 +236,7 @@ Please report any bugs (or feature requests) on the github [issue tracker](https
 Branches
 ========
 
-The [coq-8.9](https://github.com/MetaCoq/metacoq/tree/coq-8.9) branch is
+The [coq-8.10](https://github.com/MetaCoq/metacoq/tree/coq-8.10) branch is
 the active development branch. If possible, it is strongly recommended to use this branch.
 
 The branches [coq-8.6](https://github.com/MetaCoq/metacoq/tree/coq-8.6),
@@ -295,17 +295,17 @@ To setup a fresh `opam` installation, you might want to create a
 one yet. You need to use **opam 2** to obtain the right version of
 `Equations`.
 
-    # opam switch create coq.8.9.1 4.07.1
+    # opam switch create coq.8.10.2 4.07.1
     # eval $(opam env)
 
-This creates the `coq.8.9.1` switch which initially contains only the
+This creates the `coq.8.10.2` switch which initially contains only the
 basic `OCaml` `4.07.1` compiler, and puts you in the right environment
 (check with `ocamlc -v`).
 
 Once in the right switch, you can install `Coq` and the `Equations` package using:
 
-    # opam pin add coq 8.9.1
-    # opam pin add coq-equations 1.2+8.9
+    # opam pin add coq 8.10.2
+    # opam pin add coq-equations 1.2+8.10
 
 Pinning the packages prevents opam from trying to upgrade it afterwards, in
 this switch. If the commands are successful you should have `coq`
@@ -319,10 +319,10 @@ Installing from GitHub repository (for developers)
 To get the source code:
 
     # git clone https://github.com/MetaCoq/metacoq.git
-    # git checkout -b coq-8.9 origin/coq-8.9
+    # git checkout -b coq-8.10 origin/coq-8.10
     # git status
 
-This checks that you are indeed on the `coq-8.9` branch.
+This checks that you are indeed on the `coq-8.10` branch.
 
 You can create a [local
 switch](https://opam.ocaml.org/blog/opam-20-tips/#Local-switches) for
@@ -338,8 +338,8 @@ Requirements
 
 To compile the library, you need:
 
-- `Coq 8.9.1` (for the `coq-8.9` branch) or `Coq 8.8.2` (for the
-  `coq-8.8` branch). Older versions of `8.9` or `8.8` might also work.
+- `Coq 8.10.2` for the `coq-8.10` branch, `Coq 8.9.1` (for the `coq-8.9` branch).
+  Older minor versions of Coq might also work with the corresponding branch.
 - `OCaml` (tested with `4.06.1` and `4.07.1`, beware that `OCaml 4.06.0`
   can produce linking errors on some platforms)
 - [`Equations 1.2`](http://mattam82.github.io/Coq-Equations/)

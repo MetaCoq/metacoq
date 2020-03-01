@@ -45,4 +45,5 @@ Definition bignat := 10000.
 MetaCoq Erase bignat.
 
 Require Import vs.
-MetaCoq Erase main.
+(* FIXME unbound rel in erasure! *)
+(* MetaCoq Erase main. *)

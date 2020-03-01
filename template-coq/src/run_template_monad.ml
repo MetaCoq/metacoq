@@ -284,7 +284,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
       let name = unquote_ident (reduce_all env evm name) in
       let opaque = unquote_bool (reduce_all env evm opaque) in
       let evm, typ = (match unquote_option s with Some s -> let red = unquote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
-      let evm, def = DeclareDef.prepare_definition ~opaque ~allow_evars:false ~poly evm
+      let evm, def = DeclareDef.prepare_definition ~opaque ~allow_evars:true ~poly evm
         UState.default_univ_decl ~types:(Some (EConstr.of_constr typ)) ~body:(EConstr.of_constr body) in
       let n = DeclareDef.declare_definition ~kind:(Decls.IsDefinition Decls.Definition)
          ~scope:(DeclareDef.Global Declare.ImportDefaultBehavior) ~name Names.Id.Map.empty def [] in

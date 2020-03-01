@@ -72,7 +72,7 @@ let tmEval (rd : reduction_strategy) (t : term) : term tm =
 
 let tmDefinition (nm : ident) ?poly:(poly=false) ?opaque:(opaque=false) (typ : term option) (body : term) : kername tm =
   fun env evm success _fail ->
-    let evm, def = DeclareDef.prepare_definition ~allow_evars:false ~opaque 
+    let evm, def = DeclareDef.prepare_definition ~allow_evars:true ~opaque 
         ~poly ~types:(Option.map EConstr.of_constr typ) evm 
         UState.default_univ_decl ~body:(EConstr.of_constr body) in
     let n =

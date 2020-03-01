@@ -74,8 +74,10 @@ let retypecheck_term_dependencies env gr =
       begin match ax with
         | Constant c -> typecheck_constant c
         | Positive mi -> () (* typecheck_inductive mi *)
-        | Guarded c -> typecheck_constant c
+        | Guarded (Names.GlobRef.ConstRef c) -> typecheck_constant c
+        | Guarded _ -> ()
         | TemplatePolymorphic mi -> ()
+        | TypeInType c -> ()
       end
     | Opaque c | Transparent c -> typecheck_constant c
   in Printer.ContextObjectMap.iter process_object deps

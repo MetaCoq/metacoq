@@ -8,8 +8,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICPosition
      PCUICNormal PCUICInversion PCUICCumulativity PCUICSafeLemmata
      PCUICGeneration PCUICValidity PCUICSR PCUICSN PCUICUtils PCUICReduction.
-From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
+From Equations Require Import Equations.
 
 Import MonadNotation.
 Open Scope type_scope.
@@ -264,7 +264,7 @@ Section Reduce.
   Ltac obTac :=
     (* program_simpl ; *)
     program_simplify ;
-    Tactics.equations_simpl ;
+    Equations.CoreTactics.equations_simpl ;
     try program_solve_wf ;
     try reflexivity.
 

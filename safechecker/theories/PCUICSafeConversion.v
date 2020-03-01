@@ -11,9 +11,9 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICContextConversion PCUICConfluence PCUICSN PCUICAlpha PCUICUtils
      PCUICReduction PCUICWeakening.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce.
+Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
 
-Require Import Equations.Prop.DepElim.
 Local Set Keyed Unification.
 
 Set Default Goal Selector "!".

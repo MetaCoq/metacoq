@@ -9,9 +9,9 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICWeakening PCUICPosition PCUICCumulativity PCUICSafeLemmata PCUICSN
      PCUICPretty.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeConversion.
+Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
 
-Require Import Equations.Prop.DepElim.
 
 Import MonadNotation.
 Open Scope type_scope.
@@ -871,7 +871,7 @@ Section Typecheck.
       | None => raise (Msg "the type of the return predicate of a Case is not an arity")
       | Some (pctx, ps) =>
         check_eq_true
-          (existsb (leb_sort_family (universe_family ps)) (ind_kelim body))
+          (leb_sort_family (universe_family ps) (ind_kelim body))
           (Msg "cannot eliminate over this sort") ;;
         let params := firstn par args in
         match build_case_predicate_type ind decl body params u ps with

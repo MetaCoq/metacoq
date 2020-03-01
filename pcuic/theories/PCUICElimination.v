@@ -50,32 +50,29 @@ Definition Informative`{cf : checker_flags} (Σ : global_env_ext) (ind : inducti
        #|ind_ctors idecl| <= 1 /\
        squash (All (Is_proof Σ' Γ) (skipn (ind_npars mdecl) args)).
 
+Lemma leb_sort_family_intype sf : leb_sort_family InType sf -> sf = InType.
+Proof.
+  destruct sf; simpl; auto; discriminate.
+Qed.
+
 Lemma elim_restriction_works_kelim1 `{cf : checker_flags} (Σ : global_env_ext) Γ T ind npar p c brs mind idecl : wf Σ ->
   declared_inductive (fst Σ) mind ind idecl ->
   Σ ;;; Γ |- tCase (ind, npar) p c brs : T ->
-  (Is_proof Σ Γ (tCase (ind, npar) p c brs) -> False) -> In InType (ind_kelim idecl).
+  (Is_proof Σ Γ (tCase (ind, npar) p c brs) -> False) -> ind_kelim idecl = InType.
 Proof.
   intros wfΣ. intros.
   assert (HT := X).
   eapply inversion_Case in X as [uni [args [mdecl [idecl' [ps [pty [btys
-                                   [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]].
+                                   [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]; auto.
   repeat destruct ?; try congruence. subst. inv e0.
   eapply declared_inductive_inj in d as []. 2:exact H. subst.
   enough (universe_family ps = InType). rewrite H1 in i.
-  eapply existsb_exists in i as (? & ? & ?).
-  destruct x; tas; discriminate.
-
-  destruct (universe_family ps) eqn:Eu.
-  - exfalso. eapply H0. exists T. exists ps. split. admit.
-    split. (* 2:{ eapply universe_family_is_prop_sort; eauto. } *)
-    admit. admit.
-  - admit. (* no idea what to do for Set *)
-  - reflexivity.
+  now apply leb_sort_family_intype in i. 
 Admitted.                       (* elim_restriction_works *)
 
 Lemma elim_restriction_works_kelim2 `{cf : checker_flags} (Σ : global_env_ext) ind mind idecl : wf Σ ->
   declared_inductive (fst Σ) mind ind idecl ->
-  In InType (ind_kelim idecl) -> Informative Σ ind.
+  ind_kelim idecl = InType -> Informative Σ ind.
 Proof.
   intros.
   destruct (PCUICWeakeningEnv.on_declared_inductive X H) as [[]]; eauto.
@@ -109,7 +106,7 @@ Lemma elim_restriction_works_proj_kelim1 `{cf : checker_flags} (Σ : global_env_
   wf Σ ->
   declared_inductive (fst Σ) mind (fst (fst p)) idecl ->
   Σ ;;; Γ |- tProj p c : T ->
-  (Is_proof Σ Γ (tProj p c) -> False) -> In InType (ind_kelim idecl).
+  (Is_proof Σ Γ (tProj p c) -> False) -> ind_kelim idecl = InType.
 Proof.
   intros X H X0 H0.
   destruct p. destruct p. cbn in *.
@@ -126,7 +123,6 @@ Proof.
   clear - on_projs_elim. revert on_projs_elim. generalize (ind_kelim x1).
   intros. induction on_projs_elim; subst.
   - cbn. eauto.
-  - cbn. right. eauto.
 Qed. (* elim_restriction_works_proj *)
 
 Lemma elim_restriction_works_proj `{cf : checker_flags} (Σ : global_env_ext) Γ  p c mind idecl T :

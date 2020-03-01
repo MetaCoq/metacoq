@@ -1,7 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 Require Import ssreflect ssrbool.
 From MetaCoq Require Import LibHypsNaming.
-From Equations Require Import Equations.
 From Coq Require Import Bool String List Program BinPos Compare_dec String Lia.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICSize
@@ -14,6 +13,7 @@ Local Set Keyed Unification.
 Set Asymmetric Patterns.
 
 Require Import Equations.Prop.DepElim.
+From Equations Require Import Equations.
 
 Derive NoConfusion for term.
 Derive Subterm for term.
@@ -99,7 +99,7 @@ Lemma term_forall_ctx_list_ind :
     forall Γ (t : term), P Γ t.
 Proof.
   intros.
-  revert Γ t. set(foo:=Tactics.the_end_of_the_section). intros.
+  revert Γ t. set(foo:=CoreTactics.the_end_of_the_section). intros.
   Subterm.rec_wf_rel aux t (MR lt size). simpl. clear H1.
   assert (auxl : forall Γ {A} (l : list A) (f : A -> term), list_size (fun x => size (f x)) l < size pr0 ->
                                                             All (fun x => P Γ (f x)) l).
@@ -1243,7 +1243,7 @@ Section ParallelWeakening.
 
     - (* Beta *)
       specialize (forall_Γ _ (Γ'0,, vass na t0) eq_refl _ (Δ' ,, vass na t1) eq_refl heq_length _ _ X5).
-      specialize (forall_Γ1 _ _ eq_refl _ _ eq_refl heq_length _ _ X5).
+      specialize (forall_Γ1 _ _ eq_refl heq_length _ _ X5).
       econstructor; now rewrite !lift_context_snoc0 !Nat.add_0_r in forall_Γ.
 
     - (* Zeta *)
@@ -1258,9 +1258,8 @@ Section ParallelWeakening.
       + destruct nth_error eqn:Heq; noconf heq_option_map.
         pose proof (nth_error_Some_length Heq).
         rewrite !app_context_length in H1.
-        assert (#|Γ'0| = #|Δ'|). pcuic. eapply All2_local_env_app in X0 as [? ?].
-        eapply All2_local_env_length in a0. now rewrite !lift_context_length in a0.
-        rewrite !app_context_length; eauto.
+        assert (#|Γ'0| = #|Δ'|). pcuic. eapply All2_local_env_app in predΓ' as [? ?].
+        now eapply All2_local_env_length in a0. auto.
         rewrite simpl_lift; try lia.
         rewrite - {2}H0.
         assert (#|Γ''| + S i = S (#|Γ''| + i)) as -> by lia.
@@ -1277,11 +1276,13 @@ Section ParallelWeakening.
         now rewrite option_map_decl_body_map_decl heq_option_map.
 
     - (* Rel refl *)
-      pose proof (All2_local_env_length X0).
+      pose proof (All2_local_env_length predΓ').
       assert(#|Γ''| = #|Δ''|). red in X1. pcuic.
-      rewrite !app_context_length !lift_context_length in H.
+      rewrite !app_context_length in H.
       assert (#|Γ'0| = #|Δ'|) by lia. rewrite H1.
-      elim (leb_spec_Set); intros Hn. rewrite H0. now econstructor.
+      elim (leb_spec_Set); intros Hn. rewrite H0. econstructor.
+      rewrite -{1}H0.
+      eapply X0; eauto.
       now constructor.
 
     - assert(#|Γ''| = #|Δ''|). red in X3; pcuic.
@@ -1335,12 +1336,12 @@ Section ParallelWeakening.
       apply All2_map. clear X2. red in X3.
       unfold on_Trel, id in *.
       solve_all. rename_all_hyps.
-      specialize (forall_Γ1 Γ0 (Γ'0 ,,, fix_context mfix0)
+      specialize (forall_Γ0 Γ0 (Γ'0 ,,, fix_context mfix0)
                             ltac:(now rewrite app_context_assoc)).
-      specialize (forall_Γ1 Δ (Δ' ,,, fix_context mfix1)
+      specialize (forall_Γ0 Δ (Δ' ,,, fix_context mfix1)
                             ltac:(now rewrite app_context_assoc) heq_length _ _ ltac:(eauto)).
       rewrite !lift_context_app !Nat.add_0_r !app_context_length !fix_context_length
-              !app_context_assoc in forall_Γ1.
+              !app_context_assoc in forall_Γ0.
       now rewrite !lift_fix_context.
       unfold unfold_cofix. rewrite nth_error_map. rewrite Hnth. simpl.
       f_equal. f_equal.
@@ -1847,22 +1848,23 @@ Section ParallelSubstitution.
       unfold unfold_cofix in heq_unfold_cofix.
       destruct (nth_error mfix1 idx) eqn:Hnth; noconf heq_unfold_cofix. simpl.
       econstructor; pcuic.
+      eapply X0; pcuic.
       rewrite !subst_fix_context.
       erewrite subst_fix_context.
       eapply All2_local_env_subst_ctx; pcuic.
       apply All2_map. clear X2. red in X3.
       unfold on_Trel, id in *.
       solve_all. rename_all_hyps.
-      specialize (forall_Γ1 _ _ (Γ'0 ,,, fix_context mfix0)
+      specialize (forall_Γ0 _ _ (Γ'0 ,,, fix_context mfix0)
                             ltac:(now rewrite app_context_assoc)).
-      specialize (forall_Γ1 _ _ (Γ'1 ,,, fix_context mfix1) _ _ Hs
+      specialize (forall_Γ0 _ _ (Γ'1 ,,, fix_context mfix1) _ _ Hs
                             ltac:(now rewrite app_context_assoc) heq_length).
-      rewrite !app_context_length
-        in forall_Γ1. pose proof (All2_local_env_length X1).
-      forward forall_Γ1. lia. specialize (forall_Γ1 HΔ).
+      rewrite !app_context_length in forall_Γ0.
+      pose proof (All2_local_env_length X1).
+      forward forall_Γ0. lia. specialize (forall_Γ0 HΔ).
       rewrite !subst_fix_context.
       now rewrite !fix_context_length !subst_context_app
-          !Nat.add_0_r !app_context_assoc in forall_Γ1.
+          !Nat.add_0_r !app_context_assoc in forall_Γ0.
       unfold unfold_cofix. rewrite nth_error_map. rewrite Hnth. simpl.
       f_equal. f_equal.
       rewrite (map_cofix_subst (fun k => subst s' (k + #|Γ'1|))).

@@ -1,7 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 Require Import ssreflect ssrbool.
 From MetaCoq Require Import LibHypsNaming.
-From Equations Require Import Equations.
 From Coq Require Import Bool String List Program BinPos Compare_dec Utf8 String
   ZArith Lia.
 From MetaCoq.Template Require Import config utils.
@@ -13,6 +12,7 @@ Require Import Equations.Prop.DepElim.
 (* Type-valued relations. *)
 Require Import CRelationClasses.
 Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
+From Equations Require Import Equations.
 
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -1137,10 +1137,10 @@ Proof.
       * apply red1_red.
         rewrite simpl_lift; cbn; try lia.
         assert (n = i) by lia; subst. now constructor.
-      * cutrewrite (nth_error (nil term) n0 = None);
+      * enough (nth_error (nil term) n0 = None) as ->;
           [cbn|now destruct n0].
-        cutrewrite (i <=? n - 1 = true); try (apply Nat.leb_le; lia).
-        cutrewrite (S (n - 1) = n); try lia. auto.
+        enough (i <=? n - 1 = true) as ->; try (apply Nat.leb_le; lia).
+        enough (S (n - 1) = n) as ->; try lia. auto.
     + cbn. rewrite H0. auto.
   - eapply red_evar. repeat eapply All2_map_right.
     eapply All_All2; tea. intro; cbn; eauto.
@@ -1150,12 +1150,12 @@ Proof.
     eapply All_All2; tea. intros; cbn in *; rdest; eauto.
     rewrite map_length. eapply r0.
     rewrite nth_error_app_context_ge; rewrite fix_context_length; try lia.
-    cutrewrite (#|m| + i - #|m| = i); tas; lia.
+    enough (#|m| + i - #|m| = i) as ->; tas; lia.
   - eapply red_cofix_congr. repeat eapply All2_map_right.
     eapply All_All2; tea. intros; cbn in *; rdest; eauto.
     rewrite map_length. eapply r0.
     rewrite nth_error_app_context_ge; rewrite fix_context_length; try lia.
-    cutrewrite (#|m| + i - #|m| = i); tas; lia.
+    enough (#|m| + i - #|m| = i) as ->; tas; lia.
 Qed.
 
 

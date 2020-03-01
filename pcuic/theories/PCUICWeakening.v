@@ -8,8 +8,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
   PCUICClosed PCUICReduction PCUICPosition.
 Require Import ssreflect ssrbool.
 
-From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
+From Equations Require Import Equations.
 
 Set Default Goal Selector "!".
 
@@ -24,7 +24,7 @@ Derive Signature NoConfusion for All_local_env.
 Derive Signature for All_local_env_over.
 
 (* FIXME inefficiency in equations: using a very slow "pattern_sigma" to simplify an equality between sigma types *)
-Ltac Tactics.destruct_tele_eq H ::= noconf H.
+Ltac Equations.CoreTactics.destruct_tele_eq H ::= noconf H.
 
 (* Derive Signature NoConfusion for All_local_env. *)
 Derive NoConfusion for All_local_env_over.

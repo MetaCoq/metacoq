@@ -173,7 +173,7 @@ Proof.
   generalize #|mfix| at 2 3. induction n0; auto. simpl.
   f_equal. apply IHn0.
 Qed.
-Hint Resolve lift_unfold_fix.
+Hint Resolve lift_unfold_fix : core.
 
 Lemma lift_unfold_cofix n k mfix idx narg fn :
   unfold_cofix mfix idx = Some (narg, fn) ->
@@ -188,7 +188,7 @@ Proof.
   generalize #|mfix| at 2 3. induction n0; auto. simpl.
   f_equal. apply IHn0.
 Qed.
-Hint Resolve lift_unfold_cofix.
+Hint Resolve lift_unfold_cofix : core.
 
 Lemma lift_is_constructor:
   forall (args : list term) (narg : nat) n k,
@@ -200,7 +200,7 @@ Proof.
   destruct t; try discriminate || reflexivity.
   destruct t; try discriminate || reflexivity.
 Qed.
-Hint Resolve lift_is_constructor.
+Hint Resolve lift_is_constructor : core.
 
 Hint Rewrite UnivSubst.lift_subst_instance_constr : lift.
 Hint Rewrite lift_mkApps : lift.

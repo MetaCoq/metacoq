@@ -5,8 +5,8 @@ From MetaCoq.PCUIC Require Import PCUICAst.
 Import List.ListNotations.
 Require Import ssreflect.
 
-From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
+From Equations Require Import Equations.
 
 Set Asymmetric Patterns.
 

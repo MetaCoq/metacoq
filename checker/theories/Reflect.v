@@ -4,8 +4,8 @@ From MetaCoq.Template Require Import BasicAst Ast AstUtils Induction.
 Import List.ListNotations.
 Require Import ssreflect.
 
-From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
+From Equations Require Import Equations.
 
 Set Asymmetric Patterns.
 

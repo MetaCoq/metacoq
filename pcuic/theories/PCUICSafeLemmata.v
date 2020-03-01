@@ -1754,7 +1754,7 @@ Lemma type_Case' {cf:checker_flags} Σ Γ indnpar u p c brs args :
     let params := List.firstn npar args in
     forall ps pty, build_case_predicate_type ind mdecl idecl params u ps = Some pty ->
     Σ ;;; Γ |- p : pty ->
-    existsb (leb_sort_family (universe_family ps)) idecl.(ind_kelim) ->
+    leb_sort_family (universe_family ps) idecl.(ind_kelim) ->
     Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
     forall btys, map_option_out (build_branches_type ind mdecl idecl params u p)
             = Some btys ->

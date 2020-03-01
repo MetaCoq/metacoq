@@ -10,8 +10,8 @@ Require Import String.
 From MetaCoq Require Import LibHypsNaming.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
-From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
+From Equations Require Import Equations.
 
 Set Equations With UIP.
 
@@ -189,7 +189,7 @@ Section Inversion.
         let params := firstn npar args in
         build_case_predicate_type ind mdecl idecl params u ps = Some pty ×
         Σ ;;; Γ |- p : pty ×
-        existsb (leb_sort_family (universe_family ps)) (ind_kelim idecl) ×
+        leb_sort_family (universe_family ps) (ind_kelim idecl) ×
         Σ;;; Γ |- c : mkApps (tInd ind u) args ×
         map_option_out (build_branches_type ind mdecl idecl params u p)
                      = Some btys ×

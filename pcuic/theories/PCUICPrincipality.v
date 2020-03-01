@@ -16,9 +16,9 @@ Require Import String.
 From MetaCoq Require Import LibHypsNaming.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
-From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 Require Import CMorphisms CRelationClasses.
+From Equations Require Import Equations.
 
 Set Equations With UIP.
 Set Printing Universes.

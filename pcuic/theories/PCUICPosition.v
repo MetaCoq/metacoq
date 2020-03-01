@@ -6,10 +6,8 @@ From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
      AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICReflect PCUICUnivSubst PCUICEquality PCUICUtils.
-From Equations Require Import Equations.
-
 Require Import Equations.Prop.DepElim.
-
+From Equations Require Import Equations.
 Local Set Keyed Unification.
 
 Import MonadNotation.

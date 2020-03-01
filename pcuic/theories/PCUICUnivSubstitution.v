@@ -1218,16 +1218,13 @@ Proof.
         intro. now apply lift_subst_instance_constr.
       * symmetry; apply subst_instance_to_extended_list.
     + clear -H1 H4.
-      induction (ind_kelim idecl) as [|a l]; try discriminate; cbn in *.
-      apply* orb_true_iff in H1.
-      destruct H1 as [H1|H1]; [left|right; now eapply IHl].
-      clear IHl. unfold universe_family in *.
+      unfold universe_family in *.
       rewrite is_prop_subst_instance_univ; [|aa].
       destruct (Universe.is_prop ps); cbnr.
       case_eq (Universe.is_small ps); intro HH; rewrite HH in H1.
       ++ apply (is_small_subst_instance_univ u0) in HH.
          now rewrite HH.
-      ++ destruct a; inv H1.
+      ++ destruct (ind_kelim idecl); inv H1.
          destruct ?; constructor.
     + eapply X4 in H4; tea.
       rewrite subst_instance_constr_mkApps in H4; eassumption.

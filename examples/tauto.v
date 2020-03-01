@@ -1,7 +1,7 @@
 From Coq Require Import Bool String List Lia PeanoNat Peano_dec.
 From MetaCoq.Template Require Import All.
-From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
+From Equations Require Import Equations.
 Set Keyed Unification.
 Import ListNotations.
 Import MonadNotation.

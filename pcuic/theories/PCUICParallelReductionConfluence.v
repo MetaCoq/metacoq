@@ -2,7 +2,6 @@
 Set Warnings "-notation-overridden".
 Require Import ssreflect ssrbool.
 From MetaCoq Require Import LibHypsNaming.
-From Equations Require Import Equations.
 From Coq Require Import Bool String List Program BinPos Compare_dec Utf8 String
   ZArith Lia.
 From MetaCoq.Template Require Import config utils.
@@ -15,6 +14,7 @@ Require Import CRelationClasses.
 Require CMorphisms.
 Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 Require Import Equations.Prop.DepElim.
+From Equations Require Import Equations.
 
 Derive Signature for pred1 All2_local_env.
 
@@ -264,7 +264,7 @@ Lemma term_forall_ctx_list_ind :
     forall (t : term), P t.
 Proof.
   intros.
-  revert t. set(foo:=Tactics.the_end_of_the_section). intros.
+  revert t. set(foo:=CoreTactics.the_end_of_the_section). intros.
   Subterm.rec_wf_rel aux t (MR lt size). simpl. clear H0.
   assert (auxl : forall {A} (l : list A) (f : A -> term), list_size (fun x => size (f x)) l < size pr1 ->
                                                             All (fun x => P (f x)) l).

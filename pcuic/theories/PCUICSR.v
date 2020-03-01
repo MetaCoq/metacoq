@@ -1,8 +1,9 @@
 (* Distributed under the terms of the MIT license.   *)
 Set Warnings "-notation-overridden".
 
+Require Import Equations.Prop.DepElim.
+Require Import Equations.CoreTactics.
 From Equations Require Import Equations.
-Require Import Equations.Tactics.
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From MetaCoq Require Import LibHypsNaming.
 From MetaCoq.Template Require Import config utils.
@@ -18,9 +19,6 @@ Require Import ssreflect ssrbool.
 Require Import String.
 Set Asymmetric Patterns.
 Set SimplIsCbn.
-
-From Equations Require Import Equations.
-Require Import Equations.Prop.DepElim.
 
 Ltac rename_hyp h ht ::= my_rename_hyp h ht.
 
@@ -112,7 +110,7 @@ Proof.
     + subst types. rewrite simpl_subst_k.
       * now rewrite fix_context_length fix_subst_length.
       * reflexivity.
-  - destruct (IHtyping wfΣ) as [T' [rarg [f [[unf fty] Hcumul]]]].
+  - destruct (IHtyping _ _ wfΣ eq_refl) as [T' [rarg [f [[unf fty] Hcumul]]]].
     exists T', rarg, f. intuition auto.
     + eapply cumul_trans; eauto.
     + destruct b. eapply cumul_trans; eauto.
@@ -239,9 +237,9 @@ Proof.
 
   - (* Fixpoint unfolding *)
     assert (args <> []) by (destruct args; simpl in *; congruence).
-    apply mkApps_inj in H as [-> Hu]; auto.
+    symmetry in x; apply mkApps_inj in x as [-> Hu]; auto.
     rewrite mkApps_nonempty; auto.
-    epose (last_nonempty_eq H0). rewrite <- Hu in e1. rewrite <- e1.
+    epose (last_nonempty_eq H). rewrite <- Hu in e1. rewrite <- e1.
     clear e1.
     specialize (type_mkApps_inv _ _ _ _ _ wfΣ typet) as [T' [U' [[appty spty] Hcumul]]].
     specialize (validity _ wfΣ _ wfΓ _ _ appty) as [_ vT'].
@@ -285,8 +283,7 @@ Proof.
   - (* Proj Constructor congruence *) admit.
   - (* Proj reduction *) admit.
   - (* Fix congruence *)
-    symmetry in H.
-    apply mkApps_Fix_spec in H. simpl in H. subst args.
+    apply mkApps_Fix_spec in x. simpl in x. subst args.
     simpl. destruct narg; discriminate.
   - (* Fix congruence *)
     admit.

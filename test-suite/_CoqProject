@@ -9,6 +9,8 @@
 -Q ../erasure/theories MetaCoq.Erasure
 -R . MetaCoq.TestSuite
 
+# list obtained with `ls -1 *.v`
+
 bug1.v
 bug2.v
 bug5.v
@@ -20,19 +22,23 @@ case.v
 castprop.v
 # CheckerTest.v disabled
 cofix.v
+erasure_live_test.v
+erasure_test.v
 evars.v
+extractable.v
 hnf_ctor.v
+issue27.v
+issue28.v
 letin.v
 mutind.v
 opaque.v
 proj.v
-TypingTests.v
-univ.v
-tmInferInstance.v
-issue27.v
-issue28.v
-extractable.v
-vs.v
-erasure_test.v
+run_in_tactic.v
 safechecker_test.v
-erasure_live_test.v
+# test_term.v -> loaded in TypingTests.v
+tmExistingInstance.v
+tmInferInstance.v
+TypingTests.v
+unfold.v
+univ.v
+vs.v

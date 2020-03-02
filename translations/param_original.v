@@ -246,7 +246,6 @@ Module Id2.
   Definition free_thm_myf : forall A x y p, myf A x y p = p
     := param_ID_identity myf myfᵗ.
 End Id2.
-*)
 
 
 

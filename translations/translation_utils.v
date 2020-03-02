@@ -184,12 +184,6 @@ Definition Implement {tsl : Translation} (ΣE : tsl_context)
   end
   end.
 
-Definition body_constant_entry (e : constant_entry) : option term :=
-  match e with
-  | ParameterEntry _ => None
-  | DefinitionEntry {| definition_entry_body := t |} => Some t
-  end.
-
 
 Definition ImplementExisting {tsl : Translation} (ΣE : tsl_context) (id : ident)
   : TemplateMonad tsl_context :=

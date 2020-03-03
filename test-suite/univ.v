@@ -62,29 +62,6 @@ nil : list A | cons : A -> list A -> list A.
 
 Set Printing Universes.
 
-Fixpoint app_last (s : string) (c : Ascii.ascii) : string :=
-  match s with
-  | EmptyString => String c EmptyString
-  | String a s => String a (app_last s c)
-  end.
-
-Fixpoint split_string (s : string) (c : Ascii.ascii) (acc : string) : Datatypes.list string :=
-  match s with
-  | EmptyString => [acc]
-  | String a s => 
-    if Ascii.eqb a c then 
-      acc :: split_string s c EmptyString
-    else
-      split_string s c (app_last acc a)
-  end.
-
-Require Import Ascii.
-Definition shorten_name (n : name) : name :=
-  match n with
-  | nAnon => nAnon
-  | nNamed s => let s := split_string s "."%char EmptyString in 
-    nNamed (List.last s EmptyString)
-  end.
 Definition clean_universes_entry e :=
   match e with
   | Monomorphic_entry e => Monomorphic_entry e
@@ -101,7 +78,6 @@ Definition clean_universes_decl (m : mutual_inductive_entry) : mutual_inductive_
     mind_entry_private := m.(mind_entry_private) |}.
 
 Module to.
-  (* TODO : fix this *)
  Run TemplateProgram (t <- tmQuoteInductive "list" ;;
                      t <- tmEval all (mind_body_to_entry t) ;;
                      tmPrint t ;;

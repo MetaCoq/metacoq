@@ -62,14 +62,53 @@ nil : list A | cons : A -> list A -> list A.
 
 Set Printing Universes.
 
-(*Module to.
+Fixpoint app_last (s : string) (c : Ascii.ascii) : string :=
+  match s with
+  | EmptyString => String c EmptyString
+  | String a s => String a (app_last s c)
+  end.
+
+Fixpoint split_string (s : string) (c : Ascii.ascii) (acc : string) : Datatypes.list string :=
+  match s with
+  | EmptyString => [acc]
+  | String a s => 
+    if Ascii.eqb a c then 
+      acc :: split_string s c EmptyString
+    else
+      split_string s c (app_last acc a)
+  end.
+
+Require Import Ascii.
+Definition shorten_name (n : name) : name :=
+  match n with
+  | nAnon => nAnon
+  | nNamed s => let s := split_string s "."%char EmptyString in 
+    nNamed (List.last s EmptyString)
+  end.
+Definition clean_universes_entry e :=
+  match e with
+  | Monomorphic_entry e => Monomorphic_entry e
+  | Polymorphic_entry names e => Polymorphic_entry (map (fun x => nAnon) names) e
+  end.
+
+Definition clean_universes_decl (m : mutual_inductive_entry) : mutual_inductive_entry :=
+  {| mind_entry_record := m.(mind_entry_record);
+    mind_entry_finite := m.(mind_entry_finite);
+    mind_entry_params := m.(mind_entry_params);
+    mind_entry_inds := m.(mind_entry_inds);
+    mind_entry_universes := clean_universes_entry m.(mind_entry_universes);
+    mind_entry_variance := m.(mind_entry_variance);
+    mind_entry_private := m.(mind_entry_private) |}.
+
+Module to.
   (* TODO : fix this *)
  Run TemplateProgram (t <- tmQuoteInductive "list" ;;
                      t <- tmEval all (mind_body_to_entry t) ;;
                      tmPrint t ;;
-                     tmMkInductive t).
+                     tmMkInductive (clean_universes_decl t)).
+                     Print list.
 End to.
-*)
+
 
 Definition f@{i j k} := fun (E:Type@{i}) => Type@{max(i,j)}.
 Quote Definition qf := Eval cbv in f.

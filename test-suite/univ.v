@@ -62,14 +62,27 @@ nil : list A | cons : A -> list A -> list A.
 
 Set Printing Universes.
 
-(*Module to.
-  (* TODO : fix this *)
+Definition clean_universes_entry e :=
+  match e with
+  | Monomorphic_entry e => Monomorphic_entry e
+  | Polymorphic_entry names e => Polymorphic_entry (map (fun x => nAnon) names) e
+  end.
+
+Definition clean_universes_decl (m : mutual_inductive_entry) : mutual_inductive_entry :=
+  {| mind_entry_record := m.(mind_entry_record);
+    mind_entry_finite := m.(mind_entry_finite);
+    mind_entry_params := m.(mind_entry_params);
+    mind_entry_inds := m.(mind_entry_inds);
+    mind_entry_universes := clean_universes_entry m.(mind_entry_universes);
+    mind_entry_variance := m.(mind_entry_variance);
+    mind_entry_private := m.(mind_entry_private) |}.
+
+Module to.
  Run TemplateProgram (t <- tmQuoteInductive "list" ;;
                      t <- tmEval all (mind_body_to_entry t) ;;
                      tmPrint t ;;
-                     tmMkInductive t).
+                     tmMkInductive (clean_universes_decl t)).
 End to.
-*)
 
 Definition f@{i j k} := fun (E:Type@{i}) => Type@{max(i,j)}.
 Quote Definition qf := Eval cbv in f.

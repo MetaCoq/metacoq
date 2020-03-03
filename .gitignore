@@ -4,6 +4,8 @@ docs/_site
 .coq_config
 *.cm*
 *.vo
+*.vok
+*.vos
 *.v.d
 *.glob
 Makefile.coq

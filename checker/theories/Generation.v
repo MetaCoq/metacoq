@@ -1,12 +1,9 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Lia.
-From MetaCoq.Template Require Import config utils Ast AstUtils Induction utils LiftSubst UnivSubst Typing.
+From Coq Require Import Bool List Program.
+From MetaCoq.Template Require Import config utils Ast AstUtils LiftSubst Typing.
 From MetaCoq.Checker Require Import Reflect.
-Require Import ssreflect ssrbool.
-From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
-Require Import ssreflect.
 
 (** * Substitution lemmas for typing derivations. *)
 

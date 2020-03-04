@@ -1,22 +1,16 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
-     Classes.CRelationClasses ProofIrrelevance.
-From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
-     AstUtils UnivSubst uGraph.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
+From Coq Require Import Bool String List Program BinPos Arith Lia
+     ProofIrrelevance.
+From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
+     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICPrincipality PCUICConfluence
      PCUICCumulativity PCUICSR PCUICPosition PCUICEquality PCUICNameless
-     PCUICAlpha PCUICNormal PCUICInversion PCUICCumulativity PCUICReduction
-     PCUICConfluence PCUICConversion PCUICContextConversion PCUICValidity
-     PCUICParallelReductionConfluence PCUICWeakeningEnv
-     PCUICClosed PCUICPrincipality PCUICSubstitution
-     PCUICWeakening PCUICGeneration PCUICUtils.
-
-From Equations Require Import Equations.
+     PCUICAlpha PCUICNormal PCUICInversion PCUICReduction
+     PCUICConversion PCUICContextConversion PCUICValidity
+     PCUICWeakeningEnv PCUICGeneration PCUICParallelReductionConfluence.
 
 Require Import Equations.Prop.DepElim.
-Require Import Equations.Type.Relation_Properties.
 Derive Signature for red.
 Import MonadNotation.
 

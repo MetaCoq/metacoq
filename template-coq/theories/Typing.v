@@ -1,9 +1,9 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia ssreflect.
-From Coq Require Import String Wf Wellfounded Relation_Definitions Relation_Operators Lexicographic_Product Wf_nat.
+From Coq Require Import Bool List Program Arith Lia ssreflect.
+From Coq Require Import String Wellfounded Relation_Operators.
 
-From MetaCoq.Template Require Import config utils monad_utils Ast AstUtils Induction LiftSubst UnivSubst EnvironmentTyping LibHypsNaming.
+From MetaCoq.Template Require Import config utils monad_utils Ast AstUtils LiftSubst UnivSubst EnvironmentTyping.
 Import MonadNotation.
 
 Local Open Scope string_scope.
@@ -1561,19 +1561,6 @@ Proof.
             exists u. intuition eauto. unshelve eapply X14. all: eauto. lia.
 Qed.
 
-Ltac my_rename_hyp h th :=
-  match th with
-  | (wf ?E) => fresh "wf" E
-  | (typing _ _ ?t _) => fresh "type" t
-  | (@cumul _ _ _ ?t _) => fresh "cumul" t
-  | (conv _ _ ?t _) => fresh "conv" t
-  | (All_local_env (lift_typing (@typing _) _) ?G) => fresh "wf" G
-  | (All_local_env (lift_typing (@typing _) _) _) => fresh "wf"
-  | (All_local_env _ _ ?G) => fresh "H" G
-  | context [typing _ _ (_ ?t) _] => fresh "IH" t
-  end.
-
-Ltac rename_hyp h ht ::= my_rename_hyp h ht.
 
 (** * Lemmas about All_local_env *)
 

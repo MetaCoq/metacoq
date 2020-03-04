@@ -1,9 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From MetaCoq Require Import utils BasicAst Ast AstUtils.
-Require Import List Program.
-Require Import BinPos.
-Require Import Coq.Arith.Compare_dec Bool.
+From MetaCoq Require Import utils Ast AstUtils.
+Require Import List.
 Set Asymmetric Patterns.
 
 (** * Deriving a compact induction principle for terms

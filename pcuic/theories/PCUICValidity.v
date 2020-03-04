@@ -6,7 +6,6 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICParallelReductionConfluence PCUICConfluence PCUICUnivSubst
      PCUICUnivSubstitution PCUICConversion PCUICPrincipality.
 
-Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
 Require Import ssreflect.
 

@@ -1,8 +1,7 @@
-From Coq Require Import Ascii String Bool OrderedType Lia List Program Arith.
+From Coq Require Import Ascii OrderedType.
 From MetaCoq.Template Require Import utils BasicAst.
 From MetaCoq.Template Require Import Universes.
 Import List.ListNotations.
-Require Import ssreflect.
 
 Set Asymmetric Patterns.
 

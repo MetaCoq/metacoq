@@ -1,5 +1,5 @@
-From Coq Require Import Ascii String ZArith List Bool Lia.
-From Coq Require Import MSetList MSetFacts MSetProperties RelationClasses.
+From Coq Require Import Ascii String ZArith Lia.
+From Coq Require Import MSetList MSetFacts MSetProperties.
 From MetaCoq.Template Require Import utils BasicAst config.
 Import ListNotations.
 

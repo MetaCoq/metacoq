@@ -1,4 +1,4 @@
-Require Import Nat Bool String BinInt List Relations Lia ssrbool.
+Require Import Nat String BinInt Lia ssrbool.
 Require Import MSetWeakList MSetFacts MSetProperties.
 From MetaCoq.Template Require Import utils config Universes monad_utils wGraph.
 
@@ -1179,7 +1179,7 @@ Section CheckLeq.
         { now rewrite HG. }
         rewrite Hni in HH; cbn in HH.
           match goal with
-          | H : ssrbool.is_left ?X = true |- _ =>
+          | H : is_left ?X = true |- _ =>
             destruct X as [HH'|?]; [|discriminate]; clear H
           end.
           assert (val (valuation_of_labelling lab) li = Z.of_nat ni) as XX. {
@@ -1288,7 +1288,7 @@ Section CheckLeq.
         rewrite val_valuation_of_labelling in H; tas.
         2:{ red. now rewrite NoPropLevel.of_to_level. }
         match goal with
-        | H : ssrbool.is_left ?X = true |- _ =>
+        | H : is_left ?X = true |- _ =>
           destruct X as [HH'|HH']; try discriminate; clear H
         end.
         assert (lab l = K) as XX. {
@@ -1319,7 +1319,7 @@ Section CheckLeq.
     destruct HH as [[|[li bi]] [He' HH]]; [discriminate|].
     eexists; split; tea.
     match goal with
-    | H : ~~ ssrbool.is_left ?X = true |- _ =>
+    | H : ~~ is_left ?X = true |- _ =>
       destruct X as [HH'|HH']; try discriminate; clear H
     end.
     cbn in HH'. case_eq (lsp G l li).

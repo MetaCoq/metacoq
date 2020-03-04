@@ -2,7 +2,7 @@
 
 From Coq Require Import List Program.
 From MetaCoq Require Import utils Ast AstUtils Induction.
-From Coq Require Import BinPos Arith.Compare_dec Bool Lia.
+From Coq Require Import BinPos Lia.
 
 (** * Lifting and substitution for the AST
 

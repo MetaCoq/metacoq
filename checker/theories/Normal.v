@@ -1,13 +1,9 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
-From MetaCoq.Template Require Import config utils Ast AstUtils Induction LiftSubst UnivSubst Typing.
-Require Import String.
-Require Import ssreflect.
+From Coq Require Import Bool List Program.
+From MetaCoq.Template Require Import config utils Ast Typing.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
-Require Import Equations.Prop.DepElim.
-Require Import ssreflect.
 
 Section Normal.
   Context (Σ : global_env).

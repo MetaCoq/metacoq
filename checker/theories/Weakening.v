@@ -1,13 +1,12 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec ZArith Lia.
-From MetaCoq.Template Require Import config utils Ast AstUtils Induction utils
-  LiftSubst UnivSubst LibHypsNaming Typing TypingWf.
+From Coq Require Import Bool List Program ZArith Lia.
+From MetaCoq.Template Require Import config utils Ast AstUtils Induction
+  LiftSubst UnivSubst Typing TypingWf LibHypsNaming.
 From MetaCoq.Checker Require Import WeakeningEnv Closed Reflect.
-Require Import ssreflect ssrbool.
+Require Import ssreflect.
 
 From Equations Require Import Equations.
-Require Import Equations.Prop.DepElim.
 
 (** * Weakening lemmas for typing derivations.
 

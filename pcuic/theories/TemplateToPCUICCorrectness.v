@@ -1,17 +1,13 @@
 (* Distributed under the terms of the MIT license.   *)
 Set Warnings "-notation-overridden".
 
-From Coq Require Import Bool String List Program BinPos Compare_dec ZArith.
-From MetaCoq.Template Require Import config utils AstUtils BasicAst Ast
-     Typing TypingWf WfInv.
+From Coq Require Import Bool List Program Compare_dec PeanoNat.
+From MetaCoq.Template Require Import config utils AstUtils TypingWf Typing WfInv.
 
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICLiftSubst PCUICEquality
-     PCUICUnivSubst PCUICTyping PCUICGeneration TemplateToPCUIC.
-Require Import Equations.Prop.DepElim.
-From Equations Require Import Equations.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCumulativity
+     PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICTyping TemplateToPCUIC
+     PCUICSubstitution PCUICGeneration.
 
-Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 
@@ -586,7 +582,7 @@ Proof.
       * inversion wt. assumption.
       * inversion wu. assumption.
       * assumption.
-  - eapply PCUICCumulativity.eq_term_mkApps.
+  - eapply eq_term_mkApps.
     + eapply IHt.
       * inversion wt. assumption.
       * inversion wu. assumption.
@@ -1036,7 +1032,7 @@ Proof.
   - simpl. wf_inv H1. apply Forall_All in H2. inv H2.
     rewrite trans_mkApps; auto. apply Template.LiftSubst.wf_subst; auto with wf; solve_all.
     apply All_Forall. auto.
-    rewrite trans_subst; auto. apply PCUICSubstitution.red1_mkApps_l. constructor.
+    rewrite trans_subst; auto. apply red1_mkApps_l. constructor.
 
   - rewrite trans_subst; eauto. repeat constructor.
 
@@ -1084,11 +1080,11 @@ Proof.
     apply b2. all: solve_all.
 
   - rewrite !trans_mkApps; auto with wf. eapply wf_red1 in X; auto.
-    apply PCUICSubstitution.red1_mkApps_l. auto.
+    apply red1_mkApps_l. auto.
 
   - apply Forall_All in H2. clear H H0 H1. revert M1. induction X.
     simpl. intuition. inv H2. specialize (X H).
-    apply PCUICSubstitution.red1_mkApps_l. apply app_red_r. auto.
+    apply red1_mkApps_l. apply app_red_r. auto.
     inv H2. specialize (IHX X0).
     simpl. intros.
     eapply (IHX (T.tApp M1 [hd])).

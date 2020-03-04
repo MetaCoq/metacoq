@@ -1,17 +1,11 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
-     Classes.CRelationClasses ProofIrrelevance.
-From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
-     AstUtils UnivSubst.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
-     PCUICCumulativity PCUICPosition PCUICEquality PCUICNameless
+From Coq Require Import Bool List Program Lia.
+From MetaCoq.Template Require Import config monad_utils utils.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
+     PCUICLiftSubst PCUICTyping
+     PCUICCumulativity PCUICEquality PCUICNameless
      PCUICContextConversion PCUICValidity.
-From Equations Require Import Equations.
-
-Require Import Equations.Prop.DepElim.
-Require Import Equations.Type.Relation_Properties.
 Derive Signature for red.
 Import MonadNotation.
 

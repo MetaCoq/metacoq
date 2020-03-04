@@ -1,11 +1,9 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
+From Coq Require Import Bool List Program.
 From MetaCoq.Template
-Require Import config Universes monad_utils utils BasicAst AstUtils UnivSubst.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping.
-Require Import String.
-Require Import ssreflect.
+Require Import config utils.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICTyping.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 

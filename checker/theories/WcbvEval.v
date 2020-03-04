@@ -1,15 +1,13 @@
 (* Distributed under the terms of the MIT license.   *)
 Set Warnings "-notation-overridden".
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia CRelationClasses.
-From MetaCoq.Template Require Import config utils Ast AstUtils Induction LiftSubst UnivSubst WfInv Typing.
+From Coq Require Import Bool List Program Lia CRelationClasses.
+From MetaCoq.Template Require Import config utils Ast AstUtils LiftSubst UnivSubst WfInv Typing.
 From MetaCoq.Checker Require Import Reflect.
 
 Set Asymmetric Patterns.
 Require Import ssreflect ssrbool.
-
 Require Import Equations.Prop.DepElim.
-Require Import ssreflect.
 
 Local Ltac inv H := inversion H; subst.
 

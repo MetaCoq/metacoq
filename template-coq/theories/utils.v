@@ -1,4 +1,4 @@
-From Coq Require Import Nat ZArith Bool List String Program.
+From Coq Require Import Nat ZArith Bool Program.
 Global Set Asymmetric Patterns.
 
 
@@ -195,6 +195,3 @@ Ltac tea := try eassumption.
 Axiom todo : String.string -> forall {A}, A.
 Ltac todo s := exact (todo s).
 Extract Constant todo => "fun s -> failwith (String.concat """" (List.map (String.make 1) s))".
-
-
-Coercion is_left A B (u : {A} + {B}) := match u with left _ => true | _ => false end.

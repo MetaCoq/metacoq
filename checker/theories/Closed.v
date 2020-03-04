@@ -1,11 +1,9 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec ZArith Lia.
-From MetaCoq.Template Require Import config utils Ast AstUtils Induction utils
-  LiftSubst UnivSubst Typing TypingWf.
+From Coq Require Import Bool List Program ZArith Lia.
+From MetaCoq.Template Require Import config utils Ast AstUtils Induction
+  LiftSubst UnivSubst Typing.
 From MetaCoq.Checker Require Import WeakeningEnv.
-Require Import ssreflect ssrbool.
-Require Import Equations.Prop.DepElim.
 Require Import ssreflect.
 
 (** * Lemmas about the [closedn] predicate *)
@@ -47,7 +45,7 @@ Proof.
   - revert H0.
     elim (Nat.leb_spec k n0); intros. simpl in *.
     elim (Nat.ltb_spec); auto. apply Nat.ltb_lt in H1. intros. lia.
-    revert H1. simpl. elim (Nat.ltb_spec); auto. intros. apply Nat.ltb_lt. lia.
+    revert H1. simpl. intro. repeat toProp. lia.
   - specialize (IHt2 n (S k) (S k')). eauto with all.
   - specialize (IHt2 n (S k) (S k')). eauto with all.
   - specialize (IHt3 n (S k) (S k')). eauto with all.
@@ -133,7 +131,7 @@ Proof.
 Qed.
 
 Lemma closedn_subst_instance_constr k t u :
-  closedn k (UnivSubst.subst_instance_constr u t) = closedn k t.
+  closedn k (subst_instance_constr u t) = closedn k t.
 Proof.
   revert k.
   induction t in |- * using term_forall_list_ind; intros;
@@ -197,7 +195,7 @@ Lemma closedn_ctx_app n Γ Γ' :
   closedn_ctx n Γ && closedn_ctx (n + #|Γ|) Γ'.
 Proof.
   rewrite /closedn_ctx /app_context /= List.rev_app_distr mapi_app forallb_app /=.
-  bool_congr.
+  f_equal.
   rewrite List.rev_length.
   f_equal. eapply mapi_ext. intros.
   f_equal. lia.

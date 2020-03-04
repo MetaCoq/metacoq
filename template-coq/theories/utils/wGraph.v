@@ -1,9 +1,6 @@
-Require Import Peano_dec Nat Bool List Structures.Equalities Lia
-        MSets.MSetList MSetFacts MSetProperties.
-From MetaCoq.Template Require Import utils monad_utils.
-
-From Equations Require Import Equations.
-Require Import Equations.Prop.DepElim.
+Require Import Peano_dec Nat Lia ssrbool.
+Require Import MSets.MSetList MSetFacts MSetProperties.
+From MetaCoq.Template Require Import utils.
 
 Lemma fold_max_In n m l (H : fold_left max l n = m)
   : n = m \/ In m l.
@@ -1101,13 +1098,14 @@ Module WeightedGraph (V : UsualOrderedType).
       induction p; simpl; intuition.
     Qed.
 
+    Opaque split reduce SimplePaths_sub.
 
     Lemma weight_simplify2 {HG : acyclic_no_loop} {x z} (p : Paths x z)
       : sweight (simplify2 p) = weight p.
     Proof.
       induction p.
       - reflexivity.
-      - Opaque split reduce SimplePaths_sub. simpl.
+      - simpl.
         set (F0 := @VSetFact.mem_2 (snodes (simplify2 p)) x); clearbody F0.
         set (F1 := VSetFact.not_mem_iff (snodes (simplify2 p)) x); clearbody F1.
         destruct (VSet.mem x (snodes (simplify2 p))).

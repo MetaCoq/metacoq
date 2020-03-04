@@ -1,4 +1,4 @@
-From Coq Require Import Bool List Program Arith Lia SetoidList.
+From Coq Require Import Bool Program Arith Lia SetoidList.
 
 Import ListNotations.
 

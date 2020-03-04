@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
+From Coq Require Import Bool List Program Arith Lia
      ssreflect ssrbool.
 From MetaCoq.Template Require Import config utils Ast AstUtils.
 

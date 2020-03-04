@@ -3,13 +3,11 @@ From Equations Require Import Equations.
 From Coq Require Import Bool String List Program BinPos Compare_dec Lia.
 From MetaCoq.Template Require Import config utils AstUtils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
-     PCUICSubstitution PCUICPosition PCUICReduction PCUICCumulativity
+     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv
+     PCUICSubstitution PCUICPosition PCUICCumulativity PCUICReduction
      PCUICConfluence  PCUICParallelReductionConfluence PCUICEquality
-     PCUICContextConversion.
-Require Import ssreflect ssrbool.
-Require Import String.
-From MetaCoq Require Import LibHypsNaming.
+     PCUICContextConversion PCUICWeakening.
+Require Import ssreflect.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 Require Import CRelationClasses.

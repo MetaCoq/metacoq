@@ -1,5 +1,4 @@
-From Coq Require Import Ascii String.
-From MetaCoq.Template Require Import BasicAst Ast utils uGraph TemplateMonad TemplateMonad.Extractable.
+From MetaCoq.Template Require Import BasicAst uGraph TemplateMonad TemplateMonad.Extractable.
 
 (* Base types *)
 

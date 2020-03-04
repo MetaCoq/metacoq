@@ -1,15 +1,11 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec.
-From MetaCoq.Template Require Import config monad_utils utils Ast Induction LiftSubst UnivSubst
-     AstUtils Typing.
+From Coq Require Import Bool List Program.
+From MetaCoq.Template Require Import config monad_utils utils Ast LiftSubst.
 From MetaCoq.Checker Require Import Checker.
-Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 Import monad_utils.MonadNotation.
-Require Import Equations.Prop.DepElim.
-Require Import ssreflect.
 
 Existing Instance default_checker_flags.
 

@@ -3,6 +3,10 @@ From MetaCoq.Template Require Import MCCompare.
 
 Local Open Scope string_scope.
 
+(** When defining [Show] instance for your own datatypes, you sometimes need to
+    start a new line for better printing. [nl] is a shorthand for it. *)
+Definition nl : string := String (Ascii.ascii_of_nat 10) EmptyString.
+
 Definition string_of_list_aux {A} (f : A -> string) (sep : string) (l : list A) : string :=
   let fix aux l :=
       match l return string with

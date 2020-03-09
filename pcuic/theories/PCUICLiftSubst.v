@@ -3,13 +3,10 @@
 From Coq Require Import List Program.
 From MetaCoq.Template Require Import utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction.
-From Coq Require Import BinPos Arith.Compare_dec Bool Lia.
+From Coq Require Import BinPos Lia.
 Require Import PeanoNat.
 Import Nat.
 Require Import ssreflect.
-
-From Equations Require Import Equations.
-Require Import Equations.Prop.DepElim.
 
 (** * Lifting and substitution for the AST
 
@@ -347,8 +344,8 @@ Proof. destruct bod; simpl; try congruence. Qed.
 
 Hint Resolve lift_isApp map_non_nil isLambda_lift : all.
 
-Hint Unfold compose.
-Hint Transparent compose.
+Hint Unfold compose : core.
+Hint Transparent compose : core.
 
 Lemma simpl_subst_rec :
   forall M N n p k,
@@ -807,6 +804,7 @@ Proof. intros f f' Hff' t t' ->. now apply rename_ext. Qed.
     Additional combinators: [idsn n] for n-identity, [consn] for consing a parallel substitution.
  *)
 
+Declare Scope sigma_scope.
 Delimit Scope sigma_scope with sigma.
 Local Open Scope sigma_scope.
 

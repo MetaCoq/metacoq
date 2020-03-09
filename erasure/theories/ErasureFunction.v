@@ -1,14 +1,12 @@
 
-From Coq Require Import Bool String List Program BinPos Compare_dec.
-From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils uGraph.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICTyping PCUICMetaTheory PCUICWcbvEval PCUICLiftSubst PCUICInversion
+From Coq Require Import Bool String List Program.
+From MetaCoq.Template Require Import config utils monad_utils.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
+     PCUICTyping PCUICLiftSubst PCUICInversion
      PCUICConfluence PCUICCumulativity PCUICSR PCUICNormal PCUICSafeLemmata
-     PCUICValidity PCUICPrincipality PCUICElimination PCUICSN PCUICPrincipality.
+     PCUICValidity PCUICPrincipality PCUICElimination PCUICSN.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker.
-From MetaCoq.Erasure Require EAst ELiftSubst ETyping EWcbvEval Extract ErasureCorrectness.
 From Equations Require Import Equations.
-Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 Import MonadNotation.
@@ -92,7 +90,7 @@ Ltac sq := try (destruct HΣ as [wfΣ]; clear HΣ);
          | H : ∥ _ ∥ |- _ => destruct H
          end; try eapply sq.
 
-Hint Constructors normal neutral.
+Hint Constructors normal neutral : core.
 
 Derive Signature for normal.
 Derive Signature for neutral.
@@ -361,8 +359,11 @@ Next Obligation.
 
      eapply conv_sym, red_conv; eauto.
 Qed.
+
+Hint Constructors squash : core.
+
 Next Obligation.
-  Hint Constructors squash. destruct HΣ.
+destruct HΣ.
   eapply Is_conv_to_Arity_inv in H
     as [ (? & ? & ? & ?) | (? & ?) ].
   all: eauto.
@@ -372,7 +373,7 @@ End fix_sigma.
 
 Local Existing Instance extraction_checker_flags.
 Definition wf_ext_wf Σ : wf_ext Σ -> wf Σ := fst.
-Hint Resolve wf_ext_wf.
+Hint Resolve wf_ext_wf : core.
 
 (* Top.sq should be used but the behavior is a bit different *)
 Local Ltac sq :=
@@ -566,12 +567,13 @@ End Erase.
 Require Import ErasureCorrectness.
 Local Arguments bind _ _ _ _ ! _.
 
+Hint Constructors typing erases : core.
+
 Lemma erases_erase (Σ : global_env_ext) Γ t T (wfΣ : ∥wf_ext Σ∥) (wfΓ : ∥wf_local Σ Γ∥) t' :
   Σ ;;; Γ |- t : T ->
   erase Σ (wfΣ) Γ (wfΓ) t = Checked t' ->
   erases Σ Γ t t'.
 Proof.
-  Hint Constructors typing erases.
   intros. sq.
   (* pose proof (typing_wf_local X0). *)
 

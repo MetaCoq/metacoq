@@ -2,7 +2,7 @@
 
 From Coq Require Import Bool List Program.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
+From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst
      PCUICSR PCUICInversion PCUICSafeLemmata.
 
 Definition Is_proof `{cf : checker_flags} Σ Γ t := ∑ T u, Σ ;;; Γ |- t : T × Σ ;;; Γ |- T : tSort u × Universe.is_prop u.

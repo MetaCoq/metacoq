@@ -1,17 +1,13 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
-From MetaCoq.Template Require Import config monad_utils utils BasicAst AstUtils
-     UnivSubst uGraph Typing.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICNormal PCUICSR
-     PCUICGeneration PCUICReflect PCUICEquality PCUICInversion PCUICValidity
-     PCUICWeakening PCUICPosition PCUICCumulativity PCUICSafeLemmata PCUICSN TemplateToPCUIC.
-From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeConversion PCUICSafeChecker.
+From Coq Require Import Bool String List Program.
+From MetaCoq.Template Require Import config monad_utils utils.
+From MetaCoq.Template Require AstUtils Typing.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping TemplateToPCUIC.
+From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker.
 
 Import MonadNotation.
 
-Existing Instance envcheck_monad.
 
 Program Definition infer_template_program {cf : checker_flags} (p : Ast.program) φ Hφ
   : EnvCheck (∑ A, ∥ (trans_global_decls (List.rev p.1), φ) ;;; [] |- trans p.2 : A ∥) :=

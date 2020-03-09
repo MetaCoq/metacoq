@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 From Coq Require Import Bool List.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
+From MetaCoq.PCUIC Require Import PCUICAst
      PCUICLiftSubst PCUICUnivSubst PCUICTyping
      PCUICCumulativity PCUICConversion.
 Local Open Scope string_scope.

@@ -1,13 +1,11 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
-From MetaCoq.Template Require Import config monad_utils utils BasicAst AstUtils
-     UnivSubst Pretty uGraph Typing.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICNormal PCUICSR
-     PCUICGeneration PCUICReflect PCUICEquality PCUICInversion PCUICValidity
-     PCUICWeakening PCUICPosition PCUICCumulativity PCUICSafeLemmata PCUICSN TemplateToPCUIC.
-From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeConversion PCUICSafeChecker SafeTemplateChecker.
+From Coq Require Import Bool String Program.
+From MetaCoq.Template Require Import config monad_utils utils uGraph.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
+     PCUICTyping
+     TemplateToPCUIC.
+From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker SafeTemplateChecker.
 From MetaCoq.Erasure Require Import ErasureFunction EPretty.
 From MetaCoq.Erasure Require SafeErasureFunction.
 
@@ -151,6 +149,10 @@ Next Obligation.
 Qed.
 
 Local Open Scope string_scope.
+
+(* todo move *)
+Definition nl : string := String (Ascii.ascii_of_nat 10) EmptyString.
+
 
 (** This uses the checker-based erasure *)
 Program Definition erase_and_print_template_program_check {cf : checker_flags} (p : Ast.program)

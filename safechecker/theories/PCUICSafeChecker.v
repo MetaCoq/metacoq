@@ -1,15 +1,14 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
-From MetaCoq.Template Require Import config monad_utils utils BasicAst AstUtils
-     UnivSubst uGraph Pretty.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
+From Coq Require Import Bool String List Program BinPos Arith.
+From MetaCoq.Template Require Import config monad_utils utils
+     uGraph.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICNormal PCUICSR
      PCUICGeneration PCUICReflect PCUICEquality PCUICInversion PCUICValidity
      PCUICWeakening PCUICPosition PCUICCumulativity PCUICSafeLemmata PCUICSN
      PCUICPretty.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeConversion.
-Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
 
 
@@ -1295,7 +1294,7 @@ Section CheckEnv.
   Global Arguments EnvError {A} Σ e.
   Global Arguments CorrectDecl {A} a.
 
-  Instance envcheck_monad : Monad EnvCheck :=
+  Global Instance envcheck_monad : Monad EnvCheck :=
     {| ret A a := CorrectDecl a ;
        bind A B m f :=
          match m with
@@ -1304,7 +1303,8 @@ Section CheckEnv.
          end
     |}.
 
-  Instance envcheck_monad_exc : MonadExc (global_env_ext * env_error) EnvCheck :=
+  Global Instance envcheck_monad_exc
+    : MonadExc (global_env_ext * env_error) EnvCheck :=
     { raise A '(g, e) := EnvError g e;
       catch A m f :=
         match m with

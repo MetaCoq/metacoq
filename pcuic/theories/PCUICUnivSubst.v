@@ -2,7 +2,7 @@
 
 From Coq Require Import Bool List Program.
 From MetaCoq.Template Require Import utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICInduction PCUICLiftSubst.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 

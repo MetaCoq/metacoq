@@ -2,7 +2,7 @@
 
 From Coq Require Import Bool List Program.
 From MetaCoq.Template Require Import config monad_utils utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping PCUICChecker PCUICConversion PCUICCumulativity.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICTyping PCUICChecker PCUICConversion PCUICCumulativity.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 Import monad_utils.MonadNotation.

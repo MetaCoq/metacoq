@@ -1,9 +1,8 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
-From MetaCoq.Template Require Import config monad_utils utils AstUtils UnivSubst
-     uGraph.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst
+From Coq Require Import Bool String List Program.
+From MetaCoq.Template Require Import config monad_utils.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICUnivSubst
      PCUICTyping.
 
 Import MonadNotation.

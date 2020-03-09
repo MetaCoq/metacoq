@@ -2,19 +2,16 @@
 
 (** * Universe Substitution lemmas for typing derivations. *)
 
-From Coq Require Import Bool String List BinPos Compare_dec Arith Lia ZArith
+From Coq Require Import Bool List Lia ZArith
      CRelationClasses.
 Require Import Coq.Program.Syntax Coq.Program.Basics.
-From MetaCoq.Template Require Import utils config AstUtils UnivSubst.
+From MetaCoq.Template Require Import utils config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICEquality
      PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICClosed PCUICPosition
-     PCUICReduction PCUICCumulativity PCUICWeakening.
+     PCUICWeakening.
 
 Local Set Keyed Unification.
-
-From Equations Require Import Equations.
-Require Import Equations.Prop.DepElim.
 
 Set Default Goal Selector "!".
 

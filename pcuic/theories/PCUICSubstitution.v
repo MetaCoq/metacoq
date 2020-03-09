@@ -620,7 +620,7 @@ Lemma to_extended_list_k_subst n k c k' :
   to_extended_list_k (subst_context n k c) k' = to_extended_list_k c k'.
 Proof.
   unfold to_extended_list_k. revert k'.
-  generalize (nil term) at 1 2.
+  unf_term. generalize (nil term) at 1 2.
   induction c in n, k |- *; simpl; intros. 1: reflexivity.
   rewrite subst_context_snoc. unfold snoc. simpl.
   destruct a. destruct decl_body.
@@ -872,7 +872,7 @@ Proof.
       rewrite /compose /lift (subst_app_decomp [a] s k); auto with wf.
       rewrite subst_rel_gt.
       * simpl. lia.
-      * repeat (f_equal; simpl; try lia).
+      * unf_term. repeat (f_equal; simpl; try lia).
     + now rewrite /map (subst_rel_eq _ _ 0 a).
   - rewrite -IHcontext_subst // to_extended_list_k_cons /=.
     rewrite (lift_to_extended_list_k _ _ 1) map_map_compose.
@@ -881,7 +881,7 @@ Proof.
     rewrite /compose /lift (subst_app_decomp [subst0 s b] s k); auto with wf.
     rewrite subst_rel_gt.
     + simpl; lia.
-    + repeat (f_equal; simpl; try lia).
+    + unf_term. repeat (f_equal; simpl; try lia).
 Qed.
 
 
@@ -907,10 +907,10 @@ Lemma map_subst_instance_constr_to_extended_list_k u ctx k :
 Proof.
   unfold to_extended_list_k.
   cut (map (subst_instance_constr u) [] = []); [|reflexivity].
-  generalize (nil term); intros l Hl.
+  unf_term. generalize (nil term); intros l Hl.
   induction ctx in k, l, Hl |- *; cbnr.
   destruct a as [? [] ?]; cbnr; eauto.
-  eapply IHctx; cbn; congruence.
+  unf_term. eapply IHctx; cbn; congruence.
 Qed.
 
 Lemma subst_instance_context_assumptions u ctx :
@@ -950,7 +950,7 @@ Proof.
   simpl. cbn. move => -> /some_inj-HH. simpl. f_equal.
   etransitivity.
   2: exact (f_equal (subst n k) HH).
-  rewrite subst_it_mkProd_or_LetIn. simpl. f_equal. f_equal.
+  rewrite subst_it_mkProd_or_LetIn. unf_term. simpl. f_equal. f_equal.
   { destruct idecl; reflexivity. }
   rewrite subst_mkApps; simpl. f_equal.
   rewrite map_app; f_equal.

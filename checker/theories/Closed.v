@@ -49,8 +49,8 @@ Proof.
   - specialize (IHt2 n (S k) (S k')). eauto with all.
   - specialize (IHt2 n (S k) (S k')). eauto with all.
   - specialize (IHt3 n (S k) (S k')). eauto with all.
-  - rtoProp. solve_all. specialize (H1 n (#|m| + k) (#|m| + k')). eauto with all.
-  - rtoProp. solve_all. specialize (H1 n (#|m| + k) (#|m| + k')). eauto with all.
+  - rtoProp. solve_all. specialize (b0 n (#|m| + k) (#|m| + k')). eauto with all.
+  - rtoProp. solve_all. specialize (b0 n (#|m| + k) (#|m| + k')). eauto with all.
 Qed.
 
 Lemma closedn_mkApps k f u:
@@ -104,11 +104,11 @@ Proof.
     rewrite <- Nat.add_succ_comm in IHt3. eauto.
   - rewrite closedn_mkApps; solve_all.
   - rtoProp; solve_all. rewrite -> !Nat.add_assoc in *.
-    specialize (H0 (#|m| + k')). unfold is_true. rewrite <- H0. f_equal. lia.
-    unfold is_true. rewrite <- H2. f_equal. lia.
+    specialize (b0 (#|m| + k')). unfold is_true. rewrite <- b0. f_equal. lia.
+    unfold is_true. rewrite <- H0. f_equal. lia.
   - rtoProp; solve_all. rewrite -> !Nat.add_assoc in *.
-    specialize (H0 (#|m| + k')). unfold is_true. rewrite <- H0. f_equal. lia.
-    unfold is_true. rewrite <- H2. f_equal. lia.
+    specialize (b0 (#|m| + k')). unfold is_true. rewrite <- b0. f_equal. lia.
+    unfold is_true. rewrite <- H0. f_equal. lia.
 Qed.
 
 Lemma closedn_subst0 s k t :
@@ -142,14 +142,17 @@ Proof.
 
   - rewrite forallb_map; eapply Forall_forallb_eq_forallb; eauto.
   - rewrite forallb_map. f_equal; eauto using Forall_forallb_eq_forallb.
-  - red in H. rewrite forallb_map. f_equal; eauto using Forall_forallb_eq_forallb.
-    f_equal; eauto.
-  - red in H. rewrite forallb_map.
-    eapply Forall_forallb_eq_forallb; eauto.
+  - red in X. rewrite forallb_map. f_equal.
+    + f_equal; auto.
+    + eapply Forall_forallb_eq_forallb.
+      eapply All_Forall; tea.
+      intros [] XX; apply XX.
+  - red in X. rewrite forallb_map.
+    eapply Forall_forallb_eq_forallb. eapply All_Forall; eauto.
     unfold test_def, compose, map_def. simpl.
     do 3 (f_equal; intuition eauto).
-  - red in H. rewrite forallb_map.
-    eapply Forall_forallb_eq_forallb; eauto.
+  - red in X. rewrite forallb_map.
+    eapply Forall_forallb_eq_forallb. eapply All_Forall; eauto.
     unfold test_def, compose, map_def. simpl.
     do 3 (f_equal; intuition eauto).
 Qed.

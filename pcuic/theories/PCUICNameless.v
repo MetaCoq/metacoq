@@ -1058,7 +1058,7 @@ Lemma nl_to_extended_list:
 Proof.
   intros indctx. unfold to_extended_list, to_extended_list_k.
   change [] with (map nl []) at 2.
-  generalize (nil term), 0.
+  unf_term. generalize (nil term), 0.
   induction indctx.
   - reflexivity.
   - simpl. intros l n.

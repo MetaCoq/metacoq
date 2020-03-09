@@ -363,6 +363,8 @@ erasure/src/mSetWeakList.ml
 erasure/src/mSetWeakList.mli
 erasure/src/utils.ml
 erasure/src/utils.mli
+erasure/src/ssrbool.ml
+erasure/src/ssrbool.mli
 
 template-coq/gen-src/cRelationClasses.mli.rej
 .DS_Store

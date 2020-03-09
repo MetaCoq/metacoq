@@ -130,13 +130,14 @@ Lemma wf_subst_instance_constr u c :
   Ast.wf c -> Ast.wf (subst_instance_constr u c).
 Proof.
   induction 1 using term_wf_forall_list_ind; simpl; try solve [ constructor; auto using Forall_map ].
-
-  constructor; auto. destruct t; simpl in *; try congruence. destruct l; simpl in *; congruence.
-  now apply Forall_map.
-  constructor; auto. solve_all.
-  unfold compose. solve_all.
-  destruct x; simpl in *.
-  destruct dbody; simpl in *; congruence.
+  - constructor; auto. destruct t; simpl in *; try congruence.
+    destruct l; simpl in *; congruence.
+    now apply Forall_map.
+  - constructor; auto. solve_all.
+  - unfold compose. constructor. solve_all.
+    destruct x; simpl in *. repeat split; tas.
+    destruct dbody; simpl in *; congruence.
+  - unfold compose. constructor. solve_all.
 Qed.
 
 Lemma wf_nth:

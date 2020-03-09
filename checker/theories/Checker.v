@@ -195,28 +195,28 @@ Inductive conv_pb :=
 
 Fixpoint eq_term `{checker_flags} (φ : universes_graph) (t u : term) {struct t} :=
   match t, u with
-  | tRel n, tRel n' => eq_nat n n'
-  | tEvar ev args, tEvar ev' args' => eq_evar ev ev' && forallb2 (eq_term φ) args args'
+  | tRel n, tRel n' => Nat.eqb n n'
+  | tEvar ev args, tEvar ev' args' => Nat.eqb ev ev' && forallb2 (eq_term φ) args args'
   | tVar id, tVar id' => eq_string id id'
   | tSort s, tSort s' => check_eqb_universe φ s s'
   | tCast f k T, tCast f' k' T' => eq_term φ f f' && eq_term φ T T'
   | tApp f args, tApp f' args' => eq_term φ f f' && forallb2 (eq_term φ) args args'
   | tConst c u, tConst c' u' => eq_constant c c' && eqb_univ_instance φ u u'
   | tInd i u, tInd i' u' => eq_ind i i' && eqb_univ_instance φ u u'
-  | tConstruct i k u, tConstruct i' k' u' => eq_ind i i' && eq_nat k k'
+  | tConstruct i k u, tConstruct i' k' u' => eq_ind i i' && Nat.eqb k k'
                                                     && eqb_univ_instance φ u u'
   | tLambda _ b t, tLambda _ b' t' => eq_term φ b b' && eq_term φ t t'
   | tProd _ b t, tProd _ b' t' => eq_term φ b b' && eq_term φ t t'
   | tLetIn _ b t c, tLetIn _ b' t' c' => eq_term φ b b' && eq_term φ t t' && eq_term φ c c'
   | tCase (ind, par) p c brs,
     tCase (ind',par') p' c' brs' =>
-    eq_ind ind ind' && eq_nat par par' &&
+    eq_ind ind ind' && Nat.eqb par par' &&
     eq_term φ p p' && eq_term φ c c' && forallb2 (fun '(a, b) '(a', b') => eq_term φ b b') brs brs'
   | tProj p c, tProj p' c' => eq_projection p p' && eq_term φ c c'
   | tFix mfix idx, tFix mfix' idx' =>
     forallb2 (fun x y =>
                 eq_term φ x.(dtype) y.(dtype) && eq_term φ x.(dbody) y.(dbody)) mfix mfix' &&
-    eq_nat idx idx'
+    Nat.eqb idx idx'
   | tCoFix mfix idx, tCoFix mfix' idx' =>
     forallb2 (fun x y =>
                 eq_term φ x.(dtype) y.(dtype) && eq_term φ x.(dbody) y.(dbody)) mfix mfix' &&
@@ -227,32 +227,32 @@ Fixpoint eq_term `{checker_flags} (φ : universes_graph) (t u : term) {struct t}
 
 Fixpoint leq_term `{checker_flags} (φ : universes_graph) (t u : term) {struct t} :=
   match t, u with
-  | tRel n, tRel n' => eq_nat n n'
-  | tEvar ev args, tEvar ev' args' => eq_nat ev ev' && forallb2 (eq_term φ) args args'
+  | tRel n, tRel n' => Nat.eqb n n'
+  | tEvar ev args, tEvar ev' args' => Nat.eqb ev ev' && forallb2 (eq_term φ) args args'
   | tVar id, tVar id' => eq_string id id'
   | tSort s, tSort s' => check_leqb_universe φ s s'
   | tApp f args, tApp f' args' => eq_term φ f f' && forallb2 (eq_term φ) args args'
   | tCast f k T, tCast f' k' T' => eq_term φ f f' && eq_term φ T T'
   | tConst c u, tConst c' u' => eq_constant c c' && eqb_univ_instance φ u u'
   | tInd i u, tInd i' u' => eq_ind i i' && eqb_univ_instance φ u u'
-  | tConstruct i k u, tConstruct i' k' u' => eq_ind i i' && eq_nat k k' &&
+  | tConstruct i k u, tConstruct i' k' u' => eq_ind i i' && Nat.eqb k k' &&
                                                     eqb_univ_instance φ u u'
   | tLambda _ b t, tLambda _ b' t' => eq_term φ b b' && eq_term φ t t'
   | tProd _ b t, tProd _ b' t' => eq_term φ b b' && leq_term φ t t'
   | tLetIn _ b t c, tLetIn _ b' t' c' => eq_term φ b b' && eq_term φ t t' && leq_term φ c c'
   | tCase (ind, par) p c brs,
     tCase (ind',par') p' c' brs' =>
-    eq_ind ind ind' && eq_nat par par' &&
+    eq_ind ind ind' && Nat.eqb par par' &&
     eq_term φ p p' && eq_term φ c c' && forallb2 (fun '(a, b) '(a', b') => eq_term φ b b') brs brs'
   | tProj p c, tProj p' c' => eq_projection p p' && eq_term φ c c'
   | tFix mfix idx, tFix mfix' idx' =>
     forallb2 (fun x y =>
                 eq_term φ x.(dtype) y.(dtype) && eq_term φ x.(dbody) y.(dbody)) mfix mfix' &&
-    eq_nat idx idx'
+    Nat.eqb idx idx'
   | tCoFix mfix idx, tCoFix mfix' idx' =>
     forallb2 (fun x y =>
                 eq_term φ x.(dtype) y.(dtype) && eq_term φ x.(dbody) y.(dbody)) mfix mfix' &&
-    eq_nat idx idx'
+    Nat.eqb idx idx'
   | _, _ => false
   end.
 

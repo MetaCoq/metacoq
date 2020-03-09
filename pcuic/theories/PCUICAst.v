@@ -126,12 +126,18 @@ Record mutual_inductive_entry := {
     Definition tRel := tRel.
     Definition tSort := tSort.
     Definition tProd := tProd.
+    Definition tLambda := tLambda.
     Definition tLetIn := tLetIn.
     Definition tInd := tInd.
 
     Definition mkApps := mkApps.
 
   End PCUICTerm.
+
+  Ltac unf_term := unfold PCUICTerm.term in *; unfold PCUICTerm.tRel in *;
+                   unfold PCUICTerm.tSort in *; unfold PCUICTerm.tProd in *;
+                   unfold PCUICTerm.tLambda in *; unfold PCUICTerm.tLetIn in *;
+                   unfold PCUICTerm.tInd in *.
 
   Module PCUICEnvironment := Environment PCUICTerm.
   Include PCUICEnvironment.

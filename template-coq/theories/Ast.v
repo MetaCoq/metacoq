@@ -71,12 +71,18 @@ Definition term := term.
 Definition tRel := tRel.
 Definition tSort := tSort.
 Definition tProd := tProd.
+Definition tLambda := tLambda.
 Definition tLetIn := tLetIn.
 Definition tInd := tInd.
 
 Definition mkApps := mkApps.
 
 End TemplateTerm.
+
+Ltac unf_term := unfold TemplateTerm.term in *; unfold TemplateTerm.tRel in *;
+                 unfold TemplateTerm.tSort in *; unfold TemplateTerm.tProd in *;
+                 unfold TemplateTerm.tLambda in *; unfold TemplateTerm.tLetIn in *;
+                 unfold TemplateTerm.tInd in *.
 
 Module TemplateEnvironment := Environment TemplateTerm.
 Include TemplateEnvironment.
@@ -123,10 +129,6 @@ Inductive wf : term -> Prop :=
 *)
 
 (** *** Constant and axiom entries *)
-
-Inductive universes_entry :=
-| Monomorphic_entry (ctx : ContextSet.t)
-| Polymorphic_entry (names : list name) (ctx : UContext.t).
 
 Record parameter_entry := {
   parameter_entry_type      : term;

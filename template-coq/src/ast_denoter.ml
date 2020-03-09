@@ -31,7 +31,7 @@ struct
   type quoted_abstract_univ_context = Universes0.AUContext.t
   type quoted_variance = Universes0.Variance.t
   type quoted_universes_decl = Universes0.universes_decl
-  type quoted_universes_entry = Ast0.universes_entry
+  type quoted_universes_entry = Universes0.universes_entry
 
   type quoted_ind_entry = quoted_ident * t * quoted_bool * quoted_ident list * t list
   type quoted_definition_entry = Ast0.definition_entry

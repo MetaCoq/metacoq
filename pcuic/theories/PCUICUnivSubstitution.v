@@ -1252,7 +1252,7 @@ Lemma subst_instance_to_extended_list u l
 Proof.
   - unfold to_extended_list, to_extended_list_k.
     change [] with (map (subst_instance_constr u) []) at 2.
-    generalize (nil term), 0. induction l as [|[aa [ab|] ac] bb].
+    unf_term. generalize (nil term), 0. induction l as [|[aa [ab|] ac] bb].
     + reflexivity.
     + intros l n; cbn. now rewrite IHbb.
     + intros l n; cbn. now rewrite IHbb.
@@ -1388,7 +1388,7 @@ Proof.
       destruct (destArity [] t) as [[ctx s']|]; [|discriminate].
       apply some_inj in H0; subst; simpl in *. f_equal.
       rewrite subst_instance_constr_it_mkProd_or_LetIn. f_equal; cbn.
-      f_equal. rewrite subst_instance_constr_mkApps; cbn.
+      unf_term. f_equal. rewrite subst_instance_constr_mkApps; cbn.
       f_equal. rewrite map_app. f_equal.
       * rewrite !map_map, subst_instance_context_length; apply map_ext. clear.
         intro. now apply lift_subst_instance_constr.

@@ -789,3 +789,11 @@ Lemma nth_nth_error {A} n l (d : A) :
 Proof.
   symmetry. apply nth_default_eq.
 Qed.
+
+Lemma firstn_add {A} x y (args : list A) : firstn (x + y) args = firstn x args ++ firstn y (skipn x args).
+Proof.
+  induction x in y, args |- *. simpl. reflexivity.
+  simpl. destruct args. simpl.
+  now rewrite firstn_nil.
+  rewrite IHx. now rewrite app_comm_cons.
+Qed.

@@ -2,7 +2,7 @@
 Set Warnings "-notation-overridden".
 
 From Coq Require Import Bool List Program Compare_dec PeanoNat.
-From MetaCoq.Template Require Import config utils AstUtils TypingWf Typing WfInv.
+From MetaCoq.Template Require Import config utils Ast AstUtils TypingWf Typing WfInv.
 
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCumulativity
      PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICTyping TemplateToPCUIC
@@ -13,6 +13,7 @@ Set Asymmetric Patterns.
 
 Module T := Template.Ast.
 Module TTy := Template.Typing.
+Module TEnv := Template.Ast.TemplateEnvironment.
 
 Local Existing Instance default_checker_flags.
 
@@ -42,9 +43,9 @@ Proof.
   - rewrite lift_mkApps, IHt, map_map.
     f_equal. rewrite map_map; solve_all.
 
-  - f_equal; auto. red in H. solve_list.
-  - f_equal; auto; red in H; solve_list.
-  - f_equal; auto; red in H; solve_list.
+  - f_equal; auto. solve_list.
+  - f_equal; auto; solve_list.
+  - f_equal; auto; solve_list.
 Qed.
 
 Lemma mkApps_app f l l' : mkApps f (l ++ l') = mkApps (mkApps f l) l'.
@@ -94,9 +95,9 @@ Proof.
     apply Template.LiftSubst.wf_subst; auto.
     solve_all. solve_all. apply Template.LiftSubst.wf_subst; auto. solve_all.
 
-  - f_equal; auto; red in H; solve_list.
-  - f_equal; auto; red in H; solve_list.
-  - f_equal; auto; red in H; solve_list.
+  - f_equal; auto; solve_list.
+  - f_equal; auto; solve_list.
+  - f_equal; auto; solve_list.
 Qed.
 
 Notation Tterm := Template.Ast.term.
@@ -106,11 +107,12 @@ Lemma trans_subst_instance_constr u t : trans (Template.UnivSubst.subst_instance
                                         subst_instance_constr u (trans t).
 Proof.
   induction t using Template.Induction.term_forall_list_ind; simpl; try congruence.
-  f_equal. rewrite !map_map_compose. solve_all.
-  rewrite IHt. rewrite map_map_compose.
-  rewrite mkApps_morphism; auto. f_equal.
-  rewrite !map_map_compose. solve_all.
-  1-3:f_equal; auto; Template.AstUtils.merge_All; solve_list.
+  { f_equal. rewrite !map_map_compose. solve_all. }
+  { rewrite IHt. rewrite map_map_compose.
+    rewrite mkApps_morphism; auto. f_equal.
+    rewrite !map_map_compose. solve_all. }
+  1-3:f_equal; auto; unfold BasicAst.tFixProp, BasicAst.tCaseBrsProp in *;
+    repeat toAll; solve_list.
 Qed.
 
 Require Import ssreflect.
@@ -1294,7 +1296,7 @@ Proof.
   generalize (destArity_spec [] T). rewrite eq.
   simpl. move => ->.
   apply (it_mkProd_or_LetIn_wf Γ).
-  rewrite -AstUtils.it_mkProd_or_LetIn_app.
+  rewrite -TEnv.it_mkProd_or_LetIn_app.
   eapply wf_it_mkProd_or_LetIn. instantiate (1:=wf).
   induction wf; constructor; auto.
   destruct t0. eapply typing_wf; eauto.

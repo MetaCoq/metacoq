@@ -602,7 +602,8 @@ Proof.
   pose proof (to_extended_list_lift_above c).
   symmetry. solve_all.
   destruct H as [x' [-> Hx]]. simpl.
-  destruct (leb_spec_Set (#|c| + k) x'). f_equal. lia. reflexivity.
+  destruct (leb_spec_Set (#|c| + k) x'); unf_term.
+  f_equal. lia. reflexivity.
 Qed.
 
 Lemma weakening_red1 `{CF:checker_flags} Σ Γ Γ' Γ'' M N :

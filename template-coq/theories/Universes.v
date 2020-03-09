@@ -1691,3 +1691,43 @@ End SubstInstanceClosed.
 
 Hint Resolve subst_instance_level_closedu subst_instance_level_expr_closedu
      subst_instance_univ_closedu subst_instance_instance_closedu : substu.
+
+
+Local Open Scope string_scope.
+
+Definition string_of_level (l : Level.t) : string :=
+  match l with
+  | Level.lProp => "Prop"
+  | Level.lSet => "Set"
+  | Level.Level s => s
+  | Level.Var n => "Var" ++ string_of_nat n
+  end.
+
+Definition string_of_level_expr (e : UnivExpr.t) : string :=
+  match e with
+  | UnivExpr.lProp => "Prop"
+  | UnivExpr.npe (l, b) => string_of_level l ++ (if b then "+1" else "")
+  end.
+
+Definition string_of_sort (u : Universe.t) :=
+  string_of_list string_of_level_expr (UnivExprSet.elements u).
+
+Definition string_of_universe_instance u :=
+  string_of_list string_of_level u.
+
+
+Inductive universes_entry :=
+| Monomorphic_entry (ctx : ContextSet.t)
+| Polymorphic_entry (names : list name) (ctx : UContext.t).
+
+Definition universes_entry_of_decl (u : universes_decl) : universes_entry :=
+  match u with
+  | Polymorphic_ctx ctx => Polymorphic_entry (fst ctx) (Universes.AUContext.repr ctx)
+  | Monomorphic_ctx ctx => Monomorphic_entry ctx
+  end.
+
+Definition polymorphic_instance uctx :=
+  match uctx with
+  | Monomorphic_ctx c => Instance.empty
+  | Polymorphic_ctx c => fst (AUContext.repr c)
+  end.

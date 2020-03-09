@@ -31,8 +31,8 @@ MCList
 MCRelations
 MCOption
 MCProd
-MCString
 MCCompare
+MCString
 All_Forall
 Config0
 Universes0

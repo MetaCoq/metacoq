@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import List Program.
-From MetaCoq.Template Require Import utils AstUtils BasicAst Pretty.
-From MetaCoq.Erasure Require Import EAst EAstUtils ETyping ELiftSubst.
+From MetaCoq.Template Require Import utils Pretty.
+From MetaCoq.Erasure Require Import EAst EAstUtils ETyping.
 From Coq Require Import String.
 
 (** Pretty printing *)

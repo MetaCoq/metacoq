@@ -5,7 +5,7 @@ From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping
      PCUICWeakening PCUICSubstitution PCUICChecker PCUICRetyping PCUICMetaTheory
      PCUICWcbvEval PCUICSR PCUICValidity.
-From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst ETyping EWcbvEval Extract Prelim.
+From MetaCoq.Erasure Require Import EAstUtils ELiftSubst ETyping EWcbvEval Extract Prelim.
 
 From Equations Require Import Equations.
 
@@ -28,7 +28,7 @@ Derive Signature for Forall2.
 Lemma eval_box_apps:
   forall (Σ' : E.global_declarations) (e : E.term) (x x' : list E.term),
     Forall2 (eval Σ') x x' ->
-    eval Σ' e tBox -> eval Σ' (mkApps e x) tBox.
+    eval Σ' e EAst.tBox -> eval Σ' (EAst.mkApps e x) EAst.tBox.
 Proof.
   intros Σ' e x H2. revert e H2; induction x using rev_ind; cbn; intros; eauto using eval.
   eapply Forall2_app_inv_l in H as [l1' [l2' [H [H' eq]]]]. subst H2.

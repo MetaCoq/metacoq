@@ -1,11 +1,9 @@
-From Coq Require Import Ascii String Bool OrderedType Lia List Program Arith.
-From MetaCoq.Template Require Import utils AstUtils.
-From MetaCoq.Template Require Import BasicAst.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction.
+From Coq Require Import Ascii String Bool OrderedType Arith.
+From MetaCoq.Template Require Import utils.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICInduction.
 Import List.ListNotations.
 Require Import ssreflect.
 
-Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
 
 Set Asymmetric Patterns.

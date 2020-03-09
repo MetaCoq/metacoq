@@ -6,10 +6,6 @@ From Coq Require Import BinPos String.
 
 (** Pretty printing *)
 
-(** When defining [Show] instance for your own datatypes, you sometimes need to
-    start a new line for better printing. [nl] is a shorthand for it. *)
-Definition nl : string := String (Ascii.ascii_of_nat 10) EmptyString.
-
 Section print_term.
   Context (Σ : global_env_ext).
 

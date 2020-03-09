@@ -2,9 +2,9 @@
 
 (** * Substitution lemmas for typing derivations. *)
 
-From Coq Require Import Bool String List BinPos Compare_dec Arith Lia.
+From Coq Require Import Bool List Arith Lia.
 Require Import Coq.Program.Syntax Coq.Program.Basics.
-From MetaCoq.Template Require Import utils config AstUtils.
+From MetaCoq.Template Require Import utils config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
   PCUICLiftSubst PCUICEquality PCUICPosition
   PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICClosed
@@ -12,7 +12,6 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
 Require Import ssreflect.
 
 From Equations Require Import Equations.
-Require Import Equations.Prop.DepElim.
 
 Set Asymmetric Patterns.
 Local Set Keyed Unification.
@@ -379,8 +378,6 @@ Qed.
 
 Definition subst_mutual_inductive_body n k m :=
   map_mutual_inductive_body (fun k' => subst n (k' + k)) m.
-
-From Equations Require Import Equations.
 
 Lemma subst_declared_minductive {cf:checker_flags} Σ cst decl n k :
   wf Σ ->
@@ -1149,7 +1146,6 @@ Proof.
 Qed.
 
 Arguments iota_red : simpl never.
-From Equations Require Import Equations.
 
 Lemma substitution_red1 {cf:checker_flags} (Σ : global_env_ext) Γ Γ' Γ'' s M N :
   wf Σ -> subs Σ Γ s Γ' -> wf_local Σ Γ ->
@@ -1273,8 +1269,6 @@ Proof.
   rewrite <- commut_lift_subst_rec; auto with arith.
   rewrite -{3}H. now rewrite simpl_subst_k.
 Qed.
-
-Require Import PCUICReduction.
 
 Lemma substitution_let_red `{cf : checker_flags} (Σ : global_env_ext) Γ Δ Γ' s M N :
   wf Σ -> subslet Σ Γ s Δ -> wf_local Σ Γ ->

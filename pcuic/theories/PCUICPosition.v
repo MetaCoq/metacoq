@@ -3,7 +3,7 @@
 From Coq Require Import Bool List Program RelationClasses Lia.
 From MetaCoq.Template Require Import config monad_utils utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICInduction
-     PCUICReflect PCUICEquality PCUICLiftSubst PCUICAstUtils.
+     PCUICReflect PCUICEquality PCUICLiftSubst.
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
 Local Set Keyed Unification.

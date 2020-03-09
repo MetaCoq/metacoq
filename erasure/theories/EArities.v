@@ -1,12 +1,9 @@
 
-From Coq Require Import Bool String List Program BinPos Compare_dec ZArith Lia.
-From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICMetaTheory PCUICWcbvEval PCUICLiftSubst PCUICInversion PCUICSR PCUICNormal PCUICSafeLemmata PCUICPrincipality PCUICGeneration PCUICSubstitution PCUICElimination PCUICEquality PCUICContextConversion PCUICConversion.
-From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker.
+From Coq Require Import Bool List Program ZArith Lia.
+From MetaCoq.Template Require Import config utils monad_utils.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping PCUICWcbvEval PCUICLiftSubst PCUICInversion PCUICSR PCUICPrincipality PCUICGeneration PCUICSubstitution PCUICElimination PCUICContextConversion PCUICConversion.
 
-From MetaCoq.Erasure Require EAst ELiftSubst ETyping EWcbvEval Extract.
 From Equations Require Import Equations.
-Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 Import MonadNotation.
@@ -316,11 +313,12 @@ Proof.
   constructor; auto.
 Qed.
 
+Hint Constructors red red1 : core.
+
 Lemma context_conversion_red1 (Σ : global_env_ext) Γ Γ' s t : wf Σ -> (* Σ ;;; Γ' |- t : T -> *)
    context_relation (@conv_decls Σ) Γ Γ' -> red1 Σ Γ s t -> red Σ Γ' s t.
 Proof.
   intros HΣ HT X0. induction X0 using red1_ind_all in Γ', HΣ, HT |- *; eauto.
-  Hint Constructors red red1.
   all:eauto.
   - econstructor. econstructor. econstructor.
     rewrite <- H.

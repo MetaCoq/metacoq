@@ -5,9 +5,8 @@
 *)
 
 Require Import MetaCoq.Template.utils.
-Require Import FSets.
-Require Import ExtrOcamlBasic.
-Require Import ExtrOcamlString ExtrOcamlZInt.
+Require Import OrdersTac.
+Require Import ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt.
 
 From MetaCoq.SafeChecker Require Import PCUICSafeChecker PCUICSafeConversion SafeTemplateChecker.
 

@@ -1,9 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
-Require Import Coq.Strings.String.
-Require Import Coq.PArith.BinPos.
+
 Require Import List. Import ListNotations.
-From MetaCoq.Template Require Import monad_utils.
 From MetaCoq.Template Require Export BasicAst Universes.
 
 (** Extracted terms

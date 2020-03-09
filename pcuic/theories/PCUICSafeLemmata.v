@@ -1,8 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Arith Lia
-     ProofIrrelevance.
-From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst.
+From Coq Require Import Bool List Program Arith Lia.
+From MetaCoq.Template Require Import config monad_utils utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICPrincipality PCUICConfluence
      PCUICCumulativity PCUICSR PCUICPosition PCUICEquality PCUICNameless

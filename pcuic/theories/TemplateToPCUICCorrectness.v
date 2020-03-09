@@ -2,7 +2,7 @@
 Set Warnings "-notation-overridden".
 
 From Coq Require Import Bool List Program Compare_dec PeanoNat.
-From MetaCoq.Template Require Import config utils Ast AstUtils TypingWf Typing WfInv.
+From MetaCoq.Template Require Import config utils Ast TypingWf WfInv.
 
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCumulativity
      PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICTyping TemplateToPCUIC
@@ -562,18 +562,14 @@ Proof.
     { inversion wt. assumption. }
     assert (wargs' : Forall T.wf args').
     { inversion wu. assumption. }
-    rename X into H; induction H in wl, args', wargs', a |- *.
-    + dependent destruction a. constructor.
-    + dependent destruction a. simpl.
-      constructor.
-      * eapply p.
-        -- inversion wl. assumption.
-        -- inversion wargs'. assumption.
-        -- assumption.
-      * eapply IHAll.
-        -- assumption.
-        -- inversion wl. assumption.
-        -- inversion wargs'. assumption.
+    apply Forall_All in wl.
+    apply Forall_All in wargs'.
+    eapply All2_All_mix_right in a; tea.
+    eapply All2_All_mix_left in a; try exact X.
+    eapply All2_All_mix_left in a; try exact wl.
+    eapply All2_map, All2_impl; tea.
+    clear; cbn. intros x y [H1 [H2 [H3 H4]]]. 
+    apply H2; assumption.
   - constructor.
     + constructor. 2: constructor.
       eapply IHt2.

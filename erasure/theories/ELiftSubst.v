@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import List Program BinPos Arith.Compare_dec Bool Lia.
-From MetaCoq.Template Require Import Ast AstUtils utils.
+From Coq Require Import List Program Lia.
+From MetaCoq.Template Require Import utils.
 From MetaCoq.Erasure Require Import EAst EInduction.
 
 
@@ -328,8 +328,8 @@ Proof. destruct bod; simpl; try congruence. Qed.
 
 Hint Resolve lift_isApp map_non_nil isLambda_lift : all.
 
-Hint Unfold compose.
-Hint Transparent compose.
+Hint Unfold compose : core.
+Hint Transparent compose : core.
 
 Lemma simpl_subst_rec :
   forall M N n p k,

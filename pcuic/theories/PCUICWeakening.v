@@ -1,14 +1,12 @@
 (* Distributed under the terms of the MIT license.   *)
-From Equations Require Import Equations.
-From Coq Require Import Bool String List BinPos Compare_dec ZArith Lia.
+From Coq Require Import Bool List ZArith Lia.
 Require Import Coq.Program.Syntax Coq.Program.Basics.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
   PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICTyping PCUICWeakeningEnv
   PCUICClosed PCUICReduction PCUICPosition.
-Require Import ssreflect ssrbool.
+Require Import ssreflect.
 
-Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
 
 Set Default Goal Selector "!".

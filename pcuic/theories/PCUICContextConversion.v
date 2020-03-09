@@ -1,21 +1,18 @@
 (* Distributed under the terms of the MIT license.   *)
 Set Warnings "-notation-overridden".
 
-From Equations Require Import Equations.
-From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
-From Coq Require Import CRelationClasses String.
-From Coq Require Import ssreflect ssrbool.
+From Coq Require Import Bool List Program Arith Lia.
+From Coq Require Import CRelationClasses.
+From Coq Require Import ssreflect.
 
 From MetaCoq.Template Require Import config utils.
-From MetaCoq Require Import LibHypsNaming.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
-     PCUICSubstitution PCUICClosed PCUICCumulativity PCUICGeneration PCUICReduction
+From MetaCoq.PCUIC Require Import PCUICAst
+     PCUICLiftSubst PCUICTyping PCUICWeakening
+     PCUICCumulativity PCUICReduction
      PCUICParallelReduction PCUICEquality PCUICUnivSubstitution
      PCUICParallelReductionConfluence PCUICConfluence.
 
 From Equations Require Import Equations.
-Require Import Equations.Prop.DepElim.
 
 Set Asymmetric Patterns.
 Set SimplIsCbn.
@@ -141,6 +138,9 @@ Section ContextReduction.
     - case; move => n b b' //. eapply IHΔ. now depelim H. apply X.
   Qed.
 
+  Ltac t := split; [eapply red1_red; try econstructor; eauto|try constructor]; eauto with pcuic.
+  Ltac u := intuition eauto with pcuic.
+
   Lemma red1_red_ctx_aux {Γ Γ' T U} :
     red1 Σ Γ T U ->
     @red_ctx Σ Γ Γ' ->
@@ -148,9 +148,6 @@ Section ContextReduction.
     ∑ t, red Σ Γ' T t * red Σ Γ' U t.
   Proof.
     intros r H. revert Γ' H.
-    Ltac t := split; [eapply red1_red; try econstructor; eauto|try constructor]; eauto with pcuic.
-    Ltac u := intuition eauto with pcuic.
-
     simpl in *. induction r using red1_ind_all; intros; auto with pcuic;
      try solve [eexists; t]; try destruct (IHr _ H) as [? [? ?]]; auto.
 

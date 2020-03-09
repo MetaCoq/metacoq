@@ -1,14 +1,8 @@
 (* Distributed under the terms of the MIT license.   *)
-Require Import Equations.Prop.DepElim.
-From Equations Require Import Equations.
-From Coq Require Import Bool String List Program BinPos Compare_dec.
-From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
-     PCUICSubstitution PCUICClosed.
-Require Import ssreflect ssrbool.
-Require Import String.
-From MetaCoq Require Import LibHypsNaming.
+
+From Coq Require Import Bool Program.
+From MetaCoq.PCUIC Require Import PCUICAst
+     PCUICLiftSubst PCUICTyping.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 

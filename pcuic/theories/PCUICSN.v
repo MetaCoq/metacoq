@@ -3,7 +3,7 @@
 From Coq Require Import Bool List Program.
 From MetaCoq.Template
 Require Import config monad_utils utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
+From MetaCoq.PCUIC Require Import PCUICAst
      PCUICTyping
      PCUICSafeLemmata
      PCUICValidity PCUICNameless

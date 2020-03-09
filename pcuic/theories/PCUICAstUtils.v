@@ -1,11 +1,9 @@
-From Coq Require Import Ascii String Bool OrderedType Lia List Program Arith.
-From MetaCoq.Template Require Import utils AstUtils.
-From MetaCoq.Template Require Import BasicAst.
+From Coq Require Import Ascii String OrderedType Lia Program Arith.
+From MetaCoq.Template Require Import utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICSize.
 Import List.ListNotations.
 Require Import ssreflect.
 
-Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
 
 Set Asymmetric Patterns.
@@ -394,8 +392,6 @@ Proof.
   rewrite !decompose_app_rec_mkApps in H. apply decompose_app_eq_right in H.
   now rewrite !app_nil_r in H.
 Qed.
-
-Require Import ssrbool.
 
 Lemma atom_decompose_app t l : ~~ isApp t -> decompose_app_rec t l = pair t l.
 Proof. destruct t; simpl; congruence. Qed.

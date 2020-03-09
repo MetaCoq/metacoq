@@ -1,19 +1,15 @@
 (* Distributed under the terms of the MIT license.   *)
 Set Warnings "-notation-overridden".
 Require Import ssreflect ssrbool.
-From MetaCoq Require Import LibHypsNaming.
-From Coq Require Import Bool String List Program BinPos Compare_dec Utf8 String
+From Coq Require Import Bool List Program Utf8
   ZArith Lia.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICSize
-     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICReduction PCUICWeakening PCUICSubstitution
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICSize
+     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICReduction PCUICSubstitution
      PCUICReflect PCUICClosed PCUICParallelReduction.
 
 (* Type-valued relations. *)
 Require Import CRelationClasses.
-Require CMorphisms.
-Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
-Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
 
 Derive Signature for pred1 All2_local_env.

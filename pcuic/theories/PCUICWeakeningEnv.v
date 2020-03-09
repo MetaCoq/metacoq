@@ -1,13 +1,8 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
-From MetaCoq.Template Require Import config utils AstUtils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICTyping.
-Require Import ssreflect ssrbool.
-From Equations Require Import Equations.
-
-From Equations Require Import Equations.
-Require Import Equations.Prop.DepElim.
+From Coq Require Import Bool List Program Lia.
+From MetaCoq.Template Require Import config utils.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICEquality PCUICTyping.
 
 Derive Signature for Alli.
 

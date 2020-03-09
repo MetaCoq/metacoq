@@ -1,15 +1,14 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec ZArith.
-From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
-From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst Extract EArities.
-From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICInduction
-     PCUICWeakening PCUICSubstitution PCUICRetyping PCUICMetaTheory
-     PCUICWcbvEval PCUICSR  PCUICClosed PCUICInversion PCUICGeneration
-     PCUICEquality PCUICContextConversion PCUICConversion PCUICElimination.
+From Coq Require Import Bool List Program ZArith.
+From MetaCoq.Template Require Import config utils monad_utils.
+From MetaCoq.Erasure Require Import EAstUtils Extract EArities EWcbvEval.
+From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
+     PCUICSubstitution
+     PCUICWcbvEval PCUICSR  PCUICInversion PCUICGeneration
+     PCUICContextConversion.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker.
-From Coq Require Import ssreflect ssrbool.
-Require Import String.
+From Coq Require Import ssreflect.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 Import MonadNotation.
@@ -145,7 +144,7 @@ Proof.
 Qed.
 
 Lemma mkAppBox_repeat n a :
-  mkAppBox a n = EAst.mkApps a (repeat tBox n).
+  mkAppBox a n = EAst.mkApps a (repeat EAst.tBox n).
 Proof.
   revert a; induction n; cbn; firstorder congruence.
 Qed.
@@ -246,7 +245,7 @@ Proof.
 Qed.
 
 Lemma value_app_inv L :
-  Ee.value (EAst.mkApps tBox L) ->
+  Ee.value (EAst.mkApps EAst.tBox L) ->
   L = nil.
 Proof.
   intros. depelim H.
@@ -259,7 +258,7 @@ Proof.
     eapply Ee.atom_mkApps in H' as [H1 _].
     destruct n, L; discriminate.
   - unfold Ee.isStuckFix in H0. destruct f; try now inversion H0.
-    assert (EAstUtils.decompose_app (EAst.mkApps (EAst.tFix m n) args) = EAstUtils.decompose_app (EAst.mkApps tBox L)) by congruence.
+    assert (EAstUtils.decompose_app (EAst.mkApps (EAst.tFix m n) args) = EAstUtils.decompose_app (EAst.mkApps EAst.tBox L)) by congruence.
     rewrite !EAstUtils.decompose_app_mkApps in H1; eauto. inv H1.
 Qed.
 

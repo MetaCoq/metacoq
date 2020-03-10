@@ -76,7 +76,7 @@ let of_mib (env : Environ.env) (t : Names.MutInd.t) (mib : Plugin_core.mutual_in
   let inst = Univ.UContext.instance uctx in
   let indtys =
     (CArray.map_to_list (fun oib ->
-         let ty = Inductive.type_of_inductive env ((mib,oib),inst) in
+         let ty = Inductive.type_of_inductive ((mib,oib),inst) in
          (Context.Rel.Declaration.LocalAssum (Context.annotR (Names.Name oib.mind_typename), ty))) mib.mind_packets)
   in
   let envind = Environ.push_rel_context (List.rev indtys) env in
@@ -88,7 +88,7 @@ let of_mib (env : Environ.env) (t : Names.MutInd.t) (mib : Plugin_core.mutual_in
         (Array.to_list oib.mind_user_lc)
         (Array.to_list oib.mind_consnrealargs)
     in
-    let indty = Inductive.type_of_inductive env ((mib,oib),inst) in
+    let indty = Inductive.type_of_inductive ((mib,oib),inst) in
     let indty = Ast_quoter.quote_term env indty in
     let (reified_ctors,acc) =
       List.fold_left (fun (ls,acc) (nm,ty,ar) ->

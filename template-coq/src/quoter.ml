@@ -69,7 +69,7 @@ sig
   val quote_mind_finiteness : Declarations.recursivity_kind -> quoted_mind_finiteness
   val quote_mutual_inductive_entry :
     quoted_mind_finiteness * quoted_context (* params *) * quoted_ind_entry list *
-    quoted_universes_entry * quoted_variance list option ->
+    quoted_universes_entry * quoted_bool * quoted_bool ->
     quoted_mind_entry
 
   val quote_definition_entry : t option -> t -> quoted_universes_entry -> quoted_definition_entry
@@ -294,7 +294,7 @@ struct
       let inst = Univ.UContext.instance uctx in
       let indtys =
         (CArray.map_to_list (fun oib ->
-           let ty = Inductive.type_of_inductive (snd env) ((mib,oib),inst) in
+           let ty = Inductive.type_of_inductive ((mib,oib),inst) in
            (Context.Rel.Declaration.LocalAssum (Context.annotR (Names.Name oib.mind_typename), ty))) mib.mind_packets)
       in
       let envind = push_rel_context (List.rev indtys) env in
@@ -307,7 +307,7 @@ struct
 	      (Array.to_list oib.mind_user_lc)
 	      (Array.to_list oib.mind_consnrealargs)
 	  in
-          let indty = Inductive.type_of_inductive (snd env) ((mib,oib),inst) in
+          let indty = Inductive.type_of_inductive ((mib,oib),inst) in
           let indty, acc = quote_term acc env indty in
 	  let (reified_ctors,acc) =
 	    List.fold_left (fun (ls,acc) (nm,ty,ar) ->
@@ -343,6 +343,7 @@ struct
       let var = Option.map (CArray.map_to_list Q.quote_variance) mib.Declarations.mind_variance in
       let bodies = List.map Q.mk_one_inductive_body (List.rev ls) in
       let finite = Q.quote_mind_finiteness mib.Declarations.mind_finite in
+      (* let templatePoly = Q.quote_bool mi.mind_template in *)
       let mind = Q.mk_mutual_inductive_body finite nparams paramsctx bodies uctx var in
       ref_name, Q.mk_inductive_decl mind, acc
     in ((fun acc env -> quote_term acc (false, env)),
@@ -449,10 +450,9 @@ struct
   let quote_one_ind envA envC (mi:Entries.one_inductive_entry) =
     let iname = Q.quote_ident mi.mind_entry_typename  in
     let arity = quote_term envA mi.mind_entry_arity in
-    let templatePoly = Q.quote_bool mi.mind_entry_template in
     let consnames = List.map Q.quote_ident (mi.mind_entry_consnames) in
     let constypes = List.map (quote_term envC) (mi.mind_entry_lc) in
-    (iname, arity, templatePoly, consnames, constypes)
+    (iname, arity, consnames, constypes)
 
   let quote_mind_params env (params: Constr.rel_context) =
     let qparams = quote_rel_context env params in

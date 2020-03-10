@@ -34,7 +34,7 @@ struct
   type quoted_universes_decl = Universes0.universes_decl
   type quoted_universes_entry = Ast0.universes_entry
 
-  type quoted_ind_entry = quoted_ident * t * quoted_bool * quoted_ident list * t list
+  type quoted_ind_entry = quoted_ident * t * quoted_ident list * t list
   type quoted_definition_entry = Ast0.definition_entry
   type quoted_parameter_entry = Ast0.parameter_entry
   type quoted_constant_entry = Ast0.constant_entry
@@ -76,7 +76,7 @@ struct
          | None -> Universes0.Level.Level (string_to_list (Univ.Level.to_string l))
 
   let quote_universe s : Universes0.Universe.t =
-    let univs = Univ.Universe.map (fun (l,i) -> (quote_level l, i > 0)) s in
+    let univs = List.map (fun (l,i) -> (quote_level l, i > 0)) (Univ.Universe.repr s) in
     Universes0.Universe.from_kernel_repr (List.hd univs) (List.tl univs)
 
   let quote_sort s =
@@ -226,20 +226,20 @@ struct
     | Declarations.CoFinite -> CoFinite
     | Declarations.BiFinite -> BiFinite
 
-  let quote_one_inductive_entry (id, ar, b, consnames, constypes) =
+  let quote_one_inductive_entry (id, ar, consnames, constypes) =
     { mind_entry_typename = id;
       mind_entry_arity = ar;
-      mind_entry_template = b;
       mind_entry_consnames = consnames;
       mind_entry_lc = constypes }
 
-  let quote_mutual_inductive_entry (mf, mp, is, univs, variance) =
+  let quote_mutual_inductive_entry (mf, mp, is, univs, b, cumulative) =
     { mind_entry_record = None;
       mind_entry_finite = mf;
       mind_entry_params = mp;
       mind_entry_inds = List.map quote_one_inductive_entry is;
+      mind_entry_template = b;
       mind_entry_universes = univs;
-      mind_entry_variance = variance;
+      mind_entry_cumulative = cumulative;
       mind_entry_private = None }
 
   let quote_definition_entry ty body ctx = 

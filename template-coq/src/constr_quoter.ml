@@ -104,7 +104,7 @@ struct
          | None -> constr_mkApp (tLevel, [| string_of_level l|])
 
   let quote_universe s =
-    let levels = Universe.map (fun (l,i) -> pairl tlevel bool_type (quote_level l) (quote_bool (i > 0))) s in
+    let levels = List.map (fun (l,i) -> pairl tlevel bool_type (quote_level l) (quote_bool (i > 0))) (Universe.repr s) in
     let hd = List.hd levels in
     let tl = to_coq_list (prodl tlevel bool_type) (List.tl levels) in
     constr_mkApp (tfrom_kernel_repr, [| hd ; tl |])
@@ -259,17 +259,17 @@ struct
     | Declarations.CoFinite -> Lazy.force cCoFinite
     | Declarations.BiFinite -> Lazy.force cBiFinite
 
-  let make_one_inductive_entry (iname, arity, templatePoly, consnames, constypes) =
+  let make_one_inductive_entry (iname, arity, consnames, constypes) =
     let consnames = to_coq_listl tident consnames in
     let constypes = to_coq_listl tTerm constypes in
-    constr_mkApp (tBuild_one_inductive_entry, [| iname; arity; templatePoly; consnames; constypes |])
+    constr_mkApp (tBuild_one_inductive_entry, [| iname; arity; consnames; constypes |])
 
-  let quote_mutual_inductive_entry (mf, mp, is, mpol, var) =
+  let quote_mutual_inductive_entry (mf, mp, is, mpol, template, cumulative) =
     let is = to_coq_listl tOne_inductive_entry (List.map make_one_inductive_entry is) in
     let mpr = constr_mkAppl (cNone, [|bool_type|]) in
     let mr = constr_mkApp (cNone, [|constr_mkAppl (option_type, [|tident|])|]) in
-    let var = quote_option (constr_mkAppl (tlist, [| tVariance |])) (Option.map (to_coq_listl tVariance) var) in
-    constr_mkApp (tBuild_mutual_inductive_entry, [| mr; mf; mp; is; mpol; var; mpr |])
+    (* let var = quote_option (constr_mkAppl (tlist, [| tVariance |])) (Option.map (to_coq_listl tVariance) var) in *)
+    constr_mkApp (tBuild_mutual_inductive_entry, [| mr; mf; mp; is; mpol; template; cumulative; mpr |]) 
 
   let quote_parameter_entry ty univs = 
     constr_mkApp (cBuild_parameter_entry, [|ty; univs|])

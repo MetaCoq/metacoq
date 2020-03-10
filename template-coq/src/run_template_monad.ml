@@ -149,7 +149,7 @@ let denote_variance evm trm (* of type Variance.t list *) : _ * Variance.t array
   let variances = List.map denote_variance (unquote_list trm) in
   evm, Array.of_list variances
 
-let denote_variances evm trm : _ * Variance.t array option =
+let _denote_variances evm trm : _ * Variance.t array option =
   match unquote_option trm with
   | None -> evm, None
   | Some t -> let evm, v = denote_variance evm t in
@@ -199,15 +199,13 @@ let unquote_one_inductive_entry evm trm (* of type one_inductive_entry *) : _ * 
   let (h,args) = app_full trm [] in
   if constr_equall h tBuild_one_inductive_entry then
     match args with
-    | id::ar::template::cnames::ctms::[] ->
+    | id::ar::cnames::ctms::[] ->
        let id = unquote_ident id in
        let evm, ar = denote_term evm ar in
-       let template = unquote_bool template in
        let cnames = List.map unquote_ident (unquote_list cnames) in
        let evm, ctms = map_evm denote_term evm (unquote_list ctms) in
        evm, { mind_entry_typename = id ;
               mind_entry_arity = ar;
-              mind_entry_template = template;
               mind_entry_consnames = cnames;
               mind_entry_lc = ctms }
     | _ -> bad_term_verb trm "unquote_one_inductive_entry"
@@ -240,20 +238,22 @@ let unquote_mutual_inductive_entry evm trm (* of type mutual_inductive_entry *) 
   let (h,args) = app_full trm [] in
   if constr_equall h tBuild_mutual_inductive_entry then
     match args with
-    | record::finite::params::inds::univs::variance::priv::[] ->
+    | record::finite::params::inds::univs::template::cumulative::priv::[] ->
        let record = map_option (map_option (fun x -> [|x|])) (unquote_map_option (unquote_map_option unquote_ident) record) in
        let finite = denote_mind_entry_finite finite in
        let evm, params = denote_context evm params in
        let evm, inds = map_evm unquote_one_inductive_entry evm (unquote_list inds) in
        let evm, univs = denote_universes_entry evm univs in
-       let evm, variance = denote_variances evm variance in
+       let template = unquote_bool template in
+       let cumulative = unquote_bool cumulative in
        let priv = unquote_map_option unquote_bool priv in
        evm, { mind_entry_record = record;
               mind_entry_finite = finite;
               mind_entry_params = params;
               mind_entry_inds = inds;
               mind_entry_universes = univs;
-              mind_entry_variance = variance;
+              mind_entry_template = template;
+              mind_entry_cumulative = cumulative;
               mind_entry_private = priv }
     | _ -> bad_term_verb trm "unquote_mutual_inductive_entry"
   else

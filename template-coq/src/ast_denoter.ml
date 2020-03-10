@@ -33,7 +33,7 @@ struct
   type quoted_universes_decl = Universes0.universes_decl
   type quoted_universes_entry = Ast0.universes_entry
 
-  type quoted_ind_entry = quoted_ident * t * quoted_bool * quoted_ident list * t list
+  type quoted_ind_entry = quoted_ident * t * quoted_ident list * t list
   type quoted_definition_entry = Ast0.definition_entry
   type quoted_parameter_entry = Ast0.parameter_entry
   type quoted_constant_entry = Ast0.constant_entry

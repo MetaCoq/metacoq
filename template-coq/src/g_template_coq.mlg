@@ -26,7 +26,6 @@ open Genredexpr
 
 let _ = Goptions.declare_bool_option {
   Goptions.optdepr = false;
-  Goptions.optname = "Casting of propositions in template-coq";
   Goptions.optkey = ["Template";"Cast";"Propositions"];
   Goptions.optread = (fun () -> !Quoter.cast_prop);
   Goptions.optwrite = (fun a -> Quoter.cast_prop:=a);

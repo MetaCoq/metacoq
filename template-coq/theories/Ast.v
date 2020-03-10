@@ -167,7 +167,6 @@ Inductive constant_entry :=
 Record one_inductive_entry := {
   mind_entry_typename : ident;
   mind_entry_arity : term;
-  mind_entry_template : bool; (* template polymorphism *)
   mind_entry_consnames : list ident;
   mind_entry_lc : list term (* constructor list *) }.
 
@@ -180,7 +179,8 @@ Record mutual_inductive_entry := {
   mind_entry_params    : context;
   mind_entry_inds      : list one_inductive_entry;
   mind_entry_universes : universes_entry;
-  mind_entry_variance  : option (list Universes.Variance.t);
+  mind_entry_template : bool; (* template polymorphism *)
+  mind_entry_cumulative  : bool;
   mind_entry_private   : option bool
   (* Private flag for sealing an inductive definition in an enclosing
      module. Not handled by Template Coq yet. *) }.

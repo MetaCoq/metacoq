@@ -17,7 +17,6 @@ let _ =
   let open Goptions in
   declare_bool_option
     { optdepr  = false;
-      optname  = "strict unquote universe mode";
       optkey   = ["Strict"; "Unquote"; "Universe"; "Mode"];
       optread  = (fun () -> !strict_unquote_universe_mode);
       optwrite = (fun b -> strict_unquote_universe_mode := b) }

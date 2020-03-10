@@ -327,6 +327,8 @@ Definition universes_entry_of_decl (u : universes_decl) : universes_entry :=
   | Monomorphic_ctx ctx => Monomorphic_entry ctx
   end.
 
+Definition is_Some {A} (o : option A) : bool := match o with Some x => true | None => false end.
+
 (* was mind_decl_to_entry *)
 Definition mind_body_to_entry (decl : mutual_inductive_body)
   : mutual_inductive_entry.
@@ -336,7 +338,8 @@ Proof.
             mind_entry_params := _ (* Should be ind_params, but translations are broken: for Simon decl.(ind_params) *);
             mind_entry_inds := _;
             mind_entry_universes := universes_entry_of_decl decl.(ind_universes);
-            mind_entry_variance := decl.(ind_variance);
+            mind_entry_template := false;
+            mind_entry_cumulative := is_Some decl.(ind_variance);
             mind_entry_private := None |}.
   - (* FIXME: this is wrong, the info should be in ind_params *)
    refine (match List.hd_error decl.(ind_bodies) with
@@ -352,7 +355,6 @@ apply (List.firstn decl.(ind_npars)) in types.
     intros [].
     refine {| mind_entry_typename := ind_name;
               mind_entry_arity := remove_arity decl.(ind_npars) ind_type;
-              mind_entry_template := false;
               mind_entry_consnames := _;
               mind_entry_lc := _;
             |}.

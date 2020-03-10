@@ -31,7 +31,7 @@ struct
   type quoted_universes_decl = Constr.t (* of type Universes.universes_decl *)
 
   type quoted_universes_entry = Constr.t (* of type Ast.universes_entry *)
-  type quoted_ind_entry = quoted_ident * t * quoted_bool * quoted_ident list * t list
+  type quoted_ind_entry = quoted_ident * t * quoted_ident list * t list
   type quoted_definition_entry = Constr.t (* of type Ast.definition_entry *)
   type quoted_parameter_entry = Constr.t (* of type Ast.parameter_entry *)
   type quoted_constant_entry = Constr.t (* of type Ast.constant_entry *)
@@ -296,9 +296,9 @@ struct
          | None -> constr_mkApp (tLevel, [| string_of_level l|])
 
   let quote_universe s =
-    let levels = Universe.map (fun (l,i) ->
+    let levels = List.map (fun (l,i) ->
                      pair (Lazy.force tlevel) (Lazy.force bool_type) (quote_level l)
-                       (if i > 0 then (Lazy.force ttrue) else (Lazy.force tfalse))) s in
+                       (if i > 0 then (Lazy.force ttrue) else (Lazy.force tfalse))) (Univ.Universe.repr s) in
     to_coq_list (prod (Lazy.force tlevel) (Lazy.force bool_type)) levels
 
   (* todo : can be deduced from quote_level, hence shoud be in the Reify module *)

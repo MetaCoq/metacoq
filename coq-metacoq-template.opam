@@ -42,7 +42,3 @@ Template Coq includes:
   checker, and inserting them in the global environment, in the style of
   MetaCoq/MTac.
 """
-# url {
-#   src: "https://github.com/MetaCoq/metacoq/archive/v2.1-beta3.tar.gz"
-#   checksum: "md5=e81b8ecabef788a10337a39b095d54f3"
-# }

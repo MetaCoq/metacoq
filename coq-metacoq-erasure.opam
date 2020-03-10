@@ -41,7 +41,3 @@ The `erasure` function translates types and proofs in well-typed terms
 into a dummy `tBox` constructor, following closely P. Letouzey's PhD
 thesis.
 """
-# url {
-#   src: "https://github.com/MetaCoq/metacoq/archive/v2.1-beta3.tar.gz"
-#   checksum: "md5=e81b8ecabef788a10337a39b095d54f3"
-# }

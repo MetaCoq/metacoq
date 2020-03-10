@@ -31,7 +31,3 @@ The Translations modules provides implementation of standard translations
 from type theory to type theory, e.g. parametricity and the `cross-bool` 
 translation that invalidates functional extensionality.
 """
-# url {
-#   src: "https://github.com/MetaCoq/metacoq/archive/v2.1-beta3.tar.gz"
-#   checksum: "md5=e81b8ecabef788a10337a39b095d54f3"
-# }

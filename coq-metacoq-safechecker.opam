@@ -35,7 +35,3 @@ MetaCoq is a meta-programming framework for Coq.
 The SafeChecker modules provides a correct implementation of
 weak-head reduction, conversion and typechecking of Coq definitions and global environments.
 """
-# url {
-#   src: "https://github.com/MetaCoq/metacoq/archive/v2.1-beta3.tar.gz"
-#   checksum: "md5=e81b8ecabef788a10337a39b095d54f3"
-# }

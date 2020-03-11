@@ -2,9 +2,6 @@ Require Import Peano_dec Nat Bool List Structures.Equalities Lia
         MSets.MSetList MSetFacts MSetProperties.
 From MetaCoq.Template Require Import utils monad_utils.
 
-From Equations Require Import Equations.
-Require Import Equations.Prop.DepElim.
-
 Lemma fold_max_In n m l (H : fold_left max l n = m)
   : n = m \/ In m l.
 Proof.

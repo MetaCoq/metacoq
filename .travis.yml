@@ -1,5 +1,5 @@
+os: linux
 dist: trusty
-sudo: required
 language: c
 cache:
   apt: true
@@ -32,10 +32,12 @@ install:
 - eval $(opam config env)
 - opam config list
 - opam repo add coq-released https://coq.inria.fr/opam/released || echo "coq-released registered"
+- opam repo add coq-core-dev https://coq.inria.fr/opam/core-dev || echo "coq-core-dev registered"
+- opam repo add coq-extra-dev https://coq.inria.fr/opam/extra-dev || echo "coq-extra-dev registered"
 - opam install -j ${NJOBS} -y ocamlfind.${FINDLIB_VER} coq.${COQ_VER} coq-equations.${EQUATIONS_VER}
 - opam list
 
-matrix:
+jobs:
   include:
     - name: "Local build"
       env: TARGET=ci-local

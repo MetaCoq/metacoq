@@ -62,13 +62,13 @@ Run TemplateProgram
                   ; mind_entry_inds :=
                       {| mind_entry_typename := "thing"
                        ; mind_entry_arity := <% Set %>
-                       ; mind_entry_template := false
                        ; mind_entry_consnames := "thing1" :: "thing2" :: nil
                        ; mind_entry_lc := tProd nAnon <% bool %> (tRel 1) ::
                                           tProd nAnon <% string %> (tRel 1) :: nil
                        |} :: nil
                   ; mind_entry_universes := Monomorphic_entry (LevelSet.empty, empty_constraints)
-                  ; mind_entry_variance := None
+                  ; mind_entry_template := false
+                  ; mind_entry_cumulative := false
                   ; mind_entry_private := None |}).
 Print thing.
 

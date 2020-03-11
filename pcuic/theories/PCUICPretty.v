@@ -1,11 +1,9 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import List Program.
+From Coq Require Import List Program String.
 From MetaCoq.Template Require Import utils.
-Require Import MetaCoq.Template.Pretty.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-  PCUICChecker PCUICLiftSubst.
-From Coq Require Import String.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICChecker
+     PCUICLiftSubst.
 
 (** Pretty printing *)
 
@@ -17,16 +15,6 @@ Section print_term.
   Definition print_defs (print_term : context -> bool -> bool -> term -> string) Γ (defs : mfixpoint term) :=
     let ctx' := fix_context defs in
     print_list (print_def (print_term Γ true false) (print_term (ctx' ++ Γ)%list true false)) (nl ++ " with ") defs.
-
-  Section Map2.
-    Context {A B C} (f : A -> B -> C).
-    Fixpoint map2  (l : list A) (l' : list B)  : list C :=
-      match l, l' with
-      | nil, nil => nil
-      | cons a l, cons a' l' => cons (f a a') (map2 l l')
-      | _, _ => nil
-      end.
-  End Map2.
 
   Fixpoint decompose_lam (t : term) (n : nat) : (list name) * (list term) * term :=
     match n with

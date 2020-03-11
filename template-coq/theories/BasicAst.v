@@ -43,6 +43,11 @@ Definition string_of_def {A} (f : A -> string) (def : def A) :=
   "(" ++ string_of_name (dname def) ++ "," ++ f (dtype def) ++ "," ++ f (dbody def) ++ ","
       ++ string_of_nat (rarg def) ++ ")".
 
+Definition print_def {A} (f : A -> string) (g : A -> string) (def : def A) :=
+  string_of_name (dname def) ++ " { struct " ++ string_of_nat (rarg def) ++ " }" ++
+                 " : " ++ f (dtype def) ++ " := " ++ nl ++ g (dbody def).
+
+
 Definition map_def {A B} (tyf bodyf : A -> B) (d : def A) :=
   {| dname := d.(dname); dtype := tyf d.(dtype); dbody := bodyf d.(dbody); rarg := d.(rarg) |}.
 

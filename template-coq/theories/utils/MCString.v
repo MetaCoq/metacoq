@@ -19,6 +19,12 @@ Definition string_of_list_aux {A} (f : A -> string) (sep : string) (l : list A) 
 Definition string_of_list {A} (f : A -> string) (l : list A) : string :=
   "[" ++ string_of_list_aux f "," l ++ "]".
 
+Definition print_list {A} (f : A -> string) (sep : string) (l : list A) : string :=
+  string_of_list_aux f sep l.
+
+Definition parens (top : bool) (s : string) :=
+  if top then s else "(" ++ s ++ ")".
+
 Definition string_of_nat n : string :=
   match n with
   | 0 => "0"

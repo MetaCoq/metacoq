@@ -16,7 +16,7 @@ authors: ["Abhishek Anand <aa755@cs.cornell.edu>"
 license: "MIT"
 depends: [
   "ocaml" {>= "4.07.1"}
-  "coq" {>= "8.11" & < "8.12~"}
+  "coq" {= "dev"}
   "coq-metacoq-template" {= version}
   "coq-metacoq-checker" {= version}
   "coq-metacoq-pcuic" {= version}

@@ -1731,3 +1731,26 @@ Definition polymorphic_instance uctx :=
   | Monomorphic_ctx c => Instance.empty
   | Polymorphic_ctx c => fst (AUContext.repr c)
   end.
+
+
+
+Definition print_universe_instance u :=
+  match u with
+  | [] => ""
+  | _ => "@{" ++ print_list string_of_level " " u ++ "}"
+  end.
+
+Definition print_lset t :=
+  print_list string_of_level " " (LevelSet.elements t).
+
+Definition print_constraint_type d :=
+  match d with
+  | ConstraintType.Lt => "<"
+  | ConstraintType.Le => "<="
+  | ConstraintType.Eq => "="
+  end.
+
+Definition print_constraint_set t :=
+  print_list (fun '(l1, d, l2) => string_of_level l1 ++ " " ++
+                         print_constraint_type d ++ " " ++ string_of_level l2)
+             " /\ " (ConstraintSet.elements t).

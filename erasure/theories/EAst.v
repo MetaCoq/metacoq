@@ -11,6 +11,7 @@ From MetaCoq.Template Require Export BasicAst Universes.
   at lambda and let-ins, types of fix/cofixpoints), applications
   are in binary form and casts are removed.  *)
 
+(* todo reuse the one of BasicASt *)
 Record def (term : Set) := { dname : name; dbody : term; rarg : nat }.
 Arguments dname {term} d.
 Arguments dbody {term} d.

@@ -1482,10 +1482,10 @@ Section CheckEnv.
     let global_levels := global_levels Σ in
     let all_levels := LevelSet.union levels global_levels in
     check_eq_true (LevelSet.for_all (fun l => negb (LevelSet.mem l global_levels)) levels) 
-       (empty_ext Σ, IllFormedDecl id (Msg ("non fresh level in " ++ Pretty.print_lset levels)));;
+       (empty_ext Σ, IllFormedDecl id (Msg ("non fresh level in " ++ print_lset levels)));;
     check_eq_true (ConstraintSet.for_all (fun '(l1, _, l2) => LevelSet.mem l1 all_levels && LevelSet.mem l2 all_levels) (constraints_of_udecl udecl))
-                                    (empty_ext Σ, IllFormedDecl id (Msg ("non declared level in " ++ Pretty.print_lset levels ++
-                                    " |= " ++ Pretty.print_constraint_set (constraints_of_udecl udecl))));;
+                                    (empty_ext Σ, IllFormedDecl id (Msg ("non declared level in " ++ print_lset levels ++
+                                    " |= " ++ print_constraint_set (constraints_of_udecl udecl))));;
     check_eq_true match udecl with
                   | Monomorphic_ctx ctx
                     => LevelSet.for_all (negb ∘ Level.is_var) ctx.1

@@ -1,11 +1,11 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String Program.
-From MetaCoq.Template Require Import config monad_utils utils uGraph.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-     PCUICTyping
+From MetaCoq.Template Require Import config monad_utils utils uGraph Pretty.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping
      TemplateToPCUIC.
-From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker SafeTemplateChecker.
+From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker
+     SafeTemplateChecker.
 From MetaCoq.Erasure Require Import ErasureFunction EPretty.
 From MetaCoq.Erasure Require SafeErasureFunction.
 
@@ -150,9 +150,6 @@ Qed.
 
 Local Open Scope string_scope.
 
-(* todo move *)
-Definition nl : string := String (Ascii.ascii_of_nat 10) EmptyString.
-
 
 (** This uses the checker-based erasure *)
 Program Definition erase_and_print_template_program_check {cf : checker_flags} (p : Ast.program)
@@ -161,7 +158,7 @@ Program Definition erase_and_print_template_program_check {cf : checker_flags} (
   match erase_template_program_check p return string + string with
   | CorrectDecl (Σ', t) =>
     inl ("Environment is well-formed and " ++ Pretty.print_term (Ast.empty_ext p.1) [] true p.2 ++
-         " erases to: " ++ nl ++ EPretty.print_term Σ' [] true false t)
+         " erases to: " ++ nl ++ print_term Σ' [] true false t)
   | EnvError Σ' (AlreadyDeclared id) =>
     inr ("Already declared: " ++ id)
   | EnvError Σ' (IllFormedDecl id e) =>
@@ -175,7 +172,7 @@ Program Definition erase_and_print_template_program {cf : checker_flags} (p : As
   match erase_template_program p return string + string with
   | CorrectDecl (Σ', t) =>
     inl ("Environment is well-formed and " ++ Pretty.print_term (Ast.empty_ext p.1) [] true p.2 ++
-         " erases to: " ++ nl ++ EPretty.print_term Σ' [] true false t)
+         " erases to: " ++ nl ++ print_term Σ' [] true false t)
   | EnvError Σ' (AlreadyDeclared id) =>
     inr ("Already declared: " ++ id)
   | EnvError Σ' (IllFormedDecl id e) =>

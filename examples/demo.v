@@ -113,7 +113,6 @@ Definition one_i : one_inductive_entry :=
 {|
   mind_entry_typename := "demoBool";
   mind_entry_arity := tSort Universe.type0;
-  mind_entry_template := false;
   mind_entry_consnames := ["demoTrue"; "demoFalse"];
   mind_entry_lc := [tRel 1; tRel 1];
 |}.
@@ -122,7 +121,6 @@ Definition one_i2 : one_inductive_entry :=
 {|
   mind_entry_typename := "demoBool2";
   mind_entry_arity := tSort Universe.type0;
-  mind_entry_template := false;
   mind_entry_consnames := ["demoTrue2"; "demoFalse2"];
   mind_entry_lc := [tRel 0; tRel 0];
 |}.
@@ -134,7 +132,8 @@ Definition mut_i : mutual_inductive_entry :=
   mind_entry_params := [];
   mind_entry_inds := [one_i; one_i2];
   mind_entry_universes := Monomorphic_entry (LevelSet.empty, ConstraintSet.empty);
-  mind_entry_variance := None;
+  mind_entry_template := false;
+  mind_entry_cumulative := false;
   mind_entry_private := None;
 |}.
 
@@ -149,7 +148,6 @@ Definition one_list_i : one_inductive_entry :=
 {|
   mind_entry_typename := "demoList";
   mind_entry_arity := tSort Universe.type0;
-  mind_entry_template := false;
   mind_entry_consnames := ["demoNil"; "demoCons"];
   mind_entry_lc := [tApp (tRel 1) [tRel 0]; 
     mkImpl (tRel 0) (mkImpl (tApp (tRel 2) [tRel 1]) (tApp (tRel 3) [tRel 2]))];
@@ -163,7 +161,8 @@ Definition mut_list_i : mutual_inductive_entry :=
                          decl_type := (tSort Universe.type0) |}];
   mind_entry_inds := [one_list_i];
   mind_entry_universes := Monomorphic_entry (LevelSet.empty, ConstraintSet.empty);
-  mind_entry_variance := None;
+  mind_entry_template := false;
+  mind_entry_cumulative := false;
   mind_entry_private := None;
 |}.
 
@@ -176,7 +175,6 @@ Definition one_pt_i : one_inductive_entry :=
 {|
   mind_entry_typename := "Point";
   mind_entry_arity := tSort Universe.type0;
-  mind_entry_template := false;
   mind_entry_consnames := ["mkPoint"];
   mind_entry_lc := [
     mkImpl (tRel 0) (mkImpl (tRel 1) (tApp (tRel 3) [tRel 2]))];
@@ -190,7 +188,8 @@ Definition mut_pt_i : mutual_inductive_entry :=
                          decl_type := (tSort Universe.type0) |}];
   mind_entry_inds := [one_pt_i];
   mind_entry_universes := Monomorphic_entry (LevelSet.empty, ConstraintSet.empty);
-  mind_entry_variance := None;
+  mind_entry_template := false;
+  mind_entry_cumulative := false;
   mind_entry_private := None;
 |}.
 
@@ -353,6 +352,8 @@ Test Quote Prop.
 
 Inductive T : Type :=
   | toto : Type -> T.
+
+About T.
 Quote Recursively Definition TT := T.
 
 Unset Strict Unquote Universe Mode.

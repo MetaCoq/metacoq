@@ -125,7 +125,7 @@ struct
 
   let get_abstract_inductive_universes iu =
     match iu with
-    | Declarations.Monomorphic ctx -> Univ.ContextSet.to_context ctx
+    | Declarations.Monomorphic ctx -> Univ.UContext.empty
     | Polymorphic ctx -> Univ.AUContext.repr ctx
 
   let quote_universes_entry = function
@@ -300,42 +300,42 @@ struct
       let envind = push_rel_context (List.rev indtys) env in
       let ref_name = Q.quote_kn (MutInd.canonical t) in
       let (ls,acc) =
-	List.fold_left (fun (ls,acc) oib ->
-	  let named_ctors =
-	    CList.combine3
-	      (Array.to_list oib.mind_consnames)
-	      (Array.to_list oib.mind_user_lc)
-	      (Array.to_list oib.mind_consnrealargs)
-	  in
+        List.fold_left (fun (ls,acc) oib ->
+          let named_ctors =
+            CList.combine3
+              (Array.to_list oib.mind_consnames)
+              (Array.to_list oib.mind_user_lc)
+              (Array.to_list oib.mind_consnrealargs)
+          in
           let indty = Inductive.type_of_inductive ((mib,oib),inst) in
           let indty, acc = quote_term acc env indty in
-	  let (reified_ctors,acc) =
-	    List.fold_left (fun (ls,acc) (nm,ty,ar) ->
-	      debug (fun () -> Pp.(str "opt_hnf_ctor_types:" ++ spc () ++
-                            bool !opt_hnf_ctor_types)) ;
-	      let ty = if !opt_hnf_ctor_types then hnf_type (snd envind) ty else ty in
-	      let (ty,acc) = quote_term acc envind ty in
-	      ((Q.quote_ident nm, ty, Q.quote_int ar) :: ls, acc))
-	      ([],acc) named_ctors
-	  in
+          let (reified_ctors,acc) =
+            List.fold_left (fun (ls,acc) (nm,ty,ar) ->
+              debug (fun () -> Pp.(str "opt_hnf_ctor_types:" ++ spc () ++
+                                  bool !opt_hnf_ctor_types)) ;
+              let ty = if !opt_hnf_ctor_types then hnf_type (snd envind) ty else ty in
+              let (ty,acc) = quote_term acc envind ty in
+              ((Q.quote_ident nm, ty, Q.quote_int ar) :: ls, acc))
+              ([],acc) named_ctors
+          in
           let projs, acc =
             match mib.Declarations.mind_record with
             | PrimRecord [|id, csts, relevance, ps|] ->  (* TODO handle mutual records *)
-               let ctxwolet = Termops.smash_rel_context mib.mind_params_ctxt in
-               let indty = Constr.mkApp (Constr.mkIndU ((t,0),inst),
-                                       Context.Rel.to_extended_vect Constr.mkRel 0 ctxwolet) in
-               let indbinder = Context.Rel.Declaration.LocalAssum (Context.annotR (Names.Name id),indty) in
-               let envpars = push_rel_context (indbinder :: ctxwolet) env in
-               let ps, acc = CArray.fold_right2 (fun cst pb (ls,acc) ->
-                 let (ty, acc) = quote_term acc envpars pb in
-                 let na = Q.quote_ident (Names.Label.to_id cst) in
-                 ((na, ty) :: ls, acc)) csts ps ([],acc)
-               in ps, acc
+                let ctxwolet = Termops.smash_rel_context mib.mind_params_ctxt in
+                let indty = Constr.mkApp (Constr.mkIndU ((t,0),inst),
+                                        Context.Rel.to_extended_vect Constr.mkRel 0 ctxwolet) in
+                let indbinder = Context.Rel.Declaration.LocalAssum (Context.annotR (Names.Name id),indty) in
+                let envpars = push_rel_context (indbinder :: ctxwolet) env in
+                let ps, acc = CArray.fold_right2 (fun cst pb (ls,acc) ->
+                  let (ty, acc) = quote_term acc envpars pb in
+                  let na = Q.quote_ident (Names.Label.to_id cst) in
+                  ((na, ty) :: ls, acc)) csts ps ([],acc)
+                in ps, acc
             | _ -> [], acc
           in
           let sf = Q.quote_sort_family oib.Declarations.mind_kelim in
-	  (Q.quote_ident oib.mind_typename, indty, sf, (List.rev reified_ctors), projs) :: ls, acc)
-	  ([],acc) (Array.to_list mib.mind_packets)
+          (Q.quote_ident oib.mind_typename, indty, sf, (List.rev reified_ctors), projs) :: ls, acc)
+        ([],acc) (Array.to_list mib.mind_packets)
       in
       let nparams = Q.quote_int mib.Declarations.mind_nparams in
       let paramsctx, acc = quote_rel_context quote_term acc env mib.Declarations.mind_params_ctxt in

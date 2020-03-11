@@ -76,7 +76,6 @@ let retypecheck_term_dependencies env gr =
         | Positive mi -> () (* typecheck_inductive mi *)
         | Guarded (Names.GlobRef.ConstRef c) -> typecheck_constant c
         | Guarded _ -> ()
-        | TemplatePolymorphic mi -> ()
         | TypeInType c -> ()
       end
     | Opaque c | Transparent c -> typecheck_constant c

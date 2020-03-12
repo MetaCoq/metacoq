@@ -15,6 +15,7 @@ Extract Inductive Decimal.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun 
 Extraction Blacklist config uGraph Universes Ast String List Nat Int
            UnivSubst Typing Checker Retyping OrderedType Logic Common Equality Classes.
 Set Warnings "-extraction-opaque-accessed".
+Set Warnings "-extraction-reserved-identifier".
 
 From MetaCoq.Erasure Require Import EAst EAstUtils EInduction ELiftSubst ETyping Extract ErasureFunction
      SafeTemplateErasure.

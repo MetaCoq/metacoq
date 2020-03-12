@@ -20,7 +20,7 @@ Extract Constant ascii_compare =>
 Extraction Blacklist config uGraph Universes Ast String List Nat Int
            UnivSubst Typing Checker Retyping OrderedType Logic Common Equality UnivSubst.
 Set Warnings "-extraction-opaque-accessed".
-
+Set Warnings "-extraction-reserved-identifier".
 Cd "gen-src".
 
 Require Import MetaCoq.Template.TemplateMonad.Extractable.

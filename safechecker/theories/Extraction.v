@@ -20,6 +20,7 @@ Extract Constant ascii_compare =>
 Extraction Blacklist config uGraph Universes Ast String List Nat Int
            UnivSubst Typing Checker Retyping OrderedType Logic Common Equality Classes.
 Set Warnings "-extraction-opaque-accessed".
+Set Warnings "-extraction-reserved-identifier".
 
 Extraction Inline PCUICSafeConversion.Ret.
 

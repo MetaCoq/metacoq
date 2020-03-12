@@ -1,14 +1,13 @@
 (* Distributed under the terms of the MIT license.   *)
 From Equations Require Import Equations.
-From Coq Require Import Bool String List BinPos Compare_dec ZArith Lia.
+From Coq Require Import Bool List ZArith Lia.
 Require Import Coq.Program.Syntax Coq.Program.Basics.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst
-     PCUICTyping PCUICWeakeningEnv PCUICClosed PCUICReduction PCUICEquality.
-Require Import ssreflect ssrbool.
+     PCUICTyping PCUICClosed PCUICEquality.
+Require Import ssreflect.
 
 Set Keyed Unification.
-From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 Set Equations With UIP.
 

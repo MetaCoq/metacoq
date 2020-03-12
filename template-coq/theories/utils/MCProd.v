@@ -60,15 +60,6 @@ Proof.
   destruct x; unfold on_snd; cbn. split; congruence.
 Qed.
 
-Lemma on_snd_test_spec {A B C} (P : B -> Type) (p : B -> bool) (f g : B -> C) (x : A * B) :
-  P (snd x) -> (forall x, P x -> is_true (p x) -> f x = g x) ->
-  is_true (test_snd p x) ->
-  on_snd f x = on_snd g x.
-Proof.
-  intros. destruct x. unfold on_snd. simpl.
-  now rewrite H; auto.
-Qed.
-
 Definition on_pi2 {A B C} (f : B -> B) (p : A * B * C) : A * B * C :=
   (fst (fst p), f (snd (fst p)), snd p).
 

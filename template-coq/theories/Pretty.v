@@ -1,50 +1,14 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import List Program.
-From MetaCoq Require Import utils Ast AstUtils Induction LiftSubst.
-From Coq Require Import BinPos Arith.Compare_dec Bool Lia String.
+From Coq Require Import List Program BinPos String.
+From MetaCoq Require Import utils Ast AstUtils LiftSubst Universes.
 
 (** Pretty printing *)
-
-(** When defining [Show] instance for your own datatypes, you sometimes need to
-    start a new line for better printing. [nl] is a shorthand for it. *)
-Definition nl : string := String (Ascii.ascii_of_nat 10) EmptyString.
 
 Section print_term.
   Context (Σ : global_env_ext).
 
   Local Open Scope string_scope.
-
-  Definition print_list {A} (f : A -> string) (sep : string) (l : list A) : string :=
-    string_of_list_aux f sep l.
-
-  Definition parens (top : bool) (s : string) :=
-    if top then s else "(" ++ s ++ ")".
-
-  Definition print_universe_instance u :=
-    match u with
-    | [] => ""
-    | _ => "@{" ++ print_list string_of_level " " u ++ "}"
-    end.
-
-  Definition print_lset t :=
-    print_list string_of_level " " (LevelSet.elements t).
-
-  Definition print_constraint_type d :=
-    match d with
-    | ConstraintType.Lt => "<"
-    | ConstraintType.Le => "<="
-    | ConstraintType.Eq => "="
-    end.
-
-  Definition print_constraint_set t :=
-    print_list (fun '(l1, d, l2) =>
-                  string_of_level l1 ++ " " ++ print_constraint_type d ++ " " ++ string_of_level l2)
-               " /\ " (ConstraintSet.elements t).
-
-  Definition print_def {A} (f : A -> string) (g : A -> string) (def : def A) :=
-    string_of_name (dname def) ++ " { struct " ++ string_of_nat (rarg def) ++ " }" ++
-                   " : " ++ f (dtype def) ++ " := " ++ nl ++ g (dbody def).
 
   Definition fix_context (m : mfixpoint term) : context :=
     List.rev (mapi (fun i d => vass d.(dname) (lift0 i d.(dtype))) m).
@@ -52,16 +16,6 @@ Section print_term.
   Definition print_defs (print_term : context -> bool -> term -> string) Γ (defs : mfixpoint term) :=
     let ctx' := fix_context defs in
     print_list (print_def (print_term Γ true) (print_term (ctx' ++ Γ)%list true)) (nl ++ " with ") defs.
-
-  Section Map2.
-    Context {A B C} (f : A -> B -> C).
-    Fixpoint map2  (l : list A) (l' : list B)  : list C :=
-      match l, l' with
-      | nil, nil => nil
-      | cons a l, cons a' l' => cons (f a a') (map2 l l')
-      | _, _ => nil
-      end.
-  End Map2.
 
   Fixpoint decompose_lam (t : term) (n : nat) : (list name) * (list term) * term :=
     match n with

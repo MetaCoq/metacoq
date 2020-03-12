@@ -1,23 +1,17 @@
 (* Distributed under the terms of the MIT license.   *)
 Set Warnings "-notation-overridden".
 
-From Equations Require Import Equations.
-From Coq Require Import Bool String List Program BinPos Compare_dec.
+From Coq Require Import Bool List Program.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
-     PCUICSubstitution PCUICClosed PCUICInversion PCUICEquality
-     PCUICReduction PCUICCumulativity PCUICGeneration
-     PCUICParallelReductionConfluence PCUICConfluence
-     PCUICContextConversion PCUICConversion PCUICUnivSubst.
+     PCUICLiftSubst PCUICTyping PCUICSubstitution PCUICEquality
+     PCUICReduction PCUICCumulativity PCUICConfluence
+     PCUICContextConversion PCUICConversion PCUICInversion PCUICUnivSubst.
 
-Require Import ssreflect ssrbool.
-Require Import String.
-From MetaCoq Require Import LibHypsNaming.
+Require Import ssreflect.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 Require Import Equations.Prop.DepElim.
-Require Import CMorphisms CRelationClasses.
 From Equations Require Import Equations.
 
 Set Equations With UIP.
@@ -585,7 +579,6 @@ Section Principality.
   (*   apply conv_conv_alt. constructor. now apply eq_term_sym. *)
   (*   now apply IHeqargs. *)
   (* Qed. *)
-
 
   Theorem principal_typing {Γ u A B} : Σ ;;; Γ |- u : A -> Σ ;;; Γ |- u : B ->
     ∑ C, Σ ;;; Γ |- C <= A  ×  Σ ;;; Γ |- C <= B × Σ ;;; Γ |- u : C.

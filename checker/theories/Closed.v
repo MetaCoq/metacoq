@@ -1,11 +1,9 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec ZArith Lia.
-From MetaCoq.Template Require Import config utils Ast AstUtils Induction utils
-  LiftSubst UnivSubst Typing TypingWf.
+From Coq Require Import Bool List Program ZArith Lia.
+From MetaCoq.Template Require Import config utils Ast AstUtils Induction
+  LiftSubst UnivSubst Typing.
 From MetaCoq.Checker Require Import WeakeningEnv.
-Require Import ssreflect ssrbool.
-Require Import Equations.Prop.DepElim.
 Require Import ssreflect.
 
 (** * Lemmas about the [closedn] predicate *)
@@ -47,12 +45,12 @@ Proof.
   - revert H0.
     elim (Nat.leb_spec k n0); intros. simpl in *.
     elim (Nat.ltb_spec); auto. apply Nat.ltb_lt in H1. intros. lia.
-    revert H1. simpl. elim (Nat.ltb_spec); auto. intros. apply Nat.ltb_lt. lia.
+    revert H1. simpl. intro. repeat toProp. lia.
   - specialize (IHt2 n (S k) (S k')). eauto with all.
   - specialize (IHt2 n (S k) (S k')). eauto with all.
   - specialize (IHt3 n (S k) (S k')). eauto with all.
-  - rtoProp. solve_all. specialize (H1 n (#|m| + k) (#|m| + k')). eauto with all.
-  - rtoProp. solve_all. specialize (H1 n (#|m| + k) (#|m| + k')). eauto with all.
+  - rtoProp. solve_all. specialize (b0 n (#|m| + k) (#|m| + k')). eauto with all.
+  - rtoProp. solve_all. specialize (b0 n (#|m| + k) (#|m| + k')). eauto with all.
 Qed.
 
 Lemma closedn_mkApps k f u:
@@ -106,11 +104,11 @@ Proof.
     rewrite <- Nat.add_succ_comm in IHt3. eauto.
   - rewrite closedn_mkApps; solve_all.
   - rtoProp; solve_all. rewrite -> !Nat.add_assoc in *.
-    specialize (H0 (#|m| + k')). unfold is_true. rewrite <- H0. f_equal. lia.
-    unfold is_true. rewrite <- H2. f_equal. lia.
+    specialize (b0 (#|m| + k')). unfold is_true. rewrite <- b0. f_equal. lia.
+    unfold is_true. rewrite <- H0. f_equal. lia.
   - rtoProp; solve_all. rewrite -> !Nat.add_assoc in *.
-    specialize (H0 (#|m| + k')). unfold is_true. rewrite <- H0. f_equal. lia.
-    unfold is_true. rewrite <- H2. f_equal. lia.
+    specialize (b0 (#|m| + k')). unfold is_true. rewrite <- b0. f_equal. lia.
+    unfold is_true. rewrite <- H0. f_equal. lia.
 Qed.
 
 Lemma closedn_subst0 s k t :
@@ -133,7 +131,7 @@ Proof.
 Qed.
 
 Lemma closedn_subst_instance_constr k t u :
-  closedn k (UnivSubst.subst_instance_constr u t) = closedn k t.
+  closedn k (subst_instance_constr u t) = closedn k t.
 Proof.
   revert k.
   induction t in |- * using term_forall_list_ind; intros;
@@ -144,14 +142,17 @@ Proof.
 
   - rewrite forallb_map; eapply Forall_forallb_eq_forallb; eauto.
   - rewrite forallb_map. f_equal; eauto using Forall_forallb_eq_forallb.
-  - red in H. rewrite forallb_map. f_equal; eauto using Forall_forallb_eq_forallb.
-    f_equal; eauto.
-  - red in H. rewrite forallb_map.
-    eapply Forall_forallb_eq_forallb; eauto.
+  - red in X. rewrite forallb_map. f_equal.
+    + f_equal; auto.
+    + eapply Forall_forallb_eq_forallb.
+      eapply All_Forall; tea.
+      intros [] XX; apply XX.
+  - red in X. rewrite forallb_map.
+    eapply Forall_forallb_eq_forallb. eapply All_Forall; eauto.
     unfold test_def, compose, map_def. simpl.
     do 3 (f_equal; intuition eauto).
-  - red in H. rewrite forallb_map.
-    eapply Forall_forallb_eq_forallb; eauto.
+  - red in X. rewrite forallb_map.
+    eapply Forall_forallb_eq_forallb. eapply All_Forall; eauto.
     unfold test_def, compose, map_def. simpl.
     do 3 (f_equal; intuition eauto).
 Qed.
@@ -197,7 +198,7 @@ Lemma closedn_ctx_app n Γ Γ' :
   closedn_ctx n Γ && closedn_ctx (n + #|Γ|) Γ'.
 Proof.
   rewrite /closedn_ctx /app_context /= List.rev_app_distr mapi_app forallb_app /=.
-  bool_congr.
+  f_equal.
   rewrite List.rev_length.
   f_equal. eapply mapi_ext. intros.
   f_equal. lia.

@@ -1,15 +1,14 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
-From MetaCoq.Template Require Import config monad_utils utils BasicAst AstUtils
-     UnivSubst uGraph Pretty.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
+From Coq Require Import Bool String List Program BinPos Arith.
+From MetaCoq.Template Require Import config monad_utils utils
+     uGraph.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICNormal PCUICSR
      PCUICGeneration PCUICReflect PCUICEquality PCUICInversion PCUICValidity
      PCUICWeakening PCUICPosition PCUICCumulativity PCUICSafeLemmata PCUICSN
      PCUICPretty.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeConversion.
-Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
 
 
@@ -1295,7 +1294,7 @@ Section CheckEnv.
   Global Arguments EnvError {A} Σ e.
   Global Arguments CorrectDecl {A} a.
 
-  Instance envcheck_monad : Monad EnvCheck :=
+  Global Instance envcheck_monad : Monad EnvCheck :=
     {| ret A a := CorrectDecl a ;
        bind A B m f :=
          match m with
@@ -1304,7 +1303,8 @@ Section CheckEnv.
          end
     |}.
 
-  Instance envcheck_monad_exc : MonadExc (global_env_ext * env_error) EnvCheck :=
+  Global Instance envcheck_monad_exc
+    : MonadExc (global_env_ext * env_error) EnvCheck :=
     { raise A '(g, e) := EnvError g e;
       catch A m f :=
         match m with
@@ -1482,10 +1482,10 @@ Section CheckEnv.
     let global_levels := global_levels Σ in
     let all_levels := LevelSet.union levels global_levels in
     check_eq_true (LevelSet.for_all (fun l => negb (LevelSet.mem l global_levels)) levels) 
-       (empty_ext Σ, IllFormedDecl id (Msg ("non fresh level in " ++ Pretty.print_lset levels)));;
+       (empty_ext Σ, IllFormedDecl id (Msg ("non fresh level in " ++ print_lset levels)));;
     check_eq_true (ConstraintSet.for_all (fun '(l1, _, l2) => LevelSet.mem l1 all_levels && LevelSet.mem l2 all_levels) (constraints_of_udecl udecl))
-                                    (empty_ext Σ, IllFormedDecl id (Msg ("non declared level in " ++ Pretty.print_lset levels ++
-                                    " |= " ++ Pretty.print_constraint_set (constraints_of_udecl udecl))));;
+                                    (empty_ext Σ, IllFormedDecl id (Msg ("non declared level in " ++ print_lset levels ++
+                                    " |= " ++ print_constraint_set (constraints_of_udecl udecl))));;
     check_eq_true match udecl with
                   | Monomorphic_ctx ctx
                     => LevelSet.for_all (negb ∘ Level.is_var) ctx.1

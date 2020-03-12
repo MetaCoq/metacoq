@@ -13,6 +13,8 @@ src/mSetWeakList.ml
 src/eqdepFacts.mli
 src/eqdepFacts.ml
 
+src/ssrbool.ml
+src/ssrbool.mli
 src/utils.ml
 src/utils.mli
 src/monad_utils.ml

@@ -129,7 +129,6 @@ Some of the following files need to be sorted and/or explained.
 | File               | Description                                             |
 |--------------------|---------------------------------------------------------|
 | [Extraction]       |                                                         |
-| [PCUICAll]         |                                                         |
 | [PCUICAlpha]       | α-conversion (for printing annotations)                 |
 | [PCUICContextConversion] | Conversion of contexts                            |
 | [PCUICLoader]      |                                                         |
@@ -137,7 +136,6 @@ Some of the following files need to be sorted and/or explained.
 | [PCUICSize]        |                                                         |
 
 [Extraction]: Extraction.v
-[PCUICAll]: PCUICAll.v
 [PCUICAlpha]: PCUICAlpha.v
 [PCUICContextConversion]: PCUICContextConversion.v
 [PCUICLoader]: PCUICLoader.v

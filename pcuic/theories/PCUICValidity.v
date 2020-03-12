@@ -1,12 +1,10 @@
-From Coq Require Import Bool String List Program BinPos Compare_dec PeanoNat Lia.
-From MetaCoq.Template Require Import config utils UnivSubst.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
+From Coq Require Import Bool List Program PeanoNat.
+From MetaCoq.Template Require Import config utils.
+From MetaCoq.PCUIC Require Import PCUICAst
      PCUICLiftSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening PCUICInversion
      PCUICSubstitution PCUICReduction PCUICCumulativity PCUICGeneration
-     PCUICParallelReductionConfluence PCUICConfluence PCUICUnivSubst
      PCUICUnivSubstitution PCUICConversion PCUICPrincipality.
 
-Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
 Require Import ssreflect.
 

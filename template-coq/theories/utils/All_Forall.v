@@ -732,7 +732,7 @@ Proof.
   revert Hnth. destruct n. now intros [= ->].
   intros H'; eauto.
 Qed.
-Require Import Arith.
+
 Lemma nth_error_alli {A} {P : nat -> A -> Type} {l : list A} {n x} {k} :
   nth_error l n = Some x -> Alli P k l -> P (k + n) x.
 Proof.

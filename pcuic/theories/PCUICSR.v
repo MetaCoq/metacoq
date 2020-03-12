@@ -2,21 +2,17 @@
 Set Warnings "-notation-overridden".
 
 Require Import Equations.Prop.DepElim.
-Require Import Equations.CoreTactics.
-From Equations Require Import Equations.
-From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
-From MetaCoq Require Import LibHypsNaming.
+From Coq Require Import Bool List Program Lia.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
      PCUICSubstitution PCUICClosed PCUICCumulativity PCUICGeneration PCUICReduction
-     PCUICParallelReduction PCUICEquality PCUICAlpha
-     PCUICValidity PCUICParallelReductionConfluence PCUICConfluence
+     PCUICAlpha
+     PCUICValidity PCUICConfluence
      PCUICContextConversion PCUICUnivSubstitution
-     PCUICConversion PCUICInversion PCUICPrincipality.
+     PCUICConversion PCUICInversion.
 
-Require Import ssreflect ssrbool.
-Require Import String.
+Require Import ssreflect.
 Set Asymmetric Patterns.
 Set SimplIsCbn.
 

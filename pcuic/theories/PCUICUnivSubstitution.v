@@ -2,19 +2,16 @@
 
 (** * Universe Substitution lemmas for typing derivations. *)
 
-From Coq Require Import Bool String List BinPos Compare_dec Arith Lia ZArith
+From Coq Require Import Bool List Lia ZArith
      CRelationClasses.
 Require Import Coq.Program.Syntax Coq.Program.Basics.
-From MetaCoq.Template Require Import utils config AstUtils UnivSubst.
+From MetaCoq.Template Require Import utils config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICEquality
      PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICClosed PCUICPosition
-     PCUICReduction PCUICCumulativity PCUICWeakening.
+     PCUICWeakening.
 
 Local Set Keyed Unification.
-
-From Equations Require Import Equations.
-Require Import Equations.Prop.DepElim.
 
 Set Default Goal Selector "!".
 
@@ -1252,7 +1249,7 @@ Lemma subst_instance_to_extended_list u l
 Proof.
   - unfold to_extended_list, to_extended_list_k.
     change [] with (map (subst_instance_constr u) []) at 2.
-    generalize (nil term), 0. induction l as [|[aa [ab|] ac] bb].
+    unf_term. generalize (nil term), 0. induction l as [|[aa [ab|] ac] bb].
     + reflexivity.
     + intros l n; cbn. now rewrite IHbb.
     + intros l n; cbn. now rewrite IHbb.
@@ -1388,7 +1385,7 @@ Proof.
       destruct (destArity [] t) as [[ctx s']|]; [|discriminate].
       apply some_inj in H0; subst; simpl in *. f_equal.
       rewrite subst_instance_constr_it_mkProd_or_LetIn. f_equal; cbn.
-      f_equal. rewrite subst_instance_constr_mkApps; cbn.
+      unf_term. f_equal. rewrite subst_instance_constr_mkApps; cbn.
       f_equal. rewrite map_app. f_equal.
       * rewrite !map_map, subst_instance_context_length; apply map_ext. clear.
         intro. now apply lift_subst_instance_constr.

@@ -32,7 +32,7 @@ struct
   type quoted_abstract_univ_context = Universes0.AUContext.t
   type quoted_variance = Universes0.Variance.t
   type quoted_universes_decl = Universes0.universes_decl
-  type quoted_universes_entry = Ast0.universes_entry
+  type quoted_universes_entry = Universes0.universes_entry
 
   type quoted_ind_entry = quoted_ident * t * quoted_ident list * t list
   type quoted_definition_entry = Ast0.definition_entry
@@ -355,8 +355,8 @@ struct
        let k = (quote_int (k - 1)) in
        BasicAst.ConstructRef (quote_inductive (kn,n), k)
 
-  let mkPolymorphic_entry names c = Polymorphic_entry (names, c)
-  let mkMonomorphic_entry c = Monomorphic_entry c
+  let mkPolymorphic_entry names c = Universes0.Polymorphic_entry (names, c)
+  let mkMonomorphic_entry c = Universes0.Monomorphic_entry c
   
 end
 

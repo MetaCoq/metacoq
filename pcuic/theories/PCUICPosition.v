@@ -1,11 +1,9 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
-     Classes.RelationClasses.
-From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
-     AstUtils UnivSubst.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICLiftSubst PCUICReflect PCUICUnivSubst PCUICEquality PCUICUtils.
+From Coq Require Import Bool List Program RelationClasses Lia.
+From MetaCoq.Template Require Import config monad_utils utils.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICInduction
+     PCUICReflect PCUICEquality PCUICLiftSubst.
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
 Local Set Keyed Unification.
@@ -621,7 +619,7 @@ Proof.
       * destruct c. all: reflexivity.
 Qed.
 
-Lemma positionR_trans : transitive positionR.
+Lemma positionR_trans : Transitive positionR.
 Proof.
   intros p q r h1 h2.
   revert r h2.
@@ -637,7 +635,7 @@ Proof.
 Qed.
 
 Lemma posR_trans :
-  forall t, transitive (@posR t).
+  forall t, Transitive (@posR t).
 Proof.
   intros t p q r h1 h2.
   eapply positionR_trans ; eassumption.

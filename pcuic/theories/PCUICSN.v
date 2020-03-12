@@ -1,17 +1,13 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
-     Classes.CRelationClasses.
+From Coq Require Import Bool List Program.
 From MetaCoq.Template
-Require Import config Universes monad_utils utils BasicAst AstUtils UnivSubst
-     Universes uGraph.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICPosition
-     PCUICNormal PCUICInversion PCUICCumulativity PCUICSafeLemmata
-     PCUICGeneration PCUICValidity PCUICSR PCUICAlpha PCUICNameless
+Require Import config monad_utils utils.
+From MetaCoq.PCUIC Require Import PCUICAst
+     PCUICTyping
+     PCUICSafeLemmata
+     PCUICValidity PCUICNameless
      PCUICEquality PCUICConfluence PCUICUnivSubstitution.
-From Equations Require Import Equations.
-Require Import Equations.Prop.DepElim.
 
 Import MonadNotation.
 Open Scope type_scope.

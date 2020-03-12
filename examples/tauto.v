@@ -1,6 +1,5 @@
 From Coq Require Import Bool String List Lia PeanoNat Peano_dec.
 From MetaCoq.Template Require Import All.
-Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
 Set Keyed Unification.
 Import ListNotations.
@@ -643,17 +642,17 @@ Proof.
     + reflexivity.
     + simpl. eauto.
   - rewrite IHt1, IHt2. f_equal. f_equal.
-    induction H.
+    induction X.
     + reflexivity.
     + simpl. eauto.
   - generalize (#|m| + k). intro p.
-    induction H.
+    induction X.
     + reflexivity.
     + simpl. unfold map_def. unfold def_size.
       simpl.
       intuition eauto.
   - generalize (#|m| + k). intro p.
-    induction H.
+    induction X.
     + reflexivity.
     + simpl. unfold map_def. unfold def_size.
       simpl.
@@ -720,31 +719,25 @@ Proof.
     + clear - H3. destruct l. contradiction.
       discriminate.
   - f_equal. rewrite IHt1, IHt2 by assumption. f_equal.
-    clear - H H6. induction H.
+    clear - X H5. induction X.
     * reflexivity.
-    * inversion H6. subst. simpl. intuition eauto.
+    * inversion H5. subst. simpl. intuition eauto.
   - f_equal.
     generalize (#|m| + k). intro p.
-    clear - H H1. induction H.
+    clear - X H0. induction X.
     + reflexivity.
-    + inversion H1. subst.
+    + inversion H0. subst.
       unfold mfixpoint_size.
       unfold map_def. unfold def_size.
-      simpl. intuition eauto.
-      rewrite H2, H3 by assumption.
-      f_equal. f_equal. unfold mfixpoint_size in H6. rewrite <- H6.
-      reflexivity.
+      simpl. f_equal. intuition eauto.
   - f_equal.
     generalize (#|m| + k). intro p.
-    clear - H H1. induction H.
+    clear - X H0. induction X.
     + reflexivity.
-    + inversion H1. subst.
+    + inversion H0. subst.
       unfold mfixpoint_size.
       unfold map_def. unfold def_size.
-      simpl. intuition eauto.
-      rewrite H2, H3 by assumption.
-      f_equal. f_equal. unfold mfixpoint_size in H4. rewrite <- H4.
-      reflexivity.
+      simpl. f_equal. intuition eauto.
 Qed.
 
 Local Ltac inst :=
@@ -786,34 +779,34 @@ Proof.
                 (map (on_snd (subst [tRel 0] k)) l)
       <= list_size (fun x : nat × term => tsize x.2) l
     ).
-    { clear - H. induction H.
+    { clear - X. induction X.
     - reflexivity.
     - simpl. inst. lia.
   }
   lia.
   - eapply le_n_S.
     generalize (#|m| + k). intro p.
-    clear - H. induction H.
+    clear - X. induction X.
     + reflexivity.
     + unfold mfixpoint_size.
       unfold map_def. unfold def_size.
       simpl.
       intuition eauto.
-      unfold mfixpoint_size in IHForall.
-      unfold map_def in IHForall.
-      unfold def_size in IHForall.
+      unfold mfixpoint_size in IHX.
+      unfold map_def in IHX.
+      unfold def_size in IHX.
       repeat inst. lia.
   - eapply le_n_S.
     generalize (#|m| + k). intro p.
-    clear - H. induction H.
+    clear - X. induction X.
     + reflexivity.
     + unfold mfixpoint_size.
       unfold map_def. unfold def_size.
       simpl.
       intuition eauto.
-      unfold mfixpoint_size in IHForall.
-      unfold map_def in IHForall.
-      unfold def_size in IHForall.
+      unfold mfixpoint_size in IHX.
+      unfold map_def in IHX.
+      unfold def_size in IHX.
       repeat inst. lia.
 Qed.
 

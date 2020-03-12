@@ -1,11 +1,9 @@
 (* Distributed under the terms of the MIT license.   *)
 Set Warnings "-notation-overridden".
 
-From Coq Require Import Bool String List Program BinPos Compare_dec.
-From MetaCoq.Template Require Import config utils Ast.
-From MetaCoq.PCUIC Require Import PCUICAstUtils.
-From MetaCoq.Erasure Require Import EAst EAstUtils EInduction ELiftSubst ETyping.
-From MetaCoq.Template Require AstUtils.
+From Coq Require Import Bool List Program.
+From MetaCoq.Template Require Import config utils.
+From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst ETyping.
 
 Set Asymmetric Patterns.
 Require Import ssreflect ssrbool.
@@ -166,7 +164,7 @@ Section Wcbv.
   (** Atoms are values (includes abstractions, cofixpoints and constructors) *)
   | eval_atom t : atom t -> eval t t.
 
-  Hint Constructors eval.
+  Hint Constructors eval : core.
 
   (* Scheme Minimality for eval Sort Type. *)
   Definition eval_evals_ind :

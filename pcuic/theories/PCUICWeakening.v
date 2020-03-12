@@ -1,14 +1,12 @@
 (* Distributed under the terms of the MIT license.   *)
-From Equations Require Import Equations.
-From Coq Require Import Bool String List BinPos Compare_dec ZArith Lia.
+From Coq Require Import Bool List ZArith Lia.
 Require Import Coq.Program.Syntax Coq.Program.Basics.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
   PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICTyping PCUICWeakeningEnv
   PCUICClosed PCUICReduction PCUICPosition.
-Require Import ssreflect ssrbool.
+Require Import ssreflect.
 
-Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
 
 Set Default Goal Selector "!".
@@ -572,7 +570,8 @@ Hint Rewrite lift_it_mkProd_or_LetIn : lift.
 Lemma to_extended_list_lift n k c :
   to_extended_list (lift_context n k c) = to_extended_list c.
 Proof.
-  unfold to_extended_list, to_extended_list_k. generalize 0. generalize (nil term) at 1 2.
+  unfold to_extended_list, to_extended_list_k. generalize 0.
+  unf_term. generalize (nil term) at 1 2.
   induction c in n, k |- *; simpl; intros. 1: reflexivity.
   rewrite -> lift_context_snoc0. unfold snoc. simpl.
   destruct a. destruct decl_body.
@@ -585,7 +584,7 @@ Lemma to_extended_list_map_lift:
   forall (n k : nat) (c : context), to_extended_list c = map (lift n (#|c| + k)) (to_extended_list c).
 Proof.
   intros n k c.
-  pose proof (to_extended_list_lift_above c).
+  pose proof (to_extended_list_lift_above c). unf_term.
   symmetry. solve_all.
   destruct H as [x' [-> Hx]]. simpl.
   destruct (leb_spec_Set (#|c| + k) x').
@@ -859,7 +858,7 @@ Proof.
   intros ity eq.
   pose proof (lift_destArity [] ity n k) as H; cbn in H. rewrite H; clear H.
   destruct destArity as [[ctx s] | ]; [|reflexivity]. simpl. f_equal.
-  rewrite lift_it_mkProd_or_LetIn; cbn. f_equal. f_equal.
+  rewrite lift_it_mkProd_or_LetIn; cbn. unf_term. f_equal. f_equal.
   - destruct idecl; reflexivity.
   - rewrite lift_mkApps; cbn; f_equal. rewrite map_app. f_equal.
     + rewrite !map_map lift_context_length; apply map_ext. clear.

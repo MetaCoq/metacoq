@@ -1,15 +1,14 @@
 (* Distributed under the terms of the MIT license.   *)
 Set Warnings "-notation-overridden".
-Require Import ssreflect ssrbool.
-From MetaCoq Require Import LibHypsNaming.
+Require Import ssreflect.
 From Equations Require Import Equations.
-From Coq Require Import Bool String List Program BinPos Compare_dec Utf8 String Lia.
+From Coq Require Import Bool List Program Utf8 Lia.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICReduction PCUICWeakening
-     PCUICSubstitution PCUICEquality PCUICReflect PCUICClosed
+From MetaCoq.PCUIC Require Import PCUICAst
+     PCUICLiftSubst PCUICTyping PCUICReduction PCUICWeakening
+     PCUICEquality
      PCUICParallelReduction PCUICParallelReductionConfluence
-     PCUICCumulativity PCUICUnivSubstitution.
+     PCUICUnivSubstitution.
 
 (* Type-valued relations. *)
 Require Import CRelationClasses.

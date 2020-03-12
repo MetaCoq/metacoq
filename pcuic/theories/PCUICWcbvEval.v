@@ -1,9 +1,9 @@
 (* Distributed under the terms of the MIT license.   *)
 Set Warnings "-notation-overridden".
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Lia CRelationClasses.
-From MetaCoq.Template Require Import config utils AstUtils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping
+From Coq Require Import Bool List Program Lia CRelationClasses.
+From MetaCoq.Template Require Import config utils.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICUnivSubst PCUICTyping
      PCUICReduction.
 Require Import String.
 Local Open Scope string_scope.
@@ -12,7 +12,6 @@ Set Asymmetric Patterns.
 Require Import ssreflect ssrbool.
 
 From Equations Require Import Equations.
-Require Import Equations.Prop.DepElim.
 
 Local Ltac inv H := inversion H; subst.
 

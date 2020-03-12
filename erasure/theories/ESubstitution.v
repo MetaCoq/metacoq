@@ -1,11 +1,9 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Lia.
-From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICWeakening PCUICSubstitution PCUICChecker PCUICRetyping PCUICMetaTheory PCUICWcbvEval PCUICSR PCUICValidity PCUICWeakeningEnv PCUICElimination.
-From MetaCoq.Erasure Require Import EAst ELiftSubst ETyping EWcbvEval Extract Prelim.
-From Equations Require Import Equations.
-Require Import String.
+From Coq Require Import Bool List Program.
+From MetaCoq.Template Require Import config utils monad_utils.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICTyping PCUICWeakening PCUICSubstitution PCUICWeakeningEnv PCUICElimination.
+From MetaCoq.Erasure Require Import ETyping Extract Prelim.
 Local Open Scope list_scope.
 Set Asymmetric Patterns.
 Import MonadNotation.
@@ -138,7 +136,7 @@ Lemma erases_weakening' (Σ : global_env_ext) (Γ Γ' Γ'' : PCUICAst.context) (
     wf_local Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') ->
     Σ ;;; Γ ,,, Γ' |- t : T ->
     Σ ;;; Γ ,,, Γ' |- t ⇝ℇ t' ->
-    Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' |- (PCUICLiftSubst.lift #|Γ''| #|Γ'| t) ⇝ℇ (lift #|Γ''| #|Γ'| t').
+    Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' |- (PCUICLiftSubst.lift #|Γ''| #|Γ'| t) ⇝ℇ (ELiftSubst.lift #|Γ''| #|Γ'| t').
 Proof.
   intros HΣ HΓΓ' HΓ'' * H He.
   generalize_eqs H. intros eqw. rewrite <- eqw in *.
@@ -220,7 +218,7 @@ Lemma erases_weakening (Σ : global_env_ext) (Γ Γ' : PCUICAst.context) (t T : 
   wf_local Σ (Γ ,,, Γ') ->
   Σ ;;; Γ |- t : T ->
   Σ ;;; Γ |- t ⇝ℇ t' ->
-  Σ ;;; Γ ,,, Γ' |- (PCUICLiftSubst.lift #|Γ'| 0 t) ⇝ℇ (lift #|Γ'| 0 t').
+  Σ ;;; Γ ,,, Γ' |- (PCUICLiftSubst.lift #|Γ'| 0 t) ⇝ℇ (ELiftSubst.lift #|Γ'| 0 t').
 Proof.
   intros.
   pose proof (typing_wf_local X1).
@@ -287,7 +285,7 @@ Lemma erases_subst (Σ : global_env_ext) Γ Γ' Δ t s t' s' T :
   Σ ;;; Γ ,,, Γ'  ,,, Δ |- t : T ->
   Σ ;;; Γ ,,, Γ'  ,,, Δ |- t ⇝ℇ t' ->
   All2 (erases Σ Γ) s s' ->
-  Σ ;;; (Γ ,,, subst_context s 0 Δ) |- (PCUICLiftSubst.subst s #|Δ| t) ⇝ℇ subst s' #|Δ| t'.
+  Σ ;;; (Γ ,,, subst_context s 0 Δ) |- (PCUICLiftSubst.subst s #|Δ| t) ⇝ℇ ELiftSubst.subst s' #|Δ| t'.
 Proof.
   intros HΣ HΔ Hs Ht He.
   pose proof (typing_wf_local Ht).
@@ -301,7 +299,7 @@ Proof.
                               Σ;;; Γ ,,, Γ' ,,, Δ |- t ⇝ℇ t' ->
                               Γ0 = Γ ,,, Γ' ,,, Δ ->
                               All2 (erases Σ Γ) s s' ->
-                              Σ;;; Γ ,,, subst_context s 0 Δ |- PCUICLiftSubst.subst s #|Δ| t ⇝ℇ subst s' #|Δ| t'
+                              Σ;;; Γ ,,, subst_context s 0 Δ |- PCUICLiftSubst.subst s #|Δ| t ⇝ℇ ELiftSubst.subst s' #|Δ| t'
          ));
     intros Σ wfΣ Γ0 wfΓ0; intros; simpl in * |-; subst Γ0.
   - inv H0.

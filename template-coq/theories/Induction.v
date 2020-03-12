@@ -1,9 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From MetaCoq Require Import utils BasicAst Ast AstUtils.
-Require Import List Program.
-Require Import BinPos.
-Require Import Coq.Arith.Compare_dec Bool.
+From MetaCoq Require Import utils Ast AstUtils.
+Require Import List.
 Set Asymmetric Patterns.
 
 (** * Deriving a compact induction principle for terms
@@ -104,36 +102,34 @@ Proof.
   apply H2. inv H17.
   auto using lift_to_wf_list.
 
-  inv H18; auto.
-  inv H18; auto.
-  inv H18; auto.
-  inv H19; auto.
-  inv H18; auto.
+  - inv H18; auto.
+  - inv H18; auto.
+  - inv H18; auto.
+  - inv H19; auto.
+  - inv H18; auto.
+    apply H8; auto.
+    auto using lift_to_wf_list.
 
-  apply H8; auto.
-  auto using lift_to_wf_list.
+  - inv H18; apply H12; auto.
+    red. red in X.
+    induction X.
+    + constructor.
+    + constructor. inv H21; auto. apply IHX. inv H21; auto.
 
-  inv H19; apply H12; auto.
-  red.
-  red in H18.
-  induction H18.
-  constructor.
-  inv H22; auto.
+  - inv H17; auto.
 
-  inv H17; auto.
+  - inv H16; auto.
+    apply H14. red. red in X.
+    induction X; constructor.
+    + split; inv H17; intuition.
+    + apply IHX. now inv H17.
+    + eapply Forall_impl; tea. clear; intros; cbn in *; intuition.
 
-  inv H17; auto.
-  apply H14. red.
-  red in H16.
-  induction H16. constructor.
-  inv H18; constructor; intuition auto.
-  clear H16; induction H18; constructor; intuition auto.
-
-  inv H17; auto.
-  apply H15. red.
-  red in H16.
-  induction H16. constructor.
-  inv H18; constructor; intuition auto.
+  - inv H16; auto.
+    apply H15. red. red in X.
+    induction X; constructor.
+    + split; inv H17; intuition.
+    + apply IHX. now inv H17.
 Qed.
 
 Definition tCaseBrsType {A} (P : A -> Type) (l : list (nat * A)) :=

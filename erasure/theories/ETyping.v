@@ -1,9 +1,8 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec.
-From MetaCoq.Template Require Import config utils AstUtils.
-From MetaCoq.Erasure Require Import EAst EAstUtils EInduction ELiftSubst.
-Require Import String.
+From Coq Require Import Bool String List Program.
+From MetaCoq.Template Require Import config utils.
+From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 

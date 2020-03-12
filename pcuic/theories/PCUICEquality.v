@@ -1,14 +1,12 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Arith ZArith
-   Lia RelationClasses CRelationClasses CMorphisms.
-From MetaCoq.Template Require Import config utils AstUtils Universes UnivSubst.
+From Coq Require Import Bool List Program Arith
+   CMorphisms.
+From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICReflect PCUICLiftSubst PCUICUnivSubst.
+     PCUICReflect PCUICLiftSubst.
 
 Require Import ssreflect.
-From Equations Require Import Equations.
-Require Import Equations.Prop.DepElim.
 Set Equations With UIP.
 
 Local Open Scope type_scope.

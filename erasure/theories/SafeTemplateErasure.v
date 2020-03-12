@@ -1,13 +1,11 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
-From MetaCoq.Template Require Import config monad_utils utils BasicAst AstUtils
-     UnivSubst Pretty uGraph Typing.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICNormal PCUICSR
-     PCUICGeneration PCUICReflect PCUICEquality PCUICInversion PCUICValidity
-     PCUICWeakening PCUICPosition PCUICCumulativity PCUICSafeLemmata PCUICSN TemplateToPCUIC.
-From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeConversion PCUICSafeChecker SafeTemplateChecker.
+From Coq Require Import Bool String Program.
+From MetaCoq.Template Require Import config monad_utils utils uGraph Pretty.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping
+     TemplateToPCUIC.
+From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker
+     SafeTemplateChecker.
 From MetaCoq.Erasure Require Import ErasureFunction EPretty.
 From MetaCoq.Erasure Require SafeErasureFunction.
 
@@ -20,10 +18,10 @@ Local Open Scope string_scope.
 
 Program Definition erase_template_program_check (p : Ast.program)
   : EnvCheck (EAst.global_context * EAst.term) :=
-  let Σ := List.rev (trans_global (AstUtils.empty_ext p.1)).1 in
+  let Σ := List.rev (trans_global (Ast.empty_ext p.1)).1 in
   G <- check_wf_env Σ ;;
-  Σ' <- wrap_error (PCUICAstUtils.empty_ext Σ) "erasure of the global context" (erase_global Σ _) ;;
-  t <- wrap_error (PCUICAstUtils.empty_ext Σ) ("During erasure of " ++ string_of_term (trans p.2)) (erase (empty_ext Σ) _ nil _ (trans p.2));;
+  Σ' <- wrap_error (empty_ext Σ) "erasure of the global context" (erase_global Σ _) ;;
+  t <- wrap_error (empty_ext Σ) ("During erasure of " ++ string_of_term (trans p.2)) (erase (empty_ext Σ) _ nil _ (trans p.2));;
   ret (Monad:=envcheck_monad) (Σ', t).
 
 Next Obligation.
@@ -131,10 +129,10 @@ Program Fixpoint check_wf_env_only_univs (Σ : global_env)
 
 Program Definition erase_template_program (p : Ast.program)
   : EnvCheck (EAst.global_context * EAst.term) :=
-  let Σ := List.rev (trans_global (AstUtils.empty_ext p.1)).1 in
+  let Σ := List.rev (trans_global (Ast.empty_ext p.1)).1 in
   G <- check_wf_env_only_univs Σ ;;
-  Σ' <- wrap_error (PCUICAstUtils.empty_ext Σ) "erasure of the global context" (SafeErasureFunction.erase_global Σ _) ;;
-  t <- wrap_error (PCUICAstUtils.empty_ext Σ) ("During erasure of " ++ string_of_term (trans p.2)) (SafeErasureFunction.erase (empty_ext Σ) _ nil (trans p.2) _);;
+  Σ' <- wrap_error (empty_ext Σ) "erasure of the global context" (SafeErasureFunction.erase_global Σ _) ;;
+  t <- wrap_error (empty_ext Σ) ("During erasure of " ++ string_of_term (trans p.2)) (SafeErasureFunction.erase (empty_ext Σ) _ nil (trans p.2) _);;
   ret (Monad:=envcheck_monad) (Σ', t).
 
 Next Obligation.
@@ -152,14 +150,15 @@ Qed.
 
 Local Open Scope string_scope.
 
+
 (** This uses the checker-based erasure *)
 Program Definition erase_and_print_template_program_check {cf : checker_flags} (p : Ast.program)
   : string + string :=
   let p := fix_program_universes p in
   match erase_template_program_check p return string + string with
   | CorrectDecl (Σ', t) =>
-    inl ("Environment is well-formed and " ++ Pretty.print_term (AstUtils.empty_ext p.1) [] true p.2 ++
-         " erases to: " ++ nl ++ EPretty.print_term Σ' [] true false t)
+    inl ("Environment is well-formed and " ++ Pretty.print_term (Ast.empty_ext p.1) [] true p.2 ++
+         " erases to: " ++ nl ++ print_term Σ' [] true false t)
   | EnvError Σ' (AlreadyDeclared id) =>
     inr ("Already declared: " ++ id)
   | EnvError Σ' (IllFormedDecl id e) =>
@@ -172,8 +171,8 @@ Program Definition erase_and_print_template_program {cf : checker_flags} (p : As
   let p := fix_program_universes p in
   match erase_template_program p return string + string with
   | CorrectDecl (Σ', t) =>
-    inl ("Environment is well-formed and " ++ Pretty.print_term (AstUtils.empty_ext p.1) [] true p.2 ++
-         " erases to: " ++ nl ++ EPretty.print_term Σ' [] true false t)
+    inl ("Environment is well-formed and " ++ Pretty.print_term (Ast.empty_ext p.1) [] true p.2 ++
+         " erases to: " ++ nl ++ print_term Σ' [] true false t)
   | EnvError Σ' (AlreadyDeclared id) =>
     inr ("Already declared: " ++ id)
   | EnvError Σ' (IllFormedDecl id e) =>

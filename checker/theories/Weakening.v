@@ -1,13 +1,12 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec ZArith Lia.
-From MetaCoq.Template Require Import config utils Ast AstUtils Induction utils
-  LiftSubst UnivSubst LibHypsNaming Typing TypingWf.
+From Coq Require Import Bool List Program ZArith Lia.
+From MetaCoq.Template Require Import config utils Ast AstUtils Induction
+  LiftSubst UnivSubst Typing TypingWf LibHypsNaming.
 From MetaCoq.Checker Require Import WeakeningEnv Closed Reflect.
-Require Import ssreflect ssrbool.
+Require Import ssreflect.
 
 From Equations Require Import Equations.
-Require Import Equations.Prop.DepElim.
 
 (** * Weakening lemmas for typing derivations.
 
@@ -603,7 +602,8 @@ Proof.
   pose proof (to_extended_list_lift_above c).
   symmetry. solve_all.
   destruct H as [x' [-> Hx]]. simpl.
-  destruct (leb_spec_Set (#|c| + k) x'). f_equal. lia. reflexivity.
+  destruct (leb_spec_Set (#|c| + k) x'); unf_term.
+  f_equal. lia. reflexivity.
 Qed.
 
 Lemma weakening_red1 `{CF:checker_flags} Σ Γ Γ' Γ'' M N :

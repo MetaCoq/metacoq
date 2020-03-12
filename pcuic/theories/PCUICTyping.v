@@ -1,24 +1,17 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
-From MetaCoq.Template Require Import config utils monad_utils Universes BasicAst AstUtils
-UnivSubst EnvironmentTyping.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICUtils
+From Coq Require Import Bool String List Program Arith Lia.
+From MetaCoq.Template Require Import config utils monad_utils
+EnvironmentTyping.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
+PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICUtils
 PCUICPosition.
 
 From MetaCoq Require Export LibHypsNaming.
-
-Require Import String.
-Require Import Wf Wellfounded Relation_Definitions.
-Require Import Relation_Operators Lexicographic_Product Wf_nat.
 Require Import ssreflect.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
-
-Require Import CRelationClasses.
-Require Import Equations.Prop.DepElim.
-Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
+Require Import Equations.Type.Relation.
 From Equations Require Import Equations.
 Import MonadNotation.
 

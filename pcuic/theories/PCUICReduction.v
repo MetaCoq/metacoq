@@ -1,7 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
-Require Import ssreflect ssrbool.
-From MetaCoq Require Import LibHypsNaming.
-From Coq Require Import Bool String List Program BinPos Compare_dec Utf8 String
+Require Import ssreflect.
+From Coq Require Import Bool List Program Utf8
   ZArith Lia.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction

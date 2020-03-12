@@ -1,14 +1,10 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
+From Coq Require Import Bool List Program.
 From MetaCoq.Template Require Import utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst.
-Require Import String.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICInduction PCUICLiftSubst.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
-
-From Equations Require Import Equations.
-Require Import Equations.Prop.DepElim.
 
 (** * Universe substitution
 

@@ -1,13 +1,13 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
+From Coq Require Import Bool String List Program
      Classes.RelationClasses.
 From MetaCoq.Template
-Require Import config Universes monad_utils utils BasicAst AstUtils UnivSubst.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICPosition
-     PCUICNormal PCUICInversion PCUICCumulativity PCUICSafeLemmata
-     PCUICGeneration PCUICValidity PCUICSR PCUICSN PCUICUtils PCUICReduction.
+Require Import config monad_utils utils.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
+     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICPosition
+     PCUICNormal PCUICInversion PCUICSafeLemmata
+     PCUICSR PCUICSN PCUICUtils PCUICReduction.
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
 

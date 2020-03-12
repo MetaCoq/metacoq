@@ -1,10 +1,9 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
-From MetaCoq.Template Require Import config utils Ast AstUtils Induction utils LiftSubst UnivSubst Typing TypingWf.
-From MetaCoq.Checker Require Import Generation WeakeningEnv Closed Weakening Reflect.
+From Coq Require Import Bool List Program Arith Lia.
+From MetaCoq.Template Require Import config utils Ast AstUtils Induction LiftSubst UnivSubst Typing TypingWf.
+From MetaCoq.Checker Require Import Generation Closed WeakeningEnv Weakening.
 From Equations Require Import Equations.
-Require Import Equations.Prop.DepElim.
 Require Import ssreflect.
 
 (** * Substitution lemmas for typing derivations. *)
@@ -473,20 +472,21 @@ Proof.
     + eapply Forall_map_inv in H2.
       eapply Forall_impl'. all: eauto. apply H.
   - constructor. all: auto.
-    eapply Forall_map_inv in H0.
-    eapply Forall_impl'. all: eauto. apply H.
-  - constructor. eapply Forall_map_inv in H0.
+    eapply Forall_map_inv in H.
+    eapply Forall_impl'; tea.
+    apply All_Forall, X.
+  - constructor. eapply Forall_map_inv in H.
     eapply Forall_impl'. 2: eassumption.
     unfold compose. unfold map_def. simpl.
-    eapply Forall_impl. 1: eapply H. simpl.
+    eapply Forall_impl. 1: eapply All_Forall, X. simpl.
     intros [na ty bo ra] h1 h2. simpl in *.
     intuition eauto.
     destruct bo. all: try discriminate.
     reflexivity.
-  - constructor. eapply Forall_map_inv in H0.
+  - constructor. eapply Forall_map_inv in H.
     eapply Forall_impl'. 2: eassumption.
     unfold compose. unfold map_def. simpl.
-    eapply Forall_impl. 1: eapply H. simpl.
+    eapply Forall_impl. 1: eapply All_Forall, X. simpl.
     intros [na ty bo ra] h1 h2. simpl in *.
     intuition eauto.
 Qed.
@@ -916,15 +916,15 @@ Proof.
   move=> H; induction H; simpl; auto.
   - inv wfs.
     rewrite map_app -IHcontext_subst //.
-    rewrite to_extended_list_k_cons /= !map_app.
+    rewrite to_extended_list_k_cons /= !map_app; unf_term.
     f_equal.
     rewrite (lift_to_extended_list_k _ _ 1) map_map_compose.
-    pose proof (to_extended_list_k_spec Γ k).
+    pose proof (to_extended_list_k_spec Γ k); unf_term.
     solve_all. destruct H2 as [n [-> Hn]].
     rewrite /compose /lift (subst_app_decomp [a] s k); auto with wf.
     rewrite subst_rel_gt. simpl; lia.
     repeat (f_equal; simpl; try lia).
-    now rewrite /map (subst_rel_eq _ _ 0 a).
+    cbn -[subst]. f_equal. apply (subst_rel_eq _ _ 0 a); cbnr; lia.
   - inv wfs.
     rewrite -IHcontext_subst // to_extended_list_k_cons /=.
     rewrite (lift_to_extended_list_k _ _ 1) map_map_compose.
@@ -932,7 +932,7 @@ Proof.
     solve_all. destruct H2 as [n [-> Hn]].
     rewrite /compose /lift (subst_app_decomp [subst0 s b] s k); auto with wf.
     rewrite subst_rel_gt. simpl; lia.
-    repeat (f_equal; simpl; try lia).
+    repeat (unf_term; f_equal; simpl; try lia).
 Qed.
 
 Lemma wf_context_subst ctx args s :

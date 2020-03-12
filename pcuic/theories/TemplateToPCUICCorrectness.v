@@ -1,22 +1,19 @@
 (* Distributed under the terms of the MIT license.   *)
 Set Warnings "-notation-overridden".
 
-From Coq Require Import Bool String List Program BinPos Compare_dec ZArith.
-From MetaCoq.Template Require Import config utils AstUtils BasicAst Ast
-     Typing TypingWf WfInv.
+From Coq Require Import Bool List Program Compare_dec PeanoNat.
+From MetaCoq.Template Require Import config utils Ast TypingWf WfInv.
 
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICLiftSubst PCUICEquality
-     PCUICUnivSubst PCUICTyping PCUICGeneration TemplateToPCUIC.
-Require Import Equations.Prop.DepElim.
-From Equations Require Import Equations.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCumulativity
+     PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICTyping TemplateToPCUIC
+     PCUICSubstitution PCUICGeneration.
 
-Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 
 Module T := Template.Ast.
 Module TTy := Template.Typing.
+Module TEnv := Template.Ast.TemplateEnvironment.
 
 Local Existing Instance default_checker_flags.
 
@@ -46,9 +43,9 @@ Proof.
   - rewrite lift_mkApps, IHt, map_map.
     f_equal. rewrite map_map; solve_all.
 
-  - f_equal; auto. red in H. solve_list.
-  - f_equal; auto; red in H; solve_list.
-  - f_equal; auto; red in H; solve_list.
+  - f_equal; auto. solve_list.
+  - f_equal; auto; solve_list.
+  - f_equal; auto; solve_list.
 Qed.
 
 Lemma mkApps_app f l l' : mkApps f (l ++ l') = mkApps (mkApps f l) l'.
@@ -98,9 +95,9 @@ Proof.
     apply Template.LiftSubst.wf_subst; auto.
     solve_all. solve_all. apply Template.LiftSubst.wf_subst; auto. solve_all.
 
-  - f_equal; auto; red in H; solve_list.
-  - f_equal; auto; red in H; solve_list.
-  - f_equal; auto; red in H; solve_list.
+  - f_equal; auto; solve_list.
+  - f_equal; auto; solve_list.
+  - f_equal; auto; solve_list.
 Qed.
 
 Notation Tterm := Template.Ast.term.
@@ -110,11 +107,12 @@ Lemma trans_subst_instance_constr u t : trans (Template.UnivSubst.subst_instance
                                         subst_instance_constr u (trans t).
 Proof.
   induction t using Template.Induction.term_forall_list_ind; simpl; try congruence.
-  f_equal. rewrite !map_map_compose. solve_all.
-  rewrite IHt. rewrite map_map_compose.
-  rewrite mkApps_morphism; auto. f_equal.
-  rewrite !map_map_compose. solve_all.
-  1-3:f_equal; auto; Template.AstUtils.merge_All; solve_list.
+  { f_equal. rewrite !map_map_compose. solve_all. }
+  { rewrite IHt. rewrite map_map_compose.
+    rewrite mkApps_morphism; auto. f_equal.
+    rewrite !map_map_compose. solve_all. }
+  1-3:f_equal; auto; unfold BasicAst.tFixProp, BasicAst.tCaseBrsProp in *;
+    repeat toAll; solve_list.
 Qed.
 
 Require Import ssreflect.
@@ -564,18 +562,14 @@ Proof.
     { inversion wt. assumption. }
     assert (wargs' : Forall T.wf args').
     { inversion wu. assumption. }
-    rename X into H; induction H in wl, args', wargs', a |- *.
-    + dependent destruction a. constructor.
-    + dependent destruction a. simpl.
-      constructor.
-      * eapply p.
-        -- inversion wl. assumption.
-        -- inversion wargs'. assumption.
-        -- assumption.
-      * eapply IHAll.
-        -- assumption.
-        -- inversion wl. assumption.
-        -- inversion wargs'. assumption.
+    apply Forall_All in wl.
+    apply Forall_All in wargs'.
+    eapply All2_All_mix_right in a; tea.
+    eapply All2_All_mix_left in a; try exact X.
+    eapply All2_All_mix_left in a; try exact wl.
+    eapply All2_map, All2_impl; tea.
+    clear; cbn. intros x y [H1 [H2 [H3 H4]]]. 
+    apply H2; assumption.
   - constructor.
     + constructor. 2: constructor.
       eapply IHt2.
@@ -586,7 +580,7 @@ Proof.
       * inversion wt. assumption.
       * inversion wu. assumption.
       * assumption.
-  - eapply PCUICCumulativity.eq_term_mkApps.
+  - eapply eq_term_mkApps.
     + eapply IHt.
       * inversion wt. assumption.
       * inversion wu. assumption.
@@ -1036,7 +1030,7 @@ Proof.
   - simpl. wf_inv H1. apply Forall_All in H2. inv H2.
     rewrite trans_mkApps; auto. apply Template.LiftSubst.wf_subst; auto with wf; solve_all.
     apply All_Forall. auto.
-    rewrite trans_subst; auto. apply PCUICSubstitution.red1_mkApps_l. constructor.
+    rewrite trans_subst; auto. apply red1_mkApps_l. constructor.
 
   - rewrite trans_subst; eauto. repeat constructor.
 
@@ -1084,11 +1078,11 @@ Proof.
     apply b2. all: solve_all.
 
   - rewrite !trans_mkApps; auto with wf. eapply wf_red1 in X; auto.
-    apply PCUICSubstitution.red1_mkApps_l. auto.
+    apply red1_mkApps_l. auto.
 
   - apply Forall_All in H2. clear H H0 H1. revert M1. induction X.
     simpl. intuition. inv H2. specialize (X H).
-    apply PCUICSubstitution.red1_mkApps_l. apply app_red_r. auto.
+    apply red1_mkApps_l. apply app_red_r. auto.
     inv H2. specialize (IHX X0).
     simpl. intros.
     eapply (IHX (T.tApp M1 [hd])).
@@ -1298,7 +1292,7 @@ Proof.
   generalize (destArity_spec [] T). rewrite eq.
   simpl. move => ->.
   apply (it_mkProd_or_LetIn_wf Γ).
-  rewrite -AstUtils.it_mkProd_or_LetIn_app.
+  rewrite -TEnv.it_mkProd_or_LetIn_app.
   eapply wf_it_mkProd_or_LetIn. instantiate (1:=wf).
   induction wf; constructor; auto.
   destruct t0. eapply typing_wf; eauto.

@@ -1,14 +1,12 @@
 
-From Coq Require Import Bool String List Program BinPos Compare_dec ZArith.
-From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils uGraph.
+From Coq Require Import Bool String List Program.
+From MetaCoq.Template Require Import config utils monad_utils.
 From Equations Require Import Equations.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICTyping PCUICMetaTheory PCUICWcbvEval PCUICLiftSubst PCUICInversion
-     PCUICConfluence PCUICCumulativity PCUICSR PCUICNormal PCUICSafeLemmata
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
+     PCUICTyping PCUICInversion
+     PCUICConfluence PCUICCumulativity PCUICSR PCUICSafeLemmata
      PCUICValidity PCUICPrincipality PCUICElimination PCUICSN.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker PCUICSafeRetyping.
-From MetaCoq.Erasure Require EAst ELiftSubst ETyping EWcbvEval Extract ErasureCorrectness.
-Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 Import MonadNotation.
@@ -200,7 +198,7 @@ End fix_sigma.
 Transparent wf_reduction.
 Local Existing Instance extraction_checker_flags.
 Definition wf_ext_wf Σ : wf_ext Σ -> wf Σ := fst.
-Hint Resolve wf_ext_wf.
+Hint Resolve wf_ext_wf : core.
 
 (* Top.sq should be used but the behavior is a bit different *)
 Local Ltac sq :=
@@ -484,13 +482,14 @@ From MetaCoq Require Import ErasureCorrectness.
 
 Opaque wf_reduction.
 Arguments iswelltyped {cf Σ Γ t A}.
+Hint Constructors typing erases : core.
+
 Lemma erases_erase (Σ : global_env_ext) Γ t T (wfΣ : ∥wf_ext Σ∥) t' :
   Σ ;;; Γ |- t : T ->
                  forall (wt : welltyped Σ Γ t),
   erase Σ wfΣ Γ t wt = Checked t' ->
   erases Σ Γ t t'.
 Proof.
-  Hint Constructors typing erases.
   intros. sq.
   (* pose proof (typing_wf_local X0). *)
 

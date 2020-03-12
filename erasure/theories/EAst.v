@@ -1,9 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
-Require Import Coq.Strings.String.
-Require Import Coq.PArith.BinPos.
+
 Require Import List. Import ListNotations.
-From MetaCoq.Template Require Import monad_utils.
 From MetaCoq.Template Require Export BasicAst Universes.
 
 (** Extracted terms
@@ -13,6 +11,7 @@ From MetaCoq.Template Require Export BasicAst Universes.
   at lambda and let-ins, types of fix/cofixpoints), applications
   are in binary form and casts are removed.  *)
 
+(* todo reuse the one of BasicASt *)
 Record def (term : Set) := { dname : name; dbody : term; rarg : nat }.
 Arguments dname {term} d.
 Arguments dbody {term} d.

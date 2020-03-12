@@ -1,5 +1,4 @@
-From Coq Require Import Ascii String.
-From MetaCoq.Template Require Import BasicAst Ast utils uGraph TemplateMonad TemplateMonad.Extractable.
+From MetaCoq.Template Require Import BasicAst uGraph TemplateMonad TemplateMonad.Extractable.
 
 (* Base types *)
 
@@ -144,8 +143,8 @@ Register MetaCoq.Template.Ast.Build_parameter_entry as metacoq.ast.Build_paramet
 Register MetaCoq.Template.Ast.definition_entry as metacoq.ast.definition_entry.
 Register MetaCoq.Template.Ast.Build_definition_entry as metacoq.ast.Build_definition_entry.
 
-Register MetaCoq.Template.Ast.Monomorphic_entry as metacoq.ast.Monomorphic_entry.
-Register MetaCoq.Template.Ast.Polymorphic_entry as metacoq.ast.Polymorphic_entry.
+Register MetaCoq.Template.Universes.Monomorphic_entry as metacoq.ast.Monomorphic_entry.
+Register MetaCoq.Template.Universes.Polymorphic_entry as metacoq.ast.Polymorphic_entry.
 
 Register MetaCoq.Template.Ast.constant_entry as metacoq.ast.constant_entry.
 Register MetaCoq.Template.Ast.ParameterEntry as metacoq.ast.ParameterEntry.

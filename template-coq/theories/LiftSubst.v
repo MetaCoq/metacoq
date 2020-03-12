@@ -2,7 +2,7 @@
 
 From Coq Require Import List Program.
 From MetaCoq Require Import utils Ast AstUtils Induction.
-From Coq Require Import BinPos Arith.Compare_dec Bool Lia.
+From Coq Require Import BinPos Lia.
 
 (** * Lifting and substitution for the AST
 
@@ -240,8 +240,8 @@ Ltac nth_leb_simpl :=
   | |- context [nth_error ?l ?n] => elim (nth_error_spec l n); rewrite -> ?app_length, ?map_length;
                                     try lia; intros; simpl
   | H : context[nth_error (?l ++ ?l') ?n] |- _ =>
-    (rewrite -> (AstUtils.nth_error_app_ge l l' n) in H by lia) ||
-    (rewrite -> (AstUtils.nth_error_app_lt l l' n) in H by lia)
+    (rewrite -> (nth_error_app_ge l l' n) in H by lia) ||
+    (rewrite -> (nth_error_app_lt l l' n) in H by lia)
   | H : nth_error ?l ?n = Some _, H' : nth_error ?l ?n' = Some _ |- _ =>
     replace n' with n in H' by lia; rewrite -> H in H'; injection H'; intros; subst
   | _ => lia || congruence || solve [repeat (f_equal; try lia)]
@@ -567,10 +567,11 @@ Proof.
     apply wf_lift; auto. constructor. constructor.
   - apply Forall_map. eapply Forall_impl; eauto.
   - apply wf_mkApps; auto. apply Forall_map. eapply Forall_impl; eauto.
-  - apply Forall_map. eapply Forall_impl; eauto. intros. apply H0.
+  - apply Forall_map. eapply Forall_impl; eauto. intros. eapply All_Forall.
+    eapply All_impl; tea. intros [] XX; cbn in *. apply XX.
   - solve_all. unfold compose, map_def. simpl. solve_all.
     induction dbody; try discriminate. reflexivity.
-  - apply Forall_map. eapply Forall_impl; eauto. intros.
+  - apply Forall_map. eapply All_Forall, All_impl; eauto. intros.
     destruct x; simpl in *. red; simpl; intuition auto.
 Qed.
 

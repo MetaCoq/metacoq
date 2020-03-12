@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import List Program BinPos Arith.Compare_dec Bool Lia.
-From MetaCoq.Template Require Import Ast AstUtils utils.
+From Coq Require Import List Program Lia.
+From MetaCoq.Template Require Import utils.
 From MetaCoq.Erasure Require Import EAst EInduction.
 
 
@@ -240,8 +240,8 @@ Ltac nth_leb_simpl :=
   | |- context [nth_error ?l ?n] => elim (nth_error_spec l n); rewrite -> ?app_length, ?map_length;
                                     try lia; intros; simpl
   | H : context[nth_error (?l ++ ?l') ?n] |- _ =>
-    (rewrite -> (AstUtils.nth_error_app_ge l l' n) in H by lia) ||
-    (rewrite -> (AstUtils.nth_error_app_lt l l' n) in H by lia)
+    (rewrite -> (nth_error_app_ge l l' n) in H by lia) ||
+    (rewrite -> (nth_error_app_lt l l' n) in H by lia)
   | H : nth_error ?l ?n = Some _, H' : nth_error ?l ?n' = Some _ |- _ =>
     replace n' with n in H' by lia; rewrite -> H in H'; injection H'; intros; subst
   | _ => lia || congruence || solve [repeat (f_equal; try lia)]
@@ -328,8 +328,8 @@ Proof. destruct bod; simpl; try congruence. Qed.
 
 Hint Resolve lift_isApp map_non_nil isLambda_lift : all.
 
-Hint Unfold compose.
-Hint Transparent compose.
+Hint Unfold compose : core.
+Hint Transparent compose : core.
 
 Lemma simpl_subst_rec :
   forall M N n p k,

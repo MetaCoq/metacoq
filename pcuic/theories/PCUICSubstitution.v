@@ -2,9 +2,9 @@
 
 (** * Substitution lemmas for typing derivations. *)
 
-From Coq Require Import Bool String List BinPos Compare_dec Arith Lia.
+From Coq Require Import Bool List Arith Lia.
 Require Import Coq.Program.Syntax Coq.Program.Basics.
-From MetaCoq.Template Require Import utils config AstUtils.
+From MetaCoq.Template Require Import utils config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
   PCUICLiftSubst PCUICEquality PCUICPosition
   PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICClosed
@@ -12,7 +12,6 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
 Require Import ssreflect.
 
 From Equations Require Import Equations.
-Require Import Equations.Prop.DepElim.
 
 Set Asymmetric Patterns.
 Local Set Keyed Unification.
@@ -380,8 +379,6 @@ Qed.
 Definition subst_mutual_inductive_body n k m :=
   map_mutual_inductive_body (fun k' => subst n (k' + k)) m.
 
-From Equations Require Import Equations.
-
 Lemma subst_declared_minductive {cf:checker_flags} Σ cst decl n k :
   wf Σ ->
   declared_minductive Σ cst decl ->
@@ -620,7 +617,7 @@ Lemma to_extended_list_k_subst n k c k' :
   to_extended_list_k (subst_context n k c) k' = to_extended_list_k c k'.
 Proof.
   unfold to_extended_list_k. revert k'.
-  generalize (nil term) at 1 2.
+  unf_term. generalize (nil term) at 1 2.
   induction c in n, k |- *; simpl; intros. 1: reflexivity.
   rewrite subst_context_snoc. unfold snoc. simpl.
   destruct a. destruct decl_body.
@@ -872,7 +869,7 @@ Proof.
       rewrite /compose /lift (subst_app_decomp [a] s k); auto with wf.
       rewrite subst_rel_gt.
       * simpl. lia.
-      * repeat (f_equal; simpl; try lia).
+      * unf_term. repeat (f_equal; simpl; try lia).
     + now rewrite /map (subst_rel_eq _ _ 0 a).
   - rewrite -IHcontext_subst // to_extended_list_k_cons /=.
     rewrite (lift_to_extended_list_k _ _ 1) map_map_compose.
@@ -881,7 +878,7 @@ Proof.
     rewrite /compose /lift (subst_app_decomp [subst0 s b] s k); auto with wf.
     rewrite subst_rel_gt.
     + simpl; lia.
-    + repeat (f_equal; simpl; try lia).
+    + unf_term. repeat (f_equal; simpl; try lia).
 Qed.
 
 
@@ -907,10 +904,10 @@ Lemma map_subst_instance_constr_to_extended_list_k u ctx k :
 Proof.
   unfold to_extended_list_k.
   cut (map (subst_instance_constr u) [] = []); [|reflexivity].
-  generalize (nil term); intros l Hl.
+  unf_term. generalize (nil term); intros l Hl.
   induction ctx in k, l, Hl |- *; cbnr.
   destruct a as [? [] ?]; cbnr; eauto.
-  eapply IHctx; cbn; congruence.
+  unf_term. eapply IHctx; cbn; congruence.
 Qed.
 
 Lemma subst_instance_context_assumptions u ctx :
@@ -950,7 +947,7 @@ Proof.
   simpl. cbn. move => -> /some_inj-HH. simpl. f_equal.
   etransitivity.
   2: exact (f_equal (subst n k) HH).
-  rewrite subst_it_mkProd_or_LetIn. simpl. f_equal. f_equal.
+  rewrite subst_it_mkProd_or_LetIn. unf_term. simpl. f_equal. f_equal.
   { destruct idecl; reflexivity. }
   rewrite subst_mkApps; simpl. f_equal.
   rewrite map_app; f_equal.
@@ -1149,7 +1146,6 @@ Proof.
 Qed.
 
 Arguments iota_red : simpl never.
-From Equations Require Import Equations.
 
 Lemma substitution_red1 {cf:checker_flags} (Σ : global_env_ext) Γ Γ' Γ'' s M N :
   wf Σ -> subs Σ Γ s Γ' -> wf_local Σ Γ ->
@@ -1273,8 +1269,6 @@ Proof.
   rewrite <- commut_lift_subst_rec; auto with arith.
   rewrite -{3}H. now rewrite simpl_subst_k.
 Qed.
-
-Require Import PCUICReduction.
 
 Lemma substitution_let_red `{cf : checker_flags} (Σ : global_env_ext) Γ Δ Γ' s M N :
   wf Σ -> subslet Σ Γ s Δ -> wf_local Σ Γ ->

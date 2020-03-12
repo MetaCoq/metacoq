@@ -1,18 +1,15 @@
 (* Distributed under the terms of the MIT license.   *)
-Require Import ssreflect ssrbool.
-From MetaCoq Require Import LibHypsNaming.
-From Coq Require Import Bool String List Program BinPos Compare_dec String Lia.
+Require Import ssreflect.
+From Coq Require Import Bool List Program Lia.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICSize
-     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICReduction PCUICWeakening PCUICSubstitution.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICSize
+     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakening PCUICSubstitution.
 
 (* Type-valued relations. *)
 Require Import CRelationClasses.
-Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 Local Set Keyed Unification.
 Set Asymmetric Patterns.
 
-Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
 
 Derive NoConfusion for term.

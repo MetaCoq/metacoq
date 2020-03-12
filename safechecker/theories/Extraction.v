@@ -5,9 +5,8 @@
 *)
 
 Require Import MetaCoq.Template.utils.
-Require Import FSets.
-Require Import ExtrOcamlBasic.
-Require Import ExtrOcamlString ExtrOcamlZInt.
+Require Import OrdersTac.
+Require Import ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt.
 
 From MetaCoq.SafeChecker Require Import PCUICSafeChecker PCUICSafeConversion SafeTemplateChecker.
 
@@ -36,6 +35,6 @@ Cd "src".
 Separate Extraction MakeOrderTac PCUICSafeChecker.typecheck_program
          SafeTemplateChecker.infer_and_print_template_program
          (* The following directives ensure separate extraction does not produce name clashes *)
-         String utils UnivSubst Pretty PCUICPretty.
+         String utils UnivSubst PCUICPretty.
 
 Cd "..".

@@ -2,11 +2,10 @@
 
 Set Warnings "-notation-overridden".
 
-From Coq Require Import Bool String List Program BinPos Compare_dec.
-From MetaCoq.Template Require Import config utils AstUtils BasicAst Ast.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils.
+From Coq Require Import Bool List.
+From MetaCoq.Template Require Import config utils AstUtils.
+From MetaCoq.PCUIC Require Import PCUICAst.
 
-Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 

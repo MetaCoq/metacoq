@@ -40,12 +40,13 @@ install:
 jobs:
   include:
     - name: "Local build"
-      env: TARGET=ci-local
+      env: TARGET=local
     - name: "Opam installation"
-      env: TARGET=ci-opam
+      env: TARGET=opam
 
 script:
- - make -j ${NJOBS} ${TARGET}
+ - ./configure.sh ${TARGET}
+ - make -j ${NJOBS} ci-${TARGET}
 
 notifications:
   webhooks:

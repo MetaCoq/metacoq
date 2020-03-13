@@ -1,7 +1,7 @@
 MetaCoq
 =======
 
-<img src="https://github.com/MetaCoq/metacoq/raw/gh-pages/assets/LOGO.png" alt="MetaCoq" width="50px"/>
+<img src="https://github.com/MetaCoq/metacoq.github.io/raw/assets/LOGO.png" alt="MetaCoq" width="50px"/>
 
 [![Build Status](https://travis-ci.org/MetaCoq/metacoq.svg?branch=master)](https://travis-ci.org/MetaCoq/metacoq)
 [![Gitter](https://badges.gitter.im/coq/metacoq.svg)](https://gitter.im/coq/metacoq?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)

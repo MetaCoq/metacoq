@@ -32,6 +32,7 @@ theories/PCUICAlpha.v
 theories/PCUICPrincipality.v
 theories/PCUICSR.v
 theories/PCUICMetaTheory.v
+theories/PCUICCSubst.v
 theories/PCUICWcbvEval.v
 theories/PCUICChecker.v
 theories/PCUICPretty.v

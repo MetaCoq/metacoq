@@ -36,13 +36,12 @@ Coq's kernel API is not stable yet, and changes there are reflected in MetaCoq's
 so we do not ensure any compatibility from version to version.
 
 The [master](https://github.com/MetaCoq/metacoq/tree/master) branch is following Coq's master 
-branch. 
+branch and is the main development branch.
 
-The [coq-8.11](https://github.com/MetaCoq/metacoq/tree/coq-8.11) branch is the main development branch,
-being regularly merged with the `master` one.
-
-The branch [coq-8.10](https://github.com/MetaCoq/metacoq/tree/coq-8.10) gets backports from `coq-8.11`
-when possible. Both `coq-8.11` and `coq-8.10` have associated "alpha"-quality `opam` packages.
+The [coq-8.11](https://github.com/MetaCoq/metacoq/tree/coq-8.11) branch is the main stable branch,
+getting backports from `master`. The branch [coq-8.10](https://github.com/MetaCoq/metacoq/tree/coq-8.10) 
+gets backports from `coq-8.11` when possible. Both `coq-8.11` and `coq-8.10` have associated 
+"alpha"-quality `opam` packages.
 
 The branches [coq-8.6](https://github.com/MetaCoq/metacoq/tree/coq-8.6),
 [coq-8.7](https://github.com/MetaCoq/metacoq/tree/coq-8.7), [coq-8.8](https://github.com/MetaCoq/metacoq/tree/coq-8.8)

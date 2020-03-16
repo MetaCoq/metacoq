@@ -62,3 +62,10 @@ Proof.
     + now destruct (Nat.leb_spec k n); try lia.
 Qed.
 
+Lemma closed_csubst t k u : closed t -> closedn (S k) u -> closedn k (csubst t 0 u).
+Proof.
+  intros.
+  rewrite closed_subst; auto.
+  eapply closedn_subst0. simpl. erewrite closed_upwards; eauto. lia.
+  simpl. now rewrite Nat.add_1_r.
+Qed.

@@ -536,3 +536,25 @@ Proof.
   intros n [? [] ?]; unfold closed_decl; cbn.
   all: now rewrite !closedn_subst_instance_constr.
 Qed.
+
+Lemma subject_closed `{checker_flags} Σ Γ t T : 
+  wf Σ.1 ->
+  Σ ;;; Γ |- t : T ->
+  closedn #|Γ| t.
+Proof.
+  move=> wfΣ c.
+  pose proof (typing_wf_local c).
+  apply typecheck_closed in c; eauto.
+  now move: c => [_ /andP [ct _]].
+Qed.
+
+Lemma type_closed `{checker_flags} Σ Γ t T : 
+  wf Σ.1 ->
+  Σ ;;; Γ |- t : T ->
+  closedn #|Γ| T.
+Proof.
+  move=> wfΣ c.
+  pose proof (typing_wf_local c).
+  apply typecheck_closed in c; eauto.
+  now move: c => [_ /andP [_ ct]].
+Qed.

@@ -4,7 +4,7 @@ From Coq Require Import Bool List Program ZArith.
 From MetaCoq.Template Require Import config utils monad_utils.
 From MetaCoq.Erasure Require Import EAstUtils Extract EArities EWcbvEval.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
-     PCUICSubstitution
+     PCUICSubstitution PCUICLiftSubst PCUICClosed
      PCUICWcbvEval PCUICSR  PCUICInversion PCUICGeneration
      PCUICContextConversion.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker.
@@ -114,19 +114,32 @@ Proof.
     + cbn in H17. eauto.
 Qed.
 
-Theorem subject_reduction_eval : forall (Σ : PCUICAst.global_env_ext) Γ t u T,
-  wf Σ -> Σ ;;; Γ |- t : T -> PCUICWcbvEval.eval Σ Γ t u -> Σ ;;; Γ |- u : T.
+Lemma typing_spine_closed args Σ x2 x3 :  wf Σ.1 ->
+  PCUICGeneration.typing_spine Σ [] x2 args x3 ->
+  All (closedn 0) args.
 Proof.
-  intros * wfΣ Hty Hred % wcbeval_red. eapply subject_reduction; eauto.
+  intros wfΣ sp.
+  dependent induction sp; constructor; auto.
+  now eapply subject_closed in t.
+Qed.
+
+Theorem subject_reduction_eval : forall (Σ : PCUICAst.global_env_ext) t u T,
+  wf Σ -> Σ ;;; [] |- t : T -> PCUICWcbvEval.eval Σ t u -> Σ ;;; [] |- u : T.
+Proof.
+  intros * wfΣ Hty Hred%wcbeval_red; auto. eapply subject_reduction; eauto.
+  eapply PCUICClosed.typecheck_closed in Hty as [_ Hty]; auto.
+  apply andP in Hty. now destruct Hty.
 Qed.
 
 Lemma typing_spine_eval:
-  forall (Σ : global_env_ext) Γ (args args' : list PCUICAst.term) (X : All2 (PCUICWcbvEval.eval Σ Γ) args args') (bla : wf Σ)
-    (T x x0 : PCUICAst.term) (t0 : typing_spine Σ Γ x args x0) (c : Σ;;; Γ |- x0 <= T) (x1 : PCUICAst.term)
-    (c0 : Σ;;; Γ |- x1 <= x), isWfArity_or_Type Σ Γ T -> typing_spine Σ Γ x1 args' T.
+  forall (Σ : global_env_ext) (args args' : list PCUICAst.term) (X : All2 (PCUICWcbvEval.eval Σ) args args') (bla : wf Σ)
+    (T x x0 : PCUICAst.term) (t0 : typing_spine Σ [] x args x0) (c : Σ;;; [] |- x0 <= T) (x1 : PCUICAst.term)
+    (c0 : Σ;;; [] |- x1 <= x), isWfArity_or_Type Σ [] T -> typing_spine Σ [] x1 args' T.
 Proof.
   intros. eapply typing_spine_red; eauto.
-  eapply All2_impl. eassumption. intros. eapply wcbeval_red. eauto.
+  eapply typing_spine_closed in t0; auto.
+  eapply All2_All_mix_left in X; eauto. simpl in X.
+  eapply All2_impl. eassumption. simpl. intros t u [ct et]. eapply wcbeval_red; eauto.
 Qed.
 
 (** ** on mkApps *)

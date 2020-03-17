@@ -477,11 +477,7 @@ Proof.
   rewrite PCUICCSubst.closed_subst; auto.
 Qed.
 
-Lemma eeval_closed Σ a e : closed a -> Σ ⊢ a ▷ e -> closed e.
-Proof.
-Admitted.
-
-Lemma erases_closed Σ a e : PCUICLiftSubst.closed a -> Σ ;;; [] |- a ⇝ℇ e -> closed e.
+Lemma erases_closed Σ Γ  a e : PCUICLiftSubst.closedn #|Γ| a -> Σ ;;; Γ |- a ⇝ℇ e -> closedn #|Γ| e.
 Proof.
 Admitted.
 
@@ -825,6 +821,9 @@ Proof.
     2:now eapply PCUICClosed.subject_closed in Ht.
     assert (HT := t).
     eapply inversion_Fix in t as (? & ? & ? & ? & ? & ?); auto.
+    rewrite <- closed_unfold_fix_cunfold_eq in H0; first last.
+    eapply eval_closed; eauto. eapply PCUICClosed.subject_closed in Ht; eauto.
+    auto.
     unfold unfold_fix in H0. rewrite e in H0. inv H0.
 
     eapply erases_mkApps_inv in He as [(? & ? & ? & ? & [] & ? & ? & ?) | (? & ? & ? & ? & ?)]; eauto.
@@ -875,7 +874,25 @@ Proof.
               eapply erases_mkApps in H0; eauto.
               eapply IHeval2 in H0 as (? & ? & ?); cbn; eauto.
               exists x1. split. eauto.
-              econstructor. eauto. unfold ETyping.unfold_fix.
+              econstructor. eauto.
+              rewrite <- Ee.closed_unfold_fix_cunfold_eq; first last.
+              { eapply eval_closed in e3.
+                pose proof (All2_length _ _ Hmfix').
+                clear -e3 Hmfix' H8.
+                simpl in e3 |- *. solve_all.
+                rewrite app_context_nil_l in b.
+                eapply erases_closed in b. simpl in b.
+                rewrite <-H8.
+                unfold EAst.test_def. 
+                simpl in b.
+                rewrite fix_context_length in b.
+                now rewrite Nat.add_0_r.
+                unfold test_def in a. apply andP in a as [_ Hbod].
+                rewrite fix_context_length.
+                now rewrite Nat.add_0_r in Hbod.
+                eauto with pcuic.
+                now eapply PCUICClosed.subject_closed in Ht.  }
+              unfold ETyping.unfold_fix.
               rewrite e0. reflexivity.
               all:eauto.
               ** unfold is_constructor in *.
@@ -1108,7 +1125,7 @@ Proof.
 
   - destruct ip.
     assert (Hty' := Hty).
-  eapply inversion_Case in Hty' as [u' [args' [mdecl [idecl [ps [pty [btys
+    eapply inversion_Case in Hty' as [u' [args' [mdecl [idecl [ps [pty [btys
                                    [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]];
     eauto.
     eapply type_mkApps_inv in t0 as (? & ? & [] & ?); eauto.

@@ -3,7 +3,7 @@ Set Warnings "-notation-overridden".
 
 From Coq Require Import Bool List Program.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst ETyping.
+From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst ECSubst ETyping.
 
 Set Asymmetric Patterns.
 Require Import ssreflect ssrbool.
@@ -72,13 +72,13 @@ Section Wcbv.
   | eval_beta f na b a a' res :
       eval f (tLambda na b) ->
       eval a a' ->
-      eval (subst10 a' b) res ->
+      eval (csubst a' 0 b) res ->
       eval (tApp f a) res
 
   (** Let *)
   | eval_zeta na b0 b0' b1 res :
       eval b0 b0' ->
-      eval (subst10 b0' b1) res ->
+      eval (csubst b0' 0 b1) res ->
       eval (tLetIn na b0 b1) res
 
   (** Case *)
@@ -172,9 +172,9 @@ Section Wcbv.
       (forall a t t', eval a tBox -> P a tBox -> eval t t' -> P t t' -> eval (tApp a t) tBox -> P (tApp a t) tBox ) ->
       (forall (f : term) (na : name) (b a a' res : term),
           eval f (tLambda na b) ->
-          P f (tLambda na b) -> eval a a' -> P a a' -> eval (b {0 := a'}) res -> P (b {0 := a'}) res -> P (tApp f a) res) ->
+          P f (tLambda na b) -> eval a a' -> P a a' -> eval (csubst a' 0 b) res -> P (csubst a' 0 b) res -> P (tApp f a) res) ->
       (forall (na : name) (b0 b0' b1 res : term),
-          eval b0 b0' -> P b0 b0' -> eval (b1 {0 := b0'}) res -> P (b1 {0 := b0'}) res -> P (tLetIn na b0 b1) res) ->
+          eval b0 b0' -> P b0 b0' -> eval (csubst b0' 0 b1) res -> P (csubst b0' 0 b1) res -> P (tLetIn na b0 b1) res) ->
       (forall (c : ident) (decl : constant_body) (body : term),
           declared_constant Σ c decl ->
           forall (res : term),

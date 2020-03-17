@@ -57,6 +57,24 @@ Proof.
   simpl. intros. now rewrite mkApps_app in H.
 Qed.
 
+Definition substl defs body : term :=
+  fold_left (fun bod term => csubst term 0 bod)
+    defs body.
+
+Definition cunfold_fix (mfix : mfixpoint term) (idx : nat) :=
+  match List.nth_error mfix idx with
+  | Some d =>
+    Some (d.(rarg), substl (fix_subst mfix) d.(dbody))
+  | None => None
+  end.
+
+Definition cunfold_cofix (mfix : mfixpoint term) (idx : nat) :=
+  match List.nth_error mfix idx with
+  | Some d =>
+    Some (d.(rarg), substl (cofix_subst mfix) d.(dbody))
+  | None => None
+  end.
+
 Section Wcbv.
   Context (Σ : global_declarations).
   (* The local context is fixed: we are only doing weak reductions *)
@@ -97,7 +115,7 @@ Section Wcbv.
   (** Fix unfolding *)
   | eval_fix f mfix idx args args' narg fn res :
       eval f (tFix mfix idx) ->
-      unfold_fix mfix idx = Some (narg, fn) ->
+      cunfold_fix mfix idx = Some (narg, fn) ->
       (* There must be at least one argument for this to succeed *)
       is_constructor_or_box narg args' ->
       (** We unfold only a fix applied exactly to narg arguments,
@@ -120,13 +138,13 @@ Section Wcbv.
 
   (** CoFix-case unfolding *)
   | red_cofix_case ip mfix idx args narg fn brs res :
-      unfold_cofix mfix idx = Some (narg, fn) ->
+      cunfold_cofix mfix idx = Some (narg, fn) ->
       eval (tCase ip (mkApps fn args) brs) res ->
       eval (tCase ip (mkApps (tCoFix mfix idx) args) brs) res
 
   (** CoFix-proj unfolding *)
   | red_cofix_proj p mfix idx args narg fn res :
-      unfold_cofix mfix idx = Some (narg, fn) ->
+      cunfold_cofix mfix idx = Some (narg, fn) ->
       eval (tProj p (mkApps fn args)) res ->
       eval (tProj p (mkApps (tCoFix mfix idx) args)) res
 
@@ -203,7 +221,7 @@ Section Wcbv.
       (forall f (mfix : mfixpoint term) (idx : nat) (args args' : list term) (narg : nat) (fn res : term),
           eval f (tFix mfix idx) ->
           P f (tFix mfix idx) ->
-          unfold_fix mfix idx = Some (narg, fn) ->
+          cunfold_fix mfix idx = Some (narg, fn) ->
           is_constructor_or_box narg args' ->
           S narg = #|args| ->
           Forall2 eval args args' ->
@@ -217,11 +235,11 @@ Section Wcbv.
           isStuckFix (tFix mfix idx) args' -> P (mkApps f args) (mkApps (tFix mfix idx) args')) ->
       (forall (ip : inductive × nat) (mfix : mfixpoint term) (idx : nat) (args : list term)
               (narg : nat) (fn : term) (brs : list (nat × term)) (res : term),
-          unfold_cofix mfix idx = Some (narg, fn) ->
+          cunfold_cofix mfix idx = Some (narg, fn) ->
           eval (tCase ip (mkApps fn args) brs) res ->
           P (tCase ip (mkApps fn args) brs) res -> P (tCase ip (mkApps (tCoFix mfix idx) args) brs) res) ->
       (forall (p : projection) (mfix : mfixpoint term) (idx : nat) (args : list term) (narg : nat) (fn res : term),
-          unfold_cofix mfix idx = Some (narg, fn) ->
+          cunfold_cofix mfix idx = Some (narg, fn) ->
           eval (tProj p (mkApps fn args)) res ->
           P (tProj p (mkApps fn args)) res -> P (tProj p (mkApps (tCoFix mfix idx) args)) res) ->
       (forall f11 f' a a' : term,
@@ -361,6 +379,57 @@ Section Wcbv.
         rewrite /isFixApp in H0. simpl in H0.
         rewrite orb_true_r orb_true_l in H0. easy.
   Qed.
+
+  Lemma closed_unfold_fix_cunfold_eq mfix idx : 
+    closed (tFix mfix idx) ->
+    unfold_fix mfix idx = cunfold_fix mfix idx.
+  Proof.  
+    unfold unfold_fix, cunfold_fix.
+    destruct (nth_error mfix idx) eqn:Heq => //.
+    move=> /= Hf; f_equal; f_equal.
+    have clfix : All (closedn 0) (fix_subst mfix).
+    { clear Heq d idx.
+      solve_all.
+      unfold fix_subst.
+      move: #|mfix| => n.
+      induction n. constructor.
+      constructor; auto.
+      simpl. solve_all. }
+    move: (fix_subst mfix) (dbody d) clfix.
+    clear; induction fix_subst => Hfix /= //.
+    now rewrite subst_empty.
+    move=> Ha; depelim Ha.
+    simpl in *.
+    rewrite -IHfix_subst => //.
+    rewrite (subst_app_decomp [_]). simpl.
+    f_equal. rewrite lift_closed // closed_subst //.
+  Qed.
+
+  Lemma closed_unfold_cofix_cunfold_eq mfix idx : 
+    closed (tCoFix mfix idx) ->
+    unfold_cofix mfix idx = cunfold_cofix mfix idx.
+  Proof.  
+    unfold unfold_cofix, cunfold_cofix.
+    destruct (nth_error mfix idx) eqn:Heq => //.
+    move=> /= Hf; f_equal; f_equal.
+    have clfix : All (closedn 0) (cofix_subst mfix).
+    { clear Heq d idx.
+      solve_all.
+      unfold cofix_subst.
+      move: #|mfix| => n.
+      induction n. constructor.
+      constructor; auto.
+      simpl. solve_all. }
+    move: (cofix_subst mfix) (dbody d) clfix.
+    clear; induction cofix_subst => Hfix /= //.
+    now rewrite subst_empty.
+    move=> Ha; depelim Ha.
+    simpl in *.
+    rewrite -IHcofix_subst => //.
+    rewrite (subst_app_decomp [_]). simpl.
+    f_equal. rewrite lift_closed // closed_subst //.
+  Qed.
+
 
   (* Lemma eval_to_value e e' : eval e e' -> value e'. *)
   (* Proof. *)

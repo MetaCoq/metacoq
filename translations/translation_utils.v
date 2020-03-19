@@ -1,10 +1,16 @@
 From MetaCoq.Template Require Import All TemplateMonad.Core monad_utils.
 From MetaCoq.Checker Require Import All.
-Require Import List.
-Import ListNotations MonadNotation String.
+Require Import List String.
+Import ListNotations MonadNotation.
 Open Scope string_scope.
 
-Axiom todo : forall {A}, A.
+(* Should be in AstUtils probably *)
+Fixpoint subst_app (t : term) (us : list term) : term :=
+  match t, us with
+  | tLambda _ A t, u :: us => subst_app (t {0 := u}) us
+  | _, [] => t
+  | _, _ => mkApps t us
+  end.
 
 
 Definition tsl_table := list (global_reference * term).
@@ -83,8 +89,8 @@ Definition tsl_name tsl_ident n :=
 
 
 Definition tmDebug {A} : A -> TemplateMonad unit
-  := tmPrint.
-  (* := fun _ => ret tt. *)
+  (* := tmPrint. *)
+  := fun _ => ret tt.
 
 
 Definition add_global_decl d (Σ : global_env_ext) : global_env_ext
@@ -160,7 +166,7 @@ Definition Implement {tsl : Translation} (ΣE : tsl_context)
   | None => tmFail "No implementation of tsl_ty provided for this translation."
   | Some tsl_ty => 
   tA' <- tmEval lazy (tsl_ty ΣE tA) ;;
-  print_nf tA' ;;
+  tmDebug tA' ;;
   match tA' with
   | Error e =>
     print_nf e ;;

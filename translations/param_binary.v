@@ -28,13 +28,6 @@ Fixpoint tsl_rec0 (n : nat) (o : nat) (t : term) {struct t} : term :=
   | _ => t
   end.
 
-Fixpoint subst_app (t : term) (us : list term) : term :=
-  match t, us with
-  | tLambda _ _ t, u :: us => subst_app (t {0 := u}) us
-  | _, [] => t
-  | _, _  => tApp t us
-  end.
-
 
 Definition suffix (n : name) s : name :=
   match n with
@@ -140,9 +133,9 @@ Fixpoint tsl_rec1_app (app : list term) (E : tsl_table) (t : term) : term :=
         tLetIn (tsl_name tsl_ident na) (lift0 2 t1)
           (subst_app (lift0 2 A1) [tRel 1; tRel 0]) u1))
 
-  | tProj _ _ => todo
-  | tFix _ _ | tCoFix _ _ => todo
-  | tVar _ | tEvar _ _ => todo
+  | tProj _ _ => todo "tsl"
+  | tFix _ _ | tCoFix _ _ => todo "tsl"
+  | tVar _ | tEvar _ _ => todo "tsl"
   | tLambda _ _ _ => tVar "impossible"
   end
   in apply app t1
@@ -204,8 +197,8 @@ Run TemplateProgram (
   typ' <- tmEval all (tsl_rec1 [] typ) ;;
   tm <- tmQuote (fun A (x : A) => x) ;;
   tm' <- tmEval all (tsl_rec1 [] tm) ;;
-  tmUnquote (tApp typ' [tm; tm]) >>= print_nf ;;
-  tmUnquote tm' >>= print_nf
+  tmUnquote (tApp typ' [tm; tm]) >>= tmDebug ;;
+  tmUnquote tm' >>= tmDebug
 ).
 
 Run TemplateProgram (
@@ -213,7 +206,7 @@ Run TemplateProgram (
   typ' <- tmEval all (tsl_rec1 [] typ) ;;
   t   <- tmQuote (fun {A B} (x:B) (f : A -> B -> B) => x) ;;
   t'  <- tmEval all (tsl_rec1 [] t) ;;
-  tmUnquote (tApp typ' [t; t]) >>= print_nf
+  tmUnquote (tApp typ' [t; t]) >>= tmDebug
 ).
 
 Run TemplateProgram (TC <- Translate emptyTC "nat" ;;

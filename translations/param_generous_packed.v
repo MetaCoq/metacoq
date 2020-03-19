@@ -139,7 +139,7 @@ Instance tsl_param : Translation
   := {| tsl_id := tsl_ident ;
         tsl_tm := fun ΣE => tsl_term fuel (fst ΣE) (snd ΣE) [] ;
         tsl_ty := Some (fun ΣE => tsl_ty_param fuel (fst ΣE) (snd ΣE) []) ;
-        tsl_ind := todo |}.
+        tsl_ind := todo "tsl" |}.
 
 
 
@@ -149,6 +149,7 @@ Notation "'El' A" := (@sigT A.1 A.2) (at level 20).
 
 Definition Ty := Type.
 Run TemplateProgram (Translate emptyTC "Ty").
+Unset Universe Checking.
 Check Tyᵗ : El Tyᵗ.
 
 
@@ -177,7 +178,6 @@ Defined.
 
 Time Run TemplateProgram (TC <- ImplementExisting TC' "sigT_ind" ;;
                           tmDefinition "TC''" TC).
-Check "yo".
 Next Obligation.
   unshelve econstructor.
 (*   - intros A B P [X1 X2] [s []]. apply X1. *)
@@ -275,7 +275,6 @@ Run TemplateProgram (TC <- Translate TC6 "equiv" ;;
                      tmDefinition "TC7" TC).
 
 (* 244s (~ 4 min) to execute *)
-Check "go".
 (* Time
 Run TemplateProgram (H <- Implement TC7 "notUnivalence"
                      (exists A B, (equiv A B) × exists P, P A × ((P B) -> False)) ;;

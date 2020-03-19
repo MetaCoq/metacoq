@@ -27,13 +27,6 @@ Fixpoint tsl_rec0 (n : nat) (t : term) {struct t} : term :=
   | _ => t
   end.
 
-Fixpoint subst_app (t : term) (us : list term) : term :=
-  match t, us with
-  | tLambda _ A t, u :: us => subst_app (t {0 := u}) us
-  | _, [] => t
-  | _, _ => mkApps t us
-  end.
-
 Fixpoint tsl_rec1_app (app : option term) (E : tsl_table) (t : term) : term :=
   let tsl_rec1 := tsl_rec1_app None in
   let debug case symbol :=
@@ -108,9 +101,9 @@ Fixpoint tsl_rec1_app (app : option term) (E : tsl_table) (t : term) : term :=
             (map (on_snd (tsl_rec1 E)) brs)
     | _ => debug "tCase" (match (fst ik) with mkInd s _ => s end)
     end
-  | tProj _ _ => todo
-  | tFix _ _ | tCoFix _ _ => todo
-  | tVar _ | tEvar _ _ => todo
+  | tProj _ _ => todo "tsl"
+  | tFix _ _ | tCoFix _ _ => todo "tsl"
+  | tVar _ | tEvar _ _ => todo "tsl"
   | tLambda _ _ _ => tVar "impossible"
   end in
   match app with Some t' => mkApp t1 (t' {3 := tRel 1} {2 := tRel 0})
@@ -162,7 +155,7 @@ Run TemplateProgram (typ <- tmQuote (forall A, A -> A) ;;
                      typ' <- tmEval all (tsl_rec1 [] typ) ;;
                      tm <- tmQuote (fun A (x : A) => x) ;;
                      tm' <- tmEval all (tsl_rec1 [] tm) ;;
-                     tmUnquote (tApp typ' [tm]) >>= print_nf).
+                     tmUnquote (tApp typ' [tm]) >>= tmDebug).
 
 
 
@@ -269,9 +262,6 @@ Require Import MiniHoTT.
 Module Axioms.
 
   Definition UIP := forall A (x y : A) (p q : x = y), p = q.
-
-
-  Run TemplateProgram (tmQuoteRec UIP >>= tmPrint).
 
   Run TemplateProgram (TC <- TranslateRec emptyTC UIP ;;
                        tmDefinition "eqTC" TC).

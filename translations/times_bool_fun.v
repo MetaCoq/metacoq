@@ -144,7 +144,7 @@ Definition tsl_mind_body (ΣE : tsl_context) (mp : string) (kn : kername)
   : tsl_result (tsl_table * list mutual_inductive_body).
   refine (let tsl := fun Γ t => match tsl_rec fuel (fst ΣE) (snd ΣE) Γ t with
                              | Success x => x
-                             | Error _ => todo
+                             | Error _ => todo "tsl"
                              end in
           let kn' := tsl_kn tsl_ident kn mp in _).
   unshelve refine (let LI := List.split (mapi _ mind.(ind_bodies)) in
@@ -227,6 +227,8 @@ Tactic Notation "tIntro" ident(H)
 Definition NotFunext :=
   ((forall (A B : Set) (f g : A -> B), (forall x:A, f x = g x) -> f = g) -> False).
 
+Unset Universe Checking.
+
 Run TemplateProgram (TC <- TranslateRec emptyTC NotFunext ;;
                      tmDefinition "TC" TC ;;
                      Implement TC "notFunext" NotFunext).
@@ -262,8 +264,6 @@ Defined.
 
 Definition UIP := forall A (x y : A) (p q : x = y), p = q.
 
-
-Run TemplateProgram (tmQuoteRec UIP >>= tmPrint).
 
 Run TemplateProgram (TC <- TranslateRec TC UIP ;;
                      tmDefinition "eqTC" TC).

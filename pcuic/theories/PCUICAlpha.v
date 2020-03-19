@@ -4,7 +4,7 @@ From Coq Require Import Bool List Program Lia.
 From MetaCoq.Template Require Import config monad_utils utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICTyping
-     PCUICCumulativity PCUICEquality PCUICNameless
+     PCUICCumulativity PCUICEquality
      PCUICContextConversion PCUICValidity.
 Derive Signature for red.
 Import MonadNotation.
@@ -671,17 +671,6 @@ Qed.
     Unshelve. exact 0.
   Qed.
 
-  Corollary type_nameless :
-    forall Σ Γ u A,
-      wf Σ.1 ->
-      Σ ;;; Γ |- u : A ->
-      Σ ;;; Γ |- nl u : A.
-  Proof.
-    intros Σ Γ u A hΣ h.
-    eapply typing_alpha ; eauto.
-    eapply eq_term_upto_univ_tm_nl. all: auto.
-  Qed.
-
   Local Ltac inv H := inversion H; subst; clear H.
 
   Lemma upto_names_eq_term_upto_univ Re Rle t u
@@ -817,22 +806,6 @@ Qed.
     eapply wf_local_alpha; tea.
     now eapply eq_context_upto_cat.
   Qed.
-
-
-  Lemma upto_names_nl t
-    : t ≡ nl t.
-  Proof.
-    eapply eq_term_upto_univ_tm_nl; exact _.
-  Qed.
-
-  Lemma upto_names_nlctx Γ
-    : Γ ≡Γ nlctx Γ.
-  Proof.
-    induction Γ as [|a Γ]; try constructor.
-    destruct a as [na [bo|] ty]; simpl; constructor; cbn; tas.
-    all: apply upto_names_nl.
-  Qed.
-
 
 End Alpha.
 

@@ -1996,6 +1996,11 @@ Section RedConfluence.
       eapply transitivity. eauto. auto.
   Qed.
 
+  Hint Constructors clos_refl_trans_ctx : pcuic.
+  Hint Constructors eq_context_upto_names : pcuic.
+  Hint Resolve eq_context_upto_names_refl : pcuic.  
+  Set Firstorder Solver eauto with pcuic core typeclass_instances.
+
   Lemma clos_rt_OnOne2_local_env_ctx_incl R :
     inclusion (clos_refl_trans (OnOne2_local_env (on_one_decl R)))
               (clos_refl_trans_ctx (OnOne2_local_env (on_one_decl R))).

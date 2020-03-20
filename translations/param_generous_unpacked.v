@@ -28,13 +28,6 @@ Definition tsl_name n :=
 Definition mkApps t us := tApp t us. (* meanwhile *)
 Definition mkApp t u := mkApps t [u].
 
-Fixpoint subst_app (t : term) (us : list term) : term :=
-  match t, us with
-  | tLambda _ A t, u :: us => subst_app (t {0 := u}) us
-  | _, [] => t
-  | _, _ => mkApps t us
-  end.
-
 Definition default_term := tRel 0.    
 
 Definition up := lift 1 0.

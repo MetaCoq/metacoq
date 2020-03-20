@@ -138,7 +138,7 @@ Proof.
     eapply All2_All_left in X3. 2:{ idtac. intros ? ? [[[? e] ?] ?]. exact e. }
 
     eapply All2_impl. eapply All2_All_mix_left.
-    all: firstorder.
+    all: firstorder eauto with *.
   - econstructor.
 
     eapply All2_impl. eapply All2_All_mix_left. eassumption. eassumption.

@@ -236,17 +236,6 @@ Section Lemmata.
 
   Hint Resolve eq_term_upto_univ_refl : core.
 
-  Lemma fresh_global_nl :
-    forall Σ k,
-      fresh_global k Σ ->
-      fresh_global k (map (on_snd nl_global_decl) Σ).
-  Proof.
-    intros Σ k h. eapply Forall_map.
-    eapply Forall_impl ; try eassumption.
-    intros x hh. cbn in hh.
-    destruct x ; assumption.
-  Qed.
-
   (* Lemma conv_context : *)
   (*   forall Σ Γ u v ρ, *)
   (*     wf Σ.1 -> *)
@@ -308,23 +297,6 @@ Section Lemmata.
     - destruct X as [A Hu]. eexists. eapply typing_alpha; tea.
     - destruct X. constructor.
       now eapply isWfArity_alpha.
-  Qed.
-
-  Lemma wellformed_nlctx Γ u :
-      wellformed Σ Γ u ->
-      wellformed Σ (nlctx Γ) u.
-  Proof.
-    destruct hΣ as [hΣ'].
-    assert (Γ ≡Γ nlctx Γ) by apply upto_names_nlctx.
-    intros [[A hu]|[[ctx [s [X1 X2]]]]]; [left|right].
-    - exists A. eapply context_conversion'. all: try eassumption.
-      1:{ eapply wf_local_alpha with Γ. all: try eassumption.
-          eapply typing_wf_local. eassumption.
-      }
-      eapply upto_names_conv_context. assumption.
-    - constructor. exists ctx, s. split; tas.
-      eapply wf_local_alpha; tea.
-      now eapply eq_context_upto_cat.
   Qed.
 
 
@@ -891,16 +863,6 @@ Section Lemmata.
       eapply cumul_zippx. assumption.
   Qed.
 
-
-  Lemma cored_nl :
-    forall Γ u v,
-      cored Σ Γ u v ->
-      cored Σ (nlctx Γ) (nl u) (nl v).
-  Proof.
-    intros Γ u v H. induction H.
-    - constructor 1. admit.
-    - econstructor 2; tea. admit.
-  Admitted.
 
   Derive Signature for Acc.
 

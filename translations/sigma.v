@@ -1,4 +1,4 @@
-From MetaCoq Require Import Template.Ast Template.Loader.
+From MetaCoq.Template Require Import Ast Loader.
 Require Import List String. Import ListNotations.
 
 Set Primitive Projections.

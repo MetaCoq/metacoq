@@ -4,6 +4,7 @@ Open Scope list_scope. Open Scope string_scope.
 From MetaCoq.Translations Require Import translation_utils times_bool_fun MiniHoTT.
 
 Unset Strict Unquote Universe Mode.
+Unset Universe Checking.
 
 Run TemplateProgram (TC <- ImplementExisting emptyTC "paths" ;;
                      TC <- ImplementExisting TC "idpath" ;;

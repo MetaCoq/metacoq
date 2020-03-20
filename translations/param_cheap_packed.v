@@ -230,11 +230,12 @@ Notation "'El' A" := (sigma (π1 A) (π2 A)) (at level 20).
 Definition ty := nat -> nat.
 Definition to := Type.
 
-Run TemplateProgram (Translate emptyTC "nat" >>= print_nf).
+Run TemplateProgram (Translate emptyTC "nat" >>= tmDebug).
 
 Require Vector.
 Require Even.
-Run TemplateProgram (Translate emptyTC "list" >>= tmPrint).
+Unset Universe Checking.
+Run TemplateProgram (Translate emptyTC "list" >>= tmDebug).
 Check (listᵗ : forall (A : TYPE), list A.1 -> Type).
 Check (nilᵗ : forall (A : TYPE), listᵗ A nil).
 Check (consᵗ : forall (A : TYPE) (x : El A) (lH : ∃ l, listᵗ A l),

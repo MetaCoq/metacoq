@@ -27,7 +27,8 @@ for x in s:
 ```
 then copy and paste.
 
-5. Generate the pdf:
+5. Generate the svg and/or pdf:
 ```
 dot -Tpdf plop.dot -o plop.pdf
+dot -Tsvg plop.dot -o plop.svg
 ```

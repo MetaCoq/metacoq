@@ -507,7 +507,7 @@ Proof.
           eapply PCUICConversion.cumul_Prod_inv in c0 as [].
           econstructor. eassumption. eauto. eapply conv_sym in c0; eauto.
           now eapply conv_cumul. auto. auto. }
-      pose proof (eqs := type_closed_subst b extr_env_wf'0  X0).
+      assert (eqs := type_closed_subst b extr_env_wf'0  X0).
       inv Hvf'.
       * assert (Σ;;; [] |- PCUICLiftSubst.subst1 a' 0 b ⇝ℇ subst1 vu' 0 t').
         eapply (erases_subst Σ [] [PCUICAst.vass na t] [] b [a'] t'); eauto.
@@ -560,7 +560,7 @@ Proof.
         econstructor. all: cbn; eauto. now eapply typing_wf_local in X0.
       }
       unshelve epose proof (subject_reduction_eval _ _ _ _ _ t1 H); eauto.
-      pose proof (eqs := type_closed_subst b1 extr_env_wf'0 X1).
+      assert (eqs := type_closed_subst b1 extr_env_wf'0 X1).
       rewrite eqs in H1.
       eapply IHeval2 in H1 as (vres & Hvres & Hty_vres).
       2:{ rewrite <-eqs. eapply substitution_let; eauto. }

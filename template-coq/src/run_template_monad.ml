@@ -285,9 +285,9 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
       let opaque = unquote_bool (reduce_all env evm opaque) in
       let evm, typ = (match unquote_option s with Some s -> let red = unquote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
       let evm, def = DeclareDef.prepare_definition ~opaque ~allow_evars:true ~poly evm
-        UState.default_univ_decl ~types:(Some (EConstr.of_constr typ)) ~body:(EConstr.of_constr body) in
+        ~udecl:UState.default_univ_decl ~types:(Some (EConstr.of_constr typ)) ~body:(EConstr.of_constr body) in
       let n = DeclareDef.declare_definition ~kind:(Decls.IsDefinition Decls.Definition)
-         ~scope:(DeclareDef.Global Declare.ImportDefaultBehavior) ~name Names.Id.Map.empty def [] in
+         ~scope:(DeclareDef.Global Declare.ImportDefaultBehavior) ~name ~ubind:Names.Id.Map.empty ~impargs:[] def in
       let env = Global.env () in
       let evm, c = Evarutil.new_global evm n in
       k (env, evm, EConstr.to_constr evm c)
@@ -342,13 +342,13 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
     Obligations.check_evars env evm;
        let obls, _, c, cty = Obligations.eterm_obligations env ident evm 0 c (EConstr.of_constr typ) in
        (* let evm = Evd.minimize_universes evm in *)
-       let ctx = Evd.evar_universe_context evm in
+       let uctx = Evd.evar_universe_context evm in
        let hook = DeclareDef.Hook.make (fun { DeclareDef.Hook.S.dref = gr } ->
           let env = Global.env () in
           let evm = Evd.from_env env in
           let evm, t = Evd.fresh_global env evm gr in 
           k (env, evm, EConstr.to_constr evm t)) in  (* todo better *)
-    ignore (Obligations.add_definition ~name:ident ~term:c cty ctx ~poly ~kind ~hook obls)
+    ignore (Obligations.add_definition ~name:ident ~term:c cty ~uctx ~poly ~kind ~hook obls)
 
   | TmQuote (false, trm) ->
     (* user should do the reduction (using tmEval) if they want *)

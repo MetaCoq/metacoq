@@ -74,11 +74,11 @@ let tmDefinition (nm : ident) ?poly:(poly=false) ?opaque:(opaque=false) (typ : t
   fun env evm success _fail ->
     let evm, def = DeclareDef.prepare_definition ~allow_evars:true ~opaque 
         ~poly ~types:(Option.map EConstr.of_constr typ) evm 
-        UState.default_univ_decl ~body:(EConstr.of_constr body) in
+        ~udecl:UState.default_univ_decl ~body:(EConstr.of_constr body) in
     let n =
       DeclareDef.declare_definition ~kind:(Decls.(IsDefinition Definition)) 
         ~name:nm ~scope:(DeclareDef.Global Declare.ImportDefaultBehavior)
-        Names.Id.Map.empty def []
+        ~ubind:Names.Id.Map.empty def ~impargs:[]
     in success (Global.env ()) evm (Names.Constant.canonical (Globnames.destConstRef n))
 
 let tmAxiom (nm : ident) ?poly:(poly=false) (typ : term) : kername tm =
@@ -115,7 +115,7 @@ let tmLemma (nm : ident) ?poly:(poly=false)(ty : term) : kername tm =
         | Constr.Const (tm, _) ->
           success env evm (Names.Constant.canonical tm)
         | _ -> failwith "Evd.fresh_global did not return a Const") in
-    ignore (Obligations.add_definition ~name:nm ~term:c cty ctx ~poly ~kind ~hook obls)
+    ignore (Obligations.add_definition ~name:nm ~term:c cty ~uctx:ctx ~poly ~kind ~hook obls)
 
 let tmFreshName (nm : ident) : ident tm =
   fun env evd success _fail ->

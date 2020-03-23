@@ -1,7 +1,10 @@
 
 From Coq Require Import Bool List Program ZArith Lia.
 From MetaCoq.Template Require Import config utils monad_utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping PCUICWcbvEval PCUICLiftSubst PCUICInversion PCUICSR PCUICPrincipality PCUICGeneration PCUICSubstitution PCUICElimination PCUICContextConversion PCUICConversion.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils 
+  PCUICClosed PCUICTyping PCUICWcbvEval PCUICLiftSubst PCUICInversion PCUICSR 
+  PCUICPrincipality PCUICGeneration PCUICSubstitution PCUICElimination
+  PCUICContextConversion PCUICConversion.
 
 From Equations Require Import Equations.
 Local Open Scope string_scope.
@@ -531,12 +534,16 @@ Proof.
   - eauto.
 Qed.
 
-Lemma Is_type_eval (Σ : global_env_ext) Γ t v:
+Lemma Is_type_eval (Σ : global_env_ext) t v:
   wf Σ ->
-  eval Σ Γ t v ->
-  isErasable Σ Γ t ->
-  isErasable Σ Γ v.
+  eval Σ t v ->
+  isErasable Σ [] t ->
+  isErasable Σ [] v.
 Proof.
   intros; eapply Is_type_red. eauto.
-  eapply wcbeval_red; eauto. eauto.
+  eapply wcbeval_red; eauto.
+  red in X1. destruct X1 as [T [HT _]].
+  eapply typecheck_closed in HT as [_ HT]; auto. 
+  apply andP in HT. now destruct HT.
+  eauto.
 Qed.

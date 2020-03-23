@@ -22,7 +22,6 @@ Proof.
   match goal with
    |- ?T => quote_term T (fun x => pose (qgoal:=x))
   end.
-Show.
   match goal with
     H:= context [Ast.tProj (BasicAst.mkInd "MetaCoq.TestSuite.proj.Eq"%string 0, 1, 0) _] |- _ => idtac
   end.

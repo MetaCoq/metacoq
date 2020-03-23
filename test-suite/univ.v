@@ -7,8 +7,7 @@ Set Printing Universes.
 
 Test Quote Type.
 Quote Definition a_random_univ := Type.
-Compute a_random_univ.
-
+(* 
 Fail Make Definition t1 := (tSort ([]; _)).
 Fail Make Definition t1 := (tSort (Universe.make (Level.Level "Top.400"))).
 
@@ -232,3 +231,4 @@ Open Scope string_scope.
 Check (eq_refl : infer [] init_graph [] ((tProd (nNamed "A") (tSort (Universe.make (Level.Level _))) (tProd (nNamed "B") (tSort (Universe.make (Level.Level _))) (tProd nAnon (tRel 1) (tProd nAnon (tRel 1) (tRel 3)))))) = Checked (tSort _)).
 
 (* Make Definition t4 := (tSort (Universe.make (fresh_level))). *)
+*)

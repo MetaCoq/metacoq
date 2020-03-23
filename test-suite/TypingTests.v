@@ -17,7 +17,7 @@ Quote Recursively Definition idq := @Coq.Classes.Morphisms.Proper.
 Existing Instance config.default_checker_flags.
 Existing Instance Checker.default_fuel.
 
-Eval vm_compute in typecheck_program idq.
+Definition  test0 := Eval vm_compute in typecheck_program idq.
 
 Definition timpl x y := tProd nAnon x (LiftSubst.lift0 1 y).
 
@@ -155,11 +155,11 @@ Definition f2 := (forall (A:Type@{i}) (B: Prop), A -> B -> B).
 
 Quote Definition f1' := (forall (A:Type@{i}) (B: Prop), A -> B -> A).
 
-Eval lazy in infer' (empty_ext []) nil f1'.
+Definition test1 := Eval lazy in infer' (empty_ext []) nil f1'.
 
 Quote Definition f2' := (forall (A:Type@{i}) (B: Prop), A -> B -> B).
 
-Eval lazy in infer' (empty_ext []) nil f2'.
+Definition test2 := Eval lazy in infer' (empty_ext []) nil f2'.
 
 Definition f := (forall (A:Type@{i}) (B: Type@{j}), A -> B -> A).
 (* : Type@{i+1, j+1} *)
@@ -168,4 +168,4 @@ Quote Definition f' := (forall (A:Type@{i}) (B:Type@{j}), A -> B -> A).
 
 Quote Definition f'' := (forall (B: Type@{j}), B -> B).
 
-Eval lazy in infer' (empty_ext []) nil f'.
+Definition test3 := Eval lazy in infer' (empty_ext []) nil f'.

@@ -5,4 +5,3 @@ Inductive U : Type :=
 | TT : id U.
 
 Quote Recursively Definition qU := U.
-Print qU.

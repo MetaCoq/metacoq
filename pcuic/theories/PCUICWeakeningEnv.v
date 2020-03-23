@@ -500,7 +500,8 @@ Proof.
   intros * Hext wfΣ' *.
   induction 1; constructor; auto; destruct Σ; eauto using weaken_env_prop_typing.
 Qed.
-Hint Resolve 100 weaken_wf_local : pcuic.
+
+Hint Resolve weaken_wf_local | 100 : pcuic.
 
 Lemma on_declared_constant `{checker_flags} Σ cst decl :
   wf Σ -> declared_constant Σ cst decl ->

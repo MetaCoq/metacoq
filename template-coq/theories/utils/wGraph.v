@@ -147,8 +147,7 @@ Module Nbar.
 
   Definition max_lub n m p : n <= p -> m <= p -> max n m <= p.
   Proof.
-    destruct n, m, p; cbn; intuition.
-    lia.
+    destruct n, m, p; cbn; intuition lia.
   Defined.
 
   Definition add_max_distr_r n m p : max (n + p) (m + p) = max n m + p.

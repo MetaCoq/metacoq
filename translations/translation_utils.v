@@ -1,5 +1,6 @@
-From MetaCoq.Template Require Import All TemplateMonad.Core monad_utils.
-From MetaCoq.Checker Require Import All.
+Require Import MetaCoq.Template.All.
+Require Import MetaCoq.Checker.All.
+From MetaCoq.Template Require Import TemplateMonad.Core monad_utils.
 Require Import List String.
 Import ListNotations MonadNotation.
 Open Scope string_scope.
@@ -326,7 +327,7 @@ Definition tsl_kn (tsl_ident : ident -> ident) (kn : kername) mp
 Definition TranslateRec {tsl : Translation} (ΣE : tsl_context) {A} (t : A) := 
   p <- tmQuoteRec t ;;
   tmPrint "~~~~~~~~~~~~~~~~~~" ;;
-  monad_fold_left (fun ΣE '(kn, decl) =>
+  monad_fold_right (fun ΣE '(kn, decl) =>
     print_nf ("Translating " ++ kn) ;;
     match decl with
     | ConstantDecl decl =>

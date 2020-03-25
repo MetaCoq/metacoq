@@ -1,4 +1,4 @@
-From MetaCoq.Template Require Import All.
+Require Import MetaCoq.Template.All.
 Require Import Arith.Compare_dec.
 From MetaCoq.Translations Require Import translation_utils.
 Import String List Lists.List.ListNotations MonadNotation.

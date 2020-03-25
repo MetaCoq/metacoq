@@ -10,16 +10,9 @@ Import MonadNotation.
 
 
 Program Definition infer_template_program {cf : checker_flags} (p : Ast.program) φ Hφ
-  : EnvCheck (∑ A, ∥ (trans_global_decls (List.rev p.1), φ) ;;; [] |- trans p.2 : A ∥) :=
+  : EnvCheck (∑ A, ∥ (trans_global_decls p.1, φ) ;;; [] |- trans p.2 : A ∥) :=
   p <- typecheck_program (cf:=cf) (trans_global_decls p.1, trans p.2) φ Hφ ;;
   ret (p.π1 ; _).
-
-Next Obligation.
-  unfold trans_global.
-  simpl. unfold empty_ext in X.
-  unfold trans_global_decls in X.
-  rewrite <-map_rev in X. eapply X.
-Qed.
 
 Local Open Scope string_scope.
 
@@ -102,7 +95,7 @@ Definition fix_global_env_universes (Σ : Ast.global_env) : Ast.global_env :=
     let dangling := dangling_universes declared declcstrs in
     ((kn, update_universes (LevelSet.union declu dangling, declcstrs) decl), LevelSet.union declared dangling)
   in
-  fst (fold_map_left fix_decl Σ LevelSet.empty).
+  fst (fold_map_right fix_decl Σ LevelSet.empty).
 
 Definition fix_program_universes (p : Ast.program) : Ast.program :=
   let '(Σ, t) := p in

@@ -1651,8 +1651,8 @@ Section CheckEnv.
 
 
   Program Definition typecheck_program (p : program) φ Hφ
-    : EnvCheck (∑ A, ∥ (List.rev p.1, φ) ;;; [] |- p.2  : A ∥) :=
-    let Σ := List.rev (fst p) in
+    : EnvCheck (∑ A, ∥ (p.1, φ) ;;; [] |- p.2  : A ∥) :=
+    let Σ := fst p in
     G <- check_wf_env Σ ;;
     uctx <- check_udecl "toplevel term" Σ _ G.π1 (proj1 G.π2) φ ;;
     let G' := add_uctx uctx.π1 G.π1 in
@@ -1668,7 +1668,7 @@ Section CheckEnv.
     unfold global_ext_constraints; simpl.
     rewrite gc_of_constraints_union. rewrite Hctrs'.
     red in i. unfold gc_of_uctx in i; simpl in i.
-    case_eq (gc_of_constraints (global_constraints (List.rev p.1)));
+    case_eq (gc_of_constraints (global_constraints p.1));
       [|intro HH; rewrite HH in i; cbn in i; contradiction i].
     intros Σctrs HΣctrs; rewrite HΣctrs in *; simpl in *.
     subst G. unfold global_ext_levels; simpl. rewrite no_prop_levels_union.

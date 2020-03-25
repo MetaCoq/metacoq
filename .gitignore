@@ -392,3 +392,4 @@ myMain.ml
 myMain.mli
 vs.ml
 vs.mli
+*.v.timing

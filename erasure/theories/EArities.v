@@ -2,8 +2,8 @@
 From Coq Require Import Bool List Program ZArith Lia.
 From MetaCoq.Template Require Import config utils monad_utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils 
-  PCUICClosed PCUICTyping PCUICWcbvEval PCUICLiftSubst PCUICInversion PCUICSR 
-  PCUICPrincipality PCUICGeneration PCUICSubstitution PCUICElimination
+  PCUICClosed PCUICTyping PCUICWcbvEval PCUICLiftSubst PCUICInversion PCUICArities
+  PCUICSR PCUICPrincipality PCUICGeneration PCUICSubstitution PCUICElimination
   PCUICContextConversion PCUICConversion.
 
 From Equations Require Import Equations.

@@ -1164,11 +1164,7 @@ Section RedPred.
   Lemma red1_pred1 Γ : forall M N, red1 Σ Γ M N -> pred1 Σ Γ Γ M N.
   Proof with pcuic.
     induction 1 using red1_ind_all; intros; pcuic.
-    - econstructor; pcuic. eauto.
-    - econstructor; pcuic. eauto.
-    - econstructor; pcuic. eauto.
-      unfold on_Trel.
-      (* TODO fix OnOne2 use in red1 to use onTrel_eq to have equality on annotation *)
+    - constructor; pcuic.
       eapply OnOne2_All2 ...
     - constructor; pcuic.
       eapply OnOne2_All2...

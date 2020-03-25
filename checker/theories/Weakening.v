@@ -12,6 +12,8 @@ From Equations Require Import Equations.
 
   [weakening_*] proves weakening of typing, reduction etc... w.r.t. the *local* environment. *)
 
+Derive Signature for Ast.wf Forall.
+
 Set Asymmetric Patterns.
 Generalizable Variables Σ Γ t T.
 
@@ -588,7 +590,7 @@ Lemma to_extended_list_lift n k c :
   to_extended_list (lift_context n k c) = to_extended_list c.
 Proof.
   unfold to_extended_list, to_extended_list_k. generalize 0.
-  generalize (nil TemplateTerm.term) at 1 2.
+  generalize (@nil term) at 1 2.
   induction c in n, k |- *; simpl; intros. reflexivity.
   rewrite -> lift_context_snoc0. unfold snoc. simpl.
   destruct a. destruct decl_body. unfold lift_decl, map_decl. simpl.

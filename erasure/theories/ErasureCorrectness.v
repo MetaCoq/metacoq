@@ -5,7 +5,7 @@ From MetaCoq.Template Require Import config utils monad_utils.
 From MetaCoq.Erasure Require Import ELiftSubst ETyping EWcbvEval Extract Prelim
      ESubstitution EInversion EArities.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
-  PCUICWeakening PCUICSubstitution
+  PCUICWeakening PCUICSubstitution PCUICArities
   PCUICWcbvEval PCUICSR  PCUICInversion
   PCUICUnivSubstitution (* PCUICContextConversion *)
   PCUICUnivSubst PCUICWeakeningEnv.
@@ -433,6 +433,8 @@ Record extraction_pre (Σ : global_env_ext) : Type
     extr_env_wf' : wf_ext Σ }.
 
 Hint Constructors PCUICWcbvEval.eval erases : core.
+Arguments extr_env_wf' {Σ}.
+Arguments extr_env_axiom_free' {Σ}.
 
 Definition EisConstruct_app :=
   fun t => match (EAstUtils.decompose_app t).1 with

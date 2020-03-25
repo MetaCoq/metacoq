@@ -18,6 +18,7 @@ Module TEnv := Template.Ast.TemplateEnvironment.
 Local Existing Instance default_checker_flags.
 
 Module TL := Template.LiftSubst.
+Derive Signature for All.
 
 Lemma mkApps_morphism (f : term -> term) u v :
   (forall x y, f (tApp x y) = tApp (f x) (f y)) ->
@@ -1013,8 +1014,6 @@ Proof.
   intros ->. trivial.
 Qed.
 Ltac wf_inv H := try apply wf_inv in H; simpl in H; repeat destruct_conjs.
-
-Derive Signature for All.
 
 Lemma trans_red1 Σ Γ T U :
   TTy.on_global_env (fun Σ => wf_decl_pred) Σ ->

@@ -1,5 +1,5 @@
 all: Makefile.coq
-	$(MAKE) -f Makefile.coq
+	$(MAKE) -f Makefile.coq pretty-timed
 
 _CoqProject: _CoqProject.in metacoq-config
 	cat metacoq-config > _CoqProject 

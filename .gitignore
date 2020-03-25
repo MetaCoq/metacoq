@@ -393,3 +393,5 @@ myMain.mli
 vs.ml
 vs.mli
 *.v.timing
+time-of-build.log
+time-of-build-pretty.log

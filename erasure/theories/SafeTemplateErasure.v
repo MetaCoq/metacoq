@@ -18,7 +18,7 @@ Local Open Scope string_scope.
 
 Program Definition erase_template_program_check (p : Ast.program)
   : EnvCheck (EAst.global_context * EAst.term) :=
-  let Σ := List.rev (trans_global (Ast.empty_ext p.1)).1 in
+  let Σ := (trans_global (Ast.empty_ext p.1)).1 in
   G <- check_wf_env Σ ;;
   Σ' <- wrap_error (empty_ext Σ) "erasure of the global context" (erase_global Σ _) ;;
   t <- wrap_error (empty_ext Σ) ("During erasure of " ++ string_of_term (trans p.2)) (erase (empty_ext Σ) _ nil _ (trans p.2));;
@@ -129,7 +129,7 @@ Program Fixpoint check_wf_env_only_univs (Σ : global_env)
 
 Program Definition erase_template_program (p : Ast.program)
   : EnvCheck (EAst.global_context * EAst.term) :=
-  let Σ := List.rev (trans_global (Ast.empty_ext p.1)).1 in
+  let Σ := (trans_global (Ast.empty_ext p.1)).1 in
   G <- check_wf_env_only_univs Σ ;;
   Σ' <- wrap_error (empty_ext Σ) "erasure of the global context" (SafeErasureFunction.erase_global Σ _) ;;
   t <- wrap_error (empty_ext Σ) ("During erasure of " ++ string_of_term (trans p.2)) (SafeErasureFunction.erase (empty_ext Σ) _ nil (trans p.2) _);;

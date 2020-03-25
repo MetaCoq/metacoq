@@ -2,6 +2,14 @@
 
 Require Import BinPos.
 Require Import Lia.
+Require Import Recdef.
+Require Import Coq.Lists.List.
+Require Import ZArith.
+Require Import NArith.
+Require Import List Orders POrderedType.
+Require Import Sorted.
+Require Import Coq.Sorting.Mergesort.
+Require Import Permutation.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -34,7 +42,6 @@ Arguments compose [A B C].
 (*for backwards compatibility*)
 Infix "oo" := compose (at level 54, right associativity).
 
-Require Import Coq.Lists.List.
 Import ListNotations.
 
 Fixpoint zip_with_acc {A B : Type} acc (l1 : list A) (l2 : list B) :=
@@ -79,8 +86,6 @@ Definition elemb (n : nat) := existsb (fun m => Nat.eqb n m).
 
 (*positive lemmas*)
 
-Require Import ZArith.
-
 Lemma Ppred_decrease n : (n<>1)%positive -> (nat_of_P (Pos.pred n)<nat_of_P n)%nat.
 Proof.
 intros; destruct (Psucc_pred n) as [Hpred | Hpred]; try contradiction;
@@ -108,8 +113,6 @@ destruct (Pos.compare_cont Eq x y); auto.
 Qed.
 
 (* N lemmas *)
-
-Require Import NArith.
 
 Definition Nleb (x y : N) :=
   match N.compare x y with
@@ -147,8 +150,6 @@ Arguments Success [val].
 Arguments Failure [val].
 
 (* variables.v *)
-
-Require Import ZArith List Orders POrderedType.
 
 Module Ident <: UsualOrderedType := Positive_as_OT.
 Definition minid : Ident.t := xH.
@@ -245,11 +246,6 @@ Definition subst_assertion (i: var) (e: expr) (a: assertion) :=
  end.
 
 (* compare.v *)
-Require Import ZArith.
-Require Import Coq.Lists.List.
-Require Import Sorted.
-Require Import Coq.Sorting.Mergesort.
-Require Import Permutation.
 
 Definition StrictCompSpec {A} (eq lt: A -> A -> Prop)
                           (cmp: A -> A -> comparison) :=
@@ -420,9 +416,9 @@ pure atoms *)
 
 Inductive pure_atom := Eqv : expr -> expr -> pure_atom.
 
-Let var1 : var := Z2id 1.
-Let var0 : var := Z2id 0.
-Let var2 : var := Z2id 2.
+Local Definition var1 : var := Z2id 1.
+Local Definition var0 : var := Z2id 0.
+Local Definition var2 : var := Z2id 2.
 
 Fixpoint list_prio {A} (weight: var) (l: list A) (p: var) : var :=
   match l with
@@ -466,7 +462,7 @@ Qed.
 
 Lemma var_cspec : StrictCompSpec (@Logic.eq var) Ident.lt Ident.compare.
 Proof. split; [apply Ident.lt_strorder|apply Ident.compare_spec]. Qed.
-Hint Resolve var_cspec.
+Hint Resolve var_cspec : core.
 
 Definition pure_atom_cmp (a a': pure_atom) : comparison :=
  match a, a' with
@@ -688,7 +684,7 @@ Proof.
   - admit.
   - intros. unfold CompSpec. admit.
 Admitted.
-Hint Resolve clause_cspec'.
+Hint Resolve clause_cspec' : core.
 
 Definition clause_length (cl : clause) : Z :=
   match cl with
@@ -1492,8 +1488,6 @@ intros; destruct (Psucc_pred n) as [Hpred | Hpred]; try contradiction;
 pattern n at 2; rewrite <- Hpred; rewrite nat_of_P_succ_morphism; omega.
 Defined.
 
-Require Import Recdef.
-
 (* begin show *)
 
 (** The Superpose main loop *)
@@ -1524,11 +1518,11 @@ Proof.
   - easy.
   - intros. lia.
 Qed.
-Print Assumptions main.
+(* Print Assumptions main.
 Check main.
 Check positive ->
        list clause ->
-       list clause -> superposition_result * list clause * M.t * M.t.
+       list clause -> superposition_result * list clause * M.t * M.t. *)
 
 (* end show *)
 
@@ -2180,7 +2174,7 @@ intros; eapply the_loop_termination1; eauto.
 intros; eapply the_loop_termination2; eauto.
 Defined.
  *******************)
-Print Assumptions the_loop.
+(* Print Assumptions the_loop. *)
 
 (* end show *)
 (* Required to work around Coq bug #2613 *)
@@ -2197,7 +2191,7 @@ Definition check_entailment (ent: entailment) : veristar_result :=
      end.
 
 End VeriStar.
-Check VeriStar.check_entailment.
+(* Check VeriStar.check_entailment. *)
 
 
 (* example.v *)

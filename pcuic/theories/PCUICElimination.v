@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool List Program.
-From MetaCoq.Template Require Import config utils.
+From MetaCoq.Template Require Import config utils Universes.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst
      PCUICSR PCUICInversion PCUICSafeLemmata.
 
@@ -66,7 +66,7 @@ Proof.
   now apply leb_sort_family_intype in i. 
 Admitted.                       (* elim_restriction_works *)
 
-Lemma elim_restriction_works_kelim2 `{cf : checker_flags} (Σ : global_env_ext) ind mind idecl : wf Σ ->
+Lemma elim_restriction_works_kelim `{cf : checker_flags} (Σ : global_env_ext) ind mind idecl : wf Σ ->
   declared_inductive (fst Σ) mind ind idecl ->
   ind_kelim idecl = InType -> Informative Σ ind.
 Proof.
@@ -83,10 +83,7 @@ Lemma elim_restriction_works `{cf : checker_flags} (Σ : global_env_ext) Γ T in
   declared_inductive (fst Σ) mind ind idecl ->
   Σ ;;; Γ |- tCase (ind, npar) p c brs : T ->
   (Is_proof Σ Γ (tCase (ind, npar) p c brs) -> False) -> Informative Σ ind.
-Proof.
-  intros. eapply elim_restriction_works_kelim2; eauto.
-  eapply elim_restriction_works_kelim1; eauto.
-Qed.
+Admitted.
 
 Lemma declared_projection_projs_nonempty `{cf : checker_flags} {Σ : global_env_ext} { mind ind p a} :
   wf Σ ->
@@ -127,7 +124,7 @@ Lemma elim_restriction_works_proj `{cf : checker_flags} (Σ : global_env_ext) Γ
   Σ ;;; Γ |- tProj p c : T ->
   (Is_proof Σ Γ (tProj p c) -> False) -> Informative Σ (fst (fst p)).
 Proof.
-  intros. eapply elim_restriction_works_kelim2; eauto.
+  intros. eapply elim_restriction_works_kelim; eauto.
   eapply elim_restriction_works_proj_kelim1; eauto.
 Qed.
 
@@ -160,70 +157,42 @@ Lemma tCase_length_branch_inv `{cf : checker_flags} (Σ : global_env_ext) Γ ind
   nth_error brs n = Some (m, t) ->
   (#|args| = npar + m)%nat.
 Proof.
-  intros.
-  eapply inversion_Case in X0 as [uni [args' [mdecl [idecl [ps [pty [btys
-                                 [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]].
-  apply length_map_option_out in ht0 as Hl. rewrite length_of_btys in Hl.
-  eapply type_mkApps_inv in t1 as (? & ? & [] & ?); eauto.
-  eapply inversion_Construct in t1 as (? & ? & ? & ? & ? & ? & ?); eauto.
-  destruct d0. cbn in *.
-  eapply declared_inductive_inj in d as []; eauto. subst.
-
-  (* unfold types_of_case in e0. *)
-  (* repeat destruct ?; try congruence. destruct p0, p1; subst. inv E3. inv E1. inv e0. *)
-  (* unfold build_branches_type in *. *)
-  (* assert (exists t', nth_error x7 n = Some (m, t')). *)
-  (* eapply All2_nth_error_Some in H as (? & ?). 2:eassumption. destruct p0. *)
-  (* rewrite e. destruct p0 as [[? ?] ?]. cbn in *. subst. destruct x1. cbn. eauto. *)
-  (* destruct H3. *)
-  (* eapply map_option_Some in E4. *)
-  (* eapply All2_nth_error_Some_r in E4 as (? & ? & ?); eauto. *)
-  (* subst. *)
-  (* rewrite nth_error_mapi in e. destruct (nth_error (ind_ctors x11) n) eqn:E7; try now inv e. *)
-  (* cbn in e. inv e. destruct p0. destruct p0. *)
-  (* cbn in H3. *)
-  (* eapply PCUICWeakeningEnv.on_declared_inductive in H1; eauto. destruct H1. *)
-  (* depelim o0. cbn in *. unfold on_constructors in *. *)
-  (* eapply All2_nth_error_Some in E7; eauto. *)
-  (* destruct E7 as [cs [? [XX1 XX2]]]. *)
-  (* admit. admit. *)
-
-  (* clear - H0 E4. unfold mapi in *. *)
-  (* revert n x7 H0 E4. generalize 0 at 3. induction (ind_ctors x2); intros. *)
-  (* - cbn in E4. inv E4. destruct n0; inv H0. *)
-  (* - cbn in E4. destruct a. destruct ?; try congruence. *)
-  (*   destruct p0. *)
-  (*   destruct ?; try congruence. *)
-  (*   inv E4. destruct ?; try congruence. *)
-  (*   destruct ?; try congruence. *)
-  (*   destruct ?; try congruence. *)
-  (*   inv E. destruct n0; cbn in H0. *)
-  (*   + inversion H0. subst. destruct l. cbn in E0. inv E0. cbn in *. inv H0. *)
-  (*   + eapply IHl in E0. eauto.  *)
-Admitted.                       (* tCase_length_branch_inv *)
+  intros. eapply inversion_Case in X0 as (u' & args' & mdecl' & idecl' & ps' & pty' & btys' & ? & ? & ? & ? & ? & ? & ? & ? & ?); eauto.
+  subst. unfold build_case_predicate_type  in *.
+Admitted.
 
 Section no_prop_leq_type.
 
 Context `{cf : checker_flags}.
 Variable Hcf : prop_sub_type = false.
 
+Lemma cumul_prop (Σ : global_env_ext) Γ A B u :
+  wf Σ ->
+  Universe.is_prop u ->
+  (Σ ;;; Γ |- A : tSort u + (Σ ;;; Γ |- B : tSort u))%type ->
+  Σ ;;; Γ |- A <= B ->
+  ((Σ ;;; Γ |- A : tSort u) * (Σ ;;; Γ |- B : tSort u))%type.
+Admitted.
+
 Lemma cumul_prop1 (Σ : global_env_ext) Γ A B u :
   wf Σ ->
-  Universe.is_prop u -> Σ ;;; Γ |- B : tSort u ->
-                                 Σ ;;; Γ |- A <= B -> Σ ;;; Γ |- A : tSort u.
+  Universe.is_prop u ->
+  Σ ;;; Γ |- B : tSort u ->
+  Σ ;;; Γ |- A <= B ->
+  Σ ;;; Γ |- A : tSort u.
 Proof.
-  intros. induction X1.
-  - admit.
-  - eapply IHX1 in X0. admit.
-  - eapply IHX1. eapply subject_reduction. eauto. eassumption. eauto.
-Admitted.                       (* cumul_prop1 *)
+  intros. eapply cumul_prop in X1; eauto. firstorder.
+Qed.
 
 Lemma cumul_prop2 (Σ : global_env_ext) Γ A B u :
   wf Σ ->
-  Universe.is_prop u -> Σ ;;; Γ |- A <= B ->
-                             Σ ;;; Γ |- A : tSort u -> Σ ;;; Γ |- B : tSort u.
+  Universe.is_prop u ->
+  Σ ;;; Γ |- A <= B ->
+  Σ ;;; Γ |- A : tSort u ->
+  Σ ;;; Γ |- B : tSort u.
 Proof.
-Admitted.                       (* cumul_prop2 *)
+  intros. eapply cumul_prop in X0; eauto. firstorder.  
+Qed.
 
 Lemma leq_universe_prop (Σ : global_env_ext) u1 u2 :
   @check_univs cf = true ->
@@ -233,9 +202,7 @@ Lemma leq_universe_prop (Σ : global_env_ext) u1 u2 :
   (Universe.is_prop u1 \/ Universe.is_prop u2) ->
   (Universe.is_prop u1 /\ Universe.is_prop u2).
 Proof.
-  intros. unfold leq_universe in *. (* rewrite H in H1. *)
-  (* unfold leq_universe0 in H1. *)
-  (* unfold leq_universe_n in H1. *)
+  intros. unfold leq_universe in *.
 Admitted.                       (* leq_universe_prop *)
 
 End no_prop_leq_type.

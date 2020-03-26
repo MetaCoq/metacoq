@@ -1146,7 +1146,7 @@ Section Checker.
     end.
 
   Definition typecheck_program (p : program) : EnvCheck term :=
-    let Σ := List.rev (fst p) in
+    let Σ := fst p in
     G <- check_wf_env Σ ;;
     infer_term Σ G (snd p).
 

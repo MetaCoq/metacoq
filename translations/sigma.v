@@ -1,4 +1,5 @@
-From MetaCoq.Template Require Import Ast Loader.
+From MetaCoq.Template Require Import Ast.
+Require Import MetaCoq.Template.Loader.
 Require Import List String. Import ListNotations.
 
 Set Primitive Projections.
@@ -9,6 +10,8 @@ Record sigma A B :=
 Arguments π1 {A B} _.
 Arguments π2 {A B} _.
 Arguments mk_sig {A B} _ _.
+
+Declare Scope sigma_scope.
 
 Notation "{ x  &&  P }" := (sigma (fun x => P)) : type_scope.
 Notation "{ t : A && P }" := (sigma A (fun t => P)) : type_scope.

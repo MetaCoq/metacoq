@@ -83,7 +83,14 @@ Section MonadOperations.
        | y :: l => x' <- g x y ;;
                    monad_fold_left l x'
        end.
-
+  
+  Fixpoint monad_fold_right (l : list B) (x : A) : T A
+       := match l with
+          | nil => ret x
+          | y :: l => l' <- monad_fold_right l x ;;
+                      g l' y
+          end.
+   
   Context (h : nat -> A -> T B).
   Fixpoint monad_map_i_aux (n0 : nat) (l : list A) : T (list B)
     := match l with

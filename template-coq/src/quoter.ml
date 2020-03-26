@@ -440,7 +440,7 @@ struct
       (x,y)
     in
     let (tm, _) = quote_rem () env trm in
-    let decls =  List.fold_left (fun acc (kn, d) -> Q.add_global_decl kn d acc) (Q.empty_global_declarations ()) !constants in
+    let decls =  List.fold_right (fun (kn, d) acc -> Q.add_global_decl kn d acc)  !constants (Q.empty_global_declarations ()) in
     Q.mk_program decls tm
 
   let quote_rel_context env ctx = 

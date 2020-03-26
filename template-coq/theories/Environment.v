@@ -7,16 +7,16 @@ Set Asymmetric Patterns.
 
 Module Type Term.
 
-  Parameter (term : Type).
+  Parameter Inline term : Type.
 
-  Parameter (tRel : nat -> term).
-  Parameter (tSort : Universe.t -> term).
-  Parameter (tProd : name -> term -> term -> term).
-  Parameter (tLambda : name -> term -> term -> term).
-  Parameter (tLetIn : name -> term -> term -> term -> term).
-  Parameter (tInd : inductive -> Instance.t -> term).
+  Parameter Inline tRel : nat -> term.
+  Parameter Inline tSort : Universe.t -> term.
+  Parameter Inline tProd : name -> term -> term -> term.
+  Parameter Inline tLambda : name -> term -> term -> term.
+  Parameter Inline tLetIn : name -> term -> term -> term -> term.
+  Parameter Inline tInd : inductive -> Instance.t -> term.
 
-  Parameter (mkApps : term -> list term -> term).
+  Parameter Inline mkApps : term -> list term -> term.
 
 End Term.
 
@@ -197,7 +197,6 @@ Module Environment (T : Term).
   Notation " Γ  ,,, Γ' " :=
     (app_context Γ Γ') (at level 25, Γ' at next level, left associativity).
 
-
   (** Make a lambda/let-in string of abstractions from a context [Γ], ending with term [t]. *)
 
   Definition mkLambda_or_LetIn d t :=
@@ -223,7 +222,7 @@ Module Environment (T : Term).
   Lemma it_mkProd_or_LetIn_app l l' t :
     it_mkProd_or_LetIn (l ++ l') t = it_mkProd_or_LetIn l' (it_mkProd_or_LetIn l t).
   Proof. induction l in l', t |- *; simpl; auto. Qed.
-
+  
   Fixpoint reln (l : list term) (p : nat) (Γ0 : list context_decl) {struct Γ0} : list term :=
     match Γ0 with
     | [] => l

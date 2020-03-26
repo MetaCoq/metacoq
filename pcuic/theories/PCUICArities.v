@@ -412,7 +412,7 @@ Proof.
     + rewrite !subst_app_simpl /= !(subst_closedn s') //.
 Qed.
 
-Hint Constructors subslet.
+Hint Constructors subslet : core pcuic.
 
 Lemma subslet_app_inv {cf:checker_flags} Σ Γ Δ Δ' s : 
   subslet Σ Γ s (Δ ,,, Δ') ->

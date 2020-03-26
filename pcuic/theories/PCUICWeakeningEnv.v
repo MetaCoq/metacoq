@@ -561,7 +561,7 @@ Proof.
     now apply on_declared_inductive in Hidecl.
   - apply (declared_constructor_inv _ _ mdecl idecl ref cdecl
                                   weaken_env_prop_typing wfΣ wfΣ Hdecl).
-Qed.
+Defined.
 
 Lemma on_declared_projection `{checker_flags} {Σ ref mdecl idecl pdecl} :
   wf Σ ->

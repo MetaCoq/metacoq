@@ -25,14 +25,14 @@ Definition d : Ast.term.
 Defined.
 
 (** Another way **)
-MetaCoq Quote Definition d' := (fun x : nat => x).
+MetaCoq MetaCoq Quote Definition d' := (fun x : nat => x).
 
 (** To quote existing definitions **)
 Definition id_nat : nat -> nat := fun x => x.
 
-MetaCoq Quote Definition d'' := Eval compute in id_nat.
-MetaCoq Quote Definition d3 := Eval cbn in id_nat.
-MetaCoq Quote Definition d4 := Eval unfold id_nat in id_nat.
+MetaCoq MetaCoq Quote Definition d'' := Eval compute in id_nat.
+MetaCoq MetaCoq Quote Definition d3 := Eval cbn in id_nat.
+MetaCoq MetaCoq Quote Definition d4 := Eval unfold id_nat in id_nat.
 
 
 (** Fixpoints **)
@@ -60,11 +60,11 @@ with odd (a : nat) : bool :=
     | S a => even a
   end.
 
-MetaCoq Quote Definition add_syntax := Eval compute in add.
+MetaCoq MetaCoq Quote Definition add_syntax := Eval compute in add.
 
-MetaCoq Quote Definition eo_syntax := Eval compute in even.
+MetaCoq MetaCoq Quote Definition eo_syntax := Eval compute in even.
 
-MetaCoq Quote Definition add'_syntax := Eval compute in add'.
+MetaCoq MetaCoq Quote Definition add'_syntax := Eval compute in add'.
 
 (** Reflecting definitions **)
 Make Definition zero_from_syntax := (Ast.tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 0 []).
@@ -368,7 +368,7 @@ CoInductive streamn : Set :=
 
 CoFixpoint ones : streamn := scons 1 ones.
 
-MetaCoq Quote Definition ones_syntax := Eval compute in ones.
+MetaCoq MetaCoq Quote Definition ones_syntax := Eval compute in ones.
 
 Make Definition ones' := ones_syntax.
 

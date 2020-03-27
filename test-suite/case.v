@@ -7,7 +7,7 @@ Definition f := fun (n : nat) =>
   end.
 
 
-Quote Definition f_quoted :=
+MetaCoq Quote Definition f_quoted :=
   ltac:(let t := eval cbv in f in exact t).
 
 Make Definition f_from_syntax :=

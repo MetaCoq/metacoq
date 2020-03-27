@@ -16,8 +16,8 @@ Notation "( x ; y )" := (pair x y) : prod_scope.
 Notation " A × B " := (prod A B) : type_scope.
 Open Scope prod_scope.
 
-MetaCoq Quote Definition tprod := prod.
-MetaCoq Quote Definition tpair := @pair.
+MetaCoq MetaCoq Quote Definition tprod := prod.
+MetaCoq MetaCoq Quote Definition tpair := @pair.
 Definition prod_ind := Eval compute in
   match tprod with tInd i _ => i | _ => mkInd "bug: prod not an inductive" 0 end.
 Definition proj1 (t : term) : term
@@ -25,8 +25,8 @@ Definition proj1 (t : term) : term
 Definition proj2 (t : term) : term
   := tProj (prod_ind, 2, S 0) t.
 
-MetaCoq Quote Definition tbool := bool.
-MetaCoq Quote Definition ttrue := true.
+MetaCoq MetaCoq Quote Definition tbool := bool.
+MetaCoq MetaCoq Quote Definition ttrue := true.
 Definition timesBool (A : term) := tApp tprod [A; tbool].
 Definition pairTrue typ tm := tApp tpair [typ; tbool; tm; ttrue].
 

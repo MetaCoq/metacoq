@@ -26,8 +26,8 @@ Notation "'∃' x .. y , p" := (sigma _ (fun x => .. (sigma _ (fun y => p)) ..))
 Notation " A × B " := (sigma A (fun _ => B)) (at level 80, right associativity) : type_scope.
 
 
-MetaCoq Quote Definition tSigma := sigma.
-MetaCoq Quote Definition tPair := @mk_sig.
+MetaCoq MetaCoq Quote Definition tSigma := sigma.
+MetaCoq MetaCoq Quote Definition tPair := @mk_sig.
 Definition pair (typ1 typ2 t1 t2 : term) : term
   := tApp tPair [ typ1 ; typ2 ; t1 ; t2].
 Definition pack (t u : term) : term

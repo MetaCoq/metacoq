@@ -132,7 +132,7 @@ Goal ((fun f : forall (A : Type) (Aᵗ : A -> Type) (H : A), Aᵗ H -> A =>
 reflexivity.
 Defined.
 
-MetaCoq Quote Definition tm := ((fun A (x:A) => x) (Type -> Type) (fun x => x)).
+MetaCoq MetaCoq Quote Definition tm := ((fun A (x:A) => x) (Type -> Type) (fun x => x)).
 
 Run TemplateProgram (let tm' := tsl_rec1 [] tm in
                      print_nf tm' ;;

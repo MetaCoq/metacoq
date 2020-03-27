@@ -6,7 +6,7 @@ Open Scope string.
 Set Printing Universes.
 
 MetaCoq Test Quote Type.
-Quote Definition a_random_univ := Type.
+MetaCoq Quote Definition a_random_univ := Type.
 (* 
 Fail Make Definition t1 := (tSort ([]; _)).
 Fail Make Definition t1 := (tSort (Universe.make (Level.Level "Top.400"))).
@@ -36,7 +36,7 @@ Constraint i < j.
 Make Definition yuyu := (tConst "selfpid" [Level.Level "j"; Level.Level "i"]).
 
 
-Quote Definition t0 := nat.
+MetaCoq Quote Definition t0 := nat.
 Run TemplateProgram (tmUnquoteTyped Type t0).
 Definition ty : Type := Type.
 Run TemplateProgram (tmUnquoteTyped ty t0).
@@ -86,7 +86,7 @@ End to.
 
 
 Definition f@{i j k} := fun (E:Type@{i}) => Type@{max(i,j)}.
-Quote Definition qf := Eval cbv in f.
+MetaCoq Quote Definition qf := Eval cbv in f.
 Make Definition uqf := qf.
 
 
@@ -164,7 +164,7 @@ Print test.
 (* Print Universes. *)
 Unset Printing Universes. 
 
-Quote Definition qtest := Eval compute in (fun (T : Type@{i}) (T2 : Type@{j}) => T -> T2).
+MetaCoq Quote Definition qtest := Eval compute in (fun (T : Type@{i}) (T2 : Type@{j}) => T -> T2).
 Print qtest.
 
 Make Definition bla := qtest.
@@ -193,7 +193,7 @@ Compute t.
 Compute (@t Type@{i} Type@{j}).
 (* Compute (@t@{i j i j}). *)
 
-Quote Definition qt := Eval compute in t.
+MetaCoq Quote Definition qt := Eval compute in t.
 Print qt.
 
 Make Definition t' := qt.
@@ -202,13 +202,13 @@ Polymorphic Definition Funtp@{i} (A B: Type@{i}) := A->B.
 
 Polymorphic Definition F@{i} := Type@{i}.
 
-Quote Definition qT := Eval compute in F.
+MetaCoq Quote Definition qT := Eval compute in F.
 Require Import List. Import ListNotations.
 Fail Make Definition T'2 := (tSort [(Level.Var 1, false)]).
 
 Quote Recursively Definition qT' := F.
 
-Quote Definition qFuntp := Eval compute in Funtp.
+MetaCoq Quote Definition qFuntp := Eval compute in Funtp.
 Print qFuntp.
 (** the same thing is quoted in demo.v using the template-coq monad
 there the poly vars actually show up *)

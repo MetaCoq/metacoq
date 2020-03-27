@@ -37,7 +37,7 @@ Ltac infer := try red;
           change (t' = Checked T); reflexivity]
   end.
 
-Quote Definition natr := nat.
+MetaCoq Quote Definition natr := nat.
 
 Definition type_program (p : program) (ty : term) :=
   let Σ := empty_ext (fst p) in
@@ -153,19 +153,19 @@ Definition f1 := (forall (A:Type@{i}) (B: Prop), A -> B -> A).
 Definition f2 := (forall (A:Type@{i}) (B: Prop), A -> B -> B).
 (* : Prop *)
 
-Quote Definition f1' := (forall (A:Type@{i}) (B: Prop), A -> B -> A).
+MetaCoq Quote Definition f1' := (forall (A:Type@{i}) (B: Prop), A -> B -> A).
 
 Definition test1 := Eval lazy in infer' (empty_ext []) nil f1'.
 
-Quote Definition f2' := (forall (A:Type@{i}) (B: Prop), A -> B -> B).
+MetaCoq Quote Definition f2' := (forall (A:Type@{i}) (B: Prop), A -> B -> B).
 
 Definition test2 := Eval lazy in infer' (empty_ext []) nil f2'.
 
 Definition f := (forall (A:Type@{i}) (B: Type@{j}), A -> B -> A).
 (* : Type@{i+1, j+1} *)
 
-Quote Definition f' := (forall (A:Type@{i}) (B:Type@{j}), A -> B -> A).
+MetaCoq Quote Definition f' := (forall (A:Type@{i}) (B:Type@{j}), A -> B -> A).
 
-Quote Definition f'' := (forall (B: Type@{j}), B -> B).
+MetaCoq Quote Definition f'' := (forall (B: Type@{j}), B -> B).
 
 Definition test3 := Eval lazy in infer' (empty_ext []) nil f'.

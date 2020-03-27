@@ -206,29 +206,29 @@ Inductive demoList (A : Set) : Set :=
 (** Putting the above commands in monadic program *)
 Notation inat :=
   {| inductive_mind := "Coq.Init.Datatypes.nat"; inductive_ind := 0 |}.
-Run TemplateProgram (tmBind (tmQuote (3 + 3)) tmPrint).
+MetaCoq Run (tmBind (tmQuote (3 + 3)) tmPrint).
 
-Run TemplateProgram (tmBind (tmQuoteRec add) tmPrint).
+MetaCoq Run (tmBind (tmQuoteRec add) tmPrint).
 
 Definition printInductive (name  : ident): TemplateMonad unit :=
   (tmBind (tmQuoteInductive name) tmPrint).
 
-Run TemplateProgram (printInductive "Coq.Init.Datatypes.nat").
-Run TemplateProgram (printInductive "nat").
+MetaCoq Run (printInductive "Coq.Init.Datatypes.nat").
+MetaCoq Run (printInductive "nat").
 
 CoInductive cnat : Set :=  O :cnat | S : cnat -> cnat.
-Run TemplateProgram (printInductive "cnat").
+MetaCoq Run (printInductive "cnat").
 
-Run TemplateProgram (tmBind (tmQuoteConstant "add" false) tmPrint).
-Fail Run TemplateProgram (tmBind (tmQuoteConstant "nat" false) tmPrint).
+MetaCoq Run (tmBind (tmQuoteConstant "add" false) tmPrint).
+Fail MetaCoq Run (tmBind (tmQuoteConstant "nat" false) tmPrint).
 
 Definition six : nat.
   exact (3 + 3).
 Qed.
-Run TemplateProgram ((tmQuoteConstant "six" true) >>= tmPrint).
-Run TemplateProgram ((tmQuoteConstant "six" false) >>= tmPrint).
+MetaCoq Run ((tmQuoteConstant "six" true) >>= tmPrint).
+MetaCoq Run ((tmQuoteConstant "six" false) >>= tmPrint).
 
-Run TemplateProgram (t <- tmLemma "foo4" nat;;
+MetaCoq Run (t <- tmLemma "foo4" nat;;
                      tmDefinition "foo5" (t + t + 2)).
 Next Obligation.
   exact 3.
@@ -236,7 +236,7 @@ Defined.
 Print foo5.
 
 
-Run TemplateProgram (t <- tmLemma "foo44" nat ;;
+MetaCoq Run (t <- tmLemma "foo44" nat ;;
                      qt <- tmQuote t ;;
                      t <- tmEval all t ;;
                      tmPrint qt ;; tmPrint t).
@@ -246,7 +246,7 @@ Defined.
 
 
 
-(* Run TemplateProgram (tmQuoteInductive "demoList" *)
+(* MetaCoq Run (tmQuoteInductive "demoList" *)
 (*                        >>= tmDefinition "demoList_syntax"). *)
 (* Example unquote_quote_id1: demoList_syntax=mut_list_i *)
 (* (* demoList was obtained from mut_list_i *). *)
@@ -255,14 +255,14 @@ Defined.
 (*     f_equal. *)
 (* Qed. *)
 
-Run TemplateProgram (tmDefinition "foo4'" nat >>= tmPrint).
+MetaCoq Run (tmDefinition "foo4'" nat >>= tmPrint).
 
 (* We can chain the definition. In the following,
  foo5' = 12 and foo6' = foo5' *)
-Run TemplateProgram (t <- tmDefinition "foo5'" 12 ;;
+MetaCoq Run (t <- tmDefinition "foo5'" 12 ;;
                      tmDefinition "foo6'" t).
 
-Run TemplateProgram (tmLemma "foo51" nat ;;
+MetaCoq Run (tmLemma "foo51" nat ;;
                      tmLemma "foo61" bool).
 Next Obligation.
   exact 3.
@@ -279,13 +279,13 @@ Definition printConstant (name  : ident): TemplateMonad unit :=
   X' <- tmEval all (my_projT2 X) ;;
  tmPrint X'.
 
-Fail Run TemplateProgram (printInductive "Coq.Arith.PeanoNat.Nat.add").
-Run TemplateProgram (printConstant "Coq.Arith.PeanoNat.Nat.add").
+Fail MetaCoq Run (printInductive "Coq.Arith.PeanoNat.Nat.add").
+MetaCoq Run (printConstant "Coq.Arith.PeanoNat.Nat.add").
 
 
-(* Fail Run TemplateProgram (tmUnquoteTyped (nat -> nat) add_syntax >>= *)
+(* Fail MetaCoq Run (tmUnquoteTyped (nat -> nat) add_syntax >>= *)
 (*                           tmPrint). *)
-Run TemplateProgram (tmUnquoteTyped (nat -> nat -> nat) add_syntax >>=
+MetaCoq Run (tmUnquoteTyped (nat -> nat -> nat) add_syntax >>=
                      tmPrint).
 
 
@@ -294,40 +294,40 @@ Run TemplateProgram (tmUnquoteTyped (nat -> nat -> nat) add_syntax >>=
 Inductive NonRec (A:Set) (C: A -> Set): Set := 
 | SS : forall (f:A), C f -> NonRec A C.
 
-Run TemplateProgram (printInductive "NonRec").
+MetaCoq Run (printInductive "NonRec").
 
 
 Set Printing Universes.
 Monomorphic Definition Funtm (A B: Type) := A->B.
 Polymorphic Definition Funtp@{i} (A B: Type@{i}) := A->B.
-(* Run TemplateProgram (printConstant "Top.demo.Funtp"). *)
+(* MetaCoq Run (printConstant "Top.demo.Funtp"). *)
 (* Locate Funtm. *)
-(* Run TemplateProgram (printConstant "Top.Funtm"). *)
+(* MetaCoq Run (printConstant "Top.Funtm"). *)
 
 Polymorphic Definition Funtp2@{i j} 
    (A: Type@{i}) (B: Type@{j}) := A->B.
-(* Run TemplateProgram (printConstant "Top.demo.Funtp2"). *) (* TODOO *)
+(* MetaCoq Run (printConstant "Top.demo.Funtp2"). *) (* TODOO *)
 
-Run TemplateProgram (tmEval cbn add_syntax >>= tmMkDefinition "foo1").
+MetaCoq Run (tmEval cbn add_syntax >>= tmMkDefinition "foo1").
 
-Run TemplateProgram ((tmFreshName "foo") >>= tmPrint).
-Run TemplateProgram (tmAxiom "foo0" (nat -> nat) >>= tmPrint).
-Run TemplateProgram (tmAxiom "foo0'" (nat -> nat) >>=
+MetaCoq Run ((tmFreshName "foo") >>= tmPrint).
+MetaCoq Run (tmAxiom "foo0" (nat -> nat) >>= tmPrint).
+MetaCoq Run (tmAxiom "foo0'" (nat -> nat) >>=
                      fun t => tmDefinition "foo0''" t).
-Run TemplateProgram (tmFreshName "foo" >>= tmPrint).
+MetaCoq Run (tmFreshName "foo" >>= tmPrint).
 
-Run TemplateProgram (tmBind (tmAbout "foo") tmPrint).
-Run TemplateProgram (tmBind (tmAbout "qlsnkqsdlfhkdlfh") tmPrint).
-Run TemplateProgram (tmBind (tmAbout "eq") tmPrint).
-Run TemplateProgram (tmBind (tmAbout "Logic.eq") tmPrint).
-Run TemplateProgram (tmBind (tmAbout "eq_refl") tmPrint).
+MetaCoq Run (tmBind (tmAbout "foo") tmPrint).
+MetaCoq Run (tmBind (tmAbout "qlsnkqsdlfhkdlfh") tmPrint).
+MetaCoq Run (tmBind (tmAbout "eq") tmPrint).
+MetaCoq Run (tmBind (tmAbout "Logic.eq") tmPrint).
+MetaCoq Run (tmBind (tmAbout "eq_refl") tmPrint).
 
-Run TemplateProgram (tmCurrentModPath tt >>= tmPrint).
+MetaCoq Run (tmCurrentModPath tt >>= tmPrint).
 
-Run TemplateProgram (tmBind (tmEval all (3 + 3)) tmPrint).
-Run TemplateProgram (tmBind (tmEval hnf (3 + 3)) tmPrint).
+MetaCoq Run (tmBind (tmEval all (3 + 3)) tmPrint).
+MetaCoq Run (tmBind (tmEval hnf (3 + 3)) tmPrint).
 
-Fail Run TemplateProgram (tmFail "foo" >>= tmQuoteInductive).
+Fail MetaCoq Run (tmFail "foo" >>= tmQuoteInductive).
 
 
 (* Definition duplicateDefn (name newName : ident): TemplateMonad unit := *)
@@ -339,7 +339,7 @@ Fail Run TemplateProgram (tmFail "foo" >>= tmQuoteInductive).
 (*     end)) *)
 (*     . *)
 
-(* Run TemplateProgram (duplicateDefn "add" "addUnq"). *)
+(* MetaCoq Run (duplicateDefn "add" "addUnq"). *)
 (* Check (eq_refl: add=addUnq). *)
 
 
@@ -376,7 +376,7 @@ Check eq_refl : ones = ones'.
 
 
 (* Too long *)
-(* Run TemplateProgram (tmQuoteUniverses tt >>= tmDefinition "universes"). *)
+(* MetaCoq Run (tmQuoteUniverses tt >>= tmDefinition "universes"). *)
 (* Print universes. *)
 (* Definition tyu := Eval vm_compute in universes. *)
 
@@ -390,8 +390,8 @@ Definition kername_of_qualid (q : qualid) : TemplateMonad kername :=
   | None => tmFail  ("tmLocate: " ++ q ++ " not found")
   end.
 
-Run TemplateProgram (kername_of_qualid "add" >>= tmPrint).
-Run TemplateProgram (kername_of_qualid "BinNat.N.add" >>= tmPrint).
-Run TemplateProgram (kername_of_qualid "Coq.NArith.BinNatDef.N.add" >>= tmPrint).
-Fail Run TemplateProgram (kername_of_qualid "N.add" >>= tmPrint).
-Fail Run TemplateProgram (kername_of_qualid "qlskf" >>= tmPrint).
+MetaCoq Run (kername_of_qualid "add" >>= tmPrint).
+MetaCoq Run (kername_of_qualid "BinNat.N.add" >>= tmPrint).
+MetaCoq Run (kername_of_qualid "Coq.NArith.BinNatDef.N.add" >>= tmPrint).
+Fail MetaCoq Run (kername_of_qualid "N.add" >>= tmPrint).
+Fail MetaCoq Run (kername_of_qualid "qlskf" >>= tmPrint).

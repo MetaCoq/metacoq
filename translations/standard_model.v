@@ -100,12 +100,12 @@ Instance param : Translation :=
 
 (* Definition toto := ((fun A (x : A) => x) (Type : Type)). *)
 Definition toto := fun (f : forall A, A -> A) => f Type.
-Run TemplateProgram (Translate emptyTC "toto").
+MetaCoq Run (Translate emptyTC "toto").
 Check (totoᵗ : unit -> (forall A, A -> A) -> Type -> Type).
 
 
 Definition FALSE := forall X, X.
-Run TemplateProgram (TC <- Translate emptyTC "FALSE" ;; tmPrint "toto" ;;
+MetaCoq Run (TC <- Translate emptyTC "FALSE" ;; tmPrint "toto" ;;
    Implement TC "a" (forall (A : Set) (A0 : A -> Set) (x : A), FALSE -> A0 x)).
 Next Obligation.
   compute in X. apply X.
@@ -113,8 +113,8 @@ Defined.
 
 
 Definition T := forall A, A -> A.
-Run TemplateProgram (Translate emptyTC "T").
+MetaCoq Run (Translate emptyTC "T").
 
 
 Definition tm := ((fun A (x:A) => x) (Type -> Type) (fun x => x)).
-Run TemplateProgram (Translate emptyTC "tm").
+MetaCoq Run (Translate emptyTC "tm").

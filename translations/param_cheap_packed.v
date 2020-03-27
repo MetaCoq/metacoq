@@ -229,12 +229,12 @@ Notation "'El' A" := (sigma (π1 A) (π2 A)) (at level 20).
 Definition ty := nat -> nat.
 Definition to := Type.
 
-Run TemplateProgram (Translate emptyTC "nat" >>= tmDebug).
+MetaCoq Run (Translate emptyTC "nat" >>= tmDebug).
 
 Require Vector.
 Require Even.
 Unset Universe Checking.
-Run TemplateProgram (Translate emptyTC "list" >>= tmDebug).
+MetaCoq Run (Translate emptyTC "list" >>= tmDebug).
 Check (listᵗ : forall (A : TYPE), list A.1 -> Type).
 Check (nilᵗ : forall (A : TYPE), listᵗ A nil).
 Check (consᵗ : forall (A : TYPE) (x : El A) (lH : ∃ l, listᵗ A l),
@@ -394,11 +394,11 @@ Check (consᵗ : forall (A : TYPE) (x : El A) (lH : ∃ l, listᵗ A l),
 
 (* Definition tat := Type -> Type. *)
 
-(* Run TemplateProgram (tTranslate tsl_param ([],[]) "tat" *)
+(* MetaCoq Run (tTranslate tsl_param ([],[]) "tat" *)
 (*                                         >>= tmPrint). *)
 (* About tatᵗ. *)
 
-(* Run TemplateProgram (tImplement tsl_param ([], []) "tu" (Type -> Type) >>= tmPrint). *)
+(* MetaCoq Run (tImplement tsl_param ([], []) "tu" (Type -> Type) >>= tmPrint). *)
 (* Next Obligation. *)
 (*   exists id. exact (fun _ _ => True). *)
 (* Defined. *)

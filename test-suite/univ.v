@@ -37,14 +37,14 @@ MetaCoq Unquote Definition yuyu := (tConst "selfpid" [Level.Level "j"; Level.Lev
 
 
 MetaCoq Quote Definition t0 := nat.
-Run TemplateProgram (tmUnquoteTyped Type t0).
+MetaCoq Run (tmUnquoteTyped Type t0).
 Definition ty : Type := Type.
-Run TemplateProgram (tmUnquoteTyped ty t0).
+MetaCoq Run (tmUnquoteTyped ty t0).
 
 Polymorphic Cumulative Inductive test := .
 Polymorphic Cumulative Record packType := {pk : Type}.
-Run TemplateProgram (α <- tmQuoteInductive "test" ;; tmPrint α).
-Run TemplateProgram (tmQuoteInductive "packType" >>= tmEval all >>= tmPrint).
+MetaCoq Run (α <- tmQuoteInductive "test" ;; tmPrint α).
+MetaCoq Run (tmQuoteInductive "packType" >>= tmEval all >>= tmPrint).
 Polymorphic Cumulative Record Category@{i j} :=
 { Obj : Type@{i}; Hom : Obj -> Obj -> Type@{j} }.
 Polymorphic  Record Functor@{i j} (C D : Category@{i j}):=
@@ -52,8 +52,8 @@ Polymorphic  Record Functor@{i j} (C D : Category@{i j}):=
 Polymorphic Definition Cat@{i j k l} : Category@{i j}
  := Build_Category@{i j} Category@{k l} Functor@{k l}.
 
-Run TemplateProgram (tmQuoteInductive "Category" >>= tmEval all >>= tmPrint).
-Run TemplateProgram (tmQuoteConstant "Cat" false >>= tmEval all >>= tmPrint).
+MetaCoq Run (tmQuoteInductive "Category" >>= tmEval all >>= tmPrint).
+MetaCoq Run (tmQuoteConstant "Cat" false >>= tmEval all >>= tmPrint).
 
 
 Polymorphic Cumulative Inductive list (A : Type) : Type :=
@@ -77,7 +77,7 @@ Definition clean_universes_decl (m : mutual_inductive_entry) : mutual_inductive_
     mind_entry_private := m.(mind_entry_private) |}.
 
 Module to.
- Run TemplateProgram (t <- tmQuoteInductive "list" ;;
+ MetaCoq Run (t <- tmQuoteInductive "list" ;;
                      t <- tmEval all (mind_body_to_entry t) ;;
                      tmPrint t ;;
                      tmMkInductive (clean_universes_decl t)).
@@ -124,9 +124,9 @@ Compute qfoo3.
 Require Import MetaCoq.Template.monad_utils. Import MonadNotation.
 Require Import MetaCoq.Template.TemplateMonad.Core.
 
-Run TemplateProgram (tmQuoteInductive "foo" >>= tmPrint).
-Run TemplateProgram (tmQuoteInductive "foo2" >>= tmPrint).
-Run TemplateProgram (tmQuoteInductive "foo3" >>= tmPrint).
+MetaCoq Run (tmQuoteInductive "foo" >>= tmPrint).
+MetaCoq Run (tmQuoteInductive "foo2" >>= tmPrint).
+MetaCoq Run (tmQuoteInductive "foo3" >>= tmPrint).
 
 Polymorphic Definition TT@{i j} : Type@{j} := Type@{i}.
 MetaCoq Quote Recursively Definition qTT := TT.
@@ -139,7 +139,7 @@ Require Import List. Import ListNotations.
 
 Module toto.
 
-  (* Run TemplateProgram (en <- tmEval all (mind_body_to_entry (Build_minductive_decl 0 [{| *)
+  (* MetaCoq Run (en <- tmEval all (mind_body_to_entry (Build_minductive_decl 0 [{| *)
   (*  ind_name := "TT2"; *)
   (*  ind_type := tSort ((Level.Var 1, false) :: nil)%list; *)
   (*  ind_kelim := InProp :: (InSet :: InType :: nil)%list; *)

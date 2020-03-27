@@ -15,9 +15,9 @@ tFix
            (tRel 0)
            [(1, tLambda (nNamed "x0") (tApp (tInd (mkInd "Top.test" 0) []) [tInd (mkInd "Coq.Init.Datatypes.unit" 0) []]) (tApp (tRel 2) [tRel 0]))]))
      0] 0.
-Fail Run TemplateProgram (tmUnquote T >>= tmPrint).
+Fail MetaCoq Run (tmUnquote T >>= tmPrint).
 
 Fail Let bla := (existT_typed_term (test unit -> unit) (fix f (x : test f) : unit := match x with
                                                                               | test_T _ x0 => f x0
                                                                               end)).
-Fail Run TemplateProgram (tmUnquote T >>= tmDefinition "fails").
+Fail MetaCoq Run (tmUnquote T >>= tmDefinition "fails").

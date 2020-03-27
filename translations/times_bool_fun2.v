@@ -6,7 +6,7 @@ From MetaCoq.Translations Require Import translation_utils times_bool_fun MiniHo
 Unset Strict Unquote Universe Mode.
 Unset Universe Checking.
 
-Run TemplateProgram (TC <- ImplementExisting emptyTC "paths" ;;
+MetaCoq Run (TC <- ImplementExisting emptyTC "paths" ;;
                      TC <- ImplementExisting TC "idpath" ;;
                      TC <- ImplementExisting TC "paths_ind" ;;
                      TC <- ImplementExisting TC "transport" ;;
@@ -76,7 +76,7 @@ Defined.
 
 Definition UA := forall A B, isequiv (id2equiv A B).
 
-Run TemplateProgram (TC <- Translate eqTC "isequiv" ;;
+MetaCoq Run (TC <- Translate eqTC "isequiv" ;;
                      TC <- Translate TC "equiv" ;;
                      TC <- ImplementExisting TC "eq" ;;
                      TC <- Translate TC "inverse" ;;
@@ -90,7 +90,7 @@ Definition contr A := exists x : A, forall y, x = y.
 Definition weakFunext
   := forall (A : Type) (P : A -> Type), (forall x, contr (P x)) -> contr (forall x, P x).
 
-Run TemplateProgram (TC <- Translate eqTC2 "contr" ;;
+MetaCoq Run (TC <- Translate eqTC2 "contr" ;;
                      TC <- Translate TC "weakFunext" ;;
                      tmDefinition "eqTC3" TC).
 
@@ -154,7 +154,7 @@ Definition contr_retract_α : contr_retractα.
   - intro f; lazy. exact 1. (* uses eta! *)
 Defined. 
 
-(* Run TemplateProgram (TC <- TranslateRec eqTC3 contr_retractα ;; *)
+(* MetaCoq Run (TC <- TranslateRec eqTC3 contr_retractα ;; *)
 (*                      TC <- ImplementExisting TC "contr_retract_α" ;; *)
 (*                      tmDefinition "eqTC4" TC). *)
 (* Next Obligation. *)

@@ -6,5 +6,5 @@ Import MonadNotation.
 Existing Class True.
 Existing Instance I.
 
-Run TemplateProgram (tmInferInstance None True >>= tmPrint).
-Run TemplateProgram (tmInferInstance None False >>= tmPrint).
+MetaCoq Run (tmInferInstance None True >>= tmPrint).
+MetaCoq Run (tmInferInstance None False >>= tmPrint).

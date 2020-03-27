@@ -406,7 +406,7 @@ Check (consᵗ : forall (A : TYPE) (x : El A) (lH : ∃ l, listᵗ A l),
 
 
 (* Definition nat_entryT := Eval vm_compute in match tsl_mind_entry ([], []) "Coq.Init.Datatypes.nat" nat_entry with | Success (_, [e]) => e | _ => todo end. *)
-(* Make Inductive nat_entryT. *)
+(* MetaCoq Unquote Inductive nat_entryT. *)
 (* Check (natᵗ : nat -> Set). *)
 (* Check (Oᵗ : natᵗ O). *)
 (* Check (Sᵗ : forall (N : exists n, natᵗ n), natᵗ (S N.1)). *)
@@ -415,7 +415,7 @@ Check (consᵗ : forall (A : TYPE) (x : El A) (lH : ∃ l, listᵗ A l),
 (* Definition bool_entry := Eval compute in *)
 (*       (mind_body_to_entry (option_get todo (extract_mind_body_from_program "Coq.Init.Datatypes.bool" bool_prog) )). *)
 (* Definition bool_entryT := Eval vm_compute in match tsl_mind_entry ([], []) "Coq.Init.Datatypes.bool" bool_entry with | Success (_, [e]) => e | _ => todo end. *)
-(* Make Inductive bool_entryT. *)
+(* MetaCoq Unquote Inductive bool_entryT. *)
 
 
 (* (* Inductive t (A : Set) : nat -> Set := *) *)
@@ -431,7 +431,7 @@ Check (consᵗ : forall (A : TYPE) (x : El A) (lH : ∃ l, listᵗ A l),
 (* (* Definition vect_entryT := Eval vm_compute in match tsl_mind_entry ([InductiveDecl "Coq.Init.Datatypes.nat" nat_decl], [(IndRef (mkInd "Coq.Init.Datatypes.nat" 0), tnatT); (ConstructRef (mkInd "Coq.Init.Datatypes.nat" 0) O, tOT); (ConstructRef (mkInd "Coq.Init.Datatypes.nat" 0) 1, tST)]) "Top.t" vect_entry *) *)
 (* (*                                              with | Success (_, [e]) => e | _ => todo end. *) *)
 (* (* (* Definition vect_entryT' := . *) *) *)
-(* (* Make Inductive vect_entryT. *) *)
+(* (* MetaCoq Unquote Inductive vect_entryT. *) *)
 
 (* (* (* Require Vectors.VectorDef. *) *) *)
 (* (* (* MetaCoq Quote Recursively Definition vect_prog := Vectors.VectorDef.t. *) *) *)
@@ -439,10 +439,10 @@ Check (consᵗ : forall (A : TYPE) (x : El A) (lH : ∃ l, listᵗ A l),
 (* (* (*       extract_mind_body_from_program "Coq.Vectors.VectorDef.t" vect_prog. *) *) *)
 (* (* (* Definition vect_entry := Eval compute in *) *) *)
 (* (* (*       (mind_body_to_entry (option_get todo_coq vect_decl)). *) *) *)
-(* (* (* (* Make Inductive vect_entry. *) *) *) *)
+(* (* (* (* MetaCoq Unquote Inductive vect_entry. *) *) *) *)
 (* (* (* Definition vect_entryT := Eval vm_compute in tsl_mind_entry [InductiveDecl "Coq.Init.Datatypes.nat" nat_decl] [(IndRef (mkInd "Coq.Init.Datatypes.nat" 0), tnatT); (ConstructRef (mkInd "Coq.Init.Datatypes.nat" 0) O, tOT); (ConstructRef (mkInd "Coq.Init.Datatypes.nat" 0) 1, tST)] "Coq.Vectors.VectorDef.t" vect_entry. *) *) *)
 (* (* (* (* Definition vect_entryT' := . *) *) *) *)
-(* (* (* Make Inductive vect_entryT. *) *) *)
+(* (* (* MetaCoq Unquote Inductive vect_entryT. *) *) *)
 (* (* Check tᵗ : forall (A : exists A : Set, A -> Set) (N : exists n, natᵗ n), t A.1 N.1 -> Set. *) *)
 
 
@@ -450,7 +450,7 @@ Check (consᵗ : forall (A : TYPE) (x : El A) (lH : ∃ l, listᵗ A l),
 (* (* Definition eq'_entry := Eval compute in *) *)
 (* (*       (mind_body_to_entry (option_get todo_coq eq'_decl)). *) *)
 (* (* Definition eq'_entryT := Eval vm_compute in tsl_mind_entry [] [] "Top.eq'" eq'_entry. *) *)
-(* (* Make Inductive eq'_entryT. *) *)
+(* (* MetaCoq Unquote Inductive eq'_entryT. *) *)
 (* (* Check eq'ᵗ : forall (A : exists A : Set, A -> Set) (x y : El A), eq' A.1 x.1 y.1 -> Prop. *) *)
 (* (* Check eq_refl'ᵗ : forall (A : exists A : Set, A -> Set) (x : El A), *) *)
 (* (*     eq'ᵗ A x x (eq_refl' A.1 x.1). *) *)
@@ -463,7 +463,7 @@ Check (consᵗ : forall (A : TYPE) (x : El A) (lH : ∃ l, listᵗ A l),
 (* (*          (option_get todo_coq *) *)
 (* (*                      (extract_mind_body_from_program "Top.list" list_prog))). *) *)
 (* (* Definition list_entryT := Eval vm_compute in tsl_mind_entry [] [] "Top.list" list_entry. *) *)
-(* (* Make Inductive list_entryT. *) *)
+(* (* MetaCoq Unquote Inductive list_entryT. *) *)
 (* (* Check listᵗ : forall (A : exists A : Set, A -> Set), list A.1 -> Type. *) *)
 (* (* Check nilᵗ : forall (A : exists A : Set, A -> Set), listᵗ A (nil A.1). *) *)
 (* (* Check consᵗ : forall (A : exists A : Set, A -> Set) (X : El A) (L : exists l : list A.1, listᵗ A l), *) *)
@@ -477,12 +477,12 @@ Check (consᵗ : forall (A : TYPE) (x : El A) (lH : ∃ l, listᵗ A l),
 (* (*          (option_get todo_coq *) *)
 (* (*                      (extract_mind_body_from_program "Coq.Arith.Even.even" even_prog) *) *)
 (* (*       )). *) *)
-(* (* (* Make Inductive even_entry. *) *) *)
+(* (* (* MetaCoq Unquote Inductive even_entry. *) *) *)
 (* (* (* Inductive even : nat -> Prop := *) *) *)
 (* (* (*     even_O : even 0 | even_S : forall n : nat, odd n -> even (S n) *) *) *)
 (* (* (*   with odd : nat -> Prop :=  odd_S : forall n : nat, even n -> odd (S n) *) *) *)
 (* (* Definition even_entryT := Eval vm_compute in tsl_mind_entry [InductiveDecl "Coq.Init.Datatypes.nat" nat_decl] [(IndRef (mkInd "Coq.Init.Datatypes.nat" 0), tnatT); (ConstructRef (mkInd "Coq.Init.Datatypes.nat" 0) O, tOT); (ConstructRef (mkInd "Coq.Init.Datatypes.nat" 0) 1, tST)] "Coq.Arith.Even.even" even_entry. *) *)
-(* (* Make Inductive even_entryT. *) *)
+(* (* MetaCoq Unquote Inductive even_entryT. *) *)
 (* (* Check evenᵗ : forall (N : exists n, natᵗ n), even N.1 -> Prop. *) *)
 (* (* Check oddᵗ : forall (N : exists n, natᵗ n), odd N.1 -> Prop. *) *)
 (* (* Check even_Sᵗ : forall (N : exists n, natᵗ n) (P : exists p, oddᵗ N p), *) *)

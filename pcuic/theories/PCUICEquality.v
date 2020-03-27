@@ -402,9 +402,6 @@ Proof.
   induction u in v, n, k, e, Rle |- * using term_forall_list_ind.
   all: dependent destruction e.
   all: try (cbn ; constructor ; try lih ; assumption).
-  - cbn. destruct (Nat.leb_spec0 k n0).
-    + constructor.
-    + constructor.
   - cbn. constructor. solve_all.
   - cbn. constructor ; try lih ; try assumption. solve_all.
   - cbn. constructor.

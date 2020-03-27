@@ -71,6 +71,9 @@ Tactic Notation "toProp" ident(H) :=
   | (_ <? _)%nat  = true => apply PeanoNat.Nat.ltb_lt in H
   | (_ <=? _)%nat = true => apply PeanoNat.Nat.leb_le in H
   | (_ =? _)%nat  = true => apply PeanoNat.Nat.eqb_eq in H
+  | (_ <? _)%nat  = false => apply PeanoNat.Nat.ltb_ge in H
+  | (_ <=? _)%nat = false => apply PeanoNat.Nat.leb_gt in H
+  | (_ =? _)%nat  = false => apply PeanoNat.Nat.eqb_neq in H
 
   | is_true (_ <? _)%Z => apply Z.ltb_lt in H
   | is_true (_ <=? _)%Z => apply Z.leb_le in H
@@ -78,6 +81,9 @@ Tactic Notation "toProp" ident(H) :=
   | (_ <? _)%Z  = true => apply Z.ltb_lt in H
   | (_ <=? _)%Z = true => apply Z.leb_le in H
   | (_ =? _)%Z  = true => apply Z.eqb_eq in H
+  | (_ <? _)%Z  = false => apply Z.ltb_ge in H
+  | (_ <=? _)%Z = false => apply Z.leb_gt in H
+  | (_ =? _)%Z  = false => apply Z.eqb_neq in H
      
   | is_true (_ && _) => apply andb_true_iff in H
   | (_ && _) = true  => apply andb_true_iff in H
@@ -96,6 +102,9 @@ Tactic Notation "toProp" :=
   | |- (_ <? _)%nat  = true => apply PeanoNat.Nat.ltb_lt
   | |- (_ <=? _)%nat = true => apply PeanoNat.Nat.leb_le
   | |- (_ =? _)%nat  = true => apply PeanoNat.Nat.eqb_eq
+  | |- ( _ <? _)%nat  = false => apply PeanoNat.Nat.ltb_ge
+  | |- (_ <=? _)%nat = false => apply PeanoNat.Nat.leb_gt
+  | |- (_ =? _)%nat  = false => apply PeanoNat.Nat.eqb_neq
 
   | |- is_true (_ <? _)%Z => apply Z.ltb_lt
   | |- is_true (_ <=? _)%Z => apply Z.leb_le
@@ -103,6 +112,9 @@ Tactic Notation "toProp" :=
   | |- (_ <? _)%Z  = true => apply Z.ltb_lt
   | |- (_ <=? _)%Z = true => apply Z.leb_le
   | |- (_ =? _)%Z  = true => apply Z.eqb_eq
+  | |- (_ <? _)%Z  = false => apply Z.ltb_ge
+  | |- (_ <=? _)%Z = false => apply Z.leb_gt
+  | |- (_ =? _)%Z  = false => apply Z.eqb_neq
 
   | |- is_true (_ && _) => apply andb_true_iff; split
   | |- (_ && _) = true => apply andb_true_iff; split

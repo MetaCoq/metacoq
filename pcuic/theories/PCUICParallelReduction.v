@@ -21,7 +21,7 @@ Proof.
   revert n k t.
   fix size_list 3.
   destruct t; simpl; rewrite ?list_size_map_hom; try lia.
-  elim leb_spec_Set; simpl; auto. intros. auto.
+  intros. auto.
   now rewrite !size_list.
   now rewrite !size_list.
   now rewrite !size_list.

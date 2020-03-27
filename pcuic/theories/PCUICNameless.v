@@ -674,7 +674,6 @@ Proof.
   induction t in n, k |- * using term_forall_list_ind.
   all: simpl.
   all: try congruence.
-  - destruct (_ <=? _). all: reflexivity.
   - f_equal. rename X into H; induction H.
     + reflexivity.
     + simpl. f_equal.

@@ -431,8 +431,6 @@ Lemma lift_destArity ctx t n k : Ast.wf t ->
 Proof.
   intros wf; revert ctx.
   induction wf in n, k |- * using term_wf_forall_list_ind; intros ctx; simpl; trivial.
-  destruct Nat.leb; reflexivity.
-
   specialize (IHwf0 n k (ctx,, vass n0 t)). rewrite lift_context_snoc in IHwf0.
   simpl in IHwf0. unfold lift_decl, map_decl in IHwf0. unfold vass. simpl in IHwf0. rewrite IHwf0.
   reflexivity.
@@ -443,7 +441,6 @@ Qed.
 Lemma lift_strip_outer_cast n k t : lift n k (strip_outer_cast t) = strip_outer_cast (lift n k t).
 Proof.
   induction t; simpl; try reflexivity.
-  destruct Nat.leb; reflexivity.
   now rewrite IHt1.
 Qed.
 
@@ -460,7 +457,6 @@ Proof.
   - simpl. simpl.
     destruct a as [na [body|] ty]; simpl; try congruence.
     destruct t; simpl; try congruence.
-    -- now destruct (Nat.leb (#|s| + k) n0).
     -- specialize (IHparams n k args (subst0 s body :: s) t3).
        rewrite <- Nat.add_succ_r. simpl in IHparams.
        rewrite Nat.add_succ_r.
@@ -468,7 +464,6 @@ Proof.
        rewrite <- IHparams.
        rewrite distr_lift_subst. reflexivity.
     -- destruct t; simpl; try congruence.
-       now destruct (Nat.leb (#|s| + k) n0).
        destruct args; simpl; try congruence.
        specialize (IHparams n k args (t :: s) t2). simpl in IHparams.
        replace (#|s| + k + S #|params|) with (S (#|s| + k + #|params|)) by lia.
@@ -552,7 +547,6 @@ Lemma lift_decompose_prod_assum_rec ctx t n k :
 Proof.
   induction t in n, k, ctx |- *; simpl;
     try rewrite -> Nat.sub_diag, Nat.add_0_r; try (eauto; congruence).
-  - now destruct (Nat.leb (#|ctx| + k) n0).
   - eapply IHt1.
   - specialize (IHt2 (ctx ,, vass na t1) n k).
     destruct decompose_prod_assum. rewrite IHt2. simpl.
@@ -570,8 +564,7 @@ Proof. apply lift_decompose_prod_assum_rec. Qed.
 
 Lemma decompose_app_lift n k t f a :
   decompose_app t = (f, a) -> decompose_app (lift n k t) = (lift n k f, map (lift n k) a).
-Proof. destruct t; simpl; intros [= <- <-]; try reflexivity.
-       simpl. now destruct (Nat.leb k n0). Qed.
+Proof. destruct t; simpl; intros [= <- <-]; try reflexivity. Qed.
 Hint Rewrite decompose_app_lift using auto : lift.
 
 Lemma lift_it_mkProd_or_LetIn n k ctx t :
@@ -710,7 +703,6 @@ Lemma lift_eq_term_upto_univ Re Rl n k T U :
 Proof.
   induction T in n, k, U, Rl |- * using term_forall_list_rect;
     inversion 1; simpl; try (now constructor).
-  - destruct (k <=? n0); constructor.
   - constructor. subst. clear - X X1.
     induction l in X, args', X1 |- *.
     + inversion X1; constructor.

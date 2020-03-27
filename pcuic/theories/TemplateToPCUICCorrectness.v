@@ -39,7 +39,6 @@ Lemma trans_lift n k t :
   trans (TL.lift n k t) = lift n k (trans t).
 Proof.
   revert k. induction t using Template.Induction.term_forall_list_ind; simpl; intros; try congruence.
-  - now destruct leb.
   - f_equal. rewrite !map_map_compose. solve_all.
   - rewrite lift_mkApps, IHt, map_map.
     f_equal. rewrite map_map; solve_all.

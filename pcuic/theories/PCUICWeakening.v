@@ -136,8 +136,6 @@ Lemma decompose_app_rec_lift n k t l :
   decompose_app_rec (lift n k t) (map (lift n k) l)  = (lift n k f, map (lift n k) a).
 Proof.
   induction t in k, l |- *; simpl; auto with pcuic.
-
-  - destruct Nat.leb; reflexivity.
   - specialize (IHt1 k (t2 :: l)).
     destruct decompose_app_rec. now rewrite IHt1.
 Qed.
@@ -415,7 +413,6 @@ Lemma lift_destArity ctx t n k :
 Proof.
   revert ctx.
   induction t in n, k |- * using term_forall_list_ind; intros ctx; simpl; trivial.
-  - destruct Nat.leb; reflexivity.
   - move: (IHt2 n k (ctx,, vass n0 t1)).
     now rewrite lift_context_snoc /= /lift_decl /map_decl /vass /= => ->.
   - move: (IHt3 n k (ctx,, vdef n0 t1 t2)).
@@ -443,15 +440,13 @@ Proof.
     (* clear t; intros t. *)
     destruct a as [na [body|] ty]; simpl; try congruence.
     + destruct t; simpl; try congruence.
-      * now destruct (Nat.leb (#|s| + k) n0).
-      * specialize (IHparams n k args (subst0 s body :: s) t3).
-        rewrite <- Nat.add_succ_r. simpl in IHparams.
-        rewrite Nat.add_succ_r.
-        replace (#|s| + k + S #|params|) with (S (#|s| + k + #|params|)) by lia.
-        rewrite <- IHparams.
-        rewrite distr_lift_subst. reflexivity.
+      specialize (IHparams n k args (subst0 s body :: s) t3).
+      rewrite <- Nat.add_succ_r. simpl in IHparams.
+      rewrite Nat.add_succ_r.
+      replace (#|s| + k + S #|params|) with (S (#|s| + k + #|params|)) by lia.
+      rewrite <- IHparams.
+      rewrite distr_lift_subst. reflexivity.
     + destruct t; simpl; try congruence.
-      1: now destruct (Nat.leb (#|s| + k) n0).
       destruct args; simpl; try congruence.
       specialize (IHparams n k args (t :: s) t2). simpl in IHparams.
       replace (#|s| + k + S #|params|) with (S (#|s| + k + #|params|)) by lia.
@@ -540,7 +535,6 @@ Lemma lift_decompose_prod_assum_rec ctx t n k :
 Proof.
   induction t in n, k, ctx |- *; simpl;
     try rewrite -> Nat.sub_diag, Nat.add_0_r; try (eauto; congruence).
-  - now destruct (Nat.leb (#|ctx| + k) n0).
   - specialize (IHt2 (ctx ,, vass na t1) n k).
     destruct decompose_prod_assum. rewrite IHt2. simpl.
     rewrite lift_context_snoc. reflexivity.

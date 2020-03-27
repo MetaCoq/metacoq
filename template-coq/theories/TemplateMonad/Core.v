@@ -39,7 +39,7 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=
 | tmCurrentModPath : unit -> TemplateMonad string
 
 (* Quoting and unquoting commands *)
-(* Similar to Quote Definition ... := ... *)
+(* Similar to MetaCoq Quote Definition ... := ... *)
 | tmQuote : forall {A:Type@{t}}, A  -> TemplateMonad Ast.term
 (* Similar to Quote Recursively Definition ... := ...*)
 | tmQuoteRec : forall {A:Type@{t}}, A  -> TemplateMonad program

@@ -5,7 +5,7 @@ Open Scope string.
 
 Set Printing Universes.
 
-Test Quote Type.
+MetaCoq Test Quote Type.
 Quote Definition a_random_univ := Type.
 (* 
 Fail Make Definition t1 := (tSort ([]; _)).
@@ -22,15 +22,15 @@ Make Definition t3 := (tSort (Universe.make (Level.Level "Top.400"))).
 Monomorphic Universe i j.
 
 Set Strict Unquote Universe Mode.
-Test Quote (Type@{j} -> Type@{i}).
+MetaCoq Test Quote (Type@{j} -> Type@{i}).
 Make Definition T'' := (tSort (Universe.make (Level.Level "j"))).
 Unset Strict Unquote Universe Mode.
 
 
 Polymorphic Definition pidentity {A : Type} (a : A) := a.
-Test Quote @pidentity.
+MetaCoq Test Quote @pidentity.
 Polymorphic Definition selfpid := pidentity (@pidentity).
-Test Quote @selfpid.
+MetaCoq Test Quote @selfpid.
 
 Constraint i < j.
 Make Definition yuyu := (tConst "selfpid" [Level.Level "j"; Level.Level "i"]).

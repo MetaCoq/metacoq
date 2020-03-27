@@ -10,8 +10,8 @@ Reserved Notation "'tsl_ty_param'".
 
 Unset Strict Unquote Universe Mode.
 
-Quote Definition tSigma := @sigT.
-Quote Definition tPair := @existT.
+MetaCoq Quote Definition tSigma := @sigT.
+MetaCoq Quote Definition tPair := @existT.
 Definition pair (typ1 typ2 t1 t2 : term) : term
   := tApp tPair [ typ1 ; typ2 ; t1 ; t2].
 Definition pack (t u : term) : term

@@ -18,8 +18,8 @@ Print Typing Flags.
 Unset Guard Checking.
 Require Import sigma.
 
-Quote Definition tUnit := unit.
-Quote Definition ttt := tt.
+MetaCoq Quote Definition tUnit := unit.
+MetaCoq Quote Definition ttt := tt.
 
 Fixpoint kproj (k : nat) (t : term) :=
   match k with

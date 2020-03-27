@@ -5,13 +5,13 @@ Import ListNotations MonadNotation.
 Local Open Scope string_scope.
 
 (** This is just printing **)
-Test Quote (fun x : nat => x).
+MetaCoq MetaCoq Test Quote (fun x : nat => x).
 
-Test Quote (fun (f : nat -> nat) (x : nat) => f x).
+MetaCoq MetaCoq Test Quote (fun (f : nat -> nat) (x : nat) => f x).
 
-Test Quote (let x := 2 in x).
+MetaCoq MetaCoq Test Quote (let x := 2 in x).
 
-Test Quote (let x := 2 in
+MetaCoq MetaCoq Test Quote (let x := 2 in
             match x with
               | 0 => 0
               | S n => n
@@ -25,14 +25,14 @@ Definition d : Ast.term.
 Defined.
 
 (** Another way **)
-Quote Definition d' := (fun x : nat => x).
+MetaCoq Quote Definition d' := (fun x : nat => x).
 
 (** To quote existing definitions **)
 Definition id_nat : nat -> nat := fun x => x.
 
-Quote Definition d'' := Eval compute in id_nat.
-Quote Definition d3 := Eval cbn in id_nat.
-Quote Definition d4 := Eval unfold id_nat in id_nat.
+MetaCoq Quote Definition d'' := Eval compute in id_nat.
+MetaCoq Quote Definition d3 := Eval cbn in id_nat.
+MetaCoq Quote Definition d4 := Eval unfold id_nat in id_nat.
 
 
 (** Fixpoints **)
@@ -60,11 +60,11 @@ with odd (a : nat) : bool :=
     | S a => even a
   end.
 
-Quote Definition add_syntax := Eval compute in add.
+MetaCoq Quote Definition add_syntax := Eval compute in add.
 
-Quote Definition eo_syntax := Eval compute in even.
+MetaCoq Quote Definition eo_syntax := Eval compute in even.
 
-Quote Definition add'_syntax := Eval compute in add'.
+MetaCoq Quote Definition add'_syntax := Eval compute in add'.
 
 (** Reflecting definitions **)
 Make Definition zero_from_syntax := (Ast.tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 0 []).
@@ -94,7 +94,7 @@ Record prod' A B : Type :=
 Arguments fst' {A B} _.
 Arguments snd' {A B} _.
 
-Test Quote ((pair' _ _ true 4).(snd')).
+MetaCoq MetaCoq Test Quote ((pair' _ _ true 4).(snd')).
 Make Definition x := (tProj (mkInd "prod'" 0, 2, 1)
    (tApp (tConstruct (mkInd "prod'" 0) 0 nil)
       [tInd (mkInd "Coq.Init.Datatypes.bool" 0) nil;
@@ -347,9 +347,9 @@ Fail Run TemplateProgram (tmFail "foo" >>= tmQuoteInductive).
 (** Universes *)
 
 Set Printing Universes.
-Test Quote Type.
-Test Quote Set.
-Test Quote Prop.
+MetaCoq MetaCoq Test Quote Type.
+MetaCoq MetaCoq Test Quote Set.
+MetaCoq MetaCoq Test Quote Prop.
 
 Inductive T : Type :=
   | toto : Type -> T.
@@ -368,7 +368,7 @@ CoInductive streamn : Set :=
 
 CoFixpoint ones : streamn := scons 1 ones.
 
-Quote Definition ones_syntax := Eval compute in ones.
+MetaCoq Quote Definition ones_syntax := Eval compute in ones.
 
 Make Definition ones' := ones_syntax.
 

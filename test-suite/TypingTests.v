@@ -139,7 +139,7 @@ Module Test5.
 
   (* (* Yay! Typechecking an actually non-trivial term. (173s) *) *)
 
-  (* Make Definition inferred_type := ltac:(interp_infer ast). *)
+  (* MetaCoq Unquote Definition inferred_type := ltac:(interp_infer ast). *)
   (* Definition inferred_type' := Eval cbv delta in inferred_type. *)
   (* Print inferred_type'. *)
   (* Check convertible ltac:(term_type term) inferred_type. *)

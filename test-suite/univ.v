@@ -8,22 +8,22 @@ Set Printing Universes.
 MetaCoq Test Quote Type.
 MetaCoq Quote Definition a_random_univ := Type.
 (* 
-Fail Make Definition t1 := (tSort ([]; _)).
-Fail Make Definition t1 := (tSort (Universe.make (Level.Level "Top.400"))).
+Fail MetaCoq Unquote Definition t1 := (tSort ([]; _)).
+Fail MetaCoq Unquote Definition t1 := (tSort (Universe.make (Level.Level "Top.400"))).
 
 Monomorphic Definition T := Type.
-(* Make Definition t1 := (tSort (Universe.make (Level.Level "Top.5"))). *)
+(* MetaCoq Unquote Definition t1 := (tSort (Universe.make (Level.Level "Top.5"))). *)
 
 Unset Strict Unquote Universe Mode.
-Make Definition t2 := (tSort fresh_universe).
-Make Definition t3 := (tSort (Universe.make (Level.Level "Top.400"))).
+MetaCoq Unquote Definition t2 := (tSort fresh_universe).
+MetaCoq Unquote Definition t3 := (tSort (Universe.make (Level.Level "Top.400"))).
 
 
 Monomorphic Universe i j.
 
 Set Strict Unquote Universe Mode.
 MetaCoq Test Quote (Type@{j} -> Type@{i}).
-Make Definition T'' := (tSort (Universe.make (Level.Level "j"))).
+MetaCoq Unquote Definition T'' := (tSort (Universe.make (Level.Level "j"))).
 Unset Strict Unquote Universe Mode.
 
 
@@ -33,7 +33,7 @@ Polymorphic Definition selfpid := pidentity (@pidentity).
 MetaCoq Test Quote @selfpid.
 
 Constraint i < j.
-Make Definition yuyu := (tConst "selfpid" [Level.Level "j"; Level.Level "i"]).
+MetaCoq Unquote Definition yuyu := (tConst "selfpid" [Level.Level "j"; Level.Level "i"]).
 
 
 MetaCoq Quote Definition t0 := nat.
@@ -87,7 +87,7 @@ End to.
 
 Definition f@{i j k} := fun (E:Type@{i}) => Type@{max(i,j)}.
 MetaCoq Quote Definition qf := Eval cbv in f.
-Make Definition uqf := qf.
+MetaCoq Unquote Definition uqf := qf.
 
 
 Inductive foo (A : Type) : Type :=
@@ -167,9 +167,9 @@ Unset Printing Universes.
 MetaCoq Quote Definition qtest := Eval compute in (fun (T : Type@{i}) (T2 : Type@{j}) => T -> T2).
 Print qtest.
 
-Make Definition bla := qtest.
+MetaCoq Unquote Definition bla := qtest.
 Unset Strict Unquote Universe Mode.
-Make Definition bla' := (tLambda (nNamed "T") (tSort (Universe.make (Level.Level "Top.46"))) (tLambda (nNamed "T2") (tSort (Universe.make (Level.Level "Top.477"))) (tProd nAnon (tRel 1) (tRel 1)))).
+MetaCoq Unquote Definition bla' := (tLambda (nNamed "T") (tSort (Universe.make (Level.Level "Top.46"))) (tLambda (nNamed "T2") (tSort (Universe.make (Level.Level "Top.477"))) (tProd nAnon (tRel 1) (tRel 1)))).
 
 Set Printing Universes.
 Print bla.
@@ -196,7 +196,7 @@ Compute (@t Type@{i} Type@{j}).
 MetaCoq Quote Definition qt := Eval compute in t.
 Print qt.
 
-Make Definition t' := qt.
+MetaCoq Unquote Definition t' := qt.
 
 Polymorphic Definition Funtp@{i} (A B: Type@{i}) := A->B.
 
@@ -204,7 +204,7 @@ Polymorphic Definition F@{i} := Type@{i}.
 
 MetaCoq Quote Definition qT := Eval compute in F.
 Require Import List. Import ListNotations.
-Fail Make Definition T'2 := (tSort [(Level.Var 1, false)]).
+Fail MetaCoq Unquote Definition T'2 := (tSort [(Level.Var 1, false)]).
 
 MetaCoq Quote Recursively Definition qT' := F.
 
@@ -229,5 +229,5 @@ Check (eq_refl : infer' (empty_ext (fst ff)) [] (snd ff) =
 Open Scope string_scope.
 Check (eq_refl : infer [] init_graph [] ((tProd (nNamed "A") (tSort (Universe.make (Level.Level _))) (tProd (nNamed "B") (tSort (Universe.make (Level.Level _))) (tProd nAnon (tRel 1) (tProd nAnon (tRel 1) (tRel 3)))))) = Checked (tSort _)).
 
-(* Make Definition t4 := (tSort (Universe.make (fresh_level))). *)
+(* MetaCoq Unquote Definition t4 := (tSort (Universe.make (fresh_level))). *)
 *)

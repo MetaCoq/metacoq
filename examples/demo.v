@@ -67,15 +67,15 @@ MetaCoq MetaCoq Quote Definition eo_syntax := Eval compute in even.
 MetaCoq MetaCoq Quote Definition add'_syntax := Eval compute in add'.
 
 (** Reflecting definitions **)
-Make Definition zero_from_syntax := (Ast.tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 0 []).
+MetaCoq Unquote Definition zero_from_syntax := (Ast.tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 0 []).
 
 (* the function unquote_kn in reify.ml4 is not yet implemented *)
-Make Definition add_from_syntax := add_syntax.
+MetaCoq Unquote Definition add_from_syntax := add_syntax.
 
-Make Definition eo_from_syntax := eo_syntax.
+MetaCoq Unquote Definition eo_from_syntax := eo_syntax.
 Print eo_from_syntax.
 
-Make Definition two_from_syntax := (Ast.tApp (Ast.tConstruct (BasicAst.mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
+MetaCoq Unquote Definition two_from_syntax := (Ast.tApp (Ast.tConstruct (BasicAst.mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
    (Ast.tApp (Ast.tConstruct (BasicAst.mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
       (Ast.tConstruct (BasicAst.mkInd "Coq.Init.Datatypes.nat" 0) 0 nil :: nil) :: nil)).
 
@@ -83,7 +83,7 @@ MetaCoq Quote Recursively Definition plus_syntax := plus.
 
 MetaCoq Quote Recursively Definition mult_syntax := mult.
 
-Make Definition d''_from_syntax := d''.
+MetaCoq Unquote Definition d''_from_syntax := d''.
 
 
 (** Primitive Projections. *)
@@ -95,7 +95,7 @@ Arguments fst' {A B} _.
 Arguments snd' {A B} _.
 
 MetaCoq MetaCoq Test Quote ((pair' _ _ true 4).(snd')).
-Make Definition x := (tProj (mkInd "prod'" 0, 2, 1)
+MetaCoq Unquote Definition x := (tProj (mkInd "prod'" 0, 2, 1)
    (tApp (tConstruct (mkInd "prod'" 0) 0 nil)
       [tInd (mkInd "Coq.Init.Datatypes.bool" 0) nil;
       tInd (mkInd "Coq.Init.Datatypes.nat" 0) nil;
@@ -356,11 +356,11 @@ Inductive T : Type :=
 MetaCoq Quote Recursively Definition TT := T.
 
 Unset Strict Unquote Universe Mode.
-Make Definition t := (tSort (Universe.make (Level.Level "Top.20000"))).
-Make Definition t' := (tSort fresh_universe).
-Make Definition myProp := (tSort (Universe.make Level.lProp)).
-Make Definition myProp' := (tSort Universe.type0m).
-Make Definition mySet := (tSort (Universe.make Level.lSet)).
+MetaCoq Unquote Definition t := (tSort (Universe.make (Level.Level "Top.20000"))).
+MetaCoq Unquote Definition t' := (tSort fresh_universe).
+MetaCoq Unquote Definition myProp := (tSort (Universe.make Level.lProp)).
+MetaCoq Unquote Definition myProp' := (tSort Universe.type0m).
+MetaCoq Unquote Definition mySet := (tSort (Universe.make Level.lSet)).
 
 (** Cofixpoints *)
 CoInductive streamn : Set :=
@@ -370,7 +370,7 @@ CoFixpoint ones : streamn := scons 1 ones.
 
 MetaCoq MetaCoq Quote Definition ones_syntax := Eval compute in ones.
 
-Make Definition ones' := ones_syntax.
+MetaCoq Unquote Definition ones' := ones_syntax.
 
 Check eq_refl : ones = ones'.
 

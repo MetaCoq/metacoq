@@ -1,5 +1,5 @@
 (** Check reduction *)
-Quote Recursively Definition ast := term.
+MetaCoq Quote Recursively Definition ast := term.
 Make Definition normal_form := ltac:(interp_red ast).
 
 Definition normal_form' := Eval vm_compute in normal_form.

@@ -21,7 +21,7 @@ Require Import MetaCoq.SafeChecker.SafeTemplateChecker.
 Definition bool_list := List.map negb (cons true (cons false nil)).
 Set Printing Universes.
 (* Universe issues: undeclared universes from sections *)
-(* Quote Recursively Definition boolq := bool_list. *)
+(* MetaCoq Quote Recursively Definition boolq := bool_list. *)
 MetaCoq SafeCheck bool_list.
 MetaCoq CoqCheck bool_list.
 

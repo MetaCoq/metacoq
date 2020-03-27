@@ -9,4 +9,4 @@ Fixpoint fibrec (n:nat) (fs:list nat) {struct n} : nat :=
   end.
 Definition fib n := fibrec n (cons 0 (cons 1 nil)).
 MetaCoq Quote Definition qfib := fib.  (** works **)
-Quote Recursively Definition qfib_syntax := fib.
+MetaCoq Quote Recursively Definition qfib_syntax := fib.

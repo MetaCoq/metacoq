@@ -79,9 +79,9 @@ Make Definition two_from_syntax := (Ast.tApp (Ast.tConstruct (BasicAst.mkInd "Co
    (Ast.tApp (Ast.tConstruct (BasicAst.mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
       (Ast.tConstruct (BasicAst.mkInd "Coq.Init.Datatypes.nat" 0) 0 nil :: nil) :: nil)).
 
-Quote Recursively Definition plus_syntax := plus.
+MetaCoq Quote Recursively Definition plus_syntax := plus.
 
-Quote Recursively Definition mult_syntax := mult.
+MetaCoq Quote Recursively Definition mult_syntax := mult.
 
 Make Definition d''_from_syntax := d''.
 
@@ -353,7 +353,7 @@ MetaCoq MetaCoq Test Quote Prop.
 
 Inductive T : Type :=
   | toto : Type -> T.
-Quote Recursively Definition TT := T.
+MetaCoq Quote Recursively Definition TT := T.
 
 Unset Strict Unquote Universe Mode.
 Make Definition t := (tSort (Universe.make (Level.Level "Top.20000"))).

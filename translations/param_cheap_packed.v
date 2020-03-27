@@ -411,7 +411,7 @@ Check (consᵗ : forall (A : TYPE) (x : El A) (lH : ∃ l, listᵗ A l),
 (* Check (Oᵗ : natᵗ O). *)
 (* Check (Sᵗ : forall (N : exists n, natᵗ n), natᵗ (S N.1)). *)
 
-(* Quote Recursively Definition bool_prog := bool. *)
+(* MetaCoq Quote Recursively Definition bool_prog := bool. *)
 (* Definition bool_entry := Eval compute in *)
 (*       (mind_body_to_entry (option_get todo (extract_mind_body_from_program "Coq.Init.Datatypes.bool" bool_prog) )). *)
 (* Definition bool_entryT := Eval vm_compute in match tsl_mind_entry ([], []) "Coq.Init.Datatypes.bool" bool_entry with | Success (_, [e]) => e | _ => todo end. *)
@@ -420,7 +420,7 @@ Check (consᵗ : forall (A : TYPE) (x : El A) (lH : ∃ l, listᵗ A l),
 
 (* (* Inductive t (A : Set) : nat -> Set := *) *)
 (* (*   vnil : t A 0 | vcons : A -> forall n : nat, t A n -> t A (S n). *) *)
-(* (* Quote Recursively Definition vect_prog := t. *) *)
+(* (* MetaCoq Quote Recursively Definition vect_prog := t. *) *)
 (* (* Definition vect_decl := Eval compute in *) *)
 (* (*       extract_mind_body_from_program "Top.t" vect_prog. *) *)
 (* (* Definition vect_entry := Eval compute in *) *)
@@ -434,7 +434,7 @@ Check (consᵗ : forall (A : TYPE) (x : El A) (lH : ∃ l, listᵗ A l),
 (* (* Make Inductive vect_entryT. *) *)
 
 (* (* (* Require Vectors.VectorDef. *) *) *)
-(* (* (* Quote Recursively Definition vect_prog := Vectors.VectorDef.t. *) *) *)
+(* (* (* MetaCoq Quote Recursively Definition vect_prog := Vectors.VectorDef.t. *) *) *)
 (* (* (* Definition vect_decl := Eval compute in *) *) *)
 (* (* (*       extract_mind_body_from_program "Coq.Vectors.VectorDef.t" vect_prog. *) *) *)
 (* (* (* Definition vect_entry := Eval compute in *) *) *)
@@ -457,7 +457,7 @@ Check (consᵗ : forall (A : TYPE) (x : El A) (lH : ∃ l, listᵗ A l),
 
 (* (* Inductive list (A : Set) : Set := *) *)
 (* (*     nil : list A | cons : A -> list A -> list A. *) *)
-(* (* Quote Recursively Definition list_prog := @list. *) *)
+(* (* MetaCoq Quote Recursively Definition list_prog := @list. *) *)
 (* (* Definition list_entry := Eval compute in  *) *)
 (* (*       (mind_body_to_entry *) *)
 (* (*          (option_get todo_coq *) *)
@@ -471,7 +471,7 @@ Check (consᵗ : forall (A : TYPE) (x : El A) (lH : ∃ l, listᵗ A l),
 
 
 (* (* Require Import Even. *) *)
-(* (* Quote Recursively Definition even_prog := even. *) *)
+(* (* MetaCoq Quote Recursively Definition even_prog := even. *) *)
 (* (* Definition even_entry := Eval compute in  *) *)
 (* (*       (mind_body_to_entry *) *)
 (* (*          (option_get todo_coq *) *)

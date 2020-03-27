@@ -95,7 +95,7 @@ Inductive foo (A : Type) : Type :=
 (* Print Universes.*)
 (* Top.1 <= Coq.Init.Datatypes.44 *)
 
-Quote Recursively Definition qfoo := foo.
+MetaCoq Quote Recursively Definition qfoo := foo.
 Compute qfoo.
 
 Polymorphic Inductive foo2 (A : Type) : Type :=
@@ -107,7 +107,7 @@ Definition foo2_instance := foo2.
 (* Print Universes.*)
 (* Top.9 <= Coq.Init.Datatypes.44 *)
 
-Quote Recursively Definition qfoo2 := foo2.
+MetaCoq Quote Recursively Definition qfoo2 := foo2.
 Compute qfoo2.
 (* (Level.Var 0, Le, Level.Level "Coq.Init.Datatypes.44") *)
 
@@ -118,7 +118,7 @@ Polymorphic Inductive foo3@{i j k l} (A : Type@{i}) (B : Type@{j}) : Type@{k} :=
               i <= l
               i <= Coq.Init.Datatypes.44
               j <= l *)
-Quote Recursively Definition qfoo3 := foo3.
+MetaCoq Quote Recursively Definition qfoo3 := foo3.
 Compute qfoo3.
 
 Require Import MetaCoq.Template.monad_utils. Import MonadNotation.
@@ -129,10 +129,10 @@ Run TemplateProgram (tmQuoteInductive "foo2" >>= tmPrint).
 Run TemplateProgram (tmQuoteInductive "foo3" >>= tmPrint).
 
 Polymorphic Definition TT@{i j} : Type@{j} := Type@{i}.
-Quote Recursively Definition qTT := TT.
+MetaCoq Quote Recursively Definition qTT := TT.
 
 Polymorphic Inductive TT2@{i j} : Type@{j} := tt2 : Type@{i} -> TT2.
-Quote Recursively Definition qTT2 := TT2.
+MetaCoq Quote Recursively Definition qTT2 := TT2.
 
 Require Import MetaCoq.Template.utils.
 Require Import List. Import ListNotations.
@@ -206,7 +206,7 @@ MetaCoq Quote Definition qT := Eval compute in F.
 Require Import List. Import ListNotations.
 Fail Make Definition T'2 := (tSort [(Level.Var 1, false)]).
 
-Quote Recursively Definition qT' := F.
+MetaCoq Quote Recursively Definition qT' := F.
 
 MetaCoq Quote Definition qFuntp := Eval compute in Funtp.
 Print qFuntp.
@@ -220,7 +220,7 @@ Monomorphic Universe i1 j1.
 Definition f' := (forall (A:Type@{i1}) (B: Type@{j1}), A -> B -> A).
 (* : Type@{i1+1, j1+1} *)
 
-Quote Recursively Definition ff := f'.
+MetaCoq Quote Recursively Definition ff := f'.
 
 Require Import MetaCoq.Checker.All.
 Compute (infer' (empty_ext (fst ff)) [] (snd ff)).

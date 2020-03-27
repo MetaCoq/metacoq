@@ -41,7 +41,7 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=
 (* Quoting and unquoting commands *)
 (* Similar to MetaCoq MetaCoq Quote Definition ... := ... *)
 | tmQuote : forall {A:Type@{t}}, A  -> TemplateMonad Ast.term
-(* Similar to Quote Recursively Definition ... := ...*)
+(* Similar to MetaCoq Quote Recursively Definition ... := ...*)
 | tmQuoteRec : forall {A:Type@{t}}, A  -> TemplateMonad program
 (* Quote the body of a definition or inductive. Its name need not be fully qualified *)
 | tmQuoteInductive : qualid -> TemplateMonad mutual_inductive_body

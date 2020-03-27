@@ -187,7 +187,7 @@ Module Environment (T : Term).
 
   (** *** Programs
 
-    A set of declarations and a term, as produced by [Quote Recursively]. *)
+    A set of declarations and a term, as produced by [MetaCoq Quote Recursively]. *)
 
   Definition program : Type := global_env * term.
 

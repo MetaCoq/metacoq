@@ -33,7 +33,7 @@ Eval cbv in extract idtype.
 MetaCoq Quote Recursively Definition types := (nat, bool, list, List.length, sig, fun A B => prod A B, gt).
 Definition types_env := fst types.
 
-MetaCoq MetaCoq Quote Definition len := Eval compute in (fun (A : Set) (l : list A) => List.length l).
+MetaCoq Quote Definition len := Eval compute in (fun (A : Set) (l : list A) => List.length l).
 
 Eval cbv in extract_term (types_env, len).
 

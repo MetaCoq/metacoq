@@ -50,6 +50,8 @@ src/equalities.ml
 src/equalities.mli
 src/extractable.ml
 src/extractable.mli
+src/hexadecimal.ml
+src/hexadecimal.mli
 src/list0.ml
 src/list0.mli
 src/logic0.ml
@@ -58,6 +60,8 @@ src/mSetWeakList.ml
 src/mSetWeakList.mli
 src/nat0.ml
 src/nat0.mli
+src/numeral.ml
+src/numeral.mli
 src/orderedType0.ml
 src/orderedType0.mli
 src/orders.ml

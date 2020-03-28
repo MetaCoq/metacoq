@@ -2,6 +2,8 @@ Datatypes
 Bool
 Equalities
 Decimal
+Hexadecimal
+Numeral
 Nat0
 List0
 PeanoNat

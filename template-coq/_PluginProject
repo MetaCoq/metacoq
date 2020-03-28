@@ -50,6 +50,8 @@ gen-src/equalities.ml
 gen-src/equalities.mli
 gen-src/extractable.ml
 gen-src/extractable.mli
+gen-src/hexadecimal.ml
+gen-src/hexadecimal.mli
 #gen-src/induction.ml
 #gen-src/induction.mli
 gen-src/liftSubst.ml
@@ -82,6 +84,8 @@ gen-src/mSetProperties.ml
 gen-src/mSetProperties.mli
 gen-src/nat0.ml
 gen-src/nat0.mli
+gen-src/numeral.ml
+gen-src/numeral.mli
 gen-src/orderedType0.ml
 gen-src/orderedType0.mli
 gen-src/ordersFacts.ml

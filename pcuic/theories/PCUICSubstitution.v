@@ -1824,6 +1824,17 @@ Proof.
   simpl in X. now apply X.
 Qed.
 
+Lemma substitution_cumul_let {cf:checker_flags} Σ Γ na t ty u u' : wf Σ.1 ->
+  Σ ;;; Γ ,, vdef na t ty |- u <= u' ->
+  Σ ;;; Γ |- subst10 t u <= subst10 t u'.
+Proof.
+  move=> wfΣ Hu.
+  pose proof (substitution_untyped_cumul Σ Γ [vdef na t ty] [] [t] u u' wfΣ).
+  forward X.
+  { rewrite - {1}(subst_empty 0 t). constructor. constructor. }
+  simpl in X. now apply X.
+Qed.
+
 (** The cumulativity relation is substitutive, yay! *)
 
 Lemma substitution_cumul `{cf : checker_flags} (Σ : global_env_ext) Γ Γ' Γ'' s M N :

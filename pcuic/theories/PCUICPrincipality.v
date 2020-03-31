@@ -326,17 +326,47 @@ Section Principality.
     red Σ.1 Γ (tLetIn na d ty b) C ->
     (∑ na' d' ty' b',
      (red Σ.1 Γ C (tLetIn na' d' ty' b') *
-      (Σ ;;; Γ |- d = d') *
-      (Σ ;;; Γ |- ty = ty') *
-      (Σ ;;; (Γ ,, vdef na d ty) |- b <= b'))) +
+      red Σ.1 Γ d d' *
+      red Σ.1 Γ ty ty' *
+      red Σ.1 (Γ ,, vdef na d ty) b b')) +
     (red Σ.1 Γ (subst10 d b) C)%type.
   Proof.
-    intros wfHlet.
+    intros Hlet.
     (* eapply cumul_alt in Hlet. *)
     (* destruct Hlet as [v [v' [[redv redv'] leqvv']]]. *)
     (* eapply cumul_alt. *)
     (* exists v, v'. repeat split; auto. *)
   Admitted.
+(*
+  Lemma invert_red_letin_subst Γ C na d ty b :
+  red Σ.1 Γ (tLetIn na d ty b) C ->
+    ∑ d' ty' b', red Σ.1 Γ (tLetIn na d ty b) (tLetIn na d' ty' b') *
+    red Σ.1 Γ d d' *
+    red Σ.1 Γ ty ty' *
+    red Σ.1 (Γ ,, vdef na d ty) b b' *
+    red Σ.1 Γ C (subst10 d' b').
+Proof.
+  intros Hlet.
+  eapply invert_red_letin in Hlet as [[na' [d' [ty' [b' red]]]]|red] => //.
+  - exists d', ty', b'. intuition auto.
+    * eapply red_letin_alt; auto.
+    * etransitivity; eauto.
+      eapply red1_red; constructor.
+  - exists d, ty, b; intuition auto.
+  eapply red_alt in Hlet.
+  eapply Relation_Properties.clos_rt_rt1n in Hlet.
+  depind Hlet.
+  - exists d, ty, b. repeat split; auto.
+    eapply red1_red. constructor.
+  - 
+    eapply Relation_Properties.clos_rt1n_rt in Hlet.
+  depind Hlet.*)
+
+    (* destruct Hlet as [v [v' [[redv redv'] leqvv']]]. *)
+  (* eapply cumul_alt. *)
+  (* exists v, v'. repeat split; auto. *)
+  (*Admitted. *)
+
 
   Lemma invert_cumul_letin_l Γ C na d ty b :
     Σ ;;; Γ |- tLetIn na d ty b <= C ->
@@ -370,6 +400,30 @@ Section Principality.
   (*   eapply *)
 
   (* eapply red_ *)
+
+
+  Lemma invert_cumul_letin_r Γ C na d ty b :
+    Σ ;;; Γ |- C <= tLetIn na d ty b ->
+               (* (∑ na' d' ty' b', *)
+               (*  (red Σ Γ C (tLetIn na' d' ty' b') * *)
+               (*   (Σ ;;; Γ |- d = d') * *)
+               (*   (Σ ;;; Γ |- ty = ty') * *)
+                                                          (*   (Σ ;;; (Γ ,, vdef na d ty) |- b <= b'))) + *)
+               (Σ ;;; Γ |- C <= subst10 d b).
+  Proof.
+    intros Hlet.
+    eapply cumul_alt in Hlet.
+    destruct Hlet as [v [v' [[redv redv'] leqvv']]].
+    eapply invert_red_letin in redv' as [[na' [d' [ty' [b' red]]]]|red] => //.
+    - destruct red as [[[redv' redd] redty] convb]. 
+      eapply fill_le in leqvv'; eauto.
+      destruct leqvv' as [t'' [u'' [[redl redr] eq]]].
+      eapply cumul_alt. exists t'', u''. repeat split; auto.
+      * now transitivity v.
+      * admit.
+    - eapply cumul_alt.
+      exists v, v'. repeat split; auto.
+  Admitted.
 
   Lemma app_mkApps :
     forall u v t l,

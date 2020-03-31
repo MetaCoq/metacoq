@@ -72,14 +72,14 @@ let tmEval (rd : reduction_strategy) (t : term) : term tm =
 
 let tmDefinition (nm : ident) ?poly:(poly=false) ?opaque:(opaque=false) (typ : term option) (body : term) : kername tm =
   fun env evm success _fail ->
-    let evm, def = DeclareDef.prepare_definition ~allow_evars:true ~opaque 
-        ~poly ~types:(Option.map EConstr.of_constr typ) evm 
-        ~udecl:UState.default_univ_decl ~body:(EConstr.of_constr body) in
-    let n =
-      DeclareDef.declare_definition ~kind:(Decls.(IsDefinition Definition)) 
+    let n = DeclareDef.declare_definition
         ~name:nm ~scope:(DeclareDef.Global Declare.ImportDefaultBehavior)
-        ~ubind:Names.Id.Map.empty def ~impargs:[]
-    in success (Global.env ()) evm (Names.Constant.canonical (Globnames.destConstRef n))
+        ~opaque ~kind:(Decls.(IsDefinition Definition)) ~impargs:[]
+        ~poly ~types:(Option.map EConstr.of_constr typ)
+        ~udecl:UState.default_univ_decl ~body:(EConstr.of_constr body) evm in
+    let env = Global.env () in
+    let evm = Evd.from_env env in
+    success env evm (Names.Constant.canonical (Globnames.destConstRef n))
 
 let tmAxiom (nm : ident) ?poly:(poly=false) (typ : term) : kername tm =
   fun env evm success _fail ->
@@ -103,8 +103,8 @@ let tmLemma (nm : ident) ?poly:(poly=false)(ty : term) : kername tm =
     let evm, (c, _) =
       try Constrintern.interp_casted_constr_evars_impls ~program_mode:true env evm hole (EConstr.of_constr ty)
       with e -> Feedback.msg_debug (Pp.str "interp_casted raised"); raise e in
-    Obligations.check_evars env evm;
-    let obls, _, c, cty = Obligations.eterm_obligations env nm evm 0 c (EConstr.of_constr ty) in
+    RetrieveObl.check_evars env evm;
+    let obls, _, c, cty = RetrieveObl.retrieve_obligations env nm evm 0 c (EConstr.of_constr ty) in
     (* let evm = Evd.minimize_universes evm in *)
     let ctx = Evd.evar_universe_context evm in
     let hook = DeclareDef.Hook.make (fun { DeclareDef.Hook.S.dref = gr } ->

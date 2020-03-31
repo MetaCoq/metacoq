@@ -284,11 +284,13 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
       let name = unquote_ident (reduce_all env evm name) in
       let opaque = unquote_bool (reduce_all env evm opaque) in
       let evm, typ = (match unquote_option s with Some s -> let red = unquote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
-      let evm, def = DeclareDef.prepare_definition ~opaque ~allow_evars:true ~poly evm
-        ~udecl:UState.default_univ_decl ~types:(Some (EConstr.of_constr typ)) ~body:(EConstr.of_constr body) in
-      let n = DeclareDef.declare_definition ~kind:(Decls.IsDefinition Decls.Definition)
-         ~scope:(DeclareDef.Global Declare.ImportDefaultBehavior) ~name ~ubind:Names.Id.Map.empty ~impargs:[] def in
+      let n = DeclareDef.declare_definition
+          ~name ~kind:(Decls.IsDefinition Decls.Definition) ~opaque ~poly
+          ~scope:(DeclareDef.Global Declare.ImportDefaultBehavior) ~impargs:[]
+          ~udecl:UState.default_univ_decl ~types:(Some (EConstr.of_constr typ)) ~body:(EConstr.of_constr body) evm in
       let env = Global.env () in
+      (* Careful, universes in evm were modified for the declaration of def *)
+      let evm = Evd.from_env env in
       let evm, c = Evarutil.new_global evm n in
       k (env, evm, EConstr.to_constr evm c)
   | TmDefinitionTerm (opaque, name, typ, body) ->
@@ -339,14 +341,14 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
     let hole = CAst.make (Constrexpr.CHole (None, Namegen.IntroAnonymous, None)) in
     let evm, (c, _) = Constrintern.interp_casted_constr_evars_impls ~program_mode:true env evm hole (EConstr.of_constr typ) in
     let ident = unquote_ident name in
-    Obligations.check_evars env evm;
-       let obls, _, c, cty = Obligations.eterm_obligations env ident evm 0 c (EConstr.of_constr typ) in
+    RetrieveObl.check_evars env evm;
+       let obls, _, c, cty = RetrieveObl.retrieve_obligations env ident evm 0 c (EConstr.of_constr typ) in
        (* let evm = Evd.minimize_universes evm in *)
        let uctx = Evd.evar_universe_context evm in
        let hook = DeclareDef.Hook.make (fun { DeclareDef.Hook.S.dref = gr } ->
           let env = Global.env () in
           let evm = Evd.from_env env in
-          let evm, t = Evd.fresh_global env evm gr in 
+          let evm, t = Evd.fresh_global env evm gr in
           k (env, evm, EConstr.to_constr evm t)) in  (* todo better *)
     ignore (Obligations.add_definition ~name:ident ~term:c cty ~uctx ~poly ~kind ~hook obls)
 

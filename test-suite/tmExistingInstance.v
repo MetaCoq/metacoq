@@ -1,11 +1,11 @@
 Require Import MetaCoq.Template.All.
 Require Export String List.
 
-Fail Run TemplateProgram (tmExistingInstance "I").
+Fail MetaCoq Run (tmExistingInstance "I").
 
 Existing Class True.
 
-Run TemplateProgram (tmExistingInstance "I").
+MetaCoq Run (tmExistingInstance "I").
 Print Instances True.
 
 

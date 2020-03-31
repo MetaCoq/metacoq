@@ -10,7 +10,7 @@ Environment is well-formed and Ind(Coq.Init.Datatypes.nat,0,[]) has type: Sort([
 MetaCoq SafeCheck 3.
 MetaCoq SafeCheck (3 + 1).
 
-Quote Definition foo := (3 + 1).
+MetaCoq Quote Definition foo := (3 + 1).
 
 MetaCoq SafeCheck plus.
 MetaCoq CoqCheck Nat.add.
@@ -21,7 +21,7 @@ Require Import MetaCoq.SafeChecker.SafeTemplateChecker.
 Definition bool_list := List.map negb (cons true (cons false nil)).
 Set Printing Universes.
 (* Universe issues: undeclared universes from sections *)
-(* Quote Recursively Definition boolq := bool_list. *)
+(* MetaCoq Quote Recursively Definition boolq := bool_list. *)
 MetaCoq SafeCheck bool_list.
 MetaCoq CoqCheck bool_list.
 

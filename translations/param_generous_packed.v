@@ -10,8 +10,8 @@ Reserved Notation "'tsl_ty_param'".
 
 Unset Strict Unquote Universe Mode.
 
-Quote Definition tSigma := @sigT.
-Quote Definition tPair := @existT.
+MetaCoq Quote Definition tSigma := @sigT.
+MetaCoq Quote Definition tPair := @existT.
 Definition pair (typ1 typ2 t1 t2 : term) : term
   := tApp tPair [ typ1 ; typ2 ; t1 ; t2].
 Definition pack (t u : term) : term
@@ -148,13 +148,13 @@ Notation "'El' A" := (@sigT A.1 A.2) (at level 20).
 
 
 Definition Ty := Type.
-Run TemplateProgram (Translate emptyTC "Ty").
+MetaCoq Run (Translate emptyTC "Ty").
 Unset Universe Checking.
 Check Tyᵗ : El Tyᵗ.
 
 
 
-Run TemplateProgram (TC <- ImplementExisting emptyTC "sigT" ;;
+MetaCoq Run (TC <- ImplementExisting emptyTC "sigT" ;;
                      tmDefinition "TC" TC).
 Next Obligation.
   unshelve econstructor.
@@ -165,7 +165,7 @@ Next Obligation.
   - cbn; intros A B. refine (fun x => B.2 x.1 x.2).
 Defined.
 
-Run TemplateProgram (TC <- ImplementExisting TC "existT" ;;
+MetaCoq Run (TC <- ImplementExisting TC "existT" ;;
                      tmDefinition "TC'" TC).
 Next Obligation.
   unshelve econstructor.
@@ -176,7 +176,7 @@ Next Obligation.
   - cbn; intros A B x y. exact y.2.
 Defined.
 
-Time Run TemplateProgram (TC <- ImplementExisting TC' "sigT_ind" ;;
+Time MetaCoq Run (TC <- ImplementExisting TC' "sigT_ind" ;;
                           tmDefinition "TC''" TC).
 Next Obligation.
   unshelve econstructor.
@@ -188,7 +188,7 @@ Next Obligation.
 Defined.
 
 
-Run TemplateProgram (TC <- ImplementExisting TC'' "paths" ;;
+MetaCoq Run (TC <- ImplementExisting TC'' "paths" ;;
                      tmDefinition "TC3" TC).
 Next Obligation.
   unshelve econstructor.
@@ -197,13 +197,13 @@ Next Obligation.
 Defined.
 
 
-Run TemplateProgram (TC <- ImplementExisting TC3 "idpath" ;;
+MetaCoq Run (TC <- ImplementExisting TC3 "idpath" ;;
                      tmDefinition "TC4" TC).
 Next Obligation.
   unshelve econstructor; reflexivity.
 Defined.
 
-Run TemplateProgram (TC <- ImplementExisting TC4 "paths_ind" ;;
+MetaCoq Run (TC <- ImplementExisting TC4 "paths_ind" ;;
                      tmDefinition "TC5" TC).
 Next Obligation.
   unshelve econstructor.
@@ -217,7 +217,7 @@ Defined.
 Definition Funext :=
   forall A (B : A -> Type) (f g : forall x, B x), (forall x, paths (f x) (g x)) -> paths f g.
 
-Run TemplateProgram (Translate TC5 "Funext").
+MetaCoq Run (Translate TC5 "Funext").
 
 Definition Funext_fullFunext : Funext -> forall A B f g, IsEquiv (@apD10 A B f g).
 Admitted.
@@ -238,7 +238,7 @@ Defined.
 
 
 Definition FALSE := forall X, X.
-Run TemplateProgram (Translate emptyTC "FALSE").
+MetaCoq Run (Translate emptyTC "FALSE").
 
 Proposition consistency_preservation : El FALSEᵗ -> FALSE.
   compute.
@@ -249,7 +249,7 @@ Defined.
 
 Definition UIP := forall A (x y : A) (p q : paths x y), paths p q.
 
-Run TemplateProgram (Translate TC5 "UIP").
+MetaCoq Run (Translate TC5 "UIP").
 
 Proposition uip_preservation : UIP -> El UIPᵗ.
   simpl. intro H. unshelve econstructor.
@@ -263,7 +263,7 @@ Definition equiv (A B : Type) : Type :=
   exists (f : A -> B) (g : B -> A),
     (forall x, paths (g (f x)) x) × (forall x, paths (f (g x)) x).
 
-Run TemplateProgram (TC <- ImplementExisting TC5 "False" ;;
+MetaCoq Run (TC <- ImplementExisting TC5 "False" ;;
                      tmDefinition "TC6" TC).
 Next Obligation.
   unshelve econstructor.
@@ -271,12 +271,12 @@ Next Obligation.
   - intros _. exact False.
 Defined.
 
-Run TemplateProgram (TC <- Translate TC6 "equiv" ;;
+MetaCoq Run (TC <- Translate TC6 "equiv" ;;
                      tmDefinition "TC7" TC).
 
 (* 244s (~ 4 min) to execute *)
 (* Time
-Run TemplateProgram (H <- Implement TC7 "notUnivalence"
+MetaCoq Run (H <- Implement TC7 "notUnivalence"
                      (exists A B, (equiv A B) × exists P, P A × ((P B) -> False)) ;;
                      tmPrint "done").
 Check "proof".

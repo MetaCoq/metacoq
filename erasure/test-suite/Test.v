@@ -24,21 +24,21 @@ Definition extract_term `{F:utils.Fuel} (p:Template.Ast.program) : option E.term
   | None => None
   end.
 
-Quote Recursively Definition id := (fun (A : Type) (a : A) => a).
+MetaCoq Quote Recursively Definition id := (fun (A : Type) (a : A) => a).
 Eval cbv in extract id.
 
-Quote Recursively Definition idtype := (fun (A : Prop) => A).
+MetaCoq Quote Recursively Definition idtype := (fun (A : Prop) => A).
 Eval cbv in extract idtype.
 
-Quote Recursively Definition types := (nat, bool, list, List.length, sig, fun A B => prod A B, gt).
+MetaCoq Quote Recursively Definition types := (nat, bool, list, List.length, sig, fun A B => prod A B, gt).
 Definition types_env := fst types.
 
-Quote Definition len := Eval compute in (fun (A : Set) (l : list A) => List.length l).
+MetaCoq Quote Definition len := Eval compute in (fun (A : Set) (l : list A) => List.length l).
 
 Eval cbv in extract_term (types_env, len).
 
 Program Definition exn : { x : nat | x > 0 } := 1.
-Quote Recursively Definition exn_ast := exn.
+MetaCoq Quote Recursively Definition exn_ast := exn.
 Eval cbv in extract exn_ast.
 
 Require Import Coq.Arith.Wf_nat.
@@ -51,9 +51,9 @@ Proof.
   - apply lt_wf.
 Defined.
 
-Quote Recursively Definition copy := provedCopy.
+MetaCoq Quote Recursively Definition copy := provedCopy.
 
-(* Quote Recursively Definition copy_types := (nat, bool, list, List.length, sig, fun A B => prod A B, gt, le, Acc, ex, eq). *)
+(* MetaCoq Quote Recursively Definition copy_types := (nat, bool, list, List.length, sig, fun A B => prod A B, gt, le, Acc, ex, eq). *)
 (* Definition copy_types_env := fst copy_types. *)
 Require Import ETyping.
 
@@ -63,7 +63,7 @@ Function unprovedCopy (n:nat) {wf lt n} :=
   match n with 0 => 0 | S k => S (unprovedCopy k) end.
 Proof. Admitted.
 
-Quote Recursively Definition admitcopy := unprovedCopy.
+MetaCoq Quote Recursively Definition admitcopy := unprovedCopy.
 
 Definition extract_admitcopy := Eval native_compute in extract admitcopy.
 
@@ -200,7 +200,7 @@ Definition print_def (extract : option E.program) c :=
 Eval cbv in print_def extract_copy "Top.provedCopy_terminate".
 Eval cbv in print_def extract_copy "Coq.Init.Logic.and_rect".
 
-Quote Recursively Definition fixf := Fix_F.
+MetaCoq Quote Recursively Definition fixf := Fix_F.
 
 Definition extract_fix := Eval native_compute in extract fixf.
 

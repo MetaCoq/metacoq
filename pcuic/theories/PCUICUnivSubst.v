@@ -50,8 +50,6 @@ Proof.
   induction c in k |- * using term_forall_list_ind; simpl; auto;
     rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
     try solve [f_equal; eauto; solve_all; eauto].
-
-  elim (Nat.leb k n0); reflexivity.
 Qed.
 
 Lemma subst_instance_constr_mkApps u f a :

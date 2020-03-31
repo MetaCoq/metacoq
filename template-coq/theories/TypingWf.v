@@ -297,7 +297,6 @@ Proof.
   - destruct l; simpl in *; congruence.
   - destruct x; simpl in *; intuition eauto.
     destruct dbody; simpl in *; try discriminate. destruct Nat.leb; auto.
-    reflexivity.
 Qed.
 
 Lemma declared_projection_wf {cf:checker_flags}:

@@ -293,12 +293,147 @@ Proof.
   now eapply invert_cumul_letin_l in c.
 Qed. *)
 
- 
+Lemma cumul_red_r_inv {cf : checker_flags} (Σ : global_env_ext) :
+  wf Σ ->
+  forall (Γ : context) T U U',
+  Σ ;;; Γ |- T <= U ->
+  red Σ.1 Γ U U' ->
+  Σ ;;; Γ |- T <= U'.
+Proof.
+  intros wfΣ * cumtu red.
+  apply cumul_alt in cumtu.
+  destruct cumtu as [v [v' [[redl redr] eq]]].
+  apply cumul_alt.
+  destruct (red_confluence wfΣ redr red) as [nf [nfl nfr]].
+  eapply (fill_le _ wfΣ) in eq. 3:eapply nfl. 2:eapply reflexivity.
+  destruct eq as [t'' [u'' [[l r] eq]]].
+  exists t''. exists u''. repeat split; auto.
+  now transitivity v.
+  now transitivity nf.
+Qed.
+
 (** We can easily invert in case there are only assumptions: not so 
     easy to formulate with LetIn's which have non-local effects.
     Luckily, most kernel functions just expand lets when needed. *)
-(*
-  Lemma inversion_it_mkProd_or_LetIn {cf:checker_flags} Σ {wfΣ : wf Σ.1}:
+Lemma invert_cumul_letin_both {cf : checker_flags} (Σ : global_env_ext) :
+    wf Σ ->
+    forall (Γ : context) (c : term) (na : name) (d ty b : term),
+    Σ;;; Γ |- tLetIn na d ty b <= tLetIn na d ty c -> Σ;;; Γ ,, vdef na d ty |- b <= c.
+Proof.
+  intros.
+  eapply invert_cumul_letin_l in X0 => //.
+  eapply cumul_red_r_inv in X0. 2:auto.
+  2:{ eapply red1_red. constructor. }
+  eapply cumul_alt in X0 as [v [v' [[redl redr] eq]]].
+Admitted.
+
+(* Definition context_subst Γ := 
+  map_option_out (map decl_body Γ).
+
+Lemma context_subst_length Γ s : 
+  context_subst Γ = Some s ->  #|Γ| = #|s|.
+Proof.
+  unfold context_subst.
+  induction Γ in s |- *.  simpl. move=> [] <-. reflexivity.
+  simpl. destruct a as [na [?|] ?] => /=.
+  destruct map_option_out; try discriminate.
+  move=> [<-]. simpl. f_equal. now apply IHΓ.
+  discriminate.
+Qed.
+
+Definition option_mult {A} (o : option (option A)) : option A :=
+  match o with
+  | None => None
+  | Some None => None
+  | Some (Some x) => Some x
+  end.
+
+Lemma context_subst_nth_error Γ s n b : 
+  context_subst Γ = Some s ->  
+  option_map decl_body (nth_error Γ n) = Some b ->
+  nth_error s n = b.
+Proof.
+  induction n in Γ, s |- *.
+  - intros.
+    unfold context_subst in H. simpl in *.
+    destruct Γ. simpl in *. discriminate.
+    simpl in *. injection H0. intros <-. destruct (decl_body c).
+    destruct (map_option_out (map decl_body Γ)). noconf H. reflexivity.
+    discriminate. discriminate.
+  - intros. destruct Γ. simpl in *. discriminate.
+    simpl in *. destruct s. apply context_subst_length in H. simpl in H. lia.
+    eapply IHn; eauto.
+    unfold context_subst in H. simpl in H.
+    destruct (decl_body c). simpl in H. 
+    destruct (map_option_out (map decl_body Γ)) eqn:Heq. noconf H. auto.
+    discriminate. discriminate.
+Qed.
+
+Lemma context_subst_nth_error' Γ s n b : 
+  context_subst Γ = Some s ->  
+  nth_error s n = Some b ->
+  option_map decl_body (nth_error Γ n) = Some (Some b).
+Proof.
+  induction n in Γ, s, b |- *.
+  - intros.
+    unfold context_subst in H. simpl in *.
+    destruct Γ. simpl in *. noconf H. simpl in H0. subst. discriminate.
+    simpl in *. destruct (decl_body c).
+    destruct (map_option_out (map decl_body Γ)). noconf H. simpl in H0. noconf H0. reflexivity.
+    discriminate. discriminate.
+  - intros. destruct Γ. simpl in *.
+    unfold context_subst in H. simpl in H. noconf H. discriminate.
+    simpl.
+    unfold context_subst in H. simpl in H.
+    destruct (decl_body c). simpl in H. 
+    destruct (map_option_out (map decl_body Γ)) eqn:Heq. noconf H.
+    eapply IHn; eauto.
+    discriminate. discriminate.
+Qed. *)
+
+Lemma app_context_push Γ Δ Δ' d : (Γ ,,, Δ ,,, Δ') ,, d = (Γ ,,, Δ ,,, (Δ' ,, d)).
+Proof.
+  reflexivity.
+Qed.
+
+Lemma red_expand_let {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ.1} Γ na b ty Δ t :
+  red Σ.1 (Γ ,,, [vdef na b ty] ,,, Δ) t (lift 1 #|Δ| (subst1 b #|Δ| t)).
+Proof.
+  revert Δ.
+  induction t using term_forall_list_ind; intros Δ; try solve [simpl; constructor].
+  - simpl. unfold subst1. simpl.
+    destruct (leb_spec_Set #|Δ| n).
+    case_eq (nth_error [b] (n - #|Δ|)).
+    * intros t eq.
+      destruct (n - #|Δ|) eqn:Heq. simpl in eq. noconf eq.
+      rewrite simpl_lift; try lia.
+      simpl. eapply red1_red. assert (n = #|Δ|) by lia. subst n. eapply red_rel.
+      unfold option_map. rewrite nth_error_app_ge. lia. rewrite Nat.sub_diag. simpl. reflexivity.
+      simpl in eq. destruct n0; discriminate.
+    * intros Hnth.
+      eapply nth_error_None in Hnth. simpl in Hnth.
+      simpl. destruct (leb_spec_Set #|Δ| (n - 1)).
+      assert(S (n - 1) = n) by lia. rewrite H. constructor.
+      lia.
+    * simpl.
+      destruct (leb_spec_Set #|Δ| n).
+      lia. constructor.
+  - eapply red_evar. eapply All2_map_right, All2_map_right. apply All_All2_refl.
+    eapply All_impl; eauto.
+  - simpl lift. eapply red_prod => //; eauto. rewrite app_context_push.
+    eapply IHt2.
+  - simpl lift. eapply red_abs => //; eauto. rewrite app_context_push.
+    eapply IHt2.
+  - simpl lift. eapply red_letin => //; eauto. rewrite app_context_push.
+    eapply IHt3.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+Admitted.
+
+Lemma inversion_it_mkProd_or_LetIn {cf:checker_flags} Σ {wfΣ : wf Σ.1}:
  forall {Γ Δ t s},
   Σ ;;; Γ |- it_mkProd_or_LetIn Δ t : tSort s ->
   Σ ;;; Γ ,,, Δ |- t : tSort s.
@@ -314,46 +449,16 @@ induction Δ; intros.
   left. eexists _, _; intuition eauto using typing_wf_local.
   eapply invert_cumul_letin_l in c; auto.
   eapply invert_cumul_sort_r in c as [u' [redu' cumu']].
-  transitivity (tSort u'). 2:do 2 constructor; auto. all:auto.
-  eapply red_cumul.
-  transitivity (x {0 := b}).
-  eapply red1_red. 
+  transitivity (tSort u'). 2:do 2 constructor; auto.
+  eapply cumul_alt.
+  exists (tSort u'), (tSort u'). repeat split; auto.
+  2:now constructor.
+  transitivity (lift0 1 (x {0 := b})).
+  eapply (red_expand_let _ _ _ _ []).
+  change (tSort u') with (lift0 1 (tSort u')).
+  eapply (weakening_red _ (Γ ,,, Δ) [] [_]); auto.
 
   specialize (IHΔ _ _ _ h).
-   
-  eapply inversion_Prod in IHΔ as [? [? [? [? ]]]].
-  eapply type_Cumul; eauto.
-  left. eexists _, _; intuition eauto using typing_wf_local.
-  do 2 constructor.
-  eapply cumul_Sort_inv in c.
-  transitivity (Universe.sort_of_product x x0); auto using leq_universe_product.
-  auto.
-Qed.*)
-
-Lemma inversion_it_mkProd_or_LetIn {cf:checker_flags} Σ {wfΣ : wf Σ.1}:
- forall {Γ Δ t s},
-  assumption_context Δ ->
-  Σ ;;; Γ |- it_mkProd_or_LetIn Δ t : tSort s ->
-  Σ ;;; Γ ,,, Δ |- t : tSort s.
-Proof.
-intros Γ Δ t s HΔ h. revert HΔ Γ t s h.
-induction Δ; intros.
-- apply h.
-- destruct a as [na [b|] ty]; simpl in *;
-  rewrite /mkProd_or_LetIn /= in h.
-  elimtype False. depelim HΔ. simpl in H; noconf H.
-  forward IHΔ. depelim HΔ. now simpl in H; noconf H.
-  clear HΔ.
-  specialize (IHΔ _ _ _ h).
-  (* eapply inversion_LetIn in IHΔ as [s' [? [? [? [? ?]]]]].
-  eapply type_Cumul. eapply t2.
-  left. eexists _, _; intuition eauto using typing_wf_local.
-  eapply invert_cumul_letin_l in c; auto.
-  eapply invert_cumul_sort_r in c as [u' [redu' cumu']].
-  transitivity (tSort u'). 2:do 2 constructor; auto. all:auto.
-  eapply red_cumul. admit.
-  specialize (IHΔ _ _ _ h).
-   *)
   eapply inversion_Prod in IHΔ as [? [? [? [? ]]]].
   eapply type_Cumul; eauto.
   left. eexists _, _; intuition eauto using typing_wf_local.

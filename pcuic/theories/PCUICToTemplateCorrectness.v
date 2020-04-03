@@ -9,7 +9,6 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICUnivSubst PCUICTyping PCUICGeneration.
 
 From MetaCoq.Template Require Import config utils Ast TypingWf WfInv UnivSubst LiftSubst.
-From MetaCoq.Checker Require Import Generation Substitution.
 
 
 Require Import PCUICToTemplate.
@@ -790,6 +789,85 @@ Qed.
 
 
 
+(* from Checker Generation to avoid dependencies *)
+
+Derive Signature for typing.
+
+Lemma invert_type_App `{checker_flags} Σ Γ f u T :
+  TT.typing Σ Γ (tApp f u) T ->
+  { T' : term & { U' & ((TT.typing Σ Γ f T') * TT.typing_spine Σ Γ T' u U' *
+                        (isApp f = false) * (u <> []) *
+                        (TT.cumul Σ Γ U' T))%type } }.
+Proof.
+  intros Hty.
+  dependent induction Hty.
+  - exists t_ty, t'. intuition.
+  - edestruct IHHty as [T' [U' [H' H'']]].
+    1: reflexivity.
+    exists T', U'. split; auto.
+    eapply TT.cumul_trans; eauto.
+Qed.
+
+Lemma type_mkApp `{checker_flags} Σ Γ f u T T' :
+  TT.typing Σ Γ f T ->
+  TT.typing_spine Σ Γ T [u] T' ->
+  TT.typing Σ Γ (mkApp f u) T'.
+Proof.
+  intros Hf Hu. inv Hu.
+  simpl. destruct (isApp f) eqn:Happ.
+  destruct f; try discriminate. simpl.
+  eapply invert_type_App in Hf.
+  destruct Hf as (T'' & U' & (((Hf & HU) & Happf) & Hunil) & Hcumul).
+  eapply TT.type_App; eauto. intro. destruct args; discriminate.
+  inv X2. clear Happ Hf Hunil.
+  induction HU. simpl. econstructor; eauto.
+  eapply TT.cumul_trans; eauto.
+  econstructor. econstructor. eapply t. eauto. eauto.
+  apply IHHU; eauto.
+  rewrite -> AstUtils.mkApp_tApp; eauto.
+  econstructor; eauto. congruence.
+  econstructor; eauto.
+Qed.
+
+
+(* from Checker Substitution *)
+
+
+
+Lemma eq_term_upto_univ_refl Re Rle :
+  RelationClasses.Reflexive Re ->
+  RelationClasses.Reflexive Rle ->
+  forall t, TT.eq_term_upto_univ Re Rle t t.
+Proof.
+  intros hRe hRle.
+  induction t in Rle, hRle |- * using Induction.term_forall_list_rect; simpl;
+    try constructor; try apply Forall_Forall2; try apply All_All2 ; try easy;
+      try now (try apply Forall_All ; apply Forall_True).
+  - eapply All_All2. 1: eassumption.
+    intros. easy.
+  - eapply All_All2. 1: eassumption.
+    intros. easy.
+  - destruct p. constructor; try easy.
+    eapply All_All2. 1: eassumption.
+    intros. split ; auto.
+  - eapply All_All2. 1: eassumption.
+    intros x [? ?]. repeat split ; auto.
+  - eapply All_All2. 1: eassumption.
+    intros x [? ?]. repeat split ; auto.
+Qed.
+
+Lemma leq_term_refl `{checker_flags} φ t : TT.leq_term φ t t.
+Proof.
+  apply eq_term_upto_univ_refl.
+  - intro; apply eq_universe_refl.
+  - intro; apply leq_universe_refl.
+Qed.
+
+
+
+
+
+
 Theorem template_to_pcuic (Σ : P.global_env_ext) Γ t T :
   PT.wf Σ ->
   PT.typing Σ Γ t T ->
@@ -818,7 +896,7 @@ in All (for wf_local assumptions)
   - eapply TT.type_Prod;assumption.
   - eapply TT.type_Lambda;eassumption.
   - eapply TT.type_LetIn;eassumption.
-  - eapply Generation.type_mkApp.
+  - eapply type_mkApp.
     + eassumption.
     + econstructor.
       3: eassumption.

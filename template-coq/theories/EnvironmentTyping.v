@@ -231,8 +231,9 @@ Module Type Typing (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E).
   Notation " Σ ;;; Γ |- t : T " :=
     (typing Σ Γ t T) (at level 50, Γ, t, T at next level) : type_scope.
 
-  Parameter (smash_context : context -> context -> context).
-
+  Parameter Inline smash_context : context -> context -> context.
+  Parameter Inline lift_context : nat -> nat -> context -> context.
+  Parameter Inline subst_telescope : list term -> nat -> context -> context.
   Notation wf_local Σ Γ := (All_local_env (lift_typing typing Σ) Γ).
 
 End Typing.
@@ -252,15 +253,29 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
     Context {cf: checker_flags}.
     Context (P : global_env_ext -> context -> term -> option term -> Type).
 
+    Definition on_context Σ ctx :=
+      All_local_env (P Σ) ctx.
+
     (** For well-formedness of inductive declarations we need a way to check that a assumptions
       of a given context is typable in a sort [u]. We also force well-typing of the let-ins
       in any universe to imply wf_local. *)
-      Fixpoint type_local_ctx Σ (Γ Δ : context) (u : Universe.t) : Type :=
+    Fixpoint type_local_ctx Σ (Γ Δ : context) (u : Universe.t) : Type :=
       match Δ with
       | [] => True
       | {| decl_body := None; decl_type := t |} :: Δ => (type_local_ctx Σ Γ Δ u * (P Σ (Γ ,,, Δ) t (Some (tSort u))))
       | {| decl_body := Some b; decl_type := t |} :: Δ => (type_local_ctx Σ Γ Δ u * (P Σ (Γ ,,, Δ) t None * P Σ (Γ ,,, Δ) b (Some t)))
       end.    
+
+    (* Delta telescope *)
+    Inductive ctx_inst Σ (Γ : context) : list term -> context -> Type :=
+    | ctx_inst_nil : ctx_inst Σ Γ [] []
+    | ctx_inst_ass na t i inst Δ : 
+      P Σ Γ i (Some t) ->
+      ctx_inst Σ Γ inst (subst_telescope [i] 0 Δ) ->
+      ctx_inst Σ Γ (i :: inst) (vass na t :: Δ)
+    | ctx_inst_def na b t inst Δ :
+      ctx_inst Σ Γ inst (subst_telescope [b] 0 Δ) ->
+      ctx_inst Σ Γ inst (vdef na b t :: Δ).
 
     Implicit Types (mdecl : mutual_inductive_body) (idecl : one_inductive_body) (cdecl : ident * term * nat).
 
@@ -292,22 +307,32 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
           (non-lets) parameters and arguments *)
       }.
     Arguments cshape_args {mdecl i idecl ctype cargs}.
+    Arguments cshape_args_length {mdecl i idecl ctype cargs}.
+    Arguments cshape_indices {mdecl i idecl ctype cargs}.
+    Arguments cshape_eq {mdecl i idecl ctype cargs}.
 
     Open Scope type_scope.
 
-    Definition on_constructor Σ mdecl i idecl cdecl ind_ctor_sort :=
+    Record on_constructor Σ mdecl i idecl ind_indices cdecl ind_ctor_sort := {
       (* cdecl.1 fresh ?? *)
-      let ctype := cdecl.1.2 in
-      let cargs := cdecl.2 in
-      (* FIXME: there is some redundancy with the type_local_ctx *)
-      on_type Σ (arities_context mdecl.(ind_bodies)) ctype *
-      { cs : constructor_shape mdecl i idecl ctype cargs &
-            type_local_ctx Σ
-                      (arities_context mdecl.(ind_bodies) ,,, mdecl.(ind_params))
-                      cs.(cshape_args) ind_ctor_sort }.
+      cshape : constructor_shape mdecl i idecl cdecl.1.2 cdecl.2;            
+      on_ctype : on_type Σ (arities_context mdecl.(ind_bodies)) cdecl.1.2;
+      on_cargs : (* FIXME: there is some redundancy with the type_local_ctx *)
+        type_local_ctx Σ (arities_context mdecl.(ind_bodies) ,,, mdecl.(ind_params))
+                      cshape.(cshape_args) ind_ctor_sort;
+      on_cindices : 
+        ctx_inst Σ (arities_context mdecl.(ind_bodies) ,,, mdecl.(ind_params) ,,, cshape.(cshape_args))
+                      cshape.(cshape_indices)
+                      (List.rev (lift_context #|cshape.(cshape_args)| 0 ind_indices))
+        }.
 
-    Definition on_constructors Σ mdecl i idecl :=
-      All2 (on_constructor Σ mdecl i idecl).
+    Arguments cshape {Σ mdecl i idecl ind_indices cdecl ind_ctor_sort}.
+    Arguments on_ctype {Σ mdecl i idecl ind_indices cdecl ind_ctor_sort}.
+    Arguments on_cargs {Σ mdecl i idecl ind_indices cdecl ind_ctor_sort}.
+    Arguments on_cindices {Σ mdecl i idecl ind_indices cdecl ind_ctor_sort}.
+
+    Definition on_constructors Σ mdecl i idecl ind_indices :=
+      All2 (on_constructor Σ mdecl i idecl ind_indices).
 
     (** Projections have their parameter context smashed to avoid costly computations
         during type-checking. *)
@@ -386,7 +411,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
 
         (** Constructors are well-typed *)
         onConstructors :
-          on_constructors Σ mdecl i idecl idecl.(ind_ctors) ind_ctors_sort;
+          on_constructors Σ mdecl i idecl ind_indices idecl.(ind_ctors) ind_ctors_sort;
 
         (** Projections, if any, are well-typed *)
         onProjections :
@@ -399,9 +424,6 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
           check_ind_sorts Σ mdecl.(ind_params) idecl.(ind_kelim)
                           ind_indices ind_ctors_sort ind_sort;
       }.
-
-    Definition on_context Σ ctx :=
-      All_local_env (P Σ) ctx.
 
     (** We allow empty blocks for simplicity
         (no well-typed reference to them can be made). *)
@@ -477,6 +499,14 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
   End GlobalMaps.
 
   Arguments cshape_args {mdecl i idecl ctype cargs}.
+  Arguments cshape_args_length {mdecl i idecl ctype cargs}.
+  Arguments cshape_indices {mdecl i idecl ctype cargs}.
+  Arguments cshape_eq {mdecl i idecl ctype cargs}.
+  Arguments cshape {P Σ mdecl i idecl ind_indices cdecl ind_ctor_sort}.
+  Arguments on_ctype {P Σ mdecl i idecl ind_indices cdecl ind_ctor_sort}.
+  Arguments on_cargs {P Σ mdecl i idecl ind_indices cdecl ind_ctor_sort}.
+  Arguments on_cindices {P Σ mdecl i idecl ind_indices cdecl ind_ctor_sort}.
+
   Arguments ind_indices {_ P Σ mind mdecl i idecl}.
   Arguments ind_sort {_ P Σ mind mdecl i idecl}.
   Arguments ind_arity_eq {_ P Σ mind mdecl i idecl}.

@@ -312,7 +312,7 @@ Proof.
       pose proof X0.(onConstructors) as XX.
       eapply All2_nth_error_Some in Hcdecl; eauto.
       destruct Hcdecl as [? [? ?]]. cbn in *.
-      destruct o as [[s Hs] _]. rewrite -> andb_and in Hs.
+      destruct o.(on_ctype) as [s Hs]. rewrite -> andb_and in Hs.
       apply proj1 in Hs.
       unfold arities_context in Hs.
       rewrite rev_map_length in Hs.

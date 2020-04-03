@@ -272,7 +272,7 @@ Proof.
     rewrite H0 in Heq'. rewrite Heq in Heq'. revert Heq'; intros [= <- <-].
     f_equal; auto.
     + eapply All_map_id. eapply All2_All_left; tea.
-      intros [[x p] n'] y [[s Hty] [cs Hargs]].
+      intros [[x p] n'] y [cs [s Hty] Hargs _].
       unfold on_pi2; cbn; f_equal; f_equal.
       simpl in Hty.
       eapply typed_liftn. 4:eapply Hty.

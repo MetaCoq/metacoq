@@ -67,6 +67,11 @@ Fixpoint lift n k t : term :=
 
 Notation lift0 n := (lift n 0).
 
+Definition lift_decl n k d := (map_decl (lift n k) d).
+
+Definition lift_context n k (Γ : context) : context :=
+  fold_context (fun k' => lift n (k' + k)) Γ.
+
 (** Parallel substitution: it assumes that all terms in the substitution live in the
     same context *)
 
@@ -104,6 +109,9 @@ Notation subst0 t := (subst t 0).
 Definition subst1 t k u := subst [t] k u.
 Notation subst10 t := (subst1 t 0).
 Notation "M { j := N }" := (subst1 N j M) (at level 10, right associativity).
+
+Definition subst_telescope s k Γ :=
+  mapi (fun k' x => map_decl (subst s (k + k')) x) Γ.
 
 Fixpoint closedn k (t : term) : bool :=
   match t with
@@ -1543,13 +1551,6 @@ Proof.
   destruct mfix; constructor.
   split. apply auxt. apply auxt. apply auxm.
 Defined.
-
-
-Definition lift_decl n k d := (map_decl (lift n k) d).
-
-Definition lift_context n k (Γ : context) : context :=
-  fold_context (fun k' => lift n (k' + k)) Γ.
-
 
 Lemma lift_decl0 k d : map_decl (lift 0 k) d = d.
 Proof.

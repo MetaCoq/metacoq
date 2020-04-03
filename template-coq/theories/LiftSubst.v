@@ -40,6 +40,11 @@ Fixpoint lift n k t : term :=
 Notation lift0 n := (lift n 0).
 Definition up := lift 1 0.
 
+Definition lift_decl n k d := (map_decl (lift n k) d).
+
+Definition lift_context n k (Γ : context) : context :=
+  fold_context (fun k' => lift n (k' + k)) Γ.
+
 (** Parallel substitution: it assumes that all terms in the substitution live in the
     same context *)
 
@@ -78,6 +83,21 @@ Notation subst0 t := (subst t 0).
 Definition subst1 t k u := subst [t] k u.
 Notation subst10 t := (subst1 t 0).
 Notation "M { j := N }" := (subst1 N j M) (at level 10, right associativity).
+
+Definition subst_context s k (Γ : context) : context :=
+  fold_context (fun k' => subst s (k' + k)) Γ.
+
+Lemma subst_context_length s n Γ : #|subst_context s n Γ| = #|Γ|.
+Proof.
+  induction Γ as [|[na [body|] ty] tl] in Γ |- *; cbn; eauto.
+  - rewrite !List.rev_length, !mapi_rec_length, !app_length, !List.rev_length. simpl.
+    lia.
+  - rewrite !List.rev_length, !mapi_rec_length, !app_length, !List.rev_length. simpl.
+    lia.
+Qed.
+
+Definition subst_telescope s k (Γ : context) : context :=
+  mapi (fun k' decl => map_decl (subst s (k' + k)) decl) Γ.
 
 Fixpoint closedn k (t : term) : bool :=
   match t with

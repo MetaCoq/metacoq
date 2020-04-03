@@ -33,11 +33,6 @@ Proof.
   now apply (lift_closed n) in H1.
 Qed.
 
-Definition lift_decl n k d := (map_decl (lift n k) d).
-
-Definition lift_context n k (Γ : context) : context :=
-  fold_context (fun k' => lift n (k' + k)) Γ.
-
 Lemma lift_decl0 k d : map_decl (lift 0 k) d = d.
 Proof.
   destruct d; destruct decl_body; unfold map_decl; simpl;
@@ -299,7 +294,7 @@ Proof.
     rewrite H0 in Heq'. rewrite Heq in Heq'. revert Heq'; intros [= <- <-].
     f_equal; auto.
     eapply All_map_id. eapply All2_All_left; tea.
-    intros [[x p] n'] y [[s Hty] [cs Hargs]].
+    intros [[x p] n'] y [cs [s Hty] Hargs _].
     unfold on_pi2; cbn; f_equal; f_equal.
     simpl in Hty.
     eapply typed_liftn. 4:eapply Hty. eauto. apply typing_wf_local in Hty; eauto. lia.

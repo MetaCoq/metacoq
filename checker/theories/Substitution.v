@@ -360,7 +360,7 @@ Proof.
     rewrite H in Heq'. rewrite Heq in Heq'. revert Heq'; intros [= <- <-].
     f_equal; auto.
     eapply All_map_id. eapply All2_All_left; tea.
-    intros [[x p] n'] y [[s Hty] [cs Hargs]].
+    intros [[x p] n'] y [cs [s Hty] Hargs _].
     unfold on_pi2; cbn; f_equal; f_equal.
     eapply typed_subst. 3:eapply Hty. eauto. simpl. lia.
     destruct (eq_dec ind_projs []) as [Hp|Hp]; subst; auto.
@@ -735,14 +735,14 @@ Proof.
   apply X.
 Qed.
 
-Lemma on_constructor_closed_wf `{checker_flags} {Σ mind mdecl u idecl cdecl cs} :
+Lemma on_constructor_closed_wf `{checker_flags} {Σ mind mdecl u idecl indices cdecl cs} :
   wf Σ ->
-  on_constructor (lift_typing typing) (Σ, ind_universes mdecl) mdecl (inductive_ind mind) idecl cdecl cs ->
+  on_constructor (lift_typing typing) (Σ, ind_universes mdecl) mdecl (inductive_ind mind) idecl indices cdecl cs ->
   let cty := subst0 (inds (inductive_mind mind) u (ind_bodies mdecl))
                     (subst_instance_constr u (snd (fst cdecl)))
   in closed cty /\ Ast.wf cty.
 Proof.
-  intros wfΣ [[s Hs] Hparams].
+  intros wfΣ [cs' [s Hs] Hparams _].
   pose proof (typing_wf_local Hs).
   apply typing_wf in Hs as w. 2: assumption.
   destruct w as [w _].
@@ -974,14 +974,14 @@ Proof.
   move=> [= <-]. now rewrite (IHHa _ _ E').
 Qed.
 
-Lemma on_constructor_closed {cf:checker_flags}  {Σ mind mdecl u idecl cdecl cs} :
+Lemma on_constructor_closed {cf:checker_flags}  {Σ mind mdecl u idecl indices cdecl cs} :
   wf Σ ->
-  on_constructor (lift_typing typing) (Σ, ind_universes mdecl) mdecl (inductive_ind mind) idecl cdecl cs ->
+  on_constructor (lift_typing typing) (Σ, ind_universes mdecl) mdecl (inductive_ind mind) idecl indices cdecl cs ->
   let cty := subst0 (inds (inductive_mind mind) u (ind_bodies mdecl))
                     (subst_instance_constr u (snd (fst cdecl)))
   in closed cty.
 Proof.
-  intros wfΣ [[s Hs] Hparams].
+  intros wfΣ [cs' [s Hs] Hparams _].
   pose proof (typing_wf_local Hs).
   destruct cdecl as [[id cty] car].
   eapply (env_prop_typing _ typecheck_closed) in Hs; eauto.
@@ -1057,7 +1057,7 @@ Proof.
 Admitted.
 
 Lemma subst_build_branches_type {cf:checker_flags}
-      n k Σ ind mdecl idecl args u p brs cs :
+      n k Σ ind mdecl idecl indices args u p brs cs :
   wf Σ ->
   All Ast.wf args ->
   Ast.wf (ind_type idecl) ->
@@ -1067,7 +1067,7 @@ Lemma subst_build_branches_type {cf:checker_flags}
   on_inductive (lift_typing typing) (Σ, ind_universes mdecl)
                (inductive_mind ind) mdecl ->
   on_constructors (lift_typing typing) (Σ, ind_universes mdecl)
-                  mdecl (inductive_ind ind) idecl (ind_ctors idecl) cs ->
+                  mdecl (inductive_ind ind) idecl indices (ind_ctors idecl) cs ->
   map_option_out (build_branches_type ind mdecl idecl args u p) = Some brs ->
   map_option_out (build_branches_type ind mdecl
          idecl (map (subst n k) args) u (subst n k p)) =
@@ -1113,7 +1113,7 @@ Proof.
   destruct Heq as [ctx' [ty'' [s' [Hty [Hsubst Ht0]]]]].
   subst ty; simpl.
   rewrite Heqty' in Hty.
-  destruct Honc as [o [[] _]]; simpl in *.
+  destruct Honc as [[cshape_args Hs] o _ _]; simpl in *.
   rewrite cshape_eq in Hty.
   rewrite -> !subst_instance_constr_it_mkProd_or_LetIn in Hty.
   rewrite !subst_it_mkProd_or_LetIn in Hty.

@@ -381,7 +381,7 @@ Proof.
       pose proof X0.(onConstructors) as XX.
       eapply All2_nth_error_Some in Hcdecl; eauto.
       destruct Hcdecl as [? [? ?]]. cbn in *.
-      destruct o as [[s Hs] _]. rewrite -> andb_and in Hs.
+      destruct o as [? [s Hs] _]. rewrite -> andb_and in Hs.
       apply proj1 in Hs.
       unfold arities_context in Hs.
       rewrite rev_map_length in Hs.
@@ -471,15 +471,19 @@ Proof.
        --- apply onArity in X1. unfold on_type in *; simpl in *.
            now eapply X.
        --- pose proof X1.(onConstructors) as X11. red in X11.
-           unfold on_constructor, on_type in *. eapply All2_impl; eauto.
-           simpl. intros. destruct X2 as (? & ? & ?).
-           split. now eapply X.
-           exists x1.
-           clear -t X X0.
-           revert t. generalize (cshape_args x1).
-           abstract(induction c; simpl; auto;
-           destruct a as [na [b|] ty]; simpl in *; auto;
-           intuition eauto).
+          eapply All2_impl; eauto.
+          simpl. intros. destruct X2 as [? ? ? ?]; unshelve econstructor; eauto.
+          * apply X; eauto.
+          * clear -X0 X on_cargs. revert on_cargs.
+              generalize (cshape_args cshape).
+              induction c; simpl; auto;
+              destruct a as [na [b|] ty]; simpl in *; auto;
+          split; intuition eauto.
+          * clear -X0 X on_cindices.
+            revert on_cindices.
+            generalize (List.rev  (lift_context #|cshape_args cshape| 0 (ind_indices X1))).
+            generalize (cshape_indices cshape).
+            induction 1; simpl; constructor; auto.
        --- simpl; intros. pose (onProjections X1 H0). simpl in *.
            destruct o0. constructor; auto. eapply Alli_impl; intuition eauto.
            unfold on_projection in *; simpl in *.

@@ -353,10 +353,17 @@ Proof.
     destruct X. unshelve econstructor; eauto.
     + unfold on_type in *; intuition eauto.
     + unfold on_constructors in *. eapply All2_impl; eauto.
-      intros. unfold on_constructor, on_type in *; intuition eauto.
-      destruct b as [cs Hcs]. exists cs.
-      induction (cshape_args cs); simpl in *; auto.
-      destruct a0 as [na [b|] ty]; simpl in *; intuition eauto.
+      intros.
+      destruct X as [? ? ? ?]. unshelve econstructor; eauto.
+      * unfold on_type in *; eauto.
+      * clear on_cindices.
+        induction (cshape_args cshape); simpl in *; auto.
+        destruct a as [na [b|] ty]; simpl in *; intuition eauto.
+      * clear on_ctype on_cargs.
+        revert on_cindices.
+        generalize (List.rev (PCUICLiftSubst.lift_context #|cshape_args cshape| 0 ind_indices)).
+        generalize (cshape_indices cshape).
+        induction 1; constructor; eauto.
     + intros Hprojs; destruct onProjections; try constructor; auto.
       eapply Alli_impl; eauto. intros ip [id trm].
       unfold on_projection, on_type; eauto.
@@ -446,10 +453,10 @@ Lemma declared_constructor_inv `{checker_flags} Σ P mdecl idecl ref cdecl
   (HΣ : Forall_decls_typing P Σ)
   (Hdecl : declared_constructor Σ mdecl idecl ref cdecl) :
   ∑ ind_ctor_sort,
-  nth_error (declared_inductive_inv Σ P ref.1 mdecl idecl HP
-                wfΣ HΣ (proj1 Hdecl)).(ind_ctors_sort) ref.2 = Some ind_ctor_sort
+  let onib := declared_inductive_inv Σ P ref.1 mdecl idecl HP wfΣ HΣ (proj1 Hdecl) in
+  nth_error onib.(ind_ctors_sort) ref.2 = Some ind_ctor_sort
   × on_constructor (lift_typing P) (Σ, ind_universes mdecl) mdecl
-                   (inductive_ind ref.1) idecl cdecl ind_ctor_sort.
+                   (inductive_ind ref.1) idecl onib.(ind_indices) cdecl ind_ctor_sort.
 Proof.
   intros.
   destruct Hdecl as [Hidecl Hcdecl].
@@ -548,13 +555,13 @@ Lemma on_declared_constructor `{checker_flags} {Σ ref mdecl idecl cdecl}
   on_ind_body (lift_typing typing) (Σ, ind_universes mdecl)
               (inductive_mind (fst ref)) mdecl (inductive_ind (fst ref)) idecl *
   ∑ ind_ctor_sort,
-     nth_error
-      (ind_ctors_sort
-         (declared_inductive_inv Σ typing ref.1 mdecl idecl weaken_env_prop_typing
-            wfΣ wfΣ (proj1 Hdecl))) ref.2 = Some ind_ctor_sort
-    ×  on_constructor (lift_typing typing) (Σ, ind_universes mdecl)
-                 mdecl (inductive_ind (fst ref))
-                 idecl cdecl ind_ctor_sort.
+  let onib := declared_inductive_inv Σ typing ref.1 mdecl idecl weaken_env_prop_typing
+  wfΣ wfΣ (proj1 Hdecl) in
+    nth_error
+    (ind_ctors_sort onib) ref.2 = Some ind_ctor_sort
+  ×  on_constructor (lift_typing typing) (Σ, ind_universes mdecl)
+                mdecl (inductive_ind (fst ref))
+                idecl onib.(ind_indices) cdecl ind_ctor_sort.
 Proof.
   split.
   - destruct Hdecl as [Hidecl Hcdecl].

@@ -1475,8 +1475,7 @@ Proof.
   - constructor.
   - econstructor.
     + destruct x as [[? t] ?].
-      unfold on_constructor in r. cbn in r.
-      destruct r as [[? ht] ?].
+      destruct r as [? [? ht] ? _].
       eapply typecheck_closed in ht as [? e]. 2: auto.
       2: eapply typing_wf_local ; eauto.
       move/andP in e. destruct e. assumption.

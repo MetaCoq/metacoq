@@ -14,7 +14,7 @@ Set Asymmetric Patterns.
   Inductive relations for reduction, conversion and typing of CIC terms.
 
  *)
-
+ 
 Definition isSort T :=
   match T with
   | tSort u => True
@@ -28,18 +28,6 @@ Fixpoint isArity T :=
   | tLetIn _ _ _ codom => isArity codom
   | _ => False
   end.
-
-Definition subst_context s k (Γ : context) : context :=
-  fold_context (fun k' => subst s (k' + k)) Γ.
-
-Lemma subst_context_length s n Γ : #|subst_context s n Γ| = #|Γ|.
-Proof.
-  induction Γ as [|[na [body|] ty] tl] in Γ |- *; cbn; eauto.
-  - rewrite !List.rev_length !mapi_length !app_length !List.rev_length. simpl.
-    lia.
-  - rewrite !List.rev_length !mapi_length !app_length !List.rev_length. simpl.
-    lia.
-Qed.
 
 Fixpoint smash_context (Γ Γ' : context) : context :=
   match Γ' with
@@ -900,7 +888,8 @@ Module TemplateTyping <: Typing TemplateTerm TemplateEnvironment TemplateEnvTypi
   Definition ind_guard := ind_guard.
   Definition typing := @typing.
   Definition smash_context := smash_context.
-
+  Definition lift_context := lift_context.
+  Definition subst_telescope := subst_telescope.
 End TemplateTyping.
 
 Module TemplateDeclarationTyping :=
@@ -1293,11 +1282,12 @@ Proof.
           simpl in IH. simpl. apply IH; constructor 1; simpl; lia.
         -- pose proof Xg.(onConstructors) as Xg'.
            eapply All2_impl; eauto. intros.
-           red in X14 |- *. destruct X14 as [[s Hs] [cs Hargsu]]. split.
+           destruct X14 as [cs onctyp oncargs oncind].
+           unshelve econstructor. eauto.
+           destruct onctyp as [s Hs].
            pose proof (typing_wf_local (Σ:= (Σ, udecl)) Hs). simpl in Hs.
            specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ X14 (existT _ _ (existT _ _ Hs))))))).
            simpl in IH. red. simpl. exists s. simpl. apply IH; constructor 1; simpl; auto with arith.
-           exists cs.
            eapply type_local_ctx_impl; eauto. simpl. intros. red in X14.
            destruct T.
            pose proof (typing_wf_local X14).
@@ -1306,6 +1296,13 @@ Proof.
            destruct X14 as [u Hu]. exists u.
            pose proof (typing_wf_local Hu).
            specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ X14 (existT _ _ (existT _ _ Hu))))))).
+           apply IH. simpl. constructor 1. simpl. auto with arith.
+           clear -X13 IH oncind.
+           revert oncind.
+           generalize (List.rev (lift_context #|cshape_args cs| 0 (ind_indices Xg))).
+           generalize (cshape_indices cs). induction 1; constructor; auto.
+           red in p0 |- *.
+           specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ (typing_wf_local p0) (existT _ _ (existT _ _ p0))))))).
            apply IH. simpl. constructor 1. simpl. auto with arith.
         -- intros Hprojs; pose proof (onProjections Xg Hprojs); auto. simpl in *.
            destruct X14; constructor; auto. eapply Alli_impl; eauto. clear on_projs0. intros.

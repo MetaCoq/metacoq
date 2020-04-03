@@ -85,8 +85,7 @@ Proof.
   f_equal.
   induction g.
   - reflexivity.
-  - Print global_levels.
-    unfold PT.global_levels in IHg.
+  - unfold PT.global_levels in IHg.
     cbn.
     rewrite IHg.
     f_equal.
@@ -461,7 +460,6 @@ Lemma trans_instantiate_params params pars ty:
 Proof.
   rewrite instantiate_params_, PT.instantiate_params_.
   rewrite option_map_two.
-  Print instantiate_params_subst.
   match goal with
   |- option_map _ (_ _ _ ?A _) = option_map _ (_ _ _ ?B _) => change B with (map trans A)
   end.
@@ -703,7 +701,6 @@ wf_local (trans_global Σ)
   (trans_local Γ ,,, fix_context (map (map_def trans trans) mfix)).
 Proof.
   intros.
-  Print All_local_env.
   rewrite <- trans_fix_context.
   match goal with
   |- wf_local _ ?A =>

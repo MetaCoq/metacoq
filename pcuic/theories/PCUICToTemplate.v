@@ -4,20 +4,11 @@ Set Warnings "-notation-overridden".
 
 From Coq Require Import Bool String List Program BinPos Compare_dec.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils.
-About term.
 From MetaCoq.Template Require Import config utils AstUtils BasicAst Ast.
 
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
-
-About term.
-About Ast.term.
-About PCUICAst.term.
-
-Print tInd.
-About inductive.
-About tInd.
 
 Fixpoint trans (t : PCUICAst.term) : Ast.term :=
   match t with
@@ -31,7 +22,6 @@ Fixpoint trans (t : PCUICAst.term) : Ast.term :=
   | PCUICAst.tLambda na T M => tLambda na (trans T) (trans M)
   | PCUICAst.tApp u v => mkApp (trans u) (trans v)
   | PCUICAst.tProd na A B => tProd na (trans A) (trans B)
-  (* | PCUICAst.tCast c kind t => tApp (tLambda nAnon (trans t) (tRel 0)) (trans c) *)
   | PCUICAst.tLetIn na b t b' => tLetIn na (trans b) (trans t) (trans b')
   | PCUICAst.tCase ind p c brs =>
     let brs' := List.map (on_snd trans) brs in
@@ -67,8 +57,6 @@ Definition trans_constant_body bd :=
   {| cst_type := trans bd.(PCUICAst.cst_type); cst_body := option_map trans bd.(PCUICAst.cst_body);
      cst_universes := bd.(PCUICAst.cst_universes) |}.
 
-Print mutual_inductive_body.
-Print Variance.t.
 
 Definition trans_minductive_body md :=
   {| ind_finite := md.(PCUICAst.ind_finite);

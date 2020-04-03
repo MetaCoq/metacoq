@@ -11,10 +11,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
 Require Import MetaCoq.Template.All.
 Require Import MetaCoq.Checker.All.
 
-Load PCUICToTemplate.
-
-From Equations Require Import Equations.
-Require Import Equations.Prop.DepElim.
+Require Import PCUICToTemplate.
 
 Require Import String.
 Local Open Scope string_scope.
@@ -28,13 +25,11 @@ Module PT := PCUICTyping.
 Module T := Template.Ast.
 Module TT := Template.Typing.
 
-Local Existing Instance default_checker_flags.
+(* Local Existing Instance default_checker_flags. *)
 
 Module PL := PCUICLiftSubst.
 Module TL := Template.LiftSubst.
 
-About term.
-About tApp.
 
 Ltac solve_list :=
   rewrite !map_map_compose, ?compose_on_snd, ?compose_map_def;
@@ -54,9 +49,6 @@ Proof.
   reflexivity.
 Qed.
 
-
-
-
 Lemma trans_lift (t:P.term) n k:
   trans(PL.lift n k t) = TL.lift n k (trans t).
 Proof.
@@ -72,10 +64,6 @@ Proof.
   - f_equal; auto; red in X; solve_list.
 Qed.
 
-
-
-
-
 Definition on_fst {A B C} (f:A->C) (p:A×B) := (f p.1, p.2).
 
 Definition trans_def (decl:def PCUICAst.term) : def term.
@@ -87,9 +75,6 @@ Proof.
   - exact (trans dbody).
   - exact rarg.
 Defined.
-
-Require Import FunInd.
-Functional Scheme mem_ind := Induction for LevelSet.Raw.mem Sort Prop.
 
 Lemma trans_global_ext_levels Σ:
 PT.global_ext_levels Σ = global_ext_levels (trans_global Σ).
@@ -195,7 +180,7 @@ Proof.
     intros.
     now apply trans_mem_level_set.
   - unfold valid_constraints in *.
-    destruct check_univs;trivial.
+    destruct config.check_univs;trivial.
     unfold valid_constraints0 in *.
     intros.
     apply H2.
@@ -820,8 +805,9 @@ Proof.
     typing (trans_global Σ) (trans_local Γ) (trans t) (trans T)
   )%type);intros.
 (*
-like induction but with
-additional assumptions for the nested typing in All (in wf_local assumptions)
+typing_ind_env is like induction but with
+additional assumptions for the nested typing 
+in All (for wf_local assumptions)
 *)
   - rewrite trans_lift.
     rewrite trans_decl_type.
@@ -891,6 +877,7 @@ additional assumptions for the nested typing in All (in wf_local assumptions)
       cbn in X4.
       apply X4.
     + admit. (* map_option_out build branche type *)
+    (* this should be similar to trans_build_case_predicate_type *)
     + now apply trans_branches.
   - rewrite trans_subst.
     rewrite trans_subst_instance_constr.

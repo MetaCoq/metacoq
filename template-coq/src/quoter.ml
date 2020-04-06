@@ -170,11 +170,11 @@ struct
       | Constr.Var v -> (Q.mkVar (Q.quote_ident v), acc)
       | Constr.Evar (n,args) ->
 	      let (acc,args') =
-      	  CArray.fold_left_map (fun acc x ->
+      	  CList.fold_left_map (fun acc x ->
 	        let (x,acc) = quote_term acc env x in acc,x)
           acc args 
         in
-         (Q.mkEvar (Q.quote_int (Evar.repr n)) args', acc)
+         (Q.mkEvar (Q.quote_int (Evar.repr n)) (Array.of_list args'), acc)
       | Constr.Sort s -> (Q.mkSort (Q.quote_sort s), acc)
       | Constr.Cast (c,k,t) ->
 	      let (c',acc) = quote_term acc env c in

@@ -453,7 +453,7 @@ Lemma declared_constructor_inv `{checker_flags} Σ P mdecl idecl ref cdecl
   (HΣ : Forall_decls_typing P Σ)
   (Hdecl : declared_constructor Σ mdecl idecl ref cdecl) :
   ∑ ind_ctor_sort,
-  let onib := declared_inductive_inv Σ P ref.1 mdecl idecl HP wfΣ HΣ (proj1 Hdecl) in
+  let onib := declared_inductive_inv Σ P ref.1 mdecl idecl HP wfΣ HΣ (let (x, y) := Hdecl in x) in
   nth_error onib.(ind_ctors_sort) ref.2 = Some ind_ctor_sort
   × on_constructor (lift_typing P) (Σ, ind_universes mdecl) mdecl
                    (inductive_ind ref.1) idecl onib.(ind_indices) cdecl ind_ctor_sort.
@@ -461,7 +461,7 @@ Proof.
   intros.
   destruct Hdecl as [Hidecl Hcdecl].
   set (declared_inductive_inv Σ P ref.1 mdecl idecl HP wfΣ HΣ
-                              (proj1 (conj Hidecl Hcdecl))) as HH.
+                              Hidecl) as HH.
   clearbody HH. pose proof HH.(onConstructors) as HH'.
   eapply All2_nth_error_Some in Hcdecl; tea.
 Qed.
@@ -533,7 +533,7 @@ Lemma on_declared_minductive `{checker_flags} {Σ ref decl} :
 Proof.
   intros wfΣ Hdecl.
   apply (declared_minductive_inv _ _ _ _ weaken_env_prop_typing wfΣ wfΣ Hdecl).
-Qed.
+Defined.
 
 Lemma on_declared_inductive `{checker_flags} {Σ ref mdecl idecl} :
   wf Σ ->
@@ -545,7 +545,7 @@ Proof.
   split.
   - destruct Hdecl as [Hmdecl _]. now apply on_declared_minductive in Hmdecl.
   - apply (declared_inductive_inv _ _ _ mdecl idecl weaken_env_prop_typing wfΣ wfΣ Hdecl).
-Qed.
+Defined.
 
 Lemma on_declared_constructor `{checker_flags} {Σ ref mdecl idecl cdecl}
   (wfΣ : wf Σ)
@@ -556,7 +556,7 @@ Lemma on_declared_constructor `{checker_flags} {Σ ref mdecl idecl cdecl}
               (inductive_mind (fst ref)) mdecl (inductive_ind (fst ref)) idecl *
   ∑ ind_ctor_sort,
   let onib := declared_inductive_inv Σ typing ref.1 mdecl idecl weaken_env_prop_typing
-  wfΣ wfΣ (proj1 Hdecl) in
+  wfΣ wfΣ (let (x, y) := Hdecl in x) in
     nth_error
     (ind_ctors_sort onib) ref.2 = Some ind_ctor_sort
   ×  on_constructor (lift_typing typing) (Σ, ind_universes mdecl)

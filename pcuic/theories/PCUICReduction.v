@@ -622,6 +622,20 @@ Section ReductionCongruence.
       - simpl. eapply ih. cbn. constructor. assumption.
     Qed.
 
+    Lemma red1_it_mkProd_or_LetIn :
+      forall Δ u v,
+        red1 Σ (Γ ,,, Δ) u v ->
+        red1 Σ Γ (it_mkProd_or_LetIn Δ u)
+             (it_mkProd_or_LetIn Δ v).
+    Proof.
+      intros Δ u v h.
+      revert u v h.
+      induction Δ as [| [na [b|] A] Δ ih ] ; intros u v h.
+      - cbn. assumption.
+      - simpl. eapply ih. cbn. constructor. assumption.
+      - simpl. eapply ih. cbn. constructor. assumption.
+    Qed.
+
     Lemma red_it_mkLambda_or_LetIn :
       forall Δ u v,
         red Σ (Γ ,,, Δ) u v ->
@@ -634,6 +648,20 @@ Section ReductionCongruence.
       - econstructor.
         + eassumption.
         + eapply red1_it_mkLambda_or_LetIn. assumption.
+    Qed.
+
+    Lemma red_it_mkProd_or_LetIn :
+      forall Δ u v,
+        red Σ (Γ ,,, Δ) u v ->
+        red Σ Γ (it_mkProd_or_LetIn Δ u)
+            (it_mkProd_or_LetIn Δ v).
+    Proof.
+      intros Δ u v h.
+      induction h.
+      - constructor.
+      - econstructor.
+        + eassumption.
+        + eapply red1_it_mkProd_or_LetIn. assumption.
     Qed.
 
     Lemma red_proj_c :

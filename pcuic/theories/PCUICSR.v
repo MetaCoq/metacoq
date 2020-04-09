@@ -3597,17 +3597,18 @@ Proof. intros H  ->; constructor;auto. reflexivity. Qed.
 Lemma map_subst_lift_id_eq s l k : k = #|s| -> map (subst0 s ∘ lift0 k) l = l.
 Proof. intros ->; apply map_subst_lift_id. Qed.
 
-Lemma build_branches_type_red (p p' : term) (ind : inductive)
+Lemma build_branches_type_red {cf:checker_flags} (p p' : term) (ind : inductive)
 	(mdecl : PCUICAst.mutual_inductive_body)
     (idecl : PCUICAst.one_inductive_body) (pars : list term) 
     (u : Instance.t) (brtys : list (nat × term)) Σ Γ :
+  wf Σ ->
   red1 Σ Γ p p' ->
   map_option_out (build_branches_type ind mdecl idecl pars u p) = Some brtys ->
   ∃ brtys' : list (nat × term),
     map_option_out (build_branches_type ind mdecl idecl pars u p') =
     Some brtys' × All2 (on_Trel_eq (red1 Σ Γ) snd fst) brtys brtys'.
 Proof.
-  intros redp.
+  intros wfΣ redp.
   unfold build_branches_type.
   unfold mapi.
   generalize 0 at 3 6.
@@ -3636,10 +3637,50 @@ Proof.
   2:discriminate. clear Heq.
   2:discriminate.
   eapply red1_it_mkProd_or_LetIn.
+  eapply red1_mkApps_f.
+  eapply (weakening_red1 Σ Γ [] c) => //.
+Qed.
 
-        rewrite Heq.
-  rewrite IHl.
 
+Lemma OnOne2_All2_All2 (A : Type) (l1 l2 l3 : list A) (R1 R2 R3  : A -> A -> Type) :
+  OnOne2 R1 l1 l2 ->
+  All2 R2 l1 l3 ->
+  (forall x y, R2 x y -> R3 x y) ->
+  (forall x y z : A, R1 x y -> R2 x z -> R3 y z) ->
+  All2 R3 l2 l3.
+Proof.
+  intros o. induction o in l3 |- *.
+  intros H; depelim H.
+  intros Hf Hf'. specialize (Hf'  _ _ _ p r). constructor; auto.
+  eapply All2_impl; eauto.
+  intros H; depelim H.
+  intros Hf. specialize (IHo _ H Hf).
+  constructor; auto.
+Qed.
+
+Lemma OnOne2_All_All (A : Type) (l1 l2 : list A) (R1  : A -> A -> Type) (R2 R3 : A -> Type) :
+  OnOne2 R1 l1 l2 ->
+  All R2 l1 ->
+  (forall x, R2 x -> R3 x) ->
+  (forall x y : A, R1 x y -> R2 x -> R3 y) ->
+  All R3 l2.
+Proof.
+  intros o. induction o.
+  intros H; depelim H.
+  intros Hf Hf'. specialize (Hf' _ _ p r). constructor; auto.
+  eapply All_impl; eauto.
+  intros H; depelim H.
+  intros Hf. specialize (IHo H Hf).
+  constructor; auto.
+Qed.
+
+Lemma context_relation_refl P : (forall Δ x, P Δ Δ x x) -> forall Δ, context_relation P Δ Δ.
+Proof.
+  intros HP.
+  induction Δ.
+   constructor; auto.
+   destruct a as [? [?|] ?]; constructor; auto.
+Qed.
 
 Lemma sr_red1 {cf:checker_flags} : allow_cofix = false -> env_prop SR_red1.
 Proof.
@@ -4361,29 +4402,182 @@ Proof.
 
   - (* Case congruence on the predicate *) 
     eapply (type_Cumul _ _ _ (mkApps p' (skipn npar args ++ [c]))).
+    eapply build_branches_type_red in heq_map_option_out as [brtys' [eqbrtys alleq]]; eauto.
     eapply type_Case; eauto.
-    move: heq_map_option_out.
+    * eapply All2_trans'; eauto. simpl.
+      intros.
+      intuition auto. now transitivity y.1.
+      eapply type_Cumul; eauto.
+      now eapply conv_cumul, red_conv, red1_red.
+    * right.
+      pose proof typec as typec'.
+      eapply validity in typec' as [_ wat]; auto.
+      unshelve eapply isWAT_mkApps_Ind in wat as [parsubst [argsubst wat]]; eauto.
+      set (oib := on_declared_inductive wf isdecl) in *. clearbody oib.
+      destruct oib as [onind oib].
+      destruct wat  as [[spars sargs] cu].
+      unshelve eapply (build_case_predicate_type_spec (Σ.1, _)) in heq_build_case_predicate_type as [parsubst' [cparsubst Hpty]]; eauto.
+      rewrite {}Hpty in typep.
+      exists ps.
+      subst npar.
+      pose proof (context_subst_fun cparsubst spars). subst parsubst'. clear cparsubst.
+      eapply type_mkApps. eauto.
+      eapply wf_arity_spine_typing_spine; eauto.
+      split. apply validity in typep as [? ?]; eauto.
+      eapply arity_spine_it_mkProd_or_LetIn; eauto.
+      simpl. constructor; [ |constructor].
+      2:{ left; eexists _, _; split. simpl; eauto. auto. }
+      2:reflexivity.
+      rewrite subst_mkApps. simpl.
+      rewrite map_app. rewrite map_map_compose.
+      rewrite map_subst_lift_id_eq. now rewrite (subslet_length sargs); autorewrite with len.
+      move: (spine_subst_subst_to_extended_list_k sargs).
+      rewrite to_extended_list_k_subst PCUICSubstitution.map_subst_instance_constr_to_extended_list_k.
+      move->. now rewrite firstn_skipn.
+    * now eapply conv_cumul, conv_sym, red_conv, red_mkApps_f, red1_red.
 
-    Lemma build_branches_
-    unfold build_branches_type.
-    destruct (ind_ctors idecl). simpl. intros [=]. reflexivity.
+  - (* Case congruence on discriminee *) 
+    eapply type_Cumul. eapply type_Case; eauto.
+    * solve_all.
+    * right.
+      pose proof typec as typec'.
+      eapply validity in typec' as [_ wat]; auto.
+      unshelve eapply isWAT_mkApps_Ind in wat as [parsubst [argsubst wat]]; eauto.
+      set (oib := on_declared_inductive wf isdecl) in *. clearbody oib.
+      destruct oib as [onind oib].
+      destruct wat  as [[spars sargs] cu].
+      unshelve eapply (build_case_predicate_type_spec (Σ.1, _)) in heq_build_case_predicate_type as [parsubst' [cparsubst Hpty]]; eauto.
+      rewrite {}Hpty in typep.
+      exists ps.
+      subst npar.
+      pose proof (context_subst_fun cparsubst spars). subst parsubst'. clear cparsubst.
+      eapply type_mkApps. eauto.
+      eapply wf_arity_spine_typing_spine; eauto.
+      split. apply validity in typep as [? ?]; eauto.
+      eapply arity_spine_it_mkProd_or_LetIn; eauto.
+      simpl. constructor; [ |constructor].
+      2:{ left; eexists _, _; split. simpl; eauto. auto. }
+      2:reflexivity.
+      rewrite subst_mkApps. simpl.
+      rewrite map_app. rewrite map_map_compose.
+      rewrite map_subst_lift_id_eq. now rewrite (subslet_length sargs); autorewrite with len.
+      move: (spine_subst_subst_to_extended_list_k sargs).
+      rewrite to_extended_list_k_subst PCUICSubstitution.map_subst_instance_constr_to_extended_list_k.
+      move->. now rewrite firstn_skipn.
+    * eapply conv_cumul, conv_sym, red_conv, red_mkApps; auto.
+      eapply All2_app; [eapply All2_refl; reflexivity|now constructor].
+
+  - (* Case congruence on branches *)
+    eapply type_Case; eauto.
+    eapply (OnOne2_All2_All2 _ _ _ _ _ _ _ o X5).
+    intros [] []; simpl. intros.
+    intuition auto. subst.
+    intros [] [] []; simpl. intros.
+    intuition auto. subst.    
+    reflexivity.
+
+  - (* Proj CoFix congruence *)
+    epose proof (validity _ _ _ _ _ _ typec) as [_ ?].
+    eapply type_mkApps_inv in typec as [? [? [[tcof tsp] cum]]]; auto.
+    eapply type_tCoFix_inv in tcof as [allow [?  [? [? [[unf tyunf] cum']]]]]; auto.
+    rewrite e in unf. noconf unf.
+    eapply typing_spine_strengthen in tsp; eauto.
+    eapply typing_spine_weaken_concl in tsp; eauto.
+    eapply type_Cumul; [econstructor|..]; eauto.
+    eapply type_mkApps. eauto. eauto. admit.
+    (** Essential here that projection types cannot refer to the coinductive object  
+        directly but only through projections, so that SR is preserved.
+        Will need to add an invariant to the projections typing. *)
+    rewrite allow in heq_allow_cofix. discriminate.
+
+  - (* Proj Constructor reduction *) 
+    epose proof (validity _ _ _ _ _ _ typec) as [_ ?].
+    simpl in typec.
+    pose proof typec as typec'.
+    eapply inversion_mkApps in typec as [A [U [tyc [tyargs tycum]]]]; auto.
+    eapply (inversion_Construct Σ wf) in tyc as [mdecl' [idecl' [cdecl' [wfl [declc [Hu tyc]]]]]].
+    unshelve eapply Construct_Ind_ind_eq in typec'; eauto.
+    unfold on_declared_constructor in typec'.
+    destruct declc as [decli declc].
+    unfold on_declared_inductive in typec'.
+    destruct declared_constructor_inv as [cs [Hnth onc]].
+    simpl in typec'.
+    destruct declared_inductive_inv. simpl in  *.
+    pose proof isdecl as isdecl'.
+    destruct isdecl' as [decli' [H0 Hi]].
+    destruct (declared_inductive_unique decli' decli) as []; subst mdecl' idecl'.
+    forward onProjections.
+    eapply nth_error_Some_length in H0. simpl in H0.
+    intros Hp. apply (f_equal (@length _)) in Hp. rewrite  Hp /=   in H0. lia.
+    simpl in H0.
+    simpl in *.
+    destruct typec' as [[[[_ equ] cu] eqargs] [cparsubst [cargsubst [iparsubst [iidxsubst ci]]]]].
+    destruct ci as ((([cparsubst0 iparsubst0] & idxsubst0) & subsidx) & [s [typectx [Hpars Hargs]]]).
+    clear Hnth.
+    destruct onProjections.
+    eapply nth_error_alli in on_projs; eauto.
+    destruct on_projs. simpl in t.
+    eapply typing_spine_strengthen in tyargs; eauto.
+    eapply typing_spine_weaken_concl in tyargs; eauto.
+    rewrite -(firstn_skipn (ind_npars mdecl) args0) in tyargs, e |- *.
+    subst pars.
+    assert(#|firstn (ind_npars mdecl) args0| = ind_npars mdecl).
+    rewrite firstn_length_le. lia. lia.
+    rewrite nth_error_app_ge in e. lia.
+    rewrite H in e. replace (ind_npars mdecl + narg - ind_npars mdecl) with narg in e by lia.
+    unfold type_of_constructor in tyargs.
+    rewrite onc.(cshape).(cshape_eq) in tyargs.
+    rewrite !subst_instance_constr_it_mkProd_or_LetIn !subst_it_mkProd_or_LetIn in tyargs.
+    (** Will need inversion lemmas on typing_spine *)
+    admit.
 
 
-  - (* Case congruence *) admit.
-  - (* Case congruence *) admit.
-  - (* Proj CoFix congruence *) admit.
-  - (* Proj Constructor congruence *) admit.
-  - (* Proj reduction *) admit.
+  - (* Proj congruence *) 
+    eapply type_Cumul; [econstructor|..]; eauto.
+    admit.
+    eapply conv_cumul.
+    (* eapply (conv_subst_conv. *)
+    admit.
+
   - (* Fix congruence *)
     symmetry in H; apply mkApps_Fix_spec in H. simpl in H. subst args.
     simpl. destruct narg; discriminate.
-  - (* Fix congruence *)
+  - assert(conv_context Σ (Γ ,,, fix_context mfix) (Γ ,,, fix_context mfix1)).
+    clear -X o.
+    eapply context_relation_app_inv.
+    eapply OnOne2_length in o. now rewrite !fix_context_length.
+    apply conv_ctx_refl.
+    unfold fix_context, mapi.
+    generalize 0 at 2 4.
+    induction o; intros n.
+    simpl. 
+    apply context_relation_app_inv. rewrite List.rev_length; autorewrite with len.
+    now rewrite mapi_rec_length.
+    constructor.  constructor.
+    constructor. apply red_conv, red1_red.
+    (* FIXME usual fix_context induction loading headache *)
+    admit. admit. admit. admit.
+  
+  (* epose proof (OnOne2_All_All _ _ _ _ _ (fun d => (Σ;;; Γ ,,, fix_context mfix1 |- dbody d
+        : lift0 #|fix_context mfix1| (dtype d) × isLambda (dbody d) = true)) o X0). *)
+    (* simpl in X1. forward X1.
+    intros. intuition auto.
+    simpl in X1. forward X1.
+    intros [] []; simpl; intuition auto.
+    simpl in *.
+    rewrite !fix_context_length in a, t |- *.
+    clear t. *)
+  (* Fix congruence *)
+    (* eapply type_Cumul.
+    econstructor; eauto.  (* Need  to update fix_guard *)
+    admit. *)
+
+
+  - (* Fix congruence in body *)
     admit.
-  - (* Fix congruence *)
+  - (* CoFix congruence type *)
     admit.
-  - (* CoFix congruence *)
-    admit.
-  - (* CoFix congruence *)
+  - (* CoFix congruence body *)
     admit.
   - (* Conversion *)
     specialize (forall_u _ Hu).

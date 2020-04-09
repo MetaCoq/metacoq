@@ -138,6 +138,62 @@ Proof.
     + destruct b. eapply cumul_trans; eauto.
 Qed.
 
+Lemma type_tCoFix_inv {cf:checker_flags} (Σ : global_env_ext) Γ mfix idx T : wf Σ ->
+  Σ ;;; Γ |- tCoFix mfix idx : T ->
+  (allow_cofix = true) * { T' & { rarg & {f & (unfold_cofix mfix idx = Some (rarg, f)) *
+   (Σ ;;; Γ |- f : T') * (Σ ;;; Γ |- T' <= T) }}}%type.
+Proof.
+  intros wfΣ H. depind H.
+  - unfold unfold_cofix. rewrite e. split; auto.
+    specialize (nth_error_all e a0) as Hty.
+    destruct decl as [name ty body rarg]; simpl in *.
+    clear e.
+    eexists _, _, _. split.
+    + split.
+      * eauto.
+      * eapply (substitution _ _ types _ [] _ _ wfΣ); simpl; eauto with wf.
+        subst types. rename i into hguard. clear -a a0 hguard.
+        pose proof a0 as a0'. apply All_rev in a0'.
+        unfold cofix_subst, fix_context. simpl.
+        revert a0'. rewrite <- (@List.rev_length _ mfix).
+        rewrite rev_mapi. unfold mapi.
+        assert (#|mfix| >= #|List.rev mfix|) by (rewrite List.rev_length; lia).
+        assert (He :0 = #|mfix| - #|List.rev mfix|) by (rewrite List.rev_length; auto with arith).
+        rewrite {3}He. clear He. revert H.
+        assert (forall i, i < #|List.rev mfix| -> nth_error (List.rev mfix) i = nth_error mfix (#|List.rev mfix| - S i)).
+        { intros. rewrite nth_error_rev. 1: auto.
+          now rewrite List.rev_length List.rev_involutive. }
+        revert H.
+        generalize (List.rev mfix).
+        intros l Hi Hlen H.
+        induction H.
+        ++ simpl. constructor.
+        ++ simpl. constructor.
+          ** unfold mapi in IHAll.
+              simpl in Hlen. replace (S (#|mfix| - S #|l|)) with (#|mfix| - #|l|) by lia.
+              apply IHAll.
+              --- intros. simpl in Hi. specialize (Hi (S i)). apply Hi. lia.
+              --- lia.
+          ** clear IHAll.
+              simpl in Hlen. assert ((Nat.pred #|mfix| - (#|mfix| - S #|l|)) = #|l|) by lia.
+              rewrite H0. rewrite simpl_subst_k.
+              --- clear. induction l; simpl; auto with arith.
+              --- eapply type_CoFix; auto.
+                  simpl in Hi. specialize (Hi 0). forward Hi.
+                  +++ lia.
+                  +++ simpl in Hi.
+                      rewrite Hi. f_equal. lia.
+    + subst types. rewrite simpl_subst_k.
+      * now rewrite fix_context_length cofix_subst_length.
+      * reflexivity.
+  - destruct (IHtyping wfΣ) as [IH [T' [rarg [f [[unf fty] Hcumul]]]]].
+    split; auto.
+    exists T', rarg, f. intuition auto.
+    + eapply cumul_trans; eauto.
+    + destruct b. eapply cumul_trans; eauto.
+Qed.
+
+
 Arguments subst_context !s _ !Γ.
 Arguments it_mkProd_or_LetIn !l _.
 
@@ -737,7 +793,10 @@ Qed.
 
 Inductive arity_spine {cf : checker_flags} (Σ : PCUICAst.global_env_ext) (Γ : PCUICAst.context) : 
   term -> list term -> term -> Type :=
-  | arity_spine_nil ty : arity_spine Σ Γ ty [] ty
+  | arity_spine_nil ty ty' :
+    isWfArity_or_Type Σ Γ ty' ->
+    Σ ;;; Γ |- ty <= ty' ->
+    arity_spine Σ Γ ty [] ty'
   | arity_spine_def : forall (tl : list term) 
                         (na : name) (A a B B' : term),                      
                       arity_spine Σ Γ (B {0 := a}) tl B' ->
@@ -760,7 +819,7 @@ Lemma wf_arity_spine_typing_spine {cf:checker_flags} Σ Γ T args T' :
 Proof.
   intros wfΣ [wf sp].
   have wfΓ := isWAT_wf_local wf.
-  induction sp; try constructor; auto. reflexivity.
+  induction sp; try constructor; auto.
   eapply isWAT_tLetIn_red in wf; auto.
   specialize (IHsp wf).
   eapply typing_spine_strengthen; eauto.
@@ -3080,23 +3139,11 @@ Proof.
   now rewrite -IHc.
 Qed.
 
-Lemma all_rels_subst {cf:checker_flags} Σ Δ Γ Δ' t :
+Lemma all_rels_subst {cf:checker_flags} Σ Δ Γ t :
   wf Σ.1 -> wf_local Σ (Γ ,,, Δ) ->
-  Σ ;;; Γ ,,, Δ ,,, Δ' |- lift0 #|Δ'| t =
-   subst0 (all_rels Δ #|Δ'| (#|Δ| + #|Δ'|)) (lift (#|Δ| + #|Δ'|) #|Δ| t).
+  red Σ.1 (Γ ,,, Δ) t (subst0 (all_rels Δ 0 #|Δ|) (lift #|Δ| #|Δ| t)).
 Proof.
-  intros.
-  apply red_conv.
-  rewrite Nat.add_comm.
-  erewrite <-(simpl_lift _ _ _ _ #|Δ|); try lia.
-  rewrite all_rels_lift.
-  epose proof (distr_lift_subst (lift #|Δ| #|Δ| t) (all_rels Δ 0 #|Δ|) #|Δ'| 0).
-  rewrite Nat.add_0_r in H.
-  rewrite -{2}(all_rels_length Δ 0 #|Δ|).
-  rewrite -H.
-  eapply (weakening_red _ _ []); auto. clear H.
-  simpl.
-
+  intros wfΣ wf.
   induction t using term_forall_ctx_list_ind.
   simpl.
   destruct (leb_spec_Set #|Δ| n); simpl; rewrite Nat.sub_0_r.
@@ -3136,8 +3183,28 @@ Proof.
 
   * simpl. constructor.
   * simpl.   
-    eapply nth_error_All_local_env in X0; eauto.
+    
 Admitted.
+
+
+Lemma all_rels_subst_lift {cf:checker_flags} Σ Δ Γ Δ' t :
+  wf Σ.1 -> wf_local Σ (Γ ,,, Δ) ->
+  Σ ;;; Γ ,,, Δ ,,, Δ' |- lift0 #|Δ'| t =
+   subst0 (all_rels Δ #|Δ'| (#|Δ| + #|Δ'|)) (lift (#|Δ| + #|Δ'|) #|Δ| t).
+Proof.
+  intros.
+  rewrite Nat.add_comm.
+  erewrite <-(simpl_lift _ _ _ _ #|Δ|); try lia.
+  rewrite all_rels_lift.
+  epose proof (distr_lift_subst (lift #|Δ| #|Δ| t) (all_rels Δ 0 #|Δ|) #|Δ'| 0).
+  rewrite Nat.add_0_r in H.
+  rewrite -{2}(all_rels_length Δ 0 #|Δ|).
+  rewrite -H.
+  apply red_conv.
+  eapply (weakening_red _ _ []); auto. clear H.
+  simpl.
+  eapply all_rels_subst; auto.
+Qed.
 
 Lemma app_tip_assoc {A} (l : list A) x l' : (l ++ [x]) ++ l' = l ++ (x :: l').
 Proof. now rewrite -app_assoc. Qed.
@@ -3222,7 +3289,7 @@ Proof.
       rewrite !app_context_assoc.
       rewrite /app_context !app_assoc.
       
-      epose proof (all_rels_subst Σ c Γ 
+      epose proof (all_rels_subst_lift Σ c Γ 
       (l ++ [{|decl_name := na; decl_body := None; decl_type := decl_type0|}]) decl_type0).
       assert (#|Δ| = #|c| + S #|l|).
       { rewrite -eql. autorewrite with len. simpl. lia. }
@@ -3356,6 +3423,57 @@ Proof.
   now rewrite List.rev_length len.
 Qed.
 
+Lemma reln_lift n k Γ : reln [] (n + k) Γ = map (lift0 n) (reln [] k Γ).
+Proof.
+  induction Γ in n, k |- *; simpl; auto.
+  destruct a as [? [?|] ?]; simpl.
+  now rewrite -IHΓ Nat.add_assoc.
+  rewrite reln_acc  [reln [tRel k] _ _]reln_acc map_app /=.
+  f_equal. now rewrite -IHΓ Nat.add_assoc.
+Qed.
+
+Lemma spine_subst_subst_to_extended_list_k {cf:checker_flags} {Σ Γ args s Δ} : 
+  spine_subst Σ Γ args s Δ ->
+  map (subst0 s) (to_extended_list_k Δ 0) = args.
+Proof.
+  intros [_ _ sub _].
+  rewrite /to_extended_list_k.
+  rewrite -(map_lift0 args).
+  generalize 0 at 1 2 3.
+  induction sub; simpl; auto.
+  intros n.
+  rewrite reln_acc.
+  rewrite !map_app.
+  simpl. rewrite Nat.leb_refl Nat.sub_diag /=.
+  simpl.
+  f_equal. rewrite -IHsub.
+  rewrite reln_lift.
+  rewrite (reln_lift 1).
+  rewrite -{4}(Nat.add_0_r n).
+  rewrite (reln_lift n 0).
+  rewrite !map_map_compose.
+  apply map_ext.
+  intros x. unfold compose.
+  rewrite (subst_app_decomp [a] s).
+  f_equal. simpl.
+  rewrite -(commut_lift_subst_rec _ _ _ 0)  //.
+  rewrite simpl_subst_k //.
+
+  intros n.
+  rewrite -IHsub.
+  rewrite reln_lift.
+  rewrite (reln_lift 1).
+  rewrite -{4}(Nat.add_0_r n).
+  rewrite (reln_lift n 0).
+  rewrite !map_map_compose.
+  apply map_ext.
+  intros x. unfold compose.
+  rewrite (subst_app_decomp [subst0 s b] s).
+  f_equal. simpl.
+  rewrite -(commut_lift_subst_rec _ _ _ 0)  //.
+  rewrite simpl_subst_k //.
+Qed.
+
 Lemma mapi_rec_ext (f g : nat -> context_decl -> context_decl) (l : context) n k' :
   closedn_ctx k' l ->
   (forall k x, n <= k -> k < length l + n -> 
@@ -3391,30 +3509,6 @@ Proof.
   now rewrite Hfg.
 Qed.
 
-Lemma subst_context_lift s k Γ :
-  closedn_ctx #|s| Γ ->
-  lift_context k 0 (subst_context s 0 Γ) = 
-  subst_context (map (lift0 k) s) 0 Γ.
-Proof.
-  rewrite !subst_context_alt !lift_context_alt.
-  rewrite mapi_compose. intros Hcl.
-  unfold mapi.
-  Admitted.
-  (* induction Γ. simpl. auto.
-  simpl.
-  eapply mapi_rec_ext; eauto.
-  move=> x ? ? ? cl; rewrite /subst_decl /lift_decl !compose_map_decl.
-  
-  apply (map_decl_ext' _ _ (#|s| + #|Γ|)) => // t.
-  rewrite mapi_length; autorewrite with len.
-  remember (Nat.pred #|Γ| - x). rewrite Nat.add_0_r.
-  intros cl'.
-  epose proof (distr_lift_subst_rec _ _ _ n 0).
-  rewrite Nat.add_0_r in H. rewrite H.
-  rewrite lift_closed. eapply closed_upwards. eauto.
-  Admitted. *)
-
-
 
 Lemma to_extended_list_k_fold_context f Γ k : 
   to_extended_list_k (fold_context f Γ) k = to_extended_list_k Γ k.
@@ -3437,96 +3531,19 @@ Proof.
   rewrite simpl_lift; try lia.
   now rewrite Nat.add_comm.
 Qed.
-(* 
 
-
-Lemma arity_spine_it_mkProd_or_LetIn {cf:checker_flags} Σ Γ Δ T args s args' T' : 
-  wf Σ.1 ->
-  spine_subst Σ Γ args s Δ ->
-  arity_spine Σ Γ (it_mkProd_or_LetIn Δ (tSort s)) args (tSort s).
+Lemma spine_subst_eq {cf:checker_flags} {Σ Γ inst s Δ Δ'} : 
+  spine_subst Σ Γ inst s Δ ->
+  Δ = Δ' ->
+  spine_subst Σ Γ inst s Δ'.
 Proof.
-  intros wfΣ sp asp. destruct sp as [wfΓ _ cs subsl].
-  move: Δ args s T cs subsl asp.
-  induction Δ using ctx_length_rev_ind => args s T cs subsl asp.
-  - depelim cs. depelim  subsl.
-    now rewrite subst_empty in asp.
-  - rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /=.
-    destruct d as [na [b|] ty]; simpl in *.
-    * constructor. rewrite /subst1 subst_it_mkProd_or_LetIn.
-      rewrite Nat.add_0_r.
-      apply subslet_app_inv in subsl as [subsl subsl'].
-      depelim subsl; simpl in H0; noconf H0. depelim subsl.
-      apply context_subst_app in cs as [cs cs'].
-      simpl in *. rewrite skipn_0 in cs.
-      specialize (X (subst_context (skipn #|Γ0| s) 0 Γ0) ltac:(now autorewrite with len) _ _ 
-        (subst [b] #|Γ0| T) cs subsl').
-      rewrite subst_empty in H.
-      rewrite H in X. apply X.
-      rewrite -subst_app_simpl'.
-      apply subslet_length in subsl'.
-      now autorewrite with len in subsl'.
-      rewrite -H.  now rewrite firstn_skipn.
-    * apply subslet_app_inv in subsl as [subsl subsl'].
-      depelim subsl; simpl in H0; noconf H0. depelim subsl.
-      apply context_subst_app in cs as [cs cs'].
-      simpl in *.
-      destruct args. depelim cs'; simpl in H; noconf H.
-      depelim cs'. discriminate.
-      simpl in *. rewrite skipn_S skipn_0 in cs.
-      rewrite subst_empty in t0.
-      depelim cs'; simpl in H; noconf H. depelim cs'. noconf H0.
-      rewrite H1 in H2. noconf H2.
-      constructor; auto.
-      rewrite /subst1 subst_it_mkProd_or_LetIn.
-      rewrite Nat.add_0_r.
-      specialize (X (subst_context (skipn #|Γ0| s) 0 Γ0) ltac:(now autorewrite with len) _ _ 
-      (subst [t1] #|Γ0| T) cs subsl').
-      rewrite -{1}H1. apply X.
-      rewrite -subst_app_simpl'.
-      apply subslet_length in subsl'.
-      now autorewrite with len in subsl'.
-      rewrite -H1. now rewrite firstn_skipn.
+  now intros sp ->.
 Qed.
 
-Lemma arity_spine_to_extended_list_k {cf:checker_flags} Σ Γ Δ s :
-  wf_local Σ (Γ ,,, Δ) ->
-  arity_spine Σ (Γ ,,, Δ) (it_mkProd_or_LetIn (lift_context #|Δ| 0 Δ) (tSort s)) 
-    (to_extended_list_k Δ 0) (tSort s).
-Proof.  
-  intros wf.
-  generalize (@eq_refl _ Δ).
-  rewrite -{1}(app_nil_r Δ).
-  generalize (@nil context_decl).
-  induction Δ at 1 4 5 6 using ctx_length_rev_ind; simpl; auto.
-  - constructor.
-  - rewrite app_length. simpl.
-    intros l le.
-    rewrite lift_context_app /= it_mkProd_or_LetIn_app /=.
-    destruct d as [na [?|] ?]; simpl in *;
-    rewrite to_extended_list_k_app; simpl.
-    constructor; rewrite /subst1 subst_it_mkProd_or_LetIn /=.
-    admit.
-    constructor.
-    destruct (nth_error_spec Δ #|Γ0|).
-    rewrite -le in e.
-    eapply refine_type. constructor. auto.
-    rewrite -le.
-    rewrite nth_error_app_lt; eauto.
-    rewrite !app_length /=. lia.
-    rewrite Nat.add_0_r e. reflexivity.
-    rewrite nth_error_app_lt in e; eauto. rewrite app_length. simpl. lia.
-    rewrite nth_error_app_ge in e; eauto.
-    rewrite Nat.sub_diag in e. simpl in e. noconf e.
-    rewrite /=. f_equal. lia.
-    rewrite -le in l0.
-    autorewrite with len in l0. simpl in l0. lia.
-    rewrite /subst1 subst_it_mkProd_or_LetIn.
-    simpl. specialize (X ())
-
-    
-    rewrite Nat.add_0_r Nat.add_1_r.
-    econstructor.
-    rewrite -(subst_context_lift [t]). simpl.  *)
+Lemma All2_eq_eq {A} (l l' : list A) : l = l' -> All2 (fun x y => x = y) l l'.
+Proof.
+  intros ->. induction l';  constructor; auto.
+Qed.
 
 Lemma lift_context_lift_context n k Γ : lift_context n 0 (lift_context k 0 Γ) =
   lift_context (n + k) 0 Γ.
@@ -3572,8 +3589,61 @@ Proof. apply map_ext => x.
   rewrite simpl_lift; try lia. reflexivity.
 Qed.
 
-Lemma sr_red1 {cf:checker_flags} : env_prop SR_red1.
+Lemma arity_spine_eq {cf:checker_flags} Σ Γ T T' :
+  isWfArity_or_Type Σ Γ T' ->
+T = T' -> arity_spine Σ Γ T [] T'.
+Proof. intros H  ->; constructor;auto. reflexivity. Qed.
+
+Lemma map_subst_lift_id_eq s l k : k = #|s| -> map (subst0 s ∘ lift0 k) l = l.
+Proof. intros ->; apply map_subst_lift_id. Qed.
+
+Lemma build_branches_type_red (p p' : term) (ind : inductive)
+	(mdecl : PCUICAst.mutual_inductive_body)
+    (idecl : PCUICAst.one_inductive_body) (pars : list term) 
+    (u : Instance.t) (brtys : list (nat × term)) Σ Γ :
+  red1 Σ Γ p p' ->
+  map_option_out (build_branches_type ind mdecl idecl pars u p) = Some brtys ->
+  ∃ brtys' : list (nat × term),
+    map_option_out (build_branches_type ind mdecl idecl pars u p') =
+    Some brtys' × All2 (on_Trel_eq (red1 Σ Γ) snd fst) brtys brtys'.
 Proof.
+  intros redp.
+  unfold build_branches_type.
+  unfold mapi.
+  generalize 0 at 3 6.
+  induction (ind_ctors idecl) in brtys |- *. simpl.
+  intros _ [= <-]. exists []; split; auto.
+  simpl. intros n.
+  destruct a. destruct p0.
+  destruct (instantiate_params (subst_instance_context u (PCUICAst.ind_params mdecl))
+  pars
+  (subst0 (inds (inductive_mind ind) u (PCUICAst.ind_bodies mdecl))
+     (subst_instance_constr u t))).
+  destruct decompose_prod_assum.
+  destruct chop.
+  destruct map_option_out eqn:Heq.
+  specialize (IHl _ _ Heq).
+  destruct IHl. intros [= <-].
+  exists ((n0,
+  PCUICAst.it_mkProd_or_LetIn c
+    (mkApps (lift0 #|c| p')
+       (l1 ++
+        [mkApps (tConstruct ind n u) (l0 ++ PCUICAst.to_extended_list c)]))) :: x).
+  destruct p0 as [l' r'].
+  rewrite {}l'.
+  split; auto.
+  constructor; auto. simpl. split; auto.
+  2:discriminate. clear Heq.
+  2:discriminate.
+  eapply red1_it_mkProd_or_LetIn.
+
+        rewrite Heq.
+  rewrite IHl.
+
+
+Lemma sr_red1 {cf:checker_flags} : allow_cofix = false -> env_prop SR_red1.
+Proof.
+  intros allow_cofix.
   apply typing_ind_env; intros Σ wfΣ Γ wfΓ; unfold SR_red1; intros **; rename_all_hyps;
     match goal with
     | [H : (_ ;;; _ |- _ <= _) |- _ ] => idtac
@@ -3709,6 +3779,7 @@ Proof.
   - (* iota reduction *)
     subst npar.
     clear forall_u forall_u0 X X0.
+    pose proof typec as typec''.
     unfold iota_red. rename args into iargs. rename args0 into cargs.
     pose proof typec as typec'.
     eapply inversion_mkApps in typec as [A [U [tyc [tyargs tycum]]]]; auto.
@@ -3899,6 +3970,18 @@ Proof.
       eapply spine_subst_app_inv in insts as [instl instr]. 2:auto.
       2:{ rewrite map_length to_extended_list_k_length. now autorewrite with len. } *)
       eexists.
+      assert(wfparinds : wf_local Σ
+        (Γ ,,, subst_instance_context u (ind_params mdecl) ,,,
+          subst_instance_context u (ind_indices oib))). 
+      admit.
+      assert(wfparinds' : wf_local Σ
+        (Γ ,,, subst_instance_context u1 (ind_params mdecl) ,,,
+          subst_instance_context u1 (ind_indices oib))).
+      admit.
+      assert(wfparu : wf_local Σ (subst_instance_context u (ind_params mdecl))). 
+      { eapply on_minductive_wf_params; eauto. destruct decli; eauto. }
+      assert(wfparu1 : wf_local Σ (subst_instance_context u1 (ind_params mdecl))). 
+      { eapply on_minductive_wf_params; eauto. destruct decli; eauto. }
       eapply type_it_mkProd_or_LetIn; eauto. 
       eapply type_mkApps.
       assert (Σ ;;; Γ |- p : 
@@ -3915,15 +3998,16 @@ Proof.
         eexists _, ps. rewrite destArity_it_mkProd_or_LetIn.
         simpl. split. reflexivity. rewrite app_context_nil_l. simpl.
         constructor.
-        eapply substitution_wf_local; eauto. eapply cparsubst0.  admit.
+        eapply substitution_wf_local; eauto. eapply cparsubst0 => //.
         red. admit.
         eapply cumul_it_mkProd_or_LetIn => //.
-        eapply context_relation_subst => //. 2:eapply iparsubst0. 2:eapply cparsubst0. admit.
+        eapply context_relation_subst => //. 2:eapply iparsubst0. 2:eapply cparsubst0. auto.
         eapply spine_subst_conv; eauto. eapply context_relation_subst_instance; eauto.
-        admit. now symmetry. now symmetry.
+        now symmetry. now symmetry.
         rewrite - !subst_instance_context_app.
         eapply context_relation_subst_instance; eauto.
-        admit. now symmetry.
+        eapply on_minductive_wf_params_indices_inst => //. destruct decli; eauto.
+        now symmetry.
         eapply congr_cumul_prod.
         eapply mkApps_conv_args => //.
         constructor. constructor. now symmetry.
@@ -3943,9 +4027,7 @@ Proof.
       subst cindices.
       simpl.
       assert (closed_ctx (subst_instance_context u1 (ind_params mdecl)) = true).
-      { eapply closed_wf_local; eauto.
-        eapply (on_minductive_wf_params _ mdecl); intuition eauto.
-        eapply isdecl. }
+      { eapply closed_wf_local; eauto. }
       assert (lencpar := context_subst_length _ _ _ cparsubst0).
       rewrite subst_instance_context_length in lencpar. rewrite lencpar.
       
@@ -4044,203 +4126,194 @@ Proof.
           rewrite lift_context_lift_context distr_lift_subst_context.
           rewrite map_lift_lift. f_equal.
           rewrite closed_ctx_lift -?lencpar ?Nat.add_0_r; auto. }
+        rewrite simpl_map_lift.
         rewrite H0.
-        rewrite -simpl_map_lift.
-        rewrite lift_context_app.
-        
-           (map (fun x => lift #|arsubst0 (ctx_inst_sub insts) ∘ lift #|argctx| #|ind_indices oib|)
-        (PCUICAst.to_extended_list_k (ind_indices oib) 0)) = 
-
-
-
-
-
-         instantiate (1:=map (lift0 #|ind_indices oib|) (ctx_inst_sub insts)).
-         apply spine_subst_weakening.
-        
-
-
-
-         assert ((map (subst0 (ctx_inst_sub insts) ∘ lift #|argctx| #|ind_indices oib| ∘ lift0 #|ind_indices oib|)
-         (firstn (PCUICAst.ind_npars mdecl) cargs)) = 
-         map (lift #|argctx| 0) (firstn (PCUICAst.ind_npars mdecl) cargs)).
-        { apply map_ext => x. 
-          rewrite simpl_lift => //. lia.
-          rewrite subst_lift_above => //.
-          rewrite (ctx_inst_subst_length insts); auto.
-          now rewrite List.rev_length; autorewrite with len. }
-        rewrite {}H0.
-
-
-
-         assert ((map (subst0 (ctx_inst_sub insts) ∘ lift #|argctx| #|ind_indices oib|)
-         (PCUICAst.to_extended_list_k (ind_indices oib) 0)) = 
-         (map
-         (fun x : term =>
-          subst cparsubst #|argctx|
-            (subst (inds (inductive_mind ind) u1 (ind_bodies mdecl))
-               (#|argctx| + #|cparsubst|) (subst_instance_constr u1 x)))
-         (cshape_indices (cshape onc)))).
-         { rewrite -map_map_compose.
-           rewrite lift_to_extended_list_k.
-           pose proof (ctx_inst_sub_to_extended_list_k _ _ _ _ insts).
-           rewrite List.rev_involutive in H0.
-           rewrite to_extended_list_k_subst in H0.
-           rewrite PCUICSubstitution.map_subst_instance_constr_to_extended_list_k in H0.
-           rewrite /lift_context to_extended_list_k_fold_context in H0.
-           rewrite H0. reflexivity. }
-        rewrite {}H0. 
-        eapply typing_spine_it_mkProd_or_LetIn_close'; eauto.
-        rewrite subst_context_lift in instsp.
-        now rewrite -lencpar. eapply instsp.
-        left.
-        eexists _, _; intuition eauto. rewrite destArity_it_mkProd_or_LetIn. 
-        simpl. reflexivity. rewrite app_context_nil_l.
-        rewrite -subst_context_lift => //. now rewrite -lencpar.
+        have sps := spine_subst_to_extended_list_k Σ (lift_context #|argctx| 0
+        (subst_context cparsubst 0 (subst_instance_context u1 (ind_indices oib)))).
+        autorewrite with len in sps.
+        rewrite [reln _ _ _]to_extended_list_k_fold_context in sps.
+        rewrite to_extended_list_k_fold_context in sps.
+        rewrite PCUICSubstitution.map_subst_instance_constr_to_extended_list_k in sps.
+        apply sps; auto.
         apply (spine_codom_wf _ _ _ _ _ instsp).
-        left.
-        eexists _, _; intuition eauto.
-        rewrite !destArity_it_mkProd_or_LetIn !subst_instance_constr_it_mkProd_or_LetIn
-          !destArity_it_mkProd_or_LetIn. 
-        simpl. reflexivity. rewrite app_context_nil_l.
-        apply weaken_wf_local; auto. apply (spine_dom_wf _ _ _ _ _ instsp).
-        rewrite -subst_instance_context_app. apply on_minductive_wf_params_indices_inst => //.
-        pcuic.
-        assert (declared_constructor Σ.1 mdecl idecl (ind, c0) cdecl').
-        { split; eauto. }
-        
-        eapply type_mkApps. econstructor; eauto.
-        apply (spine_dom_wf _ _ _ _ _ instsp).
-        2:{ simpl. constructor. left; eexists _, _; split; [reflexivity|eauto].
-            apply (spine_dom_wf _ _ _ _ _ instsp).
-            reflexivity. }
-        pose proof (declared_constructor_valid_ty _ _ _ _ _ _ _ u1 wf (spine_dom_wf _ _ _ _ _ instsp) H0 Hu).
-        eapply typing_spine_it_mkProd_or_LetIn'; auto.
+        left; eexists _, _; split;  simpl; eauto.
+        apply (spine_codom_wf _ _ _ _ _ instsp).
+        reflexivity.
 
-        rewrite {1}onc.(cshape).(cshape_eq).
-        rewrite subst_instance_constr_it_mkProd_or_LetIn subst_it_mkProd_or_LetIn.
-        rewrite subst_instance_constr_it_mkProd_or_LetIn subst_it_mkProd_or_LetIn.
-        rewrite subst_instance_constr_mkApps subst_mkApps.
-        
-        
-        eapply All_local_env_app_inv. split.
-        rewrite subst_context_app.
+      ** eapply arity_spine_it_mkProd_or_LetIn; eauto.
+         simpl. rewrite -(app_nil_r [mkApps _ _]).
+         constructor; [|constructor].
+         2:{ left; eexists _, _; simpl; split; eauto. apply (spine_dom_wf _ _ _ _ _ instsp). }
+         2:{ simpl; reflexivity. }
+         rewrite lift_mkApps subst_mkApps /=.
+         autorewrite with len.
+         eapply type_mkApps. econstructor; eauto; pcuic.
+         apply (spine_dom_wf _ _ _ _ _ instsp).
+         simpl.
+         apply wf_arity_spine_typing_spine => //.
+         split.
+         epose proof (declared_constructor_valid_ty _ _ _ _ _ _ _ u1 wf (spine_dom_wf _ _ _ _ _ instsp) _ Hu).
+         right; eauto.
+         
+         unfold type_of_constructor.
+         rewrite {1}onc.(cshape).(cshape_eq).
+         rewrite subst_instance_constr_it_mkProd_or_LetIn subst_it_mkProd_or_LetIn.
+         eapply arity_spine_it_mkProd_or_LetIn; eauto.
+         rewrite (closed_ctx_subst (inds _ _ _) 0) => //.
+         rewrite -(closed_ctx_lift #|argctx| 0 (subst_instance_context u1 (ind_params mdecl))) => //.
+         eapply (spine_subst_weakening _ _ _ _ _ (subst_context cparsubst 0
+         (subst_context (inds (inductive_mind ind) u1 (ind_bodies mdecl))
+            #|cparsubst| (map_context (subst_instance_constr u1) argctx)))) in cparsubst0; auto.
+         autorewrite with len in cparsubst0. apply cparsubst0.
+         eapply (spine_dom_wf _ _ _ _ _ instsp).
+         rewrite subst_instance_constr_it_mkProd_or_LetIn !subst_it_mkProd_or_LetIn.
+         autorewrite with len.
+         rewrite subst_instance_constr_mkApps !subst_mkApps.
+         rewrite -(app_nil_r (to_extended_list_k argctx 0)).
+         eapply arity_spine_it_mkProd_or_LetIn; auto.
+         *** have sps := spine_subst_to_extended_list_k Σ 
+           ( subst_context cparsubst 0
+           (subst_context (inds (inductive_mind ind) u1 (ind_bodies mdecl))
+              #|cparsubst| (map_context (subst_instance_constr u1) argctx))) Γ wf
+              (spine_dom_wf _ _ _ _ _ instsp)
+              .
+              autorewrite with len in sps.
+              rewrite [reln _ _ _]to_extended_list_k_fold_context in sps.
+              rewrite to_extended_list_k_fold_context in sps.
+              rewrite PCUICSubstitution.map_subst_instance_constr_to_extended_list_k in sps.
+              eapply (spine_subst_eq sps).
+              rewrite distr_lift_subst_context.
+              rewrite !Nat.add_0_r -lencpar. rewrite closed_ctx_lift => //.
+              eapply (wf_local_instantiate _ (InductiveDecl mdecl) _ u1) in wfc; eauto.
+              2:{ destruct decli; eauto.  }
+              clear -wf wfc isdecl Hu. rewrite !subst_instance_context_app in wfc.
+              epose proof (substitution_wf_local Σ [] (subst_instance_context u1 (arities_context (ind_bodies mdecl)))).
+              specialize (X (inds (inductive_mind ind) u1 (ind_bodies mdecl))
+                (subst_instance_context u1 (ind_params mdecl) ,,, (map_context (subst_instance_constr u1) argctx)) wf).
+              rewrite app_context_nil_l in X.
+              forward X by eapply subslet_inds; eauto.
+              rewrite app_context_assoc in X.
+              specialize(X wfc). rewrite app_context_nil_l in X.
+              eapply closed_wf_local in X; eauto.
+              rewrite subst_context_app in X.
+              rewrite closedn_ctx_app in X.
+              autorewrite with len in X. simpl in X. rewrite Nat.add_0_r in X.
+              now move/andP: X => [_ X].
+          *** rewrite !map_map_compose !map_app.
+              assert ((map (subst0 (ctx_inst_sub insts) ∘ lift #|argctx| #|ind_indices oib| ∘ lift0 #|ind_indices oib|)
+                (firstn (PCUICAst.ind_npars mdecl) cargs)) = 
+              map (lift #|argctx| 0) (firstn (PCUICAst.ind_npars mdecl) cargs)).
+              { apply map_ext => x. 
+                rewrite simpl_lift => //. lia.
+                rewrite subst_lift_above => //.
+                rewrite (ctx_inst_subst_length insts); auto.
+                now rewrite List.rev_length; autorewrite with len. }
+              rewrite !Nat.add_0_r !map_map_compose {}H0.
+              assert ((map (subst0 (ctx_inst_sub insts) ∘ lift #|argctx| #|ind_indices oib|)
+                (to_extended_list_k (ind_indices oib) 0)) = 
+              (map
+              (fun x : term =>
+                subst cparsubst #|argctx|
+                  (subst (inds (inductive_mind ind) u1 (ind_bodies mdecl))
+                    (#|argctx| + #|cparsubst|) (subst_instance_constr u1 x)))
+              (cshape_indices (cshape onc)))).
+              { rewrite -map_map_compose.
+                rewrite lift_to_extended_list_k.
+                pose proof (ctx_inst_sub_to_extended_list_k _ _ _ _ insts).
+                rewrite List.rev_involutive in H0.
+                rewrite to_extended_list_k_subst in H0.
+                rewrite PCUICSubstitution.map_subst_instance_constr_to_extended_list_k in H0.
+                rewrite /lift_context to_extended_list_k_fold_context in H0.
+                rewrite H0. reflexivity. }
+              rewrite {}H0.
+              constructor.
+              { right. exists (subst_instance_univ u1 (ind_sort oib)).
+                eapply type_mkApps. econstructor; eauto.
+                apply (spine_dom_wf _ _ _ _ _ instsp).
+                destruct (oib.(onArity)) as [s' Hs].
+                eapply wf_arity_spine_typing_spine => //.
+                split.
+                eapply (instantiate_minductive _ _ _ u1) in Hs; eauto.
+                2:pcuic.
+                eapply weaken_ctx in Hs. simpl in Hs. right; exists (subst_instance_univ u1 s'). red. eauto. auto.
+                now eapply spine_dom_wf.
+                rewrite oib.(ind_arity_eq).
+                rewrite subst_instance_constr_it_mkProd_or_LetIn.
+                eapply arity_spine_it_mkProd_or_LetIn; eauto.
+                { set (foo:=map (lift #|argctx| #|ind_indices oib| ∘ lift0 #|ind_indices oib|)
+                    cparsubst).
+                  clear -instsp wf cparsubst0 H.
+                  eapply (spine_subst_weakening _ _ _ _ _ (subst_context cparsubst 0
+                    (subst_context (inds (inductive_mind ind) u1 (ind_bodies mdecl))
+                      #|cparsubst| (map_context (subst_instance_constr u1) argctx)))) in cparsubst0; auto.
+                  rewrite closed_ctx_lift in cparsubst0 => //.
+                  autorewrite with len in cparsubst0.
+                  eapply cparsubst0.                  
+                  apply (spine_dom_wf _ _ _ _ _ instsp). }
+                rewrite subst_instance_constr_it_mkProd_or_LetIn subst_it_mkProd_or_LetIn.
+                rewrite -(app_nil_r (map _ (cshape_indices _))).
+                eapply arity_spine_it_mkProd_or_LetIn; [auto|auto|constructor].
+                2:{ left; eexists _, _; split; simpl; eauto. now eapply spine_dom_wf. }
+                eapply (spine_subst_eq instsp).
+                rewrite distr_lift_subst_context.
+                rewrite closed_ctx_lift ?Nat.add_0_r -?lencpar //.
+                simpl. reflexivity. }
 
-        
-
-
-      (*rewrite lencpar. rewrite -subst_app_context.*)
-      rewrite -subst_instance_context_app in instr.
-      eapply spine_subst_weaken in instr; eauto.
-      rewrite subst_instance_context_app in instr.
-      rewrite - app_context_assoc in instr.
-      rewrite app_context_assoc in instr.
-      eapply spine_subst_subst in instr; eauto.
-      2:{ eapply (weaken_subslet _ _ _ _ []) => //; eauto.
-          eapply subslet_inds; eauto. }
-      rewrite subst_context_app in instr.
-      autorewrite with len in instr.
-      rewrite app_context_assoc in instr; eapply spine_subst_subst in instr; eauto.
-      2:{ rewrite closed_ctx_subst => //.
-          eapply cparsubst0. }
-      autorewrite with len in instr.
-      idtac. rewrite Nat.add_0_r in instr.
-      rewrite lencpar - !subst_app_context in instr.
-      rewrite firstn_map !map_map_compose in instr.
-      rewrite -{1}(subst_instance_context_length u1 (cshape_args onc.2.π1)) in instl.
-      eapply spine_subst_to_extended_list_k in instl.
-      rewrite subst_instance_context_length in instl.
-      rewrite instl in instr.
-      rewrite subst_instance_context_length in instr.
-      assert ((subst_context cparsubst #|cshape_args onc.2.π1|
-      (subst_context (inds (inductive_mind ind) u1 (PCUICAst.ind_bodies mdecl))
-         (#|cshape_args onc.2.π1| + #|cparsubst|)
-         (subst_context
-            (map (lift0 #|cshape_args onc.2.π1|) (expand_lets (subst_instance_context u1 (ind_params mdecl)))) 0
-            (subst_instance_context u1 (ind_indices onind))))) = 
-            (lift_context #|subst_instance_context u1 argctx| 0
-     (subst_context (cparsubst ++ inds (inductive_mind ind) u1 (ind_bodies mdecl)) 0
-        (subst_instance_context u1 (ind_indices onind))))).
-      { rewrite -subst_app_context_gen.
-        rewrite subst_context_decompo.
-        rewrite inds_length.
-        rewrite lift_context_subst_context.
-        rewrite subst_context_decompo.
-        autorewrite with len. rewrite inds_length. f_equal.
-
-        move: cparsubst0.
-        clear.
-        rewrite -lift_context_subst_context.
-        generalize (subst_instance_context u1 (ind_indices onind)).
-        generalize (subst_instance_context u1 (ind_params mdecl)).
-        intros Γ' c [].
-        induction inst_subslet0.
-        simpl. rewrite subst_context_0.
-        
-
-        rewrite -subst_context_map.
-
-
-
-      rewrite -app_context_assoc in instl.
-      epose proof (spine_subst_subst _ [] _ _ _  _ _ _).
-      rewrite app_context_nil_l in X. eapply X in instl; clear X; eauto.
-      rewrite app_context_nil_l in instl.
-      2:{ eapply subslet_inds; eauto. }
-      autorewrite with len in instl.
-      rewrite subst_context_app in instl.
-      rewrite closed_ctx_subst in instl. auto.
-      eapply spine_subst_weaken in instl. 3:{ eapply wfΓ. } all:auto.
-      rewrite app_context_assoc in instl.
-      (* eapply spine_subst_subst in instl => //.
-      2:{ eapply cparsubst0. } *)
-      autorewrite with len in instl.
-      set (indsub := inds (inductive_mind ind) u1 (ind_bodies mdecl)) in *.
-      rewrite subst_instance_context_length.
-
-
-      assert ((subst_context (cparsubst ++ inds (inductive_mind ind) u1 (PCUICAst.ind_bodies mdecl))
-          #|cshape_args onc.2.π1|
-         (subst_context
-            (skipn #|ind_indices onind|
-               (map (subst_instance_constr u1) inst)) 0
-            (subst_instance_context u1 (ind_indices onind)))) = 
-            (lift_context #|argctx| 0
-        (subst_context (cparsubst ++ indsub) 0 (subst_instance_context u1 (ind_indices onind))))) as <-.
-      subst argctx.
-
-
-      2:{ clear -instr.
-          rewrite (subst_app_context_gen _ _ #|_|).
-          assert( (map
-          (subst cparsubst #|cshape_args onc.2.π1|
-           ∘ subst
-               (inds (inductive_mind ind) u1 (PCUICAst.ind_bodies mdecl))
-               (#|cshape_args onc.2.π1| + #|cparsubst|)
-           ∘ subst_instance_constr u1) (firstn #|ind_indices onind| inst)) =
-           (map
-           (fun x : term =>
-            subst0 cparsubst
-              (subst (inds (inductive_mind ind) u1 (ind_bodies mdecl)) #|cparsubst|
-                 x)) (firstn #|ind_indices onind| inst))) as <-; auto.
-          apply map_ext => x. rewrite -subst_app_simpl'. auto.
-          rewrite -subst_app_simpl'. auto.
-          epose proof (subst_app_context' _ _ #|cshape_args onc.2.π1| _ #|cparsubst|). in instr.
-      apply instr. }
-      
-      pose proof (c)
-      Lemma spine_subst_subst_context Σ Γ i s Δ :
-        spine_subst Σ Γ i s Δ ->
-        subst_context s 0 Γ' = lift_context 
-        subst_context 
-
-
-
-      rewrite (closed_ctx_subst _ (#|cshape_args _| + _)).
-      rewrite -subst_app_context.
-
-
-      all:admit.
+              rewrite subst_mkApps.
+              apply conv_cumul.
+              rewrite /cshape_concl_head.
+              rewrite subst_inds_concl_head.
+              { simpl. destruct decli. now eapply nth_error_Some_length in H2. }
+              simpl. apply mkApps_conv_args; auto.
+               
+              rewrite map_app. eapply All2_app.
+              ****
+                eapply (All2_impl (P:=fun x y => x = y)).
+                2:{ intros ? ? ->. reflexivity. }
+                eapply All2_eq_eq.
+                rewrite -map_map_compose.
+                rewrite subst_instance_to_extended_list_k.
+                rewrite -map_map_compose.
+                rewrite -(subst_instance_context_length u1 (ind_params mdecl)).
+                rewrite -to_extended_list_k_map_subst; [lia|].
+                erewrite subst_to_extended_list_k.
+                2:{ eapply make_context_subst_spec_inv. rewrite List.rev_involutive.
+                    rewrite -[subst_instance_context _ _](closed_ctx_lift #|argctx| 0) => //.
+                      apply context_subst_lift.
+                    apply (cparsubst0.(inst_ctx_subst)). }
+                rewrite map_map_compose.
+                rewrite map_subst_lift_id_eq. now autorewrite with len.
+                reflexivity.
+              ****
+                set (instargctx := subst_context cparsubst 0 (subst_context _ #|cparsubst| _)) in *.
+                rewrite -{1}lencpar in instsp.
+                assert(#|instargctx| = #|argctx|).
+                { subst instargctx  ; now  autorewrite with len. }
+                unfold argctx in H0.
+                rewrite -{3}H0 -(all_rels_length instargctx 0 #|argctx|).
+                rewrite -(map_map_compose _ _ _ _ (subst cparsubst #|argctx|)).
+                rewrite -map_map_compose.
+                rewrite -map_map_compose.
+                rewrite map_map_compose.
+                eapply All2_map. rewrite -lencpar.
+                rewrite !map_map_compose.
+                apply All2_refl.
+                intros.
+                unfold compose.
+                rewrite all_rels_length.
+                epose proof (all_rels_subst Σ instargctx Γ _ wf (spine_dom_wf _ _ _ _ _ instsp)).
+                eapply red_conv in X.
+                assert(subst (map (lift0 #|argctx|) cparsubst) #|instargctx| x =
+                  (lift #|argctx| #|argctx| (subst cparsubst #|argctx| x))).
+                  epose proof (distr_lift_subst_rec _ _ #|argctx| #|argctx| 0).
+                  rewrite Nat.add_0_r in H2. rewrite H2. f_equal. now rewrite H0.
+                  admit.
+                  rewrite H2.
+                  rewrite H0 in X.
+                  symmetry in X.
+                  apply X.
+          
+          
 
     * rewrite subst_mkApps.
       pose proof (context_subst_length _ _ _ idxsubst0).
@@ -4257,11 +4330,45 @@ Proof.
       reflexivity.
       apply make_context_subst_spec_inv. rewrite List.rev_involutive.
       apply idxsubst0.
-    * admit. 
+    * right.
+      exists ps.
+      eapply type_mkApps. eauto.
+      eapply wf_arity_spine_typing_spine => //.
+      split.
+      ** now eapply validity in typep.
+      ** eapply arity_spine_it_mkProd_or_LetIn => //.
+         eauto.
+         simpl. constructor.
+         2:constructor; auto; pcuic.
+         2:{ left; eexists [], ps; intuition auto. }
+        rewrite subst_mkApps. 
+        rewrite map_app.
+        pose proof (subslet_length subsidx).
+        autorewrite with len in H. rewrite -H.
+        rewrite map_map_compose map_subst_lift_id.
+        pose proof (spine_subst_subst_to_extended_list_k subsidx).
+        rewrite to_extended_list_k_fold_context in H0.
+        rewrite PCUICSubstitution.map_subst_instance_constr_to_extended_list_k  in H0.
+        rewrite {}H0. now rewrite firstn_skipn /=.
     * simpl in Hbr. rewrite Hbr in a. intuition discriminate.
+    * eapply on_declared_minductive => //. pcuic.
 
-  - (* Case congruence *) admit.
-  - (* Case congruence *) admit.
+  - (* Case congruence: on a cofix, impossible *)
+    clear -wf typec heq_allow_cofix.
+    eapply type_mkApps_inv in typec as [? [? [[tcof _] _]]] =>  //.
+    eapply type_tCoFix_inv in tcof as [allowc _] => //.
+    rewrite allowc in heq_allow_cofix. discriminate.
+
+  - (* Case congruence on the predicate *) 
+    eapply (type_Cumul _ _ _ (mkApps p' (skipn npar args ++ [c]))).
+    eapply type_Case; eauto.
+    move: heq_map_option_out.
+
+    Lemma build_branches_
+    unfold build_branches_type.
+    destruct (ind_ctors idecl). simpl. intros [=]. reflexivity.
+
+
   - (* Case congruence *) admit.
   - (* Case congruence *) admit.
   - (* Proj CoFix congruence *) admit.

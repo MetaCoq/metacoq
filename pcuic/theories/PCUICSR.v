@@ -3682,6 +3682,200 @@ Proof.
    destruct a as [? [?|] ?]; constructor; auto.
 Qed.
 
+Definition fix_context_gen k mfix := 
+  (List.rev
+  (mapi_rec
+   (fun (i : nat) (d : def term) =>
+    PCUICAst.vass (dname d) (lift0 i (dtype d))) mfix k)).
+
+Lemma conv_decls_fix_context_gen {cf:checker_flags} Σ Γ mfix mfix1 :
+  wf Σ.1 ->
+  All2 (fun d d' => conv Σ Γ d.(dtype) d'.(dtype)) mfix mfix1 ->
+  forall Γ' Γ'',
+  conv_context Σ (Γ ,,, Γ') (Γ ,,, Γ'') ->
+  context_relation (fun Δ Δ' : PCUICAst.context => conv_decls Σ (Γ ,,, Γ' ,,, Δ) (Γ ,,, Γ'' ,,, Δ'))
+    (fix_context_gen #|Γ'| mfix) (fix_context_gen #|Γ''| mfix1).
+Proof.    
+  intros wfΣ.
+  induction 1. constructor. simpl.
+  intros Γ' Γ'' convctx.
+
+  assert(conv_decls Σ (Γ ,,, Γ' ,,, []) (Γ ,,, Γ'' ,,, [])
+  (PCUICAst.vass (dname x) (lift0 #|Γ'| (dtype x)))
+  (PCUICAst.vass (dname y) (lift0 #|Γ''| (dtype y)))).
+  { constructor.
+  pose proof (context_relation_length _ _ _  convctx).
+  rewrite !app_length in H. assert(#|Γ'|  = #|Γ''|) by lia.
+  rewrite -H0.
+  apply (weakening_conv _ _ []); auto. }
+
+  apply context_relation_app_inv. rewrite !List.rev_length; autorewrite with len.
+  rewrite !mapi_rec_length.
+  now apply All2_length in X.
+  constructor => //. constructor. 
+  eapply (context_relation_impl (P:= (fun Δ Δ' : PCUICAst.context =>
+  conv_decls Σ
+  (Γ ,,, (vass (dname x) (lift0 #|Γ'| (dtype x)) :: Γ') ,,, Δ)
+  (Γ ,,, (vass (dname y) (lift0 #|Γ''| (dtype y)) :: Γ'') ,,, Δ')))).
+  intros. now rewrite !app_context_assoc.
+  eapply IHX. simpl.
+  constructor => //.
+Qed.
+
+Lemma assumption_context_fix_context_gen k Γ : assumption_context (fix_context_gen k Γ).
+Proof.
+  rewrite /fix_context_gen. revert k.
+  induction Γ using rev_ind.
+  constructor. intros.
+  rewrite mapi_rec_app /= List.rev_app_distr /=. constructor.
+  apply IHΓ.
+Qed.
+
+
+Lemma All_local_env_fix_OnOne2_gen {cf:checker_flags} Σ P Q R Γ mfix mfix1 :
+  wf Σ.1 ->
+  (forall (Γ' Γ'' Δ Δ': context) (t : term) (T : option term),
+    conv_context Σ (Γ ,,, Γ' ,,, Δ) (Γ ,,, Γ'' ,,, Δ') ->
+    lift_typing P Σ (Γ ,,, Γ' ,,, Δ) t T ->
+    All_local_env (lift_typing (fun Σ Δ => R Σ (Γ ,,, Δ)) Σ) (Γ''  ,,, Δ') ->
+    lift_typing R Σ (Γ ,,, Γ'' ,,, Δ') t T) ->
+  (forall hd hd', Q hd hd' -> conv Σ Γ (dtype hd) (dtype hd')) ->
+  (forall Γ' Γ'' hd hd', Q hd hd' ->
+    conv_context Σ (Γ ,,, Γ') (Γ ,,, Γ'') ->
+    All_local_env (lift_typing (fun Σ Δ => R Σ (Γ ,,, Δ)) Σ) Γ'' ->
+    lift_typing P Σ (Γ ,,, Γ') (lift0 #|Γ'| (dtype hd)) None ->
+    lift_typing R Σ (Γ ,,, Γ'') (lift0 #|Γ'| (dtype hd')) None
+    ) -> 
+  OnOne2 Q mfix mfix1 ->
+  forall Γ' Γ'',
+  conv_context Σ (Γ ,,, Γ') (Γ ,,, Γ'') ->
+  All_local_env (lift_typing R Σ) (Γ ,,, Γ'') ->
+  All_local_env (lift_typing (fun Σ Δ => P Σ (Γ ,,, Γ' ,,, Δ)) Σ) (fix_context_gen #|Γ'| mfix) ->
+  All_local_env (lift_typing (fun Σ Δ => R Σ (Γ ,,, Γ'' ,,, Δ)) Σ) (fix_context_gen #|Γ'| mfix1).
+Proof.    
+  intros wfΣ PR Qconv QPR o.
+  induction o; intros Γ' Γ'' convctx wfΓ' a'.
+  simpl in a' |- *.
+  apply All_local_env_app in a' as [r r'].
+  depelim r; simpl in H; noconf H.
+  apply All_local_env_app_inv. split.
+  constructor. constructor. simpl.
+  apply All_local_env_app in wfΓ' as [wfΓ wfΓ'].
+  eapply (QPR _ _ _ _ p convctx wfΓ' l).
+  revert r'. fold (fix_context_gen (S #|Γ'|) tl).
+  generalize (assumption_context_fix_context_gen (S #|Γ'|) tl).
+  generalize (fix_context_gen (S #|Γ'|) tl).
+  induction 2.
+  - constructor.
+  - forward IHr'. now depelim H; simpl in H0; noconf H0. auto.
+    constructor; auto.
+    unfold  lift_typing in PR, t0 |- *.
+    simpl. eapply (PR _ _ _ _ _ None). 2:eapply t0.
+    apply context_relation_app_inv; simpl; auto.
+    now rewrite !app_context_length.
+    apply context_relation_app_inv; simpl; auto.
+    constructor. constructor. constructor.
+    apply (weakening_conv _ _ []); auto.
+    apply context_relation_refl. intros.
+    destruct x as [? [?|] ?]; constructor; apply conv_refl'.
+    eapply All_local_env_app_inv.
+    split; auto. now apply All_local_env_app in wfΓ' as [? ?].
+    eapply All_local_env_app_inv.
+    split; auto.
+    constructor. constructor. 
+    apply All_local_env_app in wfΓ' as [wfΓ wfΓ'].
+    apply (QPR _ _ _ _ p convctx wfΓ' l).
+    eapply All_local_env_impl. eapply  IHr'.
+    simpl; intros. unfold lift_typing in X.
+    now rewrite app_context_assoc.
+    
+  - elimtype False. depelim H; simpl in H0; noconf H0.
+
+  - simpl in a'.
+    apply All_local_env_app in a' as [r r'].
+    depelim r; simpl in H; noconf H.
+    simpl.
+    apply All_local_env_app_inv. split.
+    constructor. constructor. simpl.
+    unfold lift_typing in PR. eapply (PR _ _ [] [] _ None); eauto.
+    now apply All_local_env_app in wfΓ' as [? ?].
+
+    specialize (IHo (Γ' ,,, [PCUICAst.vass (dname hd) (lift0 #|Γ'| (dtype hd))])
+      (Γ'' ,,, [vass (dname hd) (lift0 #|Γ''| (dtype hd))])).
+    simpl in IHo.
+    assert (#|Γ'| = #|Γ''|).
+    move/context_relation_length: convctx. rewrite !app_context_length; lia.
+    forward IHo. constructor. auto.
+    constructor. 
+    rewrite  -H.
+    apply (weakening_conv _ _ []); auto.
+    forward IHo.
+    constructor. apply wfΓ'. rewrite -H. unfold lift_typing in l |- *.
+    eapply (PR _ _ [] [] _ None); eauto.
+    now apply All_local_env_app in wfΓ' as [? ?].
+
+    eapply All_local_env_impl; [eapply IHo|].
+    unfold lift_typing. intros *. 
+    eapply All_local_env_impl. eapply r'.
+    simpl; intros. unfold lift_typing in X |- *.
+    rewrite !app_context_assoc in X. apply X.
+    unfold lift_typing. intros *.
+    now rewrite !app_context_assoc -H. 
+Qed.
+
+Lemma All_local_env_fix_OnOne2 {cf:checker_flags} Σ P Q R Γ mfix mfix1 :
+  wf Σ.1 ->
+  (forall (Γ' Γ'' Δ Δ': context) (t : term) (T : option term),
+  conv_context Σ (Γ ,,, Γ' ,,, Δ) (Γ ,,, Γ'' ,,, Δ') ->
+  lift_typing P Σ (Γ ,,, Γ' ,,, Δ) t T ->
+  All_local_env (lift_typing (fun Σ Δ => R Σ (Γ ,,, Δ)) Σ) (Γ''  ,,, Δ') ->
+  lift_typing R Σ (Γ ,,, Γ'' ,,, Δ') t T) ->
+  (forall hd hd', Q hd hd' -> conv Σ Γ (dtype hd) (dtype hd')) ->
+  (forall Γ' Γ'' hd hd', Q hd hd' ->
+    conv_context Σ (Γ ,,, Γ') (Γ ,,, Γ'') ->
+    All_local_env (lift_typing (fun Σ Δ => R Σ (Γ ,,, Δ)) Σ) Γ'' ->
+    lift_typing P Σ (Γ ,,, Γ') (lift0 #|Γ'| (dtype hd)) None ->
+    lift_typing R Σ (Γ ,,, Γ'') (lift0 #|Γ'| (dtype hd')) None
+    ) -> 
+  OnOne2 Q mfix mfix1 ->
+  All_local_env (lift_typing R Σ) Γ ->
+  All_local_env (lift_typing (fun Σ Δ => P Σ (Γ ,,, Δ)) Σ) (fix_context mfix) ->
+  All_local_env (lift_typing (fun Σ Δ => R Σ (Γ ,,, Δ)) Σ) (fix_context mfix1).
+Proof.    
+  intros wfΣ PR Qconv QPR o wfΓ.
+  have H:= (All_local_env_fix_OnOne2_gen Σ P Q R Γ mfix mfix1 wfΣ PR Qconv QPR o [] []).
+  apply H. apply conv_ctx_refl. assumption.
+Qed.
+  
+Lemma conv_decls_fix_context {cf:checker_flags} Σ Γ mfix mfix1 :
+  wf Σ.1 ->
+  All2 (fun d d' => conv Σ Γ d.(dtype) d'.(dtype)) mfix mfix1 ->
+  context_relation (fun Δ Δ' : PCUICAst.context => conv_decls Σ (Γ ,,, Δ) (Γ ,,, Δ'))
+    (fix_context mfix) (fix_context mfix1).
+Proof.    
+  intros wfΣ a.
+  apply (conv_decls_fix_context_gen _ _  _ _ wfΣ a [] []).
+  apply conv_ctx_refl. 
+Qed.
+
+Lemma OnOne2_nth_error Σ Γ mfix mfix' n decl :
+  OnOne2
+  (fun x y : def term =>
+  red1 Σ Γ (dtype x) (dtype y)
+  × (dname x, dbody x, rarg x) = (dname y, dbody y, rarg y)) mfix mfix' ->        
+  nth_error mfix n = Some decl ->
+  ∑ decl', (nth_error mfix' n = Some decl') *
+  ((dname decl, dbody decl, rarg decl) = (dname decl', dbody decl', rarg decl')) *
+  ((dtype decl = dtype decl') + (red1 Σ Γ (dtype decl) (dtype decl'))).
+Proof.
+  induction 1 in n |- *.
+  destruct n; simpl.
+  - intros [= ->]. exists hd'; intuition auto.
+  - exists decl. intuition auto.
+  - destruct n; simpl; auto.
+    intros [= ->]. exists decl; intuition auto.
+Qed.
+
 Lemma sr_red1 {cf:checker_flags} : allow_cofix = false -> env_prop SR_red1.
 Proof.
   intros allow_cofix.
@@ -4542,35 +4736,69 @@ Proof.
   - (* Fix congruence *)
     symmetry in H; apply mkApps_Fix_spec in H. simpl in H. subst args.
     simpl. destruct narg; discriminate.
-  - assert(conv_context Σ (Γ ,,, fix_context mfix) (Γ ,,, fix_context mfix1)).
-    clear -X o.
-    eapply context_relation_app_inv.
-    eapply OnOne2_length in o. now rewrite !fix_context_length.
-    apply conv_ctx_refl.
-    unfold fix_context, mapi.
-    generalize 0 at 2 4.
-    induction o; intros n.
-    simpl. 
-    apply context_relation_app_inv. rewrite List.rev_length; autorewrite with len.
-    now rewrite mapi_rec_length.
-    constructor.  constructor.
-    constructor. apply red_conv, red1_red.
-    (* FIXME usual fix_context induction loading headache *)
-    admit. admit. admit. admit.
   
-  (* epose proof (OnOne2_All_All _ _ _ _ _ (fun d => (Σ;;; Γ ,,, fix_context mfix1 |- dbody d
-        : lift0 #|fix_context mfix1| (dtype d) × isLambda (dbody d) = true)) o X0). *)
-    (* simpl in X1. forward X1.
-    intros. intuition auto.
-    simpl in X1. forward X1.
-    intros [] []; simpl; intuition auto.
-    simpl in *.
-    rewrite !fix_context_length in a, t |- *.
-    clear t. *)
-  (* Fix congruence *)
-    (* eapply type_Cumul.
-    econstructor; eauto.  (* Need  to update fix_guard *)
-    admit. *)
+  - assert(fixl :#|fix_context mfix| = #|fix_context mfix1|) by now (rewrite !fix_context_length; apply (OnOne2_length o)).
+    assert(convctx : conv_context Σ (Γ ,,, fix_context mfix) (Γ ,,, fix_context mfix1)).
+    { clear -wf X o fixl.
+      eapply context_relation_app_inv => //.
+      apply conv_ctx_refl. clear X.
+      apply conv_decls_fix_context => //.
+      induction o; constructor.
+      destruct p. now apply red_conv, red1_red.
+      apply All2_refl. reflexivity.
+      reflexivity. apply IHo. }
+    assert (wf_local Σ (Γ ,,, fix_context mfix1)).
+    { apply All_local_env_app_inv. split; auto.
+      apply All_local_env_app in X as [l r].
+      
+      eapply (All_local_env_fix_OnOne2 _ (
+        fun Σ Γ0 t T =>
+        Σ;;; Γ0 |- t : T
+        × (forall u : term, red1 Σ Γ0 t u -> Σ;;; Γ0 |- u : T))); eauto.
+      all: simpl; intros *; auto.
+      * unfold lift_typing at 1.
+        destruct T.
+        ** intros conv [tyt _] wfΔ'.
+          eapply context_conversion in tyt as [_ tyt]; eauto.
+          eapply tyt; eauto. rewrite -app_context_assoc. apply All_local_env_app_inv; split; auto.
+          now eapply typing_wf_local in tyt.
+        ** intros conv [s [tyt _]] wfΔ'.
+          eapply context_conversion in tyt as [_ tyt]; eauto.
+          exists s.
+          eapply tyt; eauto.
+          rewrite -app_context_assoc. apply All_local_env_app_inv; split; auto.
+          now eapply typing_wf_local in tyt.
+      * intros [red _]. now apply red_conv. 
+      * intros [red _] conv wfΓ'' [s [ty Hred]].
+        exists s. specialize (Hred (lift0 #|Γ'| (dtype hd'))).
+        forward Hred. eapply (weakening_red1 _ _ []) => //.
+        eapply context_conversion in Hred as [_ Hred]; eauto.
+        eapply Hred; eauto. eapply All_local_env_app_inv; split; auto.
+        now eapply typing_wf_local in ty.
+      }
+
+    destruct (OnOne2_nth_error _ _ _ _ _ decl o heq_nth_error) as [decl' [[eqnth  eqs] disj]].
+    eapply type_Cumul.
+    econstructor; eauto.
+     (* Need  to update fix_guard *)
+    admit.
+    clear -X X0 convctx X1 o fixl.
+    revert o X0. generalize mfix at 1 7.
+    generalize mfix1 at 1 4.
+    induction 1; constructor.
+    depelim X0.
+    destruct p0 as [[ty eqbody] red].
+    destruct p as [Hred Heq]. noconf Heq. simpl in H; noconf H.
+    rewrite -eqbody H0. split; auto.
+    rewrite -fixl -H0.
+    eapply context_conversion.
+    3:{  } _ _ _ _ _ _ _ _ (fix_context mfix)). 3:eauto.
+
+
+
+    eapply OnOne2_All_mix_left in o; eauto.
+    clear o. 
+
 
 
   - (* Fix congruence in body *)

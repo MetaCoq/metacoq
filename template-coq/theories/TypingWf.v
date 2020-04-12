@@ -449,25 +449,20 @@ Proof.
     subst ty. eapply declared_projection_wf in isdecl; eauto.
 
   - subst types.
-    apply All_local_env_app in X as [HΓ Hmfix].
-    clear Hmfix H.
+    clear H.
     split.
-    + revert X0. generalize (fix_context mfix). intros.
-      clear decl H0. constructor. induction mfix. constructor. constructor.
-      2:{ apply IHmfix. inv X0. auto. }
-      inv X0. intuition. now apply wf_lift_wf in H0.
-    + eapply nth_error_all in X0; eauto. simpl in X0. intuition eauto.
-      now apply wf_lift_wf in H1.
+    + constructor.
+      solve_all. destruct a.
+      intuition.
+    + eapply All_nth_error in X0; eauto. destruct X0 as [s ?]; intuition. 
+
   - subst types.
-    apply All_local_env_app in X as [HΓ Hmfix].
-    clear Hmfix.
+    clear H0.
     split.
-    + revert X0. generalize (fix_context mfix). intros.
-      clear decl H. constructor. induction mfix. constructor. constructor.
-      2:{ apply IHmfix. inv X0. auto. }
-      inv X0. intuition. now apply wf_lift_wf in H1.
-    + eapply nth_error_all in X0; eauto. simpl in X0; intuition eauto.
-      now apply wf_lift_wf in H2.
+    + constructor.
+      solve_all. destruct a.
+      intuition.
+    + eapply All_nth_error in X0; eauto. destruct X0 as [s ?]; intuition. 
 
   - split. apply H. destruct X1 as [X1|[s X1]]; [|apply X1].
     destruct X1 as [[Γ' [s [X1 X1']]] XX]; cbn in *.

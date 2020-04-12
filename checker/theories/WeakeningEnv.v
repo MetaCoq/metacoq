@@ -333,16 +333,12 @@ Proof.
   - econstructor; eauto 2 with extends.
     close_Forall. intros; intuition eauto with extends.
   - econstructor; eauto with extends.
-    eapply All_local_env_impl. eapply X.
-    clear -wfΣ' extΣ. simpl; intros.
-    unfold lift_typing in *; destruct T; intuition eauto with extends.
-    destruct X as [u [tyu Hu]]. exists u. eauto.
+    eapply (All_impl X0); intuition eauto.
+    destruct X2 as [s Hs]; exists s; intuition eauto.
     eapply All_impl; eauto; simpl; intuition eauto with extends.
   - econstructor; eauto with extends. auto.
-    eapply All_local_env_impl. eapply X.
-    clear -wfΣ' extΣ. simpl; intros.
-    unfold lift_typing in *; destruct T; intuition eauto with extends.
-    destruct X as [u [tyu Hu]]. exists u. eauto.
+    eapply (All_impl X0); intuition eauto.
+    destruct X2 as [s Hs]; exists s; intuition eauto.
     eapply All_impl; eauto; simpl; intuition eauto with extends.
   - econstructor. eauto.
     destruct X2 as [isB|[u [Hu Ps]]].

@@ -32,17 +32,14 @@ Section Validity.
       clear -wfΣ wfΓ isdecl a b.
       induction b; rewrite ?lift_context_snoc; econstructor; simpl; auto.
       + destruct t0 as [u Hu]. exists u. rewrite Nat.add_0_r.
-        unshelve eapply (weakening_typing Σ (skipn n Γ) Γ0 (firstn n Γ) t _ _ _ (tSort u)); eauto with wf.
-        apply All_local_env_app_inv. intuition eauto.
+        unshelve eapply (weakening_typing Σ (skipn n Γ) Γ0 (firstn n Γ) t _ _ (tSort u)); eauto with wf.
       + destruct t0 as [u Hu]. exists u. rewrite Nat.add_0_r.
-        unshelve eapply (weakening_typing Σ (skipn n Γ) Γ0 (firstn n Γ) t _ _ _ (tSort u)); eauto with wf.
-        apply All_local_env_app_inv. intuition eauto.
+        unshelve eapply (weakening_typing Σ (skipn n Γ) Γ0 (firstn n Γ) t _ _ (tSort u)); eauto with wf.
       + rewrite Nat.add_0_r.
-        unshelve eapply (weakening_typing Σ (skipn n Γ) Γ0 (firstn n Γ) b _ _ _ t); eauto with wf.
-        eapply All_local_env_app_inv. intuition eauto.
+        unshelve eapply (weakening_typing Σ (skipn n Γ) Γ0 (firstn n Γ) b _ _ t); eauto with wf.
     - right. destruct i as [u Hu]. exists u.
       rewrite {3}H.
-      unshelve eapply (weakening_typing Σ (skipn n Γ) [] (firstn n Γ) ty _ _ _ (tSort u)); eauto with wf.
+      unshelve eapply (weakening_typing Σ (skipn n Γ) [] (firstn n Γ) ty _ _ (tSort u)); eauto with wf.
   Qed.
 
   Lemma destArity_it_mkProd_or_LetIn ctx ctx' t :
@@ -128,10 +125,16 @@ Section Validity.
   (* Qed. *)
 
   Theorem validity :
-    env_prop (fun Σ Γ t T => isWfArity_or_Type Σ Γ T).
+    env_prop (fun Σ Γ t T => isWfArity_or_Type Σ Γ T)
+      (fun Σ Γ wfΓ =>
+      All_local_env_over typing
+      (fun (Σ : global_env_ext) (Γ : context) (_ : wf_local Σ Γ) 
+         (t T : term) (_ : Σ;;; Γ |- t : T) => isWfArity_or_Type Σ Γ T) Σ Γ
+      wfΓ).
   Proof.
-
     apply typing_ind_env; intros; rename_all_hyps.
+
+    - auto. 
 
     - destruct (nth_error_All_local_env_over heq_nth_error X) as [HΓ' Hd].
       destruct decl as [na [b|] ty]; cbn -[skipn] in *.
@@ -209,11 +212,11 @@ Section Validity.
       apply All_local_env_app in wfctx as [wfd wfctx].
       eapply All_local_env_subst; eauto. simpl; intros.
       destruct T; simpl in *.
-      + rewrite Nat.add_0_r. eapply substitution_alt; eauto. constructor. constructor.
+      + rewrite Nat.add_0_r. eapply substitution; eauto. constructor. constructor.
         2: simpl; eauto; now rewrite app_context_assoc in X0.
         now rewrite subst_empty.
       + rewrite Nat.add_0_r. destruct X0 as [u' Hu']. exists u'.
-        eapply (substitution_alt _ _ _ _ _ _ (tSort u')); eauto. constructor. constructor.
+        eapply (substitution _ _ _ _ _ _ (tSort u')); eauto. constructor. constructor.
         2: simpl; eauto; now rewrite app_context_assoc in Hu'.
         now rewrite subst_empty.
       + right.
@@ -296,7 +299,7 @@ Section Validity.
       exists s.
       subst ty.
       eapply typing_subst_instance in Hty.
-      admit. auto. now eapply typing_wf_local in Hty.
+      admit. auto.
 
     - admit. (* Fix *)
     - admit. (* CoFix *)

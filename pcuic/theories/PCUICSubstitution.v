@@ -679,7 +679,7 @@ Proof.
   unshelve epose proof (weakening Σ [] (arities_context l) _ _ wfΣ _ Hs).
   1: now rewrite app_context_nil_l.
   simpl in X.
-  eapply (env_prop_typing _ typecheck_closed) in Hs; eauto.
+  eapply (env_prop_typing _ _ typecheck_closed) in Hs; eauto.
   rewrite -> andb_and in Hs. destruct Hs as [Hs Ht].
   simpl in Hs. apply (lift_closed #|arities_context l|) in Hs.
   rewrite -> Hs, app_context_nil_l in X. simpl. exists s.
@@ -704,10 +704,9 @@ Proof.
   intros wfΣ [? [s Hs] Hparams].
   pose proof (typing_wf_local Hs).
   destruct cdecl as [[id cty] car].
-  eapply (env_prop_typing _ typecheck_closed) in Hs; eauto.
+  apply subject_closed in Hs; eauto.
   rewrite arities_context_length in Hs.
-  rewrite -> andb_and in *. simpl in *.
-  destruct Hs as [Hs _].
+  simpl in *.
   eapply (closedn_subst _ 0 0).
   - clear. unfold inds.
     induction #|ind_bodies mdecl|; simpl; try constructor; auto.
@@ -725,9 +724,8 @@ Proof.
   intros [s Hs].
   pose proof (typing_wf_local Hs).
   destruct pdecl as [id cty].
-  eapply (env_prop_typing _ typecheck_closed) in Hs; eauto.
-  rewrite -> andb_and in *. simpl in *.
-  destruct Hs as [Hs _].
+  eapply subject_closed in Hs; eauto.
+  simpl in *.
   rewrite smash_context_length in Hs. simpl in *.
   rewrite - Hpar in Hs. now rewrite -> closedn_subst_instance_constr.
 Qed.
@@ -2091,25 +2089,30 @@ Proof.
 Qed.
 *)
 
-
-Theorem substitution `{cf : checker_flags} (Σ : global_env_ext) Γ Γ' s Δ (t : term) T :
-  wf Σ -> subslet Σ Γ s Γ' ->
-  Σ ;;; Γ ,,, Γ' ,,, Δ |- t : T ->
-  wf_local Σ (Γ ,,, subst_context s 0 Δ) ->
-  Σ ;;; Γ ,,, subst_context s 0 Δ |- subst s #|Δ| t : subst s #|Δ| T.
-Proof.
-  intros HΣ Hs Ht.
-  pose proof (typing_wf_local Ht).
-  generalize_eqs Ht. intros eqw. rewrite <- eqw in X.
-  revert Γ Γ' Δ s Hs eqw.
-  revert Σ HΣ Γ0 X t T Ht.
-  apply (typing_ind_env (fun Σ Γ0 t T =>
+Theorem substitution_prop `{cf : checker_flags} : env_prop
+  (fun Σ Γ0 t T =>
   forall (Γ Γ' Δ : context) (s : list term)
-    (sub : subslet Σ Γ s Γ') (eqΓ0 : Γ0 = Γ ,,, Γ' ,,, Δ)
-    (wfsubs : wf_local Σ (Γ ,,, subst_context s 0 Δ)),
-    Σ ;;; Γ ,,, subst_context s 0 Δ |- subst s #|Δ| t : subst s #|Δ| T));
-    intros Σ wfΣ Γ0 wfΓ0; intros; subst Γ0; simpl in *; try solve [econstructor; eauto].
+    (sub : subslet Σ Γ s Γ') (eqΓ0 : Γ0 = Γ ,,, Γ' ,,, Δ),
+    Σ ;;; Γ ,,, subst_context s 0 Δ |- subst s #|Δ| t : subst s #|Δ| T)
+  (fun Σ Γ0 _ =>
+    forall (Γ Γ' Δ : context) (s : list term)
+    (sub : subslet Σ Γ s Γ') (eqΓ0 : Γ0 = Γ ,,, Γ' ,,, Δ),
+    wf_local Σ (Γ ,,, subst_context s 0 Δ)).
+Proof.
+  apply typing_ind_env;
+  intros Σ wfΣ Γ0 wfΓ0; intros; subst Γ0; simpl in *; try solve [econstructor; eauto];
+    try specialize (X _ _ _ _ sub eq_refl).
 
+
+  - induction Δ.
+    + clear X. simpl in *.  now apply All_local_env_app in wfΓ0.
+    + rewrite subst_context_snoc.
+      depelim X; unfold snoc in H; noconf H; simpl;
+      econstructor; eauto.
+      * exists (tu.π1). rewrite Nat.add_0_r; now eapply t0.
+      * exists (tu.π1). rewrite Nat.add_0_r; now eapply t1.
+      * rewrite Nat.add_0_r; now eapply t0.
+      
   - elim (leb_spec_Set); intros Hn.
     + elim nth_error_spec.
       * intros x Heq Hlt.
@@ -2164,27 +2167,22 @@ Proof.
 
   - econstructor; auto.
     + eapply X1; eauto.
-    + specialize (X1 Γ Γ' Δ s sub eq_refl wfsubs).
+    + specialize (X1 Γ Γ' Δ s sub eq_refl).
       specialize (X3 Γ Γ' (Δ,, vass n t) s sub eq_refl).
-      rewrite subst_context_snoc0 in X3. forward X3.
-      * now econstructor; simpl; eauto.
-      * eapply X3.
+      now rewrite subst_context_snoc0 in X3.
 
   - econstructor; auto. 1: eapply X1; eauto.
-    specialize (X1 Γ Γ' Δ s sub eq_refl wfsubs).
+    specialize (X1 Γ Γ' Δ s sub eq_refl).
     specialize (X3 Γ Γ' (Δ,, vass n t) s sub eq_refl).
-    rewrite subst_context_snoc0 in X3. forward X3.
-    + now econstructor; simpl; eauto.
-    + eapply X3.
+    now rewrite subst_context_snoc0 in X3.
 
-  - specialize (X1 Γ Γ' Δ s sub eq_refl wfsubs).
-    specialize (X3 Γ Γ' Δ s sub eq_refl wfsubs).
+  - specialize (X1 Γ Γ' Δ s sub eq_refl).
+    specialize (X3 Γ Γ' Δ s sub eq_refl).
     specialize (X5 Γ Γ' (Δ,, vdef n b b_ty) s sub eq_refl).
-    rewrite subst_context_snoc0 in X5. forward X5.
-    + now econstructor; simpl; eauto.
-    + econstructor; eauto.
+    rewrite subst_context_snoc0 in X5.
+    econstructor; eauto.
 
-  - specialize (X1 Γ Γ' Δ s sub eq_refl wfsubs).
+  - specialize (X1 Γ Γ' Δ s sub eq_refl).
     eapply refine_type. 1: econstructor; eauto.
     unfold subst1. rewrite -> distr_subst. simpl. reflexivity.
 
@@ -2207,8 +2205,8 @@ Proof.
     apply subst_closedn; eauto. eapply closed_upwards; eauto. lia.
 
   - rewrite subst_mkApps map_app map_skipn.
-    specialize (X2 Γ Γ' Δ s sub eq_refl wfsubs).
-    specialize (X4 Γ Γ' Δ s sub eq_refl wfsubs).
+    specialize (X2 Γ Γ' Δ s sub eq_refl).
+    specialize (X4 Γ Γ' Δ s sub eq_refl).
     assert (Hclos: closed_ctx (ind_params mdecl)). {
       destruct isdecl as [Hmdecl Hidecl].
       eapply on_declared_minductive in Hmdecl; eauto.
@@ -2235,7 +2233,7 @@ Proof.
       * now rewrite closedn_subst_instance_context.
     + solve_all.
 
-  - specialize (X2 Γ Γ' Δ s sub eq_refl wfsubs).
+  - specialize (X2 Γ Γ' Δ s sub eq_refl).
     eapply refine_type.
     + econstructor.
       * eauto.
@@ -2251,91 +2249,49 @@ Proof.
       symmetry. apply subst_closedn; eauto.
       rewrite List.rev_length H. eapply closed_upwards; eauto. lia.
 
-  - assert (wf_local Σ (Γ ,,, subst_context s 0 Δ ,,, subst_context s #|Δ| (fix_context mfix))).
-    + subst types.
-      apply All_local_env_app in X as [X Hfixc].
-      apply All_local_env_app_inv. intuition.
-      revert Hfixc. clear X0 X H.
-      induction 1; simpl; auto.
-      * destruct t0 as [u [Ht IHt]].
-        specialize (IHt Γ Γ' (Δ ,,, Γ0) s sub).
-        forward IHt. 1: now rewrite app_context_assoc.
-        rewrite app_context_length subst_context_app app_context_assoc Nat.add_0_r in IHt.
-        unfold snoc; rewrite subst_context_snoc; econstructor; auto. exists u.
-        apply IHt; apply All_local_env_app_inv; intuition.
-      * destruct t0 as [u [Ht IHt]].
-        specialize (IHt Γ Γ' (Δ ,,, Γ0) s sub).
-        forward IHt. 1: now rewrite app_context_assoc.
-        rewrite app_context_length subst_context_app app_context_assoc Nat.add_0_r in IHt.
-        destruct t1 as [Ht' IHt'].
-        specialize (IHt' Γ Γ' (Δ ,,, Γ0) s sub).
-        forward IHt'. 1: now rewrite app_context_assoc.
-        rewrite app_context_length subst_context_app app_context_assoc Nat.add_0_r in IHt'.
-        unfold snoc; rewrite subst_context_snoc.
-        econstructor; auto.
-        -- simpl. eexists. eapply IHt. apply All_local_env_app_inv; intuition.
-        -- simpl. eapply IHt'. apply All_local_env_app_inv; intuition.
-    + erewrite map_dtype. eapply type_Fix.
-      * eapply fix_guard_subst ; eauto.
-      * rewrite nth_error_map H. reflexivity.
-      * now rewrite subst_fix_context.
-      * rewrite subst_fix_context.
-        apply All_map.
-        clear X. eapply All_impl; eauto.
-        clear X0. unfold compose; simpl; intros [na ty bod] [[Htyd Hlam] IH].
-        simpl in *. intuition.
-        -- specialize (IH Γ Γ' (Δ ,,, fix_context mfix) s sub).
-           forward IH by now rewrite app_context_assoc.
-           rewrite subst_context_app in IH.
-           subst types.
-           rewrite !app_context_assoc Nat.add_0_r !app_context_length fix_context_length in IH.
-           specialize (IH X1).
-           rewrite subst_context_length fix_context_length.
-           rewrite -> commut_lift_subst_rec by lia.
-           now rewrite (Nat.add_comm #|Δ|).
-        -- now apply isLambda_subst.
-
-  - assert (wf_local Σ (Γ ,,, subst_context s 0 Δ ,,, subst_context s #|Δ| (fix_context mfix))).
-    + subst types.
-      apply All_local_env_app in X as [X Hfixc].
-      apply All_local_env_app_inv. intuition.
-      revert Hfixc. clear X0 X H.
-      induction 1; simpl; auto.
-      * destruct t0 as [u [Ht IHt]].
-        specialize (IHt Γ Γ' (Δ ,,, Γ0) s sub). forward IHt. 1: now rewrite app_context_assoc.
-        rewrite app_context_length subst_context_app app_context_assoc Nat.add_0_r in IHt.
-        unfold snoc; rewrite subst_context_snoc; econstructor; auto. exists u.
-        apply IHt; apply All_local_env_app_inv; intuition.
-      * destruct t0 as [u [Ht IHt]].
-        specialize (IHt Γ Γ' (Δ ,,, Γ0) s sub).
-        forward IHt. 1: now rewrite app_context_assoc.
-        rewrite app_context_length subst_context_app app_context_assoc Nat.add_0_r in IHt.
-        destruct t1 as [Ht' IHt'].
-        specialize (IHt' Γ Γ' (Δ ,,, Γ0) s sub).
-        forward IHt'. 1: now rewrite app_context_assoc.
-        rewrite app_context_length subst_context_app app_context_assoc Nat.add_0_r in IHt'.
-        unfold snoc; rewrite subst_context_snoc.
-        econstructor; auto.
-        -- simpl. eexists. apply IHt; apply All_local_env_app_inv; intuition.
-        -- apply IHt'; apply All_local_env_app_inv; intuition.
-    + erewrite map_dtype. eapply type_CoFix.
-      * assumption.
-      * rewrite nth_error_map H. reflexivity.
-      * now rewrite subst_fix_context.
-      * rewrite subst_fix_context.
-        apply All_map.
-        clear X. eapply All_impl; eauto.
-        clear X0. unfold compose; simpl; intros [na ty bod] [Htyd IH].
-        simpl in *. intuition.
-        specialize (IH Γ Γ' (Δ ,,, fix_context mfix) s sub).
-        forward IH by now rewrite app_context_assoc.
-        rewrite subst_context_app in IH.
-        subst types.
-        rewrite !app_context_assoc Nat.add_0_r !app_context_length fix_context_length in IH.
-        specialize (IH X1).
+  - rewrite -> (map_dtype _ (subst s (#|mfix| + #|Δ|))).
+    eapply type_Fix; auto.
+    * eapply fix_guard_subst ; eauto.
+    * now rewrite -> nth_error_map, H0.
+    * eapply All_map.
+      eapply (All_impl X0); simpl.
+      intros x [u [Hs Hs']]; exists u.
+      specialize (Hs' _ _ _ _ sub eq_refl).
+      now rewrite -map_dtype.
+    * eapply All_map.
+      eapply (All_impl X1); simpl.
+      intros x [[Hb Hlam] IH].
+      unfold compose; simpl.
+      rewrite subst_fix_context.
+      specialize (IH Γ Γ' (Δ ,,,  (fix_context mfix)) _ sub).
+      rewrite app_context_assoc in IH. specialize (IH eq_refl).
+      split; auto.
+      + rewrite subst_context_app Nat.add_0_r app_context_assoc in IH.
+        rewrite app_context_length fix_context_length in IH.
         rewrite subst_context_length fix_context_length.
-        rewrite -> commut_lift_subst_rec by lia.
-        now rewrite (Nat.add_comm #|Δ|).
+        rewrite commut_lift_subst_rec; try lia. now rewrite (Nat.add_comm #|Δ|).
+      + now rewrite isLambda_subst.
+
+- rewrite -> (map_dtype _ (subst s (#|mfix| + #|Δ|))).
+  eapply type_CoFix; auto.
+  * now rewrite -> nth_error_map, H.
+  * eapply All_map.
+    eapply (All_impl X0); simpl.
+    intros x [u [Hs Hs']]; exists u.
+    specialize (Hs' _ _ _ _ sub eq_refl).
+    now rewrite -map_dtype.
+  * eapply All_map.
+    eapply (All_impl X1); simpl.
+    intros x [Hb IH].
+    unfold compose; simpl.
+    rewrite subst_fix_context.
+    specialize (IH Γ Γ' (Δ ,,,  (fix_context mfix)) _ sub).
+    rewrite app_context_assoc in IH. specialize (IH eq_refl).
+    rewrite subst_context_app Nat.add_0_r app_context_assoc in IH.
+    rewrite app_context_length fix_context_length in IH.
+    rewrite subst_context_length fix_context_length.
+    rewrite commut_lift_subst_rec; try lia. now rewrite (Nat.add_comm #|Δ|).      
+  
 
   - econstructor; eauto.
     + destruct X2 as [Bs|[u Hu]].
@@ -2345,7 +2301,7 @@ Proof.
         rewrite {}H.
         split; auto.
         apply All_local_env_app_inv; intuition auto.
-        clear -sub wfsubs a.
+        clear -sub a.
         induction ctx; try constructor; depelim a.
         -- rewrite subst_context_snoc.
            unfold snoc. unfold vass, snoc in H. noconf H.
@@ -2355,11 +2311,6 @@ Proof.
               specialize (t0 _ _ (Δ ,,, ctx) _ sub). forward t0.
               1: now rewrite app_context_assoc.
               simpl in t0.
-              forward t0.
-              { rewrite subst_context_app app_context_assoc Nat.add_0_r.
-                apply All_local_env_app_inv. split; auto.
-                eapply IHctx. eapply a.
-              }
               now rewrite subst_context_app Nat.add_0_r app_context_assoc app_length in t0.
       -- rewrite subst_context_snoc.
          unfold vdef, snoc in H |- *. noconf H.
@@ -2369,45 +2320,37 @@ Proof.
             specialize (t1 _ _ (Δ ,,, ctx) _ sub).
             forward t1. 1: now rewrite app_context_assoc.
             simpl in t1.
-            forward t1.
-            { rewrite subst_context_app app_context_assoc Nat.add_0_r.
-              apply All_local_env_app_inv. split; auto.
-              eapply IHctx. eapply a.
-            }
             now rewrite subst_context_app Nat.add_0_r app_context_assoc app_length in t1.
          ++ simpl.
             specialize (t0 _ _ (Δ ,,, ctx) _ sub). forward t0.
             1: now rewrite app_context_assoc. simpl in t0.
-            forward t0.
-            { rewrite subst_context_app app_context_assoc Nat.add_0_r.
-              apply All_local_env_app_inv. split; auto.
-              eapply IHctx. eapply a.
-            }
             now rewrite subst_context_app Nat.add_0_r app_context_assoc app_length in t0.
       * right; exists u; intuition eauto.
     + eapply substitution_cumul; eauto.
 Qed.
 
-Theorem substitution_alt {cf:checker_flags} (Σ : global_env_ext) Γ Γ' s Δ (t : term) T :
-  wf Σ ->
-  subslet Σ Γ s Γ' ->
+Corollary substitution `{cf : checker_flags} (Σ : global_env_ext) Γ Γ' s Δ (t : term) T :
+  wf Σ -> subslet Σ Γ s Γ' ->
   Σ ;;; Γ ,,, Γ' ,,, Δ |- t : T ->
   Σ ;;; Γ ,,, subst_context s 0 Δ |- subst s #|Δ| t : subst s #|Δ| T.
 Proof.
-  intros.
-  eapply substitution; eauto.
-  eapply All_local_env_app_inv.
-  apply typing_wf_local in X1; eauto.
-  apply All_local_env_app in X1 as [X1 X2].
-  apply All_local_env_app in X1. intuition.
-  induction X2; simpl; rewrite ?subst_context_snoc0; econstructor; eauto.
-  - destruct t1 as [u tu].
-    eapply substitution in tu; simpl in *; eauto.
-    eapply All_local_env_app_inv; intuition.
-  - destruct t1 as [u tu]. eapply substitution in tu; simpl in *; eauto.
-    eapply All_local_env_app_inv; intuition.
-  - simpl. eapply substitution in t2; simpl in *; eauto.
-    eapply All_local_env_app_inv; intuition.
+  intros HΣ Hs Ht.
+  generalize_eqs Ht. intros eqw.
+  revert Γ Γ' Δ s Hs eqw.
+  revert Σ HΣ Γ0 t T Ht.
+  apply (env_prop_typing _ _ substitution_prop).
+Qed.
+
+Corollary substitution_wf_local `{cf : checker_flags} (Σ : global_env_ext) Γ Γ' s Δ :
+  wf Σ -> subslet Σ Γ s Γ' ->
+  wf_local Σ (Γ ,,, Γ' ,,, Δ) ->
+  wf_local Σ (Γ ,,, subst_context s 0 Δ).
+Proof.
+  intros HΣ Hs Ht.
+  generalize_eqs Ht. intros eqw.
+  revert Γ Γ' Δ s Hs eqw.
+  revert Σ HΣ gen_x Ht.
+  apply (env_prop_wf_local _ _ substitution_prop).
 Qed.
 
 Lemma substitution0 {cf:checker_flags} (Σ : global_env_ext) Γ n u U (t : term) T :
@@ -2418,7 +2361,7 @@ Proof.
   intros HΣ Ht Hu.
   assert (wfΓ : wf_local Σ Γ).
   { apply typing_wf_local in Hu; eauto. }
-  pose proof (substitution_alt Σ Γ [vass n U] [u] [] t T HΣ) as thm.
+  pose proof (substitution Σ Γ [vass n U] [u] [] t T HΣ) as thm.
   forward thm.
   { constructor.
     - constructor.
@@ -2437,7 +2380,7 @@ Proof.
   { apply typing_wf_local in Ht; eauto with wf.
     now depelim Ht; simpl in *; unfold vdef, vass in H; noconf H.
   }
-  epose proof (substitution_alt Σ Γ [vdef n u U] _ [] t T HΣ) as thm.
+  epose proof (substitution Σ Γ [vdef n u U] _ [] t T HΣ) as thm.
   forward thm.
   { constructor.
     - constructor.
@@ -2471,36 +2414,6 @@ Proof.
     rewrite subst_app_simpl.
     rewrite distr_subst_rec. rewrite Nat.add_0_r; f_equal; try lia.
     rewrite map_length. f_equal. lia.
-Qed.
-
-Lemma substitution_wf_local `{cf : checker_flags} (Σ : global_env_ext) Γ Γ' s Δ :
-  wf Σ -> subslet Σ Γ s Γ' ->
-  wf_local Σ (Γ ,,, Γ' ,,, Δ) ->
-  wf_local Σ (Γ ,,, subst_context s 0 Δ).
-Proof.
-  intros wfΣ subs wfl.
-  induction Δ.
-  { simpl. apply All_local_env_app in wfl as [wfl _].
-    now apply All_local_env_app in wfl as [wfl _]. }
-  destruct a as [na [b|] ty]; depelim wfl; rewrite subst_context_snoc; simpl in *.
-  - constructor.
-    + now apply IHΔ.
-    + simpl in H; noconf H.
-    + simpl in H; noconf H.
-  - simpl in H; noconf H.
-    simpl in *. constructor; auto; red.
-    + simpl. rewrite Nat.add_0_r.
-      destruct l as [s' Hs].
-      eapply substitution in Hs; eauto.
-    + simpl. rewrite Nat.add_0_r.
-      eapply substitution in l0; eauto.
-  - simpl.
-    rewrite /subst_decl. rewrite Nat.add_0_r /map_decl /=.
-    constructor; noconf H; auto.
-    red.
-    destruct l as [s' Hs].
-    exists s'. eapply substitution in Hs; eauto.
-  - constructor; noconf H.
 Qed.
 
 Lemma subst_app_context s s' Γ : subst_context (s ++ s') 0 Γ = subst_context s 0 (subst_context s' #|s| Γ).

@@ -1418,10 +1418,10 @@ Proof.
     econstructor; eauto.
     eapply fix_guard_trans. assumption.
     now rewrite nth_error_map H0.
-    -- unfold app_context, trans_local.
-       rewrite H1. unfold trans_local.
-       rewrite -map_app.
-       eapply trans_wf_local_env. eapply X.
+    -- eapply trans_wf_local; eauto.
+    -- eapply All_map, (All_impl X0).
+       intros x [s [Hs Hts]]. unfold compose; simpl.
+       now exists s.
     -- apply All_map. eapply All_impl; eauto.
        unfold compose. simpl. intuition eauto 3 with wf.
        rewrite H1. rewrite /trans_local map_length.
@@ -1440,10 +1440,10 @@ Proof.
       simpl. rewrite trans_lift. reflexivity. }
     econstructor; eauto.
     now rewrite nth_error_map H.
-    -- unfold app_context, trans_local.
-       rewrite H1. unfold trans_local.
-       rewrite <- map_app.
-       eapply trans_wf_local_env. eauto.
+    -- eapply trans_wf_local; eauto.
+    -- eapply All_map, (All_impl X0).
+       intros x [s [Hs Hts]]. unfold compose; simpl.
+       now exists s.
     -- apply All_map. eapply All_impl; eauto.
        unfold compose. simpl. intuition eauto 3 with wf.
        rewrite H1. rewrite /trans_local map_length.

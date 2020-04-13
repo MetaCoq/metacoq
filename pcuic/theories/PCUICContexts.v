@@ -338,16 +338,10 @@ Proof.
     intuition auto.
     - exists x; auto.
       eapply substitution in t; eauto.
-      eapply type_local_ctx_wf_local in a; eauto.
-      eapply substitution_wf_local in a; eauto.
     - eapply substitution in b1; eauto.
-      eapply type_local_ctx_wf_local in a; eauto.
-      eapply substitution_wf_local in a; eauto.
   + rewrite subst_context_snoc /= /subst_decl /map_decl /= Nat.add_0_r.
       intuition auto.
       eapply substitution in b; eauto.
-      eapply type_local_ctx_wf_local in a; eauto.
-      eapply substitution_wf_local in a; eauto.
 Qed.
 
 Lemma weaken_type_local_ctx {cf:checker_flags} Σ Γ Γ' Δ ctxs : 

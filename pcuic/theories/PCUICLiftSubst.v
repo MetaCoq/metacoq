@@ -571,6 +571,9 @@ Qed.
 Definition fix_context (m : mfixpoint term) : context :=
   List.rev (mapi (fun i d => vass d.(dname) (lift0 i d.(dtype))) m).
 
+Definition fix_context_gen k mfix := 
+  List.rev (mapi_rec (fun (i : nat) (d : def term) => vass (dname d) (lift0 i (dtype d))) mfix k).
+
 Lemma shiftn_ext n f f' : (forall i, f i = f' i) -> forall t, shiftn n f t = shiftn n f' t.
 Proof.
   intros.

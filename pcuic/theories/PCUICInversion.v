@@ -217,7 +217,7 @@ Section Inversion.
         let types := fix_context mfix in
         fix_guard mfix ×
         nth_error mfix n = Some decl ×
-        wf_local Σ (Γ ,,, types) ×
+        All (fun d => isType Σ Γ (dtype d)) mfix ×
         All (fun d =>
           Σ ;;; Γ ,,, types |- dbody d : (lift0 #|types|) (dtype d) ×
           isLambda (dbody d) = true
@@ -234,7 +234,7 @@ Section Inversion.
         allow_cofix ×
         let types := fix_context mfix in
         nth_error mfix idx = Some decl ×
-        wf_local Σ (Γ ,,, types) ×
+        All (fun d => isType Σ Γ (dtype d)) mfix ×
         All (fun d =>
           Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype)
         ) mfix ×

@@ -919,13 +919,15 @@ Proof.
              rewrite -H0. admit.
         * simpl. admit.
 
-    - eapply inversion_Fix in hA as [decl [hguard [nthe [wfΓ [? ?]]]]]=>//.
+    - pose proof (typing_wf_local hA).
+      apply inversion_Fix in hA as [decl [hguard [nthe [wfΓ [? ?]]]]]=>//.
       eapply inversion_Fix in hB as [decl' [hguard' [nthe' [wfΓ' [? ?]]]]]=>//.
       rewrite nthe' in nthe; noconf nthe.
       exists (dtype decl); repeat split; eauto.
       eapply type_Fix; eauto.
 
-    - eapply inversion_CoFix in hA as [decl [allow [nthe [wfΓ [? ?]]]]]=>//.
+    - pose proof (typing_wf_local hA).
+      eapply inversion_CoFix in hA as [decl [allow [nthe [wfΓ [? ?]]]]]=>//.
       eapply inversion_CoFix in hB as [decl' [allpw [nthe' [wfΓ' [? ?]]]]]=>//.
       rewrite nthe' in nthe; noconf nthe.
       exists (dtype decl); repeat split; eauto.

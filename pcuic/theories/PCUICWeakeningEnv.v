@@ -298,26 +298,26 @@ Hint Resolve weakening_env_consistent_instance : extends.
 
 Lemma weakening_env `{checker_flags} :
   env_prop (fun Σ Γ t T =>
-              forall Σ', wf Σ' -> extends Σ.1 Σ' -> (Σ', Σ.2) ;;; Γ |- t : T).
+              forall Σ', wf Σ' -> extends Σ.1 Σ' -> (Σ', Σ.2) ;;; Γ |- t : T)
+           (fun Σ Γ _ =>
+             forall Σ', wf Σ' -> extends Σ.1 Σ' -> wf_local (Σ', Σ.2) Γ).
 Proof.
   apply typing_ind_env; intros;
     rename_all_hyps; try solve [econstructor; eauto 2 with extends].
 
+  - induction X; constructor; eauto 2 with extends.
+    + eexists; eapply p; eauto.
+    + eexists; eapply p0; eauto.
+    + eapply p; eauto.
   - econstructor; eauto 2 with extends.
     close_Forall. intros; intuition eauto with extends.
   - econstructor; eauto with extends.
-    + eapply All_local_env_impl.
-      * eapply X.
-      * clear -wfΣ' extΣ. simpl; intros.
-        unfold lift_typing in *; destruct T; intuition eauto with extends.
-        destruct X as [u [tyu Hu]]. exists u. eauto.
+    + eapply (All_impl X0); simpl; intuition eauto with extends.
+      destruct X as [s Hs]; exists s. intuition eauto with extends.
     + eapply All_impl; eauto; simpl; intuition eauto with extends.
   - econstructor; eauto with extends.
-    + eapply All_local_env_impl.
-      * eapply X.
-      * clear -wfΣ' extΣ. simpl; intros.
-        unfold lift_typing in *; destruct T; intuition eauto with extends.
-        destruct X as [u [tyu Hu]]. exists u. eauto.
+    + eapply (All_impl X0); simpl; intuition eauto with extends.
+      destruct X as [s Hs]; exists s. intuition eauto with extends.
     + eapply All_impl; eauto; simpl; intuition eauto with extends.
   - econstructor. 1: eauto.
     + destruct X2 as [isB|[u [Hu Ps]]].
@@ -496,9 +496,9 @@ Proof.
   red. intros * wfΣ' Hext *.
   destruct T; simpl.
   - intros Ht. pose proof (wf_extends wfΣ' Hext).
-    eapply (weakening_env (_, _)); eauto. eapply typing_wf_local in Ht; eauto.
+    eapply (weakening_env (_, _)); eauto.
   - intros [s Ht]. pose proof (wf_extends wfΣ' Hext). exists s.
-    eapply (weakening_env (_, _)); eauto. eapply typing_wf_local in Ht; eauto.
+    eapply (weakening_env (_, _)); eauto.
 Qed.
 
 Lemma weaken_wf_local `{checker_flags} (Σ : global_env_ext) Σ' Γ :

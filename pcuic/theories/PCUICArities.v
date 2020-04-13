@@ -133,7 +133,6 @@ Proof.
   - right.
     destruct i as [s' Hs].
     exists s'. eapply (substitution _ _ Δ s [] _ _ HΣ' sub Hs).
-    now apply wf_local_app in HΓ.
 Qed.
 
 
@@ -478,7 +477,7 @@ Lemma type_mkApps_inv {cf:checker_flags} (Σ : global_env_ext) Γ f u T : wf Σ 
 Proof.
   intros wfΣ; induction u in f, T |- *. simpl. intros.
   { exists T, T. intuition pcuic. constructor. eapply validity; auto with pcuic.
-    now eapply typing_wf_local. eauto. eapply cumul_refl'. }
+    eauto. eapply cumul_refl'. }
   intros Hf. simpl in Hf.
   destruct u. simpl in Hf.
   - eapply inversion_App in Hf as [na' [A' [B' [Hf' [Ha HA''']]]]].

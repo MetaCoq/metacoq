@@ -5,6 +5,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv.
 Require Import ssreflect ssrbool.
 
+From Equations Require Import Equations.
+
 (** * Lemmas about the [closedn] predicate *)
 
 Definition closed_decl n d :=
@@ -325,7 +327,8 @@ Qed.
 
 Lemma typecheck_closed `{cf : checker_flags} :
   env_prop (fun Σ Γ t T =>
-              closedn #|Γ| t && closedn #|Γ| T).
+              closedn #|Γ| t && closedn #|Γ| T)
+            (fun Σ Γ _ => closed_ctx Γ).
 Proof.
   assert(weaken_env_prop (lift_typing (fun (_ : global_env_ext) (Γ : context) (t T : term) =>
                                          closedn #|Γ| t && closedn #|Γ| T))).
@@ -333,30 +336,38 @@ Proof.
 
   apply typing_ind_env; intros * wfΣ Γ wfΓ *; simpl; intros; rewrite -> ?andb_and in *; try solve [intuition auto].
 
+  - induction X0; simpl; auto; rewrite (closedn_ctx_app _ Γ [_]); simpl.
+    unfold closedn_ctx at 2; simpl. rewrite IHX0. unfold id; simpl.
+    move/andP: p => [ct cs]. now rewrite /closed_decl /= Nat.add_0_r ct.
+    move/andP: p => [ct cs]. now rewrite {2}/closedn_ctx /closed_decl /= Nat.add_0_r IHX0 ct.
+
   - pose proof (nth_error_Some_length H).
-    elim (Nat.ltb_spec n #|Γ|); intuition auto. all: try lia. clear H0.
-    eapply (nth_error_All_local_env_over H) in X0 as [HΓ Hdecl].
-    destruct lookup_wf_local_decl; cbn in *.
-    destruct decl as [na [b|] ty]; cbn in *.
-    -- rewrite andb_true_r in Hdecl.
-       destruct Hdecl as [Hdecl Hdecl']. 
-       move/andb_and: Hdecl => [] _.
-       rewrite skipn_length; try lia.
-       move/(closedn_lift (S n)).
-       now have->: #|Γ| - S n + S n = #|Γ| by lia.
-    -- rewrite andb_true_r in Hdecl.
-       move/(closedn_lift (S n)): Hdecl.
-       rewrite skipn_length; try lia.
-       now have->: #|Γ| - S n + S n = #|Γ| by lia.
+    elim (Nat.ltb_spec n #|Γ|); intuition auto. all: try lia. clear H1.
+
+    induction Γ in n, H, H0, H2 |- *. rewrite nth_error_nil in H. discriminate.
+    destruct n.
+    simpl in H. noconf H. simpl.
+    rewrite -Nat.add_1_r. apply closedn_lift.
+    apply closedn_ctx_cons in H0. move/andP: H0 => [_ ca].
+    destruct a as [na [b|] ty]. simpl in ca.
+    rewrite /closed_decl /= in ca.
+    now move/andP: ca => [_ cty].
+    now rewrite /closed_decl /= in ca.
+    simpl.
+    rewrite -Nat.add_1_r. 
+    rewrite -(simpl_lift _ (S n) 0 1 0); try lia.
+    apply closedn_lift. apply IHΓ; auto.
+    apply closedn_ctx_cons in H0.
+    now move/andP: H0 => [H0 _]. simpl in H2; lia.
 
   - intuition auto.
     generalize (closedn_subst [u] #|Γ| 0 B). rewrite Nat.add_0_r.
-    move=> Hs. apply: Hs => /=. rewrite H => //.
+    move=> Hs. apply: Hs => /=. rewrite H0 => //.
     rewrite Nat.add_1_r. auto.
 
   - rewrite closedn_subst_instance_constr.
-    eapply lookup_on_global_env in H; eauto.
-    destruct H as [Σ' [HΣ' IH]].
+    eapply lookup_on_global_env in X0; eauto.
+    destruct X0 as [Σ' [HΣ' IH]].
     repeat red in IH. destruct decl, cst_body. simpl in *.
     rewrite -> andb_and in IH. intuition auto.
     eauto using closed_upwards with arith.
@@ -391,14 +402,14 @@ Proof.
     + solve_all. unfold test_snd. simpl in *.
       rtoProp; eauto.
     + apply closedn_mkApps; auto.
-      rewrite forallb_app. simpl. rewrite H1.
+      rewrite forallb_app. simpl. rewrite H2.
       rewrite forallb_skipn; auto.
-      now apply closedn_mkApps_inv in H7.
+      now apply closedn_mkApps_inv in H8.
 
   - intuition auto.
     apply closedn_subst0.
-    + simpl. apply closedn_mkApps_inv in H2.
-      rewrite forallb_rev H1. apply H2.
+    + simpl. apply closedn_mkApps_inv in H3.
+      rewrite forallb_rev H2. apply H3.
     + rewrite closedn_subst_instance_constr.
       eapply declared_projection_inv in isdecl as H'; eauto.
       apply on_declared_projection in isdecl as [[Hmdecl Hidecl] Hpdecl]; auto.
@@ -407,41 +418,37 @@ Proof.
       apply onNpars in Hmdecl.
       cbn in H'; destruct H'.
       simpl in *.
-      rewrite List.rev_length H0.
+      rewrite List.rev_length H1.
       rewrite andb_true_r in i. rewrite <- Hmdecl.
       rewrite smash_context_length in i. simpl in i.
       eapply closed_upwards; eauto.
       change PCUICEnvironment.context_assumptions with context_assumptions.
       lia.
 
-  - clear H0.
+  - clear H.
     split. solve_all.
     destruct x; simpl in *.
     unfold test_def. simpl. rtoProp.
     split.
     rewrite -> app_context_length in *. rewrite -> Nat.add_comm in *.
-    eapply closedn_lift_inv in H1; eauto. lia.
+    eapply closedn_lift_inv in H2; eauto. lia.
     subst types.
-    now rewrite app_context_length fix_context_length in H0.
-    eapply nth_error_all in H; eauto. simpl in H. intuition auto. rtoProp.
-    subst types. rewrite app_context_length in H0.
-    rewrite Nat.add_comm in H0.
-    now eapply closedn_lift_inv in H0.
+    now rewrite app_context_length fix_context_length in H.
+    eapply nth_error_all in X0; eauto. simpl in X0. intuition auto. rtoProp.
+    destruct X0 as [s [Hs cl]]. now rewrite andb_true_r in cl.
 
   - split. solve_all. destruct x; simpl in *.
     unfold test_def. simpl. rtoProp.
     split.
+    destruct a as [s [Hs cl]].
+    now rewrite andb_true_r in cl.
     rewrite -> app_context_length in *. rewrite -> Nat.add_comm in *.
-    eapply closedn_lift_inv in H2; eauto. lia.
-    subst types.
-    now rewrite -> app_context_length, fix_context_length in H1.
-    eapply (nth_error_all) in H; eauto. simpl in *.
-    intuition auto. rtoProp.
-    subst types. rewrite app_context_length in H1.
-    rewrite Nat.add_comm in H1.
-    now eapply closedn_lift_inv in H1.
-
-  - destruct X2; intuition eauto.
+    subst types. now rewrite fix_context_length in H2.
+    eapply nth_error_all in X0; eauto.
+    destruct X0 as [s [Hs cl]].
+    now rewrite andb_true_r in cl.
+    
+  - destruct X1; intuition eauto.
     + destruct i as [[u [ctx [Heq Hi]]] Hwfi]. simpl in Hwfi.
       generalize (destArity_spec [] B). rewrite Heq.
       simpl; intros ->.
@@ -511,7 +518,7 @@ Proof.
   intros.
   eapply weaken_lookup_on_global_env; try red; eauto.
   eapply on_global_env_impl; cycle 1.
-  apply (env_prop_sigma _ typecheck_closed _ X).
+  apply (env_prop_sigma _ _ typecheck_closed _ X).
   red; intros. unfold lift_typing in *. destruct T; intuition auto with wf.
   destruct X1 as [s0 Hs0]. simpl. rtoProp; intuition.
 Qed.

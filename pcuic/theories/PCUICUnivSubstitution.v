@@ -1308,9 +1308,23 @@ Lemma typing_subst_instance :
                                 (global_ext_context_set (Σ.1, univs)) ->
                 consistent_instance_ext (Σ.1, univs) Σ.2 u ->
                 (Σ.1,univs) ;;; subst_instance_context u Γ
-                |- subst_instance_constr u t : subst_instance_constr u T).
+                |- subst_instance_constr u t : subst_instance_constr u T)
+          (fun Σ Γ wfΓ => forall u univs,
+          wf_ext_wk Σ ->
+          sub_context_set (monomorphic_udecl Σ.2)
+                          (global_ext_context_set (Σ.1, univs)) ->
+          consistent_instance_ext (Σ.1, univs) Σ.2 u ->
+          wf_local(Σ.1,univs) (subst_instance_context u Γ)).
 Proof.
   apply typing_ind_env; intros Σ wfΣ Γ wfΓ; cbn  -[Universe.make] in *.
+  - induction 1.
+    + constructor.
+    + simpl. constructor; auto.
+      exists (subst_instance_univ u tu.π1). eapply p; auto.
+    + simpl. constructor; auto.
+      ++ exists (subst_instance_univ u tu.π1). eapply p0; auto.
+      ++ apply p; auto. 
+
   - intros n decl eq X u univs wfΣ' H Hsub. rewrite <- lift_subst_instance_constr.
     rewrite map_decl_type. econstructor; aa.
     unfold subst_instance_context, map_context.
@@ -1403,17 +1417,18 @@ Proof.
     eapply X2 in H0; tas. rewrite subst_instance_constr_mkApps in H0.
     eassumption.
 
-  - intros mfix n decl H H0 X X0 u univs wfΣ' HSub H1.
+  - intros mfix n decl H H0 H1 X X0 u univs wfΣ' HSub.
     erewrite map_dtype. econstructor.
     + now apply fix_guard_subst_instance.
-    + rewrite nth_error_map, H. reflexivity.
-    + rewrite <- (fix_context_subst_instance u mfix).
-      refine (subst_instance_context_app u Γ (fix_context mfix) # _).
-      destruct mfix; [cbn in; rewrite nth_error_nil in H; discriminate|].
-      inv X0. eapply typing_wf_local. eapply X1; eassumption.
+    + rewrite nth_error_map, H0. reflexivity.
+    + eapply H1; eauto. 
+    + apply All_map, (All_impl X); simpl; intuition auto.
+      unfold compose; simpl.
+      destruct X1 as [s Hs]. exists (subst_instance_univ u s).
+      now apply Hs.
     + eapply All_map, All_impl; tea.
       intros x [[X1 X2] X3]. split.
-      * specialize (X3 u univs wfΣ' HSub H1). erewrite map_dbody in X3.
+      * specialize (X3 u univs wfΣ' HSub H2). erewrite map_dbody in X3.
         rewrite <- lift_subst_instance_constr in X3.
         rewrite fix_context_length, map_length in *.
         erewrite map_dtype with (d := x) in X3.
@@ -1423,15 +1438,16 @@ Proof.
         eapply X3.
       * destruct x as [? ? []]; cbn in *; tea.
 
-  - intros mfix n decl H X X0 H0 u univs wfΣ' HSub H1.
+  - intros mfix n decl H X X0 X1 H0 u univs wfΣ' HSub H1.
     erewrite map_dtype. econstructor; tas.
     + rewrite nth_error_map, H. reflexivity.
-    + rewrite <- (fix_context_subst_instance u mfix).
-      refine (subst_instance_context_app u Γ (fix_context mfix) # _).
-      destruct mfix; [cbn in; rewrite nth_error_nil in H; discriminate|].
-      inv X0. eapply typing_wf_local. eapply X1; eassumption.
+    + apply X; eauto.
+    + apply All_map, (All_impl X0); simpl; intuition auto.
+      unfold compose; simpl.
+      destruct X2 as [s Hs]. exists (subst_instance_univ u s).
+      now apply Hs.
     + eapply All_map, All_impl; tea.
-      intros x [X1 X3].
+      intros x [X1' X3].
       * specialize (X3 u univs wfΣ' HSub H1). erewrite map_dbody in X3.
         rewrite <- lift_subst_instance_constr in X3.
         rewrite fix_context_length, map_length in *.
@@ -1468,8 +1484,18 @@ Lemma typing_subst_instance' Σ φ Γ t T u univs :
             |- subst_instance_constr u t : subst_instance_constr u T.
 Proof.
   intros X X0 X1.
-  eapply (typing_subst_instance (Σ, univs)); tas. 1: apply X.
-  eapply typing_wf_local; eassumption.
+  eapply (typing_subst_instance (Σ, univs)); tas. apply X.
+Qed.
+
+Lemma typing_subst_instance_wf_local Σ φ Γ u univs :
+  wf_ext_wk (Σ, univs) ->
+  wf_local (Σ, univs) Γ ->
+  sub_context_set (monomorphic_udecl univs) (global_ext_context_set (Σ, φ)) ->
+  consistent_instance_ext (Σ, φ) univs u ->
+  wf_local (Σ, φ) (subst_instance_context u Γ).
+Proof.
+  intros X X0 X1.
+  eapply (env_prop_wf_local _ _ typing_subst_instance (Σ, univs)); tas. 1: apply X.
 Qed.
 
 
@@ -1510,8 +1536,7 @@ Lemma typing_subst_instance'' Σ φ Γ t T u univs :
 Proof.
   intros X X0 X1.
   eapply (typing_subst_instance (Σ, univs)); tas. 1: apply X.
-  - eapply typing_wf_local; eassumption.
-  - etransitivity; tea. apply global_context_set_sub_ext.
+  etransitivity; tea. apply global_context_set_sub_ext.
 Qed.
 
 

@@ -738,10 +738,16 @@ Qed.
 Lemma context_conversion {cf:checker_flags} :
   env_prop
     (fun Σ Γ t T =>
-       forall Γ', conv_context Σ Γ Γ' -> wf_local Σ Γ' -> Σ ;;; Γ' |- t : T).
+       forall Γ', conv_context Σ Γ Γ' -> wf_local Σ Γ' -> Σ ;;; Γ' |- t : T)
+    (fun Σ Γ wfΓ => 
+    All_local_env_over typing
+    (fun (Σ : global_env_ext) (Γ : context) (_ : wf_local Σ Γ) (t T : term) (_ : Σ;;; Γ |- t : T) =>
+     forall Γ' : context, conv_context Σ Γ Γ' -> wf_local Σ Γ' -> Σ;;; Γ' |- t : T) Σ Γ wfΓ).
 Proof.
   apply typing_ind_env; intros Σ wfΣ Γ wfΓ; intros **; rename_all_hyps;
     try solve [econstructor; eauto].
+
+  - auto.
 
   - pose proof heq_nth_error.
     eapply (context_relation_nth X0) in H as [d' [Hnth [Hrel Hconv]]].
@@ -802,59 +808,30 @@ Proof.
   - econstructor; pcuic. intuition auto. eapply isdecl. eapply isdecl.
     eauto. solve_all.
   - econstructor; pcuic.
-    eapply All_local_env_app_inv. split; auto.
-    eapply All_local_env_app in X. subst types.
-    destruct X as [? ?]. clear -X1 X2 a0.
-    induction a0; constructor; pcuic. destruct t0. exists x; intuition eauto.
-    eapply b; eauto. now apply conv_context_app_same.
-    eapply All_local_env_app_inv; split; auto.
-    destruct t0. exists x; intuition auto.
-    eapply b0. now apply conv_context_app_same.
-    eapply All_local_env_app_inv; split; auto.
-    eapply t1; auto. now apply conv_context_app_same.
-    eapply All_local_env_app_inv; split; auto.
-    solve_all. subst types. apply b. now apply conv_context_app_same.
-    eapply All_local_env_app_inv; split; auto.
-    eapply All_local_env_app in X.
-    destruct X.
-    clear -a1 X1 X2.
-    induction a1; constructor; auto; red in t0 |- *.
-    + destruct t0 as [s [Hs Hc]]. exists s; auto.
-      apply Hc. now  apply conv_context_app_same.
-      eapply All_local_env_app_inv; split; auto.
-    + destruct t0 as [s [Hs Hc]]. exists s; auto.
-      apply Hc. now  apply conv_context_app_same.
-      eapply All_local_env_app_inv; split; auto.
-    + destruct t1 as [Hs Hc].
-      apply Hc. now apply conv_context_app_same.
-      eapply All_local_env_app_inv; split; auto.
+    eapply (All_impl X0).
+    intros x [s [Hs IH]].
+    exists s; eauto.
+    eapply (All_impl X1).
+    intros x [[Hs Hl] IH]. split; auto.
+    eapply IH.
+    now apply conv_context_app_same.
+    eapply (All_mfix_wf); auto.
+    apply (All_impl X0); simpl.
+    intros x' [s [Hs' IH']]. exists s.
+    eapply IH'; auto.
   - econstructor; pcuic.
-    eapply All_local_env_app_inv. split; auto.
-    eapply All_local_env_app in X. subst types.
-    destruct X as [? ?]. clear -X1 X2 a0.
-    induction a0; constructor; pcuic. destruct t0. exists x; intuition eauto.
-    eapply b; eauto. now apply conv_context_app_same.
-    eapply All_local_env_app_inv; split; auto.
-    destruct t0. exists x; intuition auto.
-    eapply b0. now apply conv_context_app_same.
-    eapply All_local_env_app_inv; split; auto.
-    eapply t1; auto. now apply conv_context_app_same.
-    eapply All_local_env_app_inv; split; auto.
-    solve_all. subst types. apply b. now apply conv_context_app_same.
-    eapply All_local_env_app_inv; split; auto.
-    eapply All_local_env_app in X.
-    destruct X.
-    clear -a1 X1 X2.
-    induction a1; constructor; auto; red in t0 |- *.
-    + destruct t0 as [s [Hs Hc]]. exists s; auto.
-      apply Hc. now  apply conv_context_app_same.
-      eapply All_local_env_app_inv; split; auto.
-    + destruct t0 as [s [Hs Hc]]. exists s; auto.
-      apply Hc. now  apply conv_context_app_same.
-      eapply All_local_env_app_inv; split; auto.
-    + destruct t1 as [Hs Hc].
-      apply Hc. now apply conv_context_app_same.
-      eapply All_local_env_app_inv; split; auto.
+    eapply (All_impl X0).
+    intros x [s [Hs IH]].
+    exists s; eauto.
+    eapply (All_impl X1).
+    intros x [Hs IH].
+    eapply IH.
+    now apply conv_context_app_same.
+    eapply (All_mfix_wf); auto.
+    apply (All_impl X0); simpl.
+    intros x' [s [Hs' IH']]. exists s.
+    eapply IH'; auto.
+    
   - econstructor; eauto.
     destruct X2.
     * destruct i. left.
@@ -892,10 +869,7 @@ Lemma context_conversion' {cf:checker_flags} {Σ Γ t T Γ'} :
     Σ ;;; Γ' |- t : T.
 Proof.
   intros hΣ hΓ' h e.
-  eapply context_conversion.
-  4: exact e.
-  all: try assumption.
-  eapply typing_wf_local. eassumption.
+  eapply context_conversion; eauto.
 Qed.
 
 (* 

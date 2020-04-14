@@ -3835,15 +3835,11 @@ Proof.
   apply conv_ctx_refl. 
 Qed.
 
-Lemma OnOne2_nth_error Σ Γ mfix mfix' n decl :
-  OnOne2
-  (fun x y : def term =>
-  red1 Σ Γ (dtype x) (dtype y)
-  × (dname x, dbody x, rarg x) = (dname y, dbody y, rarg y)) mfix mfix' ->        
+Lemma OnOne2_nth_error (mfix mfix' : mfixpoint term) n decl P :
+  OnOne2 P mfix mfix' ->        
   nth_error mfix n = Some decl ->
   ∑ decl', (nth_error mfix' n = Some decl') *
-  ((dname decl, dbody decl, rarg decl) = (dname decl', dbody decl', rarg decl')) *
-  ((dtype decl = dtype decl') + (red1 Σ Γ (dtype decl) (dtype decl'))).
+  ((decl = decl') + (P decl decl')).
 Proof.
   induction 1 in n |- *.
   destruct n; simpl.
@@ -3851,6 +3847,15 @@ Proof.
   - exists decl. intuition auto.
   - destruct n; simpl; auto.
     intros [= ->]. exists decl; intuition auto.
+Qed.
+
+Lemma isLambda_red1 Σ Γ b b' : isLambda b -> red1 Σ Γ b b' -> isLambda b'.
+Proof.
+  destruct b; simpl; try discriminate.
+  intros _ red.
+  depelim red.
+  symmetry in H; apply mkApps_Fix_spec in H. simpl in H. intuition.
+  constructor. constructor.
 Qed.
 
 (** The subject reduction property of the system: *)
@@ -4732,82 +4737,162 @@ Proof.
       destruct p. now apply red_conv, red1_red.
       apply All2_refl. reflexivity.
       reflexivity. apply IHo. }
+    assert(All (fun d => isType Σ Γ (dtype d)) mfix).
+    { apply (All_impl X0).
+      now intros x [s' [Hs' _]]; exists s'. }
+    assert(All (fun d => isType Σ Γ (dtype d)) mfix1).
+    { apply (OnOne2_All_All _ _ _ _ _ _ o X0).
+      * intros x [s [Hs IH]].
+        now exists s.
+      * intros x y [red eq] [s [Hs IH]].
+        now exists s; apply IH. }
     assert (wf_local Σ (Γ ,,, fix_context mfix1)).
-    { apply All_local_env_app_inv. split; auto.
-      apply All_local_env_app in X as [l r].
-      
-      eapply (All_local_env_fix_OnOne2 _ (
-        fun Σ Γ0 t T =>
-        Σ;;; Γ0 |- t : T
-        × (forall u : term, red1 Σ Γ0 t u -> Σ;;; Γ0 |- u : T))); eauto.
-      all: simpl; intros *; auto.
-      * unfold lift_typing at 1.
-        destruct T.
-        ** intros conv [tyt _] wfΔ'.
-          eapply context_conversion in tyt as [_ tyt]; eauto.
-          eapply tyt; eauto. rewrite -app_context_assoc. apply All_local_env_app_inv; split; auto.
-          now eapply typing_wf_local in tyt.
-        ** intros conv [s [tyt _]] wfΔ'.
-          eapply context_conversion in tyt as [_ tyt]; eauto.
-          exists s.
-          eapply tyt; eauto.
-          rewrite -app_context_assoc. apply All_local_env_app_inv; split; auto.
-          now eapply typing_wf_local in tyt.
-      * intros [red _]. now apply red_conv. 
-      * intros [red _] conv wfΓ'' [s [ty Hred]].
-        exists s. specialize (Hred (lift0 #|Γ'| (dtype hd'))).
-        forward Hred. eapply (weakening_red1 _ _ []) => //.
-        eapply context_conversion in Hred as [_ Hred]; eauto.
-        eapply Hred; eauto. eapply All_local_env_app_inv; split; auto.
-        now eapply typing_wf_local in ty.
-      }
-
-    destruct (OnOne2_nth_error _ _ _ _ _ decl o heq_nth_error) as [decl' [[eqnth  eqs] disj]].
+    { apply All_mfix_wf; auto. }
+    destruct (OnOne2_nth_error _ _ _ decl _ o heq_nth_error) as [decl' [eqnth disj]].
     eapply type_Cumul.
     econstructor; eauto.
-     (* Need  to update fix_guard *)
-    admit.
-    apply (OnOne2_All_All _ _ _ _ _ _ o X0).
-    simpl; intros x [[ty isl] Hred].
-    split; auto. eapply  context_conversion. 4:eapply convctx.
-    all:eauto. now eapply typing_wf_local in ty.
-    now rewrite -fixl.
-    intros [] [] [Hred Heq] [[ty isl] Hred'].
-    simpl in *. noconf Heq.
-    rewrite -fixl. split; eauto.
-    eapply  context_conversion. 4:eapply convctx.
-    all:eauto. now eapply typing_wf_local in ty.
-    now rewrite -fixl.
-    intros [] [] 
-    rewrite 
-    eapply ty.
-
-
-    clear -X X0 convctx X1 o fixl.
-    revert o X0. generalize mfix at 1 7.
-    generalize mfix1 at 1 4.
-    induction 1; constructor.
-    depelim X0.
-    destruct p0 as [[ty eqbody] red].
-    destruct p as [Hred Heq]. noconf Heq. simpl in H; noconf H.
-    rewrite -eqbody H0. split; auto.
-    rewrite -fixl -H0.
-    eapply context_conversion.
-    3:{  } _ _ _ _ _ _ _ _ (fix_context mfix)). 3:eauto.
-
-
-
-    eapply OnOne2_All_mix_left in o; eauto.
-    clear o. 
-
-
+    * eapply fix_guard_red1; eauto.
+      constructor; eauto.
+    * eapply (OnOne2_All_mix_left X0) in o.
+       apply (OnOne2_All_All _ _ _ _ _ _ o X1).
+      + intros x [[Hb Hlam] IH].
+        split; auto.
+        eapply context_conversion'; eauto.
+        now rewrite -fixl.
+      + move=> [na ty b rarg] [na' ty' b' rarg'] /= [[red eq] [s [Hs IH]]] [[Hb Hlam] IH'].
+        noconf eq. split; auto.
+        eapply context_conversion'; eauto.
+        rewrite -fixl.
+        eapply type_Cumul. eapply Hb.
+        right. exists s. specialize (IH _ red).
+        eapply (weakening _ _ _ _ (tSort _)); auto.
+        apply All_mfix_wf; auto. 
+        apply (weakening_cumul _ _ []); auto.
+        now apply red_cumul, red1_red.
+    * eapply All_nth_error in X2; eauto.
+    * apply conv_cumul, conv_sym, red_conv. destruct disj as [<-|red].
+      constructor. apply red1_red. apply red.
 
   - (* Fix congruence in body *)
-    admit.
+    assert(fixl :#|fix_context mfix| = #|fix_context mfix1|) by now (rewrite !fix_context_length; apply (OnOne2_length o)).
+    assert(convctx : fix_context mfix = fix_context mfix1).
+    { clear -wf o.
+      change fix_context with (fix_context_gen 0).
+      generalize 0. induction o.
+      destruct p as [_ eq]. noconf eq. simpl in H; noconf H.
+      simpl. intros. now rewrite H H0.
+      simpl. intros n; f_equal. apply IHo. }
+    assert(All (fun d => isType Σ Γ (dtype d)) mfix).
+    { apply (All_impl X0).
+      now intros x [s' [Hs' _]]; exists s'. }
+    assert(All (fun d => isType Σ Γ (dtype d)) mfix1).
+    { apply (OnOne2_All_All _ _ _ _ _ _ o X0).
+      * intros x [s [Hs IH]].
+        now exists s.
+      * intros x y [red eq] [s [Hs IH]].
+        noconf eq. simpl in H0; noconf H0. rewrite -H1.
+        now exists s; apply Hs. }
+    assert (wf_local Σ (Γ ,,, fix_context mfix1)).
+    { apply All_mfix_wf; auto. }
+    destruct (OnOne2_nth_error _ _ _ decl _ o heq_nth_error) as [decl' [eqnth disj]].
+    eapply type_Cumul.
+    econstructor; eauto.
+    * eapply fix_guard_red1; eauto.
+      apply fix_red_body; eauto.
+    * eapply (OnOne2_All_mix_left X0) in o.
+       apply (OnOne2_All_All _ _ _ _ _ _ o X1).
+      + intros x [[Hb Hlam] IH].
+        split; auto.
+        eapply context_conversion'; eauto.
+        now rewrite -fixl.
+        rewrite convctx. apply conv_ctx_refl.
+      + move=> [na ty b rarg] [na' ty' b' rarg'] /= [[red eq] [s [Hs IH]]] [[Hb Hlam] IH'].
+        noconf eq.
+        rewrite -convctx. split; auto.
+        now eapply isLambda_red1.
+    * eapply All_nth_error in X2; eauto.
+    * apply conv_cumul, conv_sym, red_conv. destruct disj as [<-|[_ eq]].
+      constructor. noconf eq. simpl in H0; noconf H0. rewrite H1; constructor.
+
   - (* CoFix congruence type *)
-    admit.
-  - (* CoFix congruence body *)
-    admit.
+     assert(fixl :#|fix_context mfix| = #|fix_context mfix1|) by now (rewrite !fix_context_length; apply (OnOne2_length o)).
+    assert(convctx : conv_context Σ (Γ ,,, fix_context mfix) (Γ ,,, fix_context mfix1)).
+    { clear -wf X o fixl.
+      eapply context_relation_app_inv => //.
+      apply conv_ctx_refl. clear X.
+      apply conv_decls_fix_context => //.
+      induction o; constructor.
+      destruct p. now apply red_conv, red1_red.
+      apply All2_refl. reflexivity.
+      reflexivity. apply IHo. }
+    assert(All (fun d => isType Σ Γ (dtype d)) mfix).
+    { apply (All_impl X0).
+      now intros x [s' [Hs' _]]; exists s'. }
+    assert(All (fun d => isType Σ Γ (dtype d)) mfix1).
+    { apply (OnOne2_All_All _ _ _ _ _ _ o X0).
+      * intros x [s [Hs IH]].
+        now exists s.
+      * intros x y [red eq] [s [Hs IH]].
+        now exists s; apply IH. }
+    assert (wf_local Σ (Γ ,,, fix_context mfix1)).
+    { apply All_mfix_wf; auto. }
+    destruct (OnOne2_nth_error _ _ _ decl _ o heq_nth_error) as [decl' [eqnth disj]].
+    eapply type_Cumul.
+    econstructor; eauto.
+    * eapply (OnOne2_All_mix_left X0) in o.
+      apply (OnOne2_All_All _ _ _ _ _ _ o X1).
+      + intros x [Hb IH].
+        eapply context_conversion'; eauto.
+        now rewrite -fixl.
+      + move=> [na ty b rarg] [na' ty' b' rarg'] /= [[red eq] [s [Hs IH]]] [Hb IH'].
+        noconf eq. 
+        eapply context_conversion'; eauto.
+        rewrite -fixl.
+        eapply type_Cumul. eapply Hb.
+        right. exists s. specialize (IH _ red).
+        eapply (weakening _ _ _ _ (tSort _)); auto.
+        apply All_mfix_wf; auto. 
+        apply (weakening_cumul _ _ []); auto.
+        now apply red_cumul, red1_red.
+    * eapply All_nth_error in X2; eauto.
+    * apply conv_cumul, conv_sym, red_conv. destruct disj as [<-|red].
+      constructor. apply red1_red. apply red.
+
+  - (* CoFix congruence in body *)
+    assert(fixl :#|fix_context mfix| = #|fix_context mfix1|) by now (rewrite !fix_context_length; apply (OnOne2_length o)).
+    assert(convctx : fix_context mfix = fix_context mfix1).
+    { clear -wf o.
+      change fix_context with (fix_context_gen 0).
+      generalize 0. induction o.
+      destruct p as [_ eq]. noconf eq. simpl in H; noconf H.
+      simpl. intros. now rewrite H H0.
+      simpl. intros n; f_equal. apply IHo. }
+    assert(All (fun d => isType Σ Γ (dtype d)) mfix).
+    { apply (All_impl X0).
+      now intros x [s' [Hs' _]]; exists s'. }
+    assert(All (fun d => isType Σ Γ (dtype d)) mfix1).
+    { apply (OnOne2_All_All _ _ _ _ _ _ o X0).
+      * intros x [s [Hs IH]].
+        now exists s.
+      * intros x y [red eq] [s [Hs IH]].
+        noconf eq. simpl in H; noconf H. rewrite -H1.
+        now exists s; apply Hs. }
+    assert (wf_local Σ (Γ ,,, fix_context mfix1)).
+    { apply All_mfix_wf; auto. }
+    destruct (OnOne2_nth_error _ _ _ decl _ o heq_nth_error) as [decl' [eqnth disj]].
+    eapply type_Cumul.
+    econstructor; eauto.
+    * eapply (OnOne2_All_mix_left X0) in o.
+      apply (OnOne2_All_All _ _ _ _ _ _ o X1).
+      + intros x [Hb IH].
+        now rewrite -convctx.
+      + move=> [na ty b rarg] [na' ty' b' rarg'] /= [[red eq] [s [Hs IH]]] [Hb IH'].
+        noconf eq.
+        now rewrite -convctx. 
+    * eapply All_nth_error in X2; eauto.
+    * apply conv_cumul, conv_sym, red_conv. destruct disj as [<-|[_ eq]].
+      constructor. noconf eq. simpl in H; noconf H. rewrite H1; constructor.
+ 
   - (* Conversion *)
     specialize (forall_u _ Hu).
     eapply type_Cumul; eauto.

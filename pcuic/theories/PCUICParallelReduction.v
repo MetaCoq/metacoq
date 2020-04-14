@@ -147,10 +147,6 @@ Proof.
   red. apply All_pair. split; apply auxl; simpl; auto.
 Defined.
 
-Lemma simpl_subst' :
-  forall N M n p k, k = List.length N -> p <= n -> subst N p (lift0 (k + n) M) = lift0 n M.
-Proof. intros. subst k. rewrite simpl_subst_rec; auto. now rewrite Nat.add_0_r. lia. Qed.
-
 (** All2 lemmas *)
 
 Definition All2_prop_eq Γ Γ' {A B} (f : A -> term) (g : A -> B) (rel : forall (Γ Γ' : context) (t t' : term), Type) :=

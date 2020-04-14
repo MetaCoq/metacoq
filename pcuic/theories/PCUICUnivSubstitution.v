@@ -1555,4 +1555,41 @@ Proof.
   - eapply weaken_lookup_on_global_env''; tea.
 Qed.
 
+Definition wf_global_ext Σ ext :=
+  (wf_ext_wk (Σ, ext) * sub_context_set (monomorphic_udecl ext) (global_context_set Σ))%type.
+
+Lemma wf_local_subst_instance Σ Γ ext u :
+  wf_global_ext Σ.1 ext ->
+  consistent_instance_ext Σ ext u ->
+  wf_local (Σ.1, ext) Γ ->
+  wf_local Σ (subst_instance_context u Γ).
+Proof.
+  destruct Σ as [Σ φ]. intros X X0 X1. simpl in *.
+  induction X1; cbn; constructor; auto.
+  - destruct t0 as [s Hs]. hnf.
+    eapply typing_subst_instance'' in Hs; eauto; apply X.
+  - destruct t0 as [s Hs]. hnf.
+    eapply typing_subst_instance'' in Hs; eauto; apply X. 
+  - hnf in t1 |- *.
+    eapply typing_subst_instance'' in t1; eauto; apply X.
+Qed.
+
+Lemma wf_local_subst_instance_decl Σ Γ c decl u :
+  wf Σ.1 ->
+  lookup_env Σ.1 c = Some decl ->
+  wf_local (Σ.1, universes_decl_of_decl decl) Γ ->
+  consistent_instance_ext Σ (universes_decl_of_decl decl) u ->
+  wf_local Σ (subst_instance_context u Γ).
+Proof.
+  destruct Σ as [Σ φ]. intros X X0 X1 X2.
+  induction X1; cbn; constructor; auto.
+  - destruct t0 as [s Hs]. hnf.
+    eapply typing_subst_instance_decl in Hs; eauto.
+  - destruct t0 as [s Hs]. hnf.
+    eapply typing_subst_instance_decl in Hs; eauto.
+  - hnf in t1 |- *.
+    eapply typing_subst_instance_decl in t1; eauto.
+Qed.
+
+
 End CheckerFlags.

@@ -259,7 +259,7 @@ Section Inversion.
       destruct hh as [s1 [A' [? [? [? ?]]]]].
       exists A'. split ; eauto.
       cbn. eapply cumul_trans ; try eassumption.
-      eapply cumul_it_mkProd_or_LetIn.
+      eapply cumul_it_mkProd_or_LetIn_codom.
       assumption.
     - simpl. apply ih in h. cbn in h.
       destruct h as [B [h c]].
@@ -267,16 +267,8 @@ Section Inversion.
       pose proof hh as [s1 [B' [? [? ?]]]].
       exists B'. split ; eauto.
       cbn. eapply cumul_trans ; try eassumption.
-      eapply cumul_it_mkProd_or_LetIn.
+      eapply cumul_it_mkProd_or_LetIn_codom.
       assumption.
   Qed.
 
 End Inversion.
-
-Lemma destArity_it_mkProd_or_LetIn ctx ctx' t :
-  destArity ctx (it_mkProd_or_LetIn ctx' t) =
-  destArity (ctx ,,, ctx') t.
-Proof.
-  induction ctx' in ctx, t |- *; simpl; auto.
-  rewrite IHctx'. destruct a as [na [b|] ty]; reflexivity.
-Qed.

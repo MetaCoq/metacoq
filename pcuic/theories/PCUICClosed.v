@@ -17,6 +17,18 @@ Definition closedn_ctx n ctx :=
 
 Notation closed_ctx ctx := (closedn_ctx 0 ctx).
 
+Lemma map_decl_ext' f g k d : closed_decl k d -> 
+  (forall x, closedn k x -> f x = g x) -> 
+  map_decl f d = map_decl g d.
+Proof.
+  destruct d as [? [?|] ?] => /= cl Hfg;
+  unfold map_decl; simpl; f_equal.
+  rewrite Hfg => //. unfold closed_decl in cl.
+  simpl in cl. now move/andP: cl => []. 
+  move/andP: cl => [cl cl']. now rewrite Hfg.
+  now rewrite Hfg.
+Qed.
+
 Lemma closedn_lift n k k' t : closedn k t -> closedn (k + n) (lift n k' t).
 Proof.
   revert k.
@@ -279,6 +291,33 @@ Proof.
   f_equal. lia.
 Qed.
 
+Lemma lift_decl_closed n k d : closed_decl k d -> lift_decl n k d = d.
+Proof.
+  case: d => na [body|] ty; rewrite /closed_decl /lift_decl /map_decl /=.
+  - move/andP => [cb cty]. now rewrite !lift_closed //.
+  - move=> cty; now rewrite !lift_closed //.
+Qed.
+
+Lemma closed_decl_upwards k d : closed_decl k d -> forall k', k <= k' -> closed_decl k' d.
+Proof.
+  case: d => na [body|] ty; rewrite /closed_decl /=.
+  - move/andP => [cb cty] k' lek'. do 2 rewrite (@closed_upwards k) //.
+  - move=> cty k' lek'; rewrite (@closed_upwards k) //.
+Qed.
+
+
+Lemma closed_ctx_lift n k ctx : closedn_ctx k ctx -> lift_context n k ctx = ctx.
+Proof.
+  induction ctx in n, k |- *; auto.
+  unfold closed_ctx, id. rewrite lift_context_snoc.
+  simpl.
+  rewrite /mapi mapi_rec_app forallb_app List.rev_length /= /snoc Nat.add_0_r.
+  move/andb_and => /= [Hctx /andb_and [Ha _]].
+  f_equal. rewrite lift_decl_closed. apply: closed_decl_upwards; eauto. lia. 
+  reflexivity.
+  rewrite IHctx // lift_decl_closed //. 
+Qed.
+
 Lemma closedn_mkProd_or_LetIn (Γ : context) d T :
     closed_decl #|Γ| d ->
     closedn (S #|Γ|) T -> closedn #|Γ| (mkProd_or_LetIn d T).
@@ -523,13 +562,28 @@ Proof.
   destruct X1 as [s0 Hs0]. simpl. rtoProp; intuition.
 Qed.
 
-Lemma closed_decl_upwards k d : closed_decl k d -> forall k', k <= k' -> closed_decl k' d.
+Lemma closedn_mapi_rec_ext (f g : nat -> context_decl -> context_decl) (l : context) n k' :
+  closedn_ctx k' l ->
+  (forall k x, n <= k -> k < length l + n -> 
+    closed_decl (k' + #|l|) x ->
+    f k x = g k x) ->
+  mapi_rec f l n = mapi_rec g l n.
 Proof.
-  case: d => na [body|] ty; rewrite /closed_decl /=.
-  move/andP => [cb cty] k' lek'. do 2 rewrite (@closed_upwards k) //.
-  move=> cty k' lek'; rewrite (@closed_upwards k) //.
+  intros cl Hfg.
+  induction l in n, cl, Hfg |- *; simpl; try congruence.
+  intros. rewrite Hfg; simpl; try lia.
+  simpl in cl. rewrite /closedn_ctx /mapi mapi_rec_app /= forallb_app in cl.
+  move/andP: cl => [cll clr]. simpl in clr. unfold id in clr.
+  rewrite List.rev_length in clr. rewrite Nat.add_0_r in clr.
+  move/andP : clr => [clr _]. eapply closed_decl_upwards; eauto. lia.
+  f_equal.
+  rewrite IHl; auto.
+  simpl in cl. rewrite /closedn_ctx /mapi mapi_rec_app /= forallb_app in cl.
+  move/andP: cl => [cll _]. simpl in cll.
+  apply cll.
+  intros. apply Hfg. simpl; lia. simpl. lia. simpl.
+  eapply closed_decl_upwards; eauto. lia.
 Qed.
-
 
 Lemma rev_subst_instance_context u Γ :
   List.rev (subst_instance_context u Γ) = subst_instance_context u (List.rev Γ).

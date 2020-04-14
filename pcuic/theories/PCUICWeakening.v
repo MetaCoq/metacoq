@@ -68,6 +68,18 @@ Proof.
   - now rewrite lift_context_length.
 Qed.
 
+Lemma lift_context_lift_context n k Γ : lift_context n 0 (lift_context k 0 Γ) =
+  lift_context (n + k) 0 Γ.
+Proof. rewrite !lift_context_alt.
+  rewrite mapi_compose.
+  apply mapi_ext.
+  intros n' x.
+  rewrite /lift_decl compose_map_decl.
+  apply map_decl_ext => y.
+  rewrite mapi_length; autorewrite with  len.
+  rewrite simpl_lift //; lia.
+Qed.
+
 Lemma lift_simpl {Γ'' Γ' : context} {i t} :
   i < #|Γ'| ->
   lift0 (S i) (lift #|Γ''| (#|Γ'| - S i) t) = lift #|Γ''| #|Γ'| (lift0 (S i) t).
@@ -467,20 +479,6 @@ Proof.
       intros. erewrite IHparams; eauto. simpl. lia.
     + destruct t; simpl; try congruence.
       intros. erewrite IHparams; eauto. simpl. lia.
-Qed.
-
-Lemma lift_decl_closed n k d : closed_decl k d -> lift_decl n k d = d.
-Proof.
-  case: d => na [body|] ty; rewrite /closed_decl /lift_decl /map_decl /=.
-  - move/andP => [cb cty]. now rewrite !lift_closed //.
-  - move=> cty; now rewrite !lift_closed //.
-Qed.
-
-Lemma closed_decl_upwards k d : closed_decl k d -> forall k', k <= k' -> closed_decl k' d.
-Proof.
-  case: d => na [body|] ty; rewrite /closed_decl /=.
-  - move/andP => [cb cty] k' lek'. do 2 rewrite (@closed_upwards k) //.
-  - move=> cty k' lek'; rewrite (@closed_upwards k) //.
 Qed.
 
 Lemma closed_ctx_lift n k ctx : closed_ctx ctx -> lift_context n k ctx = ctx.

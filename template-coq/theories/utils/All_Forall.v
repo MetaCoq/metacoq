@@ -264,6 +264,19 @@ Proof.
   induction 1; constructor; auto.
 Qed.
 
+Lemma All2_impl {A B} {P Q : A -> B -> Type} {l l'} :
+    All2 P l l' ->
+    (forall x y, P x y -> Q x y) ->
+    All2 Q l l'.
+Proof.
+  induction 1; constructor; auto.
+Qed.
+
+Lemma All2_eq_eq {A} (l l' : list A) : l = l' -> All2 (fun x y => x = y) l l'.
+Proof.
+  intros ->. induction l';  constructor; auto.
+Qed.
+
 Hint Constructors All All2 : core.
 
 Lemma All_rev_map {A B} (P : A -> Type) f (l : list B) : All (compose P f) l -> All P (rev_map f l).
@@ -550,6 +563,53 @@ Proof.
   induction 1; constructor; intuition eauto.
 Qed.
 
+Lemma OnOne2_All2_All2 {A : Type} {l1 l2 l3 : list A} {R1 R2 R3  : A -> A -> Type} :
+  OnOne2 R1 l1 l2 ->
+  All2 R2 l1 l3 ->
+  (forall x y, R2 x y -> R3 x y) ->
+  (forall x y z : A, R1 x y -> R2 x z -> R3 y z) ->
+  All2 R3 l2 l3.
+Proof.
+  intros o. induction o in l3 |- *.
+  intros H; depelim H.
+  intros Hf Hf'. specialize (Hf'  _ _ _ p r). constructor; auto.
+  eapply All2_impl; eauto.
+  intros H; depelim H.
+  intros Hf. specialize (IHo _ H Hf).
+  constructor; auto.
+Qed.
+
+Lemma OnOne2_All_All {A : Type} {l1 l2 : list A} {R1  : A -> A -> Type} {R2 R3 : A -> Type} :
+  OnOne2 R1 l1 l2 ->
+  All R2 l1 ->
+  (forall x, R2 x -> R3 x) ->
+  (forall x y : A, R1 x y -> R2 x -> R3 y) ->
+  All R3 l2.
+Proof.
+  intros o. induction o.
+  intros H; depelim H.
+  intros Hf Hf'. specialize (Hf' _ _ p r). constructor; auto.
+  eapply All_impl; eauto.
+  intros H; depelim H.
+  intros Hf. specialize (IHo H Hf).
+  constructor; auto.
+Qed.
+
+Lemma OnOne2_nth_error {A} (l l' : list A) n t P :
+  OnOne2 P l l' ->        
+  nth_error l n = Some t ->
+  ∑ t', (nth_error l' n = Some t') *
+  ((t = t') + (P t t')).
+Proof.
+  induction 1 in n |- *.
+  destruct n; simpl.
+  - intros [= ->]. exists hd'; intuition auto.
+  - exists t. intuition auto.
+  - destruct n; simpl; auto.
+    intros [= ->]. exists t; intuition auto.
+Qed.
+
+
 Ltac toAll :=
   match goal with
   | H : is_true (forallb _ _) |- _ => apply forallb_All in H
@@ -643,14 +703,6 @@ Proof.
   induction 1; constructor; auto.
 Qed.
 
-Lemma All2_impl {A B} {P Q : A -> B -> Type} {l l'} :
-    All2 P l l' ->
-    (forall x y, P x y -> Q x y) ->
-    All2 Q l l'.
-Proof.
-  induction 1; constructor; auto.
-Qed.
-
 Lemma Forall_app {A} (P : A -> Prop) l l' : Forall P (l ++ l') -> Forall P l /\ Forall P l'.
 Proof.
   induction l; intros H. split; try constructor. apply H.
@@ -715,7 +767,6 @@ Lemma All2_non_nil {A B} (P : A -> B -> Type) (l : list A) (l' : list B) :
 Proof.
   induction 1; congruence.
 Qed.
-
 
 Lemma nth_error_forall {A} {P : A -> Prop} {l : list A} {n x} :
   nth_error l n = Some x -> Forall P l -> P x.

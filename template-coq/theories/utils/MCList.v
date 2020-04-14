@@ -5,6 +5,9 @@ Import ListNotations.
 Notation "#| l |" := (List.length l) (at level 0, l at level 99, format "#| l |").
 Arguments nil {_}, _.
 
+Lemma app_tip_assoc {A} (l : list A) x l' : (l ++ [x]) ++ l' = l ++ (x :: l').
+Proof. now rewrite <- app_assoc. Qed.
+
 Fixpoint fold_left_i_aux {A B} (f : A -> nat -> B -> A) (n0 : nat) (l : list B)
          (a0 : A) {struct l} : A
   := match l with
@@ -385,6 +388,20 @@ Lemma mapi_ext {A B} (f g : nat -> A -> B) (l : list A) :
   mapi f l = mapi g l.
 Proof. intros; now apply mapi_rec_ext. Qed.
 
+Lemma mapi_rec_Sk {A B} (f : nat -> A -> B) (l : list A) k :
+  mapi_rec f l (S k) = mapi_rec (fun n x => f (S n) x) l k.
+Proof.
+  induction l in k |- *; simpl; congruence.
+Qed.
+
+Lemma mapi_rec_add {A B : Type} (f : nat -> A -> B) (l : list A) (n k : nat) :
+  mapi_rec f l (n + k) = mapi_rec (fun (k : nat) (x : A) => f (n + k) x) l k.
+Proof.
+  induction l in n, k |- *; simpl; auto.
+  f_equal. rewrite (IHl (S n) k). rewrite mapi_rec_Sk.
+  eapply mapi_rec_ext. intros. f_equal. lia.
+Qed.
+
 Lemma mapi_rec_app {A B} (f : nat -> A -> B) (l l' : list A) n :
   (mapi_rec f (l ++ l') n = mapi_rec f l n ++ mapi_rec f l' (length l + n))%list.
 Proof.
@@ -400,12 +417,6 @@ Proof.
   induction l'; intros. reflexivity. rewrite mapi_rec_eqn.
   change (S (length l + n)) with (S (length l) + n).
   rewrite (Nat.add_succ_comm _ n). now rewrite IHl'.
-Qed.
-
-Lemma mapi_rec_Sk {A B} (f : nat -> A -> B) (l : list A) k :
-  mapi_rec f l (S k) = mapi_rec (fun n x => f (S n) x) l k.
-Proof.
-  induction l in k |- *; simpl; congruence.
 Qed.
 
 Lemma rev_mapi_rec {A B} (f : nat -> A -> B) (l : list A) n k : k <= n ->
@@ -796,4 +807,26 @@ Proof.
   simpl. destruct args. simpl.
   now rewrite firstn_nil.
   rewrite IHx. now rewrite app_comm_cons.
+Qed.
+
+Lemma firstn_app_left (A : Type) (n : nat) (l1 l2 : list A) k :
+  k = #|l1| + n ->
+  firstn k (l1 ++ l2) = l1 ++ firstn n l2.
+Proof. intros ->; apply firstn_app_2. Qed.
+
+Lemma skipn_all_app_eq {A} n (l l' : list A) : n = #|l| -> skipn n (l ++ l') = l'.
+Proof.
+  move->. apply skipn_all_app.
+Qed.
+
+Lemma rev_case {A} (P : list A -> Type) :
+  P nil -> (forall l x, P (l ++ [x])) -> forall l, P l.
+Proof.
+  intros; now apply rev_ind.
+Qed.
+
+Lemma firstn_length_le_inv {A} n (l : list A) : #|firstn n l| = n -> n <= #|l|.
+Proof.
+  induction l in n |- *; simpl; auto with arith;
+  destruct n; simpl; auto with arith. discriminate.
 Qed.

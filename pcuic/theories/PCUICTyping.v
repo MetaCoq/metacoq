@@ -150,6 +150,11 @@ Qed.
 Lemma fix_context_length mfix : #|fix_context mfix| = #|mfix|.
 Proof. unfold fix_context. now rewrite List.rev_length mapi_length. Qed.
 
+Hint Rewrite subst_context_length subst_instance_context_length 
+  app_context_length map_context_length fix_context_length fix_subst_length cofix_subst_length 
+  map_length app_length lift_context_length 
+  @mapi_length @mapi_rec_length : len.
+
 Definition tDummy := tVar "".
 
 Definition iota_red npar c args brs :=
@@ -458,6 +463,14 @@ Proof.
   destruct (destArity [] t) as [[ctx' s']|]; cbn in *.
   exists ctx'. inversion H. now subst.
   discriminate H.
+Qed.
+
+Lemma destArity_it_mkProd_or_LetIn ctx ctx' t :
+  destArity ctx (it_mkProd_or_LetIn ctx' t) =
+  destArity (ctx ,,, ctx') t.
+Proof.
+  induction ctx' in ctx, t |- *; simpl; auto.
+  rewrite IHctx'. destruct a as [na [b|] ty]; reflexivity.
 Qed.
 
 Lemma mkApps_nonempty f l :

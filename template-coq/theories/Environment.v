@@ -78,6 +78,9 @@ Module Environment (T : Term).
 
   Definition map_context f c :=
     List.map (map_decl f) c.
+    
+  Lemma map_context_length f l : #|map_context f l| = #|l|.
+  Proof. now unfold map_context; rewrite map_length. Qed.
 
   Definition fold_context f (Γ : context) : context :=
     List.rev (mapi (fun k' decl => map_decl (f k') decl) (List.rev Γ)).

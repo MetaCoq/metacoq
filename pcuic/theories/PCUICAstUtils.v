@@ -262,6 +262,17 @@ Lemma mapi_compose {A B C} (g : nat -> B -> C) (f : nat -> A -> B) l :
   mapi g (mapi f l) = mapi (fun k x => g k (f k x)) l.
 Proof. apply mapi_rec_compose. Qed.
 
+Lemma compose_map_decl f g x : map_decl f (map_decl g x) = map_decl (f ∘ g) x.
+Proof.
+  destruct x as [? [?|] ?]; reflexivity.
+Qed.
+
+Lemma map_decl_ext f g x : (forall x, f x = g x) -> map_decl f x = map_decl g x.
+Proof.
+  intros H; destruct x as [? [?|] ?]; rewrite /map_decl /=; f_equal; auto.
+  now rewrite (H t).
+Qed.
+
 Ltac merge_All :=
   unfold tFixProp, tCaseBrsProp in *;
   repeat toAll.
@@ -516,6 +527,7 @@ Ltac finish_discr :=
          | [ H : mkApps _ _ = mkApps _ _ |- _ ] =>
            let H0 := fresh in let H1 := fresh in
                               specialize (mkApps_eq_inj H eq_refl eq_refl) as [H0 H1];
+                              clear H;
                               try (congruence || (noconf H0; noconf H1))
          | [ H : mkApps _ _ = _ |- _ ] => apply mkApps_eq_head in H
          end.

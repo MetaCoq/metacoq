@@ -49,6 +49,22 @@ Inductive context_relation (P : context -> context -> context_decl -> context_de
 Derive Signature for context_relation.
 Arguments context_relation P Γ Γ' : clear implicits.
 
+Lemma context_relation_impl {P Q Γ Γ'} :
+  (forall Γ Γ' d d', P Γ Γ' d d' -> Q Γ Γ' d d') ->
+  context_relation P Γ Γ' -> context_relation Q Γ Γ'.
+Proof.
+  induction 2; constructor; auto.
+Qed.
+
+Lemma context_relation_refl P : (forall Δ x, P Δ Δ x x) ->
+  forall Δ, context_relation P Δ Δ.
+Proof.
+  intros HP.
+  induction Δ.
+   constructor; auto.
+   destruct a as [? [?|] ?]; constructor; auto.
+Qed.
+
 Lemma context_relation_nth {P n Γ Γ' d} :
   context_relation P Γ Γ' -> nth_error Γ n = Some d ->
   { d' & ((nth_error Γ' n = Some d') *

@@ -111,6 +111,9 @@ Proof.
     f_equal; simpl; rewrite subst_empty; intuition trivial.
 Qed.
 
+Lemma subst_context_nil s n : subst_context s n [] = [].
+Proof. reflexivity. Qed.
+
 Lemma subst0_context k Γ : subst_context [] k Γ = Γ.
 Proof.
   unfold subst_context, fold_context.
@@ -162,6 +165,20 @@ Proof.
   rewrite List.rev_app_distr.
   rewrite mapi_app. rewrite <- List.rev_app_distr. f_equal. f_equal.
   apply mapi_ext. intros. f_equal. rewrite List.rev_length. f_equal. lia.
+Qed.
+
+Lemma distr_lift_subst_context n k s Γ : lift_context n k (subst_context s 0 Γ) =
+  subst_context (map (lift n k) s) 0 (lift_context n (#|s| + k) Γ).
+Proof.
+  rewrite !lift_context_alt !subst_context_alt.
+  rewrite !mapi_compose.
+  apply mapi_ext.
+  intros n' x.
+  rewrite /lift_decl /subst_decl !compose_map_decl.
+  apply map_decl_ext => y.
+  rewrite !mapi_length; autorewrite with len.
+  rewrite Nat.add_0_r.
+  rewrite distr_lift_subst_rec. f_equal. f_equal. lia.
 Qed.
 
 Lemma map_vass_map_def_subst g l n k :
@@ -791,6 +808,38 @@ Proof.
   rewrite app_nil_r /= //.
 Qed.
 
+Lemma subst_telescope_cons s k d Γ : 
+  subst_telescope s k (d :: Γ) = 
+  map_decl (subst s k) d :: subst_telescope s (S k) Γ.
+Proof.
+  simpl. 
+  unfold subst_telescope, mapi. simpl.
+  rewrite Nat.add_0_r; f_equal.
+  rewrite mapi_rec_Sk. apply mapi_rec_ext.
+  intros. simpl. now rewrite Nat.add_succ_r.
+Qed.
+
+Lemma subst_telescope_comm_rec s k s' k' Γ:
+  subst_telescope (map (subst s' k) s) k' (subst_telescope s' (#|s| + k' + k) Γ) =
+  subst_telescope s' (k' + k) (subst_telescope s k' Γ).
+Proof.
+  induction Γ in k, k' |- *; rewrite ?subst_telescope_cons; simpl; auto.
+  f_equal.
+  * unfold map_decl. simpl.
+    f_equal.
+    + destruct a as [na [b|] ty]; simpl; auto.
+      f_equal. now rewrite distr_subst_rec.
+    + now rewrite distr_subst_rec.
+  * specialize (IHΓ k (S k')). now rewrite Nat.add_succ_r in IHΓ.
+Qed.
+
+Lemma subst_telescope_comm s k s' Γ:
+  subst_telescope (map (subst s' k) s) 0 (subst_telescope s' (#|s| + k) Γ) =
+  subst_telescope s' k (subst_telescope s 0 Γ).
+Proof.
+  now rewrite -(subst_telescope_comm_rec _ _ _ 0) Nat.add_0_r.
+Qed.
+
 Lemma instantiate_params_subst_make_context_subst ctx args s ty s' ty' :
   instantiate_params_subst ctx args s ty = Some (s', ty') ->
   ∑ ctx'',
@@ -916,6 +965,7 @@ Proof.
   destruct (decl_body a); cbn; now rewrite IHctx.
 Qed.
 
+Hint Rewrite subst_instance_context_assumptions : len.
 
 Lemma subst_build_case_predicate_type ind mdecl idecl u params ps pty n k :
   closed_ctx (subst_instance_context u (ind_params mdecl)) ->
@@ -2447,11 +2497,37 @@ Proof.
   intros ->; apply subst_app_context.
 Qed.
 
-
 Lemma map_subst_app_simpl l l' k (ts : list term) : 
   map (subst l k ∘ subst l' (k + #|l|)) ts =
   map (subst (l ++ l') k) ts.
 Proof.
   eapply map_ext. intros.
   now rewrite subst_app_simpl.
+Qed.
+
+Lemma subst_context_decompo s s' Γ k : 
+  subst_context (s ++ s') k Γ =
+  subst_context s' k (subst_context (map (lift0 #|s'|) s) k Γ).
+Proof.
+  intros.
+  rewrite !subst_context_alt !mapi_compose.
+  apply mapi_ext => i x.
+  destruct x as [na [b|] ty] => //.
+  - rewrite /subst_decl /map_decl /=; f_equal.
+    + rewrite !mapi_length. f_equal.
+      now rewrite subst_app_decomp.
+    + rewrite mapi_length.
+      now rewrite subst_app_decomp.
+  - rewrite /subst_decl /map_decl /=; f_equal.
+    rewrite !mapi_length. now rewrite subst_app_decomp.
+Qed.
+
+Lemma simpl_map_lift x n k :
+  map (lift0 n ∘ lift0 k) x = 
+  map (lift k n ∘ lift0 n) x.
+Proof.
+  apply map_ext => t.
+  rewrite simpl_lift => //; try lia.
+  rewrite simpl_lift; try lia.
+  now rewrite Nat.add_comm.
 Qed.

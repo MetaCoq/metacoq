@@ -282,6 +282,9 @@ Proof.
   - now elim (leb k n).
 Qed.
 
+Lemma map_lift0 l : map (lift0 0) l = l.
+Proof. induction l; simpl; auto. now rewrite lift0_id. Qed.
+
 Lemma lift0_p : forall M, lift0 0 M = M.
 Proof. intro; apply lift0_id. Qed.
 
@@ -573,6 +576,99 @@ Definition fix_context (m : mfixpoint term) : context :=
 
 Definition fix_context_gen k mfix := 
   List.rev (mapi_rec (fun (i : nat) (d : def term) => vass (dname d) (lift0 i (dtype d))) mfix k).
+
+Lemma lift_decl0 k d : map_decl (lift 0 k) d = d.
+Proof.
+  destruct d; destruct decl_body; unfold map_decl; simpl;
+  f_equal; now rewrite ?lift0_id.
+Qed.
+
+Lemma lift0_context k Γ : lift_context 0 k Γ = Γ.
+Proof.
+  unfold lift_context, fold_context.
+  rewrite rev_mapi. rewrite List.rev_involutive.
+  unfold mapi. generalize 0 at 2. generalize #|List.rev Γ|.
+  induction Γ; intros; simpl; trivial.
+  rewrite lift_decl0; f_equal; auto.
+Qed.
+
+Lemma lift_context_length n k Γ : #|lift_context n k Γ| = #|Γ|.
+Proof. apply fold_context_length. Qed.
+Hint Rewrite lift_context_length : lift.
+
+Definition lift_context_snoc0 n k Γ d : lift_context n k (d :: Γ) = lift_context n k Γ ,, lift_decl n (#|Γ| + k) d.
+Proof. unfold lift_context. now rewrite fold_context_snoc0. Qed.
+Hint Rewrite lift_context_snoc0 : lift.
+
+Lemma lift_context_snoc n k Γ d : lift_context n k (Γ ,, d) = lift_context n k Γ ,, lift_decl n (#|Γ| + k) d.
+Proof.
+  unfold snoc. apply lift_context_snoc0.
+Qed.
+Hint Rewrite lift_context_snoc : lift.
+
+Lemma lift_context_alt n k Γ :
+  lift_context n k Γ =
+  mapi (fun k' d => lift_decl n (Nat.pred #|Γ| - k' + k) d) Γ.
+Proof.
+  unfold lift_context. apply fold_context_alt.
+Qed.
+
+Lemma lift_context_app n k Γ Δ :
+  lift_context n k (Γ ,,, Δ) = lift_context n k Γ ,,, lift_context n (#|Γ| + k) Δ.
+Proof.
+  unfold lift_context, fold_context, app_context.
+  rewrite List.rev_app_distr.
+  rewrite mapi_app. rewrite <- List.rev_app_distr. f_equal. f_equal.
+  apply mapi_ext. intros. f_equal. rewrite List.rev_length. f_equal. lia.
+Qed.
+
+Lemma map_lift_lift n k l : map (fun x => lift0 n (lift0 k x)) l = map (lift0 (n + k)) l.
+Proof. apply map_ext => x.
+  rewrite simpl_lift; try lia. reflexivity.
+Qed.
+
+Lemma simpl_subst' :
+  forall N M n p k, k = List.length N -> p <= n -> subst N p (lift0 (k + n) M) = lift0 n M.
+Proof. 
+  intros. subst k. rewrite simpl_subst_rec; auto.
+  + now rewrite Nat.add_0_r. 
+  + lia.
+Qed.
+
+Lemma map_subst_lift_id s l : map (subst0 s ∘ lift0 #|s|) l = l.
+Proof.
+  induction l; simpl; auto.
+  rewrite -{1}(Nat.add_0_r #|s|) simpl_subst'; auto.
+  now rewrite lift0_id IHl.  
+Qed.
+
+Lemma map_subst_lift_id_eq s l k : k = #|s| -> map (subst0 s ∘ lift0 k) l = l.
+Proof. intros ->; apply map_subst_lift_id. Qed.
+
+Lemma nth_error_lift_context:
+  forall (Γ' Γ'' : context) (v : nat),
+    v < #|Γ'| -> forall nth k,
+    nth_error Γ' v = Some nth ->
+    nth_error (lift_context #|Γ''| k Γ') v = Some (lift_decl #|Γ''| (#|Γ'| - S v + k) nth).
+Proof.
+  induction Γ'; intros.
+  - easy.
+  - simpl. destruct v; rewrite lift_context_snoc0.
+    + simpl. repeat f_equal; try lia. simpl in *. congruence.
+    + simpl. apply IHΓ'; simpl in *; (lia || congruence).
+Qed.
+
+Lemma nth_error_lift_context_eq:
+  forall (Γ' Γ'' : context) (v : nat) k,
+    nth_error (lift_context #|Γ''| k Γ') v =
+    option_map (lift_decl #|Γ''| (#|Γ'| - S v + k)) (nth_error Γ' v).
+Proof.
+  induction Γ'; intros.
+  - simpl. unfold lift_context, fold_context; simpl. now rewrite nth_error_nil.
+  - simpl. destruct v; rewrite lift_context_snoc0.
+    + simpl. repeat f_equal; try lia.
+    + simpl. apply IHΓ'; simpl in *; (lia || congruence).
+Qed.
 
 Lemma shiftn_ext n f f' : (forall i, f i = f' i) -> forall t, shiftn n f t = shiftn n f' t.
 Proof.
@@ -1554,76 +1650,6 @@ Proof.
   destruct mfix; constructor.
   split. apply auxt. apply auxt. apply auxm.
 Defined.
-
-Lemma lift_decl0 k d : map_decl (lift 0 k) d = d.
-Proof.
-  destruct d; destruct decl_body; unfold map_decl; simpl;
-  f_equal; now rewrite ?lift0_id.
-Qed.
-
-Lemma lift0_context k Γ : lift_context 0 k Γ = Γ.
-Proof.
-  unfold lift_context, fold_context.
-  rewrite rev_mapi. rewrite List.rev_involutive.
-  unfold mapi. generalize 0 at 2. generalize #|List.rev Γ|.
-  induction Γ; intros; simpl; trivial.
-  rewrite lift_decl0; f_equal; auto.
-Qed.
-
-Lemma lift_context_length n k Γ : #|lift_context n k Γ| = #|Γ|.
-Proof. apply fold_context_length. Qed.
-Hint Rewrite lift_context_length : lift.
-
-Definition lift_context_snoc0 n k Γ d : lift_context n k (d :: Γ) = lift_context n k Γ ,, lift_decl n (#|Γ| + k) d.
-Proof. unfold lift_context. now rewrite fold_context_snoc0. Qed.
-Hint Rewrite lift_context_snoc0 : lift.
-
-Lemma lift_context_snoc n k Γ d : lift_context n k (Γ ,, d) = lift_context n k Γ ,, lift_decl n (#|Γ| + k) d.
-Proof.
-  unfold snoc. apply lift_context_snoc0.
-Qed.
-Hint Rewrite lift_context_snoc : lift.
-
-Lemma lift_context_alt n k Γ :
-  lift_context n k Γ =
-  mapi (fun k' d => lift_decl n (Nat.pred #|Γ| - k' + k) d) Γ.
-Proof.
-  unfold lift_context. apply fold_context_alt.
-Qed.
-
-Lemma lift_context_app n k Γ Δ :
-  lift_context n k (Γ ,,, Δ) = lift_context n k Γ ,,, lift_context n (#|Γ| + k) Δ.
-Proof.
-  unfold lift_context, fold_context, app_context.
-  rewrite List.rev_app_distr.
-  rewrite mapi_app. rewrite <- List.rev_app_distr. f_equal. f_equal.
-  apply mapi_ext. intros. f_equal. rewrite List.rev_length. f_equal. lia.
-Qed.
-
-Lemma nth_error_lift_context:
-  forall (Γ' Γ'' : context) (v : nat),
-    v < #|Γ'| -> forall nth k,
-    nth_error Γ' v = Some nth ->
-    nth_error (lift_context #|Γ''| k Γ') v = Some (lift_decl #|Γ''| (#|Γ'| - S v + k) nth).
-Proof.
-  induction Γ'; intros.
-  - easy.
-  - simpl. destruct v; rewrite lift_context_snoc0.
-    + simpl. repeat f_equal; try lia. simpl in *. congruence.
-    + simpl. apply IHΓ'; simpl in *; (lia || congruence).
-Qed.
-
-Lemma nth_error_lift_context_eq:
-  forall (Γ' Γ'' : context) (v : nat) k,
-    nth_error (lift_context #|Γ''| k Γ') v =
-    option_map (lift_decl #|Γ''| (#|Γ'| - S v + k)) (nth_error Γ' v).
-Proof.
-  induction Γ'; intros.
-  - simpl. unfold lift_context, fold_context; simpl. now rewrite nth_error_nil.
-  - simpl. destruct v; rewrite lift_context_snoc0.
-    + simpl. repeat f_equal; try lia.
-    + simpl. apply IHΓ'; simpl in *; (lia || congruence).
-Qed.
 
 Fixpoint subst_app (t : term) (us : list term) : term :=
   match t, us with

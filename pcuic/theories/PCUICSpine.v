@@ -1103,48 +1103,166 @@ Lemma all_rels_subst {cf:checker_flags} Σ Δ Γ t :
   red Σ.1 (Γ ,,, Δ) t (subst0 (all_rels Δ 0 #|Δ|) (lift #|Δ| #|Δ| t)).
 Proof.
   intros wfΣ wf.
-  induction t using term_forall_ctx_list_ind.
+  assert(forall Γ' t (wf : wf_local Σ Γ'),
+    ((All_local_env_over typing 
+      (fun Σ Γ' wfΓ' t T _ => 
+        forall Γ Δ, Γ' = Γ ,,, Δ ->        
+        red Σ.1 (Γ ,,, Δ) t (subst0 (all_rels Δ 0 #|Δ|) (lift #|Δ| #|Δ| t)))
+        Σ Γ' wf) *  
+        (match t with
+        | Some t => forall Γ Δ, Γ' = Γ ,,, Δ ->        
+            red Σ.1 (Γ ,,, Δ) t (subst0 (all_rels Δ 0 #|Δ|) (lift #|Δ| #|Δ| t))
+        | None => unit  end))).
+  clear t Δ Γ wf. intros Γ' t.
+  Subterm.rec_wf_rel IH (Γ', t) (Subterm.lexprod _ _ (MR lt (@length context_decl))
+     (MR lt (fun x => match x with Some t => S (PCUICSize.size t) | None => 0 end))).
   simpl.
-  destruct (leb_spec_Set #|Δ| n); simpl; rewrite Nat.sub_0_r.
-  * destruct (nth_error_spec (all_rels Δ 0 #|Δ|) (#|Δ| + n));
-    rewrite all_rels_length in l0 |- *. lia.
-    assert (#|Δ| + n - #|Δ| = n) as -> by lia.
+  rename pr1 into cf.
+  rename pr0 into Σ.
+  rename pr2 into wfΣ.
+  rename pr3 into Γ.
+  rename pr4 into t. clear H0.
+  intros wf.
+  split.
+  - specialize (IH cf Σ wfΣ).
+    destruct wf.
     constructor.
-  * destruct (nth_error_spec (all_rels Δ 0 #|Δ|) n);
-    rewrite all_rels_length in l0 |- *; try lia.
-    eapply nth_error_all_rels_spec in e.
-    destruct e as [decl [Hnth Hdecl]].
-    destruct decl as [? [?|] ?]; simpl in Hdecl; subst x;
-    rewrite lift0_id. 2:auto.
-    etransitivity.
-    eapply red1_red. constructor.
-    rewrite nth_error_app_lt; auto.
-    rewrite Hnth. reflexivity.
-    rewrite -{1 3 4}(firstn_skipn (S n) Δ).
-    rewrite app_context_assoc.
-    assert (Hf:#|firstn (S n) Δ| = S n) by now rewrite firstn_length_le; lia.
-    rewrite app_length Hf.
-    rewrite all_rels_lift.
+    constructor. 
+    apply (IH Γ t ltac:(left; unfold MR; simpl; lia) wf).
+    intros; subst Γ.
+    now apply (IH (Γ0 ,,, Δ) (Some t0) ltac:(left; unfold MR; simpl; lia) wf).
+    constructor; auto.
+    apply (IH Γ t ltac:(left; unfold MR; simpl; lia) wf).
+    intros.
+    now apply (IH Γ (Some b) ltac:(left; unfold MR; simpl; lia) wf).
+    now apply (IH Γ (Some t0) ltac:(left; unfold MR; simpl; lia) wf).
 
-    erewrite <-(simpl_lift _ _ _ _ #|skipn (S n) Δ|); try lia.
+  - destruct t; [|exact tt].
+    intros Γ0 Δ ->.
+    rename Γ0 into Γ.
+    specialize (IH cf Σ).
+    assert (All_local_env_over typing
+    (fun (Σ : PCUICEnvironment.global_env_ext)
+       (Γ'0 : PCUICEnvironment.context) (_ : wf_local Σ Γ'0) 
+       (t T : term) (_ : Σ;;; Γ'0 |- t : T) =>
+     forall Γ Δ : context,
+     Γ'0 = Γ ,,, Δ ->
+     red Σ.1 (Γ ,,, Δ) t (subst0 (all_rels Δ 0 #|Δ|) (lift #|Δ| #|Δ| t)))
+    Σ _ wf).
+    { specialize (IH wfΣ (Γ ,,, Δ) None).
+      forward IH. simpl. right. unfold MR. lia.
+      apply (IH wf). }
+    clear IH.
+
+  change (Γ ,,, Δ) with (Γ ,,, Δ ,,, []).
+  rewrite -{3}(Nat.add_0_r #|Δ|).
+  change 0 with #|@nil context_decl| at 2 3.
+  generalize (@nil context_decl) as Δ'.
   
-    epose proof (distr_lift_subst (lift #|skipn (S n) Δ| (#|Δ| - S n) t) 
-     (all_rels (skipn (S n) Δ) 0 #|skipn (S n) Δ|) (S n) 0).
-    rewrite Nat.add_0_r in H.
-    autorewrite with len in H.
-    rewrite -{}H.
-    rewrite -{3 4}Hf.
-    eapply (weakening_red _ _ []); auto. simpl.
-    rewrite skipn_length. lia.
-    simpl.
-    admit.
-    rewrite skipn_length; lia.
+  induction t using term_forall_ctx_list_ind; try solve [constructor]; intros Δ'.
+  * simpl.
+     destruct (leb_spec_Set (#|Δ|  +#|Δ'|) n); simpl.
+    **
+      elim: leb_spec_Set => Hle.
+      destruct (nth_error_spec (all_rels Δ 0 #|Δ|) (#|Δ| + n - #|Δ'|));
+      rewrite all_rels_length in l0 |- *. lia.
+      assert (#|Δ| + n - #|Δ| = n) as -> by lia.
+      constructor. lia.
+    **
+      elim: leb_spec_Set => Hle.
+      destruct (nth_error_spec (all_rels Δ 0 #|Δ|) (n - #|Δ'|));
+      rewrite all_rels_length in l0 |- *; try lia.
+      eapply nth_error_all_rels_spec in e.
+      destruct e as [decl [Hnth Hdecl]].
+      destruct decl as [? [?|] ?]; simpl in Hdecl; subst x.
+      assert (n = #|Δ'| + (n - #|Δ'|)). lia.
+      rewrite {1}H.
+      change (tRel  (#|Δ'| + (n - #|Δ'|))) with
+          (lift0 #|Δ'| (tRel (n - #|Δ'|))).
+      eapply (weakening_red _ _ []); auto.
+      simpl.
+      set (i := n - #|Δ'|) in *. clearbody i.
+      clear l Hle H.
 
-  * simpl. constructor.
-  * simpl.   
+      etransitivity.
+      + eapply red1_red. constructor.
+        rewrite nth_error_app_lt; auto.
+        rewrite Hnth. reflexivity.
+      + rewrite -{1 3 4}(firstn_skipn (S i) Δ).
+        rewrite app_context_assoc.
+        assert (Hf:#|firstn (S i) Δ| = S i) by now rewrite firstn_length_le; lia.
+        rewrite app_length Hf.
+        rewrite all_rels_lift.
+        erewrite <-(simpl_lift _ _ _ _ #|skipn (S i) Δ|); try lia.
     
-Admitted.
+        epose proof (distr_lift_subst (lift #|skipn (S i) Δ| (#|Δ| - S i) t) 
+        (all_rels (skipn (S i) Δ) 0 #|skipn (S i) Δ|) (S i) 0).
+        rewrite Nat.add_0_r in H.
+        autorewrite with len in H.
+        rewrite -{}H.
+        rewrite -{3 4}Hf.
+        eapply (weakening_red _ _ []); auto. simpl.
+        rewrite skipn_length. lia.
+        simpl.
+        unshelve eapply (nth_error_All_local_env_over (n:=i)) in X.
+        2:{ rewrite nth_error_app_lt //. apply Hnth. }
+        destruct X as [_ [Xb Xt]].
+        specialize (Xb Γ (skipn (S i) Δ)).
+        forward Xb. rewrite skipn_app. unfold app_context. f_equal.
+        assert(S i - #|Δ| = 0) by lia. rewrite H. apply skipn_0.
+        now rewrite skipn_length in Xb; try lia.
+        rewrite skipn_length; lia.
+      + simpl. assert(#|Δ'| + (n - #|Δ'|) = n) as -> by lia.
+        constructor.
+      + constructor.
 
+  * simpl; eapply red_evar.
+    do 2 apply All2_map_right.
+    apply (All_All2 X0); auto.
+
+  * simpl. eapply red_prod. auto.
+    specialize (IHt2 (Δ' ,, vass n t1)).
+    now rewrite -Nat.add_succ_r.
+
+  * simpl; eapply red_abs; auto.
+    rewrite -Nat.add_succ_r.
+    eapply (IHt2 (Δ' ,, vass n _)).
+
+  * simpl; eapply red_letin; auto.
+    rewrite -Nat.add_succ_r.
+    eapply (IHt3 (Δ' ,, vdef n _ _)).
+
+  * simpl; eapply red_app; auto.
+  * simpl; eapply red_case; auto.
+    red in X0.
+    do 2 eapply All2_map_right.
+    eapply (All_All2 X0).
+    simpl; intros.
+    split; auto.
+
+  * simpl; eapply red_proj_c. auto.
+
+  * simpl; eapply red_fix_congr.
+    do 2 eapply All2_map_right.
+    eapply (All_All2 X0); simpl; intuition auto.
+    rewrite map_length.
+    specialize (b (Δ' ,,, fix_context m)).
+    autorewrite with len in b.
+    rewrite Nat.add_shuffle3.
+    now rewrite app_context_assoc in b.
+
+  * simpl. eapply red_cofix_congr.
+    do 2 eapply All2_map_right.
+    eapply (All_All2 X0); simpl; intuition auto.
+    rewrite map_length.
+    specialize (b (Δ' ,,, fix_context m)).
+    autorewrite with len in b.
+    rewrite Nat.add_shuffle3.
+    now rewrite app_context_assoc in b.
+  
+- specialize (X (Γ ,,, Δ)  (Some t) wf). simpl in X.
+  apply X. reflexivity.
+Qed.
 
 Lemma all_rels_subst_lift {cf:checker_flags} Σ Δ Γ Δ' t :
   wf Σ.1 -> wf_local Σ (Γ ,,, Δ) ->
@@ -1367,7 +1485,7 @@ Lemma ctx_inst_sub_to_extended_list_k {cf:checker_flags} Σ Γ args Δ :
   forall inst : ctx_inst Σ Γ args Δ,
   map (subst0 (ctx_inst_sub inst)) (to_extended_list_k (List.rev Δ) 0) = args.
 Proof.
-  induction inst; simpl; auto.
+  induction inst; simpl; rewrite /to_extended_list_k; auto.
   rewrite reln_app. simpl.
   have len := ctx_inst_subst_length inst0.
   rewrite subst_telescope_length in len.

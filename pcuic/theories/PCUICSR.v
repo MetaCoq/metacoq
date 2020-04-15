@@ -23,7 +23,7 @@ Set SimplIsCbn.
 
 From Equations Require Import Equations.
 
-Derive Signature for typing_spine.
+Derive Signature for OnOne2_local_env.
 
 Ltac rename_hyp h ht ::= my_rename_hyp h ht.
 Ltac pcuic := intuition eauto 5 with pcuic ||

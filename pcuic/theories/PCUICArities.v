@@ -18,6 +18,8 @@ From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 Require Import Equations.Type.Relation_Properties.
 
+Derive Signature for typing_spine.
+
 Lemma isArity_it_mkProd_or_LetIn Γ t : isArity t -> isArity (it_mkProd_or_LetIn Γ t).
 Proof.
   intros isA. induction Γ using rev_ind; simpl; auto.

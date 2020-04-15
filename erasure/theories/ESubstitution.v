@@ -30,12 +30,13 @@ Lemma Is_type_extends (Σ : global_env_ext) Γ t :
   forall (Σ' : global_env), wf Σ' -> extends Σ Σ' -> isErasable Σ Γ t -> isErasable (Σ', Σ.2) Γ t.
 Proof.
   intros. destruct X2 as [T []]. destruct Σ as [Σ]. cbn in *.
-  exists T. split. change u with (snd (Σ,u)). eapply weakening_env; [ | | eauto | | ]; eauto using wf_extends; eauto.
+  exists T. split. change u with (snd (Σ,u)).
+  eapply weakening_env; [ | eauto | | ]; eauto using wf_extends; eauto.
   destruct s; eauto.
   destruct s as (u' & ? & ?).
   right. exists u'. split; eauto.
   change u with (snd (Σ,u)).
-  eapply weakening_env; [ | | eauto | | ]; eauto using wf_extends.
+  eapply weakening_env; [ | eauto | | ]; eauto using wf_extends.
 Qed.
 
 Lemma Is_proof_extends (Σ : global_env_ext) Γ t :
@@ -44,8 +45,8 @@ Lemma Is_proof_extends (Σ : global_env_ext) Γ t :
 Proof.
   intros. destruct X2 as (? & ? & ? & ? & ?).
   exists x, x0. repeat split.
-  eapply weakening_env; [ | | eauto | | ]; eauto using wf_extends.
-  eapply weakening_env; [ | | eauto | | ]; eauto using wf_extends.
+  eapply weakening_env; [ | eauto | | ]; eauto using wf_extends.
+  eapply weakening_env; [ | eauto | | ]; eauto using wf_extends.
   eauto.
 Qed.
 
@@ -76,9 +77,10 @@ Qed.
 
 Lemma erases_extends :
   env_prop (fun Σ Γ t T =>
-              forall Σ', wf Σ' -> extends Σ Σ' -> forall t', erases Σ Γ t t' -> erases (Σ', Σ.2) Γ t t').
+              forall Σ', wf Σ' -> extends Σ Σ' -> forall t', erases Σ Γ t t' -> erases (Σ', Σ.2) Γ t t')
+           (fun Σ Γ wfΓ => wf_local Σ Γ).
 Proof.
-  apply typing_ind_env; intros; rename_all_hyps.
+  apply typing_ind_env; intros; rename_all_hyps; auto.
   all: match goal with [ H : erases _ _ ?a _ |- _ ] => tryif is_var a then idtac else inv H end.
   all: try now (econstructor; eauto).
   all: try now (econstructor; eapply Is_type_extends; eauto).
@@ -98,7 +100,6 @@ Proof.
     eapply All2_impl. exact X1.
     intros ? ? [[[]] [? []]].
     split; eauto.
-  - eauto.
 Qed.
 
 (** ** Weakening *)
@@ -113,12 +114,15 @@ Lemma Is_type_weakening:
 Proof.
   intros. destruct X2 as (T & ? & ?).
   eexists. split. eapply weakening_typing; eauto.
+  now apply All_local_env_app in X1.
+
   destruct s as [? | [u []]].
   - left. clear - i. generalize (#|Γ''|), (#|Γ'|). induction T; cbn in *; intros; try now inv i.
     + now eapply IHT2.
     + now eapply IHT3.
   - right. exists u. split; eauto.
     eapply weakening_typing in t1; eauto.
+    now apply All_local_env_app in X1.
 Qed.
 
 Require Import MetaCoq.PCUIC.PCUICInversion.
@@ -130,25 +134,29 @@ Proof.
   intros. now subst.
 Qed.
 
+Lemma All_map_inv {A B} (P : B -> Type) (f : A -> B) l : All P (map f l) -> All (compose P f) l.
+Proof. induction l; intros Hf; inv Hf; try constructor; eauto. Qed.
+
 Lemma erases_weakening' (Σ : global_env_ext) (Γ Γ' Γ'' : PCUICAst.context) (t T : PCUICAst.term) t' :
     wf Σ ->
-    wf_local Σ (Γ ,,, Γ') ->
     wf_local Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') ->
     Σ ;;; Γ ,,, Γ' |- t : T ->
     Σ ;;; Γ ,,, Γ' |- t ⇝ℇ t' ->
     Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' |- (PCUICLiftSubst.lift #|Γ''| #|Γ'| t) ⇝ℇ (ELiftSubst.lift #|Γ''| #|Γ'| t').
 Proof.
-  intros HΣ HΓΓ' HΓ'' * H He.
+  intros HΣ HΓ'' * H He.
   generalize_eqs H. intros eqw. rewrite <- eqw in *.
   revert Γ Γ' Γ'' HΓ'' eqw t' He.
-  revert Σ HΣ Γ0 HΓΓ' t T H .
+  revert Σ HΣ Γ0 t T H .
   apply (typing_ind_env (fun Σ Γ0 t T =>  forall Γ Γ' Γ'',
     wf_local Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') ->
     Γ0 = Γ ,,, Γ' ->
     forall t',
     Σ;;; Γ0 |- t ⇝ℇ t' ->
-    _));
-    intros Σ wfΣ Γ0; intros; subst Γ0.
+    _)
+    (fun Σ Γ wfΓ => wf_local Σ Γ)
+    );
+    intros Σ wfΣ Γ0; intros; try subst Γ0; auto.
   all: match goal with [ H : erases _ _ ?a _ |- _ ] => tryif is_var a then idtac else inv H end.
   all: try now (cbn; econstructor; eauto).
   all: try now (econstructor; eapply Is_type_weakening; eauto).
@@ -160,6 +168,7 @@ Proof.
     rewrite lift_context_snoc0, <- plus_n_O in *.
     eapply H1; eauto. cbn. econstructor.
     eauto. cbn. exists s1. eapply weakening_typing with (T := tSort s1); eauto.
+    now apply All_local_env_app in X2.
   - econstructor.
     + eapply H0; eauto.
     + pose proof (H1 Γ (PCUICAst.vdef n b b_ty :: Γ') Γ'').
@@ -167,6 +176,8 @@ Proof.
       eapply H2; eauto. cbn. econstructor.
       eauto. cbn. 2: cbn; eapply weakening_typing; eauto.
       eapply weakening_typing in X0; eauto.
+      now apply All_local_env_app in X3.
+      now apply All_local_env_app in X3.
   - econstructor.
     + eauto.
     + eapply H3; eauto.
@@ -179,11 +190,12 @@ Proof.
       cbn. destruct x, y; cbn in *; subst.
       split; eauto.
   - assert (HT : Σ;;; Γ ,,, Γ' |- PCUICAst.tFix mfix n : (decl.(dtype))).
-    econstructor; eauto. eapply All_local_env_impl. eassumption. intros.
-    destruct T; cbn in *; firstorder.
-    eapply All_impl. eassumption. firstorder.
-
-    eapply weakening_typing in HT; eauto.
+    econstructor; eauto. eapply All_impl. eassumption. intros.
+    destruct X4; cbn in *; firstorder.
+    eapply (All_impl X1). firstorder.
+    
+    eapply weakening_typing in HT; auto.
+    2:{ apply All_local_env_app in X2 as [X2 _]. eapply X2. }
 
     cbn in HT.
     eapply inversion_Fix in HT as (? & ? & ? & ? & ? & ?) ; auto. clear a0 c.
@@ -192,25 +204,22 @@ Proof.
     econstructor.
     eapply All2_map.
     eapply All2_impl. eapply All2_All_mix_left.
-    eassumption. eassumption. intros ? ? [[[]] [? []]].
-    destruct x, y; cbn in *; subst.
+    eapply X1. eassumption. simpl.
+    intros [] []. simpl. intros [[Hs IH] [<- [<- IH']]].
     repeat split. unfold app_context in *.
-    eapply (e1 Γ (types ++ Γ') Γ'') in e4.
-    3: now rewrite app_assoc.
-    (* 2:rewrite lift_context_app. *)
-    2:{ rewrite lift_context_app. unfold app_context. rewrite <- !app_assoc. rewrite <- plus_n_O.
-        rewrite lift_fix_context in *.
-        eassumption. }
-    rewrite app_length in *.
-    subst types. rewrite fix_context_length in *.
-    rewrite (All2_length _ _ X2) in *.
-    eapply erases_ctx_ext. eapply e4.
-    rewrite lift_context_app. unfold app_context.
-    rewrite !app_assoc. repeat f_equal.
-    rewrite <- lift_fix_context.
-    rewrite <- plus_n_O.
-    now rewrite (All2_length _ _ X2).
-  - eauto.
+    specialize (IH Γ (types ++ Γ') Γ'').
+    subst types. rewrite app_length, fix_context_length in IH.
+    forward IH.
+    { rewrite lift_context_app, <- plus_n_O. unfold app_context.
+      eapply All_mfix_wf in a; auto.
+      rewrite lift_fix_context in a.
+      now rewrite <- !app_assoc. }
+    forward IH by now rewrite app_assoc.
+    rewrite lift_fix_context.
+    rewrite lift_context_app, <- plus_n_O in IH.
+    unfold app_context in IH. rewrite <- !app_assoc in IH.
+    rewrite (All2_length _ _ X3) in *.
+    apply IH. apply IH'.
 Qed.
 
 Lemma erases_weakening (Σ : global_env_ext) (Γ Γ' : PCUICAst.context) (t T : PCUICAst.term) t' :
@@ -288,10 +297,9 @@ Lemma erases_subst (Σ : global_env_ext) Γ Γ' Δ t s t' s' T :
   Σ ;;; (Γ ,,, subst_context s 0 Δ) |- (PCUICLiftSubst.subst s #|Δ| t) ⇝ℇ ELiftSubst.subst s' #|Δ| t'.
 Proof.
   intros HΣ HΔ Hs Ht He.
-  pose proof (typing_wf_local Ht).
-  generalize_eqs Ht. intros eqw. rewrite <- eqw in X.
+  generalize_eqs Ht. intros eqw.
   revert Γ Γ' Δ t' s Hs HΔ He eqw.
-  revert Σ HΣ Γ0 X t T Ht.
+  revert Σ HΣ Γ0 t T Ht.
   eapply (typing_ind_env (fun Σ Γ0 t T =>
                             forall (Γ Γ' : PCUICAst.context) Δ t' (s : list PCUICAst.term),
                               wf_local Σ (Γ ,,, subst_context s 0 Δ) ->
@@ -300,8 +308,10 @@ Proof.
                               Γ0 = Γ ,,, Γ' ,,, Δ ->
                               All2 (erases Σ Γ) s s' ->
                               Σ;;; Γ ,,, subst_context s 0 Δ |- PCUICLiftSubst.subst s #|Δ| t ⇝ℇ ELiftSubst.subst s' #|Δ| t'
-         ));
-    intros Σ wfΣ Γ0 wfΓ0; intros; simpl in * |-; subst Γ0.
+         )
+         (fun Σ Γ0 _ => wf_local Σ Γ0)
+         );
+    intros Σ wfΣ Γ0 wfΓ0; intros; simpl in * |-; auto; subst Γ0.
   - inv H0.
     + cbn. destruct ?. destruct ?.
       * eapply All2_nth_error_Some in X2; eauto.
@@ -387,11 +397,11 @@ Proof.
       intros. destruct H3 as (? & ? & ?).
       repeat split; eauto.
       eapply In_nth_error in H1 as [].
-      eapply nth_error_all in X0; eauto.
-      destruct X0.
-      specialize (e2 Γ Γ' (Δ ,,, PCUICLiftSubst.fix_context mfix)).
+      eapply nth_error_all in X1; eauto.
+      destruct X1 as [Hs IH].
+      specialize (IH Γ Γ' (Δ ,,, PCUICLiftSubst.fix_context mfix)).
       rewrite app_context_assoc in *.
-      eapply e2 in e1; eauto.
+      eapply IH in e1; eauto.
 
       eapply erases_eq; eauto.
       * rewrite subst_context_app.
@@ -400,9 +410,9 @@ Proof.
         now rewrite subst_fix_context.
       * cbn. now rewrite app_context_length, fix_context_length.
       * cbn. now erewrite app_context_length, fix_context_length, All2_length.
-      * pose proof (substitution_alt Σ Γ Γ' s (Δ ,,, PCUICLiftSubst.fix_context mfix)).
-        rewrite app_context_assoc in *. destruct p.
-        eapply X0 in t; eauto.
+      * pose proof (substitution Σ Γ Γ' s (Δ ,,, PCUICLiftSubst.fix_context mfix)).
+        rewrite app_context_assoc in *. destruct Hs.
+        eapply X1 in t; eauto.
         eapply typing_wf_local.  eassumption.
     + econstructor.
       eapply is_type_subst; eauto.
@@ -414,8 +424,8 @@ Proof.
       intros. destruct H3 as (? & ? & ?).
       repeat split; eauto.
       eapply In_nth_error in H1 as [].
-      eapply nth_error_all in X0; eauto.
-      destruct X0.
+      eapply nth_error_all in X1; eauto.
+      destruct X1.
       specialize (e2 Γ Γ' (Δ ,,, PCUICLiftSubst.fix_context mfix)).
       rewrite app_context_assoc in *.
       eapply e2 in e1; eauto.
@@ -427,9 +437,9 @@ Proof.
         now rewrite subst_fix_context.
       * cbn. now rewrite app_context_length, fix_context_length.
       * cbn. now erewrite app_context_length, fix_context_length.
-      * pose proof (substitution_alt Σ Γ Γ' s (Δ ,,, PCUICLiftSubst.fix_context mfix)).
+      * pose proof (substitution Σ Γ Γ' s (Δ ,,, PCUICLiftSubst.fix_context mfix)).
         rewrite app_context_assoc in *.
-        eapply X0 in t; eauto.
+        eapply X1 in t; eauto.
         eapply typing_wf_local.  eassumption.
     + econstructor.
       eapply is_type_subst; eauto.

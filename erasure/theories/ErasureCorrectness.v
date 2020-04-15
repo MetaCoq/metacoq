@@ -75,7 +75,7 @@ Lemma Is_type_conv_context (Σ : global_env_ext) (Γ : context) t (Γ' : context
 Proof.
   intros.
   destruct X3 as (? & ? & ?). red.
-  exists x. split. eapply PCUICContextConversion.context_conversion. 4:eapply X2. all:eauto.
+  exists x. split. eapply PCUICContextConversion.context_conversion. 3:eapply X2. all:eauto.
   destruct s as [? | [u []]].
   - left. eauto.
   - right. exists u. split; eauto. eapply PCUICContextConversion.context_conversion in X2; eauto.
@@ -92,19 +92,16 @@ Proof.
   - econstructor.
   - econstructor; eauto. cbn in *.
     destruct t0. exists x. eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
-    eapply typing_wf_local; eauto.
     eapply conv_context_app; eauto.
     eapply typing_wf_local; eauto.
     eapply PCUICSafeChecker.wf_local_app_inv; eauto.
   - econstructor; eauto.
     + cbn in *.
       destruct t0. exists x. eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
-      eapply typing_wf_local; eauto.
       eapply conv_context_app; eauto.
       eapply typing_wf_local; eauto.
       eapply PCUICSafeChecker.wf_local_app_inv; eauto.
     + cbn in *. eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
-      eapply typing_wf_local; eauto.
       eapply conv_context_app; eauto.
       eapply typing_wf_local; eauto.
       eapply PCUICSafeChecker.wf_local_app_inv; eauto.
@@ -113,14 +110,16 @@ Qed.
 Hint Resolve Is_type_conv_context : core.
 
 Lemma erases_context_conversion :
-env_prop
+  env_prop
   (fun (Σ : PCUICAst.global_env_ext) (Γ : PCUICAst.context) (t T : PCUICAst.term) =>
       forall Γ' : PCUICAst.context,
         PCUICContextConversion.conv_context Σ Γ Γ' ->
         wf_local Σ Γ' ->
-        forall t', erases Σ Γ t t' -> erases Σ Γ' t t').
+        forall t', erases Σ Γ t t' -> erases Σ Γ' t t')
+  (fun Σ Γ wfΓ => wf_local Σ Γ)
+        .
 Proof.
-  apply typing_ind_env; intros Σ wfΣ Γ wfΓ; intros **; rename_all_hyps.
+  apply typing_ind_env; intros Σ wfΣ Γ wfΓ; intros **; rename_all_hyps; auto.
   all: match goal with [ H : erases _ _ ?a _ |- ?G ] => tryif is_var a then idtac else inv H end.
   all: try now (econstructor; eauto).
   - econstructor. eapply h_forall_Γ'0.
@@ -157,7 +156,6 @@ Proof.
     eapply All_local_env_impl; eauto. simpl; intros.
     destruct T. simpl in *.
     eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
-    now eapply typing_wf_local; eauto.
     eapply conv_context_app; auto. eapply typing_wf_local; eauto.
     eapply typing_wf_local in X3.
     eapply PCUICSafeChecker.wf_local_app_inv.
@@ -168,7 +166,6 @@ Proof.
     eapply wf_local_rel_conv; eauto.
     destruct X3. exists x0.
     eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
-    now eapply typing_wf_local; eauto.
     eapply conv_context_app; auto. eapply typing_wf_local; eauto.
 
     eapply typing_wf_local in t0.
@@ -176,7 +173,6 @@ Proof.
     eauto. eapply wf_local_rel_local in t0.
     eapply wf_local_rel_app in t0 as []. rewrite app_context_nil_l in w0.
     eapply wf_local_rel_conv; eauto.
-  - eauto.
 Qed.
 
 (** ** Erasure is stable under substituting universe constraints  *)
@@ -207,9 +203,10 @@ Lemma erases_subst_instance_constr0
 sub_context_set (monomorphic_udecl Σ.2) (global_ext_context_set (Σ.1, univs)) ->
       consistent_instance_ext (Σ.1,univs) (Σ.2) u ->
     Σ ;;; Γ |- t ⇝ℇ t' ->
-    (Σ.1,univs) ;;; (PCUICUnivSubst.subst_instance_context u Γ) |- PCUICUnivSubst.subst_instance_constr u t ⇝ℇ t').
+    (Σ.1,univs) ;;; (PCUICUnivSubst.subst_instance_context u Γ) |- PCUICUnivSubst.subst_instance_constr u t ⇝ℇ t')
+    (fun Σ Γ wfΓ => wf_local Σ Γ).
 Proof.
-  apply typing_ind_env; intros; cbn -[PCUICUnivSubst.subst_instance_constr] in *.
+  apply typing_ind_env; intros; cbn -[PCUICUnivSubst.subst_instance_constr] in *; auto.
   all: match goal with [ H : erases _ _ ?a _ |- ?G ] => tryif is_var a then idtac else inv H end.
   all: try now (econstructor; eauto using isErasable_subst_instance).
   - cbn. econstructor.
@@ -233,31 +230,30 @@ Proof.
     intros; cbn in *. destruct H. destruct p0. split; eauto.
   - assert (Hw :  wf_local (Σ.1, univs) (subst_instance_context u (Γ ,,, types))).
     { (* rewrite subst_instance_context_app. *)
-      apply All_local_env_app in X as [X Hfixc].
-
-      revert Hfixc. clear - wfΣ wfΓ H1 H2 X1 X2.
+      assert(All (fun d => isType Σ Γ (dtype d)) mfix).
+      eapply (All_impl X0); firstorder. 
+      eapply All_mfix_wf in X5; auto. subst types.
+      
+      revert X5. clear - wfΣ wfΓ H1 H2 X2 X3.
       induction 1.
       - eauto.
       - cbn. econstructor; eauto. cbn in *.
-        destruct t0 as (? & ? & ?). eexists.
+        destruct t0 as (? & ?). eexists.
         cbn. eapply typing_subst_instance in t0; eauto. apply snd in t0. cbn in t0.
         rapply t0; eauto.
-        eapply typing_wf_local; eauto.
       - cbn. econstructor; eauto. cbn in *.
-        destruct t0 as (? & ? & ?). destruct t1. eexists.
+        destruct t0 as (? & ?). eexists.
         cbn. eapply typing_subst_instance in t0; eauto. apply snd in t0.
         rapply t0; eauto.
-        eapply typing_wf_local; eauto.
-        cbn in *. destruct t1. eapply typing_subst_instance in t1; eauto.
+        cbn in *. eapply typing_subst_instance in t1; eauto.
         apply snd in t1. rapply t1. all:eauto.
-        eapply typing_wf_local; eauto.
     }
 
     cbn. econstructor; eauto.
     eapply All2_map_left.
-    eapply All2_impl. eapply All2_All_mix_left. eassumption.
-    exact X3.
-    intros; cbn in *. destruct X4. destruct p0. destruct p0.
+    eapply All2_impl. eapply All2_All_mix_left. eapply X1.
+    exact X4.
+    intros; cbn in *. destruct X5. destruct p0. destruct p0.
     destruct p. destruct p. repeat split; eauto.
     eapply e2 in e1.
     unfold PCUICUnivSubst.subst_instance_context in *.
@@ -265,7 +261,6 @@ Proof.
     eapply erases_ctx_ext. eassumption. unfold app_context.
     f_equal.
     eapply fix_context_subst_instance. all: eauto.
-  - eauto.
 Qed.
 
 Lemma erases_subst_instance_constr :
@@ -279,7 +274,7 @@ sub_context_set (monomorphic_udecl Σ.2) (global_ext_context_set (Σ.1, univs)) 
     (Σ.1,univs) ;;; (PCUICUnivSubst.subst_instance_context u Γ) |- PCUICUnivSubst.subst_instance_constr u t ⇝ℇ t'.
 Proof.
   intros Σ X Γ X0 t T X1 t' u univs X2 H H0 H1.
-  unshelve eapply (erases_subst_instance_constr0 Σ _ Γ _ _ _ _); tea; eauto.
+  unshelve eapply (erases_subst_instance_constr0 Σ _ Γ _ _ _); tea; eauto.
 Qed.
 
 Lemma erases_subst_instance'' Σ φ Γ t T u univs t' :
@@ -414,7 +409,7 @@ Proof.
       eassumption. now eexists [_]. eauto.
       exists decl'. split. eauto.
       unfold erases_constant_body in *. clear H. destruct ?. destruct ?.
-      * eapply (@erases_extends (_,_)). 6: eassumption.
+      * eapply (@erases_extends (_,_)). 5: eassumption.
         eapply wf_extends.
         eassumption. now eexists [_]. eauto.
         eapply (declared_constant_inv Σ) in H0; eauto.
@@ -547,8 +542,7 @@ Proof.
       }
       assert (Σ;;; [vdef na b0' t] |- b1 : x0). {
         cbn in *. eapply PCUICContextConversion.context_conversion. 3:eauto. all:cbn; eauto.
-        econstructor. all: cbn; eauto. constructor. constructor. red. exists x; auto.
-        simpl. eapply subject_reduction_eval; auto. eauto. eauto.
+        econstructor. all: cbn; eauto. eapply subject_reduction_eval; auto. eauto. eauto.
       }
       assert (Σ;;; [] |- PCUICLiftSubst.subst1 b0' 0 b1 ⇝ℇ subst1 vt1' 0 t2'). {
         eapply (erases_subst Σ [] [PCUICAst.vdef na b0' t] [] b1 [b0'] t2'); eauto.
@@ -557,9 +551,10 @@ Proof.
         econstructor. econstructor.
         rewrite !parsubst_empty.
         eapply subject_reduction_eval; eauto.
-        eapply erases_context_conversion. 4:eassumption.
+        eapply erases_context_conversion. 3:eassumption.
         all: cbn; eauto.
-        econstructor. all: cbn; eauto. now eapply typing_wf_local in X0.
+        econstructor. all: cbn; eauto.
+        eapply subject_reduction_eval; eauto.
       }
       unshelve epose proof (subject_reduction_eval _ _ _ _ _ t1 H); eauto.
       assert (eqs := type_closed_subst b1 extr_env_wf'0 X1).

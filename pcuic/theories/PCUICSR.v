@@ -1590,7 +1590,7 @@ Proof.
         rewrite app_context_assoc in wfparinds'.
         eapply (weaken_wf_local Γ) in wfparinds'; eauto.
         rewrite app_context_assoc in wfparinds'.
-        unshelve epose proof (w' := substitution_wf_local _ _ _ _ _ wf _ wfparinds'). shelve.
+        unshelve epose proof (substitution_wf_local _ _ _ _ _ wf _ wfparinds') as w'. shelve.
         eapply subslet_app; first last. eapply (weaken_subslet _ _ _ _ []); eauto. eapply subslet_inds; eauto.
         rewrite closed_ctx_subst. auto. eapply cparsubst0.
         move: (weakening_wf_local _ _ _ _ wf w' w).

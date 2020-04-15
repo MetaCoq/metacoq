@@ -34,9 +34,8 @@ Section TypeOf.
   Proof.
     intros H.
     destruct hΣ. destruct Hφ.
-    apply validity in H; auto. destruct H as [wfg [wfA | [s tyT]]].
+    apply validity in H; auto. destruct H as [wfA | [s tyT]].
     right. constructor. auto. left. econstructor; eauto.
-    now eapply typing_wf_local.
   Qed.
 
 

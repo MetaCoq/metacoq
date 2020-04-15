@@ -306,7 +306,7 @@ Lemma All_map {A B} {P : B -> Type} {f : A -> B} {l : list A} :
   All (compose P f) l -> All P (map f l).
 Proof. induction 1; constructor; auto. Qed.
 
-Lemma All_map_inv {A B} (P : B -> Prop) (f : A -> B) l : All P (map f l) -> All (compose P f) l.
+Lemma All_map_inv {A B} (P : B -> Type) (f : A -> B) l : All P (map f l) -> All (compose P f) l.
 Proof. induction l; intros Hf; inv Hf; try constructor; eauto. Qed.
 
 Lemma All_nth_error :

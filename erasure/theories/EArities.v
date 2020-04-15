@@ -221,7 +221,6 @@ Proof.
     assert (HWF : isWfArity_or_Type Σ [] x2).
     { eapply PCUICValidity.validity.
       - eauto.
-      - econstructor.
       - eapply type_mkApps. 2:eauto. eauto.
     }
     eapply inversion_Construct in t as (? & ? & ? & ? & ? & ? & ?) ; auto. (* destruct x5. destruct p. cbn in *. *)
@@ -234,9 +233,8 @@ Proof.
     (* destruct t0 as (? & [] & ?). *)
     (* eapply PCUICCumulativity.red_cumul in X. *)
     destruct (PCUICWeakeningEnv.on_declared_constructor _ d) as [XX [s [XX1 [Ht [cs XX2]]]]].
-    destruct cs; cbn in *.
     destruct x5 as [[? ?] ?]; cbn in *; subst.
-
+    destruct Ht. subst.
     change PCUICEnvironment.it_mkProd_or_LetIn with it_mkProd_or_LetIn in c2.
     change PCUICEnvironment.ind_params with ind_params in *.
     change PCUICEnvironment.to_extended_list_k with to_extended_list_k in *.
@@ -254,9 +252,8 @@ Proof.
                                                                          #|cshape_args| - (#|cshape_args| + #|ind_params x3| + 0)) < #|inds (inductive_mind ind) u (ind_bodies x3)|).
     { rewrite inds_length. lia. }
     eapply nth_error_Some in H.
-    destruct ?; try congruence.
-    (* destruct c2 as (? & [] & ?). *)
-    eapply inds_nth_error in E as [].
+    destruct (nth_error (inds _ _ _) _) eqn:Heq; try congruence.
+    eapply inds_nth_error in Heq as [].
     subst. cbn in *. revert c2.
     match goal with
     | |- context [ it_mkProd_or_LetIn ?c _ ] =>

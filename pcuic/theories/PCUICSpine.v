@@ -18,7 +18,7 @@ From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 Require Import Equations.Type.Relation_Properties.
 
-Derive Signature for typing_spine.
+Derive Signature for ctx_inst.
   
 Notation ctx_inst Σ Γ i Δ := (ctx_inst (lift_typing typing) Σ Γ i Δ).
 

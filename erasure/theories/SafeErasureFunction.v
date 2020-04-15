@@ -227,8 +227,8 @@ Next Obligation.
   sq. eauto using typing_wf_local.
 Qed.
 Next Obligation.
-  sq. eapply validity in X. destruct X. destruct i. right. sq. apply i. left.  destruct i. econstructor. apply t0.
-  apply X1. eauto using typing_wf_local.
+  apply wat_wellformed. sq; auto.
+  sq; auto. now apply validity in X.
 Qed.
 Next Obligation.
   destruct H as [T' [redT' isar]].
@@ -243,9 +243,9 @@ Next Obligation.
   sq. apply X1.
 Qed.
 Next Obligation.
-  sq. eapply validity in X as [validΣ [|]]. (* contradiction *)
+  sq. eapply validity in X as [validΣ|]; auto. (* contradiction *)
   todo "~ Is_conv_to_Arity pat -> isWfArity pat -> False".
-  destruct i as [s Hs]. econstructor; eauto. eapply X1. eauto using typing_wf_local.
+  destruct i as [s Hs]. econstructor; eauto.
 Qed.
 Next Obligation.
   sq. apply X2.
@@ -495,18 +495,18 @@ Proof.
 
 
   pose (wfΣ' := sq w).
-  pose (wfΓ := typing_wf_local X).
   change (erase Σ wfΣ' Γ t wt = Checked t') in H.
 
 
   revert H.
-  clearbody wfΣ' wfΓ.
+  clearbody wfΣ'.
 
-  revert Γ wfΓ t T X wt t' wfΣ'.
+  revert Γ t T X wt t' wfΣ'.
   eapply(typing_ind_env (fun Σ Γ t T =>
        forall (wt : welltyped Σ Γ t) (t' : E.term) (wfΣ' : ∥ wf_ext Σ ∥),
   erase Σ wfΣ' Γ t wt = Checked t' -> Σ;;; Γ |- t ⇝ℇ t'
-         )); intros.
+         )
+         (fun Σ Γ wfΓ => wf_local Σ Γ)); intros; auto.
 
   all:eauto.
 

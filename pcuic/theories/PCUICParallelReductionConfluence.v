@@ -170,6 +170,29 @@ Proof.
    now rewrite /subst_decl mapi_length fix_context_length.
 Qed.
 
+Inductive assumption_context : context -> Prop :=
+    | assumption_context_nil : assumption_context []
+    | assumption_context_vass na t Γ : assumption_context Γ -> assumption_context (vass na t :: Γ).
+
+Lemma fix_context_gen_assumption_context k Γ : assumption_context (fix_context_gen k Γ).
+Proof.
+  rewrite /fix_context_gen. revert k.
+  induction Γ using rev_ind.
+  constructor. intros.
+  rewrite mapi_rec_app /= List.rev_app_distr /=. constructor.
+  apply IHΓ.
+Qed.
+
+Lemma fix_context_assumption_context m : assumption_context (fix_context m).
+Proof. apply fix_context_gen_assumption_context. Qed.
+
+Lemma nth_error_assumption_context Γ n d :
+  assumption_context Γ -> nth_error Γ n = Some d ->
+  decl_body d = None.
+Proof.
+  intros H; induction H in n, d |- * ; destruct n; simpl; try congruence; eauto.
+  now move=> [<-] //.
+Qed.
 
 Lemma mkApps_eq_decompose_app_rec {f args t l} :
   mkApps f args = t ->
@@ -1320,27 +1343,6 @@ Section Confluence.
 
     Lemma refine_pred Γ Δ t u u' : u = u' -> pred1 Σ Γ Δ t u' -> pred1 Σ Γ Δ t u.
     Proof. now intros ->. Qed.
-
-    Inductive assumption_context : context -> Prop :=
-    | assumption_context_nil : assumption_context []
-    | assumption_context_vass na t Γ : assumption_context Γ -> assumption_context (vass na t :: Γ).
-
-    Lemma fix_context_assumption_context m : assumption_context (fix_context m).
-    Proof.
-      unfold fix_context. unfold mapi. generalize 0 at 2.
-      induction m using rev_ind.
-      constructor. intros.
-      rewrite mapi_rec_app /= List.rev_app_distr /=. constructor.
-      apply IHm.
-    Qed.
-
-    Lemma nth_error_assumption_context Γ n d :
-      assumption_context Γ -> nth_error Γ n = Some d ->
-      decl_body d = None.
-    Proof.
-      intros H; induction H in n, d |- * ; destruct n; simpl; try congruence; eauto.
-      now move=> [<-] //.
-    Qed.
 
     Hint Rewrite subst10_inst : sigma.
 

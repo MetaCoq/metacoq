@@ -13,7 +13,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICContextConversion PCUICUnivSubstitution
      PCUICConversion PCUICInversion PCUICContexts PCUICArities
      PCUICParallelReduction PCUICSpine PCUICInductives
-     PCUICCtxShape PCUICPrincipality.
+     PCUICCtxShape.
      
 Close Scope string_scope.
 
@@ -478,8 +478,8 @@ Proof.
   unfold on_declared_constructor.
   destruct (on_declared_constructor _ declc). destruct s as [? [_ onc]].
   unshelve epose proof (env_prop_typing _ _ validity _ _ _ _ _ h) as vi'; eauto using typing_wf_local.
-  eapply type_mkApps_inv in h; auto.
-  destruct h as [T [U [[hC hs] hc]]].
+  eapply inversion_mkApps in h; auto.
+  destruct h as [T [U [hC [hs hc]]]].
   apply inversion_Construct in hC
     as [mdecl' [idecl' [cdecl' [hΓ [isdecl [const htc]]]]]]; auto.
   assert (vty:=declared_constructor_valid_ty _ _ _ _ _ _ _ _ wfΣ hΓ isdecl const). 
@@ -846,7 +846,7 @@ Proof.
     rewrite mkApps_nonempty; auto.
     epose (last_nonempty_eq H0). rewrite <- Hu in e1. rewrite <- e1.
     clear e1.
-    specialize (type_mkApps_inv _ _ _ _ _ wf typet) as [T' [U' [[appty spty] Hcumul]]].
+    specialize (inversion_mkApps wf typet) as [T' [U' [appty [spty Hcumul]]]].
     specialize (validity _ wf _ _ _ appty) as [_ vT'].
     eapply type_tFix_inv in appty as [T [arg [fn' [[Hnth Hty]]]]]; auto.
     rewrite e in Hnth. noconf Hnth.
@@ -1545,7 +1545,7 @@ Proof.
 
   - (* Case congruence: on a cofix, impossible *)
     clear -wf typec heq_allow_cofix.
-    eapply type_mkApps_inv in typec as [? [? [[tcof _] _]]] =>  //.
+    eapply inversion_mkApps in typec as [? [? [tcof [_ _]]]] =>  //.
     eapply type_tCoFix_inv in tcof as [allowc _] => //.
     rewrite allowc in heq_allow_cofix. discriminate.
 
@@ -1627,7 +1627,7 @@ Proof.
 
   - (* Proj CoFix congruence *)
     pose proof (env_prop_typing _ _  validity _ _ _ _ _ typec).
-    eapply type_mkApps_inv in typec as [? [? [[tcof tsp] cum]]]; auto.
+    eapply inversion_mkApps in typec as [? [? [tcof [tsp cum]]]]; auto.
     eapply type_tCoFix_inv in tcof as [allow [?  [? [? [[unf tyunf] cum']]]]]; auto.
     (*
     rewrite e in unf. noconf unf.
@@ -2219,12 +2219,12 @@ Section SRContext.
    Qed.
 
   Lemma type_reduction {Σ Γ t A B}
-    : wf Σ.1 -> wf_local Σ Γ -> Σ ;;; Γ |- t : A -> red (fst Σ) Γ A B -> Σ ;;; Γ |- t : B.
+    : wf Σ.1 ->  Σ ;;; Γ |- t : A -> red (fst Σ) Γ A B -> Σ ;;; Γ |- t : B.
   Proof.
-    intros HΣ' HΓ Ht Hr.
+    intros HΣ' Ht Hr.
     econstructor. eassumption.
     2: now eapply cumul_red_l'.
-    destruct (validity_term HΣ' HΓ Ht).
+    destruct (validity_term HΣ' Ht).
     - left. eapply isWfArity_red; try eassumption.
     - destruct i as [s HA]. right.
       exists s. eapply subject_reduction; eassumption.

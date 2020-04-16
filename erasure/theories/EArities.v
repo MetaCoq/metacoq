@@ -217,7 +217,7 @@ Lemma tConstruct_no_Type (Σ : global_env_ext) ind c u x1 : wf Σ ->
 Proof.
   intros wfΣ (? & ? & [ | (? & ? & ?)]).
   - exfalso.
-    eapply type_mkApps_inv in t as (? & ? & [] & ?); eauto.
+    eapply PCUICValidity.inversion_mkApps in t as (? & ? & ? & ? & ?); eauto.
     assert (HWF : isWfArity_or_Type Σ [] x2).
     { eapply PCUICValidity.validity.
       - eauto.
@@ -466,7 +466,7 @@ Lemma Is_type_app (Σ : global_env_ext) Γ t L T :
 Proof.
   intros wfΣ wfΓ ? ?.
   assert (HW : isWfArity_or_Type Σ Γ T). eapply PCUICValidity.validity; eauto.
-  eapply type_mkApps_inv in X as (? & ? & [] & ?); try eassumption.
+  eapply PCUICValidity.inversion_mkApps in X as (? & ? & ? & ? & ?); try eassumption.
   destruct X0 as (? & ? & [ | [u]]).
   - eapply PCUICPrincipality.principal_typing in t2 as (? & ? & ? & ?). 2:eauto. 2:exact t0.
     eapply invert_cumul_arity_r in c1; eauto.
@@ -508,8 +508,8 @@ Proof.
   destruct s as [ | (u & ? & ?)].
   - eapply invert_cumul_arity_r in c; eauto. destruct c as (? & [] & ?).
     eapply invert_red_prod in X1 as (? & ? & [] & ?); eauto; subst. cbn in H.
-    econstructor. exists x3. econstructor. eapply type_reduction; eauto. econstructor; eauto. eexists; eauto.
-    eauto.
+    econstructor. exists x3. econstructor. 
+    eapply type_reduction; eauto. econstructor; eauto.
   - sq. eapply cumul_prop1 in c; eauto.
     eapply inversion_Prod in c as (? & ? & ? & ? & ?) ; auto.
     eapply cumul_Sort_inv in c.

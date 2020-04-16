@@ -4,7 +4,8 @@ From MetaCoq.Template Require Import config utils monad_utils.
 From Equations Require Import Equations.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICTyping PCUICInversion
-     PCUICConfluence PCUICCumulativity PCUICSR PCUICSafeLemmata
+     PCUICConfluence PCUICConversion 
+     PCUICCumulativity PCUICSR PCUICSafeLemmata
      PCUICValidity PCUICPrincipality PCUICElimination PCUICSN.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker PCUICSafeRetyping.
 Local Open Scope string_scope.
@@ -233,7 +234,6 @@ Qed.
 Next Obligation.
   destruct H as [T' [redT' isar]].
   sq. econstructor. split. eapply type_reduction; eauto.
-  eauto using typing_wf_local.
   eauto.
 Qed.
 Next Obligation.
@@ -285,7 +285,7 @@ Next Obligation.
 
     eapply leq_universe_prop in l0 as []; cbn; eauto.
     eapply leq_universe_prop in l as []; cbn; eauto.
-    reflexivity. eauto using typing_wf_local.
+    reflexivity.
 Qed.
 
 (* Program Definition is_erasable (Sigma : PCUICAst.global_env_ext) (HΣ : ∥wf_ext Sigma∥) (Gamma : context) (HΓ : ∥wf_local Sigma Gamma∥) (t : PCUICAst.term) : *)

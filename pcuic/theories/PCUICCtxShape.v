@@ -5,8 +5,8 @@ From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
      PCUICCumulativity PCUICPosition PCUICEquality PCUICNameless
-     PCUICAlpha PCUICNormal PCUICInversion PCUICCumulativity PCUICReduction
-     PCUICConfluence PCUICConversion PCUICContextConversion PCUICValidity
+     PCUICNormal PCUICInversion PCUICCumulativity PCUICReduction
+     PCUICConfluence PCUICConversion PCUICContextConversion
      PCUICParallelReductionConfluence PCUICWeakeningEnv
      PCUICClosed PCUICPrincipality PCUICSubstitution
      PCUICWeakening PCUICGeneration PCUICUtils.

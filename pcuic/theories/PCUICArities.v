@@ -7,8 +7,8 @@ From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICUnivSubstitution
      PCUICCumulativity PCUICPosition PCUICEquality PCUICNameless
-     PCUICAlpha PCUICNormal PCUICInversion PCUICCumulativity PCUICReduction
-     PCUICConfluence PCUICConversion PCUICContextConversion PCUICValidity
+     PCUICNormal PCUICInversion PCUICCumulativity PCUICReduction
+     PCUICConfluence PCUICConversion PCUICContextConversion
      PCUICParallelReductionConfluence PCUICWeakeningEnv
      PCUICClosed PCUICPrincipality PCUICSubstitution
      PCUICWeakening PCUICGeneration PCUICUtils PCUICCtxShape PCUICContexts
@@ -315,31 +315,6 @@ Qed.
 Hint Extern 4 (_ ;;; _ |- _ <= _) => reflexivity : pcuic.
 Ltac pcuic := eauto 5 with pcuic.
 
-(** Requires Validity *)
-Lemma type_mkApps_inv {cf:checker_flags} (Σ : global_env_ext) Γ f u T : wf Σ ->
-  Σ ;;; Γ |- mkApps f u : T ->
-  { T' & { U & ((Σ ;;; Γ |- f : T') * (typing_spine Σ Γ T' u U) * (Σ ;;; Γ |- U <= T))%type } }.
-Proof.
-  intros wfΣ; induction u in f, T |- *. simpl. intros.
-  { exists T, T. intuition pcuic. constructor. eapply validity; auto with pcuic.
-    eauto. eapply cumul_refl'. }
-  intros Hf. simpl in Hf.
-  destruct u. simpl in Hf.
-  - eapply inversion_App in Hf as [na' [A' [B' [Hf' [Ha HA''']]]]].
-    eexists _, _; intuition eauto.
-    econstructor; eauto with pcuic. eapply validity; eauto with wf pcuic.
-    constructor. all:eauto with pcuic.
-    eapply validity; eauto with wf.
-    eapply type_App; eauto. 
-  - specialize (IHu (tApp f a) T).
-    specialize (IHu Hf) as [T' [U' [[H' H''] H''']]].
-    eapply inversion_App in H' as [na' [A' [B' [Hf' [Ha HA''']]]]]. 2:{ eassumption. }
-    exists (tProd na' A' B'), U'. intuition; eauto.
-    econstructor. eapply validity; eauto with wf.
-    eapply cumul_refl'. auto.
-    clear -H'' HA''' wfΣ. depind H''.
-    econstructor; eauto. eapply cumul_trans; eauto.  
-Qed.
 
 Lemma subslet_app_closed {cf:checker_flags} Σ Γ s s' Δ Δ' : 
   subslet Σ Γ s Δ ->

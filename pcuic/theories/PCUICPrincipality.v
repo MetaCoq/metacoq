@@ -591,6 +591,7 @@ Proof.
   Proof.
     move=> wfΓ. red. exists [], u. intuition auto.
   Qed.
+  Hint Extern 10 (isWfArity _ _ _ (tSort _)) => apply isWfArity_sort : pcuic.
 
   (* Duplicate *)
   (* Lemma eq_term_upto_univ_mkApps_r_inv : *)

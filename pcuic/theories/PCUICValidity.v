@@ -1,9 +1,11 @@
-From Coq Require Import Bool List Program PeanoNat.
+From Coq Require Import String Bool List Program PeanoNat.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst
      PCUICLiftSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening PCUICInversion
-     PCUICSubstitution PCUICReduction PCUICCumulativity PCUICGeneration
-     PCUICUnivSubstitution PCUICConversion PCUICPrincipality.
+     PCUICSubstitution PCUICReduction PCUICCumulativity PCUICGeneration PCUICUnivSubst
+     PCUICParallelReductionConfluence
+     PCUICUnivSubstitution PCUICConversion PCUICContexts PCUICArities
+     PCUICSpine PCUICInductives.
 
 From Equations Require Import Equations.
 Require Import ssreflect.
@@ -13,6 +15,45 @@ Derive Signature for typing cumul.
 
 Section Validity.
   Context `{cf : config.checker_flags}.
+
+  Lemma isType_subst_instance_decl Σ Γ T c decl u :
+    wf Σ.1 ->
+    lookup_env Σ.1 c = Some decl ->
+    isType (Σ.1, universes_decl_of_decl decl) Γ T ->
+    consistent_instance_ext Σ (universes_decl_of_decl decl) u ->
+    isType Σ (subst_instance_context u Γ) (subst_instance_constr u T).
+  Proof.
+    destruct Σ as [Σ φ]. intros X X0 [s Hs] X1.
+    exists (subst_instance_univ u s).
+    eapply (typing_subst_instance_decl _ _ _ (tSort _)); eauto.
+  Qed.
+  
+  Lemma isWfArity_subst_instance_decl Σ Γ T c decl u :
+    wf Σ.1 ->
+    lookup_env Σ.1 c = Some decl ->
+    isWfArity typing (Σ.1, universes_decl_of_decl decl) Γ T ->
+    consistent_instance_ext Σ (universes_decl_of_decl decl) u ->
+    isWfArity typing Σ (subst_instance_context u Γ) (subst_instance_constr u T).
+  Proof.
+    destruct Σ as [Σ φ]. intros X X0 [ctx [s [eq wf]]] X1.
+    exists (subst_instance_context u ctx), (subst_instance_univ u s).
+    rewrite (subst_instance_destArity []) eq. intuition auto.
+    rewrite -subst_instance_context_app.  
+    eapply wf_local_subst_instance_decl; eauto.  
+  Qed.
+  
+  Lemma isWAT_subst_instance_decl Σ Γ T c decl u :
+    wf Σ.1 ->
+    lookup_env Σ.1 c = Some decl ->
+    isWfArity_or_Type (Σ.1, universes_decl_of_decl decl) Γ T ->
+    consistent_instance_ext Σ (universes_decl_of_decl decl) u ->
+    isWfArity_or_Type Σ (subst_instance_context u Γ) (subst_instance_constr u T).
+  Proof.
+    destruct Σ as [Σ φ]. intros X X0 X1 X2.
+    destruct X1.
+    - left. now eapply isWfArity_subst_instance_decl.
+    - right. now eapply isType_subst_instance_decl.
+  Qed.
 
   Lemma isWfArity_or_Type_lift (Σ : global_env_ext) n Γ ty (isdecl : n <= #|Γ|):
     wf Σ -> wf_local Σ Γ ->
@@ -49,9 +90,7 @@ Section Validity.
     induction ctx' in ctx, t |- *; simpl; auto.
     rewrite IHctx'. destruct a as [na [b|] ty]; reflexivity.
   Qed.
-
-  Hint Extern 10 (isWfArity _ _ _ (tSort _)) => apply isWfArity_sort : pcuic.
-
+  
   Hint Extern 30 (wf_local ?Σ ?Γ) =>
   match goal with
   | [ H : typing Σ Γ _ _ |- _ ] => apply (typing_wf_local H)
@@ -85,44 +124,125 @@ Section Validity.
   Qed.
   Hint Resolve isWfArity_or_Type_weaken : pcuic.
 
-  (** TODO: Universe instances *)
-  Lemma isWfArity_or_Type_subst_instance:
-    forall (Σ : global_env_ext) (Γ : context) (u : list Level.t) univs (ty : term),
-      wf_local Σ Γ ->
-      consistent_instance_ext Σ univs u ->
-      isWfArity_or_Type (Σ.1, univs) [] ty ->
-      isWfArity_or_Type Σ Γ (PCUICUnivSubst.subst_instance_constr u ty).
+  Lemma typing_spine_app Σ Γ ty args na A B arg :
+    wf Σ.1 ->
+    typing_spine Σ Γ ty args (tProd na A  B) ->
+    Σ ;;; Γ |- arg : A ->
+    typing_spine Σ Γ ty (args ++ [arg]) (B {0 := arg}).
   Proof.
-    intros Σ Γ u ty wfΓ H.
-    (* destruct H as [[ctx [s [Heq Hs]]]|]. *)
-    (* - left. *)
-    (*   exists ctx, s. split; pcuic. *)
-  Admitted.
+    intros wfΣ H; revert arg.
+    dependent induction H.
+    - intros arg  Harg. simpl. econstructor; eauto.
+      constructor. 2:reflexivity.
+      eapply isWAT_tProd in i as [watd wat].
+      eapply (isWAT_subst wfΣ (Δ:=[vass na A])); eauto.
+      constructor; auto. now apply typing_wf_local in Harg.
+      constructor. constructor. now rewrite subst_empty. auto.
+      now apply typing_wf_local in Harg.
+    - intros arg Harg.
+      econstructor; eauto.
+  Qed.
 
-  Lemma invert_type_mkApps Σ Γ f fty u T :
-    Σ ;;; Γ |- mkApps f u : T ->
-    (* Looks mutual with validity! *)
-    Σ ;;; Γ |- f : fty ->
-    isWfArity_or_Type Σ Γ fty ->
-    ∑ T' U,
-      Σ ;;; Γ |- f : T' ×
-      typing_spine Σ Γ T' u U ×
-      Σ ;;; Γ |- U <= T.
+  Lemma invert_type_mkApps_ind Σ Γ ind u args T mdecl idecl :
+    wf Σ.1 ->
+    declared_inductive Σ.1 mdecl ind idecl ->
+    Σ ;;; Γ |- mkApps (tInd ind u) args : T ->
+    (typing_spine Σ Γ (subst_instance_constr u (ind_type idecl)) args T)
+    * consistent_instance_ext Σ (ind_universes mdecl) u.
   Proof.
-    induction u in f, fty, T |- *. simpl. intros. exists T, T. intuition auto. constructor.
-    admit. reflexivity. reflexivity.
-    intros Hf Hty. simpl in Hty.
-    specialize (IHu _ fty _ Hf) as [T' [U' [H' [H'' H''']]]].
-    simpl in Hf.
-    econstructor.
+    intros wfΣ decli.
+    intros H; dependent induction H; solve_discr.
+    destruct args using rev_case; solve_discr. noconf x.
+    rewrite -PCUICAstUtils.mkApps_nested in x. simpl in x.
+    noconf x. clear IHtyping2.
+    specialize (IHtyping1 _ _ _ wfΣ decli eq_refl) as [IH cu]; split; auto.
+    destruct (on_declared_inductive wfΣ decli) as [onmind oib].
+    eapply typing_spine_app; eauto.
+    destruct (PCUICInductives.declared_inductive_unique isdecl decli) as [-> ->].
+    clear decli. split; auto.
+    constructor; [|reflexivity].
+    destruct (on_declared_inductive wfΣ isdecl) as [onmind oib].
+    pose proof (oib.(onArity)) as ar.
+    eapply isWAT_weaken; eauto.
+    eapply (isWAT_subst_instance_decl _ []); eauto.
+    destruct isdecl; eauto.
+    now right. simpl; auto.  
+    specialize (IHtyping _ _ _ wfΣ decli eq_refl) as [IH cu]; split; auto.
+    eapply typing_spine_weaken_concl; eauto.
+  Qed.
 
-  Admitted.
-  (*   eapply invert_type_App in H' as (fA & fB & fna & Hf). intuition. *)
-  (*   exists (tProd fna fA fB), U'. intuition auto. *)
-  (*   econstructor. *)
-  (*   exists T', U'. split; auto. split; auto. *)
-  (*   eapply cumul_trans; eauto. *)
-  (* Qed. *)
+  Lemma isWAT_mkApps_Ind {Σ Γ ind u args} (wfΣ : wf Σ.1)
+    {mdecl idecl} (declm : declared_inductive Σ.1 mdecl ind idecl) :
+    wf_local Σ Γ ->
+    isWfArity_or_Type Σ Γ (mkApps (tInd ind u) args) ->
+    ∑ parsubst argsubst,
+      let oib := (on_declared_inductive wfΣ declm).2 in
+      let parctx := (subst_instance_context u (ind_params mdecl)) in
+      let argctx := (subst_context parsubst 0 (subst_instance_context u (oib.(ind_indices)))) in
+      spine_subst Σ Γ (firstn (ind_npars mdecl) args) parsubst parctx *
+      spine_subst Σ Γ (skipn (ind_npars mdecl) args) argsubst argctx *
+      consistent_instance_ext Σ (ind_universes mdecl) u.
+  Proof.
+    move=> wfΓ isWAT.
+    destruct isWAT.
+    destruct i as [ctx [s Hs]].
+    destruct Hs. rewrite destArity_tInd in e => //.
+    destruct i as [s Hs].
+    eapply invert_type_mkApps_ind in Hs as [tyargs cu]; eauto.
+    set (decli' := on_declared_inductive _ _). clearbody decli'.
+    rename declm into decli.
+    destruct decli' as [declm decli'].
+    pose proof (decli'.(onArity)) as ar. 
+    rewrite decli'.(ind_arity_eq) in tyargs, ar.
+    hnf in ar. destruct ar as [s' ar].
+    rewrite !subst_instance_constr_it_mkProd_or_LetIn in tyargs.
+    simpl in tyargs. rewrite -it_mkProd_or_LetIn_app in tyargs.
+    eapply arity_typing_spine in tyargs as [[argslen leqs] [instsubst [wfdom wfcodom cs subs]]] => //.
+    apply context_subst_app in cs as [parsubst argsubst].
+    eexists _, _. move=> lk parctx argctx. subst lk.
+    rewrite subst_instance_context_assumptions in argsubst, parsubst.
+    rewrite declm.(onNpars _ _ _ _) in argsubst, parsubst.
+    eapply subslet_app_inv in subs as [subp suba].
+    rewrite subst_instance_context_length in subp, suba.
+    subst parctx argctx.
+    repeat split; eauto; rewrite ?subst_instance_context_length => //.
+    rewrite app_context_assoc in wfcodom. now apply All_local_env_app in wfcodom as [? ?].
+    simpl.
+    eapply substitution_wf_local; eauto. now rewrite app_context_assoc in wfcodom.
+    unshelve eapply on_inductive_inst in declm; pcuic.
+    rewrite subst_instance_context_app in declm.
+    now eapply isWAT_it_mkProd_or_LetIn_wf_local in declm.
+  Qed.
+
+  Lemma isWfArity_or_Type_extends : forall (cf : checker_flags) (Σ : global_env)
+      (Σ' : PCUICEnvironment.global_env) (φ : universes_decl),
+    wf Σ' ->
+    extends Σ Σ' ->
+    forall Γ : context,
+    forall t0 : term,
+    isWfArity_or_Type (Σ, φ) Γ t0 -> isWfArity_or_Type (Σ', φ) Γ t0.
+  Proof.
+    intros.
+    destruct X1 as [[ctx [s [eq wf]]]|[s Hs]].
+    - left; exists ctx, s; intuition auto.
+      apply (PCUICWeakeningEnv.weaken_wf_local (Σ, φ)); auto.
+    - right. exists s.
+      eapply (env_prop_typing _ _ PCUICWeakeningEnv.weakening_env (Σ, φ)); auto.
+      simpl. now eapply wf_extends.
+  Qed.
+
+  Lemma weaken_env_prop_isWAT :
+    weaken_env_prop
+    (lift_typing
+         (fun (Σ0 : PCUICEnvironment.global_env_ext)
+          (Γ0 : PCUICEnvironment.context) (_ T : term) =>
+        isWfArity_or_Type Σ0 Γ0 T)).
+  Proof.
+    red. intros.
+    red in X1 |- *.
+    destruct T. now eapply isWfArity_or_Type_extends.
+    destruct X1 as [s Hs]; exists s; now eapply isWfArity_or_Type_extends.
+  Qed.
 
   Theorem validity :
     env_prop (fun Σ Γ t T => isWfArity_or_Type Σ Γ T)
@@ -224,73 +344,74 @@ Section Validity.
         eapply (substitution0 _ _ na _ _ _ (tSort u')); eauto.
         apply inversion_Prod in Hu' as [na' [s1 [s2 Hs]]]. intuition.
         eapply type_Cumul; pcuic.
+        left; eexists _, _; intuition eauto. now eapply typing_wf_local in a.
         eapply (weakening_cumul Σ Γ [] [vass na A]) in b; pcuic.
         simpl in b. eapply cumul_trans. auto. 2:eauto.
         constructor. constructor. simpl. apply leq_universe_product. auto.
 
-    - (* eapply declared_constant_inv in H; pcuic.
-      destruct decl as [ty [b|] univs]. red in H. simpl in *.
-      destruct Σ as [Σ φ].
-      eapply (isWfArity_or_Type_subst_instance (_, _)); pcuic. simpl.
-      repeat red in H; simpl in *. simpl in *. *)
-      (* For Simon *)
-      admit.
-      (* apply isWfArity_or_Type_subst_instance; pcuic. *)
-      (* destruct H. *)
-      (* TODO: Fix Forall_decls_typing same way as local environments *)
-    - eapply on_declared_inductive in isdecl; pcuic.
+    - destruct decl as [ty [b|] univs]; simpl in *.
+      * eapply declared_constant_inv in X; eauto.
+        red in X. simpl in X.
+        eapply isWAT_weaken; eauto.
+        eapply (isWAT_subst_instance_decl _ []); eauto.
+        apply weaken_env_prop_isWAT.
+      * eapply isWAT_weaken; eauto.
+        have ond := on_declared_constant _ _ _ wf H.
+        do 2 red in ond. simpl in ond.
+        eapply (isWAT_subst_instance_decl _ []); eauto.
+        right. simpl. apply ond.
+
+    - (* Inductive type *)
+      destruct (on_declared_inductive wf isdecl); pcuic.
       destruct isdecl.
-      eapply isWfArity_or_Type_subst_instance; eauto.
-      destruct o0.
-      right. red in onArity.
-      red in onArity.
-      destruct onArity as [s Hs].
-      now exists s.
+      apply onArity in o0.
+      eapply isWAT_weaken; eauto.
+      eapply (isWAT_subst_instance_decl _ []); eauto.
+      right; simpl; apply o0.
 
-    - eapply on_declared_constructor in isdecl as [[dm di] dc].
-      destruct dc.
-      admit.
-      auto.
+    - (* Constant type *)
+      destruct (on_declared_constructor wf isdecl) as [[oni oib] [s [decli [cs onc]]]].
+      unfold type_of_constructor.
+      right. red in onc. red in onc.
+      destruct onc as [s' Hs].
+      exists (subst_instance_univ u s').
+      eapply instantiate_minductive in Hs; eauto.
+      2:(destruct isdecl as [[] _]; eauto).
+      simpl in Hs.
+      eapply (weaken_ctx (Γ:=[]) Γ); eauto.
+      eapply (substitution _ [] _ (inds _ _ _) [] _ (tSort _)); eauto.
+      eapply subslet_inds; eauto. destruct isdecl; eauto.
+      now rewrite app_context_nil_l.
 
-    - (* Case *)
+    - (* Case predicate application *)
       right. red.
-      (* destruct X2. *)
-      (* + destruct i as [ctx [s [Heq Hs]]]. *)
-      (*   exists s. *)
-      (*   unfold check_correct_arity in *. *)
-      (*   assert (ctx = pctx). admit. (* WF of cases *) *)
-      (*   subst ctx. *)
-      (*   pose proof (PCUICClosed.destArity_spec [] pty). rewrite Heq in H. *)
-      (*   simpl in H. subst pty. *)
-      (*   assert (#|args| = #|pctx|). admit. (* WF of case *) *)
-      (*   eapply type_mkApps. eauto. *)
-      (*   destruct X4. destruct i as [ctx' [s' [Heq' Hs']]]. *)
-      (*   elimtype False. *)
-      (*   { clear -Heq'. *)
-      (*     revert Heq'. *)
-      (*     assert (destArity [] (tInd ind u) = None) by reflexivity. *)
-      (*     revert H. *)
-      (*     generalize (tInd ind u). clear. induction args. *)
-      (*     intros. simpl in Heq'. congruence. *)
-      (*     intros. unshelve eapply (IHargs _ _ Heq'). *)
-      (*     reflexivity. } *)
-      (*   destruct i as [si Hi]. *)
-      (*   eapply (invert_type_mkApps _ _ (tInd ind u)) in Hi; pcuic. *)
-      (*   2:{ econstructor; eauto. admit. (* universes *) } *)
-      (*   2:{ destruct Σ as [Σ φ]. eapply (isWfArity_or_Type_subst_instance (_, _)); pcuic. *)
-      (*       admit. *)
-      (*       eapply on_declared_inductive in isdecl as [dm di]. *)
-      (*       destruct di. *)
-      (*       right. red in onArity. *)
-      (*       red in onArity. *)
-      (*       destruct onArity as [s' Hs']. *)
-      (*       now exists s'. simpl; auto. } *)
-      (*   admit. *)
-
-      (* + destruct i as [ui Hi]. exists ui. *)
-      (*   admit. (* Same idea *) *)
-
-      admit.
+      eapply (isWAT_mkApps_Ind wf isdecl) in X4 as [parsubst [argsubst Hind]]; auto.
+      destruct (on_declared_inductive wf isdecl) as [onmind oib]. simpl in Hind.
+      destruct Hind as [[sparsubst sargsubst] cu].
+      subst npar.
+      eapply (build_case_predicate_type_spec _ _ _ _ _ _ _ _ oib) in heq_build_case_predicate_type as
+        [pars [cs eqty]].
+      exists ps.
+      eapply type_mkApps; eauto.
+      eapply wf_arity_spine_typing_spine; auto.
+      split; auto.
+      rewrite eqty. clear typep eqty X2.
+      eapply arity_spine_it_mkProd_or_LetIn; auto.
+      pose proof (context_subst_fun cs sparsubst). subst pars.
+      eapply sargsubst.
+      simpl. constructor; first last.
+      constructor; auto. left; eexists _, _; intuition eauto.
+      reflexivity.
+      rewrite subst_mkApps.
+      simpl.
+      rewrite map_app. subst params.
+      rewrite map_map_compose. rewrite map_subst_lift_id_eq.
+      rewrite (subslet_length sargsubst). now autorewrite with len.
+      unfold to_extended_list.
+      eapply spine_subst_subst_to_extended_list_k in sargsubst.
+      rewrite to_extended_list_k_subst
+         PCUICSubstitution.map_subst_instance_constr_to_extended_list_k in sargsubst.
+      rewrite sargsubst firstn_skipn. eauto.
 
     - (* Proj *)
       right.
@@ -298,35 +419,29 @@ Section Validity.
       destruct onp as [s Hty].
       exists s.
       subst ty.
-      eapply typing_subst_instance in Hty.
-      admit. auto.
+      (* eapply typing_subst_instance in Hty. *)
+      todo "projection"%string.
 
-    - admit. (* Fix *)
-    - admit. (* CoFix *)
+    - (* Fix *)
+      eapply nth_error_all in X0; eauto.
+      firstorder auto.
+    
+    - (* CoFix *)
+      eapply nth_error_all in X0; eauto.
+      firstorder auto.
 
     - (* Conv *)
       destruct X2. red in i. left. exact (projT1 i).
       right. destruct s as [u [Hu _]]. now exists u.
-  Admitted.
+  Qed.
 
 End Validity.
 
 Lemma validity_term {cf:checker_flags} {Σ Γ t T} :
-  wf Σ.1 -> wf_local Σ Γ -> Σ ;;; Γ |- t : T -> isWfArity_or_Type Σ Γ T.
+  wf Σ.1 -> Σ ;;; Γ |- t : T -> isWfArity_or_Type Σ Γ T.
 Proof.
   intros. eapply validity; try eassumption.
 Defined.
-
-Corollary validity' :
-  forall `{checker_flags} {Σ Γ t T},
-    wf Σ.1 ->
-    Σ ;;; Γ |- t : T ->
-    isWfArity_or_Type Σ Γ T.
-Proof.
-  intros cf Σ Γ t T hΣ h.
-  eapply validity_term ; eauto.
-  eapply typing_wf_local. eassumption.
-Qed.
 
 (* Should be a corollary of the lemma above.
    invert_type_mkApps should only be used as a stepping stone.
@@ -340,21 +455,23 @@ Lemma inversion_mkApps :
       typing_spine Σ Γ A l U ×
       Σ ;;; Γ |- U <= T.
 Proof.
-  intros cf Σ Γ t l T hΣ h.
-  induction l in t, T, h |- *.
-  - cbn in h. exists T, T. repeat split ; auto.
-    constructor.
-    + eapply validity' ; eauto.
-    + apply cumul_refl'.
-    + reflexivity.
-  - simpl in h. eapply IHl in h as [C [U [h1 [h2 h3]]]].
-    apply inversion_App in h1 as [na [A [B [ht [ha hc]]]]].
-    eexists (tProd na A B), _. split ; [| split].
-    + assumption.
-    + econstructor. 2: eapply cumul_refl'.
-      * eapply validity' ; eauto.
-      * assumption.
-      * (* Don't know how to do it. *)
-        admit.
-    + eassumption.
-Admitted.
+  intros cf Σ Γ f u T wfΣ; induction u in f, T |- *. simpl. intros.
+  { exists T, T. intuition pcuic. constructor. eapply validity; auto with pcuic.
+    eauto. eapply cumul_refl'. }
+  intros Hf. simpl in Hf.
+  destruct u. simpl in Hf.
+  - eapply inversion_App in Hf as [na' [A' [B' [Hf' [Ha HA''']]]]].
+    eexists _, _; intuition eauto.
+    econstructor; eauto with pcuic. eapply validity; eauto with wf pcuic.
+    constructor. all:eauto with pcuic.
+    eapply validity; eauto with wf.
+    eapply type_App; eauto. 
+  - specialize (IHu (tApp f a) T).
+    specialize (IHu Hf) as [T' [U' [H' [H'' H''']]]].
+    eapply inversion_App in H' as [na' [A' [B' [Hf' [Ha HA''']]]]]. 2:{ eassumption. }
+    exists (tProd na' A' B'), U'. intuition; eauto.
+    econstructor. eapply validity; eauto with wf.
+    eapply cumul_refl'. auto.
+    clear -H'' HA''' wfΣ. depind H''.
+    econstructor; eauto. eapply cumul_trans; eauto.  
+Qed.

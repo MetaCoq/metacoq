@@ -1,10 +1,10 @@
 (* Distributed under the terms of the MIT license.   *)
 Set Warnings "-notation-overridden".
 
-From Coq Require Import Bool List Program Lia CRelationClasses.
+From Coq Require Import Bool List Lia CRelationClasses.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICUnivSubst PCUICTyping
-     PCUICReduction PCUICClosed PCUICCSubst.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst
+     PCUICUnivSubst PCUICTyping PCUICReduction PCUICClosed PCUICCSubst.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -395,14 +395,13 @@ Section Wcbv.
     value (mkApps t l) ->
     ((l = []) * atom t) + (value_head t * All value l) + (isStuckFix t l * All value l).
   Proof.
-    intros H H'. generalize_eqs H'. revert t H. induction H' using value_values_ind.
-    intros.
-    subst.
-    - now eapply atom_mkApps in H.
-    - intros * isapp appeq. move: (value_head_nApp H) => Ht.
-      apply mkApps_eq_inj in appeq; intuition subst; auto.
-    - intros * isapp appeq. move: (isStuckfix_nApp H) => Hf.
-      apply mkApps_eq_inj in appeq; intuition subst; auto.
+    intros H H'. set (x := mkApps t l) in *. cut (x = mkApps t l); [|reflexivity].
+    clearbody x. induction H' using value_values_ind; intro H1.
+    - subst. now eapply atom_mkApps in H0.
+    - move: (value_head_nApp H0) => Ht.
+      apply mkApps_eq_inj in H1; intuition subst; auto.
+    - move: (isStuckfix_nApp H0) => Hf.
+      apply mkApps_eq_inj in H1; intuition subst; auto.
   Qed.
 
   (** The codomain of evaluation is only values: *)
@@ -451,7 +450,6 @@ Section Wcbv.
     destruct t; simpl; intuition auto; eapply implybT.
   Qed.
 
-  Derive Signature for All.
   Derive Signature for eval.
 
   Lemma value_final e : value e -> eval e e.

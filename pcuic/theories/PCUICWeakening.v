@@ -1,6 +1,5 @@
 (* Distributed under the terms of the MIT license.   *)
 From Coq Require Import Bool List ZArith Lia.
-Require Import Coq.Program.Syntax Coq.Program.Basics.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
   PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICTyping PCUICWeakeningEnv
@@ -1012,12 +1011,10 @@ Proof.
     * eapply All_map.
       eapply (All_impl X0); simpl.
       intros x [s [Hs Hs']]; exists s.
-      specialize (Hs' _ _ _ wf eq_refl).
-      now rewrite -map_dtype.
+      now specialize (Hs' _ _ _ wf eq_refl).
     * eapply All_map.
       eapply (All_impl X1); simpl.
       intros x [[Hb Hlam] IH].
-      unfold compose; simpl.
       rewrite lift_fix_context.
       specialize (IH Γ (Γ' ,,,  (fix_context mfix)) Γ'' wf).
       rewrite app_context_assoc in IH. specialize (IH eq_refl).
@@ -1034,12 +1031,10 @@ Proof.
     * eapply All_map.
       eapply (All_impl X0); simpl.
       intros x [s [Hs Hs']]; exists s.
-      specialize (Hs' _ _ _ wf eq_refl).
-      now rewrite -map_dtype.
+      now specialize (Hs' _ _ _ wf eq_refl).
     * eapply All_map.
       eapply (All_impl X1); simpl.
       intros x [Hb IH].
-      unfold compose; simpl.
       rewrite lift_fix_context.
       specialize (IH Γ (Γ' ,,,  (fix_context mfix)) Γ'' wf).
       rewrite app_context_assoc in IH. specialize (IH eq_refl).
@@ -1089,15 +1084,12 @@ Qed.
 Lemma weakening_typing `{cf : checker_flags} Σ Γ Γ' Γ'' (t : term) :
   wf Σ.1 ->
   wf_local Σ (Γ ,,, Γ'') ->
-  `(Σ ;;; Γ ,,, Γ' |- t : T ->
-    Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' |-
-    lift #|Γ''| #|Γ'| t : lift #|Γ''| #|Γ'| T).
+  forall T, Σ ;;; Γ ,,, Γ' |- t : T ->
+       Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' |-
+       lift #|Γ''| #|Γ'| t : lift #|Γ''| #|Γ'| T.
 Proof.
-  intros HΣ HΓ'' * H.
-  generalize_eqs H. intros eqw.
-  revert Γ Γ' Γ'' HΓ'' eqw.
-  revert Σ HΣ Γ0 t T H.
-  apply weakening_typing_prop.
+  intros HΣ HΓ'' T H.
+  exact ((weakening_typing_prop Σ HΣ _ t T H).2 _ _ _ HΓ'' eq_refl).
 Qed.
 
 Lemma weakening_wf_local `{cf : checker_flags} Σ Γ Γ' Γ'' :
@@ -1107,9 +1099,8 @@ Lemma weakening_wf_local `{cf : checker_flags} Σ Γ Γ' Γ'' :
   wf_local Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ').
 Proof.
   intros HΣ HΓΓ' HΓ''.
-  generalize_eqs HΓΓ'. intros eqw.
-  revert gen_x HΓΓ' Γ Γ' Γ'' eqw HΓ''.
-  now apply (env_prop_wf_local _ _ weakening_typing_prop).
+  exact (env_prop_wf_local _ _ weakening_typing_prop
+                           Σ HΣ _ HΓΓ' _ _ _ eq_refl HΓ'').
 Qed.
 
 Lemma weakening `{cf : checker_flags} Σ Γ Γ' (t : term) T :

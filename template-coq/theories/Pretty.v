@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import List Program BinPos String.
+From Coq Require Import List BinPos String.
 From MetaCoq Require Import utils Ast AstUtils LiftSubst Universes.
 
 (** Pretty printing *)

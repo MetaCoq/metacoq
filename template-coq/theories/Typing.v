@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool List Program Arith Lia ssreflect.
+From Coq Require Import Bool List Arith Lia ssreflect.
 From Coq Require Import String Wellfounded Relation_Operators.
 
 From MetaCoq.Template Require Import config utils monad_utils Ast AstUtils LiftSubst UnivSubst EnvironmentTyping.
@@ -1076,6 +1076,7 @@ Inductive Forall_typing_spine `{checker_flags} Σ Γ (P : term -> term -> Type) 
     Forall_typing_spine Σ Γ P T (hd :: tl) B'
       (type_spine_cons Σ Γ hd tl na A B s T B' typrod cumul ty tls).
 
+
 Lemma typing_ind_env `{cf : checker_flags} :
   forall (P : global_env_ext -> context -> term -> term -> Type)
          (Pdecl := fun Σ Γ wfΓ t T tyT => P Σ Γ t T),
@@ -1209,8 +1210,8 @@ Proof.
    otherwise it takes forever to execure the "pose", for some reason *)
   pose (@Fix_F ({ Σ : _ & { wfΣ : wf Σ.1 & { Γ : context & { wfΓ : wf_local Σ Γ &
                { t : term & { T : term & Σ ;;; Γ |- t : T }}}}}})) as p0.
-  specialize (p0 (lexprod (MR lt (fun Σ => globenv_size (fst Σ)))
-                         (fun Σ => MR lt (fun x => typing_size (projT2 (projT2 (projT2 (projT2 (projT2 x))))))))) as p.
+  specialize (p0 (lexprod (precompose lt (fun Σ => globenv_size (fst Σ)))
+                         (fun Σ => precompose lt (fun x => typing_size (projT2 (projT2 (projT2 (projT2 (projT2 x))))))))) as p.
   set(foo := existT _ Σ (existT _ wfΣ (existT _ Γ (existT _ wfΓ (existT _ t (existT _ _ H))))) : { Σ : _ & { wfΣ : wf Σ.1 & { Γ : context & { wfΓ & { t : term & { T : term & Σ ;;; Γ |- t : T }}}}}}).
   change Σ with (projT1 foo).
   change Γ with (projT1 (projT2 (projT2 foo))).
@@ -1220,11 +1221,11 @@ Proof.
   match goal with
     |- let foo := _ in @?P foo => specialize (p (fun x => P x))
   end.
-  forward p; [ | apply p; apply wf_lexprod; intros; apply measure_wf; apply lt_wf].
+  forward p; [ | apply p; apply wf_lexprod; intros; apply wf_precompose; apply lt_wf].
   clear p.
   clear Σ wfΣ Γ wfΓ t T H.
   intros (Σ & wfΣ & Γ & wfΓ & t & t0 & H). simpl.
-  intros IH. unfold MR in IH. simpl in IH.
+  intros IH. simpl in IH.
   split.
   destruct Σ as [Σ φ]. destruct Σ.
   constructor.
@@ -1626,7 +1627,7 @@ Definition lookup_wf_local_decl {Γ P} (wfΓ : All_local_env P Γ) (n : nat)
     on_local_decl P (skipn (S n) Γ) decl.
 Proof.
   induction wfΓ in n, decl, eq |- *; simpl.
-  - elimtype False. destruct n; depelim eq.
+  - elimtype False. destruct n; inversion eq.
   - destruct n.
     + simpl. exists wfΓ. injection eq; intros <-. apply t0.
     + apply IHwfΓ. auto with arith.
@@ -1637,11 +1638,15 @@ Defined.
 
 Definition on_wf_local_decl `{checker_flags} {Σ Γ}
            (P : forall Σ Γ (wfΓ : wf_local Σ Γ) t T, Σ ;;; Γ |- t : T -> Type)
-           (wfΓ : wf_local Σ Γ) {d} (H : on_local_decl (lift_typing typing Σ) Γ d) :=
+           (wfΓ : wf_local Σ Γ) {d}
+           (H : on_local_decl (lift_typing typing Σ) Γ d) :=
   match d as d' return (on_local_decl (lift_typing typing Σ) Γ d') -> Type with
-  | {| decl_name := na; decl_body := Some b; decl_type := ty |} => fun H => P Σ Γ wfΓ b ty H
-  | {| decl_name := na; decl_body := None; decl_type := ty |} => fun H => P Σ Γ wfΓ _ _ (projT2 H)
+  | {| decl_name := na; decl_body := Some b; decl_type := ty |}
+    => fun H => P Σ Γ wfΓ b ty H
+  | {| decl_name := na; decl_body := None; decl_type := ty |}
+    => fun H => P Σ Γ wfΓ _ _ (projT2 H)
    end H.
+
 
 Lemma nth_error_All_local_env_over `{checker_flags} {P Σ Γ n decl} (eq : nth_error Γ n = Some decl) {wfΓ : All_local_env (lift_typing typing Σ) Γ} :
   All_local_env_over typing P Σ Γ wfΓ ->
@@ -1651,13 +1656,24 @@ Lemma nth_error_All_local_env_over `{checker_flags} {P Σ Γ n decl} (eq : nth_e
 Proof.
   induction 1 in n, decl, eq |- *. simpl.
   - destruct n; simpl; elimtype False; discriminate eq.
-  - destruct n. cbn [skipn]. simpl in eq.
-    revert p.
-    revert eq. intros. depelim eq.
-    split. apply X. simpl. auto.
-    simpl. apply IHX.
-  - destruct n. depelim eq. simpl. split; auto.
-    apply IHX.
+  - destruct n; simpl.
+    + cbn [skipn]. simpl in *. split; tas.
+      destruct (f_equal (fun e => match e with
+                               | Some c => c
+                               | None => {| decl_name := na;
+                                           decl_body := None; decl_type := t |}
+                               end) eq).
+      assumption.
+    + apply IHX.
+  - destruct n.
+    + cbn [skipn]. simpl in *. split; tas.
+      destruct (f_equal (fun e => match e with
+                               | Some c => c
+                               | None => {| decl_name := na;
+                                           decl_body := Some b; decl_type := t |}
+                               end) eq).
+      assumption.
+    + apply IHX.
 Defined.
 
 Definition wf_ext_wf `{checker_flags} Σ : wf_ext Σ -> wf Σ.1 := fst.

@@ -1,7 +1,8 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program.
-From MetaCoq.Template Require Import config utils Ast AstUtils Induction LiftSubst UnivSubst Typing.
+From Coq Require Import Bool String List.
+From MetaCoq.Template Require Import config utils Ast AstUtils Induction LiftSubst
+     UnivSubst Typing.
 
 Set Asymmetric Patterns.
 
@@ -134,10 +135,10 @@ Proof.
     destruct l; simpl in *; congruence.
     now apply Forall_map.
   - constructor; auto. solve_all.
-  - unfold compose. constructor. solve_all.
+  - constructor. solve_all.
     destruct x; simpl in *. repeat split; tas.
     destruct dbody; simpl in *; congruence.
-  - unfold compose. constructor. solve_all.
+  - constructor. solve_all.
 Qed.
 
 Lemma wf_nth:
@@ -291,7 +292,7 @@ Lemma wf_lift_wf n k t : Ast.wf (lift n k t) -> Ast.wf t.
 Proof.
   induction t in n, k |- * using term_forall_list_ind; simpl in *;
     intros Hwf; inv Hwf; try constructor; eauto;
-      repeat (unfold compose, snd, on_snd in *; simpl in *; solve_all).
+      repeat (unfold snd, on_snd in *; simpl in *; solve_all).
 
   - destruct t; try reflexivity. discriminate.
   - destruct l; simpl in *; congruence.
@@ -383,9 +384,9 @@ Lemma destArity_spec ctx T :
   | None => True
   end.
 Proof.
-  induction T in ctx |- *; simpl; simplify_dep_elim; try easy.
-  specialize (IHT2 (ctx,, vass na T1)). now destruct destArity.
-  specialize (IHT3 (ctx,, vdef na T1 T2)). now destruct destArity.
+  induction T in ctx |- *; simpl; try easy.
+  - specialize (IHT2 (ctx,, vass na T1)). now destruct destArity.
+  - specialize (IHT3 (ctx,, vdef na T1 T2)). now destruct destArity.
 Qed.
 
 
@@ -503,8 +504,7 @@ Proof.
   intros iQ hP hQ.
   induction hP in Q, iQ, hQ |- *.
   1: constructor.
-  dependent destruction hQ.
-  constructor.
+  invs hQ. constructor.
   - eapply IHhP. all: eauto.
   - assumption.
   - assumption.
@@ -616,11 +616,11 @@ Proof.
   - destruct a as [na [bo|] ty].
     + cbn in e. destruct t ; try discriminate.
       eapply IHparams ; try exact e.
-      dependent destruction h. assumption.
+      invs h. assumption.
     + cbn in e. destruct t ; try discriminate.
       destruct args ; try discriminate.
       eapply IHparams ; try exact e.
-      dependent destruction h. assumption.
+      invs h. assumption.
 Qed.
 
 Lemma wf_instantiate_params_subst_ctx :
@@ -638,14 +638,14 @@ Proof.
     subst. assumption.
   - destruct a as [na [bo|] ty].
     + cbn in e. destruct t ; try discriminate.
-      dependent destruction hp. destruct H as [h1 h2]. simpl in h1, h2.
+      invs hp. destruct H1 as [h1 h2]. simpl in h1, h2.
       eapply IHparams ; try exact e ; try assumption.
       constructor ; try assumption.
       eapply wf_subst ; assumption.
     + cbn in e. destruct t ; try discriminate.
       destruct args ; try discriminate.
-      dependent destruction hp. simpl in *.
-      dependent destruction ha.
+      invs hp. simpl in *.
+      invs ha.
       eapply IHparams ; try exact e ; try assumption.
       constructor ; assumption.
 Qed.

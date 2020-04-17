@@ -1,6 +1,6 @@
-From Coq Require Import Bool Program Arith Lia SetoidList.
+From Coq Require Import Bool Arith Lia SetoidList.
 
-Import ListNotations.
+Export ListNotations.
 
 Notation "#| l |" := (List.length l) (at level 0, l at level 99, format "#| l |").
 Arguments nil {_}, _.
@@ -26,7 +26,7 @@ Definition mapi {A B} (f : nat -> A -> B) (l : list A) := mapi_rec f l 0.
 
 Program Fixpoint safe_nth {A} (l : list A) (n : nat | n < List.length l) : A :=
   match l with
-  | nil => !
+  | nil => _
   | hd :: tl =>
     match n with
     | 0 => hd
@@ -34,7 +34,7 @@ Program Fixpoint safe_nth {A} (l : list A) (n : nat | n < List.length l) : A :=
     end
   end.
 Next Obligation.
-  simpl in H. inversion H.
+  exfalso. simpl in H. inversion H.
 Defined.
 Next Obligation.
   simpl in H. auto with arith.
@@ -158,9 +158,8 @@ Defined.
 
 Lemma map_map_compose :
   forall (A B C : Type) (f : A -> B) (g : B -> C) (l : list A),
-    map g (map f l) = map (compose g f) l.
+    map g (map f l) = map (fun x => g (f x)) l.
 Proof. apply map_map. Qed.
-Hint Unfold compose : terms.
 
 Lemma map_id_f {A} (l : list A) (f : A -> A) :
   (forall x, f x = x) ->
@@ -325,18 +324,6 @@ Lemma nth_map {A} (f : A -> A) n l d :
   nth n (map f l) d = f (nth n l d).
 Proof.
   induction n in l |- *; destruct l; simpl; auto.
-Qed.
-
-Lemma nlt_map {A B} (l : list A) (f : A -> B) (n : {n | n < length l }) : `n < length (map f l).
-Proof. destruct n. simpl. now rewrite map_length. Defined.
-
-Lemma map_def_safe_nth {A B} (l : list A) (n : {n | n < length l}) (f : A -> B) :
-  f (safe_nth l n) = safe_nth (map f l) (exist _ (`n) (nlt_map l f n)).
-Proof.
-  destruct n.
-  induction l in x, l0 |- *. simpl. bang.
-  simpl. destruct x. reflexivity. simpl.
-  rewrite IHl. f_equal. f_equal. pi.
 Qed.
 
 Lemma mapi_map {A B C} (f : nat -> B -> C) (l : list A) (g : A -> B) :
@@ -597,7 +584,7 @@ Lemma nth_error_removelast {A} (args : list A) n :
   n < Nat.pred #|args| -> nth_error args n = nth_error (removelast args) n.
 Proof.
   induction n in args |- *; destruct args; intros; auto.
-  simpl. destruct args. depelim H. reflexivity.
+  simpl. destruct args. inversion H. reflexivity.
   simpl. rewrite IHn. simpl in H. auto with arith.
   destruct args, n; reflexivity.
 Qed.

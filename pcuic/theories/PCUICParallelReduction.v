@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license.   *)
 Require Import ssreflect.
-From Coq Require Import Bool List Program Lia.
+From Coq Require Import Bool List Lia.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICSize
+From MetaCoq.PCUIC Require Import PCUICUtils PCUICAst PCUICSize
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakening PCUICSubstitution.
 
 (* Type-valued relations. *)
@@ -97,7 +97,7 @@ Lemma term_forall_ctx_list_ind :
 Proof.
   intros.
   revert Γ t. set(foo:=CoreTactics.the_end_of_the_section). intros.
-  Subterm.rec_wf_rel aux t (MR lt size). simpl. clear H1.
+  Subterm.rec_wf_rel aux t (precompose lt size). simpl. clear H1.
   assert (auxl : forall Γ {A} (l : list A) (f : A -> term), list_size (fun x => size (f x)) l < size pr0 ->
                                                             All (fun x => P Γ (f x)) l).
   { induction l; constructor. eapply aux. red. simpl in H. lia. apply IHl. simpl in H. lia. }
@@ -1018,7 +1018,7 @@ Hint Constructors All2_local_env : pcuic.
 Hint Resolve pred1_ctx_refl : pcuic.
 
 Ltac pcuic_simplify :=
-  simpl || split || destruct_conjs || red.
+  simpl || split || rdest || red.
 
 Hint Extern 10 => progress pcuic_simplify : pcuic.
 

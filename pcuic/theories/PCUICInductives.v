@@ -2,7 +2,7 @@
 Set Warnings "-notation-overridden".
 
 Require Import Equations.Prop.DepElim.
-From Coq Require Import Bool String List Program Lia Arith.
+From Coq Require Import Bool String List Lia Arith.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
@@ -233,7 +233,7 @@ Proof.
   f_equal.
   rewrite !subst_context_length subst_instance_context_length.
   f_equal. f_equal. f_equal. f_equal.
-  f_equal. rewrite -map_map_compose.
+  f_equal. rewrite -(map_map_compose _ _ _ _ (subst _ _ ∘ subst _ _)).
   rewrite subst_instance_to_extended_list_k.
   rewrite -map_map_compose.
   rewrite -to_extended_list_k_map_subst. rewrite subst_instance_context_length; lia.
@@ -335,4 +335,3 @@ Lemma declared_inductive_minductive Σ ind mdecl idecl :
   declared_inductive Σ mdecl ind idecl -> declared_minductive Σ (inductive_mind ind) mdecl.
 Proof. now intros []. Qed.
 Hint Resolve declared_inductive_minductive : pcuic.
-

@@ -1,4 +1,4 @@
-From Coq Require Import String Bool List Program PeanoNat.
+From Coq Require Import String Bool List PeanoNat.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst
      PCUICLiftSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening PCUICInversion
@@ -8,9 +8,9 @@ From MetaCoq.PCUIC Require Import PCUICAst
      PCUICSpine PCUICInductives.
 
 From Equations Require Import Equations.
+Require Import Equations.Prop.DepElim.
 Require Import ssreflect.
 
-Derive NoConfusion for term.
 Derive Signature for typing cumul.
 
 Section Validity.
@@ -152,23 +152,25 @@ Section Validity.
   Proof.
     intros wfΣ decli.
     intros H; dependent induction H; solve_discr.
-    destruct args using rev_case; solve_discr. noconf x.
-    rewrite -PCUICAstUtils.mkApps_nested in x. simpl in x.
-    noconf x. clear IHtyping2.
-    specialize (IHtyping1 _ _ _ wfΣ decli eq_refl) as [IH cu]; split; auto.
-    destruct (on_declared_inductive wfΣ decli) as [onmind oib].
-    eapply typing_spine_app; eauto.
-    destruct (PCUICInductives.declared_inductive_unique isdecl decli) as [-> ->].
-    clear decli. split; auto.
-    constructor; [|reflexivity].
-    destruct (on_declared_inductive wfΣ isdecl) as [onmind oib].
-    pose proof (oib.(onArity)) as ar.
-    eapply isWAT_weaken; eauto.
-    eapply (isWAT_subst_instance_decl _ []); eauto.
-    destruct isdecl; eauto.
-    now right. simpl; auto.  
-    specialize (IHtyping _ _ _ wfΣ decli eq_refl) as [IH cu]; split; auto.
-    eapply typing_spine_weaken_concl; eauto.
+    - destruct args using rev_case; solve_discr. noconf H1.
+      rewrite -PCUICAstUtils.mkApps_nested in H1. simpl in H1.
+      noconf H1.  clear IHtyping2.
+      specialize (IHtyping1 _ _ _ _ _ _ _ wfΣ decli eq_refl) as [IH cu];
+        split; auto.
+      destruct (on_declared_inductive wfΣ decli) as [onmind oib].
+      eapply typing_spine_app; eauto.
+    - noconf H0. subst.
+      destruct (PCUICInductives.declared_inductive_unique isdecl decli) as [-> ->].
+      clear decli. split; auto.
+      constructor; [|reflexivity].
+      destruct (on_declared_inductive wfΣ isdecl) as [onmind oib].
+      pose proof (oib.(onArity)) as ar.
+      eapply isWAT_weaken; eauto.
+      eapply (isWAT_subst_instance_decl _ []); eauto.
+      destruct isdecl; eauto.
+      now right. simpl; auto.  
+    - specialize (IHtyping _ _ wfΣ decli) as [IH cu]; split; auto.
+      eapply typing_spine_weaken_concl; eauto.
   Qed.
 
   Lemma isWAT_mkApps_Ind {Σ Γ ind u args} (wfΣ : wf Σ.1)
@@ -342,12 +344,11 @@ Section Validity.
       + right.
         destruct i as [u' Hu']. exists u'.
         eapply (substitution0 _ _ na _ _ _ (tSort u')); eauto.
-        apply inversion_Prod in Hu' as [na' [s1 [s2 Hs]]]. intuition.
+        apply inversion_Prod in Hu' as [na' [s1 [s2 Hs]]]; tas. intuition.
         eapply type_Cumul; pcuic.
-        left; eexists _, _; intuition eauto. now eapply typing_wf_local in a.
         eapply (weakening_cumul Σ Γ [] [vass na A]) in b; pcuic.
         simpl in b. eapply cumul_trans. auto. 2:eauto.
-        constructor. constructor. simpl. apply leq_universe_product. auto.
+        constructor. constructor. simpl. apply leq_universe_product.
 
     - destruct decl as [ty [b|] univs]; simpl in *.
       * eapply declared_constant_inv in X; eauto.

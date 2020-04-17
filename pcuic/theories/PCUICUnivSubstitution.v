@@ -2,9 +2,7 @@
 
 (** * Universe Substitution lemmas for typing derivations. *)
 
-From Coq Require Import Bool List Lia ZArith
-     CRelationClasses.
-Require Import Coq.Program.Syntax Coq.Program.Basics.
+From Coq Require Import Bool List Lia ZArith CRelationClasses.
 From MetaCoq.Template Require Import utils config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICEquality
@@ -435,7 +433,7 @@ Proof.
 Qed.
 
 Global Instance satisfies_subsets v :
-  Morphisms.Proper (Morphisms.respectful CS.Subset (flip impl))
+  Morphisms.Proper (Morphisms.respectful CS.Subset (fun A B : Prop => B -> A))
                    (satisfies v).
 Proof.
   intros φ1 φ2 H H2 c Hc; now apply H2, H.
@@ -608,7 +606,7 @@ Proof.
   intro c; split; intro Hc.
   - apply In_subst_instance_cstrs in Hc.
     destruct Hc as [c' [eq Hc]]; subst.
-    apply* CS.union_spec in Hc.
+    apply CS.union_spec in Hc. apply CS.union_spec.
     destruct Hc; [left|right]; now apply In_subst_instance_cstrs'.
   - apply In_subst_instance_cstrs.
     apply CS.union_spec in Hc.
@@ -673,7 +671,7 @@ Proof.
     induction inst; cbnr. rewrite HH; cbn. 1: apply IHinst.
     all: apply andP in H; try apply H.
   + rewrite forallb_map. apply forallb_forall.
-    intros l Hl. unfold global_ext_levels, compose in *; simpl in *.
+    intros l Hl. unfold global_ext_levels in *; simpl in *.
     eapply forallb_forall in H0; tea. clear -Hφ H0 H2 Hl.
     apply LevelSet_mem_union in H0. destruct H0 as [H|H].
     2: { destruct l; simpl; try (apply LevelSet_mem_union; right; assumption).
@@ -740,7 +738,7 @@ Proof.
   - destruct φ as [φ|[φ1 φ2]].
     + cbn. apply satisfies_subst_instance_ctr; tas.
       rewrite equal_subst_instance_cstrs_mono; aa.
-      * rewrite <- Hsub in Hv; assumption.
+      * intros c Hc; apply Hsub in Hc. now apply Hv in Hc.
       * intros c Hc; eapply monomorphic_global_constraint_ext; tea.
         apply CS.union_spec; now left.
     + destruct HH as [_ [_ [_ H1]]].
@@ -1423,7 +1421,6 @@ Proof.
     + rewrite nth_error_map, H0. reflexivity.
     + eapply H1; eauto. 
     + apply All_map, (All_impl X); simpl; intuition auto.
-      unfold compose; simpl.
       destruct X1 as [s Hs]. exists (subst_instance_univ u s).
       now apply Hs.
     + eapply All_map, All_impl; tea.
@@ -1443,7 +1440,6 @@ Proof.
     + rewrite nth_error_map, H. reflexivity.
     + apply X; eauto.
     + apply All_map, (All_impl X0); simpl; intuition auto.
-      unfold compose; simpl.
       destruct X2 as [s Hs]. exists (subst_instance_univ u s).
       now apply Hs.
     + eapply All_map, All_impl; tea.
@@ -1453,7 +1449,6 @@ Proof.
         rewrite fix_context_length, map_length in *.
         unfold subst_instance_context, map_context in *.
         rewrite map_app in *.
-        unfold compose.
         rewrite <- (fix_context_subst_instance u mfix).
         rewrite <- map_dtype. eapply X3.
 

@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool List Program Arith Lia.
+From Coq Require Import Bool List Arith Lia.
 From MetaCoq.Template Require Import config monad_utils utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICPrincipality PCUICConfluence
@@ -273,7 +273,7 @@ Section Lemmata.
 
   Lemma wellformed_irr :
     forall {Σ Γ t} (h1 h2 : wellformed Σ Γ t), h1 = h2.
-  Proof. intros. apply proof_irrelevance. Qed.
+  Proof. intros. apply ProofIrrelevance.proof_irrelevance. Qed.
 
   Context (hΣ : ∥ wf Σ ∥).
 

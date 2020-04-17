@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 Set Warnings "-notation-overridden".
 Require Import ssreflect ssrbool.
-From Coq Require Import Bool List Program Utf8
+From Coq Require Import Bool List Utf8
   ZArith Lia.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICSize
@@ -93,7 +93,7 @@ Proof. apply fold_context_length. Qed.
 
 Hint Rewrite @subst_consn_nil @subst_consn_tip : sigma.
 
-Lemma subst_consn_shiftn n l σ : #|l| = n -> ↑^n ∘ (l ⋅n σ) =1 σ.
+Lemma subst_consn_shiftn n l σ : #|l| = n -> ↑^n ∘s (l ⋅n σ) =1 σ.
 Proof.
   induction n in l |- *; simpl; intros; autorewrite with sigma.
   - destruct l; try discriminate. simpl; autorewrite with sigma. reflexivity.
@@ -102,7 +102,7 @@ Proof.
     simpl; autorewrite with sigma. apply IHn. lia.
 Qed.
 
-Lemma shiftn_consn_idsn n σ : ↑^n ∘ ⇑^n σ =1 σ ∘ ↑^n.
+Lemma shiftn_consn_idsn n σ : ↑^n ∘s ⇑^n σ =1 σ ∘s ↑^n.
 Proof.
   unfold Upn. rewrite subst_consn_shiftn. reflexivity.
   now rewrite idsn_length.
@@ -284,7 +284,7 @@ Lemma term_forall_ctx_list_ind :
 Proof.
   intros.
   revert t. set(foo:=CoreTactics.the_end_of_the_section). intros.
-  Subterm.rec_wf_rel aux t (MR lt size). simpl. clear H0.
+  Subterm.rec_wf_rel aux t (precompose lt size). simpl. clear H0.
   assert (auxl : forall {A} (l : list A) (f : A -> term), list_size (fun x => size (f x)) l < size pr1 ->
                                                             All (fun x => P (f x)) l).
   { induction l; constructor. eapply aux. red. simpl in H. lia. apply IHl. simpl in H. lia. }
@@ -1302,8 +1302,8 @@ Section Confluence.
     (* Definition ctxmap (Γ Δ : context) (s : nat -> term) := *)
     (*   forall x d, nth_error Γ x = Some d -> *)
     (*               match decl_body d return Type with *)
-    (*               | Some b => s x = b.[↑^(S x) ∘ s] *)
-    (*               | None => Σ ;;; Δ |- s x : d.(decl_type).[↑^(S x) ∘ s] *)
+    (*               | Some b => s x = b.[↑^(S x) ∘s s] *)
+    (*               | None => Σ ;;; Δ |- s x : d.(decl_type).[↑^(S x) ∘s s] *)
     (*               end. *)
 
     Definition ctxmap (Γ Δ : context) (s : nat -> term) :=
@@ -1312,7 +1312,7 @@ Section Confluence.
                   | Some b =>
                     ∑ i b', s x = tRel i /\
                             option_map decl_body (nth_error Δ i) = Some (Some b') /\
-                            b'.[↑^(S i)] = b.[↑^(S x) ∘ s]
+                            b'.[↑^(S i)] = b.[↑^(S x) ∘s s]
                   | None => True
                   end.
 
@@ -1581,7 +1581,7 @@ Section Confluence.
       simpl. rewrite - IHn. f_equal. apply H.
     Qed.
 
-    Lemma subst_consn_compose l σ' σ : l ⋅n σ' ∘ σ =1 (map (inst σ) l ⋅n (σ' ∘ σ)).
+    Lemma subst_consn_compose l σ' σ : l ⋅n σ' ∘s σ =1 (map (inst σ) l ⋅n (σ' ∘s σ)).
     Proof.
       induction l; simpl. now sigma.
       rewrite subst_consn_subst_cons. sigma.
@@ -1618,7 +1618,7 @@ Section Confluence.
       now rewrite nth_error_app_lt.
     Qed.
 
-  Lemma Upn_comp n l σ : n = #|l| -> ⇑^n σ ∘ (l ⋅n ids) =1 l ⋅n σ.
+  Lemma Upn_comp n l σ : n = #|l| -> ⇑^n σ ∘s (l ⋅n ids) =1 l ⋅n σ.
   Proof.
     intros ->. rewrite Upn_eq; simpl.
     rewrite !subst_consn_compose. sigma.
@@ -1631,7 +1631,7 @@ Section Confluence.
     lia.
   Qed.
 
-   Lemma shift_Up_comm σ : ↑ ∘ ⇑ σ =1 σ ∘ ↑.
+   Lemma shift_Up_comm σ : ↑ ∘s ⇑ σ =1 σ ∘s ↑.
    Proof. reflexivity. Qed.
 
   Lemma pres_bodies_inst_context Γ σ : pres_bodies Γ (inst_context σ Γ) σ.
@@ -1948,9 +1948,9 @@ Section Confluence.
     forall x d, nth_error Γ x = Some d ->
                 match decl_body d return Type with
                 | Some b => ∑ i, (s x = tRel i) * (* The image is a variable i in Δ *)
-                                 (option_map decl_body (nth_error Δ i) = Some (Some b.[↑^(S x) ∘ s]))
+                                 (option_map decl_body (nth_error Δ i) = Some (Some b.[↑^(S x) ∘s s]))
                 (* whose body is b substituted with the previous variables *)
-                | None => (Σ, φ) ;;; Δ |- s x : d.(decl_type).[↑^(S x) ∘ s]
+                | None => (Σ, φ) ;;; Δ |- s x : d.(decl_type).[↑^(S x) ∘s s]
                 end.
 
   Definition renaming Γ Δ r :=
@@ -1959,7 +1959,7 @@ Section Confluence.
                 match decl_body d return Prop with
                 | Some b =>
                   exists b', option_map decl_body (nth_error Δ (r x)) = Some (Some b') /\
-                             b'.[↑^(S (r x))] = b.[↑^(S x) ∘ ren r]
+                             b'.[↑^(S (r x))] = b.[↑^(S x) ∘s ren r]
                 (* whose body is b substituted with the previous variables *)
                 | None => option_map decl_body (nth_error Δ (r x)) = Some None
                 end
@@ -2753,11 +2753,7 @@ Section Confluence.
       now apply H.
     - specialize (H (dbody d)).
       forward H. rewrite mkApps_size. simpl. lia.
-      sigma.
-      unfold Basics.compose.
-      rewrite -(H (Γ ,,, rho_fix_context Γ mfix)).
-      now apply renaming_shift_rho_fix_context.
-      reflexivity.
+      apply (H).  eapply renaming_shift_rho_fix_context; tea.
   Qed.
 
   Lemma decompose_app_rec_rename r t l :
@@ -2904,12 +2900,16 @@ Section Confluence.
           clear -H H2 H3.
           unfold fix_subst. generalize #|mfix|.
           induction n; simpl; auto.
-          rewrite IHn. f_equal.
+          rewrite IHn. clear IHn. f_equal.
           specialize (H (tFix mfix n)) as Hbod.
           forward Hbod.
           { simpl; rewrite mkApps_size. simpl. lia. }
-          unfold Basics.compose. rewrite -(Hbod _ _ _ H2).
-          now rewrite -rename_inst. }
+          etransitivity; [|apply Hbod; tea]; cbn.
+          rewrite map_length. f_equal.
+          rewrite !map_map_compose. apply map_ext.
+          intros []; unfold map_def; cbn.
+          rewrite !rename_inst. f_equal. apply inst_ext.
+          apply ren_shiftn. }
 
         move => -> ->.
         rewrite rename_mkApps /= map_length. f_equal.
@@ -2964,7 +2964,7 @@ Section Confluence.
       simpl.
       assert (map (on_snd (rename r)) (map (λ x : nat × term, (fst x, rho Γ (snd x))) l) =
               (map (λ x : nat × term, (fst x, rho Δ (snd x))) (map (on_snd (rename r)) l))) as <-.
-      { red in X. rewrite !map_map_compose /compose /on_snd. solve_all. }
+      { red in X. rewrite !map_map_compose /on_snd. solve_all. }
       rewrite -(H0 Γ) //.
       rewrite -(H Γ) //.
       case: p => [ind pars].
@@ -3003,11 +3003,11 @@ Section Confluence.
           rewrite Upn_comp ?map_length ?fix_subst_length ?map_length //.
           rewrite subst_consn_compose compose_ids_l. apply subst_consn_proper => //.
           rewrite map_cofix_subst' // !map_map_compose. rewrite map_cofix_subst' //.
-          unfold compose. simpl. move=> n; f_equal.
+          simpl. move=> n; f_equal.
           rewrite /map_fix map_length.
           rewrite !map_map_compose !compose_map_def.
           apply map_ext => x; apply map_def_eq_spec => //.
-          apply map_ext => x. now rewrite /compose -rename_inst.
+          apply map_ext => x. now rewrite -rename_inst.
           now rewrite cofix_subst_length map_length.
 
         * rewrite map_map_compose /on_snd. f_equal.
@@ -3055,11 +3055,11 @@ Section Confluence.
           rewrite Upn_comp ?map_length ?fix_subst_length ?map_length //.
           rewrite subst_consn_compose compose_ids_l. apply subst_consn_proper => //.
           rewrite map_cofix_subst' // !map_map_compose. rewrite map_cofix_subst' //.
-          unfold compose. simpl. move=> n; f_equal.
+          simpl. move=> n; f_equal.
           rewrite /map_fix map_length.
           rewrite map_map_compose !compose_map_def. apply map_ext => x.
           apply map_def_eq_spec => //.
-          apply map_ext => x. now rewrite /compose -rename_inst.
+          apply map_ext => x. now rewrite -rename_inst.
           now rewrite cofix_subst_length map_length.
 
         * rewrite rename_mkApps map_map_compose /on_snd. f_equal.
@@ -3074,9 +3074,9 @@ Section Confluence.
     - (* Fix *)
       simpl. f_equal. rewrite /map_fix !map_length !map_map_compose.
       red in X. solve_all.
-      rewrite !compose_map_def.
+      rewrite !map_def_map_def.
       eapply map_def_eq_spec. eapply a. auto.
-      unfold Basics.compose. erewrite b; auto.
+      erewrite b; auto.
       assert (#|m| = #|fold_fix_context rho Γ [] m|). rewrite fold_fix_context_length /= //.
       rewrite {2}H0.
       eapply shift_renaming; auto.
@@ -3086,9 +3086,9 @@ Section Confluence.
     - (* CoFix *)
       simpl. f_equal. rewrite /map_fix !map_length !map_map_compose.
       red in X. solve_all.
-      rewrite !compose_map_def.
+      rewrite !map_def_map_def.
       eapply map_def_eq_spec. eapply a. auto.
-      unfold Basics.compose. erewrite b; auto.
+      erewrite b; auto.
       assert (#|m| = #|fold_fix_context rho Γ [] m|). rewrite fold_fix_context_length /= //.
       rewrite {2}H0.
       eapply shift_renaming; auto.
@@ -3105,7 +3105,7 @@ Section Confluence.
     rewrite -H. sigma. rewrite lift_renaming_0. reflexivity.
   Qed.
 
-  Lemma shiftk_compose n m : ↑^n ∘ ↑^m =1 ↑^(n + m).
+  Lemma shiftk_compose n m : ↑^n ∘s ↑^m =1 ↑^(n + m).
   Proof.
     induction n; simpl; sigma. reflexivity.
     rewrite -subst_compose_assoc.

@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license.   *)
-From Coq Require Import String Bool List Program.
+From Coq Require Import String Bool List.
 From MetaCoq.Template Require Import utils.
 Local Open Scope string_scope.
 
@@ -158,13 +158,13 @@ Definition tFixProp {A} (P P' : A -> Type) (m : mfixpoint A) :=
   All (fun x : def A => P x.(dtype) * P' x.(dbody))%type m.
 
 Lemma map_def_map_def {A B C} (f f' : B -> C) (g g' : A -> B) (d : def A) :
-  map_def f f' (map_def g g' d) = map_def (fun x => f (g x)) (fun x => f' (g' x)) d.
+  map_def f f' (map_def g g' d) = map_def (f ∘ g) (f' ∘ g') d.
 Proof.
   destruct d; reflexivity.
 Qed.
 
 Lemma compose_map_def {A B C} (f f' : B -> C) (g g' : A -> B) :
-  compose (A:=def A) (map_def f f') (map_def g g') = map_def (compose f g) (compose f' g').
+  (map_def f f') ∘ (map_def g g') = map_def (f ∘ g) (f' ∘ g').
 Proof. reflexivity. Qed.
 
 Lemma map_def_id {t} x : map_def (@id t) (@id t) x = id x.

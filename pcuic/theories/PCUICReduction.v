@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 Require Import ssreflect.
-From Coq Require Import Bool List Program Utf8
+From Coq Require Import Bool List Utf8
   ZArith Lia.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
@@ -1106,7 +1106,7 @@ Section ReductionCongruence.
           intros y z e. cbn in e. inversion e. eauto.
         } subst.
         constructor.
-      - set (f := fun x : term => (x, ())) in *.
+      - set (f := fun x : term => (x, tt)) in *.
         set (g := (fun '(x, _) => x) : term × unit -> term).
         assert (el :  forall l, l = map f (map g l)).
         { clear. intros l. induction l.

@@ -1,4 +1,4 @@
-From Coq Require Import Ascii String OrderedType Lia Program Arith.
+From Coq Require Import Ascii String OrderedType Lia Arith.
 From MetaCoq.Template Require Import utils uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICSize.
 Import List.ListNotations.
@@ -9,6 +9,7 @@ From Equations Require Import Equations.
 Set Asymmetric Patterns.
 
 Derive NoConfusion for term.
+Derive Signature for All.
 Derive Signature for All2.
 
 Open Scope pcuic.
@@ -457,14 +458,16 @@ Qed.
 
 Lemma mkApps_eq_head {x l} : mkApps x l = x -> l = [].
 Proof.
-  assert (WF := _ : WellFounded (MR lt size)).
+  assert (WF : WellFounded (precompose lt size))
+    by apply wf_precompose, lt_wf.
   induction l. simpl. constructor.
   apply apply_noCycle_right. simpl. red. rewrite mkApps_size. simpl. lia.
 Qed.
 
 Lemma mkApps_eq_inv {x y l} : x = mkApps y l -> size y <= size x.
 Proof.
-  assert (WF := _ : WellFounded (MR lt size)).
+  assert (WF : WellFounded (precompose lt size))
+    by apply wf_precompose, lt_wf.
   induction l in x, y |- *. simpl. intros -> ; constructor.
   simpl. intros. specialize (IHl _ _ H). simpl in IHl. lia.
 Qed.

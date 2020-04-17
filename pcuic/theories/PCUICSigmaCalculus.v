@@ -1,7 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 From Equations Require Import Equations.
 From Coq Require Import Bool List ZArith Lia.
-Require Import Coq.Program.Syntax Coq.Program.Basics.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst
      PCUICTyping PCUICClosed PCUICEquality.
@@ -1697,11 +1696,9 @@ Proof.
       * apply hf.
       * apply All_map, (All_impl ihmfixt).
         intros x [s [Hs IHs]].
-        unfold compose; simpl.
         exists s. now apply IHs.
       * apply All_map, (All_impl ihmfixb).
         intros x [[Hb Hlam] IHb].
-        unfold compose; simpl.
         destruct x as [na ty bo rarg]. simpl in *.
         split.
         -- rewrite <- rename_fix_context.
@@ -1730,11 +1727,9 @@ Proof.
       * apply hf.
       * apply All_map, (All_impl ihmfixt).
         intros x [s [Hs IHs]].
-        unfold compose; simpl.
         exists s. now apply IHs.
       * apply All_map, (All_impl ihmfixb).
         intros x [Hb IHb].
-        unfold compose; simpl.
         destruct x as [na ty bo rarg]. simpl in *.
         rewrite <- rename_fix_context.
         eapply meta_conv.
@@ -1918,7 +1913,7 @@ Proof.
     (* + simpl. reflexivity. *)
     (* + simpl. intuition eauto. *)
     (*   f_equal. *)
-    (*   * unfold map_def. unfold compose. rewrite a. *)
+    (*   * unfold map_def. rewrite a. *)
     (*     rewrite map_length. autorewrite with sigma. *)
     (*     specialize (b (S (#|l| + k))). autorewrite with sigma in b. *)
     (*     rewrite b. reflexivity. *)
@@ -1940,7 +1935,7 @@ Proof.
   all: try solve [ f_equal ; eauto ; solve_all ; eauto ].
   - rewrite IHt1. f_equal. rewrite <- IHt2.
     eapply inst_ext. intro i.
-    unfold compose, Up, subst_compose, subst_cons.
+    unfold Up, subst_compose, subst_cons.
     destruct i.
     + reflexivity.
     + pose proof (shift_subst_instance_constr u (σ i) 0) as e.
@@ -2003,7 +1998,7 @@ Proof.
       end
     end.
     { eapply inst_ext. intro i.
-      unfold Upn, compose, subst_compose, subst_consn.
+      unfold Upn, subst_compose, subst_consn.
       rewrite arities_context_length.
       case_eq (nth_error (inds (inductive_mind ind) u (ind_bodies mdecl)) i).
       - intros t' e.

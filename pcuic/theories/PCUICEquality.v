@@ -1,13 +1,14 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool List Program Arith
-   CMorphisms.
+From Coq Require Import Bool List Arith CMorphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst.
 
 Require Import ssreflect.
+From Equations.Prop Require Import DepElim.
 Set Equations With UIP.
+
 
 Local Open Scope type_scope.
 

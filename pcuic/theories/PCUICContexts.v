@@ -1,4 +1,4 @@
-From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
+From Coq Require Import Bool String List BinPos Compare_dec Arith Lia
      Classes.CRelationClasses ProofIrrelevance.
 From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
      AstUtils UnivSubst.
@@ -402,7 +402,7 @@ Proof.
   intros ->.
   rewrite /to_extended_list_k.
   rewrite -{1}(Nat.add_0_r #|s|) reln_lift map_map_compose.
-  apply map_ext. intros x; unfold compose; simpl.
+  apply map_ext. intros x; simpl.
   rewrite subst_app_decomp.
   f_equal. rewrite -{1}(Nat.add_0_r #|s|) simpl_subst' ?lift0_id //.
   now rewrite map_length.

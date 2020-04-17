@@ -211,7 +211,7 @@ Qed.
 Hint Resolve map_def_id_spec : all.
 
 Lemma compose_map_def (f g : term -> term) :
-  compose (map_def f) (map_def g) = map_def (compose f g).
+  (map_def f) ∘ (map_def g) = map_def (f ∘ g).
 Proof. reflexivity. Qed.
 
 Hint Extern 10 (_ < _)%nat => lia : all.

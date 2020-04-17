@@ -1,4 +1,4 @@
-From Coq Require Import List Bool Arith ssreflect Program Lia.
+From Coq Require Import List Bool Arith ssreflect Lia.
 From MetaCoq.Template Require Import MCList MCRelations MCProd MCOption.
 
 Import ListNotations.
@@ -279,13 +279,13 @@ Qed.
 
 Hint Constructors All All2 : core.
 
-Lemma All_rev_map {A B} (P : A -> Type) f (l : list B) : All (compose P f) l -> All P (rev_map f l).
+Lemma All_rev_map {A B} (P : A -> Type) f (l : list B) : All (fun x => P (f x)) l -> All P (rev_map f l).
 Proof. induction 1. constructor. rewrite rev_map_cons. apply All_app_inv; auto. Qed.
 
 Lemma All_rev (A : Type) (P : A -> Type) (l : list A) : All P l -> All P (List.rev l).
 Proof.
   induction l using rev_ind. constructor. rewrite rev_app_distr.
-  simpl. intros X; apply All_app in X as [? ?]. depelim a0; intuition auto.
+  simpl. intros X; apply All_app in X as [? ?]. inversion a0; intuition auto.
 Qed.
 
 Lemma All_rev_inv {A} (P : A -> Type) (l : list A) : All P (List.rev l) -> All P l.
@@ -303,10 +303,10 @@ Lemma Alli_impl {A} {P Q} (l : list A) {n} : Alli P n l -> (forall n x, P n x ->
 Proof. induction 1; try constructor; intuition auto. Defined.
 
 Lemma All_map {A B} {P : B -> Type} {f : A -> B} {l : list A} :
-  All (compose P f) l -> All P (map f l).
+  All (fun x => P (f x)) l -> All P (map f l).
 Proof. induction 1; constructor; auto. Qed.
 
-Lemma All_map_inv {A B} (P : B -> Type) (f : A -> B) l : All P (map f l) -> All (compose P f) l.
+Lemma All_map_inv {A B} (P : B -> Type) (f : A -> B) l : All P (map f l) -> All (fun x => P (f x)) l.
 Proof. induction l; intros Hf; inv Hf; try constructor; eauto. Qed.
 
 Lemma All_nth_error :
@@ -396,7 +396,7 @@ Proof.
   { induction 1. simpl. constructor.
     simpl. constructor; eauto. }
   { induction l in k |- *. simpl. constructor.
-    simpl. intros. depelim X. constructor; eauto. }
+    simpl. intros. inversion X. constructor; eauto. }
 Qed.
 
 Lemma Alli_shift {A} {P : nat -> A -> Type} k l :
@@ -416,7 +416,7 @@ Proof.
   rewrite rev_app_distr. rewrite app_length.
   simpl. constructor.
   replace (pred (#|l| + 1) - 0) with #|l| by lia.
-  depelim b. eauto. specialize (IHl _ a).
+  inversion b. eauto. specialize (IHl _ a).
   eapply Alli_shift. eapply Alli_impl. eauto.
   simpl; intros.
   now replace (pred (#|l| + 1) - S n) with (pred #|l| - n) by lia.
@@ -425,7 +425,7 @@ Qed.
 Lemma Alli_All_mix {A} {P : nat -> A -> Type} (Q : A -> Type) k l :
   Alli P k l -> All Q l -> Alli (fun k x => (P k x) * Q x)%type k l.
 Proof.
-  induction 1; constructor; try depelim X0; intuition auto.
+  induction 1; constructor; try inversion X0; intuition auto.
 Qed.
 
 
@@ -563,38 +563,6 @@ Proof.
   induction 1; constructor; intuition eauto.
 Qed.
 
-Lemma OnOne2_All2_All2 {A : Type} {l1 l2 l3 : list A} {R1 R2 R3  : A -> A -> Type} :
-  OnOne2 R1 l1 l2 ->
-  All2 R2 l1 l3 ->
-  (forall x y, R2 x y -> R3 x y) ->
-  (forall x y z : A, R1 x y -> R2 x z -> R3 y z) ->
-  All2 R3 l2 l3.
-Proof.
-  intros o. induction o in l3 |- *.
-  intros H; depelim H.
-  intros Hf Hf'. specialize (Hf'  _ _ _ p r). constructor; auto.
-  eapply All2_impl; eauto.
-  intros H; depelim H.
-  intros Hf. specialize (IHo _ H Hf).
-  constructor; auto.
-Qed.
-
-Lemma OnOne2_All_All {A : Type} {l1 l2 : list A} {R1  : A -> A -> Type} {R2 R3 : A -> Type} :
-  OnOne2 R1 l1 l2 ->
-  All R2 l1 ->
-  (forall x, R2 x -> R3 x) ->
-  (forall x y : A, R1 x y -> R2 x -> R3 y) ->
-  All R3 l2.
-Proof.
-  intros o. induction o.
-  intros H; depelim H.
-  intros Hf Hf'. specialize (Hf' _ _ p r). constructor; auto.
-  eapply All_impl; eauto.
-  intros H; depelim H.
-  intros Hf. specialize (IHo H Hf).
-  constructor; auto.
-Qed.
-
 Lemma OnOne2_nth_error {A} (l l' : list A) n t P :
   OnOne2 P l l' ->        
   nth_error l n = Some t ->
@@ -689,12 +657,12 @@ Proof.
 Qed.
 
 
-Lemma Forall_map {A B} (P : B -> Prop) (f : A -> B) l : Forall (Program.Basics.compose P f) l -> Forall P (map f l).
+Lemma Forall_map {A B} (P : B -> Prop) (f : A -> B) l : Forall (fun x => P (f x)) l -> Forall P (map f l).
 Proof.
   induction 1; constructor; auto.
 Qed.
 
-Lemma Forall_map_inv {A B} (P : B -> Prop) (f : A -> B) l : Forall P (map f l) -> Forall (compose P f) l.
+Lemma Forall_map_inv {A B} (P : B -> Prop) (f : A -> B) l : Forall P (map f l) -> Forall (fun x => P (f x)) l.
 Proof. induction l; intros Hf; inv Hf; try constructor; eauto. Qed.
 
 Lemma Forall_impl {A} {P Q : A -> Prop} {l} :
@@ -713,7 +681,8 @@ Qed.
 Lemma All_safe_nth {A} {P : A -> Type} {Γ n} (isdecl : n < length Γ) : All P Γ ->
    P (safe_nth Γ (exist _ n isdecl)).
 Proof.
-  induction 1 in n, isdecl |- *. simpl. bang.
+  induction 1 in n, isdecl |- *.
+  exfalso. inversion isdecl.
   destruct n. simpl. auto.
   simpl in *. eapply IHX.
 Qed.
@@ -848,10 +817,10 @@ Proof.
 Qed.
 
 Lemma forallb_map {A B} (f : A -> B) (l : list A) p :
-  forallb p (map f l) = forallb (compose p f) l.
+  forallb p (map f l) = forallb (fun x => p (f x)) l.
 Proof.
-  induction l in p, f |- *; unfold compose; simpl; rewrite ?andb_and;
-    intuition (f_equal; auto). apply IHl.
+  induction l in p, f |- *; simpl; rewrite ?andb_and;
+    intuition (f_equal; auto).
 Qed.
 
 Lemma All_forallb' {A} P (l : list A) (p : A -> bool) :
@@ -859,7 +828,7 @@ Lemma All_forallb' {A} P (l : list A) (p : A -> bool) :
   (forall x, P x -> is_true (p x)) ->
   is_true (forallb p l).
 Proof.
-  induction 1 in p |- *; unfold compose; simpl; rewrite ?andb_and;
+  induction 1 in p |- *; simpl; rewrite ?andb_and;
     intuition auto.
 Qed.
 
@@ -868,7 +837,7 @@ Lemma forallb_Forall' {A} (P : A -> Prop) (l : list A) p :
   (forall x, is_true (p x) -> P x) ->
   Forall P l.
 Proof.
-  induction l in p |- *; unfold compose; simpl. constructor.
+  induction l in p |- *; simpl. constructor.
   intros. constructor; eauto; rewrite -> andb_and in H; intuition eauto.
 Qed.
 
@@ -950,7 +919,7 @@ Lemma Forall_forallb {A} P (l : list A) (p : A -> bool) :
   (forall x, P x -> is_true (p x)) ->
   is_true (forallb p l).
 Proof.
-  induction 1 in p |- *; unfold compose; simpl; rewrite ?andb_and;
+  induction 1 in p |- *; simpl; rewrite ?andb_and;
     intuition auto.
 Qed.
 
@@ -987,7 +956,7 @@ Lemma Forall2_map_inv :
   forall {A B A' B'} (R : A' -> B' -> Prop) (f : A -> A')
     (g : B -> B') (l : list A) (l' : list B),
     Forall2 R (map f l) (map g l') ->
-    Forall2 (fun x => R (f x) ∘ g) l l'.
+    Forall2 (fun x y => R (f x) (g y)) l l'.
 Proof.
   intros A B A' B' R f g l l' h.
   induction l in l', h |- * ; destruct l' ; try solve [ inversion h ].
@@ -1098,7 +1067,7 @@ Proof.
   intros A P l h.
   induction l.
   - cbn. constructor.
-  - cbn. dependent destruction h.
+  - cbn. inversion h; subst.
     specialize (IHl ltac:(assumption)).
     eapply app_Forall ; try assumption.
     repeat constructor. assumption.
@@ -1524,8 +1493,9 @@ Lemma All_All2_All2_mix {A B} (P : B -> B -> Type) (Q R : A -> B -> Type) l l' l
   ∑ l''', All2 P l' l''' * All2 P l'' l'''.
 Proof.
   intros H; induction H in l', l'' |- *;
-  intros H' H''; depelim H'; depelim H''; try solve [econstructor; eauto; constructor].
-  simpl. destruct (IHAll _ _ H' H''). destruct (p _ _ q r).
+  intros H' H''; inversion H'; inversion H''; subst.
+  exists []; repeat constructor.
+  destruct (IHAll _ _ X0 X2) as [? [? ?]]. destruct (p _ _ X X1) as [? [? ?]].
   exists (x1 :: x0). split; constructor; intuition auto.
 Qed.
 
@@ -1614,8 +1584,8 @@ Proof.
   intros A P Q l h1 h2.
   induction h1 in h2 |- *.
   - constructor.
-  - dependent destruction h2.
-    specialize (IHh1 h2). auto.
+  - inversion h2.
+    specialize (IHh1 X0). auto.
 Qed.
 
 
@@ -1728,12 +1698,14 @@ Qed.
 Lemma All2_app_r {A} (P : A -> A -> Type) l l' r r' :
   All2 P (l ++ [r]) (l' ++ [r']) -> (All2 P l l') * (P r r').
 Proof.
-  induction l in l', r |- *. simpl. intros. destruct l'. simpl in *.
-  depelim X; intuition auto.
-  depelim X. destruct l'; depelim X.
-  intros.
-  depelim l'; depelim X. destruct l; depelim X.
-  specialize (IHl _ _ X). intuition auto.
+  induction l in l' |- *; cbn in *; intro X.
+  - destruct l'.
+    + inversion X; intuition auto.
+    + cbn in X. inversion X; subst. inversion X1.
+      destruct l'; inversion H.
+  - destruct l'; inversion X; subst.
+    + destruct l; inversion X1.
+    + apply IHl in X1. repeat constructor; intuition auto.
 Qed.
 
 Lemma Forall2_eq {A} l l'

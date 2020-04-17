@@ -1,8 +1,9 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import List Program.
+From Coq Require Import List BinPos Lia.
 From MetaCoq Require Import utils Ast AstUtils Induction.
-From Coq Require Import BinPos Lia.
+
+Import ListNotations.
 
 (** * Lifting and substitution for the AST
 
@@ -238,11 +239,6 @@ Ltac change_Sk :=
     |- context [S (?x + ?y)] => progress change (S (x + y)) with (S x + y)
   end.
 
-Ltac all_simpl :=
-  progress (unfold compose; simpl).
-
-Hint Extern 10 => all_simpl : all.
-
 Ltac solve_all :=
   unfold tCaseBrsProp, tFixProp in *;
   repeat toAll; try All_map; try close_Forall;
@@ -339,10 +335,8 @@ Hint Resolve lift_isApp map_non_nil isLambda_lift : all.
 Lemma wf_lift n k t : wf t -> wf (lift n k t).
 Proof.
   intros wft; revert t wft k.
-  apply (term_wf_forall_list_ind (fun t => forall k, wf (lift n k t))) ; simpl; intros; try constructor; auto;
-    solve_all.
-
-  - unfold compose. solve_all.
+  apply (term_wf_forall_list_ind (fun t => forall k, wf (lift n k t)));
+    simpl; intros; try constructor; auto; solve_all.
 Qed.
 
 Lemma mkApps_tApp t l :
@@ -354,8 +348,6 @@ Proof.
   simpl in H. discriminate.
 Qed.
 
-Hint Unfold compose : core.
-Hint Transparent compose : core.
 
 Lemma simpl_subst_rec :
   forall M (H : wf M) N n p k,
@@ -575,12 +567,11 @@ Proof.
     apply wf_lift; auto. constructor. constructor.
   - apply Forall_map. eapply Forall_impl; eauto.
   - apply wf_mkApps; auto. apply Forall_map. eapply Forall_impl; eauto.
-  - apply Forall_map. eapply Forall_impl; eauto. intros. eapply All_Forall.
-    eapply All_impl; tea. intros [] XX; cbn in *. apply XX.
-  - solve_all. unfold compose, map_def. simpl. solve_all.
-    induction dbody; try discriminate. reflexivity.
-  - apply Forall_map. eapply All_Forall, All_impl; eauto. intros.
-    destruct x; simpl in *. red; simpl; intuition auto.
+  - apply Forall_map. apply All_Forall. eapply All_impl; tea.
+    intros [] XX; cbn in *; apply XX.
+  - solve_all. induction dbody; try discriminate. reflexivity.
+  - apply Forall_map. eapply All_Forall, All_impl; eauto.
+    intros [] XX; cbn in *; split; apply XX.
 Qed.
 
 Lemma wf_subst1 t k u : wf t -> wf u -> wf (subst1 t k u).

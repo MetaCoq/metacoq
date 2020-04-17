@@ -1,11 +1,11 @@
 (* Distributed under the terms of the MIT license.   *)
-From Coq Require Import Bool List Program Lia Arith.
+From Coq Require Import Bool List Lia Arith.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-     PCUICLiftSubst PCUICTyping
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping
      PCUICSubstitution PCUICPosition PCUICCumulativity PCUICReduction
-     PCUICConfluence  PCUICParallelReductionConfluence PCUICEquality
-     PCUICContextConversion PCUICWeakening PCUICUnivSubst PCUICUnivSubstitution PCUICClosed.
+     PCUICConfluence PCUICClosed PCUICParallelReductionConfluence PCUICEquality
+     PCUICContextConversion PCUICWeakening PCUICUnivSubst PCUICUnivSubstitution
+.
 Require Import ssreflect.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -557,11 +557,11 @@ Section Inversions.
     red Σ Γ (tSort u) v -> v = tSort u.
   Proof.
     intros H; apply red_alt in H.
-    generalize_eqs H.
+    generalize_eq x (tSort u).
     induction H; simplify *.
     - depind r. solve_discr.
     - reflexivity.
-    - eapply IHclos_refl_trans2. auto.
+    - rewrite IHclos_refl_trans2; auto.
   Qed.
 
   Lemma invert_cumul_sort_r Γ C u :
@@ -591,7 +591,7 @@ Section Inversions.
              (red Σ (vass na A :: Γ) B B').
   Proof.
     intros H. apply red_alt in H.
-    generalize_eqs H. revert na A B.
+    generalize_eq x (tProd na A B). revert na A B.
     induction H; simplify_dep_elim.
     - depelim r.
       + solve_discr.

@@ -1037,8 +1037,7 @@ Proof.
     * eapply All_map.
       eapply (All_impl X0); simpl.
       intros x [s [Hs Hs']]; exists s.
-      specialize (Hs' _ _ _ wf eq_refl).
-      now rewrite -map_dtype.
+      now specialize (Hs' _ _ _ wf eq_refl).
     * eapply All_map.
       eapply (All_impl X1); simpl.
       intros x [[Hb Hlam] IH].
@@ -1059,8 +1058,7 @@ Proof.
     * eapply All_map.
       eapply (All_impl X0); simpl.
       intros x [s [Hs Hs']]; exists s.
-      specialize (Hs' _ _ _ wf eq_refl).
-      now rewrite -map_dtype.
+      now specialize (Hs' _ _ _ wf eq_refl).
     * eapply All_map.
       eapply (All_impl X1); simpl.
       intros x [Hb IH].

@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool List Program.
+From Coq Require Import Bool List.
 From MetaCoq.Template
 Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICTyping.
@@ -36,9 +36,9 @@ Section Normal.
                     normal Γ (tLambda na A B)
   | nf_cstrapp i n u v : All (normal Γ) v -> normal Γ (mkApps (tConstruct i n u) v)
   | nf_indapp i u v : All (normal Γ) v -> normal Γ (mkApps (tInd i u) v)
-  | nf_fix mfix idx : All (compose (normal Γ) dbody) mfix ->
+  | nf_fix mfix idx : All ((normal Γ) ∘ dbody) mfix ->
                       normal Γ (tFix mfix idx)
-  | nf_cofix mfix idx : All (compose (normal Γ) dbody) mfix ->
+  | nf_cofix mfix idx : All ((normal Γ) ∘ dbody) mfix ->
                         normal Γ (tCoFix mfix idx)
 
   with neutral (Γ : context) : term -> Prop :=
@@ -51,7 +51,7 @@ Section Normal.
       lookup_env Σ c = Some (ConstantDecl decl) -> decl.(cst_body) = None ->
       neutral Γ (tConst c u)
   | ne_app f v : neutral Γ f -> normal Γ v -> neutral Γ (tApp f v)
-  | ne_case i p c brs : neutral Γ c -> Forall (compose (normal Γ) snd) brs ->
+  | ne_case i p c brs : neutral Γ c -> Forall ((normal Γ) ∘ snd) brs ->
                         neutral Γ (tCase i p c brs)
   | ne_proj p c : neutral Γ c -> neutral Γ (tProj p c).
 

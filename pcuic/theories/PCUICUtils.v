@@ -1,12 +1,11 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool Program.
+From Coq Require Import Bool RelationClasses.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils.
 Set Keyed Unification.
 
-Definition transitive {A} (R : A -> A -> Prop) :=
-  forall u v w, R u v -> R v w -> R u w.
+Require Import Equations.Equations Equations.Prop.DepElim.
 
 (* Dependent lexicographic order *)
 Inductive dlexprod {A} {B : A -> Type}
@@ -52,8 +51,7 @@ Notation "R1 ⊗ R2" :=
 Notation "x ⊨ e \ R1 'by' coe ⨷ R2" :=
   (dlexmod R1 e coe (fun x => R2)) (at level 20, right associativity).
 
-Lemma acc_dlexprod :
-  forall A B leA leB,
+Lemma acc_dlexprod A B leA leB :
     (forall x, well_founded (leB x)) ->
     forall x,
       Acc leA x ->
@@ -61,10 +59,8 @@ Lemma acc_dlexprod :
         Acc (leB x) y ->
         Acc (@dlexprod A B leA leB) (x;y).
 Proof.
-  intros A B leA leB hw.
-  induction 1 as [x hx ih1].
-  intros y.
-  induction 1 as [y hy ih2].
+  intros hw. induction 1 as [x hx ih1].
+  intros y. induction 1 as [y hy ih2].
   constructor.
   intros [x' y'] h. simple inversion h.
   - intro hA. inversion H0. inversion H1. subst.
@@ -78,25 +74,23 @@ Proof.
     eapply ih2. assumption.
 Qed.
 
-Lemma dlexprod_Acc :
-  forall A B leA leB,
+Lemma dlexprod_Acc A B leA leB :
     (forall x, well_founded (leB x)) ->
     forall x y,
       Acc leA x ->
       Acc (@dlexprod A B leA leB) (x;y).
 Proof.
-  intros A B leA leB hB x y hA.
+  intros hB x y hA.
   eapply acc_dlexprod ; try assumption.
   apply hB.
 Qed.
 
-Lemma dlexprod_trans :
-  forall A B RA RB,
-    transitive RA ->
-    (forall x, transitive (RB x)) ->
-    transitive (@dlexprod A B RA RB).
+Instance dlexprod_trans A B RA RB :
+    Transitive RA ->
+    (forall x, Transitive (RB x)) ->
+    Transitive (@dlexprod A B RA RB).
 Proof.
-  intros A B RA RB hA hB [u1 u2] [v1 v2] [w1 w2] h1 h2.
+  intros hA hB [u1 u2] [v1 v2] [w1 w2] h1 h2.
   revert w1 w2 h2. induction h1 ; intros w1 w2 h2.
   - dependent induction h2.
     + left. eapply hA ; eassumption.
@@ -108,12 +102,12 @@ Qed.
 
 Derive Signature for dlexmod.
 
-Lemma acc_dlexmod :
-  forall A B (leA : A -> A -> Prop) (eA : A -> A -> Prop)
-        (coe : forall x x', eA x x' -> B x -> B x')
-        (leB : forall x : A, B x -> B x -> Prop)
-        (sym : forall x y, eA x y -> eA y x)
-        (trans : forall x y z, eA x y -> eA y z -> eA x z),
+Lemma acc_dlexmod A B
+      (leA : A -> A -> Prop) (eA : A -> A -> Prop)
+      (coe : forall x x', eA x x' -> B x -> B x')
+      (leB : forall x : A, B x -> B x -> Prop)
+      (sym : forall x y, eA x y -> eA y x)
+      (trans : forall x y z, eA x y -> eA y z -> eA x z) :
     (forall x, well_founded (leB x)) ->
     (forall x x' y, eA x x' -> leA y x' -> leA y x) ->
     (forall x, exists e : eA x x, forall y, coe _ _ e y = y) ->
@@ -133,7 +127,7 @@ Lemma acc_dlexmod :
         forall x' (e : eA x x'),
           Acc (@dlexmod A B leA eA coe leB) (x'; coe _ _ e y).
 Proof.
-  intros A B leA eA coe leB sym trans hw hA hcoe coesym coetrans lesym.
+  intros hw hA hcoe coesym coetrans lesym.
   induction 1 as [x hx ih1].
   induction 1 as [y hy ih2].
   intros x' e.
@@ -156,12 +150,12 @@ Proof.
     assumption.
 Qed.
 
-Lemma dlexmod_Acc :
-  forall A B (leA : A -> A -> Prop) (eA : A -> A -> Prop)
-    (coe : forall x x', eA x x' -> B x -> B x')
-    (leB : forall x : A, B x -> B x -> Prop)
-    (sym : forall x y, eA x y -> eA y x)
-    (trans : forall x y z, eA x y -> eA y z -> eA x z),
+Lemma dlexmod_Acc A B
+      (leA : A -> A -> Prop) (eA : A -> A -> Prop)
+      (coe : forall x x', eA x x' -> B x -> B x')
+      (leB : forall x : A, B x -> B x -> Prop)
+      (sym : forall x y, eA x y -> eA y x)
+      (trans : forall x y z, eA x y -> eA y z -> eA x z) :
     (forall x, well_founded (leB x)) ->
     (forall x x' y, eA x x' -> leA y x' -> leA y x) ->
     (forall x, exists e : eA x x, forall y, coe _ _ e y = y) ->
@@ -178,19 +172,55 @@ Lemma dlexmod_Acc :
       Acc leA x ->
       Acc (@dlexmod A B leA eA coe leB) (x ; y).
 Proof.
-  intros A B leA eA coe leB sym trans hB ? hcoe ? ? ? x y h.
+  intros hB ? hcoe ? ? ? x y h.
   specialize (hcoe x) as h'. destruct h' as [e he].
   rewrite <- (he y).
   eapply acc_dlexmod. all: eauto.
   apply hB.
 Qed.
 
-Lemma wf_dlexprod :
-  forall (A : Type) (B : A -> Type) (leA : A -> A -> Prop)
-    (leB : forall x : A, B x -> B x -> Prop),
-    well_founded leA ->
-    (forall x : A, well_founded (leB x)) -> well_founded (dlexprod leA leB).
+Lemma wf_dlexprod A B (leA : A -> A -> Prop) (leB : forall x : A, B x -> B x -> Prop) :
+  well_founded leA ->
+  (forall x : A, well_founded (leB x)) ->
+  well_founded (dlexprod leA leB).
 Proof.
-  intros A B leA leB wA wB.
+  intros wA wB.
   intros [a b]. eapply dlexprod_Acc. all: eauto.
+Qed.
+
+Instance WF_precompose {T M} (R : M -> M -> Prop) (m : T -> M) :
+  WellFounded R -> WellFounded (precompose R m)
+  := wf_precompose R m.
+
+
+Lemma OnOne2_All2_All2 {A : Type} {l1 l2 l3 : list A} {R1 R2 R3  : A -> A -> Type} :
+  OnOne2 R1 l1 l2 ->
+  All2 R2 l1 l3 ->
+  (forall x y, R2 x y -> R3 x y) ->
+  (forall x y z : A, R1 x y -> R2 x z -> R3 y z) ->
+  All2 R3 l2 l3.
+Proof.
+  intros o. induction o in l3 |- *.
+  intros H; depelim H.
+  intros Hf Hf'. specialize (Hf'  _ _ _ p r). constructor; auto.
+  eapply All2_impl; eauto.
+  intros H; depelim H.
+  intros Hf. specialize (IHo _ H Hf).
+  constructor; auto.
+Qed.
+
+Lemma OnOne2_All_All {A : Type} {l1 l2 : list A} {R1  : A -> A -> Type} {R2 R3 : A -> Type} :
+  OnOne2 R1 l1 l2 ->
+  All R2 l1 ->
+  (forall x, R2 x -> R3 x) ->
+  (forall x y : A, R1 x y -> R2 x -> R3 y) ->
+  All R3 l2.
+Proof.
+  intros o. induction o.
+  intros H; depelim H.
+  intros Hf Hf'. specialize (Hf' _ _ p r). constructor; auto.
+  eapply All_impl; eauto.
+  intros H; depelim H.
+  intros Hf. specialize (IHo H Hf).
+  constructor; auto.
 Qed.

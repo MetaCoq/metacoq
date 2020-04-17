@@ -1,10 +1,15 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool Program.
-From MetaCoq.PCUIC Require Import PCUICAst
-     PCUICLiftSubst PCUICTyping.
-Local Open Scope string_scope.
+From Coq Require Import Bool List.
+From MetaCoq.Template Require Import utils.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICTyping.
 Set Asymmetric Patterns.
+
+Import ListNotations.
+
+Require Import Equations.Prop.DepElim.
+From Equations Require Import Equations.
+
 
 Section Generation.
   Context `{cf : config.checker_flags}.
@@ -55,14 +60,12 @@ Section Generation.
     - assumption.
     - simpl. cbn. eapply ih.
       simpl in h. pose proof (typing_wf_local h) as hc.
-      dependent induction hc. 
-      cbn in t1, t2. destruct t1.
-      econstructor ; eassumption.
+      dependent induction hc; inversion H; subst.
+      econstructor; try eassumption. exact t0.π2.
     - simpl. cbn. eapply ih.
       pose proof (typing_wf_local h) as hc. cbn in hc.
-      dependent induction hc.
-      cbn in t1. destruct t1.
-      econstructor ; eassumption.
+      dependent induction hc; inversion H; subst.
+      econstructor; try eassumption. exact t0.π2.
   Qed.
 
 End Generation.

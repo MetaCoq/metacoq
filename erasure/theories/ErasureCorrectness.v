@@ -354,7 +354,7 @@ Proof.
   - eapply IHL in H; eauto.
     destruct H as [ (? & ? & ? & ? & [] & ? & ? & ?) | (? & ? & ? & ? & ?)].
     + subst. left. exists (a :: x), x0, x1. repeat split; eauto.
-    + subst. eapply type_mkApps_inv in X as (? & ? & [] & ?); eauto.
+    + subst. eapply PCUICValidity.inversion_mkApps in X as (? & ? & ? & ? & ?); eauto.
       eapply erases_App in H0 as [ (-> & []) | (? & ? & ? & ? & ?)].
       * left. exists [a], L, x0. cbn. repeat split. eauto.
         econstructor; eauto.  eauto.
@@ -608,7 +608,7 @@ Proof.
   (*                                  [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]. *)
   (*   assert (Σ ;;; [] |- mkApps (tConstruct ind c u) args :  mkApps (tInd ind u') args'). *)
   (*   eapply subject_reduction_eval; eauto. *)
-  (*   eapply type_mkApps_inv in X0 as (? & ? & [] & ?); eauto. *)
+  (*   eapply PCUICValidity.inversion_mkApps in X0 as (? & ? & [] & ?); eauto. *)
   (*   eapply inversion_Construct in t1 as (mdecl' & idecl' & cdecl & ? & ? & ? & ?). *)
   (*   assert (d1 := d0). *)
   (*   destruct d0. *)
@@ -780,7 +780,7 @@ Proof.
         eapply Forall2_nth_error_Some in H5 as (? & ? & ?); eauto.
         assert (Σ ;;; [] |- mkApps (tConstruct i k u) args : mkApps (tInd i x) x2).
         eapply subject_reduction_eval; eauto.
-        eapply type_mkApps_inv in X as (? & ? & [] & ?); eauto.
+        eapply PCUICValidity.inversion_mkApps in X as (? & ? & ? & ? & ?); eauto.
         eapply typing_spine_inv in t2 as []; eauto.
         eapply IHeval2 in H4 as (? & ? & ?); eauto.
         inv H3.
@@ -812,7 +812,7 @@ Proof.
     assert (Hunf := H).
     assert (Hcon := H1).
     assert (Σ |-p mkApps (tFix mfix idx) args ▷ res) by eauto.
-    eapply type_mkApps_inv in Hty' as (? & ? & [] & ?); eauto.
+    eapply PCUICValidity.inversion_mkApps in Hty' as (? & ? & ? & ? & ?); eauto.
     assert (Ht := t).
     eapply subject_reduction in t. 2:eauto. 2:eapply wcbeval_red; eauto.
     2:now eapply PCUICClosed.subject_closed in Ht.
@@ -987,7 +987,7 @@ Proof.
     assert (Hunf := H).
     assert (Hcon := H0).
     assert (Σ |-p mkApps (tFix mfix idx) args ▷ mkApps (tFix mfix idx) args') by eauto.
-    eapply type_mkApps_inv in Hty' as (? & ? & [] & ?); eauto.
+    eapply PCUICValidity.inversion_mkApps in Hty' as (? & ? & ? & ? & ?); eauto.
     assert (Ht := t).
     eapply subject_reduction in t. 2:eauto. 2:eapply wcbeval_red; eauto.
     2:now eapply PCUICClosed.subject_closed in Ht.
@@ -1125,12 +1125,12 @@ Proof.
     eapply inversion_Case in Hty' as [u' [args' [mdecl [idecl [ps [pty [btys
                                    [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]];
     eauto.
-    eapply type_mkApps_inv in t0 as (? & ? & [] & ?); eauto.
+    eapply PCUICValidity.inversion_mkApps in t0 as (? & ? & ? & ? & ?); eauto.
     eapply inversion_CoFix in t0 as (? & ? & ? &?); eauto.
     inversion i1.
   - assert (Hty' := Hty).
     eapply inversion_Proj in Hty' as (? & ? & ? & [] & ? & ? & ? & ? & ?).
-    eapply type_mkApps_inv in t0 as (? & ? & [] & ?); eauto.
+    eapply PCUICValidity.inversion_mkApps in t0 as (? & ? & ? & ? & ?); eauto.
     eapply inversion_CoFix in t0 as (? & ? & ? &?); eauto.
     inversion i0. eauto.
   - pose (Hty' := Hty).

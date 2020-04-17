@@ -3,7 +3,8 @@ From Coq Require Import Bool String List Program.
 From MetaCoq.Template Require Import config utils monad_utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICTyping PCUICLiftSubst PCUICInversion
-     PCUICConfluence PCUICCumulativity PCUICSR PCUICNormal PCUICSafeLemmata
+     PCUICConfluence PCUICConversion 
+     PCUICCumulativity PCUICSR PCUICNormal PCUICSafeLemmata
      PCUICValidity PCUICPrincipality PCUICElimination PCUICSN.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker.
 From Equations Require Import Equations.

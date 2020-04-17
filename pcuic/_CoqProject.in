@@ -19,7 +19,6 @@ theories/PCUICClosed.v
 theories/PCUICWeakening.v
 theories/PCUICUnivSubstitution.v
 theories/PCUICSubstitution.v
-theories/PCUICSpine.v
 theories/PCUICCumulativity.v
 theories/PCUICReduction.v
 theories/PCUICParallelReduction.v
@@ -28,13 +27,16 @@ theories/PCUICConfluence.v
 theories/PCUICContextConversion.v
 theories/PCUICConversion.v
 theories/PCUICGeneration.v
-theories/PCUICValidity.v
 theories/PCUICAlpha.v
 theories/PCUICPrincipality.v
 theories/PCUICCtxShape.v
 theories/PCUICContexts.v
 theories/PCUICUniverses.v
 theories/PCUICArities.v
+theories/PCUICSpine.v
+theories/PCUICInductives.v
+
+theories/PCUICValidity.v
 theories/PCUICSR.v
 theories/PCUICMetaTheory.v
 theories/PCUICCSubst.v

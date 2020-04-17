@@ -1171,7 +1171,7 @@ Section Lemmata.
       apply inversion_App in hw' as ihw' ; auto.
       destruct ihw' as [na' [A' [B' [hP [? ?]]]]].
       apply inversion_Prod in hP as [s1 [s2 [? [? bot]]]] ; auto.
-      apply PCUICPrincipality.invert_cumul_prod_r in bot ; auto.
+      apply PCUICConversion.invert_cumul_prod_r in bot ; auto.
       destruct bot as [? [? [? [[r ?] ?]]]].
       exfalso. clear - r wΣ.
       revert r. generalize (Universe.sort_of_product s1 s2). intro s. clear.
@@ -1568,7 +1568,6 @@ Proof.
       apply cumul_Sort_r_inv in H.
       destruct H as [s' [H H']].
       right. exists s'. eapply type_reduction; tea.
-      1:{ constructor; tas. eexists; tea. }
       apply invert_red_letin in H; tas.
       destruct H as [[? [? [? [? [[[H ?] ?] ?]]]]]|H].
       * apply invert_red_sort in H; inv H.

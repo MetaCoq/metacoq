@@ -2,15 +2,13 @@
 Set Warnings "-notation-overridden".
 
 Require Import Equations.Prop.DepElim.
-From Coq Require Import Bool String List Program Lia Arith.
+From Coq Require Import Bool String List Lia Arith.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICUtils
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
      PCUICSubstitution PCUICClosed PCUICCumulativity PCUICGeneration PCUICReduction
-     PCUICAlpha PCUICEquality
-     PCUICValidity PCUICConfluence
-     PCUICParallelReductionConfluence
-     PCUICContextConversion PCUICUnivSubstitution
+     PCUICAlpha PCUICEquality PCUICValidity PCUICParallelReductionConfluence
+     PCUICConfluence PCUICContextConversion PCUICUnivSubstitution
      PCUICConversion PCUICInversion PCUICContexts PCUICArities
      PCUICParallelReduction PCUICSpine PCUICInductives
      PCUICCtxShape.
@@ -591,10 +589,7 @@ Proof.
     rewrite !map_map_compose !map_app.
     rewrite -map_map_compose.
     rewrite (firstn_app_left _ 0).
-    rewrite PCUICUnivSubst.map_subst_instance_constr_to_extended_list_k.
-    rewrite -map_map_compose.
-    rewrite -to_extended_list_k_map_subst; first lia.
-    now rewrite map_length to_extended_list_k_length.
+    { rewrite !map_length to_extended_list_k_length. lia. }
     rewrite /= app_nil_r.
     rewrite skipn_all_app_eq.
     autorewrite with len. 
@@ -606,7 +601,9 @@ Proof.
     now apply firstn_length_le_inv.
 
     rewrite -(firstn_skipn #|cshape.(cshape_args)| isubst).
-    rewrite -[map _ (to_extended_list_k _ _)]map_map_compose.
+    rewrite -[map _ (to_extended_list_k _ _)]
+               (map_map_compose _ _ _ (subst_instance_constr u)
+                              (fun x => subst _ _ (subst _ _ x))).
     rewrite subst_instance_to_extended_list_k.
     rewrite -[map _ (to_extended_list_k _ _)]map_map_compose. 
     rewrite -to_extended_list_k_map_subst.
@@ -735,6 +732,8 @@ Proof.
   intros wfΣ; induction 1; auto; constructor; auto.
   now eapply subject_closed in p.
 Qed.
+
+Axiom todo_sr : forall A, A.
 
 (** The subject reduction property of the system: *)
 
@@ -1245,7 +1244,7 @@ Proof.
         (subst (inds (inductive_mind ind) u1 (ind_bodies mdecl)) (#|argctx| + #|cparsubst|) (subst_instance_constr u1 x)))
      (cshape_indices (cshape onc)))).
       rewrite map_map_compose. apply map_ext=> x.
-      unfold Basics.compose. now rewrite subst_app_simpl.
+      now rewrite subst_app_simpl.
       rewrite H0 in insts, instsp. clear H0.
 
       apply wf_arity_spine_typing_spine => //.
@@ -1455,9 +1454,10 @@ Proof.
                 eapply (All2_impl (P:=fun x y => x = y)).
                 2:{ intros ? ? ->. reflexivity. }
                 eapply All2_eq_eq.
-                rewrite -map_map_compose.
+                rewrite -(map_map_compose _ _ _ (subst_instance_constr _)
+                                          (fun x => subst _ _ (subst _ _ x))).
                 rewrite subst_instance_to_extended_list_k.
-                rewrite -map_map_compose.
+                rewrite -(map_map_compose _ _ _ (subst _ _)).
                 rewrite -(subst_instance_context_length u1 (ind_params mdecl)).
                 rewrite -to_extended_list_k_map_subst; [lia|].
                 erewrite subst_to_extended_list_k.
@@ -1476,8 +1476,9 @@ Proof.
                 unfold argctx in H0.
                 rewrite -{3}H0 -(all_rels_length instargctx 0 #|argctx|).
                 rewrite -(map_map_compose _ _ _ _ (subst cparsubst #|argctx|)).
-                rewrite -map_map_compose.
-                rewrite -map_map_compose.
+                rewrite -(map_map_compose _ _ _ (subst_instance_constr u1)).
+                rewrite -(map_map_compose _ _ _
+                                          (subst _ _ ∘ (subst_instance_constr u1))).
                 rewrite map_map_compose.
                 eapply All2_map. rewrite -lencpar.
                 rewrite !map_map_compose.
@@ -1486,12 +1487,10 @@ Proof.
                    (#|cshape_args (cshape onc)| + #|ind_params mdecl|)
                  ∘ subst_instance_constr u1) (cshape_indices (cshape onc)))).
                 { rewrite map_map_compose in closedindices.
-                  eapply (All_impl closedindices). unfold compose; simpl.
+                  eapply (All_impl closedindices).
                   intros. now rewrite -lencpar H0 Nat.add_comm. }  
                 apply (All_All2 X).
-                intros.
-                unfold compose.
-                rewrite all_rels_length.
+                intros. rewrite all_rels_length.
                 pose proof (all_rels_subst Σ instargctx Γ (subst cparsubst #|argctx| x) wf (spine_dom_wf _ _ _ _ _ instsp)).
                 eapply red_conv in X0.
                 assert(subst (map (lift0 #|argctx|) cparsubst) #|instargctx| x =
@@ -1530,7 +1529,6 @@ Proof.
          eauto.
          simpl. constructor.
          2:constructor; auto; pcuic.
-         2:{ left; eexists [], ps; intuition auto. }
         rewrite subst_mkApps. 
         rewrite map_app.
         pose proof (subslet_length subsidx).
@@ -1679,10 +1677,10 @@ Proof.
     rewrite onc.(cshape).(cshape_eq) in tyargs.
     rewrite !subst_instance_constr_it_mkProd_or_LetIn !subst_it_mkProd_or_LetIn in tyargs.
     (** Will need inversion lemmas on typing_spine *)
-    todo "proj reduction"%string.
+    exact (todo_sr _ "proj reduction"%string).
 
   - (* Proj congruence *) 
-    todo "Proj congruence"%string.
+    exact (todo_sr _ "Proj congruence"%string).
     (* eapply type_Cumul; [econstructor|..]; eauto.
     admit.
     eapply conv_cumul.
@@ -1868,6 +1866,8 @@ Proof.
     now left.
     now right.
 Qed.
+
+Print Assumptions sr_red1.
 
 Definition sr_stmt {cf:checker_flags} (Σ : global_env_ext) Γ t T :=
   forall u, red Σ Γ t u -> Σ ;;; Γ |- u : T.

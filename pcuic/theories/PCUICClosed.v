@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license.   *)
-From Coq Require Import Bool List Program Arith Lia.
+From Coq Require Import Bool List Arith Lia.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv.
@@ -36,7 +36,7 @@ Proof.
     simpl in *; rewrite -> ?andb_and in *;
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
     simpl closed in *; solve_all;
-    unfold compose, test_def, test_snd in *;
+    unfold test_def, test_snd in *;
       try solve [simpl lift; simpl closed; f_equal; auto; repeat (rtoProp; solve_all)]; try easy.
 
   - elim (Nat.leb_spec k' n0); intros. simpl.
@@ -53,7 +53,7 @@ Proof.
     simpl in *;
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc in *;
     simpl closed in *; repeat (rtoProp; solve_all); try change_Sk;
-    unfold compose, test_def, on_snd, test_snd in *; simpl in *; eauto with all.
+    unfold test_def, on_snd, test_snd in *; simpl in *; eauto with all.
 
   - revert H0.
     elim (Nat.leb_spec k n0); intros. simpl in *.
@@ -93,7 +93,7 @@ Proof.
     simpl in *;
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
     simpl closed in *; try change_Sk; repeat (rtoProp; solve_all);
-    unfold compose, test_def, on_snd, test_snd in *; simpl in *; eauto with all.
+    unfold test_def, on_snd, test_snd in *; simpl in *; eauto with all.
 
   - elim (Nat.leb_spec k' n); intros. simpl.
     apply Nat.ltb_lt in H.
@@ -177,7 +177,7 @@ Proof.
     simpl in *;
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc in *;
     simpl closed in *; repeat (rtoProp; f_equal; solve_all); try change_Sk;
-    unfold compose, test_def, on_snd, test_snd in *; simpl in *; eauto with all.
+    unfold test_def, on_snd, test_snd in *; simpl in *; eauto with all.
 
   - revert Hs.
     unfold Upn.
@@ -218,11 +218,11 @@ Proof.
     f_equal; eauto.
   - red in X. rewrite forallb_map.
     eapply All_forallb_eq_forallb; eauto.
-    unfold test_def, compose, map_def. simpl.
+    unfold test_def, map_def. simpl.
     do 3 (f_equal; intuition eauto).
   - red in X. rewrite forallb_map.
     eapply All_forallb_eq_forallb; eauto.
-    unfold test_def, compose, map_def. simpl.
+    unfold test_def, map_def. simpl.
     do 3 (f_equal; intuition eauto).
 Qed.
 
@@ -234,7 +234,7 @@ Lemma destArity_spec ctx T :
   | None => True
   end.
 Proof.
-  induction T in ctx |- *; simpl; simplify_dep_elim; try easy.
+  induction T in ctx |- *; simpl; try easy.
   specialize (IHT2 (ctx,, vass na T1)). now destruct destArity.
   specialize (IHT3 (ctx,, vdef na T1 T2)). now destruct destArity.
 Qed.

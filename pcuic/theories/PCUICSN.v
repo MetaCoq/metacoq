@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool List Program.
+From Coq Require Import Bool List.
 From MetaCoq.Template
 Require Import config monad_utils utils.
 From MetaCoq.PCUIC Require Import PCUICAst
@@ -11,6 +11,8 @@ From MetaCoq.PCUIC Require Import PCUICAst
 
 Import MonadNotation.
 Open Scope type_scope.
+
+Require Import Equations.Prop.DepElim.
 
 (* We assume normalisation of the reduction.
     We state is as well-foundedness of the reduction.

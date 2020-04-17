@@ -3,7 +3,6 @@
 (** * Substitution lemmas for typing derivations. *)
 
 From Coq Require Import Bool List Arith Lia.
-Require Import Coq.Program.Syntax Coq.Program.Basics.
 From MetaCoq.Template Require Import utils config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
   PCUICLiftSubst PCUICEquality PCUICPosition
@@ -913,7 +912,7 @@ Proof.
     + rewrite (lift_to_extended_list_k _ _ 1) map_map_compose.
       pose proof (to_extended_list_k_spec Γ k).
       solve_all. destruct H0 as [n [-> Hn]].
-      rewrite /compose /lift (subst_app_decomp [a] s k); auto with wf.
+      rewrite /lift (subst_app_decomp [a] s k); auto with wf.
       rewrite subst_rel_gt.
       * simpl. lia.
       * unf_term. repeat (f_equal; simpl; try lia).
@@ -922,7 +921,7 @@ Proof.
     rewrite (lift_to_extended_list_k _ _ 1) map_map_compose.
     pose proof (to_extended_list_k_spec Γ k).
     solve_all. destruct H0 as [n [-> Hn]].
-    rewrite /compose /lift (subst_app_decomp [subst0 s b] s k); auto with wf.
+    rewrite /lift (subst_app_decomp [subst0 s b] s k); auto with wf.
     rewrite subst_rel_gt.
     + simpl; lia.
     + unf_term. repeat (f_equal; simpl; try lia).
@@ -1420,7 +1419,8 @@ Proof.
     simpl in IHred1. now rewrite subst_context_snoc0 in IHred1.
 
   - eapply red_evar; eauto.
-    induction X; intuition.
+    eapply All2_map. eapply OnOne2_All2; tea; cbnr.
+    intuition.
 
   - eapply red_fix_one_ty.
     rewrite -> (OnOne2_length X). generalize (#|mfix1|).
@@ -1585,7 +1585,8 @@ Proof.
     simpl in IHred1. now rewrite subst_context_snoc0 in IHred1.
 
   - eapply red_evar; eauto.
-    induction X; intuition.
+    eapply All2_map. eapply OnOne2_All2; tea; cbnr.
+    intuition.
 
   - eapply red_fix_one_ty.
     rewrite -> (OnOne2_length X). generalize (#|mfix1|).
@@ -2056,7 +2057,7 @@ Proof.
       * rewrite subst_fix_context.
         apply All_map.
         clear X. eapply All_impl; eauto.
-        clear X0. unfold compose; simpl; intros [na ty bod] [[Htyd Hlam] IH].
+        clear X0. simpl; intros [na ty bod] [[Htyd Hlam] IH].
         simpl in *. intuition.
         specialize (IH Γ Γ' (Δ ,,, fix_context mfix) s sub).
         forward IH by now rewrite app_context_assoc.
@@ -2090,7 +2091,7 @@ Proof.
       * rewrite subst_fix_context.
         apply All_map.
         clear X. eapply All_impl; eauto.
-        clear X0. unfold compose; simpl; intros [na ty bod] [Htyd IH].
+        clear X0. simpl; intros [na ty bod] [Htyd IH].
         simpl in *. intuition.
         specialize (IH Γ Γ' (Δ ,,, fix_context mfix) s sub).
         forward IH by now rewrite app_context_assoc.
@@ -2306,12 +2307,10 @@ Proof.
     * eapply All_map.
       eapply (All_impl X0); simpl.
       intros x [u [Hs Hs']]; exists u.
-      specialize (Hs' _ _ _ _ sub eq_refl).
-      now rewrite -map_dtype.
+      now specialize (Hs' _ _ _ _ sub eq_refl).
     * eapply All_map.
       eapply (All_impl X1); simpl.
       intros x [[Hb Hlam] IH].
-      unfold compose; simpl.
       rewrite subst_fix_context.
       specialize (IH Γ Γ' (Δ ,,,  (fix_context mfix)) _ sub).
       rewrite app_context_assoc in IH. specialize (IH eq_refl).
@@ -2328,12 +2327,10 @@ Proof.
   * eapply All_map.
     eapply (All_impl X0); simpl.
     intros x [u [Hs Hs']]; exists u.
-    specialize (Hs' _ _ _ _ sub eq_refl).
-    now rewrite -map_dtype.
+    now specialize (Hs' _ _ _ _ sub eq_refl).
   * eapply All_map.
     eapply (All_impl X1); simpl.
     intros x [Hb IH].
-    unfold compose; simpl.
     rewrite subst_fix_context.
     specialize (IH Γ Γ' (Δ ,,,  (fix_context mfix)) _ sub).
     rewrite app_context_assoc in IH. specialize (IH eq_refl).
@@ -2385,10 +2382,7 @@ Corollary substitution `{cf : checker_flags} (Σ : global_env_ext) Γ Γ' s Δ (
   Σ ;;; Γ ,,, subst_context s 0 Δ |- subst s #|Δ| t : subst s #|Δ| T.
 Proof.
   intros HΣ Hs Ht.
-  generalize_eqs Ht. intros eqw.
-  revert Γ Γ' Δ s Hs eqw.
-  revert Σ HΣ Γ0 t T Ht.
-  apply (env_prop_typing _ _ substitution_prop).
+  eapply (env_prop_typing _ _ substitution_prop); trea.
 Qed.
 
 Corollary substitution_wf_local `{cf : checker_flags} (Σ : global_env_ext) Γ Γ' s Δ :
@@ -2397,10 +2391,7 @@ Corollary substitution_wf_local `{cf : checker_flags} (Σ : global_env_ext) Γ �
   wf_local Σ (Γ ,,, subst_context s 0 Δ).
 Proof.
   intros HΣ Hs Ht.
-  generalize_eqs Ht. intros eqw.
-  revert Γ Γ' Δ s Hs eqw.
-  revert Σ HΣ gen_x Ht.
-  apply (env_prop_wf_local _ _ substitution_prop).
+  eapply (env_prop_wf_local _ _ substitution_prop); trea.
 Qed.
 
 Lemma substitution0 {cf:checker_flags} (Σ : global_env_ext) Γ n u U (t : term) T :

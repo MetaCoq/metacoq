@@ -2,13 +2,11 @@
 Set Warnings "-notation-overridden".
 Require Import ssreflect.
 From Equations Require Import Equations.
-From Coq Require Import Bool List Program Utf8 Lia.
+From Coq Require Import Bool List Utf8 Lia.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst
-     PCUICLiftSubst PCUICTyping PCUICReduction PCUICWeakening
-     PCUICEquality
-     PCUICParallelReduction PCUICParallelReductionConfluence
-     PCUICUnivSubstitution.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICTyping
+     PCUICReduction PCUICWeakening PCUICEquality PCUICUnivSubstitution
+     PCUICParallelReduction PCUICParallelReductionConfluence.
 
 (* Type-valued relations. *)
 Require Import CRelationClasses.
@@ -2591,7 +2589,8 @@ Section ConfluenceFacts.
   Proof.
     move => Hred. apply red_alt in Hred.
     eapply red_pred in Hred.
-    generalize_eqs Hred. induction Hred in ind, pars, k, args |- * ; simplify *.
+    generalize_eq x (mkApps (tConstruct ind pars k) args).
+    induction Hred in ind, pars, k, args |- * ; simplify *.
     - eapply pred1_mkApps_tConstruct in r as [r' [eq redargs]].
       subst y. exists r'. intuition auto. solve_all. now apply pred1_red in X.
     - exists args; split; eauto. apply All2_same; auto.
@@ -2609,8 +2608,9 @@ Section ConfluenceFacts.
     (c = mkApps (tInd ind u) args') * (All2 (red Σ Γ) args args').
   Proof.
     move => Hred. apply red_alt in Hred.
-    eapply red_pred in Hred.
-    generalize_eqs Hred. induction Hred in ind, u, args |- * ; simplify *.
+    eapply red_pred in Hred; tas.
+    generalize_eq x (mkApps (tInd ind u) args).
+    induction Hred in ind, u, args |- * ; simplify *.
     - eapply pred1_mkApps_tInd in r as [r' [eq redargs]].
       subst y. exists r'. intuition auto. solve_all. now apply pred1_red in X.
     - exists args; split; eauto. apply All2_same; auto.
@@ -2618,7 +2618,6 @@ Section ConfluenceFacts.
       specialize (IHHred2 _ _ _ eq_refl) as [? [? ?]]. subst z.
       exists x0. intuition auto. eapply All2_trans; eauto.
       intros ? ? ?; eapply red_trans.
-    - auto.
   Qed.
 
   Lemma red_mkApps_tConst_axiom (Γ : context)
@@ -2629,8 +2628,9 @@ Section ConfluenceFacts.
     (c = mkApps (tConst cst u) args') * (All2 (red Σ Γ) args args').
   Proof.
     move => Hdecl Hbody Hred. apply red_alt in Hred.
-    eapply red_pred in Hred.
-    generalize_eqs Hred. induction Hred in cst, u, args, Hdecl |- *; simplify *.
+    eapply red_pred in Hred; tas.
+    generalize_eq x (mkApps (tConst cst u) args).
+    induction Hred in cst, u, args, Hdecl |- *; simplify *.
     - eapply pred1_mkApps_tConst_axiom in r as [r' [eq redargs]]; eauto.
       subst y. exists r'. intuition auto. solve_all. now apply pred1_red in X.
     - exists args; split; eauto. apply All2_same; auto.
@@ -2638,7 +2638,6 @@ Section ConfluenceFacts.
       specialize (IHHred2 _ _ _ Hdecl eq_refl) as [? [? ?]]. subst z.
       exists x0. intuition auto. eapply All2_trans; eauto.
       intros ? ? ?; eapply red_trans.
-    - auto.
   Qed.
 
   (* Lemma red1_red1_ctx_inv Γ Δ Δ' t u : *)

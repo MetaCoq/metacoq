@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool List Program.
+From Coq Require Import Bool List.
 From MetaCoq.Template Require Import utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICInduction PCUICLiftSubst.
 Local Open Scope string_scope.
@@ -132,6 +132,6 @@ Proof.
   induction t in |- * using term_forall_list_ind; simpl; auto; intros H';
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?forallb_map;
     try f_equal; auto with substu;
-      unfold test_def, map_def, compose in *;
+      unfold test_def, map_def in *;
       try solve [f_equal; eauto; repeat (rtoProp; solve_all); intuition auto with substu].
 Qed.

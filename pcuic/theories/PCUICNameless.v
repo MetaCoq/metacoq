@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program Arith
+From Coq Require Import Bool String List Arith
      Classes.RelationClasses.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
@@ -1226,9 +1226,9 @@ Proof.
     + auto.
     + clear -X0.
       apply All_map. eapply All_impl; tea.
-      simpl. unfold compose. intros x [s Hs]. now exists s.
+      simpl. intros x [s Hs]. now exists s.
     + apply All_map. eapply All_impl; tea.
-      simpl. unfold compose. intros [] [s Hs].
+      simpl. intros [] [s Hs].
       simpl in *; intuition auto.
       * rewrite fix_context_length, map_length.
         rewrite fix_context_length in Hs.
@@ -1243,9 +1243,9 @@ Proof.
     + now rewrite nth_error_map, H.
     + clear -X0.
       apply All_map. eapply All_impl; tea.
-      simpl. unfold compose. intros x [s Hs]. now exists s.
+      simpl. intros x [s Hs]. now exists s.
     + apply All_map. eapply All_impl; tea.
-      simpl. unfold compose. intros [] [s Hs].
+      simpl. intros [] [s Hs].
       simpl in *; intuition auto.
       * rewrite fix_context_length, map_length.
         rewrite fix_context_length in Hs.

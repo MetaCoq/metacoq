@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool List Program Lia.
+From Coq Require Import Bool List Lia.
 From MetaCoq.Template Require Import config monad_utils utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICTyping PCUICWeakening
@@ -175,14 +175,11 @@ Qed.
     eapply typing_ind_env.
     all: intros Σ wfΣ Γ wfΓ.
     - auto.
-    - intros n decl hnth ih v e.
-      dependent destruction e.
+    - intros n decl hnth ih v e; invs e.
       eapply type_Rel ; eassumption.
-    - intros l ih hl v e.
-      dependent destruction e. subst.
+    - intros l ih hl v e; invs e.
       eapply type_Sort; assumption.
-    - intros na A B s1 s2 ih hA ihA hB ihB v e.
-      dependent destruction e.
+    - intros na A B s1 s2 ih hA ihA hB ihB v e; invs e.
       econstructor.
       + eapply ihA. assumption.
       + eapply context_conversion'.
@@ -194,8 +191,7 @@ Qed.
           -- apply conv_ctx_refl ; auto.
           -- constructor. constructor.
              eapply upto_names_impl_eq_term. assumption.
-    - intros na A t s1 B ih hA ihA hB ihB v e.
-      dependent destruction e.
+    - intros na A t s1 B ih hA ihA hB ihB v e; invs e.
       econstructor.
       + econstructor.
         * eapply ihA. assumption.
@@ -216,8 +212,7 @@ Qed.
         constructor.
         all: try (eapply upto_names_impl_eq_term ; assumption).
         all: eapply eq_term_refl.
-    - intros na b B t s1 A ih hB ihB hb ihb hA ihA v e.
-      dependent destruction e.
+    - intros na b B t s1 A ih hB ihB hb ihb hA ihA v e; invs e.
       econstructor.
       + econstructor.
         * eapply ihB. assumption.
@@ -254,8 +249,7 @@ Qed.
         constructor.
         all: try (eapply upto_names_impl_eq_term ; assumption).
         all: eapply eq_term_refl.
-    - intros t na A B u ih ht iht hu ihu v e.
-      dependent destruction e.
+    - intros t na A B u ih ht iht hu ihu v e; invs e.
       econstructor.
       + econstructor.
         * eapply iht. assumption.
@@ -267,29 +261,25 @@ Qed.
         apply eq_term_sym.
         eapply upto_names_impl_eq_term.
         eapply eq_term_upto_univ_subst ; now auto.
-    - intros cst u decl ? ? hdecl hcons v e.
-      dependent destruction e.
-      apply Forall2_eq in r. apply map_inj in r ; revgoals.
+    - intros cst u decl ? ? hdecl hcons v e; invs e.
+      apply Forall2_eq in H2. apply map_inj in H2 ; revgoals.
       { apply Universe.make_inj. }
       subst.
       constructor ; auto.
-    - intros ind u mdecl idecl isdecl ? ? hcons v e.
-      dependent destruction e.
-      apply Forall2_eq in r. apply map_inj in r ; revgoals.
+    - intros ind u mdecl idecl isdecl ? ? hcons v e; invs e.
+      apply Forall2_eq in H2. apply map_inj in H2 ; revgoals.
       { apply Universe.make_inj. }
       subst.
       econstructor ; eauto.
-    - intros ind i u mdecl idecl cdecl isdecl ? ? ? v e.
-      dependent destruction e.
-      apply Forall2_eq in r. apply map_inj in r ; revgoals.
+    - intros ind i u mdecl idecl cdecl isdecl ? ? ? v e; invs e.
+      apply Forall2_eq in H4. apply map_inj in H4 ; revgoals.
       { apply Universe.make_inj. }
       subst.
       econstructor ; eauto.
     - intros ind u npar p c brs args mdecl idecl isdecl X X0 H pars ps pty
-             Hcpt X1 X2 H1 X3 X4 btys Hbbt Hbrs v e.
+             Hcpt X1 X2 H1 X3 X4 btys Hbbt Hbrs v e; invs e.
       (* intros ind u npar p c brs args mdecl idecl isdecl X X0 H pars pty X1 *)
       (*        indctx pctx ps btys htc H1 H2 ihp hc ihc ihbrs v e. *)
-      dependent destruction e.
       (* eapply types_of_case_eq_term in htc as htc' ; eauto. *)
       (* destruct htc' as [btys' [ebtys' he]]. *)
       econstructor.
@@ -312,7 +302,7 @@ Qed.
           intros v H. unshelve eapply (upto_names_trans _ _ _ _) in H; tea.
           eauto.
       + eapply validity_term ; eauto.
-        instantiate (1 := tCase (ind, npar) p c brs).
+        instantiate (1 := tCase (ind, ind_npars mdecl) p c brs).
         econstructor ; eauto.
         apply All2_prod_inv in Hbrs as [a1 a4].
         apply All2_prod_inv in a1 as [a1 a3].
@@ -327,8 +317,7 @@ Qed.
         * eapply All2_same. intro. eapply eq_term_refl.
         * constructor ; eauto.
           eapply upto_names_impl_eq_term. assumption.
-    - intros p c u mdecl idecl pdecl isdecl args X X0 hc ihc H ty v e.
-      dependent destruction e.
+    - intros p c u mdecl idecl pdecl isdecl args X X0 hc ihc H ty v e; invs e.
       econstructor.
       + econstructor. all: try eassumption.
         eapply ihc. assumption.
@@ -342,16 +331,15 @@ Qed.
         * constructor ; auto.
           eapply All2_same.
           intro. eapply eq_term_upto_univ_refl ; auto.
-    - intros mfix n decl types hguard hnth hwf ihmfix ihmfixb v e.
-      dependent destruction e.
+    - intros mfix n decl types hguard hnth hwf ihmfix ihmfixb v e; invs e.
       eapply All2_nth_error_Some in hnth as hnth' ; eauto.
       destruct hnth' as [decl' [hnth' hh]].
       destruct hh as [[ety ebo] era].
       assert (hwf' : wf_local Σ (Γ ,,, fix_context mfix')).
       { apply PCUICWeakening.All_mfix_wf; auto.
-        eapply (All2_All_mix_left ihmfix) in a.
-        clear -a.
-        induction a; constructor; simpl; auto.
+        eapply (All2_All_mix_left ihmfix) in X.
+        clear -X.
+        induction X; constructor; simpl; auto.
         destruct r as [[s [Hs IH]] [[eqty eqbod] eqrarg]].
         exists s; apply IH; eauto. }
       assert (convctx : conv_context Σ (Γ ,,, fix_context mfix) (Γ ,,, fix_context mfix')).
@@ -363,25 +351,25 @@ Qed.
         * apply eq_context_upto_refl. typeclasses eauto.
         * generalize 0.
           unfold fix_context_gen.
-          eapply (All2_All_mix_left ihmfix) in a.
-          clear -a.
-          induction a; try constructor; simpl; intros n; auto.
+          eapply (All2_All_mix_left ihmfix) in X.
+          clear -X.
+          induction X; try constructor; simpl; intros n; auto.
           destruct r as [[s [Hs IH]] [[eqty eqbod] eqrarg]].
           eapply eq_context_upto_cat.
           + constructor; [|constructor].
             now eapply eq_term_upto_univ_lift.
-          + apply IHa. }
+          + apply IHX. }
       assert(#|fix_context mfix| = #|fix_context mfix'|).
-      { now rewrite !fix_context_length, (All2_length _ _ a). } 
+      { now rewrite !fix_context_length, (All2_length _ _ X). } 
       eapply type_Cumul.
       + econstructor.
         * eapply fix_guard_eq_term ; eauto.
           constructor. assumption.
         * eassumption.
         * assumption.
-        * eapply (All2_All_mix_left ihmfix) in a.
-          clear -a.
-          induction a; constructor; simpl; auto.
+        * eapply (All2_All_mix_left ihmfix) in X.
+          clear -X.
+          induction X; constructor; simpl; auto.
           destruct r as [[s [Hs IH]] [[eqty eqbod] eqrarg]].
           exists s; apply IH; eauto.
         * solve_all.
@@ -410,16 +398,15 @@ Qed.
           * eapply leq_universe_refl.
 
 
-  - intros mfix n decl types hnth hwf ihmfix ihmfixb allow_cofix v e.
-    dependent destruction e.
+  - intros mfix n decl types hnth hwf ihmfix ihmfixb allow_cofix v e; invs e.
     eapply All2_nth_error_Some in hnth as hnth' ; eauto.
     destruct hnth' as [decl' [hnth' hh]].
     destruct hh as [[ety ebo] era].
     assert (hwf' : wf_local Σ (Γ ,,, fix_context mfix')).
     { apply PCUICWeakening.All_mfix_wf; auto.
-      eapply (All2_All_mix_left ihmfix) in a.
-      clear -a.
-      induction a; constructor; simpl; auto.
+      eapply (All2_All_mix_left ihmfix) in X.
+      clear -X.
+      induction X; constructor; simpl; auto.
       destruct r as [[s [Hs IH]] [[eqty eqbod] eqrarg]].
       exists s; apply IH; eauto. }
     assert (convctx : conv_context Σ (Γ ,,, fix_context mfix) (Γ ,,, fix_context mfix')).
@@ -431,24 +418,24 @@ Qed.
       * apply eq_context_upto_refl. typeclasses eauto.
       * generalize 0.
         unfold fix_context_gen.
-        eapply (All2_All_mix_left ihmfix) in a.
-        clear -a.
-        induction a; try constructor; simpl; intros n; auto.
+        eapply (All2_All_mix_left ihmfix) in X.
+        clear -X.
+        induction X; try constructor; simpl; intros n; auto.
         destruct r as [[s [Hs IH]] [[eqty eqbod] eqrarg]].
         eapply eq_context_upto_cat.
         + constructor; [|constructor].
           now eapply eq_term_upto_univ_lift.
-        + apply IHa. }
+        + apply IHX. }
     assert(#|fix_context mfix| = #|fix_context mfix'|).
-    { now rewrite !fix_context_length, (All2_length _ _ a). } 
+    { now rewrite !fix_context_length, (All2_length _ _ X). } 
     eapply type_Cumul.
     + econstructor.
       * eassumption.
       * eassumption.
       * now eapply All_local_env_app in hwf' as [? _]. 
-      * eapply (All2_All_mix_left ihmfix) in a.
-        clear -a.
-        induction a; constructor; simpl; auto.
+      * eapply (All2_All_mix_left ihmfix) in X.
+        clear -X.
+        induction X; constructor; simpl; auto.
         destruct r as [[s [Hs IH]] [[eqty eqbod] eqrarg]].
         exists s; apply IH; eauto.
       * solve_all.

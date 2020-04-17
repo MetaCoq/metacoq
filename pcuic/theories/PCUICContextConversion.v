@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 Set Warnings "-notation-overridden".
 
-From Coq Require Import Bool List Program Arith Lia.
+From Coq Require Import Bool List Arith Lia.
 From Coq Require Import CRelationClasses.
 From Coq Require Import ssreflect.
 

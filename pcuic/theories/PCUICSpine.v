@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
+From Coq Require Import Bool String List BinPos Compare_dec Arith Lia
      Classes.CRelationClasses ProofIrrelevance ssreflect.
 From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
      AstUtils UnivSubst.
@@ -1114,8 +1114,8 @@ Proof.
             red Σ.1 (Γ ,,, Δ) t (subst0 (all_rels Δ 0 #|Δ|) (lift #|Δ| #|Δ| t))
         | None => unit  end))).
   clear t Δ Γ wf. intros Γ' t.
-  Subterm.rec_wf_rel IH (Γ', t) (Subterm.lexprod _ _ (MR lt (@length context_decl))
-     (MR lt (fun x => match x with Some t => S (PCUICSize.size t) | None => 0 end))).
+  Subterm.rec_wf_rel IH (Γ', t) (Subterm.lexprod _ _ (precompose lt (@length context_decl))
+     (precompose lt (fun x => match x with Some t => S (PCUICSize.size t) | None => 0 end))).
   simpl.
   rename pr1 into cf.
   rename pr0 into Σ.
@@ -1128,14 +1128,14 @@ Proof.
     destruct wf.
     constructor.
     constructor. 
-    apply (IH Γ t ltac:(left; unfold MR; simpl; lia) wf).
+    apply (IH Γ t ltac:(left; simpl; lia) wf).
     intros; subst Γ.
-    now apply (IH (Γ0 ,,, Δ) (Some t0) ltac:(left; unfold MR; simpl; lia) wf).
+    now apply (IH (Γ0 ,,, Δ) (Some t0) ltac:(left; simpl; lia) wf).
     constructor; auto.
-    apply (IH Γ t ltac:(left; unfold MR; simpl; lia) wf).
+    apply (IH Γ t ltac:(left; simpl; lia) wf).
     intros.
-    now apply (IH Γ (Some b) ltac:(left; unfold MR; simpl; lia) wf).
-    now apply (IH Γ (Some t0) ltac:(left; unfold MR; simpl; lia) wf).
+    now apply (IH Γ (Some b) ltac:(left; simpl; lia) wf).
+    now apply (IH Γ (Some t0) ltac:(left; simpl; lia) wf).
 
   - destruct t; [|exact tt].
     intros Γ0 Δ ->.
@@ -1150,7 +1150,7 @@ Proof.
      red Σ.1 (Γ ,,, Δ) t (subst0 (all_rels Δ 0 #|Δ|) (lift #|Δ| #|Δ| t)))
     Σ _ wf).
     { specialize (IH wfΣ (Γ ,,, Δ) None).
-      forward IH. simpl. right. unfold MR. lia.
+      forward IH. simpl. right. lia.
       apply (IH wf). }
     clear IH.
 
@@ -1537,8 +1537,7 @@ Proof.
   rewrite (reln_lift n 0).
   rewrite !map_map_compose.
   apply map_ext.
-  intros x. unfold compose.
-  rewrite (subst_app_decomp [a] s).
+  intros x. rewrite (subst_app_decomp [a] s).
   f_equal. simpl.
   rewrite -(commut_lift_subst_rec _ _ _ 0)  //.
   rewrite simpl_subst_k //.
@@ -1551,8 +1550,7 @@ Proof.
   rewrite (reln_lift n 0).
   rewrite !map_map_compose.
   apply map_ext.
-  intros x. unfold compose.
-  rewrite (subst_app_decomp [subst0 s b] s).
+  intros x. rewrite (subst_app_decomp [subst0 s b] s).
   f_equal. simpl.
   rewrite -(commut_lift_subst_rec _ _ _ 0)  //.
   rewrite simpl_subst_k //.

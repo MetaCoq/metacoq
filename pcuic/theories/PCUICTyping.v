@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program Arith Lia.
+From Coq Require Import Bool String List Arith Lia.
 From MetaCoq.Template Require Import config utils monad_utils
 EnvironmentTyping.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
@@ -1156,8 +1156,8 @@ Proof.
    otherwise it takes forever to execure the "pose", for some reason *)
   pose (@Fix_F ({ Σ : _ & { wfΣ : wf Σ.1 & { Γ : context & 
                           { t : term & { T : term & Σ ;;; Γ |- t : T }}}}})) as p0.
-  specialize (p0 (dlexprod (MR lt (fun Σ => globenv_size (fst Σ)))
-                            (fun Σ => MR lt (fun x => typing_size (projT2 (projT2 (projT2 (projT2 x)))))))) as p.
+  specialize (p0 (dlexprod (precompose lt (fun Σ => globenv_size (fst Σ)))
+                            (fun Σ => precompose lt (fun x => typing_size (projT2 (projT2 (projT2 (projT2 x)))))))) as p.
   set(foo := existT _ Σ (existT _ wfΣ (existT _ Γ (existT _ t (existT _ _ H)))) : { Σ : _ & { wfΣ : wf Σ.1 & { Γ : context & { t : term & { T : term & Σ ;;; Γ |- t : T }}}}}).
   change Σ with (projT1 foo).
   change Γ with (projT1 (projT2 (projT2 foo))).
@@ -1168,11 +1168,11 @@ Proof.
   match goal with
     |- let foo := _ in @?P foo => specialize (p (fun x => P x))
   end.
-  forward p; [ | apply p; apply wf_dlexprod; intros; apply measure_wf; apply lt_wf].
+  forward p; [ | apply p; apply wf_dlexprod; intros; apply wf_precompose; apply lt_wf].
   clear p.
   clear Σ wfΣ Γ t T H.
   intros (Σ & wfΣ & Γ & t & t0 & H). simpl.
-  intros IH. unfold MR in IH. simpl in IH.
+  intros IH. simpl in IH.
   split. split.
   destruct Σ as [Σ φ]. destruct Σ.
   constructor.

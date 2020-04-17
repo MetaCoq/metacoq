@@ -1,4 +1,4 @@
-From Coq Require Import Nat ZArith Bool Program.
+From Coq Require Import Nat ZArith Bool.
 Global Set Asymmetric Patterns.
 
 
@@ -29,10 +29,9 @@ Tactic Notation "destruct" "?" "in" hyp(H) :=
 Notation "'eta_compose'" := (fun g f x => g (f x)).
 
 (* \circ *)
-Notation "g ∘ f" := (eta_compose g f).
+Notation "g ∘ f" := (eta_compose g f) (at level 40, left associativity).
 
-Tactic Notation "apply*" constr(H) "in" hyp(H')
-  := apply H in H'; [..|apply H].
+Notation " ! " := (@False_rect _ _) : program_scope.
 
 Ltac cbnr := cbn; try reflexivity.
 
@@ -170,8 +169,10 @@ Tactic Notation "forward" constr(H) "by" tactic(tac) := forward_gen H tac.
 
 Hint Resolve Peano_dec.eq_nat_dec : eq_dec.
 
-
 Ltac invs H := inversion H; subst; clear H.
+
+Ltac generalize_eq x t :=
+  set (x := t) in *; cut (x = t); [|reflexivity]; clearbody x.
 
 
 Lemma iff_forall {A} B C (H : forall x : A, B x <-> C x)
@@ -203,7 +204,10 @@ Qed.
 
 Ltac tas := try assumption.
 Ltac tea := try eassumption.
+Ltac trea := try reflexivity; try eassumption.
 
 Axiom todo : String.string -> forall {A}, A.
 Ltac todo s := exact (todo s).
+
+From Coq Require Import Extraction.
 Extract Constant todo => "fun s -> failwith (String.concat """" (List.map (String.make 1) s))".

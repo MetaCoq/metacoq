@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool List Program RelationClasses Lia.
+From Coq Require Import Bool List RelationClasses Lia.
 From MetaCoq.Template Require Import config monad_utils utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICInduction
      PCUICReflect PCUICEquality PCUICLiftSubst.
@@ -80,16 +80,16 @@ Definition pos (t : term) := { p : position | validpos t p = true }.
 Arguments exist {_ _} _ _.
 
 Definition dapp_l u v (p : pos u) : pos (tApp u v) :=
-  exist (app_l :: ` p) (proj2_sig p).
+  exist (app_l :: proj1_sig p) (proj2_sig p).
 
 Definition dapp_r u v (p : pos v) : pos (tApp u v) :=
-  exist (app_r :: ` p) (proj2_sig p).
+  exist (app_r :: proj1_sig p) (proj2_sig p).
 
 Definition dcase_p indn pr c brs (p : pos pr) : pos (tCase indn pr c brs) :=
-  exist (case_p :: ` p) (proj2_sig p).
+  exist (case_p :: proj1_sig p) (proj2_sig p).
 
 Definition dcase_c indn pr c brs (p : pos c) : pos (tCase indn pr c brs) :=
-  exist (case_c :: ` p) (proj2_sig p).
+  exist (case_c :: proj1_sig p) (proj2_sig p).
 
 (* Equations dcase_brs (n : nat) (indn : inductive × nat)
   (pr c : term) (brs : list (nat × term)) (m : nat) (br : term)
@@ -103,28 +103,28 @@ Qed.
 Transparent dcase_brs. *)
 
 Definition dproj_c pr c (p : pos c) : pos (tProj pr c) :=
-  exist (proj_c :: ` p) (proj2_sig p).
+  exist (proj_c :: proj1_sig p) (proj2_sig p).
 
 Definition dlam_ty na A t (p : pos A) : pos (tLambda na A t) :=
-  exist (lam_ty :: ` p) (proj2_sig p).
+  exist (lam_ty :: proj1_sig p) (proj2_sig p).
 
 Definition dlam_tm na A t (p : pos t) : pos (tLambda na A t) :=
-  exist (lam_tm :: ` p) (proj2_sig p).
+  exist (lam_tm :: proj1_sig p) (proj2_sig p).
 
 Definition dprod_l na A B (p : pos A) : pos (tProd na A B) :=
-  exist (prod_l :: ` p) (proj2_sig p).
+  exist (prod_l :: proj1_sig p) (proj2_sig p).
 
 Definition dprod_r na A B (p : pos B) : pos (tProd na A B) :=
-  exist (prod_r :: ` p) (proj2_sig p).
+  exist (prod_r :: proj1_sig p) (proj2_sig p).
 
 Definition dlet_bd na b B t (p : pos b) : pos (tLetIn na b B t) :=
-  exist (let_bd :: ` p) (proj2_sig p).
+  exist (let_bd :: proj1_sig p) (proj2_sig p).
 
 Definition dlet_ty na b B t (p : pos B) : pos (tLetIn na b B t) :=
-  exist (let_ty :: ` p) (proj2_sig p).
+  exist (let_ty :: proj1_sig p) (proj2_sig p).
 
 Definition dlet_in na b B t (p : pos t) : pos (tLetIn na b B t) :=
-  exist (let_in :: ` p) (proj2_sig p).
+  exist (let_in :: proj1_sig p) (proj2_sig p).
 
 Lemma eq_term_upto_valid_pos :
   forall {u v p Re Rle},
@@ -183,7 +183,7 @@ Inductive positionR : position -> position -> Prop :=
 Derive Signature for positionR.
 
 Definition posR {t} (p q : pos t) : Prop :=
-  positionR (` p) (` q).
+  positionR (proj1_sig p) (proj1_sig q).
 
 Lemma posR_Acc :
   forall t p, Acc (@posR t) p.
@@ -298,9 +298,9 @@ Proof.
   assert (
     forall n indn pr c brs m br (p : pos br)
       (e : nth_error brs n = Some (m, br))
-      (e1 : validpos (tCase indn pr c brs) (case_brs n :: ` p) = true),
+      (e1 : validpos (tCase indn pr c brs) (case_brs n :: proj1_sig p) = true),
       Acc posR p ->
-      Acc posR (exist (case_brs n :: ` p) e1)
+      Acc posR (exist (case_brs n :: proj1_sig p) e1)
   ) as Acc_case_brs.
   { intros n indn pr c brs m br p e e1 h.
     induction h as [p ih1 ih2] in e, e1 |- *.
@@ -313,9 +313,9 @@ Proof.
   assert (
     forall n mfix idx d (p : pos d.(dtype))
       (e : nth_error mfix n = Some d)
-      (e1 : validpos (tFix mfix idx) (fix_mfix_ty n :: ` p)),
+      (e1 : validpos (tFix mfix idx) (fix_mfix_ty n :: proj1_sig p)),
       Acc posR p ->
-      Acc posR (exist (fix_mfix_ty n :: `p) e1)
+      Acc posR (exist (fix_mfix_ty n :: proj1_sig p) e1)
   ) as Acc_fix_mfix_ty.
   { intros n mfix idx d p e e1 h.
     induction h as [p ih1 ih2] in e, e1 |- *.
@@ -328,9 +328,9 @@ Proof.
   assert (
     forall n mfix idx d (p : pos d.(dbody))
       (e : nth_error mfix n = Some d)
-      (e1 : validpos (tFix mfix idx) (fix_mfix_bd n :: ` p)),
+      (e1 : validpos (tFix mfix idx) (fix_mfix_bd n :: proj1_sig p)),
       Acc posR p ->
-      Acc posR (exist (fix_mfix_bd n :: `p) e1)
+      Acc posR (exist (fix_mfix_bd n :: proj1_sig p) e1)
   ) as Acc_fix_mfix_bd.
   { intros n mfix idx d p e e1 h.
     induction h as [p ih1 ih2] in e, e1 |- *.

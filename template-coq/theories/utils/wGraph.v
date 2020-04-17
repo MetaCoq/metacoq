@@ -937,7 +937,7 @@ Module WeightedGraph (V : UsualOrderedType).
             clear -d.
             intro a; split; intro Ha.
             * apply VSet.remove_spec in Ha. pose proof (d.p1 a).
-              intuition.
+              intuition. now symmetry in H2.
             * apply VSet.remove_spec. split.
               apply d. right; assumption.
               intro H. apply proj2 in d. apply d. subst; assumption. }
@@ -1662,13 +1662,15 @@ Module WeightedGraph (V : UsualOrderedType).
       etransitivity. apply leq_vertices_caract. unfold leqb_vertices.
       destruct (VSet.mem y (V G)).
       - destruct (le_dec (Some n) (lsp G x y)); cbn; intuition.
+        discriminate.
       - symmetry; etransitivity. apply andb_and.
         apply Morphisms_Prop.and_iff_morphism.
         apply PeanoNat.Nat.eqb_eq.
         etransitivity. apply orb_true_iff.
         apply Morphisms_Prop.or_iff_morphism.
-        destruct (V.eq_dec x y); cbn; intuition.
+        destruct (V.eq_dec x y); cbn; intuition; try discriminate.
         destruct (le_dec (Some 0) (lsp G x (s G))); cbn; intuition.
+        discriminate.
     Qed.
 
   End graph2.

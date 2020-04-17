@@ -135,7 +135,7 @@ Section Measure.
   Qed.
 
   Lemma Req_trans :
-    forall {Γ}, transitive (Req Γ).
+    forall {Γ}, Transitive (Req Γ).
   Proof.
     intros Γ u v w h1 h2.
     destruct h1.

@@ -1,4 +1,4 @@
-From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
+From Coq Require Import Bool String List BinPos Compare_dec Arith Lia
      Classes.CRelationClasses ProofIrrelevance.
 From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
      AstUtils UnivSubst.

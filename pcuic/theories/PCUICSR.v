@@ -334,7 +334,7 @@ Proof.
   - intros args args' ind i ind' i' inst wat Hsp.
     depelim Hsp.
     eapply invert_cumul_ind_l in c as [i'' [args'' [? ?]]]; auto.
-    eapply invert_red_ind in r as [? [eq ?]]. solve_discr.
+    eapply red_mkApps_tInd in r as [? [eq ?]]; auto. solve_discr.
     exists nil.
     intuition auto. clear i0.
     revert args' a. clear -b wfΣ wfΓ. induction b; intros args' H; depelim H; constructor.
@@ -342,7 +342,7 @@ Proof.
     transitivity y; auto. symmetry.
     now eapply red_conv. now eauto.
     eapply invert_cumul_prod_r in c as [? [? [? [[? ?] ?]]]]; auto.
-    eapply invert_red_ind in r as [? [eq ?]]. now solve_discr.
+    eapply red_mkApps_tInd in r as [? [eq ?]]; auto. now solve_discr.
   - intros d Γ' IH args args' ind i ind' i' inst wat Hsp.
     rewrite it_mkProd_or_LetIn_app in Hsp.
     destruct d as [na [b|] ty]; simpl in *; rewrite /mkProd_or_LetIn /= in Hsp.
@@ -387,7 +387,7 @@ Proof.
       pose proof (typing_spine_WAT_concl Hsp).
       depelim Hsp.
       eapply invert_cumul_prod_l in c as [? [? [? [[? ?] ?]]]]; auto.
-      eapply invert_red_ind in r as [? [eq ?]]. now solve_discr.
+      eapply red_mkApps_tInd in r as [? [eq ?]]; auto. now solve_discr.
       eapply cumul_Prod_inv in c as [conva cumulB].
       eapply (substitution_cumul0 _ _ _ _ _ _ hd) in cumulB; auto.
       rewrite /subst1 subst_it_mkProd_or_LetIn /= in cumulB.
@@ -1155,7 +1155,7 @@ Proof.
         eapply context_relation_subst_instance; eauto.
         eapply on_minductive_wf_params_indices_inst => //. destruct decli; eauto.
         now symmetry.
-        eapply congr_cumul_prod.
+        eapply congr_cumul_prod; eauto.
         eapply mkApps_conv_args => //.
         constructor. constructor. now symmetry.
         apply All2_app. eapply All2_map.

@@ -237,18 +237,6 @@ Section ReductionCongruence.
     - apply contextual_closure_red.
   Qed.
 
-  (* Lemma contextual_closure_trans (R : context -> term -> term -> Type) Γ : *)
-  (*   Transitive (R Γ) -> *)
-  (*   forall t u v, *)
-  (*   contextual_closure R Γ t u -> contextual_closure R Γ u v -> *)
-  (*   contextual_closure R Γ t v. *)
-  (* Proof. *)
-  (*   intros Htr t u v. *)
-  (*   induction 1. destruct 1. constructor; auto. *)
-  (*   constructor. auto. *)
-  (*   intros H. depelim H. constructor; auto. *)
-  (* Admitted. *)
-
   Lemma red_ctx {Γ} {M M'} ctx : red Σ (hole_context ctx Γ) M M' ->
                                red Σ Γ (fill_context M ctx) (fill_context M' ctx).
   Proof.

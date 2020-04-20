@@ -631,20 +631,3 @@ Proof.
   intros. rewrite !compose_map_decl; apply map_decl_ext => ?.
   now rewrite -subst_subst_instance_constr.
 Qed.
-
-(*
-Lemma subslet_wf_local {cf:checker_flags} Σ Γ Δ :
-  wf_local Σ (Γ ,,, Δ) ->
-  ∑ s, type_local_ctx (lift_typing typing) Σ Γ Δ s.
-Proof.
-  induction Δ. simpl. 
-  intros _. exists Universe.type0m. exact I.
-  intros H; depelim H. red in l.
-  destruct l as [u Hu].
-  destruct (IHΔ H) as [s Hs].
-  exists (Universe.sup u s).
-  constructor. admit.
-  simpl. admit.
-  specialize (IHΔ H) as [s Hs].
-  simpl in *. exists s. split => //.
-Admitted.*)

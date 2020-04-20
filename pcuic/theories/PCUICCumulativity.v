@@ -13,7 +13,6 @@ Set Default Goal Selector "!".
 
 Reserved Notation " Σ ;;; Γ |- t == u " (at level 50, Γ, t, u at next level).
 
-(* TODO UPDATE *)
 Lemma cumul_alt `{cf : checker_flags} Σ Γ t u :
   Σ ;;; Γ |- t <= u <~> { v & { v' & (red Σ Γ t v * red Σ Γ u v' * leq_term (global_ext_constraints Σ) v v')%type } }.
 Proof.
@@ -24,17 +23,17 @@ Proof.
       exists v', v''. intuition auto. now eapply red_step.
     + destruct IHX as (v' & v'' & (redv & redv') & leqv).
       exists v', v''. intuition auto. now eapply red_step.
-    + destruct IHX as (v' & v'' & (redv & redv') & leqv).
-(*
+    + todoeta.
+    + todoeta.
   - intros [v [v' [[redv redv'] Hleq]]]. apply red_alt in redv. apply red_alt in redv'.
     apply clos_rt_rt1n in redv.
     apply clos_rt_rt1n in redv'.
-    induction redv. induction redv'. constructor; auto.
-    econstructor 3; eauto.
-    econstructor 2; eauto.
-Qed. *)
-Admitted.
-
+    induction redv.
+    * induction redv'.
+    ** constructor; auto.
+    ** econstructor 3; eauto.
+    * econstructor 2; eauto.
+Qed.
 
 Instance cumul_refl' {cf:checker_flags} Σ Γ : Reflexive (cumul Σ Γ).
 Proof.
@@ -116,15 +115,15 @@ Proof.
   intro H; now apply conv_cumul2 in H.
 Qed.
 
-Lemma cumul2_conv {cf:checker_flags} Σ Γ t u :
-  (Σ ;;; Γ |- t <= u) * (Σ ;;; Γ |- u <= t) -> Σ ;;; Γ |- t = u.
-Proof.
-Admitted.
-
 Lemma red_conv {cf:checker_flags} (Σ : global_env_ext) Γ t u
   : red Σ Γ t u -> Σ ;;; Γ |- t = u.
 Proof.
-Admitted.
+  intros H%red_alt%clos_rt_rt1n_iff.
+  induction H.
+  - reflexivity.
+  - econstructor 2; eauto. 
+Qed.
+
 Hint Resolve red_conv : core.
 
 Lemma eq_term_App `{checker_flags} φ f f' :
@@ -198,23 +197,22 @@ Proof.
   - eapply conv_eta_l. all: eassumption.
 Qed.
 
-(* TODO UPDATE *)
 Lemma conv_alt_red {cf : checker_flags} {Σ : global_env_ext} {Γ : context} {t u : term} :
   Σ;;; Γ |- t = u <~> (∑ v v' : term, (red Σ Γ t v × red Σ Γ u v') × eq_term (global_ext_constraints Σ) v v').
 Proof.
-  (* split. *)
-  (* induction 1. exists t, u; intuition auto.
-  destruct IHX as [? [? [? ?]]].
-  exists x, x0; intuition auto. eapply red_step; eauto.
-  destruct IHX as [? [? [? ?]]].
-  exists x, x0; intuition auto. eapply red_step; eauto.
-  intros.
-  destruct X as [? [? [[? ?] ?]]].
-  eapply red_conv_conv; eauto.
-  eapply red_conv_conv_inv; eauto. now constructor.
-Qed. *)
-Admitted.
-
+  split.
+  - induction 1.
+    * exists t, u; intuition auto.
+    * destruct IHX as [? [? [? ?]]].
+      exists x, x0; intuition auto. eapply red_step; eauto.
+    * destruct IHX as [? [? [? ?]]].
+      exists x, x0; intuition auto. eapply red_step; eauto.
+    * todoeta.
+    * todoeta.
+  - destruct 1 as [? [? [[? ?] ?]]].
+    eapply red_conv_conv; eauto.
+    eapply red_conv_conv_inv; eauto. now constructor.
+Qed.
 
 Inductive conv_pb :=
 | Conv

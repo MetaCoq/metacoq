@@ -5,7 +5,7 @@ From Coq Require Import Bool List Utf8
   ZArith Lia.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICSize
-     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICReduction PCUICSubstitution
+     PCUICLiftSubst PCUICSigmaCalculus PCUICUnivSubst PCUICTyping PCUICReduction PCUICSubstitution
      PCUICReflect PCUICClosed PCUICParallelReduction.
 
 (* Type-valued relations. *)
@@ -22,153 +22,6 @@ Notation "'∃' x .. y , P" := (sigT (fun x => .. (sigT (fun y => P%type)) ..))
   format "'[  ' '[  ' ∃  x  ..  y ']' ,  '/' P ']'") : type_scope.
 
 Require Import Morphisms.
-
-Instance ren_ext : Morphisms.Proper (`=1` ==> `=1`)%signature ren.
-Proof.
-  reduce_goal. unfold ren. now rewrite H.
-Qed.
-
-Lemma shiftn0 r : shiftn 0 r =1 r.
-Proof.
-  intros x.
-  unfold shiftn. destruct (Nat.ltb_spec x 0). lia.
-  rewrite Nat.sub_0_r. lia.
-Qed.
-
-Lemma shiftnS n r : shiftn (S n) r =1 shiftn 1 (shiftn n r).
-Proof.
-  intros x. unfold shiftn.
-  destruct x. simpl. auto.
-  simpl. rewrite Nat.sub_0_r.
-  destruct (Nat.ltb_spec x n).
-  destruct (Nat.ltb_spec (S x) (S n)); auto. lia.
-  destruct (Nat.ltb_spec (S x) (S n)); auto. lia.
-Qed.
-
-Definition rename_context r Γ :=
-  fold_context (fun k => rename (shiftn k r)) Γ.
-Local Open Scope sigma_scope.
-
-Definition inst_context s Γ :=
-  fold_context (fun k => inst (⇑^k s)) Γ.
-
-Definition rename_context_snoc0 r Γ d : rename_context r (d :: Γ) = rename_context r Γ ,, map_decl (rename (shiftn #|Γ| r)) d.
-Proof. unfold rename_context. now rewrite fold_context_snoc0. Qed.
-Hint Rewrite rename_context_snoc0 : lift.
-
-Lemma rename_context_snoc r Γ d : rename_context r (Γ ,, d) = rename_context r Γ ,, map_decl (rename (shiftn #|Γ| r)) d.
-Proof.
-  unfold snoc. apply rename_context_snoc0.
-Qed.
-Hint Rewrite rename_context_snoc : lift.
-
-Lemma rename_context_alt r Γ :
-  rename_context r Γ =
-  mapi (fun k' d => map_decl (rename (shiftn (Nat.pred #|Γ| - k') r)) d) Γ.
-Proof.
-  unfold rename_context. apply fold_context_alt.
-Qed.
-
-Definition inst_context_snoc0 s Γ d :
-  inst_context s (d :: Γ) =
-  inst_context s Γ ,, map_decl (inst (⇑^#|Γ| s)) d.
-Proof. unfold inst_context. now rewrite fold_context_snoc0. Qed.
-Hint Rewrite inst_context_snoc0 : lift.
-
-Lemma inst_context_snoc s Γ d : inst_context s (Γ ,, d) = inst_context s Γ ,, map_decl (inst (⇑^#|Γ| s)) d.
-Proof.
-  unfold snoc. apply inst_context_snoc0.
-Qed.
-Hint Rewrite inst_context_snoc : lift.
-
-Lemma inst_context_alt s Γ :
-  inst_context s Γ =
-  mapi (fun k' d => map_decl (inst (⇑^(Nat.pred #|Γ| - k') s)) d) Γ.
-Proof.
-  unfold inst_context. apply fold_context_alt.
-Qed.
-
-Lemma inst_context_length s Γ : #|inst_context s Γ| = #|Γ|.
-Proof. apply fold_context_length. Qed.
-
-Hint Rewrite @subst_consn_nil @subst_consn_tip : sigma.
-
-Lemma subst_consn_shiftn n l σ : #|l| = n -> ↑^n ∘s (l ⋅n σ) =1 σ.
-Proof.
-  induction n in l |- *; simpl; intros; autorewrite with sigma.
-  - destruct l; try discriminate. simpl; autorewrite with sigma. reflexivity.
-  - destruct l; try discriminate. simpl in *.
-    rewrite subst_consn_subst_cons.
-    simpl; autorewrite with sigma. apply IHn. lia.
-Qed.
-
-Lemma shiftn_consn_idsn n σ : ↑^n ∘s ⇑^n σ =1 σ ∘s ↑^n.
-Proof.
-  unfold Upn. rewrite subst_consn_shiftn. reflexivity.
-  now rewrite idsn_length.
-Qed.
-
-Lemma subst10_inst a b τ : b {0 := a}.[τ] = (b.[⇑ τ] {0 := a.[τ]}).
-Proof.
-  unfold subst10. simpl. rewrite !subst_inst.
-  now unfold Upn, Up; autorewrite with sigma.
-Qed.
-
-Lemma lift_renaming_0 k : ren (lift_renaming k 0) = ren (Nat.add k).
-Proof. reflexivity. Qed.
-
-Lemma lift0_inst n t : lift0 n t = t.[↑^n].
-Proof. by rewrite lift_rename rename_inst lift_renaming_0 -ren_shiftk. Qed.
-
-Lemma map_vass_map_def g l r :
-  (mapi (fun i (d : def term) => vass (dname d) (lift0 i (dtype d)))
-        (map (map_def (rename r) g) l)) =
-  (mapi (fun i d => map_decl (rename (shiftn i r)) d)
-        (mapi (fun i (d : def term) => vass (dname d) (lift0 i (dtype d))) l)).
-Proof.
-  rewrite mapi_mapi mapi_map. apply mapi_ext.
-  intros. unfold map_decl, vass; simpl; f_equal.
-  rewrite !lift0_inst. rewrite !rename_inst.
-  autorewrite with sigma. rewrite -ren_shiftn up_Upn.
-  rewrite shiftn_consn_idsn. reflexivity.
-Qed.
-
-Lemma rename_fix_context r :
-  ∀ (mfix : list (def term)),
-    fix_context (map (map_def (rename r) (rename (shiftn #|mfix| r))) mfix) =
-    rename_context r (fix_context mfix).
-Proof.
-  intros mfix. unfold fix_context.
-  rewrite map_vass_map_def rev_mapi.
-  fold (fix_context mfix).
-  rewrite (rename_context_alt r (fix_context mfix)).
-  unfold map_decl. now rewrite mapi_length fix_context_length.
-Qed.
-
-Lemma map_vass_map_def_inst g l s :
-  (mapi (fun i (d : def term) => vass (dname d) (lift0 i (dtype d)))
-        (map (map_def (inst s) g) l)) =
-  (mapi (fun i d => map_decl (inst (⇑^i s)) d)
-        (mapi (fun i (d : def term) => vass (dname d) (lift0 i (dtype d))) l)).
-Proof.
-  rewrite mapi_mapi mapi_map. apply mapi_ext.
-  intros. unfold map_decl, vass; simpl; f_equal.
-  rewrite !lift0_inst.
-  autorewrite with sigma.
-  rewrite shiftn_consn_idsn. reflexivity.
-Qed.
-
-Lemma inst_fix_context:
-  forall (mfix : list (def term)) s,
-    fix_context (map (map_def (inst s) (inst (⇑^#|mfix| s))) mfix) =
-    inst_context s (fix_context mfix).
-Proof.
-  intros mfix s. unfold fix_context.
-  rewrite map_vass_map_def_inst rev_mapi.
-  fold (fix_context mfix).
-  rewrite (inst_context_alt s (fix_context mfix)).
-   now rewrite /subst_decl mapi_length fix_context_length.
-Qed.
 
 Inductive assumption_context : context -> Prop :=
     | assumption_context_nil : assumption_context []
@@ -1344,8 +1197,6 @@ Section Confluence.
     Lemma refine_pred Γ Δ t u u' : u = u' -> pred1 Σ Γ Δ t u' -> pred1 Σ Γ Δ t u.
     Proof. now intros ->. Qed.
 
-    Hint Rewrite subst10_inst : sigma.
-
     Lemma ctxmap_ext Γ Δ : CMorphisms.Proper (CMorphisms.respectful (pointwise_relation _ eq) isEquiv) (ctxmap Γ Δ).
     Proof.
       red. red. intros.
@@ -1482,14 +1333,7 @@ Section Confluence.
       destruct option_map as [[o|]|]; auto.
       unfold subst_compose. simpl. rewrite y. reflexivity.
     Qed.
-
-    Lemma inst_mkApps f l σ : (mkApps f l).[σ] = mkApps f.[σ] (map (inst σ) l).
-    Proof.
-      induction l in f |- *; simpl; auto. rewrite IHl.
-      now autorewrite with sigma.
-    Qed.
-    Hint Rewrite inst_mkApps : sigma.
-
+    
     Lemma inst_iota_red s pars c args brs :
       inst s (iota_red pars c args brs) =
       iota_red pars c (List.map (inst s) args) (List.map (on_snd (inst s)) brs).
@@ -1676,7 +1520,8 @@ Section Confluence.
         forward X0. eapply Up_ctxmap; eauto.
         forward X0. eapply pred1_subst_Up; auto.
         specialize (X4 _ _ _ _ Hσ Hτ Hrel).
-        eapply (pred_beta _ _ _ _ _ _ _ _ _ _ X2 X0 X4). (* IHredst1 IHredst2 IHredst3).*) }
+        eapply (pred_beta _ _ _ _ _ _ _ _ _ _ X2 X0 X4). }
+        
 
     (** Let-in delta case *)
     2:{ rewrite lift_rename rename_inst.

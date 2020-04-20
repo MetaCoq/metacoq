@@ -422,7 +422,7 @@ Section ContextConversion.
     exists v, v'.
     split. pcuic. auto.
   Qed.
-
+(* 
   Lemma conv_red_ctx {Γ Γ' T U} :
     Σ ;;; Γ |- T = U ->
     @red_ctx Σ Γ Γ' ->
@@ -439,7 +439,7 @@ Section ContextConversion.
   Proof.
     intros H Hctx. apply cumul2_conv.
     split; eapply cumul_red_ctx_inv; eauto; eapply conv_cumul2 in H; eapply H.
-  Qed.
+  Qed. *)
 
   Arguments red_ctx : clear implicits.
 
@@ -893,16 +893,3 @@ Proof.
   intros hΣ hΓ' h e.
   eapply context_conversion; eauto.
 Qed.
-
-(* 
-Lemma conv_isWfArity_or_Type {cf:checker_flags} Σ Γ Γ' T U :
-wf Σ.1  ->
-conv_context Σ Γ' Γ ->
-Σ ;;; Γ |- T = U ->
-isWfArity_or_Type Σ Γ T ->
-isWfArity_or_Type Σ Γ' U.
-Proof.
-intros wfΣ convctx convTU [[s [ctx H]]|[s Hs]].
-
-Admitted.
- *)

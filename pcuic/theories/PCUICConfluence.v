@@ -2745,41 +2745,6 @@ Section RedConfluence.
     econstructor 3. constructor 1; eauto. eauto.
   Qed. 
 
-  (* Lemma red_red_ctx_inv Γ Δ Δ' t u :
-    red Σ (Γ ,,, Δ) t u ->
-    assumption_context Δ ->
-    @red_ctx (Γ ,,, Δ) (Γ ,,, Δ') ->
-    red Σ (Γ ,,,  Δ') t u.
-  Proof.
-    intros redt assΔ redΔ.
-    eapply red_ctx_clos_rt_red1_ctx in redΔ.
-    eapply clos_refl_trans_ctx_to_1n in redΔ.
-    unfold context in *. unfold app_context in *.
-    dependent induction redΔ.
-    - now rewrite H.
-  Admitted. *)
-(* 
-  Lemma clos_red_rel_out_r x y :
-    clos_refl_trans red1_rel x y ->
-    red_ctx (fst x) (fst y) *
-    clos_refl_trans (red1 Σ (fst y)) (snd x) (snd y).
-  Proof.
-    intros H.
-    eapply clos_rt_rt1n_iff in H.
-    induction H.
-    - split. red. induction (fst x) as [|[na [b|] ty] tl]; try constructor; hnf; eauto.
-      constructor 2.
-    - destruct x as [Γ t], y as [Δ u], z as [Δ' u']; simpl in *.
-      destruct IHclos_refl_trans_1n.
-      red in r. destruct r.
-      * destruct p. subst. split. auto.
-        transitivity u; auto.
-        apply red_alt.
-        eapply red_red_ctx_inv; eauto.
-        apply red1_ctx_pred1_ctx in r.
-        now apply pred1_ctx_red_ctx in r. *)
-  (* Qed. *)
-
   Lemma clos_rt_red1_red1_rel_alpha Γ x y :
     clos_refl_trans (red1 Σ Γ) x y -> clos_refl_trans red1_rel_alpha (Γ, x) (Γ, y).
   Proof.

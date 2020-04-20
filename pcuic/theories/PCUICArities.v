@@ -288,25 +288,6 @@ Proof.
   now eapply invert_cumul_letin_l in c.
 Qed. *)
 
-Lemma cumul_red_r_inv {cf : checker_flags} (Σ : global_env_ext) :
-  wf Σ ->
-  forall (Γ : context) T U U',
-  Σ ;;; Γ |- T <= U ->
-  red Σ.1 Γ U U' ->
-  Σ ;;; Γ |- T <= U'.
-Proof.
-  intros wfΣ * cumtu red.
-  apply cumul_alt in cumtu.
-  destruct cumtu as [v [v' [[redl redr] eq]]].
-  apply cumul_alt.
-  destruct (red_confluence wfΣ redr red) as [nf [nfl nfr]].
-  eapply (fill_le _ wfΣ) in eq. 3:eapply nfl. 2:eapply reflexivity.
-  destruct eq as [t'' [u'' [[l r] eq]]].
-  exists t''. exists u''. repeat split; auto.
-  now transitivity v.
-  now transitivity nf.
-Qed.
-
 Lemma app_context_push Γ Δ Δ' d : (Γ ,,, Δ ,,, Δ') ,, d = (Γ ,,, Δ ,,, (Δ' ,, d)).
 Proof.
   reflexivity.

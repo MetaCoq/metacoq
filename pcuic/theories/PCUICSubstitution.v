@@ -1,4 +1,4 @@
-(* Distributed under the terms of the MIT license.   *)
+ (* Distributed under the terms of the MIT license.   *)
 
 (** * Substitution lemmas for typing derivations. *)
 
@@ -1662,7 +1662,6 @@ Proof.
     now apply subst_eq_decl.
   - now apply IHl.
 Qed.
-
 
 Lemma substitution_red `{cf : checker_flags} (Σ : global_env_ext) Γ Δ Γ' s M N :
   wf Σ -> subslet Σ Γ s Δ -> wf_local Σ Γ ->

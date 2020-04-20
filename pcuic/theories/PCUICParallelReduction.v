@@ -1203,8 +1203,8 @@ Section ParallelWeakening.
              All2_local_env_over (pred1 Σ) Γ Δ Γ'' Δ'' ->
              pred1_ctx Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (Δ ,,, Δ'' ,,, lift_context #|Δ''| 0 Δ')).
 
-    refine (pred1_ind_all_ctx Σ _ Pctx _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros *; intros; subst Pctx;
-      rename_all_hyps; try subst Γ Γ'; simplify_IH_hyps; cbn -[iota_red];
+      refine (pred1_ind_all_ctx Σ _ Pctx _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros *; intros; subst Pctx;
+        rename_all_hyps; try subst Γ Γ'; simplify_IH_hyps; cbn -[iota_red];
       match goal with
         |- context [iota_red _ _ _ _] => idtac
       | |- _ => autorewrite with lift

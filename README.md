@@ -133,3 +133,33 @@ To compile locally without using `opam`, use `./configure.sh local` at the root,
 - `make install` to install the plugin in `Coq`'s `user-contrib` local
   library. Then the `MetaCoq` namespace can be used for `Require
   Import` statements, e.g. `From MetaCoq.Template Require Import All.`.
+
+
+Contributions Guidelines
+========================
+
+Robustness
+----------
+
+To ease reparing the broken code:
+
+- Please use as many bullets as possible.
+  You even can be forced to do so with `Set Default Goal Selector "!".`
+
+- Plese use as few as possible generated names and name hypothesis in `intros` and
+  `destruct`.
+  It is more difficult for `induction` and above all for `inversion`.
+
+
+Program/Equations
+-----------------
+
+Please don't use `Program`. It inserts some JMeq and UIP axioms silently.  You can
+use `Equations` to do some dependent induction (`dependent induction`,
+`dependent destruction`, `depelim`). You may need to add:
+```
+Require Import Equations.Prop.DepElim.
+```
+
+*Important*: we keep the template-coq folder not relying on Equations (to be able
+to compile it without external dependency).

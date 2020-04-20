@@ -23,9 +23,6 @@ Hint Resolve eq_universe_leq_universe' : pcuic.
 
 Derive Signature for cumul assumption_context.
 
-Axiom todoeta : forall {A}, A.
-Ltac todoeta := apply todoeta.
-
 (* Bug in Equations ... *)
 (* Derive Signature for clos_refl_trans_1n. *)
 

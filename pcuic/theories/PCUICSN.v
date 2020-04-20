@@ -33,6 +33,15 @@ Section Normalisation.
     Acc (cored Σ (Γ,, vass n t1)) t2 ->
     Acc (cored Σ Γ) (tProd n t1 t2).
   Proof.
+    (*intros a a'.
+    constructor.
+    intros y cored.
+    depind cored.
+    depelim cored.
+    depelim X. PCUICAstUtils.solve_discr.
+    constructor.
+    eapply invert_red1_prod in X.*)
+
   Admitted.
 
   Lemma Acc_cored_LetIn Γ n t1 t2 t3 :

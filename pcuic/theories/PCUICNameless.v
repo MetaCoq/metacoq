@@ -1330,7 +1330,7 @@ Local Ltac bb' := bb; [econstructor|]; tea; cbn.
 Arguments on_snd {_ _ _} _ _/.
 Arguments map_def_anon {_ _} _ _ _/.
 
-
+(*
 Lemma nl_red1' Σ Γ M N :
     red1 Σ Γ M N ->
     ∑ N', red1 Σ (nlctx Γ) (nl M) N' × nl N = nl N'.
@@ -1513,8 +1513,7 @@ Proof.
 (*     + rewrite nlctx_app_context, nl_fix_context in r0. assumption. *)
 (*     + cbn. congruence. *)
 (* Qed. *)
-Admitted.
-
+*)
 
   (* Lemma nleq_term_zipc : *)
   (*   forall u v π, *)

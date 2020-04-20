@@ -602,6 +602,9 @@ Axiom fix_guard_subst :
 (* AXIOM INDUCTIVE GUARD CONDITION *)
 Axiom ind_guard : mutual_inductive_body -> bool.
 
+(* Mark unfinished subgoals due to eta conversion *)
+Axiom todoeta : forall {A}, A.
+Ltac todoeta := apply todoeta.
 
 (** Compute the type of a case from the predicate [p], actual parameters [pars] and
     an inductive declaration. *)

@@ -47,14 +47,6 @@ Proof.
   intuition auto.
 Qed.
 
-Lemma strengthening `{cf : checker_flags} :
-  forall {Σ Γ Γ' Γ'' t T},
-    wf Σ.1 ->
-    Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ'
-    |- lift #|Γ''| #|Γ'| t : lift #|Γ''| #|Γ'| T ->
-    Σ;;; Γ ,,, Γ' |- t : T.
-Admitted.
-
 Section Lemmata.
   Context {cf : checker_flags}.
   Context (flags : RedFlags.t).

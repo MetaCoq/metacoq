@@ -1585,6 +1585,15 @@ Qed.
 (*   rewrite ebrtys'. autorewrite with sigma. reflexivity. *)
 (* Qed. *)
 
+Lemma upto_domain_rename t u :
+  upto_domain t u -> forall f, upto_domain (rename f t) (rename f u).
+Proof.
+  induction t in u |- * using term_forall_list_ind;
+    intro e; invs e; cbn; constructor; eauto.
+  1-2: solve_all.
+  all: rewrite (All2_length _ _ X0); solve_all.
+Qed.
+
 (* TODO UPDATE We need to add rename_stack *)
 Lemma cumul_rename :
   forall Σ Γ Δ f A B,
@@ -1595,7 +1604,9 @@ Lemma cumul_rename :
 Proof.
   intros Σ Γ Δ f A B hΣ hf h.
   induction h.
-  - eapply cumul_refl. eapply eq_term_upto_univ_rename. assumption.
+  - eapply cumul_refl.
+    + eapply eq_term_upto_univ_rename. eassumption.
+    + now apply upto_domain_rename.
   - eapply cumul_red_l.
     + eapply red1_rename. all: try eassumption.
     + assumption.

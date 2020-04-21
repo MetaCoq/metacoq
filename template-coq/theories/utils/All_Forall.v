@@ -761,12 +761,12 @@ End All2_size.
 
 Ltac close_Forall :=
   match goal with
-  | H : Forall _ _ |- Forall _ _ => apply (Forall_impl H); clear H; simpl
-  | H : All _ _ |- All _ _ => apply (All_impl H); clear H; simpl
-  | H : OnOne2 _ _ _ |- OnOne2 _ _ _ => apply (OnOne2_impl H); clear H; simpl
-  | H : All2 _ _ _ |- All2 _ _ _ => apply (All2_impl H); clear H; simpl
+  | H : Forall _ _ |- Forall _ _ => apply (Forall_impl H); clear H
+  | H : All _ _ |- All _ _ => apply (All_impl H); clear H
+  | H : OnOne2 _ _ _ |- OnOne2 _ _ _ => apply (OnOne2_impl H); clear H
+  | H : All2 _ _ _ |- All2 _ _ _ => apply (All2_impl H); clear H
   | H : All2 _ _ _ |- All _ _ =>
-    (apply (All2_All_left H) || apply (All2_All_right H)); clear H; simpl
+    (apply (All2_All_left H) || apply (All2_All_right H)); clear H
   end.
 
 Lemma All2_non_nil {A B} (P : A -> B -> Type) (l : list A) (l' : list B) :
@@ -1834,3 +1834,33 @@ Proof.
     simpl in h. apply andP in h as [? ?].
     constructor. all: auto.
 Qed.
+
+Lemma All2_refl {A} (R : A -> A -> Type) l :
+  (forall x, R x x) -> All2 R l l.
+Proof.
+  intro H. induction l; constructor; auto.
+Qed.
+
+Lemma map_inj_All A B (f : A -> B) l l' :
+  All (fun x => forall y, f x = f y -> x = y) l ->
+  map f l = map f l' ->
+  l = l'.
+Proof.
+  induction 1 in l' |- *.
+  - destruct l'; try discriminate. reflexivity.
+  - destruct l'; try discriminate. cbn. injection 1; intros.
+    erewrite p; try eassumption. now erewrite IHX.
+Qed.
+
+Ltac close_All :=
+  match goal with
+  | H : Forall _ _ |- Forall _ _ => apply (Forall_impl H); clear H
+  | H : All _ _ |- All _ _ => apply (All_impl H); clear H
+  | H : OnOne2 _ _ _ |- OnOne2 _ _ _ => apply (OnOne2_impl H); clear H
+  | H : All2 _ _ _ |- All2 _ _ _ => apply (All2_impl H); clear H
+  | H : Forall2 _ _ _ |- Forall2 _ _ _ => apply (Forall2_impl H); clear H
+  | H : All _ _ |- All2 _ _ _ =>
+    apply (All_All2 H); clear H
+  | H : All2 _ _ _ |- All _ _ =>
+    (apply (All2_All_left H) || apply (All2_All_right H)); clear H
+  end.

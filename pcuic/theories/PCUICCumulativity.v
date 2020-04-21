@@ -1,94 +1,141 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst
-     PCUICEquality PCUICTyping
-     PCUICReduction PCUICPosition.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst
+     PCUICEquality PCUICTyping PCUICBasicStrengthening PCUICReduction
+     PCUICEtaReduction PCUICPosition PCUICInduction PCUICWeakening.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
-Require Import CRelationClasses.
-Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
+Require Import ssrbool List CRelationClasses Arith Lia.
+From Equations.Type Require Import Relation Relation_Properties.
+From Equations.Prop Require Import DepElim.
+
+Import ListNotations. Open Scope list_scope.
 
 Set Default Goal Selector "!".
 
 Reserved Notation " Σ ;;; Γ |- t == u " (at level 50, Γ, t, u at next level).
 
+
+(** ** Properties of Cumulativity relying on eta-postponment
+       but not on confluence ** *)
+
+
+(* todo move *)
+Lemma eta_cumul_cumul {cf:checker_flags} {Σ : global_env_ext} {Γ t u v} :
+  eta t u -> Σ ;;; Γ |- u <= v -> Σ ;;; Γ |- t <= v.
+Proof.
+  induction 1 in v |- *; auto.
+  intro. econstructor 4; eassumption.
+Qed.
+
+Lemma eta_cumul_cumul_inv {cf:checker_flags} {Σ : global_env_ext} {Γ t u v} :
+  eta t v -> Σ ;;; Γ |- u <= v -> Σ ;;; Γ |- u <= t.
+Proof.
+  induction 1 in u |- *; auto.
+  intro. econstructor 5; eassumption.
+Qed.
+
+
 Lemma cumul_alt `{cf : checker_flags} Σ Γ t u :
-  Σ ;;; Γ |- t <= u <~> { v & { v' & (red Σ Γ t v * red Σ Γ u v' * leq_term (global_ext_constraints Σ) v v')%type } }.
+  Σ ;;; Γ |- t <= u <~>
+  ∑ t' t'' u' u'' v, red Σ Γ t t' ×
+                     eta t' t'' ×
+                     red Σ Γ u u' ×
+                     eta u' u'' ×
+                     leq_term Σ t'' v ×
+                     upto_domain v u''.
 Proof.
   split.
   - induction 1.
-    + exists t, u. intuition auto.
-    + destruct IHX as (v' & v'' & (redv & redv') & leqv).
-      exists v', v''. intuition auto. now eapply red_step.
-    + destruct IHX as (v' & v'' & (redv & redv') & leqv).
-      exists v', v''. intuition auto. now eapply red_step.
-    + todoeta.
-    + todoeta.
-  - intros [v [v' [[redv redv'] Hleq]]]. apply red_alt in redv. apply red_alt in redv'.
-    apply clos_rt_rt1n in redv.
-    apply clos_rt_rt1n in redv'.
-    induction redv.
-    * induction redv'.
-    ** constructor; auto.
-    ** econstructor 3; eauto.
-    * econstructor 2; eauto.
+    + exists t, t, v, v, u. intuition auto; reflexivity.
+    + destruct IHX as (t' & t'' & u' & u'' & v0 & ? & ? & ? & ? & ? & ?).
+      exists t', t'', u', u'', v0. intuition auto. eapply red_step; tea.
+    + destruct IHX as (t' & t'' & u' & u'' & v0 & ? & ? & ? & ? & ? & ?).
+      exists t', t'', u', u'', v0. intuition auto. eapply red_step; tea.
+    + todoeta.  (* eta postponment *)
+    + todoeta.  (* eta postponment *)
+  - intros (t' & t'' & u' & u'' & ? & ? & ? & ? & ? & ? & ?).
+    eapply red_cumul_cumul; tea.
+    eapply red_cumul_cumul_inv; tea.
+    eapply eta_cumul_cumul; tea.
+    eapply eta_cumul_cumul_inv; tea.
+    econstructor; tea.
 Qed.
 
-Instance cumul_refl' {cf:checker_flags} Σ Γ : Reflexive (cumul Σ Γ).
+
+Lemma upto_domain_eq_term_com {cf:checker_flags} {φ t u v} :
+  upto_domain t u ->
+  eq_term φ u v ->
+  ∑ u', eq_term φ t u' × upto_domain u' v.
 Proof.
-  intro; constructor. reflexivity.
+  induction t in u, v |- * using term_forall_list_ind;
+    intro e; invs e; intro e'; invs e'.
+  all: try (edestruct IHt as [? [? ?]]; tea).
+  5,7-15: try (edestruct IHt1 as [? [? ?]]; tea).
+  all: try (edestruct IHt2 as [? [? ?]]; tea).
+  all: try (edestruct IHt3 as [? [? ?]]; tea).
+  all: try (eexists; split; econstructor; tea; fail).
+  - enough (∑ l', All2 (eq_term_upto_univ (eq_universe φ) (eq_universe φ)) l l'
+                  × All2 upto_domain l' args'0) as XX. {
+      destruct XX as [? [? ?]]; eexists; split; now econstructor. }
+    induction X0 in X, args'0, X1 |- *; invs X; invs X1.
+    + exists []; split; constructor.
+    + edestruct X2 as [? [? ?]]; tea.
+      edestruct IHX0 as [? [? ?]]; tea.
+      eexists (_ :: _); split; econstructor; tea.
+  - enough (∑ l', All2 (fun x0 y => x0.1 = y.1
+            × eq_term_upto_univ (eq_universe φ) (eq_universe φ) x0.2 y.2) l l'
+            × All2 (fun x0 y  => x0.1 = y.1 × upto_domain x0.2 y.2) l' brs'0) as XX. {
+      destruct XX as [? [? ?]]; eexists; split; econstructor; tea. }
+    clear -X X2 X5.
+    induction X2 in X, brs'0, X5 |- *; invs X; invs X5.
+    + exists []; split; constructor.
+    + edestruct X0 as [A [? ?]]; [intuition eauto ..|].
+      edestruct IHX2 as [B [? ?]]; tea.
+      eexists ((_, A) :: B); split; econstructor; rdest; tea.
+  - enough (∑ l', All2 (fun x y =>
+     (eq_term_upto_univ (eq_universe φ) (eq_universe φ) (dtype x) (dtype y)
+      × eq_term_upto_univ (eq_universe φ) (eq_universe φ) (dbody x) (dbody y))
+     × rarg x = rarg y) m l'
+            × All2 (fun x y  => upto_domain (dtype x) (dtype y)
+    × upto_domain (dbody x) (dbody y) × rarg x = rarg y) l' mfix'0) as XX. {
+      destruct XX as [? [? ?]]; eexists; split; econstructor; tea. }
+    clear -X X0 X1.
+    induction X0 in X, mfix'0, X1 |- *; invs X; invs X1.
+    + exists []; split; constructor.
+    + edestruct X2 as [[A [? ?]] [B [? ?]]]; [intuition eauto ..|].
+      edestruct IHX0 as [C [? ?]]; tea.
+      eexists (mkdef term _ A B _ :: C); split; econstructor; rdest; tea.
+  - enough (∑ l', All2 (fun x y =>
+     (eq_term_upto_univ (eq_universe φ) (eq_universe φ) (dtype x) (dtype y)
+      × eq_term_upto_univ (eq_universe φ) (eq_universe φ) (dbody x) (dbody y))
+     × rarg x = rarg y) m l'
+            × All2 (fun x y  => upto_domain (dtype x) (dtype y)
+    × upto_domain (dbody x) (dbody y) × rarg x = rarg y) l' mfix'0) as XX. {
+      destruct XX as [? [? ?]]; eexists; split; econstructor; tea. }
+    clear -X X0 X1.
+    induction X0 in X, mfix'0, X1 |- *; invs X; invs X1.
+    + exists []; split; constructor.
+    + edestruct X2 as [[A [? ?]] [B [? ?]]]; [intuition eauto ..|].
+      edestruct IHX0 as [C [? ?]]; tea.
+      eexists (mkdef term _ A B _ :: C); split; econstructor; rdest; tea.
+  (* lambda *)
+  - eexists; split; econstructor; tea. reflexivity.
+    Unshelve.
+    all: constructor.
 Qed.
-
-Instance conv_refl' {cf:checker_flags} Σ Γ : Reflexive (conv Σ Γ).
-Proof.
-  intro; constructor. reflexivity.
-Qed.
-
-Lemma red_cumul `{cf : checker_flags} {Σ : global_env_ext} {Γ t u} :
-  red Σ Γ t u ->
-  Σ ;;; Γ |- t <= u.
-Proof.
-  intros. apply red_alt in X. apply clos_rt_rt1n in X.
-  induction X.
-  - apply cumul_refl'.
-  - econstructor 2. all: eauto.
-Qed.
-
-Lemma red_cumul_inv `{cf : checker_flags} {Σ : global_env_ext} {Γ t u} :
-  red Σ Γ t u ->
-  Σ ;;; Γ |- u <= t.
-Proof.
-  intros. apply red_alt in X. apply clos_rt_rt1n in X.
-  induction X.
-  - apply cumul_refl'.
-  - econstructor 3. all: eauto.
-Qed.
-
-Lemma red_cumul_cumul `{cf : checker_flags} {Σ : global_env_ext} {Γ t u v} :
-  red Σ Γ t u -> Σ ;;; Γ |- u <= v -> Σ ;;; Γ |- t <= v.
-Proof.
-  intros. apply red_alt in X. apply clos_rt_rt1n in X.
-  induction X. 1: auto.
-  econstructor 2; eauto.
-Qed.
-
-Lemma red_cumul_cumul_inv `{cf : checker_flags} {Σ : global_env_ext} {Γ t u v} :
-  red Σ Γ t v -> Σ ;;; Γ |- u <= v -> Σ ;;; Γ |- u <= t.
-Proof.
-  intros. apply red_alt in X. apply clos_rt_rt1n in X.
-  induction X. 1: auto.
-  econstructor 3.
-  - eapply IHX. eauto.
-  - eauto.
-Qed.
-
 
 Lemma conv_cumul2 {cf:checker_flags} Σ Γ t u :
   Σ ;;; Γ |- t = u -> (Σ ;;; Γ |- t <= u) * (Σ ;;; Γ |- u <= t).
 Proof.
   induction 1.
-  - split; constructor; now apply eq_term_leq_term.
+  - split.
+    + econstructor; try apply eq_term_leq_term; eassumption.
+    + symmetry in e. symmetry in u0.
+      destruct (upto_domain_eq_term_com u0 e) as [? p].
+      econstructor; try apply p.
+      apply eq_term_leq_term; apply p.
   - destruct IHX as [H1 H2]. split.
     * econstructor 2; eassumption.
     * econstructor 3; eassumption.
@@ -115,16 +162,29 @@ Proof.
   intro H; now apply conv_cumul2 in H.
 Qed.
 
-Lemma red_conv {cf:checker_flags} (Σ : global_env_ext) Γ t u
-  : red Σ Γ t u -> Σ ;;; Γ |- t = u.
+Lemma cumul2_conv {cf:checker_flags} Σ Γ t u :
+  (Σ ;;; Γ |- t <= u) * (Σ ;;; Γ |- u <= t) -> Σ ;;; Γ |- t = u.
 Proof.
-  intros H%red_alt%clos_rt_rt1n_iff.
-  induction H.
-  - reflexivity.
-  - econstructor 2; eauto. 
-Qed.
+  intros [H1 H2]; revert H2. induction H1.
+Abort.
 
-Hint Resolve red_conv : core.
+
+Instance conv_sym `{cf : checker_flags} (Σ : global_env_ext) Γ :
+  Symmetric (conv Σ Γ).
+Proof.
+  intros t u X. induction X.
+  - symmetry in e. symmetry in u0.
+    destruct (upto_domain_eq_term_com u0 e).
+    econstructor; apply p.
+  - eapply red_conv_conv_inv.
+    + eapply red1_red in r. eauto.
+    + eauto.
+  - eapply red_conv_conv.
+    + eapply red1_red in r. eauto.
+    + eauto.
+  - eapply conv_eta_r. all: eassumption.
+  - eapply conv_eta_l. all: eassumption.
+Qed.
 
 Lemma eq_term_App `{checker_flags} φ f f' :
   eq_term φ f f' ->
@@ -165,106 +225,16 @@ Proof.
 Qed.
 
 Hint Resolve leq_term_refl cumul_refl' : core.
+Hint Resolve red_conv : core.
 
-Lemma red_conv_conv `{cf : checker_flags} Σ Γ t u v :
-  red (fst Σ) Γ t u -> Σ ;;; Γ |- u = v -> Σ ;;; Γ |- t = v.
+
+Lemma cumul_App_l {cf:checker_flags} {Σ Γ f g x}:
+  Σ ;;; Γ |- f <= g -> Σ ;;; Γ |- tApp f x <= tApp g x.
 Proof.
-  intros. apply red_alt in X. apply clos_rt_rt1n_iff in X.
-  induction X; auto.
-  econstructor 2; eauto.
-Qed.
-
-Lemma red_conv_conv_inv `{cf : checker_flags} Σ Γ t u v :
-  red (fst Σ) Γ t u -> Σ ;;; Γ |- v = u -> Σ ;;; Γ |- v = t.
-Proof.
-  intros. apply red_alt in X. apply clos_rt_rt1n_iff in X.
-  induction X; auto.
-  now econstructor 3; [eapply IHX|]; eauto.
-Qed.
-
-Instance conv_sym `{cf : checker_flags} (Σ : global_env_ext) Γ :
-  Symmetric (conv Σ Γ).
-Proof.
-  intros t u X. induction X.
-  - eapply eq_term_sym in e; now constructor.
-  - eapply red_conv_conv_inv.
-    + eapply red1_red in r. eauto.
-    + eauto.
-  - eapply red_conv_conv.
-    + eapply red1_red in r. eauto.
-    + eauto.
-  - eapply conv_eta_r. all: eassumption.
-  - eapply conv_eta_l. all: eassumption.
-Qed.
-
-Lemma conv_alt_red {cf : checker_flags} {Σ : global_env_ext} {Γ : context} {t u : term} :
-  Σ;;; Γ |- t = u <~> (∑ v v' : term, (red Σ Γ t v × red Σ Γ u v') × eq_term (global_ext_constraints Σ) v v').
-Proof.
-  split.
-  - induction 1.
-    * exists t, u; intuition auto.
-    * destruct IHX as [? [? [? ?]]].
-      exists x, x0; intuition auto. eapply red_step; eauto.
-    * destruct IHX as [? [? [? ?]]].
-      exists x, x0; intuition auto. eapply red_step; eauto.
-    * todoeta.
-    * todoeta.
-  - destruct 1 as [? [? [[? ?] ?]]].
-    eapply red_conv_conv; eauto.
-    eapply red_conv_conv_inv; eauto. now constructor.
-Qed.
-
-Inductive conv_pb :=
-| Conv
-| Cumul.
-
-Definition conv_cum `{cf : checker_flags} leq Σ Γ u v :=
-  match leq with
-  | Conv => ∥ Σ ;;; Γ |- u = v ∥
-  | Cumul => ∥ Σ ;;; Γ |- u <= v ∥
-  end.
-
-Lemma conv_conv_cum_l `{cf : checker_flags} :
-  forall (Σ : global_env_ext) leq Γ u v, wf Σ ->
-      Σ ;;; Γ |- u = v ->
-      conv_cum leq Σ Γ u v.
-Proof.
-  intros Σ [] Γ u v h.
-  - cbn. constructor. assumption.
-  - cbn. constructor. now apply conv_cumul.
-Qed.
-
-Lemma conv_conv_cum_r `{cf : checker_flags} :
-  forall (Σ : global_env_ext) leq Γ u v, wf Σ ->
-      Σ ;;; Γ |- u = v ->
-      conv_cum leq Σ Γ v u.
-Proof.
-  intros Σ [] Γ u v wfΣ h.
-  - cbn. constructor. apply conv_sym; auto.
-  - cbn. constructor. apply conv_cumul.
-    now apply conv_sym.
-Qed.
-
-Lemma cumul_App_l `{cf : checker_flags} :
-  forall {Σ Γ f g x},
-    Σ ;;; Γ |- f <= g ->
-    Σ ;;; Γ |- tApp f x <= tApp g x.
-Proof.
-  intros Σ Γ f g x h.
-  induction h.
-  - eapply cumul_refl. constructor.
-    + assumption.
-    + apply eq_term_refl.
-  - eapply cumul_red_l ; try eassumption.
-    econstructor. assumption.
-  - eapply cumul_red_r ; try eassumption.
-    econstructor. assumption.
-  - eapply cumul_eta_l. 2: eassumption.
-    destruct e as [na [A [f [π [? ?]]]]]. subst.
-    exists na, A, f, (stack_cat π (App x ε)).
-    rewrite 2!zipc_stack_cat. cbn. intuition reflexivity.
-  - eapply cumul_eta_r. 1: eassumption.
-    destruct e as [na [A [f [π [? ?]]]]]. subst.
-    exists na, A, f, (stack_cat π (App x ε)).
-    rewrite 2!zipc_stack_cat. cbn. intuition reflexivity.
-Qed.
+  (* intro H. *)
+  (* cut (H = H); [|reflexivity]. *)
+  (* induction H. *)
+  induction 1;
+    [econstructor 1|econstructor 2|econstructor 3|econstructor 4|econstructor 5];
+    tea; econstructor; tea; try reflexivity .
+Defined.

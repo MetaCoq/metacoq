@@ -6,6 +6,7 @@ Definition on_rel {A B} (R : A -> A -> Prop) (f : B -> A) : B -> B -> Prop :=
 
 Definition on_Trel {A B} (R : A -> A -> Type) (f : B -> A) : B -> B -> Type :=
   fun x y => R (f x) (f y).
+Arguments on_Trel {_ _} _ _ _ _/.
 
 Notation Trel_conj R S :=
   (fun x y => R x y * S x y)%type.

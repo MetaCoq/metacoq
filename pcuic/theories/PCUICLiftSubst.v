@@ -278,7 +278,8 @@ Ltac solve_all :=
   unfold tCaseBrsProp, tFixProp in *;
   repeat toAll; try All_map; try close_All;
   change_Sk; auto with all;
-  intuition eauto 4 with all.
+  intuition eauto 4 with all;
+  try (cbn; eauto with all; fail).
 
 Ltac nth_leb_simpl :=
   match goal with
@@ -358,10 +359,10 @@ Lemma lift_isApp n k t : ~ isApp t = true -> ~ isApp (lift n k t) = true.
 Proof. induction t; auto. Qed.
 
 Lemma isLambda_lift n k (bod : term) :
-  isLambda bod = true -> isLambda (lift n k bod) = true.
-Proof. now destruct bod. Qed.
+  isLambda (lift n k bod) = isLambda bod.
+Proof. destruct bod; cbnr. Qed.
 
-Hint Resolve lift_isApp map_nil isLambda_lift : all.
+Hint Resolve lift_isApp map_nil : all.
 
 Lemma simpl_subst_rec :
   forall M N n p k,
@@ -886,7 +887,6 @@ Proof.
   - rewrite IHx2. apply rename_ext, shiftn_compose.
   - rewrite IHx3. apply rename_ext, shiftn_compose.
   - rewrite map_map_compose; apply All_map_eq. solve_all.
-    rewrite on_snd_on_snd. apply on_snd_eq_spec, H.
   - rewrite map_map_compose; apply All_map_eq. solve_all.
     rewrite map_def_map_def map_length.
     apply map_def_eq_spec; auto.
@@ -1476,8 +1476,6 @@ Proof.
     apply inst_ext. intros i. destruct i; auto.
   - f_equal; auto.
     red in X. rewrite map_map_compose. solve_all.
-    rewrite on_snd_on_snd.
-    solve_all.
   - f_equal; auto.
     red in X. rewrite map_map_compose. solve_all.
     rewrite map_def_map_def map_length. apply map_def_eq_spec; solve_all.
@@ -1545,8 +1543,6 @@ Proof.
     unfold subst_compose. simpl. now rewrite !rename_inst_assoc !compose_ren.
   - f_equal; auto.
     red in X. rewrite map_map_compose. solve_all.
-    rewrite on_snd_on_snd.
-    solve_all.
   - f_equal; auto.
     red in X. rewrite map_map_compose. solve_all.
     rewrite map_def_map_def map_length. apply map_def_eq_spec; solve_all.
@@ -1631,7 +1627,6 @@ Proof.
     now rewrite H1 Up_Up_assoc.
   - f_equal; auto. autorewrite with sigma.
     rewrite map_map_compose; solve_all.
-    rewrite on_snd_on_snd. solve_all.
   - f_equal; auto. autorewrite with sigma.
     rewrite map_map_compose; solve_all.
     rewrite map_def_map_def.
@@ -1788,3 +1783,36 @@ Fixpoint subst_app (t : term) (us : list term) : term :=
   | _, _ => mkApps t us
   end.
 
+
+
+Lemma lift_subst_Rel N k :
+  subst [tRel 0] k (lift 1 (S k) N) = N.
+Proof.
+  induction N in k |- * using term_forall_list_ind;
+    cbn; rewrite ?IHN1 ?IHN2 ?IHN3 ?IHN; try reflexivity.
+  - destruct (leb_spec_Set (S k) n).
+    + destruct (leb_spec_Set k (S n)); try lia.
+      destruct (S n - k) eqn:H; cbn;
+        rewrite ?nth_error_nil; f_equal; lia.
+    + destruct (leb_spec_Set k n); cbnr.
+      destruct (n - k) eqn:H; cbn;
+        rewrite ?nth_error_nil; f_equal; lia.
+  - f_equal. rewrite map_map.
+    eapply All_map_id'; tea; auto.
+  - f_equal. rewrite map_map.
+    eapply All_map_id'; tea.
+    intros []; cbn; congruence.
+  - f_equal. rewrite map_map map_length.
+    eapply All_map_id'; tea.
+    clear; intros [] []; cbn in *.
+    rewrite Nat.add_succ_r. congruence.
+  - f_equal. rewrite map_map map_length.
+    eapply All_map_id'; tea.
+    clear; intros [] []; cbn in *.
+    rewrite Nat.add_succ_r. congruence.
+Qed.
+
+Lemma lift_subst0_Rel N : (lift 1 1 N) {0 := tRel 0} = N.
+Proof.
+  apply lift_subst_Rel.
+Qed.

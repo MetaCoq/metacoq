@@ -1918,7 +1918,7 @@ Section ParallelSubstitution.
       apply All2_map. red in X0. unfold on_Trel, id in *.
       pose proof (All2_length _ _ X3).
       eapply All2_impl; eauto. simpl. intros.
-      destruct X. destruct o, p. destruct p. rename_all_hyps.
+      destruct X as [[] [[] ?]]. rename_all_hyps.
       specialize (forall_Γ1 _ _ (_ ,,, fix_context mfix0) ltac:(now rewrite - app_context_assoc)
       _ _ (_ ,,, fix_context mfix1) _ _ Hs ltac:(now rewrite - app_context_assoc) heq_length).
       rewrite !app_context_length !fix_context_length in forall_Γ1. forward forall_Γ1 by lia.
@@ -1937,7 +1937,7 @@ Section ParallelSubstitution.
       apply All2_map. red in X0. unfold on_Trel, id in *.
       pose proof (All2_length _ _ X3).
       eapply All2_impl; eauto. simpl. intros.
-      destruct X. destruct o, p. destruct p. rename_all_hyps.
+      destruct X as [[] [[] ?]]. rename_all_hyps.
       specialize (forall_Γ1 _ _ (_ ,,, fix_context mfix0) ltac:(now rewrite - app_context_assoc)
       _ _ (_ ,,, fix_context mfix1) _ _ Hs ltac:(now rewrite - app_context_assoc) heq_length).
       rewrite !app_context_length !fix_context_length in forall_Γ1. forward forall_Γ1 by lia.

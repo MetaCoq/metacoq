@@ -1000,7 +1000,7 @@ Proof.
   - move/closedn_mkApps_inv/andP: Hc' => [Hf Hargs].
     rewrite -closed_unfold_cofix_cunfold_eq in H0; auto.
     redt _. eapply red1_red.
-    eapply PCUICTyping.red_cofix_case; eauto.
+    econstructor; eauto.
     eapply IHHe.
     eapply closed_unfold_cofix in H0; eauto.
     simpl. rewrite Hc closedn_mkApps; eauto.

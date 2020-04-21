@@ -261,9 +261,8 @@ Ltac nth_leb_simpl :=
 Lemma lift0_id : forall M k, lift 0 k M = M.
 Proof.
   intros M.
-  elim M using term_forall_list_ind; simpl in |- *; intros; try easy ;
-    try (try rewrite H; try rewrite H0 ; try rewrite H1 ; easy);
-    try (f_equal; auto; solve_all).
+  elim M using term_forall_list_ind; simpl; intros;
+    rewrite ?H, ?H0, ?H1; try reflexivity; f_equal; try solve_all.
 
   - now elim (leb k n).
 Qed.
@@ -336,7 +335,7 @@ Lemma wf_lift n k t : wf t -> wf (lift n k t).
 Proof.
   intros wft; revert t wft k.
   apply (term_wf_forall_list_ind (fun t => forall k, wf (lift n k t)));
-    simpl; intros; try constructor; auto; solve_all.
+    simpl; intros; try constructor; solve_all; cbn; auto with all.
 Qed.
 
 Lemma mkApps_tApp t l :
@@ -569,7 +568,7 @@ Proof.
   - apply wf_mkApps; auto. apply Forall_map. eapply Forall_impl; eauto.
   - apply Forall_map. apply All_Forall. eapply All_impl; tea.
     intros [] XX; cbn in *; apply XX.
-  - solve_all. induction dbody; try discriminate. reflexivity.
+  - solve_all; cbn; auto. induction dbody; try discriminate. reflexivity.
   - apply Forall_map. eapply All_Forall, All_impl; eauto.
     intros [] XX; cbn in *; split; apply XX.
 Qed.

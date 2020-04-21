@@ -1011,22 +1011,22 @@ Proof.
   - cbn; econstructor;
       eapply OnOne2_map; eapply OnOne2_impl; [ eassumption | ].
     intros. destruct X1. destruct p. inversion e. destruct x, y; cbn in *; subst.
-    red. split; cbn; eauto.
+    split; cbn; eauto.
   - cbn. eapply fix_red_body.
       eapply OnOne2_map; eapply OnOne2_impl; [ eassumption | ].
     intros. destruct X1. destruct p. inversion e. destruct x, y; cbn in *; subst.
-    red. split; cbn; eauto.
+    split; cbn; eauto.
     rewrite <- (fix_context_subst_instance u mfix0).
     unfold subst_instance_context, map_context in *. rewrite map_app in *.
     eassumption.
   - cbn; econstructor;
       eapply OnOne2_map; eapply OnOne2_impl; [ eassumption | ].
     intros. destruct X1. destruct p. inversion e. destruct x, y; cbn in *; subst.
-    red. split; cbn; eauto.
+    split; cbn; eauto.
   - cbn. eapply cofix_red_body.
       eapply OnOne2_map; eapply OnOne2_impl; [ eassumption | ].
     intros. destruct X1. destruct p. inversion e. destruct x, y; cbn in *; subst.
-    red. split; cbn; eauto.
+    split; cbn; eauto.
     rewrite <- (fix_context_subst_instance u mfix0).
     unfold subst_instance_context, map_context in *. rewrite map_app in *.
     eassumption.
@@ -1105,16 +1105,56 @@ Proof.
     rewrite map_app. cbn. reflexivity.
 Qed.
 
-Lemma eta_expands_subst_instance_constr :
-  forall l u v,
-    eta_expands u v ->
-    eta_expands (subst_instance_constr l u) (subst_instance_constr l v).
+Lemma eta1_subst_instance_constr l u v :
+  eta1 u v ->
+  eta1 (subst_instance_constr l u) (subst_instance_constr l v).
 Proof.
-  intros l u v [na [A [f [π [? ?]]]]]. subst.
-  rewrite 2!subst_instance_constr_zipc. cbn.
-  eexists _, _, _, _. intuition eauto.
-  f_equal. f_equal. f_equal.
-  rewrite lift_subst_instance_constr. reflexivity.
+  induction 1 using eta1_ind_all; cbn;
+    try (constructor; auto; fail).
+  - refine (transport (fun x => eta1 x _) _ (eta_red _ _ _)). do 2 f_equal.
+    apply lift_subst_instance_constr.
+  - constructor. eapply OnOne2_map. eapply OnOne2_impl; tea.
+    intros [? ?] [? ?] [[? ?] ?]; cbn in *; split; auto.
+  - constructor. eapply OnOne2_map. eapply OnOne2_impl; tea.
+    intros ? ? [? ?]; cbn in *; auto.
+  - constructor. replace #|mfix1| with #|mfix0|;
+      [|eapply OnOne2_length; eassumption].
+    eapply OnOne2_map. eapply OnOne2_impl; tea.
+    intros ? ? [[? ?] ?]; cbn in *; split; auto.
+    inversion e1; congruence.
+  - apply fix_eta_body.
+    replace #|mfix1| with #|mfix0|;
+      [|eapply OnOne2_length; eassumption].
+    eapply OnOne2_map. eapply OnOne2_impl; tea.
+    intros ? ? [[? ?] ?]; cbn in *; split; auto.
+    inversion e1; congruence.
+  - constructor. replace #|mfix1| with #|mfix0|;
+      [|eapply OnOne2_length; eassumption].
+    eapply OnOne2_map. eapply OnOne2_impl; tea.
+    intros ? ? [[? ?] ?]; cbn in *; split; auto.
+    inversion e1; congruence.
+  - apply cofix_eta_body.
+    replace #|mfix1| with #|mfix0|;
+      [|eapply OnOne2_length; eassumption].
+    eapply OnOne2_map. eapply OnOne2_impl; tea.
+    intros ? ? [[? ?] ?]; cbn in *; split; auto.
+    inversion e1; congruence.
+Defined.
+
+Lemma eta_subst_instance_constr l u v :
+  eta u v ->
+  eta (subst_instance_constr l u) (subst_instance_constr l v).
+Proof.
+  induction 1; [constructor 1|econstructor 2|econstructor 3];
+    eauto using eta1_subst_instance_constr.
+Defined.
+
+Lemma upto_domain_subst_instance t v :
+  upto_domain t v ->
+  forall u, upto_domain (subst_instance u t) (subst_instance_constr u v).
+Proof.
+  induction t in v |- * using term_forall_list_ind;
+    intro e; invs e; cbn; try reflexivity; constructor; eauto; solve_all.
 Qed.
 
 Lemma cumul_subst_instance (Σ : global_env_ext) Γ u A B univs :
@@ -1127,13 +1167,14 @@ Lemma cumul_subst_instance (Σ : global_env_ext) Γ u A B univs :
 Proof.
   intros Hu HH X0. induction X0.
   - econstructor.
-    eapply leq_term_subst_instance; tea.
+    + eapply leq_term_subst_instance; tea.
+    + now apply upto_domain_subst_instance.
   - econstructor 2. 1: eapply red1_subst_instance; cbn; eauto. eauto.
   - econstructor 3. 1: eauto. eapply red1_subst_instance; cbn; eauto.
   - eapply cumul_eta_l. 2: eauto.
-    eapply eta_expands_subst_instance_constr. assumption.
+    eapply eta1_subst_instance_constr. assumption.
   - eapply cumul_eta_r. 1: eauto.
-    eapply eta_expands_subst_instance_constr. assumption.
+    eapply eta1_subst_instance_constr. assumption.
 Qed.
 
 Global Instance eq_decl_subst_instance : SubstUnivPreserved eq_decl.

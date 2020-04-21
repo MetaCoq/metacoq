@@ -46,6 +46,8 @@ gen-src/denote.ml
 gen-src/denoter.ml
 gen-src/environment.ml
 gen-src/environment.mli
+gen-src/equality0.ml
+gen-src/equality0.mli
 gen-src/equalities.ml
 gen-src/equalities.mli
 gen-src/extractable.ml

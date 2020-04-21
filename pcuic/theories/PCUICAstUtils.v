@@ -256,15 +256,6 @@ Proof.
   lia.
 Qed.
 
-Lemma mapi_rec_compose {A B C} (g : nat -> B -> C) (f : nat -> A -> B) k l :
-  mapi_rec g (mapi_rec f l k) k = mapi_rec (fun k x => g k (f k x)) l k.
-Proof.
-  induction l in k |- *; simpl; auto. now rewrite IHl.
-Qed.
-
-Lemma mapi_compose {A B C} (g : nat -> B -> C) (f : nat -> A -> B) l :
-  mapi g (mapi f l) = mapi (fun k x => g k (f k x)) l.
-Proof. apply mapi_rec_compose. Qed.
 
 Lemma compose_map_decl f g x : map_decl f (map_decl g x) = map_decl (f ∘ g) x.
 Proof.
@@ -276,26 +267,6 @@ Proof.
   intros H; destruct x as [? [?|] ?]; rewrite /map_decl /=; f_equal; auto.
   now rewrite (H t).
 Qed.
-
-Ltac merge_All :=
-  unfold tFixProp, tCaseBrsProp in *;
-  repeat toAll.
-
-Hint Rewrite @map_def_id @map_id : map.
-
-(* todo move *)
-Ltac close_All :=
-  match goal with
-  | H : Forall _ _ |- Forall _ _ => apply (Forall_impl H); clear H; simpl
-  | H : All _ _ |- All _ _ => apply (All_impl H); clear H; simpl
-  | H : OnOne2 _ _ _ |- OnOne2 _ _ _ => apply (OnOne2_impl H); clear H; simpl
-  | H : All2 _ _ _ |- All2 _ _ _ => apply (All2_impl H); clear H; simpl
-  | H : Forall2 _ _ _ |- Forall2 _ _ _ => apply (Forall2_impl H); clear H; simpl
-  | H : All _ _ |- All2 _ _ _ =>
-    apply (All_All2 H); clear H; simpl
-  | H : All2 _ _ _ |- All _ _ =>
-    (apply (All2_All_left H) || apply (All2_All_right H)); clear H; simpl
-  end.
 
 Lemma mkApps_inj :
   forall u v l,
@@ -665,3 +636,18 @@ Coercion fst_ctx : global_env_ext >-> global_env.
 
 Definition empty_ext (Σ : global_env) : global_env_ext
   := (Σ, Monomorphic_ctx ContextSet.empty).
+
+
+Definition isSort T :=
+  match T with
+  | tSort u => True
+  | _ => False
+  end.
+
+Fixpoint isArity T :=
+  match T with
+  | tSort u => True
+  | tProd _ _ codom => isArity codom
+  | tLetIn _ _ _ codom => isArity codom
+  | _ => False
+  end.

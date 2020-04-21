@@ -20,6 +20,219 @@ Set Equations With UIP.
 Set Default Goal Selector "!".
 Require Import ssreflect ssrbool.
 
+
+Inductive conv_pb :=
+| Conv
+| Cumul.
+
+Definition conv_cum `{cf : checker_flags} leq Σ Γ u v :=
+  match leq with
+  | Conv => ∥ Σ ;;; Γ |- u = v ∥
+  | Cumul => ∥ Σ ;;; Γ |- u <= v ∥
+  end.
+
+Lemma conv_conv_cum_l `{cf : checker_flags} :
+  forall (Σ : global_env_ext) leq Γ u v, wf Σ ->
+      Σ ;;; Γ |- u = v ->
+      conv_cum leq Σ Γ u v.
+Proof.
+  intros Σ [] Γ u v h.
+  - cbn. constructor. assumption.
+  - cbn. constructor. now apply conv_cumul.
+Qed.
+
+Lemma conv_conv_cum_r `{cf : checker_flags} :
+  forall (Σ : global_env_ext) leq Γ u v, wf Σ ->
+      Σ ;;; Γ |- u = v ->
+      conv_cum leq Σ Γ v u.
+Proof.
+  intros Σ [] Γ u v wfΣ h.
+  - cbn. constructor. apply conv_sym; auto.
+  - cbn. constructor. apply conv_cumul.
+    now apply conv_sym.
+Qed.
+
+Global Instance conv_cum_refl {leq Γ} :
+  RelationClasses.Reflexive (conv_cum leq Σ Γ).
+Proof.
+  destruct leq; constructor; reflexivity.
+Qed.
+
+Lemma conv_conv_cum {leq Γ u v} :
+  ∥ Σ ;;; Γ |- u = v ∥ -> conv_cum leq Σ Γ u v.
+Proof.
+  intros h; destruct leq.
+  - assumption.
+  - destruct h. cbn.
+    constructor. now eapply conv_cumul.
+Qed.
+
+Global Instance conv_cum_trans {leq Γ} :
+  RelationClasses.Transitive (conv_cum leq Σ Γ).
+Proof.
+  intros u v w h1 h2. destruct leq; cbn in *; sq; etransitivity; eassumption.
+Qed.
+
+Lemma red_conv_cum_l {leq Γ u v} :
+  red (fst Σ) Γ u v -> conv_cum leq Σ Γ u v.
+Proof.
+  induction 1.
+  - reflexivity.
+  - etransitivity; tea.
+    destruct leq.
+    + simpl. destruct IHX. constructor.
+      eapply conv_red_l; eauto.
+    + simpl. constructor.
+      eapply cumul_red_l.
+      * eassumption.
+      * eapply cumul_refl'.
+Qed.
+
+Lemma red_conv_cum_r {leq Γ u v} :
+  red (fst Σ) Γ u v -> conv_cum leq Σ Γ v u.
+Proof.
+  induction 1.
+  - reflexivity.
+  - etransitivity; tea.
+    destruct leq.
+    + simpl. destruct IHX. constructor.
+      eapply conv_red_r; eauto.
+    + simpl. constructor.
+      eapply cumul_red_r.
+      * eapply cumul_refl'.
+      * assumption.
+Qed.
+
+Lemma conv_cum_Prod leq Γ na1 na2 A1 A2 B1 B2 :
+  Σ ;;; Γ |- A1 = A2 ->
+            conv_cum leq Σ (Γ,, vass na1 A1) B1 B2 ->
+            conv_cum leq Σ Γ (tProd na1 A1 B1) (tProd na2 A2 B2).
+Proof.
+  intros h1 h2; destruct leq.
+  - simpl in *. destruct h2 as [h2]. constructor.
+    eapply conv_trans => //.
+    + eapply conv_Prod_r. eassumption.
+    + eapply conv_Prod_l. eassumption.
+  - simpl in *. destruct h2 as [h2]. constructor.
+    eapply cumul_trans.
+    + auto.
+    + eapply cumul_Prod_r. eassumption.
+    + eapply conv_cumul. eapply conv_Prod_l. assumption.
+Qed.
+
+Lemma conv_cum_Lambda leq Γ na1 na2 A1 A2 t1 t2 :
+  Σ ;;; Γ |- A1 = A2 ->
+            conv_cum leq Σ (Γ ,, vass na1 A1) t1 t2 ->
+            conv_cum leq Σ Γ (tLambda na1 A1 t1) (tLambda na2 A2 t2).
+Proof.
+  intros X H. destruct leq; cbn in *; sq.
+  - etransitivity.
+    + eapply conv_Lambda_r. eassumption.
+    + now eapply conv_Lambda_l.
+  - etransitivity.
+    + eapply cumul_Lambda_r. eassumption.
+    + eapply conv_cumul, conv_Lambda_l; tea.
+Qed.
+
+Lemma conv_cum_LetIn leq Γ na1 na2 t1 t2 A1 A2 u1 u2 :
+  Σ;;; Γ |- t1 = t2 ->
+           Σ;;; Γ |- A1 = A2 ->
+                    conv_cum leq Σ (Γ ,, vdef na1 t1 A1) u1 u2 ->
+                    conv_cum leq Σ Γ (tLetIn na1 t1 A1 u1) (tLetIn na2 t2 A2 u2).
+Proof.
+  intros X H H'. destruct leq; cbn in *; sq.
+  - etransitivity.
+    + eapply conv_LetIn_bo. eassumption.
+    + etransitivity.
+      * eapply conv_LetIn_tm. eassumption.
+      * eapply conv_LetIn_ty with (na := na1). assumption.
+  - etransitivity.
+    + eapply cumul_LetIn_bo. eassumption.
+    + etransitivity.
+      * eapply conv_cumul, conv_LetIn_tm; tea.
+      * eapply conv_cumul, conv_LetIn_ty with (na := na1); tea.
+Qed.
+
+Lemma conv_cum_conv_ctx leq Γ Γ' T U :
+  conv_cum leq Σ Γ T U ->
+  conv_context Σ Γ Γ' ->
+  conv_cum leq Σ Γ' T U.
+Proof.
+  destruct leq; cbn; intros; sq.
+  - eapply conv_conv_ctx; eassumption.
+  - eapply cumul_conv_ctx; eassumption.
+Qed.
+
+
+Lemma it_mkLambda_or_LetIn_conv_cum leq Γ Δ1 Δ2 t1 t2 :
+  conv_context Σ (Γ ,,, Δ1) (Γ ,,, Δ2) ->
+  conv_cum leq Σ (Γ ,,, Δ1) t1 t2 ->
+  conv_cum leq Σ Γ (it_mkLambda_or_LetIn Δ1 t1) (it_mkLambda_or_LetIn Δ2 t2).
+Proof.
+  induction Δ1 in Δ2, t1, t2 |- *; intros X Y.
+  - apply context_relation_length in X.
+    destruct Δ2; cbn in *; [trivial|].
+    rewrite app_length in X; lia.
+  - apply context_relation_length in X as X'.
+    destruct Δ2 as [|c Δ2]; simpl in *; [rewrite app_length in X'; lia|].
+    dependent destruction X.
+    + eapply IHΔ1; tas; cbn.
+      inv c0. eapply conv_cum_Lambda; tea.
+    + eapply IHΔ1; tas; cbn.
+      inversion c0; subst; eapply conv_cum_LetIn; auto.
+Qed.
+
+Lemma Lambda_conv_cum_inv :
+  forall leq Γ na1 na2 A1 A2 b1 b2,
+    wf_local Σ Γ ->
+    conv_cum leq Σ Γ (tLambda na1 A1 b1) (tLambda na2 A2 b2) ->
+    ∥ Σ ;;; Γ |- A1 = A2 ∥ /\ conv_cum leq Σ (Γ ,, vass na1 A1) b1 b2.
+Proof.
+  intros * wfΓ.
+  destruct leq; simpl in *.
+  - destruct 1.
+    eapply conv_alt_red in X as [l [r [[redl redr] eq]]].
+    eapply red_lambda_inv in redl as [A1' [b1' [[-> ?] ?]]].
+    eapply red_lambda_inv in redr as [A2' [b2' [[-> ?] ?]]].
+    depelim eq. assert (Σ ;;; Γ |- A1 = A2).
+    { eapply conv_trans with A1'; auto.
+      eapply conv_trans with A2'; auto.
+      - constructor. assumption.
+      - apply conv_sym; auto.
+    }
+    split; constructor; auto.
+    eapply conv_trans with b1'; auto.
+    eapply conv_trans with b2'; auto.
+    + constructor; auto.
+    + apply conv_sym; auto.
+      eapply conv_conv_ctx; eauto.
+      constructor; auto. 1: reflexivity.
+      constructor. now apply conv_sym.
+  - destruct 1.
+    eapply cumul_alt in X as [l [r [[redl redr] eq]]].
+    eapply red_lambda_inv in redl as [A1' [b1' [[-> ?] ?]]].
+    eapply red_lambda_inv in redr as [A2' [b2' [[-> ?] ?]]].
+    depelim eq.
+    assert (Σ ;;; Γ |- A1 = A2).
+    { eapply conv_trans with A1'; auto.
+      eapply conv_trans with A2'; auto.
+      - constructor. assumption.
+      - apply conv_sym; auto.
+    }
+    split; constructor; auto.
+    eapply red_cumul_cumul; tea.
+    eapply cumul_trans with b2'; auto.
+    + constructor; auto.
+    + eapply cumul_conv_ctx; tas.
+      * eapply red_cumul_cumul_inv; tea.
+        reflexivity.
+      * symmetry in X.
+        constructor. 1: reflexivity.
+        now constructor.
+Qed.
+
+
+
 Definition nodelta_flags := RedFlags.mk true true true false true true.
 
 (* TODO MOVE *)

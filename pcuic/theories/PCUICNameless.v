@@ -934,17 +934,17 @@ Proof.
     + cbn. congruence.
 Qed.
 
-Lemma eta_expands_nl :
-  forall u v,
-    eta_expands u v ->
-    eta_expands (nl u) (nl v).
+Lemma eta1_nl u v : eta1 u v -> eta1 (nl u) (nl v).
 Proof.
-  intros u v [na [A [f [π [? ?]]]]]. subst.
-  rewrite 2!nl_zipc. cbn.
-  eexists _, _, _, _. intuition eauto.
-  f_equal. f_equal. f_equal.
-  rewrite nl_lift. reflexivity.
+Admitted.
+
+Lemma nl_upto_domain u v :
+  upto_domain u v -> upto_domain (nl u) (nl v).
+Proof.
+  induction u in v |- * using term_forall_list_ind;
+    intro e; invs e; cbn; constructor; eauto; solve_all.
 Qed.
+
 
 Lemma nl_cumul {cf:checker_flags} :
   forall Σ Γ A B,
@@ -953,16 +953,16 @@ Lemma nl_cumul {cf:checker_flags} :
 Proof.
   intros Σ Γ A B h.
   induction h.
-  - constructor. rewrite global_ext_constraints_nlg. apply nl_leq_term.
-    assumption.
+  - econstructor; [|apply nl_upto_domain; eassumption].
+    rewrite global_ext_constraints_nlg. now apply nl_leq_term.
   - eapply cumul_red_l. 2: eassumption.
     destruct Σ. apply nl_red1. assumption.
   - eapply cumul_red_r. 1: eassumption.
     destruct Σ. apply nl_red1. assumption.
   - eapply cumul_eta_l. 2: eassumption.
-    eapply eta_expands_nl. assumption.
+    eapply eta1_nl. assumption.
   - eapply cumul_eta_r. 1: eassumption.
-    eapply eta_expands_nl. assumption.
+    eapply eta1_nl. assumption.
 Qed.
 
 Lemma nl_destArity :

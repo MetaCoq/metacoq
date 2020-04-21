@@ -1,10 +1,9 @@
 (* Distributed under the terms of the MIT license.   *)
 Require Import ssreflect.
-From Coq Require Import Bool List Utf8
-  ZArith Lia.
+From Coq Require Import Bool List Utf8 ZArith Lia.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICPosition.
+     PCUICLiftSubst PCUICUnivSubst PCUICConversionDef PCUICPosition.
 
 Require Import Equations.Prop.DepElim.
 
@@ -369,19 +368,6 @@ Section ReductionCongruence.
       induction l.
       - reflexivity.
       - cbn. destruct a. rewrite <- IHl. reflexivity.
-    Qed.
-
-    Lemma map_inj :
-      forall A B (f : A -> B) l l',
-        (forall x y, f x = f y -> x = y) ->
-        map f l = map f l' ->
-        l = l'.
-    Proof.
-      intros A B f l l' h e.
-      induction l in l', e |- *.
-      - destruct l' ; try discriminate. reflexivity.
-      - destruct l' ; try discriminate. inversion e.
-        f_equal ; eauto.
     Qed.
 
     Context {Γ : context}.

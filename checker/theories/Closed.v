@@ -33,7 +33,7 @@ Proof.
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
     simpl closed in *; solve_all;
     unfold compose, test_def, test_snd in *;
-      try solve [simpl lift; simpl closed; f_equal; auto; repeat (rtoProp; solve_all)]; try easy.
+      try solve [simpl lift; simpl closed; f_equal; auto; repeat (rtoProp; solve_all; cbn; eauto with all)]; try easy.
 
   - elim (Nat.leb_spec k' n0); intros. simpl.
     elim (Nat.ltb_spec); auto. apply Nat.ltb_lt in H. lia.

@@ -211,6 +211,7 @@ Definition print_def {A} (f : A -> string) (g : A -> string) (def : def A) :=
 
 Definition map_def {A B} (tyf bodyf : A -> B) (d : def A) :=
   {| dname := d.(dname); dtype := tyf d.(dtype); dbody := bodyf d.(dbody); rarg := d.(rarg) |}.
+Arguments map_def {_ _} _ _ _/.
 
 Lemma map_dtype {A B} (f : A -> B) (g : A -> B) (d : def A) :
   f (dtype d) = dtype (map_def f g d).
@@ -244,7 +245,6 @@ Proof. reflexivity. Qed.
 
 Lemma map_def_id {t} x : map_def (@id t) (@id t) x = id x.
 Proof. now destruct x. Qed.
-Hint Rewrite @map_def_id @map_id : map.
 
 Lemma map_def_spec {A B} (P P' : A -> Type) (f f' g g' : A -> B) (x : def A) :
   P' x.(dbody) -> P x.(dtype) -> (forall x, P x -> f x = g x) ->
@@ -328,17 +328,4 @@ Ltac apply_spec :=
     eapply (All_map_id H)
   | H : All _ _ |- is_true (forallb _ _) =>
     eapply (All_forallb _ _ H); clear H
-  end.
-
-Ltac close_All :=
-  match goal with
-  | H : Forall _ _ |- Forall _ _ => apply (Forall_impl H); clear H; simpl
-  | H : All _ _ |- All _ _ => apply (All_impl H); clear H; simpl
-  | H : OnOne2 _ _ _ |- OnOne2 _ _ _ => apply (OnOne2_impl H); clear H; simpl
-  | H : All2 _ _ _ |- All2 _ _ _ => apply (All2_impl H); clear H; simpl
-  | H : Forall2 _ _ _ |- Forall2 _ _ _ => apply (Forall2_impl H); clear H; simpl
-  | H : All _ _ |- All2 _ _ _ =>
-    apply (All_All2 H); clear H; simpl
-  | H : All2 _ _ _ |- All _ _ =>
-    (apply (All2_All_left H) || apply (All2_All_right H)); clear H; simpl
   end.

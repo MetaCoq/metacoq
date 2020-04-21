@@ -636,7 +636,8 @@ Proof.
 
   - apply fix_red_body. rewrite !lift_fix_context.
     rewrite <- (OnOne2_length X).
-    eapply OnOne2_map. unfold on_Trel; solve_all. 2: congruence.
+    eapply OnOne2_map.
+    unfold on_Trel; solve_all; cbn. 2: congruence.
     specialize (b0 Γ0 (Γ' ,,, fix_context mfix0)).
     rewrite app_context_assoc in b0. specialize (b0 Γ'' eq_refl).
     rewrite -> app_context_length, fix_context_length in *.
@@ -646,13 +647,12 @@ Proof.
 
   - constructor.
     rewrite -> (OnOne2_length X). generalize (#|mfix1|).
-    induction X; simpl; constructor; intuition eauto.
-    + simpl; auto.
-    + simpl; congruence.
+    induction X; simpl; constructor; intuition eauto; cbn.
+    congruence.
 
   - apply cofix_red_body. rewrite !lift_fix_context.
     rewrite <- (OnOne2_length X).
-    eapply OnOne2_map. unfold on_Trel; solve_all. 2: congruence.
+    eapply OnOne2_map. unfold on_Trel; solve_all; cbn. 2: congruence.
     specialize (b0 Γ0 (Γ' ,,, fix_context mfix0)).
     rewrite app_context_assoc in b0. specialize (b0 Γ'' eq_refl).
     rewrite -> app_context_length, fix_context_length in *.
@@ -780,18 +780,58 @@ Proof.
     rewrite map_app. cbn. reflexivity.
 Qed.
 
-Lemma weakening_eta_expands `{checker_flags} :
-  forall u v n k,
-    eta_expands u v ->
-    eta_expands (lift n k u) (lift n k v).
+Lemma weakening_eta1 u v n k :
+  eta1 u v -> eta1 (lift n k u) (lift n k v).
 Proof.
-  intros u v n k [na [A [t [π [e1 e2]]]]]. subst.
-  rewrite 2!lift_zipc. cbn.
-  replace (S (#|stack_context π| + k))
-    with ((#|stack_context π| + k) + 1)
-    by lia.
-  rewrite <- permute_lift by lia.
-  eexists _, _, _, _. intuition reflexivity.
+  induction 1 in k |- * using eta1_ind_all; cbn;
+    try (constructor; auto; fail).
+  - refine (transport (fun x => eta1 x _) _ (eta_red _ _ _)). do 2 f_equal.
+    rewrite permute_lift; [lia|].
+    now rewrite Nat.add_comm.
+  - constructor. eapply OnOne2_map. eapply OnOne2_impl; tea.
+    intros [? ?] [? ?] [[? ?] ?]; cbn in *; split; auto.
+  - constructor. eapply OnOne2_map. eapply OnOne2_impl; tea.
+    intros ? ? [? ?]; cbn in *; auto.
+  - constructor. replace #|mfix1| with #|mfix0|;
+      [|eapply OnOne2_length; eassumption].
+    eapply OnOne2_map. eapply OnOne2_impl; tea.
+    intros ? ? [[? ?] ?]; cbn in *; split; auto.
+    inversion e1; congruence.
+  - apply fix_eta_body.
+    replace #|mfix1| with #|mfix0|;
+      [|eapply OnOne2_length; eassumption].
+    eapply OnOne2_map. eapply OnOne2_impl; tea.
+    intros ? ? [[? ?] ?]; cbn in *; split; auto.
+    inversion e1; congruence.
+  - constructor. replace #|mfix1| with #|mfix0|;
+      [|eapply OnOne2_length; eassumption].
+    eapply OnOne2_map. eapply OnOne2_impl; tea.
+    intros ? ? [[? ?] ?]; cbn in *; split; auto.
+    inversion e1; congruence.
+  - apply cofix_eta_body.
+    replace #|mfix1| with #|mfix0|;
+      [|eapply OnOne2_length; eassumption].
+    eapply OnOne2_map. eapply OnOne2_impl; tea.
+    intros ? ? [[? ?] ?]; cbn in *; split; auto.
+    inversion e1; congruence.
+Defined.
+
+Lemma weakening_eta u v n k :
+  eta u v -> eta (lift n k u) (lift n k v).
+Proof.
+  induction 1; [constructor 1|econstructor 2|econstructor 3];
+    eauto using weakening_eta1.
+Defined.
+
+
+Lemma weakening_upto_domain u v :
+  upto_domain u v -> forall n k, upto_domain (lift n k u) (lift n k v).
+Proof.
+  induction u in v |- * using term_forall_list_ind;
+    intro e; invs e; cbn; constructor; eauto.
+  1-2: solve_all.
+  - rewrite (All2_length _ _ X0). solve_all.
+  - rewrite (All2_length _ _ X0). solve_all.
 Qed.
 
 Lemma weakening_cumul `{CF:checker_flags} Σ Γ Γ' Γ'' M N :
@@ -800,15 +840,17 @@ Lemma weakening_cumul `{CF:checker_flags} Σ Γ Γ' Γ'' M N :
   Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' |- lift #|Γ''| #|Γ'| M <= lift #|Γ''| #|Γ'| N.
 Proof.
   intros wfΣ. induction 1.
-  - constructor. now apply lift_leq_term.
+  - econstructor.
+    + apply lift_leq_term; eassumption.
+    + eapply weakening_upto_domain; eassumption.
   - eapply weakening_red1 in r; auto.
     econstructor 2; eauto.
   - eapply weakening_red1 in r; auto.
     econstructor 3; eauto.
   - eapply cumul_eta_l. 2: eauto.
-    eapply weakening_eta_expands. assumption.
+    eapply weakening_eta1. assumption.
   - eapply cumul_eta_r. 1: eauto.
-    eapply weakening_eta_expands. assumption.
+    eapply weakening_eta1. assumption.
 Qed.
 
 Lemma destArity_it_mkProd_or_LetIn ctx ctx' t :
@@ -1187,16 +1229,17 @@ Lemma weakening_conv `{cf:checker_flags} :
     Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' |- lift #|Γ''| #|Γ'| M = lift #|Γ''| #|Γ'| N.
 Proof.
   intros Σ Γ Γ' Γ'' M N wfΣ. induction 1.
-  - constructor.
-    now apply lift_eq_term.
+  - econstructor.
+    + apply lift_eq_term; eassumption.
+    + now eapply weakening_upto_domain.
   - eapply weakening_red1 in r ; auto.
     econstructor 2 ; eauto.
   - eapply weakening_red1 in r ; auto.
     econstructor 3 ; eauto.
   - eapply conv_eta_l. 2: eassumption.
-    eapply weakening_eta_expands. assumption.
+    eapply weakening_eta1. assumption.
   - eapply conv_eta_r. 1: eassumption.
-    eapply weakening_eta_expands. assumption.
+    eapply weakening_eta1. assumption.
 Qed.
 
 Lemma weaken_wf_local {cf:checker_flags} {Σ Γ } Δ : 

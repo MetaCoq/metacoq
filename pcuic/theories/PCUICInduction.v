@@ -6,8 +6,6 @@ Set Asymmetric Patterns.
 
 (** * Deriving a compact induction principle for terms
 
-  *WIP*
-
   Allows to get the right induction principle on lists of terms appearing
   in the term syntax (in evar, applications, branches of cases and (co-)fixpoints. *)
 

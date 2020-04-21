@@ -7,7 +7,7 @@ From MetaCoq.Template Require Import utils config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
   PCUICLiftSubst PCUICEquality PCUICPosition PCUICSigmaCalculus
   PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICClosed
-  PCUICReduction PCUICWeakening PCUICCumulativity PCUICUnivSubstitution.
+  PCUICReduction PCUICWeakening PCUICUnivSubstitution.
 Require Import ssreflect.
 
 From Equations Require Import Equations.
@@ -1596,7 +1596,7 @@ Proof.
       rewrite -> subst_context_app in *.
       rewrite -> app_context_assoc, Nat.add_0_r in *.
       auto.
-    + congruence.
+    + cbn; congruence.
 
   - constructor.
     rewrite -> (OnOne2_length X). generalize (#|mfix1|).
@@ -1616,7 +1616,7 @@ Proof.
       rewrite -> subst_context_app in *.
       rewrite -> app_context_assoc, Nat.add_0_r in *.
       auto.
-    + congruence.
+    + cbn; congruence.
 Qed.
 
 Lemma subst_skipn n s k t : n <= #|s| -> subst (skipn n s) k t = subst s k (lift n k t).
@@ -2157,15 +2157,72 @@ Proof.
     rewrite map_app. cbn. reflexivity.
 Qed.
 
-Lemma eta_expands_subst :
-  forall s k u v,
-    eta_expands u v ->
-    eta_expands (subst s k u) (subst s k v).
+Lemma eta1_subst s k u v :
+  eta1 u v -> eta1 (subst s k u) (subst s k v).
 Proof.
-  intros s k u v [na [A [t [π [e1 e2]]]]]. subst.
-  rewrite 2!subst_zipc. cbn.
-  rewrite commut_lift_subst.
-  eexists _, _, _, _. intuition reflexivity.
+  induction 1 in k |- *  using eta1_ind_all; cbn;
+    try (constructor; auto; fail).
+  - refine (transport (fun x => eta1 x _) _ (eta_red _ _ _)). do 2 f_equal.
+    symmetry; apply  commut_lift_subst.
+  - constructor. eapply OnOne2_map, OnOne2_impl; tea; cbn.
+    intros [] [] [[] ?]; cbn in *. split; auto.
+  - constructor. eapply OnOne2_map, OnOne2_impl; tea; cbn.
+    intros ? ? []; auto.
+  - constructor. apply OnOne2_length in X as e. rewrite e.
+    eapply OnOne2_map, OnOne2_impl; tea; cbn.
+    intros [] [] [[] ?]; cbn in *.
+    invs e2; split; auto.
+  - apply fix_eta_body. apply OnOne2_length in X as e. rewrite e.
+    eapply OnOne2_map, OnOne2_impl; tea; cbn.
+    intros [] [] [[] ?]; cbn in *.
+    invs e2; split; auto.
+  - constructor. apply OnOne2_length in X as e. rewrite e.
+    eapply OnOne2_map, OnOne2_impl; tea; cbn.
+    intros [] [] [[] ?]; cbn in *.
+    invs e2; split; auto.
+  - apply cofix_eta_body. apply OnOne2_length in X as e. rewrite e.
+    eapply OnOne2_map, OnOne2_impl; tea; cbn.
+    intros [] [] [[] ?]; cbn in *.
+    invs e2; split; auto.
+Defined.
+
+Lemma eta_subst s k u v :
+  eta u v -> eta (subst s k u) (subst s k v).
+Proof.
+  induction 1; [econstructor 1|econstructor 2|econstructor 3];
+    eauto using eta1_subst.
+Defined.
+
+
+(* todo remove All2_nth_error_Some_r and All2_nth_error ?? *)
+Lemma subst_eta s s' k b :
+  All2 eta s s' -> eta (subst s k b) (subst s' k b).
+Proof.
+  induction b in s, s', k |- * using term_forall_list_ind; cbn; intro XX.
+  2, 4-11, 13: eauto with eta.
+  - destruct (leb_spec_Set k n); eauto with eta.
+    rewrite (All2_length _ _ XX).
+    destruct (nth_error s (n - k)) eqn:X.
+    + eapply All2_nth_error_Some in X; tea.
+      destruct X as [? [X1 X2]]; rewrite X1.
+      now apply weakening_eta.
+    + eapply All2_nth_error_None in X; tea.
+      now rewrite X.
+  - eapply eta_Evar. eapply All2_map, All_All2; eauto.
+  - eapply eta_Case; eauto. eapply All2_map, All_All2; cbn; eauto.
+  - eapply eta_Fix; eauto. eapply All2_map, All_All2; tea; cbn.
+    clear -XX. intros x [H1 H2]. rdest; eauto.
+  - eapply eta_CoFix; eauto. eapply All2_map, All_All2; tea; cbn.
+    clear -XX. intros x [H1 H2]. rdest; eauto.
+Defined.
+
+Lemma substitution_upto_domain u v :
+  upto_domain u v -> forall s k, upto_domain (subst s k u) (subst s k v).
+Proof.
+  induction u in v |- * using term_forall_list_ind;
+    intro e; invs e; cbn; try reflexivity; constructor; eauto.
+  1-2: solve_all.
+  all: rewrite (All2_length _ _ X0); solve_all.
 Qed.
 
 Lemma substitution_untyped_cumul {cf:checker_flags} Σ Γ Γ' Γ'' s M N :
@@ -2174,16 +2231,17 @@ Lemma substitution_untyped_cumul {cf:checker_flags} Σ Γ Γ' Γ'' s M N :
   Σ ;;; Γ ,,, subst_context s 0 Γ'' |- subst s #|Γ''| M <= subst s #|Γ''| N.
 Proof.
   intros wfΣ Hs. induction 1.
-  - constructor.
-    now apply subst_leq_term.
+  - econstructor.
+    + apply subst_leq_term; eassumption.
+    + now apply substitution_upto_domain.
   - eapply substitution_untyped_let_red in r. 3:eauto. all:eauto with wf.
     eapply red_cumul_cumul; eauto.
   - eapply substitution_untyped_let_red in r. 3:eauto. all:eauto with wf.
     eapply red_cumul_cumul_inv; eauto.
   - eapply cumul_eta_l. 2: eassumption.
-    eapply eta_expands_subst. assumption.
+    eapply eta1_subst. assumption.
   - eapply cumul_eta_r. 1: eassumption.
-    eapply eta_expands_subst. assumption.
+    eapply eta1_subst. assumption.
 Qed.
 
 Lemma substitution_cumul0 {cf:checker_flags} Σ Γ na t u u' a : wf Σ.1 ->
@@ -2216,16 +2274,17 @@ Lemma substitution_cumul `{cf : checker_flags} (Σ : global_env_ext) Γ Γ' Γ''
   Σ ;;; Γ ,,, subst_context s 0 Γ'' |- subst s #|Γ''| M <= subst s #|Γ''| N.
 Proof.
   intros wfΣ wfΓ Hs. induction 1.
-  - constructor.
-    now apply subst_leq_term.
+  - econstructor.
+    + apply subst_leq_term; eassumption.
+    + now eapply substitution_upto_domain.
   - eapply substitution_let_red in r. 4:eauto. all:eauto with wf.
     eapply red_cumul_cumul; eauto.
   - eapply substitution_let_red in r. 4:eauto. all:eauto with wf.
     eapply red_cumul_cumul_inv; eauto.
   - eapply cumul_eta_l. 2: eassumption.
-    eapply eta_expands_subst. assumption.
+    eapply eta1_subst. assumption.
   - eapply cumul_eta_r. 1: eassumption.
-    eapply eta_expands_subst. assumption.
+    eapply eta1_subst. assumption.
 Qed.
 
 (** Old substitution lemma without lets *)

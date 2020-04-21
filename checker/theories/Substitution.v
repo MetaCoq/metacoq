@@ -1386,7 +1386,7 @@ Proof.
       rewrite -> subst_context_app in *.
       rewrite -> app_context_assoc, Nat.add_0_r in *.
       auto.
-    + inversion b0. auto.
+    + cbn; now inversion b0.
 
   - constructor.
     rewrite -> (OnOne2_length X). generalize (#|mfix1|).
@@ -1409,7 +1409,7 @@ Proof.
         rewrite -> subst_context_app in *.
         rewrite -> app_context_assoc, Nat.add_0_r in *.
         auto.
-      + inversion b0. auto.
+      + cbn; now inversion b0.
 Qed.
 
 Lemma eq_term_upto_univ_refl Re Rle :
@@ -1802,7 +1802,7 @@ Proof.
        4: now rewrite closedn_subst_instance_context.
        all: eauto with wf.
        admit. admit.
-    -- solve_all.
+    -- solve_all; cbn; eauto.
 
   - specialize (X2 Γ Γ' Δ s sub eq_refl).
     eapply refine_type. econstructor.

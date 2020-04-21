@@ -911,3 +911,13 @@ Proof.
   induction l in n |- *; simpl; auto with arith;
   destruct n; simpl; auto with arith. discriminate.
 Qed.
+
+Lemma mapi_rec_compose {A B C} (g : nat -> B -> C) (f : nat -> A -> B) k l :
+  mapi_rec g (mapi_rec f l k) k = mapi_rec (fun k x => g k (f k x)) l k.
+Proof.
+  induction l in k |- *; simpl; auto. now rewrite IHl.
+Qed.
+
+Lemma mapi_compose {A B C} (g : nat -> B -> C) (f : nat -> A -> B) l :
+  mapi g (mapi f l) = mapi (fun k x => g k (f k x)) l.
+Proof. apply mapi_rec_compose. Qed.

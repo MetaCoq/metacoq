@@ -17,6 +17,7 @@ Notation "p .p2" := (proj2 p) (at level 2, left associativity, format "p .p2").
 
 Definition on_snd {A B C} (f : B -> C) (p : A * B) :=
   (fst p, f (snd p)).
+Arguments on_snd {_ _ _} _ _/.
 
 Definition test_snd {A B} (f : B -> bool) (p : A * B) :=
   f (snd p).

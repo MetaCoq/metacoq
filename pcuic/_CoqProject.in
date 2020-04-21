@@ -8,6 +8,7 @@ theories/PCUICInduction.v
 theories/PCUICReflect.v
 theories/PCUICLiftSubst.v
 theories/PCUICUnivSubst.v
+theories/PCUICConversionDef.v
 theories/PCUICTyping.v
 theories/PCUICInversion.v
 theories/PCUICPosition.v
@@ -17,10 +18,12 @@ theories/PCUICEquality.v
 theories/PCUICWeakeningEnv.v
 theories/PCUICClosed.v
 theories/PCUICWeakening.v
+theories/PCUICBasicStrengthening.v
 theories/PCUICUnivSubstitution.v
 theories/PCUICSubstitution.v
 theories/PCUICCumulativity.v
 theories/PCUICReduction.v
+theories/PCUICEtaReduction.v
 theories/PCUICParallelReduction.v
 theories/PCUICParallelReductionConfluence.v
 theories/PCUICConfluence.v

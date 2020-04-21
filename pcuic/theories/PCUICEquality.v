@@ -407,10 +407,10 @@ Proof.
   - cbn. constructor ; try lih ; try assumption. solve_all.
   - cbn. constructor.
     pose proof (All2_length _ _ a).
-    solve_all. rewrite H. eauto.
+    solve_all. rewrite H. cbn. eauto.
   - cbn. constructor.
     pose proof (All2_length _ _ a).
-    solve_all. rewrite H. eauto.
+    solve_all. rewrite H. cbn. eauto.
 Qed.
 
 Lemma lift_eq_term {cf:checker_flags} φ n k T U :
@@ -459,10 +459,10 @@ Proof.
   - cbn. constructor ; try sih ; eauto. solve_all.
   - cbn. constructor ; try sih ; eauto.
     pose proof (All2_length _ _ a).
-    solve_all. now rewrite H.
+    solve_all. cbn. now rewrite H.
   - cbn. constructor ; try sih ; eauto.
     pose proof (All2_length _ _ a).
-    solve_all. now rewrite H.
+    solve_all. cbn. now rewrite H.
 Qed.
 
 Lemma eq_term_upto_univ_subst Re Rle :
@@ -1429,4 +1429,109 @@ Proof.
   intros u u' H. eapply Forall2_map' in H.
   eapply Forall2_eq. eapply Forall2_impl; tea.
   clear. intros [] [] H; now inversion H.
+Qed.
+
+
+
+(** ** Syntactic equality up-to domains
+  We don't look at printing annotations *)
+
+Inductive upto_domain : term -> term -> Type :=
+| utd_Rel n  : upto_domain (tRel n) (tRel n)
+
+| utd_Evar e args args' :
+    All2 (upto_domain) args args' ->
+    upto_domain (tEvar e args) (tEvar e args')
+
+| utd_Var id : upto_domain (tVar id) (tVar id)
+
+| utd_Sort s : upto_domain (tSort s) (tSort s)
+
+| utd_App t t' u u' :
+    upto_domain t t' ->
+    upto_domain u u' ->
+    upto_domain (tApp t u) (tApp t' u')
+
+| utd_Const c u : upto_domain (tConst c u) (tConst c u)
+
+| utd_Ind i u : upto_domain (tInd i u) (tInd i u)
+
+| utd_Construct i k u : upto_domain (tConstruct i k u) (tConstruct i k u)
+
+| utd_Lambda na na' ty ty' t t' :
+    upto_domain t t' ->
+    upto_domain (tLambda na ty t) (tLambda na' ty' t')
+
+| utd_Prod na na' a a' b b' :
+    upto_domain a a' ->
+    upto_domain b b' ->
+    upto_domain (tProd na a b) (tProd na' a' b')
+
+| utd_LetIn na na' t t' ty ty' u u' :
+    upto_domain t t' ->
+    upto_domain ty ty' ->
+    upto_domain u u' ->
+    upto_domain (tLetIn na t ty u) (tLetIn na' t' ty' u')
+
+| utd_Case indn p p' c c' brs brs' :
+    upto_domain p p' ->
+    upto_domain c c' ->
+    All2 (fun x y => x.1 = y.1 × upto_domain x.2 y.2) brs brs' ->
+    upto_domain (tCase indn p c brs) (tCase indn p' c' brs')
+
+| utd_Proj p c c' :
+    upto_domain c c' ->
+    upto_domain (tProj p c) (tProj p c')
+
+| utd_Fix mfix mfix' idx :
+    All2 (fun x y => upto_domain x.(dtype) y.(dtype) ×
+                  upto_domain x.(dbody) y.(dbody) ×
+                  x.(rarg) = y.(rarg)
+                ) mfix mfix' ->
+    upto_domain (tFix mfix idx) (tFix mfix' idx)
+
+| utd_CoFix mfix mfix' idx :
+    All2 (fun x y => upto_domain x.(dtype) y.(dtype) ×
+                  upto_domain x.(dbody) y.(dbody) ×
+                  x.(rarg) = y.(rarg)
+                ) mfix mfix' ->
+    upto_domain (tCoFix mfix idx) (tCoFix mfix' idx).
+
+
+Derive Signature for upto_domain.
+
+Instance upto_domain_refl :
+  Reflexive upto_domain.
+Proof.
+  intros t.
+  induction t using term_forall_list_ind; constructor; auto.
+  all: try solve [eapply All_All2 ; eauto].
+  - eapply All_All2; eauto. simpl. intuition eauto.
+  - eapply All_All2; eauto. simpl. intuition eauto.
+Qed.
+
+Instance upto_domain_sym : Symmetric upto_domain.
+Proof.
+  intros u v e.
+  induction u in v, e |- * using term_forall_list_ind;
+    invs e; constructor; eauto.
+  all: eapply All2_sym; solve_all.
+Qed.
+
+Instance upto_domain_trans : Transitive upto_domain.
+Proof.
+  intros u v w e1 e2.
+  induction u in v, w, e1, e2 |- * using term_forall_list_ind;
+    invs e1; invs e2; constructor; eauto.
+  - solve_all.
+    induction X0 in args'0, X1 |- *; invs X1; constructor; intuition eauto.
+  - solve_all.
+    induction X2 in brs'0, X5 |- *; invs X5; constructor; intuition eauto.
+    rdest; cbn in *; congruence.
+  - solve_all.
+    induction X0 in mfix'0, X1 |- *; invs X1; constructor; intuition eauto.
+    rdest; cbn in *; congruence.
+  - solve_all.
+    induction X0 in mfix'0, X1 |- *; invs X1; constructor; intuition eauto.
+    rdest; cbn in *; congruence.
 Qed.

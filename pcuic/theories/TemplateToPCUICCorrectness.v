@@ -1034,6 +1034,11 @@ Proof.
     destruct a as [? []]; reflexivity.
 Qed.
 
+(* Lemma trans_upto_domain t u : *)
+  (* upto_domain t u -> upto_domain (trans t) (trans u). *)
+
+Axiom todo_template : forall {A}, A.
+
 Lemma trans_cumul (Σ : Ast.global_env_ext) Γ T U :
   TTy.on_global_env (fun Σ => wf_decl_pred) Σ ->
   List.Forall wf_decl Γ ->
@@ -1041,14 +1046,16 @@ Lemma trans_cumul (Σ : Ast.global_env_ext) Γ T U :
   trans_global Σ ;;; trans_local Γ |- trans T <= trans U.
 Proof.
   intros wfΣ wfΓ.
-  induction 3. constructor; auto.
-  apply trans_leq_term in l; auto.
-  now rewrite global_ext_constraints_trans.
-  pose proof r as H3. apply wf_red1 in H3; auto.
-  apply trans_red1 in r; auto. econstructor 2; eauto.
-  econstructor 3.
-  apply IHX; auto. apply wf_red1 in r; auto.
-  apply trans_red1 in r; auto.
+  induction 3.
+  - econstructor.
+    + apply trans_leq_term in l; tas.
+      now rewrite global_ext_constraints_trans.
+    + apply todo_template.
+  - pose proof r as H3. apply wf_red1 in H3; auto.
+    apply trans_red1 in r; auto. econstructor 2; eauto.
+  - econstructor 3.
+    apply IHX; auto. apply wf_red1 in r; auto.
+    apply trans_red1 in r; auto.
 Qed.
 
 Definition Tlift_typing (P : Template.Ast.global_env_ext -> Tcontext -> Tterm -> Tterm -> Type) :=

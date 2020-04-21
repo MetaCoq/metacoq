@@ -661,7 +661,7 @@ Proof.
       rewrite -> lift_context_app in *.
       rewrite -> app_context_assoc, Nat.add_0_r in *.
       auto.
-    + inversion b. eauto.
+    + cbn. now inversion b.
 
   - constructor.
     rewrite -> (OnOne2_length X). generalize (#|mfix1|).
@@ -678,7 +678,7 @@ Proof.
       rewrite -> lift_context_app in *.
       rewrite -> app_context_assoc, Nat.add_0_r in *.
       auto.
-    + inversion b. eauto.
+    + cbn; now inversion b.
 Qed.
 
 Lemma lift_eq_term_upto_univ Re Rl n k T U :
@@ -1000,7 +1000,7 @@ Proof.
        subst params. erewrite heq_build_case_predicate_type; reflexivity.
     -- destruct idecl; simpl in *; auto.
     -- now rewrite -> !lift_mkApps in IHc.
-    -- solve_all.
+    -- solve_all; cbn; eauto.
 
   - simpl.
     erewrite (distr_lift_subst_rec _ _ _ 0 #|Γ'|).

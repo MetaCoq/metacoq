@@ -197,7 +197,7 @@ Lemma weakening_env_cumul `{CF:checker_flags} Σ Σ' φ Γ M N :
 Proof.
   intros wfΣ [Σ'' ->].
   induction 1; simpl.
-  - econstructor. eapply leq_term_subset.
+  - econstructor; tea. eapply leq_term_subset.
     + eapply global_ext_constraints_app.
     + assumption.
   - econstructor 2; eauto. eapply weakening_env_red1; eauto. exists Σ''; eauto.

@@ -334,29 +334,41 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
     Definition on_constructors Σ mdecl i idecl ind_indices :=
       All2 (on_constructor Σ mdecl i idecl ind_indices).
 
-    (** Projections have their parameter context smashed to avoid costly computations
-        during type-checking. *)
+    (** Each projection type corresponds to a non-let argument of the 
+        corresponding constructor. It is parameterized over the 
+        parameters of the inductive type and all the preceding arguments
+        of the constructor. When computing the type of a projection for argument
+        [n] at a given instance of the parameters and a given term [t] in the inductive
+        type, we instantiate the argument context by corresponsping projections
+        [t.π1 ... t.πn-1]. This is essential for subject reduction to hold: each
+        projections type can only refer to the record object through projections.
+    
+      Projection types have their parameter and argument contexts smashed to avoid
+      costly computations during type-checking and reduction: we can just substitute
+      the instances of parameters and arguments without considering the presence of
+      let bindings in either of them. *)
 
-    Definition on_projection Σ mind mdecl i idecl
+    Definition on_projection Σ mdecl i idecl ind_indices cdecl ind_ctor_sort
+              (o : on_constructor Σ mdecl i idecl ind_indices cdecl ind_ctor_sort)
               (k : nat) (p : ident * term) :=
-      let ctx := smash_context [] mdecl.(ind_params) in
-      let Γ := ctx,, vass (nNamed idecl.(ind_name))
-                  (mkApps (tInd (mkInd mind i) (polymorphic_instance mdecl.(ind_universes)))
-                          (to_extended_list ctx))
-      (* FIXME: more on p? *)
-      in on_type Σ Γ (snd p).
+      let parctx := smash_context [] mdecl.(ind_params) in
+      let argctx := smash_context [] o.(cshape).(cshape_args) in
+      let Γ := parctx ,,, (skipn (#|argctx| - k) argctx) in
+      on_type Σ Γ (snd p).
 
-    Record on_projections Σ mind mdecl i idecl (indices : context) :=
+    Record on_projections Σ mdecl i idecl (ind_indices : context) cdecl ind_ctor_sort
+      (o : on_constructor Σ mdecl i idecl ind_indices cdecl ind_ctor_sort) :=
+    
       { on_projs_record : #|idecl.(ind_ctors)| = 1;
         (** The inductive must be a record *)
 
-        on_projs_noidx : #|indices| = 0;
+        on_projs_noidx : #|ind_indices| = 0;
         (** The inductive cannot have indices *)
 
         on_projs_elim : idecl.(ind_kelim) = InType;
         (** This ensures that all projections are definable *)
 
-        on_projs : Alli (on_projection Σ mind mdecl i idecl) 0 idecl.(ind_projs) }.
+        on_projs : Alli (on_projection Σ mdecl i idecl ind_indices cdecl ind_ctor_sort o) 0 idecl.(ind_projs) }.
 
     Definition check_constructors_smaller φ ind_ctors_sort ind_sort :=
       Forall (fun s => leq_universe φ s ind_sort) ind_ctors_sort.
@@ -394,7 +406,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
           else True
       end.
 
-    Record on_ind_body Σ mind mdecl i idecl :=
+    Record on_ind_body Σ mdecl i idecl :=
       { (** The type of the inductive must be an arity, sharing the same params
             as the rest of the block, and maybe having a context of indices. *)
         ind_indices : context;
@@ -415,7 +427,12 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
 
         (** Projections, if any, are well-typed *)
         onProjections :
-          idecl.(ind_projs) <> [] -> on_projections Σ mind mdecl i idecl ind_indices;
+          idecl.(ind_projs) <> [] ->
+          match onConstructors return Type with
+          | All2_nil => False
+          | All2_cons onc csort _ _ o _ =>
+            on_projections Σ mdecl i idecl ind_indices onc csort o
+          end;
 
         (** The universes and elimination sorts must be correct w.r.t.
             the universe of the inductive and the universes in its constructors, which

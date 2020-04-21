@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 From Equations Require Import Equations.
-From Coq Require Import Bool List ZArith Lia Morphisms.
+From Coq Require Import String Bool List ZArith Lia Morphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
     PCUICLiftSubst PCUICUnivSubst
@@ -2153,6 +2153,68 @@ Admitted.
 (* (* Qed. *) *)
 (* Admitted. *)
 
+
+Lemma subst_consn_compose l σ' σ : l ⋅n σ' ∘s σ =1 (map (inst σ) l ⋅n (σ' ∘s σ)).
+Proof.
+  induction l; simpl.
+  - now sigma.
+  - rewrite subst_consn_subst_cons. sigma.
+    rewrite IHl. now rewrite subst_consn_subst_cons.
+Qed.
+
+Lemma map_idsn_spec (f : term -> term) (n : nat) :
+  map f (idsn n) = Nat.recursion [] (fun x l => l ++ [f (tRel x)]) n.
+Proof.
+  induction n; simpl.
+  - reflexivity.
+  - simpl. rewrite map_app. now rewrite -IHn.
+Qed.
+
+Lemma nat_recursion_ext {A} (x : A) f g n :
+  (forall x l', x < n -> f x l' = g x l') ->
+  Nat.recursion x f n = Nat.recursion x g n.
+Proof.
+  intros.
+  generalize (le_refl n). 
+  induction n at 1 3 4; simpl; auto. 
+  intros. simpl. rewrite IHn0; try lia. now rewrite H0.
+Qed.
+
+Lemma id_nth_spec {A} (l : list A) :
+  l = Nat.recursion [] (fun x l' =>
+                          match nth_error l x with
+                          | Some a => l' ++ [a]
+                          | None => l'
+                          end) #|l|.
+Proof.
+  induction l using rev_ind; simpl; try reflexivity.
+  rewrite app_length. simpl. rewrite Nat.add_1_r. simpl.
+  rewrite nth_error_app_ge; try lia. rewrite Nat.sub_diag. simpl.
+  f_equal. rewrite {1}IHl. eapply nat_recursion_ext. intros.
+  now rewrite nth_error_app_lt.
+Qed.
+
+Lemma Upn_comp n l σ : n = #|l| -> ⇑^n σ ∘s (l ⋅n ids) =1 l ⋅n σ.
+Proof.
+  intros ->. rewrite Upn_eq; simpl.
+  rewrite !subst_consn_compose. sigma.
+  rewrite subst_consn_shiftn ?map_length //. sigma.
+  eapply subst_consn_proper; try reflexivity.
+  rewrite map_idsn_spec.
+  rewrite {3}(id_nth_spec l).
+  eapply nat_recursion_ext. intros.
+  simpl. destruct (nth_error_spec l x).
+  - unfold subst_consn. rewrite e. reflexivity.
+  - lia.
+Qed.
+
+Lemma shift_Up_comm σ : ↑ ∘s ⇑ σ =1 σ ∘s ↑.
+Proof. reflexivity. Qed.
+
+Lemma inst_closed0 σ t : closedn 0 t -> t.[σ] = t.
+Proof. intros. rewrite -{2}[t](inst_closed σ 0) //. now sigma. Qed.
+
+
 Lemma type_inst :
   forall Σ Γ Δ σ t A,
     wf Σ.1 ->
@@ -2210,20 +2272,26 @@ Proof.
         ** apply ihb; auto.  
   - intros Σ wfΣ Γ wfΓ t na A B u X ht iht hu ihu Δ σ hΔ hσ.
     autorewrite with sigma.
-    (* NEED Relation between inst and subst *)
-    admit.
+    econstructor.
+    * specialize (iht _ _ hΔ hσ).
+      simpl in iht. eapply meta_conv; [eapply iht|].
+      now rewrite up_Up.
+    * eapply ihu; auto.
   - intros Σ wfΣ Γ wfΓ cst u decl X X0 isdecl hconst Δ σ hΔ hσ.
-    (* autorewrite with sigma. *) simpl.
-    (* NEED Commutation *)
-    admit.
+    autorewrite with sigma. simpl.
+    eapply meta_conv; [econstructor; eauto|].
+    eapply declared_constant_closed_type in isdecl; eauto.
+    rewrite inst_closed0; auto.
+    now rewrite closedn_subst_instance_constr.
   - intros Σ wfΣ Γ wfΓ ind u mdecl idecl isdecl X X0 hconst Δ σ hΔ hσ.
-    (* autorewrite with sigma. *) simpl.
-    (* NEED Commutation *)
-    admit.
+    eapply meta_conv; [econstructor; eauto|].
+    eapply declared_inductive_closed_type in isdecl; eauto.
+    rewrite inst_closed0; auto.
+    now rewrite closedn_subst_instance_constr.
   - intros Σ wfΣ Γ wfΓ ind i u mdecl idecl cdecl isdecl X X0 hconst Δ σ hΔ hσ.
-    (* autorewrite with sigma. *) simpl.
-    (* NEED Commutation *)
-    admit.
+    eapply meta_conv; [econstructor; eauto|].
+    eapply declared_constructor_closed_type in isdecl; eauto.
+    rewrite inst_closed0; eauto.
   - intros Σ wfΣ Γ wfΓ ind u npar p c brs args mdecl idecl isdecl X X0 a pars
            ps pty htoc X1 ihp H2 X3 ihc btys H3 ihbtys Δ σ hΔ hσ.
     autorewrite with sigma. simpl.
@@ -2242,8 +2310,17 @@ Proof.
     + admit.
   - intros Σ wfΣ Γ wfΓ p c u mdecl idecl pdecl isdecl args X X0 hc ihc e ty
            Δ σ hΔ hσ.
-    autorewrite with sigma. simpl.
-    admit.
+    simpl.
+    eapply meta_conv; [econstructor|].
+    * eauto.
+    * specialize (ihc _ _ hΔ hσ).
+      rewrite inst_mkApps in ihc. eapply ihc.
+    * now rewrite map_length.
+    * autorewrite with sigma.
+      apply inst_ext.
+      rewrite subst_consn_compose. simpl.
+      rewrite map_rev.
+      todo "projection type closed"%string.
   - intros Σ wfΣ Γ wfΓ mfix n decl types H0 H1 X ihmfix Δ σ hΔ hσ.
     autorewrite with sigma.
     admit.

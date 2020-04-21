@@ -1425,58 +1425,7 @@ Section Confluence.
       simpl. rewrite - IHn. f_equal. apply H.
     Qed.
 
-    Lemma subst_consn_compose l σ' σ : l ⋅n σ' ∘s σ =1 (map (inst σ) l ⋅n (σ' ∘s σ)).
-    Proof.
-      induction l; simpl. now sigma.
-      rewrite subst_consn_subst_cons. sigma.
-      rewrite IHl. now rewrite subst_consn_subst_cons.
-    Qed.
-    Lemma map_idsn_spec (f : term -> term) (n : nat) :
-      map f (idsn n) = Nat.recursion [] (fun x l => l ++ [f (tRel x)]) n.
-    Proof.
-      induction n. simpl. reflexivity.
-      simpl. rewrite map_app. now rewrite -IHn.
-    Qed.
 
-
-    Lemma nat_recursion_ext {A} (x : A) f g n :
-      (forall x l', x < n -> f x l' = g x l') ->
-      Nat.recursion x f n = Nat.recursion x g n.
-    Proof.
-      intros.
-      generalize (le_refl n). induction n at 1 3 4.
-      simpl; auto. intros. simpl. rewrite IHn0. lia. now rewrite H.
-    Qed.
-
-    Lemma id_nth_spec {A} (l : list A) :
-      l = Nat.recursion [] (fun x l' =>
-                              match nth_error l x with
-                              | Some a => l' ++ [a]
-                              | None => l'
-                              end) #|l|.
-    Proof.
-      induction l using rev_ind. simpl. reflexivity.
-      rewrite app_length. simpl. rewrite Nat.add_1_r. simpl.
-      rewrite nth_error_app_ge. lia. rewrite Nat.sub_diag. simpl.
-      f_equal. rewrite {1}IHl. eapply nat_recursion_ext. intros.
-      now rewrite nth_error_app_lt.
-    Qed.
-
-  Lemma Upn_comp n l σ : n = #|l| -> ⇑^n σ ∘s (l ⋅n ids) =1 l ⋅n σ.
-  Proof.
-    intros ->. rewrite Upn_eq; simpl.
-    rewrite !subst_consn_compose. sigma.
-    rewrite subst_consn_shiftn ?map_length //. sigma.
-    eapply subst_consn_proper; try reflexivity.
-    rewrite map_idsn_spec.
-    rewrite {3}(id_nth_spec l).
-    eapply nat_recursion_ext. intros.
-    simpl. destruct (nth_error_spec l x). unfold subst_consn. rewrite e. reflexivity.
-    lia.
-  Qed.
-
-   Lemma shift_Up_comm σ : ↑ ∘s ⇑ σ =1 σ ∘s ↑.
-   Proof. reflexivity. Qed.
 
   Lemma pres_bodies_inst_context Γ σ : pres_bodies Γ (inst_context σ Γ) σ.
   Proof.
@@ -1485,9 +1434,6 @@ Section Confluence.
     apply IHΓ.
   Qed.
   Hint Resolve pres_bodies_inst_context : pcuic.
-
-  Lemma inst_closed0 σ t : closedn 0 t -> t.[σ] = t.
-  Proof. intros. rewrite -{2}[t](inst_closed σ 0) //. now sigma. Qed.
 
   Lemma isLambda_inst t σ : isLambda t -> isLambda t.[σ].
   Proof. destruct t; auto. Qed.

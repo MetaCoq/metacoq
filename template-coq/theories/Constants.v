@@ -20,6 +20,8 @@ Register Coq.Init.Datatypes.false as metacoq.bool.false.
 Register Coq.Init.Datatypes.option as metacoq.option.type.
 Register Coq.Init.Datatypes.None as metacoq.option.none.
 Register Coq.Init.Datatypes.Some as metacoq.option.some.
+Register MetaCoq.Template.TemplateMonad.Common.my_None as metacoq.option_instance.none.
+Register MetaCoq.Template.TemplateMonad.Common.my_Some as metacoq.option_instance.some.
 
 Register Coq.Init.Datatypes.list as metacoq.list.type.
 Register Coq.Init.Datatypes.nil as metacoq.list.nil.

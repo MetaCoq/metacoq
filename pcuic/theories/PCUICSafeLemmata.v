@@ -413,40 +413,9 @@ Section Lemmata.
       destruct hh as [decl [? [? [hw [? ?]]]]].
       apply typing_wf_local in h.
       clear -h hw wΣ.
-      eapply PCUICWeakening.All_mfix_wf in hw; eauto.
-      clear h.
-      rewrite fix_context_fix_context_alt in hw.
-      rewrite map_app in hw. simpl in hw.
-      unfold def_sig at 2 in hw. simpl in hw.
-      unfold fix_context_alt in hw.
-      rewrite mapi_app in hw.
-      rewrite rev_app_distr in hw.
-      simpl in hw.
-      rewrite !app_context_assoc in hw.
-      apply wf_local_app in hw.
-      match type of hw with
-      | context [ List.rev ?l ] =>
-        set (Δ := List.rev l) in *
-      end.
-      assert (e : #|Δ| = #|mfix1|).
-      { subst Δ. rewrite List.rev_length.
-        rewrite mapi_length. rewrite map_length.
-        reflexivity.
-      }
-      rewrite map_length in hw. rewrite <- e in hw.
-      clearbody Δ. clear e.
-      replace (#|Δ| + 0) with #|Δ| in hw by lia.
-      set (Γ' := Γ ,,, stack_context π) in *.
-      clearbody Γ'. clear Γ. rename Γ' into Γ.
-      rewrite <- app_context_assoc in hw.
-      inversion hw. subst.
-      match goal with
-      | hh : lift_typing _ _ _ _ _ |- _ => rename hh into h
-      end.
-      simpl in h. destruct h as [s h].
-      exists (tSort s).
-      eapply @strengthening with (Γ' := []). 1: assumption.
-      exact h.
+      eapply All_app in hw as [_ hw].
+      depelim hw. simpl in i.
+      destruct i as [s Hs]. eexists; eauto.
     - simpl. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [B h].
       apply inversion_Fix in h as hh. 2: assumption.
@@ -560,40 +529,9 @@ Section Lemmata.
       + assert (hwf := typing_wf_local h').
         apply inversion_Fix in h'. 2: assumption.
         destruct h' as [decl [? [? [hw [? ?]]]]].
-        apply PCUICWeakening.All_mfix_wf in hw; eauto.
         clear - hw wΣ.
-        rewrite fix_context_fix_context_alt in hw.
-        rewrite map_app in hw. simpl in hw.
-        unfold def_sig at 2 in hw. simpl in hw.
-        unfold fix_context_alt in hw.
-        rewrite mapi_app in hw.
-        rewrite rev_app_distr in hw.
-        simpl in hw.
-        rewrite !app_context_assoc in hw.
-        apply wf_local_app in hw.
-        match type of hw with
-        | context [ List.rev ?l ] =>
-          set (Δ := List.rev l) in *
-        end.
-        assert (e : #|Δ| = #|mfix1|).
-        { subst Δ. rewrite List.rev_length.
-          rewrite mapi_length. rewrite map_length.
-          reflexivity.
-        }
-        rewrite map_length in hw. rewrite <- e in hw.
-        clearbody Δ. clear e.
-        replace (#|Δ| + 0) with #|Δ| in hw by lia.
-        set (Γ' := Γ ,,, stack_context π) in *.
-        clearbody Γ'. clear Γ. rename Γ' into Γ.
-        rewrite <- app_context_assoc in hw.
-        inversion hw. subst.
-        match goal with
-        | hh : lift_typing _ _ _ _ _ |- _ => rename hh into h
-        end.
-        simpl in h. destruct h as [s h].
-        left. exists (tSort s).
-        eapply @strengthening with (Γ' := []). 1: assumption.
-        exact h.
+        eapply All_app in hw as [_ hw]. depelim hw.
+        left;  exists (tSort i.π1). apply i.π2.
       + apply inversion_Fix in h'. 2: assumption.
         destruct h' as [decl [? [? [? [ha ?]]]]].
         clear - ha wΣ.

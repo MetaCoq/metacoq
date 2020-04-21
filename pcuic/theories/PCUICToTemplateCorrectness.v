@@ -875,11 +875,14 @@ Theorem template_to_pcuic (Σ : P.global_env_ext) Γ t T :
 Proof.
 
   intros X X0.
-  pose proof (PT.typing_wf_local X0).
-  revert Σ X Γ X1 t T X0.
+  revert Σ X Γ t T X0.
   apply (PT.typing_ind_env (fun Σ Γ t T =>
     TT.typing (trans_global Σ) (trans_local Γ) (trans t) (trans T)
-  )%type);intros.
+  )%type
+    (fun Σ Γ wfΓ => 
+    TT.All_local_env (TT.lift_typing TT.typing (trans_global Σ)) (trans_local Γ))
+  );intros.
+  - now eapply trans_wf_local_env, All_over_All.
 (*
 typing_ind_env is like induction but with
 additional assumptions for the nested typing 
@@ -887,12 +890,10 @@ in All (for wf_local assumptions)
 *)
   - rewrite trans_lift.
     rewrite trans_decl_type.
-    eapply TT.type_Rel.
-    + now eapply trans_wf_local_env, All_over_All.
+    eapply TT.type_Rel; eauto.
     + now apply map_nth_error.
-  - eapply TT.type_Sort.
-    + now eapply trans_wf_local_env, All_over_All.
-    + now apply trans_in_level_set.
+  - eapply TT.type_Sort; eauto.
+    now apply trans_in_level_set.
   - eapply TT.type_Prod;assumption.
   - eapply TT.type_Lambda;eassumption.
   - eapply TT.type_LetIn;eassumption.
@@ -915,19 +916,16 @@ in All (for wf_local assumptions)
       *)
   - rewrite trans_subst_instance_constr.
     rewrite trans_cst_type.
-    eapply TT.type_Const.
-    + now eapply trans_wf_local_env, All_over_All.
+    eapply TT.type_Const; eauto.
     + now apply trans_declared_constant.
     + now apply trans_consistent_instance_ext.
   - rewrite trans_subst_instance_constr.
     rewrite trans_ind_type.
-    eapply TT.type_Ind.
-    + now eapply trans_wf_local_env, All_over_All.
+    eapply TT.type_Ind; eauto.
     + now apply trans_declared_inductive.
     + now apply trans_consistent_instance_ext.
   - rewrite trans_type_of_constructor.
-    eapply TT.type_Construct.
-    + now eapply trans_wf_local_env, All_over_All.
+    eapply TT.type_Construct; auto.
     + destruct isdecl. 
       constructor.
       * now apply trans_declared_inductive. 
@@ -968,29 +966,28 @@ in All (for wf_local assumptions)
       rewrite H.
       destruct mdecl.
       reflexivity.
-  - rewrite trans_dtype.
-    eapply TT.type_Fix.
+  - rewrite trans_dtype. simpl.
+    eapply TT.type_Fix; auto.
     + admit. (* fix guard *)
     + erewrite map_nth_error. 
-      2: apply H.
+      2: apply H0.
       destruct decl.
       unfold map_def.
       reflexivity.
-    + fold trans.
-      eapply trans_mfix_All;eassumption.
+    + eapply All_map, (All_impl X0).
+      firstorder.
     + fold trans.
       subst types.
       eapply trans_mfix_All2;eassumption.
   - rewrite trans_dtype.
-    eapply TT.type_CoFix.
-    + trivial.
+    eapply TT.type_CoFix; auto.
     + erewrite map_nth_error. 
       2: eassumption.
       destruct decl.
       unfold map_def.
       reflexivity.
     + fold trans.
-      eapply trans_mfix_All;eassumption.
+      eapply All_map, (All_impl X0); firstorder.
     + fold trans;subst types.
       (* like trans_mfix_All2 without isLambda *)
       admit.

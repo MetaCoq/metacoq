@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool List Arith Lia.
+From Coq Require Import String Bool List Arith Lia.
 From MetaCoq.Template Require Import config monad_utils utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICPrincipality PCUICConfluence
@@ -266,6 +266,37 @@ Section Lemmata.
   Lemma wellformed_irr :
     forall {Σ Γ t} (h1 h2 : wellformed Σ Γ t), h1 = h2.
   Proof. intros. apply ProofIrrelevance.proof_irrelevance. Qed.
+(* 
+  Lemma typing_eq_term :
+    forall Γ u v A,
+      wf Σ.1 ->
+      Σ ;;; Γ |- u : A ->
+      eq_term (global_ext_constraints Σ) u v ->
+      Σ ;;; Γ |- v : A.
+  Abort. *)
+
+  (* TODO MOVE It needs wf Σ entirely *)
+  (* Lemma subject_conversion :
+    forall Γ u v A B,
+      wf Σ.1 ->
+      Σ ;;; Γ |- u : A ->
+      Σ ;;; Γ |- v : B ->
+      Σ ;;; Γ |- u = v ->
+      ∑ C,
+        Σ ;;; Γ |- u : C ×
+        Σ ;;; Γ |- v : C.
+  Proof.
+    intros Γ u v A B hΣ hu hv h.
+    apply conv_alt_red in h as [u' [v' [[? ?] ?]]].
+    pose proof (subject_reduction _ Γ _ _ _ hΣ hu r) as hu'.
+    pose proof (subject_reduction _ Γ _ _ _ hΣ hv r0) as hv'.
+    pose proof (typing_eq_term _ _ _ _ hΣ hu' e) as hv''.
+    pose proof (principal_typing _ hΣ hv' hv'') as [C [? [? hvC]]]. *)
+    (* apply eq_term_sym in e as e'. *)
+    (* pose proof (typing_alpha _ _ _ _ hvC e') as huC. *)
+    (* Not clear.*)
+  (* Abort.
+   *)
 
   Context (hΣ : ∥ wf Σ ∥).
 
@@ -1328,28 +1359,7 @@ Section Lemmata.
       + assumption.
   Qed.
 
-  (* TODO MOVE It needs wf Σ entirely *)
-  Lemma subject_conversion :
-    forall Γ u v A B,
-      Σ ;;; Γ |- u : A ->
-      Σ ;;; Γ |- v : B ->
-      Σ ;;; Γ |- u = v ->
-      ∑ C,
-        Σ ;;; Γ |- u : C ×
-        Σ ;;; Γ |- v : C.
-  Proof.
-    intros Γ u v A B hu hv h.
-    (* apply conv_conv_alt in h. *)
-    (* apply conv_alt_red in h as [u' [v' [? [? ?]]]]. *)
-    (* pose proof (subject_reduction _ Γ _ _ _ hΣ hu r) as hu'. *)
-    (* pose proof (subject_reduction _ Γ _ _ _ hΣ hv r0) as hv'. *)
-    (* pose proof (typing_alpha _ _ _ _ hu' e) as hv''. *)
-    (* pose proof (principal_typing _ hv' hv'') as [C [? [? hvC]]]. *)
-    (* apply eq_term_sym in e as e'. *)
-    (* pose proof (typing_alpha _ _ _ _ hvC e') as huC. *)
-    (* Not clear.*)
-  Abort.
-  
+
   Derive Signature for typing.
 
   Lemma Proj_red_cond :
@@ -1362,11 +1372,12 @@ Section Lemmata.
     destruct hΣ.
     apply inversion_Proj in h; auto.
     destruct h as [uni [mdecl [idecl [pdecl [args' [d [hc [? ?]]]]]]]].
-    eapply on_declared_projection in d; auto. destruct d as [? [? ?]]; auto.
+    eapply on_declared_projection in d; auto. simpl in d. destruct d as [? [? ?]]; auto.
     simpl in *.
     destruct p.
     destruct o0; auto.
-  Admitted.
+    todo "projection invariant"%string.
+  Qed.
 
   Lemma cored_zipc :
     forall Γ t u π,

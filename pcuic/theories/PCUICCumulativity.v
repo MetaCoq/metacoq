@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Metgit Coq.Template Require Import config utils.
+From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst
      PCUICEquality PCUICTyping
      PCUICReduction PCUICPosition.

@@ -13,8 +13,480 @@ Import ListNotations. Open Scope list_scope.
 
 Set Default Goal Selector "!".
 
+Ltac eta := match goal with
+            | |- _ × _ => split
+            | _ => idtac 
+            end; auto with eta.
+
+Lemma lift_lift_inv0' n k M N :
+  lift0 1 M = lift n (S k) N
+  -> ∑ M', M = lift n k M' /\ N = lift0 1 M'.
+Proof.
+  intro X; destruct (lift_lift_inv0 _ _ _ _ X) as [M' e].
+  exists M'. split; tas. rewrite e in X.
+  apply (lift_inj 1 0); rewrite X.
+ rewrite (permute_lift M' n k 1 0); f_equal; lia.
+Qed.
+
+Lemma eta1_strengthening n k M N' :
+  eta1 (lift n k M) N'
+  -> ∑ N, eta1 M N × N' = lift n k N.
+Proof.
+  induction M in k, N' |- * using term_forall_list_ind; cbn;
+    intro XX; invs XX.
+  - enough (∑ l'', OnOne2 eta1 l l'' × l' = map (lift n k) l'') as XX. {
+      destruct XX as [l'' [? ?]]; subst. exists (tEvar n0 l''); eta. }
+    induction X in l', X0 |- *; cbn in *; invs X0.
+    + apply p in X1 as [v [? ?]]; subst. 
+      exists (v :: l); eta. now constructor.
+    + apply IHX in X1 as [l'' [? ?]]; subst.
+      exists (x :: l''); eta. now constructor.
+  - apply IHM1 in X as [N [? ?]]; subst.
+    exists (tProd n0 N M2); eta.
+  - apply IHM2 in X as [N [? ?]]; subst.
+    exists (tProd n0 M1 N); eta.
+  - destruct M2; invs H2.
+    destruct M2_2; invs H1.
+    apply lift_lift_inv0' in H0 as [? [? ?]]; subst.
+    assert (n1 = 0); [|subst n1]. {
+      destruct (S k <=? n1); lia. }
+    exists x; eta.
+  - apply IHM1 in X as [N [? ?]]; subst.
+    exists (tLambda n0 N M2); eta.
+  - apply IHM2 in X as [N [? ?]]; subst.
+    exists (tLambda n0 M1 N); eta.
+  - apply IHM1 in X as [N [? ?]]; subst.
+    exists (tLetIn n0 N M2 M3); eta.
+  - apply IHM2 in X as [N [? ?]]; subst.
+    exists (tLetIn n0 M1 N M3); eta.
+  - apply IHM3 in X as [N [? ?]]; subst.
+    exists (tLetIn n0 M1 M2 N); eta.
+  - apply IHM1 in X as [N [? ?]]; subst.
+    exists (tApp N M2); eta.
+  - apply IHM2 in X as [N [? ?]]; subst.
+    exists (tApp M1 N); eta.
+  - apply IHM1 in X0 as [N [? ?]]; subst.
+    exists (tCase p N M2 l); eta.
+  - apply IHM2 in X0 as [N [? ?]]; subst.
+    exists (tCase p M1 N l); eta.
+  - enough (∑ l'', OnOne2 (on_Trel_eq eta1 snd fst) l l''
+                   × brs' = map (on_snd (lift n k)) l'') as XX. {
+      destruct XX as [l'' [? ?]]; subst. exists (tCase p M1 M2 l''); eta. }
+    induction X in brs', X0 |- *; cbn in *; invs X0.
+    + destruct X1 as [X1 ?], x, hd'; cbn in *.
+      apply p0 in X1 as [v [? ?]]; subst. 
+      exists ((n1, v) :: l); eta. now constructor.
+    + apply IHX in X1 as [l'' [? ?]]; subst.
+      exists (x :: l''); eta. now constructor.
+  - apply IHM in X as [N [? ?]]; subst.
+    exists (tProj s N); eta.
+  - enough (∑ l'', OnOne2 (fun x y => eta1 (dtype x) (dtype y)
+             × (dname x, dbody x, rarg x) = (dname y, dbody y, rarg y)) m l''
+             × mfix1 = map (map_def (lift n k) (lift n (#|m| + k))) l'') as XX. {
+      destruct XX as [l'' [? ?]]; subst. exists (tFix l'' n0); eta.
+      now rewrite (OnOne2_length o). }
+    set (K := #|m|) in *; clearbody K.
+    induction X in mfix1, X0 |- *; invs X0; cbn in *.
+    + destruct X1 as [X1 ?], x, hd'; cbn in *.
+      apply p in X1 as [v [? ?]]; subst. invs e.
+      exists ((mkdef _ dname0 v dbody rarg0) :: l); eta. now constructor.
+    + apply IHX in X1 as [l'' [? ?]]; subst.
+      exists (x :: l''); eta. now constructor.
+  - enough (∑ l'', OnOne2 (fun x y => eta1 (dbody x) (dbody y)
+             × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)) m l''
+             × mfix1 = map (map_def (lift n k) (lift n (#|m| + k))) l'') as XX. {
+      destruct XX as [l'' [? ?]]; subst. exists (tFix l'' n0); eta.
+      now rewrite (OnOne2_length o). }
+    set (K := #|m|) in *; clearbody K.
+    induction X in mfix1, X0 |- *; invs X0; cbn in *.
+    + destruct X1 as [X1 ?], x, hd'; cbn in *.
+      apply p in X1 as [v [? ?]]; subst. invs e.
+      exists ((mkdef _ dname0 dtype v rarg0) :: l); eta. now constructor.
+    + apply IHX in X1 as [l'' [? ?]]; subst.
+      exists (x :: l''); eta. now constructor.
+  - enough (∑ l'', OnOne2 (fun x y => eta1 (dtype x) (dtype y)
+             × (dname x, dbody x, rarg x) = (dname y, dbody y, rarg y)) m l''
+             × mfix1 = map (map_def (lift n k) (lift n (#|m| + k))) l'') as XX. {
+      destruct XX as [l'' [? ?]]; subst. exists (tCoFix l'' n0); eta.
+      now rewrite (OnOne2_length o). }
+    set (K := #|m|) in *; clearbody K.
+    induction X in mfix1, X0 |- *; invs X0; cbn in *.
+    + destruct X1 as [X1 ?], x, hd'; cbn in *.
+      apply p in X1 as [v [? ?]]; subst. invs e.
+      exists ((mkdef _ dname0 v dbody rarg0) :: l); eta. now constructor.
+    + apply IHX in X1 as [l'' [? ?]]; subst.
+      exists (x :: l''); eta. now constructor.
+  - enough (∑ l'', OnOne2 (fun x y => eta1 (dbody x) (dbody y)
+             × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)) m l''
+             × mfix1 = map (map_def (lift n k) (lift n (#|m| + k))) l'') as XX. {
+      destruct XX as [l'' [? ?]]; subst. exists (tCoFix l'' n0); eta.
+      now rewrite (OnOne2_length o). }
+    set (K := #|m|) in *; clearbody K.
+    induction X in mfix1, X0 |- *; invs X0; cbn in *.
+    + destruct X1 as [X1 ?], x, hd'; cbn in *.
+      apply p in X1 as [v [? ?]]; subst. invs e.
+      exists ((mkdef _ dname0 dtype v rarg0) :: l); eta. now constructor.
+    + apply IHX in X1 as [l'' [? ?]]; subst.
+      exists (x :: l''); eta. now constructor.
+Qed.
+
+
+Existing Instance All2_trans.
+
+
+Hint Resolve eta_Case eta_Fix eta_CoFix : eta.
+Hint Extern 0 (All2 _ _ _) => OnOne2_All2; intuition auto with eta : eta.
+Hint Resolve All2_refl : eta.
+
+Lemma eta1_confluence t u1 u2 :
+  eta1 t u1 -> eta1 t u2 ->
+  ∑ v, eta u1 v × eta u2 v.
+Proof.
+  induction 1 in u2 |- * using eta1_ind_all.
+  - intro XX; invs XX. 3: invs X.
+    + apply lift_inj in H2; subst. exists t; now split.
+    + exists t; eta.
+    + apply eta1_strengthening in X0 as [t' [? ?]]; subst. 
+      exists t'; eta.
+    + invs X0.
+  - intro XX; invs XX.
+    + exists u2; eta.
+    + apply IHX in X0 as [v [? ?]].
+      exists (tLambda na v N); eta.
+    + exists (tLambda na M' M'0); eta.
+  - intros XX; invs XX.
+    + invs X; [|invs X0].
+      apply eta1_strengthening in X0 as [v [? ?]]; subst.
+      exists v; eta.
+    + exists (tLambda na M'0 M'); eta.
+    + apply IHX in X0 as [v [? ?]].
+      exists (tLambda na N v); eta.
+  - intro XX; invs XX.
+    + apply IHX in X0 as [v [? ?]].
+      exists (tLetIn na v t b'); eta.
+    + exists (tLetIn na r r0 b'); eta.
+    + exists (tLetIn na r t r0); eta.
+  - intro XX; invs XX.
+    + exists (tLetIn na r0 r b'); eta.
+    + apply IHX in X0 as [v [? ?]].
+      exists (tLetIn na b v b'); eta.
+    + exists (tLetIn na b r r0); eta.
+  - intro XX; invs XX.
+    + exists (tLetIn na r0 t r); eta.
+    + exists (tLetIn na b r0 r); eta.
+    + apply IHX in X0 as [v [? ?]].
+      exists (tLetIn na b t v); eta.
+  - intro XX; invs XX.
+    + apply IHX in X0 as [v [? ?]].
+      exists (tCase ind v c brs); eta.
+    + exists (tCase ind p' c' brs); eta.
+    + exists (tCase ind p' c brs'); eta.
+  - intro XX; invs XX.
+    + exists (tCase ind p' c' brs); eta.
+    + apply IHX in X0 as [v [? ?]].
+      exists (tCase ind p v brs); eta.
+    + exists (tCase ind p c' brs'); eta.
+  - intro XX; invs XX.
+    + exists (tCase ind p' c brs'); eta.
+    + exists (tCase ind p c' brs'); eta.
+    + enough (∑ v', All2 (on_Trel_eq eta snd fst) brs' v'
+                    × All2 (on_Trel_eq eta snd fst) brs'0 v') as XX. {
+        destruct XX as [v' [H1 H2]]. exists (tCase ind p c v'); eta. }
+      induction X in brs'0, X0 |- *; invs X0.
+      * destruct hd, hd', hd'0, p0 as [[] ?], X; cbn in *; subst.
+        apply s in e1 as [v' [H1 H2]].
+        exists ((n1, v') :: tl); split; constructor; cbn; eta; apply All2_refl; eta.
+      * destruct hd, hd', p0 as [[] ?]; cbn in *; subst.
+        exists ((n0, t0) :: tl'); split; constructor; cbn; eta.
+      * destruct hd, hd', X1 as []; cbn in *; subst.
+        exists ((n0, t0) :: tl'); split; constructor; cbn; eta.
+      * eapply IHX in X1 as [v' [H1 H2]].
+        exists (hd :: v'); split; constructor; cbn; eta.
+  - intro XX; invs XX.
+    apply IHX in X0 as [v [? ?]].
+    exists (tProj p v); eta.
+  - intro XX; invs XX.
+    + apply IHX in X0 as [v [? ?]].
+      exists (tApp v M2); eta.
+    + exists (tApp N1 N2); eta.
+  - intro XX; invs XX.
+    + exists (tApp N1 N2); eta.
+    + apply IHX in X0 as [v [? ?]].
+      exists (tApp M1 v); eta.
+  - intro XX; invs XX.
+    + apply IHX in X0 as [v [? ?]].
+      exists (tProd na v M2); eta.
+    + exists (tProd na N1 N2); eta.
+  - intro XX; invs XX.
+    + exists (tProd na N1 N2); eta.
+    + apply IHX in X0 as [v [? ?]].
+      exists (tProd na M1 v); eta.
+  - intro XX; invs XX.
+    enough (∑ l'', All2 eta l' l'' × All2 eta l'0 l'') as XX. {
+      destruct XX as [v [? ?]]. exists (tEvar ev v); eta. }
+    induction X in l'0, X0 |- *; invs X0.
+    + destruct p as [? p]. apply p in X as [v' [H1 H2]].
+      exists (v' :: tl); split; constructor; tas; now apply All2_refl.
+    + destruct p. exists (hd' :: tl'); split; constructor; trea.
+      -- eapply OnOne2_All2; trea. eta.
+      -- eta.
+      -- eapply All2_refl; trea.
+    + assert (OnOne2 eta1 tl tl') as XX. {
+        eapply OnOne2_impl; tea; cbn. now intros ? ? []. }
+      specialize (IHX _ XX); destruct IHX as [v' [H1 H2]].
+      exists (hd' :: v'); split; constructor; trea.
+      -- eta.
+      -- etransitivity; tea. eapply OnOne2_All2; trea; eta.
+    + apply IHX in X1 as [v' [H1 H2]].
+      exists (hd :: v'); split; constructor; trea.
+  - intro XX; invs XX.
+    + enough (∑ l'', All2 (fun d0 d1 => eta (dtype d0) (dtype d1)
+                           × eta (dbody d0) (dbody d1) × dname d0 = dname d1
+                           × rarg d0 = rarg d1) mfix1 l''
+                        × All2 (fun d0 d1 => eta (dtype d0) (dtype d1)
+                           × eta (dbody d0) (dbody d1) × dname d0 = dname d1
+                           × rarg d0 = rarg d1) mfix3 l'') as XX. {
+      destruct XX as [v [? ?]]. exists (tFix v idx); eta. }
+    induction X in mfix3, X0 |- *; invs X0.
+      * destruct p as [[X0 p] e], X as [X e'].
+        destruct hd, hd', hd'0; cbn in *; invs e; invs e'.
+        apply p in X as [v' [H1 H2]].
+        exists (mkdef _ dname1 v' dbody1 rarg1 :: tl); split; constructor;
+          try (now apply All2_refl); repeat split; cbn; eta.
+      * destruct p as [[X0 p] e]. exists (hd' :: tl').
+        destruct hd, hd'; cbn in *; invs e.
+        split; constructor; cbn; repeat split; eta.
+        eapply OnOne2_All2; trea; cbn.
+        -- intros ? ? [? ee]; invs ee. repeat split; eta.
+        -- now repeat split.
+      * assert (OnOne2 (fun x y => eta1 (dtype x) (dtype y)
+         × (dname x, dbody x, rarg x) = (dname y, dbody y, rarg y)) tl tl') as XX. {
+          eapply OnOne2_impl; tea; cbn. now intros ? ? []. }
+        specialize (IHX _ XX); destruct IHX as [v' [H1 H2]].
+        exists (hd' :: v').
+        destruct X1 as [? ee], hd, hd'; cbn in *; invs ee.
+        split; constructor; cbn; repeat split; eta.
+        eapply All2_trans; tea.
+        -- intros ? ? ? [? [? [? ?]]] [? [? [? ?]]];
+             repeat split; etransitivity; tea.
+        -- eapply OnOne2_All2; cbn; tea; eta.
+           intros ? ? [? ee]; invs ee; repeat split; eta.
+      * apply IHX in X1 as [v' [H1 H2]].
+        exists (hd :: v'); split; constructor; tea; now repeat split.
+    + enough (∑ l'', All2 (fun d0 d1 => eta (dtype d0) (dtype d1)
+                           × eta (dbody d0) (dbody d1) × dname d0 = dname d1
+                           × rarg d0 = rarg d1) mfix1 l''
+                        × All2 (fun d0 d1 => eta (dtype d0) (dtype d1)
+                           × eta (dbody d0) (dbody d1) × dname d0 = dname d1
+                           × rarg d0 = rarg d1) mfix3 l'') as XX. {
+      destruct XX as [v [? ?]]. exists (tFix v idx); eta. }
+    induction X in mfix3, X0 |- *; invs X0.
+      * destruct p as [[X0 p] e], X as [X e'].
+        destruct hd, hd', hd'0; cbn in *; invs e; invs e'.
+        exists (mkdef _ dname1 dtype0 dbody1 rarg1 :: tl); split; constructor;
+          try (now apply All2_refl); repeat split; cbn; eta.
+      * destruct p as [[X0 p] e]. exists (hd' :: tl').
+        destruct hd, hd'; cbn in *; invs e.
+        split; constructor; cbn; repeat split; eta.
+        eapply OnOne2_All2; trea; cbn.
+        -- intros ? ? [? ee]; invs ee. repeat split; eta.
+        -- now repeat split.
+      * destruct X1 as [? ee], hd, hd'; cbn in *; invs ee.
+        exists (mkdef _ dname0 dtype0 dbody0 rarg0 :: tl').
+        split; constructor; cbn; repeat split; eta.
+        eapply OnOne2_All2; cbn; tea; eta.
+        intros ? ? [? ee]; invs ee; repeat split; eta.
+        now constructor.
+      * apply IHX in X1 as [v' [H1 H2]].
+        exists (hd :: v'); split; constructor; tea; now repeat split.
+  - intro XX; invs XX.
+    + enough (∑ l'', All2 (fun d0 d1 => eta (dtype d0) (dtype d1)
+                           × eta (dbody d0) (dbody d1) × dname d0 = dname d1
+                           × rarg d0 = rarg d1) mfix1 l''
+                        × All2 (fun d0 d1 => eta (dtype d0) (dtype d1)
+                           × eta (dbody d0) (dbody d1) × dname d0 = dname d1
+                           × rarg d0 = rarg d1) mfix3 l'') as XX. {
+      destruct XX as [v [? ?]]. exists (tFix v idx); eta. }
+    induction X in mfix3, X0 |- *; invs X0.
+      * destruct p as [[X0 p] e], X as [X e'].
+        destruct hd, hd', hd'0; cbn in *; invs e; invs e'.
+        exists (mkdef _ dname1 dtype1 dbody0 rarg1 :: tl); split; constructor;
+          try (now apply All2_refl); repeat split; cbn; eta.
+      * destruct p as [[X0 p] e]. exists (hd' :: tl').
+        destruct hd, hd'; cbn in *; invs e.
+        split; constructor; cbn; repeat split; eta.
+        eapply OnOne2_All2; trea; cbn.
+        -- intros ? ? [? ee]; invs ee. repeat split; eta.
+        -- now repeat split.
+      * destruct X1 as [? ee], hd, hd'; cbn in *; invs ee.
+        exists (mkdef _ dname0 dtype0 dbody0 rarg0 :: tl').
+        split; constructor; cbn; repeat split; eta.
+        eapply OnOne2_All2; cbn; tea; eta.
+        intros ? ? [? ee]; invs ee; repeat split; eta.
+        now constructor.
+      * apply IHX in X1 as [v' [H1 H2]].
+        exists (hd :: v'); split; constructor; tea; now repeat split.
+    + enough (∑ l'', All2 (fun d0 d1 => eta (dtype d0) (dtype d1)
+                           × eta (dbody d0) (dbody d1) × dname d0 = dname d1
+                           × rarg d0 = rarg d1) mfix1 l''
+                        × All2 (fun d0 d1 => eta (dtype d0) (dtype d1)
+                           × eta (dbody d0) (dbody d1) × dname d0 = dname d1
+                           × rarg d0 = rarg d1) mfix3 l'') as XX. {
+      destruct XX as [v [? ?]]. exists (tFix v idx); eta. }
+    induction X in mfix3, X0 |- *; invs X0.
+      * destruct p as [[X0 p] e], X as [X e'].
+        destruct hd, hd', hd'0; cbn in *; invs e; invs e'.
+        apply p in X as [v' [H1 H2]].
+        exists (mkdef _ dname1 dtype1 v' rarg1 :: tl); split; constructor;
+          try (now apply All2_refl); repeat split; cbn; eta.
+      * destruct p as [[X0 p] e]. exists (hd' :: tl').
+        destruct hd, hd'; cbn in *; invs e.
+        split; constructor; cbn; repeat split; eta.
+        eapply OnOne2_All2; trea; cbn.
+        -- intros ? ? [? ee]; invs ee. repeat split; eta.
+        -- now repeat split.
+      * assert (OnOne2 (fun x y => eta1 (dbody x) (dbody y)
+         × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)) tl tl') as XX. {
+          eapply OnOne2_impl; tea; cbn. now intros ? ? []. }
+        specialize (IHX _ XX); destruct IHX as [v' [H1 H2]].
+        exists (hd' :: v').
+        destruct X1 as [? ee], hd, hd'; cbn in *; invs ee.
+        split; constructor; cbn; repeat split; eta.
+        eapply All2_trans; tea.
+        -- intros ? ? ? [? [? [? ?]]] [? [? [? ?]]];
+             repeat split; etransitivity; tea.
+        -- eapply OnOne2_All2; cbn; tea; eta.
+           intros ? ? [? ee]; invs ee; repeat split; eta.
+      * apply IHX in X1 as [v' [H1 H2]].
+        exists (hd :: v'); split; constructor; tea; now repeat split.
+  - intro XX; invs XX.
+    + enough (∑ l'', All2 (fun d0 d1 => eta (dtype d0) (dtype d1)
+                           × eta (dbody d0) (dbody d1) × dname d0 = dname d1
+                           × rarg d0 = rarg d1) mfix1 l''
+                        × All2 (fun d0 d1 => eta (dtype d0) (dtype d1)
+                           × eta (dbody d0) (dbody d1) × dname d0 = dname d1
+                           × rarg d0 = rarg d1) mfix3 l'') as XX. {
+      destruct XX as [v [? ?]]. exists (tCoFix v idx); eta. }
+    induction X in mfix3, X0 |- *; invs X0.
+      * destruct p as [[X0 p] e], X as [X e'].
+        destruct hd, hd', hd'0; cbn in *; invs e; invs e'.
+        apply p in X as [v' [H1 H2]].
+        exists (mkdef _ dname1 v' dbody1 rarg1 :: tl); split; constructor;
+          try (now apply All2_refl); repeat split; cbn; eta.
+      * destruct p as [[X0 p] e]. exists (hd' :: tl').
+        destruct hd, hd'; cbn in *; invs e.
+        split; constructor; cbn; repeat split; eta.
+        eapply OnOne2_All2; trea; cbn.
+        -- intros ? ? [? ee]; invs ee. repeat split; eta.
+        -- now repeat split.
+      * assert (OnOne2 (fun x y => eta1 (dtype x) (dtype y)
+         × (dname x, dbody x, rarg x) = (dname y, dbody y, rarg y)) tl tl') as XX. {
+          eapply OnOne2_impl; tea; cbn. now intros ? ? []. }
+        specialize (IHX _ XX); destruct IHX as [v' [H1 H2]].
+        exists (hd' :: v').
+        destruct X1 as [? ee], hd, hd'; cbn in *; invs ee.
+        split; constructor; cbn; repeat split; eta.
+        eapply All2_trans; tea.
+        -- intros ? ? ? [? [? [? ?]]] [? [? [? ?]]];
+             repeat split; etransitivity; tea.
+        -- eapply OnOne2_All2; cbn; tea; eta.
+           intros ? ? [? ee]; invs ee; repeat split; eta.
+      * apply IHX in X1 as [v' [H1 H2]].
+        exists (hd :: v'); split; constructor; tea; now repeat split.
+    + enough (∑ l'', All2 (fun d0 d1 => eta (dtype d0) (dtype d1)
+                           × eta (dbody d0) (dbody d1) × dname d0 = dname d1
+                           × rarg d0 = rarg d1) mfix1 l''
+                        × All2 (fun d0 d1 => eta (dtype d0) (dtype d1)
+                           × eta (dbody d0) (dbody d1) × dname d0 = dname d1
+                           × rarg d0 = rarg d1) mfix3 l'') as XX. {
+      destruct XX as [v [? ?]]. exists (tCoFix v idx); eta. }
+    induction X in mfix3, X0 |- *; invs X0.
+      * destruct p as [[X0 p] e], X as [X e'].
+        destruct hd, hd', hd'0; cbn in *; invs e; invs e'.
+        exists (mkdef _ dname1 dtype0 dbody1 rarg1 :: tl); split; constructor;
+          try (now apply All2_refl); repeat split; cbn; eta.
+      * destruct p as [[X0 p] e]. exists (hd' :: tl').
+        destruct hd, hd'; cbn in *; invs e.
+        split; constructor; cbn; repeat split; eta.
+        eapply OnOne2_All2; trea; cbn.
+        -- intros ? ? [? ee]; invs ee. repeat split; eta.
+        -- now repeat split.
+      * destruct X1 as [? ee], hd, hd'; cbn in *; invs ee.
+        exists (mkdef _ dname0 dtype0 dbody0 rarg0 :: tl').
+        split; constructor; cbn; repeat split; eta.
+        eapply OnOne2_All2; cbn; tea; eta.
+        intros ? ? [? ee]; invs ee; repeat split; eta.
+        now constructor.
+      * apply IHX in X1 as [v' [H1 H2]].
+        exists (hd :: v'); split; constructor; tea; now repeat split.
+  - intro XX; invs XX.
+    + enough (∑ l'', All2 (fun d0 d1 => eta (dtype d0) (dtype d1)
+                           × eta (dbody d0) (dbody d1) × dname d0 = dname d1
+                           × rarg d0 = rarg d1) mfix1 l''
+                        × All2 (fun d0 d1 => eta (dtype d0) (dtype d1)
+                           × eta (dbody d0) (dbody d1) × dname d0 = dname d1
+                           × rarg d0 = rarg d1) mfix3 l'') as XX. {
+      destruct XX as [v [? ?]]. exists (tCoFix v idx); eta. }
+    induction X in mfix3, X0 |- *; invs X0.
+      * destruct p as [[X0 p] e], X as [X e'].
+        destruct hd, hd', hd'0; cbn in *; invs e; invs e'.
+        exists (mkdef _ dname1 dtype1 dbody0 rarg1 :: tl); split; constructor;
+          try (now apply All2_refl); repeat split; cbn; eta.
+      * destruct p as [[X0 p] e]. exists (hd' :: tl').
+        destruct hd, hd'; cbn in *; invs e.
+        split; constructor; cbn; repeat split; eta.
+        eapply OnOne2_All2; trea; cbn.
+        -- intros ? ? [? ee]; invs ee. repeat split; eta.
+        -- now repeat split.
+      * destruct X1 as [? ee], hd, hd'; cbn in *; invs ee.
+        exists (mkdef _ dname0 dtype0 dbody0 rarg0 :: tl').
+        split; constructor; cbn; repeat split; eta.
+        eapply OnOne2_All2; cbn; tea; eta.
+        intros ? ? [? ee]; invs ee; repeat split; eta.
+        now constructor.
+      * apply IHX in X1 as [v' [H1 H2]].
+        exists (hd :: v'); split; constructor; tea; now repeat split.
+    + enough (∑ l'', All2 (fun d0 d1 => eta (dtype d0) (dtype d1)
+                           × eta (dbody d0) (dbody d1) × dname d0 = dname d1
+                           × rarg d0 = rarg d1) mfix1 l''
+                        × All2 (fun d0 d1 => eta (dtype d0) (dtype d1)
+                           × eta (dbody d0) (dbody d1) × dname d0 = dname d1
+                           × rarg d0 = rarg d1) mfix3 l'') as XX. {
+      destruct XX as [v [? ?]]. exists (tCoFix v idx); eta. }
+    induction X in mfix3, X0 |- *; invs X0.
+      * destruct p as [[X0 p] e], X as [X e'].
+        destruct hd, hd', hd'0; cbn in *; invs e; invs e'.
+        apply p in X as [v' [H1 H2]].
+        exists (mkdef _ dname1 dtype1 v' rarg1 :: tl); split; constructor;
+          try (now apply All2_refl); repeat split; cbn; eta.
+      * destruct p as [[X0 p] e]. exists (hd' :: tl').
+        destruct hd, hd'; cbn in *; invs e.
+        split; constructor; cbn; repeat split; eta.
+        eapply OnOne2_All2; trea; cbn.
+        -- intros ? ? [? ee]; invs ee. repeat split; eta.
+        -- now repeat split.
+      * assert (OnOne2 (fun x y => eta1 (dbody x) (dbody y)
+         × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)) tl tl') as XX. {
+          eapply OnOne2_impl; tea; cbn. now intros ? ? []. }
+        specialize (IHX _ XX); destruct IHX as [v' [H1 H2]].
+        exists (hd' :: v').
+        destruct X1 as [? ee], hd, hd'; cbn in *; invs ee.
+        split; constructor; cbn; repeat split; eta.
+        eapply All2_trans; tea.
+        -- intros ? ? ? [? [? [? ?]]] [? [? [? ?]]];
+             repeat split; etransitivity; tea.
+        -- eapply OnOne2_All2; cbn; tea; eta.
+           intros ? ? [? ee]; invs ee; repeat split; eta.
+      * apply IHX in X1 as [v' [H1 H2]].
+        exists (hd :: v'); split; constructor; tea; now repeat split.
+Qed.
+
+
+
+
+
 (* Lemma app_mkApps u v t l : *)
-(*   isApp t = false -> tApp u v = mkApps t l -> *)
+(*   isApp t = false -> tApp u v = mkApps t l -> *){
 (*   ∑ l', (l = l' ++ [v])%list × u = mkApps t l'. *)
 (* Proof. *)
 (*   intros h e. induction l in u, v, t, e, h |- * using list_rect_rev. *)
@@ -89,16 +561,25 @@ Hint Resolve red1_red refl_red red_trans : beta.
 Hint Resolve red_evar red_prod red_abs red_letin red_app
      red_case_p red_case_c red_proj_c : beta.
 
+Hint Constructors upto_domain : utd.
+Definition upto_domain_refl' x := upto_domain_refl x.
+Definition upto_domain_trans' x y z := upto_domain_trans x y z.
+Hint Resolve upto_domain_refl' upto_domain_trans' : utd.
 
 Definition beta_eta Σ Γ := clos_refl_trans (union (red1 Σ Γ) eta1).
 
 Create HintDb beta_eta.
-Ltac eta0 := repeat match goal with
-             | |- _ × _ => split
-             end; eauto with beta_eta.
-Tactic Notation "eta" integer(n) := repeat match goal with
-                                    | |- _ × _ => split
-                                    end; eauto n with beta_eta.
+
+Tactic Notation "eta" integer(n) :=
+  repeat match goal with
+         | |- _ × _ => split
+         end;
+  match goal with
+  | |- upto_domain _ _ => eauto n with utd
+  | _ => idtac
+  end;
+  eauto n with beta_eta.
+
 Tactic Notation "eta" := eta 5.
 Hint Constructors eta1 : beta_eta.
 Hint Constructors red1 : beta_eta.
@@ -110,17 +591,13 @@ Instance clos_refl_trans_trans {A} (R : relation A)
   : Transitive (clos_refl_trans R).
 Proof. econstructor 3; eassumption. Defined.
 
-(* todo useless *)
-Definition beta_eta_refl Σ Γ : Reflexive (beta_eta Σ Γ) := _.
+Definition beta_eta_refl Σ Γ x : beta_eta Σ Γ x x := clos_refl_trans_refl _ _.
+Hint Resolve beta_eta_refl : beta_eta.
 
-Definition beta_eta_refl' Σ Γ x := beta_eta_refl Σ Γ x.
-Hint Resolve beta_eta_refl' : beta_eta.
-
-(* todo useless *)
-Definition beta_eta_trans Σ Γ : Transitive (beta_eta Σ Γ) := _.
-
-Definition beta_eta_trans' Σ Γ x y z := beta_eta_trans Σ Γ x y z.
-Hint Resolve beta_eta_trans' : beta_eta.
+Definition beta_eta_trans Σ Γ x y z :
+  beta_eta Σ Γ x y -> beta_eta Σ Γ y z -> beta_eta Σ Γ x z
+  := clos_refl_trans_trans _ x y z.
+Hint Resolve beta_eta_trans : beta_eta.
 
 Lemma red_beta_eta Σ Γ M N :
   red Σ Γ M N -> beta_eta Σ Γ M N.
@@ -303,6 +780,110 @@ Proof.
 Defined.
 Hint Resolve red1_App_Lambda_Rel0 : beta_eta.
 
+Hint Resolve weakening_eta1 : beta_eta.
+
+Ltac ap_beta_eta := repeat (reflexivity || eapply beta_eta_Evar
+                            || eapply beta_eta_Prod || eapply beta_eta_Lambda
+                            || eapply beta_eta_LetIn || eapply beta_eta_App
+                            || eapply beta_eta_Case || eapply beta_eta_Proj
+                            || eapply beta_eta_Fix || eapply beta_eta_CoFix).
+
+Require Import String.
+
+Local Ltac tac t := exists t, t; repeat split; [eta .. | reflexivity].
+Local Ltac itac H1 H2 := apply H1 in H2 as [?u' [?v' [? [? ?]]]].
+
+Lemma red1_eta1_diamond {cf:checker_flags} {Σ Γ t u v} :
+  wf Σ -> red1 Σ Γ t u -> eta1 t v ->
+  ∑ u' v', beta_eta Σ Γ u u' × beta_eta Σ Γ v v' × upto_domain u' v'.
+Proof.
+  intros HΣ X; induction X in v |- * using red1_ind_all.
+  - intro XX; invs XX. 1: invs X.
+    + cbn. rewrite simpl_subst, !lift0_id; [|lia].
+      tac (tApp N1 a).
+    + tac (b {0 := a}).
+    + tac (M' {0 := a}).
+      todo "beta_eta subst"%string.
+    + tac (b {0 := N2}).
+      todo "beta_eta subst"%string.
+  - intro XX; invs XX.
+    + tac (b' {0 := r}).
+      todo "beta_eta subst"%string.
+    + tac (b' {0 := b}).
+    + tac (r {0 := b}).
+      todo "beta_eta subst"%string.
+  - intros XX; invs XX.
+  - intros XX; invs XX.
+    + tac (iota_red pars c args brs).
+    + todo "eta mkApps".
+    + tac (iota_red pars c args brs').
+      unfold iota_red; cbn.
+      todo "mkApps + nth".
+  - todo "eta mkApps".
+  - intro XX; invs XX.
+    + tac (tCase ip p' (mkApps fn args) brs).
+    + todo "eta mkApps".
+    + tac (tCase ip p (mkApps fn args) brs').
+  - intro XX; invs XX.
+    + todo "eta mkApps".
+  - intro XX; invs XX.
+  - intro XX; invs XX.
+    + todo "eta mkApps".
+  - intro XX; invs XX.
+    + tac v.
+    + itac IHX X0.
+      exists (tLambda na u' N), (tLambda na v' N); eta.
+    + tac (tLambda na M' M'0).
+  - intro XX; invs XX.
+    + invs X.
+      * destruct v; invs H0.
+        rewrite lift_subst0_Rel.
+        exists (tLambda na N v2), (tLambda na1 v1 v2); eta.
+      * todo "not possible".
+      * eapply (red1_strengthening _ Γ [] [vass na N]) in X0 as [v' [? ?]]; tas.
+        subst. tac v'.
+      * invs X0.
+        -- invs H0.
+        -- now sap Rel_mkApps_Fix in H.
+    + exists (tLambda na M'0 M'); eta.
+      todo "context same vdef".
+    + itac IHX X0.
+      exists (tLambda na N u'), (tLambda na N v'); eta.
+  - intro XX; invs XX.
+    + itac IHX X0.
+      exists (tLetIn na u' t b'), (tLetIn na v' t b'); eta.
+    + tac (tLetIn na r r0 b').
+    + tac (tLetIn na r t r0).
+  - intro XX; invs XX.
+    + tac (tLetIn na r0 r b').
+    + itac IHX X0.
+      exists (tLetIn na b u' b'), (tLetIn na b v' b'); eta.
+    + tac (tLetIn na b r r0).
+  - intro XX; invs XX.
+    + tac (tLetIn na r0 t r). ap_beta_eta.
+      todo "big: eta context".
+    + tac (tLetIn na b r0 r). ap_beta_eta.
+      todo "context same vdef".
+    + itac IHX X0.
+      exists (tLetIn na b t u'), (tLetIn na b t v'); eta.
+  - intro XX; invs XX.
+  - intro XX; invs XX.
+  - intro XX; invs XX.
+  - intro XX; invs XX.
+  - intro XX; invs XX.
+  - intro XX; invs XX.
+  - intro XX; invs XX.
+  - intro XX; invs XX.
+  - intro XX; invs XX.
+  - intro XX; invs XX.
+Admitted.
+
+
+
+Definition etax1 := transp eta1.
+Definition etax := transp eta.
+
+
 (* Lemma beta_eta_change_domain Σ Γ na na' M A B : *)
 (*   beta_eta Σ Γ (tLambda na A M) (tLambda na' B M). *)
 (* Proof. *)
@@ -312,24 +893,8 @@ Hint Resolve red1_App_Lambda_Rel0 : beta_eta.
 (* Defined. *)
 (* Hint Resolve beta_eta_change_domain : beta_eta. *)
 
-Hint Resolve weakening_eta1 : beta_eta.
-
-Ltac ap_beta_eta := repeat (reflexivity || eapply beta_eta_Evar
-                            || eapply beta_eta_Prod || eapply beta_eta_Lambda
-                            || eapply beta_eta_LetIn || eapply beta_eta_App
-                            || eapply beta_eta_Case || eapply beta_eta_Proj
-                            || eapply beta_eta_Fix || eapply beta_eta_CoFix).
-
-Ltac tre := try reflexivity.
-Ltac trea := try reflexivity; try eassumption.
-
-Existing Instance All2_trans.
-
-Definition etax1 := transp eta1.
-Definition etax := transp eta.
-
 (* Lemma etax1_etax1_diamond {Σ Γ t u v} : *)
-(*   etax1 t u -> etax1 t v -> *)
+(*   etax1 t u -> etax1 t v -> *){
 (*   ∑ v', beta_etax Σ Γ u v' × beta_etax Σ Γ v v'. *)
 (* Proof. *)
 (*   intro X; induction X in Γ, v |- * using eta1_ind_all. *)
@@ -459,7 +1024,7 @@ Definition etax := transp eta.
 (* Admitted. *)
 
 (* Hint Resolve weakening_red1 : beta_eta. *)
-Require Import PCUICSubstitution PCUICUnivSubst.
+}Require Import PCUICSubstitution PCUICUnivSubst.
 
 Lemma subst1_eta t t' k u :
   eta t t' -> eta (u {k := t}) (u {k := t'}).

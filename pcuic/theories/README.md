@@ -95,9 +95,13 @@
 |-------------------|----------------------------------------------------------|
 | [TemplateToPCUIC] | Translation from Template-Coq syntax to PUIC syntax      |
 | [TemplateToPCUICCorrectness] | Type preservation of the aformentioned translation |
+| [PCUICToTemplate] | Translation from PCUIC syntax to Template-Coq syntax |
+| [PCUICToTemplateCorrectness] | Type preservation of the aformentioned translation |
 
 [TemplateToPCUIC]: TemplateToPCUIC.v
 [TemplateToPCUICCorrectness]: TemplateToPCUICCorrectness.v
+[PCUICToTemplate]: PCUICToTemplate.v
+[PCUICToTemplateCorrectness]: PCUICToTemplateCorrectness.v
 
 ## Erasure
 

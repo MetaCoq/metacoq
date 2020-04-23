@@ -1150,10 +1150,94 @@ Proof.
       exists (hd :: xx); split; constructor; eta.
 Qed.
 
+Require Import PCUICSubstitution.
+
+(* useless for the moment *)
+Lemma beta_eta_subst {cf:checker_flags} Σ Γ Δ Γ' s M N :
+  wf Σ -> untyped_subslet Γ s Δ ->
+  beta_eta Σ (Γ ,,, Δ ,,, Γ') M N ->
+  beta_eta Σ (Γ ,,, subst_context s 0 Γ') (subst s #|Γ'| M) (subst s #|Γ'| N).
+Proof.
+  intros HΣ Hs Hred.
+  induction Hred; [|reflexivity|etransitivity; tea].
+  destruct r.
+  - eapply red_beta_eta, substitution_untyped_let_red; tea.
+  - eapply eta_beta_eta, eta_subst; eta.
+Qed.
+
+(* Lemma beta_eta_subst0 {cf:checker_flags} Σ Γ Δ s M N : *)
+(*   wf Σ -> untyped_subslet Γ s Δ -> *)
+(*   beta_eta Σ (Γ ,,, Δ) M N -> *)
+(*   beta_eta Σ Γ (subst s 0 M) (subst s 0 N). *)
+(* Proof. *)
+(*   apply beta_eta_subst with (Γ' := []). *)
+(* Qed. *)
+
+(* useless for the moment *)
+Lemma beta_eta_subst_vass {cf:checker_flags} Σ Γ na A t M N :
+  wf Σ -> beta_eta Σ (Γ ,, vass na A) M N ->
+  beta_eta Σ Γ (M {0 := t}) (N {0 := t}).
+Proof.
+  intros. eapply beta_eta_subst with (Γ' := []) (Δ := [_]); tea.
+  repeat constructor.
+Qed.
+
+Lemma subst_beta_eta {cf:checker_flags} Σ Γ Γ' s s' b :
+  wf Σ -> All2 (beta_eta Σ Γ) s s' ->
+  beta_eta Σ (Γ ,,, Γ') (subst s #|Γ'| b) (subst s' #|Γ'| b).
+Proof.
+  intros HΣ XX.
+  assert (clos_refl_trans (union (All2 (red Σ Γ)) (All2 eta)) s s') as YY. {
+    induction XX; [reflexivity|].
+    transitivity (y :: l).
+    - clear -r. induction r; [|reflexivity|etransitivity; tea].
+      constructor.
+      destruct r; [left|right]; constructor; trea; eta.
+    - clear XX. induction IHXX; [|reflexivity|etransitivity; tea].
+      constructor.
+      destruct r0; [left|right]; constructor; trea. }
+  clear XX. induction YY; [|reflexivity|etransitivity; tea].
+  destruct r.
+  - apply red_beta_eta. eapply red_red; tea.
+  - apply eta_beta_eta. eapply subst_eta, All2_impl; tea; eta.
+Qed.
+
+Open Scope string.
+Open Scope list.
 
 
 Local Ltac tac t := exists t, t; repeat split; [eta .. | reflexivity].
 Local Ltac itac H1 H2 := apply H1 in H2 as [?u' [?v' [? [? ?]]]].
+
+Lemma eta_mkApps M M' l l' :
+  eta M M' -> All2 eta l l' -> eta (mkApps M l) (mkApps M' l').
+Proof.
+  intros X Y.
+  induction Y in M, M', X |- * ; cbn; eauto with eta.
+Qed.
+
+Lemma eta1_mkApps_inv M l N :
+  eta1 (mkApps M l) N ->
+  (∑ M', eta1 M M' × N = mkApps M' l) + (∑ l', OnOne2 eta1 l l' × N = mkApps M l').
+Proof.
+  induction l in M |- *; cbn.
+  - left; now exists N.
+  - intro H; apply IHl in H as [[M' [? ?]]|[l' [? ?]]]; subst.
+    + invs e.
+      * left; now exists N1.
+      * right; exists (N2 :: l). split; now constructor.
+    + right; exists (a :: l'). split; now constructor.
+Defined.
+
+Lemma beta_eta_mkApps Σ Γ M M' l l' :
+  beta_eta Σ Γ M M' -> All2 (beta_eta Σ Γ) l l' ->
+  beta_eta Σ Γ (mkApps M l) (mkApps M' l').
+Proof.
+  intros X Y.
+  induction Y in M, M', X |- * ; cbn; eta.
+Qed.
+
+
 
 Lemma red1_eta1_diamond {cf:checker_flags} {Σ Γ t u v} :
   wf Σ -> red1 Σ Γ t u -> eta1 t v ->
@@ -1165,23 +1249,55 @@ Proof.
       tac (tApp N1 a).
     + tac (b {0 := a}).
     + tac (M' {0 := a}).
-      todo "beta_eta subst".
+      apply eta_beta_eta, eta_subst; eta.
     + tac (b {0 := N2}).
-      todo "beta_eta subst".
+      apply eta_beta_eta, subst_eta; eta.
   - intro XX; invs XX.
     + tac (b' {0 := r}).
-      todo "beta_eta subst".
+      apply eta_beta_eta, subst_eta; eta.
     + tac (b' {0 := b}).
     + tac (r {0 := b}).
-      todo "beta_eta subst".
+      apply eta_beta_eta, eta_subst; eta.
   - intros XX; invs XX.
   - intros XX; invs XX.
     + tac (iota_red pars c args brs).
-    + todo "eta mkApps".
+    + apply eta1_mkApps_inv in X as [[v' [? ?]]|[l' [? ?]]]; subst.
+      { invs e. }
+      tac (iota_red pars c l' brs).
+      apply beta_eta_mkApps; eta.
+      apply All2_skipn. eapply OnOne2_All2; tea; eta.
     + tac (iota_red pars c args brs').
-      unfold iota_red; cbn.
-      todo "mkApps + nth".
-  - todo "eta mkApps".
+      apply beta_eta_mkApps; [|reflexivity].
+      apply OnOne2_length in X as e.
+      rewrite !nth_nth_error. destruct (nth_error brs c) eqn:f.
+      * eapply OnOne2_nth_error in X; tea.
+        destruct X as [? [f' ?]]. rewrite f'.
+        destruct s as [[]|[]]; eta.
+      * apply nth_error_None in f. rewrite e in f.
+        apply nth_error_None in f. now rewrite f.
+  - intro XX. apply eta1_mkApps_inv in XX as [[M' [? ?]]|[l' [? ?]]]; subst.
+    + invs e.
+      * unfold unfold_fix in H.
+        destruct (nth_error mfix idx) eqn:e; [|discriminate].
+        destruct (isLambda (dbody d)) eqn:f; [|discriminate].
+        apply OnOne2_length in X as el.
+        eapply OnOne2_nth_error in X as X'; tea.
+        destruct X' as [v' [e' [|]]]; tea.
+        -- invs H. tac (mkApps (subst0 (fix_subst mfix1) (dbody v')) args).
+           ++ apply beta_eta_mkApps; [|reflexivity].
+              apply subst_beta_eta with (Γ':=[]); tas.
+              unfold fix_subst. rewrite el.
+              clear -X. induction X; cbn.
+              ** constructor. 1: admit.
+
+           ++ apply red_beta_eta, red1_red. econstructor; tea.
+              unfold unfold_fix; now rewrite e', f.
+        -- admit.
+
+    + exists (mkApps fn l'), (mkApps fn l'); eta 2.
+      * apply beta_eta_mkApps; eta. eapply OnOne2_All2; tea; eta.
+      * constructor. left. econstructor; tea.
+        todo "is_constructor eta".
   - intro XX; invs XX.
     + tac (tCase ip p' (mkApps fn args) brs).
     + todo "eta mkApps".
@@ -1207,8 +1323,9 @@ Proof.
       * invs X0.
         -- invs H0.
         -- now sap Rel_mkApps_Fix in H.
-    + tac (tLambda na M'0 M').
-      todo "context same vdef".
+    + destruct (red1_eta_ctx _ _ (Γ,, vass na M'0) _ _ X) as [v' [? ?]]. {
+        constructor; [|reflexivity]. cbn; eta. }
+      tac (tLambda na M'0 v').
     + itac IHX X0.
       exists (tLambda na N u'), (tLambda na N v'); eta.
   - intro XX; invs XX.
@@ -1223,12 +1340,11 @@ Proof.
     + tac (tLetIn na b r r0).
   - intro XX; invs XX.
     + destruct (red1_eta_ctx _ _ (Γ,, vdef na r0 t) _ _ X) as [v' [? ?]]. {
-        constructor. 1: admit. cbn; eta. reflexivity. }
+        constructor; [|reflexivity]. now cbn; eta. }
       tac (tLetIn na r0 t v').
-
-      todo "big: eta context".
-    + tac (tLetIn na b r0 r). ap_beta_eta.
-      todo "context same vdef".
+    + destruct (red1_eta_ctx _ _ (Γ,, vdef na b r0) _ _ X) as [v' [? ?]]. {
+        constructor; [|reflexivity]. now cbn; eta. }
+      tac (tLetIn na b r0 v').
     + itac IHX X0.
       exists (tLetIn na b t u'), (tLetIn na b t v'); eta.
   - intro XX; invs XX.

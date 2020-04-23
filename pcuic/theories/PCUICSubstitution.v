@@ -1998,13 +1998,12 @@ Proof.
   eapply substitution_let_red; eauto.
 Qed.
 
-Lemma red_red {cf:checker_flags} (Σ : global_env_ext) Γ Δ Γ' s s' b : wf Σ ->
+Lemma red_red {cf:checker_flags} (Σ : global_env) Γ Γ' s s' b : wf Σ ->
   All2 (red Σ Γ) s s' ->
-  untyped_subslet Γ s Δ ->
   red Σ (Γ ,,, Γ') (subst s #|Γ'| b) (subst s' #|Γ'| b).
 Proof.
-  intros wfΣ Hall Hsubs.
-  revert Δ Γ' Hsubs.
+  intros wfΣ Hall.
+  revert Γ'.
   elim b using term_forall_list_ind;
         intros; match goal with
                   |- context [tRel _] => idtac
@@ -2024,13 +2023,13 @@ Proof.
 
   - apply red_evar. apply All2_map. solve_all.
   - apply red_prod; eauto.
-    now eapply (X0 Δ (Γ' ,, _)).
+    now eapply (X0 (Γ' ,, _)).
 
   - apply red_abs; eauto.
-    now eapply (X0 Δ (Γ' ,, _)).
+    now eapply (X0 (Γ' ,, _)).
 
   - apply red_letin; eauto.
-    now eapply (X1 Δ (Γ' ,, _)).
+    now eapply (X1 (Γ' ,, _)).
 
   - apply red_app; eauto.
   - apply red_case; eauto.
@@ -2039,12 +2038,12 @@ Proof.
   - apply red_fix_congr; eauto.
     solve_all.
     rewrite subst_fix_context.
-    specialize (b0 _ (Γ' ,,, subst_context s #|Γ'| (fix_context m)) Hsubs).
+    specialize (b0 (Γ' ,,, subst_context s #|Γ'| (fix_context m))).
     now rewrite app_context_length subst_context_length app_context_assoc fix_context_length in b0.
   - apply red_cofix_congr; eauto.
     red in X. solve_all.
     rewrite subst_fix_context.
-    specialize (b0 _ (Γ' ,,, subst_context s #|Γ'| (fix_context m)) Hsubs).
+    specialize (b0 (Γ' ,,, subst_context s #|Γ'| (fix_context m))).
     now rewrite app_context_length subst_context_length app_context_assoc fix_context_length in b0.
 Qed.
 

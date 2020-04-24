@@ -907,7 +907,9 @@ Proof.
     destruct H as [t' Ht'].
     rewrite Hbr in e. noconf e. simpl in H. rewrite <- H. simpl.  
     clear H.
-    destruct brtys as [-> ->].
+    destruct brtys as [-> brtys].
+    specialize (brtys  _ csubst).
+    simpl in brtys. subst brty.
     eapply type_mkApps. eauto.
     set argctx := cshape_args (cshape onc).
     clear Hbr brbrty Hbrty X5 Ht'.

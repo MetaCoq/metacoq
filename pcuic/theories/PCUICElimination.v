@@ -6,7 +6,8 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICInductives PCUICGeneration PCUICSpine PCUICWeakeningEnv
      PCUICSubstitution PCUICUnivSubst PCUICUnivSubstitution
      PCUICCtxShape PCUICConversion PCUICCumulativity PCUICConfluence PCUICContexts
-     PCUICSR PCUICInversion PCUICValidity PCUICSafeLemmata PCUICContextConversion.
+     PCUICSR PCUICInversion PCUICValidity PCUICSafeLemmata PCUICContextConversion
+     PCUICPrincipality.
 Require Equations.Prop.DepElim.
 From Equations Require Import Equations.
 Require Import ssreflect.
@@ -582,50 +583,348 @@ Lemma tCase_length_branch_inv `{cf : checker_flags} (Σ : global_env_ext) Γ ind
 Proof.
   intros. eapply inversion_Case in X0 as (u' & args' & mdecl' & idecl' & ps' & pty' & btys' & ? & ? & ? & ? & ? & ? & ? & ? & ?); eauto.
   subst. unfold build_case_predicate_type  in *.
-Admitted.
+  pose proof t1 as t1'.
+  eapply inversion_mkApps in t1' as [A [_ [tc _]]]; auto.
+  eapply inversion_Construct in tc as [mdecl [idecl [cdecl [_ [declc _]]]]]; auto. clear A.
+  unshelve eapply Construct_Ind_ind_eq in t1; eauto.
+  destruct on_declared_constructor as [[onind oib] [cs [Hnth onc]]].
+  destruct t1 as [[t1 ->] _]. simpl in e. rewrite <- e.
+  destruct (declared_inductive_inj d (proj1 declc)); subst mdecl' idecl'.
+  f_equal. clear Hnth.
+  eapply build_branches_type_lookup in e1. eauto.
+  2:eauto.
+  3:destruct declc; eauto.
+  2:{ eapply (All2_impl a); firstorder. }
+  destruct e1 as [nargs [br [brty [[[Hnth Hnth'] brtyped]]]]].
+  epose proof (All2_nth_error _ _ _ a H).
+  specialize (X0 Hnth').
+  simpl in X0. destruct X0 as [[X0 _] _]. subst m.
+  clear e0.
+  set (decli := declared_inductive_inv _ _ _  _ _ _ _ _ _) in *.
+  clear oib. clearbody decli.
+  unshelve eapply branch_type_spec in e1; eauto.
+  now destruct e1 as [e1 _].
+Qed.
 
 Section no_prop_leq_type.
 
 Context `{cf : checker_flags}.
 Variable Hcf : prop_sub_type = false.
+Variable Hcf' : check_univs = true.
 
-Lemma cumul_prop (Σ : global_env_ext) Γ A B u :
+Lemma leq_universe_super Σ l l' : leq_universe Σ (Universe.make l) (Universe.make l') ->
+   leq_universe Σ (Universe.super l) (Universe.super l').
+Proof.
+  todo "Simon"%string.
+Qed.
+
+Lemma typing_leq_term (Σ : global_env_ext) Γ t t' T T' : 
+  wf Σ.1 ->
+  Σ ;;; Γ |- t : T ->
+  Σ ;;; Γ |- t' : T' ->
+  PCUICEquality.leq_term Σ t' t ->
+  Σ ;;; Γ |- t' : T.
+Proof.
+  intros wfΣ Ht.
+  revert Σ wfΣ Γ t T Ht t' T'.
+  eapply (typing_ind_env 
+  (fun Σ Γ t T =>
+    forall t' T' : term, Σ ;;; Γ |- t' : T' -> PCUICEquality.leq_term Σ t' t -> Σ;;; Γ |- t' : T)
+  (fun Σ Γ wfΓ => wf_local Σ Γ)); auto;intros Σ wfΣ Γ wfΓ; intros.
+    1-13:match goal with
+    [ H : PCUICEquality.leq_term _ _ _ |- _ ] => depelim H
+    end.
+  all:try solve [econstructor; eauto].
+  13:{ eapply type_Cumul.
+       eapply X1. eauto. eauto. 
+       destruct X2; [left|right].
+       red in i. apply i.
+       exists s.π1. apply s.π2. auto.
+    }
+  - eapply inversion_Sort in X0 as [l' [_ [Inl' [-> ?]]]].
+    eapply type_Cumul with (tSort (Universe.super l')).
+    constructor; auto. left; eexists _, _; simpl; intuition eauto.
+    constructor. constructor. apply leq_universe_super.
+    apply x. auto.
+
+  - eapply inversion_Prod in X4 as [s1' [s2' [Ha [Hb Hs]]]]; auto.
+    specialize (X1 _ _ Ha). 
+    specialize (X1 (PCUICEquality.eq_term_leq_term _ _ _ X5_1)).
+    eapply context_conversion in Hb. 3:{ constructor. apply conv_ctx_refl. constructor.
+      constructor; eauto. }
+    all:eauto.
+    2:{ constructor; eauto. now exists s1. }
+    specialize (X3 _ _ Hb X5_2).
+    econstructor; eauto.
+    eapply context_conversion; eauto.
+    constructor; pcuic. constructor. symmetry;  now constructor.
+    constructor; pcuic.
+Admitted.    
+
+Lemma leq_prop_is_prop {Σ x s} : leq_universe Σ x s -> 
+  (Universe.is_prop s <-> Universe.is_prop x).
+Proof.
+  intros leq.
+  split; intros isp.
+  apply is_prop_leq in leq; auto.
+  red in leq. rewrite Hcf' in leq.
+  todo "Simon"%string.
+Admitted.
+
+Lemma prop_leq_left {Σ l l'} : 
+  wf Σ.1 ->
+  Universe.is_prop l -> 
+  leq_universe (global_ext_constraints Σ) l l'.
+Proof.
+  todo "Simon"%string.
+Admitted.
+ 
+Lemma impredicative_product {Σ l u} : 
+  wf Σ.1 ->
+  Universe.is_prop u -> 
+  leq_universe (global_ext_constraints Σ) (Universe.sort_of_product l u) u.
+Proof.
+  unfold Universe.sort_of_product.
+  intros wfΣ ->. reflexivity.
+Qed.
+
+Lemma is_prop_bottom {Σ Γ T s s'} :
+  wf Σ.1 ->
+  Σ ;;; Γ |- T <= tSort s ->
+  Σ ;;; Γ |- T <= tSort s' ->
+  Universe.is_prop s -> Universe.is_prop s'.
+Proof.
+  intros wfΣ hs hs'.
+  destruct (cumul_sort_confluence _ wfΣ hs hs') as [x' [conv [leq leq']]].
+  intros isp.
+  apply (leq_prop_is_prop leq').
+  now apply (leq_prop_is_prop leq).
+Qed.
+
+Lemma leq_term_prop_sorted_l {Σ Γ v v' u u'} :
+  wf Σ.1 ->
+  PCUICEquality.leq_term (global_ext_constraints Σ) v v' ->
+  Σ;;; Γ |- v : tSort u ->
+  Σ;;; Γ |- v' : tSort u' -> Universe.is_prop u -> 
+  leq_universe (global_ext_constraints Σ) u' u.
+Proof.
+  intros wfΣ leq hv hv' isp.
+  pose proof hv as hv0.
+  eapply typing_leq_term in hv. 4:eapply leq. all:eauto.
+  destruct (principal_typing _ wfΣ hv hv0) as [C [cum0 [cum1 tyC]]].
+  pose proof (is_prop_bottom wfΣ cum1 cum0 isp).
+  apply prop_leq_left; auto.
+Qed.
+
+Lemma leq_term_prop_sorted_r {Σ Γ v v' u u'} :
+  wf Σ.1 ->
+  PCUICEquality.leq_term (global_ext_constraints Σ) v v' ->
+  Σ;;; Γ |- v : tSort u ->
+  Σ;;; Γ |- v' : tSort u' -> Universe.is_prop u' -> 
+  leq_universe (global_ext_constraints Σ) u u'.
+Proof.
+  intros wfΣ leq hv hv' isp.
+  pose proof hv as hv0.
+  eapply typing_leq_term in hv. 4:eapply leq. all:eauto.
+  destruct (principal_typing _ wfΣ hv hv0) as [C [cum0 [cum1 tyC]]].
+  pose proof (is_prop_bottom wfΣ cum0 cum1 isp).
+  apply prop_leq_left; auto.
+Qed.
+
+Lemma cumul_prop (Σ : global_env_ext) Γ A B u u' :
   wf Σ ->
   Universe.is_prop u ->
-  (Σ ;;; Γ |- A : tSort u + (Σ ;;; Γ |- B : tSort u))%type ->
+  (((Σ ;;; Γ |- A : tSort u) * (Σ ;;; Γ |- B : tSort u')) + 
+   ((Σ ;;; Γ |- B : tSort u) * (Σ ;;; Γ |- A : tSort u')))%type ->
   Σ ;;; Γ |- A <= B ->
   ((Σ ;;; Γ |- A : tSort u) * (Σ ;;; Γ |- B : tSort u))%type.
-Admitted.
+Proof.
+  intros wfΣ propu.
+  intros [[HA HB]|[HB HA]] cum; split; auto;
+  apply cumul_alt in cum as [v [v' [[redv redv'] leq]]].
+  - eapply type_Cumul with (tSort u'); eauto.
+    left; eexists _, _; simpl; intuition eauto. now apply typing_wf_local in HA.
+    constructor. constructor.
+    eapply subject_reduction in redv; eauto.
+    eapply subject_reduction in redv'; eauto.
+    eapply leq_term_prop_sorted_l; eauto.
+  - eapply subject_reduction in redv; eauto.
+    eapply subject_reduction in redv'; eauto.
+    eapply leq_term_prop_sorted_r in leq; eauto.
+    eapply type_Cumul with (tSort u'); eauto.
+    left; eexists _, _; simpl; intuition eauto. now apply typing_wf_local in HA.
+    constructor. constructor. auto.
+Qed.
+
+Lemma is_prop_gt Σ l l' : leq_universe Σ (Universe.super l) l' -> Universe.is_prop l' -> False.
+Proof.
+  todo "Simon"%string.
+Qed.
+
+Lemma cumul_prop_r_is_type (Σ : global_env_ext) Γ A B u :
+  wf Σ ->
+  Universe.is_prop u ->
+  isWfArity_or_Type Σ Γ A ->
+  Σ ;;; Γ |- B : tSort u ->
+  Σ ;;; Γ |- A <= B ->
+  isType Σ Γ A.
+Proof.
+  intros.
+  destruct X0; eauto.
+  destruct i as [ctx [s [Hd eq]]].
+  exists u.
+  apply PCUICArities.destArity_spec_Some in Hd.
+  simpl in Hd. subst A.
+  revert u H Γ eq B X1 X2. revert ctx. intros ctx.
+  change (list context_decl) with context in ctx.
+  induction ctx using ctx_length_rev_ind; simpl in *; intros.
+  - elimtype False.
+    eapply invert_cumul_sort_l in X2 as [u' [red leq]]; auto.
+    eapply subject_reduction in red; eauto.
+    eapply inversion_Sort in red as [l [wf [inl [eq' lt]]]]; auto.
+    subst u'.
+    eapply cumul_Sort_inv in lt.
+    now apply is_prop_gt in lt.
+  - rewrite app_context_assoc in eq.
+    pose proof eq as eq'.
+    eapply All_local_env_app in eq' as [wfΓ wf']. depelim wfΓ;
+    rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /= in X2 |- *.
+    + eapply invert_cumul_prod_l in X2 as (na' & A & B' & (red & conv) & cum).
+      eapply subject_reduction in X1. 3:eassumption. all:auto.
+      eapply inversion_Prod in X1 as (s1 & s2 & tA & tB' & cum'); auto.
+      eapply cumul_Sort_inv in cum'.
+      specialize (X0 Γ ltac:(reflexivity) u H _ eq B').
+      forward X0.
+      eapply type_Cumul.
+      eapply context_conversion; eauto.
+      constructor; pcuic. constructor. now symmetry.
+      constructor; auto.
+      left. eexists _, _; simpl; intuition eauto. constructor; pcuic.
+      do 2 constructor. etransitivity; eauto.
+      eapply leq_universe_product.
+      specialize (X0 cum).
+      eapply type_Cumul.
+      econstructor; eauto. eapply l.π2.
+      left; eexists _, _; simpl; intuition auto.
+      do 2 constructor. now eapply impredicative_product.
+    + eapply invert_cumul_letin_l in X2; auto.
+      eapply type_Cumul.
+      econstructor; eauto. eapply l.π2.
+      instantiate (1 := (tSort u)).
+      eapply X0; auto.
+      eapply (PCUICWeakening.weakening _ _ [vdef na b t]) in X1. simpl in X1.
+      eapply X1. all:eauto.
+      constructor; auto.
+      eapply (PCUICWeakening.weakening_cumul _ _ [] [vdef na b t]) in X2; auto. simpl in X2.
+      etransitivity; eauto.
+      eapply red_cumul. apply PCUICSpine.red_expand_let.
+      constructor; pcuic.
+      left; eexists _, _; simpl; intuition eauto.
+      eapply red_cumul, PCUICReduction.red1_red.
+      constructor.
+Qed.
+
+Lemma cumul_prop_l_is_type (Σ : global_env_ext) Γ A B u :
+  wf Σ ->
+  Universe.is_prop u ->
+  isWfArity_or_Type Σ Γ B ->
+  Σ ;;; Γ |- A : tSort u ->
+  Σ ;;; Γ |- A <= B ->
+  isType Σ Γ B.
+Proof.
+  intros.
+  destruct X0; eauto.
+  destruct i as [ctx [s [Hd eq]]].
+  exists u.
+  apply PCUICArities.destArity_spec_Some in Hd.
+  simpl in Hd. subst B.
+  revert u H Γ eq A X1 X2. revert ctx. intros ctx.
+  change (list context_decl) with context in ctx.
+  induction ctx using ctx_length_rev_ind; simpl in *; intros.
+  - elimtype False.
+    eapply invert_cumul_sort_r in X2 as [u' [red leq]]; auto.
+    eapply subject_reduction in red; eauto.
+    eapply inversion_Sort in red as [l [wf [inl [eq' lt]]]]; auto.
+    subst u'.
+    eapply cumul_Sort_inv in lt.
+    now apply is_prop_gt in lt.
+  - rewrite app_context_assoc in eq.
+    pose proof eq as eq'.
+    eapply All_local_env_app in eq' as [wfΓ wf']. depelim wfΓ;
+    rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /= in X2 |- *.
+    + eapply invert_cumul_prod_r in X2 as (na' & A' & B' & (red & conv) & cum).
+      eapply subject_reduction in X1. 3:eassumption. all:auto.
+      eapply inversion_Prod in X1 as (s1 & s2 & tA & tB' & cum'); auto.
+      eapply cumul_Sort_inv in cum'.
+      specialize (X0 Γ ltac:(reflexivity) u H _ eq B').
+      forward X0.
+      eapply type_Cumul.
+      eapply context_conversion; eauto.
+      constructor; pcuic. constructor. now symmetry.
+      constructor; auto.
+      left. eexists _, _; simpl; intuition eauto. constructor; pcuic.
+      do 2 constructor. etransitivity; eauto.
+      eapply leq_universe_product.
+      specialize (X0 cum).
+      eapply type_Cumul.
+      econstructor; eauto. eapply l.π2.
+      left; eexists _, _; simpl; intuition auto.
+      do 2 constructor. now eapply impredicative_product.
+    + eapply invert_cumul_letin_r in X2; auto.
+      eapply type_Cumul.
+      econstructor; eauto. eapply l.π2.
+      instantiate (1 := (tSort u)).
+      eapply X0; auto.
+      eapply (PCUICWeakening.weakening _ _ [vdef na b t]) in X1. simpl in X1.
+      eapply X1. all:eauto.
+      constructor; auto.
+      eapply (PCUICWeakening.weakening_cumul _ _ [] [vdef na b t]) in X2; auto. simpl in X2.
+      etransitivity; eauto.
+      eapply conv_cumul, conv_sym, red_conv. apply PCUICSpine.red_expand_let.
+      constructor; pcuic.
+      left; eexists _, _; simpl; intuition eauto.
+      eapply red_cumul, PCUICReduction.red1_red.
+      constructor.
+Qed.
 
 Lemma cumul_prop1 (Σ : global_env_ext) Γ A B u :
   wf Σ ->
   Universe.is_prop u ->
+  isWfArity_or_Type Σ Γ A ->
   Σ ;;; Γ |- B : tSort u ->
   Σ ;;; Γ |- A <= B ->
   Σ ;;; Γ |- A : tSort u.
 Proof.
-  intros. eapply cumul_prop in X1; eauto. firstorder.
+  intros.
+  eapply cumul_prop_r_is_type in X0; eauto.
+  destruct X0 as [s Hs].
+  eapply cumul_prop in H. 4:eauto. firstorder. auto.
+  right; eauto.
 Qed.
 
 Lemma cumul_prop2 (Σ : global_env_ext) Γ A B u :
   wf Σ ->
   Universe.is_prop u ->
+  isWfArity_or_Type Σ Γ B ->
   Σ ;;; Γ |- A <= B ->
   Σ ;;; Γ |- A : tSort u ->
   Σ ;;; Γ |- B : tSort u.
 Proof.
-  intros. eapply cumul_prop in X0; eauto. firstorder.  
+  intros.
+  eapply cumul_prop_l_is_type in X0; eauto.
+  destruct X0 as [s Hs].
+  eapply cumul_prop in H. 4:eauto. firstorder. auto.
+  left; eauto.
 Qed.
 
 Lemma leq_universe_prop (Σ : global_env_ext) u1 u2 :
-  @check_univs cf = true ->
-  (* @prop_sub_type cf = false -> *)
   wf Σ ->
   @leq_universe cf (global_ext_constraints Σ) u1 u2 ->
   (Universe.is_prop u1 \/ Universe.is_prop u2) ->
   (Universe.is_prop u1 /\ Universe.is_prop u2).
 Proof.
-  intros. unfold leq_universe in *.
+  intros. unfold leq_universe in *. rewrite Hcf' in H.
+  todo "Simon"%string.
 Admitted.                       (* leq_universe_prop *)
 
 End no_prop_leq_type.

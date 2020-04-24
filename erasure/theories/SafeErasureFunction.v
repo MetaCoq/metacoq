@@ -285,7 +285,9 @@ Next Obligation.
 
     eapply leq_universe_prop in l0 as []; cbn; eauto.
     eapply leq_universe_prop in l as []; cbn; eauto.
-    reflexivity.
+    2:reflexivity. now right; exists x0.
+    now apply PCUICValidity.validity in X1.
+    now apply PCUICValidity.validity in t2.
 Qed.
 
 (* Program Definition is_erasable (Sigma : PCUICAst.global_env_ext) (HΣ : ∥wf_ext Sigma∥) (Gamma : context) (HΓ : ∥wf_local Sigma Gamma∥) (t : PCUICAst.term) : *)

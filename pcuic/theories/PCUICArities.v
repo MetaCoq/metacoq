@@ -69,17 +69,49 @@ induction n; intros ctx Hlen Γ T HT.
       rewrite -> app_length in Hlen.
       rewrite Nat.add_1_r in Hlen.
       destruct HT as [na' [A' [B' [[redT convT] HT]]]].
-      specialize (IHn ctx ltac:(lia) (Γ ,, vass na ty) B' HT). clear IHctx.
+      specialize (IHn ctx ltac:(lia) (Γ ,, vass na' A') B').
+      forward IHn. eapply cumul_conv_ctx; eauto.
+      constructor; pcuic. clear IHctx.
       destruct IHn as [T' [ctx' [s' [[[redT' destT] convctx] leq]]]].
       exists (tProd na' A' T'), (ctx' ++ [vass na' A'])%list, s'. intuition auto. 2:simpl.
       -- transitivity (tProd na' A' B'); auto.
-        eapply red_prod. reflexivity.
-        todo"red context conv"%string.
+        eapply red_prod. reflexivity. apply redT'.
       -- now rewrite destArity_app destT.
       -- rewrite smash_context_app /= .
-         rewrite !app_context_assoc. simpl.
-         eapply conv_context_trans with (Γ ,, vass na ty ,,, ctx'); auto.
-         todo "conv context"%string.
+         rewrite !app_context_assoc.
+         assert (#|smash_context [] ctx| = #|ctx'|).
+         { apply context_relation_length in convctx.
+          autorewrite with len in convctx.
+          simpl in convctx. lia. }
+        eapply context_relation_app_inv; auto.
+        apply context_relation_app in convctx; auto.
+        constructor; pcuic.
+        eapply context_relation_app in convctx as [_ convctx].
+        unshelve eapply (context_relation_impl _ convctx).
+        simpl; firstorder. destruct X. constructor.
+        eapply conv_conv_ctx; eauto.
+        eapply context_relation_app_inv. constructor; pcuic.
+        constructor; pcuic. constructor; pcuic. now symmetry.
+        apply context_relation_refl. intros.
+        destruct x as [na'' [b'|] ty']; constructor; reflexivity.
+        constructor; pcuic. 
+        eapply conv_conv_ctx; eauto.
+        eapply context_relation_app_inv. constructor; pcuic.
+        constructor; pcuic. constructor; pcuic. now symmetry.
+        apply context_relation_refl. intros.
+        destruct x as [na'' [b'|] ty']; constructor; reflexivity.
+        constructor; pcuic.
+        eapply conv_conv_ctx; eauto.
+        eapply context_relation_app_inv. constructor; pcuic.
+        constructor; pcuic. constructor; pcuic. now symmetry.
+        apply context_relation_refl. intros.
+        destruct x as [? [?|] ?]; constructor; reflexivity.
+        eapply conv_conv_ctx; eauto.
+        eapply context_relation_app_inv. constructor; pcuic.
+        constructor; pcuic. constructor; pcuic. now symmetry.
+        apply context_relation_refl. intros.
+        destruct x as [? [?|] ?]; constructor; reflexivity.
+        auto.
 Qed.
 
 

@@ -442,7 +442,7 @@ Proof.
   revert u H c0.
   induction t1; intros.
   - eapply cumul_prop2 in c0; eauto.
-  - eapply cumul_prop2 in c0. 2:eauto. 2:auto. 2:eauto. 2:eauto. 3:eauto.
+  - eapply cumul_prop2 in c0. 5:eauto. all:eauto.
     eapply invert_cumul_prod_r in c as (? & ? & ? & [] & ?); eauto.
     eapply subject_reduction in c0. 3:eauto. 2:eauto.
     eapply inversion_Prod in c0 as (? & ? & ? & ? & ?) ; auto.
@@ -453,7 +453,6 @@ Proof.
     change (tSort x3) with ((tSort x3) {0 := hd}).
     eapply PCUICSubstitution.substitution0. 2:eauto. eauto.
     econstructor. eassumption. 2: now destruct c. right; eauto.
-    apply i.
 Qed.
 
 Lemma arity_type_inv (Σ : global_env_ext) Γ t T1 T2 : wf Σ -> wf_local Σ Γ ->

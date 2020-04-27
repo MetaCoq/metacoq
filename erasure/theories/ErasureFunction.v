@@ -438,7 +438,9 @@ Next Obligation.
 
        eapply leq_universe_prop in l0 as []; cbn; eauto.
        eapply leq_universe_prop in l as []; cbn; eauto.
-       reflexivity.
+       2:reflexivity. now right; exists x0.
+       now apply PCUICValidity.validity in X1.
+       now apply PCUICValidity.validity in t2.
   - sq. econstructor. eauto.
 Qed.
 

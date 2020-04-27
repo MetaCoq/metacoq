@@ -421,17 +421,28 @@ Proof.
   - right. eexists. eapply subject_reduction ; eauto.
 Qed.
 
+Lemma typing_spine_wat (Σ : global_env_ext) (Γ : context) (L : list term)
+  (x x0 : term) :
+    wf Σ ->
+    typing_spine Σ Γ x L x0 -> 
+    isWfArity_or_Type Σ Γ x0.
+Proof.
+  intros wfΣ; induction 1; auto.
+Qed.
+
 Lemma sort_typing_spine:
   forall (Σ : global_env_ext) (Γ : context) (L : list term) (u : Universe.t) (x x0 : term),
     wf Σ ->
     Universe.is_prop u ->
-    typing_spine Σ Γ x L x0 -> Σ;;; Γ |- x : tSort u -> ∑ u', Σ;;; Γ |- x0 : tSort u' × Universe.is_prop u'.
+    typing_spine Σ Γ x L x0 -> 
+    Σ;;; Γ |- x : tSort u -> 
+    ∑ u', Σ;;; Γ |- x0 : tSort u' × Universe.is_prop u'.
 Proof.
   intros Σ Γ L u x x0 ? ? t1 c0.
   revert u H c0.
-  depind t1; intros.
+  induction t1; intros.
   - eapply cumul_prop2 in c0; eauto.
-  - eapply cumul_prop2 in c0. 2:eauto. 2:auto. 2:eauto. 2:eauto.
+  - eapply cumul_prop2 in c0. 5:eauto. all:eauto.
     eapply invert_cumul_prod_r in c as (? & ? & ? & [] & ?); eauto.
     eapply subject_reduction in c0. 3:eauto. 2:eauto.
     eapply inversion_Prod in c0 as (? & ? & ? & ? & ?) ; auto.
@@ -495,6 +506,8 @@ Proof.
     eapply cumul_prop2 in c0; eauto.
     econstructor. exists x0. split. eapply type_mkApps. 2:eassumption. eassumption. right.
     eapply sort_typing_spine in t1; eauto.
+    now eapply PCUICValidity.validity in t0.
+    now apply PCUICValidity.validity in t2.
 Qed.
 
 Lemma Is_type_lambda (Σ : global_env_ext) Γ na T1 t :
@@ -504,7 +517,7 @@ Lemma Is_type_lambda (Σ : global_env_ext) Γ na T1 t :
   ∥isErasable Σ (vass na T1 :: Γ) t∥.
 Proof.
   intros ? ? (T & ? & ?).
-  eapply inversion_Lambda in t0 as (? & ? & ? & ? & ?).
+  eapply inversion_Lambda in t0 as (? & ? & ? & ? & ?); auto.
   destruct s as [ | (u & ? & ?)].
   - eapply invert_cumul_arity_r in c; eauto. destruct c as (? & [] & ?).
     eapply invert_red_prod in X1 as (? & ? & [] & ?); eauto; subst. cbn in H.
@@ -516,7 +529,8 @@ Proof.
     eapply leq_universe_prop in c as []; cbn; eauto.
     eexists. split. eassumption. right. eexists. split. eassumption.
     eapply is_prop_sort_prod; eassumption.
-  - auto.
+    eapply type_Lambda in t1; eauto.
+    now apply PCUICValidity.validity in t1.
 Qed.
 
 Lemma Is_type_red (Σ : global_env_ext) Γ t v:

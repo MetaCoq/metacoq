@@ -157,15 +157,15 @@ Lemma branch_type_spec {cf:checker_flags} Σ ind mdecl idecl cdecl pars u p c na
   forall (oib : on_ind_body (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind ind) mdecl (inductive_ind ind) idecl),
   forall csort (cs : on_constructor (lift_typing typing) (Σ, ind_universes mdecl) mdecl (inductive_ind ind) idecl (ind_indices oib) cdecl csort),
   branch_type ind mdecl idecl pars u p c cdecl = Some (nargs, bty) ->
+  let cshape := cshape cs in
+  nargs = context_assumptions cshape.(cshape_args) /\
   forall parsubst, 
   context_subst (subst_instance_context u (PCUICAst.ind_params mdecl)) pars parsubst ->
-  let cshape := cshape cs in
   let indsubst := (inds (inductive_mind ind) u (ind_bodies mdecl)) in
   let nargs' := #|cshape.(cshape_args)| in
   let npars := #|ind_params mdecl| in
   let substargs := (subst_context parsubst 0 
     (subst_context indsubst npars (map_context (subst_instance_constr u) cshape.(cshape_args)))) in
-  nargs = context_assumptions cshape.(cshape_args) /\
   bty = 
   it_mkProd_or_LetIn substargs
     (mkApps (lift0 nargs' p)
@@ -175,26 +175,28 @@ Lemma branch_type_spec {cf:checker_flags} Σ ind mdecl idecl cdecl pars u p c na
           to_extended_list substargs)])).
 Proof.
   move=> decli onmib [] indices ps aeq onAr indsorts onC onP inds.
-  intros cs onc brty parsubst Hpars cshape' indsubst nargs' na. simpl in onc, cshape'.
+  intros cs onc brty cshape'.
+  simpl in onc, cshape'.
   clear onP.
   assert(lenbodies: inductive_ind ind < #|ind_bodies mdecl|).
   { destruct decli as [_ Hnth]. now apply nth_error_Some_length in Hnth. }
   clear decli.
-  destruct onc=> /=.
+  destruct onc.
   simpl in cshape'. subst cshape'.
-  destruct cshape as [args argslen head indi eqdecl] => /=. simpl in *. 
-  rewrite eqdecl in on_ctype.
+  destruct cshape as [args argslen head indi eqdecl].
+  rewrite eqdecl in on_ctype. simpl in * |-.
   unfold branch_type in brty.
-  destruct cdecl as [[id ty] nargs'']. simpl in *.
+  destruct cdecl as [[id ty] nargs'']. simpl in * |-.
   destruct instantiate_params eqn:Heq => //.
   eapply instantiate_params_make_context_subst in Heq.
   destruct Heq as [ctx' [ty'' [s' [? [? ?]]]]].
   subst t. move: H.
-  rewrite eqdecl subst_instance_constr_it_mkProd_or_LetIn subst_it_mkProd_or_LetIn.
+  rewrite {1}eqdecl subst_instance_constr_it_mkProd_or_LetIn subst_it_mkProd_or_LetIn.
   rewrite -(subst_context_length (PCUICTyping.inds (inductive_mind ind) u (ind_bodies mdecl)) 0).
   rewrite decompose_prod_n_assum_it_mkProd.
   move=> H;noconf H.
   move: brty.
+
   rewrite !subst_context_length !subst_instance_context_length
     subst_instance_constr_it_mkProd_or_LetIn !subst_it_mkProd_or_LetIn.
   rewrite subst_context_length subst_instance_context_length Nat.add_0_r.
@@ -219,14 +221,16 @@ Proof.
   rewrite H.
   rewrite decompose_prod_assum_it_mkProd ?is_ind_app_head_mkApps //.
   rewrite decompose_app_mkApps //.
-  simpl.
+  move=> Heq; simpl in Heq; move: Heq.
   rewrite !map_map_compose map_app.
   rewrite chop_n_app.
   rewrite map_length to_extended_list_k_length.
   by rewrite (onmib.(onNpars _ _ _ _)).
+
   move=> [=] Hargs Hbty. subst nargs. split;auto. rewrite -Hbty.
   clear Hbty bty.
   rewrite app_nil_r.
+  move=>parsubst Hpars cshape' indsubst nargs' na. simpl in indsubst, na.
   pose proof (make_context_subst_spec _ _ _ H0) as csubst.
   rewrite rev_involutive in csubst.
   pose proof (context_subst_fun csubst Hpars). subst s'. clear csubst.

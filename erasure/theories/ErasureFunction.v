@@ -436,7 +436,7 @@ Next Obligation.
        eapply invert_red_sort in r.
        eapply invert_red_sort in r1. subst. inv r1.
 
-       eapply leq_universe_prop in l0 as []; cbn; eauto.
+       eapply leq_universe_prop in l0 as []; cbn; intuition eauto.
        eapply leq_universe_prop in l as []; cbn; eauto.
        2:reflexivity. now right; exists x0.
        now apply PCUICValidity.validity in X1.
@@ -615,7 +615,7 @@ Proof.
     eapply isArity_subst_instance.
     eapply isArity_ind_type; eauto.
   - econstructor.
-    eapply elim_restriction_works. eauto. eauto. eauto. intros.
+    eapply elim_restriction_works. eauto. eauto. eauto. eauto. intros.
     eapply f, isErasable_Proof. eauto. eauto.
 
     pose proof (Prelim.monad_map_All2 _ _ _ brs a2 E2).

@@ -78,13 +78,6 @@ Section Principality.
     exists u'u. split; auto.
   Qed.
 
-  Lemma leq_universe_product_mon u u' v v' :
-    leq_universe (global_ext_constraints Σ) u u' ->
-    leq_universe (global_ext_constraints Σ) v v' ->
-    leq_universe (global_ext_constraints Σ) (Universe.sort_of_product u v) (Universe.sort_of_product u' v').
-  Proof.
-  Admitted.
-
   Lemma isWfArity_sort Γ u :
     wf_local Σ Γ ->
     isWfArity typing Σ Γ (tSort u).
@@ -375,3 +368,26 @@ Section Principality.
   Qed.
 
 End Principality.
+
+Lemma principal_type_ind {cf:checker_flags} {Σ Γ c ind u u' args args'} {wfΣ: wf Σ.1} :
+  Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
+  Σ ;;; Γ |- c : mkApps (tInd ind u') args' ->
+  PCUICEquality.R_universe_instance (eq_universe (global_ext_constraints Σ)) u u' * 
+  All2 (conv Σ Γ) args args'.
+Proof.
+  intros h h'.
+  destruct (principal_typing _ wfΣ h h') as [C [l [r ty]]].
+  eapply invert_cumul_ind_r in l as [ui' [l' [red [Ru eqargs]]]]; auto.
+  eapply invert_cumul_ind_r in r as [ui'' [l'' [red' [Ru' eqargs']]]]; auto.
+  destruct (red_confluence wfΣ red red') as [nf [redl redr]].
+  eapply red_mkApps_tInd in redl as [args'' [-> eq0]]; auto.
+  eapply red_mkApps_tInd in redr as [args''' [eqnf eq1]]; auto.
+  solve_discr.
+  split. transitivity ui'; eauto. now symmetry.
+  eapply All2_trans; [|eapply eqargs|]. intro; intros. eapply conv_trans; eauto.
+  eapply All2_trans. intro; intros. eapply conv_trans; eauto.
+  2:{ eapply All2_sym. eapply (All2_impl eqargs'). intros. now apply conv_sym. }
+  eapply All2_trans. intro; intros. eapply conv_trans; eauto.
+  eapply (All2_impl eq0). intros. now apply red_conv.
+  eapply All2_sym; eapply (All2_impl eq1). intros. symmetry. now apply red_conv.
+Qed.

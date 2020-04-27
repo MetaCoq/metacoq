@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program Arith
+From Coq Require Import Bool String List Arith
      Classes.RelationClasses.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
@@ -674,7 +674,6 @@ Proof.
   induction t in n, k |- * using term_forall_list_ind.
   all: simpl.
   all: try congruence.
-  - destruct (_ <=? _). all: reflexivity.
   - f_equal. rename X into H; induction H.
     + reflexivity.
     + simpl. f_equal.
@@ -1075,12 +1074,17 @@ Qed.
 
 
 Lemma typing_nlg {cf : checker_flags} :
-  env_prop (fun Σ Γ t T => nlg Σ ;;; nlctx Γ |- nl t : nl T).
+  env_prop (fun Σ Γ t T => nlg Σ ;;; nlctx Γ |- nl t : nl T)
+    (fun Σ Γ _ => wf_local (nlg Σ) (nlctx Γ)).
 Proof.
   clear.
   apply typing_ind_env; cbn; intros;
     rewrite ?nl_lift, ?nl_subst, ?nl_subst_instance_constr;
     try (econstructor; eauto using nlg_wf_local; fail).
+  - induction X; simpl; constructor; auto.
+    * now exists (tu.π1).
+    * now exists (tu.π1).
+
   - replace (nl (decl_type decl)) with (decl_type (map_decl_anon nl decl));
       [|destruct decl; reflexivity].
     constructor. 1: eauto using nlg_wf_local.
@@ -1218,36 +1222,34 @@ Proof.
       constructor. clear. induction mfix. 1: constructor.
       simpl. constructor; tas. cbn.
       repeat split; now apply eq_term_upto_univ_tm_nl.
-    + now rewrite nth_error_map, H.
-    + rewrite XX. revert X. clear.
-      induction 1; simpl; econstructor; tas; cbn in *.
-      1-2: destruct t0 as [? [? ?]]; eauto.
-      now destruct t1.
-    + rewrite XX. clear -X0.
+    + now rewrite nth_error_map, H0.
+    + auto.
+    + clear -X0.
       apply All_map. eapply All_impl; tea.
-      clear. intros [na bd ty] [[H1 H2] H3]; simpl in *.
-      split; cbn. 2: now destruct ty.
-      rewrite <- nl_lift.
-      rewrite fix_context_length in H3.
-      now rewrite fix_context_length, map_length.
+      simpl. intros x [s Hs]. now exists s.
+    + apply All_map. eapply All_impl; tea.
+      simpl. intros [] [s Hs].
+      simpl in *; intuition auto.
+      * rewrite fix_context_length, map_length.
+        rewrite fix_context_length in Hs.
+        now rewrite XX, <- nl_lift.
+      * destruct dbody; simpl in *; congruence.
   - replace (nl (dtype decl)) with (dtype (map_def_anon nl nl decl));
       [|destruct decl; reflexivity].
     assert (XX: nlctx Γ ,,, fix_context (map (map_def_anon nl nl) mfix)
                 = nlctx (Γ ,,, fix_context mfix))
       by now rewrite <- nl_fix_context, <- nlctx_app_context.
-    constructor.
-    + assumption.
+    constructor; auto.
     + now rewrite nth_error_map, H.
-    + rewrite XX. revert X. clear.
-      induction 1; simpl; econstructor; tas; cbn in *.
-      1-2: destruct t0 as [? [? ?]]; eauto.
-      now destruct t1.
-    + rewrite XX. clear -X0.
+    + clear -X0.
       apply All_map. eapply All_impl; tea.
-      clear. intros [na bd ty] [H1 H3]; simpl in *.
-      red. cbn. rewrite <- nl_lift.
-      rewrite fix_context_length in H3.
-      now rewrite fix_context_length, map_length.
+      simpl. intros x [s Hs]. now exists s.
+    + apply All_map. eapply All_impl; tea.
+      simpl. intros [] [s Hs].
+      simpl in *; intuition auto.
+      * rewrite fix_context_length, map_length.
+        rewrite fix_context_length in Hs.
+        now rewrite XX, <- nl_lift.
   - econstructor; tea.
     + destruct X2 as [[[Δ [s [H1 H2]]] HH]|?]; [left|right].
       * exists (nlctx Δ), s. split.
@@ -1328,7 +1330,7 @@ Local Ltac bb' := bb; [econstructor|]; tea; cbn.
 Arguments on_snd {_ _ _} _ _/.
 Arguments map_def_anon {_ _} _ _ _/.
 
-
+(*
 Lemma nl_red1' Σ Γ M N :
     red1 Σ Γ M N ->
     ∑ N', red1 Σ (nlctx Γ) (nl M) N' × nl N = nl N'.
@@ -1511,8 +1513,7 @@ Proof.
 (*     + rewrite nlctx_app_context, nl_fix_context in r0. assumption. *)
 (*     + cbn. congruence. *)
 (* Qed. *)
-Admitted.
-
+*)
 
   (* Lemma nleq_term_zipc : *)
   (*   forall u v π, *)

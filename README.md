@@ -36,10 +36,11 @@ Coq's kernel API is not stable yet, and changes there are reflected in MetaCoq's
 so we do not ensure any compatibility from version to version.
 
 The [master](https://github.com/MetaCoq/metacoq/tree/master) branch is following Coq's master 
-branch and is the main development branch.
+branch and gets regular updates from the the main development branch which follows the latest 
+stable release of Coq.
 
-The [coq-8.11](https://github.com/MetaCoq/metacoq/tree/coq-8.11) branch is the main stable branch,
-getting backports from `master`. The branch [coq-8.10](https://github.com/MetaCoq/metacoq/tree/coq-8.10) 
+Currently, the [coq-8.11](https://github.com/MetaCoq/metacoq/tree/coq-8.11) branch is the main stable branch.
+The branch [coq-8.10](https://github.com/MetaCoq/metacoq/tree/coq-8.10) 
 gets backports from `coq-8.11` when possible. Both `coq-8.11` and `coq-8.10` have associated 
 "alpha"-quality `opam` packages.
 
@@ -132,3 +133,33 @@ To compile locally without using `opam`, use `./configure.sh local` at the root,
 - `make install` to install the plugin in `Coq`'s `user-contrib` local
   library. Then the `MetaCoq` namespace can be used for `Require
   Import` statements, e.g. `From MetaCoq.Template Require Import All.`.
+
+
+Contributions Guidelines
+========================
+
+Robustness
+----------
+
+To ease reparing the broken code:
+
+- Please use as many bullets as possible.
+  You even can be forced to do so with `Set Default Goal Selector "!".`
+
+- Plese use as few as possible generated names and name hypothesis in `intros` and
+  `destruct`.
+  It is more difficult for `induction` and above all for `inversion`.
+
+
+Program/Equations
+-----------------
+
+Please don't use `Program`. It inserts some JMeq and UIP axioms silently.  You can
+use `Equations` to do some dependent induction (`dependent induction`,
+`dependent destruction`, `depelim`). You may need to add:
+```
+Require Import Equations.Prop.DepElim.
+```
+
+*Important*: we keep the template-coq folder not relying on Equations (to be able
+to compile it without external dependency).

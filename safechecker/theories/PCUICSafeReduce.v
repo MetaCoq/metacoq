@@ -135,7 +135,7 @@ Section Measure.
   Qed.
 
   Lemma Req_trans :
-    forall {Γ}, transitive (Req Γ).
+    forall {Γ}, Transitive (Req Γ).
   Proof.
     intros Γ u v w h1 h2.
     destruct h1.
@@ -963,7 +963,13 @@ Section Reduce.
 
   Lemma wellformed_R_pres Γ :
     forall x y : term × stack, wellformed Σ Γ (zip x) -> R Σ Γ y x -> wellformed Σ Γ (zip y).
-  Proof. intros. todo "wellformed_R_pres proof"%string. Admitted.
+  Proof.
+    intros x y H HR.
+    depelim HR.
+    - eapply cored_wellformed; eauto.
+    - simpl in H1. revert H1; intros [= H2 _].
+      now rewrite <- H2.
+  Qed.
 
   Equations reduce_stack_full (Γ : context) (t : term) (π : stack)
            (h : wellformed Σ Γ (zip (t,π))) : { t' : term * stack | Req Σ Γ t' (t, π) /\ Pr t' π /\ Pr' t' } :=

@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 Require Import ssreflect.
-From Coq Require Import Bool List Program Utf8
+From Coq Require Import Bool List Utf8
   ZArith Lia.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
@@ -236,18 +236,6 @@ Section ReductionCongruence.
     - apply red_contextual_closure.
     - apply contextual_closure_red.
   Qed.
-
-  (* Lemma contextual_closure_trans (R : context -> term -> term -> Type) Γ : *)
-  (*   Transitive (R Γ) -> *)
-  (*   forall t u v, *)
-  (*   contextual_closure R Γ t u -> contextual_closure R Γ u v -> *)
-  (*   contextual_closure R Γ t v. *)
-  (* Proof. *)
-  (*   intros Htr t u v. *)
-  (*   induction 1. destruct 1. constructor; auto. *)
-  (*   constructor. auto. *)
-  (*   intros H. depelim H. constructor; auto. *)
-  (* Admitted. *)
 
   Lemma red_ctx {Γ} {M M'} ctx : red Σ (hole_context ctx Γ) M M' ->
                                red Σ Γ (fill_context M ctx) (fill_context M' ctx).
@@ -622,6 +610,20 @@ Section ReductionCongruence.
       - simpl. eapply ih. cbn. constructor. assumption.
     Qed.
 
+    Lemma red1_it_mkProd_or_LetIn :
+      forall Δ u v,
+        red1 Σ (Γ ,,, Δ) u v ->
+        red1 Σ Γ (it_mkProd_or_LetIn Δ u)
+             (it_mkProd_or_LetIn Δ v).
+    Proof.
+      intros Δ u v h.
+      revert u v h.
+      induction Δ as [| [na [b|] A] Δ ih ] ; intros u v h.
+      - cbn. assumption.
+      - simpl. eapply ih. cbn. constructor. assumption.
+      - simpl. eapply ih. cbn. constructor. assumption.
+    Qed.
+
     Lemma red_it_mkLambda_or_LetIn :
       forall Δ u v,
         red Σ (Γ ,,, Δ) u v ->
@@ -634,6 +636,20 @@ Section ReductionCongruence.
       - econstructor.
         + eassumption.
         + eapply red1_it_mkLambda_or_LetIn. assumption.
+    Qed.
+
+    Lemma red_it_mkProd_or_LetIn :
+      forall Δ u v,
+        red Σ (Γ ,,, Δ) u v ->
+        red Σ Γ (it_mkProd_or_LetIn Δ u)
+            (it_mkProd_or_LetIn Δ v).
+    Proof.
+      intros Δ u v h.
+      induction h.
+      - constructor.
+      - econstructor.
+        + eassumption.
+        + eapply red1_it_mkProd_or_LetIn. assumption.
     Qed.
 
     Lemma red_proj_c :
@@ -1078,7 +1094,7 @@ Section ReductionCongruence.
           intros y z e. cbn in e. inversion e. eauto.
         } subst.
         constructor.
-      - set (f := fun x : term => (x, ())) in *.
+      - set (f := fun x : term => (x, tt)) in *.
         set (g := (fun '(x, _) => x) : term × unit -> term).
         assert (el :  forall l, l = map f (map g l)).
         { clear. intros l. induction l.

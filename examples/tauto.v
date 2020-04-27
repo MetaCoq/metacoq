@@ -471,15 +471,15 @@ revert s; induction n; simpl; intros.
 Qed.
 
 
-Quote Definition MProp := Prop.
+MetaCoq Quote Definition MProp := Prop.
 
-Quote Definition MFalse := False.
+MetaCoq Quote Definition MFalse := False.
 
-Quote Definition MTrue := True.
+MetaCoq Quote Definition MTrue := True.
 
-Quote Definition Mand := and.
+MetaCoq Quote Definition Mand := and.
 
-Quote Definition Mor := or.
+MetaCoq Quote Definition Mor := or.
 
 Definition tImpl (A B : term) :=
   tProd nAnon A (lift0 1 B).

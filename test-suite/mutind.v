@@ -24,4 +24,4 @@ End with_T.
 
 Local Open Scope string_scope.
 Local Open Scope positive_scope.
-Quote Recursively Definition count_tree_syntax := count_tree.
+MetaCoq Quote Recursively Definition count_tree_syntax := count_tree.

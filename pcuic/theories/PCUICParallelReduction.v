@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license.   *)
 Require Import ssreflect.
-From Coq Require Import Bool List Program Lia.
+From Coq Require Import Bool List Lia.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICSize
+From MetaCoq.PCUIC Require Import PCUICUtils PCUICAst PCUICSize
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakening PCUICSubstitution.
 
 (* Type-valued relations. *)
@@ -21,7 +21,7 @@ Proof.
   revert n k t.
   fix size_list 3.
   destruct t; simpl; rewrite ?list_size_map_hom; try lia.
-  elim leb_spec_Set; simpl; auto. intros. auto.
+  intros. auto.
   now rewrite !size_list.
   now rewrite !size_list.
   now rewrite !size_list.
@@ -97,7 +97,7 @@ Lemma term_forall_ctx_list_ind :
 Proof.
   intros.
   revert Γ t. set(foo:=CoreTactics.the_end_of_the_section). intros.
-  Subterm.rec_wf_rel aux t (MR lt size). simpl. clear H1.
+  Subterm.rec_wf_rel aux t (precompose lt size). simpl. clear H1.
   assert (auxl : forall Γ {A} (l : list A) (f : A -> term), list_size (fun x => size (f x)) l < size pr0 ->
                                                             All (fun x => P Γ (f x)) l).
   { induction l; constructor. eapply aux. red. simpl in H. lia. apply IHl. simpl in H. lia. }
@@ -146,10 +146,6 @@ Proof.
   apply auxl'. simpl. lia.
   red. apply All_pair. split; apply auxl; simpl; auto.
 Defined.
-
-Lemma simpl_subst' :
-  forall N M n p k, k = List.length N -> p <= n -> subst N p (lift0 (k + n) M) = lift0 n M.
-Proof. intros. subst k. rewrite simpl_subst_rec; auto. now rewrite Nat.add_0_r. lia. Qed.
 
 (** All2 lemmas *)
 
@@ -1022,7 +1018,7 @@ Hint Constructors All2_local_env : pcuic.
 Hint Resolve pred1_ctx_refl : pcuic.
 
 Ltac pcuic_simplify :=
-  simpl || split || destruct_conjs || red.
+  simpl || split || rdest || red.
 
 Hint Extern 10 => progress pcuic_simplify : pcuic.
 
@@ -1207,8 +1203,8 @@ Section ParallelWeakening.
              All2_local_env_over (pred1 Σ) Γ Δ Γ'' Δ'' ->
              pred1_ctx Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (Δ ,,, Δ'' ,,, lift_context #|Δ''| 0 Δ')).
 
-    refine (pred1_ind_all_ctx Σ _ Pctx _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros *; intros; subst Pctx;
-      rename_all_hyps; try subst Γ Γ'; simplify_IH_hyps; cbn -[iota_red];
+      refine (pred1_ind_all_ctx Σ _ Pctx _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros *; intros; subst Pctx;
+        rename_all_hyps; try subst Γ Γ'; simplify_IH_hyps; cbn -[iota_red];
       match goal with
         |- context [iota_red _ _ _ _] => idtac
       | |- _ => autorewrite with lift

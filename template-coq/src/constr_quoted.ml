@@ -75,6 +75,9 @@ struct
   let cSome = resolve "metacoq.option.some"
   let cNone = resolve "metacoq.option.none"
 
+  let cSome_instance = resolve "metacoq.option_instance.some"
+  let cNone_instance = resolve "metacoq.option_instance.none"
+
   let unit_tt = resolve "metacoq.unit.intro"
   
   let tAscii = resolve "metacoq.ascii.intro"

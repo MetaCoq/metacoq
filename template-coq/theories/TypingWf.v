@@ -1,7 +1,8 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program.
-From MetaCoq.Template Require Import config utils Ast AstUtils Induction LiftSubst UnivSubst Typing.
+From Coq Require Import Bool String List.
+From MetaCoq.Template Require Import config utils Ast AstUtils Induction LiftSubst
+     UnivSubst Typing.
 
 Set Asymmetric Patterns.
 
@@ -134,10 +135,10 @@ Proof.
     destruct l; simpl in *; congruence.
     now apply Forall_map.
   - constructor; auto. solve_all.
-  - unfold compose. constructor. solve_all.
+  - constructor. solve_all.
     destruct x; simpl in *. repeat split; tas.
     destruct dbody; simpl in *; congruence.
-  - unfold compose. constructor. solve_all.
+  - constructor. solve_all.
 Qed.
 
 Lemma wf_nth:
@@ -291,13 +292,12 @@ Lemma wf_lift_wf n k t : Ast.wf (lift n k t) -> Ast.wf t.
 Proof.
   induction t in n, k |- * using term_forall_list_ind; simpl in *;
     intros Hwf; inv Hwf; try constructor; eauto;
-      repeat (unfold compose, snd, on_snd in *; simpl in *; solve_all).
+      repeat (unfold snd, on_snd in *; simpl in *; solve_all).
 
   - destruct t; try reflexivity. discriminate.
   - destruct l; simpl in *; congruence.
   - destruct x; simpl in *; intuition eauto.
     destruct dbody; simpl in *; try discriminate. destruct Nat.leb; auto.
-    reflexivity.
 Qed.
 
 Lemma declared_projection_wf {cf:checker_flags}:
@@ -348,7 +348,7 @@ Proof.
   eapply nth_error_alli in Hidecl; eauto. simpl in *.
   pose proof (onConstructors Hidecl) as h. unfold on_constructors in h.
   eapply All2_nth_error_Some in Hcdecl. 2: eassumption.
-  destruct Hcdecl as [? [? [[s [? ?]] [? ?]]]].
+  destruct Hcdecl as [? [? [[s ?] [? [? ?]]]]].
   assumption.
 Qed.
 
@@ -384,9 +384,9 @@ Lemma destArity_spec ctx T :
   | None => True
   end.
 Proof.
-  induction T in ctx |- *; simpl; simplify_dep_elim; try easy.
-  specialize (IHT2 (ctx,, vass na T1)). now destruct destArity.
-  specialize (IHT3 (ctx,, vdef na T1 T2)). now destruct destArity.
+  induction T in ctx |- *; simpl; try easy.
+  - specialize (IHT2 (ctx,, vass na T1)). now destruct destArity.
+  - specialize (IHT3 (ctx,, vdef na T1 T2)). now destruct destArity.
 Qed.
 
 
@@ -450,25 +450,20 @@ Proof.
     subst ty. eapply declared_projection_wf in isdecl; eauto.
 
   - subst types.
-    apply All_local_env_app in X as [HΓ Hmfix].
-    clear Hmfix H.
+    clear H.
     split.
-    + revert X0. generalize (fix_context mfix). intros.
-      clear decl H0. constructor. induction mfix. constructor. constructor.
-      2:{ apply IHmfix. inv X0. auto. }
-      inv X0. intuition. now apply wf_lift_wf in H0.
-    + eapply nth_error_all in X0; eauto. simpl in X0. intuition eauto.
-      now apply wf_lift_wf in H1.
+    + constructor.
+      solve_all. destruct a.
+      intuition.
+    + eapply All_nth_error in X0; eauto. destruct X0 as [s ?]; intuition. 
+
   - subst types.
-    apply All_local_env_app in X as [HΓ Hmfix].
-    clear Hmfix.
+    clear H0.
     split.
-    + revert X0. generalize (fix_context mfix). intros.
-      clear decl H. constructor. induction mfix. constructor. constructor.
-      2:{ apply IHmfix. inv X0. auto. }
-      inv X0. intuition. now apply wf_lift_wf in H1.
-    + eapply nth_error_all in X0; eauto. simpl in X0; intuition eauto.
-      now apply wf_lift_wf in H2.
+    + constructor.
+      solve_all. destruct a.
+      intuition.
+    + eapply All_nth_error in X0; eauto. destruct X0 as [s ?]; intuition. 
 
   - split. apply H. destruct X1 as [X1|[s X1]]; [|apply X1].
     destruct X1 as [[Γ' [s [X1 X1']]] XX]; cbn in *.
@@ -509,8 +504,7 @@ Proof.
   intros iQ hP hQ.
   induction hP in Q, iQ, hQ |- *.
   1: constructor.
-  dependent destruction hQ.
-  constructor.
+  invs hQ. constructor.
   - eapply IHhP. all: eauto.
   - assumption.
   - assumption.
@@ -547,7 +541,7 @@ Proof.
   - destruct c; simpl. destruct cst_body; simpl in *.
     red in o |- *. simpl in *. now eapply X.
     red in o |- *. simpl in *. now eapply X.
-  - red in o. simpl in *.
+  - simpl in *.
     destruct o0 as [onI onP onNP].
     constructor; auto.
     -- eapply Alli_impl. exact onI. eauto. intros.
@@ -557,15 +551,19 @@ Proof.
        --- apply onArity in X1. unfold on_type in *; simpl in *.
            now eapply X.
        --- pose proof X1.(onConstructors) as X11. red in X11.
-           unfold on_constructor, on_type in *. eapply All2_impl; eauto.
-           simpl. intros. destruct X2 as (? & ? & ?).
-           split. now eapply X.
-           exists x1.
-           clear -t X X0.
-           revert t. generalize (cshape_args x1).
-           induction c; simpl; auto;
-           destruct a as [na [b|] ty]; simpl in *; auto;
+           eapply All2_impl; eauto.
+           simpl. intros. destruct X2 as [? ? ? ?]; unshelve econstructor; eauto.
+           * apply X; eauto.
+           * clear -X0 X on_cargs. revert on_cargs.
+              generalize (cshape_args cshape).
+              induction c; simpl; auto;
+              destruct a as [na [b|] ty]; simpl in *; auto;
            split; intuition eauto.
+           * clear -X0 X on_cindices.
+             revert on_cindices.
+             generalize (List.rev  (lift_context #|cshape_args cshape| 0 (ind_indices X1))).
+             generalize (cshape_indices cshape).
+             induction 1; simpl; constructor; auto.
        --- simpl; intros. pose (onProjections X1 H0). simpl in *.
            destruct o0. constructor; auto. eapply Alli_impl; intuition eauto.
            unfold on_projection in *; simpl in *.
@@ -618,11 +616,11 @@ Proof.
   - destruct a as [na [bo|] ty].
     + cbn in e. destruct t ; try discriminate.
       eapply IHparams ; try exact e.
-      dependent destruction h. assumption.
+      invs h. assumption.
     + cbn in e. destruct t ; try discriminate.
       destruct args ; try discriminate.
       eapply IHparams ; try exact e.
-      dependent destruction h. assumption.
+      invs h. assumption.
 Qed.
 
 Lemma wf_instantiate_params_subst_ctx :
@@ -640,14 +638,14 @@ Proof.
     subst. assumption.
   - destruct a as [na [bo|] ty].
     + cbn in e. destruct t ; try discriminate.
-      dependent destruction hp. destruct H as [h1 h2]. simpl in h1, h2.
+      invs hp. destruct H1 as [h1 h2]. simpl in h1, h2.
       eapply IHparams ; try exact e ; try assumption.
       constructor ; try assumption.
       eapply wf_subst ; assumption.
     + cbn in e. destruct t ; try discriminate.
       destruct args ; try discriminate.
-      dependent destruction hp. simpl in *.
-      dependent destruction ha.
+      invs hp. simpl in *.
+      invs ha.
       eapply IHparams ; try exact e ; try assumption.
       constructor ; assumption.
 Qed.

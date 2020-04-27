@@ -1,4 +1,4 @@
-From Coq Require Import Ascii String OrderedType Lia Program Arith.
+From Coq Require Import Ascii String OrderedType Lia Arith.
 From MetaCoq.Template Require Import utils uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICSize.
 Import List.ListNotations.
@@ -9,6 +9,7 @@ From Equations Require Import Equations.
 Set Asymmetric Patterns.
 
 Derive NoConfusion for term.
+Derive Signature for All.
 Derive Signature for All2.
 
 Open Scope pcuic.
@@ -262,6 +263,17 @@ Lemma mapi_compose {A B C} (g : nat -> B -> C) (f : nat -> A -> B) l :
   mapi g (mapi f l) = mapi (fun k x => g k (f k x)) l.
 Proof. apply mapi_rec_compose. Qed.
 
+Lemma compose_map_decl f g x : map_decl f (map_decl g x) = map_decl (f ∘ g) x.
+Proof.
+  destruct x as [? [?|] ?]; reflexivity.
+Qed.
+
+Lemma map_decl_ext f g x : (forall x, f x = g x) -> map_decl f x = map_decl g x.
+Proof.
+  intros H; destruct x as [? [?|] ?]; rewrite /map_decl /=; f_equal; auto.
+  now rewrite (H t).
+Qed.
+
 Ltac merge_All :=
   unfold tFixProp, tCaseBrsProp in *;
   repeat toAll.
@@ -446,14 +458,16 @@ Qed.
 
 Lemma mkApps_eq_head {x l} : mkApps x l = x -> l = [].
 Proof.
-  assert (WF := _ : WellFounded (MR lt size)).
+  assert (WF : WellFounded (precompose lt size))
+    by apply wf_precompose, lt_wf.
   induction l. simpl. constructor.
   apply apply_noCycle_right. simpl. red. rewrite mkApps_size. simpl. lia.
 Qed.
 
 Lemma mkApps_eq_inv {x y l} : x = mkApps y l -> size y <= size x.
 Proof.
-  assert (WF := _ : WellFounded (MR lt size)).
+  assert (WF : WellFounded (precompose lt size))
+    by apply wf_precompose, lt_wf.
   induction l in x, y |- *. simpl. intros -> ; constructor.
   simpl. intros. specialize (IHl _ _ H). simpl in IHl. lia.
 Qed.
@@ -516,6 +530,7 @@ Ltac finish_discr :=
          | [ H : mkApps _ _ = mkApps _ _ |- _ ] =>
            let H0 := fresh in let H1 := fresh in
                               specialize (mkApps_eq_inj H eq_refl eq_refl) as [H0 H1];
+                              clear H;
                               try (congruence || (noconf H0; noconf H1))
          | [ H : mkApps _ _ = _ |- _ ] => apply mkApps_eq_head in H
          end.

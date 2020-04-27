@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program Arith Lia.
+From Coq Require Import Bool String List Arith Lia.
 From MetaCoq.Template Require Import config utils monad_utils
 EnvironmentTyping.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
@@ -149,6 +149,11 @@ Qed.
 
 Lemma fix_context_length mfix : #|fix_context mfix| = #|mfix|.
 Proof. unfold fix_context. now rewrite List.rev_length mapi_length. Qed.
+
+Hint Rewrite subst_context_length subst_instance_context_length 
+  app_context_length map_context_length fix_context_length fix_subst_length cofix_subst_length 
+  map_length app_length lift_context_length 
+  @mapi_length @mapi_rec_length : len.
 
 Definition tDummy := tVar "".
 
@@ -460,6 +465,14 @@ Proof.
   discriminate H.
 Qed.
 
+Lemma destArity_it_mkProd_or_LetIn ctx ctx' t :
+  destArity ctx (it_mkProd_or_LetIn ctx' t) =
+  destArity (ctx ,,, ctx') t.
+Proof.
+  induction ctx' in ctx, t |- *; simpl; auto.
+  rewrite IHctx'. destruct a as [na [b|] ty]; reflexivity.
+Qed.
+
 Lemma mkApps_nonempty f l :
   l <> [] -> mkApps f l = tApp (mkApps f (removelast l)) (last l f).
 Proof.
@@ -589,6 +602,9 @@ Axiom fix_guard_subst :
 (* AXIOM INDUCTIVE GUARD CONDITION *)
 Axiom ind_guard : mutual_inductive_body -> bool.
 
+(* Mark unfinished subgoals due to eta conversion *)
+Axiom todoeta : forall {A}, A.
+Ltac todoeta := apply todoeta.
 
 (** Compute the type of a case from the predicate [p], actual parameters [pars] and
     an inductive declaration. *)
@@ -752,22 +768,22 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     Σ ;;; Γ |- tProj p c : subst0 (c :: List.rev args) (subst_instance_constr u ty)
 
 | type_Fix mfix n decl :
-    let types := fix_context mfix in
     fix_guard mfix ->
     nth_error mfix n = Some decl ->
-    All_local_env (lift_typing typing Σ) (Γ ,,, types) ->
-    All (fun d => (Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype))
-    * (isLambda d.(dbody) = true)%type) mfix ->
-    Σ ;;; Γ |- tFix mfix n : decl.(dtype)
-
+    All_local_env (lift_typing typing Σ) Γ ->
+    All (fun d => {s & Σ ;;; Γ |- d.(dtype) :  tSort s}) mfix ->
+    All (fun d => (Σ ;;; Γ ,,, fix_context mfix |- d.(dbody) : lift0 #|fix_context mfix| d.(dtype))
+      * (isLambda d.(dbody) = true)%type) mfix ->
+      Σ ;;; Γ |- tFix mfix n : decl.(dtype)
+  
 | type_CoFix mfix n decl :
     allow_cofix ->
-    let types := fix_context mfix in
     nth_error mfix n = Some decl ->
-    All_local_env (lift_typing typing Σ) (Γ ,,, types) ->
-    All (fun d => Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype)) mfix ->
+    All_local_env (lift_typing typing Σ) Γ ->
+    All (fun d => {s & Σ ;;; Γ |- d.(dtype) :  tSort s}) mfix ->
+    All (fun d => Σ ;;; Γ ,,, fix_context mfix |- d.(dbody) : lift0 #|fix_context mfix| d.(dtype)) mfix ->
     Σ ;;; Γ |- tCoFix mfix n : decl.(dtype)
-
+  
 | type_Cumul t A B :
     Σ ;;; Γ |- t : A ->
     (isWfArity typing Σ Γ B + {s & Σ ;;; Γ |- B : tSort s})%type ->
@@ -801,6 +817,8 @@ Module PCUICTypingDef <: Typing PCUICTerm PCUICEnvironment PCUICEnvTyping.
   Definition ind_guard := ind_guard.
   Definition typing := @typing.
   Definition smash_context := smash_context.
+  Definition lift_context := lift_context.
+  Definition subst_telescope := subst_telescope.
 
 End PCUICTypingDef.
 
@@ -831,19 +849,19 @@ Proof.
     | H1 : size |- _  => exact (S H1)
     | _ => exact 1
     end.
-  exact (S (wf_local_size _ typing_size _ a)).
-  exact (S (wf_local_size _ typing_size _ a)).
-  exact (S (S (wf_local_size _ typing_size _ a))).
-  exact (S (S (wf_local_size _ typing_size _ a))).
-  exact (S (S (wf_local_size _ typing_size _ a))).
-  exact (S (Nat.max d1 (Nat.max d2
+  - exact (S (wf_local_size _ typing_size _ a)).
+  - exact (S (wf_local_size _ typing_size _ a)).
+  - exact (S (S (wf_local_size _ typing_size _ a))).
+  - exact (S (S (wf_local_size _ typing_size _ a))).
+  - exact (S (S (wf_local_size _ typing_size _ a))).
+  - exact (S (Nat.max d1 (Nat.max d2
                                 (all2_size _ (fun x y p => Nat.max (typing_size Σ Γ (snd x) (snd y) (snd (fst p))) (typing_size _ _ _ _ (snd p))) a)))).
-  exact (S (Nat.max (wf_local_size _ typing_size _ a) (all_size _ (fun x p => typing_size Σ _ _ _ (fst p)) a0))).
-  exact (S (Nat.max (wf_local_size _ typing_size _ a) (all_size _ (fun x p => typing_size Σ _ _ _ p) a0))).
-  destruct s. red in i.
-  exact (S (Nat.max (wf_local_size _ typing_size _ (snd (projT2 (projT2 i)))) d)).
-  destruct s as [u Hu]. apply typing_size in Hu.
-  exact (S (Nat.max d Hu)).
+  - exact (S (Nat.max (Nat.max (wf_local_size _ typing_size _ a) (all_size _ (fun x  p => typing_size Σ _ _ _ p.π2) a0)) (all_size _ (fun x p => typing_size Σ _ _ _ (fst p)) a1))).
+  - exact (S (Nat.max (Nat.max (wf_local_size _ typing_size _ a) (all_size _ (fun x  p => typing_size Σ _ _ _ p.π2) a0)) (all_size _ (fun x p => typing_size Σ _ _ _ p) a1))).
+  - destruct s. red in i.
+    exact (S (Nat.max (wf_local_size _ typing_size _ (snd (projT2 (projT2 i)))) d)).
+    destruct s as [u Hu]. apply typing_size in Hu.
+    exact (S (Nat.max d Hu)).
 Defined.
 
 Lemma typing_size_pos `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t : T) : typing_size d > 0.
@@ -881,28 +899,6 @@ Qed.
 Hint Resolve wf_ext_consistent : core.
 
 
-Definition env_prop `{checker_flags} (P : forall Σ Γ t T, Type) :=
-  forall Σ (wfΣ : wf Σ.1) Γ (wfΓ : wf_local Σ Γ) t T, Σ ;;; Γ |- t : T ->
-    Forall_decls_typing P Σ.1 * P Σ Γ t T.
-
-Lemma env_prop_typing `{checker_flags} P : env_prop P ->
-  forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (t T : term),
-    Σ ;;; Γ |- t : T -> P Σ Γ t T.
-Proof. intros. now apply X. Qed.
-
-Lemma type_Prop `{checker_flags} Σ : Σ ;;; [] |- tSort Universe.type0m : tSort Universe.type1.
-  repeat constructor.
-  apply prop_global_ext_levels.
-Defined.
-
-Lemma env_prop_sigma `{checker_flags} P : env_prop P ->
-  forall Σ (wfΣ : wf Σ), Forall_decls_typing P Σ.
-Proof.
-  intros. red in X. eapply (X (empty_ext Σ)).
-  apply wfΣ. constructor.
-  apply type_Prop.
-Defined.
-
 Lemma wf_local_app `{checker_flags} Σ (Γ Γ' : context) : wf_local Σ (Γ ,,, Γ') -> wf_local Σ Γ.
 Proof.
   induction Γ'. auto.
@@ -916,6 +912,44 @@ Proof.
   induction 1; eauto using wf_local_app.
 Defined.
 Hint Resolve typing_wf_local : wf.
+
+Definition env_prop `{checker_flags} (P : forall Σ Γ t T, Type) (PΓ : forall Σ Γ, wf_local Σ Γ ->  Type) :=
+  forall Σ (wfΣ : wf Σ.1) Γ t T (ty : Σ ;;; Γ |- t : T),
+    Forall_decls_typing P Σ.1 * 
+    PΓ Σ Γ (typing_wf_local ty) *
+    P Σ Γ t T.
+
+Lemma env_prop_typing `{checker_flags} P PΓ : env_prop P PΓ ->
+  forall Σ (wfΣ : wf Σ.1) (Γ : context) (t T : term),
+    Σ ;;; Γ |- t : T -> P Σ Γ t T.
+Proof. intros. now apply X. Qed.
+
+Lemma type_Prop_wf `{checker_flags} Σ Γ : wf_local Σ Γ -> Σ ;;; Γ |- tSort Universe.type0m : tSort Universe.type1.
+Proof. 
+  repeat constructor; auto.
+  apply prop_global_ext_levels.
+Defined.
+
+Lemma env_prop_wf_local `{checker_flags} P PΓ : env_prop P PΓ ->
+  forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ), PΓ Σ Γ wfΓ.
+Proof. intros.
+  pose (type_Prop_wf _ _ wfΓ).
+  now destruct (X _ wfΣ _ _ _ t) as [[? ?] ?].
+Qed.
+
+Lemma type_Prop `{checker_flags} Σ : Σ ;;; [] |- tSort Universe.type0m : tSort Universe.type1.
+  repeat constructor.
+  apply prop_global_ext_levels.
+Defined.
+
+Lemma env_prop_sigma `{checker_flags} P PΓ : env_prop P PΓ ->
+  forall Σ (wfΣ : wf Σ), Forall_decls_typing P Σ.
+Proof.
+  intros. red in X. eapply (X (empty_ext Σ)).
+  apply wfΣ.
+  apply type_Prop.
+Defined.
+
 
 Derive Signature for All_local_env.
 
@@ -942,10 +976,6 @@ Proof.
   change (fun (x : global_env_ext) (x0 : context) (x1 x2 : term)
   (x3 : x;;; x0 |- x1 : x2) => typing_size x3) with (@typing_size H); try lia.
   - destruct indnpar as [ind' npar']; cbn in *; subst ind npar. lia.
-  - pose proof (size_wf_local_app _ _ a).
-    eapply Nat.le_lt_trans. eauto. subst types. lia.
-  - pose proof (size_wf_local_app _ _ a).
-    eapply Nat.le_lt_trans. eauto. subst types. lia.
   - destruct s as [s | [u Hu]]; try lia.
 Qed.
 
@@ -998,18 +1028,23 @@ Derive Signature for Alli.
 
 Lemma typing_ind_env `{cf : checker_flags} :
   forall (P : global_env_ext -> context -> term -> term -> Type)
-         (Pdecl := fun Σ Γ wfΓ t T tyT => P Σ Γ t T),
+         (Pdecl := fun Σ Γ wfΓ t T tyT => P Σ Γ t T)
+         (PΓ : forall Σ Γ, wf_local Σ Γ -> Type),
+
+    (forall Σ (wfΣ : wf Σ.1)  (Γ : context) (wfΓ : wf_local Σ Γ), 
+         All_local_env_over typing Pdecl Σ Γ wfΓ -> PΓ Σ Γ wfΓ) ->
+
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (n : nat) decl,
         nth_error Γ n = Some decl ->
-        All_local_env_over typing Pdecl Σ Γ wfΓ ->
+        PΓ Σ Γ wfΓ ->
         P Σ Γ (tRel n) (lift0 (S n) decl.(decl_type))) ->
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (l : Level.t),
-        All_local_env_over typing Pdecl Σ Γ wfΓ ->
+        PΓ Σ Γ wfΓ ->
         LevelSet.In l (global_ext_levels Σ) ->
         P Σ Γ (tSort (Universe.make l)) (tSort (Universe.super l))) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (n : name) (t b : term) (s1 s2 : Universe.t),
-        All_local_env_over typing Pdecl Σ Γ wfΓ ->
+        PΓ Σ Γ wfΓ ->
         Σ ;;; Γ |- t : tSort s1 ->
         P Σ Γ t (tSort s1) ->
         Σ ;;; Γ,, vass n t |- b : tSort s2 ->
@@ -1017,14 +1052,14 @@ Lemma typing_ind_env `{cf : checker_flags} :
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (n : name) (t b : term)
             (s1 : Universe.t) (bty : term),
-        All_local_env_over typing Pdecl Σ Γ wfΓ ->
+        PΓ Σ Γ wfΓ ->
         Σ ;;; Γ |- t : tSort s1 ->
         P Σ Γ t (tSort s1) ->
         Σ ;;; Γ,, vass n t |- b : bty -> P Σ (Γ,, vass n t) b bty -> P Σ Γ (tLambda n t b) (tProd n t bty)) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (n : name) (b b_ty b' : term)
             (s1 : Universe.t) (b'_ty : term),
-        All_local_env_over typing Pdecl Σ Γ wfΓ ->
+        PΓ Σ Γ wfΓ ->
         Σ ;;; Γ |- b_ty : tSort s1 ->
         P Σ Γ b_ty (tSort s1) ->
         Σ ;;; Γ |- b : b_ty ->
@@ -1033,14 +1068,14 @@ Lemma typing_ind_env `{cf : checker_flags} :
         P Σ (Γ,, vdef n b b_ty) b' b'_ty -> P Σ Γ (tLetIn n b b_ty b') (tLetIn n b b_ty b'_ty)) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (t : term) na A B u,
-        All_local_env_over typing Pdecl Σ Γ wfΓ ->
+        PΓ Σ Γ wfΓ ->
         Σ ;;; Γ |- t : tProd na A B -> P Σ Γ t (tProd na A B) ->
         Σ ;;; Γ |- u : A -> P Σ Γ u A ->
         P Σ Γ (tApp t u) (B{0 := u})) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (cst : ident) u (decl : constant_body),
         Forall_decls_typing P Σ.1 ->
-        All_local_env_over typing Pdecl Σ Γ wfΓ ->
+        PΓ Σ Γ wfΓ ->
         declared_constant Σ.1 cst decl ->
         consistent_instance_ext Σ decl.(cst_universes) u ->
         P Σ Γ (tConst cst u) (subst_instance_constr u (cst_type decl))) ->
@@ -1048,14 +1083,14 @@ Lemma typing_ind_env `{cf : checker_flags} :
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (ind : inductive) u
           mdecl idecl (isdecl : declared_inductive Σ.1 mdecl ind idecl),
         Forall_decls_typing P Σ.1 ->
-        All_local_env_over typing Pdecl Σ Γ wfΓ ->
+        PΓ Σ Γ wfΓ ->
         consistent_instance_ext Σ mdecl.(ind_universes) u ->
         P Σ Γ (tInd ind u) (subst_instance_constr u (ind_type idecl))) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (ind : inductive) (i : nat) u
             mdecl idecl cdecl (isdecl : declared_constructor Σ.1 mdecl idecl (ind, i) cdecl),
         Forall_decls_typing P Σ.1 ->
-        All_local_env_over typing Pdecl Σ Γ wfΓ ->
+        PΓ Σ Γ wfΓ ->
         consistent_instance_ext Σ mdecl.(ind_universes) u ->
         P Σ Γ (tConstruct ind i u) (type_of_constructor mdecl cdecl (ind, i) u)) ->
 
@@ -1063,7 +1098,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
             (p c : term) (brs : list (nat * term))
             (args : list term) (mdecl : mutual_inductive_body) (idecl : one_inductive_body)
             (isdecl : declared_inductive (fst Σ) mdecl ind idecl),
-        Forall_decls_typing P Σ.1 -> All_local_env_over typing Pdecl Σ Γ wfΓ ->
+        Forall_decls_typing P Σ.1 -> PΓ Σ Γ wfΓ ->
         ind_npars mdecl = npar ->
         let params := firstn npar args in
         forall ps pty, build_case_predicate_type ind mdecl idecl params u ps = Some pty ->
@@ -1081,7 +1116,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : projection) (c : term) u
           mdecl idecl pdecl (isdecl : declared_projection Σ.1 mdecl idecl p pdecl) args,
-        Forall_decls_typing P Σ.1 -> All_local_env_over typing Pdecl Σ Γ wfΓ ->
+        Forall_decls_typing P Σ.1 -> PΓ Σ Γ wfΓ ->
         Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ->
         P Σ Γ c (mkApps (tInd (fst (fst p)) u) args) ->
         #|args| = ind_npars mdecl ->
@@ -1089,10 +1124,10 @@ Lemma typing_ind_env `{cf : checker_flags} :
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (mfix : list (def term)) (n : nat) decl,
         let types := fix_context mfix in
-        nth_error mfix n = Some decl ->
         fix_guard mfix ->
-        All_local_env (lift_typing (fun Σ Γ b ty =>
-                         (typing Σ Γ b ty * P Σ Γ b ty)%type) Σ) (Γ ,,, types) ->
+        nth_error mfix n = Some decl ->
+        PΓ Σ Γ wfΓ ->
+        All (fun d => {s & (Σ ;;; Γ |- d.(dtype) : tSort s)%type * P Σ Γ d.(dtype) (tSort s)})%type mfix ->
         All (fun d => (Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype))%type *
                    (isLambda d.(dbody) = true)%type *
             P Σ (Γ ,,, types) d.(dbody) (lift0 #|types| d.(dtype)))%type mfix ->
@@ -1101,53 +1136,55 @@ Lemma typing_ind_env `{cf : checker_flags} :
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (mfix : list (def term)) (n : nat) decl,
         let types := fix_context mfix in
         nth_error mfix n = Some decl ->
-        All_local_env (lift_typing (fun Σ Γ b ty => (typing Σ Γ b ty * P Σ Γ b ty)%type) Σ) (Γ ,,, types) ->
+        PΓ Σ Γ wfΓ ->
+        All (fun d => {s & (Σ ;;; Γ |- d.(dtype) : tSort s)%type * P Σ Γ d.(dtype) (tSort s)})%type mfix ->
         All (fun d => (Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype))%type *
             P Σ (Γ ,,, types) d.(dbody) (lift0 #|types| d.(dtype)))%type mfix ->
         allow_cofix ->
         P Σ Γ (tCoFix mfix n) decl.(dtype)) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (t A B : term),
-        All_local_env_over typing Pdecl Σ Γ wfΓ ->
+        PΓ Σ Γ wfΓ ->
         Σ ;;; Γ |- t : A ->
         P Σ Γ t A ->
         (isWfArity_prop typing Pdecl Σ Γ B + {s & (Σ ;;; Γ |- B : tSort s) * P Σ Γ B (tSort s)})%type ->
         Σ ;;; Γ |- A <= B ->
         P Σ Γ t B) ->
 
-       env_prop P.
+       env_prop P PΓ.
 Proof.
-  intros P Pdecl; unfold env_prop.
-  intros X X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 Σ wfΣ Γ wfΓ t T H.
+  intros P Pdecl PΓ; unfold env_prop.
+  intros XΓ X X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 Σ wfΣ Γ t T H.
   (* NOTE (Danil): while porting to 8.9, I had to split original "pose" into 2 pieces,
    otherwise it takes forever to execure the "pose", for some reason *)
-  pose (@Fix_F ({ Σ : _ & { wfΣ : wf Σ.1 & { Γ : context & { wfΓ : wf_local Σ Γ &
-                          { t : term & { T : term & Σ ;;; Γ |- t : T }}}}}})) as p0.
-  specialize (p0 (dlexprod (MR lt (fun Σ => globenv_size (fst Σ)))
-                            (fun Σ => MR lt (fun x => typing_size (projT2 (projT2 (projT2 (projT2 (projT2 x))))))))) as p.
-  set(foo := existT _ Σ (existT _ wfΣ (existT _ Γ (existT _ wfΓ (existT _ t (existT _ _ H))))) : { Σ : _ & { wfΣ : wf Σ.1 & { Γ : context & { wfΓ & { t : term & { T : term & Σ ;;; Γ |- t : T }}}}}}).
+  pose (@Fix_F ({ Σ : _ & { wfΣ : wf Σ.1 & { Γ : context & 
+                          { t : term & { T : term & Σ ;;; Γ |- t : T }}}}})) as p0.
+  specialize (p0 (dlexprod (precompose lt (fun Σ => globenv_size (fst Σ)))
+                            (fun Σ => precompose lt (fun x => typing_size (projT2 (projT2 (projT2 (projT2 x)))))))) as p.
+  set(foo := existT _ Σ (existT _ wfΣ (existT _ Γ (existT _ t (existT _ _ H)))) : { Σ : _ & { wfΣ : wf Σ.1 & { Γ : context & { t : term & { T : term & Σ ;;; Γ |- t : T }}}}}).
   change Σ with (projT1 foo).
   change Γ with (projT1 (projT2 (projT2 foo))).
-  change t with (projT1 (projT2 (projT2 (projT2 (projT2 foo))))).
-  change T with (projT1 (projT2 (projT2 (projT2 (projT2 (projT2 foo)))))).
+  change t with (projT1 (projT2 (projT2 (projT2 foo)))).
+  change T with (projT1 (projT2 (projT2 (projT2 (projT2 foo))))).
+  change H with (projT2 (projT2 (projT2 (projT2 (projT2 foo))))).
   revert foo.
   match goal with
     |- let foo := _ in @?P foo => specialize (p (fun x => P x))
   end.
-  forward p; [ | apply p; apply wf_dlexprod; intros; apply measure_wf; apply lt_wf].
+  forward p; [ | apply p; apply wf_dlexprod; intros; apply wf_precompose; apply lt_wf].
   clear p.
-  clear Σ wfΣ Γ wfΓ t T H.
-  intros (Σ & wfΣ & Γ & wfΓ & t & t0 & H). simpl.
-  intros IH. unfold MR in IH. simpl in IH.
-  split.
+  clear Σ wfΣ Γ t T H.
+  intros (Σ & wfΣ & Γ & t & t0 & H). simpl.
+  intros IH. simpl in IH.
+  split. split.
   destruct Σ as [Σ φ]. destruct Σ.
   constructor.
   cbn in wfΣ; inversion_clear wfΣ. auto.
   inv wfΣ.
   rename X14 into Xg.
   constructor; auto. unfold Forall_decls_typing in IH.
-  - simple refine (let IH' := IH ((Σ, udecl); (X13; []; _; (tSort Universe.type0m ); _; _)) in _).
-    constructor. shelve. apply type_Prop.
+  - simple refine (let IH' := IH ((Σ, udecl); (X13; []; (tSort Universe.type0m ); _; _)) in _).
+    shelve. simpl. apply type_Prop.
     cbn in IH'; forward IH'. constructor 1; cbn. lia.
     apply IH'; auto.
   - simpl. simpl in *.
@@ -1156,13 +1193,13 @@ Proof.
       destruct cst_body; simpl in *.
       simpl.
       intros. red in Xg. simpl in Xg.
-      specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ localenv_nil (existT _ _ (existT _ _ Xg))))))).
+      specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ [] (existT _ _ (existT _ _ Xg)))))).
       simpl in IH.
       forward IH. constructor 1. simpl; lia.
       apply IH.
       red. simpl. red in Xg; simpl in Xg.
       destruct Xg as [s Hs]. red. simpl.
-      specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ localenv_nil (existT _ _ (existT _ _ Hs))))))).
+      specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ [] (existT _ _ (existT _ _ Hs)))))).
       simpl in IH.
       forward IH. constructor 1. simpl; lia. exists s. eapply IH.
     + red in Xg.
@@ -1172,30 +1209,35 @@ Proof.
                 ind_arity_eq := Xg.(ind_arity_eq);
                 ind_ctors_sort := Xg.(ind_ctors_sort) |}.
       ++ apply onArity in Xg. destruct Xg as [s Hs]. exists s; auto.
-         specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ localenv_nil (existT _ _ (existT _ _ Hs))))))).
+         specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ [] (existT _ _ (existT _ _ Hs)))))).
          simpl in IH. simpl. apply IH; constructor 1; simpl; lia.
       ++ pose proof Xg.(onConstructors) as Xg'.
          eapply All2_impl; eauto. intros.
-         red in X14 |- *. destruct X14 as [[s Hs] [cs Hargsu]]. split.
-         pose proof (typing_wf_local (Σ:= (Σ, udecl)) Hs). simpl in Hs.
-         specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ X14 (existT _ _ (existT _ _ Hs))))))).
+         destruct X14 as [cs onctyp oncargs oncind].
+         unshelve econstructor. eauto.
+         destruct onctyp as [s Hs].
+         simpl in Hs.
+         specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ _ (existT _ _ Hs)))))).
          simpl in IH. red. simpl. exists s. simpl. apply IH; constructor 1; simpl; auto with arith.
-         exists cs.
          eapply type_local_ctx_impl; eauto. simpl. intros. red in X14.
          destruct T.
-         pose proof (typing_wf_local X14).
-         specialize (IH ((Σ, udecl); (X13; _; X17; _; _; X14))).
+         specialize (IH ((Σ, udecl); (X13; _; _; _; X14))).
          apply IH. simpl. constructor 1. simpl. auto with arith.
          destruct X14 as [u Hu]. exists u.
-         pose proof (typing_wf_local Hu).
-         specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ X14 (existT _ _ (existT _ _ Hu))))))).
+         specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ _ (existT _ _ Hu)))))).
+         apply IH. simpl. constructor 1. simpl. auto with arith.
+         clear -X13 IH oncind.
+         revert oncind.
+         generalize (List.rev (lift_context #|cshape_args cs| 0 (ind_indices Xg))).
+         generalize (cshape_indices cs). induction 1; constructor; auto.
+         red in p0 |- *.
+         specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ _ (existT _ _ p0)))))).
          apply IH. simpl. constructor 1. simpl. auto with arith.
       ++ intros Hprojs; pose proof (onProjections Xg Hprojs); auto. simpl in *.
          destruct X14; constructor; auto. eapply Alli_impl; eauto. clear on_projs0. intros.
          red in X14 |- *. unfold on_type in *; intuition eauto. simpl in *.
          destruct X14 as [s Hs]. exists s.
-         pose proof (typing_wf_local (Σ:= (Σ, udecl)) Hs).
-         specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ X14 (existT _ _ (existT _ _ Hs))))))).
+         specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ _ (existT _ _ Hs)))))).
          simpl in IH. apply IH; constructor 1; simpl; lia.
       ++ destruct Xg. simpl. unfold check_ind_sorts in *.
          destruct universe_family; auto.
@@ -1203,58 +1245,82 @@ Proof.
              eapply type_local_ctx_impl. eapply ind_sorts0.
              intros. red in X14.
              destruct T.
-             pose proof (typing_wf_local X14).
-             specialize (IH ((Σ, udecl); (X13; _; X17; _; _; X14))).
+             specialize (IH ((Σ, udecl); (X13; _; _; _; X14))).
              apply IH. simpl. constructor 1. simpl. auto with arith.
              destruct X14 as [u Hu]. exists u.
-             pose proof (typing_wf_local Hu).
-             specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ X14 (existT _ _ (existT _ _ Hu))))))).
+             specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ _ (existT _ _ Hu)))))).
              apply IH. simpl. constructor 1. simpl. auto with arith.
          +++ split. apply ind_sorts0. destruct indices_matter; auto.
              eapply type_local_ctx_impl. eapply ind_sorts0.
              intros. red in X14.
              destruct T.
-             pose proof (typing_wf_local X14).
-             specialize (IH ((Σ, udecl); (X13; _; X17; _; _; X14))).
+             specialize (IH ((Σ, udecl); (X13; _; _; _; X14))).
              apply IH. simpl. constructor 1. simpl. auto with arith.
              destruct X14 as [u Hu]. exists u.
-             pose proof (typing_wf_local Hu).
-             specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ X14 (existT _ _ (existT _ _ Hu))))))).
+             specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ _ (existT _ _ Hu)))))).
              apply IH. simpl. constructor 1. simpl. auto with arith.
       ++ red in onP |- *.
          eapply All_local_env_impl; eauto.
          intros. destruct T; simpl in X14.
-         specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ (typing_wf_local (Σ:=(Σ, udecl)) X14)
-                                                                           (existT _ _ (existT _ _ X14))))))).
+         specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ _ (existT _ _ X14)))))).
          simpl in IH. apply IH. constructor 1. simpl. lia.
          destruct X14 as [u Hu].
-         specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ (typing_wf_local (Σ:=(Σ, udecl)) Hu)
-                                                                           (existT _ _ (existT _ _ Hu))))))).
+         specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ _ (existT _ _ Hu)))))).
          simpl in IH. simpl. exists u. apply IH. constructor 1. simpl. lia.
 
-  - assert (forall Γ (wfΓ : wf_local Σ Γ) t T (Hty : Σ ;;; Γ |- t : T),
+  - assert (forall Γ t T (Hty : Σ ;;; Γ |- t : T),
                typing_size Hty < typing_size H ->
                Forall_decls_typing P Σ.1 * P Σ Γ t T).
     intros.
-    specialize (IH (existT _ Σ (existT _ wfΣ (existT _ _ (existT _ wfΓ0 (existT _ _ (existT _ _ Hty))))))).
+    specialize (IH (existT _ Σ (existT _ wfΣ (existT _ _ (existT _ _ (existT _ _ Hty)))))).
     simpl in IH.
     forward IH.
     constructor 2. simpl. apply H0.
-    apply IH. clear IH.
+    split; apply IH. clear IH.
     rename X13 into X14.
 
     assert (All_local_env_over typing Pdecl Σ Γ (typing_wf_local H)).
-    { clear -Pdecl wfΓ wfΣ X14.
-      pose proof (typing_wf_local_size H). clear wfΓ.
+    { clear -Pdecl wfΣ X14.
+      pose proof (typing_wf_local_size H).
       set (foo := typing_wf_local H) in *.
       clearbody foo.
       revert foo H0. generalize Γ at 1 2 4.
       induction foo; simpl in *; try destruct t2 as [u Hu]; simpl in *; constructor.
       - simpl in *. apply IHfoo. lia.
-      - red. eapply (X14 _ foo _ _ Hu). lia.
+      - red. eapply (X14 _ _ _ Hu). lia.
       - simpl in *. apply IHfoo. lia.
-      - red. apply (X14 _ foo _ _ t3). lia.
-      - red. apply (X14 _ foo _ _ Hu). lia. }
+      - red. apply (X14 _ _ _ t3). lia.
+      - red. apply (X14 _ _ _ Hu). lia. }
+    eapply XΓ; eauto.
+
+  - assert (forall Γ t T (Hty : Σ ;;; Γ |- t : T),
+               typing_size Hty < typing_size H ->
+               Forall_decls_typing P Σ.1 * P Σ Γ t T).
+    intros.
+    specialize (IH (existT _ Σ (existT _ wfΣ (existT _ _ (existT _ _ (existT _ _ Hty)))))).
+    simpl in IH.
+    forward IH.
+    constructor 2. simpl. apply H0.
+    split; apply IH. clear IH.
+    rename X13 into X14.
+
+    assert (Hdecls: typing_size H > 1 -> Forall_decls_typing P Σ.1).
+    { specialize (X14 _ _ _  (type_Prop _)).
+      simpl in X14. intros Hle. apply X14. lia. }
+
+    assert (All_local_env_over typing Pdecl Σ Γ (typing_wf_local H)).
+    { clear -Pdecl wfΣ X14.
+      pose proof (typing_wf_local_size H).
+      set (foo := typing_wf_local H) in *.
+      clearbody foo.
+      revert foo H0. generalize Γ at 1 2 4.
+      induction foo; simpl in *; try destruct t2 as [u Hu]; simpl in *; constructor.
+      - simpl in *. apply IHfoo. lia.
+      - red. eapply (X14 _ _ _ Hu). lia.
+      - simpl in *. apply IHfoo. lia.
+      - red. apply (X14 _ _ _ t3). lia.
+      - red. apply (X14 _ _ _ Hu). lia. }
+    apply XΓ in X13. all:auto.
 
     destruct H;
       try solve [  match reverse goal with
@@ -1269,155 +1335,123 @@ Proof.
 
     -- match reverse goal with
          H : _ |- _ => eapply H
-       end; eauto;
-         unshelve eapply X14; simpl; auto with arith.
-       econstructor; simpl; eauto.
+       end; eauto.
+       simpl in Hdecls. apply Hdecls; lia.
 
-    -- match reverse goal with
-         H : _ |- _ => eapply H
-       end.
-       all: eauto.
-       ++ unshelve eapply X14. all: eauto. simpl. lia.
-       ++ unshelve eapply X14. all: eauto. simpl. lia.
-       ++ unshelve eapply X14. all: eauto.
-          ** econstructor ; eauto. eexists ; eauto.
-          ** simpl. lia.
+    -- eapply X6; eauto.
+      apply Hdecls; simpl; lia.
 
-    -- eapply X5; eauto. simpl in X14.
-       specialize (X14 [] localenv_nil _ _ (type_Prop _)).
-       simpl in X14. forward X14; auto. lia. apply X14.
-
-    -- eapply X6; eauto. simpl in X14.
-       specialize (X14 [] localenv_nil _ _ (type_Prop _)).
-       simpl in X14. forward X14; auto. lia. apply X14.
-
-    -- eapply X7; eauto.
-       specialize (X14 [] localenv_nil _ _ (type_Prop _)).
-       simpl in X14. forward X14; auto. lia. apply X14.
+    -- eapply X7; eauto. apply Hdecls; simpl; lia.
 
     -- destruct indnpar as [ind' npar'];
          cbn in ind; cbn in npar; subst ind; subst npar.
        eapply X8; eauto.
-       ++ eapply (X14 _ wfΓ _ _ H); eauto. simpl; auto with arith.
-       ++ eapply (X14 _ wfΓ _ _ H); eauto. simpl; auto with arith.
+       ++ eapply (X14 _ _ _ H); eauto. simpl; auto with arith.
+       ++ eapply (X14 _ _ _ H); eauto. simpl; auto with arith.
        ++ simpl in *.
-          eapply (X14 _ wfΓ _ _ H0); eauto. clear. lia.
-       ++ clear X13. revert a wfΓ X14. simpl. clear. intros.
+          eapply (X14 _ _ _ H0); eauto. clear. lia.
+       ++ clear X13 Hdecls. revert a X14. simpl. clear. intros.
           induction a; simpl in *.
           ** constructor.
           ** destruct r as [[? ?] ?]. constructor.
              --- intuition eauto.
-                 +++ eapply (X14 _ wfΓ _ _ t); eauto. simpl; auto with arith.
+                 +++ eapply (X14 _ _ _ t); eauto. simpl; auto with arith.
                      lia.
-                 +++ eapply (X14 _ wfΓ _ _ t0); eauto. simpl; auto with arith.
+                 +++ eapply (X14 _ _ _ t0); eauto. simpl; auto with arith.
                      lia.
              --- apply IHa. auto. intros.
-                 eapply (X14 _ wfΓ0 _ _ Hty). lia.
+                 eapply (X14 _ _ _ Hty). lia.
 
-    -- eapply X9; eauto.
-       specialize (X14 [] localenv_nil _ _ (type_Prop _)).
-       simpl in X14. forward X14; auto. pose (typing_size_pos H). lia. apply X14.
-       unshelve eapply X14; eauto.
+    -- eapply X9; eauto. apply Hdecls; simpl.
+       pose proof (typing_size_pos H). lia.
+       eapply (X14 _ _ _  H). simpl. lia.
 
     -- clear X X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X11 X12.
-       eapply X10; eauto; clear X10. simpl in *. subst types.
-       remember (Γ ,,, fix_context mfix) as Γ'.
-       assert( forall Γ : context,
-                 wf_local Σ Γ ->
-                 forall (t T : term) (Hty : Σ;;; Γ |- t : T),
-                   typing_size Hty <
-                   S ((wf_local_size Σ
-                       (fun x (x0 : context) (x1 x2 : term) (x3 : x;;; x0 |- x1 : x2) =>
-                          typing_size x3) Γ' a)) ->
-                   Forall_decls_typing P Σ.1 * P Σ Γ t T).
-       intros; eauto. eapply (X14 _ X _ _ Hty); eauto. lia.
-       clear X14 a0.
-       clear HeqΓ'. clear X13. revert Γ wfΓ.
-       induction a; simpl in *; try econstructor; eauto.
-       eapply IHa; eauto. intros. eapply (X _ X0 _ _ Hty); simpl; eauto. lia.
-       --- simpl. destruct t0. exists x. split; eauto.
-           eapply (X _ a _ _ t0); eauto. simpl. lia.
-       --- eapply IHa. intros. eapply (X _ X0 _ _ Hty) ; eauto. lia. eapply a.
-       --- simpl. destruct t0 as [u t0].
-           exists u. split ; eauto.
-           unshelve eapply X. all: eauto. simpl. lia.
-       --- simpl. split ; eauto.
-           unshelve eapply X. all: eauto. simpl. lia.
-       --- simpl in X14.
-           assert(forall Γ0 : context,
+       eapply X10; eauto; clear X10. simpl in *.
+       * assert(forall (t T : term) (Hty : Σ;;; Γ |- t : T),
+                    typing_size Hty <
+                    S (all_size (fun x : def term =>
+                    ∑ s : Universe.t, Σ;;; Γ |- dtype x : tSort s)
+                     (fun (x : def term)
+                     (p : ∑ s : Universe.t, Σ;;; Γ |- dtype x : tSort s) =>
+                   typing_size p.π2) a0) ->
+                    Forall_decls_typing P Σ.1 * P Σ Γ t T).
+         intros; eauto. eapply (X14 _ _ _ Hty); eauto. lia.
+         clear X13 X14 a Hdecls.
+         clear -a0 X.
+         induction a0; constructor.
+         destruct p as [s Hs]. exists s; split; auto.
+         apply (X (dtype x) (tSort s) Hs). simpl. lia.
+         apply IHa0. intros. eapply (X _ _ Hty); eauto.
+         simpl. lia.
+       * simpl in X14.
+         assert(forall Γ0 : context,
+                 wf_local Σ Γ0 ->
+                forall (t T : term) (Hty : Σ;;; Γ0 |- t : T),
+                 typing_size Hty <
+                       S
+                         (all_size _ (fun (x : def term) p => typing_size (fst p)) a1) ->
+                        Forall_decls_typing P Σ.1 * P Σ Γ0 t T).
+         {intros. eapply (X14 _ _ _ Hty); eauto. lia. }
+         clear X14 X13.
+         clear e decl i a0 Hdecls.
+         remember (fix_context mfix) as mfixcontext. clear Heqmfixcontext.
+ 
+         induction a1; econstructor; eauto.
+         ++ split; auto. 
+           eapply (X _ (typing_wf_local (fst p)) _ _ (fst p)). simpl. lia.
+         ++ eapply IHa1. intros.
+           eapply (X _ X0 _ _ Hty). simpl; lia.       
+
+    -- clear X X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X12.
+       eapply X11; eauto; clear X11. simpl in *.
+       * assert(forall (t T : term) (Hty : Σ;;; Γ |- t : T),
+                  typing_size Hty <
+                  S (all_size (fun x : def term =>
+                  ∑ s : Universe.t, Σ;;; Γ |- dtype x : tSort s)
+                    (fun (x : def term)
+                    (p : ∑ s : Universe.t, Σ;;; Γ |- dtype x : tSort s) =>
+                  typing_size p.π2) a0) ->
+                  Forall_decls_typing P Σ.1 * P Σ Γ t T).
+        intros; eauto. eapply (X14 _ _ _ Hty); eauto. lia.
+        clear X13 X14 a  Hdecls.
+        clear -a0 X.
+        induction a0; constructor.
+        destruct p as [s Hs]. exists s; split; auto.
+        apply (X (dtype x) (tSort s) Hs). simpl. lia.
+        apply IHa0. intros. eapply (X _ _ Hty); eauto.
+        simpl. lia.
+      * simpl in X14.
+        assert(forall Γ0 : context,
                 wf_local Σ Γ0 ->
-               forall (t T : term) (Hty : Σ;;; Γ0 |- t : T),
+              forall (t T : term) (Hty : Σ;;; Γ0 |- t : T),
                 typing_size Hty <
                       S
-                        (all_size (fun x : def term => (Σ;;; Γ ,,, fix_context mfix |- dbody x : lift0 #|types| (dtype x))%type
-                                                        * (isLambda (dbody x) = true)%type)%type
-                                   (fun (x : def term) p => typing_size (fst p)) a0) ->
-                       Forall_decls_typing P Σ.1 * P Σ Γ0 t T).
-           subst types. intros. eapply (X14 _ X _ _ Hty); eauto. lia. clear X14.
-           subst types.
-           remember (fix_context mfix) as mfixcontext. clear Heqmfixcontext.
-           clear e decl X13. clear i.
-           induction a0; econstructor; eauto.
-       ++ split; auto.
-          eapply (X _ a _ _ (fst p)). simpl. lia.
-       ++ eapply IHa0. intros.
+                        (all_size (fun x : def term => (Σ;;; Γ ,,, fix_context mfix |- dbody x : lift0 #|fix_context mfix| (dtype x))%type)
+                                  (fun (x : def term) p => typing_size p) a1) ->
+                      Forall_decls_typing P Σ.1 * P Σ Γ0 t T).
+        {intros. eapply (X14 _ _ _ Hty); eauto. lia. }
+        clear X14 X13.
+        clear e decl i a0 Hdecls.
+        remember (fix_context mfix) as mfixcontext. clear Heqmfixcontext.
+
+        induction a1; econstructor; eauto.
+        ++ split; auto. 
+          eapply (X _ (typing_wf_local p) _ _ p). simpl. lia.
+        ++ eapply IHa1. intros.
           eapply (X _ X0 _ _ Hty). simpl; lia.
 
-    -- clear X X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X12 X13.
-       eapply X11; eauto; clear X11. simpl in *. subst types.
-       remember (Γ ,,, fix_context mfix) as Γ'.
-       assert( forall Γ : context,
-                 wf_local Σ Γ ->
-                 forall (t T : term) (Hty : Σ;;; Γ |- t : T),
-                   typing_size Hty <
-                   S
-                     (
-                       (wf_local_size Σ
-                                      (fun x (x0 : context) (x1 x2 : term) (x3 : x;;; x0 |- x1 : x2) =>
-                                         typing_size x3) Γ' a)) ->
-
-                   Forall_decls_typing P Σ.1 * P Σ Γ t T).
-       intros; eauto. eapply (X14 _ X _ _ Hty); eauto. lia.
-       clear X14 a0.
-       clear HeqΓ'. revert Γ wfΓ.
-       induction a; simpl in *; try econstructor; eauto.
-       eapply IHa; eauto. intros. eapply (X _ X0 _ _ Hty); simpl; eauto. lia.
-       --- destruct t0. exists x. split; eauto.
-           eapply (X _ a _ _ t0); eauto. simpl; lia.
-       --- eapply IHa. intros. eapply (X _ X0 _ _ Hty) ; eauto. lia. eapply a.
-       --- simpl. destruct t0 as [u t0].
-           exists u. split ; eauto.
-           unshelve eapply X. all: eauto. simpl. lia.
-       --- simpl. split ; eauto.
-           unshelve eapply X. all: eauto. simpl. lia.
-       --- simpl in X14.
-           assert(forall Γ0 : context,
-                     wf_local Σ Γ0 ->
-                     forall (t T : term) (Hty : Σ;;; Γ0 |- t : T),
-                       typing_size Hty <
-                       S (all_size (fun x : def term => Σ;;; Γ ,,, fix_context mfix |- dbody x : (lift0 #|types| (dtype x)))
-                                   (fun (x : def term) (p : Σ;;; Γ ,,, fix_context mfix |- dbody x : (lift0 #|types| (dtype x))) => typing_size p) a0) ->
-                       Forall_decls_typing P Σ.1 * P Σ Γ0 t T).
-           intros. eapply (X14 _ X _ _ Hty); eauto. subst types; lia. clear X14.
-           subst types.
-           remember (fix_context mfix) as mfixcontext. clear Heqmfixcontext.
-           clear e decl.
-           induction a0; econstructor; eauto.
-       ++ split; auto.
-          eapply (X _ a _ _ p). simpl. lia.
-       ++ eapply IHa0. intros.
-         eapply (X _ X0 _ _ Hty). simpl; lia.
     -- eapply X12; eauto.
-       ++ eapply (X14 _ wfΓ _ _ H); simpl. destruct s as [s | [u Hu]]; lia.
+       ++ eapply (X14 _ _ _ H); simpl. destruct s as [s | [u Hu]]; lia.
        ++ simpl in X14, X13.
           destruct s as [s | [u Hu]].
           ** left.
              red. exists s. red in s. revert X14.
              generalize (snd (projT2 (projT2 s))).
              induction a; simpl in *; intros X14 *; constructor.
-             --- apply IHa. intros. eapply (X14 _ wfΓ0 _ _ Hty). lia.
-             --- red. eapply (X14 _ a _ _ (projT2 t1)). destruct t1. simpl. lia.
-             --- apply IHa. intros. eapply (X14 _ wfΓ0 _ _ Hty). lia.
+             --- apply IHa. intros. eapply (X14 _ _ _ Hty). lia.
+             --- red. eapply (X14 _ _ _ (projT2 t1)). destruct t1. simpl. lia.
+             --- apply IHa. intros. eapply (X14 _ _ _ Hty). lia.
              --- red. destruct t1. unshelve eapply X14. all: eauto.
                  simpl. lia.
              --- red. destruct t1. unshelve eapply X14. all: eauto.

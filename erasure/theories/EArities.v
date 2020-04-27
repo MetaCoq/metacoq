@@ -217,11 +217,10 @@ Lemma tConstruct_no_Type (Σ : global_env_ext) ind c u x1 : wf Σ ->
 Proof.
   intros wfΣ (? & ? & [ | (? & ? & ?)]).
   - exfalso.
-    eapply type_mkApps_inv in t as (? & ? & [] & ?); eauto.
+    eapply PCUICValidity.inversion_mkApps in t as (? & ? & ? & ? & ?); eauto.
     assert (HWF : isWfArity_or_Type Σ [] x2).
     { eapply PCUICValidity.validity.
       - eauto.
-      - econstructor.
       - eapply type_mkApps. 2:eauto. eauto.
     }
     eapply inversion_Construct in t as (? & ? & ? & ? & ? & ? & ?) ; auto. (* destruct x5. destruct p. cbn in *. *)
@@ -234,9 +233,8 @@ Proof.
     (* destruct t0 as (? & [] & ?). *)
     (* eapply PCUICCumulativity.red_cumul in X. *)
     destruct (PCUICWeakeningEnv.on_declared_constructor _ d) as [XX [s [XX1 [Ht [cs XX2]]]]].
-    destruct cs; cbn in *.
     destruct x5 as [[? ?] ?]; cbn in *; subst.
-
+    destruct Ht. subst.
     change PCUICEnvironment.it_mkProd_or_LetIn with it_mkProd_or_LetIn in c2.
     change PCUICEnvironment.ind_params with ind_params in *.
     change PCUICEnvironment.to_extended_list_k with to_extended_list_k in *.
@@ -254,9 +252,8 @@ Proof.
                                                                          #|cshape_args| - (#|cshape_args| + #|ind_params x3| + 0)) < #|inds (inductive_mind ind) u (ind_bodies x3)|).
     { rewrite inds_length. lia. }
     eapply nth_error_Some in H.
-    destruct ?; try congruence.
-    (* destruct c2 as (? & [] & ?). *)
-    eapply inds_nth_error in E as [].
+    destruct (nth_error (inds _ _ _) _) eqn:Heq; try congruence.
+    eapply inds_nth_error in Heq as [].
     subst. cbn in *. revert c2.
     match goal with
     | |- context [ it_mkProd_or_LetIn ?c _ ] =>
@@ -469,14 +466,14 @@ Lemma Is_type_app (Σ : global_env_ext) Γ t L T :
 Proof.
   intros wfΣ wfΓ ? ?.
   assert (HW : isWfArity_or_Type Σ Γ T). eapply PCUICValidity.validity; eauto.
-  eapply type_mkApps_inv in X as (? & ? & [] & ?); try eassumption.
+  eapply PCUICValidity.inversion_mkApps in X as (? & ? & ? & ? & ?); try eassumption.
   destruct X0 as (? & ? & [ | [u]]).
   - eapply PCUICPrincipality.principal_typing in t2 as (? & ? & ? & ?). 2:eauto. 2:exact t0.
     eapply invert_cumul_arity_r in c1; eauto.
     destruct c1 as (? & ? & ?). destruct H as [].
     eapply PCUICCumulativity.red_cumul_inv in X.
 
-    eapply invert_cumul_arity_l in H0 as (? & ? & ?). 2: eauto.
+    eapply invert_cumul_arity_l in H0 as (? & ? & ?).
     2: eapply PCUICConversion.cumul_trans; eauto.
     destruct H.
     eapply typing_spine_red in t1. 2:{ eapply All_All2_refl.
@@ -511,8 +508,8 @@ Proof.
   destruct s as [ | (u & ? & ?)].
   - eapply invert_cumul_arity_r in c; eauto. destruct c as (? & [] & ?).
     eapply invert_red_prod in X1 as (? & ? & [] & ?); eauto; subst. cbn in H.
-    econstructor. exists x3. econstructor. eapply type_reduction; eauto. econstructor; eauto. eexists; eauto.
-    eauto.
+    econstructor. exists x3. econstructor. 
+    eapply type_reduction; eauto. econstructor; eauto.
   - sq. eapply cumul_prop1 in c; eauto.
     eapply inversion_Prod in c as (? & ? & ? & ? & ?) ; auto.
     eapply cumul_Sort_inv in c.

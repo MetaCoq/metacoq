@@ -1,14 +1,14 @@
-From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
+From Coq Require Import Bool String List BinPos Compare_dec Arith Lia
      Classes.CRelationClasses ProofIrrelevance.
 From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
      AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
      PCUICCumulativity PCUICPosition PCUICEquality PCUICNameless
-     PCUICAlpha PCUICNormal PCUICInversion PCUICCumulativity PCUICReduction
-     PCUICConfluence PCUICConversion PCUICContextConversion PCUICValidity
+     PCUICNormal PCUICInversion PCUICCumulativity PCUICReduction
+     PCUICConfluence PCUICConversion PCUICContextConversion
      PCUICParallelReductionConfluence PCUICWeakeningEnv
-     PCUICClosed PCUICPrincipality PCUICSubstitution
+     PCUICClosed PCUICSubstitution
      PCUICWeakening PCUICGeneration PCUICUtils PCUICCtxShape.
 
 From Equations Require Import Equations.
@@ -338,16 +338,10 @@ Proof.
     intuition auto.
     - exists x; auto.
       eapply substitution in t; eauto.
-      eapply type_local_ctx_wf_local in a; eauto.
-      eapply substitution_wf_local in a; eauto.
     - eapply substitution in b1; eauto.
-      eapply type_local_ctx_wf_local in a; eauto.
-      eapply substitution_wf_local in a; eauto.
   + rewrite subst_context_snoc /= /subst_decl /map_decl /= Nat.add_0_r.
       intuition auto.
       eapply substitution in b; eauto.
-      eapply type_local_ctx_wf_local in a; eauto.
-      eapply substitution_wf_local in a; eauto.
 Qed.
 
 Lemma weaken_type_local_ctx {cf:checker_flags} Σ Γ Γ' Δ ctxs : 
@@ -366,4 +360,50 @@ Proof.
     eapply (weaken_ctx Γ); auto.
   - rewrite -app_context_assoc.
     eapply (weaken_ctx Γ); auto.
+Qed.
+
+
+Lemma reln_app acc Γ Δ k : reln acc k (Γ ++ Δ) = 
+  reln (reln acc k Γ) (#|Γ| + k) Δ.
+Proof.
+  induction Γ in acc, Δ, k |- *; simpl; auto.
+  destruct a as [na [b|] ty]. rewrite IHΓ. f_equal. lia.
+  simpl. rewrite IHΓ. f_equal. lia.
+Qed.
+
+Lemma reln_acc acc k Γ : reln acc k Γ = reln [] k Γ ++ acc.
+Proof.
+  induction Γ in acc, k |- *; simpl; auto.
+  destruct a as [na [b|] ty]. rewrite IHΓ. f_equal.
+  rewrite IHΓ. rewrite [reln [_] _ _]IHΓ. 
+  now rewrite -app_assoc.
+Qed.
+
+Lemma to_extended_list_k_app Γ Δ k : to_extended_list_k (Γ ++ Δ) k = 
+  to_extended_list_k Δ (#|Γ| + k) ++ to_extended_list_k Γ k.
+Proof.
+  unfold to_extended_list_k. now rewrite reln_app reln_acc.
+Qed.
+
+Lemma reln_lift n k Γ : reln [] (n + k) Γ = map (lift0 n) (reln [] k Γ).
+Proof.
+  induction Γ in n, k |- *; simpl; auto.
+  destruct a as [? [?|] ?]; simpl.
+  now rewrite -IHΓ Nat.add_assoc.
+  rewrite reln_acc  [reln [tRel k] _ _]reln_acc map_app /=.
+  f_equal. now rewrite -IHΓ Nat.add_assoc.
+Qed.
+
+Lemma map_subst_app_to_extended_list_k s s' ctx k  :
+  k = #|s| ->
+  map (subst0 (s ++ s')) (to_extended_list_k ctx k) = 
+  map (subst0 s') (to_extended_list_k ctx 0).
+Proof.
+  intros ->.
+  rewrite /to_extended_list_k.
+  rewrite -{1}(Nat.add_0_r #|s|) reln_lift map_map_compose.
+  apply map_ext. intros x; simpl.
+  rewrite subst_app_decomp.
+  f_equal. rewrite -{1}(Nat.add_0_r #|s|) simpl_subst' ?lift0_id //.
+  now rewrite map_length.
 Qed.

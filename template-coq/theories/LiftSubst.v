@@ -1,8 +1,9 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import List Program.
+From Coq Require Import List BinPos Lia.
 From MetaCoq Require Import utils Ast AstUtils Induction.
-From Coq Require Import BinPos Lia.
+
+Import ListNotations.
 
 (** * Lifting and substitution for the AST
 
@@ -14,7 +15,7 @@ Set Asymmetric Patterns.
 
 Fixpoint lift n k t : term :=
   match t with
-  | tRel i => if Nat.leb k i then tRel (n + i) else tRel i
+  | tRel i => tRel (if Nat.leb k i then n + i else i)
   | tEvar ev args => tEvar ev (List.map (lift n k) args)
   | tLambda na T M => tLambda na (lift n k T) (lift n (S k) M)
   | tApp u v => tApp (lift n k u) (List.map (lift n k) v)
@@ -39,6 +40,11 @@ Fixpoint lift n k t : term :=
 
 Notation lift0 n := (lift n 0).
 Definition up := lift 1 0.
+
+Definition lift_decl n k d := (map_decl (lift n k) d).
+
+Definition lift_context n k (Γ : context) : context :=
+  fold_context (fun k' => lift n (k' + k)) Γ.
 
 (** Parallel substitution: it assumes that all terms in the substitution live in the
     same context *)
@@ -78,6 +84,21 @@ Notation subst0 t := (subst t 0).
 Definition subst1 t k u := subst [t] k u.
 Notation subst10 t := (subst1 t 0).
 Notation "M { j := N }" := (subst1 N j M) (at level 10, right associativity).
+
+Definition subst_context s k (Γ : context) : context :=
+  fold_context (fun k' => subst s (k' + k)) Γ.
+
+Lemma subst_context_length s n Γ : #|subst_context s n Γ| = #|Γ|.
+Proof.
+  induction Γ as [|[na [body|] ty] tl] in Γ |- *; cbn; eauto.
+  - rewrite !List.rev_length, !mapi_rec_length, !app_length, !List.rev_length. simpl.
+    lia.
+  - rewrite !List.rev_length, !mapi_rec_length, !app_length, !List.rev_length. simpl.
+    lia.
+Qed.
+
+Definition subst_telescope s k (Γ : context) : context :=
+  mapi (fun k' decl => map_decl (subst s (k' + k)) decl) Γ.
 
 Fixpoint closedn k (t : term) : bool :=
   match t with
@@ -154,11 +175,6 @@ Proof.
   now elim (leb_spec p n).
 Qed.
 
-Lemma lift_rel_alt : forall n k i, lift n k (tRel i) = tRel (if Nat.leb k i then n + i else i).
-Proof.
-  intros; simpl. now destruct leb.
-Qed.
-
 Lemma subst_rel_lt : forall u n k, k > n -> subst u k (tRel n) = tRel n.
 Proof.
   simpl in |- *; intros.
@@ -223,11 +239,6 @@ Ltac change_Sk :=
     |- context [S (?x + ?y)] => progress change (S (x + y)) with (S x + y)
   end.
 
-Ltac all_simpl :=
-  progress (unfold compose; simpl).
-
-Hint Extern 10 => all_simpl : all.
-
 Ltac solve_all :=
   unfold tCaseBrsProp, tFixProp in *;
   repeat toAll; try All_map; try close_Forall;
@@ -236,7 +247,7 @@ Ltac solve_all :=
 
 Ltac nth_leb_simpl :=
   match goal with
-    |- context [leb ?k ?n] => elim (leb_spec_Set k n); try lia; intros; simpl
+    |- context [leb ?k ?n] => elim (leb_spec_Set k n); try lia; simpl
   | |- context [nth_error ?l ?n] => elim (nth_error_spec l n); rewrite -> ?app_length, ?map_length;
                                     try lia; intros; simpl
   | H : context[nth_error (?l ++ ?l') ?n] |- _ =>
@@ -274,8 +285,8 @@ Proof.
       try (rewrite -> H, ?H0, ?H1; auto); try (f_equal; auto; solve_all).
 
   - elim (leb_spec k n); intros.
-    now rewrite lift_rel_ge.
-    now rewrite lift_rel_lt.
+    + elim (leb_spec i (n0 + n)); intros; lia.
+    + elim (leb_spec i n); intros; lia.
 Qed.
 
 Lemma simpl_lift0 : forall M n, lift0 (S n) M = lift0 1 (lift0 n M).
@@ -290,8 +301,9 @@ Proof.
   intros M.
   elim M using term_forall_list_ind;
     intros; simpl; 
-      rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
-      try solve [f_equal; auto; solve_all]; repeat nth_leb_simpl.
+      rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length,
+      ?Nat.add_assoc; f_equal;
+      try solve [auto; solve_all]; repeat nth_leb_simpl.
 Qed.
 
 Lemma permute_lift0 :
@@ -305,8 +317,6 @@ Qed.
 Lemma lift_isApp n k t : isApp t = false -> isApp (lift n k t) = false.
 Proof.
   induction t; auto.
-  intros.
-  simpl. destruct leb; auto.
 Qed.
 
 Lemma map_non_nil {A B} (f : A -> B) l : l <> nil -> map f l <> nil.
@@ -325,11 +335,8 @@ Hint Resolve lift_isApp map_non_nil isLambda_lift : all.
 Lemma wf_lift n k t : wf t -> wf (lift n k t).
 Proof.
   intros wft; revert t wft k.
-  apply (term_wf_forall_list_ind (fun t => forall k, wf (lift n k t))) ; simpl; intros; try constructor; auto;
-    solve_all.
-
-  - destruct leb; constructor.
-  - unfold compose. solve_all.
+  apply (term_wf_forall_list_ind (fun t => forall k, wf (lift n k t)));
+    simpl; intros; try constructor; auto; solve_all.
 Qed.
 
 Lemma mkApps_tApp t l :
@@ -341,8 +348,6 @@ Proof.
   simpl in H. discriminate.
 Qed.
 
-Hint Unfold compose : core.
-Hint Transparent compose : core.
 
 Lemma simpl_subst_rec :
   forall M (H : wf M) N n p k,
@@ -372,11 +377,6 @@ Qed.
 Lemma lift_mkApps n k t l : lift n k (mkApps t l) = mkApps (lift n k t) (map (lift n k) l).
 Proof.
   revert n k t; induction l; intros n k t; destruct t; try reflexivity.
-  rewrite lift_rel_alt. rewrite -> !mkApps_tRel.
-  simpl lift.
-  simpl map. rewrite !mkApps_tRel.
-  f_equal. destruct leb; auto.
-
   simpl. f_equal.
   now rewrite map_app.
 Qed.
@@ -567,12 +567,11 @@ Proof.
     apply wf_lift; auto. constructor. constructor.
   - apply Forall_map. eapply Forall_impl; eauto.
   - apply wf_mkApps; auto. apply Forall_map. eapply Forall_impl; eauto.
-  - apply Forall_map. eapply Forall_impl; eauto. intros. eapply All_Forall.
-    eapply All_impl; tea. intros [] XX; cbn in *. apply XX.
-  - solve_all. unfold compose, map_def. simpl. solve_all.
-    induction dbody; try discriminate. reflexivity.
-  - apply Forall_map. eapply All_Forall, All_impl; eauto. intros.
-    destruct x; simpl in *. red; simpl; intuition auto.
+  - apply Forall_map. apply All_Forall. eapply All_impl; tea.
+    intros [] XX; cbn in *; apply XX.
+  - solve_all. induction dbody; try discriminate. reflexivity.
+  - apply Forall_map. eapply All_Forall, All_impl; eauto.
+    intros [] XX; cbn in *; split; apply XX.
 Qed.
 
 Lemma wf_subst1 t k u : wf t -> wf u -> wf (subst1 t k u).

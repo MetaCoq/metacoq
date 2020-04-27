@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool List Program.
+From Coq Require Import Bool List.
 From MetaCoq.Template Require Import config monad_utils utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICTyping PCUICChecker PCUICConversion PCUICCumulativity.
 Local Open Scope string_scope.
@@ -29,6 +29,7 @@ Section TypeOf.
   Context {cf : checker_flags}.
   Context `{F : Fuel}.
   Context (Σ : global_env_ext).
+  Context (wfΣ : wf Σ.1).
 
   Section SortOf.
     Context (type_of : context -> term -> typing_result term).
@@ -224,8 +225,7 @@ Section TypeOf.
         admit.
     - go eq. split.
       + econstructor ; try eassumption ; try ih ; try cih.
-      + eapply congr_cumul_prod.
-        * reflexivity.
+      + eapply congr_cumul_prod; auto.
         * ih.
     - go eq. split.
       + econstructor ; try eassumption ; try ih ; try cih.

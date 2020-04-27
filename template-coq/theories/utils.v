@@ -1,4 +1,4 @@
-From Coq Require Import Nat ZArith Bool Program.
+From Coq Require Import Nat ZArith Bool.
 Global Set Asymmetric Patterns.
 
 
@@ -29,10 +29,9 @@ Tactic Notation "destruct" "?" "in" hyp(H) :=
 Notation "'eta_compose'" := (fun g f x => g (f x)).
 
 (* \circ *)
-Notation "g ∘ f" := (eta_compose g f).
+Notation "g ∘ f" := (eta_compose g f) (at level 40, left associativity).
 
-Tactic Notation "apply*" constr(H) "in" hyp(H')
-  := apply H in H'; [..|apply H].
+Notation " ! " := (@False_rect _ _) : program_scope.
 
 Ltac cbnr := cbn; try reflexivity.
 
@@ -71,6 +70,9 @@ Tactic Notation "toProp" ident(H) :=
   | (_ <? _)%nat  = true => apply PeanoNat.Nat.ltb_lt in H
   | (_ <=? _)%nat = true => apply PeanoNat.Nat.leb_le in H
   | (_ =? _)%nat  = true => apply PeanoNat.Nat.eqb_eq in H
+  | (_ <? _)%nat  = false => apply PeanoNat.Nat.ltb_ge in H
+  | (_ <=? _)%nat = false => apply PeanoNat.Nat.leb_gt in H
+  | (_ =? _)%nat  = false => apply PeanoNat.Nat.eqb_neq in H
 
   | is_true (_ <? _)%Z => apply Z.ltb_lt in H
   | is_true (_ <=? _)%Z => apply Z.leb_le in H
@@ -78,6 +80,9 @@ Tactic Notation "toProp" ident(H) :=
   | (_ <? _)%Z  = true => apply Z.ltb_lt in H
   | (_ <=? _)%Z = true => apply Z.leb_le in H
   | (_ =? _)%Z  = true => apply Z.eqb_eq in H
+  | (_ <? _)%Z  = false => apply Z.ltb_ge in H
+  | (_ <=? _)%Z = false => apply Z.leb_gt in H
+  | (_ =? _)%Z  = false => apply Z.eqb_neq in H
      
   | is_true (_ && _) => apply andb_true_iff in H
   | (_ && _) = true  => apply andb_true_iff in H
@@ -96,6 +101,9 @@ Tactic Notation "toProp" :=
   | |- (_ <? _)%nat  = true => apply PeanoNat.Nat.ltb_lt
   | |- (_ <=? _)%nat = true => apply PeanoNat.Nat.leb_le
   | |- (_ =? _)%nat  = true => apply PeanoNat.Nat.eqb_eq
+  | |- ( _ <? _)%nat  = false => apply PeanoNat.Nat.ltb_ge
+  | |- (_ <=? _)%nat = false => apply PeanoNat.Nat.leb_gt
+  | |- (_ =? _)%nat  = false => apply PeanoNat.Nat.eqb_neq
 
   | |- is_true (_ <? _)%Z => apply Z.ltb_lt
   | |- is_true (_ <=? _)%Z => apply Z.leb_le
@@ -103,6 +111,9 @@ Tactic Notation "toProp" :=
   | |- (_ <? _)%Z  = true => apply Z.ltb_lt
   | |- (_ <=? _)%Z = true => apply Z.leb_le
   | |- (_ =? _)%Z  = true => apply Z.eqb_eq
+  | |- (_ <? _)%Z  = false => apply Z.ltb_ge
+  | |- (_ <=? _)%Z = false => apply Z.leb_gt
+  | |- (_ =? _)%Z  = false => apply Z.eqb_neq
 
   | |- is_true (_ && _) => apply andb_true_iff; split
   | |- (_ && _) = true => apply andb_true_iff; split
@@ -158,8 +169,10 @@ Tactic Notation "forward" constr(H) "by" tactic(tac) := forward_gen H tac.
 
 Hint Resolve Peano_dec.eq_nat_dec : eq_dec.
 
-
 Ltac invs H := inversion H; subst; clear H.
+
+Ltac generalize_eq x t :=
+  set (x := t) in *; cut (x = t); [|reflexivity]; clearbody x.
 
 
 Lemma iff_forall {A} B C (H : forall x : A, B x <-> C x)
@@ -191,7 +204,10 @@ Qed.
 
 Ltac tas := try assumption.
 Ltac tea := try eassumption.
+Ltac trea := try reflexivity; try eassumption.
 
 Axiom todo : String.string -> forall {A}, A.
 Ltac todo s := exact (todo s).
+
+From Coq Require Import Extraction.
 Extract Constant todo => "fun s -> failwith (String.concat """" (List.map (String.make 1) s))".

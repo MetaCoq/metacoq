@@ -39,9 +39,9 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=
 | tmCurrentModPath : unit -> TemplateMonad string
 
 (* Quoting and unquoting commands *)
-(* Similar to Quote Definition ... := ... *)
+(* Similar to MetaCoq Quote Definition ... := ... *)
 | tmQuote : forall {A:Type@{t}}, A  -> TemplateMonad Ast.term
-(* Similar to Quote Recursively Definition ... := ...*)
+(* Similar to MetaCoq Quote Recursively Definition ... := ...*)
 | tmQuoteRec : forall {A:Type@{t}}, A  -> TemplateMonad program
 (* Quote the body of a definition or inductive. Its name need not be fully qualified *)
 | tmQuoteInductive : qualid -> TemplateMonad mutual_inductive_body
@@ -55,7 +55,7 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=
 
 (* Typeclass registration and querying for an instance *)
 | tmExistingInstance : qualid -> TemplateMonad unit
-| tmInferInstance : option reductionStrategy -> forall A : Type@{t}, TemplateMonad (option A)
+| tmInferInstance : option reductionStrategy -> forall A : Type@{t}, TemplateMonad (option_instance A)
 .
 
 From MetaCoq.Template Require Import monad_utils.

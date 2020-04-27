@@ -1,12 +1,14 @@
 (* Distributed under the terms of the MIT license.   *)
 Set Warnings "-notation-overridden".
 
-From Coq Require Import Bool List Program Compare_dec PeanoNat.
+From Coq Require Import Bool List Compare_dec PeanoNat.
 From MetaCoq.Template Require Import config utils Ast TypingWf WfInv.
 
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCumulativity
      PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICTyping TemplateToPCUIC
      PCUICSubstitution PCUICGeneration.
+
+From Equations.Prop Require Import DepElim.
 
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -39,7 +41,6 @@ Lemma trans_lift n k t :
   trans (TL.lift n k t) = lift n k (trans t).
 Proof.
   revert k. induction t using Template.Induction.term_forall_list_ind; simpl; intros; try congruence.
-  - now destruct leb.
   - f_equal. rewrite !map_map_compose. solve_all.
   - rewrite lift_mkApps, IHt, map_map.
     f_equal. rewrite map_map; solve_all.
@@ -532,174 +533,6 @@ Qed.
 
 Derive Signature for TTy.eq_term_upto_univ.
 
-(* We rederive this (also in Checker.Reflect) to avoid depending on Checker. *)
-Derive NoConfusion NoConfusionHom for Ast.term.
-
-Lemma trans_eq_term :
-  forall φ t u,
-    T.wf t ->
-    T.wf u ->
-    TTy.eq_term φ t u ->
-    eq_term φ (trans t) (trans u).
-Proof.
-  intros φ t u wt wu e.
-  induction t using Induction.term_forall_list_rect in wt, u, wu, e |- *.
-  all: dependent destruction e.
-  all: simpl.
-  all: try solve [ constructor ; auto ].
-  all: try solve [
-    constructor ;
-    match goal with
-    | ih : forall u : Tterm, _ |- _ =>
-      eapply ih ; [
-        inversion wt ; assumption
-      | inversion wu ; assumption
-      | assumption
-      ]
-    end
-  ].
-  - constructor.
-    assert (wl : Forall T.wf l).
-    { inversion wt. assumption. }
-    assert (wargs' : Forall T.wf args').
-    { inversion wu. assumption. }
-    apply Forall_All in wl.
-    apply Forall_All in wargs'.
-    eapply All2_All_mix_right in a; tea.
-    eapply All2_All_mix_left in a; try exact X.
-    eapply All2_All_mix_left in a; try exact wl.
-    eapply All2_map, All2_impl; tea.
-    clear; cbn. intros x y [H1 [H2 [H3 H4]]]. 
-    apply H2; assumption.
-  - constructor.
-    + constructor. 2: constructor.
-      eapply IHt2.
-      * inversion wt. assumption.
-      * inversion wu. assumption.
-      * assumption.
-    + eapply IHt1.
-      * inversion wt. assumption.
-      * inversion wu. assumption.
-      * assumption.
-  - eapply eq_term_mkApps.
-    + eapply IHt.
-      * inversion wt. assumption.
-      * inversion wu. assumption.
-      * assumption.
-    + pose proof (All2_All_mix_left X a) as h.
-      simpl in h.
-      assert (wl : Forall T.wf l).
-      { inversion wt. assumption. }
-      assert (wargs' : Forall T.wf args').
-      { inversion wu. assumption. }
-      apply Forall_All in wl.
-      apply Forall_All in wargs'.
-      pose proof (All2_All_mix_left wl h) as h1.
-      pose proof (All2_All_mix_right wargs' h1) as h2.
-      simpl in h2.
-      eapply All2_map.
-      eapply All2_impl. 1: exact h2.
-      simpl.
-      intros u v [[? [ih ?]] ?].
-      eapply ih. all: auto.
-  - constructor.
-    all: try solve [
-      match goal with
-      | ih : forall u : Tterm, _ |- _ =>
-        eapply ih ; [
-          inversion wt ; assumption
-        | inversion wu ; assumption
-        | assumption
-        ]
-      end
-    ].
-    assert (wl : All (T.wf ∘ snd) l).
-    { eapply Forall_All. inversion wt. assumption. }
-    assert (wbrs' : All (T.wf ∘ snd) brs').
-    { eapply Forall_All. inversion wu. assumption. }
-    pose proof (All2_All_mix_left X a) as h1. simpl in h1.
-    pose proof (All2_All_mix_left wl h1) as h2.
-    pose proof (All2_All_mix_right wbrs' h2) as h3.
-    simpl in h3.
-    eapply All2_map.
-    eapply All2_impl. 1: exact h3.
-    simpl.
-    intros [n u] [m v] [[? [ih [? ?]]] ?]. simpl in *.
-    intuition eauto.
-    eapply ih. all: auto.
-  - constructor.
-    assert (
-      w1 :
-        All (fun def =>
-          T.wf (dtype def) /\
-          T.wf (dbody def) /\
-          T.isLambda (dbody def) = true
-        ) m
-    ).
-    { eapply Forall_All. inversion wt. assumption. }
-    assert (
-      w2 :
-        All (fun def =>
-          T.wf (dtype def) /\
-          T.wf (dbody def) /\
-          T.isLambda (dbody def) = true
-        ) mfix'
-    ).
-    { eapply Forall_All. inversion wu. assumption. }
-    pose proof (All2_All_mix_left X a) as h1. simpl in h1.
-    pose proof (All2_All_mix_left w1 h1) as h2.
-    pose proof (All2_All_mix_right w2 h2) as h3.
-    simpl in h3.
-    eapply All2_map.
-    eapply All2_impl. 1: exact h3.
-    simpl.
-    intros [? ? ? ?] [? ? ? ?] [[[? [? ?]] [[ih1 ih2] [? [? ?]]]] [? [? ?]]].
-    simpl in *.
-    intuition eauto.
-    + eapply ih1. all: auto.
-    + eapply ih2. all: auto.
-  - constructor.
-    assert (
-      w1 :
-        All (fun def => T.wf (dtype def) /\ T.wf (dbody def)) m
-    ).
-    { eapply Forall_All. inversion wt. assumption. }
-    assert (
-      w2 :
-        All (fun def => T.wf (dtype def) /\ T.wf (dbody def)) mfix'
-    ).
-    { eapply Forall_All. inversion wu. assumption. }
-    pose proof (All2_All_mix_left X a) as h1. simpl in h1.
-    pose proof (All2_All_mix_left w1 h1) as h2.
-    pose proof (All2_All_mix_right w2 h2) as h3.
-    simpl in h3.
-    eapply All2_map.
-    eapply All2_impl. 1: exact h3.
-    simpl.
-    intros [? ? ? ?] [? ? ? ?] [[[? ?] [[ih1 ih2] [? [? ?]]]] [? ?]].
-    simpl in *.
-    intuition eauto.
-    + eapply ih1. all: auto.
-    + eapply ih2. all: auto.
-Qed.
-
-Lemma trans_eq_term_list :
-  forall φ l l',
-    List.Forall T.wf l ->
-    List.Forall T.wf l' ->
-    All2 (TTy.eq_term φ) l l' ->
-    All2 (eq_term φ) (List.map trans l) (List.map trans l').
-Proof.
-  intros φ l l' w w' h.
-  eapply All2_map.
-  apply Forall_All in w. apply Forall_All in w'.
-  pose proof (All2_All_mix_left w h) as h1.
-  pose proof (All2_All_mix_right w' h1) as h2.
-  simpl in h2.
-  apply (All2_impl h2).
-  intuition auto using trans_eq_term.
-Qed.
-
 Lemma leq_term_mkApps ϕ t u t' u' :
   eq_term ϕ t t' -> All2 (eq_term ϕ) u u' ->
   leq_term ϕ (mkApps t u) (mkApps t' u').
@@ -742,7 +575,7 @@ Proof.
       * assumption.
 Qed.
 
-(* TODO REMOVE trans_eq_term *)
+
 Lemma trans_eq_term_upto_univ :
   forall Re Rle t u,
     T.wf t ->
@@ -752,11 +585,10 @@ Lemma trans_eq_term_upto_univ :
 Proof.
   intros Re Rle  t u wt wu e.
   induction t using Induction.term_forall_list_rect in Rle, wt, u, wu, e |- *.
-  all: dependent destruction e.
-  all: simpl.
+  all: invs e; cbn.
   all: try solve [ constructor ; auto ].
   all: try solve [
-    constructor ;
+    repeat constructor ;
     match goal with
     | ih : forall Rle (u : Tterm), _ |- _ =>
       eapply ih ; [
@@ -771,7 +603,7 @@ Proof.
     { eapply Forall_All. inversion wt. assumption. }
     assert (w2 : All T.wf args').
     { eapply Forall_All. inversion wu. assumption. }
-    pose proof (All2_All_mix_left X a) as h1. simpl in h1.
+    pose proof (All2_All_mix_left X X0) as h1. simpl in h1.
     pose proof (All2_All_mix_left w1 h1) as h2.
     pose proof (All2_All_mix_right w2 h2) as h3.
     simpl in h3.
@@ -781,22 +613,12 @@ Proof.
     intros ? ? [[? [ih ?]] ?].
     simpl in *.
     eapply ih. all: auto.
-  - constructor.
-    + constructor. 2: constructor.
-      eapply IHt2.
-      * inversion wt. assumption.
-      * inversion wu. assumption.
-      * assumption.
-    + eapply IHt1.
-      * inversion wt. assumption.
-      * inversion wu. assumption.
-      * assumption.
   - eapply eq_term_upto_univ_mkApps.
     + eapply IHt.
       * inversion wt. assumption.
       * inversion wu. assumption.
       * assumption.
-    + pose proof (All2_All_mix_left X a) as h.
+    + pose proof (All2_All_mix_left X X1) as h.
       simpl in h.
       assert (wl : Forall T.wf l).
       { inversion wt. assumption. }
@@ -827,7 +649,7 @@ Proof.
     { eapply Forall_All. inversion wt. assumption. }
     assert (wbrs' : All (T.wf ∘ snd) brs').
     { eapply Forall_All. inversion wu. assumption. }
-    pose proof (All2_All_mix_left X a) as h1. simpl in h1.
+    pose proof (All2_All_mix_left X X2) as h1. simpl in h1.
     pose proof (All2_All_mix_left wl h1) as h2.
     pose proof (All2_All_mix_right wbrs' h2) as h3.
     simpl in h3.
@@ -855,7 +677,7 @@ Proof.
         ) mfix'
     ).
     { eapply Forall_All. inversion wu. assumption. }
-    pose proof (All2_All_mix_left X a) as h1. simpl in h1.
+    pose proof (All2_All_mix_left X X0) as h1. simpl in h1.
     pose proof (All2_All_mix_left w1 h1) as h2.
     pose proof (All2_All_mix_right w2 h2) as h3.
     simpl in h3.
@@ -876,7 +698,7 @@ Proof.
         All (fun def => T.wf (dtype def) /\ T.wf (dbody def)) mfix'
     ).
     { eapply Forall_All. inversion wu. assumption. }
-    pose proof (All2_All_mix_left X a) as h1. simpl in h1.
+    pose proof (All2_All_mix_left X X0) as h1. simpl in h1.
     pose proof (All2_All_mix_left w1 h1) as h2.
     pose proof (All2_All_mix_right w2 h2) as h3.
     simpl in h3.
@@ -894,6 +716,31 @@ Lemma trans_leq_term ϕ T U :
 Proof.
   intros HT HU H.
   eapply trans_eq_term_upto_univ ; eauto.
+Qed.
+
+Lemma trans_eq_term φ t u :
+    T.wf t -> T.wf u -> TTy.eq_term φ t u ->
+    eq_term φ (trans t) (trans u).
+Proof.
+  intros HT HU H.
+  eapply trans_eq_term_upto_univ ; eauto.
+Qed.
+
+Lemma trans_eq_term_list :
+  forall φ l l',
+    List.Forall T.wf l ->
+    List.Forall T.wf l' ->
+    All2 (TTy.eq_term φ) l l' ->
+    All2 (eq_term φ) (List.map trans l) (List.map trans l').
+Proof.
+  intros φ l l' w w' h.
+  eapply All2_map.
+  apply Forall_All in w. apply Forall_All in w'.
+  pose proof (All2_All_mix_left w h) as h1.
+  pose proof (All2_All_mix_right w' h1) as h2.
+  simpl in h2.
+  apply (All2_impl h2).
+  intuition auto using trans_eq_term.
 Qed.
 
 (* Lemma wf_mkApps t u : T.wf (T.mkApps t u) -> List.Forall T.wf u. *)
@@ -918,7 +765,7 @@ Qed.
 
 Lemma trans_iota_red pars ind c u args brs :
   T.wf (Template.Ast.mkApps (Template.Ast.tConstruct ind c u) args) ->
-  List.Forall (compose T.wf snd) brs ->
+  List.Forall (T.wf ∘ snd) brs ->
   trans (TTy.iota_red pars c args brs) =
   iota_red pars c (List.map trans args) (List.map (on_snd trans) brs).
 Proof.
@@ -1013,7 +860,7 @@ Lemma refine_red1_Γ Σ Γ Γ' t u : Γ = Γ' -> red1 Σ Γ t u -> red1 Σ Γ' t
 Proof.
   intros ->. trivial.
 Qed.
-Ltac wf_inv H := try apply wf_inv in H; simpl in H; repeat destruct_conjs.
+Ltac wf_inv H := try apply wf_inv in H; simpl in H; rdest.
 
 Lemma trans_red1 Σ Γ T U :
   TTy.on_global_env (fun Σ => wf_decl_pred) Σ ->
@@ -1072,7 +919,7 @@ Proof.
 
   - constructor. solve_all.
     apply OnOne2_map. apply (OnOne2_All_mix_left H1) in X. clear H1.
-    solve_all. red. unfold compose in *. simpl in *.
+    solve_all. red. simpl in *.
     intuition eauto.
     apply b2. all: solve_all.
 
@@ -1419,17 +1266,16 @@ Proof.
     econstructor; eauto.
     eapply fix_guard_trans. assumption.
     now rewrite nth_error_map H0.
-    -- unfold app_context, trans_local.
-       rewrite H1. unfold trans_local.
-       rewrite -map_app.
-       eapply trans_wf_local_env. eapply X.
+    -- eapply trans_wf_local; eauto.
+    -- eapply All_map, (All_impl X0).
+       intros x [s [Hs Hts]].
+       now exists s.
     -- apply All_map. eapply All_impl; eauto.
-       unfold compose. simpl. intuition eauto 3 with wf.
+       intuition eauto 3 with wf; cbn.
        rewrite H1. rewrite /trans_local map_length.
-       unfold Template.Ast.app_context in b.
-       rewrite /trans_local map_app in b.
-       rewrite <- trans_lift. apply b.
-       destruct (dbody x); simpl in *; congruence.
+       rewrite /trans_local map_app in X2.
+       rewrite <- trans_lift. apply X2.
+       rdest. destruct (dbody x); simpl in *; congruence.
     -- destruct decl; reflexivity.
 
   - eapply refine_type.
@@ -1441,16 +1287,15 @@ Proof.
       simpl. rewrite trans_lift. reflexivity. }
     econstructor; eauto.
     now rewrite nth_error_map H.
-    -- unfold app_context, trans_local.
-       rewrite H1. unfold trans_local.
-       rewrite <- map_app.
-       eapply trans_wf_local_env. eauto.
+    -- eapply trans_wf_local; eauto.
+    -- eapply All_map, (All_impl X0).
+       intros x [s [Hs Hts]]. now exists s.
     -- apply All_map. eapply All_impl; eauto.
-       unfold compose. simpl. intuition eauto 3 with wf.
+       intuition eauto 3 with wf.
        rewrite H1. rewrite /trans_local map_length.
-       unfold Template.Ast.app_context in b.
-       rewrite /trans_local map_app in b.
-       rewrite <- trans_lift. apply b.
+       unfold Template.Ast.app_context in X2.
+       rewrite /trans_local map_app in X2.
+       cbn. rewrite <- trans_lift. apply X2.
     -- destruct decl; reflexivity.
 
   - assert (T.wf B).

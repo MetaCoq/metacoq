@@ -1,4 +1,5 @@
-From Coq Require Import List.
+From Coq Require Import List ssreflect Arith.
+From MetaCoq Require Import MCList MCProd.
 
 Definition option_get {A} (default : A) (x : option A) : A
   := match x with
@@ -64,4 +65,29 @@ Lemma option_map_ext {A B} (f g : A -> B) (H : forall x, f x = g x)
   : forall z, option_map f z = option_map g z.
 Proof.
   intros []; cbn; congruence.
+Qed.
+
+Lemma nth_map_option_out {A B} (f : nat -> A -> option B) l l' i t : map_option_out (mapi f l) = Some l' ->
+  nth_error l' i = Some t ->
+  (∑ x, (nth_error l i = Some x) /\ (f i x = Some t)).
+Proof.
+  unfold mapi.
+  rewrite -{3}(Nat.add_0_r i).
+  generalize 0.
+  induction l in i, l' |- *; intros n; simpl. intros [= <-]. rewrite nth_error_nil; discriminate.
+  simpl. destruct (f n a) eqn:Heq => //.
+  destruct (map_option_out (mapi_rec f l (S n))) eqn:Heq' => //.
+  intros [= <-].
+  destruct i; simpl. intros [= ->]. now exists a.
+  specialize (IHl _ i _ Heq').
+  now rewrite plus_n_Sm.
+Qed.
+
+Lemma map_option_out_length {A} (l : list (option A)) l' : map_option_out l = Some l' -> #|l| = #|l'|.
+Proof.
+  induction l in l' |- * => /=.
+  now move=> [=] <-.
+  simpl. destruct a; try discriminate.
+  destruct map_option_out eqn:Heq; try discriminate.
+  move=> [=] <-. by rewrite (IHl l0 eq_refl).
 Qed.

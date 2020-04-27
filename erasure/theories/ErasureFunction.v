@@ -3,7 +3,8 @@ From Coq Require Import Bool String List Program.
 From MetaCoq.Template Require Import config utils monad_utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICTyping PCUICLiftSubst PCUICInversion
-     PCUICConfluence PCUICCumulativity PCUICSR PCUICNormal PCUICSafeLemmata
+     PCUICConfluence PCUICConversion 
+     PCUICCumulativity PCUICSR PCUICNormal PCUICSafeLemmata
      PCUICValidity PCUICPrincipality PCUICElimination PCUICSN.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker.
 From Equations Require Import Equations.
@@ -393,8 +394,8 @@ Program Definition is_erasable (Sigma : PCUICAst.global_env_ext) (HΣ : ∥wf_ex
 .
 Next Obligation. sq; eauto. Qed.
 Next Obligation.
-  sq. eapply PCUICValidity.validity in X as [_]; eauto.  destruct i.
-  right. sq. eauto. destruct i. econstructor. econstructor. eauto.
+  sq. eapply wat_wellformed. sq;auto.
+  sq. now eapply PCUICValidity.validity in X.
 Qed.
 Next Obligation.
   destruct H as (? & ? & ?).
@@ -403,8 +404,7 @@ Next Obligation.
 Qed.
 Next Obligation. sq; eauto. Qed.
 Next Obligation.
-  sq. eapply PCUICValidity.validity in X as [_]; eauto.  destruct i.
-  econstructor 2. sq. eauto. destruct i. econstructor. econstructor. eauto.
+  sq. apply wat_wellformed. sq;auto. now eapply PCUICValidity.validity in X.
 Qed.
 Next Obligation.
   sq. econstructor. split. eauto.
@@ -575,7 +575,6 @@ Lemma erases_erase (Σ : global_env_ext) Γ t T (wfΣ : ∥wf_ext Σ∥) (wfΓ :
   erases Σ Γ t t'.
 Proof.
   intros. sq.
-  (* pose proof (typing_wf_local X0). *)
 
 
   pose (wfΣ' := sq w).
@@ -584,11 +583,13 @@ Proof.
 
   revert H.
   generalize wfΣ' wfΓ'. clear wfΣ' wfΓ'.
+  clear a.
 
-  revert Γ a t T X t'.
+  revert Γ t T X t'.
   eapply(typing_ind_env (fun Σ Γ t T =>   forall (t' : E.term) (wfΣ' : ∥ wf_ext Σ ∥) (wfΓ' : ∥ wf_local Σ Γ ∥),
   erase Σ wfΣ' Γ wfΓ' t = Checked t' -> Σ;;; Γ |- t ⇝ℇ t'
-         )); intros.
+         )
+         (fun Σ Γ wfΓ => wf_local Σ Γ)); intros; auto.
 
   all:eauto.
 
@@ -635,9 +636,9 @@ Proof.
     unfold erase_mfix in *.
     repeat destruct ?; try congruence.
     pose proof (Prelim.monad_map_All2 _ _ _ mfix a1 E1).
-    eapply All2_impl. eapply All2_All_mix_left. exact X0. eassumption.
+    eapply All2_impl. eapply All2_All_mix_left. exact X1. eassumption.
 
-    intros. destruct X2. cbn in *. unfold bind in e. cbn in e.
+    intros. destruct X3. cbn in *. unfold bind in e. cbn in e.
     repeat destruct ?; try congruence; inv e.
 
     cbn. repeat split; eauto.

@@ -298,34 +298,6 @@ Proof.
   split; [assumption|]. split; [assumption| trivial].
 Defined.
 
-Definition strengthening_wf_local_rel `{cf : checker_flags} Σ Γ1 Γ2 Γ3 Γ4 :
-  wf Σ.1 -> wf_local_rel Σ Γ1 (Γ2 ,,, Γ3 ,,, lift_context #|Γ3| 0 Γ4)
-  -> wf_local_rel Σ Γ1 (Γ2 ,,, Γ4).
-Proof.
-  intros HΣ H.
-  eapply wf_local_rel_app in H; destruct H as [H1 H2].
-  eapply wf_local_rel_app in H1; destruct H1 as [H1 H1'].
-  eapply wf_local_rel_app_inv. assumption.
-  revert H2. clear -HΣ. induction Γ4. intros; constructor.
-  intro H. rewrite lift_context_snoc0 in H.
-  destruct a as [na [b|] ty].
-  - unfold lift_decl, map_decl in H; cbn in H.
-    destruct (wf_local_rel_inv H _ _ eq_refl) as [H1 [H2 H3]]; cbn in *.
-    rewrite Nat.add_0_r in *.
-    rewrite app_context_assoc in *.
-    econstructor.
-    + easy.
-    + cbn. exists H2.π1. eapply strengthening. assumption. exact H2.π2.
-    + cbn. eapply strengthening; eassumption.
-  - unfold lift_decl, map_decl in H; cbn in H.
-    destruct (wf_local_rel_inv H _ _ eq_refl) as [H1 [[u H2] _]]; cbn in *.
-    rewrite Nat.add_0_r in H2.
-    rewrite app_context_assoc in H2.
-    econstructor. easy.
-    exists u. eapply strengthening; eassumption.
-Qed.
-
-
 Definition wf_local_app_inv `{cf : checker_flags} {Σ Γ1 Γ2} :
   wf_local Σ Γ1 -> wf_local_rel Σ Γ1 Γ2
   -> wf_local Σ (Γ1 ,,, Γ2).
@@ -885,26 +857,23 @@ Section Typecheck.
       match nth_error mfix n with
       | None => raise (IllFormedFix mfix n)
       | Some decl =>
-        XX <- (fix check_types (mfix : mfixpoint term) acc (Hacc : ∥ wf_local_rel Σ Γ acc ∥) {struct mfix}
-              : typing_result (∥ wf_local_rel Σ (Γ ,,, acc) (fix_context_i #|acc| mfix) ∥)
+        XX <- (fix check_types (mfix : mfixpoint term) {struct mfix}
+              : typing_result (∥ All (fun x => isType Σ Γ (dtype x)) mfix ∥)
               := match mfix with
-                 | [] => ret (sq wf_local_rel_nil)
+                 | [] => ret (sq All_nil)
                  | def :: mfix =>
        (* probably not tail recursive but needed so that next line terminates *)
                    W <- infer_type infer Γ HΓ (dtype def) ;;
-                   let W' := weakening_sq acc _ _ W.π2 in
-                   Z <- check_types mfix
-                     (acc ,, vass (dname def) ((lift0 #|acc|) (dtype def)))
-                     (wf_local_rel_abs_sq Hacc (W.π1; W')) ;;
-                   ret (wf_local_rel_app_inv_sq
-                          (wf_local_rel_abs_sq (sq wf_local_rel_nil) (W.π1; W')) Z)
+                   Z <- check_types mfix ;;
+                   ret _
                  end)
-           mfix [] (sq wf_local_rel_nil);;
+           mfix ;;
         YY <- (fix check_bodies (mfix' : mfixpoint term)
-                  (XX' : ∥ wf_local_rel Σ Γ (fix_context mfix') ∥) {struct mfix'}
- : typing_result (All (fun d =>
- ∥ Σ ;;; Γ ,,, fix_context mfix |- dbody d : (lift0 #|fix_context mfix|) (dtype d) ∥
-   /\ isLambda (dbody d) = true) mfix')
+              (XX : ∥ All (fun x => isType Σ Γ (dtype x)) mfix' ∥)
+            {struct mfix'}
+                : typing_result (All (fun d =>
+              ∥ Σ ;;; Γ ,,, fix_context mfix |- dbody d : (lift0 #|fix_context mfix|) (dtype d) ∥
+              /\ isLambda (dbody d) = true) mfix')
               := match mfix' with
                  | [] => ret All_nil
                  | def :: mfix' =>
@@ -925,25 +894,22 @@ Section Typecheck.
       match nth_error mfix n with
       | None => raise (IllFormedFix mfix n)
       | Some decl =>
-        XX <- (fix check_types (mfix : mfixpoint term) acc (Hacc : ∥ wf_local_rel Σ Γ acc ∥) {struct mfix}
-              : typing_result (∥ wf_local_rel Σ (Γ ,,, acc) (fix_context_i #|acc| mfix) ∥)
-              := match mfix with
-                 | [] => ret (sq wf_local_rel_nil)
-                 | def :: mfix =>
-       (* probably not tail recursive but needed so that next line terminates *)
-                   W <- infer_type infer Γ HΓ (dtype def) ;;
-                   let W' := weakening_sq acc _ _ W.π2 in
-                   Z <- check_types mfix
-                     (acc ,, vass (dname def) ((lift0 #|acc|) (dtype def)))
-                     (wf_local_rel_abs_sq Hacc (W.π1; W')) ;;
-                   ret (wf_local_rel_app_inv_sq
-                          (wf_local_rel_abs_sq (sq wf_local_rel_nil) (W.π1; W')) Z)
-                 end)
-           mfix [] (sq wf_local_rel_nil);;
-        YY <- (fix check_bodies (mfix' : mfixpoint term) (XX' : ∥ wf_local_rel Σ Γ (fix_context mfix') ∥) {struct mfix'}
- : typing_result (All (fun d =>
- ∥ Σ ;;; Γ ,,, fix_context mfix |- dbody d : (lift0 #|fix_context mfix|) (dtype d) ∥
-   ) mfix')
+        XX <-  (fix check_types (mfix : mfixpoint term) {struct mfix}
+        : typing_result (∥ All (fun x => isType Σ Γ (dtype x)) mfix ∥)
+        := match mfix with
+           | [] => ret (sq All_nil)
+           | def :: mfix =>
+ (* probably not tail recursive but needed so that next line terminates *)
+             W <- infer_type infer Γ HΓ (dtype def) ;;
+             Z <- check_types mfix ;;
+             ret _
+           end)
+         mfix ;;
+        YY <- (fix check_bodies (mfix' : mfixpoint term)
+        (XX' : ∥ All (fun x => isType Σ Γ (dtype x)) mfix' ∥)
+        {struct mfix'}
+        : typing_result (All (fun d =>
+            ∥ Σ ;;; Γ ,,, fix_context mfix |- dbody d : (lift0 #|fix_context mfix|) (dtype d) ∥) mfix')
               := match mfix' with
                  | [] => ret All_nil
                  | def :: mfix' =>
@@ -1116,25 +1082,19 @@ Section Typecheck.
   Defined.
 
   (* tFix *)
-  Next Obligation. sq; now eapply All_local_env_app_inv. Defined.
-  Next Obligation. sq; now eapply All_local_env_app_inv. Defined.
+  Next Obligation. sq. constructor; auto. exists W; auto. Defined.
+  Next Obligation. sq. now eapply PCUICWeakening.All_mfix_wf in XX0. Defined.
   Next Obligation.
-    sq. cbn in *.
-    apply wf_local_rel_app, fst in XX'. rewrite lift0_p in XX'.
-    inversion XX'; subst. destruct X0 as [s HH].
+    sq. cbn in *. depelim XX.
+    destruct i as [s HH].
     right. exists s.
     change (tSort s) with (lift0 #|fix_context mfix| (tSort s)).
     apply weakening; try assumption.
-    apply wf_local_app_inv; assumption.
+    now apply All_mfix_wf.
   Defined.
   Next Obligation.
-    clear -XX' HΣ. sq.
-    change (wf_local_rel Σ Γ ([vass (dname def) ((lift0 0) (dtype def))] ,,, fix_context_i 1 mfix')) in XX'.
-    rewrite lift0_p in XX'.
-    pose proof (lift_fix_context mfix' 0 1 0) as e; cbn in e;
-      rewrite e in XX' by reflexivity; clear e.
-    pose proof (strengthening_wf_local_rel Σ Γ [] [vass (dname def) (dtype def)] (fix_context mfix')) as Y.
-    now rewrite !app_context_nil_l in Y.
+    clear -XX HΣ. sq.
+    now depelim XX.
   Qed.
   Next Obligation.
     assert (∥ All (fun d => ((Σ;;; Γ ,,, fix_context mfix |- dbody d : (lift0 #|fix_context mfix|) (dtype d)) * (isLambda (dbody d) = true))%type) mfix ∥). {
@@ -1142,35 +1102,30 @@ Section Typecheck.
       cbn; intros ? []. sq; now constructor. }
     sq; econstructor; try eassumption.
     symmetry; eassumption.
-    now eapply All_local_env_app_inv.
   Qed.
 
   (* tCoFix *)
-  Next Obligation. sq; now eapply All_local_env_app_inv. Defined.
-  Next Obligation. sq; now eapply All_local_env_app_inv. Defined.
+  Next Obligation. sq. constructor; auto. exists W; auto. Defined.
+  Next Obligation. sq. now eapply PCUICWeakening.All_mfix_wf in XX. Defined.
   Next Obligation.
-    sq. cbn in *.
-    apply wf_local_rel_app, fst in XX'. rewrite lift0_p in XX'.
-    inversion XX'; subst. destruct X0 as [s HH].
-    right. exists s. change (tSort s) with (lift0 #|fix_context mfix| (tSort s)).
+    sq. cbn in *. depelim XX'.
+    destruct i as [s HH].
+    right. exists s.
+    change (tSort s) with (lift0 #|fix_context mfix| (tSort s)).
     apply weakening; try assumption.
-    apply wf_local_app_inv; assumption.
+    now apply All_mfix_wf.
   Defined.
   Next Obligation.
     clear -XX' HΣ. sq.
-    change (wf_local_rel Σ Γ ([vass (dname def) ((lift0 0) (dtype def))] ,,, fix_context_i 1 mfix')) in XX'.
-    rewrite lift0_p in XX'.
-    pose proof (lift_fix_context mfix' 0 1 0) as e; cbn in e;
-      rewrite e in XX' by reflexivity; clear e.
-    pose proof (strengthening_wf_local_rel Σ Γ [] [vass (dname def) (dtype def)] (fix_context mfix')) as Y.
-    now rewrite !app_context_nil_l in Y.
-  Defined.
+    now depelim XX'.
+  Qed.
   Next Obligation.
-    apply All_sq in YY.
-    sq. econstructor; eauto.
-    now eapply All_local_env_app_inv.
-  Defined.
-
+    assert (∥ All (fun d => ((Σ;;; Γ ,,, fix_context mfix |- dbody d : (lift0 #|fix_context mfix|) (dtype d)))%type) mfix ∥). {
+      eapply All_sq, All_impl.  exact YY.
+      now cbn; intros ? []. }
+    sq; econstructor; try eassumption.
+    symmetry; eassumption.
+  Qed.
 
   Lemma sq_wfl_nil : ∥ wf_local Σ [] ∥.
   Proof.

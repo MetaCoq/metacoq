@@ -192,7 +192,7 @@ Instance param : Translation :=
 
 (* EXAMPLES *)
 
-Run TemplateProgram (
+MetaCoq Run (
   typ <- tmQuote (forall A, A -> A) ;;
   typ' <- tmEval all (tsl_rec1 [] typ) ;;
   tm <- tmQuote (fun A (x : A) => x) ;;
@@ -201,7 +201,7 @@ Run TemplateProgram (
   tmUnquote tm' >>= tmDebug
 ).
 
-Run TemplateProgram (
+MetaCoq Run (
   typ <- tmQuote (forall A B, B -> (A -> B -> B) -> B) ;;
   typ' <- tmEval all (tsl_rec1 [] typ) ;;
   t   <- tmQuote (fun {A B} (x:B) (f : A -> B -> B) => x) ;;
@@ -209,22 +209,22 @@ Run TemplateProgram (
   tmUnquote (tApp typ' [t; t]) >>= tmDebug
 ).
 
-Run TemplateProgram (TC <- Translate emptyTC "nat" ;;
+MetaCoq Run (TC <- Translate emptyTC "nat" ;;
                      tmDefinition "nat_TC" TC).
 
-Run TemplateProgram (TC <- Translate nat_TC "bool" ;;
+MetaCoq Run (TC <- Translate nat_TC "bool" ;;
                      tmDefinition "bool_TC" TC).
 
-Run TemplateProgram (TC <- Translate bool_TC "list" ;;
+MetaCoq Run (TC <- Translate bool_TC "list" ;;
                      tmDefinition "list_TC" TC).
 
 Module FreeTheorems.
 
   Definition HD := forall X, list X -> X.
-  Run TemplateProgram (Translate list_TC "HD").
+  MetaCoq Run (Translate list_TC "HD").
 
   Definition MAP := forall X, list X -> list X.
-  Run TemplateProgram (Translate list_TC "MAP").
+  MetaCoq Run (Translate list_TC "MAP").
 
   (* taken from coq-community/paramcoq *)
   Definition graph {A B} (f : A -> B) := fun x y => f x = y.

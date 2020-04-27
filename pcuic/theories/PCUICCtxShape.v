@@ -1,14 +1,14 @@
-From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
+From Coq Require Import Bool String List BinPos Compare_dec Arith Lia
      Classes.CRelationClasses ProofIrrelevance.
 From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
      AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
      PCUICCumulativity PCUICPosition PCUICEquality PCUICNameless
-     PCUICAlpha PCUICNormal PCUICInversion PCUICCumulativity PCUICReduction
-     PCUICConfluence PCUICConversion PCUICContextConversion PCUICValidity
+     PCUICNormal PCUICInversion PCUICCumulativity PCUICReduction
+     PCUICConfluence PCUICConversion PCUICContextConversion
      PCUICParallelReductionConfluence PCUICWeakeningEnv
-     PCUICClosed PCUICPrincipality PCUICSubstitution
+     PCUICClosed PCUICSubstitution
      PCUICWeakening PCUICGeneration PCUICUtils.
 
 From Equations Require Import Equations.
@@ -43,6 +43,38 @@ Proof.
   induction 1; simpl; try constructor.
   apply same_ctx_shape_app; auto. repeat constructor.
   apply same_ctx_shape_app; auto. repeat constructor.
+Qed.
+
+Lemma to_extended_list_k_eq Γ Γ' n : same_ctx_shape Γ Γ' -> 
+  to_extended_list_k Γ n = to_extended_list_k Γ' n.
+Proof.
+  unfold to_extended_list_k.
+  intros s.
+  generalize (@nil term). induction s in n |- *; simpl; auto.
+Qed.
+
+Lemma to_extended_list_eq Γ Γ' : same_ctx_shape Γ Γ' -> 
+  to_extended_list Γ = to_extended_list Γ'.
+Proof.
+  unfold to_extended_list. apply to_extended_list_k_eq.
+Qed.
+
+Hint Constructors context_relation : core.
+
+Lemma same_ctx_shape_refl Γ : same_ctx_shape Γ Γ.
+Proof. induction Γ. constructor; auto.
+  destruct a as [? [?|] ?]; constructor; simpl; auto; constructor.
+Qed.
+
+Lemma same_ctx_shape_map Γ Γ' f f' : same_ctx_shape Γ Γ' ->
+  same_ctx_shape (map_context f Γ) (map_context f' Γ').
+Proof. induction 1; constructor; auto. Qed.
+
+Lemma same_ctx_shape_subst Γ Γ' s k s' k' : same_ctx_shape Γ Γ' ->
+  same_ctx_shape (subst_context s k Γ) (subst_context s' k' Γ').
+Proof. move=> same. induction same in s, k |- *. constructor; auto.
+  rewrite !subst_context_snoc. constructor; auto. apply IHsame.
+  rewrite !subst_context_snoc. constructor; auto. apply IHsame.
 Qed.
 
 Lemma context_assumptions_app Γ Γ' : context_assumptions (Γ ++ Γ')%list = 

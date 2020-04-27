@@ -45,10 +45,8 @@ Qed.
 Lemma snd_on_snd {A B C} (f : B -> C) (p : A * B) : snd (on_snd f p) = f (snd p).
 Proof. destruct p; reflexivity. Qed.
 
-Require Import Program.
-
 Lemma compose_on_snd {A B C D} (f : C -> D) (g : B -> C) :
-  compose (A:=A * B) (on_snd f) (on_snd g) = on_snd (compose f g).
+  (fun (x : A * B) => (on_snd f) (on_snd g x)) = on_snd (fun x => f (g x)).
 Proof.
   reflexivity.
 Qed.

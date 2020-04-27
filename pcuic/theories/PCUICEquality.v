@@ -1,13 +1,14 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool List Program Arith
-   CMorphisms.
+From Coq Require Import Bool List Arith CMorphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst.
 
 Require Import ssreflect.
+From Equations.Prop Require Import DepElim.
 Set Equations With UIP.
+
 
 Local Open Scope type_scope.
 
@@ -402,9 +403,6 @@ Proof.
   induction u in v, n, k, e, Rle |- * using term_forall_list_ind.
   all: dependent destruction e.
   all: try (cbn ; constructor ; try lih ; assumption).
-  - cbn. destruct (Nat.leb_spec0 k n0).
-    + constructor.
-    + constructor.
   - cbn. constructor. solve_all.
   - cbn. constructor ; try lih ; try assumption. solve_all.
   - cbn. constructor.

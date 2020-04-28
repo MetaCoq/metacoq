@@ -17,6 +17,6 @@ Local Existing Instance config.default_checker_flags.
 (** Weak Normalization: every term has a normal form *)
 
 Definition normal (Σ : global_env_ext) Γ t := { u : _ & red1 Σ Γ t u } -> False.
-
+(* 
 Conjecture weak_normalization : forall (Σ : global_env_ext) Γ t T,
-    Σ ;;; Γ |- t : T -> { u & (red Σ Γ t u * normal Σ Γ u)%type }.
+    Σ ;;; Γ |- t : T -> { u & (red Σ Γ t u * normal Σ Γ u)%type }. *)

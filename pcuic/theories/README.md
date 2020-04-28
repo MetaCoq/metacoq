@@ -30,6 +30,8 @@
 
 | File             | Description                                               |
 |------------------|-----------------------------------------------------------|
+| [PCUICPretty]    |  Pretty-printing of PCUIC terms                           |
+| [PCUICSize]      |  Size function on PCUIC terms                             |
 | [PCUICTyping]    | Definition of reduction, conversion and typing            |
 | [PCUICReduction] | Results on reduction (including parallel reduction)       |
 | [PCUICPosition]  | Notions of position and stack, well-order on positions    |
@@ -46,14 +48,17 @@
 | [PCUICParallelReduction] | Definition of parallel reduction                  |
 | [PCUICParallelReductionConfluence] | Proof of confluence of the parallel reduction |
 | [PCUICConfluence] | Proof of confluence                                      |
-| [PCUICPrincipality] | Principality of typing                                 |
+| [PCUICContextConversion] | Proof of context conversion for typing and cumulativity  |
+| [PCUICPrincipality] | Principality of typing and invariance by syntactic (in)equality |
 | [PCUICUnivSubstitution] | Universe substitution lemmata                      |
 | [PCUICValidity] | Every type `A` such that `Γ ⊢ t : A` is *valid*, meaning it is sorted or a well-formed arity |
 | [PCUICSR] | Subject reduction |
+| [PCUICCSubst]    | Definition of closed (capturing) substitution             |
 | [PCUICWcbvEval] | Weak-head call-by-value evaluation strategy |
 | [PCUICMetaTheory] |   |
 
-
+[PCUICPretty]: PCUICPretty.v
+[PCUICSize]: PCUICSize.v
 [PCUICTyping]: PCUICTyping.v
 [PCUICReduction]: PCUICReduction.v
 [PCUICPosition]: PCUICPosition.v
@@ -70,10 +75,12 @@
 [PCUICParallelReduction]: PCUICParallelReduction.v
 [PCUICParallelReductionConfluence]: PCUICParallelReductionConfluence.v
 [PCUICConfluence]: PCUICConfluence.v
+[PCUICContextConversion]: PCUICContextConversion.v
 [PCUICPrincipality]: PCUICPrincipality.v
 [PCUICUnivSubstitution]: PCUICUnivSubstitution.v
 [PCUICValidity]: PCUICValidity.v
 [PCUICSR]: PCUICSR.v
+[PCUICCSubst]: PCUICCSubst.v
 [PCUICWcbvEval]: PCUICWcbvEval.v
 [PCUICMetaTheory]: PCUICMetaTheory.v
 
@@ -134,14 +141,8 @@ Some of the following files need to be sorted and/or explained.
 |--------------------|---------------------------------------------------------|
 | [Extraction]       |                                                         |
 | [PCUICAlpha]       | α-conversion (for printing annotations)                 |
-| [PCUICContextConversion] | Conversion of contexts                            |
 | [PCUICLoader]      |                                                         |
-| [PCUICPretty]      |                                                         |
-| [PCUICSize]        |                                                         |
 
 [Extraction]: Extraction.v
 [PCUICAlpha]: PCUICAlpha.v
-[PCUICContextConversion]: PCUICContextConversion.v
 [PCUICLoader]: PCUICLoader.v
-[PCUICPretty]: PCUICPretty.v
-[PCUICSize]: PCUICSize.v

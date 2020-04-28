@@ -385,6 +385,8 @@ Proof.
   - red in onP |- *. eapply All_local_env_impl; eauto.
 Qed.
 
+Local Open Scope list_scope.
+
 Lemma weakening_env_lookup_on_global_env `{checker_flags} P Σ Σ' c decl :
   weaken_env_prop P ->
   wf Σ' -> extends Σ Σ' -> on_global_env P Σ ->
@@ -525,6 +527,41 @@ Proof.
   intros. unfold declared_constant in *. rewrite H in H0.
   now inv H0.
 Qed.
+
+Lemma declared_inductive_inj `{cf : checker_flags} {Σ mdecl mdecl' ind idecl idecl'} :
+  declared_inductive Σ mdecl' ind idecl' ->
+  declared_inductive Σ mdecl ind idecl ->
+  mdecl = mdecl' /\ idecl = idecl'.
+Proof.
+  intros [] []. unfold declared_minductive in *.
+  rewrite H in H1. inversion H1. subst. rewrite H2 in H0. inversion H0. eauto.
+Qed.
+
+Lemma declared_constructor_inj `{cf : checker_flags} {Σ mdecl mdecl' idecl idecl' cdecl cdecl' c} :
+  declared_constructor Σ mdecl' idecl' c cdecl ->
+  declared_constructor Σ mdecl idecl c cdecl' ->
+  mdecl = mdecl' /\ idecl = idecl'  /\ cdecl = cdecl'.
+Proof.
+  intros [] []. 
+  destruct (declared_inductive_inj H H1); subst.
+  rewrite H0 in H2. intuition congruence.
+Qed.
+
+Lemma declared_projection_inj `{cf : checker_flags} {Σ mdecl mdecl' idecl idecl' pdecl pdecl' p} :
+  declared_projection Σ mdecl' idecl' p pdecl ->
+  declared_projection Σ mdecl idecl p pdecl' ->
+  mdecl = mdecl' /\ idecl = idecl'  /\ pdecl = pdecl'.
+Proof.
+  intros [] []. 
+  destruct (declared_inductive_inj H H1); subst.
+  destruct H0, H2.
+  rewrite H0 in H2. intuition congruence.
+Qed.
+
+Lemma declared_inductive_minductive Σ ind mdecl idecl :
+  declared_inductive Σ mdecl ind idecl -> declared_minductive Σ (inductive_mind ind) mdecl.
+Proof. now intros []. Qed.
+Hint Resolve declared_inductive_minductive : pcuic.
 
 Lemma on_declared_minductive `{checker_flags} {Σ ref decl} :
   wf Σ ->

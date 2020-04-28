@@ -34,26 +34,6 @@ Proof.
   rewrite rev_map_spec. rewrite -(map_length f l) -nth_error_rev ?map_length //.
   now rewrite nth_error_map.
 Qed.
-  
-Lemma declared_inductive_unique {Σ ind mdecl mdecl' idecl idecl'} : 
-  declared_inductive Σ mdecl ind idecl ->
-  declared_inductive Σ mdecl' ind idecl' ->
-  (mdecl = mdecl') * (idecl = idecl').
-Proof.
-  unfold declared_inductive, declared_minductive.
-  intros [-> ?] [eq ?].
-  noconf eq; split; congruence.
-Qed.
-
-Lemma declared_constructor_unique {Σ c mdecl mdecl' idecl idecl' cdecl cdecl'} : 
-  declared_constructor Σ mdecl idecl c cdecl ->
-  declared_constructor Σ mdecl' idecl' c cdecl' ->
-  (mdecl = mdecl') * (idecl = idecl') * (cdecl = cdecl').
-Proof.
-  unfold declared_constructor.
-  intros [? ?] [eq ?]. destruct (declared_inductive_unique H eq).
-  subst mdecl' idecl'. rewrite H0 in H1. intuition congruence.
-Qed.
 
 Lemma build_case_predicate_type_spec {cf:checker_flags} Σ ind mdecl idecl pars u ps pty :
   forall (o : on_ind_body (lift_typing typing) Σ (inductive_mind ind) mdecl (inductive_ind ind) idecl),
@@ -335,7 +315,21 @@ Proof.
   simpl. move=> [] <-. now simpl.
 Qed.
 
-Lemma declared_inductive_minductive Σ ind mdecl idecl :
-  declared_inductive Σ mdecl ind idecl -> declared_minductive Σ (inductive_mind ind) mdecl.
-Proof. now intros []. Qed.
-Hint Resolve declared_inductive_minductive : pcuic.
+Definition projection_context mdecl idecl ind := 
+  smash_context [] (PCUICEnvironment.ind_params mdecl),,
+       PCUICEnvironment.vass (nNamed (PCUICEnvironment.ind_name idecl))
+         (mkApps
+            (tInd
+               {|
+               inductive_mind := inductive_mind ind;
+               inductive_ind := inductive_ind ind |}
+               (polymorphic_instance (PCUICEnvironment.ind_universes mdecl)))
+            (PCUICEnvironment.to_extended_list
+               (smash_context [] (PCUICEnvironment.ind_params mdecl)))).
+
+Lemma projection_subslet {cf:checker_flags} Σ Γ mdecl idecl ind u c args : 
+  Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
+  subslet Σ Γ (c :: List.rev args) (projection_context mdecl idecl ind). 
+Proof.
+  todo "Projections"%string.
+Qed.

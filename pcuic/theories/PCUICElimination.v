@@ -28,35 +28,6 @@ Qed.
 
 Definition Is_proof `{cf : checker_flags} Σ Γ t := ∑ T u, Σ ;;; Γ |- t : T × Σ ;;; Γ |- T : tSort u × Universe.is_prop u.
 
-Lemma declared_inductive_inj `{cf : checker_flags} {Σ mdecl mdecl' ind idecl idecl'} :
-  declared_inductive Σ mdecl' ind idecl' ->
-  declared_inductive Σ mdecl ind idecl ->
-  mdecl = mdecl' /\ idecl = idecl'.
-Proof.
-  intros [] []. unfold declared_minductive in *.
-  rewrite H in H1. inversion H1. subst. rewrite H2 in H0. inversion H0. eauto.
-Qed.
-
-Lemma declared_constructor_inj `{cf : checker_flags} {Σ mdecl mdecl' idecl idecl' cdecl cdecl' c} :
-  declared_constructor Σ mdecl' idecl' c cdecl ->
-  declared_constructor Σ mdecl idecl c cdecl' ->
-  mdecl = mdecl' /\ idecl = idecl'  /\ cdecl = cdecl'.
-Proof.
-  intros [] []. 
-  destruct (declared_inductive_inj H H1); subst.
-  rewrite H0 in H2. noconf H2. intuition congruence.
-Qed.
-
-Lemma declared_projection_inj `{cf : checker_flags} {Σ mdecl mdecl' idecl idecl' pdecl pdecl' p} :
-  declared_projection Σ mdecl' idecl' p pdecl ->
-  declared_projection Σ mdecl idecl p pdecl' ->
-  mdecl = mdecl' /\ idecl = idecl'  /\ pdecl = pdecl'.
-Proof.
-  intros [] []. 
-  destruct (declared_inductive_inj H H1); subst.
-  destruct H0, H2.
-  rewrite H0 in H2. noconf H2. intuition congruence.
-Qed.
 
 Definition SingletonProp `{cf : checker_flags} (Σ : global_env_ext) (ind : inductive) :=
   forall mdecl idecl,
@@ -637,24 +608,6 @@ Context `{cf : checker_flags}.
 Variable Hcf : prop_sub_type = false.
 Variable Hcf' : check_univs = true.
 
-Definition projection_context mdecl idecl ind := 
-  smash_context [] (PCUICEnvironment.ind_params mdecl),,
-       PCUICEnvironment.vass (nNamed (PCUICEnvironment.ind_name idecl))
-         (mkApps
-            (tInd
-               {|
-               inductive_mind := inductive_mind ind;
-               inductive_ind := inductive_ind ind |}
-               (polymorphic_instance (PCUICEnvironment.ind_universes mdecl)))
-            (PCUICEnvironment.to_extended_list
-               (smash_context [] (PCUICEnvironment.ind_params mdecl)))).
-
-Lemma projection_subslet Σ Γ mdecl idecl ind u c args : 
-  Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
-  subslet Σ Γ (c :: List.rev args) (projection_context mdecl idecl ind). 
-Proof.
-  todo "Projections"%string.
-Qed.
 
 Lemma typing_leq_term (Σ : global_env_ext) Γ t t' T T' : 
   wf Σ.1 ->

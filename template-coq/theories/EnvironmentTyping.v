@@ -53,6 +53,12 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
 
   Definition universes_decl_of_decl := on_udecl_decl (fun x => x).
 
+  Definition abstract_instance decl :=
+    match decl with
+    | Monomorphic_ctx _ => Instance.empty
+    | Polymorphic_ctx auctx => UContext.instance (AUContext.repr auctx)
+    end.
+
   (* Definition LevelSet_add_list l := LevelSet.union (LevelSetProp.of_list l). *)
 
   Definition global_levels (Σ : global_env) : LevelSet.t :=
@@ -234,6 +240,9 @@ Module Type Typing (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E).
   Parameter Inline smash_context : context -> context -> context.
   Parameter Inline lift_context : nat -> nat -> context -> context.
   Parameter Inline subst_telescope : list term -> nat -> context -> context.
+  Parameter Inline lift : nat -> nat -> term -> term.
+  Parameter Inline subst : list term -> nat -> term -> term.
+  Parameter Inline inds : kername -> Instance.t -> list one_inductive_body -> list term. 
   Notation wf_local Σ Γ := (All_local_env (lift_typing typing Σ) Γ).
 
 End Typing.
@@ -281,55 +290,60 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
 
     Definition on_type Σ Γ T := P Σ Γ T None.
 
-    Record constructor_shape mdecl i idecl ctype cargs :=
+    Definition cdecl_type cdecl := cdecl.1.2.
+    Definition cdecl_args cdecl := cdecl.2.
+
+    (* A constructor shape is a decomposition of a constructor's type *)
+    Record constructor_shape :=
       { cshape_args : context;
         (* Arguments (with lets) *)
-        cshape_args_length : context_assumptions cshape_args = cargs;
-        (* Real (non-let) arguments bound by the constructor *)
-
-        cshape_concl_head := tRel (#|mdecl.(ind_bodies)|
-                                  - S i
-                                  + #|mdecl.(ind_params)|
-                                  + #|cshape_args|);
-        (* Conclusion head: reference to the current inductive in the block *)
 
         cshape_indices : list term;
         (* Indices of the constructor, whose length should be the real arguments
         length of the inductive *)
 
-        cshape_eq : ctype = it_mkProd_or_LetIn mdecl.(ind_params)
-                              (it_mkProd_or_LetIn cshape_args
-                                (mkApps cshape_concl_head
-                                (to_extended_list_k mdecl.(ind_params) #|cshape_args|
-                                  ++ cshape_indices)))
-        (* The type of the constructor canonically has this shape: parameters, real
-          arguments ending with a reference to the inductive applied to the
-          (non-lets) parameters and arguments *)
+        cshape_sort : Universe.t;
+        (* The sort bounding the arguments context (without lets) *)
       }.
-    Arguments cshape_args {mdecl i idecl ctype cargs}.
-    Arguments cshape_args_length {mdecl i idecl ctype cargs}.
-    Arguments cshape_indices {mdecl i idecl ctype cargs}.
-    Arguments cshape_eq {mdecl i idecl ctype cargs}.
 
     Open Scope type_scope.
 
-    Record on_constructor Σ mdecl i idecl ind_indices cdecl ind_ctor_sort := {
+    Record on_constructor Σ mdecl i idecl ind_indices cdecl (cshape : constructor_shape) := {
       (* cdecl.1 fresh ?? *)
-      cshape : constructor_shape mdecl i idecl cdecl.1.2 cdecl.2;            
-      on_ctype : on_type Σ (arities_context mdecl.(ind_bodies)) cdecl.1.2;
+      cstr_args_length : context_assumptions (cshape_args cshape) = cdecl_args cdecl;
+      
+      (* Real (non-let) arguments bound by the constructor *)
+      cstr_concl_head := tRel (#|mdecl.(ind_bodies)|
+      - S i
+      + #|mdecl.(ind_params)|
+      + #|cshape_args cshape|);
+      (* Conclusion head: reference to the current inductive in the block *)
+
+      cstr_eq : cdecl_type cdecl =
+       it_mkProd_or_LetIn mdecl.(ind_params)
+                          (it_mkProd_or_LetIn (cshape_args cshape)
+                              (mkApps cstr_concl_head
+                              (to_extended_list_k mdecl.(ind_params) #|cshape_args cshape|
+                                ++ cshape_indices cshape)));
+      (* The type of the constructor canonically has this shape: parameters, real
+        arguments ending with a reference to the inductive applied to the
+        (non-lets) parameters and arguments *)
+
+      on_ctype : on_type Σ (arities_context mdecl.(ind_bodies)) (cdecl_type cdecl);
       on_cargs : (* FIXME: there is some redundancy with the type_local_ctx *)
         type_local_ctx Σ (arities_context mdecl.(ind_bodies) ,,, mdecl.(ind_params))
-                      cshape.(cshape_args) ind_ctor_sort;
+                      cshape.(cshape_args) cshape.(cshape_sort);
       on_cindices : 
         ctx_inst Σ (arities_context mdecl.(ind_bodies) ,,, mdecl.(ind_params) ,,, cshape.(cshape_args))
                       cshape.(cshape_indices)
                       (List.rev (lift_context #|cshape.(cshape_args)| 0 ind_indices))
         }.
 
-    Arguments cshape {Σ mdecl i idecl ind_indices cdecl ind_ctor_sort}.
-    Arguments on_ctype {Σ mdecl i idecl ind_indices cdecl ind_ctor_sort}.
-    Arguments on_cargs {Σ mdecl i idecl ind_indices cdecl ind_ctor_sort}.
-    Arguments on_cindices {Σ mdecl i idecl ind_indices cdecl ind_ctor_sort}.
+    Arguments on_ctype {Σ mdecl i idecl ind_indices cdecl cshape}.
+    Arguments on_cargs {Σ mdecl i idecl ind_indices cdecl cshape}.
+    Arguments on_cindices {Σ mdecl i idecl ind_indices cdecl cshape}.
+    Arguments cstr_args_length {Σ mdecl i idecl ind_indices cdecl cshape}.
+    Arguments cstr_eq {Σ mdecl i idecl ind_indices cdecl cshape}.
 
     Definition on_constructors Σ mdecl i idecl ind_indices :=
       All2 (on_constructor Σ mdecl i idecl ind_indices).
@@ -345,20 +359,32 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
     
       Projection types have their parameter and argument contexts smashed to avoid
       costly computations during type-checking and reduction: we can just substitute
-      the instances of parameters and arguments without considering the presence of
-      let bindings in either of them. *)
+      the instances of parameters and the inductive value without considering the 
+      presence of let bindings. *)
 
-    Definition on_projection Σ mdecl i idecl ind_indices cdecl ind_ctor_sort
-              (o : on_constructor Σ mdecl i idecl ind_indices cdecl ind_ctor_sort)
-              (k : nat) (p : ident * term) :=
+    Fixpoint projs ind npars k :=
+      match k with
+      | 0 => []
+      | S k' => (tProj ((ind, npars), k') (tRel 0)) :: projs ind npars k'
+      end.
+
+    Definition on_projection mdecl mind i cshape (k : nat) (p : ident * term) :=
       let parctx := smash_context [] mdecl.(ind_params) in
-      let argctx := smash_context [] o.(cshape).(cshape_args) in
+      let argctx := smash_context [] cshape.(cshape_args) in
       let Γ := parctx ,,, (skipn (#|argctx| - k) argctx) in
-      on_type Σ Γ (snd p).
+      match nth_error argctx k return Type with
+      | None => False
+      | Some decl => 
+        let u := abstract_instance mdecl.(ind_universes) in
+        let ind := {| inductive_mind := mind; inductive_ind := i |} in
+        (** The stored projection type already has the references to the inductive
+          type substituted along with the previous arguments replaced by projections.s *)
+        snd p = subst (inds mind u mdecl.(ind_bodies)) 0
+              (subst (projs ind mdecl.(ind_npars) k) 0 
+                (lift 1 k (decl_type decl)))
+      end.
 
-    Record on_projections Σ mdecl i idecl (ind_indices : context) cdecl ind_ctor_sort
-      (o : on_constructor Σ mdecl i idecl ind_indices cdecl ind_ctor_sort) :=
-    
+    Record on_projections mdecl mind i idecl (ind_indices : context) cshape :=
       { on_projs_record : #|idecl.(ind_ctors)| = 1;
         (** The inductive must be a record *)
 
@@ -368,10 +394,10 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
         on_projs_elim : idecl.(ind_kelim) = InType;
         (** This ensures that all projections are definable *)
 
-        on_projs : Alli (on_projection Σ mdecl i idecl ind_indices cdecl ind_ctor_sort o) 0 idecl.(ind_projs) }.
+        on_projs : Alli (on_projection mdecl mind i cshape) 0 idecl.(ind_projs) }.
 
-    Definition check_constructors_smaller φ ind_ctors_sort ind_sort :=
-      Forall (fun s => leq_universe φ s ind_sort) ind_ctors_sort.
+    Definition check_constructors_smaller φ cshapes ind_sort :=
+      Forall (fun s => leq_universe φ (cshape_sort s) ind_sort) cshapes.
 
     (** This ensures that all sorts in kelim are lower
         or equal to the top elimination sort, if set.
@@ -380,7 +406,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
     Fixpoint elim_sort_prop_ind ind_ctors_sort :=
       match ind_ctors_sort with
       | [] => (* Empty inductive proposition: *) InType
-      | [ s ] => match universe_family s with
+      | [ s ] => match universe_family (cshape_sort s) with
                 | InProp => (* Not squashed: all arguments are in Prop  *)
                   (* This is singleton elimination *) InType
                 | _ => (* Squashed: some arguments are higher than Prop,
@@ -390,23 +416,23 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       end.
 
     Definition check_ind_sorts (Σ : global_env_ext)
-              params kelim ind_indices ind_ctors_sort ind_sort : Type :=
+              params kelim ind_indices cshapes ind_sort : Type :=
       match universe_family ind_sort with
       | InProp =>
         (** The inductive is declared in the impredicative sort Prop *)
         (** No universe-checking to do: any size of constructor argument is allowed,
             however elimination restrictions apply. *)
-        leb_sort_family kelim (elim_sort_prop_ind ind_ctors_sort)
+        leb_sort_family kelim (elim_sort_prop_ind cshapes)
       | _ =>
         (** The inductive is predicative: check that all constructors arguments are
             smaller than the declared universe. *)
-        check_constructors_smaller Σ ind_ctors_sort ind_sort
+        check_constructors_smaller Σ cshapes ind_sort
         × if indices_matter then
             type_local_ctx Σ params ind_indices ind_sort
           else True
       end.
 
-    Record on_ind_body Σ mdecl i idecl :=
+    Record on_ind_body Σ mind mdecl i idecl :=
       { (** The type of the inductive must be an arity, sharing the same params
             as the rest of the block, and maybe having a context of indices. *)
         ind_indices : context;
@@ -418,20 +444,20 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
         (** It must be well-typed in the empty context. *)
         onArity : on_type Σ [] idecl.(ind_type);
 
-        (** There is a sort bounding the indices and arguments for each constructor *)
-        ind_ctors_sort : list Universe.t;
+        (** The decompose shapes of each constructor *)
+        ind_cshapes : list constructor_shape;
 
         (** Constructors are well-typed *)
         onConstructors :
-          on_constructors Σ mdecl i idecl ind_indices idecl.(ind_ctors) ind_ctors_sort;
+          on_constructors Σ mdecl i idecl ind_indices idecl.(ind_ctors) ind_cshapes;
 
         (** Projections, if any, are well-typed *)
         onProjections :
           idecl.(ind_projs) <> [] ->
-          match onConstructors return Type with
-          | All2_nil => False
-          | All2_cons onc csort _ _ o _ =>
-            on_projections Σ mdecl i idecl ind_indices onc csort o
+          match ind_cshapes return Type with
+          | [ o ] =>
+            on_projections mdecl mind i idecl ind_indices o
+          | _ => False
           end;
 
         (** The universes and elimination sorts must be correct w.r.t.
@@ -439,7 +465,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
             are declared in [on_constructors]. *)
         ind_sorts :
           check_ind_sorts Σ mdecl.(ind_params) idecl.(ind_kelim)
-                          ind_indices ind_ctors_sort ind_sort;
+                          ind_indices ind_cshapes ind_sort;
       }.
 
     (** We allow empty blocks for simplicity
@@ -515,20 +541,17 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
 
   End GlobalMaps.
 
-  Arguments cshape_args {mdecl i idecl ctype cargs}.
-  Arguments cshape_args_length {mdecl i idecl ctype cargs}.
-  Arguments cshape_indices {mdecl i idecl ctype cargs}.
-  Arguments cshape_eq {mdecl i idecl ctype cargs}.
-  Arguments cshape {P Σ mdecl i idecl ind_indices cdecl ind_ctor_sort}.
-  Arguments on_ctype {P Σ mdecl i idecl ind_indices cdecl ind_ctor_sort}.
-  Arguments on_cargs {P Σ mdecl i idecl ind_indices cdecl ind_ctor_sort}.
-  Arguments on_cindices {P Σ mdecl i idecl ind_indices cdecl ind_ctor_sort}.
+  Arguments cstr_args_length {P Σ mdecl i idecl ind_indices cdecl cshape}.
+  Arguments cstr_eq {P Σ mdecl i idecl ind_indices cdecl cshape}.
+  Arguments on_ctype {P Σ mdecl i idecl ind_indices cdecl cshape}.
+  Arguments on_cargs {P Σ mdecl i idecl ind_indices cdecl cshape}.
+  Arguments on_cindices {P Σ mdecl i idecl ind_indices cdecl cshape}.
 
   Arguments ind_indices {_ P Σ mind mdecl i idecl}.
   Arguments ind_sort {_ P Σ mind mdecl i idecl}.
   Arguments ind_arity_eq {_ P Σ mind mdecl i idecl}.
+  Arguments ind_cshapes {_ P Σ mind mdecl i idecl}.
   Arguments onArity {_ P Σ mind mdecl i idecl}.
-  Arguments ind_ctors_sort {_ P Σ mind mdecl i idecl}.
   Arguments onConstructors {_ P Σ mind mdecl i idecl}.
   Arguments onProjections {_ P Σ mind mdecl i idecl}.
   Arguments ind_sorts {_ P Σ mind mdecl i idecl}.

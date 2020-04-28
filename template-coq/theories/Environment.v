@@ -15,7 +15,7 @@ Module Type Term.
   Parameter Inline tLambda : name -> term -> term -> term.
   Parameter Inline tLetIn : name -> term -> term -> term -> term.
   Parameter Inline tInd : inductive -> Instance.t -> term.
-
+  Parameter Inline tProj : projection -> term -> term.
   Parameter Inline mkApps : term -> list term -> term.
 
 End Term.

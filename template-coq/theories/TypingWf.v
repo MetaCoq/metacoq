@@ -1,9 +1,9 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List.
+From Coq Require Import Bool String List Arith Lia.
 From MetaCoq.Template Require Import config utils Ast AstUtils Induction LiftSubst
      UnivSubst Typing.
-
+Require Import ssreflect.
 Set Asymmetric Patterns.
 
 (** * Well-formedness of terms and types in typing derivations
@@ -283,6 +283,11 @@ Qed.
 
 Hint Resolve wf_inds : wf.
 
+Lemma wf_projs ind npars p : Forall Ast.wf (projs ind npars p).
+Proof.
+  unfold projs. induction p; constructor; wf.
+Qed.
+
 Ltac specialize_goal :=
   repeat match goal with
   | H : ?P -> _, H' : ?P |- _ => specialize (H H')
@@ -298,25 +303,6 @@ Proof.
   - destruct l; simpl in *; congruence.
   - destruct x; simpl in *; intuition eauto.
     destruct dbody; simpl in *; try discriminate. destruct Nat.leb; auto.
-Qed.
-
-Lemma declared_projection_wf {cf:checker_flags}:
-  forall (Σ : global_env) (p : projection) (u : Instance.t)
-         (mdecl : mutual_inductive_body) (idecl : one_inductive_body) (pdecl : ident * term),
-    declared_projection Σ mdecl idecl p pdecl ->
-    Forall_decls_typing (fun (_ : global_env_ext) (_ : context) (t T : term) => Ast.wf t /\ Ast.wf T) Σ ->
-    Ast.wf (subst_instance_constr u (snd pdecl)).
-Proof.
-  intros Σ p u mdecl idecl pdecl isdecl X.
-  destruct isdecl as [[Hmdecl Hidecl] Hpdecl].
-  eapply lookup_on_global_env in Hmdecl as [Σ' [wfΣ' prf]]; eauto. red in prf.
-  apply onInductives in prf.
-  eapply nth_error_alli in Hidecl; eauto. intuition auto.
-  destruct (onProjections Hidecl).
-  now eapply nth_error_Some_non_nil in H.
-  eapply nth_error_alli in on_projs; eauto. red in on_projs.
-  hnf in on_projs.
-  destruct on_projs as [s [Hs Hnpars]]. apply wf_subst_instance_constr. apply Hs.
 Qed.
 
 Lemma declared_inductive_wf {cf:checker_flags} :
@@ -339,7 +325,7 @@ Lemma declared_constructor_wf {cf:checker_flags}:
          (mdecl : mutual_inductive_body) (idecl : one_inductive_body) (cdecl : ident * term * nat),
     Forall_decls_typing (fun (_ : global_env_ext) (_ : context) (t T : term) => Ast.wf t /\ Ast.wf T) Σ ->
     declared_constructor Σ mdecl idecl (ind, i) cdecl ->
-    Ast.wf (snd (fst cdecl)).
+    Ast.wf (cdecl_type cdecl).
 Proof.
   intros Σ ind i u mdecl idecl cdecl X isdecl.
   destruct isdecl as [[Hmdecl Hidecl] Hcdecl]. red in Hmdecl.
@@ -348,8 +334,80 @@ Proof.
   eapply nth_error_alli in Hidecl; eauto. simpl in *.
   pose proof (onConstructors Hidecl) as h. unfold on_constructors in h.
   eapply All2_nth_error_Some in Hcdecl. 2: eassumption.
-  destruct Hcdecl as [? [? [[s ?] [? [? ?]]]]].
+  destruct Hcdecl as [cs [Hnth [? ? ? [? [? ?]] ?]]].
   assumption.
+Qed.
+ 
+Lemma declared_inductive_wf_shapes {cf:checker_flags} {Σ : global_env_ext} {ind mdecl idecl} :
+    forall (oib : on_ind_body
+    (lift_typing (fun _ _ (t T : term) => Ast.wf t /\ Ast.wf T)) Σ
+    (inductive_mind ind) mdecl (inductive_ind ind) idecl),
+    Forall (fun cs => Forall wf_decl (cshape_args cs)) oib.(ind_cshapes).
+Proof.
+  intros oib.
+  pose proof (onConstructors oib) as h. unfold on_constructors in h.
+  induction h; constructor; auto.
+  destruct r. clear -on_cargs.
+  induction (cshape_args y) as [|[? [] ?] ?]; simpl in on_cargs; constructor;
+    try red; simpl; intuition auto.
+Qed.
+
+Lemma subst_context_snoc s k Γ d : subst_context s k (d :: Γ) = subst_context s k Γ ,, map_decl (subst s (#|Γ| + k)) d.
+Proof.
+  unfold subst_context, fold_context.
+  rewrite !rev_mapi !rev_involutive /mapi mapi_rec_eqn /snoc.
+  f_equal. now rewrite Nat.sub_0_r List.rev_length.
+  rewrite mapi_rec_Sk. simpl. apply mapi_rec_ext. intros.
+  rewrite app_length !List.rev_length. simpl. f_equal. f_equal. lia.
+Qed.
+
+Lemma wf_subst_context s k Γ : Forall wf_decl Γ -> Forall Ast.wf s -> Forall wf_decl (subst_context s k Γ).
+Proof.
+  intros wfΓ. induction wfΓ in s |- *.
+  - intros. constructor.
+  - rewrite subst_context_snoc. constructor; auto.
+    destruct H. destruct x as [? [] ?]; constructor; simpl in *; wf.
+Qed.
+
+Lemma wf_smash_context Γ Δ : Forall wf_decl Γ -> Forall wf_decl Δ ->
+   Forall wf_decl (smash_context Δ Γ).
+Proof.
+  intros wfΓ; induction wfΓ in Δ |- *; intros wfΔ; simpl; auto.
+  destruct x as [? [] ?]; simpl. apply IHwfΓ.
+  eapply wf_subst_context; auto. constructor; auto. apply H.
+  eapply IHwfΓ.
+  eapply All_Forall. apply All_app_inv; auto. now apply Forall_All in wfΔ.
+Qed.
+
+Lemma declared_projection_wf {cf:checker_flags}:
+  forall (Σ : global_env) (p : projection) (u : Instance.t)
+         (mdecl : mutual_inductive_body) (idecl : one_inductive_body) (pdecl : ident * term),
+    declared_projection Σ mdecl idecl p pdecl ->
+    Forall_decls_typing (fun (_ : global_env_ext) (_ : context) (t T : term) => Ast.wf t /\ Ast.wf T) Σ ->
+    Ast.wf (subst_instance_constr u (snd pdecl)).
+Proof.
+  intros Σ p u mdecl idecl pdecl isdecl X.
+  destruct isdecl as [[Hmdecl Hidecl] Hpdecl].
+  eapply lookup_on_global_env in Hmdecl as [Σ' [wfΣ' prf]]; eauto. red in prf.
+  apply onInductives in prf.
+  eapply nth_error_alli in Hidecl; eauto. intuition auto.
+  pose proof (onProjections Hidecl) as on_projs.
+  forward on_projs by now eapply nth_error_Some_non_nil in H.
+  destruct (ind_cshapes Hidecl) as [|? [|]] eqn:Heq; try contradiction.
+  destruct on_projs.
+  eapply nth_error_alli in on_projs; eauto. red in on_projs.
+  hnf in on_projs. simpl in on_projs.
+  destruct (nth_error (smash_context _ _) p.2) eqn:Heq'; try contradiction.
+  pose proof (declared_inductive_wf_shapes Hidecl).
+  eapply Forall_All in H1.
+  simpl in Heq. rewrite Heq in H1.
+  inv H1. clear X0. rewrite on_projs.
+  eapply wf_subst_instance_constr. eapply wf_subst.    
+  eapply wf_inds. eapply wf_subst. eapply wf_projs.
+  eapply wf_lift. eapply (wf_smash_context _ []) in H2.
+  2:constructor.
+  eapply nth_error_forall in Heq'; eauto.
+  apply Heq'.
 Qed.
 
 (* TODO MOVE *)
@@ -547,7 +605,7 @@ Proof.
     -- eapply Alli_impl. exact onI. eauto. intros.
        refine {| ind_indices := X1.(ind_indices);
                  ind_arity_eq := X1.(ind_arity_eq);
-                 ind_ctors_sort := X1.(ind_ctors_sort) |}.
+                 ind_cshapes := X1.(ind_cshapes) |}.
        --- apply onArity in X1. unfold on_type in *; simpl in *.
            now eapply X.
        --- pose proof X1.(onConstructors) as X11. red in X11.
@@ -555,19 +613,16 @@ Proof.
            simpl. intros. destruct X2 as [? ? ? ?]; unshelve econstructor; eauto.
            * apply X; eauto.
            * clear -X0 X on_cargs. revert on_cargs.
-              generalize (cshape_args cshape).
+              generalize (cshape_args y).
               induction c; simpl; auto;
               destruct a as [na [b|] ty]; simpl in *; auto;
            split; intuition eauto.
            * clear -X0 X on_cindices.
              revert on_cindices.
-             generalize (List.rev  (lift_context #|cshape_args cshape| 0 (ind_indices X1))).
-             generalize (cshape_indices cshape).
+             generalize (List.rev  (lift_context #|cshape_args y| 0 (ind_indices X1))).
+             generalize (cshape_indices y).
              induction 1; simpl; constructor; auto.
-       --- simpl; intros. pose (onProjections X1 H0). simpl in *.
-           destruct o0. constructor; auto. eapply Alli_impl; intuition eauto.
-           unfold on_projection in *; simpl in *.
-           now apply X.
+       --- simpl; intros. apply (onProjections X1 H0).
        --- destruct X1. simpl. unfold check_ind_sorts in *.
            destruct universe_family; auto.
            split. apply ind_sorts. destruct indices_matter; auto.

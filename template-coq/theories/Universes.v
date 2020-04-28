@@ -1755,3 +1755,67 @@ Definition print_constraint_set t :=
                          print_constraint_type d ++ " " ++ string_of_level l2)
              " /\ " (ConstraintSet.elements t).
   
+
+Lemma leq_universe_product_mon {cf: checker_flags} ϕ u u' v v' :
+  leq_universe ϕ u u' ->
+  leq_universe ϕ v v' ->
+  leq_universe (ϕ) (Universe.sort_of_product u v) (Universe.sort_of_product u' v').
+Proof.
+Admitted.
+
+Lemma impredicative_product {cf:checker_flags} {ϕ l u} : 
+  Universe.is_prop u -> 
+  leq_universe ϕ (Universe.sort_of_product l u) u.
+Proof.
+  unfold Universe.sort_of_product.
+  intros ->. reflexivity.
+Qed.
+
+Section no_prop_leq_type.
+  Context {cf:checker_flags}.
+  Context (Hcf : check_univs = true).
+  Context (no_prop_leq : prop_sub_type = false).
+  Context (ϕ : ConstraintSet.t).
+  (* MS: we need these lemmas on constraints coming from a well-formed environment,
+    maybe that's a necessary additional assumption. *)
+    
+
+  Lemma leq_universe_super l l' : 
+    leq_universe ϕ (Universe.make l) (Universe.make l') ->
+    leq_universe ϕ (Universe.super l) (Universe.super l').
+  Proof.
+    todo "Simon"%string.
+  Qed.
+
+  Lemma leq_universe_prop u1 u2 :
+    @leq_universe cf ϕ u1 u2 ->
+    (Universe.is_prop u1 \/ Universe.is_prop u2) ->
+    (Universe.is_prop u1 /\ Universe.is_prop u2).
+  Proof.
+    intros. unfold leq_universe in *. rewrite Hcf in H.
+    intuition auto. red in H.
+    red in H.
+    all:todo "Simon"%string.
+  Admitted.                       (* leq_universe_prop *)
+
+  Lemma leq_prop_prop {l l'} : 
+    Universe.is_prop l -> Universe.is_prop l' ->
+    leq_universe ϕ l l'.
+  Proof.
+    todo "Simon"%string.
+  Admitted.
+
+  Lemma leq_prop_is_prop {x s} : 
+    leq_universe ϕ x s -> 
+    (Universe.is_prop s <-> Universe.is_prop x).
+  Proof.
+    intros leq.
+    split; intros isp;  apply leq_universe_prop in leq; intuition auto.
+  Qed.
+
+  Lemma is_prop_gt l l' : leq_universe ϕ   (Universe.super l) l' -> Universe.is_prop l' -> False.
+  Proof.
+    todo "Simon"%string.
+  Qed.
+
+End no_prop_leq_type.

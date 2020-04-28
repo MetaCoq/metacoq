@@ -160,7 +160,7 @@ Section Validity.
       destruct (on_declared_inductive wfΣ decli) as [onmind oib].
       eapply typing_spine_app; eauto.
     - noconf H0. subst.
-      destruct (PCUICInductives.declared_inductive_unique isdecl decli) as [-> ->].
+      destruct (declared_inductive_inj isdecl decli) as [-> ->].
       clear decli. split; auto.
       constructor; [|reflexivity].
       destruct (on_declared_inductive wfΣ isdecl) as [onmind oib].

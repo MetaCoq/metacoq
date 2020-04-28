@@ -78,13 +78,6 @@ Section Principality.
     exists u'u. split; auto.
   Qed.
 
-  Lemma leq_universe_product_mon u u' v v' :
-    leq_universe (global_ext_constraints Σ) u u' ->
-    leq_universe (global_ext_constraints Σ) v v' ->
-    leq_universe (global_ext_constraints Σ) (Universe.sort_of_product u v) (Universe.sort_of_product u' v').
-  Proof.
-  Admitted.
-
   Lemma isWfArity_sort Γ u :
     wf_local Σ Γ ->
     isWfArity typing Σ Γ (tSort u).
@@ -288,8 +281,8 @@ Section Principality.
       subst.
       destruct d, d0. red in H, H1.
       rewrite H in H1. noconf H1. rewrite H0 in H2. noconf H2.
-      specialize (IHu1 _ _ _ t t1). clear t t1.
-      specialize (IHu2 _ _ _ t0 t2). clear t0 t2.
+      specialize (IHu1 _ _ _ t t1). clear t. eapply PCUICValidity.validity in t1.
+      specialize (IHu2 _ _ _ t0 t2).
       repeat outsum. repeat outtimes.
       eapply invert_cumul_ind_r in c1 as [u' [x0' [redr [redu ?]]]]; auto.
       eapply invert_cumul_ind_r in c2 as [u'' [x9' [redr' [redu' ?]]]]; auto.
@@ -312,22 +305,13 @@ Section Principality.
           apply (All2_trans _ (conv_trans _ _) _ _ _ X0 a2).
       }
       clear redr redr' a1 a2.
-      todo "case"%string.
-      (* exists (mkApps u1 (skipn (ind_npars x8) x7 ++ [u2])); repeat split; auto. *)
-
-      (* 2:{ revert e2. *)
-      (*     rewrite /types_of_case. *)
-      (*     destruct instantiate_params eqn:Heq => //. *)
-      (*     destruct (destArity [] t1) as [[args s']|] eqn:eqar => //. *)
-      (*     destruct (destArity [] x12) as [[args' s'']|] eqn:eqx12 => //. *)
-      (*     destruct (destArity [] x2) as [[ctxx2 sx2]|] eqn:eqx2 => //. *)
-      (*     destruct map_option_out eqn:eqbrs => //. *)
-      (*     intros [=]. subst. *)
-      (*     eapply (type_Case _ _ _ x8). eauto. repeat split; eauto. auto. *)
-      (*     eapply t0. rewrite /types_of_case. *)
-      (*     rewrite Heq eqar eqx2 eqbrs. reflexivity. *)
-      (*     admit. admit. eapply type_Cumul. eauto. *)
-      (*     all:admit. } *)
+      exists (mkApps u1 (skipn (ind_npars x8) x7 ++ [u2])); repeat split; auto.
+      transitivity (mkApps u1 (skipn (ind_npars x8) x0 ++ [u2])); auto.
+      eapply conv_cumul, mkApps_conv_args; auto.
+      eapply All2_app. 2:constructor; auto.
+      eapply All2_skipn. eapply All2_sym, (All2_impl X0); firstorder.
+      econstructor;  eauto. simpl. split; auto.
+      eapply type_Cumul; eauto. auto.
 
     - destruct s as [[ind k] pars]; simpl in *.
       eapply inversion_Proj in hA=>//.
@@ -375,3 +359,27 @@ Section Principality.
   Qed.
 
 End Principality.
+
+Lemma principal_type_ind {cf:checker_flags} {Σ Γ c ind u u' args args'} {wfΣ: wf Σ.1} :
+  Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
+  Σ ;;; Γ |- c : mkApps (tInd ind u') args' ->
+  PCUICEquality.R_universe_instance (eq_universe (global_ext_constraints Σ)) u u' * 
+  All2 (conv Σ Γ) args args'.
+Proof.
+  intros h h'.
+  destruct (principal_typing _ wfΣ h h') as [C [l [r ty]]].
+  eapply invert_cumul_ind_r in l as [ui' [l' [red [Ru eqargs]]]]; auto.
+  eapply invert_cumul_ind_r in r as [ui'' [l'' [red' [Ru' eqargs']]]]; auto.
+  destruct (red_confluence wfΣ red red') as [nf [redl redr]].
+  eapply red_mkApps_tInd in redl as [args'' [-> eq0]]; auto.
+  eapply red_mkApps_tInd in redr as [args''' [eqnf eq1]]; auto.
+  solve_discr.
+  split. transitivity ui'; eauto. now symmetry.
+  eapply All2_trans; [|eapply eqargs|]. intro; intros. eapply conv_trans; eauto.
+  eapply All2_trans. intro; intros. eapply conv_trans; eauto.
+  2:{ eapply All2_sym. eapply (All2_impl eqargs'). intros. now apply conv_sym. }
+  eapply All2_trans. intro; intros. eapply conv_trans; eauto.
+  eapply (All2_impl eq0). intros. now apply red_conv.
+  eapply All2_sym; eapply (All2_impl eq1). intros. symmetry. now apply red_conv.
+Qed.
+

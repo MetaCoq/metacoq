@@ -485,7 +485,7 @@ Proof.
   eapply typing_spine_weaken_concl in hs.
   3:{ eapply cumul_trans; eauto with pcuic. } all:auto.
   clear hc htc.
-  destruct (declared_constructor_unique isdecl declc) as [[? ?] ?].
+  destruct (declared_constructor_inj isdecl declc) as [? [? ?]].
   subst mdecl' idecl' cdecl'. clear isdecl.
   destruct p as [onmind onind]. clear onc.
   destruct declc as [decli declc].
@@ -892,7 +892,7 @@ Proof.
     unfold on_declared_inductive in typec'.
     destruct declared_constructor_inv as [cs [Hnth onc]].
     simpl in typec'.
-    destruct (declared_inductive_unique isdecl decli) as []; subst mdecl' idecl'.
+    destruct (declared_inductive_inj isdecl decli) as []; subst mdecl' idecl'.
     set(oib := declared_inductive_inv _ _ _ _ _ _ _ _ _) in *. clearbody oib.
     eapply (build_branches_type_lookup _  Γ ind mdecl idecl cdecl' _ _ _ brs) in heq_map_option_out; eauto.
     2:{ eapply All2_impl; eauto. simpl; intuition eauto. }
@@ -1655,7 +1655,7 @@ Proof.
     destruct declared_inductive_inv. simpl in  *.
     pose proof isdecl as isdecl'.
     destruct isdecl' as [decli' [H0 Hi]].
-    destruct (declared_inductive_unique decli' decli) as []; subst mdecl' idecl'.
+    destruct (declared_inductive_inj decli' decli) as []; subst mdecl' idecl'.
     forward onProjections.
     eapply nth_error_Some_length in H0. simpl in H0.
     intros Hp. apply (f_equal (@length _)) in Hp. rewrite  Hp /=   in H0. lia.

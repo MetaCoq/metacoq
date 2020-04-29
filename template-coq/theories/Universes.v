@@ -990,6 +990,13 @@ Proof.
       eapply Forall_forall in H2; tea.
 Qed.
 
+Lemma sup_comm x1 x2 :
+  Universe.sup x1 x2 = Universe.sup x2 x1.
+Proof.
+  apply eq_univ'; simpl. unfold UnivExprSet.Equal.
+  intros H. rewrite !UnivExprSet.union_spec. intuition.
+Qed.
+
 Lemma is_prop_sort_sup x1 x2 :
   Universe.is_prop (Universe.sup x1 x2) -> Universe.is_prop x2.
 Proof.
@@ -998,6 +1005,31 @@ Proof.
   intros x HX; apply H.
   apply UnivExprSet.union_spec; now right.
 Qed.
+
+Lemma is_prop_sort_sup_prop x1 x2 :
+  Universe.is_prop x1 && Universe.is_prop x2 ->
+  Universe.is_prop (Universe.sup x1 x2).
+Proof.
+  intro H; apply andP in H as [H1 H2].
+  apply UnivExprSet.for_all_spec; proper.
+  apply UnivExprSet.for_all_spec in H1; proper.
+  apply UnivExprSet.for_all_spec in H2; proper.
+  intros H x.
+  apply UnivExprSet.union_spec in x.
+  destruct x.  now specialize (H1 _ H0).
+  apply (H2 _ H0).
+Qed.
+
+Lemma is_prop_sup u s :
+  Universe.is_prop (Universe.sup u s)
+  = Universe.is_prop u && Universe.is_prop s.
+Proof.
+  apply iff_is_true_eq_bool; split; intro H.
+  - rewrite (is_prop_sort_sup _ _ H).
+    rewrite sup_comm in H. now rewrite (is_prop_sort_sup _ _ H).
+  - now apply is_prop_sort_sup_prop.
+Qed.
+
 
 Lemma is_prop_sort_prod x2 x3 :
   Universe.is_prop (Universe.sort_of_product x2 x3) -> Universe.is_prop x3.
@@ -1754,68 +1786,159 @@ Definition print_constraint_set t :=
   print_list (fun '(l1, d, l2) => string_of_level l1 ++ " " ++
                          print_constraint_type d ++ " " ++ string_of_level l2)
              " /\ " (ConstraintSet.elements t).
-  
+
 
 Lemma leq_universe_product_mon {cf: checker_flags} ϕ u u' v v' :
   leq_universe ϕ u u' ->
   leq_universe ϕ v v' ->
-  leq_universe (ϕ) (Universe.sort_of_product u v) (Universe.sort_of_product u' v').
+  leq_universe ϕ (Universe.sort_of_product u v) (Universe.sort_of_product u' v').
 Proof.
-Admitted.
+  unfold leq_universe in *; destruct check_univs; [|trivial].
+  intros H1 H2 vv Hv. specialize (H1 _ Hv). specialize (H2 _ Hv).
+  cbn in *. unfold Universe.sort_of_product.
+  destruct (Universe.is_prop v) eqn:e, (Universe.is_prop v') eqn:f;
+    rewrite ?val_sup.
+  - apply is_prop_val with (v:=vv) in e.
+    apply is_prop_val with (v:=vv) in f.
+    now rewrite e, f.
+  - apply is_prop_val with (v:=vv) in e.
+    apply is_prop_val_false with (v:=vv) in f.
+    lled; lia.
+  - apply is_prop_val_false with (v:=vv) in e.
+    apply is_prop_val with (v:=vv) in f.
+    lled; lia.
+  - apply is_prop_val_false with (v:=vv) in e.
+    apply is_prop_val_false with (v:=vv) in f.
+    lled; lia.
+Qed.
 
-Lemma impredicative_product {cf:checker_flags} {ϕ l u} : 
-  Universe.is_prop u -> 
+Lemma impredicative_product {cf:checker_flags} {ϕ l u} :
+  Universe.is_prop u ->
   leq_universe ϕ (Universe.sort_of_product l u) u.
 Proof.
   unfold Universe.sort_of_product.
   intros ->. reflexivity.
 Qed.
 
+
+Section UniverseLemmas.
+  Context {cf:checker_flags}.
+
+  Ltac unfold_eq_universe
+    := unfold eq_universe in *; destruct check_univs; [intros v Hv|trivial].
+
+  Lemma sup_idem s : Universe.sup s s = s.
+  Proof.
+    apply eq_univ'; cbn.
+    intro; rewrite !UnivExprSet.union_spec. intuition.
+  Qed.
+
+  Lemma sort_of_product_idem s
+    : Universe.sort_of_product s s = s.
+  Proof.
+    unfold Universe.sort_of_product. destruct (Universe.is_prop s); trea.
+    apply sup_idem.
+  Qed.
+
+  Lemma sup_assoc s1 s2 s3 :
+    Universe.sup s1 (Universe.sup s2 s3) = Universe.sup (Universe.sup s1 s2) s3.
+  Proof.
+    apply eq_univ'; cbn. symmetry; apply UnivExprSetProp.union_assoc.
+  Qed.
+
+  Instance sup_eq_universe φ :
+    Proper (eq_universe φ ==> eq_universe φ ==> eq_universe φ) Universe.sup.
+  Proof.
+    intros s1 s1' H1 s2 s2' H2.
+    unfold_eq_universe. specialize (H1 v Hv). specialize (H2 v Hv).
+    rewrite !val_sup; lia.
+  Qed.
+
+  Lemma sort_of_product_twice u s :
+    Universe.sort_of_product u (Universe.sort_of_product u s)
+    = Universe.sort_of_product u s.
+  Proof.
+    apply eq_univ'.
+    unfold Universe.sort_of_product. case_eq (Universe.is_prop s).
+    - intros ->. reflexivity.
+    - intro e. rewrite is_prop_sup, e, andb_false_r.
+    now rewrite sup_assoc, sup_idem.
+  Qed.
+End UniverseLemmas.
+
+
 Section no_prop_leq_type.
   Context {cf:checker_flags}.
-  Context (Hcf : check_univs = true).
-  Context (no_prop_leq : prop_sub_type = false).
   Context (ϕ : ConstraintSet.t).
   (* MS: we need these lemmas on constraints coming from a well-formed environment,
     maybe that's a necessary additional assumption. *)
-    
 
-  Lemma leq_universe_super l l' : 
+
+  Lemma leq_universe_super l l' :
     leq_universe ϕ (Universe.make l) (Universe.make l') ->
     leq_universe ϕ (Universe.super l) (Universe.super l').
   Proof.
-    todo "Simon"%string.
+    unfold leq_universe. destruct check_univs; [|trivial].
+    intros H v Hv. specialize (H v Hv). cbn in *.
+    destruct l, l'; lled; cbn -[Z.add] in *; destruct H; lia.
   Qed.
 
   Lemma leq_universe_prop u1 u2 :
-    @leq_universe cf ϕ u1 u2 ->
-    (Universe.is_prop u1 \/ Universe.is_prop u2) ->
-    (Universe.is_prop u1 /\ Universe.is_prop u2).
+    check_univs ->
+    consistent ϕ ->
+    leq_universe ϕ u1 u2 ->
+    Universe.is_prop u2 -> Universe.is_prop u1.
   Proof.
-    intros. unfold leq_universe in *. rewrite Hcf in H.
-    intuition auto. red in H.
-    red in H.
-    all:todo "Simon"%string.
-  Admitted.                       (* leq_universe_prop *)
+    intros Hcf [v Hv] H1 H2.
+    eapply is_prop_val in H2. eapply (val_is_prop _ v).
+    unfold leq_universe in *. rewrite Hcf in H1.
+    specialize (H1 _ Hv). rewrite H2 in H1.
+    cbn in *. lled; lia.
+  Qed.
 
-  Lemma leq_prop_prop {l l'} : 
+  Lemma leq_universe_prop_no_prop_sub_type u1 u2 :
+    check_univs ->
+    prop_sub_type = false ->
+    consistent ϕ ->
+    leq_universe ϕ u1 u2 ->
+    Universe.is_prop u1 -> Universe.is_prop u2.
+  Proof.
+    intros Hcf npst [v Hv] H1 H2.
+    eapply is_prop_val in H2. eapply (val_is_prop _ v).
+    unfold leq_universe in *. rewrite Hcf in H1.
+    specialize (H1 _ Hv). rewrite H2 in H1.
+    cbn in *. lled; lia.
+  Qed.
+
+  Lemma leq_prop_prop {l l'} :
     Universe.is_prop l -> Universe.is_prop l' ->
     leq_universe ϕ l l'.
   Proof.
-    todo "Simon"%string.
-  Admitted.
-
-  Lemma leq_prop_is_prop {x s} : 
-    leq_universe ϕ x s -> 
-    (Universe.is_prop s <-> Universe.is_prop x).
-  Proof.
-    intros leq.
-    split; intros isp;  apply leq_universe_prop in leq; intuition auto.
+    red. destruct check_univs; [|trivial].
+    intros H1 H2 v Hv. eapply is_prop_val in H1; eapply is_prop_val in H2.
+    rewrite H1, H2. lled; lia.
   Qed.
 
-  Lemma is_prop_gt l l' : leq_universe ϕ   (Universe.super l) l' -> Universe.is_prop l' -> False.
+  Lemma leq_prop_is_prop {x s} :
+    check_univs ->
+    prop_sub_type = false ->
+    consistent ϕ ->
+    leq_universe ϕ x s ->
+    (Universe.is_prop s <-> Universe.is_prop x).
   Proof.
-    todo "Simon"%string.
+    intros H H0 H1 H2; split.
+    now apply leq_universe_prop.
+    now apply leq_universe_prop_no_prop_sub_type.
+  Qed.
+
+  Lemma is_prop_gt l l' :
+    check_univs ->
+    consistent ϕ ->
+    leq_universe ϕ (Universe.super l) l' -> Universe.is_prop l' -> False.
+  Proof.
+    intros Hcf [v Hv] H1 H2. unfold leq_universe in *; rewrite Hcf in *.
+    eapply is_prop_val with (v:=v) in H2. specialize (H1 _ Hv).
+    rewrite H2 in H1. destruct l; lled; cbn -[Z.add] in *; lia.
   Qed.
 
 End no_prop_leq_type.

@@ -429,15 +429,17 @@ Next Obligation.
 
        eapply cumul_prop1 in c; eauto.
 
-       destruct (invert_cumul_sort_r _ _ _ _ c0) as (? & ? & ?).
-       destruct (invert_cumul_sort_r _ _ _ _ c1) as (? & ? & ?).
-       eapply red_confluence in r as (? & ? & ?); eauto.
+       { destruct (invert_cumul_sort_r _ _ _ _ c0) as (? & ? & ?).
+         destruct (invert_cumul_sort_r _ _ _ _ c1) as (? & ? & ?).
+         eapply red_confluence in r as (? & ? & ?); eauto.
 
-       eapply invert_red_sort in r.
-       eapply invert_red_sort in r1. subst. inv r1.
+         eapply invert_red_sort in r.
+         eapply invert_red_sort in r1. subst. inv r1.
 
-       eapply leq_universe_prop in l0 as []; cbn; intuition eauto.
-       eapply leq_universe_prop in l as []; cbn; eauto.
+         eapply leq_universe_prop in l0; auto.
+         eapply leq_universe_prop_no_prop_sub_type in l; auto.
+         intuition eauto. }
+
        2:reflexivity. now right; exists x0.
        now apply PCUICValidity.validity in X1.
        now apply PCUICValidity.validity in t2.

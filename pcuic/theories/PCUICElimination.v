@@ -53,7 +53,7 @@ Definition Informative `{cf : checker_flags} (Σ : global_env_ext) (ind : induct
   forall mdecl idecl,
     declared_inductive (fst Σ) mdecl ind idecl ->
     forall Γ args u n (Σ' : global_env_ext),
-      wf Σ' ->
+      wf_ext Σ' ->
       PCUICWeakeningEnv.extends Σ Σ' ->
       Is_proof Σ' Γ (mkApps (tConstruct ind n u) args) ->
        #|ind_ctors idecl| <= 1 /\
@@ -381,13 +381,14 @@ Qed.
 
 Lemma Is_proof_mkApps_tConstruct `{cf : checker_flags} (Σ : global_env_ext) Γ ind n u mdecl idecl args :
   check_univs = true ->
-  wf Σ ->
+  wf_ext Σ ->
   declared_inductive (fst Σ) mdecl ind idecl ->
   ind_kelim idecl <> InProp ->
   Is_proof Σ Γ (mkApps (tConstruct ind n u) args) ->
   #|ind_ctors idecl| <= 1 /\ ∥ All (Is_proof Σ Γ) (skipn (ind_npars mdecl) args) ∥.
 Proof.
-  intros checkunivs wfΣ decli kelim [tyc [tycs [hc [hty hp]]]].
+  intros checkunivs HΣ decli kelim [tyc [tycs [hc [hty hp]]]].
+  assert (wfΣ : wf Σ) by apply HΣ.
   eapply inversion_mkApps in hc as [? [? [hc [hsp hcum]]]]; auto.
   eapply inversion_Construct in hc as [mdecl' [idecl' [cdecl' [wfΓ [declc [cu cum']]]]]]; auto.
   destruct (on_declared_constructor _ declc) as [[oi oib] [cs [Hnth onc]]].
@@ -479,21 +480,22 @@ Qed.
     
 Lemma elim_restriction_works_kelim `{cf : checker_flags} (Σ : global_env_ext) ind mind idecl :
   check_univs = true ->
-  wf Σ ->
+  wf_ext Σ ->
   declared_inductive (fst Σ) mind ind idecl ->
   ind_kelim idecl <> InProp -> Informative Σ ind.
 Proof.
-  intros cu wfΣ H indk.
+  intros cu HΣ H indk.
+  assert (wfΣ : wf Σ) by apply HΣ.
   destruct (PCUICWeakeningEnv.on_declared_inductive wfΣ H) as [[]]; eauto.
   intros ?. intros.
   eapply declared_inductive_inj in H as []; eauto; subst idecl0 mind.
-  eapply Is_proof_mkApps_tConstruct in X1; eauto.
+  eapply Is_proof_mkApps_tConstruct in X1; tea.
   now eapply weakening_env_declared_inductive.
 Qed.
 
 Lemma elim_restriction_works `{cf : checker_flags} (Σ : global_env_ext) Γ T ind npar p c brs mind idecl : 
   check_univs = true ->
-  wf Σ ->
+  wf_ext Σ ->
   declared_inductive (fst Σ) mind ind idecl ->
   Σ ;;; Γ |- tCase (ind, npar) p c brs : T ->
   (Is_proof Σ Γ (tCase (ind, npar) p c brs) -> False) -> Informative Σ ind.
@@ -538,7 +540,7 @@ Proof.
 Qed. (* elim_restriction_works_proj *)
 
 Lemma elim_restriction_works_proj `{cf : checker_flags} (Σ : global_env_ext) Γ  p c mind idecl T :
-  check_univs = true -> wf Σ ->
+  check_univs = true -> wf_ext Σ ->
   declared_inductive (fst Σ) mind (fst (fst p)) idecl ->
   Σ ;;; Γ |- tProj p c : T ->
   (Is_proof Σ Γ (tProj p c) -> False) -> Informative Σ (fst (fst p)).
@@ -610,20 +612,20 @@ Variable Hcf' : check_univs = true.
 
 
 Lemma is_prop_bottom {Σ Γ T s s'} :
-  wf Σ.1 ->
+  wf_ext Σ ->
   Σ ;;; Γ |- T <= tSort s ->
   Σ ;;; Γ |- T <= tSort s' ->
   Universe.is_prop s -> Universe.is_prop s'.
 Proof.
   intros wfΣ hs hs'.
-  destruct (cumul_sort_confluence _ wfΣ hs hs') as [x' [conv [leq leq']]].
+  destruct (cumul_sort_confluence _ wfΣ.1 hs hs') as [x' [conv [leq leq']]].
   intros isp.
-  unshelve eapply (leq_prop_is_prop _ _ leq'); auto.
-  now unshelve eapply (leq_prop_is_prop _ _ leq).
+  unshelve eapply (leq_prop_is_prop _ _ _ _ leq'); auto.
+  now unshelve eapply (leq_prop_is_prop _ _ _ _ leq).
 Qed.
 
 Lemma leq_term_prop_sorted_l {Σ Γ v v' u u'} :
-  wf Σ.1 ->
+  wf_ext Σ ->
   PCUICEquality.leq_term (global_ext_constraints Σ) v v' ->
   Σ;;; Γ |- v : tSort u ->
   Σ;;; Γ |- v' : tSort u' -> Universe.is_prop u -> 
@@ -632,13 +634,13 @@ Proof.
   intros wfΣ leq hv hv' isp.
   pose proof hv as hv0.
   eapply typing_leq_term in hv. 4:eapply leq. all:eauto.
-  destruct (principal_typing _ wfΣ hv hv0) as [C [cum0 [cum1 tyC]]].
+  destruct (principal_typing _ wfΣ.1 hv hv0) as [C [cum0 [cum1 tyC]]].
   pose proof (is_prop_bottom wfΣ cum1 cum0 isp).
   apply leq_prop_prop; auto.
 Qed.
 
 Lemma leq_term_prop_sorted_r {Σ Γ v v' u u'} :
-  wf Σ.1 ->
+  wf_ext Σ ->
   PCUICEquality.leq_term (global_ext_constraints Σ) v v' ->
   Σ;;; Γ |- v : tSort u ->
   Σ;;; Γ |- v' : tSort u' -> Universe.is_prop u' -> 
@@ -647,13 +649,13 @@ Proof.
   intros wfΣ leq hv hv' isp.
   pose proof hv as hv0.
   eapply typing_leq_term in hv. 4:eapply leq. all:eauto.
-  destruct (principal_typing _ wfΣ hv hv0) as [C [cum0 [cum1 tyC]]].
+  destruct (principal_typing _ wfΣ.1 hv hv0) as [C [cum0 [cum1 tyC]]].
   pose proof (is_prop_bottom wfΣ cum0 cum1 isp).
   now apply leq_prop_prop.
 Qed.
 
 Lemma cumul_prop (Σ : global_env_ext) Γ A B u u' :
-  wf Σ ->
+  wf_ext Σ ->
   Universe.is_prop u ->
   (((Σ ;;; Γ |- A : tSort u) * (Σ ;;; Γ |- B : tSort u')) + 
    ((Σ ;;; Γ |- B : tSort u) * (Σ ;;; Γ |- A : tSort u')))%type ->
@@ -678,7 +680,7 @@ Proof.
 Qed.
 
 Lemma cumul_prop_r_is_type (Σ : global_env_ext) Γ A B u :
-  wf Σ ->
+  wf_ext Σ ->
   Universe.is_prop u ->
   isWfArity_or_Type Σ Γ A ->
   Σ ;;; Γ |- B : tSort u ->
@@ -731,7 +733,8 @@ Proof.
       eapply (PCUICWeakening.weakening _ _ [vdef na b t]) in X1. simpl in X1.
       eapply X1. all:eauto.
       constructor; auto.
-      eapply (PCUICWeakening.weakening_cumul _ _ [] [vdef na b t]) in X2; auto. simpl in X2.
+      eapply (PCUICWeakening.weakening_cumul _ _ [] [vdef na b t]) in X2; auto.
+      simpl in X2. assert (wf Σ) by apply X.
       etransitivity; eauto.
       eapply red_cumul. apply PCUICSpine.red_expand_let.
       constructor; pcuic.
@@ -741,7 +744,7 @@ Proof.
 Qed.
 
 Lemma cumul_prop_l_is_type (Σ : global_env_ext) Γ A B u :
-  wf Σ ->
+  wf_ext Σ ->
   Universe.is_prop u ->
   isWfArity_or_Type Σ Γ B ->
   Σ ;;; Γ |- A : tSort u ->
@@ -763,7 +766,7 @@ Proof.
     eapply inversion_Sort in red as [l [wf [inl [eq' lt]]]]; auto.
     subst u'.
     eapply cumul_Sort_inv in lt.
-    now apply is_prop_gt in lt.
+    apply is_prop_gt in lt; auto.
   - rewrite app_context_assoc in eq.
     pose proof eq as eq'.
     eapply All_local_env_app in eq' as [wfΓ wf']. depelim wfΓ;
@@ -794,7 +797,8 @@ Proof.
       eapply (PCUICWeakening.weakening _ _ [vdef na b t]) in X1. simpl in X1.
       eapply X1. all:eauto.
       constructor; auto.
-      eapply (PCUICWeakening.weakening_cumul _ _ [] [vdef na b t]) in X2; auto. simpl in X2.
+      eapply (PCUICWeakening.weakening_cumul _ _ [] [vdef na b t]) in X2; auto.
+      simpl in X2. assert (wf Σ) by apply X.
       etransitivity; eauto.
       eapply conv_cumul, conv_sym, red_conv. apply PCUICSpine.red_expand_let.
       constructor; pcuic.
@@ -804,7 +808,7 @@ Proof.
 Qed.
 
 Lemma cumul_prop1 (Σ : global_env_ext) Γ A B u :
-  wf Σ ->
+  wf_ext Σ ->
   Universe.is_prop u ->
   isWfArity_or_Type Σ Γ A ->
   Σ ;;; Γ |- B : tSort u ->
@@ -819,7 +823,7 @@ Proof.
 Qed.
 
 Lemma cumul_prop2 (Σ : global_env_ext) Γ A B u :
-  wf Σ ->
+  wf_ext Σ ->
   Universe.is_prop u ->
   isWfArity_or_Type Σ Γ B ->
   Σ ;;; Γ |- A <= B ->

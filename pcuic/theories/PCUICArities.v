@@ -11,8 +11,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICConfluence PCUICConversion PCUICContextConversion
      PCUICParallelReductionConfluence PCUICWeakeningEnv
      PCUICClosed PCUICSubstitution
-     PCUICWeakening PCUICGeneration PCUICUtils PCUICCtxShape PCUICContexts
-     PCUICUniverses.
+     PCUICWeakening PCUICGeneration PCUICUtils PCUICCtxShape PCUICContexts.
+
 From Equations Require Import Equations.
 
 Require Import Equations.Prop.DepElim.
@@ -292,9 +292,7 @@ Proof.
     left. eexists [], _; intuition eauto using typing_wf_local.
     eapply typing_wf_local in Ht.
     depelim Ht; eapply All_local_env_app in Ht; intuition auto.
-    constructor. constructor.
-    apply eq_universe_leq_universe.
-    apply sort_of_product_twice.
+    now rewrite sort_of_product_twice.
 Qed.
 
 Lemma isWAT_wf_local {cf:checker_flags} {Σ Γ T} : isWfArity_or_Type Σ Γ T -> wf_local Σ Γ.

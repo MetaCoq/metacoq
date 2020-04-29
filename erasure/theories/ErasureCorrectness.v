@@ -964,31 +964,31 @@ Proof.
                                                 erewrite <- All2_length; eauto. }
               inv H5; inv H7.
               erewrite All2_length; eauto.
-      * eapply Is_type_app in X2 as [].
-        exists EAst.tBox. split.
-        econstructor.
-        eapply Is_type_eval. eauto. eassumption.
-        eauto.
+      * eapply Is_type_app in X2 as []; tas.
+        -- exists EAst.tBox. split. econstructor.
+           eapply Is_type_eval; eauto. eauto.
 
-        assert (exists x5, Forall2 (EWcbvEval.eval Σ') x3 x5) as [x5]. {
-          assert (forall x n, nth_error args n = Some x -> ∑ T,  Σ;;; [] |- x : T).
-          { intros. eapply typing_spine_inv with (arg := n) in t0 as [].
-            2:{ eassumption. } eauto.
+          assert (exists x5, Forall2 (EWcbvEval.eval Σ') x3 x5) as [x5]. {
+            assert (forall x n, nth_error args n = Some x -> ∑ T,  Σ;;; [] |- x : T).
+            { intros. eapply typing_spine_inv with (arg := n) in t0 as [].
+              2:{ eassumption. } eauto.
+            }
+            clear - X3 X0 H6. revert X3 x3 H6; induction X0; intros.
+            ** inv H6. exists []; eauto.
+            ** inv H6. destruct (X3 x 0 eq_refl).
+               eapply r in t as (? & ? & ?); eauto.
+               eapply IHX0 in H3 as (? & ?); eauto.
+               intros. eapply (X3 x2 (S n)). eassumption.
           }
-          clear - X3 X0 H6. revert X3 x3 H6; induction X0; intros.
-          ** inv H6. exists []; eauto.
-          ** inv H6. destruct (X3 x 0 eq_refl).
-             eapply r in t as (? & ? & ?); eauto.
-             eapply IHX0 in H3 as (? & ?); eauto.
-             intros. eapply (X3 x2 (S n)). eassumption.
-        }
 
-        eapply eval_box_apps. eauto. eauto. eapply wf_ext_wf. eauto. eauto.
-        eapply subject_reduction. eauto. exact Hty.
-        eapply PCUICReduction.red_mkApps. 
-        eapply PCUICClosed.subject_closed in Ht; auto. now eapply wcbeval_red; eauto.
-        eapply All_All2_refl.
-        clear. induction args. econstructor. econstructor; eauto.
+          eapply eval_box_apps; eauto.
+        -- constructor.
+        -- eapply subject_reduction. eauto. exact Hty.
+           eapply PCUICReduction.red_mkApps. 
+           eapply PCUICClosed.subject_closed in Ht; auto.
+           now eapply wcbeval_red; eauto.
+          eapply All_All2_refl.
+          clear. induction args. econstructor. econstructor; eauto.
 
   - assert (Hty' := Hty).
     assert (Hunf := H).
@@ -1099,7 +1099,7 @@ Proof.
               ** inv H3. inv t0. eapply r in X2 as (? & ? & ?); eauto.
                  eapply IHX0 in X3 as (? & ? & ?); eauto.
 
-      * eapply Is_type_app in X2 as [].
+      * eapply Is_type_app in X2 as []; tas.
         exists EAst.tBox. split.
         econstructor.
         eapply Is_type_eval. eauto. eassumption.
@@ -1118,7 +1118,8 @@ Proof.
              intros. eapply (X3 x2 (S n)). eassumption.
         }
 
-        eapply eval_box_apps. eauto. eauto. eapply wf_ext_wf. eauto. eauto.
+        eapply eval_box_apps. eauto. eauto.
+        constructor.
         eapply subject_reduction. eauto. exact Hty.
         eapply PCUICReduction.red_mkApps.
         eapply PCUICClosed.subject_closed in Ht.

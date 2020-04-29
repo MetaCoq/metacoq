@@ -432,27 +432,24 @@ Qed.
 
 Lemma sort_typing_spine:
   forall (Σ : global_env_ext) (Γ : context) (L : list term) (u : Universe.t) (x x0 : term),
-    wf Σ ->
+    wf_ext Σ ->
     Universe.is_prop u ->
     typing_spine Σ Γ x L x0 -> 
     Σ;;; Γ |- x : tSort u -> 
     ∑ u', Σ;;; Γ |- x0 : tSort u' × Universe.is_prop u'.
 Proof.
-  intros Σ Γ L u x x0 ? ? t1 c0.
+  intros Σ Γ L u x x0 HΣ ? t1 c0.
+  assert (X : wf Σ) by apply HΣ.
   revert u H c0.
   induction t1; intros.
   - eapply cumul_prop2 in c0; eauto.
-  - eapply cumul_prop2 in c0. 5:eauto. all:eauto.
-    eapply invert_cumul_prod_r in c as (? & ? & ? & [] & ?); eauto.
-    eapply subject_reduction in c0. 3:eauto. 2:eauto.
+  - eapply cumul_prop2 in c0; auto. 2-3: tea.
     eapply inversion_Prod in c0 as (? & ? & ? & ? & ?) ; auto.
-    eapply PCUICConversion.cumul_Sort_inv in c0.
-    eapply leq_universe_prop in c0 as []; cbn; eauto.
-
-    eapply is_prop_sort_prod in H0. eapply IHt1. exact H0.
-    change (tSort x3) with ((tSort x3) {0 := hd}).
-    eapply PCUICSubstitution.substitution0. 2:eauto. eauto.
-    econstructor. eassumption. 2: now destruct c. right; eauto.
+    eapply cumul_Sort_inv in c0.
+    eapply leq_universe_prop in c0 as H0; cbn; eauto.
+    eapply is_prop_sort_prod in H0. eapply IHt1; [exact H0|].
+    change (tSort x0) with ((tSort x0) {0 := hd}).
+    eapply substitution0; eauto.
 Qed.
 
 Lemma arity_type_inv (Σ : global_env_ext) Γ t T1 T2 : wf Σ -> wf_local Σ Γ ->
@@ -469,7 +466,7 @@ Proof.
 Qed.
 
 Lemma Is_type_app (Σ : global_env_ext) Γ t L T :
-  wf Σ ->
+  wf_ext Σ ->
   wf_local Σ Γ ->
   Σ ;;; Γ |- mkApps t L : T ->
   isErasable Σ Γ t ->
@@ -477,9 +474,9 @@ Lemma Is_type_app (Σ : global_env_ext) Γ t L T :
 Proof.
   intros wfΣ wfΓ ? ?.
   assert (HW : isWfArity_or_Type Σ Γ T). eapply PCUICValidity.validity; eauto.
-  eapply PCUICValidity.inversion_mkApps in X as (? & ? & ? & ? & ?); try eassumption.
+  eapply PCUICValidity.inversion_mkApps in X as (? & ? & ? & ? & ?); auto.
   destruct X0 as (? & ? & [ | [u]]).
-  - eapply PCUICPrincipality.principal_typing in t2 as (? & ? & ? & ?). 2:eauto. 2:exact t0.
+  - eapply principal_typing in t2 as (? & ? & ? & ?). 2:eauto. 2:exact t0.
     eapply invert_cumul_arity_r in c1; eauto.
     destruct c1 as (? & ? & ?). destruct H as [].
     eapply PCUICCumulativity.red_cumul_inv in X.
@@ -511,7 +508,7 @@ Proof.
 Qed.
 
 Lemma Is_type_lambda (Σ : global_env_ext) Γ na T1 t :
-  wf Σ ->
+  wf_ext Σ ->
   wf_local Σ Γ ->
   isErasable Σ Γ (tLambda na T1 t) ->
   ∥isErasable Σ (vass na T1 :: Γ) t∥.
@@ -526,9 +523,9 @@ Proof.
   - sq. eapply cumul_prop1 in c; eauto.
     eapply inversion_Prod in c as (? & ? & ? & ? & ?) ; auto.
     eapply cumul_Sort_inv in c.
-    eapply leq_universe_prop in c as []; cbn; eauto.
+    eapply leq_universe_prop in c as H0; cbn; eauto.
     eexists. split. eassumption. right. eexists. split. eassumption.
-    eapply is_prop_sort_prod; eassumption.
+    eapply is_prop_sort_prod; eauto.
     eapply type_Lambda in t1; eauto.
     now apply PCUICValidity.validity in t1.
 Qed.

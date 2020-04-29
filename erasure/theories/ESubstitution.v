@@ -50,6 +50,10 @@ Proof.
   eauto.
 Qed.
 
+(* todo move *)
+Instance extends_refl : CRelationClasses.Reflexive extends.
+Proof. now exists []. Qed.
+
 Lemma Informative_extends:
   forall (Σ : global_env_ext) (ind : inductive)
     (mdecl : PCUICAst.mutual_inductive_body) (idecl : PCUICAst.one_inductive_body),
@@ -70,6 +74,7 @@ Proof.
   unfold PCUICTyping.declared_minductive in *.
 
   eapply extends_lookup in H1; eauto.
+  2:{ reflexivity. }
   rewrite H1 in H. inversion H. subst. clear H.
   rewrite H3 in H4. inversion H4. subst. clear H4.
   split. eauto. econstructor. eauto.

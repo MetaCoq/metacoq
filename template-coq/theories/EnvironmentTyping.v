@@ -368,18 +368,19 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       | S k' => (tProj ((ind, npars), k') (tRel 0)) :: projs ind npars k'
       end.
 
+    Lemma projs_length ind npars k : #|projs ind npars k| = k.
+    Proof. induction k; simpl; auto. Qed.
+
     Definition on_projection mdecl mind i cshape (k : nat) (p : ident * term) :=
-      let parctx := smash_context [] mdecl.(ind_params) in
-      let argctx := smash_context [] cshape.(cshape_args) in
-      let Γ := parctx ,,, (skipn (#|argctx| - k) argctx) in
-      match nth_error argctx k return Type with
+      let Γ := smash_context [] (cshape.(cshape_args) ++ mdecl.(ind_params)) in
+      match nth_error Γ (context_assumptions cshape.(cshape_args) - k) return Type with
       | None => False
       | Some decl => 
         let u := abstract_instance mdecl.(ind_universes) in
         let ind := {| inductive_mind := mind; inductive_ind := i |} in
         (** The stored projection type already has the references to the inductive
-          type substituted along with the previous arguments replaced by projections.s *)
-        snd p = subst (inds mind u mdecl.(ind_bodies)) 0
+          type substituted along with the previous arguments replaced by projections. *)
+        snd p = subst (inds mind u mdecl.(ind_bodies)) (ind_npars mdecl)
               (subst (projs ind mdecl.(ind_npars) k) 0 
                 (lift 1 k (decl_type decl)))
       end.

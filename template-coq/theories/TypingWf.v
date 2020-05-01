@@ -338,6 +338,19 @@ Proof.
   assumption.
 Qed.
  
+Lemma on_inductive_wf_params {cf:checker_flags} {Σ : global_env_ext} {ind mdecl} :
+    forall (oib : on_inductive
+    (lift_typing (fun _ _ (t T : term) => Ast.wf t /\ Ast.wf T)) Σ
+    (inductive_mind ind) mdecl),
+    Forall wf_decl (ind_params mdecl).
+Proof.
+  intros oib. apply onParams in oib.
+  red in oib.
+  induction (ind_params mdecl) as [|[? [] ?] ?]; simpl in oib; inv oib; constructor;
+    try red in X0; try red in X1; try red; simpl; intuition auto.
+  destruct X0; intuition auto.
+Qed.
+
 Lemma declared_inductive_wf_shapes {cf:checker_flags} {Σ : global_env_ext} {ind mdecl idecl} :
     forall (oib : on_ind_body
     (lift_typing (fun _ _ (t T : term) => Ast.wf t /\ Ast.wf T)) Σ
@@ -347,7 +360,8 @@ Proof.
   intros oib.
   pose proof (onConstructors oib) as h. unfold on_constructors in h.
   induction h; constructor; auto.
-  destruct r. clear -on_cargs.
+  destruct r.
+  clear -on_cargs.
   induction (cshape_args y) as [|[? [] ?] ?]; simpl in on_cargs; constructor;
     try red; simpl; intuition auto.
 Qed.
@@ -379,16 +393,23 @@ Proof.
   eapply All_Forall. apply All_app_inv; auto. now apply Forall_All in wfΔ.
 Qed.
 
+(* Lemma smash_context_app Γ Δ : smash_context Δ Γ = smash_context [] Γ ++ Δ.
+Proof.
+  induction Γ in Δ |- *; simpl; auto.
+  destruct a as [? [] ?]; simpl; auto. rewrite IHΓ.
+  rewrite IHΓ. *)
+
 Lemma declared_projection_wf {cf:checker_flags}:
-  forall (Σ : global_env) (p : projection) (u : Instance.t)
+  forall (Σ : global_env) (p : projection)
          (mdecl : mutual_inductive_body) (idecl : one_inductive_body) (pdecl : ident * term),
     declared_projection Σ mdecl idecl p pdecl ->
     Forall_decls_typing (fun (_ : global_env_ext) (_ : context) (t T : term) => Ast.wf t /\ Ast.wf T) Σ ->
-    Ast.wf (subst_instance_constr u (snd pdecl)).
+    Ast.wf (snd pdecl).
 Proof.
-  intros Σ p u mdecl idecl pdecl isdecl X.
+  intros Σ p mdecl idecl pdecl isdecl X.
   destruct isdecl as [[Hmdecl Hidecl] Hpdecl].
   eapply lookup_on_global_env in Hmdecl as [Σ' [wfΣ' prf]]; eauto. red in prf.
+  assert (wfpars := on_inductive_wf_params prf).
   apply onInductives in prf.
   eapply nth_error_alli in Hidecl; eauto. intuition auto.
   pose proof (onProjections Hidecl) as on_projs.
@@ -397,14 +418,15 @@ Proof.
   destruct on_projs.
   eapply nth_error_alli in on_projs; eauto. red in on_projs.
   hnf in on_projs. simpl in on_projs.
-  destruct (nth_error (smash_context _ _) p.2) eqn:Heq'; try contradiction.
+  destruct (nth_error (smash_context _ _) _) eqn:Heq'; try contradiction.
   pose proof (declared_inductive_wf_shapes Hidecl).
   eapply Forall_All in H1.
   simpl in Heq. rewrite Heq in H1.
   inv H1. clear X0. rewrite on_projs.
-  eapply wf_subst_instance_constr. eapply wf_subst.    
+  eapply wf_subst.    
   eapply wf_inds. eapply wf_subst. eapply wf_projs.
-  eapply wf_lift. eapply (wf_smash_context _ []) in H2.
+  eapply wf_lift. eapply app_Forall in wfpars; [|eapply H2].
+  eapply (wf_smash_context _ []) in wfpars.
   2:constructor.
   eapply nth_error_forall in Heq'; eauto.
   apply Heq'.
@@ -506,6 +528,7 @@ Proof.
   - split. wf. apply wf_subst. solve_all. constructor. wf.
     apply wf_mkApps_inv in H2. apply All_rev. solve_all.
     subst ty. eapply declared_projection_wf in isdecl; eauto.
+    now eapply wf_subst_instance_constr. 
 
   - subst types.
     clear H.
@@ -721,4 +744,53 @@ Proof.
   apply wf_instantiate_params_subst_ctx in eq as h2 ; trivial.
   - eapply wf_subst ; trivial.
   - eapply rev_Forall. assumption.
+Qed.
+
+Record wf_inductive_body idecl := {
+  wf_ind_type : Ast.wf (ind_type idecl);
+  wf_ind_ctors : Forall (fun cdecl => Ast.wf (cdecl_type cdecl)) (ind_ctors idecl);
+  wf_ind_projs : Forall (fun pdecl => Ast.wf pdecl.2) (ind_projs idecl)
+}.
+
+Lemma declared_minductive_declared {cf:checker_flags} {Σ : global_env_ext} {mind} {mdecl} :
+  wf Σ.1 ->  
+  declared_minductive Σ mind mdecl ->
+  (Alli (fun i decl => declared_inductive Σ mdecl {| inductive_mind := mind; inductive_ind := i |} decl)
+    0 (ind_bodies mdecl)).
+Proof.
+ intros; eapply forall_nth_error_Alli. intros; split; auto.
+Qed.
+
+Lemma declared_inductive_declared {cf:checker_flags} {Σ : global_env_ext}
+  {ind mdecl idecl} :
+  wf Σ.1 ->  
+  declared_inductive Σ mdecl ind idecl ->
+  (Alli (fun i decl => declared_constructor Σ mdecl idecl (ind, i) decl) 0 (ind_ctors idecl)) *
+  (Alli (fun i decl => declared_projection Σ mdecl idecl ((ind, ind_npars mdecl), i) decl) 0 (ind_projs idecl)).
+Proof.
+ intros; split; eapply forall_nth_error_Alli; intros; split; auto.
+Qed.
+
+Lemma declared_minductive_wf {cf:checker_flags} {Σ : global_env_ext} {mind mdecl} :
+  wf Σ.1 ->  
+  declared_minductive Σ mind mdecl ->
+  Forall wf_decl (ind_params mdecl) /\
+  Forall wf_inductive_body (ind_bodies mdecl).
+Proof.  
+  intros wfΣ declm.
+  pose proof (typing_wf_gen _ wfΣ _ localenv_nil _ _ (type_Prop _)) as [X _].
+  split. eapply lookup_on_global_env in declm as [? [? ?]]; eauto.
+  red in o.
+  now apply (on_inductive_wf_params (ind:={|inductive_mind := mind; inductive_ind := 0|})) in o.
+  eapply All_Forall.
+  move: (declared_minductive_declared wfΣ declm) => decli.
+  eapply Alli_All; eauto.
+  intros i oib H. simpl in H.
+  destruct (declared_inductive_declared wfΣ H) as [declc declp].
+  split.
+  now eapply declared_inductive_wf in H.
+  eapply All_Forall, Alli_All; eauto. simpl; intros.
+  eapply declared_constructor_wf in H0; eauto. exact [].
+  eapply All_Forall, Alli_All; eauto. simpl; intros.
+  eapply declared_projection_wf in H0; eauto.
 Qed.

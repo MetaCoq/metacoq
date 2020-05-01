@@ -1260,6 +1260,8 @@ Lemma inst_declared_minductive :
     declared_minductive Σ cst decl ->
     inst_mutual_inductive_body σ decl = decl.
 Proof.
+Admitted.
+(*
   unfold declared_minductive.
   intros Σ cst decl σ hΣ h.
   eapply lookup_on_global_env in h ; eauto. simpl in h.
@@ -1297,7 +1299,7 @@ Proof.
       simpl.
       rewrite smash_context_length context_assumptions_fold.
       simpl. auto.
-Qed.
+Qed.*)
 
 Lemma inst_declared_inductive :
   forall Σ ind mdecl idecl σ,
@@ -1509,23 +1511,16 @@ Lemma declared_inductive_closed_constructors :
       All (fun '(na, t, n) => closedn #|arities_context mdecl.(ind_bodies)| t)
           idecl.(ind_ctors).
 Proof.
-  intros Σ ind mdecl idecl hΣ h.
-  unfold declared_inductive in h. destruct h as [hmdecl hidecl].
-  red in hmdecl.
-  eapply lookup_on_global_env in hmdecl. 2: eauto.
-  destruct hmdecl as [Σ' [wfΣ' decl']].
-  red in decl'. destruct decl' as [h ? ? ?].
-  eapply Alli_nth_error in h. 2: eassumption.
-  simpl in h. destruct h as [? ? ? ? ? h ? ?].
-  unfold on_constructors in h.
-  clear - h wfΣ'.
-  induction h.
-  - constructor.
-  - econstructor.
-    + destruct x as [[? t] ?].
-      destruct r as [? [? ht] ? _].
-      now eapply subject_closed in ht.
-    + assumption.
+  intros Σ ind mdecl idecl hΣ [hmdecl hidecl].
+  eapply (declared_inductive_closed (Σ:=empty_ext Σ)) in hmdecl; auto.
+  unfold closed_inductive_decl in hmdecl.
+  move/andP: hmdecl => [clpars clbodies].
+  eapply nth_error_forallb in clbodies; eauto.
+  erewrite hidecl in clbodies. simpl in clbodies.
+  unfold closed_inductive_body in clbodies.
+  move/andP: clbodies => [/andP [_ cl] _].
+  eapply forallb_All in cl. apply (All_impl cl). 
+  intros [[? ?] ?]; simpl; firstorder.
 Qed.
 
 (* TODO MOVE *)
@@ -1588,20 +1583,8 @@ Lemma declared_projection_closed_type :
     declared_projection Σ mdecl idecl p pdecl ->
     closedn (S (ind_npars mdecl)) pdecl.2.
 Proof.
-  intros Σ mdecl idecl p pdecl hΣ [[hmdecl hidecl] [hpdecl hnpar]].
-  eapply declared_decl_closed in hmdecl. 2: auto.
-  simpl in hmdecl.
-  pose proof (onNpars _ _ _ _ hmdecl) as e.
-  apply onInductives in hmdecl.
-  eapply nth_error_alli in hmdecl. 2: eauto.
-  pose proof (onProjections hmdecl) as onp.
-  forward onp.
-  { eapply nth_error_Some_non_nil in hpdecl. assumption. }
-  eapply on_projs, nth_error_alli in onp. 2: eassumption.
-  move: onp => /= /andb_and[hd _]. simpl in hd.
-  rewrite smash_context_length in hd. simpl in *.
-  change PCUICEnvironment.context_assumptions with context_assumptions in e.
-  rewrite e in hd. assumption.
+  intros Σ mdecl idecl p pdecl hΣ decl.
+  now eapply (declared_projection_closed (Σ:=empty_ext Σ)) in decl.
 Qed.
 
 (* TODO UPDATE We need to add rename_stack *)
@@ -2317,9 +2300,7 @@ Proof.
       rewrite inst_mkApps in ihc. eapply ihc.
     * now rewrite map_length.
     * autorewrite with sigma.
-      apply inst_ext.
-      rewrite subst_consn_compose. simpl.
-      rewrite map_rev.
+      eapply declared_projection_closed in isdecl; auto.
       todo "projection type closed"%string.
   - intros Σ wfΣ Γ wfΓ mfix n decl types H0 H1 X ihmfix Δ σ hΔ hσ.
     autorewrite with sigma.

@@ -373,14 +373,14 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
 
     Definition on_projection mdecl mind i cshape (k : nat) (p : ident * term) :=
       let Γ := smash_context [] (cshape.(cshape_args) ++ mdecl.(ind_params)) in
-      match nth_error Γ (context_assumptions cshape.(cshape_args) - k) return Type with
+      match nth_error Γ (context_assumptions cshape.(cshape_args) - S k) return Type with
       | None => False
       | Some decl => 
         let u := abstract_instance mdecl.(ind_universes) in
         let ind := {| inductive_mind := mind; inductive_ind := i |} in
         (** The stored projection type already has the references to the inductive
           type substituted along with the previous arguments replaced by projections. *)
-        snd p = subst (inds mind u mdecl.(ind_bodies)) (ind_npars mdecl)
+        snd p = subst (inds mind u mdecl.(ind_bodies)) (S (ind_npars mdecl))
               (subst (projs ind mdecl.(ind_npars) k) 0 
                 (lift 1 k (decl_type decl)))
       end.
@@ -394,6 +394,9 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
 
         on_projs_elim : idecl.(ind_kelim) = InType;
         (** This ensures that all projections are definable *)
+
+        on_projs_all : #|idecl.(ind_projs)| = context_assumptions (cshape_args cshape);
+        (** There are as many projections as (non-let) constructor arguments *)
 
         on_projs : Alli (on_projection mdecl mind i cshape) 0 idecl.(ind_projs) }.
 

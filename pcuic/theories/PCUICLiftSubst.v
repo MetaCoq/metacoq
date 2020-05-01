@@ -113,6 +113,11 @@ Notation "M { j := N }" := (subst1 N j M) (at level 10, right associativity).
 Definition subst_telescope s k Γ :=
   mapi (fun k' x => map_decl (subst s (k + k')) x) Γ.
 
+Definition subst_decl s k (d : context_decl) := map_decl (subst s k) d.
+
+Definition subst_context s k (Γ : context) : context :=
+  fold_context (fun k' => subst s (k' + k)) Γ.
+
 Fixpoint closedn k (t : term) : bool :=
   match t with
   | tRel i => Nat.ltb i k
@@ -661,6 +666,27 @@ Proof.
     + simpl. repeat f_equal; try lia.
     + simpl. apply IHΓ'; simpl in *; (lia || congruence).
 Qed.
+
+Lemma subst_context_length s n Γ : #|subst_context s n Γ| = #|Γ|.
+Proof.
+  induction Γ as [|[na [body|] ty] tl] in Γ |- *; cbn; eauto.
+  - rewrite !List.rev_length !mapi_length !app_length !List.rev_length. simpl.
+    lia.
+  - rewrite !List.rev_length !mapi_length !app_length !List.rev_length. simpl.
+    lia.
+Qed.
+
+Lemma subst_context_snoc s k Γ d : subst_context s k (d :: Γ) = subst_context s k Γ ,, subst_decl s (#|Γ| + k) d.
+Proof.
+  unfold subst_context, fold_context.
+  rewrite !rev_mapi !rev_involutive /mapi mapi_rec_eqn /snoc.
+  f_equal. 1: now rewrite Nat.sub_0_r List.rev_length.
+  rewrite mapi_rec_Sk. simpl. apply mapi_rec_ext. intros.
+  rewrite app_length !List.rev_length. simpl. f_equal. f_equal. lia.
+Qed.
+Hint Rewrite subst_context_snoc : subst.
+
+(* Sigma calculus*)
 
 Lemma shiftn_ext n f f' : (forall i, f i = f' i) -> forall t, shiftn n f t = shiftn n f' t.
 Proof.

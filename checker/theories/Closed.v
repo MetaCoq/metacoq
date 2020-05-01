@@ -274,14 +274,6 @@ Definition Pclosed :=
   (fun (_ : global_env_ext) (Γ : context) (t T : term) =>
            closedn #|Γ| t && closedn #|Γ| T).
 
-Lemma Alli_app_inv {A} {P} {l l' : list A} {n} : Alli P n l -> Alli P (n + #|l|) l' -> Alli P n (l ++ l').
-Proof.
-  induction 1; simpl; auto.  now rewrite Nat.add_0_r.
-  rewrite Nat.add_succ_r. simpl in IHX.
-  intros H; specialize (IHX H).
-  constructor; auto.
-Qed.
-
 Lemma type_local_ctx_Pclosed Σ Γ Δ s :
   type_local_ctx (lift_typing Pclosed) Σ Γ Δ s ->
   Alli (fun i d => closed_decl (#|Γ| + i) d) 0 (List.rev Δ).
@@ -374,28 +366,6 @@ Lemma closed_smash_context (Γ Δ : context) :
   Alli (fun i d => closed_decl (#|Γ| + i) d) 0 (List.rev (smash_context [] Δ)).
 Proof.
   intros; apply (closed_smash_context_gen Γ _ []); auto. constructor.
-Qed.
-
-Lemma Alli_rev_nth_error {A} (l : list A) n P x :
-  Alli P 0 (List.rev l) ->
-  nth_error l n = Some x ->
-  P (#|l| - S n) x.
-Proof.
-  induction l in x, n |- *; simpl.
-  { rewrite nth_error_nil; discriminate. }
-  move/Alli_app => [Alll Alla]. inv Alla. clear X0.
-  destruct n as [|n'].
-  - move=> [=] <-. rewrite List.rev_length Nat.add_0_r in X.
-    now rewrite Nat.sub_0_r.
-  - simpl. eauto.
-Qed.  
-
-Lemma Alli_shiftn {A} {P : nat -> A -> Type} k l n :
-  Alli (fun x => P (n + x)) k l ->
-  Alli P (n + k) l.
-Proof.
-  induction 1; simpl; constructor; auto.
-  now rewrite Nat.add_succ_r in IHX.
 Qed.
 
 Lemma context_assumptions_app Γ Δ : context_assumptions (Γ ++ Δ) = 

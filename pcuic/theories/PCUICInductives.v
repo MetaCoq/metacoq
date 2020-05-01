@@ -126,7 +126,6 @@ Proof.
   congruence.
 Qed.
 
-Arguments cshape_indices {mdecl i idecl ctype cargs}.
 Import PCUICEnvironment.
 
 From MetaCoq.PCUIC Require Import PCUICCtxShape.
@@ -135,7 +134,7 @@ Lemma branch_type_spec {cf:checker_flags} Σ ind mdecl idecl cdecl pars u p c na
   declared_inductive Σ mdecl ind idecl ->
   forall (omib : on_inductive (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind ind) mdecl),
   forall (oib : on_ind_body (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind ind) mdecl (inductive_ind ind) idecl),
-  forall csort (cs : on_constructor (lift_typing typing) (Σ, ind_universes mdecl) mdecl (inductive_ind ind) idecl (ind_indices oib) cdecl csort),
+  forall cshape (cs : on_constructor (lift_typing typing) (Σ, ind_universes mdecl) mdecl (inductive_ind ind) idecl (ind_indices oib) cdecl cshape),
   branch_type ind mdecl idecl pars u p c cdecl = Some (nargs, bty) ->
   let cshape := cshape cs in
   nargs = context_assumptions cshape.(cshape_args) /\
@@ -163,15 +162,15 @@ Proof.
   clear decli.
   destruct onc.
   simpl in cshape'. subst cshape'.
-  destruct cshape as [args argslen head indi eqdecl].
-  rewrite eqdecl in on_ctype. simpl in * |-.
+  destruct cs as [args indi csort] => /=. simpl in *. 
+  rewrite cstr_eq in on_ctype.
   unfold branch_type in brty.
   destruct cdecl as [[id ty] nargs'']. simpl in * |-.
   destruct instantiate_params eqn:Heq => //.
   eapply instantiate_params_make_context_subst in Heq.
   destruct Heq as [ctx' [ty'' [s' [? [? ?]]]]].
   subst t. move: H.
-  rewrite {1}eqdecl subst_instance_constr_it_mkProd_or_LetIn subst_it_mkProd_or_LetIn.
+  rewrite {1}cstr_eq subst_instance_constr_it_mkProd_or_LetIn subst_it_mkProd_or_LetIn.
   rewrite -(subst_context_length (PCUICTyping.inds (inductive_mind ind) u (ind_bodies mdecl)) 0).
   rewrite decompose_prod_n_assum_it_mkProd.
   move=> H;noconf H.
@@ -187,7 +186,7 @@ Proof.
      (PCUICTyping.inds (inductive_mind ind) u
         (PCUICAst.ind_bodies mdecl))
      (#|args| + #|PCUICAst.ind_params mdecl|)
-     (subst_instance_constr u head))) = tInd ind u).
+     (subst_instance_constr u cstr_concl_head))) = tInd ind u).
   rewrite /head. simpl subst_instance_constr.
   erewrite (subst_rel_eq _ _ (#|ind_bodies mdecl| -  S (inductive_ind ind))); try lia.
   2:{ rewrite inds_spec nth_error_rev.

@@ -422,6 +422,37 @@ Proof.
   now replace (pred (#|l| + 1) - S n) with (pred #|l| - n) by lia.
 Qed.
 
+
+Lemma Alli_app_inv {A} {P} {l l' : list A} {n} : Alli P n l -> Alli P (n + #|l|) l' -> Alli P n (l ++ l').
+Proof.
+  induction 1; simpl; auto.  now rewrite Nat.add_0_r.
+  rewrite Nat.add_succ_r. simpl in IHX.
+  intros H; specialize (IHX H).
+  constructor; auto.
+Qed.
+
+Lemma Alli_rev_nth_error {A} (l : list A) n P x :
+  Alli P 0 (List.rev l) ->
+  nth_error l n = Some x ->
+  P (#|l| - S n) x.
+Proof.
+  induction l in x, n |- *; simpl.
+  { rewrite nth_error_nil; discriminate. }
+  move/Alli_app => [Alll Alla]. inv Alla. clear X0.
+  destruct n as [|n'].
+  - move=> [=] <-. rewrite List.rev_length Nat.add_0_r in X.
+    now rewrite Nat.sub_0_r.
+  - simpl. eauto.
+Qed.  
+
+Lemma Alli_shiftn {A} {P : nat -> A -> Type} k l n :
+  Alli (fun x => P (n + x)) k l ->
+  Alli P (n + k) l.
+Proof.
+  induction 1; simpl; constructor; auto.
+  now rewrite Nat.add_succ_r in IHX.
+Qed.
+
 Lemma Alli_All_mix {A} {P : nat -> A -> Type} (Q : A -> Type) k l :
   Alli P k l -> All Q l -> Alli (fun k x => (P k x) * Q x)%type k l.
 Proof.

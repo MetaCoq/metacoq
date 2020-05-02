@@ -920,7 +920,7 @@ Section CheckLeq.
       -> gc_leq_universe_n n uctx.2 (Universe.make l) (Universe.make l').
   Proof.
     intro HH. apply leq_universe_vertices0.
-    apply leqb_vertices_correct; tas; subst G; exact _.
+    apply leqb_vertices_correct; tas; clear HH; subst G; exact _.
   Qed.
 
   Lemma leqb_no_prop_n_spec n (l l' : NoPropLevel.t)

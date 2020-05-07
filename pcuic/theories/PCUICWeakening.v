@@ -237,31 +237,6 @@ Proof.
     + eapply typed_liftn in t0 as [Ht HT]; eauto. lia.
 Qed.
 
-Lemma closed_wf_local `{checker_flags} Σ Γ :
-  wf Σ.1 ->
-  wf_local Σ Γ ->
-  closed_ctx Γ.
-Proof.
-  intros wfΣ. unfold closed_ctx, mapi. intros wf. generalize 0.
-  induction wf; intros n; auto; unfold closed_ctx, snoc; simpl;
-    rewrite mapi_rec_app forallb_app; unfold id, closed_decl.
-  - simpl.
-    destruct t0 as [s Hs].
-    eapply typecheck_closed in Hs as [closedΓ tcl]; eauto.
-    rewrite -> andb_and in *. simpl in *; rewrite andb_true_r in tcl |- *.
-    simpl in *. intuition auto.
-    + apply IHwf.
-    + erewrite closed_upwards; eauto. rewrite List.rev_length. lia.
-  - simpl. eapply typecheck_closed in t1 as [closedΓ tcl]; eauto.
-    rewrite -> andb_and in *. intuition auto.
-    + apply IHwf.
-    + erewrite closed_upwards; eauto.
-      * erewrite closed_upwards; eauto.
-        rewrite List.rev_length. lia.
-      * rewrite List.rev_length. lia.
-Qed.
-
-
 Lemma lift_declared_minductive `{checker_flags} {Σ : global_env} cst decl n k :
   wf Σ ->
   declared_minductive Σ cst decl ->
@@ -1140,7 +1115,7 @@ Proof.
   rewrite !app_context_nil_l in X.
   forward X by eauto using typing_wf_local.
   pose proof (typing_wf_local ty).
-  pose proof (closed_wf_local _ _ wfΣ (typing_wf_local ty)).
+  pose proof (closed_wf_local wfΣ (typing_wf_local ty)).
   specialize (X _ ty).
   eapply PCUICClosed.typecheck_closed in ty as [_ closed]; auto.
   move/andP: closed => [ct cT].

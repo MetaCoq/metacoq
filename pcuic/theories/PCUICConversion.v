@@ -2304,7 +2304,7 @@ Proof.
   epose proof (weakening_conv Σ [] Γ Δ t u wfΣ).
   rewrite !app_context_nil_l in X.
   forward X by eauto using typing_wf_local.
-  pose proof (closed_wf_local _ _ wfΣ wfΓ).
+  pose proof (closed_wf_local wfΣ wfΓ).
   rewrite closed_ctx_lift in X; auto.
   rewrite !lift_closed in X => //.
 Qed.
@@ -2338,12 +2338,12 @@ Lemma context_relation_subst_instance {cf:checker_flags} {Σ} Γ Δ u u' :
   (subst_instance_context u' Δ).
 Proof.
   move=> wfΣ wf wf0 equ.
-  assert (cl := closed_wf_local _ _ _ wf0).
+  assert (cl := closed_wf_local wfΣ wf0).
   rewrite closedn_subst_instance_context in cl.
   induction Δ as [|d Δ] in cl, wf0 |- *.
   - constructor.
   - simpl.
-    apply closedn_ctx_cons in cl. apply andP in cl as [clctx cld].
+    rewrite closedn_ctx_cons in cl. apply andP in cl as [clctx cld].
     simpl in wf0.
     destruct d as [na [b|] ty] => /=.
     * depelim wf0; simpl in H; noconf H; simpl in *.

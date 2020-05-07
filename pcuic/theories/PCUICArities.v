@@ -729,7 +729,7 @@ Proof.
     rewrite app_context_nil_l in b.
     eapply weaken_wf_local=> //.
   - right. exists s.
-    unshelve epose proof (subject_closed _ _ _ _ _ hs); eauto.
+    unshelve epose proof (subject_closed wfΣ hs); eauto.
     eapply (weakening _ _ Γ) in hs => //.
     rewrite lift_closed in hs => //.
     now rewrite app_context_nil_l in hs.

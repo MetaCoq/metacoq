@@ -373,16 +373,19 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
 
     Definition on_projection mdecl mind i cshape (k : nat) (p : ident * term) :=
       let Γ := smash_context [] (cshape.(cshape_args) ++ mdecl.(ind_params)) in
-      match nth_error Γ (context_assumptions cshape.(cshape_args) - S k) return Type with
+      match nth_error Γ (context_assumptions cshape.(cshape_args) - S k) with
       | None => False
       | Some decl => 
         let u := abstract_instance mdecl.(ind_universes) in
         let ind := {| inductive_mind := mind; inductive_ind := i |} in
         (** The stored projection type already has the references to the inductive
-          type substituted along with the previous arguments replaced by projections. *)
-        snd p = subst (inds mind u mdecl.(ind_bodies)) (S (ind_npars mdecl))
+          type substituted along with the previous arguments replaced by projections.
+          All projections must also be named.
+          *)
+        (decl_name decl = nNamed (fst p)) /\
+        (snd p = subst (inds mind u mdecl.(ind_bodies)) (S (ind_npars mdecl))
               (subst (projs ind mdecl.(ind_npars) k) 0 
-                (lift 1 k (decl_type decl)))
+                (lift 1 k (decl_type decl))))
       end.
 
     Record on_projections mdecl mind i idecl (ind_indices : context) cshape :=

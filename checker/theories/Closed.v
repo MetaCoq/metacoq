@@ -396,13 +396,14 @@ Proof.
   simpl in onp. destruct (ind_cshapes oib) as [|? []] eqn:Heq; try contradiction.
   red in onp.
   destruct (nth_error (smash_context [] _) _) eqn:Heq'; try contradiction.
+  destruct onp as [onna onp].
   rewrite {}onp. 
   pose proof (onConstructors oib) as onc. 
   red in onc. rewrite Heq in onc. inv onc. clear X1.
   eapply on_cargs in X.
   simpl.
   replace (S (ind_npars mdecl)) with (1 + ind_npars mdecl) by lia.
-  eapply closedn_subst.
+  eapply (closedn_subst _ 0).
   { clear. unfold inds. generalize (TemplateEnvironment.ind_bodies mdecl).
     induction l; simpl; auto. }
   rewrite inds_length.

@@ -80,6 +80,35 @@ Proof.
     f_equal. f_equal. f_equal; lia.
 Qed.
 
+Lemma smash_context_lift Δ k n Γ : 
+  smash_context (lift_context n (k + #|Γ|) Δ) (lift_context n k Γ) =
+  lift_context n k (smash_context Δ Γ).
+Proof.
+  revert Δ. induction Γ as [|[na [b|] ty]]; intros Δ; simpl; auto.
+  - now rewrite Nat.add_0_r.
+  - rewrite -IHΓ.
+    rewrite lift_context_snoc /=. f_equal.
+    rewrite !subst_context_alt !lift_context_alt !mapi_compose.
+    apply mapi_ext=> n' x.
+    destruct x as [na' [b'|] ty']; simpl.
+    * rewrite !mapi_length /lift_decl /subst_decl /= /map_decl /=; f_equal.
+      f_equal. rewrite Nat.add_0_r distr_lift_subst_rec /=.
+      f_equal; try lia. do 2 f_equal; lia. f_equal; lia.
+      rewrite Nat.add_0_r distr_lift_subst_rec; simpl.
+      f_equal; try lia. do 2 f_equal; lia. f_equal; lia.
+    * rewrite !mapi_length /lift_decl /subst_decl /= /map_decl /=; f_equal.
+      rewrite Nat.add_0_r distr_lift_subst_rec /=.
+      f_equal. f_equal; f_equal; lia. f_equal; lia. 
+  - rewrite -IHΓ.
+    rewrite lift_context_snoc /= // /lift_decl /subst_decl /map_decl /=.
+    f_equal.
+    rewrite lift_context_app. simpl.
+    rewrite /app_context. f_equal.
+    f_equal; lia.
+    rewrite /lift_context // /fold_context /= /map_decl /=.
+    f_equal. f_equal. f_equal; lia.
+Qed.
+
 Lemma smash_context_subst_empty s n Γ : 
   smash_context [] (subst_context s n Γ) =
   subst_context s n (smash_context [] Γ).

@@ -544,13 +544,9 @@ Proof.
     pose proof (principal_type_ind X2 a0) as [Ruu' X3].
     transitivity (subst0 (c :: List.rev args) (subst_instance_constr u' pdecl'.2)).
     eapply conv_cumul.
-    destruct (PCUICWeakeningEnv.on_declared_projection wfΣ a) as [[oni oib] onp].
-    destruct p as [[ind n] k].
-    red in onp. simpl in onp.
-    match goal with 
-    [ _ : on_type _ _ ?Γ _ |- _ ] => set(ctx := Γ) in *
-    end.
-    eapply (conv_subst_conv _ Γ ctx ctx []); eauto.
+    set (ctx := PCUICInductives.projection_context mdecl' idecl' p.1.1 u').
+    set (ctx' := PCUICInductives.projection_context mdecl' idecl' p.1.1 u).
+    eapply (conv_subst_conv _ Γ ctx ctx' []); eauto.
     constructor. now constructor.
     eapply All2_rev. apply All2_sym. apply (All2_impl X3). intros; now symmetry.
     eapply subslet_untyped_subslet; eauto.

@@ -1372,10 +1372,9 @@ Section Lemmata.
     destruct hΣ.
     apply inversion_Proj in h; auto.
     destruct h as [uni [mdecl [idecl [pdecl [args' [d [hc [? ?]]]]]]]].
-    eapply on_declared_projection in d; auto. simpl in d. destruct d as [? [? ?]]; auto.
+    eapply on_declared_projection in d; auto. simpl in d.
+    destruct d as []; auto.
     simpl in *.
-    destruct p.
-    destruct o0; auto.
     todo "projection invariant"%string.
   Qed.
 

@@ -453,14 +453,14 @@ Lemma declared_constructor_inv `{checker_flags} {Σ P mdecl idecl ref cdecl}
   (HΣ : Forall_decls_typing P Σ)
   (Hdecl : declared_constructor Σ mdecl idecl ref cdecl) :
   ∑ cs,
-  let onib := declared_inductive_inv HP wfΣ HΣ (proj1 Hdecl) in
+  let onib := declared_inductive_inv HP wfΣ HΣ (let (x, _) := Hdecl in x) in
   nth_error onib.(ind_cshapes) ref.2 = Some cs
   × on_constructor (lift_typing P) (Σ, ind_universes mdecl) mdecl
                    (inductive_ind ref.1) idecl onib.(ind_indices) cdecl cs.
 Proof.
   intros.
   destruct Hdecl as [Hidecl Hcdecl].
-  set (declared_inductive_inv HP wfΣ HΣ (proj1 (conj Hidecl Hcdecl))) as HH.
+  set (declared_inductive_inv HP wfΣ HΣ Hidecl) as HH.
   clearbody HH. pose proof HH.(onConstructors) as HH'.
   eapply All2_nth_error_Some in Hcdecl; tea.
 Qed.
@@ -470,21 +470,32 @@ Lemma declared_projection_inv `{checker_flags} {Σ P mdecl idecl ref pdecl} :
   (wfΣ : wf Σ)
   (HΣ : Forall_decls_typing P Σ)
   (Hdecl : declared_projection Σ mdecl idecl ref pdecl),
-  let oib := declared_inductive_inv HP wfΣ HΣ (proj1 Hdecl) in
+  let oib := declared_inductive_inv HP wfΣ HΣ (let (x, _) := Hdecl in x) in
   match oib.(ind_cshapes) return Type with
-  | [cs] => on_projection mdecl (inductive_mind ref.1.1) (inductive_ind ref.1.1) cs (snd ref) pdecl
+  | [cs] => 
+    type_local_ctx (lift_typing P) (Σ, ind_universes mdecl) (arities_context (ind_bodies mdecl) ,,, ind_params mdecl) (cshape_args cs)
+      (cshape_sort cs) *
+    on_projections mdecl (inductive_mind ref.1.1) (inductive_ind ref.1.1) idecl (oib.(ind_indices)) cs *
+    ((snd ref) < context_assumptions cs.(cshape_args)) *
+    on_projection mdecl (inductive_mind ref.1.1) (inductive_ind ref.1.1) cs (snd ref) pdecl
   | _ => False
   end.
 Proof.
   intros.
-  destruct (declared_inductive_inv HP wfΣ HΣ (proj1 Hdecl)) in *.
+  destruct (declared_inductive_inv HP wfΣ HΣ (let (x, _) := Hdecl in x)) in *.
   destruct Hdecl as [Hidecl [Hcdecl Hnpar]]. simpl. clearbody oib.
   forward onProjections.    
   { eapply nth_error_Some_length in Hcdecl.
     destruct (ind_projs idecl); simpl in *; try lia. congruence. }
   destruct ind_cshapes as [|? []]; try contradiction.
-  destruct onProjections.
-  eapply nth_error_alli in Hcdecl; eauto. eapply Hcdecl.
+  intuition auto.
+  - red in onConstructors. destruct onProjections.
+    destruct (ind_ctors idecl) as [|? []]; simpl in *; try discriminate.
+    inv onConstructors. now eapply on_cargs in X.
+  - destruct onProjections. eapply nth_error_Some_length in Hcdecl. lia.
+  - destruct onProjections.
+    eapply nth_error_alli in Hcdecl; eauto. 
+    eapply Hcdecl.
 Qed.
 
 Lemma wf_extends `{checker_flags} {Σ Σ'} : wf Σ' -> extends Σ Σ' -> wf Σ.
@@ -587,7 +598,7 @@ Proof.
   split.
   - destruct Hdecl as [Hmdecl _]. now apply on_declared_minductive in Hmdecl.
   - apply (declared_inductive_inv weaken_env_prop_typing wfΣ wfΣ Hdecl).
-Qed.
+Defined.
 
 Lemma on_declared_constructor `{checker_flags} {Σ ref mdecl idecl cdecl}
   (wfΣ : wf Σ)
@@ -597,7 +608,7 @@ Lemma on_declared_constructor `{checker_flags} {Σ ref mdecl idecl cdecl}
   on_ind_body (lift_typing typing) (Σ, ind_universes mdecl)
               (inductive_mind (fst ref)) mdecl (inductive_ind (fst ref)) idecl *
   ∑ ind_ctor_sort,
-    let onib := declared_inductive_inv weaken_env_prop_typing wfΣ wfΣ (proj1 Hdecl) in
+    let onib := declared_inductive_inv weaken_env_prop_typing wfΣ wfΣ (let (x, _) := Hdecl in x) in
      nth_error (ind_cshapes onib) ref.2 = Some ind_ctor_sort
     ×  on_constructor (lift_typing typing) (Σ, ind_universes mdecl)
                  mdecl (inductive_ind (fst ref))
@@ -607,14 +618,20 @@ Proof.
   - destruct Hdecl as [Hidecl Hcdecl].
     now apply on_declared_inductive in Hidecl.
   - apply (declared_constructor_inv weaken_env_prop_typing wfΣ wfΣ Hdecl).
-Qed.
+Defined.
 
 Lemma on_declared_projection `{checker_flags} {Σ ref mdecl idecl pdecl} :
   forall (wfΣ : wf Σ) (Hdecl : declared_projection Σ mdecl idecl ref pdecl),
   on_inductive (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind (fst (fst ref))) mdecl *
-  let oib := declared_inductive_inv weaken_env_prop_typing wfΣ wfΣ (proj1 Hdecl) in
+  let oib := declared_inductive_inv weaken_env_prop_typing wfΣ wfΣ (let (x, _) := Hdecl in x) in
   match oib.(ind_cshapes) return Type with
-  | [cs] => on_projection mdecl (inductive_mind ref.1.1) (inductive_ind ref.1.1) cs (snd ref) pdecl
+  | [cs] => 
+    type_local_ctx (lift_typing typing) (Σ, ind_universes mdecl) 
+      (arities_context (ind_bodies mdecl) ,,, ind_params mdecl) (cshape_args cs)
+      (cshape_sort cs) *
+    on_projections mdecl (inductive_mind ref.1.1) (inductive_ind ref.1.1) idecl (oib.(ind_indices)) cs *
+    ((snd ref) < context_assumptions cs.(cshape_args)) *
+    on_projection mdecl (inductive_mind ref.1.1) (inductive_ind ref.1.1) cs (snd ref) pdecl
   | _ => False
   end.
 Proof.

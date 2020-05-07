@@ -446,11 +446,18 @@ Proof.
 Qed.  
 
 Lemma Alli_shiftn {A} {P : nat -> A -> Type} k l n :
-  Alli (fun x => P (n + x)) k l ->
-  Alli P (n + k) l.
+  Alli (fun x => P (n + x)) k l -> Alli P (n + k) l.
 Proof.
   induction 1; simpl; constructor; auto.
   now rewrite Nat.add_succ_r in IHX.
+Qed.
+
+Lemma Alli_shiftn_inv {A} {P : nat -> A -> Type} k l n :
+  Alli P (n + k) l -> Alli (fun x => P (n + x)) k l.
+Proof.
+  induction l in n, k |- *; simpl; constructor; auto.
+  inv X; auto. inv X; auto. apply IHl.
+  now rewrite Nat.add_succ_r.
 Qed.
 
 Lemma Alli_All_mix {A} {P : nat -> A -> Type} (Q : A -> Type) k l :

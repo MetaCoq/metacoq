@@ -864,7 +864,7 @@ Proof.
         eapply All2_nth_error_Some in X2 as (? & ? & ?); eauto.
         destruct x1. cbn in *. subst.
 
-        enough(Σ;;; [] ,,, subst_context (fix_subst mfix) 0 [] |- PCUICLiftSubst.subst (fix_subst mfix) 0 dbody ⇝ℇ subst (ETyping.fix_subst mfix') 0 (Extract.E.dbody x4)).
+        enough(Σ;;; [] ,,, PCUICLiftSubst.subst_context (fix_subst mfix) 0 [] |- PCUICLiftSubst.subst (fix_subst mfix) 0 dbody ⇝ℇ subst (ETyping.fix_subst mfix') 0 (Extract.E.dbody x4)).
         destruct p. destruct p.
 
         clear e3. rename H into e3.

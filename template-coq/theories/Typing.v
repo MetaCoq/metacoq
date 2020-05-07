@@ -1265,7 +1265,7 @@ Proof.
           simpl in IH. simpl. apply IH; constructor 1; simpl; lia.
         -- pose proof Xg.(onConstructors) as Xg'.
            eapply All2_impl; eauto. intros.
-           destruct X14 as [cass chead tyeq onctyp oncargs oncind oncindices].
+           destruct X14 as [cass chead tyeq onctyp oncargs oncind].
            unshelve econstructor; eauto.
            destruct onctyp as [s Hs].
            pose proof (typing_wf_local (Σ:= (Σ, udecl)) Hs). simpl in Hs.

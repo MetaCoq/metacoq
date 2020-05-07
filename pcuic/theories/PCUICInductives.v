@@ -136,7 +136,6 @@ Lemma branch_type_spec {cf:checker_flags} Σ ind mdecl idecl cdecl pars u p c na
   forall (oib : on_ind_body (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind ind) mdecl (inductive_ind ind) idecl),
   forall cshape (cs : on_constructor (lift_typing typing) (Σ, ind_universes mdecl) mdecl (inductive_ind ind) idecl (ind_indices oib) cdecl cshape),
   branch_type ind mdecl idecl pars u p c cdecl = Some (nargs, bty) ->
-  let cshape := cshape cs in
   nargs = context_assumptions cshape.(cshape_args) /\
   forall parsubst, 
   context_subst (subst_instance_context u (PCUICAst.ind_params mdecl)) pars parsubst ->
@@ -154,14 +153,13 @@ Lemma branch_type_spec {cf:checker_flags} Σ ind mdecl idecl cdecl pars u p c na
           to_extended_list substargs)])).
 Proof.
   move=> decli onmib [] indices ps aeq onAr indsorts onC onP inds.
-  intros cs onc brty cshape'.
-  simpl in onc, cshape'.
+  intros cs onc brty.
+  simpl in onc.
   clear onP.
   assert(lenbodies: inductive_ind ind < #|ind_bodies mdecl|).
   { destruct decli as [_ Hnth]. now apply nth_error_Some_length in Hnth. }
   clear decli.
   destruct onc.
-  simpl in cshape'. subst cshape'.
   destruct cs as [args indi csort] => /=. simpl in *. 
   rewrite cstr_eq in on_ctype.
   unfold branch_type in brty.
@@ -209,7 +207,7 @@ Proof.
   move=> [=] Hargs Hbty. subst nargs. split;auto. rewrite -Hbty.
   clear Hbty bty.
   rewrite app_nil_r.
-  move=>parsubst Hpars cshape' indsubst nargs' na. simpl in indsubst, na.
+  move=>parsubst Hpars.
   pose proof (make_context_subst_spec _ _ _ H0) as csubst.
   rewrite rev_involutive in csubst.
   pose proof (context_subst_fun csubst Hpars). subst s'. clear csubst.
@@ -314,7 +312,7 @@ Proof.
   simpl. move=> [] <-. now simpl.
 Qed.
 
-Definition projection_context mdecl idecl ind := 
+Definition projection_context mdecl idecl ind u := 
   smash_context [] (PCUICEnvironment.ind_params mdecl),,
        PCUICEnvironment.vass (nNamed (PCUICEnvironment.ind_name idecl))
          (mkApps
@@ -322,13 +320,13 @@ Definition projection_context mdecl idecl ind :=
                {|
                inductive_mind := inductive_mind ind;
                inductive_ind := inductive_ind ind |}
-               (polymorphic_instance (PCUICEnvironment.ind_universes mdecl)))
+               u)
             (PCUICEnvironment.to_extended_list
                (smash_context [] (PCUICEnvironment.ind_params mdecl)))).
 
 Lemma projection_subslet {cf:checker_flags} Σ Γ mdecl idecl ind u c args : 
   Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
-  subslet Σ Γ (c :: List.rev args) (projection_context mdecl idecl ind). 
+  subslet Σ Γ (c :: List.rev args) (projection_context mdecl idecl ind u). 
 Proof.
   todo "Projections"%string.
 Qed.

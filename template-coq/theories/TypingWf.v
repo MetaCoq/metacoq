@@ -422,7 +422,7 @@ Proof.
   pose proof (declared_inductive_wf_shapes Hidecl).
   eapply Forall_All in H1.
   simpl in Heq. rewrite Heq in H1.
-  inv H1. clear X0. rewrite on_projs.
+  inv H1. clear X0. destruct on_projs as [onna on_projs]. rewrite on_projs.
   eapply wf_subst.    
   eapply wf_inds. eapply wf_subst. eapply wf_projs.
   eapply wf_lift. eapply app_Forall in wfpars; [|eapply H2].

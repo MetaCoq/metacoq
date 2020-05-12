@@ -206,27 +206,25 @@ Next Obligation.
     constructor. f_equal. assumption.
 Defined.
 
-Definition eq_inductive ind ind' :=
-  match ind, ind' with
-  | mkInd m n, mkInd m' n' =>
-    eqb m m' && eqb n n'
-  end.
+
+#[program] Instance reflect_kername : ReflectEq kername := {
+  eqb := eq_kername
+}.
+Next Obligation.
+  intros; unfold eq_kername; destruct kername_eq_dec; now constructor.
+Qed.
+
 
 #[program] Instance reflect_inductive : ReflectEq inductive := {
   eqb := eq_inductive
 }.
 Next Obligation.
-  intros i i'. destruct i as [m n], i' as [m' n'].
-  unfold eq_inductive.
+  intros i i'. destruct i as [m n], i' as [m' n']; cbn.
+  change (eq_kername m m') with (eqb m m').
+  change (n =? n') with (eqb n n').
   destruct (eqb_spec m m') ; nodec.
   destruct (eqb_spec n n') ; nodec.
   cbn. constructor. subst. reflexivity.
-Defined.
-
-Lemma eq_inductive_refl i : eq_inductive i i.
-Proof.
-  destruct i as [mind k].
-  unfold eq_inductive, eqb; cbn. now rewrite eq_string_refl Nat.eqb_refl.
 Defined.
 
 Definition eq_def {A : Set} `{ReflectEq A} (d1 d2 : def A) : bool :=
@@ -299,7 +297,7 @@ Local Ltac term_dec_tac term_dec :=
            fcase (eq_dec x y)
          | n : nat, m : nat |- _ => fcase (Nat.eq_dec n m)
          | i : ident, i' : ident |- _ => fcase (string_dec i i')
-         | i : kername, i' : kername |- _ => fcase (string_dec i i')
+         | i : kername, i' : kername |- _ => fcase (kername_eq_dec i i')
          | i : string, i' : kername |- _ => fcase (string_dec i i')
          | n : name, n' : name |- _ => fcase (eq_dec n n')
          | i : inductive, i' : inductive |- _ => fcase (eq_dec i i')

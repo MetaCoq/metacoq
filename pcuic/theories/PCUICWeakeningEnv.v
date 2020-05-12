@@ -133,7 +133,7 @@ Lemma lookup_env_Some_fresh `{checker_flags} Σ c decl :
   lookup_env Σ c = Some decl -> ~ (fresh_global c Σ).
 Proof.
   induction Σ; cbn. 1: congruence.
-  destruct (ident_eq_spec c a.1); subst.
+  unfold eq_kername; destruct kername_eq_dec; subst.
   - intros [= <-] H2. inv H2.
     contradiction.
   - intros H1 H2. apply IHΣ; tas.
@@ -153,11 +153,8 @@ Proof.
     + inv wfΣ'. simpl in X0. apply X.
     + intros HΣ. specialize (IHΣ'' HΣ).
       inv wfΣ'. simpl in *.
-      destruct (ident_eq c kn) eqn:Heq'.
-      * eapply lookup_env_Some_fresh in IHΣ''; eauto.
-        rewrite <- (reflect_iff _ _ (ident_eq_spec _ _)) in Heq'.
-        rewrite <- Heq' in H0. contradiction.
-      * auto.
+      unfold eq_kername; destruct kername_eq_dec; subst; auto.
+      apply lookup_env_Some_fresh in IHΣ''; contradiction.
 Qed.
 Hint Resolve extends_lookup : extends.
 
@@ -220,7 +217,7 @@ Qed.
 (* Qed. *)
 (* Hint Resolve weakening_env_consistent_universe_context_instance : extends. *)
 Lemma weakening_env_declared_constant `{CF:checker_flags}:
-  forall (Σ : global_env) (cst : ident) (decl : constant_body),
+  forall (Σ : global_env) cst (decl : constant_body),
     declared_constant Σ cst decl ->
     forall Σ' : global_env, wf Σ' -> extends Σ Σ' -> declared_constant Σ' cst decl.
 Proof.
@@ -396,7 +393,7 @@ Proof.
     destruct Hext as [Σ'' HΣ''].
     exists ((Σ'' ++ [(kn, d)])%list). now rewrite <- app_assoc.
   }
-  destruct (ident_eq_spec c kn).
+  unfold eq_kername; destruct kername_eq_dec; subst.
   - intros [= ->]. subst.
     clear Hext; eapply weakening_on_global_decl; eauto.
   - now apply IHHΣ.
@@ -663,7 +660,8 @@ Lemma weaken_lookup_on_global_env' `{checker_flags} Σ c decl :
 Proof.
   intros wfΣ HH.
   induction wfΣ; simpl. 1: discriminate.
-  cbn in HH. subst udecl. destruct (ident_eq_spec c kn).
+  cbn in HH. subst udecl.
+  unfold eq_kername in HH; destruct kername_eq_dec; subst.
   - apply some_inj in HH; destruct HH. subst.
     clear -o. unfold on_udecl, on_udecl_prop in *.
     destruct o as [H1 [H2 [H3 H4]]]. repeat split.

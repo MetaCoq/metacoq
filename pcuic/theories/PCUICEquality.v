@@ -855,7 +855,7 @@ Proof.
   intros eqb leqb t eqb_refl leqb_refl.
   induction t using term_forall_list_ind in leqb, leqb_refl |- *.
   all: simpl.
-  all: rewrite -> ?Nat.eqb_refl, ?eq_string_refl, ?eq_inductive_refl.
+  all: rewrite -> ?Nat.eqb_refl, ?eq_string_refl, ?eq_kername_refl, ?eq_inductive_refl.
   all: repeat rewrite -> eq_prod_refl
         by (eauto using eq_prod_refl, Nat.eqb_refl, eq_string_refl, eq_inductive_refl).
   all: repeat lazymatch goal with

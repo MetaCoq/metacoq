@@ -254,9 +254,31 @@ struct
     let evm, l = map_evm unquote_level evm l in
     evm, Univ.Instance.of_array (Array.of_list l)
 
+  let unquote_dirpath dp : DirPath.t =
+    let l = List.map unquote_ident (unquote_list dp) in
+    DirPath.make l
 
-  let unquote_kn (k : quoted_kernel_name) : Libnames.qualid =
-    Libnames.qualid_of_string (Quoted.clean_name (unquote_string k))
+  let rec unquote_modpath mp : ModPath.t =
+    let (h,args) = app_full mp [] in
+    if constr_equall h tMPfile then
+      match args with
+      | dp::[] -> ModPath.MPfile (unquote_dirpath dp)
+      | _ -> bad_term_verb mp "unquote_modpath"
+    else if constr_equall h tMPbound then
+      match args with
+      | dp::id::i::[] ->
+        ModPath.MPbound (Obj.magic (unquote_nat i, unquote_ident id, unquote_dirpath dp) : MBId.t)
+      | _ -> bad_term_verb mp "unquote_modpath"
+    else if constr_equall h tMPdot then
+      match args with
+      | mp'::id::[] -> ModPath.MPdot (unquote_modpath mp', Label.of_id (unquote_ident id))
+      | _ -> bad_term_verb mp "unquote_modpath"
+    else
+      not_supported_verb mp "unquote_modpath"
+
+  let unquote_kn (k : quoted_kernel_name) : KerName.t =
+    let (mp, id) = unquote_pair k in
+    KerName.make (unquote_modpath mp) (Label.of_id (unquote_ident id))
 
   let unquote_proj (qp : quoted_proj) : (quoted_inductive * quoted_int * quoted_int) =
     let (h,args) = app_full qp [] in
@@ -268,28 +290,41 @@ struct
        | _ -> bad_term_verb qp "unquote_proj")
     | _ -> bad_term_verb qp "unquote_proj"
 
-  let unquote_inductive trm =
+  let unquote_inductive trm : inductive =
     let (h,args) = app_full trm [] in
     if constr_equall h tmkInd then
       match args with
-        nm :: num :: _ ->
-        let s = unquote_string nm in
-        let (dp, nm) = Quoted.split_name s in
-        (try
-           match Nametab.locate (Libnames.make_qualid dp nm) with
-           | Globnames.ConstRef c ->  CErrors.user_err (str "this not an inductive constant. use tConst instead of tInd : " ++ str s)
-           | Globnames.IndRef i -> (fst i, unquote_nat  num)
-           | Globnames.VarRef _ -> CErrors.user_err (str "the constant is a variable. use tVar : " ++ str s)
-           | Globnames.ConstructRef _ -> CErrors.user_err (str "the constant is a consructor. use tConstructor : " ++ str s)
-         with
-           Not_found ->   CErrors.user_err (str "Constant not found : " ++ str s))
-      | _ -> assert false
+      | nm :: num :: [] -> Names.MutInd.make1 (unquote_kn nm), unquote_nat num
+      | _ -> bad_term_verb trm "unquote_inductive"
     else
-      bad_term_verb trm "non-constructor"
+      not_supported_verb trm "unquote_inductive"
 
 
   let unquote_int=unquote_nat
   let print_term=Printer.pr_constr_env (Global.env ()) Evd.empty
+
+
+  let unquote_global_reference (trm : Constr.t) (* of type global_reference *) : GlobRef.t =
+    let (h,args) = app_full trm [] in
+    if constr_equall h tVarRef then
+      match args with
+      | id :: [] -> GlobRef.VarRef (unquote_ident id)
+      | _ -> bad_term_verb trm "unquote_global_reference"
+    else if constr_equall h tConstRef then
+      match args with
+      | kn :: [] -> GlobRef.ConstRef (Constant.make1 (unquote_kn kn))
+      | _ -> bad_term_verb trm "unquote_global_reference"
+    else if constr_equall h tIndRef then
+      match args with
+      | ind :: [] -> GlobRef.IndRef (unquote_inductive ind)
+      | _ -> bad_term_verb trm "unquote_global_reference"
+    else if constr_equall h tConstructRef then
+      match args with
+      | ind :: c :: [] -> GlobRef.ConstructRef (unquote_inductive ind, unquote_nat c + 1)
+      | _ -> bad_term_verb trm "unquote_global_reference"
+    else
+      not_supported_verb trm "unquote_global_reference"
+
 
   let inspect_term (t:Constr.t)
   : (Constr.t, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_univ_instance, quoted_proj) structure_of_term =

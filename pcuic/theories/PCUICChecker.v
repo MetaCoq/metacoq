@@ -28,7 +28,7 @@ Inductive type_error :=
 | UnboundVar (id : string)
 | UnboundMeta (m : nat)
 | UnboundEvar (ev : nat)
-| UndeclaredConstant (c : string)
+| UndeclaredConstant (c : kername)
 | UndeclaredInductive (c : inductive)
 | UndeclaredConstructor (c : inductive) (i : nat)
 | NotConvertible (Γ : context) (t u t' u' : term)

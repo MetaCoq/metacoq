@@ -208,9 +208,8 @@ struct
         (Q.mkApp f' xs', acc)
 
       | Constr.Const (c,pu) ->
-         let kn = Names.Constant.canonical c in
-	       (Q.mkConst (Q.quote_kn kn) (Q.quote_univ_instance pu),
-          add_constant kn acc)
+        let kn = Constant.canonical c in
+	(Q.mkConst (Q.quote_kn kn) (Q.quote_univ_instance pu), add_constant kn acc)
 
       | Constr.Construct ((mind,c),pu) ->
          (Q.mkConstruct (quote_inductive' mind, Q.quote_int (c - 1)) (Q.quote_univ_instance pu),

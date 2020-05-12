@@ -12,7 +12,7 @@ sig
   (* val unquote_sort : quoted_sort -> Sorts.t *)
   (* val unquote_sort_family : quoted_sort_family -> Sorts.family *)
   val unquote_cast_kind : quoted_cast_kind -> Constr.cast_kind
-  val unquote_kn :  quoted_kernel_name -> Libnames.qualid
+  val unquote_kn :  quoted_kernel_name -> KerName.t
   val unquote_inductive :  quoted_inductive -> Names.inductive
   (*val unquote_univ_instance :  quoted_univ_instance -> Univ.Instance.t *)
   val unquote_proj : quoted_proj -> (quoted_inductive * quoted_int * quoted_int)

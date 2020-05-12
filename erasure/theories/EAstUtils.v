@@ -246,7 +246,7 @@ Fixpoint string_of_term (t : term) : string :=
   | tLambda na t => "Lambda(" ++ string_of_name na ++ "," ++ string_of_term t ++ ")"
   | tLetIn na b t => "LetIn(" ++ string_of_name na ++ "," ++ string_of_term b ++ "," ++ string_of_term t ++ ")"
   | tApp f l => "App(" ++ string_of_term f ++ "," ++ string_of_term l ++ ")"
-  | tConst c => "Const(" ++ c ++ ")"
+  | tConst c => "Const(" ++ string_of_kername c ++ ")"
   | tConstruct i n => "Construct(" ++ string_of_inductive i ++ "," ++ string_of_nat n ++ ")"
   | tCase (ind, i) t brs =>
     "Case(" ++ string_of_inductive ind ++ "," ++ string_of_nat i ++ "," ++ string_of_term t ++ ","

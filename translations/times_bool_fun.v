@@ -18,8 +18,11 @@ Open Scope prod_scope.
 
 MetaCoq Quote Definition tprod := prod.
 MetaCoq Quote Definition tpair := @pair.
-Definition prod_ind := Eval compute in
-  match tprod with tInd i _ => i | _ => mkInd "bug: prod not an inductive" 0 end.
+MetaCoq Run (t <- tmQuote prod ;;
+            match t with
+            | tInd i _ => tmDefinition "prod_ind" i
+            | _ => tmFail "bug"
+            end).
 Definition proj1 (t : term) : term
   := tProj (prod_ind, 2, 0) t.
 Definition proj2 (t : term) : term
@@ -139,14 +142,14 @@ Defined.
 
 
 
-Definition tsl_mind_body (ΣE : tsl_context) (mp : string) (kn : kername)
+Definition tsl_mind_body (ΣE : tsl_context) (mp : modpath) (kn : kername)
            (mind : mutual_inductive_body)
   : tsl_result (tsl_table * list mutual_inductive_body).
   refine (let tsl := fun Γ t => match tsl_rec fuel (fst ΣE) (snd ΣE) Γ t with
                              | Success x => x
                              | Error _ => todo "tsl"
                              end in
-          let kn' := tsl_kn tsl_ident kn mp in _).
+          let kn' := (mp, tsl_ident (snd kn)) in _).
   unshelve refine (let LI := List.split (mapi _ mind.(ind_bodies)) in
           ret (List.concat (fst LI),
                [{| ind_npars := mind.(ind_npars);

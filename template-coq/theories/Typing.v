@@ -276,7 +276,7 @@ Lemma red1_ind_all :
           (narg : nat) (fn : term),
         unfold_cofix mfix idx = Some (narg, fn) -> P Γ (tProj p (mkApps (tCoFix mfix idx) args)) (tProj p (mkApps fn args))) ->
 
-       (forall (Γ : context) (c : ident) (decl : constant_body) (body : term),
+       (forall (Γ : context) c (decl : constant_body) (body : term),
         declared_constant Σ c decl ->
         forall u : Instance.t, cst_body decl = Some body -> P Γ (tConst c u) (subst_instance_constr u body)) ->
 
@@ -1126,7 +1126,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         Forall_typing_spine Σ Γ (fun t T => P Σ Γ t T) t_ty l t' s ->
         P Σ Γ (tApp t l) t') ->
 
-    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (cst : ident) u (decl : constant_body),
+    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) cst u (decl : constant_body),
         Forall_decls_typing P Σ.1 ->
         All_local_env_over typing Pdecl Σ Γ wfΓ ->
         declared_constant Σ.1 cst decl ->
@@ -1545,7 +1545,7 @@ Lemma lookup_on_global_env `{checker_flags} P Σ c decl :
 Proof.
   induction 1; simpl.
   congruence.
-  destruct (ident_eq_spec c kn).
+  unfold eq_kername. destruct kername_eq_dec.
   - intros [= ->]. subst c.
     exists (Σ, udecl). constructor; tas.
   - apply IHX.

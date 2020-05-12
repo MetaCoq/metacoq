@@ -202,15 +202,15 @@ Fixpoint eq_term `{checker_flags} (φ : universes_graph) (t u : term) {struct t}
   | tCast f k T, tCast f' k' T' => eq_term φ f f' && eq_term φ T T'
   | tApp f args, tApp f' args' => eq_term φ f f' && forallb2 (eq_term φ) args args'
   | tConst c u, tConst c' u' => eq_constant c c' && eqb_univ_instance φ u u'
-  | tInd i u, tInd i' u' => eq_ind i i' && eqb_univ_instance φ u u'
-  | tConstruct i k u, tConstruct i' k' u' => eq_ind i i' && Nat.eqb k k'
+  | tInd i u, tInd i' u' => eq_inductive i i' && eqb_univ_instance φ u u'
+  | tConstruct i k u, tConstruct i' k' u' => eq_inductive i i' && Nat.eqb k k'
                                                     && eqb_univ_instance φ u u'
   | tLambda _ b t, tLambda _ b' t' => eq_term φ b b' && eq_term φ t t'
   | tProd _ b t, tProd _ b' t' => eq_term φ b b' && eq_term φ t t'
   | tLetIn _ b t c, tLetIn _ b' t' c' => eq_term φ b b' && eq_term φ t t' && eq_term φ c c'
   | tCase (ind, par) p c brs,
     tCase (ind',par') p' c' brs' =>
-    eq_ind ind ind' && Nat.eqb par par' &&
+    eq_inductive ind ind' && Nat.eqb par par' &&
     eq_term φ p p' && eq_term φ c c' && forallb2 (fun '(a, b) '(a', b') => eq_term φ b b') brs brs'
   | tProj p c, tProj p' c' => eq_projection p p' && eq_term φ c c'
   | tFix mfix idx, tFix mfix' idx' =>
@@ -234,15 +234,15 @@ Fixpoint leq_term `{checker_flags} (φ : universes_graph) (t u : term) {struct t
   | tApp f args, tApp f' args' => eq_term φ f f' && forallb2 (eq_term φ) args args'
   | tCast f k T, tCast f' k' T' => eq_term φ f f' && eq_term φ T T'
   | tConst c u, tConst c' u' => eq_constant c c' && eqb_univ_instance φ u u'
-  | tInd i u, tInd i' u' => eq_ind i i' && eqb_univ_instance φ u u'
-  | tConstruct i k u, tConstruct i' k' u' => eq_ind i i' && Nat.eqb k k' &&
+  | tInd i u, tInd i' u' => eq_inductive i i' && eqb_univ_instance φ u u'
+  | tConstruct i k u, tConstruct i' k' u' => eq_inductive i i' && Nat.eqb k k' &&
                                                     eqb_univ_instance φ u u'
   | tLambda _ b t, tLambda _ b' t' => eq_term φ b b' && eq_term φ t t'
   | tProd _ b t, tProd _ b' t' => eq_term φ b b' && leq_term φ t t'
   | tLetIn _ b t c, tLetIn _ b' t' c' => eq_term φ b b' && eq_term φ t t' && leq_term φ c c'
   | tCase (ind, par) p c brs,
     tCase (ind',par') p' c' brs' =>
-    eq_ind ind ind' && Nat.eqb par par' &&
+    eq_inductive ind ind' && Nat.eqb par par' &&
     eq_term φ p p' && eq_term φ c c' && forallb2 (fun '(a, b) '(a', b') => eq_term φ b b') brs brs'
   | tProj p c, tProj p' c' => eq_projection p p' && eq_term φ c c'
   | tFix mfix idx, tFix mfix' idx' =>
@@ -439,7 +439,7 @@ Inductive type_error :=
 | UnboundVar (id : string)
 | UnboundMeta (m : nat)
 | UnboundEvar (ev : nat)
-| UndeclaredConstant (c : string)
+| UndeclaredConstant (c : kername)
 | UndeclaredInductive (c : inductive)
 | UndeclaredConstructor (c : inductive) (i : nat)
 | NotConvertible (Γ : context) (t u t' u' : term)
@@ -457,9 +457,9 @@ Definition string_of_type_error (e : type_error) : string :=
   | UnboundVar id => "Unbound var " ++ id
   | UnboundMeta m => "Unbound meta " ++ string_of_nat m
   | UnboundEvar ev => "Unbound evar " ++ string_of_nat ev
-  | UndeclaredConstant c => "Undeclared constant " ++ c
-  | UndeclaredInductive c => "Undeclared inductive " ++ (inductive_mind c)
-  | UndeclaredConstructor c i => "Undeclared inductive " ++ (inductive_mind c)
+  | UndeclaredConstant c => "Undeclared constant " ++ string_of_kername c
+  | UndeclaredInductive c => "Undeclared inductive " ++ string_of_kername (inductive_mind c)
+  | UndeclaredConstructor c i => "Undeclared inductive " ++ string_of_kername (inductive_mind c)
   | NotConvertible Γ t u t' u' => "Terms are not convertible: " ++
       string_of_term t ++ " " ++ string_of_term u ++ " after reduction: " ++
       string_of_term t' ++ " " ++ string_of_term u'
@@ -747,7 +747,7 @@ Section Typecheck2.
       indargs <- reduce_to_ind Σ Γ ty ;;
       (** TODO check branches *)
       let '(ind', u, args) := indargs in
-      if eq_ind ind ind' then
+      if eq_inductive ind ind' then
         ret (tApp p (List.skipn par args ++ [c]))
       else
         let ind1 := tInd ind u in
@@ -832,9 +832,6 @@ Proof.
   injection H as eq. subst T. simpl.
   eexists. split; eauto.
 Qed.
-
-Lemma eq_ind_refl i i' : eq_ind i i' = true <-> i = i'.
-Proof. intros. todo "Checker.eq_ind_refl". Defined.
 
 
 Arguments bind _ _ _ _ ! _.
@@ -1089,8 +1086,8 @@ Section Checker.
     match g with
     | ConstantDecl cst =>
       match cst.(cst_body) with
-      | Some term => check_wf_judgement kn Σ G term cst.(cst_type)
-      | None => check_wf_type kn Σ G cst.(cst_type)
+      | Some term => check_wf_judgement (string_of_kername kn) Σ G term cst.(cst_type)
+      | None => check_wf_type (string_of_kername kn) Σ G cst.(cst_type)
       end
     | InductiveDecl inds =>
       List.fold_left (fun acc body =>
@@ -1104,7 +1101,7 @@ Section Checker.
     | g :: env =>
       check_fresh id env;;
       if eq_constant id g.1 then
-        EnvError (AlreadyDeclared id)
+        EnvError (AlreadyDeclared (string_of_kername id))
       else ret ()
     end.
 
@@ -1134,7 +1131,7 @@ Section Checker.
       G <- check_wf_env env ;;
       match gc_of_constraints (global_decl_univs g.2) with
       | None =>
-        EnvError (IllFormedDecl g.1
+        EnvError (IllFormedDecl (string_of_kername g.1)
                              (UnsatisfiableConstraints (global_decl_univs g.2)))
       | Some ctrs =>
         wrap_error "" (check_consistent_constraints G (global_decl_univs g.2)) ;;

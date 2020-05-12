@@ -44,8 +44,8 @@ val tmLemma : ident -> ?poly:bool -> term -> kername tm
 
 val tmFreshName : ident -> ident tm
 
-val tmAbout : qualid -> global_reference option tm
-val tmAboutString : string -> global_reference option tm
+val tmLocate : qualid -> global_reference list tm
+val tmLocateString : string -> global_reference list tm
 val tmCurrentModPath : Names.ModPath.t tm
 
 val tmQuoteInductive : kername -> (Names.MutInd.t * mutual_inductive_body) option tm
@@ -54,5 +54,5 @@ val tmQuoteConstant : kername -> bool -> constant_body tm
 
 val tmInductive : mutual_inductive_entry -> unit tm
 
-val tmExistingInstance : kername -> unit tm
+val tmExistingInstance : global_reference -> unit tm
 val tmInferInstance : term -> term option tm

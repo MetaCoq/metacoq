@@ -78,17 +78,17 @@ Fixpoint tsl_rec1_app (app : option term) (E : tsl_table) (t : term) : term :=
   | tConst s univs =>
     match lookup_tsl_table E (ConstRef s) with
     | Some t => t
-    | None => debug "tConst" s
+    | None => debug "tConst" (string_of_kername s)
     end
   | tInd i univs =>
     match lookup_tsl_table E (IndRef i) with
     | Some t => t
-    | None => debug "tInd" (match i with mkInd s _ => s end)
+    | None => debug "tInd" (match i with mkInd s _ => string_of_kername s end)
     end
   | tConstruct i n univs =>
     match lookup_tsl_table E (ConstructRef i n) with
     | Some t => t
-    | None => debug "tConstruct" (match i with mkInd s _ => s end)
+    | None => debug "tConstruct" (match i with mkInd s _ => string_of_kername s end)
     end
   | tCase ik t u brs as case =>
     let brs' := List.map (on_snd (lift0 1)) brs in
@@ -99,7 +99,7 @@ Fixpoint tsl_rec1_app (app : option term) (E : tsl_table) (t : term) : term :=
             (tsl_rec1_app (Some (tsl_rec0 0 case1)) E t)
             (tsl_rec1 E u)
             (map (on_snd (tsl_rec1 E)) brs)
-    | _ => debug "tCase" (match (fst ik) with mkInd s _ => s end)
+    | _ => debug "tCase" (match (fst ik) with mkInd s _ => string_of_kername s end)
     end
   | tProj _ _ => todo "tsl"
   | tFix _ _ | tCoFix _ _ => todo "tsl"
@@ -111,14 +111,14 @@ Fixpoint tsl_rec1_app (app : option term) (E : tsl_table) (t : term) : term :=
   end.
 Definition tsl_rec1 := tsl_rec1_app None.
 
-Definition tsl_mind_body (E : tsl_table) (mp : string) (kn : kername)
+Definition tsl_mind_body (E : tsl_table) (mp : modpath) (kn : kername)
            (mind : mutual_inductive_body) : tsl_table * list mutual_inductive_body.
   refine (_, [{| ind_npars := 2 * mind.(ind_npars);
                  ind_params := _;
                  ind_bodies := _;
                  ind_universes := mind.(ind_universes);
                  ind_variance := mind.(ind_variance)|}]).  (* FIXME always ok? *)
-  - refine (let kn' := tsl_kn tsl_ident kn mp in
+  - refine (let kn' : kername := (mp, tsl_ident kn.2) in
             fold_left_i (fun E i ind => _ :: _ ++ E)%list mind.(ind_bodies) []).
     + (* ind *)
       exact (IndRef (mkInd kn i), tInd (mkInd kn' i) []).
@@ -184,7 +184,7 @@ MetaCoq Run (TC <- Translate emptyTC "nat" ;;
 
 MetaCoq Run (TC <- Translate nat_TC "bool" ;;
                      tmDefinition "bool_TC" TC ).
-
+Import Nat.
 MetaCoq Run (Translate bool_TC "pred").
 
 

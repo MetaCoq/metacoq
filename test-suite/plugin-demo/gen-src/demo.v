@@ -46,7 +46,7 @@ Definition gr_to_kername (gr : global_reference) : kername :=
   end.
 
 Definition tmResolve (nm : String.string) : TM (option kername) :=
-  tmBind (tmAbout nm)
+  tmBind (tmLocate nm)
          (fun gr =>
             match gr with
             | None => tmReturn None
@@ -155,7 +155,7 @@ Definition opBind {A B} (a: option A) (f: A -> option B) : option B :=
   end.
 
 Definition genLensN (baseName : String.string) : TM unit :=
-  tmBind (tmAbout baseName) (fun gr =>
+  tmBind (tmLocate baseName) (fun gr =>
     match gr with
     | Some (IndRef kn) =>
       let name := kn.(inductive_mind) in
@@ -182,7 +182,7 @@ Definition genLensN (baseName : String.string) : TM unit :=
 
 
 Definition tmQuoteConstantR (nm : String.string) (bypass : bool) : TM _ :=
-  tmBind (tmAbout nm)
+  tmBind (tmLocate nm)
          (fun gr =>
             match gr with
             | Some (ConstRef kn) =>

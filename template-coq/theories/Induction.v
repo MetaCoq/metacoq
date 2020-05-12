@@ -25,7 +25,7 @@ Lemma term_forall_list_ind :
     (forall (n : name) (t : term),
         P t -> forall t0 : term, P t0 -> forall t1 : term, P t1 -> P (tLetIn n t t0 t1)) ->
     (forall t : term, P t -> forall l : list term, Forall P l -> P (tApp t l)) ->
-    (forall (s : String.string) (u : list Level.t), P (tConst s u)) ->
+    (forall s (u : list Level.t), P (tConst s u)) ->
     (forall (i : inductive) (u : list Level.t), P (tInd i u)) ->
     (forall (i : inductive) (n : nat) (u : list Level.t), P (tConstruct i n u)) ->
     (forall (p : inductive * nat) (t : term),
@@ -82,7 +82,7 @@ Lemma term_wf_forall_list_ind :
         P t -> forall t0 : term, P t0 -> forall t1 : term, P t1 -> P (tLetIn n t t0 t1)) ->
     (forall t : term, isApp t = false -> wf t -> P t ->
                       forall l : list term, l <> nil -> Forall wf l -> Forall P l -> P (tApp t l)) ->
-    (forall (s : String.string) (u : list Level.t), P (tConst s u)) ->
+    (forall s (u : list Level.t), P (tConst s u)) ->
     (forall (i : inductive) (u : list Level.t), P (tInd i u)) ->
     (forall (i : inductive) (n : nat) (u : list Level.t), P (tConstruct i n u)) ->
     (forall (p : inductive * nat) (t : term),
@@ -150,7 +150,7 @@ Lemma term_forall_list_rect :
     (forall (n : name) (t : term),
         P t -> forall t0 : term, P t0 -> forall t1 : term, P t1 -> P (tLetIn n t t0 t1)) ->
     (forall t : term, P t -> forall l : list term, All P l -> P (tApp t l)) ->
-    (forall (s : String.string) (u : list Level.t), P (tConst s u)) ->
+    (forall s (u : list Level.t), P (tConst s u)) ->
     (forall (i : inductive) (u : list Level.t), P (tInd i u)) ->
     (forall (i : inductive) (n : nat) (u : list Level.t), P (tConstruct i n u)) ->
     (forall (p : inductive * nat) (t : term),

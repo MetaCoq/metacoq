@@ -104,6 +104,7 @@ Section FoldFix.
 
 End FoldFix.
 
+(* todo: rename! *)
 Lemma term_forall_ctx_list_ind :
   forall (P : term -> Type),
     (forall (n : nat), P (tRel n)) ->
@@ -118,7 +119,7 @@ Lemma term_forall_ctx_list_ind :
     (forall (t u : term),
         (forall t', size t' < size (tApp t u) -> P t') ->
         P t -> P u -> P (tApp t u)) ->
-    (forall (s : String.string) (u : list Level.t), P (tConst s u)) ->
+    (forall s (u : list Level.t), P (tConst s u)) ->
     (forall (i : inductive) (u : list Level.t), P (tInd i u)) ->
     (forall (i : inductive) (n : nat) (u : list Level.t), P (tConstruct i n u)) ->
     (forall (p : inductive * nat) (t : term),

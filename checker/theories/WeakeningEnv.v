@@ -40,7 +40,7 @@ Lemma lookup_env_Some_fresh Σ c decl :
   lookup_env Σ c = Some decl -> ~ (fresh_global c Σ).
 Proof.
   induction Σ; cbn. congruence.
-  destruct (ident_eq_spec c a.1).
+  unfold eq_kername. destruct (kername_eq_dec c a.1).
   - subst c. intros [= <-]. intros H2. inv H2. contradiction.
   - intros H1 H2. apply IHΣ; tas.
     now inv H2.
@@ -55,7 +55,7 @@ Proof.
   inv wfΣ'. simpl in X0. apply X.
   intros HΣ. specialize (IHΣ'' HΣ).
   inv wfΣ'. simpl in *.
-  destruct (ident_eq_spec c kn); subst.
+  unfold eq_kername; destruct kername_eq_dec; subst.
   eapply lookup_env_Some_fresh in IHΣ''; eauto. contradiction.
   assumption.
 Qed.
@@ -185,7 +185,7 @@ Proof.
 Qed.
 
 Lemma weakening_env_declared_constant `{CF:checker_flags}:
-  forall (Σ : global_env) (cst : ident) (decl : constant_body),
+  forall (Σ : global_env) cst (decl : constant_body),
     declared_constant Σ cst decl ->
     forall Σ' : global_env, wf Σ' -> extends Σ Σ' -> declared_constant Σ' cst decl.
 Proof.
@@ -408,7 +408,7 @@ Proof.
   assert (HH: extends Σ Σ'). {
     destruct Hext as [Σ'' HΣ''].
     exists ((Σ'' ++ [(kn, d)])%list). now rewrite <- app_assoc. }
-  destruct (ident_eq_spec c kn); subst.
+  unfold eq_kername; destruct kername_eq_dec; subst.
   - intros [= ->].
     clear Hext; eapply weakening_on_global_decl; eauto.
   - now apply IHHΣ.

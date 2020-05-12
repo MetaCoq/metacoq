@@ -46,6 +46,11 @@ Register MetaCoq.Template.TemplateMonad.Common.existT_typed_term as metacoq.sigm
 Register MetaCoq.Template.BasicAst.nAnon as metacoq.ast.nAnon.
 Register MetaCoq.Template.BasicAst.nNamed as metacoq.ast.nNamed.
 Register MetaCoq.Template.BasicAst.ident as metacoq.ast.ident.
+Register MetaCoq.Template.BasicAst.kername as metacoq.ast.kername.
+Register MetaCoq.Template.BasicAst.modpath as metacoq.ast.modpath.
+Register MetaCoq.Template.BasicAst.MPfile as metacoq.ast.MPfile.
+Register MetaCoq.Template.BasicAst.MPbound as metacoq.ast.MPbound.
+Register MetaCoq.Template.BasicAst.MPdot as metacoq.ast.MPdot.
 Register MetaCoq.Template.BasicAst.name as metacoq.ast.name.
 Register MetaCoq.Template.BasicAst.inductive as metacoq.ast.inductive.
 Register MetaCoq.Template.BasicAst.mkInd as metacoq.ast.mkInd.
@@ -61,6 +66,7 @@ Register MetaCoq.Template.BasicAst.Finite as metacoq.ast.Finite.
 Register MetaCoq.Template.BasicAst.CoFinite as metacoq.ast.CoFinite.
 Register MetaCoq.Template.BasicAst.BiFinite as metacoq.ast.BiFinite.
 Register MetaCoq.Template.BasicAst.global_reference as metacoq.ast.global_reference.
+Register MetaCoq.Template.BasicAst.VarRef as metacoq.ast.VarRef.
 Register MetaCoq.Template.BasicAst.ConstRef as metacoq.ast.ConstRef.
 Register MetaCoq.Template.BasicAst.IndRef as metacoq.ast.IndRef.
 Register MetaCoq.Template.BasicAst.ConstructRef as metacoq.ast.ConstructRef.
@@ -197,7 +203,7 @@ Register MetaCoq.Template.TemplateMonad.Core.tmAxiomRed as metacoq.templatemonad
 Register MetaCoq.Template.TemplateMonad.Core.tmMkDefinition as metacoq.templatemonad.prop.tmMkDefinition.
 Register MetaCoq.Template.TemplateMonad.Core.tmMkInductive as metacoq.templatemonad.prop.tmMkInductive.
 Register MetaCoq.Template.TemplateMonad.Core.tmFreshName as metacoq.templatemonad.prop.tmFreshName.
-Register MetaCoq.Template.TemplateMonad.Core.tmAbout as metacoq.templatemonad.prop.tmAbout.
+Register MetaCoq.Template.TemplateMonad.Core.tmLocate as metacoq.templatemonad.prop.tmLocate.
 Register MetaCoq.Template.TemplateMonad.Core.tmCurrentModPath as metacoq.templatemonad.prop.tmCurrentModPath.
 
 Register MetaCoq.Template.TemplateMonad.Core.tmQuote as metacoq.templatemonad.prop.tmQuote.
@@ -230,7 +236,7 @@ Register MetaCoq.Template.TemplateMonad.Extractable.tmDefinition_ as metacoq.tem
 Register MetaCoq.Template.TemplateMonad.Extractable.tmAxiom as metacoq.templatemonad.type.tmAxiom.
 Register MetaCoq.Template.TemplateMonad.Extractable.tmLemma as metacoq.templatemonad.type.tmLemma.
 Register MetaCoq.Template.TemplateMonad.Extractable.tmFreshName as metacoq.templatemonad.type.tmFreshName.
-Register MetaCoq.Template.TemplateMonad.Extractable.tmAbout as metacoq.templatemonad.type.tmAbout.
+Register MetaCoq.Template.TemplateMonad.Extractable.tmLocate as metacoq.templatemonad.type.tmLocate.
 Register MetaCoq.Template.TemplateMonad.Extractable.tmCurrentModPath as metacoq.templatemonad.type.tmCurrentModPath.
 Register MetaCoq.Template.TemplateMonad.Extractable.tmQuoteInductive as metacoq.templatemonad.type.tmQuoteInductive.
 Register MetaCoq.Template.TemplateMonad.Extractable.tmQuoteUniverses as metacoq.templatemonad.type.tmQuoteUniverses.

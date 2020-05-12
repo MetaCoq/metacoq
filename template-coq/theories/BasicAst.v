@@ -3,31 +3,192 @@ From Coq Require Import String Bool List.
 From MetaCoq.Template Require Import utils.
 Local Open Scope string_scope.
 
+
+(** ** Reification of names ** *)
+
+(** [Comment taken from Coq's code]
+    - Id.t is the type of identifiers, that is morally a subset of strings which
+      only contains Unicode characters of the Letter kind (and a few more).
+      => [ident]
+    - Name.t is an ad-hoc variant of Id.t option allowing to handle optionally
+      named objects.
+      => [name]
+    - DirPath.t represents generic paths as sequences of identifiers.
+      => [dirpath]
+    - Label.t is an equivalent of Id.t made distinct for semantical purposes.
+      => [ident]
+    - ModPath.t are module paths.
+      => [modpath]
+    - KerName.t are absolute names of objects in Coq.
+      => [kername]
+
+    And also :
+    - Constant.t => [kername]
+    - variable => [ident]
+    - MutInd.t => [kername]
+    - inductive => [inductive]
+    - constructor => [inductive * nat]
+    - Projection.t => [projection]
+    - GlobRef.t => global_reference
+*)
+
 Definition ident   := string. (* e.g. nat *)
 Definition qualid  := string. (* e.g. Datatypes.nat *)
-Definition kername := string. (* e.g. Coq.Init.Datatypes.nat *)
 
+(** Type of directory paths. Essentially a list of module identifiers. The
+    order is reversed to improve sharing. E.g. A.B.C is ["C";"B";"A"] *)
+Definition dirpath := list ident.
+
+Definition string_of_dirpath : dirpath -> string
+  := String.concat "." ∘ rev.
+
+(** The module part of the kernel name.
+    - MPfile is for toplevel libraries, i.e. .vo files
+    - MPbound are parameters of functors
+    - MPdot is for submodules
+*)
+Inductive modpath :=
+| MPfile  (dp : dirpath)
+| MPbound (dp : dirpath) (id : ident) (i : nat)
+| MPdot   (mp : modpath) (id : ident).
+
+Fixpoint string_of_modpath (mp : modpath) : string :=
+  match mp with
+  | MPfile dp => string_of_dirpath dp
+  | MPbound dp id _ => string_of_dirpath dp ++ "." ++ id
+  | MPdot mp id => string_of_modpath mp ++ "." ++ id
+  end.
+
+(** The absolute names of objects seen by kernel *)
+Definition kername := modpath × ident.
+
+Definition string_of_kername (kn : kername) :=
+  string_of_modpath kn.1 ++ "." ++ kn.2.
+
+
+(** Identifiers that are allowed to be anonymous (i.e. "_" in concrete syntax). *)
 Inductive name : Set :=
 | nAnon
 | nNamed (_ : ident).
 
 Definition string_of_name (na : name) :=
   match na with
-  | nAnon => "Anonymous"
+  | nAnon => "_"
   | nNamed n => n
   end.
 
+(** Designation of a (particular) inductive type. *)
 Record inductive : Set := mkInd { inductive_mind : kername ;
                                   inductive_ind : nat }.
 Arguments mkInd _%string _%nat.
 
 Definition string_of_inductive (i : inductive) :=
-  (inductive_mind i) ++ "," ++ string_of_nat (inductive_ind i).
+  string_of_kername (inductive_mind i) ++ "," ++ string_of_nat (inductive_ind i).
 
 Definition projection : Set := inductive * nat (* params *) * nat (* argument *).
 
-(** Parametrized by term because term is not yet defined *)
+(** Kernel declaration references [global_reference] *)
+Inductive global_reference :=
+| VarRef : ident -> global_reference
+| ConstRef : kername -> global_reference
+| IndRef : inductive -> global_reference
+| ConstructRef : inductive -> nat -> global_reference.
 
+
+Definition string_of_gref gr : string :=
+  match gr with
+  | VarRef v => v
+  | ConstRef s => string_of_kername s
+  | IndRef (mkInd s n) =>
+    "Inductive " ++ string_of_kername s ++ " " ++ (string_of_nat n)
+  | ConstructRef (mkInd s n) k =>
+    "Constructor " ++ string_of_kername s ++ " " ++ (string_of_nat n) ++ " " ++ (string_of_nat k)
+  end.
+
+Definition kername_eq_dec (k k0 : kername) : {k = k0} + {k <> k0}.
+Proof.
+  repeat (decide equality; eauto with eq_dec).
+Defined.
+Hint Resolve kername_eq_dec : eq_dec.
+
+Definition gref_eq_dec (gr gr' : global_reference) : {gr = gr'} + {~ gr = gr'}.
+Proof.
+  decide equality; eauto with eq_dec.
+  destruct i, i0.
+  decide equality; eauto with eq_dec.
+  destruct i, i0.
+  decide equality; eauto with eq_dec.
+Defined.
+
+Definition ident_eq (x y : ident) :=
+  match string_compare x y with
+  | Eq => true
+  | _ => false
+  end.
+
+Lemma ident_eq_spec x y : reflect (x = y) (ident_eq x y).
+Proof.
+  unfold ident_eq. destruct (string_compare_eq x y).
+  destruct string_compare; constructor; auto.
+  intro Heq; specialize (H0 Heq). discriminate.
+  intro Heq; specialize (H0 Heq). discriminate.
+Qed.
+
+(* todo : better ? *)
+Definition eq_kername (k k0 : kername) : bool :=
+  match kername_eq_dec k k0 with
+  | left _ => true
+  | right _ => false
+  end.
+
+Lemma eq_kername_refl kn : eq_kername kn kn.
+Proof.
+  unfold eq_kername. destruct (kername_eq_dec kn kn); cbnr.
+  contradiction.
+Qed.
+
+Definition eq_inductive i i' :=
+  let 'mkInd i n := i in
+  let 'mkInd i' n' := i' in
+  eq_kername i i' && Nat.eqb n n'.
+
+Definition eq_constant := eq_kername.
+
+Definition eq_projection p p' :=
+  let '(ind, pars, arg) := p in
+  let '(ind', pars', arg') := p' in
+  eq_inductive ind ind' && Nat.eqb pars pars' && Nat.eqb arg arg'.
+
+Lemma eq_inductive_refl i : eq_inductive i i.
+Proof.
+  destruct i as [mind k].
+  unfold eq_inductive. now rewrite eq_kername_refl, PeanoNat.Nat.eqb_refl.
+Qed.
+
+Lemma eq_projection_refl i : eq_projection i i.
+Proof.
+  destruct i as [[mind k] p].
+  unfold eq_projection.
+  now rewrite eq_inductive_refl, !PeanoNat.Nat.eqb_refl.
+Qed.
+
+
+
+(** The kind of a cast *)
+Inductive cast_kind : Set :=
+| VmCast
+| NativeCast
+| Cast
+| RevertCast.
+
+Inductive recursivity_kind :=
+  | Finite (* = inductive *)
+  | CoFinite (* = coinductive *)
+  | BiFinite (* = non-recursive, like in "Record" definitions *).
+
+
+
+(* Parametrized by term because term is not yet defined *)
 Record def term := mkdef {
   dname : name; (* the name **)
   dtype : term;
@@ -59,94 +220,8 @@ Lemma map_dbody {A B} (f : A -> B) (g : A -> B) (d : def A) :
   g (dbody d) = dbody (map_def f g d).
 Proof. destruct d; reflexivity. Qed.
 
-Definition mfixpoint term :=
-  list (def term).
+Definition mfixpoint term := list (def term).
 
-(** The kind of a cast *)
-
-Inductive cast_kind : Set :=
-| VmCast
-| NativeCast
-| Cast
-| RevertCast.
-
-Inductive recursivity_kind :=
-  | Finite (* = inductive *)
-  | CoFinite (* = coinductive *)
-  | BiFinite (* = non-recursive, like in "Record" definitions *).
-
-(** Kernel declaration references [global_reference] *)
-
-Inductive global_reference :=
-(* VarRef of Names.variable *)
-| ConstRef : kername -> global_reference
-| IndRef : inductive -> global_reference
-| ConstructRef : inductive -> nat -> global_reference.
-
-
-Definition string_of_gref gr : string :=
-  match gr with
-  | ConstRef s => s
-  | IndRef (mkInd s n) =>
-    "Inductive " ++ s ++ " " ++ (string_of_nat n)
-  | ConstructRef (mkInd s n) k =>
-    "Constructor " ++ s ++ " " ++ (string_of_nat n) ++ " " ++ (string_of_nat k)
-  end.
-
-Definition gref_eq_dec
-: forall gr gr' : global_reference, {gr = gr'} + {~ gr = gr'}.
-Proof.
-  decide equality; eauto with eq_dec.
-  destruct i, i0.
-  decide equality; eauto with eq_dec.
-  destruct i, i0.
-  decide equality; eauto with eq_dec.
-Defined.
-
-Definition ident_eq (x y : ident) :=
-  match string_compare x y with
-  | Eq => true
-  | _ => false
-  end.
-
-Lemma ident_eq_spec x y : reflect (x = y) (ident_eq x y).
-Proof.
-  unfold ident_eq. destruct (string_compare_eq x y).
-  destruct string_compare; constructor; auto.
-  intro Heq; specialize (H0 Heq). discriminate.
-  intro Heq; specialize (H0 Heq). discriminate.
-Qed.
-
-Definition eq_ind i i' :=
-  let 'mkInd i n := i in
-  let 'mkInd i' n' := i' in
-  eq_string i i' && Nat.eqb n n'.
-
-Definition eq_constant := eq_string.
-
-Definition eq_projection p p' :=
-  let '(ind, pars, arg) := p in
-  let '(ind', pars', arg') := p' in
-  eq_ind ind ind' && Nat.eqb pars pars' && Nat.eqb arg arg'.
-
-Lemma eq_ind_refl i : eq_ind i i.
-Proof.
-  destruct i as [mind k].
-  unfold eq_ind. now rewrite eq_string_refl, PeanoNat.Nat.eqb_refl.
-Qed.
-
-Lemma eq_projection_refl i : eq_projection i i.
-Proof.
-  destruct i as [[mind k] p].
-  unfold eq_projection.
-  now rewrite eq_ind_refl, !PeanoNat.Nat.eqb_refl.
-Qed.
-
-Definition get_ident (n : name) : string :=
-  match n with
-  | nAnon => "XX"
-  | nNamed i => i
-  end.
 
 Definition test_def {A} (tyf bodyf : A -> bool) (d : def A) :=
   tyf d.(dtype) && bodyf d.(dbody).

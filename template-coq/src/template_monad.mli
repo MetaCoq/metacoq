@@ -32,7 +32,7 @@ type template_monad =
 
   | TmFreshName of Constr.t
 
-  | TmAbout of Constr.t
+  | TmLocate of Constr.t
   | TmCurrentModPath
 
     (* quoting *)

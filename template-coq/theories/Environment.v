@@ -374,12 +374,12 @@ Module Environment (T : Term).
 
 
 
-  Fixpoint lookup_mind_decl (id : ident) (decls : global_env)
+  Fixpoint lookup_mind_decl (k : kername) (decls : global_env)
     := match decls with
        | nil => None
        | (kn, InductiveDecl d) :: tl =>
-         if eq_string kn id then Some d else lookup_mind_decl id tl
-       | _ :: tl => lookup_mind_decl id tl
+         if eq_kername kn k then Some d else lookup_mind_decl k tl
+       | _ :: tl => lookup_mind_decl k tl
        end.
 
   Lemma context_assumptions_fold Γ f : context_assumptions (fold_context f Γ) = context_assumptions Γ.

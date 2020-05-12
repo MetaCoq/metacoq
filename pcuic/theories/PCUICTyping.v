@@ -284,7 +284,7 @@ Lemma red1_ind_all :
           (narg : nat) (fn : term),
         unfold_cofix mfix idx = Some (narg, fn) -> P Γ (tProj p (mkApps (tCoFix mfix idx) args)) (tProj p (mkApps fn args))) ->
 
-       (forall (Γ : context) (c : ident) (decl : constant_body) (body : term),
+       (forall (Γ : context) c (decl : constant_body) (body : term),
         declared_constant Σ c decl ->
         forall u : Instance.t, cst_body decl = Some body -> P Γ (tConst c u) (subst_instance_constr u body)) ->
 
@@ -1073,7 +1073,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         Σ ;;; Γ |- u : A -> P Σ Γ u A ->
         P Σ Γ (tApp t u) (B{0 := u})) ->
 
-    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (cst : ident) u (decl : constant_body),
+    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) cst u (decl : constant_body),
         Forall_decls_typing P Σ.1 ->
         PΓ Σ Γ wfΓ ->
         declared_constant Σ.1 cst decl ->
@@ -1497,7 +1497,7 @@ Section All_local_env.
     { Σ' & { wfΣ' : on_global_env P Σ'.1 & on_global_decl P Σ' c decl } }.
   Proof.
     induction 1; simpl. congruence.
-    destruct (ident_eq_spec c kn); subst.
+    unfold eq_kername; destruct kername_eq_dec; subst.
     intros [= ->].
     exists (Σ, udecl). exists X. auto.
     apply IHX.

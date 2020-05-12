@@ -27,7 +27,7 @@ let (ptmReturn,
 
      ptmFreshName,
 
-     ptmAbout,
+     ptmLocate,
      ptmCurrentModPath,
 
      ptmQuote,
@@ -64,7 +64,7 @@ let (ptmReturn,
 
    r_template_monad_prop_p "tmFreshName",
 
-   r_template_monad_prop_p "tmAbout",
+   r_template_monad_prop_p "tmLocate",
    r_template_monad_prop_p "tmCurrentModPath",
 
    r_template_monad_prop_p "tmQuote",
@@ -97,7 +97,7 @@ let (ttmReturn,
      ttmAxiom,
      ttmLemma,
      ttmFreshName,
-     ttmAbout,
+     ttmLocate,
      ttmCurrentModPath,
      ttmQuoteInductive,
      ttmQuoteUniverses,
@@ -119,7 +119,7 @@ let (ttmReturn,
 
    r_template_monad_type_p "tmFreshName",
 
-   r_template_monad_type_p "tmAbout",
+   r_template_monad_type_p "tmLocate",
    r_template_monad_type_p "tmCurrentModPath",
 
    r_template_monad_type_p "tmQuoteInductive",
@@ -158,7 +158,7 @@ type template_monad =
 
   | TmFreshName of Constr.t
 
-  | TmAbout of Constr.t
+  | TmLocate of Constr.t
   | TmCurrentModPath
 
     (* quoting *)
@@ -280,11 +280,11 @@ let next_action env evd (pgm : constr) : template_monad * _ =
        (TmFreshName name, universes)
     | _ -> monad_failure "tmFreshName" 1
 
-  else if eq_gr ptmAbout || eq_gr ttmAbout then
+  else if eq_gr ptmLocate || eq_gr ttmLocate then
     match args with
     | id::[] ->
-       (TmAbout id, universes)
-    | _ -> monad_failure "tmAbout" 1
+       (TmLocate id, universes)
+    | _ -> monad_failure "tmLocate" 1
   else if eq_gr ptmCurrentModPath then
     match args with
     | _::[] -> (TmCurrentModPath, universes)

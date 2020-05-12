@@ -154,7 +154,7 @@ struct
     let inst' = quote_univ_instance (UContext.instance uctx) in
     let const' = quote_univ_constraints (UContext.constraints uctx) in
     constr_mkApp (tUContextmake, [|inst'; const'|])
-  
+
  let quote_abstract_univ_context uctx =
     let arr = (AUContext.names uctx) in
     let idents = to_coq_listl tname (CArray.map_to_list quote_name arr) in
@@ -210,7 +210,21 @@ struct
   let quote_inductive (kn, i) =
     constr_mkApp (tmkInd, [| kn; i |])
 
-  let quote_kn kn = quote_string (KerName.to_string kn)
+  let quote_dirpath dp =
+    let l = DirPath.repr dp in
+    to_coq_listl tident (List.map quote_ident l)
+
+  let rec quote_modpath mp =
+    match mp with
+    | MPfile dp -> constr_mkApp (tMPfile, [|quote_dirpath dp|])
+    | MPbound mbid -> let (i, id, dp) = MBId.repr mbid in
+      constr_mkApp (tMPbound, [|quote_dirpath dp ; quote_ident id; quote_int i|])
+    | MPdot (mp, id) -> constr_mkApp (tMPdot, [|quote_modpath mp; quote_ident (Label.to_id id)|])
+
+  let quote_kn kn =
+    pairl tmodpath tident (quote_modpath (KerName.modpath kn))
+      (quote_ident (Label.to_id (KerName.label kn)))
+
 
   (* useful? *)
   let quote_proj ind pars args =
@@ -241,14 +255,14 @@ struct
   let mk_constant_decl bdy =
     constr_mkApp (tConstantDecl, [|bdy|])
 
-  let global_pairty () = 
-    constr_mkAppl (prod_type, [| tident; tglobal_decl |])
-    
+  let global_pairty () =
+    constr_mkAppl (prod_type, [| tkername; tglobal_decl |])
+
   let empty_global_declarations () =
     constr_mkApp (c_nil, [| global_pairty () |])
 
   let add_global_decl kn d l =
-    let pair = pairl tident tglobal_decl kn d in
+    let pair = pairl tkername tglobal_decl kn d in
     constr_mkApp (c_cons, [| global_pairty (); pair; l|])
 
   let mk_program f s = pairl tglobal_env tTerm f s
@@ -271,17 +285,17 @@ struct
     let var = quote_option (constr_mkAppl (tlist, [| tVariance |])) (Option.map (to_coq_listl tVariance) var) in
     constr_mkApp (tBuild_mutual_inductive_entry, [| mr; mf; mp; is; mpol; var; mpr |])
 
-  let quote_parameter_entry ty univs = 
+  let quote_parameter_entry ty univs =
     constr_mkApp (cBuild_parameter_entry, [|ty; univs|])
 
-  let quote_definition_entry ty body univs = 
+  let quote_definition_entry ty body univs =
     constr_mkApp (cBuild_definition_entry, [| quote_option (Lazy.force tTerm) ty; body; univs|])
 
   let quote_constant_entry = function
     | Left ce ->  constr_mkApp (cDefinitionEntry, [| ce |])
     | Right pe -> constr_mkApp (cParameterEntry, [| pe |])
 
-  let quote_entry decl = 
+  let quote_entry decl =
     let opType = constr_mkAppl(sum_type, [|tConstant_entry;tMutual_inductive_entry|]) in
     let mkSome c t = constr_mkApp (cSome, [|opType; constr_mkAppl (c, [|tConstant_entry;tMutual_inductive_entry; lazy t|] )|]) in
     let mkSomeDef = mkSome cInl in
@@ -292,8 +306,11 @@ struct
     | None -> constr_mkApp (cNone, [| opType |])
 
 
+  (* todo : put in Reify *)
   let quote_global_reference : Names.GlobRef.t -> quoted_global_reference = function
-    | Names.GlobRef.VarRef _ -> CErrors.user_err (str "VarRef unsupported")
+    | Names.GlobRef.VarRef v ->
+       let id = quote_ident v in
+       constr_mkApp (tVarRef, [|id|])
     | Names.GlobRef.ConstRef c ->
        let kn = quote_kn (Names.Constant.canonical c) in
        constr_mkApp (tConstRef, [|kn|])

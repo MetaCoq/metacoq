@@ -1,4 +1,5 @@
-From Coq Require Import Strings.String.
+From Coq Require Import Strings.String List.
+Import ListNotations.
 Open Scope string_scope.
 From MetaCoq.Template Require Import Ast AstUtils Common.
 
@@ -35,8 +36,10 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=
 (* Guaranteed to not cause "... already declared" error *)
 | tmFreshName : ident -> TemplateMonad ident
 
-| tmAbout : qualid -> TemplateMonad (option global_reference)
-| tmCurrentModPath : unit -> TemplateMonad string
+(* Returns the list of globrefs corresponding to a qualid,
+   the head is the default one if any. *)
+| tmLocate : qualid -> TemplateMonad (list global_reference)
+| tmCurrentModPath : unit -> TemplateMonad modpath
 
 (* Quoting and unquoting commands *)
 (* Similar to MetaCoq Quote Definition ... := ... *)
@@ -44,9 +47,9 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=
 (* Similar to MetaCoq Quote Recursively Definition ... := ...*)
 | tmQuoteRec : forall {A:Type@{t}}, A  -> TemplateMonad program
 (* Quote the body of a definition or inductive. Its name need not be fully qualified *)
-| tmQuoteInductive : qualid -> TemplateMonad mutual_inductive_body
+| tmQuoteInductive : kername -> TemplateMonad mutual_inductive_body
 | tmQuoteUniverses : TemplateMonad ConstraintSet.t
-| tmQuoteConstant : qualid -> bool (* bypass opacity? *) -> TemplateMonad constant_body
+| tmQuoteConstant : kername -> bool (* bypass opacity? *) -> TemplateMonad constant_body
 (* unquote before making the definition *)
 (* FIXME take an optional universe context as well *)
 | tmMkInductive : mutual_inductive_entry -> TemplateMonad unit
@@ -54,7 +57,8 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=
 | tmUnquoteTyped : forall A : Type@{t}, Ast.term -> TemplateMonad A
 
 (* Typeclass registration and querying for an instance *)
-| tmExistingInstance : qualid -> TemplateMonad unit
+(* Rk: This is *Global* Existing Instance, not Local *)
+| tmExistingInstance : global_reference -> TemplateMonad unit
 | tmInferInstance : option reductionStrategy -> forall A : Type@{t}, TemplateMonad (option_instance A)
 .
 
@@ -62,7 +66,7 @@ From MetaCoq.Template Require Import monad_utils.
 
 (** This allow to use notations of MonadNotation *)
 Instance TemplateMonad_Monad : Monad TemplateMonad :=
-{| ret := @tmReturn ; bind := @tmBind |}.
+  {| ret := @tmReturn ; bind := @tmBind |}.
 
 Import MonadNotation.
 
@@ -86,11 +90,21 @@ Definition tmMkInductive' (mind : mutual_inductive_body) : TemplateMonad unit
 Definition tmAxiom id := tmAxiomRed id None.
 Definition tmDefinition id {A} t := @tmDefinitionRed_ false id None A t.
 
+Definition tmLocate1 (q : qualid) : TemplateMonad global_reference :=
+  l <- tmLocate q ;;
+  match l with
+  | [] => tmFail ("Constant [" ++ q ++ "] not found")
+  | x :: _ => tmReturn x
+  end.
+
 (** Don't remove. Constants used in the implem of the plugin *)
 Definition tmTestQuote {A} (t : A) := tmQuote t >>= tmPrint.
+
+Definition Common_kn (s : ident) :=
+  (MPfile ["Common"; "TemplateMonad"; "Template"; "MetaCoq"], s).
 Definition tmTestUnquote (t : term) :=
      t' <- tmUnquote t ;;
-     t'' <- tmEval (unfold "Template.TemplateMonad.Common.my_projT2") (my_projT2 t') ;;
+     t'' <- tmEval (unfold (Common_kn "my_projT2")) (my_projT2 t') ;;
      tmPrint t''.
 
 Definition tmQuoteDefinition id {A} (t : A) := tmQuote t >>= tmDefinition id.
@@ -99,8 +113,8 @@ Definition tmQuoteDefinitionRed id rd {A} (t : A)
 Definition tmQuoteRecDefinition id {A} (t : A)
   := tmQuoteRec t >>= tmDefinition id.
 
-Definition tmMkDefinition id (tm : term) : TemplateMonad unit
+Definition tmMkDefinition (id : ident) (tm : term) : TemplateMonad unit
   := t' <- tmUnquote tm ;;
-     t'' <- tmEval (unfold "Template.TemplateMonad.Common.my_projT2") (my_projT2 t') ;;
-     tmDefinitionRed id (Some (unfold "Template.TemplateMonad.Common.my_projT1")) t'' ;;
+     t'' <- tmEval (unfold (Common_kn "my_projT2")) (my_projT2 t') ;;
+     tmDefinitionRed id (Some (unfold (Common_kn "my_projT1"))) t'' ;;
      tmReturn tt.

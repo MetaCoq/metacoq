@@ -43,8 +43,8 @@ Cumulative Inductive TM@{t} : Type@{t} -> Type :=
 (* Guaranteed to not cause "... already declared" error *)
 | tmFreshName : ident -> TM ident
 
-| tmAbout : qualid -> TM (option global_reference)
-| tmCurrentModPath : TM string
+| tmLocate : qualid -> TM (list global_reference)
+| tmCurrentModPath : TM modpath
 
 (* Quote the body of a definition or inductive. *)
 | tmQuoteInductive (nm : kername) (* nm is the kernel name of the mutind *)
@@ -59,7 +59,7 @@ Cumulative Inductive TM@{t} : Type@{t} -> Type :=
 | tmInductive : mutual_inductive_entry -> TM unit
 
 (* Typeclass registration and querying for an instance *)
-| tmExistingInstance : kername -> TM unit
+| tmExistingInstance : global_reference -> TM unit
 | tmInferInstance (type : Ast.term)
   : TM (option Ast.term)
 .
@@ -70,7 +70,7 @@ Definition TypeInstance : Common.TMInstance :=
    ; Common.tmBind:=@tmBind
    ; Common.tmFail:=@tmFail
    ; Common.tmFreshName:=@tmFreshName
-   ; Common.tmAbout:=@tmAbout
+   ; Common.tmLocate:=@tmLocate
    ; Common.tmCurrentModPath:=fun _ => @tmCurrentModPath
    ; Common.tmQuoteInductive:=@tmQuoteInductive
    ; Common.tmQuoteUniverses:=@tmQuoteUniverses

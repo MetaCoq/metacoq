@@ -631,7 +631,7 @@ Proof.
   intros Σ c.
   induction Σ. 1: reflexivity.
   simpl.
-  destruct (ident_eq c a.1).
+  unfold eq_kername; destruct kername_eq_dec; subst.
   - reflexivity.
   - assumption.
 Qed.

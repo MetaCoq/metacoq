@@ -213,7 +213,7 @@ Defined.
 
 Definition tTranslate (ΣE : tsl_context) (id : ident)
   : TemplateMonad (option tsl_context) :=
-  gr <- tmAbout id ;;
+  gr <- tmLocate id ;;
   id' <- tmEval all (tsl_ident id) ;;
   let E := snd ΣE in
   match gr with

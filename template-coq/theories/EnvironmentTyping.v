@@ -11,15 +11,15 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
 
   (** ** Environment lookup *)
 
-  Fixpoint lookup_env (Σ : global_env) (id : ident) : option global_decl :=
+  Fixpoint lookup_env (Σ : global_env) (kn : kername) : option global_decl :=
     match Σ with
     | nil => None
     | d :: tl =>
-      if ident_eq id d.1 then Some d.2
-      else lookup_env tl id
+      if eq_kername kn d.1 then Some d.2
+      else lookup_env tl kn
     end.
 
-  Definition declared_constant (Σ : global_env) (id : ident) decl : Prop :=
+  Definition declared_constant (Σ : global_env) (id : kername) decl : Prop :=
     lookup_env Σ id = Some (ConstantDecl decl).
 
   Definition declared_minductive Σ mind decl :=
@@ -508,7 +508,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
 
     (** Well-formed global environments have no name clash. *)
 
-    Definition fresh_global (s : string) : global_env -> Prop :=
+    Definition fresh_global (s : kername) : global_env -> Prop :=
       Forall (fun g => g.1 <> s).
 
     Definition satisfiable_udecl `{checker_flags} Σ φ

@@ -30,6 +30,7 @@ hnf_ctor.v
 issue27.v
 issue28.v
 letin.v
+modules_sections.v
 mutind.v
 opaque.v
 proj.v

@@ -375,7 +375,7 @@ Proof.
   unfold erases_global. destruct Σ; simpl.
   intros. induction H; cbn in *.
   - inv H0.
-  - destruct ?.
+  - unfold eq_kername in *; destruct ?.
     + inv H0.
       exists cb'. split; eauto. unfold erases_constant_body in *.
       destruct ?. destruct ?.
@@ -402,7 +402,7 @@ Proof.
         eauto. now eexists [_].
       * tauto.
       * destruct ?; tauto.
-  - destruct ?.
+  - unfold eq_kername in *; destruct ?.
     + inv H0.
     + edestruct IHerases_global_decls as (decl' & ? & ?).
       eapply wf_extends.

@@ -141,7 +141,7 @@ Fixpoint replace t k u {struct u} :=
   end.
 
 
-Definition tsl_mind_body (ΣE : tsl_context) (mp : string)
+Definition tsl_mind_body (ΣE : tsl_context) (mp : modpath)
            (kn : kername) (mind : mutual_inductive_body)
   : tsl_result (tsl_table * list mutual_inductive_body).
   refine (
@@ -153,7 +153,7 @@ Definition tsl_mind_body (ΣE : tsl_context) (mp : string)
         let E := snd ΣE in
         let tsl_ty' := tsl_ty_param fuel Σ G E [] in
         let tsl2' := tsl_rec2 fuel Σ G E [] in
-        let kn' := tsl_kn tsl_ident kn mp in _ end).
+        let kn' : kername := (mp, tsl_ident (snd kn)) in _ end).
   simple refine (let arities := List.map ind_type mind.(ind_bodies) in
                  arities2 <- monad_map tsl2' arities ;;
                  bodies <- _ ;;

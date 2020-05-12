@@ -133,7 +133,7 @@ Proof.
   induction g;cbn in H.
   - discriminate H.
   - cbn.
-    destruct ident_eq.
+    unfold eq_kername in *; destruct kername_eq_dec; subst.
     + destruct a.
       cbn in *.
       injection H as ->.

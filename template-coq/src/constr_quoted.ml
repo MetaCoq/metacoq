@@ -128,6 +128,11 @@ struct
      ast "tSort", ast "tCast", ast "tProd", ast "tLambda",
      ast "tLetIn", ast "tApp", ast "tCase", ast "tFix",
      ast "tConstruct", ast "tConst", ast "tInd", ast "tCoFix", ast "tProj")
+  let tkername = ast "kername"
+  let tmodpath = ast "modpath"
+  let tMPfile = ast "MPfile"
+  let tMPbound = ast "MPbound"
+  let tMPdot = ast "MPdot"
 
   let tlevel = ast "level.t"
   let tLevel = ast "level.Level"
@@ -179,8 +184,8 @@ struct
   let tInductiveDecl = ast "InductiveDecl"
   let tglobal_env = ast "global_env"
 
-  let (tglobal_reference, tConstRef, tIndRef, tConstructRef) =
-    (ast "global_reference", ast "ConstRef", ast "IndRef", ast "ConstructRef")
+  let (tglobal_reference, tVarRef, tConstRef, tIndRef, tConstructRef) =
+    (ast "global_reference", ast "VarRef", ast "ConstRef", ast "IndRef", ast "ConstructRef")
 
   let tcontext_decl = ast "context_decl"
   let tcontext = ast "context"

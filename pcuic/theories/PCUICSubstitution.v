@@ -642,7 +642,7 @@ Qed.
 Hint Rewrite subst_instantiate_params : lift.
 
 Lemma wf_arities_context' {cf:checker_flags}:
-  forall (Σ : global_env_ext) (mind : ident) (mdecl : mutual_inductive_body),
+  forall (Σ : global_env_ext) mind (mdecl : mutual_inductive_body),
     wf Σ ->
     on_inductive (lift_typing typing) Σ mind mdecl ->
     wf_local Σ (arities_context (ind_bodies mdecl)).

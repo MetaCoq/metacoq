@@ -1,6 +1,5 @@
-From MetaCoq.Template Require Import Ast.
-Require Import MetaCoq.Template.Loader.
-Require Import List String. Import ListNotations.
+From MetaCoq.Template Require Import Ast Core monad_utils Loader.
+Require Import List String. Import ListNotations MonadNotation.
 
 Set Primitive Projections.
 
@@ -32,7 +31,11 @@ Definition pair (typ1 typ2 t1 t2 : term) : term
   := tApp tPair [ typ1 ; typ2 ; t1 ; t2].
 Definition pack (t u : term) : term
   := tApp tSigma [ t ; u ].
-Definition sigma_ind := Eval compute in match tSigma with tInd i _ => i | _ =>  mkInd "bug: sigma not an inductive"%string 0 end.
+MetaCoq Run (t <- tmQuote sigma ;;
+            match t with
+            | tInd i _ => tmDefinition "sigma_ind" i
+            | _ => tmFail "bug"
+            end).
 Definition proj1 (t : term) : term
   := tProj (sigma_ind, 2, 0) t.
 Definition proj2 (t : term) : term

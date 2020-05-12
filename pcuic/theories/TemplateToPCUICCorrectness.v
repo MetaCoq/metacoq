@@ -124,7 +124,8 @@ Lemma forall_decls_declared_constant Σ cst decl :
 Proof.
   unfold declared_constant, TTy.declared_constant.
   induction Σ => //; try discriminate.
-  case: a => // /= k b; case: (ident_eq cst k); auto.
+  case: a => // /= k b.
+  unfold eq_kername; destruct kername_eq_dec; subst; auto.
   - by move => [=] ->.
 Qed.
 
@@ -134,7 +135,8 @@ Lemma forall_decls_declared_minductive Σ cst decl :
 Proof.
   unfold declared_minductive, TTy.declared_minductive.
   induction Σ => //; try discriminate.
-  case: a => // /= k b; case: (ident_eq cst k); auto.
+  case: a => // /= k b.
+  unfold eq_kername; destruct kername_eq_dec; subst; auto.
   - by move => [=] ->.
 Qed.
 

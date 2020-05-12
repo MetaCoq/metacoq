@@ -123,21 +123,14 @@ let tmFreshName (nm : ident) : ident tm =
       Namegen.next_ident_away_from nm (fun id -> Nametab.exists_cci (Lib.make_path id))
     in success env evd name'
 
-let tmAbout (qualid : qualid) : global_reference option tm =
+let tmLocate (qualid : qualid) : global_reference list tm =
   fun env evd success _fail ->
-    let opt =
-      try
-        Some (Smartlocate.locate_global_with_alias qualid)
-      with
-        Not_found -> None
-    in success env evd opt
+  let grs = Nametab.locate_all qualid in success env evd grs
 
 
-let tmAboutString (s : string) : global_reference option tm =
-  fun env evd success fail ->
-    let (dp, nm) = Quoted.split_name s in
-    let q = Libnames.make_qualid dp nm in
-    tmAbout q env evd success fail
+let tmLocateString (s : string) : global_reference list tm =
+  let id = Libnames.qualid_of_string s in
+  tmLocate id
 
 let tmCurrentModPath : Names.ModPath.t tm =
   fun env evd success _fail ->
@@ -211,11 +204,10 @@ let tmInductive (mi : mutual_inductive_entry) : unit tm =
     ignore (DeclareInd.declare_mutual_inductive_with_eliminations mi Names.Id.Map.empty []) ;
     success (Global.env ()) evd ()
 
-let tmExistingInstance (kn : kername) : unit tm =
+let tmExistingInstance (gr : Names.GlobRef.t) : unit tm =
   fun env evd success _fail ->
-    (* note(gmm): this seems wrong. *)
-    let ident = Names.Id.of_string (Names.KerName.to_string kn) in
-    Classes.existing_instance true (Libnames.qualid_of_ident ident) None;
+    let q = Libnames.qualid_of_path (Nametab.path_of_global gr) in
+    Classes.existing_instance true q None;
     success env evd ()
 
 let tmInferInstance (typ : term) : term option tm =

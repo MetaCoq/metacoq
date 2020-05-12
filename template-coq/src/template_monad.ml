@@ -43,6 +43,7 @@ let (ptmReturn,
      ptmExistingInstance,
 
      ptmTestQuote,
+     ptmTestUnquote,
      ptmQuoteDefinition,
      ptmQuoteDefinitionRed,
      ptmQuoteRecDefinition) =
@@ -79,6 +80,7 @@ let (ptmReturn,
    r_template_monad_prop_p "tmExistingInstance",
 
    r_template_monad_prop_p "tmTestQuote",
+   r_template_monad_prop_p "tmTestUnquote",
    r_template_monad_prop_p "tmQuoteDefinition",
    r_template_monad_prop_p "tmQuoteDefinitionRed",
    r_template_monad_prop_p "tmQuoteRecDefinition")

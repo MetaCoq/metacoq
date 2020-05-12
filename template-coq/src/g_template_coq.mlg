@@ -103,6 +103,16 @@ VERNAC COMMAND EXTEND TemplateCoq_Quote_Recursively_Definition CLASSIFIED AS SID
         run_template_program env evm ~poly pgm }
 END
 
+VERNAC COMMAND EXTEND TemplateCoq_Test_Unquote CLASSIFIED AS QUERY
+    | #[ poly = polymorphic ] [ "MetaCoq" "Test" "Unquote" constr(def) ] ->
+      { let (env, evm) = fresh_env () in
+        let (evm, def) = Constrintern.interp_open_constr env evm def in
+        let (evm, pgm) = EConstr.fresh_global env evm (Lazy.force Template_monad.ptmTestUnquote) in
+        let pgm = Constr.mkApp (EConstr.to_constr evm pgm, 
+          [|to_constr_evars evm def|]) in
+        run_template_program env evm ~poly pgm }
+END
+
 VERNAC COMMAND EXTEND TemplateCoq_Make_Definition CLASSIFIED AS SIDEFF
   | #[ poly = polymorphic ] [ "MetaCoq" "Unquote" "Definition" ident(name) ":=" constr(def) ] ->
       { let (env, evm) = fresh_env () in

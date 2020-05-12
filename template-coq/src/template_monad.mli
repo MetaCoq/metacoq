@@ -1,4 +1,5 @@
 val ptmTestQuote : Names.GlobRef.t Lazy.t
+val ptmTestUnquote : Names.GlobRef.t Lazy.t
 val ptmQuoteDefinition : Names.GlobRef.t Lazy.t
 val ptmQuoteDefinitionRed : Names.GlobRef.t Lazy.t
 val ptmQuoteRecDefinition : Names.GlobRef.t Lazy.t

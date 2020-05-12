@@ -213,6 +213,7 @@ Register MetaCoq.Template.TemplateMonad.Core.tmInferInstance as metacoq.template
 Register MetaCoq.Template.TemplateMonad.Core.tmExistingInstance as metacoq.templatemonad.prop.tmExistingInstance.
 
 Register MetaCoq.Template.TemplateMonad.Core.tmTestQuote as metacoq.templatemonad.prop.tmTestQuote.
+Register MetaCoq.Template.TemplateMonad.Core.tmTestUnquote as metacoq.templatemonad.prop.tmTestUnquote.
 Register MetaCoq.Template.TemplateMonad.Core.tmQuoteDefinition as metacoq.templatemonad.prop.tmQuoteDefinition.
 Register MetaCoq.Template.TemplateMonad.Core.tmQuoteDefinitionRed as metacoq.templatemonad.prop.tmQuoteDefinitionRed.
 Register MetaCoq.Template.TemplateMonad.Core.tmQuoteRecDefinition as metacoq.templatemonad.prop.tmQuoteRecDefinition.

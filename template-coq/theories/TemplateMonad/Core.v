@@ -88,6 +88,10 @@ Definition tmDefinition id {A} t := @tmDefinitionRed_ false id None A t.
 
 (** Don't remove. Constants used in the implem of the plugin *)
 Definition tmTestQuote {A} (t : A) := tmQuote t >>= tmPrint.
+Definition tmTestUnquote (t : term) :=
+     t' <- tmUnquote t ;;
+     t'' <- tmEval (unfold "Template.TemplateMonad.Common.my_projT2") (my_projT2 t') ;;
+     tmPrint t''.
 
 Definition tmQuoteDefinition id {A} (t : A) := tmQuote t >>= tmDefinition id.
 Definition tmQuoteDefinitionRed id rd {A} (t : A)

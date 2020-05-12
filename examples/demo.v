@@ -17,6 +17,8 @@ MetaCoq Test Quote (let x := 2 in
               | S n => n
             end).
 
+MetaCoq Test Unquote (Ast.tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 0 []).
+
 (** Build a definition **)
 Definition d : Ast.term.
   let t := constr:(fun x : nat => x) in

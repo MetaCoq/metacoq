@@ -2265,13 +2265,22 @@ Proof.
         apply eq_term_upto_univ_subst_instance_constr; try typeclasses eauto.
         apply equ.
 
-  - (* Proj congruence *) 
-    todo "projection congruence SR proof"%string.
-    (* eapply type_Cumul; [econstructor|..]; eauto.
-    admit.
+  - (* Proj congruence: discriminee reduction *) 
+    eapply type_Cumul; [econstructor|..]; eauto.
+    eapply validity; eauto.
+    instantiate (1:= tProj p c).
+    econstructor; eauto.
     eapply conv_cumul.
-    (* eapply (conv_subst_conv. *)
-    admit. *)
+    rewrite (subst_app_simpl [c']) (subst_app_simpl [c]).
+    eapply (untyped_subst_conv Γ [vass nAnon (mkApps (tInd p.1.1 u) args)] 
+      [vass nAnon (mkApps (tInd p.1.1 u) args)] []); auto.
+    repeat constructor. repeat constructor. constructor.
+    now apply conv_sym, red_conv, red1_red. constructor.
+    simpl. constructor. auto.
+    eapply validity in typec; auto.
+    destruct typec; auto.
+    destruct i as [ctx [s [dA _]]].
+    rewrite destArity_tInd in dA. discriminate.
 
   - (* Fix congruence *)
     symmetry in H0; apply mkApps_Fix_spec in H0. simpl in H0. subst args.

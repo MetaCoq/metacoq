@@ -970,6 +970,16 @@ Section Validity.
     todo "universes"%string.
   Qed.
 
+  Lemma wf_local_smash_end Σ Γ Δ : 
+    wf Σ.1 ->
+    wf_local Σ (Γ ,,, Δ) -> wf_local Σ (Γ ,,, smash_context [] Δ).
+  Proof.
+    intros wfΣ  wf. 
+    apply All_local_env_app_inv. split.
+    now apply All_local_env_app in wf.
+    eapply wf_local_rel_smash_context; auto.
+  Qed.
+
   (* Well, it's a smash_context mess! *)
   Lemma declared_projections {Σ : global_env_ext} {mdecl ind idecl} : 
     forall (wfΣ : wf Σ.1) (Hdecl : declared_inductive Σ mdecl ind idecl),
@@ -987,6 +997,9 @@ Section Validity.
         ∑ decl, 
           (nth_error (smash_context [] (cshape_args cs)) 
             (context_assumptions (cshape_args cs) - S i) = Some decl) *
+          wf_local (Σ.1, ind_universes mdecl) 
+            (arities_context (ind_bodies mdecl) ,,, 
+              ind_params mdecl ,,, smash_context [] (cshape_args cs)) *
           (projection_type mdecl ind i decl.(decl_type) = pdecl.2) *
           (projection_type mdecl ind i decl.(decl_type) = 
              projection_type' mdecl ind  i decl.(decl_type)))%type
@@ -1159,7 +1172,7 @@ Section Validity.
       now apply All_local_env_app in wfargs as [wfindpars wfargs].
       apply wf_local_rel_smash_context; auto.
       eapply closed_wf_local in X0; auto.
-      eapply (closed_ctx_decl (n:=idx)) in X0; eauto.
+      eapply (closedn_ctx_decl (n:=idx)) in X0; eauto.
       2:{ rewrite nth_error_app_lt. autorewrite with len. simpl; lia.
           now eapply nthidx. }
       move/andP: X0 => [_ clty]. 
@@ -1216,6 +1229,8 @@ Section Validity.
     unfold projection_type in H0.
     rewrite H0. exists s; auto.
     exists arg. intuition auto.
+
+    apply wf_local_smash_end; auto.
 
     unfold projsubst. clear Hs.
     clear -wfΣ parslen onps projslen some_proj IH Hp2 decli.
@@ -1290,7 +1305,7 @@ Section Validity.
           rewrite context_assumptions_smash_context /= //.
           assert(subst_instance_constr u pdecl.2 = pdecl.2) as ->.
           { eapply isType_subst_instance_id. apply IH. }
-          destruct IH as [isTy [decl [[nthdecl eqpdecl] ptyeq]]].
+          destruct IH as [isTy [decl [[[nthdecl _] eqpdecl] ptyeq]]].
           move ptyeq at bottom. 
           replace  (S (context_assumptions (cshape_args c) - S (S i))) with 
            (context_assumptions (cshape_args c) - S i) in Hnth by lia.
@@ -1348,6 +1363,43 @@ Section Validity.
     eapply nth_error_alli in onprojs; eauto.
     simpl in onprojs. intuition auto.
   Qed.
+
+  Lemma declared_projection_type_and_eq {Σ : global_env_ext} {mdecl idecl p pdecl} : 
+     forall (wfΣ : wf Σ.1) (Hdecl : declared_projection Σ mdecl idecl p pdecl),
+     let u := PCUICLookup.abstract_instance (ind_universes mdecl) in
+     let oib := declared_inductive_inv weaken_env_prop_typing wfΣ wfΣ (let (x, _) := Hdecl in x) in
+     let u := PCUICLookup.abstract_instance (ind_universes mdecl) in
+     match ind_cshapes oib return Type with
+     | [cs] => 
+       isType (Σ.1, ind_universes mdecl)
+         ((vass nAnon (mkApps (tInd p.1.1 u) 
+               (to_extended_list (smash_context [] (ind_params mdecl)))))::
+            smash_context [] (ind_params mdecl)) pdecl.2 *
+        ∑ decl, 
+        (nth_error (smash_context [] (cshape_args cs)) 
+          (context_assumptions (cshape_args cs) - S p.2) = Some decl) *
+        (wf_local (Σ.1, ind_universes mdecl) 
+            (arities_context (ind_bodies mdecl) ,,, 
+              ind_params mdecl ,,, smash_context [] (cshape_args cs))) *
+        (projection_type mdecl p.1.1 p.2 decl.(decl_type) = pdecl.2) *
+        (projection_type mdecl p.1.1 p.2 decl.(decl_type) = 
+          projection_type' mdecl p.1.1 p.2 decl.(decl_type))%type
+    | _ => False
+     end.
+   Proof.
+     intros wfΣ declp.
+     destruct (on_declared_projection wfΣ declp) as [oni onp].
+     specialize (declared_projections wfΣ (let (x, _) := declp in x)).
+     set(oib := declared_inductive_inv _ _ _ _) in *.
+     intros onprojs u.
+     clearbody oib.
+     simpl in *.
+     destruct (ind_cshapes oib) as [|? []]; try contradiction.
+     forward onprojs. intuition auto.
+     destruct declp as [decli [Hnth Hpars]].
+     eapply nth_error_alli in onprojs; eauto.
+     simpl in onprojs. intuition auto.
+   Qed.
 
   Lemma subst_instance_subst_context u s k Γ : 
     subst_instance_context u (subst_context s k Γ) =

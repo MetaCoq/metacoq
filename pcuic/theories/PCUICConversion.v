@@ -2174,6 +2174,25 @@ Proof.
       * eapply conv_cumul, conv_LetIn_ty with (na := na1). assumption.
 Qed.
 
+Lemma untyped_substitution_conv `{cf : checker_flags} (Σ : global_env_ext) Γ Γ' Γ'' s M N :
+  wf Σ -> wf_local Σ (Γ ,,, Γ' ,,, Γ'') -> 
+  untyped_subslet Γ s Γ' ->
+  Σ ;;; Γ ,,, Γ' ,,, Γ'' |- M = N ->
+  Σ ;;; Γ ,,, subst_context s 0 Γ'' |- subst s #|Γ''| M = subst s #|Γ''| N.
+Proof.
+  intros wfΣ wfΓ Hs. induction 1.
+  - constructor.
+    now apply subst_eq_term.
+  - eapply substitution_untyped_let_red in r. 3:eauto. all:eauto with wf.
+    eapply red_conv_conv; eauto.
+  - eapply substitution_untyped_let_red in r. 3:eauto. all:eauto with wf.
+    eapply red_conv_conv_inv; eauto.
+  - eapply conv_eta_l. 2: eassumption.
+    eapply eta_expands_subst. assumption.
+  - eapply conv_eta_r. 1: eassumption.
+    eapply eta_expands_subst. assumption.
+Qed.
+
 Lemma substitution_conv `{cf : checker_flags} (Σ : global_env_ext) Γ Γ' Γ'' s M N :
   wf Σ -> wf_local Σ (Γ ,,, Γ' ,,, Γ'') -> subslet Σ Γ s Γ' ->
   Σ ;;; Γ ,,, Γ' ,,, Γ'' |- M = N ->
@@ -2232,6 +2251,26 @@ Qed.
 Lemma subslet_untyped_subslet {cf:checker_flags} Σ Γ s Γ' : subslet Σ Γ s Γ' -> untyped_subslet Γ s Γ'.
 Proof.
   induction 1; constructor; auto.
+Qed.
+
+Lemma untyped_subst_conv {cf:checker_flags} {Σ} Γ Γ0 Γ1 Δ s s' T U : 
+  wf Σ.1 ->
+  untyped_subslet Γ s Γ0 ->
+  untyped_subslet Γ s' Γ1 ->
+  All2 (conv Σ Γ) s s' ->
+  wf_local Σ (Γ ,,, Γ0 ,,, Δ) ->
+  Σ;;; Γ ,,, Γ0 ,,, Δ |- T = U ->
+  Σ;;; Γ ,,, subst_context s 0 Δ |- subst s #|Δ| T = subst s' #|Δ| U.
+Proof.
+  move=> wfΣ subss subss' eqsub wfctx eqty.
+  eapply conv_trans => //.
+  * eapply untyped_substitution_conv => //.
+  ** eapply wfctx.
+  ** auto. 
+  ** apply eqty.
+  * clear eqty.
+    rewrite -(subst_context_length s 0 Δ).
+    eapply conv_subst_conv => //; eauto using subslet_untyped_subslet.
 Qed.
 
 Lemma subst_conv {cf:checker_flags} {Σ} Γ Γ0 Γ1 Δ s s' T U : 

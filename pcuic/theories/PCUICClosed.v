@@ -922,14 +922,14 @@ Proof.
       * rewrite List.rev_length. lia.
 Qed.
 
-Lemma closed_ctx_decl {Γ n d} :
-  closed_ctx Γ ->
+Lemma closedn_ctx_decl {Γ n d k} :
+  closedn_ctx k Γ ->
   nth_error Γ n = Some d ->
-  closed_decl (#|Γ| - S n) d.
+  closed_decl (k + #|Γ| - S n) d.
 Proof.
   intros clΓ hnth. eapply closedn_ctx_spec in clΓ.
   pose proof (nth_error_Some_length hnth).
   rewrite (nth_error_rev _ _ H) in hnth.
   eapply nth_error_alli in clΓ; eauto.
-  now simpl in clΓ.
+  simpl in clΓ. eapply closed_decl_upwards; eauto. lia.
 Qed.

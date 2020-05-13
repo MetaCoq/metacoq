@@ -408,7 +408,7 @@ Proof.
   rewrite !subst_instance_constr_mkApps.
   simpl.
   autorewrite with len.
-  rewrite !subst_mkApps Nat.add_0_r.
+  rewrite !subst_mkApps.
   rewrite !subst_inds_concl_head.
   destruct decli. now apply nth_error_Some_length in H0.
   destruct (le_dec (ind_npars mdecl) #|args|).

@@ -1593,6 +1593,19 @@ Proof.
     + cbn. f_equal.
 Qed.
 
+Lemma substitution_untyped_red {cf:checker_flags} Σ Γ Δ Γ' s M N :
+  wf Σ -> untyped_subslet Γ s Δ ->
+  red Σ (Γ ,,, Δ ,,, Γ') M N ->
+  red Σ (Γ ,,, subst_context s 0 Γ') (subst s #|Γ'| M) (subst s #|Γ'| N).
+Proof.
+  intros wfΣ subsl.
+  induction 1. 
+  - constructor.
+  - etransitivity.
+    * eapply IHX.
+    * eapply substitution_untyped_let_red; eauto.
+Qed.
+
 Lemma subst_eq_decl `{checker_flags} ϕ l k d d' :
   eq_decl ϕ d d' -> eq_decl ϕ (subst_decl l k d) (subst_decl l k d').
 Proof.

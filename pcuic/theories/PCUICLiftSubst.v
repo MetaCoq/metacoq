@@ -869,6 +869,18 @@ Proof.
   intros f f' Hff' t t' ->. now apply inst_ext.
 Qed.
 
+Instance proper_inst' : Proper (`=1` ==> pointwise_relation _ Logic.eq) inst.
+Proof.
+  intros f f' Hff' t. now apply inst_ext.
+Qed.
+
+Instance proper_map_ho {A B} : Proper ((pointwise_relation A Logic.eq) ==> Logic.eq ==> Logic.eq)
+  (@map A B).
+Proof.
+  intros f g Hfg x y ->. apply map_ext.
+  apply Hfg.
+Qed.
+
 Instance proper_ext_eq {A B} : Proper (`=1` ==> `=1` ==> iff) (@pointwise_relation A _ (@Logic.eq B)).
 Proof.
   intros f f' Hff' g g' Hgg'. split; intros.
@@ -1669,3 +1681,4 @@ Fixpoint subst_app (t : term) (us : list term) : term :=
   | _, [] => t
   | _, _ => mkApps t us
   end.
+

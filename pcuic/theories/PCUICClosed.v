@@ -933,3 +933,39 @@ Proof.
   eapply nth_error_alli in clΓ; eauto.
   simpl in clΓ. eapply closed_decl_upwards; eauto. lia.
 Qed.
+
+Lemma closedn_ctx_lift n k k' Γ : closedn_ctx k Γ ->
+  closedn_ctx (n + k) (lift_context n k' Γ).
+Proof.
+  induction Γ as [|d ?]; simpl; auto; rewrite lift_context_snoc !closedn_ctx_cons /=;
+    move/andP=> [clΓ cld]; rewrite IHΓ //;
+  autorewrite with len in cld.
+  move: cld;  rewrite /closed_decl. simpl.
+  move/andP=> [clb clt]; apply andb_and; split.
+  destruct (decl_body d) => /= //. simpl in clb |- *.
+  eapply (closedn_lift n) in clb.
+  autorewrite with len. now rewrite -Nat.add_assoc Nat.add_comm.
+  eapply (closedn_lift n) in clt.
+  autorewrite with len. now rewrite -Nat.add_assoc Nat.add_comm.
+Qed.
+
+Lemma closedn_ctx_subst k k' s Γ : 
+  closedn_ctx (k + k' + #|s|) Γ ->
+  forallb (closedn k) s ->
+  closedn_ctx (k + k') (subst_context s k' Γ).
+Proof.
+  induction Γ as [|d ?] in k' |- *; simpl; auto; rewrite subst_context_snoc !closedn_ctx_cons /=;
+  move/andP=> [clΓ cld]  cls; rewrite IHΓ //;
+  autorewrite with len in cld.
+  move: cld;  rewrite /closed_decl. simpl.
+  move/andP=> [clb clt]; apply andb_and; split.
+  destruct (decl_body d) => /= //. simpl in clb |- *.
+  rewrite -Nat.add_assoc [#|s| + _]Nat.add_comm Nat.add_assoc in clb.
+  rewrite -(Nat.add_assoc k) in clb.
+  eapply (closedn_subst s) in clb => //. rewrite Nat.add_assoc in clb.
+  autorewrite with len. now rewrite (Nat.add_comm #|Γ|).
+  rewrite -Nat.add_assoc [#|s| + _]Nat.add_comm Nat.add_assoc in clt.
+  rewrite -(Nat.add_assoc k) in clt.
+  eapply (closedn_subst s) in clt => //. rewrite Nat.add_assoc in clt.
+  autorewrite with len. now rewrite (Nat.add_comm #|Γ|).
+Qed.

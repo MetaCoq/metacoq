@@ -1809,3 +1809,22 @@ Proof.
     eapply 
 
 *)
+
+Lemma typing_spine_app {cf:checker_flags} Σ Γ ty args na A B arg :
+  wf Σ.1 ->
+  typing_spine Σ Γ ty args (tProd na A B) ->
+  Σ ;;; Γ |- arg : A ->
+  typing_spine Σ Γ ty (args ++ [arg]) (B {0 := arg}).
+Proof.
+  intros wfΣ H; revert arg.
+  dependent induction H.
+  - intros arg  Harg. simpl. econstructor; eauto.
+    constructor. 2:reflexivity.
+    eapply isWAT_tProd in i as [watd wat].
+    eapply (isWAT_subst wfΣ (Δ:=[vass na A])); eauto.
+    constructor; auto. now apply typing_wf_local in Harg.
+    constructor. constructor. now rewrite subst_empty. auto.
+    now apply typing_wf_local in Harg.
+  - intros arg Harg.
+    econstructor; eauto.
+Qed.

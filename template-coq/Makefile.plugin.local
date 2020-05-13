@@ -3,6 +3,7 @@ CAMLFLAGS+=-w -32 # Unused value
 CAMLFLAGS+=-w -39 # Unused rec flag
 CAMLFLAGS+=-w -26 # Unused variable
 CAMLFLAGS+=-w -34 # Unused type
+CAMLFLAGS+=-w -60 # Unused module
 CAMLFLAGS+=-bin-annot # For merlin
 
 INSTALLDEFAULTROOT=MetaCoq/Template

@@ -135,14 +135,6 @@ Proof.
 Qed.
 Close Scope string_scope.
 
-Lemma firstn_add {A} x y (args : list A) : firstn (x + y) args = firstn x args ++ firstn y (skipn x args).
-Proof.
-  induction x in y, args |- *. simpl. reflexivity.
-  simpl. destruct args. simpl.
-  now rewrite firstn_nil.
-  rewrite IHx. now rewrite app_comm_cons.
-Qed.
-
 Lemma decompose_app_rec_inv' f l hd args :
   decompose_app_rec f l = (hd, args) ->
   ∑ n, ~~ isApp hd /\ l = skipn n args /\ f = mkApps hd (firstn n args).

@@ -141,7 +141,7 @@ Proof. unfold fix_context. now rewrite List.rev_length mapi_length. Qed.
 Hint Rewrite subst_context_length subst_instance_context_length 
   app_context_length map_context_length fix_context_length fix_subst_length cofix_subst_length 
   map_length app_length lift_context_length 
-  @mapi_length @mapi_rec_length : len.
+  @mapi_length @mapi_rec_length List.rev_length Nat.add_0_r : len.
 
 Definition tDummy := tVar "".
 

@@ -21,7 +21,7 @@ Require PCUICWeakening.
 Set Asymmetric Patterns.
 Open Scope sigma_scope.
 
-Hint Rewrite @lift_rename : sigma.
+Hint Rewrite @lift_rename Nat.add_0_r : sigma.
 
 Lemma subst1_inst :
   forall t n u,
@@ -50,9 +50,6 @@ Lemma rename_mkApps :
 Proof.
   intros f t l.
   autorewrite with sigma. f_equal.
-  induction l.
-  - reflexivity.
-  - simpl. autorewrite with sigma. easy.
 Qed.
 
 Lemma rename_subst_instance_constr :
@@ -1105,8 +1102,6 @@ Proof.
   intros params pars T f T' hcl e.
   eapply instantiate_params_inst with (σ := ren f) in e. 2: auto.
   autorewrite with sigma. rewrite <- e. f_equal.
-  induction pars in |- *. 1: reflexivity.
-  simpl. autorewrite with sigma. easy.
 Qed.
 
 Lemma build_branches_type_rename :

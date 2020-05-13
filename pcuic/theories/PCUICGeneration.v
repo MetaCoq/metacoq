@@ -10,6 +10,10 @@ Import ListNotations.
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
 
+Derive NoConfusion NoConfusionHom for term.
+Derive NoConfusion NoConfusionHom for context_decl.
+Derive NoConfusion NoConfusionHom for list.
+Derive NoConfusion NoConfusionHom for option.
 
 Section Generation.
   Context `{cf : config.checker_flags}.
@@ -44,11 +48,6 @@ Section Generation.
     eapply type_App.
     eapply type_Cumul; eauto. eauto.
   Qed.
-
-  Derive NoConfusion NoConfusionHom for term.
-  Derive NoConfusion NoConfusionHom for context_decl.
-  Derive NoConfusion NoConfusionHom for list.
-  Derive NoConfusion NoConfusionHom for option.
 
   Lemma type_it_mkLambda_or_LetIn :
     forall Σ Γ Δ t A,

@@ -3,7 +3,7 @@ From Coq Require Import Bool List ZArith Lia.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
   PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICTyping PCUICWeakeningEnv
-  PCUICClosed PCUICReduction PCUICPosition.
+  PCUICClosed PCUICReduction PCUICPosition PCUICGeneration.
 Require Import ssreflect.
 
 From Equations Require Import Equations.
@@ -1161,4 +1161,34 @@ Proof.
       ** eapply All_local_env_impl; eauto.
         simpl; intros.
         rewrite app_context_assoc. apply X.
+Qed.
+
+
+Lemma isWfArity_or_Type_lift {cf:checker_flags} {Σ : global_env_ext} {n Γ ty} 
+  (isdecl : n <= #|Γ|):
+  wf Σ -> wf_local Σ Γ ->
+  isWfArity_or_Type Σ (skipn n Γ) ty ->
+  isWfArity_or_Type Σ Γ (lift0 n ty).
+Proof.
+  intros wfΣ wfΓ wfty. rewrite <- (firstn_skipn n Γ) in wfΓ |- *.
+  assert (n = #|firstn n Γ|).
+  { rewrite firstn_length_le; auto with arith. }
+  destruct wfty.
+  - red. left. destruct i as [ctx [u [da Hd]]].
+    exists (lift_context n 0 ctx), u. split.
+    1: now rewrite (lift_destArity [] ty n 0) da.
+    eapply All_local_env_app_inv.
+    eapply All_local_env_app in Hd. intuition eauto.
+    rewrite {3}H.
+    clear -wfΣ wfΓ isdecl a b.
+    induction b; rewrite ?lift_context_snoc; econstructor; simpl; auto.
+    + destruct t0 as [u Hu]. exists u. rewrite Nat.add_0_r.
+      unshelve eapply (weakening_typing Σ (skipn n Γ) Γ0 (firstn n Γ) t _ _ (tSort u)); eauto with wf.
+    + destruct t0 as [u Hu]. exists u. rewrite Nat.add_0_r.
+      unshelve eapply (weakening_typing Σ (skipn n Γ) Γ0 (firstn n Γ) t _ _ (tSort u)); eauto with wf.
+    + rewrite Nat.add_0_r.
+      unshelve eapply (weakening_typing Σ (skipn n Γ) Γ0 (firstn n Γ) b _ _ t); eauto with wf.
+  - right. destruct i as [u Hu]. exists u.
+    rewrite {3}H.
+    unshelve eapply (weakening_typing Σ (skipn n Γ) [] (firstn n Γ) ty _ _ (tSort u)); eauto with wf.
 Qed.

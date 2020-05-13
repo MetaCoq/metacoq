@@ -1,19 +1,5 @@
 From Coq Require Import Bool.
 
-(* Use \sum to input ∑ in Company Coq (it is not a sigma Σ). *)
-Notation "'∑' x .. y , p" := (sigT (fun x => .. (sigT (fun y => p%type)) ..))
-  (at level 200, x binder, right associativity,
-   format "'[' '∑'  '/  ' x  ..  y ,  '/  ' p ']'")
-  : type_scope.
-
-Notation "( x ; y )" := (@existT _ _ x y).
-Notation "( x ; y ; z )" := (x ; ( y ; z)).
-Notation "( x ; y ; z ; t )" := (x ; ( y ; (z ; t))).
-Notation "( x ; y ; z ; t ; u )" := (x ; ( y ; (z ; (t ; u)))).
-Notation "( x ; y ; z ; t ; u ; v )" := (x ; ( y ; (z ; (t ; (u ; v))))).
-Notation "x .π1" := (@projT1 _ _ x) (at level 3, format "x '.π1'").
-Notation "x .π2" := (@projT2 _ _ x) (at level 3, format "x '.π2'").
-
 Declare Scope pair_scope.
 
 Notation "p .1" := (fst p)
@@ -22,7 +8,7 @@ Notation "p .2" := (snd p)
   (at level 2, left associativity, format "p .2") : pair_scope.
 Open Scope pair_scope.
 
-Notation "x × y" := (prod x y )(at level 80, right associativity).
+Notation "x × y" := (prod x y ) (at level 80, right associativity).
 
 
 Notation "p .p1" := (proj1 p) (at level 2, left associativity, format "p .p1").

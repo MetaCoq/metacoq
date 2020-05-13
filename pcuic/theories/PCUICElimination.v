@@ -244,10 +244,7 @@ Proof.
     * eapply invert_cumul_ind_l in c as [ui' [l' [red  [Req argeq]]]] => //.
       intros mdecl idecl decli oib.
       eapply subject_reduction in Ht; eauto.
-      eapply inversion_mkApps in Ht as [A [U [tInd [sp cum]]]]; auto.
-      eapply PCUICArities.typing_spine_weaken_concl in sp; eauto.
-      2:{ left; exists [], s; simpl; intuition auto. now eapply typing_wf_local. }
-      clear cum.
+      eapply inversion_mkApps in Ht as [A [tInd sp]]; auto.
       eapply inversion_Ind in tInd as [mdecl' [idecl' [wfΓ [decli' [cu cum]]]]]; auto.
       destruct (declared_inductive_inj decli decli'); subst mdecl' idecl'.
       clear decli'.
@@ -389,14 +386,12 @@ Lemma Is_proof_mkApps_tConstruct `{cf : checker_flags} (Σ : global_env_ext) Γ 
 Proof.
   intros checkunivs HΣ decli kelim [tyc [tycs [hc [hty hp]]]].
   assert (wfΣ : wf Σ) by apply HΣ.
-  eapply inversion_mkApps in hc as [? [? [hc [hsp hcum]]]]; auto.
+  eapply inversion_mkApps in hc as [? [hc hsp]]; auto.
   eapply inversion_Construct in hc as [mdecl' [idecl' [cdecl' [wfΓ [declc [cu cum']]]]]]; auto.
   destruct (on_declared_constructor _ declc) as [[oi oib] [cs [Hnth onc]]].
   set (onib := declared_inductive_inv _ _ _ _) in *.
   clearbody onib. clear oib.
   eapply typing_spine_strengthen in hsp; eauto.
-  eapply PCUICArities.typing_spine_weaken_concl in hsp; eauto.
-  2:{ right; eexists; eauto. }
   pose proof (declared_inductive_inj decli (proj1 declc)) as [-> ->].
   assert (isWfArity_or_Type Σ Γ (type_of_constructor mdecl cdecl' (ind, n) u)).
   { eapply declared_constructor_valid_ty in declc; eauto. now right. }
@@ -578,7 +573,7 @@ Proof.
   intros. eapply inversion_Case in X0 as (u' & args' & mdecl' & idecl' & ps' & pty' & btys' & ? & ? & ? & ? & ? & ? & ? & ? & ?); eauto.
   subst. unfold build_case_predicate_type  in *.
   pose proof t1 as t1'.
-  eapply inversion_mkApps in t1' as [A [_ [tc _]]]; auto.
+  eapply inversion_mkApps in t1' as [A [tc _]]; auto.
   eapply inversion_Construct in tc as [mdecl [idecl [cdecl [_ [declc _]]]]]; auto. clear A.
   unshelve eapply Construct_Ind_ind_eq in t1; eauto.
   destruct on_declared_constructor as [[onind oib] [cs [Hnth onc]]].

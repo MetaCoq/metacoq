@@ -187,6 +187,8 @@ Inductive arity_spine {cf : checker_flags} (Σ : PCUICAst.global_env_ext) (Γ : 
                     arity_spine Σ Γ (B {0 := hd}) tl B' ->
                     arity_spine Σ Γ (tProd na A B) (hd :: tl) B'.
 
+Derive Signature for arity_spine.
+
 Record wf_arity_spine {cf:checker_flags} Σ Γ T args T' :=
 { wf_arity_spine_wf : isWfArity_or_Type Σ Γ T;
   wf_arity_spine_spine : arity_spine Σ Γ T args T' }.
@@ -1051,7 +1053,7 @@ Proof.
   destruct a as [? [?|] ?]; simpl.
   intros [= <-].
   eexists; split; eauto. simpl.
-  now rewrite skipn_S skipn_0 Nat.add_0_r Nat.sub_0_r all_rels_length.
+  now rewrite skipn_S skipn_0 Nat.add_0_r all_rels_length.
   intros [= <-].
   eexists; split; eauto. simpl.
   now rewrite Nat.add_0_r.

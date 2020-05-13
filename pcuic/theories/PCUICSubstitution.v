@@ -164,7 +164,6 @@ Proof.
   rewrite /lift_decl /subst_decl !compose_map_decl.
   apply map_decl_ext => y.
   rewrite !mapi_length; autorewrite with len.
-  rewrite Nat.add_0_r.
   rewrite distr_lift_subst_rec. f_equal. f_equal. lia.
 Qed.
 

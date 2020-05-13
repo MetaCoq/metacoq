@@ -8,7 +8,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICNormal PCUICInversion PCUICCumulativity PCUICReduction
      PCUICConfluence PCUICConversion PCUICContextConversion
      PCUICParallelReductionConfluence PCUICWeakeningEnv
-     PCUICClosed PCUICSubstitution
+     PCUICClosed PCUICSubstitution PCUICSigmaCalculus
      PCUICWeakening PCUICGeneration PCUICUtils PCUICCtxShape.
 
 From Equations Require Import Equations.
@@ -18,6 +18,8 @@ Require Import Equations.Type.Relation_Properties.
 Require Import ssreflect ssrbool.
 
 Derive Signature for context_subst.
+
+Hint Rewrite Nat.add_0_r : len.
 
 Lemma ctx_length_ind (P : context -> Type) (p0 : P [])
   (pS : forall d Γ, (forall Γ', #|Γ'| <= #|Γ|  -> P Γ') -> P (d :: Γ)) 
@@ -423,6 +425,10 @@ Proof.
   f_equal. now rewrite -IHΓ Nat.add_assoc.
 Qed.
 
+Lemma to_extended_list_length Γ : #|to_extended_list Γ| = context_assumptions Γ.
+Proof. now rewrite /to_extended_list PCUICCtxShape.to_extended_list_k_length. Qed.
+Hint Rewrite to_extended_list_length : len.
+
 Lemma map_subst_app_to_extended_list_k s s' ctx k  :
   k = #|s| ->
   map (subst0 (s ++ s')) (to_extended_list_k ctx k) = 
@@ -447,14 +453,14 @@ Proof.
     rewrite !subst_context_alt !mapi_mapi. apply mapi_ext. clear.
     intros n x. rewrite /subst_decl !PCUICAstUtils.compose_map_decl.
     eapply PCUICAstUtils.map_decl_ext. intros.
-    autorewrite with len. rewrite Nat.add_0_r.
+    autorewrite with len.
     generalize (Nat.pred #|Γ| - n). generalize (#|Δ| + k). clear.
     intros. rewrite distr_subst_rec. simpl. now rewrite -Nat.add_assoc.
   - rewrite IHΔ. f_equal.
     rewrite subst_context_app. simpl.  unfold app_context. f_equal.
 Qed.
 
-Lemma wf_local_rel_smash_context_gen Σ Γ Δ Δ' :
+Lemma wf_local_rel_smash_context_gen {cf:checker_flags} Σ Γ Δ Δ' :
   wf Σ.1 ->
   wf_local Σ (Δ' ,,, Γ) -> 
   wf_local_rel Σ (Δ' ,,, Γ) Δ ->
@@ -479,7 +485,7 @@ Proof.
     rewrite -{1}(subst_empty 0 b). repeat constructor. now rewrite !subst_empty.
 Qed.
 
-Lemma wf_local_rel_smash_context Σ Γ Δ :
+Lemma wf_local_rel_smash_context {cf:checker_flags} Σ Γ Δ :
   wf Σ.1 ->
   wf_local Σ (Δ ,,, Γ) -> 
   wf_local_rel Σ Δ (smash_context [] Γ).
@@ -487,7 +493,7 @@ Proof.
   intros. eapply wf_local_rel_smash_context_gen; eauto. constructor.
 Qed.
 
-Lemma wf_local_rel_empty Σ Γ : wf_local_rel Σ [] Γ <~> wf_local Σ Γ.
+Lemma wf_local_rel_empty {cf:checker_flags} Σ Γ : wf_local_rel Σ [] Γ <~> wf_local Σ Γ.
 Proof.
   split.
   - intros h. eapply (All_local_env_impl _ _ _ h). firstorder.
@@ -496,7 +502,7 @@ Proof.
     red in X |- *. now rewrite app_context_nil_l.
 Qed.
 
-Lemma wf_local_smash_context Σ Γ :
+Lemma wf_local_smash_context {cf:checker_flags} Σ Γ :
   wf Σ.1 -> wf_local Σ Γ -> wf_local Σ (smash_context [] Γ).
 Proof.
   intros; apply wf_local_rel_empty. eapply (wf_local_rel_smash_context Σ Γ []); 
@@ -807,8 +813,8 @@ Proof.
     now autorewrite with sigma.
 Qed.
 
-Lemma skipn_0_eq {A} (l : list A) n : n =  0 -> skipn n l = l.
-Proof. intros ->; apply PCUICAstUtils.skipn_0. Qed.
+Lemma skipn_0_eq {A} (l : list A) n : n = 0 -> skipn n l = l.
+Proof. intros ->; apply skipn_0. Qed.
 
 Lemma map_subst_app_decomp (l l' : list term) (k : nat) (ts : list term) :
   map (subst (l ++ l') k) ts = map (fun x => subst l' k (subst (map (lift0 #|l'|) l) k x)) ts.
@@ -857,7 +863,7 @@ Proof.
     intros l. generalize (Nat.le_refl k).
     generalize k at 1 3.
     induction Γ as [|[? [] ?] ?] in k, l |- *; simpl. reflexivity.
-    simpl. intros k0 lek0. apply IHΓ. lia.
+    simpl. intros k0 le0. apply IHΓ. lia.
     intros k0 lek0. rewrite reln_acc map_app. simpl.
     rewrite map_app. simpl.
     elim: leb_spec_Set => Hle. f_equal. apply IHΓ. lia.

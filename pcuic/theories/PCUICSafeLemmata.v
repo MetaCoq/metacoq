@@ -1462,7 +1462,7 @@ apply inversion_Case in h as ih ; auto.
 destruct ih
   as [uni [args' [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [ht0 [? ?]]]]]]]]]]]]]].
   pose proof ht0 as typec.
-  eapply inversion_mkApps in typec as [A' [U [tyc [tyargs tycum]]]]; auto.
+  eapply inversion_mkApps in typec as [A' [tyc tyargs]]; auto.
   eapply (inversion_Construct Σ wΣ) in tyc as [mdecl' [idecl' [cdecl' [wfl [declc [Hu tyc]]]]]].
   epose proof (Construct_Ind_ind_eq _ ht0 declc); eauto.
   simpl in X. destruct declc. simpl in X.
@@ -1475,18 +1475,18 @@ forall Γ i i' pars narg c u l,
   wellformed Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i' c u) l)) ->
   i = i'.
 Proof.
-destruct hΣ as [wΣ].
-intros Γ i i' pars narg c u l [[T h]|[[ctx [s [e _]]]]];
-  [|discriminate].
-apply inversion_Proj in h ; auto.
-destruct h as [uni [mdecl [idecl [pdecl [args' [? [hc [? ?]]]]]]]].
-pose proof hc as typec.
-eapply inversion_mkApps in typec as [A' [U [tyc [tyargs tycum]]]]; auto.
-eapply (inversion_Construct Σ wΣ) in tyc as [mdecl' [idecl' [cdecl' [wfl [declc [Hu tyc]]]]]].
-epose proof (Construct_Ind_ind_eq _ hc declc); eauto.
-simpl in X. destruct declc. simpl in X.
-destruct declared_constructor_inv as [cs [csort onc']].
-intuition auto.
+  destruct hΣ as [wΣ].
+  intros Γ i i' pars narg c u l [[T h]|[[ctx [s [e _]]]]];
+    [|discriminate].
+  apply inversion_Proj in h ; auto.
+  destruct h as [uni [mdecl [idecl [pdecl [args' [? [hc [? ?]]]]]]]].
+  pose proof hc as typec.
+  eapply inversion_mkApps in typec as [A' [tyc tyargs]]; auto.
+  eapply (inversion_Construct Σ wΣ) in tyc as [mdecl' [idecl' [cdecl' [wfl [declc [Hu tyc]]]]]].
+  epose proof (Construct_Ind_ind_eq _ hc declc); eauto.
+  simpl in X. destruct declc. simpl in X.
+  destruct declared_constructor_inv as [cs [csort onc']].
+  intuition auto.
 Qed.
 
 Lemma isWAT_tLetIn {cf:checker_flags} {Σ : global_env_ext} (HΣ' : wf Σ)

@@ -22,15 +22,14 @@ Set SimplIsCbn.
 
 From Equations Require Import Equations.
 
+
 Derive Signature for OnOne2_local_env.
 
 Ltac rename_hyp h ht ::= my_rename_hyp h ht.
 Ltac pcuic := intuition eauto 5 with pcuic ||
   (try solve [repeat red; cbn in *; intuition auto; eauto 5 with pcuic || (try lia || congruence)]).
 
-(* Commented otherwise extraction would produce an axiom making the whole
-   extracted code unusable *)
-
+Arguments Nat.sub : simpl nomatch.
 Arguments Universe.sort_of_product : simpl nomatch.
 
 Lemma mkApps_inj f a f' l :
@@ -250,7 +249,7 @@ Proof.
   rewrite -it_mkProd_or_LetIn_app in t.
   eapply inversion_it_mkProd_or_LetIn in t => //.
   unfold cstr_concl_head in t. simpl in t.
-  eapply inversion_mkApps in t as [A [U [ta [sp cum]]]].
+  eapply inversion_mkApps in t as [A [ta sp]].
   eapply inversion_Rel in ta as [decl [wfΓ [nth cum']]].
   rewrite nth_error_app_ge in nth. autorewrite with len. lia.
   autorewrite with len in nth.
@@ -268,8 +267,7 @@ Proof.
     destruct X0 as [s Hs]. now apply subject_closed in Hs. } 
   rewrite lift_closed in cum' => //.
   eapply typing_spine_strengthen in sp; pcuic.
-  eapply typing_spine_weaken_concl in sp; eauto. 2:left; eexists [], _; intuition auto.
-  clear cum' A. move: sp. 
+  move: sp. 
   rewrite (oib.(ind_arity_eq)).
   rewrite -it_mkProd_or_LetIn_app.
   move=> sp. simpl in sp.
@@ -477,14 +475,11 @@ Proof.
   destruct (on_declared_constructor _ declc). destruct s as [? [_ onc]].
   unshelve epose proof (env_prop_typing _ _ validity _ _ _ _ _ h) as vi'; eauto using typing_wf_local.
   eapply inversion_mkApps in h; auto.
-  destruct h as [T [U [hC [hs hc]]]].
+  destruct h as [T [hC hs]].
   apply inversion_Construct in hC
     as [mdecl' [idecl' [cdecl' [hΓ [isdecl [const htc]]]]]]; auto.
   assert (vty:=declared_constructor_valid_ty _ _ _ _ _ _ _ _ wfΣ hΓ isdecl const). 
   eapply typing_spine_strengthen in hs. 3:eapply htc. all:eauto.
-  eapply typing_spine_weaken_concl in hs.
-  3:{ eapply cumul_trans; eauto with pcuic. } all:auto.
-  clear hc htc.
   destruct (declared_constructor_inj isdecl declc) as [? [? ?]].
   subst mdecl' idecl' cdecl'. clear isdecl.
   destruct p as [onmind onind]. clear onc.
@@ -915,7 +910,7 @@ Qed.
 
 Lemma subst_projs_inst ind npars k x : map (subst0 [x]) (projs ind npars k) = projs_inst ind npars k x.
 Proof.
-  induction k; simpl; auto.
+  induction k; simpl; auto. unfold Nat.sub. simpl.
   rewrite lift0_id. f_equal; auto.
 Qed.
 
@@ -1122,15 +1117,13 @@ Proof.
     rewrite mkApps_nonempty; auto.
     epose (last_nonempty_eq H0). rewrite <- Hu in e1. rewrite <- e1.
     clear e1.
-    specialize (inversion_mkApps wf typet) as [T' [U' [appty [spty Hcumul]]]].
+    specialize (inversion_mkApps wf typet) as [T' [appty spty]].
     specialize (validity _ wf _ _ _ appty) as [_ vT'].
     eapply type_tFix_inv in appty as [T [arg [fn' [[Hnth Hty]]]]]; auto.
     rewrite e in Hnth. noconf Hnth.
     eapply type_App.
-    eapply type_Cumul.
     eapply type_mkApps. eapply type_Cumul; eauto. eapply spty.
-    eapply validity; eauto.
-    eauto. eauto.
+    eauto.
 
   - (* Congruence *)
     eapply type_Cumul; [eapply type_App| |]; eauto with wf.
@@ -1161,7 +1154,7 @@ Proof.
     pose proof typec as typec''.
     unfold iota_red. rename args into iargs. rename args0 into cargs.
     pose proof typec as typec'.
-    eapply inversion_mkApps in typec as [A [U [tyc [tyargs tycum]]]]; auto.
+    eapply inversion_mkApps in typec as [A [tyc tyargs]]; auto.
     eapply (inversion_Construct Σ wf) in tyc as [mdecl' [idecl' [cdecl' [wfl [declc [Hu tyc]]]]]].
     unshelve eapply Construct_Ind_ind_eq in typec'; eauto.
     unfold on_declared_constructor in typec'.
@@ -1822,7 +1815,7 @@ Proof.
 
   - (* Case congruence: on a cofix, impossible *)
     clear -wf typec heq_allow_cofix.
-    eapply inversion_mkApps in typec as [? [? [tcof [_ _]]]] =>  //.
+    eapply inversion_mkApps in typec as [? [tcof _]] =>  //.
     eapply type_tCoFix_inv in tcof as [allowc _] => //.
     rewrite allowc in heq_allow_cofix. discriminate.
 
@@ -1908,13 +1901,12 @@ Proof.
     { econstructor; eauto. }
 
     pose proof (env_prop_typing _ _  validity _ _ _ _ _ typec).
-    eapply inversion_mkApps in typec as [? [? [tcof [tsp cum]]]]; auto.
+    eapply inversion_mkApps in typec as [? [tcof tsp]]; auto.
     eapply type_tCoFix_inv in tcof as [allow [?  [? [? [[unf tyunf] cum']]]]]; auto.
     rewrite unf in e. noconf e.
     simpl in X1.
     eapply type_Cumul; [econstructor|..]; eauto.
     eapply typing_spine_strengthen in tsp; eauto.
-    eapply typing_spine_weaken_concl in tsp; eauto.
     eapply type_mkApps. eauto. eauto.
     now eapply validity in typecofix.
     eapply conv_cumul.
@@ -1979,7 +1971,7 @@ Proof.
     pose proof (env_prop_typing _ _ validity _ _ _ _ _ typec).
     simpl in typec.
     pose proof typec as typec'.
-    eapply inversion_mkApps in typec as [A [U [tyc [tyargs tycum]]]]; auto.
+    eapply inversion_mkApps in typec as [A [tyc tyargs]]; auto.
     eapply (inversion_Construct Σ wf) in tyc as [mdecl' [idecl' [cdecl' [wfl [declc [Hu tyc]]]]]].
     pose proof typec' as typec''.
     unshelve eapply Construct_Ind_ind_eq in typec'; eauto.
@@ -2013,7 +2005,6 @@ Proof.
     pose proof (on_declared_minductive wf isdecl.p1.p1) as onmind.
     eapply nth_error_alli in on_projs; eauto.
     eapply typing_spine_strengthen in tyargs; eauto.
-    eapply typing_spine_weaken_concl in tyargs; eauto.
     rewrite -(firstn_skipn (ind_npars mdecl) args0) in tyargs, e |- *.
     subst pars.
     assert(#|firstn (ind_npars mdecl) args0| = ind_npars mdecl).
@@ -2042,7 +2033,7 @@ Proof.
     simpl in on_projs. red in on_projs.
     eapply type_Cumul; eauto.
     * rewrite firstn_skipn.
-      eapply (isType_subst_instance_decl Σ _ _ _ _ u wf isdecl.p1.p1) in projty; eauto.
+      eapply (isType_subst_instance_decl (u:=u) wf isdecl.p1.p1) in projty; eauto.
       right. destruct projty as [s' Hs].
       exists s'. red in Hs.
       rewrite /= /map_decl /= in Hs.
@@ -2266,7 +2257,7 @@ Proof.
           eapply closed_wf_local in wfdecl.
           rewrite closedn_ctx_app in wfdecl.
           move/andP: wfdecl => [_ wfdecl].
-          autorewrite with len in wfdecl. rewrite arities_context_length in wfdecl.
+          autorewrite with len in wfdecl.
           simpl in wfdecl.
           eapply closedn_ctx_decl in wfdecl; eauto.
           autorewrite with len in wfdecl.
@@ -2326,7 +2317,7 @@ Proof.
         eapply spine_subst_weakening in cparsubst0; eauto.
         2:{ eapply All_local_env_app in wfarpars as [wfars _]. eapply wfars. }
         autorewrite with len in cparsubst0.
-        rewrite inds_length. rewrite arities_context_length in cparsubst0. apply cparsubst0.
+        rewrite inds_length. apply cparsubst0.
         rewrite closed_ctx_lift. eapply closed_wf_local. eauto.
         eapply on_minductive_wf_params; eauto. eapply decli. auto.
         eapply All_local_env_app_inv. split; auto.

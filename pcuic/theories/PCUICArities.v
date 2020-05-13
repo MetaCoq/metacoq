@@ -81,8 +81,8 @@ induction n; intros ctx Hlen Γ T HT.
          rewrite !app_context_assoc.
          assert (#|smash_context [] ctx| = #|ctx'|).
          { apply context_relation_length in convctx.
-          autorewrite with len in convctx.
-          simpl in convctx. lia. }
+          autorewrite with len in convctx |- *.
+          simpl in convctx. simpl. lia. }
         eapply context_relation_app_inv; auto.
         apply context_relation_app in convctx; auto.
         constructor; pcuic.
@@ -746,3 +746,47 @@ Proof.
   intros. rewrite !compose_map_decl; apply map_decl_ext => ?.
   now rewrite -subst_subst_instance_constr.
 Qed.
+
+Section CheckerFlags.
+  Context `{cf : config.checker_flags}.
+
+  Lemma isType_subst_instance_decl {Σ Γ T c decl u} :
+    wf Σ.1 ->
+    lookup_env Σ.1 c = Some decl ->
+    isType (Σ.1, universes_decl_of_decl decl) Γ T ->
+    consistent_instance_ext Σ (universes_decl_of_decl decl) u ->
+    isType Σ (subst_instance_context u Γ) (subst_instance_constr u T).
+  Proof.
+    destruct Σ as [Σ φ]. intros X X0 [s Hs] X1.
+    exists (subst_instance_univ u s).
+    eapply (typing_subst_instance_decl _ _ _ (tSort _)); eauto.
+  Qed.
+  
+  Lemma isWfArity_subst_instance_decl {Σ Γ T c decl u} :
+    wf Σ.1 ->
+    lookup_env Σ.1 c = Some decl ->
+    isWfArity typing (Σ.1, universes_decl_of_decl decl) Γ T ->
+    consistent_instance_ext Σ (universes_decl_of_decl decl) u ->
+    isWfArity typing Σ (subst_instance_context u Γ) (subst_instance_constr u T).
+  Proof.
+    destruct Σ as [Σ φ]. intros X X0 [ctx [s [eq wf]]] X1.
+    exists (subst_instance_context u ctx), (subst_instance_univ u s).
+    rewrite (subst_instance_destArity []) eq. intuition auto.
+    rewrite -subst_instance_context_app.  
+    eapply wf_local_subst_instance_decl; eauto.  
+  Qed.
+  
+  Lemma isWAT_subst_instance_decl {Σ Γ T c decl u} :
+    wf Σ.1 ->
+    lookup_env Σ.1 c = Some decl ->
+    isWfArity_or_Type (Σ.1, universes_decl_of_decl decl) Γ T ->
+    consistent_instance_ext Σ (universes_decl_of_decl decl) u ->
+    isWfArity_or_Type Σ (subst_instance_context u Γ) (subst_instance_constr u T).
+  Proof.
+    destruct Σ as [Σ φ]. intros X X0 X1 X2.
+    destruct X1.
+    - left. now eapply isWfArity_subst_instance_decl.
+    - right. now eapply isType_subst_instance_decl.
+  Qed.
+
+End CheckerFlags.

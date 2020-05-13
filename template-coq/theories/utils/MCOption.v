@@ -1,5 +1,5 @@
 From Coq Require Import List ssreflect Arith.
-From MetaCoq Require Import MCList MCProd.
+From MetaCoq Require Import MCPrelude MCList MCProd.
 
 Definition option_get {A} (default : A) (x : option A) : A
   := match x with

@@ -1,5 +1,5 @@
 From Coq Require Import List Bool Arith ssreflect Lia.
-From MetaCoq.Template Require Import MCList MCRelations MCProd MCOption.
+From MetaCoq.Template Require Import MCPrelude MCList MCRelations MCProd MCOption.
 
 Import ListNotations.
 

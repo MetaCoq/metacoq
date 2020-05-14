@@ -141,33 +141,7 @@ Section Validity.
     todo "universes"%string.
   Defined.
 
-  Lemma subst_id s Γ t : 
-    closedn #|s| t ->
-    assumption_context Γ ->
-    s = List.rev (to_extended_list Γ) ->
-    subst s 0 t = t.
-  Proof.
-    intros cl ass eq.
-    autorewrite with sigma.
-    rewrite -{2}(subst_ids t).
-    eapply inst_ext_closed; eauto.
-    intros.
-    unfold ids, subst_consn. simpl.
-    destruct (equiv_inv _ _ (nth_error_Some' s x) H). rewrite e.
-    subst s.
-    rewrite /to_extended_list /to_extended_list_k in e.
-    rewrite List.rev_length in cl, H. autorewrite with len in *.
-    rewrite reln_alt_eq in e.
-    rewrite app_nil_r List.rev_involutive in e.
-    clear -ass e. revert e.
-    rewrite -{2}(Nat.add_0_r x).
-    generalize 0.
-    induction Γ in x, ass, x0 |- * => n. simpl in *. rewrite nth_error_nil => //.
-    depelim ass; simpl.
-    destruct x. simpl in *. congruence.
-    move=> e; specialize (IHΓ ass); simpl in e.
-    specialize (IHΓ _ _ _ e). subst x0. f_equal. lia.
-  Qed.
+
   
   Lemma isType_closed {Σ Γ T} : wf Σ.1 -> isType Σ Γ T -> closedn #|Γ| T.
   Proof. intros wfΣ [s Hs]. now eapply subject_closed in Hs. Qed.
@@ -655,25 +629,6 @@ Section Validity.
     - rewrite IHΓ. f_equal.
       now rewrite subst_instance_subst_context.
     - rewrite IHΓ subst_instance_context_app /= //.
-  Qed.
-
-  Lemma map_inst_idsn l l' n :
-    #|l| = n ->
-    map (inst (l ⋅n l')) (idsn n) = l.
-  Proof.
-    induction n in l, l' |- *.
-    - destruct l => //.
-    - destruct l as [|l a] using rev_case => // /=.
-      rewrite app_length /= Nat.add_1_r => [=].
-      intros; subst n.
-      simpl. rewrite map_app.
-      f_equal. rewrite subst_consn_app.
-      now apply IHn.
-      simpl.
-      destruct (subst_consn_lt #|l| (l ++ [a]) l') as [a' [hnth heq]].
-      rewrite app_length. simpl; lia.
-      rewrite heq. rewrite nth_error_app_ge in hnth; auto.
-      rewrite Nat.sub_diag in hnth. simpl in hnth. congruence.
   Qed.
   
   Lemma context_subst_extended_subst Γ args s : 

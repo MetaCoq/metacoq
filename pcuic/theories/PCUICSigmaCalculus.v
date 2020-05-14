@@ -163,6 +163,23 @@ Hint Rewrite inst_mkApps : sigma.
 Lemma lift_renaming_0 k : ren (lift_renaming k 0) = ren (Nat.add k).
 Proof. reflexivity. Qed.
 
+Lemma ren_lift_renaming n k : ren (lift_renaming n k) =1 (⇑^k ↑^n).
+Proof.
+  unfold subst_compose. intros i.
+  simpl. rewrite -{1}(Nat.add_0_r k). unfold ren. rewrite - (shiftn_lift_renaming n k 0).
+  pose proof (ren_shiftn k (lift_renaming n 0) i).
+  change ((ren (shiftn k (lift_renaming n 0)) i) = ((⇑^k (↑^n)) i)).
+  rewrite -H. sigma. rewrite lift_renaming_0. reflexivity.
+Qed.
+
+Lemma shiftk_compose n m : ↑^n ∘s ↑^m =1 ↑^(n + m).
+Proof.
+  induction n; simpl; sigma. reflexivity.
+  rewrite -subst_compose_assoc.
+  rewrite -shiftk_shift shiftk_shift_l.
+  now rewrite subst_compose_assoc IHn -shiftk_shift shiftk_shift_l.
+Qed.
+
 Lemma lift0_inst n t : lift0 n t = t.[↑^n].
 Proof. by rewrite lift_rename rename_inst lift_renaming_0 -ren_shiftk. Qed.
 Hint Rewrite lift0_inst : sigma.
@@ -311,6 +328,115 @@ Proof.
   now unfold Upn, Up; autorewrite with sigma.
 Qed.
 Hint Rewrite subst10_inst : sigma.
+
+Local Open Scope sigma.
+Lemma Upn_compose n σ σ' : ⇑^n σ ∘s ⇑^n σ' =1 ⇑^n (σ ∘s σ').
+Proof.
+  induction n.
+  - unfold Upn. simpl.
+    now rewrite !subst_consn_nil !shiftk_0 !compose_ids_r.
+  - rewrite !Upn_S. autorewrite with sigma. now rewrite IHn.
+Qed.
+
+Lemma up_ext_closed k' k s s' :
+  (forall i, i < k' -> s i = s' i) -> 
+  forall i, i < k + k' ->
+  up k s i = up k s' i.
+Proof.
+  unfold up. intros Hs t. elim (Nat.leb_spec k t) => H; auto.
+  intros. f_equal. apply Hs. lia.
+Qed.
+
+Lemma inst_ext_closed s s' k t : 
+  closedn k t -> 
+  (forall x, x < k -> s x = s' x) -> 
+  inst s t = inst s' t.
+Proof.
+  clear.
+  intros clt Hs. revert k clt s s' Hs.
+  elim t using PCUICInduction.term_forall_list_ind; simpl in |- *; intros; try easy ;
+    try (try rewrite H; try rewrite H0 ; try rewrite H1 ; easy);
+    try solve [f_equal; solve_all].
+  - apply Hs. now eapply Nat.ltb_lt. 
+  - move/andP: clt => []. intros. f_equal; eauto.
+    eapply H0; eauto. intros. eapply up_ext_closed; eauto.
+  - move/andP: clt => []. intros. f_equal; eauto. now eapply H0, up_ext_closed.
+  - move/andP: clt => [] /andP[] ?. intros. f_equal; eauto.
+    now eapply H1, up_ext_closed.
+  - move/andP: clt => [] ? ?. f_equal; eauto.
+  - move/andP: clt => [] /andP[] ? ? b1.
+    red in X. solve_all. f_equal; eauto.
+    eapply All_map_eq. eapply (All_impl b1). firstorder.
+  - f_equal; eauto. red in X. solve_all.
+    move/andP: b => []. eauto. intros.
+    apply map_def_eq_spec; eauto.
+    eapply b0; eauto. now apply up_ext_closed.
+  - f_equal; eauto. red in X. solve_all.
+    move/andP: b => []. eauto. intros.
+    apply map_def_eq_spec; eauto.
+    eapply b0; eauto. now apply up_ext_closed.
+Qed.
+
+Lemma subst_consn_eq s0 s1 s2 s3 x : 
+  x < #|s0| -> #|s0| = #|s2| ->
+  subst_fn s0 x = subst_fn s2 x ->
+  (s0 ⋅n s1) x = (s2 ⋅n s3) x.
+Proof.
+  unfold subst_fn; intros Hx Heq Heqx.
+  unfold subst_consn. 
+  destruct (nth_error s0 x) eqn:Heq';
+  destruct (nth_error s2 x) eqn:Heq''; auto;
+  (apply nth_error_None in Heq''|| apply nth_error_None in Heq'); lia.
+Qed.
+
+Lemma subst_id s Γ t : 
+  closedn #|s| t ->
+  assumption_context Γ ->
+  s = List.rev (to_extended_list Γ) ->
+  subst s 0 t = t.
+Proof.
+  intros cl ass eq.
+  autorewrite with sigma.
+  rewrite -{2}(subst_ids t).
+  eapply inst_ext_closed; eauto.
+  intros.
+  unfold ids, subst_consn. simpl.
+  destruct (equiv_inv _ _ (nth_error_Some' s x) H). rewrite e.
+  subst s.
+  rewrite /to_extended_list /to_extended_list_k in e.
+  rewrite List.rev_length in cl, H. autorewrite with len in *.
+  rewrite reln_alt_eq in e.
+  rewrite app_nil_r List.rev_involutive in e.
+  clear -ass e. revert e.
+  rewrite -{2}(Nat.add_0_r x).
+  generalize 0.
+  induction Γ in x, ass, x0 |- * => n. 
+  - simpl in *. rewrite nth_error_nil => //.
+  - depelim ass; simpl.
+    destruct x; simpl in *; try congruence.
+    move=> e; specialize (IHΓ ass); simpl in e.
+    specialize (IHΓ _ _ _ e). subst x0. f_equal. lia.
+Qed.
+
+Lemma map_inst_idsn l l' n :
+  #|l| = n ->
+  map (inst (l ⋅n l')) (idsn n) = l.
+Proof.
+  induction n in l, l' |- *.
+  - destruct l => //.
+  - destruct l as [|l a] using rev_case => // /=.
+    rewrite app_length /= Nat.add_1_r => [=].
+    intros; subst n.
+    simpl. rewrite map_app.
+    f_equal; auto.
+    + rewrite subst_consn_app.
+      now apply IHn.
+    + simpl.
+      destruct (@subst_consn_lt _ (l ++ [a]) #|l|) as [a' [hnth heq]].
+      * rewrite app_length. simpl; lia.
+      * rewrite heq. rewrite nth_error_app_ge in hnth; auto.
+        rewrite Nat.sub_diag in hnth. simpl in hnth. congruence.
+Qed.
 
 Lemma map_vass_map_def g l r :
   (mapi (fun i (d : def term) => vass (dname d) (lift0 i (dtype d)))

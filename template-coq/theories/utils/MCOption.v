@@ -91,3 +91,11 @@ Proof.
   destruct map_option_out eqn:Heq; try discriminate.
   move=> [=] <-. by rewrite (IHl l0 eq_refl).
 Qed.
+
+Lemma option_map_Some {A B} (f : A -> B) (o : option A) x : 
+  option_map f o = Some x ->
+  ∑ y, (o = Some y) /\ (x = f y).
+Proof.
+  destruct o => /= //.
+  move=> [] <-. exists a; auto.
+Qed.

@@ -65,3 +65,6 @@ Definition snd_eq {A B} {x x' : A} {y y' : B}
 Proof.
   inversion 1; reflexivity.
 Qed.
+
+Definition swap {A B : Type} (x : A * B) : B * A :=
+  (snd x, fst x).

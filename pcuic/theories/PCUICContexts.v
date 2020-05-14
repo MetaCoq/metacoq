@@ -574,82 +574,6 @@ Qed.
 
 Arguments Nat.sub : simpl never.
 
-Local Open Scope sigma.
-Lemma Upn_compose n σ σ' : ⇑^n σ ∘s ⇑^n σ' =1 ⇑^n (σ ∘s σ').
-Proof.
-  induction n. unfold Upn. simpl.
-  now rewrite !subst_consn_nil !shiftk_0 !compose_ids_r.
-  rewrite !Upn_S. autorewrite with sigma. now rewrite IHn.
-Qed.
-
-
-Lemma subst_consn_lt i (s : list term) σ : 
-  i < #|s| -> 
-  ∑ x, List.nth_error s i = Some x /\ (s ⋅n σ) i = x.
-Proof.
-  clear.
-  induction i in s |- *.
-  simpl. destruct s; simpl.
-  - lia.
-  - intros lt. exists t; simpl; auto.
-  - intros lt. destruct s; [elimtype False;inv lt|].
-    simpl in *. specialize (IHi s). forward IHi by lia.
-    destruct IHi as [? ?]; firstorder.
-Qed.
-
-Lemma up_ext_closed k' k s s' :
-  (forall i, i < k' -> s i = s' i) -> 
-  forall i, i < k + k' ->
-  up k s i = up k s' i.
-Proof.
-  unfold up. intros Hs t. elim (Nat.leb_spec k t) => H; auto.
-  intros. f_equal. apply Hs. lia.
-Qed.
-
-Lemma inst_ext_closed s s' k t : 
-  closedn k t -> 
-  (forall x, x < k -> s x = s' x) -> 
-  inst s t = inst s' t.
-Proof.
-  clear.
-  intros clt Hs. revert k clt s s' Hs.
-  elim t using PCUICInduction.term_forall_list_ind; simpl in |- *; intros; try easy ;
-    try (try rewrite H; try rewrite H0 ; try rewrite H1 ; easy);
-    try solve [f_equal; solve_all].
-  - apply Hs. now eapply Nat.ltb_lt. 
-  - move/andP: clt => []. intros. f_equal; eauto.
-    eapply H0; eauto. intros. eapply up_ext_closed; eauto.
-  - move/andP: clt => []. intros. f_equal; eauto. now eapply H0, up_ext_closed.
-  - move/andP: clt => [] /andP[] ?. intros. f_equal; eauto.
-    now eapply H1, up_ext_closed.
-  - move/andP: clt => [] ? ?. f_equal; eauto.
-  - move/andP: clt => [] /andP[] ? ? b1.
-    red in X. solve_all. f_equal; eauto.
-    eapply All_map_eq. eapply (All_impl b1). firstorder.
-  - f_equal; eauto. red in X. solve_all.
-    move/andP: b => []. eauto. intros.
-    apply map_def_eq_spec; eauto.
-    eapply b0; eauto. now apply up_ext_closed.
-  - f_equal; eauto. red in X. solve_all.
-    move/andP: b => []. eauto. intros.
-    apply map_def_eq_spec; eauto.
-    eapply b0; eauto. now apply up_ext_closed.
-Qed.
-
-Lemma subst_consn_eq s0 s1 s2 s3 x : 
-  x < #|s0| -> #|s0| = #|s2| ->
-  subst_fn s0 x = subst_fn s2 x ->
-  (s0 ⋅n s1) x = (s2 ⋅n s3) x.
-Proof.
-  unfold subst_fn; intros Hx Heq Heqx.
-  unfold subst_consn. 
-  destruct (nth_error s0 x) eqn:Heq';
-  destruct (nth_error s2 x) eqn:Heq''; auto.
-  apply nth_error_None in Heq''. lia.
-  apply nth_error_None in Heq'. lia.
-  apply nth_error_None in Heq'. lia.
-Qed.
-
 Fixpoint extended_subst (Γ : context) (n : nat) 
  (* Δ, smash_context Γ, n |- extended_subst Γ n : Γ *) :=
   match Γ with
@@ -717,10 +641,10 @@ Proof.
   rewrite !map_idsn_spec.
   apply nat_recursion_ext => x l' Hx.
   f_equal. f_equal.
-  edestruct (subst_consn_lt x (extended_subst Γ k) ids) as [d [Hd Hσ]].
+  edestruct (@subst_consn_lt _ (extended_subst Γ k) x) as [d [Hd Hσ]].
   now (autorewrite with len; lia).
   simpl. rewrite Hσ.
-  edestruct (subst_consn_lt x (extended_subst Γ 0) ids) as [d' [Hd' Hσ']].
+  edestruct (@subst_consn_lt _ (extended_subst Γ 0) x) as [d' [Hd' Hσ']].
   now autorewrite with len.
   unfold subst_compose. rewrite Hσ'.
   apply some_inj.
@@ -813,9 +737,6 @@ Proof.
     now autorewrite with sigma.
 Qed.
 
-Lemma skipn_0_eq {A} (l : list A) n : n = 0 -> skipn n l = l.
-Proof. intros ->; apply skipn_0. Qed.
-
 Lemma map_subst_app_decomp (l l' : list term) (k : nat) (ts : list term) :
   map (subst (l ++ l') k) ts = map (fun x => subst l' k (subst (map (lift0 #|l'|) l) k x)) ts.
 Proof.
@@ -898,14 +819,6 @@ Lemma assumption_context_fold f Γ :
 Proof. 
   induction 1; simpl. constructor. rewrite fold_context_snoc0.
   now constructor.
-Qed.
-
-Lemma option_map_Some {A B} (f : A -> B) (o : option A) x : 
-  option_map f o = Some x ->
-  ∑ y, (o = Some y) * (x = f y).
-Proof.
-  destruct o => /= //.
-  move=> [] <-. exists a; auto.
 Qed.
 
 Lemma map_subst_closedn (s : list term) (k : nat) l :

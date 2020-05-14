@@ -1108,7 +1108,7 @@ Qed.
 
 Lemma subst_consn_lt {A} {l : list A} {i} :
   i < #|l| ->
-  { x : _ & (List.nth_error l i = Some x) /\ (forall σ, (l ⋅n σ) i = x) }%type.
+  ∑ x, (List.nth_error l i = Some x) /\ (forall σ, (l ⋅n σ) i = x)%type.
 Proof.
   induction l in i |- *; simpl.
   - intros H; elimtype False; lia.

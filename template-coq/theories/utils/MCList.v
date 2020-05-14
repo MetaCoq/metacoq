@@ -544,6 +544,9 @@ Qed.
 Lemma skipn_0 {A} (l : list A) : skipn 0 l = l.
 Proof. reflexivity. Qed.
 
+Lemma skipn_0_eq {A} (l : list A) n : n = 0 -> skipn n l = l.
+Proof. intros ->; apply skipn_0. Qed.
+
 Lemma skipn_n_Sn {A} n s (x : A) xs : skipn n s = x :: xs -> skipn (S n) s = xs.
 Proof.
   induction n in s, x, xs |- *.

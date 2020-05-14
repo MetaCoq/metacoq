@@ -37,6 +37,14 @@ Fixpoint isArity T :=
   | _ => False
   end.
 
+(** Assumptions contexts do not contain let-ins. *)  
+
+Inductive assumption_context : context -> Prop :=
+| assumption_context_nil : assumption_context []
+| assumption_context_vass na t Γ : assumption_context Γ -> assumption_context (vass na t :: Γ).
+
+(** Smashing a context produces an assumption context. *)
+
 Fixpoint smash_context (Γ Γ' : context) : context :=
   match Γ' with
   | {| decl_body := Some b |} :: Γ' => smash_context (subst_context [b] 0 Γ) Γ'

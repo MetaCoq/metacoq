@@ -1537,6 +1537,43 @@ Proof.
   exists (x1 :: x0). split; constructor; intuition auto.
 Qed.
 
+Lemma All2_nth_error_Some_right {A} {P : A -> A -> Type} {l l'} n t :
+  All2 P l l' ->
+  nth_error l' n = Some t ->
+  { t' : A & (nth_error l n = Some t') * P t' t}%type.
+Proof.
+  intros Hall. revert n.
+  induction Hall; destruct n; simpl; try congruence. intros [= ->]. exists x. intuition auto.
+  eauto.
+Qed.
+
+Lemma All2_mix {A} {P Q : A -> A -> Type} {l l'} :
+  All2 P l l' -> All2 Q l l' -> All2 (fun x y => (P x y * Q x y))%type l l'.
+Proof.
+  induction 1; intros HQ; inv HQ; constructor; eauto.
+Qed.
+
+Lemma All2_mix_inv {A} {P Q : A -> A -> Type} {l l'} :
+  All2 (fun x y => (P x y * Q x y))%type l l' ->
+  (All2 P l l' * All2 Q l l').
+Proof.
+  induction 1; split; constructor; intuition eauto.
+Qed.
+
+Lemma All2_map_left' {A B} (P : A -> A -> Type) l l' (f : B -> A) :
+  All2 (fun x y => P (f x) y) l l' -> All2 P (map f l) l'.
+Proof. intros. rewrite - (map_id l'). eapply All2_map; eauto. Qed.
+
+Lemma All2_map_right' {A B} (P : A -> A -> Type) l l' (f : B -> A) :
+  All2 P l (map f l') ->  All2 (fun x y => P x (f y)) l l'.
+Proof.
+  induction l in l' |- *. intros. inversion X. destruct l'; try discriminate.
+  constructor.
+  destruct l'; intros H; inversion H; try discriminate.
+  subst.
+  specialize (IHl _ X0). constructor; auto.
+Qed.
+
 Lemma All_forallb_map_spec {A B : Type} {P : A -> Type} {p : A -> bool}
       {l : list A} {f g : A -> B} :
     All P l -> forallb p l ->

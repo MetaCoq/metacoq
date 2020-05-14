@@ -20,6 +20,11 @@ Require Import Equations.Type.Relation_Properties.
 
 Derive Signature for typing_spine.
 
+Notation isWAT :=
+  (lift_typing
+    (fun (Σ0 : PCUICEnvironment.global_env_ext) (Γ : context) (_ T : term)
+  => isWfArity_or_Type Σ0 Γ T)).
+
 Lemma isArity_it_mkProd_or_LetIn Γ t : isArity t -> isArity (it_mkProd_or_LetIn Γ t).
 Proof.
   intros isA. induction Γ using rev_ind; simpl; auto.

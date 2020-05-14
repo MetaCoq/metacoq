@@ -43,6 +43,8 @@ Inductive assumption_context : context -> Prop :=
 | assumption_context_nil : assumption_context []
 | assumption_context_vass na t Γ : assumption_context Γ -> assumption_context (vass na t :: Γ).
 
+Derive Signature for assumption_context.
+
 (** Smashing a context produces an assumption context. *)
 
 Fixpoint smash_context (Γ Γ' : context) : context :=

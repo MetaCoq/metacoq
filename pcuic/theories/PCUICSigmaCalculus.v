@@ -174,10 +174,11 @@ Qed.
 
 Lemma shiftk_compose n m : ↑^n ∘s ↑^m =1 ↑^(n + m).
 Proof.
-  induction n; simpl; sigma. reflexivity.
-  rewrite -subst_compose_assoc.
-  rewrite -shiftk_shift shiftk_shift_l.
-  now rewrite subst_compose_assoc IHn -shiftk_shift shiftk_shift_l.
+  induction n; simpl; sigma; auto.
+  - reflexivity.
+  - rewrite -subst_compose_assoc.
+    rewrite -shiftk_shift shiftk_shift_l.
+    now rewrite subst_compose_assoc IHn -shiftk_shift shiftk_shift_l.
 Qed.
 
 Lemma lift0_inst n t : lift0 n t = t.[↑^n].
@@ -1585,128 +1586,6 @@ Qed.
 (*   } *)
 (*   rewrite ebrtys'. autorewrite with sigma. reflexivity. *)
 (* Qed. *)
-
-(* TODO MOVE *)
-Lemma declared_constant_closed_type :
-  forall Σ cst decl,
-    wf Σ ->
-    declared_constant Σ cst decl ->
-    closed decl.(cst_type).
-Proof.
-  intros Σ cst decl hΣ h.
-  unfold declared_constant in h.
-  eapply lookup_on_global_env in h. 2: eauto.
-  destruct h as [Σ' [wfΣ' decl']].
-  red in decl'. red in decl'.
-  destruct decl as [ty bo un]. simpl in *.
-  destruct bo as [t|].
-  - now eapply type_closed in decl'.
-  - cbn in decl'. destruct decl' as [s h].
-    now eapply subject_closed in h.
-Qed.
-
-(* TODO MOVE *)
-Lemma declared_inductive_closed_type :
-  forall Σ mdecl ind idecl,
-    wf Σ ->
-    declared_inductive Σ mdecl ind idecl ->
-    closed idecl.(ind_type).
-Proof.
-  intros Σ mdecl ind idecl hΣ h.
-  unfold declared_inductive in h. destruct h as [h1 h2].
-  unfold declared_minductive in h1.
-  eapply lookup_on_global_env in h1. 2: eauto.
-  destruct h1 as [Σ' [wfΣ' decl']].
-  red in decl'. destruct decl' as [h ? ? ?].
-  eapply Alli_nth_error in h. 2: eassumption.
-  simpl in h. destruct h as [? ? ? [? h] ? ? ?].
-  eapply typecheck_closed in h as [? e]. 2: auto. 
-  move/andP in e. destruct e. assumption.
-Qed.
-
-(* TODO MOVE *)
-Lemma declared_inductive_closed_constructors :
-  forall Σ ind mdecl idecl,
-      wf Σ ->
-      declared_inductive Σ mdecl ind idecl ->
-      All (fun '(na, t, n) => closedn #|arities_context mdecl.(ind_bodies)| t)
-          idecl.(ind_ctors).
-Proof.
-  intros Σ ind mdecl idecl hΣ [hmdecl hidecl].
-  eapply (declared_inductive_closed (Σ:=empty_ext Σ)) in hmdecl; auto.
-  unfold closed_inductive_decl in hmdecl.
-  move/andP: hmdecl => [clpars clbodies].
-  eapply nth_error_forallb in clbodies; eauto.
-  erewrite hidecl in clbodies. simpl in clbodies.
-  unfold closed_inductive_body in clbodies.
-  move/andP: clbodies => [/andP [_ cl] _].
-  eapply forallb_All in cl. apply (All_impl cl). 
-  intros [[? ?] ?]; simpl; firstorder.
-Qed.
-
-(* TODO MOVE *)
-Lemma declared_minductive_closed_inds :
-  forall Σ ind mdecl u,
-    wf Σ ->
-    declared_minductive Σ (inductive_mind ind) mdecl ->
-    forallb (closedn 0) (inds (inductive_mind ind) u (ind_bodies mdecl)).
-Proof.
-  intros Σ ind mdecl u hΣ h.
-  red in h.
-  eapply lookup_on_global_env in h. 2: eauto.
-  destruct h as [Σ' [wfΣ' decl']].
-  red in decl'. destruct decl' as [h ? ? ?].
-  rewrite inds_spec. rewrite forallb_rev.
-  unfold mapi.
-  generalize 0 at 1. generalize 0. intros n m.
-  induction h in n, m |- *.
-  - reflexivity.
-  - simpl. eauto.
-Qed.
-
-(* TODO MOVE *)
-Lemma declared_inductive_closed_inds :
-  forall Σ ind mdecl idecl u,
-      wf Σ ->
-      declared_inductive Σ mdecl ind idecl ->
-      forallb (closedn 0) (inds (inductive_mind ind) u (ind_bodies mdecl)).
-Proof.
-  intros Σ ind mdecl idecl u hΣ h.
-  unfold declared_inductive in h. destruct h as [hmdecl hidecl].
-  eapply declared_minductive_closed_inds in hmdecl. all: eauto.
-Qed.
-
-(* TODO MOVE *)
-Lemma declared_constructor_closed_type :
-  forall Σ mdecl idecl c cdecl u,
-    wf Σ ->
-    declared_constructor Σ mdecl idecl c cdecl ->
-    closed (type_of_constructor mdecl cdecl c u).
-Proof.
-  intros Σ mdecl idecl c cdecl u hΣ h.
-  unfold declared_constructor in h.
-  destruct c as [i ci]. simpl in h. destruct h as [hidecl hcdecl].
-  eapply declared_inductive_closed_constructors in hidecl as h. 2: auto.
-  unfold type_of_constructor. simpl.
-  destruct cdecl as [[id t'] arity]. simpl.
-  destruct idecl as [na ty ke ct pr]. simpl in *.
-  eapply All_nth_error in h. 2: eassumption.
-  simpl in h.
-  eapply closedn_subst0.
-  - eapply declared_inductive_closed_inds. all: eauto.
-  - simpl. rewrite inds_length. rewrite arities_context_length in h.
-    rewrite closedn_subst_instance_constr. assumption.
-Qed.
-
-Lemma declared_projection_closed_type :
-  forall Σ mdecl idecl p pdecl,
-    wf Σ ->
-    declared_projection Σ mdecl idecl p pdecl ->
-    closedn (S (ind_npars mdecl)) pdecl.2.
-Proof.
-  intros Σ mdecl idecl p pdecl hΣ decl.
-  now eapply (declared_projection_closed (Σ:=empty_ext Σ)) in decl.
-Qed.
 
 (* TODO UPDATE We need to add rename_stack *)
 Lemma cumul_rename :

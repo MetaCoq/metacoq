@@ -2267,7 +2267,7 @@ Proof.
           lia. auto. }
       rewrite (subst_closedn (List.rev args)).
       eapply (closedn_subst _ 0).
-      epose proof (PCUICSigmaCalculus.declared_inductive_closed_inds _ _ _ _ _ wf decli).
+      epose proof (PCUICClosed.declared_inductive_closed_inds _ _ _ _ _ wf decli).
       rewrite closed_map_subst_instance. eapply H6.
       rewrite /indsubst; autorewrite with len.
       rewrite inds_length. rewrite closedn_subst_instance_constr.

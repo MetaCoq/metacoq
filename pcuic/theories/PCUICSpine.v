@@ -5,7 +5,8 @@ From Coq Require Import Bool String List BinPos Compare_dec Arith Lia
 From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
      AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICUnivSubstitution
+     PCUICReflect PCUICLiftSubst PCUICSigmaCalculus 
+     PCUICUnivSubst PCUICTyping PCUICUnivSubstitution
      PCUICCumulativity PCUICPosition PCUICEquality PCUICNameless
      PCUICNormal PCUICInversion PCUICCumulativity PCUICReduction
      PCUICConfluence PCUICConversion PCUICContextConversion
@@ -1829,4 +1830,56 @@ Proof.
     now apply typing_wf_local in Harg.
   - intros arg Harg.
     econstructor; eauto.
+Qed.
+
+Local Open Scope sigma.
+
+Lemma spine_subst_smash {cf:checker_flags} {Σ Γ inst s Δ} : 
+  wf Σ.1 ->
+  spine_subst Σ Γ inst s Δ ->
+  spine_subst Σ Γ inst (List.rev inst) (smash_context [] Δ).
+Proof.
+  intros wfΣ [].
+  assert (context_subst (smash_context [] Δ) inst (List.rev inst)).
+  { apply closed_wf_local in spine_dom_wf0.
+    clear -inst_ctx_subst0 spine_dom_wf0. induction inst_ctx_subst0.
+    constructor. rewrite List.rev_app_distr /=.
+    rewrite smash_context_acc. simpl.
+    constructor. auto.
+    simpl. rewrite smash_context_acc. simpl. auto.
+    auto. }
+  split; auto.
+  - eapply All_local_env_app_inv; split; auto.
+    eapply wf_local_rel_smash_context; auto.
+  - induction inst_subslet0 in inst, inst_ctx_subst0, spine_codom_wf0 |- *.
+    depelim inst_ctx_subst0.
+    + constructor.
+    + depelim inst_ctx_subst0; simpl in H; noconf H.
+      simpl. rewrite smash_context_acc.
+      simpl. rewrite List.rev_app_distr.
+      depelim spine_codom_wf0; simpl in H; noconf H.
+      constructor. now apply IHinst_subslet0.
+      eapply meta_conv. eauto.
+      simpl.
+      autorewrite with sigma.
+      apply inst_ext. rewrite ren_lift_renaming.
+      autorewrite with sigma.
+      unfold Upn. rewrite subst_consn_compose.
+      autorewrite with sigma.
+      apply subst_consn_proper.
+      2:{ rewrite -(subst_compose_assoc (↑^#|Δ|)).
+          rewrite subst_consn_shiftn.
+          2:now autorewrite with len.
+          autorewrite with sigma.
+          rewrite subst_consn_shiftn //.
+          rewrite List.rev_length.
+          now apply context_subst_length2 in inst_ctx_subst0. }
+      clear -inst_ctx_subst0.
+      rewrite subst_consn_compose.
+      rewrite map_inst_idsn. now autorewrite with len.
+      now apply context_subst_extended_subst.
+    + simpl. rewrite smash_context_acc.
+      simpl. depelim spine_codom_wf0; simpl in H; noconf H.
+      depelim inst_ctx_subst0; simpl in H; noconf H; simpl in H0; noconf H0.
+      apply IHinst_subslet0; auto.
 Qed.

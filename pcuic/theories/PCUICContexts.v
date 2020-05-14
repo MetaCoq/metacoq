@@ -8,7 +8,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICNormal PCUICInversion PCUICCumulativity PCUICReduction
      PCUICConfluence PCUICConversion PCUICContextConversion
      PCUICParallelReductionConfluence PCUICWeakeningEnv
-     PCUICClosed PCUICSubstitution PCUICSigmaCalculus
+     PCUICClosed PCUICSubstitution PCUICUnivSubstitution PCUICSigmaCalculus
      PCUICWeakening PCUICGeneration PCUICUtils PCUICCtxShape.
 
 From Equations Require Import Equations.
@@ -493,6 +493,16 @@ Proof.
   intros. eapply wf_local_rel_smash_context_gen; eauto. constructor.
 Qed.
 
+Lemma wf_local_smash_end {cf:checker_flags} Σ Γ Δ : 
+  wf Σ.1 ->
+  wf_local Σ (Γ ,,, Δ) -> wf_local Σ (Γ ,,, smash_context [] Δ).
+Proof.
+  intros wfΣ  wf. 
+  apply All_local_env_app_inv. split.
+  now apply All_local_env_app in wf.
+  eapply wf_local_rel_smash_context; auto.
+Qed.
+
 Lemma wf_local_rel_empty {cf:checker_flags} Σ Γ : wf_local_rel Σ [] Γ <~> wf_local Σ Γ.
 Proof.
   split.
@@ -568,11 +578,32 @@ Proof.
   intros. now apply hfg.
 Qed.
 
+Lemma subst_instance_subst_context u s k Γ : 
+  subst_instance_context u (subst_context s k Γ) =
+  subst_context (map (subst_instance_constr u) s) k (subst_instance_context u Γ).
+Proof.
+  rewrite /subst_instance_context /map_context !subst_context_alt.
+  rewrite map_mapi mapi_map. apply mapi_rec_ext.
+  intros. rewrite /subst_decl !PCUICAstUtils.compose_map_decl.
+  apply PCUICAstUtils.map_decl_ext => ?.
+  rewrite map_length. now rewrite subst_subst_instance_constr.
+Qed.
+
+Lemma subst_instance_context_smash u Γ Δ : 
+  subst_instance_context u (smash_context Δ Γ) = 
+  smash_context (subst_instance_context u Δ) (subst_instance_context u Γ).
+Proof.
+  induction Γ as [|[? [] ?] ?] in Δ |- *; simpl; auto.
+  - rewrite IHΓ. f_equal.
+    now rewrite subst_instance_subst_context.
+  - rewrite IHΓ subst_instance_context_app /= //.
+Qed.
+
 (* Smashing a context Γ with Δ depending on it is the same as smashing Γ
      and substituting all references to Γ in Δ by the expansions of let bindings.
   *)
 
-Arguments Nat.sub : simpl never.
+Arguments Nat.sub : simpl nomatch.
 
 Fixpoint extended_subst (Γ : context) (n : nat) 
  (* Δ, smash_context Γ, n |- extended_subst Γ n : Γ *) :=
@@ -735,6 +766,39 @@ Proof.
     rewrite subst_consn_shiftn.
     2:now autorewrite with len.
     now autorewrite with sigma.
+Qed.
+
+Lemma context_subst_extended_subst Γ args s : 
+  context_subst Γ args s ->
+  s = map (inst (List.rev args ⋅n ids)) (extended_subst Γ 0).
+Proof.
+  induction 1.
+  - simpl; auto.
+  - simpl.
+    rewrite lift_extended_subst.
+    rewrite map_map_compose.
+    rewrite List.rev_app_distr. simpl. f_equal.
+    rewrite IHX. apply map_ext.
+    intros. autorewrite with sigma.
+    apply inst_ext.
+    rewrite subst_consn_subst_cons.
+    now rewrite subst_cons_shift.
+  - simpl.
+    f_equal; auto.
+    rewrite IHX.
+    autorewrite with sigma.
+    apply inst_ext.
+    rewrite ren_lift_renaming. autorewrite with len.
+    rewrite subst_consn_compose.
+    autorewrite with sigma.
+    unfold Upn.
+    rewrite subst_consn_compose.
+    apply subst_consn_proper; first last.
+    rewrite -subst_consn_app.
+    rewrite shiftk_compose.
+    rewrite subst_consn_shiftn //.
+    autorewrite with len. now rewrite (context_subst_length2 X).
+    rewrite map_inst_idsn //. now autorewrite with len.
 Qed.
 
 Lemma map_subst_app_decomp (l l' : list term) (k : nat) (ts : list term) :

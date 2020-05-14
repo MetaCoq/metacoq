@@ -502,7 +502,7 @@ Section Confluence.
 
   Derive NoConfusion for global_decl.
 
-  Hint Resolve pred1_refl : pcuic.`
+  Hint Resolve pred1_refl : pcuic.
 
   Lemma All2_local_env_skipn P l l' n :
     All2_local_env P l l' ->

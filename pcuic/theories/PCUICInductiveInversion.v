@@ -26,6 +26,28 @@ Ltac pcuic := intuition eauto 5 with pcuic ||
 
 (** Inversion principles on inductive/coinductives types following from validity. *)
 
+Lemma isWAT_it_mkProd_or_LetIn_mkApps_Ind_isType {cf:checker_flags} {Σ Γ ind u args} Δ :
+  wf Σ.1 ->
+  isWfArity_or_Type Σ Γ (it_mkProd_or_LetIn Δ (mkApps (tInd ind u) args)) ->
+  isType Σ Γ (it_mkProd_or_LetIn Δ (mkApps (tInd ind u) args)).
+Proof.
+  intros wfΣ.
+  intros [[ctx [s eq]]|H]; auto.
+  rewrite destArity_it_mkProd_or_LetIn in eq.
+  destruct eq as [da _].
+  apply destArity_app_Some in da as [ctx' [da _]].
+  rewrite destArity_tInd in da. discriminate.
+Qed.
+
+Lemma isWAT_mkApps_Ind_isType {cf:checker_flags} Σ Γ ind u args :
+  wf Σ.1 ->
+  isWfArity_or_Type Σ Γ (mkApps (tInd ind u) args) ->
+  isType Σ Γ (mkApps (tInd ind u) args).
+Proof.
+  intros wfΣ H.
+  now apply (isWAT_it_mkProd_or_LetIn_mkApps_Ind_isType [] wfΣ).
+Qed.
+
 Lemma declared_constructor_valid_ty {cf:checker_flags} Σ Γ mdecl idecl i n cdecl u :
   wf Σ.1 ->
   wf_local Σ Γ ->
@@ -38,23 +60,20 @@ Proof.
     (type_of_constructor mdecl cdecl (i, n) u)).
   forward X by eapply type_Construct; eauto.
   simpl in X.
-  destruct X.
-  2:eauto.
-  destruct i0 as [ctx [s [Hs ?]]].
-  unfold type_of_constructor in Hs.
+  unfold type_of_constructor in X |- *.
   destruct (on_declared_constructor _ declc); eauto.
-  destruct s0 as [cshape [Hsorc Hc]].
+  destruct s as [cshape [Hsorc Hc]].
   destruct Hc as [_ chead cstr_eq [cs Hcs] _ _].
   destruct cshape. rewrite /cdecl_type in cstr_eq.
-  rewrite cstr_eq in Hs. clear -declc Hs.
-  rewrite /subst1 !subst_instance_constr_it_mkProd_or_LetIn
-  !subst_it_mkProd_or_LetIn in Hs.
-  rewrite !subst_instance_constr_mkApps !subst_mkApps in Hs.
-  rewrite !subst_instance_context_length Nat.add_0_r in Hs.
-  rewrite subst_inds_concl_head in Hs.
+  rewrite cstr_eq in X |- *. clear -wfΣ declc X.
+  move: X. simpl.
+  rewrite /subst1 !subst_instance_constr_it_mkProd_or_LetIn !subst_it_mkProd_or_LetIn.
+  rewrite !subst_instance_constr_mkApps !subst_mkApps.
+  rewrite !subst_instance_context_length Nat.add_0_r.
+  rewrite subst_inds_concl_head.
   + simpl. destruct declc as [[onm oni] ?].
     now eapply nth_error_Some_length in oni.
-  + now rewrite !destArity_it_mkProd_or_LetIn destArity_app /= destArity_tInd in Hs.
+  + rewrite -it_mkProd_or_LetIn_app. apply isWAT_it_mkProd_or_LetIn_mkApps_Ind_isType. auto.
 Qed.
 
 Lemma type_tFix_inv {cf:checker_flags} (Σ : global_env_ext) Γ mfix idx T : wf Σ ->

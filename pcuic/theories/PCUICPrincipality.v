@@ -78,6 +78,32 @@ Section Principality.
     exists u'u. split; auto.
   Qed.
 
+
+  Lemma cumul_ind_confluence {Γ A ind u v l l'} :
+    Σ ;;; Γ |- A <= mkApps (tInd ind u) l  ->
+    Σ ;;; Γ |- A <= mkApps (tInd ind v) l' ->
+    ∑ v' l'', (red Σ Γ A (mkApps (tInd ind v') l'')) *
+          All2 (conv Σ Γ) l l'' *
+          All2 (conv Σ Γ) l' l'' *          
+          (R_universe_instance (eq_universe (global_ext_constraints Σ)) v' u /\
+           R_universe_instance (eq_universe (global_ext_constraints Σ)) v' v).
+  Proof.
+    move=> H H'.
+    eapply invert_cumul_ind_r in H as [u'u [l'u [redl [ru ?]]]].
+    eapply invert_cumul_ind_r in H' as [vu [l''u [redr [ru' ?]]]].
+    destruct (red_confluence wfΣ redl redr) as [nf [redl' redr']].
+    eapply red_mkApps_tInd in redl'  as [args' [eqnf conv]].
+    eapply red_mkApps_tInd in redr'  as [args'' [eqnf' conv']].
+    rewrite eqnf in eqnf'. solve_discr. subst nf.
+    all:auto. exists u'u, args'; intuition auto.
+    transitivity (mkApps (tInd ind u'u) l'u).
+    auto. eapply red_mkApps. reflexivity. auto.
+    - apply All2_trans with l'u => //. typeclasses eauto.
+      eapply (All2_impl conv). intros. now apply red_conv.
+    - apply All2_trans with l''u => //. typeclasses eauto.
+      eapply (All2_impl conv'). intros. now apply red_conv.
+  Qed.
+
   Lemma isWfArity_sort Γ u :
     wf_local Σ Γ ->
     isWfArity typing Σ Γ (tSort u).
@@ -325,23 +351,26 @@ Section Principality.
       rewrite H2 in H; noconf H.
       rewrite -e in e0.
       specialize (IHu _ _ _ t t1) as [C' [? [? ?]]].
-      eapply invert_cumul_ind_r in c1 as [u' [x0' [redr [redu ?]]]]; auto.
-      eapply invert_cumul_ind_r in c2 as [u'' [x9' [redr' [redu' ?]]]]; auto.
-      exists (subst0 (u :: List.rev x3) (subst_instance_constr x t2)).
-      todo "projections"%string.
-      (* repeat split; auto.
-      + admit.
+      destruct (cumul_ind_confluence c1 c2) as [nfu [nfargs [[[conv convargs] convargs'] [ru ru']]]].
+      exists (subst0 (u :: List.rev nfargs) (subst_instance_constr nfu t2)).
+      repeat split; auto.
+      + etransitivity; [|eapply c0].
+        admit.
+      + etransitivity; [|eapply c].
+        admit.
       + eapply refine_type.
         * eapply type_Proj.
           -- repeat split; eauto.
           -- simpl. eapply type_Cumul.
              1: eapply t0.
              1: right.
-             2:eapply red_cumul; eauto.
-             admit.
+             2:eapply conv_cumul; eauto.
+             eapply type_reduction in t0; [|auto|apply conv].
+             eapply validity_term in t0; eauto. 
+             now apply PCUICInductiveInversion.isWAT_mkApps_Ind_isType in t0.
           -- rewrite H3. simpl. simpl in H0.
-             rewrite -H0. admit.
-        * simpl. admit. *)
+             rewrite -H0. rewrite -(All2_length _ _ convargs). congruence.
+        * simpl. reflexivity.
 
     - pose proof (typing_wf_local hA).
       apply inversion_Fix in hA as [decl [hguard [nthe [wfΓ [? ?]]]]]=>//.

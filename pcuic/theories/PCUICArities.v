@@ -442,7 +442,7 @@ Proof.
   intro. intros hin.
   specialize (sv x). apply sv. unfold global_ext_constraints in *.
   eapply ConstraintSet.union_spec. simpl. left.
-  todo "Simon: this  subst_instance_cstrs is the identity"%string.
+  todounivs. (* Simon: this  subst_instance_cstrs is the identity *)
   (* revert hin. unfold subst_instance_cstrs.
   rewrite ConstraintSet.fold_spec.
   intros. rewrite -(ConstraintSet.elements_spec1 t x).
@@ -463,7 +463,7 @@ Proof.
   intros wfΣ isdecl u.
   unfold inds.
   destruct isdecl as [declm _].
-  pose proof declm as declm'.
+  pose proof declm as declm'. 
   apply PCUICWeakeningEnv.on_declared_minductive in declm' as [oind oc]; auto.
   clear oc.
   assert (Alli (fun i x =>
@@ -474,7 +474,7 @@ Proof.
     eapply consistent_instance_ext_abstract_instance; eauto.
     eapply Alli_nth_error in oind; eauto. simpl in oind.
     destruct oind. red in onArity. right. apply onArity.
-    todo "Simon"%string. (* Same thing, the abstract universe instance is an identity *) }
+    todounivs. (* Same thing, the abstract universe instance is an identity *) }
   clear oind.
   revert X. clear onNpars onGuard.
   generalize (le_n #|ind_bodies mdecl|).

@@ -2301,7 +2301,7 @@ Proof.
     * now rewrite map_length.
     * autorewrite with sigma.
       eapply declared_projection_closed in isdecl; auto.
-      todo "projection type closed"%string.
+      admit.
   - intros Σ wfΣ Γ wfΓ mfix n decl types H0 H1 X ihmfix Δ σ hΔ hσ.
     autorewrite with sigma.
     admit.

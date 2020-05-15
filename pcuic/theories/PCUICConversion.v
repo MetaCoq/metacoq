@@ -22,7 +22,7 @@ Ltac pcuic := intuition eauto 5 with pcuic ||
 Hint Resolve eq_universe_leq_universe' : pcuic.
 
 Derive Signature for cumul assumption_context.
-
+ 
 (* Bug in Equations ... *)
 (* Derive Signature for clos_refl_trans_1n. *)
 

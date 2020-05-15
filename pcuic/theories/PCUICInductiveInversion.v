@@ -76,6 +76,25 @@ Proof.
   + rewrite -it_mkProd_or_LetIn_app. apply isWAT_it_mkProd_or_LetIn_mkApps_Ind_isType. auto.
 Qed.
 
+Lemma declared_inductive_valid_type {cf:checker_flags} Σ Γ mdecl idecl i u :
+  wf Σ.1 ->
+  wf_local Σ Γ ->
+  declared_inductive Σ.1 mdecl i idecl ->
+  consistent_instance_ext Σ (ind_universes mdecl) u ->
+  isType Σ Γ (subst_instance_constr u (ind_type idecl)).
+Proof.
+  move=> wfΣ wfΓ declc Hu.
+  pose declc as declc'.
+  apply on_declared_inductive in declc' as [onmind onind]; auto.
+  apply onArity in onind.
+  destruct onind as [s Hs].
+  epose proof (PCUICUnivSubstitution.typing_subst_instance_decl Σ) as s'.
+  destruct declc.
+  specialize (s' [] _ _ _ _ u wfΣ H Hs Hu).
+  simpl in s'. eexists; eauto.
+  eapply (PCUICWeakening.weaken_ctx (Γ:=[]) Γ); eauto.
+Qed.
+
 Lemma type_tFix_inv {cf:checker_flags} (Σ : global_env_ext) Γ mfix idx T : wf Σ ->
   Σ ;;; Γ |- tFix mfix idx : T ->
   { T' & { rarg & {f & (unfold_fix mfix idx = Some (rarg, f)) * (Σ ;;; Γ |- f : T') * (Σ ;;; Γ |- T' <= T) }}}%type.
@@ -723,4 +742,73 @@ Proof.
   depelim red.
   symmetry in H; apply mkApps_Fix_spec in H. simpl in H. intuition.
   constructor. constructor.
+Qed.
+
+Lemma Case_Construct_ind_eq {cf:checker_flags} Σ (hΣ : ∥ wf Σ.1 ∥) 
+  {Γ ind ind' npar pred i u brs args} :
+  (∑ T, Σ ;;; Γ |- tCase (ind, npar) pred (mkApps (tConstruct ind' i u) args) brs : T) ->
+  ind = ind'.
+Proof.
+  destruct hΣ as [wΣ].
+  intros [A h].
+  apply inversion_Case in h as ih ; auto.
+  destruct ih
+    as [uni [args' [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [ht0 [? ?]]]]]]]]]]]]]].
+    pose proof ht0 as typec.
+    eapply inversion_mkApps in typec as [A' [tyc tyargs]]; auto.
+    eapply (inversion_Construct Σ wΣ) in tyc as [mdecl' [idecl' [cdecl' [wfl [declc [Hu tyc]]]]]].
+    epose proof (PCUICInductiveInversion.Construct_Ind_ind_eq _ ht0 declc); eauto.
+    destruct on_declared_constructor as [[onmind oib] [cs [? ?]]].
+    simpl in *.
+    intuition auto.
+Qed.
+
+Lemma Proj_Constuct_ind_eq {cf:checker_flags} Σ (hΣ : ∥ wf Σ.1 ∥) {Γ i i' pars narg c u l} :
+  (∑ T, Σ ;;; Γ |- tProj (i, pars, narg) (mkApps (tConstruct i' c u) l) : T) ->
+  i = i'.
+Proof.
+  destruct hΣ as [wΣ].
+  intros [T h].
+  apply inversion_Proj in h ; auto.
+  destruct h as [uni [mdecl [idecl [pdecl [args' [? [hc [? ?]]]]]]]].
+  pose proof hc as typec.
+  eapply inversion_mkApps in typec as [A' [tyc tyargs]]; auto.
+  eapply (inversion_Construct Σ wΣ) in tyc as [mdecl' [idecl' [cdecl' [wfl [declc [Hu tyc]]]]]].
+  epose proof (PCUICInductiveInversion.Construct_Ind_ind_eq _ hc declc); eauto.
+  destruct on_declared_constructor as [[onmind oib] [cs [? ?]]].
+  simpl in *.
+  intuition auto.
+Qed.
+
+Lemma Proj_Constuct_projargs {cf:checker_flags} Σ (hΣ : ∥ wf Σ.1 ∥) {Γ i pars narg c u l} :
+  (∑ T, Σ ;;; Γ |- tProj (i, pars, narg) (mkApps (tConstruct i c u) l) : T) ->
+  pars + narg < #|l|.
+Proof.
+  destruct hΣ as [wΣ].
+  intros [T h].
+  apply inversion_Proj in h ; auto.
+  destruct h as [uni [mdecl [idecl [pdecl [args' [? [hc [? ?]]]]]]]].
+  clear c0.
+  pose proof hc as typec.
+  eapply inversion_mkApps in typec as [A' [tyc tyargs]]; auto.
+  eapply (inversion_Construct Σ wΣ) in tyc as [mdecl' [idecl' [cdecl' [wfl [declc [Hu tyc]]]]]].
+  pose proof (declared_inductive_inj d.p1 declc.p1) as [? ?]; subst mdecl' idecl'.
+  set (declc' :=  
+   (conj (let (x, _) := d in x) declc.p2) : declared_constructor Σ.1  mdecl idecl (i, c) cdecl').
+  epose proof (PCUICInductiveInversion.Construct_Ind_ind_eq _ hc declc'); eauto.
+  simpl in X.
+  destruct (on_declared_projection wΣ d).
+  set (oib := declared_inductive_inv _ _ _ _) in *.
+  simpl in *. 
+  set (foo := (All2_nth_error_Some _ _ _ _)) in X.
+  clearbody foo.
+  destruct (ind_cshapes oib) as [|? []] eqn:Heq; try contradiction.
+  destruct foo as [t' [ntht' onc]].
+  destruct c; simpl in ntht'; try discriminate.
+  noconf ntht'.
+  2:{ rewrite nth_error_nil in ntht'. discriminate. }
+  destruct X as [[[_ Ru] Hl] Hpars]. rewrite Hl.
+  destruct d as [decli [nthp parseq]].
+  simpl in *. rewrite parseq.
+  destruct y as [[_ onps] onp]. lia.
 Qed.

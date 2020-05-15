@@ -7,7 +7,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICTyping PCUICSubstitution PCUICEquality
      PCUICReduction PCUICCumulativity PCUICConfluence
      PCUICContextConversion PCUICConversion PCUICInversion PCUICUnivSubst
-     PCUICArities PCUICValidity PCUICSR.
+     PCUICArities PCUICValidity PCUICInductives PCUICSR.
 
 Require Import ssreflect.
 
@@ -344,6 +344,7 @@ Section Principality.
       eapply inversion_Proj in hB=>//.
       repeat outsum. repeat outtimes.
       simpl in *.
+      assert(declp := d0).
       destruct d0, d. destruct H, H1. red in H, H1.
       rewrite H1 in H; noconf H.
       rewrite H4 in H3; noconf H3.
@@ -353,11 +354,48 @@ Section Principality.
       specialize (IHu _ _ _ t t1) as [C' [? [? ?]]].
       destruct (cumul_ind_confluence c1 c2) as [nfu [nfargs [[[conv convargs] convargs'] [ru ru']]]].
       exists (subst0 (u :: List.rev nfargs) (subst_instance_constr nfu t2)).
+      assert(wfnf : PCUICGeneration.isWfArity_or_Type Σ Γ (mkApps (tInd ind nfu) nfargs)).
+      { eapply validity; eauto. eapply type_reduction; eauto. }
       repeat split; auto.
       + etransitivity; [|eapply c0].
-        admit.
+        eapply conv_cumul.
+        eapply (subst_conv _ (projection_context x5 x6 ind nfu)
+          (projection_context x5 x6 ind x4) []); auto.
+        eapply (projection_subslet _ _ _ _ _ _ (ind, k, pars)); eauto.
+        eapply type_reduction; eauto. simpl.
+        eapply (projection_subslet _ _ _ _ _ _ (ind, k, pars)); eauto.
+        simpl; auto.
+        eapply validity; eauto.
+        constructor; auto. apply All2_rev. eapply All2_sym.
+        eapply (All2_impl convargs'). apply conv_sym.
+        eapply (wf_projection_context _ _ _ _ (ind, k, pars)); eauto.
+        eapply PCUICInductiveInversion.isWAT_mkApps_Ind_isType in wfnf.
+        destruct wfnf as [s Hs].
+        eapply invert_type_mkApps_ind in Hs. intuition eauto. all:auto.
+        eapply declp. now apply typing_wf_local in t0.
+        constructor.
+        apply PCUICUnivSubstitution.eq_term_upto_univ_subst_instance_constr;
+           try typeclasses eauto; auto.
       + etransitivity; [|eapply c].
-        admit.
+        eapply conv_cumul.
+        eapply (subst_conv _ (projection_context x5 x6 ind nfu)
+          (projection_context x5 x6 ind x) []); auto.
+        eapply (projection_subslet _ _ _ _ _ _ (ind, k, pars)); eauto.
+        eapply type_reduction; eauto.
+        eapply (projection_subslet _ _ _ _ _ _ (ind, k, pars)); eauto.
+        simpl; auto.
+        eapply validity; eauto.
+        constructor; auto. apply All2_rev. eapply All2_sym.
+        eapply (All2_impl convargs). apply conv_sym.
+        eapply (wf_projection_context _ _ _ _ (ind, k, pars)); eauto.
+        eapply PCUICInductiveInversion.isWAT_mkApps_Ind_isType in wfnf.
+        destruct wfnf as [s Hs].
+        eapply invert_type_mkApps_ind in Hs. intuition eauto. all:auto.
+        eapply declp. now apply typing_wf_local in t0.
+        constructor.
+        apply PCUICUnivSubstitution.eq_term_upto_univ_subst_instance_constr;
+          try typeclasses eauto; auto.        
+
       + eapply refine_type.
         * eapply type_Proj.
           -- repeat split; eauto.
@@ -580,8 +618,10 @@ Proof.
     eapply All2_rev. apply All2_sym. apply (All2_impl X3). intros; now symmetry.
     eapply subslet_untyped_subslet; eauto.
     eapply PCUICInductives.projection_subslet; eauto.
+    eapply validity in a0; auto.
     eapply subslet_untyped_subslet; eauto.
     eapply PCUICInductives.projection_subslet; eauto.
+    eapply validity in X2; auto.
     constructor. eapply PCUICEquality.subst_leq_term.
     destruct (PCUICWeakeningEnv.declared_projection_inj a isdecl) as [<- [<- <-]].
     subst ty.
@@ -623,3 +663,5 @@ Proof.
   eapply typing_leq_term; eauto.
   now eapply eq_term_leq_term.
 Qed.
+
+Print Assumptions principal_typing.

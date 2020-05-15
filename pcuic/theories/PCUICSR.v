@@ -1915,3 +1915,41 @@ Section SRContext.
   Defined.
 
 End SRContext.
+
+Lemma isWAT_tLetIn {cf:checker_flags} {Σ : global_env_ext} (HΣ' : wf Σ)
+      {Γ} (HΓ : wf_local Σ Γ) {na t A B}
+  : isWfArity_or_Type Σ Γ (tLetIn na t A B)
+    <~> (isType Σ Γ A × (Σ ;;; Γ |- t : A)
+                      × isWfArity_or_Type Σ (Γ,, vdef na t A) B).
+Proof.
+  split; intro HH.
+  - destruct HH as [[ctx [s [H1 H2]]]|[s H]].
+    + cbn in H1. apply destArity_app_Some in H1.
+      destruct H1 as [ctx' [H1 HH]]; subst ctx.
+      rewrite app_context_assoc in H2. repeat split.
+      * apply wf_local_app in H2. inversion H2; subst. assumption.
+      * apply wf_local_app in H2. inversion H2; subst. assumption.
+      * left. exists ctx', s. split; tas.
+    + apply inversion_LetIn in H; tas. destruct H as [s1 [A' [HA [Ht [HB H]]]]].
+      repeat split; tas. 1: eexists; eassumption.
+      apply cumul_Sort_r_inv in H.
+      destruct H as [s' [H H']].
+      right. exists s'. eapply type_reduction; tea.
+      apply invert_red_letin in H; tas.
+      destruct H as [[? [? [? [? [[[H ?] ?] ?]]]]]|H].
+      * apply invert_red_sort in H; inv H.
+      * etransitivity.
+        2: apply weakening_red_0 with (Γ' := [_]) (N := tSort _);
+          tea; reflexivity.
+        exact (red_rel_all _ (Γ ,, vdef na t A) 0 t A' eq_refl).
+  - destruct HH as [HA [Ht [[ctx [s [H1 H2]]]|HB]]].
+    + left. exists ([vdef na t A] ,,, ctx), s. split.
+      cbn. now rewrite destArity_app H1.
+      now rewrite app_context_assoc.
+    + right. destruct HB as [sB HB].
+      eexists. eapply type_reduction; tas.
+      * econstructor; tea.
+        apply HA.π2.
+      * apply red1_red.
+        apply red_zeta with (b':=tSort sB).
+Defined.

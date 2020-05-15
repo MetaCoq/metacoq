@@ -463,7 +463,7 @@ Proof.
   set (declared_inductive_inv HP wfΣ HΣ Hidecl) as HH.
   clearbody HH. pose proof HH.(onConstructors) as HH'.
   eapply All2_nth_error_Some in Hcdecl; tea.
-Qed.
+Defined.
 
 Lemma declared_projection_inv `{checker_flags} {Σ P mdecl idecl ref pdecl} :
   forall (HP : weaken_env_prop (lift_typing P))

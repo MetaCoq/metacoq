@@ -622,6 +622,16 @@ Proof.
   intros. destruct (IHl _ H). auto. subst. simpl in H0. discriminate.
 Qed.
 
+Lemma tApp_mkApps_inj f a f' l :
+  tApp f a = mkApps f' l -> l <> [] ->
+  f = mkApps f' (removelast l) /\ (a = last l a).
+Proof.
+  induction l in f' |- *; simpl; intros H. noconf H. intros Hf. congruence.
+  intros . destruct l; simpl in *. now noconf H.
+  specialize (IHl _ H). forward IHl by congruence.
+  apply IHl.
+Qed.
+
 Definition application_atom t :=
   match t with
   | tVar _

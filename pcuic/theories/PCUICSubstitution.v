@@ -124,11 +124,6 @@ Lemma fold_context_length f Γ : #|fold_context f Γ| = #|Γ|.
 Proof.
   unfold fold_context. now rewrite !List.rev_length mapi_length List.rev_length.
 Qed.
-
-Lemma subst_context_length s k Γ : #|subst_context s k Γ| = #|Γ|.
-Proof.
-  unfold subst_context. apply fold_context_length.
-Qed.
 Hint Rewrite subst_context_length : subst wf.
 
 Lemma subst_context_snoc0 s Γ d : subst_context s 0 (Γ ,, d) = subst_context s 0 Γ ,, subst_decl s #|Γ| d.
@@ -165,6 +160,15 @@ Proof.
   apply map_decl_ext => y.
   rewrite !mapi_length; autorewrite with len.
   rewrite distr_lift_subst_rec. f_equal. f_equal. lia.
+Qed.
+
+Lemma skipn_subst_context n s k Γ : skipn n (subst_context s k Γ) = 
+  subst_context s k (skipn n Γ).
+Proof.
+  rewrite !subst_context_alt.
+  rewrite skipn_mapi_rec. rewrite mapi_rec_add /mapi.
+  apply mapi_rec_ext. intros.
+  f_equal. rewrite List.skipn_length. lia.
 Qed.
 
 Lemma subst_decl_closed n k d : closed_decl k d -> subst_decl n k d = d.

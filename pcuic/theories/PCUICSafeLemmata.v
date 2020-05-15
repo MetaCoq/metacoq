@@ -1464,7 +1464,7 @@ destruct ih
   pose proof ht0 as typec.
   eapply inversion_mkApps in typec as [A' [tyc tyargs]]; auto.
   eapply (inversion_Construct Σ wΣ) in tyc as [mdecl' [idecl' [cdecl' [wfl [declc [Hu tyc]]]]]].
-  epose proof (Construct_Ind_ind_eq _ ht0 declc); eauto.
+  epose proof (PCUICInductiveInversion.Construct_Ind_ind_eq _ ht0 declc); eauto.
   simpl in X. destruct declc. simpl in X.
   destruct declared_constructor_inv as [cs [csort onc']].
   intuition auto.
@@ -1483,7 +1483,7 @@ Proof.
   pose proof hc as typec.
   eapply inversion_mkApps in typec as [A' [tyc tyargs]]; auto.
   eapply (inversion_Construct Σ wΣ) in tyc as [mdecl' [idecl' [cdecl' [wfl [declc [Hu tyc]]]]]].
-  epose proof (Construct_Ind_ind_eq _ hc declc); eauto.
+  epose proof (PCUICInductiveInversion.Construct_Ind_ind_eq _ hc declc); eauto.
   simpl in X. destruct declc. simpl in X.
   destruct declared_constructor_inv as [cs [csort onc']].
   intuition auto.
@@ -1526,27 +1526,3 @@ Proof.
       * apply red1_red.
         apply red_zeta with (b':=tSort sB).
 Defined.
-(*
-Lemma type_Case' {cf:checker_flags} Σ Γ indnpar u p c brs args :
-  let ind := indnpar.1 in
-  let npar := indnpar.2 in
-      forall mdecl idecl (isdecl : declared_inductive Σ.1 mdecl ind idecl),
-    mdecl.(ind_npars) = npar ->
-    wf Σ.1 ->
-    let params := List.firstn npar args in
-    forall ps pty, build_case_predicate_type ind mdecl idecl params u ps =
-                Some pty ->                
-    Σ ;;; Γ |- p : pty ->
-    leb_sort_family (universe_family ps) idecl.(ind_kelim) ->
-    Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
-    forall btys, map_option_out (build_branches_type ind mdecl idecl params u p) =
-                Some btys ->
-    All2 (fun br bty => (br.1 = bty.1) × (Σ ;;; Γ |- br.2 : bty.2)) brs btys ->
-    Σ ;;; Γ |- tCase indnpar p c brs : mkApps p (skipn npar args ++ [c]).
-Proof.
-  (* intros mdecl idecl isdecl wfΣ H pars pty X indctx pctx ps btys H0 X0 H1 X1 X2.
-  econstructor; tea.
-  eapply type_Case_valid_btys in H0; tea.
-  eapply All2_All_mix_right; tas. *)
-Admitted.
-*)

@@ -567,6 +567,18 @@ Proof.
   rewrite !skipn_S. apply IHl. lia.
 Qed.
 
+Lemma skipn_mapi_rec {A B} n (f : nat -> A -> B) k (l : list A) : 
+  skipn n (mapi_rec f l k) = 
+  mapi_rec f (skipn n l) (n + k).
+Proof.
+  induction n in f, l, k |- *.
+  - now rewrite !skipn_0.
+  - destruct l.
+    * reflexivity.
+    * simpl. rewrite IHn.
+      now rewrite Nat.add_succ_r.
+Qed.
+
 Lemma firstn_ge {A} (l : list A) n : #|l| <= n -> firstn n l = l.
 Proof.
   induction l in n |- *; simpl; intros; auto. now rewrite firstn_nil.

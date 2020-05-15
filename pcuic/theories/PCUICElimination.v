@@ -394,7 +394,7 @@ Proof.
   eapply typing_spine_strengthen in hsp; eauto.
   pose proof (declared_inductive_inj decli (proj1 declc)) as [-> ->].
   assert (isWfArity_or_Type Σ Γ (type_of_constructor mdecl cdecl' (ind, n) u)).
-  { eapply declared_constructor_valid_ty in declc; eauto. now right. }
+  { eapply PCUICInductiveInversion.declared_constructor_valid_ty in declc; eauto. now right. }
   move: X hsp.
   unfold type_of_constructor.
   rewrite [cdecl'.1.2](onc.(cstr_eq)).
@@ -440,7 +440,7 @@ Proof.
       2:{ eapply (weaken_subslet _ _ _ _ []), PCUICArities.subslet_inds; eauto. } 
       eapply sub. }
     2:{ eapply PCUICWeakening.weaken_wf_local; auto.
-        unshelve eapply on_constructor_inst in oi; eauto.
+        unshelve eapply PCUICInductiveInversion.on_constructor_inst in oi; eauto.
         destruct oi as [oi _].
         rewrite !subst_instance_context_app in oi.
         now eapply wf_local_app in oi. }
@@ -575,7 +575,7 @@ Proof.
   pose proof t1 as t1'.
   eapply inversion_mkApps in t1' as [A [tc _]]; auto.
   eapply inversion_Construct in tc as [mdecl [idecl [cdecl [_ [declc _]]]]]; auto. clear A.
-  unshelve eapply Construct_Ind_ind_eq in t1; eauto.
+  unshelve eapply PCUICInductiveInversion.Construct_Ind_ind_eq in t1; eauto.
   destruct on_declared_constructor as [[onind oib] [cs [Hnth onc]]].
   destruct t1 as [[t1 ->] _]. simpl in e. rewrite <- e.
   destruct (declared_inductive_inj d (proj1 declc)); subst mdecl' idecl'.

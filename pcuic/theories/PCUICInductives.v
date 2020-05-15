@@ -276,6 +276,20 @@ Proof.
   now rewrite (subst_to_extended_list_k _ _ pars).
 Qed.
 
+Lemma instantiate_inds {cf:checker_flags} Σ u mind mdecl :
+  wf Σ.1 ->
+  declared_minductive Σ.1 mind mdecl ->
+  consistent_instance_ext Σ (ind_universes mdecl) u ->
+  subst_instance u
+     (inds mind (PCUICLookup.abstract_instance (PCUICEnvironment.ind_universes mdecl))
+        (ind_bodies mdecl)) = 
+  inds mind u (ind_bodies mdecl).
+Proof.
+  intros wfΣ declm cu.
+  rewrite subst_instance_inds.
+  f_equal. apply subst_instance_instance_id.
+Qed.
+
 Lemma subst_inds_concl_head ind u mdecl (arity : context) :
   let head := tRel (#|ind_bodies mdecl| - S (inductive_ind ind) + #|ind_params mdecl| + #|arity|) in
   let s := (inds (inductive_mind ind) u (ind_bodies mdecl)) in
@@ -366,6 +380,107 @@ Proof.
   destruct decli. rewrite H0 in Heq. noconf Heq.
   simpl. move=> [] <-. now simpl.
 Qed.
+
+(** * Projections *)
+
+Fixpoint projs_inst ind npars k x : list term :=
+  match k with
+  | 0 => []
+  | S k' => tProj (ind, npars, k') x :: projs_inst ind npars k' x
+  end.
+
+Lemma subst_instance_constr_projs u i p n :
+  map (subst_instance_constr u) (projs i p n) = projs i p n.
+Proof.
+  induction n; simpl; auto. f_equal; auto.
+Qed.
+
+Lemma subslet_projs {cf:checker_flags} (Σ : global_env_ext) i mdecl idecl :
+  forall (wfΣ : wf Σ.1) 
+  (Hdecl : declared_inductive Σ.1 mdecl i idecl),
+  let oib := declared_inductive_inv weaken_env_prop_typing wfΣ wfΣ Hdecl in
+  match ind_cshapes oib return Type with
+  | [cs] => 
+    on_projections mdecl (inductive_mind i) (inductive_ind i) 
+     idecl (ind_indices oib) cs -> 
+     forall Γ t u,
+     let indsubst := inds (inductive_mind i) u (ind_bodies mdecl) in
+     untyped_subslet Γ
+     (projs_inst i (ind_npars mdecl) (context_assumptions (cshape_args cs)) t)
+     (smash_context []
+        (subst_context (inds (inductive_mind i) u (ind_bodies mdecl))
+           #|ind_params mdecl| (subst_instance_context u (cshape_args cs))))
+  | _ => True
+  end.
+Proof.
+  intros wfΣ Hdecl oib.
+  destruct ind_cshapes as [|cs []] eqn:Heq; trivial.
+  intros onp. simpl. intros Γ t u. 
+  rewrite (smash_context_subst []).
+  destruct onp.
+  assert (#|PCUICEnvironment.ind_projs idecl| >=
+  PCUICEnvironment.context_assumptions (cshape_args cs)). lia.
+  clear on_projs_all.
+  induction (cshape_args cs) as [|[? [] ?] ?].
+  - simpl. constructor.
+  - simpl. apply IHc. now simpl in H.
+  - simpl. rewrite smash_context_acc /=.
+    rewrite subst_context_snoc.
+    rewrite /subst_decl {2}/map_decl /=.
+    simpl in H. constructor. apply IHc. lia.
+Qed.
+
+Lemma skipn_projs n i npars k : 
+  skipn n (projs i npars k) = projs i npars (k - n).
+Proof.
+  induction k in n |- *; simpl.
+  - now rewrite skipn_nil.
+  - destruct n. now rewrite skipn_0.
+    now  rewrite skipn_S.
+Qed.
+
+Lemma subst_projs_inst ind npars k x : map (subst0 [x]) (projs ind npars k) = projs_inst ind npars k x.
+Proof.
+  induction k; simpl; auto. unfold Nat.sub. simpl.
+  rewrite lift0_id. f_equal; auto.
+Qed.
+
+Lemma projs_inst_length ind npars k x : #|projs_inst ind npars k x| = k.
+Proof. induction k; simpl; auto. Qed.
+
+Hint Rewrite projs_inst_length : len.
+
+Lemma projs_inst_lift ind npars k x n : 
+  projs_inst ind npars k (lift0 n x) = 
+  map (lift0 n) (projs_inst ind npars k x).
+Proof.
+  induction k; simpl; auto.
+  f_equal; auto.
+Qed.
+
+Lemma projs_subst_instance_constr u ind npars k :
+  map (subst_instance_constr u) (projs ind npars k) = projs ind npars k.
+Proof.
+  induction k; simpl; auto. f_equal; auto.
+Qed.
+
+Lemma projs_subst_above s (n : nat) ind npars k : n > 0 ->
+  map (subst s n) (projs ind npars k) = projs ind npars k.
+Proof.
+  induction k; simpl; auto. intros.
+  f_equal; auto. elim: Nat.leb_spec => //; lia.
+Qed.
+
+Lemma nth_error_projs_inst ind npars k x n :
+  n < k ->
+  nth_error (projs_inst ind npars k x) n = Some (tProj (ind, npars, k - S n) x).
+Proof.
+  induction k in n |- *; simpl; auto. lia.
+  destruct n.
+  + simpl. now rewrite Nat.sub_0_r.
+  + intros Hlt. simpl. apply IHk; lia.  
+Qed.
+
 
 (* k is the projection number: 0 is the first argument *)
 Definition projection_type mdecl ind k ty := 

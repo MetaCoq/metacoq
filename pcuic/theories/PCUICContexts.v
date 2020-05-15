@@ -129,29 +129,29 @@ Proof.
 Qed.
 
 Lemma smash_context_assumption_context {Γ Δ} : 
-assumption_context Γ ->
-assumption_context (smash_context Γ Δ).
+  assumption_context Γ ->
+  assumption_context (smash_context Γ Δ).
 Proof.
-induction Δ in Γ |- *; simpl; auto.
-destruct a as [? [b|] ty]; auto.
-intros.
-eapply IHΔ. clear -H.
-induction H; simpl; auto. constructor.
-rewrite subst_context_snoc. constructor; auto.
-intros.
-eapply IHΔ.
-clear -H. induction H; simpl; auto. constructor. constructor.
-constructor. auto.
+  induction Δ in Γ |- *; simpl; auto.
+  destruct a as [? [b|] ty]; auto.
+  intros.
+  eapply IHΔ. clear -H.
+  induction H; simpl; auto. constructor.
+  rewrite subst_context_snoc. constructor; auto.
+  intros.
+  eapply IHΔ.
+  clear -H. induction H; simpl; auto. constructor. constructor.
+  constructor. auto.
 Qed.
 
 Lemma assumption_context_length ctx : assumption_context ctx ->
-context_assumptions ctx = #|ctx|.
+  context_assumptions ctx = #|ctx|.
 Proof.
-induction ctx; simpl; auto.
-destruct a as [na [b|] ty]; simpl.
-intros. depelim H; simpl in H0; noconf H0.
-depelim H; simpl in H0; noconf H0.
-rewrite IHctx; auto.
+  induction ctx; simpl; auto.
+  destruct a as [na [b|] ty]; simpl.
+  intros. depelim H; simpl in H0; noconf H0.
+  depelim H; simpl in H0; noconf H0.
+  rewrite IHctx; auto.
 Qed.
 
 Lemma context_subst_length2 {ctx args s} : context_subst ctx args s -> #|args| = context_assumptions ctx.
@@ -662,6 +662,19 @@ Proof.
     rewrite map_map_compose. apply map_ext => x.
     rewrite simpl_lift; try lia.
     now rewrite Nat.add_1_r.
+Qed.
+
+Lemma extended_subst_subst_instance_constr u Γ n :
+  map (subst_instance_constr u) (extended_subst Γ n) =
+  extended_subst (subst_instance_context u Γ) n.
+Proof.
+  induction Γ as [|[?[]?] ?] in n |- *; simpl; auto.
+  - autorewrite with len.
+    f_equal; auto.
+    rewrite -subst_subst_instance_constr.
+    rewrite -lift_subst_instance_constr.
+    f_equal. apply IHΓ.
+  - f_equal; auto.
 Qed.
 
 Lemma inst_extended_subst_shift (Γ : context) k : 

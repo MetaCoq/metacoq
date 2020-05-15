@@ -7,6 +7,10 @@ From Coq Require Import BinPos Lia.
 Require Import PeanoNat.
 Import Nat.
 Require Import ssreflect.
+Require Import Morphisms.
+
+Notation "`=1`" := (pointwise_relation _ Logic.eq) (at level 80).
+Infix "=1" := (pointwise_relation _ Logic.eq) (at level 90).
 
 (** * Lifting and substitution for the AST
 
@@ -306,6 +310,11 @@ Qed.
 
 Lemma simpl_lift0 : forall M n, lift0 (S n) M = lift0 1 (lift0 n M).
 Proof.  intros; now rewrite simpl_lift. Qed.
+
+Lemma simpl_lift_ext n k p i :
+  i <= k + n -> k <= i ->
+  lift p i ∘ lift n k =1 lift (p + n) k.
+Proof. intros ? ? ?; now apply simpl_lift. Qed.
 
 Lemma permute_lift :
   forall M n k p i,
@@ -642,6 +651,14 @@ Qed.
 Lemma map_subst_lift_id_eq s l k : k = #|s| -> map (subst0 s ∘ lift0 k) l = l.
 Proof. intros ->; apply map_subst_lift_id. Qed.
 
+Lemma map_subst_lift_ext N n p k l :
+  k = #|N| -> p <= n ->
+  map (subst N p ∘ lift0 (k + n)) l = map (lift0 n) l.
+Proof.
+  intros -> pn.
+  apply map_ext => x. now apply simpl_subst'.
+Qed.
+
 Lemma nth_error_lift_context:
   forall (Γ' Γ'' : context) (v : nat),
     v < #|Γ'| -> forall nth k,
@@ -670,11 +687,10 @@ Qed.
 Lemma subst_context_length s n Γ : #|subst_context s n Γ| = #|Γ|.
 Proof.
   induction Γ as [|[na [body|] ty] tl] in Γ |- *; cbn; eauto.
-  - rewrite !List.rev_length !mapi_length !app_length !List.rev_length. simpl.
-    lia.
-  - rewrite !List.rev_length !mapi_length !app_length !List.rev_length. simpl.
-    lia.
+  - rewrite !List.rev_length !mapi_length !app_length !List.rev_length. simpl. lia.
+  - rewrite !List.rev_length !mapi_length !app_length !List.rev_length. simpl. lia.
 Qed.
+Hint Rewrite subst_context_length : len.
 
 Lemma subst_context_snoc s k Γ d : subst_context s k (d :: Γ) = subst_context s k Γ ,, subst_decl s (#|Γ| + k) d.
 Proof.
@@ -751,12 +767,6 @@ Definition up k (s : nat -> term) :=
   fun i =>
     if k <=? i then rename (add k) (s (i - k))
     else tRel i.
-
-
-Require Import Morphisms.
-
-Notation "`=1`" := (pointwise_relation _ Logic.eq) (at level 80).
-Infix "=1" := (pointwise_relation _ Logic.eq) (at level 90).
 
 Lemma shiftn_compose n f f' : shiftn n f ∘ shiftn n f' =1 shiftn n (f ∘ f').
 Proof.

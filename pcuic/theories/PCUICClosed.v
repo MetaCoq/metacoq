@@ -252,6 +252,14 @@ Proof.
     do 3 (f_equal; intuition eauto).
 Qed.
 
+Lemma closed_map_subst_instance n u l : 
+  forallb (closedn n) (map (subst_instance_constr u) l) = 
+  forallb (closedn n) l.
+Proof.
+  induction l; simpl; auto.
+  now rewrite closedn_subst_instance_constr IHl.
+Qed.
+
 Arguments skipn : simpl never.
 
 Lemma destArity_spec ctx T :
@@ -932,6 +940,13 @@ Proof.
   rewrite (nth_error_rev _ _ H) in hnth.
   eapply nth_error_alli in clΓ; eauto.
   simpl in clΓ. eapply closed_decl_upwards; eauto. lia.
+Qed.
+
+Lemma ctx_inst_closed {cf:checker_flags} (Σ : global_env_ext) Γ i Δ : 
+  wf Σ.1 -> ctx_inst (lift_typing typing) Σ Γ i Δ -> All (closedn #|Γ|) i.
+Proof.
+  intros wfΣ; induction 1; auto; constructor; auto.
+  now eapply subject_closed in p.
 Qed.
 
 Lemma closedn_ctx_lift n k k' Γ : closedn_ctx k Γ ->

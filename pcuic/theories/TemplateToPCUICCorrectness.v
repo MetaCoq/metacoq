@@ -1239,6 +1239,7 @@ Proof.
     -- apply H1.
     -- rewrite trans_mkApps in X4; auto with wf.
        eapply typing_wf in X3; auto. intuition. eapply wf_mkApps_inv in H4; auto.
+    -- admit.
     -- apply trans_build_branches_type in H2.
        rewrite firstn_map. exact H2.
     -- eapply All2_map. solve_all.
@@ -1277,6 +1278,7 @@ Proof.
        rewrite /trans_local map_app in X2.
        rewrite <- trans_lift. apply X2.
        rdest. destruct (dbody x); simpl in *; congruence.
+    -- admit.
     -- destruct decl; reflexivity.
 
   - eapply refine_type.
@@ -1287,7 +1289,8 @@ Proof.
       f_equal. apply mapi_ext => i x.
       simpl. rewrite trans_lift. reflexivity. }
     econstructor; eauto.
-    now rewrite nth_error_map H.
+    -- admit.
+    -- now rewrite nth_error_map H.
     -- eapply trans_wf_local; eauto.
     -- eapply All_map, (All_impl X0).
        intros x [s [Hs Hts]]. now exists s.
@@ -1297,6 +1300,7 @@ Proof.
        unfold Template.Ast.app_context in X2.
        rewrite /trans_local map_app in X2.
        cbn. rewrite <- trans_lift. apply X2.
+    -- admit.
     -- destruct decl; reflexivity.
 
   - assert (T.wf B).

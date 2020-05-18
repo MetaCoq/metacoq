@@ -1359,10 +1359,6 @@ Section Lemmata.
       + assumption.
   Qed.
 
-  Derive Signature for typing.
-
-  Require Import MCList.
-
   Lemma Proj_red_cond :
     forall Γ i pars narg i' c u l,
       wellformed Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i' c u) l)) ->

@@ -276,7 +276,7 @@ Proof.
     apply decompose_app_inv in dapp => //.
     rewrite dapp. do 3 f_equal.
     symmetry.
-    change (eq_string ind k) with (PCUICReflect.eqb ind k) in eqk.
+    change (eq_kername ind k) with (PCUICReflect.eqb ind k) in eqk.
     destruct (PCUICReflect.eqb_spec ind k); auto. discriminate.
     discriminate.
   - discriminate.

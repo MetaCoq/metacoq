@@ -167,7 +167,6 @@ Lemma sr_red1 {cf:checker_flags} :
       (fun Σ Γ wfΓ =>
         All_local_env_over typing (fun  Σ Γ _ t T _ => SR_red1 Σ Γ t T) Σ Γ wfΓ).
 Proof.
-  intros allow_cofix.
   apply typing_ind_env; intros Σ wfΣ Γ wfΓ; unfold SR_red1; intros **; rename_all_hyps; auto;
     match goal with
     | [H : (_ ;;; _ |- _ <= _) |- _ ] => idtac

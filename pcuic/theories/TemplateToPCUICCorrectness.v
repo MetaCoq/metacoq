@@ -1296,7 +1296,7 @@ Proof.
        intros x [s [Hs Hts]]. now exists s.
     -- apply All_map. eapply All_impl; eauto.
        intuition eauto 3 with wf.
-       rewrite H1. rewrite /trans_local map_length.
+       rewrite H0. rewrite /trans_local map_length.
        unfold Template.Ast.app_context in X2.
        rewrite /trans_local map_app in X2.
        cbn. rewrite <- trans_lift. apply X2.

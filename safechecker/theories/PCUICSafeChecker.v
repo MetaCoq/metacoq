@@ -889,8 +889,6 @@ Section Typecheck.
       end
 
     | tCoFix mfix n =>
-      (* to add when generalizing to all flags *)
-      allowcofix <- check_eq_true allow_cofix (Msg "cofix not allowed") ;;
       match nth_error mfix n with
       | None => raise (IllFormedFix mfix n)
       | Some decl =>

@@ -647,7 +647,7 @@ Proof.
 
     cbn. repeat split; eauto.
     eapply p. eauto.
-  - clear E. inv t; discriminate.
+  - clear E. todo "erasure cofix"%string.
 Qed.
 Print Assumptions erases_erase.
 

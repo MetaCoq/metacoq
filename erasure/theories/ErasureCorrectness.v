@@ -173,6 +173,41 @@ Proof.
     eauto. eapply wf_local_rel_local in t0.
     eapply wf_local_rel_app in t0 as []. rewrite app_context_nil_l in w0.
     eapply wf_local_rel_conv; eauto.
+  - econstructor.
+
+    eapply All2_impl. eapply All2_All_mix_left. eassumption. eassumption.
+    intros. cbn in *.
+    decompose [prod] X2. intuition auto.
+    eapply b0.
+    subst types.
+    eapply conv_context_app; auto. eapply typing_wf_local; eassumption.
+    eapply typing_wf_local in a0. subst types.
+    2:eauto.
+
+    eapply All_local_env_app_inv.
+    eapply All_local_env_app in a0. intuition auto.
+
+    (* clear -wfΣ X2 a2 b4 X1. *)
+    eapply All_local_env_impl; eauto. simpl; intros.
+    destruct T. simpl in *.
+    eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
+    eapply conv_context_app; auto. eapply typing_wf_local; eauto.
+    eapply typing_wf_local in X3.
+    eapply PCUICSafeChecker.wf_local_app_inv.
+    eauto. eapply wf_local_rel_local in X3.
+    eapply wf_local_rel_app in X3 as []. rewrite app_context_nil_l in w0.
+
+
+    eapply wf_local_rel_conv; eauto.
+    destruct X3. exists x0.
+    eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
+    eapply conv_context_app; auto. eapply typing_wf_local; eauto.
+
+    eapply typing_wf_local in t0.
+    eapply PCUICSafeChecker.wf_local_app_inv.
+    eauto. eapply wf_local_rel_local in t0.
+    eapply wf_local_rel_app in t0 as []. rewrite app_context_nil_l in w0.
+    eapply wf_local_rel_conv; eauto.
 Qed.
 
 (** ** Erasure is stable under substituting universe constraints  *)
@@ -234,7 +269,7 @@ Proof.
       eapply (All_impl X0); firstorder. 
       eapply All_mfix_wf in X5; auto. subst types.
       
-      revert X5. clear - wfΣ wfΓ H1 H2 X2 X3.
+      revert X5. clear - wfΣ wfΓ H2 H3 X2 X3.
       induction 1.
       - eauto.
       - cbn. econstructor; eauto. cbn in *.
@@ -261,6 +296,41 @@ Proof.
     eapply erases_ctx_ext. eassumption. unfold app_context.
     f_equal.
     eapply fix_context_subst_instance. all: eauto.
+
+  - assert (Hw :  wf_local (Σ.1, univs) (subst_instance_context u (Γ ,,, types))).
+  { (* rewrite subst_instance_context_app. *)
+    assert(All (fun d => isType Σ Γ (dtype d)) mfix).
+    eapply (All_impl X0); firstorder. 
+    eapply All_mfix_wf in X5; auto. subst types.
+    
+    revert X5. clear - wfΣ wfΓ H2 H3 X2 X3.
+    induction 1.
+    - eauto.
+    - cbn. econstructor; eauto. cbn in *.
+      destruct t0 as (? & ?). eexists.
+      cbn. eapply typing_subst_instance in t0; eauto. apply snd in t0. cbn in t0.
+      rapply t0; eauto.
+    - cbn. econstructor; eauto. cbn in *.
+      destruct t0 as (? & ?). eexists.
+      cbn. eapply typing_subst_instance in t0; eauto. apply snd in t0.
+      rapply t0; eauto.
+      cbn in *. eapply typing_subst_instance in t1; eauto.
+      apply snd in t1. rapply t1. all:eauto.
+  }
+
+  cbn. econstructor; eauto.
+  eapply All2_map_left.
+  eapply All2_impl. eapply All2_All_mix_left. eapply X1.
+  exact X4.
+  intros; cbn in *. destruct X5. destruct p0. destruct p0.
+  destruct p. repeat split; eauto.
+  eapply e2 in e1.
+  unfold PCUICUnivSubst.subst_instance_context in *.
+  unfold map_context in *. rewrite map_app in *. subst types. 2:eauto.
+  eapply erases_ctx_ext. eassumption. unfold app_context.
+  f_equal.
+  eapply fix_context_subst_instance. all: eauto.
+
 Qed.
 
 Lemma erases_subst_instance_constr :
@@ -605,7 +675,7 @@ Proof.
   - assert (Hty' := Hty).
     assert (Σ |-p tCase (ind, pars) p discr brs ▷ res) by eauto.
     eapply inversion_Case in Hty' as [u' [args' [mdecl [idecl [ps [pty [btys 
-                                    [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]; auto.
+                                    [? [? [? [? [? [_ [? [ht0 [? ?]]]]]]]]]]]]]]]]; auto.
     assert (Σ ;;; [] |- mkApps (tConstruct ind c u) args :  mkApps (tInd ind u') args').
     eapply subject_reduction_eval; eauto.
     eapply PCUICValidity.inversion_mkApps in X0 as (? & ? & ?); eauto.
@@ -826,7 +896,7 @@ Proof.
     eapply subject_reduction in t. 2:eauto. 2:eapply wcbeval_red; eauto.
     2:now eapply PCUICClosed.subject_closed in Ht.
     assert (HT := t).
-    eapply inversion_Fix in t as (? & ? & ? & ? & ? & ?); auto.
+    eapply inversion_Fix in t as (? & ? & ? & ? & ? & ? & ?); auto.
     rewrite <- closed_unfold_fix_cunfold_eq in H0; first last.
     eapply eval_closed; eauto. eapply PCUICClosed.subject_closed in Ht; eauto.
     auto.
@@ -1001,7 +1071,7 @@ Proof.
     eapply subject_reduction in t. 2:eauto. 2:eapply wcbeval_red; eauto.
     2:now eapply PCUICClosed.subject_closed in Ht.
     assert (HT := t).
-    eapply inversion_Fix in t as (? & ? & ? & ? & ? & ?); auto.
+    eapply inversion_Fix in t as (? & ? & ? & ? & ? & ? & ?); auto.
 
     eapply erases_mkApps_inv in He as [(? & ? & ? & ? & [] & ? & ? & ?) | (? & ? & ? & ? & ?)]; eauto.
     + subst. assert (X100 := X2). eapply Is_type_app in X100 as[]; auto.
@@ -1133,16 +1203,17 @@ Proof.
   - destruct ip.
     assert (Hty' := Hty).
     eapply inversion_Case in Hty' as [u' [args' [mdecl [idecl [ps [pty [btys
-                                   [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]];
+                                   [? [? [? [? [? [_ [? [ht0 [? ?]]]]]]]]]]]]]]]];
     eauto.
     eapply PCUICValidity.inversion_mkApps in t0 as (? & ? & ?); eauto.
     eapply inversion_CoFix in t0 as (? & ? & ? &?); eauto.
-    inversion i1.
+    todo "erasure cofix"%string.
+    
   - assert (Hty' := Hty).
     eapply inversion_Proj in Hty' as (? & ? & ? & [] & ? & ? & ? & ? & ?).
     eapply PCUICValidity.inversion_mkApps in t0 as (? & ? & ?); eauto.
     eapply inversion_CoFix in t0 as (? & ? & ? &?); eauto.
-    inversion i0. eauto.
+    todo "erasure cofix". auto.
   - pose (Hty' := Hty).
     eapply inversion_App in Hty' as (? & ? & ? & ? & ? & ?); eauto.
     inv He.

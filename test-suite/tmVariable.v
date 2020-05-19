@@ -9,6 +9,13 @@ Section test.
   MetaCoq Run (tmDefinition "test" bla).
   MetaCoq Run (tmDefinition "test2" 0).
 
+  MetaCoq Run (tmVariable "toto" nat ;;
+              gr <- tmLocate1 "toto" ;;
+              match gr with
+              | VarRef id => let term := tVar id in
+                            tmPrint "Here we can get the term"
+              | _ => tmFail "Something bad happened"
+              end).
 
 End test.
 

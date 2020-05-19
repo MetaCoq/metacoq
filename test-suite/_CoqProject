@@ -43,4 +43,5 @@ TypingTests.v
 unfold.v
 univ.v
 vs.v
+tmVariable.v
 order_rec.v

@@ -179,8 +179,8 @@ struct
   let tInductiveDecl = ast "InductiveDecl"
   let tglobal_env = ast "global_env"
 
-  let (tglobal_reference, tConstRef, tIndRef, tConstructRef) =
-    (ast "global_reference", ast "ConstRef", ast "IndRef", ast "ConstructRef")
+  let (tglobal_reference, tVarRef, tConstRef, tIndRef, tConstructRef) =
+    (ast "global_reference", ast "VarRef", ast "ConstRef", ast "IndRef", ast "ConstructRef")
 
   let tcontext_decl = ast "context_decl"
   let tcontext = ast "context"

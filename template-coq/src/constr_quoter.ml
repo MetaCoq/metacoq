@@ -293,7 +293,9 @@ struct
 
 
   let quote_global_reference : Names.GlobRef.t -> quoted_global_reference = function
-    | Names.GlobRef.VarRef _ -> CErrors.user_err (str "VarRef unsupported")
+    | Names.GlobRef.VarRef c ->
+       let kn = quote_ident c in
+       constr_mkApp (tVarRef, [|kn|])
     | Names.GlobRef.ConstRef c ->
        let kn = quote_kn (Names.Constant.canonical c) in
        constr_mkApp (tConstRef, [|kn|])

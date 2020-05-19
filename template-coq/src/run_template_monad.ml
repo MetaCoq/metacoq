@@ -277,6 +277,16 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
   | TmBind (a,f) ->
     run_template_program_rec ~poly ~intactic:intactic
      (fun (env, evm, ar) -> run_template_program_rec ~poly ~intactic:intactic k env (evm, Constr.mkApp (f, [|ar|]))) env (evm, a)
+ | TmVariable (name, typ) ->
+    if intactic 
+    then not_in_tactic "tmVariable"
+    else
+      let name = unquote_ident (reduce_all env evm name) in
+      let univs = Evd.univ_entry ~poly evm in
+      let param = Declare.ParameterEntry (None, (typ, univs), None) in
+      let n = Declare.declare_constant ~name ~kind:Decls.(IsAssumption Logical) param in
+      let env = Global.env () in
+      k (env, evm, Constr.mkConst n)
   | TmDefinition (opaque,name,s,typ,body) ->
     if intactic
     then not_in_tactic "tmDefinition"

@@ -78,7 +78,7 @@ Inductive recursivity_kind :=
 (** Kernel declaration references [global_reference] *)
 
 Inductive global_reference :=
-(* VarRef of Names.variable *)
+| VarRef : kername -> global_reference
 | ConstRef : kername -> global_reference
 | IndRef : inductive -> global_reference
 | ConstructRef : inductive -> nat -> global_reference.
@@ -86,6 +86,7 @@ Inductive global_reference :=
 
 Definition string_of_gref gr : string :=
   match gr with
+  | VarRef s => "Variable " ++ s
   | ConstRef s => s
   | IndRef (mkInd s n) =>
     "Inductive " ++ s ++ " " ++ (string_of_nat n)

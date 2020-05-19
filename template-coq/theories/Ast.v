@@ -74,7 +74,7 @@ Definition tProd := tProd.
 Definition tLambda := tLambda.
 Definition tLetIn := tLetIn.
 Definition tInd := tInd.
-
+Definition tProj := tProj.
 Definition mkApps := mkApps.
 
 End TemplateTerm.
@@ -82,7 +82,7 @@ End TemplateTerm.
 Ltac unf_term := unfold TemplateTerm.term in *; unfold TemplateTerm.tRel in *;
                  unfold TemplateTerm.tSort in *; unfold TemplateTerm.tProd in *;
                  unfold TemplateTerm.tLambda in *; unfold TemplateTerm.tLetIn in *;
-                 unfold TemplateTerm.tInd in *.
+                 unfold TemplateTerm.tInd in *; unfold TemplateTerm.tProj in *.
 
 Module TemplateEnvironment := Environment TemplateTerm.
 Include TemplateEnvironment.

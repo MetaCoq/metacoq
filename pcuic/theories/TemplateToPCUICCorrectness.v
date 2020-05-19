@@ -1242,13 +1242,13 @@ Proof.
     -- eapply All2_map. solve_all.
 
   - destruct pdecl as [arity ty]; simpl in *.
-    pose proof (TypingWf.declared_projection_wf _ _ u _ _ _ isdecl).
+    pose proof (TypingWf.declared_projection_wf _ _ _ _ _ isdecl).
     simpl in H0.
     eapply forall_decls_declared_projection in isdecl.
     destruct (typing_wf _ wfΣ _ _ _ X1) as [wfc wfind].
     eapply wf_mkApps_inv in wfind; auto.
     rewrite trans_subst; auto with wf. constructor; solve_all.
-    apply H0.
+    apply wf_subst_instance_constr, H0.
     eapply typing_wf_wf; auto.
     simpl. rewrite map_rev. rewrite trans_subst_instance_constr.
     eapply (type_Proj _ _ _ _ _ _ _ (arity, trans ty)). eauto.

@@ -52,13 +52,6 @@ Inductive mkApps_spec : term -> list term -> term -> list term -> term -> Type :
     ~~ isApp f ->
     mkApps_spec f l (mkApps f (firstn n l)) (skipn n l) (mkApps f l).
 
-Lemma firstn_add {A} x y (args : list A) : firstn (x + y) args = firstn x args ++ firstn y (skipn x args).
-Proof.
-  induction x in y, args |- *. simpl. reflexivity.
-  simpl. destruct args. simpl.
-  now rewrite firstn_nil.
-  rewrite IHx. now rewrite app_comm_cons.
-Qed.
 Definition is_empty {A} (l : list A) :=
   if l is nil then true else false.
 

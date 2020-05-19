@@ -20,6 +20,11 @@ Require Import Equations.Type.Relation_Properties.
 
 Derive Signature for typing_spine.
 
+Notation isWAT :=
+  (lift_typing
+    (fun (Σ0 : PCUICEnvironment.global_env_ext) (Γ : context) (_ T : term)
+  => isWfArity_or_Type Σ0 Γ T)).
+
 Lemma isArity_it_mkProd_or_LetIn Γ t : isArity t -> isArity (it_mkProd_or_LetIn Γ t).
 Proof.
   intros isA. induction Γ using rev_ind; simpl; auto.
@@ -81,8 +86,8 @@ induction n; intros ctx Hlen Γ T HT.
          rewrite !app_context_assoc.
          assert (#|smash_context [] ctx| = #|ctx'|).
          { apply context_relation_length in convctx.
-          autorewrite with len in convctx.
-          simpl in convctx. lia. }
+          autorewrite with len in convctx |- *.
+          simpl in convctx. simpl. lia. }
         eapply context_relation_app_inv; auto.
         apply context_relation_app in convctx; auto.
         constructor; pcuic.
@@ -404,6 +409,91 @@ Proof.
       now eapply skipn_n_Sn.
 Qed.
 
+Lemma consistent_instance_ext_abstract_instance {cf:checker_flags} Σ ind mdecl :
+  wf Σ ->
+  declared_minductive Σ ind mdecl ->
+  let u := PCUICLookup.abstract_instance (ind_universes mdecl) in
+  consistent_instance_ext (Σ, ind_universes mdecl) (ind_universes mdecl) u.
+Proof.
+  intros wfΣ declm u.
+  unfold consistent_instance_ext, consistent_instance.
+  revert u. destruct (ind_universes mdecl) eqn:Heq; simpl; auto.
+  destruct cst. simpl.
+  split.
+  { unfold AUContext.repr. simpl.
+    apply All_forallb. apply All_mapi. simpl.
+    clear; generalize 0; induction l; constructor; eauto. }
+  split. apply All_forallb.
+  eapply All_mapi.
+  unfold global_ext_levels. simpl.
+  unfold AUContext.levels. simpl.
+  clear. unfold mapi. generalize 0; induction l; constructor; auto.
+  simpl. apply LevelSet.mem_spec. apply LevelSet.union_spec. left.
+  apply LevelSet.add_spec. left; reflexivity.
+  simpl. eapply (Alli_impl _ (IHl (S n))).
+  intros.
+  eapply LevelSet.mem_spec in H. eapply LevelSet.mem_spec.
+  apply LevelSet.union_spec in H. destruct H; apply LevelSet.union_spec; intuition auto.
+  left. apply LevelSet.add_spec. right; auto.
+  rewrite mapi_length. intuition auto.
+  simpl. red. destruct check_univs; auto.
+  unfold valid_constraints0. simpl.
+  intros v sv.
+  intro. intros hin.
+  specialize (sv x). apply sv. unfold global_ext_constraints in *.
+  eapply ConstraintSet.union_spec. simpl. left.
+  todounivs. (* Simon: this  subst_instance_cstrs is the identity *)
+  (* revert hin. unfold subst_instance_cstrs.
+  rewrite ConstraintSet.fold_spec.
+  intros. rewrite -(ConstraintSet.elements_spec1 t x).
+  apply ConstraintSet.elements_spec1 in hin.
+  induction (ConstraintSet.elements t). simpl in *. simpl in hin. inv hin.
+  simpl in hin.
+  depelim hin. subst. simpl in H0.
+  constructor. *)
+Qed.
+
+Lemma subslet_inds_gen {cf:checker_flags} Σ ind mdecl idecl :
+  wf Σ ->
+  declared_inductive Σ mdecl ind idecl ->
+  let u := PCUICLookup.abstract_instance (ind_universes mdecl) in
+  subslet (Σ, ind_universes mdecl) [] (inds (inductive_mind ind) u (ind_bodies mdecl))
+    (arities_context (ind_bodies mdecl)).
+Proof.
+  intros wfΣ isdecl u.
+  unfold inds.
+  destruct isdecl as [declm _].
+  pose proof declm as declm'. 
+  apply PCUICWeakeningEnv.on_declared_minductive in declm' as [oind oc]; auto.
+  clear oc.
+  assert (Alli (fun i x =>
+   (Σ, ind_universes mdecl) ;;; [] |- tInd {| inductive_mind := inductive_mind ind; inductive_ind := i |} u : (ind_type x)) 0 (ind_bodies mdecl)).
+  { apply forall_nth_error_Alli. intros.
+    eapply type_Cumul.
+    econstructor; eauto. split; eauto.
+    eapply consistent_instance_ext_abstract_instance; eauto.
+    eapply Alli_nth_error in oind; eauto. simpl in oind.
+    destruct oind. red in onArity. right. apply onArity.
+    todounivs. (* Same thing, the abstract universe instance is an identity *) }
+  clear oind.
+  revert X. clear onNpars onGuard.
+  generalize (le_n #|ind_bodies mdecl|).
+  generalize (ind_bodies mdecl) at 1 3 4 5.
+  induction l using rev_ind; simpl; first constructor.
+  rewrite /subst_instance_context /= /map_context.
+  simpl. rewrite /arities_context rev_map_spec /=.
+  rewrite map_app /= rev_app_distr /=. 
+  rewrite /= app_length /= Nat.add_1_r.
+  constructor.
+  - rewrite -rev_map_spec. apply IHl; try lia.
+    eapply Alli_app in X; intuition auto.
+  - eapply Alli_app in X as [oind Hx].
+    depelim Hx. clear Hx.
+    rewrite Nat.add_0_r in t.
+    rewrite subst_closedn; auto. 
+    + eapply typecheck_closed in t as [? ?]; auto.
+Qed.
+
 Lemma subslet_inds {cf:checker_flags} Σ ind u mdecl idecl :
   wf Σ.1 ->
   declared_inductive Σ.1 mdecl ind idecl ->
@@ -644,7 +734,7 @@ Proof.
     rewrite app_context_nil_l in b.
     eapply weaken_wf_local=> //.
   - right. exists s.
-    unshelve epose proof (subject_closed _ _ _ _ _ hs); eauto.
+    unshelve epose proof (subject_closed wfΣ hs); eauto.
     eapply (weakening _ _ Γ) in hs => //.
     rewrite lift_closed in hs => //.
     now rewrite app_context_nil_l in hs.
@@ -661,3 +751,47 @@ Proof.
   intros. rewrite !compose_map_decl; apply map_decl_ext => ?.
   now rewrite -subst_subst_instance_constr.
 Qed.
+
+Section CheckerFlags.
+  Context `{cf : config.checker_flags}.
+
+  Lemma isType_subst_instance_decl {Σ Γ T c decl u} :
+    wf Σ.1 ->
+    lookup_env Σ.1 c = Some decl ->
+    isType (Σ.1, universes_decl_of_decl decl) Γ T ->
+    consistent_instance_ext Σ (universes_decl_of_decl decl) u ->
+    isType Σ (subst_instance_context u Γ) (subst_instance_constr u T).
+  Proof.
+    destruct Σ as [Σ φ]. intros X X0 [s Hs] X1.
+    exists (subst_instance_univ u s).
+    eapply (typing_subst_instance_decl _ _ _ (tSort _)); eauto.
+  Qed.
+  
+  Lemma isWfArity_subst_instance_decl {Σ Γ T c decl u} :
+    wf Σ.1 ->
+    lookup_env Σ.1 c = Some decl ->
+    isWfArity typing (Σ.1, universes_decl_of_decl decl) Γ T ->
+    consistent_instance_ext Σ (universes_decl_of_decl decl) u ->
+    isWfArity typing Σ (subst_instance_context u Γ) (subst_instance_constr u T).
+  Proof.
+    destruct Σ as [Σ φ]. intros X X0 [ctx [s [eq wf]]] X1.
+    exists (subst_instance_context u ctx), (subst_instance_univ u s).
+    rewrite (subst_instance_destArity []) eq. intuition auto.
+    rewrite -subst_instance_context_app.  
+    eapply wf_local_subst_instance_decl; eauto.  
+  Qed.
+  
+  Lemma isWAT_subst_instance_decl {Σ Γ T c decl u} :
+    wf Σ.1 ->
+    lookup_env Σ.1 c = Some decl ->
+    isWfArity_or_Type (Σ.1, universes_decl_of_decl decl) Γ T ->
+    consistent_instance_ext Σ (universes_decl_of_decl decl) u ->
+    isWfArity_or_Type Σ (subst_instance_context u Γ) (subst_instance_constr u T).
+  Proof.
+    destruct Σ as [Σ φ]. intros X X0 X1 X2.
+    destruct X1.
+    - left. now eapply isWfArity_subst_instance_decl.
+    - right. now eapply isType_subst_instance_decl.
+  Qed.
+
+End CheckerFlags.

@@ -23,10 +23,6 @@ Notation "'∃' x .. y , P" := (sigT (fun x => .. (sigT (fun y => P%type)) ..))
 
 Require Import Morphisms.
 
-Inductive assumption_context : context -> Prop :=
-    | assumption_context_nil : assumption_context []
-    | assumption_context_vass na t Γ : assumption_context Γ -> assumption_context (vass na t :: Γ).
-
 Lemma fix_context_gen_assumption_context k Γ : assumption_context (fix_context_gen k Γ).
 Proof.
   rewrite /fix_context_gen. revert k.
@@ -507,16 +503,6 @@ Section Confluence.
   Derive NoConfusion for global_decl.
 
   Hint Resolve pred1_refl : pcuic.
-
-  Lemma All2_nth_error_Some_right {A} {P : A -> A -> Type} {l l'} n t :
-    All2 P l l' ->
-    nth_error l' n = Some t ->
-    { t' : A & (nth_error l n = Some t') * P t' t}%type.
-  Proof.
-    intros Hall. revert n.
-    induction Hall; destruct n; simpl; try congruence. intros [= ->]. exists x. intuition auto.
-    eauto.
-  Qed.
 
   Lemma All2_local_env_skipn P l l' n :
     All2_local_env P l l' ->
@@ -1152,13 +1138,6 @@ Section Confluence.
 
     Local Open Scope sigma_scope.
 
-    (* Definition ctxmap (Γ Δ : context) (s : nat -> term) := *)
-    (*   forall x d, nth_error Γ x = Some d -> *)
-    (*               match decl_body d return Type with *)
-    (*               | Some b => s x = b.[↑^(S x) ∘s s] *)
-    (*               | None => Σ ;;; Δ |- s x : d.(decl_type).[↑^(S x) ∘s s] *)
-    (*               end. *)
-
     Definition ctxmap (Γ Δ : context) (s : nat -> term) :=
       forall x d, nth_error Γ x = Some d ->
                   match decl_body d return Type with
@@ -1233,12 +1212,92 @@ Section Confluence.
       rewrite -inst_assoc. rewrite H2.
       now autorewrite with sigma.
     Qed.
-
+    
     Inductive All2i {A B : Type} (R : nat -> A -> B -> Type) : list A -> list B -> Type :=
       All2i_nil : All2i R [] []
     | All2i_cons : forall (x : A) (y : B) (l : list A) (l' : list B),
-        R (List.length l) x y -> All2i R l l' -> All2i R (x :: l) (y :: l').
+            R (List.length l) x y -> All2i R l l' -> All2i R (x :: l) (y :: l').
     Hint Constructors All2i : core pcuic.
+
+    Lemma All2i_app {A B} (P : nat -> A -> B -> Type) l0 l0' l1 l1' :
+      All2i P l0' l1' ->
+      All2i (fun n => P (n + #|l0'|)) l0 l1 ->
+      All2i P (l0 ++ l0') (l1 ++ l1').
+    Proof.
+      intros H. induction 1; simpl. apply H.
+      constructor. now rewrite app_length. apply IHX.
+    Qed.
+
+    Lemma All2i_length {A B} (P : nat -> A -> B -> Type) l l' :
+      All2i P l l' -> #|l| = #|l'|.
+    Proof. induction 1; simpl; auto. Qed.
+
+    Lemma All2i_impl {A B} (P Q : nat -> A -> B -> Type) l l' :
+      All2i P l l' -> (forall n x y, P n x y -> Q n x y) -> All2i Q l l'.
+    Proof. induction 1; simpl; auto. Qed.
+
+    Lemma All2i_rev {A B} (P : nat -> A -> B -> Type) l l' :
+      All2i P l l' ->
+      All2i (fun n => P (#|l| - S n)) (List.rev l) (List.rev l').
+    Proof.
+      induction 1. constructor. simpl List.rev.
+      apply All2i_app. repeat constructor. simpl. rewrite Nat.sub_0_r. auto.
+      simpl. eapply All2i_impl; eauto. intros. simpl in X0. now rewrite Nat.add_1_r.
+    Qed.
+
+    Inductive All2i_ctx {A B : Type} (R : nat -> A -> B -> Type) (n : nat) : list A -> list B -> Type :=
+      All2i_ctx_nil : All2i_ctx R n [] []
+    | All2i_ctx_cons : forall (x : A) (y : B) (l : list A) (l' : list B),
+        R n x y -> All2i_ctx R (S n) l l' -> All2i_ctx R n (x :: l) (y :: l').
+    Hint Constructors All2i_ctx : core pcuic.
+
+    Lemma All2i_ctx_app {A B} (P : nat -> A -> B -> Type) n l0 l0' l1 l1' :
+      All2i_ctx P (n + #|l0|) l0' l1' ->
+      All2i_ctx P n l0 l1 ->
+      All2i_ctx P n (l0 ++ l0') (l1 ++ l1').
+    Proof.
+      intros H.
+      induction 1. simpl. now rewrite Nat.add_0_r in H.
+      simpl. rewrite Nat.add_succ_comm in IHX. specialize (IHX H).
+      now constructor.
+    Qed.
+
+    Lemma All2i_rev_ctx {A B} (R : nat -> A -> B -> Type) (n : nat) (l : list A) (l' : list B) :
+      All2i R l l' -> All2i_ctx R 0 (List.rev l) (List.rev l').
+    Proof.
+      induction 1. simpl. constructor.
+      simpl. apply All2i_ctx_app. simpl. rewrite List.rev_length. auto.
+      auto.
+    Qed.
+
+    Lemma All2i_rev_ctx_gen {A B} (R : nat -> A -> B -> Type) (n : nat) (l : list A) (l' : list B) :
+      All2i_ctx R n l l' -> All2i (fun m => R (n + m)) (List.rev l) (List.rev l').
+    Proof.
+      induction 1. simpl. constructor.
+      simpl. eapply All2i_app. constructor. now rewrite Nat.add_0_r. constructor.
+      eapply All2i_impl; eauto. intros.
+      simpl in *. rewrite [S _]Nat.add_succ_comm in X0. now rewrite Nat.add_1_r.
+    Qed.
+
+    Lemma All2i_rev_ctx_inv {A B} (R : nat -> A -> B -> Type) (l : list A) (l' : list B) :
+      All2i_ctx R 0 l l' -> All2i R (List.rev l) (List.rev l').
+    Proof.
+      intros. eapply All2i_rev_ctx_gen in X. simpl in X. apply X.
+    Qed.
+
+    Lemma All2i_ctx_mapi {A B C D} (R : nat -> A -> B -> Type)
+          (l : list C) (l' : list D) (f : nat -> C -> A) (g : nat -> D -> B) n :
+      All2i_ctx (fun n x y => R n (f n x) (g n y)) n l l' ->
+      All2i_ctx R n (mapi_rec f l n) (mapi_rec g l' n).
+    Proof.
+      induction 1; constructor; auto.
+    Qed.
+
+    Lemma All2i_ctx_trivial {A B} (R : nat -> A -> B -> Type) (H : forall n x y, R n x y) n l l' :
+      #|l| = #|l'| -> All2i_ctx R n l l'.
+    Proof.
+      induction l in n, l' |- *; destruct l'; simpl; try discriminate; intros; constructor; auto.
+    Qed.
 
     Definition pres_bodies Γ Δ σ :=
       All2i (fun n decl decl' => (decl_body decl' = option_map (fun x => x.[⇑^n σ]) (decl_body decl)))
@@ -2417,86 +2476,6 @@ Section Confluence.
     move/IHmfix. lia.
   Qed.
 
-  Lemma All2i_app {A B} (P : nat -> A -> B -> Type) l0 l0' l1 l1' :
-    All2i P l0' l1' ->
-    All2i (fun n => P (n + #|l0'|)) l0 l1 ->
-    All2i P (l0 ++ l0') (l1 ++ l1').
-  Proof.
-    intros H. induction 1; simpl. apply H.
-    constructor. now rewrite app_length. apply IHX.
-  Qed.
-
-  Lemma All2i_length {A B} (P : nat -> A -> B -> Type) l l' :
-    All2i P l l' -> #|l| = #|l'|.
-  Proof. induction 1; simpl; auto. Qed.
-
-  Lemma All2i_impl {A B} (P Q : nat -> A -> B -> Type) l l' :
-    All2i P l l' -> (forall n x y, P n x y -> Q n x y) -> All2i Q l l'.
-  Proof. induction 1; simpl; auto. Qed.
-
-  Lemma All2i_rev {A B} (P : nat -> A -> B -> Type) l l' :
-    All2i P l l' ->
-    All2i (fun n => P (#|l| - S n)) (List.rev l) (List.rev l').
-  Proof.
-    induction 1. constructor. simpl List.rev.
-    apply All2i_app. repeat constructor. simpl. rewrite Nat.sub_0_r. auto.
-    simpl. eapply All2i_impl; eauto. intros. simpl in X0. now rewrite Nat.add_1_r.
-  Qed.
-
-  Inductive All2i_ctx {A B : Type} (R : nat -> A -> B -> Type) (n : nat) : list A -> list B -> Type :=
-    All2i_ctx_nil : All2i_ctx R n [] []
-  | All2i_ctx_cons : forall (x : A) (y : B) (l : list A) (l' : list B),
-      R n x y -> All2i_ctx R (S n) l l' -> All2i_ctx R n (x :: l) (y :: l').
-  Hint Constructors All2i_ctx : core pcuic.
-
-  Lemma All2i_ctx_app {A B} (P : nat -> A -> B -> Type) n l0 l0' l1 l1' :
-    All2i_ctx P (n + #|l0|) l0' l1' ->
-    All2i_ctx P n l0 l1 ->
-    All2i_ctx P n (l0 ++ l0') (l1 ++ l1').
-  Proof.
-    intros H.
-    induction 1. simpl. now rewrite Nat.add_0_r in H.
-    simpl. rewrite Nat.add_succ_comm in IHX. specialize (IHX H).
-    now constructor.
-  Qed.
-
-  Lemma All2i_rev_ctx {A B} (R : nat -> A -> B -> Type) (n : nat) (l : list A) (l' : list B) :
-    All2i R l l' -> All2i_ctx R 0 (List.rev l) (List.rev l').
-  Proof.
-    induction 1. simpl. constructor.
-    simpl. apply All2i_ctx_app. simpl. rewrite List.rev_length. auto.
-    auto.
-  Qed.
-
-  Lemma All2i_rev_ctx_gen {A B} (R : nat -> A -> B -> Type) (n : nat) (l : list A) (l' : list B) :
-    All2i_ctx R n l l' -> All2i (fun m => R (n + m)) (List.rev l) (List.rev l').
-  Proof.
-    induction 1. simpl. constructor.
-    simpl. eapply All2i_app. constructor. now rewrite Nat.add_0_r. constructor.
-    eapply All2i_impl; eauto. intros.
-    simpl in *. rewrite [S _]Nat.add_succ_comm in X0. now rewrite Nat.add_1_r.
-  Qed.
-
-  Lemma All2i_rev_ctx_inv {A B} (R : nat -> A -> B -> Type) (l : list A) (l' : list B) :
-    All2i_ctx R 0 l l' -> All2i R (List.rev l) (List.rev l').
-  Proof.
-    intros. eapply All2i_rev_ctx_gen in X. simpl in X. apply X.
-  Qed.
-
-  Lemma All2i_ctx_mapi {A B C D} (R : nat -> A -> B -> Type)
-        (l : list C) (l' : list D) (f : nat -> C -> A) (g : nat -> D -> B) n :
-    All2i_ctx (fun n x y => R n (f n x) (g n y)) n l l' ->
-    All2i_ctx R n (mapi_rec f l n) (mapi_rec g l' n).
-  Proof.
-    induction 1; constructor; auto.
-  Qed.
-
-  Lemma All2i_ctx_trivial {A B} (R : nat -> A -> B -> Type) (H : forall n x y, R n x y) n l l' :
-    #|l| = #|l'| -> All2i_ctx R n l l'.
-  Proof.
-    induction l in n, l' |- *; destruct l'; simpl; try discriminate; intros; constructor; auto.
-  Qed.
-
   Lemma mfixpoint_size_In {mfix d} :
     In d mfix ->
     size (dbody d) < mfixpoint_size size mfix /\
@@ -2887,23 +2866,6 @@ Section Confluence.
       intros. rewrite map_app !fold_fix_context_app. simpl. constructor. simpl. reflexivity. apply IHm.
   Qed.
 
-  Lemma ren_lift_renaming n k : ren (lift_renaming n k) =1 (⇑^k ↑^n).
-  Proof.
-    unfold subst_compose. intros i.
-    simpl. rewrite -{1}(Nat.add_0_r k). unfold ren. rewrite - (shiftn_lift_renaming n k 0).
-    pose proof (ren_shiftn k (lift_renaming n 0) i).
-    change ((ren (shiftn k (lift_renaming n 0)) i) = ((⇑^k (↑^n)) i)).
-    rewrite -H. sigma. rewrite lift_renaming_0. reflexivity.
-  Qed.
-
-  Lemma shiftk_compose n m : ↑^n ∘s ↑^m =1 ↑^(n + m).
-  Proof.
-    induction n; simpl; sigma. reflexivity.
-    rewrite -subst_compose_assoc.
-    rewrite -shiftk_shift shiftk_shift_l.
-    now rewrite subst_compose_assoc IHn -shiftk_shift shiftk_shift_l.
-  Qed.
-
   Lemma rho_lift0 Γ Δ t : lift0 #|Δ| (rho Γ t) = rho (Γ ,,, Δ) (lift0 #|Δ| t).
   Proof.
     rewrite !lift_rename. apply rho_rename.
@@ -2999,19 +2961,6 @@ Section Confluence.
       All2 (on_Trel (pred1 Σ Γ' (rho_ctx Γ)) snd) brs1 (map (λ x : nat * term, (fst x, rho (rho_ctx Γ) (snd x))) brs0).
   Proof.
     intros. rewrite - {1}(map_id brs1). eapply All2_map, All2_sym, All2_impl; pcuic.
-  Qed.
-
-  Lemma All2_map_left' {A B} (P : A -> A -> Type) l l' (f : B -> A) :
-    All2 (fun x y => P (f x) y) l l' -> All2 P (map f l) l'.
-  Proof. intros. rewrite - (map_id l'). eapply All2_map; eauto. Qed.
-
-  Lemma All2_map_right' {A B} (P : A -> A -> Type) l l' (f : B -> A) :
-    All2 P l (map f l') ->  All2 (fun x y => P x (f y)) l l'.
-  Proof.
-    induction l in l' |- *. intros. depelim X. destruct l'; try discriminate.
-    constructor.
-    destruct l'; intros H; depelim H; try discriminate.
-    specialize (IHl _ H). constructor; auto.
   Qed.
 
   Lemma All_All2_telescopei_gen (Γ Γ' Δ Δ' : context) (m m' : mfixpoint term) :
@@ -3135,21 +3084,6 @@ Section Confluence.
     simpl in H. now apply H.
   Qed.
 
-  Lemma All2_mix {A} {P Q : A -> A -> Type} {l l'} :
-    All2 P l l' -> All2 Q l l' -> All2 (fun x y => (P x y * Q x y))%type l l'.
-  Proof.
-    induction 1; intros HQ; depelim HQ; constructor; eauto.
-  Qed.
-
-  Lemma All2_mix_inv {A} {P Q : A -> A -> Type} {l l'} :
-    All2 (fun x y => (P x y * Q x y))%type l l' ->
-    (All2 P l l' * All2 Q l l').
-  Proof.
-    induction 1; split; constructor; intuition eauto.
-  Qed.
-
-  Definition swap {A B : Type} (x : A * B) : B * A :=
-    (snd x, fst x).
 
   Lemma All2_local_env_sym P Γ Γ' Δ Δ' :
     All2_local_env (on_decl (on_decl_over (fun Γ Γ' t t' => P Γ' Γ t' t) Γ' Γ)) Δ' Δ ->

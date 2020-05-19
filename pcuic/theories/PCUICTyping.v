@@ -37,17 +37,15 @@ Fixpoint isArity T :=
   | _ => False
   end.
 
-Definition subst_context s k (Γ : context) : context :=
-  fold_context (fun k' => subst s (k' + k)) Γ.
+(** Assumptions contexts do not contain let-ins. *)  
 
-Lemma subst_context_length s n Γ : #|subst_context s n Γ| = #|Γ|.
-Proof.
-  induction Γ as [|[na [body|] ty] tl] in Γ |- *; cbn; eauto.
-  - rewrite !List.rev_length !mapi_length !app_length !List.rev_length. simpl.
-    lia.
-  - rewrite !List.rev_length !mapi_length !app_length !List.rev_length. simpl.
-    lia.
-Qed.
+Inductive assumption_context : context -> Prop :=
+| assumption_context_nil : assumption_context []
+| assumption_context_vass na t Γ : assumption_context Γ -> assumption_context (vass na t :: Γ).
+
+Derive Signature for assumption_context.
+
+(** Smashing a context produces an assumption context. *)
 
 Fixpoint smash_context (Γ Γ' : context) : context :=
   match Γ' with
@@ -153,7 +151,7 @@ Proof. unfold fix_context. now rewrite List.rev_length mapi_length. Qed.
 Hint Rewrite subst_context_length subst_instance_context_length 
   app_context_length map_context_length fix_context_length fix_subst_length cofix_subst_length 
   map_length app_length lift_context_length 
-  @mapi_length @mapi_rec_length : len.
+  @mapi_length @mapi_rec_length List.rev_length Nat.add_0_r : len.
 
 Definition tDummy := tVar "".
 
@@ -819,7 +817,9 @@ Module PCUICTypingDef <: Typing PCUICTerm PCUICEnvironment PCUICEnvTyping.
   Definition smash_context := smash_context.
   Definition lift_context := lift_context.
   Definition subst_telescope := subst_telescope.
-
+  Definition subst := subst.
+  Definition lift := lift.
+  Definition inds := inds.  
 End PCUICTypingDef.
 
 Module PCUICDeclarationTyping :=
@@ -1207,18 +1207,19 @@ Proof.
       eapply Alli_impl; eauto. clear onI onP onnp; intros n x Xg.
       refine {| ind_indices := Xg.(ind_indices);
                 ind_arity_eq := Xg.(ind_arity_eq);
-                ind_ctors_sort := Xg.(ind_ctors_sort) |}.
+                ind_cshapes := Xg.(ind_cshapes) |}.
+                
       ++ apply onArity in Xg. destruct Xg as [s Hs]. exists s; auto.
          specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ [] (existT _ _ (existT _ _ Hs)))))).
          simpl in IH. simpl. apply IH; constructor 1; simpl; lia.
       ++ pose proof Xg.(onConstructors) as Xg'.
          eapply All2_impl; eauto. intros.
-         destruct X14 as [cs onctyp oncargs oncind].
-         unshelve econstructor. eauto.
+         destruct X14 as [cass chead tyeq onctyp oncargs oncind].
+         unshelve econstructor; eauto.
          destruct onctyp as [s Hs].
          simpl in Hs.
          specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ _ (existT _ _ Hs)))))).
-         simpl in IH. red. simpl. exists s. simpl. apply IH; constructor 1; simpl; auto with arith.
+         simpl in IH. simpl. exists s. simpl. apply IH; constructor 1; simpl; auto with arith.
          eapply type_local_ctx_impl; eauto. simpl. intros. red in X14.
          destruct T.
          specialize (IH ((Σ, udecl); (X13; _; _; _; X14))).
@@ -1228,17 +1229,12 @@ Proof.
          apply IH. simpl. constructor 1. simpl. auto with arith.
          clear -X13 IH oncind.
          revert oncind.
-         generalize (List.rev (lift_context #|cshape_args cs| 0 (ind_indices Xg))).
-         generalize (cshape_indices cs). induction 1; constructor; auto.
+         generalize (List.rev (lift_context #|cshape_args y| 0 (ind_indices Xg))).
+         generalize (cshape_indices y). induction 1; constructor; auto.
          red in p0 |- *.
          specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ _ (existT _ _ p0)))))).
          apply IH. simpl. constructor 1. simpl. auto with arith.
-      ++ intros Hprojs; pose proof (onProjections Xg Hprojs); auto. simpl in *.
-         destruct X14; constructor; auto. eapply Alli_impl; eauto. clear on_projs0. intros.
-         red in X14 |- *. unfold on_type in *; intuition eauto. simpl in *.
-         destruct X14 as [s Hs]. exists s.
-         specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ _ (existT _ _ Hs)))))).
-         simpl in IH. apply IH; constructor 1; simpl; lia.
+      ++ intros Hprojs; pose proof (onProjections Xg Hprojs); auto. 
       ++ destruct Xg. simpl. unfold check_ind_sorts in *.
          destruct universe_family; auto.
          +++ split. apply ind_sorts0. destruct indices_matter; auto.

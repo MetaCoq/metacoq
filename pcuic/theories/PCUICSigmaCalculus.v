@@ -21,7 +21,7 @@ Require PCUICWeakening.
 Set Asymmetric Patterns.
 Open Scope sigma_scope.
 
-Hint Rewrite @lift_rename : sigma.
+Hint Rewrite @lift_rename Nat.add_0_r : sigma.
 
 Lemma subst1_inst :
   forall t n u,
@@ -50,9 +50,6 @@ Lemma rename_mkApps :
 Proof.
   intros f t l.
   autorewrite with sigma. f_equal.
-  induction l.
-  - reflexivity.
-  - simpl. autorewrite with sigma. easy.
 Qed.
 
 Lemma rename_subst_instance_constr :
@@ -165,6 +162,24 @@ Hint Rewrite inst_mkApps : sigma.
 
 Lemma lift_renaming_0 k : ren (lift_renaming k 0) = ren (Nat.add k).
 Proof. reflexivity. Qed.
+
+Lemma ren_lift_renaming n k : ren (lift_renaming n k) =1 (⇑^k ↑^n).
+Proof.
+  unfold subst_compose. intros i.
+  simpl. rewrite -{1}(Nat.add_0_r k). unfold ren. rewrite - (shiftn_lift_renaming n k 0).
+  pose proof (ren_shiftn k (lift_renaming n 0) i).
+  change ((ren (shiftn k (lift_renaming n 0)) i) = ((⇑^k (↑^n)) i)).
+  rewrite -H. sigma. rewrite lift_renaming_0. reflexivity.
+Qed.
+
+Lemma shiftk_compose n m : ↑^n ∘s ↑^m =1 ↑^(n + m).
+Proof.
+  induction n; simpl; sigma; auto.
+  - reflexivity.
+  - rewrite -subst_compose_assoc.
+    rewrite -shiftk_shift shiftk_shift_l.
+    now rewrite subst_compose_assoc IHn -shiftk_shift shiftk_shift_l.
+Qed.
 
 Lemma lift0_inst n t : lift0 n t = t.[↑^n].
 Proof. by rewrite lift_rename rename_inst lift_renaming_0 -ren_shiftk. Qed.
@@ -314,6 +329,115 @@ Proof.
   now unfold Upn, Up; autorewrite with sigma.
 Qed.
 Hint Rewrite subst10_inst : sigma.
+
+Local Open Scope sigma.
+Lemma Upn_compose n σ σ' : ⇑^n σ ∘s ⇑^n σ' =1 ⇑^n (σ ∘s σ').
+Proof.
+  induction n.
+  - unfold Upn. simpl.
+    now rewrite !subst_consn_nil !shiftk_0 !compose_ids_r.
+  - rewrite !Upn_S. autorewrite with sigma. now rewrite IHn.
+Qed.
+
+Lemma up_ext_closed k' k s s' :
+  (forall i, i < k' -> s i = s' i) -> 
+  forall i, i < k + k' ->
+  up k s i = up k s' i.
+Proof.
+  unfold up. intros Hs t. elim (Nat.leb_spec k t) => H; auto.
+  intros. f_equal. apply Hs. lia.
+Qed.
+
+Lemma inst_ext_closed s s' k t : 
+  closedn k t -> 
+  (forall x, x < k -> s x = s' x) -> 
+  inst s t = inst s' t.
+Proof.
+  clear.
+  intros clt Hs. revert k clt s s' Hs.
+  elim t using PCUICInduction.term_forall_list_ind; simpl in |- *; intros; try easy ;
+    try (try rewrite H; try rewrite H0 ; try rewrite H1 ; easy);
+    try solve [f_equal; solve_all].
+  - apply Hs. now eapply Nat.ltb_lt. 
+  - move/andP: clt => []. intros. f_equal; eauto.
+    eapply H0; eauto. intros. eapply up_ext_closed; eauto.
+  - move/andP: clt => []. intros. f_equal; eauto. now eapply H0, up_ext_closed.
+  - move/andP: clt => [] /andP[] ?. intros. f_equal; eauto.
+    now eapply H1, up_ext_closed.
+  - move/andP: clt => [] ? ?. f_equal; eauto.
+  - move/andP: clt => [] /andP[] ? ? b1.
+    red in X. solve_all. f_equal; eauto.
+    eapply All_map_eq. eapply (All_impl b1). firstorder.
+  - f_equal; eauto. red in X. solve_all.
+    move/andP: b => []. eauto. intros.
+    apply map_def_eq_spec; eauto.
+    eapply b0; eauto. now apply up_ext_closed.
+  - f_equal; eauto. red in X. solve_all.
+    move/andP: b => []. eauto. intros.
+    apply map_def_eq_spec; eauto.
+    eapply b0; eauto. now apply up_ext_closed.
+Qed.
+
+Lemma subst_consn_eq s0 s1 s2 s3 x : 
+  x < #|s0| -> #|s0| = #|s2| ->
+  subst_fn s0 x = subst_fn s2 x ->
+  (s0 ⋅n s1) x = (s2 ⋅n s3) x.
+Proof.
+  unfold subst_fn; intros Hx Heq Heqx.
+  unfold subst_consn. 
+  destruct (nth_error s0 x) eqn:Heq';
+  destruct (nth_error s2 x) eqn:Heq''; auto;
+  (apply nth_error_None in Heq''|| apply nth_error_None in Heq'); lia.
+Qed.
+
+Lemma subst_id s Γ t : 
+  closedn #|s| t ->
+  assumption_context Γ ->
+  s = List.rev (to_extended_list Γ) ->
+  subst s 0 t = t.
+Proof.
+  intros cl ass eq.
+  autorewrite with sigma.
+  rewrite -{2}(subst_ids t).
+  eapply inst_ext_closed; eauto.
+  intros.
+  unfold ids, subst_consn. simpl.
+  destruct (equiv_inv _ _ (nth_error_Some' s x) H). rewrite e.
+  subst s.
+  rewrite /to_extended_list /to_extended_list_k in e.
+  rewrite List.rev_length in cl, H. autorewrite with len in *.
+  rewrite reln_alt_eq in e.
+  rewrite app_nil_r List.rev_involutive in e.
+  clear -ass e. revert e.
+  rewrite -{2}(Nat.add_0_r x).
+  generalize 0.
+  induction Γ in x, ass, x0 |- * => n. 
+  - simpl in *. rewrite nth_error_nil => //.
+  - depelim ass; simpl.
+    destruct x; simpl in *; try congruence.
+    move=> e; specialize (IHΓ ass); simpl in e.
+    specialize (IHΓ _ _ _ e). subst x0. f_equal. lia.
+Qed.
+
+Lemma map_inst_idsn l l' n :
+  #|l| = n ->
+  map (inst (l ⋅n l')) (idsn n) = l.
+Proof.
+  induction n in l, l' |- *.
+  - destruct l => //.
+  - destruct l as [|l a] using rev_case => // /=.
+    rewrite app_length /= Nat.add_1_r => [=].
+    intros; subst n.
+    simpl. rewrite map_app.
+    f_equal; auto.
+    + rewrite subst_consn_app.
+      now apply IHn.
+    + simpl.
+      destruct (@subst_consn_lt _ (l ++ [a]) #|l|) as [a' [hnth heq]].
+      * rewrite app_length. simpl; lia.
+      * rewrite heq. rewrite nth_error_app_ge in hnth; auto.
+        rewrite Nat.sub_diag in hnth. simpl in hnth. congruence.
+Qed.
 
 Lemma map_vass_map_def g l r :
   (mapi (fun i (d : def term) => vass (dname d) (lift0 i (dtype d)))
@@ -1105,8 +1229,6 @@ Proof.
   intros params pars T f T' hcl e.
   eapply instantiate_params_inst with (σ := ren f) in e. 2: auto.
   autorewrite with sigma. rewrite <- e. f_equal.
-  induction pars in |- *. 1: reflexivity.
-  simpl. autorewrite with sigma. easy.
 Qed.
 
 Lemma build_branches_type_rename :
@@ -1260,6 +1382,8 @@ Lemma inst_declared_minductive :
     declared_minductive Σ cst decl ->
     inst_mutual_inductive_body σ decl = decl.
 Proof.
+Admitted.
+(*
   unfold declared_minductive.
   intros Σ cst decl σ hΣ h.
   eapply lookup_on_global_env in h ; eauto. simpl in h.
@@ -1297,7 +1421,7 @@ Proof.
       simpl.
       rewrite smash_context_length context_assumptions_fold.
       simpl. auto.
-Qed.
+Qed.*)
 
 Lemma inst_declared_inductive :
   forall Σ ind mdecl idecl σ,
@@ -1462,147 +1586,6 @@ Qed.
 (*   } *)
 (*   rewrite ebrtys'. autorewrite with sigma. reflexivity. *)
 (* Qed. *)
-
-(* TODO MOVE *)
-Lemma declared_constant_closed_type :
-  forall Σ cst decl,
-    wf Σ ->
-    declared_constant Σ cst decl ->
-    closed decl.(cst_type).
-Proof.
-  intros Σ cst decl hΣ h.
-  unfold declared_constant in h.
-  eapply lookup_on_global_env in h. 2: eauto.
-  destruct h as [Σ' [wfΣ' decl']].
-  red in decl'. red in decl'.
-  destruct decl as [ty bo un]. simpl in *.
-  destruct bo as [t|].
-  - now eapply type_closed in decl'.
-  - cbn in decl'. destruct decl' as [s h].
-    now eapply subject_closed in h.
-Qed.
-
-(* TODO MOVE *)
-Lemma declared_inductive_closed_type :
-  forall Σ mdecl ind idecl,
-    wf Σ ->
-    declared_inductive Σ mdecl ind idecl ->
-    closed idecl.(ind_type).
-Proof.
-  intros Σ mdecl ind idecl hΣ h.
-  unfold declared_inductive in h. destruct h as [h1 h2].
-  unfold declared_minductive in h1.
-  eapply lookup_on_global_env in h1. 2: eauto.
-  destruct h1 as [Σ' [wfΣ' decl']].
-  red in decl'. destruct decl' as [h ? ? ?].
-  eapply Alli_nth_error in h. 2: eassumption.
-  simpl in h. destruct h as [? ? ? [? h] ? ? ?].
-  eapply typecheck_closed in h as [? e]. 2: auto. 
-  move/andP in e. destruct e. assumption.
-Qed.
-
-(* TODO MOVE *)
-Lemma declared_inductive_closed_constructors :
-  forall Σ ind mdecl idecl,
-      wf Σ ->
-      declared_inductive Σ mdecl ind idecl ->
-      All (fun '(na, t, n) => closedn #|arities_context mdecl.(ind_bodies)| t)
-          idecl.(ind_ctors).
-Proof.
-  intros Σ ind mdecl idecl hΣ h.
-  unfold declared_inductive in h. destruct h as [hmdecl hidecl].
-  red in hmdecl.
-  eapply lookup_on_global_env in hmdecl. 2: eauto.
-  destruct hmdecl as [Σ' [wfΣ' decl']].
-  red in decl'. destruct decl' as [h ? ? ?].
-  eapply Alli_nth_error in h. 2: eassumption.
-  simpl in h. destruct h as [? ? ? ? ? h ? ?].
-  unfold on_constructors in h.
-  clear - h wfΣ'.
-  induction h.
-  - constructor.
-  - econstructor.
-    + destruct x as [[? t] ?].
-      destruct r as [? [? ht] ? _].
-      now eapply subject_closed in ht.
-    + assumption.
-Qed.
-
-(* TODO MOVE *)
-Lemma declared_minductive_closed_inds :
-  forall Σ ind mdecl u,
-    wf Σ ->
-    declared_minductive Σ (inductive_mind ind) mdecl ->
-    forallb (closedn 0) (inds (inductive_mind ind) u (ind_bodies mdecl)).
-Proof.
-  intros Σ ind mdecl u hΣ h.
-  red in h.
-  eapply lookup_on_global_env in h. 2: eauto.
-  destruct h as [Σ' [wfΣ' decl']].
-  red in decl'. destruct decl' as [h ? ? ?].
-  rewrite inds_spec. rewrite forallb_rev.
-  unfold mapi.
-  generalize 0 at 1. generalize 0. intros n m.
-  induction h in n, m |- *.
-  - reflexivity.
-  - simpl. eauto.
-Qed.
-
-(* TODO MOVE *)
-Lemma declared_inductive_closed_inds :
-  forall Σ ind mdecl idecl u,
-      wf Σ ->
-      declared_inductive Σ mdecl ind idecl ->
-      forallb (closedn 0) (inds (inductive_mind ind) u (ind_bodies mdecl)).
-Proof.
-  intros Σ ind mdecl idecl u hΣ h.
-  unfold declared_inductive in h. destruct h as [hmdecl hidecl].
-  eapply declared_minductive_closed_inds in hmdecl. all: eauto.
-Qed.
-
-(* TODO MOVE *)
-Lemma declared_constructor_closed_type :
-  forall Σ mdecl idecl c cdecl u,
-    wf Σ ->
-    declared_constructor Σ mdecl idecl c cdecl ->
-    closed (type_of_constructor mdecl cdecl c u).
-Proof.
-  intros Σ mdecl idecl c cdecl u hΣ h.
-  unfold declared_constructor in h.
-  destruct c as [i ci]. simpl in h. destruct h as [hidecl hcdecl].
-  eapply declared_inductive_closed_constructors in hidecl as h. 2: auto.
-  unfold type_of_constructor. simpl.
-  destruct cdecl as [[id t'] arity]. simpl.
-  destruct idecl as [na ty ke ct pr]. simpl in *.
-  eapply All_nth_error in h. 2: eassumption.
-  simpl in h.
-  eapply closedn_subst0.
-  - eapply declared_inductive_closed_inds. all: eauto.
-  - simpl. rewrite inds_length. rewrite arities_context_length in h.
-    rewrite closedn_subst_instance_constr. assumption.
-Qed.
-
-Lemma declared_projection_closed_type :
-  forall Σ mdecl idecl p pdecl,
-    wf Σ ->
-    declared_projection Σ mdecl idecl p pdecl ->
-    closedn (S (ind_npars mdecl)) pdecl.2.
-Proof.
-  intros Σ mdecl idecl p pdecl hΣ [[hmdecl hidecl] [hpdecl hnpar]].
-  eapply declared_decl_closed in hmdecl. 2: auto.
-  simpl in hmdecl.
-  pose proof (onNpars _ _ _ _ hmdecl) as e.
-  apply onInductives in hmdecl.
-  eapply nth_error_alli in hmdecl. 2: eauto.
-  pose proof (onProjections hmdecl) as onp.
-  forward onp.
-  { eapply nth_error_Some_non_nil in hpdecl. assumption. }
-  eapply on_projs, nth_error_alli in onp. 2: eassumption.
-  move: onp => /= /andb_and[hd _]. simpl in hd.
-  rewrite smash_context_length in hd. simpl in *.
-  change PCUICEnvironment.context_assumptions with context_assumptions in e.
-  rewrite e in hd. assumption.
-Qed.
 
 (* TODO UPDATE We need to add rename_stack *)
 Lemma cumul_rename :
@@ -2317,10 +2300,8 @@ Proof.
       rewrite inst_mkApps in ihc. eapply ihc.
     * now rewrite map_length.
     * autorewrite with sigma.
-      apply inst_ext.
-      rewrite subst_consn_compose. simpl.
-      rewrite map_rev.
-      todo "projection type closed"%string.
+      eapply declared_projection_closed in isdecl; auto.
+      admit.
   - intros Σ wfΣ Γ wfΓ mfix n decl types H0 H1 X ihmfix Δ σ hΔ hσ.
     autorewrite with sigma.
     admit.

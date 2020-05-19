@@ -7,6 +7,10 @@ From Coq Require Import BinPos Lia.
 Require Import PeanoNat.
 Import Nat.
 Require Import ssreflect.
+Require Import Morphisms.
+
+Notation "`=1`" := (pointwise_relation _ Logic.eq) (at level 80).
+Infix "=1" := (pointwise_relation _ Logic.eq) (at level 90).
 
 (** * Lifting and substitution for the AST
 
@@ -112,6 +116,11 @@ Notation "M { j := N }" := (subst1 N j M) (at level 10, right associativity).
 
 Definition subst_telescope s k Γ :=
   mapi (fun k' x => map_decl (subst s (k + k')) x) Γ.
+
+Definition subst_decl s k (d : context_decl) := map_decl (subst s k) d.
+
+Definition subst_context s k (Γ : context) : context :=
+  fold_context (fun k' => subst s (k' + k)) Γ.
 
 Fixpoint closedn k (t : term) : bool :=
   match t with
@@ -301,6 +310,11 @@ Qed.
 
 Lemma simpl_lift0 : forall M n, lift0 (S n) M = lift0 1 (lift0 n M).
 Proof.  intros; now rewrite simpl_lift. Qed.
+
+Lemma simpl_lift_ext n k p i :
+  i <= k + n -> k <= i ->
+  lift p i ∘ lift n k =1 lift (p + n) k.
+Proof. intros ? ? ?; now apply simpl_lift. Qed.
 
 Lemma permute_lift :
   forall M n k p i,
@@ -637,6 +651,14 @@ Qed.
 Lemma map_subst_lift_id_eq s l k : k = #|s| -> map (subst0 s ∘ lift0 k) l = l.
 Proof. intros ->; apply map_subst_lift_id. Qed.
 
+Lemma map_subst_lift_ext N n p k l :
+  k = #|N| -> p <= n ->
+  map (subst N p ∘ lift0 (k + n)) l = map (lift0 n) l.
+Proof.
+  intros -> pn.
+  apply map_ext => x. now apply simpl_subst'.
+Qed.
+
 Lemma nth_error_lift_context:
   forall (Γ' Γ'' : context) (v : nat),
     v < #|Γ'| -> forall nth k,
@@ -661,6 +683,26 @@ Proof.
     + simpl. repeat f_equal; try lia.
     + simpl. apply IHΓ'; simpl in *; (lia || congruence).
 Qed.
+
+Lemma subst_context_length s n Γ : #|subst_context s n Γ| = #|Γ|.
+Proof.
+  induction Γ as [|[na [body|] ty] tl] in Γ |- *; cbn; eauto.
+  - rewrite !List.rev_length !mapi_length !app_length !List.rev_length. simpl. lia.
+  - rewrite !List.rev_length !mapi_length !app_length !List.rev_length. simpl. lia.
+Qed.
+Hint Rewrite subst_context_length : len.
+
+Lemma subst_context_snoc s k Γ d : subst_context s k (d :: Γ) = subst_context s k Γ ,, subst_decl s (#|Γ| + k) d.
+Proof.
+  unfold subst_context, fold_context.
+  rewrite !rev_mapi !rev_involutive /mapi mapi_rec_eqn /snoc.
+  f_equal. 1: now rewrite Nat.sub_0_r List.rev_length.
+  rewrite mapi_rec_Sk. simpl. apply mapi_rec_ext. intros.
+  rewrite app_length !List.rev_length. simpl. f_equal. f_equal. lia.
+Qed.
+Hint Rewrite subst_context_snoc : subst.
+
+(* Sigma calculus*)
 
 Lemma shiftn_ext n f f' : (forall i, f i = f' i) -> forall t, shiftn n f t = shiftn n f' t.
 Proof.
@@ -725,12 +767,6 @@ Definition up k (s : nat -> term) :=
   fun i =>
     if k <=? i then rename (add k) (s (i - k))
     else tRel i.
-
-
-Require Import Morphisms.
-
-Notation "`=1`" := (pointwise_relation _ Logic.eq) (at level 80).
-Infix "=1" := (pointwise_relation _ Logic.eq) (at level 90).
 
 Lemma shiftn_compose n f f' : shiftn n f ∘ shiftn n f' =1 shiftn n (f ∘ f').
 Proof.
@@ -841,6 +877,18 @@ Qed.
 Instance proper_inst : Proper (`=1` ==> Logic.eq ==> Logic.eq) inst.
 Proof.
   intros f f' Hff' t t' ->. now apply inst_ext.
+Qed.
+
+Instance proper_inst' : Proper (`=1` ==> pointwise_relation _ Logic.eq) inst.
+Proof.
+  intros f f' Hff' t. now apply inst_ext.
+Qed.
+
+Instance proper_map_ho {A B} : Proper ((pointwise_relation A Logic.eq) ==> Logic.eq ==> Logic.eq)
+  (@map A B).
+Proof.
+  intros f g Hfg x y ->. apply map_ext.
+  apply Hfg.
 Qed.
 
 Instance proper_ext_eq {A B} : Proper (`=1` ==> `=1` ==> iff) (@pointwise_relation A _ (@Logic.eq B)).
@@ -1070,7 +1118,7 @@ Qed.
 
 Lemma subst_consn_lt {A} {l : list A} {i} :
   i < #|l| ->
-  { x : _ & (List.nth_error l i = Some x) /\ (forall σ, (l ⋅n σ) i = x) }%type.
+  ∑ x, (List.nth_error l i = Some x) /\ (forall σ, (l ⋅n σ) i = x)%type.
 Proof.
   induction l in i |- *; simpl.
   - intros H; elimtype False; lia.
@@ -1643,3 +1691,4 @@ Fixpoint subst_app (t : term) (us : list term) : term :=
   | _, [] => t
   | _, _ => mkApps t us
   end.
+

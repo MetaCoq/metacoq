@@ -12,6 +12,9 @@ Derive NoConfusion for term.
 Derive Signature for All.
 Derive Signature for All2.
 
+Axiom todounivs : forall {A}, A.
+Ltac todounivs := apply todounivs.
+
 Open Scope pcuic.
 Local Open Scope string_scope.
 Fixpoint string_of_term (t : term) :=
@@ -565,76 +568,6 @@ Proof.
 Qed.
 Close Scope string_scope.
 
-Lemma firstn_add {A} x y (args : list A) : firstn (x + y) args = firstn x args ++ firstn y (skipn x args).
-Proof.
-  induction x in y, args |- *. simpl. reflexivity.
-  simpl. destruct args. simpl.
-  now rewrite firstn_nil.
-  rewrite IHx. now rewrite app_comm_cons.
-Qed.
-
-
-Lemma rev_map_spec {A B} (f : A -> B) (l : list A) : 
-  rev_map f l = List.rev (map f l).
-Proof.
-  unfold rev_map.
-  rewrite -(app_nil_r (List.rev (map f l))).
-  generalize (@nil B).
-  induction l; simpl; auto. intros l0.
-  rewrite IHl. now rewrite -app_assoc.
-Qed.
-
-Lemma skipn_0 {A} (l : list A) : skipn 0 l = l.
-Proof. reflexivity. Qed.
-
-Lemma skipn_n_Sn {A} n s (x : A) xs : skipn n s = x :: xs -> skipn (S n) s = xs.
-Proof.
-  induction n in s, x, xs |- *.
-  - unfold skipn. now intros ->.
-  - destruct s; simpl. intros H; discriminate. apply IHn.
-Qed. 
-
-Lemma skipn_all {A} (l : list A) : skipn #|l| l = [].
-Proof.
-  induction l; simpl; auto.
-Qed.
-
-Lemma skipn_app_le {A} n (l l' : list A) : n <= #|l| -> skipn n (l ++ l') = skipn n l ++ l'.
-Proof.
-  induction l in n, l' |- *; simpl; auto.
-  intros Hn. destruct n; try lia. reflexivity.
-  intros Hn. destruct n. reflexivity.
-  rewrite !skipn_S. apply IHl. lia.
-Qed.
-
-Lemma firstn_ge {A} (l : list A) n : #|l| <= n -> firstn n l = l.
-Proof.
-  induction l in n |- *; simpl; intros; auto. now rewrite firstn_nil.
-  destruct n; simpl. lia. rewrite IHl; auto. lia.
-Qed.
-
-Lemma firstn_0 {A} (l : list A) n : n = 0 -> firstn n l = [].
-Proof.
-  intros ->. reflexivity.
-Qed.
-
-
-Arguments firstn : simpl nomatch.
-Arguments skipn : simpl nomatch.
-
-
-Lemma skipn_firstn_skipn {A} (l : list A) n : skipn n (firstn (S n) l) ++ skipn (S n) l = skipn n l.
-Proof.
-  induction l in n |- *; simpl; auto. now rewrite app_nil_r.
-  destruct n=> /=; auto.
-Qed.
-
-Lemma firstn_firstn_firstn {A} (l : list A) n : firstn n (firstn (S n) l) = firstn n l.
-Proof.
-  induction l in n |- *; simpl; auto.
-  destruct n=> /=; auto. now rewrite IHl.
-Qed.
-
 Lemma decompose_app_rec_inv' f l hd args :
   decompose_app_rec f l = (hd, args) ->
   ∑ n, ~~ isApp hd /\ l = skipn n args /\ f = mkApps hd (firstn n args).
@@ -690,6 +623,16 @@ Lemma mkApps_nisApp {t t' l} : mkApps t l = t' -> ~~ isApp t' -> t = t' /\ l = [
 Proof.
   induction l in t |- *; simpl; auto.
   intros. destruct (IHl _ H). auto. subst. simpl in H0. discriminate.
+Qed.
+
+Lemma tApp_mkApps_inj f a f' l :
+  tApp f a = mkApps f' l -> l <> [] ->
+  f = mkApps f' (removelast l) /\ (a = last l a).
+Proof.
+  induction l in f' |- *; simpl; intros H. noconf H. intros Hf. congruence.
+  intros . destruct l; simpl in *. now noconf H.
+  specialize (IHl _ H). forward IHl by congruence.
+  apply IHl.
 Qed.
 
 Definition application_atom t :=

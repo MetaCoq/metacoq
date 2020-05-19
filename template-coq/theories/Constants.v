@@ -197,6 +197,7 @@ Register MetaCoq.Template.TemplateMonad.Core.tmPrint as metacoq.templatemonad.pr
 Register MetaCoq.Template.TemplateMonad.Core.tmMsg as metacoq.templatemonad.prop.tmMsg.
 Register MetaCoq.Template.TemplateMonad.Core.tmFail as metacoq.templatemonad.prop.tmFail.
 Register MetaCoq.Template.TemplateMonad.Core.tmEval as metacoq.templatemonad.prop.tmEval.
+Register MetaCoq.Template.TemplateMonad.Core.tmVariable as metacoq.templatemonad.prop.tmVariable.
 Register MetaCoq.Template.TemplateMonad.Core.tmLemma as metacoq.templatemonad.prop.tmLemma.
 Register MetaCoq.Template.TemplateMonad.Core.tmDefinitionRed_ as metacoq.templatemonad.prop.tmDefinitionRed_.
 Register MetaCoq.Template.TemplateMonad.Core.tmAxiomRed as metacoq.templatemonad.prop.tmAxiomRed.

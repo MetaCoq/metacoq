@@ -122,6 +122,23 @@ Definition subst_decl s k (d : context_decl) := map_decl (subst s k) d.
 Definition subst_context s k (Γ : context) : context :=
   fold_context (fun k' => subst s (k' + k)) Γ.
 
+(** Assumptions contexts do not contain let-ins. *)  
+
+Inductive assumption_context : context -> Prop :=
+| assumption_context_nil : assumption_context []
+| assumption_context_vass na t Γ : assumption_context Γ -> assumption_context (vass na t :: Γ).
+
+Derive Signature for assumption_context.
+
+(** Smashing a context produces an assumption context. *)
+
+Fixpoint smash_context (Γ Γ' : context) : context :=
+  match Γ' with
+  | {| decl_body := Some b |} :: Γ' => smash_context (subst_context [b] 0 Γ) Γ'
+  | {| decl_body := None |} as d :: Γ' => smash_context (Γ ++ [d])%list Γ'
+  | [] => Γ
+  end.
+
 Fixpoint closedn k (t : term) : bool :=
   match t with
   | tRel i => Nat.ltb i k
@@ -772,6 +789,14 @@ Proof.
   apply mapi_rec_ext. intros.
   f_equal. rewrite List.skipn_length. lia.
 Qed.
+
+Lemma smash_context_length Γ Γ' : #|smash_context Γ Γ'| = #|Γ| + context_assumptions Γ'.
+Proof.
+  induction Γ' as [|[na [body|] ty] tl] in Γ |- *; cbn; eauto.
+  - now rewrite IHtl subst_context_length.
+  - rewrite IHtl app_length. simpl. lia.
+Qed.
+Hint Rewrite smash_context_length : len.
 
 (* Sigma calculus*)
 

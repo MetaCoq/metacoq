@@ -3,10 +3,10 @@
 From Coq Require Import Bool List Arith Lia.
 From Coq Require String.
 From MetaCoq.Template Require Import config utils monad_utils
-EnvironmentTyping.
+  EnvironmentTyping.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICUtils
-PCUICPosition.
+  PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICUtils
+  PCUICPosition.
 
 From MetaCoq Require Export LibHypsNaming.
 Require Import ssreflect.
@@ -37,30 +37,6 @@ Fixpoint isArity T :=
   | _ => False
   end.
 
-(** Assumptions contexts do not contain let-ins. *)  
-
-Inductive assumption_context : context -> Prop :=
-| assumption_context_nil : assumption_context []
-| assumption_context_vass na t Γ : assumption_context Γ -> assumption_context (vass na t :: Γ).
-
-Derive Signature for assumption_context.
-
-(** Smashing a context produces an assumption context. *)
-
-Fixpoint smash_context (Γ Γ' : context) : context :=
-  match Γ' with
-  | {| decl_body := Some b |} :: Γ' => smash_context (subst_context [b] 0 Γ) Γ'
-  | {| decl_body := None |} as d :: Γ' => smash_context (Γ ++ [d])%list Γ'
-  | [] => Γ
-  end.
-
-Lemma smash_context_length Γ Γ' : #|smash_context Γ Γ'| = #|Γ| + context_assumptions Γ'.
-Proof.
-  induction Γ' as [|[na [body|] ty] tl] in Γ |- *; cbn; eauto.
-  - now rewrite IHtl subst_context_length.
-  - rewrite IHtl app_length. simpl. lia.
-Qed.
-Hint Rewrite smash_context_length : len.
 
 Module PCUICLookup := Lookup PCUICTerm PCUICEnvironment.
 Include PCUICLookup.
@@ -868,7 +844,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     Σ ;;; Γ |- p : pty ->
     leb_sort_family (universe_family ps) idecl.(ind_kelim) ->
     Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
-    ~~ isCoFinite mdecl.(ind_finite) ->
+    isCoFinite mdecl.(ind_finite) = false ->
     forall btys, map_option_out (build_branches_type ind mdecl idecl params u p) = Some btys ->
     All2 (fun br bty => (br.1 = bty.1) * (Σ ;;; Γ |- br.2 : bty.2) * (Σ ;;; Γ |- bty.2 : tSort ps)) brs btys ->
     Σ ;;; Γ |- tCase indnpar p c brs : mkApps p (skipn npar args ++ [c])
@@ -1223,7 +1199,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         P Σ Γ p pty ->
         leb_sort_family (universe_family ps) idecl.(ind_kelim) ->
         Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
-        ~~ isCoFinite mdecl.(ind_finite) ->
+        isCoFinite mdecl.(ind_finite) = false ->
         P Σ Γ c (mkApps (tInd ind u) args) ->
         forall btys, map_option_out (build_branches_type ind mdecl idecl params u p) = Some btys ->
         All2 (fun br bty => (br.1 = bty.1) *

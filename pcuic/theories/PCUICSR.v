@@ -22,25 +22,147 @@ Set SimplIsCbn.
 
 From Equations Require Import Equations.
 
-
 Derive Signature for OnOne2_local_env.
 
 Ltac rename_hyp h ht ::= my_rename_hyp h ht.
-Ltac pcuic := intuition eauto 5 with pcuic ||
-  (try solve [repeat red; cbn in *; intuition auto; eauto 5 with pcuic || (try lia || congruence)]).
+Ltac pcuic := intuition eauto 3 with pcuic ||
+  (try solve [repeat red; cbn in *; intuition auto; eauto 3 with pcuic || (try lia || congruence)]).
 
 Arguments Nat.sub : simpl nomatch.
 Arguments Universe.sort_of_product : simpl nomatch.
-
-Hint Rewrite smash_context_length Nat.add_0_r List.rev_length extended_subst_length 
-  projs_length : len.
+Hint Rewrite subst_instance_context_assumptions : len.
+Hint Rewrite projs_length : len.
 
 (** The subject reduction property of the system: *)
 
 Definition SR_red1 {cf:checker_flags} (Σ : global_env_ext) Γ t T :=
   forall u (Hu : red1 Σ Γ t u), Σ ;;; Γ |- u : T.
 
-Lemma sr_red1 {cf:checker_flags} : allow_cofix = false -> 
+Lemma wf_fixpoint_red1_type {cf:checker_flags} (Σ : global_env_ext) Γ mfix mfix1 : 
+  wf Σ.1 ->
+  wf_fixpoint Σ.1 mfix ->
+  OnOne2
+  (fun x y : def term =>
+   red1 Σ Γ (dtype x) (dtype y)
+   × (dname x, dbody x, rarg x) = (dname y, dbody y, rarg y)) mfix mfix1 ->
+  wf_fixpoint Σ.1 mfix1.
+Proof.
+  intros wfΣ wffix o.
+  move: wffix; unfold wf_fixpoint.
+  enough (forall inds, map_option_out (map check_one_fix mfix) = Some inds ->
+     map_option_out (map check_one_fix mfix1) = Some inds) => //.
+  destruct map_option_out. now specialize (H _ eq_refl) as ->.
+  discriminate.
+  induction o; intros inds.
+  - simpl.
+    destruct p as [redty eqs].
+    destruct hd as [dname dtype dbody rarg], hd' as [dname' dtype' dbody' rarg'].
+    simpl in *.
+    noconf eqs.
+    destruct (decompose_prod_assum [] dtype) eqn:decomp.
+    destruct nth_error eqn:Hnth.
+    apply decompose_prod_assum_it_mkProd_or_LetIn in decomp.
+    simpl in decomp.
+    subst dtype.
+    destruct (red1_it_mkProd_or_LetIn_smash _ _ _ _ _ _ _ wfΣ redty Hnth) as 
+      (ctx & t' & decomp & d & [hnth di]).
+    rewrite decomp hnth.
+    unfold head in di. destruct decompose_app; simpl in *.
+    destruct destInd as [[ind u]|]; try discriminate.
+    destruct decompose_app. simpl in di. rewrite di. auto.
+    discriminate.
+  - simpl map.
+    simpl map_option_out.
+    destruct check_one_fix => //.
+    destruct map_option_out. specialize (IHo _ eq_refl).
+    move=> [= <-]. now rewrite IHo.
+    discriminate.
+Qed.
+
+Lemma wf_fixpoint_red1_body {cf:checker_flags} (Σ : global_env_ext) Γ mfix mfix1 : 
+  wf Σ.1 ->
+  wf_fixpoint Σ.1 mfix ->
+  OnOne2
+  (fun x y : def term =>
+   red1 Σ Γ (dbody x) (dbody y)
+   × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)) mfix mfix1 ->
+  wf_fixpoint Σ.1 mfix1.
+Proof.
+  intros wfΣ wffix o.
+  move: wffix; unfold wf_fixpoint.
+  enough (map check_one_fix mfix = map check_one_fix mfix1) as -> => //.
+  induction o.
+  - simpl. f_equal.
+    destruct p as [redty eqs].
+    destruct hd as [dname dtype dbody rarg], hd' as [dname' dtype' dbody' rarg'].
+    simpl in *.
+    noconf eqs. reflexivity.
+  - simpl. now rewrite IHo.
+Qed.
+
+Lemma wf_cofixpoint_red1_type {cf:checker_flags} (Σ : global_env_ext) Γ mfix mfix1 : 
+  wf Σ.1 ->
+  wf_cofixpoint Σ.1 mfix ->
+  OnOne2
+  (fun x y : def term =>
+   red1 Σ Γ (dtype x) (dtype y)
+   × (dname x, dbody x, rarg x) = (dname y, dbody y, rarg y)) mfix mfix1 ->
+  wf_cofixpoint Σ.1 mfix1.
+Proof.
+  intros wfΣ wffix o.
+  move: wffix; unfold wf_cofixpoint.
+  enough (forall inds, map_option_out (map check_one_cofix mfix) = Some inds ->
+     map_option_out (map check_one_cofix mfix1) = Some inds) => //.
+  destruct map_option_out. now specialize (H _ eq_refl) as ->.
+  discriminate.
+  induction o; intros inds.
+  - simpl.
+    destruct p as [redty eqs].
+    destruct hd as [dname dtype dbody rarg], hd' as [dname' dtype' dbody' rarg'].
+    simpl in *.
+    noconf eqs.
+    destruct (decompose_prod_assum [] dtype) eqn:decomp.
+    apply decompose_prod_assum_it_mkProd_or_LetIn in decomp.
+    simpl in decomp.
+    subst dtype.
+    eapply red1_red in redty.
+    destruct (decompose_app t) as [f l] eqn:decomp.
+    destruct f; try discriminate. simpl.
+    apply decompose_app_inv in decomp. subst t.
+    eapply red_it_mkProd_or_LetIn_mkApps_Ind in redty as [ctx' [args' ->]]; auto.
+    erewrite decompose_prod_assum_it_mkProd => //.
+    2:{ now rewrite is_ind_app_head_mkApps. }
+    rewrite decompose_app_mkApps => //.
+  - simpl map.
+    simpl map_option_out.
+    destruct check_one_cofix => //.
+    destruct map_option_out. specialize (IHo _ eq_refl).
+    move=> [= <-]. now rewrite IHo.
+    discriminate.
+Qed.
+
+Lemma wf_cofixpoint_red1_body {cf:checker_flags} (Σ : global_env_ext) Γ mfix mfix1 : 
+  wf Σ.1 ->
+  wf_cofixpoint Σ.1 mfix ->
+  OnOne2
+  (fun x y : def term =>
+   red1 Σ Γ (dbody x) (dbody y)
+   × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)) mfix mfix1 ->
+  wf_cofixpoint Σ.1 mfix1.
+Proof.
+  intros wfΣ wffix o.
+  move: wffix; unfold wf_cofixpoint.
+  enough (map check_one_cofix mfix = map check_one_cofix mfix1) as -> => //.
+  induction o.
+  - simpl. f_equal.
+    destruct p as [redty eqs].
+    destruct hd as [dname dtype dbody rarg], hd' as [dname' dtype' dbody' rarg'].
+    simpl in *.
+    noconf eqs. reflexivity.
+  - simpl. now rewrite IHo.
+Qed.
+
+Lemma sr_red1 {cf:checker_flags} :
   env_prop SR_red1
       (fun Σ Γ wfΓ =>
         All_local_env_over typing (fun  Σ Γ _ t T _ => SR_red1 Σ Γ t T) Σ Γ wfΓ).
@@ -147,7 +269,7 @@ Proof.
     clear e1.
     specialize (inversion_mkApps wf typet) as [T' [appty spty]].
     specialize (validity _ wf _ _ _ appty) as [_ vT'].
-    eapply type_tFix_inv in appty as [T [arg [fn' [[Hnth Hty]]]]]; auto.
+    eapply type_tFix_inv in appty as [T [arg [fn' [[[Hnth wffix] Hty]]]]]; auto.
     rewrite e in Hnth. noconf Hnth.
     eapply type_App.
     eapply type_mkApps. eapply type_Cumul; eauto. eapply spty.
@@ -828,7 +950,8 @@ Proof.
       ** eapply arity_spine_it_mkProd_or_LetIn => //.
          eauto.
          simpl. constructor.
-         2:constructor; auto; pcuic.
+         2:constructor; auto; eauto 4 with pcuic.
+         2:left; eexists _, _; intuition auto.
         rewrite subst_mkApps. 
         rewrite map_app.
         pose proof (subslet_length subsidx).
@@ -839,13 +962,22 @@ Proof.
         rewrite PCUICSubstitution.map_subst_instance_constr_to_extended_list_k  in H0.
         rewrite {}H0. now rewrite firstn_skipn /=.
     * simpl in Hbr. rewrite Hbr in a. intuition discriminate.
-    * eapply on_declared_minductive => //. pcuic.
+    * eapply on_declared_minductive => //.
+      destruct isdecl; auto.
 
   - (* Case congruence: on a cofix, impossible *)
-    clear -wf typec heq_allow_cofix.
-    eapply inversion_mkApps in typec as [? [tcof _]] =>  //.
-    eapply type_tCoFix_inv in tcof as [allowc _] => //.
-    rewrite allowc in heq_allow_cofix. discriminate.
+    eapply inversion_mkApps in typec as [? [tcof ?]] =>  //.
+    eapply type_tCoFix_inv in tcof as [d [[[Hnth wfcofix] ?] ?]] => //.
+    unfold unfold_cofix in e.
+    rewrite Hnth in e. noconf e.
+    clear heq_map_option_out X5 heq_build_case_predicate_type forall_u.
+    eapply typing_spine_strengthen in t; eauto. clear c.
+    eapply wf_cofixpoint_typing_spine in t; eauto.
+    2:eapply validity_term; eauto.
+    unfold check_recursivity_kind in t.
+    rewrite isdecl.p1 in t.
+    apply PCUICReflect.eqb_eq in t. rewrite t /= in heq_isCoFinite.
+    discriminate.
 
   - (* Case congruence on the predicate *) 
     eapply (type_Cumul _ _ _ (mkApps p' (skipn npar args ++ [c]))).
@@ -930,15 +1062,16 @@ Proof.
 
     pose proof (env_prop_typing _ _  validity _ _ _ _ _ typec).
     eapply inversion_mkApps in typec as [? [tcof tsp]]; auto.
-    eapply type_tCoFix_inv in tcof as [allow [?  [? [? [[unf tyunf] cum']]]]]; auto.
-    rewrite unf in e. noconf e.
+    eapply type_tCoFix_inv in tcof as [d [[[Hnth wfcofix] Hbody] Hcum]]; auto.
+    unfold unfold_cofix in e.
+    rewrite Hnth in e. noconf e.
     simpl in X1.
     eapply type_Cumul; [econstructor|..]; eauto.
     eapply typing_spine_strengthen in tsp; eauto.
     eapply type_mkApps. eauto. eauto.
     now eapply validity in typecofix.
     eapply conv_cumul.
-    rewrite (subst_app_decomp [mkApps fn args0]) (subst_app_decomp [mkApps (tCoFix mfix idx) args0]).
+    rewrite (subst_app_decomp [mkApps (subst0 (cofix_subst mfix) (dbody d)) args0]) (subst_app_decomp [mkApps (tCoFix mfix idx) args0]).
     eapply conv_sym, red_conv.
     destruct (on_declared_projection wf isdecl) as [oi onp].
     epose proof (subslet_projs _ _ _ _ wf (let (x, _) := isdecl in x)).
@@ -987,6 +1120,7 @@ Proof.
       elim: p.2. simpl. constructor.
       intros n Hn. constructor; auto.
       eapply red1_red. eapply red_cofix_proj. eauto.
+      unfold unfold_cofix. rewrite Hnth. reflexivity.
     ** rewrite -projs_inst_lift.
       rewrite -subst_projs_inst.
       assert (p.2 = context_assumptions (cshape_args c) - (context_assumptions (cshape_args c) - p.2)) by lia.
@@ -1089,8 +1223,7 @@ Proof.
       rewrite nth_error_app_lt in on_projs.
       { autorewrite with len. simpl. 
         eapply nth_error_Some_length in Hnth. autorewrite with len in Hnth.
-        rewrite !context_assumptions_fold in Hnth.
-        now rewrite subst_instance_context_assumptions in Hnth. }
+        now simpl in Hnth. }
       rewrite nth_error_subst_context in on_projs.
       epose proof (nth_error_lift_context_eq _ (smash_context [] (ind_params mdecl))).
       autorewrite with len in H1. simpl in H1.
@@ -1298,7 +1431,7 @@ Proof.
       epose proof (PCUICClosed.declared_inductive_closed_inds _ _ _ _ _ wf decli).
       rewrite closed_map_subst_instance. eapply H6.
       rewrite /indsubst; autorewrite with len.
-      rewrite inds_length. rewrite closedn_subst_instance_constr.
+      rewrite closedn_subst_instance_constr.
       eapply closed_upwards; eauto; lia.
       autorewrite with len.
       pose proof(context_subst_length _ _ _ cparsubst0).
@@ -1420,6 +1553,7 @@ Proof.
         apply (weakening_cumul _ _ []); auto.
         now apply red_cumul, red1_red.
 
+    * eapply wf_fixpoint_red1_type; eauto.
     * eapply All_nth_error in X2; eauto.
     * apply conv_cumul, conv_sym, red_conv. destruct disj as [<-|red].
       constructor. apply red1_red. apply red.
@@ -1441,7 +1575,7 @@ Proof.
       * intros x [s [Hs IH]].
         now exists s.
       * intros x y [red eq] [s [Hs IH]].
-        noconf eq. simpl in H0; noconf H0. rewrite -H1.
+        noconf eq. simpl in H0; noconf H0. rewrite -H2.
         now exists s; apply Hs. }
     assert (wf_local Σ (Γ ,,, fix_context mfix1)).
     { apply All_mfix_wf; auto. }
@@ -1461,9 +1595,10 @@ Proof.
         noconf eq.
         rewrite -convctx. split; auto.
         now eapply isLambda_red1.
+    * eapply wf_fixpoint_red1_body; eauto.
     * eapply All_nth_error in X2; eauto.
     * apply conv_cumul, conv_sym, red_conv. destruct disj as [<-|[_ eq]].
-      constructor. noconf eq. simpl in H0; noconf H0. rewrite H1; constructor.
+      constructor. noconf eq. simpl in H0; noconf H0. rewrite H2; constructor.
 
   - (* CoFix congruence type *)
     assert(fixl :#|fix_context mfix| = #|fix_context mfix1|) by now (rewrite !fix_context_length; apply (OnOne2_length o)).
@@ -1490,6 +1625,8 @@ Proof.
     destruct (OnOne2_nth_error _ _ _ decl _ o heq_nth_error) as [decl' [eqnth disj]].
     eapply type_Cumul.
     econstructor; eauto.
+    * eapply (cofix_guard_red1 _ _ _ _ 0); eauto.
+      constructor; eauto.
     * eapply (OnOne2_All_mix_left X0) in o.
       apply (OnOne2_All_All o X1).
       + intros x [Hb IH].
@@ -1505,6 +1642,7 @@ Proof.
         apply All_mfix_wf; auto. 
         apply (weakening_cumul _ _ []); auto.
         now apply red_cumul, red1_red.
+    * eapply wf_cofixpoint_red1_type; eauto.
     * eapply All_nth_error in X2; eauto.
     * apply conv_cumul, conv_sym, red_conv. destruct disj as [<-|red].
       constructor. apply red1_red. apply red.
@@ -1526,13 +1664,15 @@ Proof.
       * intros x [s [Hs IH]].
         now exists s.
       * intros x y [red eq] [s [Hs IH]].
-        noconf eq. simpl in H; noconf H. rewrite -H1.
+        noconf eq. simpl in H0; noconf H0. rewrite -H2.
         now exists s; apply Hs. }
     assert (wf_local Σ (Γ ,,, fix_context mfix1)).
     { apply All_mfix_wf; auto. }
     destruct (OnOne2_nth_error _ _ _ decl _ o heq_nth_error) as [decl' [eqnth disj]].
     eapply type_Cumul.
     econstructor; eauto.
+    * eapply (cofix_guard_red1 _ _ _ _ 0); eauto.
+      apply cofix_red_body; eauto.
     * eapply (OnOne2_All_mix_left X0) in o.
       apply (OnOne2_All_All o X1).
       + intros x [Hb IH].
@@ -1540,9 +1680,10 @@ Proof.
       + move=> [na ty b rarg] [na' ty' b' rarg'] /= [[red eq] [s [Hs IH]]] [Hb IH'].
         noconf eq.
         now rewrite -convctx. 
+    * now eapply wf_cofixpoint_red1_body.
     * eapply All_nth_error in X2; eauto.
     * apply conv_cumul, conv_sym, red_conv. destruct disj as [<-|[_ eq]].
-      constructor. noconf eq. simpl in H; noconf H. rewrite H1; constructor.
+      constructor. noconf eq. simpl in H0; noconf H0. rewrite H2; constructor.
  
   - (* Conversion *)
     specialize (forall_u _ Hu).
@@ -1562,7 +1703,7 @@ Theorem subject_reduction {cf:checker_flags} :
 Proof.
   intros * wfΣ Hty Hred.
   induction Hred. auto.
-  eapply sr_red1 in IHHred; eauto with wf. todo "allow_cofix"%string.
+  eapply sr_red1 in IHHred; eauto with wf.
 Qed.
 
 Lemma subject_reduction1 {cf:checker_flags} {Σ Γ t u T}
@@ -1937,7 +2078,7 @@ Proof.
       right. exists s'. eapply type_reduction; tea.
       apply invert_red_letin in H; tas.
       destruct H as [[? [? [? [? [[[H ?] ?] ?]]]]]|H].
-      * apply invert_red_sort in H; inv H.
+      * discriminate.
       * etransitivity.
         2: apply weakening_red_0 with (Γ' := [_]) (N := tSort _);
           tea; reflexivity.

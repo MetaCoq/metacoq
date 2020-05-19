@@ -33,6 +33,12 @@ Class ReflectEq A := {
   eqb_spec : forall x y : A, reflect (x = y) (eqb x y)
 }.
 
+Lemma eqb_eq {A} `{PCUICReflect.ReflectEq A} (x y : A) : PCUICReflect.eqb x y -> x = y.
+Proof.
+  elim: PCUICReflect.eqb_spec; auto.
+  discriminate.
+Qed.
+
 Instance ReflectEq_EqDec :
   forall A, ReflectEq A -> EqDec A.
 Proof.

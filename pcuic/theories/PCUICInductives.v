@@ -1213,6 +1213,7 @@ Proof.
   assert(#|args| = ind_npars mdecl).
   { pose proof (context_subst_length2 sppars).
     autorewrite with len in H2.
+    rewrite subst_instance_context_assumptions in H2.
     rewrite H0 in H2.
     apply firstn_length_le_inv in H2. lia. }
   rewrite -H2 in sppars.
@@ -1222,4 +1223,307 @@ Proof.
   rewrite subst_mkApps /=.
   rewrite /argsubst in H1.
   now rewrite (spine_subst_subst_to_extended_list_k sppars).
+Qed.
+
+
+Lemma invert_red1_letin {cf:checker_flags} (Σ : global_env_ext) Γ C na d ty b :
+  red1 Σ.1 Γ (tLetIn na d ty b) C ->
+  (∑ d', (C = tLetIn na d' ty b) *
+    red1 Σ.1 Γ d d') +
+  (∑ ty', (C = tLetIn na d ty' b) *
+    red1 Σ.1 Γ ty ty') +
+  (∑ b', (C = tLetIn na d ty b') *
+    red1 Σ.1 (Γ ,, vdef na d ty) b b') +
+  (C = subst10 d b)%type.
+Proof.
+  intros H; depelim H; try solve_discr; firstorder auto.
+Qed.
+
+Lemma decompose_prod_assum_it_mkProd_or_LetIn' ctx Γ t :
+  decompose_prod_assum ctx (it_mkProd_or_LetIn Γ t) =
+  let (ctx', t') := decompose_prod_assum [] t in
+  (ctx ,,, Γ ,,, ctx', t').
+Proof.
+  generalize ctx.
+  induction Γ using rev_ind; simpl; intros.
+  - now rewrite decompose_prod_assum_ctx.
+  - rewrite it_mkProd_or_LetIn_app.
+    destruct x as [na [b|] ty]; simpl.
+    rewrite IHΓ.
+    destruct (decompose_prod_assum [] t).
+    now rewrite app_context_assoc.
+    rewrite IHΓ.
+    destruct (decompose_prod_assum [] t).
+    now rewrite app_context_assoc.
+Qed.
+
+Definition head x := (decompose_app x).1.
+Definition arguments x := (decompose_app x).2.
+
+Lemma head_arguments x : mkApps (head x) (arguments x) = x.
+Proof.
+  unfold head, arguments, decompose_app.
+  remember (decompose_app_rec x []).
+  destruct p as [f l].
+  symmetry in Heqp.
+  eapply decompose_app_rec_inv in Heqp.
+  now simpl in *.
+Qed.
+
+Lemma head_nApp x : negb (isApp (head x)).
+Proof.
+  unfold head.
+  eapply decompose_app_rec_head. reflexivity.
+Qed.
+
+Lemma head_tapp t1 t2 : head (tApp t1 t2) = head t1.
+Proof.  rewrite /head /decompose_app /= fst_decompose_app_rec //. Qed.
+
+Lemma destInd_head_subst s k t f : destInd (head (subst s k t)) = Some f ->
+  (destInd (head t) = Some f) +  
+  (∑ n u, (head t = tRel n) /\ k <= n /\ (nth_error s (n - k) = Some u /\ destInd (head  (lift0 k u)) = Some f)).
+Proof.
+  induction t in s, k, f |- *; simpl; try solve [firstorder auto].
+  elim: leb_spec_Set => le; intros destI.
+   right.
+  destruct nth_error eqn:Heq.
+  - exists n, t; intuition auto.
+  - simpl in destI => //.
+  - simpl => //.
+  - intros destI. rewrite head_tapp in destI.
+    rewrite head_tapp.
+    specialize (IHt1 _ _ _ destI).
+    destruct IHt1 as [?|[n [u [headt1 [hnth hind]]]]].
+    * left; auto.
+    * right. exists n, u; intuition auto.
+Qed.
+
+Lemma destInd_head_lift n b ind u : destInd (head (lift0 n b)) = Some (ind, u) ->
+  destInd (head b) = Some (ind, u).
+Proof.
+  induction b; simpl; try discriminate.
+  rewrite !head_tapp. apply IHb1.
+  congruence.
+Qed.
+
+Lemma destInd_head_lift_inv n b ind u : destInd (head b) = Some (ind, u) ->
+  destInd (head (lift0 n b)) = Some (ind, u).
+Proof.
+  induction b; simpl; try discriminate.
+  rewrite !head_tapp. apply IHb1.
+  congruence.
+Qed.
+
+Lemma head_subst s k t : head (subst s k t) = head (subst s k (head t)).
+Proof.
+  induction t; simpl; auto.
+  now rewrite !head_tapp.
+Qed.
+
+Hint Rewrite context_assumptions_app context_assumptions_subst : len.
+
+Lemma red1_destInd (Σ : global_env_ext) Γ t t' ind u : 
+  red1 Σ.1 Γ t t' -> destInd (head t) = Some (ind, u) -> 
+  destInd (head t') = Some (ind, u).
+Proof.
+  induction 1; simpl in *; try discriminate.
+  unfold head.
+  remember (mkApps (tFix mfix idx) args) eqn:decapp.
+  symmetry in decapp. pose proof (mkApps_Fix_spec _ _ _ _ decapp).
+  destruct (decompose_app t); simpl in *; try discriminate.
+  destruct t0; try discriminate.
+  elim H.
+  rewrite !head_tapp. auto.
+  rewrite !head_tapp. auto.
+Qed.
+
+Lemma red_destInd (Σ : global_env_ext) Γ t t' ind u : 
+  red Σ.1 Γ t t' -> destInd (head t) = Some (ind, u) -> 
+  destInd (head t') = Some (ind, u).
+Proof.
+  intros r%red_alt.
+  apply Relation_Properties.clos_rt_rt1n_iff in r.
+  induction r.
+  auto.
+  intros.
+  eapply red1_destInd in H. apply IHr. eauto.
+  eauto.
+Qed.
+
+Lemma destInd_Some_eq t ind u : destInd t = Some (ind, u) -> t = tInd ind u.
+Proof.
+  destruct t; simpl; congruence.
+Qed.
+
+Lemma red_it_mkProd_or_LetIn_smash {cf:checker_flags} (Σ : global_env_ext) Γ ctx t u n c :
+  wf Σ.1 ->  
+  red Σ.1 Γ (it_mkProd_or_LetIn ctx t) u ->
+  nth_error (List.rev (smash_context [] ctx)) n = Some c ->
+  ∑ ctx' t',
+    (decompose_prod_assum [] u = (ctx', t')) *
+    ∑ d, (nth_error (List.rev (smash_context [] ctx')) n = Some d) *
+      red Σ.1 (Γ ,,, skipn (#|smash_context [] ctx| - n) (smash_context [] ctx)) (decl_type c) (decl_type d).
+Proof.
+  intros wfΣ.
+  rename Γ into Δ.
+  revert Δ t u n c.
+  induction ctx using ctx_length_rev_ind; simpl; intros Δ t u n c r.
+  rewrite nth_error_nil => //.
+  destruct d as [na [b|] ty].
+  rewrite it_mkProd_or_LetIn_app in r.
+  simpl in *.
+  eapply invert_red_letin in r as [[na' [d' [ty' [b' [[[-> redb] redty] redbody]]]]]|]; auto.
+  - intros Hnth.
+    rewrite !smash_context_app smash_context_acc in Hnth |- *; simpl in *.
+    pose proof (nth_error_Some_length Hnth).
+    autorewrite with len in H. simpl in H.
+    rewrite nth_error_rev_inv in Hnth.
+    now autorewrite with len.
+    autorewrite with len in Hnth. simpl in Hnth.
+    rewrite subst_empty lift0_id lift0_context in Hnth.
+    rewrite app_nil_r in Hnth.
+    rewrite nth_error_subst_context in Hnth.
+    unfold snoc; simpl.
+    rewrite decompose_prod_assum_ctx.
+    specialize (X Γ ltac:(lia)).
+    destruct nth_error eqn:hnth.
+    specialize (X _ _ _ n c0 redbody).
+    rewrite nth_error_rev_inv in X; autorewrite with len. auto.
+    autorewrite with len in X |- *. simpl in *.
+    specialize (X hnth).
+    destruct X as [ctx' [t' [decompb X]]].
+    rewrite decompb. eexists _, _; intuition eauto.
+    destruct X as [decl [hnth' hred]].
+    have hlen := nth_error_Some_length hnth'.
+    autorewrite with len in hlen.
+    rewrite nth_error_rev_inv in hnth'; autorewrite with len. auto.
+    rewrite nth_error_rev_inv; autorewrite with len.
+    rewrite context_assumptions_app /=. simpl in hlen. lia.
+    rewrite smash_context_app smash_context_acc /= app_nil_r.
+    rewrite subst_empty lift0_id lift0_context.
+    rewrite app_nil_r.
+    rewrite nth_error_subst_context /=.
+    autorewrite with len. simpl in *.
+    rewrite context_assumptions_app /=. simpl.
+    rewrite Nat.add_0_r. autorewrite with len in hnth'. rewrite hnth'.
+    simpl. eexists; split; eauto. simpl.
+    autorewrite with len in Hnth. simpl in Hnth. move: Hnth.
+    assert (PCUICAst.context_assumptions ctx' -
+    S (PCUICAst.context_assumptions ctx' - S n) = n) as -> by lia.
+    assert (context_assumptions Γ -
+    S (PCUICAst.context_assumptions Γ  - S n) = n) as -> by lia.
+    move=> [= <-]. simpl.
+    transitivity (subst [b] n (decl_type decl)).
+    rewrite subst_empty lift0_id lift0_context.
+    epose proof (substitution_untyped_red _ Δ [vdef na b ty] (skipn (context_assumptions Γ - n) (smash_context [] Γ)) [b]
+      (decl_type c0) (decl_type decl) wfΣ).
+    forward X. rewrite -{1}(subst_empty 0 b). repeat constructor.
+    specialize (X hred).
+    rewrite skipn_subst_context.
+    rewrite !skipn_length in X; autorewrite with len. lia.
+    autorewrite with len in X. simpl in X.
+    assert(context_assumptions Γ - (context_assumptions Γ - n) = n) by lia.
+    rewrite H0 in X. apply X.
+    epose proof (red_red Σ Δ [vdef na b ty] (skipn (context_assumptions Γ - n) (subst_context [b] 0 (smash_context [] Γ)))).
+    rewrite subst_empty lift0_id lift0_context.
+    rewrite !skipn_length in X; autorewrite with len. lia.
+    autorewrite with len in X. simpl in X.
+    assert(context_assumptions Γ - (context_assumptions Γ - n) = n) by lia.
+    rewrite H0 in X.
+    eapply X; auto. rewrite -{1}(subst_empty 0 b); repeat constructor.
+    simpl in Hnth; discriminate.
+
+  - rewrite /subst1 subst_it_mkProd_or_LetIn Nat.add_0_r in r.
+    intros hnth.
+    rewrite smash_context_app smash_context_acc /= app_nil_r in hnth.
+    rewrite subst_empty lift0_id lift0_context in hnth.
+    specialize (X (subst_context [b] 0 Γ) ltac:(autorewrite with len; lia)).
+    specialize (X _ _ _ n c r). 
+    rewrite (smash_context_subst []) in X.
+    specialize (X hnth). 
+    autorewrite with len. simpl.
+    autorewrite with len in X. simpl in X.
+    rewrite smash_context_app smash_context_acc /=.
+    rewrite subst_empty lift0_id lift0_context app_nil_r.
+    apply X.
+
+  - rewrite smash_context_app /= List.rev_app_distr /=.
+    move=> hnth.
+    rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /= in r.
+    eapply invert_red_prod in r as [A' [B' [[-> redty] redB']]]; auto.
+    simpl. rewrite decompose_prod_assum_ctx.
+    destruct n. 
+    * simpl in hnth. noconf hnth; simpl in *.
+      destruct (decompose_prod_assum [] B') eqn:decomp.
+      eexists _, _; intuition eauto.
+      unfold snoc; simpl. rewrite smash_context_app /= List.rev_app_distr /=.
+      eexists _; split; eauto.
+      autorewrite with len. simpl.
+      rewrite skipn_all2. autorewrite with len. simpl. lia. auto.
+    * simpl in hnth.
+      specialize (X Γ ltac:(lia) (vass na ty :: Δ) t B' n c redB' hnth).
+      destruct X as [ctx' [t' [decomp [d [hnth' red]]]]].
+      rewrite decomp. simpl. eexists _, _; intuition eauto.
+      unfold snoc; simpl. rewrite smash_context_app /= List.rev_app_distr /= hnth'.
+      eexists _; split; eauto.
+      rewrite app_length. simpl.
+      autorewrite with len. simpl.
+      assert (context_assumptions Γ + 1 - S n = context_assumptions Γ - n) by lia.
+      rewrite H. rewrite skipn_app.
+      autorewrite with len. simpl.
+      rewrite [skipn _ [_]]skipn_0_eq. lia.
+      rewrite app_context_assoc. unfold app_context in red |- *.
+      simpl. autorewrite with len in red. simpl in red.
+      apply red.
+Qed.
+
+Lemma red1_it_mkProd_or_LetIn_smash {cf:checker_flags} (Σ : global_env_ext) Γ ctx t u n c :
+  wf Σ.1 ->  
+  red1 Σ.1 Γ (it_mkProd_or_LetIn ctx t) u ->
+  nth_error (List.rev (smash_context [] ctx)) n = Some c ->
+  ∑ ctx' t',
+    (decompose_prod_assum [] u = (ctx', t')) *
+    ∑ d, (nth_error (List.rev (smash_context [] ctx')) n = Some d) *
+      (match destInd (head (decl_type c)) with 
+      | Some ind => destInd (head (decl_type d)) = Some ind
+      | None => True
+      end).
+Proof.      
+  intros wfΣ r nth.
+  apply red1_red in r.
+  eapply red_it_mkProd_or_LetIn_smash in nth; eauto.
+  destruct nth as [ctx' [t' [decomp [d [hnth r']]]]].
+  exists ctx', t'; intuition auto.
+  exists d; intuition auto.
+  destruct destInd as [[ind u']|] eqn:di; auto.
+  now eapply (red_destInd _ _ _ _ _ _ r').
+Qed.
+
+Lemma red_it_mkProd_or_LetIn_mkApps_Ind {cf:checker_flags} (Σ : global_env_ext) Γ ctx ind u args v :
+  wf Σ.1 ->  
+  red Σ.1 Γ (it_mkProd_or_LetIn ctx (mkApps (tInd ind u) args)) v ->
+  ∑ ctx' args', v = it_mkProd_or_LetIn ctx' (mkApps (tInd ind u) args').
+Proof.
+  intros wfΣ.
+  rename Γ into Δ.
+  revert Δ v args.
+  induction ctx using ctx_length_rev_ind; simpl; intros Δ v args r.
+  - eapply red_mkApps_tInd in r  as [args' [-> conv]];  auto.
+    now exists [], args'.
+  - rewrite it_mkProd_or_LetIn_app in r.
+    destruct d as [na [b|] ty].
+    simpl in *.
+    eapply invert_red_letin in r as [[na' [d' [ty' [b' [[[-> redb] redty] redbody]]]]]|]; auto.
+    * specialize (X Γ ltac:(lia) _ _ _ redbody).
+      destruct X as [ctx' [args' ->]].
+      exists (ctx' ++ [vdef na' d' ty']).
+      exists args'. now rewrite it_mkProd_or_LetIn_app /=.
+    * rewrite /subst1 subst_it_mkProd_or_LetIn subst_mkApps /= in r.
+      specialize (X (subst_context [b] 0 Γ) ltac:(autorewrite with len; lia) _ _ _ r).
+      apply X.
+    * simpl in r.
+      eapply invert_red_prod in r as [A' [B' [[-> redty] redB']]]; auto.
+      specialize (X Γ ltac:(lia) _ _ _ redB') as [ctx' [args' ->]].
+      exists (ctx' ++ [vass na A']), args'.
+      rewrite it_mkProd_or_LetIn_app /= //.
 Qed.

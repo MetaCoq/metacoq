@@ -97,7 +97,9 @@ Qed.
 
 Lemma type_tFix_inv {cf:checker_flags} (Σ : global_env_ext) Γ mfix idx T : wf Σ ->
   Σ ;;; Γ |- tFix mfix idx : T ->
-  { T' & { rarg & {f & (unfold_fix mfix idx = Some (rarg, f)) * (Σ ;;; Γ |- f : T') * (Σ ;;; Γ |- T' <= T) }}}%type.
+  { T' & { rarg & {f & (unfold_fix mfix idx = Some (rarg, f))  *
+    wf_fixpoint Σ.1  mfix
+  * (Σ ;;; Γ |- f : T') * (Σ ;;; Γ |- T' <= T) }}}%type.
 Proof.
   intros wfΣ H. depind H.
   - unfold unfold_fix. rewrite e.
@@ -110,7 +112,7 @@ Proof.
     + split.
       * eauto.
       * eapply (substitution _ _ _ _ [] _ _ wfΣ); simpl; eauto with wf.
-        rename i into hguard. clear -a a0 a1 hguard.
+        rename i into hguard. clear -i0 a a0 a1 hguard.
         pose proof a1 as a1'. apply All_rev in a1'.
         unfold fix_subst, fix_context. simpl.
         revert a1'. rewrite <- (@List.rev_length _ mfix).
@@ -151,59 +153,134 @@ Proof.
     + destruct b. eapply cumul_trans; eauto.
 Qed.
 
+Lemma subslet_cofix {cf:checker_flags} (Σ : global_env_ext) Γ mfix :
+  wf_local Σ Γ ->
+  cofix_guard mfix ->
+  All (fun d : def term => ∃ s : Universe.t, Σ;;; Γ |- dtype d : tSort s) mfix ->
+  All
+  (fun d : def term =>
+   Σ;;; Γ ,,, fix_context mfix |- dbody d
+   : lift0 #|fix_context mfix| (dtype d)) mfix ->
+  wf_cofixpoint Σ.1 mfix -> subslet Σ Γ (cofix_subst mfix) (fix_context mfix).
+Proof.
+  intros wfΓ hguard types bodies wfcofix.
+  pose proof bodies as X1. apply All_rev in X1.
+  unfold cofix_subst, fix_context. simpl.
+  revert X1. rewrite <- (@List.rev_length _ mfix).
+  rewrite rev_mapi. unfold mapi.
+  assert (#|mfix| >= #|List.rev mfix|) by (rewrite List.rev_length; lia).
+  assert (He :0 = #|mfix| - #|List.rev mfix|) by (rewrite List.rev_length; auto with arith).
+  rewrite {3}He. clear He. revert H.
+  assert (forall i, i < #|List.rev mfix| -> nth_error (List.rev mfix) i = nth_error mfix (#|List.rev mfix| - S i)).
+  { intros. rewrite nth_error_rev. 1: auto.
+    now rewrite List.rev_length List.rev_involutive. }
+  revert H.
+  generalize (List.rev mfix).
+  intros l Hi Hlen H.
+  induction H.
+  ++ simpl. constructor.
+  ++ simpl. constructor.
+    ** unfold mapi in IHAll.
+        simpl in Hlen. replace (S (#|mfix| - S #|l|)) with (#|mfix| - #|l|) by lia.
+        apply IHAll.
+        --- intros. simpl in Hi. specialize (Hi (S i)). apply Hi. lia.
+        --- lia.
+    ** clear IHAll.
+        simpl in Hlen. assert ((Nat.pred #|mfix| - (#|mfix| - S #|l|)) = #|l|) by lia.
+        rewrite H0. rewrite simpl_subst_k.
+        --- clear. induction l; simpl; auto with arith.
+        --- eapply type_CoFix; auto.
+            simpl in Hi. specialize (Hi 0). forward Hi.
+            +++ lia.
+            +++ simpl in Hi.
+                rewrite Hi. f_equal. lia.
+Qed.
+
 Lemma type_tCoFix_inv {cf:checker_flags} (Σ : global_env_ext) Γ mfix idx T : wf Σ ->
   Σ ;;; Γ |- tCoFix mfix idx : T ->
-  (allow_cofix = true) * { T' & { rarg & {f & (unfold_cofix mfix idx = Some (rarg, f)) *
-   (Σ ;;; Γ |- f : T') * (Σ ;;; Γ |- T' <= T) }}}%type.
+  ∑ d, (nth_error mfix idx = Some d) *
+    wf_cofixpoint Σ.1 mfix *
+    (Σ ;;; Γ |- subst0 (cofix_subst mfix) (dbody d) : (dtype d)) *
+    (Σ ;;; Γ |- dtype d <= T).
 Proof.
   intros wfΣ H. depind H.
-  - unfold unfold_cofix. rewrite e. split; auto.
+  - exists decl. 
     specialize (nth_error_all e a1) as Hty.
     destruct decl as [name ty body rarg]; simpl in *.
-    clear e.
-    eexists _, _, _. split.
-    + split.
-      * eauto.
-      * eapply (substitution _ _ _ _ [] _ _ wfΣ); simpl; eauto with wf.
-        rename i into hguard. clear -a a0 a1 hguard.
-        pose proof a1 as a1'. apply All_rev in a1'.
-        unfold cofix_subst, fix_context. simpl.
-        revert a1'. rewrite <- (@List.rev_length _ mfix).
-        rewrite rev_mapi. unfold mapi.
-        assert (#|mfix| >= #|List.rev mfix|) by (rewrite List.rev_length; lia).
-        assert (He :0 = #|mfix| - #|List.rev mfix|) by (rewrite List.rev_length; auto with arith).
-        rewrite {3}He. clear He. revert H.
-        assert (forall i, i < #|List.rev mfix| -> nth_error (List.rev mfix) i = nth_error mfix (#|List.rev mfix| - S i)).
-        { intros. rewrite nth_error_rev. 1: auto.
-          now rewrite List.rev_length List.rev_involutive. }
-        revert H.
-        generalize (List.rev mfix).
-        intros l Hi Hlen H.
-        induction H.
-        ++ simpl. constructor.
-        ++ simpl. constructor.
-          ** unfold mapi in IHAll.
-              simpl in Hlen. replace (S (#|mfix| - S #|l|)) with (#|mfix| - #|l|) by lia.
-              apply IHAll.
-              --- intros. simpl in Hi. specialize (Hi (S i)). apply Hi. lia.
-              --- lia.
-          ** clear IHAll.
-              simpl in Hlen. assert ((Nat.pred #|mfix| - (#|mfix| - S #|l|)) = #|l|) by lia.
-              rewrite H0. rewrite simpl_subst_k.
-              --- clear. induction l; simpl; auto with arith.
-              --- eapply type_CoFix; auto.
-                  simpl in Hi. specialize (Hi 0). forward Hi.
-                  +++ lia.
-                  +++ simpl in Hi.
-                      rewrite Hi. f_equal. lia.
-    + rewrite simpl_subst_k.
-      * now rewrite fix_context_length cofix_subst_length.
-      * reflexivity.
-  - destruct (IHtyping wfΣ) as [IH [T' [rarg [f [[unf fty] Hcumul]]]]].
-    split; auto.
-    exists T', rarg, f. intuition auto.
+    intuition auto.
+    * eapply (substitution _ _ _ (cofix_subst mfix) [] _ _ wfΣ) in Hty. simpl; eauto with wf.
+      simpl in Hty.
+      rewrite subst_context_nil /= in Hty.
+      eapply refine_type; eauto.
+      rewrite simpl_subst_k //. now autorewrite with len.
+      apply subslet_cofix; auto. 
+    * reflexivity.
+  - destruct (IHtyping wfΣ) as [d [[[Hnth wfcofix] ?] ?]].
+    exists d. intuition auto.
     + eapply cumul_trans; eauto.
-    + destruct b. eapply cumul_trans; eauto.
+    + eapply cumul_trans; eauto.
+Qed.
+
+Lemma wf_cofixpoint_all {cf:checker_flags} (Σ : global_env_ext) mfix :
+  wf_cofixpoint Σ.1 mfix ->
+  ∑ mind, check_recursivity_kind Σ.1 mind CoFinite *
+  All (fun d => ∑ ctx i u args, (dtype d) = it_mkProd_or_LetIn ctx (mkApps (tInd {| inductive_mind := mind; inductive_ind := i |} u) args)) mfix.
+Proof.
+  unfold wf_cofixpoint.
+  destruct mfix. discriminate.
+  simpl.
+  destruct (check_one_cofix d) as [ind|] eqn:hcof.
+  intros eqr.
+  exists ind.
+  destruct (map_option_out (map check_one_cofix mfix)) eqn:eqfixes.
+  move/andP: eqr => [eqinds rk].
+  split; auto.
+  constructor.
+  - move: hcof. unfold check_one_cofix.
+    destruct d as [dname dbody dtype rarg] => /=.
+    destruct (decompose_prod_assum [] dbody) as [ctx concl] eqn:Hdecomp.
+    apply decompose_prod_assum_it_mkProd_or_LetIn in Hdecomp.
+    destruct (decompose_app concl) eqn:dapp.
+    destruct (destInd t) as [[ind' u]|] eqn:dind.
+    destruct ind' as [mind ind'].
+    move=> [=] Hmind. subst mind.
+    exists ctx, ind', u, l0.
+    simpl in Hdecomp. rewrite Hdecomp.
+    f_equal.
+    destruct t; try discriminate.
+    simpl in dind. noconf dind.
+    apply decompose_app_inv in dapp => //.
+    discriminate.
+  - clear rk hcof.
+    induction mfix in l, eqfixes, eqinds |- *. constructor.
+    simpl in *.
+    destruct (check_one_cofix a) eqn:hcof; try discriminate.
+    destruct (map_option_out (map check_one_cofix mfix)) eqn:hcofs; try discriminate.
+    noconf eqfixes.
+    specialize (IHmfix _ eq_refl).
+    simpl in eqinds.
+    move/andP: eqinds => [eqk eql0].
+    constructor; auto. clear IHmfix hcofs d.
+    destruct a as [dname dbody dtype rarg] => /=.
+    unfold check_one_cofix in hcof.
+    destruct (decompose_prod_assum [] dbody) as [ctx concl] eqn:Hdecomp.
+    apply decompose_prod_assum_it_mkProd_or_LetIn in Hdecomp.
+    destruct (decompose_app concl) eqn:dapp.
+    destruct (destInd t) as [[ind' u]|] eqn:dind.
+    destruct ind' as [mind ind']. noconf hcof.
+    exists ctx, ind', u, l.
+    simpl in Hdecomp. rewrite Hdecomp.
+    f_equal.
+    destruct t; try discriminate.
+    simpl in dind. noconf dind.
+    apply decompose_app_inv in dapp => //.
+    rewrite dapp. do 3 f_equal.
+    symmetry.
+    change (eq_string ind k) with (PCUICReflect.eqb ind k) in eqk.
+    destruct (PCUICReflect.eqb_spec ind k); auto. discriminate.
+    discriminate.
+  - discriminate.
+  - discriminate.
 Qed.
 
 Lemma on_constructor_subst' {cf:checker_flags} Σ ind mdecl idecl cshape cdecl : 
@@ -452,6 +529,26 @@ Proof.
         rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /= in wat.
         eapply isWAT_tProd in wat as [Hty _]; auto.
         eapply type_Cumul; eauto. now eapply conv_cumul.
+Qed.
+
+Lemma wf_cofixpoint_typing_spine {cf:checker_flags} (Σ : global_env_ext) Γ ind u mfix idx d args args' : 
+  wf Σ.1 -> wf_local Σ Γ ->
+  wf_cofixpoint Σ.1 mfix ->
+  nth_error mfix idx = Some d ->
+  isWfArity_or_Type Σ Γ (dtype d) ->
+  typing_spine Σ Γ (dtype d) args (mkApps (tInd ind u) args') ->
+  check_recursivity_kind Σ (inductive_mind ind) CoFinite.
+Proof.
+  intros wfΣ wfΓ wfcofix Hnth wat sp.
+  apply wf_cofixpoint_all in wfcofix.
+  destruct wfcofix as [mind [cr allfix]].
+  eapply nth_error_all in allfix; eauto.
+  simpl in allfix.
+  destruct allfix as [ctx [i [u' [args'' eqty]]]].
+  rewrite {}eqty in sp wat.
+  eapply mkApps_ind_typing_spine in sp; auto.
+  destruct sp as [instsub [[[makes [Hargs [Hind Hu]]] subs] subsl]].
+  now subst ind.
 Qed.
 
 Lemma Construct_Ind_ind_eq {cf:checker_flags} {Σ} (wfΣ : wf Σ.1):
@@ -753,7 +850,7 @@ Proof.
   intros [A h].
   apply inversion_Case in h as ih ; auto.
   destruct ih
-    as [uni [args' [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [ht0 [? ?]]]]]]]]]]]]]].
+    as [uni [args' [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]].
     pose proof ht0 as typec.
     eapply inversion_mkApps in typec as [A' [tyc tyargs]]; auto.
     eapply (inversion_Construct Σ wΣ) in tyc as [mdecl' [idecl' [cdecl' [wfl [declc [Hu tyc]]]]]].

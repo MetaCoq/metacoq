@@ -337,7 +337,7 @@ Section Principality.
       eapply All2_app. 2:constructor; auto.
       eapply All2_skipn. eapply All2_sym, (All2_impl X0); firstorder.
       econstructor;  eauto. simpl. split; auto.
-      eapply type_Cumul; eauto. auto.
+      eapply type_Cumul; eauto. auto. 
 
     - destruct s as [[ind k] pars]; simpl in *.
       eapply inversion_Proj in hA=>//.
@@ -411,15 +411,15 @@ Section Principality.
         * simpl. reflexivity.
 
     - pose proof (typing_wf_local hA).
-      apply inversion_Fix in hA as [decl [hguard [nthe [wfΓ [? ?]]]]]=>//.
-      eapply inversion_Fix in hB as [decl' [hguard' [nthe' [wfΓ' [? ?]]]]]=>//.
+      apply inversion_Fix in hA as [decl [hguard [nthe [wfΓ [? [? ?]]]]]]=>//.
+      eapply inversion_Fix in hB as [decl' [hguard' [nthe' [wfΓ' [? [? ?]]]]]]=>//.
       rewrite nthe' in nthe; noconf nthe.
       exists (dtype decl); repeat split; eauto.
       eapply type_Fix; eauto.
 
     - pose proof (typing_wf_local hA).
-      eapply inversion_CoFix in hA as [decl [allow [nthe [wfΓ [? ?]]]]]=>//.
-      eapply inversion_CoFix in hB as [decl' [allpw [nthe' [wfΓ' [? ?]]]]]=>//.
+      eapply inversion_CoFix in hA as [decl [allow [nthe [wfΓ [? [? ?]]]]]]=>//.
+      eapply inversion_CoFix in hB as [decl' [allpw [nthe' [wfΓ' [? [? ?]]]]]]=>//.
       rewrite nthe' in nthe; noconf nthe.
       exists (dtype decl); repeat split; eauto.
       eapply type_CoFix; eauto.
@@ -597,9 +597,9 @@ Proof.
     eapply All2_app. simpl in *.
     2:constructor; pcuic.
     eapply All2_skipn.
-    clear -wfΣ a5 X4 X7_2.
-    specialize (X4 _ _ a5 (PCUICEquality.eq_term_leq_term _ _ _ X7_2)).
-    eapply (principal_type_ind a5 X4).
+    clear -wfΣ a6 X4 X7_2.
+    specialize (X4 _ _ a6 (PCUICEquality.eq_term_leq_term _ _ _ X7_2)).
+    eapply (principal_type_ind a6 X4).
     
   - eapply inversion_Proj in X3 as (u' & mdecl' & idecl' & pdecl' & args' & inv); auto.
     intuition auto.
@@ -629,7 +629,7 @@ Proof.
     eapply PCUICUnivSubstitution.eq_term_upto_univ_subst_instance_constr; eauto; try typeclasses eauto.
     now symmetry.
 
-  - eapply inversion_Fix in X2 as (decl' & fixguard' & Hnth & types' & bodies & cum); auto.
+  - eapply inversion_Fix in X2 as (decl' & fixguard' & Hnth & types' & bodies & wffix & cum); auto.
     eapply type_Cumul.
     econstructor; eauto.
     eapply PCUICValidity.validity; eauto.
@@ -640,11 +640,11 @@ Proof.
     destruct a as [[eqty _] _].
     constructor. now apply PCUICEquality.eq_term_leq_term.
   
-  - eapply inversion_CoFix in X2 as (decl' & fixguard' & Hnth & types' & bodies & cum); auto.
+  - eapply inversion_CoFix in X2 as (decl' & fixguard' & Hnth & types' & bodies & wfcofix & cum); auto.
     eapply type_Cumul.
     econstructor; eauto.
     eapply PCUICValidity.validity; eauto.
-    eapply type_CoFix. 2:eapply H. all:eauto.
+    eapply type_CoFix. 2:eapply H0. all:eauto.
     eapply (All_impl X0); firstorder.
     eapply (All_impl X1); firstorder.
     eapply All2_nth_error in a; eauto.

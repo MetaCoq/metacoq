@@ -278,11 +278,12 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
     if intactic then not_in_tactic "tmVariable"
     else
       let name = unquote_ident (reduce_all env evm name) in
-      let univs = Evd.univ_entry ~poly evm in
-      let param = Declare.ParameterEntry (None, (typ, univs), None) in
-      let n = Declare.declare_constant ~name ~kind:Decls.(IsAssumption Logical) param in
+      let kind = Decls.IsAssumption Decls.Definitional in
+      let decl = Declare.SectionLocalAssum {typ; impl = Glob_term.Explicit} in
+      (* FIXME: better handling of evm *)
+      Declare.declare_variable ~name ~kind decl;
       let env = Global.env () in
-      k (env, evm, Constr.mkConst n)
+      k (env, evm, Lazy.force unit_tt)
   | TmDefinition (opaque,name,s,typ,body) ->
     if intactic
     then not_in_tactic "tmDefinition"

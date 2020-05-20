@@ -52,6 +52,18 @@ End list_size.
     induction l; simpl; auto.
     rewrite IHl. lia.
   Qed.
+  
+  Section FoldFix.
+    Context (rho : context -> term -> term).
+    Context (Γ : context).
+
+    Fixpoint fold_fix_context acc m :=
+      match m with
+      | [] => acc
+      | def :: fixd =>
+        fold_fix_context (vass def.(dname) (lift0 #|acc| (rho Γ def.(dtype))) :: acc) fixd
+      end.
+  End FoldFix.
 
   Fixpoint isFixLambda_app (t : term) : bool :=
     match t with
@@ -111,6 +123,7 @@ End list_size.
     Proof.
       lia. unfold def_size. lia.        
     Qed.
+    Transparent fold_fix_context_wf.
 
     #[program] Definition map_terms {t} (rho : context -> forall x, size x < size t -> term) Γ (l : list term)
       (H : list_size size l < size t) :=
@@ -127,6 +140,12 @@ End list_size.
     Qed.
 
     Definition inspect {A} (x : A) : { y : A | y = x } := exist x eq_refl.
+
+    Definition unfold_fix mfix idx :=
+      match nth_error mfix idx with
+      | Some d => Some (rarg d, subst0 (fix_subst mfix) (dbody d))
+      | None => None
+      end.
 
     Equations? rho (Γ : context) (t : term) : term by wf (size t) := 
        { rho Γ (tApp t u) with view_lambda_fix_app t u := 
@@ -242,7 +261,14 @@ End list_size.
       unfold map_fix_rho. now rewrite map_In_spec.
     Qed. 
 
-    Hint Rewrite map_fix_rho_map : rho.
+    Lemma fold_fix_context_wf_fold mfix Γ ctx :
+      fold_fix_context_wf mfix (fun Γ x _ => rho Γ x) Γ ctx = 
+      fold_fix_context rho Γ ctx mfix.
+    Proof.
+      induction mfix in ctx |- *; simpl; auto. 
+    Qed.
+
+    Hint Rewrite map_fix_rho_map fold_fix_context_wf_fold : rho.
 
     Lemma mkApps_tApp f a l : mkApps (tApp f a) l = mkApps f (a :: l).
     Proof. reflexivity. Qed.
@@ -257,10 +283,45 @@ End list_size.
       intros isf. specialize (IHl isf).
       simpl. rewrite IHl. destruct (mkApps t l); auto.
     Qed.
+    Definition isFixLambda (t : term) : bool :=
+    match t with
+    | tFix _ _ => true
+    | tLambda _ _ _ => true
+    | _ => false
+    end.
+
+    Inductive fix_lambda_view : term -> Type :=
+    | fix_lambda_lambda na b t : fix_lambda_view (tLambda na b t)
+    | fix_lambda_fix mfix i : fix_lambda_view (tFix mfix i)
+    | fix_lambda_other t : ~~ isFixLambda t -> fix_lambda_view t.
+
+    Lemma view_fix_lambda (t : term) : fix_lambda_view t.
+    Proof.
+      destruct t; repeat constructor.
+    Qed.
+    
+    Lemma isFixLambda_app_mkApps' t l x : isFixLambda t -> isFixLambda_app (tApp (mkApps t l) x).
+    Proof. 
+      induction l using rev_ind; simpl; auto.
+      destruct t; auto.
+      intros isl. specialize (IHl isl).
+      simpl in IHl.
+      now rewrite -mkApps_nested /=. 
+    Qed.
 
     Ltac solve_discr := (try (progress (prepare_discr; finish_discr; cbn [mkApps] in * )));
        try discriminate.
   
+    Ltac discr_mkApps H := 
+      let Hf := fresh in let Hargs := fresh in
+      rewrite ?tApp_mkApps ?mkApps_nested in H;
+        (eapply mkApps_nApp_inj in H as [Hf Hargs] ||
+         eapply (mkApps_nApp_inj _ _ []) in H as [Hf Hargs] ||
+         eapply (mkApps_nApp_inj _ _ _ []) in H as [Hf Hargs]);
+         [noconf Hf|reflexivity].
+
+    Set Equations With UIP. (* This allows to use decidable equality on terms. *)
+
     (* Most of this is discrimination, we should have a more robust tactic to  
       solve this. *)
     Lemma rho_app_lambda Γ na ty b a l :
@@ -268,33 +329,90 @@ End list_size.
       mkApps ((rho (vass na (rho Γ ty) :: Γ) b) {0 := rho Γ a}) (map (rho Γ) l).
     Proof.
       induction l using rev_ind; autorewrite with rho.
-      set (view := view_lambda_fix_app _ _). clearbody view.
-      depelim view. injection H. intros; solve_discr.
-      destruct l; noconf H. simpl in H.
-      noconf H. now autorewrite with rho.
-      injection H. intros.
-      clear -H1; destruct l using rev_ind; solve_discr.
-      rewrite -mkApps_nested in H1; discriminate.
-      simpl in i. discriminate.
-      rewrite -mkApps_nested. simpl.
-      autorewrite with rho.
-      set (view := view_lambda_fix_app _ _).
-      clearbody view. 
-      remember (mkApps (tApp (tLambda na ty b) a) l) as app.
-      destruct view.
-      rewrite tApp_mkApps mkApps_nested in Heqapp. 
-      eapply mkApps_nApp_inj in Heqapp; intuition auto. discriminate.
-      destruct l0. simpl in Heqapp; solve_discr.
-      rewrite tApp_mkApps mkApps_nested in Heqapp.
-      eapply (mkApps_nApp_inj _ _ []) in Heqapp; intuition auto. discriminate.
-      unfold rho_unfold_clause_1. autorewrite with rho.
-      simpl in Heqapp. apply (f_equal decompose_app) in Heqapp.
-      rewrite !mkApps_tApp in Heqapp.
-      rewrite !decompose_app_mkApps in Heqapp => //.
-      now noconf Heqapp.
-      elimtype False; rewrite Heqapp in i.
-      rewrite tApp_mkApps mkApps_nested in i.
-      rewrite isFixLambda_app_mkApps in i => //.
+      - set (view := view_lambda_fix_app _ _). clearbody view.
+        depelim view. injection H. intros. discr_mkApps H1.
+        injection H. intros. discr_mkApps H1. subst.
+        now simpl in H; noconf H.
+        simpl in i; discriminate.
+      - simpl. rewrite -mkApps_nested. autorewrite with rho.
+        set (view := view_lambda_fix_app _ _). clearbody view.
+        depelim view. injection H. intros. discr_mkApps H1.
+        injection H. intros. discr_mkApps H1. subst. clear H.
+        remember (mkApps (tApp (tLambda na ty b) a) l).
+        depelim view0. discr_mkApps Heqt.
+        discr_mkApps Heqt. subst. simpl. now autorewrite with rho.
+        subst t. elimtype False. rewrite !tApp_mkApps mkApps_nested in i.
+        rewrite isFixLambda_app_mkApps in i => //.
+        elimtype False; rewrite !tApp_mkApps mkApps_nested in i.
+        rewrite isFixLambda_app_mkApps in i => //.
+    Qed.
+    
+    Lemma map_fix_subst f g mfix :
+      (forall n, tFix (map (map_def f g) mfix) n = f (tFix mfix n)) ->
+      fix_subst (map (map_def f g) mfix) =
+      map f (fix_subst mfix).
+    Proof.
+      unfold fix_subst. intros.
+      rewrite map_length. generalize (#|mfix|) at 1 2. induction n. simpl. reflexivity.
+      simpl. rewrite - IHn. f_equal. apply H.
     Qed.
 
-
+    Lemma rho_app_fix Γ mfix idx args :
+      let rhoargs := map (rho Γ) args in
+      rho Γ (mkApps (tFix mfix idx) args) = 
+        match nth_error mfix idx with
+        | Some d => 
+          if is_constructor (rarg d) args then 
+            let fn := (subst0 (map (rho Γ) (fix_subst mfix))) (rho (Γ ,,, fold_fix_context rho Γ [] mfix) (dbody d)) in
+            mkApps fn rhoargs
+          else mkApps (rho Γ (tFix mfix idx)) rhoargs
+        | None => mkApps (rho Γ (tFix mfix idx)) rhoargs
+        end.
+    Proof.
+      induction args using rev_ind; autorewrite with rho.
+      - intros rhoargs.
+        destruct nth_error as [d|] eqn:eqfix => //.
+        rewrite /is_constructor nth_error_nil //.
+      - simpl. rewrite map_app /=.
+        destruct nth_error as [d|] eqn:eqfix => //.
+        destruct (is_constructor (rarg d) (args ++ [x])) eqn:isc.
+        rewrite -mkApps_nested /=.
+        autorewrite with rho.
+        set (view := view_lambda_fix_app _ _). clearbody view.
+        depelim view.
+        * injection H; intros Ha Hargs. subst. discr_mkApps Hargs.
+          subst l. noconf H. autorewrite with rho.
+          simpl. autorewrite with rho.
+          unfold unfold_fix.
+          rewrite /map_fix. rewrite nth_error_map.
+          unfold unfold_fix in eqfix.
+          rewrite eqfix /= isc map_app.
+          f_equal => //.
+          rewrite map_fix_subst => //. 
+          intros n.
+          autorewrite with rho. simpl. f_equal.
+          now autorewrite with rho.
+        * injection H. intros _ H'; discr_mkApps H'.
+        * elimtype False; rewrite tApp_mkApps in i.
+          rewrite isFixLambda_app_mkApps' in i => //. 
+        * rewrite -mkApps_nested.
+          autorewrite with rho.
+          set (view := view_lambda_fix_app _ _).
+          clearbody view.
+          remember (mkApps (tFix mfix idx) args) as t.
+          destruct view; simpl; try discr_mkApps Heqt.
+          ** subst l. autorewrite with rho.
+            unfold unfold_fix.
+            rewrite /map_fix nth_error_map eqfix /= isc map_app //.
+          ** subst t. rewrite isFixLambda_app_mkApps' in i => //.
+        * rewrite -mkApps_nested; autorewrite with rho.
+          set (view := view_lambda_fix_app _ _).
+          clearbody view.
+          remember (mkApps (tFix mfix idx) args) as t.
+          destruct view; simpl; try discr_mkApps Heqt.
+          subst l.
+          rewrite /unfold_fix. autorewrite with rho.
+          rewrite /map_fix nth_error_map eqfix /= map_app //.
+          subst t.
+          rewrite isFixLambda_app_mkApps' in i => //.
+      Qed.

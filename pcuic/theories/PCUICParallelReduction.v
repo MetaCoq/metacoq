@@ -454,7 +454,7 @@ Section ParallelReduction.
       All2_prop2_eq Γ Γ' (Γ ,,, fix_context mfix0) (Γ' ,,, fix_context mfix1)
                     dtype dbody (fun x => (dname x, rarg x)) pred1 mfix0 mfix1 ->
       unfold_fix mfix1 idx = Some (narg, fn) ->
-      is_constructor narg args1 = true ->
+      is_constructor narg args0 = true ->
       All2 (pred1 Γ Γ') args0 args1 ->
       pred1 Γ Γ' (mkApps (tFix mfix0 idx) args0) (mkApps fn args1)
 
@@ -778,7 +778,7 @@ Section ParallelReduction.
           All2_prop2_eq Γ Γ' (Γ ,,, fix_context mfix0) (Γ' ,,, fix_context mfix1) dtype dbody
                         (fun x => (dname x, rarg x)) P' mfix0 mfix1 ->
           unfold_fix mfix1 idx = Some (narg, fn) ->
-          is_constructor narg args1 = true ->
+          is_constructor narg args0 = true ->
           All2 (P' Γ Γ') args0 args1 ->
           P Γ Γ' (mkApps (tFix mfix0 idx) args0) (mkApps fn args1)) ->
       (forall (Γ Γ' : context) (ip : inductive * nat) (p0 p1 : term) (mfix0 mfix1 : mfixpoint term) (idx : nat)

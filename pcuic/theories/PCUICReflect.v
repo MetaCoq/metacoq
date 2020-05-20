@@ -33,6 +33,12 @@ Class ReflectEq A := {
   eqb_spec : forall x y : A, reflect (x = y) (eqb x y)
 }.
 
+Lemma eqb_eq {A} `{PCUICReflect.ReflectEq A} (x y : A) : PCUICReflect.eqb x y -> x = y.
+Proof.
+  elim: PCUICReflect.eqb_spec; auto.
+  discriminate.
+Qed.
+
 Instance ReflectEq_EqDec :
   forall A, ReflectEq A -> EqDec A.
 Proof.
@@ -420,3 +426,17 @@ Proof.
 Qed.
 
 Instance eqb_ctx : ReflectEq context := _.
+
+Definition eqb_recursivity_kind r r' :=
+  match r, r' with
+  | Finite, Finite => true
+  | CoFinite, CoFinite => true
+  | BiFinite, BiFinite => true
+  | _, _ => false
+  end.
+
+Instance reflect_recursivity_kind : ReflectEq recursivity_kind.
+Proof.
+  refine {| eqb := eqb_recursivity_kind |}.
+  destruct x, y; simpl; constructor; congruence.
+Defined.

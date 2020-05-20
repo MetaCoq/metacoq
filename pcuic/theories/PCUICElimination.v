@@ -73,7 +73,7 @@ Proof.
   intros wfΣ. intros.
   assert (HT := X).
   eapply inversion_Case in X as [uni [args [mdecl [idecl' [ps [pty [btys
-                                   [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]; auto.
+                                   [? [? [? [? [? [? [ht0 [? [? ?]]]]]]]]]]]]]]]]; auto.
   repeat destruct ?; try congruence. subst.
   eapply declared_inductive_inj in d as []. 2:exact H. subst.
   enough (universe_family ps <> InProp).
@@ -88,7 +88,7 @@ Proof.
   exists ps.
   intuition auto.
   econstructor; eauto.
-  assert (watiapp := env_prop_typing  _ _ validity _ _ _ _ _ t0).
+  assert (watiapp := env_prop_typing  _ _ validity _ _ _ _ _ ht0).
   simpl in watiapp.
   eapply (isWAT_mkApps_Ind wfΣ H) in watiapp as [psub [asub [[spp spa] cuni]]]; eauto.
   2:eapply typing_wf_local; eauto.
@@ -570,7 +570,7 @@ Lemma tCase_length_branch_inv `{cf : checker_flags} (Σ : global_env_ext) Γ ind
   nth_error brs n = Some (m, t) ->
   (#|args| = npar + m)%nat.
 Proof.
-  intros. eapply inversion_Case in X0 as (u' & args' & mdecl' & idecl' & ps' & pty' & btys' & ? & ? & ? & ? & ? & ? & ? & ? & ?); eauto.
+  intros. eapply inversion_Case in X0 as (u' & args' & mdecl' & idecl' & ps' & pty' & btys' & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?); eauto.
   subst. unfold build_case_predicate_type  in *.
   pose proof t1 as t1'.
   eapply inversion_mkApps in t1' as [A [tc _]]; auto.
@@ -580,19 +580,19 @@ Proof.
   destruct t1 as [[t1 ->] _]. simpl in e. rewrite <- e.
   destruct (declared_inductive_inj d (proj1 declc)); subst mdecl' idecl'.
   f_equal. clear Hnth.
-  eapply build_branches_type_lookup in e1. eauto.
+  eapply build_branches_type_lookup in e2. eauto.
   2:eauto.
   3:destruct declc; eauto.
   2:{ eapply (All2_impl a); firstorder. }
-  destruct e1 as [nargs [br [brty [[[Hnth Hnth'] brtyped]]]]].
+  destruct e2 as [nargs [br [brty [[[Hnth Hnth'] brtyped]]]]].
   epose proof (All2_nth_error _ _ _ a H).
   specialize (X0 Hnth').
   simpl in X0. destruct X0 as [[X0 _] _]. subst m.
   clear e0.
   set (decli := declared_inductive_inv _ _ _ _) in *.
   clear oib. clearbody decli.
-  unshelve eapply branch_type_spec in e1; eauto.
-  now destruct e1 as [e1 _].
+  unshelve eapply branch_type_spec in e2; eauto.
+  now destruct e2 as [e2 _].
 Qed.
 
 Section no_prop_leq_type.

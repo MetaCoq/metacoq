@@ -845,7 +845,6 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     Σ ;;; Γ |- tFix mfix n : decl.(dtype)
 
 | type_CoFix mfix n decl :
-    allow_cofix ->
     nth_error mfix n = Some decl ->
     All_local_env (lift_typing typing Σ) Γ ->
     All (fun d => {s & Σ ;;; Γ |- d.(dtype) :  tSort s}) mfix ->
@@ -1193,7 +1192,6 @@ Lemma typing_ind_env `{cf : checker_flags} :
         All (fun d => {s & (Σ ;;; Γ |- d.(dtype) : tSort s)%type * P Σ Γ d.(dtype) (tSort s)})%type mfix ->
         All (fun d => (Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype))%type *
             P Σ (Γ ,,, types) d.(dbody) (lift0 #|types| d.(dtype)))%type mfix ->
-        allow_cofix ->
         P Σ Γ (tCoFix mfix n) decl.(dtype)) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (t A B : term),
@@ -1494,7 +1492,7 @@ Proof.
                           Forall_decls_typing P Σ.1 * P Σ Γ0 t T).
            {intros. eapply (X14 _ X _ _ Hty); eauto. lia. }
            clear X14 X13.
-           clear e decl i a0.
+           clear e decl a0.
            remember (fix_context mfix) as mfixcontext. clear Heqmfixcontext.
    
            induction a1; econstructor; eauto.

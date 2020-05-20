@@ -806,7 +806,7 @@ Section Inversions.
   Lemma invert_red_letin Γ C na d ty b :
     red Σ.1 Γ (tLetIn na d ty b) C ->
     (∑ na' d' ty' b',
-     (red Σ.1 Γ C (tLetIn na' d' ty' b') *
+     ((C = tLetIn na' d' ty' b') *
       red Σ.1 Γ d d' *
       red Σ.1 Γ ty ty' *
       red Σ.1 (Γ ,, vdef na d ty) b b')) +

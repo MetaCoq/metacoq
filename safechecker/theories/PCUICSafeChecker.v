@@ -885,12 +885,11 @@ Section Typecheck.
                    ret (All_cons (conj W1 W2) Z)
                  end) mfix _ ;;
         guarded <- check_eq_true (fix_guard mfix) (Msg "Unguarded fixpoint") ;;
+        wffix <- check_eq_true (wf_fixpoint Σ.1 mfix) (Msg "Ill-formed fixpoint: not defined on a mutually inductive family") ;;
         ret (dtype decl; _)
       end
 
     | tCoFix mfix n =>
-      (* to add when generalizing to all flags *)
-      allowcofix <- check_eq_true allow_cofix (Msg "cofix not allowed") ;;
       match nth_error mfix n with
       | None => raise (IllFormedFix mfix n)
       | Some decl =>
@@ -918,6 +917,8 @@ Section Typecheck.
                    Z <- check_bodies mfix' _ ;;
                    ret (All_cons W1 Z)
                  end) mfix _ ;;
+        guarded <- check_eq_true (cofix_guard mfix) (Msg "Unguarded cofixpoint") ;;
+        wfcofix <- check_eq_true (wf_cofixpoint Σ.1 mfix) (Msg "Ill-formed cofixpoint: not producing values in a mutually coinductive family") ;;         
         ret (dtype decl; _)
       end
     end.

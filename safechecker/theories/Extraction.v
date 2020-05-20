@@ -26,6 +26,7 @@ Extraction Inline PCUICSafeConversion.Ret.
 Extract Inductive Equations.Init.sigma => "(,)" ["(,)"].
 
 Extract Constant PCUICTyping.fix_guard => "(fun x -> true)".
+Extract Constant PCUICTyping.cofix_guard => "(fun x -> true)".
 Extract Constant PCUICTyping.ind_guard => "(fun x -> true)".
 Extract Constant check_one_ind_body => "(fun _ _ _ _ _ _ _ -> ret envcheck_monad __)".
 (* Extract Constant erase_mfix_obligation_1 => "(fun _ _ _ _ => ret typing_monad __)". *)

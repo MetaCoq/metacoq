@@ -481,7 +481,7 @@ Section Lemmata.
       destruct indn.
       apply inversion_Case in h as hh ; auto.
       destruct hh as [uni [args [mdecl [idecl [ps [pty [btys
-                                 [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]].
+                                 [? [? [? [? [? [? [ht0 [? [? ?]]]]]]]]]]]]]]]].
       apply All2_app_inv in a as [[? ?] [[? ?] ha]].
       inversion ha. subst.
       intuition eauto. simpl in *.

@@ -183,6 +183,7 @@ Section Inversion.
         build_case_predicate_type ind mdecl idecl params u ps = Some pty ×
         Σ ;;; Γ |- p : pty ×
         leb_sort_family (universe_family ps) (ind_kelim idecl) ×
+        isCoFinite (ind_finite mdecl) = false ×
         Σ;;; Γ |- c : mkApps (tInd ind u) args ×
         map_option_out (build_branches_type ind mdecl idecl params u p)
                      = Some btys ×
@@ -219,6 +220,7 @@ Section Inversion.
           Σ ;;; Γ ,,, types |- dbody d : (lift0 #|types|) (dtype d) ×
           isLambda (dbody d) = true
         ) mfix ×
+        wf_fixpoint Σ mfix ×
         Σ ;;; Γ |- dtype decl <= T.
   Proof.
     intros Γ mfix n T h. invtac h.
@@ -228,13 +230,14 @@ Section Inversion.
     forall {Γ mfix idx T},
       Σ ;;; Γ |- tCoFix mfix idx : T ->
       ∑ decl,
-        allow_cofix ×
+        cofix_guard mfix ×
         let types := fix_context mfix in
         nth_error mfix idx = Some decl ×
         All (fun d => isType Σ Γ (dtype d)) mfix ×
         All (fun d =>
           Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype)
         ) mfix ×
+        wf_cofixpoint Σ mfix ×
         Σ ;;; Γ |- decl.(dtype) <= T.
   Proof.
     intros Γ mfix idx T h. invtac h.

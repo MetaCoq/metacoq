@@ -119,6 +119,35 @@ Proof.
       * destruct H2. rewrite H2. simpl. now rewrite Nat.sub_0_r.
 Qed.
 
+Ltac lia_f_equal := repeat (lia || f_equal).
+
+Lemma smash_context_lift Δ k n Γ : 
+  smash_context (lift_context n (k + #|Γ|) Δ) (lift_context n k Γ) =
+  lift_context n k (smash_context Δ Γ).
+Proof.
+  revert Δ. induction Γ as [|[na [b|] ty]]; intros Δ; simpl; auto.
+  - now rewrite Nat.add_0_r.
+  - rewrite -IHΓ.
+    rewrite lift_context_snoc /=. f_equal.
+    rewrite !subst_context_alt !lift_context_alt !mapi_compose.
+    apply mapi_ext=> n' x.
+    destruct x as [na' [b'|] ty']; simpl.
+    * rewrite !mapi_length /lift_decl /subst_decl /= /map_decl /=; f_equal.
+      + f_equal. rewrite Nat.add_0_r distr_lift_subst_rec /=.
+        lia_f_equal.
+      + rewrite Nat.add_0_r distr_lift_subst_rec; simpl. lia_f_equal.
+    * rewrite !mapi_length /lift_decl /subst_decl /= /map_decl /=; f_equal.
+      rewrite Nat.add_0_r distr_lift_subst_rec /=.
+      repeat (lia || f_equal).
+  - rewrite -IHΓ.
+    rewrite lift_context_snoc /= // /lift_decl /subst_decl /map_decl /=.
+    f_equal.
+    rewrite lift_context_app. simpl.
+    rewrite /app_context; lia_f_equal.
+    rewrite /lift_context // /fold_context /= /map_decl /=.
+    now lia_f_equal.
+Qed.
+
 Lemma lift_unfold_fix n k mfix idx narg fn :
   unfold_fix mfix idx = Some (narg, fn) ->
   unfold_fix (map (map_def (lift n k) (lift n (#|mfix| + k))) mfix) idx = Some (narg, lift n k fn).
@@ -471,10 +500,24 @@ Proof.
 Qed.
 Hint Rewrite lift_instantiate_params : lift.
 
-(* bug eauto with let .. in hypothesis failing *)
+Lemma decompose_prod_assum_ctx ctx t : decompose_prod_assum ctx t = 
+  let (ctx', t') := decompose_prod_assum [] t in
+  (ctx ,,, ctx', t').
+Proof.
+  induction t in ctx |- *; simpl; auto.
+  - simpl. rewrite IHt2.
+    rewrite (IHt2 ([] ,, vass _ _)).
+    destruct (decompose_prod_assum [] t2). simpl.
+    unfold snoc. now rewrite app_context_assoc.
+  - simpl. rewrite IHt3.
+    rewrite (IHt3 ([] ,, vdef _ _ _)).
+    destruct (decompose_prod_assum [] t3). simpl.
+    unfold snoc. now rewrite app_context_assoc.
+Qed.
+
 Lemma lift_decompose_prod_assum_rec ctx t n k :
-  let (ctx', t') := decompose_prod_assum ctx t in
-  (lift_context n k ctx', lift n (length ctx' + k) t') =
+  (let (ctx', t') := decompose_prod_assum ctx t in
+  (lift_context n k ctx', lift n (length ctx' + k) t')) =
   decompose_prod_assum (lift_context n k ctx) (lift n (length ctx + k) t).
 Proof.
   induction t in n, k, ctx |- *; simpl;
@@ -488,8 +531,8 @@ Proof.
 Qed.
 
 Lemma lift_decompose_prod_assum t n k :
-  let (ctx', t') := decompose_prod_assum [] t in
-  (lift_context n k ctx', lift n (length ctx' + k) t') =
+  (let (ctx', t') := decompose_prod_assum [] t in
+  (lift_context n k ctx', lift n (length ctx' + k) t')) =
   decompose_prod_assum [] (lift n k t).
 Proof. apply lift_decompose_prod_assum_rec. Qed.
 
@@ -840,6 +883,65 @@ Proof.
   now rewrite -> to_extended_list_lift, <- to_extended_list_map_lift.
 Qed.
 
+Lemma destInd_lift n k t : destInd (lift n k t) = destInd t.
+Proof.
+  destruct t; simpl; try congruence.
+Qed.
+
+Lemma nth_error_rev_inv {A} (l : list A) i : 
+  i < #|l| ->
+  nth_error (List.rev l) i = nth_error l (#|l| - S i).
+Proof.
+  intros Hi.
+  rewrite nth_error_rev; autorewrite with len; auto.
+  now rewrite List.rev_involutive.
+Qed.
+
+Lemma weakening_check_one_fix (Γ' Γ'' : context) mfix :
+  map
+       (fun x : def term =>
+        check_one_fix (map_def (lift #|Γ''| #|Γ'|) (lift #|Γ''| (#|mfix| + #|Γ'|)) x)) mfix =
+  map check_one_fix mfix.
+Proof.
+  apply map_ext. move=> [na ty def rarg] /=.
+  rewrite decompose_prod_assum_ctx.
+  destruct (decompose_prod_assum _ ty) eqn:decomp.
+  rewrite decompose_prod_assum_ctx in decomp.
+  rewrite -lift_decompose_prod_assum.
+  destruct (decompose_prod_assum [] ty) eqn:decty.
+  noconf decomp. rewrite !app_context_nil_l (smash_context_lift []).
+  destruct (nth_error_spec (List.rev (smash_context [] c0)) rarg);
+  autorewrite with len in *; simpl in *.
+  - rewrite nth_error_rev_inv; autorewrite with len; simpl; auto.
+    rewrite nth_error_lift_context_eq.
+    simpl.
+    rewrite nth_error_rev_inv in e; autorewrite with len; auto.
+    autorewrite with len in e. simpl in e. rewrite e. simpl.
+    destruct (decompose_app (decl_type x)) eqn:Happ.
+    erewrite decompose_app_lift; eauto.
+    rewrite destInd_lift. reflexivity.
+  - erewrite (proj2 (nth_error_None _ _)); auto.
+    autorewrite with len. simpl; lia.
+Qed.
+
+Lemma weakening_check_one_cofix (Γ' Γ'' : context) mfix :
+  map
+       (fun x : def term =>
+        check_one_cofix (map_def (lift #|Γ''| #|Γ'|) (lift #|Γ''| (#|mfix| + #|Γ'|)) x)) mfix =
+  map check_one_cofix mfix.
+Proof.
+  apply map_ext. move=> [na ty def rarg] /=.
+  rewrite decompose_prod_assum_ctx.
+  destruct (decompose_prod_assum _ ty) eqn:decomp.
+  rewrite decompose_prod_assum_ctx in decomp.
+  rewrite -lift_decompose_prod_assum.
+  destruct (decompose_prod_assum [] ty) eqn:decty.
+  noconf decomp.
+  destruct (decompose_app t) eqn:Happ.
+  erewrite decompose_app_lift; eauto.
+  rewrite destInd_lift. reflexivity.
+Qed.
+
 Lemma weakening_typing_prop {cf:checker_flags} : env_prop (fun Σ Γ0 t T =>
   forall Γ Γ' Γ'' : context,
   wf_local Σ (Γ ,,, Γ'') ->
@@ -924,7 +1026,7 @@ Proof.
       rewrite closedn_subst_instance_context.
       eapply closed_wf_local in Hmdecl; eauto. }
     simpl. econstructor.
-    7:{ cbn. rewrite -> firstn_map.
+    8:{ cbn. rewrite -> firstn_map.
         erewrite lift_build_branches_type; tea.
         rewrite map_option_out_map_option_map.
         subst params. erewrite heq_map_option_out. reflexivity. }
@@ -975,9 +1077,13 @@ Proof.
         rewrite lift_context_length fix_context_length.
         rewrite permute_lift; try lia. now rewrite (Nat.add_comm #|Γ'|).
       + now rewrite isLambda_lift.
-
+    * red; rewrite <-H1. unfold wf_fixpoint.
+      rewrite map_map_compose.
+      now rewrite weakening_check_one_fix.
+      
   - rewrite -> (map_dtype _ (lift #|Γ''| (#|mfix| + #|Γ'|))).
     eapply type_CoFix; auto.
+    * eapply cofix_guard_lift ; eauto.
     * rewrite -> nth_error_map, heq_nth_error. reflexivity.
     * eapply All_map.
       eapply (All_impl X0); simpl.
@@ -993,6 +1099,9 @@ Proof.
       rewrite app_context_length fix_context_length in IH.
       rewrite lift_context_length fix_context_length.
       rewrite permute_lift; try lia. now rewrite (Nat.add_comm #|Γ'|).
+    * red; rewrite <-H1. unfold wf_cofixpoint.
+      rewrite map_map_compose.
+      now rewrite weakening_check_one_cofix.
 
   - econstructor; eauto; [|now eapply weakening_cumul].
     destruct IHB.

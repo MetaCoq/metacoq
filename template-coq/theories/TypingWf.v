@@ -539,7 +539,6 @@ Proof.
     + eapply All_nth_error in X0; eauto. destruct X0 as [s ?]; intuition. 
 
   - subst types.
-    clear H0.
     split.
     + constructor.
       solve_all. destruct a.

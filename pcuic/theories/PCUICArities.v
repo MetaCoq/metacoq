@@ -657,7 +657,7 @@ Proof.
       eapply red_cumul.
       apply invert_red_letin in H as [H|H] => //.
       destruct H as [na' [d' [ty' [b' [[[reds ?] ?] ?]]]]].
-      eapply invert_red_sort in reds. discriminate.
+      discriminate.
       now repeat constructor.
 Qed.
 

@@ -538,14 +538,14 @@ Proof.
     unfold test_def. simpl. rtoProp.
     split.
     rewrite -> app_context_length in *. rewrite -> Nat.add_comm in *.
-    eapply closedn_lift_inv in H2; eauto. lia.
+    eapply closedn_lift_inv in H1; eauto. lia.
     subst types.
-    now rewrite -> app_context_length, fix_context_length in H1.
+    now rewrite -> app_context_length, fix_context_length in H0.
     eapply (nth_error_all) in H; eauto. simpl in *.
     intuition. rtoProp.
-    subst types. rewrite app_context_length in H1.
-    rewrite Nat.add_comm in H1.
-    now eapply closedn_lift_inv in H1.
+    subst types. rewrite app_context_length in H0.
+    rewrite Nat.add_comm in H0.
+    now eapply closedn_lift_inv in H0.
 
   - destruct X2; intuition eauto.
     + destruct i as [[u [ctx [Heq Hi]]] Hwfi]. simpl in Hwfi.
@@ -580,8 +580,7 @@ Definition closed_inductive_body mdecl idecl :=
 
 Definition closed_inductive_decl mdecl :=
   closed_ctx (ind_params mdecl) &&
-  forallb (closed_inductive_body mdecl) (ind_bodies mdecl). 
-  
+  forallb (closed_inductive_body mdecl) (ind_bodies mdecl).
 
 Lemma closedn_All_local_env (ctx : list context_decl) :
   All_local_env 

@@ -3,7 +3,7 @@ open Quoted
 
 module type Denoter =
 sig
-  include Quoted
+  include Reification
 
   val unquote_ident : quoted_ident -> Id.t
   val unquote_name : quoted_name -> Name.t

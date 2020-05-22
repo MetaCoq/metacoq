@@ -306,7 +306,6 @@ struct
     | None -> constr_mkApp (cNone, [| opType |])
 
 
-  (* todo : put in Reify *)
   let quote_global_reference : Names.GlobRef.t -> quoted_global_reference = function
     | Names.GlobRef.VarRef v ->
        let id = quote_ident v in

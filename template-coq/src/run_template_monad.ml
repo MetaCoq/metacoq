@@ -6,7 +6,6 @@ open Genredexpr
 open Pp (* this adds the ++ to the current scope *)
 
 open Tm_util
-open Quoter
 open Denote
 open Constr_quoter
 open Template_monad
@@ -14,6 +13,10 @@ open Constr_denoter
 
 open CoqLiveDenoter
 open TemplateCoqQuoter
+
+
+let reduce_all env evm trm =
+  EConstr.to_constr evm (Reductionops.nf_all env evm (EConstr.of_constr trm))
 
 
 let unquote_reduction_strategy env evm trm (* of type reductionStrategy *) : Redexpr.red_expr =
@@ -280,7 +283,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
     else
       let name = unquote_ident (reduce_all env evm name) in
       let opaque = unquote_bool (reduce_all env evm opaque) in
-      let evm, typ = (match unquote_option s with Some s -> let red = unquote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
+      let evm, typ = (match unquote_option s with Some s -> let red = unquote_reduction_strategy env evm s in Plugin_core.reduce env evm red typ | None -> evm, typ) in
       let evm, def = DeclareDef.prepare_definition ~opaque ~allow_evars:true ~poly evm
         UState.default_univ_decl ~types:(Some (EConstr.of_constr typ)) ~body:(EConstr.of_constr body) in
       let n = DeclareDef.declare_definition ~kind:(Decls.IsDefinition Decls.Definition)
@@ -315,7 +318,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
     then not_in_tactic "tmAxiom"
     else
       let name = unquote_ident (reduce_all env evm name) in
-      let evm, typ = (match unquote_option s with Some s -> let red = unquote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
+      let evm, typ = (match unquote_option s with Some s -> let red = unquote_reduction_strategy env evm s in Plugin_core.reduce env evm red typ | None -> evm, typ) in
       let univs = Evd.univ_entry ~poly evm in
       let param = Declare.ParameterEntry (None, (typ, univs), None) in
       let n = Declare.declare_constant ~name ~kind:Decls.(IsDefinition Definition) param in
@@ -394,7 +397,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
     k (env, evm, s)
   | TmEval (s, trm) ->
     let red = unquote_reduction_strategy env evm (reduce_all env evm s) in
-    let (evm, trm) = reduce env evm red trm
+    let (evm, trm) = Plugin_core.reduce env evm red trm
     in k (env, evm, trm)
   | TmEvalTerm (s,trm) ->
     let red = unquote_reduction_strategy env evm (reduce_all env evm s) in
@@ -445,7 +448,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
         match unquote_option s with
           Some s ->
           let red = unquote_reduction_strategy env evm s in
-          reduce env evm red typ
+          Plugin_core.reduce env evm red typ
         | None -> evm, typ in
       try
         let (evm,t) = Typeclasses.resolve_one_typeclass env evm (EConstr.of_constr typ) in

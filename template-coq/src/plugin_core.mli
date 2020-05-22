@@ -36,6 +36,7 @@ val tmMsg  : string -> unit tm
 
 val tmFail : Pp.t -> 'a tm
 val tmFailString : string -> 'a tm
+val reduce : Environ.env -> Evd.evar_map -> reduction_strategy -> term -> Evd.evar_map * term
 val tmEval : reduction_strategy -> term -> term tm
 
 val tmDefinition : ident -> ?poly:bool -> ?opaque:bool -> term option -> term -> kername tm

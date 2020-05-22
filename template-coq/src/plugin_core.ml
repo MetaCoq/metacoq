@@ -65,9 +65,15 @@ let tmFail (s : Pp.t) : 'a tm =
 let tmFailString (s : string) : 'a tm =
   tmFail Pp.(str s)
 
+
+let reduce env evm red trm =
+  let red, _ = Redexpr.reduction_of_red_expr env red in
+  let evm, red = red env evm (EConstr.of_constr trm) in
+  (evm, EConstr.to_constr evm red)
+
 let tmEval (rd : reduction_strategy) (t : term) : term tm =
   fun env evd k _fail ->
-    let evd,t' = Quoter.reduce env evd rd t in
+    let evd,t' = reduce env evd rd t in
     k env evd t'
 
 let tmDefinition (nm : ident) ?poly:(poly=false) ?opaque:(opaque=false) (typ : term option) (body : term) : kername tm =

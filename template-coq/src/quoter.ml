@@ -36,9 +36,11 @@ let hnf_type env ty =
   in
   hnf_type true ty
 
+
+
 module type Quoter =
 sig
-  include Quoted
+  include Reification
 
   val quote_ident : Id.t -> quoted_ident
   val quote_name : Name.t -> quoted_name
@@ -107,14 +109,6 @@ sig
   val mk_program : quoted_global_env -> t -> quoted_program
 end
 
-
-let reduce env evm red trm =
-  let red, _ = Redexpr.reduction_of_red_expr env red in
-  let evm, red = red env evm (EConstr.of_constr trm) in
-  (evm, EConstr.to_constr evm red)
-
-let reduce_all env evm trm =
-  EConstr.to_constr evm (Reductionops.nf_all env evm (EConstr.of_constr trm))
 
 
 module Reify (Q : Quoter) =

@@ -24,13 +24,13 @@ type ('term, 'nat, 'ident, 'name, 'quoted_sort, 'cast_kind, 'kername, 'inductive
   | ACoq_tCoFix of ('term, 'name, 'nat) amfixpoint * 'nat
 
 (* todo(gmm): these are helper functions *)
-let string_to_list s =
+let string_to_list (s : string) : char list =
   let rec aux acc i =
     if i < 0 then acc
     else aux (s.[i] :: acc) (i - 1)
   in aux [] (String.length s - 1)
 
-let list_to_string l =
+let list_to_string (l : char list) : string =
   let buf = Bytes.create (List.length l) in
   let rec aux i = function
     | [] -> ()
@@ -40,24 +40,9 @@ let list_to_string l =
   aux 0 l;
   Bytes.to_string buf
 
-(* Remove '#' from names *)
-let clean_name s =
-  let l = List.rev (CString.split_on_char '#' s) in
-  match l with
-    s :: rst -> s
-  | [] -> raise (Failure "Empty name cannot be quoted")
-
-let split_name s : (Names.DirPath.t * Names.Id.t) =
-  let ss = List.rev (CString.split_on_char '.' s) in
-  match ss with
-    nm :: rst ->
-     let nm = clean_name nm in
-     let dp = (Names.DirPath.make (List.map Names.Id.of_string rst)) in (dp, Names.Id.of_string nm)
-  | [] -> raise (Failure "Empty name cannot be quoted")
 
 
-
-module type Quoted =
+module type Reification =
 sig
   type t (* this represented quoted Gallina terms *)
 
@@ -115,8 +100,7 @@ sig
   val mkConst : quoted_kernel_name -> quoted_univ_instance -> t
   val mkInd : quoted_inductive -> quoted_univ_instance -> t
   val mkConstruct : quoted_inductive * quoted_int -> quoted_univ_instance -> t
-  val mkCase : (quoted_inductive * quoted_int) -> quoted_int list -> t -> t ->
-               t list -> t
+  val mkCase : (quoted_inductive * quoted_int) -> quoted_int list -> t -> t -> t list -> t
   val mkProj : quoted_proj -> t -> t
   val mkFix : (quoted_int array * quoted_int) * (quoted_name array * t array * t array) -> t
   val mkCoFix : quoted_int * (quoted_name array * t array * t array) -> t

@@ -42,7 +42,6 @@ gen-src/datatypes.ml
 gen-src/datatypes.mli
 gen-src/decimal.ml
 gen-src/decimal.mli
-gen-src/denote.ml
 gen-src/denoter.ml
 gen-src/environment.ml
 gen-src/environment.mli
@@ -100,7 +99,7 @@ gen-src/plugin_core.ml
 gen-src/plugin_core.mli
 gen-src/pretty.ml
 gen-src/pretty.mli
-gen-src/quoted.ml
+gen-src/reification.ml
 gen-src/quoter.ml
 gen-src/run_extractable.ml
 gen-src/run_extractable.mli

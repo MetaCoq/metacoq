@@ -1,31 +1,13 @@
 open Pp
 open Names
-open Univ
 open Tm_util
-open Quoted
-open Denote
-open Constr_quoted
+open Denoter
 
 
-
-(* If strict unquote universe mode is on then fail when unquoting a non *)
-(* declared universe / an empty list of level expressions. *)
-(* Otherwise, add it / a fresh level the global environnment. *)
-
-
-let _ =
-  let open Goptions in
-  declare_bool_option
-    { optdepr  = false;
-      optname  = "strict unquote universe mode";
-      optkey   = ["Strict"; "Unquote"; "Universe"; "Mode"];
-      optread  = (fun () -> !strict_unquote_universe_mode);
-      optwrite = (fun b -> strict_unquote_universe_mode := b) }
-
-
-module CoqLiveDenoter =
+module ConstrBaseDenoter =
 struct
-  include ConstrQuoted
+  open Constr_reification
+  include ConstrReification
 
   let unquote_sigt trm =
     let (h,args) = app_full trm [] in
@@ -143,7 +125,7 @@ struct
           let evm = Evd.add_global_univ evm l in
           if !strict_unquote_universe_mode then
             CErrors.user_err ~hdr:"unquote_level" (str ("Level "^s^" is not a declared level and you are in Strict Unquote Universe Mode."))
-          else (Feedback.msg_info (str"Fresh universe " ++ Level.pr l ++ str" was added to the context.");
+          else (Feedback.msg_info (str"Fresh universe " ++ Univ.Level.pr l ++ str" was added to the context.");
                 evm, l)
         with
         | UGraph.AlreadyDeclared -> evm, l
@@ -164,7 +146,7 @@ struct
         CErrors.user_err ~hdr:"unquote_level" (str "It is not possible to unquote a fresh level in Strict Unquote Universe Mode.")
       else
         let evm, l = Evd.new_univ_level_variable (Evd.UnivFlexible false) evm in
-        Feedback.msg_info (str"Fresh level " ++ Level.pr l ++ str" was added to the context.");
+        Feedback.msg_info (str"Fresh level " ++ Univ.Level.pr l ++ str" was added to the context.");
         evm, l
     else if constr_equall h lProp then
       match args with
@@ -229,7 +211,7 @@ struct
         CErrors.user_err ~hdr:"unquote_universe" (str "It is not possible to unquote a fresh universe in Strict Unquote Universe Mode.")
       else
         let evm, u = Evd.new_univ_variable (Evd.UnivFlexible false) evm in
-        Feedback.msg_info (str"Fresh universe " ++ Universe.pr u ++ str" was added to the context.");
+        Feedback.msg_info (str"Fresh universe " ++ Univ.Universe.pr u ++ str" was added to the context.");
         evm, u
     else if constr_equall h tBuild_Universe then
       match args with
@@ -423,6 +405,7 @@ end
 
 
 
-module CoqLiveDenote = Denote(CoqLiveDenoter)
+module ConstrDenoter = Denoter(ConstrBaseDenoter)
 
-let denote_term=CoqLiveDenote.denote_term
+include ConstrBaseDenoter
+include ConstrDenoter

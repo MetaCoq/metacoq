@@ -2,15 +2,14 @@ open Univ
 open Names
 open Pp
 open Tm_util
-open Quoted
 open Quoter
-open Constr_quoted
+
 
 (** The reifier to Coq values *)
-module TemplateCoqQuoter =
+module ConstrBaseQuoter =
 struct
-  include ConstrQuoted
-
+  open Constr_reification
+  include ConstrReification
 
   let to_coq_list typ =
     let the_nil = constr_mkApp (c_nil, [| typ |]) in
@@ -20,6 +19,63 @@ struct
       | l :: ls ->
 	constr_mkApp (c_cons, [| typ ; l ; to_list ls |])
     in to_list
+
+  let to_coq_listl typ = to_coq_list (Lazy.force typ)
+
+  let rec seq f t =
+    if f < t then f :: seq (f + 1) t
+    else []
+
+  let mkAnon () = Lazy.force nAnon
+  let mkName id = constr_mkApp (nNamed, [| id |])
+
+  let mkRel i = constr_mkApp (tRel, [| i |])
+  let mkVar id = constr_mkApp (tVar, [| id |])
+  let mkEvar n args = constr_mkApp (tEvar, [| n; to_coq_listl tTerm (Array.to_list args) |])
+  let mkSort s = constr_mkApp (tSort, [| s |])
+  let mkCast c k t = constr_mkApp (tCast, [| c ; k ; t |])
+  let mkConst kn u = constr_mkApp (tConst, [| kn ; u |])
+  let mkProd na t b =
+    constr_mkApp (tProd, [| na ; t ; b |])
+  let mkLambda na t b =
+    constr_mkApp (tLambda, [| na ; t ; b |])
+  let mkApp f xs =
+    constr_mkApp (tApp, [| f ; to_coq_listl tTerm (Array.to_list xs) |])
+
+  let mkLetIn na t t' b =
+    constr_mkApp (tLetIn, [| na ; t ; t' ; b |])
+
+  let mkFix ((a,b),(ns,ts,ds)) =
+    let mk_fun xs i =
+      constr_mkApp (tmkdef, [| Lazy.force tTerm ; Array.get ns i ;
+                             Array.get ts i ; Array.get ds i ; Array.get a i |]) :: xs
+    in
+    let defs = List.fold_left mk_fun [] (seq 0 (Array.length a)) in
+    let block = to_coq_list (constr_mkAppl (tdef, [| tTerm |])) (List.rev defs) in
+    constr_mkApp (tFix, [| block ; b |])
+
+  let mkConstruct (ind, i) u =
+    constr_mkApp (tConstructor, [| ind ; i ; u |])
+
+  let mkCoFix (a,(ns,ts,ds)) =
+    let mk_fun xs i =
+      constr_mkApp (tmkdef, [| Lazy.force tTerm ; Array.get ns i ;
+                             Array.get ts i ; Array.get ds i ; Lazy.force tO |]) :: xs
+    in
+    let defs = List.fold_left mk_fun [] (seq 0 (Array.length ns)) in
+    let block = to_coq_list (constr_mkAppl (tdef, [| tTerm |])) (List.rev defs) in
+    constr_mkApp (tCoFix, [| block ; a |])
+
+  let mkInd i u = constr_mkApp (tInd, [| i ; u |])
+
+  let mkCase (ind, npar) nargs p c brs =
+    let info = pairl tIndTy tnat ind npar in
+    let branches = List.map2 (fun br nargs ->  pairl tnat tTerm nargs br) brs nargs in
+    let tl = prodl tnat tTerm in
+    constr_mkApp (tCase, [| info ; p ; c ; to_coq_list tl branches |])
+
+  let mkProj kn t =
+    constr_mkApp (tProj, [| kn; t |])
 
   let quote_option ty = function
     | Some tm -> constr_mkApp (cSome, [|ty; tm|])
@@ -96,7 +152,7 @@ struct
     to_string (Univ.Level.to_string s)
 
   let quote_level l =
-    debug (fun () -> str"quote_level " ++ Level.pr l);
+    Tm_util.debug (fun () -> str"quote_level " ++ Level.pr l);
     if Level.is_prop l then Lazy.force lProp
     else if Level.is_set l then Lazy.force lSet
     else match Level.var_index l with
@@ -167,10 +223,12 @@ struct
   let mkPolymorphic_ctx t =
     constr_mkApp (cPolymorphic_ctx, [|t|])
 
-  (* let quote_inductive_universes uctx =
-    match uctx with
-    | Entries.Monomorphic_entry uctx -> quote_univ_context (Univ.ContextSet.to_context uctx)
-    | Entries.Polymorphic_entry (names, uctx) -> quote_abstract_univ_context_aux uctx *)
+  let mkMonomorphic_entry ctx = 
+     constr_mkApp (cMonomorphic_entry, [| ctx |])
+  
+  let mkPolymorphic_entry names ctx = 
+     let names = to_coq_list (Lazy.force tname) names in
+     constr_mkApp (cPolymorphic_entry, [| names; ctx |])
 
   let quote_ugraph (g : UGraph.t) =
     let inst' = quote_univ_instance Univ.Instance.empty in
@@ -325,4 +383,7 @@ struct
 end
 
 
-module TermReify = Reify(TemplateCoqQuoter)
+module ConstrQuoter = Quoter(ConstrBaseQuoter)
+
+include ConstrBaseQuoter
+include ConstrQuoter

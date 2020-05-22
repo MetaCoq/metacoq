@@ -2,12 +2,9 @@ open Names
 open Constr
 open BasicAst
 open Ast0
-open TemplateEnvironment
-open Quoted
-open Quoter
-open Ast_quoter
+open Tm_util
 
-module ExtractionDenoter =
+module ExtractionDenoterr =
 struct
   type t = Ast0.term
   type quoted_ident = char list
@@ -70,7 +67,7 @@ struct
   let mkCase = mkCase
   let mkProj = mkProj
 
-  let unquote_def (x: 't BasicAst.def) : ('t, name, quoted_int) Quoted.adef =
+  let unquote_def (x: 't BasicAst.def) : ('t, name, quoted_int) adef =
     {
       adname=dname x;
       adtype=dtype x;
@@ -186,8 +183,8 @@ struct
 
 end
 
-module  ExtractionDenote = Denote.Denote(ExtractionDenoter)
+module  ExtractionDenoter = Denoter.Denoter(ExtractionDenoterr)
 
 
+include ExtractionDenoterr
 include ExtractionDenoter
-include ExtractionDenote

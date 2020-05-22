@@ -38,8 +38,8 @@ Tm_util
 Quoter
 Constr_quoter
 Template_monad
-Denote
 Denoter
+Denoterr
 Plugin_core
 Ast_quoter
 Ast_denoter

@@ -1,15 +1,9 @@
-(*i camlp4deps: "parsing/grammar.cma" i*)
-(*i camlp4use: "pa_extend.cmp" i*)
-
 open Names
-open Constr
 open BasicAst
 open Ast0
-open TemplateEnvironment
-open Quoted
-open Quoter
+open Tm_util
 
-module TemplateASTQuoter =
+module ExtractedASTBaseQuoter =
 struct
   type t = Ast0.term
   type quoted_ident = char list
@@ -89,10 +83,10 @@ struct
     | Sorts.InSProp -> Universes0.InProp (* FIXME "SProp sort not supported" *)
 
   let quote_cast_kind = function
-    | DEFAULTcast -> Cast
-    | REVERTcast -> RevertCast
-    | NATIVEcast -> NativeCast
-    | VMcast -> VmCast
+    | Constr.DEFAULTcast -> Cast
+    | Constr.REVERTcast -> RevertCast
+    | Constr.NATIVEcast -> NativeCast
+    | Constr.VMcast -> VmCast
 
 
   let quote_dirpath (dp : DirPath.t) : BasicAst.dirpath =
@@ -308,7 +302,7 @@ struct
   
 end
 
-module TemplateASTReifier = Reify(TemplateASTQuoter)
+module ExtractedASTQuoter = Quoter.Quoter(ExtractedASTBaseQuoter)
 
-include TemplateASTQuoter
-include TemplateASTReifier
+include ExtractedASTBaseQuoter
+include ExtractedASTQuoter

@@ -6,13 +6,10 @@ open Genredexpr
 open Pp (* this adds the ++ to the current scope *)
 
 open Tm_util
-open Denote
+open Denoter
 open Constr_quoter
-open Template_monad
 open Constr_denoter
-
-open CoqLiveDenoter
-open TemplateCoqQuoter
+open Template_monad
 
 
 let reduce_all env evm trm =
@@ -352,14 +349,14 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
 
   | TmQuote (false, trm) ->
     (* user should do the reduction (using tmEval) if they want *)
-    let qt = TermReify.quote_term env trm
+    let qt = quote_term env trm
     in k (env, evm, qt)
   | TmQuote (true, trm) ->
-    let qt = TermReify.quote_term_rec env trm in
+    let qt = quote_term_rec env trm in
     k (env, evm, qt)
   | TmQuoteInd (name, strict) ->
        let kn = unquote_kn (reduce_all env evm name) in
-       let t = TermReify.quote_mind_decl env (MutInd.make1 kn) in
+       let t = quote_mind_decl env (MutInd.make1 kn) in
        let _, args = Constr.destApp t in
        (match args with
         | [|decl|] ->
@@ -369,11 +366,11 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
     let name = unquote_kn (reduce_all env evm name) in
     let bypass = unquote_bool (reduce_all env evm bypass) in
     let cd = Environ.lookup_constant (Constant.make1 name) env in
-    let cb = TermReify.quote_constant_body bypass env evm cd in
+    let cb = quote_constant_body bypass env evm cd in
     k (env, evm, cb)
   | TmQuoteUnivs ->
     let univs = Environ.universes env in
-    k (env, evm, TermReify.quote_ugraph univs)
+    k (env, evm, quote_ugraph univs)
   | TmPrint trm ->
     Feedback.msg_info (Printer.pr_constr_env env evm trm);
     k (env, evm, Lazy.force unit_tt)
@@ -403,7 +400,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
     let red = unquote_reduction_strategy env evm (reduce_all env evm s) in
     let evm,trm = denote_term evm (reduce_all env evm trm) in
     Plugin_core.run (Plugin_core.tmEval red trm) env evm
-      (fun env evm trm -> k (env, evm, TermReify.quote_term env trm))
+      (fun env evm trm -> k (env, evm, quote_term env trm))
   | TmMkInductive mind ->
     declare_inductive env evm mind;
     let env = Global.env () in
@@ -462,7 +459,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
       (fun env evm -> function
            None -> k (env, evm, constr_mkAppl (cNone, [| tTerm|]))
          | Some trm ->
-           let qtrm = TermReify.quote_term env trm in
+           let qtrm = quote_term env trm in
            k (env, evm, constr_mkApp (cSome, [| Lazy.force tTerm; qtrm |])))
   | TmPrintTerm trm ->
     let evm,trm = denote_term evm (reduce_all env evm trm) in

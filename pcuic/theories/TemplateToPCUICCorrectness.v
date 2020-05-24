@@ -798,9 +798,7 @@ Lemma trans_unfold_fix mfix idx narg fn :
 Proof.
   unfold TTy.unfold_fix, unfold_fix. intros wffix.
   rewrite nth_error_map. destruct (nth_error mfix idx) eqn:Hdef => //.
-  cbn. rewrite trans_isLambda. {
-    apply (nth_error_forall Hdef) in wffix.
-    simpl in wffix. intuition auto. }
+  cbn.
   destruct (Ast.isLambda (dbody d)); [|discriminate].
   intros [= <- <-]. simpl.
   repeat f_equal.

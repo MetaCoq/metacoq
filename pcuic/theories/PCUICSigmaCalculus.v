@@ -610,10 +610,8 @@ Proof.
   case_eq (nth_error mfix idx).
   2: intro neq ; rewrite neq in h ; discriminate.
   intros d e. rewrite e in h.
-  case_eq (isLambda (dbody d)).
-  2: intro neq ; rewrite neq in h ; discriminate.
-  intros hl. rewrite hl in h. inversion h. clear h.
-  simpl. rewrite isLambda_rename. 1: assumption.
+  inversion h. clear h.
+  simpl.
   f_equal. f_equal.
   rewrite rename_subst0. rewrite fix_subst_length.
   f_equal.

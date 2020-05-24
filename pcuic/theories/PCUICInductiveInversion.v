@@ -104,7 +104,7 @@ Proof.
   intros wfΣ H. depind H.
   - unfold unfold_fix. rewrite e.
     specialize (nth_error_all e a0) as [s Hs].
-    specialize (nth_error_all e a1) as [Hty ->].
+    specialize (nth_error_all e a1) as [Hty Hlam].
     simpl.
     destruct decl as [name ty body rarg]; simpl in *.
     clear e.
@@ -156,7 +156,7 @@ Qed.
 Lemma subslet_cofix {cf:checker_flags} (Σ : global_env_ext) Γ mfix :
   wf_local Σ Γ ->
   cofix_guard mfix ->
-  All (fun d : def term => ∃ s : Universe.t, Σ;;; Γ |- dtype d : tSort s) mfix ->
+  All (fun d : def term => ∑ s : Universe.t, Σ;;; Γ |- dtype d : tSort s) mfix ->
   All
   (fun d : def term =>
    Σ;;; Γ ,,, fix_context mfix |- dbody d

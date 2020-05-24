@@ -1309,8 +1309,6 @@ Section ParallelWeakening.
               !app_context_assoc in forall_Γ0.
       now rewrite !lift_fix_context.
       unfold unfold_fix. rewrite nth_error_map. rewrite Hnth. simpl.
-      destruct (isLambda (dbody d)) eqn:isl; noconf heq_unfold_fix.
-      rewrite isLambda_lift //.
       f_equal. f_equal.
       rewrite distr_lift_subst. rewrite fix_subst_length. f_equal.
       now rewrite (map_fix_subst (fun k => lift #|Δ''| (k + #|Δ'|))).
@@ -1810,7 +1808,6 @@ Section ParallelSubstitution.
     - autorewrite with subst. simpl.
       unfold unfold_fix in heq_unfold_fix.
       destruct (nth_error mfix1 idx) eqn:Hnth; noconf heq_unfold_fix.
-      destruct (isLambda (dbody d)) eqn:isl; noconf heq_unfold_fix.
       econstructor; auto with pcuic. eapply X0; eauto with pcuic.
       rewrite !subst_fix_context.
       erewrite subst_fix_context.
@@ -1829,7 +1826,6 @@ Section ParallelSubstitution.
       now rewrite !fix_context_length !subst_context_app
           !Nat.add_0_r !app_context_assoc in forall_Γ0.
       unfold unfold_fix. rewrite nth_error_map. rewrite Hnth. simpl.
-      rewrite isLambda_subst //.
       f_equal. f_equal.
       rewrite (map_fix_subst (fun k => subst s' (k + #|Γ'1|))).
       intros. reflexivity. simpl.

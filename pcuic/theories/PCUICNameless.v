@@ -873,7 +873,6 @@ Proof.
       cbn.
       replace (isLambda (nl (dbody d))) with (isLambda (dbody d))
         by (destruct (dbody d) ; reflexivity).
-      destruct (isLambda (dbody d)). 2: discriminate.
       inversion H. subst. rewrite nl_subst.
       repeat f_equal. clear.
       unfold fix_subst. rewrite map_length.

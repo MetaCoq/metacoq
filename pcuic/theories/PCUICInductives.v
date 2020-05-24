@@ -1270,6 +1270,19 @@ Proof.
   now simpl in *.
 Qed.
 
+Lemma fst_decompose_app_rec t l : fst (decompose_app_rec t l) = fst (decompose_app t).
+Proof.
+  induction t in l |- *; simpl; auto. rewrite IHt1.
+  unfold decompose_app. simpl. now rewrite (IHt1 [t2]).
+Qed.
+
+Lemma decompose_app_rec_head t l f : fst (decompose_app_rec t l) = f ->
+  negb (isApp f).
+Proof.
+  induction t; unfold isApp; simpl; try intros [= <-]; auto.
+  intros. apply IHt1. now rewrite !fst_decompose_app_rec.
+Qed.
+
 Lemma head_nApp x : negb (isApp (head x)).
 Proof.
   unfold head.

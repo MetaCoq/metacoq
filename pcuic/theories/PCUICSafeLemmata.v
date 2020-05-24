@@ -619,7 +619,7 @@ Section Lemmata.
         left. apply wf_local_app in h2.
         inversion h2. subst. cbn in *.
         match goal with
-        | h : ∃ s : Universe.t, _ |- _ =>
+        | h : ∑ s : Universe.t, _ |- _ =>
           destruct h
         end.
         eexists. eassumption.

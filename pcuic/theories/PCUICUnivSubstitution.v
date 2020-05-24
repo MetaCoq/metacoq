@@ -971,9 +971,9 @@ Proof.
   - cbn. rewrite !subst_instance_constr_mkApps. cbn.
     econstructor.
     + unfold unfold_fix in *. destruct (nth_error mfix idx) eqn:E.
-      * destruct (isLambda (dbody d)) eqn:E2; inversion H.
+      * inversion H.
         rewrite nth_error_map, E. cbn.
-        destruct d. cbn in *. destruct dbody; cbn in *; try congruence.
+        destruct d. cbn in *. cbn in *; try congruence.
         repeat f_equal.
         all: rewrite <- subst_subst_instance_constr;
           rewrite fix_subst_subst_instance; reflexivity.

@@ -1191,7 +1191,7 @@ Proof.
   change 0 with #|@nil context_decl| at 2 3.
   generalize (@nil context_decl) as Δ'.
   
-  induction t using term_forall_ctx_list_ind; try solve [constructor]; intros Δ'.
+  induction t using term_ind_size_app; try solve [constructor]; intros Δ'.
   * simpl.
      destruct (leb_spec_Set (#|Δ|  +#|Δ'|) n); simpl.
     **

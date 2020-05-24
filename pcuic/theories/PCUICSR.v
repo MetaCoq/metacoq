@@ -33,6 +33,16 @@ Arguments Universe.sort_of_product : simpl nomatch.
 Hint Rewrite subst_instance_context_assumptions : len.
 Hint Rewrite projs_length : len.
 
+Lemma nth_nth_error {A} {i} {l : list A} {d v} :
+  nth i l d = v ->
+  (nth_error l i = Some v) +
+  (nth_error l i = None /\ v = d).
+Proof.
+  move: i v. elim: l => [|hd tl IH] //.
+  - case => /= //; now right.
+  - case => /= // _ <-. now left.
+Qed.
+
 (** The subject reduction property of the system: *)
 
 Definition SR_red1 {cf:checker_flags} (Σ : global_env_ext) Γ t T :=
@@ -319,7 +329,7 @@ Proof.
       [parsubst [csubst ptyeq]]. 2:exact oib. subst pty.
     destruct heq_map_option_out as [nargs [br [brty [[[Hbr Hbrty] brbrty] brtys]]]].
     unshelve eapply (branch_type_spec Σ.1) in brtys; auto.
-    destruct (PCUICParallelReductionConfluence.nth_nth_error (@eq_refl _ (nth c0 brs (0, tDummy)))) => //.
+    destruct (nth_nth_error (@eq_refl _ (nth c0 brs (0, tDummy)))) => //.
     assert (H : ∑ t', nth_error btys c0 = Some t').
     pose proof (All2_length _ _ X5). eapply nth_error_Some_length in e. rewrite H in e.
     destruct (nth_error_spec btys c0). eexists; eauto. elimtype False; lia.

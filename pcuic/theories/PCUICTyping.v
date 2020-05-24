@@ -81,13 +81,7 @@ Definition fix_subst (l : mfixpoint term) :=
 
 Definition unfold_fix (mfix : mfixpoint term) (idx : nat) :=
   match List.nth_error mfix idx with
-  | Some d =>
-    if isLambda d.(dbody) then
-      Some (d.(rarg), subst0 (fix_subst mfix) d.(dbody))
-    else None (* We don't unfold ill-formed fixpoints, which would
-                 render confluence unprovable, creating an infinite
-                 number of critical pairs between unfoldings of fixpoints.
-                 e.g. [fix f := f] is not allowed. *)
+  | Some d => Some (d.(rarg), subst0 (fix_subst mfix) d.(dbody))
   | None => None
   end.
 

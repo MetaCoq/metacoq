@@ -110,13 +110,7 @@ Definition substl defs body : term :=
 
 Definition cunfold_fix (mfix : mfixpoint term) (idx : nat) :=
   match List.nth_error mfix idx with
-  | Some d =>
-    if isLambda d.(dbody) then
-      Some (d.(rarg), substl (fix_subst mfix) d.(dbody))
-    else None (* We don't unfold ill-formed fixpoints, which would
-                 render confluence unprovable, creating an infinite
-                 number of critical pairs between unfoldings of fixpoints.
-                 e.g. [fix f := f] is not allowed. *)
+  | Some d => Some (d.(rarg), substl (fix_subst mfix) d.(dbody))
   | None => None
   end.
 
@@ -533,7 +527,7 @@ Section Wcbv.
     unfold_fix mfix idx = Some (narg, fn) -> closed fn.
   Proof.
     unfold unfold_fix. destruct (nth_error mfix idx) eqn:Heq.
-    destruct (isLambda (dbody d)); try discriminate. move=> /= Hf Heq'; noconf Heq'.
+    move=> /= Hf Heq'; noconf Heq'.
     eapply closedn_subst0. unfold fix_subst. clear -Hf. generalize #|mfix|.
     induction n; simpl; auto. apply/andP; split; auto.
     simpl. rewrite fix_subst_length. solve_all.
@@ -548,7 +542,6 @@ Section Wcbv.
   Proof.  
     unfold unfold_fix, cunfold_fix.
     destruct (nth_error mfix idx) eqn:Heq => //.
-    destruct (isLambda (dbody d)) => //.
     move=> /= Hf; f_equal; f_equal.
     have clfix : All (closedn 0) (fix_subst mfix).
     { clear Heq d idx.

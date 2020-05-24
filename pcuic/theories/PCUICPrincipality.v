@@ -18,6 +18,8 @@ From Equations Require Import Equations.
 Set Equations With UIP.
 Set Printing Universes.
 
+Derive NoConfusion for global_decl.
+
 Section Principality.
   Context {cf : checker_flags}.
   Context (Σ : global_env_ext).
@@ -270,7 +272,9 @@ Section Principality.
       eapply inversion_Const in hB as [decl' ?] => //.
       repeat outtimes.
       exists (subst_instance_constr u (cst_type decl)).
-      red in d0, d. rewrite d0 in d. noconf d.
+      red in d0, d. rewrite d0 in d.
+      change PCUICEnvironment.ConstantDecl with ConstantDecl in d.
+      noconf d.
       repeat intimes; eauto.
       eapply type_Const; eauto.
 

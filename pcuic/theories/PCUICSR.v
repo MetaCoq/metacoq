@@ -307,7 +307,7 @@ Proof.
     now rewrite app_context_nil_l.
     eapply typing_subst_instance_decl with (Γ0:=[]); tea.
 
-  - (* iota reduction *)    
+  - (* iota reduction *)
     subst npar.
     clear forall_u forall_u0 X X0.
     pose proof typec as typec''.
@@ -365,8 +365,8 @@ Proof.
            <=
     (it_mkProd_or_LetIn
      (subst_context cparsubst 0
-        (subst_context (inds (inductive_mind ind) u1 (ind_bodies mdecl))
-           #|ind_params mdecl| (map_context (subst_instance_constr u1) argctx)))
+        (subst_context (inds (inductive_mind ind) u (ind_bodies mdecl))
+           #|ind_params mdecl| (map_context (subst_instance_constr u) argctx)))
      (mkApps ((lift0 #|argctx|) p)
         (map
            (fun x : term =>

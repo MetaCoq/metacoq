@@ -11,14 +11,6 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
 
   (** ** Environment lookup *)
 
-  Fixpoint lookup_env (Σ : global_env) (kn : kername) : option global_decl :=
-    match Σ with
-    | nil => None
-    | d :: tl =>
-      if eq_kername kn d.1 then Some d.2
-      else lookup_env tl kn
-    end.
-
   Definition declared_constant (Σ : global_env) (id : kername) decl : Prop :=
     lookup_env Σ id = Some (ConstantDecl decl).
 

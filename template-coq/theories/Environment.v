@@ -372,15 +372,13 @@ Module Environment (T : Term).
     map (on_snd (f (S npars_ass))) (ind_projs oib).
   Proof. destruct oib; simpl. reflexivity. Qed.
 
-
-
-  Fixpoint lookup_mind_decl (k : kername) (decls : global_env)
-    := match decls with
-       | nil => None
-       | (kn, InductiveDecl d) :: tl =>
-         if eq_kername kn k then Some d else lookup_mind_decl k tl
-       | _ :: tl => lookup_mind_decl k tl
-       end.
+  Fixpoint lookup_env (Σ : global_env) (kn : kername) : option global_decl :=
+    match Σ with
+    | nil => None
+    | d :: tl =>
+      if eq_kername kn d.1 then Some d.2
+      else lookup_env tl kn
+    end.
 
   Lemma context_assumptions_fold Γ f : context_assumptions (fold_context f Γ) = context_assumptions Γ.
   Proof.

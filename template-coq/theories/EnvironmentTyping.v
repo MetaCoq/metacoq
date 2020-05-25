@@ -475,6 +475,16 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
                           ind_indices ind_cshapes ind_sort;
       }.
 
+    Definition on_variance univs (variances : option (list Variance.t)) :=
+      match univs with
+      | Monomorphic_ctx _ => variances = None
+      | Polymorphic_ctx auctx => 
+        match variances with
+        | None => True
+        | Some v => List.length v = #|UContext.instance (AUContext.repr auctx)|
+        end
+      end.
+    
     (** We allow empty blocks for simplicity
         (no well-typed reference to them can be made). *)
 
@@ -484,6 +494,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
             the size annotation counts assumptions only (no let-ins). *)
         onParams : on_context Σ mdecl.(ind_params);
         onNpars : context_assumptions mdecl.(ind_params) = mdecl.(ind_npars);
+        onVariance : on_variance mdecl.(ind_universes) mdecl.(ind_variance);
         onGuard : ind_guard mdecl
       }.
 

@@ -1970,16 +1970,16 @@ Proof.
     * eapply substitution_untyped_let_red; eauto.
 Qed.
 
-Lemma subst_eq_decl `{checker_flags} ϕ l k d d' :
-  eq_decl ϕ d d' -> eq_decl ϕ (subst_decl l k d) (subst_decl l k d').
+Lemma subst_eq_decl `{checker_flags} Σ ϕ l k d d' :
+  eq_decl Σ ϕ d d' -> eq_decl Σ ϕ (subst_decl l k d) (subst_decl l k d').
 Proof.
   destruct d, d', decl_body, decl_body0;
     unfold eq_decl, map_decl; cbn; intuition auto using subst_eq_term.
 Qed.
 
-Lemma subst_eq_context `{checker_flags} φ l l' n k :
-  eq_context φ l l' ->
-  eq_context φ (subst_context n k l) (subst_context n k l').
+Lemma subst_eq_context `{checker_flags} Σ φ l l' n k :
+  eq_context Σ φ l l' ->
+  eq_context Σ φ (subst_context n k l) (subst_context n k l').
 Proof.
   induction l in l', n, k |- *; inversion 1. 1: constructor.
   rewrite !subst_context_snoc. constructor.

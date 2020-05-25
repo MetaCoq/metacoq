@@ -534,9 +534,9 @@ Qed.
 
 Derive Signature for TTy.eq_term_upto_univ.
 
-Lemma leq_term_mkApps ϕ t u t' u' :
-  eq_term ϕ t t' -> All2 (eq_term ϕ) u u' ->
-  leq_term ϕ (mkApps t u) (mkApps t' u').
+Lemma leq_term_mkApps Σ ϕ t u t' u' :
+  eq_term Σ ϕ t t' -> All2 (eq_term Σ ϕ) u u' ->
+  leq_term Σ ϕ (mkApps t u) (mkApps t' u').
 Proof.
   intros Hn Ht.
   revert t t' Ht Hn; induction u in u' |- *; intros.
@@ -548,21 +548,21 @@ Proof.
   simpl in *. apply IHu. assumption. constructor; assumption.
 Qed.
 
-Lemma eq_term_upto_univ_App `{checker_flags} Re Rle f f' :
-  eq_term_upto_univ Re Rle f f' ->
+Lemma eq_term_upto_univ_App `{checker_flags} Σ Re Rle f f' :
+  eq_term_upto_univ Σ Re Rle f f' ->
   isApp f = isApp f'.
 Proof.
   inversion 1; reflexivity.
 Qed.
 
-Lemma eq_term_upto_univ_mkApps `{checker_flags} Re Rle f l f' l' :
-  eq_term_upto_univ Re Rle f f' ->
-  All2 (eq_term_upto_univ Re Re) l l' ->
-  eq_term_upto_univ Re Rle (mkApps f l) (mkApps f' l').
+Lemma eq_term_upto_univ_mkApps `{checker_flags} Σ Re Rle f l f' l' :
+  eq_term_upto_univ Σ Re Rle f f' ->
+  All2 (eq_term_upto_univ Σ Re Re) l l' ->
+  eq_term_upto_univ Σ Re Rle (mkApps f l) (mkApps f' l').
 Proof.
   induction l in f, f', l' |- *; intro e; inversion_clear 1.
   - assumption.
-  - pose proof (eq_term_upto_univ_App _ _ _ _ e).
+  - pose proof (eq_term_upto_univ_App _ _ _ _ _ e).
     case_eq (isApp f).
     + intro X; rewrite X in H0.
       destruct f; try discriminate.
@@ -578,13 +578,13 @@ Qed.
 
 
 Lemma trans_eq_term_upto_univ :
-  forall Re Rle t u,
+  forall Σ Re Rle t u,
     T.wf t ->
     T.wf u ->
     TTy.eq_term_upto_univ Re Rle t u ->
-    eq_term_upto_univ Re Rle (trans t) (trans u).
+    eq_term_upto_univ Σ Re Rle (trans t) (trans u).
 Proof.
-  intros Re Rle  t u wt wu e.
+  intros Σ Re Rle t u wt wu e.
   induction t using Induction.term_forall_list_rect in Rle, wt, u, wu, e |- *.
   all: invs e; cbn.
   all: try solve [ constructor ; auto ].
@@ -635,8 +635,9 @@ Proof.
       simpl.
       intros u v [[? [ih ?]] ?].
       eapply ih. all: auto.
-  - constructor.
-    all: try solve [
+  - constructor. todounivs.
+  - constructor. todounivs.
+  - constructor. all: try solve [
       match goal with
       | ih : forall Rle u, _ |- _ =>
         eapply ih ; [
@@ -711,30 +712,30 @@ Proof.
     intuition eauto.
 Qed.
 
-Lemma trans_leq_term ϕ T U :
+Lemma trans_leq_term Σ ϕ T U :
   T.wf T -> T.wf U -> TTy.leq_term ϕ T U ->
-  leq_term ϕ (trans T) (trans U).
+  leq_term Σ ϕ (trans T) (trans U).
 Proof.
   intros HT HU H.
   eapply trans_eq_term_upto_univ ; eauto.
 Qed.
 
-Lemma trans_eq_term φ t u :
+Lemma trans_eq_term Σ φ t u :
     T.wf t -> T.wf u -> TTy.eq_term φ t u ->
-    eq_term φ (trans t) (trans u).
+    eq_term Σ φ (trans t) (trans u).
 Proof.
   intros HT HU H.
   eapply trans_eq_term_upto_univ ; eauto.
 Qed.
 
 Lemma trans_eq_term_list :
-  forall φ l l',
+  forall Σ φ l l',
     List.Forall T.wf l ->
     List.Forall T.wf l' ->
     All2 (TTy.eq_term φ) l l' ->
-    All2 (eq_term φ) (List.map trans l) (List.map trans l').
+    All2 (eq_term Σ φ) (List.map trans l) (List.map trans l').
 Proof.
-  intros φ l l' w w' h.
+  intros Σ φ l l' w w' h.
   eapply All2_map.
   apply Forall_All in w. apply Forall_All in w'.
   pose proof (All2_All_mix_left w h) as h1.
@@ -1042,7 +1043,7 @@ Lemma trans_cumul (Σ : Ast.global_env_ext) Γ T U :
 Proof.
   intros wfΣ wfΓ.
   induction 3. constructor; auto.
-  apply trans_leq_term in l; auto.
+  eapply trans_leq_term in l; eauto.
   now rewrite global_ext_constraints_trans.
   pose proof r as H3. apply wf_red1 in H3; auto.
   apply trans_red1 in r; auto. econstructor 2; eauto.

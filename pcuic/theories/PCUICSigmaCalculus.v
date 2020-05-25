@@ -509,10 +509,10 @@ Section Renaming.
 
 Context `{checker_flags}.
 
-Lemma eq_term_upto_univ_rename :
+Lemma eq_term_upto_univ_rename Σ :
   forall Re Rle u v f,
-    eq_term_upto_univ Re Rle u v ->
-    eq_term_upto_univ Re Rle (rename f u) (rename f v).
+    eq_term_upto_univ Σ Re Rle u v ->
+    eq_term_upto_univ Σ Re Rle (rename f u) (rename f v).
 Proof.
   intros Re Rle u v f h.
   induction u in v, Rle, f, h |- * using term_forall_list_ind.

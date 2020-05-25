@@ -1272,6 +1272,14 @@ Proof.
     assumption.
 Qed.
 
+Lemma upto_eq_impl Σ Re Rle :
+  RelationClasses.Reflexive Re ->
+  RelationClasses.Reflexive Rle ->
+  subrelation (eq_term_upto_univ Σ eq eq) (eq_term_upto_univ Σ Re Rle).
+Proof.
+  intros he hle. eapply eq_term_upto_univ_impl.
+  all: intros ? ? []; eauto.
+Qed.
 
 (** ** Syntactic equality up to printing anotations ** *)
 

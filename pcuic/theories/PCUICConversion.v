@@ -645,7 +645,7 @@ Section Inversions.
   Lemma eq_term_upto_univ_conv_arity_l :
     forall Re Rle Γ u v,
       isArity u ->
-      eq_term_upto_univ Re Rle u v ->
+      eq_term_upto_univ Σ Re Rle u v ->
       Is_conv_to_Arity Σ Γ v.
   Proof.
     intros Re Rle Γ u v a e.
@@ -673,7 +673,7 @@ Section Inversions.
   Lemma eq_term_upto_univ_conv_arity_r :
     forall Re Rle Γ u v,
       isArity u ->
-      eq_term_upto_univ Re Rle v u ->
+      eq_term_upto_univ Σ Re Rle v u ->
       Is_conv_to_Arity Σ Γ v.
   Proof.
     intros Re Rle Γ u v a e.
@@ -921,7 +921,7 @@ Section Inversions.
       Σ ;;; Γ |- mkApps (tInd ind ui) l <= T ->
       ∑ ui' l',
         red Σ.1 Γ T (mkApps (tInd ind ui') l') ×
-        R_universe_instance (eq_universe Σ) ui ui' ×
+        R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (inductive_mind ind) ui ui' ×
         All2 (fun a a' => Σ ;;; Γ |- a = a') l l'.
   Proof.
     intros Γ ind ui l T h.
@@ -944,7 +944,7 @@ Section Inversions.
       Σ ;;; Γ |- T <= mkApps (tInd ind ui) l ->
       ∑ ui' l',
         red Σ.1 Γ T (mkApps (tInd ind ui') l') ×
-        R_universe_instance (eq_universe Σ) ui' ui ×
+        R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (inductive_mind ind) ui' ui ×
         All2 (fun a a' => Σ ;;; Γ |- a = a') l l'.
   Proof.
     intros Γ ind ui l T h.
@@ -981,7 +981,7 @@ Lemma it_mkProd_or_LetIn_ass_inv {cf : checker_flags} (Σ : global_env_ext) Γ c
   assumption_context ctx' ->
   Σ ;;; Γ |- it_mkProd_or_LetIn ctx (tSort s) <= it_mkProd_or_LetIn ctx' (tSort s') ->
   context_relation (fun ctx ctx' => conv_decls Σ (Γ ,,, ctx) (Γ ,,, ctx')) ctx ctx' *
-   leq_term Σ (tSort s) (tSort s').
+   leq_term Σ.1 Σ (tSort s) (tSort s').
 Proof.
   intros wfΣ.
   revert Γ ctx' s s'.
@@ -1673,7 +1673,7 @@ Section Inversions.
           -- simpl. intuition eauto.
              ++ eapply eq_term_upto_univ_refl.
                 all: apply eq_universe_refl.
-             ++ eapply upto_names_impl. 3: assumption.
+             ++ eapply upto_eq_impl. 3: assumption.
                 all: apply eq_universe_refl.
           -- apply All2_same. intros. intuition reflexivity.
   - eapply conv_eta_l. 2: eassumption.
@@ -1701,7 +1701,7 @@ Section Inversions.
     intros Γ mfix mfix' idx wΣ h.
     assert (thm :
       Σ ;;; Γ |- tFix mfix idx = tFix mfix' idx ×
-      eq_context_upto eq (Γ ,,, fix_context mfix) (Γ ,,, fix_context mfix')
+      eq_context_upto Σ eq (Γ ,,, fix_context mfix) (Γ ,,, fix_context mfix')
     ).
     { apply All2_many_OnOne2 in h.
       induction h.
@@ -2229,7 +2229,7 @@ Lemma conv_subst_conv {cf:checker_flags} (Σ : global_env_ext) Γ Δ Δ' Γ' s s
   conv Σ (Γ ,,, Γ') (subst s #|Γ'| b) (subst s' #|Γ'| b).
 Proof.
   move=> wfΣ eqsub subs subs'.
-  assert(∑ s0 s'0, All2 (red Σ Γ) s s0 * All2 (red Σ Γ) s' s'0 * All2 (eq_term Σ) s0 s'0)
+  assert(∑ s0 s'0, All2 (red Σ Γ) s s0 * All2 (red Σ Γ) s' s'0 * All2 (eq_term Σ Σ) s0 s'0)
     as [s0 [s'0 [[redl redr] eqs]]].
   { induction eqsub in Δ, subs |- *.
     * depelim subs. exists [], []; split; auto.
@@ -2420,8 +2420,9 @@ Proof.
   now specialize (H H0) as [_ H].
 Qed.
 
-Lemma conv_inds {cf:checker_flags} Σ Γ u u' ind mdecl :
-  R_universe_instance (eq_universe (global_ext_constraints Σ)) u u' ->
+Lemma conv_inds {cf:checker_flags} (Σ : global_env_ext) Γ u u' ind mdecl :
+  R_global_instance Σ (eq_universe (global_ext_constraints Σ))
+     (eq_universe (global_ext_constraints Σ)) (inductive_mind ind) u u' ->
   All2 (conv Σ Γ) (inds (inductive_mind ind) u (ind_bodies mdecl))
     (inds (inductive_mind ind) u' (ind_bodies mdecl)).
 Proof.
@@ -2429,7 +2430,7 @@ Proof.
   unfold inds. generalize #|ind_bodies mdecl|.
   induction n; constructor; auto.
   clear IHn.
-  now repeat constructor.
+  repeat constructor. apply equ.
 Qed.
 
 Lemma weakening_conv_gen :

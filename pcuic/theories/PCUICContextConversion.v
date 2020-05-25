@@ -364,8 +364,8 @@ Section ContextConversion.
   Hint Resolve conv_ctx_refl' : pcuic.
 
   Lemma fill_le {Γ t t' u u'} :
-    leq_term Σ t u -> red Σ Γ t t' -> red Σ Γ u u' ->
-    ∑ t'' u'', red Σ Γ t' t'' * red Σ Γ u' u'' * leq_term Σ t'' u''.
+    leq_term Σ.1 Σ t u -> red Σ Γ t t' -> red Σ Γ u u' ->
+    ∑ t'' u'', red Σ Γ t' t'' * red Σ Γ u' u'' * leq_term Σ Σ t'' u''.
   Proof.
     intros tu tt' uu'.
     pose proof tu as tu2.
@@ -378,8 +378,8 @@ Section ContextConversion.
   Qed.
 
   Lemma fill_eq {Γ t t' u u'} :
-    eq_term Σ t u -> red Σ Γ t t' -> red Σ Γ u u' ->
-    ∑ t'' u'', red Σ Γ t' t'' * red Σ Γ u' u'' * eq_term Σ t'' u''.
+    eq_term Σ.1 Σ t u -> red Σ Γ t t' -> red Σ Γ u u' ->
+    ∑ t'' u'', red Σ Γ t' t'' * red Σ Γ u' u'' * eq_term Σ.1 Σ t'' u''.
   Proof.
     intros tu tt' uu'.
     pose proof tu as tu2.
@@ -446,10 +446,10 @@ Section ContextConversion.
   Lemma red_eq_context_upto_l {Re Γ Δ u v}
         `{RelationClasses.Reflexive _ Re} `{RelationClasses.Transitive _ Re} `{SubstUnivPreserving Re} :
     red Σ Γ u v ->
-    eq_context_upto Re Γ Δ ->
+    eq_context_upto Σ Re Γ Δ ->
     ∑ v',
     red Σ Δ u v' *
-    eq_term_upto_univ Re Re v v'.
+    eq_term_upto_univ Σ Re Re v v'.
   Proof.
     intros r HΓ.
     eapply red_alt in r.
@@ -471,7 +471,7 @@ Section ContextConversion.
     ∑ l o r, red Σ Γ t l *
              red Σ Γ u o *
              red Σ Γ v r *
-             leq_term Σ l o * leq_term Σ o r.
+             leq_term Σ.1 Σ l o * leq_term Σ.1 Σ o r.
   Proof.
     intros X X0.
     intros.
@@ -490,7 +490,7 @@ Section ContextConversion.
   Qed.
 
   Lemma conv_eq_context_upto {Γ Δ T U} :
-    eq_context_upto (eq_universe Σ) Γ Δ ->
+    eq_context_upto Σ (eq_universe Σ) Γ Δ ->
     Σ ;;; Γ |- T = U ->
     Σ ;;; Δ |- T = U.
   Proof.
@@ -506,7 +506,7 @@ Section ContextConversion.
   Qed.
 
   Lemma cumul_eq_context_upto {Γ Δ T U} :
-    eq_context_upto (eq_universe (global_ext_constraints Σ)) Γ Δ ->
+    eq_context_upto Σ (eq_universe (global_ext_constraints Σ)) Γ Δ ->
     Σ ;;; Γ |- T <= U ->
     Σ ;;; Δ |- T <= U.
   Proof.
@@ -557,7 +557,7 @@ Section ContextConversion.
 
   Lemma conv_context_red_context Γ Γ' :
     conv_context Γ Γ' ->
-    ∑ Δ Δ', red_ctx Σ Γ Δ * red_ctx Σ Γ' Δ' * eq_context_upto (eq_universe Σ) Δ Δ'.
+    ∑ Δ Δ', red_ctx Σ Γ Δ * red_ctx Σ Γ' Δ' * eq_context_upto Σ (eq_universe Σ) Δ Δ'.
   Proof.
     intros Hctx.
     induction Hctx.
@@ -725,7 +725,7 @@ Qed.
 
 Lemma eq_context_upto_conv_context {cf:checker_flags} (Σ : global_env_ext) Re :
   RelationClasses.subrelation Re (eq_universe Σ) ->
-  subrelation (eq_context_upto Re) (fun Γ Γ' => conv_context Σ Γ Γ').
+  subrelation (eq_context_upto Σ Re) (fun Γ Γ' => conv_context Σ Γ Γ').
 Proof.
   intros HRe Γ Δ h. induction h.
   - constructor.
@@ -740,7 +740,7 @@ Proof.
 Qed.
 
 Lemma eq_context_upto_univ_conv_context {cf:checker_flags} Σ Γ Δ :
-    eq_context_upto (eq_universe (global_ext_constraints Σ)) Γ Δ ->
+    eq_context_upto Σ.1 (eq_universe (global_ext_constraints Σ)) Γ Δ ->
     conv_context Σ Γ Δ.
 Proof.
   intros h. eapply eq_context_upto_conv_context; tea.

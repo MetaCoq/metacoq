@@ -411,6 +411,9 @@ Proof.
   eexists ; eauto.
 Qed.
 
+Definition R_ind_universes  {cf:checker_flags} (Σ : global_env_ext) ind i i' :=
+  R_global_instance Σ (eq_universe (global_ext_constraints Σ)) (leq_universe (global_ext_constraints Σ)) (inductive_mind ind) i i'.
+
 Lemma mkApps_ind_typing_spine {cf:checker_flags} Σ Γ Γ' ind i
   inst ind' i' args args' : 
   wf Σ.1 ->
@@ -419,8 +422,7 @@ Lemma mkApps_ind_typing_spine {cf:checker_flags} Σ Γ Γ' ind i
   typing_spine Σ Γ (it_mkProd_or_LetIn Γ' (mkApps (tInd ind i) args)) inst 
     (mkApps (tInd ind' i') args') ->
   ∑ instsubst, (make_context_subst (List.rev Γ') inst [] = Some instsubst) *
-  (#|inst| = context_assumptions Γ' /\ ind = ind' /\ 
-  R_universe_instance (eq_universe (global_ext_constraints Σ)) i i') *
+  (#|inst| = context_assumptions Γ' /\ ind = ind' /\ R_ind_universes Σ ind i i') *
   All2 (fun par par' => Σ ;;; Γ |- par = par') (map (subst0 instsubst) args) args' *
   (subslet Σ Γ instsubst Γ').
 Proof.
@@ -558,7 +560,7 @@ Lemma Construct_Ind_ind_eq {cf:checker_flags} {Σ} (wfΣ : wf Σ.1):
   let '(onind, oib, existT cshape (hnth, onc)) := on_declared_constructor wfΣ Hdecl in
   (i = i') * 
   (* Universe instances match *)
-  R_universe_instance (eq_universe (global_ext_constraints Σ)) u u' *
+  R_ind_universes Σ i u u' *
   consistent_instance_ext Σ (ind_universes mdecl) u' *    
   (#|args| = (ind_npars mdecl + context_assumptions cshape.(cshape_args))%nat) *
   ∑ parsubst argsubst parsubst' argsubst',

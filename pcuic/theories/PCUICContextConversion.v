@@ -739,6 +739,24 @@ Proof.
     eapply eq_term_upto_univ_impl; tea.
 Qed.
 
+Instance eq_subrel_eq_univ {cf:checker_flags} Σ : RelationClasses.subrelation eq (eq_universe Σ).
+Proof. intros x y []. reflexivity. Qed.
+
+Lemma eq_context_upto_empty_conv_context {cf:checker_flags} (Σ : global_env_ext) :
+  subrelation (eq_context_upto [] eq) (fun Γ Γ' => conv_context Σ Γ Γ').
+Proof.
+  intros Γ Δ h. induction h.
+  - constructor.
+  - constructor; tas.
+    constructor. eapply conv_refl.
+    eapply eq_term_upto_univ_empty_impl; tea; typeclasses eauto.
+  - constructor; tas.
+    constructor. eapply conv_refl.
+    eapply eq_term_upto_univ_empty_impl; tea; try typeclasses eauto.
+    eapply conv_refl.
+    eapply eq_term_upto_univ_empty_impl; tea; typeclasses eauto.
+Qed.
+
 Lemma eq_context_upto_univ_conv_context {cf:checker_flags} Σ Γ Δ :
     eq_context_upto Σ.1 (eq_universe (global_ext_constraints Σ)) Γ Δ ->
     conv_context Σ Γ Δ.

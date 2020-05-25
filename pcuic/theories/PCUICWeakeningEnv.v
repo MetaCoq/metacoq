@@ -44,8 +44,8 @@ Qed.
 
 
 
-Lemma leq_term_subset {cf:checker_flags} ctrs ctrs' t u
-  : ConstraintSet.Subset ctrs ctrs' -> leq_term ctrs t u -> leq_term ctrs' t u.
+Lemma leq_term_subset {cf:checker_flags} Σ ctrs ctrs' t u
+  : ConstraintSet.Subset ctrs ctrs' -> leq_term Σ ctrs t u -> leq_term Σ ctrs' t u.
 Proof.
   intro H. apply eq_term_upto_univ_impl.
   - intros t' u'. eapply eq_universe_subset; assumption.
@@ -93,26 +93,26 @@ Proof.
   apply global_ext_constraints_app.
 Qed.
 
-Lemma eq_term_subset {cf:checker_flags} φ φ' t t'
+Lemma eq_term_subset {cf:checker_flags} Σ φ φ' t t'
   : ConstraintSet.Subset φ φ'
-    -> eq_term φ t t' ->  eq_term φ' t t'.
+    -> eq_term Σ φ t t' ->  eq_term Σ φ' t t'.
 Proof.
   intro H. apply eq_term_upto_univ_impl.
   all: intros u u'; eapply eq_universe_subset; assumption.
 Qed.
 
-Lemma eq_decl_subset {cf:checker_flags} φ φ' d d'
+Lemma eq_decl_subset {cf:checker_flags} Σ φ φ' d d'
   : ConstraintSet.Subset φ φ'
-    -> eq_decl φ d d' ->  eq_decl φ' d d'.
+    -> eq_decl Σ φ d d' ->  eq_decl Σ φ' d d'.
 Proof.
   intros Hφ [H1 H2]. split; [|eapply eq_term_subset; eauto].
   destruct d as [na [bd|] ty], d' as [na' [bd'|] ty']; cbn in *; trivial.
   eapply eq_term_subset; eauto.
 Qed.
 
-Lemma eq_context_subset {cf:checker_flags} φ φ' Γ Γ'
+Lemma eq_context_subset {cf:checker_flags} Σ φ φ' Γ Γ'
   : ConstraintSet.Subset φ φ'
-    -> eq_context φ Γ Γ' ->  eq_context φ' Γ Γ'.
+    -> eq_context Σ φ Γ Γ' ->  eq_context Σ φ' Γ Γ'.
 Proof.
   intros Hφ. induction 1; constructor.
   - eapply eq_decl_subset; eassumption.
@@ -189,6 +189,64 @@ Proof.
   econstructor; eauto.
 Qed.
 
+(** The definition of [R_global_instance] is defined so that it is weakenable. *)
+Lemma R_global_instance_weaken_env {cf:checker_flags} Σ Σ' Re Re' Rle Rle' gr :
+  wf Σ' -> extends Σ Σ' ->
+  RelationClasses.subrelation Re Re' ->
+  RelationClasses.subrelation Rle Rle' ->
+  RelationClasses.subrelation Re Rle' ->
+  subrelation (R_global_instance Σ Re Rle gr) (R_global_instance Σ' Re' Rle' gr).
+Proof.
+  intros wfΣ ext he hle hele t t'.
+  rewrite /R_global_instance.
+  destruct lookup_env as [[g|g]|] eqn:look.
+  - eapply extends_lookup in look; eauto. rewrite look.
+    eauto using R_universe_instance_impl'.
+  - eapply extends_lookup in look; eauto. rewrite look.
+    destruct ind_variance; eauto using R_universe_instance_impl'.
+    induction t in l, t' |- *; destruct l, t'; simpl; auto.
+    intros []; split; auto.
+    destruct t0; simpl; auto.
+  - destruct (lookup_env Σ' gr) as [[g'|g']|] eqn:look'.
+    * eauto using R_universe_instance_impl'.
+    * destruct ind_variance; eauto using R_universe_instance_impl'.
+      induction t in l, t' |- *; destruct l,  t'; simpl; intros H; inv H; auto.
+      split; auto. destruct t0; simpl; auto.
+    * eauto using R_universe_instance_impl'.
+Qed.
+
+Instance eq_term_upto_univ_weaken_env {cf:checker_flags} Σ Σ' Re Re' Rle Rle' :
+  wf Σ' -> extends Σ Σ' ->
+  RelationClasses.subrelation Re Re' ->
+  RelationClasses.subrelation Rle Rle' ->
+  RelationClasses.subrelation Re Rle' ->
+  CRelationClasses.subrelation (eq_term_upto_univ Σ Re Rle) (eq_term_upto_univ Σ' Re' Rle').
+Proof.
+  intros wfΣ ext he hele hle t t'.
+  induction t in t', Rle, Rle', hle, hele |- * using PCUICInduction.term_forall_list_ind;
+    try (inversion 1; subst; constructor;
+         eauto using R_universe_instance_impl'; fail).
+  - inversion 1; subst; constructor.
+    eapply All2_impl'; tea.
+    eapply All_impl; eauto.
+  - inversion 1; subst; constructor.
+    eapply R_global_instance_weaken_env. 6:eauto. all:eauto.
+  - inversion 1; subst; constructor.
+    eapply R_global_instance_weaken_env. 6:eauto. all:eauto.
+  - inversion 1; subst; constructor; eauto.
+    eapply All2_impl'; tea.
+    eapply All_impl; eauto.
+    cbn. intros x ? y [? ?]. split; eauto.
+  - inversion 1; subst; constructor.
+    eapply All2_impl'; tea.
+    eapply All_impl; eauto.
+    cbn. intros x [? ?] y [[? ?] ?]. repeat split; eauto.
+  - inversion 1; subst; constructor.
+    eapply All2_impl'; tea.
+    eapply All_impl; eauto.
+    cbn. intros x [? ?] y [[? ?] ?]. repeat split; eauto.
+Qed.
+
 Lemma weakening_env_cumul `{CF:checker_flags} Σ Σ' φ Γ M N :
   wf Σ' ->
   extends Σ Σ' ->
@@ -199,7 +257,9 @@ Proof.
   induction 1; simpl.
   - econstructor. eapply leq_term_subset.
     + eapply global_ext_constraints_app.
-    + assumption.
+    + simpl in *. eapply eq_term_upto_univ_weaken_env in l; simpl; eauto.
+      1:exists Σ''; eauto.
+      all:typeclasses eauto.
   - econstructor 2; eauto. eapply weakening_env_red1; eauto. exists Σ''; eauto.
   - econstructor 3; eauto. eapply weakening_env_red1; eauto. exists Σ''; eauto.
   - eapply cumul_eta_l. all: eassumption.

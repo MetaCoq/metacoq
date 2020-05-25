@@ -123,8 +123,8 @@ Qed.
 
 
 Lemma trans_lookup Σ cst decl:
-PT.lookup_env Σ.1 cst = Some decl ->
-Typing.lookup_env (trans_global Σ).1 cst =
+P.lookup_env Σ.1 cst = Some decl ->
+Ast.lookup_env (trans_global Σ).1 cst =
 Some (trans_global_decl decl).
 Proof.
   intros H.

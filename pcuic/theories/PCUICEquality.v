@@ -94,9 +94,11 @@ Definition global_variance Σ gr napp :=
   | IndRef ind =>
     match lookup_inductive Σ ind with
     | Some (mdecl, idecl) => 
-      let (ctx, s) := decompose_prod_assum [] idecl.(ind_type) in
-      if (context_assumptions ctx) <=? napp then mdecl.(ind_variance)
-      else None
+      match destArity [] idecl.(ind_type) with
+      | Some (ctx, _) => if (context_assumptions ctx) <=? napp then mdecl.(ind_variance)
+        else None
+      | None => None
+      end
     | None => None
     end
   | ConstructRef ind k =>
@@ -240,14 +242,13 @@ Proof.
   - apply Forall2_same; eauto.
 Qed.    
 
-Instance eq_term_upto_univ_refl Σ Re Rle :
+Instance eq_term_upto_univ_refl Σ Re Rle napp :
   RelationClasses.Reflexive Re ->
   RelationClasses.Reflexive Rle ->
-  Reflexive (eq_term_upto_univ Σ Re Rle).
+  Reflexive (eq_term_upto_univ_napp Σ Re Rle napp).
 Proof.
   intros hRe hRle t.
-  generalize 0.
-  induction t in Rle, hRle |- * using term_forall_list_ind.
+  induction t in napp, Rle, hRle |- * using term_forall_list_ind.
   all: simpl.
   all: try constructor. all: eauto.
   all: try solve [eapply All_All2 ; eauto].
@@ -300,14 +301,13 @@ Proof.
   - apply Forall2_symP; eauto.
 Qed.    
 
-Instance eq_term_upto_univ_sym Σ Re Rle :
+Instance eq_term_upto_univ_sym Σ Re Rle napp :
   RelationClasses.Symmetric Re ->
   RelationClasses.Symmetric Rle ->
-  Symmetric (eq_term_upto_univ Σ Re Rle).
+  Symmetric (eq_term_upto_univ_napp Σ Re Rle napp).
 Proof.
-  intros he hle u v. generalize 0. 
-  intros n e.
-  induction u in Rle, hle, v, n, e |- * using term_forall_list_ind.
+  intros he hle u v e.
+  induction u in Rle, hle, v, napp, e |- * using term_forall_list_ind.
   all: dependent destruction e.
   all: try solve [
     econstructor ; eauto ;
@@ -365,14 +365,13 @@ Proof.
   eapply Forall2_trans; auto.
 Qed.
 
-Instance eq_term_upto_univ_trans Σ Re Rle :
+Instance eq_term_upto_univ_trans Σ Re Rle napp :
   RelationClasses.Transitive Re ->
   RelationClasses.Transitive Rle ->
-  Transitive (eq_term_upto_univ Σ Re Rle).
+  Transitive (eq_term_upto_univ_napp Σ Re Rle napp).
 Proof.
-  intros he hle u v w.
-  generalize 0. intros n e1 e2.
-  induction u in Rle, hle, v, w, n, e1, e2 |- * using term_forall_list_ind.
+  intros he hle u v w e1 e2.
+  induction u in Rle, hle, v, w, napp, e1, e2 |- * using term_forall_list_ind.
   all: dependent destruction e1.
   all: try solve [ eauto ].
   all: try solve [
@@ -515,12 +514,26 @@ Proof.
   rewrite /global_variance.
   destruct gr; try congruence.
   - destruct lookup_inductive as [[mdecl idec]|] => //.
-    destruct decompose_prod_assum => //.
+    destruct destArity as [[ctx s]|] => //.
     elim: Nat.leb_spec => // cass indv.
     elim: Nat.leb_spec => //. lia.
   - destruct lookup_constructor as [[[mdecl idecl] cdecl]|] => //.
     elim: Nat.leb_spec => // cass indv.
     elim: Nat.leb_spec => //. lia.
+Qed.
+
+Instance R_global_instance_impl_same_napp Σ Re Re' Rle Rle' gr napp :
+  RelationClasses.subrelation Re Re' ->
+  RelationClasses.subrelation Rle Rle' ->
+  subrelation (R_global_instance Σ Re Rle gr napp) (R_global_instance Σ Re' Rle' gr napp).
+Proof.
+  intros he hle t t'.
+  rewrite /R_global_instance.
+  destruct global_variance as [v|] eqn:glob.
+  induction t in v, t' |- *; destruct v, t'; simpl; auto.
+  intros []; split; auto.
+  destruct t0; simpl; auto.
+  now eapply R_universe_instance_impl'.
 Qed.
 
 Instance R_global_instance_impl Σ Re Re' Rle Rle' gr napp napp' :

@@ -42,14 +42,14 @@ Proof.
   apply Hctrs; eauto.
 Qed.
 
-
-
 Lemma leq_term_subset {cf:checker_flags} Σ ctrs ctrs' t u
   : ConstraintSet.Subset ctrs ctrs' -> leq_term Σ ctrs t u -> leq_term Σ ctrs' t u.
 Proof.
-  intro H. apply eq_term_upto_univ_impl.
+  intro H. apply eq_term_upto_univ_impl; auto.
   - intros t' u'. eapply eq_universe_subset; assumption.
   - intros t' u'. eapply leq_universe_subset; assumption.
+  - intros t' u' eq. apply eq_universe_leq_universe'.
+    eapply eq_universe_subset; eauto.
 Qed.
 
 (** * Weakening lemmas w.r.t. the global environment *)
@@ -97,7 +97,7 @@ Lemma eq_term_subset {cf:checker_flags} Σ φ φ' t t'
   : ConstraintSet.Subset φ φ'
     -> eq_term Σ φ t t' ->  eq_term Σ φ' t t'.
 Proof.
-  intro H. apply eq_term_upto_univ_impl.
+  intro H. apply eq_term_upto_univ_impl; auto.
   all: intros u u'; eapply eq_universe_subset; assumption.
 Qed.
 
@@ -189,41 +189,51 @@ Proof.
   econstructor; eauto.
 Qed.
 
+Lemma global_variance_sigma_mon {cf:checker_flags} {Σ Σ' gr napp v} : 
+  wf Σ' -> extends Σ Σ' -> 
+  global_variance Σ gr napp = Some v ->
+  global_variance Σ' gr napp = Some v.
+Proof.
+  intros wf ext.
+  rewrite /global_variance /lookup_constructor /lookup_inductive /lookup_minductive.
+  destruct gr as [|ind|[ind i]|] => /= //.
+  - destruct (lookup_env Σ ind) eqn:look => //.
+    eapply extends_lookup in look; eauto. rewrite look //.
+  - destruct (lookup_env Σ (inductive_mind i)) eqn:look => //.
+    eapply extends_lookup in look; eauto. rewrite look //.
+Qed.  
+
 (** The definition of [R_global_instance] is defined so that it is weakenable. *)
-Lemma R_global_instance_weaken_env {cf:checker_flags} Σ Σ' Re Re' Rle Rle' gr :
+Lemma R_global_instance_weaken_env {cf:checker_flags} Σ Σ' Re Re' Rle Rle' gr napp :
   wf Σ' -> extends Σ Σ' ->
   RelationClasses.subrelation Re Re' ->
   RelationClasses.subrelation Rle Rle' ->
   RelationClasses.subrelation Re Rle' ->
-  subrelation (R_global_instance Σ Re Rle gr) (R_global_instance Σ' Re' Rle' gr).
+  subrelation (R_global_instance Σ Re Rle gr napp) (R_global_instance Σ' Re' Rle' gr napp).
 Proof.
   intros wfΣ ext he hle hele t t'.
   rewrite /R_global_instance.
-  destruct lookup_env as [[g|g]|] eqn:look.
-  - eapply extends_lookup in look; eauto. rewrite look.
-    eauto using R_universe_instance_impl'.
-  - eapply extends_lookup in look; eauto. rewrite look.
-    destruct ind_variance; eauto using R_universe_instance_impl'.
-    induction t in l, t' |- *; destruct l, t'; simpl; auto.
+  destruct global_variance as [v|] eqn:look.
+  - rewrite (global_variance_sigma_mon wfΣ ext look).
+    induction t in v, t' |- *; destruct v, t'; simpl; auto.
     intros []; split; auto.
     destruct t0; simpl; auto.
-  - destruct (lookup_env Σ' gr) as [[g'|g']|] eqn:look'.
-    * eauto using R_universe_instance_impl'.
-    * destruct ind_variance; eauto using R_universe_instance_impl'.
-      induction t in l, t' |- *; destruct l,  t'; simpl; intros H; inv H; auto.
+  - destruct (global_variance Σ' gr napp) => //.
+    * induction t in l, t' |- *; destruct l,  t'; simpl; intros H; inv H; auto.
       split; auto. destruct t0; simpl; auto.
     * eauto using R_universe_instance_impl'.
 Qed.
 
-Instance eq_term_upto_univ_weaken_env {cf:checker_flags} Σ Σ' Re Re' Rle Rle' :
+Instance eq_term_upto_univ_weaken_env {cf:checker_flags} Σ Σ' Re Re' Rle Rle' napp :
   wf Σ' -> extends Σ Σ' ->
   RelationClasses.subrelation Re Re' ->
   RelationClasses.subrelation Rle Rle' ->
   RelationClasses.subrelation Re Rle' ->
-  CRelationClasses.subrelation (eq_term_upto_univ Σ Re Rle) (eq_term_upto_univ Σ' Re' Rle').
+  CRelationClasses.subrelation (eq_term_upto_univ_napp Σ Re Rle napp) 
+    (eq_term_upto_univ_napp Σ' Re' Rle' napp).
 Proof.
   intros wfΣ ext he hele hle t t'.
-  induction t in t', Rle, Rle', hle, hele |- * using PCUICInduction.term_forall_list_ind;
+  induction t in napp, t', Rle, Rle', hle, hele |- * using PCUICInduction.term_forall_list_ind;
     try (inversion 1; subst; constructor;
          eauto using R_universe_instance_impl'; fail).
   - inversion 1; subst; constructor.

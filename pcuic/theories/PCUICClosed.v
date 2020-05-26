@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 From Coq Require Import Bool List Arith Lia.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICInduction
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv.
 Require Import ssreflect ssrbool.
 

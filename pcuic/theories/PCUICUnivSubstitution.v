@@ -125,20 +125,19 @@ Proof.
   - exact (IHu u1 u2 H).
 Qed.
 
-Lemma subst_equal_inst_global_inst Σ Re gr :
+Lemma subst_equal_inst_global_inst Σ Re gr napp :
   RelationClasses.Reflexive Re ->
   SubstUnivPreserving Re ->
   forall u u1 u2, R_universe_instance Re u1 u2 ->
-             R_global_instance Σ Re Re gr (subst_instance_instance u1 u)
+             R_global_instance Σ Re Re gr napp (subst_instance_instance u1 u)
                                     (subst_instance_instance u2 u).
 Proof.
   intros reflRe hRe u u1 u2 Ru1u2.
   unfold R_global_instance.
-  destruct lookup_env as [[g|g]|]; auto using subst_equal_inst_inst.
-  destruct ind_variance; auto using subst_equal_inst_inst.
-  induction u in l |- *; cbnr; try now constructor.
-  - destruct l; simpl; auto.
-  - destruct l; simpl; auto.
+  destruct global_variance as [v|]; auto using subst_equal_inst_inst.
+  induction u in v |- *; cbnr; try now constructor.
+  - destruct v; simpl; auto.
+  - destruct v; simpl; auto.
     split; auto.
     destruct t; simpl; auto.
     * pose proof (hRe (Universe.make a) u1 u2 Ru1u2) as HH.
@@ -147,16 +146,16 @@ Proof.
       now rewrite !subst_instance_univ_make in HH.
 Qed.
 
-Lemma eq_term_upto_univ_subst_instance_constr Σ Re :
+Lemma eq_term_upto_univ_subst_instance_constr Σ Re napp :
   RelationClasses.Reflexive Re ->
   SubstUnivPreserving Re ->
   forall t u1 u2,
     R_universe_instance Re u1 u2 ->
-    eq_term_upto_univ Σ Re Re (subst_instance_constr u1 t)
+    eq_term_upto_univ_napp Σ Re Re napp (subst_instance_constr u1 t)
                             (subst_instance_constr u2 t).
 Proof.
   intros ref hRe t.
-  induction t using term_forall_list_ind; intros u1 u2 hu.
+  induction t in napp |- * using term_forall_list_ind; intros u1 u2 hu.
   all: cbn; try constructor; eauto using subst_equal_inst_inst.
   all: try eapply All2_map, All_All2; tea; cbn; intros; rdest; eauto.
   all:auto using subst_equal_inst_global_inst.
@@ -840,51 +839,50 @@ Definition precompose_subst_instance_instance__1 Rle u i i'
 Definition precompose_subst_instance_instance__2 Rle u i i'
   := equiv_inv _ _ (precompose_subst_instance_instance Rle u i i').
 
-Lemma precompose_subst_instance_global Σ Re Rle gr u i i' :
-  precompose (R_global_instance Σ Re Rle gr) (subst_instance_instance u) i i'
+Lemma precompose_subst_instance_global Σ Re Rle gr napp u i i' :
+  precompose (R_global_instance Σ Re Rle gr napp) (subst_instance_instance u) i i'
   <~> R_global_instance Σ (precompose Re (subst_instance_univ u)) 
-    (precompose Rle (subst_instance_univ u)) gr i i'.
+    (precompose Rle (subst_instance_univ u)) gr napp i i'.
 Proof.
   unfold R_global_instance, subst_instance_instance.
-  destruct lookup_env as [[g|g]|]; eauto using precompose_subst_instance_instance.
-  destruct ind_variance; eauto using precompose_subst_instance_instance.
-  induction i in i', l |- *; destruct i', l; simpl; try split; auto.
-  - destruct (IHi i' l). intros []; split; auto.
+  destruct global_variance as [v|]; eauto using precompose_subst_instance_instance.
+  induction i in i', v |- *; destruct i', v; simpl; try split; auto.
+  - destruct (IHi i' v). intros []; split; auto.
     destruct t0; simpl in *; auto.
     * now rewrite !subst_instance_univ_make.
     * now rewrite !subst_instance_univ_make.
-  - destruct (IHi i' l). intros []; split; auto.
+  - destruct (IHi i' v). intros []; split; auto.
     destruct t0; simpl in *; auto.
     * now rewrite !subst_instance_univ_make in H.
     * now rewrite !subst_instance_univ_make in H.
 Qed.
 
-Definition precompose_subst_instance_global__1 Σ Re Rle gr u i i'
-  := equiv _ _ (precompose_subst_instance_global Σ Re Rle gr u i i').
+Definition precompose_subst_instance_global__1 Σ Re Rle gr napp u i i'
+  := equiv _ _ (precompose_subst_instance_global Σ Re Rle gr napp u i i').
 
-Definition precompose_subst_instance_global__2 Σ Re Rle gr u i i'
-  := equiv_inv _ _ (precompose_subst_instance_global Σ Re Rle gr u i i').
+Definition precompose_subst_instance_global__2 Σ Re Rle gr napp u i i'
+  := equiv_inv _ _ (precompose_subst_instance_global Σ Re Rle gr napp u i i').
 
 Global Instance eq_term_upto_univ_subst_instance Σ
-         (Re Rle : ConstraintSet.t -> Universe.t -> Universe.t -> Prop)
+         (Re Rle : ConstraintSet.t -> Universe.t -> Universe.t -> Prop) napp
       {he: SubstUnivPreserved Re} {hle: SubstUnivPreserved Rle}
-  : SubstUnivPreserved (fun φ => eq_term_upto_univ Σ (Re φ) (Rle φ)).
+  : SubstUnivPreserved (fun φ => eq_term_upto_univ_napp Σ (Re φ) (Rle φ) napp).
 Proof.
   intros φ φ' u Hu HH t t'.
   specialize (he _ _ _ Hu HH).
   specialize (hle _ _ _ Hu HH).
   clear Hu HH.
-  induction t in t', Rle, hle |- * using term_forall_list_ind;
+  induction t in napp, t', Rle, hle |- * using term_forall_list_ind;
     inversion 1; subst; cbn; constructor;
       eauto using precompose_subst_instance_instance__2, R_universe_instance_impl'.
   all: try (apply All2_map; eapply All2_impl'; tea;
     eapply All_impl; eauto; cbn; intros; aa).
   - inv X.
     eapply precompose_subst_instance_global__2.
-    eapply R_global_instance_impl; eauto.
+    eapply R_global_instance_impl_same_napp; eauto.
   - inv X.
     eapply precompose_subst_instance_global__2.
-    eapply R_global_instance_impl; eauto.
+    eapply R_global_instance_impl_same_napp; eauto.
 Qed.
 
 Lemma leq_term_subst_instance Σ : SubstUnivPreserved (leq_term Σ).

@@ -545,24 +545,25 @@ Proof.
   simpl. apply eq_term_leq_term. assumption.
 
   inversion_clear Ht.
-  simpl in *. apply IHu. assumption. constructor; assumption.
+  simpl in *. apply IHu. assumption. constructor; auto.
+  now apply eq_term_eq_term_napp.
 Qed.
 
-Lemma eq_term_upto_univ_App `{checker_flags} Σ Re Rle f f' :
-  eq_term_upto_univ Σ Re Rle f f' ->
+Lemma eq_term_upto_univ_App `{checker_flags} Σ Re Rle f f' napp :
+  eq_term_upto_univ_napp Σ Re Rle napp f f' ->
   isApp f = isApp f'.
 Proof.
   inversion 1; reflexivity.
 Qed.
 
 Lemma eq_term_upto_univ_mkApps `{checker_flags} Σ Re Rle f l f' l' :
-  eq_term_upto_univ Σ Re Rle f f' ->
+  eq_term_upto_univ_napp Σ Re Rle #|l| f f' ->
   All2 (eq_term_upto_univ Σ Re Re) l l' ->
   eq_term_upto_univ Σ Re Rle (mkApps f l) (mkApps f' l').
 Proof.
   induction l in f, f', l' |- *; intro e; inversion_clear 1.
   - assumption.
-  - pose proof (eq_term_upto_univ_App _ _ _ _ _ e).
+  - pose proof (eq_term_upto_univ_App _ _ _ _ _ _ e).
     case_eq (isApp f).
     + intro X; rewrite X in H0.
       destruct f; try discriminate.
@@ -576,22 +577,23 @@ Proof.
       * assumption.
 Qed.
 
-
+(* TODO update Template Coq's eq_term to reflect PCUIC's cumulativity *)
 Lemma trans_eq_term_upto_univ :
-  forall Σ Re Rle t u,
+  forall Σ Re Rle t u napp,
     T.wf t ->
     T.wf u ->
     TTy.eq_term_upto_univ Re Rle t u ->
-    eq_term_upto_univ Σ Re Rle (trans t) (trans u).
+    eq_term_upto_univ_napp Σ Re Rle napp (trans t) (trans u).
 Proof.
-  intros Σ Re Rle t u wt wu e.
-  induction t using Induction.term_forall_list_rect in Rle, wt, u, wu, e |- *.
+Admitted.
+(* intros Σ Re Rle t u napp wt wu e.
+  induction t using Induction.term_forall_list_rect in Rle, napp, wt, u, wu, e |- *.
   all: invs e; cbn.
   all: try solve [ constructor ; auto ].
   all: try solve [
     repeat constructor ;
     match goal with
-    | ih : forall Rle (u : Tterm), _ |- _ =>
+    | ih : forall Rle (u : Tterm) (napp : nat), _ |- _ =>
       eapply ih ; [
         inversion wt ; assumption
       | inversion wu ; assumption
@@ -614,7 +616,7 @@ Proof.
     intros ? ? [[? [ih ?]] ?].
     simpl in *.
     eapply ih. all: auto.
-  - eapply eq_term_upto_univ_mkApps.
+  -s apply eq_term_eq_term_napp.
     + eapply IHt.
       * inversion wt. assumption.
       * inversion wu. assumption.
@@ -710,7 +712,7 @@ Proof.
     intros [? ? ? ?] [? ? ? ?] [[[? ?] [[ih1 ih2] [? [? ?]]]] [? ?]].
     simpl in *.
     intuition eauto.
-Qed.
+Qed.  *)
 
 Lemma trans_leq_term Σ ϕ T U :
   T.wf T -> T.wf U -> TTy.leq_term ϕ T U ->

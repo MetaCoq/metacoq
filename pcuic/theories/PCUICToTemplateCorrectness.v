@@ -530,7 +530,7 @@ Qed.
 
 Lemma trans_destr_arity x:
 TT.destArity [] (trans x) 
-= option_map (fun '(xs,u) => (map trans_decl xs,u)) (PT.destArity [] x).
+= option_map (fun '(xs,u) => (map trans_decl xs,u)) (PCUICAstUtils.destArity [] x).
 Proof.
   remember (@nil PCUICAst.context_decl) as xs.
   replace (@nil context_decl) with (map trans_decl xs) by (now subst).

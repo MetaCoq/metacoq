@@ -411,8 +411,9 @@ Proof.
   eexists ; eauto.
 Qed.
 
-Definition R_ind_universes  {cf:checker_flags} (Σ : global_env_ext) ind i i' :=
-  R_global_instance Σ (eq_universe (global_ext_constraints Σ)) (leq_universe (global_ext_constraints Σ)) (inductive_mind ind) i i'.
+Definition R_ind_universes  {cf:checker_flags} (Σ : global_env_ext) ind n i i' :=
+  R_global_instance Σ (eq_universe (global_ext_constraints Σ))
+    (leq_universe (global_ext_constraints Σ)) (IndRef ind) n i i'.
 
 Lemma mkApps_ind_typing_spine {cf:checker_flags} Σ Γ Γ' ind i
   inst ind' i' args args' : 
@@ -422,7 +423,7 @@ Lemma mkApps_ind_typing_spine {cf:checker_flags} Σ Γ Γ' ind i
   typing_spine Σ Γ (it_mkProd_or_LetIn Γ' (mkApps (tInd ind i) args)) inst 
     (mkApps (tInd ind' i') args') ->
   ∑ instsubst, (make_context_subst (List.rev Γ') inst [] = Some instsubst) *
-  (#|inst| = context_assumptions Γ' /\ ind = ind' /\ R_ind_universes Σ ind i i') *
+  (#|inst| = context_assumptions Γ' /\ ind = ind' /\ R_ind_universes Σ ind #|args| i i') *
   All2 (fun par par' => Σ ;;; Γ |- par = par') (map (subst0 instsubst) args) args' *
   (subslet Σ Γ instsubst Γ').
 Proof.
@@ -466,6 +467,7 @@ Proof.
       eapply (context_subst_subst [{| decl_name := na; decl_body := Some b;  decl_type := ty |}] [] [b] Γ').
       rewrite -{2}  (subst_empty 0 b). eapply context_subst_def. constructor.
       now rewrite List.rev_involutive in Hisub.
+      now autorewrite with len in H2.
       rewrite map_map_compose in Hargs.
       assert (map (subst0 isub ∘ subst [b] #|Γ'|) args = map (subst0 (isub ++ [b])) args) as <-.
       { eapply map_ext => x. simpl.
@@ -511,6 +513,7 @@ Proof.
       intuition auto.
       destruct X1 as [isub [[[Hisub [Htl [Hind Hu]]] Hargs] Hs]].
       exists (isub ++ [hd])%list. rewrite List.rev_app_distr.
+      autorewrite with len in Hu.
       intuition auto. 2:lia.
       * apply make_context_subst_spec_inv.
         apply make_context_subst_spec in Hisub.
@@ -560,7 +563,7 @@ Lemma Construct_Ind_ind_eq {cf:checker_flags} {Σ} (wfΣ : wf Σ.1):
   let '(onind, oib, existT cshape (hnth, onc)) := on_declared_constructor wfΣ Hdecl in
   (i = i') * 
   (* Universe instances match *)
-  R_ind_universes Σ i u u' *
+  R_ind_universes Σ i (context_assumptions (ind_params mdecl) + #|cshape_indices cshape|) u u' *
   consistent_instance_ext Σ (ind_universes mdecl) u' *    
   (#|args| = (ind_npars mdecl + context_assumptions cshape.(cshape_args))%nat) *
   ∑ parsubst argsubst parsubst' argsubst',
@@ -637,6 +640,9 @@ Proof.
   eapply (isWAT_mkApps_Ind wfΣ decli) in vi' as (parsubst & argsubst & (spars & sargs) & cons) => //.
   unfold on_declared_inductive in sargs. simpl in sargs. rewrite -indeq in sargs. clear indeq.
   split=> //. split=> //.
+  split; auto. split => //.
+  autorewrite with len in Hu.
+  now rewrite to_extended_list_k_length in Hu.
   now rewrite Hargslen context_assumptions_app !context_assumptions_subst !subst_instance_context_assumptions; lia.
 
   exists (skipn #|cshape.(cshape_args)| isubst), (firstn #|cshape.(cshape_args)| isubst).

@@ -232,6 +232,8 @@ Section Alpha.
     destruct (decompose_app) eqn:eqdec.
     destruct (decompose_app_upto e eqdec) as [hd' [tl' [[[eq eqhd] napp] eqtl]]].
     rewrite eq. rewrite decompose_app_mkApps; auto.
+    eapply (eq_term_upto_univ_empty_impl _ Logic.eq Logic.eq Logic.eq Logic.eq #|l0| 0) in eqhd.
+    all:try typeclasses eauto.
     apply upto_names_destInd in eqhd.
     inv eqhd; auto.
     destruct a as [ind u], b0 as [ind' u']; simpl in *; auto.
@@ -257,6 +259,8 @@ Section Alpha.
     destruct (decompose_app) eqn:eqdec.
     destruct (decompose_app_upto eqt eqdec) as [hd' [tl' [[[eq eqhd] napp] eqtl]]].
     rewrite eq. rewrite decompose_app_mkApps; auto.
+    eapply (eq_term_upto_univ_empty_impl _ Logic.eq Logic.eq Logic.eq Logic.eq #|l0| 0) in eqhd.
+    all:try typeclasses eauto.
     apply upto_names_destInd in eqhd.
     inv eqhd; auto.
     destruct a as [ind u], b as [ind' u']; simpl in *; auto.
@@ -335,11 +339,10 @@ Section Alpha.
                 ** eapply ihb. assumption.
                 ** right. eexists. eapply ihB. assumption.
                 ** eapply cumul_refl.
-                   eapply eq_term_upto_univ_empty_impl. 5: eassumption.
-                   4: auto.
+                   eapply eq_term_upto_univ_empty_impl. 4:eassumption.
+                   all:try typeclasses eauto.
                    all: intros x ? [].
-                   --- eapply eq_universe_refl.
-                   --- eapply leq_universe_refl.
+                   --- reflexivity.
                    --- reflexivity.
           -- eapply ihA. assumption.
           -- constructor.
@@ -361,7 +364,7 @@ Section Alpha.
       + econstructor.
         * eapply iht.
           eapply eq_term_upto_univ_empty_impl in X; eauto.
-        assumption.
+          all:typeclasses eauto.
         * eapply ihu. assumption.
       + eapply validity_term ; eauto.
         econstructor ; eauto.
@@ -588,18 +591,28 @@ Section Alpha.
 
   Local Ltac inv H := inversion H; subst; clear H.
 
-  Lemma upto_names_eq_term_upto_univ Σ Re Rle t u
-    : eq_term_upto_univ Σ Re Rle t u ->
-      forall t' u', t ≡ t' -> u ≡ u' ->
-               eq_term_upto_univ Σ Re Rle t' u'.
+  Lemma eq_term_upto_univ_napp_0 n t t' :
+    eq_term_upto_univ_napp [] eq eq n t t' ->
+    upto_names' t t'. 
   Proof.
-    revert t u Rle. fix aux 4.
+    apply eq_term_upto_univ_empty_impl; typeclasses eauto.
+  Qed.
+
+  Lemma upto_names_eq_term_upto_univ Σ Re Rle napp t u
+    : eq_term_upto_univ_napp Σ Re Rle napp t u ->
+      forall t' u', t ≡ t' -> u ≡ u' ->
+               eq_term_upto_univ_napp Σ Re Rle napp t' u'.
+  Proof.
+    revert napp t u Rle. fix aux 5.
     destruct 1; cbn; intros t'' u'' H' H0';
       inv H'; inv H0'; try econstructor; eauto.
     - revert args'0 args'1 X X0.
       induction a; simpl; intros args0 args'0 H1 H2.
       + inv H1; inv H2; constructor; eauto.
       + inv H1; inv H2. constructor; eauto.
+    - apply eq_term_upto_univ_napp_0 in X.
+      apply eq_term_upto_univ_napp_0 in X3.
+      eapply aux; eauto.
     - apply Forall2_eq, map_inj in H2.
       apply Forall2_eq, map_inj in H3.
       congruence.

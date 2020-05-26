@@ -561,11 +561,13 @@ Proof.
   destruct gr; auto.
 Qed.
 
-Instance R_global_instance_empty_impl Σ Re Re' Rle Rle' gr napp :
+(** Pure syntactic equality, without cumulative inductive types subtyping *)
+
+Instance R_global_instance_empty_impl Σ Re Re' Rle Rle' gr napp napp' :
   RelationClasses.subrelation Re Re' ->
   RelationClasses.subrelation Rle Rle' ->
   RelationClasses.subrelation Re Rle' ->
-  subrelation (R_global_instance [] Re Rle gr napp) (R_global_instance Σ Re' Rle' gr napp).
+  subrelation (R_global_instance [] Re Rle gr napp) (R_global_instance Σ Re' Rle' gr napp').
 Proof.
   intros he hle hele t t'.
   rewrite /R_global_instance. simpl.
@@ -615,22 +617,20 @@ Instance eq_term_upto_univ_empty_impl Σ Re Re' Rle Rle' napp napp' :
   RelationClasses.subrelation Re Re' ->
   RelationClasses.subrelation Rle Rle' ->
   RelationClasses.subrelation Re Rle' ->
-  napp <= napp' ->
   subrelation (eq_term_upto_univ_napp [] Re Rle napp) (eq_term_upto_univ_napp Σ Re' Rle' napp').
 Proof.
-  intros he hle hele hnapp t t'.
-  induction t in napp, napp', hnapp, t', Rle, Rle', hle, hele |- * using term_forall_list_ind;
+  intros he hle hele t t'.
+  induction t in napp, napp', t', Rle, Rle', hle, hele |- * using term_forall_list_ind;
     try (inversion 1; subst; constructor;
          eauto using R_universe_instance_impl'; fail).
   - inversion 1; subst; constructor.
     eapply All2_impl'; tea.
     eapply All_impl; eauto.
-  - inversion 1; subst; constructor.
-    eapply IHt1. 4:eauto. all:auto. auto with arith. eauto.
   - inversion 1; subst; constructor. 
-    eapply R_global_instance_empty_impl; eauto.
+    (* eapply shelf bug... fixed in unifall *)
+    eapply R_global_instance_empty_impl. 4:eauto. all:eauto.
   - inversion 1; subst; constructor.
-    eapply R_global_instance_empty_impl; eauto.
+    eapply R_global_instance_empty_impl. 4:eauto. all:eauto.
   - inversion 1; subst; constructor; eauto.
     eapply All2_impl'; tea.
     eapply All_impl; eauto.
@@ -642,7 +642,7 @@ Proof.
   - inversion 1; subst; constructor.
     eapply All2_impl'; tea.
     eapply All_impl; eauto.
-    cbn. intros x [? ?] y [[? ?] ?]. repeat split; eauto.
+    cbn. intros x [? ?] y [[? ?] ?]. repeat split; eauto.    
 Qed.
 
 Instance eq_term_upto_univ_leq Σ Re Rle napp napp' :
@@ -1249,17 +1249,81 @@ Qed.
 
 (** ** Behavior on mkApps and it_mkLambda_or_LetIn **  *)
 
-Lemma eq_term_upto_univ_mkApps Σ Re Rle u1 l1 u2 l2 :
-    eq_term_upto_univ_napp Σ Re Rle #|l1| u1 u2 ->
-    All2 (eq_term_upto_univ Σ Re Re) l1 l2 ->
-    eq_term_upto_univ Σ Re Rle (mkApps u1 l1) (mkApps u2 l2).
+Lemma eq_term_eq_term_napp Σ Re Rle napp t t' :
+  RelationClasses.subrelation Re Rle ->
+  eq_term_upto_univ Σ Re Rle t t' -> 
+  eq_term_upto_univ_napp Σ Re Rle napp t t'.
 Proof.
-  intros hu hl. induction l1 in u1, u2, l2, hu, hl |- *.
+  intros. eapply eq_term_upto_univ_impl. 5:eauto.
+  4:auto with arith. all:typeclasses eauto.
+Qed.
+
+Lemma leq_term_leq_term_napp Σ Re Rle napp t t' :
+  RelationClasses.subrelation Re Rle ->
+  eq_term_upto_univ Σ Re Rle t t' -> 
+  eq_term_upto_univ_napp Σ Re Rle napp t t'.
+Proof.
+  intros. eapply eq_term_upto_univ_impl. 5:eauto.
+  4:auto with arith. all:try typeclasses eauto.
+Qed.
+
+Lemma eq_term_upto_univ_napp_mkApps Σ Re Rle u1 l1 u2 l2 napp :
+    eq_term_upto_univ_napp Σ Re Rle (#|l1| + napp) u1 u2 ->
+    All2 (eq_term_upto_univ Σ Re Re) l1 l2 ->
+    eq_term_upto_univ_napp Σ Re Rle napp (mkApps u1 l1) (mkApps u2 l2).
+Proof.
+  intros hu hl. induction l1 in napp, u1, u2, l2, hu, hl |- *.
   - inversion hl. subst. assumption.
   - inversion hl. subst. simpl.
     eapply IHl1.
     + constructor. all: assumption.
     + assumption.
+Qed.
+
+Lemma eq_term_upto_univ_napp_mkApps_l_inv Σ Re Rle napp u l t :
+    eq_term_upto_univ_napp Σ Re Rle napp (mkApps u l) t ->
+    ∑ u' l',
+      eq_term_upto_univ_napp Σ Re Rle (#|l| + napp) u u' *
+      All2 (eq_term_upto_univ Σ Re Re) l l' *
+      (t = mkApps u' l').
+Proof.
+  intros h. induction l in napp, u, t, h, Rle |- *.
+  - cbn in h. exists t, []. split ; auto.
+  - cbn in h. apply IHl in h as [u' [l' [[h1 h2] h3]]].
+    dependent destruction h1. subst.
+    eexists. eexists. split; [ split | ].
+    + eassumption.
+    + constructor.
+      * eassumption.
+      * eassumption.
+    + cbn. reflexivity.
+Qed.
+
+Lemma eq_term_upto_univ_napp_mkApps_r_inv Σ Re Rle napp u l t :
+    eq_term_upto_univ_napp Σ Re Rle napp t (mkApps u l) ->
+    ∑ u' l',
+      eq_term_upto_univ_napp Σ Re Rle (#|l| + napp) u' u *
+      All2 (eq_term_upto_univ Σ Re Re) l' l *
+      (t = mkApps u' l').
+Proof.
+  intros h. induction l in napp, u, t, h, Rle |- *.
+  - cbn in h. exists t, []. split ; auto.
+  - cbn in h. apply IHl in h as [u' [l' [[h1 h2] h3]]].
+    dependent destruction h1. subst.
+    eexists. eexists. split; [ split | ].
+    + eassumption.
+    + constructor.
+      * eassumption.
+      * eassumption.
+    + cbn. reflexivity.
+Qed.
+
+Lemma eq_term_upto_univ_mkApps Σ Re Rle u1 l1 u2 l2 :
+    eq_term_upto_univ_napp Σ Re Rle #|l1| u1 u2 ->
+    All2 (eq_term_upto_univ Σ Re Re) l1 l2 ->
+    eq_term_upto_univ Σ Re Rle (mkApps u1 l1) (mkApps u2 l2).
+Proof.
+  intros; apply eq_term_upto_univ_napp_mkApps; rewrite ?Nat.add_0_r; auto.
 Qed.
 
 Lemma eq_term_upto_univ_mkApps_l_inv Σ Re Rle u l t :
@@ -1269,16 +1333,7 @@ Lemma eq_term_upto_univ_mkApps_l_inv Σ Re Rle u l t :
       All2 (eq_term_upto_univ Σ Re Re) l l' *
       (t = mkApps u' l').
 Proof.
-  intros h. induction l in u, t, h, Rle |- *.
-  - cbn in h. exists t, []. split ; auto.
-  - cbn in h. apply IHl in h as [u' [l' [[h1 h2] h3]]].
-    dependent destruction h1. subst.
-    eexists. eexists. split; [ split | ].
-    + eassumption.
-    + constructor.
-      * eassumption.
-      * eassumption.
-    + cbn. reflexivity.
+  intros H; apply eq_term_upto_univ_napp_mkApps_l_inv in H; rewrite ?Nat.add_0_r in H; auto.
 Qed.
 
 Lemma eq_term_upto_univ_mkApps_r_inv Σ Re Rle u l t :
@@ -1288,16 +1343,8 @@ Lemma eq_term_upto_univ_mkApps_r_inv Σ Re Rle u l t :
       All2 (eq_term_upto_univ Σ Re Re) l' l *
       (t = mkApps u' l').
 Proof.
-  intros h. induction l in u, t, h, Rle |- *.
-  - cbn in h. exists t, []. split ; auto.
-  - cbn in h. apply IHl in h as [u' [l' [[h1 h2] h3]]].
-    dependent destruction h1. subst.
-    eexists. eexists. split; [ split | ].
-    + eassumption.
-    + constructor.
-      * eassumption.
-      * eassumption.
-    + cbn. reflexivity.
+  intros H; apply eq_term_upto_univ_napp_mkApps_r_inv in H;
+    rewrite Nat.add_0_r in H; auto.
 Qed.
 
 Lemma eq_term_upto_univ_it_mkLambda_or_LetIn Σ Re Rle Γ :
@@ -1771,7 +1818,7 @@ Proof.
   - apply Forall2_symP; eauto.
 Qed.
 
-Lemma eq_term_upto_univ_flip Σ (Re Rle Rle' : Universe.t -> Universe.t -> Prop) u v :
+Lemma eq_term_upto_univ_napp_flip Σ (Re Rle Rle' : Universe.t -> Universe.t -> Prop) napp u v :
   RelationClasses.Reflexive Re ->
   RelationClasses.Reflexive Rle ->
   RelationClasses.Symmetric Re ->
@@ -1779,8 +1826,8 @@ Lemma eq_term_upto_univ_flip Σ (Re Rle Rle' : Universe.t -> Universe.t -> Prop)
   RelationClasses.Transitive Rle ->
   RelationClasses.subrelation Re Rle ->
   (forall x y, Rle x y -> Rle' y x) ->
-  eq_term_upto_univ Σ Re Rle u v ->
-  eq_term_upto_univ Σ Re Rle' v u.
+  eq_term_upto_univ_napp Σ Re Rle napp u v ->
+  eq_term_upto_univ_napp Σ Re Rle' napp v u.
 Proof.
   intros Rerefl Rlerefl Resym Retrans Rletrans incl incl' H.
   assert (Resub : RelationClasses.subrelation Re Re).
@@ -1802,7 +1849,6 @@ Proof.
     now eapply eq_term_upto_univ_sym.
     now eapply eq_term_upto_univ_sym.
 Qed.
-
 
 Lemma eq_univ_make :
   forall u u',

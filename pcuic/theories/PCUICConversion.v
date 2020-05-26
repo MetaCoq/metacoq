@@ -921,7 +921,7 @@ Section Inversions.
       Σ ;;; Γ |- mkApps (tInd ind ui) l <= T ->
       ∑ ui' l',
         red Σ.1 Γ T (mkApps (tInd ind ui') l') ×
-        R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (inductive_mind ind) ui ui' ×
+        R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) #|l| ui ui' ×
         All2 (fun a a' => Σ ;;; Γ |- a = a') l l'.
   Proof.
     intros Γ ind ui l T h.
@@ -932,11 +932,12 @@ Section Inversions.
     subst.
     dependent destruction e.
     eexists _,_. split ; eauto. split ; auto.
-    eapply All2_trans.
-    - intros x y z h1 h2. eapply conv_trans ; eauto.
-    - eapply All2_impl ; eauto.
-    - eapply All2_impl ; eauto.
-      intros x y h. eapply conv_refl. assumption.
+    - now rewrite (All2_length _ _ ha).
+    - eapply All2_trans.
+      * intros x y z h1 h2. eapply conv_trans ; eauto.
+      * eapply All2_impl ; eauto.
+      * eapply All2_impl ; eauto.
+        intros x y h. eapply conv_refl. assumption.
   Qed.
 
   Lemma invert_cumul_ind_r :
@@ -944,7 +945,7 @@ Section Inversions.
       Σ ;;; Γ |- T <= mkApps (tInd ind ui) l ->
       ∑ ui' l',
         red Σ.1 Γ T (mkApps (tInd ind ui') l') ×
-        R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (inductive_mind ind) ui' ui ×
+        R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) #|l| ui' ui ×
         All2 (fun a a' => Σ ;;; Γ |- a = a') l l'.
   Proof.
     intros Γ ind ui l T h.
@@ -955,12 +956,13 @@ Section Inversions.
     subst.
     dependent destruction e.
     eexists _,_. split ; eauto. split ; auto.
-    eapply All2_trans.
-    - intros x y z h1 h2. eapply conv_trans ; eauto.
-    - eapply All2_impl ; eauto.
-    - eapply All2_swap.
-      eapply All2_impl ; eauto.
-      intros x y h. eapply conv_sym; auto. now constructor.
+    - rewrite (All2_length _ _ a); auto.
+    - eapply All2_trans.
+      * intros x y z h1 h2. eapply conv_trans ; eauto.
+      * eapply All2_impl ; eauto.
+      * eapply All2_swap.
+        eapply All2_impl ; eauto.
+        intros x y h. eapply conv_sym; auto. now constructor.
   Qed.
 
 End Inversions.
@@ -1113,7 +1115,7 @@ Section Inversions.
     intros h.
     induction h.
     - eapply cumul_refl. constructor.
-      + apply leq_term_refl.
+      + apply eq_term_upto_univ_refl; typeclasses eauto.
       + assumption.
     -  eapply cumul_red_l ; try eassumption.
        econstructor. assumption.
@@ -1138,7 +1140,7 @@ Section Inversions.
     intros h.
     induction h.
     - constructor. constructor.
-      + apply eq_term_refl.
+      + apply eq_term_upto_univ_refl; typeclasses eauto.
       + assumption.
     - eapply conv_red_l ; eauto.
       econstructor. assumption.
@@ -1363,7 +1365,7 @@ Section Inversions.
     intros Γ f g x h.
     induction h.
     - constructor. constructor.
-      + assumption.
+      + apply eq_term_eq_term_napp; auto. typeclasses eauto.
       + apply eq_term_refl.
     - eapply conv_red_l ; eauto.
       econstructor. assumption.
@@ -2421,8 +2423,7 @@ Proof.
 Qed.
 
 Lemma conv_inds {cf:checker_flags} (Σ : global_env_ext) Γ u u' ind mdecl :
-  R_global_instance Σ (eq_universe (global_ext_constraints Σ))
-     (eq_universe (global_ext_constraints Σ)) (inductive_mind ind) u u' ->
+  R_universe_instance (eq_universe (global_ext_constraints Σ)) u u' ->
   All2 (conv Σ Γ) (inds (inductive_mind ind) u (ind_bodies mdecl))
     (inds (inductive_mind ind) u' (ind_bodies mdecl)).
 Proof.
@@ -2430,7 +2431,10 @@ Proof.
   unfold inds. generalize #|ind_bodies mdecl|.
   induction n; constructor; auto.
   clear IHn.
-  repeat constructor. apply equ.
+  repeat constructor. destruct ind; simpl in *.
+  eapply (R_global_instance_empty_impl _ _ _ _ _ _ 0).
+  4:{ unfold R_global_instance. simpl. eauto. }
+  all:typeclasses eauto.
 Qed.
 
 Lemma weakening_conv_gen :

@@ -127,6 +127,12 @@ Proof.
     eexists. split.
     + eapply case_red_brs. eassumption.
     + econstructor. all: try eapply eq_term_upto_univ_refl ; eauto.
+  - destruct (IHh _ e) as [x [redl redr]].
+    exists (tApp x M2).
+    split. constructor; auto.
+    constructor. eapply eq_term_upto_univ_impl. 5:eauto.
+    all:auto. 1-3:typeclasses eauto.
+    reflexivity.
   - assert (h : ∑ ll,
       OnOne2 (red1 Σ Δ) l ll *
       All2 (eq_term_upto_univ Σ Re Re) l' ll
@@ -373,21 +379,21 @@ Proof.
 Qed.
 
 
-Lemma red1_eq_term_upto_univ_l Σ Re Rle Γ u v u' :
+Lemma red1_eq_term_upto_univ_l Σ Re Rle napp Γ u v u' :
   RelationClasses.Reflexive Re ->
   SubstUnivPreserving Re ->
   RelationClasses.Reflexive Rle ->
   RelationClasses.Transitive Re ->
   RelationClasses.Transitive Rle ->
   RelationClasses.subrelation Re Rle ->
-  eq_term_upto_univ Σ Re Rle u u' ->
+  eq_term_upto_univ_napp Σ Re Rle napp u u' ->
   red1 Σ Γ u v ->
   ∑ v', red1 Σ Γ u' v' *
-         eq_term_upto_univ Σ Re Rle v v'.
+         eq_term_upto_univ_napp Σ Re Rle napp v v'.
 Proof.
   unfold RelationClasses.subrelation.
   intros he he' hle tRe tRle hR e h.
-  induction h in u', e, tRle, Rle, hle, hR |- * using red1_ind_all.
+  induction h in napp, u', e, tRle, Rle, hle, hR |- * using red1_ind_all.
   all: try solve [
     dependent destruction e ;
     edestruct IHh as [? [? ?]] ; [ .. | eassumption | ] ; eauto ;
@@ -403,7 +409,7 @@ Proof.
     clear h ;
     lazymatch goal with
     | r : red1 _ (?Γ,, vass ?na ?A) ?u ?v,
-      e :  eq_term_upto_univ _ _ _ ?A ?B
+      e :  eq_term_upto_univ_napp _ _ _ _ ?A ?B
       |- _ =>
       let hh := fresh "hh" in
       eapply red1_eq_context_upto_l in r as hh ; revgoals ; [
@@ -426,11 +432,14 @@ Proof.
   - dependent destruction e. dependent destruction e1.
     eexists. split.
     + constructor.
-    + eapply eq_term_upto_univ_subst ; eauto.
+    + eapply eq_term_upto_univ_substs ; eauto.
+      eapply leq_term_leq_term_napp; eauto.
   - dependent destruction e.
     eexists. split.
     + constructor.
-    + eapply eq_term_upto_univ_subst ; assumption.
+    + eapply eq_term_upto_univ_substs ; try assumption.
+      eapply leq_term_leq_term_napp; eauto.
+      auto.
   - dependent destruction e.
     eexists. split.
     + constructor. eassumption.
@@ -440,14 +449,14 @@ Proof.
     dependent destruction h1.
     eexists. split.
     + constructor.
-    + eapply eq_term_upto_univ_mkApps.
-      * eapply All2_nth
-          with (P := fun x y =>  eq_term_upto_univ Σ Re Rle (snd x) (snd y)).
+    + unfold iota_red. eapply eq_term_upto_univ_napp_mkApps.
+      * simpl. eapply (eq_term_upto_univ_leq _ _ _ 0). auto. auto with arith.
+        eapply All2_nth
+          with (P := fun x y =>  eq_term_upto_univ Σ Re Re (snd x) (snd y)).
         -- solve_all.
-           eapply eq_term_upto_univ_leq ; eauto.
         -- cbn. eapply eq_term_upto_univ_refl ; eauto.
       * eapply All2_skipn. assumption.
-  - apply eq_term_upto_univ_mkApps_l_inv in e as [? [? [[h1 h2] h3]]]. subst.
+  - apply eq_term_upto_univ_napp_mkApps_l_inv in e as [? [? [[h1 h2] h3]]]. subst.
     dependent destruction h1.
     unfold unfold_fix in H.
     case_eq (nth_error mfix idx) ;
@@ -467,9 +476,9 @@ Proof.
       * unfold unfold_fix. rewrite e'; eauto.
       * unfold is_constructor. rewrite <- erarg. rewrite ea'.
         eapply isConstruct_app_eq_term_l ; eassumption.
-    + eapply eq_term_upto_univ_mkApps.
+    + eapply eq_term_upto_univ_napp_mkApps.
       * eapply eq_term_upto_univ_substs ; eauto.
-        -- eapply eq_term_upto_univ_leq ; eauto.
+        -- eapply (eq_term_upto_univ_leq _ _ _ 0) ; eauto with arith. 
         -- unfold fix_subst.
            apply All2_length in a as el. rewrite <- el.
            generalize #|mfix|. intro n.
@@ -493,6 +502,8 @@ Proof.
     + constructor. all: eauto.
       eapply eq_term_upto_univ_mkApps. all: eauto.
       eapply eq_term_upto_univ_substs ; eauto; try exact _.
+      eapply (eq_term_upto_univ_leq _ _ _ 0); auto with arith.
+      typeclasses eauto.
       unfold cofix_subst.
       apply All2_length in a0 as el. rewrite <- el.
       generalize #|mfix|. intro n.
@@ -515,6 +526,8 @@ Proof.
     + constructor.
       eapply eq_term_upto_univ_mkApps. all: eauto.
       eapply eq_term_upto_univ_substs ; eauto; try exact _.
+      eapply (eq_term_upto_univ_leq _ _ _ 0); auto with arith.
+      typeclasses eauto.
       unfold cofix_subst.
       apply All2_length in a as el. rewrite <- el.
       generalize #|mfix|. intro n.
@@ -525,7 +538,7 @@ Proof.
   - dependent destruction e.
     eexists. split.
     + econstructor. all: eauto.
-    + eapply eq_term_upto_univ_leq; tas.
+    + eapply (eq_term_upto_univ_leq _ _ _ 0); tas. auto. auto with arith.
       now apply eq_term_upto_univ_subst_instance_constr.
   - dependent destruction e.
     apply eq_term_upto_univ_mkApps_l_inv in e as [? [? [[h1 h2] h3]]]. subst.
@@ -535,6 +548,7 @@ Proof.
     eexists. split.
     + constructor. eassumption.
     + eapply eq_term_upto_univ_leq ; eauto.
+      eapply eq_term_eq_term_napp; auto. typeclasses eauto.
   - dependent destruction e.
     edestruct IHh as [? [? ?]] ; [ .. | eassumption | ] ; eauto.
     clear h.
@@ -660,14 +674,14 @@ Proof.
            ).
     { revert mfix' a.
       refine (OnOne2_ind_l _ (fun L x y => (red1 Σ (Γ ,,, fix_context L) (dbody x) (dbody y)
-        × (forall Rle (u' : term),
+        × (forall Rle napp (u' : term),
            RelationClasses.Reflexive Rle ->
            RelationClasses.Transitive Rle ->
            (forall u u'0 : Universe.t, Re u u'0 -> Rle u u'0) ->
-           eq_term_upto_univ Σ Re Rle (dbody x) u' ->
+           eq_term_upto_univ_napp Σ Re Rle napp (dbody x) u' ->
            ∑ v' : term,
              red1 Σ (Γ ,,, fix_context L) u' v'
-                  × eq_term_upto_univ Σ Re Rle (dbody y) v' ))
+                  × eq_term_upto_univ_napp Σ Re Rle napp (dbody y) v' ))
        × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)) (fun L mfix0 mfix1 o => forall mfix', All2
       (fun x y : def term =>
        (eq_term_upto_univ Σ Re Re (dtype x) (dtype y)
@@ -804,14 +818,14 @@ Proof.
            ).
     { revert mfix' a.
       refine (OnOne2_ind_l _ (fun L x y => (red1 Σ (Γ ,,, fix_context L) (dbody x) (dbody y)
-        × (forall Rle (u' : term),
+        × (forall Rle napp (u' : term),
            RelationClasses.Reflexive Rle ->
            RelationClasses.Transitive Rle ->
            (forall u u'0 : Universe.t, Re u u'0 -> Rle u u'0) ->
-           eq_term_upto_univ Σ Re Rle (dbody x) u' ->
+           eq_term_upto_univ_napp Σ Re Rle napp (dbody x) u' ->
            ∑ v' : term,
              red1 Σ (Γ ,,, fix_context L) u' v'
-               × eq_term_upto_univ Σ Re Rle (dbody y) v'))
+               × eq_term_upto_univ_napp Σ Re Rle napp (dbody y) v'))
        × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)) (fun L mfix0 mfix1 o => forall mfix', All2
       (fun x y : def term =>
        (eq_term_upto_univ Σ Re Re (dtype x) (dtype y)
@@ -915,7 +929,7 @@ Proof.
   now eapply eq_term_upto_univ_sym.
 Qed.
 
-Lemma red1_eq_term_upto_univ_r Σ Re Rle Γ u v u' :
+Lemma red1_eq_term_upto_univ_r Σ Re Rle napp Γ u v u' :
   RelationClasses.Reflexive Re ->
   SubstUnivPreserving Re ->
   RelationClasses.Reflexive Rle ->
@@ -923,18 +937,18 @@ Lemma red1_eq_term_upto_univ_r Σ Re Rle Γ u v u' :
   RelationClasses.Transitive Re ->
   RelationClasses.Transitive Rle ->
   RelationClasses.subrelation Re Rle ->
-  eq_term_upto_univ Σ Re Rle u' u ->
+  eq_term_upto_univ_napp Σ Re Rle napp u' u ->
   red1 Σ Γ u v ->
   ∑ v', red1 Σ Γ u' v' ×
-        eq_term_upto_univ Σ Re Rle v' v.
+        eq_term_upto_univ_napp Σ Re Rle napp v' v.
 Proof.
   intros he he' hle tRe tRle hR e h uv.
-  destruct (red1_eq_term_upto_univ_l Σ Re (flip Rle) Γ u v u'); auto.
+  destruct (red1_eq_term_upto_univ_l Σ Re (flip Rle) napp Γ u v u'); auto.
   - now eapply flip_Transitive.
   - intros x y X. symmetry in X. apply e. auto.
-  - eapply eq_term_upto_univ_flip; eauto.
+  - eapply eq_term_upto_univ_napp_flip; eauto.
   - exists x. intuition auto.
-    eapply (eq_term_upto_univ_flip Σ Re (flip Rle) Rle); eauto.
+    eapply (eq_term_upto_univ_napp_flip Σ Re (flip Rle) Rle); eauto.
     + now eapply flip_Transitive.
     + unfold flip. intros ? ? H. symmetry in H. eauto.
 Qed.
@@ -1192,74 +1206,6 @@ Section RedPred.
     destruct option_map as [[o|]|]; auto.
     now rewrite !subst_ids in X1.
   Qed.
-(*
-  Lemma pred1_ctx_pred1_inv' Γ Γ'  t u :
-    pred1 Σ Γ Γ' t u ->
-    pred1 Σ Γ' Γ' t u.
-  Proof.
-    intros X.
-    pose proof (strong_substitutivity _ wfΣ _ _ Γ' Γ' _ _ ids ids X).
-    forward X0.
-    { red. intros. simpl.
-      epose proof (pred1_pred1_ctx _ X).
-      destruct (leb_spec_Set (S x) #|Γ|).
-      case e: (decl_body d) => [b|] //. eexists x, _; intuition eauto.
-      rewrite nth_error_app_ge in H0. lia. rewrite nth_error_app_ge. lia.
-      rewrite H0. simpl. rewrite e. reflexivity. }
-    forward X1.
-    { red. intros.
-      destruct (leb_spec_Set (S x) #|Δ|).
-      rewrite nth_error_app_lt in H0. lia.
-      apply nth_error_assumption_context in H0 => //; rewrite H0 //.
-      case e: (decl_body d) => [b|] //. eexists x, _; intuition eauto.
-      rewrite nth_error_app_ge in H0 |- *; try lia.
-      eapply All2_local_env_app in X0 as [_ X0] => //.
-      pose proof (All2_local_env_length X0).
-      rewrite nth_error_app_ge. lia. now rewrite lenΔ H0 /= e. }
-    forward X1.
-    red. intros x; split. eapply pred1_refl_gen; auto.
-    destruct option_map as [[o|]|]; auto.
-    now rewrite !subst_ids in X1.
-  Qed. *)
-
-(*
-  Lemma pred1_ctx_pred1_inv' Γ Γ' Δ Δ' t u :
-    #|Γ| = #|Γ'| ->
-    pred1 Σ (Γ ,,, Δ) (Γ' ,,, Δ') t u ->
-    assumption_context Δ ->
-    assumption_context Δ' ->
-    pred1_ctx Σ (Γ ,,, Δ) (Γ' ,,, Δ) ->
-    pred1 Σ (Γ' ,,, Δ) (Γ' ,,, Δ) t u.
-  Proof.
-    intros Hlen X H H' X0.
-    eapply pred1_ctx_pred1_inv in X0; eauto.
-    assert(lenΔ : #|Δ| = #|Δ'|). 
-    { eapply pred1_pred1_ctx in X. eapply All2_local_env_length in X.
-      rewrite !app_context_length in X. lia. }
-    pose proof (strong_substitutivity _ wfΣ _ _ (Γ' ,,, Δ) (Γ' ,,, Δ) _ _ ids ids X0).
-    forward X1.
-    { red. intros. simpl.
-      destruct (leb_spec_Set (S x) #|Δ|).
-      rewrite nth_error_app_lt in H0. lia.
-      apply nth_error_assumption_context in H0 => //; rewrite H0 //.
-      case e: (decl_body d) => [b|] //. eexists x, _; intuition eauto.
-      rewrite nth_error_app_ge in H0. lia. rewrite nth_error_app_ge. lia.
-      rewrite H0. simpl. rewrite e. reflexivity. }
-    forward X1.
-    { red. intros.
-      destruct (leb_spec_Set (S x) #|Δ|).
-      rewrite nth_error_app_lt in H0. lia.
-      apply nth_error_assumption_context in H0 => //; rewrite H0 //.
-      case e: (decl_body d) => [b|] //. eexists x, _; intuition eauto.
-      rewrite nth_error_app_ge in H0 |- *; try lia.
-      eapply All2_local_env_app in X0 as [_ X0] => //.
-      pose proof (All2_local_env_length X0).
-      rewrite nth_error_app_ge. lia. now rewrite lenΔ H0 /= e. }
-    forward X1.
-    red. intros x; split. eapply pred1_refl_gen; auto.
-    destruct option_map as [[o|]|]; auto.
-    now rewrite !subst_ids in X1.
-  Qed.*)
 
   Ltac noconf H := repeat (DepElim.noconf H; simpl NoConfusion in * ).
 

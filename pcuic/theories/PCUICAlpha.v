@@ -72,7 +72,9 @@ Section Alpha.
           simpl. split ; auto.
           eapply eq_term_upto_univ_it_mkProd_or_LetIn ; auto.
           eapply eq_term_upto_univ_mkApps.
-          -- eapply eq_term_upto_univ_lift. assumption.
+          -- eapply eq_term_upto_univ_lift. 
+             eapply eq_term_eq_term_napp; eauto.
+              typeclasses eauto.
           -- apply All2_same. intro. apply eq_term_upto_univ_refl ; auto.
   Qed.
 
@@ -151,7 +153,7 @@ Section Alpha.
     eq_term_upto_univ Σ Re Rle x y ->
     decompose_app x = (hd, tl) ->
     ∑ hd' tl', (y = mkApps hd' tl') *
-    eq_term_upto_univ Σ Re Rle hd hd' *
+    eq_term_upto_univ_napp Σ Re Rle #|tl| hd hd' *
     negb (isApp hd') *
     All2 (eq_term_upto_univ Σ Re Re) tl tl'.
   Proof.
@@ -165,15 +167,15 @@ Section Alpha.
     inv eqh; simpl in *; try discriminate; auto.
   Qed.
 
-Lemma All2_trans' {A B C}
-      (P : A -> B -> Type) (Q : B -> C -> Type) (R : A -> C -> Type)
-      (H : forall x y z, P x y × Q y z -> R x z) {l1 l2 l3}
-  : All2 P l1 l2 -> All2 Q l2 l3 -> All2 R l1 l3.
-Proof.
-  induction 1 in l3 |- *.
-  - inversion 1; constructor.
-  - inversion 1; subst. constructor; eauto.
-Qed.
+  Lemma All2_trans' {A B C}
+        (P : A -> B -> Type) (Q : B -> C -> Type) (R : A -> C -> Type)
+        (H : forall x y z, P x y × Q y z -> R x z) {l1 l2 l3}
+    : All2 P l1 l2 -> All2 Q l2 l3 -> All2 R l1 l3.
+  Proof.
+    induction 1 in l3 |- *.
+    - inversion 1; constructor.
+    - inversion 1; subst. constructor; eauto.
+  Qed.
 
   Lemma decompose_prod_assum_upto_names' ctx ctx' x y : 
     eq_context_upto [] eq ctx ctx' -> upto_names' x y -> 
@@ -333,7 +335,8 @@ Qed.
                 ** eapply ihb. assumption.
                 ** right. eexists. eapply ihB. assumption.
                 ** eapply cumul_refl.
-                   eapply eq_term_upto_univ_empty_impl. 4: eassumption.
+                   eapply eq_term_upto_univ_empty_impl. 5: eassumption.
+                   4: auto.
                    all: intros x ? [].
                    --- eapply eq_universe_refl.
                    --- eapply leq_universe_refl.
@@ -356,7 +359,9 @@ Qed.
     - intros t na A B u ih ht iht hu ihu v e; invs e.
       econstructor.
       + econstructor.
-        * eapply iht. assumption.
+        * eapply iht.
+          eapply eq_term_upto_univ_empty_impl in X; eauto.
+        assumption.
         * eapply ihu. assumption.
       + eapply validity_term ; eauto.
         econstructor ; eauto.

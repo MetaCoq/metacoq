@@ -731,12 +731,12 @@ Proof.
   - constructor.
   - constructor; tas.
     constructor. eapply conv_refl.
-    eapply eq_term_upto_univ_impl; tea.
+    eapply eq_term_upto_univ_impl; tea. auto.
   - constructor; tas.
     constructor. eapply conv_refl.
-    eapply eq_term_upto_univ_impl; tea.
+    eapply eq_term_upto_univ_impl; tea. auto.
     eapply conv_refl.
-    eapply eq_term_upto_univ_impl; tea.
+    eapply eq_term_upto_univ_impl => //; tea.
 Qed.
 
 Instance eq_subrel_eq_univ {cf:checker_flags} Σ : RelationClasses.subrelation eq (eq_universe Σ).
@@ -749,12 +749,12 @@ Proof.
   - constructor.
   - constructor; tas.
     constructor. eapply conv_refl.
-    eapply eq_term_upto_univ_empty_impl; tea; typeclasses eauto.
+    eapply eq_term_upto_univ_empty_impl; tea; try typeclasses eauto.
   - constructor; tas.
     constructor. eapply conv_refl.
     eapply eq_term_upto_univ_empty_impl; tea; try typeclasses eauto.
     eapply conv_refl.
-    eapply eq_term_upto_univ_empty_impl; tea; typeclasses eauto.
+    eapply eq_term_upto_univ_empty_impl; tea; try typeclasses eauto.
 Qed.
 
 Lemma eq_context_upto_univ_conv_context {cf:checker_flags} Σ Γ Δ :

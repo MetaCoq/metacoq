@@ -619,6 +619,14 @@ Hint Resolve eta_beta_eta : beta_eta.
 Hint Resolve eta1_eta : beta_eta.
 Hint Resolve red1_red : beta_eta.
 
+Lemma red1_beta_eta Σ Γ M N :
+  red1 Σ Γ M N -> beta_eta Σ Γ M N.
+Proof. eta. Defined.
+
+Lemma eta1_beta_eta Σ Γ M N :
+  eta1 M N -> beta_eta Σ Γ M N.
+Proof. eta. Defined.
+
 Lemma beta_eta_Evar Σ Γ n l l' :
   All2 (beta_eta Σ Γ) l l' ->
   beta_eta Σ Γ (tEvar n l) (tEvar n l').
@@ -1009,7 +1017,7 @@ Lemma red1_eta_ctx Σ Γ Δ t u :
 Proof.
   induction 1 in Δ |- * using red1_ind_all; intro XX.
   all: try (eexists; split; [|reflexivity];
-            apply red_beta_eta, red1_red; eta; fail).
+            apply red1_beta_eta; eta; fail).
   - destruct (nth_error Γ i) eqn:e; [|discriminate].
     destruct c as [na [bo|] ty]; [|discriminate].
     cbn in *. invs H.
@@ -1018,7 +1026,7 @@ Proof.
     destruct d as [na' [bo'|] ty']; [|contradiction]; cbn in *.
     destruct o.
     exists (lift0 (S i) bo'); split; [|eta].
-    apply red_beta_eta, red1_red. constructor. now rewrite e.
+    apply red1_beta_eta. constructor. now rewrite e.
   - edestruct IHX as [xx [? ?]]; tea.
     exists (tLambda na xx N); eta.
   - edestruct IHX as [xx [? ?]].
@@ -1236,7 +1244,43 @@ Proof.
   intros X Y.
   induction Y in M, M', X |- * ; cbn; eta.
 Qed.
+Hint Resolve beta_eta_mkApps : beta_eta.
 
+Hint Extern 0 (All2 _ _ _) => reflexivity : beta_eta.
+Hint Resolve OnOne2_All2 : beta_eta.
+
+(* todo move *)
+Lemma beta_eta_subst0 {cf:checker_flags} Σ Γ Δ s M N :
+  wf Σ -> untyped_subslet Γ s Δ ->
+  beta_eta Σ (Γ ,,, Δ) M N ->
+  beta_eta Σ Γ (subst s 0 M) (subst s 0 N).
+Proof.
+  apply beta_eta_subst with (Γ' := []).
+Qed.
+
+
+Lemma untyped_subslet_fix_subst Γ mfix :
+  untyped_subslet Γ (fix_subst mfix) (fix_context mfix).
+Proof.
+Admitted.
+
+Lemma untyped_subslet_cofix_subst Γ mfix :
+  untyped_subslet Γ (cofix_subst mfix) (fix_context mfix).
+Proof.
+Admitted.
+
+Lemma fst_decompose_app_App M N :
+  (decompose_app (tApp M N)).1 = (decompose_app M).1.
+Proof.
+  unfold decompose_app; cbn. generalize [N]. generalize (@nil term).
+  induction M; cbnr. eauto.
+Qed.
+
+Lemma isConstruct_app_App M N :
+  isConstruct_app (tApp M N) = isConstruct_app M.
+Proof.
+  unfold isConstruct_app. now rewrite fst_decompose_app_App.
+Qed.
 
 
 Lemma red1_eta1_diamond {cf:checker_flags} {Σ Γ t u v} :
@@ -1275,49 +1319,220 @@ Proof.
         destruct s as [[]|[]]; eta.
       * apply nth_error_None in f. rewrite e in f.
         apply nth_error_None in f. now rewrite f.
+
   - intro XX. apply eta1_mkApps_inv in XX as [[M' [? ?]]|[l' [? ?]]]; subst.
     + invs e.
-      * unfold unfold_fix in H.
+      * enough (∑ fn', beta_eta Σ Γ fn fn'
+                       × unfold_fix mfix1 idx = Some (narg, fn')) as XX. {
+          destruct XX as [fn' [? ?]].
+          tac (mkApps fn' args). }
+        unfold unfold_fix in *.
         destruct (nth_error mfix idx) eqn:e; [|discriminate].
         destruct (isLambda (dbody d)) eqn:f; [|discriminate].
         apply OnOne2_length in X as el.
         eapply OnOne2_nth_error in X as X'; tea.
-        destruct X' as [v' [e' [|]]]; tea.
-        -- invs H. tac (mkApps (subst0 (fix_subst mfix1) (dbody v')) args).
-           ++ apply beta_eta_mkApps; [|reflexivity].
+        invs H. destruct X' as [v' [e' [|]]]; tea.
+        -- subst. exists (subst0 (fix_subst mfix1) (dbody v')); split.
+           ++ apply subst_beta_eta with (Γ':=[]); tas.
+              unfold fix_subst. rewrite el.
+              clear -X. induction #|mfix1|; trea.
+              constructor; eta.
+           ++ now rewrite e', f.
+        -- exists (subst0 (fix_subst mfix1) (dbody d)); eta.
+           ++ apply subst_beta_eta with (Γ':=[]); tas.
+              unfold fix_subst. rewrite el.
+              clear -X. induction #|mfix1|; trea.
+              constructor; eta.
+           ++ rewrite e'. destruct p as [? HH]; invs HH.
+              now rewrite f.
+      * enough (∑ fn', beta_eta Σ Γ fn fn'
+                       × unfold_fix mfix1 idx = Some (narg, fn')) as XX. {
+          destruct XX as [fn' [? ?]].
+          tac (mkApps fn' args). }
+        unfold unfold_fix in *.
+        destruct (nth_error mfix idx) eqn:e; [|discriminate].
+        destruct (isLambda (dbody d)) eqn:f; [|discriminate].
+        apply OnOne2_length in X as el.
+        eapply OnOne2_nth_error in X as X'; tea.
+        invs H. destruct X' as [v' [e' [|]]]; tea.
+        -- subst. exists (subst0 (fix_subst mfix1) (dbody v')); split.
+           ++ apply subst_beta_eta with (Γ':=[]); tas.
+              unfold fix_subst. rewrite el.
+              clear -X. induction #|mfix1|; trea.
+              constructor; eta.
+           ++ now rewrite e', f.
+        -- exists (subst0 (fix_subst mfix1) (dbody v')); eta.
+           ++ transitivity (subst0 (fix_subst mfix) (dbody v')). {
+                destruct p.
+                eapply beta_eta_subst0; eta.
+                eapply untyped_subslet_fix_subst. }
               apply subst_beta_eta with (Γ':=[]); tas.
               unfold fix_subst. rewrite el.
-              clear -X. induction X; cbn.
-              ** constructor. 1: admit.
+              clear -X. induction #|mfix1|; trea.
+              constructor; eta.
+           ++ rewrite e'. destruct p as [? HH]; invs HH.
+              todo "big pb: islambda eta".
+    + exists (mkApps fn l'), (mkApps fn l'); eta 2; [eta|].
+      constructor. left. econstructor; tea.
+      unfold is_constructor in *.
+      destruct (nth_error args narg) eqn:e; [|discriminate].
+      eapply OnOne2_nth_error in o as [v' [e' [|]]]; tea;
+        rewrite e'.
+      * easy.
+      * clear -H0 e0.
+        induction e0; cbn in *; try discriminate;
+          rewrite isConstruct_app_App in *; auto.
 
-           ++ apply red_beta_eta, red1_red. econstructor; tea.
-              unfold unfold_fix; now rewrite e', f.
-        -- admit.
-
-    + exists (mkApps fn l'), (mkApps fn l'); eta 2.
-      * apply beta_eta_mkApps; eta. eapply OnOne2_All2; tea; eta.
-      * constructor. left. econstructor; tea.
-        todo "is_constructor eta".
   - intro XX; invs XX.
     + tac (tCase ip p' (mkApps fn args) brs).
-    + todo "eta mkApps".
+    + apply eta1_mkApps_inv in X as [[M' [? ?]]|[l' [? ?]]]; subst.
+      2: exists (tCase ip p (mkApps fn l') brs), (tCase ip p (mkApps fn l') brs); eta 6.
+      invs e.
+      * enough (∑ fn', beta_eta Σ Γ fn fn'
+                       × unfold_cofix mfix1 idx = Some (narg, fn')) as XX. {
+          destruct XX as [fn' [? ?]].
+          tac (tCase ip p (mkApps fn' args) brs). }
+        unfold unfold_cofix in *.
+        destruct (nth_error mfix idx) eqn:e; [|discriminate].
+        apply OnOne2_length in X as el.
+        eapply OnOne2_nth_error in X as X'; tea.
+        invs H. destruct X' as [v' [e' [|]]]; tea.
+        -- subst. exists (subst0 (cofix_subst mfix1) (dbody v')); split.
+           ++ apply subst_beta_eta with (Γ':=[]); tas.
+              unfold cofix_subst. rewrite el.
+              clear -X. induction #|mfix1|; trea.
+              constructor; eta.
+           ++ now rewrite e'.
+        -- exists (subst0 (cofix_subst mfix1) (dbody d)); eta.
+           ++ apply subst_beta_eta with (Γ':=[]); tas.
+              unfold cofix_subst. rewrite el.
+              clear -X. induction #|mfix1|; trea.
+              constructor; eta.
+           ++ rewrite e'. destruct p0 as [? HH]; now invs HH.
+      * enough (∑ fn', beta_eta Σ Γ fn fn'
+                       × unfold_cofix mfix1 idx = Some (narg, fn')) as XX. {
+          destruct XX as [fn' [? ?]].
+          tac (tCase ip p (mkApps fn' args) brs). }
+        unfold unfold_cofix in *.
+        destruct (nth_error mfix idx) eqn:e; [|discriminate].
+        apply OnOne2_length in X as el.
+        eapply OnOne2_nth_error in X as X'; tea.
+        invs H. destruct X' as [v' [e' [|]]]; tea.
+        -- subst. exists (subst0 (cofix_subst mfix1) (dbody v')); split.
+           ++ apply subst_beta_eta with (Γ':=[]); tas.
+              unfold cofix_subst. rewrite el.
+              clear -X. induction #|mfix1|; trea.
+              constructor; eta.
+           ++ now rewrite e'.
+        -- exists (subst0 (cofix_subst mfix1) (dbody v')); eta.
+           ++ transitivity (subst0 (cofix_subst mfix) (dbody v')). {
+                destruct p0.
+                eapply beta_eta_subst0; eta.
+                eapply untyped_subslet_cofix_subst. }
+              apply subst_beta_eta with (Γ':=[]); tas.
+              unfold cofix_subst. rewrite el.
+              clear -X. induction #|mfix1|; trea.
+              constructor; eta.
+           ++ rewrite e'. destruct p0 as [? HH]; now invs HH.
     + tac (tCase ip p (mkApps fn args) brs').
+
+
   - intro XX; invs XX.
-    + todo "eta mkApps".
+    apply eta1_mkApps_inv in X as [[M' [? ?]]|[l' [? ?]]]; subst.
+    2: exists (tProj p (mkApps fn l')), (tProj p (mkApps fn l')); eta 6.
+    invs e.
+    * enough (∑ fn', beta_eta Σ Γ fn fn'
+                     × unfold_cofix mfix1 idx = Some (narg, fn')) as XX. {
+        destruct XX as [fn' [? ?]].
+        tac (tProj p (mkApps fn' args)). }
+      unfold unfold_cofix in *.
+      destruct (nth_error mfix idx) eqn:e; [|discriminate].
+      apply OnOne2_length in X as el.
+      eapply OnOne2_nth_error in X as X'; tea.
+      invs H. destruct X' as [v' [e' [|]]]; tea.
+      -- subst. exists (subst0 (cofix_subst mfix1) (dbody v')); split.
+         ++ apply subst_beta_eta with (Γ':=[]); tas.
+            unfold cofix_subst. rewrite el.
+            clear -X. induction #|mfix1|; trea.
+            constructor; eta.
+         ++ now rewrite e'.
+      -- exists (subst0 (cofix_subst mfix1) (dbody d)); eta.
+         ++ apply subst_beta_eta with (Γ':=[]); tas.
+            unfold cofix_subst. rewrite el.
+            clear -X. induction #|mfix1|; trea.
+            constructor; eta.
+         ++ rewrite e'. destruct p0 as [? HH]; now invs HH.
+    * enough (∑ fn', beta_eta Σ Γ fn fn'
+                     × unfold_cofix mfix1 idx = Some (narg, fn')) as XX. {
+        destruct XX as [fn' [? ?]].
+        tac (tProj p (mkApps fn' args)). }
+      unfold unfold_cofix in *.
+      destruct (nth_error mfix idx) eqn:e; [|discriminate].
+      apply OnOne2_length in X as el.
+      eapply OnOne2_nth_error in X as X'; tea.
+      invs H. destruct X' as [v' [e' [|]]]; tea.
+      -- subst. exists (subst0 (cofix_subst mfix1) (dbody v')); split.
+         ++ apply subst_beta_eta with (Γ':=[]); tas.
+            unfold cofix_subst. rewrite el.
+            clear -X. induction #|mfix1|; trea.
+            constructor; eta.
+         ++ now rewrite e'.
+      -- exists (subst0 (cofix_subst mfix1) (dbody v')); eta.
+         ++ transitivity (subst0 (cofix_subst mfix) (dbody v')). {
+              destruct p0.
+              eapply beta_eta_subst0; eta.
+              eapply untyped_subslet_cofix_subst. }
+            apply subst_beta_eta with (Γ':=[]); tas.
+            unfold cofix_subst. rewrite el.
+            clear -X. induction #|mfix1|; trea.
+            constructor; eta.
+         ++ rewrite e'. destruct p0 as [? HH]; now invs HH.
+
   - intro XX; invs XX.
   - intro XX; invs XX.
-    + todo "eta mkApps".
+    apply eta1_mkApps_inv in X as [[M' [? ?]]|[l' [? ?]]]; subst.
+    1: invs e.
+    eapply OnOne2_nth_error in o as [v' [e' [|]]]; tea.
+    + subst. tac v'.
+    + tac v'.
   - intro XX; invs XX.
     + tac v.
     + itac IHX X0.
       exists (tLambda na u' N), (tLambda na v' N); eta.
     + tac (tLambda na M' M'0).
   - intro XX; invs XX.
-    + invs X.
+    + clear IHX. invs X.
       * destruct v; invs H0.
         rewrite lift_subst0_Rel.
         exists (tLambda na N v2), (tLambda na1 v1 v2); eta.
-      * todo "not possible".
+      * apply PCUICParallelReductionConfluence.mkApps_eq_app in H as [H2 [H3 H4]];
+          [|auto].
+        eapply app_removelast_last with (d:=tRel 0) in H2.
+        rewrite H2 in H1; rewrite H2; clear H2.
+        rewrite <- H3 in H1; rewrite <- H3; clear H3.
+        set (args' := removelast args) in *; clearbody args'; clear args.
+        eapply lift_Apps_Fix_inv in H4 as [? [? [? [? ?]]]]; subst.
+        rewrite PCUICBasicStrengthening.lift_unfold_fix in H0.
+        destruct (unfold_fix x idx) as [[]|] eqn:e; [|discriminate]. invs H0.
+        assert (is_constructor narg x0); [|clear H1]. {
+          unfold is_constructor in *.
+          destruct (le_gt_dec #|x0| narg).
+          - rewrite nth_error_app_ge in H1; rewrite map_length in *; tas.
+            destruct (narg - #|x0|) as [|[|n]]; discriminate.
+          - rewrite nth_error_app_lt in H1; [|now rewrite map_length].
+            rewrite nth_error_map in H1.
+            destruct (nth_error x0 narg); [cbn in *|discriminate].
+            unfold isConstruct_app, decompose_app in *.
+            pose proof (decompose_app_rec_lift 1 0 t0 []) as HH.
+            destruct (decompose_app_rec t0 []); cbn in *.
+            rewrite HH in H1. cbn in H1.
+            destruct t1; try discriminate; reflexivity.
+        }
+        tac (mkApps t x0).
+        rewrite <- mkApps_nested; cbn.
+        eapply eta1_beta_eta.
+        pose proof (eta_red na (mkApps t x0) N) as X.
+        now rewrite lift_mkApps in X.
       * eapply (red1_strengthening _ Γ [] [vass na N]) in X0 as [v' [? ?]]; tas.
         subst. tac v'.
       * invs X0.
@@ -1348,6 +1563,18 @@ Proof.
     + itac IHX X0.
       exists (tLetIn na b t u'), (tLetIn na b t v'); eta.
   - intro XX; invs XX.
+    + apply IHX in X0 as (u' & v' & H1 & H2 & H3).
+      exists (tCase ind u' c brs), (tCase ind v' c brs); eta.
+      constructor; eta. apply All2_refl. intro; split; reflexivity.
+    + tac (tCase ind p' c' brs).
+    + tac (tCase ind p' c brs').
+  - intro XX; invs XX.
+    + apply IHX in X0 as (u' & v' & H1 & H2 & H3).
+      exists (tCase ind u' c brs), (tCase ind v' c brs); eta.
+      constructor; eta. apply All2_refl. intro; split; reflexivity.
+    + tac (tCase ind p' c' brs).
+    + tac (tCase ind p' c brs').
+
   - intro XX; invs XX.
   - intro XX; invs XX.
   - intro XX; invs XX.

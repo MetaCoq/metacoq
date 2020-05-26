@@ -21,6 +21,7 @@ Set Asymmetric Patterns.
 
 
 Module P := PCUICAst.
+Module PC := PCUICConversionDef.
 Module PT := PCUICTyping.
 Module T := Template.Ast.
 Module TT := Template.Typing.
@@ -77,22 +78,22 @@ Proof.
 Defined.
 
 Lemma trans_global_ext_levels Σ:
-PT.global_ext_levels Σ = TT.global_ext_levels (trans_global Σ).
+  PC.global_ext_levels Σ = TT.global_ext_levels (trans_global Σ).
 Proof.
-  unfold TT.global_ext_levels, PT.global_ext_levels.
+  unfold TT.global_ext_levels, PC.global_ext_levels.
   destruct Σ.
   cbn [trans_global fst snd].
   f_equal.
   induction g.
   - reflexivity.
-  - unfold PT.global_levels in IHg.
+  - unfold PC.global_levels in IHg.
     cbn.
     rewrite IHg.
     f_equal.
     destruct a.
     cbn.
     unfold TT.monomorphic_levels_decl, TT.monomorphic_udecl_decl, TT.on_udecl_decl.
-    unfold PT.monomorphic_levels_decl, PT.monomorphic_udecl_decl, PT.on_udecl_decl.
+    unfold PC.monomorphic_levels_decl, PC.monomorphic_udecl_decl, PC.on_udecl_decl.
     destruct g0.
     + cbn.
       destruct c.
@@ -104,7 +105,7 @@ Qed.
 
 
 Lemma trans_mem_level_set l Σ:
-LevelSet.mem l (PT.global_ext_levels Σ) ->
+LevelSet.mem l (PC.global_ext_levels Σ) ->
 LevelSet.mem l (TT.global_ext_levels (trans_global Σ)).
 Proof.
   intros.
@@ -113,7 +114,7 @@ Proof.
 Qed.
 
 Lemma trans_in_level_set l Σ:
-LevelSet.In l (PT.global_ext_levels Σ) ->
+LevelSet.In l (PC.global_ext_levels Σ) ->
 LevelSet.In l (TT.global_ext_levels (trans_global Σ)).
 Proof.
   intros.
@@ -123,7 +124,7 @@ Qed.
 
 
 Lemma trans_lookup Σ cst decl:
-PT.lookup_env Σ.1 cst = Some decl ->
+PC.lookup_env Σ.1 cst = Some decl ->
 Typing.lookup_env (trans_global Σ).1 cst =
 Some (trans_global_decl decl).
 Proof.
@@ -142,35 +143,35 @@ Proof.
 Qed.
 
 Lemma trans_declared_constant Σ cst decl:
-PT.declared_constant Σ.1 cst decl ->
+PC.declared_constant Σ.1 cst decl ->
 TT.declared_constant (trans_global Σ).1 cst (trans_constant_body decl).
 Proof.
   intros H.
   unfold TT.declared_constant.
-  unfold PT.declared_constant in H.
+  unfold PC.declared_constant in H.
   apply trans_lookup in H as ->.
   reflexivity.
 Qed.
 
 Lemma trans_constraintSet_in x Σ:
-ConstraintSet.In x (PT.global_ext_constraints Σ) ->
+ConstraintSet.In x (PC.global_ext_constraints Σ) ->
 ConstraintSet.In x (TT.global_ext_constraints (trans_global Σ)).
 Proof.
-  enough (PT.global_ext_constraints Σ = TT.global_ext_constraints (trans_global Σ)) as ->.
+  enough (PC.global_ext_constraints Σ = TT.global_ext_constraints (trans_global Σ)) as ->.
   trivial.
   destruct Σ.
-  unfold PT.global_ext_constraints, trans_global.
+  unfold PC.global_ext_constraints, trans_global.
   cbn [fst snd].
 Admitted.
 
 
 Lemma trans_consistent_instance_ext Σ decl u:
-PT.consistent_instance_ext Σ decl u ->
+PC.consistent_instance_ext Σ decl u ->
 TT.consistent_instance_ext (trans_global Σ) decl u.
 Proof.
   intros H.
-  unfold consistent_instance_ext, PT.consistent_instance_ext in *.
-  unfold consistent_instance, PT.consistent_instance in *.
+  unfold consistent_instance_ext, PC.consistent_instance_ext in *.
+  unfold consistent_instance, PC.consistent_instance in *.
   destruct decl;trivial.
   destruct H as (?&?&?&?).
   repeat split;trivial.
@@ -192,12 +193,12 @@ Proof.
 Qed.
 
 Lemma trans_declared_inductive Σ mdecl ind idecl:
-PT.declared_inductive Σ.1 mdecl ind idecl ->
+PC.declared_inductive Σ.1 mdecl ind idecl ->
 TT.declared_inductive (trans_global Σ).1 (trans_minductive_body mdecl) ind (trans_one_ind_body idecl).
 Proof.
   intros [].
   split.
-  - unfold TT.declared_minductive, PT.declared_minductive in *.
+  - unfold TT.declared_minductive, PC.declared_minductive in *.
     apply trans_lookup in H as ->.
     reflexivity.
   - now apply map_nth_error.
@@ -420,7 +421,7 @@ Proof.
 Qed.
 
 Lemma trans_declared_projection Σ mdecl idecl p pdecl :
-PT.declared_projection Σ.1 mdecl idecl p pdecl ->
+PC.declared_projection Σ.1 mdecl idecl p pdecl ->
 TT.declared_projection (trans_global Σ).1 (trans_minductive_body mdecl) (trans_one_ind_body idecl) p (on_snd trans pdecl).
 Proof.
   intros (?&?&?).

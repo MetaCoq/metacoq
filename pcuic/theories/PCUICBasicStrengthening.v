@@ -94,10 +94,8 @@ Lemma lift_unfold_fix n k mfix idx :
 Proof.
   unfold unfold_fix.
   rewrite nth_error_map. destruct (nth_error mfix idx); cbnr.
-  rewrite isLambda_lift.
-  destruct isLambda; cbnr. f_equal. unfold on_snd; cbn. f_equal.
-  rewrite (distr_lift_subst_rec _ _ n 0 k).
-  rewrite fix_subst_length. f_equal.
+  f_equal. rewrite (distr_lift_subst_rec _ _ n 0 k).
+  rewrite fix_subst_length. f_equal. cbn. f_equal.
   unfold fix_subst. rewrite !map_length.
   generalize #|mfix| at 2 3. induction n0; auto. simpl.
   f_equal. apply IHn0.

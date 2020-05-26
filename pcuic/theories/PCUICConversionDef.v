@@ -205,7 +205,7 @@ Lemma red1_ind_all :
           (narg : nat) (fn : term),
         unfold_cofix mfix idx = Some (narg, fn) -> P Γ (tProj p (mkApps (tCoFix mfix idx) args)) (tProj p (mkApps fn args))) ->
 
-       (forall (Γ : context) (c : ident) (decl : constant_body) (body : term),
+       (forall (Γ : context) c (decl : constant_body) (body : term),
         declared_constant Σ c decl ->
         forall u : Instance.t, cst_body decl = Some body -> P Γ (tConst c u) (subst_instance_constr u body)) ->
 

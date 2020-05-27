@@ -821,7 +821,8 @@ Module PCUICTypingDef <: Typing PCUICTerm PCUICEnvironment PCUICEnvTyping.
   Definition subst_telescope := subst_telescope.
   Definition subst := subst.
   Definition lift := lift.
-  Definition inds := inds.  
+  Definition inds := inds. 
+  Definition noccur_between := noccur_between. 
 End PCUICTypingDef.
 
 Module PCUICDeclarationTyping :=

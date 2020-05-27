@@ -161,6 +161,26 @@ Fixpoint closedn k (t : term) : bool :=
 
 Notation closed t := (closedn 0 t).
 
+Fixpoint noccur_between k n (t : term) : bool :=
+  match t with
+  | tRel i => Nat.leb k i && Nat.ltb i (k + n)
+  | tEvar ev args => List.forallb (noccur_between k n) args
+  | tLambda _ T M | tProd _ T M => noccur_between k n T && noccur_between (S k) n M
+  | tApp u v => noccur_between k n u && noccur_between k n v
+  | tLetIn na b t b' => noccur_between k n b && noccur_between k n t && noccur_between (S k) n b'
+  | tCase ind p c brs =>
+    let brs' := List.forallb (test_snd (noccur_between k n)) brs in
+    noccur_between k n p && noccur_between k n c && brs'
+  | tProj p c => noccur_between k n c
+  | tFix mfix idx =>
+    let k' := List.length mfix + k in
+    List.forallb (test_def (noccur_between k n) (noccur_between k' n)) mfix
+  | tCoFix mfix idx =>
+    let k' := List.length mfix + k in
+    List.forallb (test_def (noccur_between k n) (noccur_between k' n)) mfix
+  | x => true
+  end.
+
 Create HintDb terms.
 
 Ltac arith_congr := repeat (try lia; progress f_equal).

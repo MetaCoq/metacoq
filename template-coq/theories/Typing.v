@@ -891,6 +891,7 @@ Module TemplateTyping <: Typing TemplateTerm TemplateEnvironment TemplateEnvTypi
   Definition lift_context := lift_context.
   Definition subst_telescope := subst_telescope.
   Definition inds := inds.
+  Definition noccur_between := noccur_between.
 End TemplateTyping.
 
 Module TemplateDeclarationTyping :=

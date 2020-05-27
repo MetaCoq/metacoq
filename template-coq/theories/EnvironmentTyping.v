@@ -313,7 +313,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       let (ctx, concl) := decompose_prod_assum [] arg in
       (* Again, we smash the context, as Coq does *)
       let ctx := smash_context [] ctx in
-      alli (fun i d => noccur_between (npars + narg + i) d.(decl_type)) ninds 0 (List.rev ctx) &&
+      alli (fun i d => noccur_between (npars + narg + i) ninds d.(decl_type)) 0 (List.rev ctx) &&
       let (hd, args) := decompose_app concl in
       match hd with
       | tRel i => 

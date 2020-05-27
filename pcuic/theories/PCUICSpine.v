@@ -783,7 +783,6 @@ Proof.
   now rewrite /subst_telescope mapi_length.
 Qed.
 
-
 Lemma arity_spine_it_mkProd_or_LetIn {cf:checker_flags} Σ Γ Δ T args s args' T' : 
   wf Σ.1 ->
   spine_subst Σ Γ args s Δ ->
@@ -1989,4 +1988,53 @@ Proof.
       simpl. depelim spine_codom_wf0; simpl in H; noconf H.
       depelim inst_ctx_subst0; simpl in H; noconf H; simpl in H0; noconf H0.
       apply IHinst_subslet0; auto.
+Qed.
+
+Lemma arity_spine_it_mkProd_or_LetIn_smash {cf:checker_flags} Σ Γ Δ T args s args' T' : 
+  wf Σ.1 ->
+  spine_subst Σ Γ args s (smash_context [] Δ) ->
+  arity_spine Σ Γ (subst0 s T) args' T' ->
+  arity_spine Σ Γ (it_mkProd_or_LetIn Δ T) (args ++ args') T'.
+Proof.
+  intros wfΣ sp asp. destruct sp as [wfΓ _ cs subsl].
+  move: Δ args s T cs subsl asp.
+  induction Δ using ctx_length_rev_ind => args s T cs subsl asp.
+  - depelim cs. depelim  subsl.
+    now rewrite subst_empty in asp.
+  - rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /=.
+    destruct d as [na [b|] ty]; simpl in *.
+    * constructor. rewrite /subst1 subst_it_mkProd_or_LetIn.
+      rewrite Nat.add_0_r.
+      apply subslet_app_inv in subsl as [subsl subsl'].
+      depelim subsl; simpl in H0; noconf H0. depelim subsl.
+      apply context_subst_app in cs as [cs cs'].
+      simpl in *. rewrite skipn_0 in cs.
+      specialize (X (subst_context (skipn #|Γ0| s) 0 Γ0) ltac:(now autorewrite with len) _ _ 
+        (subst [b] #|Γ0| T) cs subsl').
+      rewrite subst_empty in H.
+      rewrite H in X. apply X.
+      rewrite -subst_app_simpl'.
+      apply subslet_length in subsl'.
+      now autorewrite with len in subsl'.
+      rewrite -H.  now rewrite firstn_skipn.
+    * apply subslet_app_inv in subsl as [subsl subsl'].
+      depelim subsl; simpl in H0; noconf H0. depelim subsl.
+      apply context_subst_app in cs as [cs cs'].
+      simpl in *.
+      destruct args. depelim cs'; simpl in H; noconf H.
+      depelim cs'. discriminate.
+      simpl in *. rewrite skipn_S skipn_0 in cs.
+      rewrite subst_empty in t0.
+      depelim cs'; simpl in H; noconf H. depelim cs'. noconf H0.
+      rewrite H1 in H2. noconf H2.
+      constructor; auto.
+      rewrite /subst1 subst_it_mkProd_or_LetIn.
+      rewrite Nat.add_0_r.
+      specialize (X (subst_context (skipn #|Γ0| s) 0 Γ0) ltac:(now autorewrite with len) _ _ 
+      (subst [t1] #|Γ0| T) cs subsl').
+      rewrite -{1}H1. apply X.
+      rewrite -subst_app_simpl'.
+      apply subslet_length in subsl'.
+      now autorewrite with len in subsl'.
+      rewrite -H1. now rewrite firstn_skipn.
 Qed.

@@ -234,7 +234,11 @@ Module Type Typing (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E).
   Parameter Inline subst_telescope : list term -> nat -> context -> context.
   Parameter Inline lift : nat -> nat -> term -> term.
   Parameter Inline subst : list term -> nat -> term -> term.
-  Parameter Inline inds : kername -> Instance.t -> list one_inductive_body -> list term. 
+  Parameter Inline inds : kername -> Instance.t -> list one_inductive_body -> list term.
+  
+  (* [noccur_between n k t] Checks that deBruijn indices between n and n+k do not appear in t (even under binders).  *)
+  Parameter Inline noccur_between : nat -> nat -> term -> bool.
+
   Notation wf_local Σ Γ := (All_local_env (lift_typing typing Σ) Γ).
 
 End Typing.
@@ -300,6 +304,40 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
 
     Open Scope type_scope.
 
+    (** Positivity checking of the inductive, ensuring that the inductive itself 
+      can only appear at the right of an arrow in each argument's types. *)
+    (*
+    Definition positive_cstr_arg ninds npars narg (arg : term) : bool :=
+      (* We decompose the constructor's arguments' type and verify the inductive references
+        only appear in the conclusion, if any. *)
+      let (ctx, concl) := decompose_prod_assum [] arg in
+      (* Again, we smash the context, as Coq does *)
+      let ctx := smash_context [] ctx in
+      alli (fun i d => noccur_between (npars + narg + i) d.(decl_type)) ninds 0 (List.rev ctx) &&
+      let (hd, args) := decompose_app concl in
+      match hd with
+      | tRel i => 
+        if noccur_between (npars + narg + #|ctx|) ninds (tRel i) then 
+          (* Call to an unrelated variable *)
+          true
+        else (* Recursive call to the inductive *)
+          (* Coq disallows the inductive to be applied to another inductive in the block *)
+          forallb (noccur_between (npars + narg + #|ctx|) ninds) args
+      | tInd ind u => 
+        if forallb (noccur_between (npars + narg + #|ctx|) ninds) args then
+          (* Unrelated inductive *)
+          true
+        else (* Nested inductive *)
+          true
+      end.
+
+    Definition positive_cstr_args ninds npars (args : context) : bool :=
+      alli (fun i decl => positive_cstr_arg nind npars i decl.(decl_type))
+      (* We smash the context, just as Coq's kernel computes positivity on 
+        weak-head normalized types *)
+      (List.rev (smash_context [] args))
+    *)
+    
     Record on_constructor Σ mdecl i idecl ind_indices cdecl (cshape : constructor_shape) := {
       (* cdecl.1 fresh ?? *)
       cstr_args_length : context_assumptions (cshape_args cshape) = cdecl_args cdecl;

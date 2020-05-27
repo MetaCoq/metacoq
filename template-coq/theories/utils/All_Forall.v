@@ -30,6 +30,12 @@ Inductive All2 {A B : Type} (R : A -> B -> Type) : list A -> list B -> Type :=
 Arguments All2_nil {_ _ _}.
 Arguments All2_cons {_ _ _ _ _ _ _}.
 
+Fixpoint alli {A} (p : nat -> A -> bool) (l : list A) (n : nat) : bool :=
+  match l with
+  | [] => true
+  | hd :: tl => p n hd && alli p tl (S n)
+  end.
+
 Section Forallb2.
   Context {A} (f : A -> A -> bool).
 

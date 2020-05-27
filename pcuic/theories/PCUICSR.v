@@ -345,6 +345,12 @@ Proof.
     destruct typec' as [[[[_ equ] cu] eqargs] [cparsubst [cargsubst [iparsubst [iidxsubst ci]]]]].
     destruct ci as ((([cparsubst0 iparsubst0] & idxsubst0) & subsidx) & [s [typectx [Hpars Hargs]]]).
     pose proof (context_subst_fun csubst (iparsubst0.(inst_ctx_subst))). subst iparsubst.
+    eapply wf_arity_spine_typing_spine => //.
+    split. admit.
+    rewrite -(app_nil_r (skipn _ _)).
+    eapply arity_spine_it_mkProd_or_LetIn => //.
+    split => //. admit.
+
     assert(leq:Σ ;;; Γ |- (it_mkProd_or_LetIn
     (subst_context parsubst 0
        (subst_context (inds (inductive_mind ind) u (ind_bodies mdecl))
@@ -406,14 +412,14 @@ Proof.
       rewrite subst_instance_context_length in lenipar. 
       assert (lencpar := context_subst_length _ _ _ cparsubst0).
       rewrite subst_instance_context_length in lencpar. 
-      assert (All2 (conv Σ Γ) (parsubst ++ inds (inductive_mind ind) u (ind_bodies mdecl))
-        (cparsubst ++ inds (inductive_mind ind) u1 (ind_bodies mdecl))).
+      (* assert (All2 (conv Σ Γ) (parsubst ++ inds (inductive_mind ind) u (ind_bodies mdecl))
+        (cparsubst ++ inds (inductive_mind ind) u (ind_bodies mdecl))).
       { eapply All2_app.
         * eapply spine_subst_conv; eauto.
           eapply context_relation_subst_instance; eauto.
           now rewrite closedn_subst_instance_context in H.
           now symmetry.
-        * now apply conv_inds. }
+        * now apply conv_inds. } *)
       pose proof (on_declared_inductive wf isdecl) as [onind _].
       eapply cumul_it_mkProd_or_LetIn => //.
       clear csubst. subst argctx.
@@ -423,7 +429,7 @@ Proof.
 
       eapply (context_relation_subst _ 
         (subst_instance_context u (arities_context (ind_bodies mdecl) ,,, ind_params mdecl))
-        (subst_instance_context u1 (arities_context (ind_bodies mdecl) ,,, ind_params mdecl))); eauto with pcuic.
+        (subst_instance_context u (arities_context (ind_bodies mdecl) ,,, ind_params mdecl))); eauto with pcuic.
       rewrite -app_context_assoc - [subst_instance_context _ _ ,,, _]subst_instance_context_app.
       apply weaken_wf_local => //.
       eapply on_constructor_inst; pcuic.

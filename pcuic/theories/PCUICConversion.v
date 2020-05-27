@@ -4,7 +4,7 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping
      PCUICSubstitution PCUICPosition PCUICCumulativity PCUICReduction
      PCUICConfluence PCUICClosed PCUICParallelReductionConfluence PCUICEquality
-     PCUICEtaReduction
+     PCUICEtaReduction PCUICBasicStrengthening PCUICInduction
      (* PCUICContextConversion *)
      PCUICWeakening PCUICUnivSubst PCUICUnivSubstitution
 .
@@ -72,7 +72,6 @@ Proof.
 Qed.
 Hint Resolve subst1_upto_domain : utd.
 
-Require Import PCUICInduction.
 Lemma upto_domain_subst s s' k b :
   All2 upto_domain s s' -> upto_domain (subst s k b) (subst s' k b).
 Proof.
@@ -230,7 +229,6 @@ Proof.
 Qed.
 
 
-Require Import PCUICBasicStrengthening.
 Lemma eta1_eq_term_upto_univ_r Re Rle u v u' :
   RelationClasses.Reflexive Re ->
   RelationClasses.Reflexive Rle ->
@@ -369,7 +367,8 @@ Lemma leq_term_eta1_r {cf:checker_flags} φ {t u u'} :
   eta1 u u' ->
   ∑ t', eta1 t t' × leq_term φ t' u'.
 Proof.
-Admitted.
+  apply eta1_eq_term_upto_univ_r; exact _.
+Qed.
 
 Lemma leq_term_beta_eta_r {cf:checker_flags} {Σ : global_env_ext} {Γ t u u'} :
   leq_term Σ t u ->
@@ -395,12 +394,46 @@ Proof.
   all: exact _.
 Qed.
 
+Instance R_universe_instance_sym R (hR : RelationClasses.Symmetric R)
+  : RelationClasses.Symmetric (R_universe_instance R).
+Proof.
+  intros x y xy. eapply Forall2_sym, Forall2_impl; tea.
+Qed.
+
+
+Lemma eq_term_upto_univ_flip' Re Rle {u v} :
+  RelationClasses.Symmetric Re ->
+  eq_term_upto_univ Re Rle u v ->
+  eq_term_upto_univ Re (flip Rle) v u.
+Proof.
+  intro Se. pose proof (eq_term_upto_univ_sym Re Re Se Se) as SS. red in SS.
+  pose proof (R_universe_instance_sym Re Se) as SS'. red in SS'.
+  induction u in v |- * using term_forall_list_ind; intro H; invs H;
+    constructor; tas; auto.
+  all: apply All2_sym; solve_all.
+Qed.
+
+Lemma eta1_eq_term_upto_univ_l Re Rle u v u' :
+  RelationClasses.Reflexive Re ->
+  RelationClasses.Reflexive Rle ->
+  RelationClasses.Symmetric Re ->
+  eq_term_upto_univ Re Rle u u' ->
+  eta1 u v ->
+  ∑ v', eta1 u' v' × eq_term_upto_univ Re Rle v v'.
+Proof.
+  intros he hle hse h uv.
+  destruct (eta1_eq_term_upto_univ_r Re (flip Rle) u v u') as (x & ? & ?); auto.
+  - now apply eq_term_upto_univ_flip'.
+  - exists x; split; tas. now apply eq_term_upto_univ_flip'.
+Qed.
+
 Lemma leq_term_eta1_l {cf:checker_flags} φ {t u u'} :
   leq_term φ u t ->
   eta1 u u' ->
   ∑ t', eta1 t t' × leq_term φ u' t'.
 Proof.
-Admitted.
+  apply eta1_eq_term_upto_univ_l; exact _.
+Qed.
 
 Lemma leq_term_beta_eta_l {cf:checker_flags} {Σ : global_env_ext} {Γ t u u'} :
   leq_term Σ u t ->
@@ -503,7 +536,7 @@ Qed.
 
 Print Assumptions cumul_trans.
 
-Admitted.
+
 
 Instance conv_trans {cf:checker_flags} (Σ : global_env_ext) {Γ} :
   wf Σ -> Transitive (conv Σ Γ).

@@ -18,6 +18,24 @@ Lemma app_cons {A} (x y : list A) a :
   x ++ a :: y = (x ++ [a]) ++ y.
 Proof. now rewrite <- app_assoc. Qed.
 
+Lemma OnOne2_All2 {A}:
+  forall (ts ts' : list A) P Q,
+    OnOne2 P ts ts' ->
+    (forall x y, P x y -> Q x y)%type ->
+    (forall x, Q x x) ->
+    All2 Q ts ts'.
+Proof.
+  intros ts ts' P Q X.
+  induction X; intuition auto.
+  constructor; auto. now apply All2_refl.
+Qed.
+
+Ltac OnOne2_All2 :=
+  match goal with
+  | [ H : OnOne2 ?P ?ts ?ts' |- All2 ?Q ?ts ?ts' ] =>
+    unshelve eapply (OnOne2_All2 _ _ P Q H); simpl; intros
+  end.
+
 
 (** * Definition of β-reduction, η-reduction, conversion and cumulativity *)
 
@@ -700,10 +718,18 @@ Proof.
   now rewrite (app_cons mfix0 l) (app_cons mfix0 l').
 Defined.
 
+Lemma eta_mkApps M M' l l' :
+  eta M M' -> All2 eta l l' -> eta (mkApps M l) (mkApps M' l').
+Proof.
+  intros X Y.
+  induction Y in M, M', X |- * ; cbn; eauto using eta_App.
+Qed.
+
 
 Hint Resolve eta_Evar eta_Prod eta_Lambda eta_LetIn eta_App
-     eta_Case0 eta_Proj : eta.
-(* eta_Case eta_Fix eta_CoFix *)
+     eta_Case0 eta_Proj eta_Case eta_Fix eta_CoFix eta_mkApps : eta.
+Hint Extern 0 (All2 _ _ _) => OnOne2_All2; intuition auto with eta : eta.
+Hint Resolve All2_refl : eta.
 
  
 (** ** Basic Properties of cumul *)

@@ -483,7 +483,7 @@ Section Pred1_inversion.
     intros hnth isc pred. remember (mkApps _ _) as fixt.
     revert mfix0 idx args0 Heqfixt hnth isc.
     induction pred; intros; solve_discr.
-    - unfold PCUICTyping.unfold_fix in e.
+    - unfold unfold_fix in e.
       red in a1.
       eapply All2_nth_error_Some in a1; eauto.
       destruct a1 as [t' [ht' [hds [hr [= eqna eqrarg]]]]].
@@ -2101,10 +2101,9 @@ Section Rho.
     apply IHAll2; clear IHAll2.
     rewrite -H in Hctxs.
     apply Hctxs; clear Hctxs.
-    clear IHAll2 Hctxs. destruct r.
-    destruct o0. destruct p. destruct p.
-    simpl in *. simpl in H.
-    rewrite H in o |- *.
+    clear IHAll2 Hctxs.
+    rdestruct r.
+    simpl in *. rewrite H in o |- *.
     rewrite rho_ctx_app in o. apply o.
     simp rho; simpl; simp rho.
     econstructor. eauto. clear Hctxs o IHAll2.
@@ -2178,9 +2177,8 @@ Section Rho.
     forward IHAll2 by lia.
     forward IHAll2 by lia. rewrite -Hlen in IHAll2.
     apply IHAll2; clear IHAll2. apply Hctxs; clear Hctxs.
-    clear IHAll2 Hctxs. destruct r.
-    destruct o0. destruct p. destruct p. red in o.
-    simpl in *. noconf Heqlen. simpl in H.
+    clear IHAll2 Hctxs. rdestruct r.
+    red in o. simpl in *. noconf Heqlen. simpl in H.
     rewrite H in o |- *.
     rewrite rho_ctx_app in o. apply o.
     simp rho; simpl; simp rho.
@@ -3086,7 +3084,7 @@ Section Rho.
       rewrite - {1} (map_id args1). eapply All2_map, All2_impl; eauto. simpl. intuition.
 
     - (* Fix reduction *)
-      unfold PCUICTyping.unfold_fix in heq_unfold_fix |- *.
+      unfold unfold_fix in heq_unfold_fix |- *.
       rewrite rho_app_fix.
       destruct nth_error eqn:Heq; noconf heq_unfold_fix.
       eapply All2_nth_error_Some_right in Heq; eauto.
@@ -3235,7 +3233,7 @@ Section Rho.
             red in redo.
             solve_all.
             unfold on_Trel in *. intuition auto. now noconf b0.
-            unfold PCUICTyping.unfold_fix. rewrite nth_error_map e /=.
+            unfold unfold_fix. rewrite nth_error_map e /=.
             rewrite map_fix_subst /= //.
             intros n.  simp rho; simpl; now simp rho.
             move: i1.

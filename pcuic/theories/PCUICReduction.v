@@ -1165,23 +1165,6 @@ Hint Resolve All_All2 : all.
 
 Hint Resolve All2_same : pred.
 
-Lemma OnOne2_All2 {A}:
-  forall (ts ts' : list A) P Q,
-    OnOne2 P ts ts' ->
-    (forall x y, P x y -> Q x y)%type ->
-    (forall x, Q x x) ->
-    All2 Q ts ts'.
-Proof.
-  intros ts ts' P Q X.
-  induction X; intuition auto with pred.
-Qed.
-
-Ltac OnOne2_All2 :=
-  match goal with
-  | [ H : OnOne2 ?P ?ts ?ts' |- All2 ?Q ?ts ?ts' ] =>
-    unshelve eapply (OnOne2_All2 _ _ P Q H); simpl; intros
-  end.
-
 Hint Extern 0 (All2 _ _ _) => OnOne2_All2; intuition auto with pred : pred.
 
 (* TODO Find a better place for this. *)

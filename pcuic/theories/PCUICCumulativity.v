@@ -36,32 +36,72 @@ Proof.
   intro. econstructor 5; eassumption.
 Qed.
 
+Lemma beta_eta_cumul_cumul {cf:checker_flags} {Σ : global_env_ext} {Γ t u v} :
+  beta_eta Σ Γ t u -> Σ ;;; Γ |- u <= v -> Σ ;;; Γ |- t <= v.
+Proof.
+  induction 1 in v |- *; auto.
+  destruct r; [eauto using red_cumul_cumul|].
+  apply eta_cumul_cumul; eta.
+Qed.
+
+Lemma beta_eta_cumul_cumul_inv {cf:checker_flags} {Σ : global_env_ext} {Γ t u v} :
+  beta_eta Σ Γ t v -> Σ ;;; Γ |- u <= v -> Σ ;;; Γ |- u <= t.
+Proof.
+  induction 1 in u |- *; auto.
+  destruct r; [eauto using red_cumul_cumul_inv|].
+  apply eta_cumul_cumul_inv; eta.
+Qed.
+
 
 Lemma cumul_alt `{cf : checker_flags} Σ Γ t u :
   Σ ;;; Γ |- t <= u <~>
-  ∑ t' t'' u' u'' v, red Σ Γ t t' ×
-                     eta t' t'' ×
-                     red Σ Γ u u' ×
-                     eta u' u'' ×
-                     leq_term Σ t'' v ×
-                     upto_domain v u''.
+  ∑ t' u' v, beta_eta Σ Γ t t' ×
+             beta_eta Σ Γ u u' ×
+             leq_term Σ t' v ×
+             upto_domain v u'.
 Proof.
   split.
   - induction 1.
-    + exists t, t, v, v, u. intuition auto; reflexivity.
-    + destruct IHX as (t' & t'' & u' & u'' & v0 & ? & ? & ? & ? & ? & ?).
-      exists t', t'', u', u'', v0. intuition auto. eapply red_step; tea.
-    + destruct IHX as (t' & t'' & u' & u'' & v0 & ? & ? & ? & ? & ? & ?).
-      exists t', t'', u', u'', v0. intuition auto. eapply red_step; tea.
-    + todoeta.  (* eta postponment *)
-    + todoeta.  (* eta postponment *)
-  - intros (t' & t'' & u' & u'' & ? & ? & ? & ? & ? & ? & ?).
-    eapply red_cumul_cumul; tea.
-    eapply red_cumul_cumul_inv; tea.
-    eapply eta_cumul_cumul; tea.
-    eapply eta_cumul_cumul_inv; tea.
+    + exists t, v, u; beta_eta.
+    + destruct IHX as (t' & u' & v0 & ? & ? & ? & ?).
+      exists t', u', v0; beta_eta.
+    + destruct IHX as (t' & u' & v0 & ? & ? & ? & ?).
+      exists t', u', v0; beta_eta.
+    + destruct IHX as (t' & u' & v0 & ? & ? & ? & ?).
+      exists t', u', v0; beta_eta.
+    + destruct IHX as (t' & u' & v0 & ? & ? & ? & ?).
+      exists t', u', v0; beta_eta.
+  - intros (t' & u' & ? & ? & ? & ? & ?).
+    eapply beta_eta_cumul_cumul; tea.
+    eapply beta_eta_cumul_cumul_inv; tea.
     econstructor; tea.
 Qed.
+
+(* Lemma cumul_alt `{cf : checker_flags} Σ Γ t u : *)
+(*   Σ ;;; Γ |- t <= u <~> *)
+(*   ∑ t' t'' u' u'' v, red Σ Γ t t' × *)
+(*                      eta t' t'' × *)
+(*                      red Σ Γ u u' × *)
+(*                      eta u' u'' × *)
+(*                      leq_term Σ t'' v × *)
+(*                      upto_domain v u''. *)
+(* Proof. *)
+(*   split. *)
+(*   - induction 1. *)
+(*     + exists t, t, v, v, u. intuition auto; reflexivity. *)
+(*     + destruct IHX as (t' & t'' & u' & u'' & v0 & ? & ? & ? & ? & ? & ?). *)
+(*       exists t', t'', u', u'', v0. intuition auto. eapply red_step; tea. *)
+(*     + destruct IHX as (t' & t'' & u' & u'' & v0 & ? & ? & ? & ? & ? & ?). *)
+(*       exists t', t'', u', u'', v0. intuition auto. eapply red_step; tea. *)
+(*     + todoeta.  (* eta postponment *) *)
+(*     + todoeta.  (* eta postponment *) *)
+(*   - intros (t' & t'' & u' & u'' & ? & ? & ? & ? & ? & ? & ?). *)
+(*     eapply red_cumul_cumul; tea. *)
+(*     eapply red_cumul_cumul_inv; tea. *)
+(*     eapply eta_cumul_cumul; tea. *)
+(*     eapply eta_cumul_cumul_inv; tea. *)
+(*     econstructor; tea. *)
+(* Qed. *)
 
 
 Lemma upto_domain_eq_term_com {cf:checker_flags} {φ t u v} :
@@ -78,7 +118,7 @@ Proof.
   all: try (eexists; split; econstructor; tea; fail).
   - enough (∑ l', All2 (eq_term_upto_univ (eq_universe φ) (eq_universe φ)) l l'
                   × All2 upto_domain l' args'0) as XX. {
-      destruct XX as [? [? ?]]; eexists; split; now econstructor. }
+      destruct XX as [? [? ?]]; eexists; split; econstructor; eassumption. }
     induction X0 in X, args'0, X1 |- *; invs X; invs X1.
     + exists []; split; constructor.
     + edestruct X2 as [? [? ?]]; tea.

@@ -2204,11 +2204,19 @@ Qed.
 
 Print Assumptions red1_eta1_diamond.
 
+Lemma beta_eta_confluence {cf:checker_flags} {Σ Γ t u v} :
+  wf Σ -> beta_eta Σ Γ t u -> beta_eta Σ Γ t v ->
+  ∑ u' v', beta_eta Σ Γ u u' × beta_eta Σ Γ v v' × upto_domain u' v'.
+Admitted.
 
-Lemma eta_postponment {cf:checker_flags} Σ (HΣ : wf Σ) Γ u v w
-      (H1 : eta_expands u v) (H2 : red1 Σ Γ v w)
-  : ∑ v', clos_refl (red1 Σ Γ) u v' × clos_refl eta_expands v' w.
-Proof.
+
+(* Lemma eta_postponment {cf:checker_flags} Σ (HΣ : wf Σ) Γ u v w *)
+(*       (H1 : eta1 u v) (H2 : red1 Σ Γ v w) *)
+(*   : ∑ v', clos_refl (red1 Σ Γ) u v' × clos_refl eta_expands v' w. *)
+(* Proof. *)
+
+
+
 
 
 
@@ -2226,7 +2234,7 @@ Proof.
 (* Hint Resolve beta_eta_change_domain : beta_eta. *)
 
 (* Lemma etax1_etax1_diamond {Σ Γ t u v} : *)
-(*   etax1 t u -> etax1 t v -> *){
+(*   etax1 t u -> etax1 t v -> *)
 (*   ∑ v', beta_etax Σ Γ u v' × beta_etax Σ Γ v v'. *)
 (* Proof. *)
 (*   intro X; induction X in Γ, v |- * using eta1_ind_all. *)
@@ -2356,7 +2364,7 @@ Proof.
 (* Admitted. *)
 
 (* Hint Resolve weakening_red1 : beta_eta. *)
-(* }Require Import PCUICSubstitution PCUICUnivSubst. *)
+(* Require Import PCUICSubstitution PCUICUnivSubst. *)
 
 (* Lemma subst1_eta t t' k u : *)
 (*   eta t t' -> eta (u {k := t}) (u {k := t'}). *)

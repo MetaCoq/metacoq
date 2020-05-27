@@ -515,7 +515,7 @@ Lemma red1_strengthening_inv {cf:checker_flags} Σ Γ Γ' Γ'' M N' :
 Abort.
 
 
-Lemma eq_term_upto_univ_strengthening {cf:checker_flags} Re Rle n k M N' :
+Lemma eq_term_upto_univ_strengthening Re Rle n k M N' :
   RelationClasses.Reflexive Re
   -> RelationClasses.Reflexive Rle
   -> eq_term_upto_univ Re Rle (lift n k M) N'
@@ -630,7 +630,7 @@ Proof.
     cbn. apply All2_length in H3; now rewrite H3.
 Qed.
 
-Lemma eq_term_upto_univ_strengthening_inv {cf:checker_flags} Re Rle n k M' N :
+Lemma eq_term_upto_univ_strengthening_inv Re Rle n k M' N :
   RelationClasses.Reflexive Re
   -> RelationClasses.Reflexive Rle
   -> eq_term_upto_univ Re Rle M' (lift n k N)
@@ -745,7 +745,7 @@ Proof.
     cbn. apply All2_length in H3; now rewrite H3.
 Qed.
 
-Lemma eq_term_upto_univ_strengthening' {cf:checker_flags} Re Rle n k M N :
+Lemma eq_term_upto_univ_strengthening' Re Rle n k M N :
   RelationClasses.Reflexive Re
   -> RelationClasses.Reflexive Rle
   -> eq_term_upto_univ Re Rle (lift n k M) (lift n k N)

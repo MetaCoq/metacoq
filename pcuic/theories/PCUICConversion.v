@@ -4,7 +4,9 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping
      PCUICSubstitution PCUICPosition PCUICCumulativity PCUICReduction
      PCUICConfluence PCUICClosed PCUICParallelReductionConfluence PCUICEquality
-     PCUICContextConversion PCUICWeakening PCUICUnivSubst PCUICUnivSubstitution
+     PCUICEtaReduction
+     (* PCUICContextConversion *)
+     PCUICWeakening PCUICUnivSubst PCUICUnivSubstitution
 .
 Require Import ssreflect.
 Local Open Scope string_scope.
@@ -32,15 +34,476 @@ Derive Signature for cumul assumption_context.
 (* So that we can use [conv_trans]... *)
 Existing Class wf.
 
-(* todo move *)
-Lemma All2_refl {A} {P : A -> A -> Type} l : 
-  (forall x, P x x) ->
-  All2 P l l.
+Lemma upto_domain_mkApps {u u' args args'} :
+  upto_domain u u' ->
+  All2 upto_domain args args' ->
+  upto_domain (mkApps u args) (mkApps u' args').
 Proof.
-  intros HP. induction l; constructor; auto.
+  intros X Y. induction Y in u, u', X |- *; cbn; tas. 
+  apply IHY. now constructor.
+Qed.
+Hint Resolve upto_domain_mkApps : utd.
+
+Lemma upto_domain_mkApps_inv t u args :
+  upto_domain t (mkApps u args) ->
+  ∑ u0 args0, t = mkApps u0 args0 × upto_domain u0 u × All2 upto_domain args0 args.
+Proof.
+  revert t. induction args using MCList.rev_ind; cbn; intros t X.
+  - now exists t, [].
+  - rewrite <- mkApps_nested in X; cbn in X. invs X.
+    apply IHargs in X0 as (u1 & args0 & ? & ? & ?).
+    exists u1, (args0 ++ [u0]); intuition auto.
+    + rewrite <- mkApps_nested; cbn; now f_equal.
+    + apply All2_app; auto.
 Qed.
 
+Ltac invs_utd :=
+  repeat match goal with
+         | H : upto_domain ?t (mkApps _ _) |- _
+           => apply upto_domain_mkApps_inv in H;
+             destruct H as (? & ? & ? & ? & ?); subst t
+         | H : upto_domain _ _ |- _ => invs H; [idtac]
+         end.
+
+Lemma subst1_upto_domain {u v} k N :
+  upto_domain u v -> upto_domain (u { k := N }) (v { k := N }).
+Proof.
+  intro; now apply substitution_upto_domain.
+Qed.
+Hint Resolve subst1_upto_domain : utd.
+
+Require Import PCUICInduction.
+Lemma upto_domain_subst s s' k b :
+  All2 upto_domain s s' -> upto_domain (subst s k b) (subst s' k b).
+Proof.
+  induction b in s, s', k |- * using term_forall_list_ind; cbn; intro XX.
+  2, 4-11, 13: eauto with utd.
+  - destruct (leb_spec_Set k n); eauto with utd.
+    rewrite (All2_length _ _ XX).
+    destruct (nth_error s (n - k)) eqn:X.
+    + eapply All2_nth_error_Some in X; tea.
+      destruct X as [? [X1 X2]]; rewrite X1.
+      now apply weakening_upto_domain.
+    + eapply All2_nth_error_None in X; tea.
+      now rewrite X.
+  - econstructor. eapply All2_map, All_All2; eauto.
+  - econstructor; eauto. eapply All2_map, All_All2; cbn; eauto.
+  - econstructor; eauto. eapply All2_map, All_All2; tea; cbn.
+    clear -XX. intros x [H1 H2]. rdest; eauto.
+  - econstructor; eauto. eapply All2_map, All_All2; tea; cbn.
+    clear -XX. intros x [H1 H2]. rdest; eauto.
+Defined.
+
+Lemma upto_domain_subst1 {u u'} t k :
+  upto_domain u u' -> upto_domain (t { k := u }) (t { k := u' }).
+Proof.
+  intro H; apply upto_domain_subst; now repeat constructor.
+Qed.
+Hint Resolve upto_domain_subst1 : utd.
+
+
+Local Tactic Notation "tac" integer(n)
+  := eexists; split; [apply red1_red; econstructor n|].
+Local Ltac utd := eauto with utd.
+
+Lemma upto_domain_red1_r {Σ Γ t u u'} :
+  upto_domain t u ->
+  red1 Σ Γ u u' ->
+  ∑ t', red Σ Γ t t' × upto_domain t' u'.
+Proof.
+  intros X Y; induction Y in t, X |- *; invs_utd.
+  - tac 1; utd.
+  - tac 2; utd.
+  - tac 3; utd.
+  - tac 4. unfold iota_red.
+    apply upto_domain_mkApps.
+    + eapply (All2_nth _ _ (fun x y => upto_domain x.2 y.2)); trea.
+      solve_all.
+    + now eapply All2_skipn.
+  - enough ((∑ fn', unfold_fix mfix0 idx = Some (narg, fn') × upto_domain fn' fn)
+              × is_constructor narg x0) as XX. {
+      clear e e0; destruct XX as [[? []] ?].
+      tac 5; utd. }
+    split.
+    + unfold unfold_fix in *.
+      destruct (nth_error mfix idx) eqn:ee; [|discriminate]. invs e.
+      eapply (All2_nth_error_Some_r _ _ X) in ee as (fn' & e1 & ? & ? & e2).
+      eexists; rewrite e1 e2. split; [reflexivity|].
+      transitivity (subst0 (fix_subst mfix0) (dbody d)).
+      * now apply substitution_upto_domain.
+      * apply upto_domain_subst.
+        assert (HH: forall k, upto_domain (tFix mfix0 k) (tFix mfix k)) by utd.
+        clear -X HH. unfold fix_subst.
+        apply All2_length in X; rewrite X; clear X.
+        induction #|mfix|; constructor; auto.
+    + unfold is_constructor in *.
+      destruct (nth_error args narg) eqn:ee; [|discriminate].
+      eapply (All2_nth_error_Some_r _ _ a) in ee as (fn' & e1 & ?).
+      rewrite e1. clear -e0 u.
+      unfold isConstruct_app, decompose_app in *.
+      revert e0. generalize (@nil term) at 1 as l.
+      generalize (@nil term) at 1 as l'.
+      induction u; cbn in *; try discriminate; cbnr.
+      intros; eapply IHu1; eassumption.
+  - tac 6. all: admit.
+  - tac 7. all: admit.
+  - tac 8; utd.
+  - eapply All2_nth_error_Some_r in a; tea.
+    destruct a as [? [? ?]].
+    tac 9; utd.
+  - exists (tLambda na0 ty t0); split; now constructor.
+  - edestruct IHY as (? & ? & ?); tea.
+    exists (tLambda na0 ty x); split; utd.
+    apply red_abs; trea.
+    eapply red_upto_types; tea. now constructor.
+Admitted.
+
+Lemma upto_domain_eta1_r {t u u'} :
+  upto_domain t u ->
+  eta1 u u' ->
+  ∑ t', eta t t' × upto_domain t' u'.
+Proof.
+  intros X Y; induction Y in t, X |- *; invs_utd.
+Local Tactic Notation "tac" integer(n)
+  := eexists; split; [apply eta1_eta; econstructor n|].
+  - admit.
+  - eexists; split. 2: constructor; eassumption. eta.
+  - edestruct IHY as (? & ? & ?); tea.
+    eexists; split. 2: constructor; eassumption. eta.
+  - edestruct IHY as (? & ? & ?); tea.
+    eexists; split. 2: constructor; eassumption. eta.
+  - edestruct IHY as (? & ? & ?); tea.
+    eexists; split. 2: constructor; eassumption. eta.
+  - edestruct IHY as (? & ? & ?); tea.
+    eexists; split. 2: constructor; eassumption. eta.
+  - edestruct IHY as (? & ? & ?); tea.
+    eexists; split. 2: constructor; eassumption. eta.
+  - edestruct IHY as (? & ? & ?); tea.
+    eexists; split. 2: constructor; eassumption. eta.
+  - admit.
+  - edestruct IHY as (? & ? & ?); tea.
+    eexists; split. 2: constructor; eassumption. eta.
+  - edestruct IHY as (? & ? & ?); tea.
+    eexists; split. 2: constructor; eassumption. eta.
+  - edestruct IHY as (? & ? & ?); tea.
+    eexists; split. 2: constructor; eassumption. eta.
+  - edestruct IHY as (? & ? & ?); tea.
+    eexists; split. 2: constructor; eassumption. eta.
+  - edestruct IHY as (? & ? & ?); tea.
+    eexists; split. 2: constructor; eassumption. eta.
+Admitted.
+
+Lemma upto_domain_beta_eta_r {Σ Γ t u u'} :
+  upto_domain t u ->
+  beta_eta Σ Γ u u' ->
+  ∑ t', beta_eta Σ Γ t t' × upto_domain t' u'.
+Proof.
+  intros X Y; induction Y in t, X |- *; [destruct r|..].
+  - eapply upto_domain_red1_r in r as (? & ? & ?); tea. beta_eta.
+  - eapply upto_domain_eta1_r in e as (? & ? & ?); tea. beta_eta.
+  - beta_eta.
+  - edestruct IHY1 as (? & ? & ?); tea.
+    edestruct IHY2 as (? & ? & ?); tea.
+    beta_eta.
+Qed.
+
+Lemma upto_domain_beta_eta_l {Σ Γ t u u'} :
+  upto_domain u t ->
+  beta_eta Σ Γ u u' ->
+  ∑ t', beta_eta Σ Γ t t' × upto_domain u' t'.
+Proof.
+  intros X Y. symmetry in X.
+  eapply upto_domain_beta_eta_r in X as (x & ? & ?); tea.
+  exists x; beta_eta. now symmetry.
+Qed.
+
+
+(* See also fill_le *)
+Lemma leq_term_red1_r {cf:checker_flags} {Σ : global_env_ext} {Γ t u u'} :
+  leq_term Σ t u ->
+  red1 Σ Γ u u' ->
+  ∑ t', red1 Σ Γ t t' × leq_term Σ t' u'.
+Proof.
+  intros tu uu'.
+  eapply red1_eq_term_upto_univ_r in tu; tea.
+  all: exact _.
+Qed.
+
+
+Require Import PCUICBasicStrengthening.
+Lemma eta1_eq_term_upto_univ_r Re Rle u v u' :
+  RelationClasses.Reflexive Re ->
+  RelationClasses.Reflexive Rle ->
+  eq_term_upto_univ Re Rle u' u ->
+  eta1 u v ->
+  ∑ v', eta1 u' v' × eq_term_upto_univ Re Rle v' v.
+Proof.
+  intros he hle e h.
+  induction h in u', e, Rle, hle |- * using eta1_ind_all.
+  - invs e. invs X0. invs X2.
+    eapply eq_term_upto_univ_strengthening_inv in X1 as (? & ? & ?); tas; subst.
+    eexists; split; [econstructor|]; assumption.
+  - invs e. edestruct IHh as (? & ? & ?); [..|eassumption|]; try exact _.
+    eexists; split; now constructor.
+  - invs e. edestruct IHh as (? & ? & ?); [..|eassumption|]; try exact _.
+    eexists; split; now constructor.
+  - invs e. edestruct IHh as (? & ? & ?); [..|eassumption|]; try exact _.
+    eexists; split; now constructor.
+  - invs e. edestruct IHh as (? & ? & ?); [..|eassumption|]; try exact _.
+    eexists; split; now constructor.
+  - invs e. edestruct IHh as (? & ? & ?); [..|eassumption|]; try exact _.
+    eexists; split; now constructor.
+  - invs e. edestruct IHh as (? & ? & ?); [..|eassumption|]; try exact _.
+    eexists; split; now constructor.
+  - invs e. edestruct IHh as (? & ? & ?); [..|eassumption|]; try exact _.
+    eexists; split; now constructor.
+  - invs e.
+    enough (∑ brs1, OnOne2 (on_Trel_eq eta1 snd fst) brs0 brs1
+                    × All2 (fun x y => x.1 = y.1 × eq_term_upto_univ Re Re x.2 y.2) 
+                    brs1 brs') as XX. {
+      destruct XX as [brs1 [? ?]].
+      eexists; split; [econstructor 9|]; tea.
+      now constructor. }
+    clear X0 X1. induction X in brs0, X2 |- *; invs X2.
+    + rdestruct p1. destruct X.
+      destruct hd, hd', x; cbn in *; subst.
+      apply p3 in e0 as (? & ? & ?); try exact _.
+      exists ((n0, x) :: l); split; constructor; cbn; auto.
+    + apply IHX in X1 as (? & ? & ?).
+      exists (x :: x0); split; constructor; cbn; auto.
+  - invs e. edestruct IHh as (? & ? & ?); [..|eassumption|]; try exact _.
+    eexists; split; now constructor.
+  - invs e. edestruct IHh as (? & ? & ?); [..|eassumption|]; try exact _.
+    eexists; split; now constructor.
+  - invs e. edestruct IHh as (? & ? & ?); [..|eassumption|]; try exact _.
+    eexists; split; now constructor.
+  - invs e. edestruct IHh as (? & ? & ?); [..|eassumption|]; try exact _.
+    eexists; split; now constructor.
+  - invs e. edestruct IHh as (? & ? & ?); [..|eassumption|]; try exact _.
+    eexists; split; now constructor.
+  - invs e.
+    enough (∑ l1, OnOne2 eta1 args l1
+                    × All2 (eq_term_upto_univ Re Re) l1 l') as XX. {
+      destruct XX as [l1 [? ?]].
+      eexists; split; [econstructor|]; tea.
+      now constructor. }
+    induction X in args, X0 |- *; invs X0.
+    + rdestruct p.
+      apply p0 in X as (? & ? & ?); try exact _.
+      exists (x0 :: l); split; constructor; cbn; auto.
+    + apply IHX in X2 as (? & ? & ?).
+      exists (x :: x0); split; constructor; cbn; auto.
+  - invs e.
+    enough (∑ l', OnOne2 (fun x y => eta1 (dtype x) (dtype y)
+     × (dname x, dbody x, rarg x) = (dname y, dbody y, rarg y)) mfix l'
+              × All2 (fun x y => (eq_term_upto_univ Re Re (dtype x) (dtype y)
+     × eq_term_upto_univ Re Re (dbody x) (dbody y)) × 
+    rarg x = rarg y) l' mfix1) as XX. {
+      destruct XX as [? [? ?]].
+      eexists; split; [econstructor 16|]; tea.
+      now constructor. }
+    induction X in mfix, X0 |- *; invs X0.
+    + rdestruct p. rdestruct X.
+      destruct hd, hd', x; cbn in *; invs p0.
+      apply p1 in X as (? & ? & ?); try exact _.
+      exists ({| dname := dname1; dtype := x; dbody := dbody1; rarg := rarg0 |} :: l);
+        split; constructor; repeat split; cbn; auto.
+    + apply IHX in X2 as (? & ? & ?).
+      exists (x :: x0); split; constructor; cbn; auto.
+  - invs e.
+    enough (∑ l', OnOne2 (fun x y => eta1 (dbody x) (dbody y)
+     × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)) mfix l'
+              × All2 (fun x y => (eq_term_upto_univ Re Re (dtype x) (dtype y)
+     × eq_term_upto_univ Re Re (dbody x) (dbody y)) × 
+    rarg x = rarg y) l' mfix1) as XX. {
+      destruct XX as [? [? ?]].
+      eexists; split; [econstructor 17|]; tea.
+      now constructor. }
+    induction X in mfix, X0 |- *; invs X0.
+    + rdestruct p. rdestruct X.
+      destruct hd, hd', x; cbn in *; invs p0.
+      apply p1 in X2 as (? & ? & ?); try exact _.
+      exists ({| dname := dname1; dtype := dtype1; dbody := x; rarg := rarg0 |} :: l);
+        split; constructor; repeat split; cbn; auto.
+    + apply IHX in X2 as (? & ? & ?).
+      exists (x :: x0); split; constructor; cbn; auto.
+  - invs e.
+    enough (∑ l', OnOne2 (fun x y => eta1 (dtype x) (dtype y)
+     × (dname x, dbody x, rarg x) = (dname y, dbody y, rarg y)) mfix l'
+              × All2 (fun x y => (eq_term_upto_univ Re Re (dtype x) (dtype y)
+     × eq_term_upto_univ Re Re (dbody x) (dbody y)) × 
+    rarg x = rarg y) l' mfix1) as XX. {
+      destruct XX as [? [? ?]].
+      eexists; split; [econstructor 18|]; tea.
+      now constructor. }
+    induction X in mfix, X0 |- *; invs X0.
+    + rdestruct p. rdestruct X.
+      destruct hd, hd', x; cbn in *; invs p0.
+      apply p1 in X as (? & ? & ?); try exact _.
+      exists ({| dname := dname1; dtype := x; dbody := dbody1; rarg := rarg0 |} :: l);
+        split; constructor; repeat split; cbn; auto.
+    + apply IHX in X2 as (? & ? & ?).
+      exists (x :: x0); split; constructor; cbn; auto.
+  - invs e.
+    enough (∑ l', OnOne2 (fun x y => eta1 (dbody x) (dbody y)
+     × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)) mfix l'
+              × All2 (fun x y => (eq_term_upto_univ Re Re (dtype x) (dtype y)
+     × eq_term_upto_univ Re Re (dbody x) (dbody y)) × 
+    rarg x = rarg y) l' mfix1) as XX. {
+      destruct XX as [? [? ?]].
+      eexists; split; [econstructor 19|]; tea.
+      now constructor. }
+    induction X in mfix, X0 |- *; invs X0.
+    + rdestruct p. rdestruct X.
+      destruct hd, hd', x; cbn in *; invs p0.
+      apply p1 in X2 as (? & ? & ?); try exact _.
+      exists ({| dname := dname1; dtype := dtype1; dbody := x; rarg := rarg0 |} :: l);
+        split; constructor; repeat split; cbn; auto.
+    + apply IHX in X2 as (? & ? & ?).
+      exists (x :: x0); split; constructor; cbn; auto.
+Qed.
+
+
+Lemma leq_term_eta1_r {cf:checker_flags} φ {t u u'} :
+  leq_term φ t u ->
+  eta1 u u' ->
+  ∑ t', eta1 t t' × leq_term φ t' u'.
+Proof.
+Admitted.
+
+Lemma leq_term_beta_eta_r {cf:checker_flags} {Σ : global_env_ext} {Γ t u u'} :
+  leq_term Σ t u ->
+  beta_eta Σ Γ u u' ->
+  ∑ t', beta_eta Σ Γ t t' × leq_term Σ t' u'.
+Proof.
+  intros X Y; induction Y in t, X |- *; [destruct r|..].
+  - eapply leq_term_red1_r in r as (? & ? & ?); tea. beta_eta.
+  - eapply leq_term_eta1_r in e as (? & ? & ?); tea. beta_eta.
+  - beta_eta.
+  - edestruct IHY1 as (? & ? & ?); tea.
+    edestruct IHY2 as (? & ? & ?); tea.
+    beta_eta.
+Qed.
+
+Lemma leq_term_red1_l {cf:checker_flags} {Σ : global_env_ext} {Γ t u u'} :
+  leq_term Σ u t ->
+  red1 Σ Γ u u' ->
+  ∑ t', red1 Σ Γ t t' × leq_term Σ u' t'.
+Proof.
+  intros tu uu'.
+  eapply red1_eq_term_upto_univ_l in tu; tea.
+  all: exact _.
+Qed.
+
+Lemma leq_term_eta1_l {cf:checker_flags} φ {t u u'} :
+  leq_term φ u t ->
+  eta1 u u' ->
+  ∑ t', eta1 t t' × leq_term φ u' t'.
+Proof.
+Admitted.
+
+Lemma leq_term_beta_eta_l {cf:checker_flags} {Σ : global_env_ext} {Γ t u u'} :
+  leq_term Σ u t ->
+  beta_eta Σ Γ u u' ->
+  ∑ t', beta_eta Σ Γ t t' × leq_term Σ u' t'.
+Proof.
+  intros X Y; induction Y in t, X |- *; [destruct r|..].
+  - eapply leq_term_red1_l in r as (? & ? & ?); tea. beta_eta.
+  - eapply leq_term_eta1_l in e as (? & ? & ?); tea. beta_eta.
+  - beta_eta.
+  - edestruct IHY1 as (? & ? & ?); tea.
+    edestruct IHY2 as (? & ? & ?); tea.
+    beta_eta.
+Qed.
+  
+
+Lemma upto_domain_leq_term_com {cf:checker_flags} {φ t u v} :
+  upto_domain t u ->
+  leq_term φ u v ->
+  ∑ u', leq_term φ t u' × upto_domain u' v.
+Proof.
+(*   induction t in u, v |- * using term_forall_list_ind; *)
+(*     intro e; invs e; intro e'; invs e'. *)
+(*   all: try (edestruct IHt as [? [? ?]]; tea). *)
+(*   5,7-15: try (edestruct IHt1 as [? [? ?]]; tea). *)
+(*   all: try (edestruct IHt2 as [? [? ?]]; tea). *)
+(*   all: try (edestruct IHt3 as [? [? ?]]; tea). *)
+(*   all: try (eexists; split; econstructor; tea; fail). *)
+(*   - enough (∑ l', All2 (eq_term_upto_univ (eq_universe φ) (eq_universe φ)) l l' *)
+(*                   × All2 upto_domain l' args'0) as XX. { *)
+(*       destruct XX as [? [? ?]]; eexists; split; econstructor; eassumption. } *)
+(*     induction X0 in X, args'0, X1 |- *; invs X; invs X1. *)
+(*     + exists []; split; constructor. *)
+(*     + edestruct X2 as [? [? ?]]; tea. *)
+(*       edestruct IHX0 as [? [? ?]]; tea. *)
+(*       eexists (_ :: _); split; econstructor; tea. *)
+(*   - enough (∑ l', All2 (fun x0 y => x0.1 = y.1 *)
+(*             × eq_term_upto_univ (eq_universe φ) (eq_universe φ) x0.2 y.2) l l' *)
+(*             × All2 (fun x0 y  => x0.1 = y.1 × upto_domain x0.2 y.2) l' brs'0) as XX. { *)
+(*       destruct XX as [? [? ?]]; eexists; split; econstructor; tea. } *)
+(*     clear -X X2 X5. *)
+(*     induction X2 in X, brs'0, X5 |- *; invs X; invs X5. *)
+(*     + exists []; split; constructor. *)
+(*     + edestruct X0 as [A [? ?]]; [intuition eauto ..|]. *)
+(*       edestruct IHX2 as [B [? ?]]; tea. *)
+(*       eexists ((_, A) :: B); split; econstructor; rdest; tea. *)
+(*   - enough (∑ l', All2 (fun x y => *)
+(*      (eq_term_upto_univ (eq_universe φ) (eq_universe φ) (dtype x) (dtype y) *)
+(*       × eq_term_upto_univ (eq_universe φ) (eq_universe φ) (dbody x) (dbody y)) *)
+(*      × rarg x = rarg y) m l' *)
+(*             × All2 (fun x y  => upto_domain (dtype x) (dtype y) *)
+(*     × upto_domain (dbody x) (dbody y) × rarg x = rarg y) l' mfix'0) as XX. { *)
+(*       destruct XX as [? [? ?]]; eexists; split; econstructor; tea. } *)
+(*     clear -X X0 X1. *)
+(*     induction X0 in X, mfix'0, X1 |- *; invs X; invs X1. *)
+(*     + exists []; split; constructor. *)
+(*     + edestruct X2 as [[A [? ?]] [B [? ?]]]; [intuition eauto ..|]. *)
+(*       edestruct IHX0 as [C [? ?]]; tea. *)
+(*       eexists (mkdef term _ A B _ :: C); split; econstructor; rdest; tea. *)
+(*   - enough (∑ l', All2 (fun x y => *)
+(*      (eq_term_upto_univ (eq_universe φ) (eq_universe φ) (dtype x) (dtype y) *)
+(*       × eq_term_upto_univ (eq_universe φ) (eq_universe φ) (dbody x) (dbody y)) *)
+(*      × rarg x = rarg y) m l' *)
+(*             × All2 (fun x y  => upto_domain (dtype x) (dtype y) *)
+(*     × upto_domain (dbody x) (dbody y) × rarg x = rarg y) l' mfix'0) as XX. { *)
+(*       destruct XX as [? [? ?]]; eexists; split; econstructor; tea. } *)
+(*     clear -X X0 X1. *)
+(*     induction X0 in X, mfix'0, X1 |- *; invs X; invs X1. *)
+(*     + exists []; split; constructor. *)
+(*     + edestruct X2 as [[A [? ?]] [B [? ?]]]; [intuition eauto ..|]. *)
+(*       edestruct IHX0 as [C [? ?]]; tea. *)
+(*       eexists (mkdef term _ A B _ :: C); split; econstructor; rdest; tea. *)
+(*   (* lambda *) *)
+(*   - eexists; split; econstructor; tea. reflexivity. *)
+(*     Unshelve. *)
+(*     all: constructor. *)
+(* Qed. *)
+Admitted.  
+
+
+
 (** Remark that confluence is needed for transitivity of conv and cumul. *)
+
+Instance cumul_trans {cf:checker_flags} (Σ : global_env_ext) Γ :
+  wf Σ -> Transitive (cumul Σ Γ).
+Proof.
+  intros wfΣ t u v X Y.
+  eapply cumul_alt in X as (t' & u' & tu & H1 & H2 & H3 & H4).
+  eapply cumul_alt in Y as (u'' & v' & uv & H5 & H6 & H7 & H8).
+  destruct (beta_eta_confluence wfΣ H2 H5) as (w & w' & H9 & H10 & H11);
+    clear u H2 H5.
+  destruct (upto_domain_beta_eta_r H4 H9) as (w0 & H12 & H13); clear u' H4 H9.
+  destruct (leq_term_beta_eta_r H3 H12) as (w1 & H14 & H15); clear tu H3 H12.
+  destruct (leq_term_beta_eta_l H7 H10) as (w2 & H16 & H17); clear u'' H7 H10.
+  destruct (upto_domain_beta_eta_l H8 H16) as (w3 & H18 & H19); clear uv H8 H16.
+  pose proof (upto_domain_trans _ _ _ H13 H11) as H20; clear w H13 H11.
+  destruct (upto_domain_leq_term_com H20 H17) as (w4 & H21 & H22); clear w' H20 H17.
+  eapply cumul_alt. exists w1, w3, w4; beta_eta. etransitivity; tea.
+Qed.
+
+Print Assumptions cumul_trans.
+
+Admitted.
 
 Instance conv_trans {cf:checker_flags} (Σ : global_env_ext) {Γ} :
   wf Σ -> Transitive (conv Σ Γ).
@@ -57,26 +520,6 @@ Proof.
 (*   - now transitivity t'. *)
 (*   - now transitivity v'. *)
 (*   - now transitivity u'nf. *)
-(* Qed. *)
-Admitted.
-
-Instance cumul_trans {cf:checker_flags} (Σ : global_env_ext) Γ :
-  wf Σ -> Transitive (cumul Σ Γ).
-(* Proof. *)
-(*   intros wfΣ t u v X X0. *)
-(*   eapply cumul_alt in X as [v' [v'' [[redl redr] eq]]]. *)
-(*   eapply cumul_alt in X0 as [w [w' [[redl' redr'] eq']]]. *)
-(*   destruct (red_confluence wfΣ redr redl') as [nf [nfl nfr]]. *)
-(*   eapply cumul_alt. *)
-(*   eapply red_eq_term_upto_univ_r in eq; tc;eauto with pcuic. *)
-(*   destruct eq as [v'0 [red'0 eq2]]. *)
-(*   eapply red_eq_term_upto_univ_l in eq'; tc;eauto with pcuic. *)
-(*   destruct eq' as [v'1 [red'1 eq1]]. *)
-(*   exists v'0, v'1. *)
-(*   split. 1: split. *)
-(*   - transitivity v' ; auto. *)
-(*   - transitivity w' ; auto. *)
-(*   - eapply leq_term_trans with nf; eauto. *)
 (* Qed. *)
 Admitted.
 

@@ -8,7 +8,7 @@ From Coq Require Import ssreflect.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst
      PCUICLiftSubst PCUICTyping PCUICWeakening
-     PCUICCumulativity PCUICReduction
+     PCUICCumulativity PCUICReduction PCUICEtaReduction
      PCUICParallelReduction PCUICEquality PCUICUnivSubstitution
      PCUICParallelReductionConfluence PCUICConfluence.
 
@@ -17,10 +17,6 @@ From Equations Require Import Equations.
 Set Asymmetric Patterns.
 Set SimplIsCbn.
 
-
-
-(* Commented otherwise extraction would produce an axiom making the whole
-   extracted code unusable *)
 
 Arguments red_ctx : clear implicits.
 
@@ -126,7 +122,7 @@ Section ContextReduction.
     (forall n b b',
         option_map decl_body (nth_error Γ n) = Some (Some b) ->
         option_map decl_body (nth_error Γ' n) = Some (Some b') ->
-        @red_ctx Σ (skipn (S n) Γ) (skipn (S n) Γ') ->
+        red_ctx Σ (skipn (S n) Γ) (skipn (S n) Γ') ->
         ∑ t, red Σ (skipn (S n) Γ') b t * red Σ (skipn (S n) Γ') b' t).
 
   Lemma red_ctx_skip i Γ Γ' :
@@ -165,7 +161,7 @@ Section ContextReduction.
 
   Lemma red1_red_ctx_aux {Γ Γ' T U} :
     red1 Σ Γ T U ->
-    @red_ctx Σ Γ Γ' ->
+    red_ctx Σ Γ Γ' ->
     red1_red_ctxP Γ Γ' ->
     ∑ t, red Σ Γ' T t * red Σ Γ' U t.
   Proof.
@@ -279,7 +275,7 @@ Section ContextReduction.
 
   Lemma red_red_ctx' {Γ Γ' T U} :
     red Σ Γ T U ->
-    @red_ctx Σ Γ Γ' ->
+    red_ctx Σ Γ Γ' ->
     red1_red_ctxP Γ Γ' ->
     ∑ t, red Σ Γ' T t * red Σ Γ' U t.
   Proof.
@@ -296,7 +292,7 @@ Section ContextReduction.
   Qed.
 
   Lemma red_red_ctx_aux' {Γ Γ'} :
-    @red_ctx Σ Γ Γ' -> red1_red_ctxP Γ Γ'.
+    red_ctx Σ Γ Γ' -> red1_red_ctxP Γ Γ'.
   Proof.
     intros X.
     induction Γ in Γ', X |- *.
@@ -317,13 +313,31 @@ Section ContextReduction.
 
   Lemma red_red_ctx {Γ Γ' T U} :
     red Σ Γ T U ->
-    @red_ctx Σ Γ Γ' ->
+    red_ctx Σ Γ Γ' ->
     ∑ t, red Σ Γ' T t * red Σ Γ' U t.
   Proof.
     intros. eapply red_red_ctx', red_red_ctx_aux'; eauto.
   Qed.
 
+
+  Lemma beta_eta_red_ctx {Γ Γ' t u} :
+    beta_eta Σ Γ t u ->
+    red_ctx Σ Γ Γ' ->
+    ∑ t' u', beta_eta Σ Γ' t t' × upto_domain t' u' × beta_eta Σ Γ' u u'.
+  Proof.
+    intros X Y; induction X; [destruct r|..].
+    - eapply red1_red, red_red_ctx in r; tea.
+      destruct r as [t [? ?]]; exists t, t; beta_eta.
+    - exists y, y; beta_eta.
+    - exists x, x; beta_eta.
+    - destruct IHX1 as [t [? ?]], IHX2 as [u [? ?]].
+    - beta_eta.
+    intros. eapply red_red_ctx', red_red_ctx_aux'; eauto.
+  Qed.
+
 End ContextReduction.
+
+
 
 Section ContextConversion.
   Context {cf : checker_flags}.
@@ -397,7 +411,7 @@ Section ContextConversion.
     Σ ;;; Γ' |- T <= U.
   Proof.
     intros H Hctx.
-    apply cumul_alt in H as (t' & t'' & u' & u'' & v0 & redl & ? & ? & ? & ? & ?).
+    apply cumul_alt in H as (t' & u' & v0 & redl & ? & ? & ?).
     destruct (red_red_ctx Σ wfΣ redl Hctx) as [lnf [redl0 redr0]].
     apply cumul_alt.
   (*   eapply red_eq_term_upto_univ_l in leq; tea; tc. *)
@@ -412,7 +426,7 @@ Section ContextConversion.
 
   Lemma cumul_red_ctx_inv Γ Γ' T U :
     Σ ;;; Γ |- T <= U ->
-    @red_ctx Σ Γ' Γ ->
+    red_ctx Σ Γ' Γ ->
     Σ ;;; Γ' |- T <= U.
   Proof.
     intros H Hctx.
@@ -428,7 +442,7 @@ Section ContextConversion.
 (* 
   Lemma conv_red_ctx {Γ Γ' T U} :
     Σ ;;; Γ |- T = U ->
-    @red_ctx Σ Γ Γ' ->
+    red_ctx Σ Γ Γ' ->
     Σ ;;; Γ' |- T = U.
   Proof.
     intros H Hctx. apply cumul2_conv.
@@ -437,7 +451,7 @@ Section ContextConversion.
 
   Lemma conv_red_ctx_inv {Γ Γ' T U} :
     Σ ;;; Γ |- T = U ->
-    @red_ctx Σ Γ' Γ ->
+    red_ctx Σ Γ' Γ ->
     Σ ;;; Γ' |- T = U.
   Proof.
     intros H Hctx. apply cumul2_conv.
@@ -530,7 +544,7 @@ Section ContextConversion.
 
   Lemma conv_alt_red_ctx {Γ Γ' T U} :
     Σ ;;; Γ |- T = U ->
-    @red_ctx Σ Γ Γ' ->
+    red_ctx Σ Γ Γ' ->
     Σ ;;; Γ' |- T = U.
   Proof.
   (*   intros H Hctx. *)

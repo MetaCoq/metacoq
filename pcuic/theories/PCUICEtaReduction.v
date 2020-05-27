@@ -1240,15 +1240,96 @@ Proof.
 Defined.
 
 
+Lemma fix_context_app_sing mfix def :
+  fix_context (mfix ++ [def])
+  = fix_context mfix ,, vass (dname def) (lift0 #|mfix| (dtype def)).
+Proof.
+  unfold fix_context, mapi.
+  change (#|mfix|) with (0 + #|mfix|).  generalize 0 at 2 4 5.
+  induction mfix; intro n; cbnr.
+  - now rewrite Nat.add_0_r.
+  - rewrite IHmfix. cbn. unfold snoc. repeat f_equal. lia.
+Qed.
+
+Definition fix_subst_aux (l : mfixpoint term) :=
+  fix aux n :=
+    match n with
+    | 0 => []
+    | S n => tFix l n :: aux n
+    end.
+
+Lemma fix_subst_fix_subst_aux mfix :
+  fix_subst mfix = fix_subst_aux mfix #|mfix|.
+Proof.
+  reflexivity.
+Qed.
+
+Lemma fix_subst_app_sing mfix def :
+  fix_subst (mfix ++ [def])
+  = fix_subst_aux (mfix ++ [def]) #|mfix| ,, tFix (mfix ++ [def]) #|mfix|.
+Proof.
+  unfold fix_subst. rewrite app_length; cbn.
+  now rewrite Nat.add_comm.
+Qed.
+
+Lemma fix_subst_aux_app_sing (mfix0 mfix : mfixpoint term) def :
+  fix_subst_aux mfix0 #|mfix ++ [def]|
+  = fix_subst_aux mfix0  #|mfix| ,, tFix mfix0 #|mfix|.
+Proof.
+  unfold fix_subst. rewrite app_length; cbn.
+  now rewrite Nat.add_comm.
+Qed.
+
 Lemma untyped_subslet_fix_subst Γ mfix :
   untyped_subslet Γ (fix_subst mfix) (fix_context mfix).
 Proof.
-Admitted.
+  rewrite fix_subst_fix_subst_aux.
+  generalize mfix at 1 as mfix0.
+  induction mfix using MCList.rev_ind; intro mfix0; try now constructor.
+  rewrite fix_context_app_sing.
+  rewrite fix_subst_aux_app_sing. constructor; eauto.
+Qed.
 
-Lemma untyped_subslet_cofix_subst Γ mfix :
-  untyped_subslet Γ (cofix_subst mfix) (fix_context mfix).
+
+Definition cofix_subst_aux (l : mfixpoint term) :=
+  fix aux n :=
+    match n with
+    | 0 => []
+    | S n => tCoFix l n :: aux n
+    end.
+
+Lemma cofix_subst_cofix_subst_aux mcofix :
+  cofix_subst mcofix = cofix_subst_aux mcofix #|mcofix|.
 Proof.
-Admitted.
+  reflexivity.
+Qed.
+
+Lemma cofix_subst_app_sing mcofix def :
+  cofix_subst (mcofix ++ [def])
+  = cofix_subst_aux (mcofix ++ [def]) #|mcofix| ,, tCoFix (mcofix ++ [def]) #|mcofix|.
+Proof.
+  unfold cofix_subst. rewrite app_length; cbn.
+  now rewrite Nat.add_comm.
+Qed.
+
+Lemma cofix_subst_aux_app_sing (mcofix0 mcofix : mfixpoint term) def :
+  cofix_subst_aux mcofix0 #|mcofix ++ [def]|
+  = cofix_subst_aux mcofix0  #|mcofix| ,, tCoFix mcofix0 #|mcofix|.
+Proof.
+  unfold cofix_subst. rewrite app_length; cbn.
+  now rewrite Nat.add_comm.
+Qed.
+
+Lemma untyped_subslet_cofix_subst Γ mcofix :
+  untyped_subslet Γ (cofix_subst mcofix) (fix_context mcofix).
+Proof.
+  rewrite cofix_subst_cofix_subst_aux.
+  generalize mcofix at 1 as mcofix0.
+  induction mcofix using MCList.rev_ind; intro mcofix0; try now constructor.
+  rewrite fix_context_app_sing.
+  rewrite cofix_subst_aux_app_sing. constructor; eauto.
+Qed.
+
 
 Lemma fst_decompose_app_App M N :
   (decompose_app (tApp M N)).1 = (decompose_app M).1.
@@ -1936,19 +2017,203 @@ Proof.
       * eapply IHX  in X1 as [mfix2 [mfix4 [? [? ?]]]]; clear IHX.
         exists (hd :: mfix2), (hd :: mfix4); repeat split; constructor; beta_eta.
 
+  - intro XX; invs XX.
+    + enough (∑ mfix2 mfix4,
+              All2 (fun d0 d1 => beta_eta Σ Γ (dtype d0) (dtype d1)
+                      × dbody d0 = dbody d1 × dname d0 = dname d1
+                      × rarg d0 = rarg d1) mfix1 mfix2
+            × All2 (fun x y => upto_domain (dtype x) (dtype y)
+                      × upto_domain (dbody x) (dbody y)
+                      × rarg x = rarg y) mfix2 mfix4
+            × All2 (fun d0 d1 => beta_eta Σ Γ (dtype d0) (dtype d1)
+                      × dbody d0 = dbody d1 × dname d0 = dname d1
+                      × rarg d0 = rarg d1) mfix3 mfix4) as XX. {
+        destruct XX as (mfix2 & mfix4 & ? & ? & ?).
+        exists (tCoFix mfix2 idx), (tCoFix mfix4 idx); beta_eta. }
+      induction X in mfix3, X0 |- *; invs X0.
+      * rdestruct p. destruct X as [X1 X2].
+        itac p1 X1.
+        destruct hd as [na ty bd ar].
+        destruct hd' as [na' ty' bd' ar'].
+        destruct hd'0 as [na0 ty0 bd0 ar0].
+        cbn in *; invs X2; invs p0.
+        exists ({| dname := na'; dtype := u'; dbody := bd'; rarg := ar' |} :: tl),
+          ({| dname := na'; dtype := v'; dbody := bd'; rarg := ar' |} :: tl);
+          repeat split; constructor; cbn; repeat split; trea.
+        all: now apply All2_refl.
+      * rdestruct p.
+        destruct hd as [na ty bd ar].
+        destruct hd' as [na' ty' bd' ar'].
+        cbn in *; invs p0.
+        pretac ({| dname := na'; dtype := ty'; dbody := bd'; rarg := ar' |} :: tl');
+          constructor; cbn; repeat split; trea; beta_eta.
+        2-3: now apply All2_refl.
+        OnOne2_All2; rdest; try invs e0; beta_eta.
+      * destruct X1 as [X1 p0].
+        destruct hd as [na ty bd ar].
+        destruct hd' as [na' ty' bd' ar'].
+        cbn in *; invs p0.
+        pretac ({| dname := na'; dtype := ty'; dbody := bd'; rarg := ar' |} :: tl');
+          constructor; cbn; repeat split; trea; beta_eta.
+        1-2: now apply All2_refl.
+        OnOne2_All2; rdest; try invs e; beta_eta.
+      * itac IHX X1; clear IHX.
+        exists (hd :: u'), (hd :: v'); beta_eta.
+        constructor; beta_eta.
+    + enough (∑ mfix2 mfix4,
+              All2 (fun d0 d1 => beta_eta Σ Γ (dtype d0) (dtype d1)
+                      × beta_eta Σ (Γ ,,, fix_context mfix1) (dbody d0) (dbody d1)
+                      × dname d0 = dname d1 × rarg d0 = rarg d1) mfix1 mfix2
+            × All2 (fun x y => upto_domain (dtype x) (dtype y)
+                      × upto_domain (dbody x) (dbody y)
+                      × rarg x = rarg y) mfix2 mfix4
+            × All2 (fun d0 d1 => beta_eta Σ Γ (dtype d0) (dtype d1)
+                      × beta_eta Σ (Γ ,,, fix_context mfix3) (dbody d0) (dbody d1)
+                      × dname d0 = dname d1 × rarg d0 = rarg d1) mfix3 mfix4)
+        as XX. {
+        destruct XX as (mfix2 & mfix4 & ? & ? & ?).
+        exists (tCoFix mfix2 idx), (tCoFix mfix4 idx); beta_eta. }
+      set (Γ1 := fix_context mfix1) in *; clearbody Γ1.
+      set (Γ3 := fix_context mfix3) in *; clearbody Γ3.
+      induction X in mfix3, X0 |- *; invs X0.
+      * rdestruct p. destruct X as [X1 X2].
+        destruct hd as [na ty bd ar].
+        destruct hd' as [na' ty' bd' ar'].
+        destruct hd'0 as [na0 ty0 bd0 ar0].
+        cbn in *; invs X2; invs p0.
+        tac ({| dname := na'; dtype := ty'; dbody := bd0; rarg := ar' |} :: tl);
+          repeat split; constructor; cbn; repeat split; beta_eta.
+        all: now apply All2_refl.
+      * rdestruct p.
+        destruct hd as [na ty bd ar].
+        destruct hd' as [na' ty' bd' ar'].
+        cbn in *; invs p0.
+        pretac ({| dname := na'; dtype := ty'; dbody := bd'; rarg := ar' |} :: tl');
+          constructor; cbn; repeat split; trea; beta_eta.
+        2-3: now apply All2_refl.
+        OnOne2_All2; rdest; try invs e0; beta_eta.
+      * destruct X1 as [X1 p0].
+        destruct hd as [na ty bd ar].
+        destruct hd' as [na' ty' bd' ar'].
+        cbn in *; invs p0.
+        pretac ({| dname := na'; dtype := ty'; dbody := bd'; rarg := ar' |} :: tl');
+          constructor; cbn; repeat split; trea; beta_eta.
+        1-2: now apply All2_refl.
+        OnOne2_All2; rdest; try invs e; beta_eta.
+      * itac IHX X1; clear IHX.
+        exists (hd :: u'), (hd :: v'); beta_eta.
+        all: constructor; beta_eta.
 
   - intro XX; invs XX.
-  - intro XX; invs XX.
-  - intro XX; invs XX.
-  - intro XX; invs XX.
-  - intro XX; invs XX.
-  - intro XX; invs XX.
-Admitted.
+    + enough (∑ mfix2,
+              All2 (fun d0 d1 => beta_eta Σ Γ (dtype d0) (dtype d1)
+                      × beta_eta Σ (Γ ,,, fix_context mfix3) (dbody d0) (dbody d1)
+                      × dname d0 = dname d1 × rarg d0 = rarg d1) mfix1 mfix2
+            × All2 (fun d0 d1 => beta_eta Σ Γ (dtype d0) (dtype d1)
+                      × beta_eta Σ (Γ ,,, fix_context mfix3) (dbody d0) (dbody d1)
+                      × dname d0 = dname d1 × rarg d0 = rarg d1) mfix3 mfix2)
+        as XX. {
+        assert (#|mfix1| = #|mfix3|). {
+          erewrite <- OnOne2_length; tea.
+          now erewrite OnOne2_length; tea. }
+        destruct XX as (mfix2 & ? & ?).
+        pretac (tCoFix mfix2 idx); [|beta_eta].
+        ap_beta_eta. eapply All2_impl; tea; cbn.
+        intros ? ? [? [? []]]; beta_eta. }
+      assert (upto_types (Γ ,,, fix_context mfix0) (Γ ,,, fix_context mfix3))
+        as HΓ. {
+        apply upto_types_app; [reflexivity|].
+        apply upto_types_fix_context. now eapply OnOne2_length. }
+      set (Γ0 := fix_context mfix0) in *; clearbody Γ0.
+      set (Γ3 := fix_context mfix3) in *; clearbody Γ3.
+      induction X in mfix3, X0 |- *; invs X0.
+      * rdestruct p. destruct X as [X1 X2].
+        destruct hd as [na ty bd ar].
+        destruct hd' as [na' ty' bd' ar'].
+        destruct hd'0 as [na0 ty0 bd0 ar0].
+        cbn in *; invs X2; invs p0.
+        exists ({| dname := na'; dtype := ty0; dbody := bd'; rarg := ar' |} :: tl);
+          split; constructor; cbn; repeat split; beta_eta.
+        all: try now apply All2_refl.
+      * rdestruct p.
+        destruct hd as [na ty bd ar].
+        cbn in *; invs p0.
+        exists (hd' :: tl'); split; constructor; beta_eta.
+        -- OnOne2_All2; rdest; try invs e0; beta_eta.
+        -- eapply All2_refl. intro; rdest; beta_eta.
+      * destruct X1 as [X1 X2].
+        destruct hd as [na ty bd ar].
+        cbn in *; invs X2. 
+        exists (hd' :: tl'); split; constructor; beta_eta.
+        -- eapply All2_refl. intro; rdest; beta_eta.
+        -- OnOne2_All2; rdest; try invs e; beta_eta.
+      * eapply IHX  in X1 as [mfix2 [? ?]]; clear IHX.
+        exists (hd :: mfix2); split; constructor; beta_eta.
+    + enough (∑ mfix2 mfix4,
+              All2 (fun d0 d1 => beta_eta Σ Γ (dtype d0) (dtype d1)
+                      × beta_eta Σ (Γ ,,, fix_context mfix1) (dbody d0) (dbody d1)
+                      × dname d0 = dname d1 × rarg d0 = rarg d1) mfix1 mfix2
+            × All2 (fun x y => upto_domain (dtype x) (dtype y)
+                      × upto_domain (dbody x) (dbody y)
+                      × rarg x = rarg y) mfix2 mfix4
+            × All2 (fun d0 d1 => beta_eta Σ Γ (dtype d0) (dtype d1)
+                      × beta_eta Σ (Γ ,,, fix_context mfix3) (dbody d0) (dbody d1)
+                      × dname d0 = dname d1 × rarg d0 = rarg d1) mfix3 mfix4)
+        as XX. {
+        destruct XX as (mfix2 & mfix4 & ? & ? & ?).
+        exists (tCoFix mfix2 idx), (tCoFix mfix4 idx); beta_eta. }
+      assert (upto_types (Γ ,,, fix_context mfix0) (Γ ,,, fix_context mfix1))
+        as HΓ. {
+        apply upto_types_app; [reflexivity|].
+        apply upto_types_fix_context. now eapply OnOne2_length. }
+      assert (upto_types (Γ ,,, fix_context mfix0) (Γ ,,, fix_context mfix3))
+        as HΓ'. {
+        apply upto_types_app; [reflexivity|].
+        apply upto_types_fix_context. now eapply OnOne2_length. }
+      set (Γ0 := fix_context mfix0) in *; clearbody Γ0.
+      set (Γ1 := fix_context mfix1) in *; clearbody Γ1.
+      set (Γ3 := fix_context mfix3) in *; clearbody Γ3.
+      induction X in mfix3, X0 |- *; invs X0.
+      * rdestruct p. destruct X as [X1 X2].
+        destruct hd as [na ty bd ar].
+        destruct hd' as [na' ty' bd' ar'].
+        destruct hd'0 as [na0 ty0 bd0 ar0].
+        cbn in *; invs X2; invs p0.
+        eapply p1 in X1 as [u' [v' [? [? ?]]]].
+        exists ({| dname := na'; dtype := ty'; dbody := u'; rarg := ar' |} :: tl),
+          ({| dname := na'; dtype := ty'; dbody := v'; rarg := ar' |} :: tl);
+          repeat split; constructor; cbn; repeat split; beta_eta.
+        all: now apply All2_refl.
+      * rdestruct p.
+        destruct hd as [na ty bd ar].
+        cbn in *; invs p0.
+        pretac (hd' :: tl'); constructor; beta_eta.
+        -- OnOne2_All2; rdest; try invs e0; beta_eta.
+        -- eapply All2_refl. intro; rdest; beta_eta.
+        -- eapply All2_refl. intro; rdest; beta_eta.
+      * destruct X1 as [X1 X2].
+        destruct hd as [na ty bd ar].
+        cbn in *; invs X2. 
+        pretac (hd' :: tl'); constructor; beta_eta.
+        -- eapply All2_refl. intro; rdest; beta_eta.
+        -- eapply All2_refl. intro; rdest; beta_eta.
+        -- OnOne2_All2; rdest; try invs e; beta_eta.
+      * eapply IHX  in X1 as [mfix2 [mfix4 [? [? ?]]]]; clear IHX.
+        exists (hd :: mfix2), (hd :: mfix4); repeat split; constructor; beta_eta.
+Qed.
+
+Print Assumptions red1_eta1_diamond.
+
+
+Lemma eta_postponment {cf:checker_flags} Σ (HΣ : wf Σ) Γ u v w
+      (H1 : eta_expands u v) (H2 : red1 Σ Γ v w)
+  : ∑ v', clos_refl (red1 Σ Γ) u v' × clos_refl eta_expands v' w.
+Proof.
 
 
 
-Definition etax1 := transp eta1.
-Definition etax := transp eta.
+(* Definition etax1 := transp eta1. *)
+(* Definition etax := transp eta. *)
 
 
 (* Lemma beta_eta_change_domain Σ Γ na na' M A B : *)
@@ -2091,151 +2356,30 @@ Definition etax := transp eta.
 (* Admitted. *)
 
 (* Hint Resolve weakening_red1 : beta_eta. *)
-}Require Import PCUICSubstitution PCUICUnivSubst.
+(* }Require Import PCUICSubstitution PCUICUnivSubst. *)
 
-Lemma subst1_eta t t' k u :
-  eta t t' -> eta (u {k := t}) (u {k := t'}).
-Proof.
-  intro; apply subst_eta. now constructor.
-Defined.
-
-Hint Resolve subst1_eta | 10 : beta_eta.
-
-Lemma eta_subst1 t k u u' :
-  eta u u' -> eta (u {k := t}) (u' {k := t}).
-Proof. apply eta_subst. Defined.
-
-Hint Resolve eta_subst1 | 10 : beta_eta.
-
-Lemma mkApps_cons t l u : mkApps t (l ++ [u]) = tApp (mkApps t l) u.
-Proof. now rewrite <- mkApps_nested. Qed.
-
-Lemma OnOne2_app' {A} (P : A -> A -> Type) l l' tl :
-  OnOne2 P l l' -> OnOne2 P (l ++ tl) (l' ++ tl).
-Proof. induction 1; simpl; try constructor; auto. Qed.
-
-(* Lemma eta1_mkApps_inv Σ Γ t l u : *)
-(*   eta1 (mkApps t l) u -> *)
-(*   (∑ na A, u = eta_redex na A (mkApps t l)) *)
-(*   + (∑ t', eta1 t t' × u = mkApps t' l) *)
-(*   + (∑ l', OnOne2 eta1 l l' × u = mkApps t l') *)
-(*   + red1 Σ Γ u (mkApps t l). *)
+(* Lemma subst1_eta t t' k u : *)
+(*   eta t t' -> eta (u {k := t}) (u {k := t'}). *)
 (* Proof. *)
-(*   revert t u. induction l using MCList.rev_ind; cbn; intros t u XX. *)
-(*   - left. left. right. now exists u. *)
-(*   - rewrite mkApps_cons in XX. invs XX. *)
-(*     + repeat left. exists na, A. now rewrite mkApps_cons. *)
-(*     + apply IHl in X as [[[X|X]|X]|X]; rewrite !mkApps_cons. *)
-(*       * right. destruct X as [na [A H]]; subst. *)
-(*         refine (_ # red_beta _ _ _ _ _ _ ); cbn; f_equal. *)
-(*         -- now apply simpl_subst_k. *)
-(*         -- now rewrite lift0_id. *)
-(*       * left. left. right. destruct X as [t' [H1 H2]]. *)
-(*         exists t'; split; tas. now rewrite H2, mkApps_cons. *)
-(*       * left. right. destruct X as [l' [H1 H2]]. *)
-(*         exists (l' ++ [x]); split. *)
-(*         -- now apply OnOne2_app'. *)
-(*         -- now rewrite H2, mkApps_cons. *)
-(*       * right. now constructor. *)
-(*     + left; right. exists (l ++ [N2]); split. *)
-(*       * apply OnOne2_app. now constructor. *)
-(*       * now rewrite mkApps_cons. *)
+(*   intro; apply subst_eta. now constructor. *)
 (* Defined. *)
+
+(* Hint Resolve subst1_eta | 10 : beta_eta. *)
+
+(* Lemma eta_subst1 t k u u' : *)
+(*   eta u u' -> eta (u {k := t}) (u' {k := t}). *)
+(* Proof. apply eta_subst. Defined. *)
+
+(* Hint Resolve eta_subst1 | 10 : beta_eta. *)
+
+(* Lemma mkApps_cons t l u : mkApps t (l ++ [u]) = tApp (mkApps t l) u. *)
+(* Proof. now rewrite <- mkApps_nested. Qed. *)
+
+(* Lemma OnOne2_app' {A} (P : A -> A -> Type) l l' tl : *)
+(*   OnOne2 P l l' -> OnOne2 P (l ++ tl) (l' ++ tl). *)
+(* Proof. induction 1; simpl; try constructor; auto. Qed. *)
  
 
-(* Lemma red1_eta1_diamond {cf:checker_flags} {Σ Γ t u v} : *)
-(*   wf Σ -> red1 Σ Γ t u -> eta1 t v -> *)
-(*   ∑ v', beta_eta Σ Γ u v' × beta_eta Σ Γ v v'. *)
-(* Proof. *)
-(*   intros HΣ X; induction X in v |- * using red1_ind_all. *)
-(*   - intro XX; invs XX. *)
-(*     + exists (eta_redex na0 A (b {0 := a})); eta 3; cbn. *)
-(*       cbn. rewrite distr_lift_subst10. eta. *)
-(*     + invs X. *)
-(*       * exists (b {0 := a}); eta 1. *)
-(*         transitivity (tApp (tLambda na t b) a); cbn; eta 10. *)
-(*       * exists (b {0 := a}); eta. *)
-(*       * exists (M' {0 := a}); eta. *)
-(*     + exists (b {0 := N2}); eta. *)
-(*   - intro XX; invs XX. *)
-(*     + exists (eta_redex na0 A (b' {0 := b})); eta 3. *)
-(*       cbn. rewrite distr_lift_subst10. eta. *)
-(*     + exists (b' {0 := r}); eta. *)
-(*     + exists (b' {0 := b}); eta 3. *)
-(*     + exists (r {0 := b}); eta. *)
-(*   - intro XX; invs XX. *)
-(*     exists (eta_redex na A (lift0 (S i) body)); *)
-(*       split; ap_beta_eta; [eta|]. constructor; left. *)
-(*     rewrite <- simpl_lift0. now constructor. *)
-(*   - admit. *)
-(*   - admit. *)
-(*   - admit. *)
-(*   - admit. *)
-(*   - intro XX; invs XX. *)
-(*     exists (eta_redex na A (subst_instance_constr u body)); *)
-(*       split; ap_beta_eta; [eta|]. constructor; left. *)
-(*     rewrite lift_subst_instance_constr. econstructor; tea. *)
-(*     eapply lift_declared_constant in H; tas. *)
-(*     rewrite H; cbn. now rewrite H0. *)
-(*   - intro XX; invs XX. { *)
-(*       exists (eta_redex na A arg); *)
-(*         split; ap_beta_eta; [eta|]. constructor; left; cbn. *)
-(*       rewrite lift_mkApps; cbn. constructor. *)
-(*       now rewrite nth_error_map, H. } *)
-(*     apply (eta1_mkApps_inv Σ Γ) in X as [[[X|X]|X]|X]. *)
-(*     + destruct X as [nA [a x]]; subst. *)
-(*     rewrite lift_subst_instance_constr. econstructor; tea. *)
-(*     eapply lift_declared_constant in H; tas. *)
-(*     rewrite H; cbn. now rewrite H0. *)
-(*   - admit. *)
-(*   - intro XX; invs XX. *)
-(*     + exists (tLambda na0 A (tApp (lift0 1 (tLambda na M' N)) (tRel 0))); eta. *)
-(*     + eapply IHX in X0 as [v' [H1 H2]]. *)
-(*       exists (tLambda na v' N); eta. *)
-(*     + exists (tLambda na M' M'0); eta. *)
-(*   - intro XX; invs XX. *)
-(*     + exists (tLambda na0 A (tApp (lift0 1 (tLambda na N M')) (tRel 0))); *)
-(*         cbn; split; ap_beta_eta; [eta|]. *)
-(*       apply (weakening_red1 Σ Γ [vass na N] [vass na0 A]) in X; tas; eta. *)
-(*     + exists (tLambda na M'0 M'); split; ap_beta_eta; [eta|]. *)
-(*       admit. (* eta1_ctx ?? *) *)
-(*     + eapply IHX in X0 as [v' [H1 H2]]. *)
-(*       exists (tLambda na N v'); eta. *)
-(*   - *)
-(* Abort. *)
 
 
 
-(* Lemma eta1_red1_diamond {cf:checker_flags} {Σ Γ t u v} : *)
-(*   wf Σ -> eta1 t u -> red1 Σ Γ t v -> *)
-(*   ∑ v', beta_eta Σ Γ u v' × beta_eta Σ Γ v v'. *)
-(* Proof. *)
-(*   intros HΣ X; induction X in Γ, v |- * using eta1_ind_all. *)
-(*   - intro XX. *)
-(*     exists (tLambda na A (tApp (lift0 1 v) (tRel 0))); split. 2: eta. *)
-(*     eapply beta_eta_Lambda; [eta|]. *)
-(*     eapply beta_eta_App; [|eta]. *)
-(*     eapply red_beta_eta, red1_red. *)
-(*     eapply (weakening_red1 Σ Γ [] [vass na A]); tea. *)
-(*   - intro XX; invs XX. *)
-(*     + now sap Lambda_mkApps_Fix in H. *)
-(*     + apply IHX in X0 as [v' [H1 H2]]. *)
-(*       exists (tLambda na v' N); eta. *)
-(*     + exists (tLambda na M' M'0); eta 1. *)
-(*       eapply beta_eta_Lambda; try eta 1. *)
-(*       admit. (* eta1_ctx ?? *) *)
-(*   - intro XX; invs XX. *)
-(*     + now sap Lambda_mkApps_Fix in H. *)
-(*     + exists (tLambda na M'0 M'); eta. *)
-(*     + apply IHX in X0 as [v' [H1 H2]]. *)
-(*       exists (tLambda na N v'); eta. *)
-(* Abort. *)
-
-
-
-
-
-(* Lemma eta_postponment {cf:checker_flags} Σ (HΣ : wf Σ) Γ u v w *)
-(*       (H1 : eta_expands u v) (H2 : red1 Σ Γ v w) *)
-(*   : ∑ v', clos_refl (red1 Σ Γ) u v' × clos_refl eta_expands v' w. *)
-(* Proof. *)

@@ -823,6 +823,7 @@ Module PCUICTypingDef <: Typing PCUICTerm PCUICEnvironment PCUICEnvTyping.
   Definition lift := lift.
   Definition inds := inds. 
   Definition noccur_between := noccur_between. 
+  Definition closedn := closedn.
 End PCUICTypingDef.
 
 Module PCUICDeclarationTyping :=

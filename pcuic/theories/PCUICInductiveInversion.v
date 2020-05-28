@@ -917,3 +917,266 @@ Proof.
   simpl in *. rewrite parseq.
   destruct y as [[_ onps] onp]. lia.
 Qed.
+
+Ltac unf_env := 
+  change PCUICEnvironment.it_mkProd_or_LetIn with it_mkProd_or_LetIn in *; 
+  change PCUICEnvironment.to_extended_list_k with to_extended_list_k in *; 
+  change PCUICEnvironment.ind_params with ind_params in *.
+
+Derive Signature for positive_cstr.
+
+Lemma smash_context_app_def Γ na b ty :
+  smash_context [] (Γ ++ [{| decl_name := na; decl_body := Some b; decl_type := ty |}]) =
+  smash_context [] (subst_context [b] 0 Γ).
+Proof.
+  now rewrite smash_context_app smash_context_acc /= subst_empty lift0_id lift0_context /=
+    subst_context_nil app_nil_r (smash_context_subst []).
+Qed.
+
+Lemma smash_context_app_ass Γ na ty :
+  smash_context [] (Γ ++ [{| decl_name := na; decl_body := None; decl_type := ty |}]) =
+  smash_context [] Γ ++ [{| decl_name := na; decl_body := None; decl_type := ty |}].
+Proof.
+  now rewrite smash_context_app smash_context_acc /= subst_context_lift_id.
+Qed.
+
+Lemma subst_consn_ids_ren n k f : (idsn n ⋅n (tRel k ⋅ ren f) =1 ren (ren_ids n ⋅n (subst_cons_gen k f)))%sigma.
+Proof.
+  intros i.
+  destruct (Nat.leb_spec n i).
+  - rewrite subst_consn_ge idsn_length. auto.
+    unfold ren. f_equal. rewrite subst_consn_ge ren_ids_length; auto.
+    unfold subst_cons_gen. destruct (i - n) eqn:eqin. simpl. auto. simpl. reflexivity.
+  - assert (Hr:i < #|ren_ids n|) by (rewrite ren_ids_length; lia).
+    assert (Hi:i < #|idsn n|) by (rewrite idsn_length; lia).
+    destruct (subst_consn_lt Hi) as [x' [Hnth He]].
+    destruct (subst_consn_lt Hr) as [x'' [Hnth' He']].
+    rewrite (idsn_lt H) in Hnth.
+    rewrite (ren_ids_lt H) in Hnth'.
+    injection Hnth as <-. injection Hnth' as <-. rewrite He.
+    unfold ren. now rewrite He'.
+Qed.
+
+Lemma subst_reli_lift_id i n t : i <= n ->
+  subst [tRel i] n (lift (S i) (S n) t) = (lift i n t).
+Proof.
+  intros ltin.
+  sigma.
+  apply inst_ext.
+  unfold Upn. sigma. unfold shiftk at 1 => /=.
+  simpl.
+  rewrite ren_shiftk. rewrite subst_consn_ids_ren.
+  unfold lift_renaming. rewrite compose_ren.
+  intros i'. unfold ren, ids; simpl. f_equal.
+  elim: Nat.leb_spec => H'. unfold subst_consn, subst_cons_gen.
+  elim: nth_error_spec => [i'' e l|].
+  rewrite ren_ids_length /= in l. lia.
+  rewrite ren_ids_length /=.
+  intros Hn. destruct (S (i + i') - n) eqn:?. lia.
+  elim: (Nat.leb_spec n i'). lia. lia.
+  unfold subst_consn, subst_cons_gen.
+  elim: nth_error_spec => [i'' e l|].
+  rewrite (@ren_ids_lt n i') in e. rewrite ren_ids_length in l. auto.
+  noconf e. rewrite ren_ids_length in l. 
+  elim: Nat.leb_spec; try lia.
+  rewrite ren_ids_length /=.
+  intros. destruct (i' - n) eqn:?; try lia.
+  elim: Nat.leb_spec; try lia.
+Qed.
+
+Definition expand_lets_k Γ k t := 
+  (subst (extended_subst Γ 0) k (lift (context_assumptions Γ) (k + #|Γ|) t)).
+
+Definition expand_lets Γ t := expand_lets_k Γ 0 t.
+
+Definition expand_lets_k_ctx Γ k Δ := 
+  (subst_context (extended_subst Γ 0) k (lift_context (context_assumptions Γ) (k + #|Γ|) Δ)).
+
+Definition expand_lets_ctx Γ Δ := expand_lets_k_ctx Γ 0 Δ.
+
+Lemma expand_lets_k_vass Γ na ty k t : 
+  expand_lets_k (Γ ++ [{| decl_name := na; decl_body := None; decl_type := ty |}]) k t =
+  expand_lets_k Γ k t.
+Proof.
+  rewrite /expand_lets /expand_lets_k; autorewrite with len.
+  rewrite extended_subst_app /=.
+  rewrite subst_app_simpl. simpl. autorewrite with len.
+  rewrite !Nat.add_1_r.
+  rewrite subst_context_lift_id. f_equal.
+  rewrite Nat.add_succ_r.
+  rewrite subst_reli_lift_id //.
+  move: (context_assumptions_length_bound Γ); lia.
+Qed.
+
+Lemma expand_lets_vass Γ na ty t : 
+  expand_lets (Γ ++ [{| decl_name := na; decl_body := None; decl_type := ty |}]) t =
+  expand_lets Γ t.
+Proof.
+  rewrite /expand_lets; apply expand_lets_k_vass.
+Qed.
+
+Lemma expand_lets_k_vdef Γ na b ty k t : 
+  expand_lets_k (Γ ++ [{| decl_name := na; decl_body := Some b; decl_type := ty |}]) k t =
+  expand_lets_k (subst_context [b] 0 Γ) k (subst [b] (k + #|Γ|) t).
+Proof.
+  rewrite /expand_lets /expand_lets_k; autorewrite with len.
+  rewrite extended_subst_app /=.
+  rewrite subst_app_simpl. simpl. autorewrite with len.
+  rewrite !subst_empty lift0_id lift0_context.
+  epose proof (distr_lift_subst_rec _ [b] (context_assumptions Γ) (k + #|Γ|) 0).
+  rewrite !Nat.add_0_r in H.
+  f_equal. simpl in H. rewrite Nat.add_assoc.
+  rewrite <- H.
+  reflexivity.
+Qed.
+
+Lemma expand_lets_vdef Γ na b ty t : 
+  expand_lets (Γ ++ [{| decl_name := na; decl_body := Some b; decl_type := ty |}]) t =
+  expand_lets (subst_context [b] 0 Γ) (subst [b] #|Γ| t).
+Proof.
+  rewrite /expand_lets; apply expand_lets_k_vdef.
+Qed.
+
+Definition expand_lets_k_ctx_vass Γ k Δ na ty :
+  expand_lets_k_ctx Γ k (Δ ++ [{| decl_name := na; decl_body := None; decl_type := ty |}]) =
+  expand_lets_k_ctx Γ (S k) Δ ++ [{| decl_name := na; decl_body := None; decl_type :=
+    expand_lets_k Γ k ty |}].
+Proof. 
+  now  rewrite /expand_lets_k_ctx lift_context_app subst_context_app /=; simpl.
+Qed.
+
+Definition expand_lets_k_ctx_decl Γ k Δ d :
+  expand_lets_k_ctx Γ k (Δ ++ [d]) = expand_lets_k_ctx Γ (S k) Δ ++ [map_decl (expand_lets_k Γ k) d].
+Proof. 
+  rewrite /expand_lets_k_ctx lift_context_app subst_context_app /=; simpl.
+  unfold app_context. simpl.
+  rewrite /subst_context /fold_context /=.
+  f_equal. rewrite compose_map_decl. f_equal.
+Qed.
+
+Lemma positive_cstr_it_mkProd_or_LetIn mdecl i Γ Δ t : 
+  positive_cstr mdecl i Γ (it_mkProd_or_LetIn Δ t) ->
+  All_local_env (fun Δ ty _ => positive_cstr_arg mdecl i (Γ ,,, Δ) ty)
+    (smash_context [] Δ) *
+  positive_cstr mdecl i (Γ ,,, smash_context [] Δ) (expand_lets Δ t).
+Proof.
+  revert Γ t; unfold expand_lets, expand_lets_k;
+   induction Δ as [|[na [b|] ty] Δ] using ctx_length_rev_ind; intros Γ t.
+  - simpl; intuition auto. now rewrite subst_empty lift0_id.
+  - rewrite it_mkProd_or_LetIn_app /=; intros H; depelim H.
+    solve_discr. rewrite smash_context_app_def.
+    rewrite /subst1 subst_it_mkProd_or_LetIn in H.
+    specialize (X (subst_context [b] 0 Δ) ltac:(autorewrite with len; lia) _ _ H).
+    simpl; autorewrite with len in X |- *.
+    destruct X; split; auto. simpl.
+    rewrite extended_subst_app /= !subst_empty !lift0_id lift0_context.
+    rewrite subst_app_simpl; autorewrite with len => /=.
+    simpl.
+    epose proof (distr_lift_subst_rec _ [b] (context_assumptions Δ) #|Δ| 0).
+    rewrite !Nat.add_0_r in H0. now erewrite <- H0.
+  - rewrite it_mkProd_or_LetIn_app /=; intros H; depelim H.
+    solve_discr. rewrite smash_context_app_ass.
+    specialize (X Δ ltac:(autorewrite with len; lia) _ _ H).
+    simpl; autorewrite with len in X |- *.
+    destruct X; split; auto. simpl.
+    eapply All_local_env_app_inv; split.
+    constructor; auto.
+    eapply (All_local_env_impl _ _ _ a). intros; auto.
+    now rewrite app_context_assoc. simpl.
+    rewrite extended_subst_app /=.
+    rewrite subst_app_simpl; autorewrite with len => /=.
+    simpl.
+    rewrite subst_context_lift_id.
+    rewrite Nat.add_comm Nat.add_1_r subst_reli_lift_id. 
+    apply context_assumptions_length_bound. now rewrite app_context_assoc.
+Qed.
+
+Lemma closedn_expand_lets k (Γ : context) t : 
+  closedn (k + context_assumptions Γ) (expand_lets Γ t) -> 
+  closedn (k + #|Γ|) t.
+Proof.
+  revert k t.
+  induction Γ as [|[na [b|] ty] Γ] using ctx_length_rev_ind; intros k t; simpl; auto.
+  - now rewrite /expand_lets /expand_lets_k subst_empty lift0_id.
+  - autorewrite with len.
+    rewrite !expand_lets_vdef.
+    specialize (H (subst_context [b] 0 Γ) ltac:(autorewrite with len; lia)).
+    autorewrite with len in H.
+    intros cl.
+    specialize (H _ _ cl).
+    eapply (closedn_subst_eq' _ k) in H.
+    simpl in *. now rewrite Nat.add_assoc.
+  - autorewrite with len.
+    rewrite !expand_lets_vass. simpl. intros cl.
+    specialize (H Γ ltac:(autorewrite with len; lia)).
+    rewrite (Nat.add_comm _ 1) Nat.add_assoc in cl.
+    now rewrite (Nat.add_comm _ 1) Nat.add_assoc.
+Qed.
+
+Lemma expand_lets_it_mkProd_or_LetIn Γ Δ k t : 
+  expand_lets_k Γ k (it_mkProd_or_LetIn Δ t) = 
+  it_mkProd_or_LetIn (expand_lets_k_ctx Γ k Δ) (expand_lets_k Γ (k + #|Δ|) t).
+Proof.
+  revert k; induction Δ as [|[na [b|] ty] Δ] using ctx_length_rev_ind; simpl; auto; intros k.
+  - now rewrite /expand_lets_k_ctx /= Nat.add_0_r.
+  - rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /=.
+    rewrite /expand_lets_ctx expand_lets_k_ctx_decl /= it_mkProd_or_LetIn_app.
+    simpl. f_equal. rewrite app_length /=.
+    simpl. rewrite Nat.add_1_r Nat.add_succ_r.
+    now rewrite -(H Δ ltac:(lia) (S k)).
+  - rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /=.
+    rewrite /expand_lets_ctx expand_lets_k_ctx_decl /= it_mkProd_or_LetIn_app.
+    simpl. f_equal. rewrite app_length /=.
+    simpl. rewrite Nat.add_1_r Nat.add_succ_r.
+    now rewrite -(H Δ ltac:(lia) (S k)).
+Qed.
+
+Lemma expand_lets_k_mkApps Γ k f args : 
+  expand_lets_k Γ k (mkApps f args) =
+  mkApps (expand_lets_k Γ k f) (map (expand_lets_k Γ k) args).
+Proof.
+  now rewrite /expand_lets_k lift_mkApps subst_mkApps map_map_compose.
+Qed.
+Lemma expand_lets_mkApps Γ f args : 
+  expand_lets Γ (mkApps f args) =
+  mkApps (expand_lets Γ f) (map (expand_lets Γ) args).
+Proof.
+  now rewrite /expand_lets expand_lets_k_mkApps.
+Qed.  
+ 
+Lemma expand_lets_cstr_head k Γ : 
+  expand_lets Γ (tRel (k + #|Γ|)) = tRel (k + context_assumptions Γ).
+Proof.
+  rewrite /expand_lets /expand_lets_k. 
+  rewrite lift_rel_ge. lia.
+  rewrite subst_rel_gt. autorewrite with len. lia.
+  autorewrite with len. lia_f_equal.
+Qed.
+
+Lemma positive_cstr_closed_indices {cf:checker_flags} {Σ} (wfΣ : wf Σ.1):
+  forall {i mdecl idecl cdecl ind_indices cs},
+  on_constructor (lift_typing typing) Σ mdecl i idecl ind_indices cdecl cs -> 
+  All (closedn (#|ind_params mdecl| + #|cshape_args cs|)) (cshape_indices cs).
+Proof.
+  intros.
+  pose proof (on_ctype_positive _ _ _ _ _ _ _ _ X).
+  rewrite X.(cstr_eq) in X0. unf_env.
+  rewrite -it_mkProd_or_LetIn_app in X0.
+  eapply positive_cstr_it_mkProd_or_LetIn in X0 as [hpars hpos].
+  rewrite app_context_nil_l in hpos.
+  rewrite expand_lets_mkApps in hpos.
+  unfold cstr_concl_head in hpos.
+  have subsrel := expand_lets_cstr_head (#|ind_bodies mdecl| - S i) (cshape_args cs  ++ ind_params mdecl).
+  rewrite app_length (Nat.add_comm #|(cshape_args cs)|) Nat.add_assoc in subsrel. rewrite {}subsrel in hpos.
+  rewrite context_assumptions_app in hpos. depelim hpos; solve_discr.
+  simpl in H; noconf H.
+  eapply All_map_inv in a.
+  eapply All_app in a as [ _ a].
+  eapply (All_impl a).
+  clear. intros.
+  autorewrite with len in H; simpl in H.
+  rewrite -context_assumptions_app in H.
+  apply (closedn_expand_lets 0) in H => //.
+  autorewrite with len in H.
+  now rewrite Nat.add_comm.
+Qed.

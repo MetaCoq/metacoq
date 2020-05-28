@@ -536,7 +536,7 @@ Proof.
         2:eauto.
         (* 1: cshape indices should be closed w.r.t. inds.
            2: parsubst and cparsubst are convertible
-           
+           f
         *) 
       * simpl. rewrite lift_mkApps !subst_mkApps /=.
         constructor. 2:constructor.

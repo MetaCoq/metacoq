@@ -388,7 +388,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       positive_cstr mdecl i ctx (mkApps (tRel headrel) indices)
 
     | positive_cstr_let na b ty t :
-      positive_cstr mdecl i ctx (subst [b] 0 ty) ->
+      positive_cstr mdecl i ctx (subst [b] 0 t) ->
       positive_cstr mdecl i ctx (tLetIn na b ty t) 
 
     | positive_cstr_ass na ty t :

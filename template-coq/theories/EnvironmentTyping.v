@@ -238,7 +238,8 @@ Module Type Typing (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E).
   
   (* [noccur_between n k t] Checks that deBruijn indices between n and n+k do not appear in t (even under binders).  *)
   Parameter Inline noccur_between : nat -> nat -> term -> bool.
-
+  Parameter Inline closedn : nat -> term -> bool.
+  
   Notation wf_local Σ Γ := (All_local_env (lift_typing typing Σ) Γ).
 
 End Typing.
@@ -337,7 +338,64 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
         weak-head normalized types *)
       (List.rev (smash_context [] args))
     *)
+
+    (** A constructor argument type [t] is positive w.r.t. an inductive block [mdecl]
+      when it's zeta-normal form is of the shape Π Δ. concl and: 
+        - [t] does not refer to any inductive in the block.
+          In that case [t] must be a closed type under the context of parameters and
+          previous arguments.
+        - None of the variable assumptions in Δ refer to any inductive in the block, 
+          but the conclusion [concl] is of the form [mkApps (tRel k) args] for k 
+          refering to an inductive in the block, and none of the arguments [args]
+          refer to the inductive.          
+      
+      Let-in assumptions in Δ are systematically unfolded, i.e. we really consider:
+      the zeta-reduction of [t]. *)
     
+    Inductive positive_cstr_arg mdecl i ctx : term -> Type :=
+    | positive_cstr_arg_closed t : 
+      closedn #|ctx| t ->
+      positive_cstr_arg mdecl i ctx t
+
+    | positive_cstr_arg_concl l k : 
+      (** Mutual inductive references in the conclusion are ok *)
+      #|ctx| <= i -> i < #|ctx| + #|mdecl.(ind_bodies)| ->
+      All (closedn #|ctx|) l ->
+      positive_cstr_arg mdecl i ctx (mkApps (tRel k) l)
+
+    | positive_cstr_arg_let na b ty t :
+      positive_cstr_arg mdecl i ctx (subst [b] 0 ty) ->
+      positive_cstr_arg mdecl i ctx (tLetIn na b ty t) 
+
+    | positive_cstr_arg_ass na ty t :
+      closedn #|ctx| ty ->
+      positive_cstr_arg mdecl i (vass na ty :: ctx) t ->
+      positive_cstr_arg mdecl i ctx (tProd na ty t).
+
+    (** A constructor type [t] is positive w.r.t. an inductive block [mdecl]
+      and inductive [i] when it's zeta normal-form is of the shape Π Δ. concl and: 
+        - All of the arguments in Δ are positive.
+        - The conclusion is of the shape [mkApps (tRel k) indices] 
+          where [k] refers to the current inductive [i] and [indices] does not mention
+          any of the inductive types in the block. I.e. [indices] are closed terms
+          in [params ,,, args]. *)
+          
+    Inductive positive_cstr mdecl i (ctx : context) : term -> Type :=
+    | positive_cstr_concl indices :
+      let headrel : nat := 
+        (#|mdecl.(ind_bodies)| - S i + #|ctx|)%nat in
+      All (closedn #|ctx|) indices ->
+      positive_cstr mdecl i ctx (mkApps (tRel headrel) indices)
+
+    | positive_cstr_let na b ty t :
+      positive_cstr mdecl i ctx (subst [b] 0 ty) ->
+      positive_cstr mdecl i ctx (tLetIn na b ty t) 
+
+    | positive_cstr_ass na ty t :
+      positive_cstr_arg mdecl i ctx ty ->
+      positive_cstr mdecl i (vass na ty :: ctx) t ->
+      positive_cstr mdecl i ctx (tProd na ty t).
+
     Record on_constructor Σ mdecl i idecl ind_indices cdecl (cshape : constructor_shape) := {
       (* cdecl.1 fresh ?? *)
       cstr_args_length : context_assumptions (cshape_args cshape) = cdecl_args cdecl;
@@ -366,8 +424,12 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       on_cindices : 
         ctx_inst Σ (arities_context mdecl.(ind_bodies) ,,, mdecl.(ind_params) ,,, cshape.(cshape_args))
                       cshape.(cshape_indices)
-                      (List.rev (lift_context #|cshape.(cshape_args)| 0 ind_indices))
-        }.
+                      (List.rev (lift_context #|cshape.(cshape_args)| 0 ind_indices));
+
+      on_ctype_positive : (* The constructor type is positive *)
+        positive_cstr mdecl i [] (cdecl_type cdecl)
+
+    }.
 
     Arguments on_ctype {Σ mdecl i idecl ind_indices cdecl cshape}.
     Arguments on_cargs {Σ mdecl i idecl ind_indices cdecl cshape}.

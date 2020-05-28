@@ -892,6 +892,7 @@ Module TemplateTyping <: Typing TemplateTerm TemplateEnvironment TemplateEnvTypi
   Definition subst_telescope := subst_telescope.
   Definition inds := inds.
   Definition noccur_between := noccur_between.
+  Definition closedn := closedn.
 End TemplateTyping.
 
 Module TemplateDeclarationTyping :=

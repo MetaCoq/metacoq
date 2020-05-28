@@ -299,6 +299,14 @@ Proof.
   induction l; constructor; auto.
 Qed.
 
+Lemma All2_transitivity {A} (R : A -> A -> Type) :
+  CRelationClasses.Transitive R ->
+  CRelationClasses.Transitive (All2 R).
+Proof.
+  intros HR x y z l; induction l in z |- *; auto.
+  intros H; depelim H. constructor; eauto.
+Qed.
+
 Lemma sr_red1 {cf:checker_flags} :
   env_prop SR_red1
       (fun Σ Γ wfΓ =>
@@ -524,7 +532,12 @@ Proof.
       autorewrite with len. rewrite skipn_length. lia.
       unfold argctx. lia. } 
     { rewrite !map_app. eapply All2_app.
-      * admit.
+      * eapply All2_transitivity. intros x y z; eapply conv_trans; eauto.
+        2:eauto.
+        (* 1: cshape indices should be closed w.r.t. inds.
+           2: parsubst and cparsubst are convertible
+           
+        *) 
       * simpl. rewrite lift_mkApps !subst_mkApps /=.
         constructor. 2:constructor.
         assert (R_global_instance Σ.1 (eq_universe (global_ext_constraints Σ)) (eq_universe (global_ext_constraints Σ)) 

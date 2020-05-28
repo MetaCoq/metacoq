@@ -137,7 +137,6 @@ Proof.
   destruct global_variance as [v|]; auto using subst_equal_inst_inst.
   induction u in v |- *; cbnr; try now constructor.
   - destruct v; simpl; auto.
-  - destruct v; simpl; auto.
     split; auto.
     destruct t; simpl; auto.
     * pose proof (hRe (Universe.make a) u1 u2 Ru1u2) as HH.
@@ -847,6 +846,8 @@ Proof.
   unfold R_global_instance, subst_instance_instance.
   destruct global_variance as [v|]; eauto using precompose_subst_instance_instance.
   induction i in i', v |- *; destruct i', v; simpl; try split; auto.
+  - destruct (IHi i' []). intros; auto.
+  - destruct (IHi i' []). intros; auto.
   - destruct (IHi i' v). intros []; split; auto.
     destruct t0; simpl in *; auto.
     * now rewrite !subst_instance_univ_make.

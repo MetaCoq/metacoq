@@ -55,7 +55,9 @@ Fixpoint R_universe_instance_variance Re Rle v u u' :=
   match u, u' return Prop with
   | u :: us, u' :: us' =>
     match v with
-    | [] => True (* Missing variance stands for irrelevance *)
+    | [] => R_universe_instance_variance Re Rle v us us' 
+      (* Missing variance stands for irrelevance, we still check that the instances have
+        the same length. *)
     | v :: vs => R_universe_variance Re Rle v u u' /\
         R_universe_instance_variance Re Rle vs us us'
     end
@@ -104,7 +106,10 @@ Definition global_variance Σ gr napp :=
   | ConstructRef ind k =>
     match lookup_constructor Σ ind k with
     | Some (mdecl, idecl, cdecl) =>
-      if (cdecl.2 + mdecl.(ind_npars))%nat <=? napp then mdecl.(ind_variance)
+      if (cdecl.2 + mdecl.(ind_npars))%nat <=? napp then
+        (** Fully applied constructors are always compared at the same supertype, 
+          which implies that no universe equality needs to be checked here. *)
+        Some []
       else None
     | _ => None
     end
@@ -356,7 +361,7 @@ Proof.
   unfold R_global_instance.
   destruct global_variance as [v|].
   clear -he hle.
-  induction x in y, z, v |- *; destruct y, z, v; simpl; auto => //.
+  induction x in y, z, v |- *; destruct y, z, v; simpl; auto => //. eauto.
   intros [Ra Rxy] [Rt Ryz].
   split; eauto.
   destruct t1; simpl in *; auto.
@@ -552,6 +557,7 @@ Proof.
   destruct t0; simpl; auto.
   destruct (global_variance _ _ napp') as [v|] eqn:glob'; eauto using R_universe_instance_impl'.
   induction t in v, t' |- *; destruct v, t'; simpl; auto; intros H; inv H.
+  eauto.
   split; auto.
   destruct t0; simpl; auto.
 Qed.
@@ -788,7 +794,8 @@ Fixpoint compare_universe_instance_variance equ lequ v u u' :=
   match u, u' with
   | u :: us, u' :: us' =>
     match v with
-    | [] => true (* Missing variance stands for irrelevance *)
+    | [] => compare_universe_instance_variance equ lequ v us us' 
+      (* Missing variance stands for irrelevance *)
     | v :: vs => compare_universe_variance equ lequ v u u' &&
         compare_universe_instance_variance equ lequ vs us us'
     end
@@ -912,7 +919,7 @@ Proof.
   intros hre hrle x y.
   unfold compare_global_instance, R_global_instance.
   destruct global_variance as [v|].
-  induction x in v, y |- *; destruct v, y; simpl; auto.    
+  induction x in v, y |- *; destruct v, y; simpl; auto.
   rtoProp. intros [Hat Hxy]. split; auto.
   destruct t; simpl in *; auto.
   intro. eapply forallb2_Forall2 in H.

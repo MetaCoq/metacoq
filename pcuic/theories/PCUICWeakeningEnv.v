@@ -257,6 +257,25 @@ Proof.
     cbn. intros x [? ?] y [[? ?] ?]. repeat split; eauto.
 Qed.
 
+Lemma weakening_env_conv `{CF:checker_flags} Σ Σ' φ Γ M N :
+  wf Σ' ->
+  extends Σ Σ' ->
+  conv (Σ, φ) Γ M N ->
+  conv (Σ', φ) Γ M N.
+Proof.
+  intros wfΣ [Σ'' ->].
+  induction 1; simpl.
+  - econstructor. eapply eq_term_subset.
+    + eapply global_ext_constraints_app.
+    + simpl in *. eapply eq_term_upto_univ_weaken_env in e; simpl; eauto.
+      1:exists Σ''; eauto.
+      all:typeclasses eauto.
+  - econstructor 2; eauto. eapply weakening_env_red1; eauto. exists Σ''; eauto.
+  - econstructor 3; eauto. eapply weakening_env_red1; eauto. exists Σ''; eauto.
+  - eapply conv_eta_l. all: eassumption.
+  - eapply conv_eta_r. all: eassumption.
+Qed.
+
 Lemma weakening_env_cumul `{CF:checker_flags} Σ Σ' φ Γ M N :
   wf Σ' ->
   extends Σ Σ' ->
@@ -463,6 +482,15 @@ Proof.
         generalize (List.rev (PCUICLiftSubst.lift_context #|cshape_args y| 0 ind_indices)).
         generalize (cshape_indices y).
         induction 1; constructor; eauto.
+      * simpl.
+        intros v indv. specialize (on_ctype_variance v indv).
+        simpl in *. move: on_ctype_variance.
+        unfold respects_variance. destruct variance_universes as [[univs u] u'].
+        intros [args idxs]. split.
+        ** eapply (All2_local_env_impl args); intros.
+           eapply weakening_env_cumul; eauto.
+        ** eapply (All2_impl idxs); intros.
+          eapply weakening_env_conv; eauto.
     + unfold check_ind_sorts in *. destruct universe_family; auto.
       * split; [apply fst in ind_sorts|apply snd in ind_sorts].
         -- eapply Forall_impl; tea; cbn.

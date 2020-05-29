@@ -536,8 +536,25 @@ Proof.
         2:eauto.
         (* 1: cshape indices should be closed w.r.t. inds.
            2: parsubst and cparsubst are convertible
-           f
         *) 
+        pose proof (positive_cstr_closed_indices wf onc).
+        rewrite -(map_map_compose _ _ _ (subst (inds _ _ _) _ ∘ (subst_instance_constr u)) (subst parsubst #|argctx|)).
+        rewrite -(map_map_compose _ _ _ (subst_instance_constr u)).
+        rewrite (map_subst_closedn (inds _ _ _)).
+        { apply All_forallb. apply All_map.
+          eapply (All_impl X). 
+          intros x Px. rewrite closedn_subst_instance_constr.
+          rewrite /argctx; autorewrite with len.
+          now rewrite Nat.add_comm. }
+        rewrite -(map_map_compose _ _ _ (subst (inds _ _ _) _ ∘ (subst_instance_constr u1)) (subst _ _)).
+        rewrite -(map_map_compose _ _ _ (subst_instance_constr u1)).
+        rewrite (map_subst_closedn (inds _ _ _)).
+        { apply All_forallb. apply All_map.
+          eapply (All_impl X). 
+          intros x Px. rewrite closedn_subst_instance_constr.
+          rewrite /argctx; autorewrite with len.
+          now rewrite Nat.add_comm. }
+        admit. (* indices conversion *)
       * simpl. rewrite lift_mkApps !subst_mkApps /=.
         constructor. 2:constructor.
         assert (R_global_instance Σ.1 (eq_universe (global_ext_constraints Σ)) (eq_universe (global_ext_constraints Σ)) 
@@ -1541,16 +1558,16 @@ Proof.
         eapply spargs. eapply iparsubst0.
         rewrite closed_ctx_subst.
         eapply closed_wf_local; eauto.
-        eapply on_minductive_wf_params; eauto. eapply decli.
+        eapply on_minductive_wf_params; eauto.
         eapply context_relation_subst_instance; eauto.
-        eapply on_minductive_wf_params; eauto. eapply decli.
+        eapply on_minductive_wf_params; eauto. admit.
         eapply Hpars. }
       { simpl.
         eapply weaken_wf_local; auto.
         rewrite closed_ctx_subst.
         eapply closed_wf_local; eauto.
-        eapply on_minductive_wf_params; eauto. eapply decli.
-        eapply on_minductive_wf_params; eauto. eapply decli. }
+        eapply on_minductive_wf_params; eauto.
+        eapply on_minductive_wf_params; eauto. }
       simpl.
       rewrite distr_subst. autorewrite with len.
       simpl.
@@ -1706,7 +1723,7 @@ Proof.
       ** eapply subslet_untyped_subslet.
         eapply PCUICArities.weaken_subslet; eauto.
         eapply subslet_inds; eauto.
-      ** eapply conv_inds => //.
+      ** eapply conv_inds => //. admit.
       ** fold indsubst1 in |- *.
         eapply (wf_local_instantiate _ _ _ _ _ wf decli'.p1) in wfdecl.
         2:eapply Hu.
@@ -1723,13 +1740,13 @@ Proof.
         autorewrite with len in cparsubst0.
         rewrite inds_length. apply cparsubst0.
         rewrite closed_ctx_lift. eapply closed_wf_local. eauto.
-        eapply on_minductive_wf_params; eauto. eapply decli. auto.
+        eapply on_minductive_wf_params; eauto. auto.
         eapply All_local_env_app_inv. split; auto.
         eapply All_local_env_skipn.
         now rewrite -(subst_instance_context_smash _ _ []).
       ** constructor.
         apply eq_term_upto_univ_subst_instance_constr; try typeclasses eauto.
-        apply equ.
+        admit. (* apply equ. *)
 
   - (* Proj congruence: discriminee reduction *) 
     eapply type_Cumul; [econstructor|..]; eauto.
@@ -1934,7 +1951,7 @@ Proof.
     destruct X2 as [[wf' _]|[s Hs]].
     now left.
     now right.
-Qed.
+Admitted.
 
 Print Assumptions sr_red1.
 

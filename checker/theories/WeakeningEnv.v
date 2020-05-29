@@ -379,6 +379,15 @@ Proof.
       revert on_cindices.
       generalize (List.rev (LiftSubst.lift_context #|cshape_args cs| 0 ind_indices)).
       generalize (cshape_indices cs). induction 1; constructor; eauto.
+      simpl.
+      intros v indv. specialize (on_ctype_variance v indv).
+      simpl in *. move: on_ctype_variance.
+      unfold respects_variance. destruct variance_universes as [[univs u] u'].
+      intros [args idxs]. split.
+      eapply (All2_local_env_impl args); intros.
+      eapply weakening_env_cumul; eauto.
+      eapply (All2_impl idxs); intros.
+      eapply weakening_env_cumul; eauto.
     -- unfold check_ind_sorts in *. destruct universe_family; auto.
       --- split; [apply fst in ind_sorts|apply snd in ind_sorts].
           eapply Forall_impl; tea; cbn.

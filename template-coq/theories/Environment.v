@@ -116,7 +116,7 @@ Module Environment (T : Term).
     rewrite List.rev_app_distr.
     rewrite mapi_app. rewrite <- List.rev_app_distr. f_equal. f_equal.
     apply mapi_ext. intros. f_equal. rewrite List.rev_length. f_equal.
-  Qed.
+  Qed. 
 
 
   (** *** Environments *)

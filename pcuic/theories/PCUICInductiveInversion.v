@@ -1153,13 +1153,13 @@ Proof.
   autorewrite with len. lia_f_equal.
 Qed.
 
-Lemma positive_cstr_closed_indices {cf:checker_flags} {Σ} (wfΣ : wf Σ.1):
+Lemma positive_cstr_closed_indices {cf:checker_flags} {Σ : global_env_ext} (wfΣ : wf Σ.1):
   forall {i mdecl idecl cdecl ind_indices cs},
-  on_constructor (lift_typing typing) Σ mdecl i idecl ind_indices cdecl cs -> 
+  on_constructor (lift_typing typing) (Σ.1, ind_universes mdecl) mdecl i idecl ind_indices cdecl cs -> 
   All (closedn (#|ind_params mdecl| + #|cshape_args cs|)) (cshape_indices cs).
 Proof.
   intros.
-  pose proof (on_ctype_positive _ _ _ _ _ _ _ _ X).
+  pose proof (X.(on_ctype_positive)).
   rewrite X.(cstr_eq) in X0. unf_env.
   rewrite -it_mkProd_or_LetIn_app in X0.
   eapply positive_cstr_it_mkProd_or_LetIn in X0 as [hpars hpos].
@@ -1180,3 +1180,45 @@ Proof.
   autorewrite with len in H.
   now rewrite Nat.add_comm.
 Qed.
+
+Lemma declared_inductive_lookup_inductive {Σ ind mdecl idecl} :
+  declared_inductive Σ mdecl ind idecl ->
+  lookup_inductive Σ ind = Some (mdecl, idecl).
+Proof.
+  rewrite /declared_inductive /lookup_inductive.
+  intros []. red in H. now rewrite /lookup_minductive H H0.
+Qed.
+
+Lemma constructor_cumulative_indices {cf:checker_flags} {Σ : global_env_ext} (wfΣ : wf Σ.1) :
+  forall {ind mdecl idecl cdecl ind_indices cs u u' napp},
+  declared_inductive Σ mdecl ind idecl ->
+  on_constructor (lift_typing typing) (Σ.1, ind_universes mdecl) mdecl (inductive_ind ind) idecl ind_indices cdecl cs -> 
+  R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) napp u u' ->
+  All2_local_env (on_decl (fun Γ Γ' x y => Σ ;;; ind_arities mdecl ,,, ind_params mdecl|- x <= y))
+  (subst_instance_context u (cshape_args cs))
+  (subst_instance_context u' (cshape_args cs)) *
+  All2 (fun x y => Σ ;;; ind_arities mdecl ,,, ind_params mdecl ,,, cshape_args cs |- x = y)
+    (map (subst_instance_constr u) (cshape_indices cs))
+    (map (subst_instance_constr u') (cshape_indices cs)).
+Proof.
+  intros. move: H0.
+  unfold R_global_instance.
+  simpl. rewrite (declared_inductive_lookup_inductive H).
+  eapply on_declared_inductive in H as [onind oib]; eauto.
+  rewrite oib.(ind_arity_eq). 
+  rewrite !destArity_it_mkProd_or_LetIn. simpl.
+  rewrite app_context_nil_l context_assumptions_app.
+  elim: leb_spec_Set => comp.
+  destruct ind_variance eqn:indv.
+  pose proof (X.(on_ctype_variance)).
+  specialize (X0 _ indv).
+  simpl in X0.
+  unfold respects_variance in X0.
+  destruct variance_universes as [[v i] i'] eqn:vu.
+  destruct X0 as [args idx].
+  (** Morally, if variance_universes l = v i i' and R_universe_instance_variance l u u' then
+      i and i' can be substituted respectively by u and u'.
+      The hard part might be to show that (Σ.1, v) can also be turned into Σ by instanciating
+      i and i' by u and u'.
+  *)
+Admitted.

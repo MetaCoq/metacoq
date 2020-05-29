@@ -885,10 +885,14 @@ Module TemplateTyping <: Typing TemplateTerm TemplateEnvironment TemplateEnvTypi
 
   Definition ind_guard := ind_guard.
   Definition typing := @typing.
+  Definition conv := @conv.
+  Definition cumul := @cumul.
   Definition smash_context := smash_context.
   Definition lift := lift.
   Definition subst := subst.
   Definition lift_context := lift_context.
+  Definition subst_instance_constr := subst_instance_constr.
+  Definition subst_instance_context := subst_instance_context.
   Definition subst_telescope := subst_telescope.
   Definition inds := inds.
   Definition noccur_between := noccur_between.

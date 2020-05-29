@@ -816,9 +816,13 @@ Module PCUICTypingDef <: Typing PCUICTerm PCUICEnvironment PCUICEnvTyping.
 
   Definition ind_guard := ind_guard.
   Definition typing := @typing.
+  Definition conv := @conv.
+  Definition cumul := @cumul.
   Definition smash_context := smash_context.
   Definition lift_context := lift_context.
   Definition subst_telescope := subst_telescope.
+  Definition subst_instance_context := subst_instance_context.
+  Definition subst_instance_constr := subst_instance_constr.
   Definition subst := subst.
   Definition lift := lift.
   Definition inds := inds. 

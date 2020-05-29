@@ -682,8 +682,8 @@ Proof.
   intros. unfold map_decl, vass; simpl; f_equal.
   rewrite permute_lift. f_equal; lia. lia.
 Qed.
-
+(* 
 Lemma noccur_between_subst k n t : noccur_between k n t -> 
   closedn (n + k) t -> closedn k t.
 Proof.
-Admitted.
+Admitted. *)

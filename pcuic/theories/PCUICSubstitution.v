@@ -2224,6 +2224,41 @@ Proof.
   all: rewrite (All2_length _ _ X0); solve_all.
 Qed.
 
+Lemma subst1_upto_domain {u v} k N :
+  upto_domain u v -> upto_domain (u { k := N }) (v { k := N }).
+Proof.
+  intro; now apply substitution_upto_domain.
+Qed.
+Hint Resolve subst1_upto_domain : utd.
+
+Lemma upto_domain_subst s s' k b :
+  All2 upto_domain s s' -> upto_domain (subst s k b) (subst s' k b).
+Proof.
+  induction b in s, s', k |- * using term_forall_list_ind; cbn; intro XX.
+  2, 4-11, 13: eauto with utd.
+  - destruct (leb_spec_Set k n); eauto with utd.
+    rewrite (All2_length _ _ XX).
+    destruct (nth_error s (n - k)) eqn:X.
+    + eapply All2_nth_error_Some in X; tea.
+      destruct X as [? [X1 X2]]; rewrite X1.
+      now apply weakening_upto_domain.
+    + eapply All2_nth_error_None in X; tea.
+      now rewrite X.
+  - econstructor. eapply All2_map, All_All2; eauto.
+  - econstructor; eauto. eapply All2_map, All_All2; cbn; eauto.
+  - econstructor; eauto. eapply All2_map, All_All2; tea; cbn.
+    clear -XX. intros x [H1 H2]. rdest; eauto.
+  - econstructor; eauto. eapply All2_map, All_All2; tea; cbn.
+    clear -XX. intros x [H1 H2]. rdest; eauto.
+Defined.
+
+Lemma upto_domain_subst1 {u u'} t k :
+  upto_domain u u' -> upto_domain (t { k := u }) (t { k := u' }).
+Proof.
+  intro H; apply upto_domain_subst; now repeat constructor.
+Qed.
+Hint Resolve upto_domain_subst1 : utd.
+
 Lemma substitution_untyped_cumul {cf:checker_flags} Σ Γ Γ' Γ'' s M N :
   wf Σ.1 -> untyped_subslet Γ s Γ' ->
   Σ ;;; Γ ,,, Γ' ,,, Γ'' |- M <= N ->

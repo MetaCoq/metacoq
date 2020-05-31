@@ -331,10 +331,7 @@ Section ContextReduction.
     - exists y, y; beta_eta.
     - exists x, x; beta_eta.
     - destruct IHX1 as [t [? ?]], IHX2 as [u [? ?]].
-    - beta_eta.
-    intros. eapply red_red_ctx', red_red_ctx_aux'; eauto.
-  Qed.
-
+  Abort.
 End ContextReduction.
 
 

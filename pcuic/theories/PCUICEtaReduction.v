@@ -149,7 +149,7 @@ Proof.
 Qed.
 
 
-Lemma eta1_confluence t u1 u2 :
+Lemma eta1_local_confluence t u1 u2 :
   eta1 t u1 -> eta1 t u2 ->
   ∑ v, eta u1 v × eta u2 v.
 Proof.
@@ -571,12 +571,8 @@ Hint Resolve red1_red refl_red red_trans : beta.
 Hint Resolve red_evar red_prod red_abs red_letin red_app
      red_case_p red_case_c red_proj_c : beta.
 
-Hint Constructors upto_domain : utd.
-Definition upto_domain_refl' x := upto_domain_refl x.
-Definition upto_domain_trans' x y z := upto_domain_trans x y z.
-Hint Resolve upto_domain_refl' upto_domain_trans' : utd.
-
-Definition beta_eta Σ Γ := clos_refl_trans (union (red1 Σ Γ) eta1).
+Definition beta_eta1 Σ Γ := union (red1 Σ Γ) eta1.
+Definition beta_eta Σ Γ := clos_refl_trans (beta_eta1 Σ Γ).
 
 Create HintDb beta_eta.
 
@@ -754,7 +750,7 @@ Lemma beta_eta_Fix_ty mfix mfix' idx Σ Γ :
 Proof.
   intro XX.
   assert (clos_refl_trans (OnOne2 (fun d0 d1 =>
-                  (union (red1 Σ Γ) eta1 (dtype d0) (dtype d1))
+                  (beta_eta1 Σ Γ (dtype d0) (dtype d1))
                   × dbody d0 = dbody d1
                   × dname d0 = dname d1
                   × rarg d0 = rarg d1)) mfix mfix') as YY; [|clear XX]. {
@@ -790,8 +786,7 @@ Lemma beta_eta_Fix_bo mfix mfix' idx Σ Γ :
 Proof.
   intro XX.
   assert (clos_refl_trans (OnOne2 (fun d0 d1 =>
-                  (union (red1 Σ (Γ ,,, fix_context mfix))
-                         eta1 (dbody d0) (dbody d1))
+                  beta_eta1 Σ (Γ ,,, fix_context mfix) (dbody d0) (dbody d1)
                   × dtype d0 = dtype d1
                   × dname d0 = dname d1
                   × rarg d0 = rarg d1)) mfix mfix') as YY; [|clear XX]. {
@@ -866,7 +861,7 @@ Lemma beta_eta_CoFix_ty mfix mfix' idx Σ Γ :
 Proof.
   intro XX.
   assert (clos_refl_trans (OnOne2 (fun d0 d1 =>
-                  (union (red1 Σ Γ) eta1 (dtype d0) (dtype d1))
+                  (beta_eta1 Σ Γ (dtype d0) (dtype d1))
                   × dbody d0 = dbody d1
                   × dname d0 = dname d1
                   × rarg d0 = rarg d1)) mfix mfix') as YY; [|clear XX]. {
@@ -902,8 +897,7 @@ Lemma beta_eta_CoFix_bo mfix mfix' idx Σ Γ :
 Proof.
   intro XX.
   assert (clos_refl_trans (OnOne2 (fun d0 d1 =>
-                  (union (red1 Σ (Γ ,,, fix_context mfix))
-                         eta1 (dbody d0) (dbody d1))
+                 beta_eta1 Σ (Γ ,,, fix_context mfix) (dbody d0) (dbody d1)
                   × dtype d0 = dtype d1
                   × dname d0 = dname d1
                   × rarg d0 = rarg d1)) mfix mfix') as YY; [|clear XX]. {
@@ -1220,7 +1214,7 @@ Qed.
 
 
 
-(** ** βη-confluence up to domains ** **)
+(** ** βη-local confluence up to domains ** **)
 
 Local Ltac pretac t := exists t, t; repeat split; [.. | try reflexivity].
 Local Ltac tac t := pretac t; beta_eta.
@@ -1437,13 +1431,14 @@ Proof.
   constructor. destruct r; [left|right]; tas.
   eapply red1_upto_types; eassumption.
 Qed.
+Hint Resolve beta_eta_upto_types : beta_eta.
 
 Lemma red1_upto_vass {Σ Γ na na' A A' t t'} :
   red1 Σ (Γ ,, vass na A) t t' -> red1 Σ (Γ ,, vass na' A') t t'.
 Proof.
   apply red1_upto_types. now constructor.
 Qed.
-Hint Resolve beta_eta_upto_types : beta_eta.
+Hint Resolve red1_upto_vass : beta.
 
 Lemma beta_eta_upto_vass {Σ Γ na na' A A' t t'} :
   beta_eta Σ (Γ ,, vass na A) t t' -> beta_eta Σ (Γ ,, vass na' A') t t'.
@@ -2202,7 +2197,22 @@ Proof.
         exists (hd :: mfix2), (hd :: mfix4); repeat split; constructor; beta_eta.
 Qed.
 
-Print Assumptions red1_eta1_diamond.
+Lemma beta_eta_local_confluence {cf:checker_flags} {Σ Γ t u v} :
+  wf Σ -> beta_eta1 Σ Γ t u -> beta_eta1 Σ Γ t v ->
+  ∑ u' v', beta_eta Σ Γ u u' × beta_eta Σ Γ v v' × upto_domain u' v'.
+Proof.
+  intros HΣ [X|X] [Y|Y].
+  - apply red1_red in X; apply red1_red in Y.
+    eapply red_confluence in X as [v' [? ?]]; try exact Y; tas.
+    tac v'.
+  - eapply red1_eta1_diamond in X; tea.
+  - eapply red1_eta1_diamond in X as [u' [v' [? [? ?]]]]; tea.
+    exists v', u'; repeat split; try symmetry; beta_eta.
+  - eapply eta1_local_confluence in X as [v' [? ?]]; try exact Y.
+    tac v'.
+Qed.
+
+Print Assumptions beta_eta_local_confluence.
 
 Lemma beta_eta_confluence {cf:checker_flags} {Σ Γ t u v} :
   wf Σ -> beta_eta Σ Γ t u -> beta_eta Σ Γ t v ->

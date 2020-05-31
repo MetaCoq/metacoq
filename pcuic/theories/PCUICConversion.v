@@ -34,83 +34,18 @@ Derive Signature for cumul assumption_context.
 (* So that we can use [conv_trans]... *)
 Existing Class wf.
 
-Lemma upto_domain_mkApps {u u' args args'} :
-  upto_domain u u' ->
-  All2 upto_domain args args' ->
-  upto_domain (mkApps u args) (mkApps u' args').
-Proof.
-  intros X Y. induction Y in u, u', X |- *; cbn; tas. 
-  apply IHY. now constructor.
-Qed.
-Hint Resolve upto_domain_mkApps : utd.
-
-Lemma upto_domain_mkApps_inv t u args :
-  upto_domain t (mkApps u args) ->
-  ∑ u0 args0, t = mkApps u0 args0 × upto_domain u0 u × All2 upto_domain args0 args.
-Proof.
-  revert t. induction args using MCList.rev_ind; cbn; intros t X.
-  - now exists t, [].
-  - rewrite <- mkApps_nested in X; cbn in X. invs X.
-    apply IHargs in X0 as (u1 & args0 & ? & ? & ?).
-    exists u1, (args0 ++ [u0]); intuition auto.
-    + rewrite <- mkApps_nested; cbn; now f_equal.
-    + apply All2_app; auto.
-Qed.
-
-Ltac invs_utd :=
-  repeat match goal with
-         | H : upto_domain ?t (mkApps _ _) |- _
-           => apply upto_domain_mkApps_inv in H;
-             destruct H as (? & ? & ? & ? & ?); subst t
-         | H : upto_domain _ _ |- _ => invs H; [idtac]
-         end.
-
-Lemma subst1_upto_domain {u v} k N :
-  upto_domain u v -> upto_domain (u { k := N }) (v { k := N }).
-Proof.
-  intro; now apply substitution_upto_domain.
-Qed.
-Hint Resolve subst1_upto_domain : utd.
-
-Lemma upto_domain_subst s s' k b :
-  All2 upto_domain s s' -> upto_domain (subst s k b) (subst s' k b).
-Proof.
-  induction b in s, s', k |- * using term_forall_list_ind; cbn; intro XX.
-  2, 4-11, 13: eauto with utd.
-  - destruct (leb_spec_Set k n); eauto with utd.
-    rewrite (All2_length _ _ XX).
-    destruct (nth_error s (n - k)) eqn:X.
-    + eapply All2_nth_error_Some in X; tea.
-      destruct X as [? [X1 X2]]; rewrite X1.
-      now apply weakening_upto_domain.
-    + eapply All2_nth_error_None in X; tea.
-      now rewrite X.
-  - econstructor. eapply All2_map, All_All2; eauto.
-  - econstructor; eauto. eapply All2_map, All_All2; cbn; eauto.
-  - econstructor; eauto. eapply All2_map, All_All2; tea; cbn.
-    clear -XX. intros x [H1 H2]. rdest; eauto.
-  - econstructor; eauto. eapply All2_map, All_All2; tea; cbn.
-    clear -XX. intros x [H1 H2]. rdest; eauto.
-Defined.
-
-Lemma upto_domain_subst1 {u u'} t k :
-  upto_domain u u' -> upto_domain (t { k := u }) (t { k := u' }).
-Proof.
-  intro H; apply upto_domain_subst; now repeat constructor.
-Qed.
-Hint Resolve upto_domain_subst1 : utd.
-
-
-Local Tactic Notation "tac" integer(n)
-  := eexists; split; [apply red1_red; econstructor n|].
-Local Ltac utd := eauto with utd.
+Definition red01 Σ Γ t u : Type := (t = u) + red1 Σ Γ t u.
 
 Lemma upto_domain_red1_r {Σ Γ t u u'} :
   upto_domain t u ->
   red1 Σ Γ u u' ->
-  ∑ t', red Σ Γ t t' × upto_domain t' u'.
+  ∑ t', red01 Σ Γ t t' × upto_domain t' u'.
 Proof.
   intros X Y; induction Y in t, X |- *; invs_utd.
+
+Local Tactic Notation "tac" integer(n)
+  := eexists; split; [right; econstructor n|].
+
   - tac 1; utd.
   - tac 2; utd.
   - tac 3; utd.
@@ -151,45 +86,81 @@ Proof.
     destruct a as [? [? ?]].
     tac 9; utd.
   - exists (tLambda na0 ty t0); split; now constructor.
-  - edestruct IHY as (? & ? & ?); tea.
-    exists (tLambda na0 ty x); split; utd.
-    apply red_abs; trea.
-    eapply red_upto_types; tea. now constructor.
+
+Local Tactic Notation "itac" ident(IHY) integer(n) :=
+  let h := fresh in
+  edestruct IHY as (? & [h|h] & ?); tea;
+  eexists; split; [left; subst; reflexivity|utd
+                   |right; econstructor n; eauto with beta|utd].
+
+  - itac IHY 11.
+  - itac IHY 12.
+  - itac IHY 13.
+  - itac IHY 14.
 Admitted.
+
+
+Lemma upto_domain_strengthening n k M N' :
+  upto_domain (lift n k M) N'
+  -> ∑ N, upto_domain M N × upto_domain N' (lift n k N).
+Proof.
+  induction M in k, N' |- * using term_forall_list_ind; intro H; invs_utd.
+  all: try (eexists; split; reflexivity).
+  - admit.
+  - edestruct IHM1 as [? [? ?]]; tea; subst.
+    edestruct IHM2 as [? [? ?]]; tea; subst.
+    eexists; split; [econstructor; tea|econstructor]; tas.
+  - edestruct IHM2 as [? [? ?]]; tea; subst.
+    eexists; split; [econstructor; tea|econstructor]; tas.
+  - edestruct IHM1 as [? [? ?]]; tea; subst.
+    edestruct IHM2 as [? [? ?]]; tea; subst.
+    edestruct IHM3 as [? [? ?]]; tea; subst.
+    eexists; split; [econstructor; tea|econstructor]; tas.
+  - edestruct IHM1 as [? [? ?]]; tea; subst.
+    edestruct IHM2 as [? [? ?]]; tea; subst.
+    eexists; split; [econstructor; tea|econstructor]; tas.
+  - admit.
+  - edestruct IHM as [? [? ?]]; tea; subst.
+    eexists; split; [econstructor; tea|econstructor]; tas.
+Admitted.
+
+
+Definition eta01 t u : Type := (t = u) + eta1 t u.
 
 Lemma upto_domain_eta1_r {t u u'} :
   upto_domain t u ->
   eta1 u u' ->
-  ∑ t', eta t t' × upto_domain t' u'.
+  ∑ t', eta01 t t' × upto_domain t' u'.
 Proof.
-  intros X Y; induction Y in t, X |- *; invs_utd.
-Local Tactic Notation "tac" integer(n)
-  := eexists; split; [apply eta1_eta; econstructor n|].
+  intros X Y; induction Y using eta1_ind_all in t, X |- *; invs_utd.
+
+Local Tactic Notation "itac" ident(IHY) integer(n) :=
+  let h := fresh in
+  edestruct IHY as (? & [h|h] & ?); tea;
+  eexists; split; [left; subst; reflexivity|utd
+                   |right; econstructor n; eauto with beta|utd].
+  - symmetry in X; eapply upto_domain_strengthening in X as [? [? ?]].
+    eexists; split; [|symmetry; eassumption]. right.
+    (* ??? *)
+    admit.
+  - eexists; split. 2: constructor; eassumption. now left.
+  - itac IHY 3.
+  - itac IHY 4.
+  - itac IHY 5.
+  - itac IHY 6.
+  - itac IHY 7.
+  - itac IHY 8.
   - admit.
-  - eexists; split. 2: constructor; eassumption. eta.
-  - edestruct IHY as (? & ? & ?); tea.
-    eexists; split. 2: constructor; eassumption. eta.
-  - edestruct IHY as (? & ? & ?); tea.
-    eexists; split. 2: constructor; eassumption. eta.
-  - edestruct IHY as (? & ? & ?); tea.
-    eexists; split. 2: constructor; eassumption. eta.
-  - edestruct IHY as (? & ? & ?); tea.
-    eexists; split. 2: constructor; eassumption. eta.
-  - edestruct IHY as (? & ? & ?); tea.
-    eexists; split. 2: constructor; eassumption. eta.
-  - edestruct IHY as (? & ? & ?); tea.
-    eexists; split. 2: constructor; eassumption. eta.
+  - itac IHY 10.
+  - itac IHY 11.
+  - itac IHY 12.
+  - itac IHY 13.
+  - itac IHY 14.
   - admit.
-  - edestruct IHY as (? & ? & ?); tea.
-    eexists; split. 2: constructor; eassumption. eta.
-  - edestruct IHY as (? & ? & ?); tea.
-    eexists; split. 2: constructor; eassumption. eta.
-  - edestruct IHY as (? & ? & ?); tea.
-    eexists; split. 2: constructor; eassumption. eta.
-  - edestruct IHY as (? & ? & ?); tea.
-    eexists; split. 2: constructor; eassumption. eta.
-  - edestruct IHY as (? & ? & ?); tea.
-    eexists; split. 2: constructor; eassumption. eta.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
 Admitted.
 
 Lemma upto_domain_beta_eta_r {Σ Γ t u u'} :
@@ -198,8 +169,8 @@ Lemma upto_domain_beta_eta_r {Σ Γ t u u'} :
   ∑ t', beta_eta Σ Γ t t' × upto_domain t' u'.
 Proof.
   intros X Y; induction Y in t, X |- *; [destruct r|..].
-  - eapply upto_domain_red1_r in r as (? & ? & ?); tea. beta_eta.
-  - eapply upto_domain_eta1_r in e as (? & ? & ?); tea. beta_eta.
+  - eapply upto_domain_red1_r in r as (? & [] & ?); tea; [subst|]; beta_eta.
+  - eapply upto_domain_eta1_r in e as (? & [] & ?); tea; [subst|]; beta_eta.
   - beta_eta.
   - edestruct IHY1 as (? & ? & ?); tea.
     edestruct IHY2 as (? & ? & ?); tea.
@@ -448,70 +419,87 @@ Proof.
     edestruct IHY2 as (? & ? & ?); tea.
     beta_eta.
 Qed.
-  
+
+Lemma upto_domain_upto_univ_com {cf:checker_flags} {t u v Re Rle} :
+  RelationClasses.Reflexive Re ->
+  upto_domain t u ->
+  eq_term_upto_univ Re Rle u v ->
+  ∑ u', eq_term_upto_univ Re Rle t u' × upto_domain u' v.
+Proof.
+  intro HRe.
+  induction t in u, v, Rle |- * using term_forall_list_ind;
+    intro e; invs e; intro e'; invs e'.
+  all: try (edestruct IHt as [? [? ?]]; tea).
+  5,7-15: try edestruct IHt1 as [? [? ?]]; tea.
+  all: try (edestruct IHt2 as [? [? ?]]; tea).
+  all: try (edestruct IHt3 as [? [? ?]]; tea).
+  all: try (eexists; split; econstructor; tea; fail).
+  - enough (∑ l', All2 (eq_term_upto_univ Re Re) l l'
+                  × All2 upto_domain l' args'0) as XX. {
+      destruct XX as [? [? ?]]; eexists; split; econstructor; eassumption. }
+    induction X0 in X, args'0, X1 |- *; invs X; invs X1.
+    + exists []; split; constructor.
+    + edestruct X2 as [? [? ?]]; tea.
+      edestruct IHX0 as [? [? ?]]; tea.
+      eexists (_ :: _); split; econstructor; tea.
+  - enough (∑ l', All2 (fun x0 y => x0.1 = y.1
+            × eq_term_upto_univ Re Re x0.2 y.2) l l'
+            × All2 (fun x0 y  => x0.1 = y.1 × upto_domain x0.2 y.2) l' brs'0) as XX. {
+      destruct XX as [? [? ?]]; eexists; split; econstructor; tea. }
+    clear -X X2 X5.
+    induction X2 in X, brs'0, X5 |- *; invs X; invs X5.
+    + exists []; split; constructor.
+    + edestruct X0 as [A [? ?]]; [intuition eauto ..|].
+      edestruct IHX2 as [B [? ?]]; tea.
+      eexists ((_, A) :: B); split; econstructor; rdest; tea.
+  - enough (∑ l', All2 (fun x y =>
+     (eq_term_upto_univ Re Re (dtype x) (dtype y)
+      × eq_term_upto_univ Re Re (dbody x) (dbody y))
+     × rarg x = rarg y) m l'
+            × All2 (fun x y  => upto_domain (dtype x) (dtype y)
+    × upto_domain (dbody x) (dbody y) × rarg x = rarg y) l' mfix'0) as XX. {
+      destruct XX as [? [? ?]]; eexists; split; econstructor; tea. }
+    clear -X X0 X1.
+    induction X0 in X, mfix'0, X1 |- *; invs X; invs X1.
+    + exists []; split; constructor.
+    + edestruct X2 as [[A [? ?]] [B [? ?]]]; [intuition eauto ..|].
+      edestruct IHX0 as [C [? ?]]; tea.
+      eexists (mkdef term _ A B _ :: C); split; econstructor; rdest; tea.
+  - enough (∑ l', All2 (fun x y =>
+     (eq_term_upto_univ Re Re (dtype x) (dtype y)
+      × eq_term_upto_univ Re Re (dbody x) (dbody y))
+     × rarg x = rarg y) m l'
+            × All2 (fun x y  => upto_domain (dtype x) (dtype y)
+    × upto_domain (dbody x) (dbody y) × rarg x = rarg y) l' mfix'0) as XX. {
+      destruct XX as [? [? ?]]; eexists; split; econstructor; tea. }
+    clear -X X0 X1.
+    induction X0 in X, mfix'0, X1 |- *; invs X; invs X1.
+    + exists []; split; constructor.
+    + edestruct X2 as [[A [? ?]] [B [? ?]]]; [intuition eauto ..|].
+      edestruct IHX0 as [C [? ?]]; tea.
+      eexists (mkdef term _ A B _ :: C); split; econstructor; rdest; tea.
+  (* lambda *)
+  - eexists; split; econstructor; tea. reflexivity.
+    Unshelve.
+    all: constructor.
+Qed.
 
 Lemma upto_domain_leq_term_com {cf:checker_flags} {φ t u v} :
   upto_domain t u ->
   leq_term φ u v ->
   ∑ u', leq_term φ t u' × upto_domain u' v.
 Proof.
-(*   induction t in u, v |- * using term_forall_list_ind; *)
-(*     intro e; invs e; intro e'; invs e'. *)
-(*   all: try (edestruct IHt as [? [? ?]]; tea). *)
-(*   5,7-15: try (edestruct IHt1 as [? [? ?]]; tea). *)
-(*   all: try (edestruct IHt2 as [? [? ?]]; tea). *)
-(*   all: try (edestruct IHt3 as [? [? ?]]; tea). *)
-(*   all: try (eexists; split; econstructor; tea; fail). *)
-(*   - enough (∑ l', All2 (eq_term_upto_univ (eq_universe φ) (eq_universe φ)) l l' *)
-(*                   × All2 upto_domain l' args'0) as XX. { *)
-(*       destruct XX as [? [? ?]]; eexists; split; econstructor; eassumption. } *)
-(*     induction X0 in X, args'0, X1 |- *; invs X; invs X1. *)
-(*     + exists []; split; constructor. *)
-(*     + edestruct X2 as [? [? ?]]; tea. *)
-(*       edestruct IHX0 as [? [? ?]]; tea. *)
-(*       eexists (_ :: _); split; econstructor; tea. *)
-(*   - enough (∑ l', All2 (fun x0 y => x0.1 = y.1 *)
-(*             × eq_term_upto_univ (eq_universe φ) (eq_universe φ) x0.2 y.2) l l' *)
-(*             × All2 (fun x0 y  => x0.1 = y.1 × upto_domain x0.2 y.2) l' brs'0) as XX. { *)
-(*       destruct XX as [? [? ?]]; eexists; split; econstructor; tea. } *)
-(*     clear -X X2 X5. *)
-(*     induction X2 in X, brs'0, X5 |- *; invs X; invs X5. *)
-(*     + exists []; split; constructor. *)
-(*     + edestruct X0 as [A [? ?]]; [intuition eauto ..|]. *)
-(*       edestruct IHX2 as [B [? ?]]; tea. *)
-(*       eexists ((_, A) :: B); split; econstructor; rdest; tea. *)
-(*   - enough (∑ l', All2 (fun x y => *)
-(*      (eq_term_upto_univ (eq_universe φ) (eq_universe φ) (dtype x) (dtype y) *)
-(*       × eq_term_upto_univ (eq_universe φ) (eq_universe φ) (dbody x) (dbody y)) *)
-(*      × rarg x = rarg y) m l' *)
-(*             × All2 (fun x y  => upto_domain (dtype x) (dtype y) *)
-(*     × upto_domain (dbody x) (dbody y) × rarg x = rarg y) l' mfix'0) as XX. { *)
-(*       destruct XX as [? [? ?]]; eexists; split; econstructor; tea. } *)
-(*     clear -X X0 X1. *)
-(*     induction X0 in X, mfix'0, X1 |- *; invs X; invs X1. *)
-(*     + exists []; split; constructor. *)
-(*     + edestruct X2 as [[A [? ?]] [B [? ?]]]; [intuition eauto ..|]. *)
-(*       edestruct IHX0 as [C [? ?]]; tea. *)
-(*       eexists (mkdef term _ A B _ :: C); split; econstructor; rdest; tea. *)
-(*   - enough (∑ l', All2 (fun x y => *)
-(*      (eq_term_upto_univ (eq_universe φ) (eq_universe φ) (dtype x) (dtype y) *)
-(*       × eq_term_upto_univ (eq_universe φ) (eq_universe φ) (dbody x) (dbody y)) *)
-(*      × rarg x = rarg y) m l' *)
-(*             × All2 (fun x y  => upto_domain (dtype x) (dtype y) *)
-(*     × upto_domain (dbody x) (dbody y) × rarg x = rarg y) l' mfix'0) as XX. { *)
-(*       destruct XX as [? [? ?]]; eexists; split; econstructor; tea. } *)
-(*     clear -X X0 X1. *)
-(*     induction X0 in X, mfix'0, X1 |- *; invs X; invs X1. *)
-(*     + exists []; split; constructor. *)
-(*     + edestruct X2 as [[A [? ?]] [B [? ?]]]; [intuition eauto ..|]. *)
-(*       edestruct IHX0 as [C [? ?]]; tea. *)
-(*       eexists (mkdef term _ A B _ :: C); split; econstructor; rdest; tea. *)
-(*   (* lambda *) *)
-(*   - eexists; split; econstructor; tea. reflexivity. *)
-(*     Unshelve. *)
-(*     all: constructor. *)
-(* Qed. *)
-Admitted.  
+  now apply upto_domain_upto_univ_com.
+Qed.
+
+(* todo replace in PCUICCumulativity *)
+Lemma upto_domain_eq_term_com {cf:checker_flags} {φ t u v} :
+  upto_domain t u ->
+  eq_term φ u v ->
+  ∑ u', eq_term φ t u' × upto_domain u' v.
+Proof.
+  now apply upto_domain_upto_univ_com.
+Qed.
 
 
 

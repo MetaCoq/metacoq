@@ -1535,3 +1535,43 @@ Proof.
     induction X0 in mfix'0, X1 |- *; invs X1; constructor; intuition eauto.
     rdest; cbn in *; congruence.
 Qed.
+
+Definition upto_domain_refl' x := upto_domain_refl x.
+Definition upto_domain_trans' x y z := upto_domain_trans x y z.
+Hint Resolve upto_domain_refl' upto_domain_trans' : utd.
+
+Lemma upto_domain_mkApps {u u' args args'} :
+  upto_domain u u' ->
+  All2 upto_domain args args' ->
+  upto_domain (mkApps u args) (mkApps u' args').
+Proof.
+  intros X Y. induction Y in u, u', X |- *; cbn; tas. 
+  apply IHY. now constructor.
+Qed.
+
+Hint Constructors upto_domain : utd.
+Hint Resolve upto_domain_mkApps : utd.
+
+
+Lemma upto_domain_mkApps_inv t u args :
+  upto_domain t (mkApps u args) ->
+  ∑ u0 args0, t = mkApps u0 args0 × upto_domain u0 u × All2 upto_domain args0 args.
+Proof.
+  revert t. induction args using MCList.rev_ind; cbn; intros t X.
+  - now exists t, [].
+  - rewrite <- mkApps_nested in X; cbn in X. invs X.
+    apply IHargs in X0 as (u1 & args0 & ? & ? & ?).
+    exists u1, (args0 ++ [u0]); intuition auto.
+    + rewrite <- mkApps_nested; cbn; now f_equal.
+    + apply All2_app; auto.
+Qed.
+
+Ltac invs_utd :=
+  repeat match goal with
+         | H : upto_domain ?t (mkApps _ _) |- _
+           => apply upto_domain_mkApps_inv in H;
+             destruct H as (? & ? & ? & ? & ?); subst t
+         | H : upto_domain _ _ |- _ => invs H; [idtac]
+         end.
+
+Ltac utd := eauto with utd.

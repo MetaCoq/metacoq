@@ -902,7 +902,7 @@ Proof.
   intros wfΣ wfΓ.
   induction Γ'; simpl; intros wf Hwf.
   induction Hwf; simpl; auto.
-  depelim Hwf;unfold snoc in H; noconf H;
+  depelim Hwf;
   rewrite lift_context_snoc; simpl; constructor.
   eapply IHΓ'; eauto. red. exists (tu.π1). simpl.
   rewrite Nat.add_0_r. apply t0; auto.
@@ -1089,10 +1089,9 @@ Proof.
       split; auto.
       apply All_local_env_app_inv; intuition auto.
       clear -wf a.
-      induction ctx; try constructor; depelim a.
+      induction ctx; try constructor.
+      depelim a.
       -- rewrite lift_context_snoc.
-         inversion H. subst. simpl in H3; noconf H3.
-         simpl in H0; noconf H0.
          constructor; auto.
          eapply IHctx. eapply a.
          simpl. destruct tu as [u tu]. exists u.
@@ -1101,7 +1100,6 @@ Proof.
          specialize (t0 eq_refl). simpl in t0.
          rewrite app_context_length lift_context_app app_context_assoc Nat.add_0_r in t0. apply t0.
       -- rewrite lift_context_snoc.
-         inversion H. subst. noconf H3.
          constructor; auto.
          ++ eapply IHctx. eapply a.
          ++ simpl.

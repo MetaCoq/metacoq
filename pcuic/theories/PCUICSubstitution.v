@@ -1396,13 +1396,13 @@ Proof.
     apply red_letin; auto.
     now rewrite subst_context_snoc0 in IHred1.
 
-  - simplify_IH_hyps. eapply red_case; auto.
+  - eqns_specialize_eqs IHred1. eapply red_case; auto.
     apply All2_map, All2_same. intros. split; auto.
 
-  - simplify_IH_hyps. eapply red_case; auto.
+  - eqns_specialize_eqs IHred1. eapply red_case; auto.
     apply All2_map, All2_same. intros. split; auto.
 
-  - simplify_IH_hyps. apply red_case; auto.
+  - apply red_case; auto.
     apply All2_map.
     eapply OnOne2_All2; eauto. simpl. intuition eauto.
 
@@ -1562,13 +1562,13 @@ Proof.
     apply red_letin; auto.
     now rewrite subst_context_snoc0 in IHred1.
 
-  - simplify_IH_hyps. eapply red_case; auto.
+  - eapply red_case; eauto.
     apply All2_map, All2_same. intros. split; auto.
 
-  - simplify_IH_hyps. eapply red_case; auto.
+  - eapply red_case; eauto.
     apply All2_map, All2_same. intros. split; auto.
 
-  - simplify_IH_hyps. apply red_case; auto.
+  - apply red_case; auto.
     eapply All2_map.
     eapply OnOne2_All2; eauto. simpl. intuition eauto.
 
@@ -2157,7 +2157,7 @@ Proof.
   - induction Δ.
     + clear X. simpl in *.  now apply All_local_env_app in wfΓ0.
     + rewrite subst_context_snoc.
-      depelim X; unfold snoc in H; noconf H; simpl;
+      depelim X;
       econstructor; eauto.
       * exists (tu.π1). rewrite Nat.add_0_r; now eapply t0.
       * exists (tu.π1). rewrite Nat.add_0_r; now eapply t1.
@@ -2350,7 +2350,7 @@ Proof.
         clear -sub a.
         induction ctx; try constructor; depelim a.
         -- rewrite subst_context_snoc.
-           unfold snoc. unfold vass, snoc in H. noconf H.
+           unfold snoc.
            econstructor; auto.
            ++ eapply IHctx. eapply a.
            ++ simpl. destruct tu as [u tu]. exists u.
@@ -2359,7 +2359,6 @@ Proof.
               simpl in t0.
               now rewrite subst_context_app Nat.add_0_r app_context_assoc app_length in t0.
       -- rewrite subst_context_snoc.
-         unfold vdef, snoc in H |- *. noconf H.
          constructor; auto.
          ++ eapply IHctx. eapply a.
          ++ simpl.
@@ -2418,7 +2417,7 @@ Proof.
   intros HΣ Ht.
   assert ((wf_local Σ Γ) * (Σ ;;; Γ |- u : U)%type) as [wfΓ tyu].
   { apply typing_wf_local in Ht; eauto with wf.
-    now depelim Ht; simpl in *; unfold vdef, vass in H; noconf H.
+    now depelim Ht; simpl in *.
   }
   epose proof (substitution Σ Γ [vdef n u U] _ [] t T HΣ) as thm.
   forward thm.

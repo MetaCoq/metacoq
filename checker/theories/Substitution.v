@@ -1700,7 +1700,7 @@ Proof.
   intros wfΣ wfΓ.
   induction Δ; simpl; intros Hwf.
   intros _. clear Hwf. simpl in wfΓ. now eapply All_local_env_app in wfΓ.
-  depelim Hwf; unfold snoc in H; noconf H;
+  depelim Hwf;
   rewrite subst_context_snoc; simpl; constructor.
   eapply IHΔ; eauto. red. exists (tu.π1). simpl.
   rewrite Nat.add_0_r. eapply t0; eauto.
@@ -1940,8 +1940,7 @@ Proof.
       apply All_local_env_app_inv; intuition auto.
       clear -sub a.
       induction ctx; try constructor; depelim a.
-      -- inversion H0. subst. noconf H4.
-         rewrite subst_context_snoc.
+      -- rewrite subst_context_snoc.
          unfold snoc.
          econstructor; auto.
          eapply IHctx. eapply a.
@@ -1949,8 +1948,7 @@ Proof.
          specialize (t0 _ _ (Δ ,,, ctx) _ sub). forward t0.
          now rewrite app_context_assoc. simpl in t0.
          now rewrite subst_context_app Nat.add_0_r app_context_assoc app_length in t0.
-      -- inversion H0. subst. noconf H4.
-         rewrite subst_context_snoc.
+      -- rewrite subst_context_snoc.
          constructor; auto.
          ++ eapply IHctx. eapply a.
          ++ simpl.

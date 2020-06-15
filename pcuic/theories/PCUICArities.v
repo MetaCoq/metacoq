@@ -218,14 +218,13 @@ Lemma type_mkProd_or_LetIn {cf:checker_flags} Σ Γ d u t s :
 Proof.
   intros wfΣ. destruct d as [na [b|] dty] => [Hd Ht|Hd Ht]; rewrite /mkProd_or_LetIn /=.
   - have wf := typing_wf_local Ht.
-    depelim wf; simpl in H; noconf H. clear l.
+    depelim wf. clear l.
     eapply type_Cumul. econstructor; eauto.
     left. red. exists [], s; intuition auto.
     transitivity (tSort s).
     eapply red_cumul. eapply red1_red. constructor. reflexivity.
   - have wf := typing_wf_local Ht.
-    depelim wf; simpl in H; noconf H.
-    clear l.
+    depelim wf; clear l.
     eapply type_Cumul. eapply type_Prod; eauto.
     left. red. exists [], (Universe.sort_of_product u s); intuition auto.
     reflexivity.
@@ -453,7 +452,7 @@ Proof.
     eapply substitution_let in t1; auto.
     eapply invert_cumul_letin_l in c; auto.
     pose proof (subslet_app_inv _ _ _ _ _ sub) as [subl subr].
-    depelim subl; simpl in H1; noconf H1.
+    depelim subl.
     depelim subl. rewrite subst_empty in H0. rewrite H0 in subr.
     specialize (IHn (subst_context [b] 0 l) (subst [b] #|l| T) ltac:(rewrite subst_context_length; lia)).
     specialize (IHn _ _ subr).
@@ -467,7 +466,7 @@ Proof.
     intros Hs.
     eapply inversion_Prod in Hs as [? [? [? [? ?]]]]; auto.
     pose proof (subslet_app_inv _ _ _ _ _ sub) as [subl subr].
-    depelim subl; simpl in H1; noconf H1.
+    depelim subl.
     depelim subl. rewrite subst_empty in t2. rewrite H0 in subr.
     epose proof (substitution0 _ _ na _ _ _ _ wfΣ t0 t2).
     specialize (IHn (subst_context [t1] 0 l) (subst [t1] #|l| T)).

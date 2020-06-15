@@ -291,7 +291,7 @@ Section Conversion.
           simpl in *.
           dependent destruction h.
           -- left. unfold posR in *. simpl in *. assumption.
-          -- match goal with
+          -- simpl in H0. noconf H0. match goal with
              | |- context [ exist q1 ?hq1 ] =>
                assert (ee : hq1 = hq2) by eapply uip
              end.
@@ -321,7 +321,7 @@ Section Conversion.
       + left. unfold posR in *.
         simpl in *.
         assumption.
-      + match goal with
+      + simpl in H0. noconf H0. match goal with
         | |- context [ exist p1 ?hp1 ] =>
           assert (ee : hp1 = hp2) by eapply uip
         end.
@@ -332,7 +332,7 @@ Section Conversion.
           dependent destruction H.
           -- left. unfold posR in *.
              simpl in *. assumption.
-          -- right. assumption.
+          -- simpl in H0; noconf H0; right. assumption.
     - eapply normalisation_upto. all: assumption.
   Qed.
 

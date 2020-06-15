@@ -1204,7 +1204,7 @@ Section ParallelWeakening.
              pred1_ctx Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (Δ ,,, Δ'' ,,, lift_context #|Δ''| 0 Δ')).
 
       refine (pred1_ind_all_ctx Σ _ Pctx _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros *; intros; subst Pctx;
-        rename_all_hyps; try subst Γ Γ'; simplify_IH_hyps; cbn -[iota_red];
+        rename_all_hyps; try subst Γ Γ'; cbn -[iota_red];
       match goal with
         |- context [iota_red _ _ _ _] => idtac
       | |- _ => autorewrite with lift
@@ -1225,17 +1225,15 @@ Section ParallelWeakening.
         destruct X0.
         induction a0; rewrite ?lift_context_snoc0; cbn; constructor; pcuic.
         * apply IHa0.
-          -- depelim predΓ'.
-             ++ hnf in H, H0. noconf H. noconf H0. assumption.
-             ++ hnf in H, H0. noconf H.
+          -- now depelim predΓ'.
           -- unfold ",,,". lia.
         * now rewrite !Nat.add_0_r.
-        * apply IHa0; auto. depelim predΓ'.
-          all: hnf in H, H0. all: noconf H. noconf H0. assumption.
+        * apply IHa0; auto. now depelim predΓ'.
         * split; red; now rewrite !Nat.add_0_r.
 
     - (* Beta *)
       specialize (forall_Γ _ (Γ'0,, vass na t0) eq_refl _ (Δ' ,, vass na t1) eq_refl heq_length _ _ X5).
+      eqns_specialize_eqs forall_Γ1.
       specialize (forall_Γ1 _ _ eq_refl heq_length _ _ X5).
       econstructor; now rewrite !lift_context_snoc0 !Nat.add_0_r in forall_Γ.
 
@@ -1329,12 +1327,12 @@ Section ParallelWeakening.
       apply All2_map. clear X2. red in X3.
       unfold on_Trel, id in *.
       solve_all. rename_all_hyps.
-      specialize (forall_Γ0 Γ0 (Γ'0 ,,, fix_context mfix0)
+      specialize (forall_Γ1 Γ0 (Γ'0 ,,, fix_context mfix0)
                             ltac:(now rewrite app_context_assoc)).
-      specialize (forall_Γ0 Δ (Δ' ,,, fix_context mfix1)
+      specialize (forall_Γ1 Δ (Δ' ,,, fix_context mfix1)
                             ltac:(now rewrite app_context_assoc) heq_length _ _ ltac:(eauto)).
       rewrite !lift_context_app !Nat.add_0_r !app_context_length !fix_context_length
-              !app_context_assoc in forall_Γ0.
+              !app_context_assoc in forall_Γ1.
       now rewrite !lift_fix_context.
       unfold unfold_cofix. rewrite nth_error_map. rewrite Hnth. simpl.
       f_equal. f_equal.
@@ -1674,7 +1672,7 @@ Section ParallelSubstitution.
                All2_local_env_over (pred1 Σ) Γ Γ1 Δ Δ1 ->
                pred1_ctx Σ (Γ ,,, subst_context s 0 Γ') (Γ1 ,,, subst_context s' 0 Γ'1)).
     refine (pred1_ind_all_ctx Σ _ P' _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros *; !intros;
-      try subst Γ Γ'; simplify_IH_hyps; cbn -[iota_red];
+      try subst Γ Γ'; cbn -[iota_red];
       match goal with
         |- context [iota_red _ _ _ _] => idtac
       | |- _ => autorewrite with lift
@@ -1841,23 +1839,22 @@ Section ParallelSubstitution.
       unfold unfold_cofix in heq_unfold_cofix.
       destruct (nth_error mfix1 idx) eqn:Hnth; noconf heq_unfold_cofix. simpl.
       econstructor; pcuic.
-      eapply X0; pcuic.
       rewrite !subst_fix_context.
       erewrite subst_fix_context.
       eapply All2_local_env_subst_ctx; pcuic.
       apply All2_map. clear X2. red in X3.
       unfold on_Trel, id in *.
       solve_all. rename_all_hyps.
-      specialize (forall_Γ0 _ _ (Γ'0 ,,, fix_context mfix0)
+      specialize (forall_Γ1 _ _ (Γ'0 ,,, fix_context mfix0)
                             ltac:(now rewrite app_context_assoc)).
-      specialize (forall_Γ0 _ _ (Γ'1 ,,, fix_context mfix1) _ _ Hs
+      specialize (forall_Γ1 _ _ (Γ'1 ,,, fix_context mfix1) _ _ Hs
                             ltac:(now rewrite app_context_assoc) heq_length).
-      rewrite !app_context_length in forall_Γ0.
+      rewrite !app_context_length in forall_Γ1.
       pose proof (All2_local_env_length X1).
-      forward forall_Γ0. lia. specialize (forall_Γ0 HΔ).
+      forward forall_Γ1. lia. specialize (forall_Γ1 HΔ).
       rewrite !subst_fix_context.
       now rewrite !fix_context_length !subst_context_app
-          !Nat.add_0_r !app_context_assoc in forall_Γ0.
+          !Nat.add_0_r !app_context_assoc in forall_Γ1.
       unfold unfold_cofix. rewrite nth_error_map. rewrite Hnth. simpl.
       f_equal. f_equal.
       rewrite (map_cofix_subst (fun k => subst s' (k + #|Γ'1|))).
@@ -1980,14 +1977,10 @@ Section ParallelSubstitution.
     - constructor; auto with pcuic.
       forward H by pcuic.
       + constructor; pcuic. apply pred1_pred1_ctx in redN.
-        depelim redN. all: hnf in H, H0. all: noconf H.
-        noconf H0. pcuic.
+        now depelim redN.
       + simpl in H |- *. apply pred1_pred1_ctx in redN; pcuic.
-        depelim redN. all: hnf in H, H0. all: noconf H.
-        noconf H0. pcuic.
+        now depelim redN.
     - pose proof (pred1_pred1_ctx _ redN). depelim X.
-      all: hnf in H0, H1. all: noconf H0.
-      noconf H1.
       apply H; pcuic. auto. constructor; pcuic.
   Qed.
 
@@ -1999,8 +1992,6 @@ Section ParallelSubstitution.
     intros wfΣ redM redN.
     pose proof (substitution_let_pred1 Σ Γ [vdef na M A] [] Δ [vdef na' M' A'] [] [M] [M'] N N' wfΣ) as H.
     pose proof (pred1_pred1_ctx _ redN). depelim X.
-    all: hnf in H0, H1. all: noconf H0.
-    noconf H1.
     simpl in o.
     forward H.
     - pose proof (psubst_vdef Σ Γ Δ [] [] [] [] na na' M M' A A').

@@ -973,14 +973,12 @@ Section Confluence.
       cbn in H. destruct c as [? [?|] ?]; noconf H.
       depelim X0.
       - destruct Δ'. noconf H. destruct c as [? [?|] ?]; noconf H.
-        simpl in H. noconf H. simpl in H. noconf H.
         constructor. eapply IHΔ. auto. red. red in o. intros.
         red in o. rewrite !rho_ctx_app. eapply o.
       - destruct Δ'. noconf H. destruct c as [? [?|] ?]; noconf H.
-        simpl in H. noconf H. red in o. destruct o.
+        red in o. destruct o.
         constructor. eapply IHΔ. auto. red. red in o, o0. intros.
         rewrite !rho_ctx_app. split; eauto.
-        simpl in H. noconf H.
     Qed.
 
     Hint Resolve pred_mkApps : pcuic.
@@ -3240,7 +3238,7 @@ Section Confluence.
     assert ((Nat.pred #|mfix0| - (#|mfix0| - S #|l|)) = #|l|) by lia.
     assert ((Nat.pred #|mfix0| - (#|mfix0| - S #|l'|)) = #|l'|) by lia.
     rewrite H0 H1.
-    intros. depelim Hctxs. red in o. simpl in H2, H3. noconf H2; noconf H3.
+    intros. depelim Hctxs. red in o.
     red in o. noconf Heqlen. simpl in H.
     rewrite -H.
     econstructor. unfold mapi in IHAll2.
@@ -3275,7 +3273,6 @@ Section Confluence.
       rewrite rho_ctx_app in a2. unfold on_Trel.
       eapply All2_map_left. simpl. eapply a2.
       eapply All2_map_left. simpl. solve_all. }
-    simpl in H2. noconf H2.
   Qed.
 
 (* TODO generalize fix/cofix subst by tFix/tCofix constructor! *)
@@ -3320,8 +3317,6 @@ Section Confluence.
     assert ((Nat.pred #|mfix0| - (#|mfix0| - S #|l'|)) = #|l'|) by lia.
     rewrite H0 H1.
     intros. depelim Hctxs. red in o.
-    simpl in H2. noconf H2.
-    simpl in H3. noconf H3.
     constructor. unfold mapi in IHAll2.
     forward IHAll2 by lia.
     forward IHAll2 by lia.
@@ -3351,7 +3346,6 @@ Section Confluence.
       rewrite rho_ctx_app in a2. unfold on_Trel.
       eapply All2_map_left. simpl. eapply a2.
       eapply All2_map_left. simpl. solve_all. }
-    hnf in H2. noconf H2.
   Qed.
 
   Lemma rho_cofix_subst Γ mfix :

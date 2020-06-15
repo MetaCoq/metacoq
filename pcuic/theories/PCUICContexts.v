@@ -92,9 +92,7 @@ Lemma conv_context_smash {cf:checker_flags} Σ Γ Δ Δ' :
 Proof.
   intros Hass Hconv.
   induction Hass in Δ', Hconv |- *. depelim Hconv. constructor.
-  depelim Hconv;
-  simpl in H; noconf H.
-  constructor; auto.
+  depelim Hconv; constructor; auto.
 Qed.
 
 Lemma smash_context_assumption_context {Γ Δ} : 
@@ -119,8 +117,7 @@ Proof.
 induction ctx; simpl; auto.
 destruct a as [na [b|] ty]; simpl.
 intros. depelim H; simpl in H0; noconf H0.
-depelim H; simpl in H0; noconf H0.
-rewrite IHctx; auto.
+depelim H; rewrite IHctx; auto.
 Qed.
 
 Lemma context_subst_length2 {ctx args s} : context_subst ctx args s -> #|args| = context_assumptions ctx.

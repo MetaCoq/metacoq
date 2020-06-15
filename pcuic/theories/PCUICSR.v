@@ -1744,7 +1744,7 @@ Proof.
     { clear -wf o.
       change fix_context with (fix_context_gen 0).
       generalize 0. induction o.
-      destruct p as [_ eq]. noconf eq. simpl in H; noconf H.
+      destruct p as [_ eq]. noconf eq. do 2 (simpl in H; noconf H).
       simpl. intros. now rewrite H H0.
       simpl. intros n; f_equal. apply IHo. }
     assert(All (fun d => isType Σ Γ (dtype d)) mfix).
@@ -1755,7 +1755,7 @@ Proof.
       * intros x [s [Hs IH]].
         now exists s.
       * intros x y [red eq] [s [Hs IH]].
-        noconf eq. simpl in H0; noconf H0. rewrite -H1.
+        noconf eq. do 2 (simpl in H0; noconf H0). rewrite -H1.
         now exists s; apply Hs. }
     assert (wf_local Σ (Γ ,,, fix_context mfix1)).
     { apply All_mfix_wf; auto. }
@@ -1777,7 +1777,7 @@ Proof.
         now eapply isLambda_red1.
     * eapply All_nth_error in X2; eauto.
     * apply conv_cumul, conv_sym, red_conv. destruct disj as [<-|[_ eq]].
-      constructor. noconf eq. simpl in H0; noconf H0. rewrite H1; constructor.
+      constructor. noconf eq. do 2 (simpl in H0; noconf H0). rewrite H1; constructor.
 
   - (* CoFix congruence type *)
     assert(fixl :#|fix_context mfix| = #|fix_context mfix1|) by now (rewrite !fix_context_length; apply (OnOne2_length o)).
@@ -1830,8 +1830,8 @@ Proof.
     { clear -wf o.
       change fix_context with (fix_context_gen 0).
       generalize 0. induction o.
-      destruct p as [_ eq]. noconf eq. simpl in H; noconf H.
-      simpl. intros. now rewrite H H0.
+      destruct p as [_ eq]. injection eq.
+      simpl. intros. now rewrite H0 H1.
       simpl. intros n; f_equal. apply IHo. }
     assert(All (fun d => isType Σ Γ (dtype d)) mfix).
     { apply (All_impl X0).
@@ -1840,8 +1840,8 @@ Proof.
     { apply (OnOne2_All_All o X0).
       * intros x [s [Hs IH]].
         now exists s.
-      * intros x y [red eq] [s [Hs IH]].
-        noconf eq. simpl in H; noconf H. rewrite -H1.
+      * intros x y [red eq] [s [Hs IH]]. injection eq.
+        intros _ <- _.
         now exists s; apply Hs. }
     assert (wf_local Σ (Γ ,,, fix_context mfix1)).
     { apply All_mfix_wf; auto. }
@@ -1857,7 +1857,7 @@ Proof.
         now rewrite -convctx. 
     * eapply All_nth_error in X2; eauto.
     * apply conv_cumul, conv_sym, red_conv. destruct disj as [<-|[_ eq]].
-      constructor. noconf eq. simpl in H; noconf H. rewrite H1; constructor.
+      constructor. injection eq. intros _ <- _; constructor.
  
   - (* Conversion *)
     specialize (forall_u _ Hu).
@@ -2021,17 +2021,16 @@ Section SRContext.
     specialize (X r).
     assert(wf_local Σ Γ').
     apply typing_wf_local in H.
-    induction H in Γ', r, X |-  *; depelim r; simpl in H; noconf H.
+    induction H in Γ', r, X |-  *; depelim r.
     - constructor; auto. red in o.
-      destruct t2 as [s Hs]. exists s.
+      destruct t1 as [s Hs]. exists s.
       eapply subject_reduction1 in Hs; eauto.
-    - depelim X; simpl in H; noconf H; simpl in H0; noconf H0.
+    - depelim X.
       constructor; auto. 
       destruct t1 as [s Hs]. exists s.
       eapply context_conversion; eauto.
-    - depelim X; simpl in H; noconf H; simpl in H0; noconf H0.
-      red in o. destruct t2 as [s Hs].
-      simpl in t3.
+    - depelim X.
+      red in o. destruct t1 as [s Hs].
       destruct o as [[r ->]|[r <-]].
 
       constructor; auto. exists s; auto.
@@ -2040,9 +2039,8 @@ Section SRContext.
       eapply type_Cumul; eauto. right. exists s.
       eapply subject_reduction1; eauto.
       now apply red_cumul, red1_red.
-    - depelim X; simpl in H; noconf H; simpl in H0; noconf H0.
-      destruct t2 as [s Hs].
-      simpl in t3.
+    - depelim X.
+      destruct t1 as [s Hs].
 
       constructor; auto. exists s; auto.
       eapply context_conversion; eauto.

@@ -2281,7 +2281,7 @@ Proof.
   induction Δ as [|d Δ]; intros * wfl ctxr len0; destruct Δ' as [|d' Δ']; simpl in len0; try lia.
   - constructor.
   - rewrite !subst_context_snoc. specialize (IHΔ Δ'). depelim wfl; specialize (IHΔ wfl);
-    depelim ctxr; simpl in H; noconf H; noconf len0; simpl in H; noconf H;
+    depelim ctxr; noconf len0; simpl in H; noconf H;
     depelim c; simpl.
     * constructor; auto. constructor. simpl.
       ** rewrite !Nat.add_0_r. rewrite -H.
@@ -2346,7 +2346,7 @@ Proof.
     apply closedn_ctx_cons in cl. apply andP in cl as [clctx cld].
     simpl in wf0.
     destruct d as [na [b|] ty] => /=.
-    * depelim wf0; simpl in H; noconf H; simpl in *.
+    * depelim wf0; simpl in *.
       simpl in cld. unfold closed_decl in cld. simpl in cld. simpl.
       apply andP in cld as [clb clty].
       constructor; auto. constructor.
@@ -2356,7 +2356,7 @@ Proof.
         apply eq_term_upto_univ_subst_instance_constr; try typeclasses eauto. auto.
       ** constructor. red.
         apply eq_term_upto_univ_subst_instance_constr; try typeclasses eauto. auto.
-    * depelim wf0; simpl in H; noconf H; simpl in *.
+    * depelim wf0; simpl in *.
       simpl in cld. unfold closed_decl in cld. simpl in cld. simpl.
       constructor; auto. constructor. apply weaken_conv; auto.
       1-2:autorewrite with len; now rewrite closedn_subst_instance_constr.

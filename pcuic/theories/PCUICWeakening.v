@@ -905,7 +905,7 @@ Proof.
         try specialize (forall_Γ  _ _ _ eq_refl wf).
     
   - induction Γ'; simpl; auto.
-    depelim X; unfold snoc in H; noconf H;
+    depelim X;
     rewrite lift_context_snoc; simpl; constructor.
     + eapply IHΓ'; eauto.
     + red. exists (tu.π1). simpl.
@@ -1053,8 +1053,6 @@ Proof.
       clear -wf a.
       induction ctx; try constructor; depelim a.
       -- rewrite lift_context_snoc.
-          inversion H. subst. simpl in H3; noconf H3.
-          simpl in H0; noconf H0.
           constructor; auto.
           * eapply IHctx. eapply a.
           * simpl. destruct tu as [u tu]. exists u.
@@ -1063,7 +1061,6 @@ Proof.
             specialize (t0 eq_refl). simpl in t0.
             rewrite app_context_length lift_context_app app_context_assoc Nat.add_0_r in t0. apply t0.
       -- rewrite lift_context_snoc.
-          inversion H. subst. noconf H3.
           constructor; auto.
           ++ eapply IHctx. eapply a.
           ++ simpl.

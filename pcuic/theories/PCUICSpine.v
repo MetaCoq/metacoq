@@ -484,7 +484,7 @@ induction cv; intros; depelim cs ; depelim cs';
   constructor; auto.
 - depelim sl; depelim sl'; simpl in H; noconf H; simpl in H0; noconf H0;
     try (simpl in H1; noconf H1); try (simpl in H2; noconf H2).
-  depelim wf; simpl in H; noconf H.
+  depelim wf.
   specialize (IHcv _ _ cs wf sl _ _ cs' sl' X).
   constructor; auto.
   eapply (subst_conv _ _ _ []); eauto.
@@ -784,18 +784,18 @@ Proof.
       depelim cs'. discriminate.
       simpl in *. rewrite skipn_S skipn_0 in cs.
       rewrite subst_empty in t0.
-      depelim cs'; simpl in H; noconf H. depelim cs'. noconf H0.
-      rewrite H1 in H2. noconf H2.
+      depelim cs'. depelim cs'. noconf H.
+      rewrite H0 in H1. noconf H1.
       constructor; auto.
       rewrite /subst1 subst_it_mkProd_or_LetIn.
       rewrite Nat.add_0_r.
       specialize (X (subst_context (skipn #|Γ0| s) 0 Γ0) ltac:(now autorewrite with len) _ _ 
       (subst [t1] #|Γ0| T) cs subsl').
-      rewrite -{1}H1. apply X.
+      rewrite -{1}H0. apply X.
       rewrite -subst_app_simpl'.
       apply subslet_length in subsl'.
       now autorewrite with len in subsl'.
-      rewrite -H1. now rewrite firstn_skipn.
+      rewrite -H0. now rewrite firstn_skipn.
 Qed.
 
 

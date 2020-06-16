@@ -253,7 +253,7 @@ Section Confluence.
     revert c. induction args using rev_ind; intros; simpl in *.
     depelim X... exists []. intuition auto.
     intros. rewrite <- mkApps_nested in X.
-    depelim X... simpl in H; noconf H. solve_discr.
+    depelim X... 
     prepare_discr. apply mkApps_eq_decompose_app in H.
     rewrite !decompose_app_rec_mkApps in H. noconf H.
     destruct (IHargs _ X1) as [args' [-> Hargs']].
@@ -288,6 +288,8 @@ Section Confluence.
     eapply All2_app; auto.
   Qed.
 
+  Derive NoConfusion for PCUICEnvironment.global_decl.
+
   Lemma pred1_mkApps_tConst_axiom (Σ : global_env) (Γ Δ : context)
         cst u (args : list term) cb c :
     declared_constant Σ cst cb -> cst_body cb = None ->
@@ -297,11 +299,10 @@ Section Confluence.
     revert c. induction args using rev_ind; intros; simpl in *.
     depelim X...
     - red in H, isdecl. rewrite isdecl in H; noconf H.
-      simpl in H. injection H. intros. subst. congruence.
+      congruence.
     - exists []. intuition auto.
     - rewrite <- mkApps_nested in X.
       depelim X...
-      * simpl in H1; noconf H1. solve_discr.
       * prepare_discr. apply mkApps_eq_decompose_app in H1.
         rewrite !decompose_app_rec_mkApps in H1. noconf H1.
       * destruct (IHargs _ H H0 X1) as [args' [-> Hargs']].
@@ -503,8 +504,6 @@ Section Confluence.
     - intros H.
       now exists ind, n, ui, [].
   Qed.
-
-  Derive NoConfusion for global_decl.
 
   Hint Resolve pred1_refl : pcuic.
 
@@ -1473,8 +1472,8 @@ Section Confluence.
         destruct (nth_error_pred1_ctx _ _ X H) as [bodyΓ [? ?]]; eauto.
         move e after H.
         pose proof (pred1_pred1_ctx _ (fst (Hrel i))).
-        destruct (nth_error Γ' i) eqn:HΓ'i; noconf H. hnf in H.
-        destruct (nth_error Γ i) eqn:HΓi; noconf e. hnf in H.
+        destruct (nth_error Γ' i) eqn:HΓ'i; noconf H.
+        destruct (nth_error Γ i) eqn:HΓi; noconf e.
         pose proof (Hσ _ _ HΓi) as Hc. rewrite H in Hc.
         destruct Hc as [σi [b' [eqi' [Hnth Hb']]]].
         pose proof (Hτ _ _ HΓ'i) as Hc'. rewrite H0 in Hc'.

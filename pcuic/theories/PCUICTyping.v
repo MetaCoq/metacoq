@@ -411,11 +411,8 @@ Inductive cumul `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> 
 
 where " Σ ;;; Γ |- t <= u " := (cumul Σ Γ t u) : type_scope.
 
-(** *** Conversion
-
-   Defined as cumulativity in both directions.
+(** *** Conversion   
  *)
-
 
 Inductive conv `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
 | conv_refl t u : eq_term Σ.1 (global_ext_constraints Σ) t u -> Σ ;;; Γ |- t = u

@@ -465,6 +465,7 @@ Proof.
     destruct heq_map_option_out as [nargs [br [brty [[[Hbr Hbrty] brbrty] brtys]]]].
     unshelve eapply (branch_type_spec Σ.1) in brtys; eauto. 2:eapply on_declared_inductive; eauto.
     destruct (nth_nth_error (@eq_refl _ (nth c0 brs (0, tDummy)))) => //.
+    2:{ simpl in Hbr. rewrite Hbr in a. intuition discriminate. }
     assert (H : ∑ t', nth_error btys c0 = Some t').
     pose proof (All2_length _ _ X5). eapply nth_error_Some_length in e. rewrite H in e.
     destruct (nth_error_spec btys c0). eexists; eauto. elimtype False; lia.
@@ -480,6 +481,7 @@ Proof.
     destruct typec' as [[[[_ equ] cu] eqargs] [cparsubst [cargsubst [iparsubst [iidxsubst ci]]]]].
     destruct ci as ((([cparsubst0 iparsubst0] & idxsubst0) & subsidx) & [s [typectx [Hpars Hargs]]]).
     pose proof (context_subst_fun csubst (iparsubst0.(inst_ctx_subst))). subst iparsubst.
+    epose proof (constructor_cumulative_indices wf isdecl onc equ) as [cumargs convidx].
     eapply wf_arity_spine_typing_spine => //.
     split.
     admit.
@@ -488,6 +490,16 @@ Proof.
     set (pargctx := subst_context parsubst 0 _).
     eapply (spine_subst_cumul _ _ _ _ (smash_context [] pargctx)) in argsubst; first last.
     4-5:apply smash_context_assumption_context; constructor. all:auto.
+    Definition cumul_ctx_rel {cf:checker_flags} Σ Γ Δ Δ' :=
+      All2_local_env (on_decl (fun Γ' _ x y => Σ ;;; Γ ,,, Γ' |- x <= y)) Δ Δ'.
+    Lemma cumul_ctx_subst {cf:checker_flags} Σ Γ Δ Δ' s s' : 
+      cumul_ctx_rel Σ (Γ ,,, Γ') Δ Δ' ->
+      All2 (conv Σ []) s s' ->
+      subslet Σ [] s Γ ->
+      subslet Σ [] s' Γ ->
+      cumul_ctx_rel Σ (subst_context s 0 Γ') (subst_context s #|Γ'| Δ) (subst_context s' #|Γ'| Δ').
+
+
     admit. (* Cumulativity of constructor argument types *)
     { eapply on_constructor_inst in onc; eauto.
       2:{ simpl. eapply on_declared_inductive; eauto. }
@@ -554,6 +566,9 @@ Proof.
           intros x Px. rewrite closedn_subst_instance_constr.
           rewrite /argctx; autorewrite with len.
           now rewrite Nat.add_comm. }
+
+
+
         admit. (* indices conversion *)
       * simpl. rewrite lift_mkApps !subst_mkApps /=.
         constructor. 2:constructor.
@@ -590,7 +605,6 @@ Proof.
         eapply All2_app; auto. apply All2_symmetry => //.
         intros x y conv; now symmetry.
         eapply All2_refl. intros; reflexivity. }          
-      simpl in Hbr. rewrite Hbr in a. intuition discriminate.
   
 (*
     

@@ -540,7 +540,7 @@ Section Pred1_inversion.
         rewrite nth_error_app_lt in hi; eauto. congruence.
         auto.
         rewrite app_length. move=> ge _.
-        elim: nth_error_spec; intros; try lia. auto.
+        elim: nth_error_spec; intros; try lia; auto.
       }
       specialize (IHpred1 _ _ _ _ _ Hnth H _ _ eq_refl eq_refl).
       destruct IHpred1 as [? ?]. red in a.

@@ -631,7 +631,7 @@ Proof.
   intros Σ c.
   induction Σ. 1: reflexivity.
   simpl.
-  destruct (ident_eq c a.1).
+  unfold eq_kername; destruct kername_eq_dec; subst.
   - reflexivity.
   - assumption.
 Qed.
@@ -873,7 +873,6 @@ Proof.
       cbn.
       replace (isLambda (nl (dbody d))) with (isLambda (dbody d))
         by (destruct (dbody d) ; reflexivity).
-      destruct (isLambda (dbody d)). 2: discriminate.
       inversion H. subst. rewrite nl_subst.
       repeat f_equal. clear.
       unfold fix_subst. rewrite map_length.
@@ -1063,6 +1062,18 @@ Proof.
     all: apply IHindctx.
 Qed.
 
+Lemma nl_wf_fixpoint Σ mfix : 
+  wf_fixpoint Σ.1 mfix = wf_fixpoint (nlg Σ).1 (map (map_def_anon nl nl) mfix).
+Proof.
+  unfold wf_fixpoint.
+Admitted.
+
+Lemma nl_wf_cofixpoint Σ mfix : 
+  wf_cofixpoint Σ.1 mfix = wf_cofixpoint (nlg Σ).1 (map (map_def_anon nl nl) mfix).
+Proof.
+  unfold wf_fixpoint.
+Admitted.
+
 Lemma subst_instance_context_nlctx u ctx :
   subst_instance_context u (nlctx ctx) = nlctx (subst_instance_context u ctx).
 Proof.
@@ -1234,13 +1245,18 @@ Proof.
         rewrite fix_context_length in Hs.
         now rewrite XX, <- nl_lift.
       * destruct dbody; simpl in *; congruence.
+    + now rewrite <-nl_wf_fixpoint.
   - replace (nl (dtype decl)) with (dtype (map_def_anon nl nl decl));
       [|destruct decl; reflexivity].
     assert (XX: nlctx Γ ,,, fix_context (map (map_def_anon nl nl) mfix)
                 = nlctx (Γ ,,, fix_context mfix))
       by now rewrite <- nl_fix_context, <- nlctx_app_context.
     constructor; auto.
-    + now rewrite nth_error_map, H.
+    + eapply cofix_guard_eq_term with (idx:=n). 1: eassumption.
+      constructor. clear. induction mfix. 1: constructor.
+      simpl. constructor; tas. cbn.
+      repeat split; now apply eq_term_upto_univ_tm_nl.
+    + now rewrite nth_error_map, H0.
     + clear -X0.
       apply All_map. eapply All_impl; tea.
       simpl. intros x [s Hs]. now exists s.
@@ -1250,6 +1266,7 @@ Proof.
       * rewrite fix_context_length, map_length.
         rewrite fix_context_length in Hs.
         now rewrite XX, <- nl_lift.
+    + now rewrite <-nl_wf_cofixpoint.
   - econstructor; tea.
     + destruct X2 as [[[Δ [s [H1 H2]]] HH]|?]; [left|right].
       * exists (nlctx Δ), s. split.

@@ -1,7 +1,7 @@
 Require Import Coq.Strings.String.
 Require Import Coq.Lists.List.
 From MetaCoq.Template Require Import
-     Ast Loader utils.
+     BasicAst Ast Loader utils.
 From MetaCoq.Template.TemplateMonad Require Import
      Common Extractable.
 
@@ -43,9 +43,9 @@ MetaCoq Run
                           (fun _ => tmAxiom i <% bool %>))).
 Print blah0.
 
-
+MetaCoq Test Quote nat.
 MetaCoq Run
-    (tmBind (tmQuoteInductive "Coq.Init.Datatypes.nat")
+    (tmBind (tmQuoteInductive (MPfile ["Datatypes"; "Init"; "Coq"], "nat"))
             (fun mi => tmMsg (string_of_nat (length mi.(ind_bodies))))).
 
 Definition empty_constraints : ConstraintSet.t_.
@@ -74,11 +74,9 @@ Print thing.
 
 MetaCoq Run
     (tmBind tmCurrentModPath
-            tmMsg).
+            (fun s => tmMsg (string_of_modpath s))).
 
+MetaCoq Test Quote plus.
+MetaCoq Run (tmQuoteInductive (MPfile ["Datatypes"; "Init"; "Coq"], "nat")).
 
-Fail MetaCoq Run (tmQuoteInductive "nat").
-MetaCoq Run (tmQuoteInductive "Coq.Init.Datatypes.nat").
-
-Fail MetaCoq Run (tmQuoteConstant "plus" true).
-MetaCoq Run (tmQuoteConstant "Coq.Init.Nat.add" true).
+MetaCoq Run (tmQuoteConstant (MPfile ["Nat"; "Init"; "Coq"], "add") true).

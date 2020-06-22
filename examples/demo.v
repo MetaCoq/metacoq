@@ -17,6 +17,8 @@ MetaCoq Test Quote (let x := 2 in
               | S n => n
             end).
 
+MetaCoq Test Unquote (Ast.tConstruct (mkInd (MPfile ["Datatypes"; "Init"; "Coq"], "nat") 0) 0 []).
+
 (** Build a definition **)
 Definition d : Ast.term.
   let t := constr:(fun x : nat => x) in
@@ -67,7 +69,7 @@ MetaCoq Quote Definition eo_syntax := Eval compute in even.
 MetaCoq Quote Definition add'_syntax := Eval compute in add'.
 
 (** Reflecting definitions **)
-MetaCoq Unquote Definition zero_from_syntax := (Ast.tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 0 []).
+MetaCoq Unquote Definition zero_from_syntax := (Ast.tConstruct (mkInd (MPfile ["Datatypes"; "Init"; "Coq"], "nat") 0) 0 []).
 
 (* the function unquote_kn in reify.ml4 is not yet implemented *)
 MetaCoq Unquote Definition add_from_syntax := add_syntax.
@@ -75,9 +77,11 @@ MetaCoq Unquote Definition add_from_syntax := add_syntax.
 MetaCoq Unquote Definition eo_from_syntax := eo_syntax.
 Print eo_from_syntax.
 
-MetaCoq Unquote Definition two_from_syntax := (Ast.tApp (Ast.tConstruct (BasicAst.mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
-   (Ast.tApp (Ast.tConstruct (BasicAst.mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
-      (Ast.tConstruct (BasicAst.mkInd "Coq.Init.Datatypes.nat" 0) 0 nil :: nil) :: nil)).
+Local Notation Nat_module := (MPfile ["Datatypes"; "Init"; "Coq"], "nat").
+
+MetaCoq Unquote Definition two_from_syntax := (Ast.tApp (Ast.tConstruct (BasicAst.mkInd Nat_module 0) 1 nil)
+   (Ast.tApp (Ast.tConstruct (BasicAst.mkInd Nat_module 0) 1 nil)
+      (Ast.tConstruct (BasicAst.mkInd Nat_module 0) 0 nil :: nil) :: nil)).
 
 MetaCoq Quote Recursively Definition plus_syntax := plus.
 
@@ -95,16 +99,6 @@ Arguments fst' {A B} _.
 Arguments snd' {A B} _.
 
 MetaCoq Test Quote ((pair' _ _ true 4).(snd')).
-MetaCoq Unquote Definition x := (tProj (mkInd "prod'" 0, 2, 1)
-   (tApp (tConstruct (mkInd "prod'" 0) 0 nil)
-      [tInd (mkInd "Coq.Init.Datatypes.bool" 0) nil;
-      tInd (mkInd "Coq.Init.Datatypes.nat" 0) nil;
-      tConstruct (mkInd "Coq.Init.Datatypes.bool" 0) 0 nil;
-      tApp (tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
-        [tApp (tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
-           [tApp (tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
-              [tApp (tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
-                 [tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 0 nil]]]]])).
 
 
 (** Reflecting  Inductives *)
@@ -204,13 +198,19 @@ Inductive demoList (A : Set) : Set :=
 
 (** Putting the above commands in monadic program *)
 Notation inat :=
-  {| inductive_mind := "Coq.Init.Datatypes.nat"; inductive_ind := 0 |}.
+  {| inductive_mind := Nat_module; inductive_ind := 0 |}.
 MetaCoq Run (tmBind (tmQuote (3 + 3)) tmPrint).
 
 MetaCoq Run (tmBind (tmQuoteRec add) tmPrint).
 
-Definition printInductive (name  : ident): TemplateMonad unit :=
-  (tmBind (tmQuoteInductive name) tmPrint).
+MetaCoq Run (tmBind (tmLocate "add") tmPrint).
+
+Definition printInductive (q : qualid): TemplateMonad unit :=
+  kn <- tmLocate1 q ;;
+  match kn with
+  | IndRef ind => (tmQuoteInductive ind.(inductive_mind)) >>= tmPrint
+  | _ => tmFail ("[" ++ q ++ "] is not an inductive")
+  end.
 
 MetaCoq Run (printInductive "Coq.Init.Datatypes.nat").
 MetaCoq Run (printInductive "nat").
@@ -218,17 +218,25 @@ MetaCoq Run (printInductive "nat").
 CoInductive cnat : Set :=  O :cnat | S : cnat -> cnat.
 MetaCoq Run (printInductive "cnat").
 
-MetaCoq Run (tmBind (tmQuoteConstant "add" false) tmPrint).
-Fail MetaCoq Run (tmBind (tmQuoteConstant "nat" false) tmPrint).
+
+Definition printConstant (q : qualid) b : TemplateMonad unit :=
+  kn <- tmLocate1 q ;;
+  match kn with
+  | ConstRef kn => (tmQuoteConstant kn b) >>= tmPrint
+  | _ => tmFail ("[" ++ q ++ "] is not a constant")
+  end.
+
+MetaCoq Run (printConstant "add" false).
+Fail MetaCoq Run (printConstant "nat" false).
 
 Definition six : nat.
   exact (3 + 3).
 Qed.
-MetaCoq Run ((tmQuoteConstant "six" true) >>= tmPrint).
-MetaCoq Run ((tmQuoteConstant "six" false) >>= tmPrint).
+MetaCoq Run (printConstant "six" true).
+MetaCoq Run (printConstant "six" false).
 
 MetaCoq Run (t <- tmLemma "foo4" nat;;
-                     tmDefinition "foo5" (t + t + 2)).
+             tmDefinition "foo5" (t + t + 2)).
 Next Obligation.
   exact 3.
 Defined.
@@ -236,9 +244,9 @@ Print foo5.
 
 
 MetaCoq Run (t <- tmLemma "foo44" nat ;;
-                     qt <- tmQuote t ;;
-                     t <- tmEval all t ;;
-                     tmPrint qt ;; tmPrint t).
+             qt <- tmQuote t ;;
+             t <- tmEval all t ;;
+             tmPrint qt ;; tmPrint t).
 Next Obligation.
   exact (3+2).
 Defined.
@@ -273,19 +281,21 @@ Qed.
 
 
 
-Definition printConstant (name  : ident): TemplateMonad unit :=
-  X <- tmUnquote (tConst name []) ;;
-  X' <- tmEval all (my_projT2 X) ;;
- tmPrint X'.
+Definition printConstant' (name  : qualid): TemplateMonad unit :=
+  gr <- tmLocate1 name ;;
+  match gr with
+  | ConstRef kn => X <- tmUnquote (tConst kn []) ;;
+                  X' <- tmEval all (my_projT2 X) ;;
+                  tmPrint X'
+  | _ => tmFail ("[" ++ name ++ "] is not a constant")
+  end.
 
 Fail MetaCoq Run (printInductive "Coq.Arith.PeanoNat.Nat.add").
-MetaCoq Run (printConstant "Coq.Arith.PeanoNat.Nat.add").
+MetaCoq Run (printConstant' "Coq.Arith.PeanoNat.Nat.add").
 
 
-(* Fail MetaCoq Run (tmUnquoteTyped (nat -> nat) add_syntax >>= *)
-(*                           tmPrint). *)
-MetaCoq Run (tmUnquoteTyped (nat -> nat -> nat) add_syntax >>=
-                     tmPrint).
+Fail MetaCoq Run (tmUnquoteTyped (nat -> nat) add_syntax >>= tmPrint).
+MetaCoq Run (tmUnquoteTyped (nat -> nat -> nat) add_syntax >>= tmPrint).
 
 
 
@@ -315,11 +325,11 @@ MetaCoq Run (tmAxiom "foo0'" (nat -> nat) >>=
                      fun t => tmDefinition "foo0''" t).
 MetaCoq Run (tmFreshName "foo" >>= tmPrint).
 
-MetaCoq Run (tmBind (tmAbout "foo") tmPrint).
-MetaCoq Run (tmBind (tmAbout "qlsnkqsdlfhkdlfh") tmPrint).
-MetaCoq Run (tmBind (tmAbout "eq") tmPrint).
-MetaCoq Run (tmBind (tmAbout "Logic.eq") tmPrint).
-MetaCoq Run (tmBind (tmAbout "eq_refl") tmPrint).
+MetaCoq Run (tmBind (tmLocate "foo") tmPrint).
+MetaCoq Run (tmBind (tmLocate "qlsnkqsdlfhkdlfh") tmPrint).
+MetaCoq Run (tmBind (tmLocate "eq") tmPrint).
+MetaCoq Run (tmBind (tmLocate "Logic.eq") tmPrint).
+MetaCoq Run (tmBind (tmLocate "eq_refl") tmPrint).
 
 MetaCoq Run (tmCurrentModPath tt >>= tmPrint).
 
@@ -381,16 +391,16 @@ Check eq_refl : ones = ones'.
 
 
 Definition kername_of_qualid (q : qualid) : TemplateMonad kername :=
-  gr <- tmAbout q ;;
+  gr <- tmLocate1 q ;;
   match gr with
-  | Some (ConstRef kn)  => ret kn
-  | Some (IndRef ind) => ret ind.(inductive_mind)
-  | Some (ConstructRef ind _) => ret ind.(inductive_mind)
-  | None => tmFail  ("tmLocate: " ++ q ++ " not found")
+  | ConstRef kn  => ret kn
+  | IndRef ind => ret ind.(inductive_mind)
+  | ConstructRef ind _ => ret ind.(inductive_mind)
+  | VarRef _ => tmFail ("tmLocate: " ++ q ++ " is a Var")
   end.
 
 MetaCoq Run (kername_of_qualid "add" >>= tmPrint).
 MetaCoq Run (kername_of_qualid "BinNat.N.add" >>= tmPrint).
 MetaCoq Run (kername_of_qualid "Coq.NArith.BinNatDef.N.add" >>= tmPrint).
-Fail MetaCoq Run (kername_of_qualid "N.add" >>= tmPrint).
+MetaCoq Run (kername_of_qualid "N.add" >>= tmPrint).
 Fail MetaCoq Run (kername_of_qualid "qlskf" >>= tmPrint).

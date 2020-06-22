@@ -110,13 +110,7 @@ Definition substl defs body : term :=
 
 Definition cunfold_fix (mfix : mfixpoint term) (idx : nat) :=
   match List.nth_error mfix idx with
-  | Some d =>
-    if isLambda d.(dbody) then
-      Some (d.(rarg), substl (fix_subst mfix) d.(dbody))
-    else None (* We don't unfold ill-formed fixpoints, which would
-                 render confluence unprovable, creating an infinite
-                 number of critical pairs between unfoldings of fixpoints.
-                 e.g. [fix f := f] is not allowed. *)
+  | Some d => Some (d.(rarg), substl (fix_subst mfix) d.(dbody))
   | None => None
   end.
 
@@ -266,12 +260,12 @@ Section Wcbv.
           option_map decl_body (nth_error Γ i) = Some (Some body) ->
           eval ((lift0 (S i)) body) res -> P ((lift0 (S i)) body) res -> P (tRel i) res) -> *)
       (* (forall i : nat, option_map decl_body (nth_error Γ i) = Some None -> P (tRel i) (tRel i)) -> *)
-      (forall (c : ident) (decl : constant_body) (body : term),
+      (forall c (decl : constant_body) (body : term),
           declared_constant Σ c decl ->
           forall (u : Instance.t) (res : term),
             cst_body decl = Some body ->
             eval (subst_instance_constr u body) res -> P (subst_instance_constr u body) res -> P (tConst c u) res) ->
-      (forall (c : ident) (decl : constant_body),
+      (forall c (decl : constant_body),
           declared_constant Σ c decl -> forall u : Instance.t, cst_body decl = None -> P (tConst c u) (tConst c u)) ->
       (forall (ind : inductive) (pars : nat) (discr : term) (c : nat) (u : Instance.t)
               (args : list term) (p : term) (brs : list (nat × term)) (res : term),
@@ -533,7 +527,7 @@ Section Wcbv.
     unfold_fix mfix idx = Some (narg, fn) -> closed fn.
   Proof.
     unfold unfold_fix. destruct (nth_error mfix idx) eqn:Heq.
-    destruct (isLambda (dbody d)); try discriminate. move=> /= Hf Heq'; noconf Heq'.
+    move=> /= Hf Heq'; noconf Heq'.
     eapply closedn_subst0. unfold fix_subst. clear -Hf. generalize #|mfix|.
     induction n; simpl; auto. apply/andP; split; auto.
     simpl. rewrite fix_subst_length. solve_all.
@@ -548,7 +542,6 @@ Section Wcbv.
   Proof.  
     unfold unfold_fix, cunfold_fix.
     destruct (nth_error mfix idx) eqn:Heq => //.
-    destruct (isLambda (dbody d)) => //.
     move=> /= Hf; f_equal; f_equal.
     have clfix : All (closedn 0) (fix_subst mfix).
     { clear Heq d idx.

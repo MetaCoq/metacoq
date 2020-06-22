@@ -326,10 +326,10 @@ Proof.
     + eapply IHmfix0. destruct H as [L]. exists (x :: L). subst. now rewrite <- app_assoc.
     + rewrite <- plus_n_O.
       rewrite PCUICLiftSubst.simpl_subst_k. clear. induction l; cbn; try congruence.
-      eapply inversion_Fix in X as (? & ? & ? & ? & ?) ; auto.
+      eapply inversion_Fix in X as (? & ? & ? & ? & ? & ? & ?) ; auto.
       econstructor; eauto. destruct H. subst.
       rewrite <- app_assoc. rewrite nth_error_app_ge. lia.
-      rewrite minus_diag. cbn. reflexivity. eapply p.
+      rewrite minus_diag. cbn. reflexivity.
 Qed.
 
 (** ** Prelim on typing *)

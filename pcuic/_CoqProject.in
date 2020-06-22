@@ -31,14 +31,15 @@ theories/PCUICAlpha.v
 theories/PCUICPrincipality.v
 theories/PCUICCtxShape.v
 theories/PCUICContexts.v
-theories/PCUICUniverses.v
 theories/PCUICArities.v
 theories/PCUICSpine.v
 theories/PCUICInductives.v
 
 theories/PCUICValidity.v
+theories/PCUICInductiveInversion.v
 theories/PCUICSR.v
 theories/PCUICMetaTheory.v
+
 theories/PCUICCSubst.v
 theories/PCUICWcbvEval.v
 theories/PCUICChecker.v
@@ -54,6 +55,8 @@ theories/PCUICSafeLemmata.v
 
 theories/TemplateToPCUIC.v
 theories/TemplateToPCUICCorrectness.v
+theories/PCUICToTemplate.v
+theories/PCUICToTemplateCorrectness.v
 # theories/All.v
 
 # To do separate extraction of the files, not working currently

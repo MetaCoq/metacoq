@@ -3,8 +3,10 @@
 From Coq Require Import Bool List Program ZArith Lia.
 From MetaCoq.Template Require Import config utils Ast AstUtils Induction
   LiftSubst UnivSubst Typing TypingWf.
-From MetaCoq.Checker Require Import WeakeningEnv.
+From MetaCoq.Checker Require Import Reflect WeakeningEnv.
 Require Import ssreflect.
+
+From Equations Require Import Equations.
 
 (** * Lemmas about the [closedn] predicate *)
 
@@ -14,6 +16,13 @@ Definition closed_decl n d :=
 Definition closedn_ctx n ctx :=
   forallb id (mapi (fun k d => closed_decl (n + k) d) (List.rev ctx)).
 
+Lemma closed_decl_upwards k d : closed_decl k d -> forall k', k <= k' -> closed_decl k' d.
+Proof.
+  case: d => na [body|] ty; rewrite /closed_decl /=.
+  move/andP => [cb cty] k' lek'. do 2 rewrite (@closed_upwards k) //.
+  move=> cty k' lek'; rewrite (@closed_upwards k) //.
+Qed.
+  
 Notation closed_ctx ctx := (closedn_ctx 0 ctx).
 
 Lemma closedn_lift n k k' t : closedn k t -> closedn (k + n) (lift n k' t).
@@ -249,16 +258,194 @@ Proof.
     eapply closedn_mkLambda_or_LetIn;
       now rewrite app_length // plus_n_Sm.
 Qed.
+ 
+Lemma type_local_ctx_All_local_env {cf:checker_flags} P Σ Γ Δ s : 
+  All_local_env (lift_typing P Σ) Γ ->
+  type_local_ctx (lift_typing P) Σ Γ Δ s ->
+  All_local_env (lift_typing P Σ) (Γ ,,, Δ).
+Proof.
+  induction Δ; simpl; auto.
+  destruct a as [na [b|] ty];
+  intros wfΓ wfctx; constructor; intuition auto.
+   exists s; auto.
+Qed.
 
+Definition Pclosed :=
+  (fun (_ : global_env_ext) (Γ : context) (t T : term) =>
+           closedn #|Γ| t && closedn #|Γ| T).
+
+Lemma type_local_ctx_Pclosed Σ Γ Δ s :
+  type_local_ctx (lift_typing Pclosed) Σ Γ Δ s ->
+  Alli (fun i d => closed_decl (#|Γ| + i) d) 0 (List.rev Δ).
+Proof.
+  induction Δ; simpl; auto; try constructor.  
+  destruct a as [? [] ?]; intuition auto.
+  - apply Alli_app_inv; auto. constructor. simpl.
+    rewrite List.rev_length. 2:constructor.
+    unfold closed_decl. unfold Pclosed in b0. simpl.
+    rewrite app_context_length in b0. now rewrite Nat.add_comm.
+  - apply Alli_app_inv; auto. constructor. simpl.
+    rewrite List.rev_length. 2:constructor.
+    unfold closed_decl. unfold Pclosed in b. simpl.
+    rewrite app_context_length in b. rewrite Nat.add_comm.
+    now rewrite andb_true_r in b.
+Qed.
+
+Lemma All_local_env_Pclosed Σ Γ :
+  All_local_env ( lift_typing Pclosed Σ) Γ ->
+  Alli (fun i d => closed_decl i d) 0 (List.rev Γ).
+Proof.
+  induction Γ; simpl; auto; try constructor.  
+  intros all; depelim all; intuition auto.
+  - apply Alli_app_inv; auto. constructor. simpl.
+    rewrite List.rev_length. 2:constructor.
+    unfold closed_decl. unfold Pclosed in l. simpl. red in l.
+    destruct l as [s H].
+    now rewrite andb_true_r in H.
+  - apply Alli_app_inv; auto. constructor. simpl.
+    rewrite List.rev_length. 2:constructor.
+    unfold closed_decl. unfold Pclosed, lift_typing in *. now simpl.
+Qed.
+
+Lemma closed_subst_context (Γ Δ Δ' : context) t :
+  closedn (#|Γ| + #|Δ|) t ->
+  Alli (fun i d => closed_decl (#|Γ| + S #|Δ| + i) d) 0 (List.rev Δ') -> 
+  Alli (fun i d => closed_decl (#|Γ| + #|Δ| + i) d) 0 (List.rev (subst_context [t] 0 Δ')).
+Proof.
+  induction Δ' in Δ |- *.
+  intros. simpl. auto. constructor.
+  destruct a as [? [] ?]; simpl.
+  - intros. eapply Alli_app in X as [X X'].
+    rewrite subst_context_snoc. simpl. eapply Alli_app_inv.
+    eapply IHΔ'; eauto. constructor; [|constructor].
+    simpl. 
+    rewrite /closed_decl /map_decl /= Nat.add_0_r List.rev_length subst_context_length.
+    inv X'. unfold closed_decl in H0. simpl in H0.
+    rewrite List.rev_length Nat.add_0_r in H0.
+    move/andP: H0 => [Hl Hr].
+    rewrite !closedn_subst /= ?H //; eapply closed_upwards; eauto; try lia.
+  - intros. eapply Alli_app in X as [X X'].
+    rewrite subst_context_snoc. simpl. eapply Alli_app_inv.
+    eapply IHΔ'; eauto. constructor; [|constructor].
+    simpl. 
+    rewrite /closed_decl /map_decl /= Nat.add_0_r List.rev_length subst_context_length.
+    inv X'. unfold closed_decl in H0. simpl in H0.
+    rewrite List.rev_length Nat.add_0_r in H0.
+    rewrite !closedn_subst /= ?H //; eapply closed_upwards; eauto; try lia.
+Qed.
+
+Lemma closed_smash_context_gen (Γ Δ Δ' : context) :
+  Alli (fun i d => closed_decl (#|Γ| + i) d) 0 (List.rev Δ) -> 
+  Alli (fun i d => closed_decl (#|Γ| + #|Δ| + i) d) 0 (List.rev Δ') -> 
+  Alli (fun i d => closed_decl (#|Γ| + i) d) 0 (List.rev (smash_context Δ' Δ)).
+Proof.
+  induction Δ in Δ' |- *.
+  intros. simpl. auto.
+  simpl. eapply (Alli_impl _ X0). simpl. now rewrite Nat.add_0_r.
+  destruct a as [? [] ?]; simpl.
+  - intros. eapply Alli_app in X as [X X'].
+    eapply IHΔ; eauto.
+    inv X'. unfold closed_decl in H. simpl in H.
+    rewrite List.rev_length Nat.add_0_r in H.
+    clear X1. eapply closed_subst_context; auto.
+    now move/andP: H => [].
+  - intros. eapply Alli_app in X as [X X'].
+    eapply IHΔ; eauto.
+    inv X'. unfold closed_decl in H. simpl in H.
+    rewrite List.rev_length Nat.add_0_r in H.
+    clear X1. rewrite List.rev_app_distr.
+    eapply Alli_app_inv; repeat constructor.
+    now rewrite /closed_decl Nat.add_0_r /=.
+    rewrite List.rev_length /=. clear -X0.
+    apply Alli_shift, (Alli_impl _ X0). intros.
+    eapply closed_decl_upwards; eauto; lia.
+Qed.
+
+Lemma closed_smash_context (Γ Δ : context) :
+  Alli (fun i d => closed_decl (#|Γ| + i) d) 0 (List.rev Δ) -> 
+  Alli (fun i d => closed_decl (#|Γ| + i) d) 0 (List.rev (smash_context [] Δ)).
+Proof.
+  intros; apply (closed_smash_context_gen Γ _ []); auto. constructor.
+Qed.
+
+Lemma context_assumptions_app Γ Δ : context_assumptions (Γ ++ Δ) = 
+  context_assumptions Γ + context_assumptions Δ.
+Proof.
+  induction Γ as [|[? [] ?] ?]; simpl; auto.
+Qed.
+
+Lemma weaken_env_prop_closed {cf:checker_flags} : 
+  weaken_env_prop (lift_typing (fun (_ : global_env_ext) (Γ : context) (t T : term) =>
+  closedn #|Γ| t && closedn #|Γ| T)).
+Proof. repeat red. intros. destruct t; red in X0; eauto. Qed.
+
+Lemma declared_projection_closed_ind {cf:checker_flags} {Σ : global_env_ext} {mdecl idecl p pdecl} : 
+  wf Σ.1 ->
+  declared_projection Σ.1 mdecl idecl p pdecl ->
+  Forall_decls_typing
+  (fun (_ : TemplateEnvironment.global_env_ext) (Γ : TemplateEnvironment.context) (t T : term) =>
+  closedn #|Γ| t && closedn #|Γ| T) Σ.1 ->
+  closedn (S (ind_npars mdecl)) pdecl.2.
+Proof.
+  intros wfΣ isdecl X0.
+  pose proof (declared_projection_inv weaken_env_prop_closed wfΣ X0 isdecl) as onp.
+  set (declared_inductive_inv _ wfΣ X0 isdecl.p1) as oib in *.
+  clearbody oib.
+  have onpars := onParams _ _ _ _ (declared_minductive_inv weaken_env_prop_closed wfΣ X0 isdecl.p1.p1).
+  have parslen := onNpars _ _ _ _ (declared_minductive_inv weaken_env_prop_closed wfΣ X0 isdecl.p1.p1).
+  simpl in onp. destruct (ind_cshapes oib) as [|? []] eqn:Heq; try contradiction.
+  red in onp.
+  destruct (nth_error (smash_context [] _) _) eqn:Heq'; try contradiction.
+  destruct onp as [onna onp].
+  rewrite {}onp. 
+  pose proof (onConstructors oib) as onc. 
+  red in onc. rewrite Heq in onc. inv onc. clear X1.
+  eapply on_cargs in X.
+  simpl.
+  replace (S (ind_npars mdecl)) with (1 + ind_npars mdecl) by lia.
+  eapply (closedn_subst _ 0).
+  { clear. unfold inds. generalize (TemplateEnvironment.ind_bodies mdecl).
+    induction l; simpl; auto. }
+  rewrite inds_length.
+  eapply closedn_subst0.
+  { clear. unfold projs. induction p.2; simpl; auto. }
+  rewrite projs_length /=.
+  eapply (@closed_upwards (ind_npars mdecl + #|ind_bodies mdecl| + p.2 + 1)).
+  2:lia.
+  eapply closedn_lift.
+  clear -parslen isdecl Heq' onpars X.
+  rename X into args.
+  apply type_local_ctx_Pclosed in args.
+  red in onpars.
+  eapply All_local_env_Pclosed in onpars.
+  eapply (Alli_impl (Q:=fun i d => closed_decl (#|ind_params mdecl| + i + #|arities_context (ind_bodies mdecl)|) d)) in args.
+  2:{ intros n x. rewrite app_context_length. 
+      intros H; eapply closed_decl_upwards; eauto. lia. }
+  eapply (Alli_shiftn (P:=fun i d => closed_decl (i + #|arities_context (ind_bodies mdecl)|) d)) in args.
+  rewrite Nat.add_0_r in args.
+  eapply (Alli_impl (Q:=fun i d => closed_decl (i + #|arities_context (ind_bodies mdecl)|) d)) in onpars.
+  2:{ intros n x d. eapply closed_decl_upwards; eauto; lia. }
+  epose proof (Alli_app_inv onpars). rewrite List.rev_length /= in X.
+  specialize (X args). rewrite -List.rev_app_distr in X.
+  clear onpars args.
+  eapply (Alli_impl (Q:=fun i d => closed_decl (#|arities_context (ind_bodies mdecl)| + i) d)) in X.
+  2:intros; eapply closed_decl_upwards; eauto; lia.
+  eapply closed_smash_context in X.
+  eapply Alli_rev_nth_error in X; eauto.
+  rewrite smash_context_length in X. simpl in X.
+  eapply nth_error_Some_length in Heq'. rewrite smash_context_length in Heq'.
+  simpl in Heq'. unfold closed_decl in X.
+  move/andP: X => [] _ cl.
+  eapply closed_upwards. eauto. rewrite arities_context_length.
+  rewrite context_assumptions_app parslen.
+  rewrite context_assumptions_app in Heq'. lia.
+Qed.
 
 Lemma typecheck_closed `{cf : checker_flags} :
   env_prop (fun Σ Γ t T =>
               closedn #|Γ| t && closedn #|Γ| T).
 Proof.
-  assert(weaken_env_prop (lift_typing (fun (_ : global_env_ext) (Γ : context) (t T : term) =>
-                                         closedn #|Γ| t && closedn #|Γ| T))).
-  { repeat red. intros. destruct t; red in X0; eauto. }
-
+  assert (X := weaken_env_prop_closed).
   apply typing_ind_env; intros; simpl; rewrite -> ?andb_and in *; try solve [intuition auto].
   - pose proof (nth_error_Some_length H).
     elim (Nat.ltb_spec n #|Γ|); intuition. clear H0.
@@ -329,18 +516,10 @@ Proof.
     apply closedn_subst0.
     simpl. apply closedn_mkApps_inv in H2.
     rewrite forallb_rev H1. apply H2.
+    simpl. rewrite List.rev_length. rewrite H0.
     rewrite closedn_subst_instance_constr.
-    eapply declared_projection_inv in isdecl as H'; eauto.
-    apply on_declared_projection in isdecl as [[Hmdecl Hidecl] Hpdecl]; auto.
-    red in Hpdecl.
-    destruct Hpdecl as [s Hs]. simpl in *.
-    apply onNpars in Hmdecl.
-    cbn in H'; destruct H'.
-    simpl in *.
-    rewrite List.rev_length H0.
-    rewrite andb_true_r in i. rewrite <- Hmdecl.
-    rewrite smash_context_length in i. simpl in i.
-    eapply closed_upwards; eauto. lia.
+    eapply closed_upwards. eapply declared_projection_closed_ind; eauto.
+    lia.
 
   - split. solve_all.
     destruct x; simpl in *.
@@ -359,14 +538,14 @@ Proof.
     unfold test_def. simpl. rtoProp.
     split.
     rewrite -> app_context_length in *. rewrite -> Nat.add_comm in *.
-    eapply closedn_lift_inv in H2; eauto. lia.
+    eapply closedn_lift_inv in H1; eauto. lia.
     subst types.
-    now rewrite -> app_context_length, fix_context_length in H1.
+    now rewrite -> app_context_length, fix_context_length in H0.
     eapply (nth_error_all) in H; eauto. simpl in *.
     intuition. rtoProp.
-    subst types. rewrite app_context_length in H1.
-    rewrite Nat.add_comm in H1.
-    now eapply closedn_lift_inv in H1.
+    subst types. rewrite app_context_length in H0.
+    rewrite Nat.add_comm in H0.
+    now eapply closedn_lift_inv in H0.
 
   - destruct X2; intuition eauto.
     + destruct i as [[u [ctx [Heq Hi]]] Hwfi]. simpl in Hwfi.
@@ -379,8 +558,7 @@ Proof.
     + destruct s. rewrite andb_true_r in p. intuition auto.
 Qed.
 
-
-Lemma declared_decl_closed `{checker_flags} (Σ : global_env) cst decl :
+Lemma declared_decl_closed `{checker_flags} {Σ : global_env} {cst decl} :
   wf Σ ->
   lookup_env Σ cst = Some decl ->
   on_global_decl (fun Σ Γ b t => closedn #|Γ| b && option_default (closedn #|Γ|) t true)
@@ -394,13 +572,87 @@ Proof.
   destruct X1 as [s0 Hs0]. simpl. rtoProp; intuition.
 Qed.
 
-Lemma closed_decl_upwards k d : closed_decl k d -> forall k', k <= k' -> closed_decl k' d.
+Definition closed_inductive_body mdecl idecl :=
+  closedn 0 idecl.(ind_type) &&
+  forallb (fun cdecl => 
+    closedn (#|arities_context mdecl.(ind_bodies)|) (cdecl_type cdecl)) idecl.(ind_ctors) &&
+  forallb (fun x => closedn (S (ind_npars mdecl)) x.2) idecl.(ind_projs).
+
+Definition closed_inductive_decl mdecl :=
+  closed_ctx (ind_params mdecl) &&
+  forallb (closed_inductive_body mdecl) (ind_bodies mdecl).
+
+Lemma closedn_All_local_env (ctx : list context_decl) :
+  All_local_env 
+    (fun (Γ : context) (b : term) (t : option term) =>
+      closedn #|Γ| b && option_default (closedn #|Γ|) t true) ctx ->
+    closedn_ctx 0 ctx.
 Proof.
-  case: d => na [body|] ty; rewrite /closed_decl /=.
-  move/andP => [cb cty] k' lek'. do 2 rewrite (@closed_upwards k) //.
-  move=> cty k' lek'; rewrite (@closed_upwards k) //.
+  induction 1. constructor.
+  rewrite /closedn_ctx /= mapi_app forallb_app /= [forallb _ _]IHX /id /closed_decl /=.
+  now rewrite Nat.add_0_r List.rev_length t0.
+  rewrite /closedn_ctx /= mapi_app forallb_app /= [forallb _ _]IHX /id /closed_decl /=.
+  now rewrite Nat.add_0_r List.rev_length t1.
 Qed.
 
+Lemma skipn_0 {A} (l : list A) : skipn 0 l = l.
+Proof. reflexivity. Qed.
+
+Lemma declared_projection_closed {cf:checker_flags} {Σ : global_env_ext} {mdecl idecl p pdecl} : 
+  wf Σ.1 ->
+  declared_projection Σ.1 mdecl idecl p pdecl ->
+  closedn (S (ind_npars mdecl)) pdecl.2.
+Proof.
+  intros; eapply declared_projection_closed_ind; eauto.
+  eapply typecheck_closed; eauto.
+  constructor. eapply type_Prop.
+Qed.
+
+Lemma declared_inductive_closed {cf:checker_flags} {Σ : global_env_ext} {mdecl mind} : 
+  wf Σ.1 ->
+  declared_minductive Σ.1 mind mdecl ->
+  closed_inductive_decl mdecl.
+Proof.
+  intros wfΣ decl.
+  pose proof (declared_decl_closed wfΣ decl) as decl'.
+  red in decl'.
+  unfold closed_inductive_decl.
+  apply andb_and. split. apply onParams in decl'.
+  now apply closedn_All_local_env in decl'; auto.
+  apply onInductives in decl'.
+  eapply All_forallb.
+  
+  assert (Alli (fun i =>  declared_inductive Σ.1 mdecl {| inductive_mind := mind; inductive_ind := i |}) 
+    0 (ind_bodies mdecl)).
+  { eapply forall_nth_error_Alli. intros.
+    split; auto. }
+  eapply Alli_mix in decl'; eauto. clear X.
+  clear decl.
+  eapply Alli_All; eauto.
+  intros n x [decli oib].
+  rewrite /closed_inductive_body.
+  apply andb_and; split. apply andb_and. split.
+  - apply onArity in oib. hnf in oib.
+    now move/andP: oib => [].
+  - pose proof (onConstructors oib).
+    red in X. eapply All_forallb. eapply All2_All_left; eauto.
+    firstorder auto.
+    eapply on_ctype in X0.
+    now move/andP: X0 => [].
+  - eapply All_forallb.
+    pose proof (onProjections oib).
+    destruct (eq_dec (ind_projs x) []) as [->|eq]; try constructor.
+    specialize (X eq). clear eq.
+    destruct (ind_cshapes oib) as [|? []]; try contradiction.
+    apply on_projs in X.
+    assert (Alli (fun i pdecl => declared_projection Σ.1 mdecl x 
+     (({| inductive_mind := mind; inductive_ind := n |}, mdecl.(ind_npars)), i) pdecl)
+      0 (ind_projs x)).
+    { eapply forall_nth_error_Alli.
+      intros. split; auto. }
+    eapply (Alli_All X0). intros.
+    now eapply declared_projection_closed in H.
+Qed.
 
 Lemma rev_subst_instance_context u Γ :
   List.rev (subst_instance_context u Γ) = subst_instance_context u (List.rev Γ).

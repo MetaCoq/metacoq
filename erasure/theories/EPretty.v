@@ -103,7 +103,7 @@ Section print_term.
                       print_term (vdef na' def :: Γ) true false body)
   | tApp f l =>
     parens (top || inapp) (print_term Γ false true f ++ " " ++ print_term Γ false false l)
-  | tConst c => c
+  | tConst c => string_of_kername c
   | tConstruct (mkInd i k as ind) l =>
     match lookup_ind_decl i k with
     | Some oib =>

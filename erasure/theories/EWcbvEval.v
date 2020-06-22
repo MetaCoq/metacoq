@@ -193,7 +193,7 @@ Section Wcbv.
           P f (tLambda na b) -> eval a a' -> P a a' -> eval (csubst a' 0 b) res -> P (csubst a' 0 b) res -> P (tApp f a) res) ->
       (forall (na : name) (b0 b0' b1 res : term),
           eval b0 b0' -> P b0 b0' -> eval (csubst b0' 0 b1) res -> P (csubst b0' 0 b1) res -> P (tLetIn na b0 b1) res) ->
-      (forall (c : ident) (decl : constant_body) (body : term),
+      (forall c (decl : constant_body) (body : term),
           declared_constant Σ c decl ->
           forall (res : term),
             cst_body decl = Some body ->

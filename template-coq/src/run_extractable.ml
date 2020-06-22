@@ -1,19 +1,12 @@
 open Extractable
 open Plugin_core
 open BasicAst
+open Tm_util
 
-open Quoter
 open Ast_quoter
+open Ast_denoter
 
-
-let of_constr (env : Environ.env) (t : Constr.t) : Ast0.term =
-  Ast_quoter.quote_term env t
-
-let to_string : char list -> string =
-  Quoted.list_to_string
-
-let of_string : string -> char list =
-  Quoted.string_to_list
+(* todo : replace string_to_list and converse by (un)quote_string *)
 
 let to_reduction_strategy (s : Common0.reductionStrategy) : Plugin_core.reduction_strategy =
   match s with
@@ -24,41 +17,21 @@ let to_reduction_strategy (s : Common0.reductionStrategy) : Plugin_core.reductio
    | Common0.Coq_lazy -> Plugin_core.rs_lazy
    | Common0.Coq_unfold x -> failwith "not yet implemented: to_reduction_strategy"
 
-let to_ident : char list ->  Names.Id.t =
-  Ast_quoter.unquote_ident
-
-let of_ident (id : Names.Id.t) : char list =
-  of_string (Names.Id.to_string id)
-
-let of_global_reference : Plugin_core.global_reference -> BasicAst.global_reference =
-  Ast_quoter.quote_global_reference
-
 let to_qualid (c : char list) : Libnames.qualid =
-  Libnames.qualid_of_string (to_string c)
+  Libnames.qualid_of_string (list_to_string c)
 
 let of_qualid (q : Libnames.qualid) : char list =
-  of_string (Libnames.string_of_qualid q)
-
-let of_kername : Names.KerName.t -> char list =
-  Ast_quoter.quote_kn
-
-(* TODO: check that [s] was fully qualified *)
-let to_kername (s : char list) : Names.KerName.t =
-  match Nametab.locate (Ast_quoter.unquote_kn s) with
-   | Names.GlobRef.VarRef vr -> failwith "not yet implemented"
-   | Names.GlobRef.ConstRef c -> Names.Constant.canonical c
-   | Names.GlobRef.IndRef i -> Names.MutInd.canonical (fst i)
-   | Names.GlobRef.ConstructRef c -> failwith "not yet implemented"
+  string_to_list (Libnames.string_of_qualid q)
 
 (* todo(gmm): this definition adapted from quoter.ml *)
 let quote_rel_decl env = function
   | Context.Rel.Declaration.LocalAssum (na, t) ->
-    let t' = Ast_quoter.quote_term env t in
-    Ast_quoter.quote_context_decl (Ast_quoter.quote_name (Context.binder_name na)) None t'
+    let t' = quote_term env t in
+    quote_context_decl (quote_name (Context.binder_name na)) None t'
   | Context.Rel.Declaration.LocalDef (na, b, t) ->
-    let b' = Ast_quoter.quote_term env b in
-    let t' = Ast_quoter.quote_term env t in
-    Ast_quoter.quote_context_decl (Ast_quoter.quote_name (Context.binder_name na)) (Some b') t'
+    let b' = quote_term env b in
+    let t' = quote_term env t in
+    quote_context_decl (quote_name (Context.binder_name na)) (Some b') t'
 
 (* todo(gmm): this definition adapted from quoter.ml *)
 let quote_rel_context env ctx =
@@ -67,7 +40,7 @@ let quote_rel_context env ctx =
         let x = quote_rel_decl env decl in
         (x :: ds, Environ.push_rel decl env))
       ctx ([],env) in
-  Ast_quoter.quote_context decls
+  quote_context decls
 
 (* todo(gmm): this definition adapted from quoter.ml (the body of quote_minductive_type) *)
 let of_mib (env : Environ.env) (t : Names.MutInd.t) (mib : Plugin_core.mutual_inductive_body) : Ast0.mutual_inductive_body =
@@ -89,14 +62,14 @@ let of_mib (env : Environ.env) (t : Names.MutInd.t) (mib : Plugin_core.mutual_in
         (Array.to_list oib.mind_consnrealargs)
     in
     let indty = Inductive.type_of_inductive ((mib,oib),inst) in
-    let indty = Ast_quoter.quote_term env indty in
+    let indty = quote_term env indty in
     let (reified_ctors,acc) =
       List.fold_left (fun (ls,acc) (nm,ty,ar) ->
           Tm_util.debug (fun () -> Pp.(str "opt_hnf_ctor_types:" ++ spc () ++
-                                      bool !opt_hnf_ctor_types)) ;
-          let ty = if !opt_hnf_ctor_types then hnf_type envind ty else ty in
+                                      bool !Quoter.opt_hnf_ctor_types)) ;
+          let ty = if !Quoter.opt_hnf_ctor_types then Quoter.hnf_type envind ty else ty in
           let ty = quote_term acc ty in
-          ((Ast_quoter.quote_ident nm, ty, Ast_quoter.quote_int ar) :: ls, acc))
+          ((quote_ident nm, ty, quote_int ar) :: ls, acc))
         ([],acc) named_ctors
     in
     let projs, acc =
@@ -110,22 +83,22 @@ let of_mib (env : Environ.env) (t : Names.MutInd.t) (mib : Plugin_core.mutual_in
         let ps, acc = CArray.fold_right2 (fun cst pb (ls,acc) ->
             let ty = quote_term envpars pb in
             let kn = cst in
-            let na = Ast_quoter.quote_ident (Names.Label.to_id kn) in
+            let na = quote_ident (Names.Label.to_id kn) in
             ((na, ty) :: ls, acc)) labels ps ([],acc)
         in ps, acc
       | _ -> [], acc
     in
-    let sf = Ast_quoter.quote_sort_family oib.mind_kelim in
-    (Ast_quoter.quote_ident oib.mind_typename, indty, sf, (List.rev reified_ctors), projs) :: ls, acc)
+    let sf = quote_sort_family oib.mind_kelim in
+    (quote_ident oib.mind_typename, indty, sf, (List.rev reified_ctors), projs) :: ls, acc)
         ([],env) (Array.to_list mib.mind_packets)
   in
-  let nparams = Ast_quoter.quote_int mib.mind_nparams in
+  let nparams = quote_int mib.mind_nparams in
   let paramsctx = quote_rel_context env mib.mind_params_ctxt in
   let uctx = quote_universes_decl mib.mind_universes in
-  let bodies = List.map Ast_quoter.mk_one_inductive_body (List.rev ls) in
+  let bodies = List.map mk_one_inductive_body (List.rev ls) in
   let finite = quote_mind_finiteness mib.mind_finite in
   let variance = Option.map (CArray.map_to_list quote_variance) mib.mind_variance in
-  Ast_quoter.mk_mutual_inductive_body finite nparams paramsctx bodies uctx variance
+  mk_mutual_inductive_body finite nparams paramsctx bodies uctx variance
 
 let to_mie (x : Ast0.mutual_inductive_entry) : Plugin_core.mutual_inductive_entry =
   failwith "to_mie"
@@ -146,8 +119,8 @@ let get_constant_body b =
 let of_constant_body (env : Environ.env) (cd : Plugin_core.constant_body) : Ast0.constant_body =
   let open Declarations in
   let {const_body = body; const_type = typ; const_universes = univs} = cd in
-  Ast0.({cst_type = Ast_quoter.quote_term env typ;
-         cst_body = Option.map (Ast_quoter.quote_term env) (get_constant_body body);
+  Ast0.({cst_type = quote_term env typ;
+         cst_body = Option.map (quote_term env) (get_constant_body body);
          cst_universes = quote_universes_decl univs})
 
 (* what about the overflow?
@@ -162,16 +135,15 @@ let of_cast_kind (ck: BasicAst.cast_kind) : Constr.cast_kind =
   | Cast -> Constr.DEFAULTcast
   | RevertCast -> Constr.REVERTcast
 
-open Ast_denoter
   (* todo(gmm): determine what of these already exist. *)
 let rec to_constr_ev (evm : Evd.evar_map) (t : Ast0.term) : Evd.evar_map * Constr.t =
-  ExtractionDenote.denote_term evm t
+  denote_term evm t
 
 let to_constr (t : Ast0.term) : Constr.t =
   snd (to_constr_ev Evd.empty t)
 
 let tmOfConstr (t : Constr.t) : Ast0.term tm =
-  Plugin_core.with_env_evm (fun env _ -> tmReturn (of_constr env t))
+  Plugin_core.with_env_evm (fun env _ -> tmReturn (quote_term env t))
 
 let tmOfMib (ti : Names.MutInd.t) (t : Plugin_core.mutual_inductive_body) : Ast0.mutual_inductive_body tm =
   Plugin_core.with_env_evm (fun env _ -> tmReturn (of_mib env ti t))
@@ -191,7 +163,7 @@ let dbg = function
   | Coq_tmAxiom (nm, typ) -> "tmAxiom"
   | Coq_tmLemma (nm, typ) -> "tmLemma"
   | Coq_tmFreshName nm -> "tmFreshName"
-  | Coq_tmAbout id -> "tmAbout"
+  | Coq_tmLocate id -> "tmLocate"
   | Coq_tmCurrentModPath -> "tmCurrentModPath"
   | Coq_tmQuoteInductive kn -> "tmQuoteInductive"
   | Coq_tmQuoteUniverses -> "tmQuoteUniverses"
@@ -207,8 +179,8 @@ let rec interp_tm (t : 'a coq_TM) : 'a tm =
   | Coq_tmReturn x -> tmReturn x
   | Coq_tmBind (c, k) -> tmBind (interp_tm c) (fun x -> interp_tm (k x))
   | Coq_tmPrint t -> Obj.magic (tmPrint (to_constr t))
-  | Coq_tmMsg msg -> Obj.magic (tmMsg (to_string msg))
-  | Coq_tmFail err -> tmFailString (to_string err)
+  | Coq_tmMsg msg -> Obj.magic (tmMsg (list_to_string msg))
+  | Coq_tmFail err -> tmFailString (list_to_string err)
   | Coq_tmEval (r,t) ->
     tmBind (tmEval (to_reduction_strategy r) (to_constr t))
            (fun x -> Obj.magic (tmOfConstr x))
@@ -218,39 +190,37 @@ let rec interp_tm (t : 'a coq_TM) : 'a tm =
         None -> None
       | Some typ -> Some (to_constr typ)
     in
-    tmMap (fun x -> Obj.magic (of_kername x))
-          (tmDefinition (to_ident nm) ~opaque typ (to_constr trm))
+    tmMap (fun x -> Obj.magic (quote_kn x))
+          (tmDefinition (unquote_ident nm) ~opaque typ (to_constr trm))
   | Coq_tmAxiom (nm, typ) ->
-    tmMap (fun x -> Obj.magic (of_kername x))
-          (tmAxiom (to_ident nm) (to_constr typ))
+    tmMap (fun x -> Obj.magic (quote_kn x))
+          (tmAxiom (unquote_ident nm) (to_constr typ))
   | Coq_tmLemma (nm, typ) ->
-    tmMap (fun x -> Obj.magic (of_kername x))
-          (tmLemma (to_ident nm) (to_constr typ))
+    tmMap (fun x -> Obj.magic (quote_kn x))
+          (tmLemma (unquote_ident nm) (to_constr typ))
   | Coq_tmFreshName nm ->
-    tmMap (fun x -> Obj.magic (of_ident x))
-          (tmFreshName (to_ident nm))
-  | Coq_tmAbout id ->
-    tmMap (function
-             None -> Obj.magic None
-           | Some gr -> Obj.magic (Some (of_global_reference gr)))
-          (tmAbout (to_qualid id))
+    tmMap (fun x -> Obj.magic (quote_ident x))
+          (tmFreshName (unquote_ident nm))
+  | Coq_tmLocate id ->
+    tmMap (fun x -> Obj.magic (List.map quote_global_reference x))
+          (tmLocate (to_qualid id))
   | Coq_tmCurrentModPath ->
-    tmMap (fun mp -> Obj.magic (of_string (Names.ModPath.to_string mp)))
+    tmMap (fun mp -> Obj.magic (string_to_list (Names.ModPath.to_string mp)))
           tmCurrentModPath
   | Coq_tmQuoteInductive kn ->
-    tmBind (tmQuoteInductive (to_kername kn))
+    tmBind (tmQuoteInductive (unquote_kn kn))
            (function
              None -> Obj.magic (tmFail Pp.(str "inductive does not exist"))
            | Some (mi, mib) -> Obj.magic (tmOfMib mi mib))
   | Coq_tmQuoteUniverses ->
     tmMap (fun x -> failwith "tmQuoteUniverses") tmQuoteUniverses
   | Coq_tmQuoteConstant (kn, b) ->
-    tmBind (tmQuoteConstant (to_kername kn) b)
+    tmBind (tmQuoteConstant (unquote_kn kn) b)
            (fun x -> Obj.magic (tmOfConstantBody x))
   | Coq_tmInductive i ->
     tmMap (fun _ -> Obj.magic ()) (tmInductive (to_mie i))
   | Coq_tmExistingInstance k ->
-    Obj.magic (tmExistingInstance (to_kername k))
+    Obj.magic (tmExistingInstance (unquote_global_reference k))
   | Coq_tmInferInstance t ->
     tmBind (tmInferInstance (to_constr t))
       (function

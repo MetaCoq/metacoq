@@ -125,7 +125,8 @@ Lemma forall_decls_declared_constant Σ cst decl :
 Proof.
   unfold declared_constant, TTy.declared_constant.
   induction Σ => //; try discriminate.
-  case: a => // /= k b; case: (ident_eq cst k); auto.
+  case: a => // /= k b.
+  unfold eq_kername; destruct kername_eq_dec; subst; auto.
   - by move => [=] ->.
 Qed.
 
@@ -135,7 +136,8 @@ Lemma forall_decls_declared_minductive Σ cst decl :
 Proof.
   unfold declared_minductive, TTy.declared_minductive.
   induction Σ => //; try discriminate.
-  case: a => // /= k b; case: (ident_eq cst k); auto.
+  case: a => // /= k b.
+  unfold eq_kername; destruct kername_eq_dec; subst; auto.
   - by move => [=] ->.
 Qed.
 
@@ -797,9 +799,7 @@ Lemma trans_unfold_fix mfix idx narg fn :
 Proof.
   unfold TTy.unfold_fix, unfold_fix. intros wffix.
   rewrite nth_error_map. destruct (nth_error mfix idx) eqn:Hdef => //.
-  cbn. rewrite trans_isLambda. {
-    apply (nth_error_forall Hdef) in wffix.
-    simpl in wffix. intuition auto. }
+  cbn.
   destruct (Ast.isLambda (dbody d)); [|discriminate].
   intros [= <- <-]. simpl.
   repeat f_equal.
@@ -1238,18 +1238,19 @@ Proof.
     -- apply H1.
     -- rewrite trans_mkApps in X4; auto with wf.
        eapply typing_wf in X3; auto. intuition. eapply wf_mkApps_inv in H4; auto.
+    -- admit.
     -- apply trans_build_branches_type in H2.
        rewrite firstn_map. exact H2.
     -- eapply All2_map. solve_all.
 
   - destruct pdecl as [arity ty]; simpl in *.
-    pose proof (TypingWf.declared_projection_wf _ _ u _ _ _ isdecl).
+    pose proof (TypingWf.declared_projection_wf _ _ _ _ _ isdecl).
     simpl in H0.
     eapply forall_decls_declared_projection in isdecl.
     destruct (typing_wf _ wfΣ _ _ _ X1) as [wfc wfind].
     eapply wf_mkApps_inv in wfind; auto.
     rewrite trans_subst; auto with wf. constructor; solve_all.
-    apply H0.
+    apply wf_subst_instance_constr, H0.
     eapply typing_wf_wf; auto.
     simpl. rewrite map_rev. rewrite trans_subst_instance_constr.
     eapply (type_Proj _ _ _ _ _ _ _ (arity, trans ty)). eauto.
@@ -1276,6 +1277,7 @@ Proof.
        rewrite /trans_local map_app in X2.
        rewrite <- trans_lift. apply X2.
        rdest. destruct (dbody x); simpl in *; congruence.
+    -- admit.
     -- destruct decl; reflexivity.
 
   - eapply refine_type.
@@ -1286,16 +1288,18 @@ Proof.
       f_equal. apply mapi_ext => i x.
       simpl. rewrite trans_lift. reflexivity. }
     econstructor; eauto.
-    now rewrite nth_error_map H.
+    -- admit.
+    -- now rewrite nth_error_map H.
     -- eapply trans_wf_local; eauto.
     -- eapply All_map, (All_impl X0).
        intros x [s [Hs Hts]]. now exists s.
     -- apply All_map. eapply All_impl; eauto.
        intuition eauto 3 with wf.
-       rewrite H1. rewrite /trans_local map_length.
+       rewrite H0. rewrite /trans_local map_length.
        unfold Template.Ast.app_context in X2.
        rewrite /trans_local map_app in X2.
        cbn. rewrite <- trans_lift. apply X2.
+    -- admit.
     -- destruct decl; reflexivity.
 
   - assert (T.wf B).

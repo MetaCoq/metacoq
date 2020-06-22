@@ -115,7 +115,7 @@ Inductive type_error :=
 | UnboundRel (n : nat)
 | UnboundVar (id : string)
 | UnboundEvar (ev : nat)
-| UndeclaredConstant (c : string)
+| UndeclaredConstant (c : kername)
 | UndeclaredInductive (c : inductive)
 | UndeclaredConstructor (c : inductive) (i : nat)
 | NotCumulSmaller (G : universes_graph) (Γ : context) (t u t' u' : term) (e : ConversionError)
@@ -153,10 +153,10 @@ Definition print_term Σ Γ t :=
 Fixpoint string_of_conv_error Σ (e : ConversionError) : string :=
   match e with
   | NotFoundConstants c1 c2 =>
-      "Both constants " ++ c1 ++ " and " ++ c2 ++
+      "Both constants " ++ string_of_kername c1 ++ " and " ++ string_of_kername c2 ++
       " are not found in the environment."
   | NotFoundConstant c =>
-      "Constant " ++ c ++
+      "Constant " ++ string_of_kername c ++
       " common in both terms is not found in the environment."
   | LambdaNotConvertibleTypes Γ1 na A1 t1 Γ2 na' A2 t2 e =>
       "When comparing\n" ++ print_term Σ Γ1 (tLambda na A1 t1) ++
@@ -239,9 +239,9 @@ Definition string_of_type_error Σ (e : type_error) : string :=
   | UnboundRel n => "Unbound rel " ++ string_of_nat n
   | UnboundVar id => "Unbound var " ++ id
   | UnboundEvar ev => "Unbound evar " ++ string_of_nat ev
-  | UndeclaredConstant c => "Undeclared constant " ++ c
-  | UndeclaredInductive c => "Undeclared inductive " ++ (inductive_mind c)
-  | UndeclaredConstructor c i => "Undeclared inductive " ++ (inductive_mind c)
+  | UndeclaredConstant c => "Undeclared constant " ++ string_of_kername c
+  | UndeclaredInductive c => "Undeclared inductive " ++ string_of_kername (inductive_mind c)
+  | UndeclaredConstructor c i => "Undeclared inductive " ++ string_of_kername (inductive_mind c)
   | NotCumulSmaller G Γ t u t' u' e => "Terms are not <= for cumulativity:\n" ++
       print_term Σ Γ t ++ "\nand:\n" ++ print_term Σ Γ u ++
       "\nafter reduction:\n" ++
@@ -885,12 +885,11 @@ Section Typecheck.
                    ret (All_cons (conj W1 W2) Z)
                  end) mfix _ ;;
         guarded <- check_eq_true (fix_guard mfix) (Msg "Unguarded fixpoint") ;;
+        wffix <- check_eq_true (wf_fixpoint Σ.1 mfix) (Msg "Ill-formed fixpoint: not defined on a mutually inductive family") ;;
         ret (dtype decl; _)
       end
 
     | tCoFix mfix n =>
-      (* to add when generalizing to all flags *)
-      allowcofix <- check_eq_true allow_cofix (Msg "cofix not allowed") ;;
       match nth_error mfix n with
       | None => raise (IllFormedFix mfix n)
       | Some decl =>
@@ -918,6 +917,8 @@ Section Typecheck.
                    Z <- check_bodies mfix' _ ;;
                    ret (All_cons W1 Z)
                  end) mfix _ ;;
+        guarded <- check_eq_true (cofix_guard mfix) (Msg "Unguarded cofixpoint") ;;
+        wfcofix <- check_eq_true (wf_cofixpoint Σ.1 mfix) (Msg "Ill-formed cofixpoint: not producing values in a mutually coinductive family") ;;         
         ret (dtype decl; _)
       end
     end.
@@ -1273,13 +1274,13 @@ Section CheckEnv.
     | TypeError e => EnvError Σ (IllFormedDecl id e)
     end.
 
-  Definition check_wf_type id Σ HΣ HΣ' G HG t
+  Definition check_wf_type kn Σ HΣ HΣ' G HG t
     : EnvCheck (∑ u, ∥ Σ;;; [] |- t : tSort u ∥)
-    := wrap_error Σ id (@infer_type _ Σ HΣ (@infer _ Σ HΣ HΣ' G HG) [] sq_wfl_nil t).
+    := wrap_error Σ (string_of_kername  kn) (@infer_type _ Σ HΣ (@infer _ Σ HΣ HΣ' G HG) [] sq_wfl_nil t).
 
-  Definition check_wf_judgement id Σ HΣ HΣ' G HG t ty
+  Definition check_wf_judgement kn Σ HΣ HΣ' G HG t ty
     : EnvCheck (∥ Σ;;; [] |- t : ty ∥)
-    := wrap_error Σ id (@check _ Σ HΣ HΣ' G HG [] sq_wfl_nil t ty).
+    := wrap_error Σ (string_of_kername kn) (@check _ Σ HΣ HΣ' G HG [] sq_wfl_nil t ty).
 
   Definition infer_term Σ HΣ HΣ' G HG t :=
     wrap_error Σ "toplevel term" (@infer _ Σ HΣ HΣ' G HG [] sq_wfl_nil t).
@@ -1290,7 +1291,7 @@ Section CheckEnv.
     | g :: env =>
       p <- check_fresh id env;;
       match eq_constant id g.1 with
-      | true => EnvError (empty_ext env) (AlreadyDeclared id)
+      | true => EnvError (empty_ext env) (AlreadyDeclared (string_of_kername id))
       | false => ret _
       end
     end.
@@ -1373,16 +1374,17 @@ Section CheckEnv.
 
 
   Program Definition check_wf_decl (Σ : global_env_ext) HΣ HΣ' G HG
-             id (d : global_decl)
-    : EnvCheck (∥ on_global_decl (lift_typing typing) Σ id d ∥) :=
+             kn (d : global_decl)
+    : EnvCheck (∥ on_global_decl (lift_typing typing) Σ kn d ∥) :=
     match d with
     | ConstantDecl cst =>
       match cst.(cst_body) with
-      | Some term => check_wf_judgement id Σ HΣ HΣ' G HG term cst.(cst_type) ;; ret _
-      | None => check_wf_type id Σ HΣ HΣ' G HG cst.(cst_type) ;; ret _
+      | Some term => check_wf_judgement kn Σ HΣ HΣ' G HG term cst.(cst_type) ;; ret _
+      | None => check_wf_type kn Σ HΣ HΣ' G HG cst.(cst_type) ;; ret _
       end
     | InductiveDecl mdecl =>
-      X1 <- monad_Alli (check_one_ind_body Σ HΣ HΣ' G HG id mdecl) _ _ ;;
+      X1 <- monad_Alli (check_one_ind_body Σ HΣ HΣ' G HG kn mdecl) _ _ ;;
+      let id := string_of_kername kn in
       X2 <- wrap_error Σ id (check_context HΣ HΣ' G HG (ind_params mdecl)) ;;
       X3 <- wrap_error Σ id (check_eq_nat (context_assumptions (ind_params mdecl))
                                        (ind_npars mdecl)
@@ -1517,7 +1519,7 @@ Section CheckEnv.
         G <- check_wf_env Σ ;;
         check_fresh d.1 Σ ;;
         let udecl := universes_decl_of_decl d.2 in
-        uctx <- check_udecl d.1 Σ _ G.π1 (proj1 G.π2) udecl ;;
+        uctx <- check_udecl (string_of_kername d.1) Σ _ G.π1 (proj1 G.π2) udecl ;;
         let G' := add_uctx uctx.π1 G.π1 in
         check_wf_decl (Σ, udecl) _ _ G' _ d.1 d.2 ;;
         match udecl with

@@ -456,7 +456,6 @@ Proof.
     eapply All2_nth_error_Some in a as hh ; try eassumption.
     destruct hh as [d' [e' [[? ?] erarg]]].
     unfold is_constructor in H0.
-    destruct (isLambda (dbody d)) eqn:isl; noconf H2.
     case_eq (nth_error args (rarg d)) ;
       try (intros bot ; rewrite bot in H0 ; discriminate H0).
     intros a' ea.
@@ -465,8 +464,7 @@ Proof.
     destruct hh as [a'' [ea' ?]].
     eexists. split.
     + eapply red_fix.
-      * unfold unfold_fix. rewrite e'.
-        erewrite isLambda_eq_term_l; eauto.
+      * unfold unfold_fix. rewrite e'; eauto.
       * unfold is_constructor. rewrite <- erarg. rewrite ea'.
         eapply isConstruct_app_eq_term_l ; eassumption.
     + eapply eq_term_upto_univ_mkApps.
@@ -1487,7 +1485,8 @@ Section PredRed.
       transitivity (mkApps (tFix mfix1 idx) args1).
       eapply red_mkApps. eapply red_fix_congr. red in X3. solve_all. eapply a.
       solve_all.
-      eapply red_step. econstructor; eauto. eauto.
+      eapply red_step. econstructor; eauto. 2:eauto.
+      eapply (is_constructor_pred1 Σ). eapply (All2_impl X4); intuition eauto. auto.
 
     - transitivity (tCase ip p1 (mkApps (tCoFix mfix1 idx) args1) brs1).
       eapply red_case; eauto.
@@ -1983,7 +1982,7 @@ End AbstractConfluence.
 
 Unset Universe Minimization ToSet.
 
-Lemma red_pred {cf:checker_flags} {Σ Γ t u} : wf Σ -> clos_refl_trans (red1 Σ Γ) t u -> clos_refl_trans (pred1 Σ Γ Γ) t u.
+Lemma red_pred {cf:checker_flags} {Σ : global_env} {Γ t u} : wf Σ -> clos_refl_trans (red1 Σ Γ) t u -> clos_refl_trans (pred1 Σ Γ Γ) t u.
 Proof.
   intros wfΣ. eapply clos_rt_monotone.
   intros x y H.
@@ -1992,7 +1991,7 @@ Qed.
 
 Section RedConfluence.
   Context {cf : checker_flags}.
-  Context {Σ} (wfΣ : wf Σ).
+  Context {Σ : global_env} (wfΣ : wf Σ).
 
   Instance pred1_refl Γ : Reflexive (pred1 Σ Γ Γ).
   Proof. red; apply pred1_refl. Qed.
@@ -2009,7 +2008,7 @@ Section RedConfluence.
   Proof.
     move/(red1_pred1 wfΣ) => tu.
     move/(red1_pred1 wfΣ) => tv.
-    eapply confluence in tu; eauto.
+    eapply pred1_diamond in tu; eauto.
     destruct tu as [redl redr].
     eapply pred1_red in redl; auto.
     eapply pred1_red in redr; auto.
@@ -2019,7 +2018,7 @@ Section RedConfluence.
   Lemma diamond_pred1_rel : diamond pred1_rel.
   Proof.
     move=> t u v tu tv.
-    destruct (confluence _ _ _ _ _ _ _ wfΣ tu tv).
+    destruct (pred1_diamond wfΣ tu tv).
     eexists (rho_ctx Σ (fst t), rho Σ (rho_ctx Σ (fst t)) (snd t)).
     split; auto.
   Qed.

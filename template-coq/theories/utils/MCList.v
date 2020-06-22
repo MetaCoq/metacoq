@@ -1,6 +1,10 @@
 From Coq Require Import Bool Arith Lia SetoidList.
+From MetaCoq Require Import MCPrelude.
 
 Export ListNotations.
+
+Arguments firstn : simpl nomatch.
+Arguments skipn : simpl nomatch.
 
 Notation "#| l |" := (List.length l) (at level 0, l at level 99, format "#| l |").
 Arguments nil {_}, _.
@@ -293,6 +297,15 @@ Proof.
   destruct l, n; simpl; congruence.
 Qed.
 
+Lemma nth_error_Some' {A} l n : (∑ x : A, nth_error l n = Some x) <~> n < length l.
+Proof.
+  revert n. induction l; destruct n; simpl.
+  - split; [now destruct 1 | intros H'; elimtype False; inversion H'].
+  - split; [now destruct 1 | intros H'; elimtype False; inversion H'].
+  - split; now intuition eauto with arith.
+  - destruct (IHl n); split; intros; auto with arith.
+Qed.
+
 Lemma nth_error_spec {A} (l : list A) (n : nat) : nth_error_Spec l n (nth_error l n).
 Proof.
   destruct nth_error eqn:Heq.
@@ -516,6 +529,87 @@ Proof.
   induction l1 in l2 |- *.
   - reflexivity.
   - simpl. eauto.
+Qed.
+
+Lemma rev_map_spec {A B} (f : A -> B) (l : list A) : 
+  rev_map f l = List.rev (map f l).
+Proof.
+  unfold rev_map.
+  rewrite -(app_nil_r (List.rev (map f l))).
+  generalize (@nil B).
+  induction l; simpl; auto. intros l0.
+  rewrite IHl. now rewrite -app_assoc.
+Qed.
+
+Lemma skipn_0 {A} (l : list A) : skipn 0 l = l.
+Proof. reflexivity. Qed.
+
+Lemma skipn_0_eq {A} (l : list A) n : n = 0 -> skipn n l = l.
+Proof. intros ->; apply skipn_0. Qed.
+
+Lemma skipn_n_Sn {A} n s (x : A) xs : skipn n s = x :: xs -> skipn (S n) s = xs.
+Proof.
+  induction n in s, x, xs |- *.
+  - unfold skipn. now intros ->.
+  - destruct s; simpl. intros H; discriminate. apply IHn.
+Qed. 
+
+Lemma skipn_all {A} (l : list A) : skipn #|l| l = [].
+Proof.
+  induction l; simpl; auto.
+Qed.
+
+Lemma skipn_app_le {A} n (l l' : list A) : n <= #|l| -> skipn n (l ++ l') = skipn n l ++ l'.
+Proof.
+  induction l in n, l' |- *; simpl; auto.
+  intros Hn. destruct n; try lia. reflexivity.
+  intros Hn. destruct n. reflexivity.
+  rewrite !skipn_S. apply IHl. lia.
+Qed.
+
+Lemma skipn_mapi_rec {A B} n (f : nat -> A -> B) k (l : list A) : 
+  skipn n (mapi_rec f l k) = 
+  mapi_rec f (skipn n l) (n + k).
+Proof.
+  induction n in f, l, k |- *.
+  - now rewrite !skipn_0.
+  - destruct l.
+    * reflexivity.
+    * simpl. rewrite IHn.
+      now rewrite Nat.add_succ_r.
+Qed.
+
+Lemma firstn_ge {A} (l : list A) n : #|l| <= n -> firstn n l = l.
+Proof.
+  induction l in n |- *; simpl; intros; auto. now rewrite firstn_nil.
+  destruct n; simpl. lia. rewrite IHl; auto. lia.
+Qed.
+
+Lemma firstn_0 {A} (l : list A) n : n = 0 -> firstn n l = [].
+Proof.
+  intros ->. reflexivity.
+Qed.
+
+Lemma skipn_firstn_skipn {A} (l : list A) n : skipn n (firstn (S n) l) ++ skipn (S n) l = skipn n l.
+Proof.
+  induction l in n |- *; simpl; auto. now rewrite app_nil_r.
+  destruct n=> /=; auto.
+Qed.
+
+Lemma firstn_firstn_firstn {A} (l : list A) n : firstn n (firstn (S n) l) = firstn n l.
+Proof.
+  induction l in n |- *; simpl; auto.
+  destruct n=> /=; auto. now rewrite IHl.
+Qed.
+
+Lemma skipn_eq_cons {A} n (l : list A) hd tl : skipn n l = hd :: tl ->
+  (nth_error l n = Some hd) /\ (skipn (S n) l = tl).
+Proof.
+  induction n in l, hd, tl |- *.
+  - rewrite skipn_0 => ->. now simpl.
+  - destruct l as [|hd' tl'].
+    * rewrite skipn_nil. discriminate.
+    * simpl. apply IHn.
 Qed.
 
 Lemma rev_app :
@@ -791,7 +885,7 @@ Qed.
 Lemma firstn_add {A} x y (args : list A) : firstn (x + y) args = firstn x args ++ firstn y (skipn x args).
 Proof.
   induction x in y, args |- *. simpl. reflexivity.
-  simpl. destruct args. simpl.
+  simpl. destruct args; simpl.
   now rewrite firstn_nil.
   rewrite IHx. now rewrite app_comm_cons.
 Qed.

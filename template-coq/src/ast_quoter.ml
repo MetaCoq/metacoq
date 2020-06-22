@@ -1,14 +1,9 @@
-(*i camlp4deps: "parsing/grammar.cma" i*)
-(*i camlp4use: "pa_extend.cmp" i*)
-
-open Constr
+open Names
 open BasicAst
 open Ast0
-open TemplateEnvironment
-open Quoted
-open Quoter
+open Tm_util
 
-module TemplateASTQuoter =
+module ExtractedASTBaseQuoter =
 struct
   type t = Ast0.term
   type quoted_ident = char list
@@ -17,7 +12,7 @@ struct
   type quoted_name = name
   type quoted_sort = Universes0.Universe.t
   type quoted_cast_kind = cast_kind
-  type quoted_kernel_name = char list
+  type quoted_kernel_name = BasicAst.kername
   type quoted_inductive = inductive
   type quoted_proj = projection
   type quoted_global_reference = global_reference
@@ -50,8 +45,6 @@ struct
   type quoted_global_decl = global_decl
   type quoted_global_env = global_env
   type quoted_program = program
-
-  open Names
 
   let quote_ident id =
     string_to_list (Id.to_string id)
@@ -90,12 +83,27 @@ struct
     | Sorts.InSProp -> Universes0.InProp (* FIXME "SProp sort not supported" *)
 
   let quote_cast_kind = function
-    | DEFAULTcast -> Cast
-    | REVERTcast -> RevertCast
-    | NATIVEcast -> NativeCast
-    | VMcast -> VmCast
+    | Constr.DEFAULTcast -> Cast
+    | Constr.REVERTcast -> RevertCast
+    | Constr.NATIVEcast -> NativeCast
+    | Constr.VMcast -> VmCast
 
-  let quote_kn kn = string_to_list (KerName.to_string kn)
+
+  let quote_dirpath (dp : DirPath.t) : BasicAst.dirpath =
+    let l = DirPath.repr dp in
+    List.map quote_ident l
+
+  let rec quote_modpath (mp : ModPath.t) : BasicAst.modpath =
+    match mp with
+    | MPfile dp -> MPfile (quote_dirpath dp)
+    | MPbound mbid -> let (i, id, dp) = MBId.repr mbid in
+      MPbound (quote_dirpath dp, quote_ident id, quote_int i)
+    | MPdot (mp, id) -> MPdot (quote_modpath mp, quote_ident (Label.to_id id))
+
+  let quote_kn (kn : KerName.t) : BasicAst.kername =
+    (quote_modpath (KerName.modpath kn),
+     quote_ident (Label.to_id (KerName.label kn)))
+
   let quote_inductive (kn, i) = { inductive_mind = kn ; inductive_ind = i }
   let quote_proj ind p a = ((ind,p),a)
 
@@ -273,94 +281,28 @@ struct
 
 
 
-  let unquote_ident (qi: quoted_ident) : Id.t =
-    let s = list_to_string qi in
-    Id.of_string s
 
-  let unquote_name (q: quoted_name) : Name.t =
-    match q with
-    | Coq_nAnon -> Anonymous
-    | Coq_nNamed n -> Name (unquote_ident n)
-
-  let rec unquote_int (q: quoted_int) : int =
-    match q with
-    | Datatypes.O -> 0
-    | Datatypes.S x -> succ (unquote_int x)
-
-  let unquote_bool (q : quoted_bool) : bool = q
-
-  (* val unquote_sort : quoted_sort -> Sorts.t *)
-  (* val unquote_sort_family : quoted_sort_family -> Sorts.family *)
-  let unquote_cast_kind (q : quoted_cast_kind) : Constr.cast_kind =
-    match q with
-    | VmCast -> VMcast
-    | NativeCast -> NATIVEcast
-    | Cast -> DEFAULTcast
-    | RevertCast -> REVERTcast
-
-  let unquote_kn (q: quoted_kernel_name) : Libnames.qualid =
-    let s = list_to_string q in
-    Libnames.qualid_of_string s
-
-  let unquote_inductive (q: quoted_inductive) : Names.inductive =
-    let { inductive_mind = na; inductive_ind = i } = q in
-    let comps = CString.split_on_char '.' (list_to_string na) in
-    let comps = List.map Id.of_string comps in
-    let id, dp = CList.sep_last comps in
-    let dp = ModPath.MPfile (DirPath.make (List.rev dp)) in
-    let mind = Names.MutInd.make2 dp (Label.of_id id) in
-    (mind, unquote_int i)
-
-  (*val unquote_univ_instance :  quoted_univ_instance -> Univ.Instance.t *)
-  let unquote_proj (q : quoted_proj) : (quoted_inductive * quoted_int * quoted_int) =
-    let (ind, ps), idx = q in
-    (ind, ps, idx)
-
-  let unquote_level (trm : Universes0.Level.t) : Univ.Level.t =
-    match trm with
-    | Universes0.Level.Coq_lProp -> Univ.Level.prop
-    | Universes0.Level.Coq_lSet -> Univ.Level.set
-    | Universes0.Level.Level s ->
-      let s = list_to_string s in
-      let comps = CString.split_on_char '.' s in
-      let last, dp = CList.sep_last comps in
-      let dp = DirPath.make (List.map Id.of_string comps) in
-      let idx = int_of_string last in
-      Univ.Level.make (Univ.Level.UGlobal.make dp idx)
-    | Universes0.Level.Var n -> Univ.Level.var (unquote_int n)
-
-  let unquote_level_expr (trm : Universes0.Level.t * quoted_bool) : Univ.Universe.t =
-    let l = unquote_level (fst trm) in
-    let u = Univ.Universe.make l in
-    if snd trm && not (Univ.Level.is_prop l) then Univ.Universe.super u
-    else u
-
-  let unquote_universe evd (trm : Universes0.Universe.t) =
-    let l = Universes0.Universe.to_kernel_repr trm in
-    let l = List.map unquote_level_expr l in
-    evd, List.fold_left Univ.Universe.sup (List.hd l) (List.tl l)
-
-  let quote_global_reference : Names.GlobRef.t -> quoted_global_reference = function
-    | Names.GlobRef.VarRef _ -> CErrors.user_err (Pp.str "VarRef unsupported")
-    | Names.GlobRef.ConstRef c ->
-      let kn = quote_kn (Names.Constant.canonical c) in
-      BasicAst.ConstRef kn
-    | Names.GlobRef.IndRef (i, n) ->
-      let kn = quote_kn (Names.MutInd.canonical i) in
+  let quote_global_reference : GlobRef.t -> quoted_global_reference = function
+    | GlobRef.VarRef id -> VarRef (quote_ident id)
+    | GlobRef.ConstRef c ->
+      let kn = quote_kn (Constant.canonical c) in
+      ConstRef kn
+    | GlobRef.IndRef (i, n) ->
+      let kn = quote_kn (MutInd.canonical i) in
       let n = quote_int n in
-      BasicAst.IndRef (quote_inductive (kn,n))
-    | Names.GlobRef.ConstructRef ((i, n), k) ->
-       let kn = quote_kn (Names.MutInd.canonical i) in
+      IndRef (quote_inductive (kn,n))
+    | GlobRef.ConstructRef ((i, n), k) ->
+       let kn = quote_kn (MutInd.canonical i) in
        let n = quote_int n in
        let k = (quote_int (k - 1)) in
-       BasicAst.ConstructRef (quote_inductive (kn,n), k)
+       ConstructRef (quote_inductive (kn,n), k)
 
   let mkPolymorphic_entry names c = Universes0.Polymorphic_entry (names, c)
   let mkMonomorphic_entry c = Universes0.Monomorphic_entry c
   
 end
 
-module TemplateASTReifier = Reify(TemplateASTQuoter)
+module ExtractedASTQuoter = Quoter.Quoter(ExtractedASTBaseQuoter)
 
-include TemplateASTQuoter
-include TemplateASTReifier
+include ExtractedASTBaseQuoter
+include ExtractedASTQuoter

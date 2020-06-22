@@ -429,16 +429,20 @@ Next Obligation.
 
        eapply cumul_prop1 in c; eauto.
 
-       destruct (invert_cumul_sort_r _ _ _ _ c0) as (? & ? & ?).
-       destruct (invert_cumul_sort_r _ _ _ _ c1) as (? & ? & ?).
-       eapply red_confluence in r as (? & ? & ?); eauto.
+       { destruct (invert_cumul_sort_r _ _ _ _ c0) as (? & ? & ?).
+         destruct (invert_cumul_sort_r _ _ _ _ c1) as (? & ? & ?).
+         eapply red_confluence in r as (? & ? & ?); eauto.
 
-       eapply invert_red_sort in r.
-       eapply invert_red_sort in r1. subst. inv r1.
+         eapply invert_red_sort in r.
+         eapply invert_red_sort in r1. subst. inv r1.
 
-       eapply leq_universe_prop in l0 as []; cbn; eauto.
-       eapply leq_universe_prop in l as []; cbn; eauto.
-       reflexivity.
+         eapply leq_universe_prop in l0; auto.
+         eapply leq_universe_prop_no_prop_sub_type in l; auto.
+         intuition eauto. }
+
+       2:reflexivity. now right; exists x0.
+       now apply PCUICValidity.validity in X1.
+       now apply PCUICValidity.validity in t2.
   - sq. econstructor. eauto.
 Qed.
 
@@ -613,7 +617,7 @@ Proof.
     eapply isArity_subst_instance.
     eapply isArity_ind_type; eauto.
   - econstructor.
-    eapply elim_restriction_works. eauto. eauto. eauto. intros.
+    eapply elim_restriction_works. eauto. eauto. eauto. eauto. intros.
     eapply f, isErasable_Proof. eauto. eauto.
 
     pose proof (Prelim.monad_map_All2 _ _ _ brs a2 E2).
@@ -643,7 +647,7 @@ Proof.
 
     cbn. repeat split; eauto.
     eapply p. eauto.
-  - clear E. inv t; discriminate.
+  - clear E. todo "erasure cofix"%string.
 Qed.
 Print Assumptions erases_erase.
 

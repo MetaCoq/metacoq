@@ -1,3 +1,5 @@
+.PHONY: all bugd clean mrproper plugin-demo
+
 all: bugs plugin-demo
 
 bugs: Makefile.coq

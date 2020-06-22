@@ -147,6 +147,24 @@ Section Alpha.
     - f_equal. all: auto.
   Qed.
 
+  Lemma decompose_app_upto {Re Rle x y hd tl} : 
+    eq_term_upto_univ Re Rle x y ->
+    decompose_app x = (hd, tl) ->
+    ∑ hd' tl', (y = mkApps hd' tl') *
+    eq_term_upto_univ Re Rle hd hd' *
+    negb (isApp hd') *
+    All2 (eq_term_upto_univ Re Re) tl tl'.
+  Proof.
+    intros eq dapp.
+    pose proof (decompose_app_notApp _ _ _ dapp).
+    apply decompose_app_inv in dapp.
+    subst x.
+    eapply eq_term_upto_univ_mkApps_l_inv in eq as [u' [l' [[eqh eqtl] ->]]].
+    eexists _, _; intuition eauto.
+    revert H.
+    inv eqh; simpl in *; try discriminate; auto.
+  Qed.
+
 Lemma All2_trans' {A B C}
       (P : A -> B -> Type) (Q : B -> C -> Type) (R : A -> C -> Type)
       (H : forall x y z, P x y × Q y z -> R x z) {l1 l2 l3}
@@ -157,6 +175,91 @@ Proof.
   - inversion 1; subst. constructor; eauto.
 Qed.
 
+  Lemma decompose_prod_assum_upto_names' ctx ctx' x y : 
+    eq_context_upto eq ctx ctx' -> upto_names' x y -> 
+    let (ctx0, x0) := decompose_prod_assum ctx x in 
+    let (ctx1, x1) := decompose_prod_assum ctx' y in
+    eq_context_upto eq ctx0 ctx1 * upto_names' x0 x1.
+  Proof.
+    induction x in ctx, ctx', y |- *; intros eqctx eqt; inv eqt; simpl; 
+      try split; auto; try constructor; auto.
+    - specialize (IHx2 (ctx,, vass na x1) (ctx',,vass na' a') b').
+      apply IHx2; auto. constructor; auto.
+    - apply IHx3; auto. constructor; auto. 
+  Qed.
+
+  Lemma destInd_spec t : 
+    match destInd t with
+    | Some (ind, u) => t = tInd ind u
+    | None => forall ind u, t <> tInd ind u
+    end.
+  Proof.
+    destruct t; congruence.
+  Qed.
+
+  Lemma upto_names_destInd Re Rle t u : 
+    eq_term_upto_univ Re Rle t u ->
+    rel_option (fun '(ind, u) '(ind', u') => (ind = ind') * R_universe_instance Re u u')%type (destInd t) (destInd u).
+  Proof.
+    induction 1; simpl; constructor; try congruence.
+    split; auto.
+  Qed.
+
+  Lemma upto_names_check_fix mfix mfix' :
+     All2
+      (fun x y : def term =>
+        (upto_names' (dtype x) (dtype y) × upto_names' (dbody x) (dbody y))
+        × rarg x = rarg y) mfix mfix' ->
+      map check_one_fix mfix = map check_one_fix mfix'.
+  Proof.
+    induction 1; simpl; auto.
+    rewrite IHX. f_equal.
+    unfold check_one_fix.
+    destruct x as [name ty body rarg].
+    destruct y as [name' ty' body' rarg'].
+    simpl in r. destruct r as [[eqty eqb] eqrarg].
+    pose proof (decompose_prod_assum_upto_names' [] [] ty ty' ltac:(constructor) eqty).
+    do 2 destruct decompose_prod_assum.
+    destruct X0 as [eqctx eqt].
+    apply (eq_context_upto_smash_context [] []) in eqctx; try constructor.
+    apply eq_context_upto_rev' in eqctx.
+    eapply (eq_context_upto_nth_error _ _ _ rarg) in eqctx.
+    subst rarg'.
+    destruct (nth_error (List.rev (smash_context [] c)) rarg).
+    inv eqctx. destruct X0.
+    destruct (decompose_app) eqn:eqdec.
+    destruct (decompose_app_upto e eqdec) as [hd' [tl' [[[eq eqhd] napp] eqtl]]].
+    rewrite eq. rewrite decompose_app_mkApps; auto.
+    apply upto_names_destInd in eqhd.
+    inv eqhd; auto.
+    destruct a as [ind u], b0 as [ind' u']; simpl in *; auto.
+    destruct X0 as [-> _]; auto.
+    now inv eqctx.
+  Qed.
+
+  Lemma upto_names_check_cofix mfix mfix' :
+    All2 (fun x y : def term =>
+     (upto_names' (dtype x) (dtype y) × upto_names' (dbody x) (dbody y))
+     × rarg x = rarg y) mfix mfix' ->
+   map check_one_cofix mfix = map check_one_cofix mfix'.
+  Proof.
+    induction 1; simpl; auto.
+    rewrite IHX. f_equal.
+    unfold check_one_cofix. clear X IHX.
+    destruct x as [name ty body rarg].
+    destruct y as [name' ty' body' rarg'].
+    simpl in r. destruct r as [[eqty eqb] <-].
+    pose proof (decompose_prod_assum_upto_names' [] [] ty ty' ltac:(constructor) eqty).
+    do 2 destruct decompose_prod_assum.
+    destruct X as [_ eqt].
+    destruct (decompose_app) eqn:eqdec.
+    destruct (decompose_app_upto eqt eqdec) as [hd' [tl' [[[eq eqhd] napp] eqtl]]].
+    rewrite eq. rewrite decompose_app_mkApps; auto.
+    apply upto_names_destInd in eqhd.
+    inv eqhd; auto.
+    destruct a as [ind u], b as [ind' u']; simpl in *; auto.
+    destruct X as [-> _]; auto.
+  Qed.
 
   Lemma typing_alpha :
     forall Σ Γ u v A,
@@ -277,7 +380,7 @@ Qed.
       subst.
       econstructor ; eauto.
     - intros ind u npar p c brs args mdecl idecl isdecl X X0 H pars ps pty
-             Hcpt X1 X2 H1 X3 X4 btys Hbbt Hbrs v e; invs e.
+             Hcpt X1 X2 H1 H2 X3 X4 btys Hbbt Hbrs v e; invs e.
       (* intros ind u npar p c brs args mdecl idecl isdecl X X0 H pars pty X1 *)
       (*        indctx pctx ps btys htc H1 H2 ihp hc ihc ihbrs v e. *)
       (* eapply types_of_case_eq_term in htc as htc' ; eauto. *)
@@ -331,7 +434,7 @@ Qed.
         * constructor ; auto.
           eapply All2_same.
           intro. eapply eq_term_upto_univ_refl ; auto.
-    - intros mfix n decl types hguard hnth hwf ihmfix ihmfixb v e; invs e.
+    - intros mfix n decl types hguard hnth hwf ihmfix ihmfixb wffix v e; invs e.
       eapply All2_nth_error_Some in hnth as hnth' ; eauto.
       destruct hnth' as [decl' [hnth' hh]].
       destruct hh as [[ety ebo] era].
@@ -363,7 +466,7 @@ Qed.
       { now rewrite !fix_context_length, (All2_length _ _ X). } 
       eapply type_Cumul.
       + econstructor.
-        * eapply fix_guard_eq_term ; eauto.
+        * eapply (fix_guard_eq_term _ _ n); eauto.
           constructor. assumption.
         * eassumption.
         * assumption.
@@ -389,7 +492,11 @@ Qed.
             *** eapply leq_universe_refl.
           ** eapply isLambda_eq_term_l.
             --- eassumption.
-            --- intuition eauto. 
+            --- intuition eauto.
+        * revert wffix.
+          unfold wf_fixpoint.
+          enough (map check_one_fix mfix = map check_one_fix mfix') as ->; auto.
+          now apply upto_names_check_fix.
         + eapply All_nth_error in ihmfix as [s [Hs _]]; eauto.
         + apply cumul_refl. eapply eq_term_upto_univ_impl.
           3:intuition eauto. 3:symmetry; eauto.
@@ -398,7 +505,7 @@ Qed.
           * eapply leq_universe_refl.
 
 
-  - intros mfix n decl types hnth hwf ihmfix ihmfixb allow_cofix v e; invs e.
+  - intros mfix n decl types guard hnth hwf ihmfix ihmfixb wfcofix v e; invs e.
     eapply All2_nth_error_Some in hnth as hnth' ; eauto.
     destruct hnth' as [decl' [hnth' hh]].
     destruct hh as [[ety ebo] era].
@@ -430,9 +537,10 @@ Qed.
     { now rewrite !fix_context_length, (All2_length _ _ X). } 
     eapply type_Cumul.
     + econstructor.
+      * eapply (cofix_guard_eq_term _ _ n) ; eauto.
+        constructor. assumption.
       * eassumption.
       * eassumption.
-      * now eapply All_local_env_app in hwf' as [? _]. 
       * eapply (All2_All_mix_left ihmfix) in X.
         clear -X.
         induction X; constructor; simpl; auto.
@@ -453,6 +561,9 @@ Qed.
         all: intros ? ? [].
         *** eapply eq_universe_refl.
         *** eapply leq_universe_refl.
+      * revert wfcofix; unfold wf_cofixpoint.
+        enough (map check_one_cofix mfix = map check_one_cofix mfix') as ->; auto.
+        now apply upto_names_check_cofix.
       + eapply All_nth_error in ihmfix as [s [Hs _]]; eauto.
       + apply cumul_refl. eapply eq_term_upto_univ_impl.
         3:intuition eauto. 3:symmetry; eauto.
@@ -470,7 +581,6 @@ Qed.
     - rename wfΣ into Γ, wfΓ into v, Γ into u.
       intros A hΣ hu e.
       eapply tm ; eauto.
-    Unshelve. exact 0.
   Qed.
 
   Local Ltac inv H := inversion H; subst; clear H.

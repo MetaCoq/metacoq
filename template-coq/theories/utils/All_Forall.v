@@ -1,5 +1,5 @@
 From Coq Require Import List Bool Arith ssreflect Lia.
-From MetaCoq.Template Require Import MCList MCRelations MCProd MCOption.
+From MetaCoq.Template Require Import MCPrelude MCList MCRelations MCProd MCOption.
 
 Import ListNotations.
 
@@ -420,6 +420,44 @@ Proof.
   eapply Alli_shift. eapply Alli_impl. eauto.
   simpl; intros.
   now replace (pred (#|l| + 1) - S n) with (pred #|l| - n) by lia.
+Qed.
+
+
+Lemma Alli_app_inv {A} {P} {l l' : list A} {n} : Alli P n l -> Alli P (n + #|l|) l' -> Alli P n (l ++ l').
+Proof.
+  induction 1; simpl; auto.  now rewrite Nat.add_0_r.
+  rewrite Nat.add_succ_r. simpl in IHX.
+  intros H; specialize (IHX H).
+  constructor; auto.
+Qed.
+
+Lemma Alli_rev_nth_error {A} (l : list A) n P x :
+  Alli P 0 (List.rev l) ->
+  nth_error l n = Some x ->
+  P (#|l| - S n) x.
+Proof.
+  induction l in x, n |- *; simpl.
+  { rewrite nth_error_nil; discriminate. }
+  move/Alli_app => [Alll Alla]. inv Alla. clear X0.
+  destruct n as [|n'].
+  - move=> [=] <-. rewrite List.rev_length Nat.add_0_r in X.
+    now rewrite Nat.sub_0_r.
+  - simpl. eauto.
+Qed.  
+
+Lemma Alli_shiftn {A} {P : nat -> A -> Type} k l n :
+  Alli (fun x => P (n + x)) k l -> Alli P (n + k) l.
+Proof.
+  induction 1; simpl; constructor; auto.
+  now rewrite Nat.add_succ_r in IHX.
+Qed.
+
+Lemma Alli_shiftn_inv {A} {P : nat -> A -> Type} k l n :
+  Alli P (n + k) l -> Alli (fun x => P (n + x)) k l.
+Proof.
+  induction l in n, k |- *; simpl; constructor; auto.
+  inv X; auto. inv X; auto. apply IHl.
+  now rewrite Nat.add_succ_r.
 Qed.
 
 Lemma Alli_All_mix {A} {P : nat -> A -> Type} (Q : A -> Type) k l :
@@ -1497,6 +1535,43 @@ Proof.
   exists []; repeat constructor.
   destruct (IHAll _ _ X0 X2) as [? [? ?]]. destruct (p _ _ X X1) as [? [? ?]].
   exists (x1 :: x0). split; constructor; intuition auto.
+Qed.
+
+Lemma All2_nth_error_Some_right {A} {P : A -> A -> Type} {l l'} n t :
+  All2 P l l' ->
+  nth_error l' n = Some t ->
+  { t' : A & (nth_error l n = Some t') * P t' t}%type.
+Proof.
+  intros Hall. revert n.
+  induction Hall; destruct n; simpl; try congruence. intros [= ->]. exists x. intuition auto.
+  eauto.
+Qed.
+
+Lemma All2_mix {A} {P Q : A -> A -> Type} {l l'} :
+  All2 P l l' -> All2 Q l l' -> All2 (fun x y => (P x y * Q x y))%type l l'.
+Proof.
+  induction 1; intros HQ; inv HQ; constructor; eauto.
+Qed.
+
+Lemma All2_mix_inv {A} {P Q : A -> A -> Type} {l l'} :
+  All2 (fun x y => (P x y * Q x y))%type l l' ->
+  (All2 P l l' * All2 Q l l').
+Proof.
+  induction 1; split; constructor; intuition eauto.
+Qed.
+
+Lemma All2_map_left' {A B} (P : A -> A -> Type) l l' (f : B -> A) :
+  All2 (fun x y => P (f x) y) l l' -> All2 P (map f l) l'.
+Proof. intros. rewrite - (map_id l'). eapply All2_map; eauto. Qed.
+
+Lemma All2_map_right' {A B} (P : A -> A -> Type) l l' (f : B -> A) :
+  All2 P l (map f l') ->  All2 (fun x y => P x (f y)) l l'.
+Proof.
+  induction l in l' |- *. intros. inversion X. destruct l'; try discriminate.
+  constructor.
+  destruct l'; intros H; inversion H; try discriminate.
+  subst.
+  specialize (IHl _ X0). constructor; auto.
 Qed.
 
 Lemma All_forallb_map_spec {A B : Type} {P : A -> Type} {p : A -> bool}

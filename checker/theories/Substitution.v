@@ -14,6 +14,8 @@ Close Scope string_scope.
 
 Generalizable Variables Σ Γ t T.
 
+Derive Signature for Ast.wf.
+
 Definition subst_decl s k (d : context_decl) := map_decl (subst s k) d.
 
 Definition subst_context n k (Γ : context) : context :=
@@ -120,6 +122,24 @@ Proof.
   rewrite List.rev_app_distr.
   rewrite mapi_app. rewrite <- List.rev_app_distr. f_equal. f_equal.
   apply mapi_ext. intros. f_equal. rewrite List.rev_length. f_equal. lia.
+Qed.
+
+
+Lemma subst_decl_closed n k d : wf_decl d -> closed_decl k d -> subst_decl n k d = d.
+Proof.
+  case: d => na [body|] ty; rewrite /closed_decl /subst_decl /map_decl /wf_decl /= => [[wfb wfty]].
+  move/andP => [cb cty]. rewrite !subst_closedn //.
+  move=> cty; now rewrite !subst_closedn //.
+Qed.
+
+Lemma closed_ctx_subst n k ctx : All wf_decl ctx -> closed_ctx ctx = true -> subst_context n k ctx = ctx.
+Proof.
+  induction ctx in n, k |- *; auto.
+  unfold closed_ctx, id. intros wfctx. inv wfctx.
+  rewrite mapi_app forallb_app List.rev_length /= Nat.add_0_r.
+  move/andb_and => /= [Hctx /andb_and [Ha _]].
+  rewrite subst_context_snoc /snoc /= IHctx // subst_decl_closed //.
+  now apply: closed_decl_upwards.
 Qed.
 
 Lemma map_vass_map_def g l n k :
@@ -332,46 +352,48 @@ Qed.
 Definition subst_mutual_inductive_body n k m :=
   map_mutual_inductive_body (fun k' => subst n (k' + k)) m.
 
+(* Damnit we also need Ast.wf arguments in Template-coq... to use closedness *)  
 Lemma subst_declared_minductive {cf:checker_flags} Σ cst decl n k :
   wf Σ ->
   declared_minductive Σ cst decl ->
   subst_mutual_inductive_body n k decl = decl.
 Proof.
-  unfold declared_minductive.
-  intros.
-  eapply lookup_on_global_env in H; eauto.
-  destruct H as [Σ' [wfΣ' decl']].
-  red in decl'.
-  destruct decl. simpl in *. f_equal.
-  - eapply subst_wf_local; eauto.
-    eapply onParams in decl'. auto.
-  - apply onInductives in decl'.
-    revert decl'. generalize ind_bodies at 2 4 5.
-    intros.
-    eapply Alli_mapi_id in decl'. eauto.
-    clear decl'. intros.
-    destruct x; simpl in *.
-    destruct (decompose_prod_assum [] ind_type) eqn:Heq.
-    destruct (decompose_prod_assum [] (subst n k ind_type)) eqn:Heq'.
-    destruct X0. simpl in *.
-    assert (subst n k ind_type = ind_type).
-    destruct onArity as [s Hs].
-    eapply typed_subst; eauto. simpl; lia.
-    rewrite H in Heq'. rewrite Heq in Heq'. revert Heq'; intros [= <- <-].
-    f_equal; auto.
-    eapply All_map_id. eapply All2_All_left; tea.
-    intros [[x p] n'] y [cs [s Hty] Hargs _].
-    unfold on_pi2; cbn; f_equal; f_equal.
-    eapply typed_subst. 3:eapply Hty. eauto. simpl. lia.
-    destruct (eq_dec ind_projs []) as [Hp|Hp]; subst; auto.
-    specialize (onProjections Hp).
-    apply on_projs in onProjections.
-    apply (Alli_map_id onProjections).
-    intros n1 [x p]. unfold on_projection; simpl.
-    intros [s Hty].
-    unfold on_snd; f_equal; f_equal.
-    eapply typed_subst. 3:eapply Hty. eauto. simpl.
-    rewrite smash_context_length context_assumptions_fold. simpl; lia.
+  intros wfΣ Hdecl.
+  pose proof (on_declared_minductive wfΣ Hdecl). apply onNpars in X.
+  unshelve epose proof (declared_inductive_closed (Σ:=(empty_ext Σ)) _ Hdecl). auto.
+  unshelve epose proof (declared_minductive_wf (Σ:=(empty_ext Σ)) _ Hdecl) as [wfpars wfbodies]. auto.
+  move: H.
+  rewrite /closed_inductive_decl /lift_mutual_inductive_body.
+  destruct decl; simpl in *.
+  move/andP => [clpar clbodies]. f_equal.
+  rewrite [fold_context _ _]closed_ctx_subst; try easy. 
+  eapply Forall_All; eauto.
+  eapply forallb_All in clbodies. apply Forall_All in wfbodies.
+  eapply (All_mix wfbodies) in clbodies. clear wfbodies.
+  eapply Alli_mapi_id.
+  eapply (All_Alli clbodies). intros i oib [wfb clb]; eauto.
+  2:{ intros. eapply X0. }
+  simpl.
+  move: clb. rewrite /closed_inductive_body.
+  destruct oib; simpl. move=> /andP[/andP [ci ct] cp].
+  destruct wfb; simpl in *.
+  f_equal. rewrite subst_closedn; eauto.
+  eapply closed_upwards; eauto; lia.
+  eapply All_map_id. eapply forallb_All in ct.
+  eapply Forall_All in wf_ind_ctors.
+  eapply (All_mix wf_ind_ctors) in ct.
+  eapply (All_impl ct). intros x [wf cl].
+  destruct x as [[id ty] arg]; unfold on_pi2; simpl; repeat f_equal.
+  apply subst_closedn. apply wf. unfold cdecl_type in cl; simpl in cl.
+  eapply closed_upwards; eauto; lia.
+  simpl in X. rewrite -X in cp.
+  eapply forallb_All in cp.
+  eapply Forall_All in wf_ind_projs. apply (All_mix wf_ind_projs) in cp.
+  eapply All_map_id; eauto.
+  eapply (All_impl cp); firstorder auto.
+  destruct x; unfold on_snd; simpl; f_equal.
+  apply subst_closedn; auto. rewrite context_assumptions_fold.
+  eapply closed_upwards; eauto; lia.
 Qed.
 
 Lemma subst_declared_inductive `{checker_flags} Σ ind mdecl idecl n k :
@@ -448,76 +470,17 @@ Proof.
     + eauto.
 Qed.
 
-(* TODO MOVE *)
-Derive Signature for Ast.wf.
-
-(* TODO MOVE *)
-Lemma wf_subst_instance_constr_inv :
-  forall u c,
-    Ast.wf (subst_instance_constr u c) ->
-    Ast.wf c.
-Proof.
-  intros u c h.
-  induction c in c, h |- * using term_forall_list_ind.
-  all: simpl in *.
-  all: dependent destruction h.
-  all: try solve [ constructor ; auto using Forall_map_inv ].
-  - constructor. eapply Forall_map_inv in H0.
-    eapply Forall_impl'. all: eauto. apply H.
-  - constructor.
-    + destruct c. all: simpl in *. all: try reflexivity.
-      congruence.
-    + destruct l. 2: discriminate. assumption.
-    + eapply IHc. assumption.
-    + eapply Forall_map_inv in H2.
-      eapply Forall_impl'. all: eauto. apply H.
-  - constructor. all: auto.
-    eapply Forall_map_inv in H.
-    eapply Forall_impl'; tea.
-    apply All_Forall, X.
-  - constructor. eapply Forall_map_inv in H.
-    eapply Forall_impl'. 2: eassumption.
-    unfold compose. unfold map_def. simpl.
-    eapply Forall_impl. 1: eapply All_Forall, X. simpl.
-    intros [na ty bo ra] h1 h2. simpl in *.
-    intuition eauto.
-    destruct bo. all: try discriminate.
-    reflexivity.
-  - constructor. eapply Forall_map_inv in H.
-    eapply Forall_impl'. 2: eassumption.
-    unfold compose. unfold map_def. simpl.
-    eapply Forall_impl. 1: eapply All_Forall, X. simpl.
-    intros [na ty bo ra] h1 h2. simpl in *.
-    intuition eauto.
-Qed.
-
 Lemma subst_declared_projection {cf:checker_flags} Σ c mdecl idecl pdecl n k :
   wf Σ ->
   declared_projection Σ mdecl idecl c pdecl ->
   on_snd (subst n (S (ind_npars mdecl + k))) pdecl = pdecl.
 Proof.
   intros wfΣ Hd.
-  eapply declared_projection_wf with (u := []) in Hd as w.
+  eapply declared_projection_wf in Hd as w.
   2: eapply wf_Forall_decls_typing_wf. 2: assumption.
-  destruct Hd as [[Hmdecl Hidecl] [Hpdecl Hnpar]].
-  eapply declared_decl_closed in Hmdecl; auto.
-  simpl in Hmdecl.
-  pose proof (onNpars _ _ _ _ Hmdecl) as Hnpars.
-  apply onInductives in Hmdecl.
-  eapply nth_error_alli in Hmdecl; eauto.
-  assert (Hp : ind_projs idecl <> []).
-  { now apply nth_error_Some_non_nil in Hpdecl. }
-  pose proof (onProjections Hmdecl Hp) as onp.
-  apply on_projs in onp; eauto.
-  eapply nth_error_alli in onp; eauto.
-  hnf in onp. simpl in onp.
-  rewrite smash_context_length in onp. simpl in onp.
-  rewrite Hnpars in onp.
-  move: onp => /andb_and[Hb Ht].
-  destruct pdecl as [id ty]. unfold on_snd; simpl in *.
-  f_equal. eapply subst_closedn.
-  - eapply wf_subst_instance_constr_inv. eassumption.
-  - eapply closed_upwards; eauto. lia.
+  eapply (declared_projection_closed (Σ:=empty_ext Σ)) in Hd. 2:auto.
+  destruct pdecl; unfold on_snd; simpl; f_equal. apply subst_closedn; auto.
+  eapply closed_upwards; eauto. lia.
 Qed.
 
 Lemma subst_fix_context:
@@ -611,23 +574,6 @@ Proof.
        simpl in IHparams.
        replace (#|s| + k + S #|params|) with (S (#|s| + k + #|params|)) by lia.
        now rewrite <- IHparams.
-Qed.
-
-Lemma subst_decl_closed n k d : wf_decl d -> closed_decl k d -> subst_decl n k d = d.
-Proof.
-  case: d => na [body|] ty; rewrite /closed_decl /subst_decl /map_decl /wf_decl /= => [[wfb wfty]].
-  move/andP => [cb cty]. rewrite !subst_closedn //.
-  move=> cty; now rewrite !subst_closedn //.
-Qed.
-
-Lemma closed_ctx_subst n k ctx : All wf_decl ctx -> closed_ctx ctx = true -> subst_context n k ctx = ctx.
-Proof.
-  induction ctx in n, k |- *; auto.
-  unfold closed_ctx, id. intros wfctx. inv wfctx.
-  rewrite mapi_app forallb_app List.rev_length /= Nat.add_0_r.
-  move/andb_and => /= [Hctx /andb_and [Ha _]].
-  rewrite subst_context_snoc /snoc /= IHctx // subst_decl_closed //.
-  now apply: closed_decl_upwards.
 Qed.
 
 Lemma closed_tele_subst n k ctx :
@@ -742,7 +688,7 @@ Lemma on_constructor_closed_wf `{checker_flags} {Σ mind mdecl u idecl indices c
                     (subst_instance_constr u (snd (fst cdecl)))
   in closed cty /\ Ast.wf cty.
 Proof.
-  intros wfΣ [cs' [s Hs] Hparams _].
+  intros wfΣ [cs' ? Hparams [s Hs]].
   pose proof (typing_wf_local Hs).
   apply typing_wf in Hs as w. 2: assumption.
   destruct w as [w _].
@@ -759,7 +705,7 @@ Proof.
     + auto with wf.
     + apply wf_subst_instance_constr. assumption.
 Qed.
-
+(*
 Lemma on_projection_closed_wf `{checker_flags} {Σ mind mdecl u i idecl pdecl} :
   wf Σ -> mdecl.(ind_npars) = context_assumptions mdecl.(ind_params) ->
   on_projection (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind mind) mdecl (inductive_ind mind) idecl i pdecl ->
@@ -779,7 +725,7 @@ Proof.
   rewrite - Hpar in Hs. rewrite -> closedn_subst_instance_constr.
   split; auto with wf. now apply wf_subst_instance_constr.
 Qed.
-
+*)
 Lemma context_subst_length Γ a s : context_subst Γ a s -> #|Γ| = #|s|.
 Proof. induction 1; simpl; congruence. Qed.
 
@@ -981,7 +927,7 @@ Lemma on_constructor_closed {cf:checker_flags}  {Σ mind mdecl u idecl indices c
                     (subst_instance_constr u (snd (fst cdecl)))
   in closed cty.
 Proof.
-  intros wfΣ [cs' [s Hs] Hparams _].
+  intros wfΣ [cs' ? Hparams [s Hs] _].
   pose proof (typing_wf_local Hs).
   destruct cdecl as [[id cty] car].
   eapply (env_prop_typing _ typecheck_closed) in Hs; eauto.
@@ -1113,7 +1059,7 @@ Proof.
   destruct Heq as [ctx' [ty'' [s' [Hty [Hsubst Ht0]]]]].
   subst ty; simpl.
   rewrite Heqty' in Hty.
-  destruct Honc as [[cshape_args Hs] o _ _]; simpl in *.
+  destruct Honc as [Hcshape_args ? cshape_eq Hty' _ _]; unfold cdecl_type in *; simpl in *.
   rewrite cshape_eq in Hty.
   rewrite -> !subst_instance_constr_it_mkProd_or_LetIn in Hty.
   rewrite !subst_it_mkProd_or_LetIn in Hty.
@@ -1127,7 +1073,7 @@ Proof.
   intros Heqty'' <-. revert Heqty''.
   rewrite !subst_instance_context_length Nat.add_0_r.
   rewrite subst_context_length subst_instance_context_length.
-  rewrite (subst_cstr_concl_head ind u mdecl cshape_args cshape_indices).
+  rewrite (subst_cstr_concl_head ind u mdecl cs'.(cshape_args) cs'.(cshape_indices)).
   - destruct wfidecl as [Hmdecl Hnth].
     now apply nth_error_Some_length in Hnth.
   - intros <-. rewrite !subst_it_mkProd_or_LetIn !subst_mkApps /=.
@@ -1136,7 +1082,7 @@ Proof.
     rewrite !decompose_app_mkApps; try by reflexivity.
     simpl. rewrite !map_app !subst_context_length
                   !subst_instance_context_length Nat.add_0_r.
-    eapply subst_to_extended_list_k with (k:=#|cshape_args|) in Hsubst as XX.
+    eapply subst_to_extended_list_k with (k:=#|cs'.(cshape_args)|) in Hsubst as XX.
     2:{ eapply wf_make_context_subst. 3: eassumption.
         all: auto using Forall_All with wf.
     }
@@ -1153,7 +1099,7 @@ Proof.
       now rewrite subst_instance_context_assumptions.
     }
     move=> [= <- <-] chopm.
-    move: {chopm}(chopm _ (subst n (#|cshape_args| + k))).
+    move: {chopm}(chopm _ (subst n (#|cs'.(cshape_args)| + k))).
     rewrite map_app.
     move=> chopm; rewrite {}chopm /=.
     inversion 1; subst. f_equal. unfold on_snd; cbn; f_equal.
@@ -1868,12 +1814,13 @@ Proof.
     erewrite distr_subst_rec. simpl.
     rewrite map_rev. subst ty.
     f_equal.
-    apply on_declared_projection in isdecl as [? isdecl]; auto.
-    eapply on_projection_closed_wf in isdecl as [clty wfty]; auto.
-    symmetry. apply subst_closedn; eauto.
-    rewrite List.rev_length H0. eapply closed_upwards; eauto. lia. auto.
-    destruct p0. now pose proof (onNpars _ _ _ _ o).
-    auto.
+    pose proof (declared_projection_closed wfΣ isdecl).
+    pose proof (declared_projection_wf _ _ _ _ _ isdecl).
+    pose proof (typing_wf_gen _ wfΣ _ localenv_nil _ _ (type_Prop _)) as [X' _].
+    specialize (H2 X'). clear X'.
+    symmetry; apply subst_closedn; eauto. now apply wf_subst_instance_constr.
+    rewrite List.rev_length H0. rewrite closedn_subst_instance_constr.
+    eapply closed_upwards; eauto. lia. auto.
 
   - rewrite -> (map_dtype _ (subst s (#|mfix| + #|Δ|))).
     eapply type_Fix; auto.

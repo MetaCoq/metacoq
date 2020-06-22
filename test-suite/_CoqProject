@@ -30,6 +30,7 @@ hnf_ctor.v
 issue27.v
 issue28.v
 letin.v
+modules_sections.v
 mutind.v
 opaque.v
 proj.v
@@ -42,4 +43,5 @@ TypingTests.v
 unfold.v
 univ.v
 vs.v
+tmVariable.v
 order_rec.v

@@ -44,16 +44,14 @@ AstUtils
 LiftSubst
 UnivSubst0
 Pretty
-Common
-
-Denote
-Denoter
+Common0
 Extractable
 Logic0
 
 Tm_util
-Quoted
+Reification
 Quoter
+Denoter
 Ast_quoter
 Ast_denoter
 Plugin_core

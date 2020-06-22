@@ -855,7 +855,7 @@ Proof.
   intros eqb leqb t eqb_refl leqb_refl.
   induction t using term_forall_list_ind in leqb, leqb_refl |- *.
   all: simpl.
-  all: rewrite -> ?Nat.eqb_refl, ?eq_string_refl, ?eq_inductive_refl.
+  all: rewrite -> ?Nat.eqb_refl, ?eq_string_refl, ?eq_kername_refl, ?eq_inductive_refl.
   all: repeat rewrite -> eq_prod_refl
         by (eauto using eq_prod_refl, Nat.eqb_refl, eq_string_refl, eq_inductive_refl).
   all: repeat lazymatch goal with
@@ -1169,6 +1169,59 @@ Proof.
     + assumption.
 Qed.
 
+Lemma eq_context_upto_length :
+  forall {Re Γ Δ},
+    eq_context_upto Re Γ Δ ->
+    #|Γ| = #|Δ|.
+Proof.
+  intros Re Γ Δ h.
+  induction h. all: simpl ; auto.
+Qed.
+
+Lemma eq_context_upto_subst_context Re Rle :
+  RelationClasses.subrelation Re Rle ->
+  forall u v n l l',
+    eq_context_upto Re u v ->
+    All2 (eq_term_upto_univ Re Re) l l' ->
+    eq_context_upto Re (subst_context l n u) (subst_context l' n v).
+Proof.
+  intros re u v n l l'.
+  induction 1; intros Hl.
+  - rewrite !subst_context_nil. constructor.
+  - rewrite !subst_context_snoc; constructor; auto.
+    simpl. rewrite (eq_context_upto_length X).
+    apply eq_term_upto_univ_substs; auto. typeclasses eauto.
+  - rewrite !subst_context_snoc; constructor; auto;
+    simpl; rewrite (eq_context_upto_length X).
+    apply eq_term_upto_univ_substs; auto. typeclasses eauto.
+    apply eq_term_upto_univ_substs; auto. typeclasses eauto.
+Qed.
+
+Lemma eq_context_upto_smash_context ctx ctx' x y :
+  eq_context_upto eq ctx ctx' -> eq_context_upto eq x y -> 
+  eq_context_upto eq (smash_context ctx x) (smash_context ctx' y).
+Proof.
+  induction x in ctx, ctx', y |- *; intros eqctx eqt; inv eqt; simpl; 
+    try split; auto; try constructor; auto.
+  - apply IHx; auto. apply eq_context_upto_cat; auto.
+    constructor; auto. constructor.
+  - apply IHx; auto. eapply eq_context_upto_subst_context; eauto.
+    typeclasses eauto.
+Qed.
+
+Lemma eq_context_upto_nth_error Re ctx ctx' n :
+  eq_context_upto Re ctx ctx' -> 
+  rel_option (eq_decl_upto Re) (nth_error ctx n) (nth_error ctx' n).
+Proof.
+  induction 1 in n |- *.
+  - rewrite nth_error_nil. constructor.
+  - destruct n; simpl; auto. 
+    constructor. split; auto. constructor.
+  - destruct n; simpl; auto.
+    constructor. constructor; simpl; auto.
+    constructor; auto.
+Qed.
+
 Lemma eq_context_impl :
   forall Re Re',
     RelationClasses.subrelation Re Re' ->
@@ -1181,15 +1234,6 @@ Proof.
     eapply eq_term_upto_univ_impl. all: eassumption.
   - constructor. 3: assumption.
     all: eapply eq_term_upto_univ_impl. all: eassumption.
-Qed.
-
-Lemma eq_context_upto_length :
-  forall Re Γ Δ,
-    eq_context_upto Re Γ Δ ->
-    #|Γ| = #|Δ|.
-Proof.
-  intros Re Γ Δ h.
-  induction h. all: simpl ; auto.
 Qed.
 
 Section ContextUpTo.

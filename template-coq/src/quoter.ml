@@ -4,7 +4,7 @@ open Declarations
 open Pp
 
 open Tm_util
-open Quoted
+open Reification
 
 let cast_prop = ref (false)
 
@@ -36,9 +36,31 @@ let hnf_type env ty =
   in
   hnf_type true ty
 
-module type Quoter =
+
+
+module type BaseQuoter =
 sig
-  include Quoted
+  include Reification
+
+  val mkRel : quoted_int -> t
+  val mkVar : quoted_ident -> t
+  val mkEvar : quoted_int -> t array -> t
+  val mkSort : quoted_sort -> t
+  val mkCast : t -> quoted_cast_kind -> t -> t
+  val mkProd : quoted_name -> t -> t -> t
+  val mkLambda : quoted_name -> t -> t -> t
+  val mkLetIn : quoted_name -> t -> t -> t -> t
+  val mkApp : t -> t array -> t
+  val mkConst : quoted_kernel_name -> quoted_univ_instance -> t
+  val mkInd : quoted_inductive -> quoted_univ_instance -> t
+  val mkConstruct : quoted_inductive * quoted_int -> quoted_univ_instance -> t
+  val mkCase : (quoted_inductive * quoted_int) -> quoted_int list -> t -> t -> t list -> t
+  val mkProj : quoted_proj -> t -> t
+  val mkFix : (quoted_int array * quoted_int) * (quoted_name array * t array * t array) -> t
+  val mkCoFix : quoted_int * (quoted_name array * t array * t array) -> t
+
+  val mkName : quoted_ident -> quoted_name
+  val mkAnon : unit -> quoted_name
 
   val quote_ident : Id.t -> quoted_ident
   val quote_name : Name.t -> quoted_name
@@ -108,16 +130,8 @@ sig
 end
 
 
-let reduce env evm red trm =
-  let red, _ = Redexpr.reduction_of_red_expr env red in
-  let evm, red = red env evm (EConstr.of_constr trm) in
-  (evm, EConstr.to_constr evm red)
 
-let reduce_all env evm trm =
-  EConstr.to_constr evm (Reductionops.nf_all env evm (EConstr.of_constr trm))
-
-
-module Reify (Q : Quoter) =
+module Quoter (Q : BaseQuoter) =
 struct
 
   let push_rel decl (in_prop, env) = (in_prop, Environ.push_rel decl env)
@@ -208,9 +222,8 @@ struct
         (Q.mkApp f' xs', acc)
 
       | Constr.Const (c,pu) ->
-         let kn = Names.Constant.canonical c in
-	       (Q.mkConst (Q.quote_kn kn) (Q.quote_univ_instance pu),
-          add_constant kn acc)
+        let kn = Constant.canonical c in
+	(Q.mkConst (Q.quote_kn kn) (Q.quote_univ_instance pu), add_constant kn acc)
 
       | Constr.Construct ((mind,c),pu) ->
          (Q.mkConstruct (quote_inductive' mind, Q.quote_int (c - 1)) (Q.quote_univ_instance pu),

@@ -22,7 +22,7 @@ Ltac pcuic := intuition eauto 5 with pcuic ||
 Hint Resolve eq_universe_leq_universe' : pcuic.
 
 Derive Signature for cumul assumption_context.
-
+ 
 (* Bug in Equations ... *)
 (* Derive Signature for clos_refl_trans_1n. *)
 
@@ -806,7 +806,7 @@ Section Inversions.
   Lemma invert_red_letin Γ C na d ty b :
     red Σ.1 Γ (tLetIn na d ty b) C ->
     (∑ na' d' ty' b',
-     (red Σ.1 Γ C (tLetIn na' d' ty' b') *
+     ((C = tLetIn na' d' ty' b') *
       red Σ.1 Γ d d' *
       red Σ.1 Γ ty ty' *
       red Σ.1 (Γ ,, vdef na d ty) b b')) +
@@ -2174,6 +2174,25 @@ Proof.
       * eapply conv_cumul, conv_LetIn_ty with (na := na1). assumption.
 Qed.
 
+Lemma untyped_substitution_conv `{cf : checker_flags} (Σ : global_env_ext) Γ Γ' Γ'' s M N :
+  wf Σ -> wf_local Σ (Γ ,,, Γ' ,,, Γ'') -> 
+  untyped_subslet Γ s Γ' ->
+  Σ ;;; Γ ,,, Γ' ,,, Γ'' |- M = N ->
+  Σ ;;; Γ ,,, subst_context s 0 Γ'' |- subst s #|Γ''| M = subst s #|Γ''| N.
+Proof.
+  intros wfΣ wfΓ Hs. induction 1.
+  - constructor.
+    now apply subst_eq_term.
+  - eapply substitution_untyped_let_red in r. 3:eauto. all:eauto with wf.
+    eapply red_conv_conv; eauto.
+  - eapply substitution_untyped_let_red in r. 3:eauto. all:eauto with wf.
+    eapply red_conv_conv_inv; eauto.
+  - eapply conv_eta_l. 2: eassumption.
+    eapply eta_expands_subst. assumption.
+  - eapply conv_eta_r. 1: eassumption.
+    eapply eta_expands_subst. assumption.
+Qed.
+
 Lemma substitution_conv `{cf : checker_flags} (Σ : global_env_ext) Γ Γ' Γ'' s M N :
   wf Σ -> wf_local Σ (Γ ,,, Γ' ,,, Γ'') -> subslet Σ Γ s Γ' ->
   Σ ;;; Γ ,,, Γ' ,,, Γ'' |- M = N ->
@@ -2232,6 +2251,26 @@ Qed.
 Lemma subslet_untyped_subslet {cf:checker_flags} Σ Γ s Γ' : subslet Σ Γ s Γ' -> untyped_subslet Γ s Γ'.
 Proof.
   induction 1; constructor; auto.
+Qed.
+
+Lemma untyped_subst_conv {cf:checker_flags} {Σ} Γ Γ0 Γ1 Δ s s' T U : 
+  wf Σ.1 ->
+  untyped_subslet Γ s Γ0 ->
+  untyped_subslet Γ s' Γ1 ->
+  All2 (conv Σ Γ) s s' ->
+  wf_local Σ (Γ ,,, Γ0 ,,, Δ) ->
+  Σ;;; Γ ,,, Γ0 ,,, Δ |- T = U ->
+  Σ;;; Γ ,,, subst_context s 0 Δ |- subst s #|Δ| T = subst s' #|Δ| U.
+Proof.
+  move=> wfΣ subss subss' eqsub wfctx eqty.
+  eapply conv_trans => //.
+  * eapply untyped_substitution_conv => //.
+  ** eapply wfctx.
+  ** auto. 
+  ** apply eqty.
+  * clear eqty.
+    rewrite -(subst_context_length s 0 Δ).
+    eapply conv_subst_conv => //; eauto using subslet_untyped_subslet.
 Qed.
 
 Lemma subst_conv {cf:checker_flags} {Σ} Γ Γ0 Γ1 Δ s s' T U : 
@@ -2304,7 +2343,7 @@ Proof.
   epose proof (weakening_conv Σ [] Γ Δ t u wfΣ).
   rewrite !app_context_nil_l in X.
   forward X by eauto using typing_wf_local.
-  pose proof (closed_wf_local _ _ wfΣ wfΓ).
+  pose proof (closed_wf_local wfΣ wfΓ).
   rewrite closed_ctx_lift in X; auto.
   rewrite !lift_closed in X => //.
 Qed.
@@ -2338,12 +2377,12 @@ Lemma context_relation_subst_instance {cf:checker_flags} {Σ} Γ Δ u u' :
   (subst_instance_context u' Δ).
 Proof.
   move=> wfΣ wf wf0 equ.
-  assert (cl := closed_wf_local _ _ _ wf0).
+  assert (cl := closed_wf_local wfΣ wf0).
   rewrite closedn_subst_instance_context in cl.
   induction Δ as [|d Δ] in cl, wf0 |- *.
   - constructor.
   - simpl.
-    apply closedn_ctx_cons in cl. apply andP in cl as [clctx cld].
+    rewrite closedn_ctx_cons in cl. apply andP in cl as [clctx cld].
     simpl in wf0.
     destruct d as [na [b|] ty] => /=.
     * depelim wf0; simpl in *.

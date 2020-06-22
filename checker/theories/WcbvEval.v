@@ -233,12 +233,12 @@ Section Wcbv.
           option_map decl_body (nth_error Γ i) = Some (Some body) ->
           eval ((lift0 (S i)) body) res -> P ((lift0 (S i)) body) res -> P (tRel i) res) ->
       (forall i : nat, option_map decl_body (nth_error Γ i) = Some None -> P (tRel i) (tRel i)) ->
-      (forall (c : ident) (decl : constant_body) (body : term),
+      (forall c (decl : constant_body) (body : term),
           declared_constant Σ c decl ->
           forall (u : Instance.t) (res : term),
             cst_body decl = Some body ->
             eval (subst_instance_constr u body) res -> P (subst_instance_constr u body) res -> P (tConst c u) res) ->
-      (forall (c : ident) (decl : constant_body),
+      (forall c (decl : constant_body),
           declared_constant Σ c decl -> forall u : Instance.t, cst_body decl = None -> P (tConst c u) (tConst c u)) ->
       (forall (ind : inductive) (pars : nat) (discr : term) (c : nat) (u : Instance.t)
               (args : list term) (p : term) (brs : list (nat × term)) (res : term),

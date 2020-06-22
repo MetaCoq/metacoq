@@ -481,7 +481,7 @@ Section Lemmata.
       destruct indn.
       apply inversion_Case in h as hh ; auto.
       destruct hh as [uni [args [mdecl [idecl [ps [pty [btys
-                                 [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]].
+                                 [? [? [? [? [? [? [ht0 [? [? ?]]]]]]]]]]]]]]]].
       apply All2_app_inv in a as [[? ?] [[? ?] ha]].
       inversion ha. subst.
       intuition eauto. simpl in *.
@@ -619,7 +619,7 @@ Section Lemmata.
         left. apply wf_local_app in h2.
         inversion h2. subst. cbn in *.
         match goal with
-        | h : ∃ s : Universe.t, _ |- _ =>
+        | h : ∑ s : Universe.t, _ |- _ =>
           destruct h
         end.
         eexists. eassumption.
@@ -1359,8 +1359,6 @@ Section Lemmata.
       + assumption.
   Qed.
 
-  Derive Signature for typing.
-
   Lemma Proj_red_cond :
     forall Γ i pars narg i' c u l,
       wellformed Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i' c u) l)) ->
@@ -1368,14 +1366,11 @@ Section Lemmata.
   Proof.
     intros Γ i pars narg i' c u l [[T h]|[[ctx [s [e _]]]]];
       [|discriminate].
-    destruct hΣ.
-    apply inversion_Proj in h; auto.
-    destruct h as [uni [mdecl [idecl [pdecl [args' [d [hc [? ?]]]]]]]].
-    eapply on_declared_projection in d; auto. simpl in d. destruct d as [? [? ?]]; auto.
-    simpl in *.
-    destruct p.
-    destruct o0; auto.
-    todo "projection invariant"%string.
+    epose proof (PCUICInductiveInversion.Proj_Constuct_ind_eq _ hΣ).
+    forward H by (exists T; eauto). subst i'.
+    epose proof (PCUICInductiveInversion.Proj_Constuct_projargs _ hΣ).
+    forward H by (exists T; eauto).
+    now apply (nth_error_Some).
   Qed.
 
   Lemma cored_zipc :
@@ -1429,45 +1424,16 @@ Section Lemmata.
 
 End Lemmata.
 
-Lemma declared_inductive_valid_type {cf:checker_flags} Σ Γ mdecl idecl i u :
-  wf Σ.1 ->
-  wf_local Σ Γ ->
-  declared_inductive Σ.1 mdecl i idecl ->
-  consistent_instance_ext Σ (ind_universes mdecl) u ->
-  isType Σ Γ (subst_instance_constr u (ind_type idecl)).
-Proof.
-  move=> wfΣ wfΓ declc Hu.
-  pose declc as declc'.
-  apply on_declared_inductive in declc' as [onmind onind]; auto.
-  apply onArity in onind.
-  destruct onind as [s Hs].
-  epose proof (PCUICUnivSubstitution.typing_subst_instance_decl Σ) as s'.
-  destruct declc.
-  specialize (s' [] _ _ _ _ u wfΣ H Hs Hu).
-  simpl in s'. eexists; eauto.
-  eapply (PCUICWeakening.weaken_ctx (Γ:=[]) Γ); eauto.
-Qed.
-
-Set Default Goal Selector "1".
-
 Lemma Case_Construct_ind_eq {cf:checker_flags} Σ (hΣ : ∥ wf Σ.1 ∥) :
-forall {Γ ind ind' npar pred i u brs args},
+  forall {Γ ind ind' npar pred i u brs args},
   wellformed Σ Γ (tCase (ind, npar) pred (mkApps (tConstruct ind' i u) args) brs) ->
   ind = ind'.
 Proof.
 destruct hΣ as [wΣ].
 intros Γ ind ind' npar pred i u brs args [[A h]|[[ctx [s [e _]]]]];
   [|discriminate].
-apply inversion_Case in h as ih ; auto.
-destruct ih
-  as [uni [args' [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [ht0 [? ?]]]]]]]]]]]]]].
-  pose proof ht0 as typec.
-  eapply inversion_mkApps in typec as [A' [U [tyc [tyargs tycum]]]]; auto.
-  eapply (inversion_Construct Σ wΣ) in tyc as [mdecl' [idecl' [cdecl' [wfl [declc [Hu tyc]]]]]].
-  epose proof (Construct_Ind_ind_eq _ ht0 declc); eauto.
-  simpl in X. destruct declc. simpl in X.
-  destruct declared_constructor_inv as [cs [csort onc']].
-  intuition auto.
+  eapply PCUICInductiveInversion.Case_Construct_ind_eq; eauto.
+  sq; auto.
 Qed.
 
 Lemma Proj_Constuct_ind_eq {cf:checker_flags} Σ (hΣ : ∥ wf Σ.1 ∥):
@@ -1475,78 +1441,9 @@ forall Γ i i' pars narg c u l,
   wellformed Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i' c u) l)) ->
   i = i'.
 Proof.
-destruct hΣ as [wΣ].
-intros Γ i i' pars narg c u l [[T h]|[[ctx [s [e _]]]]];
-  [|discriminate].
-apply inversion_Proj in h ; auto.
-destruct h as [uni [mdecl [idecl [pdecl [args' [? [hc [? ?]]]]]]]].
-pose proof hc as typec.
-eapply inversion_mkApps in typec as [A' [U [tyc [tyargs tycum]]]]; auto.
-eapply (inversion_Construct Σ wΣ) in tyc as [mdecl' [idecl' [cdecl' [wfl [declc [Hu tyc]]]]]].
-epose proof (Construct_Ind_ind_eq _ hc declc); eauto.
-simpl in X. destruct declc. simpl in X.
-destruct declared_constructor_inv as [cs [csort onc']].
-intuition auto.
+  destruct hΣ as [wΣ].
+  intros Γ i i' pars narg c u l [[T h]|[[ctx [s [e _]]]]];
+    [|discriminate].
+    eapply PCUICInductiveInversion.Proj_Constuct_ind_eq; eauto.
+    sq; auto.
 Qed.
-
-Lemma isWAT_tLetIn {cf:checker_flags} {Σ : global_env_ext} (HΣ' : wf Σ)
-      {Γ} (HΓ : wf_local Σ Γ) {na t A B}
-  : isWfArity_or_Type Σ Γ (tLetIn na t A B)
-    <~> (isType Σ Γ A × (Σ ;;; Γ |- t : A)
-                      × isWfArity_or_Type Σ (Γ,, vdef na t A) B).
-Proof.
-  split; intro HH.
-  - destruct HH as [[ctx [s [H1 H2]]]|[s H]].
-    + cbn in H1. apply destArity_app_Some in H1.
-      destruct H1 as [ctx' [H1 HH]]; subst ctx.
-      rewrite app_context_assoc in H2. repeat split.
-      * apply wf_local_app in H2. inversion H2; subst. assumption.
-      * apply wf_local_app in H2. inversion H2; subst. assumption.
-      * left. exists ctx', s. split; tas.
-    + apply inversion_LetIn in H; tas. destruct H as [s1 [A' [HA [Ht [HB H]]]]].
-      repeat split; tas. 1: eexists; eassumption.
-      apply cumul_Sort_r_inv in H.
-      destruct H as [s' [H H']].
-      right. exists s'. eapply type_reduction; tea.
-      apply invert_red_letin in H; tas.
-      destruct H as [[? [? [? [? [[[H ?] ?] ?]]]]]|H].
-      * apply invert_red_sort in H; inv H.
-      * etransitivity.
-        2: apply weakening_red_0 with (Γ' := [_]) (N := tSort _);
-          tea; reflexivity.
-        exact (red_rel_all _ (Γ ,, vdef na t A) 0 t A' eq_refl).
-  - destruct HH as [HA [Ht [[ctx [s [H1 H2]]]|HB]]].
-    + left. exists ([vdef na t A] ,,, ctx), s. split.
-      cbn. now rewrite destArity_app H1.
-      now rewrite app_context_assoc.
-    + right. destruct HB as [sB HB].
-      eexists. eapply type_reduction; tas.
-      * econstructor; tea.
-        apply HA.π2.
-      * apply red1_red.
-        apply red_zeta with (b':=tSort sB).
-Defined.
-(*
-Lemma type_Case' {cf:checker_flags} Σ Γ indnpar u p c brs args :
-  let ind := indnpar.1 in
-  let npar := indnpar.2 in
-      forall mdecl idecl (isdecl : declared_inductive Σ.1 mdecl ind idecl),
-    mdecl.(ind_npars) = npar ->
-    wf Σ.1 ->
-    let params := List.firstn npar args in
-    forall ps pty, build_case_predicate_type ind mdecl idecl params u ps =
-                Some pty ->                
-    Σ ;;; Γ |- p : pty ->
-    leb_sort_family (universe_family ps) idecl.(ind_kelim) ->
-    Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
-    forall btys, map_option_out (build_branches_type ind mdecl idecl params u p) =
-                Some btys ->
-    All2 (fun br bty => (br.1 = bty.1) × (Σ ;;; Γ |- br.2 : bty.2)) brs btys ->
-    Σ ;;; Γ |- tCase indnpar p c brs : mkApps p (skipn npar args ++ [c]).
-Proof.
-  (* intros mdecl idecl isdecl wfΣ H pars pty X indctx pctx ps btys H0 X0 H1 X1 X2.
-  econstructor; tea.
-  eapply type_Case_valid_btys in H0; tea.
-  eapply All2_All_mix_right; tas. *)
-Admitted.
-*)

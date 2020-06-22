@@ -1065,7 +1065,7 @@ Section Lemmata.
     | _ => false
     end.
 
-  Fixpoint isProd t :=
+  Definition isProd t :=
     match t with
     | tProd na A B => true
     | _ => false

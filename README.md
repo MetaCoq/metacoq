@@ -10,7 +10,7 @@ MetaCoq is a project formalizing Coq in Coq and providing tools for
 manipulating Coq terms and developing certified plugins
 (i.e. translations, compilers or tactics) in Coq.
 
-See the [website](https://metacoq.github.io/metacoq/) for a documentation,
+See the [website](https://metacoq.github.io/) for a documentation,
 related papers and introduction to the system, along with installation instructions
 for targeted at users.
 

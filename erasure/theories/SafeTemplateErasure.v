@@ -59,7 +59,7 @@ Program Fixpoint check_wf_env_only_univs (Σ : global_env)
     G <- check_wf_env_only_univs Σ ;;
     check_fresh d.1 Σ ;;
     let udecl := universes_decl_of_decl d.2 in
-    uctx <- check_udecl d.1 Σ _ G.π1 (proj1 G.π2) udecl ;;
+    uctx <- check_udecl (string_of_kername d.1) Σ _ G.π1 (proj1 G.π2) udecl ;;
     let G' := add_uctx uctx.π1 G.π1 in
     assume_wf_decl (Σ, udecl) _ _ G' _ d.1 d.2 ;;
     match udecl with

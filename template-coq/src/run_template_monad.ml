@@ -1,4 +1,3 @@
-open CErrors
 open Univ
 open Entries
 open Names
@@ -7,14 +6,14 @@ open Genredexpr
 open Pp (* this adds the ++ to the current scope *)
 
 open Tm_util
-open Quoter
-open Denote
+open Denoter
 open Constr_quoter
-open Template_monad
 open Constr_denoter
+open Template_monad
 
-open CoqLiveDenoter
-open TemplateCoqQuoter
+
+let reduce_all env evm trm =
+  EConstr.to_constr evm (Reductionops.nf_all env evm (EConstr.of_constr trm))
 
 
 let unquote_reduction_strategy env evm trm (* of type reductionStrategy *) : Redexpr.red_expr =
@@ -31,9 +30,7 @@ let unquote_reduction_strategy env evm trm (* of type reductionStrategy *) : Red
     | name (* to unfold *) :: _ ->
        let name = reduce_all env evm name in
        let name = unquote_kn name in
-       (try Unfold [Locus.AllOccurrences, Tacred.evaluable_of_global_reference env (Nametab.locate name)]
-        with
-        | _ -> CErrors.user_err (str "Constant not found or not a constant: " ++ Libnames.pr_qualid name))
+       Unfold [Locus.AllOccurrences, Tacred.evaluable_of_global_reference env (GlobRef.ConstRef (Constant.make1 name))]
     | _ -> bad_term_verb trm "unquote_reduction_strategy"
   else not_supported_verb trm "unquote_reduction_strategy"
 
@@ -277,16 +274,25 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
   | TmBind (a,f) ->
     run_template_program_rec ~poly ~intactic:intactic
      (fun (env, evm, ar) -> run_template_program_rec ~poly ~intactic:intactic k env (evm, Constr.mkApp (f, [|ar|]))) env (evm, a)
+ | TmVariable (name, typ) ->
+    if intactic then not_in_tactic "tmVariable"
+    else
+      let name = unquote_ident (reduce_all env evm name) in
+      let kind = Decls.IsAssumption Decls.Definitional in
+      (* FIXME: better handling of evm *)
+      Declare.declare_variable ~name ~kind ~typ ~impl:Glob_term.Explicit;
+      let env = Global.env () in
+      k (env, evm, Lazy.force unit_tt)
   | TmDefinition (opaque,name,s,typ,body) ->
     if intactic
     then not_in_tactic "tmDefinition"
     else
       let name = unquote_ident (reduce_all env evm name) in
       let opaque = unquote_bool (reduce_all env evm opaque) in
-      let evm, typ = (match unquote_option s with Some s -> let red = unquote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
+      let evm, typ = (match unquote_option s with Some s -> let red = unquote_reduction_strategy env evm s in Plugin_core.reduce env evm red typ | None -> evm, typ) in
       let n = DeclareDef.declare_definition
           ~name ~kind:(Decls.IsDefinition Decls.Definition) ~opaque ~poly
-          ~scope:(DeclareDef.Global Declare.ImportDefaultBehavior) ~impargs:[]
+          ~scope:(Declare.Global Declare.ImportDefaultBehavior) ~impargs:[]
           ~udecl:UState.default_univ_decl ~types:(Some (EConstr.of_constr typ)) ~body:(EConstr.of_constr body) evm in
       let env = Global.env () in
       (* Careful, universes in evm were modified for the declaration of def *)
@@ -320,7 +326,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
     then not_in_tactic "tmAxiom"
     else
       let name = unquote_ident (reduce_all env evm name) in
-      let evm, typ = (match unquote_option s with Some s -> let red = unquote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
+      let evm, typ = (match unquote_option s with Some s -> let red = unquote_reduction_strategy env evm s in Plugin_core.reduce env evm red typ | None -> evm, typ) in
       let univs = Evd.univ_entry ~poly evm in
       let param = Declare.ParameterEntry (None, (typ, univs), None) in
       let n = Declare.declare_constant ~name ~kind:Decls.(IsDefinition Definition) param in
@@ -345,7 +351,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
        let obls, _, c, cty = RetrieveObl.retrieve_obligations env ident evm 0 c (EConstr.of_constr typ) in
        (* let evm = Evd.minimize_universes evm in *)
        let uctx = Evd.evar_universe_context evm in
-       let hook = DeclareDef.Hook.make (fun { DeclareDef.Hook.S.dref = gr } ->
+       let hook = Declare.Hook.make (fun { Declare.Hook.S.dref = gr } ->
           let env = Global.env () in
           let evm = Evd.from_env env in
           let evm, t = Evd.fresh_global env evm gr in
@@ -354,58 +360,28 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
 
   | TmQuote (false, trm) ->
     (* user should do the reduction (using tmEval) if they want *)
-    let qt = TermReify.quote_term env trm
+    let qt = quote_term env trm
     in k (env, evm, qt)
   | TmQuote (true, trm) ->
-    let qt = TermReify.quote_term_rec env trm in
+    let qt = quote_term_rec env trm in
     k (env, evm, qt)
   | TmQuoteInd (name, strict) ->
-       let name = unquote_string (reduce_all env evm name) in
-       let (dp, nm) = Quoted.split_name name in
-       (match Nametab.locate (Libnames.make_qualid dp nm) with
-        | Names.GlobRef.IndRef (ind, _) ->
-          let _ =
-            let kn = Names.KerName.to_string (Names.MutInd.canonical ind) in
-            if strict && kn <> name then
-              CErrors.user_err (str "strict mode not canonical: \"" ++ str name ++ str "\" <> \"" ++ str kn ++ str "\"")
-            else ()
-          in
-          let t = TermReify.quote_mind_decl env ind in
-          let _, args = Constr.destApp t in
-          (match args with
-           | [|decl|] ->
-             k (env, evm, decl)
-           | _ -> bad_term_verb t "anomaly in quoting of inductive types")
-        (* quote_mut_ind produce an entry rather than a decl *)
-        (* let c = Environ.lookup_mind (fst ni) env in (\* FIX: For efficienctly, we should also export (snd ni)*\) *)
-        (* TermReify.quote_mut_ind env c *)
-        | _ -> CErrors.user_err (str name ++ str " does not seem to be an inductive."))
+       let kn = unquote_kn (reduce_all env evm name) in
+       let t = quote_mind_decl env (MutInd.make1 kn) in
+       let _, args = Constr.destApp t in
+       (match args with
+        | [|decl|] ->
+          k (env, evm, decl)
+        | _ -> bad_term_verb t "anomaly in quoting of inductive types")
   | TmQuoteConst (name, bypass, strict) ->
-    begin
-       let name = unquote_string (reduce_all env evm name) in
-       let bypass = unquote_bool (reduce_all env evm bypass) in
-       let cmd =
-         let open Plugin_core in
-         tmBind (tmAboutString name)
-           (function
-               None -> tmFail (str "not found: " ++ str name)
-             | Some (Names.GlobRef.ConstRef cnst) ->
-               let kn = KerName.to_string (Names.Constant.canonical cnst) in
-               if strict && kn <> name then
-                 tmFail (str "strict mode not canonical: \"" ++ str name ++ str "\" <> \"" ++ str kn ++ str "\"")
-               else
-                 with_env_evm (fun env evm ->
-                     let cd = Environ.lookup_constant cnst env in
-                     let cb = TermReify.quote_constant_body bypass env evm cd in
-                     tmReturn cb)
-             | Some _ ->
-               tmFail (str "\"" ++ str name ++ str "\" does not refer to a constant"))
-       in
-       Plugin_core.run cmd env evm (fun a b c -> k (a,b,c))
-     end
+    let name = unquote_kn (reduce_all env evm name) in
+    let bypass = unquote_bool (reduce_all env evm bypass) in
+    let cd = Environ.lookup_constant (Constant.make1 name) env in
+    let cb = quote_constant_body bypass env evm cd in
+    k (env, evm, cb)
   | TmQuoteUnivs ->
     let univs = Environ.universes env in
-    k (env, evm, TermReify.quote_ugraph univs)
+    k (env, evm, quote_ugraph univs)
   | TmPrint trm ->
     Feedback.msg_info (Printer.pr_constr_env env evm trm);
     k (env, evm, Lazy.force unit_tt)
@@ -416,29 +392,26 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
   | TmFail trm ->
     let err = unquote_string (reduce_all env evm trm) in
     CErrors.user_err (str err)
-  | TmAbout id ->
-    let id = Libnames.qualid_of_string (unquote_string id) in
-    Plugin_core.run (Plugin_core.tmAbout id) env evm
-      (fun env evm -> function
-           None -> k (env, evm, constr_mkAppl (cNone, [|tglobal_reference|]))
-         | Some gr ->
-           let qgr = quote_global_reference gr in
-           let opt = constr_mkApp (cSome , [|Lazy.force tglobal_reference ; qgr|]) in
-           k (env, evm, opt))
+  | TmLocate id ->
+    let id = unquote_string (reduce_all env evm id) in
+    Plugin_core.run (Plugin_core.tmLocateString id) env evm
+      (fun env evm l ->
+         let l = List.map quote_global_reference l in
+         let l = to_coq_listl tglobal_reference l in
+         k (env, evm, l))
   | TmCurrentModPath ->
     let mp = Lib.current_mp () in
-    (* let dp' = Lib.cwd () in (* different on sections ? *) *)
-    let s = quote_string (Names.ModPath.to_string mp) in
+    let s = quote_modpath mp in
     k (env, evm, s)
   | TmEval (s, trm) ->
     let red = unquote_reduction_strategy env evm (reduce_all env evm s) in
-    let (evm, trm) = reduce env evm red trm
+    let (evm, trm) = Plugin_core.reduce env evm red trm
     in k (env, evm, trm)
   | TmEvalTerm (s,trm) ->
     let red = unquote_reduction_strategy env evm (reduce_all env evm s) in
     let evm,trm = denote_term evm (reduce_all env evm trm) in
     Plugin_core.run (Plugin_core.tmEval red trm) env evm
-      (fun env evm trm -> k (env, evm, TermReify.quote_term env trm))
+      (fun env evm trm -> k (env, evm, quote_term env trm))
   | TmMkInductive mind ->
     declare_inductive env evm mind;
     let env = Global.env () in
@@ -455,12 +428,12 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
            | GlobRef.ConstructRef ctor ->
               let (evm,c) = Evarutil.new_global evm (Lazy.force texistT_typed_term) in
               let term = Constr.mkApp
-               (EConstr.to_constr evm c, [|typ; t'|]) in
+               (EConstr.to_constr evm c, [|EConstr.to_constr evm typ; t'|]) in
              let evm, _ = Typing.type_of env evm (EConstr.of_constr term) in
                (env, evm, term)
-           | _ -> anomaly (str "texistT_typed_term does not refer to a constructor")
+           | _ -> CErrors.anomaly (str "texistT_typed_term does not refer to a constructor")
          in
-           k (make_typed_term (EConstr.to_constr evm typ) t' evm)
+           k (make_typed_term typ t' evm)
         with Reduction.NotArity -> CErrors.user_err (str "unquoting ill-typed term")
       end
   | TmUnquoteTyped (typ, t) ->
@@ -471,16 +444,19 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
   | TmFreshName name ->
     let name' = Namegen.next_ident_away_from (unquote_ident name) (fun id -> Nametab.exists_cci (Lib.make_path id)) in
     k (env, evm, quote_ident name')
-  | TmExistingInstance name ->
-     Classes.existing_instance true (Libnames.qualid_of_ident (unquote_ident name)) None;
-     k (env, evm, Lazy.force unit_tt)
+  | TmExistingInstance gr ->
+    let gr = reduce_all env evm gr in
+    let gr = unquote_global_reference gr in
+    let q = Libnames.qualid_of_path (Nametab.path_of_global gr) in
+    Classes.existing_instance true q None;
+    k (env, evm, Lazy.force unit_tt)
   | TmInferInstance (s, typ) ->
     begin
       let evm, typ =
         match unquote_option s with
           Some s ->
           let red = unquote_reduction_strategy env evm s in
-          reduce env evm red typ
+          Plugin_core.reduce env evm red typ
         | None -> evm, typ in
       try
         let (evm,t) = Typeclasses.resolve_one_typeclass env evm (EConstr.of_constr typ) in
@@ -494,7 +470,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
       (fun env evm -> function
            None -> k (env, evm, constr_mkAppl (cNone, [| tTerm|]))
          | Some trm ->
-           let qtrm = TermReify.quote_term env trm in
+           let qtrm = quote_term env trm in
            k (env, evm, constr_mkApp (cSome, [| Lazy.force tTerm; qtrm |])))
   | TmPrintTerm trm ->
     let evm,trm = denote_term evm (reduce_all env evm trm) in

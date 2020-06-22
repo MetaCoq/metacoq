@@ -1,8 +1,8 @@
 From Coq Require Import Nat ZArith Bool.
 Global Set Asymmetric Patterns.
 
-
-Require Export All_Forall
+Require Export MCPrelude
+        All_Forall
         MCArith
         MCCompare
         MCEquality
@@ -25,13 +25,6 @@ Tactic Notation "destruct" "?" "in" hyp(H) :=
   let e := fresh "E" in
   match type of H with context [match ?x with _ => _ end] => destruct x eqn:e
   end.
-
-Notation "'eta_compose'" := (fun g f x => g (f x)).
-
-(* \circ *)
-Notation "g ∘ f" := (eta_compose g f) (at level 40, left associativity).
-
-Notation " ! " := (@False_rect _ _) : program_scope.
 
 Ltac cbnr := cbn; try reflexivity.
 
@@ -146,13 +139,6 @@ Ltac rtoProp :=
   | |- context [is_true (_ && _)] => rewrite andb_and
   end.
 
-
-(** "Incoherent" notion of equivalence, that we only apply to hProps actually. *)
-Record isEquiv (A B : Type) :=
-  { equiv : A -> B;
-    equiv_inv : B -> A}.
-
-Infix "<~>" := isEquiv (at level 90).
 
 Class Fuel := fuel : nat.
 

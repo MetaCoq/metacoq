@@ -1012,7 +1012,7 @@ Proof.
  rewrite (M.cardinal_spec s).
  generalize (M.elements_spec1 s); intro.
  replace (Basics.flip M.In s) with (Basics.flip (@List.In _) (M.elements s)).
-Focus 2.
+ 2:{
 unfold Basics.flip; apply extensionality; intro x;
 apply prop_ext; rewrite <- (H x).
 clear; intuition.
@@ -1020,8 +1020,7 @@ apply SetoidList.In_InA; auto.
 apply eq_equivalence.
 rewrite SetoidList.InA_alt in H.
 destruct H as [? [? ?]].
-subst; auto.
-(* End Focus 2 *)
+subst; auto. }
  clear H.
  generalize (M.elements_spec2w s); intro.
  remember (M.elements s) as l.

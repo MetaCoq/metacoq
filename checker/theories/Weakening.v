@@ -131,6 +131,31 @@ Proof.
   rewrite permute_lift; try easy.
 Qed.
 
+
+Lemma lift_decl_closed n k d : closed_decl k d -> lift_decl n k d = d.
+Proof.
+  case: d => na [body|] ty; rewrite /closed_decl /lift_decl /map_decl /=.
+  move/andP => [cb cty]. now rewrite !lift_closed //.
+  move=> cty; now rewrite !lift_closed //.
+Qed.
+
+Lemma closed_decl_upwards k d : closed_decl k d -> forall k', k <= k' -> closed_decl k' d.
+Proof.
+  case: d => na [body|] ty; rewrite /closed_decl /=.
+  move/andP => [cb cty] k' lek'. do 2 rewrite (@closed_upwards k) //.
+  move=> cty k' lek'; rewrite (@closed_upwards k) //.
+Qed.
+
+Lemma closed_ctx_lift n k ctx : closed_ctx ctx -> lift_context n k ctx = ctx.
+Proof.
+  induction ctx in n, k |- *; auto.
+  unfold closed_ctx, id. simpl.
+  rewrite mapi_app forallb_app List.rev_length /= lift_context_snoc0 /snoc Nat.add_0_r.
+  move/andb_and => /= [Hctx /andb_and [Ha _]].
+  rewrite IHctx // lift_decl_closed //. now apply: closed_decl_upwards.
+Qed.
+
+
 Lemma lift_iota_red n k pars c args brs :
   lift n k (iota_red pars c args brs) =
   iota_red pars c (List.map (lift n k) args) (List.map (on_snd (lift n k)) brs).
@@ -270,55 +295,52 @@ Proof.
     * rewrite List.rev_length. lia.
 Qed.
 
-Lemma lift_declared_minductive `{checker_flags} Σ cst decl n k :
+Lemma lift_declared_minductive `{checker_flags} {Σ : global_env} cst decl n k :
   wf Σ ->
   declared_minductive Σ cst decl ->
   lift_mutual_inductive_body n k decl = decl.
 Proof.
-  intros wfΣ Hdecl. eapply on_declared_minductive in Hdecl; eauto.
-  destruct decl. simpl in *. f_equal.
-  - apply onParams in Hdecl. simpl in *.
-    eapply lift_wf_local; eauto; eauto.
-  - apply onInductives in Hdecl.
-    revert Hdecl. simpl. generalize ind_bodies at 2 4 5.
-    intros.
-    eapply (Alli_mapi_id Hdecl).
-    clear Hdecl. intros.
-    destruct x; simpl in *.
-    destruct (decompose_prod_assum [] ind_type) eqn:Heq.
-    destruct (decompose_prod_assum [] (lift n k ind_type)) eqn:Heq'.
-    destruct X. simpl in *.
-    assert (lift n k ind_type = ind_type). repeat red in onArity.
-    destruct onArity as [s Hs].
-    eapply typed_liftn; eauto; eauto. constructor. simpl; lia.
-    rewrite H0 in Heq'. rewrite Heq in Heq'. revert Heq'; intros [= <- <-].
-    f_equal; auto.
-    eapply All_map_id. eapply All2_All_left; tea.
-    intros [[x p] n'] y [cs [s Hty] Hargs _].
-    unfold on_pi2; cbn; f_equal; f_equal.
-    simpl in Hty.
-    eapply typed_liftn. 4:eapply Hty. eauto. apply typing_wf_local in Hty; eauto. lia.
-    destruct(eq_dec ind_projs []) as [Hp|Hp]. subst; auto. specialize (onProjections Hp).
-    destruct onProjections as [_ _ _ onProjections].
-    apply (Alli_map_id onProjections).
-    intros n1 [x p].
-    unfold on_projection. simpl.
-    intros [s Hty].
-    unfold on_snd; f_equal; f_equal.
-    eapply typed_liftn. 4:eapply Hty. all:eauto. eapply typing_wf_local in Hty; eauto. simpl.
-    rewrite smash_context_length. simpl.
-    rewrite context_assumptions_fold. lia.
+  intros wfΣ Hdecl.
+  pose proof (on_declared_minductive wfΣ Hdecl). apply onNpars in X.
+  apply (declared_inductive_closed (Σ:=(empty_ext Σ))) in Hdecl. auto.
+  move: Hdecl.
+  rewrite /closed_inductive_decl /lift_mutual_inductive_body.
+  destruct decl; simpl.
+  move/andP => [clpar clbodies]. f_equal.
+  now rewrite [fold_context _ _]closed_ctx_lift.
+  eapply forallb_All in clbodies.
+  eapply Alli_mapi_id.
+  eapply (All_Alli clbodies). intros; eauto.
+  2:{ intros. eapply X0. }
+  simpl; intros.
+  move: H0. rewrite /closed_inductive_body.
+  destruct x; simpl. move=> /andP[/andP [ci ct] cp].
+  f_equal. rewrite lift_closed; eauto.
+  eapply closed_upwards; eauto; lia.
+  eapply All_map_id. eapply forallb_All in ct.
+  eapply (All_impl ct). intros x.
+  destruct x as [[id ty] arg]; unfold on_pi2; intros c; simpl; repeat f_equal.
+  apply lift_closed. unfold cdecl_type in c; simpl in c.
+  eapply closed_upwards; eauto; lia.
+  simpl in X. rewrite -X in cp.
+  eapply forallb_All in cp. eapply All_map_id; eauto.
+  eapply (All_impl cp); firstorder auto.
+  destruct x; unfold on_snd; simpl; f_equal.
+  apply lift_closed. rewrite context_assumptions_fold.
+  eapply closed_upwards; eauto; lia.
+  simpl. auto.
 Qed.
 
 Lemma lift_declared_inductive `{checker_flags} Σ ind mdecl idecl n k :
   wf Σ ->
   declared_inductive Σ mdecl ind idecl ->
   map_one_inductive_body (context_assumptions mdecl.(ind_params))
-                         (length (arities_context mdecl.(ind_bodies))) (fun k' => lift n (k' + k))
+                         (length (arities_context mdecl.(ind_bodies)))
+                          (fun k' => lift n (k' + k))
                          (inductive_ind ind) idecl = idecl.
 Proof.
   unfold declared_inductive. intros wfΣ [Hmdecl Hidecl].
-  eapply (lift_declared_minductive _ _ _ n k) in Hmdecl.
+  eapply (lift_declared_minductive _ _ n k) in Hmdecl.
   unfold lift_mutual_inductive_body in Hmdecl.
   destruct mdecl. simpl in *.
   injection Hmdecl. intros Heq.
@@ -370,20 +392,10 @@ Lemma lift_declared_projection `{checker_flags} Σ c mdecl idecl pdecl n k :
   on_snd (lift n (S (ind_npars mdecl + k))) pdecl = pdecl.
 Proof.
   intros.
-  destruct H0 as [[Hmdecl Hidecl] [Hpdecl Hnpar]].
-  eapply declared_decl_closed in Hmdecl; auto.
-  simpl in Hmdecl.
-  pose proof (onNpars _ _ _ _ Hmdecl).
-  apply onInductives in Hmdecl.
-  eapply nth_error_alli in Hmdecl; eauto.
-  pose proof (onProjections Hmdecl) as onp; eauto. forward onp.
-  now eapply nth_error_Some_non_nil in Hpdecl.
-  eapply on_projs, nth_error_alli in onp; eauto.
-  move: onp => /= /andb_and[Hd _]. simpl in Hd.
-  rewrite smash_context_length in Hd. simpl in *. rewrite H0 in Hd.
-  destruct pdecl as [id ty]. unfold on_snd; simpl in *.
-  f_equal. eapply lift_closed.
-  eapply closed_upwards; eauto. lia.
+  eapply (declared_projection_closed (Σ:=empty_ext Σ)) in H0; auto.
+  unfold on_snd. simpl.
+  rewrite lift_closed. eapply closed_upwards; eauto; try lia.
+  destruct pdecl; reflexivity.
 Qed.
 
 Lemma lift_fix_context:
@@ -480,29 +492,6 @@ Proof.
   intros. erewrite IHparams; eauto. simpl. lia.
   destruct t; simpl; try congruence.
   intros. erewrite IHparams; eauto. simpl. lia.
-Qed.
-
-Lemma lift_decl_closed n k d : closed_decl k d -> lift_decl n k d = d.
-Proof.
-  case: d => na [body|] ty; rewrite /closed_decl /lift_decl /map_decl /=.
-  move/andP => [cb cty]. now rewrite !lift_closed //.
-  move=> cty; now rewrite !lift_closed //.
-Qed.
-
-Lemma closed_decl_upwards k d : closed_decl k d -> forall k', k <= k' -> closed_decl k' d.
-Proof.
-  case: d => na [body|] ty; rewrite /closed_decl /=.
-  move/andP => [cb cty] k' lek'. do 2 rewrite (@closed_upwards k) //.
-  move=> cty k' lek'; rewrite (@closed_upwards k) //.
-Qed.
-
-Lemma closed_ctx_lift n k ctx : closed_ctx ctx -> lift_context n k ctx = ctx.
-Proof.
-  induction ctx in n, k |- *; auto.
-  unfold closed_ctx, id. simpl.
-  rewrite mapi_app forallb_app List.rev_length /= lift_context_snoc0 /snoc Nat.add_0_r.
-  move/andb_and => /= [Hctx /andb_and [Ha _]].
-  rewrite IHctx // lift_decl_closed //. now apply: closed_decl_upwards.
 Qed.
 
 Lemma closed_tele_lift n k ctx :

@@ -1,0 +1,24 @@
+{
+open Stdarg
+open MyPlugin
+}
+
+DECLARE PLUGIN "demo_plugin"
+
+VERNAC COMMAND EXTEND Make_vernac CLASSIFIED AS QUERY
+   | [ "Showoff" ] ->
+     { Run_extractable.run_vernac showoff }
+END
+
+
+VERNAC COMMAND EXTEND Make_lens_vernac CLASSIFIED AS SIDEFF
+| [ "Make" "Lens" ident(name) ] ->
+     { Run_extractable.run_vernac (genLensN (Tm_util.string_to_list (Names.Id.to_string name))) }
+END
+
+
+VERNAC COMMAND EXTEND Unquote_vernac CLASSIFIED AS SIDEFF
+| [ "LookupPrint" ident(name) ] ->
+     { let nstr = Names.Id.to_string name in
+       Run_extractable.run_vernac (lookupPrint (Tm_util.string_to_list nstr)) }
+END

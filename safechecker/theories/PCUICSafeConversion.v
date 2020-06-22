@@ -2096,7 +2096,7 @@ Section Conversion.
     destruct h1 as [h1], h2 as [h2].
     constructor.
     rewrite fix_context_fix_context_alt.
-    pose proof (PCUICParallelReductionConfluence.All2_mix h1 h2) as h3.
+    pose proof (All2_mix h1 h2) as h3.
     eapply All2_impl. 1: exact h3.
     intros [? ? ? ?] [? ? ? ?] ?. simpl in *.
     intuition eauto.

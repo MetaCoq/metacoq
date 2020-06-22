@@ -1,15 +1,15 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Arith Lia.
+From Coq Require Import Bool List Arith Lia.
+From Coq Require String.
 From MetaCoq.Template Require Import config utils monad_utils
-EnvironmentTyping.
+  EnvironmentTyping.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICUtils
-PCUICPosition.
+  PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICUtils
+  PCUICPosition.
 
 From MetaCoq Require Export LibHypsNaming.
 Require Import ssreflect.
-Local Open Scope string_scope.
 Set Asymmetric Patterns.
 Require Import Equations.Type.Relation.
 From Equations Require Import Equations.
@@ -37,31 +37,6 @@ Fixpoint isArity T :=
   | _ => False
   end.
 
-Definition subst_context s k (Γ : context) : context :=
-  fold_context (fun k' => subst s (k' + k)) Γ.
-
-Lemma subst_context_length s n Γ : #|subst_context s n Γ| = #|Γ|.
-Proof.
-  induction Γ as [|[na [body|] ty] tl] in Γ |- *; cbn; eauto.
-  - rewrite !List.rev_length !mapi_length !app_length !List.rev_length. simpl.
-    lia.
-  - rewrite !List.rev_length !mapi_length !app_length !List.rev_length. simpl.
-    lia.
-Qed.
-
-Fixpoint smash_context (Γ Γ' : context) : context :=
-  match Γ' with
-  | {| decl_body := Some b |} :: Γ' => smash_context (subst_context [b] 0 Γ) Γ'
-  | {| decl_body := None |} as d :: Γ' => smash_context (Γ ++ [d])%list Γ'
-  | [] => Γ
-  end.
-
-Lemma smash_context_length Γ Γ' : #|smash_context Γ Γ'| = #|Γ| + context_assumptions Γ'.
-Proof.
-  induction Γ' as [|[na [body|] ty] tl] in Γ |- *; cbn; eauto.
-  - now rewrite IHtl subst_context_length.
-  - rewrite IHtl app_length. simpl. lia.
-Qed.
 
 Module PCUICLookup := Lookup PCUICTerm PCUICEnvironment.
 Include PCUICLookup.
@@ -79,6 +54,7 @@ Lemma inds_length ind u l : #|inds ind u l| = #|l|.
 Proof.
   unfold inds. induction l; simpl; congruence.
 Qed.
+Hint Rewrite inds_length : len.
 
 Lemma inds_spec ind u l :
   inds ind u l = List.rev (mapi (fun i _ => tInd {| inductive_mind := ind; inductive_ind := i |} u) l).
@@ -105,13 +81,7 @@ Definition fix_subst (l : mfixpoint term) :=
 
 Definition unfold_fix (mfix : mfixpoint term) (idx : nat) :=
   match List.nth_error mfix idx with
-  | Some d =>
-    if isLambda d.(dbody) then
-      Some (d.(rarg), subst0 (fix_subst mfix) d.(dbody))
-    else None (* We don't unfold ill-formed fixpoints, which would
-                 render confluence unprovable, creating an infinite
-                 number of critical pairs between unfoldings of fixpoints.
-                 e.g. [fix f := f] is not allowed. *)
+  | Some d => Some (d.(rarg), subst0 (fix_subst mfix) d.(dbody))
   | None => None
   end.
 
@@ -153,9 +123,9 @@ Proof. unfold fix_context. now rewrite List.rev_length mapi_length. Qed.
 Hint Rewrite subst_context_length subst_instance_context_length 
   app_context_length map_context_length fix_context_length fix_subst_length cofix_subst_length 
   map_length app_length lift_context_length 
-  @mapi_length @mapi_rec_length : len.
+  @mapi_length @mapi_rec_length List.rev_length Nat.add_0_r : len.
 
-Definition tDummy := tVar "".
+Definition tDummy := tVar String.EmptyString.
 
 Definition iota_red npar c args brs :=
   (mkApps (snd (List.nth c brs (0, tDummy))) (List.skipn npar args)).
@@ -286,7 +256,7 @@ Lemma red1_ind_all :
           (narg : nat) (fn : term),
         unfold_cofix mfix idx = Some (narg, fn) -> P Γ (tProj p (mkApps (tCoFix mfix idx) args)) (tProj p (mkApps fn args))) ->
 
-       (forall (Γ : context) (c : ident) (decl : constant_body) (body : term),
+       (forall (Γ : context) c (decl : constant_body) (body : term),
         declared_constant Σ c decl ->
         forall u : Instance.t, cst_body decl = Some body -> P Γ (tConst c u) (subst_instance_constr u body)) ->
 
@@ -599,6 +569,44 @@ Axiom fix_guard_subst :
     fix_guard mfix ->
     fix_guard mfix'.
 
+(* AXIOM Cofix Guard Condition (guarded by constructors) *)
+
+Axiom cofix_guard : mfixpoint term -> bool.
+
+Axiom cofix_guard_red1 :
+  forall Σ Γ mfix mfix' idx,
+    cofix_guard mfix ->
+    red1 Σ Γ (tCoFix mfix idx) (tCoFix mfix' idx) ->
+    cofix_guard mfix'.
+
+Axiom cofix_guard_eq_term :
+  forall mfix mfix' idx,
+    cofix_guard mfix ->
+    upto_names (tCoFix mfix idx) (tCoFix mfix' idx) ->
+    cofix_guard mfix'.
+
+Axiom cofix_guard_rename :
+  forall mfix f,
+    let mfix' :=
+        map (map_def (rename f) (rename (shiftn (List.length mfix) f))) mfix
+    in
+    cofix_guard mfix ->
+    cofix_guard mfix'.
+
+Axiom cofix_guard_lift :
+  forall mfix n k,
+    let k' := (#|mfix| + k)%nat in
+    let mfix' := map (map_def (lift n k) (lift n k')) mfix in
+    cofix_guard mfix ->
+    cofix_guard mfix'.
+
+Axiom cofix_guard_subst :
+  forall mfix s k,
+    let k' := (#|mfix| + k)%nat in
+    let mfix' := map (map_def (subst s k) (subst s k')) mfix in
+    cofix_guard mfix ->
+    cofix_guard mfix'.
+
 (* AXIOM INDUCTIVE GUARD CONDITION *)
 Axiom ind_guard : mutual_inductive_body -> bool.
 
@@ -695,6 +703,80 @@ Definition build_case_predicate_type ind mdecl idecl params u ps : option term :
          decl_body := None;
          decl_type := mkApps (tInd ind u) (map (lift0 #|X.1|) params ++ to_extended_list X.1) |} in
   ret (it_mkProd_or_LetIn (X.1 ,, inddecl) (tSort ps)).
+  
+Definition destInd (t : term) :=
+  match t with
+  | tInd ind u => Some (ind, u)
+  | _ => None
+  end.
+
+Definition isFinite (r : recursivity_kind) :=
+  match r with
+  | Finite => true
+  | _ => false
+  end.
+
+Definition isCoFinite (r : recursivity_kind) :=
+  match r with
+  | CoFinite => true
+  | _ => false
+  end.
+
+Definition check_recursivity_kind Σ ind r :=
+  match lookup_env Σ ind with
+  | Some (InductiveDecl mib) => PCUICReflect.eqb mib.(ind_finite) r
+  | _ => false
+  end.
+
+Definition check_one_fix d :=
+  let '{| dname := na;
+         dtype := ty;
+         dbody := b;
+         rarg := arg |} := d in
+  let '(ctx, ty) := decompose_prod_assum [] ty in
+  match nth_error (List.rev (smash_context [] ctx)) arg with
+  | Some argd =>
+    let (hd, args) := decompose_app argd.(decl_type) in
+    match destInd hd with
+    | Some (mkInd mind _, u) => Some mind
+    | None => None (* Not recursive on an inductive type *)
+    end
+  | None => None (* Recursive argument not found *)
+  end.
+
+Definition wf_fixpoint (Σ : global_env) mfix :=
+  let checks := map check_one_fix mfix in
+  match map_option_out checks with
+  | Some (ind :: inds) =>
+    (* Check that mutually recursive fixpoints are all on the same mututal
+       inductive block *)
+    forallb (PCUICReflect.eqb ind) inds &&
+    check_recursivity_kind Σ ind Finite
+  | _ => false
+  end.
+
+Definition check_one_cofix d :=
+  let '{| dname := na;
+         dtype := ty;
+         dbody := b;
+         rarg := arg |} := d in
+  let '(ctx, ty) := decompose_prod_assum [] ty in
+  let (hd, args) := decompose_app ty in
+  match destInd hd with
+  | Some (mkInd ind _, u) => Some ind
+  | None => None (* Not recursive on an inductive type *)
+  end.
+
+Definition wf_cofixpoint (Σ : global_env) mfix :=
+  let checks := map check_one_cofix mfix in
+  match map_option_out checks with
+  | Some (ind :: inds) =>
+    (* Check that mutually recursive cofixpoints are all producing
+       coinductives in the same mututal coinductive block *)
+    forallb (PCUICReflect.eqb ind) inds &&
+    check_recursivity_kind Σ ind CoFinite
+  | _ => false
+  end.
 
 Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
 | type_Rel n decl :
@@ -756,6 +838,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     Σ ;;; Γ |- p : pty ->
     leb_sort_family (universe_family ps) idecl.(ind_kelim) ->
     Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
+    isCoFinite mdecl.(ind_finite) = false ->
     forall btys, map_option_out (build_branches_type ind mdecl idecl params u p) = Some btys ->
     All2 (fun br bty => (br.1 = bty.1) * (Σ ;;; Γ |- br.2 : bty.2) * (Σ ;;; Γ |- bty.2 : tSort ps)) brs btys ->
     Σ ;;; Γ |- tCase indnpar p c brs : mkApps p (skipn npar args ++ [c])
@@ -774,14 +857,16 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     All (fun d => {s & Σ ;;; Γ |- d.(dtype) :  tSort s}) mfix ->
     All (fun d => (Σ ;;; Γ ,,, fix_context mfix |- d.(dbody) : lift0 #|fix_context mfix| d.(dtype))
       * (isLambda d.(dbody) = true)%type) mfix ->
-      Σ ;;; Γ |- tFix mfix n : decl.(dtype)
+    wf_fixpoint Σ.1 mfix -> 
+    Σ ;;; Γ |- tFix mfix n : decl.(dtype)
   
 | type_CoFix mfix n decl :
-    allow_cofix ->
+    cofix_guard mfix ->
     nth_error mfix n = Some decl ->
     All_local_env (lift_typing typing Σ) Γ ->
     All (fun d => {s & Σ ;;; Γ |- d.(dtype) :  tSort s}) mfix ->
     All (fun d => Σ ;;; Γ ,,, fix_context mfix |- d.(dbody) : lift0 #|fix_context mfix| d.(dtype)) mfix ->
+    wf_cofixpoint Σ.1 mfix ->
     Σ ;;; Γ |- tCoFix mfix n : decl.(dtype)
   
 | type_Cumul t A B :
@@ -819,7 +904,9 @@ Module PCUICTypingDef <: Typing PCUICTerm PCUICEnvironment PCUICEnvTyping.
   Definition smash_context := smash_context.
   Definition lift_context := lift_context.
   Definition subst_telescope := subst_telescope.
-
+  Definition subst := subst.
+  Definition lift := lift.
+  Definition inds := inds.  
 End PCUICTypingDef.
 
 Module PCUICDeclarationTyping :=
@@ -1073,7 +1160,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         Σ ;;; Γ |- u : A -> P Σ Γ u A ->
         P Σ Γ (tApp t u) (B{0 := u})) ->
 
-    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (cst : ident) u (decl : constant_body),
+    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) cst u (decl : constant_body),
         Forall_decls_typing P Σ.1 ->
         PΓ Σ Γ wfΓ ->
         declared_constant Σ.1 cst decl ->
@@ -1106,6 +1193,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         P Σ Γ p pty ->
         leb_sort_family (universe_family ps) idecl.(ind_kelim) ->
         Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
+        isCoFinite mdecl.(ind_finite) = false ->
         P Σ Γ c (mkApps (tInd ind u) args) ->
         forall btys, map_option_out (build_branches_type ind mdecl idecl params u p) = Some btys ->
         All2 (fun br bty => (br.1 = bty.1) *
@@ -1131,16 +1219,18 @@ Lemma typing_ind_env `{cf : checker_flags} :
         All (fun d => (Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype))%type *
                    (isLambda d.(dbody) = true)%type *
             P Σ (Γ ,,, types) d.(dbody) (lift0 #|types| d.(dtype)))%type mfix ->
+        wf_fixpoint Σ.1 mfix ->
         P Σ Γ (tFix mfix n) decl.(dtype)) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (mfix : list (def term)) (n : nat) decl,
         let types := fix_context mfix in
+        cofix_guard mfix ->
         nth_error mfix n = Some decl ->
         PΓ Σ Γ wfΓ ->
         All (fun d => {s & (Σ ;;; Γ |- d.(dtype) : tSort s)%type * P Σ Γ d.(dtype) (tSort s)})%type mfix ->
         All (fun d => (Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype))%type *
             P Σ (Γ ,,, types) d.(dbody) (lift0 #|types| d.(dtype)))%type mfix ->
-        allow_cofix ->
+        wf_cofixpoint Σ.1 mfix ->
         P Σ Γ (tCoFix mfix n) decl.(dtype)) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (t A B : term),
@@ -1185,7 +1275,7 @@ Proof.
   constructor; auto. unfold Forall_decls_typing in IH.
   - simple refine (let IH' := IH ((Σ, udecl); (X13; []; (tSort Universe.type0m ); _; _)) in _).
     shelve. simpl. apply type_Prop.
-    cbn in IH'; forward IH'. constructor 1; cbn. lia.
+    forward IH'. constructor 1; cbn. lia.
     apply IH'; auto.
   - simpl. simpl in *.
     destruct d; simpl.
@@ -1207,18 +1297,19 @@ Proof.
       eapply Alli_impl; eauto. clear onI onP onnp; intros n x Xg.
       refine {| ind_indices := Xg.(ind_indices);
                 ind_arity_eq := Xg.(ind_arity_eq);
-                ind_ctors_sort := Xg.(ind_ctors_sort) |}.
+                ind_cshapes := Xg.(ind_cshapes) |}.
+                
       ++ apply onArity in Xg. destruct Xg as [s Hs]. exists s; auto.
          specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ [] (existT _ _ (existT _ _ Hs)))))).
          simpl in IH. simpl. apply IH; constructor 1; simpl; lia.
       ++ pose proof Xg.(onConstructors) as Xg'.
          eapply All2_impl; eauto. intros.
-         destruct X14 as [cs onctyp oncargs oncind].
-         unshelve econstructor. eauto.
+         destruct X14 as [cass chead tyeq onctyp oncargs oncind].
+         unshelve econstructor; eauto.
          destruct onctyp as [s Hs].
          simpl in Hs.
          specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ _ (existT _ _ Hs)))))).
-         simpl in IH. red. simpl. exists s. simpl. apply IH; constructor 1; simpl; auto with arith.
+         simpl in IH. simpl. exists s. simpl. apply IH; constructor 1; simpl; auto with arith.
          eapply type_local_ctx_impl; eauto. simpl. intros. red in X14.
          destruct T.
          specialize (IH ((Σ, udecl); (X13; _; _; _; X14))).
@@ -1228,17 +1319,12 @@ Proof.
          apply IH. simpl. constructor 1. simpl. auto with arith.
          clear -X13 IH oncind.
          revert oncind.
-         generalize (List.rev (lift_context #|cshape_args cs| 0 (ind_indices Xg))).
-         generalize (cshape_indices cs). induction 1; constructor; auto.
+         generalize (List.rev (lift_context #|cshape_args y| 0 (ind_indices Xg))).
+         generalize (cshape_indices y). induction 1; constructor; auto.
          red in p0 |- *.
          specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ _ (existT _ _ p0)))))).
          apply IH. simpl. constructor 1. simpl. auto with arith.
-      ++ intros Hprojs; pose proof (onProjections Xg Hprojs); auto. simpl in *.
-         destruct X14; constructor; auto. eapply Alli_impl; eauto. clear on_projs0. intros.
-         red in X14 |- *. unfold on_type in *; intuition eauto. simpl in *.
-         destruct X14 as [s Hs]. exists s.
-         specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ _ (existT _ _ Hs)))))).
-         simpl in IH. apply IH; constructor 1; simpl; lia.
+      ++ intros Hprojs; pose proof (onProjections Xg Hprojs); auto. 
       ++ destruct Xg. simpl. unfold check_ind_sorts in *.
          destruct universe_family; auto.
          +++ split. apply ind_sorts0. destruct indices_matter; auto.
@@ -1394,7 +1480,7 @@ Proof.
                         Forall_decls_typing P Σ.1 * P Σ Γ0 t T).
          {intros. eapply (X14 _ _ _ Hty); eauto. lia. }
          clear X14 X13.
-         clear e decl i a0 Hdecls.
+         clear e decl i a0 Hdecls i0.
          remember (fix_context mfix) as mfixcontext. clear Heqmfixcontext.
  
          induction a1; econstructor; eauto.
@@ -1432,7 +1518,7 @@ Proof.
                       Forall_decls_typing P Σ.1 * P Σ Γ0 t T).
         {intros. eapply (X14 _ _ _ Hty); eauto. lia. }
         clear X14 X13.
-        clear e decl i a0 Hdecls.
+        clear e decl i a0 Hdecls i0.
         remember (fix_context mfix) as mfixcontext. clear Heqmfixcontext.
 
         induction a1; econstructor; eauto.
@@ -1501,7 +1587,7 @@ Section All_local_env.
     { Σ' & { wfΣ' : on_global_env P Σ'.1 & on_global_decl P Σ' c decl } }.
   Proof.
     induction 1; simpl. congruence.
-    destruct (ident_eq_spec c kn); subst.
+    unfold eq_kername; destruct kername_eq_dec; subst.
     intros [= ->].
     exists (Σ, udecl). exists X. auto.
     apply IHX.

@@ -1,4 +1,3 @@
-(*i camlp4deps: "grammar/grammar.cma" i*)
 
 DECLARE PLUGIN "metacoq_erasure_plugin"
 

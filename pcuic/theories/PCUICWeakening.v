@@ -3,7 +3,7 @@ From Coq Require Import Bool List ZArith Lia.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
   PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICTyping PCUICWeakeningEnv
-  PCUICClosed PCUICReduction PCUICPosition.
+  PCUICClosed PCUICReduction PCUICPosition PCUICGeneration.
 Require Import ssreflect.
 
 From Equations Require Import Equations.
@@ -41,6 +41,16 @@ Proof.
   apply (lift_closed n) in H0.
   simpl in *. forward H1 by lia.
   now apply (lift_closed n) in H1.
+Qed.
+
+
+Lemma closed_ctx_lift n k ctx : closed_ctx ctx -> lift_context n k ctx = ctx.
+Proof.
+  induction ctx in n, k |- *; auto.
+  unfold closed_ctx, id. simpl.
+  rewrite mapi_app forallb_app List.rev_length /= lift_context_snoc0 /snoc Nat.add_0_r.
+  move/andb_and => /= [Hctx /andb_and [Ha _]].
+  rewrite IHctx // lift_decl_closed //. now apply: closed_decl_upwards.
 Qed.
 
 Lemma weaken_nth_error_ge {Γ Γ' v Γ''} : #|Γ'| <= v ->
@@ -109,15 +119,42 @@ Proof.
       * destruct H2. rewrite H2. simpl. now rewrite Nat.sub_0_r.
 Qed.
 
+Ltac lia_f_equal := repeat (lia || f_equal).
+
+Lemma smash_context_lift Δ k n Γ : 
+  smash_context (lift_context n (k + #|Γ|) Δ) (lift_context n k Γ) =
+  lift_context n k (smash_context Δ Γ).
+Proof.
+  revert Δ. induction Γ as [|[na [b|] ty]]; intros Δ; simpl; auto.
+  - now rewrite Nat.add_0_r.
+  - rewrite -IHΓ.
+    rewrite lift_context_snoc /=. f_equal.
+    rewrite !subst_context_alt !lift_context_alt !mapi_compose.
+    apply mapi_ext=> n' x.
+    destruct x as [na' [b'|] ty']; simpl.
+    * rewrite !mapi_length /lift_decl /subst_decl /= /map_decl /=; f_equal.
+      + f_equal. rewrite Nat.add_0_r distr_lift_subst_rec /=.
+        lia_f_equal.
+      + rewrite Nat.add_0_r distr_lift_subst_rec; simpl. lia_f_equal.
+    * rewrite !mapi_length /lift_decl /subst_decl /= /map_decl /=; f_equal.
+      rewrite Nat.add_0_r distr_lift_subst_rec /=.
+      repeat (lia || f_equal).
+  - rewrite -IHΓ.
+    rewrite lift_context_snoc /= // /lift_decl /subst_decl /map_decl /=.
+    f_equal.
+    rewrite lift_context_app. simpl.
+    rewrite /app_context; lia_f_equal.
+    rewrite /lift_context // /fold_context /= /map_decl /=.
+    now lia_f_equal.
+Qed.
+
 Lemma lift_unfold_fix n k mfix idx narg fn :
   unfold_fix mfix idx = Some (narg, fn) ->
   unfold_fix (map (map_def (lift n k) (lift n (#|mfix| + k))) mfix) idx = Some (narg, lift n k fn).
 Proof.
   unfold unfold_fix.
   rewrite nth_error_map. destruct (nth_error mfix idx) eqn:Hdef; try congruence.
-  case e: isLambda => //.
   intros [= <- <-]. simpl.
-  rewrite isLambda_lift //.
   repeat f_equal.
   rewrite (distr_lift_subst_rec _ _ n 0 k).
   rewrite fix_subst_length. f_equal.
@@ -227,79 +264,40 @@ Proof.
     + eapply typed_liftn in t0 as [Ht HT]; eauto. lia.
 Qed.
 
-Lemma closed_wf_local `{checker_flags} Σ Γ :
-  wf Σ.1 ->
-  wf_local Σ Γ ->
-  closed_ctx Γ.
-Proof.
-  intros wfΣ. unfold closed_ctx, mapi. intros wf. generalize 0.
-  induction wf; intros n; auto; unfold closed_ctx, snoc; simpl;
-    rewrite mapi_rec_app forallb_app; unfold id, closed_decl.
-  - simpl.
-    destruct t0 as [s Hs].
-    eapply typecheck_closed in Hs as [closedΓ tcl]; eauto.
-    rewrite -> andb_and in *. simpl in *; rewrite andb_true_r in tcl |- *.
-    simpl in *. intuition auto.
-    + apply IHwf.
-    + erewrite closed_upwards; eauto. rewrite List.rev_length. lia.
-  - simpl. eapply typecheck_closed in t1 as [closedΓ tcl]; eauto.
-    rewrite -> andb_and in *. intuition auto.
-    + apply IHwf.
-    + erewrite closed_upwards; eauto.
-      * erewrite closed_upwards; eauto.
-        rewrite List.rev_length. lia.
-      * rewrite List.rev_length. lia.
-Qed.
-
-Lemma lift_declared_minductive `{checker_flags} Σ cst decl n k :
+Lemma lift_declared_minductive `{checker_flags} {Σ : global_env} cst decl n k :
   wf Σ ->
   declared_minductive Σ cst decl ->
   lift_mutual_inductive_body n k decl = decl.
 Proof.
-  intros wfΣ Hdecl. eapply on_declared_minductive in Hdecl; eauto.
-  destruct decl. simpl in *. f_equal.
-  - apply onParams in Hdecl. simpl in *.
-    eapply lift_wf_local; eauto; eauto.
-  - apply onInductives in Hdecl.
-    revert Hdecl. simpl. generalize ind_bodies at 2 4 5.
-    intros.
-    eapply (Alli_mapi_id Hdecl).
-    clear Hdecl. intros.
-    destruct x; simpl in *.
-    destruct (decompose_prod_assum [] ind_type) eqn:Heq.
-    destruct (decompose_prod_assum [] (lift n k ind_type)) eqn:Heq'.
-    destruct X. simpl in *.
-    assert (lift n k ind_type = ind_type).
-    { repeat red in onArity.
-      destruct onArity as [s Hs].
-      eapply typed_liftn; eauto; eauto.
-      - constructor.
-      - simpl. lia.
-    }
-    rewrite H0 in Heq'. rewrite Heq in Heq'. revert Heq'; intros [= <- <-].
-    f_equal; auto.
-    + eapply All_map_id. eapply All2_All_left; tea.
-      intros [[x p] n'] y [cs [s Hty] Hargs _].
-      unfold on_pi2; cbn; f_equal; f_equal.
-      simpl in Hty.
-      eapply typed_liftn. 4:eapply Hty.
-      * eauto.
-      * apply typing_wf_local in Hty; eauto.
-      * change PCUICEnvironment.arities_context with arities_context. lia.
-    + destruct(eq_dec ind_projs []) as [Hp|Hp].
-      * subst; auto.
-      * specialize (onProjections Hp).
-        destruct onProjections as [_ _ _ onProjections].
-        apply (Alli_map_id onProjections).
-        intros n1 [x p].
-        unfold on_projection. simpl.
-        intros [s Hty].
-        unfold on_snd; f_equal; f_equal.
-        eapply typed_liftn. 4:eapply Hty. all:eauto.
-        -- eapply typing_wf_local in Hty; eauto.
-        -- simpl.
-           rewrite smash_context_length. simpl.
-           rewrite context_assumptions_fold. lia.
+  intros wfΣ Hdecl.
+  pose proof (on_declared_minductive wfΣ Hdecl). apply onNpars in X.
+  apply (declared_inductive_closed (Σ:=(empty_ext Σ))) in Hdecl; auto.
+  move: Hdecl.
+  rewrite /closed_inductive_decl /lift_mutual_inductive_body.
+  destruct decl; simpl.
+  move/andP => [clpar clbodies]. f_equal.
+  - now rewrite [fold_context _ _]closed_ctx_lift. 
+  - eapply forallb_All in clbodies.
+    eapply Alli_mapi_id.
+    * eapply (All_Alli clbodies). intros; eauto.
+      intros. eapply H0.
+    * simpl; intros.
+      move: H0. rewrite /closed_inductive_body.
+      destruct x; simpl. move=> /andP[/andP [ci ct] cp].
+      f_equal.
+      + rewrite lift_closed; eauto.
+        eapply closed_upwards; eauto; lia.
+      + eapply All_map_id. eapply forallb_All in ct.
+        eapply (All_impl ct). intros x.
+        destruct x as [[id ty] arg]; unfold on_pi2; intros c; simpl; repeat f_equal.
+        apply lift_closed. unfold cdecl_type in c; simpl in c.
+        eapply closed_upwards; eauto; lia.
+      + simpl in X. rewrite -X in cp.
+        eapply forallb_All in cp. eapply All_map_id; eauto.
+        eapply (All_impl cp); firstorder auto.
+        destruct x; unfold on_snd; simpl; f_equal.
+        apply lift_closed. rewrite context_assumptions_fold.
+        eapply closed_upwards; eauto; lia.
 Qed.
 
 Lemma lift_declared_inductive `{checker_flags} Σ ind mdecl idecl n k :
@@ -310,7 +308,7 @@ Lemma lift_declared_inductive `{checker_flags} Σ ind mdecl idecl n k :
                          (inductive_ind ind) idecl = idecl.
 Proof.
   unfold declared_inductive. intros wfΣ [Hmdecl Hidecl].
-  eapply (lift_declared_minductive _ _ _ n k) in Hmdecl. 2: auto.
+  eapply (lift_declared_minductive _ _ n k) in Hmdecl. 2: auto.
   unfold lift_mutual_inductive_body in Hmdecl.
   destruct mdecl. simpl in *.
   injection Hmdecl. intros Heq.
@@ -362,22 +360,11 @@ Lemma lift_declared_projection `{checker_flags} Σ c mdecl idecl pdecl n k :
   on_snd (lift n (S (ind_npars mdecl + k))) pdecl = pdecl.
 Proof.
   intros.
-  destruct H0 as [[Hmdecl Hidecl] [Hpdecl Hnpar]].
-  eapply declared_decl_closed in Hmdecl; auto.
-  simpl in Hmdecl.
-  pose proof (onNpars _ _ _ _ Hmdecl).
-  apply onInductives in Hmdecl.
-  eapply nth_error_alli in Hmdecl; eauto.
-  pose proof (onProjections Hmdecl) as onp; eauto. forward onp.
-  1: now eapply nth_error_Some_non_nil in Hpdecl.
-  eapply on_projs, nth_error_alli in onp; eauto.
-  move: onp => /= /andb_and[Hd _]. simpl in Hd.
-  rewrite smash_context_length in Hd. simpl in *.
-  change PCUICEnvironment.context_assumptions with context_assumptions in H0.
-  rewrite H0 in Hd.
-  destruct pdecl as [id ty]. unfold on_snd; simpl in *.
-  f_equal. eapply lift_closed.
-  eapply closed_upwards; eauto. lia.
+  eapply (declared_projection_closed (Σ:=empty_ext Σ)) in H0; auto.
+  unfold on_snd. simpl.
+  rewrite lift_closed. 
+  - eapply closed_upwards; eauto; try lia.
+  - destruct pdecl; reflexivity.
 Qed.
 
 Lemma lift_fix_context:
@@ -480,15 +467,6 @@ Proof.
       intros. erewrite IHparams; eauto. simpl. lia.
 Qed.
 
-Lemma closed_ctx_lift n k ctx : closed_ctx ctx -> lift_context n k ctx = ctx.
-Proof.
-  induction ctx in n, k |- *; auto.
-  unfold closed_ctx, id. simpl.
-  rewrite mapi_app forallb_app List.rev_length /= lift_context_snoc0 /snoc Nat.add_0_r.
-  move/andb_and => /= [Hctx /andb_and [Ha _]].
-  rewrite IHctx // lift_decl_closed //. now apply: closed_decl_upwards.
-Qed.
-
 Lemma closed_tele_lift n k ctx :
   closed_ctx ctx ->
   mapi (fun (k' : nat) (decl : context_decl) => lift_decl n (k' + k) decl) (List.rev ctx) = List.rev ctx.
@@ -520,10 +498,24 @@ Proof.
 Qed.
 Hint Rewrite lift_instantiate_params : lift.
 
-(* bug eauto with let .. in hypothesis failing *)
+Lemma decompose_prod_assum_ctx ctx t : decompose_prod_assum ctx t = 
+  let (ctx', t') := decompose_prod_assum [] t in
+  (ctx ,,, ctx', t').
+Proof.
+  induction t in ctx |- *; simpl; auto.
+  - simpl. rewrite IHt2.
+    rewrite (IHt2 ([] ,, vass _ _)).
+    destruct (decompose_prod_assum [] t2). simpl.
+    unfold snoc. now rewrite app_context_assoc.
+  - simpl. rewrite IHt3.
+    rewrite (IHt3 ([] ,, vdef _ _ _)).
+    destruct (decompose_prod_assum [] t3). simpl.
+    unfold snoc. now rewrite app_context_assoc.
+Qed.
+
 Lemma lift_decompose_prod_assum_rec ctx t n k :
-  let (ctx', t') := decompose_prod_assum ctx t in
-  (lift_context n k ctx', lift n (length ctx' + k) t') =
+  (let (ctx', t') := decompose_prod_assum ctx t in
+  (lift_context n k ctx', lift n (length ctx' + k) t')) =
   decompose_prod_assum (lift_context n k ctx) (lift n (length ctx + k) t).
 Proof.
   induction t in n, k, ctx |- *; simpl;
@@ -537,8 +529,8 @@ Proof.
 Qed.
 
 Lemma lift_decompose_prod_assum t n k :
-  let (ctx', t') := decompose_prod_assum [] t in
-  (lift_context n k ctx', lift n (length ctx' + k) t') =
+  (let (ctx', t') := decompose_prod_assum [] t in
+  (lift_context n k ctx', lift n (length ctx' + k) t')) =
   decompose_prod_assum [] (lift n k t).
 Proof. apply lift_decompose_prod_assum_rec. Qed.
 
@@ -889,6 +881,65 @@ Proof.
   now rewrite -> to_extended_list_lift, <- to_extended_list_map_lift.
 Qed.
 
+Lemma destInd_lift n k t : destInd (lift n k t) = destInd t.
+Proof.
+  destruct t; simpl; try congruence.
+Qed.
+
+Lemma nth_error_rev_inv {A} (l : list A) i : 
+  i < #|l| ->
+  nth_error (List.rev l) i = nth_error l (#|l| - S i).
+Proof.
+  intros Hi.
+  rewrite nth_error_rev; autorewrite with len; auto.
+  now rewrite List.rev_involutive.
+Qed.
+
+Lemma weakening_check_one_fix (Γ' Γ'' : context) mfix :
+  map
+       (fun x : def term =>
+        check_one_fix (map_def (lift #|Γ''| #|Γ'|) (lift #|Γ''| (#|mfix| + #|Γ'|)) x)) mfix =
+  map check_one_fix mfix.
+Proof.
+  apply map_ext. move=> [na ty def rarg] /=.
+  rewrite decompose_prod_assum_ctx.
+  destruct (decompose_prod_assum _ ty) eqn:decomp.
+  rewrite decompose_prod_assum_ctx in decomp.
+  rewrite -lift_decompose_prod_assum.
+  destruct (decompose_prod_assum [] ty) eqn:decty.
+  noconf decomp. rewrite !app_context_nil_l (smash_context_lift []).
+  destruct (nth_error_spec (List.rev (smash_context [] c0)) rarg);
+  autorewrite with len in *; simpl in *.
+  - rewrite nth_error_rev_inv; autorewrite with len; simpl; auto.
+    rewrite nth_error_lift_context_eq.
+    simpl.
+    rewrite nth_error_rev_inv in e; autorewrite with len; auto.
+    autorewrite with len in e. simpl in e. rewrite e. simpl.
+    destruct (decompose_app (decl_type x)) eqn:Happ.
+    erewrite decompose_app_lift; eauto.
+    rewrite destInd_lift. reflexivity.
+  - erewrite (proj2 (nth_error_None _ _)); auto.
+    autorewrite with len. simpl; lia.
+Qed.
+
+Lemma weakening_check_one_cofix (Γ' Γ'' : context) mfix :
+  map
+       (fun x : def term =>
+        check_one_cofix (map_def (lift #|Γ''| #|Γ'|) (lift #|Γ''| (#|mfix| + #|Γ'|)) x)) mfix =
+  map check_one_cofix mfix.
+Proof.
+  apply map_ext. move=> [na ty def rarg] /=.
+  rewrite decompose_prod_assum_ctx.
+  destruct (decompose_prod_assum _ ty) eqn:decomp.
+  rewrite decompose_prod_assum_ctx in decomp.
+  rewrite -lift_decompose_prod_assum.
+  destruct (decompose_prod_assum [] ty) eqn:decty.
+  noconf decomp.
+  destruct (decompose_app t) eqn:Happ.
+  erewrite decompose_app_lift; eauto.
+  rewrite destInd_lift. reflexivity.
+Qed.
+
 Lemma weakening_typing_prop {cf:checker_flags} : env_prop (fun Σ Γ0 t T =>
   forall Γ Γ' Γ'' : context,
   wf_local Σ (Γ ,,, Γ'') ->
@@ -973,7 +1024,7 @@ Proof.
       rewrite closedn_subst_instance_context.
       eapply closed_wf_local in Hmdecl; eauto. }
     simpl. econstructor.
-    7:{ cbn. rewrite -> firstn_map.
+    8:{ cbn. rewrite -> firstn_map.
         erewrite lift_build_branches_type; tea.
         rewrite map_option_out_map_option_map.
         subst params. erewrite heq_map_option_out. reflexivity. }
@@ -1024,9 +1075,13 @@ Proof.
         rewrite lift_context_length fix_context_length.
         rewrite permute_lift; try lia. now rewrite (Nat.add_comm #|Γ'|).
       + now rewrite isLambda_lift.
-
+    * red; rewrite <-H1. unfold wf_fixpoint.
+      rewrite map_map_compose.
+      now rewrite weakening_check_one_fix.
+      
   - rewrite -> (map_dtype _ (lift #|Γ''| (#|mfix| + #|Γ'|))).
     eapply type_CoFix; auto.
+    * eapply cofix_guard_lift ; eauto.
     * rewrite -> nth_error_map, heq_nth_error. reflexivity.
     * eapply All_map.
       eapply (All_impl X0); simpl.
@@ -1042,6 +1097,9 @@ Proof.
       rewrite app_context_length fix_context_length in IH.
       rewrite lift_context_length fix_context_length.
       rewrite permute_lift; try lia. now rewrite (Nat.add_comm #|Γ'|).
+    * red; rewrite <-H1. unfold wf_cofixpoint.
+      rewrite map_map_compose.
+      now rewrite weakening_check_one_cofix.
 
   - econstructor; eauto; [|now eapply weakening_cumul].
     destruct IHB.
@@ -1161,7 +1219,7 @@ Proof.
   rewrite !app_context_nil_l in X.
   forward X by eauto using typing_wf_local.
   pose proof (typing_wf_local ty).
-  pose proof (closed_wf_local _ _ wfΣ (typing_wf_local ty)).
+  pose proof (closed_wf_local wfΣ (typing_wf_local ty)).
   specialize (X _ ty).
   eapply PCUICClosed.typecheck_closed in ty as [_ closed]; auto.
   move/andP: closed => [ct cT].
@@ -1207,4 +1265,34 @@ Proof.
       ** eapply All_local_env_impl; eauto.
         simpl; intros.
         rewrite app_context_assoc. apply X.
+Qed.
+
+
+Lemma isWfArity_or_Type_lift {cf:checker_flags} {Σ : global_env_ext} {n Γ ty} 
+  (isdecl : n <= #|Γ|):
+  wf Σ -> wf_local Σ Γ ->
+  isWfArity_or_Type Σ (skipn n Γ) ty ->
+  isWfArity_or_Type Σ Γ (lift0 n ty).
+Proof.
+  intros wfΣ wfΓ wfty. rewrite <- (firstn_skipn n Γ) in wfΓ |- *.
+  assert (n = #|firstn n Γ|).
+  { rewrite firstn_length_le; auto with arith. }
+  destruct wfty.
+  - red. left. destruct i as [ctx [u [da Hd]]].
+    exists (lift_context n 0 ctx), u. split.
+    1: now rewrite (lift_destArity [] ty n 0) da.
+    eapply All_local_env_app_inv.
+    eapply All_local_env_app in Hd. intuition eauto.
+    rewrite {3}H.
+    clear -wfΣ wfΓ isdecl a b.
+    induction b; rewrite ?lift_context_snoc; econstructor; simpl; auto.
+    + destruct t0 as [u Hu]. exists u. rewrite Nat.add_0_r.
+      unshelve eapply (weakening_typing Σ (skipn n Γ) Γ0 (firstn n Γ) t _ _ (tSort u)); eauto with wf.
+    + destruct t0 as [u Hu]. exists u. rewrite Nat.add_0_r.
+      unshelve eapply (weakening_typing Σ (skipn n Γ) Γ0 (firstn n Γ) t _ _ (tSort u)); eauto with wf.
+    + rewrite Nat.add_0_r.
+      unshelve eapply (weakening_typing Σ (skipn n Γ) Γ0 (firstn n Γ) b _ _ t); eauto with wf.
+  - right. destruct i as [u Hu]. exists u.
+    rewrite {3}H.
+    unshelve eapply (weakening_typing Σ (skipn n Γ) [] (firstn n Γ) ty _ _ (tSort u)); eauto with wf.
 Qed.

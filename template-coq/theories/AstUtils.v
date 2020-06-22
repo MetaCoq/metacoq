@@ -23,7 +23,7 @@ Fixpoint string_of_term (t : term) :=
   | tLetIn na b t' t => "LetIn(" ++ string_of_name na ++ "," ++ string_of_term b
                                  ++ "," ++ string_of_term t' ++ "," ++ string_of_term t ++ ")"
   | tApp f l => "App(" ++ string_of_term f ++ "," ++ string_of_list string_of_term l ++ ")"
-  | tConst c u => "Const(" ++ c ++ "," ++ string_of_universe_instance u ++ ")"
+  | tConst c u => "Const(" ++ string_of_kername c ++ "," ++ string_of_universe_instance u ++ ")"
   | tInd i u => "Ind(" ++ string_of_inductive i ++ "," ++ string_of_universe_instance u ++ ")"
   | tConstruct i n u => "Construct(" ++ string_of_inductive i ++ "," ++ string_of_nat n ++ ","
                                     ++ string_of_universe_instance u ++ ")"
@@ -84,11 +84,11 @@ Fixpoint remove_arity (n : nat) (t : term) : term :=
           end
   end.
 
-Fixpoint lookup_mind_decl (id : ident) (decls : global_env)
+Fixpoint lookup_mind_decl (id : kername) (decls : global_env)
  := match decls with
     | nil => None
     | (kn, InductiveDecl d) :: tl =>
-      if string_compare kn id is Eq then Some d else lookup_mind_decl id tl
+      if eq_kername kn id then Some d else lookup_mind_decl id tl
     | _ :: tl => lookup_mind_decl id tl
     end.
 

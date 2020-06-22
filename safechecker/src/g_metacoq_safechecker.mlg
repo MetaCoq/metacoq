@@ -1,4 +1,3 @@
-(*i camlp4deps: "grammar/grammar.cma" i*)
 
 DECLARE PLUGIN "metacoq_safechecker_plugin"
 
@@ -10,7 +9,7 @@ open PeanoNat.Nat
 open Datatypes
 open PCUICSafeChecker
 
-let pr_char_list l = str (Scanf.unescaped (Quoted.list_to_string l))
+let pr_char_list l = str (Scanf.unescaped (Tm_util.list_to_string l))
 
 let time prefix f x =
   let start = Unix.gettimeofday () in

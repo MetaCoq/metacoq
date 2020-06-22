@@ -283,9 +283,13 @@ Next Obligation.
     eapply invert_red_sort in r.
     eapply invert_red_sort in r1. subst. inv r1.
 
-    eapply leq_universe_prop in l0 as []; cbn; eauto.
-    eapply leq_universe_prop in l as []; cbn; eauto.
-    reflexivity.
+    eapply leq_universe_prop in l0; auto.
+    eapply leq_universe_prop_no_prop_sub_type in l; auto.
+    intuition eauto.
+
+    2:reflexivity. now right; exists x0.
+    now apply PCUICValidity.validity in X1.
+    now apply PCUICValidity.validity in t2.
 Qed.
 
 (* Program Definition is_erasable (Sigma : PCUICAst.global_env_ext) (HΣ : ∥wf_ext Sigma∥) (Gamma : context) (HΓ : ∥wf_local Sigma Gamma∥) (t : PCUICAst.term) : *)

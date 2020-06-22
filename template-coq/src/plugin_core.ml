@@ -65,15 +65,21 @@ let tmFail (s : Pp.t) : 'a tm =
 let tmFailString (s : string) : 'a tm =
   tmFail Pp.(str s)
 
+
+let reduce env evm red trm =
+  let red, _ = Redexpr.reduction_of_red_expr env red in
+  let evm, red = red env evm (EConstr.of_constr trm) in
+  (evm, EConstr.to_constr evm red)
+
 let tmEval (rd : reduction_strategy) (t : term) : term tm =
   fun env evd k _fail ->
-    let evd,t' = Quoter.reduce env evd rd t in
+    let evd,t' = reduce env evd rd t in
     k env evd t'
 
 let tmDefinition (nm : ident) ?poly:(poly=false) ?opaque:(opaque=false) (typ : term option) (body : term) : kername tm =
   fun env evm success _fail ->
     let n = DeclareDef.declare_definition
-        ~name:nm ~scope:(DeclareDef.Global Declare.ImportDefaultBehavior)
+        ~name:nm ~scope:(Declare.Global Declare.ImportDefaultBehavior)
         ~opaque ~kind:(Decls.(IsDefinition Definition)) ~impargs:[]
         ~poly ~types:(Option.map EConstr.of_constr typ)
         ~udecl:UState.default_univ_decl ~body:(EConstr.of_constr body) evm in
@@ -107,7 +113,7 @@ let tmLemma (nm : ident) ?poly:(poly=false)(ty : term) : kername tm =
     let obls, _, c, cty = RetrieveObl.retrieve_obligations env nm evm 0 c (EConstr.of_constr ty) in
     (* let evm = Evd.minimize_universes evm in *)
     let ctx = Evd.evar_universe_context evm in
-    let hook = DeclareDef.Hook.make (fun { DeclareDef.Hook.S.dref = gr } ->
+    let hook = Declare.Hook.make (fun { Declare.Hook.S.dref = gr } ->
         let env = Global.env () in
         let evm = Evd.from_env env in
         let evm, t = Evd.fresh_global env evm gr in
@@ -123,21 +129,14 @@ let tmFreshName (nm : ident) : ident tm =
       Namegen.next_ident_away_from nm (fun id -> Nametab.exists_cci (Lib.make_path id))
     in success env evd name'
 
-let tmAbout (qualid : qualid) : global_reference option tm =
+let tmLocate (qualid : qualid) : global_reference list tm =
   fun env evd success _fail ->
-    let opt =
-      try
-        Some (Smartlocate.locate_global_with_alias qualid)
-      with
-        Not_found -> None
-    in success env evd opt
+  let grs = Nametab.locate_all qualid in success env evd grs
 
 
-let tmAboutString (s : string) : global_reference option tm =
-  fun env evd success fail ->
-    let (dp, nm) = Quoted.split_name s in
-    let q = Libnames.make_qualid dp nm in
-    tmAbout q env evd success fail
+let tmLocateString (s : string) : global_reference list tm =
+  let id = Libnames.qualid_of_string s in
+  tmLocate id
 
 let tmCurrentModPath : Names.ModPath.t tm =
   fun env evd success _fail ->
@@ -211,11 +210,10 @@ let tmInductive (mi : mutual_inductive_entry) : unit tm =
     ignore (DeclareInd.declare_mutual_inductive_with_eliminations mi Names.Id.Map.empty []) ;
     success (Global.env ()) evd ()
 
-let tmExistingInstance (kn : kername) : unit tm =
+let tmExistingInstance (gr : Names.GlobRef.t) : unit tm =
   fun env evd success _fail ->
-    (* note(gmm): this seems wrong. *)
-    let ident = Names.Id.of_string (Names.KerName.to_string kn) in
-    Classes.existing_instance true (Libnames.qualid_of_ident ident) None;
+    let q = Libnames.qualid_of_path (Nametab.path_of_global gr) in
+    Classes.existing_instance true q None;
     success env evd ()
 
 let tmInferInstance (typ : term) : term option tm =

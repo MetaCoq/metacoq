@@ -276,7 +276,7 @@ Lemma red1_ind_all :
           (narg : nat) (fn : term),
         unfold_cofix mfix idx = Some (narg, fn) -> P Γ (tProj p (mkApps (tCoFix mfix idx) args)) (tProj p (mkApps fn args))) ->
 
-       (forall (Γ : context) (c : ident) (decl : constant_body) (body : term),
+       (forall (Γ : context) c (decl : constant_body) (body : term),
         declared_constant Σ c decl ->
         forall u : Instance.t, cst_body decl = Some body -> P Γ (tConst c u) (subst_instance_constr u body)) ->
 
@@ -833,8 +833,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     forall mdecl idecl pdecl (isdecl : declared_projection Σ.1 mdecl idecl p pdecl) args,
     Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ->
     #|args| = ind_npars mdecl ->
-    let ty := snd pdecl in
-    Σ ;;; Γ |- tProj p c : subst0 (c :: List.rev args) (subst_instance_constr u ty)
+    Σ ;;; Γ |- tProj p c : subst0 (c :: List.rev args) (subst_instance_constr u pdecl.2)
 
 | type_Fix mfix n decl :
   fix_guard mfix ->
@@ -846,7 +845,6 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     Σ ;;; Γ |- tFix mfix n : decl.(dtype)
 
 | type_CoFix mfix n decl :
-    allow_cofix ->
     nth_error mfix n = Some decl ->
     All_local_env (lift_typing typing Σ) Γ ->
     All (fun d => {s & Σ ;;; Γ |- d.(dtype) :  tSort s}) mfix ->
@@ -888,8 +886,11 @@ Module TemplateTyping <: Typing TemplateTerm TemplateEnvironment TemplateEnvTypi
   Definition ind_guard := ind_guard.
   Definition typing := @typing.
   Definition smash_context := smash_context.
+  Definition lift := lift.
+  Definition subst := subst.
   Definition lift_context := lift_context.
   Definition subst_telescope := subst_telescope.
+  Definition inds := inds.
 End TemplateTyping.
 
 Module TemplateDeclarationTyping :=
@@ -1124,7 +1125,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         Forall_typing_spine Σ Γ (fun t T => P Σ Γ t T) t_ty l t' s ->
         P Σ Γ (tApp t l) t') ->
 
-    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (cst : ident) u (decl : constant_body),
+    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) cst u (decl : constant_body),
         Forall_decls_typing P Σ.1 ->
         All_local_env_over typing Pdecl Σ Γ wfΓ ->
         declared_constant Σ.1 cst decl ->
@@ -1191,7 +1192,6 @@ Lemma typing_ind_env `{cf : checker_flags} :
         All (fun d => {s & (Σ ;;; Γ |- d.(dtype) : tSort s)%type * P Σ Γ d.(dtype) (tSort s)})%type mfix ->
         All (fun d => (Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype))%type *
             P Σ (Γ ,,, types) d.(dbody) (lift0 #|types| d.(dtype)))%type mfix ->
-        allow_cofix ->
         P Σ Γ (tCoFix mfix n) decl.(dtype)) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (t A B : term),
@@ -1257,14 +1257,14 @@ Proof.
       * eapply Alli_impl; eauto. clear onI onP onnp; intros n x Xg.
         refine {| ind_indices := Xg.(ind_indices);
                   ind_arity_eq := Xg.(ind_arity_eq);
-                  ind_ctors_sort := Xg.(ind_ctors_sort) |}.
+                  ind_cshapes := Xg.(ind_cshapes) |}.
         -- apply onArity in Xg. destruct Xg as [s Hs]. exists s; auto.
           specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ localenv_nil (existT _ _ (existT _ _ Hs))))))).
           simpl in IH. simpl. apply IH; constructor 1; simpl; lia.
         -- pose proof Xg.(onConstructors) as Xg'.
            eapply All2_impl; eauto. intros.
-           destruct X14 as [cs onctyp oncargs oncind].
-           unshelve econstructor. eauto.
+           destruct X14 as [cass chead tyeq onctyp oncargs oncind].
+           unshelve econstructor; eauto.
            destruct onctyp as [s Hs].
            pose proof (typing_wf_local (Σ:= (Σ, udecl)) Hs). simpl in Hs.
            specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ X14 (existT _ _ (existT _ _ Hs))))))).
@@ -1280,18 +1280,12 @@ Proof.
            apply IH. simpl. constructor 1. simpl. auto with arith.
            clear -X13 IH oncind.
            revert oncind.
-           generalize (List.rev (lift_context #|cshape_args cs| 0 (ind_indices Xg))).
-           generalize (cshape_indices cs). induction 1; constructor; auto.
+           generalize (List.rev (lift_context #|cshape_args y| 0 (ind_indices Xg))).
+           generalize (cshape_indices y). induction 1; constructor; auto.
            red in p0 |- *.
            specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ (typing_wf_local p0) (existT _ _ (existT _ _ p0))))))).
            apply IH. simpl. constructor 1. simpl. auto with arith.
-        -- intros Hprojs; pose proof (onProjections Xg Hprojs); auto. simpl in *.
-           destruct X14; constructor; auto. eapply Alli_impl; eauto. clear on_projs0. intros.
-           red in X14 |- *. unfold on_type in *; intuition eauto. simpl in *.
-           destruct X14 as [s Hs]. exists s.
-           pose proof (typing_wf_local (Σ:= (Σ, udecl)) Hs).
-           specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ X14 (existT _ _ (existT _ _ Hs))))))).
-           simpl in IH. apply IH; constructor 1; simpl; lia.
+        -- intros Hprojs; pose proof (onProjections Xg Hprojs); auto.
         -- destruct Xg. simpl. unfold check_ind_sorts in *.
           destruct universe_family; auto.
           ++ split. apply ind_sorts0. destruct indices_matter; auto.
@@ -1498,7 +1492,7 @@ Proof.
                           Forall_decls_typing P Σ.1 * P Σ Γ0 t T).
            {intros. eapply (X14 _ X _ _ Hty); eauto. lia. }
            clear X14 X13.
-           clear e decl i a0.
+           clear e decl a0.
            remember (fix_context mfix) as mfixcontext. clear Heqmfixcontext.
    
            induction a1; econstructor; eauto.
@@ -1549,7 +1543,7 @@ Lemma lookup_on_global_env `{checker_flags} P Σ c decl :
 Proof.
   induction 1; simpl.
   congruence.
-  destruct (ident_eq_spec c kn).
+  unfold eq_kername. destruct kername_eq_dec.
   - intros [= ->]. subst c.
     exists (Σ, udecl). constructor; tas.
   - apply IHX.

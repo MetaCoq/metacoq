@@ -80,7 +80,7 @@ Lemma term_forall_ctx_list_ind :
     (forall Γ (n : name) (t : term),
         P Γ t -> forall t0 : term, P Γ t0 -> forall t1 : term, P (vdef n t t0 :: Γ) t1 -> P Γ (tLetIn n t t0 t1)) ->
     (forall Γ (t u : term), P Γ t -> P Γ u -> P Γ (tApp t u)) ->
-    (forall Γ (s : String.string) (u : list Level.t), P Γ (tConst s u)) ->
+    (forall Γ s (u : list Level.t), P Γ (tConst s u)) ->
     (forall Γ (i : inductive) (u : list Level.t), P Γ (tInd i u)) ->
     (forall Γ (i : inductive) (n : nat) (u : list Level.t), P Γ (tConstruct i n u)) ->
     (forall Γ (p : inductive * nat) (t : term),
@@ -454,7 +454,7 @@ Section ParallelReduction.
       All2_prop2_eq Γ Γ' (Γ ,,, fix_context mfix0) (Γ' ,,, fix_context mfix1)
                     dtype dbody (fun x => (dname x, rarg x)) pred1 mfix0 mfix1 ->
       unfold_fix mfix1 idx = Some (narg, fn) ->
-      is_constructor narg args1 = true ->
+      is_constructor narg args0 = true ->
       All2 (pred1 Γ Γ') args0 args1 ->
       pred1 Γ Γ' (mkApps (tFix mfix0 idx) args0) (mkApps fn args1)
 
@@ -778,7 +778,7 @@ Section ParallelReduction.
           All2_prop2_eq Γ Γ' (Γ ,,, fix_context mfix0) (Γ' ,,, fix_context mfix1) dtype dbody
                         (fun x => (dname x, rarg x)) P' mfix0 mfix1 ->
           unfold_fix mfix1 idx = Some (narg, fn) ->
-          is_constructor narg args1 = true ->
+          is_constructor narg args0 = true ->
           All2 (P' Γ Γ') args0 args1 ->
           P Γ Γ' (mkApps (tFix mfix0 idx) args0) (mkApps fn args1)) ->
       (forall (Γ Γ' : context) (ip : inductive * nat) (p0 p1 : term) (mfix0 mfix1 : mfixpoint term) (idx : nat)
@@ -807,13 +807,13 @@ Section ParallelReduction.
           unfold_cofix mfix1 idx = Some (narg, fn) ->
           All2 (P' Γ Γ') args0 args1 ->
           P Γ Γ' (tProj p (mkApps (tCoFix mfix0 idx) args0)) (tProj p (mkApps fn args1))) ->
-      (forall (Γ Γ' : context) (c : ident) (decl : constant_body) (body : term),
+      (forall (Γ Γ' : context) c (decl : constant_body) (body : term),
           All2_local_env (on_decl pred1) Γ Γ' ->
           Pctx Γ Γ' ->
           declared_constant Σ c decl ->
           forall u : Instance.t, cst_body decl = Some body ->
                                         P Γ Γ' (tConst c u) (subst_instance_constr u body)) ->
-      (forall (Γ Γ' : context) (c : ident) (u : Instance.t),
+      (forall (Γ Γ' : context) c (u : Instance.t),
           All2_local_env (on_decl pred1) Γ Γ' ->
           Pctx Γ Γ' ->
           P Γ Γ' (tConst c u) (tConst c u)) ->
@@ -1307,8 +1307,6 @@ Section ParallelWeakening.
               !app_context_assoc in forall_Γ0.
       now rewrite !lift_fix_context.
       unfold unfold_fix. rewrite nth_error_map. rewrite Hnth. simpl.
-      destruct (isLambda (dbody d)) eqn:isl; noconf heq_unfold_fix.
-      rewrite isLambda_lift //.
       f_equal. f_equal.
       rewrite distr_lift_subst. rewrite fix_subst_length. f_equal.
       now rewrite (map_fix_subst (fun k => lift #|Δ''| (k + #|Δ'|))).
@@ -1808,7 +1806,6 @@ Section ParallelSubstitution.
     - autorewrite with subst. simpl.
       unfold unfold_fix in heq_unfold_fix.
       destruct (nth_error mfix1 idx) eqn:Hnth; noconf heq_unfold_fix.
-      destruct (isLambda (dbody d)) eqn:isl; noconf heq_unfold_fix.
       econstructor; auto with pcuic. eapply X0; eauto with pcuic.
       rewrite !subst_fix_context.
       erewrite subst_fix_context.
@@ -1827,7 +1824,6 @@ Section ParallelSubstitution.
       now rewrite !fix_context_length !subst_context_app
           !Nat.add_0_r !app_context_assoc in forall_Γ0.
       unfold unfold_fix. rewrite nth_error_map. rewrite Hnth. simpl.
-      rewrite isLambda_subst //.
       f_equal. f_equal.
       rewrite (map_fix_subst (fun k => subst s' (k + #|Γ'1|))).
       intros. reflexivity. simpl.
@@ -1837,8 +1833,8 @@ Section ParallelSubstitution.
 
     - autorewrite with subst. simpl.
       unfold unfold_cofix in heq_unfold_cofix.
-      destruct (nth_error mfix1 idx) eqn:Hnth; noconf heq_unfold_cofix. simpl.
-      econstructor; pcuic.
+      destruct (nth_error mfix1 idx) eqn:Hnth; noconf heq_unfold_cofix.
+      econstructor; eauto.
       rewrite !subst_fix_context.
       erewrite subst_fix_context.
       eapply All2_local_env_subst_ctx; pcuic.

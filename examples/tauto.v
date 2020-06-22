@@ -812,6 +812,20 @@ Qed.
 
 Definition inspect {A} (x : A) : { y : A | y = x } := exist _ x eq_refl.
 
+Definition tmLocateInd (q : qualid) : TemplateMonad kername :=
+  l <- tmLocate q ;;
+  match l with
+  | [] => tmFail ("Inductive [" ++ q ++ "] not found")
+  | (IndRef ind) :: _ => tmReturn ind.(inductive_mind)
+  | _ :: _ => tmFail ("[" ++ q ++ "] not an inductive")
+  end.
+
+
+MetaCoq Run (tmLocateInd "Logic.and" >>= tmDefinition "q_and").
+MetaCoq Run (tmLocateInd "Logic.or" >>= tmDefinition "q_or").
+MetaCoq Run (tmLocateInd "Logic.True" >>= tmDefinition "q_True").
+MetaCoq Run (tmLocateInd "Logic.False" >>= tmDefinition "q_False").
+
 Equations reify (Σ : global_env_ext) (Γ : context) (P : term) : option form
   by wf (tsize P) lt :=
   reify Σ Γ P with inspect (decompose_app P) := {
@@ -821,7 +835,7 @@ Equations reify (Σ : global_env_ext) (Γ : context) (P : term) : option form
       | None => None
       } ;
     | tInd ind []
-      with string_dec ind.(inductive_mind) "Coq.Init.Logic.and" := {
+      with kername_eq_dec ind.(inductive_mind) q_and := {
       | left e2 with args := {
         | [ A ; B ] =>
           af <- reify Σ Γ A ;;
@@ -830,7 +844,7 @@ Equations reify (Σ : global_env_ext) (Γ : context) (P : term) : option form
         | _ => None
         } ;
       | right _
-        with string_dec ind.(inductive_mind) "Coq.Init.Logic.or" := {
+        with kername_eq_dec ind.(inductive_mind) q_or := {
         | left e2 with args := {
           | [ A ; B ] =>
             af <- reify Σ Γ A ;;
@@ -839,13 +853,13 @@ Equations reify (Σ : global_env_ext) (Γ : context) (P : term) : option form
           | _ => None
           } ;
         | right _
-          with string_dec ind.(inductive_mind) "Coq.Init.Logic.False" := {
+          with kername_eq_dec ind.(inductive_mind) q_False := {
           | left e2 with args := {
             | [] => ret Fa ;
             | _ => None
             } ;
       | right _
-          with string_dec ind.(inductive_mind) "Coq.Init.Logic.True" := {
+          with kername_eq_dec ind.(inductive_mind) q_True := {
           | left e2 with args := {
             | [] => ret Tr ;
             | _ => None

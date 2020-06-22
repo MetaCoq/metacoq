@@ -37,11 +37,12 @@ Section print_term.
          | nAnon => true
          end) Γ.
 
-  Fixpoint lookup_env (Σ : global_env) (id : ident) : option global_decl :=
+  (* todo : duplicate in Environment ? *)
+  Fixpoint lookup_env (Σ : global_env) (id : kername) : option global_decl :=
     match Σ with
     | nil => None
     | hd :: tl =>
-      if ident_eq id hd.1 then Some hd.2
+      if eq_kername id hd.1 then Some hd.2
       else lookup_env tl id
     end.
 
@@ -123,7 +124,7 @@ Section print_term.
                       print_term (vdef na' def dom :: Γ) true body)
   | tApp f l =>
     parens top (print_term Γ false f ++ " " ++ print_list (print_term Γ false) " " l)
-  | tConst c u => c ++ print_universe_instance u
+  | tConst c u => string_of_kername c ++ print_universe_instance u
   | tInd (mkInd i k) u =>
     match lookup_ind_decl i k with
     | Some oib => oib.(ind_name) ++ print_universe_instance u

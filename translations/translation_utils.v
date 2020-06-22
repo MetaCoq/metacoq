@@ -32,7 +32,7 @@ Definition emptyTC : tsl_context := (empty_ext [], []).
 
 Inductive tsl_error :=
 | NotEnoughFuel
-| TranslationNotFound (id : ident)
+| TranslationNotFound (gr : global_reference)
 | TranslationNotHandeled
 | TypingError (t : type_error).
 
@@ -64,7 +64,7 @@ Instance monad_exc : MonadExc tsl_error tsl_result :=
 Definition lookup_tsl_table' E gr :=
   match lookup_tsl_table E gr with
   | Some t => ret t
-  | None => raise (TranslationNotFound (string_of_gref gr))
+  | None => raise (TranslationNotFound gr)
   end.
 
 
@@ -75,8 +75,8 @@ Class Translation :=
     tsl_tm : tsl_context -> term -> tsl_result term ;
     tsl_ty : option (tsl_context -> term -> tsl_result term) ;
 
-    (* string = ModPath in which the inductive will be declared *)
-    tsl_ind : tsl_context -> string -> kername -> mutual_inductive_body
+    (* modpath = ModPath in which the inductive will be declared *)
+    tsl_ind : tsl_context -> modpath -> kername -> mutual_inductive_body
               -> tsl_result (tsl_table * list mutual_inductive_body) }.
 
 
@@ -97,18 +97,34 @@ Definition tmDebug {A} : A -> TemplateMonad unit
 Definition add_global_decl d (Σ : global_env_ext) : global_env_ext
   := (d :: Σ.1, Σ.2).
 
+Definition tmLocateCst (q : qualid) : TemplateMonad kername :=
+  l <- tmLocate q ;;
+  match l with
+  | [] => tmFail ("Constant [" ++ q ++ "] not found")
+  | (ConstRef kn) :: _ => tmReturn kn
+  | _ :: _ => tmFail ("[" ++ q ++ "] is not a constant")
+  end.
+
+Definition monomorph_globref_term (gr : global_reference) : term :=
+  match gr with
+  | VarRef x => tVar x
+  | ConstRef x => tConst x []
+  | IndRef x => tInd x []
+  | ConstructRef x x0 => tConstruct x x0 []
+  end.
+
 
 Definition Translate {tsl : Translation} (ΣE : tsl_context) (id : ident)
   : TemplateMonad tsl_context :=
   tmDebug ("Translate " ++ id);;
-  gr <- tmAbout id ;;
+  gr <- tmLocate1 id ;;
   tmDebug gr;;
   match gr with
-  | None => fail_nf (id ++ " not found")
-  | Some (ConstructRef (mkInd kn n) _)
-  | Some (IndRef (mkInd kn n)) =>
+  | VarRef _ => tmFail "Section variable not supported for the moment"
+  | ConstructRef (mkInd kn n) _
+  | IndRef (mkInd kn n) =>
     mp <- tmCurrentModPath tt ;;
-    d <- tmQuoteInductive id ;;
+    d <- tmQuoteInductive kn ;;
     d' <- tmEval lazy (tsl_ind ΣE mp kn d) ;;
     match d' with
     | Error e =>
@@ -120,11 +136,11 @@ Definition Translate {tsl : Translation} (ΣE : tsl_context) (id : ident)
       let E' := (E ++ (snd ΣE))%list in
       Σ' <- tmEval lazy Σ' ;;
       E' <- tmEval lazy E' ;;
-      tmMsg (kn ++ " has been translated.") ;;
+      tmMsg (string_of_kername kn ++ " has been translated.") ;;
       ret (Σ', E')
     end
     
-  | Some (ConstRef kn) =>
+  | ConstRef kn =>
     e <- tmQuoteConstant kn true ;;
     match e.(cst_body) with
     | None =>
@@ -141,15 +157,16 @@ Definition Translate {tsl : Translation} (ΣE : tsl_context) (id : ident)
         fail_nf ("Translation error during the translation of the body of " ++ id)
       | Success t' =>
         id' <- tmEval all (tsl_id id) ;;
-            tmDebug "here" ;;
-            tmDebug id' ;;
-            tmDebug t' ;;
+        tmDebug "here" ;;
+        tmDebug id' ;;
+        tmDebug t' ;;
         tmMkDefinition id' t' ;;
-            tmDebug "doneu" ;;
+        tmDebug "doneu" ;;
+        gr' <- tmLocate1 id' ;;
         let decl := {| cst_universes := univs;
                        cst_type := A; cst_body := Some t |} in
         let Σ' := add_global_decl (kn, ConstantDecl decl) (fst ΣE) in
-        let E' := (ConstRef kn, tConst id' []) :: (snd ΣE) in
+        let E' := (ConstRef kn, monomorph_globref_term gr') :: (snd ΣE) in
         Σ' <- tmEval lazy Σ' ;;
         E' <- tmEval lazy E' ;;
         print_nf (id ++ " has been translated as " ++ id') ;;
@@ -177,32 +194,29 @@ Definition Implement {tsl : Translation} (ΣE : tsl_context)
       tmBind (tmUnquoteTyped Type tA') (fun A' =>
       tmLemma id' A' ;;
       tmAxiom id A ;;
-      gr <- tmAbout id ;;
-      match gr with
-      | Some (ConstRef kn) =>
-        let decl := {| cst_universes := Monomorphic_ctx ContextSet.empty;
-                       cst_type := tA; cst_body := None |} in
-        let Σ' := add_global_decl (kn, ConstantDecl decl) (fst ΣE) in
-        let E' := (ConstRef kn, tConst id' []) :: (snd ΣE) in
-        print_nf (id ++ " has been translated as " ++ id') ;;
-        ret (Σ', E')
-      | _ => fail_nf (id ++ " was not found or is not a constant. This is a bug.")
-      end)
+      kn <- tmLocateCst id ;;
+      gr' <- tmLocate1 id' ;;
+      let decl := {| cst_universes := Monomorphic_ctx ContextSet.empty;
+                     cst_type := tA; cst_body := None |} in
+      let Σ' := add_global_decl (kn, ConstantDecl decl) (fst ΣE) in
+      let E' := (ConstRef kn, monomorph_globref_term gr') :: (snd ΣE) in
+      print_nf (id ++ " has been translated as " ++ id') ;;
+      ret (Σ', E'))
   end
   end.
 
 
 Definition ImplementExisting {tsl : Translation} (ΣE : tsl_context) (id : ident)
   : TemplateMonad tsl_context :=
-  gr <- tmAbout id ;;
+  gr <- tmLocate1 id ;;
   id' <- tmEval all (tsl_id id) ;;
   mp <- tmCurrentModPath tt ;;
   match tsl_ty with
   | None => tmFail "No implementation of tsl_ty provided for this translation."
   | Some tsl_ty => 
   match gr with
-  | None => fail_nf (id ++ " not found")
-  | Some (ConstRef kn) =>
+  | VarRef _ => tmFail "Section variable not supported for the moment"
+  | ConstRef kn =>
     e <- tmQuoteConstant kn true ;;
     let A := e.(cst_type) in
     tmDebug "plop1" ;;
@@ -219,14 +233,15 @@ Definition ImplementExisting {tsl : Translation} (ΣE : tsl_context) (id : ident
       tmBind (tmUnquoteTyped Type tA') (fun A' =>
       tmDebug "plop3" ;;
       tmLemma id' A' ;;
+      gr' <- tmLocate1 id' ;;
       let decl := {| cst_universes := Monomorphic_ctx ContextSet.empty;
                      cst_type := A; cst_body := e.(cst_body) |} in
       let Σ' := add_global_decl (kn, ConstantDecl decl) (fst ΣE) in
-      let E' := (ConstRef kn, tConst id' []) :: (snd ΣE) in
+      let E' := (ConstRef kn, monomorph_globref_term gr') :: (snd ΣE) in
       print_nf (id ++ " has been translated as " ++ id') ;;
       ret (Σ', E'))
     end
-  | Some (IndRef (mkInd kn n)) =>
+  | IndRef (mkInd kn n) =>
     d <- tmQuoteInductive kn ;;
     match List.nth_error (ind_bodies d) n with
       | None => fail_nf ("The declaration of "
@@ -241,14 +256,15 @@ Definition ImplementExisting {tsl : Translation} (ΣE : tsl_context) (id : ident
         id' <- tmEval all (tsl_id id) ;;
         tmBind (tmUnquoteTyped Type tA') (fun A' =>
         tmLemma id' A' ;;
+        gr' <- tmLocate1 id' ;;
         let Σ' := add_global_decl (kn, InductiveDecl d) (fst ΣE) in
-        let E' := (IndRef (mkInd kn n), tConst id' []) :: (snd ΣE) in
+        let E' := (IndRef (mkInd kn n), monomorph_globref_term gr') :: (snd ΣE) in
         print_nf (id ++ " has been translated as " ++ id') ;;
         ret (Σ', E'))
       end
     end
 
-  | Some (ConstructRef (mkInd kn n) k) =>
+  | ConstructRef (mkInd kn n) k =>
     d <- tmQuoteInductive kn ;;
     tmDebug "plop1" ;;
     match List.nth_error (ind_bodies d) n with
@@ -275,7 +291,8 @@ Definition ImplementExisting {tsl : Translation} (ΣE : tsl_context) (id : ident
           tmBind (tmUnquoteTyped Type tA') (fun A' =>
           tmDebug "plop7" ;;
           tmLemma id' A' ;;
-          let E' := (ConstructRef (mkInd kn n) k, tConst id' []) :: (snd ΣE) in
+          gr' <- tmLocate1 id' ;;
+          let E' := (ConstructRef (mkInd kn n) k, monomorph_globref_term gr') :: (snd ΣE) in
           print_nf (id ++ " has been translated as " ++ id') ;;
           ret (fst ΣE, E'))
         end
@@ -286,57 +303,20 @@ Definition ImplementExisting {tsl : Translation} (ΣE : tsl_context) (id : ident
 
 
 
-Require Import Ascii.
-
-Fixpoint string_of_ascii_list l :=
-  match l with
-  | nil => EmptyString
-  | a :: s => String a (string_of_ascii_list s)
-  end.
-
-Definition string_of_ascii_list_rev l := string_of_ascii_list (rev l).
-
-(* Compute (string_of_ascii_list_rev ["."; "g"; "h"]%char). *)
-
-
-(* empty list on empty string ?? *)
-(* acc is in reverse order *)
-Fixpoint split_string_aux (sep : ascii) (s : string) (acc : list ascii)
-  : list string :=
-  match s with
-  | EmptyString => [string_of_ascii_list_rev acc]
-  | String a s => if Ascii.ascii_dec a sep then (string_of_ascii_list_rev acc)
-                                                 :: (split_string_aux sep s [])
-                 else split_string_aux sep s (a :: acc)
-  end.
-
-Definition split_string (sep : Ascii.ascii) (s : string) : list string :=
-  split_string_aux sep s [].
-
-(* Compute (split_string "."%char "eopjqd.qS.E"). *)
-(* Compute (split_string "."%char ""). *)
-
-Definition ident_of_kn (kn : kername) : ident
-  := last (split_string "."%char kn) kn.
-
-Definition tsl_kn (tsl_ident : ident -> ident) (kn : kername) mp
-  := mp ++ "." ++ (tsl_ident (ident_of_kn kn)).
-
-
 
 Definition TranslateRec {tsl : Translation} (ΣE : tsl_context) {A} (t : A) := 
   p <- tmQuoteRec t ;;
   tmPrint "~~~~~~~~~~~~~~~~~~" ;;
   monad_fold_right (fun ΣE '(kn, decl) =>
-    print_nf ("Translating " ++ kn) ;;
+    print_nf ("Translating " ++ string_of_kername kn) ;;
     match decl with
     | ConstantDecl decl =>
       match lookup_tsl_table (snd ΣE) (ConstRef kn) with
-      | Some _ => print_nf (kn ++ " was already translated") ;; ret ΣE
+      | Some _ => print_nf (string_of_kername kn ++ " was already translated") ;; ret ΣE
       | None => 
         match decl with
         | {| cst_body := None |} =>
-          fail_nf (kn ++ " is an axiom. Use Implement Existing.")
+          fail_nf (string_of_kername kn ++ " is an axiom. Use Implement Existing.")
                     
         | {| cst_type := A; cst_body := Some t; cst_universes := univs |} =>
           tmDebug "go";;
@@ -346,17 +326,18 @@ Definition TranslateRec {tsl : Translation} (ΣE : tsl_context) {A} (t : A) :=
           | Error e =>
             print_nf e ;;
             fail_nf ("Translation error during the translation of the body of "
-                       ++ kn)
+                       ++ string_of_kername kn)
           | Success t' =>
-            let id := ident_of_kn kn in
+            let id := kn.2 in
             let id' := tsl_ident id in
             tmDebug "here";;
             tmDebug id' ;;
             tmDebug t' ;;
             tmMkDefinition id' t' ;;
             tmDebug "there";;
+            gr' <- tmLocate1 id' ;;
             let Σ' := add_global_decl (kn, ConstantDecl decl) (fst ΣE) in
-            let E' := (ConstRef kn, tConst id' []) :: (snd ΣE) in
+            let E' := (ConstRef kn, monomorph_globref_term gr') :: (snd ΣE) in
             Σ' <- tmEval lazy Σ' ;;
             E' <- tmEval lazy E' ;;
             print_nf  (id ++ " has been translated as " ++ id') ;;
@@ -367,7 +348,7 @@ Definition TranslateRec {tsl : Translation} (ΣE : tsl_context) {A} (t : A) :=
 
     | InductiveDecl d => 
       match lookup_tsl_table (snd ΣE) (IndRef (mkInd kn 0)) with
-      | Some _ => print_nf (kn ++ " was already translated") ;; ret ΣE
+      | Some _ => print_nf (string_of_kername kn ++ " was already translated") ;; ret ΣE
       | None => 
         tmDebug "go'";;
         mp <- tmCurrentModPath tt ;;
@@ -377,14 +358,14 @@ Definition TranslateRec {tsl : Translation} (ΣE : tsl_context) {A} (t : A) :=
          | Error e => 
            print_nf e ;;
            fail_nf ("Translation error during the translation of the inductive "
-                      ++ kn)
+                      ++ string_of_kername kn)
          | Success (E, decls) =>
            monad_iter tmMkInductive' decls ;;
            let Σ' := add_global_decl (kn, InductiveDecl d) (fst ΣE) in
            let E' := (E ++ (snd ΣE))%list in
            Σ' <- tmEval lazy Σ' ;;
            E' <- tmEval lazy E' ;;
-           print_nf  (kn ++ " has been translated.") ;;
+           print_nf  (string_of_kername kn ++ " has been translated.") ;;
            ret (Σ', E')
          end
       end

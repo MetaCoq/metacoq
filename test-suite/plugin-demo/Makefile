@@ -1,23 +1,26 @@
-TEMPLATE_LIB=../../template-coq
+all: coq plugin
 
-coq: sources Makefile.coq
+coq: Makefile.coq
 	$(MAKE) -f Makefile.coq
+	cd gen-src && ./to-lower.sh
 
-Makefile.coq: _CoqProject gen-src get-mc
+Makefile.coq: _CoqProject
 	coq_makefile -f _CoqProject -o Makefile.coq
 
-gen-src:
-	$(MAKE) -C gen-src
+Makefile.plugin: _PluginProject
+	coq_makefile -f _PluginProject -o Makefile.plugin
 
-get-mc:
-	cp -r $(TEMPLATE_LIB)/gen-src/to-lower.sh src
-	(cd src; ./to-lower.sh)
-	cp -r $(TEMPLATE_LIB)/gen-src/*.ml $(TEMPLATE_LIB)/gen-src/*.mli src
+plugin: Makefile.plugin coq
+	$(MAKE) -f Makefile.plugin
 
-.PHONY: get-mc gen-src
+.PHONY: plugin
 
-clean:
+clean: Makefile.coq Makefile.plugin
 	$(MAKE) -f Makefile.coq clean
+	$(MAKE) -f Makefile.plugin clean
 
-sources:
-	$(MAKE) -C gen-src
+.merlin:
+	make -f Makefile.plugin .merlin
+
+cleanplugin: Makefile.plugin
+	make -f Makefile.plugin clean

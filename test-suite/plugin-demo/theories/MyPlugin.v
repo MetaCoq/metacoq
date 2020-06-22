@@ -26,11 +26,11 @@ Fixpoint print_all_kns (t : Ast.term) : TM unit :=
     tmBind (print_all_kns a) (fun _ => mconcat (List.map print_all_kns b))
   | tLetIn _ a b c =>
     tmBind (print_all_kns a) (fun _ => tmBind (print_all_kns b) (fun _ => print_all_kns c))
-  | tConst c _ => tmMsg c
-  | tInd i _ => tmMsg i.(inductive_mind)
-  | tConstruct i _ _ => tmMsg i.(inductive_mind)
+  | tConst c _ => tmMsg (string_of_kername c)
+  | tInd i _ => tmMsg (string_of_kername i.(inductive_mind))
+  | tConstruct i _ _ => tmMsg (string_of_kername i.(inductive_mind))
   | tProj (i,_,_) b =>
-    tmBind (tmMsg i.(inductive_mind)) (fun _ => print_all_kns b)
+    tmBind (tmMsg (string_of_kername i.(inductive_mind))) (fun _ => print_all_kns b)
   | _ => tmReturn tt
   end.
 
@@ -38,33 +38,33 @@ Notation "<% x %>" := (ltac:(let p y := exact y in quote_term x p))
   (only parsing).
 
 
-Definition gr_to_kername (gr : global_reference) : kername :=
-  match gr with
-  | ConstRef kn => kn
-  | IndRef ind => ind.(inductive_mind)
-  | ConstructRef ind _ => ind.(inductive_mind)
-  end.
+(* Definition gr_to_kername (gr : global_reference) : kername := *)
+(*   match gr with *)
+(*   | ConstRef kn => kn *)
+(*   | IndRef ind => ind.(inductive_mind) *)
+(*   | ConstructRef ind _ => ind.(inductive_mind) *)
+(*   end. *)
 
 Definition tmResolve (nm : String.string) : TM (option kername) :=
-  tmBind (tmAbout nm)
+  tmBind (tmLocate nm)
          (fun gr =>
             match gr with
-            | None => tmReturn None
-            | Some (ConstRef kn) => tmReturn (Some kn)
-            | Some (IndRef ind) => tmReturn (Some ind.(inductive_mind))
-            | Some (ConstructRef ind _) => tmReturn (Some ind.(inductive_mind))
+            | (ConstRef kn) :: _ => tmReturn (Some kn)
+            | (IndRef ind) :: _ => tmReturn (Some ind.(inductive_mind))
+            | (ConstructRef ind _) :: _ => tmReturn (Some ind.(inductive_mind))
+            | _ => tmReturn None
             end).
 
 
 (* ^^ Everything above here is generic *)
 
-Require Import Lens.Lens.
+Require Import Lens.
 
 
 Set Primitive Projections.
 Set Universe Polymorphism.
 
-Record Info : Set :=
+Record Info  :=
 { type : ident
 ; ctor : ident
 ; fields : list (ident * term)
@@ -155,9 +155,9 @@ Definition opBind {A B} (a: option A) (f: A -> option B) : option B :=
   end.
 
 Definition genLensN (baseName : String.string) : TM unit :=
-  tmBind (tmAbout baseName) (fun gr =>
+  tmBind (tmLocate baseName) (fun gr =>
     match gr with
-    | Some (IndRef kn) =>
+    | (IndRef kn) :: _ =>
       let name := kn.(inductive_mind) in
       let ty := Ast.tInd
         {| BasicAst.inductive_mind := name
@@ -182,10 +182,10 @@ Definition genLensN (baseName : String.string) : TM unit :=
 
 
 Definition tmQuoteConstantR (nm : String.string) (bypass : bool) : TM _ :=
-  tmBind (tmAbout nm)
+  tmBind (tmLocate nm)
          (fun gr =>
             match gr with
-            | Some (ConstRef kn) =>
+            | (ConstRef kn) :: _ =>
               tmBind (tmQuoteConstant kn bypass)
                      (fun x => tmReturn (Some x))
             | _ => tmReturn None
@@ -197,16 +197,15 @@ Definition lookupPrint (baseName : String.string) : TM unit :=
             match b with
             | None => tmFail "not a constant"
             | Some b =>
-              match b with
-              | ParameterEntry _ => tmReturn tt
-              | DefinitionEntry d =>
-                tmPrint (definition_entry_body d)
+              match b.(cst_body) with
+              | None => tmReturn tt
+              | Some bd => tmPrint bd
               end
             end).
 
 Definition x := <% 0 %>.
 
-Definition lookup (baseName : String.string) : TM unit :=
+Definition lookup baseName : TM unit :=
   tmBind (tmQuoteConstant baseName true)
          (fun b => tmReturn tt).
 

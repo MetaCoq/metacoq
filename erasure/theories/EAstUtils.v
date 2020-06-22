@@ -135,14 +135,6 @@ Proof.
 Qed.
 Close Scope string_scope.
 
-Lemma firstn_add {A} x y (args : list A) : firstn (x + y) args = firstn x args ++ firstn y (skipn x args).
-Proof.
-  induction x in y, args |- *. simpl. reflexivity.
-  simpl. destruct args. simpl.
-  now rewrite firstn_nil.
-  rewrite IHx. now rewrite app_comm_cons.
-Qed.
-
 Lemma decompose_app_rec_inv' f l hd args :
   decompose_app_rec f l = (hd, args) ->
   ∑ n, ~~ isApp hd /\ l = skipn n args /\ f = mkApps hd (firstn n args).
@@ -254,7 +246,7 @@ Fixpoint string_of_term (t : term) : string :=
   | tLambda na t => "Lambda(" ++ string_of_name na ++ "," ++ string_of_term t ++ ")"
   | tLetIn na b t => "LetIn(" ++ string_of_name na ++ "," ++ string_of_term b ++ "," ++ string_of_term t ++ ")"
   | tApp f l => "App(" ++ string_of_term f ++ "," ++ string_of_term l ++ ")"
-  | tConst c => "Const(" ++ c ++ ")"
+  | tConst c => "Const(" ++ string_of_kername c ++ ")"
   | tConstruct i n => "Construct(" ++ string_of_inductive i ++ "," ++ string_of_nat n ++ ")"
   | tCase (ind, i) t brs =>
     "Case(" ++ string_of_inductive ind ++ "," ++ string_of_nat i ++ "," ++ string_of_term t ++ ","

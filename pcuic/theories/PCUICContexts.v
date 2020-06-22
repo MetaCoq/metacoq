@@ -116,8 +116,7 @@ context_assumptions ctx = #|ctx|.
 Proof.
 induction ctx; simpl; auto.
 destruct a as [na [b|] ty]; simpl.
-intros. depelim H; simpl in H0; noconf H0.
-depelim H; rewrite IHctx; auto.
+intros. depelim H. depelim H; rewrite IHctx; auto.
 Qed.
 
 Lemma context_subst_length2 {ctx args s} : context_subst ctx args s -> #|args| = context_assumptions ctx.

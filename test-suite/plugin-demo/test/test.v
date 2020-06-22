@@ -18,7 +18,7 @@ Fail Print zeroE.
 
 Make Lens Point.
 
-SearchAbout Point.
+Search Point.
 
 Module A.
   Showoff.

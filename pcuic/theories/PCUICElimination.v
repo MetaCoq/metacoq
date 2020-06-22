@@ -273,7 +273,7 @@ Proof.
       specialize (H _ _ _ _ Ht sp).
       split.
       * intros prs;eapply All_local_assum_app in prs as [prd prs].
-      depelim prd; simpl in H0; noconf H0.
+      depelim prd.
       apply H.
       clear -wfΣ prs.
       eapply All_local_assum_subst; eauto.
@@ -285,7 +285,7 @@ Proof.
       repeat (constructor; auto). rewrite !subst_empty.
       eapply typing_wf_local in Ht2.
       rewrite app_context_assoc in Ht2. eapply All_local_env_app in Ht2 as [Ht2 _].
-      depelim Ht2; simpl in H; noconf H. apply l0.
+      depelim Ht2. apply l0.
       now rewrite app_context_assoc in Ht2.
       * intros mdecl idec decli oib.
         now apply H.
@@ -318,7 +318,7 @@ Proof.
         specialize (H _ _ _ _ Ht sp).
         split.
         intros prs;eapply All_local_assum_app in prs as [prd prs].
-        depelim prd; simpl in H0; noconf H0.
+        depelim prd.
         eapply (type_Cumul _ _ _ _ ty) in t0.
         2:{ right. destruct s0 as [s' [Hs' _]]. exists s'; auto. }
         2:{ eapply conv_cumul. now symmetry. }
@@ -583,7 +583,7 @@ Proof.
   eapply build_branches_type_lookup in e2. eauto.
   2:eauto.
   3:destruct declc; eauto.
-  2:{ eapply (All2_impl a); firstorder. }
+  2:{ eapply (All2_impl a); firstorder eauto. }
   destruct e2 as [nargs [br [brty [[[Hnth Hnth'] brtyped]]]]].
   epose proof (All2_nth_error _ _ _ a H).
   specialize (X0 Hnth').

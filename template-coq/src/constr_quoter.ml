@@ -201,6 +201,15 @@ struct
     | Univ.Variance.Covariant -> Lazy.force cCovariant
     | Univ.Variance.Invariant -> Lazy.force cInvariant
 
+  let quote_cuminfo_variance var =
+    let var_list = CArray.map_to_list quote_variance var in
+    to_coq_list (Lazy.force tVariance) var_list
+
+  let quote_ucontext inst const =
+    let inst' = quote_univ_instance inst in
+    let const' = quote_univ_constraints const in
+    constr_mkApp (tUContextmake, [|inst'; const'|])
+
   let quote_univ_contextset uctx =
     let levels' = quote_levelset (ContextSet.levels uctx) in
     let const' = quote_univ_constraints (ContextSet.constraints uctx) in
@@ -211,6 +220,14 @@ struct
     let const' = quote_univ_constraints (UContext.constraints uctx) in
     constr_mkApp (tUContextmake, [|inst'; const'|])
 
+  (* let quote_variance_entry var =
+    let listvar = constr_mkAppl (tlist, [| tVariance |]) in
+    match var with
+    | None -> constr_mkApp (cNone, [| listvar |])
+    | Some var ->
+     let var' = quote_cuminfo_variance var in
+      constr_mkApp (cSome, [| listvar; var' |]) *)
+  
  let quote_abstract_univ_context uctx =
     let arr = (AUContext.names uctx) in
     let idents = to_coq_listl tname (CArray.map_to_list quote_name arr) in
@@ -229,6 +246,17 @@ struct
   let mkPolymorphic_entry names ctx = 
      let names = to_coq_list (Lazy.force tname) names in
      constr_mkApp (cPolymorphic_entry, [| names; ctx |])
+
+  let quote_inductive_universes uctx =
+    match uctx with
+    | Entries.Monomorphic_entry uctx -> 
+      let ctx = quote_univ_context (Univ.ContextSet.to_context uctx) in
+      constr_mkApp (cMonomorphic_entry, [| ctx |])
+    | Entries.Polymorphic_entry (names, uctx) ->
+      let names = CArray.map_to_list quote_name names in
+      let names = to_coq_list (Lazy.force tname) names in
+      let ctx = quote_univ_context uctx in
+      constr_mkApp (cPolymorphic_entry, [| names; ctx |])
 
   let quote_ugraph (g : UGraph.t) =
     let inst' = quote_univ_instance Univ.Instance.empty in
@@ -335,13 +363,13 @@ struct
     let consnames = to_coq_listl tident consnames in
     let constypes = to_coq_listl tTerm constypes in
     constr_mkApp (tBuild_one_inductive_entry, [| iname; arity; consnames; constypes |])
-
-  let quote_mutual_inductive_entry (mf, mp, is, mpol, template, cumulative) =
+  
+  let quote_mutual_inductive_entry (mf, mp, is, mpol, var) =
     let is = to_coq_listl tOne_inductive_entry (List.map make_one_inductive_entry is) in
     let mpr = constr_mkAppl (cNone, [|bool_type|]) in
     let mr = constr_mkApp (cNone, [|constr_mkAppl (option_type, [|tident|])|]) in
-    (* let var = quote_option (constr_mkAppl (tlist, [| tVariance |])) (Option.map (to_coq_listl tVariance) var) in *)
-    constr_mkApp (tBuild_mutual_inductive_entry, [| mr; mf; mp; is; mpol; template; cumulative; mpr |]) 
+    (* let var = quote_option (constr_mkAppl (tlist, [| tVariance |])) (Option.map (to_coq_listl tVariance) var) in*)
+    constr_mkApp (tBuild_mutual_inductive_entry, [| mr; mf; mp; is; mpol; var; mpr |])
 
   let quote_parameter_entry ty univs =
     constr_mkApp (cBuild_parameter_entry, [|ty; univs|])

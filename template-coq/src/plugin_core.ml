@@ -79,7 +79,7 @@ let tmEval (rd : reduction_strategy) (t : term) : term tm =
 let tmDefinition (nm : ident) ?poly:(poly=false) ?opaque:(opaque=false) (typ : term option) (body : term) : kername tm =
   fun env evm success _fail ->
     let n = DeclareDef.declare_definition
-        ~name:nm ~scope:(DeclareDef.Global Declare.ImportDefaultBehavior)
+        ~name:nm ~scope:(Declare.Global Declare.ImportDefaultBehavior)
         ~opaque ~kind:(Decls.(IsDefinition Definition)) ~impargs:[]
         ~poly ~types:(Option.map EConstr.of_constr typ)
         ~udecl:UState.default_univ_decl ~body:(EConstr.of_constr body) evm in
@@ -113,7 +113,7 @@ let tmLemma (nm : ident) ?poly:(poly=false)(ty : term) : kername tm =
     let obls, _, c, cty = RetrieveObl.retrieve_obligations env nm evm 0 c (EConstr.of_constr ty) in
     (* let evm = Evd.minimize_universes evm in *)
     let ctx = Evd.evar_universe_context evm in
-    let hook = DeclareDef.Hook.make (fun { DeclareDef.Hook.S.dref = gr } ->
+    let hook = Declare.Hook.make (fun { Declare.Hook.S.dref = gr } ->
         let env = Global.env () in
         let evm = Evd.from_env env in
         let evm, t = Evd.fresh_global env evm gr in

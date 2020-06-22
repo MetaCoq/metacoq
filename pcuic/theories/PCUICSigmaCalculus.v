@@ -367,7 +367,7 @@ Proof.
   - move/andP: clt => [] ? ?. f_equal; eauto.
   - move/andP: clt => [] /andP[] ? ? b1.
     red in X. solve_all. f_equal; eauto.
-    eapply All_map_eq. eapply (All_impl b1). firstorder.
+    eapply All_map_eq. eapply (All_impl b1). firstorder auto with *.
   - f_equal; eauto. red in X. solve_all.
     move/andP: b => []. eauto. intros.
     apply map_def_eq_spec; eauto.

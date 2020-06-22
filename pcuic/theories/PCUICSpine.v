@@ -1675,7 +1675,7 @@ Proof.
         repeat constructor. rewrite !subst_empty.
         eapply All_local_env_app in wfΓΔ as [_ wf].
         eapply All_local_env_app in wf as [wfd _].
-        depelim wfd; simpl in H; noconf H. apply l0.
+        depelim wfd. apply l0.
       * rewrite subst_app_simpl.
         move: (context_subst_length _ _ _ sps).
         now  autorewrite with len => <-.
@@ -1953,10 +1953,10 @@ Proof.
   - induction inst_subslet0 in inst, inst_ctx_subst0, spine_codom_wf0 |- *.
     depelim inst_ctx_subst0.
     + constructor.
-    + depelim inst_ctx_subst0; simpl in H; noconf H.
+    + depelim inst_ctx_subst0.
       simpl. rewrite smash_context_acc.
       simpl. rewrite List.rev_app_distr.
-      depelim spine_codom_wf0; simpl in H; noconf H.
+      depelim spine_codom_wf0.
       constructor. now apply IHinst_subslet0.
       eapply meta_conv. eauto.
       simpl.
@@ -1978,7 +1978,7 @@ Proof.
       rewrite map_inst_idsn. now autorewrite with len.
       now apply context_subst_extended_subst.
     + simpl. rewrite smash_context_acc.
-      simpl. depelim spine_codom_wf0; simpl in H; noconf H.
-      depelim inst_ctx_subst0; simpl in H; noconf H; simpl in H0; noconf H0.
+      simpl. depelim spine_codom_wf0.
+      depelim inst_ctx_subst0.
       apply IHinst_subslet0; auto.
 Qed.

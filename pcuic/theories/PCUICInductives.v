@@ -993,7 +993,7 @@ Proof.
   move=> wfΣ wfΔ.
   generalize 0 at 1 4.
   induction Δ as [|[na [d|] ?] ?] in wfΔ |- *; simpl; auto;
-  depelim wfΔ; simpl in H; noconf H.
+  depelim wfΔ.
   * intros n. rewrite extended_subst_length. rewrite lift_closed.
     red in l0. autorewrite with len. now eapply subject_closed in l0.
     rewrite (reln_lift 1 0).
@@ -1016,7 +1016,7 @@ Lemma subslet_extended_subst {cf:checker_flags} Σ Δ :
 Proof.
   move=> wfΣ wfΔ.
   induction Δ as [|[na [d|] ?] ?] in wfΔ |- *; simpl; auto;
-  depelim wfΔ; simpl in H; noconf H.
+  depelim wfΔ.
   * rewrite extended_subst_length. rewrite lift_closed.
     red in l0. autorewrite with len. now eapply subject_closed in l0.
     constructor. auto. specialize (IHΔ wfΔ).

@@ -279,9 +279,8 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
     else
       let name = unquote_ident (reduce_all env evm name) in
       let kind = Decls.IsAssumption Decls.Definitional in
-      let decl = Declare.SectionLocalAssum {typ; impl = Glob_term.Explicit} in
       (* FIXME: better handling of evm *)
-      Declare.declare_variable ~name ~kind decl;
+      Declare.declare_variable ~name ~kind ~typ ~impl:Glob_term.Explicit;
       let env = Global.env () in
       k (env, evm, Lazy.force unit_tt)
   | TmDefinition (opaque,name,s,typ,body) ->
@@ -293,7 +292,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
       let evm, typ = (match unquote_option s with Some s -> let red = unquote_reduction_strategy env evm s in Plugin_core.reduce env evm red typ | None -> evm, typ) in
       let n = DeclareDef.declare_definition
           ~name ~kind:(Decls.IsDefinition Decls.Definition) ~opaque ~poly
-          ~scope:(DeclareDef.Global Declare.ImportDefaultBehavior) ~impargs:[]
+          ~scope:(Declare.Global Declare.ImportDefaultBehavior) ~impargs:[]
           ~udecl:UState.default_univ_decl ~types:(Some (EConstr.of_constr typ)) ~body:(EConstr.of_constr body) evm in
       let env = Global.env () in
       (* Careful, universes in evm were modified for the declaration of def *)
@@ -352,7 +351,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
        let obls, _, c, cty = RetrieveObl.retrieve_obligations env ident evm 0 c (EConstr.of_constr typ) in
        (* let evm = Evd.minimize_universes evm in *)
        let uctx = Evd.evar_universe_context evm in
-       let hook = DeclareDef.Hook.make (fun { DeclareDef.Hook.S.dref = gr } ->
+       let hook = Declare.Hook.make (fun { Declare.Hook.S.dref = gr } ->
           let env = Global.env () in
           let evm = Evd.from_env env in
           let evm, t = Evd.fresh_global env evm gr in

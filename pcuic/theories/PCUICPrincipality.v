@@ -339,8 +339,8 @@ Section Principality.
       transitivity (mkApps u1 (skipn (ind_npars x8) x0 ++ [u2])); auto.
       eapply conv_cumul, mkApps_conv_args; auto.
       eapply All2_app. 2:constructor; auto.
-      eapply All2_skipn. eapply All2_sym, (All2_impl X0); firstorder.
-      econstructor;  eauto. simpl. split; auto.
+      eapply All2_skipn. eapply All2_sym, (All2_impl X0); firstorder auto with *.
+      econstructor; eauto. simpl. split; auto.
       eapply type_Cumul; eauto. auto. 
 
     - destruct s as [[ind k] pars]; simpl in *.

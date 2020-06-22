@@ -27,7 +27,7 @@ struct
   type quoted_universes_decl = Constr.t (* of type Universes.universes_decl *)
 
   type quoted_universes_entry = Constr.t (* of type Ast.universes_entry *)
-  type quoted_ind_entry = quoted_ident * t * quoted_bool * quoted_ident list * t list
+  type quoted_ind_entry = quoted_ident * t * quoted_ident list * t list
   type quoted_definition_entry = Constr.t (* of type Ast.definition_entry *)
   type quoted_parameter_entry = Constr.t (* of type Ast.parameter_entry *)
   type quoted_constant_entry = Constr.t (* of type Ast.constant_entry *)

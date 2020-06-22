@@ -242,7 +242,7 @@ Next Obligation.
   cbn. constructor. subst. reflexivity.
 Defined.
 
-Fixpoint eq_cast_kind (c c' : cast_kind) : bool :=
+Definition eq_cast_kind (c c' : cast_kind) : bool :=
   match c, c' with
   | VmCast, VmCast
   | NativeCast, NativeCast

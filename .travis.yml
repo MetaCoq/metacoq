@@ -25,7 +25,7 @@ install:
 - export PATH=$HOME/bin:$PATH
 - which opam || (rm -rf $HOME/.opam; echo $HOME/bin | sudo sh install.sh --no-backup; opam init --disable-sandboxing -j ${NJOBS} --compiler=${COMPILER} -n -y)
 - opam --version
-- opam update
+- opam update -y
 - opam init -j ${NJOBS} -n -y --compiler=$COMPILER
 - opam switch create ${COMPILER} || echo "switch already exists"
 - opam switch set ${COMPILER}

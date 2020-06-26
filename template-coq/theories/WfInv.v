@@ -6,7 +6,7 @@ From MetaCoq.Template Require Import config utils Ast AstUtils.
 
 (** * Inversion lemmas for the well-formedness judgement *)
 
-Fixpoint wf_Inv (t : term) :=
+Definition wf_Inv (t : term) :=
   match t with
   | tRel _ | tVar _ | tSort _ => True
   | tEvar n l => Forall wf l

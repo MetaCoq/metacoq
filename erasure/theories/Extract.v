@@ -109,13 +109,10 @@ Inductive erases_global_decls : global_env -> E.global_declarations -> Prop :=
 
 Definition erases_global Σ Σ' := erases_global_decls Σ Σ'.
 
-Fixpoint inductive_arity (t : term) :=
-  match t with
-  | tApp f _ | f =>
-    match f with
-    | tInd ind u => Some ind
-    | _ => None
-    end
+Definition inductive_arity (t : term) :=
+  match fst (decompose_app t) with
+  | tInd ind u => Some ind
+  | _ => None
   end.
 
 Definition option_is_none {A} (o : option A) :=

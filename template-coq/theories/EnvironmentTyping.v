@@ -410,7 +410,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
         or equal to the top elimination sort, if set.
         For inductives in Type we do not check [kelim] currently. *)
 
-    Fixpoint elim_sort_prop_ind ind_ctors_sort :=
+    Definition elim_sort_prop_ind ind_ctors_sort :=
       match ind_ctors_sort with
       | [] => (* Empty inductive proposition: *) InType
       | [ s ] => match universe_family (cshape_sort s) with

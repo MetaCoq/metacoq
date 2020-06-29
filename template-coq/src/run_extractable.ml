@@ -227,5 +227,5 @@ let rec interp_tm (t : 'a coq_TM) : 'a tm =
           None -> Obj.magic None
         | Some inst -> Obj.magic (tmMap (fun x -> Some x) (tmOfConstr inst)))
 
-let run_vernac (c : 'a coq_TM) : unit =
-  Plugin_core.run_vernac (interp_tm (Obj.magic c))
+let run_vernac ~pm (c : 'a coq_TM) : Plugin_core.coq_state =
+  Plugin_core.run_vernac ~st:pm (interp_tm (Obj.magic c))

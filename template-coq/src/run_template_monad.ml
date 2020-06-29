@@ -290,10 +290,9 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
       let name = unquote_ident (reduce_all env evm name) in
       let opaque = unquote_bool (reduce_all env evm opaque) in
       let evm, typ = (match unquote_option s with Some s -> let red = unquote_reduction_strategy env evm s in Plugin_core.reduce env evm red typ | None -> evm, typ) in
-      let n = DeclareDef.declare_definition
-          ~name ~kind:(Decls.IsDefinition Decls.Definition) ~opaque ~poly
-          ~scope:(Declare.Global Declare.ImportDefaultBehavior) ~impargs:[]
-          ~udecl:UState.default_univ_decl ~types:(Some (EConstr.of_constr typ)) ~body:(EConstr.of_constr body) evm in
+      let cinfo = Declare.CInfo.make ~name () ~typ:(Some (EConstr.of_constr typ)) in
+      let info = Declare.Info.make ~poly ~kind:(Decls.IsDefinition Decls.Definition) () in
+      let n = Declare.declare_definition ~cinfo ~info ~opaque ~body:(EConstr.of_constr body) evm in
       let env = Global.env () in
       (* Careful, universes in evm were modified for the declaration of def *)
       let evm = Evd.from_env env in
@@ -343,7 +342,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
 
   | TmLemma (name,typ) ->
     let name = reduce_all env evm name in
-    let kind = Decls.(Definition) in
+    let kind = Decls.(IsDefinition Definition) in
     let hole = CAst.make (Constrexpr.CHole (None, Namegen.IntroAnonymous, None)) in
     let evm, (c, _) = Constrintern.interp_casted_constr_evars_impls ~program_mode:true env evm hole (EConstr.of_constr typ) in
     let ident = unquote_ident name in
@@ -356,7 +355,9 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
           let evm = Evd.from_env env in
           let evm, t = Evd.fresh_global env evm gr in
           k (env, evm, EConstr.to_constr evm t)) in  (* todo better *)
-    ignore (Obligations.add_definition ~name:ident ~term:c cty ~uctx ~poly ~kind ~hook obls)
+    let cinfo = Declare.CInfo.make ~name:ident ~typ:cty () in
+    let info = Declare.Info.make ~poly ~kind ~hook () in
+    ignore (Declare.Obls.add_definition ~cinfo ~info ~term:c ~uctx obls)
 
   | TmQuote (false, trm) ->
     (* user should do the reduction (using tmEval) if they want *)

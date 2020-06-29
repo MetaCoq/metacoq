@@ -78,11 +78,9 @@ let tmEval (rd : reduction_strategy) (t : term) : term tm =
 
 let tmDefinition (nm : ident) ?poly:(poly=false) ?opaque:(opaque=false) (typ : term option) (body : term) : kername tm =
   fun env evm success _fail ->
-    let n = DeclareDef.declare_definition
-        ~name:nm ~scope:(Declare.Global Declare.ImportDefaultBehavior)
-        ~opaque ~kind:(Decls.(IsDefinition Definition)) ~impargs:[]
-        ~poly ~types:(Option.map EConstr.of_constr typ)
-        ~udecl:UState.default_univ_decl ~body:(EConstr.of_constr body) evm in
+    let cinfo = Declare.CInfo.make ~name:nm ~typ:(Option.map EConstr.of_constr typ) () in
+    let info = Declare.Info.make ~poly ~kind:(Decls.(IsDefinition Definition)) () in
+    let n = Declare.declare_definition ~cinfo ~info ~opaque ~body:(EConstr.of_constr body) evm in
     let env = Global.env () in
     let evm = Evd.from_env env in
     success env evm (Names.Constant.canonical (Globnames.destConstRef n))
@@ -103,7 +101,7 @@ let tmAxiom (nm : ident) ?poly:(poly=false) (typ : term) : kername tm =
 (* this generates a lemma leaving a hole *)
 let tmLemma (nm : ident) ?poly:(poly=false)(ty : term) : kername tm =
   fun env evm success _fail ->
-    let kind = Decls.Definition in
+    let kind = Decls.(IsDefinition Definition) in
     let hole = CAst.make (Constrexpr.CHole (Some Evar_kinds.(QuestionMark default_question_mark), Namegen.IntroAnonymous, None)) in
     Feedback.msg_debug (Pp.str "interp_casted called");
     let evm, (c, _) =
@@ -121,7 +119,9 @@ let tmLemma (nm : ident) ?poly:(poly=false)(ty : term) : kername tm =
         | Constr.Const (tm, _) ->
           success env evm (Names.Constant.canonical tm)
         | _ -> failwith "Evd.fresh_global did not return a Const") in
-    ignore (Obligations.add_definition ~name:nm ~term:c cty ~uctx:ctx ~poly ~kind ~hook obls)
+    let cinfo = Declare.CInfo.make ~name:nm ~typ:cty () in
+    let info = Declare.Info.make ~poly ~kind ~hook () in
+    ignore (Declare.Obls.add_definition ~cinfo ~info ~term:c ~uctx:ctx obls)
 
 let tmFreshName (nm : ident) : ident tm =
   fun env evd success _fail ->

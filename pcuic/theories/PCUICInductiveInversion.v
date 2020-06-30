@@ -1194,10 +1194,10 @@ Lemma constructor_cumulative_indices {cf:checker_flags} {Σ : global_env_ext} (w
   declared_inductive Σ mdecl ind idecl ->
   on_constructor (lift_typing typing) (Σ.1, ind_universes mdecl) mdecl (inductive_ind ind) idecl ind_indices cdecl cs -> 
   R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) napp u u' ->
-  All2_local_env (on_decl (fun Γ Γ' x y => Σ ;;; ind_arities mdecl ,,, ind_params mdecl ,,, Γ |- x <= y))
+  All2_local_env (on_decl (fun Γ Γ' x y => Σ ;;; subst_instance_context u (ind_arities mdecl ,,, ind_params mdecl) ,,, Γ |- x <= y))
   (subst_instance_context u (cshape_args cs))
   (subst_instance_context u' (cshape_args cs)) *
-  All2 (fun x y => Σ ;;; ind_arities mdecl ,,, ind_params mdecl ,,, cshape_args cs |- x = y)
+  All2 (fun x y => Σ ;;; subst_instance_context u (ind_arities mdecl ,,, ind_params mdecl ,,, cshape_args cs) |- x = y)
     (map (subst_instance_constr u) (cshape_indices cs))
     (map (subst_instance_constr u') (cshape_indices cs)).
 Proof.

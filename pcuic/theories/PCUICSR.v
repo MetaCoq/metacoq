@@ -15,7 +15,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICUtils
      
 Close Scope string_scope.
 
-Require Import ssreflect. 
+Require Import ssreflect.
 
 Set Asymmetric Patterns.
 Set SimplIsCbn.
@@ -307,6 +307,153 @@ Proof.
   intros H; depelim H. constructor; eauto.
 Qed.
 
+Definition conv_ctx_rel {cf:checker_flags} Σ Γ Δ Δ' :=
+  All2_local_env (on_decl (fun Γ' _ x y => Σ ;;; Γ ,,, Γ' |- x = y)) Δ Δ'.
+
+Definition cumul_ctx_rel {cf:checker_flags} Σ Γ Δ Δ' :=
+  All2_local_env (on_decl (fun Γ' _ x y => Σ ;;; Γ ,,, Γ' |- x <= y)) Δ Δ'.
+
+Lemma cumul_subst_conv {cf:checker_flags} (Σ : global_env_ext) Γ Δ Δ' Γ' s s' b : wf Σ ->
+  All2 (conv Σ Γ) s s' ->
+  untyped_subslet Γ s Δ ->
+  untyped_subslet Γ s' Δ' ->
+  cumul Σ (Γ ,,, Γ') (subst s #|Γ'| b) (subst s' #|Γ'| b).
+Proof.
+  move=> wfΣ eqsub subs subs'.
+  eapply conv_cumul. eapply conv_subst_conv; eauto.
+Qed.
+
+Lemma subst_cumul {cf:checker_flags} {Σ} Γ Γ0 Γ1 Δ s s' T U : 
+  wf Σ.1 ->
+  subslet Σ Γ s Γ0 ->
+  subslet Σ Γ s' Γ1 ->
+  All2 (conv Σ Γ) s s' ->
+  wf_local Σ (Γ ,,, Γ0 ,,, Δ) ->
+  Σ;;; Γ ,,, Γ0 ,,, Δ |- T <= U ->
+  Σ;;; Γ ,,, subst_context s 0 Δ |- subst s #|Δ| T <= subst s' #|Δ| U.
+Proof.
+  move=> wfΣ subss subss' eqsub wfctx eqty.
+  eapply cumul_trans => //.
+  * eapply substitution_cumul => //.
+  ** eapply wfctx.
+  ** auto. 
+  ** eapply eqty.
+  * clear eqty.
+    rewrite -(subst_context_length s 0 Δ).
+    eapply cumul_subst_conv => //; eauto using subslet_untyped_subslet.
+Qed.
+
+Lemma conv_ctx_subst {cf:checker_flags} Σ Γ Γ' Δ Δ' s s' : 
+  wf Σ.1 ->
+  wf_local Σ (Γ ,,, Γ' ,,, Δ) ->
+  conv_ctx_rel Σ (Γ ,,, Γ') Δ Δ' ->
+  All2 (conv Σ []) s s' ->
+  subslet Σ [] s Γ ->
+  subslet Σ [] s' Γ ->
+  conv_ctx_rel Σ (subst_context s 0 Γ') (subst_context s #|Γ'| Δ) (subst_context s' #|Γ'| Δ').
+Proof.
+  intros wfΣ wf. induction 1.
+  - simpl. constructor.
+  - rewrite !subst_context_snoc /=.
+    intros Hs subs subs'.
+    depelim wf; simpl in H; noconf H.
+    specialize (IHX wf Hs subs subs').
+    constructor. apply IHX.
+    red. red in p. simpl.
+    epose proof (subst_conv [] Γ Γ (Γ' ,,, Γ0) _ _ _ _ wfΣ subs subs' Hs).
+    rewrite app_context_nil_l app_context_assoc in X0.
+    specialize (X0 wf p).
+    rewrite subst_context_app in X0; autorewrite with len in X0.
+    rewrite app_context_nil_l in X0.
+    now rewrite -(All2_local_env_length X).
+  - rewrite !subst_context_snoc /=.
+    intros Hs subs subs'.
+    depelim wf; simpl in H; noconf H.
+    specialize (IHX wf Hs subs subs').
+    constructor. apply IHX.
+    red. red in p. simpl.
+    destruct p as [pb pt].
+    epose proof (subst_conv [] Γ Γ (Γ' ,,, Γ0) _ _ _ _ wfΣ subs subs' Hs) as X0.
+    rewrite app_context_nil_l app_context_assoc in X0.
+    specialize (X0 wf pb).
+    epose proof (subst_conv [] Γ Γ (Γ' ,,, Γ0) _ _ _ _ wfΣ subs subs' Hs) as X1.
+    rewrite app_context_nil_l app_context_assoc in X1.
+    specialize (X1 wf pt).
+    rewrite !subst_context_app !app_context_nil_l in X0, X1; autorewrite with len in X0, X1.
+    now rewrite -(All2_local_env_length X).
+Qed.
+
+Notation conv_terms Σ Γ args args' := (All2 (conv Σ Γ) args args').
+
+Lemma conv_terms_weaken {cf:checker_flags} Σ Γ Γ' args args' :
+  wf Σ.1 ->
+  wf_local Σ Γ ->
+  wf_local Σ Γ' ->
+  All (closedn #|Γ|) args -> All (closedn #|Γ|) args' ->
+  conv_terms Σ Γ args args' ->
+  conv_terms Σ (Γ' ,,, Γ) args args'.
+Proof.
+  intros wfΣ wf wf' cl cl' conv.
+  solve_all.
+  eapply weaken_conv; eauto.
+Qed.
+
+Lemma conv_terms_subst {cf:checker_flags} Σ Γ Γ' Γ'' Δ s s' args args' :
+  wf Σ.1 ->
+  wf_local Σ (Γ ,,, Γ' ,,, Δ) ->
+  subslet Σ Γ s Γ' ->
+  subslet Σ Γ s' Γ'' ->
+  conv_terms Σ Γ s s' ->
+  conv_terms Σ (Γ ,,, Γ' ,,, Δ) args args' ->
+  conv_terms Σ (Γ ,,, subst_context s 0 Δ) (map (subst s #|Δ|) args) (map (subst s' #|Δ|) args').
+Proof.
+  intros wfΣ wf cl cl' convs conv.
+  eapply All2_map.
+  eapply (All2_impl conv).
+  intros x y eqxy.
+  eapply subst_conv; eauto.
+Qed.
+
+Lemma cumul_ctx_subst {cf:checker_flags} Σ Γ Γ' Δ Δ' s s' : 
+  wf Σ.1 ->
+  wf_local Σ (Γ ,,, Γ' ,,, Δ) ->
+  cumul_ctx_rel Σ (Γ ,,, Γ') Δ Δ' ->
+  All2 (conv Σ []) s s' ->
+  subslet Σ [] s Γ ->
+  subslet Σ [] s' Γ ->
+  cumul_ctx_rel Σ (subst_context s 0 Γ') (subst_context s #|Γ'| Δ) (subst_context s' #|Γ'| Δ').
+Proof.
+  intros wfΣ wf. induction 1.
+  - simpl. constructor.
+  - rewrite !subst_context_snoc /=.
+    intros Hs subs subs'.
+    depelim wf; simpl in H; noconf H.
+    specialize (IHX wf Hs subs subs').
+    constructor. apply IHX.
+    red. red in p. simpl.
+    epose proof (subst_cumul [] Γ Γ (Γ' ,,, Γ0) _ _ _ _ wfΣ subs subs' Hs).
+    rewrite app_context_nil_l app_context_assoc in X0.
+    specialize (X0 wf p).
+    rewrite subst_context_app in X0; autorewrite with len in X0.
+    rewrite app_context_nil_l in X0.
+    now rewrite -(All2_local_env_length X).
+  - rewrite !subst_context_snoc /=.
+    intros Hs subs subs'.
+    depelim wf; simpl in H; noconf H.
+    specialize (IHX wf Hs subs subs').
+    constructor. apply IHX.
+    red. red in p. simpl.
+    destruct p as [pb pt].
+    epose proof (subst_cumul [] Γ Γ (Γ' ,,, Γ0) _ _ _ _ wfΣ subs subs' Hs) as X0.
+    rewrite app_context_nil_l app_context_assoc in X0.
+    specialize (X0 wf pb).
+    epose proof (subst_cumul [] Γ Γ (Γ' ,,, Γ0) _ _ _ _ wfΣ subs subs' Hs) as X1.
+    rewrite app_context_nil_l app_context_assoc in X1.
+    specialize (X1 wf pt).
+    rewrite !subst_context_app !app_context_nil_l in X0, X1; autorewrite with len in X0, X1.
+    now rewrite -(All2_local_env_length X).
+Qed.
+
 Lemma sr_red1 {cf:checker_flags} :
   env_prop SR_red1
       (fun Σ Γ wfΓ =>
@@ -490,14 +637,7 @@ Proof.
     set (pargctx := subst_context parsubst 0 _).
     eapply (spine_subst_cumul _ _ _ _ (smash_context [] pargctx)) in argsubst; first last.
     4-5:apply smash_context_assumption_context; constructor. all:auto.
-    Definition cumul_ctx_rel {cf:checker_flags} Σ Γ Δ Δ' :=
-      All2_local_env (on_decl (fun Γ' _ x y => Σ ;;; Γ ,,, Γ' |- x <= y)) Δ Δ'.
-    Lemma cumul_ctx_subst {cf:checker_flags} Σ Γ Δ Δ' s s' : 
-      cumul_ctx_rel Σ (Γ ,,, Γ') Δ Δ' ->
-      All2 (conv Σ []) s s' ->
-      subslet Σ [] s Γ ->
-      subslet Σ [] s' Γ ->
-      cumul_ctx_rel Σ (subst_context s 0 Γ') (subst_context s #|Γ'| Δ) (subst_context s' #|Γ'| Δ').
+
 
 
     admit. (* Cumulativity of constructor argument types *)
@@ -566,6 +706,11 @@ Proof.
           intros x Px. rewrite closedn_subst_instance_constr.
           rewrite /argctx; autorewrite with len.
           now rewrite Nat.add_comm. }
+        rewrite (map_map_compose _ _ _ _ (subst0 (extended_subst pargctx 0))).
+        change (fun x =>  subst0 (extended_subst pargctx 0) _ ) with (expand_lets pargctx).
+        rewrite -map_subst_app_simpl -(map_map_compose _ _ _ _ (subst0 cargsubst)) /=.
+        rewrite (subslet_length idxsubst0); autorewrite with len.
+        epose proof (conv_terms_subst _ _ _ _ _ _ _ _ _ wf).
 
 
 

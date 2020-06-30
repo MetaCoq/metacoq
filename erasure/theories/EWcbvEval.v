@@ -45,7 +45,7 @@ Definition isStuckFix t args :=
   | tFix mfix idx =>
     match unfold_fix mfix idx with
     | Some (narg, fn) =>
-      ~~ is_constructor narg args
+      ~~ is_constructor_or_box narg args
     | None => false
     end
   | _ => false

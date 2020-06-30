@@ -1132,20 +1132,9 @@ Proof.
               ** assert (EAstUtils.decompose_app (EAst.mkApps (E.tFix mfix' idx) L) = EAstUtils.decompose_app (EAst.mkApps EAst.tBox x6)) by now rewrite H6.
                  rewrite !EAstUtils.decompose_app_mkApps in H7; try reflexivity.
                  inv H7.
-              ** unfold is_constructor, ETyping.is_constructor in *.
+              ** unfold is_constructor, ETyping.is_constructor_or_box in *.
                  destruct nth_error eqn:En; try now inv Hcon.
-                 --- eapply Forall2_nth_error_Some in H4 as (? & ? & ?); eauto.
-                     inv H0.
-                     +++ assert (EAstUtils.decompose_app (EAst.mkApps (E.tFix mfix' idx) L) = EAstUtils.decompose_app (EAst.mkApps (E.tFix mfix'0 idx) x5)) by now rewrite H.
-                         rewrite !EAstUtils.decompose_app_mkApps in H0; try reflexivity.
-                         inv H0.
-                         rewrite H4.
-                         eapply is_construct_erases in Hcon; eauto.
-                         unfold EisConstruct_app in *.
-                         destruct ?; eauto.
-                     +++ assert (EAstUtils.decompose_app (EAst.mkApps (E.tFix mfix' idx) L) = EAstUtils.decompose_app (EAst.mkApps EAst.tBox x5)) by now rewrite H.
-                         rewrite !EAstUtils.decompose_app_mkApps in H0; try reflexivity.
-                         inv H0.
+                 --- todo "cannot have stuck fixpoint with enough args when axiom free".
                  ---  eapply Forall2_nth_error_None_l in H4; eauto.
                       inv H0.
                       +++ assert (EAstUtils.decompose_app (EAst.mkApps (E.tFix mfix' idx) L) = EAstUtils.decompose_app (EAst.mkApps (E.tFix mfix'0 idx) x5)) by now rewrite H.

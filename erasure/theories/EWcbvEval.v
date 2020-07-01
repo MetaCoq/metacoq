@@ -543,3 +543,5 @@ Proof.
 Qed.
 
 End Wcbv.
+
+Arguments eval_deterministic {_ _ _ _}.

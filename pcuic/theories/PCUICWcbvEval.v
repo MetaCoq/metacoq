@@ -664,7 +664,7 @@ Section Wcbv.
       * easy.
   Qed.
  
-  Lemma eval_deterministic t v v' :
+  Lemma eval_deterministic {t v v'} :
     eval t v ->
     eval t v' ->
     v = v'.
@@ -825,6 +825,7 @@ Section Wcbv.
 
 End Wcbv.
 
+Arguments eval_deterministic {_ _ _ _}.
 
 (** Well-typed closed programs can't go wrong: they always evaluate to a value. *)
 

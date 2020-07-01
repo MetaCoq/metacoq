@@ -24,62 +24,6 @@ From Equations Require Import Equations.
 Arguments subst_context !s _ !Γ.
 Arguments it_mkProd_or_LetIn !l _.
 
-Section Universes.
-  Context {cf:checker_flags}.
-
-  Lemma subst_instance_instance_id u mdecl : 
-    subst_instance_instance u (PCUICLookup.abstract_instance (ind_universes mdecl)) = u.
-  Proof.
-    todounivs.
-  Qed.
-
-  Lemma consistent_instance_ext_abstract_instance Σ mdecl mind :
-    wf Σ ->
-    declared_minductive Σ mind mdecl ->
-    consistent_instance_ext (Σ, ind_universes mdecl) (ind_universes mdecl)
-        (PCUICLookup.abstract_instance (ind_universes mdecl)).
-  Proof.
-    todounivs.
-  Defined.
-
-  Lemma isType_closed {Σ Γ T} : wf Σ.1 -> isType Σ Γ T -> closedn #|Γ| T.
-  Proof. intros wfΣ [s Hs]. now eapply subject_closed in Hs. Qed.
-
-  Lemma subst_instance_context_id Σ univs Γ : 
-    let u :=  PCUICLookup.abstract_instance univs in
-    wf_local (Σ, univs) Γ ->
-    subst_instance_context u Γ = Γ.
-  Proof.
-    todounivs.
-  Qed.
-
-  Lemma subst_instance_ind_sort_id Σ mdecl ind idecl : 
-    declared_inductive Σ mdecl ind idecl ->
-    forall (oib : on_ind_body (lift_typing typing) (Σ, ind_universes mdecl)
-    (inductive_mind ind) mdecl (inductive_ind ind) idecl),
-    let u :=  PCUICLookup.abstract_instance (ind_universes mdecl) in
-    subst_instance_univ u (ind_sort oib) = ind_sort oib.
-  Proof.
-    todounivs.
-  Qed.
-
-  Lemma subst_instance_ind_type_id Σ mdecl ind idecl : 
-    declared_inductive Σ mdecl ind idecl ->
-    let u :=  PCUICLookup.abstract_instance (ind_universes mdecl) in
-    subst_instance_constr u (ind_type idecl) = ind_type idecl.
-  Proof.
-    todounivs.
-  Qed.
-
-  Lemma isType_subst_instance_id Σ univs Γ T : 
-    let u :=  PCUICLookup.abstract_instance univs in
-    isType (Σ, univs) Γ T -> subst_instance_constr u T = T.
-  Proof.
-    todounivs.
-  Qed.
-
-End Universes.
-
 Lemma nth_error_rev_map {A B} (f : A -> B) l i : 
   i < #|l| ->
   nth_error (rev_map f l) (#|l| - S i) = 
@@ -287,7 +231,7 @@ Lemma instantiate_inds {cf:checker_flags} Σ u mind mdecl :
 Proof.
   intros wfΣ declm cu.
   rewrite subst_instance_inds.
-  f_equal. apply subst_instance_instance_id.
+  f_equal. eapply subst_instance_instance_id; eauto.
 Qed.
 
 Lemma subst_inds_concl_head ind u mdecl (arity : context) :
@@ -606,7 +550,8 @@ Proof.
   rewrite (closed_ctx_subst _ _ (ind_params mdecl)).
   red in onpars. eapply closed_wf_local; [|eauto]. auto.
   assert (parsu : subst_instance_context u (ind_params mdecl) = ind_params mdecl). 
-  { red in onpars. eapply subst_instance_context_id. eauto. }
+  { red in onpars. eapply (subst_instance_context_id (Σ.1, ind_universes mdecl)). eauto.
+    eapply declared_inductive_wf_ext_wk; eauto with pcuic. auto. }
   assert (sortu : subst_instance_univ u (ind_sort oib) = ind_sort oib).
   { apply subst_instance_ind_sort_id; eauto. }
   pose proof (spine_subst_to_extended_list_k (Σ.1, ind_universes mdecl)
@@ -621,8 +566,8 @@ Proof.
   { constructor. auto. red. exists (ind_sort oib).
     eapply type_mkApps. econstructor; eauto.
     destruct isdecl as []; eauto. subst u.
-    eapply consistent_instance_ext_abstract_instance. 2:destruct decli; eauto. 
-    now auto.
+    eapply consistent_instance_ext_abstract_instance; eauto with pcuic.
+    eapply declared_inductive_wf_global_ext; eauto with pcuic.
     rewrite (ind_arity_eq oib).
     rewrite subst_instance_constr_it_mkProd_or_LetIn.
     rewrite -(app_nil_r (to_extended_list _)).
@@ -849,7 +794,8 @@ Proof.
         simpl. 
         rewrite context_assumptions_smash_context /= //.
         assert(subst_instance_constr u pdecl.2 = pdecl.2) as ->.
-        { eapply isType_subst_instance_id. apply IH. }
+        { eapply (isType_subst_instance_id (Σ.1, ind_universes mdecl)); eauto with pcuic.
+          eapply declared_inductive_wf_ext_wk; eauto with pcuic. }
         destruct IH as [isTy [decl [[[nthdecl _] eqpdecl] ptyeq]]].
         move ptyeq at bottom. 
         replace  (S (context_assumptions (cshape_args c) - S (S i))) with 

@@ -74,15 +74,20 @@ Definition unfold_cofix (mfix : mfixpoint term) (idx : nat) :=
   | None => None
   end.
 
-Definition is_constructor_or_box n ts :=
-  match List.nth_error ts n with
-  | Some tBox => true
-  | Some a =>
+Definition is_constructor_app_or_box t :=
+  match t with
+  | tBox => true
+  | a =>
     let (f, a) := decompose_app a in
     match f with
     | tConstruct _ _ => true
     | _ => false
     end
+  end.
+
+Definition is_nth_constructor_app_or_box n ts :=
+  match List.nth_error ts n with
+  | Some a => is_constructor_app_or_box a
   | None => false
   end.
 

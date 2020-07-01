@@ -688,13 +688,13 @@ Section Wcbv.
       now apply IHev2 in ev'2.
     + easy.
   - depelim ev'.
-    + replace decl0 with decl in * by (now eapply PCUICWeakeningEnv.declared_constant_inj).
+    + pose proof (PCUICWeakeningEnv.declared_constant_inj _ _ isdecl isdecl0); subst.
       replace body0 with body in * by congruence.
       now apply IHev in ev'.
-    + now replace decl0 with decl in * by (now eapply PCUICWeakeningEnv.declared_constant_inj).
+    + now pose proof (PCUICWeakeningEnv.declared_constant_inj _ _ isdecl isdecl0); subst.
     + easy.
   - depelim ev'.
-    + now replace decl0 with decl in * by (now eapply PCUICWeakeningEnv.declared_constant_inj).
+    + now pose proof (PCUICWeakeningEnv.declared_constant_inj _ _ isdecl isdecl0); subst.
     + easy.
     + easy.
   - depelim ev'.
@@ -748,85 +748,39 @@ Section Wcbv.
     + easy.
   - depelim ev'.
     + apply eval_mkApps_tCoFix in ev'1 as (? & ?); solve_discr.
-    + solve_discr.apply IHev in ev'.
-      noconf H1.
-      rewrite H0 in H.
-      noconf H.
+    + solve_discr.
+      rewrite e0 in e.
+      noconf e.
       now apply IHev in ev'.
-    + apply aeval_mkApps_tCoFix in ev'1 as (? & ?).
-      solve_discr.
-    + apply aeval_mkApps_tCoFix in ev' as (? & ?).
-      solve_discr.
     + easy.
   - depelim ev'.
-    + unfold ETyping.declared_constant in *.
-      rewrite H1 in H.
+    + apply eval_mkApps_tCoFix in ev'1 as (? & ?); solve_discr.
+    + solve_discr.
+      rewrite e0 in e.
+      noconf e.
+      now apply IHev in ev'.
+    + easy.
+  - depelim ev'.
+    + now apply IHev1 in ev'1; subst.
+    + apply IHev1 in ev'1; subst.
+      rewrite isFixApp_mkApps in i; [easy|].
       cbn in *.
-      noconf H.
-      rewrite H2 in H0.
-      noconf H0.
-      now apply IHev in ev'.
-    + easy.
-  - depelim ev'.
-    + apply aeval_mkApps_tCoFix in ev1 as (? & ?); solve_discr.
-    + apply IHev1 in ev'1.
-      now apply mkApps_eq_inj in ev'1 as (ev'1 & <-).
-    + apply IHev1 in ev'.
-      solve_discr.
-    + easy.
-  - depelim ev'.
-    + apply aeval_mkApps_tCoFix in ev as (? & ?); solve_discr.
-    + apply IHev in ev'1.
-      solve_discr.
-    + easy.
-    + easy.
-  - depelim ev'.
-    + apply IHev1 in ev'1.
-      apply IHev2 in ev'2.
-      subst.
-      easy.
-    + apply IHev1 in ev'1.
-      apply IHev2 in ev'2.
-      subst.
-      easy.
-    + apply IHev1 in ev'1.
-      apply IHev2 in ev'2.
-      subst.
-      now rewrite mkApps_app.
-    + apply IHev1 in ev'1.
-      apply IHev2 in ev'2.
-      subst.
-      rewrite isFixApp_mkApps in H by easy.
-      cbn in H.
-      now rewrite orb_true_r in H.
-    + apply IHev1 in ev'1.
-      apply IHev2 in ev'2.
-      congruence.
+      now rewrite Bool.orb_true_r in i.
+    + apply IHev1 in ev'1; subst.
+      rewrite isFixApp_mkApps in i; [easy|].
+      cbn in *.
+      now rewrite Bool.orb_true_r in i.
+    + apply IHev1 in ev'1; subst.
+      now apply IHev2 in ev'2; subst.
     + easy.
   - now depelim ev'.
-Qed.
-
-  Lemma eval_atom_inj t t' : atom t -> eval t t' -> t = t'.
-  Proof.
-    intros Ha H; depind H; try solve_discr; try now easy.
-    eapply atom_mkApps in Ha; intuition subst. discriminate.
-    eapply atom_mkApps in Ha; intuition subst. now depelim a.
   Qed.
 
   Lemma eval_LetIn {n b ty t v} :
     eval (tLetIn n b ty t) v ->
     ∑ b',
       eval b b' * eval (csubst b' 0 t) v.
-  Proof.
-    intros H; depind H; try solve_discr; try now easy.
-    - apply (f_equal nApp) in H1 as h. simpl in h.
-      rewrite nApp_mkApps in h. exfalso. lia.
-    - apply (f_equal nApp) in H0 as h. simpl in h.
-      rewrite nApp_mkApps in h. depelim a.
-      + simpl in *. subst.
-        eapply IHeval. reflexivity.
-      + simpl in h. exfalso. lia.
-  Qed.
+  Proof. now intros H; depelim H. Qed.
 
   Lemma eval_Const {c u v} :
     eval (tConst c u) v ->
@@ -836,51 +790,14 @@ Qed.
                  | None => v = tConst c u
                  end.
   Proof.
-    intros H; depind H; try solve_discr; try now easy.
-    - exists decl. intuition auto. now rewrite e.
-    - exists decl. intuition auto. now rewrite e.
-    - apply (f_equal nApp) in H1 as h.
-      simpl in h. rewrite nApp_mkApps in h.
-      exfalso. lia.
-    - apply (f_equal nApp) in H0 as h.
-      simpl in h. rewrite nApp_mkApps in h.
-      destruct a.
-      + simpl in *. subst.
-        eapply IHeval. reflexivity.
-      + exfalso. simpl in h. lia.
-  Qed.
-
-  Lemma eval_mkApps_tCoFix mfix idx l v :
-    eval (mkApps (tCoFix mfix idx) l) v ->
-    ∑ l', All2 eval l l' * (v = mkApps (tCoFix mfix idx) l').
-  Proof.
-    intros H.
-    depind H; try solve_discr'.
-    - destruct (mkApps_elim f [a]).
-      rewrite [tApp _ _](mkApps_nested f (firstn n l0) [a]) in H2.
-      solve_discr'.
-      specialize (IHeval1 _ _ _ _ eq_refl).
-      firstorder eauto.
-      solve_discr'.
-    - destruct (mkApps_elim f args). solve_discr'.
-      specialize (IHeval1 _ _ _ _ eq_refl).
-      firstorder eauto. solve_discr.
-    - destruct (mkApps_elim f args). solve_discr'.
-      specialize (IHeval _ _ _ _ eq_refl).
-      firstorder eauto. solve_discr.
-    - destruct (mkApps_elim f [a]).
-      replace (tApp (mkApps f (firstn n l0)) a)
-        with (mkApps f (firstn n l0 ++ [a])) in H1.
-      2:now rewrite -mkApps_nested.
-      solve_discr'.
-      specialize (IHeval1 _ _ _ _ eq_refl).
-      firstorder eauto. subst.
-      exists (x ++ [a'])%list.
-      split. eapply All2_app; auto.
-      now rewrite -mkApps_nested.
-    - eapply atom_mkApps in i; intuition try easy.
-      subst.
-      exists []. intuition auto.
+    intros H; depelim H.
+    - exists decl.
+      split; [easy|].
+      now rewrite e.
+    - exists decl.
+      split; [easy|].
+      now rewrite e.
+    - easy.
   Qed.
 
   Lemma eval_mkApps_cong f f' l l' :
@@ -906,107 +823,6 @@ Qed.
     forward IHl. simpl; lia. cbn -[removelast] in *. simpl removelast. simpl. lia.
   Qed.
 
-  Lemma eval_deterministic {t v v'} : eval t v -> eval t v' -> v = v'.
-  Proof.
-    intros tv. revert v'.
-    revert t v tv.
-    induction 1 using eval_evals_ind; intros v' tv'.
-    - depelim tv'; auto.
-      * specialize (IHtv1 _ tv'1); try congruence. inv IHtv1.
-        specialize (IHtv2 _ tv'2). subst.
-        specialize (IHtv3 _ tv'3). now subst.
-      * rewrite [args](app_removelast_last a) in H.
-        destruct args; discriminate.
-        rewrite -mkApps_nested in H. simpl in H. injection H. intros. clear H.
-        subst.
-        assert (eval (mkApps f0 (removelast args)) (mkApps (tFix mfix idx) (removelast args'))).
-        eapply eval_fix_value. auto. admit.
-        simpl. admit.
-(*        rewrite e /is_constructor. rewrite /is_constructor in i.
-        destruct (nth_error (removelast args') narg) eqn:Heq.
-        eapply nth_error_Some_length in Heq.
-        have H':= (removelast_length args').
-        forward H'. rewrite -(All2_length _ _ a0). lia.
-        elimtype False. rewrite -(All2_length _ _ a0) in H'. lia. 
-        constructor.*)
-        specialize (IHtv1 _ X).
-        solve_discr'.
-      * destruct (mkApps_elim f [a]).
-        destruct (mkApps_elim f0 args).
-(*
-    - depelim tv'; auto; try specialize (IHtv1 _ tv'1) || solve [depelim tv1]; try congruence.
-      inv IHtv1. specialize (IHtv2 _ tv'2). subst.
-      now specialize (IHtv3 _ tv'3).
-      now subst f'. easy.
-    - eapply eval_LetIn in tv' as [b' [evb evt]].
-      rewrite -(IHtv1 _ evb) in evt.
-      eapply (IHtv2 _ evt).
-    - depelim tv'; try solve_discr.
-      * specialize (IHtv1 _ tv'1).
-        solve_discr. inv H.
-        now specialize (IHtv2 _ tv'2).
-      * specialize (IHtv1 _ tv'1); solve_discr.
-      * eapply eval_mkApps_tCoFix in tv1 as [l' [ev' eq]]. solve_discr.
-      * easy.
-    - subst.
-      depelim tv'.
-      * specialize (IHtv1 _ tv'1).
-        solve_discr.
-      * specialize (IHtv1 _ tv'1).
-        now specialize (IHtv2 _ tv'2).
-      * pose proof tv1. eapply eval_mkApps_tCoFix in H0.
-        destruct H0 as [l' [evargs eq]]. solve_discr.
-      * easy.
-    - depelim tv' => //.
-      * depelim tv'1.
-      * depelim tv'1.
-      * rewrite H in H0. inv H0.
-        now specialize (IHtv _ tv').
-      * now depelim tv'1.
-*)
-  (*   - depelim tv'; try easy. *)
-  (*     * eapply eval_mkApps_tCoFix in tv'1 as [l' [evargs eq]]. *)
-  (*       solve_discr. *)
-  (*     * eapply eval_mkApps_tCoFix in tv'1 as [l' [evargs eq]]. *)
-  (*       solve_discr. *)
-  (*     * solve_discr. inv H1. rewrite H in H0. inv H0. *)
-  (*       now specialize (IHtv _ tv'). *)
-
-  (*   - depelim tv'; try easy. *)
-  (*     * solve_discr. inv H1. rewrite H in H0. inv H0. *)
-  (*       now specialize (IHtv _ tv'). *)
-  (*     * eapply eval_mkApps_tCoFix in tv'1 as [l' [evargs eq]]. *)
-  (*       solve_discr. *)
-  (*     * eapply eval_mkApps_tCoFix in tv' as [l' [evargs eq]]. *)
-  (*       solve_discr. *)
-
-  (*   - eapply eval_Const in tv' as [decl' [body' [? ?]]]. *)
-  (*     intuition eauto. eapply IHtv. *)
-  (*     red in isdecl, H0. rewrite H0 in isdecl. inv isdecl. *)
-  (*     now rewrite H in H2; inv H2. *)
-
-  (*   - depelim tv'. *)
-  (*     * eapply eval_mkApps_tCoFix in tv1 as [l' [evargs eq]]. *)
-  (*       solve_discr. *)
-  (*     * specialize (IHtv1 _ tv'1). *)
-  (*       solve_discr. inv H. *)
-  (*       now specialize (IHtv2 _ tv'2). *)
-  (*     * specialize (IHtv1 _ tv'). solve_discr. *)
-  (*     * easy. *)
-
-  (*   - depelim tv'; try easy. *)
-  (*     * eapply eval_mkApps_tCoFix in tv as [l' [evargs eq]]. *)
-  (*       solve_discr. *)
-  (*     * specialize (IHtv _ tv'1). solve_discr. *)
-
-  (*   - depelim tv'; try specialize (IHtv1 _ tv'1); subst; try easy. *)
-  (*     depelim tv1. easy. *)
-  (*     specialize (IHtv2 _ tv'2). congruence. *)
-
-  (*   - depelim tv'; try easy. *)
-  (* Qed. *)
-  Admitted.
-
 End Wcbv.
 
 
@@ -1023,7 +839,7 @@ Lemma wcbeval_red `{checker_flags} : forall (Σ : global_env_ext) t u, wf Σ -> 
     eval Σ t u -> red Σ [] t u.
 Proof.
   intros Σ t u wfΣ Hc He. revert Hc.
-  induction He using eval_evals_ind; simpl; 
+  induction He; simpl; 
   (move/andP => [/andP[Hc Hc'] Hc''] || move/andP => [Hc Hc'] || move => Hc);
     try solve[econstructor; eauto].
 
@@ -1061,36 +877,45 @@ Proof.
     apply red1_red. econstructor; eauto.
     eapply eval_closed in He1; eauto. eapply closed_arg in He1; eauto.
 
-  - move/closedn_mkApps_inv/andP: Hc => [Hf Hargs]. 
-    redt (mkApps (tFix mfix idx) args'); eauto.
-    eapply red_mkApps; eauto. solve_all.
-    rewrite -closed_unfold_fix_cunfold_eq in H0; auto.
-    eapply eval_closed in He1; eauto.
-    redt (mkApps fn args'); eauto.
-    eapply red1_red. eapply red_fix; eauto.
-    eapply IHHe2. eapply eval_closed in He1; eauto.
-    eapply closedn_mkApps; eauto using closed_unfold_fix.
-    clear -wfΣ X Hargs. solve_all. now eapply eval_closed.
+  - redt (tApp (mkApps (tFix mfix idx) argsv) av);
+      [eapply red_app; eauto|].
+    assert (closed_fix: closed (mkApps (tFix mfix idx) argsv)).
+    { eapply eval_closed; [easy| |easy].
+      easy. }
+    eapply closedn_mkApps_inv in closed_fix.
+    apply andb_true_iff in closed_fix.
+    rewrite -closed_unfold_fix_cunfold_eq in e; [easy|].
+    redt (tApp (mkApps fn argsv) av).
+    + repeat change (tApp ?h ?a) with (mkApps h [a]).
+      rewrite !mkApps_nested.
+      apply red1_red.
+      eapply red_fix; [easy|].
+      unfold is_constructor.
+      now rewrite nth_error_snoc.
+    + eapply IHHe3.
+      cbn.
+      apply andb_true_iff.
+      split.
+      * apply closedn_mkApps; [|easy].
+        now eapply closed_unfold_fix.
+      * now eapply eval_closed; [| |easy].
 
-  - move/closedn_mkApps_inv/andP: Hc => [Hf Hargs].
-    eapply red_mkApps; eauto.
-    eauto using eval_closed.
-    solve_all.
+  - now apply red_app.
 
   - move/closedn_mkApps_inv/andP: Hc' => [Hf Hargs].
-    rewrite -closed_unfold_cofix_cunfold_eq in H0; auto.
+    rewrite -closed_unfold_cofix_cunfold_eq in e; auto.
     redt _. eapply red1_red.
     eapply PCUICTyping.red_cofix_case; eauto.
     eapply IHHe.
-    eapply closed_unfold_cofix in H0; eauto.
+    eapply closed_unfold_cofix in e; eauto.
     simpl. rewrite Hc closedn_mkApps; eauto.
 
   - move/closedn_mkApps_inv/andP: Hc => [Hf Hargs].
-    rewrite -closed_unfold_cofix_cunfold_eq in H0; auto.
+    rewrite -closed_unfold_cofix_cunfold_eq in e; auto.
     redt _. 2:eapply IHHe.
     redt (tProj _ (mkApps _ _)). eapply red_proj_c. eauto.
     apply red1_red. econstructor; eauto.
-    simpl. eapply closed_unfold_cofix in H0; eauto.
+    simpl. eapply closed_unfold_cofix in e; eauto.
     rewrite closedn_mkApps; eauto.
 
   - eapply (red_mkApps _ _ [a] [a']); auto.

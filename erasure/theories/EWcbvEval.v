@@ -390,6 +390,7 @@ Qed.
 
 Derive NoConfusionHom for EAst.global_decl.
 
+Unset SsrRewrite.
 Lemma eval_deterministic {t v v'} :
   eval t v ->
   eval t v' ->
@@ -457,7 +458,7 @@ Proof.
       now apply negb_true_iff in H.
     + apply IHev1 in ev'1.
       subst.
-      rewrite isFixApp_mkApps in H2; [easy|].
+      rewrite isFixApp_mkApps in H2 by easy.
       cbn in *.
       now rewrite orb_true_r in H2.
     + easy.
@@ -478,7 +479,7 @@ Proof.
       now apply mkApps_eq_inj in ev'1 as (ev'1 & <-).
     + apply IHev1 in ev'1.
       subst.
-      rewrite isFixApp_mkApps in H1; [easy|].
+      rewrite isFixApp_mkApps in H1 by easy.
       cbn in H1.
       now rewrite orb_true_r in H1.
     + easy.
@@ -529,7 +530,7 @@ Proof.
     + apply IHev1 in ev'1.
       apply IHev2 in ev'2.
       subst.
-      rewrite isFixApp_mkApps in H; [easy|].
+      rewrite isFixApp_mkApps in H by easy.
       cbn in H.
       now rewrite orb_true_r in H.
     + apply IHev1 in ev'1.
@@ -541,6 +542,7 @@ Proof.
     + easy.
   - now depelim ev'.
 Qed.
+Set SsrRewrite.
 
 End Wcbv.
 

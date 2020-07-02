@@ -888,46 +888,40 @@ Proof.
   - assert (Hty' := Hty).
     assert (Hunf := H).
     assert (Hcon := H1).
-    (*assert (Σ |-p mkApps (tFix mfix idx) argsv ▷ res) by eauto.*)
-    eapply PCUICValidity.inversion_app in Hty' as (? & ? & ?); eauto.
+    (*assert (Σ |-p tApp (mkApps (tFix mfix idx) args ▷ res) by eauto.*)
+    eapply inversion_App in Hty' as (? & ? & ? & ? & ? & ?); eauto.
     assert (Ht := t).
     eapply subject_reduction in t. 2:eauto. 2:eapply wcbeval_red; eauto.
     2:now eapply PCUICClosed.subject_closed in Ht.
     assert (HT := t).
-    eapply inversion_Fix in t as (? & ? & ? & ? & ? & ? & ?); auto.
-    rewrite <- closed_unfold_fix_cunfold_eq in H0; first last.
-    eapply eval_closed; eauto. eapply PCUICClosed.subject_closed in Ht; eauto.
-    auto.
-    unfold unfold_fix in H0. rewrite e in H0. inv H0.
-
-    eapply erases_mkApps_inv in He as [(? & ? & ? & ? & [] & ? & ? & ?) | (? & ? & ? & ? & ?)]; eauto.
-    + subst. assert (X100 := X2). eapply Is_type_app in X100 as[]; auto.
-      exists EAst.tBox. split. 2:{
-        assert (exists x4, Forall2 (EWcbvEval.eval Σ') x3 x4) as [x4]. {
-          eapply All2_app_inv in X0 as ([] & ? & ?). destruct p.
-          clear a0. subst.
-          assert (forall x n, nth_error x2 n = Some x -> ∑ T,  Σ;;; [] |- x : T).
-          { intros. eapply typing_spine_inv with (arg := n + #|x1|) in t0 as [].
-            2:{ rewrite nth_error_app2. 2:lia. rewrite Nat.add_sub. eassumption. }
-            eauto.
-          }
-          clear - X0 a1 H5. revert X0 x3 H5; induction a1; intros.
-          ** inv H5. exists []; eauto.
-          ** inv H5. destruct (X0 x 0 eq_refl).
-             eapply r in t as (? & ? & ?); eauto.
-             eapply IHa1 in H3 as (? & ?); eauto.
-             intros. eapply (X0 x2 (S n)). eassumption.
-        }
-        eapply eval_box_apps. eassumption. econstructor; eauto. }
+    apply PCUICValidity.inversion_mkApps in HT as (? & ? & ?); auto.
+    assert (Ht1 := t1).
+    apply inversion_Fix in t1 as Hfix; auto.
+    destruct Hfix as (? & ? & ? & ? & ? & ? & ?).
+    rewrite <- closed_unfold_fix_cunfold_eq in e; first last.
+    eapply (PCUICClosed.subject_closed (Γ := [])); eauto.
+    assert (uf := e).
+    unfold unfold_fix in e. rewrite e0 in e. inv e.
+    depelim He; first last.
+    
+    + assert (X100 := X). eapply (Is_type_app _ _ _ []) in X100 as[]; eauto.
+      exists EAst.tBox. split; [|now constructor].
       econstructor.
       eapply Is_type_eval. eauto. eassumption.
-      rewrite <- mkApps_nested.
-      eapply Is_type_red. eauto. 2:exact X3. repeat eapply PCUICReduction.red_mkApps_f.
-      eapply wcbeval_red; eauto. now eapply PCUICClosed.subject_closed in Ht.
-      eauto. eauto.
-      rewrite mkApps_nested; eauto.
-    + subst.
-      eapply IHeval1 in H4 as (? & ? & ?); eauto.
+      eapply Is_type_red. eauto. 2: exact X0.
+      cbn.
+      etransitivity.
+      eapply PCUICReduction.red_app.
+      eapply wcbeval_red. eauto. now eapply PCUICClosed.subject_closed in Ht.
+      eauto. eapply wcbeval_red. eauto. now eapply PCUICClosed.subject_closed in t0.
+      eauto.
+      rewrite <- !mkApps_snoc.
+      eapply PCUICReduction.red1_red.
+      eapply red_fix.
+      eauto.
+      unfold is_constructor.
+      rewrite nth_error_snoc; eauto.
+    + eapply IHeval1 in H4 as (? & ? & ?); eauto.
       inv H0.
       * assert (Hmfix' := X2).
         eapply All2_nth_error_Some in X2 as (? & ? & ?); eauto.

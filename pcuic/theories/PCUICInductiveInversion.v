@@ -572,6 +572,9 @@ Lemma Construct_Ind_ind_eq {cf:checker_flags} {Σ} (wfΣ : wf Σ.1):
     let argctx := (subst_context parsubst 0
     ((subst_context (inds (inductive_mind i) u mdecl.(ind_bodies)) #|ind_params mdecl|
     (subst_instance_context u cshape.(cshape_args))))) in
+    let argctx2 := (subst_context parsubst' 0
+    ((subst_context (inds (inductive_mind i) u' mdecl.(ind_bodies)) #|ind_params mdecl|
+    (subst_instance_context u' cshape.(cshape_args))))) in
     let argctx' := (subst_context parsubst' 0 (subst_instance_context u' oib.(ind_indices))) in
     
     spine_subst Σ Γ (firstn (ind_npars mdecl) args) parsubst parctx *
@@ -579,7 +582,7 @@ Lemma Construct_Ind_ind_eq {cf:checker_flags} {Σ} (wfΣ : wf Σ.1):
     spine_subst Σ Γ (skipn (ind_npars mdecl) args) argsubst argctx *
     spine_subst Σ Γ (skipn (ind_npars mdecl) args')  argsubst' argctx' *
 
-    ∑ s, type_local_ctx (lift_typing typing) Σ Γ argctx s *
+    ∑ s, type_local_ctx (lift_typing typing) Σ Γ argctx2 s *
     (** Parameters match *)
     (All2 (fun par par' => Σ ;;; Γ |- par = par') 
       (firstn mdecl.(ind_npars) args) 
@@ -663,7 +666,7 @@ Proof.
   (*rewrite -Heqp in spars sargs. simpl in *. clear Heqp. *)
   exists parsubst, argsubst.
   assert(wfar : wf_local Σ
-  (Γ ,,, subst_instance_context u (arities_context (ind_bodies mdecl)))).
+  (Γ ,,, subst_instance_context u' (arities_context (ind_bodies mdecl)))).
   { eapply weaken_wf_local => //.
     eapply wf_local_instantiate => //; destruct decli; eauto.
     eapply wf_arities_context => //; eauto. }
@@ -684,19 +687,19 @@ Proof.
     eapply weaken_wf_local => //.
     rewrite -subst_instance_context_app. 
     apply a.
-  - exists (subst_instance_univ u (cshape_sort cshape)). split.
+  - exists (subst_instance_univ u' (cshape_sort cshape)). split.
     move/onParams: onmind. rewrite /on_context.
-    pose proof (wf_local_instantiate Σ (InductiveDecl mdecl) (ind_params mdecl) u).
+    pose proof (wf_local_instantiate Σ (InductiveDecl mdecl) (ind_params mdecl) u').
     move=> H'. eapply X in H'; eauto.
     2:destruct decli; eauto.
-    clear -wfar wfpars wfΣ hΓ const decli t cargs H0 H' a a0.
+    clear -wfar wfpars wfΣ hΓ cons decli t cargs sargs H0 H' a spars a0.
     eapply (subst_type_local_ctx _ _ [] 
-      (subst_context (inds (inductive_mind i) u (ind_bodies mdecl)) 0 (subst_instance_context u (ind_params mdecl)))) => //.
+      (subst_context (inds (inductive_mind i) u' (ind_bodies mdecl)) 0 (subst_instance_context u' (ind_params mdecl)))) => //.
     simpl. eapply weaken_wf_local => //.
     rewrite closed_ctx_subst => //.
     now rewrite closedn_subst_instance_context.
-    simpl. rewrite -(subst_instance_context_length u (ind_params mdecl)).
-    eapply (subst_type_local_ctx _ _ _ (subst_instance_context u (arities_context (ind_bodies mdecl)))) => //.
+    simpl. rewrite -(subst_instance_context_length u' (ind_params mdecl)).
+    eapply (subst_type_local_ctx _ _ _ (subst_instance_context u' (arities_context (ind_bodies mdecl)))) => //.
     eapply weaken_wf_local => //.
     rewrite -app_context_assoc.
     eapply weaken_type_local_ctx => //.
@@ -704,8 +707,9 @@ Proof.
     eapply type_local_ctx_instantiate => //; destruct decli; eauto.
     eapply (weaken_subslet _ _ _ _ []) => //.
     now eapply subslet_inds; eauto.
-    now rewrite closed_ctx_subst ?closedn_subst_instance_context.
-
+    rewrite closed_ctx_subst ?closedn_subst_instance_context. auto.
+    apply spars.
+    
     move: (All2_firstn  _ _ _ _ _ mdecl.(ind_npars) Hargs).
     move: (All2_skipn  _ _ _ _ _ mdecl.(ind_npars) Hargs).
     clear Hargs.
@@ -1189,17 +1193,32 @@ Proof.
   intros []. red in H. now rewrite /lookup_minductive H H0.
 Qed.
 
+Definition ind_subst mdecl ind u := inds (inductive_mind ind) u (ind_bodies mdecl).
+
 Lemma constructor_cumulative_indices {cf:checker_flags} {Σ : global_env_ext} (wfΣ : wf Σ.1) :
   forall {ind mdecl idecl cdecl ind_indices cs u u' napp},
   declared_inductive Σ mdecl ind idecl ->
   on_constructor (lift_typing typing) (Σ.1, ind_universes mdecl) mdecl (inductive_ind ind) idecl ind_indices cdecl cs -> 
   R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) napp u u' ->
-  All2_local_env (on_decl (fun Γ Γ' x y => Σ ;;; subst_instance_context u (ind_arities mdecl ,,, ind_params mdecl) ,,, Γ |- x <= y))
-  (subst_instance_context u (cshape_args cs))
-  (subst_instance_context u' (cshape_args cs)) *
-  All2 (fun x y => Σ ;;; subst_instance_context u (ind_arities mdecl ,,, ind_params mdecl ,,, cshape_args cs) |- x = y)
-    (map (subst_instance_constr u) (cshape_indices cs))
-    (map (subst_instance_constr u') (cshape_indices cs)).
+  forall Γ pars pars' parsubst parsubst',
+  spine_subst Σ Γ pars parsubst (subst_instance_context u (ind_params mdecl)) ->
+  spine_subst Σ Γ pars' parsubst' (subst_instance_context u' (ind_params mdecl)) ->  
+  All2 (conv Σ Γ) pars pars' ->
+  let argctx := 
+      (subst_context (ind_subst mdecl ind u) #|ind_params mdecl| (subst_instance_context u (cshape_args cs)))
+  in
+  let argctx' :=
+     (subst_context (ind_subst mdecl ind u') #|ind_params mdecl| (subst_instance_context u' (cshape_args cs)))
+  in
+  let pargctx := subst_context parsubst 0 argctx in
+  let pargctx' := subst_context parsubst' 0 argctx' in
+  All2_local_env (fun Γ' _ _ x y => Σ ;;; Γ ,,, Γ' |- x <= y) 
+    (smash_context [] pargctx) (smash_context [] pargctx') *
+  All2 (conv Σ (Γ ,,, smash_context [] pargctx))
+    (map (subst parsubst (context_assumptions (cshape_args cs)))
+      (map (expand_lets argctx) (map (subst_instance_constr u) (cshape_indices cs))))
+    (map (subst parsubst' (context_assumptions (cshape_args cs)))
+      (map (expand_lets argctx') (map (subst_instance_constr u') (cshape_indices cs)))).
 Proof.
   intros. move: H0.
   unfold R_global_instance.
@@ -1210,12 +1229,13 @@ Proof.
   rewrite app_context_nil_l context_assumptions_app.
   elim: leb_spec_Set => comp.
   destruct ind_variance eqn:indv.
-  pose proof (X.(on_ctype_variance)).
-  specialize (X0 _ indv).
-  simpl in X0.
-  unfold respects_variance in X0.
+  pose proof (X.(on_ctype_variance)) as respv.
+  specialize (respv _ indv).
+  simpl in respv.
+  unfold respects_variance in respv.
   destruct variance_universes as [[v i] i'] eqn:vu.
-  destruct X0 as [args idx].
+  destruct respv as [args idx].
+  (* We need to strengthen respects variance to allow arbitrary parameter substitutions *)
   (** Morally, if variance_universes l = v i i' and R_universe_instance_variance l u u' then
       i and i' can be substituted respectively by u and u'.
       The hard part might be to show that (Σ.1, v) can also be turned into Σ by instanciating

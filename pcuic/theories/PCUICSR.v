@@ -382,6 +382,60 @@ Proof.
     rewrite !subst_context_app !app_context_nil_l in X0, X1; autorewrite with len in X0, X1.
     now rewrite -(All2_local_env_length X).
 Qed.
+ 
+Lemma expand_lets_subst_comm Γ s : 
+  expand_lets (subst_context s 0 Γ) ∘ subst s #|Γ| =1 subst s (context_assumptions Γ) ∘ expand_lets Γ.
+Proof.
+  unfold expand_lets, expand_lets_k; simpl; intros x.
+  autorewrite with len.
+  rewrite !subst_extended_subst.
+  rewrite distr_subst. f_equal.
+  autorewrite with len.
+  now rewrite commut_lift_subst_rec.
+Qed.
+
+Lemma map_expand_lets_subst_comm Γ s :
+  map (expand_lets (subst_context s 0 Γ)) ∘ (map (subst s #|Γ|)) =1 
+  map (subst s (context_assumptions Γ)) ∘ (map (expand_lets Γ)).
+Proof.
+  intros l. rewrite !map_map_compose.
+  apply map_ext. intros x; apply expand_lets_subst_comm.
+Qed.
+
+Lemma spine_subst_expand_lets inst s Δ : 
+  context_subst Δ inst s ->
+  s = map (subst0 (List.rev inst)) (extended_subst Δ 0).
+Proof.
+  intros sp.
+  induction sp.
+  - simpl; auto.
+  - rewrite List.rev_app_distr /= lift0_id. f_equal.
+    rewrite lift_extended_subst.
+    rewrite map_map_compose. rewrite IHsp. apply map_ext.
+    intros. rewrite (subst_app_decomp [_]). f_equal.
+    simpl. rewrite simpl_subst ?lift0_id //.
+  - simpl. autorewrite with len.
+    f_equal; auto.
+    rewrite IHsp.
+    rewrite distr_subst. f_equal.
+    simpl; autorewrite with len.
+    pose proof (context_subst_length2 sp).
+    rewrite -H. rewrite -(List.rev_length args).
+    rewrite -(Nat.add_0_r #|List.rev args|).
+    rewrite simpl_subst_rec; try lia.
+    now rewrite lift0_id.
+Qed.
+
+Lemma map_subst_expand_lets s Γ : 
+  context_assumptions Γ = #|s| ->
+  map (subst0 (map (subst0 s) (extended_subst Γ 0))) =1 map (subst0 s ∘ expand_lets Γ).
+Proof.
+  intros Hs l; apply map_ext. intros x.
+  clear l. unfold expand_lets, expand_lets_k.
+  rewrite distr_subst. f_equal.
+  autorewrite with len.
+  simpl. rewrite simpl_subst_k //.
+Qed.
 
 Notation conv_terms Σ Γ args args' := (All2 (conv Σ Γ) args args').
 
@@ -628,19 +682,51 @@ Proof.
     destruct typec' as [[[[_ equ] cu] eqargs] [cparsubst [cargsubst [iparsubst [iidxsubst ci]]]]].
     destruct ci as ((([cparsubst0 iparsubst0] & idxsubst0) & subsidx) & [s [typectx [Hpars Hargs]]]).
     pose proof (context_subst_fun csubst (iparsubst0.(inst_ctx_subst))). subst iparsubst.
-    epose proof (constructor_cumulative_indices wf isdecl onc equ) as [cumargs convidx].
+    epose proof (constructor_cumulative_indices wf isdecl onc equ _ _ _ _ _ cparsubst0 iparsubst0 Hpars).
+    set (argctxu1 := subst_context _ _ _) in X |- *.
+    set (argctxu := subst_context _ _ _) in X |- *.
+    simpl in X.
+    set (pargctxu1 := subst_context cparsubst 0 argctxu1) in X |- *.
+    set (pargctxu := subst_context parsubst 0 argctxu) in X |- *.
+    destruct X as [cumargs convidx]; eauto.
     eapply wf_arity_spine_typing_spine => //.
     split.
-    admit.
+    { (* Predicate instantiation is well typed *) 
+      right. exists (Universe.sort_of_product s ps).
+      eapply type_it_mkProd_or_LetIn; eauto.
+      assert (wf_local Σ (Γ ,,, pargctxu)).
+      { eapply type_local_ctx_wf_local in typectx; eauto. }
+      assert (#|argctx| = #|pargctxu|).
+      { now rewrite /argctx /pargctxu /argctxu /argctx; autorewrite with len. }
+      eapply type_mkApps.
+      eapply weakening_gen; eauto.
+      eapply wf_arity_spine_typing_spine => //.
+      split.
+      ** eapply validity in typep. eapply isWfArity_or_Type_lift.
+         autorewrite with len. lia.
+         all:auto. rewrite skipn_all_app_eq //.
+      ** rewrite lift_it_mkProd_or_LetIn.
+         eapply arity_spine_it_mkProd_or_LetIn => //.
+         instantiate (1 := )
+         eapply 
+         eauto. rewrite H.
+         simpl. constructor.
+         2:constructor; auto; eauto 4 with pcuic.
+         2:left; eexists _, _; intuition auto.
+        rewrite subst_mkApps. 
+        rewrite map_app.
+        pose proof (subslet_length subsidx).
+        autorewrite with len in H. rewrite -H.
+        rewrite map_map_compose map_subst_lift_id.
+        pose proof (spine_subst_subst_to_extended_list_k subsidx).
+        rewrite to_extended_list_k_fold_context in H0.
+        rewrite PCUICSubstitution.map_subst_instance_constr_to_extended_list_k  in H0.
+        rewrite {}H0. now rewrite firstn_skipn /=.
+    }
     rewrite -(app_nil_r (skipn _ _)).
     have argsubst := spine_subst_smash wf idxsubst0.
-    set (pargctx := subst_context parsubst 0 _).
-    eapply (spine_subst_cumul _ _ _ _ (smash_context [] pargctx)) in argsubst; first last.
+    eapply (spine_subst_cumul _ _ _ _ (smash_context [] pargctxu)) in argsubst; first last.
     4-5:apply smash_context_assumption_context; constructor. all:auto.
-
-
-
-    admit. (* Cumulativity of constructor argument types *)
     { eapply on_constructor_inst in onc; eauto.
       2:{ simpl. eapply on_declared_inductive; eauto. }
       destruct onc as [wfc [inst spc]].
@@ -679,7 +765,7 @@ Proof.
       move: (subslet_length subsidx). autorewrite with len => <-.
       now rewrite map_map_compose map_subst_lift_id firstn_skipn. }
     eapply conv_cumul. eapply mkApps_conv_args; auto.
-    { rewrite /pargctx. autorewrite with len.
+    { rewrite /pargctxu /argctxu. autorewrite with len.
       rewrite simpl_lift; try lia. rewrite subst_subst_lift //; try reflexivity.
       autorewrite with len. rewrite skipn_length. lia.
       unfold argctx. lia. } 
@@ -706,15 +792,40 @@ Proof.
           intros x Px. rewrite closedn_subst_instance_constr.
           rewrite /argctx; autorewrite with len.
           now rewrite Nat.add_comm. }
-        rewrite (map_map_compose _ _ _ _ (subst0 (extended_subst pargctx 0))).
-        change (fun x =>  subst0 (extended_subst pargctx 0) _ ) with (expand_lets pargctx).
+        rewrite (map_map_compose _ _ _ _ (subst0 (extended_subst pargctxu 0))).
+        change (fun x =>  subst0 (extended_subst pargctxu 0) _ ) with (expand_lets pargctxu).
         rewrite -map_subst_app_simpl -(map_map_compose _ _ _ _ (subst0 cargsubst)) /=.
         rewrite (subslet_length idxsubst0); autorewrite with len.
-        epose proof (conv_terms_subst _ _ _ _ _ _ _ _ _ wf).
+        eapply All2_symmetry. intros x y. now symmetry.
+        pose proof (spine_subst_expand_lets _ _ _ idxsubst0).
+        unfold ind_subst in argctxu1; fold argctxu1 pargctxu1 in H. rewrite H.
+        eapply spine_subst_smash in idxsubst0; eauto.
+        epose proof (conv_terms_subst _ Γ (smash_context [] pargctxu1) (smash_context [] pargctxu) [] _ _ _ _ wf) as cv.
+        simpl in cv. forward cv.
+        eapply idxsubst0; eauto.
+        specialize (cv idxsubst0 argsubst).
+        forward cv. eapply All2_rev; auto. eapply All2_refl. reflexivity.
+        specialize (cv convidx). clear convidx. rewrite subst_context_nil /= in cv.
+        rewrite /pargctxu /argctx. assert (#|cshape_args cs| = #|argctxu|) as lenargctxu.
+        { rewrite /argctxu; autorewrite with len. reflexivity. }
+        rewrite lenargctxu.
+        assert(context_assumptions (cshape_args cs) = context_assumptions argctxu1).
+        { rewrite /argctxu1; autorewrite with len. reflexivity. }
+        rewrite {1}H0 in cv.
+        rewrite -(map_expand_lets_subst_comm _ _ _) in cv.
+        rewrite (map_expand_lets_subst_comm _ _ _).
+        assert(#|argctxu| = #|argctxu1|).
+        { rewrite /argctxu /argctxu1; autorewrite with len. reflexivity. }
+        assert(context_assumptions argctxu = context_assumptions (cshape_args cs)) as ->.
+        { rewrite /argctxu /argctxu1; autorewrite with len. reflexivity. }
+        rewrite -H2 in cv.
+        rewrite /pargctxu1.
+        rewrite (map_subst_expand_lets _ _ _ _).
+        { autorewrite with len. rewrite -H0 (context_subst_length2 idxsubst0).
+          autorewrite with len. rewrite context_assumptions_smash_context.
+          autorewrite with len. now simpl. }
+        now rewrite -map_map_compose.
 
-
-
-        admit. (* indices conversion *)
       * simpl. rewrite lift_mkApps !subst_mkApps /=.
         constructor. 2:constructor.
         assert (R_global_instance Σ.1 (eq_universe (global_ext_constraints Σ)) (eq_universe (global_ext_constraints Σ)) 
@@ -737,7 +848,7 @@ Proof.
         eapply All2_refl. intros; reflexivity.
         eapply mkApps_conv_args; eauto.
         rewrite 3!map_app. rewrite 3!map_map_compose.
-        rewrite /pargctx; autorewrite with len.
+        rewrite /pargctxu /argctxu; autorewrite with len.
         rewrite map_subst_subst_lift_lift. autorewrite with len.
         rewrite skipn_length eqargs; try lia. subst argctx. lia.
         set (ctx := subst_context parsubst 0 _).

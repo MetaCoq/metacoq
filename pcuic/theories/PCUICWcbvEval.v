@@ -651,19 +651,15 @@ Section Wcbv.
       now depelim ev.
     + rewrite <- mkApps_nested in ev.
       cbn in *.
-      depelim ev.
-      * apply IHargs in ev1 as (? & ?).
-        solve_discr.
-      * apply IHargs in ev1 as (? & ?).
-        solve_discr.
-      * apply IHargs in ev1 as (? & ?).
-        solve_discr.
+      depelim ev;
+        try solve [apply IHargs in ev1 as (? & ?); solve_discr].
       * apply IHargs in ev1 as (argsv & ->).
         exists (argsv ++ [a'])%list.
         now rewrite <- mkApps_nested.
       * easy.
   Qed.
  
+  Unset SsrRewrite.
   Lemma eval_deterministic {t v v'} :
     eval t v ->
     eval t v' ->
@@ -688,13 +684,13 @@ Section Wcbv.
       now apply IHev2 in ev'2.
     + easy.
   - depelim ev'.
-    + pose proof (PCUICWeakeningEnv.declared_constant_inj _ _ isdecl isdecl0); subst.
+    + rewrite (PCUICWeakeningEnv.declared_constant_inj _ _ isdecl isdecl0) in *.
       replace body0 with body in * by congruence.
       now apply IHev in ev'.
-    + now pose proof (PCUICWeakeningEnv.declared_constant_inj _ _ isdecl isdecl0); subst.
+    + now rewrite (PCUICWeakeningEnv.declared_constant_inj _ _ isdecl isdecl0) in *.
     + easy.
   - depelim ev'.
-    + now pose proof (PCUICWeakeningEnv.declared_constant_inj _ _ isdecl isdecl0); subst.
+    + now rewrite (PCUICWeakeningEnv.declared_constant_inj _ _ isdecl isdecl0) in *.
     + easy.
     + easy.
   - depelim ev'.
@@ -729,7 +725,7 @@ Section Wcbv.
       now apply Bool.negb_true_iff in H0.
     + apply IHev1 in ev'1.
       subst f'.
-      rewrite isFixApp_mkApps in i0; [easy|].
+      rewrite isFixApp_mkApps in i0 by easy.
       cbn in *.
       now rewrite Bool.orb_true_r in i0.
     + easy.
@@ -742,7 +738,7 @@ Section Wcbv.
     + apply IHev1 in ev'1; solve_discr.
       now apply IHev2 in ev'2; subst.
     + apply IHev1 in ev'1; subst.
-      rewrite isFixApp_mkApps in i; [easy|].
+      rewrite isFixApp_mkApps in i by easy.
       cbn in *.
       now rewrite Bool.orb_true_r in i.
     + easy.
@@ -763,11 +759,11 @@ Section Wcbv.
   - depelim ev'.
     + now apply IHev1 in ev'1; subst.
     + apply IHev1 in ev'1; subst.
-      rewrite isFixApp_mkApps in i; [easy|].
+      rewrite isFixApp_mkApps in i by easy.
       cbn in *.
       now rewrite Bool.orb_true_r in i.
     + apply IHev1 in ev'1; subst.
-      rewrite isFixApp_mkApps in i; [easy|].
+      rewrite isFixApp_mkApps in i by easy.
       cbn in *.
       now rewrite Bool.orb_true_r in i.
     + apply IHev1 in ev'1; subst.
@@ -775,6 +771,7 @@ Section Wcbv.
     + easy.
   - now depelim ev'.
   Qed.
+  Set SsrRewrite.
 
   Lemma eval_LetIn {n b ty t v} :
     eval (tLetIn n b ty t) v ->

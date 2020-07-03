@@ -559,6 +559,18 @@ Proof.
     now rewrite - !distr_subst in X.
 Qed.
 
+Lemma spine_subst_subst_first {cf:checker_flags} Σ Γ Γ' i s Δ sub : 
+  wf Σ.1 ->
+  spine_subst Σ (Γ ,,, Γ') i s Δ ->
+  subslet Σ [] sub Γ ->
+  spine_subst Σ (subst_context sub 0 Γ') (map (subst sub #|Γ'|) i) (map (subst sub #|Γ'|) s)
+   (subst_context sub #|Γ'| Δ).
+Proof.
+  move=> wfΣ sp subs.
+  epose proof (spine_subst_subst Σ [] Γ Γ' i s Δ sub wfΣ).
+  rewrite !app_context_nil_l in X. apply X; auto.
+Qed.
+
 Lemma weaken_subslet {cf:checker_flags} Σ s Δ Γ Γ' :
   wf Σ.1 ->
   wf_local Σ Γ -> wf_local Σ Γ' ->

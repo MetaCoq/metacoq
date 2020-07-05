@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 TEMPLATE_LIB=../template-coq
 
 if [[ "src" -ot "${TEMPLATE_LIB}/gen-src" || ! -f "src/metacoq_checker_plugin.cmxa" \

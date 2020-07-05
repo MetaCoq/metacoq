@@ -266,6 +266,7 @@ struct
       | Constr.Meta _ -> failwith "Meta not supported by TemplateCoq"
       | Constr.Int _ -> failwith "Native integers not supported by TemplateCoq"
       | Constr.Float _ -> failwith "Native floating point numbers not supported by TemplateCoq"
+      | Constr.Array _ -> failwith "Persistent arrays not supported by TemplateCoq"
       in
       let in_prop, env' = env in
       if is_cast_prop () && not in_prop then

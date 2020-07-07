@@ -1080,145 +1080,85 @@ Proof.
            eapply wcbeval_red; eauto.
            eapply PCUICClosed.subject_closed in t0; eauto.
 
-  - todo "fix_value case".
-    (*
-    assert (Hty' := Hty).
-    assert (Hunf := H).
-    assert (Hcon := H0).
-    assert (Σ |-p mkApps (tFix mfix idx) args ▷ mkApps (tFix mfix idx) args') by eauto.
-    eapply PCUICValidity.inversion_mkApps in Hty' as (? & ? & ?); eauto.
-    assert (Ht := t).
-    eapply subject_reduction in t. 2:eauto. 2:eapply wcbeval_red; eauto.
-    2:now eapply PCUICClosed.subject_closed in Ht.
-    assert (HT := t).
-    eapply inversion_Fix in t as (? & ? & ? & ? & ? & ? & ?); auto.
-
-    eapply erases_mkApps_inv in He as [(? & ? & ? & ? & [] & ? & ? & ?) | (? & ? & ? & ? & ?)]; eauto.
-    + subst. assert (X100 := X2). eapply Is_type_app in X100 as[]; auto.
-      exists EAst.tBox. split. 2:{
-        assert (exists x4, Forall2 (EWcbvEval.eval Σ') x3 x4) as [x4]. {
-          eapply All2_app_inv in X0 as ([] & ? & ?). destruct p.
-          clear a0. subst.
-          assert (forall x n, nth_error x2 n = Some x -> ∑ T,  Σ;;; [] |- x : T).
-          { intros. eapply typing_spine_inv with (arg := n + #|x1|) in t0 as [].
-            2:{ rewrite nth_error_app2. 2:lia. rewrite Nat.add_sub. eassumption. }
-            eauto.
-          }
-          clear - X0 a1 H3. revert X0 x3 H3; induction a1; intros.
-          ** inv H3. exists []; eauto.
-          ** inv H3. destruct (X0 x 0 eq_refl).
-             eapply r in t as (? & ? & ?); eauto.
-             eapply IHa1 in H4 as (? & ?); eauto.
-             intros. eapply (X0 x2 (S n)). eassumption.
-        }
-        eapply eval_box_apps. eassumption. econstructor; eauto. }
-      econstructor.
-      eapply Is_type_eval. eauto. eassumption.
-      rewrite <- mkApps_nested.
-      eapply Is_type_red. eauto. 2:exact X3. repeat eapply PCUICReduction.red_mkApps_f.
-      eapply wcbeval_red; eauto. now eapply PCUICClosed.subject_closed in Ht. eauto. eauto.
-      rewrite mkApps_nested; eauto.
-    + subst.
-      eapply IHeval in H2 as (? & ? & ?); eauto.
-      assert (H2' := H1).
-      inv H1.
-      * assert (Hmfix' := X2).
-        eapply All2_nth_error_Some in X2 as (? & ? & ?); eauto.
-        destruct x0. cbn in *. subst.
-
-        (* enough(Σ;;; [] ,,, subst_context (fix_subst mfix) 0 [] |- PCUICLiftSubst.subst (fix_subst mfix) 0 dbody ⇝ℇ subst (ETyping.fix_subst mfix') 0 (Extract.E.dbody x4)). *)
-        destruct p. destruct p.
-
-        clear e3. rename H into e3.
-        -- enough (exists L, Forall2 (erases Σ []) args' L /\ Forall2 (Ee.eval Σ') x2 L).
-           ++ cbn in e3. destruct H as (L & ? & ?).
-              assert (Hv : Forall Ee.value L).
-              { eapply Forall2_Forall_right; eauto.
-                intros. eapply EWcbvEval.eval_to_value. eauto.
-              }
-
-              eapply erases_mkApps in H; eauto.
-              eexists. split. eauto.
-              eapply Ee.eval_fix_value; eauto.
-              cbn.
-
-              eapply All2_nth_error_Some in Hmfix' as (? & ? & ?); eauto.
-              destruct p. destruct p. cbn in *. subst.
-              unfold ETyping.unfold_fix, unfold_fix in *. rewrite e4.
-              rewrite e in Hcon.
-              clear H0. cbn in *.
-              rewrite e6 in *.
-              eapply erases_mkApps_inv in H as [ (? & ? & ? & ? & ? & ? & ? & ?) | (? & ? & ? & ? & ?) ].
-              ** assert (EAstUtils.decompose_app (EAst.mkApps (E.tFix mfix' idx) L) = EAstUtils.decompose_app (EAst.mkApps EAst.tBox x6)) by now rewrite H6.
-                 rewrite !EAstUtils.decompose_app_mkApps in H7; try reflexivity.
-                 inv H7.
-              ** unfold is_constructor, ETyping.is_constructor in *.
-                 destruct nth_error eqn:En; try now inv Hcon.
-                 --- eapply Forall2_nth_error_Some in H4 as (? & ? & ?); eauto.
-                     inv H0.
-                     +++ assert (EAstUtils.decompose_app (EAst.mkApps (E.tFix mfix' idx) L) = EAstUtils.decompose_app (EAst.mkApps (E.tFix mfix'0 idx) x5)) by now rewrite H.
-                         rewrite !EAstUtils.decompose_app_mkApps in H0; try reflexivity.
-                         inv H0.
-                         rewrite H4.
-                         eapply is_construct_erases in Hcon; eauto.
-                         unfold EisConstruct_app in *.
-                         destruct ?; eauto.
-                     +++ assert (EAstUtils.decompose_app (EAst.mkApps (E.tFix mfix' idx) L) = EAstUtils.decompose_app (EAst.mkApps EAst.tBox x5)) by now rewrite H.
-                         rewrite !EAstUtils.decompose_app_mkApps in H0; try reflexivity.
-                         inv H0.
-                 ---  eapply Forall2_nth_error_None_l in H4; eauto.
-                      inv H0.
-                      +++ assert (EAstUtils.decompose_app (EAst.mkApps (E.tFix mfix' idx) L) = EAstUtils.decompose_app (EAst.mkApps (E.tFix mfix'0 idx) x5)) by now rewrite H.
-                         rewrite !EAstUtils.decompose_app_mkApps in H0; try reflexivity.
-                         inv H0.
-                         rewrite H4. eauto.
-                      +++ assert (EAstUtils.decompose_app (EAst.mkApps (E.tFix mfix' idx) L) = EAstUtils.decompose_app (EAst.mkApps EAst.tBox x5)) by now rewrite H.
-                         rewrite !EAstUtils.decompose_app_mkApps in H0; try reflexivity.
-                         inv H0.
-              ** auto.
-              ** eapply subject_reduction. eauto. exact Hty.
-                 etransitivity.
-                 eapply PCUICReduction.red_mkApps.
-                 eapply PCUICClosed.subject_closed in Ht.
-                 eapply wcbeval_red; eauto. auto.
-                 eapply typing_spine_closed in t0.
-                 eapply All2_All_mix_left in X; eauto. 
-                 eapply All2_impl. exact X. intros. destruct X2.
-                 now eapply wcbeval_red. auto.
-                 econstructor.
-           ++ clear - t0 H3 X0. revert x t0 x2 H3; induction X0; intros.
-              ** inv H3. exists []; eauto.
-              ** inv H3. inv t0. eapply r in X2 as (? & ? & ?); eauto.
-                 eapply IHX0 in X3 as (? & ? & ?); eauto.
-
-      * eapply Is_type_app in X2 as []; tas.
-        exists EAst.tBox. split.
-        econstructor.
-        eapply Is_type_eval. eauto. eassumption.
-        eauto.
-
-        assert (exists x5, Forall2 (EWcbvEval.eval Σ') x2 x5) as [x5]. {
-          assert (forall x n, nth_error args n = Some x -> ∑ T,  Σ;;; [] |- x : T).
-          { intros. eapply typing_spine_inv with (arg := n) in t0 as [].
-            2:{ eassumption. } eauto.
-          }
-          clear - X3 H3 X0. revert X3 x2 H3; induction X0; intros.
-          ** inv H3. exists []; eauto.
-          ** inv H3. destruct (X3 x 0 eq_refl).
-             eapply r in t as (? & ? & ?); eauto.
-             eapply IHX0 in H4 as (? & ?); eauto.
-             intros. eapply (X3 x2 (S n)). eassumption.
-        }
-
-        eapply eval_box_apps. eauto. eauto.
-        constructor.
-        eapply subject_reduction. eauto. exact Hty.
-        eapply PCUICReduction.red_mkApps.
-        eapply PCUICClosed.subject_closed in Ht.
-        now eapply wcbeval_red. auto.
-        eapply All_All2_refl.
-        clear. induction args. econstructor. econstructor; eauto.
-    *)
+  - apply inversion_App in Hty as Hty'; [|eauto].
+    destruct Hty' as (? & ? & ? & ? & ? & ?).
+    eapply erases_App in He as He'; [|eauto].
+    destruct He' as [(-> & [])|(? & ? & -> & ? & ?)].
+    + exists E.tBox.
+      split; [|eauto using Ee.eval].
+      constructor.
+      eapply Is_type_red.
+      * eauto.
+      * eapply PCUICReduction.red_app.
+        -- eapply wcbeval_red; [eauto| |eauto].
+           eapply PCUICClosed.subject_closed in t; eauto.
+        -- eapply wcbeval_red; [eauto| |eauto].
+           eapply PCUICClosed.subject_closed in t0; eauto.
+      * eauto.
+    + eapply IHeval1 in H1 as (? & ? & ?); [|eauto].
+      eapply IHeval2 in H2 as (? & ? & ?); [|eauto].
+      eapply erases_mkApps_inv in H1; [|eauto|]; first last.
+      { eapply subject_reduction; [eauto| |]; first last.
+        - eapply wcbeval_red; [eauto| |eauto].
+          eapply PCUICClosed.subject_closed in t; eauto.
+        - eauto. }
+      destruct H1 as [(? & ? & ? & -> & [] & ? & ? & ->)|(? & ? & -> & ? & ?)].
+      * apply eval_to_mkApps_tBox_inv in H3 as ?; subst.
+        depelim H5.
+        rewrite !app_nil_r in *.
+        cbn in *.
+        exists E.tBox.
+        split; [|eauto using Ee.eval].
+        eapply (Is_type_app _ _ _ [av]) in X as [].
+        -- constructor.
+           apply X.
+        -- eauto.
+        -- eauto.
+        -- cbn.
+           eapply type_App.
+           ++ eapply subject_reduction; [eauto| |]; first last.
+              ** eapply wcbeval_red; [eauto| |eauto].
+                 eapply PCUICClosed.subject_closed in t; eauto.
+              ** eauto.
+           ++ eapply subject_reduction; [eauto| |]; first last.
+              ** eapply wcbeval_red; [eauto| |eauto].
+                 eapply PCUICClosed.subject_closed in t0; eauto.
+              ** eauto.
+      * depelim H1.
+        -- exists (E.tApp (E.mkApps (E.tFix mfix' idx) x7) x5).
+           split; [eauto using erases_tApp, erases_mkApps|].
+           unfold cunfold_fix in *.
+           destruct (nth_error _ _) eqn:nth; [|congruence].
+           eapply All2_nth_error_Some in X as (? & ? & ? & ? & ?); [|eauto].
+           eapply Ee.eval_fix_value.
+           ++ eauto.
+           ++ eauto.
+           ++ unfold Ee.cunfold_fix.
+              rewrite e0.
+              reflexivity.
+           ++ eapply Forall2_length in H5.
+              destruct o as [|(<- & ?)]; [left; congruence|right].
+              split; [congruence|].
+              todo "contradiction: av must be a constructor when axiom free".
+        -- exists E.tBox.
+           apply eval_to_mkApps_tBox_inv in H3 as ?; subst.
+           split; [|eauto using Ee.eval].
+           eapply Is_type_app in X as [].
+           ++ constructor.
+              rewrite <- mkApps_snoc.
+              exact X.
+           ++ eauto.
+           ++ eauto.
+           ++ rewrite mkApps_snoc.
+              eapply type_App.
+              ** eapply subject_reduction; [eauto| |]; first last.
+                 --- eapply wcbeval_red; [eauto| |eauto].
+                     eapply PCUICClosed.subject_closed in t; eauto.
+                 --- eauto.
+              ** eapply subject_reduction; [eauto| |]; first last.
+                 --- eapply wcbeval_red; [eauto| |eauto].
+                     eapply PCUICClosed.subject_closed in t0; eauto.
+                 --- eauto.
 
   - destruct ip.
     assert (Hty' := Hty).

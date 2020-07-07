@@ -433,14 +433,6 @@ Proof.
       * eauto.
 Qed.
 
-(*
-Lemma erases_mkApps_head (Σ : global_env_ext) Γ f L T t :
-  wf Σ ->
-  Σ;;; Γ |- mkApps f L : T ->
-  Σ;;; Γ |- mkApps f l ⇝ℇ t ->
-  (
-*)
-
 (** ** Global erasure  *)
 
 Lemma lookup_env_erases (Σ : global_env_ext) c decl Σ' :
@@ -555,38 +547,6 @@ Qed.
 Lemma erases_closed Σ Γ  a e : PCUICLiftSubst.closedn #|Γ| a -> Σ ;;; Γ |- a ⇝ℇ e -> closedn #|Γ| e.
 Proof.
 Admitted.
-
-Lemma eval_tApp_inv_head Σ hd a v :
-  Σ |-p tApp hd a ▷ v ->
-  ∥ ∑ hdv, Σ |-p hd ▷ hdv ∥.
-Proof.
-  intros ev.
-  constructor.
-  now depelim ev.
-Qed.
-
-Lemma eval_tApp_inv_arg Σ hd a v :
-  Σ |-p tApp hd a ▷ v ->
-  ∥ ∑ av, Σ |-p a ▷ av ∥.
-Proof.
-  intros ev.
-  constructor.
-  now depelim ev.
-Qed.
-
-Lemma eval_to_mkApps_tFix_inv Σ t mfix idx argsv :
-  Σ |-p t ▷ mkApps (tFix mfix idx) argsv ->
-  ∥ Σ |-p tFix mfix idx ▷ tFix mfix idx × All (value Σ) argsv ∥.
-Proof.
-  intros ev.
-  apply eval_to_value in ev.
-  depelim ev.
-  - apply atom_mkApps in i as (-> & ?).
-    now constructor.
-  - now apply mkApps_eq_inj in x as (-> & ->); [|now destruct t0|easy].
-  - apply mkApps_eq_inj in x as (-> & ->); [|now destruct f|easy].
-    solve [constructor; split; eauto using eval].
-Qed.
 
 Lemma eval_to_mkApps_tBox_inv Σ t argsv :
   Σ ⊢ t ▷ E.mkApps E.tBox argsv ->
@@ -937,7 +897,6 @@ Proof.
   - assert (Hty' := Hty).
     assert (Hunf := H).
     assert (Hcon := H1).
-    (*assert (Σ |-p tApp (mkApps (tFix mfix idx) args ▷ res) by eauto.*)
     eapply inversion_App in Hty' as (? & ? & ? & ? & ? & ?); eauto.
     assert (Ht := t).
     eapply subject_reduction in t. 2:eauto. 2:eapply wcbeval_red; eauto.

@@ -1082,6 +1082,11 @@ Proof.
 
   - apply inversion_App in Hty as Hty'; [|eauto].
     destruct Hty' as (? & ? & ? & ? & ? & ?).
+
+    eapply subject_reduction in t as typ_stuck_fix; [|eauto|]; first last.
+    { eapply wcbeval_red; [eauto| |eauto].
+      eapply PCUICClosed.subject_closed in t; eauto. }
+    
     eapply erases_App in He as He'; [|eauto].
     destruct He' as [(-> & [])|(? & ? & -> & ? & ?)].
     + exists E.tBox.
@@ -1095,13 +1100,13 @@ Proof.
         -- eapply wcbeval_red; [eauto| |eauto].
            eapply PCUICClosed.subject_closed in t0; eauto.
       * eauto.
-    + eapply IHeval1 in H1 as (? & ? & ?); [|eauto].
+    + eapply subject_reduction in t0 as typ_arg; [|eauto|]; first last.
+      { eapply wcbeval_red; [eauto| |eauto].
+        eapply PCUICClosed.subject_closed in t0; eauto. }
+
+      eapply IHeval1 in H1 as (? & ? & ?); [|eauto].
       eapply IHeval2 in H2 as (? & ? & ?); [|eauto].
-      eapply erases_mkApps_inv in H1; [|eauto|]; first last.
-      { eapply subject_reduction; [eauto| |]; first last.
-        - eapply wcbeval_red; [eauto| |eauto].
-          eapply PCUICClosed.subject_closed in t; eauto.
-        - eauto. }
+      eapply erases_mkApps_inv in H1; [|eauto|eauto].
       destruct H1 as [(? & ? & ? & -> & [] & ? & ? & ->)|(? & ? & -> & ? & ?)].
       * apply eval_to_mkApps_tBox_inv in H3 as ?; subst.
         depelim H5.
@@ -1115,15 +1120,7 @@ Proof.
         -- eauto.
         -- eauto.
         -- cbn.
-           eapply type_App.
-           ++ eapply subject_reduction; [eauto| |]; first last.
-              ** eapply wcbeval_red; [eauto| |eauto].
-                 eapply PCUICClosed.subject_closed in t; eauto.
-              ** eauto.
-           ++ eapply subject_reduction; [eauto| |]; first last.
-              ** eapply wcbeval_red; [eauto| |eauto].
-                 eapply PCUICClosed.subject_closed in t0; eauto.
-              ** eauto.
+           eapply type_App; eauto.
       * depelim H1.
         -- exists (E.tApp (E.mkApps (E.tFix mfix' idx) x7) x5).
            split; [eauto using erases_tApp, erases_mkApps|].
@@ -1150,15 +1147,7 @@ Proof.
            ++ eauto.
            ++ eauto.
            ++ rewrite mkApps_snoc.
-              eapply type_App.
-              ** eapply subject_reduction; [eauto| |]; first last.
-                 --- eapply wcbeval_red; [eauto| |eauto].
-                     eapply PCUICClosed.subject_closed in t; eauto.
-                 --- eauto.
-              ** eapply subject_reduction; [eauto| |]; first last.
-                 --- eapply wcbeval_red; [eauto| |eauto].
-                     eapply PCUICClosed.subject_closed in t0; eauto.
-                 --- eauto.
+              eapply type_App; eauto.
 
   - destruct ip.
     assert (Hty' := Hty).

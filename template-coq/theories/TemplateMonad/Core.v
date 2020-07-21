@@ -66,7 +66,7 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=
 From MetaCoq.Template Require Import monad_utils.
 
 (** This allow to use notations of MonadNotation *)
-Instance TemplateMonad_Monad : Monad TemplateMonad :=
+Instance TemplateMonad_Monad@{t u} : Monad@{t u} TemplateMonad@{t u} :=
   {| ret := @tmReturn ; bind := @tmBind |}.
 
 Import MonadNotation.

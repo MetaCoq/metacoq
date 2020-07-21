@@ -1,5 +1,4 @@
 (* Distributed under the terms of the MIT license.   *)
-
 From Coq Require Import Bool String List Program BinPos Arith.
 From MetaCoq.Template Require Import config monad_utils utils
      uGraph.
@@ -48,7 +47,7 @@ Proof.
   intros; sq; now eapply wf_local_rel_app_inv.
 Qed.
 
-Fixpoint monad_All {T} {M : Monad T} {A} {P} (f : forall x, T (P x)) l : T (@All A P l)
+Fixpoint monad_All@{u v w} {T} {M : Monad@{u v} T} {A : Type@{w}} {P} (f : forall x, T (P x)) l : T (@All A P l)
   := match l with
      | [] => ret All_nil
      | a :: l => X <- f a ;;
@@ -71,7 +70,7 @@ Fixpoint monad_All2 {T E} {M : Monad T} {M' : MonadExc E T} wrong_sizes
 Definition monad_prod {T} {M : Monad T} {A B} (x : T A) (y : T B): T (A * B)
   := X <- x ;; Y <- y ;; ret (X, Y).
 
-Definition check_dec {T E} {M : Monad T} {M' : MonadExc E T} (e : E) {P}
+Definition check_dec@{u v e} {T E} {M : Monad@{u v} T} {M' : MonadExc@{u v e} E T} (e : E) {P}
            (H : {P} + {~ P})
   : T P
   := match H with
@@ -79,11 +78,11 @@ Definition check_dec {T E} {M : Monad T} {M' : MonadExc E T} (e : E) {P}
      | right _ => raise e
      end.
 
-Definition check_eq_true {T E} {M : Monad T} {M' : MonadExc E T} b (e : E)
+Definition check_eq_true@{u v e} {T E} {M : Monad@{u v} T} {M' : MonadExc@{u v e} E T} b (e : E)
   : T (b = true)
   := if b return T (b = true) then ret eq_refl else raise e.
 
-Program Definition check_eq_nat {T E} {M : Monad T} {M' : MonadExc E T} n m (e : E)
+Program Definition check_eq_nat@{u v e} {T E} {M : Monad@{u v} T} {M' : MonadExc@{u v e} E T} n m (e : E)
   : T (n = m)
   := match Nat.eq_dec n m with
      | left p => ret p
@@ -1330,7 +1329,7 @@ Section CheckEnv.
     intros H H0 H1 H2. sq. econstructor; eassumption.
   Defined.
 
-  Program Fixpoint monad_Alli {T} {M : Monad T} {A} {P} (f : forall n x, T (∥ P n x ∥)) l n
+  Program Fixpoint monad_Alli@{u v} {T} {M : Monad@{u v} T} {A} {P} (f : forall n x, T (∥ P n x ∥)) l n
     : T (∥ @Alli A P n l ∥)
     := match l with
        | [] => ret (sq Alli_nil)

@@ -419,7 +419,12 @@ struct
     let is = to_coq_listl tOne_inductive_entry (List.map make_one_inductive_entry is) in
     let mpr = constr_mkAppl (cNone, [|bool_type|]) in
     let mr = constr_mkApp (cNone, [|constr_mkAppl (option_type, [|tident|])|]) in
-    (* let var = quote_option (constr_mkAppl (tlist, [| tVariance |])) (Option.map (to_coq_listl tVariance) var) in*)
+    let var = quote_option (constr_mkAppl (tlist, [| tVariance |]))
+        (Option.map (fun var ->
+             let var = List.map (quote_option (Lazy.force tVariance)) var in
+             to_coq_listl tVariance var)
+            var)
+    in
     constr_mkApp (tBuild_mutual_inductive_entry, [| mr; mf; mp; is; mpol; var; mpr |])
 
   let quote_parameter_entry ty univs =

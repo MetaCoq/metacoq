@@ -100,7 +100,7 @@ Definition clean_universes_decl (m : mutual_inductive_entry) : mutual_inductive_
     mind_entry_inds := m.(mind_entry_inds);
     mind_entry_universes := clean_universes_entry m.(mind_entry_universes);
     mind_entry_template := m.(mind_entry_template);
-    mind_entry_cumulative := m.(mind_entry_cumulative);
+    mind_entry_variance := m.(mind_entry_variance);
     mind_entry_private := m.(mind_entry_private) |}.
 
 Module to.

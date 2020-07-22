@@ -94,7 +94,7 @@ sig
   val quote_mind_finiteness : Declarations.recursivity_kind -> quoted_mind_finiteness
   val quote_mutual_inductive_entry :
     quoted_mind_finiteness * quoted_context (* params *) * quoted_ind_entry list *
-    quoted_universes_entry * quoted_bool ->
+    quoted_universes_entry * quoted_variance option list option ->
     quoted_mind_entry
 
   val quote_definition_entry : t option -> t -> quoted_universes_entry -> quoted_definition_entry

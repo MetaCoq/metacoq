@@ -179,7 +179,7 @@ Record mutual_inductive_entry := {
   mind_entry_inds      : list one_inductive_entry;
   mind_entry_universes : universes_entry;
   mind_entry_template : bool; (* template polymorphism *)
-  mind_entry_cumulative  : bool;
+  mind_entry_variance  : option (list (option Universes.Variance.t));
   mind_entry_private   : option bool
   (* Private flag for sealing an inductive definition in an enclosing
      module. Not handled by Template Coq yet. *) }.

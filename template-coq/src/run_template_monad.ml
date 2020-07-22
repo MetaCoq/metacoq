@@ -263,14 +263,17 @@ let unquote_mutual_inductive_entry evm trm (* of type mutual_inductive_entry *) 
   let (h,args) = app_full trm [] in
   if constr_equall h tBuild_mutual_inductive_entry then
     match args with
-    | record::finite::params::inds::univs::template::cumulative::priv::[] ->
+    | record::finite::params::inds::univs::template::variance::priv::[] ->
        let record = map_option (map_option (fun x -> [|x|])) (unquote_map_option (unquote_map_option unquote_ident) record) in
        let finite = denote_mind_entry_finite finite in
        let evm, params = denote_context evm params in
        let evm, inds = map_evm unquote_one_inductive_entry evm (unquote_list inds) in
        let evm, univs = denote_universes_entry evm univs in
        let template = unquote_bool template in
-       let cumulative = unquote_bool cumulative in
+       let variance = unquote_map_option
+           (fun v -> CArray.map_of_list (unquote_map_option unquote_variance) (unquote_list v))
+           variance
+       in
        let priv = unquote_map_option unquote_bool priv in
        evm, { mind_entry_record = record;
               mind_entry_finite = finite;
@@ -278,7 +281,7 @@ let unquote_mutual_inductive_entry evm trm (* of type mutual_inductive_entry *) 
               mind_entry_inds = inds;
               mind_entry_universes = univs;
               mind_entry_template = template;
-              mind_entry_cumulative = cumulative;
+              mind_entry_variance = variance;
               mind_entry_private = priv }
     | _ -> bad_term_verb trm "unquote_mutual_inductive_entry"
   else

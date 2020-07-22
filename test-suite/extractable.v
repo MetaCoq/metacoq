@@ -71,7 +71,7 @@ MetaCoq Run
                        |} :: nil
                   ; mind_entry_universes := Monomorphic_entry (LevelSet.empty, empty_constraints)
                   ; mind_entry_template := false
-                  ; mind_entry_cumulative := false
+                  ; mind_entry_variance := None
                   ; mind_entry_private := None |}).
 Print thing.
 

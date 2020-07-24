@@ -744,6 +744,15 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma nth_error_snoc {A} (l : list A) (a : A) i :
+  i = #|l| ->
+  nth_error (l ++ [a]) i = Some a.
+Proof.
+  intros ->.
+  rewrite nth_error_app_ge; [easy|].
+  now rewrite Nat.sub_diag.
+Qed.
+
 Lemma map_inj :
   forall A B (f : A -> B) l l',
     (forall x y, f x = f y -> x = y) ->

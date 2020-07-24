@@ -36,8 +36,8 @@ mrproper:
 	rm -f Makefile.plugin _PluginProject
 	rm -f Makefile.pcuic _CoqProject
 
-.merlin:
-	make -f Makefile.plugin .merlin
+.merlin: Makefile.plugin
+	make -f $< $@
 
 cleanplugin: Makefile.plugin
 #	make -f Makefile.plugin clean

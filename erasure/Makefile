@@ -37,8 +37,8 @@ mrproper:
 	rm -f Makefile.plugin
 	rm -f Makefile.erasure
 
-.merlin:
-	make -f Makefile.plugin .merlin
+.merlin: Makefile.plugin
+	make -f $< $@
 
 cleanplugin: Makefile.plugin
 	make -f Makefile.plugin clean

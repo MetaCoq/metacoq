@@ -53,8 +53,8 @@ Makefile.template: _TemplateCoqProject
 # Avoid conflicting dependency file creation for the template plugin
 	$(SED) -i -e s/coqdeps/coqdeps.template/g Makefile.template
 
-.merlin: Makefile.coq
-	$(MAKE) -f Makefile.plugin .merlin
+.merlin: Makefile.plugin
+	$(MAKE) -f $< $@
 
 cleanplugin: Makefile.plugin
 	make -f Makefile.plugin clean

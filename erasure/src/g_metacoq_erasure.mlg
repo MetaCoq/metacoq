@@ -33,7 +33,7 @@ let time prefix f x =
 
 let check env evm c =
   Feedback.msg_debug (str"Quoting");
-  let term = time (str"Quoting") (Ast_quoter.quote_term_rec env) (EConstr.to_constr evm c) in
+  let term = time (str"Quoting") (Ast_quoter.quote_term_rec true env) (EConstr.to_constr evm c) in
   let checker_flags = Config0.extraction_checker_flags in
   let erase = time (str"Erasing")
       (SafeTemplateErasure.erase_and_print_template_program checker_flags)

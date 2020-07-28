@@ -47,6 +47,8 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=
 | tmQuote : forall {A:Type@{t}}, A  -> TemplateMonad Ast.term
 (* Similar to MetaCoq Quote Recursively Definition ... := ...*)
 | tmQuoteRec : forall {A:Type@{t}}, A  -> TemplateMonad program
+(* Similar to [tmQuoteRec] but respect opacity (does not quote the bodies of opaque definitions) *)
+| tmQuoteRecTransp : forall {A:Type@{t}}, A -> TemplateMonad program
 (* Quote the body of a definition or inductive. Its name need not be fully qualified *)
 | tmQuoteInductive : kername -> TemplateMonad mutual_inductive_body
 | tmQuoteUniverses : TemplateMonad ConstraintSet.t

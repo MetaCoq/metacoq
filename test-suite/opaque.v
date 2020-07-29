@@ -13,7 +13,7 @@ Axiom really_opaque : nat.
 
 MetaCoq Quote Recursively Definition really_opaque_syn := really_opaque.
 
-MetaCoq Run (foo_t <- tmQuoteRecTransp foo ;; (* quote respecting transparency *)
+MetaCoq Run (foo_t <- tmQuoteRecTransp foo false ;; (* quote respecting transparency *)
              foo_o <- tmQuoteRec foo ;; (* quote ignoring transparency settings  *)
              tmDefinition "foo_t" foo_t ;;
              tmDefinition "foo_o" foo_o).
@@ -27,7 +27,7 @@ Proof.
   split;eexists;eexists;cbn; now intuition.
 Qed.
 
-Time MetaCoq Run (t <- tmQuoteRecTransp Plus.le_plus_r ;;
+Time MetaCoq Run (t <- tmQuoteRecTransp Plus.le_plus_r false ;;
                   tmDefinition "add_comm_syn" t). (* quote respecting transparency *)
 
 Time MetaCoq Run (t <- tmQuoteRec Plus.le_plus_r ;;

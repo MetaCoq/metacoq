@@ -2,12 +2,14 @@
 
 (** * Universe Substitution lemmas for typing derivations. *)
 
+Require Import Equations.Prop.DepElim.
 From Coq Require Import Bool List Lia ZArith CRelationClasses.
 From MetaCoq.Template Require Import utils config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICEquality
      PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICClosed PCUICPosition
      PCUICWeakening.
+From Equations Require Import Equations.
 
 Local Set Keyed Unification.
 
@@ -1692,5 +1694,428 @@ Proof.
     eapply typing_subst_instance_decl in t1; eauto.
 Qed.
 
-
 End CheckerFlags.
+
+Require Import Morphisms.
+Require Import ssreflect.
+Set SimplIsCbn.
+
+Section SubstIdentity.
+  Context `{cf:checker_flags}.
+
+  Lemma mapi_nth {A B} (l : list A) (l' : list B) (default : A) : #|l| = #|l'| ->
+    mapi (fun i _ => nth i l default) l' = l.
+  Proof.
+    induction l' in l |- *; destruct l => /= //.
+    simpl. intros [= Hl]. f_equal. now rewrite mapi_rec_Sk.
+  Qed.
+
+  Lemma subst_instance_instance_id Σ u mdecl : 
+    consistent_instance_ext Σ (ind_universes mdecl) u ->
+    subst_instance_instance u (PCUICLookup.abstract_instance (ind_universes mdecl)) = u.
+  Proof.
+    intros cu.
+    red in cu. red in cu.
+    destruct (ind_universes mdecl) eqn:eqi.
+    - destruct u; simpl in cu; try discriminate.
+      reflexivity.
+    - simpl. destruct cst as [univs csts]. simpl.
+      rewrite map_mapi. simpl. simpl in cu.
+      destruct cu as [Hu [Hu' [sizeu vu]]].
+      now rewrite mapi_nth.
+  Qed.
+
+  Fixpoint unfold {A} (n : nat) (f : nat -> A) : list A :=
+    match n with
+    | 0 => []
+    | S n => unfold n f ++ [f n]
+    end.
+
+  Lemma mapi_irrel_list {A B} (f : nat -> A) (l l' : list B) :
+    #|l| = #|l'| ->
+    mapi (fun i (x : B) => f i) l = mapi (fun i x => f i) l'.
+  Proof.
+    induction l in f, l' |- *; destruct l' => //; simpl; auto.
+    intros [= eq]. f_equal.
+    rewrite !mapi_rec_Sk.
+    now rewrite [mapi_rec _ _ _](IHl (fun x => (f (S x))) l').
+  Qed.
+
+  Lemma mapi_unfold {A B} (f : nat -> B) l : mapi (fun i (x : A) => f i) l = unfold #|l| f.
+  Proof.
+    induction l in f |- *; simpl; auto.
+    rewrite mapi_rec_Sk.
+    rewrite -IHl. rewrite -(mapi_rec_Sk (fun i x => f i) l 0).
+    change [f #|l|] with (mapi_rec (fun i x => f i) [a] #|l|).
+    rewrite -(Nat.add_0_r #|l|). rewrite -mapi_rec_app.
+    change (f 0 :: _) with (mapi (fun i x => f i) (a :: l)).
+    apply mapi_irrel_list. simpl. rewrite app_length /=; lia.
+  Qed.
+
+  Lemma forallb_mapi {A B} (p : B -> bool) (f : nat -> B) l :
+    (forall i, i < #|l| -> p (f i)) ->
+    forallb p (mapi (fun i (x : A) => f i) l).
+  Proof.
+    intros Hp. rewrite (mapi_unfold f).
+    induction #|l| in *; simpl; auto.
+    rewrite forallb_app. simpl. now rewrite Hp // !andb_true_r.
+  Qed.
+
+  Lemma In_unfold n i : In (Level.Var i) (unfold n Level.Var) -> i < n.
+  Proof.
+    induction n; simpl => //.
+    intros H; apply in_app_or in H.
+    destruct H.
+    - specialize (IHn H). lia.
+    - simpl in H. destruct H; [injection H|].
+      * intros ->. auto.
+      * destruct H.
+  Qed.
+
+  Lemma In_fold_right_add x l : 
+    In x l <-> LevelSet.In x (fold_right LevelSet.add LevelSet.empty l).
+  Proof.
+    split.
+    - induction l; simpl => //.
+      intros [<-|H].
+      * eapply LevelSet.add_spec; left; auto.
+      * eapply LevelSet.add_spec; right; auto.
+    - induction l; simpl => //.
+      * now rewrite LevelSetFact.empty_iff.
+      * rewrite LevelSet.add_spec. intuition auto.
+  Qed.
+
+  Lemma CS_For_all_union f cst cst' : ConstraintSet.For_all f (ConstraintSet.union cst cst') -> 
+    ConstraintSet.For_all f cst.
+  Proof.
+    unfold CS.For_all.
+    intros IH x inx. apply (IH x).
+    now eapply CS.union_spec; left.
+  Qed.
+
+  Lemma declared_inductive_wf_ext_wk Σ mdecl mind :
+    wf Σ ->
+    declared_minductive Σ mind mdecl ->
+    wf_ext_wk (Σ, ind_universes mdecl).
+  Proof.
+    intros wfΣ decli.
+    epose proof (weaken_lookup_on_global_env' _ _ (InductiveDecl mdecl) wfΣ decli); eauto.
+    red. simpl. split; auto.
+  Qed.
+
+  Lemma declared_inductive_wf_global_ext Σ mdecl mind :
+    wf Σ ->
+    declared_minductive Σ mind mdecl ->
+    wf_global_ext Σ (ind_universes mdecl).
+  Proof.
+    intros wfΣ decli.
+    epose proof (weaken_lookup_on_global_env'' _ _ (InductiveDecl mdecl) wfΣ decli); eauto with pcuic.
+    split; auto.
+    epose proof (weaken_lookup_on_global_env' _ _ (InductiveDecl mdecl) wfΣ decli); eauto.
+    red. simpl. split; auto.
+  Qed.
+
+  Hint Resolve declared_inductive_wf_ext_wk declared_inductive_wf_global_ext : pcuic.
+
+  Instance For_all_proper P : Morphisms.Proper (CS.Equal ==> iff)%signature (ConstraintSet.For_all P).
+  Proof. 
+    intros s s' eqs.
+    unfold CS.For_all. split; intros IH x inxs; apply (IH x);
+    now apply eqs.
+  Qed.
+   
+  Lemma unfold_length {A} (f : nat -> A) m : #|unfold m f| = m.
+  Proof.
+    induction m; simpl; rewrite ?app_length /=; auto. lia.
+  Qed.
+
+  Lemma nth_error_unfold {A} (f : nat -> A) m n : n < m <-> nth_error (unfold m f) n = Some (f n).
+  Proof.
+    induction m in n |- *; split; intros Hn; try lia.
+    - simpl in Hn. rewrite nth_error_nil in Hn. discriminate.
+    - destruct (eq_dec n m); [subst|].
+      * simpl. rewrite nth_error_app_ge unfold_length // Nat.sub_diag /= //.
+      * simpl. rewrite nth_error_app_lt ?unfold_length //; try lia.
+        apply IHm; lia.
+    - simpl in Hn. eapply nth_error_Some_length in Hn.
+      rewrite app_length /= unfold_length in Hn. lia.
+  Qed.
+  
+  Lemma nth_error_unfold_inv {A} (f : nat -> A) m n t : nth_error (unfold m f) n = Some t -> t = (f n).
+  Proof.
+    induction m in n |- *; intros Hn; try lia.
+    - simpl in Hn. rewrite nth_error_nil in Hn. discriminate.
+    - simpl in Hn.
+      pose proof (nth_error_Some_length Hn).
+      rewrite app_length /= unfold_length in H.
+      destruct (eq_dec n m); [subst|].
+      * simpl. revert Hn. rewrite nth_error_app_ge unfold_length // Nat.sub_diag /= //; congruence.
+      * simpl. revert Hn. rewrite nth_error_app_lt ?unfold_length //; try lia. auto.
+  Qed.
+
+  Lemma CS_For_all_add P x s : CS.For_all P (CS.add x s) -> P x /\ CS.For_all P s.
+  Proof.
+    intros.
+    split. 
+    * apply (H x), CS.add_spec; left => //.
+    * intros y iny. apply (H y), CS.add_spec; right => //.
+  Qed.
+
+  Lemma subst_instance_level_abs l n Σ : 
+    wf Σ ->
+    LevelSet.In l (LevelSet.union
+     (fold_right LevelSet.add LevelSet.empty
+        (unfold n Level.Var)) (global_levels Σ)) ->
+    subst_instance_level (unfold n Level.Var) l = l.
+  Proof.
+    intros wfΣ lin.
+    eapply LevelSet.union_spec in lin.
+    destruct lin.
+    - apply In_fold_right_add in H.
+      destruct l; simpl; auto.
+      eapply In_unfold in H.
+      pose proof (proj1 (nth_error_unfold Level.Var n n0) H).
+      now rewrite (nth_error_nth _ _ _ H0).
+    - eapply not_var_global_levels in wfΣ.
+      specialize (wfΣ l H). simpl in wfΣ.
+      destruct l => //.
+  Qed.    
+
+  Lemma consistent_instance_ext_abstract_instance Σ udecl :
+    wf Σ ->
+    wf_global_ext Σ udecl ->
+    consistent_instance_ext (Σ, udecl) udecl (PCUICLookup.abstract_instance udecl).
+  Proof.
+    intros wfΣ wf_glob_ext.
+    red. red.
+    destruct udecl as [?|[univs cst]] eqn:indu.
+    { simpl. reflexivity. }
+    split; [|split; [|split]].
+    - eapply forallb_mapi => /= //.
+    - simpl PCUICLookup.abstract_instance.
+      eapply forallb_mapi => //.
+      intros i Hi. unfold global_ext_levels.
+      apply LevelSet.mem_spec, LevelSet.union_spec. left.
+      unfold levels_of_udecl. simpl.
+      rewrite (mapi_unfold Level.Var).
+      eapply In_fold_right_add.
+      induction #|univs| in i, Hi |- *; try lia.
+      simpl. eapply in_or_app. destruct (eq_dec i n).
+      * subst. right; simpl; auto.
+      * left; apply IHn; lia.
+    - now rewrite mapi_length.
+    - simpl. rewrite (mapi_unfold Level.Var).
+      assert(CS.Equal (subst_instance_cstrs (unfold #|univs| Level.Var) cst) cst).
+      { unfold CS.Equal; intros a. 
+        unfold subst_instance_cstrs.
+        red in wf_glob_ext. destruct wf_glob_ext as [[_ [wfext _]] _].
+        unfold on_udecl_prop in wfext.
+        simpl constraints_of_udecl in wfext.
+        simpl levels_of_udecl in wfext.
+        rewrite (mapi_unfold Level.Var) in wfext.
+        clear indu.
+        simpl fst in wfext.
+        revert wfext.
+        eapply ConstraintSetProp.fold_rec_weak; auto.
+        2:reflexivity.
+        * intros s s' a' eqs H.
+          intros Hf.
+          rewrite <- eqs in Hf. rewrite -eqs; auto.
+        * intros x a0 s nin equiv.
+          intros cadd.
+          eapply CS_For_all_add in cadd as [cadd Ps].
+          specialize (equiv Ps). clear Ps.
+          destruct x as [[l c] r]. destruct cadd as [inl inr].
+          unfold subst_instance_cstr. simpl.
+          eapply subst_instance_level_abs in inl; auto.
+          eapply subst_instance_level_abs in inr; auto.
+          rewrite inl inr.
+          rewrite !CS.add_spec.
+          intuition auto. }
+      unfold valid_constraints. destruct check_univs; auto.
+      unfold valid_constraints0. simpl.
+      unfold satisfies.
+      intros v. rewrite H.
+      eapply CS_For_all_union.
+  Qed.
+
+  Lemma isType_closed {Σ Γ T} : wf Σ.1 -> isType Σ Γ T -> closedn #|Γ| T.
+  Proof. intros wfΣ [s Hs]. now eapply subject_closed in Hs. Qed.
+
+  Lemma in_var_global_ext n Σ :
+    wf Σ.1 ->
+    LevelSet.In (Level.Var n) (global_ext_levels Σ) -> 
+    LevelSet.In (Level.Var n) (levels_of_udecl Σ.2).
+  Proof.
+    intros wfΣ Hin.
+    eapply LevelSet.union_spec in Hin.
+    destruct Hin; auto.
+    eapply not_var_global_levels in wfΣ.
+    specialize (wfΣ (Level.Var n) H).
+    now simpl in wfΣ.
+  Qed.
+
+  Lemma udecl_prop_in_var_poly {Σ n} : on_udecl_prop Σ.1 Σ.2 -> LevelSet.In (Level.Var n) (levels_of_udecl Σ.2) ->
+    ∑ ctx, Σ.2 = Polymorphic_ctx ctx.
+  Proof.
+    intros onu lin.
+    destruct (Σ.2); intuition eauto.
+    simpl in lin, onu.
+    red in onu. destruct onu as [_ [nvar _]].
+    eapply LevelSet.for_all_spec in nvar.
+    - specialize (nvar _ lin). simpl in nvar. discriminate.
+    - typeclasses eauto.
+  Qed.
+
+  Lemma consistent_instance_ext_subst_abs Σ decl u :
+    wf_ext_wk Σ ->
+    consistent_instance_ext Σ decl u ->
+    subst_instance_instance (PCUICLookup.abstract_instance Σ.2) u = u.
+  Proof.
+    intros [wfΣ onu] cu.
+    destruct decl.
+    - simpl in cu. destruct u; simpl in *; try discriminate; auto.
+    - destruct cu as [nprop [decl' [sizeu vc]]].
+      clear nprop sizeu vc.
+      induction u; simpl; auto.
+      move/andP: decl' => [ina au]. specialize (IHu au).
+      rewrite [map _ u]IHu. f_equal. clear au.
+      destruct a; simpl; auto.
+      eapply LevelSet.mem_spec in ina.
+      eapply in_var_global_ext in ina; auto.
+      destruct (udecl_prop_in_var_poly onu ina) as [[univs csts] eq].
+      rewrite eq in IHu, ina |- *. simpl in *.
+      rewrite mapi_unfold in IHu, ina |- *.
+      eapply In_fold_right_add in ina.
+      eapply In_unfold in ina.
+      eapply (nth_error_unfold Level.Var) in ina.
+      now rewrite (nth_error_nth _ _ _ ina).
+  Qed.
+
+  Lemma subst_abstract_instance_id : 
+    env_prop (fun Σ Γ t T =>
+        wf_ext_wk Σ ->
+        let u := PCUICLookup.abstract_instance (snd Σ) in
+        subst_instance_constr u t = t)
+        (fun Σ Γ wfΓ => 
+        wf_ext_wk Σ ->
+        let u := PCUICLookup.abstract_instance (snd Σ) in
+        subst_instance_context u Γ = Γ).
+  Proof.
+    eapply typing_ind_env; intros; simpl in *; auto; try ((subst u || subst u0); f_equal; eauto; try congruence).
+
+    - induction X; simpl; auto; unfold snoc.
+      * f_equal; auto.
+        unfold map_decl. simpl. unfold vass. f_equal. auto.
+      * unfold map_decl. simpl. unfold vdef. repeat f_equal; auto.
+      
+    - unfold Universe.make.
+      unfold subst_instance_level_expr.
+      destruct (UnivExpr.make l) eqn:eql; auto.
+      destruct e as [nt b].
+      destruct nt; auto.
+      unfold UnivExpr.make in eql.
+      destruct l; simpl in eql; try discriminate.
+      injection eql.
+      intros <- ->. clear eql.
+      eapply in_var_global_ext in H0; auto.
+      unfold levels_of_udecl in H0.
+      specialize (H X).
+      destruct X. destruct o as [_ onmon].
+      destruct Σ as [Σ []]; simpl in *.
+      * destruct onmon as [novar _]. eapply LevelSet.for_all_spec in novar; auto.
+        2:typeclasses eauto. specialize (novar _ H0). simpl in novar. discriminate.
+      * destruct cst as [univs cst].
+        simpl in H0.
+        unfold AUContext.repr in *. rewrite (mapi_unfold Level.Var) in H0 |- *.
+        apply In_fold_right_add in H0. simpl.
+        destruct (nth_error _ n) eqn:hnth.
+        + simpl in hnth. apply nth_error_unfold_inv in hnth. subst t.
+          simpl. reflexivity.
+        + apply In_unfold in H0. apply nth_error_None in hnth.
+          rewrite unfold_length in hnth. lia.
+
+    - eapply consistent_instance_ext_subst_abs; eauto.
+
+    - eapply consistent_instance_ext_subst_abs; eauto.
+
+    - eapply consistent_instance_ext_subst_abs; eauto.
+
+    - solve_all.
+
+    - solve_all.
+      destruct a as [s [dty eqdty]].
+      solve_all.
+    - solve_all. destruct a as [s [? ?]]. solve_all.
+  Qed.
+
+  Lemma typed_subst_abstract_instance Σ Γ t T :
+    wf_ext_wk Σ ->
+    Σ ;;; Γ |- t : T ->
+    let u := PCUICLookup.abstract_instance Σ.2 in
+    subst_instance_constr u t = t.
+  Proof.
+    intros [wfΣ onu] H. eapply (env_prop_typing _ _ subst_abstract_instance_id) in H; eauto. 
+    split; auto.
+  Qed.
+
+  Lemma subst_instance_context_id Σ Γ : 
+    wf_ext_wk Σ ->
+    wf_local Σ Γ ->
+    let u := PCUICLookup.abstract_instance Σ.2 in
+    subst_instance_context u Γ = Γ.
+  Proof.
+    intros. eapply (env_prop_wf_local _ _ subst_abstract_instance_id) in X0; eauto.
+    apply X.
+  Qed.
+
+  Lemma subst_instance_ind_sort_id Σ mdecl ind idecl : 
+    wf Σ ->
+    declared_inductive Σ mdecl ind idecl ->
+    forall (oib : on_ind_body (lift_typing typing) (Σ, ind_universes mdecl)
+    (inductive_mind ind) mdecl (inductive_ind ind) idecl),
+    let u := PCUICLookup.abstract_instance (ind_universes mdecl) in
+    subst_instance_univ u (ind_sort oib) = ind_sort oib.
+  Proof.
+    intros wfΣ decli oib u.
+    pose proof (onArity oib) as ona.
+    rewrite (oib.(ind_arity_eq)) in ona.
+    red in ona. destruct ona.
+    eapply typed_subst_abstract_instance in t.
+    2:split; simpl; auto.
+    - rewrite !subst_instance_constr_it_mkProd_or_LetIn in t.
+      eapply (f_equal (destArity [])) in t.
+      rewrite !destArity_it_mkProd_or_LetIn in t. simpl in t. noconf t.
+      simpl in H; noconf H. apply H0.
+    - destruct decli as [declm _].
+      eapply declared_inductive_wf_global_ext in declm; auto.
+      destruct declm. apply w.
+  Qed.
+
+  Lemma subst_instance_ind_type_id Σ mdecl ind idecl : 
+    wf Σ ->
+    declared_inductive Σ mdecl ind idecl ->
+    let u := PCUICLookup.abstract_instance (ind_universes mdecl) in
+    subst_instance_constr u (ind_type idecl) = ind_type idecl.
+  Proof.
+    intros wfΣ decli u.
+    pose proof (on_declared_inductive wfΣ decli) as [_ oib].
+    pose proof (onArity oib) as ona.
+    rewrite (oib.(ind_arity_eq)) in ona |- *.
+    red in ona. destruct ona.
+    eapply typed_subst_abstract_instance in t; eauto.
+    destruct decli as [declm _].
+    eapply declared_inductive_wf_global_ext in declm; auto.
+    destruct declm. apply w.
+  Qed.
+
+  Lemma isType_subst_instance_id Σ Γ T : 
+    wf_ext_wk Σ ->
+    let u := PCUICLookup.abstract_instance Σ.2 in
+    isType Σ Γ T -> subst_instance_constr u T = T.
+  Proof.
+    intros wf_ext u isT.
+    destruct isT. eapply typed_subst_abstract_instance in t; auto.
+  Qed.
+
+End SubstIdentity.

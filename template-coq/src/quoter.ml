@@ -374,7 +374,7 @@ struct
     Ind of Names.inductive
   | Const of KerName.t
 
-  let quote_term_rec env trm =
+  let quote_term_rec bypass env trm =
     let visited_terms = ref Names.KNset.empty in
     let visited_types = ref Mindset.empty in
     let constants = ref [] in
@@ -405,13 +405,15 @@ struct
         | Undef _ -> None
         | Primitive _ -> CErrors.user_err Pp.(str "Primitives are unsupported by TemplateCoq")
 	      | Def cs -> Some (Mod_subst.force_constr cs)
-	      | OpaqueDef lc -> 
+	      | OpaqueDef lc ->
+          if bypass then
           let c, univs = Opaqueproof.force_proof Library.indirect_accessor (Environ.opaque_tables env) lc in
           let () = match univs with
           | Opaqueproof.PrivateMonomorphic () -> ()
           | Opaqueproof.PrivatePolymorphic (n, csts) -> if not (Univ.ContextSet.is_empty csts && Int.equal n 0) then 
             CErrors.user_err Pp.(str "Private polymorphic universes not supported by TemplateCoq")
           in Some c
+          else None
         in
         let tm, acc =
           match body with

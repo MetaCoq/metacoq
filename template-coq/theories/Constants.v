@@ -209,6 +209,7 @@ Register MetaCoq.Template.TemplateMonad.Core.tmCurrentModPath as metacoq.templat
 
 Register MetaCoq.Template.TemplateMonad.Core.tmQuote as metacoq.templatemonad.prop.tmQuote.
 Register MetaCoq.Template.TemplateMonad.Core.tmQuoteRec as metacoq.templatemonad.prop.tmQuoteRec.
+Register MetaCoq.Template.TemplateMonad.Core.tmQuoteRecTransp as metacoq.templatemonad.prop.tmQuoteRecTransp.
 Register MetaCoq.Template.TemplateMonad.Core.tmQuoteInductive as metacoq.templatemonad.prop.tmQuoteInductive.
 Register MetaCoq.Template.TemplateMonad.Core.tmQuoteConstant as metacoq.templatemonad.prop.tmQuoteConstant.
 Register MetaCoq.Template.TemplateMonad.Core.tmQuoteUniverses as metacoq.templatemonad.prop.tmQuoteUniverses.

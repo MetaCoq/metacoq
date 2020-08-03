@@ -381,15 +381,12 @@ Section Erase.
 
     Program Definition erase_mfix Γ (defs : mfixpoint term) : typing_result (EAst.mfixpoint E.term) :=
       let Γ' := (PCUICLiftSubst.fix_context defs ++ Γ)%list in
-      monad_map (fun d => H <- _ ;;
-                   dbody' <- erase Γ' d.(dbody) H;;
+      monad_map (fun d => dbody' <- erase Γ' d.(dbody) _;;
                           ret ({| E.dname := d.(dname); E.rarg := d.(rarg);
                                   E.dbody := dbody' |})) defs.
     Next Obligation.
-      clear erase.
-      destruct (wf_ext_is_graph HΣ) as [].
-      apply Checked. todo "well-typed fix body".
-    Defined.
+      todo "well-typed fix body".
+    Qed.
       (* epose proof ((fix check_types (mfix : mfixpoint term) acc (Hacc : ∥ wf_local_rel Σ Γ acc ∥) {struct mfix} *)
       (*         : typing_result (∥ wf_local_rel Σ (Γ ,,, acc) (fix_context_i #|acc| mfix) ∥) *)
       (*         := match mfix with *)

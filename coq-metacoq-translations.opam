@@ -18,7 +18,7 @@ install: [
   [make "-C" "translations" "install"]
 ]
 depends: [
-  "ocaml" {>= "4.07.1"}
+  "ocaml" {>= "4.07.1" & < "4.12~"}
   "coq" { >= "8.12~" & < "8.13~" }
   "coq-metacoq-template" {= version}
   "coq-metacoq-checker" {= version}

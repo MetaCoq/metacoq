@@ -12,9 +12,6 @@ Derive NoConfusion for term.
 Derive Signature for All.
 Derive Signature for All2.
 
-Axiom todounivs : forall {A}, A.
-Ltac todounivs := apply todounivs.
-
 Open Scope pcuic.
 Local Open Scope string_scope.
 Fixpoint string_of_term (t : term) :=

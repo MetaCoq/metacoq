@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license.   *)
 Set Warnings "-notation-overridden".
 
-From Coq Require Import Bool List Program Lia CRelationClasses.
-From MetaCoq.Template Require Import config utils Ast AstUtils LiftSubst UnivSubst WfInv Typing.
+From Coq Require Import Arith Bool List Program Lia CRelationClasses.
+From MetaCoq.Template Require Import config utils Ast AstUtils LiftSubst MCList UnivSubst WfInv Typing.
 From MetaCoq.Checker Require Import Reflect.
 
 Set Asymmetric Patterns.
@@ -163,30 +163,23 @@ Section Wcbv.
       nth_error args (pars + arg) = Some a ->
       eval a res ->
       eval (tProj (i, pars, arg) discr) res
-
+           
   (** Fix unfolding, with guard *)
-  | eval_fix f mfix idx args args' narg fn res :
-      eval f (tFix mfix idx) ->
+  | eval_fix f mfix idx fixargsv args argsv narg fn res :
+      eval f (mkApps (tFix mfix idx) fixargsv) ->
+      All2 eval args argsv ->
       unfold_fix mfix idx = Some (narg, fn) ->
-      (* There must be at least one argument for this to succeed *)
-      is_constructor narg args' ->
-      (** We unfold only a fix applied exactly to narg arguments,
-          avoiding overlap with [eval_beta] when there are more arguments. *)
-      S narg = #|args| ->
-      (* We reduce all arguments before unfolding *)
-      All2 eval args args' ->
-      eval (mkApps fn args') res ->
+      is_constructor narg (fixargsv ++ argsv) ->
+      eval (mkApps fn (fixargsv ++ argsv)) res ->
       eval (mkApps f args) res
 
   (** Fix stuck, with guard *)
-  | eval_fix_value f mfix idx args args' :
-      eval f (tFix mfix idx) ->
-      (* We reduce all arguments to produce a suspended fix application value
-         Note that the stuck fixpoint can be applied to any number of arguments
-         here. *)
-      All2 eval args args' ->
-      isStuckFix (tFix mfix idx) args' ->
-      eval (mkApps f args) (mkApps (tFix mfix idx) args')
+  | eval_fix_value f mfix idx fixargsv args argsv narg fn :
+      eval f (mkApps (tFix mfix idx) fixargsv) ->
+      All2 eval args argsv ->
+      unfold_fix mfix idx = Some (narg, fn) ->
+      ~~is_constructor narg (fixargsv ++ argsv) ->
+      eval (mkApps f args) (mkApps (tFix mfix idx) (fixargsv ++ argsv))
 
   (** CoFix-case unfolding *)
   | red_cofix_case ip mfix idx p args narg fn brs res :
@@ -250,21 +243,26 @@ Section Wcbv.
           eval discr (mkApps (tConstruct i k u) args) ->
           P discr (mkApps (tConstruct i k u) args) ->
           nth_error args (pars + arg) = Some a -> eval a res -> P a res -> P (tProj (i, pars, arg) discr) res) ->
-      (forall f (mfix : mfixpoint term) (idx : nat) (args args' : list term) (narg : nat) (fn res : term),
-          eval f (tFix mfix idx) ->
-          P f (tFix mfix idx) ->
+      (forall (f : term) (mfix : mfixpoint term) (idx : nat) (fixargsv args argsv : list term)
+             (narg : nat) (fn res : term),
+        eval f (mkApps (tFix mfix idx) fixargsv) ->
+        P f (mkApps (tFix mfix idx) fixargsv) ->
+        All2 eval args argsv ->
+        All2 P args argsv ->
+        unfold_fix mfix idx = Some (narg, fn) ->
+        is_constructor narg (fixargsv ++ argsv) ->
+        eval (mkApps fn (fixargsv ++ argsv)) res ->
+        P (mkApps fn (fixargsv ++ argsv)) res ->
+        P (mkApps f args) res) ->
+      (forall (f : term) (mfix : mfixpoint term) (idx : nat) (fixargsv args argsv : list term)
+              (narg : nat) (fn : term),
+          eval f (mkApps (tFix mfix idx) fixargsv) ->
+          P f (mkApps (tFix mfix idx) fixargsv) ->
+          All2 eval args argsv ->
+          All2 P args argsv ->
           unfold_fix mfix idx = Some (narg, fn) ->
-          is_constructor narg args' ->
-          S narg = #|args| ->
-          All2 eval args args' ->
-          All2 P args args' ->
-          eval (mkApps fn args') res -> P (mkApps fn args') res -> P (mkApps f args) res) ->
-      (forall f (mfix : mfixpoint term) (idx : nat) (args args' : list term),
-          eval f (tFix mfix idx) ->
-          P f (tFix mfix idx) ->
-          All2 eval args args' ->
-          All2 P args args' ->
-          isStuckFix (tFix mfix idx) args' -> P (mkApps f args) (mkApps (tFix mfix idx) args')) ->
+          ~~ is_constructor narg (fixargsv ++ argsv) ->
+          P (mkApps f args) (mkApps (tFix mfix idx) (fixargsv ++ argsv))) ->
       (forall (ip : inductive × nat) (mfix : mfixpoint term) (idx : nat) (p : term) (args : list term)
               (narg : nat) (fn : term) (brs : list (nat × term)) (res : term),
           unfold_cofix mfix idx = Some (narg, fn) ->
@@ -292,12 +290,12 @@ Section Wcbv.
     - eapply Hax; [eapply isdecl|eapply e].
     - eapply Hfix; eauto.
       clear -a eval_evals_ind.
-      revert args args' a. fix aux 3. destruct 1. constructor; auto.
-      constructor. now apply eval_evals_ind. now apply aux.
-    - eapply Hstuckfix => //. eapply eval_evals_ind. auto.
-      clear -eval_evals_ind a.
-      revert args args' a. fix aux 3. destruct 1. constructor; auto.
-      constructor. now apply eval_evals_ind. now apply aux.
+      revert args argsv a.
+      fix aux 3; destruct 1; constructor; auto.
+    - eapply Hstuckfix; eauto.
+      clear -a eval_evals_ind.
+      revert args argsv a.
+      fix aux 3; destruct 1; constructor; auto.
     - eapply Happcong; auto. clear i0.
       revert a a' a0. fix aux 3; destruct 1; constructor; auto.
   Defined.
@@ -369,6 +367,15 @@ Section Wcbv.
     - intros * isapp appeq. move: (isStuckfix_nApp H) => Hf.
       apply mkApps_eq_inj in appeq; intuition subst; auto.
   Qed.
+  
+  Lemma value_mkApps_values t l :
+    value (mkApps t l) ->
+    ~~ isApp t ->
+    All value l.
+  Proof.
+    intros val not_app.
+    now apply value_mkApps_inv in val as [[(-> & ?)|]|].
+  Qed.
 
   (** The codomain of evaluation is only values: *)
   (*     It means no redex can remain at the head of an evaluated term. *)
@@ -391,9 +398,14 @@ Section Wcbv.
       rewrite /value_head /= H.
       destruct decl as [? [b|] ?]; try discriminate.
       constructor. constructor.
-    - eapply value_stuck_fix => //.
-      now eapply All2_right in X0.
-    - eapply All2_right in X0.
+    - eapply value_stuck_fix.
+      + apply All_app_inv.
+        * now eapply value_mkApps_values.
+        * now eapply All2_All_right.
+      + unfold isStuckFix.
+        now rewrite H.
+
+    - apply All2_right in X0.
       depelim IHeve.
       destruct t; simpl in * |- *; try congruence.
       eapply value_app; auto.
@@ -455,9 +467,13 @@ Section Wcbv.
       now eapply value_head_final.
       eapply All2_app; auto.
     - destruct f; try discriminate.
-      apply All_All2_refl in X0.
-      eapply eval_fix_value => //.
-      constructor; auto.
+      unfold isStuckFix in *.
+      destruct (unfold_fix _ _) as [(? & ?)|] eqn:uf; [|easy].
+      eapply (eval_fix_value _ _ _ []).
+      + now eapply eval_atom.
+      + now eapply All_All2.
+      + easy.
+      + easy.
   Qed.
 
   (* (** Evaluation preserves closedness: *) *)
@@ -519,11 +535,34 @@ Section Wcbv.
   Lemma eval_atom_inj t t' : atom t -> eval t t' -> t = t'.
   Proof.
     intros Ha H; depind H; try solve_discr'; try now easy.
-    - eapply atom_mkApps in Ha; intuition subst. discriminate.
-    - eapply atom_mkApps in Ha; intuition subst. now depelim a.
+    - eapply atom_mkApps in Ha; intuition subst.
+      depelim a.
+      apply atom_mkApps in H2 as (-> & ?).
+      unfold is_constructor in *.
+      now rewrite nth_error_nil in i.
+
+    - eapply atom_mkApps in Ha; intuition subst.
+      depelim a.
+      apply atom_mkApps in H1 as (-> & ?).
+      unfold is_constructor in *.
+      now rewrite nth_error_nil in i.
   Qed.
 
   Derive Signature for eval.
+  
+  Lemma eval_to_stuck_fix_inv mfix idx narg fn t args :
+    unfold_fix mfix idx = Some (narg, fn) ->
+    eval t (mkApps (tFix mfix idx) args) ->
+    ~~is_constructor narg args.
+  Proof.
+    intros uf ev.
+    apply eval_to_value in ev.
+    apply value_mkApps_inv in ev as [[(-> & ?)|]|]; try easy.
+    - unfold is_constructor in *.
+      now rewrite nth_error_nil.
+    - unfold isStuckFix in *.
+      now rewrite uf in p.
+  Qed.
 
   Lemma eval_LetIn {n b ty t v} :
     eval (tLetIn n b ty t) v ->
@@ -531,9 +570,15 @@ Section Wcbv.
       eval b b' * eval (t {0 := b'}) v.
   Proof.
     intros H; depind H; try solve_discr'; try now easy.
-    - symmetry in H1. apply mkApps_nisApp in H1 => //; intuition subst; auto.      discriminate.
+    - symmetry in H1. apply mkApps_nisApp in H1 => //; intuition subst; auto.
+      depelim a.
+      eapply eval_to_stuck_fix_inv in H; [|easy].
+      apply negb_true_iff in H.
+      now rewrite app_nil_r in i.
+
     - symmetry in H0. eapply mkApps_nisApp in H0 => //; intuition subst; auto.
-      now depelim a.
+      depelim a.
+      now rewrite app_nil_r.
   Qed.
 
   Lemma eval_Const {c u v} :
@@ -547,8 +592,15 @@ Section Wcbv.
     intros H; depind H; try solve_discr'; try now easy.
     - exists decl. intuition auto. now rewrite e.
     - exists decl. intuition auto. now rewrite e.
-    - symmetry in H1. eapply mkApps_nisApp in H1 => //; intuition subst; auto.     discriminate.
-    - symmetry in H0. eapply mkApps_nisApp in H0 => //; intuition subst; auto.     now depelim a.
+    - symmetry in H1. eapply mkApps_nisApp in H1 => //; intuition subst; auto.
+      depelim a.
+      eapply eval_to_stuck_fix_inv in H; [|easy].
+      apply negb_true_iff in H.
+      now rewrite app_nil_r in i.
+    - symmetry in H0. eapply mkApps_nisApp in H0 => //; intuition subst; auto.
+      depelim a.
+      apply IHeval.
+      now rewrite app_nil_r.
   Qed.
 
   (* Lemma eval_mkApps_tCoFix mfix idx l v : *)

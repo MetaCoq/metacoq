@@ -1219,7 +1219,7 @@ Proof.
       rewrite subst_instance_context_smash.
       eapply iparsubst0. simpl.
       rewrite subst_instance_constr_mkApps subst_mkApps /=.
-      rewrite subst_instance_instance_id subst_instance_to_extended_list.
+      rewrite (subst_instance_instance_id Σ) // subst_instance_to_extended_list.
       rewrite firstn_all2 in iparsubst0. lia.
       eapply spine_subst_smash in iparsubst0; auto.
       rewrite subst_instance_context_smash /=.

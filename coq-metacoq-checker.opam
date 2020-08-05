@@ -22,9 +22,9 @@ install: [
   [make "-C" "checker" "install"]
 ]
 depends: [
-  "ocaml" {>= "4.07.1"}
+  "ocaml" {>= "4.07.1" & < "4.12~"}
   "coq" { >= "8.12~" & < "8.13~" }
-  "coq-equations" {= "1.2.2+8.12" }
+  "coq-equations" {= "1.2.3+8.12" }
   "coq-metacoq-template" {= version}
 ]
 synopsis: "Specification of Coq's type theory and reference checker implementation"

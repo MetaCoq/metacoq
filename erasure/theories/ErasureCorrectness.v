@@ -546,7 +546,32 @@ Qed.
 
 Lemma erases_closed Σ Γ  a e : PCUICLiftSubst.closedn #|Γ| a -> Σ ;;; Γ |- a ⇝ℇ e -> closedn #|Γ| e.
 Proof.
-Admitted.
+  remember #|Γ| as Γl eqn:Heq.
+  intros cla era.
+  revert Γ e era Heq.
+  pattern Γl, a.
+  match goal with 
+  |- ?P Γl a => simpl; eapply (PCUICClosed.term_closedn_list_ind P); auto; clear
+  end; simpl; intros; subst k;
+    match goal with [H:erases _ _ _ _ |- _] => depelim H end; trivial;
+    simpl; try solve [solve_all].
+  - now apply Nat.ltb_lt.
+  - apply andb_and. split; eauto.
+  - apply andb_and; split; eauto.
+  - eapply andb_and; split; eauto.
+    solve_all. destruct y ;  simpl in *; subst.
+    unfold test_snd. simpl; eauto.
+  - epose proof (All2_length _ _ X0).
+    solve_all. destruct y ;  simpl in *; subst.
+    unfold EAst.test_def; simpl; eauto.
+    rewrite <-H. rewrite fix_context_length in b0.
+    eapply b0. eauto. now rewrite app_length, fix_context_length.
+  - epose proof (All2_length _ _ X0).
+    solve_all. destruct y ;  simpl in *; subst.
+    unfold EAst.test_def; simpl; eauto.
+    rewrite <-H. rewrite fix_context_length in b0.
+    eapply b0. eauto. now rewrite app_length, fix_context_length.
+Qed.
 
 Lemma eval_to_mkApps_tBox_inv Σ t argsv :
   Σ ⊢ t ▷ E.mkApps E.tBox argsv ->
@@ -1136,6 +1161,7 @@ Proof.
            ++ eapply Forall2_length in H5.
               destruct o as [|(<- & ?)]; [left; congruence|right].
               split; [congruence|].
+
               todo "contradiction: av must be a constructor when axiom free".
         -- exists E.tBox.
            apply eval_to_mkApps_tBox_inv in H3 as ?; subst.

@@ -1100,3 +1100,73 @@ Proof.
   intros Σ mdecl idecl p pdecl hΣ decl.
   now eapply (declared_projection_closed (Σ:=empty_ext Σ)) in decl.
 Qed.
+
+Lemma term_closedn_list_ind :
+  forall (P : nat -> term -> Type), 
+    (forall k (n : nat), n < k -> P k (tRel n)) ->
+    (forall k (i : ident), P k (tVar i)) ->
+    (forall k (n : nat) (l : list term), All (P k) l -> P k (tEvar n l)) ->
+    (forall k s, P k (tSort s)) ->
+    (forall k (n : name) (t : term), P k t -> forall t0 : term, P (S k) t0 -> P k (tProd n t t0)) ->
+    (forall k (n : name) (t : term), P k t -> forall t0 : term, P (S k)  t0 -> P k (tLambda n t t0)) ->
+    (forall k (n : name) (t : term),
+        P k t -> forall t0 : term, P k t0 -> forall t1 : term, P (S k) t1 -> P k (tLetIn n t t0 t1)) ->
+    (forall k (t u : term), P k t -> P k u -> P k (tApp t u)) ->
+    (forall k s (u : list Level.t), P  k (tConst s u)) ->
+    (forall k (i : inductive) (u : list Level.t), P k (tInd i u)) ->
+    (forall k (i : inductive) (n : nat) (u : list Level.t), P k (tConstruct i n u)) ->
+    (forall k (p : inductive * nat) (t : term),
+        P k t -> forall t0 : term, P k t0 -> forall l : list (nat * term),
+            tCaseBrsProp (P k) l -> P k (tCase p t t0 l)) ->
+    (forall k (s : projection) (t : term), P k t -> P k (tProj s t)) ->
+    (forall k (m : mfixpoint term) (n : nat), tFixProp (P k) (P (#|fix_context m| + k)) m -> P k (tFix m n)) ->
+    (forall k (m : mfixpoint term) (n : nat), tFixProp (P k) (P (#|fix_context m| + k)) m -> P k (tCoFix m n)) ->
+    forall k (t : term), closedn k t -> P k t.
+Proof.
+  intros until t. revert k t.
+  fix auxt 2.
+  move auxt at top.
+  intros k t.
+  destruct t; intros clt;  match goal with
+                 H : _ |- _ => apply H
+              end; auto; simpl in clt; 
+            try move/andP: clt => [cl1 cl2]; 
+            try move/andP: cl1 => [cl1 cl1'];
+            try solve[apply auxt; auto];
+              simpl in *. now apply Nat.ltb_lt in clt. 
+  revert l clt.
+  fix auxl' 1.
+  destruct l; constructor; [|apply auxl'].
+  apply auxt. simpl in clt. now move/andP: clt  => [clt cll].
+  now  move/andP: clt => [clt cll].
+
+  red.
+  revert brs cl2.
+  fix auxl' 1.
+  destruct brs; constructor; [|apply auxl'].
+  simpl in cl2. move/andP: cl2  => [clt cll].
+  apply auxt, clt. move/andP: cl2  => [clt cll].
+  apply cll.
+
+  red.
+  rewrite fix_context_length.
+  revert clt.
+  generalize (#|mfix|).
+  revert mfix.
+  fix auxm 1. 
+  destruct mfix; intros; constructor.
+  simpl in clt. move/andP: clt  => [clt cll].
+  simpl in clt. move/andP: clt. intuition auto.
+  move/andP: clt => [cd cmfix]. apply auxm; auto.
+
+  red.
+  rewrite fix_context_length.
+  revert clt.
+  generalize (#|mfix|).
+  revert mfix.
+  fix auxm 1. 
+  destruct mfix; intros; constructor.
+  simpl in clt. move/andP: clt  => [clt cll].
+  simpl in clt. move/andP: clt. intuition auto.
+  move/andP: clt => [cd cmfix]. apply auxm; auto.
+Defined.

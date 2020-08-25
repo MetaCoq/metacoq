@@ -582,6 +582,115 @@ Proof.
   now apply value_app_inv in ev.
 Qed.
 
+Lemma canonical_closed_inductive_value Σ t i u args : 
+  Σ ;;; [] |- t : mkApps (tInd i u) args -> 
+  isConstruct_app t.
+Proof.
+  intros.
+Admitted.
+
+Require Import PCUICValidity ssreflect.
+Lemma All2_map_left' {A B  C} (P : A -> B -> Type) l l' (f : C -> A) :
+  All2 P (map f l) l' -> All2 (fun x y => P (f x) y) l l'.
+Proof. intros. rewrite - (map_id l') in X. eapply All2_map_inv; eauto. Qed.
+
+Lemma wf_fixpoint_inv Σ mfix idx decl :
+  wf Σ ->
+  wf_fixpoint Σ mfix ->
+  nth_error mfix idx = Some decl ->
+  ∑ mind, (check_one_fix decl = Some mind)  *
+    check_recursivity_kind Σ mind Finite.
+Proof.
+  move=> wfΣ; rewrite /wf_fixpoint => wffix nthe.
+  move: wffix; case E: (map_option_out (map check_one_fix mfix)) => [l|] //.
+  apply map_option_Some in E.
+  eapply All2_map_left' in E.
+  eapply All2_nth_error_Some in E; eauto.
+  destruct E as [kn [Hl Hcheck]].
+  destruct l as [|hd tl].
+  now rewrite nth_error_nil in Hl => //.
+  move/andP=> [eqhd checkrec].
+  exists kn. split; auto.
+  enough (hd = kn) as -> => //.
+  clear -Hl eqhd.
+  eapply forallb_All in eqhd.
+  destruct idx; simpl in Hl; [congruence|].
+  eapply All_nth_error in eqhd; eauto.
+  now eapply PCUICReflect.eqb_eq in eqhd.
+Qed.
+Require Import PCUICTyping PCUICLiftSubst PCUICContexts PCUICGeneration PCUICSpine PCUICConversion.
+
+Section Spines.
+  Context {cf:checker_flags}.
+  Context {Σ : global_env_ext}.
+  Context (wfΣ : wf Σ.1).
+  
+  Lemma typing_spine_smash Γ Δ T args T' : 
+    typing_spine Σ Γ (it_mkProd_or_LetIn Δ T) args T' ->
+    #|args| < context_assumptions Δ ->
+    typing_spine Σ Γ (it_mkProd_or_LetIn (smash_context [] Δ) (subst0 (extended_subst Δ 0) T')) args T'.
+  Proof.
+    revert T.
+    induction Δ using ctx_length_rev_ind; intros T.
+    simpl. lia.
+    rewrite it_mkProd_or_LetIn_app /= smash_context_app.
+    destruct d as [na [b|] ty] => /=.
+    - autorewrite with len.
+      rewrite /mkProd_or_LetIn /=.
+      move=> sp; eapply typing_spine_letin_inv in sp; auto.
+      rewrite /subst1 subst_it_mkProd_or_LetIn Nat.add_0_r in sp.
+      move=> Hlen.
+      specialize (X (subst_context [b] 0 Γ0) ltac:(now autorewrite with len) _ sp).
+      forward X. now autorewrite with len.
+      rewrite subst_context_smash_context /= subst_context_nil.
+      rewrite extended_subst_app.
+
+
+Lemma wf_fixpoint_spine Σ mfix idx decl args na dom codom : 
+  wf Σ.1 ->
+  wf_fixpoint Σ.1 mfix ->
+  nth_error mfix idx = Some decl ->
+  PCUICGeneration.typing_spine Σ [] (dtype decl) args (tProd na dom codom) ->
+  #|args| = decl.(rarg) ->
+  ∑ ind u indargs,
+  (dom = mkApps (tInd ind u) indargs) * isType Σ [] (mkApps (tInd ind u) indargs) *
+  check_recursivity_kind Σ.1 (inductive_mind ind) Finite.
+Proof.
+  move=> wfΣ wffix nthe.
+  eapply wf_fixpoint_inv in nthe; eauto.
+  destruct nthe as [mind' [cfix ck]].
+  move=> sp. 
+  destruct decl as [dna dty dbod rarg].
+  rewrite /check_one_fix in cfix. simpl in *.
+  case E: (decompose_prod_assum [] dty) => [Γ concl].
+  rewrite E in cfix.
+  eapply decompose_prod_assum_it_mkProd_or_LetIn in E.
+  simpl in E. subst dty.
+  intros <-.
+  destruct (nth_error _ #|args|) eqn:Hnth.
+  pose proof (nth_error_Some_length Hnth).
+  autorewrite with len in H. simpl in H.
+  rewrite (firstn_skipn )
+  eapply typing_spine_
+  rewrite nth_error_assumption_context
+
+Lemma app_fix_prod_indarg Σ mfix idx args na dom codom decl :
+  wf Σ.1 ->
+  Σ ;;; [] |- mkApps (tFix mfix idx) args : tProd na dom codom ->
+  nth_error mfix idx = Some decl ->
+  #|args| = decl.(rarg) ->
+  ∑ ind u indargs, dom = mkApps (tInd ind u) indargs *
+    isType Σ [] (mkApps (tInd ind u) indargs) * 
+    (check_recursivity_kind Σ.1 (inductive_mind ind) Finite).
+Proof.
+  intros wfΣ  tapp.
+  eapply inversion_mkApps in tapp as [A [Hfix Hargs]]; eauto.
+  eapply inversion_Fix in Hfix;eauto.
+  destruct Hfix as [decl [fixg [Hnth [Hist [_ [wf cum]]]]]].
+  rewrite /wf_fixpoint in wf.
+
+
+
 Lemma erases_correct Σ t T t' v Σ' :
   extraction_pre Σ ->
   Σ;;; [] |- t : T ->
@@ -1161,6 +1270,8 @@ Proof.
            ++ eapply Forall2_length in H5.
               destruct o as [|(<- & ?)]; [left; congruence|right].
               split; [congruence|].
+              eapply subject_reduction_eval in t; eauto.
+
 
               todo "contradiction: av must be a constructor when axiom free".
         -- exists E.tBox.

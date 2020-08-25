@@ -1588,8 +1588,8 @@ Proof.
 Qed.
 
 Lemma All2_map_left' {A B} (P : A -> A -> Type) l l' (f : B -> A) :
-  All2 (fun x y => P (f x) y) l l' -> All2 P (map f l) l'.
-Proof. intros. rewrite - (map_id l'). eapply All2_map; eauto. Qed.
+  All2 P (map f l) l' -> All2 (fun x y => P (f x) y) l l'.
+Proof. intros. rewrite - (map_id l') in X. eapply All2_map_inv; eauto. Qed.
 
 Lemma All2_map_right' {A B} (P : A -> A -> Type) l l' (f : B -> A) :
   All2 P l (map f l') ->  All2 (fun x y => P x (f y)) l l'.

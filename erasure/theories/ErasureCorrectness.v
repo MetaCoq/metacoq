@@ -620,6 +620,34 @@ Proof.
 Qed.
 Require Import PCUICTyping PCUICLiftSubst PCUICContexts PCUICGeneration PCUICSpine PCUICConversion.
 
+Lemma extended_subst_app Γ Γ' : 
+  extended_subst (Γ ++ Γ') 0 = 
+  extended_subst (subst_context (extended_subst Γ' 0) 0
+   (lift_context (context_assumptions Γ') #|Γ'| Γ)) 0 ++ 
+   extended_subst Γ' (context_assumptions Γ).
+Proof.
+  induction Γ as [|[na [b|] ty] Γ] in |- *; simpl; auto.
+  - autorewrite with len. 
+    rewrite IHΓ. simpl.  rewrite app_comm_cons.
+    f_equal.
+    erewrite subst_app_simpl'.
+    2:autorewrite with len; reflexivity.
+    simpl.
+    rewrite lift_context_snoc subst_context_snoc /=.
+    autorewrite with len. f_equal. f_equal.
+    rewrite -{3}(Nat.add_0_r #|Γ|).
+    erewrite <- (simpl_lift _ _ _ _ (#|Γ| + #|Γ'|)). all:try lia.
+    rewrite distr_lift_subst_rec. autorewrite with len.
+    f_equal. apply lift_extended_subst.
+  - rewrite lift_context_snoc  subst_context_snoc /=. lia_f_equal.
+    rewrite lift_extended_subst. rewrite IHΓ /=.
+    rewrite map_app. rewrite !(lift_extended_subst _ (S _)).
+    rewrite (lift_extended_subst _ (context_assumptions Γ)).
+    rewrite map_map_compose.
+    f_equal. apply map_ext. intros.
+    rewrite simpl_lift; lia_f_equal.
+Qed.
+
 Section Spines.
   Context {cf:checker_flags}.
   Context {Σ : global_env_ext}.
@@ -628,7 +656,8 @@ Section Spines.
   Lemma typing_spine_smash Γ Δ T args T' : 
     typing_spine Σ Γ (it_mkProd_or_LetIn Δ T) args T' ->
     #|args| < context_assumptions Δ ->
-    typing_spine Σ Γ (it_mkProd_or_LetIn (smash_context [] Δ) (subst0 (extended_subst Δ 0) T')) args T'.
+    typing_spine Σ Γ (it_mkProd_or_LetIn (smash_context [] Δ) 
+      (subst0 (extended_subst Δ 0) (lift (context_assumptions Δ) #|Δ| T))) args T'.
   Proof.
     revert T.
     induction Δ using ctx_length_rev_ind; intros T.
@@ -643,7 +672,19 @@ Section Spines.
       specialize (X (subst_context [b] 0 Γ0) ltac:(now autorewrite with len) _ sp).
       forward X. now autorewrite with len.
       rewrite subst_context_smash_context /= subst_context_nil.
-      rewrite extended_subst_app.
+      rewrite extended_subst_app /= !subst_empty lift0_id lift0_context.
+      rewrite subst_app_simpl. autorewrite with len. simpl.
+      autorewrite with len in X.
+      epose proof (distr_lift_subst_rec _ _ _ _ 0).
+      rewrite Nat.add_0_r in H. rewrite -> H in X. clear H.
+      now rewrite /= Nat.add_0_r in X.
+    - autorewrite with len.
+      rewrite /mkProd_or_LetIn /=.
+      move=> sp.
+      rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /=.
+      move=> Hlen.
+      rewrite extended_subst_app /=.
+      depelim sp. eapply typing_spine
 
 
 Lemma wf_fixpoint_spine Σ mfix idx decl args na dom codom : 

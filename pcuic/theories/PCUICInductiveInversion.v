@@ -638,11 +638,6 @@ Proof.
 Qed.
 Hint Rewrite subst_instance_context_assumptions to_extended_list_k_length : len.
 
-(* Lemma subst_context_to_extended_list_k Γ k Δ : 
-  subst_context (List.rev (to_extended_list_k Γ k)) 0 (expand_lets_ctx Γ Δ) = 
-  subst_context (extended_subst Γ 0) 0 (lift_context k 0 Δ).
-Admitted. *)
-
 Lemma expand_lets_k_ctx_subst_id Γ k Δ : 
   closedn_ctx #|Γ| Δ -> 
   expand_lets_k_ctx Γ k (subst_context (List.rev (to_extended_list_k Γ k)) 0 
@@ -658,7 +653,9 @@ Proof.
     autorewrite with len. simpl to_extended_list_k.
     rewrite Nat.add_1_r; change  (S k) with (1 + k); rewrite reln_lift.
     rewrite (subst_app_context_gen [_]). simpl.
-    admit.
+    rewrite ->( subst_app_context_gen [subst0 (extended_subst Γ 0) (lift  (context_assumptions Γ) #|Γ| b)] (extended_subst Γ 0)).
+    simpl. simpl in clΔ.
+    rewrite /expand_lets_k_ctx in IHΓ.
     simpl.
 Admitted.
 
@@ -1432,3 +1429,37 @@ Proof.
       i and i' by u and u'.
   *)
 Admitted.
+
+  
+Lemma wt_ind_app_variance {cf:checker_flags} {Σ : global_env_ext} {Γ ind u l}:
+  wf Σ.1 ->
+  isWfArity_or_Type Σ Γ (mkApps (tInd ind u) l) ->
+  ∑ mdecl, (lookup_inductive Σ ind = Some mdecl) *
+  (global_variance Σ (IndRef ind) #|l| = ind_variance (fst mdecl)).
+Proof.
+  move=> wfΣ.
+  move/isWAT_mkApps_Ind_isType => [s wat].
+  red in wat. eapply inversion_mkApps in wat as [ty [Hind Hargs]]; auto.
+  eapply inversion_Ind in Hind as [mdecl [idecl [wfΓ [decli [cu cum]]]]]; auto.
+  eapply typing_spine_strengthen in Hargs; eauto. clear cum.
+  exists (mdecl, idecl).
+  assert (lookup_inductive Σ ind = Some (mdecl, idecl)).
+  { destruct decli as [decli declmi].
+    rewrite /lookup_inductive. red in decli. rewrite /lookup_minductive decli.
+    now rewrite declmi. }
+  split; auto.
+  simpl. rewrite H.
+  pose proof decli as decli'.
+  eapply on_declared_inductive in decli' as [onmi oni]; auto.
+  rewrite oni.(ind_arity_eq) in Hargs |- *.
+  rewrite !destArity_it_mkProd_or_LetIn. simpl.
+  rewrite app_context_nil_l.
+  rewrite !subst_instance_constr_it_mkProd_or_LetIn in Hargs.
+  rewrite -it_mkProd_or_LetIn_app in Hargs.
+  eapply arity_typing_spine in Hargs; auto.
+  destruct Hargs as [[Hl Hleq] ?]. rewrite Hl.
+  autorewrite with len. now rewrite context_assumptions_app Nat.leb_refl.
+  eapply weaken_wf_local; auto.
+  rewrite -[_ ++ _]subst_instance_context_app.
+  eapply on_minductive_wf_params_indices_inst; eauto with pcuic.
+Qed.

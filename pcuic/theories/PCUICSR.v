@@ -506,6 +506,24 @@ Proof.
   eapply sp. simpl. reflexivity.
 Qed.
 
+Lemma context_assumptions_mapi f Γ : context_assumptions (mapi (fun i => map_decl (f i)) Γ) = 
+  context_assumptions Γ.
+Proof.
+  rewrite /mapi; generalize 0.
+  induction Γ; simpl; intros; eauto.
+  destruct a as [? [b|] ?]; simpl; auto.
+Qed.
+
+Lemma ctx_inst_length {cf:checker_flags} Σ Γ args Δ :
+  ctx_inst Σ Γ args Δ -> 
+  #|args| = context_assumptions Δ.
+Proof.
+  induction 1; simpl; auto.
+  rewrite /subst_telescope in IHX.
+  rewrite context_assumptions_mapi in IHX. congruence.
+  rewrite context_assumptions_mapi in IHX. congruence.
+Qed.
+
 Lemma sr_red1 {cf:checker_flags} :
   env_prop SR_red1
       (fun Σ Γ wfΓ =>
@@ -1323,7 +1341,11 @@ Proof.
         eapply closed_wf_local; eauto.
         eapply on_minductive_wf_params; eauto.
         eapply context_relation_subst_instance; eauto.
-        eapply on_minductive_wf_params; eauto. admit.
+        eapply on_minductive_wf_params; eauto.
+        pose proof (onc.(on_cindices)).
+        eapply ctx_inst_length in X2.
+        rewrite context_assumptions_rev context_assumptions_fold in X2.
+        move: equ; simpl. rewrite X2. todo "univs"%string.
         eapply Hpars. }
       { simpl.
         eapply weaken_wf_local; auto.
@@ -1486,7 +1508,7 @@ Proof.
       ** eapply subslet_untyped_subslet.
         eapply PCUICArities.weaken_subslet; eauto.
         eapply subslet_inds; eauto.
-      ** eapply conv_inds => //. admit.
+      ** eapply conv_inds => //. todo "univs"%string.
       ** fold indsubst1 in |- *.
         eapply (wf_local_instantiate _ _ _ _ _ wf decli'.p1) in wfdecl.
         2:eapply Hu.
@@ -1507,9 +1529,8 @@ Proof.
         eapply All_local_env_app_inv. split; auto.
         eapply All_local_env_skipn.
         now rewrite -(subst_instance_context_smash _ _ []).
-      ** constructor.                   
-        apply eq_term_upto_univ_subst_instance_constr; try typeclasses eauto.
-        admit. (* apply equ. *)
+      ** constructor.
+        todo "univs"%string.
 
   - (* Proj congruence: discriminee reduction *) 
     eapply type_Cumul; [econstructor|..]; eauto.
@@ -1714,7 +1735,7 @@ Proof.
     destruct X2 as [[wf' _]|[s Hs]].
     now left.
     now right.
-Admitted.
+Qed.
 
 Print Assumptions sr_red1.
 

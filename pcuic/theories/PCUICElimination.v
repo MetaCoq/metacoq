@@ -603,42 +603,7 @@ Context `{cf : checker_flags}.
 Variable Hcf : prop_sub_type = false.
 Variable Hcf' : check_univs = true.
 
-Lemma typing_leq_term_prop (Σ : global_env_ext) Γ t t' s s' :
-  wf Σ.1 ->
-  Σ ;;; Γ |- t : tSort s ->
-  Σ ;;; Γ |- t' : tSort s' ->
-  PCUICEquality.leq_term Σ Σ t' t ->
-  Universe.is_prop s <-> Universe.is_prop s'.
-Proof.
-Admitted.
-  (* intros wfΣ Ht.
-  remember (tSort s) as sorts.
-  revert Σ wfΣ Γ t sorts Ht s Heqsorts t' s'.
-  eapply (typing_ind_env 
-  (fun Σ Γ t T => forall s : Universe.t,
-  T = tSort s ->
-  forall (t' : term) (s' : Universe.t),
-  Σ;;; Γ |- t' : tSort s' ->
-  PCUICEquality.leq_term Σ Σ t' t -> Universe.is_prop s -> Universe.is_prop s')
-  (fun Σ Γ wfΓ => wf_local Σ Γ)); auto;intros Σ wfΣ Γ wfΓ; intros.
-    1-13:match goal with
-    [ H : PCUICEquality.leq_term _ _ _ _ |- _ ] => depelim H
-    end.
 
-  14:{ subst B. destruct X1. red in i.
-    destruct i as [wfa ]
-    eapply X1. eauto. eauto. 
-    destruct X2; [left|right].
-    red in i. apply i.
-    exists s.π1. apply s.π2. auto.
- }
-- eapply inversion_Sort in X0 as [l' [_ [Inl' [-> ?]]]].
- eapply type_Cumul with (tSort (Universe.super l')).
- constructor; auto. left; eexists _, _; simpl; intuition eauto.
- constructor. constructor. apply leq_universe_super.
- apply x. auto.
-
--        *)
 
 Lemma is_prop_bottom {Σ Γ T s s'} :
   wf_ext Σ ->
@@ -653,6 +618,436 @@ Proof.
   now unshelve eapply (leq_prop_is_prop _ _ _ _ leq).
 Qed.
 
+Lemma prop_sort_eq {Σ Γ u u'} : Universe.is_prop u -> Universe.is_prop u' -> Σ ;;; Γ |- tSort u = tSort u'.
+Proof.
+  move=> isp isp'.
+  constructor. constructor. 
+  red. rewrite Hcf'.
+  red. intros. now rewrite (is_prop_val _ isp) (is_prop_val _ isp').
+Qed.
+
+Lemma is_prop_cum_r {Σ Γ T s} : 
+  wf_ext Σ ->
+  Universe.is_prop s ->
+  Σ ;;; Γ |- T <= tSort s <~> Σ ;;; Γ |- T = tSort s.
+Proof.
+  move=> isp; split=> Ht.
+  eapply invert_cumul_sort_r in Ht as [u' [hr leq]].
+  eapply conv_trans with (tSort u'); eauto.
+  eapply leq_prop_is_prop in leq; eauto.
+  now eapply prop_sort_eq.
+  now eapply conv_cumul.
+Qed.  
+
+Lemma is_prop_cum_l {Σ Γ T s} : 
+  wf_ext Σ ->
+  Universe.is_prop s ->
+  Σ ;;; Γ |- tSort s <= T <~> Σ ;;; Γ |- T = tSort s.
+Proof.
+  move=> isp; split=> Ht.
+  eapply invert_cumul_sort_l in Ht as [u' [hr leq]].
+  eapply conv_trans with (tSort u'); eauto.
+  eapply leq_prop_is_prop in leq; eauto.
+  now eapply prop_sort_eq.
+  now eapply conv_cumul.
+Qed.
+
+Lemma is_prop_cum_sym {Σ Γ T s} : 
+  wf_ext Σ ->
+  Universe.is_prop s ->
+  Σ ;;; Γ |- tSort s <= T <~> Σ ;;; Γ |- T <= tSort s.
+Proof.
+  move=> isp; split=> Ht.
+  eapply is_prop_cum_l in  Ht; eauto.
+  eapply is_prop_cum_r; eauto.
+  eapply is_prop_cum_l; eauto.
+  eapply is_prop_cum_r; eauto.
+Qed.
+
+Require Import PCUICReduction.
+
+Lemma is_prop_arity_cum_sym {Σ Γ T s Δ} : 
+  wf_ext Σ ->
+  Universe.is_prop s ->
+  Σ ;;; Γ |- it_mkProd_or_LetIn Δ (tSort s) <= T <~>
+  Σ ;;; Γ |- T <= it_mkProd_or_LetIn Δ (tSort s).
+Proof.
+  move=> wfext isp.
+  revert Γ T; induction Δ using ctx_length_rev_ind; intros Γ' T.
+  - simpl. now eapply is_prop_cum_sym.
+  - destruct d as [na [b|] ty]; simpl;
+      rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /=.
+    + split => HT.
+      eapply invert_cumul_letin_l in HT; auto.
+      rewrite /subst1 subst_it_mkProd_or_LetIn /= in HT.
+      specialize (X (subst_context [b] 0 Γ) ltac:(autorewrite with len; auto)).
+      eapply cumul_trans. 2:eapply X. auto. auto.
+      eapply red_cumul_cumul_inv. eapply red1_red; repeat constructor.
+      now rewrite /subst1 subst_it_mkProd_or_LetIn.
+
+      eapply invert_cumul_letin_r in HT; auto.
+      rewrite /subst1 subst_it_mkProd_or_LetIn /= in HT.
+      specialize (X (subst_context [b] 0 Γ) ltac:(autorewrite with len; auto) ).
+      eapply cumul_trans. auto. 2:eapply X.
+      eapply red_cumul_cumul. eapply red1_red; repeat constructor.
+      now rewrite /subst1 subst_it_mkProd_or_LetIn. assumption.
+
+    + split => HT.
+      eapply invert_cumul_prod_l in HT as [? [? [? [[red eq] leq]]]]; auto.
+      eapply cumul_trans with (tProd x x0 x1); auto.
+      eapply red_cumul; auto. eapply cumul_trans. auto. eapply cumul_Prod_l.
+      symmetry; eauto.  eapply cumul_Prod_r.
+      specialize (X Γ ltac:(reflexivity)). now eapply X.
+
+      eapply invert_cumul_prod_r in HT as [? [? [? [[red eq] leq]]]]; auto.
+      eapply cumul_trans with (tProd na ty x1); auto.
+      2:{ eapply red_cumul_cumul_inv. eauto. eapply cumul_Prod_l; auto. }
+      eapply cumul_Prod_r. 
+      specialize (X Γ ltac:(reflexivity)). now eapply X.
+Qed.
+
+Lemma is_prop_arity_cum_l_eq {Σ Γ T s Δ} : 
+  wf_ext Σ ->
+  Universe.is_prop s ->
+  Σ ;;; Γ |- it_mkProd_or_LetIn Δ (tSort s) <= T ->
+  Σ ;;; Γ |- it_mkProd_or_LetIn Δ (tSort s) = T.
+Proof.
+  move=> wfext isp.
+  revert Γ T; induction Δ using ctx_length_rev_ind; intros Γ' T.
+  - simpl. intros Hs; eapply is_prop_cum_l in Hs. now symmetry. auto. auto.
+  - destruct d as [na [b|] ty]; simpl;
+      rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /= => HT.
+    eapply invert_cumul_letin_l in HT; auto.
+    rewrite /subst1 subst_it_mkProd_or_LetIn /= in HT.
+    specialize (X (subst_context [b] 0 Γ) ltac:(autorewrite with len; auto)).
+    eapply conv_trans. 3:eapply X. auto.
+    eapply red_conv, red_trans. eapply red1_red. constructor.
+    now rewrite /subst1 subst_it_mkProd_or_LetIn.
+    apply HT.
+
+    eapply invert_cumul_prod_l in HT as [? [? [? [[red eq] leq]]]]; auto.
+    eapply conv_trans with (tProd na ty x1); auto.
+    eapply conv_Prod_r.
+    specialize (X Γ ltac:(reflexivity)). now eapply X.
+    eapply conv_trans. auto. eapply conv_Prod_l. eauto.
+    now symmetry; eapply red_conv.
+Qed.    
+
+Lemma is_prop_arity_cum_r_eq {Σ Γ T s Δ} : 
+  wf_ext Σ ->
+  Universe.is_prop s ->
+  Σ ;;; Γ |- T <= it_mkProd_or_LetIn Δ (tSort s) ->
+  Σ ;;; Γ |- it_mkProd_or_LetIn Δ (tSort s) = T.
+Proof.
+  move=> wfext isp HT.
+  eapply is_prop_arity_cum_sym in HT; auto.
+  now eapply is_prop_arity_cum_l_eq.
+Qed.
+
+Lemma conv_sort_inv Σ Γ s s' :
+  Σ ;;; Γ |- tSort s = tSort s' ->
+  eq_universe (global_ext_constraints Σ) s s'.
+Proof.
+  intros H.
+  eapply conv_alt_red in H as [v [v' [[redv redv'] eqvv']]].
+  eapply invert_red_sort in redv.
+  eapply invert_red_sort in redv'. subst.
+  now depelim eqvv'.
+Qed.
+
+Definition is_prop_arity Σ Γ T := 
+  ∑ Δ s, (Σ ;;; Γ |- T = it_mkProd_or_LetIn Δ (tSort s)) * (Universe.is_prop s).
+
+Lemma is_prop_arity_cum_l Σ Γ A B : 
+  wf_ext Σ ->
+  is_prop_arity Σ Γ A -> 
+  Σ ;;; Γ |- A <= B ->
+  is_prop_arity Σ Γ B.
+Proof.
+  intros wfΣ [Δ [s [conv isp]]] cum.
+  symmetry in conv; eapply conv_cumul in conv.
+  unshelve epose proof (cumul_trans _ _ _ _ _ _ conv cum); auto.
+  eapply is_prop_arity_cum_l_eq in X; auto.
+  exists Δ, s. split; pcuic. now symmetry.
+Qed.
+
+Lemma is_prop_arity_cum_r Σ Γ A B : 
+  wf_ext Σ ->
+  is_prop_arity Σ Γ A -> 
+  Σ ;;; Γ |- B <= A ->
+  is_prop_arity Σ Γ B.
+Proof.
+  intros wfΣ [Δ [s [conv isp]]] cum.
+  symmetry in conv; eapply conv_cumul in conv.
+  eapply is_prop_arity_cum_sym in conv; auto.
+  unshelve epose proof (cumul_trans _ _ _ _ _ _ cum conv); auto.
+  eapply is_prop_arity_cum_r_eq in X; auto.
+  exists Δ, s. split; pcuic. now symmetry.
+Qed.
+
+Lemma conv_sort_it_mkProd_or_LetIn {Σ Γ s Δ s'}: 
+  Σ ;;; Γ |- tSort s = it_mkProd_or_LetIn Δ (tSort s') ->
+  Σ ;;; Γ |- tSort s = tSort s'.
+Proof.
+  induction Δ using ctx_length_rev_ind.
+  - simpl. auto.
+  - destruct d as [na [b|] ty]; simpl;
+      rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /= => HT.
+    eapply invert_conv_letin_r in HT; auto.
+    rewrite /subst1 subst_it_mkProd_or_LetIn /= in HT.
+    specialize (X (subst_context [b] 0 Γ) ltac:(autorewrite with len; auto)).
+    eapply conv_trans. 3:eapply X. auto.
+    eapply red_conv, red_trans. eapply red1_red. constructor.
+    now rewrite /subst1 subst_it_mkProd_or_LetIn.
+    apply HT.
+
+    eapply invert_cumul_prod_l in HT as [? [? [? [[red eq] leq]]]]; auto.
+    eapply conv_trans with (tProd na ty x1); auto.
+    eapply conv_Prod_r.
+    specialize (X Γ ltac:(reflexivity)). now eapply X.
+    eapply conv_trans. auto. eapply conv_Prod_l. eauto.
+    now symmetry; eapply red_conv.
+Qed.    
+
+
+Lemma typing_leq_term_prop (Σ : global_env_ext) Γ t t' T T' :
+  wf Σ.1 ->
+  Σ ;;; Γ |- t : T ->
+  on_udecl Σ.1 Σ.2 ->
+  Σ ;;; Γ |- t' : T' ->
+  forall n, leq_term_napp Σ n t' t ->
+  is_prop_arity Σ Γ T -> is_prop_arity Σ Γ T'.
+Proof.
+  intros wfΣ Ht.
+  revert Σ wfΣ Γ t T Ht t' T'.
+  eapply (typing_ind_env 
+  (fun Σ Γ t T =>
+  forall t' T' : term,
+  on_udecl Σ.1 Σ.2 ->
+Σ;;; Γ |- t' : T' ->
+forall n, leq_term_napp Σ n t' t ->
+is_prop_arity Σ Γ T -> is_prop_arity Σ Γ T')
+  (fun Σ Γ wfΓ => wf_local Σ Γ)); auto;intros Σ wfΣ Γ wfΓ; intros.
+    1-13:match goal with
+    [ H : leq_term_napp _ _ _ _ |- _ ] => depelim H
+    end; assert  (wf_ext Σ) by (split; assumption).
+
+    14:{ eapply X1; eauto. eapply is_prop_arity_cum_r; eauto.
+        split; auto. }
+
+    - eapply inversion_Rel in X0 as [decl' [wfΓ' [Hnth Hcum]]]; auto.
+      rewrite Hnth in H; noconf H. eapply is_prop_arity_cum_l in X2; eauto.
+  
+    - eapply inversion_Sort in X0 as [l' [_ [Inl' [-> ?]]]]; auto.
+      destruct X2 as [Δ [s [eqs isp]]]. eapply conv_sort_inv in X2.
+      elimtype False; eapply (is_prop_gt  _ l s0); auto.
+      now apply wf_ext_consistent.
+      now eapply eq_universe_leq_universe.
+
+    - eapply conv_sort_inv in X6.
+      symmetry in X6; eapply eq_universe_leq_universe in X6.
+      eapply leq_universe_prop_no_prop_sub_type in X6; eauto.
+      eapply inversion_Prod in X4 as [s1' [s2' [Ha [Hb Hs]]]]; auto.
+      specialize (X1 _ _ H Ha). 
+      specialize (X1 _ (eq_term_upto_univ_napp_leq X5_1)).
+      eapply context_conversion in Hb. 3:{ constructor. apply conv_ctx_refl. constructor.
+        constructor. eauto. }
+      all:eauto.
+      2:{ constructor; eauto. now exists s1. }
+      specialize (X3 _ _ H Hb _ X5_2).
+      specialize (X3 s2 (conv_refl' _ _ _)).
+      eapply is_prop_sort_prod in X6. specialize (X3 X6).
+      eapply is_prop_cum_l; auto.
+      etransitivity; eauto. 
+      transitivity (tSort s2). now eapply conv_cumul, prop_sort_eq.
+      transitivity (tSort s2'). eapply conv_cumul. eapply conv_sort_inv in X3.
+      now do 2 constructor.
+      do 2 constructor; eapply leq_universe_product.
+  
+    - eapply conv_cumul, cumul_Prod_Sort_inv in X6.
+      destruct X6.
+      
+    - eapply inversion_LetIn in X6 as (s1' & A & dom & bod & codom & cum); auto.
+      specialize (X1 _ _ H dom _ (eq_term_upto_univ_napp_leq X7_2) s1 (conv_refl' _ _ _)).
+      specialize (X3 _ _ H bod _  (eq_term_upto_univ_napp_leq X7_1)).
+      assert(conv_context Σ (Γ ,, vdef na t ty) (Γ ,, vdef n b b_ty)).
+      { repeat constructor; pcuic. eapply conv_ctx_refl. }
+      specialize (X5 u A H).
+      forward X5 by eapply context_conversion; eauto; pcuic.
+      specialize (X5 _ X7_3 s).
+      admit.
+
+    - eapply inversion_App in X4 as (na' & A' & B' & hf & ha & cum); auto.
+      eapply X3. 3: now eapply eq_term_upto_univ_napp_leq in X5_2.
+      unfold leq_term in X1.
+      eapply eq_term_upto_univ_empty_impl in X5_1.
+      specialize (X1 _ _ hf X5_1). all:try typeclasses eauto.
+      specialize (X3 _ _ ha (eq_term_empty_leq_term X5_2)).
+      eapply leq_term_empty_leq_term in X5_1.
+      eapply eq_term_empty_eq_term in X5_2.
+      econstructor.
+      econstructor; [eapply X1|eapply X3].
+      eapply PCUICValidity.validity; pcuic.
+      eapply type_App; eauto.
+      eapply conv_cumul. eapply (subst_conv Γ [vass na A] [vass na A] []); pcuic.
+      repeat constructor. now rewrite subst_empty.
+      repeat constructor. now rewrite subst_empty.
+      eapply PCUICValidity.validity in X0; auto.
+      apply PCUICArities.isWAT_tProd in X0 as [tyA]; auto.
+      constructor; auto.
+  
+    - eapply inversion_Const in X1 as [decl' [wf [declc [cu cum]]]]; auto.
+      econstructor; eauto.
+      econstructor; eauto.
+      eapply PCUICValidity.validity; eauto.
+      econstructor; eauto.
+      eapply conv_cumul. constructor.
+      pose proof (PCUICWeakeningEnv.declared_constant_inj _ _ H declc); subst decl'.
+      eapply PCUICUnivSubstitution.eq_term_upto_univ_subst_instance_constr; eauto; typeclasses eauto.
+    
+    - eapply inversion_Ind in X1 as [decl' [idecl' [wf [declc [cu cum]]]]]; auto.
+      econstructor; eauto.
+      econstructor; eauto.
+      eapply PCUICValidity.validity; eauto.
+      econstructor; eauto.
+  
+      eapply conv_cumul.
+      constructor.
+      pose proof (PCUICWeakeningEnv.declared_inductive_inj isdecl declc) as [-> ->].
+      eapply PCUICUnivSubstitution.eq_term_upto_univ_subst_instance_constr; eauto; typeclasses eauto.
+    
+    - eapply inversion_Construct in X1 as [decl' [idecl' [cdecl' [wf [declc [cu cum]]]]]]; auto.
+      
+      econstructor; eauto.
+      econstructor; eauto.
+      eapply PCUICValidity.validity; eauto.
+      econstructor; eauto.
+      pose proof (PCUICWeakeningEnv.declared_constructor_inj isdecl declc) as [-> [-> ->]].
+      unfold type_of_constructor.
+      transitivity (subst0 (inds (inductive_mind (ind, i).1) u (ind_bodies mdecl))
+      (subst_instance_constr u0 cdecl'.1.2)).
+      * eapply conv_cumul.
+        eapply (conv_subst_conv _ Γ _ _ []); eauto.
+        { eapply conv_inds. now eapply R_global_instance_empty_universe_instance. }
+        eapply subslet_untyped_subslet.
+        eapply (PCUICSpine.weaken_subslet _ _ _ Γ []); eauto.
+        eapply PCUICArities.subslet_inds; eauto.
+        destruct declc; eauto.
+        eapply subslet_untyped_subslet.
+        eapply (PCUICSpine.weaken_subslet _ _ _ Γ []); eauto.
+        eapply PCUICArities.subslet_inds; eauto.
+        destruct declc; eauto.
+      * constructor. eapply PCUICEquality.subst_leq_term.
+        eapply PCUICEquality.eq_term_leq_term.
+        eapply PCUICUnivSubstitution.eq_term_upto_univ_subst_instance_constr; eauto; typeclasses eauto.
+  
+    - eapply inversion_Case in X6 as (u' & args' & mdecl' & idecl' & ps' & pty' & btys' & inv); auto.
+      intuition auto.
+      intuition auto.
+      specialize (X4 _ _ a6 (eq_term_empty_leq_term X7_2)).
+      eapply eq_term_empty_eq_term in X7_1.
+      eapply eq_term_empty_eq_term in X7_2.
+      eapply type_Cumul.
+      econstructor; eauto.
+      eapply PCUICValidity.validity; eauto.
+      eapply (type_Case _ _ (ind, npar)). eapply isdecl.
+      all:eauto.
+      eapply (All2_impl X5); firstorder.
+      eapply conv_cumul.
+      eapply mkApps_conv_args; pcuic.
+      eapply All2_app. simpl in *.
+      2:constructor; pcuic.
+      eapply All2_skipn.
+      clear -wfΣ a6 X4 X7_2.
+      eapply (principal_type_ind a6 X4).
+      
+    - eapply inversion_Proj in X3 as (u' & mdecl' & idecl' & pdecl' & args' & inv); auto.
+      intuition auto.
+      specialize (X2 _ _ a0 (eq_term_empty_leq_term X4)).
+      eapply eq_term_empty_eq_term in X4.
+      pose proof (principal_type_ind X2 a0) as [Ruu' X3].
+      eapply type_Cumul. clear a0.
+      econstructor; eauto.
+      now rewrite (All2_length _ _ X3).
+      eapply PCUICValidity.validity; eauto.
+      eapply type_Proj; eauto.
+      transitivity (subst0 (c :: List.rev args) (subst_instance_constr u pdecl'.2)).
+      eapply conv_cumul.
+      set (ctx := PCUICInductives.projection_context mdecl' idecl' p.1.1 u).
+      set (ctx' := PCUICInductives.projection_context mdecl' idecl' p.1.1 u).
+      eapply (conv_subst_conv _ Γ ctx ctx' []); eauto.
+      constructor. now constructor. 
+      eapply All2_rev. eapply All2_refl. intros; apply conv_refl'.
+      eapply subslet_untyped_subslet; eauto.
+      eapply PCUICInductives.projection_subslet; eauto.
+      eapply validity in X2; auto.
+      eapply subslet_untyped_subslet; eauto.
+      eapply PCUICInductives.projection_subslet; eauto.
+      eapply validity in X2; auto.
+      constructor. eapply PCUICEquality.subst_leq_term.
+      destruct (PCUICWeakeningEnv.declared_projection_inj a isdecl) as [<- [<- <-]].
+      subst ty. reflexivity.
+  
+    - eapply inversion_Fix in X2 as (decl' & fixguard' & Hnth & types' & bodies & wffix & cum); auto.
+      eapply type_Cumul.
+      econstructor; eauto.
+      eapply PCUICValidity.validity; eauto.
+      econstructor. 2:eapply H0. all:eauto.
+      eapply (All_impl X0); firstorder.
+      eapply (All_impl X1); firstorder.
+      eapply All2_nth_error in a; eauto.
+      destruct a as [[eqty _] _].
+      constructor. eapply eq_term_empty_leq_term in eqty.
+      now eapply leq_term_empty_leq_term.
+    
+    - eapply inversion_CoFix in X2 as (decl' & fixguard' & Hnth & types' & bodies & wfcofix & cum); auto.
+      eapply type_Cumul.
+      econstructor; eauto.
+      eapply PCUICValidity.validity; eauto.
+      eapply type_CoFix. 2:eapply H0. all:eauto.
+      eapply (All_impl X0); firstorder.
+      eapply (All_impl X1); firstorder.
+      eapply All2_nth_error in a; eauto.
+      destruct a as [[eqty _] _].
+      constructor. apply eq_term_empty_leq_term in eqty.
+      now eapply leq_term_empty_leq_term.
+
+
+Lemma typing_leq_term_prop (Σ : global_env_ext) Γ t t' T T' :
+  wf Σ.1 ->
+  Σ ;;; Γ |- t : T ->
+  Σ ;;; Γ |- t' : T' ->
+  PCUICEquality.leq_term Σ Σ t' t ->
+  forall s s', Σ ;;; Γ |- T <= tSort s -> Σ ;;; Γ |- T' <= tSort s' ->
+  Universe.is_prop s <-> Universe.is_prop s'.
+Proof.
+  intros wfΣ Ht.
+  revert Σ wfΣ Γ t T Ht t' T'.
+  eapply (typing_ind_env 
+  (fun Σ Γ t T =>
+  forall t' T' : term,
+Σ;;; Γ |- t' : T' ->
+PCUICEquality.leq_term Σ Σ t' t ->
+forall s s' : Universe.t,
+Σ;;; Γ |- T <= tSort s ->
+Σ;;; Γ |- T' <= tSort s' -> Universe.is_prop s <-> Universe.is_prop s')
+  (fun Σ Γ wfΓ => wf_local Σ Γ)); auto;intros Σ wfΣ Γ wfΓ; intros.
+    1-13:match goal with
+    [ H : PCUICEquality.leq_term _ _ _ _ |- _ ] => depelim H
+    end.
+
+  14:{ eapply H; eauto. transitivity B; eauto. }
+
+  - eapply inversion_Rel in X0 as [decl' [wfΓ' [Hnth Hcum]]].
+      
+
+  - eapply inversion_Sort in X0 as [l' [_ [Inl' [-> ?]]]].
+ eapply type_Cumul with (tSort (Universe.super l')).
+ constructor; auto. left; eexists _, _; simpl; intuition eauto.
+ constructor. constructor. apply leq_universe_super.
+ apply x. auto.
+
+-        *)
 Lemma leq_term_prop_sorted_l {Σ Γ v v' u u'} :
   wf_ext Σ ->
   PCUICEquality.leq_term Σ (global_ext_constraints Σ) v v' ->

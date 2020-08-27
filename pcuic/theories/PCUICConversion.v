@@ -898,6 +898,42 @@ Section Inversions.
     eapply red1_red; constructor.
   Qed.
 
+
+  Lemma conv_red_l_inv :
+    forall (Γ : context) T T' U,
+    Σ ;;; Γ |- T = U ->
+    red Σ.1 Γ T T' ->
+    Σ ;;; Γ |- T' = U.
+  Proof.
+    intros * cumtu red.
+    apply conv_alt_red in cumtu.
+    destruct cumtu as [v [v' [[redl redr] eq]]].
+    apply conv_alt_red.
+    destruct (red_confluence wfΣ redl red) as [nf [nfl nfr]].
+    eapply (fill_eq _ wfΣ) in eq. 2:eapply nfl. 2:eapply reflexivity.
+    destruct eq as [t'' [u'' [[l r] eq]]].
+    exists t''. exists u''. repeat split; auto.
+    - now transitivity nf.
+    - now transitivity v'.
+  Qed.
+
+  Lemma invert_conv_letin_l Γ C na d ty b :
+    Σ ;;; Γ |- tLetIn na d ty b = C ->
+    Σ ;;; Γ |- subst10 d b = C.
+  Proof.
+    intros Hlet.
+    eapply conv_red_l_inv; eauto.
+    eapply red1_red; constructor.
+  Qed.  
+
+  Lemma invert_conv_letin_r Γ C na d ty b :
+    Σ ;;; Γ |- C = tLetIn na d ty b ->
+    Σ ;;; Γ |- C = subst10 d b.
+  Proof.
+    intros Hlet. symmetry; symmetry in Hlet.
+    now eapply invert_conv_letin_l.
+  Qed.
+
   Lemma app_mkApps :
     forall u v t l,
       isApp t = false ->
@@ -1206,6 +1242,32 @@ Section Inversions.
     - eapply conv_eta_r. 1: eassumption.
       destruct e as [? [? [? [π [? ?]]]]]. subst.
       eexists _, _, _, (stack_cat π (Prod_r na A ε)).
+      rewrite 2!zipc_stack_cat. cbn.
+      intuition eauto.
+  Qed.
+
+  Lemma cumul_Prod_l:
+    forall {Γ na na' A1 A2 B},
+      Σ ;;; Γ |- A1 = A2 ->
+      Σ ;;; Γ |- tProd na A1 B <= tProd na' A2 B.
+  Proof.
+    intros Γ na na' A1 A2 B h.
+    induction h.
+    - constructor. constructor.
+      + assumption.
+      + apply leq_term_refl.
+    - eapply cumul_red_l ; eauto.
+      econstructor. assumption.
+    - eapply cumul_red_r ; eauto.
+      econstructor. assumption.
+    - eapply cumul_eta_l. 2: eassumption.
+      destruct e as [? [A [g [π [? ?]]]]]. subst.
+      eexists _, _, _, (stack_cat π (Prod_l na B ε)).
+      rewrite 2!zipc_stack_cat. cbn.
+      intuition eauto.
+    - eapply cumul_eta_r. 1: eassumption.
+      destruct e as [? [A [g [π [? ?]]]]]. subst.
+      eexists _, _, _, (stack_cat π (Prod_l na' B ε)).
       rewrite 2!zipc_stack_cat. cbn.
       intuition eauto.
   Qed.

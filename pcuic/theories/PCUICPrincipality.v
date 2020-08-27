@@ -501,17 +501,27 @@ Lemma eq_term_upto_univ_napp_leq {cf:checker_flags} {Σ : global_env_ext} {n x y
 Proof.
   eapply eq_term_upto_univ_impl; auto; typeclasses eauto.
 Qed.
-
-(*
-Lemma typing_leq_term {cf:checker_flags} (Σ : global_env_ext) Γ t t' l l' T T' : 
+(* 
+Lemma typing_leq_term_app {cf:checker_flags} (Σ : global_env_ext) Γ t t' l l' T T' : 
   wf Σ.1 ->
   Σ ;;; Γ |- mkApps t l : T ->
   Σ ;;; Γ |- mkApps t' l' : T' ->
   All2 (eq_term Σ Σ) l l' ->
   leq_term_napp Σ #|l| t' t ->
-  ~ isApp 
   Σ ;;; Γ |- mkApps t' l' : T.
-Proof.*)
+Proof.
+  intros wfΣ Ht Ht' Hl Heq.
+  depind Heq.        *)
+(* 
+Lemma typing_leq_term_gen {cf:checker_flags} (Σ : global_env_ext) Γ t t' T T' : 
+  wf Σ.1 ->
+  Σ ;;; Γ |- t : T ->
+  Σ ;;; Γ |- t' : T' ->
+  leq_term Σ Σ t' t ->
+  Σ ;;; Γ |- t' : T.
+Proof. *)
+
+
 
 Lemma R_global_instance_empty_universe_instance Re Rle ref napp u u' :
   R_global_instance [] Re Rle ref napp u u' ->
@@ -525,7 +535,9 @@ Lemma typing_leq_term {cf:checker_flags} (Σ : global_env_ext) Γ t t' T T' :
   wf Σ.1 ->
   Σ ;;; Γ |- t : T ->
   Σ ;;; Γ |- t' : T' ->
-  leq_term [] Σ t' t -> (* No cumulativity of inductive types, see generalized lemma above *)
+  leq_term [] Σ t' t -> 
+  (* No cumulativity of inductive types, as they can relate 
+    inductives in different sorts. *)
   Σ ;;; Γ |- t' : T.
 Proof.
   intros wfΣ Ht.

@@ -116,11 +116,14 @@ Definition global_variance Σ gr napp :=
   | _ => None
   end.
 
-Definition R_global_instance Σ Re Rle gr napp :=
-  match global_variance Σ gr napp with
+Definition R_opt_variance Re Rle v :=
+  match v with 
   | Some v => R_universe_instance_variance Re Rle v
   | None => R_universe_instance Re
   end.
+
+Definition R_global_instance Σ Re Rle gr napp :=
+  R_opt_variance Re Rle (global_variance Σ gr napp).
 
 Lemma R_universe_instance_impl R R' :
   RelationClasses.subrelation R R' ->
@@ -241,7 +244,7 @@ Proof.
   rewrite /R_global_instance.
   destruct global_variance as [v|] eqn:lookup.
   - induction u in v |- *; simpl; auto;
-    destruct v; simpl; auto.
+    unfold R_opt_variance in IHu; destruct v; simpl; auto.
     split; auto.
     destruct t; simpl; auto.
   - apply Forall2_same; eauto.
@@ -299,7 +302,7 @@ Proof.
   rewrite /R_global_instance.
   destruct global_variance as [v|] eqn:lookup.
   - induction u in u', v |- *; destruct u'; simpl; auto;
-    destruct v as [|v vs]; simpl; auto.
+    destruct v as [|v vs]; unfold R_opt_variance in IHu; simpl; auto.
     intros [Ra Ru']. split.
     destruct v; simpl; auto.
     apply IHu; auto.
@@ -358,7 +361,7 @@ Instance R_global_instance_trans Σ Re Rle gr napp :
   Transitive (R_global_instance Σ Re Rle gr napp).
 Proof.
   intros he hle x y z.
-  unfold R_global_instance.
+  unfold R_global_instance, R_opt_variance.
   destruct global_variance as [v|].
   clear -he hle.
   induction x in y, z, v |- *; destruct y, z, v; simpl; auto => //. eauto.
@@ -486,7 +489,7 @@ Instance R_global_instance_antisym Σ Re Rle (hRe : RelationClasses.Equivalence 
   RelationClasses.Antisymmetric _ (R_global_instance Σ Re Re gr napp) (R_global_instance Σ Re Rle gr napp).
 Proof.
   intros hR u v.
-  unfold R_global_instance.
+  unfold R_global_instance, R_opt_variance.
   destruct global_variance; auto.
   induction u in l, v |- *; destruct v, l; simpl; auto.
   intros [at' uv] [ta vu]. split; auto.
@@ -533,7 +536,7 @@ Instance R_global_instance_impl_same_napp Σ Re Re' Rle Rle' gr napp :
   subrelation (R_global_instance Σ Re Rle gr napp) (R_global_instance Σ Re' Rle' gr napp).
 Proof.
   intros he hle t t'.
-  rewrite /R_global_instance.
+  rewrite /R_global_instance /R_opt_variance.
   destruct global_variance as [v|] eqn:glob.
   induction t in v, t' |- *; destruct v, t'; simpl; auto.
   intros []; split; auto.
@@ -549,7 +552,7 @@ Instance R_global_instance_impl Σ Re Re' Rle Rle' gr napp napp' :
   subrelation (R_global_instance Σ Re Rle gr napp) (R_global_instance Σ Re' Rle' gr napp').
 Proof.
   intros he hle hele hnapp t t'.
-  rewrite /R_global_instance.
+  rewrite /R_global_instance /R_opt_variance.
   destruct global_variance as [v|] eqn:glob.
   rewrite (global_variance_napp_mon hnapp glob).
   induction t in v, t' |- *; destruct v, t'; simpl; auto.
@@ -576,7 +579,7 @@ Instance R_global_instance_empty_impl Σ Re Re' Rle Rle' gr napp napp' :
   subrelation (R_global_instance [] Re Rle gr napp) (R_global_instance Σ Re' Rle' gr napp').
 Proof.
   intros he hle hele t t'.
-  rewrite /R_global_instance. simpl.
+  rewrite /R_global_instance /R_opt_variance. simpl.
   rewrite global_variance_empty.
   destruct global_variance as [v|]; eauto using R_universe_instance_impl'.
   induction t in v, t' |- *; destruct v, t'; simpl; intros H; inv H; auto.
@@ -917,7 +920,7 @@ Lemma compare_global_instance_impl (equ lequ : _ -> _ -> bool) Σ Re Rle gr napp
   subrelation (compare_global_instance Σ equ lequ gr napp) (R_global_instance Σ Re Rle gr napp).
 Proof.
   intros hre hrle x y.
-  unfold compare_global_instance, R_global_instance.
+  unfold compare_global_instance, R_global_instance, R_opt_variance.
   destruct global_variance as [v|].
   induction x in v, y |- *; destruct v, y; simpl; auto.
   rtoProp. intros [Hat Hxy]. split; auto.
@@ -1815,7 +1818,7 @@ Lemma R_global_instance_flip Σ gr napp
   R_global_instance Σ Re Rle' gr napp v u.
 Proof.
   intros Rerefl Rlerefl Resym Retrans Rletrans incl incl'.
-  rewrite /R_global_instance.
+  rewrite /R_global_instance /R_opt_variance.
   destruct global_variance as [vs|] eqn:var.  
   - induction u in vs, v |- *; destruct v; simpl; auto;
     destruct vs as [|v' vs]; simpl; auto.

@@ -212,7 +212,7 @@ Lemma R_global_instance_weaken_env {cf:checker_flags} Σ Σ' Re Re' Rle Rle' gr 
   subrelation (R_global_instance Σ Re Rle gr napp) (R_global_instance Σ' Re' Rle' gr napp).
 Proof.
   intros wfΣ ext he hle hele t t'.
-  rewrite /R_global_instance.
+  rewrite /R_global_instance /R_opt_variance.
   destruct global_variance as [v|] eqn:look.
   - rewrite (global_variance_sigma_mon wfΣ ext look).
     induction t in v, t' |- *; destruct v, t'; simpl; auto.

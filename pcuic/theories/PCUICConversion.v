@@ -400,6 +400,33 @@ Proof.
   - todoeta.
 Qed.
 
+Lemma conv_Prod_l_inv {cf:checker_flags} (Σ : global_env_ext) Γ na dom codom T :
+  wf Σ ->
+  Σ ;;; Γ |- tProd na dom codom = T ->
+  ∑ na' dom' codom', red Σ Γ T (tProd na' dom' codom') *
+                     (Σ ;;; Γ |- dom = dom') * (Σ ;;; Γ ,, vass na dom |- codom = codom').
+Proof.
+  intros wfΣ H; depind H; auto.
+  - inv e. exists na', a', b'; intuition eauto; constructor; auto.
+  - depelim r.
+    + solve_discr.
+    + specialize (IHconv _ _ _ _ wfΣ eq_refl).
+      destruct IHconv as [na' [dom' [codom' [[reddom' eqdom'] leq]]]].
+      exists na', dom', codom'; intuition auto.
+      * transitivity N1; eauto.
+      * eapply conv_conv_ctx; eauto. constructor; cbnr.
+        constructor. symmetry; eapply red_conv; auto.
+    + specialize (IHconv _ _ _ _ wfΣ eq_refl).
+      destruct IHconv as [na' [dom' [codom' [[reddom' eqdom'] leq]]]].
+      exists na', dom', codom'; intuition auto.
+      transitivity N2; eauto.
+  - destruct IHconv as [na' [dom' [codom' [[reddom' eqdom'] leq]]]] => //.
+    exists na', dom', codom'; intuition auto.
+    now eapply red_step with v.
+  - todoeta.
+  - todoeta.
+Qed.
+
 Lemma cumul_Prod_l_inv {cf:checker_flags} (Σ : global_env_ext) Γ na dom codom T :
   wf Σ ->
   Σ ;;; Γ |- tProd na dom codom <= T ->
@@ -423,6 +450,33 @@ Proof.
   - destruct IHcumul as [na' [dom' [codom' [[reddom' eqdom'] leq]]]] => //.
     exists na', dom', codom'; intuition auto.
     now eapply red_step with v.
+  - todoeta.
+  - todoeta.
+Qed.
+
+Lemma conv_Prod_r_inv {cf:checker_flags} (Σ : global_env_ext) Γ na' dom' codom' T :
+  wf Σ ->
+  Σ ;;; Γ |- T = tProd na' dom' codom' ->
+  ∑ na dom codom, red Σ Γ T (tProd na dom codom) *
+                     (Σ ;;; Γ |- dom = dom') * (Σ ;;; Γ ,, vass na' dom' |- codom = codom').
+Proof.
+  intros wfΣ H; depind H; auto.
+  - inv e. exists na, a, b; intuition eauto; constructor; auto.
+  - destruct IHconv as [na [dom [codom [[reddom' eqdom'] leq]]]] => //.
+    exists na, dom, codom; intuition auto.
+    now eapply red_step with v.
+  - depelim r.
+    + solve_discr.
+    + specialize (IHconv _ _ _ _ wfΣ eq_refl).
+      destruct IHconv as [na [dom [codom [[reddom' eqdom'] leq]]]].
+      eexists _, _, _; intuition eauto.
+      * transitivity N1; eauto. symmetry; apply red_conv; auto.
+      * eapply conv_conv_ctx; eauto. constructor; cbnr.
+        constructor. symmetry. eapply red_conv; auto.
+    + specialize (IHconv _ _ _ _ wfΣ eq_refl).
+      destruct IHconv as [na [dom [codom [[reddom' eqdom'] leq]]]].
+      eexists _, _, _; intuition eauto.
+      transitivity N2; eauto. symmetry; eapply red_conv; auto.
   - todoeta.
   - todoeta.
 Qed.

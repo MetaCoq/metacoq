@@ -46,6 +46,7 @@ theories/PCUICChecker.v
 theories/PCUICPretty.v
 theories/PCUICCheckerCompleteness.v
 theories/PCUICRetyping.v
+theories/PCUICCumulProp.v
 theories/PCUICElimination.v
 theories/PCUICSN.v
 

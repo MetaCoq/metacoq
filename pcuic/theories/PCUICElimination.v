@@ -28,7 +28,6 @@ Qed.
 
 Definition Is_proof `{cf : checker_flags} Σ Γ t := ∑ T u, Σ ;;; Γ |- t : T × Σ ;;; Γ |- T : tSort u × Universe.is_prop u.
 
-
 Definition SingletonProp `{cf : checker_flags} (Σ : global_env_ext) (ind : inductive) :=
   forall mdecl idecl,
     declared_inductive (fst Σ) mdecl ind idecl ->
@@ -1126,11 +1125,108 @@ Proof.
   intros x y; unfold eq_univ_prop; intuition.
 Qed.
 
+Lemma UnivExprSet_For_all (P : UnivExpr.t -> Prop) (u : Universe.t) :
+  UnivExprSet.For_all P u <->
+  Forall P (UnivExprSet.elements u).
+Proof.
+  rewrite UnivExprSet_For_all_exprs.
+  pose proof (Universe.exprs_spec u).
+  destruct (Universe.exprs u). rewrite -H. simpl.
+  split. constructor; intuition.
+  intros H'; inv H'; intuition.
+Qed.
+
+Lemma univ_expr_set_in_elements e s : 
+  UnivExprSet.In e s <-> In e (UnivExprSet.elements s).
+Proof.
+  rewrite -UnivExprSet.elements_spec1. generalize (UnivExprSet.elements s).
+  now eapply InA_In_eq.
+Qed.
+
+Lemma univ_epxrs_elements_map g s : 
+  forall e, In e (UnivExprSet.elements (Universe.map g s)) <->
+      In e (map g (UnivExprSet.elements s)).
+Proof.
+  intros e.
+  unfold Universe.map.
+  pose proof (Universe.exprs_spec s).
+  destruct (Universe.exprs s) as [e' l] eqn:eq.  
+  rewrite -univ_expr_set_in_elements Universe.add_list_spec.
+  rewrite -H. simpl. rewrite UnivExprSet.singleton_spec.
+  intuition auto.
+Qed.
+  
+Lemma Forall_elements_in P s : Forall P (UnivExprSet.elements s) <-> 
+  (forall x, UnivExprSet.In x s -> P x).
+Proof.
+  setoid_rewrite univ_expr_set_in_elements.
+  generalize (UnivExprSet.elements s).
+  intros.
+  split; intros.
+  induction H; depelim H0; subst => //; auto.
+  induction l; constructor; auto.
+  apply H. repeat constructor.
+  apply IHl. intros x inxl. apply H. right; auto.
+Qed.
+
+Lemma univ_exprs_map_all P g s : 
+  Forall P (UnivExprSet.elements (Universe.map g s)) <->
+  Forall (fun x => P (g x)) (UnivExprSet.elements s).
+Proof.
+  rewrite !Forall_elements_in.
+  setoid_rewrite Universe.map_spec.
+  intuition auto.
+  eapply H. now exists x.
+  destruct H0 as [e' [ins ->]]. apply H; auto.
+Qed.
+
+Lemma expr_set_forall_map f g s : 
+  UnivExprSet.for_all f (Universe.map g s) <->
+  UnivExprSet.for_all (fun e => f (g e)) s.
+Proof.
+  rewrite /is_true !UnivExprSet.for_all_spec !UnivExprSet_For_all.
+  apply univ_exprs_map_all.
+Qed.
+
+Lemma univ_is_prop_make x : Universe.is_prop (Universe.make x) = Level.is_prop x.
+Proof.
+  destruct x; simpl; auto.
+Qed.
+
+Lemma is_prop_subst_level_expr u1 u2 s : 
+  Forall2 (fun x y : Level.t => eq_univ_prop (Universe.make x) (Universe.make y)) u1 u2  ->
+  UnivExpr.is_prop (subst_instance_level_expr u1 s) = UnivExpr.is_prop (subst_instance_level_expr u2 s).
+Proof.
+  intros hu. destruct s; simpl; auto.
+  destruct e as [[] ?]; simpl; auto.
+  destruct (nth_error u1 n) eqn:E.
+  eapply Forall2_nth_error_Some_l in hu; eauto.
+  destruct hu as [t' [-> eq]].
+  red in eq. rewrite !univ_is_prop_make in eq.
+  eapply eq_iff_eq_true in eq.
+  destruct t, t'; simpl in eq => //.
+  eapply Forall2_nth_error_None_l in hu; eauto.
+  now rewrite hu.
+Qed.
+
 Instance substuniv_eq_univ_prop : SubstUnivPreserving eq_univ_prop.
 Proof.
   intros s u1 u2 hu.
   red in hu.
-Admitted.
+  eapply Forall2_map_inv in hu.
+  rewrite /subst_instance_univ.
+  red.
+  unfold Universe.is_prop in *.
+  rewrite !expr_set_forall_map.
+  rewrite /is_true !UnivExprSet.for_all_spec !UnivExprSet_For_all.
+  generalize (UnivExprSet.elements s).
+  induction l. split; constructor.
+  split; intros H; inv H; constructor; auto.
+  rewrite -(is_prop_subst_level_expr u1 u2) => //.
+  now apply IHl.
+  rewrite (is_prop_subst_level_expr u1 u2) => //.
+  now apply IHl.
+Qed.
 
 Lemma cumul_prop_sym Σ Γ T U : 
   wf Σ.1 ->
@@ -1166,7 +1262,6 @@ Qed.
 
 Instance cumul_prop_transitive Σ Γ : wf_ext Σ -> CRelationClasses.Transitive (cumul_prop Σ Γ).
 Proof. intros. red. intros. now eapply cumul_prop_trans. Qed.
-
 Existing Class wf_ext.
 
 Lemma cumul_prop_cum_l Σ Γ A T B : 
@@ -1222,8 +1317,7 @@ Definition conv_decls_prop (Σ : global_env_ext) (Γ Γ' : context) (c d : conte
   | _, _ => False
   end.
 
-Definition conv_ctx_prop Σ := 
-  context_relation (conv_decls_prop Σ).
+Notation conv_ctx_prop Σ := (context_relation (conv_decls_prop Σ)).
 
 Lemma conv_ctx_prop_refl Σ Γ :
   conv_ctx_prop Σ Γ Γ.
@@ -1319,6 +1413,38 @@ Proof.
   intros wfΣ subs subs' Heq.
   eapply cumul_prop_alt.
   eexists _, _; intuition eauto.
+  eapply PCUICEquality.eq_term_upto_univ_substs => //.
+  reflexivity.
+Qed.
+
+Lemma cumul_prop_args (Σ : global_env_ext) {Γ args args'} :
+  wf_ext Σ ->
+  All2 (cumul_prop Σ Γ) args args' ->
+  ∑ nf nf', All2 (red Σ Γ) args nf * All2 (red Σ Γ) args' nf' *
+    All2 (eq_term_prop Σ 0) nf nf'.
+Proof.
+  intros wfΣ a.
+  induction a. exists [], []; intuition auto.
+  destruct IHa as (nfa & nfa' & (redl & redr) & eq).
+  eapply cumul_prop_alt in r as (nf & nf' & ((redl' & redr') & eq'')).
+  exists (nf :: nfa), (nf' :: nfa'); intuition auto.
+Qed.
+
+Lemma substitution_untyped_cumul_prop_cumul Σ Γ Δ Γ' Δ' s s' M :
+  wf_ext Σ -> 
+  untyped_subslet Γ s Δ ->
+  untyped_subslet Γ s' Δ' ->
+  All2 (cumul_prop Σ Γ) s s' ->
+  Σ ;;; (Γ ,,, subst_context s 0 Γ') |- (subst s #|Γ'| M) ~ (subst s' #|Γ'| M).
+Proof.
+  intros wfΣ subs subs' Heq.
+  eapply cumul_prop_args in Heq as (nf & nf' & (redl & redr) & eq) => //.
+  eapply cumul_prop_alt.
+  eexists (subst nf #|Γ'| M), (subst nf' #|Γ'| M); intuition eauto.
+  rewrite -(subst_context_length s 0 Γ').
+  eapply red_red => //; eauto.
+  rewrite -(subst_context_length s 0 Γ').
+  eapply red_red => //; eauto.
   eapply PCUICEquality.eq_term_upto_univ_substs => //.
   reflexivity.
 Qed.
@@ -1436,11 +1562,6 @@ Proof.
   constructor; auto.
 Qed.
 
-Lemma univ_is_prop_make x : Universe.is_prop (Universe.make x) = Level.is_prop x.
-Proof.
-  destruct x; simpl; auto.
-Qed.
-
 Lemma R_eq_univ_prop_consistent_instances Σ univs u u' : 
   wf Σ.1 ->
   consistent_instance_ext Σ univs u ->
@@ -1478,6 +1599,113 @@ Proof.
   rewrite {1}/map_decl /= Nat.add_1_r /=.
   constructor.
    rewrite -rev_map_spec. apply IHl. lia.
+Qed.
+
+Hint Resolve conv_ctx_prop_refl : core.
+
+Lemma cumul_prop_tProd {Σ : global_env_ext} {Γ na t ty na' t' ty'} : 
+  wf_ext Σ ->
+  eq_term Σ.1 Σ t t' ->
+  Σ ;;; Γ ,, vass na t |- ty ~ ty' ->
+  Σ ;;; Γ |- tProd na t ty ~ tProd na' t' ty'.
+Proof.
+  intros wfΣ eq cum.
+  eapply cumul_prop_alt in cum as (nf & nf' & ((redl & redr) & eq')).
+  eapply cumul_prop_alt. eexists (tProd na t nf), (tProd na' t' nf'); intuition eauto.
+  eapply red_prod; auto. eapply red_prod; auto.
+  eapply red_upto_conv_ctx_prop; eauto.
+  repeat (constructor; auto).
+  repeat (constructor; auto).
+  eapply eq_term_eq_term_prop_impl; auto.
+Qed.
+
+Lemma cumul_prop_tLetIn (Σ : global_env_ext) {Γ na t d ty na' t' d' ty'} : 
+  wf_ext Σ ->
+  eq_term Σ.1 Σ t t' ->
+  eq_term Σ.1 Σ d d' ->
+  Σ ;;; Γ ,, vdef na d t |- ty ~ ty' ->
+  Σ ;;; Γ |- tLetIn na d t ty ~ tLetIn na' d' t' ty'.
+Proof.
+  intros wfΣ eq eq' cum.
+  eapply cumul_prop_alt in cum as (nf & nf' & ((redl & redr) & eq'')).
+  eapply cumul_prop_alt. 
+  assert(eq_context_upto Σ (eq_universe Σ) (Γ ,, vdef na d t) (Γ ,, vdef na' d' t')).
+  { repeat constructor; pcuic. eapply eq_context_upto_refl. typeclasses eauto. }
+  eapply red_eq_context_upto_l in redr; eauto. all:try typeclasses eauto.
+  destruct redr as [v' [redv' eq''']].
+  eexists (tLetIn na d t nf), (tLetIn na' d' t' v'); intuition eauto.
+  eapply red_letin; auto. eapply red_letin; auto.
+  constructor; eauto using eq_term_eq_term_prop_impl.
+  apply eq_term_eq_term_prop_impl; auto.
+  apply eq_term_eq_term_prop_impl; auto.
+  transitivity nf'. auto. now eapply eq_term_eq_term_prop_impl.
+Qed.
+
+Lemma cumul_prop_mkApps (Σ : global_env_ext) {Γ f args f' args'} :
+  wf_ext Σ ->
+  eq_term Σ.1 Σ f f' ->
+  All2 (cumul_prop Σ Γ) args args' ->
+  Σ ;;; Γ |- mkApps f args ~ mkApps f' args'.
+Proof.
+  intros wfΣ eq eq'.
+  eapply cumul_prop_alt.
+  eapply cumul_prop_args in eq' as (nf & nf' & (redl & redr) & eq').
+  exists (mkApps f nf), (mkApps f' nf'); intuition auto.
+  eapply red_mkApps; auto.
+  eapply red_mkApps; auto.
+  eapply eq_term_upto_univ_mkApps.
+  eapply eq_term_upto_univ_impl.
+  5:eapply eq. all:auto. 4:lia.
+  all:now eapply subrelation_eq_universe_eq_prop.
+Qed.
+
+Lemma red_cumul_prop (Σ : global_env_ext) Γ : CRelationClasses.subrelation (red Σ Γ) (cumul_prop Σ Γ).
+Proof.
+  intros x y r. eapply cumul_prop_alt. exists y, y.
+  intuition auto. apply eq_term_upto_univ_refl; typeclasses eauto.
+Qed.
+
+Lemma eq_term_prop_mkApps_inv (Σ : global_env_ext) {ind u args ind' u' args'} :
+  wf_ext Σ ->
+  forall n, eq_term_prop Σ n (mkApps (tInd ind u) args) (mkApps (tInd ind' u') args') ->
+  All2 (eq_term_prop Σ 0) args args'.
+Proof.
+  intros wfΣ. revert args'.
+  induction args using rev_ind; intros args' n; simpl.
+  intros H; destruct args' using rev_case.
+  constructor.
+  depelim H. solve_discr. eapply app_eq_nil in H1 as [_ H]. congruence.
+  intros H.
+  destruct args' using rev_case. depelim H. solve_discr.
+  apply app_eq_nil in H1 as [_ H]; discriminate.
+  rewrite - !mkApps_nested /= in H. depelim H.
+  eapply All2_app => //.
+  eapply IHargs; eauto. repeat constructor.
+  red. apply H0.
+Qed.
+
+Lemma cumul_prop_mkApps_Ind_inv (Σ : global_env_ext) {Γ ind u args ind' u' args'} :
+  wf_ext Σ ->
+  Σ ;;; Γ |- mkApps (tInd ind u) args ~ mkApps (tInd ind' u') args' ->
+  All2 (cumul_prop Σ Γ) args args'.
+Proof.
+  intros wfΣ eq.
+  eapply cumul_prop_alt in eq as (nf & nf' & (redl & redr) & eq').
+  eapply red_mkApps_tInd in redl as [args'' [-> eqargs]].
+  eapply red_mkApps_tInd in redr as [args''' [-> eqargs']]. all:auto.
+  eapply All2_trans. typeclasses eauto.
+  eapply All2_impl; eauto. eapply red_cumul_prop.
+  eapply All2_trans. typeclasses eauto.
+  2:{ eapply All2_symP. intros x y H; now eapply cumul_prop_sym.
+      eapply All2_impl; eauto. eapply red_cumul_prop. } 
+  eapply All2_impl; eauto.
+  eapply eq_term_prop_mkApps_inv in eq' => //.
+  eapply All2_impl; eauto. now constructor.
+Qed.
+  
+Instance cumul_prop_sym' Σ Γ : wf Σ.1 -> CRelationClasses.Symmetric (cumul_prop Σ Γ).
+Proof.
+  now intros wf x y; eapply cumul_prop_sym.
 Qed.
 
 Lemma typing_leq_term_prop (Σ : global_env_ext) Γ t t' T T' :
@@ -1553,7 +1781,8 @@ Proof.
     { repeat constructor; pcuic. eapply conv_ctx_refl. }
     forward X3 by eapply context_conversion; eauto; pcuic.
     specialize (X3 _ X5_2). eapply cumul_cumul_prop in cum; eauto.
-    eapply cumul_prop_trans; eauto. admit. auto.
+    eapply cumul_prop_trans; eauto.
+    eapply cumul_prop_tProd; eauto. now symmetry. auto.
 
   - eapply inversion_LetIn in X6 as (s1' & A & dom & bod & codom & cum); auto.
     specialize (X1 _ _ H dom _ (eq_term_upto_univ_napp_leq X7_2)).
@@ -1565,7 +1794,8 @@ Proof.
     specialize (X5 _ X7_3).
     eapply cumul_cumul_prop in cum; eauto.
     eapply cumul_prop_trans; eauto.
-    admit.
+    eapply cumul_prop_tLetIn; auto. now symmetry.
+    now symmetry.
 
   - eapply inversion_Const in X1 as [decl' [wf [declc [cu cum]]]]; auto.
     eapply cumul_cumul_prop in cum; eauto.
@@ -1599,30 +1829,39 @@ Proof.
     intuition auto.
     intuition auto.
     eapply cumul_cumul_prop in b; eauto.
-    eapply cumul_prop_trans; eauto. admit.
-(*    specialize (X4 _ _ a6 (eq_term_empty_leq_term X7_2)).
-    eapply eq_term_empty_eq_term in X7_1.
-    eapply eq_term_empty_eq_term in X7_2.
-    eapply type_Cumul.
-    econstructor; eauto.
-    eapply PCUICValidity.validity; eauto.
-    eapply (type_Case _ _ (ind, npar)). eapply isdecl.
-    all:eauto.
-    eapply (All2_impl X5); firstorder.
-    eapply conv_cumul.
-    eapply mkApps_conv_args; pcuic.
-    eapply All2_app. simpl in *.
-    2:constructor; pcuic.
-    eapply All2_skipn.
-    clear -wfΣ a6 X4 X7_2.
-    eapply (principal_type_ind a6 X4). *)
+    eapply cumul_prop_trans; eauto. simpl.
+    specialize (X4 _ _ H4 a6 _ (eq_term_upto_univ_napp_leq X7_2)).
+    eapply cumul_prop_sym => //.
+    eapply cumul_prop_mkApps => //.
+    eapply All2_app. 2:(repeat constructor; auto using eq_term_eq_term_prop_impl).
+    eapply All2_skipn. eapply cumul_prop_mkApps_Ind_inv in X4 => //.
+    eapply All2_symP => //. typeclasses eauto.
     
   - eapply inversion_Proj in X3 as (u' & mdecl' & idecl' & pdecl' & args' & inv); auto.
     intuition auto.
     specialize (X2 _ _  H0 a0 _ (eq_term_upto_univ_napp_leq X4)).
     eapply eq_term_upto_univ_napp_leq in X4.
     eapply cumul_cumul_prop in b; eauto.
-    eapply cumul_prop_trans; eauto. admit.
+    eapply cumul_prop_trans; eauto.
+    eapply cumul_prop_mkApps_Ind_inv in X2 => //.
+    destruct (PCUICWeakeningEnv.declared_projection_inj a isdecl) as [<- [<- <-]].
+    subst ty. 
+    transitivity (subst0 (c0 :: List.rev args') (subst_instance_constr u pdecl'.2)).
+    eapply (substitution_untyped_cumul_prop_cumul Σ Γ (projection_context mdecl idecl p.1.1 u) []) => //.
+    epose proof (projection_subslet Σ _ _ _ _ _ _ _ _ isdecl wfΣ X1).
+    eapply subslet_untyped_subslet. eapply X3, validity; eauto.
+    epose proof (projection_subslet Σ _ _ _ _ _ _ _ _ a wfΣ a0).
+    eapply subslet_untyped_subslet. eapply X3, validity; eauto.
+    constructor => //. symmetry; constructor => //.
+    now eapply leq_term_eq_term_prop_impl.
+    now eapply All2_rev.
+    eapply (substitution_untyped_cumul_prop Σ Γ (projection_context mdecl idecl p.1.1 u') []) => //.
+    epose proof (projection_subslet Σ _ _ _ _ _ _ _ _ a wfΣ a0).
+    eapply subslet_untyped_subslet. eapply X3, validity; eauto.
+    destruct a.
+    eapply validity, (isWAT_mkApps_Ind wfΣ H1) in X1 as [ps [argss [_ cu]]]; eauto.
+    eapply validity, (isWAT_mkApps_Ind wfΣ H1) in a0 as [? [? [_ cu']]]; eauto.
+    eapply cumul_prop_subst_instance_constr; eauto.
 
   - eapply inversion_Fix in X2 as (decl' & fixguard' & Hnth & types' & bodies & wffix & cum); auto.
     eapply cumul_cumul_prop in cum; eauto.
@@ -1639,7 +1878,7 @@ Proof.
     destruct a as [[a _] _].
     constructor. eapply eq_term_eq_term_prop_impl; eauto.
     now eapply eq_term_sym in a.
-Admitted.
+Qed.
 
 Lemma leq_term_prop_sorted_l {Σ Γ v v' u u'} :
   wf_ext Σ ->

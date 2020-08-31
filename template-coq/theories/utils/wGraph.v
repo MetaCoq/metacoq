@@ -1608,9 +1608,9 @@ Module WeightedGraph (V : UsualOrderedType).
             destruct (V.eq_dec y y) as [_|?]; [|contradiction].
             destruct (V.eq_dec x y) as [Hy|Hy]. contradiction.
             simple refine (let YY := lsp0_spec_le G'
-                                (spaths_step G' _ (V G) (s G) x x _ (1; _)
+                                (spaths_step G' _ (V G) (s G) x x ?[XX] (1; _)
                                              (spaths_refl _ _ _)) in _).
-            2: apply DisjointAdd_remove1. apply HI.
+            [XX]: apply DisjointAdd_remove1. apply HI.
             apply EdgeSet.add_spec. left; reflexivity.
             clearbody YY; simpl in YY.
             case_eq (lsp0 G' (V G) (s G) x);

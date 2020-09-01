@@ -684,7 +684,7 @@ Qed.
 Lemma declared_inductive_minductive Σ ind mdecl idecl :
   declared_inductive Σ mdecl ind idecl -> declared_minductive Σ (inductive_mind ind) mdecl.
 Proof. now intros []. Qed.
-Hint Resolve declared_inductive_minductive : pcuic.
+Hint Resolve declared_inductive_minductive : pcuic core.
 
 Lemma on_declared_constant `{checker_flags} Σ cst decl :
   wf Σ -> declared_constant Σ cst decl ->

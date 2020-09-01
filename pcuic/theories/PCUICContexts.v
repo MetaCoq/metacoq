@@ -354,6 +354,22 @@ Proof.
   unfold to_extended_list_k. now rewrite reln_app reln_acc.
 Qed.
 
+Lemma to_extended_list_k_fold_context f Γ k : 
+  to_extended_list_k (fold_context f Γ) k = to_extended_list_k Γ k.
+Proof.
+  rewrite /to_extended_list_k.
+  generalize (@nil term).
+  induction Γ in k |- *.
+  simpl; auto.
+  intros.
+  rewrite fold_context_snoc0. simpl.
+  destruct a as [? [?|] ?] => /=; now rewrite IHΓ.  
+Qed.
+
+Lemma to_extended_list_k_lift_context c k n k' : 
+  to_extended_list_k (lift_context n k c) k' = to_extended_list_k c k'. 
+Proof. now rewrite to_extended_list_k_fold_context. Qed.
+
 Lemma reln_lift n k Γ : reln [] (n + k) Γ = map (lift0 n) (reln [] k Γ).
 Proof.
   induction Γ in n, k |- *; simpl; auto.

@@ -1194,8 +1194,7 @@ Proof.
   - autorewrite with len.
     f_equal; auto.
     rewrite -subst_subst_instance_constr.
-    rewrite -lift_subst_instance_constr.
-    rewrite subst_instance_context_assumptions.
+    rewrite -lift_subst_instance_constr /=.
     f_equal. apply IHΓ.
   - f_equal; auto.
 Qed.

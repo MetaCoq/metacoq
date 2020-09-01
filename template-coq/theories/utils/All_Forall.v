@@ -283,7 +283,28 @@ Proof.
   intros ->. induction l';  constructor; auto.
 Qed.
 
+Lemma All2_symmetry {A} (R : A -> A -> Type) : 
+  CRelationClasses.Symmetric R ->
+  CRelationClasses.Symmetric (All2 R).
+Proof.
+  intros HR x y l. 
+  induction l; constructor; auto.
+Qed.
+
+Lemma All2_transitivity {A} (R : A -> A -> Type) :
+  CRelationClasses.Transitive R ->
+  CRelationClasses.Transitive (All2 R).
+Proof.
+  intros HR x y z l; induction l in z |- *; auto.
+  intros H; inv H. constructor; eauto.
+Qed.
+
 Hint Constructors All All2 : core.
+
+Lemma All_refl {A} (P : A -> Type) l : (forall x, P x) -> All P l.
+Proof.
+  intros Hp; induction l; constructor; auto.
+Qed.
 
 Lemma All_rev_map {A B} (P : A -> Type) f (l : list B) : All (fun x => P (f x)) l -> All P (rev_map f l).
 Proof. induction 1. constructor. rewrite rev_map_cons. apply All_app_inv; auto. Qed.

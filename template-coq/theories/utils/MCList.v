@@ -891,6 +891,16 @@ Proof.
   symmetry. apply nth_default_eq.
 Qed.
 
+Lemma nth_nth_error' {A} {i} {l : list A} {d v} :
+  nth i l d = v ->
+  (nth_error l i = Some v) +
+  (nth_error l i = None /\ v = d).
+Proof.
+  move: i v. elim: l => [|hd tl IH] //.
+  - case => /= //; now right.
+  - case => /= // _ <-. now left.
+Qed.
+
 Lemma firstn_add {A} x y (args : list A) : firstn (x + y) args = firstn x args ++ firstn y (skipn x args).
 Proof.
   induction x in y, args |- *. simpl. reflexivity.

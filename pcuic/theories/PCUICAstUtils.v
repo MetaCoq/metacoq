@@ -253,6 +253,21 @@ Proof.
   lia.
 Qed.
 
+Lemma context_assumptions_map f Γ : context_assumptions (map_context f Γ) = context_assumptions Γ.
+Proof.
+  induction Γ as [|[? [?|] ?] ?]; simpl; auto.
+Qed.
+
+Lemma context_assumptions_mapi f Γ : context_assumptions (mapi (fun i => map_decl (f i)) Γ) = 
+  context_assumptions Γ.
+Proof.
+  rewrite /mapi; generalize 0.
+  induction Γ; simpl; intros; eauto.
+  destruct a as [? [b|] ?]; simpl; auto.
+Qed.
+
+Hint Rewrite context_assumptions_map context_assumptions_mapi : len.
+
 Lemma mapi_rec_compose {A B C} (g : nat -> B -> C) (f : nat -> A -> B) k l :
   mapi_rec g (mapi_rec f l k) k = mapi_rec (fun k x => g k (f k x)) l k.
 Proof.

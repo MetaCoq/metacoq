@@ -678,6 +678,13 @@ Proof.
   + lia.
 Qed.
 
+Lemma subst_subst_lift (s s' : list term) n t : n = #|s| + #|s'| -> 
+  subst0 s (subst0 s' (lift0 n t)) = t.
+Proof.
+  intros ->. rewrite Nat.add_comm simpl_subst' //; try lia.
+  now rewrite -(Nat.add_0_r #|s|) simpl_subst' // lift0_id.
+Qed.
+
 Lemma map_subst_lift_id s l : map (subst0 s ∘ lift0 #|s|) l = l.
 Proof.
   induction l; simpl; auto.
@@ -694,6 +701,13 @@ Lemma map_subst_lift_ext N n p k l :
 Proof.
   intros -> pn.
   apply map_ext => x. now apply simpl_subst'.
+Qed.
+
+Lemma map_subst_subst_lift_lift (s s' : list term) k k' l : k + k' = #|s| + #|s'| -> 
+  map (fun t => subst0 s (subst0 s' (lift k k' (lift0 k' t)))) l = l.
+Proof.
+  intros H. eapply All_map_id. eapply All_refl => x.
+  rewrite simpl_lift; try lia. rewrite subst_subst_lift //.
 Qed.
 
 Lemma nth_error_lift_context:

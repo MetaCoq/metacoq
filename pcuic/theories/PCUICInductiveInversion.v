@@ -973,8 +973,7 @@ Proof.
     eapply wf_local_instantiate => //; destruct decli; eauto.
     eapply wf_arities_context => //; eauto. }
   assert(wfpars : wf_local Σ (subst_instance_context u (ind_params mdecl))).
-    { eapply on_minductive_wf_params => //; eauto.
-      destruct decli; eauto. }
+    { eapply on_minductive_wf_params => //; eauto. }
       
   intuition auto; try split; auto.
   - apply weaken_wf_local => //.

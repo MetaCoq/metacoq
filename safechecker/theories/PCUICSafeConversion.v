@@ -210,7 +210,7 @@ Section Conversion.
   Qed.
 
   Definition eqt u v :=
-    ∥ eq_term Σ u v ∥.
+    ∥ eq_term Σ Σ u v ∥.
 
   (* TODO REMOVE? *)
   Lemma eq_term_valid_pos :
@@ -275,7 +275,7 @@ Section Conversion.
           eexists _,_. intuition eauto.
           -- constructor. assumption.
           -- constructor. eapply eq_term_trans. all: eauto.
-        * intros x. exists (sq (eq_term_refl _ _)). intros [[q'' h] ?].
+        * intros x. exists (sq (eq_term_refl _ _ _)). intros [[q'' h] ?].
           unfold R_aux_obligations_obligation_2.
           simpl. f_equal. f_equal.
           eapply uip.
@@ -301,7 +301,7 @@ Section Conversion.
       eexists _,_. intuition eauto.
       + constructor. assumption.
       + constructor. eapply eq_term_trans. all: eauto.
-    - intros x. exists (sq (eq_term_refl _ _)). intros [[q' h] [? [? ?]]].
+    - intros x. exists (sq (eq_term_refl _ _ _)). intros [[q' h] [? [? ?]]].
       unfold R_aux_obligations_obligation_1.
       simpl. f_equal. f_equal.
       eapply uip.
@@ -356,6 +356,8 @@ Section Conversion.
     eapply Acc_fun with (f := fun x => obpack x).
     apply R_aux_Acc. assumption.
   Qed.
+
+  Notation eq_term Σ t u := (eq_term Σ Σ t u).
 
   Lemma R_cored :
     forall Γ p1 p2,
@@ -509,14 +511,14 @@ Section Conversion.
   Qed.
 
   Definition leqb_term :=
-    eqb_term_upto_univ (check_eqb_universe G) (check_leqb_universe G).
+    eqb_term_upto_univ Σ (check_eqb_universe G) (check_leqb_universe G).
 
   Definition eqb_term :=
-    eqb_term_upto_univ (check_eqb_universe G) (check_eqb_universe G).
+    eqb_term_upto_univ Σ (check_eqb_universe G) (check_eqb_universe G).
 
   Lemma leqb_term_spec t u :
     leqb_term t u ->
-    leq_term (global_ext_constraints Σ) t u.
+    leq_term Σ (global_ext_constraints Σ) t u.
   Proof.
     pose proof hΣ'.
     apply eqb_term_upto_univ_impl.
@@ -534,7 +536,7 @@ Section Conversion.
 
   Lemma eqb_term_spec t u :
     eqb_term t u ->
-    eq_term (global_ext_constraints Σ) t u.
+    eq_term Σ t u.
   Proof.
     pose proof hΣ'.
     apply eqb_term_upto_univ_impl.
@@ -572,7 +574,7 @@ Section Conversion.
   Lemma eqb_ctx_spec :
     forall Γ Δ,
       eqb_ctx Γ Δ ->
-      eq_context_upto (eq_universe (global_ext_constraints Σ)) Γ Δ.
+      eq_context_upto Σ (eq_universe Σ) Γ Δ.
   Proof.
     intros Γ Δ h.
     induction Γ as [| [na [b|] A] Γ ih ] in Δ, h |- *.
@@ -597,10 +599,10 @@ Section Conversion.
   Lemma eqb_term_stack_spec :
     forall Γ t1 π1 t2 π2,
       eqb_term_stack t1 π1 t2 π2 ->
-      eq_context_upto (eq_universe (global_ext_constraints Σ))
+      eq_context_upto Σ (eq_universe (global_ext_constraints Σ))
                       (Γ ,,, stack_context π1)
                       (Γ ,,, stack_context π2) ×
-      eq_term (global_ext_constraints Σ) (zipp t1 π1) (zipp t2 π2).
+      eq_term Σ (zipp t1 π1) (zipp t2 π2).
   Proof.
     intros Γ t1 π1 t2 π2 h.
     apply andP in h as [h1 h2].
@@ -635,10 +637,10 @@ Section Conversion.
   Lemma leqb_term_stack_spec :
     forall Γ t1 π1 t2 π2,
       leqb_term_stack t1 π1 t2 π2 ->
-      eq_context_upto (eq_universe (global_ext_constraints Σ))
+      eq_context_upto Σ (eq_universe (global_ext_constraints Σ))
                       (Γ ,,, stack_context π1)
                       (Γ ,,, stack_context π2) ×
-      leq_term (global_ext_constraints Σ) (zipp t1 π1) (zipp t2 π2).
+      leq_term Σ Σ (zipp t1 π1) (zipp t2 π2).
   Proof.
     intros Γ t1 π1 t2 π2 h.
     apply andP in h as [h1 h2].
@@ -1538,12 +1540,12 @@ Section Conversion.
   (* TODO (RE)MOVE *)
   Lemma destArity_eq_term_upto_univ :
     forall Re Rle Γ1 Γ2 t1 t2 Δ1 s1,
-      eq_term_upto_univ Re Rle t1 t2 ->
-      eq_context_upto Re Γ1 Γ2 ->
+      eq_term_upto_univ Σ Re Rle t1 t2 ->
+      eq_context_upto Σ Re Γ1 Γ2 ->
       destArity Γ1 t1 = Some (Δ1, s1) ->
       exists Δ2 s2,
         destArity Γ2 t2 = Some (Δ2, s2) /\
-        ∥ eq_context_upto Re Δ1 Δ2 ∥ /\
+        ∥ eq_context_upto Σ Re Δ1 Δ2 ∥ /\
         Rle s1 s2.
   Proof.
     intros Re Rle Γ1 Γ2 t1 t2 Δ1 s1 ht hΓ e.

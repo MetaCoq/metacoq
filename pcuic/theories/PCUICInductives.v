@@ -532,7 +532,7 @@ Proof.
   simpl.
   assert (wfarities : wf_local (Σ.1, ind_universes mdecl)
       (arities_context (ind_bodies mdecl))).
-  { eapply wf_arities_context; eauto. now destruct isdecl as [[] ?]. }
+  { eapply wf_arities_context; eauto. }
   eapply PCUICClosed.type_local_ctx_All_local_env in wfargs.
   2:{ eapply All_local_env_app_inv. split; auto.
       red in onpars. eapply (All_local_env_impl _ _ _ onpars).

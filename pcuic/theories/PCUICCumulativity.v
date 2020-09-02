@@ -14,7 +14,8 @@ Set Default Goal Selector "!".
 Reserved Notation " Σ ;;; Γ |- t == u " (at level 50, Γ, t, u at next level).
 
 Lemma cumul_alt `{cf : checker_flags} Σ Γ t u :
-  Σ ;;; Γ |- t <= u <~> { v & { v' & (red Σ Γ t v * red Σ Γ u v' * leq_term (global_ext_constraints Σ) v v')%type } }.
+  Σ ;;; Γ |- t <= u <~> { v & { v' & (red Σ Γ t v * red Σ Γ u v' * 
+  leq_term Σ (global_ext_constraints Σ) v v')%type } }.
 Proof.
   split.
   - induction 1.
@@ -126,41 +127,58 @@ Qed.
 
 Hint Resolve red_conv : core.
 
-Lemma eq_term_App `{checker_flags} φ f f' :
-  eq_term φ f f' ->
+Lemma eq_term_App `{checker_flags} Σ φ f f' :
+  eq_term Σ φ f f' ->
   isApp f = isApp f'.
 Proof.
   inversion 1; reflexivity.
 Qed.
 
-Lemma eq_term_mkApps `{checker_flags} φ f l f' l' :
-  eq_term φ f f' ->
-  All2 (eq_term φ) l l' ->
-  eq_term φ (mkApps f l) (mkApps f' l').
+Lemma eq_term_eq_term_napp {cf:checker_flags} Σ ϕ napp t t' :
+  eq_term Σ ϕ t t' -> 
+  eq_term_upto_univ_napp Σ (eq_universe ϕ) (eq_universe ϕ) napp t t'.
+Proof.
+  intros. eapply eq_term_upto_univ_impl. 5:eauto.
+  4:auto with arith. all:typeclasses eauto.
+Qed.
+
+Lemma leq_term_leq_term_napp {cf:checker_flags} Σ ϕ napp t t' :
+  leq_term Σ ϕ t t' -> 
+  eq_term_upto_univ_napp Σ (eq_universe ϕ) (leq_universe ϕ) napp t t'.
+Proof.
+  intros. eapply eq_term_upto_univ_impl. 5:eauto.
+  4:auto with arith. all:typeclasses eauto.
+Qed.
+
+Lemma eq_term_mkApps `{checker_flags} Σ φ f l f' l' :
+  eq_term Σ φ f f' ->
+  All2 (eq_term Σ φ) l l' ->
+  eq_term Σ φ (mkApps f l) (mkApps f' l').
 Proof.
   induction l in l', f, f' |- *; intro e; inversion_clear 1.
   - assumption.
   - cbn. eapply IHl.
-    + constructor; assumption.
+    + constructor; auto. now apply eq_term_eq_term_napp.
     + assumption.
 Qed.
 
-Lemma leq_term_App `{checker_flags} φ f f' :
-  leq_term φ f f' ->
+Lemma leq_term_App `{checker_flags} Σ φ f f' :
+  leq_term Σ φ f f' ->
   isApp f = isApp f'.
 Proof.
   inversion 1; reflexivity.
 Qed.
 
-Lemma leq_term_mkApps `{checker_flags} φ f l f' l' :
-  leq_term φ f f' ->
-  All2 (eq_term φ) l l' ->
-  leq_term φ (mkApps f l) (mkApps f' l').
+Lemma leq_term_mkApps `{checker_flags} Σ φ f l f' l' :
+  leq_term Σ φ f f' ->
+  All2 (eq_term Σ φ) l l' ->
+  leq_term Σ φ (mkApps f l) (mkApps f' l').
 Proof.
   induction l in l', f, f' |- *; intro e; inversion_clear 1.
   - assumption.
   - cbn. apply IHl.
     + constructor; try assumption.
+      now eapply leq_term_leq_term_napp.
     + assumption.
 Qed.
 
@@ -198,7 +216,8 @@ Proof.
 Qed.
 
 Lemma conv_alt_red {cf : checker_flags} {Σ : global_env_ext} {Γ : context} {t u : term} :
-  Σ;;; Γ |- t = u <~> (∑ v v' : term, (red Σ Γ t v × red Σ Γ u v') × eq_term (global_ext_constraints Σ) v v').
+  Σ;;; Γ |- t = u <~> (∑ v v' : term, (red Σ Γ t v × red Σ Γ u v') × 
+    eq_term Σ (global_ext_constraints Σ) v v').
 Proof.
   split.
   - induction 1.
@@ -253,7 +272,7 @@ Proof.
   intros Σ Γ f g x h.
   induction h.
   - eapply cumul_refl. constructor.
-    + assumption.
+    + apply leq_term_leq_term_napp. assumption.
     + apply eq_term_refl.
   - eapply cumul_red_l ; try eassumption.
     econstructor. assumption.

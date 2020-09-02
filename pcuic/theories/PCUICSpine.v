@@ -18,10 +18,17 @@ From Equations Require Import Equations.
 
 Require Import Equations.Prop.DepElim.
 Require Import Equations.Type.Relation_Properties.
+Require Import ssreflect.
 
 Derive Signature for ctx_inst.
   
 Notation ctx_inst Σ Γ i Δ := (ctx_inst (lift_typing typing) Σ Γ i Δ).
+
+Lemma typing_spine_eq {cf:checker_flags} Σ Γ ty s s' ty' :
+  s = s' ->
+  typing_spine Σ Γ ty s ty' ->
+  typing_spine Σ Γ ty s' ty'.
+Proof. now intros ->. Qed.
 
 Lemma typing_spine_strengthen {cf:checker_flags} Σ Γ T args U : 
   wf Σ.1 ->
@@ -559,6 +566,18 @@ Proof.
     now rewrite - !distr_subst in X.
 Qed.
 
+Lemma spine_subst_subst_first {cf:checker_flags} Σ Γ Γ' i s Δ sub : 
+  wf Σ.1 ->
+  spine_subst Σ (Γ ,,, Γ') i s Δ ->
+  subslet Σ [] sub Γ ->
+  spine_subst Σ (subst_context sub 0 Γ') (map (subst sub #|Γ'|) i) (map (subst sub #|Γ'|) s)
+   (subst_context sub #|Γ'| Δ).
+Proof.
+  move=> wfΣ sp subs.
+  epose proof (spine_subst_subst Σ [] Γ Γ' i s Δ sub wfΣ).
+  rewrite !app_context_nil_l in X. apply X; auto.
+Qed.
+
 Lemma weaken_subslet {cf:checker_flags} Σ s Δ Γ Γ' :
   wf Σ.1 ->
   wf_local Σ Γ -> wf_local Σ Γ' ->
@@ -669,6 +688,15 @@ Proof.
   now apply subslet_lift.
 Qed.
 
+Lemma ctx_inst_length {cf:checker_flags} Σ Γ args Δ :
+  ctx_inst Σ Γ args Δ -> 
+  #|args| = context_assumptions Δ.
+Proof.
+  induction 1; simpl; auto.
+  rewrite /subst_telescope in IHX.
+  rewrite context_assumptions_mapi in IHX. congruence.
+  rewrite context_assumptions_mapi in IHX. congruence.
+Qed.
 
 Lemma ctx_inst_subst {cf:checker_flags} Σ Γ Γ0 Γ' i Δ sub : 
   wf Σ.1 ->
@@ -783,7 +811,6 @@ Proof.
   now rewrite /subst_telescope mapi_length.
 Qed.
 
-
 Lemma arity_spine_it_mkProd_or_LetIn {cf:checker_flags} Σ Γ Δ T args s args' T' : 
   wf Σ.1 ->
   spine_subst Σ Γ args s Δ ->
@@ -833,6 +860,16 @@ Proof.
       rewrite -H1. now rewrite firstn_skipn.
 Qed.
 
+Lemma arity_spine_it_mkProd_or_LetIn_Sort {cf:checker_flags} Σ Γ ctx s args inst : 
+  wf Σ.1 ->
+  spine_subst Σ Γ args inst ctx ->
+  arity_spine Σ Γ (it_mkProd_or_LetIn ctx (tSort s)) args (tSort s).
+Proof.
+  intros wfΣ sp. rewrite -(app_nil_r args).
+  eapply arity_spine_it_mkProd_or_LetIn => //.
+  eauto. constructor. left. eexists _, _; intuition eauto.
+  eapply sp. simpl. reflexivity.
+Qed.
 
 Lemma ctx_inst_app {cf:checker_flags} {Σ Γ} {Δ : context} {Δ' args} (c : ctx_inst Σ Γ args (Δ ++ Δ')) :
   ∑ (dom : ctx_inst Σ Γ (firstn (context_assumptions Δ) args) Δ),
@@ -1596,18 +1633,6 @@ Proof.
   intros sp <-; eapply spine_subst_subst_to_extended_list_k; eauto.
 Qed.
 
-Lemma to_extended_list_k_fold_context f Γ k : 
-  to_extended_list_k (fold_context f Γ) k = to_extended_list_k Γ k.
-Proof.
-  rewrite /to_extended_list_k.
-  generalize (@nil term).
-  induction Γ in k |- *.
-  simpl; auto.
-  intros.
-  rewrite fold_context_snoc0. simpl.
-  destruct a as [? [?|] ?] => /=; now rewrite IHΓ.  
-Qed.
-
 Lemma arity_spine_eq {cf:checker_flags} Σ Γ T T' :
   isWfArity_or_Type Σ Γ T' ->
   T = T' -> arity_spine Σ Γ T [] T'.
@@ -1989,4 +2014,251 @@ Proof.
       simpl. depelim spine_codom_wf0; simpl in H; noconf H.
       depelim inst_ctx_subst0; simpl in H; noconf H; simpl in H0; noconf H0.
       apply IHinst_subslet0; auto.
+Qed.
+(* 
+Lemma lift_extended_subst (Γ : context) k : 
+  extended_subst Γ k = map (lift0 k) (extended_subst Γ 0).
+Proof.
+  induction Γ as [|[? [] ?] ?] in k |- *; simpl; auto.
+  - rewrite IHΓ. f_equal.
+    autorewrite with len.
+    rewrite distr_lift_subst. f_equal.
+    autorewrite with len. rewrite simpl_lift; lia_f_equal.
+  - rewrite Nat.add_0_r; f_equal.
+    rewrite IHΓ (IHΓ 1).
+    rewrite map_map_compose. apply map_ext => x.
+    rewrite simpl_lift; try lia.
+    now rewrite Nat.add_1_r.
+Qed. *)
+
+Lemma extended_subst_app Γ Γ' : 
+  extended_subst (Γ ++ Γ') 0 = 
+  extended_subst (subst_context (extended_subst Γ' 0) 0
+   (lift_context (context_assumptions Γ') #|Γ'| Γ)) 0 ++ 
+   extended_subst Γ' (context_assumptions Γ).
+Proof.
+  induction Γ as [|[na [b|] ty] Γ] in |- *; simpl; auto.
+  - autorewrite with len. 
+    rewrite IHΓ. simpl.  rewrite app_comm_cons.
+    f_equal.
+    erewrite subst_app_simpl'.
+    2:autorewrite with len; reflexivity.
+    simpl.
+    rewrite lift_context_snoc subst_context_snoc /=.
+    autorewrite with len. f_equal. f_equal.
+    rewrite !context_assumptions_fold.
+    rewrite -{3}(Nat.add_0_r #|Γ|).
+    erewrite <- (simpl_lift _ _ _ _ (#|Γ| + #|Γ'|)). all:try lia.
+    rewrite distr_lift_subst_rec. autorewrite with len.
+    f_equal. apply lift_extended_subst.
+  - rewrite lift_context_snoc  subst_context_snoc /=. lia_f_equal.
+    rewrite lift_extended_subst. rewrite IHΓ /=.
+    rewrite map_app. rewrite !(lift_extended_subst _ (S _)).
+    rewrite (lift_extended_subst _ (context_assumptions Γ)).
+    rewrite map_map_compose.
+    f_equal. apply map_ext. intros.
+    rewrite simpl_lift; lia_f_equal.
+Qed.
+
+Lemma subst_rel0_lift_id n t : subst [tRel 0] n (lift 1 (S n) t) = t.
+Proof.
+  sigma. rewrite -{2}(subst_ids t).
+  apply inst_ext.
+  unfold Upn. sigma. unfold shiftk at 1 => /=.
+  rewrite Nat.add_0_r.
+  assert(idsn n ⋅n (tRel n ⋅ ↑^n) =1 idsn (S n) ⋅n ↑^n).
+  { pose proof (@subst_consn_app _ (idsn n) [(tRel 0).[↑^n]] (↑^n)).
+    simpl in H. rewrite -> (subst_consn_subst_cons (tRel 0).[↑^n] []) in H.
+    simpl in H. rewrite -> subst_consn_nil in H.
+    unfold shiftk at 3 in H. rewrite Nat.add_0_r in H.
+    rewrite -H. unfold shiftk at 1; now rewrite Nat.add_0_r. }
+  rewrite H. rewrite ren_shiftk. rewrite subst_consn_ids_ren.
+  unfold lift_renaming. rewrite compose_ren.
+  intros i. unfold ren, ids; simpl. f_equal.
+  elim: Nat.leb_spec => H'. unfold subst_consn.
+  elim: nth_error_spec => [i' e l|].
+  rewrite app_length ren_ids_length /= in l. lia.
+  rewrite app_length ren_ids_length /=. lia.
+  unfold subst_consn.
+  elim: nth_error_spec => [i' e l|].
+  rewrite (@ren_ids_lt (S n) i) in e. lia. congruence.
+  rewrite app_length ren_ids_length /=. lia.
+Qed.
+
+Lemma subst_context_lift_id Γ : subst_context [tRel 0] 0 (lift_context 1 1 Γ) = Γ.
+Proof.
+  rewrite subst_context_alt lift_context_alt.
+  rewrite mapi_compose.
+  replace Γ with (mapi (fun k x => x) Γ) at 2.
+  2:unfold mapi; generalize 0; induction Γ; simpl; intros; auto; congruence.
+  apply mapi_ext.
+  autorewrite with len.
+  intros n [? [?|] ?]; unfold lift_decl, subst_decl, map_decl; simpl.
+  generalize (Nat.pred #|Γ| - n).
+  intros.
+  now rewrite !Nat.add_0_r !Nat.add_1_r !subst_rel0_lift_id.
+  now rewrite !Nat.add_0_r !Nat.add_1_r !subst_rel0_lift_id.
+Qed.
+
+Lemma subst_extended_subst s Γ : extended_subst (subst_context s 0 Γ) 0 = 
+  map (subst s (context_assumptions Γ)) (extended_subst Γ 0).
+Proof.
+  induction Γ as [|[na [b|] ty] Γ]; simpl; auto; rewrite subst_context_snoc /=;
+    autorewrite with len; rewrite ? (lift_extended_subst _ 1); f_equal; auto.
+  - rewrite IHΓ.
+    rewrite commut_lift_subst_rec. auto.
+    rewrite context_assumptions_fold.
+    rewrite distr_subst. now autorewrite with len.
+  - rewrite IHΓ. 
+    rewrite !map_map_compose. apply map_ext.
+    intros x. 
+    erewrite (commut_lift_subst_rec). lia_f_equal.
+    lia.
+Qed.
+
+Lemma map_subst_extended_subst_lift_to_extended_list_k Γ :
+ map (subst0 (extended_subst Γ 0)) (map (lift (context_assumptions Γ) #|Γ|)
+  (to_extended_list Γ)) = to_extended_list (smash_context [] Γ).
+Proof.
+  induction Γ as [|[na [b|] ty] ?]; cbn; auto.
+  rewrite (reln_lift 1).
+  rewrite -[reln [] 0 (smash_context [] Γ)]IHΓ.
+  rewrite !map_map_compose. apply map_ext => x.
+  rewrite -Nat.add_1_r -(permute_lift _ _ _ 1). lia.
+  rewrite (subst_app_decomp [_]).
+  rewrite simpl_subst_k /= //.
+  rewrite reln_acc (reln_lift 1) map_app /=.
+  rewrite smash_context_acc /= (reln_acc [tRel 0]) (reln_lift 1) map_app /=.
+  f_equal.
+  rewrite -[reln [] 0 (smash_context [] Γ)]IHΓ.
+  rewrite !map_map_compose. apply map_ext => x.
+  rewrite -(Nat.add_1_r #|Γ|) -(permute_lift _ _ _ 1). lia.
+  rewrite (subst_app_decomp [_]).
+  rewrite simpl_subst_k /= //.
+  rewrite lift_extended_subst.
+  rewrite distr_lift_subst. f_equal.
+  autorewrite with len. rewrite simpl_lift; lia_f_equal.
+Qed.
+
+Lemma arity_spine_it_mkProd_or_LetIn_smash {cf:checker_flags} Σ Γ Δ T args args' T' : 
+  wf Σ.1 ->
+  subslet Σ Γ (List.rev args) (smash_context [] Δ) ->
+  arity_spine Σ Γ (subst0 (List.rev args) (subst0 (extended_subst Δ 0) (lift (context_assumptions Δ) #|Δ| T))) args' T' ->
+  arity_spine Σ Γ (it_mkProd_or_LetIn Δ T) (args ++ args') T'.
+Proof.
+  intros wfΣ subsl asp.
+  move: Δ T args subsl asp.
+  induction Δ using ctx_length_rev_ind => T args subsl asp.
+  - simpl in subsl. simpl in asp. rewrite subst_empty lift0_id in asp. depelim subsl.
+    rewrite /= H !subst_empty in asp. destruct args => //.
+    simpl in H. apply (f_equal (@List.length _)) in H. simpl in H.
+    rewrite app_length /= in H. lia.
+  - rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /=.
+    destruct d as [na [b|] ty]; simpl in *.
+    * constructor. rewrite /subst1 subst_it_mkProd_or_LetIn.
+      rewrite Nat.add_0_r.
+      rewrite smash_context_app smash_context_acc /= in subsl.
+      rewrite subst_empty lift0_id /= subst_context_nil app_nil_r 
+        lift0_context in subsl.
+      rewrite -(smash_context_subst []) /= subst_context_nil in subsl.
+      apply (X (subst_context [b] 0 Γ0) ltac:(now autorewrite with len)
+        (subst [b] #|Γ0| T) _ subsl).
+      rewrite extended_subst_app /= in asp.
+      rewrite !subst_empty lift0_id lift0_context in asp.
+      erewrite subst_app_simpl' in asp.
+      2:now autorewrite with len.
+      simpl in asp. autorewrite with len in asp.
+      simpl in asp.
+      autorewrite with len.
+      rewrite context_assumptions_fold.
+      now rewrite -{1}(Nat.add_0_r #|Γ0|) distr_lift_subst_rec /= Nat.add_0_r.
+    * simpl in *. autorewrite with len in *. 
+      simpl in asp.
+      assert (len:=subslet_length subsl).
+      autorewrite with len in len. simpl in len.
+      rewrite Nat.add_1_r in len.
+      rewrite smash_context_app smash_context_acc /= in subsl.
+      rewrite subst_context_lift_id in subsl.
+      eapply subslet_app_inv in subsl as [subsl subsr].
+      destruct args; simpl in * => //. 
+      noconf len; simpl in H; noconf H.
+      autorewrite with len in subsl, subsr. simpl in *.
+      rewrite -H in subsl subsr. rewrite skipn_all_app_eq ?List.rev_length in subsl subsr => //.
+      rewrite (firstn_app_left _ 0) ?firstn_0 ?app_nil_r ?List.rev_length in subsr => //.
+      depelim subsl; simpl in H0; noconf H0.
+      constructor. now rewrite subst_empty in t1.
+      rewrite /subst1 subst_it_mkProd_or_LetIn Nat.add_0_r.
+      rewrite -(smash_context_subst []) /= in subsr.
+      apply (X (subst_context [t] 0 Γ0) ltac:(now autorewrite with len)
+        (subst [t] #|Γ0| T) _ subsr).
+      rewrite extended_subst_app /= in asp.
+      rewrite subst_context_lift_id in asp.
+      erewrite subst_app_simpl' in asp.
+      2:now autorewrite with len.
+      simpl in asp.
+      autorewrite with len.
+      rewrite context_assumptions_fold.
+      rewrite -{1}(Nat.add_0_r #|Γ0|) distr_lift_subst_rec /= Nat.add_0_r.
+      move: asp. rewrite subst_app_simpl /=; autorewrite with len.
+      rewrite distr_subst. autorewrite with len.
+      rewrite (distr_subst_rec _ _ [t]).
+      cbn [map]. rewrite -H. erewrite (subst_rel_eq _ _ 0) =>//.
+      simpl; autorewrite with len.
+      rewrite (Nat.add_1_r #|args|).
+      erewrite <-(simpl_lift T #|args| _ 1 (#|Γ0| + 1 + #|args|)).
+      all:try lia.
+      rewrite (simpl_subst_k) //.
+      now rewrite subst_extended_subst H.
+Qed.
+
+
+(** This shows that we can promote an argument spine for a given context to 
+    a spine for a context whose types are higher in the cumulativity relation.
+*)
+
+Lemma subslet_cumul {cf:checker_flags} Σ Δ args Γ Γ' : 
+  wf Σ.1 ->
+  assumption_context Γ -> assumption_context Γ' -> 
+  wf_local Σ (Δ ,,, Γ) ->
+  wf_local Σ (Δ ,,, Γ') ->
+  All2_local_env (fun Γ Γ' _ ty ty' => Σ ;;; Δ ,,, Γ |- ty <= ty') Γ Γ' ->
+  subslet Σ Δ args Γ -> subslet Σ Δ args Γ'.
+Proof.
+  intros wfΣ ass ass' wf wf' a2. induction a2 in wf, wf', args, ass, ass' |- *.
+  - inversion 1; constructor.
+  - intros subsl; depelim subsl; simpl in H; noconf H.
+    specialize (IHa2 s).
+    forward IHa2 by now depelim ass; simpl in H; noconf H.
+    forward IHa2 by now depelim ass'; simpl in H; noconf H.
+    depelim wf; simpl in H; noconf H.
+    depelim wf'; simpl in H; noconf H.
+    specialize (IHa2 wf wf' subsl).
+    constructor; auto.
+    eapply type_Cumul; eauto.
+    eapply isWAT_subst; eauto.
+    right; auto.
+    eapply (substitution_cumul _ _ _ []). eauto.
+    eapply wf. assumption. assumption.
+  - elimtype False; inv ass.
+Qed.
+
+Lemma spine_subst_cumul {cf:checker_flags} Σ Δ args Γ Γ' : 
+  wf Σ.1 ->
+  assumption_context Γ -> assumption_context Γ' -> 
+  wf_local Σ (Δ ,,, Γ) ->
+  wf_local Σ (Δ ,,, Γ') ->
+  All2_local_env (fun Γ Γ' _ ty ty' => Σ ;;; Δ ,,, Γ |- ty <= ty') Γ Γ' ->
+  spine_subst Σ Δ args (List.rev args) Γ -> 
+  spine_subst Σ Δ args (List.rev args) Γ'.
+Proof.
+  intros wfΣ ass ass' wf wf' a2.
+  intros []; split; auto.
+  - clear -a2 ass ass' inst_ctx_subst0.
+    revert inst_ctx_subst0; generalize (List.rev args).
+    intros l ctxs. 
+    induction ctxs in ass, Γ', ass', a2 |- *; depelim a2; try (simpl in H; noconf H); try constructor; auto.
+    * eapply IHctxs. now depelim ass.
+      now depelim ass'. auto.
+    * elimtype False; depelim ass. simpl in H; noconf H.
+  - eapply subslet_cumul. 6:eauto. all:eauto.
 Qed.

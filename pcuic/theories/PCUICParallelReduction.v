@@ -210,35 +210,6 @@ Defined.
 
 Section All2_local_env.
 
-  Definition on_decl (P : context -> context -> term -> term -> Type)
-             (Γ Γ' : context) (b : option (term * term)) (t t' : term) :=
-    match b with
-    | Some (b, b') => (P Γ Γ' b b' * P Γ Γ' t t')%type
-    | None => P Γ Γ' t t'
-    end.
-
-  Definition on_decls (P : term -> term -> Type) (d d' : context_decl) :=
-    match d.(decl_body), d'.(decl_body) with
-    | Some b, Some b' => (P b b' * P d.(decl_type) d'.(decl_type))%type
-    | None, None => P d.(decl_type) d'.(decl_type)
-    | _, _ => False
-    end.
-
-  Section All_local_2.
-    Context (P : forall (Γ Γ' : context), option (term * term) -> term -> term -> Type).
-
-    Inductive All2_local_env : context -> context -> Type :=
-    | localenv2_nil : All2_local_env [] []
-    | localenv2_cons_abs Γ Γ' na na' t t' :
-        All2_local_env Γ Γ' ->
-        P Γ Γ' None t t' ->
-        All2_local_env (Γ ,, vass na t) (Γ' ,, vass na' t')
-    | localenv2_cons_def Γ Γ' na na' b b' t t' :
-        All2_local_env Γ Γ' ->
-        P Γ Γ' (Some (b, b')) t t' ->
-        All2_local_env (Γ ,, vdef na b t) (Γ' ,, vdef na' b' t').
-  End All_local_2.
-
   Definition on_decl_over (P : context -> context -> term -> term -> Type) Γ Γ' :=
     fun Δ Δ' => P (Γ ,,, Δ) (Γ' ,,, Δ').
 

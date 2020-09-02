@@ -161,6 +161,26 @@ Fixpoint closedn k (t : term) : bool :=
 
 Notation closed t := (closedn 0 t).
 
+Fixpoint noccur_between k n (t : term) : bool :=
+  match t with
+  | tRel i => Nat.leb k i && Nat.ltb i (k + n)
+  | tEvar ev args => List.forallb (noccur_between k n) args
+  | tLambda _ T M | tProd _ T M => noccur_between k n T && noccur_between (S k) n M
+  | tApp u v => noccur_between k n u && noccur_between k n v
+  | tLetIn na b t b' => noccur_between k n b && noccur_between k n t && noccur_between (S k) n b'
+  | tCase ind p c brs =>
+    let brs' := List.forallb (test_snd (noccur_between k n)) brs in
+    noccur_between k n p && noccur_between k n c && brs'
+  | tProj p c => noccur_between k n c
+  | tFix mfix idx =>
+    let k' := List.length mfix + k in
+    List.forallb (test_def (noccur_between k n) (noccur_between k' n)) mfix
+  | tCoFix mfix idx =>
+    let k' := List.length mfix + k in
+    List.forallb (test_def (noccur_between k n) (noccur_between k' n)) mfix
+  | x => true
+  end.
+
 Create HintDb terms.
 
 Ltac arith_congr := repeat (try lia; progress f_equal).
@@ -658,6 +678,13 @@ Proof.
   + lia.
 Qed.
 
+Lemma subst_subst_lift (s s' : list term) n t : n = #|s| + #|s'| -> 
+  subst0 s (subst0 s' (lift0 n t)) = t.
+Proof.
+  intros ->. rewrite Nat.add_comm simpl_subst' //; try lia.
+  now rewrite -(Nat.add_0_r #|s|) simpl_subst' // lift0_id.
+Qed.
+
 Lemma map_subst_lift_id s l : map (subst0 s ∘ lift0 #|s|) l = l.
 Proof.
   induction l; simpl; auto.
@@ -674,6 +701,13 @@ Lemma map_subst_lift_ext N n p k l :
 Proof.
   intros -> pn.
   apply map_ext => x. now apply simpl_subst'.
+Qed.
+
+Lemma map_subst_subst_lift_lift (s s' : list term) k k' l : k + k' = #|s| + #|s'| -> 
+  map (fun t => subst0 s (subst0 s' (lift k k' (lift0 k' t)))) l = l.
+Proof.
+  intros H. eapply All_map_id. eapply All_refl => x.
+  rewrite simpl_lift; try lia. rewrite subst_subst_lift //.
 Qed.
 
 Lemma nth_error_lift_context:

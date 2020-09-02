@@ -396,91 +396,6 @@ Definition eta_expands u v : Type :=
 Definition eta_eq :=
   clos_refl_sym_trans eta_expands.
 
-(** ** Utilities for typing *)
-
-(** Decompose an arity into a context and a sort *)
-
-Fixpoint destArity Γ (t : term) :=
-  match t with
-  | tProd na t b => destArity (Γ ,, vass na t) b
-  | tLetIn na b b_ty b' => destArity (Γ ,, vdef na b b_ty) b'
-  | tSort s => Some (Γ, s)
-  | _ => None
-  end.
-
-Lemma destArity_app_aux {Γ Γ' t}
-  : destArity (Γ ,,, Γ') t = option_map (fun '(ctx, s) => (Γ ,,, ctx, s))
-                                        (destArity Γ' t).
-Proof.
-  revert Γ'.
-  induction t; cbn; intro Γ'; try reflexivity.
-  - rewrite <- app_context_cons. now eapply IHt2.
-  - rewrite <- app_context_cons. now eapply IHt3.
-Qed.
-
-Lemma destArity_app {Γ t}
-  : destArity Γ t = option_map (fun '(ctx, s) => (Γ ,,, ctx, s))
-                               (destArity [] t).
-Proof.
-  exact (@destArity_app_aux Γ [] t).
-Qed.
-
-Lemma destArity_app_Some {Γ t ctx s}
-  : destArity Γ t = Some (ctx, s)
-    -> ∑ ctx', destArity [] t = Some (ctx', s) /\ ctx = Γ ,,, ctx'.
-Proof.
-  intros H. rewrite destArity_app in H.
-  destruct (destArity [] t) as [[ctx' s']|]; cbn in *.
-  exists ctx'. inversion H. now subst.
-  discriminate H.
-Qed.
-
-Lemma destArity_it_mkProd_or_LetIn ctx ctx' t :
-  destArity ctx (it_mkProd_or_LetIn ctx' t) =
-  destArity (ctx ,,, ctx') t.
-Proof.
-  induction ctx' in ctx, t |- *; simpl; auto.
-  rewrite IHctx'. destruct a as [na [b|] ty]; reflexivity.
-Qed.
-
-Lemma mkApps_nonempty f l :
-  l <> [] -> mkApps f l = tApp (mkApps f (removelast l)) (last l f).
-Proof.
-  destruct l using rev_ind. intros; congruence.
-  intros. rewrite <- mkApps_nested. simpl. f_equal.
-  rewrite removelast_app. congruence. simpl. now rewrite app_nil_r.
-  rewrite last_app. congruence.
-  reflexivity.
-Qed.
-
-Lemma destArity_tFix {mfix idx args} :
-  destArity [] (mkApps (tFix mfix idx) args) = None.
-Proof.
-  induction args. reflexivity.
-  rewrite mkApps_nonempty.
-  intros e; discriminate e.
-  reflexivity.
-Qed.
-
-Lemma destArity_tApp {t u l} :
-  destArity [] (mkApps (tApp t u) l) = None.
-Proof.
-  induction l. reflexivity.
-  rewrite mkApps_nonempty.
-  intros e; discriminate e.
-  reflexivity.
-Qed.
-
-Lemma destArity_tInd {t u l} :
-  destArity [] (mkApps (tInd t u) l) = None.
-Proof.
-  induction l. reflexivity.
-  rewrite mkApps_nonempty.
-  intros e; discriminate e.
-  reflexivity.
-Qed.
-
-
 Reserved Notation " Σ ;;; Γ |- t : T " (at level 50, Γ, t, T at next level).
 Reserved Notation " Σ ;;; Γ |- t <= u " (at level 50, Γ, t, u at next level).
 Reserved Notation " Σ ;;; Γ |- t = u " (at level 50, Γ, t, u at next level).
@@ -488,7 +403,7 @@ Reserved Notation " Σ ;;; Γ |- t = u " (at level 50, Γ, t, u at next level).
 (** ** Cumulativity *)
 
 Inductive cumul `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
-| cumul_refl t u : leq_term (global_ext_constraints Σ) t u -> Σ ;;; Γ |- t <= u
+| cumul_refl t u : leq_term Σ.1 (global_ext_constraints Σ) t u -> Σ ;;; Γ |- t <= u
 | cumul_red_l t u v : red1 Σ.1 Γ t v -> Σ ;;; Γ |- v <= u -> Σ ;;; Γ |- t <= u
 | cumul_red_r t u v : Σ ;;; Γ |- t <= v -> red1 Σ.1 Γ u v -> Σ ;;; Γ |- t <= u
 | cumul_eta_l t u v : eta_expands t v -> Σ ;;; Γ |- v <= u -> Σ ;;; Γ |- t <= u
@@ -496,14 +411,11 @@ Inductive cumul `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> 
 
 where " Σ ;;; Γ |- t <= u " := (cumul Σ Γ t u) : type_scope.
 
-(** *** Conversion
-
-   Defined as cumulativity in both directions.
+(** *** Conversion   
  *)
 
-
 Inductive conv `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
-| conv_refl t u : eq_term (global_ext_constraints Σ) t u -> Σ ;;; Γ |- t = u
+| conv_refl t u : eq_term Σ.1 (global_ext_constraints Σ) t u -> Σ ;;; Γ |- t = u
 | conv_red_l t u v : red1 Σ Γ t v -> Σ ;;; Γ |- v = u -> Σ ;;; Γ |- t = u
 | conv_red_r t u v : Σ ;;; Γ |- t = v -> red1 (fst Σ) Γ u v -> Σ ;;; Γ |- t = u
 | conv_eta_l t u v : eta_expands t v -> Σ ;;; Γ |- v = u -> Σ ;;; Γ |- t = u
@@ -901,12 +813,18 @@ Module PCUICTypingDef <: Typing PCUICTerm PCUICEnvironment PCUICEnvTyping.
 
   Definition ind_guard := ind_guard.
   Definition typing := @typing.
+  Definition conv := @conv.
+  Definition cumul := @cumul.
   Definition smash_context := smash_context.
   Definition lift_context := lift_context.
   Definition subst_telescope := subst_telescope.
+  Definition subst_instance_context := subst_instance_context.
+  Definition subst_instance_constr := subst_instance_constr.
   Definition subst := subst.
   Definition lift := lift.
-  Definition inds := inds.  
+  Definition inds := inds. 
+  Definition noccur_between := noccur_between. 
+  Definition closedn := closedn.
 End PCUICTypingDef.
 
 Module PCUICDeclarationTyping :=

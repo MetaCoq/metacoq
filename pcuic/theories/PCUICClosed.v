@@ -1,11 +1,19 @@
 (* Distributed under the terms of the MIT license.   *)
 From Coq Require Import Bool List Arith Lia.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICInduction
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv.
 Require Import ssreflect ssrbool.
 
 From Equations Require Import Equations.
+
+Lemma All_forallb_eq_forallb {A} (P : A -> Type) (p q : A -> bool) l :
+  All P l ->
+  (forall x, P x -> p x = q x) ->
+  forallb p l = forallb q l.
+Proof.
+  induction 1; simpl; intuition (f_equal; auto).
+Qed.
 
 (** * Lemmas about the [closedn] predicate *)
 
@@ -110,26 +118,85 @@ Proof.
     now rewrite Hf Ha Hu.
 Qed.
 
-Lemma closedn_subst s k k' t :
-  forallb (closedn k) s -> closedn (k + k' + #|s|) t ->
+Lemma closedn_subst_eq s k k' t :
+  forallb (closedn k) s -> 
+  closedn (k + k' + #|s|) t =
   closedn (k + k') (subst s k' t).
 Proof.
-  intros Hs. solve_all. revert H.
+  intros Hs. solve_all. revert Hs.
   induction t in k' |- * using term_forall_list_ind; intros;
     simpl in *;
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
-    simpl closed in *; try change_Sk; repeat (rtoProp; solve_all);
-    unfold test_def, on_snd, test_snd in *; simpl in *; eauto with all.
+    simpl closed in *; try change_Sk;
+    unfold test_def, on_snd, test_snd in *; simpl in *; eauto 4 with all.
 
   - elim (Nat.leb_spec k' n); intros. simpl.
-    apply Nat.ltb_lt in H.
     destruct nth_error eqn:Heq.
-    -- eapply closedn_lift.
+    -- rewrite closedn_lift.
        now eapply nth_error_all in Heq; simpl; eauto; simpl in *.
+       eapply nth_error_Some_length in Heq.
+       eapply Nat.ltb_lt. lia.
     -- simpl. elim (Nat.ltb_spec); auto. intros.
-       apply nth_error_None in Heq. lia.
-    -- simpl. apply Nat.ltb_lt in H0.
-       apply Nat.ltb_lt. apply Nat.ltb_lt in H0. lia.
+       apply nth_error_None in Heq. symmetry. apply Nat.ltb_lt. lia.
+       apply nth_error_None in Heq. intros. symmetry. eapply Nat.ltb_nlt.
+       intros H'. lia.
+    -- simpl.
+      elim: Nat.ltb_spec; symmetry. apply Nat.ltb_lt. lia.
+      apply Nat.ltb_nlt. intro. lia.
+
+  - rewrite forallb_map.
+    eapply All_forallb_eq_forallb; eauto.
+
+  - specialize (IHt2 (S k')).
+    rewrite <- Nat.add_succ_comm in IHt2.
+    rewrite IHt1 // IHt2 //.
+  - specialize (IHt2 (S k')).
+    rewrite <- Nat.add_succ_comm in IHt2.
+    rewrite IHt1 // IHt2 //.
+  - specialize (IHt3 (S k')).
+    rewrite <- Nat.add_succ_comm in IHt3.
+    rewrite IHt1 // IHt2 // IHt3 //.
+  - rewrite IHt1 // IHt2 //.
+    rewrite forallb_map. simpl.
+    bool_congr. eapply All_forallb_eq_forallb; eauto.
+  - rewrite forallb_map. simpl.
+    eapply All_forallb_eq_forallb; eauto. simpl.
+    intros x [h1 h2]. rewrite h1 //.
+    specialize (h2 (#|m| + k')).
+    rewrite Nat.add_assoc in h2.
+    rewrite (Nat.add_comm k #|m|) in h2. 
+    rewrite -> !Nat.add_assoc in *.
+    rewrite h2 //.
+  - rewrite forallb_map. simpl.
+    eapply All_forallb_eq_forallb; eauto. simpl.
+    intros x [h1 h2]. rewrite h1 //.
+    specialize (h2 (#|m| + k')).
+    rewrite Nat.add_assoc in h2.
+    rewrite (Nat.add_comm k #|m|) in h2. 
+    rewrite -> !Nat.add_assoc in *.
+    rewrite h2 //.
+Qed.
+
+Lemma closedn_subst_eq' s k k' t :
+  closedn (k + k') (subst s k' t) ->
+  closedn (k + k' + #|s|) t.
+Proof.
+  intros Hs. solve_all. revert Hs.
+  induction t in k' |- * using term_forall_list_ind; intros;
+    simpl in *;
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+    simpl closed in *; repeat (rtoProp; f_equal; solve_all);  try change_Sk;
+    unfold test_def, on_snd, test_snd in *; simpl in *; eauto 4 with all.
+
+  - move: Hs; elim (Nat.leb_spec k' n); intros. simpl.
+    destruct nth_error eqn:Heq.
+    -- eapply Nat.ltb_lt.
+       eapply nth_error_Some_length in Heq. lia.
+    -- simpl. simpl in Hs.
+       apply nth_error_None in Heq. apply Nat.ltb_lt.
+       apply Nat.ltb_lt in Hs; lia.
+    -- simpl in Hs. eapply Nat.ltb_lt in Hs.
+       apply Nat.ltb_lt. lia.
 
   - specialize (IHt2 (S k')).
     rewrite <- Nat.add_succ_comm in IHt2. eauto.
@@ -137,12 +204,24 @@ Proof.
     rewrite <- Nat.add_succ_comm in IHt2. eauto.
   - specialize (IHt3 (S k')).
     rewrite <- Nat.add_succ_comm in IHt3. eauto.
-  - rtoProp; solve_all. rewrite -> !Nat.add_assoc in *.
-    specialize (b0 (#|m| + k')). unfold is_true. rewrite <- b0. f_equal. lia.
-    unfold is_true. rewrite <- H0. f_equal. lia.
-  - rtoProp; solve_all. rewrite -> !Nat.add_assoc in *.
-    specialize (b0 (#|m| + k')). unfold is_true. rewrite <- b0. f_equal. lia.
-    unfold is_true. rewrite <- H0. f_equal. lia.
+  - move/andP: b => [hty hbod]. rewrite a0 //.
+    specialize (b0 (#|m| + k')).
+    rewrite Nat.add_assoc (Nat.add_comm k #|m|) in b0. 
+    rewrite -> !Nat.add_assoc in *.
+    rewrite b0 //. now autorewrite with len in hbod.
+  - move/andP: b => [hty hbod]. rewrite a0 //.
+    specialize (b0 (#|m| + k')).
+    rewrite Nat.add_assoc (Nat.add_comm k #|m|) in b0. 
+    rewrite -> !Nat.add_assoc in *.
+    rewrite b0 //. now autorewrite with len in hbod.
+Qed.
+
+Lemma closedn_subst s k k' t :
+  forallb (closedn k) s -> 
+  closedn (k + k' + #|s|) t ->
+  closedn (k + k') (subst s k' t).
+Proof.
+  intros; now rewrite -closedn_subst_eq.
 Qed.
 
 Lemma closedn_subst0 s k t :
@@ -219,14 +298,6 @@ Proof.
     revert b0. now sigma.
   - rtoProp. specialize (b0 σ (#|m| + k) H0). eapply map_def_id_spec; auto.
     revert b0. now sigma.
-Qed.
-
-Lemma All_forallb_eq_forallb {A} (P : A -> Type) (p q : A -> bool) l :
-  All P l ->
-  (forall x, P x -> p x = q x) ->
-  forallb p l = forallb q l.
-Proof.
-  induction 1; simpl; intuition (f_equal; auto).
 Qed.
 
 Lemma closedn_subst_instance_constr k t u :

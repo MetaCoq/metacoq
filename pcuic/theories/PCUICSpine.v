@@ -208,6 +208,18 @@ Proof.
   now intros sp ->.
 Qed.
 
+Lemma spine_subst_inj_subst {cf:checker_flags} {Σ Γ inst s s' Δ} :
+  spine_subst Σ Γ inst s Δ ->
+  spine_subst Σ Γ inst s' Δ ->
+  s = s'.
+Proof.
+  intros [_ _ c _] [_ _ c' _].
+  induction c in s', c' |- *; depelim c'; simpl; auto;
+  simpl in H; noconf H. eapply app_inj_tail in H0 as [-> ->].
+  f_equal; eauto.
+  specialize (IHc _ c'). now subst. 
+Qed.
+
 Inductive arity_spine {cf : checker_flags} (Σ : PCUICAst.global_env_ext) (Γ : PCUICAst.context) : 
   term -> list term -> term -> Type :=
 | arity_spine_nil ty ty' :

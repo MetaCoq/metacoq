@@ -418,3 +418,7 @@ erasure/src/pCUICTypeChecker.ml
 erasure/src/pCUICTypeChecker.mli
 erasure/src/pCUICPrimitive.ml
 erasure/src/pCUICPrimitive.mli
+
+bidirectional/CoqMakefile
+
+bidirectional/CoqMakefile.conf

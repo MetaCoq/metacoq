@@ -339,6 +339,23 @@ Proof.
   induction n; simpl; auto. f_equal; auto.
 Qed.
 
+Lemma projs_inst_subst s k i pars arg t :
+  map (subst s k) (projs_inst i pars arg t)  =
+  projs_inst i pars arg (subst s k t).
+Proof.
+  induction arg; simpl; auto.
+  f_equal; auto.
+Qed.
+
+Lemma projs_inst_skipn {i pars arg t} n :
+  skipn n (projs_inst i pars arg t) = projs_inst i pars (arg - n) t.
+Proof.
+  induction arg in n |- *; simpl; auto.
+  - now rewrite skipn_nil.
+  - destruct n as [|n']; [rewrite skipn_0|rewrite skipn_S] => //.
+    rewrite IHarg /= //.
+Qed.
+
 Lemma subslet_projs {cf:checker_flags} (Σ : global_env_ext) i mdecl idecl :
   forall (wfΣ : wf Σ.1) 
   (Hdecl : declared_inductive Σ.1 mdecl i idecl),

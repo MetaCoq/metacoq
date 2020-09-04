@@ -1530,7 +1530,7 @@ Section All_local_env.
         * apply X1.
         * apply X2.
   Qed.
-
+  
   Definition wf_local_rel_app {Σ Γ1 Γ2 Γ3} :
     wf_local_rel Σ Γ1 (Γ2 ,,, Γ3) ->
     wf_local_rel Σ Γ1 Γ2 * wf_local_rel Σ (Γ1 ,,, Γ2) Γ3.
@@ -1606,6 +1606,20 @@ Section All_local_env.
     destruct n. exact wfΓ.
     apply IHwfΓ. auto with arith.
   Defined.
+
+  Lemma wf_local_app_skipn {Σ Γ Γ' n} : 
+    wf_local Σ (Γ ,,, Γ') ->
+    wf_local Σ (Γ ,,, skipn n Γ').
+  Proof.
+    intros wf.
+    destruct (le_dec n #|Γ'|).
+    unfold app_context.
+    replace Γ with (skipn (n - #|Γ'|) Γ).
+    rewrite -skipn_app. now apply All_local_env_skipn.
+    replace (n - #|Γ'|) with 0 by lia. now rewrite skipn_0.
+    rewrite List.skipn_all2. lia.
+    now eapply wf_local_app in wf.
+  Qed.
 
   Definition on_local_decl_glob (P : term -> option term -> Type) d :=
     match d.(decl_body) with

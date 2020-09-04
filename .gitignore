@@ -421,3 +421,7 @@ erasure/src/pCUICPrimitive.mli
 erasure/src/pCUICCases.ml
 erasure/src/pCUICCases.mli
 template-coq/gen-src/specFloat.ml.rej
+
+bidirectional/CoqMakefile
+
+bidirectional/CoqMakefile.conf

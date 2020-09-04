@@ -428,3 +428,7 @@ erasure/src/eCSubst.ml
 erasure/src/eCSubst.mli
 erasure/src/pCUICExpandLets.ml
 erasure/src/pCUICExpandLets.mli
+
+bidirectional/CoqMakefile
+
+bidirectional/CoqMakefile.conf

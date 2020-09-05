@@ -637,8 +637,326 @@ Proof.
   eexists ; eauto.
 Qed.
 Hint Rewrite subst_instance_context_assumptions to_extended_list_k_length : len.
-
+(* 
 Lemma expand_lets_k_ctx_subst_id Γ k Δ : 
+  closedn_ctx #|Γ| Δ -> 
+  subst_context (List.rev (to_extended_list_k Γ k)) 0 (expand_lets_ctx Γ Δ) = 
+  expand_lets_k_ctx Γ k (lift_context k 0 Δ).
+Proof.
+  rewrite /expand_lets_ctx /expand_lets_k_ctx.
+  intros clΔ.
+Admitted. *)
+
+(*
+Lemma expand_lets_k_ctx_idem Γ k Δ : 
+  expand_lets_k_ctx Γ k (expand_lets_k_ctx Γ k Δ) =
+  expand_lets_k_ctx Γ k Δ.
+Proof.
+  rewrite /expand_lets_ctx /expand_lets_k_ctx.
+  induction Γ in k, Δ |- *.
+  - simpl to_extended_list_k; simpl List.rev.
+     rewrite !subst0_context /= ?lift0_context /=. reflexivity.
+  - destruct a as [na [b|] ty].
+    rewrite /expand_lets_k_ctx /=.
+    autorewrite with len. simpl to_extended_list_k.
+    f_equal.
+    rewrite Nat.add_1_r; change  (S k) with (1 + k); rewrite reln_lift.
+    rewrite (subst_app_context_gen [_]). simpl.
+    rewrite ->( subst_app_context_gen [subst0 (extended_subst Γ 0) (lift  (context_assumptions Γ) #|Γ| b)] (extended_subst Γ 0)).
+    simpl. simpl in clΔ.
+    rewrite /expand_lets_k_ctx in IHΓ.
+    simpl. f_equal.
+    specialize (IHΓ (S k)). simpl in IHΓ.
+    rewrite Nat.add_1_r Nat.add_succ_r. -IHΓ.
+
+Admitted.*)
+Require Import ssrbool.
+Section VarCheck.
+
+  Section AllDefs.
+  (* Predicate [p k n] where k is the number of binders we passed and n the index of the variable to check. *)
+  Variable p : nat -> nat -> bool.
+
+  Fixpoint all_vars k (t : term) : bool :=
+  match t with
+  | tRel i => p k i
+  | tEvar ev args => List.forallb (all_vars k) args
+  | tLambda _ T M | tProd _ T M => all_vars k T && all_vars (S k) M
+  | tApp u v => all_vars k u && all_vars k v
+  | tLetIn na b t b' => all_vars k b && all_vars k t && all_vars (S k) b'
+  | tCase ind p c brs =>
+    let brs' := List.forallb (test_snd (all_vars k)) brs in
+    all_vars k p && all_vars k c && brs'
+  | tProj p c => all_vars k c
+  | tFix mfix idx =>
+    let k' := List.length mfix + k in
+    List.forallb (test_def (all_vars k) (all_vars k')) mfix
+  | tCoFix mfix idx =>
+    let k' := List.length mfix + k in
+    List.forallb (test_def (all_vars k) (all_vars k')) mfix
+  | tVar _ | tSort _ | tConst _ _ | tInd _ _ | tConstruct _ _ _ => true
+  end.
+
+  Lemma all_vars_true k t : (forall k n, p k n) -> all_vars k t.
+  Proof.
+    intros. revert k.
+    induction t using PCUICInduction.term_forall_list_ind; simpl => //; solve_all.
+    solve_all.
+    all:try now rewrite ?IHt1 ?IHt2 ?IHt3.
+    rewrite IHt1 IHt2. eapply All_forallb. solve_all.
+    eapply All_forallb; solve_all. unfold test_def.
+    now rewrite a b.
+    eapply All_forallb; solve_all. unfold test_def.
+    now rewrite a b.
+  Qed.
+  End AllDefs.
+
+  Lemma all_vars_impl (p q : nat -> nat -> bool) k t : (forall k n, p k n -> q k n) -> 
+    all_vars p k t -> all_vars q k t.
+  Proof.
+    intros. revert t k H0.
+    induction t using PCUICInduction.term_forall_list_ind; simpl => //; solve_all.
+    all:try solve_all.
+    all:try now rewrite ?IHt1 ?IHt2 ?IHt3.
+    apply /andP. move/andP: H0. intuition auto.
+    apply /andP. move/andP: H0. intuition auto.
+    apply /andP. move/andP: H0. intuition auto.
+    apply /andP. move/andP: H1. intuition auto.
+    apply /andP. move/andP: H0. intuition auto.
+    apply /andP. move/andP: H0. intuition auto.
+    apply /andP. move/andP: H1. intuition auto.
+    solve_all.
+    solve_all.
+    unfold test_def in *.
+    apply /andP. move/andP: b. intuition auto.
+    solve_all.
+    unfold test_def in *.
+    apply /andP. move/andP: b. intuition auto.
+  Qed.
+
+  Lemma forallb_eq {A} (p q : A -> bool) l :
+    All (fun x => p x = q x) l -> forallb p l = forallb q l.
+  Proof.
+    intros H; induction H; simpl; auto.
+    now rewrite p0 IHAll.
+  Qed.
+
+  Lemma all_vars_eq_k (p q : nat -> nat -> bool) k k' t : (forall k n, p (k' + k) n = q k n) -> 
+    all_vars p (k' + k) t = all_vars q k t.
+  Proof.
+    intros. revert t k.
+    induction t using PCUICInduction.term_forall_list_ind; simpl => //.
+    all:try solve_all.
+    eapply forallb_eq. solve_all.
+    rewrite IHt1 -(IHt2 (S k)). lia_f_equal.
+    rewrite IHt1 -(IHt2 (S k)). lia_f_equal.
+    rewrite IHt1 -(IHt2 k) -(IHt3 (S k)). lia_f_equal.
+    rewrite IHt1 IHt2. bool_congr. eapply forallb_eq. solve_all.
+    eapply forallb_eq. solve_all.
+    unfold test_def.
+    rewrite a -(b (#|m| + k)). lia_f_equal.
+    eapply forallb_eq. solve_all.
+    unfold test_def.
+    rewrite a -(b (#|m| + k)). lia_f_equal.
+  Qed.
+    
+End VarCheck.
+
+Definition no_let Γ (k n : nat) := 
+  (n <? k) || 
+  match option_map decl_body (nth_error Γ (n - k)) with 
+  | Some (Some _) => false
+  | _ => true
+  end.
+
+Definition no_lets_from Γ k t :=
+  all_vars (no_let Γ) k t.
+  
+Definition option_all (p : term -> bool) (o : option term) : bool :=
+  match o with
+  | None => true
+  | Some b => p b
+  end.
+
+Definition test_decl (p : term -> bool) d :=
+  p d.(decl_type) && option_all p d.(decl_body).
+
+Definition no_lets_ctx_from Γ k ctx :=
+  Alli (fun i => test_decl (no_lets_from Γ (i + k))) 0 (List.rev ctx). 
+
+Lemma no_lets_from_nil : forall k n, no_lets_from [] k n.
+Proof.
+  intros k n; rewrite /no_lets_from; apply all_vars_true.
+  intros k' n'; rewrite /no_let.
+  destruct Nat.ltb; simpl => //.
+  rewrite nth_error_nil //.
+Qed.
+
+Lemma no_lets_ctx_from_nil k Δ : no_lets_ctx_from [] k Δ.
+Proof.
+  red.
+  generalize 0.
+  induction Δ using rev_ind; [constructor|].
+  rewrite List.rev_app_distr. simpl. constructor.
+  simpl. rewrite /test_decl. rewrite !no_lets_from_nil.
+  destruct x as [na [?|] ?]; simpl; auto.
+  now rewrite no_lets_from_nil.
+  apply IHΔ.
+Qed.
+
+
+Lemma smash_context_app_def Γ na b ty :
+  smash_context [] (Γ ++ [{| decl_name := na; decl_body := Some b; decl_type := ty |}]) =
+  smash_context [] (subst_context [b] 0 Γ).
+Proof.
+  now rewrite smash_context_app smash_context_acc /= subst_empty lift0_id lift0_context /=
+    subst_context_nil app_nil_r (smash_context_subst []).
+Qed.
+
+Lemma smash_context_app_ass Γ na ty :
+  smash_context [] (Γ ++ [{| decl_name := na; decl_body := None; decl_type := ty |}]) =
+  smash_context [] Γ ++ [{| decl_name := na; decl_body := None; decl_type := ty |}].
+Proof.
+  now rewrite smash_context_app smash_context_acc /= subst_context_lift_id.
+Qed.
+
+Lemma lift_context_add k k' n Γ : lift_context (k + k') n Γ = lift_context k n (lift_context k' n Γ).
+Proof.
+  induction Γ => //.
+  rewrite !lift_context_snoc IHΓ; f_equal.
+  destruct a as [na [b|] ty]; rewrite /lift_decl /map_decl /=; simpl; f_equal;
+  autorewrite with len; rewrite simpl_lift //; try lia.
+Qed.
+
+Lemma distr_lift_subst_context_rec n k s Γ k' : lift_context n (k' + k) (subst_context s k' Γ) =
+  subst_context (map (lift n k) s) k' (lift_context n (#|s| + k + k') Γ).
+Proof.
+  rewrite !lift_context_alt !subst_context_alt.
+  rewrite !mapi_compose.
+  apply mapi_ext.
+  intros n' x.
+  rewrite /lift_decl /subst_decl !compose_map_decl.
+  apply map_decl_ext => y. autorewrite with len.
+  replace (Nat.pred #|Γ| - n' + (#|s| + k + k'))
+    with ((Nat.pred #|Γ| - n' + k') + #|s| + k) by lia.
+  rewrite -distr_lift_subst_rec. f_equal. lia.
+Qed.
+
+Lemma subst_context_lift_id Γ k : subst_context [tRel 0] k (lift_context 1 (S k) Γ) = Γ.
+Proof.
+  rewrite subst_context_alt lift_context_alt.
+  rewrite mapi_compose.
+  replace Γ with (mapi (fun k x => x) Γ) at 2.
+  2:unfold mapi; generalize 0; induction Γ; simpl; intros; auto; congruence.
+  apply mapi_ext.
+  autorewrite with len.
+  intros n [? [?|] ?]; unfold lift_decl, subst_decl, map_decl; simpl.
+  generalize (Nat.pred #|Γ| - n).
+  intros. 
+  now rewrite !Nat.add_succ_r !subst_rel0_lift_id.
+  now rewrite !Nat.add_succ_r !subst_rel0_lift_id.
+Qed.
+
+Lemma no_lets_from_ext Γ n  k Γ' t : 
+  assumption_context Γ' ->
+  no_lets_from Γ (n + (#|Γ'| + k)) t ->
+  no_lets_from (Γ ,,, Γ') (n + k) t.
+Proof.
+  intros ass. unfold no_lets_from in *.
+  intros allv.
+  replace (n + (#|Γ'| + k)) with (#|Γ'| + (n + k)) in allv by lia.
+  rewrite -(all_vars_eq_k (fun k' n => no_let Γ k' n) _ _ #|Γ'|) //.
+  intros. unfold no_let.
+  destruct (Nat.ltb_spec n0 (#|Γ'| + k0)) => /=.
+  destruct (Nat.ltb_spec n0 k0) => /= //.
+  rewrite nth_error_app_lt. lia.
+  destruct nth_error eqn:E => //.
+  eapply PCUICParallelReductionConfluence.nth_error_assumption_context in ass; eauto.
+  simpl. now rewrite ass.
+  destruct (Nat.ltb_spec n0 k0) => /= //.
+  lia.
+  rewrite nth_error_app_ge. lia.
+  now replace (n0 - k0 - #|Γ'|) with (n0 - (#|Γ'| + k0)) by lia.
+Qed.
+
+Lemma no_lets_ctx_from_ext Γ k Γ' Δ : 
+  assumption_context Γ' ->
+  no_lets_ctx_from Γ (#|Γ'| + k) Δ ->
+  no_lets_ctx_from (Γ ,,, Γ') k Δ.
+Proof.
+  rewrite /no_lets_ctx_from.
+  intros ass a. eapply Alli_impl; eauto.
+  simpl; intros.
+  unfold test_decl in *.
+  apply /andP. move/andP: H; intuition auto.
+  now eapply no_lets_from_ext.
+  destruct (decl_body x); simpl in * => //.
+  now eapply no_lets_from_ext.
+Qed.
+
+Lemma no_lets_ctx_from_subst Γ k s Δ : 
+  forallb (no_lets_from Γ 0) s ->
+  no_lets_ctx_from Γ (#|s| + k) Δ ->
+  no_lets_ctx_from Γ k (subst_context s k Δ).
+Proof.
+  induction s in Δ  |- *; simpl; auto.
+  now rewrite subst0_context.
+  move/andP => [Ha Hs] ass.
+  rewrite (subst_context_decompo [_]) /=.
+  eapply IHs. auto.
+Admitted.
+
+Lemma expand_lets_no_let Γ k t : 
+  no_lets_from (smash_context [] Γ) k (expand_lets_k Γ k t).
+Proof.
+Admitted.
+
+Lemma expand_lets_ctx_no_let Γ k Δ : 
+  no_lets_ctx_from (smash_context [] Γ) k (expand_lets_k_ctx Γ k Δ).
+Proof.
+  induction Γ in k, Δ |- *.
+  - unfold expand_lets_k_ctx.
+    simpl context_assumptions. rewrite ?lift0_context. simpl; rewrite !subst0_context.
+    apply no_lets_ctx_from_nil.
+    
+  - destruct a as [na [b|] ty].
+    rewrite /expand_lets_k_ctx /=.
+    autorewrite with len.
+    rewrite (subst_app_context_gen [_]). simpl.
+    rewrite ->( subst_app_context_gen [subst0 (extended_subst Γ 0) (lift  (context_assumptions Γ) #|Γ| b)] (extended_subst Γ 0)).
+    simpl.
+    rewrite (Nat.add_succ_r k #|Γ|).
+    rewrite /expand_lets_k_ctx in IHΓ.
+    specialize (IHΓ (S k)).
+    eapply (no_lets_ctx_from_subst _ _ [_] _) in IHΓ.
+    rewrite Nat.add_1_r.
+    eapply IHΓ. simpl.
+    now rewrite expand_lets_no_let.
+
+    simpl.    
+    rewrite smash_context_acc /= /map_decl /=.
+    rewrite ->( subst_app_context_gen [tRel 0] (extended_subst Γ 1)).
+    simpl.
+    rewrite (lift_context_add 1 _).
+    rewrite (lift_extended_subst _ 1).
+    epose proof  (distr_lift_subst_context_rec 1 0 (extended_subst Γ 0) _ (k + 1)).
+    autorewrite with len in H. 
+    replace (#|Γ| + (k + 1)) with (k + S #|Γ|) in H by lia.
+    rewrite <- H. clear H. rewrite Nat.add_1_r.
+    rewrite subst_context_lift_id.
+    rewrite /expand_lets_k_ctx in IHΓ.
+    rewrite Nat.add_succ_r.
+    specialize (IHΓ (S k) Δ).
+    unshelve eapply (no_lets_ctx_from_ext _ k [_] _ _) in IHΓ. 3:eapply IHΓ.
+    repeat constructor.
+Qed.
+
+Admitted.
+
+
+
+
+Lemma expand_lets_k_ctx_subst_id' Γ k Δ : 
   closedn_ctx #|Γ| Δ -> 
   expand_lets_k_ctx Γ k (subst_context (List.rev (to_extended_list_k Γ k)) 0 
     (expand_lets_ctx Γ Δ)) = expand_lets_k_ctx Γ k (lift_context k 0 Δ).
@@ -656,7 +974,9 @@ Proof.
     rewrite ->( subst_app_context_gen [subst0 (extended_subst Γ 0) (lift  (context_assumptions Γ) #|Γ| b)] (extended_subst Γ 0)).
     simpl. simpl in clΔ.
     rewrite /expand_lets_k_ctx in IHΓ.
-    simpl.
+    simpl. f_equal.
+    specialize (IHΓ (S k)). simpl in IHΓ.
+    rewrite Nat.add_1_r Nat.add_succ_r. 
 Admitted.
 
 Lemma on_constructor_inst_pars_indices {cf:checker_flags} Σ ind u mdecl idecl cshape cdecl Γ pars parsubst : 
@@ -707,7 +1027,7 @@ Proof.
   rewrite {4}(spine_subst_extended_subst sp) in spr.
   rewrite subst_context_map_subst_expand_lets_k in spr; try now autorewrite with len.
   rewrite List.rev_length. now rewrite -(context_subst_length2 sp).
-  rewrite expand_lets_k_ctx_subst_id in spr. autorewrite with len. admit.
+  rewrite expand_lets_k_ctx_subst_id' in spr. autorewrite with len. admit.
   rewrite -subst_context_map_subst_expand_lets_k in spr; try autorewrite with len.
   rewrite (context_subst_length2 sp). now autorewrite with len.
   rewrite -(spine_subst_extended_subst sp) in spr.
@@ -1228,22 +1548,6 @@ Ltac unf_env :=
   change PCUICEnvironment.ind_params with ind_params in *.
 
 Derive Signature for positive_cstr.
-
-Lemma smash_context_app_def Γ na b ty :
-  smash_context [] (Γ ++ [{| decl_name := na; decl_body := Some b; decl_type := ty |}]) =
-  smash_context [] (subst_context [b] 0 Γ).
-Proof.
-  now rewrite smash_context_app smash_context_acc /= subst_empty lift0_id lift0_context /=
-    subst_context_nil app_nil_r (smash_context_subst []).
-Qed.
-
-Lemma smash_context_app_ass Γ na ty :
-  smash_context [] (Γ ++ [{| decl_name := na; decl_body := None; decl_type := ty |}]) =
-  smash_context [] Γ ++ [{| decl_name := na; decl_body := None; decl_type := ty |}].
-Proof.
-  now rewrite smash_context_app smash_context_acc /= subst_context_lift_id.
-Qed.
-
 
 
 Lemma positive_cstr_it_mkProd_or_LetIn mdecl i Γ Δ t : 

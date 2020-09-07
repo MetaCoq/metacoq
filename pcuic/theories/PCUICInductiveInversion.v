@@ -759,7 +759,163 @@ Section VarCheck.
     unfold test_def.
     rewrite a -(b (#|m| + k)). lia_f_equal.
   Qed.
-    
+ 
+  Lemma all_vars_lift (p : nat -> nat -> bool) n k t : 
+    (forall n k' k, k <= n -> p k n -> p (k' + k) (k' + n)) ->
+    (forall n k' k, n < k -> p k n -> p (k' + k) n) ->    
+    all_vars p k t -> all_vars p (k + n) (lift n k t).
+  Proof.
+    intros. revert t n k H1.
+    induction t using PCUICInduction.term_forall_list_ind; simpl => //; solve_all.
+    all:try solve_all.
+    - destruct (Nat.leb_spec k n).
+      rewrite (Nat.add_comm k n0). now apply H.
+      rewrite Nat.add_comm.
+      now apply H0.
+    - apply /andP. move/andP: H1. intuition eauto.
+    - apply /andP. move/andP: H1. intuition eauto.
+    - apply /andP. move/andP: H1. intuition eauto.
+      move/andP: H2 => [P P']. apply/andP; intuition eauto.
+    - apply /andP. move/andP: H1. intuition eauto.
+    - apply /andP. move/andP: H1. intuition eauto.
+      move/andP: H2 => [P P']. apply/andP; intuition eauto.
+      solve_all.
+    - autorewrite with len.
+      destruct x; rewrite /map_def /test_def; simpl in *.
+      apply /andP. move/andP: b; simpl. intuition eauto.
+      replace (#|m| + (k + n0)) with ((k + #|m|) + n0) by lia.
+      rewrite (Nat.add_comm #|m| k).
+      eapply b0. rewrite Nat.add_comm //.
+    - autorewrite with len.
+      destruct x; rewrite /map_def /test_def; simpl in *.
+      apply /andP. move/andP: b; simpl. intuition eauto.
+      replace (#|m| + (k + n0)) with ((k + #|m|) + n0) by lia.
+      rewrite (Nat.add_comm #|m| k).
+      eapply b0. rewrite Nat.add_comm //.
+  Qed.
+
+  Lemma all_vars_lift'' (p : nat -> nat -> bool) n k i t : 
+    (forall n k' k, k + i <= n -> p k n -> p k (k' + n)) ->
+    all_vars p k t -> all_vars p k (lift n (k + i) t).
+  Proof.
+    intros Pp. revert t n k.
+    induction t using PCUICInduction.term_forall_list_ind; simpl => //; solve_all.
+    all:try solve_all.
+    - destruct (Nat.leb_spec (k + i) n).
+      now apply Pp. auto.
+    - apply /andP. move/andP: H. intuition eauto.
+    - apply /andP. move/andP: H. intuition eauto.
+    - apply /andP. move/andP: H. intuition eauto.
+      move/andP: H0 => [P P']. apply/andP; intuition eauto.
+    - apply /andP. move/andP: H. intuition eauto.
+    - apply /andP. move/andP: H. intuition eauto.
+      move/andP: H0 => [P P']. apply/andP; intuition eauto.
+      solve_all.
+    - autorewrite with len.
+      destruct x; rewrite /map_def /test_def; simpl in *.
+      apply /andP. move/andP: b; simpl. intuition eauto.
+      replace (#|m| + (k + i)) with ((k + #|m|) + i) by lia.
+      rewrite (Nat.add_comm #|m| k).
+      eapply b0. rewrite Nat.add_comm //.
+    - autorewrite with len.
+      destruct x; rewrite /map_def /test_def; simpl in *.
+      apply /andP. move/andP: b; simpl. intuition eauto.
+      replace (#|m| + (k + i)) with ((k + #|m|) + i) by lia.
+      rewrite (Nat.add_comm #|m| k).
+      eapply b0. rewrite Nat.add_comm //.
+  Qed.
+
+  Lemma all_vars_lift'' (p : nat -> nat -> bool) n k k' t : 
+    (forall n k' n' k, n' <= n -> p k n -> p k (k' + n)) ->
+    all_vars p k t -> all_vars p k (lift n k' t).
+  Proof.
+    intros. revert t n k H0.
+    induction t using PCUICInduction.term_forall_list_ind; simpl => //; solve_all.
+    all:try solve_all.
+    - destruct (Nat.leb_spec k' n).
+      eapply H. eauto. auto. auto.
+  Admitted.
+    (* - apply /andP. move/andP: H1. intuition eauto.
+    - apply /andP. move/andP: H1. intuition eauto.
+    - apply /andP. move/andP: H1. intuition eauto.
+      move/andP: H2 => [P P']. apply/andP; intuition eauto.
+    - apply /andP. move/andP: H1. intuition eauto.
+    - apply /andP. move/andP: H1. intuition eauto.
+      move/andP: H2 => [P P']. apply/andP; intuition eauto.
+      solve_all.
+    - autorewrite with len.
+      destruct x; rewrite /map_def /test_def; simpl in *.
+      apply /andP. move/andP: b; simpl. intuition eauto.
+      replace (#|m| + (k + n0)) with ((k + #|m|) + n0) by lia.
+      rewrite (Nat.add_comm #|m| k).
+      eapply b0. rewrite Nat.add_comm //.
+    - autorewrite with len.
+      destruct x; rewrite /map_def /test_def; simpl in *.
+      apply /andP. move/andP: b; simpl. intuition eauto.
+      replace (#|m| + (k + n0)) with ((k + #|m|) + n0) by lia.
+      rewrite (Nat.add_comm #|m| k).
+      eapply b0. rewrite Nat.add_comm //.
+  Qed. *)
+
+
+  Lemma all_vars_lift' (p : nat -> nat -> bool) n k t : 
+    (forall k n', p k (if k <=? n' then n + n' else n'))  ->
+    all_vars p k (lift n k t).
+  Proof.
+    intros. revert t k.
+    induction t using PCUICInduction.term_forall_list_ind; simpl => //; solve_all.
+    all:try solve_all.
+    all:try now rewrite ?IHt2 ?IHt2 ?IHt3. apply /andP; intuition eauto.
+    rewrite IHt1 -(IHt2 (S k)); apply /andP; intuition auto.
+    all:repeat (apply /andP; split; auto).
+    rewrite forallb_map. solve_all.
+    simpl; auto.
+    autorewrite with len; simpl; auto.
+    simpl; auto.
+    autorewrite with len; simpl; auto.
+  Qed.
+
+  Lemma all_vars_subst (p : nat -> nat -> bool) k s t : 
+    forallb (all_vars p 0) s ->
+    (forall n k' k, k <= n -> p k n -> p (k' + k) (k' + n)) ->
+    (forall n k' k, n < k -> p k n -> p (k' + k) n) ->    
+    (forall n k, k <= n -> #|s| <= n - k -> p (#|s| + k) n -> p k (n - #|s|)) ->
+    (forall n k, n < k -> p (#|s| + k) n -> p k n) ->    
+    all_vars p (#|s| + k) t -> all_vars p k (subst s k t).
+  Proof.
+    intros Hs P1 P2 P3 P4. revert t k.
+    induction t using PCUICInduction.term_forall_list_ind; simpl => //; solve_all.
+    all:try solve_all.
+    all:try now rewrite ?IHt1 ?IHt2 ?IHt3.
+    - destruct (Nat.leb_spec k n).
+      destruct nth_error eqn:eq.
+      eapply nth_error_all in eq; eauto.
+      simpl in eq. apply (all_vars_lift _ _ 0); auto.      
+      eapply nth_error_None in eq.
+      simpl. apply P3; eauto.
+      simpl. now apply P4.
+    - apply /andP. move/andP: H. intuition eauto.
+      now specialize (IHt2 (S k)); rewrite Nat.add_succ_r in IHt2.
+    - apply /andP. move/andP: H. intuition eauto.
+      now specialize (IHt2 (S k)); rewrite Nat.add_succ_r in IHt2.
+    - apply /andP. move/andP: H => [/andP [P P'] Q].
+      split. apply/andP. intuition auto.
+      now specialize (IHt3 (S k)); rewrite Nat.add_succ_r in IHt3.
+    - apply /andP. move/andP: H. intuition eauto.
+    - apply /andP. move/andP: H => [/andP [P P'] Q]. intuition eauto.
+      apply/andP. intuition auto.
+      solve_all.
+    - destruct x; simpl in *. autorewrite with len.
+      unfold map_def, test_def => /=.
+      rewrite /test_def /= in b. move/andP: b => [bd bb].
+      apply /andP; split; eauto. specialize (b0 (#|m| + k)).
+      apply b0. red. rewrite -bb. lia_f_equal.
+    - destruct x; simpl in *. autorewrite with len.
+      unfold map_def, test_def => /=.
+      rewrite /test_def /= in b. move/andP: b => [bd bb].
+      apply /andP; split; eauto. specialize (b0 (#|m| + k)).
+      apply b0. red. rewrite -bb. lia_f_equal.
+  Qed.
 End VarCheck.
 
 Definition no_let Γ (k n : nat) := 
@@ -879,6 +1035,25 @@ Proof.
   now replace (n0 - k0 - #|Γ'|) with (n0 - (#|Γ'| + k0)) by lia.
 Qed.
 
+Lemma no_lets_from_ext_left Γ k Γ' t : 
+  assumption_context Γ' ->
+  no_lets_from Γ k t ->
+  no_lets_from (Γ' ,,, Γ) k t.
+Proof.
+  intros ass. unfold no_lets_from in *.
+  eapply all_vars_impl.
+  intros k' n. unfold no_let.
+  elim: Nat.ltb_spec => /= // Hk'.
+  destruct nth_error eqn:eq => /= //;
+  destruct (nth_error (Γ' ,,, Γ)) eqn:eq' => /= //.
+  rewrite nth_error_app_lt in eq'. eapply nth_error_Some_length in eq; lia.
+  now rewrite eq in eq'; noconf eq'.
+  move=> _. eapply nth_error_None in eq.
+  rewrite nth_error_app_ge in eq' => //.
+  eapply nth_error_assumption_context in eq'; eauto.
+  now rewrite eq'.
+Qed.
+
 Lemma no_lets_ctx_from_ext Γ k Γ' Δ : 
   assumption_context Γ' ->
   no_lets_ctx_from Γ (#|Γ'| + k) Δ ->
@@ -894,22 +1069,150 @@ Proof.
   now eapply no_lets_from_ext.
 Qed.
 
+Lemma option_all_map f g x : option_all f (option_map g x) = option_all (f ∘ g) x.
+Proof.
+  destruct x; reflexivity.
+Qed.
+
+Lemma test_decl_map_decl f g x : test_decl f (map_decl g x) = test_decl (f ∘ g) x.
+Proof.
+  now rewrite /test_decl /map_decl /= option_all_map.
+Qed.
+
+Lemma option_all_ext f g x : f =1 g -> option_all f x = option_all g x.
+Proof.
+  move=> Hf; destruct x; simpl => //; rewrite Hf; reflexivity.
+Qed.
+
+Lemma test_decl_eq f g x : f =1 g -> test_decl f x = test_decl g x.
+Proof.
+  intros Hf; rewrite /test_decl (Hf (decl_type x)) (option_all_ext f g) //.
+Qed.
+
+
+Lemma option_all_impl (f g : term -> bool) x : (forall x, f x -> g x) -> option_all f x -> option_all g x.
+Proof.
+  move=> Hf; destruct x; simpl => //; apply Hf.
+Qed.
+
+Lemma test_decl_impl (f g : term -> bool) x : (forall x, f x -> g x) -> test_decl f x -> test_decl g x.
+Proof.
+  intros Hf; rewrite /test_decl.
+  move/andP=> [Hd Hb].
+  apply/andP; split; eauto.
+  eapply option_all_impl; eauto.
+Qed.
+
+Lemma no_lets_from_lift Γ k n t : 
+  no_lets_from Γ k t -> no_lets_from Γ (k + n) (lift n k t).
+Proof.
+  intros Hs.
+  apply all_vars_lift; auto.
+  - clear; intros n k' k.
+    unfold no_let.
+    destruct (Nat.ltb_spec n k) => /= //; try lia.
+    move=> _ Hb.
+    destruct (Nat.ltb_spec (k' + n) (k' + k)) => /= //; try lia.
+    now replace (k' + n - (k' + k)) with (n - k) by lia.
+  - clear. intros n k' k.
+    intros Hn _; unfold no_let.
+    destruct (Nat.ltb_spec n (k' + k)) => /= //; try lia.
+Qed.
+
+Lemma no_lets_from_subst Γ s n t : 
+  forallb (no_lets_from Γ 0) s ->
+  no_lets_from Γ (#|s| + n) t -> no_lets_from Γ n (subst s n t).
+Proof.
+  intros Hs.
+  apply all_vars_subst; auto.
+  - clear; intros n k' k.
+    unfold no_let.
+    destruct (Nat.ltb_spec n k) => /= //; try lia.
+    move=> _ Hb.
+    destruct (Nat.ltb_spec (k' + n) (k' + k)) => /= //; try lia.
+    now replace (k' + n - (k' + k)) with (n - k) by lia.
+  - clear. intros n k' k.
+    intros Hn _; unfold no_let.
+    destruct (Nat.ltb_spec n (k' + k)) => /= //; try lia.
+  - clear; intros n k.
+    intros kn snk. unfold no_let.
+    destruct (Nat.ltb_spec n (#|s| + k)) => /= //; try lia.
+    destruct (Nat.ltb_spec (n - #|s|) k) => /= //; try lia.
+    now replace (n - (#|s| + k)) with (n - #|s| - k) by lia.
+  - clear; intros n k.
+    intros nk. unfold no_let.
+    destruct (Nat.ltb_spec n (#|s| + k)) => /= //; try lia.
+    destruct (Nat.ltb_spec n k) => /= //; try lia.
+Qed.
+
 Lemma no_lets_ctx_from_subst Γ k s Δ : 
   forallb (no_lets_from Γ 0) s ->
   no_lets_ctx_from Γ (#|s| + k) Δ ->
   no_lets_ctx_from Γ k (subst_context s k Δ).
 Proof.
-  induction s in Δ  |- *; simpl; auto.
-  now rewrite subst0_context.
-  move/andP => [Ha Hs] ass.
-  rewrite (subst_context_decompo [_]) /=.
-  eapply IHs. auto.
-Admitted.
+  intros hs.
+  unfold no_lets_ctx_from.
+  rewrite -subst_telescope_subst_context.
+  rewrite /subst_telescope. intros a.
+  eapply (fst (Alli_mapi _ _ _)).
+  eapply Alli_impl; eauto.
+  simpl; intros n x.
+  rewrite test_decl_map_decl.
+  apply test_decl_impl => t.
+  clear -hs.
+  replace (n + (#|s| + k)) with (#|s| + (n + k)) by lia.
+  rewrite (Nat.add_comm k n).
+  generalize (n+k). intros n'. 
+  now eapply no_lets_from_subst.
+Qed.
+
+Lemma no_lets_from_lift_ctx Γ n k t : 
+  #|Γ| = n ->
+  no_lets_from Γ k (lift n k t).
+Proof.
+  intros Hn. eapply all_vars_lift'.
+  intros. unfold no_let.
+  elim: Nat.leb_spec => // Hs /=.
+  elim: Nat.ltb_spec => // /= _.
+  subst n.
+  destruct nth_error eqn:eq.
+  eapply nth_error_Some_length in eq. lia.
+  now simpl.
+  elim: Nat.ltb_spec => // Hs' /=. lia.
+Qed.  
+
+Lemma assumption_context_app_inv Γ Δ : assumption_context Γ -> assumption_context Δ ->  
+  assumption_context (Γ ++ Δ).
+Proof.
+  induction 1; try constructor; auto.
+Qed.
 
 Lemma expand_lets_no_let Γ k t : 
   no_lets_from (smash_context [] Γ) k (expand_lets_k Γ k t).
 Proof.
-Admitted.
+  unfold expand_lets_k.
+  eapply no_lets_from_subst.
+  - induction Γ as [|[na [b|] ty] Γ'] using ctx_length_rev_ind; simpl; auto.
+    rewrite smash_context_app_def.
+    rewrite extended_subst_app /= !subst_empty lift0_id lift0_context.
+    rewrite forallb_app. apply /andP. split; auto.
+    2:{ simpl. rewrite andb_true_r.
+        apply no_lets_from_lift_ctx.
+        now  autorewrite with len. }
+    eapply H. now autorewrite with len.
+    rewrite smash_context_app_ass /=.
+    rewrite extended_subst_app /= subst_context_lift_id forallb_app /= andb_true_r.
+    apply/andP; split. specialize (H Γ' ltac:(reflexivity)).
+    solve_all. eapply no_lets_from_ext_left in H. eapply H. repeat constructor.
+    unfold no_let.
+    elim: Nat.ltb_spec => // /= _.
+    destruct nth_error eqn:eq => //.
+    eapply nth_error_assumption_context in eq => /=. now rewrite eq.
+    eapply assumption_context_app_inv. apply smash_context_assumption_context; constructor.
+    repeat constructor.
+  - autorewrite with len. rewrite Nat.add_comm.
+    eapply no_lets_from_lift_ctx. now autorewrite with len.
+Qed.
 
 Lemma expand_lets_ctx_no_let Γ k Δ : 
   no_lets_ctx_from (smash_context [] Γ) k (expand_lets_k_ctx Γ k Δ).
@@ -951,16 +1254,148 @@ Proof.
     repeat constructor.
 Qed.
 
+Lemma subst_context_no_lets_from Γ k Δ :
+  no_lets_ctx_from (smash_context [] Γ) 0 Δ ->
+  no_lets_ctx_from Δ k (subst_context (List.rev (to_extended_list_k Γ k)) 0 Δ).
+Proof.
+Admitted.
+
+Lemma no_lets_from_lift' Γ k n t : 
+  no_lets_from Γ k t -> no_lets_from Γ k (lift n (k + #|Γ|) t).
+Proof.
+  eapply all_vars_lift''. clear; unfold no_let. intros n k' k le.
+  destruct (Nat.ltb_spec n k) => /= //; try lia.
+  elim: Nat.ltb_spec => /= //; try lia.
+  move=> lek.
+  destruct nth_error eqn:eq. eapply nth_error_Some_length in eq. lia.
+  simpl.
+  elim eq': nth_error.
+  eapply nth_error_Some_length in eq' => //. lia.
+  simpl. auto.
+Qed.
+
+Require Import PCUICSigmaCalculus.
+
+Hint Rewrite reln_length : len.
+
+Lemma map_subst_extended_subst Γ k : 
+  map (subst0 (List.rev (to_extended_list_k Γ k))) (extended_subst Γ 0) = 
+  all_rels Γ k 0.
+Proof.
+  unfold to_extended_list_k.
+  
+  induction Γ in k |- *; simpl; auto.
+  destruct a as [na [b|] ty]; simpl.
+  f_equal. autorewrite with len.
+  rewrite lift0_id.
+  rewrite distr_subst. autorewrite with len.
+  rewrite simpl_subst_k. now autorewrite with len. 
+  rewrite IHΓ. now rewrite Nat.add_1_r.
+  rewrite IHΓ. now rewrite Nat.add_1_r.
+  rewrite nth_error_rev. autorewrite with len => /= //. simpl; lia.
+  autorewrite with len. simpl.
+  rewrite Nat.sub_succ. rewrite List.rev_involutive.
+  change (0 - 0) with 0. rewrite Nat.sub_0_r.
+  f_equal.
+  rewrite reln_acc nth_error_app_ge; autorewrite with len => //.
+  simpl. now rewrite Nat.sub_diag /=.
+  rewrite -IHΓ. simpl.
+  rewrite reln_acc List.rev_app_distr /=. 
+  rewrite (map_subst_app_decomp [tRel k]).
+  simpl. rewrite lift_extended_subst.
+  rewrite map_map_compose. apply map_ext.
+  intros x. f_equal. now rewrite Nat.add_1_r.
+  autorewrite with len. simpl.
+  rewrite simpl_subst // lift0_id //.
+Qed.
+
+Lemma subst_ext_list_ext_subst Γ k' k t :
+  subst (List.rev (to_extended_list_k Γ k)) k'
+    (subst (extended_subst Γ 0) k'
+      (lift (context_assumptions Γ) (k' + #|Γ|) t)) =
+  subst (all_rels Γ k 0) k' t.
+Proof.
+  epose proof (distr_subst_rec _ _ _ 0 _).
+  rewrite Nat.add_0_r in H. rewrite -> H. clear H.
+  autorewrite with len.
+  rewrite simpl_subst_k. now autorewrite with len. 
+  now rewrite map_subst_extended_subst.
+Qed.
+
+Lemma expand_lets_ctx_o_lets Γ k k' Δ :
+  subst_context (List.rev (to_extended_list_k Γ k)) k' (expand_lets_k_ctx Γ k' Δ) = 
+  subst_context (all_rels Γ k 0) k' Δ.
+Proof.
+  revert k k'; induction Δ using rev_ind; simpl; auto.
+  intros k k'; rewrite expand_lets_k_ctx_decl /map_decl /=.
+  rewrite !subst_context_app /=.
+  simpl; unfold app_context.
+  f_equal. specialize (IHΔ k (S k')). simpl in IHΔ.
+  rewrite -IHΔ.
+  destruct x; simpl.
+  destruct decl_body; simpl in * => //.
+  unfold subst_context, fold_context; simpl.
+  f_equal.
+  unfold expand_lets_k, subst_context => /=. 
+  unfold map_decl; simpl. unfold map_decl. simpl. f_equal.
+  destruct (decl_body x); simpl. f_equal.
+  now rewrite subst_ext_list_ext_subst. auto.
+  now rewrite subst_ext_list_ext_subst.
+Qed.
+
+Lemma no_lets_subst_all_rels Γ k k' Δ :
+  no_lets_ctx_from Γ k' Δ ->
+  closedn_ctx (#|Γ| + k') Δ ->
+  subst_context (all_rels Γ k 0) k' Δ = Δ.
+Proof.
+  intros nolet cl.
+  revert k k' nolet cl.
+  induction Δ using rev_ind; simpl; auto; intros.
+  rewrite subst_context_app. unfold app_context; f_equal.
+  simpl. rewrite (IHΔ k (S k')). admit. admit.
+  auto.
+  rewrite subst_context_snoc /= subst_context_nil /= /snoc.
+  f_equal.
+  destruct x as [na [b|] ty]; rewrite /subst_decl /map_decl /=.
+  f_equal. f_equal.
+  rewrite closedn_ctx_app in cl. move/andP: cl => [clb clΓ].
+  simpl in clb. rewrite /id andb_true_r /closed_decl /= in clb.
+  move/andP: clb =>  [clb clty].
 Admitted.
 
 
+Lemma expand_lets_subst_lift Γ k k' Δ :
+  no_lets_ctx_from (smash_context [] Γ) k Δ ->
+  no_lets_ctx_from Γ (k + k')  (subst_context (List.rev (to_extended_list_k Γ k')) 0 Δ).
+Proof.
+Admitted.
 
+(* 
+Lemma expand_lets_no_lets Γ k Δ :
+  no_lets_ctx_from (smash_context [] Γ) 0 Δ ->
+  expand_lets_k_ctx Γ k (subst_context (List.rev (to_extended_list Γ k)) 0 Δ) = 
+  lift_context k 0 Δ. 
+    
+Admitted. *)
 
 Lemma expand_lets_k_ctx_subst_id' Γ k Δ : 
   closedn_ctx #|Γ| Δ -> 
   expand_lets_k_ctx Γ k (subst_context (List.rev (to_extended_list_k Γ k)) 0 
     (expand_lets_ctx Γ Δ)) = expand_lets_k_ctx Γ k (lift_context k 0 Δ).
 Proof.
+  intros clΔ.
+  pose proof (expand_lets_ctx_no_let Γ 0 Δ).
+  eapply (expand_lets_subst_lift _ _ k) in X. simpl in X.
+  rewrite expand_lets_ctx_o_lets in X |- *.
+  rewrite no_lets_subst_all_rels. 2:now rewrite Nat.add_0_r. admit.
+  unfold expand_lets_k_ctx at 2.
+
+  rewrite lift_c  
+
+
+Admitted.
+(* 
+
   induction Γ in k, Δ |- *; intros clΔ.
   - simpl to_extended_list_k; simpl List.rev.
      rewrite !subst0_context /= ?lift0_context /=. unfold expand_lets_k_ctx.
@@ -977,7 +1412,7 @@ Proof.
     simpl. f_equal.
     specialize (IHΓ (S k)). simpl in IHΓ.
     rewrite Nat.add_1_r Nat.add_succ_r. 
-Admitted.
+Admitted. *)
 
 Lemma on_constructor_inst_pars_indices {cf:checker_flags} Σ ind u mdecl idecl cshape cdecl Γ pars parsubst : 
   wf Σ.1 -> 

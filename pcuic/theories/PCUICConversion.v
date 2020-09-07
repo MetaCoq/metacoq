@@ -2791,3 +2791,23 @@ Proof.
     rewrite !subst_context_app !app_context_nil_l in X0, X1; autorewrite with len in X0, X1.
     now rewrite -(All2_local_env_length X).
 Qed.
+
+Lemma All2_local_env_nth_error {cf:checker_flags} Σ Γ Δ Δ' : 
+  All2_local_env (fun (Γ' _ : PCUICEnvironment.context) 
+  (_ : option (term × term)) (x y : term) =>
+  Σ;;; Γ ,,, Γ' |- x <= y) Δ Δ' ->
+  assumption_context Δ ->
+  forall n decl, nth_error Δ n = Some decl ->
+  ∑ decl', (nth_error Δ' n = Some decl') * (Σ ;;; Γ ,,, skipn (S n) Δ |- decl_type decl <= decl_type decl').
+Proof.
+  induction 1.
+  - move=> n decl /= //. now rewrite nth_error_nil.
+  - move=> H [|n'] decl /= //.
+    + rewrite /nth_error /= => [= <-].
+      eexists; intuition eauto.
+    + rewrite /= => Hnth.
+      forward IHX by now depelim H.
+      destruct (IHX _ _ Hnth) as [decl' [Hnth' cum]].
+      eexists; intuition eauto.
+  - move=> H; elimtype False; depelim H; simpl in H0; noconf H0.
+Qed.

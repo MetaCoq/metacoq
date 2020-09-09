@@ -144,6 +144,25 @@ Fixpoint noccur_between k n (t : term) : bool :=
   | x => true
   end.
 
+Fixpoint extended_subst (Γ : context) (n : nat) 
+  (* Δ, smash_context Γ, n |- extended_subst Γ n : Γ *) :=
+  match Γ with
+  | nil => nil
+  | cons d vs =>
+    match decl_body d with
+    | Some b =>
+      (* Δ , vs |- b *)
+      let s := extended_subst vs n in
+      (* Δ , smash_context vs , n |- s : vs *)
+      let b' := lift (context_assumptions vs + n) #|s| b in
+      (* Δ, smash_context vs, n , vs |- b' *)
+      let b' := subst0 s b' in
+      (* Δ, smash_context vs , n |- b' *)
+      b' :: s
+    | None => tRel n :: extended_subst vs (S n)
+    end
+  end.
+
 Create HintDb terms.
 
 Ltac arith_congr := repeat (try lia; progress f_equal).

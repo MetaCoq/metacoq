@@ -758,18 +758,6 @@ Proof.
   induction 1; try constructor; auto.
 Qed.
 
-Lemma closed_ctx_decl k d Γ : closedn_ctx k (d :: Γ) =
-  closed_decl (k + #|Γ|) d && closedn_ctx k Γ.
-Proof.
-  unfold closedn_ctx at 1.
-  rewrite mapi_rev /= forallb_app {2}/id /= andb_true_r.
-  replace (S #|Γ| - 1) with #|Γ| by lia.
-  rewrite andb_comm. f_equal.
-  unfold closedn_ctx.
-  rewrite mapi_rev (mapi_rec_add _ _ 1 0) /=.
-  f_equal.
-Qed.
-
 Lemma closedn_ctx_upwards k k' Γ : 
   closedn_ctx k Γ -> k <= k' ->
   closedn_ctx k' Γ.
@@ -1952,34 +1940,6 @@ Section UniverseClosedSubst.
   
 End UniverseClosedSubst.
 
-Lemma eq_term_upto_univ_variance {cf:checker_flags} (Σ : global_env_ext) {mdecl v l i i' u u' t t'} : 
-  forallb (negb ∘ Level.is_prop) u ->
-  forallb (negb ∘ Level.is_prop) u' ->
-  (forall val, satisfies val Σ -> 
-      satisfies (subst_instance_valuation (u ++ u') val)
-     (global_ext_constraints (Σ.1, v))) ->
-  variance_universes (PCUICEnvironment.ind_universes mdecl) l = Some (v, i, i') ->
-  R_universe_instance_variance (eq_universe Σ) (leq_universe Σ) l u u' ->
-  forall n, 
-  eq_term_upto_univ_napp Σ (eq_universe (global_ext_constraints (Σ.1, v))) 
-    (leq_universe (global_ext_constraints (Σ.1, v))) n t t' ->
-  eq_term_upto_univ_napp Σ (eq_universe Σ) (leq_universe Σ) n 
-     (subst_instance_constr u t) (subst_instance_constr u' t').
-Proof.
-  intros nprop nprop' valsat var Rus.
-  eapply eq_term_upto_univ_napp_impl.
-  { intros x y eq.
-    red in eq |- *. destruct check_univs => //.
-    red in eq. red. intros.
-    erewrite !subst_instance_univ_val'; eauto.
-    apply valsat in H.
-    pose proof (eq _ H).
-    apply satisfies_subst_instance_ctr in H => //.
-    apply satisfies_subst_instance_ctr in H => //.
-    
-  }
-Admitted.
-
 Lemma level_var_instance_length n i : #|level_var_instance n i| = #|i|.
 Proof. now rewrite /level_var_instance; len. Qed.
 Hint Rewrite level_var_instance_length : len.
@@ -2214,8 +2174,14 @@ Proof.
     now rewrite subst_instance_cstrs_add.
 Qed.
 
+(** Morally, if variance_universes l = v i i' and R_universe_instance_variance l u u' then
+  i and i' can be substituted respectively by u and u'.
+    The hard part is to show that (Σ.1, v) can also be turned into Σ by instanciating
+  i and i' by u and u'.
+*)
+
 Lemma cumul_inst_variance {cf:checker_flags} (Σ : global_env_ext) mdecl l v i i' u u' Γ : 
-  wf_ext Σ ->
+  wf Σ ->
   on_udecl Σ (ind_universes mdecl) ->
   on_variance (ind_universes mdecl) (Some l) ->
   variance_universes (PCUICEnvironment.ind_universes mdecl) l = Some (v, i, i') ->
@@ -2261,7 +2227,7 @@ Proof.
   rewrite satisfies_union. split; auto.
   2:{ rewrite -satisfies_subst_instance_ctr //.
       rewrite equal_subst_instance_cstrs_mono //.
-      red; apply monomorphic_global_constraint; auto. apply wfΣ. }
+      red; apply monomorphic_global_constraint; auto. }
   rewrite cstrs.
   destruct (ind_universes mdecl) as [[inst cstrs']|[inst cstrs']].
   { simpl in vari => //. }
@@ -2304,20 +2270,19 @@ Proof.
 Qed.
 
 Lemma All2_local_env_inst {cf:checker_flags} (Σ : global_env_ext) mdecl l v i i' u u' Γ' Γ : 
-  wf_ext Σ ->  
+  wf Σ ->  
   on_udecl Σ (ind_universes mdecl) ->
   on_variance (ind_universes mdecl) (Some l) ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   consistent_instance_ext Σ (ind_universes mdecl) u' ->
   variance_universes (PCUICEnvironment.ind_universes mdecl) l = Some (v, i, i') ->
   R_universe_instance_variance (eq_universe Σ) (leq_universe Σ) l u u' ->
-  All2_local_env (on_decl (fun Γ _ t t' => cumul (Σ.1, v) (subst_instance_context i Γ' ,,, Γ) t t'))
-    (subst_instance_context i Γ) (subst_instance_context i' Γ) ->
-  All2_local_env (on_decl (fun Γ _ t t' => cumul Σ (subst_instance_context u Γ' ,,, Γ) t t'))
-  (subst_instance_context u Γ) (subst_instance_context u' Γ).
+  cumul_ctx_rel (Σ.1, v) (subst_instance_context i Γ') (subst_instance_context i Γ) (subst_instance_context i' Γ) ->
+  cumul_ctx_rel Σ (subst_instance_context u Γ') (subst_instance_context u Γ) (subst_instance_context u' Γ).
 Proof.
+  unfold cumul_ctx_rel.
   intros wfΣ onu onv cu cu' vari Ru.
-  induction Γ as [[]|[na [b|] ty] tl]; simpl.
+  induction Γ as [|[na [b|] ty] tl]; simpl.
   constructor.
   intros H; depelim H; simpl in H0; noconf H0; simpl in H1; noconf H1.
   econstructor; auto. red.
@@ -2335,10 +2300,24 @@ Proof.
   eapply cumul_inst_variance; eauto.
 Qed.
 
+Lemma forallb_closed_upwards k k' s : 
+  forallb (closedn k) s ->
+  k <= k' ->
+  forallb (closedn k') s.
+Proof.
+  intros H Hk.
+  eapply All_forallb.
+  eapply forallb_All in H. solve_all.
+  eapply closed_upwards; eauto.
+Qed.
+
 Lemma constructor_cumulative_indices {cf:checker_flags} {Σ : global_env_ext} (wfΣ : wf Σ.1) :
-  forall {ind mdecl idecl cdecl ind_indices cs u u' napp},
+  forall {ind mdecl idecl cdecl cs u u' napp},
   declared_inductive Σ mdecl ind idecl ->
-  on_constructor (lift_typing typing) (Σ.1, ind_universes mdecl) mdecl (inductive_ind ind) idecl ind_indices cdecl cs -> 
+  forall (oib : on_ind_body (lift_typing typing) (Σ.1, ind_universes mdecl) (inductive_mind ind) mdecl 
+    (inductive_ind ind) idecl),
+  on_constructor (lift_typing typing) (Σ.1, ind_universes mdecl) mdecl (inductive_ind ind) idecl 
+    (ind_indices oib) cdecl cs -> 
   on_udecl Σ (ind_universes mdecl) ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   consistent_instance_ext Σ (ind_universes mdecl) u' ->
@@ -2366,7 +2345,8 @@ Proof.
   intros. move: H3.
   unfold R_global_instance.
   simpl. rewrite (declared_inductive_lookup_inductive H).
-  eapply on_declared_inductive in H as [onind oib]; eauto.
+  pose proof H as decli.
+  eapply on_declared_inductive in H as [onind _]; eauto.
   rewrite oib.(ind_arity_eq). 
   rewrite !destArity_it_mkProd_or_LetIn. simpl.
   rewrite app_context_nil_l context_assumptions_app.
@@ -2381,8 +2361,97 @@ Proof.
   simpl.
   intros Ru.
   { split.
-    { eapply All2_local_env_inst in args.          
-  
+    { eapply All2_local_env_inst in args.
+      8:eauto. all:eauto.
+      2:{ pose proof (onVariance _ _ _ _ onind).
+          now rewrite -indv. }
+      rewrite -smash_context_subst subst_context_nil in args.
+      rewrite !subst_instance_context_smash /= in args.
+      rewrite subst_instance_context_app in args.
+      epose proof (cumul_ctx_subst _ [] _ _ _ _ _ _).
+      rewrite app_context_nil_l in X3. eapply X3 in args; clear X3.
+      rewrite app_context_nil_l in args.
+      autorewrite with len in args. simpl in args.
+      5:{ eapply subslet_untyped_subslet. eapply subslet_inds; eauto. }
+      5:{ eapply subslet_untyped_subslet. eapply subslet_inds; eauto. }
+      4:{ eapply conv_inds. admit. }
+      all:eauto.
+      2:admit.
+      
+      rewrite - !smash_context_subst !subst_context_nil in args.
+      assert (closed_ctx
+        (subst_instance_context u
+          (smash_context [] (PCUICEnvironment.ind_params mdecl)))) by admit.
+      rewrite closed_ctx_subst // in args.
+      eapply (weaken_cumul_ctx _ Γ) in args => //.
+      4:eapply X0.
+      2:{ rewrite closedn_ctx_app; apply /andP. split => //. simpl.
+          len. simpl. eapply closedn_smash_context.
+          rewrite -(Nat.add_0_l (context_assumptions _)).
+          eapply closedn_ctx_subst. len; simpl.
+          2:{ eapply declared_minductive_closed_inds; eauto. }
+          epose proof (on_constructor_subst' _ _ _ _ _ _ wfΣ decli onind oib X) as [[_ wf'] _].
+          eapply closed_wf_local in wf'.
+          rewrite closedn_ctx_app in wf'. move/andP: wf'=> [_ clargs].
+          simpl in clargs; autorewrite with len in clargs.
+          rewrite closedn_subst_instance_context.
+          rewrite -(Nat.add_0_r (context_assumptions _ + _)).
+          eapply closedn_ctx_subst. len.
+          eapply closedn_ctx_upwards; eauto. lia.
+          eapply forallb_closed_upwards. eapply closedn_extended_subst; try lia.
+          2:lia. rewrite -(closedn_subst_instance_context (u:=u)).
+          eapply closed_wf_local; eauto. eapply on_minductive_wf_params; eauto. auto. }
+      2:{ rewrite closedn_ctx_app; apply /andP. split => //. simpl.
+          len. simpl. eapply closedn_smash_context.
+          rewrite -(Nat.add_0_l (context_assumptions _)).
+          eapply closedn_ctx_subst. len; simpl.
+          2:{ eapply declared_minductive_closed_inds; eauto. }
+          epose proof (on_constructor_subst' _ _ _ _ _ _ wfΣ decli onind oib X) as [[_ wf'] _].
+          eapply closed_wf_local in wf'.
+          rewrite closedn_ctx_app in wf'. move/andP: wf'=> [_ clargs].
+          simpl in clargs; autorewrite with len in clargs.
+          rewrite closedn_subst_instance_context.
+          rewrite -(Nat.add_0_r (context_assumptions _ + _)).
+          eapply closedn_ctx_subst. len.
+          eapply closedn_ctx_upwards; eauto. lia.
+          eapply forallb_closed_upwards. eapply closedn_extended_subst; try lia.
+          2:lia. rewrite -(closedn_subst_instance_context (u:=u)).
+          eapply closed_wf_local; eauto. eapply on_minductive_wf_params; eauto. auto. }
+      eapply spine_subst_smash in X0 => //.
+      eapply spine_subst_smash in X1 => //.
+      eapply (cumul_ctx_subst _ Γ _ _ [] _ _ (List.rev pars) (List.rev pars')) in args; eauto.
+      3:{ eapply All2_rev => //. }
+      3:{ rewrite subst_instance_context_smash /=.
+          eapply subslet_untyped_subslet. eapply X0. }
+      3:{ eapply subslet_untyped_subslet. eapply X1. }
+      2:admit.
+      move: args.
+      rewrite subst_context_nil /= - !smash_context_subst /= subst_context_nil.
+      len.
+      rewrite !subst_instance_subst_context.
+      generalize (subst_app_context_gen (List.rev pars)).
+      rewrite -(context_subst_length _ _ _ X0). len; simpl.
+      move=> subs. rewrite -(subs _ 0).
+      
+
+
+      eapply 
+
+
+(*  Real problem here: the args hypothesis could perfectly prove that Ind I@{u} (X := Type@{u}) : Type@{u} := foo : X -> I@{u}
+  with u irrelevant. The cumulativity test *must* smash the  parameters sright away.
+*)
+
+      eapply (cumul_ctx_subst _ Γ _ []) in args.
+      5:{ eapply subslet_untyped_subslet. eapply X0. }
+      all:auto.
+      3:{ eapply  }
+      autorewrite with len in args. simpl in args.
+      
+      
+        
+
+      }
 
 
 
@@ -2393,11 +2462,6 @@ Proof.
   2:{ simpl. }
 
   (* We need to strengthen respects variance to allow arbitrary parameter substitutions *)
-  (** Morally, if variance_universes l = v i i' and R_universe_instance_variance l u u' then
-      i and i' can be substituted respectively by u and u'.
-      The hard part might be to show that (Σ.1, v) can also be turned into Σ by instanciating
-      i and i' by u and u'.
-  *)
 Admitted.
 
   

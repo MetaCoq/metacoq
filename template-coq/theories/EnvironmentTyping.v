@@ -291,13 +291,15 @@ Module Type Typing (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E).
 
   Parameter Inline smash_context : context -> context -> context.
   Parameter Inline lift_context : nat -> nat -> context -> context.
+  Parameter Inline subst_context : list term -> nat ->  context -> context.
   Parameter Inline subst_telescope : list term -> nat -> context -> context.
   Parameter Inline subst_instance_context : Instance.t -> context -> context.
   Parameter Inline subst_instance_constr : Instance.t -> term  -> term.
   Parameter Inline lift : nat -> nat -> term -> term.
   Parameter Inline subst : list term -> nat -> term -> term.
   Parameter Inline inds : kername -> Instance.t -> list one_inductive_body -> list term.
-  
+  Parameter Inline extended_subst : context -> nat -> list term. (* Let expansion substitution *)
+
   (* [noccur_between n k t] Checks that deBruijn indices between n and n+k do not appear in t (even under binders).  *)
   Parameter Inline noccur_between : nat -> nat -> term -> bool.
   Parameter Inline closedn : nat -> term -> bool.
@@ -519,15 +521,15 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       let univs := ind_universes mdecl in
       match variance_universes univs v with
       | Some (univs, u, u') =>
-      All2_local_env 
-        (on_decl (fun Γ Γ' t t' => 
-          cumul (Σ, univs) (subst_instance_context u (ind_arities mdecl ,,, smash_context [] (ind_params mdecl)) ,,, Γ) t t'))
-        (subst_instance_context u (smash_context [] (cshape_args cs)))
-        (subst_instance_context u' (smash_context [] (cshape_args cs))) *
-      All2 
-        (conv (Σ, univs) (subst_instance_context u (ind_arities mdecl ,,, smash_context [] (ind_params mdecl ,,, cshape_args cs))))
-        (map (subst_instance_constr u) (cshape_indices cs))
-        (map (subst_instance_constr u') (cshape_indices cs))
+        All2_local_env 
+          (on_decl (fun Γ Γ' t t' => 
+            cumul (Σ, univs) (subst_instance_context u (ind_arities mdecl ,,, smash_context [] (ind_params mdecl)) ,,, Γ) t t'))
+          (subst_instance_context u (subst_context (extended_subst (ind_params mdecl) 0) 0 (smash_context [] (cshape_args cs))))
+          (subst_instance_context u' (subst_context (extended_subst (ind_params mdecl) 0) 0 (smash_context [] (cshape_args cs)))) *
+        All2 
+          (conv (Σ, univs) (subst_instance_context u (ind_arities mdecl ,,, smash_context [] (ind_params mdecl ,,, cshape_args cs))))
+          (map (subst_instance_constr u) (cshape_indices cs))
+          (map (subst_instance_constr u') (cshape_indices cs))
       | None => False (* Monomorphic inductives have no variance attached *)
       end.
 

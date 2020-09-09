@@ -520,11 +520,12 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       match variance_universes univs v with
       | Some (univs, u, u') =>
       All2_local_env 
-        (on_decl (fun Γ Γ' t t' => cumul (Σ, univs) (ind_arities mdecl ,,, smash_context [] (ind_params mdecl) ,,, Γ) t t'))
+        (on_decl (fun Γ Γ' t t' => 
+          cumul (Σ, univs) (subst_instance_context u (ind_arities mdecl ,,, smash_context [] (ind_params mdecl)) ,,, Γ) t t'))
         (subst_instance_context u (smash_context [] (cshape_args cs)))
         (subst_instance_context u' (smash_context [] (cshape_args cs))) *
       All2 
-        (conv (Σ, univs) (ind_arities mdecl ,,, smash_context [] (ind_params mdecl ,,, cshape_args cs)))
+        (conv (Σ, univs) (subst_instance_context u (ind_arities mdecl ,,, smash_context [] (ind_params mdecl ,,, cshape_args cs))))
         (map (subst_instance_constr u) (cshape_indices cs))
         (map (subst_instance_constr u') (cshape_indices cs))
       | None => False (* Monomorphic inductives have no variance attached *)

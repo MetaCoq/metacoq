@@ -14,15 +14,6 @@ Require Equations.Prop.DepElim.
 From Equations Require Import Equations.
 Require Import ssreflect.
 
-Lemma consistent_instance_ext_noprop {cf:checker_flags} {Σ univs u} : 
-  consistent_instance_ext Σ univs u ->
-  forallb (fun x1 : Level.t => negb (Level.is_prop x1)) u.
-Proof.
-  unfold consistent_instance_ext, consistent_instance.
-  destruct univs. destruct u; simpl; try discriminate; auto.
-  firstorder.
-Qed.
-
 Lemma not_prop_not_leq_prop sf : sf <> InProp -> ~ leb_sort_family sf InProp.
 Proof.
   destruct sf; simpl; try congruence.

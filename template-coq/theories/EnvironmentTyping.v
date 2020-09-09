@@ -464,6 +464,9 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       | Level.Var k => Level.Var (n + k)
       end.
 
+    Definition lift_instance n l :=
+      map (lift_level n) l.
+
     Definition lift_constraint n (c : Level.t * ConstraintType.t * Level.t) :=
       let '((l, r), l') := c in
       ((lift_level n l, r), lift_level n l').
@@ -475,16 +478,16 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
     Definition level_var_instance n (inst : list name) :=
       mapi_rec (fun i _ => Level.Var i) inst n.
 
-    Fixpoint add_variance (v : list Variance.t) (u u' : Instance.t) cstrs :=
+    Fixpoint variance_cstrs (v : list Variance.t) (u u' : Instance.t) :=
       match v, u, u' with
-      | _, [], [] => cstrs
+      | _, [], [] => ConstraintSet.empty
       | v :: vs, u :: us, u' :: us' => 
         match v with
-        | Variance.Irrelevant => add_variance vs us us' cstrs
-        | Variance.Covariant => add_variance vs us us' (ConstraintSet.add (u, ConstraintType.Le, u') cstrs)
-        | Variance.Invariant => add_variance vs us us' (ConstraintSet.add (u, ConstraintType.Eq, u') cstrs)
+        | Variance.Irrelevant => variance_cstrs vs us us'
+        | Variance.Covariant => ConstraintSet.add (u, ConstraintType.Le, u') (variance_cstrs vs us us')
+        | Variance.Invariant => ConstraintSet.add (u, ConstraintType.Eq, u') (variance_cstrs vs us us')
         end
-      | _, _, _ => (* Impossible *) cstrs
+      | _, _, _ => (* Impossible due to on_variance invariant *) ConstraintSet.empty
       end.
 
     (** This constructs a duplication of the polymorphic universe context of the inductive,  
@@ -493,15 +496,15 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
 
     Definition variance_universes univs v :=
       match univs with
-      | Monomorphic_ctx ctx => (univs, [], []) (* Dummy value: impossible case *)
+      | Monomorphic_ctx ctx => None
       | Polymorphic_ctx auctx =>
         let (inst, cstrs) := auctx in
-        let u := level_var_instance #|inst| inst in
         let u' := level_var_instance 0 inst in
+        let u := lift_instance #|inst| u' in
         let cstrs := ConstraintSet.union cstrs (lift_constraints #|inst| cstrs) in
-        let cstra := add_variance v u u' cstrs in
-        let auctx' := (inst ++ inst, cstrs) in
-        (Polymorphic_ctx auctx', u, u')
+        let cstrv := variance_cstrs v u u' in
+        let auctx' := (inst ++ inst, ConstraintSet.union cstrs cstrv) in
+        Some (Polymorphic_ctx auctx', u, u')
       end.
 
     (** A constructor type respects the given variance [v] if each constructor 
@@ -514,15 +517,18 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
 
     Definition respects_variance Σ mdecl v cs :=
       let univs := ind_universes mdecl in
-      let '(univs, u, u') := variance_universes univs v in
+      match variance_universes univs v with
+      | Some (univs, u, u') =>
       All2_local_env 
-        (on_decl (fun Γ Γ' t t' => cumul (Σ, univs) (ind_arities mdecl ,,, ind_params mdecl ,,, Γ) t t'))
-        (subst_instance_context u (cshape_args cs))
-        (subst_instance_context u' (cshape_args cs)) *
+        (on_decl (fun Γ Γ' t t' => cumul (Σ, univs) (ind_arities mdecl ,,, smash_context [] (ind_params mdecl) ,,, Γ) t t'))
+        (subst_instance_context u (smash_context [] (cshape_args cs)))
+        (subst_instance_context u' (smash_context [] (cshape_args cs))) *
       All2 
-        (conv (Σ, univs) (ind_arities mdecl ,,, ind_params mdecl ,,, cshape_args cs))
+        (conv (Σ, univs) (ind_arities mdecl ,,, smash_context [] (ind_params mdecl ,,, cshape_args cs)))
         (map (subst_instance_constr u) (cshape_indices cs))
-        (map (subst_instance_constr u') (cshape_indices cs)).
+        (map (subst_instance_constr u') (cshape_indices cs))
+      | None => False (* Monomorphic inductives have no variance attached *)
+      end.
 
     Record on_constructor Σ mdecl i idecl ind_indices cdecl (cshape : constructor_shape) := {
       (* cdecl.1 fresh ?? *)

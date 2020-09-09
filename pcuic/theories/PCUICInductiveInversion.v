@@ -24,6 +24,18 @@ From Equations Require Import Equations.
 Ltac len := autorewrite with len.
 Hint Rewrite reln_length : len.
 
+
+Lemma consistent_instance_ext_noprop {cf:checker_flags} {Σ univs u} : 
+  consistent_instance_ext Σ univs u ->
+  forallb (fun x1 : Level.t => negb (Level.is_prop x1)) u.
+Proof.
+  unfold consistent_instance_ext, consistent_instance.
+  destruct univs. destruct u; simpl; try discriminate; auto.
+  firstorder.
+Qed.
+
+Hint Resolve consistent_instance_ext_noprop : pcuic.
+
 (* TODO Move *)
 Definition expand_lets_k Γ k t := 
   (subst (extended_subst Γ 0) k (lift (context_assumptions Γ) (k + #|Γ|) t)).
@@ -1752,6 +1764,436 @@ Proof.
   intros []. red in H. now rewrite /lookup_minductive H H0.
 Qed.
 
+Require Import Equations.Type.Relation_Properties.
+Lemma red_subst_instance {cf:checker_flags} (Σ : global_env) (Γ : context) (u : Instance.t) (s t : term) :
+  red Σ Γ s t ->
+  red Σ (subst_instance_context u Γ) (subst_instance_constr u s)
+            (subst_instance_constr u t).
+Proof.
+  intros H; apply red_alt, clos_rt_rt1n in H.
+  apply red_alt, clos_rt1n_rt.
+  induction H. constructor.
+  eapply red1_subst_instance in r.
+  econstructor 2. eapply r.
+  auto.
+Qed.
+
+Lemma nth_error_decl_body_ass_ctx {Γ Δ i body} : 
+  assumption_context Γ ->
+  option_map decl_body (nth_error (Γ ,,, Δ) i) = Some (Some body) ->
+  i < #|Δ|.
+Proof.
+  intros ass.
+  destruct nth_error eqn:eq.
+  simpl.
+  destruct (i <? #|Δ|) eqn:lt.
+  eapply Nat.ltb_lt in lt => //.
+  eapply Nat.ltb_nlt in lt => //.
+  rewrite nth_error_app_ge in eq. lia.
+  eapply nth_error_assumption_context in eq; eauto. rewrite eq //.
+  by [].
+Qed.
+  
+Lemma red1_assumption_context_irrelevant Σ Γ Δ Γ' t t' : 
+  red1 Σ (Γ ,,, Δ) t t' ->
+  assumption_context Γ ->
+  #|Γ| = #|Γ'| ->
+  red1 Σ (Γ' ,,, Δ) t t'. 
+Proof.
+  remember (Γ ,,, Δ) as ctx.
+  intros H; revert Γ Δ Heqctx Γ'. 
+  induction H using red1_ind_all; intros; subst; try solve [econstructor; eauto; try solve_all].
+  
+  - pose proof (nth_error_decl_body_ass_ctx H0 H).
+    rewrite nth_error_app_lt // in H |- *.
+    constructor. rewrite nth_error_app_lt //.
+  - econstructor; eauto; eapply (IHred1 Γ0 (Δ ,, vass na N) ltac:(reflexivity)) => //.
+  - econstructor; eauto; eapply (IHred1 Γ0 (Δ ,, vdef na b t) ltac:(reflexivity)) => //.
+  - econstructor; eauto; eapply (IHred1 Γ0 (Δ ,, vass na M1) ltac:(reflexivity)) => //.
+  - eapply fix_red_body. solve_all.
+    specialize (b0 Γ0 (Δ ,,, fix_context mfix0) ltac:(rewrite app_context_assoc; reflexivity) _ H H0).
+    now rewrite app_context_assoc in b0.
+  - eapply cofix_red_body. solve_all.
+    specialize (b0 Γ0 (Δ ,,, fix_context mfix0) ltac:(rewrite app_context_assoc; reflexivity) _ H H0).
+    now rewrite app_context_assoc in b0.
+Qed.
+
+Lemma red_assumption_context_app_irrelevant Σ Γ Δ Γ' t t' : 
+  red Σ (Γ ,,, Δ) t t' ->
+  assumption_context Γ ->
+  #|Γ| = #|Γ'| ->
+  red Σ (Γ' ,,, Δ) t t'. 
+Proof.
+  intros r ass eqc.
+  eapply red_alt, clos_rt_rt1n in r.
+  eapply red_alt. eapply clos_rt1n_rt.
+  induction r; [constructor|econstructor 2].
+  eapply red1_assumption_context_irrelevant; eauto. apply IHr.
+Qed.
+
+Lemma red_assumption_context_irrelevant Σ Γ Γ' t t' : 
+  red Σ Γ t t' ->
+  assumption_context Γ ->
+  #|Γ| = #|Γ'| ->
+  red Σ Γ' t t'. 
+Proof.
+  intros r ass eqc.
+  now eapply (red_assumption_context_app_irrelevant _ _ [] Γ').
+Qed.
+
+Lemma assumption_context_map f Γ :
+  assumption_context Γ -> assumption_context (map_context f Γ).
+Proof.
+  induction 1; constructor; auto.
+Qed.
+
+Lemma assumption_context_subst_instance u Γ :
+  assumption_context Γ -> assumption_context (subst_instance_context u Γ).
+Proof. apply assumption_context_map. Qed.
+
+Lemma eq_term_upto_univ_napp_impl {cf:checker_flags} (Σ : global_env) 
+  (Re Re' Rle Rle' : Relation_Definitions.relation Universe.t) u u' t t' : 
+  (forall x y : Universe.t, Re x y -> Re' (subst_instance_univ u x) (subst_instance_univ u' y)) ->
+  (forall x y : Universe.t, Rle x y -> Rle' (subst_instance_univ u x) (subst_instance_univ u' y)) ->
+  (forall x y : Instance.t, R_universe_instance Re x y -> R_universe_instance Re' (subst_instance_instance u x) 
+    (subst_instance_instance u' y)) ->
+  (forall r n (x y : Instance.t), R_global_instance Σ Re Rle r n x y -> 
+    R_global_instance Σ Re' Rle' r n (subst_instance_instance u x) (subst_instance_instance u' y)) ->
+  (forall r n (x y : Instance.t), R_global_instance Σ Re Re r n x y -> 
+    R_global_instance Σ Re' Re' r n (subst_instance_instance u x) (subst_instance_instance u' y)) ->
+  forall n, eq_term_upto_univ_napp Σ Re Rle n t t' ->
+  eq_term_upto_univ_napp Σ Re' Rle' n (subst_instance_constr u t) (subst_instance_constr u' t').
+Proof.
+  intros Heq Hle Hi Hgil Hgie.
+  induction t in t', Re, Re', Rle, Rle', Heq, Hle, Hi, Hgil, Hgie |- * using 
+    PCUICInduction.term_forall_list_ind; simpl; intros n' H; depelim H. 
+  all:simpl; try solve [constructor; eauto; try solve_all].
+Qed.
+
+Section Betweenu.
+  Context (start : nat) (k : nat).
+
+  Definition betweenu_level (l : Level.t) :=
+    match l with
+    | Level.Var n => (start <=? n) && (n <? start + k)%nat
+    | _ => true
+    end.
+
+  Definition betweenu_level_expr (s : UnivExpr.t) :=
+    betweenu_level (UnivExpr.get_level s).
+
+  Definition betweenu_universe (u : Universe.t) :=
+    UnivExprSet.for_all betweenu_level_expr u.
+
+  Definition betweenu_instance (u : Instance.t) :=
+    forallb betweenu_level u.
+
+End Betweenu.
+
+(** Universe-closed terms are unaffected by universe substitution. *)
+Section UniverseClosedSubst.
+  Lemma closedu_subst_instance_level_app u u' l
+  : closedu_level #|u'| l -> subst_instance_level (u' ++ u) l = subst_instance_level u' l.
+  Proof.
+    destruct l; cbnr.
+    intros Hn % Nat.ltb_lt.
+    rewrite app_nth1 //.
+  Qed.
+
+  Lemma closedu_subst_instance_level_lift u u' l
+  : closedu_level #|u| l -> subst_instance_level (u' ++ u) (lift_level #|u'| l) = subst_instance_level u l.
+  Proof.
+    destruct l; cbnr.
+    intros Hn % Nat.ltb_lt.
+    rewrite app_nth2; try lia.
+    lia_f_equal.
+  Qed.
+  
+  Definition lift_npl (k : nat) (e : NoPropLevel.t) : NoPropLevel.t :=
+    match e with
+    | NoPropLevel.lSet => NoPropLevel.lSet
+    | NoPropLevel.Level s => NoPropLevel.Level s
+    | NoPropLevel.Var n => NoPropLevel.Var (k + n)
+    end.
+
+  (* Definition lift_expr (n : nat) (e : UnivExpr.t) : UnivExpr.t. *)
+
+  Lemma closedu_subst_instance_level_expr_app u u' e
+    : closedu_level_expr #|u'| e -> subst_instance_level_expr (u' ++ u) e = subst_instance_level_expr u' e.
+  Proof.
+    destruct e as [|[[] b]]; cbnr.
+    intros Hn % Nat.ltb_lt.
+    rewrite nth_error_app_lt //.
+  Qed.
+
+
+  (* Lemma closedu_subst_instance_level_expr_lilft u u' e
+    : closedu_level_expr #|u| e -> subst_instance_level_expr (u' ++ u) (lift_expr e = subst_instance_level_expr u' e.
+  Proof.
+    destruct e as [|[[] b]]; cbnr.
+    intros Hn % Nat.ltb_lt.
+    rewrite nth_error_app_lt //.
+  Qed. *)
+  
+  Lemma closedu_subst_instance_instance_app u u' t
+    : closedu_instance #|u'| t -> subst_instance_instance (u' ++ u) t = subst_instance_instance u' t.
+  Proof.
+    intro H. eapply forallb_All in H. apply All_map_eq.
+    solve_all. now eapply closedu_subst_instance_level_app.
+  Qed.
+  
+  Lemma closedu_subst_instance_instance_lift u u' t
+    : closedu_instance #|u| t -> subst_instance_instance (u' ++ u) (lift_instance #|u'| t) = subst_instance_instance u t.
+  Proof.
+    intro H. eapply forallb_All in H.
+    rewrite /subst_instance_instance /lift_instance map_map_compose. apply All_map_eq.
+    solve_all. now eapply closedu_subst_instance_level_lift.
+  Qed.
+  
+End UniverseClosedSubst.
+
+Lemma eq_term_upto_univ_variance {cf:checker_flags} (Σ : global_env_ext) {mdecl v l i i' u u' t t'} : 
+  forallb (negb ∘ Level.is_prop) u ->
+  forallb (negb ∘ Level.is_prop) u' ->
+  (forall val, satisfies val Σ -> 
+      satisfies (subst_instance_valuation (u ++ u') val)
+     (global_ext_constraints (Σ.1, v))) ->
+  variance_universes (PCUICEnvironment.ind_universes mdecl) l = Some (v, i, i') ->
+  R_universe_instance_variance (eq_universe Σ) (leq_universe Σ) l u u' ->
+  forall n, 
+  eq_term_upto_univ_napp Σ (eq_universe (global_ext_constraints (Σ.1, v))) 
+    (leq_universe (global_ext_constraints (Σ.1, v))) n t t' ->
+  eq_term_upto_univ_napp Σ (eq_universe Σ) (leq_universe Σ) n 
+     (subst_instance_constr u t) (subst_instance_constr u' t').
+Proof.
+  intros nprop nprop' valsat var Rus.
+  eapply eq_term_upto_univ_napp_impl.
+  { intros x y eq.
+    red in eq |- *. destruct check_univs => //.
+    red in eq. red. intros.
+    erewrite !subst_instance_univ_val'; eauto.
+    apply valsat in H.
+    pose proof (eq _ H).
+    apply satisfies_subst_instance_ctr in H => //.
+    apply satisfies_subst_instance_ctr in H => //.
+    
+  }
+Admitted.
+
+Lemma level_var_instance_length n i : #|level_var_instance n i| = #|i|.
+Proof. now rewrite /level_var_instance; len. Qed.
+Hint Rewrite level_var_instance_length : len.
+
+Lemma lift_instance_length n i : #|lift_instance n i| = #|i|.
+Proof. now rewrite /lift_instance; len. Qed.
+Hint Rewrite lift_instance_length : len.
+
+Lemma variance_universes_insts {mdecl l v i i'} :
+  on_variance (ind_universes mdecl) (Some l) ->
+  variance_universes (PCUICEnvironment.ind_universes mdecl) l = Some (v, i, i') ->
+  (constraints_of_udecl v = match ind_universes mdecl with
+  | Monomorphic_ctx (_, cstrs) => cstrs
+  | Polymorphic_ctx (inst, cstrs) => 
+    ConstraintSet.union (ConstraintSet.union cstrs (lift_constraints #|i| cstrs)) (variance_cstrs l i i')
+  end) /\
+  #|i| = #|i'| /\ #|l| = #|i| /\
+  i' = abstract_instance (ind_universes mdecl) /\
+  closedu_instance #|i'| i' /\ i = lift_instance #|i'| i'.
+Proof.
+  unfold variance_universes.
+  destruct (ind_universes mdecl); simpl.
+  - intros H; noconf H; split; eauto.
+  - destruct cst as [inst cstrs]. simpl; len. intros Hll.
+    intros H; noconf H. len. simpl. intuition auto.
+    rewrite /closedu_instance /level_var_instance forallb_mapi //.
+    intros i hi. simpl. now eapply Nat.ltb_lt.
+Qed.
+
+Lemma consistent_instance_length {cf:checker_flags} {Σ : global_env_ext} {univs u} :
+  consistent_instance_ext Σ univs u ->
+  #|u| = #|abstract_instance univs|. 
+Proof.
+  rewrite /consistent_instance_ext /consistent_instance.
+  destruct univs; simpl; auto.
+  intros [_ [_ [H _]]].
+  destruct cst; simpl in *.
+  now rewrite H; len.
+Qed.
+ 
+Lemma consistent_instance_valid {cf:checker_flags} {Σ : global_env_ext} {inst cstrs u} :
+  consistent_instance_ext Σ (Polymorphic_ctx (inst, cstrs)) u ->
+  check_univs = true ->
+  forall v, satisfies v (global_ext_constraints Σ) -> satisfies v (subst_instance_cstrs u cstrs).
+Proof. rewrite /consistent_instance_ext /=; intros [_ [_ [_ v]]] cu.
+    red in v. now rewrite cu in v.
+Qed.
+
+Definition closedu_cstr k (cstr : (Level.t * ConstraintType.t * Level.t)) :=
+  let '(l1, p, l2) := cstr in
+  closedu_level k l1 && closedu_level k l2. 
+
+Definition closedu_cstrs k (cstrs : CS.t) :=
+  CS.for_all (closedu_cstr k) cstrs.
+
+Lemma LSet_in_poly_bounded l inst cstrs : LevelSet.In l (levels_of_udecl (Polymorphic_ctx (inst, cstrs))) ->
+  closedu_level #|inst| l.
+Proof.
+  simpl.
+  rewrite /mapi.
+  change (#|inst|) with (0 + #|inst|).
+  generalize 0.
+  induction inst; simpl; auto.
+  intros n emp. now eapply LevelSetFact.empty_iff in emp.
+  intros n Hl.
+  rewrite -> LS.add_spec in Hl.
+  destruct Hl. subst.  simpl. apply Nat.ltb_lt; lia.
+  specialize (IHinst _ H). now rewrite Nat.add_succ_r.
+Qed.
+
+Lemma LSet_in_global_bounded {cf:checker_flags} {Σ l} k : 
+  wf Σ -> LevelSet.In l (global_levels Σ) ->
+  closedu_level k l.
+Proof.
+  simpl.
+  intros wf. eapply not_var_global_levels in wf.
+  intros hin. specialize (wf _ hin). simpl in wf.
+  destruct l; simpl in *; congruence.
+Qed.
+
+Lemma on_udecl_poly_bounded {cf:checker_flags} Σ inst cstrs :
+  wf Σ ->
+  on_udecl Σ (Polymorphic_ctx (inst, cstrs)) ->
+  CS.For_all (closedu_cstr #|inst|) cstrs.
+Proof.
+  rewrite /on_udecl. intros wfΣ [_ [nlevs _]].
+  intros x incstrs.
+  specialize (nlevs x incstrs).
+  destruct x as [[l1 p] l2].
+  destruct nlevs.
+  apply LevelSetProp.Dec.F.union_1 in H.
+  apply LevelSetProp.Dec.F.union_1 in H0.
+  destruct H. eapply LSet_in_poly_bounded in H.
+  destruct H0. eapply LSet_in_poly_bounded in H0. simpl. now rewrite H H0.
+  eapply (LSet_in_global_bounded #|inst|) in H0 => //. simpl.
+  now rewrite H H0.
+  eapply (LSet_in_global_bounded #|inst|) in H => //. simpl.
+  destruct H0. eapply LSet_in_poly_bounded in H0. simpl. now rewrite H H0.
+  eapply (LSet_in_global_bounded #|inst|) in H0 => //. simpl.
+  now rewrite H H0.
+Qed.
+
+Lemma closedu_subst_instance_cstrs_app u u' cstrs :
+  closedu_cstrs #|u| cstrs -> 
+  subst_instance_cstrs (u ++ u') cstrs = subst_instance_cstrs u cstrs.
+Proof.
+Admitted.
+
+Lemma closedu_subst_instance_cstrs_lift u u' cstrs :
+  closedu_cstrs #|u| cstrs -> 
+  subst_instance_cstrs (u ++ u') (lift_constraints #|u| cstrs) = subst_instance_cstrs u' cstrs.
+Proof.
+Admitted.
+
+Lemma cumul_inst_variance {cf:checker_flags} (Σ : global_env_ext) mdecl l v i i' u u' Γ : 
+  wf_ext Σ ->
+  on_udecl Σ (ind_universes mdecl) ->
+  on_variance (ind_universes mdecl) (Some l) ->
+  variance_universes (PCUICEnvironment.ind_universes mdecl) l = Some (v, i, i') ->
+  consistent_instance_ext Σ (ind_universes mdecl) u ->
+  consistent_instance_ext Σ (ind_universes mdecl) u' ->
+  R_universe_instance_variance (eq_universe Σ) (leq_universe Σ) l u u' ->
+  forall t t',
+  assumption_context Γ -> 
+  cumul (Σ.1, v) (subst_instance_context i Γ) (subst_instance_constr i t) (subst_instance_constr i' t') ->
+  cumul Σ (subst_instance_context u Γ)
+    (subst_instance_constr u t) (subst_instance_constr u' t').
+Proof.
+  intros wfΣ onu onv vari cu cu' Ru t t' assc.
+  intros cum.
+  destruct Σ as [Σ univs].
+  pose proof (variance_universes_insts onv vari) as (cstrs & leni & lenl & eqi' & ci' & eqi).
+  subst i.
+  pose proof (consistent_instance_length cu).
+  pose proof (consistent_instance_length cu').
+  rewrite -eqi' in H, H0.
+  rewrite -H0 in cum.
+  assert (forallb (fun x : Level.t => ~~ Level.is_prop x) (u' ++ u)).
+  { rewrite forallb_app; erewrite !consistent_instance_ext_noprop; eauto. }
+  eapply (cumul_subst_instance (Σ, v) _ (u' ++ u)) in cum; auto.
+  rewrite subst_instance_context_two in cum.
+  rewrite !subst_instance_constr_two in cum.
+  rewrite closedu_subst_instance_instance_lift in cum.
+  now rewrite H.
+  rewrite eqi' in cum.
+  erewrite subst_instance_instance_id in cum; eauto.
+  rewrite closedu_subst_instance_instance_app in cum.
+  now rewrite H0 -eqi' //.
+  erewrite subst_instance_instance_id in cum; eauto.
+  unfold valid_constraints. destruct check_univs eqn:checku => //.
+  unfold valid_constraints0.
+  intros v0 sat.
+  rewrite satisfies_subst_instance_ctr //.
+  simpl in sat.
+  unfold global_ext_constraints in sat |- *.
+  move: sat.
+  rewrite satisfies_union /= => [[satcstrs satglob]].
+  rewrite satisfies_union. split; auto.
+  2:{ rewrite -satisfies_subst_instance_ctr //.
+      rewrite equal_subst_instance_cstrs_mono //.
+      red; apply monomorphic_global_constraint; auto. apply wfΣ. }
+  rewrite cstrs.
+  destruct (ind_universes mdecl) as [[inst cstrs']|[inst cstrs']].
+  simpl in vari => //.
+  rewrite !satisfies_union. len. intuition auto.
+  rewrite -satisfies_subst_instance_ctr //.
+  eapply consistent_instance_valid in cu.
+  assert(ConstraintSet.Equal (subst_instance_cstrs u cstrs')
+      (subst_instance_cstrs (u' ++ u) cstrs')).
+  { intros c. rewrite !In_subst_instance_cstrs.
+
+
+  red in cu. destruct check_univs. red in cu.
+  red in cu. simpl in cu.
+
+
+  simpl in eqi'.
+  
+  
+
+
+
+  simpl in eqi'. subst i'; simpl in *.
+  destruct u, u'; try discriminate. simpl.
+  noconf vari. simpl in *.
+  destruct onu as [_ [_ [_ onu]]].
+  do 2 red in onu. simpl in onu.
+  red in wfΣ.
+  unfold global_ext_constraints in onu |- *.  simpl in onu.
+
+  unfold subst_instance_valuation. simpl.
+  
+
+Admitted.
+    
+
+
+Lemma All2_local_env_inst {cf:checker_flags} (Σ : global_env_ext) mdecl l v i i' u u' Γ' Γ : 
+  variance_universes (PCUICEnvironment.ind_universes mdecl) l = (v, i, i') ->
+  R_universe_instance_variance (eq_universe Σ) (leq_universe Σ) l u u' ->
+  All2_local_env (on_decl (fun Γ _ t t' => cumul (Σ.1, v) (Γ' ,,, Γ) t t'))
+    (subst_instance_context i Γ) (subst_instance_context i' Γ) ->
+  All2_local_env (on_decl (fun Γ _ t t' => cumul Σ (Γ' ,,, Γ) t t'))
+  (subst_instance_context u Γ) (subst_instance_context u' Γ).
+Proof.
+  intros vari Ru.
+  induction Γ as [[]|[na [b|] ty] tl]; simpl.
+  constructor.
+  intros H; depelim H; simpl in H0; noconf H0; simpl in H1; noconf H1.
+  econstructor; auto. red.
+  destruct o.
+  split; eauto.
+Admitted.
+
 Lemma constructor_cumulative_indices {cf:checker_flags} {Σ : global_env_ext} (wfΣ : wf Σ.1) :
   forall {ind mdecl idecl cdecl ind_indices cs u u' napp},
   declared_inductive Σ mdecl ind idecl ->
@@ -1792,6 +2234,20 @@ Proof.
   unfold respects_variance in respv.
   destruct variance_universes as [[v i] i'] eqn:vu.
   destruct respv as [args idx].
+  simpl.
+  intros Ru.
+  { split.
+    {         
+  
+
+
+
+     }
+  }
+
+  2:{ simpl. }
+  2:{ simpl. }
+
   (* We need to strengthen respects variance to allow arbitrary parameter substitutions *)
   (** Morally, if variance_universes l = v i i' and R_universe_instance_variance l u u' then
       i and i' can be substituted respectively by u and u'.

@@ -485,7 +485,7 @@ Proof.
       * simpl.
         intros v indv. specialize (on_ctype_variance v indv).
         simpl in *. move: on_ctype_variance.
-        unfold respects_variance. destruct variance_universes as [[univs u] u'].
+        unfold respects_variance. destruct variance_universes as [[[univs u] u']|]; auto.
         intros [args idxs]. split.
         ** eapply (All2_local_env_impl args); intros.
            eapply weakening_env_cumul; eauto.

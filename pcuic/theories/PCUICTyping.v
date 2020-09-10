@@ -817,6 +817,7 @@ Module PCUICTypingDef <: Typing PCUICTerm PCUICEnvironment PCUICEnvTyping.
   Definition cumul := @cumul.
   Definition smash_context := smash_context.
   Definition extended_subst := extended_subst.
+  Definition expand_lets_ctx := expand_lets_ctx.
   Definition lift_context := lift_context.
   Definition subst_context := subst_context.  
   Definition subst_telescope := subst_telescope.

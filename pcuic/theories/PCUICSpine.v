@@ -1110,9 +1110,6 @@ Fixpoint all_rels (Γ : context) (n : nat) (k : nat) :=
     end
   end.
 
-Definition expand_lets Γ :=
-  all_rels Γ 0 #|Γ|.
-
 Lemma all_rels_length Γ n k : #|all_rels Γ n k| = #|Γ|.
 Proof.
   induction Γ in n, k |- *; simpl; auto.

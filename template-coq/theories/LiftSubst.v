@@ -163,6 +163,16 @@ Fixpoint extended_subst (Γ : context) (n : nat)
     end
   end.
 
+Definition expand_lets_k Γ k t := 
+  (subst (extended_subst Γ 0) k (lift (context_assumptions Γ) (k + #|Γ|) t)).
+
+Definition expand_lets Γ t := expand_lets_k Γ 0 t.
+
+Definition expand_lets_k_ctx Γ k Δ := 
+  (subst_context (extended_subst Γ 0) k (lift_context (context_assumptions Γ) (k + #|Γ|) Δ)).
+
+Definition expand_lets_ctx Γ Δ := expand_lets_k_ctx Γ 0 Δ.
+
 Create HintDb terms.
 
 Ltac arith_congr := repeat (try lia; progress f_equal).

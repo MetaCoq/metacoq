@@ -2951,21 +2951,25 @@ Lemma map_map_subst_expand_lets (s : list term) (Γ : context) l k :
   map (subst (map (subst0 s) (extended_subst Γ 0)) k) l = map (subst s k ∘ expand_lets_k Γ k) l.
 Proof. move=> ca; apply map_ext => x; apply map_subst_expand_lets_k => //. Qed.
 
-Lemma expand_lets_k_app Γ Γ' t k : expand_lets_k (Γ ++ Γ') k t =
+Lemma expand_lets_k_app (Γ Γ' : context) t k : expand_lets_k (Γ ++ Γ') k t =
   expand_lets_k Γ' (k + context_assumptions Γ) (expand_lets_k Γ k t).
 Proof.
-  rewrite {1}/expand_lets_k extended_subst_app; len.
-  rewrite subst_app_decomp; len; rewrite Nat.add_comm.
-  epose proof (distr_subst_rec  _ _ _ 0 _). rewrite Nat.add_0_r in H.
-  rewrite -> H. clear H. len. 
-  (* rewrite (Nat.add_comm (context_assumptions _) _).*)
-  rewrite -(simpl_lift _ _ _ _ (k + #|Γ| + #|Γ'|)); try lia.
-  rewrite subst_extended_subst_k. simpl.  
-  rewrite context_assumptions_fold.
-  rewrite map_map_compose.
-  rewrite -{1}(extended_subst_length Γ' (context_assumptions Γ)).
-  rewrite map_subst_lift_id Nat.add_0_r.
-Admitted.
+  revert Γ k t.
+  induction Γ' as [|[na [b|] ty] Γ'] using ctx_length_rev_ind; intros Γ k t.
+  - simpl. now rewrite /expand_lets_k /= subst_empty lift0_id app_nil_r.
+  - simpl; rewrite app_assoc !expand_lets_k_vdef /=; len; simpl.
+    rewrite subst_context_app. specialize (H (subst_context [b] 0 Γ') ltac:(now len)).
+    specialize (H (subst_context [b] #|Γ'| Γ)). rewrite Nat.add_0_r /app_context H; len.
+    f_equal.
+    rewrite /expand_lets_k; len.
+    rewrite -Nat.add_assoc.
+    rewrite distr_subst_rec; len.
+    epose proof (subst_extended_subst_k [b] Γ #|Γ'| 0).
+    rewrite Nat.add_0_r Nat.add_comm in H0. rewrite -H0. f_equal.
+    rewrite commut_lift_subst_rec. lia. lia_f_equal.
+  - simpl. rewrite app_assoc !expand_lets_k_vass /=; len; simpl.
+    now rewrite (H Γ' ltac:(reflexivity)).
+Qed.
 
 Lemma expand_lets_app Γ Γ' t : expand_lets (Γ ++ Γ') t =
   expand_lets_k Γ' (context_assumptions Γ) (expand_lets Γ t).

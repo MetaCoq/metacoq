@@ -829,6 +829,7 @@ Module PCUICTypingDef <: Typing PCUICTerm PCUICEnvironment PCUICEnvTyping.
   Definition inds := inds. 
   Definition noccur_between := noccur_between. 
   Definition closedn := closedn.
+  Definition destArity := destArity [].
 End PCUICTypingDef.
 
 Module PCUICDeclarationTyping :=

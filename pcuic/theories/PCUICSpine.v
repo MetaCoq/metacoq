@@ -2230,7 +2230,7 @@ Lemma subslet_cumul {cf:checker_flags} Σ Δ args Γ Γ' :
   assumption_context Γ -> assumption_context Γ' -> 
   wf_local Σ (Δ ,,, Γ) ->
   wf_local Σ (Δ ,,, Γ') ->
-  All2_local_env (fun Γ Γ' _ ty ty' => Σ ;;; Δ ,,, Γ |- ty <= ty') Γ Γ' ->
+  cumul_ctx_rel Σ Δ Γ Γ' ->
   subslet Σ Δ args Γ -> subslet Σ Δ args Γ'.
 Proof.
   intros wfΣ ass ass' wf wf' a2. induction a2 in wf, wf', args, ass, ass' |- *.
@@ -2256,7 +2256,7 @@ Lemma spine_subst_cumul {cf:checker_flags} Σ Δ args Γ Γ' :
   assumption_context Γ -> assumption_context Γ' -> 
   wf_local Σ (Δ ,,, Γ) ->
   wf_local Σ (Δ ,,, Γ') ->
-  All2_local_env (fun Γ Γ' _ ty ty' => Σ ;;; Δ ,,, Γ |- ty <= ty') Γ Γ' ->
+  cumul_ctx_rel Σ Δ Γ Γ' ->
   spine_subst Σ Δ args (List.rev args) Γ -> 
   spine_subst Σ Δ args (List.rev args) Γ'.
 Proof.

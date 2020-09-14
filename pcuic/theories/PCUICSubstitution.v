@@ -1162,6 +1162,37 @@ Proof.
     now rewrite Nat.add_1_r.
 Qed.
 
+Lemma lift_extended_subst' Γ k k' : extended_subst Γ (k + k') = map (lift0 k) (extended_subst Γ k').
+Proof.
+  induction Γ as [|[? [] ?] ?] in k |- *; simpl; auto.
+  - rewrite IHΓ. f_equal.
+    autorewrite with len.
+    rewrite distr_lift_subst. f_equal.
+    autorewrite with len. rewrite simpl_lift; lia_f_equal.
+  - f_equal.
+    rewrite (IHΓ (S k)) (IHΓ 1).
+    rewrite map_map_compose. apply map_ext => x.
+    rewrite simpl_lift; lia_f_equal.
+Qed.
+
+Lemma subst_extended_subst_k s Γ k k' : extended_subst (subst_context s k Γ) k' = 
+  map (subst s (k + context_assumptions Γ + k')) (extended_subst Γ k').
+Proof.
+  induction Γ as [|[na [b|] ty] Γ]; simpl; auto; rewrite subst_context_snoc /=;
+    autorewrite with len; f_equal; auto.
+  - rewrite IHΓ.
+    rewrite commut_lift_subst_rec; try lia.
+    rewrite distr_subst. autorewrite with len. f_equal.
+    now rewrite context_assumptions_fold.
+  - elim: Nat.leb_spec => //. lia.
+  - rewrite (lift_extended_subst' _ 1 k') IHΓ. 
+    rewrite (lift_extended_subst' _ 1 k'). 
+    rewrite !map_map_compose.
+    apply map_ext.
+    intros x. 
+    erewrite (commut_lift_subst_rec); lia_f_equal.
+Qed.
+
 Lemma extended_subst_subst_instance_constr u Γ n :
   map (subst_instance_constr u) (extended_subst Γ n) =
   extended_subst (subst_instance_context u Γ) n.

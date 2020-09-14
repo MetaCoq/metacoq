@@ -2843,9 +2843,7 @@ Proof.
 Qed.
 
 Lemma All2_local_env_nth_error {cf:checker_flags} Σ Γ Δ Δ' : 
-  All2_local_env (fun (Γ' _ : PCUICEnvironment.context) 
-  (_ : option (term × term)) (x y : term) =>
-  Σ;;; Γ ,,, Γ' |- x <= y) Δ Δ' ->
+  cumul_ctx_rel Σ Γ Δ Δ' ->
   assumption_context Δ ->
   forall n decl, nth_error Δ n = Some decl ->
   ∑ decl', (nth_error Δ' n = Some decl') * (Σ ;;; Γ ,,, skipn (S n) Δ |- decl_type decl <= decl_type decl').

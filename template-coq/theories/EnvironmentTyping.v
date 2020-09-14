@@ -301,6 +301,7 @@ Module Type Typing (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E).
   Parameter Inline subst : list term -> nat -> term -> term.
   Parameter Inline inds : kername -> Instance.t -> list one_inductive_body -> list term.
   Parameter Inline extended_subst : context -> nat -> list term. (* Let expansion substitution *)
+  Parameter destArity : term -> option (context * Universe.t).
 
   (* [noccur_between n k t] Checks that deBruijn indices between n and n+k do not appear in t (even under binders).  *)
   Parameter Inline noccur_between : nat -> nat -> term -> bool.
@@ -413,30 +414,38 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
         - None of the variable assumptions in Δ refer to any inductive in the block, 
           but the conclusion [concl] is of the form [mkApps (tRel k) args] for k 
           refering to an inductive in the block, and none of the arguments [args]
-          refer to the inductive.          
+          refer to the inductive. #|args| must be the length of the full inductive application.         
       
       Let-in assumptions in Δ are systematically unfolded, i.e. we really consider:
       the zeta-reduction of [t]. *)
     
-    Inductive positive_cstr_arg mdecl i ctx : term -> Type :=
+    Definition ind_realargs (o : one_inductive_body) := 
+      match destArity o.(ind_type) with
+      | Some (ctx, _) => #|smash_context [] ctx|
+      | _ => 0
+      end.
+
+    Inductive positive_cstr_arg mdecl ctx : term -> Type :=
     | positive_cstr_arg_closed t : 
       closedn #|ctx| t ->
-      positive_cstr_arg mdecl i ctx t
+      positive_cstr_arg mdecl ctx t
 
-    | positive_cstr_arg_concl l k : 
+    | positive_cstr_arg_concl l k i : 
       (** Mutual inductive references in the conclusion are ok *)
-      #|ctx| <= i -> i < #|ctx| + #|mdecl.(ind_bodies)| ->
+      #|ctx| <= k -> k < #|ctx| + #|mdecl.(ind_bodies)| ->
       All (closedn #|ctx|) l ->
-      positive_cstr_arg mdecl i ctx (mkApps (tRel k) l)
+      nth_error (List.rev mdecl.(ind_bodies)) (k - #|ctx|) = Some i ->
+      #|l| = ind_realargs i ->
+      positive_cstr_arg mdecl ctx (mkApps (tRel k) l)
 
     | positive_cstr_arg_let na b ty t :
-      positive_cstr_arg mdecl i ctx (subst [b] 0 ty) ->
-      positive_cstr_arg mdecl i ctx (tLetIn na b ty t) 
+      positive_cstr_arg mdecl ctx (subst [b] 0 t) ->
+      positive_cstr_arg mdecl ctx (tLetIn na b ty t) 
 
     | positive_cstr_arg_ass na ty t :
       closedn #|ctx| ty ->
-      positive_cstr_arg mdecl i (vass na ty :: ctx) t ->
-      positive_cstr_arg mdecl i ctx (tProd na ty t).
+      positive_cstr_arg mdecl (vass na ty :: ctx) t ->
+      positive_cstr_arg mdecl ctx (tProd na ty t).
 
     (** A constructor type [t] is positive w.r.t. an inductive block [mdecl]
       and inductive [i] when it's zeta normal-form is of the shape Π Δ. concl and: 
@@ -458,7 +467,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       positive_cstr mdecl i ctx (tLetIn na b ty t) 
 
     | positive_cstr_ass na ty t :
-      positive_cstr_arg mdecl i ctx ty ->
+      positive_cstr_arg mdecl ctx ty ->
       positive_cstr mdecl i (vass na ty :: ctx) t ->
       positive_cstr mdecl i ctx (tProd na ty t).
 

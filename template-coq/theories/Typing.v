@@ -903,6 +903,7 @@ Module TemplateTyping <: Typing TemplateTerm TemplateEnvironment TemplateEnvTypi
   Definition inds := inds.
   Definition noccur_between := noccur_between.
   Definition closedn := closedn.
+  Definition destArity := destArity [].
 End TemplateTyping.
 
 Module TemplateDeclarationTyping :=

@@ -292,6 +292,7 @@ Module Type Typing (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E).
   Parameter Inline smash_context : context -> context -> context.
   Parameter Inline lift_context : nat -> nat -> context -> context.
   Parameter Inline subst_context : list term -> nat ->  context -> context.
+  Parameter Inline expand_lets : context -> term -> term.
   Parameter Inline expand_lets_ctx : context -> context -> context.
   Parameter Inline subst_telescope : list term -> nat -> context -> context.
   Parameter Inline subst_instance_context : Instance.t -> context -> context.
@@ -529,8 +530,8 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
           (subst_instance_context u' (expand_lets_ctx (ind_params mdecl) (smash_context [] (cshape_args cs)))) *
         All2 
           (conv (Σ, univs) (subst_instance_context u (ind_arities mdecl ,,, smash_context [] (ind_params mdecl ,,, cshape_args cs))))
-          (map (subst_instance_constr u) (cshape_indices cs))
-          (map (subst_instance_constr u') (cshape_indices cs))
+          (map (subst_instance_constr u ∘ expand_lets (ind_params mdecl ,,, cshape_args cs)) (cshape_indices cs))
+          (map (subst_instance_constr u' ∘ expand_lets (ind_params mdecl ,,, cshape_args cs)) (cshape_indices cs))
       | None => False (* Monomorphic inductives have no variance attached *)
       end.
 

@@ -890,6 +890,7 @@ Module TemplateTyping <: Typing TemplateTerm TemplateEnvironment TemplateEnvTypi
   Definition conv := @conv.
   Definition cumul := @cumul.
   Definition smash_context := smash_context.
+  Definition expand_lets := expand_lets.
   Definition expand_lets_ctx := expand_lets_ctx.
   Definition lift := lift.
   Definition subst := subst.

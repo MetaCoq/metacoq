@@ -2535,6 +2535,34 @@ Proof.
       apply eq_term_upto_univ_subst_instance_constr; try typeclasses eauto. auto.
 Qed.
 
+Definition conv_ctx_rel {cf:checker_flags} Σ Γ Δ Δ' :=
+  All2_local_env (on_decl (fun Γ' _ x y => Σ ;;; Γ ,,, Γ' |- x = y)) Δ Δ'.
+
+Definition cumul_ctx_rel {cf:checker_flags} Σ Γ Δ Δ' :=
+  All2_local_env (on_decl (fun Γ' _ x y => Σ ;;; Γ ,,, Γ' |- x <= y)) Δ Δ'.
+
+Lemma cumul_ctx_subst_instance {cf:checker_flags} {Σ} Γ Δ u u' : 
+  wf Σ.1 ->
+  wf_local Σ Γ -> 
+  R_universe_instance (eq_universe (global_ext_constraints Σ)) u u' ->
+  cumul_ctx_rel Σ Γ (subst_instance_context u Δ) (subst_instance_context u' Δ).
+Proof.
+  move=> wfΣ wf equ.
+  induction Δ as [|d Δ].
+  - constructor.
+  - simpl.
+    destruct d as [na [b|] ty] => /=.
+    * constructor; eauto.
+      split. 
+      + constructor. eapply eq_term_leq_term.
+        eapply eq_term_upto_univ_subst_instance_constr; try typeclasses eauto; auto.
+      + constructor. eapply eq_term_leq_term.
+        eapply eq_term_upto_univ_subst_instance_constr; try typeclasses eauto; auto.
+    * constructor; auto.
+      constructor. eapply eq_term_leq_term. simpl.
+      apply eq_term_upto_univ_subst_instance_constr; try typeclasses eauto. auto.
+Qed.
+
 Lemma context_relation_over_same {cf:checker_flags} Σ Γ Δ Δ' :
   context_relation (fun Γ0 Γ'  => conv_decls Σ (Γ ,,, Γ0) (Γ ,,, Γ')) Δ Δ' ->
   context_relation (conv_decls Σ) (Γ ,,, Δ) (Γ ,,, Δ').
@@ -2550,6 +2578,21 @@ Proof.
   autorewrite with len in e. assert(#|Δ| = #|Δ'|) by lia.
   move/context_relation_app: H => H.
   now specialize (H H0) as [_ H].
+Qed.
+
+Lemma eq_term_inds {cf:checker_flags} (Σ : global_env_ext) u u' ind mdecl :
+  R_universe_instance (eq_universe (global_ext_constraints Σ)) u u' ->
+  All2 (eq_term Σ Σ) (inds (inductive_mind ind) u (ind_bodies mdecl))
+    (inds (inductive_mind ind) u' (ind_bodies mdecl)).
+Proof.
+  move=> equ.
+  unfold inds. generalize #|ind_bodies mdecl|.
+  induction n; constructor; auto.
+  clear IHn.
+  repeat constructor. destruct ind; simpl in *.
+  eapply (R_global_instance_empty_impl _ _ _ _ _ _ 0).
+  4:{ unfold R_global_instance. simpl. eauto. }
+  all:typeclasses eauto.
 Qed.
 
 Lemma conv_inds {cf:checker_flags} (Σ : global_env_ext) Γ u u' ind mdecl :
@@ -2641,12 +2684,6 @@ Notation conv_terms Σ Γ := (All2 (conv Σ Γ)).
 
 Instance conv_terms_Proper {cf:checker_flags} Σ Γ : CMorphisms.Proper (eq ==> eq ==> arrow)%signature (conv_terms Σ Γ).
 Proof. intros x y -> x' y' -> f. exact f. Qed.
-
-Definition conv_ctx_rel {cf:checker_flags} Σ Γ Δ Δ' :=
-  All2_local_env (on_decl (fun Γ' _ x y => Σ ;;; Γ ,,, Γ' |- x = y)) Δ Δ'.
-
-Definition cumul_ctx_rel {cf:checker_flags} Σ Γ Δ Δ' :=
-  All2_local_env (on_decl (fun Γ' _ x y => Σ ;;; Γ ,,, Γ' |- x <= y)) Δ Δ'.
 
 Lemma cumul_subst_conv {cf:checker_flags} (Σ : global_env_ext) Γ Δ Δ' Γ' s s' b : wf Σ ->
   All2 (conv Σ Γ) s s' ->

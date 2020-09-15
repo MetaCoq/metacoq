@@ -1027,7 +1027,7 @@ Proof.
   intros cl; revert n' t cl k Heqn'.
   eapply (term_closedn_list_ind (fun n' t => forall k, n' = #|s| + k -> 
   subst (map (lift0  n) s) k t = subst s (n + k) (lift n k t)));
-  intros; simpl; solve_all; eauto.
+  intros; simpl; f_equal; eauto.
   - subst k.
     simpl.
     destruct (Nat.leb_spec k0 n0).
@@ -1042,24 +1042,18 @@ Proof.
     destruct (Nat.leb_spec (n + k0) n0); try lia.
     reflexivity.
 
-  - simpl. f_equal. rewrite map_map_compose. solve_all.
-  - simpl; f_equal; eauto.
-    rewrite (H0 (S k0)). lia. lia_f_equal.
-  - simpl. f_equal; eauto.
-    rewrite (H0 (S k0)). lia. lia_f_equal.
-  - simpl. f_equal; eauto.
-    rewrite (H1 (S k0)). lia. lia_f_equal.
-  - simpl. f_equal; eauto.
-    rewrite map_map_compose. solve_all.
-  - simpl. f_equal; eauto.
-    rewrite map_map_compose. len.
+  - rewrite map_map_compose. solve_all.
+  - rewrite (H0 (S k0)). lia. lia_f_equal.
+  - rewrite (H0 (S k0)). lia. lia_f_equal.
+  - rewrite (H1 (S k0)). lia. lia_f_equal.
+  - rewrite map_map_compose. solve_all.
+  - rewrite map_map_compose. len.
     solve_all. rewrite map_def_map_def.
     specialize (a _ H). specialize (b (#|fix_context m| + k0)).
     forward b by lia. eapply map_def_eq_spec; auto.
     autorewrite with len in b.
     rewrite  b. lia_f_equal.
-  - simpl. f_equal; eauto.
-    rewrite map_map_compose. len.
+  - rewrite map_map_compose. len.
     solve_all. rewrite map_def_map_def.
     specialize (a _ H). specialize (b (#|fix_context m| + k0)).
     forward b by lia. eapply map_def_eq_spec; auto.

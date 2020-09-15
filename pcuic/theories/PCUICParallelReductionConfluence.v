@@ -197,7 +197,7 @@ Equations discr_construct_cofix (t : term) : Prop :=
 Transparent discr_construct_cofix.
 
 Inductive construct_cofix_view : term -> Type :=
-| construct_cofix_construct c u i : construct_cofix_view (tConstruct c u i)
+| construct_cofix_construct ind u i : construct_cofix_view (tConstruct ind u i)
 | construct_cofix_cofix mfix idx : construct_cofix_view (tCoFix mfix idx)
 | construct_cofix_other t : discr_construct_cofix t -> construct_cofix_view t.
 
@@ -205,6 +205,21 @@ Equations view_construct_cofix (t : term) : construct_cofix_view t :=
 { | tConstruct ind u i => construct_cofix_construct ind u i;
   | tCoFix mfix idx => construct_cofix_cofix mfix idx;
   | t => construct_cofix_other t I }.
+
+Equations discr_construct0_cofix (t : term) : Prop :=
+  { | tConstruct _ u _ => u <> 0;
+    | tCoFix _ _ => False;
+    | _ => True }.
+Transparent discr_construct0_cofix.
+Inductive construct0_cofix_view : term -> Type :=
+| construct0_cofix_construct ind i : construct0_cofix_view (tConstruct ind 0 i)
+| construct0_cofix_cofix mfix idx : construct0_cofix_view (tCoFix mfix idx)
+| construct0_cofix_other t : discr_construct0_cofix t -> construct0_cofix_view t.
+
+Equations view_construct0_cofix (t : term) : construct0_cofix_view t :=
+{ | tConstruct ind 0 i => construct0_cofix_construct ind i;
+  | tCoFix mfix idx => construct0_cofix_cofix mfix idx;
+  | t => construct0_cofix_other t _ }.
 
 (** This induction principle gives a general induction hypothesis for applications,
     allowing to apply the induction to their head. *)  
@@ -729,13 +744,13 @@ Section Rho.
         tCase (ind, pars) p' x' brs' } };
 
   rho Γ (tProj (i, pars, narg) x) with inspect (decompose_app x) := {
-    | exist (f, args) eqx with view_construct_cofix f :=
-    | construct_cofix_construct ind c u with inspect (nth_error (map_terms rho Γ args _) (pars + narg)) := { 
+    | exist (f, args) eqx with view_construct0_cofix f :=
+    | construct0_cofix_construct ind u with inspect (nth_error (map_terms rho Γ args _) (pars + narg)) := { 
       | exist (Some arg1) eq => 
         if eq_inductive i ind then arg1
         else tProj (i, pars, narg) (rho Γ x);
       | exist None neq => tProj (i, pars, narg) (rho Γ x) }; 
-    | construct_cofix_cofix mfix idx := 
+    | construct0_cofix_cofix mfix idx := 
       let args' := map_terms rho Γ args _ in
       let mfixctx := fold_fix_context_wf mfix (fun Γ x Hx => rho Γ x) Γ [] in 
       let mfix' := map_fix_rho (t:=tProj (i, pars, narg) x) rho Γ mfixctx mfix _ in
@@ -743,7 +758,7 @@ Section Rho.
       | Some d => tProj (i, pars, narg) (mkApps (subst0 (cofix_subst mfix') (dbody d)) args')
       | None =>  tProj (i, pars, narg) (rho Γ x)
       end;
-    | construct_cofix_other t nconscof => tProj (i, pars, narg) (rho Γ x) } ;
+    | construct0_cofix_other t nconscof => tProj (i, pars, narg) (rho Γ x) } ;
   rho Γ (tConst c u) with lookup_env Σ c := { 
     | Some (ConstantDecl decl) with decl.(cst_body) := { 
       | Some body => subst_instance_constr u body; 
@@ -1081,7 +1096,7 @@ Section Rho.
     rho Γ (tProj (ind, pars, arg) x) =
     let (f, args) := decompose_app x in
     match f with
-    | tConstruct ind' c u => 
+    | tConstruct ind' 0 u => 
       if eq_inductive ind ind' then
         match nth_error args (pars + arg) with
         | Some arg1 => rho Γ arg1
@@ -1102,7 +1117,7 @@ Section Rho.
     set (app := inspect _).
     destruct app as [[f l] eqapp].
     rewrite -{2}eqapp. autorewrite with rho.
-    destruct view_construct_cofix; autorewrite with rho.
+    destruct view_construct0_cofix; autorewrite with rho.
     destruct eq_inductive eqn:eqi; simp rho => //.
     set (arg' := inspect _). clearbody arg'.
     destruct arg' as [[arg'|] eqarg'];
@@ -1121,6 +1136,7 @@ Section Rho.
     intros. autorewrite with rho. simpl. now autorewrite with rho.
     simpl. eapply symmetry, decompose_app_inv in eqapp.
     subst x. destruct t; simpl in d => //.
+    now destruct n.
   Qed.
 
 
@@ -1684,7 +1700,7 @@ Section Rho.
 
       simpl. destruct view_construct_cofix; simpl; simp rho.
 
-      * destruct (eq_inductive i c) eqn:eqi.
+      * destruct (eq_inductive i ind) eqn:eqi.
         simp rho. simpl. rewrite -H2. 
         (* Reduction *)
         rewrite /iota_red /= -map_skipn rename_mkApps !nth_map //.
@@ -1771,7 +1787,8 @@ Section Rho.
       rewrite rename_mkApps in H.
 
       destruct f; simpl; auto.
-      * destruct eq_inductive eqn:eqi; simpl; auto.
+      * destruct n0; simpl; auto.
+        destruct eq_inductive eqn:eqi; simpl; auto.
         rewrite nth_error_map.
         destruct nth_error eqn:hnth; simpl; auto.
         simp rho in H. rewrite rename_mkApps in H.
@@ -3395,7 +3412,7 @@ Section Rho.
       destruct p as [[ind pars] arg].
       rewrite rho_app_proj.
       destruct decompose_app eqn:Heq.
-      destruct (view_construct_cofix t).
+      destruct (view_construct0_cofix t).
       + apply decompose_app_inv in Heq.
         subst c. simpl. simp rho in X0 |- *.
         pose proof (pred1_pred1_ctx _ X0).
@@ -3403,7 +3420,7 @@ Section Rho.
         eapply pred1_mkApps_refl_tConstruct in X0.
         destruct nth_error eqn:Heq.
         change eq_inductive with (@eqb inductive _).
-        destruct (eqb_spec ind c0); subst.
+        destruct (eqb_spec ind ind0); subst.
         econstructor; eauto.
         now rewrite nth_error_map Heq.
         eapply pred_proj_congr, pred_mkApps; auto with pcuic.
@@ -3465,7 +3482,9 @@ Section Rho.
         * eapply pred_proj_congr; eauto.
 
       + eapply decompose_app_inv in Heq. subst c.
-        destruct t; noconf d; econstructor; eauto.
+        destruct t; noconf d; try solve [econstructor; eauto].
+        destruct n; [easy|].
+        econstructor; eauto.
 
     - simp rho; simpl; simp rho.
       rewrite /rho_fix_context - fold_fix_context_rho_ctx.

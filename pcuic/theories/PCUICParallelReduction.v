@@ -465,11 +465,11 @@ Section ParallelReduction.
       pred1 Γ Γ' (tConst c u) (tConst c u)
 
   (** Proj *)
-  | pred_proj i pars narg k u args0 args1 arg1 :
+  | pred_proj i pars narg u args0 args1 arg1 :
       All2_local_env (on_decl pred1) Γ Γ' ->
       All2 (pred1 Γ Γ') args0 args1 ->
       nth_error args1 (pars + narg) = Some arg1 ->
-      pred1 Γ Γ' (tProj (i, pars, narg) (mkApps (tConstruct i k u) args0)) arg1
+      pred1 Γ Γ' (tProj (i, pars, narg) (mkApps (tConstruct i 0 u) args0)) arg1
 
   (** Congruences *)
   | pred_abs na M M' N N' : pred1 Γ Γ' M M' -> pred1 (Γ ,, vass na M) (Γ' ,, vass na M') N N' ->
@@ -788,14 +788,14 @@ Section ParallelReduction.
           All2_local_env (on_decl pred1) Γ Γ' ->
           Pctx Γ Γ' ->
           P Γ Γ' (tConst c u) (tConst c u)) ->
-      (forall (Γ Γ' : context) (i : inductive) (pars narg : nat) (k : nat) (u : Instance.t)
+      (forall (Γ Γ' : context) (i : inductive) (pars narg : nat) (u : Instance.t)
               (args0 args1 : list term) (arg1 : term),
           All2_local_env (on_decl pred1) Γ Γ' ->
           Pctx Γ Γ' ->
           All2 (pred1 Γ Γ') args0 args1 ->
           All2 (P Γ Γ') args0 args1 ->
           nth_error args1 (pars + narg) = Some arg1 ->
-          P Γ Γ' (tProj (i, pars, narg) (mkApps (tConstruct i k u) args0)) arg1) ->
+          P Γ Γ' (tProj (i, pars, narg) (mkApps (tConstruct i 0 u) args0)) arg1) ->
       (forall (Γ Γ' : context) (na : name) (M M' N N' : term),
           pred1 Γ Γ' M M' ->
           P Γ Γ' M M' -> pred1 (Γ,, vass na M) (Γ' ,, vass na M') N N' ->

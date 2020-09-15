@@ -889,7 +889,7 @@ Proof.
         eapply value_app_inv in H1. subst. eassumption.
       * rename H3 into Hinf.
         eapply Forall2_nth_error_Some in H4 as (? & ? & ?); eauto.
-        assert (Σ ;;; [] |- mkApps (tConstruct i k u) args : mkApps (tInd i x) x2).
+        assert (Σ ;;; [] |- mkApps (tConstruct i 0 u) args : mkApps (tInd i x) x2).
         eapply subject_reduction_eval; eauto.
         eapply PCUICValidity.inversion_mkApps in X as (? & ? & ?); eauto.
         eapply typing_spine_inv in t2 as []; eauto.

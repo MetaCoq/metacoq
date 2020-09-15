@@ -1448,7 +1448,7 @@ Section PredRed.
 
     - eapply red1_red. econstructor; eauto.
 
-    - transitivity (tProj (i, pars, narg) (mkApps (tConstruct i k u) args1)).
+    - transitivity (tProj (i, pars, narg) (mkApps (tConstruct i 0 u) args1)).
       eapply red_proj_c; eauto.
       eapply red_mkApps; [|solve_all]. auto.
       eapply red1_red. econstructor; eauto.

@@ -187,8 +187,8 @@ Section Wcbv.
       eval (tCase (ind, pars) p discr brs) res
 
   (** Proj *)
-  | eval_proj i pars arg discr args k u a res :
-      eval discr (mkApps (tConstruct i k u) args) ->
+  | eval_proj i pars arg discr args u a res :
+      eval discr (mkApps (tConstruct i 0 u) args) ->
       nth_error args (pars + arg) = Some a ->
       eval a res ->
       eval (tProj (i, pars, arg) discr) res

@@ -3273,21 +3273,21 @@ Section Conversion.
 
     unfold_one_proj Γ p c h with p := {
     | (i, pars, narg) with inspect (reduce_stack RedFlags.default Σ hΣ Γ c ε _) := {
-      | @exist (cred, ρ) eq with cc_viewc cred := {
-        | ccview_construct ind' n ui with inspect (decompose_stack ρ) := {
+      | @exist (cred, ρ) eq with cc0_viewc cred := {
+        | cc0view_construct ind' ui with inspect (decompose_stack ρ) := {
           | @exist (args, ξ) eq' with inspect (nth_error args (pars + narg)) := {
             | @exist (Some arg) eq2 := Some arg ;
             | @exist None _ := None
             }
           } ;
-        | ccview_cofix mfix idx with inspect (decompose_stack ρ) := {
+        | cc0view_cofix mfix idx with inspect (decompose_stack ρ) := {
           | @exist (args, ξ) eq' with inspect (unfold_cofix mfix idx) := {
             | @exist (Some (narg, fn)) eq2 :=
               Some (tProj (i, pars, narg) (mkApps fn args)) ;
             | @exist None eq2 := None
             }
           } ;
-        | ccview_other t _ := None
+        | cc0view_other t _ := None
         }
       }
     }.

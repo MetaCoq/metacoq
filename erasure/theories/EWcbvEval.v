@@ -150,8 +150,8 @@ Section Wcbv.
       eval (tConst c) res
 
   (** Proj *)
-  | eval_proj i pars arg discr args k res :
-      eval discr (mkApps (tConstruct i k) args) ->
+  | eval_proj i pars arg discr args res :
+      eval discr (mkApps (tConstruct i 0) args) ->
       eval (List.nth (pars + arg) args tDummy) res ->
       eval (tProj (i, pars, arg) discr) res
 

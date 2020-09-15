@@ -851,8 +851,7 @@ Proof.
     destruct ci as ((([cparsubst0 iparsubst0] & idxsubst0) & subsidx) & [s [typectx [Hpars Hargs]]]).
     destruct ind_cshapes as [|? []]; try contradiction.
     destruct X2 as [projty projeq].
-    destruct k; simpl in *; try discriminate. noconf Hnth.
-    2:{ rewrite nth_error_nil in Hnth. discriminate. }
+    noconf Hnth.
     specialize (projsubsl onProjs).
     destruct onProjs.
     pose proof (on_declared_minductive wf isdecl.p1.p1) as onmind.

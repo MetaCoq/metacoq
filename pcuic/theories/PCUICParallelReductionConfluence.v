@@ -445,6 +445,27 @@ Section Pred1_inversion.
     eapply All2_app; auto.
   Qed.
 
+  Lemma pred1_mkApps_tRel (Σ : global_env) (Γ Δ : context) k b (args : list term) c :
+    nth_error Γ k = Some b -> decl_body b = None ->
+    pred1 Σ Γ Δ (mkApps (tRel k) args) c ->
+    {args' : list term & (c = mkApps (tRel k) args') * (All2 (pred1 Σ Γ Δ) args args') }%type.
+  Proof with solve_discr.
+    revert c. induction args using rev_ind; intros; simpl in *.
+    - depelim X...
+      * exists []. intuition auto.
+        eapply nth_error_pred1_ctx in a; eauto.
+        destruct a as [body' [eqopt _]]. rewrite H /= H0 in eqopt. discriminate.
+      * exists []; intuition auto.
+    - rewrite -mkApps_nested /= in X.
+      depelim X; try (simpl in H1; noconf H1); solve_discr.
+      * prepare_discr. apply mkApps_eq_decompose_app in H1.
+        rewrite !decompose_app_rec_mkApps in H1. noconf H1.
+      * destruct (IHargs _ H H0 X1) as [args' [-> Hargs']].
+        exists (args' ++ [N1])%list.
+        rewrite <- mkApps_nested. intuition auto.
+        eapply All2_app; auto.
+  Qed.
+
   Lemma pred1_mkApps_tConst_axiom (Σ : global_env) (Γ Δ : context)
         cst u (args : list term) cb c :
     declared_constant Σ cst cb -> cst_body cb = None ->

@@ -1120,31 +1120,7 @@ Proof.
   revert Δ; induction Γ as [|[na [b|] ty]]; intros Δ; simpl; auto.
 Qed.
 
-
-(* Smashing a context Γ with Δ depending on it is the same as smashing Γ
-     and substituting all references to Γ in Δ by the expansions of let bindings.
-  *)
-
 Arguments Nat.sub : simpl nomatch.
-
-Fixpoint extended_subst (Γ : context) (n : nat) 
-  (* Δ, smash_context Γ, n |- extended_subst Γ n : Γ *) :=
-  match Γ with
-  | nil => nil
-  | cons d vs =>
-    match decl_body d with
-    | Some b =>
-      (* Δ , vs |- b *)
-      let s := extended_subst vs n in
-      (* Δ , smash_context vs , n |- s : vs *)
-      let b' := lift (context_assumptions vs + n) #|s| b in
-      (* Δ, smash_context vs, n , vs |- b' *)
-      let b' := subst0 s b' in
-      (* Δ, smash_context vs , n |- b' *)
-      b' :: s
-    | None => tRel n :: extended_subst vs (S n)
-    end
-  end.
 
 Lemma extended_subst_length Γ n : #|extended_subst Γ n| = #|Γ|.
 Proof.
@@ -1184,6 +1160,37 @@ Proof.
     rewrite map_map_compose. apply map_ext => x.
     rewrite simpl_lift; try lia.
     now rewrite Nat.add_1_r.
+Qed.
+
+Lemma lift_extended_subst' Γ k k' : extended_subst Γ (k + k') = map (lift0 k) (extended_subst Γ k').
+Proof.
+  induction Γ as [|[? [] ?] ?] in k |- *; simpl; auto.
+  - rewrite IHΓ. f_equal.
+    autorewrite with len.
+    rewrite distr_lift_subst. f_equal.
+    autorewrite with len. rewrite simpl_lift; lia_f_equal.
+  - f_equal.
+    rewrite (IHΓ (S k)) (IHΓ 1).
+    rewrite map_map_compose. apply map_ext => x.
+    rewrite simpl_lift; lia_f_equal.
+Qed.
+
+Lemma subst_extended_subst_k s Γ k k' : extended_subst (subst_context s k Γ) k' = 
+  map (subst s (k + context_assumptions Γ + k')) (extended_subst Γ k').
+Proof.
+  induction Γ as [|[na [b|] ty] Γ]; simpl; auto; rewrite subst_context_snoc /=;
+    autorewrite with len; f_equal; auto.
+  - rewrite IHΓ.
+    rewrite commut_lift_subst_rec; try lia.
+    rewrite distr_subst. autorewrite with len. f_equal.
+    now rewrite context_assumptions_fold.
+  - elim: Nat.leb_spec => //. lia.
+  - rewrite (lift_extended_subst' _ 1 k') IHΓ. 
+    rewrite (lift_extended_subst' _ 1 k'). 
+    rewrite !map_map_compose.
+    apply map_ext.
+    intros x. 
+    erewrite (commut_lift_subst_rec); lia_f_equal.
 Qed.
 
 Lemma extended_subst_subst_instance_constr u Γ n :

@@ -890,15 +890,20 @@ Module TemplateTyping <: Typing TemplateTerm TemplateEnvironment TemplateEnvTypi
   Definition conv := @conv.
   Definition cumul := @cumul.
   Definition smash_context := smash_context.
+  Definition expand_lets := expand_lets.
+  Definition expand_lets_ctx := expand_lets_ctx.
   Definition lift := lift.
   Definition subst := subst.
   Definition lift_context := lift_context.
+  Definition subst_context := subst_context.
+  Definition extended_subst := extended_subst.
   Definition subst_instance_constr := subst_instance_constr.
   Definition subst_instance_context := subst_instance_context.
   Definition subst_telescope := subst_telescope.
   Definition inds := inds.
   Definition noccur_between := noccur_between.
   Definition closedn := closedn.
+  Definition destArity := destArity [].
 End TemplateTyping.
 
 Module TemplateDeclarationTyping :=

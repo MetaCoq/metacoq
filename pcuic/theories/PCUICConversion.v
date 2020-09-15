@@ -2466,6 +2466,20 @@ Proof.
   rewrite !lift_closed in X => //.
 Qed.
 
+Lemma weaken_cumul {cf:checker_flags} {Σ Γ t u} Δ : 
+  wf Σ.1 -> closedn_ctx 0 Γ ->
+  closedn #|Γ| t -> closedn #|Γ| u ->
+  Σ ;;; Γ |- t <= u ->
+  Σ ;;; Δ ,,, Γ |- t <= u.
+Proof.
+  intros wfΣ clΓ clt clu ty.
+  epose proof (weakening_cumul Σ [] Γ Δ t u wfΣ).
+  rewrite !app_context_nil_l in X.
+  forward X by eauto.
+  rewrite closed_ctx_lift in X; auto.
+  rewrite !lift_closed in X => //.
+Qed.
+
 Lemma conv_subst_instance {cf:checker_flags} (Σ : global_env_ext) Γ u A B univs :
   forallb (fun x => negb (Level.is_prop x)) u ->
   valid_constraints (global_ext_constraints (Σ.1, univs))
@@ -2521,6 +2535,34 @@ Proof.
       apply eq_term_upto_univ_subst_instance_constr; try typeclasses eauto. auto.
 Qed.
 
+Definition conv_ctx_rel {cf:checker_flags} Σ Γ Δ Δ' :=
+  All2_local_env (on_decl (fun Γ' _ x y => Σ ;;; Γ ,,, Γ' |- x = y)) Δ Δ'.
+
+Definition cumul_ctx_rel {cf:checker_flags} Σ Γ Δ Δ' :=
+  All2_local_env (on_decl (fun Γ' _ x y => Σ ;;; Γ ,,, Γ' |- x <= y)) Δ Δ'.
+
+Lemma cumul_ctx_subst_instance {cf:checker_flags} {Σ} Γ Δ u u' : 
+  wf Σ.1 ->
+  wf_local Σ Γ -> 
+  R_universe_instance (eq_universe (global_ext_constraints Σ)) u u' ->
+  cumul_ctx_rel Σ Γ (subst_instance_context u Δ) (subst_instance_context u' Δ).
+Proof.
+  move=> wfΣ wf equ.
+  induction Δ as [|d Δ].
+  - constructor.
+  - simpl.
+    destruct d as [na [b|] ty] => /=.
+    * constructor; eauto.
+      split. 
+      + constructor. eapply eq_term_leq_term.
+        eapply eq_term_upto_univ_subst_instance_constr; try typeclasses eauto; auto.
+      + constructor. eapply eq_term_leq_term.
+        eapply eq_term_upto_univ_subst_instance_constr; try typeclasses eauto; auto.
+    * constructor; auto.
+      constructor. eapply eq_term_leq_term. simpl.
+      apply eq_term_upto_univ_subst_instance_constr; try typeclasses eauto. auto.
+Qed.
+
 Lemma context_relation_over_same {cf:checker_flags} Σ Γ Δ Δ' :
   context_relation (fun Γ0 Γ'  => conv_decls Σ (Γ ,,, Γ0) (Γ ,,, Γ')) Δ Δ' ->
   context_relation (conv_decls Σ) (Γ ,,, Δ) (Γ ,,, Δ').
@@ -2536,6 +2578,21 @@ Proof.
   autorewrite with len in e. assert(#|Δ| = #|Δ'|) by lia.
   move/context_relation_app: H => H.
   now specialize (H H0) as [_ H].
+Qed.
+
+Lemma eq_term_inds {cf:checker_flags} (Σ : global_env_ext) u u' ind mdecl :
+  R_universe_instance (eq_universe (global_ext_constraints Σ)) u u' ->
+  All2 (eq_term Σ Σ) (inds (inductive_mind ind) u (ind_bodies mdecl))
+    (inds (inductive_mind ind) u' (ind_bodies mdecl)).
+Proof.
+  move=> equ.
+  unfold inds. generalize #|ind_bodies mdecl|.
+  induction n; constructor; auto.
+  clear IHn.
+  repeat constructor. destruct ind; simpl in *.
+  eapply (R_global_instance_empty_impl _ _ _ _ _ _ 0).
+  4:{ unfold R_global_instance. simpl. eauto. }
+  all:typeclasses eauto.
 Qed.
 
 Lemma conv_inds {cf:checker_flags} (Σ : global_env_ext) Γ u u' ind mdecl :
@@ -2627,12 +2684,6 @@ Notation conv_terms Σ Γ := (All2 (conv Σ Γ)).
 
 Instance conv_terms_Proper {cf:checker_flags} Σ Γ : CMorphisms.Proper (eq ==> eq ==> arrow)%signature (conv_terms Σ Γ).
 Proof. intros x y -> x' y' -> f. exact f. Qed.
-
-Definition conv_ctx_rel {cf:checker_flags} Σ Γ Δ Δ' :=
-  All2_local_env (on_decl (fun Γ' _ x y => Σ ;;; Γ ,,, Γ' |- x = y)) Δ Δ'.
-
-Definition cumul_ctx_rel {cf:checker_flags} Σ Γ Δ Δ' :=
-  All2_local_env (on_decl (fun Γ' _ x y => Σ ;;; Γ ,,, Γ' |- x <= y)) Δ Δ'.
 
 Lemma cumul_subst_conv {cf:checker_flags} (Σ : global_env_ext) Γ Δ Δ' Γ' s s' b : wf Σ ->
   All2 (conv Σ Γ) s s' ->
@@ -2752,14 +2803,14 @@ Proof.
   eapply subst_conv; eauto.
 Qed.
 
-Lemma cumul_ctx_subst {cf:checker_flags} Σ Γ Γ' Δ Δ' s s' : 
+Lemma cumul_ctx_subst {cf:checker_flags} Σ Γ Γ' Γ'0 Γ'' Δ Δ' s s' : 
   wf Σ.1 ->
-  wf_local Σ (Γ ,,, Γ' ,,, Δ) ->
-  cumul_ctx_rel Σ (Γ ,,, Γ') Δ Δ' ->
-  All2 (conv Σ []) s s' ->
-  subslet Σ [] s Γ ->
-  subslet Σ [] s' Γ ->
-  cumul_ctx_rel Σ (subst_context s 0 Γ') (subst_context s #|Γ'| Δ) (subst_context s' #|Γ'| Δ').
+  wf_local Σ (Γ ,,, Γ' ,,, Γ'' ,,, Δ) ->
+  cumul_ctx_rel Σ (Γ ,,, Γ' ,,, Γ'') Δ Δ' ->
+  All2 (conv Σ Γ) s s' ->
+  untyped_subslet Γ s Γ' ->
+  untyped_subslet Γ s' Γ'0 ->
+  cumul_ctx_rel Σ (Γ ,,, subst_context s 0 Γ'') (subst_context s #|Γ''| Δ) (subst_context s' #|Γ''| Δ').
 Proof.
   intros wfΣ wf. induction 1.
   - simpl. constructor.
@@ -2769,11 +2820,10 @@ Proof.
     specialize (IHX wf Hs subs subs').
     constructor; auto. 
     red. red in p. simpl.
-    epose proof (subst_cumul [] Γ Γ (Γ' ,,, Γ0) _ _ _ _ wfΣ subs subs' Hs).
-    rewrite app_context_nil_l app_context_assoc in X0.
+    epose proof (untyped_subst_cumul Γ Γ' Γ'0 (Γ'' ,,, Γ0) _ _ _ _ wfΣ subs subs' Hs).
+    rewrite app_context_assoc in X0.
     specialize (X0 wf p).
-    rewrite subst_context_app in X0; autorewrite with len in X0.
-    rewrite app_context_nil_l in X0.
+    rewrite !subst_context_app app_context_assoc in X0; autorewrite with len in X0.
     now rewrite -(All2_local_env_length X).
   - rewrite !subst_context_snoc /=.
     intros Hs subs subs'.
@@ -2782,20 +2832,18 @@ Proof.
     constructor; auto.
     red. red in p. simpl.
     destruct p as [pb pt].
-    epose proof (subst_cumul [] Γ Γ (Γ' ,,, Γ0) _ _ _ _ wfΣ subs subs' Hs) as X0.
-    rewrite app_context_nil_l app_context_assoc in X0.
+    epose proof (untyped_subst_cumul Γ Γ' Γ'0 (Γ'' ,,, Γ0) _ _ _ _ wfΣ subs subs' Hs) as X0.
+    rewrite app_context_assoc in X0.
     specialize (X0 wf pb).
-    epose proof (subst_cumul [] Γ Γ (Γ' ,,, Γ0) _ _ _ _ wfΣ subs subs' Hs) as X1.
-    rewrite app_context_nil_l app_context_assoc in X1.
+    epose proof (untyped_subst_cumul Γ Γ' Γ'0 (Γ'' ,,, Γ0) _ _ _ _ wfΣ subs subs' Hs) as X1.
+    rewrite !app_context_assoc in X1.
     specialize (X1 wf pt).
-    rewrite !subst_context_app !app_context_nil_l in X0, X1; autorewrite with len in X0, X1.
+    rewrite !subst_context_app !app_context_assoc in X0, X1; autorewrite with len in X0, X1.
     now rewrite -(All2_local_env_length X).
 Qed.
 
 Lemma All2_local_env_nth_error {cf:checker_flags} Σ Γ Δ Δ' : 
-  All2_local_env (fun (Γ' _ : PCUICEnvironment.context) 
-  (_ : option (term × term)) (x y : term) =>
-  Σ;;; Γ ,,, Γ' |- x <= y) Δ Δ' ->
+  cumul_ctx_rel Σ Γ Δ Δ' ->
   assumption_context Δ ->
   forall n decl, nth_error Δ n = Some decl ->
   ∑ decl', (nth_error Δ' n = Some decl') * (Σ ;;; Γ ,,, skipn (S n) Δ |- decl_type decl <= decl_type decl').
@@ -2810,4 +2858,55 @@ Proof.
       destruct (IHX _ _ Hnth) as [decl' [Hnth' cum]].
       eexists; intuition eauto.
   - move=> H; elimtype False; depelim H; simpl in H0; noconf H0.
+Qed.
+
+Require Import ssrbool.
+
+Lemma closed_ctx_decl k d Γ : closedn_ctx k (d :: Γ) =
+  closed_decl (k + #|Γ|) d && closedn_ctx k Γ.
+Proof.
+  unfold closedn_ctx at 1.
+  rewrite mapi_rev /= forallb_app {2}/id /= andb_true_r.
+  replace (#|Γ| - 0) with #|Γ| by lia.
+  rewrite andb_comm. f_equal.
+  unfold closedn_ctx.
+  rewrite mapi_rev (mapi_rec_add _ _ 1 0) /=.
+  f_equal.
+Qed.
+
+Lemma weaken_cumul_ctx {cf:checker_flags} Σ Γ Γ' Δ Δ' :
+  wf Σ.1 ->
+  closed_ctx (Γ' ,,, Δ) ->
+  closed_ctx (Γ' ,,, Δ') ->
+  wf_local Σ Γ ->
+  cumul_ctx_rel Σ Γ' Δ Δ' ->
+  cumul_ctx_rel Σ (Γ ,,, Γ') Δ Δ'.
+Proof.
+  intros wfΣ wf wf' wf''. induction 1.
+  - simpl. constructor.
+  - rewrite /= closed_ctx_decl in wf.
+    rewrite /= closed_ctx_decl in wf'.
+    move/andP: wf => [wfd wf].
+    move/andP: wf' => [wfd' wf'].
+    constructor; auto.
+    + now eapply IHX.
+    + red. red in p. 
+      rewrite -app_context_assoc.
+      eapply weaken_cumul; eauto.
+      autorewrite with len; simpl; rewrite (All2_local_env_length X).
+      now autorewrite with len in wfd'.
+  - rewrite /= closed_ctx_decl in wf.
+    rewrite /= closed_ctx_decl in wf'.
+    move/andP: wf => [wfd wf].
+    move/andP: wf' => [wfd' wf'].
+    constructor; auto.
+    + now eapply IHX.
+    + red. red in p. 
+      rewrite -app_context_assoc.
+      autorewrite with len in *.
+      destruct p.
+      move/andP: wfd => /= [wfb wft].
+      move/andP: wfd' => /= [wfb' wft'].
+      rewrite <- (All2_local_env_length X) in *.
+      split; eapply weaken_cumul; autorewrite with len; eauto.
 Qed.

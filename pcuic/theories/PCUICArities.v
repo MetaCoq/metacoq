@@ -172,6 +172,27 @@ Proof.
     exists s'. eapply (substitution _ _ Δ s [] _ _ HΣ' sub Hs).
 Qed.
 
+Lemma isWAT_subst_gen {cf:checker_flags} {Σ : global_env_ext} (HΣ' : wf Σ) {Γ Δ Δ'} {A} s :
+  subslet Σ Γ s Δ ->
+  isWfArity_or_Type Σ (Γ ,,, Δ ,,, Δ') A -> 
+  isWfArity_or_Type Σ (Γ ,,, subst_context s 0 Δ') (subst s #|Δ'| A).
+Proof.
+  intros sub WAT.
+  destruct WAT.
+  - left.
+    destruct i as [ctx [s' [wfa wfl]]].
+    exists (subst_context s #|Δ'|ctx), s'.
+    generalize (subst_destArity [] A s #|Δ'|).
+    rewrite wfa /=.
+    split; auto.
+    epose proof (subst_context_app _ 0 _ _).
+    rewrite Nat.add_0_r in H0. rewrite <- app_context_assoc, <- H0.
+    eapply substitution_wf_local; eauto.
+    now rewrite app_context_assoc.
+  - right.
+    destruct i as [s' Hs].
+    exists s'. eapply (substitution _ _ Δ s _ _ _ HΣ' sub Hs).
+Qed.
 
 Lemma typing_spine_letin_inv {cf:checker_flags} {Σ Γ na b B T args S} : 
   wf Σ.1 ->

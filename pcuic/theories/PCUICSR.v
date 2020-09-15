@@ -174,7 +174,7 @@ Proof.
     | [H : (_ ;;; _ |- _ <= _) |- _ ] => idtac
     | _ =>
       depelim Hu; try solve [apply mkApps_Fix_spec in x; noconf x];
-      try solve [econstructor; eauto] ;
+      try solve [econstructor; eauto];
       try solve [
         match goal with
         | h : _ = mkApps _ ?args |- _ =>
@@ -338,7 +338,8 @@ Proof.
     destruct typec' as [[[[_ equ] cu] eqargs] [cparsubst [cargsubst [iparsubst [iidxsubst ci]]]]].
     destruct ci as ((([cparsubst0 iparsubst0] & idxsubst0) & subsidx) & [s [typectx [Hpars Hargs]]]).
     pose proof (context_subst_fun csubst (iparsubst0.(inst_ctx_subst))). subst iparsubst.
-    epose proof (constructor_cumulative_indices wf isdecl onc equ _ _ _ _ _ cparsubst0 iparsubst0 Hpars).
+    unshelve epose proof (constructor_cumulative_indices wf isdecl oib onc _ Hu cu equ _ _ _ _ _ cparsubst0 iparsubst0 Hpars).
+    { eapply (weaken_lookup_on_global_env' _ _ _ wf (proj1 decli)). }
     set (argctxu1 := subst_context _ _ _) in X |- *.
     set (argctxu := subst_context _ _ _) in X |- *.
     simpl in X.
@@ -367,7 +368,7 @@ Proof.
          pose proof onc as onc'.
          eapply on_constructor_inst_pars_indices in onc'; eauto.
          2:{ simpl. eapply on_declared_inductive; eauto. }
-         destruct onc' as [inst sp].
+         destruct onc' as [wfparsargs [inst sp]].
          eapply arity_spine_it_mkProd_or_LetIn => //.
          simpl in sp. rewrite !map_map_compose in sp. eapply sp.
          autorewrite with len.
@@ -396,19 +397,19 @@ Proof.
          rewrite {6}/pargctxu in X0.
          rewrite distr_lift_subst_context in X0.
          rewrite closed_ctx_lift in X0.
-         rewrite /argctxu. rewrite -(context_subst_length _ _ _ csubst).
-         rewrite subst_instance_context_length. rewrite Nat.add_comm. eapply closedn_ctx_subst.
-         2:eapply declared_minductive_closed_inds; eauto.
-         rewrite /argctx. autorewrite with len. simpl.
-         { pose proof (on_declared_inductive wf isdecl) as [onind _].
-           pose proof (on_constructor_inst _ _ u _ _ _ _ wf isdecl onind oib onc cu) as [wfcl _]; auto.
-           eapply closed_wf_local in wfcl; auto.
-           rewrite !subst_instance_context_app in wfcl.
-           rewrite closedn_ctx_app in wfcl.
-            move/andP: wfcl => []. autorewrite with len. auto. }
+         { rewrite /argctxu. rewrite -(context_subst_length _ _ _ csubst).
+           rewrite subst_instance_context_length. rewrite Nat.add_comm. eapply closedn_ctx_subst.
+          2:eapply declared_minductive_closed_inds; eauto.
+          rewrite /argctx. autorewrite with len. simpl.
+          pose proof (on_declared_inductive wf isdecl) as [onind _].
+          pose proof (on_constructor_inst u wf isdecl onind oib onc cu) as [wfcl _]; auto.
+          eapply closed_wf_local in wfcl; auto.
+          rewrite !subst_instance_context_app in wfcl.
+          rewrite closedn_ctx_app in wfcl.
+          move/andP: wfcl => []. autorewrite with len. now auto. }
          eapply arity_spine_it_mkProd_or_LetIn; eauto.
-         unfold to_extended_list, to_extended_list_k. rewrite /argctxu in X0. simpl. rewrite -H in X0.
-         eapply X0.
+         { unfold to_extended_list, to_extended_list_k. rewrite /argctxu in X0. simpl. rewrite -H in X0. 
+           eapply X0. }
          epose proof (to_extended_list_map_lift _ 0 _) as Hl; rewrite Nat.add_0_r in Hl.
          rewrite map_app.
          rewrite <- Hl. clear Hl.
@@ -487,11 +488,13 @@ Proof.
             ∘ subst_instance_constr u) (cshape_indices cs))).
            { pose proof (positive_cstr_closed_indices wf onc).
              eapply All_map.
+             eapply All_map_inv in X1.
              eapply (All_impl X1) => x cl.
-             rewrite subst_closedn.
-             now rewrite Nat.add_comm closedn_subst_instance_constr.
-             rewrite closedn_subst_instance_constr -(context_subst_length _ _ _ iparsubst0).
-             now autorewrite with len. }  
+             eapply (closedn_expand_lets 0) in cl.
+             rewrite subst_closedn closedn_subst_instance_constr.
+             now len in cl.
+             rewrite -(context_subst_length _ _ _ iparsubst0).
+             autorewrite with len. now rewrite Nat.add_comm; len in cl. }  
            rewrite !map_map_compose. apply (All_All2 X1).
            intros x cl.
            pose proof (all_rels_subst Σ pargctxu Γ (subst parsubst #|argctx| x) wf X) as X2.
@@ -559,18 +562,22 @@ Proof.
         rewrite -(map_map_compose _ _ _ (subst_instance_constr u)).
         rewrite (map_subst_closedn (inds _ _ _)).
         { apply All_forallb. apply All_map.
-          eapply (All_impl X). 
-          intros x Px. rewrite closedn_subst_instance_constr.
-          rewrite /argctx; autorewrite with len.
-          now rewrite Nat.add_comm. }
+          eapply All_map_inv in X; eapply (All_impl X). 
+          intros x Px.
+          eapply (closedn_expand_lets 0) in Px.
+          len in Px.
+          rewrite closedn_subst_instance_constr.
+          now rewrite /argctx; autorewrite with len. }
         rewrite -(map_map_compose _ _ _ (subst (inds _ _ _) _ ∘ (subst_instance_constr u1)) (subst _ _)).
         rewrite -(map_map_compose _ _ _ (subst_instance_constr u1)).
         rewrite (map_subst_closedn (inds _ _ _)).
         { apply All_forallb. apply All_map.
-          eapply (All_impl X). 
-          intros x Px. rewrite closedn_subst_instance_constr.
-          rewrite /argctx; autorewrite with len.
-          now rewrite Nat.add_comm. }
+          eapply All_map_inv in X; eapply (All_impl X). 
+          intros x Px.
+          eapply (closedn_expand_lets 0) in Px.
+          len in Px.
+          rewrite closedn_subst_instance_constr.
+          now rewrite /argctx; autorewrite with len. }
         rewrite (map_map_compose _ _ _ _ (subst0 (extended_subst pargctxu 0))).
         change (fun x =>  subst0 (extended_subst pargctxu 0) _ ) with (expand_lets pargctxu).
         rewrite -map_subst_app_simpl -(map_map_compose _ _ _ _ (subst0 cargsubst)) /=.
@@ -832,8 +839,10 @@ Proof.
     epose proof (declared_projection_type_and_eq wf pdecl').
     simpl in X2.
     pose proof (subslet_projs Σ _ _ _ _ decli) as projsubsl.
-    destruct declared_inductive_inv. simpl in *.
-    forward onProjections. clear pdecl'.
+    set(oib := declared_inductive_inv _ wf wf decli) in *.
+    change (declared_inductive_inv weaken_env_prop_typing wf wf decli) with oib in X2.
+    pose proof (onProjections oib) as onProjs. clearbody oib.
+    forward onProjs. clear pdecl'.
     eapply nth_error_Some_length in H0. simpl in H0.
     intros Hp. apply (f_equal (@length _)) in Hp. rewrite  Hp /=   in H0. lia.
     simpl in H0.
@@ -844,8 +853,8 @@ Proof.
     destruct X2 as [projty projeq].
     destruct k; simpl in *; try discriminate. noconf Hnth.
     2:{ rewrite nth_error_nil in Hnth. discriminate. }
-    specialize (projsubsl onProjections).
-    destruct onProjections.
+    specialize (projsubsl onProjs).
+    destruct onProjs.
     pose proof (on_declared_minductive wf isdecl.p1.p1) as onmind.
     eapply nth_error_alli in on_projs; eauto.
     eapply typing_spine_strengthen in tyargs; eauto.
@@ -912,7 +921,9 @@ Proof.
     epose proof (nth_error_lift_context_eq _ (smash_context [] (ind_params mdecl))).
     autorewrite with len in H1. simpl in H1.
     erewrite -> H1 in on_projs. clear H1.
-    move: (constructor_cumulative_indices wf decli' onc equ _ _ _ _ _ spargs iparsubst0 Hpars).
+    unshelve epose proof (constructor_cumulative_indices wf decli' oib onc _ Hu cu equ _ _ _ _ _ spargs iparsubst0 Hpars).
+    { eapply (weaken_lookup_on_global_env' _ _ _ wf (proj1 decli)). }
+    move: X2.
     set (argsu1 := subst_instance_context u1 (cshape_args cs)) in *.
     set (argsu := subst_instance_context u (cshape_args cs)) in *.
     set (argctxu1 := subst_context _ _ argsu1) in *.

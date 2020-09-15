@@ -2773,6 +2773,25 @@ Section ConfluenceFacts.
       intros ? ? ?; eapply red_trans.
   Qed.
 
+  Lemma red_mkApps_tRel (Γ : context) k b (args : list term) c :
+    nth_error Γ k = Some b -> decl_body b = None ->
+    red Σ Γ (mkApps (tRel k) args) c ->
+    ∑ args' : list term,
+    (c = mkApps (tRel k) args') * (All2 (red Σ Γ) args args').
+  Proof.
+    move => Hnth Hb Hred. apply red_alt in Hred.
+    eapply red_pred in Hred; tas.
+    generalize_eq x (mkApps (tRel k) args).
+    induction Hred in k, b, Hnth, Hb, args |- * ; simplify *.
+    - eapply pred1_mkApps_tRel in r as [r' [eq redargs]]; eauto.
+      subst y. exists r'. intuition auto. solve_all. now apply pred1_red in X.
+    - exists args; split; eauto. apply All2_same; auto.
+    - specialize IHHred1 as [? [? ?]]; eauto. subst.
+      specialize (IHHred2 _ _ _ Hnth Hb eq_refl) as [? [? ?]]. subst z.
+      exists x0. intuition auto. eapply All2_trans; eauto.
+      intros ? ? ?; eapply red_trans.
+  Qed.
+
   Lemma red_mkApps_tConst_axiom (Γ : context)
         cst u (args : list term) cb c :
     declared_constant Σ cst cb -> cst_body cb = None ->

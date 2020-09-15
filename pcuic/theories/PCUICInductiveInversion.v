@@ -24,16 +24,34 @@ From Equations Require Import Equations.
 Ltac len := autorewrite with len.
 Hint Rewrite reln_length : len.
 
+Tactic Notation "relativize" open_constr(c) := 
+  let ty := type of c in  
+  let x := fresh in
+  evar (x : ty); replace c with x; subst x.
+
+Ltac substu := autorewrite with substu => /=.
+Tactic Notation "len" "in" hyp(id) :=
+  autorewrite with len in id; simpl in id.
+
+Tactic Notation "substu" "in" hyp(id) :=
+  autorewrite with substu in id; simpl in id.
+
+Lemma conv_eq_ctx {cf:checker_flags} Σ Γ Γ' T U : Σ ;;; Γ |- T = U -> Γ = Γ' -> Σ ;;; Γ' |- T = U.
+Proof. now intros H ->. Qed.
+
+Lemma consistent_instance_ext_noprop {cf:checker_flags} {Σ univs u} : 
+  consistent_instance_ext Σ univs u ->
+  forallb (fun x1 : Level.t => negb (Level.is_prop x1)) u.
+Proof.
+  unfold consistent_instance_ext, consistent_instance.
+  destruct univs. destruct u; simpl; try discriminate; auto.
+  firstorder.
+Qed.
+
+Hint Resolve consistent_instance_ext_noprop : pcuic.
+
 (* TODO Move *)
-Definition expand_lets_k Γ k t := 
-  (subst (extended_subst Γ 0) k (lift (context_assumptions Γ) (k + #|Γ|) t)).
 
-Definition expand_lets Γ t := expand_lets_k Γ 0 t.
-
-Definition expand_lets_k_ctx Γ k Δ := 
-  (subst_context (extended_subst Γ 0) k (lift_context (context_assumptions Γ) (k + #|Γ|) Δ)).
-
-Definition expand_lets_ctx Γ Δ := expand_lets_k_ctx Γ 0 Δ.
 
 Lemma subst_consn_ids_ren n k f : (idsn n ⋅n (tRel k ⋅ ren f) =1 ren (ren_ids n ⋅n (subst_cons_gen k f)))%sigma.
 Proof.
@@ -148,6 +166,35 @@ Proof.
   rewrite distr_subst. f_equal.
   len.
   now rewrite commut_lift_subst_rec.
+Qed.
+
+Lemma subst_extended_subst s Γ k : extended_subst (subst_context s k Γ) 0 = 
+  map (subst s (k + context_assumptions Γ)) (extended_subst Γ 0).
+Proof.
+  induction Γ as [|[na [b|] ty] Γ]; simpl; auto; rewrite subst_context_snoc /=;
+    autorewrite with len; f_equal; auto.
+  - rewrite IHΓ.
+    rewrite commut_lift_subst_rec. auto. lia.
+    rewrite distr_subst. now len.
+  - elim: Nat.leb_spec => //. lia.
+  - rewrite ? (lift_extended_subst _ 1); rewrite IHΓ. 
+    rewrite !map_map_compose. apply map_ext.
+    intros x. 
+    erewrite (commut_lift_subst_rec). lia_f_equal.
+    lia.
+Qed.
+
+Lemma expand_lets_subst_comm' Γ s k x : 
+  closedn (k + #|Γ|) x ->
+  expand_lets (subst_context s k Γ) x = subst s (k + context_assumptions Γ) (expand_lets Γ x).
+Proof.
+  unfold expand_lets, expand_lets_k; simpl; intros clx.
+  len.
+  rewrite !subst_extended_subst.
+  rewrite distr_subst. f_equal.
+  len. rewrite subst_closedn //.
+  rewrite Nat.add_assoc; eapply closedn_lift.
+  now rewrite Nat.add_comm.
 Qed.
 
 Lemma map_expand_lets_subst_comm Γ s :
@@ -610,7 +657,7 @@ Proof.
   apply on_minductive_wf_params_indices => //. pcuic.
 Qed.
 
-Lemma on_constructor_inst {cf:checker_flags} Σ ind u mdecl idecl cshape cdecl : 
+Lemma on_constructor_inst {cf:checker_flags} {Σ ind mdecl idecl cshape cdecl} u : 
   wf Σ.1 -> 
   declared_inductive Σ.1 mdecl ind idecl ->
   on_inductive (lift_typing typing) (Σ.1, ind_universes mdecl) (inductive_mind ind) mdecl ->
@@ -746,18 +793,6 @@ Proof.
   induction 1; try constructor; auto.
 Qed.
 
-Lemma closed_ctx_decl k d Γ : closedn_ctx k (d :: Γ) =
-  closed_decl (k + #|Γ|) d && closedn_ctx k Γ.
-Proof.
-  unfold closedn_ctx at 1.
-  rewrite mapi_rev /= forallb_app {2}/id /= andb_true_r.
-  replace (S #|Γ| - 1) with #|Γ| by lia.
-  rewrite andb_comm. f_equal.
-  unfold closedn_ctx.
-  rewrite mapi_rev (mapi_rec_add _ _ 1 0) /=.
-  f_equal.
-Qed.
-
 Lemma closedn_ctx_upwards k k' Γ : 
   closedn_ctx k Γ -> k <= k' ->
   closedn_ctx k' Γ.
@@ -788,6 +823,32 @@ Proof.
     specialize (H Γ ltac:(len; lia)).
     rewrite (Nat.add_comm _ 1) Nat.add_assoc in cl.
     now rewrite (Nat.add_comm _ 1) Nat.add_assoc.
+Qed.
+
+Lemma closedn_expand_lets_eq k (Γ : context) k' t :
+  closedn_ctx k Γ ->
+  closedn (k + k' + context_assumptions Γ) (expand_lets_k Γ k' t) =
+  closedn (k + k' + #|Γ|) t.
+Proof.
+  revert k k' t.
+  induction Γ as [|[na [b|] ty] Γ] using ctx_length_rev_ind; intros k k' t;
+    rewrite ?closedn_ctx_app /= /id /=; simpl; auto.
+  - now rewrite /expand_lets /expand_lets_k /= subst_empty lift0_id.
+  - rewrite andb_true_r /id; move/andP=> [cld clΓ]. len.
+    rewrite !expand_lets_k_vdef.
+    simpl in cld |- *. move/andP: cld => /= [clb _].
+    rewrite Nat.add_0_r in clb.
+    specialize (H (subst_context [b] 0 Γ) ltac:(len; lia)).
+    autorewrite with len in H. rewrite H /=.
+    relativize k. eapply closedn_ctx_subst. simpl. 3:rewrite Nat.add_0_r //.
+    now rewrite Nat.add_0_r. now rewrite /= clb.
+    rewrite -Nat.add_assoc -closedn_subst_eq. simpl. now rewrite clb.
+    simpl; lia_f_equal.
+  - len. rewrite andb_true_r /=; move/andP => [clty clΓ]. 
+    rewrite !expand_lets_k_vass. simpl.
+    specialize (H Γ ltac:(len; lia) (S k)).
+    rewrite Nat.add_assoc !Nat.add_succ_r !Nat.add_0_r. apply H.
+    now rewrite Nat.add_1_r in clΓ.
 Qed.
 
 Lemma closedn_ctx_expand_lets k Γ Δ :
@@ -1026,8 +1087,24 @@ Proof.
     lia_f_equal.
 Qed.
 
+Lemma subst_context_lift_context_comm (Γ : context) n k k' s : 
+  k' = k + n ->
+  subst_context s k' (lift_context n k Γ) =
+  lift_context n k (subst_context s k Γ).
+Proof.
+  intros ->; induction Γ as [|[? [] ?] ?] in |- *; auto;
+    rewrite !lift_context_snoc !subst_context_snoc !lift_context_snoc /= 
+      /subst_decl /lift_decl /map_decl /=.
+  - rewrite IHΓ //. f_equal. f_equal. f_equal; len.
+    rewrite commut_lift_subst_rec. lia. lia_f_equal.
+    len.
+    rewrite commut_lift_subst_rec. lia. lia_f_equal.
+  - f_equal. apply IHΓ => //.
+    f_equal; len. rewrite commut_lift_subst_rec //; try lia.
+    lia_f_equal.
+Qed.
 
-Lemma on_constructor_inst_pars_indices {cf:checker_flags} Σ ind u mdecl idecl cshape cdecl Γ pars parsubst : 
+Lemma on_constructor_inst_pars_indices {cf:checker_flags} {Σ ind u mdecl idecl cshape cdecl Γ pars parsubst} : 
   wf Σ.1 -> 
   declared_inductive Σ.1 mdecl ind idecl ->
   on_inductive (lift_typing typing) (Σ.1, ind_universes mdecl) (inductive_mind ind) mdecl ->
@@ -1037,6 +1114,9 @@ Lemma on_constructor_inst_pars_indices {cf:checker_flags} Σ ind u mdecl idecl c
           mdecl (inductive_ind ind) idecl (ind_indices oib) cdecl cshape), 
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   spine_subst Σ Γ pars parsubst (subst_instance_context u (ind_params mdecl)) ->
+  wf_local Σ (subst_instance_context u (ind_params mdecl) ,,,
+    subst_context (inds (inductive_mind ind) u (ind_bodies mdecl)) #|ind_params mdecl|
+    (subst_instance_context u (cshape_args cshape))) *
   ∑ inst,
   spine_subst Σ
           (Γ ,,, subst_context parsubst 0 (subst_context (ind_subst mdecl ind u) #|ind_params mdecl|
@@ -1049,7 +1129,7 @@ Lemma on_constructor_inst_pars_indices {cf:checker_flags} Σ ind u mdecl idecl c
           (subst_context parsubst 0 (subst_instance_context u (ind_indices oib)))). 
 Proof.
   move=> wfΣ declm oi oib onc cext sp.
-  destruct (on_constructor_inst Σ ind u mdecl idecl _ cdecl wfΣ declm oi oib onc) as [wfl [inst sp']]; auto.
+  destruct (on_constructor_inst u wfΣ declm oi oib onc) as [wfl [inst sp']]; auto.
   rewrite !subst_instance_context_app in sp'.
   eapply spine_subst_app_inv in sp' as [spl spr]; auto.
   rewrite (spine_subst_extended_subst spl) in spr.
@@ -1083,6 +1163,8 @@ Proof.
     rewrite forallb_rev. eapply closedn_to_extended_list_k.
     now len. }
   autorewrite with len in spr.
+  split.
+  { autorewrite with len in spr. apply spr. }
   eapply spine_subst_weaken in spr.
   3:eapply (spine_dom_wf _ _ _ _ _ sp); eauto. 2:eauto.
   rewrite app_context_assoc in spr.
@@ -1330,7 +1412,7 @@ Proof.
   injection Heqp. intros indeq _. 
   move: onc Heqp. rewrite -indeq.
   intros onc Heqp. clear Heqp. simpl in onc.
-  pose proof (on_constructor_inst _ _ _ _ _ _ _ wfΣ decli onmind onind onc const).
+  pose proof (on_constructor_inst u wfΣ decli onmind onind onc const).
   destruct onc as [argslength conclhead cshape_eq [cs' t] cargs cinds]; simpl.
   simpl in *. 
   unfold type_of_constructor in hs. simpl in hs.
@@ -1637,10 +1719,9 @@ Ltac unf_env :=
 
 Derive Signature for positive_cstr.
 
-
 Lemma positive_cstr_it_mkProd_or_LetIn mdecl i Γ Δ t : 
   positive_cstr mdecl i Γ (it_mkProd_or_LetIn Δ t) ->
-  All_local_env (fun Δ ty _ => positive_cstr_arg mdecl i (Γ ,,, Δ) ty)
+  All_local_env (fun Δ ty _ => positive_cstr_arg mdecl  (Γ ,,, Δ) ty)
     (smash_context [] Δ) *
   positive_cstr mdecl i (Γ ,,, smash_context [] Δ) (expand_lets Δ t).
 Proof.
@@ -1719,7 +1800,8 @@ Qed.
 Lemma positive_cstr_closed_indices {cf:checker_flags} {Σ : global_env_ext} (wfΣ : wf Σ.1):
   forall {i mdecl idecl cdecl ind_indices cs},
   on_constructor (lift_typing typing) (Σ.1, ind_universes mdecl) mdecl i idecl ind_indices cdecl cs -> 
-  All (closedn (#|ind_params mdecl| + #|cshape_args cs|)) (cshape_indices cs).
+  All (closedn (context_assumptions (ind_params mdecl ,,, cshape_args cs)))
+    (map (expand_lets (cshape_args cs ++ ind_params mdecl)) (cshape_indices cs)).
 Proof.
   intros.
   pose proof (X.(on_ctype_positive)).
@@ -1735,14 +1817,61 @@ Proof.
   simpl in H; noconf H.
   eapply All_map_inv in a.
   eapply All_app in a as [ _ a].
-  eapply (All_impl a).
+  eapply All_map; eapply (All_impl a).
   clear. intros.
   autorewrite with len in H; simpl in H.
-  rewrite -context_assumptions_app in H.
-  apply (closedn_expand_lets 0) in H => //.
-  autorewrite with len in H.
-  now rewrite Nat.add_comm.
+  now rewrite context_assumptions_app.
 Qed.
+
+Lemma smash_context_app_expand Γ Δ Δ' : 
+  smash_context Γ (Δ ,,, Δ') =
+  smash_context [] Δ ,,, expand_lets_ctx Δ (smash_context Γ Δ').
+Proof.
+  rewrite smash_context_app smash_context_acc.
+  rewrite /expand_lets_k_ctx /app_context. f_equal.
+Qed.
+
+Lemma expand_lets_smash_context Γ Δ Δ' : 
+  expand_lets_ctx Γ (smash_context Δ Δ') = 
+  smash_context (expand_lets_k_ctx Γ #|Δ'| Δ) (expand_lets_ctx Γ Δ').
+Proof.
+  rewrite /expand_lets_ctx /expand_lets_k_ctx.
+  rewrite -smash_context_lift -smash_context_subst /=; len.
+  lia_f_equal.
+Qed.
+
+
+Lemma expand_lets_k_ctx_length Γ k Δ : #|expand_lets_k_ctx Γ k Δ| = #|Δ|.
+Proof. now rewrite /expand_lets_k_ctx; len. Qed.
+Hint Rewrite expand_lets_k_ctx_length : len.
+
+Lemma expand_lets_ctx_length Γ Δ : #|expand_lets_ctx Γ Δ| = #|Δ|.
+Proof. now rewrite /expand_lets_ctx; len. Qed.
+Hint Rewrite expand_lets_ctx_length : len.
+
+Lemma expand_lets_k_ctx_nil Γ k : expand_lets_k_ctx Γ k [] = [].
+Proof. reflexivity. Qed.
+
+Lemma expand_lets_ctx_nil Γ : expand_lets_ctx Γ [] = [].
+Proof. reflexivity. Qed.
+Hint Rewrite expand_lets_k_ctx_nil expand_lets_ctx_nil : pcuic.
+
+Lemma positive_cstr_arg_subst_instance {mdecl Γ} {t} u :
+  positive_cstr_arg mdecl Γ t ->
+  positive_cstr_arg mdecl (subst_instance_context u Γ) (subst_instance_constr u t).
+Proof.
+  induction 1.
+  - constructor 1; len.
+    now rewrite closedn_subst_instance_constr.
+  - rewrite subst_instance_constr_mkApps. econstructor 2; len => //; eauto.
+    eapply All_map; solve_all.
+    now rewrite closedn_subst_instance_constr.
+  - simpl. constructor 3; len => //.
+    now rewrite -subst_subst_instance_constr in IHX.
+  - simpl. constructor 4; len => //.
+    now rewrite closedn_subst_instance_constr.
+Qed.
+
 
 Lemma declared_inductive_lookup_inductive {Σ ind mdecl idecl} :
   declared_inductive Σ mdecl ind idecl ->
@@ -1752,10 +1881,1149 @@ Proof.
   intros []. red in H. now rewrite /lookup_minductive H H0.
 Qed.
 
-Lemma constructor_cumulative_indices {cf:checker_flags} {Σ : global_env_ext} (wfΣ : wf Σ.1) :
-  forall {ind mdecl idecl cdecl ind_indices cs u u' napp},
+Notation red_terms Σ Γ := (All2 (red Σ Γ)).
+
+Lemma red_terms_conv_terms {cf:checker_flags} {Σ : global_env_ext} Γ u u' : 
+  All2 (red Σ Γ) u u' -> All2 (conv Σ Γ) u u'.
+Proof.
+  move=> Hu; eapply All2_impl; eauto.
+Qed.
+
+Lemma eq_terms_conv_terms {cf:checker_flags} {Σ : global_env_ext} Γ u u' : 
+  All2 (eq_term Σ Σ) u u' -> All2 (conv Σ Γ) u u'.
+Proof.
+  move=> Hu; eapply All2_impl; eauto.
+  intros. now constructor.
+Qed.
+
+Instance conv_terms_sym {cf:checker_flags} {Σ : global_env_ext} Γ : CRelationClasses.Symmetric (conv_terms Σ Γ).
+Proof.
+  move=> u u' Hu; eapply All2_symmetry; eauto. typeclasses eauto.
+Qed.
+
+Instance conv_terms_trans {cf:checker_flags} {Σ : global_env_ext} {Γ} {wfΣ : wf Σ}: 
+  CRelationClasses.Transitive (conv_terms Σ Γ).
+Proof.
+  move=> x y z Hu; eapply All2_transitivity; eauto.
+  eapply conv_trans. typeclasses eauto.
+Qed.
+
+Lemma cumul_mkApps_tRel {cf:checker_flags} {Σ : global_env_ext} Γ n d u u' : 
+  wf Σ -> nth_error Γ n = Some d -> decl_body d = None ->
+  Σ ;;; Γ |- mkApps (tRel n) u <= mkApps (tRel n) u' -> 
+  All2 (conv Σ Γ) u u'.
+Proof.
+  intros wfΣ Hnth Hd cum.
+  eapply cumul_alt in cum as [v' [v [[redl redr] leq]]].
+  eapply red_mkApps_tRel in redl as [args' [-> conv]]; eauto.
+  eapply red_mkApps_tRel in redr as [args'' [-> conv']]; eauto.
+  eapply All2_trans. apply _.
+  now eapply red_terms_conv_terms.
+  eapply eq_term_upto_univ_mkApps_l_inv in leq as [u'' [l' [[eqrel eqargs] eq']]].
+  depelim eqrel. eapply mkApps_eq_inj in eq' as [_ ->] => //.
+  etransitivity; [|symmetry; eapply red_terms_conv_terms]; eauto.
+  now eapply eq_terms_conv_terms.
+Qed.
+
+Lemma nth_error_subst_instance_context u Γ n : 
+  nth_error (subst_instance_context u Γ) n = 
+  option_map (map_decl (subst_instance_constr u)) (nth_error Γ n).
+Proof.
+  now rewrite nth_error_map.
+Qed.
+
+Lemma conv_terms_confl {cf:checker_flags} {Σ : global_env_ext} Γ u u' : 
+  wf Σ -> conv_terms Σ Γ u u' ->
+  ∑ nf nf', (red_terms Σ Γ u nf * red_terms Σ Γ u' nf') * (All2 (eq_term Σ Σ) nf nf').
+Proof.
+  intros wfΣ cv.
+  induction cv.
+  - exists [], []; intuition auto.
+  - destruct IHcv as [nf [nf' [[redl redr] eq]]].
+    eapply conv_alt_red in r as [x' [y' [[redx redy] eq']]].
+    exists (x' :: nf), (y' :: nf'); intuition auto.
+Qed.
+
+Lemma cumul_mkApps_cum {cf:checker_flags} {Σ : global_env_ext} Γ f f' u u' : 
+  wf Σ -> 
+  eq_term_upto_univ_napp Σ (eq_universe Σ) (leq_universe Σ) #|u| f f' ->
+  conv_terms Σ Γ u u' ->
+  Σ ;;; Γ |- mkApps f u <= mkApps f' u'.
+Proof.
+  intros wfΣ eqf equ.
+  eapply cumul_alt.
+  eapply conv_terms_confl in equ as [nf [nf' [[redl redr] eq]]] => //.
+  exists (mkApps f nf), (mkApps f' nf').
+  intuition idtac.
+  eapply red_mkApps; eauto.
+  eapply red_mkApps; eauto.
+  eapply eq_term_upto_univ_napp_mkApps.
+  now rewrite Nat.add_0_r -(All2_length _ _ redl).
+  apply eq.
+Qed.
+
+Lemma cumul_LetIn_inv {cf:checker_flags} {Σ : global_env_ext} {Γ na na' b b' ty ty' t t'} :
+  wf Σ -> 
+  Σ ;;; Γ |- tLetIn na b ty t <= tLetIn na' b' ty' t' ->
+  Σ ;;; Γ |- t {0 := b} <= t' {0 := b'}.
+Proof.
+  intros wfΣ cum.
+  eapply invert_cumul_letin_l; eauto.
+  eapply invert_cumul_letin_r; eauto.
+Qed.
+
+Lemma cumul_LetIn_subst {cf:checker_flags} {Σ : global_env_ext} {Γ na na' b b' ty ty' t t'} :
+  wf Σ -> 
+  Σ ;;; Γ |- t {0 := b} <= t' {0 := b'} ->
+  Σ ;;; Γ |- tLetIn na b ty t <= tLetIn na' b' ty' t'.
+Proof.
+  intros wfΣ cum.
+  transitivity (t {0 := b}).
+  eapply red_cumul. eapply red1_red. econstructor.
+  transitivity (t' {0 := b'}) => //.
+  eapply conv_cumul, conv_sym, red_conv.
+  eapply red1_red; constructor. 
+Qed.
+
+Lemma cumul_Prod_inv_l {cf:checker_flags} Σ Γ na na' A B A' B' :
+  wf Σ.1 -> wf_local Σ Γ ->
+  Σ ;;; Γ |- tProd na A B <= tProd na' A' B' ->
+   ((Σ ;;; Γ |- A = A') * (Σ ;;; Γ ,, vass na A |- B <= B'))%type.
+Proof.
+  intros wfΣ wfΓ H; depind H.
+  - depelim l.
+    split; auto.
+    all: now constructor.
+
+  - depelim r.
+    + solve_discr.
+    + specialize (IHcumul _ _ _ _ _ _ wfΣ wfΓ eq_refl).
+      intuition auto.
+      econstructor 2; eauto.
+      eapply cumul_conv_ctx; eauto. constructor; pcuic.
+      constructor. symmetry. now eapply red_conv, red1_red.
+    + specialize (IHcumul _ _ _ _ _ _ wfΣ wfΓ eq_refl).
+      intuition auto. apply cumul_trans with N2.
+      * auto.
+      * eapply cumul_conv_ctx; eauto.
+        -- econstructor 2. 1: eauto.
+           constructor. reflexivity.
+        -- constructor. 1: now apply conv_ctx_refl.
+           constructor; auto.
+      * auto.
+
+  - depelim r.
+    + solve_discr.
+    + specialize (IHcumul _ _ _ _ _ _ wfΣ wfΓ eq_refl).
+      intuition auto.
+      * econstructor 3. 2:eauto. auto.
+    + specialize (IHcumul _ _ _ _ _ _ wfΣ wfΓ eq_refl).
+      intuition auto. apply cumul_trans with N2. 1-2: auto.
+      eapply cumul_conv_ctx; eauto.
+      eapply cumul_red_r; eauto. reflexivity.
+      constructor; pcuic.
+      constructor. now symmetry.
+
+  - todoeta.
+  - todoeta.
+Qed.
+
+Lemma positive_cstr_arg_subst {cf:checker_flags} {Σ : global_env_ext} {ind mdecl idecl Γ t u u'} :
+  wf Σ -> 
   declared_inductive Σ mdecl ind idecl ->
-  on_constructor (lift_typing typing) (Σ.1, ind_universes mdecl) mdecl (inductive_ind ind) idecl ind_indices cdecl cs -> 
+  consistent_instance_ext Σ (ind_universes mdecl) u ->
+  R_opt_variance (eq_universe Σ) (leq_universe Σ) (ind_variance mdecl) u u' ->
+  wf_local Σ (subst_instance_context u (ind_arities mdecl) ,,, subst_instance_context u Γ) ->
+  closedn_ctx #|ind_arities mdecl| Γ ->
+  Σ ;;; subst_instance_context u (ind_arities mdecl) ,,, subst_instance_context u Γ |- (subst_instance_constr u t) <= (subst_instance_constr u' t) ->
+  isWfArity_or_Type Σ (subst_instance_context u (ind_arities mdecl) ,,, subst_instance_context u Γ) (subst_instance_constr u t) ->
+  positive_cstr_arg mdecl Γ t ->
+  (Σ ;;; subst_context (ind_subst mdecl ind u) 0 (subst_instance_context u Γ) |- (subst (ind_subst mdecl ind u) #|Γ| (subst_instance_constr u t)) <=
+    subst (ind_subst mdecl ind u') #|Γ| (subst_instance_constr u' t)).
+Proof.
+  intros wfΣ decli cu ru cl wf cum isty pos.
+  pose proof (proj1 decli) as declm.
+  induction pos.
+  - rewrite -(app_context_nil_l (_ ,,, _)) app_context_assoc in cum.
+    rewrite -(app_context_nil_l (_ ,,, _)) app_context_assoc in isty.
+    eapply substitution_cumul in cum; eauto.
+    2:rewrite app_context_nil_l //.
+    2:{ eapply subslet_inds; eauto. }
+    eapply isWAT_subst_gen in isty; eauto.
+    2:{ eapply subslet_inds; eauto. }
+    rewrite !subst_closedn ?closedn_subst_instance_constr //.
+    rewrite !subst_closedn ?closedn_subst_instance_constr // in cum; len; auto.
+    now rewrite app_context_nil_l in cum.
+
+  - rewrite !subst_instance_constr_mkApps !subst_mkApps in cum |- *.
+    simpl in cum. eapply cumul_mkApps_tRel in cum; eauto; cycle 1.
+    { rewrite nth_error_app_ge // subst_instance_context_length //
+         nth_error_subst_instance_context.
+      unfold ind_arities, arities_context.
+      rewrite rev_map_spec -map_rev.
+      rewrite nth_error_map e /=. reflexivity. }
+    1:trivial.
+    eapply cumul_mkApps_cum => //; len.
+    * simpl. destruct (Nat.leb #|ctx| k) eqn:eqle.
+      eapply Nat.leb_le in eqle.
+      rewrite /ind_subst !inds_spec !rev_mapi !nth_error_mapi.
+      rewrite e /=. simpl. constructor. simpl.
+      unfold R_global_instance. simpl.
+      assert(declared_inductive Σ mdecl {|
+      inductive_mind := inductive_mind ind;
+      inductive_ind := Nat.pred #|ind_bodies mdecl| - (k - #|ctx|) |} i).
+      { split; auto. simpl. rewrite -e nth_error_rev; lia_f_equal. }
+      rewrite (declared_inductive_lookup_inductive H) //.
+      eapply on_declared_inductive in H as [onmind onind] => //. simpl in *.
+      rewrite e0 /ind_realargs /PCUICTypingDef.destArity.
+      rewrite !onind.(ind_arity_eq).
+      rewrite !destArity_it_mkProd_or_LetIn /=; len; simpl.
+      rewrite (Nat.leb_refl) //. eapply Nat.leb_nle in eqle. lia.
+    * rewrite -(app_context_nil_l (_ ,,, _)) app_context_assoc in cum.
+      eapply conv_terms_subst in cum.
+      4:{ eapply (subslet_inds _ _ u); eauto. }
+      4:{ eapply (subslet_inds _ _ u); eauto. }
+      all:eauto.
+      3:{ eapply All2_refl. intros x; eapply conv_refl'. }
+      rewrite app_context_nil_l // in cum. autorewrite with len in cum.
+      rewrite /ind_subst.
+      { do 2 eapply All2_map. do 2 eapply All2_map_inv in cum.
+        eapply All2_All in cum. apply All_All2_refl.
+        solve_all. autorewrite with len in b.
+        now rewrite !subst_closedn ?closedn_subst_instance_constr // in b |- *. }
+      now rewrite app_context_nil_l.
+    
+  - simpl in cum |- *.
+    eapply cumul_LetIn_subst; eauto.
+    rewrite - !subst_subst_instance_constr /= in IHpos.
+    rewrite !distr_subst /= in IHpos. rewrite /subst1.
+    eapply IHpos => //.
+    eapply cumul_LetIn_inv in cum; eauto.
+    eapply isWAT_tLetIn_red in isty; eauto.
+
+  - simpl in cum |- *.
+    eapply cumul_Prod_inv_l in cum as [dom codom]; eauto.
+    eapply congr_cumul_prod; eauto.
+    * rewrite -(app_context_nil_l (_ ,,, _)) app_context_assoc in dom.
+      eapply substitution_conv in dom; rewrite ?app_context_nil_l; eauto.
+      2:{ eapply subslet_inds; eauto. }
+      rewrite ?app_context_nil_l ?closedn_subst_instance_context // in dom.
+      rewrite !subst_closedn ?closedn_subst_instance_constr // in dom; len; auto.
+      now rewrite !subst_closedn ?closedn_subst_instance_constr.
+    * cbn -[closedn_ctx] in IHpos. rewrite subst_context_snoc in IHpos.
+      autorewrite with len in IHpos. eapply IHpos; eauto.
+      simpl; constructor; auto.
+      simpl in isty. eapply isWAT_tProd in isty as [Hty Ht]; eauto.
+      rewrite closedn_ctx_cons /=. apply/andP; split; auto. simpl.
+      eapply closed_upwards; eauto; lia.
+      simpl in isty. eapply isWAT_tProd in isty as [Hty Ht]; eauto.
+Qed.
+
+Definition wt_cumul_ctx_rel {cf:checker_flags} Σ Γ Δ Δ' :=
+  (cumul_ctx_rel Σ Γ Δ Δ' * wf_local Σ (Γ ,,, Δ))%type.
+
+Lemma wt_cumul_ctx_rel_cons {cf:checker_flags} Σ Γ Δ Δ' na ty na' ty' :
+  wt_cumul_ctx_rel Σ Γ Δ Δ' -> 
+  Σ ;;; (Γ ,,, Δ) |- ty <= ty' -> wf_local Σ (Γ ,,, Δ ,, vass na ty) ->
+  wt_cumul_ctx_rel Σ Γ (vass na ty :: Δ) (vass na' ty' :: Δ').
+Proof.
+  intros []; split; simpl; try constructor; auto.
+  now depelim X0; simpl in H; noconf H.
+Qed.
+
+Lemma positive_cstr_closed_args_subst_arities {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ.1} {u u' Γ}
+   {i ind mdecl idecl cdecl ind_indices cs} :
+  declared_inductive Σ mdecl ind idecl ->
+  consistent_instance_ext Σ (ind_universes mdecl) u ->
+  on_constructor (lift_typing typing) (Σ.1, ind_universes mdecl) mdecl i idecl ind_indices cdecl cs -> 
+  R_opt_variance (eq_universe Σ) (leq_universe Σ) (ind_variance mdecl) u u' ->
+  closed_ctx (subst_instance_context u (ind_params mdecl)) ->
+  wf_local Σ (subst_instance_context u (ind_arities mdecl ,,, smash_context [] (ind_params mdecl) ,,, Γ)) ->
+  All_local_env
+    (fun (Γ : PCUICEnvironment.context) (t : term) (_ : option term) =>
+           positive_cstr_arg mdecl ([] ,,, (smash_context [] (ind_params mdecl) ,,, Γ)) t)
+      Γ ->
+  assumption_context Γ ->
+  cumul_ctx_rel Σ (subst_instance_context u (ind_arities mdecl) ,,,
+      subst_instance_context u
+        (smash_context [] (PCUICEnvironment.ind_params mdecl)))
+   (subst_instance_context u Γ) (subst_instance_context u' Γ) -> 
+  
+  wt_cumul_ctx_rel Σ (subst_instance_context u (smash_context [] (PCUICEnvironment.ind_params mdecl)))
+    (subst_context (ind_subst mdecl ind u) (context_assumptions (ind_params mdecl)) (subst_instance_context u Γ))
+    (subst_context (ind_subst mdecl ind u') (context_assumptions (ind_params mdecl)) (subst_instance_context u' Γ)).
+Proof.
+  intros * decli cu onc onv cl wf cpos ass.
+  intros cum.
+  split.
+  2:{ rewrite !subst_instance_context_app in wf.
+      rewrite -app_context_assoc -(app_context_nil_l (_ ,,, _)) app_context_assoc in wf.
+      eapply substitution_wf_local in wf; eauto.
+      2:{ eapply subslet_inds; eauto. }
+      rewrite app_context_nil_l in wf.
+      rewrite subst_context_app in wf.
+      rewrite closed_ctx_subst in wf.
+      rewrite closedn_subst_instance_context closedn_smash_context //.
+      now rewrite closedn_subst_instance_context in cl.
+      now len in wf. } 
+  revert cum.
+  induction cpos; simpl; rewrite ?subst_context_nil ?subst_context_snoc; try solve [constructor; auto].
+  all:len; intros cv; depelim cv; simpl in H; noconf H; simpl in H0; noconf H0.
+  depelim wf; simpl in H; noconf H.
+  assert (isWfArity_or_Type Σ
+  (subst_instance_context u (ind_arities mdecl) ,,,
+   subst_instance_context u (smash_context [] (ind_params mdecl) ,,, Γ))
+  (subst_instance_constr u t)).
+  { rewrite subst_instance_context_app app_context_assoc. simpl in l. right.
+    now rewrite ![map _ _]subst_instance_context_app subst_instance_context_app in l. }
+  all:constructor.
+  - eapply IHcpos. auto. now depelim ass. eapply cv.
+  - red in o. simpl in *.
+    rewrite app_context_nil_l in t1.
+    simpl in wf.
+    eapply positive_cstr_arg_subst in t1; eauto.
+    move: t1; len; simpl.
+    * rewrite subst_instance_context_smash /=.
+      rewrite subst_instance_context_app subst_instance_context_smash subst_context_app.
+      rewrite closed_ctx_subst ?closedn_subst_instance_context // ?closedn_smash_context; eauto.
+      now len; simpl.
+    * rewrite ![map _ _]subst_instance_context_app subst_instance_context_app in wf.
+      now rewrite subst_instance_context_app app_context_assoc.
+    * eapply closed_wf_local in wf; eauto.
+      rewrite closedn_subst_instance_context app_assoc in wf.
+      now rewrite closedn_ctx_app /= in wf; move/andP: wf => [wfars wf].
+    * now rewrite subst_instance_context_app app_context_assoc.
+  - elimtype False; now depelim ass.
+  - elimtype False; now depelim ass.
+Qed.
+
+Lemma positive_cstr_closed_args {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ.1} {u u'} 
+  {ind mdecl idecl cdecl cs} :
+  declared_inductive Σ mdecl ind idecl ->
+  on_inductive (lift_typing typing) (Σ.1, ind_universes mdecl) (inductive_mind ind) mdecl ->
+  forall (oib : on_ind_body (lift_typing typing) (Σ.1, ind_universes mdecl) (inductive_mind ind) mdecl 
+           (inductive_ind ind) idecl)
+        (onc : on_constructor (lift_typing typing) (Σ.1, ind_universes mdecl)
+          mdecl (inductive_ind ind) idecl (ind_indices oib) cdecl cs),  
+  consistent_instance_ext Σ (ind_universes mdecl) u ->
+  R_opt_variance (eq_universe Σ) (leq_universe Σ) (ind_variance mdecl) u u' ->
+ cumul_ctx_rel Σ (subst_instance_context u (ind_arities mdecl) ,,,
+    subst_instance_context u
+      (smash_context [] (PCUICEnvironment.ind_params mdecl)))
+ (smash_context []
+    (subst_instance_context u
+       (expand_lets_ctx (PCUICEnvironment.ind_params mdecl)
+          (cshape_args cs))))
+ (smash_context []
+    (subst_instance_context u'
+       (expand_lets_ctx (PCUICEnvironment.ind_params mdecl)
+          (cshape_args cs)))) ->
+  
+  wt_cumul_ctx_rel Σ (subst_instance_context u (smash_context [] (PCUICEnvironment.ind_params mdecl)))
+      (subst_context (inds (inductive_mind ind) u (ind_bodies mdecl)) (context_assumptions (ind_params mdecl))
+       (smash_context []
+          (subst_instance_context u
+             (expand_lets_ctx (PCUICEnvironment.ind_params mdecl)
+                (cshape_args cs)))))
+       (subst_context (inds (inductive_mind ind) u' (ind_bodies mdecl)) (context_assumptions (ind_params mdecl))
+           ((smash_context []
+          (subst_instance_context u'
+             (expand_lets_ctx (PCUICEnvironment.ind_params mdecl)
+                (cshape_args cs)))))).
+Proof.
+  intros * decli onind oib onc cu Ru cx.
+  pose proof (onc.(on_ctype_positive)) as cpos.
+  rewrite onc.(cstr_eq) in cpos. unf_env.
+  rewrite -it_mkProd_or_LetIn_app in cpos.
+  eapply positive_cstr_it_mkProd_or_LetIn in cpos as [hpars _].
+  rewrite smash_context_app_expand in hpars.
+  eapply All_local_env_app in hpars as [_hpars hargs].
+  rewrite expand_lets_smash_context /= expand_lets_k_ctx_nil /= in hargs.
+  eapply positive_cstr_closed_args_subst_arities in hargs; eauto.
+  split.
+  - rewrite !subst_instance_context_smash /ind_subst /= in hargs |- *.
+    eapply hargs; eauto.
+  - destruct hargs as [hargs hwf]. now rewrite !subst_instance_context_smash in hwf |- *.
+  - eapply closed_wf_local; eauto; eapply on_minductive_wf_params; eauto.
+  - rewrite -app_context_assoc. rewrite -(expand_lets_smash_context _ []).
+    rewrite -smash_context_app_expand subst_instance_context_app subst_instance_context_smash.
+    eapply wf_local_smash_end; eauto.
+    rewrite -subst_instance_context_app app_context_assoc.
+    now epose proof (on_constructor_inst u wfΣ decli onind oib onc cu) as [wfarpars _].
+  - eapply smash_context_assumption_context. constructor.
+  - now rewrite !(subst_instance_context_smash _ (expand_lets_ctx _ _)).
+Qed.
+
+Require Import Equations.Type.Relation_Properties.
+Lemma red_subst_instance {cf:checker_flags} (Σ : global_env) (Γ : context) (u : Instance.t) (s t : term) :
+  red Σ Γ s t ->
+  red Σ (subst_instance_context u Γ) (subst_instance_constr u s)
+            (subst_instance_constr u t).
+Proof.
+  intros H; apply red_alt, clos_rt_rt1n in H.
+  apply red_alt, clos_rt1n_rt.
+  induction H. constructor.
+  eapply red1_subst_instance in r.
+  econstructor 2. eapply r.
+  auto.
+Qed.
+
+Lemma nth_error_decl_body_ass_ctx {Γ Δ i body} : 
+  assumption_context Γ ->
+  option_map decl_body (nth_error (Γ ,,, Δ) i) = Some (Some body) ->
+  i < #|Δ|.
+Proof.
+  intros ass.
+  destruct nth_error eqn:eq.
+  simpl.
+  destruct (i <? #|Δ|) eqn:lt.
+  eapply Nat.ltb_lt in lt => //.
+  eapply Nat.ltb_nlt in lt => //.
+  rewrite nth_error_app_ge in eq. lia.
+  eapply nth_error_assumption_context in eq; eauto. rewrite eq //.
+  by [].
+Qed.
+  
+Lemma red1_assumption_context_irrelevant Σ Γ Δ Γ' t t' : 
+  red1 Σ (Γ ,,, Δ) t t' ->
+  assumption_context Γ ->
+  #|Γ| = #|Γ'| ->
+  red1 Σ (Γ' ,,, Δ) t t'. 
+Proof.
+  remember (Γ ,,, Δ) as ctx.
+  intros H; revert Γ Δ Heqctx Γ'. 
+  induction H using red1_ind_all; intros; subst; try solve [econstructor; eauto; try solve_all].
+  
+  - pose proof (nth_error_decl_body_ass_ctx H0 H).
+    rewrite nth_error_app_lt // in H |- *.
+    constructor. rewrite nth_error_app_lt //.
+  - econstructor; eauto; eapply (IHred1 Γ0 (Δ ,, vass na N) ltac:(reflexivity)) => //.
+  - econstructor; eauto; eapply (IHred1 Γ0 (Δ ,, vdef na b t) ltac:(reflexivity)) => //.
+  - econstructor; eauto; eapply (IHred1 Γ0 (Δ ,, vass na M1) ltac:(reflexivity)) => //.
+  - eapply fix_red_body. solve_all.
+    specialize (b0 Γ0 (Δ ,,, fix_context mfix0) ltac:(rewrite app_context_assoc; reflexivity) _ H H0).
+    now rewrite app_context_assoc in b0.
+  - eapply cofix_red_body. solve_all.
+    specialize (b0 Γ0 (Δ ,,, fix_context mfix0) ltac:(rewrite app_context_assoc; reflexivity) _ H H0).
+    now rewrite app_context_assoc in b0.
+Qed.
+
+Lemma red_assumption_context_app_irrelevant Σ Γ Δ Γ' t t' : 
+  red Σ (Γ ,,, Δ) t t' ->
+  assumption_context Γ ->
+  #|Γ| = #|Γ'| ->
+  red Σ (Γ' ,,, Δ) t t'. 
+Proof.
+  intros r ass eqc.
+  eapply red_alt, clos_rt_rt1n in r.
+  eapply red_alt. eapply clos_rt1n_rt.
+  induction r; [constructor|econstructor 2].
+  eapply red1_assumption_context_irrelevant; eauto. apply IHr.
+Qed.
+
+Lemma red_assumption_context_irrelevant Σ Γ Γ' t t' : 
+  red Σ Γ t t' ->
+  assumption_context Γ ->
+  #|Γ| = #|Γ'| ->
+  red Σ Γ' t t'. 
+Proof.
+  intros r ass eqc.
+  now eapply (red_assumption_context_app_irrelevant _ _ [] Γ').
+Qed.
+
+Lemma assumption_context_map f Γ :
+  assumption_context Γ -> assumption_context (map_context f Γ).
+Proof.
+  induction 1; constructor; auto.
+Qed.
+
+Lemma assumption_context_subst_instance u Γ :
+  assumption_context Γ -> assumption_context (subst_instance_context u Γ).
+Proof. apply assumption_context_map. Qed.
+
+Lemma eq_term_upto_univ_napp_impl {cf:checker_flags} (Σ : global_env) 
+  (Re Re' Rle Rle' : Relation_Definitions.relation Universe.t) u u' t t' : 
+  (forall x y : Universe.t, Re x y -> Re' (subst_instance_univ u x) (subst_instance_univ u' y)) ->
+  (forall x y : Universe.t, Rle x y -> Rle' (subst_instance_univ u x) (subst_instance_univ u' y)) ->
+  (forall x y : Instance.t, R_universe_instance Re x y -> R_universe_instance Re' (subst_instance_instance u x) 
+    (subst_instance_instance u' y)) ->
+  (forall r n (x y : Instance.t), R_global_instance Σ Re Rle r n x y -> 
+    R_global_instance Σ Re' Rle' r n (subst_instance_instance u x) (subst_instance_instance u' y)) ->
+  (forall r n (x y : Instance.t), R_global_instance Σ Re Re r n x y -> 
+    R_global_instance Σ Re' Re' r n (subst_instance_instance u x) (subst_instance_instance u' y)) ->
+  forall n, eq_term_upto_univ_napp Σ Re Rle n t t' ->
+  eq_term_upto_univ_napp Σ Re' Rle' n (subst_instance_constr u t) (subst_instance_constr u' t').
+Proof.
+  intros Heq Hle Hi Hgil Hgie.
+  induction t in t', Re, Re', Rle, Rle', Heq, Hle, Hi, Hgil, Hgie |- * using 
+    PCUICInduction.term_forall_list_ind; simpl; intros n' H; depelim H. 
+  all:simpl; try solve [constructor; eauto; try solve_all].
+Qed.
+
+Section Betweenu.
+  Context (start : nat) (k : nat).
+
+  Definition betweenu_level (l : Level.t) :=
+    match l with
+    | Level.Var n => (start <=? n) && (n <? start + k)%nat
+    | _ => true
+    end.
+
+  Definition betweenu_level_expr (s : UnivExpr.t) :=
+    betweenu_level (UnivExpr.get_level s).
+
+  Definition betweenu_universe (u : Universe.t) :=
+    UnivExprSet.for_all betweenu_level_expr u.
+
+  Definition betweenu_instance (u : Instance.t) :=
+    forallb betweenu_level u.
+
+End Betweenu.
+
+(** Universe-closed terms are unaffected by universe substitution. *)
+Section UniverseClosedSubst.
+  Lemma closedu_subst_instance_level_app u u' l
+  : closedu_level #|u'| l -> subst_instance_level (u' ++ u) l = subst_instance_level u' l.
+  Proof.
+    destruct l; cbnr.
+    intros Hn % Nat.ltb_lt.
+    rewrite app_nth1 //.
+  Qed.
+
+  Lemma closedu_subst_instance_level_lift u u' l
+  : closedu_level #|u| l -> subst_instance_level (u' ++ u) (lift_level #|u'| l) = subst_instance_level u l.
+  Proof.
+    destruct l; cbnr.
+    intros Hn % Nat.ltb_lt.
+    rewrite app_nth2; try lia.
+    lia_f_equal.
+  Qed.
+  
+  Definition lift_npl (k : nat) (e : NoPropLevel.t) : NoPropLevel.t :=
+    match e with
+    | NoPropLevel.lSet => NoPropLevel.lSet
+    | NoPropLevel.Level s => NoPropLevel.Level s
+    | NoPropLevel.Var n => NoPropLevel.Var (k + n)
+    end.
+
+  (* Definition lift_expr (n : nat) (e : UnivExpr.t) : UnivExpr.t. *)
+
+  Lemma closedu_subst_instance_level_expr_app u u' e
+    : closedu_level_expr #|u'| e -> subst_instance_level_expr (u' ++ u) e = subst_instance_level_expr u' e.
+  Proof.
+    destruct e as [|[[] b]]; cbnr.
+    intros Hn % Nat.ltb_lt.
+    rewrite nth_error_app_lt //.
+  Qed.
+
+
+  (* Lemma closedu_subst_instance_level_expr_lilft u u' e
+    : closedu_level_expr #|u| e -> subst_instance_level_expr (u' ++ u) (lift_expr e = subst_instance_level_expr u' e.
+  Proof.
+    destruct e as [|[[] b]]; cbnr.
+    intros Hn % Nat.ltb_lt.
+    rewrite nth_error_app_lt //.
+  Qed. *)
+  
+  Lemma closedu_subst_instance_instance_app u u' t
+    : closedu_instance #|u'| t -> subst_instance_instance (u' ++ u) t = subst_instance_instance u' t.
+  Proof.
+    intro H. eapply forallb_All in H. apply All_map_eq.
+    solve_all. now eapply closedu_subst_instance_level_app.
+  Qed.
+  
+  Lemma closedu_subst_instance_instance_lift u u' t
+    : closedu_instance #|u| t -> subst_instance_instance (u' ++ u) (lift_instance #|u'| t) = subst_instance_instance u t.
+  Proof.
+    intro H. eapply forallb_All in H.
+    rewrite /subst_instance_instance /lift_instance map_map_compose. apply All_map_eq.
+    solve_all. now eapply closedu_subst_instance_level_lift.
+  Qed.
+  
+End UniverseClosedSubst.
+
+Lemma level_var_instance_length n i : #|level_var_instance n i| = #|i|.
+Proof. now rewrite /level_var_instance; len. Qed.
+Hint Rewrite level_var_instance_length : len.
+
+Lemma lift_instance_length n i : #|lift_instance n i| = #|i|.
+Proof. now rewrite /lift_instance; len. Qed.
+Hint Rewrite lift_instance_length : len.
+
+Lemma variance_universes_insts {mdecl l v i i'} :
+  on_variance (ind_universes mdecl) (Some l) ->
+  variance_universes (PCUICEnvironment.ind_universes mdecl) l = Some (v, i, i') ->
+  (constraints_of_udecl v = match ind_universes mdecl with
+  | Monomorphic_ctx (_, cstrs) => cstrs
+  | Polymorphic_ctx (inst, cstrs) => 
+    ConstraintSet.union (ConstraintSet.union cstrs (lift_constraints #|i| cstrs)) (variance_cstrs l i i')
+  end) /\
+  #|i| = #|i'| /\ #|l| = #|i| /\
+  i' = abstract_instance (ind_universes mdecl) /\
+  closedu_instance #|i'| i' /\ i = lift_instance #|i'| i'.
+Proof.
+  unfold variance_universes.
+  destruct (ind_universes mdecl); simpl.
+  - intros H; noconf H; split; eauto.
+  - destruct cst as [inst cstrs]. simpl; len. intros Hll.
+    intros H; noconf H. len. simpl. intuition auto.
+    rewrite /closedu_instance /level_var_instance forallb_mapi //.
+    intros i hi. simpl. now eapply Nat.ltb_lt.
+Qed.
+
+Lemma consistent_instance_length {cf:checker_flags} {Σ : global_env_ext} {univs u} :
+  consistent_instance_ext Σ univs u ->
+  #|u| = #|abstract_instance univs|. 
+Proof.
+  rewrite /consistent_instance_ext /consistent_instance.
+  destruct univs; simpl; auto.
+  intros [_ [_ [H _]]].
+  destruct cst; simpl in *.
+  now rewrite H; len.
+Qed.
+
+Lemma consistent_instance_poly_length {cf:checker_flags} {Σ : global_env_ext} {inst cstrs u} :
+  consistent_instance_ext Σ (Polymorphic_ctx (inst, cstrs)) u ->
+  #|u| = #|inst|. 
+Proof.
+  rewrite /consistent_instance_ext /consistent_instance.
+  intuition auto.
+Qed.
+ 
+Lemma consistent_instance_valid {cf:checker_flags} {Σ : global_env_ext} {inst cstrs u} :
+  consistent_instance_ext Σ (Polymorphic_ctx (inst, cstrs)) u ->
+  check_univs = true ->
+  forall v, satisfies v (global_ext_constraints Σ) -> satisfies v (subst_instance_cstrs u cstrs).
+Proof. rewrite /consistent_instance_ext /=; intros [_ [_ [_ v]]] cu.
+    red in v. now rewrite cu in v.
+Qed.
+
+Definition closedu_cstr k (cstr : (Level.t * ConstraintType.t * Level.t)) :=
+  let '(l1, p, l2) := cstr in
+  closedu_level k l1 && closedu_level k l2. 
+
+Definition closedu_cstrs k (cstrs : CS.t) :=
+  CS.For_all (closedu_cstr k) cstrs.
+
+Lemma LSet_in_poly_bounded l inst cstrs : LevelSet.In l (levels_of_udecl (Polymorphic_ctx (inst, cstrs))) ->
+  closedu_level #|inst| l.
+Proof.
+  simpl.
+  rewrite /mapi.
+  change (#|inst|) with (0 + #|inst|).
+  generalize 0.
+  induction inst; simpl; auto.
+  intros n emp. now eapply LevelSetFact.empty_iff in emp.
+  intros n Hl.
+  rewrite -> LS.add_spec in Hl.
+  destruct Hl. subst.  simpl. apply Nat.ltb_lt; lia.
+  specialize (IHinst _ H). now rewrite Nat.add_succ_r.
+Qed.
+
+Lemma LSet_in_global_bounded {cf:checker_flags} {Σ l} k : 
+  wf Σ -> LevelSet.In l (global_levels Σ) ->
+  closedu_level k l.
+Proof.
+  simpl.
+  intros wf. eapply not_var_global_levels in wf.
+  intros hin. specialize (wf _ hin). simpl in wf.
+  destruct l; simpl in *; congruence.
+Qed.
+
+Lemma on_udecl_prop_poly_bounded {cf:checker_flags} Σ inst cstrs :
+  wf Σ ->
+  on_udecl_prop Σ (Polymorphic_ctx (inst, cstrs)) ->
+  closedu_cstrs #|inst| cstrs.
+Proof.
+  rewrite /on_udecl_prop. intros wfΣ [nlevs _].
+  red.
+  rewrite /closedu_cstrs.
+  intros x incstrs.
+  specialize (nlevs x incstrs).
+  destruct x as [[l1 p] l2].
+  destruct nlevs.
+  apply LevelSetProp.Dec.F.union_1 in H.
+  apply LevelSetProp.Dec.F.union_1 in H0.
+  destruct H. eapply LSet_in_poly_bounded in H.
+  destruct H0. eapply LSet_in_poly_bounded in H0. simpl. now rewrite H H0.
+  eapply (LSet_in_global_bounded #|inst|) in H0 => //. simpl.
+  now rewrite H H0.
+  eapply (LSet_in_global_bounded #|inst|) in H => //. simpl.
+  destruct H0. eapply LSet_in_poly_bounded in H0. simpl. now rewrite H H0.
+  eapply (LSet_in_global_bounded #|inst|) in H0 => //. simpl.
+  now rewrite H H0.
+Qed.
+
+Lemma closedu_subst_instance_cstrs_app u u' cstrs :
+  closedu_cstrs #|u| cstrs -> 
+  CS.Equal (subst_instance_cstrs (u ++ u') cstrs) (subst_instance_cstrs u cstrs).
+Proof.
+  intros clcstra.
+  intros c.
+  rewrite !In_subst_instance_cstrs.
+  firstorder eauto.
+  subst c; exists x; split; auto.
+  specialize (clcstra _ H0).
+  simpl in *.
+  destruct x as [[l c] r]; rewrite /subst_instance_cstr; simpl.
+  move/andP: clcstra => [cll clr].
+  rewrite !closedu_subst_instance_level_app //.
+
+  subst c; exists x; split; auto.
+  specialize (clcstra _ H0).
+  simpl in *.
+  destruct x as [[l c] r]; rewrite /subst_instance_cstr; simpl.
+  move/andP: clcstra => [cll clr].
+  rewrite !closedu_subst_instance_level_app //.
+Qed.
+
+
+Lemma In_lift_constraints u c ctrs :
+  CS.In c (lift_constraints u ctrs)
+  <-> exists c', c = lift_constraint u c' /\ CS.In c' ctrs.
+Proof.
+  unfold lift_constraints.
+  rewrite CS.fold_spec.
+  transitivity (CS.In c CS.empty \/
+                exists c', c = lift_constraint u c'
+                      /\ In c' (CS.elements ctrs)).
+  - generalize (CS.elements ctrs), CS.empty.
+    induction l; cbn.
+    + firstorder.
+    + intros t. etransitivity. 1: eapply IHl.
+      split; intros [HH|HH].
+      * destruct a as [[l1 a] l2]. apply CS.add_spec in HH.
+        destruct HH as [HH|HH]. 2: now left.
+        right; eexists. split; [|left; reflexivity]. assumption.
+      * destruct HH as [c' ?]. right; exists c'; intuition auto.
+      * left. destruct a as [[l1 a] l2]. apply CS.add_spec.
+        now right.
+      * destruct HH as [c' [HH1 [?|?]]]; subst.
+        -- left. destruct c' as [[l1 c'] l2];
+           apply CS.add_spec; now left.
+        -- right. exists c'. intuition.
+  - rewrite ConstraintSetFact.empty_iff.
+    transitivity (exists c', c = lift_constraint u c'
+                        /\ In c' (CS.elements ctrs)).
+    1: intuition.
+    apply iff_ex; intro. apply and_iff_compat_l. symmetry.
+    etransitivity. 1: eapply CS.elements_spec1.
+    etransitivity. 1: eapply SetoidList.InA_alt.
+    split; intro; eauto.
+    now destruct H as [? [[] ?]].
+Qed.
+
+
+Lemma closedu_subst_instance_cstrs_lift u u' cstrs :
+  closedu_cstrs #|u'| cstrs -> 
+  CS.Equal (subst_instance_cstrs (u ++ u') (lift_constraints #|u| cstrs)) (subst_instance_cstrs u' cstrs).
+Proof.
+  intros clcstra.
+  intros c.
+  rewrite !In_subst_instance_cstrs.
+  firstorder eauto.
+  - subst c.
+    rewrite -> In_lift_constraints in H0.
+    destruct H0 as [c' [-> inc']].
+    exists c'. split; auto.
+    specialize (clcstra _ inc').
+    simpl in *.
+    destruct c' as [[l c] r]; rewrite /subst_instance_cstr; simpl.
+    move/andP: clcstra => [cll clr].
+    rewrite !closedu_subst_instance_level_lift //.
+
+  - subst c.
+    exists (lift_constraint #|u| x).
+    rewrite -> In_lift_constraints.
+    firstorder eauto.
+    specialize (clcstra _ H0).
+    simpl in *.
+    destruct x as [[l c] r]; rewrite /subst_instance_cstr; simpl.
+    move/andP: clcstra => [cll clr].
+    rewrite !closedu_subst_instance_level_lift //.
+Qed.
+
+Lemma subst_instance_cstrs_add u x c : 
+  CS.Equal (subst_instance_cstrs u (ConstraintSet.add x c))
+    (ConstraintSet.add (subst_instance_cstr u x) (subst_instance_cstrs u c)).
+Proof.
+  intros cc.
+  rewrite ConstraintSetFact.add_iff.
+  rewrite !In_subst_instance_cstrs.
+  intuition auto.
+  destruct H as [c' [-> inc']].
+  rewrite -> ConstraintSetFact.add_iff in inc'.
+  destruct inc'; subst; intuition auto.
+  right. eexists; intuition eauto.
+  subst.
+  exists x; intuition eauto.
+  now rewrite ConstraintSetFact.add_iff.
+  firstorder eauto.
+  subst. exists x0; firstorder.
+Qed.
+
+Lemma subst_instance_variance_cstrs l u i i' :
+  CS.Equal (subst_instance_cstrs u (variance_cstrs l i i'))
+    (variance_cstrs l (subst_instance_instance u i) (subst_instance_instance u i')).
+Proof.
+  induction l in u, i, i' |- *; simpl; auto;
+  destruct i, i'; simpl => //.
+  destruct a.
+  - apply (IHl u i i').
+  - rewrite -IHl.
+    now rewrite subst_instance_cstrs_add.
+  - rewrite -IHl.
+    now rewrite subst_instance_cstrs_add.
+Qed.
+
+(** Morally, if variance_universes l = v i i' and R_universe_instance_variance l u u' then
+  i and i' can be substituted respectively by u and u'.
+    The hard part is to show that (Σ.1, v) can also be turned into Σ by instanciating
+  i and i' by u and u'.
+*)
+
+Lemma cumul_inst_variance {cf:checker_flags} (Σ : global_env_ext) mdecl l v i i' u u' Γ : 
+  wf Σ ->
+  on_udecl_prop Σ (ind_universes mdecl) ->
+  on_variance (ind_universes mdecl) (Some l) ->
+  variance_universes (PCUICEnvironment.ind_universes mdecl) l = Some (v, i, i') ->
+  consistent_instance_ext Σ (ind_universes mdecl) u ->
+  consistent_instance_ext Σ (ind_universes mdecl) u' ->
+  R_universe_instance_variance (eq_universe Σ) (leq_universe Σ) l u u' ->
+  forall t t',
+  cumul (Σ.1, v) (subst_instance_context i Γ) (subst_instance_constr i t) (subst_instance_constr i' t') ->
+  cumul Σ (subst_instance_context u Γ)
+    (subst_instance_constr u t) (subst_instance_constr u' t').
+Proof.
+  intros wfΣ onu onv vari cu cu' Ru t t'.
+  intros cum.
+  destruct Σ as [Σ univs].
+  pose proof (variance_universes_insts onv vari) as (cstrs & leni & lenl & eqi' & ci' & eqi).
+  subst i.
+  pose proof (consistent_instance_length cu).
+  pose proof (consistent_instance_length cu').
+  rewrite -eqi' in H, H0.
+  rewrite -H0 in cum.
+  assert (forallb (fun x : Level.t => ~~ Level.is_prop x) (u' ++ u)).
+  { rewrite forallb_app; erewrite !consistent_instance_ext_noprop; eauto. }
+  assert (subst_instance_instance (u' ++ u) (lift_instance #|u'| i') = u) as subsu.
+  { rewrite closedu_subst_instance_instance_lift //.
+    now rewrite H. rewrite eqi'.
+    erewrite subst_instance_instance_id => //. eauto. }
+  assert (subst_instance_instance (u' ++ u) i' = u') as subsu'.
+  { rewrite closedu_subst_instance_instance_app //.
+    rewrite H0 //. rewrite eqi' //.
+    erewrite subst_instance_instance_id => //. eauto. } 
+  eapply (cumul_subst_instance (Σ, v) _ (u' ++ u)) in cum; auto.
+  rewrite subst_instance_context_two in cum.
+  rewrite !subst_instance_constr_two in cum.
+  now rewrite subsu subsu' in cum.
+  unfold valid_constraints. destruct check_univs eqn:checku => //.
+  unfold valid_constraints0.
+  intros v0 sat.
+  rewrite satisfies_subst_instance_ctr //.
+  simpl in sat.
+  generalize sat.
+  unfold global_ext_constraints.
+  rewrite satisfies_union /= => [[satcstrs satglob]].
+  rewrite satisfies_union. split; auto.
+  2:{ rewrite -satisfies_subst_instance_ctr //.
+      rewrite equal_subst_instance_cstrs_mono //.
+      red; apply monomorphic_global_constraint; auto. }
+  rewrite cstrs.
+  destruct (ind_universes mdecl) as [[inst cstrs']|[inst cstrs']].
+  { simpl in vari => //. }
+  rewrite !satisfies_union. len.
+  autorewrite with len in lenl.
+  intuition auto.
+  - rewrite -satisfies_subst_instance_ctr //.
+    assert(ConstraintSet.Equal (subst_instance_cstrs u' cstrs')
+        (subst_instance_cstrs (u' ++ u) cstrs')) as <-.
+    { rewrite closedu_subst_instance_cstrs_app //.
+      rewrite (consistent_instance_poly_length cu').
+      eapply on_udecl_prop_poly_bounded; eauto. }
+    eapply consistent_instance_valid in cu'; eauto.
+  - rewrite -satisfies_subst_instance_ctr // -H0.
+    assert(ConstraintSet.Equal (subst_instance_cstrs u cstrs')
+        (subst_instance_cstrs (u' ++ u) (lift_constraints #|u'| cstrs'))) as <-.
+    { rewrite closedu_subst_instance_cstrs_lift //.
+      rewrite H -H0 (consistent_instance_poly_length cu').
+      eapply on_udecl_prop_poly_bounded; eauto. }
+    eapply consistent_instance_valid in cu; eauto.
+  - rewrite -satisfies_subst_instance_ctr //.
+    rewrite subst_instance_variance_cstrs //.
+    rewrite -H0 subsu subsu'.
+    assert (#|u| = #|u'|) as lenu by lia.
+    assert (#|l| = #|u|) as lenlu. now rewrite lenl H.
+    clear -checku Ru sat lenu lenlu.
+    induction l in u, u', Ru, lenu, lenlu |- *. simpl in *. destruct u, u';
+    intro; rewrite ConstraintSetFact.empty_iff //.
+    destruct u, u' => //; simpl in *.
+    destruct Ru as [Ra Rl].
+    specialize (IHl u u' Rl). do 2 forward IHl by lia.
+    destruct a => //; intros x; rewrite ConstraintSetFact.add_iff;
+    intros [<-|inx]; auto.
+    + do 2 red in Ra; rewrite checku in Ra;
+      specialize (Ra _ sat); simpl in Ra.
+      constructor. now rewrite !Universes.UnivExpr.val_make in Ra.
+    + do 2 red in Ra. rewrite checku in Ra.
+      specialize  (Ra _ sat).
+      constructor. now rewrite !Universes.Universe.val_make in Ra.
+Qed.
+
+Lemma conv_inst_variance {cf:checker_flags} (Σ : global_env_ext) mdecl l v i i' u u' Γ : 
+  wf Σ ->
+  on_udecl_prop Σ (ind_universes mdecl) ->
+  on_variance (ind_universes mdecl) (Some l) ->
+  variance_universes (PCUICEnvironment.ind_universes mdecl) l = Some (v, i, i') ->
+  consistent_instance_ext Σ (ind_universes mdecl) u ->
+  consistent_instance_ext Σ (ind_universes mdecl) u' ->
+  R_universe_instance_variance (eq_universe Σ) (leq_universe Σ) l u u' ->
+  forall t t',
+  conv (Σ.1, v) (subst_instance_context i Γ) (subst_instance_constr i t) (subst_instance_constr i' t') ->
+  conv Σ (subst_instance_context u Γ)
+    (subst_instance_constr u t) (subst_instance_constr u' t').
+Proof.
+  intros wfΣ onu onv vari cu cu' Ru t t'.
+  intros cum.
+  destruct Σ as [Σ univs].
+  pose proof (variance_universes_insts onv vari) as (cstrs & leni & lenl & eqi' & ci' & eqi).
+  subst i.
+  pose proof (consistent_instance_length cu).
+  pose proof (consistent_instance_length cu').
+  rewrite -eqi' in H, H0.
+  rewrite -H0 in cum.
+  assert (forallb (fun x : Level.t => ~~ Level.is_prop x) (u' ++ u)).
+  { rewrite forallb_app; erewrite !consistent_instance_ext_noprop; eauto. }
+  assert (subst_instance_instance (u' ++ u) (lift_instance #|u'| i') = u) as subsu.
+  { rewrite closedu_subst_instance_instance_lift //.
+    now rewrite H. rewrite eqi'.
+    erewrite subst_instance_instance_id => //. eauto. }
+  assert (subst_instance_instance (u' ++ u) i' = u') as subsu'.
+  { rewrite closedu_subst_instance_instance_app //.
+    rewrite H0 //. rewrite eqi' //.
+    erewrite subst_instance_instance_id => //. eauto. } 
+  eapply (conv_subst_instance (Σ, v) _ (u' ++ u)) in cum; auto.
+  rewrite subst_instance_context_two in cum.
+  rewrite !subst_instance_constr_two in cum.
+  now rewrite subsu subsu' in cum.
+  unfold valid_constraints. destruct check_univs eqn:checku => //.
+  unfold valid_constraints0.
+  intros v0 sat.
+  rewrite satisfies_subst_instance_ctr //.
+  simpl in sat.
+  generalize sat.
+  unfold global_ext_constraints.
+  rewrite satisfies_union /= => [[satcstrs satglob]].
+  rewrite satisfies_union. split; auto.
+  2:{ rewrite -satisfies_subst_instance_ctr //.
+      rewrite equal_subst_instance_cstrs_mono //.
+      red; apply monomorphic_global_constraint; auto. }
+  rewrite cstrs.
+  destruct (ind_universes mdecl) as [[inst cstrs']|[inst cstrs']].
+  { simpl in vari => //. }
+  rewrite !satisfies_union. len.
+  autorewrite with len in lenl.
+  intuition auto.
+  - rewrite -satisfies_subst_instance_ctr //.
+    assert(ConstraintSet.Equal (subst_instance_cstrs u' cstrs')
+        (subst_instance_cstrs (u' ++ u) cstrs')) as <-.
+    { rewrite closedu_subst_instance_cstrs_app //.
+      rewrite (consistent_instance_poly_length cu').
+      eapply on_udecl_prop_poly_bounded; eauto. }
+    eapply consistent_instance_valid in cu'; eauto.
+  - rewrite -satisfies_subst_instance_ctr // -H0.
+    assert(ConstraintSet.Equal (subst_instance_cstrs u cstrs')
+        (subst_instance_cstrs (u' ++ u) (lift_constraints #|u'| cstrs'))) as <-.
+    { rewrite closedu_subst_instance_cstrs_lift //.
+      rewrite H -H0 (consistent_instance_poly_length cu').
+      eapply on_udecl_prop_poly_bounded; eauto. }
+    eapply consistent_instance_valid in cu; eauto.
+  - rewrite -satisfies_subst_instance_ctr //.
+    rewrite subst_instance_variance_cstrs //.
+    rewrite -H0 subsu subsu'.
+    assert (#|u| = #|u'|) as lenu by lia.
+    assert (#|l| = #|u|) as lenlu. now rewrite lenl H.
+    clear -checku Ru sat lenu lenlu.
+    induction l in u, u', Ru, lenu, lenlu |- *. simpl in *. destruct u, u';
+    intro; rewrite ConstraintSetFact.empty_iff //.
+    destruct u, u' => //; simpl in *.
+    destruct Ru as [Ra Rl].
+    specialize (IHl u u' Rl). do 2 forward IHl by lia.
+    destruct a => //; intros x; rewrite ConstraintSetFact.add_iff;
+    intros [<-|inx]; auto.
+    + do 2 red in Ra; rewrite checku in Ra;
+      specialize (Ra _ sat); simpl in Ra.
+      constructor. now rewrite !Universes.UnivExpr.val_make in Ra.
+    + do 2 red in Ra. rewrite checku in Ra.
+      specialize  (Ra _ sat).
+      constructor. now rewrite !Universes.Universe.val_make in Ra.
+Qed.
+
+Lemma All2_local_env_inst {cf:checker_flags} (Σ : global_env_ext) mdecl l v i i' u u' Γ' Γ : 
+  wf Σ ->  
+  on_udecl_prop Σ (ind_universes mdecl) ->
+  on_variance (ind_universes mdecl) (Some l) ->
+  consistent_instance_ext Σ (ind_universes mdecl) u ->
+  consistent_instance_ext Σ (ind_universes mdecl) u' ->
+  variance_universes (PCUICEnvironment.ind_universes mdecl) l = Some (v, i, i') ->
+  R_universe_instance_variance (eq_universe Σ) (leq_universe Σ) l u u' ->
+  cumul_ctx_rel (Σ.1, v) (subst_instance_context i Γ') (subst_instance_context i Γ) (subst_instance_context i' Γ) ->
+  cumul_ctx_rel Σ (subst_instance_context u Γ') (subst_instance_context u Γ) (subst_instance_context u' Γ).
+Proof.
+  unfold cumul_ctx_rel.
+  intros wfΣ onu onv cu cu' vari Ru.
+  induction Γ as [|[na [b|] ty] tl]; simpl.
+  constructor.
+  intros H; depelim H; simpl in H0; noconf H0; simpl in H1; noconf H1.
+  econstructor; auto. red.
+  destruct o.
+  rewrite -subst_instance_context_app in c, c0. simpl in c0 |- *.
+  rewrite -subst_instance_context_app.
+  split; eapply cumul_inst_variance; eauto.
+
+  intros H; depelim H; simpl in H0; noconf H0; simpl in H1; noconf H1.
+  simpl in *.
+  constructor; auto.
+  red. simpl.
+  rewrite -subst_instance_context_app in o.
+  rewrite -subst_instance_context_app.
+  eapply cumul_inst_variance; eauto.
+Qed.
+
+Lemma forallb_closed_upwards k k' s : 
+  forallb (closedn k) s ->
+  k <= k' ->
+  forallb (closedn k') s.
+Proof.
+  intros H Hk.
+  eapply All_forallb.
+  eapply forallb_All in H. solve_all.
+  eapply closed_upwards; eauto.
+Qed.
+
+Lemma subst_context_subst_context s k s' Γ :
+  subst_context s k (subst_context s' 0 Γ) =
+  subst_context (map (subst s k) s') 0 (subst_context s (k + #|s'|) Γ).
+Proof.
+  induction Γ as [|[na [b|] ty] Γ']; simpl; auto; 
+    rewrite !subst_context_snoc /= /subst_decl /map_decl /=; f_equal; 
+    auto; f_equal; len;
+  rewrite distr_subst_rec; lia_f_equal.
+Qed.
+
+Lemma subst_context_subst_context_comm s k k' s' Γ :
+  k' = k + #|s| ->
+  subst_context s k (subst_context s' k' Γ) =
+  subst_context s' k (subst_context (map (lift0 #|s'|) s) k Γ).
+Proof.
+  intros ->.
+  induction Γ as [|[na [b|] ty] Γ']; simpl; auto; 
+    rewrite !subst_context_snoc /= /subst_decl /map_decl /=; f_equal; 
+    auto; f_equal; len;
+    now rewrite Nat.add_assoc -subst_app_simpl subst_app_decomp.
+Qed.
+ 
+Lemma subst_context_lift_context_cancel s k n Γ :
+  n = #|s| ->
+  subst_context s k (lift_context n k Γ) = Γ.
+Proof.
+  intros ->.
+  induction Γ as [|[na [b|] ty] Γ']; auto;
+    rewrite !lift_context_snoc !subst_context_snoc /= /subst_decl /map_decl /snoc /=; simpl; f_equal;
+    auto; f_equal; len;
+    rewrite -(Nat.add_0_r #|s|) simpl_subst_rec /= // ?lift0_id //; lia.
+Qed.
+
+
+Lemma All2_local_env_impl' (P Q : context -> context -> option (term * term) -> term -> term -> Type)
+  (par par' : context) :
+  All2_local_env P par par' ->
+  (forall (par0 par'0 : PCUICEnvironment.context) (o : option (term * term)) (x y : term),
+  P par0 par'0 o x y -> Q par0 par'0 o x y) ->
+  All2_local_env Q par par'.
+Proof.
+  intros H HP; induction H; constructor; auto.
+Qed.
+
+Lemma map_map_subst_expand_lets (s : list term) (Γ : context) l k :
+  context_assumptions Γ = #|s| ->
+  map (subst (map (subst0 s) (extended_subst Γ 0)) k) l = map (subst s k ∘ expand_lets_k Γ k) l.
+Proof. move=> ca; apply map_ext => x; apply map_subst_expand_lets_k => //. Qed.
+
+Lemma expand_lets_k_app (Γ Γ' : context) t k : expand_lets_k (Γ ++ Γ') k t =
+  expand_lets_k Γ' (k + context_assumptions Γ) (expand_lets_k Γ k t).
+Proof.
+  revert Γ k t.
+  induction Γ' as [|[na [b|] ty] Γ'] using ctx_length_rev_ind; intros Γ k t.
+  - simpl. now rewrite /expand_lets_k /= subst_empty lift0_id app_nil_r.
+  - simpl; rewrite app_assoc !expand_lets_k_vdef /=; len; simpl.
+    rewrite subst_context_app. specialize (H (subst_context [b] 0 Γ') ltac:(now len)).
+    specialize (H (subst_context [b] #|Γ'| Γ)). rewrite Nat.add_0_r /app_context H; len.
+    f_equal.
+    rewrite /expand_lets_k; len.
+    rewrite -Nat.add_assoc.
+    rewrite distr_subst_rec; len.
+    epose proof (subst_extended_subst_k [b] Γ #|Γ'| 0).
+    rewrite Nat.add_0_r Nat.add_comm in H0. rewrite -H0. f_equal.
+    rewrite commut_lift_subst_rec. lia. lia_f_equal.
+  - simpl. rewrite app_assoc !expand_lets_k_vass /=; len; simpl.
+    now rewrite (H Γ' ltac:(reflexivity)).
+Qed.
+
+Lemma expand_lets_app Γ Γ' t : expand_lets (Γ ++ Γ') t =
+  expand_lets_k Γ' (context_assumptions Γ) (expand_lets Γ t).
+Proof.
+  now rewrite /expand_lets expand_lets_k_app.
+Qed.
+
+Hint Rewrite closedn_subst_instance_constr : pcuic.
+
+Lemma subst_conv_closed {cf : checker_flags} {Σ : global_env_ext}
+  {Γ Γ0 Γ1 Δ : context} {s s' : list term} {T U : term} :
+  wf Σ.1 ->
+  subslet Σ Γ s Γ0 ->
+  subslet Σ Γ s' Γ1 ->
+  #|s| = #|s'| ->
+  closedn #|Δ| T ->
+  closedn #|Δ| U ->
+  wf_local Σ (Γ ,,, Γ0 ,,, Δ) ->
+  Σ;;; Γ ,,, Γ0 ,,, Δ |- T = U ->
+  Σ;;; Γ ,,, subst_context s 0 Δ |- subst s #|Δ| T = subst s' #|Δ| U.
+Proof.
+  intros wfΣ subs subs' eqs clT clU wf.
+  intros cum.
+  pose proof (substitution_conv Σ _ _ _ s _ _ wfΣ  wf subs cum).
+  transitivity (subst s #|Δ| U) => //.
+  clear X.
+  rewrite !subst_closedn //.
+  reflexivity.
+Qed.
+
+Lemma subst_instance_constr_expand_lets u Γ t :
+  subst_instance_constr u (expand_lets Γ t) = 
+  expand_lets (subst_instance_context u Γ) (subst_instance_constr u t).
+Proof.
+  rewrite /expand_lets /expand_lets_k.
+  rewrite -subst_subst_instance_constr.
+  rewrite extended_subst_subst_instance_constr.
+  f_equal.
+  rewrite lift_subst_instance_constr. len; f_equal.
+Qed.
+
+Hint Rewrite subst_instance_constr_expand_lets closedn_subst_instance_constr : substu.
+
+
+Lemma constructor_cumulative_indices {cf:checker_flags} {Σ : global_env_ext} (wfΣ : wf Σ.1) :
+  forall {ind mdecl idecl cdecl cs u u' napp},
+  declared_inductive Σ mdecl ind idecl ->
+  forall (oib : on_ind_body (lift_typing typing) (Σ.1, ind_universes mdecl) (inductive_mind ind) mdecl 
+    (inductive_ind ind) idecl),
+  on_constructor (lift_typing typing) (Σ.1, ind_universes mdecl) mdecl (inductive_ind ind) idecl 
+    (ind_indices oib) cdecl cs -> 
+  on_udecl_prop Σ (ind_universes mdecl) ->
+  consistent_instance_ext Σ (ind_universes mdecl) u ->
+  consistent_instance_ext Σ (ind_universes mdecl) u' ->
   R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) napp u u' ->
   forall Γ pars pars' parsubst parsubst',
   spine_subst Σ Γ pars parsubst (subst_instance_context u (ind_params mdecl)) ->
@@ -1769,38 +3037,329 @@ Lemma constructor_cumulative_indices {cf:checker_flags} {Σ : global_env_ext} (w
   in
   let pargctx := subst_context parsubst 0 argctx in
   let pargctx' := subst_context parsubst' 0 argctx' in
-  All2_local_env (fun Γ' _ _ x y => Σ ;;; Γ ,,, Γ' |- x <= y) 
-    (smash_context [] pargctx) (smash_context [] pargctx') *
+  cumul_ctx_rel Σ Γ (smash_context [] pargctx) (smash_context [] pargctx') *
   All2 (conv Σ (Γ ,,, smash_context [] pargctx))
     (map (subst parsubst (context_assumptions (cshape_args cs)))
       (map (expand_lets argctx) (map (subst_instance_constr u) (cshape_indices cs))))
     (map (subst parsubst' (context_assumptions (cshape_args cs)))
       (map (expand_lets argctx') (map (subst_instance_constr u') (cshape_indices cs)))).
 Proof.
-  intros. move: H0.
+  intros * decli oib onc onu cu cu' Ru Γ * spu spu' cpars *. move: Ru.
   unfold R_global_instance.
-  simpl. rewrite (declared_inductive_lookup_inductive H).
-  eapply on_declared_inductive in H as [onind oib]; eauto.
-  rewrite oib.(ind_arity_eq). 
-  rewrite !destArity_it_mkProd_or_LetIn. simpl.
-  rewrite app_context_nil_l context_assumptions_app.
-  elim: leb_spec_Set => comp.
-  destruct ind_variance eqn:indv.
-  pose proof (X.(on_ctype_variance)) as respv.
-  specialize (respv _ indv).
-  simpl in respv.
-  unfold respects_variance in respv.
-  destruct variance_universes as [[v i] i'] eqn:vu.
-  destruct respv as [args idx].
-  (* We need to strengthen respects variance to allow arbitrary parameter substitutions *)
-  (** Morally, if variance_universes l = v i i' and R_universe_instance_variance l u u' then
-      i and i' can be substituted respectively by u and u'.
-      The hard part might be to show that (Σ.1, v) can also be turned into Σ by instanciating
-      i and i' by u and u'.
-  *)
-Admitted.
+  pose proof decli as decli'.
+  eapply on_declared_inductive in decli' as [onind _]; eauto.
+  assert (closed_ctx
+    (subst_instance_context u
+      (PCUICEnvironment.ind_params mdecl))) as clpu.
+  { eapply closed_wf_local; eauto; eapply on_minductive_wf_params; eauto. }
+  assert (closed_ctx
+  (subst_instance_context u'
+    (PCUICEnvironment.ind_params mdecl)))  as clpu'.
+  {  eapply closed_wf_local; eauto; eapply on_minductive_wf_params; eauto. }
+  assert (closed_ctx
+    (subst_instance_context u
+      (smash_context [] (PCUICEnvironment.ind_params mdecl)))) as clspu.
+  { rewrite subst_instance_context_smash. now eapply closedn_smash_context. }
+  destruct global_variance eqn:gv.
+  { move:gv.
+    simpl. rewrite (declared_inductive_lookup_inductive decli).
+    rewrite oib.(ind_arity_eq). 
+    rewrite !destArity_it_mkProd_or_LetIn. simpl.
+    rewrite app_context_nil_l context_assumptions_app.
+    elim: leb_spec_Set => // comp.
+    destruct ind_variance eqn:indv => //.
+    move=> [=] eq. subst l0.
+    pose proof (onc.(on_ctype_variance)) as respv.
+    specialize (respv _ indv).
+    simpl in respv.
+    unfold respects_variance in respv.
+    destruct variance_universes as [[[v i] i']|] eqn:vu => //.
+    destruct respv as [args idx].
+    simpl => Ru.
+    pose proof (onVariance _ _ _ _ onind) as onvari.
+    rewrite indv in onvari.
+    split.
+    { eapply All2_local_env_inst in args.
+      8:eauto. all:eauto.
+      rewrite !expand_lets_smash_context in args.
+      autorewrite with pcuic in args.
+      rewrite !subst_instance_context_smash /= in args.
+      rewrite subst_instance_context_app in args.
+      eapply positive_cstr_closed_args in args; eauto.
+      2:{ rewrite indv. now simpl. }  
+      rewrite - !smash_context_subst !subst_context_nil in args.
+      destruct args as [args wfargs].
+      eapply (weaken_cumul_ctx _ Γ) in args => //.
+      4:eapply spu.
+      2:{ eapply closed_wf_local; eauto. }
+      2:{ rewrite closedn_ctx_app; apply /andP. split => //. simpl.
+          len. simpl. eapply closedn_smash_context.
+          rewrite -(Nat.add_0_l (context_assumptions _)).
+          eapply closedn_ctx_subst. len; simpl.
+          2:{ eapply declared_minductive_closed_inds; eauto. }
+          epose proof (on_constructor_subst' _ _ _ _ _ _ wfΣ decli onind oib onc) as [[_ wf'] _]; eauto.
+          eapply closed_wf_local in wf'; eauto.
+          rewrite closedn_ctx_app in wf'. move/andP: wf'=> [_ clargs].
+          simpl in clargs; autorewrite with len in clargs.
+          rewrite closedn_subst_instance_context.
+          rewrite Nat.add_comm.
+          eapply closedn_ctx_expand_lets.
+          rewrite -(closedn_subst_instance_context (u:=u)).
+          eapply closedn_ctx_upwards; eauto. lia.
+          now rewrite Nat.add_comm. }
+      pose proof (spine_subst_smash wfΣ spu) as sspu.
+      pose proof (spine_subst_smash wfΣ spu') as sspu'.
+      eapply (cumul_ctx_subst _ Γ _ _ [] _ _ (List.rev pars) (List.rev pars')) in args; eauto.
+      3:{ eapply All2_rev => //. }
+      3:{ rewrite subst_instance_context_smash /=.
+          eapply subslet_untyped_subslet. eapply sspu. }
+      3:{ eapply subslet_untyped_subslet. eapply sspu'. }
+      2:{ rewrite - !app_context_assoc. eapply weaken_wf_local; eauto.
+          eapply spu. now rewrite app_context_nil_l. }
+      move: args.
+      rewrite subst_context_nil /= - !smash_context_subst /= subst_context_nil; len.
+      rewrite !subst_instance_subst_context.
+      rewrite !extended_subst_subst_instance_constr.
+      rewrite (subst_context_subst_context (inds  _ u _)); len.
+      rewrite (subst_context_subst_context (inds  _ u' _)); len.
+      rewrite -(subst_instance_context_assumptions u).
+      rewrite -(subst_extended_subst _ _ 0).
+      rewrite (closed_ctx_subst (inds _ _ _)) //.
+      rewrite (subst_instance_context_assumptions u).
+      rewrite -(subst_instance_context_assumptions u').
+      rewrite -(subst_extended_subst _ _ 0).
+      rewrite (closed_ctx_subst (inds _ u' _)) //.
+      rewrite (subst_instance_context_assumptions u').
+      rewrite (subst_context_subst_context (List.rev pars)) /=; len.
+      rewrite -(spine_subst_extended_subst spu).
+      rewrite !subst_instance_lift_context. len.
+      rewrite (subst_context_subst_context_comm (List.rev _)).
+      len. rewrite (context_subst_length2 spu); len; lia.
+      len. rewrite subst_context_lift_context_cancel.
+      len. rewrite (context_subst_length2 spu); len; lia.
+      rewrite (subst_context_subst_context (List.rev pars')) /=; len.
+      rewrite -(spine_subst_extended_subst spu').
+      rewrite (subst_context_subst_context_comm (List.rev pars')).
+      len. rewrite (context_subst_length2 spu'); len; lia.
+      len. rewrite subst_context_lift_context_cancel.
+      len. rewrite (context_subst_length2 spu'); len; lia.
+      now rewrite subst_context_nil.
+    }
+    { rewrite /pargctx /pargctx' (smash_context_subst []).
+      rewrite (spine_subst_extended_subst spu) (spine_subst_extended_subst spu').
+      rewrite !subst_context_map_subst_expand_lets_k.
+      now rewrite -(context_subst_length2 spu); len.
+      rewrite map_map_subst_expand_lets.
+      now rewrite -(context_subst_length2 spu); len.
+      rewrite -map_map_compose.
+      rewrite map_map_subst_expand_lets.
+      now rewrite -(context_subst_length2 spu'); len.
+      simpl.
+      rewrite -(map_map_compose _ _ _ _ (subst (List.rev pars') _)).
+      evar (k : nat).
+      replace (context_assumptions (cshape_args cs)) with k. subst k.
+      unshelve eapply (conv_terms_subst _ _ _ _ _ _ _ _ _ wfΣ _ (spine_subst_smash wfΣ spu) (spine_subst_smash wfΣ spu')).
+      { rewrite -app_context_assoc -smash_context_app_expand. eapply wf_local_smash_end; eauto.
+        rewrite /argctx. apply weaken_wf_local; eauto. eapply spu.
+        destruct (on_constructor_inst u wfΣ decli onind _ onc cu) as [wfparargs _].
+        rewrite !subst_instance_context_app in wfparargs.
+        rewrite -app_context_assoc in wfparargs.
+        rewrite -(app_context_nil_l (subst_instance_context _ _ ,,, _)) in wfparargs.
+        rewrite app_context_assoc in wfparargs.
+        eapply (substitution_wf_local _ []) in wfparargs; eauto.
+        2:{ eapply subslet_inds; eauto. }
+        rewrite subst_context_app /= app_context_nil_l in wfparargs.
+        len in wfparargs.
+        rewrite closed_ctx_subst // in wfparargs. }
+      eapply All2_rev; eauto.
+      2:{ subst k; len. now rewrite /argctx; len. }
+      len. simpl.
+      rewrite !map_map_compose; eapply All2_map.
+      eapply All2_map_inv in idx.
+      epose proof (positive_cstr_closed_indices wfΣ onc) as cli.
+      eapply All_map_inv in cli.
+      eapply All2_All in idx. solve_all.
+      rename a into cxy; rename b into clx.
+      rewrite -app_context_assoc; eapply weaken_conv; eauto. apply spu.
+      { destruct (on_constructor_inst_pars_indices wfΣ decli onind _ onc cu spu) as [wfparargs _].
+        rewrite -smash_context_app_expand.  eapply wf_local_smash_context; eauto. }
+      { len. simpl. rewrite expand_lets_app in clx.
+        rewrite -(subst_instance_context_assumptions u (ind_params _)).
+        rewrite (closedn_expand_lets_eq 0) // /=; len.
+        rewrite context_assumptions_app in clx.
+        rewrite (closedn_expand_lets_eq 0 (ind_params _)) // /= in clx; len.
+        now erewrite <- (closedn_subst_instance_context (u := u)).
+        rewrite Nat.add_comm. 
+        epose proof (closedn_expand_lets_eq #|ind_params mdecl| _ 0 _).
+        rewrite Nat.add_0_r in H. rewrite /expand_lets. rewrite -> H;
+        rewrite Nat.add_comm in clx; eapply closedn_expand_lets in clx.
+        substu. now rewrite /argctx; len.
+        rewrite /argctx.
+        rewrite -(Nat.add_0_l #|ind_params mdecl|).
+        eapply closedn_ctx_subst; cbn. rewrite /ind_subst; len.
+        epose proof (on_constructor_inst u wfΣ decli onind _ onc cu) as [wfarpars _]; auto.
+        move/closed_wf_local: wfarpars. rewrite !subst_instance_context_app closedn_ctx_app.
+        now move/andP; len.
+        rewrite /ind_subst. eapply declared_minductive_closed_inds; eauto. }
+      { len. simpl. rewrite expand_lets_app in clx.
+        rewrite -(subst_instance_context_assumptions u' (ind_params _)).
+        rewrite (closedn_expand_lets_eq 0) // /=; len.
+        rewrite context_assumptions_app in clx.
+        rewrite (closedn_expand_lets_eq 0 (ind_params _)) // /= in clx; len.
+        now erewrite <- (closedn_subst_instance_context (u := u')).
+        rewrite Nat.add_comm. 
+        epose proof (closedn_expand_lets_eq #|ind_params mdecl| _ 0 _).
+        rewrite Nat.add_0_r in H. rewrite /expand_lets.
+        relativize (context_assumptions argctx). rewrite -> H.
+        rewrite Nat.add_comm in clx; eapply closedn_expand_lets in clx.
+        substu. now rewrite /argctx'; len.
+        rewrite /argctx'.
+        rewrite -(Nat.add_0_l #|ind_params mdecl|).
+        eapply closedn_ctx_subst; cbn. rewrite /ind_subst; len.
+        epose proof (on_constructor_inst _ wfΣ decli onind _ onc cu') as [wfarpars _]; auto.
+        move/closed_wf_local: wfarpars. rewrite !subst_instance_context_app closedn_ctx_app.
+        now move/andP; len.
+        rewrite /ind_subst. eapply declared_minductive_closed_inds; eauto.
+        now rewrite /argctx /argctx'; len. }
+      rewrite smash_context_app smash_context_acc in cxy.
+      autorewrite with len in cxy.
+      eapply conv_inst_variance in cxy.
+      8:eauto. all:eauto.
+      rewrite subst_instance_context_app in cxy.
+      epose proof (subst_conv_closed (Γ := []) wfΣ) as X3.
+      rewrite !app_context_nil_l in X3. eapply X3 in cxy; clear X3; cycle 1.
+      { eapply (subslet_inds _ _ u); eauto. }
+      { eapply (subslet_inds _ _ u'); eauto. }
+      { now len. }
+      { len. simpl. autorewrite with pcuic. now rewrite -context_assumptions_app. }
+      { len. simpl. autorewrite with pcuic. now rewrite -context_assumptions_app. }
+      { destruct (on_constructor_inst u wfΣ decli onind _ onc cu) as [wfparargs _].
+        rewrite subst_instance_context_app subst_instance_context_smash /=.
+        rewrite subst_instance_subst_context subst_instance_lift_context subst_instance_context_smash.
+        rewrite extended_subst_subst_instance_constr.
+        rewrite -(subst_instance_context_assumptions u (ind_params mdecl)).
+        rewrite -(subst_instance_context_length u (ind_params mdecl)).
+        rewrite -smash_context_app_expand. eapply wf_local_smash_end; eauto.
+        now rewrite - !subst_instance_context_app app_context_assoc. }
+      len in cxy; substu in cxy.
+      rewrite -context_assumptions_app in cxy.
+      rewrite -{1}(subst_instance_context_assumptions u (_ ++ _)) in cxy.
+      rewrite -{1}(subst_instance_context_assumptions u' (_ ++ _)) in cxy.
+      rewrite -(expand_lets_subst_comm' _ _ 0) in cxy.
+      { len. substu; cbn. eapply (closedn_expand_lets 0) in clx.
+        red; rewrite -clx; now len. }
+      rewrite -(expand_lets_subst_comm' _ _ 0) in cxy.
+        { len. substu; cbn. eapply (closedn_expand_lets 0) in clx.
+          red; rewrite -clx; now len. }
+      rewrite !subst_instance_context_app in cxy.
+      rewrite !subst_context_app in cxy. len in cxy.
+      rewrite (closed_ctx_subst (inds _ _ _ )) // in cxy.
+      rewrite (closed_ctx_subst (inds _ _ _ ) _ (subst_instance_context u (ind_params mdecl))) // in cxy.
+      rewrite (closed_ctx_subst (inds _ _ _ ) _ (subst_instance_context u' (ind_params mdecl))) // in cxy.
+      rewrite {2 4}/argctx; len.
+      rewrite !expand_lets_app in cxy; len in cxy.
+      rewrite {2}/argctx /argctx'.
+      eapply conv_eq_ctx; eauto.
+      rewrite subst_instance_context_smash /=; f_equal.
+      rewrite subst_instance_subst_context subst_instance_lift_context subst_instance_context_smash /=.
+      rewrite /argctx /expand_lets_k_ctx.
+      rewrite extended_subst_subst_instance_constr.
+      rewrite subst_context_subst_context.
+      rewrite -(subst_instance_context_assumptions u).
+      rewrite -(subst_extended_subst _ _ 0).
+      rewrite subst_instance_context_assumptions.
+      rewrite (closed_ctx_subst (inds _ _ _ )) //. f_equal.
+      len. simpl.
+      rewrite (smash_context_subst []).
+      now rewrite subst_context_lift_context_comm; try lia. }
+  } 
+  { simpl.
+    pose proof decli as decli'.
+    assert (wf_local Σ Γ) by apply spu.
+    epose proof (on_constructor_inst u wfΣ decli onind oib onc cu) as 
+      [wfargs spinst].
+    intros Ru; split.
+    { rewrite /pargctx /pargctx' /argctx /argctx'.
+      rewrite !(smash_context_subst []).
+      eapply (cumul_ctx_subst _ _ _ _ []); eauto.
+      4:eapply subslet_untyped_subslet; eapply spu.
+      4:eapply subslet_untyped_subslet; eapply spu'.
+      { simpl.
+        rewrite -app_context_assoc. eapply weaken_wf_local; eauto.
+        rewrite !subst_instance_context_app in wfargs.
+        rewrite -app_context_assoc in wfargs.
+        rewrite -(app_context_nil_l (subst_instance_context _ _ ,,, _)) in wfargs.
+        rewrite app_context_assoc in wfargs.
+        eapply (substitution_wf_local _ []) in wfargs; eauto.
+        2:{ eapply subslet_inds; eauto. }
+        rewrite subst_context_app /= app_context_nil_l in wfargs.
+        autorewrite with len  in wfargs.
+        rewrite closed_ctx_subst // in wfargs.
+        rewrite -(smash_context_subst []).
+        eapply wf_local_smash_end => //. }
+      2:{ eapply spine_subst_conv; eauto.
+          eapply context_relation_subst_instance; eauto.
+          eapply on_minductive_wf_params; eauto. }
+      simpl.
+      assert (subst_context (ind_subst mdecl ind u) 0 (subst_instance_context u (ind_params mdecl)) = 
+        (subst_instance_context u (ind_params mdecl))) as ispars.
+      { rewrite closed_ctx_subst; eauto. }
+      rewrite -ispars.
+      rewrite -(subst_instance_context_length u (ind_params mdecl)).
+      eapply (cumul_ctx_subst _ Γ); eauto.
+      4:{ eapply subslet_untyped_subslet. eapply PCUICArities.weaken_subslet; eauto; eapply subslet_inds; eauto. }
+      4:{ eapply subslet_untyped_subslet. eapply PCUICArities.weaken_subslet; eauto; eapply subslet_inds; eauto. }
+      { simpl.
+        rewrite - !app_context_assoc. eapply weaken_wf_local; eauto.
+        rewrite app_context_assoc. eapply wf_local_smash_end; auto.
+        now rewrite !subst_instance_context_app in wfargs. }
+      2:now eapply conv_inds.
+      rewrite - !(subst_instance_context_smash _ _ []).
+      eapply cumul_ctx_subst_instance => //.
+      rewrite -app_context_assoc. eapply weaken_wf_local; eauto.
+      rewrite !subst_instance_context_app in wfargs.
+      now eapply All_local_env_app in wfargs as [wfargs _].
+    }
+    { rewrite /pargctx.
+      rewrite (smash_context_subst []).
+      evar (i : nat).
+      replace (context_assumptions (cshape_args cs)) with i. subst i.
+      unshelve eapply (conv_terms_subst _ _ _ _ _ _ _ _ _ wfΣ _ spu spu'); eauto.
+      { rewrite -app_context_assoc. eapply weaken_wf_local; eauto.
+        rewrite !subst_instance_context_app in wfargs.
+        rewrite -app_context_assoc in wfargs.
+        rewrite -(app_context_nil_l (subst_instance_context _ _ ,,, _)) in wfargs.
+        rewrite app_context_assoc in wfargs.
+        eapply (substitution_wf_local _ []) in wfargs; eauto.
+        2:{ eapply subslet_inds; eauto. }
+        rewrite subst_context_app /= app_context_nil_l in wfargs.
+        autorewrite with len  in wfargs.
+        rewrite closed_ctx_subst // in wfargs.
+        rewrite /argctx.
+        eapply wf_local_smash_end => //. }
+      eapply spine_subst_conv; eauto.
+      eapply context_relation_subst_instance; eauto.
+      eapply on_minductive_wf_params; eauto.
+      2:subst i; len; rewrite /argctx; len; reflexivity.
+      rewrite /expand_lets /expand_lets_k.
+      rewrite !map_map_compose.
+      eapply All2_map. eapply All2_refl.
+      intros.
+      constructor.
+      rewrite /argctx /argctx' /=; len.
+      rewrite !lift_subst_instance_constr.
+      rewrite !subst_extended_subst.
+      rewrite - !extended_subst_subst_instance_constr. len.
+      eapply eq_term_upto_univ_substs; eauto. typeclasses eauto.
+      eapply eq_term_upto_univ_subst_instance_constr; eauto; typeclasses eauto.
+      do 2 eapply All2_map. eapply All2_refl.
+      intros x'.
+      eapply eq_term_upto_univ_substs. typeclasses eauto.
+      eapply eq_term_upto_univ_subst_instance_constr; eauto; typeclasses eauto.
+      eapply eq_term_inds; eauto. }
+  } 
+Qed.
 
-  
 Lemma wt_ind_app_variance {cf:checker_flags} {Σ : global_env_ext} {Γ ind u l}:
   wf Σ.1 ->
   isWfArity_or_Type Σ Γ (mkApps (tInd ind u) l) ->

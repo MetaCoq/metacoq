@@ -1453,17 +1453,17 @@ Section SRContext.
     specialize (X r).
     assert(wf_local Σ Γ').
     apply typing_wf_local in H.
-    induction H in Γ', r, X |-  *; depelim r; simpl in H; noconf H.
+    induction H in Γ', r, X |-  *; depelim r.
     - constructor; auto. red in o.
-      destruct t2 as [s Hs]. exists s.
+      destruct t1 as [s Hs]. exists s.
       eapply subject_reduction1 in Hs; eauto.
-    - depelim X; simpl in H; noconf H; simpl in H0; noconf H0.
+    - depelim X.
       constructor; auto. 
       destruct t1 as [s Hs]. exists s.
       eapply context_conversion; eauto.
-    - depelim X; simpl in H; noconf H; simpl in H0; noconf H0.
-      red in o. destruct t2 as [s Hs].
-      simpl in t3.
+    - depelim X.
+      red in o. destruct t1 as [s Hs].
+      simpl in t2.
       destruct o as [[r ->]|[r <-]].
 
       constructor; auto. exists s; auto.
@@ -1472,10 +1472,8 @@ Section SRContext.
       eapply type_Cumul; eauto. right. exists s.
       eapply subject_reduction1; eauto.
       now apply red_cumul, red1_red.
-    - depelim X; simpl in H; noconf H; simpl in H0; noconf H0.
-      destruct t2 as [s Hs].
-      simpl in t3.
-
+    - depelim X. destruct t1 as [s Hs].
+      simpl in t2.
       constructor; auto. exists s; auto.
       eapply context_conversion; eauto.
       red; eapply context_conversion; eauto.
@@ -1514,7 +1512,6 @@ Section SRContext.
     all: constructor; cbnr; eauto.
   Qed.
 
-
   Lemma wf_local_red {Σ Γ Γ'} :
     wf Σ.1 ->
     red_ctx Σ.1 Γ Γ' -> wf_local Σ Γ -> wf_local Σ Γ'.
@@ -1524,7 +1521,6 @@ Section SRContext.
     apply eq_context_upto_names_upto_names in e.
     eauto using wf_local_alpha.
   Qed.
-
 
   Lemma wf_local_subst1 Σ (wfΣ : wf Σ.1) Γ na b t Γ' :
       wf_local Σ (Γ ,,, [],, vdef na b t ,,, Γ') ->

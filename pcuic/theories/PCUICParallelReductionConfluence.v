@@ -43,7 +43,7 @@ Lemma map_In_spec {A B : Type} (f : A → B) (l : list A) :
   map_In l (fun (x : A) (_ : In x l) => f x) = List.map f l.
 Proof.
   remember (fun (x : A) (_ : In x l) => f x) as g.
-  funelim (map_In l g); rewrite ?H; trivial.
+  funelim (map_In l g) => //; simpl; rewrite (H f0); trivial.
 Qed.
 
 Section list_size.
@@ -479,7 +479,6 @@ Section Pred1_inversion.
     - exists []. intuition auto.
     - rewrite <- mkApps_nested in X.
       depelim X...
-      * simpl in H1; noconf H1. solve_discr.
       * prepare_discr. apply mkApps_eq_decompose_app in H1.
         rewrite !decompose_app_rec_mkApps in H1. noconf H1.
       * destruct (IHargs _ H H0 X1) as [args' [-> Hargs']].
@@ -2111,7 +2110,7 @@ Section Rho.
     assert ((Nat.pred #|mfix0| - (#|mfix0| - S #|l|)) = #|l|) by lia.
     assert ((Nat.pred #|mfix0| - (#|mfix0| - S #|l'|)) = #|l'|) by lia.
     rewrite H0 H1.
-    intros. depelim Hctxs. red in o. simpl in H2, H3. noconf H2; noconf H3.
+    intros. depelim Hctxs. red in o. 
     red in o. noconf Heqlen. simpl in H.
     rewrite -H.
     econstructor. unfold mapi in IHAll2.
@@ -2147,7 +2146,6 @@ Section Rho.
       rewrite rho_ctx_app in a2. unfold on_Trel.
       eapply All2_map_left. simpl. eapply a2.
       eapply All2_map_left. simpl. solve_all. }
-    simpl in H2. noconf H2.
   Qed.
 
 (* TODO generalize fix/cofix subst by tFix/tCofix constructor! *)
@@ -2192,8 +2190,6 @@ Section Rho.
     assert ((Nat.pred #|mfix0| - (#|mfix0| - S #|l'|)) = #|l'|) by lia.
     rewrite H0 H1.
     intros. depelim Hctxs. red in o.
-    simpl in H2. noconf H2.
-    simpl in H3. noconf H3.
     constructor. unfold mapi in IHAll2.
     forward IHAll2 by lia.
     forward IHAll2 by lia.
@@ -2224,7 +2220,6 @@ Section Rho.
       rewrite rho_ctx_app in a2. unfold on_Trel.
       eapply All2_map_left. simpl. eapply a2.
       eapply All2_map_left. simpl. solve_all. }
-    hnf in H2. noconf H2.
   Qed.
 
   Definition pred1_subst Γ Δ Δ' σ τ :=
@@ -2526,14 +2521,12 @@ Section Rho.
     cbn in H. destruct c as [? [?|] ?]; noconf H.
     depelim X0.
     - destruct Δ'. noconf H. destruct c as [? [?|] ?]; noconf H.
-      simpl in H. noconf H. simpl in H. noconf H.
       constructor. eapply IHΔ. auto. red. red in o. intros.
       red in o. rewrite !rho_ctx_app. eapply o.
     - destruct Δ'. noconf H. destruct c as [? [?|] ?]; noconf H.
-      simpl in H. noconf H. red in o. destruct o.
+      destruct o.
       constructor. eapply IHΔ. auto. red. red in o, o0. intros.
       rewrite !rho_ctx_app. split; eauto.
-      simpl in H. noconf H.
   Qed.
 
   Lemma pred1_rho_fix_context_2 (Γ Γ' : context) (m m' : mfixpoint term) :

@@ -17,7 +17,7 @@ env:
   - NJOBS=2
   - COMPILER="4.07.1"
   - FINDLIB_VER="1.8.0"
-  - EQUATIONS_VER="1.2.1+8.11"
+  - EQUATIONS_VER="1.2.3+8.11"
   - COQ_VER="8.11.0"
 
 install:

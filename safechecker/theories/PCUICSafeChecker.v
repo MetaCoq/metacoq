@@ -105,11 +105,7 @@ Definition mkApps_decompose_app t :
   := mkApps_decompose_app_rec t [].
 
 
-Derive EqDec for sort_family.
-Next Obligation.
-  unfold Classes.dec_eq. decide equality.
-Defined.
-
+Derive NoConfusion EqDec for sort_family.
 
 Inductive type_error :=
 | UnboundRel (n : nat)

@@ -59,11 +59,11 @@ Section Generation.
     - assumption.
     - simpl. cbn. eapply ih.
       simpl in h. pose proof (typing_wf_local h) as hc.
-      dependent induction hc; inversion H; subst.
+      dependent induction hc.
       econstructor; try eassumption. exact t0.π2.
     - simpl. cbn. eapply ih.
       pose proof (typing_wf_local h) as hc. cbn in hc.
-      dependent induction hc; inversion H; subst.
+      dependent induction hc;
       econstructor; try eassumption. exact t0.π2.
   Qed.
 

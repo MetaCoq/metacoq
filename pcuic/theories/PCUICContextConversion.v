@@ -156,7 +156,7 @@ Section ContextReduction.
     red1_red_ctxP (Γ ,,, Δ) (Γ' ,,, Δ).
   Proof.
     induction Δ as [|[na [b|] ty] Δ]; intros; auto.
-    - elimtype False. depelim H. hnf in H0. noconf H0.
+    - elimtype False. depelim H. 
     - case; move => n b b' //. eapply IHΔ. now depelim H. apply X.
   Qed.
 
@@ -881,22 +881,16 @@ Proof.
       clear -a X4 X5.
       induction ctx; auto.
       destruct a0 as [na [b|] ty]; simpl.
-      depelim Hwf; simpl in H; noconf H.
-      unfold snoc in H. noconf H. simpl in H. noconf H.
-      unfold snoc in H. noconf H. simpl in H; noconf H.
-      simpl in H0. subst.
+      depelim Hwf.
       depelim a. specialize (IHctx _ a).
       red in l, l0. destruct l as [s Hs].
       constructor; auto; red.
       exists s; eapply t1. now eapply conv_context_app_same. auto.
       eapply t0. now eapply conv_context_app_same. auto.
-      depelim Hwf; simpl in H; noconf H.
-      unfold snoc in H. noconf H. simpl in H. noconf H.
-      simpl in H0. subst. depelim a.
+      depelim Hwf; depelim a.
       specialize (IHctx _ a).
       constructor; auto. eexists; eapply t0.
       now eapply conv_context_app_same. auto.
-      unfold snoc in H; simpl in H; noconf H. simpl in H; noconf H.
      * right. destruct s as [s [ty ?]]. exists s. eauto.
     * eapply cumul_conv_ctx; eauto.
 Qed.

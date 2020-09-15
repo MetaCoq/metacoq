@@ -17,7 +17,6 @@ Ltac tc := try typeclasses eauto 10.
 
 Set Asymmetric Patterns.
 
-
 Lemma red1_eq_context_upto_l Σ Re Γ Δ u v :
   RelationClasses.Reflexive Re ->
   SubstUnivPreserving Re ->
@@ -2590,12 +2589,12 @@ Section RedConfluence.
     induction X in X0, Δ, Δ', X1 |- *. depelim X1. depelim X0. constructor.
     destruct x as [na b ty], y as [na' b' ty']; simpl in *.
     subst.
-    depelim X1. depelim X0. hnf in H. noconf H.
+    depelim X1. depelim X0. 
     red in o. simpl in *. subst.
     destruct y as [? [b'|] ?]; noconf e.
     constructor; auto. eapply IHX; eauto.
     red. eapply red_eq_context_upto_names; eauto.
-    hnf in H. noconf H. destruct o. depelim X0. simpl in *.
+    destruct o. depelim X0. simpl in *.
     destruct y as [? [b'|] ?]; noconf e. subst; simpl in *.
     constructor. eapply IHX; eauto.
     red.

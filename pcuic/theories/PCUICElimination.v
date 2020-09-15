@@ -277,20 +277,20 @@ Proof.
       specialize (H _ _ _ _ Ht sp).
       split.
       * intros prs;eapply All_local_assum_app in prs as [prd prs].
-      depelim prd; simpl in H0; noconf H0.
-      apply H.
-      clear -wfΣ prs.
-      eapply All_local_assum_subst; eauto.
-      simpl. intros.
-      destruct X as [s [Ht2 isp]].
-      exists s; firstorder.
-      rewrite Nat.add_0_r. eapply (substitution _ Γ [vdef na b ty] [b] Γ1 _ (tSort s)); auto.
-      rewrite -{1}(subst_empty 0 b).
-      repeat (constructor; auto). rewrite !subst_empty.
-      eapply typing_wf_local in Ht2.
-      rewrite app_context_assoc in Ht2. eapply All_local_env_app in Ht2 as [Ht2 _].
-      depelim Ht2; simpl in H3; noconf H3. apply l0.
-      now rewrite app_context_assoc in Ht2.
+        depelim prd.
+        apply H.
+        clear -wfΣ prs.
+        eapply All_local_assum_subst; eauto.
+        simpl. intros.
+        destruct X as [s [Ht2 isp]].
+        exists s; firstorder.
+        rewrite Nat.add_0_r. eapply (substitution _ Γ [vdef na b ty] [b] Γ1 _ (tSort s)); auto.
+        rewrite -{1}(subst_empty 0 b).
+        repeat (constructor; auto). rewrite !subst_empty.
+        eapply typing_wf_local in Ht2.
+        rewrite app_context_assoc in Ht2. eapply All_local_env_app in Ht2 as [Ht2 _].
+        depelim Ht2. apply l0.
+        now rewrite app_context_assoc in Ht2.
       * intros mdecl idec decli oib.
         now apply H.
     + rewrite it_mkProd_or_LetIn_app in sp.
@@ -321,7 +321,7 @@ Proof.
         specialize (H _ _ _ _ Ht sp).
         split.
         intros prs;eapply All_local_assum_app in prs as [prd prs].
-        depelim prd; simpl in H0; noconf H0.
+        depelim prd.
         eapply (type_Cumul _ _ _ _ ty) in t0.
         2:{ right. destruct s0 as [s' [Hs' _]]. exists s'; auto. }
         2:{ eapply conv_cumul. now symmetry. }

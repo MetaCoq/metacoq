@@ -974,8 +974,8 @@ Lemma size_wf_local_app `{checker_flags} {Σ} (Γ Γ' : context) (Hwf : wf_local
 Proof.
   induction Γ' in Γ, Hwf |- *; try lia. simpl. lia.
   depelim Hwf.
-  - inversion H0. subst. noconf H4. simpl. unfold eq_rect_r. simpl. specialize (IHΓ' _ Hwf). lia.
-  - inversion H0. subst. noconf H4. specialize (IHΓ' _ Hwf). simpl. unfold eq_rect_r. simpl. lia.
+  - specialize (IHΓ' _ Hwf). simpl. unfold eq_rect_r; simpl. lia.
+  - specialize (IHΓ' _ Hwf). simpl. unfold eq_rect_r. simpl. lia.
 Qed.
 
 Lemma typing_wf_local_size `{checker_flags} {Σ} {Γ t T}

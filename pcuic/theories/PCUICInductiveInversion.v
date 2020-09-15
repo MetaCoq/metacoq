@@ -14,12 +14,13 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      
 Close Scope string_scope.
 
-Require Import ssreflect. 
+Require Import ssreflect.
 
 Set Asymmetric Patterns.
 Set SimplIsCbn.
 
 From Equations Require Import Equations.
+Require Import Equations.Type.Relation_Properties.
 
 Ltac len := autorewrite with len.
 Hint Rewrite reln_length : len.
@@ -1027,7 +1028,7 @@ Proof.
   intros cl; revert n' t cl k Heqn'.
   eapply (term_closedn_list_ind (fun n' t => forall k, n' = #|s| + k -> 
   subst (map (lift0  n) s) k t = subst s (n + k) (lift n k t)));
-  intros; simpl; solve_all; eauto.
+  intros; simpl; f_equal; eauto.
   - subst k.
     simpl.
     destruct (Nat.leb_spec k0 n0).
@@ -1042,24 +1043,18 @@ Proof.
     destruct (Nat.leb_spec (n + k0) n0); try lia.
     reflexivity.
 
-  - simpl. f_equal. rewrite map_map_compose. solve_all.
-  - simpl; f_equal; eauto.
-    rewrite (H0 (S k0)). lia. lia_f_equal.
-  - simpl. f_equal; eauto.
-    rewrite (H0 (S k0)). lia. lia_f_equal.
-  - simpl. f_equal; eauto.
-    rewrite (H1 (S k0)). lia. lia_f_equal.
-  - simpl. f_equal; eauto.
-    rewrite map_map_compose. solve_all.
-  - simpl. f_equal; eauto.
-    rewrite map_map_compose. len.
+  - rewrite map_map_compose. solve_all.
+  - rewrite (H0 (S k0)). lia. lia_f_equal.
+  - rewrite (H0 (S k0)). lia. lia_f_equal.
+  - rewrite (H1 (S k0)). lia. lia_f_equal.
+  - rewrite map_map_compose. solve_all.
+  - rewrite map_map_compose. len.
     solve_all. rewrite map_def_map_def.
     specialize (a _ H). specialize (b (#|fix_context m| + k0)).
     forward b by lia. eapply map_def_eq_spec; auto.
     autorewrite with len in b.
     rewrite  b. lia_f_equal.
-  - simpl. f_equal; eauto.
-    rewrite map_map_compose. len.
+  - rewrite map_map_compose. len.
     solve_all. rewrite map_def_map_def.
     specialize (a _ H). specialize (b (#|fix_context m| + k0)).
     forward b by lia. eapply map_def_eq_spec; auto.
@@ -1814,12 +1809,9 @@ Proof.
   have subsrel := expand_lets_cstr_head (#|ind_bodies mdecl| - S i) (cshape_args cs  ++ ind_params mdecl).
   rewrite app_length (Nat.add_comm #|(cshape_args cs)|) Nat.add_assoc in subsrel. rewrite {}subsrel in hpos.
   rewrite context_assumptions_app in hpos. depelim hpos; solve_discr.
-  simpl in H; noconf H.
   eapply All_map_inv in a.
   eapply All_app in a as [ _ a].
-  eapply All_map; eapply (All_impl a).
-  clear. intros.
-  autorewrite with len in H; simpl in H.
+  eapply All_map; eapply (All_impl a); clear; intros x H; len in H; simpl in H.
   now rewrite context_assumptions_app.
 Qed.
 
@@ -1839,7 +1831,6 @@ Proof.
   rewrite -smash_context_lift -smash_context_subst /=; len.
   lia_f_equal.
 Qed.
-
 
 Lemma expand_lets_k_ctx_length Γ k Δ : #|expand_lets_k_ctx Γ k Δ| = #|Δ|.
 Proof. now rewrite /expand_lets_k_ctx; len. Qed.
@@ -2128,7 +2119,7 @@ Lemma wt_cumul_ctx_rel_cons {cf:checker_flags} Σ Γ Δ Δ' na ty na' ty' :
   wt_cumul_ctx_rel Σ Γ (vass na ty :: Δ) (vass na' ty' :: Δ').
 Proof.
   intros []; split; simpl; try constructor; auto.
-  now depelim X0; simpl in H; noconf H.
+  now depelim X0.
 Qed.
 
 Lemma positive_cstr_closed_args_subst_arities {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ.1} {u u' Γ}
@@ -2168,8 +2159,7 @@ Proof.
       now len in wf. } 
   revert cum.
   induction cpos; simpl; rewrite ?subst_context_nil ?subst_context_snoc; try solve [constructor; auto].
-  all:len; intros cv; depelim cv; simpl in H; noconf H; simpl in H0; noconf H0.
-  depelim wf; simpl in H; noconf H.
+  all:len; intros cv; depelim cv; depelim wf.
   assert (isWfArity_or_Type Σ
   (subst_instance_context u (ind_arities mdecl) ,,,
    subst_instance_context u (smash_context [] (ind_params mdecl) ,,, Γ))
@@ -2179,10 +2169,9 @@ Proof.
   all:constructor.
   - eapply IHcpos. auto. now depelim ass. eapply cv.
   - red in o. simpl in *.
-    rewrite app_context_nil_l in t1.
-    simpl in wf.
-    eapply positive_cstr_arg_subst in t1; eauto.
-    move: t1; len; simpl.
+    rewrite app_context_nil_l in t0.
+    eapply positive_cstr_arg_subst in t0; eauto.
+    move: t0; len; simpl.
     * rewrite subst_instance_context_smash /=.
       rewrite subst_instance_context_app subst_instance_context_smash subst_context_app.
       rewrite closed_ctx_subst ?closedn_subst_instance_context // ?closedn_smash_context; eauto.
@@ -2254,7 +2243,6 @@ Proof.
   - now rewrite !(subst_instance_context_smash _ (expand_lets_ctx _ _)).
 Qed.
 
-Require Import Equations.Type.Relation_Properties.
 Lemma red_subst_instance {cf:checker_flags} (Σ : global_env) (Γ : context) (u : Instance.t) (s t : term) :
   red Σ Γ s t ->
   red Σ (subst_instance_context u Γ) (subst_instance_constr u s)
@@ -2264,8 +2252,7 @@ Proof.
   apply red_alt, clos_rt1n_rt.
   induction H. constructor.
   eapply red1_subst_instance in r.
-  econstructor 2. eapply r.
-  auto.
+  econstructor 2. eapply r. auto.
 Qed.
 
 Lemma nth_error_decl_body_ass_ctx {Γ Δ i body} : 
@@ -2874,18 +2861,14 @@ Proof.
   unfold cumul_ctx_rel.
   intros wfΣ onu onv cu cu' vari Ru.
   induction Γ as [|[na [b|] ty] tl]; simpl.
-  constructor.
-  intros H; depelim H; simpl in H0; noconf H0; simpl in H1; noconf H1.
-  econstructor; auto. red.
-  destruct o.
+  constructor. intros H; depelim H.
+  econstructor; auto. red. destruct o.
   rewrite -subst_instance_context_app in c, c0. simpl in c0 |- *.
   rewrite -subst_instance_context_app.
   split; eapply cumul_inst_variance; eauto.
 
-  intros H; depelim H; simpl in H0; noconf H0; simpl in H1; noconf H1.
-  simpl in *.
-  constructor; auto.
-  red. simpl.
+  intros H; depelim H; simpl in *.
+  constructor; auto. red. simpl.
   rewrite -subst_instance_context_app in o.
   rewrite -subst_instance_context_app.
   eapply cumul_inst_variance; eauto.

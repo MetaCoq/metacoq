@@ -21,10 +21,10 @@ Ltac pcuic := intuition eauto 5 with pcuic ||
 
 Hint Resolve eq_universe_leq_universe' : pcuic.
 
-Derive Signature for cumul assumption_context.
+Derive Signature for conv cumul assumption_context.
  
 (* Bug in Equations ... *)
-(* Derive Signature for clos_refl_trans_1n. *)
+Derive Signature for clos_refl_trans_1n. 
 
 (* So that we can use [conv_trans]... *)
 Existing Class wf.
@@ -2349,7 +2349,7 @@ Proof.
   move=> wfΣ eqsub subs subs'.
   assert(∑ s0 s'0, All2 (red Σ Γ) s s0 * All2 (red Σ Γ) s' s'0 * All2 (eq_term Σ Σ) s0 s'0)
     as [s0 [s'0 [[redl redr] eqs]]].
-  { induction eqsub in Δ, subs |- *.
+  { clear subs'; induction eqsub in Δ, subs |- *.
     * depelim subs. exists [], []; split; auto.
     * depelim subs.
     - specialize (IHeqsub _ subs) as [s0 [s'0 [[redl redr] eqs0]]].
@@ -2438,11 +2438,10 @@ Proof.
   induction Δ as [|d Δ]; intros * wfl ctxr len0; destruct Δ' as [|d' Δ']; simpl in len0; try lia.
   - constructor.
   - rewrite !subst_context_snoc. specialize (IHΔ Δ'). depelim wfl; specialize (IHΔ wfl);
-    depelim ctxr; simpl in H; noconf H; noconf len0; simpl in H; noconf H;
-    depelim c; simpl.
+    depelim ctxr; depelim c; noconf len0; simpl.
     * constructor; auto. constructor. simpl.
-      ** rewrite !Nat.add_0_r. rewrite -H.
-      eapply subst_conv; eauto. now rewrite -app_context_assoc.
+      ** rewrite !Nat.add_0_r -H.
+        eapply subst_conv; eauto. now rewrite -app_context_assoc.
     * constructor; auto. constructor; simpl;
       rewrite !Nat.add_0_r -H;
       eapply subst_conv; eauto; now rewrite -app_context_assoc.
@@ -2517,7 +2516,7 @@ Proof.
     rewrite closedn_ctx_cons in cl. apply andP in cl as [clctx cld].
     simpl in wf0.
     destruct d as [na [b|] ty] => /=.
-    * depelim wf0; simpl in H; noconf H; simpl in *.
+    * depelim wf0; simpl in *.
       simpl in cld. unfold closed_decl in cld. simpl in cld. simpl.
       apply andP in cld as [clb clty].
       constructor; auto. constructor.
@@ -2527,7 +2526,7 @@ Proof.
         apply eq_term_upto_univ_subst_instance_constr; try typeclasses eauto. auto.
       ** constructor. red.
         apply eq_term_upto_univ_subst_instance_constr; try typeclasses eauto. auto.
-    * depelim wf0; simpl in H; noconf H; simpl in *.
+    * depelim wf0; simpl in *.
       simpl in cld. unfold closed_decl in cld. simpl in cld. simpl.
       constructor; auto. constructor. apply weaken_conv; auto.
       1-2:autorewrite with len; now rewrite closedn_subst_instance_constr.
@@ -2747,7 +2746,7 @@ Proof.
   - simpl. constructor.
   - rewrite !subst_context_snoc /=.
     intros Hs subs subs'.
-    depelim wf; simpl in H; noconf H.
+    depelim wf.
     specialize (IHX wf Hs subs subs').
     constructor; auto.
     red. red in p. simpl.
@@ -2759,7 +2758,7 @@ Proof.
     now rewrite -(All2_local_env_length X).
   - rewrite !subst_context_snoc /=.
     intros Hs subs subs'.
-    depelim wf; simpl in H; noconf H.
+    depelim wf.
     specialize (IHX wf Hs subs subs').
     constructor; auto.
     red. red in p. simpl.
@@ -2816,7 +2815,7 @@ Proof.
   - simpl. constructor.
   - rewrite !subst_context_snoc /=.
     intros Hs subs subs'.
-    depelim wf; simpl in H; noconf H.
+    depelim wf.
     specialize (IHX wf Hs subs subs').
     constructor; auto. 
     red. red in p. simpl.
@@ -2826,8 +2825,7 @@ Proof.
     rewrite !subst_context_app app_context_assoc in X0; autorewrite with len in X0.
     now rewrite -(All2_local_env_length X).
   - rewrite !subst_context_snoc /=.
-    intros Hs subs subs'.
-    depelim wf; simpl in H; noconf H.
+    intros Hs subs subs'. depelim wf.
     specialize (IHX wf Hs subs subs').
     constructor; auto.
     red. red in p. simpl.

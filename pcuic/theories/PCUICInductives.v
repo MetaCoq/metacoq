@@ -956,7 +956,7 @@ Proof.
   move=> wfΣ wfΔ.
   generalize 0 at 1 4.
   induction Δ as [|[na [d|] ?] ?] in wfΔ |- *; simpl; auto;
-  depelim wfΔ; simpl in H; noconf H.
+  depelim wfΔ.
   * intros n. rewrite extended_subst_length. rewrite lift_closed.
     red in l0. autorewrite with len. now eapply subject_closed in l0.
     rewrite (reln_lift 1 0).
@@ -978,8 +978,7 @@ Lemma subslet_extended_subst {cf:checker_flags} Σ Δ :
   subslet Σ (smash_context [] Δ) (extended_subst Δ 0) Δ.
 Proof.
   move=> wfΣ wfΔ.
-  induction Δ as [|[na [d|] ?] ?] in wfΔ |- *; simpl; auto;
-  depelim wfΔ; simpl in H; noconf H.
+  induction Δ as [|[na [d|] ?] ?] in wfΔ |- *; simpl; auto; depelim wfΔ.
   * rewrite extended_subst_length. rewrite lift_closed.
     red in l0. autorewrite with len. now eapply subject_closed in l0.
     constructor. auto. specialize (IHΔ wfΔ).
@@ -1253,7 +1252,7 @@ Proof.
 Qed.
 
 Lemma head_tapp t1 t2 : head (tApp t1 t2) = head t1.
-Proof.  rewrite /head /decompose_app /= fst_decompose_app_rec //. Qed.
+Proof. rewrite /head /decompose_app /= fst_decompose_app_rec //. Qed.
 
 Lemma destInd_head_subst s k t f : destInd (head (subst s k t)) = Some f ->
   (destInd (head t) = Some f) +  

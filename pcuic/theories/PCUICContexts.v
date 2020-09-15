@@ -61,9 +61,7 @@ Lemma conv_context_smash {cf:checker_flags} Σ Γ Δ Δ' :
 Proof.
   intros Hass Hconv.
   induction Hass in Δ', Hconv |- *. depelim Hconv. constructor.
-  depelim Hconv;
-  simpl in H; noconf H.
-  constructor; auto.
+  depelim Hconv; constructor; auto.
 Qed.
 
 Lemma smash_context_assumption_context {Γ Δ} : 
@@ -84,13 +82,7 @@ Qed.
 
 Lemma assumption_context_length ctx : assumption_context ctx ->
   context_assumptions ctx = #|ctx|.
-Proof.
-  induction ctx; simpl; auto.
-  destruct a as [na [b|] ty]; simpl.
-  intros. depelim H; simpl in H0; noconf H0.
-  depelim H; simpl in H0; noconf H0.
-  rewrite IHctx; auto.
-Qed.
+Proof. induction 1; simpl; auto. Qed.
 
 Lemma context_subst_length2 {ctx args s} : context_subst ctx args s -> #|args| = context_assumptions ctx.
 Proof.
@@ -100,15 +92,15 @@ Qed.
 
 Lemma context_subst_fun {ctx args s s'} : context_subst ctx args s -> context_subst ctx args s' -> s = s'.
 Proof.
-  induction 1 in s' |- *; intros H'; depelim H'; try simpl in H; try noconf H; auto.
-  eapply app_inj_tail in H0. intuition subst.
+  induction 1 in s' |- *; intros H'; depelim H'; auto.
+  eapply app_inj_tail in H. intuition subst.
   now specialize (IHX _ H').
   now specialize (IHX _ H').
 Qed.
 
 Lemma context_subst_fun' {ctx args args' s s'} : context_subst ctx args s -> context_subst ctx args' s' -> #|args| = #|args'|.
 Proof.
-  induction 1 as [ | ? ? ? ? ? ? ? IHX | ? ? ? ? ? ? ? IHX ] in args', s' |- *; intros H'; depelim H'; try simpl in H; try noconf H; auto.
+  induction 1 as [ | ? ? ? ? ? ? ? IHX | ? ? ? ? ? ? ? IHX ] in args', s' |- *; intros H'; depelim H'; auto.
   now rewrite !app_length; specialize (IHX _ _ H').
   now specialize (IHX _ _ H').
 Qed.

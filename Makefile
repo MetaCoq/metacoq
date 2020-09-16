@@ -83,5 +83,6 @@ ci-local:
 	$(MAKE) all test-suite
 
 ci-opam:
-	opam install -y .
+	# Use -v so that regular output is produced
+	opam install -v -y .
 	opam remove -y coq-metacoq coq-metacoq-template

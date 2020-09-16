@@ -484,7 +484,7 @@ Section Typecheck.
     match leqb_term Σ G t u with true => ret _ | false =>
     match iscumul Γ t ht u hu with
     | Success _ => ret _
-    | Error e => (* fallback *)  (* nico *)
+    | Error e h => (* fallback *)  (* nico *)
       let t' := hnf Γ t ht in
       let u' := hnf Γ u hu in
       (* match leq_term (snd Σ) t' u' with true => ret _ | false => *)

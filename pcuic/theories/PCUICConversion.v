@@ -1464,6 +1464,15 @@ Section Inversions.
       + apply conv_Case_brs. all: assumption.
   Qed.
 
+  Lemma Case_conv_inv :
+    forall Γ indn p p' c c' brs brs',
+    Σ ;;; Γ |- tCase indn p c brs = tCase indn p' c' brs' ->
+    Σ ;;; Γ |- p = p' /\ Σ ;;; Γ |- c = c' /\ 
+    ∥ All2 (fun u v => u.1 = v.1 × Σ ;;; Γ |- u.2 = v.2) brs brs' ∥.
+  Proof.
+    todo "Completeness"%string.
+  Qed.
+  
   Lemma conv_Proj_c :
     forall Γ p u v,
       Σ ;;; Γ |- u = v ->

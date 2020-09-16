@@ -272,8 +272,6 @@ Proof.
       all:typeclasses eauto.
   - econstructor 2; eauto. eapply weakening_env_red1; eauto. exists Σ''; eauto.
   - econstructor 3; eauto. eapply weakening_env_red1; eauto. exists Σ''; eauto.
-  - eapply conv_eta_l. all: eassumption.
-  - eapply conv_eta_r. all: eassumption.
 Qed.
 
 Lemma weakening_env_cumul `{CF:checker_flags} Σ Σ' φ Γ M N :
@@ -291,20 +289,8 @@ Proof.
       all:typeclasses eauto.
   - econstructor 2; eauto. eapply weakening_env_red1; eauto. exists Σ''; eauto.
   - econstructor 3; eauto. eapply weakening_env_red1; eauto. exists Σ''; eauto.
-  - eapply cumul_eta_l. all: eassumption.
-  - eapply cumul_eta_r. all: eassumption.
 Qed.
 
-(* Lemma weakening_env_consistent_universe_context_instance `{checker_flags} : *)
-(*   forall (Σ : global_env_ext) (u : list Level.t) univs, *)
-(*     consistent_universe_context_instance (snd Σ) univs u -> *)
-(*     forall Σ' : global_env_ext, *)
-(*       extends Σ Σ' -> consistent_universe_context_instance (snd Σ') univs u. *)
-(* Proof. *)
-(*   intros Σ u univs H1 Σ' H2. destruct univs; simpl in *; eauto. *)
-(*   all:(destruct UContext.dest; destruct H2 as [Σ'' ->]; simpl; auto). exact (fst ctx). *)
-(* Qed. *)
-(* Hint Resolve weakening_env_consistent_universe_context_instance : extends. *)
 Lemma weakening_env_declared_constant `{CF:checker_flags}:
   forall (Σ : global_env) cst (decl : constant_body),
     declared_constant Σ cst decl ->

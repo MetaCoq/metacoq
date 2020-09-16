@@ -1159,18 +1159,6 @@ Proof.
     rewrite map_app. cbn. reflexivity.
 Qed.
 
-Lemma eta_expands_subst_instance_constr :
-  forall l u v,
-    eta_expands u v ->
-    eta_expands (subst_instance_constr l u) (subst_instance_constr l v).
-Proof.
-  intros l u v [na [A [f [π [? ?]]]]]. subst.
-  rewrite 2!subst_instance_constr_zipc. cbn.
-  eexists _, _, _, _. intuition eauto.
-  f_equal. f_equal. f_equal.
-  rewrite lift_subst_instance_constr. reflexivity.
-Qed.
-
 Lemma cumul_subst_instance (Σ : global_env_ext) Γ u A B univs :
   forallb (fun x => negb (Level.is_prop x)) u ->
   valid_constraints (global_ext_constraints (Σ.1, univs))
@@ -1184,10 +1172,6 @@ Proof.
     eapply leq_term_subst_instance; tea.
   - econstructor 2. 1: eapply red1_subst_instance; cbn; eauto. eauto.
   - econstructor 3. 1: eauto. eapply red1_subst_instance; cbn; eauto.
-  - eapply cumul_eta_l. 2: eauto.
-    eapply eta_expands_subst_instance_constr. assumption.
-  - eapply cumul_eta_r. 1: eauto.
-    eapply eta_expands_subst_instance_constr. assumption.
 Qed.
 
 Global Instance eq_decl_subst_instance Σ : SubstUnivPreserved (eq_decl Σ).

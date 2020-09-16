@@ -22,8 +22,6 @@ Ltac pcuic := intuition eauto 5 with pcuic ||
 Hint Resolve eq_universe_leq_universe' : pcuic.
 
 Derive Signature for conv cumul assumption_context.
- 
-(* Bug in Equations ... *)
 Derive Signature for clos_refl_trans_1n. 
 
 (* So that we can use [conv_trans]... *)
@@ -136,78 +134,7 @@ Section Eta.
     - cbn. rewrite IHl. reflexivity.
   Qed.
 
-  Definition eta_expansions :=
-    clos_refl_trans eta_expands.
-
-  Lemma eta_postpone :
-    forall Γ t u v,
-      eta_expands t u ->
-      red1 Σ Γ u v ->
-      ∑ w,
-        red Σ Γ t w ×
-        eta_expansions w v.
-  Proof.
-    intros Γ t u v [na [A [f [π [e1 e2]]]]] r. subst.
-    induction π in Γ, v, na, A, f, r |- * using stack_rev_rect.
-    - simpl in *. dependent destruction r.
-      + exfalso. apply (f_equal isFixApp) in H. rewrite isFixApp_mkApps in H.
-        cbn in H. discriminate.
-      + eexists. split ; revgoals.
-        * eapply rt_step. eexists _, _, _, ε. cbn. intuition reflexivity.
-        * constructor.
-      + dependent destruction r.
-        all: try (cbn in H ; noconf H).
-        * destruct f. all: try discriminate.
-          cbn in H. noconf H.
-          eexists. split. 1: constructor.
-          (* We have a problem here because the type is not the same! *)
-          give_up.
-        *
-  Abort.
-
 End Eta.
-
-(*
-Lemma red_eq_context_upto_r Σ Re Γ Δ u v :
-  RelationClasses.Reflexive Re ->
-  RelationClasses.Transitive Re ->
-  RelationClasses.Symmetric Re ->
-  SubstUnivPreserving Re ->
-  red Σ Γ u v ->
-  eq_context_upto Re Δ Γ ->
-  ∑ v', red Σ Δ u v' *
-        eq_term_upto_univ Re Re v' v.
-Proof.
-  intros.
-  induction X.
-  - exists u; split; eauto. reflexivity.
-  - destruct IHX as [v' [redv' eqv']].
-    destruct (red1_eq_context_upto_r Σ Re Γ Δ P N); auto.
-    destruct p.
-    destruct (red1_eq_term_upto_univ_r Σ Re Re Δ P x v'); auto.
-    + intros ? ?; eauto.
-    + exists x0. intuition auto.
-      * transitivity v'; auto.
-      * transitivity x; auto.
-Qed.
-
-Lemma red_conv_ctx {cf:checker_flags} {Σ Γ Γ' T U} :
-  wf Σ.1 ->
-  red Σ.1 Γ T U ->
-  conv_context Σ Γ Γ' ->
-  ∑ t u, red Σ.1 Γ' T t * red Σ.1 Γ' U u * eq_term (global_ext_constraints Σ) t u.
-Proof.
-  intros wfΣ r c.
-  apply conv_context_red_context in c as (Δ & Δ' & (red & red') & eqc); auto.
-  eapply red_red_ctx in r as [t' [redt' red't']]. 3:eauto. 2:auto.
-  symmetry in eqc.
-  destruct (red_eq_context_upto_r Σ.1 _ Δ Δ' T t' _ _ _ _ redt' eqc) as [T' [redΔ' eq1]].
-  destruct (red_eq_context_upto_r Σ.1 _ Δ Δ' U t' _ _ _ _ red't' eqc) as [U' [red'Δ' eq2]].
-  exists T', U'; split; [split|]; auto.
-  + eapply PCUICConfluence.red_red_ctx; eauto.
-  + eapply PCUICConfluence.red_red_ctx; eauto.
-  + transitivity t'; auto. now symmetry.
-Qed. *)
 
 Lemma congr_cumul_prod_l : forall `{checker_flags} Σ Γ na na' M1 M2 N1,
   wf Σ.1 ->
@@ -253,8 +180,8 @@ Proof.
   - now inversion l.
   - depelim r. solve_discr.
   - depelim r. solve_discr.
-  - todoeta.
-  - todoeta.
+  
+  
 Qed.
 
 Lemma cumul_Sort_Prod_inv {cf:checker_flags} Σ Γ s na dom codom :
@@ -268,22 +195,6 @@ Proof.
     + solve_discr.
     + eapply IHcumul. reflexivity.
     + eapply IHcumul. reflexivity.
-  - destruct e as [nb [A [f [π [e1 e2]]]]].
-    assert (π = ε).
-    { clear - e1. induction π in f, e1 |- *.
-      1: reflexivity.
-      all: solve [
-        cbn in e1 ; apply IHπ in e1 as ? ; subst ;
-        cbn in e1 ; discriminate
-      ].
-    } subst.
-    cbn in e1. subst.
-    cbn in *.
-    (* TODO It seems a bit hard to prove
-      Might be we need a stronger hypothesis on any eta expansion of a sort.
-    *)
-    todoeta.
-  - todoeta.
 Qed.
 
 Lemma cumul_Sort_l_inv {cf:checker_flags} Σ Γ s T :
@@ -295,8 +206,6 @@ Proof.
   - depelim r. solve_discr.
   - destruct IHcumul as [s' [redv leq]].
     exists s'. split; auto. now eapply red_step with v.
-  - todoeta.
-  - todoeta.
 Qed.
 
 Lemma cumul_Sort_r_inv {cf:checker_flags} Σ Γ s T :
@@ -308,8 +217,6 @@ Proof.
   - destruct IHcumul as [s' [redv leq]].
     exists s'. split; auto. now eapply red_step with v.
   - depelim r. solve_discr.
-  - todoeta. (* The lemma is now WRONG *)
-  - todoeta.
 Qed.
 
 Lemma cumul_LetIn_l_inv {cf:checker_flags} (Σ : global_env_ext) Γ na b B codom T :
@@ -352,8 +259,6 @@ Proof.
     destruct IHcumul as [codom' [reddom' leq]] => //.
     exists codom'; intuition auto.
     now eapply red_step with v.
-  - todoeta.
-  - todoeta.
 Qed.
 
 Lemma cumul_LetIn_r_inv {cf:checker_flags} (Σ : global_env_ext) Γ na b B codom T :
@@ -396,8 +301,6 @@ Proof.
       rewrite -{1 2}(subst_empty 0 b).
       eapply (untyped_substitution_red _ _ [vdef na b B] []); auto.
       repeat constructor.
-  - todoeta.
-  - todoeta.
 Qed.
 
 Lemma conv_Prod_l_inv {cf:checker_flags} (Σ : global_env_ext) Γ na dom codom T :
@@ -423,8 +326,8 @@ Proof.
   - destruct IHconv as [na' [dom' [codom' [[reddom' eqdom'] leq]]]] => //.
     exists na', dom', codom'; intuition auto.
     now eapply red_step with v.
-  - todoeta.
-  - todoeta.
+  
+  
 Qed.
 
 Lemma cumul_Prod_l_inv {cf:checker_flags} (Σ : global_env_ext) Γ na dom codom T :
@@ -450,8 +353,6 @@ Proof.
   - destruct IHcumul as [na' [dom' [codom' [[reddom' eqdom'] leq]]]] => //.
     exists na', dom', codom'; intuition auto.
     now eapply red_step with v.
-  - todoeta.
-  - todoeta.
 Qed.
 
 Lemma conv_Prod_r_inv {cf:checker_flags} (Σ : global_env_ext) Γ na' dom' codom' T :
@@ -477,8 +378,6 @@ Proof.
       destruct IHconv as [na [dom [codom [[reddom' eqdom'] leq]]]].
       eexists _, _, _; intuition eauto.
       transitivity N2; eauto. symmetry; eapply red_conv; auto.
-  - todoeta.
-  - todoeta.
 Qed.
 
 Lemma cumul_Prod_r_inv {cf:checker_flags} (Σ : global_env_ext) Γ na' dom' codom' T :
@@ -504,8 +403,6 @@ Proof.
       destruct IHcumul as [na [dom [codom [[reddom' eqdom'] leq]]]].
       eexists _, _, _; intuition eauto.
       transitivity N2; eauto. eapply red_cumul_inv; auto.
-  - todoeta.
-  - todoeta.
 Qed.
 
 Lemma cumul_Prod_Sort_inv {cf:checker_flags} Σ Γ s na dom codom :
@@ -518,8 +415,6 @@ Proof.
     + eapply IHcumul; reflexivity.
     + eapply IHcumul; reflexivity.
   - depelim r. solve_discr.
-  - todoeta.
-  - todoeta.
 Qed.
 
 Lemma cumul_Prod_Prod_inv {cf:checker_flags} (Σ : global_env_ext) Γ na na' dom dom' codom codom' :
@@ -552,8 +447,6 @@ Proof.
       split; auto.
       eapply cumul_trans with N2; auto.
       now eapply red1_red, red_cumul_inv in r.
-  - todoeta.
-  - todoeta.
 Qed.
 
 Section Inversions.
@@ -813,8 +706,8 @@ Section Inversions.
         * assumption.
       + assumption.
     - eapply IHh. eapply isArity_red1. all: eassumption.
-    - todoeta.
-    - todoeta.
+    
+    
   Qed.
 
   Lemma invert_cumul_arity_l :
@@ -835,8 +728,8 @@ Section Inversions.
           -- eassumption.
         * assumption.
       + assumption.
-    - todoeta.
-    - todoeta.
+    
+    
   Qed.
 
   Lemma invert_cumul_prod_l Γ C na A B :
@@ -1174,8 +1067,8 @@ Proof.
       intuition auto. apply cumul_trans with N2. 1-2: auto.
       eapply cumul_red_r; eauto. reflexivity.
 
-  - todoeta.
-  - todoeta.
+  
+  
 
 Qed.
 
@@ -1211,16 +1104,6 @@ Section Inversions.
        econstructor. assumption.
     - eapply cumul_red_r ; try eassumption.
       econstructor. assumption.
-    - eapply cumul_eta_l. 2: eassumption.
-      destruct e as [na [A [g [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (coApp f ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
-    - eapply cumul_eta_r. 1: eassumption.
-      destruct e as [na [A [g [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (coApp f ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
   Qed.
 
   Lemma conv_App_r {Γ f x y} :
@@ -1236,16 +1119,6 @@ Section Inversions.
       econstructor. assumption.
     - eapply conv_red_r ; eauto.
       econstructor. assumption.
-    - eapply conv_eta_l. 2: eassumption.
-      destruct e as [na [A [g [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (coApp f ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
-    - eapply conv_eta_r. 1: eassumption.
-      destruct e as [na [A [g [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (coApp f ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
   Qed.
 
   Lemma conv_Prod_l:
@@ -1262,16 +1135,6 @@ Section Inversions.
       econstructor. assumption.
     - eapply conv_red_r ; eauto.
       econstructor. assumption.
-    - eapply conv_eta_l. 2: eassumption.
-      destruct e as [? [A [g [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (Prod_l na B ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
-    - eapply conv_eta_r. 1: eassumption.
-      destruct e as [? [A [g [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (Prod_l na' B ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
   Qed.
 
   Lemma conv_Prod_r  :
@@ -1288,16 +1151,6 @@ Section Inversions.
       econstructor. assumption.
     - eapply conv_red_r ; eauto.
       econstructor. assumption.
-    - eapply conv_eta_l. 2: eassumption.
-      destruct e as [? [? [? [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (Prod_r na A ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
-    - eapply conv_eta_r. 1: eassumption.
-      destruct e as [? [? [? [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (Prod_r na A ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
   Qed.
 
   Lemma cumul_Prod_l:
@@ -1314,16 +1167,6 @@ Section Inversions.
       econstructor. assumption.
     - eapply cumul_red_r ; eauto.
       econstructor. assumption.
-    - eapply cumul_eta_l. 2: eassumption.
-      destruct e as [? [A [g [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (Prod_l na B ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
-    - eapply cumul_eta_r. 1: eassumption.
-      destruct e as [? [A [g [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (Prod_l na' B ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
   Qed.
 
   Lemma cumul_Prod_r :
@@ -1340,16 +1183,6 @@ Section Inversions.
       econstructor. assumption.
     - eapply cumul_red_r ; try eassumption.
       econstructor. assumption.
-    - eapply cumul_eta_l. 2: eassumption.
-      destruct e as [? [? [? [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (Prod_r na A ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
-    - eapply cumul_eta_r. 1: eassumption.
-      destruct e as [? [? [? [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (Prod_r na A ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
   Qed.
 
   Global Instance conv_cum_refl {leq Γ} :
@@ -1437,16 +1270,6 @@ Section Inversions.
       constructor. assumption.
     - eapply cumul_red_r ; eauto.
       constructor. assumption.
-    - eapply cumul_eta_l. 2: eassumption.
-      destruct e as [? [? [? [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (Case (ind, n) p brs ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
-    - eapply cumul_eta_r. 1: eassumption.
-      destruct e as [? [? [? [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (Case (ind, n) p brs ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
   Qed.
 
   Lemma cumul_Proj_c :
@@ -1461,16 +1284,6 @@ Section Inversions.
       econstructor. assumption.
     - eapply cumul_red_r ; try eassumption.
       econstructor. assumption.
-    - eapply cumul_eta_l. 2: eassumption.
-      destruct e as [? [? [? [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (Proj p ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
-    - eapply cumul_eta_r. 1: eassumption.
-      destruct e as [? [? [? [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (Proj p ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
   Qed.
 
   Lemma conv_App_l :
@@ -1487,16 +1300,6 @@ Section Inversions.
       econstructor. assumption.
     - eapply conv_red_r ; eauto.
       econstructor. assumption.
-    - eapply conv_eta_l. 2: eassumption.
-      destruct e as [? [? [? [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (App x ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
-    - eapply conv_eta_r. 1: eassumption.
-      destruct e as [? [? [? [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (App x ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
   Qed.
 
   Lemma App_conv :
@@ -1537,16 +1340,6 @@ Section Inversions.
       constructor. assumption.
     - eapply conv_red_r ; eauto.
       constructor. assumption.
-    - eapply conv_eta_l. 2: eassumption.
-      destruct e as [? [? [? [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (Case_p (ind, n) c brs ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
-    - eapply conv_eta_r. 1: eassumption.
-      destruct e as [? [? [? [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (Case_p (ind, n) c brs ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
   Qed.
 
   Lemma conv_Case_c :
@@ -1565,16 +1358,6 @@ Section Inversions.
       constructor. assumption.
     - eapply conv_red_r ; eauto.
       constructor. assumption.
-    - eapply conv_eta_l. 2: eassumption.
-      destruct e as [? [? [? [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (Case (ind, n) p brs ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
-    - eapply conv_eta_r. 1: eassumption.
-      destruct e as [? [? [? [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (Case (ind, n) p brs ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
   Qed.
 
   Lemma conv_Case_one_brs :
@@ -1599,16 +1382,6 @@ Section Inversions.
       intuition eauto.
     - eapply conv_red_r ; eauto.
       constructor. apply OnOne2_app. constructor. simpl.
-      intuition eauto.
-    - eapply conv_eta_l. 2: eassumption.
-      destruct e as [? [? [? [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (Case_brs (ind, n) p c _ _ _ ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
-    - eapply conv_eta_r. 1: eassumption.
-      destruct e as [? [? [? [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (Case_brs (ind, n) p c _ _ _ ε)).
-      rewrite 2!zipc_stack_cat. cbn.
       intuition eauto.
   Qed.
 
@@ -1655,16 +1428,6 @@ Section Inversions.
       econstructor. assumption.
     - eapply conv_red_r ; try eassumption.
       econstructor. assumption.
-    - eapply conv_eta_l. 2: eassumption.
-      destruct e as [? [? [? [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (Proj _ ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
-    - eapply conv_eta_r. 1: eassumption.
-      destruct e as [? [? [? [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (Proj _ ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
   Qed.
 
   Lemma conv_Fix_one_type :
@@ -1693,16 +1456,6 @@ Section Inversions.
       intuition eauto.
     - eapply conv_red_r ; eauto.
       constructor. apply OnOne2_app. constructor. simpl.
-      intuition eauto.
-    - eapply conv_eta_l. 2: eassumption.
-      destruct e as [? [? [? [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (Fix_mfix_ty _ _ _ _ _ _ ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
-    - eapply conv_eta_r. 1: eassumption.
-      destruct e as [? [? [? [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (Fix_mfix_ty _ _ _ _ _ _ ε)).
-      rewrite 2!zipc_stack_cat. cbn.
       intuition eauto.
   Qed.
 
@@ -1794,16 +1547,6 @@ Section Inversions.
              ++ eapply upto_eq_impl. 3: assumption.
                 all: apply eq_universe_refl.
           -- apply All2_same. intros. intuition reflexivity.
-  - eapply conv_eta_l. 2: eassumption.
-    destruct e as [? [? [? [π [? ?]]]]]. subst.
-    eexists _, _, _, (stack_cat π (Fix_mfix_bd _ _ _ _ _ _ ε)).
-    rewrite 2!zipc_stack_cat. cbn.
-    intuition eauto.
-  - eapply conv_eta_r. 1: eassumption.
-    destruct e as [? [? [? [π [? ?]]]]]. subst.
-    eexists _, _, _, (stack_cat π (Fix_mfix_bd _ _ _ _ _ _ ε)).
-    rewrite 2!zipc_stack_cat. cbn.
-    intuition eauto.
   Qed.
 
   Lemma conv_Fix_bodies :
@@ -1926,16 +1669,6 @@ Section Inversions.
       econstructor. assumption.
     - eapply conv_red_r ; try eassumption.
       econstructor. assumption.
-    - eapply conv_eta_l. 2: eassumption.
-      destruct e as [? [? [? [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (Lambda_ty _ _ ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
-    - eapply conv_eta_r. 1: eassumption.
-      destruct e as [? [? [? [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (Lambda_ty _ _ ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
   Qed.
 
   Lemma conv_Lambda_r :
@@ -1950,16 +1683,6 @@ Section Inversions.
       econstructor. assumption.
     - eapply conv_red_r ; try eassumption.
       econstructor. assumption.
-    - eapply conv_eta_l. 2: eassumption.
-      destruct e as [? [? [? [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (Lambda_tm _ _ ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
-    - eapply conv_eta_r. 1: eassumption.
-      destruct e as [? [? [? [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (Lambda_tm _ _ ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
   Qed.
 
   Lemma cumul_LetIn_bo :
@@ -1976,16 +1699,6 @@ Section Inversions.
       econstructor. assumption.
     - eapply cumul_red_r ; try eassumption.
       econstructor. assumption.
-    - eapply cumul_eta_l. 2: eassumption.
-      destruct e as [? [? [? [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (LetIn_in _ _ _ ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
-    - eapply cumul_eta_r. 1: eassumption.
-      destruct e as [? [? [? [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (LetIn_in _ _ _ ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
   Qed.
 
   Lemma cumul_Lambda_r :
@@ -2002,16 +1715,6 @@ Section Inversions.
       econstructor. assumption.
     - eapply cumul_red_r ; try eassumption.
       econstructor. assumption.
-    - eapply cumul_eta_l. 2: eassumption.
-      destruct e as [? [? [? [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (Lambda_tm _ _ ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
-    - eapply cumul_eta_r. 1: eassumption.
-      destruct e as [? [? [? [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (Lambda_tm _ _ ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
   Qed.
 
   Lemma cumul_it_mkLambda_or_LetIn :
@@ -2074,16 +1777,6 @@ Section Inversions.
       assumption.
     - econstructor 2; tea. now constructor.
     - econstructor 3; tea. now constructor.
-    - eapply conv_eta_l. 2: eassumption.
-      destruct e as [? [? [? [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (LetIn_bd _ _ _ ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
-    - eapply conv_eta_r. 1: eassumption.
-      destruct e as [? [? [? [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (LetIn_bd _ _ _ ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
   Qed.
 
   Lemma conv_LetIn_ty Γ na na' ty ty' t u :
@@ -2095,16 +1788,6 @@ Section Inversions.
       assumption.
     - econstructor 2; tea. now constructor.
     - econstructor 3; tea. now constructor.
-    - eapply conv_eta_l. 2: eassumption.
-      destruct e as [? [? [? [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (LetIn_ty _ _ _ ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
-    - eapply conv_eta_r. 1: eassumption.
-      destruct e as [? [? [? [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (LetIn_ty _ _ _ ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
   Qed.
 
   Lemma conv_LetIn_bo :
@@ -2119,16 +1802,6 @@ Section Inversions.
       econstructor. assumption.
     - eapply conv_red_r ; try eassumption.
       econstructor. assumption.
-    - eapply conv_eta_l. 2: eassumption.
-      destruct e as [? [? [? [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (LetIn_in _ _ _ ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
-    - eapply conv_eta_r. 1: eassumption.
-      destruct e as [? [? [? [π [? ?]]]]]. subst.
-      eexists _, _, _, (stack_cat π (LetIn_in _ _ _ ε)).
-      rewrite 2!zipc_stack_cat. cbn.
-      intuition eauto.
   Qed.
 
   Lemma conv_cum_LetIn leq Γ na1 na2 t1 t2 A1 A2 u1 u2 :
@@ -2305,10 +1978,6 @@ Proof.
     eapply red_conv_conv; eauto.
   - eapply substitution_untyped_let_red in r. 3:eauto. all:eauto with wf.
     eapply red_conv_conv_inv; eauto.
-  - eapply conv_eta_l. 2: eassumption.
-    eapply eta_expands_subst. assumption.
-  - eapply conv_eta_r. 1: eassumption.
-    eapply eta_expands_subst. assumption.
 Qed.
 
 Lemma substitution_conv `{cf : checker_flags} (Σ : global_env_ext) Γ Γ' Γ'' s M N :
@@ -2323,10 +1992,6 @@ Proof.
     eapply red_conv_conv; eauto.
   - eapply substitution_let_red in r. 4:eauto. all:eauto with wf.
     eapply red_conv_conv_inv; eauto.
-  - eapply conv_eta_l. 2: eassumption.
-    eapply eta_expands_subst. assumption.
-  - eapply conv_eta_r. 1: eassumption.
-    eapply eta_expands_subst. assumption.
 Qed.
 
 Lemma red_subst_conv {cf:checker_flags} (Σ : global_env_ext) Γ Δ Γ' s s' b : wf Σ ->
@@ -2492,10 +2157,6 @@ Proof.
     eapply eq_term_subst_instance; tea.
   - econstructor 2. 1: eapply red1_subst_instance; cbn; eauto. eauto.
   - econstructor 3. 1: eauto. eapply red1_subst_instance; cbn; eauto.
-  - eapply conv_eta_l. 2: eauto.
-    eapply eta_expands_subst_instance_constr. assumption.
-  - eapply conv_eta_r. 1: eauto.
-    eapply eta_expands_subst_instance_constr. assumption.
 Qed.
 
 Lemma context_relation_subst_instance {cf:checker_flags} {Σ} Γ Δ u u' : 

@@ -999,18 +999,6 @@ Proof.
     + cbn. congruence.
 Qed.
 
-Lemma eta_expands_nl :
-  forall u v,
-    eta_expands u v ->
-    eta_expands (nl u) (nl v).
-Proof.
-  intros u v [na [A [f [π [? ?]]]]]. subst.
-  rewrite 2!nl_zipc. cbn.
-  eexists _, _, _, _. intuition eauto.
-  f_equal. f_equal. f_equal.
-  rewrite nl_lift. reflexivity.
-Qed.
-
 Lemma nl_cumul {cf:checker_flags} :
   forall Σ Γ A B,
     Σ ;;; Γ |- A <= B ->
@@ -1025,10 +1013,6 @@ Proof.
     destruct Σ. apply nl_red1. assumption.
   - eapply cumul_red_r. 1: eassumption.
     destruct Σ. apply nl_red1. assumption.
-  - eapply cumul_eta_l. 2: eassumption.
-    eapply eta_expands_nl. assumption.
-  - eapply cumul_eta_r. 1: eassumption.
-    eapply eta_expands_nl. assumption.
 Qed.
 
 Lemma nl_instantiate_params :

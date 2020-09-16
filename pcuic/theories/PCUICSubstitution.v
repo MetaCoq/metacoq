@@ -2163,17 +2163,6 @@ Proof.
     rewrite map_app. cbn. reflexivity.
 Qed.
 
-Lemma eta_expands_subst :
-  forall s k u v,
-    eta_expands u v ->
-    eta_expands (subst s k u) (subst s k v).
-Proof.
-  intros s k u v [na [A [t [π [e1 e2]]]]]. subst.
-  rewrite 2!subst_zipc. cbn.
-  rewrite commut_lift_subst.
-  eexists _, _, _, _. intuition reflexivity.
-Qed.
-
 Lemma substitution_untyped_cumul {cf:checker_flags} Σ Γ Γ' Γ'' s M N :
   wf Σ.1 -> untyped_subslet Γ s Γ' ->
   Σ ;;; Γ ,,, Γ' ,,, Γ'' |- M <= N ->
@@ -2186,10 +2175,6 @@ Proof.
     eapply red_cumul_cumul; eauto.
   - eapply substitution_untyped_let_red in r. 3:eauto. all:eauto with wf.
     eapply red_cumul_cumul_inv; eauto.
-  - eapply cumul_eta_l. 2: eassumption.
-    eapply eta_expands_subst. assumption.
-  - eapply cumul_eta_r. 1: eassumption.
-    eapply eta_expands_subst. assumption.
 Qed.
 
 Lemma substitution_cumul0 {cf:checker_flags} Σ Γ na t u u' a : wf Σ.1 ->
@@ -2228,10 +2213,6 @@ Proof.
     eapply red_cumul_cumul; eauto.
   - eapply substitution_let_red in r. 4:eauto. all:eauto with wf.
     eapply red_cumul_cumul_inv; eauto.
-  - eapply cumul_eta_l. 2: eassumption.
-    eapply eta_expands_subst. assumption.
-  - eapply cumul_eta_r. 1: eassumption.
-    eapply eta_expands_subst. assumption.
 Qed.
 
 (** Old substitution lemma without lets *)
@@ -2771,6 +2752,7 @@ Proof.
   specialize (thm Ht). now rewrite !subst_empty in thm.
 Qed.
 
+(* TODO Move to liftsubst *)
 
 Lemma subst_context_comm s s' Γ : 
   subst_context s 0 (subst_context s' 0 Γ) =

@@ -24,8 +24,6 @@ Proof.
       exists v', v''. intuition auto. now eapply red_step.
     + destruct IHX as (v' & v'' & (redv & redv') & leqv).
       exists v', v''. intuition auto. now eapply red_step.
-    + todoeta.
-    + todoeta.
   - intros [v [v' [[redv redv'] Hleq]]]. apply red_alt in redv. apply red_alt in redv'.
     apply clos_rt_rt1n in redv.
     apply clos_rt_rt1n in redv'.
@@ -84,7 +82,6 @@ Proof.
   - eauto.
 Qed.
 
-
 Lemma conv_cumul2 {cf:checker_flags} Σ Γ t u :
   Σ ;;; Γ |- t = u -> (Σ ;;; Γ |- t <= u) * (Σ ;;; Γ |- u <= t).
 Proof.
@@ -96,12 +93,6 @@ Proof.
   - destruct IHX as [H1 H2]. split.
     * econstructor 3; eassumption.
     * econstructor 2; eassumption.
-  - destruct IHX as [H1 H2]. split.
-    * econstructor 4; eassumption.
-    * econstructor 5; eassumption.
-  - destruct IHX as [H1 H2]. split.
-    * econstructor 5; eassumption.
-    * econstructor 4; eassumption.
 Qed.
 
 Lemma conv_cumul {cf:checker_flags} Σ Γ t u :
@@ -211,8 +202,6 @@ Proof.
   - eapply red_conv_conv.
     + eapply red1_red in r. eauto.
     + eauto.
-  - eapply conv_eta_r. all: eassumption.
-  - eapply conv_eta_l. all: eassumption.
 Qed.
 
 Lemma conv_alt_red {cf : checker_flags} {Σ : global_env_ext} {Γ : context} {t u : term} :
@@ -226,8 +215,6 @@ Proof.
       exists x, x0; intuition auto. eapply red_step; eauto.
     * destruct IHX as [? [? [? ?]]].
       exists x, x0; intuition auto. eapply red_step; eauto.
-    * todoeta.
-    * todoeta.
   - destruct 1 as [? [? [[? ?] ?]]].
     eapply red_conv_conv; eauto.
     eapply red_conv_conv_inv; eauto. now constructor.
@@ -278,12 +265,4 @@ Proof.
     econstructor. assumption.
   - eapply cumul_red_r ; try eassumption.
     econstructor. assumption.
-  - eapply cumul_eta_l. 2: eassumption.
-    destruct e as [na [A [f [π [? ?]]]]]. subst.
-    exists na, A, f, (stack_cat π (App x ε)).
-    rewrite 2!zipc_stack_cat. cbn. intuition reflexivity.
-  - eapply cumul_eta_r. 1: eassumption.
-    destruct e as [na [A [f [π [? ?]]]]]. subst.
-    exists na, A, f, (stack_cat π (App x ε)).
-    rewrite 2!zipc_stack_cat. cbn. intuition reflexivity.
 Qed.

@@ -164,8 +164,6 @@ Proof.
   - constructor. now apply leq_term_eq_term_prop_impl in l.
   - econstructor 2; eauto.
   - econstructor 3; eauto.
-  - todoeta.
-  - todoeta.  
 Qed.
 
 Lemma conv_cumul_prop Σ Γ A B : 
@@ -177,8 +175,6 @@ Proof.
   - constructor. now apply eq_term_eq_term_prop_impl in e.
   - econstructor 2; eauto.
   - econstructor 3; eauto.
-  - todoeta.
-  - todoeta.  
 Qed.
 
 Lemma cumul_prop_alt Σ Γ T U :
@@ -808,7 +804,7 @@ Proof.
   eapply eq_term_prop_mkApps_inv in eq' => //.
   eapply All2_impl; eauto. now constructor.
 Qed.
-  
+
 Instance cumul_prop_sym' Σ Γ : wf Σ.1 -> CRelationClasses.Symmetric (cumul_prop Σ Γ).
 Proof.
   now intros wf x y; eapply cumul_prop_sym.

@@ -780,20 +780,6 @@ Proof.
     rewrite map_app. cbn. reflexivity.
 Qed.
 
-Lemma weakening_eta_expands `{checker_flags} :
-  forall u v n k,
-    eta_expands u v ->
-    eta_expands (lift n k u) (lift n k v).
-Proof.
-  intros u v n k [na [A [t [π [e1 e2]]]]]. subst.
-  rewrite 2!lift_zipc. cbn.
-  replace (S (#|stack_context π| + k))
-    with ((#|stack_context π| + k) + 1)
-    by lia.
-  rewrite <- permute_lift by lia.
-  eexists _, _, _, _. intuition reflexivity.
-Qed.
-
 Lemma weakening_cumul `{CF:checker_flags} Σ Γ Γ' Γ'' M N :
   wf Σ.1 ->
   Σ ;;; Γ ,,, Γ' |- M <= N ->
@@ -805,10 +791,6 @@ Proof.
     econstructor 2; eauto.
   - eapply weakening_red1 in r; auto.
     econstructor 3; eauto.
-  - eapply cumul_eta_l. 2: eauto.
-    eapply weakening_eta_expands. assumption.
-  - eapply cumul_eta_r. 1: eauto.
-    eapply weakening_eta_expands. assumption.
 Qed.
 
 Lemma destArity_it_mkProd_or_LetIn ctx ctx' t :
@@ -1189,10 +1171,6 @@ Proof.
     econstructor 2 ; eauto.
   - eapply weakening_red1 in r ; auto.
     econstructor 3 ; eauto.
-  - eapply conv_eta_l. 2: eassumption.
-    eapply weakening_eta_expands. assumption.
-  - eapply conv_eta_r. 1: eassumption.
-    eapply weakening_eta_expands. assumption.
 Qed.
 
 Lemma weaken_wf_local {cf:checker_flags} {Σ Γ } Δ : 

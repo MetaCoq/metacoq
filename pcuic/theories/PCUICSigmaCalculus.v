@@ -1602,8 +1602,6 @@ Proof.
   - eapply cumul_red_r.
     + eassumption.
     + eapply red1_rename. all: try eassumption.
-  - todoeta. (* eapply cumul_eta_l. *)
-  - todoeta.
 Qed.
 
 Lemma typing_rename_prop : env_prop
@@ -1813,8 +1811,7 @@ Proof.
       * right. eexists. eapply ihB. assumption.
     + eapply cumul_rename. all: try eassumption.
       apply hf.
-      
-Admitted.
+Abort.
 
 Lemma typing_rename :
   forall Σ Γ Δ f t A,
@@ -1823,10 +1820,11 @@ Lemma typing_rename :
     Σ ;;; Γ |- t : A ->
     Σ ;;; Δ |- rename f t : rename f A.
 Proof.
-  intros Σ Γ Δ f t A hΣ hf h.
+Abort.
+  (* intros Σ Γ Δ f t A hΣ hf h.
   revert Σ hΣ Γ t A h Δ f hf.
   apply typing_rename_prop.
-Qed.
+Qed. *)
 
 End Renaming.
 

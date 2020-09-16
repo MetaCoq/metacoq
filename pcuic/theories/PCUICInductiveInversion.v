@@ -2014,9 +2014,6 @@ Proof.
       eapply cumul_red_r; eauto. reflexivity.
       constructor; pcuic.
       constructor. now symmetry.
-
-  - todoeta.
-  - todoeta.
 Qed.
 
 Lemma positive_cstr_arg_subst {cf:checker_flags} {Σ : global_env_ext} {ind mdecl idecl Γ t u u'} :

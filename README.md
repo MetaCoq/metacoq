@@ -71,12 +71,9 @@ basic `OCaml` `4.07.1` compiler, and puts you in the right environment
 
 Once in the right switch, you can install `Coq` and the `Equations` package using:
 
-    # opam pin add coq 8.11.0
-    # opam pin add coq-equations 1.2.1+8.11
+    # opam install . --deps-only
 
-Pinning the packages prevents opam from trying to upgrade it afterwards, in
-this switch. If the commands are successful you should have `coq`
-available (check with `coqc -v`). 
+If the commands are successful you should have `coq` available (check with `coqc -v`). 
 
 Installing from GitHub repository (for developers)
 ------------------------------
@@ -107,7 +104,7 @@ To compile the library, you need:
   for the `master` branch).
 - `OCaml` (tested with `4.06.1` and `4.07.1`, beware that `OCaml 4.06.0`
   can produce linking errors on some platforms)
-- [`Equations 1.2.1`](http://mattam82.github.io/Coq-Equations/)
+- [`Equations 1.2.3`](http://mattam82.github.io/Coq-Equations/)
 
 When using `opam` you can get those using `opam install --deps-only .`.
 

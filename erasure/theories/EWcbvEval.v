@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 Set Warnings "-notation-overridden".
 
-From Coq Require Import Arith Bool List Program.
+From Coq Require Import Arith Bool List Program Lia.
 From Equations Require Import Equations.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst ECSubst ETyping.
@@ -52,12 +52,11 @@ Definition cunfold_fix (mfix : mfixpoint term) (idx : nat) :=
   | None => None
   end.
 
-Definition isStuckFix t args :=
+Definition isStuckFix t (args : list term) :=
   match t with
   | tFix mfix idx =>
     match cunfold_fix mfix idx with
-    | Some (narg, fn) =>
-      ~~ is_nth_constructor_app_or_box narg args
+    | Some (narg, fn) => #|args| <=? narg
     | None => false
     end
   | _ => false
@@ -118,8 +117,7 @@ Section Wcbv.
       eval f (mkApps (tFix mfix idx) argsv) ->
       eval a av ->
       cunfold_fix mfix idx = Some (narg, fn) ->
-      #|argsv| = narg ->
-      is_constructor_app_or_box av ->
+      narg <= #|argsv| ->
       eval (tApp (mkApps fn argsv) av) res ->
       eval (tApp f a) res
 
@@ -128,7 +126,7 @@ Section Wcbv.
       eval f (mkApps (tFix mfix idx) argsv) ->
       eval a av ->
       cunfold_fix mfix idx = Some (narg, fn) ->
-      (#|argsv| <> narg \/ (#|argsv| = narg /\ ~~is_constructor_app_or_box av)) ->
+      (#|argsv| < narg) ->
       eval (tApp f a) (tApp (mkApps (tFix mfix idx) argsv) av)
 
   (** CoFix-case unfolding *)
@@ -285,24 +283,13 @@ Section Wcbv.
         apply (value_stuck_fix _ [av]); [easy|].
         cbn.
         destruct (cunfold_fix mfix idx) as [(? & ?)|]; [|easy].
-        noconf H1.
-        destruct H2 as [|(<- & ?)]; [|easy].
-        unfold is_nth_constructor_app_or_box.
-        now rewrite (proj2 (nth_error_None _ _));
-          cbn in *.
+        noconf H1. destruct narg; auto. lia.
       + easy.
       + eapply value_stuck_fix; [now apply Forall_app_inv|].
         unfold isStuckFix in *.
         destruct (cunfold_fix mfix idx) as [(? & ?)|]; [|easy].
-        noconf H1.
-        unfold is_nth_constructor_app_or_box in *.
-        destruct H2 as [|(<- & ?)]; [|now rewrite nth_error_snoc].
-        destruct (Nat.ltb_spec #|argsv| narg).
-        * rewrite (proj2 (nth_error_None _ _)); [|easy].
-          rewrite app_length.
-          cbn.
-          easy.
-        * now rewrite nth_error_app1.
+        noconf H1. rewrite app_length; simpl.
+        eapply Nat.leb_le. lia.
 
     - destruct (mkApps_elim f' [a']).
       eapply value_mkApps_inv in IHeval1 => //.
@@ -440,27 +427,25 @@ Proof.
     + apply IHev1 in ev'1.
       apply mkApps_eq_inj in ev'1; try easy.
       depelim ev'1.
-      noconf H2.
+      noconf H1; noconf H2.
       subst.
       apply IHev2 in ev'2; subst.
-      rewrite H4 in H.
+      rewrite H3 in H.
       now noconf H.
     + apply IHev1 in ev'1.
       apply mkApps_eq_inj in ev'1; try easy.
       depelim ev'1.
+      noconf H1.
       noconf H2.
-      noconf H3.
       apply IHev2 in ev'2.
       subst.
-      rewrite H4 in H.
-      noconf H.
-      destruct H5 as [|(_ & ?)]; [easy|].
-      now apply negb_true_iff in H.
+      rewrite H3 in H.
+      noconf H. lia.
     + apply IHev1 in ev'1.
       subst.
-      rewrite isFixApp_mkApps in H2 by easy.
+      rewrite isFixApp_mkApps in H1 by easy.
       cbn in *.
-      now rewrite orb_true_r in H2.
+      now rewrite orb_true_r in H1.
     + easy.
   - depelim ev'.
     + apply IHev1 in ev'1; solve_discr.
@@ -471,9 +456,7 @@ Proof.
       noconf ev'1.
       subst.
       rewrite H1 in H.
-      noconf H.
-      destruct H0 as [|(? & ?)]; [easy|].
-      now apply negb_true_iff in H0.
+      noconf H. lia.
     + apply IHev1 in ev'1.
       apply IHev2 in ev'2.
       now apply mkApps_eq_inj in ev'1 as (ev'1 & <-).

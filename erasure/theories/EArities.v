@@ -518,14 +518,12 @@ Qed.
 
 Lemma Is_type_eval (Σ : global_env_ext) t v:
   wf Σ ->
+  axiom_free Σ ->
   eval Σ t v ->
   isErasable Σ [] t ->
   isErasable Σ [] v.
 Proof.
   intros; eapply Is_type_red. eauto.
-  eapply wcbeval_red; eauto.
   red in X1. destruct X1 as [T [HT _]].
-  eapply typecheck_closed in HT as [_ HT]; auto. 
-  apply andP in HT. now destruct HT.
-  eauto.
+  eapply wcbeval_red; eauto. assumption.
 Qed.

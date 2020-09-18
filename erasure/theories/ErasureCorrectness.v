@@ -1042,8 +1042,7 @@ Proof.
               now rewrite Nat.add_0_r in Hbod.
               eauto with pcuic.
               now eapply PCUICClosed.subject_closed in Ht.
-           ++ apply Forall2_length in H4.
-              congruence.
+           ++ apply Forall2_length in H4. rewrite <- e2. lia.
            ++ unfold isConstruct_app in *.
               destruct (decompose_app av) eqn:EE.
               assert (E2 : fst (decompose_app av) = t3) by now rewrite EE.
@@ -1057,12 +1056,7 @@ Proof.
                 as [ (? & ? & ? & ? & [] & ? & ? & ?) | (? & ? & ? & ? & ?) ].
               ** subst.
                  now apply eval_to_mkApps_tBox_inv in ev_arg as ->.
-              ** subst. inv H5.
-                 +++ destruct x6 using rev_ind; cbn - [EAstUtils.decompose_app]. reflexivity.
-                     unfold is_constructor_app_or_box.
-                     rewrite emkApps_snoc at 1.
-                     now rewrite EAstUtils.decompose_app_mkApps.
-                 +++ now apply eval_to_mkApps_tBox_inv in ev_arg as ->.
+              ** subst. apply H2.
               ** eauto.
               ** eapply subject_reduction; last first.
                  eapply wcbeval_red; last first.
@@ -1071,7 +1065,6 @@ Proof.
                  eauto.
                  eauto.
                  eauto.
-           ++ eauto.
         -- cbn. destruct p. destruct p.
            eapply (erases_subst Σ [] (PCUICLiftSubst.fix_context mfix) [] dbody (fix_subst mfix)) in e3; cbn; eauto.
            ++ eapply subslet_fix_subst. now eapply wf_ext_wf. all: eassumption.
@@ -1161,7 +1154,12 @@ Proof.
               rewrite e0.
               reflexivity.
            ++ eapply Forall2_length in H5.
-              destruct o as [|(<- & ?)]; [left; congruence|right].
+              destruct o as [|(<- & ?)]. noconf e.
+              rewrite <-H5, <- e2. revert H1.
+              assert(#|argsv| < rargd || #|argsv| > rarg d).
+              
+              congruence. lia.
+              [left; congruence|right].
               split; [congruence|].
               eapply subject_reduction_eval in t; eauto.
               injection e. intros <- eq.

@@ -1089,17 +1089,16 @@ Section WeakNormalization.
     now move: (check_recursivity_kind_inj typed ck).
   Qed.
 
-  Lemma fix_app_is_constructor mfix idx args ty narg fn : 
+  Lemma fix_app_is_constructor {mfix idx args ty narg fn} : 
     axiom_free Σ ->
-    All (wh_normal Σ []) args ->
     Σ;;; [] |- mkApps (tFix mfix idx) args : ty ->
     unfold_fix mfix idx = Some (narg, fn) ->
     match nth_error args narg return Type with
-    | Some a => isConstruct_app a
+    | Some a => wh_normal Σ [] a -> isConstruct_app a
     | None => ∑ na dom codom, Σ ;;; [] |- tProd na dom codom <= ty
     end.
   Proof.
-    intros axfree allnorm typed unf.
+    intros axfree typed unf.
     eapply inversion_mkApps in typed as (? & ? & ?); eauto.
     eapply inversion_Fix in t as (? & ? & ? & ? & ? & ? & ?); auto.
     eapply typing_spine_strengthen in t0; eauto.
@@ -1109,7 +1108,7 @@ Section WeakNormalization.
     eapply (wf_fixpoint_spine wfΣ) in t0; eauto.
     rewrite /is_constructor. destruct (nth_error args (rarg x0)) eqn:hnth.
     destruct_sigma t0. destruct t0.
-    eapply nth_error_all in allnorm; eauto.
+    intros norm.
     eapply whnf_ind_finite in t0; eauto.
     assumption.
   Qed.
@@ -1212,10 +1211,9 @@ Section WeakNormalization.
       eapply red_fix; eauto.
       assert (Σ ;;; [] |- mkApps (tFix mfix idx) (argsv ++ [av]) : B {0 := av}).
       { rewrite -mkApps_nested /=. eapply type_App; eauto. }
-      eapply fix_app_is_constructor in X0; eauto.
+      epose proof (fix_app_is_constructor axfree X0 e); eauto.
       rewrite /is_constructor.
       destruct nth_error eqn:hnth => //.
-      eapply nth_error_None in hnth; len in hnth; simpl in *. lia.
       assert (All (closedn 0) (argsv ++ [av])%list).
       { eapply subject_closed in X0; eauto.
         rewrite closedn_mkApps in X0.
@@ -1225,9 +1223,11 @@ Section WeakNormalization.
       { eapply All_app_inv; [|constructor; [|constructor]].
         eapply eval_to_value in He1.
         eapply value_mkApps_inv in He1 as [[[-> Hat]|[vh vargs]]|[hstuck vargs]] => //.
-        now eapply eval_to_value in He2. }        
+        now eapply eval_to_value in He2. }
       solve_all.
-      now eapply value_whnf. }
+      eapply nth_error_all in X3; eauto. simpl in X3.
+      destruct X3 as [cl val]. eapply X1, value_whnf; auto.
+      eapply nth_error_None in hnth; len in hnth; simpl in *. lia. }      
     redt _; eauto.
 
   - apply inversion_App in Ht; auto; destruct_sigma Ht.

@@ -16,6 +16,20 @@ From Equations Require Import Equations.
 
 Local Ltac inv H := inversion H; subst.
 
+Ltac solve_discr :=
+  try progress (prepare_discr; finish_discr; cbn[mkApps] in * );
+  try match goal with
+    H : mkApps _ _ = mkApps ?f ?l |- _ =>
+    eapply mkApps_eq_inj in H as [? ?]; [|easy|easy]; subst; try intuition congruence; try noconf H
+  | H : ?t = mkApps ?f ?l |- _ =>
+    change t with (mkApps t []) in H ;
+    eapply mkApps_eq_inj in H as [? ?]; [|easy|easy]; subst; try intuition congruence; try noconf H
+  | H : mkApps ?f ?l = ?t |- _ =>
+    change t with (mkApps t []) in H ;
+    eapply mkApps_eq_inj in H as [? ?]; [|easy|easy]; subst; try intuition congruence; try noconf H
+  end.
+
+
 (** * Weak-head call-by-value evaluation strategy.
 
   The [wcbveval] inductive relation specifies weak cbv evaluation.  It
@@ -398,6 +412,33 @@ Section Wcbv.
         eapply Nat.leb_le in stuck; lia.
   Qed.
 
+  Lemma stuck_fix_value_inv argsv mfix idx narg fn :
+    value (mkApps (tFix mfix idx) argsv) -> 
+    cunfold_fix mfix idx = Some (narg, fn) ->
+    (All value argsv * isStuckFix (tFix mfix idx) argsv).
+  Proof.
+    remember (mkApps (tFix mfix idx) argsv) as tfix.
+    intros hv; revert Heqtfix.
+    induction hv using value_values_ind; intros eq; subst.
+    unfold atom in H. destruct argsv using rev_case => //.
+    split; auto. simpl. simpl in H. rewrite H0 //.
+    rewrite -mkApps_nested /= in H. depelim H.
+    solve_discr => //.
+    solve_discr.
+  Qed.
+    
+  Lemma stuck_fix_value_args argsv mfix idx narg fn :
+    value (mkApps (tFix mfix idx) argsv) ->
+    cunfold_fix mfix idx = Some (narg, fn) ->
+    #|argsv| <= narg.
+  Proof.
+    intros val unf.
+    eapply stuck_fix_value_inv in val; eauto.
+    destruct val.
+    simpl in i. rewrite unf in i.
+    now eapply Nat.leb_le in i.
+  Qed.
+
   Derive Signature for eval.
 
   Lemma value_final e : value e -> eval e e.
@@ -488,16 +529,15 @@ Section Wcbv.
     rewrite PeanoNat.Nat.add_0_r in Hf. now move/andP: Hf.
     discriminate.
   Qed.
-  
-  Lemma closed_unfold_fix_cunfold_eq mfix idx : 
+
+  Lemma closed_fix_substl_subst_eq {mfix idx d} : 
     closed (tFix mfix idx) ->
-    unfold_fix mfix idx = cunfold_fix mfix idx.
+    nth_error mfix idx = Some d ->
+    subst0 (fix_subst mfix) (dbody d) = substl (fix_subst mfix) (dbody d).
   Proof.  
-    unfold unfold_fix, cunfold_fix.
-    destruct (nth_error mfix idx) eqn:Heq => //.
     move=> /= Hf; f_equal; f_equal.
     have clfix : All (closedn 0) (fix_subst mfix).
-    { clear Heq d idx.
+    { clear idx.
       solve_all.
       unfold fix_subst.
       move: #|mfix| => n.
@@ -507,11 +547,22 @@ Section Wcbv.
     move: (fix_subst mfix) (dbody d) clfix.
     clear; induction fix_subst => Hfix /= //.
     now rewrite subst_empty.
-    move=> Ha; dependent elimination Ha as [All_cons ca cf].
+    move=> Ha; depelim Ha.
     simpl in *.
+    intros hnth.
     rewrite -IHfix_subst => //.
-    rewrite (subst_app_decomp [wildcard]). simpl.
+    rewrite (subst_app_decomp [_]). simpl.
     f_equal. rewrite lift_closed // closed_subst //.
+  Qed.
+
+  Lemma closed_unfold_fix_cunfold_eq mfix idx : 
+    closed (tFix mfix idx) ->
+    unfold_fix mfix idx = cunfold_fix mfix idx.
+  Proof.
+    unfold unfold_fix, cunfold_fix.
+    destruct (nth_error mfix idx) eqn:Heq => //.
+    intros cl; f_equal; f_equal.
+    now rewrite (closed_fix_substl_subst_eq cl).
   Qed.
   
   Lemma closed_unfold_cofix_cunfold_eq mfix idx : 

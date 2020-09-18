@@ -307,15 +307,14 @@ Section Wcbv.
         rewrite orb_true_r orb_true_l in H0. easy.
   Qed.
 
-  Lemma closed_unfold_fix_cunfold_eq mfix idx : 
+  Lemma closed_fix_substl_subst_eq {mfix idx d} : 
     closed (tFix mfix idx) ->
-    unfold_fix mfix idx = cunfold_fix mfix idx.
+    nth_error mfix idx = Some d ->
+    subst0 (fix_subst mfix) (dbody d) = substl (fix_subst mfix) (dbody d).
   Proof.  
-    unfold unfold_fix, cunfold_fix.
-    destruct (nth_error mfix idx) eqn:Heq => //.
     move=> /= Hf; f_equal; f_equal.
     have clfix : All (closedn 0) (fix_subst mfix).
-    { clear Heq d idx.
+    { clear idx.
       solve_all.
       unfold fix_subst.
       move: #|mfix| => n.
@@ -327,9 +326,20 @@ Section Wcbv.
     now rewrite subst_empty.
     move=> Ha; depelim Ha.
     simpl in *.
+    intros hnth.
     rewrite -IHfix_subst => //.
     rewrite (subst_app_decomp [_]). simpl.
     f_equal. rewrite lift_closed // closed_subst //.
+  Qed.
+
+  Lemma closed_unfold_fix_cunfold_eq mfix idx : 
+    closed (tFix mfix idx) ->
+    unfold_fix mfix idx = cunfold_fix mfix idx.
+  Proof.
+    unfold unfold_fix, cunfold_fix.
+    destruct (nth_error mfix idx) eqn:Heq => //.
+    intros cl; f_equal; f_equal.
+    now rewrite (closed_fix_substl_subst_eq cl).
   Qed.
 
   Lemma closed_unfold_cofix_cunfold_eq mfix idx : 
@@ -376,6 +386,106 @@ Proof.
 Qed.
 
 Derive NoConfusionHom for EAst.global_decl.
+
+
+Lemma Forall_Forall2_refl :
+  forall (A : Type) (R : A -> A -> Prop) (l : list A),
+  Forall (fun x : A => R x x) l -> Forall2 R l l.
+Proof.
+  induction 1; constructor; auto.
+Qed.
+
+Lemma value_head_spec_impl t :
+  implb (value_head t) (~~ (isLambda t || isFixApp t || isBox t)).
+Proof.
+  destruct t; simpl; intuition auto; eapply implybT.
+Qed.
+
+Derive Signature for Forall.
+
+Lemma eval_stuck_fix args argsv mfix idx :
+  Forall2 eval args argsv ->
+  isStuckFix (tFix mfix idx) argsv ->
+  eval (mkApps (tFix mfix idx) args) (mkApps (tFix mfix idx) argsv).
+Proof.
+  revert argsv.
+  induction args as [|a args IH] using MCList.rev_ind;
+  intros argsv all stuck.
+  - apply Forall2_length in all.
+    destruct argsv; [|easy].
+    now apply eval_atom.
+  - destruct argsv as [|? ? _] using MCList.rev_ind;
+      [apply Forall2_length in all; rewrite app_length in all; now cbn in *|].
+    apply Forall2_app_r in all as (all & ev_a).
+    rewrite <- !mkApps_nested.
+    cbn in *.
+    destruct (cunfold_fix mfix idx) as [(? & ?)|] eqn:cuf; [|easy].
+    eapply eval_fix_value.
+    + apply IH; [easy|].
+      destruct (cunfold_fix mfix idx) as [(? & ?)|]; [|easy].
+      rewrite app_length /= in stuck.
+      eapply Nat.leb_le in stuck. eapply Nat.leb_le. lia.
+    + easy.
+    + easy.
+    + rewrite app_length /= in stuck.
+      eapply Nat.leb_le in stuck; lia.
+Qed.
+
+Lemma stuck_fix_value_inv argsv mfix idx narg fn :
+  value (mkApps (tFix mfix idx) argsv) -> 
+  cunfold_fix mfix idx = Some (narg, fn) ->
+  (Forall value argsv /\ isStuckFix (tFix mfix idx) argsv).
+Proof.
+  remember (mkApps (tFix mfix idx) argsv) as tfix.
+  intros hv; revert Heqtfix.
+  induction hv using value_values_ind; intros eq; subst.
+  unfold atom in H. destruct argsv using rev_case => //.
+  split; auto. simpl. simpl in H. rewrite H0 //.
+  rewrite -mkApps_nested /= in H. depelim H.
+  solve_discr => //.
+  solve_discr.
+Qed.
+  
+Lemma stuck_fix_value_args argsv mfix idx narg fn :
+  value (mkApps (tFix mfix idx) argsv) ->
+  cunfold_fix mfix idx = Some (narg, fn) ->
+  #|argsv| <= narg.
+Proof.
+  intros val unf.
+  eapply stuck_fix_value_inv in val; eauto.
+  destruct val.
+  simpl in H0. rewrite unf in H0.
+  now eapply Nat.leb_le in H0.
+Qed.
+
+Lemma value_final e : value e -> eval e e.
+Proof.
+  induction 1 using value_values_ind; simpl; auto using value.
+  - apply Forall_Forall2_refl in H1 as H2.
+    move/implyP: (value_head_spec_impl t).
+    move/(_ H) => Ht.
+    induction l using rev_ind. simpl.
+    destruct t; try discriminate.
+    * repeat constructor.
+    * repeat constructor.
+    * rewrite -mkApps_nested.
+      eapply Forall_app in H0 as [Hl Hx]. depelim Hx.
+      eapply Forall_app in H1 as [Hl' Hx']. depelim Hx'.
+      eapply Forall2_app_inv_r in H2 as [Hl'' [Hx'' [? [? ?]]]].
+      depelim H3. depelim H4.
+      eapply eval_app_cong; auto.
+      eapply IHl; auto.
+      now eapply Forall_Forall2.
+      destruct l using rev_ind; auto.
+      eapply value_head_nApp in H.
+      rewrite isFixApp_mkApps => //.
+      rewrite -mkApps_nested; simpl.
+      rewrite orb_false_r.
+      destruct t; auto.
+  - destruct f; try discriminate.
+    apply Forall_Forall2_refl in H0.
+    now apply eval_stuck_fix.
+Qed.
 
 Unset SsrRewrite.
 Lemma eval_deterministic {t v v'} :

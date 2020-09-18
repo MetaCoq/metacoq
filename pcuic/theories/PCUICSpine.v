@@ -8,7 +8,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICSigmaCalculus 
      PCUICUnivSubst PCUICTyping PCUICUnivSubstitution
      PCUICCumulativity PCUICPosition PCUICEquality PCUICNameless
-     PCUICNormal PCUICInversion PCUICCumulativity PCUICReduction
+     PCUICInversion PCUICCumulativity PCUICReduction
      PCUICConfluence PCUICConversion PCUICContextConversion
      PCUICParallelReductionConfluence PCUICWeakeningEnv
      PCUICClosed PCUICSubstitution
@@ -1743,7 +1743,7 @@ Proof.
         repeat constructor. now rewrite !subst_empty.
       * rewrite subst_app_simpl.
         move: (context_subst_length _ _ _ sps).
-        now autorewrite with len => <-.  
+        now autorewrite with len => <-.
       * rewrite subst_app_simpl.
         move: (context_subst_length _ _ _ sps).
         now autorewrite with len => <-.

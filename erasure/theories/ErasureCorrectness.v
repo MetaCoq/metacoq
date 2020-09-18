@@ -1,14 +1,16 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program ZArith.
+From Coq Require Import Bool String List Program.Basics Program.Tactics ZArith.
 From MetaCoq.Template Require Import config utils monad_utils.
 From MetaCoq.Erasure Require Import ELiftSubst ETyping EWcbvEval Extract Prelim
      ESubstitution EInversion EArities.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
   PCUICWeakening PCUICSubstitution PCUICArities
   PCUICWcbvEval PCUICSR  PCUICInversion
-  PCUICUnivSubstitution PCUICElimination (* PCUICContextConversion *)
-  PCUICUnivSubst PCUICWeakeningEnv.
+  PCUICUnivSubstitution PCUICElimination PCUICCanonicity
+  PCUICUnivSubst PCUICWeakeningEnv PCUICCumulativity.
+
+Require Import Equations.Prop.DepElim.
 
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -22,8 +24,6 @@ Module PA := PCUICAst.
 Module P := PCUICWcbvEval.
 
 Local Existing Instance config.extraction_checker_flags.
-
-From MetaCoq.PCUIC Require Import PCUICCumulativity.
 
 (** ** Prelim on arities and proofs *)
 
@@ -581,6 +581,8 @@ Proof.
   apply Ee.eval_to_value in ev.
   now apply value_app_inv in ev.
 Qed.
+
+Transparent PCUICParallelReductionConfluence.construct_cofix_discr.
 
 Lemma erases_correct Σ t T t' v Σ' :
   extraction_pre Σ ->
@@ -1161,8 +1163,31 @@ Proof.
            ++ eapply Forall2_length in H5.
               destruct o as [|(<- & ?)]; [left; congruence|right].
               split; [congruence|].
-
-              todo "contradiction: av must be a constructor when axiom free".
+              eapply subject_reduction_eval in t; eauto.
+              injection e. intros <- eq.
+              assert (Σ ;;; [] |- mkApps (tFix mfix idx) (argsv ++ [a]) : PCUICLiftSubst.subst1 a 0 x1).
+              { rewrite <-mkApps_nested; simpl. eapply type_App; eauto. }
+              eapply PCUICValidity.inversion_mkApps in X as (fixty & tyfix & sp); auto.
+              eapply inversion_Fix in tyfix as (? & ? & ? & ? & ? & ? & ?); auto.
+              rewrite e4 in nth. injection nth; intros ->.
+              eapply PCUICSpine.typing_spine_strengthen in sp; eauto.
+              eapply wf_fixpoint_spine in sp; eauto.
+              2:{ eapply nth_error_all in a0; eauto. eapply a0. }
+              rewrite eq in sp. rewrite nth_error_app_ge in sp; try lia.
+              rewrite Nat.sub_diag in sp. simpl in sp.
+              destruct sp as [ind [u [indargs [tya ck]]]].
+              eapply wf_ext_wf in extr_env_wf'0.
+              pose proof (eval_ind_canonical Σ _ _ _ _ extr_env_axiom_free'0 tya _ H0).
+              revert H1 H6.
+              unfold negb, isConstruct_app, PCUICParallelReductionConfluence.construct_cofix_discr, PCUICInductives.head.
+              destruct (decompose_app av) as [hd tl] eqn:da. simpl.
+              destruct hd; try congruence. intros _ _.
+              eapply subject_reduction_eval in tya; eauto.
+              eapply decompose_app_inv in da. subst av.
+              eapply typing_cofix_coind in tya; auto.
+              pose proof (check_recursivity_kind_inj Σ ck tya).
+              now discriminate.
+              
         -- exists E.tBox.
            apply eval_to_mkApps_tBox_inv in H3 as ?; subst.
            split; [|eauto using Ee.eval].

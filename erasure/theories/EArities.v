@@ -4,7 +4,7 @@ From MetaCoq.Template Require Import config utils monad_utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils 
   PCUICClosed PCUICTyping PCUICWcbvEval PCUICLiftSubst PCUICInversion PCUICArities
   PCUICSR PCUICPrincipality PCUICGeneration PCUICSubstitution PCUICElimination
-  PCUICContextConversion PCUICConversion.
+  PCUICContextConversion PCUICConversion PCUICCanonicity.
 
 From Equations Require Import Equations.
 Local Open Scope string_scope.

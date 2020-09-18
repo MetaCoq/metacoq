@@ -61,35 +61,6 @@ Lemma isWfArity_prod_inv:
     unfold snoc, app_context in *. rewrite <- app_assoc in *. eassumption.
 Qed.
 
-Lemma isArity_subst:
-  forall x2 : term, forall s n, isArity x2 -> isArity (subst s n x2).
-Proof.
-  induction x2; cbn in *; try tauto; intros; eauto.
-Qed.
-
-Lemma isArity_typing_spine:
-  forall (Σ : global_env_ext) (Γ : context) (L : list term) (T x4 : term),
-    wf Σ -> wf_local Σ Γ ->
-    Is_conv_to_Arity Σ Γ x4 -> typing_spine Σ Γ x4 L T -> Is_conv_to_Arity Σ Γ T.
-Proof.
-  intros.
-  depind X1.
-  - destruct H as (? & ? & ?). sq.
-    eapply PCUICCumulativity.red_cumul_inv in H.
-    eapply (cumul_trans _ _ _ _ _) in c; tea.
-    eapply invert_cumul_arity_l in c; eauto.
-  - eapply IHX1.
-    destruct H as (? & ? & ?). sq.
-    eapply PCUICCumulativity.red_cumul_inv in H.
-    eapply (cumul_trans _ _ _ _ _) in c; tea.
-    eapply invert_cumul_arity_l in c; eauto.
-    destruct c as (? & H1 & H2). sq.
-    eapply invert_red_prod in H1 as (? & ? & [] & ?); eauto; subst.
-    exists (x2 {0 := hd}). split; sq.
-    eapply (PCUICSubstitution.substitution_red Σ Γ [_] [] [_]). eauto. econstructor. econstructor.
-    rewrite subst_empty. eassumption. eauto. cbn. eassumption. cbn in H2.
-    now eapply isArity_subst.
-Qed.
 
 Lemma inds_nth_error ind u l n t :
   nth_error (inds ind u l) n = Some t -> exists n, t = tInd {| inductive_mind := ind ; inductive_ind := n |} u.

@@ -131,7 +131,7 @@ Program Definition erase_template_program (p : Ast.program)
   : EnvCheck (EAst.global_context * EAst.term) :=
   let Σ := (trans_global (Ast.empty_ext p.1)).1 in
   G <- check_wf_env_only_univs Σ ;;
-  Σ' <- wrap_error (empty_ext Σ) "erasure of the global context" (SafeErasureFunction.erase_global Σ _) ;;
+  Σ' <- (SafeErasureFunction.erase_global Σ _) ;;
   t <- wrap_error (empty_ext Σ) ("During erasure of " ++ string_of_term (trans p.2)) (SafeErasureFunction.erase (empty_ext Σ) _ nil (trans p.2) _);;
   ret (Monad:=envcheck_monad) (Σ', t).
 
@@ -149,7 +149,6 @@ Next Obligation.
 Qed.
 
 Local Open Scope string_scope.
-
 
 (** This uses the checker-based erasure *)
 Program Definition erase_and_print_template_program_check {cf : checker_flags} (p : Ast.program)

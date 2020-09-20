@@ -51,15 +51,32 @@ Proof.
   intros. apply CorrectDecl. constructor. todo "assumed correct global declaration".
 Defined.
 
+Definition assume_fresh id env : EnvCheck (∥ fresh_global id env ∥).
+Proof.
+  left. todo "assumed fresh".
+Defined.
+
+Program Definition compute_udecl (id : string) (Σ : global_env) (HΣ : ∥ wf Σ ∥) G
+  (HG : is_graph_of_uctx G (global_uctx Σ)) (udecl : universes_decl)
+  : EnvCheck (∑ uctx', gc_of_uctx (uctx_of_udecl udecl) = Some uctx' /\
+               ∥ on_udecl Σ udecl ∥) :=
+    match gc_of_uctx (uctx_of_udecl udecl) with
+    | Some uctx => ret (uctx; conj _ _)
+    | None => raise (empty_ext Σ, IllFormedDecl id (Msg "constraints not satisfiable"))
+    end.
+  Next Obligation.
+    constructor. todo "assume udecl is ok".
+  Defined.
+
 Program Fixpoint check_wf_env_only_univs (Σ : global_env)
   : EnvCheck (∑ G, (is_graph_of_uctx G (global_uctx Σ) /\ ∥ wf Σ ∥)) :=
   match Σ with
   | nil => ret (init_graph; _)
   | d :: Σ =>
     G <- check_wf_env_only_univs Σ ;;
-    check_fresh d.1 Σ ;;
+    assume_fresh d.1 Σ ;;
     let udecl := universes_decl_of_decl d.2 in
-    uctx <- check_udecl (string_of_kername d.1) Σ _ G.π1 (proj1 G.π2) udecl ;;
+    uctx <- compute_udecl (string_of_kername d.1) Σ _ G.π1 (proj1 G.π2) udecl ;;
     let G' := add_uctx uctx.π1 G.π1 in
     assume_wf_decl (Σ, udecl) _ _ G' _ d.1 d.2 ;;
     match udecl with
@@ -127,26 +144,41 @@ Program Fixpoint check_wf_env_only_univs (Σ : global_env)
     assumption.
   Qed.
 
+From MetaCoq.Erasure Require Import SafeErasureFunction.
+
 Program Definition erase_template_program (p : Ast.program)
   : EnvCheck (EAst.global_context * EAst.term) :=
-  let Σ := (trans_global (Ast.empty_ext p.1)).1 in
-  G <- check_wf_env_only_univs Σ ;;
-  Σ' <- (SafeErasureFunction.erase_global Σ _) ;;
-  t <- wrap_error (empty_ext Σ) ("During erasure of " ++ string_of_term (trans p.2)) (SafeErasureFunction.erase (empty_ext Σ) _ nil (trans p.2) _);;
+  let Σ := 
+    (* To get timing info, use 
+      SafeErasureFunction.time "Translating global environment to PCUIC" (fun _ => *)
+    (trans_global (Ast.empty_ext p.1)).1 in
+  t <- 
+  (* SafeErasureFunction.time "Erasing main term" (fun _ =>  *)
+  wrap_error (empty_ext Σ) ("During erasure of " ++ string_of_term (trans p.2)) 
+    (SafeErasureFunction.erase (empty_ext Σ) _ nil (trans p.2) _);;
+  Σ' <-
+  (* SafeErasureFunction.time "Erasing environment" (fun _ => *)
+   (SafeErasureFunction.erase_global (SafeErasureFunction.term_global_deps t) Σ _) ;;
   ret (Monad:=envcheck_monad) (Σ', t).
 
 Next Obligation.
   unfold trans_global.
-  simpl. unfold wf_ext, empty_ext. simpl.
-  unfold on_global_env_ext. destruct H0. constructor.
-  split; auto. simpl. todo "on_udecl on empty universe context".
+  simpl. unfold wf_ext, empty_ext. simpl. 
+  unfold on_global_env_ext. constructor.
+  split; auto. simpl. todo "global env is correct".
+  simpl. todo "on_udecl empty".
 Qed.
 
 Next Obligation.
   unfold trans_global.
   simpl. unfold wf_ext, empty_ext. simpl.
-  unfold on_global_env_ext. destruct H0. todo "assuming well-typedness".
+  unfold on_global_env_ext. todo "assuming well-typedness".
 Qed.
+
+Next Obligation.
+  sq. todo "assuming wf env".
+Qed.
+
 
 Local Open Scope string_scope.
 

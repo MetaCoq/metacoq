@@ -12,6 +12,10 @@ src/mSetWeakList.mli
 src/mSetWeakList.ml
 src/eqdepFacts.mli
 src/eqdepFacts.ml
+src/orderedTypeEx.mli
+src/orderedTypeEx.ml
+src/orderedTypeAlt.mli
+src/orderedTypeAlt.ml
 
 src/ssrbool.ml
 src/ssrbool.mli

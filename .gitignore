@@ -395,3 +395,7 @@ vs.mli
 *.v.timing
 time-of-build.log
 time-of-build-pretty.log
+erasure/src/orderedTypeAlt.ml
+erasure/src/orderedTypeAlt.mli
+erasure/src/orderedTypeEx.ml
+erasure/src/orderedTypeEx.mli

@@ -624,15 +624,12 @@ Definition erase_one_inductive_body (Σ : global_env_ext) (wfΣ : ∥ wf_ext Σ 
   let '(params, arity) := (decty : context * term) in
   (* type <- erase Σ wfΣ [] wf_local_nil oib.(ind_type) ;; *)
   ctors <- monad_map (A:=(ident * term) * nat) (fun '((x, y), z) => y' <- erase Σ wfΣ arities y _;; ret (x, y', z)) oib.(ind_ctors);;
-  (* FIXME not used! let projctx := arities ,,, params ,, vass nAnon oib.(ind_type) in *)
-  projs <- monad_map (fun '(x, y) => y' <- erase Σ wfΣ [] (y : term) _;; ret (x, y')) oib.(ind_projs);;
+  (* Projection types are types, hence always erased *)
+  projs <- monad_map (fun '(x, y) => ret (x, EAst.tBox)) oib.(ind_projs);;
   ret {| E.ind_name := oib.(ind_name);
          E.ind_kelim := oib.(ind_kelim);
          E.ind_ctors := ctors;
          E.ind_projs := projs |}.
-Next Obligation.
-  intros. todo "welltyped threading".
-Qed.
 Next Obligation.
   intros. todo "welltyped threading".
 Qed.
@@ -646,16 +643,18 @@ Program Definition erase_mutual_inductive_body Σ wfΣ
   ret {| E.ind_npars := mib.(ind_npars);
          E.ind_bodies := bodies; |}.
 
-Program Fixpoint erase_global_decls Σ : ∥ wf Σ ∥ -> typing_result E.global_declarations := fun wfΣ =>
+Program Fixpoint erase_global_decls Σ : ∥ wf Σ ∥ -> EnvCheck E.global_declarations := fun wfΣ =>
   match Σ with
   | [] => ret []
-  | (kn, ConstantDecl cb) :: Σ =>
-    cb' <- erase_constant_body (Σ, cst_universes cb) _ cb _;;
-    Σ' <- erase_global_decls Σ _;;
+  | (kn, ConstantDecl cb) :: Σ' =>
+    cb' <- wrap_error (Σ', cst_universes cb) ("Erasure of " ++ string_of_kername kn)
+      (erase_constant_body (Σ', cst_universes cb) _ cb _);;
+    Σ' <- erase_global_decls Σ' _;;
     ret ((kn, E.ConstantDecl cb') :: Σ')
-  | (kn, InductiveDecl mib) :: Σ =>
-    mib' <- erase_mutual_inductive_body (Σ, ind_universes mib) _ mib ;;
-    Σ' <- erase_global_decls Σ _;;
+  | (kn, InductiveDecl mib) :: Σ' =>
+    mib' <- wrap_error (Σ', ind_universes mib) ("Erasure of " ++ string_of_kername kn) 
+      (erase_mutual_inductive_body (Σ', ind_universes mib) _ mib) ;;
+    Σ' <- erase_global_decls Σ' _;;
     ret ((kn, E.InductiveDecl mib') :: Σ')
   end.
 Next Obligation.
@@ -688,7 +687,7 @@ Program Definition erase_global Σ : ∥wf Σ∥ -> _:=
 
 
 Lemma erase_global_correct Σ (wfΣ : ∥ wf Σ∥) Σ' :
-  erase_global Σ wfΣ = Checked Σ' ->
+  erase_global Σ wfΣ = CorrectDecl Σ' ->
   erases_global Σ Σ'.
 Proof.
   induction Σ in wfΣ, Σ' |- *; intros; sq.
@@ -699,6 +698,7 @@ Proof.
       unfold bind in E2. cbn in E2. repeat destruct ?; try congruence.
       inv E2. econstructor.
       all:todo "finish".
+    + all:todo "finish".
 (*    * unfold optM in E0. destruct ?; try congruence.
         -- unfold erases_constant_body.
           cbn. cbn in *.

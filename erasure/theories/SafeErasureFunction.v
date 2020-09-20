@@ -614,34 +614,21 @@ Definition lift_opt_typing {A} (a : option A) (e : type_error) : typing_result A
   | None => raise e
   end.
 
-Program
-Definition erase_one_inductive_body (Σ : global_env_ext) (wfΣ : ∥ wf_ext Σ ∥) npars
-  (arities : context)
-           (oib : one_inductive_body) : typing_result E.one_inductive_body :=
+Definition erase_one_inductive_body (oib : one_inductive_body) : E.one_inductive_body :=
+  (* Projection and constructor types are types, hence always erased *)
+  let ctors := map (A:=(ident * term) * nat) (fun '((x, y), z) => (x, EAst.tBox, z)) oib.(ind_ctors) in
+  let projs := map (fun '(x, y) => (x, EAst.tBox)) oib.(ind_projs) in
+  {| E.ind_name := oib.(ind_name);
+     E.ind_kelim := oib.(ind_kelim);
+     E.ind_ctors := ctors;
+     E.ind_projs := projs |}.
 
-  decty <- lift_opt_typing (decompose_prod_n_assum [] npars oib.(ind_type))
-        (NotAnInductive oib.(ind_type)) ;;
-  let '(params, arity) := (decty : context * term) in
-  (* type <- erase Σ wfΣ [] wf_local_nil oib.(ind_type) ;; *)
-  ctors <- monad_map (A:=(ident * term) * nat) (fun '((x, y), z) => y' <- erase Σ wfΣ arities y _;; ret (x, y', z)) oib.(ind_ctors);;
-  (* Projection types are types, hence always erased *)
-  projs <- monad_map (fun '(x, y) => ret (x, EAst.tBox)) oib.(ind_projs);;
-  ret {| E.ind_name := oib.(ind_name);
-         E.ind_kelim := oib.(ind_kelim);
-         E.ind_ctors := ctors;
-         E.ind_projs := projs |}.
-Next Obligation.
-  intros. todo "welltyped threading".
-Qed.
-
-Program Definition erase_mutual_inductive_body Σ wfΣ
-           (mib : mutual_inductive_body)
-: typing_result E.mutual_inductive_body :=
+Definition erase_mutual_inductive_body (mib : mutual_inductive_body) : E.mutual_inductive_body :=
   let bds := mib.(ind_bodies) in
   let arities := arities_context bds in
-  bodies <- monad_map (erase_one_inductive_body Σ wfΣ mib.(ind_npars) arities) bds ;;
-  ret {| E.ind_npars := mib.(ind_npars);
-         E.ind_bodies := bodies; |}.
+  let bodies := map erase_one_inductive_body bds in
+  {| E.ind_npars := mib.(ind_npars);
+     E.ind_bodies := bodies; |}.
 
 Program Fixpoint erase_global_decls Σ : ∥ wf Σ ∥ -> EnvCheck E.global_declarations := fun wfΣ =>
   match Σ with
@@ -652,8 +639,7 @@ Program Fixpoint erase_global_decls Σ : ∥ wf Σ ∥ -> EnvCheck E.global_decl
     Σ' <- erase_global_decls Σ' _;;
     ret ((kn, E.ConstantDecl cb') :: Σ')
   | (kn, InductiveDecl mib) :: Σ' =>
-    mib' <- wrap_error (Σ', ind_universes mib) ("Erasure of " ++ string_of_kername kn) 
-      (erase_mutual_inductive_body (Σ', ind_universes mib) _ mib) ;;
+    let mib' := erase_mutual_inductive_body mib in
     Σ' <- erase_global_decls Σ' _;;
     ret ((kn, E.InductiveDecl mib') :: Σ')
   end.
@@ -670,12 +656,6 @@ Next Obligation.
   sq. inv X. apply X0.
 Qed.
 
-
-Next Obligation.
-  sq. split. cbn.
-  eapply PCUICWeakeningEnv.wf_extends. eauto. eexists [_]; reflexivity.
-  now inversion X; subst.
-Qed.
 Next Obligation.
   sq. eapply PCUICWeakeningEnv.wf_extends. eauto. eexists [_]; reflexivity.
 Qed.

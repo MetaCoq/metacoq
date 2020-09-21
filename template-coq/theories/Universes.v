@@ -200,7 +200,7 @@ Module NoPropLevel.
 
   Definition eq : t -> t -> Prop := Logic.eq.
 
-  Definition eq_equiv : RelationClasses.Equivalence eq := _.
+  Definition eq_equiv : Equivalence eq := _.
 
   Definition eq_dec (l1 l2 : t) : {l1 = l2}+{l1 <> l2}.
   Proof.
@@ -1064,7 +1064,7 @@ Module ConstraintType.
   Inductive t_ : Set := Lt | Le | Eq.
   Definition t := t_.
   Definition eq : t -> t -> Prop := eq.
-  Definition eq_equiv : RelationClasses.Equivalence eq := _.
+  Definition eq_equiv : Equivalence eq := _.
 
   Inductive lt_ : t -> t -> Prop :=
   | LtLe : lt_ Lt Le
@@ -1109,7 +1109,7 @@ End ConstraintType.
 Module UnivConstraint.
   Definition t : Set := Level.t * ConstraintType.t * Level.t.
   Definition eq : t -> t -> Prop := eq.
-  Definition eq_equiv : RelationClasses.Equivalence eq := _.
+  Definition eq_equiv : Equivalence eq := _.
 
   Definition make l1 ct l2 : t := (l1, ct, l2).
 
@@ -1376,12 +1376,6 @@ Context {cf:checker_flags}.
 
 
   (** **** Lemmas about eq and leq **** *)
-
-  (** We show that equality and inequality of universes form an equivalence and
-      a partial order (one w.r.t. the other).
-      We use classes from [CRelationClasses] for consistency with the rest of the
-      development which uses relations in [Type] rather than [Prop].
-      These definitions hence use [Prop <= Type]. *)
 
   Global Instance eq_universe0_refl φ : Reflexive (eq_universe0 φ).
   Proof.

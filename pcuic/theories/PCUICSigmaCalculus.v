@@ -402,7 +402,7 @@ Proof.
   eapply inst_ext_closed; eauto.
   intros.
   unfold ids, subst_consn. simpl.
-  destruct (equiv_inv _ _ (nth_error_Some' s x) H). rewrite e.
+  destruct (snd (nth_error_Some' s x) H). rewrite e.
   subst s.
   rewrite /to_extended_list /to_extended_list_k in e.
   rewrite List.rev_length in cl, H. autorewrite with len in *.

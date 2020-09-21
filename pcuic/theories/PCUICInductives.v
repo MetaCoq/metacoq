@@ -483,7 +483,7 @@ Proof.
   destruct X as [_ _ _ on_projs_all on_projs].
   eapply forall_nth_error_Alli.
   intros.
-  pose proof (equiv_inv _ _ (nth_error_Some' (ind_projs idecl) (context_assumptions (cshape_args cs) - S i))).
+  pose proof (snd (nth_error_Some' (ind_projs idecl) (context_assumptions (cshape_args cs) - S i))).
   apply X. eapply nth_error_Some_length in H. 
     autorewrite with len in H. simpl in H; lia.
 Qed.

@@ -59,9 +59,6 @@ Section Principality.
       destruct ih as [? ?]
     end.
 
-  Arguments equiv {A B}.
-  Arguments equiv_inv {A B}.
-
   Lemma cumul_sort_confluence {Γ A u v} :
     Σ ;;; Γ |- A <= tSort u ->
     Σ ;;; Γ |- A <= tSort v ->

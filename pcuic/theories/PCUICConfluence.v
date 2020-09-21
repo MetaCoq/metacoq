@@ -1977,7 +1977,7 @@ Section RedConfluence.
     red Σ Γ t u ->
     trans_clos pred1_rel (Γ, t) (Γ, u).
   Proof.
-    move/(equiv _ _ (red_alt _ _ _ _)) => tu.
+    move/(fst (red_alt _ _ _ _)) => tu.
     induction tu.
     constructor. now eapply red1_pred1 in r.
     constructor. pcuic.
@@ -2602,7 +2602,7 @@ Section RedConfluence.
   Qed.
 
   Instance proper_red_ctx :
-    Proper (eq_context_upto_names ==> eq_context_upto_names ==> isEquiv) red_ctx.
+    Proper (eq_context_upto_names ==> eq_context_upto_names ==> iffT) red_ctx.
   Proof.
     reduce_goal.
     split.

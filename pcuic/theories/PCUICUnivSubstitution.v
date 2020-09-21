@@ -833,10 +833,10 @@ Proof.
 Qed.
 
 Definition precompose_subst_instance_instance__1 Rle u i i'
-  := equiv _ _ (precompose_subst_instance_instance Rle u i i').
+  := fst (precompose_subst_instance_instance Rle u i i').
 
 Definition precompose_subst_instance_instance__2 Rle u i i'
-  := equiv_inv _ _ (precompose_subst_instance_instance Rle u i i').
+  := snd (precompose_subst_instance_instance Rle u i i').
 
 Lemma precompose_subst_instance_global Σ Re Rle gr napp u i i' :
   precompose (R_global_instance Σ Re Rle gr napp) (subst_instance_instance u) i i'
@@ -859,10 +859,10 @@ Proof.
 Qed.
 
 Definition precompose_subst_instance_global__1 Σ Re Rle gr napp u i i'
-  := equiv _ _ (precompose_subst_instance_global Σ Re Rle gr napp u i i').
+  := fst (precompose_subst_instance_global Σ Re Rle gr napp u i i').
 
 Definition precompose_subst_instance_global__2 Σ Re Rle gr napp u i i'
-  := equiv_inv _ _ (precompose_subst_instance_global Σ Re Rle gr napp u i i').
+  := snd (precompose_subst_instance_global Σ Re Rle gr napp u i i').
 
 Global Instance eq_term_upto_univ_subst_instance Σ
          (Re Rle : ConstraintSet.t -> Universe.t -> Universe.t -> Prop) napp

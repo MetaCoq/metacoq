@@ -154,12 +154,13 @@ Proof.
 Qed.
 
 Lemma invert_it_Ind_red Σ L i u l t Γ : wf Σ ->
-  red Σ Γ (it_mkProd_or_LetIn L (mkApps (tInd i u) l)) t -> exists L' l', t = it_mkProd_or_LetIn L' (mkApps (tInd i u) l').
+  red Σ Γ (it_mkProd_or_LetIn L (mkApps (tInd i u) l)) t
+  -> exists L' l', t = it_mkProd_or_LetIn L' (mkApps (tInd i u) l').
 Proof.
-  intros. induction X0.
+  intros. induction X0 using red_rect'.
   - eauto.
   - destruct IHX0 as (? & ? & ->).
-    eapply invert_it_Ind_red1 in r as (? & ? & ?); eauto.
+    eapply invert_it_Ind_red1 in X1 as (? & ? & ?); eauto.
 Qed.
 
 Lemma it_mkProd_red_Arity Σ  c0 i u l : wf Σ ->
@@ -287,14 +288,12 @@ Proof.
   constructor; auto.
 Qed.
 
-Hint Constructors red red1 : core.
-
 Lemma context_conversion_red1 (Σ : global_env_ext) Γ Γ' s t : wf Σ -> (* Σ ;;; Γ' |- t : T -> *)
    context_relation (@conv_decls Σ) Γ Γ' -> red1 Σ Γ s t -> red Σ Γ' s t.
 Proof.
   intros HΣ HT X0. induction X0 using red1_ind_all in Γ', HΣ, HT |- *; eauto.
-  all:eauto.
-  - econstructor. econstructor. econstructor.
+  all:pcuic.
+  - econstructor. econstructor.
     rewrite <- H.
     induction HT in i |- *; destruct i; eauto.
     now inv p.
@@ -316,15 +315,15 @@ Proof.
     eapply All_All2_refl. induction brs; eauto.
   -     eapply PCUICReduction.red_case; eauto. clear.
     eapply All_All2_refl. induction brs; eauto.
-  - destruct ind.
-    eapply PCUICReduction.red_case; eauto.
+  - destruct a.
+    eapply red_case; eauto.
     clear - HΣ X HT.
     induction X.
     + econstructor. destruct p. destruct p.
       split; eauto.
       eapply All_All2_refl.
       induction tl; eauto.
-    + econstructor.  repeat econstructor.
+    + econstructor. now split.
       eassumption.
   -
     eapply PCUICReduction.red_proj_c. eauto.
@@ -381,7 +380,7 @@ Qed.
 Lemma context_conversion_red (Σ : global_env_ext) Γ Γ' s t : wf Σ ->
   context_relation (@conv_decls Σ) Γ Γ' -> red Σ Γ s t -> red Σ Γ' s t.
 Proof.
-  intros. induction X1; eauto.
+  intros. induction X1 using red_rect'; eauto.
   etransitivity. eapply IHX1.
   eapply context_conversion_red1; eauto.
 Qed.

@@ -57,7 +57,7 @@ Proof.
   induction (wf_cod' s) as [s _ IH_sub] in Γ, H, IH |- *.
   econstructor.
   intros (Γ' & B & ?) [(na & A & ? & ?)]. subst.
-    inversion r.
+  eapply Relation_Properties.clos_rt_rtn1 in r. inversion r.
     + subst. eapply IH_sub. econstructor. cbn. reflexivity.
       intros. eapply IH.
       inversion H0.
@@ -65,15 +65,19 @@ Proof.
       * subst. eapply cored_red in H2 as [].
         eapply cored_red_trans. 2: eapply prod_red_r. 2:eassumption.
         eapply PCUICReduction.red_prod_r. eauto.
-      * repeat econstructor.
+      * constructor. do 2 eexists. now split.
     + subst. eapply IH.
-      * eapply red_neq_cored. exact r. intros ?. subst.
-        eapply cored_red_trans in X0; eauto.
+      * eapply red_neq_cored.
+        eapply Relation_Properties.clos_rtn1_rt. exact r.
+        intros ?. subst.
+        eapply Relation_Properties.clos_rtn1_rt in X1.
+        eapply cored_red_trans in X0; [| exact X1 ].
         eapply Acc_no_loop in X0. eauto.
         eapply @normalisation'; eauto.
-      * repeat econstructor.
+      * constructor. do 2 eexists. now split.
 Grab Existential Variables.
-- eapply red_wellformed; sq. 3:eauto. all:eauto.
+- eapply red_wellformed; sq.
+  3:eapply Relation_Properties.clos_rtn1_rt in r; eassumption. all:eauto.
 - destruct H as [[] |[]].
   -- eapply inversion_Prod in X0 as (? & ? & ? & ? & ?) ; auto.
      eapply cored_red in H0 as [].
@@ -147,7 +151,7 @@ Next Obligation.
 Qed.
 Next Obligation.
   destruct H as (? & ? & ?). eexists (tProd _ _ _). split; sq.
-  etransitivity. eassumption. eapply PCUICReduction.red_prod. econstructor.
+  etransitivity. eassumption. eapply PCUICReduction.red_prod. reflexivity.
   eassumption. now cbn.
 Qed.
 Next Obligation.

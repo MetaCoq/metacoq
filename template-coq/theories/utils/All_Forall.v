@@ -416,8 +416,7 @@ Proof.
 Qed.
 
 Lemma Alli_mapi {A B} {P : nat -> B -> Type} (f : nat -> A -> B) k l :
-  CRelationClasses.iffT (Alli (fun n a => P n (f n a)) k l)
-                        (Alli P k (mapi_rec f l k)).
+  Alli (fun n a => P n (f n a)) k l <~> Alli P k (mapi_rec f l k).
 Proof.
   split.
   { induction 1. simpl. constructor.
@@ -825,15 +824,6 @@ Proof.
   destruct n; discriminate.
   revert Hnth. destruct n. intros [= ->]. now rewrite Nat.add_0_r.
   intros H'; eauto. rewrite <- Nat.add_succ_comm. eauto.
-Qed.
-
-Lemma nth_error_Some' {A} l n : (exists x : A, nth_error l n = Some x) <-> n < length l.
-Proof.
-  revert n. induction l; destruct n; simpl.
-  - split; [now destruct 1 | inversion 1].
-  - split; [now destruct 1 | inversion 1].
-  - split; now intuition eauto with arith.
-  - rewrite IHl; split; auto with arith.
 Qed.
 
 Lemma nth_error_forallb {A} P l n :

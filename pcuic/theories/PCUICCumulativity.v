@@ -8,6 +8,17 @@ Set Asymmetric Patterns.
 
 Set Default Goal Selector "!".
 
+(** *************************************************************************************
+The "natural" definition of conversion is given by [conv0]. It is the reflexive
+symmetric transitive closure of beta redution + equality modulo universes.
+It turns out to be equivalent to [conv1]: only beta reduction needs to be symmetrized.
+Cumulativity is defined in the same style ([cumul1]), not symmetrizing [leq_term] because
+it is oriented.
+
+Those definitions are NOT used in the definition of typing. Instead we use [cumul] and
+[conv] which are defined as "reducing to a common term". It tunrs out to be equivalent
+to [conv1] and [cumul1] by confluence. It will be shown afterward, in PCUICConversion.v .
+**************************************************************************************** *)
 
 Section ConvCumulDefs.
   Context {cf:checker_flags} (Σ : global_env_ext) (Γ : context).

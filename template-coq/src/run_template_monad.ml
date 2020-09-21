@@ -280,9 +280,8 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
     else
       let name = unquote_ident (reduce_all env evm name) in
       let kind = Decls.IsAssumption Decls.Definitional in
-      let decl = Declare.(SectionLocalAssum { typ; impl = Glob_term.Explicit }) in
       (* FIXME: better handling of evm *)
-      Declare.declare_variable ~name ~kind decl;
+      Declare.declare_variable ~name ~kind ~typ ~impl:Glob_term.Explicit;
       let env = Global.env () in
       k ~st env evm (Lazy.force unit_tt)
   | TmDefinition (opaque,name,s,typ,body) ->

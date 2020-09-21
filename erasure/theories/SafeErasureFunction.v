@@ -611,48 +611,33 @@ Definition lift_opt_typing {A} (a : option A) (e : type_error) : typing_result A
   | None => raise e
   end.
 
-Program
-Definition erase_one_inductive_body (Σ : global_env_ext) (wfΣ : ∥ wf_ext Σ ∥) npars
-  (arities : context)
-           (oib : one_inductive_body) : typing_result E.one_inductive_body :=
+Definition erase_one_inductive_body (oib : one_inductive_body) : E.one_inductive_body :=
+  (* Projection and constructor types are types, hence always erased *)
+  let ctors := map (A:=(ident * term) * nat) (fun '((x, y), z) => (x, EAst.tBox, z)) oib.(ind_ctors) in
+  let projs := map (fun '(x, y) => (x, EAst.tBox)) oib.(ind_projs) in
+  {| E.ind_name := oib.(ind_name);
+     E.ind_kelim := oib.(ind_kelim);
+     E.ind_ctors := ctors;
+     E.ind_projs := projs |}.
 
-  decty <- lift_opt_typing (decompose_prod_n_assum [] npars oib.(ind_type))
-        (NotAnInductive oib.(ind_type)) ;;
-  let '(params, arity) := (decty : context * term) in
-  (* type <- erase Σ wfΣ [] wf_local_nil oib.(ind_type) ;; *)
-  ctors <- monad_map (A:=(ident * term) * nat) (fun '((x, y), z) => y' <- erase Σ wfΣ arities y _;; ret (x, y', z)) oib.(ind_ctors);;
-  (* FIXME not used! let projctx := arities ,,, params ,, vass nAnon oib.(ind_type) in *)
-  projs <- monad_map (fun '(x, y) => y' <- erase Σ wfΣ [] (y : term) _;; ret (x, y')) oib.(ind_projs);;
-  ret {| E.ind_name := oib.(ind_name);
-         E.ind_kelim := oib.(ind_kelim);
-         E.ind_ctors := ctors;
-         E.ind_projs := projs |}.
-Next Obligation.
-  intros. todo "welltyped threading".
-Qed.
-Next Obligation.
-  intros. todo "welltyped threading".
-Qed.
-
-Program Definition erase_mutual_inductive_body Σ wfΣ
-           (mib : mutual_inductive_body)
-: typing_result E.mutual_inductive_body :=
+Definition erase_mutual_inductive_body (mib : mutual_inductive_body) : E.mutual_inductive_body :=
   let bds := mib.(ind_bodies) in
   let arities := arities_context bds in
-  bodies <- monad_map (erase_one_inductive_body Σ wfΣ mib.(ind_npars) arities) bds ;;
-  ret {| E.ind_npars := mib.(ind_npars);
-         E.ind_bodies := bodies; |}.
+  let bodies := map erase_one_inductive_body bds in
+  {| E.ind_npars := mib.(ind_npars);
+     E.ind_bodies := bodies; |}.
 
-Program Fixpoint erase_global_decls Σ : ∥ wf Σ ∥ -> typing_result E.global_declarations := fun wfΣ =>
+Program Fixpoint erase_global_decls Σ : ∥ wf Σ ∥ -> EnvCheck E.global_declarations := fun wfΣ =>
   match Σ with
   | [] => ret []
-  | (kn, ConstantDecl cb) :: Σ =>
-    cb' <- erase_constant_body (Σ, cst_universes cb) _ cb _;;
-    Σ' <- erase_global_decls Σ _;;
+  | (kn, ConstantDecl cb) :: Σ' =>
+    cb' <- wrap_error (Σ', cst_universes cb) ("Erasure of " ++ string_of_kername kn)
+      (erase_constant_body (Σ', cst_universes cb) _ cb _);;
+    Σ' <- erase_global_decls Σ' _;;
     ret ((kn, E.ConstantDecl cb') :: Σ')
-  | (kn, InductiveDecl mib) :: Σ =>
-    mib' <- erase_mutual_inductive_body (Σ, ind_universes mib) _ mib ;;
-    Σ' <- erase_global_decls Σ _;;
+  | (kn, InductiveDecl mib) :: Σ' =>
+    let mib' := erase_mutual_inductive_body mib in
+    Σ' <- erase_global_decls Σ' _;;
     ret ((kn, E.InductiveDecl mib') :: Σ')
   end.
 Next Obligation.
@@ -668,12 +653,6 @@ Next Obligation.
   sq. inv X. apply X0.
 Qed.
 
-
-Next Obligation.
-  sq. split. cbn.
-  eapply PCUICWeakeningEnv.wf_extends. eauto. eexists [_]; reflexivity.
-  now inversion X; subst.
-Qed.
 Next Obligation.
   sq. eapply PCUICWeakeningEnv.wf_extends. eauto. eexists [_]; reflexivity.
 Qed.
@@ -685,7 +664,7 @@ Program Definition erase_global Σ : ∥wf Σ∥ -> _:=
 
 
 Lemma erase_global_correct Σ (wfΣ : ∥ wf Σ∥) Σ' :
-  erase_global Σ wfΣ = Checked Σ' ->
+  erase_global Σ wfΣ = CorrectDecl Σ' ->
   erases_global Σ Σ'.
 Proof.
   induction Σ in wfΣ, Σ' |- *; intros; sq.
@@ -696,6 +675,7 @@ Proof.
       unfold bind in E2. cbn in E2. repeat destruct ?; try congruence.
       inv E2. econstructor.
       all:todo "finish".
+    + all:todo "finish".
 (*    * unfold optM in E0. destruct ?; try congruence.
         -- unfold erases_constant_body.
           cbn. cbn in *.

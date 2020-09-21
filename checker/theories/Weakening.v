@@ -1078,9 +1078,8 @@ Proof.
       split; auto.
       apply All_local_env_app_inv; intuition auto.
       clear -wf a.
-      induction ctx; try constructor.
-      depelim a.
-      -- rewrite lift_context_snoc.
+      induction ctx; try constructor; depelim a.
+      -- rewrite lift_context_snoc.         
          constructor; auto.
          eapply IHctx. eapply a.
          simpl. destruct tu as [u tu]. exists u.

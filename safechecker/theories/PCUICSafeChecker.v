@@ -107,6 +107,9 @@ Definition mkApps_decompose_app t :
   t = mkApps  (fst (decompose_app t)) (snd (decompose_app t))
   := mkApps_decompose_app_rec t [].
 
+
+Derive NoConfusion EqDec for sort_family.
+
 Inductive type_error :=
 | UnboundRel (n : nat)
 | UnboundVar (id : string)
@@ -531,7 +534,7 @@ Section Typecheck.
   Program Definition convert_leq Γ t u
           (ht : wellformed Σ Γ t) (hu : wellformed Σ Γ u)
     : typing_result (∥ Σ ;;; Γ |- t <= u ∥) :=
-    match leqb_term G t u with true => ret _ | false =>
+    match leqb_term Σ G t u with true => ret _ | false =>
     match iscumul Γ t ht u hu with
     | Success _ => ret _
     | Error e => (* fallback *)  (* nico *)
@@ -672,24 +675,24 @@ Section Typecheck.
 
   Definition eqb_opt_term (t u : option term) :=
     match t, u with
-    | Some t, Some u => eqb_term G t u
+    | Some t, Some u => eqb_term Σ G t u
     | None, None => true
     | _, _ => false
     end.
 
 
   Lemma eqb_opt_term_spec t u
-    : eqb_opt_term t u -> eq_opt_term (global_ext_constraints Σ) t u.
+    : eqb_opt_term t u -> eq_opt_term Σ (global_ext_constraints Σ) t u.
   Proof.
     destruct t, u; try discriminate; cbn.
     apply eqb_term_spec; tea. trivial.
   Qed.
 
   Definition eqb_decl (d d' : context_decl) :=
-    eqb_opt_term d.(decl_body) d'.(decl_body) && eqb_term G d.(decl_type) d'.(decl_type).
+    eqb_opt_term d.(decl_body) d'.(decl_body) && eqb_term Σ G d.(decl_type) d'.(decl_type).
 
   Lemma eqb_decl_spec d d'
-    : eqb_decl d d' -> eq_decl (global_ext_constraints Σ) d d'.
+    : eqb_decl d d' -> eq_decl Σ (global_ext_constraints Σ) d d'.
   Proof.
     unfold eqb_decl, eq_decl.
     intro H. rtoProp. apply eqb_opt_term_spec in H.
@@ -699,7 +702,7 @@ Section Typecheck.
   Definition eqb_context (Γ Δ : context) := forallb2 eqb_decl Γ Δ.
 
   Lemma eqb_context_spec Γ Δ
-    : eqb_context Γ Δ -> eq_context (global_ext_constraints Σ) Γ Δ.
+    : eqb_context Γ Δ -> eq_context Σ (global_ext_constraints Σ) Γ Δ.
   Proof.
     unfold eqb_context, eq_context.
     intro HH. apply forallb2_All2 in HH.
@@ -1322,13 +1325,29 @@ Section CheckEnv.
        (levels, edges, G.2).
 
 
+  Definition check_variance univs (variances : option (list Variance.t)) :=
+    match variances with
+    | None => true
+    | Some v => 
+      match univs with
+      | Monomorphic_ctx _ => false
+      | Polymorphic_ctx auctx => eqb #|v| #|UContext.instance (AUContext.repr auctx)|
+      end
+    end.
+    
   Definition Build_on_inductive_sq {Σ ind mdecl}
     : ∥ Alli (on_ind_body (lift_typing typing) Σ ind mdecl) 0 (ind_bodies mdecl) ∥ ->
       ∥ wf_local Σ (ind_params mdecl) ∥ ->
       context_assumptions (ind_params mdecl) = ind_npars mdecl ->
-      ind_guard mdecl -> ∥ on_inductive (lift_typing typing) Σ ind mdecl ∥.
+      ind_guard mdecl -> 
+      check_variance (ind_universes mdecl) (ind_variance mdecl) ->
+      ∥ on_inductive (lift_typing typing) Σ ind mdecl ∥.
   Proof.
-    intros H H0 H1 H2. sq. econstructor; eassumption.
+    intros H H0 H1 H2 H3. sq. econstructor; try eassumption.
+    unfold check_variance in H3. unfold on_variance.
+    destruct (ind_universes mdecl) eqn:E;
+    destruct (ind_variance mdecl) eqn:E'; try congruence.
+    2:split. now eapply eqb_eq in H3.
   Defined.
 
   Program Fixpoint monad_Alli {T} {M : Monad T} {A} {P} (f : forall n x, T (∥ P n x ∥)) l n
@@ -1367,8 +1386,7 @@ Section CheckEnv.
   Proof.
     intros Σ HΣ HΣ'0 G HG id mdecl n [].
   Admitted.
-
-
+  
   Program Definition check_wf_decl (Σ : global_env_ext) HΣ HΣ' G HG
              kn (d : global_decl)
     : EnvCheck (∥ on_global_decl (lift_typing typing) Σ kn d ∥) :=
@@ -1386,7 +1404,8 @@ Section CheckEnv.
                                        (ind_npars mdecl)
                                        (Msg "wrong number of parameters")) ;;
       X4 <- wrap_error Σ id (check_eq_true (ind_guard mdecl) (Msg "guard"));;
-      ret (Build_on_inductive_sq X1 X2 X3 X4)
+      X5 <- wrap_error Σ id (check_eq_true (check_variance mdecl.(ind_universes) mdecl.(ind_variance)) (Msg "variance"));;
+      ret (Build_on_inductive_sq X1 X2 X3 X4 X5)
     end.
   Next Obligation.
     sq. unfold on_constant_decl; rewrite <- Heq_anonymous; tas.

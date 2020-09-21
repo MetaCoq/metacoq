@@ -123,8 +123,8 @@ Qed.
 
 
 Lemma trans_lookup Σ cst decl:
-PT.lookup_env Σ.1 cst = Some decl ->
-Typing.lookup_env (trans_global Σ).1 cst =
+P.lookup_env Σ.1 cst = Some decl ->
+Ast.lookup_env (trans_global Σ).1 cst =
 Some (trans_global_decl decl).
 Proof.
   intros H.
@@ -530,7 +530,7 @@ Qed.
 
 Lemma trans_destr_arity x:
 TT.destArity [] (trans x) 
-= option_map (fun '(xs,u) => (map trans_decl xs,u)) (PT.destArity [] x).
+= option_map (fun '(xs,u) => (map trans_decl xs,u)) (PCUICAstUtils.destArity [] x).
 Proof.
   remember (@nil PCUICAst.context_decl) as xs.
   replace (@nil context_decl) with (map trans_decl xs) by (now subst).

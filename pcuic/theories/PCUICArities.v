@@ -7,7 +7,7 @@ From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICUnivSubstitution
      PCUICCumulativity PCUICPosition PCUICEquality PCUICNameless
-     PCUICNormal PCUICInversion PCUICCumulativity PCUICReduction
+     PCUICInversion PCUICCumulativity PCUICReduction
      PCUICConfluence PCUICConversion PCUICContextConversion
      PCUICParallelReductionConfluence PCUICWeakeningEnv
      PCUICClosed PCUICSubstitution
@@ -172,6 +172,27 @@ Proof.
     exists s'. eapply (substitution _ _ Δ s [] _ _ HΣ' sub Hs).
 Qed.
 
+Lemma isWAT_subst_gen {cf:checker_flags} {Σ : global_env_ext} (HΣ' : wf Σ) {Γ Δ Δ'} {A} s :
+  subslet Σ Γ s Δ ->
+  isWfArity_or_Type Σ (Γ ,,, Δ ,,, Δ') A -> 
+  isWfArity_or_Type Σ (Γ ,,, subst_context s 0 Δ') (subst s #|Δ'| A).
+Proof.
+  intros sub WAT.
+  destruct WAT.
+  - left.
+    destruct i as [ctx [s' [wfa wfl]]].
+    exists (subst_context s #|Δ'|ctx), s'.
+    generalize (subst_destArity [] A s #|Δ'|).
+    rewrite wfa /=.
+    split; auto.
+    epose proof (subst_context_app _ 0 _ _).
+    rewrite Nat.add_0_r in H0. rewrite <- app_context_assoc, <- H0.
+    eapply substitution_wf_local; eauto.
+    now rewrite app_context_assoc.
+  - right.
+    destruct i as [s' Hs].
+    exists s'. eapply (substitution _ _ Δ s _ _ _ HΣ' sub Hs).
+Qed.
 
 Lemma typing_spine_letin_inv {cf:checker_flags} {Σ Γ na b B T args S} : 
   wf Σ.1 ->
@@ -529,8 +550,7 @@ Proof.
     eapply substitution_let in t1; auto.
     eapply invert_cumul_letin_l in c; auto.
     pose proof (subslet_app_inv _ _ _ _ _ sub) as [subl subr].
-    depelim subl.
-    depelim subl. rewrite subst_empty in H0. rewrite H0 in subr.
+    depelim subl. depelim subl. rewrite subst_empty in H0. rewrite H0 in subr.
     specialize (IHn (subst_context [b] 0 l) (subst [b] #|l| T) ltac:(rewrite subst_context_length; lia)).
     specialize (IHn _ _ subr).
     rewrite /subst1 subst_it_mkProd_or_LetIn Nat.add_0_r in t1.
@@ -543,8 +563,7 @@ Proof.
     intros Hs.
     eapply inversion_Prod in Hs as [? [? [? [? ?]]]]; auto.
     pose proof (subslet_app_inv _ _ _ _ _ sub) as [subl subr].
-    depelim subl.
-    depelim subl. rewrite subst_empty in t2. rewrite H0 in subr.
+    depelim subl; depelim subl. rewrite subst_empty in t2. rewrite H0 in subr.
     epose proof (substitution0 _ _ na _ _ _ _ wfΣ t0 t2).
     specialize (IHn (subst_context [t1] 0 l) (subst [t1] #|l| T)).
     forward IHn. rewrite subst_context_length; lia.

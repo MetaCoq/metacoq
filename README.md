@@ -3,7 +3,6 @@ MetaCoq
 
 <img src="https://raw.githubusercontent.com/MetaCoq/metacoq.github.io/master/assets/LOGO.png" alt="MetaCoq" width="50px"/>
 
-<<<<<<< HEAD
 [![Build Status](https://travis-ci.com/MetaCoq/metacoq.svg?branch=coq-8.12)](https://travis-ci.com/MetaCoq/metacoq)
 [![MetaCoq Chat](https://img.shields.io/badge/zulip-join_chat-brightgreen.svg)](https://coq.zulipchat.com)
 
@@ -72,12 +71,9 @@ basic `OCaml` `4.07.1` compiler, and puts you in the right environment
 
 Once in the right switch, you can install `Coq` and the `Equations` package using:
 
-    # opam pin add coq 8.12.0
-    # opam pin add coq-equations 1.2.3+8.12
+    # opam install . --deps-only
 
-Pinning the packages prevents opam from trying to upgrade it afterwards, in
-this switch. If the commands are successful you should have `coq`
-available (check with `coqc -v`). 
+If the commands are successful you should have `coq` available (check with `coqc -v`). 
 
 Installing from GitHub repository (for developers)
 ------------------------------
@@ -104,7 +100,7 @@ Requirements
 
 To compile the library, you need:
 
-- The `Coq` version corrsponding to your branch (you can use the `coq.dev` package 
+- The `Coq` version corresponding to your branch (you can use the `coq.dev` package 
   for the `master` branch).
 - `OCaml` (tested with `4.07.1` and `4.09.1`, beware that `OCaml 4.06.0`
   can produce linking errors on some platforms)

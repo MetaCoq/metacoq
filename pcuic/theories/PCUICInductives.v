@@ -339,6 +339,23 @@ Proof.
   induction n; simpl; auto. f_equal; auto.
 Qed.
 
+Lemma projs_inst_subst s k i pars arg t :
+  map (subst s k) (projs_inst i pars arg t)  =
+  projs_inst i pars arg (subst s k t).
+Proof.
+  induction arg; simpl; auto.
+  f_equal; auto.
+Qed.
+
+Lemma projs_inst_skipn {i pars arg t} n :
+  skipn n (projs_inst i pars arg t) = projs_inst i pars (arg - n) t.
+Proof.
+  induction arg in n |- *; simpl; auto.
+  - now rewrite skipn_nil.
+  - destruct n as [|n']; [rewrite skipn_0|rewrite skipn_S] => //.
+    rewrite IHarg /= //.
+Qed.
+
 Lemma subslet_projs {cf:checker_flags} (Σ : global_env_ext) i mdecl idecl :
   forall (wfΣ : wf Σ.1) 
   (Hdecl : declared_inductive Σ.1 mdecl i idecl),
@@ -532,7 +549,7 @@ Proof.
   simpl.
   assert (wfarities : wf_local (Σ.1, ind_universes mdecl)
       (arities_context (ind_bodies mdecl))).
-  { eapply wf_arities_context; eauto. now destruct isdecl as [[] ?]. }
+  { eapply wf_arities_context; eauto. }
   eapply PCUICClosed.type_local_ctx_All_local_env in wfargs.
   2:{ eapply All_local_env_app_inv. split; auto.
       red in onpars. eapply (All_local_env_impl _ _ _ onpars).
@@ -961,8 +978,7 @@ Lemma subslet_extended_subst {cf:checker_flags} Σ Δ :
   subslet Σ (smash_context [] Δ) (extended_subst Δ 0) Δ.
 Proof.
   move=> wfΣ wfΔ.
-  induction Δ as [|[na [d|] ?] ?] in wfΔ |- *; simpl; auto;
-  depelim wfΔ.
+  induction Δ as [|[na [d|] ?] ?] in wfΔ |- *; simpl; auto; depelim wfΔ.
   * rewrite extended_subst_length. rewrite lift_closed.
     red in l0. autorewrite with len. now eapply subject_closed in l0.
     constructor. auto. specialize (IHΔ wfΔ).
@@ -1236,7 +1252,7 @@ Proof.
 Qed.
 
 Lemma head_tapp t1 t2 : head (tApp t1 t2) = head t1.
-Proof.  rewrite /head /decompose_app /= fst_decompose_app_rec //. Qed.
+Proof. rewrite /head /decompose_app /= fst_decompose_app_rec //. Qed.
 
 Lemma destInd_head_subst s k t f : destInd (head (subst s k t)) = Some f ->
   (destInd (head t) = Some f) +  

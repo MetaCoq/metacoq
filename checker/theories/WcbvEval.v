@@ -158,8 +158,8 @@ Section Wcbv.
       eval (tCase (ind, pars) p discr brs) res
 
   (** Proj *)
-  | eval_proj i pars arg discr args k u a res :
-      eval discr (mkApps (tConstruct i k u) args) ->
+  | eval_proj i pars arg discr args u a res :
+      eval discr (mkApps (tConstruct i 0 u) args) ->
       nth_error args (pars + arg) = Some a ->
       eval a res ->
       eval (tProj (i, pars, arg) discr) res
@@ -238,10 +238,10 @@ Section Wcbv.
           eval discr (mkApps (tConstruct ind c u) args) ->
           P discr (mkApps (tConstruct ind c u) args) ->
           eval (iota_red pars c args brs) res -> P (iota_red pars c args brs) res -> P (tCase (ind, pars) p discr brs) res) ->
-      (forall (i : inductive) (pars arg : nat) (discr : term) (args : list term) (k : nat) (u : Instance.t)
+      (forall (i : inductive) (pars arg : nat) (discr : term) (args : list term) (u : Instance.t)
               (a res : term),
-          eval discr (mkApps (tConstruct i k u) args) ->
-          P discr (mkApps (tConstruct i k u) args) ->
+          eval discr (mkApps (tConstruct i 0 u) args) ->
+          P discr (mkApps (tConstruct i 0 u) args) ->
           nth_error args (pars + arg) = Some a -> eval a res -> P a res -> P (tProj (i, pars, arg) discr) res) ->
       (forall (f : term) (mfix : mfixpoint term) (idx : nat) (fixargsv args argsv : list term)
              (narg : nat) (fn res : term),

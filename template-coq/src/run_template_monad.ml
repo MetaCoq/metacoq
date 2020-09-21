@@ -444,6 +444,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
        let evm = Typing.check env evm (EConstr.of_constr t') (EConstr.of_constr typ) in
        k (env, evm, t')
   | TmFreshName name ->
+    let name = reduce_all env evm name in
     let name' = Namegen.next_ident_away_from (unquote_ident name) (fun id -> Nametab.exists_cci (Lib.make_path id)) in
     k (env, evm, quote_ident name')
   | TmExistingInstance gr ->

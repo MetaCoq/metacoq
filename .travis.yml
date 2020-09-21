@@ -17,8 +17,8 @@ env:
   - NJOBS=2
   - COMPILER="4.07.1"
   - FINDLIB_VER="1.8.0"
-  - EQUATIONS_VER="1.2.3+8.12"
-  - COQ_VER="8.12.0"
+  - EQUATIONS_VER="dev"
+  - COQ_VER="dev"
 
 install:
 - curl -sL https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh > install.sh

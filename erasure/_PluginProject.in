@@ -41,6 +41,8 @@ src/pCUICReflect.mli
 src/pCUICReflect.ml
 src/pCUICEquality.mli
 src/pCUICEquality.ml
+src/pCUICReduction.ml
+src/pCUICReduction.mli
 src/pCUICTyping.ml
 src/pCUICTyping.mli
 src/pCUICUnivSubst.ml

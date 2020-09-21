@@ -748,7 +748,7 @@ Proof.
         eapply subject_reduction. eauto. exact Hty.
         etransitivity.
         eapply PCUICReduction.red_case_c. eapply wcbeval_red; eauto.
-        econstructor. econstructor. econstructor.
+        econstructor. econstructor.
 
         all:unfold iota_red in *. all:cbn in *.
         eapply erases_mkApps. eauto.
@@ -793,9 +793,9 @@ Proof.
         eapply PCUICReduction.red_case_c. eapply wcbeval_red. eauto.
         now eapply PCUICClosed.subject_closed in t0. eauto. eauto.
 
-        etransitivity. eapply trans_red. econstructor.
-        econstructor. unfold iota_red. rewrite <- nth_default_eq. unfold nth_default.
-        rewrite Hnth. econstructor.
+        etransitivity. constructor. constructor.
+        unfold iota_red. rewrite <- nth_default_eq. unfold nth_default.
+        rewrite Hnth. reflexivity.
 
         eapply erases_mkApps. eauto.
         eapply Forall2_skipn. eauto.
@@ -823,8 +823,8 @@ Proof.
            etransitivity.
            eapply PCUICReduction.red_case_c. eapply wcbeval_red. eauto.
            now eapply PCUICClosed.subject_closed in t0; eauto. eauto. eauto.
-           econstructor. econstructor. 
-           econstructor.
+           etransitivity. constructor. constructor.
+           unfold iota_red. rewrite <- nth_default_eq. reflexivity.
 
            eapply erases_mkApps. eauto.
            instantiate (1 := repeat EAst.tBox _).

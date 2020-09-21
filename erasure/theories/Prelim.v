@@ -321,7 +321,7 @@ Lemma subslet_fix_subst `{cf : checker_flags} Σ mfix1 T n :
   wf Σ.1 ->
   Σ ;;; [] |- tFix mfix1 n : T ->
   (* wf_local Σ (PCUICLiftSubst.fix_context mfix1) -> *)
-  subslet Σ [] (PCUICTyping.fix_subst mfix1) (PCUICLiftSubst.fix_context mfix1).
+  subslet Σ [] (fix_subst mfix1) (PCUICLiftSubst.fix_context mfix1).
 Proof.
   intro hΣ.
   unfold fix_subst, PCUICLiftSubst.fix_context.

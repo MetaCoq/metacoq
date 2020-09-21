@@ -609,10 +609,41 @@ Proof. repeat econstructor. Qed.
 
 Require Import MSetList OrderedTypeAlt OrderedTypeEx.
 
-Module StringComp := OrderedType_to_Alt String_as_OT.
-Definition compare_ident := StringComp.compare.
+Definition compare_ident := string_compare.
 
 Require Import Lia.
+
+Module IdentComp <: OrderedTypeAlt.
+  Definition t := string.
+
+  Definition eq := @eq string.
+  Definition eq_univ : RelationClasses.Equivalence eq := _.
+
+  Definition compare := string_compare.
+
+  Infix "?=" := compare (at level 70, no associativity).
+
+  Lemma compare_sym : forall x y, (y ?= x) = CompOpp (x ?= y).
+  Proof.
+    induction x; destruct y; simpl; auto;
+    destruct (ascii_compare a0 a) eqn:eq.
+    apply ascii_Compare_eq in eq; subst a0.
+    destruct (ascii_compare a a) eqn:eq'.
+    apply ascii_Compare_eq in eq'. apply IHx.
+    simpl.
+  Admitted.
+ 
+  Lemma compare_trans :
+    forall c x y z, (x?=y) = c -> (y?=z) = c -> (x?=z) = c.
+  Proof.
+    intros c x y z. revert c.
+    induction x in y, z |- *; destruct y, z; intros c; simpl; auto; try congruence.
+    unfold compare_ident.
+  Admitted.
+
+End IdentComp.
+
+Module IdentOT := OrderedType_from_Alt IdentComp.
 
 Module DirPathComp <: OrderedTypeAlt.
   Definition t := dirpath.
@@ -623,7 +654,7 @@ Module DirPathComp <: OrderedTypeAlt.
   Fixpoint compare dp dp' :=
     match dp, dp' with
     | hd :: tl, hd' :: tl' => 
-      match compare_ident hd hd' with
+      match IdentComp.compare hd hd' with
       | Eq => compare tl tl'
       | x => x
       end
@@ -638,8 +669,8 @@ Module DirPathComp <: OrderedTypeAlt.
   Proof.
     induction x; destruct y; simpl; auto.
     unfold compare_ident.
-    rewrite StringComp.compare_sym.
-    destruct (StringComp.compare a s); simpl; auto.
+    rewrite IdentComp.compare_sym.
+    destruct (IdentComp.compare a s); simpl; auto.
   Qed.
  
   Lemma compare_trans :
@@ -648,29 +679,27 @@ Module DirPathComp <: OrderedTypeAlt.
     intros c x y z. revert c.
     induction x in y, z |- *; destruct y, z; intros c; simpl; auto; try congruence.
     unfold compare_ident.
-    destruct (StringComp.compare a s) eqn:eqc;
-    destruct (StringComp.compare s s0) eqn:eqc'; simpl; try congruence;
-    try rewrite (StringComp.compare_trans _ _ _ _ eqc eqc'); auto.
+    destruct (IdentComp.compare a s) eqn:eqc;
+    destruct (IdentComp.compare s s0) eqn:eqc'; simpl; try congruence;
+    try rewrite (IdentComp.compare_trans _ _ _ _ eqc eqc'); auto.
     apply IHx.
     intros; subst. rewrite <- H0.
-    unfold StringComp.compare in *.
-    destruct (String_as_OT.compare s s0);
-    destruct (String_as_OT.compare a s); try congruence.
-    destruct (String_as_OT.compare a s0); try congruence.
-    eapply String_as_OT.lt_not_eq in l.
-    unfold String_as_OT.eq in *. subst. congruence.
-    assert (String_as_OT.lt a s0). red in e; subst. apply l.
-    unfold String_as_OT.eq, String_as_OT.lt in *. subst.
-    induction l0; depelim H; eauto; try lia.
-    unfold StringComp.compare in *.
+    unfold IdentComp.compare in *.
+    destruct (string_compare s s0);
+    destruct (string_compare a s); try congruence.
+    destruct (string_compare a s0); try congruence.
   Admitted.
 
 End DirPathComp.
 
 Module DirPathOT := OrderedType_from_Alt DirPathComp.
 Require Import ssreflect.
+Print DirPathOT.compare.
 
-Module ModPathComp <: OrderedTypeAlt.
+(* Eval compute in DirPathComp.compare ["foo"; "bar"] ["baz"].
+ *)
+
+Module ModPathComp.
   Definition t := modpath.
 
   Definition eq := @eq modpath.
@@ -681,13 +710,13 @@ Module ModPathComp <: OrderedTypeAlt.
     | MPfile dp, MPfile dp' => DirPathComp.compare dp dp'
     | MPbound dp id k, MPbound dp' id' k' => 
       if DirPathComp.compare dp dp' is Eq then
-        if StringComp.compare id id' is Eq then
+        if IdentComp.compare id id' is Eq then
           Nat.compare k k'
-        else StringComp.compare id id'
+        else IdentComp.compare id id'
       else DirPathComp.compare dp dp'
     | MPdot mp id, MPdot mp' id' => 
       if compare mp mp' is Eq then
-        StringComp.compare id id'
+        IdentComp.compare id id'
       else compare mp mp'
     | MPfile _, _ => Gt
     | _, MPfile _ => Lt
@@ -723,7 +752,7 @@ Module KernameComp.
     match kn, kn' with
     | (mp, id), (mp', id') => 
       if ModPathComp.compare mp mp' is Eq then
-        StringComp.compare id id'
+        IdentComp.compare id id'
       else ModPathComp.compare mp mp'
     end.
 
@@ -742,7 +771,7 @@ Module KernameComp.
 
 End KernameComp.
 
-Module KernameOT <:OrderedType.
+Module KernameOT.
  Include KernameComp.
  Module OT := OrderedType_from_Alt KernameComp.
 
@@ -759,7 +788,13 @@ Module KernameOT <:OrderedType.
   Admitted.
 
   Definition compare_spec : forall x y, CompareSpec (eq x y) (lt x y) (lt y x) (compare x y).
-  Admitted.
+  Proof.
+    induction x; destruct y.
+    simpl. 
+    destruct (ModPathComp.compare a m) eqn:eq.
+    destruct (IdentComp.compare b i) eqn:eq'.
+    all:constructor; todo "compare".
+  Defined.
 
   Definition eq_dec : forall x y, {eq x y} + {~ eq x y}.
   Proof.
@@ -768,6 +803,9 @@ Module KernameOT <:OrderedType.
   Defined.
 
 End KernameOT.
+
+Eval compute in KernameOT.compare (MPfile ["fdejrkjl"], "A") (MPfile ["lfrk;k"], "B").
+
   
 Module KernameSet := MSetList.Make KernameOT.
 (* Module KernameSetFact := WFactsOn Kername KernameSet.
@@ -873,7 +911,6 @@ Program Definition erase_global deps Σ : ∥wf Σ∥ -> _:=
   fun wfΣ  =>
   Σ' <- erase_global_decls deps Σ wfΣ ;;
   ret Σ'.
-
 
 Lemma erase_global_correct deps Σ (wfΣ : ∥ wf Σ∥) Σ' :
   erase_global deps Σ wfΣ = CorrectDecl Σ' ->

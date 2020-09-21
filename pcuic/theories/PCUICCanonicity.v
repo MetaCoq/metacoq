@@ -1107,7 +1107,7 @@ Section WeakNormalization.
     noconf unf.
     eapply (wf_fixpoint_spine wfΣ) in t0; eauto.
     rewrite /is_constructor. destruct (nth_error args (rarg x0)) eqn:hnth.
-    destruct_sigma t0. destruct t0.
+    destruct_sigma t0.
     intros norm.
     eapply whnf_ind_finite in t0; eauto.
     assumption.

@@ -558,8 +558,7 @@ Proof.
   - apply andb_and. split; eauto.
   - apply andb_and; split; eauto.
   - eapply andb_and; split; eauto.
-    solve_all. destruct y ;  simpl in *; subst.
-    unfold test_snd. simpl; eauto.
+    solve_all.
   - epose proof (All2_length _ _ X0).
     solve_all. destruct y ;  simpl in *; subst.
     unfold EAst.test_def; simpl; eauto.

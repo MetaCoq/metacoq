@@ -518,7 +518,7 @@ Section Pred1_inversion.
     intros hnth isc pred. remember (mkApps _ _) as fixt.
     revert mfix0 idx args0 Heqfixt hnth isc.
     induction pred; intros; solve_discr.
-    - unfold PCUICTyping.unfold_fix in e.
+    - unfold unfold_fix in e.
       red in a1.
       eapply All2_nth_error_Some in a1; eauto.
       destruct a1 as [t' [ht' [hds [hr [= eqna eqrarg]]]]].
@@ -3117,7 +3117,7 @@ Section Rho.
       rewrite - {1} (map_id args1). eapply All2_map, All2_impl; eauto. simpl. intuition.
 
     - (* Fix reduction *)
-      unfold PCUICTyping.unfold_fix in heq_unfold_fix |- *.
+      unfold unfold_fix in heq_unfold_fix |- *.
       rewrite rho_app_fix.
       destruct nth_error eqn:Heq; noconf heq_unfold_fix.
       eapply All2_nth_error_Some_right in Heq; eauto.
@@ -3266,7 +3266,7 @@ Section Rho.
             red in redo.
             solve_all.
             unfold on_Trel in *. intuition auto. now noconf b0.
-            unfold PCUICTyping.unfold_fix. rewrite nth_error_map e /=.
+            unfold unfold_fix. rewrite nth_error_map e /=.
             rewrite map_fix_subst /= //.
             intros n.  simp rho; simpl; now simp rho.
             move: i1.

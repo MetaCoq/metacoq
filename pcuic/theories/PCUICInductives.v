@@ -1316,8 +1316,7 @@ Lemma red_destInd (Σ : global_env_ext) Γ t t' ind u :
   red Σ.1 Γ t t' -> destInd (head t) = Some (ind, u) -> 
   destInd (head t') = Some (ind, u).
 Proof.
-  intros r%red_alt.
-  apply Relation_Properties.clos_rt_rt1n_iff in r.
+  intros r%Relation_Properties.clos_rt_rt1n_iff.
   induction r.
   auto.
   intros.

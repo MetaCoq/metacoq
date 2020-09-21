@@ -2245,8 +2245,8 @@ Lemma red_subst_instance {cf:checker_flags} (Σ : global_env) (Γ : context) (u 
   red Σ (subst_instance_context u Γ) (subst_instance_constr u s)
             (subst_instance_constr u t).
 Proof.
-  intros H; apply red_alt, clos_rt_rt1n in H.
-  apply red_alt, clos_rt1n_rt.
+  intros H; apply clos_rt_rt1n in H.
+  apply clos_rt1n_rt.
   induction H. constructor.
   eapply red1_subst_instance in r.
   econstructor 2. eapply r. auto.
@@ -2299,8 +2299,8 @@ Lemma red_assumption_context_app_irrelevant Σ Γ Δ Γ' t t' :
   red Σ (Γ' ,,, Δ) t t'. 
 Proof.
   intros r ass eqc.
-  eapply red_alt, clos_rt_rt1n in r.
-  eapply red_alt. eapply clos_rt1n_rt.
+  eapply clos_rt_rt1n in r.
+  eapply clos_rt1n_rt.
   induction r; [constructor|econstructor 2].
   eapply red1_assumption_context_irrelevant; eauto. apply IHr.
 Qed.

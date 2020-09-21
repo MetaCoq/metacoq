@@ -6,7 +6,6 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICTyping PCUICWeakening
      PCUICCumulativity PCUICEquality
      PCUICContextConversion PCUICValidity.
-Derive Signature for red.
 Import MonadNotation.
 
 Local Set Keyed Unification.

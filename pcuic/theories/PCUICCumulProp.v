@@ -191,7 +191,6 @@ Proof.
     exists nf, nf'; intuition pcuic.
     now transitivity v.
   - intros [nf [nf' [[redv redv'] eq]]].
-    apply red_alt in redv. apply red_alt in redv'.
     apply clos_rt_rt1n in redv.
     apply clos_rt_rt1n in redv'.
     induction redv.
@@ -466,8 +465,7 @@ Lemma red_upto_conv_ctx_prop Σ Γ Γ' t t' :
   conv_ctx_prop Σ Γ Γ' ->
   red Σ.1 Γ' t t'.
 Proof.
-  intros Hred. eapply red_alt in Hred.
-  intros convctx. eapply red_alt.
+  intros Hred. intros convctx.
   induction Hred; eauto.
   constructor. now eapply red1_upto_conv_ctx_prop.
   eapply rt_trans; eauto.

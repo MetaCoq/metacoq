@@ -11,7 +11,6 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICWeakeningEnv PCUICGeneration PCUICParallelReductionConfluence.
 
 Require Import Equations.Prop.DepElim.
-Derive Signature for red.
 Import MonadNotation.
 
 Local Set Keyed Unification.
@@ -302,7 +301,7 @@ Section Lemmata.
       cored Σ Γ v u \/ u = v.
   Proof.
     intros Γ u v h.
-    induction h.
+    induction h using red_rect'.
     - right. reflexivity.
     - destruct IHh.
       + left. eapply cored_trans ; eassumption.
@@ -363,7 +362,7 @@ Section Lemmata.
       cored Σ Γ w u.
   Proof.
     intros Γ u v w h1 h2.
-    revert w h2. induction h1 ; intros w h2.
+    revert w h2. induction h1 using red_rect'; intros w h2.
     - constructor. assumption.
     - eapply cored_trans.
       + eapply IHh1. eassumption.
@@ -611,11 +610,9 @@ Section Lemmata.
   Proof.
     intros Γ u v h.
     induction h.
-    - constructor. econstructor.
-      + constructor.
-      + assumption.
+    - constructor. now constructor.
     - destruct IHh as [r].
-      constructor. econstructor ; eassumption.
+      constructor. etransitivity; eauto.
   Qed.
 
   Lemma cored_context :
@@ -994,11 +991,9 @@ Section Lemmata.
       red (fst Σ) Γ (tConst c u) (subst_instance_constr u cb).
   Proof.
     intros Γ c u cty cb cu e.
-    econstructor.
-    - econstructor.
-    - econstructor.
-      + symmetry in e.  exact e.
-      + reflexivity.
+    econstructor. econstructor.
+    - symmetry in e. exact e.
+    - reflexivity.
   Qed.
 
   Lemma cored_const :
@@ -1109,18 +1104,17 @@ Section Lemmata.
       destruct bot as [? [? [? [[r ?] ?]]]].
       exfalso. clear - r wΣ.
       revert r. generalize (Universe.sort_of_product s1 s2). intro s. clear.
-      intro r.
+      intro r. eapply Relation_Properties.clos_rt_rt1n in r.
       dependent induction r.
-      assert (h : P = tSort s).
-      { clear - r. induction r ; auto. subst.
-        dependent destruction r0.
+      assert (h : y = tSort s).
+      { clear - r. dependent destruction r.
         assert (h : isSort (mkApps (tFix mfix idx) args)).
         { rewrite <- H. constructor. }
         apply isSortmkApps in h. subst. cbn in H.
         discriminate.
       }
       subst.
-      dependent destruction r0.
+      dependent destruction r.
       assert (h : isSort (mkApps (tFix mfix idx) args)).
       { rewrite <- H. constructor. }
       apply isSortmkApps in h. subst. cbn in H.
@@ -1297,7 +1291,7 @@ Section Lemmata.
       cored Σ Γ v u.
   Proof.
     intros Γ u v r n.
-    destruct r.
+    destruct r using red_rect'.
     - exfalso. apply n. reflexivity.
     - eapply cored_red_cored ; try eassumption.
       constructor. assumption.
@@ -1311,7 +1305,7 @@ Section Lemmata.
   Proof.
     destruct hΣ as [wΣ]; clear hΣ.
     intros Γ u v h [r].
-    revert h. induction r ; intros h.
+    revert h. induction r using red_rect' ; intros h.
     - assumption.
     - specialize IHr with (1 := ltac:(eassumption)).
       destruct IHr as [A ?]. exists A.
@@ -1325,7 +1319,7 @@ Section Lemmata.
       cored Σ Γ w u.
   Proof.
     intros Γ u v w h1 h2.
-    revert u h2. induction h1 ; intros t h2.
+    revert u h2. induction h1 using red_rect' ; intros t h2.
     - assumption.
     - eapply cored_trans.
       + eapply IHh1. assumption.

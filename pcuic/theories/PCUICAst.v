@@ -2,7 +2,8 @@
 
 
 Require Import List. Import ListNotations.
-From MetaCoq.Template Require Export Universes BasicAst Environment.
+From MetaCoq.Template Require Export Universes BasicAst
+     Environment EnvironmentTyping.
 
 Declare Scope pcuic.
 Delimit Scope pcuic with pcuic.
@@ -140,3 +141,6 @@ Record mutual_inductive_entry := {
 
   Module PCUICEnvironment := Environment PCUICTerm.
   Include PCUICEnvironment.
+
+  Module PCUICLookup := Lookup PCUICTerm PCUICEnvironment.
+  Include PCUICLookup.

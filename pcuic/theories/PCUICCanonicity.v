@@ -10,9 +10,8 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
   PCUICInduction PCUICLiftSubst PCUICContexts PCUICGeneration PCUICSpine PCUICConversion
   PCUICValidity PCUICInductives  PCUICConversion
   PCUICInductiveInversion PCUICNormal PCUICSafeLemmata PCUICParallelReductionConfluence PCUICSN
-  PCUICWcbvEval.
+  PCUICWcbvEval PCUICClosed PCUICReduction PCUICCSubst.
   
-Local Open Scope string_scope.
 Set Asymmetric Patterns.
 Local Set Keyed Unification.
 
@@ -65,6 +64,21 @@ Proof.
     now eapply isArity_subst.
 Qed.
 
+Ltac destruct_sigma H := 
+  repeat match type of H with
+  | @sigT _ (fun x => _) => let v := fresh x in
+    destruct H as (v & H); simpl in H
+  | (_ × _)%type => destruct H as (? & H); simpl in H
+  end.
+  
+Lemma closedn_mkApps k f args : closedn k (mkApps f args) = closedn k f && forallb (closedn k) args.
+Proof.
+  induction args using rev_ind; simpl => //.
+  - now rewrite andb_true_r.
+  - now rewrite -mkApps_nested /= IHargs forallb_app andb_assoc /= andb_true_r.
+Qed. 
+
+
 Section Arities.
   Context {cf:checker_flags} {Σ : global_env_ext}.
   Context {wfΣ : wf Σ}.
@@ -101,7 +115,6 @@ Section Arities.
 
 End Arities.
 
-Require Import PCUICValidity ssreflect.
 Lemma All2_map_left' {A B  C} (P : A -> B -> Type) l l' (f : C -> A) :
   All2 P (map f l) l' -> All2 (fun x y => P (f x) y) l l'.
 Proof. intros. rewrite - (map_id l') in X. eapply All2_map_inv; eauto. Qed.
@@ -271,7 +284,7 @@ Section Spines.
       intros wf sp; depelim sp. rewrite nth_error_nil //.
       pose proof (All_local_env_app _ _ _ wf) as [_ wfty].
       eapply All_local_env_app in wfty as [wfty _]. depelim wfty.
-      eapply cumul_Prod_inv in c as [dom codom]; pcuic.
+      eapply cumul_Prod_inv in c as [dom codom]. 2-3:pcuic.
       assert (Σ ;;; Γ |- hd : ty).
       { eapply type_Cumul; pcuic. eapply conv_cumul. now symmetry. }
       eapply (substitution_cumul0 _ _ _ _ _ _ hd) in codom; eauto.
@@ -322,7 +335,7 @@ Section Spines.
         simpl; len => hargs. simpl in hargs.
         rewrite Nat.add_1_r in hargs. destruct args => //.
         depelim sp. noconf hargs.
-        eapply cumul_Prod_inv in c as [dom codom]; pcuic.
+        eapply cumul_Prod_inv in c as [dom codom]. 2-3:pcuic.
         rewrite expand_lets_vass. simpl.
         eapply (substitution_cumul0 _ _ _ _ _ _ t) in codom; eauto.
         eapply typing_spine_strengthen in sp; eauto.
@@ -378,10 +391,10 @@ Section Spines.
       eapply All_local_env_app in wfty as [wfty _]. depelim wfty.
       intros Hargs.
       depelim sp. 
-      + eapply invert_cumul_prod_l in c as [na' [dom [codom [[red eqdom] cum]]]]; pcuic.
+      + eapply invert_cumul_prod_l in c as [na' [dom [codom [[red eqdom] cum]]]]; auto.
         move=> _. exists na', dom, codom.
         now eapply conv_cumul, conv_sym, red_conv.
-      + eapply cumul_Prod_inv in c as [dom codom]; pcuic.
+      + eapply cumul_Prod_inv in c as [dom codom]. 2-3:pcuic.
         assert (Σ ;;; Γ |- hd : ty).
         { eapply type_Cumul; pcuic. eapply conv_cumul. now symmetry. }
         eapply (substitution_cumul0 _ _ _ _ _ _ hd) in codom; eauto.
@@ -711,6 +724,95 @@ Section Normalization.
 End Normalization.
 *)
 
+(** Evaluation is a subrelation of reduction: *)
+
+Tactic Notation "redt" uconstr(y) := eapply (CRelationClasses.transitivity (R:=red _ _) (y:=y)).
+(*
+Lemma wcbeval_red `{checker_flags} : env_prop (fun Σ Γ t ty =>
+    forall u, Γ = [] ->
+    eval Σ t u -> red Σ [] t u) (fun Σ Γ wf => wf_local Σ Γ).
+Proof.
+  eapply typing_ind_env => Σ wfΣ Γ wf //.
+  - move=> n decl hnth _ u eqΓ ev; subst Γ.
+    depelim ev. constructor.
+  - move=> l _ inl u eqΓ ev; subst Γ; depelim ev.
+    constructor.
+  - move=> n t b s1 s2 _ hty IH Hb IH' u eqΓ; subst Γ.
+    intros sp; depelim sp; constructor.
+  - intros. subst Γ. depelim X4; constructor.
+  - intros * _ Hbty IH Hb IHb Hb' IHb' u eqΓ; subst Γ.
+    intros sp; depelim sp; auto.
+    rewrite (closed_subst b0' 0 b') in sp2.
+    eapply eval_closed; eauto.
+    eapply subject_closed in Hb; eauto.
+    redt (tLetIn n b0' b_ty b'); eauto.
+    eapply red_letin; eauto.
+    redt (b' {0 := b0'}); auto.
+    do 2 econstructor.
+    
+    specialize (IHHe1 _ t1).
+    rewrite /subst1.
+    rewrite -(closed_subst b0' 0 b1); eauto using eval_closed.
+    eapply subject_reduction in t1; eauto. eapply subject_closed in t1; eauto.
+    eapply IHHe2.
+    rewrite closed_subst.
+*)
+
+    (*eapply All2_same. intros. split; auto.
+    redt (iota_red _ _ _ _); eauto. 2:eapply IHHe2.
+    eapply red1_red. econstructor.
+    eapply closed_iota; eauto. now eapply eval_closed in He1.
+
+  - redt _. 2:eapply IHHe2; eauto using eval_closed.
+    redt (tProj _ (mkApps _ _)). eapply red_proj_c. eauto.
+    apply red1_red. econstructor; eauto.
+    eapply eval_closed in He1; eauto. eapply closed_arg in He1; eauto.
+
+  - redt (tApp (mkApps (tFix mfix idx) argsv) av);
+      [eapply red_app; eauto|].
+    assert (closed_fix: closed (mkApps (tFix mfix idx) argsv)).
+    { eapply eval_closed; [easy| |easy].
+      easy. }
+    eapply closedn_mkApps_inv in closed_fix.
+    apply andb_true_iff in closed_fix.
+    rewrite -closed_unfold_fix_cunfold_eq in e; [easy|].
+    redt (tApp (mkApps fn argsv) av).
+    + repeat change (tApp ?h ?a) with (mkApps h [a]).
+      rewrite !mkApps_nested.
+      apply red1_red.
+      eapply red_fix; [easy|].
+      unfold is_constructor.
+      rewrite nth_error_app_ge //.
+    + eapply IHHe3.
+      cbn.
+      apply andb_true_iff.
+      split.
+      * apply closedn_mkApps; [|easy].
+        now eapply closed_unfold_fix.
+      * now eapply eval_closed; [| |easy].
+
+  - now apply red_app.
+
+  - move/closedn_mkApps_inv/andP: Hc' => [Hf Hargs].
+    rewrite -closed_unfold_cofix_cunfold_eq in e; auto.
+    redt _. eapply red1_red.
+    eapply PCUICTyping.red_cofix_case; eauto.
+    eapply IHHe.
+    eapply closed_unfold_cofix in e; eauto.
+    simpl. rewrite Hc closedn_mkApps; eauto.
+
+  - move/closedn_mkApps_inv/andP: Hc => [Hf Hargs].
+    rewrite -closed_unfold_cofix_cunfold_eq in e; auto.
+    redt _. 2:eapply IHHe.
+    redt (tProj _ (mkApps _ _)). eapply red_proj_c. eauto.
+    apply red1_red. econstructor; eauto.
+    simpl. eapply closed_unfold_cofix in e; eauto.
+    rewrite closedn_mkApps; eauto.
+
+  - eapply (red_mkApps _ _ [a] [a']); auto.
+Qed.*)
+
+
 Section WeakNormalization.
   Context {cf:checker_flags} (Σ : global_env_ext).
   Context {wfΣ : wf Σ}.
@@ -718,14 +820,7 @@ Section WeakNormalization.
   Section reducible.
   Notation wh_neutral := (whne RedFlags.default).
   Notation wh_normal := (whnf RedFlags.default).
-  Require Import PCUICClosed.
 
-  Lemma closedn_mkApps k f args : closedn k (mkApps f args) = closedn k f && forallb (closedn k) args.
-  Proof.
-    induction args using rev_ind; simpl => //.
-    - now rewrite andb_true_r.
-    - now rewrite -mkApps_nested /= IHargs forallb_app andb_assoc /= andb_true_r.
-  Qed. 
   Transparent construct_cofix_discr.
 
   Lemma value_whnf t : closed t -> value Σ t -> wh_normal Σ [] t.
@@ -749,16 +844,13 @@ Section WeakNormalization.
       eapply whnf_cofixapp.
     - destruct f => //. cbn in H.
       destruct cunfold_fix as [[rarg body]|] eqn:unf => //.
-      rewrite /is_constructor in H.
       pose proof cl as cl'.
       rewrite closedn_mkApps in cl'. move/andP: cl' => [clfix _].
       rewrite -P.closed_unfold_fix_cunfold_eq in unf => //.
-      destruct nth_error eqn:nth => //.
-      * have clarg := closed_arg  _ _ _ _ cl nth.
-        eapply whnf_ne; eapply whne_fixapp; eauto.
-        eapply nth_error_all in X0; eauto.
-        destruct isConstruct_app => //.
-      * eapply whnf_fixapp. rewrite unf //.
+      rewrite /unfold_fix in unf.
+      destruct nth_error eqn:nth => //. noconf unf.
+      eapply whnf_fixapp. rewrite /unfold_fix nth.
+      eapply Nat.leb_le in H. now eapply nth_error_None.
   Qed.
 
   Lemma eval_whne t t' : closed t -> eval Σ t t' -> wh_normal Σ [] t'.
@@ -899,7 +991,7 @@ Section WeakNormalization.
       wh_normal Σ Γ t -> Γ = [] -> construct_cofix_discr (head t).
   Proof.
     all:intros axfree typed ne;
-    pose proof (PCUICClosed.subject_closed wfΣ typed) as cl;
+    pose proof (subject_closed wfΣ typed) as cl;
     destruct ne; intros eqΓ;  simpl in *; try discriminate.
     - rewrite eqΓ in cl => //.
     - now eapply typing_var in typed.
@@ -973,24 +1065,215 @@ Section WeakNormalization.
     False.
   Proof. intros; now eapply wh_neutral_empty_gen. Qed.
 
-  Lemma wh_normal_empty t i u args : axiom_free Σ -> 
+  Lemma wh_normal_ind_discr t i u args : axiom_free Σ -> 
       Σ ;;; [] |- t : mkApps (tInd i u) args -> 
       wh_normal Σ [] t -> 
       construct_cofix_discr (head t).
   Proof. intros; now eapply wh_normal_empty_gen. Qed. 
 
+  Lemma whnf_ind_finite t ind u indargs : 
+    axiom_free Σ ->
+    Σ ;;; [] |- t : mkApps (tInd ind u) indargs ->
+    wh_normal Σ [] t ->
+    check_recursivity_kind Σ (inductive_mind ind) Finite ->
+    isConstruct_app t.
+  Proof.
+    intros axfree typed whnf ck.
+    rewrite /isConstruct_app.
+    eapply wh_normal_ind_discr in whnf; eauto.
+    rewrite /head in whnf.
+    destruct (decompose_app t) as [hd tl] eqn:da; simpl in *.
+    destruct hd eqn:eqh => //. subst hd.
+    eapply decompose_app_inv in da. subst.
+    eapply typing_cofix_coind in typed.
+    now move: (check_recursivity_kind_inj typed ck).
+  Qed.
+
+  Lemma fix_app_is_constructor {mfix idx args ty narg fn} : 
+    axiom_free Σ ->
+    Σ;;; [] |- mkApps (tFix mfix idx) args : ty ->
+    unfold_fix mfix idx = Some (narg, fn) ->
+    match nth_error args narg return Type with
+    | Some a => wh_normal Σ [] a -> isConstruct_app a
+    | None => ∑ na dom codom, Σ ;;; [] |- tProd na dom codom <= ty
+    end.
+  Proof.
+    intros axfree typed unf.
+    eapply inversion_mkApps in typed as (? & ? & ?); eauto.
+    eapply inversion_Fix in t as (? & ? & ? & ? & ? & ? & ?); auto.
+    eapply typing_spine_strengthen in t0; eauto.
+    eapply nth_error_all in a; eauto. simpl in a.
+    rewrite /unfold_fix in unf. rewrite e in unf.
+    noconf unf.
+    eapply (wf_fixpoint_spine wfΣ) in t0; eauto.
+    rewrite /is_constructor. destruct (nth_error args (rarg x0)) eqn:hnth.
+    destruct_sigma t0. destruct t0.
+    intros norm.
+    eapply whnf_ind_finite in t0; eauto.
+    assumption.
+  Qed.
+
+  (** Evaluation on well-typed terms corresponds to reduction. 
+      It differs in two ways from standard reduction: 
+      - using closed substitution operations applicable only on closed terms
+      - it does not check that fixpoints that are applied to enough arguments 
+        have a constructor at their recursive argument as it is ensured by typing. *)
+
+  Lemma wcbeval_red t ty u :
+    axiom_free Σ ->
+    Σ ;;; [] |- t : ty ->
+    eval Σ t u -> red Σ [] t u.
+  Proof.
+  intros axfree Hc He.
+  revert ty Hc.
+  induction He; simpl; move=> ty Ht;
+    try solve[econstructor; eauto].
+
+  - eapply inversion_App in Ht as (? & ? & ? & ? & ? & ?); auto.
+    redt (tApp (tLambda na t b) a); eauto.
+    eapply red_app; eauto.
+    redt (tApp (tLambda na t b) a'). eapply red_app; eauto.
+    specialize (IHHe1 _ t0). specialize (IHHe2 _ t1).
+    redt (csubst a' 0 b).
+    rewrite (closed_subst a' 0 b).
+    eapply eval_closed; eauto. now eapply subject_closed in t1.
+    eapply red1_red. constructor.
+    pose proof (subject_closed wfΣ t1); auto.
+    eapply eval_closed in H; eauto.
+    eapply subject_reduction in IHHe1. 2-3:eauto.
+    eapply inversion_Lambda in IHHe1 as (? & ? & ? & ? & ?); eauto.
+    eapply (substitution0 _ []) in t3; eauto.
+    eapply IHHe3.
+    rewrite (closed_subst a' 0 b); auto.
+    rewrite /subst1 in t3. eapply t3.
+    eapply type_Cumul; eauto.
+    eapply subject_reduction in IHHe2; eauto.
+    eapply cumul_Prod_inv in c0 as [dom codom]; eauto.
+    eapply conv_cumul; now symmetry.
+
+  - eapply inversion_LetIn in Ht as (? & ? & ? & ? & ? & ?); auto.
+    redt (tLetIn na b0' t b1); eauto.
+    eapply red_letin; eauto.
+    redt (b1 {0 := b0'}); auto.
+    do 2 econstructor.
+    specialize (IHHe1 _ t1).
+    rewrite /subst1.
+    rewrite -(closed_subst b0' 0 b1).
+    eapply subject_reduction in t1; eauto. eapply subject_closed in t1; eauto.
+    eapply IHHe2.
+    rewrite closed_subst.
+    eapply subject_reduction in t1; eauto. eapply subject_closed in t1; eauto.
+    eapply substitution_let in t2; eauto.
+    eapply subject_reduction in t2.
+    3:{ eapply (red_red _ _ [vass na t] []); eauto. repeat constructor. }    
+    eapply t2. auto.
+    
+
+  - redt (subst_instance_constr u body); auto.
+    eapply red1_red. econstructor; eauto.
+    eapply IHHe. eapply subject_reduction; eauto.
+    eapply red1_red. econstructor; eauto.
+
+  - epose proof (subject_reduction Σ [] _ _ _ wfΣ Ht).
+    apply inversion_Case in Ht; auto; destruct_sigma Ht.
+    specialize (IHHe1 _ t0).
+    assert (red Σ [] (tCase (ind, pars) p discr brs) (iota_red pars c args brs)).
+    { redt _.
+      eapply red_case; eauto. eapply All2_refl; intros; eauto.
+      eapply red1_red; constructor. }
+    specialize (X X0).
+    redt _; eauto.
+
+  - epose proof (subject_reduction Σ [] _ _ _ wfΣ Ht).
+    apply inversion_Proj in Ht; auto; destruct_sigma Ht.
+    specialize (IHHe1 _ t).
+    assert (red Σ [] (tProj (i, pars, arg) discr) a).
+    { redt _.
+      eapply red_proj_c; eauto.
+      eapply red1_red; constructor; auto. }
+    specialize (X X0).
+    redt _; eauto.
+
+  - epose proof (subject_reduction Σ [] _ _ _ wfΣ Ht).
+    apply inversion_App in Ht; auto; destruct_sigma Ht.
+    specialize (IHHe1 _ t).
+    specialize (IHHe2 _ t0).
+    epose proof (subject_reduction Σ [] _ _ _ wfΣ t IHHe1) as Ht2.
+    epose proof (subject_reduction Σ [] _ _ _ wfΣ t0 IHHe2) as Ha2.
+    assert (red Σ [] (tApp f a) (tApp (mkApps fn argsv) av)).
+    { redt _.
+      eapply red_app; eauto.
+      rewrite ![tApp _ _](mkApps_nested _ _ [_]).
+      eapply red1_red. 
+      rewrite -closed_unfold_fix_cunfold_eq in e.
+      eapply subject_closed in Ht2; auto.
+      rewrite closedn_mkApps in Ht2. now move/andP: Ht2 => [clf _].
+      eapply red_fix; eauto.
+      assert (Σ ;;; [] |- mkApps (tFix mfix idx) (argsv ++ [av]) : B {0 := av}).
+      { rewrite -mkApps_nested /=. eapply type_App; eauto. }
+      epose proof (fix_app_is_constructor axfree X0 e); eauto.
+      rewrite /is_constructor.
+      destruct nth_error eqn:hnth => //.
+      assert (All (closedn 0) (argsv ++ [av])%list).
+      { eapply subject_closed in X0; eauto.
+        rewrite closedn_mkApps in X0.
+        move/andP: X0 => [clfix clargs].
+        now eapply forallb_All in clargs. }
+      assert (All (value Σ) (argsv ++ [av])).
+      { eapply All_app_inv; [|constructor; [|constructor]].
+        eapply eval_to_value in He1.
+        eapply value_mkApps_inv in He1 as [[[-> Hat]|[vh vargs]]|[hstuck vargs]] => //.
+        now eapply eval_to_value in He2. }
+      solve_all.
+      eapply nth_error_all in X3; eauto. simpl in X3.
+      destruct X3 as [cl val]. eapply X1, value_whnf; auto.
+      eapply nth_error_None in hnth; len in hnth; simpl in *. lia. }      
+    redt _; eauto.
+
+  - apply inversion_App in Ht; auto; destruct_sigma Ht.
+    specialize (IHHe1 _ t).
+    specialize (IHHe2 _ t0).
+    now eapply red_app.
+
+  - epose proof (subject_reduction Σ [] _ _ _ wfΣ Ht).
+    apply inversion_Case in Ht; auto; destruct_sigma Ht.
+    pose proof (subject_closed wfΣ t0) as H.
+    rewrite closedn_mkApps in H. move/andP: H => [clcofix clargs].
+    assert (red Σ [] (tCase ip p (mkApps (tCoFix mfix idx) args) brs) (tCase ip p (mkApps fn args) brs)).
+    { eapply red1_red. eapply PCUICTyping.red_cofix_case.
+      rewrite -closed_unfold_cofix_cunfold_eq in e; eauto. }
+    specialize (X X0).
+    specialize (IHHe _ X).
+    redt _; eauto.
+    
+  - epose proof (subject_reduction Σ [] _ _ _ wfΣ Ht).
+    apply inversion_Proj in Ht; auto; destruct_sigma Ht.
+    pose proof (subject_closed wfΣ t) as H.
+    rewrite closedn_mkApps in H. move/andP: H => [clcofix clargs].
+    assert (red Σ [] (tProj p (mkApps (tCoFix mfix idx) args)) (tProj p (mkApps fn args))).
+    { eapply red1_red. eapply PCUICTyping.red_cofix_proj.
+      rewrite -closed_unfold_cofix_cunfold_eq in e; eauto. }
+    specialize (X X0).
+    specialize (IHHe _ X).
+    redt _; eauto.
+
+  - eapply inversion_App in Ht as (? & ? & ? & Hf & Ha & Ht); auto.
+    specialize (IHHe1 _ Hf).
+    specialize (IHHe2 _ Ha).
+    now eapply red_app.
+  Qed.
+
   Lemma eval_ind_canonical t i u args : 
     axiom_free Σ ->
     Σ ;;; [] |- t : mkApps (tInd i u) args -> 
-    forall t', 
-    eval Σ t t' ->
+    forall t', eval Σ t t' ->
     construct_cofix_discr (head t').
   Proof.
     intros axfree Ht t' eval.
     pose proof (subject_closed wfΣ Ht).
     eapply subject_reduction in Ht. 3:eapply wcbeval_red; eauto. 2:auto.
     eapply eval_whne in eval; auto.
-    eapply wh_normal_empty; eauto.
+    eapply wh_normal_ind_discr; eauto.
   Qed.
 
   End reducible.

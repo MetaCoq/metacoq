@@ -4,7 +4,8 @@ Set Warnings "-notation-overridden".
 From Coq Require Import Arith Bool List Lia CRelationClasses.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst
-     PCUICUnivSubst PCUICTyping PCUICReduction PCUICClosed PCUICCSubst.
+     PCUICUnivSubst PCUICTyping PCUICReduction PCUICClosed PCUICCSubst 
+     PCUICSubstitution PCUICInversion PCUICSR.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -14,6 +15,20 @@ Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
 
 Local Ltac inv H := inversion H; subst.
+
+Ltac solve_discr :=
+  try progress (prepare_discr; finish_discr; cbn[mkApps] in * );
+  try match goal with
+    H : mkApps _ _ = mkApps ?f ?l |- _ =>
+    eapply mkApps_eq_inj in H as [? ?]; [|easy|easy]; subst; try intuition congruence; try noconf H
+  | H : ?t = mkApps ?f ?l |- _ =>
+    change t with (mkApps t []) in H ;
+    eapply mkApps_eq_inj in H as [? ?]; [|easy|easy]; subst; try intuition congruence; try noconf H
+  | H : mkApps ?f ?l = ?t |- _ =>
+    change t with (mkApps t []) in H ;
+    eapply mkApps_eq_inj in H as [? ?]; [|easy|easy]; subst; try intuition congruence; try noconf H
+  end.
+
 
 (** * Weak-head call-by-value evaluation strategy.
 
@@ -121,12 +136,11 @@ Definition cunfold_cofix (mfix : mfixpoint term) (idx : nat) :=
   | None => None
   end.
 
-Definition isStuckFix t args :=
+Definition isStuckFix t (args : list term) :=
   match t with
   | tFix mfix idx =>
     match cunfold_fix mfix idx with
-    | Some (narg, fn) =>
-      ~~ is_constructor narg args
+    | Some (narg, fn) => #|args| <=? narg
     | None => false
     end
   | _ => false
@@ -194,12 +208,10 @@ Section Wcbv.
       eval (tProj (i, pars, arg) discr) res
 
   (** Fix unfolding, with guard *)
-  | eval_fix f mfix idx argsv a av narg fn res :
+  | eval_fix f mfix idx argsv a av fn res :
       eval f (mkApps (tFix mfix idx) argsv) ->
       eval a av ->
-      cunfold_fix mfix idx = Some (narg, fn) ->
-      #|argsv| = narg ->
-      isConstruct_app av ->
+      cunfold_fix mfix idx = Some (#|argsv|, fn) ->
       eval (tApp (mkApps fn argsv) av) res ->
       eval (tApp f a) res
 
@@ -208,7 +220,7 @@ Section Wcbv.
       eval f (mkApps (tFix mfix idx) argsv) ->
       eval a av ->
       cunfold_fix mfix idx = Some (narg, fn) ->
-      (#|argsv| <> narg \/ (#|argsv| = narg /\ ~~isConstruct_app av)) ->
+      (#|argsv| < narg) ->
       eval (tApp f a) (tApp (mkApps (tFix mfix idx) argsv) av)
 
   (** CoFix-case unfolding *)
@@ -342,24 +354,13 @@ Section Wcbv.
         apply (value_stuck_fix _ [av]); [easy|].
         cbn.
         destruct (cunfold_fix mfix idx) as [(? & ?)|]; [|easy].
-        noconf e.
-        unfold is_constructor.
-        destruct o as [|(<- & ?)]; [|easy].
-        now rewrite (proj2 (nth_error_None _ _));
-          cbn in *.
+        noconf e. eapply Nat.leb_le. lia.
       + easy.
       + eapply value_stuck_fix; [now apply All_app_inv|].
         unfold isStuckFix in *.
         destruct (cunfold_fix mfix idx) as [(? & ?)|]; [|easy].
-        noconf e.
-        unfold is_constructor in *.
-        destruct o as [|(<- & ?)]; [|now rewrite nth_error_snoc].
-        destruct (Nat.ltb_spec #|argsv| narg).
-        * rewrite (proj2 (nth_error_None _ _)); [|easy].
-          rewrite app_length.
-          cbn.
-          easy.
-        * now rewrite nth_error_app1.
+        noconf e. rewrite app_length /=.
+        eapply Nat.leb_le; lia.
     - destruct (mkApps_elim f' [a']).
       eapply value_mkApps_inv in IHX1 => //.
       destruct IHX1; intuition subst.
@@ -402,15 +403,39 @@ Section Wcbv.
       eapply eval_fix_value.
       + apply IH; [easy|].
         destruct (cunfold_fix mfix idx) as [(? & ?)|]; [|easy].
-        unfold is_constructor in *.
-        destruct (nth_error argsv _) eqn:nth; [|easy].
-        now erewrite nth_error_app_left in stuck.
+        rewrite app_length /= in stuck.
+        eapply Nat.leb_le in stuck. eapply Nat.leb_le. lia.
       + easy.
       + easy.
-      + destruct (Nat.eqb_spec #|argsv| n) as [<-|].
-        * unfold is_constructor in *.
-          now rewrite nth_error_snoc in stuck.
-        * now left.
+      + rewrite app_length /= in stuck.
+        eapply Nat.leb_le in stuck; lia.
+  Qed.
+
+  Lemma stuck_fix_value_inv argsv mfix idx narg fn :
+    value (mkApps (tFix mfix idx) argsv) -> 
+    cunfold_fix mfix idx = Some (narg, fn) ->
+    (All value argsv * isStuckFix (tFix mfix idx) argsv).
+  Proof.
+    remember (mkApps (tFix mfix idx) argsv) as tfix.
+    intros hv; revert Heqtfix.
+    induction hv using value_values_ind; intros eq; subst.
+    unfold atom in H. destruct argsv using rev_case => //.
+    split; auto. simpl. simpl in H. rewrite H0 //.
+    rewrite -mkApps_nested /= in H. depelim H.
+    solve_discr => //.
+    solve_discr.
+  Qed.
+    
+  Lemma stuck_fix_value_args argsv mfix idx narg fn :
+    value (mkApps (tFix mfix idx) argsv) ->
+    cunfold_fix mfix idx = Some (narg, fn) ->
+    #|argsv| <= narg.
+  Proof.
+    intros val unf.
+    eapply stuck_fix_value_inv in val; eauto.
+    destruct val.
+    simpl in i. rewrite unf in i.
+    now eapply Nat.leb_le in i.
   Qed.
 
   Derive Signature for eval.
@@ -503,16 +528,15 @@ Section Wcbv.
     rewrite PeanoNat.Nat.add_0_r in Hf. now move/andP: Hf.
     discriminate.
   Qed.
-  
-  Lemma closed_unfold_fix_cunfold_eq mfix idx : 
+
+  Lemma closed_fix_substl_subst_eq {mfix idx d} : 
     closed (tFix mfix idx) ->
-    unfold_fix mfix idx = cunfold_fix mfix idx.
+    nth_error mfix idx = Some d ->
+    subst0 (fix_subst mfix) (dbody d) = substl (fix_subst mfix) (dbody d).
   Proof.  
-    unfold unfold_fix, cunfold_fix.
-    destruct (nth_error mfix idx) eqn:Heq => //.
     move=> /= Hf; f_equal; f_equal.
     have clfix : All (closedn 0) (fix_subst mfix).
-    { clear Heq d idx.
+    { clear idx.
       solve_all.
       unfold fix_subst.
       move: #|mfix| => n.
@@ -522,11 +546,22 @@ Section Wcbv.
     move: (fix_subst mfix) (dbody d) clfix.
     clear; induction fix_subst => Hfix /= //.
     now rewrite subst_empty.
-    move=> Ha; dependent elimination Ha as [All_cons ca cf].
+    move=> Ha; depelim Ha.
     simpl in *.
+    intros hnth.
     rewrite -IHfix_subst => //.
-    rewrite (subst_app_decomp [wildcard]). simpl.
+    rewrite (subst_app_decomp [_]). simpl.
     f_equal. rewrite lift_closed // closed_subst //.
+  Qed.
+
+  Lemma closed_unfold_fix_cunfold_eq mfix idx : 
+    closed (tFix mfix idx) ->
+    unfold_fix mfix idx = cunfold_fix mfix idx.
+  Proof.
+    unfold unfold_fix, cunfold_fix.
+    destruct (nth_error mfix idx) eqn:Heq => //.
+    intros cl; f_equal; f_equal.
+    now rewrite (closed_fix_substl_subst_eq cl).
   Qed.
   
   Lemma closed_unfold_cofix_cunfold_eq mfix idx : 
@@ -714,27 +749,23 @@ Section Wcbv.
     + apply IHev1 in ev'1; solve_discr.
     + apply IHev1 in ev'1.
       solve_discr.
-      rewrite e1 in e.
-      apply IHev2 in ev'2.
-      subst.
-      noconf e.
+      rewrite e0 in e. noconf e.
+      apply IHev2 in ev'2. subst.
       now apply IHev3 in ev'3.
     + apply IHev1 in ev'1; solve_discr.
       apply IHev2 in ev'2; subst.
-      destruct o as [|(? & ?)]; [easy|].
-      now apply Bool.negb_true_iff in H0.
+      rewrite e0 in e. noconf e. lia.
     + apply IHev1 in ev'1.
       subst f'.
-      rewrite isFixApp_mkApps in i0 by easy.
+      rewrite isFixApp_mkApps in i by easy.
       cbn in *.
-      now rewrite Bool.orb_true_r in i0.
+      now rewrite Bool.orb_true_r in i.
     + easy.
   - depelim ev'.
     + apply IHev1 in ev'1; solve_discr.
     + apply IHev1 in ev'1; solve_discr.
       apply IHev2 in ev'2; subst.
-      destruct o as [|(? & ?)]; [easy|].
-      now apply Bool.negb_true_iff in H0.
+      rewrite e0 in e; noconf e. lia.
     + apply IHev1 in ev'1; solve_discr.
       now apply IHev2 in ev'2; subst.
     + apply IHev1 in ev'1; subst.
@@ -829,92 +860,3 @@ Arguments eval_deterministic {_ _ _ _}.
 Conjecture closed_typed_wcbeval : forall {cf : checker_flags} (Σ : global_env_ext) t T,
     Σ ;;; [] |- t : T -> ∑ u, eval (fst Σ) t u.
 
-(** Evaluation is a subrelation of reduction: *)
-
-Tactic Notation "redt" uconstr(y) := eapply (transitivity (R:=red _ _) (y:=y)).
-
-Lemma wcbeval_red `{checker_flags} : forall (Σ : global_env_ext) t u, wf Σ -> closed t ->
-    eval Σ t u -> red Σ [] t u.
-Proof.
-  intros Σ t u wfΣ Hc He. revert Hc.
-  induction He; simpl; 
-  (move/andP => [/andP[Hc Hc'] Hc''] || move/andP => [Hc Hc'] || move => Hc);
-    try solve[econstructor; eauto].
-
-  - redt (tApp (tLambda na t b) a); eauto.
-    eapply red_app; eauto.
-    redt (tApp (tLambda na t b) a'). eapply red_app; eauto.
-    redt (csubst a' 0 b).
-    rewrite (closed_subst a' 0 b).
-    eapply eval_closed; eauto. eapply red1_red. constructor.
-    eapply IHHe3. eapply closed_csubst. eauto using eval_closed.
-    eapply eval_closed in He1; eauto. 
-    simpl in He1. now move/andP: He1.
-
-  - redt (tLetIn na b0' t b1); eauto.
-    eapply red_letin; auto.
-    redt (b1 {0 := b0'}); auto.
-    do 2 econstructor.
-    forward IHHe2.
-    eapply closed_csubst; eauto using eval_closed. unfold subst1.
-    rewrite -(closed_subst b0' 0 b1); eauto using eval_closed.
-
-  - redt (subst_instance_constr u body); auto.
-    eapply red1_red. econstructor; eauto.
-    apply IHHe. now eapply closed_def.
-
-  - redt (tCase (ind, pars) p _ brs).
-    eapply red_case. eauto. eapply IHHe1; eauto.
-    eapply All2_same. intros. split; auto.
-    redt (iota_red _ _ _ _); eauto. 2:eapply IHHe2.
-    eapply red1_red. econstructor.
-    eapply closed_iota; eauto. now eapply eval_closed in He1.
-
-  - redt _. 2:eapply IHHe2; eauto using eval_closed.
-    redt (tProj _ (mkApps _ _)). eapply red_proj_c. eauto.
-    apply red1_red. econstructor; eauto.
-    eapply eval_closed in He1; eauto. eapply closed_arg in He1; eauto.
-
-  - redt (tApp (mkApps (tFix mfix idx) argsv) av);
-      [eapply red_app; eauto|].
-    assert (closed_fix: closed (mkApps (tFix mfix idx) argsv)).
-    { eapply eval_closed; [easy| |easy].
-      easy. }
-    eapply closedn_mkApps_inv in closed_fix.
-    apply andb_true_iff in closed_fix.
-    rewrite -closed_unfold_fix_cunfold_eq in e; [easy|].
-    redt (tApp (mkApps fn argsv) av).
-    + repeat change (tApp ?h ?a) with (mkApps h [a]).
-      rewrite !mkApps_nested.
-      apply red1_red.
-      eapply red_fix; [easy|].
-      unfold is_constructor.
-      now rewrite nth_error_snoc.
-    + eapply IHHe3.
-      cbn.
-      apply andb_true_iff.
-      split.
-      * apply closedn_mkApps; [|easy].
-        now eapply closed_unfold_fix.
-      * now eapply eval_closed; [| |easy].
-
-  - now apply red_app.
-
-  - move/closedn_mkApps_inv/andP: Hc' => [Hf Hargs].
-    rewrite -closed_unfold_cofix_cunfold_eq in e; auto.
-    redt _. eapply red1_red.
-    eapply PCUICTyping.red_cofix_case; eauto.
-    eapply IHHe.
-    eapply closed_unfold_cofix in e; eauto.
-    simpl. rewrite Hc closedn_mkApps; eauto.
-
-  - move/closedn_mkApps_inv/andP: Hc => [Hf Hargs].
-    rewrite -closed_unfold_cofix_cunfold_eq in e; auto.
-    redt _. 2:eapply IHHe.
-    redt (tProj _ (mkApps _ _)). eapply red_proj_c. eauto.
-    apply red1_red. econstructor; eauto.
-    simpl. eapply closed_unfold_cofix in e; eauto.
-    rewrite closedn_mkApps; eauto.
-
-  - eapply (red_mkApps _ _ [a] [a']); auto.
-Qed.

@@ -51,12 +51,13 @@ Section Lemmata.
   Context {cf : checker_flags}.
   Context (flags : RedFlags.t).
 
+  (*
   Lemma eq_term_zipc_inv :
-    forall φ u v π,
-      eq_term φ (zipc u π) (zipc v π) ->
-      eq_term φ u v.
+    forall Σ φ u v π,
+      eq_term Σ φ (zipc u π) (zipc v π) ->
+      eq_term Σ φ u v.
   Proof.
-    intros Σ u v π h.
+    intros Σ φ u v π h.
     induction π in u, v, h |- *.
     all: try solve [
              simpl in h ; try apply IHπ in h ;
@@ -97,21 +98,24 @@ Section Lemmata.
     eapply eq_term_zipc_inv.
     eapply eq_term_it_mkLambda_or_LetIn_inv.
     eassumption.
-  Qed.
+  Qed.*)
 
   Lemma eq_term_upto_univ_zipc :
-    forall Re u v π,
+    forall Σ Re u v π,
       RelationClasses.Reflexive Re ->
-      eq_term_upto_univ Re Re u v ->
-      eq_term_upto_univ Re Re (zipc u π) (zipc v π).
+      eq_term_upto_univ Σ Re Re u v ->
+      eq_term_upto_univ Σ Re Re (zipc u π) (zipc v π).
   Proof.
-    intros Re u v π he h.
+    intros Σ Re u v π he h.
     induction π in u, v, h |- *.
     all: try solve [
                simpl ; try apply IHπ ;
                cbn ; constructor ; try apply eq_term_upto_univ_refl ; assumption
              ].
     - assumption.
+    - simpl. apply IHπ. constructor.
+      + eapply eq_term_eq_term_napp; auto. apply _.
+      + apply eq_term_upto_univ_refl; assumption.
     - simpl. apply IHπ. constructor.
       apply All2_app.
       + apply All2_same.
@@ -160,8 +164,8 @@ Section Lemmata.
 
   Lemma eq_term_zipc :
     forall (Σ : global_env_ext) u v π,
-      eq_term (global_ext_constraints Σ) u v ->
-      eq_term (global_ext_constraints Σ) (zipc u π) (zipc v π).
+      eq_term Σ (global_ext_constraints Σ) u v ->
+      eq_term Σ (global_ext_constraints Σ) (zipc u π) (zipc v π).
   Proof.
     intros Σ u v π h.
     eapply eq_term_upto_univ_zipc.
@@ -170,23 +174,23 @@ Section Lemmata.
   Qed.
 
   Lemma eq_term_upto_univ_zipp :
-    forall Re u v π,
+    forall Σ Re u v π,
       RelationClasses.Reflexive Re ->
-      eq_term_upto_univ Re Re u v ->
-      eq_term_upto_univ Re Re (zipp u π) (zipp v π).
+      eq_term_upto_univ Σ Re Re u v ->
+      eq_term_upto_univ Σ Re Re (zipp u π) (zipp v π).
   Proof.
-    intros Re u v π he h.
+    intros Σ Re u v π he h.
     unfold zipp.
     case_eq (decompose_stack π). intros l ρ e.
     eapply eq_term_upto_univ_mkApps.
-    - assumption.
+    - apply eq_term_eq_term_napp; try assumption; apply _.
     - apply All2_same. intro. reflexivity.
   Qed.
 
   Lemma eq_term_zipp :
     forall (Σ : global_env_ext) u v π,
-      eq_term (global_ext_constraints Σ) u v ->
-      eq_term (global_ext_constraints Σ) (zipp u π) (zipp v π).
+      eq_term Σ (global_ext_constraints Σ) u v ->
+      eq_term Σ (global_ext_constraints Σ) (zipp u π) (zipp v π).
   Proof.
     intros Σ u v π h.
     eapply eq_term_upto_univ_zipp.
@@ -195,20 +199,20 @@ Section Lemmata.
   Qed.
 
   Lemma eq_term_upto_univ_zipx :
-    forall Re Γ u v π,
+    forall Σ Re Γ u v π,
       RelationClasses.Reflexive Re ->
-      eq_term_upto_univ Re Re u v ->
-      eq_term_upto_univ Re Re (zipx Γ u π) (zipx Γ v π).
+      eq_term_upto_univ Σ Re Re u v ->
+      eq_term_upto_univ Σ Re Re (zipx Γ u π) (zipx Γ v π).
   Proof.
-    intros Re Γ u v π he h.
+    intros Σ Re Γ u v π he h.
     eapply eq_term_upto_univ_it_mkLambda_or_LetIn ; auto.
     eapply eq_term_upto_univ_zipc ; auto.
   Qed.
 
   Lemma eq_term_zipx :
-    forall φ Γ u v π,
-      eq_term φ u v ->
-      eq_term φ (zipx Γ u π) (zipx Γ v π).
+    forall Σ φ Γ u v π,
+      eq_term Σ φ u v ->
+      eq_term Σ φ (zipx Γ u π) (zipx Γ v π).
   Proof.
     intros Σ Γ u v π h.
     eapply eq_term_upto_univ_zipx ; auto.
@@ -266,43 +270,12 @@ Section Lemmata.
   Lemma wellformed_irr :
     forall {Σ Γ t} (h1 h2 : wellformed Σ Γ t), h1 = h2.
   Proof. intros. apply ProofIrrelevance.proof_irrelevance. Qed.
-(* 
-  Lemma typing_eq_term :
-    forall Γ u v A,
-      wf Σ.1 ->
-      Σ ;;; Γ |- u : A ->
-      eq_term (global_ext_constraints Σ) u v ->
-      Σ ;;; Γ |- v : A.
-  Abort. *)
-
-  (* TODO MOVE It needs wf Σ entirely *)
-  (* Lemma subject_conversion :
-    forall Γ u v A B,
-      wf Σ.1 ->
-      Σ ;;; Γ |- u : A ->
-      Σ ;;; Γ |- v : B ->
-      Σ ;;; Γ |- u = v ->
-      ∑ C,
-        Σ ;;; Γ |- u : C ×
-        Σ ;;; Γ |- v : C.
-  Proof.
-    intros Γ u v A B hΣ hu hv h.
-    apply conv_alt_red in h as [u' [v' [[? ?] ?]]].
-    pose proof (subject_reduction _ Γ _ _ _ hΣ hu r) as hu'.
-    pose proof (subject_reduction _ Γ _ _ _ hΣ hv r0) as hv'.
-    pose proof (typing_eq_term _ _ _ _ hΣ hu' e) as hv''.
-    pose proof (principal_typing _ hΣ hv' hv'') as [C [? [? hvC]]]. *)
-    (* apply eq_term_sym in e as e'. *)
-    (* pose proof (typing_alpha _ _ _ _ hvC e') as huC. *)
-    (* Not clear.*)
-  (* Abort.
-   *)
 
   Context (hΣ : ∥ wf Σ ∥).
 
   Lemma welltyped_alpha Γ u v :
       welltyped Σ Γ u ->
-      eq_term_upto_univ eq eq u v ->
+      eq_term_upto_univ [] eq eq u v ->
       welltyped Σ Γ v.
   Proof.
     intros [A h] e.
@@ -312,7 +285,7 @@ Section Lemmata.
 
   Lemma wellformed_alpha Γ u v :
       wellformed Σ Γ u ->
-      eq_term_upto_univ eq eq u v ->
+      eq_term_upto_univ [] eq eq u v ->
       wellformed Σ Γ v.
   Proof.
     destruct hΣ as [hΣ'].

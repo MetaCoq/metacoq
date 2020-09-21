@@ -6,7 +6,7 @@ From MetaCoq.Erasure Require Import EAstUtils Extract EArities EWcbvEval.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
      PCUICSubstitution PCUICLiftSubst PCUICClosed
      PCUICWcbvEval PCUICSR  PCUICInversion PCUICGeneration
-     PCUICContextConversion.
+     PCUICContextConversion PCUICCanonicity.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker.
 From Coq Require Import ssreflect.
 Local Open Scope string_scope.
@@ -21,6 +21,10 @@ Module PA := PCUICAst.
 Module P := PCUICWcbvEval.
 
 Ltac inv H := inversion H; subst; clear H.
+
+Coercion wf_ext_wf : wf_ext >-> wf.
+Existing Instance wf_ext_wf.
+Existing Class axiom_free.
 
 Lemma nth_error_app_inv X (x : X) n l1 l2 :
   nth_error (l1 ++ l2) n = Some x -> (n < #|l1| /\ nth_error l1 n = Some x) \/ (n >= #|l1| /\ nth_error l2 (n - List.length l1) = Some x).
@@ -114,32 +118,36 @@ Proof.
     + cbn in H17. eauto.
 Qed.
 
-Lemma typing_spine_closed args Σ x2 x3 :  wf Σ.1 ->
+Definition well_typed Σ Γ t := ∑ T, Σ ;;; Γ |- t : T.
+
+Lemma typing_spine_wt args Σ x2 x3 :  wf Σ.1 ->
   PCUICGeneration.typing_spine Σ [] x2 args x3 ->
-  All (closedn 0) args.
+  All (well_typed Σ []) args.
 Proof.
   intros wfΣ sp.
   dependent induction sp; constructor; auto.
-  now eapply subject_closed in t.
+  now exists A.
 Qed.
 
-Theorem subject_reduction_eval : forall (Σ : PCUICAst.global_env_ext) t u T,
-  wf Σ -> Σ ;;; [] |- t : T -> PCUICWcbvEval.eval Σ t u -> Σ ;;; [] |- u : T.
+Theorem subject_reduction_eval {Σ :global_env_ext} {t u T} {wfΣ : wf Σ} {axfree : axiom_free Σ} :
+  Σ ;;; [] |- t : T -> PCUICWcbvEval.eval Σ t u -> Σ ;;; [] |- u : T.
 Proof.
-  intros * wfΣ Hty Hred%wcbeval_red; auto. eapply subject_reduction; eauto.
-  eapply PCUICClosed.typecheck_closed in Hty as [_ Hty]; auto.
-  apply andP in Hty. now destruct Hty.
+  intros Hty Hred.
+  eapply wcbeval_red in Hred; eauto. eapply subject_reduction; eauto.
 Qed.
 
 Lemma typing_spine_eval:
-  forall (Σ : global_env_ext) (args args' : list PCUICAst.term) (X : All2 (PCUICWcbvEval.eval Σ) args args') (bla : wf Σ)
-    (T x x0 : PCUICAst.term) (t0 : typing_spine Σ [] x args x0) (c : Σ;;; [] |- x0 <= T) (x1 : PCUICAst.term)
-    (c0 : Σ;;; [] |- x1 <= x), isWfArity_or_Type Σ [] T -> typing_spine Σ [] x1 args' T.
+  forall (Σ : global_env_ext) (args args' : list PCUICAst.term) 
+  (X : All2 (PCUICWcbvEval.eval Σ) args args') (bla : wf Σ)
+    (T x x0 : PCUICAst.term) (t0 : typing_spine Σ [] x args x0) 
+    (c : Σ;;; [] |- x0 <= T) (x1 : PCUICAst.term)
+    (c0 : Σ;;; [] |- x1 <= x), axiom_free Σ -> isWfArity_or_Type Σ [] T -> typing_spine Σ [] x1 args' T.
 Proof.
   intros. eapply typing_spine_red; eauto.
-  eapply typing_spine_closed in t0; auto.
+  eapply typing_spine_wt in t0; auto.
   eapply All2_All_mix_left in X; eauto. simpl in X.
   eapply All2_impl. eassumption. simpl. intros t u [ct et]. eapply wcbeval_red; eauto.
+  eapply (projT2 ct).
 Qed.
 
 (** ** on mkApps *)

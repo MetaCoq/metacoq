@@ -36,6 +36,7 @@ Section Normal.
                     normal Γ (tLambda na A B)
   | nf_cstrapp i n u v : All (normal Γ) v -> normal Γ (mkApps (tConstruct i n u) v)
   | nf_indapp i u v : All (normal Γ) v -> normal Γ (mkApps (tInd i u) v)
+  (* Missing stuck fixes *)
   | nf_fix mfix idx : All ((normal Γ) ∘ dbody) mfix ->
                       normal Γ (tFix mfix idx)
   | nf_cofix mfix idx : All ((normal Γ) ∘ dbody) mfix ->
@@ -43,12 +44,12 @@ Section Normal.
 
   with neutral (Γ : context) : term -> Prop :=
   | ne_rel i :
-      option_map decl_body (nth_error Γ i) = Some None ->
+      (forall b, option_map decl_body (nth_error Γ i) <> Some (Some b)) ->
       neutral Γ (tRel i)
   | ne_var v : neutral Γ (tVar v)
   | ne_evar n l : neutral Γ (tEvar n l)
-  | ne_const c u decl :
-      lookup_env Σ c = Some (ConstantDecl decl) -> decl.(cst_body) = None ->
+  | ne_const c u :
+      (forall decl b, lookup_env Σ c = Some (ConstantDecl decl) -> decl.(cst_body) = Some b -> False) ->
       neutral Γ (tConst c u)
   | ne_app f v : neutral Γ f -> normal Γ v -> neutral Γ (tApp f v)
   | ne_case i p c brs : neutral Γ c -> Forall ((normal Γ) ∘ snd) brs ->
@@ -63,8 +64,13 @@ Section Normal.
   | whnf_lam na A B : whnf Γ (tLambda na A B)
   | whnf_cstrapp i n u v : whnf Γ (mkApps (tConstruct i n u) v)
   | whnf_indapp i u v : whnf Γ (mkApps (tInd i u) v)
-  | whnf_fix mfix idx : whnf Γ (tFix mfix idx)
-  | whnf_cofix mfix idx : whnf Γ (tCoFix mfix idx)
+  | whnf_fixapp mfix idx v :
+    match unfold_fix mfix idx with
+    | Some (rarg, body) => nth_error v rarg = None
+    | None => True
+    end ->
+    whnf Γ (mkApps (tFix mfix idx) v)
+  | whnf_cofixapp mfix idx v : whnf Γ (mkApps (tCoFix mfix idx) v)
 
   with whne (Γ : context) : term -> Prop :=
   | whne_rel i :
@@ -98,6 +104,14 @@ Section Normal.
       whne Γ f ->
       whne Γ (tApp f v)
 
+  (* Stuck fixpoints are neutrals *)
+  | whne_fixapp mfix idx args rarg arg body :
+     unfold_fix mfix idx = Some (rarg, body) ->
+     nth_error args rarg = Some arg -> 
+     whnf Γ arg ->
+     PCUICAstUtils.isConstruct_app arg = false ->
+     whne Γ (mkApps (tFix mfix idx) args)
+  
   | whne_case i p c brs :
       whne Γ c ->
       whne Γ (tCase i p c brs)
@@ -123,17 +137,6 @@ Section Normal.
     induction args in t, h |- *.
     - assumption.
     - simpl. eapply IHargs. econstructor. assumption.
-  Qed.
-
-  Lemma whne_mkApps_inv :
-    forall Γ t l,
-      whne Γ (mkApps t l) ->
-      whne Γ t.
-  Proof.
-    intros Γ t l h.
-    induction l in t, h |- *.
-    - assumption.
-    - simpl in h. apply IHl in h. inversion h. assumption.
   Qed.
 
 End Normal.

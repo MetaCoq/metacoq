@@ -201,9 +201,9 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
     red1 Σ Γ (tConst c u) (subst_instance_constr u body)
 
 (** Proj *)
-| red_proj i pars narg args k u arg:
+| red_proj i pars narg args u arg:
     nth_error args (pars + narg) = Some arg ->
-    red1 Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i k u) args)) arg
+    red1 Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i 0 u) args)) arg
 
 
 | abs_red_l na M M' N : red1 Σ Γ M M' -> red1 Σ Γ (tLambda na M N) (tLambda na M' N)
@@ -280,10 +280,10 @@ Lemma red1_ind_all :
         declared_constant Σ c decl ->
         forall u : Instance.t, cst_body decl = Some body -> P Γ (tConst c u) (subst_instance_constr u body)) ->
 
-       (forall (Γ : context) (i : inductive) (pars narg : nat) (args : list term) (k : nat) (u : Instance.t)
+       (forall (Γ : context) (i : inductive) (pars narg : nat) (args : list term) (u : Instance.t)
          (arg : term),
            nth_error args (pars + narg) = Some arg ->
-           P Γ (tProj (i, pars, narg) (mkApps (tConstruct i k u) args)) arg) ->
+           P Γ (tProj (i, pars, narg) (mkApps (tConstruct i 0 u) args)) arg) ->
 
        (forall (Γ : context) (na : name) (M M' N : term),
         red1 Σ Γ M M' -> P Γ M M' -> P Γ (tLambda na M N) (tLambda na M' N)) ->
@@ -563,7 +563,7 @@ Fixpoint destArity Γ (t : term) :=
 
 Reserved Notation " Σ ;;; Γ |- t : T " (at level 50, Γ, t, T at next level).
 Reserved Notation " Σ ;;; Γ |- t <= u " (at level 50, Γ, t, u at next level).
-
+Reserved Notation " Σ ;;; Γ |- t = u " (at level 50, Γ, t, u at next level).
 (** ** Cumulativity *)
 
 Inductive cumul `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
@@ -578,12 +578,14 @@ where " Σ ;;; Γ |- t <= u " := (cumul Σ Γ t u) : type_scope.
    Defined as cumulativity in both directions.
  *)
 
-Definition conv `{checker_flags} Σ Γ T U : Type :=
-  (Σ ;;; Γ |- T <= U) * (Σ ;;; Γ |- U <= T).
+Inductive conv `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
+ | conv_refl t u : eq_term (global_ext_constraints Σ) t u -> Σ ;;; Γ |- t = u
+ | conv_red_l t u v : red1 Σ.1 Γ t v -> Σ ;;; Γ |- v = u -> Σ ;;; Γ |- t = u
+ | conv_red_r t u v : Σ ;;; Γ |- t = v -> red1 Σ.1 Γ u v -> Σ ;;; Γ |- t = u
 
-Notation " Σ ;;; Γ |- t = u " := (conv Σ Γ t u) (at level 50, Γ, t, u at next level) : type_scope.
+ where " Σ ;;; Γ |- t = u " := (@conv _ Σ Γ t u) : type_scope.
 
-Lemma conv_refl `{checker_flags} : forall Σ Γ t, Σ ;;; Γ |- t = t.
+Lemma conv_refl' `{checker_flags} : forall Σ Γ t, Σ ;;; Γ |- t = t.
   intros. todo "conv_refl".
 Defined.
 
@@ -885,12 +887,23 @@ Module TemplateTyping <: Typing TemplateTerm TemplateEnvironment TemplateEnvTypi
 
   Definition ind_guard := ind_guard.
   Definition typing := @typing.
+  Definition conv := @conv.
+  Definition cumul := @cumul.
   Definition smash_context := smash_context.
+  Definition expand_lets := expand_lets.
+  Definition expand_lets_ctx := expand_lets_ctx.
   Definition lift := lift.
   Definition subst := subst.
   Definition lift_context := lift_context.
+  Definition subst_context := subst_context.
+  Definition extended_subst := extended_subst.
+  Definition subst_instance_constr := subst_instance_constr.
+  Definition subst_instance_context := subst_instance_context.
   Definition subst_telescope := subst_telescope.
   Definition inds := inds.
+  Definition noccur_between := noccur_between.
+  Definition closedn := closedn.
+  Definition destArity := destArity [].
 End TemplateTyping.
 
 Module TemplateDeclarationTyping :=

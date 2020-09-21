@@ -113,11 +113,10 @@ Section Wcbv.
       eval (tCase (ind, pars) discr brs) res
 
   (** Fix unfolding, with guard *)
-  | eval_fix f mfix idx argsv a av narg fn res :
+  | eval_fix f mfix idx argsv a av fn res :
       eval f (mkApps (tFix mfix idx) argsv) ->
       eval a av ->
-      cunfold_fix mfix idx = Some (narg, fn) ->
-      narg <= #|argsv| ->
+      cunfold_fix mfix idx = Some (#|argsv|, fn) ->
       eval (tApp (mkApps fn argsv) av) res ->
       eval (tApp f a) res
 
@@ -540,7 +539,8 @@ Proof.
       noconf H1; noconf H2.
       subst.
       apply IHev2 in ev'2; subst.
-      rewrite H3 in H.
+      noconf H0.
+      rewrite H2 in H.
       now noconf H.
     + apply IHev1 in ev'1.
       apply mkApps_eq_inj in ev'1; try easy.
@@ -548,14 +548,14 @@ Proof.
       noconf H1.
       noconf H2.
       apply IHev2 in ev'2.
-      subst.
-      rewrite H3 in H.
+      subst. noconf H0.
+      rewrite H2 in H.
       noconf H. lia.
     + apply IHev1 in ev'1.
       subst.
-      rewrite isFixApp_mkApps in H1 by easy.
+      rewrite isFixApp_mkApps in H0 by easy.
       cbn in *.
-      now rewrite orb_true_r in H1.
+      now rewrite orb_true_r in H0.
     + easy.
   - depelim ev'.
     + apply IHev1 in ev'1; solve_discr.

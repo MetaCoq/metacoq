@@ -208,11 +208,10 @@ Section Wcbv.
       eval (tProj (i, pars, arg) discr) res
 
   (** Fix unfolding, with guard *)
-  | eval_fix f mfix idx argsv a av narg fn res :
+  | eval_fix f mfix idx argsv a av fn res :
       eval f (mkApps (tFix mfix idx) argsv) ->
       eval a av ->
-      cunfold_fix mfix idx = Some (narg, fn) ->
-      narg <= #|argsv| ->      
+      cunfold_fix mfix idx = Some (#|argsv|, fn) ->
       eval (tApp (mkApps fn argsv) av) res ->
       eval (tApp f a) res
 

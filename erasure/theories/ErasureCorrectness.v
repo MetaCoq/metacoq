@@ -934,7 +934,7 @@ Proof.
       econstructor.
       eapply Is_type_eval. 4:eapply X. eauto. eauto.
       eapply eval_fix; eauto.
-      rewrite /cunfold_fix e0 //.
+      rewrite /cunfold_fix e0 //. congruence.
     + eapply IHeval1 in He1 as IH1; eauto.
       destruct IH1 as (er_stuck_v & er_stuck & ev_stuck).
       eapply IHeval2 in He2 as IH2; eauto.
@@ -959,7 +959,8 @@ Proof.
           rewrite mkApps_nested. eapply value_final.
           eapply eval_to_value; eauto.
           eapply value_final, eval_to_value; eauto.
-          rewrite  /cunfold_fix e0 //. auto. auto. }
+          rewrite  /cunfold_fix e0 //. auto. auto.
+          rewrite H3; eauto. auto. }
 
       inv H2.
       * assert (Hmfix' := X).
@@ -976,7 +977,7 @@ Proof.
         -- cbn in e3. rename x5 into L.
            eapply (erases_mkApps _ _ _ _ (argsv ++ [av])) in H2; first last.
            { eapply Forall2_app.
-             - exact H3.
+             - exact H4.
              - eauto. }
            rewrite <- mkApps_nested in H2.
            rewrite EAstUtils.mkApps_app in H2.
@@ -996,7 +997,7 @@ Proof.
              pose proof (eval_to_value _ _ _ e3) as vfix.
              eapply PCUICWcbvEval.stuck_fix_value_args in vfix; eauto.
              2:{ rewrite /cunfold_fix e0 //. }
-             simpl in vfix. assert (rarg = #|argsv|) by lia.
+             simpl in vfix. 
              subst. unfold is_constructor.
              rewrite nth_error_snoc. lia.
              assert(Σ ;;; [] |- mkApps (tFix mfix idx) (argsv ++ [av]) : PCUICLiftSubst.subst [av] 0 x1).
@@ -1014,7 +1015,8 @@ Proof.
            ++ eauto.
            ++ eauto.
            ++ rewrite <- Ee.closed_unfold_fix_cunfold_eq.
-              { unfold ETyping.unfold_fix. now rewrite e. }
+              { unfold ETyping.unfold_fix. rewrite e -e2.
+                now rewrite (Forall2_length H4). }
               eapply eval_closed in e3; eauto.
               clear -e3 Hmfix'.
               pose proof (All2_length _ _ Hmfix').
@@ -1034,8 +1036,7 @@ Proof.
               now rewrite Nat.add_0_r in Hbod.
               eauto with pcuic.
               now eapply PCUICClosed.subject_closed in Ht.
-           ++ apply Forall2_length in H3. rewrite <- e2. lia.
-           ++ auto.
+          ++ auto.
            
         -- cbn. destruct p. destruct p.
            eapply (erases_subst Σ [] (PCUICLiftSubst.fix_context mfix) [] dbody (fix_subst mfix)) in e3; cbn; eauto.
@@ -1045,10 +1046,10 @@ Proof.
            ++ eapply All2_from_nth_error.
               erewrite fix_subst_length, ETyping.fix_subst_length, All2_length; eauto.
               intros.
-              rewrite fix_subst_nth in H4. now rewrite fix_subst_length in H2.
+              rewrite fix_subst_nth in H3. now rewrite fix_subst_length in H2.
               rewrite efix_subst_nth in H5. rewrite fix_subst_length in H2.
-                                                erewrite <- All2_length; eauto.
-              inv H5; inv H4.
+              erewrite <- All2_length; eauto.
+              inv H5; inv H3.
               erewrite All2_length; eauto.
       * eapply (Is_type_app _ _ _ (argsv ++ [av])) in X as []; tas.
         -- exists EAst.tBox.
@@ -1058,7 +1059,7 @@ Proof.
               rewrite -mkApps_nested.
               eapply eval_fix; eauto. 
               1-2:eapply value_final, eval_to_value; eauto.
-              rewrite /cunfold_fix e0 //.
+              rewrite /cunfold_fix e0 //. congruence.
            ++ eapply Ee.eval_box; [|eauto].
               apply eval_to_mkApps_tBox_inv in ev_stuck as ?; subst.
               eauto.
@@ -1206,7 +1207,7 @@ Proof.
     + inv He.
       * eexists. split; eauto. now econstructor.
       * eexists. split. 2: now econstructor.
-        econstructor; eauto.
+        econstructor; eauto.      
 Qed.
 
 Print Assumptions erases_correct.

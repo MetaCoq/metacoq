@@ -999,41 +999,9 @@ End RedEq.
 
 
 
-(* Using Derive makes Qed break?? *)
-(** FIXME Equations Derive Bug *)
-(* Polymorphic Derive Signature for Relation.clos_refl_trans. *)
-Set Universe Polymorphism.
-Definition clos_refl_trans_sig@{i j} (A : Type@{i}) (R : Relation.relation A)
-           (index : sigma (fun _ : A => A)) : Type@{j} :=
-    Relation.clos_refl_trans@{i j} R (pr1 index) (pr2 index).
-
-Definition clos_refl_trans_sig_pack@{i j} (A : Type@{i}) (R : Relation.relation A) (x H : A)
-           (clos_refl_trans_var : Relation.clos_refl_trans R x H) :
-  sigma@{i} (fun index : sigma (fun _ : A => A) => Relation.clos_refl_trans@{i j} R (pr1 index) (pr2 index)) :=
-    ({| pr1 := {| pr1 := x; pr2 := H |}; pr2 := clos_refl_trans_var |}).
-
-Instance clos_refl_trans_Signature (A : Type) (R : Relation.relation A) (x H : A)
-  : Signature (Relation.clos_refl_trans R x H) (sigma (fun _ : A => A)) (clos_refl_trans_sig A R) :=
-  clos_refl_trans_sig_pack A R x H.
-Unset Universe Polymorphism.
+Polymorphic Derive Signature for Relation.clos_refl_trans.
 
 Derive Signature for red1.
-
-(* Definition red1_sig@{} (Σ : global_env) (index : sigma (fun _ : context => sigma (fun _ : term => term))) := *)
-(*   let Γ := pr1 index in let H := pr1 (pr2 index) in let H0 := pr2 (pr2 index) in red1 Σ Γ H H0. *)
-
-(* Universe red1u. *)
-
-(* Definition red1_sig_pack@{} (Σ : global_env) (Γ : context) (H H0 : term) (red1_var : red1 Σ Γ H H0) *)
-(*   : sigma@{red1u} (fun index : sigma (fun _ : context => sigma (fun _ : term => term)) => *)
-(*         red1 Σ (pr1 index) (pr1 (pr2 index)) (pr2 (pr2 index))) *)
-(*   := *)
-(*      {| pr1 := {| pr1 := Γ; pr2 := {| pr1 := H; pr2 := H0 |} |}; pr2 := red1_var |}. *)
-
-(* Instance red1_Signature@{} (Σ : global_env) (Γ : context) (H H0 : term) *)
-(*      : Signature@{red1u} (red1 Σ Γ H H0) (sigma (fun _ : context => sigma (fun _ : term => term))) (red1_sig Σ) := *)
-(*   red1_sig_pack Σ Γ H H0. *)
-(* (** FIXME Equations *)  ==> seems fixed now that term is not in Set anymore *)
 
 Lemma local_env_telescope P Γ Γ' Δ Δ' :
   All2_telescope (on_decl P) Γ Γ' Δ Δ' ->

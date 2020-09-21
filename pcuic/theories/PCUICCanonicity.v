@@ -1240,7 +1240,7 @@ Section WeakNormalization.
     pose proof (subject_closed wfΣ t0) as H.
     rewrite closedn_mkApps in H. move/andP: H => [clcofix clargs].
     assert (red Σ [] (tCase ip p (mkApps (tCoFix mfix idx) args) brs) (tCase ip p (mkApps fn args) brs)).
-    { eapply red1_red. eapply PCUICTyping.red_cofix_case.
+    { eapply red1_red. eapply red_cofix_case.
       rewrite -closed_unfold_cofix_cunfold_eq in e; eauto. }
     specialize (X X0).
     specialize (IHHe _ X).
@@ -1251,7 +1251,7 @@ Section WeakNormalization.
     pose proof (subject_closed wfΣ t) as H.
     rewrite closedn_mkApps in H. move/andP: H => [clcofix clargs].
     assert (red Σ [] (tProj p (mkApps (tCoFix mfix idx) args)) (tProj p (mkApps fn args))).
-    { eapply red1_red. eapply PCUICTyping.red_cofix_proj.
+    { eapply red1_red. eapply red_cofix_proj.
       rewrite -closed_unfold_cofix_cunfold_eq in e; eauto. }
     specialize (X X0).
     specialize (IHHe _ X).

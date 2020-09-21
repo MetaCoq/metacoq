@@ -283,9 +283,7 @@ Section ContextReduction.
     red1_red_ctxP Γ Γ' ->
     ∑ t, red Σ Γ' T t * red Σ Γ' U t.
   Proof.
-    intros r rc rP.
-    eapply red_alt in r.
-    induction r.
+    intros r rc rP. induction r.
     - eapply red1_red_ctx_aux; eauto.
     - exists x; split; auto.
     - destruct IHr1 as [xl [redl redr]].
@@ -451,9 +449,7 @@ Section ContextConversion.
     red Σ Δ u v' *
     eq_term_upto_univ Σ Re Re v v'.
   Proof.
-    intros r HΓ.
-    eapply red_alt in r.
-    induction r.
+    intros r HΓ. induction r.
     - eapply red1_eq_context_upto_l in r; eauto.
       destruct r as [v [? ?]]. exists v. intuition pcuic.
     - exists x. split; auto. reflexivity.

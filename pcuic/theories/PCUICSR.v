@@ -1068,7 +1068,7 @@ Proof.
       rewrite firstn_skipn_comm nth_error_skipn.
       rewrite -{1}[args0](firstn_skipn (ind_npars mdecl + narg)).
       rewrite nth_error_app1 // firstn_length_le; autorewrite with len; try lia.
-      constructor. }
+      reflexivity. }
     { simpl. autorewrite with len.
       rewrite -(subst_instance_context_length u (ind_params mdecl)).
       eapply weakening_wf_local; auto. }
@@ -1163,7 +1163,7 @@ Proof.
     * eapply wf_fixpoint_red1_type; eauto.
     * eapply All_nth_error in X2; eauto.
     * apply conv_cumul, conv_sym, red_conv. destruct disj as [<-|red].
-      constructor. apply red1_red. apply red.
+      reflexivity. apply red1_red. apply red.
 
   - (* Fix congruence in body *)
     assert(fixl :#|fix_context mfix| = #|fix_context mfix1|) by now (rewrite !fix_context_length; apply (OnOne2_length o)).
@@ -1205,7 +1205,7 @@ Proof.
     * eapply wf_fixpoint_red1_body; eauto.
     * eapply All_nth_error in X2; eauto.
     * apply conv_cumul, conv_sym, red_conv. destruct disj as [<-|[_ eq]].
-      constructor. noconf eq. simpl in H0; noconf H0. rewrite H2; constructor.
+      reflexivity. noconf eq. simpl in H0; noconf H0. rewrite H2; reflexivity.
 
   - (* CoFix congruence type *)
     assert(fixl :#|fix_context mfix| = #|fix_context mfix1|) by now (rewrite !fix_context_length; apply (OnOne2_length o)).
@@ -1252,7 +1252,7 @@ Proof.
     * eapply wf_cofixpoint_red1_type; eauto.
     * eapply All_nth_error in X2; eauto.
     * apply conv_cumul, conv_sym, red_conv. destruct disj as [<-|red].
-      constructor. apply red1_red. apply red.
+      reflexivity. apply red1_red. apply red.
 
   - (* CoFix congruence in body *)
     assert(fixl :#|fix_context mfix| = #|fix_context mfix1|) by now (rewrite !fix_context_length; apply (OnOne2_length o)).
@@ -1290,7 +1290,7 @@ Proof.
     * now eapply wf_cofixpoint_red1_body.
     * eapply All_nth_error in X2; eauto.
     * apply conv_cumul, conv_sym, red_conv. destruct disj as [<-|[_ eq]].
-      constructor. noconf eq. simpl in H0; noconf H0. rewrite H2; constructor.
+      reflexivity. noconf eq. simpl in H0; noconf H0. rewrite H2; reflexivity.
  
   - (* Conversion *)
     specialize (forall_u _ Hu).
@@ -1309,8 +1309,8 @@ Theorem subject_reduction {cf:checker_flags} :
   forall (Σ : global_env_ext) Γ t u T, wf Σ -> Σ ;;; Γ |- t : T -> red Σ Γ t u -> Σ ;;; Γ |- u : T.
 Proof.
   intros * wfΣ Hty Hred.
-  induction Hred. auto.
-  eapply sr_red1 in IHHred; eauto with wf.
+  induction Hred; eauto.
+  eapply sr_red1 in Hty; eauto with wf.
 Qed.
 
 Lemma subject_reduction1 {cf:checker_flags} {Σ Γ t u T}
@@ -1341,7 +1341,7 @@ Section SRContext.
       Σ ;;; Γ |- t <= u.
   Proof.
     intros Σ Γ t u hΣ h.
-    induction h.
+    induction h using red_rect'.
     - eapply cumul_refl'.
     - eapply PCUICConversion.cumul_trans ; try eassumption.
       eapply cumul_red_l.
@@ -1629,7 +1629,7 @@ Section SRContext.
      isWfArity typing Σ Γ A ->
      isWfArity typing Σ Γ B.
    Proof.
-     induction 2.
+     induction 2 using red_rect'.
      - easy.
      - intro. now eapply isWfArity_red1.
    Qed.

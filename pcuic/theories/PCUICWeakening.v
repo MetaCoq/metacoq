@@ -667,9 +667,9 @@ Lemma weakening_red `{CF:checker_flags} Σ Γ Γ' Γ'' M N :
   red Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (lift #|Γ''| #|Γ'| M) (lift #|Γ''| #|Γ'| N).
 Proof.
   intros wfΣ; induction 1.
-  - constructor.
-  - eapply red_trans with (lift #|Γ''| #|Γ'| P); eauto.
-    simpl; eapply red1_red. eapply weakening_red1; auto.
+  - constructor. eapply weakening_red1; auto.
+  - reflexivity.
+  - etransitivity; eassumption.
 Qed.
 
 Fixpoint lift_stack n k π :=

@@ -859,4 +859,3 @@ Arguments eval_deterministic {_ _ _ _}.
 
 Conjecture closed_typed_wcbeval : forall {cf : checker_flags} (Σ : global_env_ext) t T,
     Σ ;;; [] |- t : T -> ∑ u, eval (fst Σ) t u.
-

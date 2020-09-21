@@ -3,7 +3,7 @@
 From Coq Require Import Bool List.
 From MetaCoq.Template
 Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICTyping.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICReduction.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 

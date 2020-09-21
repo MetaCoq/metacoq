@@ -5,9 +5,9 @@
 From Coq Require Import Bool List Arith Lia.
 From MetaCoq.Template Require Import utils config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-  PCUICLiftSubst PCUICEquality PCUICPosition PCUICSigmaCalculus
-  PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICClosed
-  PCUICReduction PCUICWeakening PCUICCumulativity PCUICUnivSubstitution.
+     PCUICLiftSubst PCUICEquality PCUICPosition PCUICSigmaCalculus
+     PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICClosed
+     PCUICReduction PCUICWeakening PCUICCumulativity PCUICUnivSubstitution.
 Require Import ssreflect.
 
 From Equations Require Import Equations.
@@ -1664,7 +1664,7 @@ Proof.
            simpl. rewrite subst_skipn. 1: auto with arith.
            rewrite simpl_lift; auto with arith.
            assert(S (i - #|Γ'|) + #|Γ'| = S i) as -> by lia.
-           constructor.
+           reflexivity.
         -- noconf H.
       * apply nth_error_None in Heq.
         assert(S i = #|s| + (S (i - #|s|))) by lia.
@@ -1698,7 +1698,7 @@ Proof.
     now rewrite nth_error_map H.
 
   - specialize (IHred1 Γ0 Δ Γ' eq_refl wfΓ Hs).
-    apply red_abs. 1: auto. constructor.
+    apply red_abs. 1: auto. reflexivity.
 
   - specialize (IHred1 Γ0 Δ (Γ' ,, _) eq_refl wfΓ Hs).
     apply red_abs; auto.
@@ -1831,7 +1831,7 @@ Proof.
         simpl. rewrite subst_skipn. 1: auto with arith.
         rewrite simpl_lift; auto with arith.
         assert(S (i - #|Γ'|) + #|Γ'| = S i) as -> by lia.
-        constructor.
+        reflexivity.
       * apply nth_error_None in Heq.
         assert(S i = #|s| + (S (i - #|s|))) by lia.
         rewrite H1. rewrite -> simpl_subst; try lia.
@@ -1864,7 +1864,7 @@ Proof.
     now rewrite nth_error_map H.
 
   - specialize (IHred1 Γ0 Δ Γ' eq_refl Hs).
-    apply red_abs. 1: auto. constructor.
+    apply red_abs. 1: auto. reflexivity.
 
   - specialize (IHred1 Γ0 Δ (Γ' ,, _) eq_refl Hs).
     apply red_abs; auto with pcuic.
@@ -1969,11 +1969,9 @@ Lemma substitution_untyped_red {cf:checker_flags} Σ Γ Δ Γ' s M N :
   red Σ (Γ ,,, subst_context s 0 Γ') (subst s #|Γ'| M) (subst s #|Γ'| N).
 Proof.
   intros wfΣ subsl.
-  induction 1. 
-  - constructor.
-  - etransitivity.
-    * eapply IHX.
-    * eapply substitution_untyped_let_red; eauto.
+  induction 1; trea.
+  - eapply substitution_untyped_let_red; eassumption.
+  - etransitivity; eauto.
 Qed.
 
 Lemma subst_eq_decl `{checker_flags} Σ ϕ l k d d' :
@@ -1999,9 +1997,9 @@ Lemma substitution_red `{cf : checker_flags} (Σ : global_env_ext) Γ Δ Γ' s M
   red Σ (Γ ,,, Δ ,,, Γ') M N ->
   red Σ (Γ ,,, subst_context s 0 Γ') (subst s #|Γ'| M) (subst s #|Γ'| N).
 Proof.
-  intros HG Hs Hl Hred. induction Hred. 1: constructor.
-  eapply red_trans with (subst s #|Γ'| P); auto.
-  eapply substitution_let_red; eauto.
+  intros HG Hs Hl Hred. induction Hred; trea. 
+  - eapply substitution_let_red; eauto.
+  - etransitivity; eauto.
 Qed.
 
 Lemma red_red {cf:checker_flags} (Σ : global_env_ext) Γ Δ Γ' s s' b : wf Σ ->
@@ -2025,8 +2023,8 @@ Proof.
       * destruct (All2_nth_error_Some _ _ Hall Heq') as [t' [-> Ptt']].
         intros. apply (weakening_red Σ Γ [] Γ' t t'); auto.
       * rewrite (All2_nth_error_None _ Hall Heq').
-        apply All2_length in Hall as ->. constructor.
-    + constructor.
+        apply All2_length in Hall as ->. reflexivity.
+    + reflexivity.
 
   - apply red_evar. apply All2_map. solve_all.
   - apply red_prod; eauto.
@@ -2059,9 +2057,9 @@ Lemma untyped_substitution_red {cf:checker_flags} Σ Γ Δ Γ' s M N :
   red Σ (Γ ,,, Δ ,,, Γ') M N ->
   red Σ (Γ ,,, subst_context s 0 Γ') (subst s #|Γ'| M) (subst s #|Γ'| N).
 Proof.
-  intros HG Hs Hred. induction Hred. 1: constructor.
-  eapply red_trans with (subst s #|Γ'| P); auto.
-  eapply substitution_untyped_let_red; eauto.
+  intros HG Hs Hred. induction Hred; trea.
+  - eapply substitution_untyped_let_red; eauto.
+  - etransitivity; eauto.
 Qed.
 
 (** The cumulativity relation is substitutive, yay! *)

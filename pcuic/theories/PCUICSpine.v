@@ -1226,7 +1226,7 @@ Proof.
       destruct (nth_error_spec (all_rels Δ 0 #|Δ|) (#|Δ| + n - #|Δ'|));
       rewrite all_rels_length in l0 |- *. lia.
       assert (#|Δ| + n - #|Δ| = n) as -> by lia.
-      constructor. lia.
+      reflexivity. lia.
     **
       elim: leb_spec_Set => Hle.
       destruct (nth_error_spec (all_rels Δ 0 #|Δ|) (n - #|Δ'|));
@@ -1272,8 +1272,8 @@ Proof.
         now rewrite skipn_length in Xb; try lia.
         rewrite skipn_length; lia.
       + simpl. assert(#|Δ'| + (n - #|Δ'|) = n) as -> by lia.
-        constructor.
-      + constructor.
+        reflexivity.
+      + reflexivity.
 
   * simpl; eapply red_evar.
     do 2 apply All2_map_right.

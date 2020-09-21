@@ -252,11 +252,11 @@ Section Reduce.
     intros Γ [t π] [t' π'] h. cbn.
     dependent destruction h.
     - repeat zip fold. rewrite H.
-      constructor. constructor.
+      constructor. reflexivity.
     - dependent destruction H.
       + eapply cored_red. assumption.
       + cbn in H0. inversion H0.
-        constructor. constructor.
+        constructor. reflexivity.
   Qed.
 
   (* Show Obligation Tactic. *)

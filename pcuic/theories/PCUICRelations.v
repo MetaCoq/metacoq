@@ -126,3 +126,39 @@ Global Instance relation_disjunction_refl_r {A} {R S : relation A} :
 Proof.
   intros HR x. right; auto.
 Qed.
+
+Global Instance clos_rt_trans_Symmetric A R :
+  Symmetric R -> Symmetric (@clos_refl_trans A R).
+Proof.
+  intros X x y H. induction H; eauto.
+  eapply clos_rt_trans; eassumption.
+Qed.
+
+Definition clos_sym {A} (R : relation A) := relation_disjunction R (flip R).
+
+Global Instance clos_sym_Symmetric A R :
+  Symmetric (@clos_sym A R).
+Proof.
+  intros x y []; [right|left]; assumption.
+Qed.
+
+Global Instance clos_refl_sym_trans_Symmetric A R :
+  Symmetric (@clos_refl_sym_trans A R)
+  := rst_sym R.
+
+Global Instance clos_refl_sym_trans_Reflexive A R :
+  Reflexive (@clos_refl_sym_trans A R)
+  := rst_refl R.
+
+Global Instance clos_refl_sym_trans_Transitive A R :
+  Transitive (@clos_refl_sym_trans A R)
+  := rst_trans R.
+
+Global Instance relation_disjunction_Symmetric {A} {R S : relation A} :
+  Symmetric R -> Symmetric S -> Symmetric (relation_disjunction R S).
+Proof.
+  intros HR HS x y [X|X]; [left|right]; eauto.
+Qed.
+
+Ltac rst_induction h :=
+  induction h; [constructor|reflexivity|etransitivity].

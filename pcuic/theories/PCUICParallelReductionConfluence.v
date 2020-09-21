@@ -1305,7 +1305,7 @@ Section Rho.
   Lemma refine_pred Γ Δ t u u' : u = u' -> pred1 Σ Γ Δ t u' -> pred1 Σ Γ Δ t u.
   Proof. now intros ->. Qed.
 
-  Lemma ctxmap_ext Γ Δ : CMorphisms.Proper (CMorphisms.respectful (pointwise_relation _ eq) isEquiv) (ctxmap Γ Δ).
+  Lemma ctxmap_ext Γ Δ : CMorphisms.Proper (CMorphisms.respectful (pointwise_relation _ eq) iffT) (ctxmap Γ Δ).
   Proof.
     red. red. intros.
     split; intros X.

@@ -9,30 +9,8 @@ Require Import ssreflect.
 From Equations.Prop Require Import DepElim.
 Set Equations With UIP.
 
-
 Local Open Scope type_scope.
 
-Section CRelationLemmas.
-  Local Set Universe Polymorphism.
-  Context {A : Type} (R : crelation A).
-
-  Lemma flip_Reflexive : Reflexive R -> Reflexive (flip R).
-  Proof.
-    intros HR x. unfold flip. apply reflexivity.
-  Qed.
-
-  Lemma flip_Symmetric : Symmetric R -> Symmetric (flip R).
-  Proof.
-    intros HR x y. unfold flip. apply symmetry.
-  Qed.
-
-  Lemma flip_Transitive : Transitive R -> Transitive (flip R).
-  Proof.
-    intros HR x y z xy yz.
-    unfold flip in *. now transitivity y.
-  Qed.
-
-End CRelationLemmas.
 
 Definition R_universe_instance R :=
   fun u u' => Forall2 R (List.map Universe.make u) (List.map Universe.make u').

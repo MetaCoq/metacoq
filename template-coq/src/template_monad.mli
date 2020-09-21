@@ -37,7 +37,8 @@ type template_monad =
   | TmCurrentModPath
 
     (* quoting *)
-  | TmQuote of bool * Constr.t  (* only Prop *)
+  | TmQuote of Constr.t (* arguments: recursive * bypass opacity * term  *)  (* only Prop *)
+  | TmQuoteRecTransp of Constr.t * Constr.t
   | TmQuoteInd of Constr.t * bool (* strict *)
   | TmQuoteConst of Constr.t * Constr.t * bool (* strict *)
   | TmQuoteUnivs

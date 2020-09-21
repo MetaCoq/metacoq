@@ -17,15 +17,15 @@ env:
   - NJOBS=2
   - COMPILER="4.07.1"
   - FINDLIB_VER="1.8.0"
-  - EQUATIONS_VER="dev"
-  - COQ_VER="dev"
+  - EQUATIONS_VER="1.2.3+8.12"
+  - COQ_VER="8.12.0"
 
 install:
 - curl -sL https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh > install.sh
 - export PATH=$HOME/bin:$PATH
 - which opam || (rm -rf $HOME/.opam; echo $HOME/bin | sudo sh install.sh --no-backup; opam init --disable-sandboxing -j ${NJOBS} --compiler=${COMPILER} -n -y)
 - opam --version
-- opam update
+- opam update -y
 - opam init -j ${NJOBS} -n -y --compiler=$COMPILER
 - opam switch create ${COMPILER} || echo "switch already exists"
 - opam switch set ${COMPILER}

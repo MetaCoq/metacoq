@@ -273,7 +273,7 @@ Section Validity.
       constructor. constructor.
       simpl. rewrite subst_empty.
       rewrite subst_instance_constr_mkApps subst_mkApps /=.
-      rewrite subst_instance_instance_id.
+      rewrite (subst_instance_instance_id Σ); auto.
       rewrite subst_instance_to_extended_list.
       rewrite subst_instance_context_smash.
       rewrite (spine_subst_subst_to_extended_list_k sppar).

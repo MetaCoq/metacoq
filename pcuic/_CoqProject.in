@@ -38,6 +38,7 @@ theories/PCUICInductives.v
 theories/PCUICValidity.v
 theories/PCUICInductiveInversion.v
 theories/PCUICSR.v
+theories/PCUICCanonicity.v
 theories/PCUICMetaTheory.v
 
 theories/PCUICCSubst.v
@@ -46,6 +47,7 @@ theories/PCUICChecker.v
 theories/PCUICPretty.v
 theories/PCUICCheckerCompleteness.v
 theories/PCUICRetyping.v
+theories/PCUICCumulProp.v
 theories/PCUICElimination.v
 theories/PCUICSN.v
 

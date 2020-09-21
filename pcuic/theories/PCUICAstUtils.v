@@ -12,9 +12,6 @@ Derive NoConfusion for term.
 Derive Signature for All.
 Derive Signature for All2.
 
-Axiom todounivs : forall {A}, A.
-Ltac todounivs := apply todounivs.
-
 Open Scope pcuic.
 Local Open Scope string_scope.
 Fixpoint string_of_term (t : term) :=
@@ -255,6 +252,21 @@ Proof.
   induction Γ; simpl; auto. destruct a as [? [?|] ?]; simpl; auto.
   lia.
 Qed.
+
+Lemma context_assumptions_map f Γ : context_assumptions (map_context f Γ) = context_assumptions Γ.
+Proof.
+  induction Γ as [|[? [?|] ?] ?]; simpl; auto.
+Qed.
+
+Lemma context_assumptions_mapi f Γ : context_assumptions (mapi (fun i => map_decl (f i)) Γ) = 
+  context_assumptions Γ.
+Proof.
+  rewrite /mapi; generalize 0.
+  induction Γ; simpl; intros; eauto.
+  destruct a as [? [b|] ?]; simpl; auto.
+Qed.
+
+Hint Rewrite context_assumptions_map context_assumptions_mapi : len.
 
 Lemma mapi_rec_compose {A B C} (g : nat -> B -> C) (f : nat -> A -> B) k l :
   mapi_rec g (mapi_rec f l k) k = mapi_rec (fun k x => g k (f k x)) l k.
@@ -665,3 +677,85 @@ Coercion fst_ctx : global_env_ext >-> global_env.
 
 Definition empty_ext (Σ : global_env) : global_env_ext
   := (Σ, Monomorphic_ctx ContextSet.empty).
+
+(** Decompose an arity into a context and a sort *)
+
+Fixpoint destArity Γ (t : term) :=
+  match t with
+  | tProd na t b => destArity (Γ ,, vass na t) b
+  | tLetIn na b b_ty b' => destArity (Γ ,, vdef na b b_ty) b'
+  | tSort s => Some (Γ, s)
+  | _ => None
+  end.
+
+Lemma destArity_app_aux {Γ Γ' t}
+  : destArity (Γ ,,, Γ') t = option_map (fun '(ctx, s) => (Γ ,,, ctx, s))
+                                        (destArity Γ' t).
+Proof.
+  revert Γ'.
+  induction t; cbn; intro Γ'; try reflexivity.
+  - rewrite <- app_context_cons. now eapply IHt2.
+  - rewrite <- app_context_cons. now eapply IHt3.
+Qed.
+
+Lemma destArity_app {Γ t}
+  : destArity Γ t = option_map (fun '(ctx, s) => (Γ ,,, ctx, s))
+                               (destArity [] t).
+Proof.
+  exact (@destArity_app_aux Γ [] t).
+Qed.
+
+Lemma destArity_app_Some {Γ t ctx s}
+  : destArity Γ t = Some (ctx, s)
+    -> ∑ ctx', destArity [] t = Some (ctx', s) /\ ctx = Γ ,,, ctx'.
+Proof.
+  intros H. rewrite destArity_app in H.
+  destruct (destArity [] t) as [[ctx' s']|]; cbn in *.
+  exists ctx'. inversion H. now subst.
+  discriminate H.
+Qed.
+
+Lemma destArity_it_mkProd_or_LetIn ctx ctx' t :
+  destArity ctx (it_mkProd_or_LetIn ctx' t) =
+  destArity (ctx ,,, ctx') t.
+Proof.
+  induction ctx' in ctx, t |- *; simpl; auto.
+  rewrite IHctx'. destruct a as [na [b|] ty]; reflexivity.
+Qed.
+
+Lemma mkApps_nonempty f l :
+  l <> [] -> mkApps f l = tApp (mkApps f (removelast l)) (last l f).
+Proof.
+  destruct l using rev_ind. intros; congruence.
+  intros. rewrite <- mkApps_nested. simpl. f_equal.
+  rewrite removelast_app. congruence. simpl. now rewrite app_nil_r.
+  rewrite last_app. congruence.
+  reflexivity.
+Qed.
+
+Lemma destArity_tFix {mfix idx args} :
+  destArity [] (mkApps (tFix mfix idx) args) = None.
+Proof.
+  induction args. reflexivity.
+  rewrite mkApps_nonempty.
+  intros e; discriminate e.
+  reflexivity.
+Qed.
+
+Lemma destArity_tApp {t u l} :
+  destArity [] (mkApps (tApp t u) l) = None.
+Proof.
+  induction l. reflexivity.
+  rewrite mkApps_nonempty.
+  intros e; discriminate e.
+  reflexivity.
+Qed.
+
+Lemma destArity_tInd {t u l} :
+  destArity [] (mkApps (tInd t u) l) = None.
+Proof.
+  induction l. reflexivity.
+  rewrite mkApps_nonempty.
+  intros e; discriminate e.
+  reflexivity.
+Qed.

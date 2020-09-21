@@ -63,7 +63,7 @@ Section Generation.
       econstructor; try eassumption. exact t0.π2.
     - simpl. cbn. eapply ih.
       pose proof (typing_wf_local h) as hc. cbn in hc.
-      dependent induction hc.
+      dependent induction hc;
       econstructor; try eassumption. exact t0.π2.
   Qed.
 

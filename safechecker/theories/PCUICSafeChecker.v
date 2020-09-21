@@ -100,13 +100,9 @@ Proof.
   now rewrite IHt1.
 Qed.
 
-Derive NoConfusion for sort_family.
-Derive EqDec for sort_family.
-
 Definition mkApps_decompose_app t :
   t = mkApps  (fst (decompose_app t)) (snd (decompose_app t))
   := mkApps_decompose_app_rec t [].
-
 
 Derive NoConfusion EqDec for sort_family.
 

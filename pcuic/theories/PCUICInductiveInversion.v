@@ -2643,7 +2643,7 @@ Proof.
   exists x; intuition eauto.
   now rewrite ConstraintSetFact.add_iff.
   firstorder eauto.
-  subst. exists x0; firstorder.
+  subst. exists x0; firstorder auto with *.
 Qed.
 
 Lemma subst_instance_variance_cstrs l u i i' :

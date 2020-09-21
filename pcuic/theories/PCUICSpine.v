@@ -856,11 +856,11 @@ Proof.
       rewrite Nat.add_0_r.
       specialize (X (subst_context (skipn #|Γ0| s) 0 Γ0) ltac:(now autorewrite with len) _ _ 
       (subst [t1] #|Γ0| T) cs subsl').
-      rewrite -{1}H0. apply X.
+      rewrite -{1}H1. apply X.
       rewrite -subst_app_simpl'.
       apply subslet_length in subsl'.
       now autorewrite with len in subsl'.
-      rewrite -H0. now rewrite firstn_skipn.
+      rewrite -H1. now rewrite firstn_skipn.
 Qed.
 
 Lemma arity_spine_it_mkProd_or_LetIn_Sort {cf:checker_flags} Σ Γ ctx s args inst : 

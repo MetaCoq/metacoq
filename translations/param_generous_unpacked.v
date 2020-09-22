@@ -1,18 +1,10 @@
-Require Import ssreflect ssrfun ssrbool.
-From mathcomp Require Import all_ssreflect.
-Require Import Template.All.
-Require Import Arith.Compare_dec.
-Require Import  Translations.translation_utils.
-Import String Lists.List.ListNotations MonadNotation.
-Open Scope list_scope.
-Open Scope string_scope.
-Open Scope sigma_scope.
-
-
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import utils All.
+Require Import Translations.translation_utils.
+Require Import ssreflect.
 
 
 Reserved Notation "'tsl_ty_param'".
-
 
 Definition tsl_name n :=
   match n with
@@ -109,7 +101,7 @@ with tsl_rec1 (E : tsl_table) (t : term) {struct t} : term :=
     | None => default_term
     end
 
-  | _ => todo
+  | _ => todo ""
   end.
 
 
@@ -133,6 +125,8 @@ reflexivity.
 Defined.
 
 MetaCoq Quote Definition tm := ((fun A (x:A) => x) (Type -> Type) (fun x => x)).
+
+Unset Strict Unquote Universe Mode.
 
 MetaCoq Run (let tm' := tsl_rec1 [] tm in
                      print_nf tm' ;;
@@ -173,7 +167,7 @@ Definition tsl_mind_body (E : tsl_table)
   refine (_, [{| ind_npars := 2 * mind.(ind_npars);
                  ind_bodies := _ |}]).
   - refine (let id' := tsl_ident id in (* should be kn ? *)
-            fold_left_i (fun E i ind => _ :: _ ++ E)%list mind.(ind_bodies) []).
+            fold_left_i (fun E i ind => _ :: _ ++ E) mind.(ind_bodies) []).
     + (* ind *)
       exact (IndRef (mkInd id i), tInd (mkInd id' i) []).
     + (* ctors *)
@@ -227,30 +221,30 @@ Definition tTranslate (ΣE : tsl_context) (id : ident)
       (* print_nf entries ;; *)
       monad_fold_left (fun _ e => tmMkInductive e) entries tt ;;
       let decl := InductiveDecl kn d in
-      print_nf  (id ++ " has been translated as " ++ id') ;;
-      ret (Some (decl :: fst ΣE, E ++ snd ΣE)%list)
+      print_nf  (id ^ " has been translated as " ^ id') ;;
+      ret (Some (decl :: fst ΣE, E ++ snd ΣE))
 
   | ConstRef kn =>
     e <- tmQuoteConstant kn true ;;
-    print_nf ("toto1" ++ id) ;;
+    print_nf ("toto1" ^ id) ;;
     match e with
-    | ParameterEntry _ => print_nf (id ++ "is an axiom, not a definition") ;;
+    | ParameterEntry _ => print_nf (id ^ "is an axiom, not a definition") ;;
                          ret None
     | DefinitionEntry {| definition_entry_type := A;
                          definition_entry_body := t |} =>
-      print_nf ("toto2 " ++ id) ;;
+      print_nf ("toto2 " ^ id) ;;
       (* tmPrint t ;; *)
       t0 <- tmEval lazy (tsl_rec0 E t) ;;
       t1 <- tmEval lazy (tsl_rec1 E t) ;;
       A1 <- tmEval lazy (tsl_rec1 E A) ;;
-      print_nf ("toto4 " ++ id) ;;
+      print_nf ("toto4 " ^ id) ;;
       tmMkDefinition id' t1 ;;
-      print_nf ("toto5 " ++ id) ;;
+      print_nf ("toto5 " ^ id) ;;
       let decl := {| cst_universes := [];
                      cst_type := A; cst_body := Some t |} in
       let Σ' := ConstantDecl kn decl :: (fst ΣE) in
       let E' := (ConstRef kn, tConst id' []) :: (snd ΣE) in
-      print_nf  (id ++ " has been translated as " ++ id') ;;
+      print_nf  (id ^ " has been translated as " ^ id') ;;
       tmEval all (Some (Σ', E'))
     end
   end.

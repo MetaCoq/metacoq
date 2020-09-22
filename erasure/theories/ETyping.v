@@ -1,15 +1,10 @@
 (* Distributed under the terms of the MIT license. *)
-
-From Coq Require Import Bool String List Program.
+From Coq Require Import Program.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst.
-Local Open Scope string_scope.
-Set Asymmetric Patterns.
 
 
 (** * Typing derivations
-
-  *WIP*
 
   Inductive relations for reduction, conversion and typing of CIC terms.
 
@@ -103,7 +98,7 @@ Proof.
   induction mfix; simpl; auto.
 Qed.
 
-Definition tDummy := tVar "".
+Definition tDummy := tVar ""%string.
 
 Definition iota_red npar c args brs :=
   (mkApps (snd (List.nth c brs (0, tDummy))) (List.skipn npar args)).

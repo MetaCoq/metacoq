@@ -626,7 +626,7 @@ Section Wcbv.
   (*     solve_discr'. *)
   (*     specialize (IHeval1 _ _ _ eq_refl). *)
   (*     firstorder eauto. subst. *)
-  (*     exists (x ++ [a'])%list. *)
+  (*     exists (x ++ [a']). *)
   (*     split. eapply All2_app; auto. *)
   (*     now rewrite -mkApps_nested. *)
   (*   - eapply atom_mkApps in i; intuition try easy. *)
@@ -725,7 +725,7 @@ Lemma All2_app_inv_l :
   forall A B R l1 l2 r,
     @All2 A B R (l1 ++ l2) r ->
     ∑ r1 r2,
-      (r = r1 ++ r2)%list ×
+      (r = r1 ++ r2) ×
       All2 R l1 r1 ×
       All2 R l2 r2.
 Proof.

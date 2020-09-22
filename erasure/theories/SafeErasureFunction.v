@@ -1,21 +1,21 @@
-
-From Coq Require Import Bool String List Program.
-From MetaCoq.Template Require Import config utils monad_utils.
-From Equations Require Import Equations.
+(* Distributed under the terms of the MIT license. *)
+From Coq Require Import Program.
+From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICTyping PCUICInversion
      PCUICConfluence PCUICConversion 
      PCUICCumulativity PCUICSR PCUICSafeLemmata
      PCUICValidity PCUICPrincipality PCUICElimination PCUICSN.
-From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker PCUICSafeRetyping.
-Local Open Scope string_scope.
-Set Asymmetric Patterns.
-Import MonadNotation.
-Local Set Keyed Unification.
-
+From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker
+     PCUICSafeRetyping.
 From MetaCoq.Erasure Require Import EArities Extract Prelim.
 
+From Equations Require Import Equations.
 Set Equations Transparent.
+
+Local Set Keyed Unification.
+
+
 
 Section fix_sigma.
 Local Existing Instance extraction_checker_flags.
@@ -87,7 +87,7 @@ Grab Existential Variables.
      econstructor 2. sq.
      eapply isWfArity_red in i; eauto.
      destruct i as (? & ? & ? & ?).
-     exists (x ++ [vass na A])%list, x0. cbn; split.
+     exists (x ++ [vass na A]), x0. cbn; split.
      2:{ unfold snoc, app_context in *. rewrite <- app_assoc. eassumption. }
      change ([] ,, vass na A) with ([vass na A] ,,, []).
      rewrite destArity_app_aux. rewrite e. cbn. reflexivity.
@@ -384,7 +384,7 @@ Section Erase.
     Context (erase : forall  (Γ : context) (t : term) (Ht : welltyped Σ Γ t), typing_result E.term).
 
     Program Definition erase_mfix Γ (defs : mfixpoint term) : typing_result (EAst.mfixpoint E.term) :=
-      let Γ' := (PCUICLiftSubst.fix_context defs ++ Γ)%list in
+      let Γ' := (PCUICLiftSubst.fix_context defs ++ Γ) in
       monad_map (fun d => dbody' <- erase Γ' d.(dbody) _;;
                           ret ({| E.dname := d.(dname); E.rarg := d.(rarg);
                                   E.dbody := dbody' |})) defs.

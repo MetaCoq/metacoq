@@ -1,24 +1,15 @@
 (* Distributed under the terms of the MIT license. *)
-
-From Coq Require Import Bool String List Program BinPos Compare_dec Lia.
-From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
+From Coq Require Import Program.
+From MetaCoq.Template Require Import config utils BasicAst AstUtils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping
      PCUICWeakening PCUICSubstitution PCUICChecker PCUICRetyping
      PCUICWcbvEval PCUICSR PCUICValidity.
-From MetaCoq.Erasure Require Import EAstUtils ELiftSubst ETyping EWcbvEval Extract Prelim.
+From MetaCoq.Erasure Require Import EAstUtils ELiftSubst ETyping EWcbvEval
+     Extract Prelim.
 
 From Equations Require Import Equations.
 
-Local Open Scope list_scope.
-Set Asymmetric Patterns.
-Import MonadNotation.
-
-Module PA := PCUICAst.
-Module P := PCUICWcbvEval.
-
-Local Existing Instance default_checker_flags.
-
-(** ** Inversion on eval *)
+(** * Inversion on eval *)
 
 
 Notation type_Construct_inv := PCUICInversion.inversion_Construct.

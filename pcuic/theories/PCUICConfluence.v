@@ -1039,7 +1039,7 @@ Proof.
   rewrite {2}(All2_local_env_length X0).
   now eapply weakP.
   specialize (IHX (vass (dname y) (lift0 #|Δ| (dtype x)) :: Δ)
-                  (vass (dname y) (lift0 #|Δ'| (dtype y)) :: Δ')%list).
+                  (vass (dname y) (lift0 #|Δ'| (dtype y)) :: Δ')).
   forward IHX.
   constructor; auto. now eapply weakP. simpl in IHX.
   rewrite {2}(All2_local_env_length X0).

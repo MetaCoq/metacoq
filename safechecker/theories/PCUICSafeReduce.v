@@ -1,22 +1,15 @@
 (* Distributed under the terms of the MIT license. *)
-
-From Coq Require Import Bool String List Program
-     Classes.RelationClasses.
-From MetaCoq.Template
-Require Import config monad_utils utils.
+From Coq Require Import RelationClasses.
+From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICPosition
      PCUICNormal PCUICInversion PCUICSafeLemmata
      PCUICSR PCUICSN PCUICUtils PCUICReduction.
+
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
-
-Import MonadNotation.
-Open Scope type_scope.
-
-Set Default Goal Selector "!".
-
 Set Equations Transparent.
+Set Equations With UIP.
 
 (** * Reduction machine for PCUIC without fuel
 
@@ -28,7 +21,11 @@ Set Equations Transparent.
 
  *)
 
-Set Equations With UIP.
+(* From Program *)
+Notation " `  t " := (proj1_sig t) (at level 10, t at next level) : metacoq_scope.
+
+Set Default Goal Selector "!".
+
 Local Set Keyed Unification.
 
 (* We assume normalisation of the reduction.
@@ -260,12 +257,11 @@ Section Reduce.
   Qed.
 
   (* Show Obligation Tactic. *)
-
   Ltac obTac :=
     (* program_simpl ; *)
-    program_simplify ;
+    Program.Tactics.program_simplify ;
     Equations.CoreTactics.equations_simpl ;
-    try program_solve_wf ;
+    try Program.Tactics.program_solve_wf ;
     try reflexivity.
 
   Obligation Tactic := obTac.

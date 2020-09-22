@@ -13,6 +13,6 @@ clean: Makefile.coq
 
 install: all
 	$(MAKE) -f Makefile.coq install
-	
+
 mrproper:
 	rm -f Makefile.coq

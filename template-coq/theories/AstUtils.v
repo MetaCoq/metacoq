@@ -32,7 +32,6 @@ Fixpoint string_of_term (t : term) :=
   | tFix l n => "Fix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
   | tCoFix l n => "CoFix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
   end.
-Local Close Scope string_scope.
 
 Definition decompose_app (t : term) :=
   match t with

@@ -1,20 +1,19 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import Bool List ZArith Lia.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
   PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICTyping PCUICWeakeningEnv
   PCUICClosed PCUICReduction PCUICPosition PCUICGeneration.
+
 Require Import ssreflect.
-
 From Equations Require Import Equations.
-
-Set Default Goal Selector "!".
 
 (** * Weakening lemmas for typing derivations.
 
-  [weakening_*] proves weakening of typing, reduction etc... w.r.t. the *local* environment. *)
+  [weakening_*] proves weakening of typing, reduction etc... w.r.t. the *local*
+  environment. *)
 
-Set Asymmetric Patterns.
+
+Set Default Goal Selector "!".
 Generalizable Variables Σ Γ t T.
 
 Derive Signature NoConfusion for All_local_env.

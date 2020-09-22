@@ -1,20 +1,17 @@
  (* Distributed under the terms of the MIT license. *)
-
-(** * Substitution lemmas for typing derivations. *)
-
-From Coq Require Import Bool List Arith Lia.
 From MetaCoq.Template Require Import utils config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICPosition PCUICSigmaCalculus
      PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICClosed
      PCUICReduction PCUICWeakening PCUICCumulativity PCUICUnivSubstitution.
-Require Import ssreflect.
 
+Require Import ssreflect.
 From Equations Require Import Equations.
 
-Set Asymmetric Patterns.
+(** * Substitution lemmas for typing derivations. *)
+
+
 Local Set Keyed Unification.
-Close Scope string_scope.
 
 Set Default Goal Selector "!".
 
@@ -1115,7 +1112,8 @@ Proof.
       lia_f_equal.
 Qed.
 
-Lemma smash_context_app Δ Γ Γ' : smash_context Δ (Γ ++ Γ')%list = smash_context (smash_context Δ Γ) Γ'.
+Lemma smash_context_app Δ Γ Γ' :
+  smash_context Δ (Γ ++ Γ') = smash_context (smash_context Δ Γ) Γ'.
 Proof.
   revert Δ; induction Γ as [|[na [b|] ty]]; intros Δ; simpl; auto.
 Qed.

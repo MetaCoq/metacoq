@@ -920,7 +920,7 @@ Section Inversions.
       isApp t = false ->
       tApp u v = mkApps t l ->
       ∑ l',
-        (l = l' ++ [v])%list ×
+        (l = l' ++ [v]) ×
         u = mkApps t l'.
   Proof.
     intros u v t l h e.
@@ -1108,7 +1108,7 @@ Qed.
 
 Lemma tProd_it_mkProd_or_LetIn na A B ctx s :
   tProd na A B = it_mkProd_or_LetIn ctx (tSort s) ->
-  { ctx' & ctx = (ctx' ++ [vass na A])%list /\
+  { ctx' & ctx = (ctx' ++ [vass na A]) /\
            destArity [] B = Some (ctx', s) }.
 Proof.
   intros. exists (removelast ctx).

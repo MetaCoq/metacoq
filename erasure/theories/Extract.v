@@ -1,12 +1,10 @@
 (* Distributed under the terms of the MIT license. *)
-
-From Coq Require Import Bool List Program.
-From MetaCoq.Template Require Import config utils monad_utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping PCUICElimination.
+From Coq Require Import Program.
+From MetaCoq.Template Require Import config utils.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping
+     PCUICElimination.
 From MetaCoq.Erasure Require EAst.
-Local Open Scope string_scope.
-Set Asymmetric Patterns.
-Import MonadNotation.
+
 
 Local Existing Instance extraction_checker_flags.
 

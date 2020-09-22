@@ -1,19 +1,17 @@
-
-From Coq Require Import Bool String List Program.
-From MetaCoq.Template Require Import config utils monad_utils.
+(* Distributed under the terms of the MIT license. *)
+From Coq Require Import Program.
+From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-     PCUICTyping PCUICLiftSubst PCUICInversion
-     PCUICConfluence PCUICConversion 
+     PCUICTyping PCUICLiftSubst PCUICInversion PCUICConfluence PCUICConversion 
      PCUICCumulativity PCUICSR PCUICNormal PCUICSafeLemmata
      PCUICValidity PCUICPrincipality PCUICElimination PCUICSN.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker.
+Require Import EArities Extract Prelim.
+
 From Equations Require Import Equations.
-Local Open Scope string_scope.
-Set Asymmetric Patterns.
-Import MonadNotation.
+
 Local Set Keyed Unification.
 
-Require Import EArities Extract Prelim.
 Section fix_sigma.
 Local Existing Instance extraction_checker_flags.
 Variable Σ : global_env_ext.
@@ -84,7 +82,7 @@ Grab Existential Variables.
      econstructor 2. sq.
      eapply isWfArity_red in i; eauto.
      destruct i as (? & ? & ? & ?).
-     exists (x ++ [vass na A])%list, x0. cbn; split.
+     exists (x ++ [vass na A]), x0. cbn; split.
      2:{ unfold snoc, app_context in *. rewrite <- app_assoc. eassumption. }
      change ([] ,, vass na A) with ([vass na A] ,,, []).
      rewrite destArity_app_aux. rewrite e. cbn. reflexivity.
@@ -478,7 +476,7 @@ Section Erase.
     Context (erase : forall  (Γ : context) (HΓ : ∥ wf_local Σ Γ ∥) (t : term), typing_result E.term).
 
     Program Definition erase_mfix Γ (HΓ : ∥wf_local Σ Γ∥) (defs : mfixpoint term) : typing_result (EAst.mfixpoint E.term) :=
-      let Γ' := (PCUICLiftSubst.fix_context defs ++ Γ)%list in
+      let Γ' := PCUICLiftSubst.fix_context defs ++ Γ in
       monad_map (fun d => H <- _ ;;
                    dbody' <- erase Γ' H d.(dbody);;
                           ret ({| E.dname := d.(dname); E.rarg := d.(rarg);

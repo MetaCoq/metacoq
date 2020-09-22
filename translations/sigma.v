@@ -1,7 +1,7 @@
-From MetaCoq.Template Require Import Ast Core monad_utils Loader.
-Require Import List String. Import ListNotations MonadNotation.
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import utils All.
 
-Set Primitive Projections.
+Local Set Primitive Projections.
 
 Record sigma A B :=
   mk_sig { π1 : A ; π2 : B π1 }.
@@ -11,6 +11,7 @@ Arguments π2 {A B} _.
 Arguments mk_sig {A B} _ _.
 
 Declare Scope sigma_scope.
+Open Scope sigma_scope.
 
 Notation "{ x  &&  P }" := (sigma (fun x => P)) : type_scope.
 Notation "{ t : A && P }" := (sigma A (fun t => P)) : type_scope.

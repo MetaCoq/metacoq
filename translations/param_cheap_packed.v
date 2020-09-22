@@ -1,11 +1,7 @@
-Require Import MetaCoq.Template.All.
-Require Import Arith.Compare_dec.
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import utils All.
+From MetaCoq.Checker Require Import All.
 From MetaCoq.Translations Require Import translation_utils sigma.
-Require Import MetaCoq.Checker.All.
-Import String Lists.List.ListNotations MonadNotation.
-Open Scope string_scope.
-Open Scope list_scope.
-Open Scope sigma_scope.
 
 Local Existing Instance config.default_checker_flags.
 Local Existing Instance default_fuel.

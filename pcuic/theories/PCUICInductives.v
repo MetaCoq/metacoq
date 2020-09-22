@@ -74,7 +74,7 @@ Definition branch_type ind mdecl (idecl : one_inductive_body) params u p i (br :
   let allargs := snd (decompose_app ccl) in
   let '(paramrels, args) := chop mdecl.(ind_npars) allargs in
   let cstr := tConstruct ind i u in
-  let args := (args ++ [mkApps cstr (paramrels ++ to_extended_list sign)])%list in
+  let args := (args ++ [mkApps cstr (paramrels ++ to_extended_list sign)]) in
   Some (ar, it_mkProd_or_LetIn sign (mkApps (lift0 nargs p) args))
 | None => None
 end.
@@ -1086,7 +1086,7 @@ Proof.
       split; auto.
     destruct (on_declared_inductive wfΣ decli) as [onmind oib].
     eapply typing_spine_app; eauto.
-  - destruct (declared_inductive_inj isdecl decli) as [-> ->].
+  - invs H0. destruct (declared_inductive_inj isdecl decli) as [-> ->].
     clear decli. split; auto.
     constructor; [|reflexivity].
     destruct (on_declared_inductive wfΣ isdecl) as [onmind oib].

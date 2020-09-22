@@ -1,7 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-
-From Coq Require Import Bool String List Program.Basics Program.Tactics ZArith.
-From MetaCoq.Template Require Import config utils monad_utils.
+From Coq Require Import Program.
+From MetaCoq.Template Require Import config utils.
 From MetaCoq.Erasure Require Import ELiftSubst ETyping EWcbvEval Extract Prelim
      ESubstitution EInversion EArities.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
@@ -12,13 +11,8 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
 
 Require Import Equations.Prop.DepElim.
 Require Import ssreflect.
-Local Open Scope string_scope.
-Set Asymmetric Patterns.
+
 Local Set Keyed Unification.
-
-Import MonadNotation.
-
-Require Import Lia.
 
 Module PA := PCUICAst.
 Module P := PCUICWcbvEval.
@@ -408,7 +402,7 @@ Lemma erases_mkApps_inv (Σ : global_env_ext) Γ f L T t :
   wf Σ ->
   Σ ;;; Γ |- mkApps f L : T ->
   Σ;;; Γ |- mkApps f L ⇝ℇ t ->
-  (exists L1 L2 L2', L = (L1 ++ L2)%list /\
+  (exists L1 L2 L2', L = L1 ++ L2 /\
                 squash (isErasable Σ Γ (mkApps f L1)) /\
                 erases Σ Γ (mkApps f L1) EAst.tBox /\
                 Forall2 (erases Σ Γ) L2 L2' /\
@@ -1064,7 +1058,7 @@ Proof.
              rewrite nth_error_snoc. lia.
              assert(Σ ;;; [] |- mkApps (tFix mfix idx) (argsv ++ [av]) : PCUICLiftSubst.subst [av] 0 x1).
              { rewrite -mkApps_nested. eapply type_App; eauto. eapply subject_reduction_eval;eauto. }
-             epose proof (fix_app_is_constructor Σ (args:=argsv ++ [av])%list axfree X).
+             epose proof (fix_app_is_constructor Σ (args:=argsv ++ [av]) axfree X).
              rewrite /unfold_fix e0 in X0.
              specialize (X0 eq_refl). simpl in X0.
              rewrite nth_error_snoc in X0. auto. apply X0.
@@ -1211,7 +1205,7 @@ Proof.
     2:{ eapply PCUICReduction.red1_red. eapply PCUICReduction.red_cofix_case. eauto.
         rewrite closed_unfold_cofix_cunfold_eq; eauto. }
     specialize (IHeval _ Hty').
-    inv He; [eapply erases_mkApps_inv in H7; eauto; destruct H7 as [H7|H7]; destruct_sigma H7|].
+    invs He; [eapply erases_mkApps_inv in H7; eauto; destruct H7 as [H7|H7]; destruct_sigma H7|].
     * destruct H7 as (? & ? & ? & ? & ? & ? & ? & ?). subst.
       destruct H1.
       edestruct IHeval as (? & ? & ?).
@@ -1245,7 +1239,7 @@ Proof.
             rewrite cofix_subst_nth in H1. now rewrite cofix_subst_length in H0.
             rewrite ecofix_subst_nth in H3. rewrite cofix_subst_length in H0.
             erewrite <- All2_length; eauto.
-            inv H1; inv H3.
+            invs H1; invs H3.
             erewrite All2_length; eauto. }
         edestruct IHeval as (? & ? & ?).
         constructor; eauto. eapply erases_mkApps; eauto.
@@ -1290,7 +1284,7 @@ Proof.
     2:{ eapply PCUICReduction.red1_red. eapply PCUICReduction.red_cofix_proj. eauto.
         rewrite closed_unfold_cofix_cunfold_eq; eauto. }
     specialize (IHeval _ Hty').
-    inv He; [eapply erases_mkApps_inv in H4; eauto; destruct_sigma H4|]; eauto.
+    invs He; [eapply erases_mkApps_inv in H4; eauto; destruct_sigma H4|]; eauto.
     destruct H4.
     * destruct H0 as (? & ? & ? & ? & ? & ? & ? & ?). subst.
       destruct H1.
@@ -1325,7 +1319,7 @@ Proof.
             rewrite cofix_subst_nth in H1. now rewrite cofix_subst_length in H0.
             rewrite ecofix_subst_nth in H4. rewrite cofix_subst_length in H0.
             erewrite <- All2_length; eauto.
-            inv H1; inv H4.
+            invs H1; invs H4.
             erewrite All2_length; eauto. }
         edestruct IHeval as (? & ? & ?).
         constructor; eauto. eapply erases_mkApps; eauto.

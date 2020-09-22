@@ -53,8 +53,8 @@ Inductive modpath :=
 Fixpoint string_of_modpath (mp : modpath) : string :=
   match mp with
   | MPfile dp => string_of_dirpath dp
-  | MPbound dp id _ => string_of_dirpath dp ++ "." ++ id
-  | MPdot mp id => string_of_modpath mp ++ "." ++ id
+  | MPbound dp id _ => string_of_dirpath dp ^ "." ^ id
+  | MPdot mp id => string_of_modpath mp ^ "." ^ id
   end.
 
 (** The absolute names of objects seen by kernel *)

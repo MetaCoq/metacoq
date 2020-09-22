@@ -1,13 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
-
-Set Warnings "-notation-overridden".
-
-From Coq Require Import Bool List.
 From MetaCoq.Template Require Import config utils AstUtils.
 From MetaCoq.PCUIC Require Import PCUICAst.
 
-Local Open Scope string_scope.
-Set Asymmetric Patterns.
 
 Fixpoint trans (t : Ast.term) : term :=
   match t with

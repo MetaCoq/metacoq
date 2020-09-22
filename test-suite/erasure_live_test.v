@@ -4,7 +4,7 @@ From MetaCoq.Erasure Require Import SafeTemplateErasure.
 From Coq Require Import String.
 Local Open Scope string_scope.
 
-From MetaCoq.Template Require Import utils monad_utils.
+From MetaCoq.Template Require Import utils.
 
 Definition test (p : Ast.program) : string :=
   match erase_and_print_template_program p with

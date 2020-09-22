@@ -1,20 +1,16 @@
 (* Distributed under the terms of the MIT license. *)
-
-From Coq Require Import Bool String List Program.
-From MetaCoq.Template Require Import config monad_utils utils.
+From Coq Require Import Program.
+From MetaCoq.Template Require Import config utils.
 From MetaCoq.Template Require AstUtils Typing.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping TemplateToPCUIC.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping
+     TemplateToPCUIC.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker.
-
-Import MonadNotation.
 
 
 Program Definition infer_template_program {cf : checker_flags} (p : Ast.program) φ Hφ
   : EnvCheck (∑ A, ∥ (trans_global_decls p.1, φ) ;;; [] |- trans p.2 : A ∥) :=
   p <- typecheck_program (cf:=cf) (trans_global_decls p.1, trans p.2) φ Hφ ;;
   ret (p.π1 ; _).
-
-Local Open Scope string_scope.
 
 (** In Coq until 8.10, programs can be ill-formed w.r.t. universes as they don't include
     all declarations of universes and constraints coming from section variable declarations.
@@ -106,12 +102,12 @@ Program Definition infer_and_print_template_program {cf : checker_flags} (p : As
   let p := fix_program_universes p in
   match infer_template_program (cf:=cf) p φ Hφ return string + string with
   | CorrectDecl t =>
-    inl ("Environment is well-formed and " ++ string_of_term (trans p.2) ++
-         " has type: " ++ string_of_term t.π1)
+    inl ("Environment is well-formed and " ^ string_of_term (trans p.2) ^
+         " has type: " ^ string_of_term t.π1)
   | EnvError Σ (AlreadyDeclared id) =>
-    inr ("Already declared: " ++ id)
+    inr ("Already declared: " ^ id)
   | EnvError Σ (IllFormedDecl id e) =>
-    inr ("Type error: " ++ PCUICSafeChecker.string_of_type_error Σ e ++ ", while checking " ++ id)
+    inr ("Type error: " ^ PCUICSafeChecker.string_of_type_error Σ e ^ ", while checking " ^ id)
   end.
 
 (* Program Definition check_template_program {cf : checker_flags} (p : Ast.program) (ty : Ast.term) *)

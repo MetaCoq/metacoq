@@ -1,22 +1,17 @@
 (* Distributed under the terms of the MIT license. *)
-
-From Coq Require Import Bool List Arith Lia.
-From Coq Require String.
-From MetaCoq.Template Require Import config utils monad_utils
-  EnvironmentTyping.
+From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
   PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICUtils
   PCUICPosition.
 From MetaCoq.PCUIC Require Export PCUICReduction PCUICCumulativity.
 
+(* TODO: remove this export *)
 From MetaCoq Require Export LibHypsNaming.
+
 Require Import ssreflect.
-Set Asymmetric Patterns.
 Require Import Equations.Type.Relation.
 From Equations Require Import Equations.
-Import MonadNotation.
 
-Local Open Scope type_scope.
 (** * Typing derivations
 
   Inductive relations for reduction, conversion and typing of PCUIC terms.
@@ -24,6 +19,7 @@ Local Open Scope type_scope.
   deal with arities, declarations in the environment etc...
 
  *)
+
 
 Hint Rewrite subst_context_length subst_instance_context_length
   app_context_length map_context_length fix_context_length fix_subst_length cofix_subst_length
@@ -224,7 +220,7 @@ Definition build_branches_type ind mdecl idecl params u p : list (option (nat ×
       let allargs := snd (decompose_app ccl) in
       let '(paramrels, args) := chop mdecl.(ind_npars) allargs in
       let cstr := tConstruct ind i u in
-      let args := (args ++ [mkApps cstr (paramrels ++ to_extended_list sign)])%list in
+      let args := (args ++ [mkApps cstr (paramrels ++ to_extended_list sign)]) in
       Some (ar, it_mkProd_or_LetIn sign (mkApps (lift0 nargs p) args))
     | None => None
     end
@@ -241,7 +237,7 @@ Lemma build_branches_type_ ind mdecl idecl params u p :
          let allargs := snd (decompose_app ccl) in
          let '(paramrels, args) := chop mdecl.(ind_npars) allargs in
          let cstr := tConstruct ind i u in
-         let args := (args ++ [mkApps cstr (paramrels ++ to_extended_list sign)])%list in
+         let args := (args ++ [mkApps cstr (paramrels ++ to_extended_list sign)]) in
          (ar, it_mkProd_or_LetIn sign (mkApps (lift0 nargs p) args)))
                   (instantiate_params (subst_instance_context u mdecl.(ind_params))
                                       params ty)

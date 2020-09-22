@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils config monad_utils.
+From MetaCoq.Template Require Import utils config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICUnivSubst
      PCUICTyping.
 

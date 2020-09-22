@@ -1,16 +1,16 @@
 (* Distributed under the terms of the MIT license. *)
-
-From Coq Require Import Bool List RelationClasses Lia.
-From MetaCoq.Template Require Import config monad_utils utils.
+From Coq Require Import RelationClasses.
+From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICInduction
      PCUICReflect PCUICEquality PCUICLiftSubst.
+
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
+
 Local Set Keyed Unification.
 
-Import MonadNotation.
-
 Set Default Goal Selector "!".
+
 
 (* A choice is a local position.
    We define positions in a non dependent way to make it more practical.

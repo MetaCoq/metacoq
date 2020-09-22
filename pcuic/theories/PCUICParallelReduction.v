@@ -1,16 +1,14 @@
 (* Distributed under the terms of the MIT license. *)
-Require Import ssreflect.
-From Coq Require Import Bool List Lia.
+Require Import CRelationClasses.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICUtils PCUICAst PCUICSize
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakening PCUICSubstitution.
 
-(* Type-valued relations. *)
-Require Import CRelationClasses.
-Local Set Keyed Unification.
-Set Asymmetric Patterns.
-
+Require Import ssreflect.
 From Equations Require Import Equations.
+
+
+Local Set Keyed Unification.
 
 Derive NoConfusion for term.
 Derive Subterm for term.
@@ -47,7 +45,7 @@ Proof.
   reflexivity.
 Qed.
 
-Require Import RelationClasses Arith.
+Require Import RelationClasses.
 
 Arguments All {A} P%type _.
 

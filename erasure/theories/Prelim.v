@@ -1,19 +1,13 @@
 (* Distributed under the terms of the MIT license. *)
-
-From Coq Require Import Bool List Program ZArith.
-From MetaCoq.Template Require Import config utils monad_utils.
+From MetaCoq.Template Require Import config utils.
 From MetaCoq.Erasure Require Import EAstUtils Extract EArities EWcbvEval.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
      PCUICSubstitution PCUICLiftSubst PCUICClosed
      PCUICWcbvEval PCUICSR  PCUICInversion PCUICGeneration
      PCUICContextConversion PCUICCanonicity.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker.
-From Coq Require Import ssreflect.
-Local Open Scope string_scope.
-Set Asymmetric Patterns.
-Import MonadNotation.
+From Coq Require Import Program ssreflect.
 
-Require Import Lia.
 
 Local Existing Instance extraction_checker_flags.
 
@@ -67,7 +61,7 @@ Proof.
 Qed.
 
 Lemma monad_map_app X Y (f : X -> typing_result Y) (l1 l2 : list X) a1 a2 :
-  monad_map f l1 = Checked a1 -> monad_map f l2 = Checked a2 -> monad_map f (l1 ++ l2) = Checked (a1 ++ a2)%list.
+  monad_map f l1 = Checked a1 -> monad_map f l2 = Checked a2 -> monad_map f (l1 ++ l2) = Checked (a1 ++ a2).
 Proof.
   revert a1. induction l1; intros.
   - cbn in *. invs H. eauto.
@@ -81,7 +75,7 @@ Proof.
 Qed.
 
 Lemma monad_map_app_invs X Y (f : X -> typing_result Y) (l1 l2 : list X) a :
-  monad_map f (l1 ++ l2) = Checked a -> exists a1 a2, monad_map f l1 = Checked a1 /\ monad_map f l2 = Checked a2 /\ (a = a1 ++ a2)%list.
+  monad_map f (l1 ++ l2) = Checked a -> exists a1 a2, monad_map f l1 = Checked a1 /\ monad_map f l2 = Checked a2 /\ (a = a1 ++ a2).
 Proof.
   intros. revert a H. induction l1; intros.
   - cbn in *. eauto.
@@ -325,7 +319,7 @@ Lemma subslet_fix_subst `{cf : checker_flags} Σ mfix1 T n :
 Proof.
   intro hΣ.
   unfold fix_subst, PCUICLiftSubst.fix_context.
-  assert (exists L, mfix1 = mfix1 ++ L)%list by (exists []; now simpl_list). revert H.
+  assert (exists L, mfix1 = mfix1 ++ L) by (exists []; now simpl_list). revert H.
   generalize mfix1 at 2 5 6.  intros.
   induction mfix0 using rev_ind.
   - econstructor.

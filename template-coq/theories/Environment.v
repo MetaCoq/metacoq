@@ -196,7 +196,7 @@ Module Environment (T : Term).
 
   (* TODO MOVE AstUtils factorisation *)
 
-  Definition app_context (Γ Γ' : context) : context := (Γ' ++ Γ)%list.
+  Definition app_context (Γ Γ' : context) : context := Γ' ++ Γ.
   Notation " Γ  ,,, Γ' " :=
     (app_context Γ Γ') (at level 25, Γ' at next level, left associativity).
 

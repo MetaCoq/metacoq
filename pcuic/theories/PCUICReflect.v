@@ -1,12 +1,9 @@
-From Coq Require Import Ascii String Bool OrderedType Arith.
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICInduction.
-Import List.ListNotations.
+
 Require Import ssreflect.
-
 From Equations Require Import Equations.
-
-Set Asymmetric Patterns.
 
 Open Scope pcuic.
 

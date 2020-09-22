@@ -1,6 +1,5 @@
-
-From Coq Require Import Bool List Program ZArith Lia.
-From MetaCoq.Template Require Import config utils monad_utils.
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils 
   PCUICClosed PCUICTyping PCUICWcbvEval PCUICLiftSubst PCUICInversion PCUICArities
   PCUICSR PCUICPrincipality PCUICGeneration PCUICSubstitution PCUICElimination
@@ -9,11 +8,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
 Require Import ssreflect.
 From MetaCoq.Erasure Require Import Extract.
   
+Require Import Program.
 From Equations Require Import Equations.
-Local Open Scope string_scope.
-Set Asymmetric Patterns.
-Import MonadNotation.
-Set Keyed Unification.
 
 Local Existing Instance extraction_checker_flags.
 
@@ -130,28 +126,28 @@ Proof.
            rewrite mkApps_nested in x.
            rewrite !decompose_app_mkApps in x; cbn; eauto. cbn in x. inv x.
         -- eapply IHl in X as [].  subst.
-           exists (x0 ++ [x])%list. now rewrite <- mkApps_nested.
-        -- exists (l ++ [N2])%list. now rewrite <- mkApps_nested.
+           exists (x0 ++ [x]). now rewrite <- mkApps_nested.
+        -- exists (l ++ [N2]). now rewrite <- mkApps_nested.
   - rewrite it_mkProd_or_LetIn_app in X.
     cbn in X.
     destruct x, decl_body; cbn in *.
     + dependent destruction X.
       * unfold subst1. rewrite subst_it_mkProd_or_LetIn subst_mkApps. eauto.
       * destruct args using rev_ind; try rewrite <- mkApps_nested in x; cbn in x; inv x.
-      * eexists (l ++ [mkdecl decl_name (Some r) decl_type])%list, l0.
+      * eexists (l ++ [mkdecl decl_name (Some r) decl_type]), l0.
         now rewrite it_mkProd_or_LetIn_app.
-      * eexists (l ++ [mkdecl decl_name (Some t0) r])%list, l0.
+      * eexists (l ++ [mkdecl decl_name (Some t0) r]), l0.
         now rewrite it_mkProd_or_LetIn_app.
       * eapply IHL in X as (? & ? & ?). subst.
-        eexists (x ++ [mkdecl decl_name (Some t0) decl_type])%list, x0.
+        eexists (x ++ [mkdecl decl_name (Some t0) decl_type]), x0.
         rewrite it_mkProd_or_LetIn_app. reflexivity.
     + dependent destruction X.
       * eapply (f_equal decompose_app) in x.
         rewrite decompose_app_mkApps in x; cbn; eauto. cbn in x. inv x.
-      * eexists (l ++ [mkdecl decl_name None N1])%list, l0.
+      * eexists (l ++ [mkdecl decl_name None N1]), l0.
         now rewrite it_mkProd_or_LetIn_app.
       * eapply IHL in X as (? & ? & ?). subst.
-        eexists (x ++ [mkdecl decl_name None decl_type])%list, x0.
+        eexists (x ++ [mkdecl decl_name None decl_type]), x0.
         rewrite it_mkProd_or_LetIn_app. reflexivity.
 Qed.
 

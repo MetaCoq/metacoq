@@ -1,23 +1,19 @@
 (* Distributed under the terms of the MIT license. *)
-
-From Coq Require Import Bool String List Program Arith Lia.
-From MetaCoq.Template Require Import config monad_utils utils
-     uGraph.
+From Coq Require Import ProofIrrelevance.
+From MetaCoq.Template Require Import config utils uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
      PCUICCumulativity PCUICEquality PCUICConversion
      PCUICSafeLemmata PCUICNormal PCUICInversion PCUICReduction PCUICPosition
-     PCUICContextConversion PCUICSN PCUICUtils
-     PCUICWeakening.
+     PCUICContextConversion PCUICSN PCUICUtils PCUICWeakening.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce.
+
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
 
 Local Set Keyed Unification.
 
 Set Default Goal Selector "!".
-
-Import MonadNotation.
 
 Module PSR := PCUICSafeReduce.
 

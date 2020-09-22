@@ -1,8 +1,4 @@
 (* Distributed under the terms of the MIT license. *)
-Set Warnings "-notation-overridden".
-
-Require Import Equations.Prop.DepElim.
-From Coq Require Import Bool String List Lia Arith.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICUtils
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
@@ -12,15 +8,13 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICUtils
      PCUICConversion PCUICInversion PCUICContexts PCUICArities
      PCUICParallelReduction PCUICSpine PCUICInductives PCUICInductiveInversion
      PCUICCtxShape.
-     
-Close Scope string_scope.
 
 Require Import ssreflect.
-
-Set Asymmetric Patterns.
-Set SimplIsCbn.
-
 From Equations Require Import Equations.
+Require Import Equations.Prop.DepElim.
+
+
+Local Set SimplIsCbn.
 
 Derive Signature for OnOne2_local_env.
 

@@ -1,23 +1,16 @@
 (* Distributed under the terms of the MIT license. *)
-
-From Coq Require Import Bool String List Program ZArith.
 From MetaCoq.Template Require Import config utils monad_utils.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
   PCUICWeakening PCUICSubstitution PCUICArities
   PCUICWcbvEval PCUICSR  PCUICInversion
   PCUICUnivSubstitution PCUICElimination (* PCUICContextConversion *)
   PCUICUnivSubst PCUICWeakeningEnv PCUICCumulativity PCUICConfluence
-  PCUICInduction PCUICLiftSubst PCUICContexts PCUICGeneration PCUICSpine PCUICConversion
-  PCUICValidity PCUICInductives  PCUICConversion
-  PCUICInductiveInversion PCUICNormal PCUICSafeLemmata PCUICParallelReductionConfluence PCUICSN
+  PCUICInduction PCUICLiftSubst PCUICContexts PCUICGeneration PCUICSpine
+  PCUICConversion PCUICValidity PCUICInductives  PCUICConversion
+  PCUICInductiveInversion PCUICNormal PCUICSafeLemmata
+  PCUICParallelReductionConfluence PCUICSN
   PCUICWcbvEval PCUICClosed PCUICReduction PCUICCSubst.
-  
-Set Asymmetric Patterns.
-Local Set Keyed Unification.
 
-Import MonadNotation.
-
-Require Import Lia.
 
 Module PA := PCUICAst.
 Module P := PCUICWcbvEval.

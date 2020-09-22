@@ -1,6 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-
-From Coq Require Import Bool List Arith CMorphisms Lia.
+From Coq Require Import CMorphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst.
@@ -8,8 +7,6 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
 Require Import ssreflect.
 From Equations.Prop Require Import DepElim.
 Set Equations With UIP.
-
-Local Open Scope type_scope.
 
 
 Definition R_universe_instance R :=

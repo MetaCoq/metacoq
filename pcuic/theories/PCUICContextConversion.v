@@ -1,10 +1,4 @@
 (* Distributed under the terms of the MIT license. *)
-Set Warnings "-notation-overridden".
-
-From Coq Require Import Bool List Arith Lia.
-From Coq Require Import CRelationClasses.
-From Coq Require Import ssreflect.
-
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst
      PCUICLiftSubst PCUICTyping PCUICWeakening
@@ -12,15 +6,10 @@ From MetaCoq.PCUIC Require Import PCUICAst
      PCUICParallelReduction PCUICEquality PCUICUnivSubstitution
      PCUICParallelReductionConfluence PCUICConfluence.
 
+From Coq Require Import CRelationClasses ssreflect.
 From Equations Require Import Equations.
 
-Set Asymmetric Patterns.
-Set SimplIsCbn.
 
-
-
-(* Commented otherwise extraction would produce an axiom making the whole
-   extracted code unusable *)
 
 Arguments red_ctx : clear implicits.
 

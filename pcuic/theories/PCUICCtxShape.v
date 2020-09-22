@@ -1,6 +1,5 @@
-From Coq Require Import Bool String List BinPos Compare_dec Arith Lia
-     Classes.CRelationClasses ProofIrrelevance.
-From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
+From Coq Require Import CRelationClasses ProofIrrelevance.
+From MetaCoq.Template Require Import config Universes utils BasicAst
      AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
@@ -8,14 +7,13 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICInversion PCUICCumulativity PCUICReduction
      PCUICConfluence PCUICConversion PCUICContextConversion
      PCUICParallelReductionConfluence PCUICWeakeningEnv
-     PCUICClosed PCUICSubstitution
-     PCUICWeakening PCUICGeneration PCUICUtils.
+     PCUICClosed PCUICSubstitution PCUICWeakening PCUICGeneration PCUICUtils.
 
 From Equations Require Import Equations.
-
 Require Import Equations.Prop.DepElim.
 Require Import Equations.Type.Relation_Properties.
 Require Import ssreflect ssrbool.
+
 
 Definition same_shape (d d' : context_decl) := 
   match decl_body d, decl_body d' with

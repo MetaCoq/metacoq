@@ -1,6 +1,4 @@
 (* Distributed under the terms of the MIT license. *)
-
-From Coq Require Import String Arith Bool List Lia.
 From MetaCoq.Template Require Import config utils Universes.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICInductives PCUICGeneration PCUICSpine PCUICWeakeningEnv
@@ -13,6 +11,7 @@ Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 Require Equations.Prop.DepElim.
 From Equations Require Import Equations.
 Require Import ssreflect.
+
 
 Lemma not_prop_not_leq_prop sf : sf <> InProp -> ~ leb_sort_family sf InProp.
 Proof.

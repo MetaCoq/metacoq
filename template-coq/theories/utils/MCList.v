@@ -1,5 +1,5 @@
 From Coq Require Import Bool Arith Lia SetoidList.
-From MetaCoq Require Import MCPrelude.
+From MetaCoq Require Import MCPrelude MCRelations.
 
 Export ListNotations.
 

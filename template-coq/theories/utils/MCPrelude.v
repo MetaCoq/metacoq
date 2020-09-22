@@ -1,8 +1,5 @@
-Require Import CRelationClasses.
 
 Declare Scope metacoq_scope.
-
-Infix "<~>" := iffT (at level 90).
 
 Notation "'eta_compose'" := (fun g f x => g (f x)).
 

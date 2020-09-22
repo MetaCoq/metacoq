@@ -1,6 +1,6 @@
 Require Import Peano_dec Nat Lia ssrbool.
 Require Import MSets.MSetList MSetFacts MSetProperties.
-From MetaCoq.Template Require Import utils.
+From MetaCoq.Template Require Import MCUtils.
 
 Lemma fold_max_In n m l (H : fold_left max l n = m)
   : n = m \/ In m l.
@@ -343,25 +343,25 @@ Module WeightedGraph (V : UsualOrderedType).
     Fixpoint weight {x y} (p : Paths x y) :=
       match p with
       | paths_refl x => 0
-      | paths_step x y z e p => e.π1 + weight p
+      | paths_step e p => e.π1 + weight p
       end.
 
     Fixpoint nodes {x y} (p : Paths x y) : VSet.t :=
       match p with
       | paths_refl x => VSet.empty
-      | paths_step x y z e p => VSet.add x (nodes p)
+      | paths_step e p => VSet.add x (nodes p)
       end.
 
     Fixpoint concat {x y z} (p : Paths x y) : Paths y z -> Paths x z :=
       match p with
       | paths_refl _ => fun q => q
-      | paths_step _ _ _ e p => fun q => paths_step e (concat p q)
+      | paths_step e p => fun q => paths_step e (concat p q)
       end.
 
     Fixpoint length {x y} (p : Paths x y) :=
       match p with
       | paths_refl x => 0
-      | paths_step x y z e p => Datatypes.S (length p)
+      | paths_step e p => Datatypes.S (length p)
       end.
 
     (* Global Instance Paths_refl : CRelationClasses.Reflexive Paths := paths_refl. *)
@@ -420,13 +420,13 @@ Module WeightedGraph (V : UsualOrderedType).
     Fixpoint to_paths {s x y} (p : SimplePaths s x y) : Paths x y :=
       match p with
       | spaths_refl _ x => paths_refl x
-      | spaths_step _ _ x y z _ e p => paths_step e (to_paths p)
+      | spaths_step _ e p => paths_step e (to_paths p)
       end.
 
     Fixpoint sweight {s x y} (p : SimplePaths s x y) :=
       match p with
       | spaths_refl _ _ => 0
-      | spaths_step _ _ x y z _ e p => e.π1 + sweight p
+      | spaths_step _ e p => e.π1 + sweight p
       end.
 
     Lemma sweight_weight {s x y} (p : SimplePaths s x y)
@@ -438,7 +438,7 @@ Module WeightedGraph (V : UsualOrderedType).
     Fixpoint is_simple {x y} (p : Paths x y) :=
       match p with
       | paths_refl x => true
-      | paths_step x y z e p => negb (VSet.mem x (nodes p)) && is_simple p
+      | paths_step e p => negb (VSet.mem x (nodes p)) && is_simple p
       end.
 
     Program Definition to_simple : forall {x y} (p : Paths x y),
@@ -530,7 +530,7 @@ Module WeightedGraph (V : UsualOrderedType).
       : forall {z} (e : Edges y z) {s'} (Hs : DisjointAdd y s s'), SimplePaths s' x z
       := match p with
          | spaths_refl s x => fun z e s' Hs => spaths_step Hs e (spaths_refl _ _)
-         | spaths_step s0 s x x0 y H e p
+         | spaths_step H e p
            => fun z e' s' Hs => spaths_step (DisjointAdd_add1 H Hs) e
                                         (add_end p e' (DisjointAdd_add3 H Hs))
          end.
@@ -609,7 +609,7 @@ Module WeightedGraph (V : UsualOrderedType).
     Fixpoint snodes {s x y} (p : SimplePaths s x y) : VSet.t :=
       match p with
       | spaths_refl s x => VSet.empty
-      | spaths_step s s' x y z H e p => VSet.add x (snodes p)
+      | spaths_step H e p => VSet.add x (snodes p)
       end.
 
     Definition split {s x y} (p : SimplePaths s x y)
@@ -747,7 +747,7 @@ Module WeightedGraph (V : UsualOrderedType).
         VSet.Equal (VSet.union s (nodes q)) s' -> ∑ x', SimplePaths s' x' x' :=
       match q with
       | paths_refl x => fun p s' Hs => (x; SimplePaths_sub (simplify_aux1 Hs) p)
-      | paths_step y y' _ e q =>
+      | @paths_step y y' _ e q =>
         fun p s' Hs => match VSet.mem y s as X return VSet.mem y s = X -> _ with
               | true => fun XX => let '(p1, p2) := split' p in
                        if 0 <? sweight p2

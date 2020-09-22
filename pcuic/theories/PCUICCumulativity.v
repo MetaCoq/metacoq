@@ -1,4 +1,4 @@
-(* Distributed under the terms of the MIT license.   *)
+(* Distributed under the terms of the MIT license. *)
 From Coq Require Import Bool List Arith Lia ssreflect.
 From MetaCoq.Template Require Import config utils EnvironmentTyping.
 From MetaCoq.PCUIC Require Import PCUICRelations PCUICAst PCUICAstUtils

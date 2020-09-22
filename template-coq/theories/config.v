@@ -1,3 +1,6 @@
+(* Distributed under the terms of the MIT license. *)
+
+
 Class checker_flags := {
   (* check_guard : bool ; *)
 
@@ -11,7 +14,7 @@ Class checker_flags := {
   indices_matter : bool
 }.
 
-(* Should correspond to Coq *)
+(** Should correspond to Coq *)
 Local Instance default_checker_flags : checker_flags := {|
   check_univs := true ;
   prop_sub_type := true;

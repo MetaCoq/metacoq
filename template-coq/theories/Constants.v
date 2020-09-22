@@ -1,4 +1,6 @@
-From MetaCoq.Template Require Import BasicAst uGraph TemplateMonad TemplateMonad.Extractable.
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import BasicAst uGraph TemplateMonad
+     TemplateMonad.Extractable.
 
 (* Base types *)
 

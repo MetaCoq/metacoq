@@ -1,8 +1,6 @@
-Require Import List Arith String.
-Require Import MetaCoq.Template.All.
-Import ListNotations MonadNotation.
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import utils All.
 
-Local Open Scope string_scope.
 
 (** This is just printing **)
 MetaCoq Test Quote (fun x : nat => x).

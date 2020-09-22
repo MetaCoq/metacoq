@@ -1,4 +1,4 @@
-(* Distributed under the terms of the MIT license.   *)
+(* Distributed under the terms of the MIT license. *)
 
 From Coq Require Import String Arith Bool List Lia.
 From MetaCoq.Template Require Import config utils Universes.

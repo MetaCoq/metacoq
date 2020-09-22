@@ -1,9 +1,7 @@
-From Coq Require Import Ascii OrderedType Arith Lia.
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils BasicAst.
 From MetaCoq.Template Require Import Universes.
-Import List.ListNotations.
 
-Set Asymmetric Patterns.
 
 Module Type Term.
 
@@ -84,6 +82,8 @@ Module Environment (T : Term).
 
   Definition fold_context f (Γ : context) : context :=
     List.rev (mapi (fun k' decl => map_decl (f k') decl) (List.rev Γ)).
+
+  Arguments fold_context f Γ%list_scope.
 
   Lemma fold_context_alt f Γ :
     fold_context f Γ =

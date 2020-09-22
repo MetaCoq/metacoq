@@ -15,6 +15,7 @@ theories/utils/MCRelations.v
 theories/utils/MCSquash.v
 theories/utils/MCString.v
 theories/utils/wGraph.v
+theories/utils/MCUtils.v
 
 # common
 theories/common/uGraph.v

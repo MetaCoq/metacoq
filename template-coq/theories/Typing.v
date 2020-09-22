@@ -1,19 +1,14 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import Bool List Arith Lia ssreflect.
-From Coq Require Import String Wellfounded Relation_Operators.
-
-From MetaCoq.Template Require Import config utils monad_utils Ast AstUtils LiftSubst UnivSubst EnvironmentTyping.
-Import MonadNotation.
-
-Local Open Scope string_scope.
-Set Asymmetric Patterns.
+(* Distributed under the terms of the MIT license. *)
+From Coq Require Import ssreflect Wellfounded Relation_Operators.
+From MetaCoq.Template Require Import config utils Ast AstUtils LiftSubst UnivSubst
+     EnvironmentTyping.
 
 (** * Typing derivations
 
   Inductive relations for reduction, conversion and typing of CIC terms.
 
  *)
+
  
 Definition isSort T :=
   match T with

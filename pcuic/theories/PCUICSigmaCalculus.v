@@ -1,4 +1,4 @@
-(* Distributed under the terms of the MIT license.   *)
+(* Distributed under the terms of the MIT license. *)
 From Equations Require Import Equations.
 From Coq Require Import String Bool List ZArith Lia Morphisms.
 From MetaCoq.Template Require Import config utils.

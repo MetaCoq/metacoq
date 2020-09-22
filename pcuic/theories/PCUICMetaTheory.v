@@ -1,4 +1,4 @@
-(* Distributed under the terms of the MIT license.   *)
+(* Distributed under the terms of the MIT license. *)
 
 
 From MetaCoq.PCUIC Require Import PCUICAst PCUICTyping.

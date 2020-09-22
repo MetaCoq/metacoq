@@ -1,9 +1,8 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import List BinPos String.
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq Require Import utils Ast AstUtils LiftSubst Universes.
 
-(** Pretty printing *)
+(** * Pretty printing *)
+
 
 Section print_term.
   Context (Σ : global_env_ext).

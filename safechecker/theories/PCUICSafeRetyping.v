@@ -1,4 +1,4 @@
-(* Distributed under the terms of the MIT license.   *)
+(* Distributed under the terms of the MIT license. *)
 
 From Coq Require Import Bool String List Program.
 From MetaCoq.Template Require Import config monad_utils utils uGraph.

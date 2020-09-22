@@ -1,4 +1,4 @@
-(* Distributed under the terms of the MIT license.   *)
+(* Distributed under the terms of the MIT license. *)
 
 From MetaCoq.Erasure Require Import EAst.
 Require Import List.

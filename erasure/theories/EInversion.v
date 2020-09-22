@@ -3,7 +3,7 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Lia.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping
-     PCUICWeakening PCUICSubstitution PCUICChecker PCUICRetyping PCUICMetaTheory
+     PCUICWeakening PCUICSubstitution PCUICChecker PCUICRetyping
      PCUICWcbvEval PCUICSR PCUICValidity.
 From MetaCoq.Erasure Require Import EAstUtils ELiftSubst ETyping EWcbvEval Extract Prelim.
 

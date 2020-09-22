@@ -57,8 +57,6 @@ src/pCUICNormal.ml
 # src/pCUICChecker.mli
 # src/pCUICRetyping.ml
 # src/pCUICRetyping.mli
-# src/pCUICMetaTheory.ml
-# src/pCUICMetaTheory.mli
 # src/pCUICWeakeningEnv.ml
 # src/pCUICWeakeningEnv.mli
 # src/pCUICWeakening.mli

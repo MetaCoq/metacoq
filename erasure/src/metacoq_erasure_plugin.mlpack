@@ -27,7 +27,6 @@ PCUICPosition
 PCUICChecker
 PCUICPretty
 PCUICRetyping
-PCUICMetaTheory
 TemplateToPCUIC
 PCUICSafeLemmata
 PCUICCumulativity

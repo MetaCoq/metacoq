@@ -1,4 +1,4 @@
-(* Distributed under the terms of the MIT license.   *)
+(* Distributed under the terms of the MIT license. *)
 Set Warnings "-notation-overridden".
 Require Import ssreflect.
 From Equations Require Import Equations.

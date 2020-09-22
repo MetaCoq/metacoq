@@ -1,10 +1,9 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import Bool List Arith Lia ssreflect ssrbool.
+(* Distributed under the terms of the MIT license. *)
+From Coq Require Import ssreflect ssrbool.
 From MetaCoq.Template Require Import config utils Ast AstUtils.
 
-
 (** * Inversion lemmas for the well-formedness judgement *)
+
 
 Fixpoint wf_Inv (t : term) :=
   match t with

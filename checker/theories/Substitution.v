@@ -1,16 +1,13 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import Bool List Program Arith Lia.
-From MetaCoq.Template Require Import config utils Ast AstUtils Induction LiftSubst UnivSubst Typing TypingWf.
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import config utils Ast AstUtils Induction LiftSubst
+     UnivSubst Typing TypingWf.
 From MetaCoq.Checker Require Import Generation Closed WeakeningEnv Weakening.
+
 From Equations Require Import Equations.
 Require Import ssreflect.
 
 (** * Substitution lemmas for typing derivations. *)
 
-Set Keyed Unification.
-Set Asymmetric Patterns.
-Close Scope string_scope.
 
 Generalizable Variables Σ Γ t T.
 
@@ -451,7 +448,7 @@ Proof.
   rewrite <- H2 at 2.
   rewrite <- subst0_inds_subst. f_equal.
   now rewrite <- subst_subst_instance_constr.
-  apply All_map. unfold compose. eapply All_impl; eauto.
+  apply All_map. eapply All_impl; eauto.
   intros. now apply wf_subst_instance_constr.
 Qed.
 
@@ -867,7 +864,7 @@ Proof.
     rewrite (lift_to_extended_list_k _ _ 1) map_map_compose.
     pose proof (to_extended_list_k_spec Γ k); unf_term.
     solve_all. destruct H2 as [n [-> Hn]].
-    rewrite /compose /lift (subst_app_decomp [a] s k); auto with wf.
+    rewrite /lift (subst_app_decomp [a] s k); auto with wf.
     rewrite subst_rel_gt. simpl; lia.
     repeat (f_equal; simpl; try lia).
     cbn -[subst]. f_equal. apply (subst_rel_eq _ _ 0 a); cbnr; lia.
@@ -876,7 +873,7 @@ Proof.
     rewrite (lift_to_extended_list_k _ _ 1) map_map_compose.
     pose proof (to_extended_list_k_spec Γ k).
     solve_all. destruct H2 as [n [-> Hn]].
-    rewrite /compose /lift (subst_app_decomp [subst0 s b] s k); auto with wf.
+    rewrite /lift (subst_app_decomp [subst0 s b] s k); auto with wf.
     rewrite subst_rel_gt. simpl; lia.
     repeat (unf_term; f_equal; simpl; try lia).
 Qed.
@@ -1224,6 +1221,8 @@ Lemma wf_cofix :
 Proof.
   intros. inv H. auto.
 Defined.
+
+Local Set Keyed Unification.
 
 Lemma substitution_red1 `{CF:checker_flags} Σ Γ Γ' Γ'' s M N :
   wf Σ.1 -> All Ast.wf s -> subs Σ Γ s Γ' -> wf_local Σ Γ -> Ast.wf M ->
@@ -1662,9 +1661,8 @@ Theorem substitution `{checker_flags} Σ Γ Γ' s Δ (t : term) T :
 Proof.
   intros HΣ Hs Ht.
   pose proof (typing_wf_local Ht).
-  generalize_eqs Ht. intros eqw. rewrite <- eqw in X.
-  revert Γ Γ' Δ s Hs eqw.
-  revert Σ HΣ Γ0 X t T Ht.
+  generalize_eq Γ0 (Γ ,,, Γ' ,,, Δ). 
+  revert Γ Γ' Δ s Hs. revert Σ HΣ Γ0 X t T Ht.
   apply (typing_ind_env (fun Σ Γ0 t T =>
   forall (Γ Γ' Δ : context) (s : list term)
     (sub : subs Σ Γ s Γ') (eqΓ0 : Γ0 = Γ ,,, Γ' ,,, Δ),
@@ -1833,7 +1831,6 @@ Proof.
     * eapply All_map.
       eapply (All_impl X1); simpl.
       intros x [[Hb Hlam] IH].
-      unfold compose; simpl.
       rewrite subst_fix_context.
       specialize (IH Γ Γ' (Δ ,,,  (fix_context mfix)) _ sub).
       rewrite app_context_assoc in IH. specialize (IH eq_refl).
@@ -1854,7 +1851,6 @@ Proof.
     * eapply All_map.
       eapply (All_impl X1); simpl.
       intros x [Hb IH].
-      unfold compose; simpl.
       rewrite subst_fix_context.
       specialize (IH Γ Γ' (Δ ,,,  (fix_context mfix)) _ sub).
       rewrite app_context_assoc in IH. specialize (IH eq_refl).

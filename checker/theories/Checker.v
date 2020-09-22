@@ -1,13 +1,8 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import Bool String List Program ZArith.
-From MetaCoq.Template Require Import config Ast AstUtils monad_utils utils
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import config Ast AstUtils utils
      LiftSubst UnivSubst uGraph Typing.
-Import MonadNotation.
 
 (** * Coq type-checker for kernel terms
-
-  *WIP*
 
   Implemets [typecheck_program] which returns an error and
   on success should guarantee that the term has the given type.
@@ -18,7 +13,10 @@ Import MonadNotation.
   This file implements reduction with a stack machine [reduce_stack],
   conversion/cumulativity with the first-order fast-path heuristic [isconv]
   that are used to type-check terms in reasonable time. *)
-Set Asymmetric Patterns.
+
+
+Local Notation " () " := Datatypes.unit : type_scope.
+Local Notation " () " := tt.
 
 Module RedFlags.
 
@@ -1036,7 +1034,7 @@ End InferOk.
 Extract Constant infer_type_correct => "(fun f sigma ctx t x -> assert false)".
 Extract Constant infer_correct => "(fun f sigma ctx t ty -> assert false)".
 
-Definition default_fuel : Fuel := 2 ^ 14.
+Definition default_fuel : Fuel := Nat.pow 2 14.
 
 Fixpoint fresh id (env : global_env) : bool :=
   match env with

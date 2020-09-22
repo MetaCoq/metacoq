@@ -1,15 +1,13 @@
-(** Extraction setup for template-coq.
+(* Distributed under the terms of the MIT license. *)
+Require Import MetaCoq.Template.utils.
+Require Import FSets ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt.
+
+(** * Extraction setup for template-coq.
 
     Any extracted code planning to link with the plugin's OCaml reifier
     should use these same directives for consistency.
 *)
 
-(* From MetaCoq.Template Require All. *)
-Require Import MetaCoq.Template.utils.
-Require Import FSets.
-Require Import ExtrOcamlBasic.
-Require Import ExtrOcamlString ExtrOcamlZInt.
-Require Import MetaCoq.Template.utils.MCCompare.
 
 (* Ignore [Decimal.int] before the extraction issue is solved:
    https://github.com/coq/coq/issues/7017. *)

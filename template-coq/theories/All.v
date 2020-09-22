@@ -1,7 +1,7 @@
-(* Distributed under the terms of the MIT license.   *)
+(* Distributed under the terms of the MIT license. *)
 
 From MetaCoq.Template Require Export
-     utils         (* Utility functions *)
+     utils.MCUtils (* Utility functions *)
      monad_utils   (* Monadic notations *)
      uGraph        (* The graph of universes *)
      BasicAst      (* The basic AST structures *)

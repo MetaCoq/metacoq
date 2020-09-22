@@ -1,6 +1,5 @@
-Require Import MetaCoq.Template.All.
-Require Import List String.
-Import ListNotations MonadNotation.
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import utils All.
 
 (* **************************************************** *)
 (* In this file we define a small plugin which allow to *)

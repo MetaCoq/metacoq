@@ -1,4 +1,4 @@
-(* Distributed under the terms of the MIT license.   *)
+(* Distributed under the terms of the MIT license. *)
 
 From Coq Require Import Bool String List.
 From MetaCoq.Template Require Import utils config monad_utils.

@@ -1,13 +1,10 @@
-From Coq Require Import Bool String List Lia PeanoNat Peano_dec.
-From MetaCoq.Template Require Import All.
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import utils All.
+
 From Equations Require Import Equations.
-Set Keyed Unification.
-Import ListNotations.
-Import MonadNotation.
-Local Open Scope list_scope.
 
-Existing Instance config.default_checker_flags.
 
+Local Existing Instance config.default_checker_flags.
 
 Definition var := nat.
 
@@ -937,6 +934,8 @@ Proof.
   - constructor. all: try easy.
     constructor.
 Qed.
+
+Local Set Keyed Unification.
 
 Definition reify_correct :
   forall Σ Γ P,

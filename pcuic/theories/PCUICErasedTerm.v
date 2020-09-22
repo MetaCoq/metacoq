@@ -1,4 +1,4 @@
-(* Distributed under the terms of the MIT license.   *)
+(* Distributed under the terms of the MIT license. *)
 
 Require Import Coq.Strings.String.
 Require Import Coq.PArith.BinPos.

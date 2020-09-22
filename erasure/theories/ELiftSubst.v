@@ -1,4 +1,4 @@
-(* Distributed under the terms of the MIT license.   *)
+(* Distributed under the terms of the MIT license. *)
 
 From Coq Require Import List Program Lia.
 From MetaCoq.Template Require Import utils.

@@ -1,19 +1,15 @@
-From Coq Require Import Strings.String List.
-Import ListNotations.
-Open Scope string_scope.
-From MetaCoq.Template Require Import Ast AstUtils Common.
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import utils Ast AstUtils Common.
 
-Set Universe Polymorphism.
-Set Universe Minimization ToSet.
-Set Primitive Projections.
-Set Printing Universes.
+Local Set Universe Polymorphism.
 
-(** ** The Template Monad
+(** * The Template Monad
 
   A monad for programming with Template Coq structures. Use [Run
   TemplateProgram] on a monad action to produce its side-effects.
 
   Uses a reduction strategy specifier [reductionStrategy]. *)
+
 
 (** *** The TemplateMonad type *)
 Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=

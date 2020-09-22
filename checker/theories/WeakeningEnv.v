@@ -1,13 +1,10 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import Bool List Program Lia.
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils Ast AstUtils
      LibHypsNaming Typing.
 Require Import ssreflect.
 
 (** * Weakening lemmas w.r.t. the global environment *)
 
-Set Asymmetric Patterns.
 
 Generalizable Variables Σ Γ t T.
 

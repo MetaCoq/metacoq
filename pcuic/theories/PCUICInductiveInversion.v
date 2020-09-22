@@ -1,7 +1,4 @@
 (* Distributed under the terms of the MIT license. *)
-Set Warnings "-notation-overridden".
-
-Require Import Equations.Prop.DepElim.
 From Coq Require Import Bool String List Lia Arith.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
@@ -12,15 +9,13 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICConversion PCUICInversion PCUICContexts PCUICArities
      PCUICParallelReduction PCUICCtxShape PCUICSpine PCUICInductives PCUICValidity.
      
-Close Scope string_scope.
-
-Require Import ssreflect.
-
-Set Asymmetric Patterns.
-Set SimplIsCbn.
-
 From Equations Require Import Equations.
 Require Import Equations.Type.Relation_Properties.
+Require Import Equations.Prop.DepElim.
+Require Import ssreflect.
+
+
+Local Set SimplIsCbn.
 
 Ltac len := autorewrite with len.
 Hint Rewrite reln_length : len.

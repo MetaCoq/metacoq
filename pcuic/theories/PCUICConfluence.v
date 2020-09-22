@@ -1,21 +1,17 @@
 (* Distributed under the terms of the MIT license. *)
-Set Warnings "-notation-overridden".
-Require Import ssreflect.
-From Equations Require Import Equations.
-From Coq Require Import Bool List Utf8 Lia.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICRelations PCUICAst PCUICLiftSubst PCUICTyping
      PCUICReduction PCUICWeakening PCUICEquality PCUICUnivSubstitution
      PCUICParallelReduction PCUICParallelReductionConfluence.
 
-(* Type-valued relations. *)
+Require Import ssreflect.
+From Equations Require Import Equations.
 Require Import CRelationClasses CMorphisms.
 Require Import Equations.Prop.DepElim.
 Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 
-Ltac tc := try typeclasses eauto 10.
 
-Set Asymmetric Patterns.
+Ltac tc := try typeclasses eauto 10.
 
 Lemma red1_eq_context_upto_l Σ Re Γ Δ u v :
   RelationClasses.Reflexive Re ->
@@ -1056,10 +1052,10 @@ Lemma All_All2_telescopei P (Γ Γ' : context) (m m' : mfixpoint term) :
     P Γ Γ' x y ->
     P (Γ ,,, Δ) (Γ' ,,, Δ') (lift0 #|Δ| x) (lift0 #|Δ'| y)) ->
   All2 (on_Trel_eq (P Γ Γ') dtype dname) m m' ->
-  All2_telescope_n (on_decl P) (λ n : nat, lift0 n)
+  All2_telescope_n (on_decl P) (fun n => lift0 n)
                    Γ Γ' 0
-                   (map (λ def : def term, vass (dname def) (dtype def)) m)
-                   (map (λ def : def term, vass (dname def) (dtype def)) m').
+                   (map (fun def => vass (dname def) (dtype def)) m)
+                   (map (fun def => vass (dname def) (dtype def)) m').
 Proof.
   specialize (All_All2_telescopei_gen P Γ Γ' [] [] m m'). simpl.
   intros. specialize (X X0 X1). apply X; constructor.
@@ -1441,12 +1437,12 @@ Section PredRed.
     All2_local_env
        (on_decl
           (on_decl_over
-             (λ (Γ Γ' : context) (t t0 : term),
-                ∀ Γ0 Γ'0 Δ Δ' : context,
+             (fun (Γ Γ' : context) (t t0 : term) =>
+                forall Γ0 Γ'0 Δ Δ' : context,
                   Γ = Γ0 ,,, Δ
-                  → Γ' = Γ'0 ,,, Δ'
-                    → pred1_ctx Σ (Γ'0 ,,, Δ) (Γ'0 ,,, Δ')
-                      → pred1 Σ (Γ'0 ,,, Δ) (Γ'0 ,,, Δ') t t0) 
+                  -> Γ' = Γ'0 ,,, Δ'
+                    -> pred1_ctx Σ (Γ'0 ,,, Δ) (Γ'0 ,,, Δ')
+                      -> pred1 Σ (Γ'0 ,,, Δ) (Γ'0 ,,, Δ') t t0) 
              (Γ0 ,,, Δ) (Γ'0 ,,, Δ'))) (fix_context mfix0)
        (fix_context mfix1) ->
     All2_local_env (on_decl (on_decl_over (pred1 Σ) (Γ'0 ,,, Δ) (Γ'0 ,,, Δ')))
@@ -1479,8 +1475,8 @@ Section PredRed.
     refine (@pred1_ind_all_ctx Σ _ 
       (fun Γ Γ' =>
        All2_local_env (on_decl (fun Γ0 Γ'0 M N => 
-       ∀ Γ Γ' Δ Δ' : context,
-       Γ0 = Γ ,,, Δ → Γ'0 = Γ' ,,, Δ' →
+       forall Γ Γ' Δ Δ' : context,
+       Γ0 = Γ ,,, Δ -> Γ'0 = Γ' ,,, Δ' ->
        pred1 Σ Γ0 Γ'0 M N ->
        pred1_ctx Σ (Γ' ,,, Δ) (Γ' ,,, Δ') ->
        pred1 Σ (Γ' ,,, Δ) (Γ' ,,, Δ') M N)) Γ Γ')%type
@@ -1847,7 +1843,7 @@ Section RedConfluence.
     econstructor 2; eauto.
   Qed.
 
-  Definition on_one_decl (P : context → term → term → Type) (Γ : context) (b : option (term × term)) (t t' : term) :=
+  Definition on_one_decl (P : context -> term -> term -> Type) (Γ : context) (b : option (term × term)) (t t' : term) :=
     match b with
     | Some (b0, b') => ((P Γ b0 b' * (t = t')) + (P Γ t t' * (b0 = b')))%type
     | None => P Γ t t'
@@ -1869,10 +1865,10 @@ Section RedConfluence.
         OnOne2_local_env (Γ ,, d) (Γ' ,, d).
   End OnOne_local_2.
 
-  Inductive clos_refl_trans_ctx_decl (R : relation context_decl) (x : context_decl) : context_decl → Type :=
-    rt_ctx_decl_step : ∀ y, R x y → clos_refl_trans_ctx_decl R x y
+  Inductive clos_refl_trans_ctx_decl (R : relation context_decl) (x : context_decl) : context_decl -> Type :=
+    rt_ctx_decl_step : forall y, R x y -> clos_refl_trans_ctx_decl R x y
   | rt_ctx_decl_refl y : decl_body x = decl_body y -> decl_type x = decl_type y -> clos_refl_trans_ctx_decl R x y
-  | rt_ctx_decl_trans : ∀ y z, clos_refl_trans_ctx_decl R x y → clos_refl_trans_ctx_decl R y z →
+  | rt_ctx_decl_trans : forall y z, clos_refl_trans_ctx_decl R x y -> clos_refl_trans_ctx_decl R y z ->
                                clos_refl_trans_ctx_decl R x z.
 
   Inductive eq_context_upto_names : context -> context -> Type :=
@@ -1898,10 +1894,10 @@ Section RedConfluence.
     etransitivity; eauto.
   Qed.
 
-  Inductive clos_refl_trans_ctx (R : relation context) (x : context) : context → Type :=
-  | rt_ctx_step : ∀ y, R x y → clos_refl_trans_ctx R x y
+  Inductive clos_refl_trans_ctx (R : relation context) (x : context) : context -> Type :=
+  | rt_ctx_step : forall y, R x y -> clos_refl_trans_ctx R x y
   | rt_ctx_refl y : eq_context_upto_names x y -> clos_refl_trans_ctx R x y
-  | rt_ctx_trans : ∀ y z, clos_refl_trans_ctx R x y → clos_refl_trans_ctx R y z → clos_refl_trans_ctx R x z.
+  | rt_ctx_trans : forall y z, clos_refl_trans_ctx R x y -> clos_refl_trans_ctx R y z -> clos_refl_trans_ctx R x z.
 
   Global Instance clos_refl_trans_ctx_refl R :
     Reflexive (clos_refl_trans_ctx R).
@@ -2023,10 +2019,10 @@ Section RedConfluence.
       etransitivity; eauto.
   Qed.
 
-  Inductive clos_refl_trans_ctx_t (R : relation (context * term)) (x : context * term) : context * term → Type :=
-  | rt_ctx_t_step : ∀ y, R x y → clos_refl_trans_ctx_t R x y
+  Inductive clos_refl_trans_ctx_t (R : relation (context * term)) (x : context * term) : context * term -> Type :=
+  | rt_ctx_t_step : forall y, R x y -> clos_refl_trans_ctx_t R x y
   | rt_ctx_t_refl y : eq_context_upto_names (fst x) (fst y) -> snd x = snd y -> clos_refl_trans_ctx_t R x y
-  | rt_ctx_t_trans : ∀ y z, clos_refl_trans_ctx_t R x y → clos_refl_trans_ctx_t R y z → clos_refl_trans_ctx_t R x z.
+  | rt_ctx_t_trans : forall y z, clos_refl_trans_ctx_t R x y -> clos_refl_trans_ctx_t R y z -> clos_refl_trans_ctx_t R x z.
 
   Global Instance clos_refl_trans_ctx_t_refl R :
     Reflexive (clos_refl_trans_ctx_t R).
@@ -2516,9 +2512,9 @@ Section RedConfluence.
     - now transitivity y.
   Qed.
     
-  Inductive clos_refl_trans_ctx_1n (R : relation context) (x : context) : context → Type :=
+  Inductive clos_refl_trans_ctx_1n (R : relation context) (x : context) : context -> Type :=
   | rt1n_ctx_eq : clos_refl_trans_ctx_1n R x x
-  | rt1n_ctx_trans : ∀ y z, eq_context_upto_names x y + R x y → clos_refl_trans_ctx_1n R y z -> clos_refl_trans_ctx_1n R x z.
+  | rt1n_ctx_trans : forall y z, eq_context_upto_names x y + R x y -> clos_refl_trans_ctx_1n R y z -> clos_refl_trans_ctx_1n R x z.
 
 
   Lemma clos_refl_trans_ctx_to_1n (x y : context) :

@@ -1,15 +1,12 @@
 (* Distributed under the terms of the MIT license. *)
-
 From MetaCoq.Template Require Import utils.
 From MetaCoq.PCUIC Require Import PCUICAst.
-Set Asymmetric Patterns.
 
 (** * Deriving a compact induction principle for terms
 
-  *WIP*
-
   Allows to get the right induction principle on lists of terms appearing
   in the term syntax (in evar, applications, branches of cases and (co-)fixpoints. *)
+
 
 (** Custom induction principle on syntax, dealing with the various lists appearing in terms. *)
 

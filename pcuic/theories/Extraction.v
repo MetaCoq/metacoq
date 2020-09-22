@@ -1,12 +1,13 @@
-(** Extraction setup for the pcuic phase of MetaCoq.
+(* Distributed under the terms of the MIT license. *)
+Require Import MetaCoq.Template.utils.
+Require Import FSets ssreflect ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt.
+
+(** * Extraction setup for the pcuic phase of MetaCoq.
 
     Any extracted code planning to link with the plugin's OCaml reifier
     should use these same directives for consistency.
 *)
 
-From Coq Require Import FSets ssreflect.
-Require Import ExtrOcamlBasic.
-Require Import ExtrOcamlString ExtrOcamlZInt.
 
 (* Ignore [Decimal.int] before the extraction issue is solved:
    https://github.com/coq/coq/issues/7017. *)

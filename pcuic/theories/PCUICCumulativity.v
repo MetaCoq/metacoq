@@ -1,14 +1,12 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import Bool List Arith Lia ssreflect.
-From MetaCoq.Template Require Import config utils EnvironmentTyping.
+From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICRelations PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICReduction.
-Local Open Scope string_scope.
-Set Asymmetric Patterns.
 
 Set Default Goal Selector "!".
 
-(** *************************************************************************************
+(** * Definition of cumulativity and conversion relations
+
 The "natural" definition of conversion is given by [conv0]. It is the reflexive
 symmetric transitive closure of beta redution + equality modulo universes.
 It turns out to be equivalent to [conv1]: only beta reduction needs to be symmetrized.
@@ -18,7 +16,8 @@ it is oriented.
 Those definitions are NOT used in the definition of typing. Instead we use [cumul] and
 [conv] which are defined as "reducing to a common term". It tunrs out to be equivalent
 to [conv1] and [cumul1] by confluence. It will be shown afterward, in PCUICConversion.v .
-**************************************************************************************** *)
+*)
+
 
 Section ConvCumulDefs.
   Context {cf:checker_flags} (Σ : global_env_ext) (Γ : context).

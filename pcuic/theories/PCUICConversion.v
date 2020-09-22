@@ -1,19 +1,18 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import Bool List Lia Arith.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping
      PCUICSubstitution PCUICPosition PCUICCumulativity PCUICReduction
      PCUICConfluence PCUICClosed PCUICParallelReductionConfluence PCUICEquality
      PCUICContextConversion PCUICWeakening PCUICUnivSubst PCUICUnivSubstitution
 .
+
 Require Import ssreflect.
-Local Open Scope string_scope.
-Set Asymmetric Patterns.
 Require Import CRelationClasses.
 Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 Require Import Equations.Prop.DepElim.
 
 Set Default Goal Selector "!".
+
 
 Ltac tc := try typeclasses eauto 10.
 Ltac pcuic := intuition eauto 5 with pcuic ||

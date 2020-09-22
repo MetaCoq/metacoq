@@ -1,16 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
-
-From Coq Require Import List.
 From MetaCoq.Template Require Import utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction.
-From Coq Require Import BinPos Lia.
-Require Import PeanoNat.
-Import Nat.
 Require Import ssreflect.
 Require Import Morphisms.
-
-Notation "`=1`" := (pointwise_relation _ Logic.eq) (at level 80).
-Infix "=1" := (pointwise_relation _ Logic.eq) (at level 90).
 
 (** * Lifting and substitution for the AST
 
@@ -18,7 +10,10 @@ Infix "=1" := (pointwise_relation _ Logic.eq) (at level 90).
   Definition of [closedn] (boolean) predicate for checking if
   a term is closed. *)
 
-Set Asymmetric Patterns.
+
+Notation "`=1`" := (pointwise_relation _ Logic.eq) (at level 80).
+Infix "=1" := (pointwise_relation _ Logic.eq) (at level 90).
+
 Derive Signature for Peano.le.
 
 (** Shift a renaming [f] by [k]. *)

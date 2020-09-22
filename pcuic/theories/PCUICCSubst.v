@@ -1,21 +1,18 @@
 (* Distributed under the terms of the MIT license. *)
-Set Warnings "-notation-overridden".
-
-From Coq Require Import Bool List Lia CRelationClasses Arith.
+From Coq Require Import CRelationClasses.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICUnivSubst PCUICTyping
-     PCUICInduction PCUICReduction PCUICClosed.
-Require Import String.
-Local Open Scope string_scope.
-Set Asymmetric Patterns.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst
+     PCUICUnivSubst PCUICTyping PCUICInduction PCUICReduction PCUICClosed.
 
 Require Import ssreflect ssrbool.
-
 From Equations Require Import Equations.
 
-Local Ltac inv H := inversion H; subst.
+(** * Closed single substitution:
 
-(** Closed single substitution: no lifting involved and one term at a time. *)
+    no lifting involved and one term at a time. *)
+
+
+Local Ltac inv H := inversion H; subst.
 
 Fixpoint csubst t k u :=
   match u with

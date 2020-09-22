@@ -22,9 +22,7 @@ install: [
   [make "-C" "pcuic" "install"]
 ]
 depends: [
-  "ocaml" {>= "4.07.1"}
-  "coq" {= "dev"}
-  "coq-equations" {= "dev"}
+  "coq-equations" {= "dev" }
   "coq-metacoq-template" {= version}
   "coq-metacoq-checker" {= version}
 ]

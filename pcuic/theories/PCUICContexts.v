@@ -5,7 +5,7 @@ From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
      PCUICCumulativity PCUICPosition PCUICEquality PCUICNameless
-     PCUICNormal PCUICInversion PCUICCumulativity PCUICReduction
+     PCUICInversion PCUICCumulativity PCUICReduction
      PCUICConfluence PCUICConversion PCUICContextConversion
      PCUICParallelReductionConfluence PCUICWeakeningEnv
      PCUICClosed PCUICSubstitution PCUICUnivSubstitution PCUICSigmaCalculus
@@ -82,11 +82,7 @@ Qed.
 
 Lemma assumption_context_length ctx : assumption_context ctx ->
   context_assumptions ctx = #|ctx|.
-Proof.
-  induction ctx; simpl; auto.
-  destruct a as [na [b|] ty]; simpl.
-  intros. depelim H. depelim H; rewrite IHctx; auto.
-Qed.
+Proof. induction 1; simpl; auto. Qed.
 
 Lemma context_subst_length2 {ctx args s} : context_subst ctx args s -> #|args| = context_assumptions ctx.
 Proof.
@@ -349,6 +345,22 @@ Lemma to_extended_list_k_app Γ Δ k : to_extended_list_k (Γ ++ Δ) k =
 Proof.
   unfold to_extended_list_k. now rewrite reln_app reln_acc.
 Qed.
+
+Lemma to_extended_list_k_fold_context f Γ k : 
+  to_extended_list_k (fold_context f Γ) k = to_extended_list_k Γ k.
+Proof.
+  rewrite /to_extended_list_k.
+  generalize (@nil term).
+  induction Γ in k |- *.
+  simpl; auto.
+  intros.
+  rewrite fold_context_snoc0. simpl.
+  destruct a as [? [?|] ?] => /=; now rewrite IHΓ.  
+Qed.
+
+Lemma to_extended_list_k_lift_context c k n k' : 
+  to_extended_list_k (lift_context n k c) k' = to_extended_list_k c k'. 
+Proof. now rewrite to_extended_list_k_fold_context. Qed.
 
 Lemma reln_lift n k Γ : reln [] (n + k) Γ = map (lift0 n) (reln [] k Γ).
 Proof.

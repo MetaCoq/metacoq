@@ -744,6 +744,15 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma nth_error_snoc {A} (l : list A) (a : A) i :
+  i = #|l| ->
+  nth_error (l ++ [a]) i = Some a.
+Proof.
+  intros ->.
+  rewrite nth_error_app_ge; [easy|].
+  now rewrite Nat.sub_diag.
+Qed.
+
 Lemma map_inj :
   forall A B (f : A -> B) l l',
     (forall x y, f x = f y -> x = y) ->
@@ -880,6 +889,16 @@ Lemma nth_nth_error {A} n l (d : A) :
               end.
 Proof.
   symmetry. apply nth_default_eq.
+Qed.
+
+Lemma nth_nth_error' {A} {i} {l : list A} {d v} :
+  nth i l d = v ->
+  (nth_error l i = Some v) +
+  (nth_error l i = None /\ v = d).
+Proof.
+  move: i v. elim: l => [|hd tl IH] //.
+  - case => /= //; now right.
+  - case => /= // _ <-. now left.
 Qed.
 
 Lemma firstn_add {A} x y (args : list A) : firstn (x + y) args = firstn x args ++ firstn y (skipn x args).

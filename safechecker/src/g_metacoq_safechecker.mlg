@@ -20,7 +20,7 @@ let time prefix f x =
 
 let check env evm (c, ustate) =
   Feedback.msg_debug (str"Quoting");
-  let term = time (str"Quoting") (Ast_quoter.quote_term_rec env) (EConstr.to_constr evm c) in
+  let term = time (str"Quoting") (Ast_quoter.quote_term_rec true env) (EConstr.to_constr evm c) in
   let uctx = UState.context_set ustate in
   Feedback.msg_debug (str"Universes added: " ++ Printer.pr_universe_ctx_set evm uctx);
   let uctx = Universes0.Monomorphic_ctx (Ast_quoter.quote_univ_contextset uctx) in

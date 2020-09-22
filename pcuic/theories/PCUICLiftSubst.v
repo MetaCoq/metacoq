@@ -139,6 +139,38 @@ Fixpoint smash_context (Γ Γ' : context) : context :=
   | [] => Γ
   end.
 
+(* Smashing a context Γ with Δ depending on it is the same as smashing Γ
+    and substituting all references to Γ in Δ by the expansions of let bindings. *)
+
+Fixpoint extended_subst (Γ : context) (n : nat)
+  (* Δ, smash_context Γ, n |- extended_subst Γ n : Γ *) :=
+  match Γ with
+  | nil => nil
+  | cons d vs =>
+    match decl_body d with
+    | Some b =>
+      (* Δ , vs |- b *)
+      let s := extended_subst vs n in
+      (* Δ , smash_context vs , n |- s : vs *)
+      let b' := lift (context_assumptions vs + n) #|s| b in
+      (* Δ, smash_context vs, n , vs |- b' *)
+      let b' := subst0 s b' in
+      (* Δ, smash_context vs , n |- b' *)
+      b' :: s
+    | None => tRel n :: extended_subst vs (S n)
+    end
+  end.
+
+Definition expand_lets_k Γ k t := 
+  (subst (extended_subst Γ 0) k (lift (context_assumptions Γ) (k + #|Γ|) t)).
+
+Definition expand_lets Γ t := expand_lets_k Γ 0 t.
+
+Definition expand_lets_k_ctx Γ k Δ := 
+  (subst_context (extended_subst Γ 0) k (lift_context (context_assumptions Γ) (k + #|Γ|) Δ)).
+
+Definition expand_lets_ctx Γ Δ := expand_lets_k_ctx Γ 0 Δ.
+
 Fixpoint closedn k (t : term) : bool :=
   match t with
   | tRel i => Nat.ltb i k
@@ -160,6 +192,26 @@ Fixpoint closedn k (t : term) : bool :=
   end.
 
 Notation closed t := (closedn 0 t).
+
+Fixpoint noccur_between k n (t : term) : bool :=
+  match t with
+  | tRel i => Nat.leb k i && Nat.ltb i (k + n)
+  | tEvar ev args => List.forallb (noccur_between k n) args
+  | tLambda _ T M | tProd _ T M => noccur_between k n T && noccur_between (S k) n M
+  | tApp u v => noccur_between k n u && noccur_between k n v
+  | tLetIn na b t b' => noccur_between k n b && noccur_between k n t && noccur_between (S k) n b'
+  | tCase ind p c brs =>
+    let brs' := List.forallb (test_snd (noccur_between k n)) brs in
+    noccur_between k n p && noccur_between k n c && brs'
+  | tProj p c => noccur_between k n c
+  | tFix mfix idx =>
+    let k' := List.length mfix + k in
+    List.forallb (test_def (noccur_between k n) (noccur_between k' n)) mfix
+  | tCoFix mfix idx =>
+    let k' := List.length mfix + k in
+    List.forallb (test_def (noccur_between k n) (noccur_between k' n)) mfix
+  | x => true
+  end.
 
 Create HintDb terms.
 
@@ -658,6 +710,13 @@ Proof.
   + lia.
 Qed.
 
+Lemma subst_subst_lift (s s' : list term) n t : n = #|s| + #|s'| -> 
+  subst0 s (subst0 s' (lift0 n t)) = t.
+Proof.
+  intros ->. rewrite Nat.add_comm simpl_subst' //; try lia.
+  now rewrite -(Nat.add_0_r #|s|) simpl_subst' // lift0_id.
+Qed.
+
 Lemma map_subst_lift_id s l : map (subst0 s ∘ lift0 #|s|) l = l.
 Proof.
   induction l; simpl; auto.
@@ -674,6 +733,13 @@ Lemma map_subst_lift_ext N n p k l :
 Proof.
   intros -> pn.
   apply map_ext => x. now apply simpl_subst'.
+Qed.
+
+Lemma map_subst_subst_lift_lift (s s' : list term) k k' l : k + k' = #|s| + #|s'| -> 
+  map (fun t => subst0 s (subst0 s' (lift k k' (lift0 k' t)))) l = l.
+Proof.
+  intros H. eapply All_map_id. eapply All_refl => x.
+  rewrite simpl_lift; try lia. rewrite subst_subst_lift //.
 Qed.
 
 Lemma nth_error_lift_context:

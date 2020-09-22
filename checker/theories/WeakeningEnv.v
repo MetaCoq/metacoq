@@ -163,6 +163,14 @@ Proof.
     repeat split; eauto using eq_term_upto_univ_morphism0.
 Qed.
 
+Lemma eq_term_subset {cf:checker_flags} φ φ' t t'
+  : ConstraintSet.Subset φ φ'
+    -> eq_term φ t t' ->  eq_term φ' t t'.
+Proof.
+  intro H. apply eq_term_upto_univ_morphism.
+  all: intros u u'; eapply eq_universe_subset; assumption.
+Qed.
+
 Lemma leq_term_subset {cf:checker_flags} ctrs ctrs' t u
   : ConstraintSet.Subset ctrs ctrs' -> leq_term ctrs t u -> leq_term ctrs' t u.
 Proof.
@@ -171,6 +179,21 @@ Proof.
   intros t' u'; eapply leq_universe_subset; assumption.
 Qed.
 
+
+Lemma weakening_env_conv `{CF:checker_flags} Σ Σ' φ Γ M N :
+  wf Σ' ->
+  extends Σ Σ' ->
+  conv (Σ, φ) Γ M N ->
+  conv (Σ', φ) Γ M N.
+Proof.
+  intros wfΣ [Σ'' ->].
+  induction 1; simpl.
+  - econstructor. eapply eq_term_subset.
+    + eapply global_ext_constraints_app.
+    + assumption. 
+  - econstructor 2; eauto. eapply weakening_env_red1; eauto. exists Σ''; eauto.
+  - econstructor 3; eauto. eapply weakening_env_red1; eauto. exists Σ''; eauto.
+Qed.
 
 Lemma weakening_env_cumul `{CF:checker_flags} Σ Σ' φ Γ M N :
   wf Σ' -> extends Σ Σ' ->
@@ -250,14 +273,6 @@ Lemma weakening_env_global_ext_constraints Σ Σ' φ (H : extends Σ Σ')
 Proof.
   destruct H as [Σ'' eq]. subst.
   apply global_ext_constraints_app.
-Qed.
-
-Lemma eq_term_subset {cf:checker_flags} φ φ' t t'
-  : ConstraintSet.Subset φ φ'
-    -> eq_term φ t t' ->  eq_term φ' t t'.
-Proof.
-  intro H. apply eq_term_upto_univ_morphism.
-  all: intros u u'; eapply eq_universe_subset; assumption.
 Qed.
 
 Lemma eq_decl_subset {cf:checker_flags} φ φ' d d'
@@ -379,6 +394,15 @@ Proof.
       revert on_cindices.
       generalize (List.rev (LiftSubst.lift_context #|cshape_args cs| 0 ind_indices)).
       generalize (cshape_indices cs). induction 1; constructor; eauto.
+      simpl.
+      intros v indv. specialize (on_ctype_variance v indv).
+      simpl in *. move: on_ctype_variance.
+      unfold respects_variance. destruct variance_universes as [[[univs u] u']|]; auto.
+      intros [args idxs]. split.
+      eapply (All2_local_env_impl args); intros.
+      eapply weakening_env_cumul; eauto.
+      eapply (All2_impl idxs); intros.
+      eapply weakening_env_conv; eauto.
     -- unfold check_ind_sorts in *. destruct universe_family; auto.
       --- split; [apply fst in ind_sorts|apply snd in ind_sorts].
           eapply Forall_impl; tea; cbn.

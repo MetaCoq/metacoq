@@ -40,7 +40,6 @@ theories/PCUICValidity.v
 theories/PCUICInductiveInversion.v
 theories/PCUICSR.v
 theories/PCUICCanonicity.v
-theories/PCUICMetaTheory.v
 
 theories/PCUICCSubst.v
 theories/PCUICWcbvEval.v

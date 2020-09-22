@@ -55,7 +55,6 @@
 | [PCUICSR] | Subject reduction |
 | [PCUICCSubst]    | Definition of closed (capturing) substitution             |
 | [PCUICWcbvEval] | Weak-head call-by-value evaluation strategy |
-| [PCUICMetaTheory] |   |
 
 [PCUICPretty]: PCUICPretty.v
 [PCUICSize]: PCUICSize.v
@@ -82,7 +81,6 @@
 [PCUICSR]: PCUICSR.v
 [PCUICCSubst]: PCUICCSubst.v
 [PCUICWcbvEval]: PCUICWcbvEval.v
-[PCUICMetaTheory]: PCUICMetaTheory.v
 
 ## Fueled type checker
 

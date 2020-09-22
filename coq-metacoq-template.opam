@@ -23,7 +23,7 @@ install: [
 ]
 depends: [
   "ocaml" {>= "4.07.1"}
-  "coq" { >= "8.12~"  & < "8.13~" }
+  "coq" { = "dev" }
 ]
 synopsis: "A quoting and unquoting library for Coq in Coq"
 description: """

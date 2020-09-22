@@ -249,6 +249,7 @@ Proof.
   econstructor 2; eauto.
 Qed.
 
+(* This should be called sym instead of inv, no ? *)
 Lemma red_conv_conv_inv `{cf : checker_flags} Σ Γ t u v :
   red (fst Σ) Γ t u -> Σ ;;; Γ |- v = u -> Σ ;;; Γ |- v = t.
 Proof.

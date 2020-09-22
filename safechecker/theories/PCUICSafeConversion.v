@@ -121,7 +121,8 @@ Qed.
 Section Conversion.
 
   Context {cf : checker_flags}.
-  Context (flags : RedFlags.t).
+  (* Unused *)
+  (* Context (flags : RedFlags.t). *)
   Context (Σ : global_env_ext).
   Context (hΣ : ∥ wf Σ ∥) (Hφ : ∥ on_udecl Σ.1 Σ.2 ∥).
   Context (G : universes_graph) (HG : is_graph_of_uctx G (global_ext_uctx Σ)).
@@ -2334,6 +2335,7 @@ Section Conversion.
     todo "Completeness"%string. 
   Qed.
 
+(* 
   Notation whne := (whne flags Σ).
 
   Lemma app_conv_inv : forall Γ t t' u u',
@@ -2366,7 +2368,7 @@ Section Conversion.
     (* Proof idea: decompose the stacks, prove by induction that the
     each side is applied to the same number of arguments. *)
     intros Γ indn p p' c c' brs brs' π π' t t' wht wht'.
-
+(* 
     destruct (decompose_stack π) as [l s] eqn:Hpi.
     destruct (decompose_stack π') as [l' s'] eqn: Hpi'.
     unfold zipp; rewrite Hpi, Hpi'; clear s s' Hpi Hpi'.
@@ -2378,10 +2380,17 @@ Section Conversion.
     assert (cum_irr : forall napp, eq_term_upto_univ_napp Σ.1 (eq_universe Σ) (eq_universe Σ) napp t t' -> eq_term Σ t t').
     - intros n heq; depelim heq; now constructor.
     -
-    
+     *)
     
     todo "Completeness"%string.
-  Qed.
+  Qed. *)
+
+  Lemma conv_red_full_l : 
+    forall Σ Γ (t u v : term),
+      red Σ.1 Γ v t -> Σ;;; Γ |- v = u -> Σ;;; Γ |- t = u.
+  Proof.
+    admit.
+  Admitted.
 
   Opaque reduce_stack.
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
@@ -2474,7 +2483,7 @@ Section Conversion.
                     } ;
                   | Error e h := Error e _
                   } ;
-                | @exist false _ :=
+                | @exist false eqDiff :=
                   Error (
                     CaseOnDifferentInd
                       (Γ ,,, stack_context π1) ind par p c brs
@@ -2495,7 +2504,7 @@ Section Conversion.
         | Success h1 := isconv_args leq (tProj p c) π1 (tProj p' c') π2 aux ;
         | Error e h := Error e _
         } ;
-      | @exist false _ :=
+      | @exist false eqDiff :=
         Error (
           DistinctStuckProj
             (Γ ,,, stack_context π1) p c
@@ -2506,7 +2515,7 @@ Section Conversion.
     | prog_view_Fix mfix idx mfix' idx'
       with inspect (eqb_term (tFix mfix idx) (tFix mfix' idx')) := {
       | @exist true eq1 := isconv_args leq (tFix mfix idx) π1 (tFix mfix' idx') π2 aux ;
-      | @exist false _ with inspect (unfold_one_fix Γ mfix idx π1 _) := {
+      | @exist false eqDiff with inspect (unfold_one_fix Γ mfix idx π1 _) := {
         | @exist (Some (fn, θ)) eq1
           with inspect (decompose_stack θ) := {
           | @exist (l', θ') eq2
@@ -2873,22 +2882,34 @@ Section Conversion.
   Qed.
   Next Obligation.
     apply h; clear h.
-    destruct leq.
-    + destruct H as [H]; cbn in H.
-      unfold zipp in H.
-      destruct (decompose_stack π1) eqn:H1; subst.
-      destruct (decompose_stack π2) eqn:H2; subst.
-    cbn in *.
-    Search "inv" "Case".
+    (* Proof idea:
+      1) prove that the 2 tCase are in conv_cum relation 
+        because they are whne (needs to add thys hypothesis)
+      2) wlog leq = Conv because there is no cumulativity between tCase
+      3) invert the conv judgement using that the tCase are whne
+         (so preserved by wh-reductions) 
+    *)
     todo "Completeness"%string.
   Qed.
   Next Obligation.
+    apply h ; clear h.
+    cbn. (* Same idea as previous case *)
     todo "Completeness"%string.
   Qed.
   Next Obligation.
+    apply h; clear h.
+    cbn. (* Same idea as previous case *)
     todo "Completeness"%string.
   Qed.
   Next Obligation.
+    (* Proof idea: 
+      1) from H, derive that some
+          tCase (ind, par) _ _ _ and tCase (ind',par') _ _ _
+          are in eqb_term 
+          maybe using conv_alt_red
+      2) deduce that ind = ind' and par = par'
+      3) conclude that it contradicts eqDiff
+    *)
     todo "Completeness"%string.
   Qed.
   Next Obligation.
@@ -3019,7 +3040,30 @@ Section Conversion.
       + eapply conv_context_sym. all: auto.
   Qed.
   Next Obligation.
-    todo "Completeness"%string.
+    apply h; clear h.
+    set (redc := reduce_term _ _ _ _ _ _);
+    assert (∥ red Σ.1 (Γ ,,, stack_context π1) c redc ∥)
+    as [hc]
+    by apply reduce_term_sound.
+    set (redc' := reduce_term _ _ _ _ _ _);
+    assert (∥ red Σ.1 (Γ ,,, stack_context π2) c' redc' ∥)
+    as [hc']
+    by apply reduce_term_sound.
+    destruct hx as [hx].
+    destruct hΣ as [ wfΣ].
+    (* Proof idea: wlog leq = Conv,  *)
+    destruct leq.
+    - set (t0 := zipp _ _).
+      destruct H as [Hconv].
+      constructor.
+      eapply conv_red_full_l. 1: apply red_zipp, red_case_c, hc.
+      symmetry.
+      eapply conv_conv_ctx. 1: assumption.
+      2: eapply conv_context_sym; eassumption.
+      eapply conv_red_full_l. 1: apply red_zipp, red_case_c, hc'. 
+      eapply conv_conv_ctx; try eassumption.
+      symmetry; assumption.
+    - todo "Completeness"%string. (* see previous comment *)
   Qed.
 
   (* tProj *)
@@ -3043,9 +3087,12 @@ Section Conversion.
     eapply conv_Proj_c. assumption.
   Qed.
   Next Obligation.
+    apply h; clear h.
+    cbn.
     todo "Completeness"%string.
   Qed.
   Next Obligation.
+    (* Proof idea: c and c' are whne so from H, p = p' contradicting eqDiff *)
     todo "Completeness"%string.
   Qed.
 
@@ -3206,6 +3253,8 @@ Section Conversion.
     - rewrite e. assumption.
   Qed.
   Next Obligation.
+    apply h; clear h.
+    (* Idea: a fixpoint should be convertible to its unfolding +  *)
     todo "Completeness"%string.
   Qed.
   Next Obligation.
@@ -3363,6 +3412,8 @@ Section Conversion.
     - assumption.
   Qed.
   Next Obligation.
+    apply h; clear h.
+    (* Idea: a fixpoint should be convertible to its unfolding +  *)
     todo "Completeness"%string.
   Qed.
   Next Obligation.
@@ -3386,9 +3437,15 @@ Section Conversion.
     eapply conv_Fix. all: assumption.
   Qed.
   Next Obligation.
+    apply h; clear h.
+    (* Idea : The fixpoints are neutral (do not unfold) *)
+    (* so each definitions are convertible *)
     todo "Completeness"%string.
   Qed.
   Next Obligation.
+    (* Proof idea: reduce to the case where we have eq_term
+    between tFix using that the fixpoints do not unfold
+    and then conlude with eqDiff *)
     todo "Completeness"%string.
   Qed.
 
@@ -3465,7 +3522,7 @@ Section Conversion.
     with aux u1 u2 args1 l1 (coApp t2 (appstack l2 π2)) _ _ _ _ Conv _ I I I := {
     | Success H1 with _isconv_args' leq Γ t1 (args1 ++ [u1]) l1 π1 _ _ (tApp t2 u2) l2 π2 _ _ _ _ _ := {
       | Success H2 := yes ;
-      | Error e h :=
+      | Error e herr :=
         Error (
           StackTailError
             leq
@@ -3473,7 +3530,7 @@ Section Conversion.
             (Γ ,,, stack_context π2) t2 u2 l2 e
         ) _
       } ;
-    | Error e h :=
+    | Error e herr :=
       Error (
         StackHeadError
           leq
@@ -3574,9 +3631,11 @@ Section Conversion.
     assumption.
   Defined.
   Next Obligation.
+    apply herr; clear herr.
     todo "Completeness"%string.
   Qed.
   Next Obligation.
+    apply herr; clear herr.
     todo "Completeness"%string.
   Qed.
 
@@ -3591,7 +3650,7 @@ Section Conversion.
     | @exist (l1, θ1) eq1 with inspect (decompose_stack π2) := {
       | @exist (l2, θ2) eq2 with _isconv_args' leq Γ t1 [] l1 θ1 _ _ t2 l2 θ2 _ _ _ _ _ := {
         | Success h := yes ;
-        | Error e h := Error e _ (* TODO Is it sufficient? *)
+        | Error e h := Error e _
         }
       }
     }.
@@ -3635,7 +3694,10 @@ Section Conversion.
     assumption.
   Qed.
   Next Obligation.
-    todo "Completeness"%string.
+    apply h; clear h.
+    pose proof (decompose_stack_eq _ _ _ (eq_sym eq1)). subst.
+    pose proof (decompose_stack_eq _ _ _ (eq_sym eq2)). subst.
+    assumption.
   Qed.
   
   Equations unfold_one_case (Γ : context) (ind : inductive) (par : nat)
@@ -4117,6 +4179,8 @@ Section Conversion.
     assumption.
   Qed.
   Next Obligation.
+    apply h; clear h.
+    (* Contrapositive of previous case *)
     todo "Completeness"%string.
   Qed.
   Next Obligation.
@@ -4271,6 +4335,8 @@ Section Conversion.
     - eapply conv_context_sym. all: auto.
   Qed.
   Next Obligation.
+    apply h; clear h.
+    (* Contrapositive of previous case *)
     todo "Completeness"%string.
   Qed.
   Next Obligation.
@@ -4282,6 +4348,7 @@ Section Conversion.
     eapply eqb_term_spec. auto.
   Qed.
   Next Obligation.
+    (* Proof idea: t1, t2 are un whnf, convertible but distinct ? *)
     todo "Completeness"%string.
   Qed.
   Next Obligation.
@@ -4293,6 +4360,7 @@ Section Conversion.
     eapply leqb_term_spec. auto.
   Qed.
   Next Obligation.
+    (* Proof idea: t1, t2 are un whnf, in cumulative relation but not in leqb_term relation ? *)
     todo "Completeness"%string.
   Qed.
   
@@ -4344,19 +4412,19 @@ Section Conversion.
     apply R_Acc. assumption.
   Qed.
   
-  Program Definition isconv Γ leq t1 π1 h1 t2 π2 h2 hx :=
-    match isconv_full Reduction Γ t1 π1 h1 t2 π2 h2 leq hx I I I with
-    | Success _ => Success I
-    | Error e h => Error e _
-    end.
-  Next Obligation.
-    (* This goal is probably not solvable, should probably change the definition of ConversionResult *)
-    todo "Completeness"%string. 
-  Qed.
+  Inductive ConversionResultSummary :=
+  | ConvSuccess : ConversionResultSummary
+  | ConvError : ConversionError -> ConversionResultSummary.
 
+  Definition isconv Γ leq t1 π1 h1 t2 π2 h2 hx :=
+    match isconv_full Reduction Γ t1 π1 h1 t2 π2 h2 leq hx I I I with
+    | Success _ => ConvSuccess
+    | Error e h => ConvError e
+    end.
+  
   Theorem isconv_sound :
     forall Γ leq t1 π1 h1 t2 π2 h2 hx,
-      isconv Γ leq t1 π1 h1 t2 π2 h2 hx = Success I ->
+      isconv Γ leq t1 π1 h1 t2 π2 h2 hx = ConvSuccess ->
       conv_cum leq Σ (Γ ,,, stack_context π1) (zipp t1 π1) (zipp t2 π2).
   Proof.
     unfold isconv.
@@ -4371,7 +4439,7 @@ Section Conversion.
 
   Theorem isconv_term_sound :
     forall Γ leq t1 h1 t2 h2,
-      isconv_term Γ leq t1 h1 t2 h2 = Success I ->
+      isconv_term Γ leq t1 h1 t2 h2 = ConvSuccess ->
       conv_cum leq Σ Γ t1 t2.
   Proof.
     intros Γ leq t1 h1 t2 h2.

@@ -483,8 +483,8 @@ Section Typecheck.
     : typing_result (∥ Σ ;;; Γ |- t <= u ∥) :=
     match leqb_term Σ G t u with true => ret _ | false =>
     match iscumul Γ t ht u hu with
-    | Success _ => ret _
-    | Error e h => (* fallback *)  (* nico *)
+    | ConvSuccess => ret _
+    | ConvError e => (* fallback *)  (* nico *)
       let t' := hnf Γ t ht in
       let u' := hnf Γ u hu in
       (* match leq_term (snd Σ) t' u' with true => ret _ | false => *)
@@ -753,8 +753,8 @@ Section Typecheck.
           (* We could avoid one useless sort comparison by only comparing *)
           (* the contexts [pctx] and [indctx] (what is done in Coq). *)
           match iscumul Γ pty.π1 _ pty' _ with
-          | Error e => raise (NotCumulSmaller G Γ pty.π1 pty' pty.π1 pty' e)
-          | Success _ =>
+          | ConvError e => raise (NotCumulSmaller G Γ pty.π1 pty' pty.π1 pty' e)
+          | ConvSuccess =>
             match map_option_out (build_branches_type ind decl body params u p) with
             | None => raise (Msg "failure in build_branches_type")
             | Some btys => 
@@ -994,7 +994,7 @@ Section Typecheck.
   Defined.
     
   Next Obligation.
-    rename Heq_anonymous2 into XX2. destruct wildcard'.
+    rename Heq_anonymous2 into XX2.
     symmetry in XX2. simpl in *. eapply isconv_sound in XX2.
     change (eqb ind ind' = true) in H0.
     destruct (eqb_spec ind ind') as [e|e]; [destruct e|discriminate H0].

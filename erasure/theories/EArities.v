@@ -4,14 +4,16 @@ From MetaCoq.Template Require Import config utils monad_utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils 
   PCUICClosed PCUICTyping PCUICWcbvEval PCUICLiftSubst PCUICInversion PCUICArities
   PCUICSR PCUICPrincipality PCUICGeneration PCUICSubstitution PCUICElimination
-  PCUICContextConversion PCUICConversion PCUICCanonicity.
-
+  PCUICContextConversion PCUICConversion PCUICCanonicity
+  PCUICSpine PCUICInductives PCUICInductiveInversion PCUICConfluence.
+Require Import ssreflect.
+From MetaCoq.Erasure Require Import Extract.
+  
 From Equations Require Import Equations.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 Import MonadNotation.
 Set Keyed Unification.
-Require Import Extract.
 
 Local Existing Instance extraction_checker_flags.
 
@@ -134,7 +136,7 @@ Proof.
     cbn in X.
     destruct x, decl_body; cbn in *.
     + dependent destruction X.
-      * unfold subst1. rewrite subst_it_mkProd_or_LetIn, subst_mkApps. eauto.
+      * unfold subst1. rewrite subst_it_mkProd_or_LetIn subst_mkApps. eauto.
       * destruct args using rev_ind; try rewrite <- mkApps_nested in x; cbn in x; inv x.
       * eexists (l ++ [mkdecl decl_name (Some r) decl_type])%list, l0.
         now rewrite it_mkProd_or_LetIn_app.
@@ -178,10 +180,11 @@ Proof.
   revert x0 x3 x1 x H0. induction x2 using rev_ind; intros.
   - cbn. assert (decompose_app (tProd x x0 x1) = decompose_app (mkApps (tInd i u) x3)) by now rewrite H0.
     rewrite decompose_app_mkApps in H; cbn; eauto. cbn in H. inv H.
-  - rewrite it_mkProd_or_LetIn_app in *. cbn in *.
+  - rewrite it_mkProd_or_LetIn_app in H0. cbn in *.
     destruct x, decl_body; cbn in H0; try now inv H0.
 Qed.
 
+(* if a constructor is a type or proof, it is a proof *)
 
 Lemma tConstruct_no_Type (Σ : global_env_ext) ind c u x1 : wf Σ ->
   isErasable Σ [] (mkApps (tConstruct ind c u) x1) ->
@@ -219,8 +222,8 @@ Proof.
     rewrite PCUICSubstitution.subst_it_mkProd_or_LetIn in c2.
     rewrite subst_mkApps in c2.
     cbn in c2.
-    rewrite PCUICUnivSubst.subst_instance_context_length in *.
-    rewrite app_length in *.
+    rewrite PCUICUnivSubst.subst_instance_context_length in c2.
+    rewrite app_length in c2.
     destruct (Nat.leb_spec (#|cshape_args s| + #|ind_params x3| + 0) (#|ind_bodies x3| - S (inductive_ind ind) + #|ind_params x3| + #|cshape_args s|)). 2:lia.
     clear H.
     assert ((#|ind_bodies x3| - S (inductive_ind ind) + #|ind_params x3| +
@@ -269,7 +272,46 @@ Proof.
       rewrite subst_it_mkProd_or_LetIn in c1.
       rewrite subst_mkApps in c1. eassumption.
   - exists x, x0. eauto.
-Qed.                       (* if a constructor is a type or proof, it is a proof *)
+Qed.                      
+
+(* if a cofixpoint is a type or proof, it is a proof *)
+
+Lemma tCoFix_no_Type (Σ : global_env_ext) mfix idx x1 : wf Σ ->
+  isErasable Σ [] (mkApps (tCoFix mfix idx) x1) ->
+  Is_proof Σ [] (mkApps (tCoFix mfix idx) x1).
+Proof.
+  intros wfΣ (? & ? & [ | (? & ? & ?)]).
+  - exfalso.
+    eapply PCUICValidity.inversion_mkApps in t as (? & ? & ?); eauto.
+    assert(c0 : Σ ;;; [] |- x <= x) by reflexivity.
+    revert c0 t0 i. generalize x at 1 3.
+    intros x2 c0 t0 i.
+    assert (HWF : isWfArity_or_Type Σ [] x2).
+    { eapply PCUICValidity.validity.
+      - eauto.
+      - eapply type_mkApps. 2:eauto. eauto.
+    }
+    eapply inversion_CoFix in t as (? & ? & ? & ? & ? & ? & ?) ; auto.
+    eapply invert_cumul_arity_r in c0; eauto.
+    eapply typing_spine_strengthen in t0; eauto.
+    eapply wf_cofixpoint_spine in i1; eauto.
+    2:eapply nth_error_all in a; eauto; simpl in a; eauto.
+    destruct i1 as (Γ' & T & DA & ind & u & indargs & (eqT & ck) & cum).
+    destruct (Nat.ltb #|x1| (context_assumptions Γ')).
+    eapply invert_cumul_arity_r_gen in c0; eauto.
+    destruct c0. destruct H as [[r] isA].
+    move: r; rewrite subst_it_mkProd_or_LetIn eqT; autorewrite with len.
+    rewrite expand_lets_mkApps subst_mkApps /=.
+    move/red_it_mkProd_or_LetIn_mkApps_Ind => [ctx' [args' eq]].
+    subst x4. now eapply it_mkProd_arity, isArity_mkApps in isA.
+    move: cum => [] Hx1; rewrite eqT expand_lets_mkApps subst_mkApps /= => cum.
+    eapply invert_cumul_arity_r_gen in c0; eauto.
+    destruct c0 as [? [[r] isA]].
+    eapply red_mkApps_tInd in r as [args' [eq _]]; auto.
+    subst x4.
+    now eapply isArity_mkApps in isA.
+  - eexists _, _; intuition eauto.
+Qed.
 
 Inductive conv_decls (Σ : global_env_ext) Γ (Γ' : context) : forall (x y : context_decl), Type :=
 | conv_vass : forall (na na' : name) (T T' : term),

@@ -581,12 +581,75 @@ Proof.
   now apply value_app_inv in ev.
 Qed.
 
+Lemma Is_proof_ty Σ Γ t : 
+  wf_ext Σ ->
+  Is_proof Σ Γ t -> 
+  forall t' ty, 
+  Σ ;;; Γ |- t : ty ->
+  Σ ;;; Γ |- t' : ty -> 
+  Is_proof Σ Γ t'.
+Proof.
+  intros wfΣ [ty [u [Hty isp]]].
+  intros t' ty' Hty'.
+  epose proof (PCUICPrincipality.principal_typing _ wfΣ Hty Hty') as [C [Cty [Cty' Ht'']]].
+  intros Ht'.
+  exists ty', u; intuition auto.
+  eapply PCUICValidity.validity in Hty; eauto.
+  eapply PCUICValidity.validity in Hty'; eauto.
+  eapply PCUICValidity.validity in Ht''; eauto.
+  eapply PCUICElimination.cumul_prop1 in Cty; eauto.
+  eapply PCUICElimination.cumul_prop2 in Cty'; eauto.
+Qed.
+
+Lemma Is_proof_app {Σ Γ t args ty} {wfΣ : wf_ext Σ} :
+  Is_proof Σ Γ t -> 
+  Σ ;;; Γ |- mkApps t args : ty ->
+  Is_proof Σ Γ (mkApps t args).
+Proof.
+  intros [ty' [u [Hty [isp pu]]]] Htargs.
+  eapply PCUICValidity.inversion_mkApps in Htargs as [A [Ht sp]].
+  pose proof (PCUICValidity.validity_term wfΣ Hty).  
+  pose proof (PCUICValidity.validity_term wfΣ Ht).  
+  epose proof (PCUICPrincipality.principal_typing _ wfΣ Hty Ht) as [C [Cty [Cty' Ht'']]].
+  eapply PCUICSpine.typing_spine_strengthen in sp; eauto.
+  edestruct (sort_typing_spine _ _ _ u _ _ _ pu sp) as [u' [Hty' isp']].
+  eapply PCUICElimination.cumul_prop1; eauto.
+  eapply PCUICValidity.validity; eauto.
+  exists ty, u'; split; auto.
+  eapply PCUICGeneration.type_mkApps. 2:eauto. auto. auto.
+Qed.
+
+
+Lemma unfold_cofix_type Σ mfix idx args narg fn ty :
+  wf Σ.1 ->
+  Σ ;;; [] |- mkApps (tCoFix mfix idx) args : ty ->
+  unfold_cofix mfix idx = Some (narg, fn) ->
+  Σ ;;; [] |- mkApps fn args : ty.
+Proof.
+  intros wfΣ ht.
+  pose proof (typing_wf_local ht).
+  eapply PCUICValidity.inversion_mkApps in ht as (? & ? & ?); eauto.
+  eapply inversion_CoFix in t; auto.
+  destruct_sigma t.
+  rewrite /unfold_cofix e => [=] harg hfn.
+  subst fn.
+  eapply PCUICSpine.typing_spine_strengthen in t0; eauto.
+  eapply PCUICGeneration.type_mkApps; eauto.
+  pose proof a0 as a0'.
+  eapply nth_error_all in a0'; eauto. simpl in a0'.
+  eapply (substitution _ _ _ _ []) in a0'; eauto.
+  2:{ eapply subslet_cofix_subst; pcuic.
+      constructor; eauto. }
+  rewrite PCUICLiftSubst.simpl_subst_k in a0'. now autorewrite with len.
+  eapply a0'.
+Qed.
+
 Transparent PCUICParallelReductionConfluence.construct_cofix_discr.
 
 Lemma erases_correct Σ t T t' v Σ' :
   extraction_pre Σ ->
   Σ;;; [] |- t : T ->
-  Σ;;; [] |- t ⇝ℇ t' ->
+  Σ;;; [] |- t ⇝ℇ t' ->  
   erases_global Σ Σ' ->
   Σ |-p t ▷ v ->
   exists v', Σ;;; [] |- v ⇝ℇ v' /\ Σ' ⊢ t' ▷ v'.
@@ -1137,15 +1200,163 @@ Proof.
     eapply inversion_Case in Hty' as [u' [args' [mdecl [idecl [ps [pty [btys
                                    [? [? [? [? [? [_ [? [ht0 [? ?]]]]]]]]]]]]]]]];
     eauto.
-    eapply PCUICValidity.inversion_mkApps in t0 as (? & ? & ?); eauto.
-    eapply inversion_CoFix in t0 as (? & ? & ? &?); eauto.
-    todo "erasure cofix"%string.
-    
+    assert (t0' := t0).
+    eapply PCUICValidity.inversion_mkApps in t0' as (? & ? & ?); eauto.
+    pose proof (PCUICClosed.subject_closed wfΣ t1) as clfix.
+    eapply inversion_CoFix in t1; destruct_sigma t1; auto.
+    eapply PCUICSpine.typing_spine_strengthen in t2; eauto.
+    assert(Hty' := Hty).
+    assert(clcof : PCUICLiftSubst.closedn 0 (tCoFix mfix idx)).
+    { eapply PCUICClosed.subject_closed in Hty; eauto. }
+    eapply subject_reduction in Hty'. 2:auto.
+    2:{ eapply PCUICReduction.red1_red. eapply PCUICReduction.red_cofix_case. eauto.
+        rewrite closed_unfold_cofix_cunfold_eq; eauto. }
+    specialize (IHeval _ Hty').
+    inv He; [eapply erases_mkApps_inv in H7; eauto; destruct H7 as [H7|H7]; destruct_sigma H7|].
+    * destruct H7 as (? & ? & ? & ? & ? & ? & ? & ?). subst.
+      destruct H1.
+      edestruct IHeval as (? & ? & ?).
+      { constructor; eauto.
+        rewrite -mkApps_nested.
+        eapply erases_mkApps. instantiate(1:=EAst.tBox).
+        constructor.
+        eapply isErasable_Proof.
+        eapply tCoFix_no_Type in X0; auto.
+        pose proof X0 as X0'. destruct X0' as [tyapp [u [Htyapp Hu]]].
+        eapply Is_proof_ty; eauto.
+        eapply unfold_cofix_type; eauto.
+        move: e. rewrite -closed_unfold_cofix_cunfold_eq // /unfold_cofix e2.
+        intros e; eapply e. eauto. }
+      exists x3; split; auto.
+    * destruct H7 as (? & ? & ? & ? & ?).
+      subst c'.
+      pose proof (erases_closed _ _ _ _ clfix H1) as clfix'.
+      depelim H1.
+      + pose proof X as X'. eapply All2_nth_error_Some in X'; eauto.
+        destruct X' as (t' & Hnth & dn & rargeq & er).
+        assert (e' := e).
+        move: e'. rewrite -closed_unfold_cofix_cunfold_eq // /unfold_cofix e2.
+        intros [= <- Heq].
+        eapply (erases_subst Σ [] (PCUICLiftSubst.fix_context mfix) [] (dbody decl) (cofix_subst mfix) _ (ETyping.cofix_subst mfix')) in er; cbn; eauto.
+        2:{ eapply subslet_cofix_subst; eauto. constructor; eauto. }
+        simpl in er. rewrite Heq in er.
+        3:{ eapply All2_from_nth_error.
+            erewrite cofix_subst_length, ETyping.cofix_subst_length, All2_length; eauto.
+            intros.
+            rewrite cofix_subst_nth in H1. now rewrite cofix_subst_length in H0.
+            rewrite ecofix_subst_nth in H3. rewrite cofix_subst_length in H0.
+            erewrite <- All2_length; eauto.
+            inv H1; inv H3.
+            erewrite All2_length; eauto. }
+        edestruct IHeval as (? & ? & ?).
+        constructor; eauto. eapply erases_mkApps; eauto.
+        eexists; intuition eauto.
+        eapply Ee.red_cofix_case; eauto.
+        rewrite /Ee.cunfold_cofix Hnth //. f_equal.
+        erewrite (closed_cofix_substl_subst_eq); eauto.
+        eapply nth_error_all in a1; eauto. simpl in a1. eauto.
+      + edestruct IHeval as (? & ? & ?).
+        { constructor; eauto.
+          eapply erases_mkApps. instantiate(1:=EAst.tBox).
+          constructor.
+          eapply isErasable_Proof.
+          eapply (tCoFix_no_Type _ _ _ []) in X; auto.
+          pose proof X as X'. destruct X' as [tyapp [u [Htyapp Hu]]].
+          eapply Is_proof_ty; eauto.
+          eapply (unfold_cofix_type _ _ _ []); eauto.
+          move: e. rewrite -closed_unfold_cofix_cunfold_eq // /unfold_cofix e2.
+          intros e; eapply e. eauto. }
+        exists x0; split; auto.
+    * exists EAst.tBox; split; auto.
+      2:repeat constructor.
+      constructor.
+      eapply Is_type_eval; eauto.
+      eapply Is_type_red. 3:eauto. auto.
+      eapply PCUICReduction.red1_red.
+      eapply PCUICReduction.red_cofix_case.
+      move: e. rewrite -closed_unfold_cofix_cunfold_eq // /unfold_cofix e2.
+      intros e; eapply e.
+        
   - assert (Hty' := Hty).
-    eapply inversion_Proj in Hty' as (? & ? & ? & [] & ? & ? & ? & ? & ?).
-    eapply PCUICValidity.inversion_mkApps in t0 as (? & ? & ?); eauto.
-    eapply inversion_CoFix in t0 as (? & ? & ? &?); eauto.
-    todo "erasure cofix". auto.
+    eapply inversion_Proj in Hty' as (? & ? & ? & [] & ? & ? & ? & ? & ?); auto.
+    set (t0' := t0).
+    eapply PCUICValidity.inversion_mkApps in t0' as (? & ? & ?); eauto.
+    pose proof (PCUICClosed.subject_closed wfΣ t0) as clfix.
+    assert(clcof : PCUICLiftSubst.closedn 0 (tCoFix mfix idx)).
+    { eapply PCUICClosed.subject_closed in t1; eauto. }
+    eapply inversion_CoFix in t1; destruct_sigma t1; auto.
+    eapply PCUICSpine.typing_spine_strengthen in t2; eauto.
+    assert(Hty' := Hty).
+    eapply subject_reduction in Hty'. 2:auto.
+    2:{ eapply PCUICReduction.red1_red. eapply PCUICReduction.red_cofix_proj. eauto.
+        rewrite closed_unfold_cofix_cunfold_eq; eauto. }
+    specialize (IHeval _ Hty').
+    inv He; [eapply erases_mkApps_inv in H4; eauto; destruct_sigma H4|]; eauto.
+    destruct H4.
+    * destruct H0 as (? & ? & ? & ? & ? & ? & ? & ?). subst.
+      destruct H1.
+      edestruct IHeval as (? & ? & ?).
+      { constructor; eauto.
+        rewrite -mkApps_nested.
+        eapply erases_mkApps. instantiate(1:=EAst.tBox).
+        constructor.
+        eapply isErasable_Proof.
+        eapply tCoFix_no_Type in X; auto.
+        pose proof X as X0'. destruct X0' as [tyapp [u [Htyapp Hu]]].
+        eapply Is_proof_ty; eauto.
+        eapply unfold_cofix_type; eauto.
+        move: e. rewrite -closed_unfold_cofix_cunfold_eq // /unfold_cofix e1.
+        intros e; eapply e. eauto. }
+      exists x7; split; auto.
+    * destruct H0 as (? & ? & ? & ? & ?).
+      subst c'.
+      pose proof (erases_closed _ [] _ _ clcof H1) as clfix'.
+      depelim H1.
+      + pose proof X as X'. eapply All2_nth_error_Some in X'; eauto.
+        destruct X' as (t' & Hnth & dn & rargeq & er).
+        assert (e' := e).
+        move: e'. rewrite -closed_unfold_cofix_cunfold_eq // /unfold_cofix e1.
+        intros [= <- Heq].
+        eapply (erases_subst Σ [] (PCUICLiftSubst.fix_context mfix) [] (dbody decl) (cofix_subst mfix) _ (ETyping.cofix_subst mfix')) in er; cbn; eauto.
+        2:{ eapply subslet_cofix_subst; eauto. constructor; eauto. }
+        simpl in er. rewrite Heq in er.
+        3:{ eapply All2_from_nth_error.
+            erewrite cofix_subst_length, ETyping.cofix_subst_length, All2_length; eauto.
+            intros.
+            rewrite cofix_subst_nth in H1. now rewrite cofix_subst_length in H0.
+            rewrite ecofix_subst_nth in H4. rewrite cofix_subst_length in H0.
+            erewrite <- All2_length; eauto.
+            inv H1; inv H4.
+            erewrite All2_length; eauto. }
+        edestruct IHeval as (? & ? & ?).
+        constructor; eauto. eapply erases_mkApps; eauto.
+        eexists; intuition eauto.
+        eapply Ee.red_cofix_proj; eauto.
+        rewrite /Ee.cunfold_cofix Hnth //. f_equal.
+        erewrite (closed_cofix_substl_subst_eq); eauto.
+        eapply nth_error_all in a0; eauto. simpl in a0. eauto.
+      + edestruct IHeval as (? & ? & ?).
+        { constructor; eauto.
+          eapply erases_mkApps. instantiate(1:=EAst.tBox).
+          constructor.
+          eapply isErasable_Proof.
+          eapply (tCoFix_no_Type _ _ _ []) in X; auto.
+          pose proof X as X'. destruct X' as [tyapp [u [Htyapp Hu]]].
+          eapply Is_proof_ty; eauto.
+          eapply (unfold_cofix_type _ _ _ []); eauto.
+          move: e. rewrite -closed_unfold_cofix_cunfold_eq // /unfold_cofix e1.
+          intros e; eapply e. eauto. }
+        exists x4; split; auto.
+    * exists EAst.tBox; split; auto.
+      2:repeat constructor.
+      constructor.
+      eapply Is_type_eval; eauto.
+      eapply Is_type_red. 3:eauto. auto.
+      eapply PCUICReduction.red1_red.
+      eapply PCUICReduction.red_cofix_proj.
+      move: e. rewrite -closed_unfold_cofix_cunfold_eq // /unfold_cofix e1.
+      intros e; eapply e.
+      
   - pose (Hty' := Hty).
     eapply inversion_App in Hty' as (? & ? & ? & ? & ? & ?); eauto.
     inv He.
@@ -1207,7 +1418,7 @@ Proof.
     + inv He.
       * eexists. split; eauto. now econstructor.
       * eexists. split. 2: now econstructor.
-        econstructor; eauto.      
+        econstructor; eauto.
 Qed.
 
 Print Assumptions erases_correct.

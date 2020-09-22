@@ -1,19 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
-
-From Coq Require Import Bool String List Program.
-From MetaCoq.Template Require Import config monad_utils utils uGraph.
+From MetaCoq.Template Require Import config utils uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICInduction PCUICLiftSubst
      PCUICUnivSubst PCUICTyping PCUICSafeLemmata PCUICValidity.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker.
-Local Open Scope string_scope.
-Set Asymmetric Patterns.
-Import monad_utils.MonadNotation.
-
-Derive NoConfusion for type_error.
-
-Set Equations With UIP.
-
-Add Search Blacklist "_graph_mut".
 
 (** * Retyping
 
@@ -23,6 +12,13 @@ Add Search Blacklist "_graph_mut".
   head-reducing types to uncover dependent products or inductives) and
   substitution are costly here. No universe checking or conversion is done
   in particular. *)
+
+
+Derive NoConfusion for type_error.
+
+Set Equations With UIP.
+
+Add Search Blacklist "_graph_mut".
 
 Section TypeOf.
   Context {cf : checker_flags}.
@@ -143,7 +139,7 @@ Section TypeOf.
     econstructor; eauto using typing_wf_local.
   Defined.
 
-  Solve All Obligations with program_simpl; try match goal with
+  Solve All Obligations with Program.Tactics.program_simpl; try match goal with
                                               [ |- ∥ _ ∥ ] => todo "PCUICSafeRetyping.type_of"
                                             | [ |- welltyped _ _ _ ] => todo "PCUICSafeRetyping.type_of"
                                             | [ |- wellformed _ _ _ ] => todo "PCUICSafeRetyping.type_of"

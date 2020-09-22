@@ -1,8 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction.
-Require Import ssreflect.
-Require Import Morphisms.
+Require Import ssreflect Morphisms. Import Nat.
 
 (** * Lifting and substitution for the AST
 
@@ -130,7 +129,7 @@ Derive Signature for assumption_context.
 Fixpoint smash_context (Γ Γ' : context) : context :=
   match Γ' with
   | {| decl_body := Some b |} :: Γ' => smash_context (subst_context [b] 0 Γ) Γ'
-  | {| decl_body := None |} as d :: Γ' => smash_context (Γ ++ [d])%list Γ'
+  | {| decl_body := None |} as d :: Γ' => smash_context (Γ ++ [d]) Γ'
   | [] => Γ
   end.
 

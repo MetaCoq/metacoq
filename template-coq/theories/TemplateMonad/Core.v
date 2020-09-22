@@ -61,13 +61,9 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=
 | tmInferInstance : option reductionStrategy -> forall A : Type@{t}, TemplateMonad (option_instance A)
 .
 
-From MetaCoq.Template Require Import monad_utils.
-
 (** This allow to use notations of MonadNotation *)
 Instance TemplateMonad_Monad : Monad TemplateMonad :=
   {| ret := @tmReturn ; bind := @tmBind |}.
-
-Import MonadNotation.
 
 
 Polymorphic Definition tmDefinitionRed
@@ -95,7 +91,7 @@ Definition tmQuoteRec {A} (a : A) := tmQuoteRecTransp a true.
 Definition tmLocate1 (q : qualid) : TemplateMonad global_reference :=
   l <- tmLocate q ;;
   match l with
-  | [] => tmFail ("Constant [" ++ q ++ "] not found")
+  | [] => tmFail ("Constant [" ^ q ^ "] not found")
   | x :: _ => tmReturn x
   end.
 

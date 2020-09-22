@@ -1,9 +1,10 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICSize.
-Require Import ssreflect.
 
+Require Import ssreflect.
 From Equations Require Import Equations.
+
 
 Derive NoConfusion for term.
 Derive Signature for All.
@@ -572,7 +573,6 @@ Lemma decompose_app_rec_eq f l :
 Proof.
   destruct f; simpl; try discriminate; congruence.
 Qed.
-Close Scope string_scope.
 
 Lemma decompose_app_rec_inv' f l hd args :
   decompose_app_rec f l = (hd, args) ->

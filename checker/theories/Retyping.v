@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import config monad_utils utils Ast LiftSubst.
+From MetaCoq.Template Require Import config utils Ast LiftSubst.
 From MetaCoq.Checker Require Import Checker.
 
 (** * Retyping

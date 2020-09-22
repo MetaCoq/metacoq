@@ -1,12 +1,10 @@
 (* Distributed under the terms of the MIT license. *)
-
-From Coq Require Import Bool List Program.
-From MetaCoq.Template Require Import config utils monad_utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICTyping PCUICWeakening PCUICSubstitution PCUICWeakeningEnv PCUICElimination.
+From Coq Require Import Program.
+From MetaCoq.Template Require Import config utils.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICTyping
+     PCUICWeakening PCUICSubstitution PCUICWeakeningEnv PCUICElimination.
 From MetaCoq.Erasure Require Import ETyping Extract Prelim.
-Local Open Scope list_scope.
-Set Asymmetric Patterns.
-Import MonadNotation.
+
 
 Local Set Keyed Unification.
 

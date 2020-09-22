@@ -1,18 +1,25 @@
 (* Distributed under the terms of the MIT license. *)
-Set Warnings "-notation-overridden".
-
-From Coq Require Import Arith Bool List Lia CRelationClasses.
+From Coq Require Import CRelationClasses.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst
      PCUICUnivSubst PCUICTyping PCUICReduction PCUICClosed PCUICCSubst 
      PCUICSubstitution PCUICInversion PCUICSR.
-Require Import String.
-Local Open Scope string_scope.
-Set Asymmetric Patterns.
 
 Require Import ssreflect ssrbool.
-
 From Equations Require Import Equations.
+
+(** * Weak-head call-by-value evaluation strategy.
+
+  The [wcbveval] inductive relation specifies weak cbv evaluation.  It
+  is shown to be a subrelation of the 1-step reduction relation from
+  which conversion is defined. Hence two terms that reduce to the same
+  wcbv head normal form are convertible.
+
+  This reduction strategy is supposed to mimick at the Coq level the
+  reduction strategy of ML programming languages. It is used to state
+  the extraction conjecture that can be applied to Coq terms to produce
+  (untyped) terms where all proofs are erased to a dummy value. *)
+
 
 Local Ltac inv H := inversion H; subst.
 
@@ -28,19 +35,6 @@ Ltac solve_discr :=
     change t with (mkApps t []) in H ;
     eapply mkApps_eq_inj in H as [? ?]; [|easy|easy]; subst; try intuition congruence; try noconf H
   end.
-
-
-(** * Weak-head call-by-value evaluation strategy.
-
-  The [wcbveval] inductive relation specifies weak cbv evaluation.  It
-  is shown to be a subrelation of the 1-step reduction relation from
-  which conversion is defined. Hence two terms that reduce to the same
-  wcbv head normal form are convertible.
-
-  This reduction strategy is supposed to mimick at the Coq level the
-  reduction strategy of ML programming languages. It is used to state
-  the extraction conjecture that can be applied to Coq terms to produce
-  (untyped) terms where all proofs are erased to a dummy value. *)
 
 (** ** Big step version of weak cbv beta-zeta-iota-fix-delta reduction. *)
 
@@ -618,15 +612,15 @@ Section Wcbv.
       move/andP: IHev1 => [Hcons Hargs]. solve_all.
       eapply All_nth_error in Hargs; eauto.
     - eapply IHev3.
-      apply Bool.andb_true_iff.
+      apply andb_true_iff.
       split; [|easy].
       specialize (IHev1 Hc).
       eapply closedn_mkApps_inv in IHev1.
-      apply Bool.andb_true_iff in IHev1.
+      apply andb_true_iff in IHev1.
       eapply closedn_mkApps; [|easy].
       eapply closed_unfold_fix; [easy|].
       now rewrite closed_unfold_fix_cunfold_eq.
-    - apply Bool.andb_true_iff.
+    - apply andb_true_iff.
       split; [|easy].
       solve_all.
     - eapply IHev. move/closedn_mkApps_inv/andP: Hc' => [Hfix Hargs].
@@ -689,7 +683,7 @@ Section Wcbv.
       depelim ev;
         try solve [apply IHargs in ev1 as (? & ?); solve_discr].
       * apply IHargs in ev1 as (argsv & ->).
-        exists (argsv ++ [a'])%list.
+        exists (argsv ++ [a']).
         now rewrite <- mkApps_nested.
       * easy.
   Qed.
@@ -759,7 +753,7 @@ Section Wcbv.
       subst f'.
       rewrite isFixApp_mkApps in i by easy.
       cbn in *.
-      now rewrite Bool.orb_true_r in i.
+      now rewrite orb_true_r in i.
     + easy.
   - depelim ev'.
     + apply IHev1 in ev'1; solve_discr.
@@ -771,7 +765,7 @@ Section Wcbv.
     + apply IHev1 in ev'1; subst.
       rewrite isFixApp_mkApps in i by easy.
       cbn in *.
-      now rewrite Bool.orb_true_r in i.
+      now rewrite orb_true_r in i.
     + easy.
   - depelim ev'.
     + apply eval_mkApps_tCoFix in ev'1 as (? & ?); solve_discr.
@@ -792,11 +786,11 @@ Section Wcbv.
     + apply IHev1 in ev'1; subst.
       rewrite isFixApp_mkApps in i by easy.
       cbn in *.
-      now rewrite Bool.orb_true_r in i.
+      now rewrite orb_true_r in i.
     + apply IHev1 in ev'1; subst.
       rewrite isFixApp_mkApps in i by easy.
       cbn in *.
-      now rewrite Bool.orb_true_r in i.
+      now rewrite orb_true_r in i.
     + apply IHev1 in ev'1; subst.
       now apply IHev2 in ev'2; subst.
     + easy.

@@ -1,10 +1,8 @@
-(* -*- coq-prog-args: ("-type-in-type" "-top" "Translations.tsl_param3") -*-  *)
-From MetaCoq Require Import Template.All Checker.All.
-From MetaCoq.Translations Require Import translation_utils.
-Import String Lists.List.ListNotations MonadNotation.
-Open Scope list_scope. Open Scope string_scope.
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import utils All.
+From MetaCoq.Checker Require Import All.
+From MetaCoq.Translations Require Import translation_utils MiniHoTT_paths.
 
-Require Import MiniHoTT_paths.
 
 Reserved Notation "'tsl_ty_param'".
 

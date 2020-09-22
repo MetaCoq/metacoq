@@ -1,5 +1,4 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import Bool String List Lia Arith.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
@@ -1198,6 +1197,8 @@ Definition R_ind_universes  {cf:checker_flags} (Σ : global_env_ext) ind n i i' 
   R_global_instance Σ (eq_universe (global_ext_constraints Σ))
     (leq_universe (global_ext_constraints Σ)) (IndRef ind) n i i'.
 
+
+
 Lemma mkApps_ind_typing_spine {cf:checker_flags} Σ Γ Γ' ind i
   inst ind' i' args args' : 
   wf Σ.1 ->
@@ -1216,6 +1217,7 @@ Proof.
     depelim Hsp.
     eapply invert_cumul_ind_l in c as [i'' [args'' [? ?]]]; auto.
     eapply red_mkApps_tInd in r as [? [eq ?]]; auto. solve_discr.
+    noconf H. noconf H0.
     exists nil.
     intuition auto. clear i0.
     revert args' a. clear -b wfΣ wfΓ. induction b; intros args' H; depelim H; constructor.
@@ -1295,7 +1297,7 @@ Proof.
       3:eapply cumulB. all:eauto.
       intuition auto.
       destruct X1 as [isub [[[Hisub [Htl [Hind Hu]]] Hargs] Hs]].
-      exists (isub ++ [hd])%list. rewrite List.rev_app_distr.
+      exists (isub ++ [hd]). rewrite List.rev_app_distr.
       autorewrite with len in Hu.
       intuition auto. 2:lia.
       * apply make_context_subst_spec_inv.
@@ -1804,6 +1806,7 @@ Proof.
   have subsrel := expand_lets_cstr_head (#|ind_bodies mdecl| - S i) (cshape_args cs  ++ ind_params mdecl).
   rewrite app_length (Nat.add_comm #|(cshape_args cs)|) Nat.add_assoc in subsrel. rewrite {}subsrel in hpos.
   rewrite context_assumptions_app in hpos. depelim hpos; solve_discr.
+  noconf H0. noconf H1.
   eapply All_map_inv in a.
   eapply All_app in a as [ _ a].
   eapply All_map; eapply (All_impl a); clear; intros x H; len in H; simpl in H.

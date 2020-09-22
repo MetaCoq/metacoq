@@ -1,8 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-
-From Coq Require Import Bool String List BinPos Compare_dec Arith Lia
-     Classes.CRelationClasses ProofIrrelevance ssreflect.
-From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
+From Coq Require Import CRelationClasses ProofIrrelevance.
+From MetaCoq.Template Require Import config Universes utils BasicAst
      AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICSigmaCalculus 
@@ -14,11 +12,12 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICClosed PCUICSubstitution
      PCUICWeakening PCUICGeneration PCUICUtils PCUICCtxShape PCUICContexts
      PCUICArities.
-From Equations Require Import Equations.
 
+From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 Require Import Equations.Type.Relation_Properties.
 Require Import ssreflect.
+
 
 Derive Signature for ctx_inst.
   

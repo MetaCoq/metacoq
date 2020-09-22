@@ -16,6 +16,7 @@ Extract Inductive Decimal.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun 
 Extraction Blacklist config uGraph universes Ast String List Logic Logic0 Nat Int
            UnivSubst Typing Checker Retyping OrderedType Classes equality.
 Set Warnings "-extraction-opaque-accessed".
+Set Warnings "-extraction-reserved-identifier".
 
 Cd "src".
 

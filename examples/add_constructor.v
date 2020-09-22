@@ -14,7 +14,7 @@ From MetaCoq.Template Require Import utils All.
 Class TslIdent := { tsl_ident : ident -> ident }.
 
 Instance prime_tsl_ident : TslIdent
-  := {| tsl_ident := fun id => (id ++ "'")%string |}.
+  := {| tsl_ident := fun id => id ^ "'" |}.
 
 Fixpoint try_remove_n_lambdas (n : nat) (t : term) {struct n} : term :=
   match n, t with

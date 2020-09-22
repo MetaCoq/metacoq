@@ -2,6 +2,7 @@ From Coq Require Import MSetList MSetFacts MSetProperties.
 From MetaCoq.Template Require Import utils BasicAst config.
 
 Local Open Scope Z_scope.
+Local Open Scope string_scope2.
 
 
 (** * Valuations *)
@@ -1718,20 +1719,18 @@ Hint Resolve subst_instance_level_closedu subst_instance_level_expr_closedu
      subst_instance_univ_closedu subst_instance_instance_closedu : substu.
 
 
-Local Open Scope string_scope.
-
 Definition string_of_level (l : Level.t) : string :=
   match l with
   | Level.lProp => "Prop"
   | Level.lSet => "Set"
   | Level.Level s => s
-  | Level.Var n => "Var" ++ string_of_nat n
+  | Level.Var n => "Var" ^ string_of_nat n
   end.
 
 Definition string_of_level_expr (e : UnivExpr.t) : string :=
   match e with
   | UnivExpr.lProp => "Prop"
-  | UnivExpr.npe (l, b) => string_of_level l ++ (if b then "+1" else "")
+  | UnivExpr.npe (l, b) => string_of_level l ^ (if b then "+1" else "")
   end.
 
 Definition string_of_sort (u : Universe.t) :=
@@ -1762,7 +1761,7 @@ Definition polymorphic_instance uctx :=
 Definition print_universe_instance u :=
   match u with
   | [] => ""
-  | _ => "@{" ++ print_list string_of_level " " u ++ "}"
+  | _ => "@{" ^ print_list string_of_level " " u ^ "}"
   end.
 
 Definition print_lset t :=
@@ -1776,8 +1775,8 @@ Definition print_constraint_type d :=
   end.
 
 Definition print_constraint_set t :=
-  print_list (fun '(l1, d, l2) => string_of_level l1 ++ " " ++
-                         print_constraint_type d ++ " " ++ string_of_level l2)
+  print_list (fun '(l1, d, l2) => string_of_level l1 ^ " " ^
+                         print_constraint_type d ^ " " ^ string_of_level l2)
              " /\ " (ConstraintSet.elements t).
 
 

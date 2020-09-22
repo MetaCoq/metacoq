@@ -1,15 +1,15 @@
 (* Distributed under the terms of the MIT license. *)
+From Coq Require Import CRelationClasses.
+From MetaCoq.Template Require Import utils config Universes uGraph.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
+     PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICTyping PCUICWeakeningEnv
+     PCUICClosed PCUICPosition PCUICWeakening.
+
+Require Import Equations.Prop.DepElim.
+From Equations Require Import Equations.
 
 (** * Universe Substitution lemmas for typing derivations. *)
 
-Require Import Equations.Prop.DepElim.
-From Coq Require Import Bool List Lia ZArith CRelationClasses.
-From MetaCoq.Template Require Import utils config.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICLiftSubst PCUICEquality
-     PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICClosed PCUICPosition
-     PCUICWeakening.
-From Equations Require Import Equations.
 
 Local Set Keyed Unification.
 
@@ -22,7 +22,6 @@ Create HintDb univ_subst.
 
 Local Ltac aa := rdest; eauto with univ_subst.
 
-From MetaCoq.Template Require Import Universes uGraph.
 
 Lemma subst_instance_level_val u l v v'
       (H1 : forall s, valuation_mono v s = valuation_mono v' s)

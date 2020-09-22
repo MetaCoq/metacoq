@@ -1,3 +1,4 @@
+(* Distributed under the terms of the MIT license. *)
 Require Import ssreflect.
 Require Export CRelationClasses.
 Require Export Equations.Type.Relation Equations.Type.Relation_Properties.

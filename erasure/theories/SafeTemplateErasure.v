@@ -1,7 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-
-From Coq Require Import Bool String Program.
-From MetaCoq.Template Require Import config monad_utils utils uGraph Pretty.
+From Coq Require Import Program.
+From MetaCoq.Template Require Import config utils uGraph Pretty.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping
      TemplateToPCUIC.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker
@@ -9,19 +8,15 @@ From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker
 From MetaCoq.Erasure Require Import ErasureFunction EPretty.
 From MetaCoq.Erasure Require SafeErasureFunction.
 
-Import MonadNotation.
-
 Existing Instance envcheck_monad.
 Existing Instance extraction_checker_flags.
-
-Local Open Scope string_scope.
 
 Program Definition erase_template_program_check (p : Ast.program)
   : EnvCheck (EAst.global_context * EAst.term) :=
   let Σ := (trans_global (Ast.empty_ext p.1)).1 in
   G <- check_wf_env Σ ;;
   Σ' <- wrap_error (empty_ext Σ) "erasure of the global context" (erase_global Σ _) ;;
-  t <- wrap_error (empty_ext Σ) ("During erasure of " ++ string_of_term (trans p.2)) (erase (empty_ext Σ) _ nil _ (trans p.2));;
+  t <- wrap_error (empty_ext Σ) ("During erasure of " ^ string_of_term (trans p.2)) (erase (empty_ext Σ) _ nil _ (trans p.2));;
   ret (Monad:=envcheck_monad) (Σ', t).
 
 Next Obligation.
@@ -132,7 +127,7 @@ Program Definition erase_template_program (p : Ast.program)
   let Σ := (trans_global (Ast.empty_ext p.1)).1 in
   G <- check_wf_env_only_univs Σ ;;
   Σ' <- (SafeErasureFunction.erase_global Σ _) ;;
-  t <- wrap_error (empty_ext Σ) ("During erasure of " ++ string_of_term (trans p.2)) (SafeErasureFunction.erase (empty_ext Σ) _ nil (trans p.2) _);;
+  t <- wrap_error (empty_ext Σ) ("During erasure of " ^ string_of_term (trans p.2)) (SafeErasureFunction.erase (empty_ext Σ) _ nil (trans p.2) _);;
   ret (Monad:=envcheck_monad) (Σ', t).
 
 Next Obligation.
@@ -148,20 +143,18 @@ Next Obligation.
   unfold on_global_env_ext. destruct H0. todo "assuming well-typedness".
 Qed.
 
-Local Open Scope string_scope.
-
 (** This uses the checker-based erasure *)
 Program Definition erase_and_print_template_program_check {cf : checker_flags} (p : Ast.program)
   : string + string :=
   let p := fix_program_universes p in
   match erase_template_program_check p return string + string with
   | CorrectDecl (Σ', t) =>
-    inl ("Environment is well-formed and " ++ Pretty.print_term (Ast.empty_ext p.1) [] true p.2 ++
-         " erases to: " ++ nl ++ print_term Σ' [] true false t)
+    inl ("Environment is well-formed and " ^ Pretty.print_term (Ast.empty_ext p.1) [] true p.2 ^
+         " erases to: " ^ nl ^ print_term Σ' [] true false t)
   | EnvError Σ' (AlreadyDeclared id) =>
-    inr ("Already declared: " ++ id)
+    inr ("Already declared: " ^ id)
   | EnvError Σ' (IllFormedDecl id e) =>
-    inr ("Type error: " ++ PCUICSafeChecker.string_of_type_error Σ' e ++ ", while checking " ++ id)
+    inr ("Type error: " ^ PCUICSafeChecker.string_of_type_error Σ' e ^ ", while checking " ^ id)
   end.
 
 (** This uses the retyping-based erasure *)
@@ -170,12 +163,12 @@ Program Definition erase_and_print_template_program {cf : checker_flags} (p : As
   let p := fix_program_universes p in
   match erase_template_program p return string + string with
   | CorrectDecl (Σ', t) =>
-    inl ("Environment is well-formed and " ++ Pretty.print_term (Ast.empty_ext p.1) [] true p.2 ++
-         " erases to: " ++ nl ++ print_term Σ' [] true false t)
+    inl ("Environment is well-formed and " ^ Pretty.print_term (Ast.empty_ext p.1) [] true p.2 ^
+         " erases to: " ^ nl ^ print_term Σ' [] true false t)
   | EnvError Σ' (AlreadyDeclared id) =>
-    inr ("Already declared: " ++ id)
+    inr ("Already declared: " ^ id)
   | EnvError Σ' (IllFormedDecl id e) =>
-    inr ("Type error: " ++ PCUICSafeChecker.string_of_type_error Σ' e ++ ", while checking " ++ id)
+    inr ("Type error: " ^ PCUICSafeChecker.string_of_type_error Σ' e ^ ", while checking " ^ id)
   end.
 
 (* Program Definition check_template_program {cf : checker_flags} (p : Ast.program) (ty : Ast.term) *)

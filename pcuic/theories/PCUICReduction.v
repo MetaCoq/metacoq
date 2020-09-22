@@ -1,15 +1,14 @@
-From Coq Require Import Bool List Utf8 ZArith Lia ssreflect.
-From MetaCoq.Template Require Import config utils EnvironmentTyping.
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICRelations PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICInduction.
-Local Open Scope string_scope.
-Set Asymmetric Patterns.
 
+Require Import ssreflect.
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
 
-Set Default Goal Selector "!".
 
+Set Default Goal Selector "!".
 
 Definition tDummy := tVar String.EmptyString.
 
@@ -499,7 +498,7 @@ Section ReductionCongruence.
 
   End FillContext.
 
-  Inductive contextual_closure (red : ∀ Γ, term -> term -> Type) : context -> term -> term -> Type :=
+  Inductive contextual_closure (red : forall Γ, term -> term -> Type) : context -> term -> term -> Type :=
   | ctxclos_atom Γ t : atom t -> contextual_closure red Γ t t
   | ctxclos_ctx Γ (ctx : term_context) (u u' : term) :
       red (hole_context ctx Γ) u u' -> contextual_closure red Γ (fill_context u ctx) (fill_context u' ctx).
@@ -867,8 +866,8 @@ Section ReductionCongruence.
       All2 P l l' ->
       forall x a a', nth_error l x = Some a ->
                      nth_error l' x = Some a' ->
-                     OnOne2 P (firstn x l ++ [a] ++ skipn (S x) l)%list
-                            (firstn x l ++ [a'] ++ skipn (S x) l)%list.
+                     OnOne2 P (firstn x l ++ [a] ++ skipn (S x) l)
+                              (firstn x l ++ [a'] ++ skipn (S x) l).
     Proof.
       induction 1.
       - simpl. intros x a a' Hnth. now rewrite nth_error_nil in Hnth.
@@ -1115,11 +1114,11 @@ Section ReductionCongruence.
       assert (∑ mfixi,
         All2 (
           on_Trel_eq (red Σ (Γ ,,, fix_context mfix)) dbody
-                     (λ x : def term, (dname x, dtype x, rarg x))
+                     (fun x : def term => (dname x, dtype x, rarg x))
         ) mfix mfixi ×
         All2 (
           on_Trel_eq (red Σ Γ) dtype
-                     (λ x : def term, (dname x, dbody x, rarg x))
+                     (fun x : def term => (dname x, dbody x, rarg x))
 
         ) mfixi mfix'
       ) as [mfixi [h1 h2]].
@@ -1300,11 +1299,11 @@ Section ReductionCongruence.
       assert (∑ mfixi,
         All2 (
           on_Trel_eq (red Σ (Γ ,,, fix_context mfix)) dbody
-                     (λ x : def term, (dname x, dtype x, rarg x))
+                     (fun x : def term => (dname x, dtype x, rarg x))
         ) mfix mfixi ×
         All2 (
           on_Trel_eq (red Σ Γ) dtype
-                     (λ x : def term, (dname x, dbody x, rarg x))
+                     (fun x : def term => (dname x, dbody x, rarg x))
 
         ) mfixi mfix'
       ) as [mfixi [h1 h2]].

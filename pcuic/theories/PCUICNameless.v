@@ -1,13 +1,13 @@
 (* Distributed under the terms of the MIT license. *)
-
-From Coq Require Import Bool String List Arith
-     Classes.RelationClasses.
+From Coq Require Import RelationClasses.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICTyping PCUICPosition PCUICUnivSubst.
-Local Set Keyed Unification.
 Require Import Equations.Prop.DepElim.
 Require Import ssreflect.
+
+
+Local Set Keyed Unification.
 
 Set Default Goal Selector "!".
 

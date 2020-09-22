@@ -1,14 +1,11 @@
 (* Distributed under the terms of the MIT license. *)
-
-From Coq Require Import List Program Lia Arith.
+From Coq Require Import Program.
 From MetaCoq.Template Require Import utils.
 From MetaCoq.Erasure Require Import EAst EInduction ELiftSubst.
 
-Set Warnings "-notation-overridden".
-
 Require Import ssreflect ssrbool.
-
 From Equations Require Import Equations.
+
 
 Local Ltac inv H := inversion H; subst.
 

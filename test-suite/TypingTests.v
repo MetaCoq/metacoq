@@ -60,8 +60,8 @@ Definition test_reduction (p : program) :=
 
 Definition string_of_env_error e :=
   match e with
-  | IllFormedDecl s e => ("IllFormedDecl " ++ s ++ "\nType error: " ++ string_of_type_error e)%string
-  | AlreadyDeclared s => ("Alreadydeclared " ++ s)%string
+  | IllFormedDecl s e => ("IllFormedDecl " ^ s ^ "\nType error: " ^ string_of_type_error e)%string
+  | AlreadyDeclared s => ("Alreadydeclared " ^ s)%string
   end.
 
 Definition out_typing c :=

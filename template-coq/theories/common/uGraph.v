@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 Require Import ssrbool MSetWeakList MSetFacts MSetProperties.
-From MetaCoq.Template Require Import utils config Universes monad_utils wGraph.
+From MetaCoq.Template Require Import utils config Universes wGraph.
 
 Import ConstraintType.
 

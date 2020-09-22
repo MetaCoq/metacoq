@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import config utils monad_utils.
+From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
   PCUICWeakening PCUICSubstitution PCUICArities
   PCUICWcbvEval PCUICSR  PCUICInversion
@@ -1287,7 +1287,7 @@ Section WeakNormalization.
       epose proof (fix_app_is_constructor axfree X0 e); eauto.
       rewrite /is_constructor.
       destruct nth_error eqn:hnth => //.
-      assert (All (closedn 0) (argsv ++ [av])%list).
+      assert (All (closedn 0) (argsv ++ [av])).
       { eapply subject_closed in X0; eauto.
         rewrite closedn_mkApps in X0.
         move/andP: X0 => [clfix clargs].

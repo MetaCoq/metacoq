@@ -812,9 +812,9 @@ Definition inspect {A} (x : A) : { y : A | y = x } := exist _ x eq_refl.
 Definition tmLocateInd (q : qualid) : TemplateMonad kername :=
   l <- tmLocate q ;;
   match l with
-  | [] => tmFail ("Inductive [" ++ q ++ "] not found")
+  | [] => tmFail ("Inductive [" ^ q ^ "] not found")
   | (IndRef ind) :: _ => tmReturn ind.(inductive_mind)
-  | _ :: _ => tmFail ("[" ++ q ++ "] not an inductive")
+  | _ :: _ => tmFail ("[" ^ q ^ "] not an inductive")
   end.
 
 
@@ -995,8 +995,6 @@ Section Plugin.
   Transparent reify. 
 
   Inductive NotSolvable (s: string) : Prop := notSolvable: NotSolvable s.
-
-  Local Open Scope string_scope.
 
   Definition inhabit_formula gamma Mphi Gamma :
     match reify (empty_ext []) gamma Mphi with

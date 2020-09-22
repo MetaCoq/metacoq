@@ -89,11 +89,9 @@
 | File             | Description                                               |
 |------------------|-----------------------------------------------------------|
 | [PCUICChecker]   | Fueled type checker for PCUIC                             |
-| [PCUICCheckerCompleteness] | Completeness of the aforementioned checker      |
 | [PCUICRetyping]  | `type_of` function to get the type without re-checking it is well-typed |
 
 [PCUICChecker]: PCUICChecker.v
-[PCUICCheckerCompleteness]: PCUICCheckerCompleteness.v
 [PCUICRetyping]: PCUICRetyping.v
 
 ## Relation with Template-Coq

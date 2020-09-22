@@ -2329,7 +2329,59 @@ Section Conversion.
 
   Lemma wellformed_zipc_tProd_appstack_nil {Γ na A B l ρ} :
     wellformed Σ Γ (zipc (tProd na A B) (appstack l ρ)) -> l = [].
-  Proof. todo "Completeness"%string. Qed.
+  Proof. 
+    (* Proof idea: a sort cannot be applied to anything *)
+    todo "Completeness"%string. 
+  Qed.
+
+  Notation whne := (whne flags Σ).
+
+  Lemma app_conv_inv : forall Γ t t' u u',
+    (forall napp, eq_term_upto_univ_napp Σ.1 (eq_universe Σ) (eq_universe Σ) napp t t' ->
+      eq_term Σ t t') ->
+    whne Γ t -> 
+    whne Γ t' ->
+    Σ ;;; Γ |- tApp t u = tApp t' u' ->
+    Σ ;;; Γ |- t = t'.
+  Proof.
+    intros Γ t t' u u' cum_irr wh wh' hconv.
+    depind hconv.
+    + intros **. depelim e. eapply conv_refl, cum_irr; eassumption.  
+    + (* Proof idea: invert the reduction r using thw whne hyp to apply the IH *)
+      todo "Completeness"%string.
+    + (* Proof idea: invert the reduction r using thw whne hyp to apply the IH *)
+      todo "Completeness"%string.
+  Qed.
+
+  
+
+  Lemma zipp_Case_conv_inv :
+    forall Γ indn p p' c c' brs brs' π π',
+    let t := tCase indn p c brs in
+    let t' := tCase indn p' c' brs' in
+    whne Γ t -> whne Γ t' ->
+    Σ ;;; Γ |- zipp t π = zipp t' π' ->
+    Σ ;;; Γ |- t = t'.
+  Proof.
+    (* Proof idea: decompose the stacks, prove by induction that the
+    each side is applied to the same number of arguments. *)
+    intros Γ indn p p' c c' brs brs' π π' t t' wht wht'.
+
+    destruct (decompose_stack π) as [l s] eqn:Hpi.
+    destruct (decompose_stack π') as [l' s'] eqn: Hpi'.
+    unfold zipp; rewrite Hpi, Hpi'; clear s s' Hpi Hpi'.
+    induction l as [|x l IH] in l' |- *; destruct l' as [|x' l'].
+    + trivial.
+    + simpl. intro H. depelim H.
+    
+
+    assert (cum_irr : forall napp, eq_term_upto_univ_napp Σ.1 (eq_universe Σ) (eq_universe Σ) napp t t' -> eq_term Σ t t').
+    - intros n heq; depelim heq; now constructor.
+    -
+    
+    
+    todo "Completeness"%string.
+  Qed.
 
   Opaque reduce_stack.
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
@@ -2821,6 +2873,12 @@ Section Conversion.
   Qed.
   Next Obligation.
     apply h; clear h.
+    destruct leq.
+    + destruct H as [H]; cbn in H.
+      unfold zipp in H.
+      destruct (decompose_stack π1) eqn:H1; subst.
+      destruct (decompose_stack π2) eqn:H2; subst.
+    cbn in *.
     Search "inv" "Case".
     todo "Completeness"%string.
   Qed.

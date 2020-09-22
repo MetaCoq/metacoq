@@ -337,7 +337,6 @@ Proof.
       repeat constructor.
 Qed.
 
-Derive Signature for conv.
 
 Lemma conv_Prod_l_inv {cf:checker_flags} (Σ : global_env_ext) Γ na dom codom T :
   wf Σ ->
@@ -1435,11 +1434,10 @@ Section Inversions.
 
   Lemma conv_Case_brs :
     forall Γ indn p c brs brs',
-      wf Σ ->
       All2 (fun u v => u.1 = v.1 × Σ ;;; Γ |- u.2 = v.2) brs brs' ->
       Σ ;;; Γ |- tCase indn p c brs = tCase indn p c brs'.
   Proof.
-    intros Γ [ind n] p c brs brs' wΣ h.
+    intros Γ [ind n] p c brs brs' h.
     apply All2_many_OnOne2 in h.
     induction h.
     - reflexivity.
@@ -1450,13 +1448,12 @@ Section Inversions.
 
   Lemma conv_Case :
     forall Γ indn p p' c c' brs brs',
-      wf Σ ->
       Σ ;;; Γ |- p = p' ->
       Σ ;;; Γ |- c = c' ->
       All2 (fun u v => u.1 = v.1 × Σ ;;; Γ |- u.2 = v.2) brs brs' ->
       Σ ;;; Γ |- tCase indn p c brs = tCase indn p' c' brs'.
   Proof.
-    intros Γ [ind n] p p' c c' brs brs' wΣ hp hc hbrs.
+    intros Γ [ind n] p p' c c' brs brs' hp hc hbrs.
     etransitivity.
     - eapply conv_Case_p. eassumption.
     - etransitivity.
@@ -1467,12 +1464,30 @@ Section Inversions.
   Lemma Case_conv_inv :
     forall Γ indn p p' c c' brs brs',
     Σ ;;; Γ |- tCase indn p c brs = tCase indn p' c' brs' ->
+    Σ ;;; Γ |- p = p' × Σ ;;; Γ |- c = c' ×
+    All2 (fun u v => u.1 = v.1 × Σ ;;; Γ |- u.2 = v.2) brs brs'.
+  Proof.
+    (* intros Γ indn p p' c c' brs brs' H.
+    depind H.
+    + depelim e; split; [| split]. 
+      1,2: by apply conv_refl.
+      apply (All2_impl a).
+      intros x y [? ?] ; split. 1: by [].
+      by apply conv_refl. *)
+    (* TODO needs to add a whne hypothesis *)
+    todo "Completeness"%string.
+  Qed.
+  
+(* 
+  Lemma Case_conv_cum_inv :
+    forall leq Γ indn p p' c c' brs brs',
+    conv_cum leq (tCase indn p c brs) (tCase indn p' c' brs') ->
     Σ ;;; Γ |- p = p' /\ Σ ;;; Γ |- c = c' /\ 
     ∥ All2 (fun u v => u.1 = v.1 × Σ ;;; Γ |- u.2 = v.2) brs brs' ∥.
   Proof.
     todo "Completeness"%string.
-  Qed.
-  
+  Qed. *)
+
   Lemma conv_Proj_c :
     forall Γ p u v,
       Σ ;;; Γ |- u = v ->

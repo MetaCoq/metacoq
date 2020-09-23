@@ -1,8 +1,4 @@
-Require Import List Arith String.
-From MetaCoq Require Import Template.All.
-Import ListNotations MonadNotation.
-
-Local Open Scope string_scope.
+From MetaCoq.Template Require Import utils All.
 
 MetaCoq Quote Recursively Definition plus_syntax := plus.
 

@@ -537,7 +537,7 @@ Proof.
   - destruct (RedFlags.zeta flags) eqn:Er; eauto.
     right. intros ?. depelim H. congruence. help.
   - destruct (IHt Γ) as [[] _].
-    + destruct t. all:eauto using whnf_mkApps, All_Forall.
+    + destruct t. all:try now (left; eauto using whnf_mkApps, All_Forall).
       all: try now left; eapply whnf_mkApps; depelim w; eauto; help.
       * destruct v as [ | ? v].
         -- eauto.
@@ -547,18 +547,21 @@ Proof.
            ++ firstorder congruence.
       * destruct (unfold_fix mfix idx) as [(narg, body) |] eqn:E1.
         -- destruct (nth_error v narg) as [a  | ] eqn:E2.
-           ++ eapply nth_error_all in X as [_ []]. 3: eassumption.
-              ** eauto.
-              ** right. (* right. intros ?. depelim H0. depelim H0. all:help. clear IHv. *)
-                 (* eapply whne_mkApps_inv in H0 as []; eauto. *)
-                 (* --- depelim H0. help. *)
-                 (*     eapply (f_equal decompose_app) in x; *)
-                 (*       rewrite !decompose_app_mkApps in x; cbn in *; try firstorder congruence. *)
-                 (*     inv x. destruct narg0; inv H1. *)
-                 (* --- destruct H0 as (? & ? & ? & ? & ? & ? & ? & ? & ?). inv H0. *)
+           ++ destruct (nth_error_all E2 X Γ) as [_ []].
+              ** left. eauto.
+              ** right. intros ?. depelim H0. depelim H0. all:help. clear IHv. 
+                 eapply whne_mkApps_inv in H0 as []; eauto.
+                 --- depelim H0. help. 
+                     eapply (f_equal decompose_app) in x; 
+                     rewrite !decompose_app_mkApps in x; cbn in *; try firstorder congruence. 
+                     inv x. destruct narg0; inv H1. 
+                 --- destruct H0 as (? & ? & ? & ? & ? & ? & ? & ? & ?). inv H0.
+                     rewrite E1 in H1. inv H1.
+                     eapply (nth_error_app_left v [x0]) in H2.
+                     rewrite E2 in H2. inv H2. eauto. (* 
                  (*     rewrite H1 in E1. inv E1. *)
-                 (*     eapply nth_error_app_left in H2. rewrite H2 in E2. inv E2. eauto. *) todo "bug".
-           ++ eauto.
+                 (*     eapply nth_error_app_left in H2. rewrite H2 in E2. inv E2. eauto. *) todo "bug". *)
+           ++ left. eauto.
         -- right. intros ?. depelim H0. depelim H0. all:help. clear IHv.
            eapply whne_mkApps_inv in H0 as []; eauto.
            --- depelim H0. help.

@@ -36,6 +36,13 @@ MetaCoq Quote Recursively Definition plusr := (plus 0 1).
 
 Time Definition plusrtest := Eval lazy in test plusr.
 
+(** test optimised matches  *)
+
+MetaCoq Quote Recursively Definition match_empty := (fun x : False => match x return nat with end).
+Definition match_empty_test := Eval lazy in test match_empty.
+
+MetaCoq Quote Recursively Definition match_trivial := (fun x : True => match x with I => 0 end).
+Definition match_trivial_test := Eval lazy in test match_trivial.
 
 (** vector addition **)
 Require Coq.Vectors.Vector.
@@ -145,7 +152,8 @@ Definition ans_pierce :=
   Eval cbv in (test cbv_pierce).
 
 (* [program] of the program *)
-MetaCoq Quote Recursively Definition p_pierce := pierce.
+MetaCoq Quote Recursively Definition p_pierce := ltac:(let t:=(eval unfold pierce in pierce) in exact t).
+Print p_pierce.
 
 Definition P_pierce := Eval cbv in test p_pierce.
 

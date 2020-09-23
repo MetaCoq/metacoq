@@ -24,6 +24,9 @@ From MetaCoq.Erasure Require Import EAst EAstUtils EInduction ELiftSubst ETyping
 
 Extract Inductive Equations.Init.sigma => "(*)" ["(,)"].
 
+Extraction Inline MCEquality.transport.
+Extraction Inline Equations.Prop.Logic.transport.
+
 Extract Constant PCUICTyping.fix_guard => "(fun x -> true)".
 Extract Constant PCUICTyping.cofix_guard => "(fun x -> true)".
 Extract Constant PCUICTyping.ind_guard => "(fun x -> true)".

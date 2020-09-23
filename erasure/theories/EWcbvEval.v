@@ -341,15 +341,14 @@ Section Wcbv.
     now rewrite (closed_fix_substl_subst_eq cl).
   Qed.
 
-  Lemma closed_unfold_cofix_cunfold_eq mfix idx : 
+  Lemma closed_cofix_substl_subst_eq {mfix idx d} : 
     closed (tCoFix mfix idx) ->
-    unfold_cofix mfix idx = cunfold_cofix mfix idx.
+    nth_error mfix idx = Some d ->
+    subst0 (cofix_subst mfix) (dbody d) = substl (cofix_subst mfix) (dbody d).
   Proof.  
-    unfold unfold_cofix, cunfold_cofix.
-    destruct (nth_error mfix idx) eqn:Heq => //.
     move=> /= Hf; f_equal; f_equal.
     have clfix : All (closedn 0) (cofix_subst mfix).
-    { clear Heq d idx.
+    { clear idx.
       solve_all.
       unfold cofix_subst.
       move: #|mfix| => n.
@@ -361,9 +360,21 @@ Section Wcbv.
     now rewrite subst_empty.
     move=> Ha; depelim Ha.
     simpl in *.
+    intros hnth.
     rewrite -IHcofix_subst => //.
     rewrite (subst_app_decomp [_]). simpl.
     f_equal. rewrite lift_closed // closed_subst //.
+  Qed.
+
+
+  Lemma closed_unfold_cofix_cunfold_eq mfix idx : 
+    closed (tCoFix mfix idx) ->
+    unfold_cofix mfix idx = cunfold_cofix mfix idx.
+  Proof.  
+    unfold unfold_cofix, cunfold_cofix.
+    destruct (nth_error mfix idx) eqn:Heq => //.
+    intros cl; f_equal; f_equal.
+    now rewrite (closed_cofix_substl_subst_eq cl).
   Qed.
 
 Lemma eval_mkApps_tCoFix mfix idx args v :

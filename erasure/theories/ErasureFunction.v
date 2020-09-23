@@ -6,7 +6,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICCumulativity PCUICSR PCUICNormal PCUICSafeLemmata
      PCUICValidity PCUICPrincipality PCUICElimination PCUICSN.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker.
-Require Import EArities Extract Prelim.
+Require Import EArities Extract Prelim EDeps.
 
 From Equations Require Import Equations.
 
@@ -828,9 +828,9 @@ Lemma erase_correct (Σ : global_env_ext) (wfΣ : wf_ext Σ) t T v Σ' t' :
   Σ |-p t ▷ v -> 
   exists v', Σ;;; [] |- v ⇝ℇ v' /\ Σ' ⊢ t' ▷ v'.
 Proof.
-  intros axiomfree Ht HΣ' Ht'.
+  intros axiomfree Ht HΣ' Ht' ev.
   assert (extraction_pre Σ) by now constructor.
   eapply erases_erase in Ht'; eauto.
-  eapply erase_global_correct in HΣ'.
+  eapply erase_global_correct, erases_global_erases_deps in HΣ'; eauto.
   eapply erases_correct; eauto.
 Qed.

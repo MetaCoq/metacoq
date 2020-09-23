@@ -10,6 +10,7 @@ theories/EWcbvEval.v
 theories/EWndEval.v
 theories/ETyping.v
 theories/Extract.v
+theories/EDeps.v
 theories/EAll.v
 theories/Extraction.v
 theories/Prelim.v

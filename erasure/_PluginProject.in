@@ -15,8 +15,6 @@ src/eqdepFacts.ml
 
 src/ssrbool.ml
 src/ssrbool.mli
-src/utils.ml
-src/utils.mli
 src/monad_utils.ml
 src/monad_utils.mli
 src/uGraph0.ml

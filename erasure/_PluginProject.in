@@ -35,8 +35,8 @@ src/pCUICLiftSubst.ml
 src/pCUICLiftSubst.mli
 src/eqDecInstances.ml
 src/eqDecInstances.mli
-# src/pCUICInduction.mli
-# src/pCUICInduction.ml
+src/pCUICInduction.mli
+src/pCUICInduction.ml
 src/pCUICReflect.mli
 src/pCUICReflect.ml
 src/pCUICEquality.mli

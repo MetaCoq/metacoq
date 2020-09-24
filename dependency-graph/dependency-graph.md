@@ -1,6 +1,17 @@
-# Generate the dependency graph between files
+# Generate the dependency graph with the script
 
-1. In each folder (template-coq + checker + pcuic + safechecker + extraction), generate the dot file with:
+In a shell, run `generate-dpegraph.sh myname` in the `dependency-graph`
+folder. It will produces `myname.dot` and `myname.svg`.
+
+Example:
+```
+cd dependency-graph
+./generate-depgraph.sh depgraph-2020-09-24
+```
+
+# Generate the dependency graph between files by hand (obsolete)
+
+1. In each folder (template-coq + checker + pcuic + safechecker + erasure), generate the dot file with:
 ```
 coqdep -f _CoqProject -dumpgraph plop.dot > /dev/null
 ```

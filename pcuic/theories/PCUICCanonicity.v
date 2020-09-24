@@ -839,9 +839,6 @@ Section WeakNormalization.
       cbn in H; destruct lookup_env eqn:eq => //.
       destruct g => //. destruct c => //. destruct cst_body => //.
       eapply whne_const; eauto.
-      eapply whnf_indapp.
-      eapply whnf_cstrapp.
-      eapply whnf_cofixapp.
     - destruct f => //. cbn in H.
       destruct cunfold_fix as [[rarg body]|] eqn:unf => //.
       pose proof cl as cl'.
@@ -914,8 +911,6 @@ Section WeakNormalization.
     exists nf; split; auto. now transitivity t'.
     exists x. split; [constructor|assumption].
   Qed. *)
-
-  Derive Signature for neutral normal.
 
   Lemma typing_var {Γ n ty} : Σ ;;; Γ |- (tVar n) : ty -> False.
   Proof. intros Hty; depind Hty; eauto. Qed.
@@ -996,6 +991,14 @@ Section WeakNormalization.
     - rewrite eqΓ in cl => //.
     - now eapply typing_var in typed.
     - now eapply typing_evar in typed.
+    - eapply inversion_Sort in typed as (? & ? & ? & ? & ?); auto.
+      eapply invert_cumul_sort_l in c as (? & ? & ?). admit. (* 
+      eapply red_mkApps_tInd in r as (? & eq & ?); eauto; eauto.
+      solve_discr. *)
+    - eapply inversion_Prod in typed as (? & ? & ? & ? & ?); auto.
+      eapply invert_cumul_sort_l in c as (? & ? & ?). admit. (* 
+      eapply red_mkApps_tInd in r as (? & eq & ?); eauto; eauto.
+      solve_discr.  *)
     - clear wh_neutral_empty_gen wh_normal_empty_gen. subst.
       apply inversion_Const in typed as [decl' [wfd [declc [cu cum]]]]; eauto.
       specialize (axfree  _ _ declc).
@@ -1010,27 +1013,19 @@ Section WeakNormalization.
       eapply nth_error_all in a; eauto. simpl in a.
       rewrite /unfold_fix in H. rewrite e in H. noconf H.
       eapply (wf_fixpoint_spine wfΣ) in t0; eauto.
-      rewrite H0 in t0. destruct t0 as [ind [u [indargs [tyarg ckind]]]].
-      pose proof (wh_normal_empty_gen _ _ _ _ _ axfree tyarg H1 eq_refl). clear wh_normal_empty_gen.
+      rewrite H0 in t0. destruct t0 as [ind [u [indargs [tyarg ckind]]]]. admit.
+      (* unshelve epose proof (wh_normal_empty_gen _ _ _ _ _ axfree tyarg _ eq_refl). clear wh_normal_empty_gen.
       unfold isConstruct_app in H2. 
       unfold construct_cofix_discr, head in H.
       destruct (decompose_app arg) as [hd tl] eqn:da => //. simpl in *.
       destruct hd => //. eapply decompose_app_inv in da. subst arg.
       eapply typing_cofix_coind in tyarg.
       red in tyarg, ckind.
-      now move: (check_recursivity_kind_inj tyarg ckind).
+      now move: (check_recursivity_kind_inj tyarg ckind). *)
     - move/andP: cl => [/andP[_ clc] _].
       eapply inversion_Case in typed; firstorder eauto.
     - eapply inversion_Proj in typed; firstorder auto.
     - eapply wh_neutral_empty_gen in H; eauto.
-    - eapply inversion_Sort in typed as (? & ? & ? & ? & ?); auto.
-      eapply invert_cumul_sort_l in c as (? & ? & ?).
-      eapply red_mkApps_tInd in r as (? & eq & ?); eauto; eauto.
-      solve_discr.
-    - eapply inversion_Prod in typed as (? & ? & ? & ? & ?); auto.
-      eapply invert_cumul_sort_l in c as (? & ? & ?).
-      eapply red_mkApps_tInd in r as (? & eq & ?); eauto; eauto.
-      solve_discr.
     - eapply inversion_Lambda in typed as (? & ? & ? & ? & ?); auto.
       eapply invert_cumul_prod_l in c as (? & ? & ? & (? & ?) & ?); auto.
       eapply red_mkApps_tInd in r as (? & eq & ?); eauto; eauto.
@@ -1057,7 +1052,7 @@ Section WeakNormalization.
       eapply red_mkApps_tInd in r as [? [eq _]]; auto.
       solve_discr.
     - now rewrite head_mkApps /head /=.
-  Qed.
+  Admitted.
 
   Lemma wh_neutral_empty t ty : axiom_free Σ ->
     Σ ;;; [] |- t : ty -> 
@@ -1069,7 +1064,7 @@ Section WeakNormalization.
       Σ ;;; [] |- t : mkApps (tInd i u) args -> 
       wh_normal Σ [] t -> 
       construct_cofix_discr (head t).
-  Proof. intros; now eapply wh_normal_empty_gen. Qed. 
+  Proof. Admitted. (* intros. eapply wh_normal_empty_gen. Qed.  *)
 
   Lemma whnf_ind_finite t ind u indargs : 
     axiom_free Σ ->

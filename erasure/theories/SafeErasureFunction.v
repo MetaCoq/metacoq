@@ -469,7 +469,8 @@ Section Erase.
                                 ret (E.tCoFix mfix' n)
     }.
   
-  Next Obligation. exfalso. destruct Ht. now eapply inversion_Evar in X. Qed.
+  Next Obligation.
+    exfalso. destruct Ht. now eapply inversion_Evar in X. Qed.
   Next Obligation.
     destruct Ht, HΣ.
     eapply inversion_Lambda in X as (? & ? & ? & ? & ?) ; eauto.
@@ -696,12 +697,7 @@ Next Obligation.
   sq. inv wfΣ. apply X.
 Qed.
 Next Obligation.
-  sq. split. cbn.
-  eapply PCUICWeakeningEnv.wf_extends. eauto. eexists [_]; reflexivity.
-  now inversion wfΣ; subst.
-Qed.
-Next Obligation.
-  sq. eapply PCUICWeakeningEnv.wf_extends. eauto. eexists [_]; reflexivity.
+  sq. inv wfΣ. eauto.
 Qed.
 
 Program Definition erase_global Σ : ∥wf Σ∥ -> _:=

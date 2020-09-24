@@ -91,57 +91,6 @@ Ltac sq := try (destruct HΣ as [wfΣ]; clear HΣ);
          | H : ∥ _ ∥ |- _ => destruct H
          end; try eapply sq.
 
-Hint Constructors normal neutral : core.
-
-Derive Signature for normal.
-Derive Signature for neutral.
-
-(* Definition normal_neutral_dec Γ t : ({normal Σ Γ t} + {~ (normal Σ Γ t)}) * ({neutral Σ Γ t} + {~ (neutral Σ Γ t)}). *)
-(* Proof. *)
-(*   induction t in Γ |- *; split; eauto. *)
-(*   all: try now (right; intros H; depelim H). *)
-(*   - destruct (option_map decl_body (nth_error Γ n)) as [ [ | ] | ] eqn:E. *)
-(*     + right. intros H. depelim H. depelim H. congruence. admit. admit. *)
-(*     + eauto. *)
-(*     + right. intros H. depelim H. depelim H. congruence. admit. admit. *)
-(*   - destruct (option_map decl_body (nth_error Γ n)) as [ [ | ] | ] eqn:E. *)
-(*     + right. intros H. depelim H. congruence.  *)
-(*     + eauto. *)
-(*     + right. intros H. depelim H. congruence. *)
-(*   - destruct (IHt1 Γ) as [[] _]; *)
-(*       [destruct (IHt2 (Γ,, vass na t1)) as [[] _]|]; eauto. *)
-(*     + right. intros H. depelim H. depelim H. eauto. admit. admit. *)
-(*     + right. intros H. depelim H. depelim H. eauto. admit. admit. *)
-(*   - destruct (IHt1 Γ) as [[] _]; *)
-(*       [destruct (IHt2 (Γ,, vass na t1)) as [[] _]|]; eauto. *)
-(*     + right. intros H. depelim H. depelim H. eauto. admit. admit. *)
-(*     + right. intros H. depelim H. depelim H. eauto. admit. admit. *)
-(*   - right. intros H. depelim H. depelim H. admit. admit. *)
-(*   - destruct (IHt1 Γ) as [_ []]; *)
-(*       [destruct (IHt2 Γ) as [[] _]|]; eauto. *)
-(*     + right. intros H. depelim H. depelim H. eauto. admit. admit. *)
-(*     + right. intros H. depelim H. depelim H. eauto. admit. admit. *)
-(*   - destruct (IHt1 Γ) as [_ []]; *)
-(*       [destruct (IHt2 Γ) as [[] _]|]; eauto. *)
-(*     + right. intros H. depelim H. eauto.  *)
-(*     + right. intros H. depelim H. eauto. *)
-(*   - destruct (lookup_env Σ k) as [[] | ] eqn:E. *)
-(*     + destruct (cst_body c) eqn:E2. *)
-(*       * right. intros H. depelim H. depelim H. congruence. admit. admit. *)
-(*       * destruct (string_dec k k0). subst. left. eauto.  *)
-(*         right. intros H. depelim H. depelim H. congruence. admit. admit. *)
-(*     +   right. intros H. depelim H. depelim H. congruence. admit. admit. *)
-(*     +   right. intros H. depelim H. depelim H. congruence. admit. admit. *)
-(*   - destruct (lookup_env Σ k) as [[] | ] eqn:E. *)
-(*     + destruct (cst_body c) eqn:E2. *)
-(*       * right. intros H. depelim H. congruence.  *)
-(*       * destruct (string_dec k k0). subst. left. eauto.  *)
-(*         right. intros H. depelim H. congruence. *)
-(*     +   right. intros H. depelim H. congruence. *)
-(*     +   right. intros H. depelim H. congruence. *)
-(*   - *)
-(* Admitted. *)
-
 Lemma mkApps_tFix_inv t mfix n L :
   t = mkApps (tFix mfix n) L ->
   (∑ a b, t = tApp a b) + ((t = tFix mfix n) * (L = [])).

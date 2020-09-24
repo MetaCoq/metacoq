@@ -826,7 +826,7 @@ Lemma erase_correct (Σ : global_env_ext) (wfΣ : wf_ext Σ) t T v Σ' t' :
   erase_global Σ (wf_ext_wf_squash wfΣ) = Checked Σ' ->
   erase Σ (sq wfΣ) [] (sq localenv_nil) t = Checked t' ->
   Σ |-p t ▷ v -> 
-  exists v', Σ;;; [] |- v ⇝ℇ v' /\ Σ' ⊢ t' ▷ v'.
+  exists v', Σ;;; [] |- v ⇝ℇ v' /\ ∥Σ' ⊢ t' ▷ v'∥.
 Proof.
   intros axiomfree Ht HΣ' Ht' ev.
   assert (extraction_pre Σ) by now constructor.

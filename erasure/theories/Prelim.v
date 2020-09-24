@@ -266,15 +266,15 @@ Proof.
   intros. depelim H.
   - destruct L using rev_ind.
     reflexivity.
-    rewrite emkApps_snoc in H. inv H.
+    rewrite emkApps_snoc in i. inv i.
   - destruct (EAstUtils.mkApps_elim t l). EAstUtils.solve_discr.
-    rewrite Ee.value_head_spec in H.
-    move/andP: H => [H H'].
+    rewrite Ee.value_head_spec in i.
+    move/andP: i => [H H'].
     eapply Ee.atom_mkApps in H' as [H1 _].
     destruct n, L; discriminate.
-  - unfold Ee.isStuckFix in H0. destruct f; try now inversion H0.
+  - unfold Ee.isStuckFix in i. destruct f; try now inversion i.
     assert (EAstUtils.decompose_app (EAst.mkApps (EAst.tFix m n) args) = EAstUtils.decompose_app (EAst.mkApps EAst.tBox L)) by congruence.
-    rewrite !EAstUtils.decompose_app_mkApps in H1; eauto. inv H1.
+    rewrite !EAstUtils.decompose_app_mkApps in H; eauto. inv H.
 Qed.
 
 (** ** Prelim on eliminations  *)

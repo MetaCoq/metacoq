@@ -281,7 +281,7 @@ Proof.
       now apply Forall_skipn.
   - depelim er.
     subst brs; cbn in *.
-    depelim H0.
+    depelim H.
     cbn in *.
     apply IHev2.
     apply erases_deps_mkApps; [easy|].
@@ -289,34 +289,33 @@ Proof.
     now constructor.
   - depelim er.
     intuition auto.
-    eapply erases_deps_mkApps_inv in H0 as (? & ?).
-    depelim H0.
+    eapply erases_deps_mkApps_inv in H as (? & ?).
+    depelim H.
     apply IHev3.
     constructor; [|easy].
     apply erases_deps_mkApps; [|easy].
     now eapply erases_deps_cunfold_fix.
   - depelim er.
-    clear H0.
     intuition auto.
-    apply erases_deps_mkApps_inv in H0 as (? & ?).
+    apply erases_deps_mkApps_inv in H as (? & ?).
     constructor; [|easy].
     now apply erases_deps_mkApps.
   - depelim er.
     apply erases_deps_mkApps_inv in er as (? & ?).
-    depelim H1.
+    depelim H0.
     apply IHev.
     constructor; [|easy].
     apply erases_deps_mkApps; [|easy].
     now eapply erases_deps_cunfold_cofix.
   - depelim er.
     apply erases_deps_mkApps_inv in er as (? & ?).
-    depelim H0.
+    depelim H.
     apply IHev.
     constructor.
     apply erases_deps_mkApps; [|easy].
     now eapply erases_deps_cunfold_cofix.
   - depelim er.
-    now apply IHev, H3.
+    now apply IHev, H2.
   - depelim er.
     intuition auto.
     apply erases_deps_mkApps_inv in H as (? & ?).

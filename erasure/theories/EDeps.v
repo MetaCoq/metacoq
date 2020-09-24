@@ -8,7 +8,6 @@ From MetaCoq.Erasure Require Import
      ELiftSubst ESubstitution ETyping Extract
      EWcbvEval Prelim.
 From MetaCoq.Template Require Import config utils monad_utils.
-Set Asymmetric Patterns.
 
 Derive NoConfusion for term.
 Derive Signature for erases_deps.

@@ -10,6 +10,14 @@ install: all
 	$(MAKE) -C erasure install
 	$(MAKE) -C translations install
 
+uninstall: all
+	$(MAKE) -C template-coq uninstall
+	$(MAKE) -C checker uninstall
+	$(MAKE) -C pcuic uninstall
+	$(MAKE) -C safechecker uninstall
+	$(MAKE) -C erasure uninstall
+	$(MAKE) -C translations uninstall
+
 html: all
 	"coqdoc" -toc -utf8 -interpolate -l -html \
 		-R template-coq/theories MetaCoq.Template \

@@ -14,5 +14,8 @@ clean: Makefile.coq
 install: all
 	$(MAKE) -f Makefile.coq install
 
+uninstall: all
+	$(MAKE) -f Makefile.coq uninstall
+
 mrproper:
 	rm -f Makefile.coq

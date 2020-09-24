@@ -1,7 +1,8 @@
-MetaCoq
-=======
+# MetaCoq
 
+<p align="center">
 <img src="https://raw.githubusercontent.com/MetaCoq/metacoq.github.io/master/assets/LOGO.png" alt="MetaCoq" width="50px"/>
+</p>
 
 [![Build Status](https://travis-ci.com/MetaCoq/metacoq.svg?branch=coq-8.11)](https://travis-ci.com/MetaCoq/metacoq)
 [![MetaCoq Chat](https://img.shields.io/badge/zulip-join_chat-brightgreen.svg)](https://coq.zulipchat.com)
@@ -10,9 +11,223 @@ MetaCoq is a project formalizing Coq in Coq and providing tools for
 manipulating Coq terms and developing certified plugins
 (i.e. translations, compilers or tactics) in Coq.
 
-See the [website](https://metacoq.github.io/) for a documentation,
-related papers and introduction to the system, along with installation instructions
-for targeted at users.
+
+**Quick jump**
+- [Getting started](#getting-started)
+- [Installation instructions](#installation-instructions)
+- [Documentation](#documentation)
+- [Overview of the project](#overview-of-the-project)
+- [Papers](#papers)
+- [Team & Credits](#team--credits)
+- [Bugs](#bugs)
+
+
+
+## Getting started
+
+- You may want to start with a [demo](https://github.com/MetaCoq/metacoq/tree/coq-8.11/examples/demo.v).
+
+- The current branch [documentation (as light coqdoc files)](https://metacoq.github.io/html/toc.html).
+
+- The [overview](#overview-of-the-project) of the different parts of the project.
+
+
+
+## Installation instructions
+
+See [INSTALL.md](https://github.com/MetaCoq/metacoq/tree/coq-8.11/INSTALL.md)
+
+
+
+## Documentation
+
+See [DOC.md](https://github.com/MetaCoq/metacoq/tree/coq-8.11/DOC.md)
+
+
+
+## Overview of the project
+
+At the center of this project is the Template-Coq quoting library for
+Coq. The project currently has a single repository extending
+Template-Coq with additional features. Each extension is in dedicated folder.
+
+### [Template-Coq](https://github.com/MetaCoq/metacoq/tree/coq-8.11/template-coq)
+
+Template-Coq is a quoting library for [Coq](http://coq.inria.fr). It
+takes `Coq` terms and constructs a representation of their syntax tree as
+a `Coq` inductive data type. The representation is based on the kernel's
+term representation.
+
+In addition to this representation of terms, Template Coq includes:
+
+- Reification of the environment structures, for constant and inductive
+  declarations.
+
+- Denotation of terms and global declarations
+
+- A monad for manipulating global declarations, calling the type
+  checker, and inserting them in the global environment, in
+  the style of MTac.
+
+
+### [Checker](https://github.com/MetaCoq/metacoq/tree/coq-8.11/checker)
+
+A partial type-checker for the Calculus of Inductive Constructions,
+whose extraction to ML is runnable as a plugin (using command `MetaCoq
+Check foo`). This checker uses _fuel_, so it must be passed a number
+of maximal reduction steps to perform when calling conversion, and is
+NOT verified.
+
+
+### [PCUIC](https://github.com/MetaCoq/metacoq/tree/coq-8.11/pcuic)
+
+PCUIC, the Polymorphic Cumulative Calculus of Inductive Constructions is
+a cleaned up version of the term language of Coq and its associated
+type system, equivalent to the one of Coq. This version of the
+calculus has proofs of standard metatheoretical results:
+
+- Weakening for global declarations, weakening and substitution for
+  local contexts.
+
+- Confluence of reduction using a notion of parallel reduction
+
+- Context conversion and validity of typing.
+
+- Subject Reduction (case/cofix reduction excluded)
+
+- Principality: every typeable term has a smallest type.
+
+- Elimination restrictions: the elimination restrictions ensure
+  that singleton elimination (from Prop to Type) is only allowed
+  on singleton inductives in Prop.
+
+
+### [Safe Checker](https://github.com/MetaCoq/metacoq/tree/coq-8.11/safechecker)
+
+Implementation of a fuel-free and verified reduction machine, conversion
+checker and type checker for PCUIC. This relies on a postulate of
+strong normalization of the reduction relation of PCUIC on well-typed terms.
+The extracted safe checker is available in Coq through a new vernacular command:
+
+    MetaCoq SafeCheck <term>
+
+After importing `MetaCoq.SafeChecker.Loader`.
+
+To roughly compare the time used to check a definition with Coq's vanilla
+type-checker, one can use:
+
+    MetaCoq CoqCheck <term>
+
+
+### [Erasure](https://github.com/MetaCoq/metacoq/tree/coq-8.11/erasure)
+
+An erasure procedure to untyped lambda-calculus accomplishing the
+same as the Extraction plugin of Coq. The extracted safe erasure is
+available in Coq through a new vernacular command:
+
+    MetaCoq Erase <term>
+
+After importing `MetaCoq.Erasure.Loader`.
+
+
+### [Translations](https://github.com/MetaCoq/metacoq/tree/coq-8.11/translations)
+
+Examples of translations built on top of this:
+
+- a parametricity plugin in [translations/param_original.v](https://github.com/MetaCoq/metacoq/tree/coq-8.11/translations/param_original.v)
+
+- a plugin to negate funext in [translations/times_bool_fun.v](https://github.com/MetaCoq/metacoq/tree/coq-8.11/translations/times_bool_fun.v)
+
+
+### Examples
+
+- An example Coq plugin built on the Template Monad, which can be used to
+  add a constructor to any inductive type is in [examples/add_constructor.v](https://github.com/MetaCoq/metacoq/tree/coq-8.11/examples/add_constructor.v)
+
+- The test-suite files [test-suite/erasure_test.v](https://github.com/MetaCoq/metacoq/tree/coq-8.11/test-suite/erasure_test.v)
+  and [test-suite/safechecker_test.v](https://github.com/MetaCoq/metacoq/tree/coq-8.11/test-suite/safechecker_test.v) show example
+  uses (and current limitations of) the verified checker and erasure.
+
+
+
+## Papers
+
+- ["Coq Coq Correct! Verification of Type Checking and Erasure for Coq, in Coq"](coqcoqcorrect)
+  Matthieu Sozeau, Simon Boulier, Yannick Forster, Nicolas Tabareau
+  and Théo Winterhalter. POPL 2020, New Orleans.
+
+- ["Coq Coq Codet! Towards a Verified Toolchain for Coq in
+  MetaCoq"](http://www.irif.fr/~sozeau/research/publications/Coq_Coq_Codet-CoqWS19.pdf)
+  Matthieu Sozeau, Simon Boulier, Yannick Forster, Nicolas Tabareau and
+  Théo Winterhalter. Abstract and
+  [presentation](http://www.ps.uni-saarland.de/~forster/downloads/slides-coqws19.pdf)
+  given at the [Coq Workshop
+  2019](https://staff.aist.go.jp/reynald.affeldt/coq2019/), September
+  2019.
+
+- ["The MetaCoq Project"](https://www.irif.fr/~sozeau/research/publications/drafts/The_MetaCoq_Project.pdf)
+  Matthieu Sozeau, Abhishek Anand, Simon Boulier, Cyril Cohen, Yannick Forster, Fabian Kunze,
+  Gregory Malecha, Nicolas Tabareau and Théo Winterhalter. JAR, February 2020.
+  Extended version of the ITP 2018 paper.
+
+  This includes a full documentation of the Template Monad and the typing rules of PCUIC.
+
+- [A certifying extraction with time bounds from Coq to call-by-value λ-calculus](https://www.ps.uni-saarland.de/Publications/documents/ForsterKunze_2019_Certifying-extraction.pdf).
+  Yannick Forster and Fabian Kunze.
+  ITP 2019.
+  [Example](https://github.com/uds-psl/certifying-extraction-with-time-bounds/blob/master/Tactics/Extract.v)
+
+- ["Towards Certified Meta-Programming with Typed Template-Coq"](https://hal.archives-ouvertes.fr/hal-01809681/document)
+  Abhishek Anand, Simon Boulier, Cyril Cohen, Matthieu Sozeau and Nicolas Tabareau.
+  ITP 2018.
+
+- The system was presented at [Coq'PL 2018](https://popl18.sigplan.org/event/coqpl-2018-typed-template-coq)
+
+
+
+## Team & Credits
+
+<p align="center">
+<img
+src="https://github.com/MetaCoq/metacoq.github.io/raw/master/assets/abhishek-anand.jpg"
+alt="Abhishek Anand" width="150px"/>
+<img
+src="https://github.com/MetaCoq/metacoq.github.io/raw/master/assets/danil-annenkov.jpeg"
+alt="Danil Annenkov" width="150px"/>
+<img
+src="https://github.com/MetaCoq/metacoq.github.io/raw/master/assets/simon-boulier.jpg"
+alt="Simon Boulier" width="150px"/><br/>
+<img
+src="https://github.com/MetaCoq/metacoq.github.io/raw/master/assets/cyril-cohen.png"
+alt="Cyril Cohen" width="150px"/>
+<img
+src="https://github.com/MetaCoq/metacoq.github.io/raw/master/assets/yannick-forster.jpg"
+alt="Yannick Forster" width="150px"/>
+<img
+src="https://github.com/MetaCoq/metacoq.github.io/raw/master/assets/gregory-malecha.jpg"
+alt="Gregory Malecha" width="150px"/><br/>
+<img
+src="https://github.com/MetaCoq/metacoq.github.io/raw/master/assets/matthieu-sozeau.png"
+alt="Matthieu Sozeau" width="150px"/>
+<img
+src="https://github.com/MetaCoq/metacoq.github.io/raw/master/assets/nicolas-tabareau.jpg"
+alt="Nicolas Tabareau" width="150px"/>
+<img
+src="https://github.com/MetaCoq/metacoq.github.io/raw/master/assets/theo-winterhalter.jpg"
+alt="Théo Winterhalter" width="150px"/>
+
+MetaCoq is developed by (left to right)
+<a href="https://github.com/aa755">Abhishek Anand</a>,
+<a href="https://github.com/annenkov">Danil Annenkov</a>,
+<a href="https://github.com/SimonBoulier">Simon Boulier</a>,
+<a href="https://github.com/CohenCyril">Cyril Cohen</a>,
+<a href="https://github.com/yforster">Yannick Forster</a>,
+<a href="https://github.com/gmalecha">Gregory Malecha</a>,
+<a href="https://github.com/mattam82">Matthieu Sozeau</a>,
+<a href="https://github.com/Tabareau">Nicolas Tabareau</a> and
+<a href="https://github.com/TheoWinterhalter">Théo Winterhalter</a>.
+</p>
+
 
 ```
 Copyright (c) 2014-2020 Gregory Malecha
@@ -22,141 +237,10 @@ Copyright (c) 2018-2020 Danil Annenkov, Yannick Forster, Théo Winterhalter
 ```
 
 This software is distributed under the terms of the MIT license.
-See [LICENSE](LICENSE) for details.
-
-Bugs
-====
-
-Please report any bugs (or feature requests) on the github [issue tracker](https://github.com/MetaCoq/metacoq/issues).
-
-Branches and compatibility
-========
-
-Coq's kernel API is not stable yet, and changes there are reflected in MetaCoq's reified structures,
-so we do not ensure any compatibility from version to version.
-
-The [master](https://github.com/MetaCoq/metacoq/tree/master) branch is following Coq's master 
-branch and gets regular updates from the the main development branch which follows the latest 
-stable release of Coq.
-
-Currently, the [coq-8.11](https://github.com/MetaCoq/metacoq/tree/coq-8.11) branch is the main stable branch.
-The branch [coq-8.10](https://github.com/MetaCoq/metacoq/tree/coq-8.10) 
-gets backports from `coq-8.11` when possible. Both `coq-8.11` and `coq-8.10` have associated 
-"alpha"-quality `opam` packages.
-
-The branches [coq-8.6](https://github.com/MetaCoq/metacoq/tree/coq-8.6),
-[coq-8.7](https://github.com/MetaCoq/metacoq/tree/coq-8.7), [coq-8.8](https://github.com/MetaCoq/metacoq/tree/coq-8.8)
-and [coq-8.9](https://github.com/MetaCoq/metacoq/tree/coq-8.9) are frozen.
-
-Installation instructions (for developers only)
-=========================
-
-The recommended way to build a development environment for MetaCoq is
-to have a dedicated `opam` switch.
-
-Setting up an `opam` switch
----------------
-
-To setup a fresh `opam` installation, you might want to create a
-"switch" (an environment of `opam` packages) for `Coq` if you don't have
-one yet. You need to use **opam 2** to obtain the right version of
-`Equations`.
-
-    # opam switch create coq.8.11 4.07.1
-    # eval $(opam env)
-
-This creates the `coq.8.11` switch which initially contains only the
-basic `OCaml` `4.07.1` compiler, and puts you in the right environment
-(check with `ocamlc -v`).
-
-Once in the right switch, you can install `Coq` and the `Equations` package using:
-
-    # opam install . --deps-only
-
-If the commands are successful you should have `coq` available (check with `coqc -v`). 
-
-Installing from GitHub repository (for developers)
-------------------------------
-
-To get the source code:
-
-    # git clone https://github.com/MetaCoq/metacoq.git
-    # git checkout -b coq-8.11 origin/coq-8.11
-    # git status
-
-This checks that you are indeed on the `coq-8.11` branch.
-
-You can create a [local
-switch](https://opam.ocaml.org/blog/opam-20-tips/#Local-switches) for
-developing using (in the root directory of the sources):
-
-    # opam switch create . 4.07.1
-
-Or use `opam switch link foo` to link an existing `opam` switch `foo` with
-the sources directory.
-
-Requirements
-------------
-
-To compile the library, you need:
-
-- The `Coq` version corrsponding to your branch (you can use the `coq.dev` package 
-  for the `master` branch).
-- `OCaml` (tested with `4.06.1` and `4.07.1`, beware that `OCaml 4.06.0`
-  can produce linking errors on some platforms)
-- [`Equations 1.2.3`](http://mattam82.github.io/Coq-Equations/)
-
-When using `opam` you can get those using `opam install --deps-only .`.
-
-You can test the installation of the packages locally using
-
-    # opam install .
-
-at the root directory.
-
-Compiling from sources
--------
-
-To compile locally without using `opam`, use `./configure.sh local` at the root, then use:
-
-- `make` to compile the `template-coq` plugin, the `checker`, the `pcuic`
-  development and the `safechecker` and `erasure` plugins.
-  You can also selectively build each target.
-
-- `make translations` to compile the translation plugins
-
-- `make test-suite` to compile the test suite
-
-- `make install` to install the plugin in `Coq`'s `user-contrib` local
-  library. Then the `MetaCoq` namespace can be used for `Require
-  Import` statements, e.g. `From MetaCoq.Template Require Import All.`.
+See [LICENSE](https://github.com/MetaCoq/metacoq/tree/coq-8.11/LICENSE) for details.
 
 
-Contributions Guidelines
-========================
 
-Robustness
-----------
+## Bugs
 
-To ease reparing the broken code:
-
-- Please use as many bullets as possible.
-  You even can be forced to do so with `Set Default Goal Selector "!".`
-
-- Plese use as few as possible generated names and name hypothesis in `intros` and
-  `destruct`.
-  It is more difficult for `induction` and above all for `inversion`.
-
-
-Program/Equations
------------------
-
-Please don't use `Program`. It inserts some JMeq and UIP axioms silently.  You can
-use `Equations` to do some dependent induction (`dependent induction`,
-`dependent destruction`, `depelim`). You may need to add:
-```
-Require Import Equations.Prop.DepElim.
-```
-
-*Important*: we keep the template-coq folder not relying on Equations (to be able
-to compile it without external dependency).
+Please report any bugs or feature requests on the github [issue tracker](https://github.com/MetaCoq/metacoq/issues).

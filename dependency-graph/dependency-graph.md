@@ -1,7 +1,7 @@
 # Generate the dependency graph with the script
 
 In a shell, run `generate-dpegraph.sh myname` in the `dependency-graph`
-folder. It will produces `myname.dot` and `myname.svg`.
+folder. It will produces `myname.dot`, `myname.png` and `myname.svg`.
 
 Example:
 ```

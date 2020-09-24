@@ -4,7 +4,7 @@
 #
 # Usage:
 # In the dependency-graph folder, [generate-dpegraph.sh myname]
-# produces [myname.dot] and [myname.svg].
+# produces [myname.dot], [myname.png] and [myname.svg].
 #
 # Example:
 # cd dependency-graph
@@ -57,3 +57,4 @@ echo "}" >> $dot_file
 
 # produce the svg file
 dot -Tsvg $dot_file -o $filename.svg
+dot -Tpng $dot_file -o $filename.png

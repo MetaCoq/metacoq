@@ -3,7 +3,7 @@ From Coq Require Import Program.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping
      PCUICElimination.
-From MetaCoq.Erasure Require EAst.
+From MetaCoq.Erasure Require EAst ETyping.
 
 
 Local Existing Instance extraction_checker_flags.
@@ -72,6 +72,112 @@ Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :
                     Σ;;; Γ |- tCoFix mfix n ⇝ℇ E.tCoFix mfix' n
   | erases_box : forall t : term, isErasable Σ Γ t -> Σ;;; Γ |- t ⇝ℇ E.tBox where "Σ ;;; Γ |- s ⇝ℇ t" := (erases Σ Γ s t).
 
+Lemma erases_forall_list_ind
+      Σ (P : context -> term -> E.term -> Prop)
+      (Hrel : forall Γ i, P Γ (tRel i) (E.tRel i))
+      (Hvar : forall Γ n, P Γ (tVar n) (E.tVar n))
+      (Hevar : forall Γ m m' l l',
+          All2 (erases Σ Γ) l l' ->
+          Forall2 (P Γ) l l' ->
+          P Γ (tEvar m l) (E.tEvar m' l'))
+      (Hlam : forall Γ na b t t',
+          Σ;;; (vass na b :: Γ) |- t ⇝ℇ t' ->
+          P (vass na b :: Γ) t t' ->
+          P Γ (tLambda na b t) (E.tLambda na t'))
+      (Hletin : forall Γ na t1 t1' T t2 t2',
+          Σ;;; Γ |- t1 ⇝ℇ t1' ->
+          P Γ t1 t1' ->
+          Σ;;; (vdef na t1 T :: Γ) |- t2 ⇝ℇ t2' ->
+          P (vdef na t1 T :: Γ) t2 t2' ->
+          P Γ (tLetIn na t1 T t2) (E.tLetIn na t1' t2'))
+      (Happ : forall Γ f4 u f' u',
+          Σ;;; Γ |- f4 ⇝ℇ f' ->
+          P Γ f4 f' -> Σ;;; Γ |- u ⇝ℇ u' ->
+          P Γ u u' ->
+          P Γ (tApp f4 u) (E.tApp f' u'))
+      (Hconst : forall Γ kn u,
+          P Γ (tConst kn u) (E.tConst kn))
+      (Hconstruct : forall Γ kn k n,
+          P Γ (tConstruct kn k n) (E.tConstruct kn k))
+      (Hcase : forall Γ ind npar T c brs c' brs',
+          PCUICElimination.Informative Σ ind ->
+          Σ;;; Γ |- c ⇝ℇ c' ->
+          P Γ c c' ->
+          All2 (fun x x' => Σ;;; Γ |- x.2 ⇝ℇ x'.2 × x.1 = x'.1) brs brs' ->
+          Forall2 (fun br br' => P Γ br.2 br'.2) brs brs' ->
+          P Γ (tCase (ind, npar) T c brs) (E.tCase (ind, npar) c' brs'))
+      (Hproj : forall Γ p c c',
+          let ind := p.1.1 in
+          PCUICElimination.Informative Σ ind ->
+          Σ;;; Γ |- c ⇝ℇ c' ->
+          P Γ c c' ->
+          P Γ (tProj p c) (E.tProj p c'))
+      (Hfix : forall Γ mfix n mfix',
+          All2
+            (fun d d' =>
+               dname d = E.dname d' ×
+               rarg d = E.rarg d' ×
+               Σ;;; app_context Γ (PCUICLiftSubst.fix_context mfix) |- dbody d ⇝ℇ E.dbody d')
+            mfix mfix' ->
+          Forall2 (fun d d' =>
+                     P (app_context Γ (PCUICLiftSubst.fix_context mfix))
+                       (dbody d)
+                       (EAst.dbody d') ) mfix mfix' ->
+          P Γ (tFix mfix n) (E.tFix mfix' n))
+      (Hcofix : forall Γ mfix n mfix',
+          All2
+            (fun d d' =>
+               dname d = E.dname d' ×
+               rarg d = E.rarg d' ×
+               Σ;;; app_context Γ (PCUICLiftSubst.fix_context mfix) |- dbody d ⇝ℇ E.dbody d')
+            mfix mfix' ->
+          Forall2 (fun d d' =>
+                     P (app_context Γ (PCUICLiftSubst.fix_context mfix))
+                       (dbody d)
+                       (EAst.dbody d') ) mfix mfix' ->
+          P Γ (tCoFix mfix n) (E.tCoFix mfix' n))
+      (Hbox : forall Γ t, isErasable Σ Γ t -> P Γ t E.tBox) :
+  forall Γ t t0,
+    Σ;;; Γ |- t ⇝ℇ t0 ->
+    P Γ t t0.
+Proof.
+  fix f 4.
+  intros Γ t et er.
+  move f at top.
+  destruct er;
+    try solve [match goal with
+    | [H: _ |- _] => apply H
+    end; auto].
+  - apply Hevar; [assumption|].
+    revert l l' X.
+    fix f' 3.
+    intros l l' [].
+    + now constructor.
+    + constructor; [now apply f|now apply f'].
+  - apply Hcase; try assumption.
+    + now apply f.
+    + revert brs brs' X.
+      fix f' 3.
+      intros brs brs' []; [now constructor|].
+      constructor; [now apply f|now apply f'].
+  - apply Hfix; try assumption.
+    revert X.
+    generalize mfix at 1 3.
+    intros mfix_gen.
+    revert mfix mfix'.
+    fix f' 3.
+    intros mfix mfix' []; [now constructor|].
+    constructor; [now apply f|now apply f'].
+  - apply Hcofix; try assumption.
+    revert X.
+    generalize mfix at 1 3.
+    intros mfix_gen.
+    revert mfix mfix'.
+    fix f' 3.
+    intros mfix mfix' []; [now constructor|].
+    constructor; [now apply f|now apply f'].
+Defined.
+
 Definition erases_constant_body (Σ : global_env_ext) (cb : constant_body) (cb' : E.constant_body) :=
   match cst_body cb, E.cst_body cb' with
   | Some b, Some b' => erases Σ [] b b'
@@ -106,6 +212,49 @@ Inductive erases_global_decls : global_env -> E.global_declarations -> Prop :=
     erases_global_decls ((kn, InductiveDecl mib) :: Σ) ((kn, E.InductiveDecl mib') :: Σ').
 
 Definition erases_global Σ Σ' := erases_global_decls Σ Σ'.
+
+(* For erasure evaluation correctness we do not need the full global
+   environment to be erased, rather only (constant) dependencies of
+   terms need to be there. *)
+Inductive erases_deps (Σ : global_env) (Σ' : E.global_declarations) : E.term -> Prop :=
+| erases_deps_tBox : erases_deps Σ Σ' E.tBox
+| erases_deps_tRel i : erases_deps Σ Σ' (E.tRel i)
+| erases_deps_tVar n : erases_deps Σ Σ' (E.tVar n)
+| erases_deps_tEvar m l :
+    Forall (erases_deps Σ Σ') l ->
+    erases_deps Σ Σ' (E.tEvar m l)
+| erases_deps_tLambda na body :
+    erases_deps Σ Σ' body ->
+    erases_deps Σ Σ' (E.tLambda na body)
+| erases_deps_tLetIn na val body :
+    erases_deps Σ Σ' val ->
+    erases_deps Σ Σ' body ->
+    erases_deps Σ Σ' (E.tLetIn na val body)
+| erases_deps_tApp hd arg :
+    erases_deps Σ Σ' hd ->
+    erases_deps Σ Σ' arg ->
+    erases_deps Σ Σ' (E.tApp hd arg)
+| erases_deps_tConst kn cb cb' :
+    PCUICTyping.declared_constant Σ kn cb ->
+    ETyping.declared_constant Σ' kn cb' ->
+    erases_constant_body (Σ, cst_universes cb) cb cb' ->
+    (forall body, E.cst_body cb' = Some body -> erases_deps Σ Σ' body) ->
+    erases_deps Σ Σ' (E.tConst kn)
+| erases_deps_tConstruct ind c :
+    erases_deps Σ Σ' (E.tConstruct ind c)
+| erases_deps_tCase p discr brs :
+    erases_deps Σ Σ' discr ->
+    Forall (fun br => erases_deps Σ Σ' br.2) brs ->
+    erases_deps Σ Σ' (E.tCase p discr brs)
+| erases_deps_tProj p t :
+    erases_deps Σ Σ' t ->
+    erases_deps Σ Σ' (E.tProj p t)
+| erases_deps_tFix defs i :
+    Forall (fun d => erases_deps Σ Σ' (E.dbody d)) defs ->
+    erases_deps Σ Σ' (E.tFix defs i)
+| erases_deps_tCoFix defs i :
+    Forall (fun d => erases_deps Σ Σ' (E.dbody d)) defs ->
+    erases_deps Σ Σ' (E.tCoFix defs i).
 
 Fixpoint inductive_arity (t : term) :=
   match t with

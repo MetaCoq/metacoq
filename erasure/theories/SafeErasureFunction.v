@@ -213,11 +213,11 @@ Local Ltac sq :=
 
 Program Definition is_erasable (Sigma : PCUICAst.global_env_ext) (HΣ : ∥wf_ext Sigma∥) (Gamma : context) (t : PCUICAst.term) (Ht : welltyped Sigma Gamma t) :
   typing_result ({∥isErasable Sigma Gamma t∥} +{∥(isErasable Sigma Gamma t -> False)∥}) :=
-  mlet T <- @type_of extraction_checker_flags Sigma _ _ Gamma t Ht ;;
+  let T := @type_of extraction_checker_flags Sigma _ _ Gamma t Ht in
   mlet b <- is_arity Sigma _ Gamma _ T _ ;;
   if b : {_} + {_} then
     ret (left _)
-  else mlet K <- @type_of extraction_checker_flags Sigma _ _ Gamma T _ ;;
+  else let K := @type_of extraction_checker_flags Sigma _ _ Gamma T _ in
        mlet (u;_) <- @reduce_to_sort _ Sigma _ Gamma K _ ;;
       match Universe.is_prop u with true => ret (left _) | false => ret (right _) end
 .
@@ -226,51 +226,69 @@ Next Obligation.
   sq. red in X. red in X. apply X.
 Qed.
 Next Obligation.
-  sq. apply X1.
+  sq. apply X.
 Qed.
 Next Obligation.
-  sq. eauto using typing_wf_local.
+  destruct Ht. sq. eauto using typing_wf_local.
 Qed.
 Next Obligation.
-  apply wat_wellformed. sq; auto.
-  sq; auto. now apply validity in X.
+  unfold type_of. destruct infer. simpl.
+  destruct s as [[Htx _]]. 
+  eapply typing_wellformed; eauto; sq; auto. apply X.
 Qed.
 Next Obligation.
+  unfold type_of in *.
+  destruct infer as [x [[Htx Hp]]].
   destruct H as [T' [redT' isar]].
   sq. econstructor. split. eapply type_reduction; eauto.
   eauto.
 Qed.
 Next Obligation.
-  sq. apply X1.
+  sq. apply w.
 Qed.
 Next Obligation.
-  sq. apply X1.
+  sq. apply w.
 Qed.
 Next Obligation.
-  sq. eapply validity in X as [validΣ|]; auto. (* contradiction *)
+  sq.
+  unfold type_of in *.
+  destruct infer as [x [[Htx Hp]]]. simpl.
+  simpl in *.
+  eapply validity in Htx as [|]; auto.
   todo "~ Is_conv_to_Arity pat -> isWfArity pat -> False".
   destruct i as [s Hs]. econstructor; eauto.
 Qed.
 Next Obligation.
-  sq. apply X2.
+  sq. apply w.
 Qed.
 Next Obligation.
-  sq. eapply typing_wellformed; eauto. sq; auto. sq; auto. apply X2.
+  sq.
+  unfold type_of.
+  destruct (infer _ (is_erasable_obligation_7 _ _ _ _ _ _ _)).
+  simpl. sq.
+  destruct X. eapply validity in t0; auto.
+  eapply wat_wellformed; eauto. sq; auto.
+  now sq.
 Qed.
 Next Obligation.
-  sq. red. eexists; split; eauto.
+  unfold type_of in *.
+  destruct (infer _ (is_erasable_obligation_7 _ _ _ _ _ _ _)).
+  destruct (infer _ (is_erasable_obligation_1 _ _)).
+  simpl in *.
+  destruct Ht.
+  sq. red. exists x0 ; split; intuition eauto.
   right. exists pat; split; eauto.
   eapply type_reduction; eauto using typing_wf_local.
 Qed.
 Next Obligation.
-  rename pat0 into T.
-  rename pat1 into K.
-  rename pat into u.
+  unfold type_of in *.
+  destruct (infer _ (is_erasable_obligation_7 _ _ _ _ _ _ _)) as [? [[? ?]]].
+  destruct (infer _ (is_erasable_obligation_1 _ _)) as [? [[? ?]]].
   sq.
   intros (? & ? & ?).
-  destruct s as [ | (? & ? & ?)].
+  destruct s as [ | (? & ? & ?)]; simpl in *.
   + destruct H. eapply arity_type_inv; eauto using typing_wf_local.
-  + eapply principal_typing in X2 as (? & ? & ? &?). 2:eauto. 2:exact t0.
+  + specialize (c0 _ t2). eapply principal_typing in X2 as (? & ? & ? &?). 2:eauto. 2:exact t0.
     eapply cumul_prop1 in c; eauto.
     eapply cumul_prop2 in c0; eauto.
 

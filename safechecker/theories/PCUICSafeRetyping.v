@@ -35,14 +35,6 @@ Proof.
 Qed.
 
 
-Derive NoConfusion for type_error.
-
-Set Equations With UIP.
-
-Add Search Blacklist "_graph_mut".
-
-Notation ret t := (exist t _).
-
 Definition well_sorted {cf:checker_flags} Σ Γ T := 
   ∥ ∑ s, Σ ;;; Γ |- T : tSort s ∥.
 
@@ -89,7 +81,8 @@ Section TypeOf.
   Context {cf : checker_flags}.
   Context (Σ : global_env_ext).
   Context (hΣ : ∥ wf Σ ∥) (Hφ : ∥ on_udecl Σ.1 Σ.2 ∥).
-  Context (G : universes_graph) (HG : is_graph_of_uctx G (global_ext_uctx Σ)).
+
+  Local Notation ret t := (exist t _).
 
   Section SortOf.
     Obligation Tactic := idtac.
@@ -126,7 +119,7 @@ Section TypeOf.
     end.
     Next Obligation. exact (todo "completeness"). Qed.
     Next Obligation. exact (todo "completeness"). Qed.
-  Check !.
+  
   
   Equations lookup_ind_decl ind : typing_result
         ({decl & {body & declared_inductive (fst Σ) decl ind body}}) :=
@@ -154,8 +147,6 @@ Section TypeOf.
   Qed.
 
   Obligation Tactic := idtac.
-  
-  Local Notation ret t := (exist t _).
 
   Equations? infer (Γ : context) (t : term) (wt : welltyped Σ Γ t) : principal_type Σ Γ t 
     by struct t :=

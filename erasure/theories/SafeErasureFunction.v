@@ -213,11 +213,11 @@ Local Ltac sq :=
 
 Program Definition is_erasable (Sigma : PCUICAst.global_env_ext) (HΣ : ∥wf_ext Sigma∥) (Gamma : context) (t : PCUICAst.term) (Ht : welltyped Sigma Gamma t) :
   typing_result ({∥isErasable Sigma Gamma t∥} +{∥(isErasable Sigma Gamma t -> False)∥}) :=
-  mlet (T; _) <- @type_of extraction_checker_flags Sigma _ _ Gamma t Ht ;;
+  mlet T <- @type_of extraction_checker_flags Sigma _ _ Gamma t Ht ;;
   mlet b <- is_arity Sigma _ Gamma _ T _ ;;
   if b : {_} + {_} then
     ret (left _)
-  else mlet (K; _) <- @type_of extraction_checker_flags Sigma _ _ Gamma T _ ;;
+  else mlet K <- @type_of extraction_checker_flags Sigma _ _ Gamma T _ ;;
        mlet (u;_) <- @reduce_to_sort _ Sigma _ Gamma K _ ;;
       match Universe.is_prop u with true => ret (left _) | false => ret (right _) end
 .

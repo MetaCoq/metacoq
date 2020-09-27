@@ -18,6 +18,7 @@ Import monad_utils.MonadNotation.
 Derive NoConfusion for type_error.
 
 Set Equations With UIP.
+Set Equations Transparent.
 
 Add Search Blacklist "_graph_mut".
 
@@ -227,7 +228,8 @@ Section TypeOf.
         | ret None => ! }
   }.
   Proof.
-    all:destruct hΣ, Hφ; destruct wt as [T HT]; try clear infer.
+    all:try clear infer.
+    all:destruct hΣ, Hφ; destruct wt as [T HT].
     all:try solve [econstructor; eauto].
 
     - sq. destruct (nth_error Γ n) eqn:hnth => //.

@@ -130,7 +130,6 @@ Program Fixpoint check_wf_env_only_univs (Σ : global_env)
 Program Definition erase_template_program (p : Ast.program)
   : EnvCheck (EAst.global_context * EAst.term) :=
   let Σ := (trans_global (Ast.empty_ext p.1)).1 in
-  G <- check_wf_env_only_univs Σ ;;
   Σ' <- (SafeErasureFunction.erase_global Σ _) ;;
   t <- wrap_error (empty_ext Σ) ("During erasure of " ++ string_of_term (trans p.2)) (SafeErasureFunction.erase (empty_ext Σ) _ nil (trans p.2) _);;
   ret (Monad:=envcheck_monad) (Σ', t).
@@ -138,15 +137,18 @@ Program Definition erase_template_program (p : Ast.program)
 Next Obligation.
   unfold trans_global.
   simpl. unfold wf_ext, empty_ext. simpl.
-  unfold on_global_env_ext. destruct H0. constructor.
-  split; auto. simpl. todo "on_udecl on empty universe context".
-Qed.
+  unfold on_global_env_ext. constructor. todo "assuming wf environment".
+Defined.
 
 Next Obligation.
   unfold trans_global.
   simpl. unfold wf_ext, empty_ext. simpl.
-  unfold on_global_env_ext. destruct H0. todo "assuming well-typedness".
-Qed.
+  unfold on_global_env_ext. constructor. todo "assuming wf env".
+Defined.
+
+Next Obligation.
+  todo "assuming well-typedness".
+Defined.
 
 Local Open Scope string_scope.
 

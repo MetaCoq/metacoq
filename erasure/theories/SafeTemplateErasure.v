@@ -143,36 +143,26 @@ From MetaCoq.Erasure Require Import SafeErasureFunction.
 
 Program Definition erase_template_program (p : Ast.program)
   : EnvCheck (EAst.global_context * EAst.term) :=
-  let Σ := 
-    (* To get timing info, use 
-      SafeErasureFunction.time "Translating global environment to PCUIC" (fun _ => *)
-    (trans_global (Ast.empty_ext p.1)).1 in
-  t <- 
-  (* SafeErasureFunction.time "Erasing main term" (fun _ =>  *)
-  wrap_error (empty_ext Σ) ("During erasure of " ++ string_of_term (trans p.2)) 
-    (SafeErasureFunction.erase (empty_ext Σ) _ nil (trans p.2) _);;
-  Σ' <-
-  (* SafeErasureFunction.time "Erasing environment" (fun _ => *)
-   (SafeErasureFunction.erase_global (SafeErasureFunction.term_global_deps t) Σ _) ;;
+  let Σ := (trans_global (Ast.empty_ext p.1)).1 in
+  Σ' <- (SafeErasureFunction.erase_global Σ _) ;;
+  t <- wrap_error (empty_ext Σ) ("During erasure of " ^ string_of_term (trans p.2)) (SafeErasureFunction.erase (empty_ext Σ) _ nil (trans p.2) _);;
   ret (Monad:=envcheck_monad) (Σ', t).
 
 Next Obligation.
   unfold trans_global.
-  simpl. unfold wf_ext, empty_ext. simpl. 
-  unfold on_global_env_ext. constructor.
-  split; auto. simpl. todo "global env is correct".
-  simpl. todo "on_udecl empty".
-Qed.
+  simpl. unfold wf_ext, empty_ext. simpl.
+  unfold on_global_env_ext. constructor. todo "assuming wf environment".
+Defined.
 
 Next Obligation.
   unfold trans_global.
   simpl. unfold wf_ext, empty_ext. simpl.
-  unfold on_global_env_ext. todo "assuming well-typedness".
-Qed.
+  unfold on_global_env_ext. constructor. todo "assuming wf env".
+Defined.
 
 Next Obligation.
-  sq. todo "assuming wf env".
-Qed.
+  todo "assuming well-typedness".
+Defined.
 
 
 Local Open Scope string_scope.

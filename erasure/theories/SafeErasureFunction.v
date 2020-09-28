@@ -2,13 +2,16 @@
 From Coq Require Import Program.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-     PCUICTyping PCUICInversion
+     PCUICTyping PCUICInversion PCUICGeneration
      PCUICConfluence PCUICConversion 
      PCUICCumulativity PCUICSR PCUICSafeLemmata
      PCUICValidity PCUICPrincipality PCUICElimination PCUICSN.
-From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker
-     PCUICSafeRetyping.
-From MetaCoq.Erasure Require Import EArities Extract Prelim.
+From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker PCUICSafeRetyping.
+From MetaCoq.Erasure Require Import EArities Extract Prelim ErasureCorrectness.
+
+Local Open Scope string_scope.
+Set Asymmetric Patterns.
+Import MonadNotation.
 
 From Equations Require Import Equations.
 
@@ -25,10 +28,7 @@ Extract Constant time =>
               temp)". *)
 
 Set Equations Transparent.
-
 Local Set Keyed Unification.
-
-
 
 Section fix_sigma.
 Local Existing Instance extraction_checker_flags.
@@ -520,7 +520,6 @@ Section Erase.
 End Erase.
 
 Local Arguments bind _ _ _ _ ! _.
-From MetaCoq Require Import ErasureCorrectness.
 
 Opaque wf_reduction.
 Arguments iswelltyped {cf Σ Γ t A}.
@@ -531,7 +530,6 @@ Proof.
   intros [s Hs].
   exists (tSort s). intuition auto. left; simpl; auto.
 Qed.
-Require Import PCUICGeneration.
 (* 
 Lemma isWAT_isErasable Σ Γ T : isWfArity_or_Type Σ Γ T -> isErasable Σ Γ T.
 Proof.

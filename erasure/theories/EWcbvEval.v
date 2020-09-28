@@ -77,7 +77,7 @@ Section Wcbv.
   Context (Σ : global_declarations).
   (* The local context is fixed: we are only doing weak reductions *)
 
-  Inductive eval : term -> term -> Prop :=
+  Inductive eval : term -> term -> Type :=
   (** Reductions *)
   | eval_box a t t' :
       eval a tBox ->
@@ -175,6 +175,9 @@ Section Wcbv.
   Hint Constructors eval : core.
   Derive Signature for eval.
   Derive NoConfusionHom for term.
+  
+  Derive Signature for All.
+  Derive Signature for All2.
 
   (** Characterization of values for this reduction relation.
       Only constructors and cofixpoints can accumulate arguments.
@@ -188,34 +191,33 @@ Section Wcbv.
   Definition value_head x :=
     isConstruct x || isCoFix x.
 
-  Inductive value : term -> Prop :=
+  Inductive value : term -> Type :=
   | value_atom t : atom t -> value t
-  (* | value_evar n l l' : Forall value l -> Forall value l' -> value (mkApps (tEvar n l) l') *)
-  | value_app t l : value_head t -> Forall value l -> value (mkApps t l)
+  | value_app t l : value_head t -> All value l -> value (mkApps t l)
   | value_stuck_fix f args :
-      Forall value args ->
+      All value args ->
       isStuckFix f args ->
       value (mkApps f args)
   .
 
-  Lemma value_values_ind : forall P : term -> Prop,
+  Lemma value_values_ind : forall P : term -> Type,
       (forall t, atom t -> P t) ->
-      (forall t l, value_head t -> Forall value l -> Forall P l -> P (mkApps t l)) ->
+      (forall t l, value_head t -> All value l -> All P l -> P (mkApps t l)) ->
       (forall f args,
-          Forall value args ->
-          Forall P args ->
+          All value args ->
+          All P args ->
           isStuckFix f args ->
           P (mkApps f args)) ->
       forall t : term, value t -> P t.
   Proof.
     intros P ? ? ?.
     fix value_values_ind 2. destruct 1.
-    - apply H; auto.
-    - eapply H0; auto.
-      revert l H3. fix aux 2. destruct 1. constructor; auto.
+    - apply X; auto.
+    - eapply X0; auto.
+      revert l a. fix aux 2. destruct 1. constructor; auto.
       constructor. eauto. eauto.
-    - eapply H1; eauto.
-      clear H3. revert args H2. fix aux 2. destruct 1. constructor; auto.
+    - eapply X1; eauto.
+      clear i. revert args a. fix aux 2. destruct 1. constructor; auto.
       constructor. now eapply value_values_ind. now apply aux.
   Defined.
 
@@ -234,7 +236,7 @@ Section Wcbv.
   Lemma value_mkApps_inv t l :
     ~~ isApp t ->
     value (mkApps t l) ->
-    ((l = []) /\ atom t) \/ (value_head t /\ Forall value l) \/ (isStuckFix t l /\ Forall value l).
+    ((l = []) × atom t) + (value_head t × All value l) + (isStuckFix t l × All value l).
   Proof.
     intros H H'. generalize_eqs H'. revert t H. induction H' using value_values_ind.
     intros.
@@ -263,45 +265,39 @@ Section Wcbv.
     rewrite !decompose_app_mkApps // /=. now eapply negbTE in Hf.
   Qed.
 
-  Lemma Forall_app_inv {A} (P : A -> Prop) l l' : Forall P l -> Forall P l' -> Forall P (l ++ l').
-  Proof.
-    intros Hl Hl'. induction Hl. apply Hl'.
-    constructor; intuition auto.
-  Qed.
-
   Lemma eval_to_value e e' : eval e e' -> value e'.
   Proof.
     induction 1; simpl; auto using value.
     - change (tApp ?h ?a) with (mkApps h [a]).
       rewrite mkApps_nested.
       apply value_mkApps_inv in IHeval1; [|easy].
-      destruct IHeval1 as [(-> & _)|[|(stuck & vals)]].
+      destruct IHeval1 as [[(-> & _)|]|(stuck & vals)].
       + cbn in *.
         apply (value_stuck_fix _ [av]); [easy|].
         cbn.
         destruct (cunfold_fix mfix idx) as [(? & ?)|]; [|easy].
-        noconf H1. destruct narg; auto. lia.
+        noconf e. destruct narg; auto. lia.
       + easy.
-      + eapply value_stuck_fix; [now apply Forall_app_inv|].
+      + eapply value_stuck_fix; [now apply All_app_inv|].
         unfold isStuckFix in *.
         destruct (cunfold_fix mfix idx) as [(? & ?)|]; [|easy].
-        noconf H1. rewrite app_length; simpl.
+        noconf e. rewrite app_length; simpl.
         eapply Nat.leb_le. lia.
 
     - destruct (mkApps_elim f' [a']).
       eapply value_mkApps_inv in IHeval1 => //.
       destruct IHeval1; intuition subst.
-      * rewrite H3.
-        simpl. rewrite H3 in H. simpl in *.
-        apply (value_app f0 [a']). rewrite H3 in H0. destruct f0; simpl in * |- *; try congruence.
+      * rewrite -> a1 in *.
+        simpl in *.
+        apply (value_app f0 [a']). destruct f0; simpl in * |- *; try congruence.
         constructor; auto. constructor. constructor; auto.
       * rewrite [tApp _ _](mkApps_nested _ (firstn n l) [a']).
-        constructor 2; auto. eapply Forall_app_inv; auto.
+        constructor 2; auto. eapply All_app_inv; auto.
       * rewrite [tApp _ _](mkApps_nested _ (firstn n l) [a']).
-        erewrite isFixApp_mkApps in H0 => //.
+        erewrite isFixApp_mkApps in i => //.
         destruct f0; simpl in *; try congruence.
-        rewrite /isFixApp in H0. simpl in H0.
-        rewrite orb_true_r orb_true_l in H0. easy.
+        rewrite /isFixApp in i. simpl in i.
+        rewrite orb_true_r orb_true_l in i. easy.
   Qed.
 
   Lemma closed_fix_substl_subst_eq {mfix idx d} : 
@@ -412,19 +408,19 @@ Qed.
 Derive Signature for Forall.
 
 Lemma eval_stuck_fix args argsv mfix idx :
-  Forall2 eval args argsv ->
+  All2 eval args argsv ->
   isStuckFix (tFix mfix idx) argsv ->
   eval (mkApps (tFix mfix idx) args) (mkApps (tFix mfix idx) argsv).
 Proof.
   revert argsv.
   induction args as [|a args IH] using MCList.rev_ind;
   intros argsv all stuck.
-  - apply Forall2_length in all.
+  - apply All2_length in all.
     destruct argsv; [|easy].
     now apply eval_atom.
   - destruct argsv as [|? ? _] using MCList.rev_ind;
-      [apply Forall2_length in all; rewrite app_length in all; now cbn in *|].
-    apply Forall2_app_r in all as (all & ev_a).
+      [apply All2_length in all; rewrite app_length in all; now cbn in *|].
+    apply All2_app_r in all as (all & ev_a).
     rewrite <- !mkApps_nested.
     cbn in *.
     destruct (cunfold_fix mfix idx) as [(? & ?)|] eqn:cuf; [|easy].
@@ -442,7 +438,7 @@ Qed.
 Lemma stuck_fix_value_inv argsv mfix idx narg fn :
   value (mkApps (tFix mfix idx) argsv) -> 
   cunfold_fix mfix idx = Some (narg, fn) ->
-  (Forall value argsv /\ isStuckFix (tFix mfix idx) argsv).
+  (All value argsv × isStuckFix (tFix mfix idx) argsv).
 Proof.
   remember (mkApps (tFix mfix idx) argsv) as tfix.
   intros hv; revert Heqtfix.
@@ -462,14 +458,14 @@ Proof.
   intros val unf.
   eapply stuck_fix_value_inv in val; eauto.
   destruct val.
-  simpl in H0. rewrite unf in H0.
-  now eapply Nat.leb_le in H0.
+  simpl in i. rewrite unf in i.
+  now eapply Nat.leb_le in i.
 Qed.
 
 Lemma value_final e : value e -> eval e e.
 Proof.
   induction 1 using value_values_ind; simpl; auto using value.
-  - apply Forall_Forall2_refl in H1 as H2.
+  - apply All_All2_refl in H1 as H2.
     move/implyP: (value_head_spec_impl t).
     move/(_ H) => Ht.
     induction l using rev_ind. simpl.
@@ -477,13 +473,13 @@ Proof.
     * repeat constructor.
     * repeat constructor.
     * rewrite -mkApps_nested.
-      eapply Forall_app in H0 as [Hl Hx]. depelim Hx.
-      eapply Forall_app in H1 as [Hl' Hx']. depelim Hx'.
-      eapply Forall2_app_inv_r in H2 as [Hl'' [Hx'' [? [? ?]]]].
-      depelim H3. depelim H4.
+      eapply All_app in H0 as [Hl Hx]. depelim Hx.
+      eapply All_app in H1 as [Hl' Hx']. depelim Hx'.
+      eapply All2_app_inv_r in H2 as [Hl'' [Hx'' [? [? ?]]]].
+      depelim a0.
       eapply eval_app_cong; auto.
       eapply IHl; auto.
-      now eapply Forall_Forall2.
+      now eapply All_All2.
       destruct l using rev_ind; auto.
       eapply value_head_nApp in H.
       rewrite isFixApp_mkApps => //.
@@ -491,7 +487,7 @@ Proof.
       rewrite orb_false_r.
       destruct t; auto.
   - destruct f; try discriminate.
-    apply Forall_Forall2_refl in H0.
+    apply All_All2_refl in H0.
     now apply eval_stuck_fix.
 Qed.
 
@@ -535,7 +531,7 @@ Proof.
   - depelim ev'.
     + apply IHev1 in ev'1; solve_discr.
     + subst.
-      noconf H0.
+      noconf e0.
       now apply IHev2 in ev'2.
     + apply eval_mkApps_tCoFix in ev1 as (? & ?); solve_discr.
     + easy.
@@ -545,26 +541,25 @@ Proof.
     + apply IHev1 in ev'1.
       apply mkApps_eq_inj in ev'1; try easy.
       depelim ev'1.
-      noconf H1; noconf H2.
+      noconf H.
       subst.
       apply IHev2 in ev'2; subst.
-      noconf H0.
-      rewrite H2 in H.
-      now noconf H.
+      rewrite e0 in e.
+      now noconf e.
     + apply IHev1 in ev'1.
       apply mkApps_eq_inj in ev'1; try easy.
       depelim ev'1.
-      noconf H1.
-      noconf H2.
+      noconf H.
+      subst.
       apply IHev2 in ev'2.
-      subst. noconf H0.
-      rewrite H2 in H.
-      noconf H. lia.
+      subst.
+      rewrite e0 in e.
+      noconf e. lia.
     + apply IHev1 in ev'1.
       subst.
-      rewrite isFixApp_mkApps in H0 by easy.
+      rewrite isFixApp_mkApps in i by easy.
       cbn in *.
-      now rewrite orb_true_r in H0.
+      now rewrite orb_true_r in i.
     + easy.
   - depelim ev'.
     + apply IHev1 in ev'1; solve_discr.
@@ -574,31 +569,31 @@ Proof.
       apply mkApps_eq_inj in ev'1 as (ev'1 & <-); try easy.
       noconf ev'1.
       subst.
-      rewrite H1 in H.
-      noconf H. lia.
+      rewrite e0 in e.
+      noconf e. lia.
     + apply IHev1 in ev'1.
       apply IHev2 in ev'2.
       now apply mkApps_eq_inj in ev'1 as (ev'1 & <-).
     + apply IHev1 in ev'1.
       subst.
-      rewrite isFixApp_mkApps in H1 by easy.
-      cbn in H1.
-      now rewrite orb_true_r in H1.
+      rewrite isFixApp_mkApps in i by easy.
+      cbn in i.
+      now rewrite orb_true_r in i.
     + easy.
   - depelim ev'.
     + apply eval_mkApps_tCoFix in ev'1 as (? & ?); solve_discr.
     + apply eval_mkApps_tCoFix in ev'1 as (? & ?); solve_discr.
-    + apply mkApps_eq_inj in H1 as (H1 & <-); try easy.
-      noconf H1.
-      rewrite H0 in H.
+    + apply mkApps_eq_inj in H as (H & <-); try easy.
       noconf H.
+      rewrite e0 in e.
+      noconf e.
       now apply IHev in ev'.
     + easy.
   - depelim ev'.
-    + apply mkApps_eq_inj in H1 as (H1 & <-); try easy.
-      noconf H1.
-      rewrite H0 in H.
+    + apply mkApps_eq_inj in H as (H & <-); try easy.
       noconf H.
+      rewrite e0 in e.
+      noconf e.
       now apply IHev in ev'.
     + apply eval_mkApps_tCoFix in ev'1 as (? & ?); solve_discr.
     + apply eval_mkApps_tCoFix in ev' as (? & ?); solve_discr.
@@ -607,8 +602,8 @@ Proof.
     + unfold ETyping.declared_constant in *.
       rewrite isdecl0 in isdecl.
       noconf isdecl.
-      rewrite H0 in H.
-      noconf H.
+      rewrite e0 in e.
+      noconf e.
       now apply IHev in ev'.
     + easy.
   - depelim ev'.
@@ -632,9 +627,9 @@ Proof.
     + apply IHev1 in ev'1.
       apply IHev2 in ev'2.
       subst.
-      rewrite isFixApp_mkApps in H by easy.
-      cbn in H.
-      now rewrite orb_true_r in H.
+      rewrite isFixApp_mkApps in i by easy.
+      cbn in i.
+      now rewrite orb_true_r in i.
     + apply IHev1 in ev'1.
       apply IHev2 in ev'2.
       now subst.

@@ -5,7 +5,7 @@ From Equations Require Import Equations.
 
 From Coq Require Import Bool String List Program.
 From MetaCoq.Template Require Import config monad_utils utils uGraph.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICInduction PCUICLiftSubst
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst
      PCUICUnivSubst PCUICTyping PCUICSafeLemmata PCUICSubstitution PCUICValidity
      PCUICGeneration PCUICInversion PCUICValidity PCUICInductives PCUICSR
      PCUICCumulativity PCUICConversion PCUICConfluence PCUICArities
@@ -24,8 +24,6 @@ Add Search Blacklist "_graph_mut".
 
 Require Import ssreflect.
 
-
-Require Import PCUICAstUtils.
 Lemma cumul_Ind_Ind_inv {cf:checker_flags} {Σ : global_env_ext} Γ ind u args ind' u' args' : 
   wf Σ ->
   Σ ;;; Γ |- mkApps (tInd ind u) args <= mkApps (tInd ind' u') args' ->

@@ -3,7 +3,7 @@ From Coq Require Import Bool String List Program.
 From MetaCoq.Template Require Import config utils monad_utils.
 From Equations Require Import Equations.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-     PCUICTyping PCUICInversion
+     PCUICTyping PCUICInversion PCUICGeneration
      PCUICConfluence PCUICConversion 
      PCUICCumulativity PCUICSR PCUICSafeLemmata
      PCUICValidity PCUICPrincipality PCUICElimination PCUICSN.
@@ -13,7 +13,7 @@ Set Asymmetric Patterns.
 Import MonadNotation.
 Local Set Keyed Unification.
 
-From MetaCoq.Erasure Require Import EArities Extract Prelim.
+From MetaCoq.Erasure Require Import EArities Extract Prelim ErasureCorrectness.
 
 Set Equations Transparent.
 
@@ -507,7 +507,6 @@ Section Erase.
 End Erase.
 
 Local Arguments bind _ _ _ _ ! _.
-From MetaCoq Require Import ErasureCorrectness.
 
 Opaque wf_reduction.
 Arguments iswelltyped {cf Σ Γ t A}.
@@ -518,7 +517,6 @@ Proof.
   intros [s Hs].
   exists (tSort s). intuition auto. left; simpl; auto.
 Qed.
-Require Import PCUICGeneration.
 (* 
 Lemma isWAT_isErasable Σ Γ T : isWfArity_or_Type Σ Γ T -> isErasable Σ Γ T.
 Proof.

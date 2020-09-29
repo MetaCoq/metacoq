@@ -25,7 +25,7 @@ Qed.
 
 Lemma equiv_reflectT P (b : bool) : (P -> b) -> (b -> P) -> reflectT P b.
 Proof.
-  intros. destruct b; constructor; auto. intro. now discriminate H.
+  intros. destruct b; constructor; auto.
 Qed.
 
 Lemma reflectT_subrelation {A} {R} {r : A -> A -> bool} : (forall x y, reflectT (R x y) (r x y)) -> CRelationClasses.subrelation R r.

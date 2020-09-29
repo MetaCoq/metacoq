@@ -496,8 +496,9 @@ Lemma whnf_pres Σ Γ t t' :
   whnf RedFlags.default Σ Γ t -> whnf RedFlags.default Σ Γ t'.
 Proof.
   induction 1; intros.
-  - eauto.
   - eapply whnf_pres1; eauto.
+  - eauto.
+  - eauto.
 Qed.
 
 Lemma whnf_red1_sort Σ Γ t u :
@@ -531,9 +532,9 @@ Lemma whnf_red_sort Σ Γ t u :
   whnf RedFlags.default Σ Γ t ->
   red Σ Γ t (tSort u) -> t = tSort u.
 Proof.
-  intros. remember (tSort u) as t'. induction X.
+  intros. remember (tSort u) as t'. induction X using red_rect'.
   - eauto.
-  - subst. eapply whnf_red1_sort in r. subst. eauto.
+  - subst. eapply whnf_red1_sort in X0. subst. eauto.
     eapply whnf_pres; eauto.
 Qed.
 
@@ -569,9 +570,9 @@ Lemma whnf_red_prod Σ Γ t na t1 t2 :
   whnf RedFlags.default Σ Γ t ->
   red Σ Γ t (tProd na t1 t2) -> exists t1 t2, t = tProd na t1 t2.
 Proof.
-  intros. remember (tProd na t1 t2) as t'. revert t1 t2 Heqt'. induction X; intros.
+  intros. remember (tProd na t1 t2) as t'. revert t1 t2 Heqt'. induction X using red_rect'; intros.
   - eauto.
-  - subst. eapply whnf_red1_prod in r as (? & ? & ?). subst. eauto.
+  - subst. eapply whnf_red1_prod in X0 as (? & ? & ?). subst. eauto.
     eapply whnf_pres; eauto.
 Qed.
 

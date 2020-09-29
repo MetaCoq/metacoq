@@ -20,6 +20,18 @@ Set Warnings "-extraction-reserved-identifier".
 From MetaCoq.Erasure Require Import EAst EAstUtils EInduction ELiftSubst ETyping Extract ErasureFunction
      SafeTemplateErasure.
 
+Extraction Inline Equations.Prop.Classes.noConfusion.
+Extraction Inline Equations.Prop.Logic.eq_elim.
+Extraction Inline Equations.Prop.Logic.eq_elim_r.
+Extraction Inline Equations.Prop.Logic.transport.
+Extraction Inline Equations.Prop.Logic.transport_r.
+Extraction Inline Equations.Prop.Logic.False_rect_dep.
+Extraction Inline Equations.Prop.Logic.True_rect_dep.
+Extraction Inline Equations.Init.pr1.
+Extraction Inline Equations.Init.pr2.
+Extraction Inline Equations.Init.hidebody.
+Extraction Inline Equations.Prop.DepElim.solution_left.
+
 Extract Inductive Equations.Init.sigma => "(*)" ["(,)"].
 
 Extract Constant PCUICTyping.fix_guard => "(fun x -> true)".

@@ -125,11 +125,84 @@ Proof.
   intro l; cbn in *.
   transitivity (mkApps t1 ((t2 ::l))). reflexivity.
   now rewrite IHt1.
-Qed.
+Defined.
 
 Definition mkApps_decompose_app t :
   t = mkApps  (fst (decompose_app t)) (snd (decompose_app t))
   := mkApps_decompose_app_rec t [].
+
+  Section Reverse_Induction.
+
+    Variable A : Type.
+
+    Lemma rev_list_ind : forall P:list A-> Type,
+      P [] ->
+      (forall (a:A) (l:list A), P (rev l) -> P (rev (a :: l))) ->
+      forall l:list A, P (rev l).
+    Proof.
+      induction l; auto.
+    Defined.
+
+    Let app_nil_r : forall l:list A, l ++ [] = l.
+    Proof.
+      induction l; simpl; f_equal; auto.
+    Defined.
+
+    Let app_assoc : forall l m n:list A, l ++ m ++ n = (l ++ m) ++ n.
+    Proof.
+      intros l m n; induction l; simpl; f_equal; auto.
+    Defined.
+
+    Let rev_app_distr : forall x y:list A, rev (x ++ y) = rev y ++ rev x.
+    Proof.
+      induction x as [| a l IHl].
+      destruct y as [| a l].
+      simpl.
+      auto.
+
+      simpl.
+      rewrite app_nil_r; auto.
+
+      intro y.
+      simpl.
+      rewrite (IHl y).
+      rewrite app_assoc; trivial.
+    Defined.
+
+    Let rev_unit : forall (l:list A) (a:A), rev (l ++ [a]) = a :: rev l.
+    Proof.
+      intros.
+      apply (rev_app_distr l [a]); simpl; auto.
+    Defined.
+
+    Let rev_involutive : forall l:list A, rev (rev l) = l.
+    Proof.
+      induction l as [| a l IHl].
+      simpl; auto.
+
+      simpl.
+      rewrite (rev_unit (rev l) a).
+      rewrite IHl; auto.
+    Defined.
+
+    Theorem rev_rec : forall P:list A -> Type,
+      P [] ->
+      (forall (x:A) (l:list A), P l -> P (l ++ [x])) -> forall l:list A, P l.
+    Proof.
+      intros.
+      generalize (rev_involutive l).
+      intros E; rewrite <- E.
+      apply (rev_list_ind P).
+      - auto.
+      - simpl.
+        intros.
+        apply (X0 a (rev l0)).
+        auto.
+    Defined.
+
+  End Reverse_Induction.
+
+From Equations Require Import Equations.
 
 Lemma term_forall_mkApps_ind :
   forall P : term -> Type,
@@ -157,7 +230,7 @@ Proof.
   assert (Acc (MR lt size) t) by eapply measure_wf, Wf_nat.lt_wf.
   induction H. rename X14 into auxt. clear H. rename x into t.
   move auxt at top.
-
+  
   destruct t; try now repeat (match goal with
                  H : _ |- _ => apply H; try (hnf; cbn; lia)
               end).
@@ -171,17 +244,39 @@ Proof.
     eapply X6.
     + eapply decompose_app_notApp in E. eauto.
     + eapply auxt. cbn. hnf. pose proof (decompose_app_size_tApp1 t1 t2). rewrite E in *. hnf in *; cbn in *. lia.
-    + pose proof (decompose_app_size_tApp2 t1 t2). rewrite E in *. cbn in H. clear E.
-      induction l.
+    + induction l using rev_rec in E, auxt, t1, t2, t |- *.
       * econstructor.
-      * econstructor. eapply auxt. hnf; cbn. inv H. eassumption.
-        eapply IHl. inv H. eassumption.
-        
+      * eapply All_app_inv.
+        2:{ 
+        econstructor. eapply auxt. hnf; cbn.
+        pose proof (decompose_app_size_tApp2 t1 t2). rewrite E in *. cbn in H. clear E.
+        eapply Forall_All, All_app in H as [H H1]. inv H1. lia. econstructor. }
+        destruct (isApp t1) eqn:Et1.
+        -- destruct t1; try now inv Et1.
+           pose proof (E' := E).
+           eapply IHl.
+           2:{ 
+           eapply decompose_app_inv in E. rewrite <- mkApps_nested in E.
+           cbn in E. noconf E. rewrite H.
+                                               rewrite decompose_app_mkApps. reflexivity.
+                                               eapply decompose_app_notApp in E'.
+                                               now rewrite E'.
+           }
+           eapply decompose_app_inv in E. rewrite <- mkApps_nested in E.
+           cbn in E. noconf E. 
+           intros. eapply auxt.
+           red. red in H0. cbn in *. lia.
+        -- destruct l.
+           econstructor.
+           exfalso.
+           pose proof (decompose_app_mkApps t1 [t2]). cbn in H.
+           cbn in E. rewrite H in E.
+           inversion E. destruct l; inv H3.
+           now rewrite Et1.
   - eapply X10; [apply auxt; hnf; cbn; lia.. | ]. rename brs into l.
     revert l auxt. unfold MR; cbn. fix auxt' 1.
     destruct l; constructor. apply auxt. hnf; cbn; lia. apply auxt'. intros. apply auxt.
     hnf in *; cbn in *. lia. 
-  
   - eapply X12; [apply auxt; hnf; cbn; lia.. | ]. rename mfix into l.
     revert l auxt. unfold MR; cbn. fix auxt' 1.
     destruct l; constructor. split.

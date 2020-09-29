@@ -41,6 +41,7 @@ Extraction Inline Equations.Init.pr2.
 Extraction Inline Equations.Init.hidebody.
 Extraction Inline Equations.Prop.DepElim.solution_left.
 
+Extraction Inline MCEquality.transport.
 (* Extraction Inline NoConfusionPackage_All_local_env_over. *)
 (* Extraction Inline NoConfusionPackage_context_decl. *)
 Extraction Library Signature.

@@ -253,7 +253,7 @@ Proof.
         eapply Forall_All, All_app in H as [H H1]. inv H1. lia. econstructor. }
         destruct (isApp t1) eqn:Et1.
         -- destruct t1; try now inv Et1.
-           pose proof (E' := E).
+           pose proof E as E'.
            eapply IHl.
            2:{ 
            eapply decompose_app_inv in E. rewrite <- mkApps_nested in E.

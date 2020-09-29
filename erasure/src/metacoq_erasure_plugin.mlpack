@@ -46,6 +46,7 @@ ETyping
 EPretty
 Extract
 ErasureFunction
+OrderedTypeAlt
 SafeErasureFunction
 SafeTemplateErasure
 

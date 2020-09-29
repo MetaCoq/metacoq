@@ -979,7 +979,7 @@ Proof.
   unfold isConstruct_app.
   assert (HH: (decompose_app (subst_instance_constr u t)).1
               = subst_instance_constr u (decompose_app t).1). {
-    unfold decompose_app. generalize (nil term) at 1. generalize (nil term).
+    unfold decompose_app. generalize (@nil term) at 1. generalize (@nil term).
     induction t; cbn; try reflexivity.
     intros l l'. erewrite IHt1; reflexivity. }
   rewrite HH. destruct (decompose_app t).1; reflexivity.
@@ -1227,7 +1227,7 @@ Lemma subst_instance_instantiate_params u0 params pars ty :
                        (subst_instance_constr u0 ty).
 Proof.
   unfold instantiate_params.
-  change (nil term) with (map (subst_instance_constr u0) []) at 2.
+  change (@nil term) with (map (subst_instance_constr u0) []) at 2.
   rewrite rev_subst_instance_context.
   rewrite <- subst_instance_instantiate_params_subst.
   destruct ?; cbnr. destruct p; cbn.
@@ -1272,7 +1272,7 @@ Lemma subst_instance_to_extended_list u l
 Proof.
   - unfold to_extended_list, to_extended_list_k.
     change [] with (map (subst_instance_constr u) []) at 2.
-    unf_term. generalize (nil term), 0. induction l as [|[aa [ab|] ac] bb].
+    unf_term. generalize (@nil term), 0. induction l as [|[aa [ab|] ac] bb].
     + reflexivity.
     + intros l n; cbn. now rewrite IHbb.
     + intros l n; cbn. now rewrite IHbb.

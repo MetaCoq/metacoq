@@ -549,7 +549,7 @@ Lemma to_extended_list_lift n k c :
   to_extended_list (lift_context n k c) = to_extended_list c.
 Proof.
   unfold to_extended_list, to_extended_list_k. generalize 0.
-  unf_term. generalize (nil term) at 1 2.
+  unf_term. generalize (@nil term) at 1 2.
   induction c in n, k |- *; simpl; intros. 1: reflexivity.
   rewrite -> lift_context_snoc0. unfold snoc. simpl.
   destruct a. destruct decl_body.

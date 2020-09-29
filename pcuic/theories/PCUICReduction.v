@@ -1432,7 +1432,7 @@ Proof.
       * apply red1_red.
         rewrite simpl_lift; cbn; try lia.
         assert (n = i) by lia; subst. now constructor.
-      * enough (nth_error (nil term) n0 = None) as ->;
+      * enough (nth_error (@nil term) n0 = None) as ->;
           [cbn|now destruct n0].
         enough (i <=? n - 1 = true) as ->; try (apply Nat.leb_le; lia).
         enough (S (n - 1) = n) as ->; try lia. auto.

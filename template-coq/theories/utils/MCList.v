@@ -789,6 +789,13 @@ Section ListSize.
     rewrite rev_cons list_size_app IHl; cbn; lia.
   Qed.
 
+  Lemma list_size_length (l : list A)
+    : list_size l >= length l.
+  Proof.
+    induction l; simpl; lia.
+  Qed.    
+
+
 End ListSize.
 
 Section ListSizeMap.

@@ -1489,8 +1489,8 @@ Section Rho.
   Lemma isConstruct_app_rename r t :
     isConstruct_app t = isConstruct_app (rename r t).
   Proof.
-    unfold isConstruct_app. unfold decompose_app. generalize (nil term) at 1.
-    change (nil term) with (map (rename r) []). generalize (nil term).
+    unfold isConstruct_app. unfold decompose_app. generalize (@nil term) at 1.
+    change (@nil term) with (map (rename r) []). generalize (@nil term).
     induction t; simpl; auto.
     intros l l0. specialize (IHt1 (t2 :: l) (t2 :: l0)).
     now rewrite IHt1.

@@ -8,7 +8,7 @@
 Coq's kernel API is not stable yet, and changes there are reflected in MetaCoq's reified structures,
 so we do not ensure any compatibility from version to version. There is one branch for each Coq version.
 
-The **main branch* or *current branch* is the one which appers when you go on
+The *main branch* or *current branch* is the one which appers when you go on
 [https://github.com/MetaCoq/metacoq](https://github.com/MetaCoq/metacoq).
 Currently (unless you are reading the README of an outdated branch),
 it is the [coq-8.11](https://github.com/MetaCoq/metacoq/tree/coq-8.11).
@@ -102,7 +102,7 @@ Generated on 2020/09/24, sources [there](https://github.com/MetaCoq/metacoq/tree
 ## MetaDocumentation (documentation about documentation)
 
 The file `README.md` in https://github.com/MetaCoq/metacoq.github.io is supposed to be synchronized with
-`README.md` in https://github.com/MetaCoq/metacoq/ .
+`README.md` in [https://github.com/MetaCoq/metacoq/](https://github.com/MetaCoq/metacoq/).
 
 That's why we can't use relative links and have to use absolute ones.
 E.g. [INSTALL.md](https://github.com/MetaCoq/metacoq/tree/coq-8.11/INSTALL.md) and not [INSTALL.md](INSTALL.md).

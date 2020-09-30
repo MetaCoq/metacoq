@@ -7,10 +7,7 @@ Local Open Scope string_scope.
 From MetaCoq.Template Require Import utils.
 
 Definition test (p : Ast.program) : string :=
-  match erase_and_print_template_program p with
-  | inl s => s
-  | inr s => s
-  end.
+  erase_and_print_template_program p.
 
 MetaCoq Quote Recursively Definition zero := 0.
 Definition zerocst := Eval lazy in test zero.
@@ -326,10 +323,8 @@ Definition ans_provedCopyx :=
   Eval lazy in (test cbv_provedCopyx).
 MetaCoq Quote Recursively Definition p_provedCopyx := provedCopyx. (* program *)
 (* We don't run those every time as they are really expensive *)
-(* Time Definition P_provedCopyx := Eval lazy in (test p_provedCopyx).
- *)(* 2 min purely inside Coq *)
-(* Time Definition P_provedCopyxvm := Eval vm_compute in (test p_provedCopyx).
- *)
+Time Definition P_provedCopyx := Eval lazy in (test cbv_provedCopyx).
+Time Definition P_provedCopyxvm := Eval vm_compute in (test p_provedCopyx).
 From MetaCoq.Erasure Require Import Loader.
 MetaCoq Erase provedCopyx.
 (* 2m purely in the bytecode VM *)

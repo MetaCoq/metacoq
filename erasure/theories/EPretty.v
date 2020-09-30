@@ -96,7 +96,7 @@ Section print_term.
                                 ^ " => " ^ print_term (vass na' :: Γ) true false body)
   | tLetIn na def body =>
     let na' := fresh_name Γ na t in
-    parens top ("let" ^ string_of_name na' ^
+    parens top ("let " ^ string_of_name na' ^
                       " := " ^ print_term Γ true false def ^ " in " ^ nl ^
                       print_term (vdef na' def :: Γ) true false body)
   | tApp f l =>

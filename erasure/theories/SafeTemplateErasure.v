@@ -141,11 +141,11 @@ Program Fixpoint check_wf_env_only_univs (Σ : global_env)
 
 From MetaCoq.Erasure Require Import SafeErasureFunction.
 
-Program Definition erase_template_program (p : Ast.program)
+Program Definition erase_template_program (p : Ast.program) 
   : (EAst.global_context * EAst.term) :=
   let Σ := (trans_global (Ast.empty_ext p.1)).1 in
-  let Σ' := SafeErasureFunction.erase_global Σ _ in
   let t := SafeErasureFunction.erase (empty_ext Σ) _ nil (trans p.2) _ in
+  let Σ' := SafeErasureFunction.erase_global (term_global_deps t) Σ _ in
   (Σ', t).
 
 Next Obligation.
@@ -157,14 +157,11 @@ Defined.
 Next Obligation.
   unfold trans_global.
   simpl. unfold wf_ext, empty_ext. simpl.
-  unfold on_global_env_ext. constructor. todo "assuming wf env".
+  unfold on_global_env_ext. todo "assuming well-typedness".
 Defined.
-
 Next Obligation.
-  todo "assuming well-typedness".
+  constructor. todo "assuming wf environment".
 Defined.
-
-
 Local Open Scope string_scope.
 
 (** This uses the checker-based erasure *)

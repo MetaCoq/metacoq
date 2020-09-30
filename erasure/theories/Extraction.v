@@ -44,6 +44,6 @@ Cd "src".
 
 Separate Extraction ErasureFunction.erase SafeTemplateErasure
          (* The following directives ensure separate extraction does not produce name clashes *)
-         String utils Template.UnivSubst ELiftSubst ETyping.
+         Coq.Strings.String utils Template.UnivSubst ELiftSubst ETyping.
 
 Cd "..".

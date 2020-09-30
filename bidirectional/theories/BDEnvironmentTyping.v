@@ -454,9 +454,10 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       match Δ with
       | [] => True
       | {| decl_body := None; decl_type := t |} :: Δ =>
-        (type_local_ctx Σ Γ Δ u × (checking Σ (Γ ,,, Δ) t (tSort u)))
+        (type_local_ctx Σ Γ Δ u × (sorting Σ (Γ ,,, Δ) t u))
       | {| decl_body := Some b; decl_type := t |} :: Δ =>
-        (type_local_ctx Σ Γ Δ u × (lift_sorting checking sorting Σ (Γ ,,, Δ) b (Some t)))
+        (type_local_ctx Σ Γ Δ u ×
+          (lift_sorting checking sorting Σ) (Γ ,,, Δ) t None) × (lift_sorting checking sorting Σ) (Γ ,,, Δ) b (Some t)
       end.
 
     (* Delta telescope *)
@@ -931,15 +932,33 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
     intros. induction X; simpl; constructor; auto.
   Defined.
 
-  Lemma type_local_ctx_impl (P P' : global_env_ext -> context -> term -> term -> Type) Q Q' Σ Γ Δ u :
-    type_local_ctx P Q Σ Γ Δ u ->
-    (forall Γ t T, P Σ Γ t T -> P' Σ Γ t T) ->
-    (forall Γ t u, Q Σ Γ t u -> Q' Σ Γ t u) ->
-    type_local_ctx P' Q' Σ Γ Δ u.
+  Lemma type_local_ctx_impl (P P' : global_env_ext -> context -> term -> term -> Type) Q Q' Σ Γ Δ s :
+    type_local_ctx P Q Σ Γ Δ s ->
+    (forall Δ t T, (type_local_ctx P Q Σ Γ Δ s) -> P Σ (Γ ,,, Δ) t T -> P' Σ (Γ ,,, Δ) t T) ->
+    (forall Δ t u, (type_local_ctx P Q Σ Γ Δ s) -> Q Σ (Γ ,,, Δ) t u -> Q' Σ (Γ ,,, Δ) t u) ->
+    type_local_ctx P' Q' Σ Γ Δ s.
   Proof.
     intros HPQ HP HQ. revert HPQ; induction Δ in Γ, HP, HQ |- *; simpl; auto.
     destruct a as [na [b|] ty]; simpl; auto.
-    intros. intuition auto. intuition auto.
+    2: intuition auto.
+    intros [[? []] ?]. 
+    intuition auto.
+    eexists.
+    apply HQ ; eassumption.
+  Qed.
+
+  Lemma type_local_ctx_wf_local {cf:checker_flags} Σ Γ Δ s : 
+    All_local_env (lift_sorting checking sorting Σ) Γ ->
+    type_local_ctx checking sorting Σ Γ Δ s ->
+    All_local_env (lift_sorting checking sorting Σ) (Γ ,,, Δ).
+  Proof.
+    induction Δ; simpl; auto.
+    destruct a as [na [b|] ty];
+    intros wfΓ wfctx; constructor; intuition auto.
+    1: constructor.
+    2: assumption.
+    1: destruct b1.
+    all: eexists; eauto.
   Qed.
 
   (** This predicate enforces that there exists typing derivations for every typable term in env. *)

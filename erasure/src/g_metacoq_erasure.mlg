@@ -39,9 +39,7 @@ let check env evm c =
       (SafeTemplateErasure.erase_and_print_template_program checker_flags)
       term
   in
-  match erase with
-  | Coq_inl s -> Feedback.msg_info (pr_char_list s)
-  | Coq_inr s -> CErrors.user_err ~hdr:"metacoq" (pr_char_list s)
+  Feedback.msg_info (pr_char_list erase)
 }
 
 VERNAC COMMAND EXTEND MetaCoqErase CLASSIFIED AS QUERY

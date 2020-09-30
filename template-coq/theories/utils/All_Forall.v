@@ -242,7 +242,7 @@ Lemma All_app_inv {A} (P : A -> Type) l l' : All P l -> All P l' -> All P (l ++ 
 Proof.
   intros Hl Hl'. induction Hl. apply Hl'.
   constructor; intuition auto.
-Qed.
+Defined.
 
 Lemma All_mix {A} {P : A -> Type} {Q : A -> Type} {l} :
   All P l -> All Q l -> All (fun x => (P x * Q x)%type) l.
@@ -812,10 +812,12 @@ Qed.
 Lemma nth_error_all {A} {P : A -> Type} {l : list A} {n x} :
   nth_error l n = Some x -> All P l -> P x.
 Proof.
-  intros Hnth HPl. induction HPl in n, Hnth |- *. destruct n; discriminate.
-  revert Hnth. destruct n. now intros [= ->].
-  intros H'; eauto.
-Qed.
+  intros Hnth HPl. 
+  induction l in n, Hnth, HPl |- *. destruct n; discriminate.
+  destruct n; cbn in Hnth.
+  - inversion Hnth. subst. inversion HPl. eauto.
+  - eapply IHl. eassumption. inversion HPl. eassumption.
+Defined.
 
 Lemma nth_error_alli {A} {P : nat -> A -> Type} {l : list A} {n x} {k} :
   nth_error l n = Some x -> Alli P k l -> P (k + n) x.

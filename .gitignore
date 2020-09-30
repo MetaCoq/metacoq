@@ -359,6 +359,8 @@ erasure/src/pCUICReduction.mli
 /erasure/src/pCUICSafeRetyping.mli
 /erasure/src/safeErasureFunction.ml
 /erasure/src/safeErasureFunction.mli
+erasure/src/pCUICInduction.ml
+erasure/src/pCUICInduction.mli
 erasure/src/mSetWeakList.ml
 erasure/src/mSetWeakList.mli
 erasure/src/utils.ml

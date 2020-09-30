@@ -72,7 +72,7 @@ Proof.
     rewrite <- !Nat.add_succ_r.
     depelim H0.
     constructor; [|easy].
-    now apply H.
+    now apply p.
   - depelim er.
     constructor.
     induction H in k, H, H0 |- *; [easy|].
@@ -80,7 +80,7 @@ Proof.
     rewrite <- !Nat.add_succ_r.
     depelim H0.
     constructor; [|easy].
-    now apply H.
+    now apply p.
 Qed.
 
 Lemma erases_deps_subst Σ Σ' s k t :
@@ -120,7 +120,7 @@ Proof.
     rewrite <- !Nat.add_succ_r.
     depelim H0.
     constructor; [|easy].
-    now apply H.
+    now apply p.
   - depelim er.
     constructor.
     induction H in k, H, H0 |- *; [easy|].
@@ -128,7 +128,7 @@ Proof.
     rewrite <- !Nat.add_succ_r.
     depelim H0.
     constructor; [|easy].
-    now apply H.
+    now apply p.
 Qed.
 
 Lemma erases_deps_subst1 Σ Σ' t k u :
@@ -175,7 +175,7 @@ Proof.
     rewrite <- !Nat.add_succ_r.
     depelim H0.
     constructor; [|easy].
-    now apply H.
+    now apply p.
   - depelim er.
     constructor.
     induction H in k, H, H0 |- *; [easy|].
@@ -183,7 +183,7 @@ Proof.
     rewrite <- !Nat.add_succ_r.
     depelim H0.
     constructor; [|easy].
-    now apply H.
+    now apply p.
 Qed.
 
 Lemma erases_deps_substl Σ Σ' s t :

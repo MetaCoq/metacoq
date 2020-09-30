@@ -152,7 +152,7 @@ Examples of translations built on top of this:
 
 ## Papers
 
-- ["Coq Coq Correct! Verification of Type Checking and Erasure for Coq, in Coq"](https://github.com/MetaCoq/metacoq/tree/CoqCoqCorrect)
+- ["Coq Coq Correct! Verification of Type Checking and Erasure for Coq, in Coq"](https://metacoq.github.io/coqcoqcorrect)
   Matthieu Sozeau, Simon Boulier, Yannick Forster, Nicolas Tabareau
   and Théo Winterhalter. POPL 2020, New Orleans.
 

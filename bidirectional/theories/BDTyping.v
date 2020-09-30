@@ -693,7 +693,19 @@ Section TypingInduction.
                by eassumption. 
           }
            have wftypes : wf_local (Σ, udecl) (arities_context (ind_bodies m)).
-          { admit. }
+          { 
+            unfold arities_context.
+            clear - wfΣ IH' onInductives0.
+            rewrite rev_map_spec -map_rev.
+            apply Alli_rev in onInductives0.
+            induction onInductives0 as [| ? ? ? [? ? ? []] ?].
+            1: by constructor.
+            cbn. constructor.
+            1: assumption.
+            eexists.
+            cbn.
+            admit. (* weakening *)
+            }
           remember (ind_bodies m) as Γ in onInductives0 |- *.
           clear - wfΣ IH' onParams0 wftypes onInductives0.
           induction onInductives0 as [| ? ? ? [] ?].
@@ -721,12 +733,19 @@ Section TypingInduction.
             ** eapply type_local_ctx_impl.
                 1: eassumption.
                 all: intros ; applyIH ; eapply type_local_ctx_wf_local ; try eassumption.
-                admit. (*well-formedness of context concatenation, when both contexts are well-formed *)
+                all: admit. (*well-formedness of context concatenation, when both contexts are well-formed *)
                   
 
 
-            ** admit.
-          ++ clear - wfΣ IH' ind_sorts0.
+            ** clear - wfΣ IH' wftypes onParams0 on_cargs0 on_cindices0.
+               induction on_cindices0.
+               all: constructor ; auto.
+               cbn. applyIH.
+               eapply type_local_ctx_wf_local.
+               1: admit. (*well-formedness of context concatenation*)
+               eassumption.
+
+          ++ clear - wfΣ IH' ind_sorts0 onParams0.
               red in ind_sorts0 |- *.
               destruct (universe_family ind_sort0).
               all: intuition.
@@ -867,7 +886,7 @@ Section TypingInduction.
       { admit. }
       remember (all_size _ (fun d p => infering_sort_size p.π2) a) as s.
       have wf_size : wfl_size wfΓmfix <= wfl_size wfΓ + s.
-      { admit. }
+      { admit. } 
 
       clear -IH' wf_size.
       induction a0 as [| ? ? [? ?]].

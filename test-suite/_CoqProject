@@ -46,7 +46,3 @@ univ.v
 vs.v
 tmVariable.v
 order_rec.v
-<<<<<<< HEAD
-issue453.v
-=======
->>>>>>> origin/fast-erase

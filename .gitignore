@@ -397,6 +397,9 @@ vs.mli
 *.v.timing
 time-of-build.log
 time-of-build-pretty.log
+_build/**
+extraction/src/*.ml
+extraction/src/*.mli
 erasure/src/orderedTypeAlt.ml
 erasure/src/orderedTypeAlt.mli
 erasure/src/orderedTypeEx.ml

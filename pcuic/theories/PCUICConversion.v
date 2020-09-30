@@ -337,6 +337,8 @@ Proof.
       repeat constructor.
 Qed.
 
+Derive Signature for conv.
+
 Lemma conv_Prod_l_inv {cf:checker_flags} (Σ : global_env_ext) Γ na dom codom T :
   wf Σ ->
   Σ ;;; Γ |- tProd na dom codom = T ->
@@ -1273,6 +1275,32 @@ Section Inversions.
       + eapply conv_cumul. eapply conv_Prod_l. assumption.
   Qed.
 
+  Lemma Prod_conv_cum_inv : 
+    forall {Γ leq na1 na2 A1 A2 B1 B2},
+    conv_cum leq Σ Γ (tProd na1 A1 B1) (tProd na2 A2 B2) ->
+      ∥ Σ ;;; Γ |- A1 = A2 ∥ /\
+      conv_cum leq Σ (Γ,, vass na1 A1) B1 B2.
+  Proof.
+    intros *; destruct leq; simpl.
+    - intros [[na1' [A1' [B1' [[Hred eqA] eqB]]]]%conv_Prod_r_inv]. 2: assumption.
+      apply invert_red_prod in Hred. 2: assumption.
+      destruct Hred as [? [? [[[= ? ?%eq_sym ?%eq_sym] redA] redB]]].
+      subst.
+      assert (Σ;;;Γ |- A1 = A2) as HA by
+        (etransitivity; [apply red_conv, redA | assumption]).
+      split; constructor. 1: assumption.
+      etransitivity. 1: apply red_conv, redB. 
+      eapply conv_conv_ctx. 1,2 : eassumption.
+      apply ctx_rel_vass. 1: reflexivity.
+      now constructor.
+    - intros [[eqA cumB]%cumul_Prod_Prod_inv]. 2: assumption.
+      split; constructor. 1: assumption.
+      eapply cumul_conv_ctx. 1,2: eassumption.
+      apply ctx_rel_vass. 1: reflexivity.
+      now constructor.  
+  Qed.
+
+
   Lemma cumul_Case_c :
     forall Γ indn p brs u v,
       Σ ;;; Γ |- u = v ->
@@ -1919,11 +1947,10 @@ Section Inversions.
 
   Lemma Lambda_conv_cum_inv :
     forall leq Γ na1 na2 A1 A2 b1 b2,
-      wf_local Σ Γ ->
       conv_cum leq Σ Γ (tLambda na1 A1 b1) (tLambda na2 A2 b2) ->
       ∥ Σ ;;; Γ |- A1 = A2 ∥ /\ conv_cum leq Σ (Γ ,, vass na1 A1) b1 b2.
   Proof.
-    intros * wfΓ.
+    intros *.
     destruct leq; simpl in *.
     - destruct 1.
       eapply conv_alt_red in X as [l [r [[redl redr] eq]]].

@@ -185,19 +185,16 @@ Definition erases_constant_body (Σ : global_env_ext) (cb : constant_body) (cb' 
   | _, _ => False
   end.
 
-Definition erases_one_inductive_body (Σ : global_env_ext) (npars : nat) (arities : context) (oib : one_inductive_body) (oib' : E.one_inductive_body) :=
-  let decty := option_get ([], tRel 0) (decompose_prod_n_assum [] npars oib.(ind_type)) in
-  let '(params, arity) := decty in
-  let projctx := arities ,,, params ,, vass nAnon oib.(ind_type) in
-  Forall2 (fun '((i,t), n) '((i',t'), n') => erases Σ arities t t' /\ n = n' /\ i = i') oib.(ind_ctors) oib'.(E.ind_ctors) /\
-  Forall2 (fun '(i,t) '(i',t') => erases Σ [] t t' /\ i = i') oib.(ind_projs) oib'.(E.ind_projs) /\
+Definition erases_one_inductive_body (oib : one_inductive_body) (oib' : E.one_inductive_body) :=
+  Forall2 (fun '((i,t), n) '(i', n') => n = n' /\ i = i') oib.(ind_ctors) oib'.(E.ind_ctors) /\
+  Forall2 (fun '(i,t) i' => i = i') oib.(ind_projs) oib'.(E.ind_projs) /\
   oib'.(E.ind_name) = oib.(ind_name) /\
   oib'.(E.ind_kelim) = oib.(ind_kelim).
 
-Definition erases_mutual_inductive_body (Σ : global_env_ext) (mib : mutual_inductive_body) (mib' : E.mutual_inductive_body) :=
+Definition erases_mutual_inductive_body (mib : mutual_inductive_body) (mib' : E.mutual_inductive_body) :=
   let bds := mib.(ind_bodies) in
   let arities := arities_context bds in
-  Forall2 (erases_one_inductive_body Σ #|ind_params mib| arities) bds (mib'.(E.ind_bodies)) /\
+  Forall2 erases_one_inductive_body bds (mib'.(E.ind_bodies)) /\
   mib.(ind_npars) = mib'.(E.ind_npars).
 
 Inductive erases_global_decls : global_env -> E.global_declarations -> Prop :=
@@ -206,8 +203,8 @@ Inductive erases_global_decls : global_env -> E.global_declarations -> Prop :=
     erases_constant_body (Σ, cst_universes cb) cb cb' ->
     erases_global_decls Σ Σ' ->
     erases_global_decls ((kn, ConstantDecl cb) :: Σ) ((kn, E.ConstantDecl cb') :: Σ')
-| erases_global_ind Σ univs mib mib' kn Σ' :
-    erases_mutual_inductive_body (Σ, univs) mib mib' ->
+| erases_global_ind Σ mib mib' kn Σ' :
+    erases_mutual_inductive_body mib mib' ->
     erases_global_decls Σ Σ' ->
     erases_global_decls ((kn, InductiveDecl mib) :: Σ) ((kn, E.InductiveDecl mib') :: Σ').
 

@@ -135,8 +135,7 @@ Record mutual_inductive_entry := {
 
 Record context_decl := {
   decl_name : name ;
-  decl_body : option term ;
-  (* decl_type : term *) }.
+  decl_body : option term }.
 
 (** Local (de Bruijn) variable binding *)
 
@@ -154,8 +153,7 @@ Definition context := list context_decl.
 
 Definition map_decl f (d : context_decl) :=
   {| decl_name := d.(decl_name);
-     decl_body := option_map f d.(decl_body);
-     (* decl_type := f d.(decl_type) *) |}.
+     decl_body := option_map f d.(decl_body) |}.
 
 Definition map_context f c :=
   List.map (map_decl f) c.
@@ -171,12 +169,9 @@ Notation " Γ ,, d " := (snoc Γ d) (at level 20, d at next level).
 (** See [one_inductive_body] from [declarations.ml]. *)
 Record one_inductive_body : Set := {
   ind_name : ident;
-  (* ind_type : term; (* Closed arity *) *)
   ind_kelim : sort_family; (* Top allowed elimination sort *)
-  ind_ctors : list (ident * term (* Under context of arities of the mutual inductive *)
-                    * nat (* arity, w/o lets, w/o parameters *));
-  ind_projs : list (ident * term) (* names and types of projections, if any.
-                                     Type under context of params and inductive object *) }.
+  ind_ctors : list (ident * nat (* arity, w/o lets, w/o parameters *));
+  ind_projs : list (ident) (* names of projections, if any. *) }.
 
 (** See [mutual_inductive_body] from [declarations.ml]. *)
 Record mutual_inductive_body := {
@@ -184,9 +179,7 @@ Record mutual_inductive_body := {
   ind_bodies : list one_inductive_body }.
 
 (** See [constant_body] from [declarations.ml] *)
-Record constant_body := {
-    (* cst_type : term; *)
-    cst_body : option term }.
+Record constant_body := { cst_body : option term }.
 
 Inductive global_decl :=
 | ConstantDecl : constant_body -> global_decl

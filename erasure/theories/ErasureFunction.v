@@ -525,7 +525,6 @@ Proof.
     eapply p. eauto.
   - clear E. todo "erasure cofix"%string.
 Qed.
-Print Assumptions erases_erase.
 
 Lemma erase_Some_typed {Σ wfΣ Γ wfΓ t r} :
   erase Σ wfΣ Γ wfΓ t = Checked r -> exists T, ∥Σ ;;; Γ |- t : T∥.
@@ -556,28 +555,20 @@ Definition lift_opt_typing {A} (a : option A) (e : type_error) : typing_result A
   | None => raise e
   end.
 
-Definition erase_one_inductive_body Σ wfΣ npars arities Har
-           (oib : one_inductive_body) : typing_result E.one_inductive_body :=
-  decty <- lift_opt_typing (decompose_prod_n_assum [] npars oib.(ind_type))
-        (NotAnInductive oib.(ind_type)) ;;
-  let '(params, arity) := decty in
-  type <- erase Σ wfΣ [] wf_local_nil oib.(ind_type) ;;
-  ctors <- monad_map (fun '(x, y, z) => y' <- erase Σ wfΣ arities Har y;; ret (x, y', z)) oib.(ind_ctors);;
-  let projctx := arities ,,, params ,, vass nAnon oib.(ind_type) in
-  projs <- monad_map (fun '(x, y) => y' <- erase Σ wfΣ [] wf_local_nil y;; ret (x, y')) oib.(ind_projs);;
-  ret {| E.ind_name := oib.(ind_name);
-         E.ind_kelim := oib.(ind_kelim);
-         E.ind_ctors := ctors;
-         E.ind_projs := projs |}.
+Definition erase_one_inductive_body (oib : one_inductive_body) : E.one_inductive_body :=
+  let ctors := map (fun '(x, y, z) => (x, z)) oib.(ind_ctors) in
+  let projs := map (fun '(x, y) => x) oib.(ind_projs) in
+  {| E.ind_name := oib.(ind_name);
+     E.ind_kelim := oib.(ind_kelim);
+     E.ind_ctors := ctors;
+     E.ind_projs := projs |}.
 
-Program Definition erase_mutual_inductive_body Σ wfΣ
-           (mib : mutual_inductive_body) (Hm :   ∥ wf_local Σ (arities_context (ind_bodies mib)) ∥)
-: typing_result E.mutual_inductive_body :=
+Program Definition erase_mutual_inductive_body (mib : mutual_inductive_body) : E.mutual_inductive_body :=
   let bds := mib.(ind_bodies) in
   let arities := arities_context bds in
-  bodies <- monad_map (erase_one_inductive_body Σ wfΣ mib.(ind_npars) arities _) bds ;;
-  ret {| E.ind_npars := mib.(ind_npars);
-         E.ind_bodies := bodies; |}.
+  let bodies := map erase_one_inductive_body bds in
+  {| E.ind_npars := mib.(ind_npars);
+     E.ind_bodies := bodies; |}.
 
 Program Fixpoint erase_global_decls Σ : ∥ wf Σ ∥ -> typing_result E.global_declarations := fun wfΣ =>
   match Σ with
@@ -587,7 +578,7 @@ Program Fixpoint erase_global_decls Σ : ∥ wf Σ ∥ -> typing_result E.global
     Σ' <- erase_global_decls Σ _;;
     ret ((kn, E.ConstantDecl cb') :: Σ')
   | (kn, InductiveDecl mib) :: Σ =>
-    mib' <- erase_mutual_inductive_body (Σ, ind_universes mib) _ mib _ ;;
+    let mib' := erase_mutual_inductive_body mib in
     Σ' <- erase_global_decls Σ _;;
     ret ((kn, E.InductiveDecl mib') :: Σ')
   end.
@@ -600,17 +591,8 @@ Next Obligation.
   sq. eapply PCUICWeakeningEnv.wf_extends. eauto. eexists [_]; reflexivity.
 Qed.
 Next Obligation.
-  sq. split. cbn.
-  eapply PCUICWeakeningEnv.wf_extends. eauto. eexists [_]; reflexivity.
-  now inversion X; subst.
-Qed.
-Next Obligation.
-  sq. inv X. cbn in *.
-  eapply PCUICSubstitution.wf_arities_context'; eauto.
-Qed.
-Next Obligation.
   sq. eapply PCUICWeakeningEnv.wf_extends. eauto. eexists [_]; reflexivity.
-Qed.
+Defined.
 
 Program Definition erase_global Σ : ∥wf Σ∥ -> _:=
   fun wfΣ  =>
@@ -648,45 +630,22 @@ Proof.
            rewrite E1. cbn. econstructor.
       * eapply IHΣ. unfold erase_global. rewrite E3. reflexivity.
     + inv H. inv E. inv E2.
-      unfold erase_mutual_inductive_body, bind in H0. cbn in H0.
-      destruct ?; try congruence. inv H0.
       econstructor.
-      * econstructor; cbn; eauto.
-        pose proof (Prelim.monad_map_All2 _ _ _ _ _ E).
-        eapply All2_Forall2.
-        eapply All2_impl. eassumption.
-
-        intros. cbn in H.
-        unfold erase_one_inductive_body, bind in H. cbn in H.
-        repeat destruct ?; try congruence.
-        inv H.
-        unfold erases_one_inductive_body. cbn. destruct ?; cbn.
-        (* unfold lift_opt_typing in E. *)
-        (* destruct decompose_prod_n_assum eqn:E6; inv E. cbn. *)
-        pose proof (Prelim.monad_map_All2 _ _ _ _ _ E4).
-        pose proof (Prelim.monad_map_All2 _ _ _ _ _ E5). repeat split; eauto.
-        -- eapply All2_Forall2.
-           eapply All2_impl_In. eassumption.
-           intros. destruct x0, p, y, p. cbn in *.
-           destruct ?; try congruence.
-           inv H1. split; eauto.
-
-           (* pose (t' := t). inv t'. cbn in *. *)
-           destruct (erase_Some_typed E6) as [? []].
-
-           eapply erases_erase. 2:eauto. eauto.
-        -- eapply All2_Forall2.
-           eapply All2_impl_In. eassumption.
-           intros. cbn in H1. destruct x0, y.
-           destruct ?; try congruence;
-             inv H1. split; eauto.
-
-           (* pose (t' := t). inv t'. cbn in *. *)
-           destruct (erase_Some_typed E6) as [? []].
-
-           eapply erases_erase.
-           2:{ eauto. } eauto.
-  * eapply IHΣ. unfold erase_global. rewrite E3. reflexivity.
+      2:{ simpl in H0. eapply IHΣ; eauto. unfold erase_global. rewrite H0. now simpl. }
+      destruct m. constructor; simpl; auto.
+      rewrite <- (map_id ind_bodies) at 1.
+      eapply Forall2_map. clear.
+      induction ind_bodies; constructor; auto.
+      destruct a; simpl. constructor; simpl.
+      rewrite <- (map_id ind_ctors) at 1.
+      eapply Forall2_map. clear.
+      induction ind_ctors; constructor; auto.
+      destruct a as [[id ty] nargs]; simpl; auto.
+      intuition auto.
+      rewrite <- (map_id ind_projs) at 1.
+      eapply Forall2_map.
+      clear. induction ind_projs; constructor; auto.
+      destruct a; auto.
 Qed.
 
 Lemma wf_ext_wf_squash {Σ} : wf_ext Σ -> ∥ wf Σ ∥.
@@ -708,3 +667,5 @@ Proof.
   eapply erase_global_correct, erases_global_erases_deps in HΣ'; eauto.
   eapply erases_correct; eauto.
 Qed.
+
+Print Assumptions erases_erase.

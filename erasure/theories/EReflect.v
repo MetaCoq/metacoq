@@ -1,3 +1,4 @@
+From MetaCoq.Template Require Import utils.
 From MetaCoq.Erasure Require Import EAst EInduction.
 From MetaCoq.PCUIC Require Import PCUICReflect.
 From Equations Require Import Equations.

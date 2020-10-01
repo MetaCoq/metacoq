@@ -1,5 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Export utils BasicAst Universes.
+From MetaCoq.Template Require Export BasicAst Universes.
+From MetaCoq.Template Require Import utils.
 
 (** * Extracted terms
 

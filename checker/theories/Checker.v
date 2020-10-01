@@ -1,13 +1,8 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import Bool String List Program ZArith.
-From MetaCoq.Template Require Import config Ast AstUtils monad_utils utils
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import config Ast AstUtils utils
      LiftSubst UnivSubst uGraph Typing.
-Import MonadNotation.
 
 (** * Coq type-checker for kernel terms
-
-  *WIP*
 
   Implemets [typecheck_program] which returns an error and
   on success should guarantee that the term has the given type.
@@ -18,7 +13,10 @@ Import MonadNotation.
   This file implements reduction with a stack machine [reduce_stack],
   conversion/cumulativity with the first-order fast-path heuristic [isconv]
   that are used to type-check terms in reasonable time. *)
-Set Asymmetric Patterns.
+
+
+Local Notation " () " := Datatypes.unit : type_scope.
+Local Notation " () " := tt.
 
 Module RedFlags.
 
@@ -130,7 +128,7 @@ Section Reduce.
         | d :: ds => aux (vass d.(dname) d.(dtype) :: acc) ds
         end
     in aux [] l.
-  Close Scope string_scope.
+
   Definition map_constr_with_binders (f : context -> term -> term) Γ (t : term) : term :=
     match t with
     | tRel i => t
@@ -453,16 +451,16 @@ Inductive type_error :=
 
 Definition string_of_type_error (e : type_error) : string :=
   match e with
-  | UnboundRel n => "Unboound rel " ++ string_of_nat n
-  | UnboundVar id => "Unbound var " ++ id
-  | UnboundMeta m => "Unbound meta " ++ string_of_nat m
-  | UnboundEvar ev => "Unbound evar " ++ string_of_nat ev
-  | UndeclaredConstant c => "Undeclared constant " ++ string_of_kername c
-  | UndeclaredInductive c => "Undeclared inductive " ++ string_of_kername (inductive_mind c)
-  | UndeclaredConstructor c i => "Undeclared inductive " ++ string_of_kername (inductive_mind c)
-  | NotConvertible Γ t u t' u' => "Terms are not convertible: " ++
-      string_of_term t ++ " " ++ string_of_term u ++ " after reduction: " ++
-      string_of_term t' ++ " " ++ string_of_term u'
+  | UnboundRel n => "Unboound rel " ^ string_of_nat n
+  | UnboundVar id => "Unbound var " ^ id
+  | UnboundMeta m => "Unbound meta " ^ string_of_nat m
+  | UnboundEvar ev => "Unbound evar " ^ string_of_nat ev
+  | UndeclaredConstant c => "Undeclared constant " ^ string_of_kername c
+  | UndeclaredInductive c => "Undeclared inductive " ^ string_of_kername (inductive_mind c)
+  | UndeclaredConstructor c i => "Undeclared inductive " ^ string_of_kername (inductive_mind c)
+  | NotConvertible Γ t u t' u' => "Terms are not convertible: " ^
+      string_of_term t ^ " " ^ string_of_term u ^ " after reduction: " ^
+      string_of_term t' ^ " " ^ string_of_term u'
   | NotASort t => "Not a sort"
   | NotAProduct t t' => "Not a product"
   | NotAnInductive t => "Not an inductive"
@@ -508,7 +506,7 @@ Definition check_conv `{checker_flags} {F:Fuel} := check_conv_gen Conv.
 
 Definition is_graph_of_global_env_ext `{checker_flags} Σ G :=
   is_graph_of_uctx G (global_ext_uctx Σ).
-Local Open Scope string_scope.
+
 Lemma conv_spec : forall `{checker_flags} {F:Fuel} Σ G Γ t u,
     is_graph_of_global_env_ext Σ G ->
     Σ ;;; Γ |- t = u <~> check_conv (fst Σ) G Γ t u = Checked ().
@@ -1036,7 +1034,7 @@ End InferOk.
 Extract Constant infer_type_correct => "(fun f sigma ctx t x -> assert false)".
 Extract Constant infer_correct => "(fun f sigma ctx t ty -> assert false)".
 
-Definition default_fuel : Fuel := 2 ^ 14.
+Definition default_fuel : Fuel := Nat.pow 2 14.
 
 Fixpoint fresh id (env : global_env) : bool :=
   match env with

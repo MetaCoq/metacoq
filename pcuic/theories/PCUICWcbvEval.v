@@ -1,18 +1,25 @@
-(* Distributed under the terms of the MIT license.   *)
-Set Warnings "-notation-overridden".
-
-From Coq Require Import Arith Bool List Lia CRelationClasses.
+(* Distributed under the terms of the MIT license. *)
+From Coq Require Import CRelationClasses.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst
      PCUICUnivSubst PCUICTyping PCUICReduction PCUICClosed PCUICCSubst 
      PCUICSubstitution PCUICInversion PCUICSR.
-Require Import String.
-Local Open Scope string_scope.
-Set Asymmetric Patterns.
 
 Require Import ssreflect ssrbool.
-
 From Equations Require Import Equations.
+
+(** * Weak-head call-by-value evaluation strategy.
+
+  The [wcbveval] inductive relation specifies weak cbv evaluation.  It
+  is shown to be a subrelation of the 1-step reduction relation from
+  which conversion is defined. Hence two terms that reduce to the same
+  wcbv head normal form are convertible.
+
+  This reduction strategy is supposed to mimick at the Coq level the
+  reduction strategy of ML programming languages. It is used to state
+  the extraction conjecture that can be applied to Coq terms to produce
+  (untyped) terms where all proofs are erased to a dummy value. *)
+
 
 Local Ltac inv H := inversion H; subst.
 
@@ -28,19 +35,6 @@ Ltac solve_discr :=
     change t with (mkApps t []) in H ;
     eapply mkApps_eq_inj in H as [? ?]; [|easy|easy]; subst; try intuition congruence; try noconf H
   end.
-
-
-(** * Weak-head call-by-value evaluation strategy.
-
-  The [wcbveval] inductive relation specifies weak cbv evaluation.  It
-  is shown to be a subrelation of the 1-step reduction relation from
-  which conversion is defined. Hence two terms that reduce to the same
-  wcbv head normal form are convertible.
-
-  This reduction strategy is supposed to mimick at the Coq level the
-  reduction strategy of ML programming languages. It is used to state
-  the extraction conjecture that can be applied to Coq terms to produce
-  (untyped) terms where all proofs are erased to a dummy value. *)
 
 (** ** Big step version of weak cbv beta-zeta-iota-fix-delta reduction. *)
 
@@ -618,15 +612,15 @@ Section Wcbv.
       move/andP: IHev1 => [Hcons Hargs]. solve_all.
       eapply All_nth_error in Hargs; eauto.
     - eapply IHev3.
-      apply Bool.andb_true_iff.
+      apply andb_true_iff.
       split; [|easy].
       specialize (IHev1 Hc).
       eapply closedn_mkApps_inv in IHev1.
-      apply Bool.andb_true_iff in IHev1.
+      apply andb_true_iff in IHev1.
       eapply closedn_mkApps; [|easy].
       eapply closed_unfold_fix; [easy|].
       now rewrite closed_unfold_fix_cunfold_eq.
-    - apply Bool.andb_true_iff.
+    - apply andb_true_iff.
       split; [|easy].
       solve_all.
     - eapply IHev. move/closedn_mkApps_inv/andP: Hc' => [Hfix Hargs].
@@ -689,119 +683,171 @@ Section Wcbv.
       depelim ev;
         try solve [apply IHargs in ev1 as (? & ?); solve_discr].
       * apply IHargs in ev1 as (argsv & ->).
-        exists (argsv ++ [a'])%list.
+        exists (argsv ++ [a']).
         now rewrite <- mkApps_nested.
       * easy.
   Qed.
- 
+  
+  Set Equations With UIP.
+  
+  Scheme Induction for le Sort Prop.
+  
+  Lemma le_irrel n m (p q : n <= m) : p = q.
+  Proof.
+    revert q.
+    now induction p using le_ind_dep; intros q; depelim q.
+  Qed.
+
   Unset SsrRewrite.
+  Lemma eval_unique_sig {t v v'} :
+    forall (ev1 : eval t v) (ev2 : eval t v'),
+      {| pr1 := v; pr2 := ev1 |} = {| pr1 := v'; pr2 := ev2 |}.
+  Proof.
+    Local Ltac go :=
+      solve [
+          repeat
+            match goal with
+            | [H: _, H' : _ |- _] =>
+              specialize (H _ H');
+              try solve [apply (f_equal pr1) in H; cbn in *; solve_discr];
+              noconf H
+            end; easy].
+    intros ev.
+    revert v'.
+    depind ev; intros v' ev'.
+    - depelim ev'; go.
+    - depelim ev'; go.
+    - depelim ev'; try go.
+      pose proof (PCUICWeakeningEnv.declared_constant_inj _ _ isdecl isdecl0) as <-.
+      assert (body0 = body) as -> by congruence.
+      assert (e0 = e) as -> by now apply uip.
+      assert (isdecl0 = isdecl) as -> by now apply uip.
+      now specialize (IHev _ ev'); noconf IHev.
+    - depelim ev'; try go.
+      pose proof (PCUICWeakeningEnv.declared_constant_inj _ _ isdecl isdecl0) as <-.
+      assert (isdecl0 = isdecl) as -> by now apply uip.
+      now assert (e0 = e) as -> by now apply uip.
+    - depelim ev'; try go.
+      + specialize (IHev1 _ ev'1); noconf IHev1.
+        apply (f_equal pr1) in IHev1 as apps_eq; cbn in *.
+        apply mkApps_eq_inj in apps_eq as (eq1 & eq2); try easy.
+        noconf eq1.
+        noconf eq2.
+        noconf IHev1.
+        now specialize (IHev2 _ ev'2); noconf IHev2.
+      + apply eval_mkApps_tCoFix in ev1 as H.
+        destruct H as (? & ?); solve_discr.
+    - depelim ev'; try go.
+      + specialize (IHev1 _ ev'1).
+        pose proof (mkApps_eq_inj (f_equal pr1 IHev1) eq_refl eq_refl) as (? & <-).
+        noconf H.
+        noconf IHev1.
+        assert (a0 = a) as -> by congruence.
+        assert (e0 = e) as -> by now apply uip.
+        now specialize (IHev2 _ ev'2); noconf IHev2.
+      + apply eval_mkApps_tCoFix in ev1 as H; destruct H; solve_discr.
+    - depelim ev'; try go.
+      + specialize (IHev1 _ ev'1).
+        pose proof (mkApps_eq_inj (f_equal pr1 IHev1) eq_refl eq_refl) as (? & <-).
+        noconf H.
+        noconf IHev1.
+        specialize (IHev2 _ ev'2); noconf IHev2.
+        assert (fn0 = fn) as -> by congruence.
+        assert (e0 = e) as -> by now apply uip.
+        now specialize (IHev3 _ ev'3); noconf IHev3.
+      + specialize (IHev1 _ ev'1).
+        pose proof (mkApps_eq_inj (f_equal pr1 IHev1) eq_refl eq_refl) as (? & <-).
+        noconf H.
+        exfalso; rewrite e0 in e.
+        noconf e.
+        lia.
+      + specialize (IHev1 _ ev'1).
+        noconf IHev1.
+        exfalso.
+        rewrite isFixApp_mkApps in i by easy.
+        cbn in *.
+        now rewrite Bool.orb_true_r in i.
+    - depelim ev'; try go.
+      + specialize (IHev1 _ ev'1).
+        pose proof (mkApps_eq_inj (f_equal pr1 IHev1) eq_refl eq_refl) as (? & <-).
+        noconf H.
+        exfalso; rewrite e0 in e.
+        noconf e.
+        lia.
+      + specialize (IHev1 _ ev'1).
+        pose proof (mkApps_eq_inj (f_equal pr1 IHev1) eq_refl eq_refl) as (? & <-).
+        noconf H.
+        noconf IHev1.
+        specialize (IHev2 _ ev'2); noconf IHev2.
+        assert (narg0 = narg) as -> by congruence.
+        assert (fn0 = fn) as -> by congruence.
+        assert (e0 = e) as -> by now apply uip.
+        now assert (l0 = l) as -> by now apply le_irrel.
+      + specialize (IHev1 _ ev'1).
+        noconf IHev1.
+        exfalso.
+        rewrite isFixApp_mkApps in i by easy.
+        cbn in *.
+        now rewrite Bool.orb_true_r in i.
+    - depelim ev'; try go.
+      + apply eval_mkApps_tCoFix in ev'1 as H; destruct H; solve_discr.
+      + apply mkApps_eq_inj in e' as H'; auto.
+        destruct H' as (H' & <-).
+        noconf H'.
+        assert (narg0 = narg) as -> by congruence.
+        assert (fn0 = fn) as -> by congruence.
+        assert (e' = eq_refl) as -> by now apply uip.
+        assert (e0 = e) as -> by now apply uip.
+        cbn in *; subst.
+        now specialize (IHev _ ev'); noconf IHev.
+    - depelim ev'; try go.
+      + exfalso; apply eval_mkApps_tCoFix in ev'1 as (? & ?); solve_discr.
+      + apply mkApps_eq_inj in e1 as H'; auto.
+        destruct H' as (H' & <-).
+        noconf H'.
+        assert (narg0 = narg) as -> by congruence.
+        assert (fn0 = fn) as -> by congruence.
+        assert (e1 = eq_refl) as -> by now apply uip.
+        assert (e0 = e) as -> by now apply uip.
+        cbn in *; subst.
+        now specialize (IHev _ ev'); noconf IHev.
+    - depelim ev'; try go.
+      + specialize (IHev1 _ ev'1); noconf IHev1.
+        exfalso.
+        rewrite isFixApp_mkApps in i by easy.
+        cbn in *.
+        now rewrite Bool.orb_true_r in i.
+      + specialize (IHev1 _ ev'1); noconf IHev1.
+        exfalso.
+        rewrite isFixApp_mkApps in i by easy.
+        cbn in *.
+        now rewrite Bool.orb_true_r in i.
+      + specialize (IHev1 _ ev'1); noconf IHev1.
+        specialize (IHev2 _ ev'2); noconf IHev2.
+        now assert (i0 = i) as -> by now apply uip.
+    - depelim ev'; try go.
+      now assert (i0 = i) as -> by now apply uip.
+  Qed.
+  
   Lemma eval_deterministic {t v v'} :
     eval t v ->
     eval t v' ->
     v = v'.
   Proof.
-  intros ev.
-  revert v'.
-  depind ev; intros v' ev'.
-  - depelim ev'.
-    + apply IHev1 in ev'1.
-      apply IHev2 in ev'2.
-      subst.
-      noconf ev'1.
-      now apply IHev3 in ev'3.
-    + apply IHev1 in ev'1; solve_discr.
-    + apply IHev1 in ev'1; solve_discr.
-    + apply IHev1 in ev'1; subst; easy.
-    + easy.
-  - depelim ev'.
-    + apply IHev1 in ev'1.
-      subst.
-      now apply IHev2 in ev'2.
-    + easy.
-  - depelim ev'.
-    + rewrite (PCUICWeakeningEnv.declared_constant_inj _ _ isdecl isdecl0) in *.
-      replace body0 with body in * by congruence.
-      now apply IHev in ev'.
-    + now rewrite (PCUICWeakeningEnv.declared_constant_inj _ _ isdecl isdecl0) in *.
-    + easy.
-  - depelim ev'.
-    + now rewrite (PCUICWeakeningEnv.declared_constant_inj _ _ isdecl isdecl0) in *.
-    + easy.
-    + easy.
-  - depelim ev'.
-    + apply IHev1 in ev'1.
-      apply mkApps_eq_inj in ev'1; try easy.
-      depelim ev'1.
-      noconf H.
-      noconf H0.
-      now apply IHev2 in ev'2.
-    + apply eval_mkApps_tCoFix in ev1 as (? & ?); solve_discr.
-    + easy.
-  - depelim ev'.
-    + apply IHev1 in ev'1.
-      apply mkApps_eq_inj in ev'1 as (ev'1 & <-); try easy.
-      noconf ev'1.
-      replace a0 with a in * by congruence.
-      now apply IHev2 in ev'2.
-    + apply eval_mkApps_tCoFix in ev1 as (? & ?); solve_discr.
-    + easy.
-  - depelim ev'.
-    + apply IHev1 in ev'1; solve_discr.
-    + apply IHev1 in ev'1.
-      solve_discr.
-      rewrite e0 in e. noconf e.
-      apply IHev2 in ev'2. subst.
-      now apply IHev3 in ev'3.
-    + apply IHev1 in ev'1; solve_discr.
-      apply IHev2 in ev'2; subst.
-      rewrite e0 in e. noconf e. lia.
-    + apply IHev1 in ev'1.
-      subst f'.
-      rewrite isFixApp_mkApps in i by easy.
-      cbn in *.
-      now rewrite Bool.orb_true_r in i.
-    + easy.
-  - depelim ev'.
-    + apply IHev1 in ev'1; solve_discr.
-    + apply IHev1 in ev'1; solve_discr.
-      apply IHev2 in ev'2; subst.
-      rewrite e0 in e; noconf e. lia.
-    + apply IHev1 in ev'1; solve_discr.
-      now apply IHev2 in ev'2; subst.
-    + apply IHev1 in ev'1; subst.
-      rewrite isFixApp_mkApps in i by easy.
-      cbn in *.
-      now rewrite Bool.orb_true_r in i.
-    + easy.
-  - depelim ev'.
-    + apply eval_mkApps_tCoFix in ev'1 as (? & ?); solve_discr.
-    + solve_discr.
-      rewrite e0 in e.
-      noconf e.
-      now apply IHev in ev'.
-    + easy.
-  - depelim ev'.
-    + apply eval_mkApps_tCoFix in ev'1 as (? & ?); solve_discr.
-    + solve_discr.
-      rewrite e0 in e.
-      noconf e.
-      now apply IHev in ev'.
-    + easy.
-  - depelim ev'.
-    + now apply IHev1 in ev'1; subst.
-    + apply IHev1 in ev'1; subst.
-      rewrite isFixApp_mkApps in i by easy.
-      cbn in *.
-      now rewrite Bool.orb_true_r in i.
-    + apply IHev1 in ev'1; subst.
-      rewrite isFixApp_mkApps in i by easy.
-      cbn in *.
-      now rewrite Bool.orb_true_r in i.
-    + apply IHev1 in ev'1; subst.
-      now apply IHev2 in ev'2; subst.
-    + easy.
-  - now depelim ev'.
+    intros ev ev'.
+    pose proof (eval_unique_sig ev ev').
+    now noconf H.
   Qed.
+
+  Lemma eval_unique {t v} :
+    forall (ev1 : eval t v) (ev2 : eval t v),
+      ev1 = ev2.
+  Proof.
+    intros ev ev'.
+    pose proof (eval_unique_sig ev ev').
+    now noconf H.
+  Qed.
+  
   Set SsrRewrite.
 
   Lemma eval_LetIn {n b ty t v} :
@@ -853,10 +899,11 @@ Section Wcbv.
 
 End Wcbv.
 
+Arguments eval_unique_sig {_ _ _ _}.
 Arguments eval_deterministic {_ _ _ _}.
+Arguments eval_unique {_ _ _}.
 
 (** Well-typed closed programs can't go wrong: they always evaluate to a value. *)
 
 Conjecture closed_typed_wcbeval : forall {cf : checker_flags} (Σ : global_env_ext) t T,
     Σ ;;; [] |- t : T -> ∑ u, eval (fst Σ) t u.
-

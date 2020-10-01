@@ -1,6 +1,5 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import Bool List Arith CMorphisms Lia.
+(* Distributed under the terms of the MIT license. *)
+From Coq Require Import CMorphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst.
@@ -9,30 +8,6 @@ Require Import ssreflect.
 From Equations.Prop Require Import DepElim.
 Set Equations With UIP.
 
-
-Local Open Scope type_scope.
-
-Section CRelationLemmas.
-  Local Set Universe Polymorphism.
-  Context {A : Type} (R : crelation A).
-
-  Lemma flip_Reflexive : Reflexive R -> Reflexive (flip R).
-  Proof.
-    intros HR x. unfold flip. apply reflexivity.
-  Qed.
-
-  Lemma flip_Symmetric : Symmetric R -> Symmetric (flip R).
-  Proof.
-    intros HR x y. unfold flip. apply symmetry.
-  Qed.
-
-  Lemma flip_Transitive : Transitive R -> Transitive (flip R).
-  Proof.
-    intros HR x y z xy yz.
-    unfold flip in *. now transitivity y.
-  Qed.
-
-End CRelationLemmas.
 
 Definition R_universe_instance R :=
   fun u u' => Forall2 R (List.map Universe.make u) (List.map Universe.make u').
@@ -1006,21 +981,6 @@ Proof.
     intro. rtoProp. split; tas. split; eapply X0; tea.
 Qed.
 
-Lemma equiv_reflectT P (b : bool) : (P -> b) -> (b -> P) -> reflectT P b.
-Proof.
-  intros. destruct b; constructor; auto.
-Qed.
-
-Lemma reflectT_subrelation {A} {R} {r : A -> A -> bool} : (forall x y, reflectT (R x y) (r x y)) -> subrelation R r.
-Proof.
-  intros. intros x y h. destruct (X x y); auto.
-Qed.
-
-Lemma reflectT_subrelation' {A} {R} {r : A -> A -> bool} : (forall x y, reflectT (R x y) (r x y)) -> subrelation r R.
-Proof.
-  intros. intros x y h. destruct (X x y); auto. discriminate.
-Qed.
-
 Lemma reflect_eq_term_upto_univ Σ equ lequ (Re Rle : Universe.t -> Universe.t -> Prop) napp :
   (forall u u', reflectT (Re u u') (equ u u')) ->
   (forall u u', reflectT (Rle u u') (lequ u u')) ->
@@ -1795,14 +1755,6 @@ Proof.
     dependent destruction h1. reflexivity.
   - eapply decompose_app_notApp. eassumption.
   - reflexivity.
-Qed.
-
-(* TODO MOVE *)
-Instance subrelation_same :
-  forall A (R : A -> A -> Prop),
-    RelationClasses.subrelation R R.
-Proof.
-  intros A R x y h. assumption.
 Qed.
 
 Lemma R_global_instance_flip Σ gr napp

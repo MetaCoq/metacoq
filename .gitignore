@@ -217,8 +217,6 @@ checker/src/wf.mli
 /pcuic/src/pCUICRetyping.mli
 /pcuic/src/templateToPCUIC.ml.rej
 /pcuic/src/templateToPCUIC.mli.rej
-/pcuic/src/pCUICMetaTheory.ml
-/pcuic/src/pCUICMetaTheory.mli
 /checker/src/basicAst.ml
 /checker/src/basicAst.mli
 /checker/src/typingWf.ml
@@ -348,6 +346,8 @@ pcuic/src/pCUICReflect.ml
 pcuic/src/pCUICReflect.mli
 pcuic/src/pCUICUtils.ml
 pcuic/src/pCUICUtils.mli
+erasure/src/pCUICReduction.ml
+erasure/src/pCUICReduction.mli
 
 /pcuic/src/ssreflect.mli
 /_opam
@@ -359,6 +359,8 @@ pcuic/src/pCUICUtils.mli
 /erasure/src/pCUICSafeRetyping.mli
 /erasure/src/safeErasureFunction.ml
 /erasure/src/safeErasureFunction.mli
+erasure/src/pCUICInduction.ml
+erasure/src/pCUICInduction.mli
 erasure/src/mSetWeakList.ml
 erasure/src/mSetWeakList.mli
 erasure/src/utils.ml
@@ -395,3 +397,7 @@ vs.mli
 *.v.timing
 time-of-build.log
 time-of-build-pretty.log
+erasure/src/orderedTypeAlt.ml
+erasure/src/orderedTypeAlt.mli
+erasure/src/orderedTypeEx.ml
+erasure/src/orderedTypeEx.mli

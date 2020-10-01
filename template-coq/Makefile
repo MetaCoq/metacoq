@@ -26,6 +26,11 @@ install: Makefile.coq coq template-coq plugin
 	$(MAKE) -f Makefile.template install
 	$(MAKE) -f Makefile.plugin install
 
+uninstall: Makefile.coq coq template-coq plugin
+	$(MAKE) -f Makefile.coq uninstall
+	$(MAKE) -f Makefile.template uninstall
+	$(MAKE) -f Makefile.plugin uninstall
+
 html: all
 	$(MAKE) -f Makefile.coq html
 

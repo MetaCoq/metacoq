@@ -1,18 +1,18 @@
-(* Distributed under the terms of the MIT license.   *)
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Export utils Universes BasicAst
+     Environment EnvironmentTyping.
 
+(** * AST of the Polymorphic Cumulative Calculus of Inductive Constructions
 
-Require Import List. Import ListNotations.
-From MetaCoq.Template Require Export Universes BasicAst Environment.
+   This AST is a cleaned-up version of Coq's internal AST better suited for
+   reasoning.
+   In particular, it has binary applications and all terms are well-formed.
+   Casts are absent as well. *)
+
 
 Declare Scope pcuic.
 Delimit Scope pcuic with pcuic.
 Open Scope pcuic.
-
-(** * AST of the Polymorphic Cumulative Calculus of Inductive Constructions
-
-   This AST is a cleaned-up version of Coq's internal AST better suited for reasoning.
-   In particular, it has binary applications and all terms are well-formed.
-   Casts are absent as well. *)
 
 Inductive term :=
 | tRel (n : nat)
@@ -140,3 +140,6 @@ Record mutual_inductive_entry := {
 
   Module PCUICEnvironment := Environment PCUICTerm.
   Include PCUICEnvironment.
+
+  Module PCUICLookup := Lookup PCUICTerm PCUICEnvironment.
+  Include PCUICLookup.

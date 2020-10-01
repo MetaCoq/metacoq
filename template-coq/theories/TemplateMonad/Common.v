@@ -1,10 +1,8 @@
-From Coq Require Import Strings.String.
-From MetaCoq.Template Require Import Ast.
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import utils Ast.
 
-Set Universe Polymorphism.
-Set Universe Minimization ToSet.
-Set Primitive Projections.
-Set Printing Universes.
+Local Set Universe Polymorphism.
+
 
 (** Reduction strategy to apply, beware [cbv], [cbn] and [lazy] are _strong_. *)
  

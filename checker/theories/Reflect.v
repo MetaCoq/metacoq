@@ -1,14 +1,11 @@
-From Coq Require Import Ascii String Bool OrderedType Arith.
-From MetaCoq.Template Require Import utils AstUtils.
-From MetaCoq.Template Require Import BasicAst Ast Induction.
-Import List.ListNotations.
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import utils AstUtils BasicAst Ast Induction.
 Require Import ssreflect.
 
 From Equations Require Import Equations.
 
-Set Asymmetric Patterns.
+(** * Notion of reflection for Type-based properties *)
 
-(** Notion of reflection for Type-based properties *)
 
 Inductive reflectT (A : Type) : bool -> Type :=
 | ReflectT : A -> reflectT A true

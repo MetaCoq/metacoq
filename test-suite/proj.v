@@ -1,5 +1,5 @@
-Require Import MetaCoq.Template.All.
-Require Import String.
+From MetaCoq.Template Require Import utils All.
+
 Set Primitive Projections.
 
 Record Eq (A : Type) := { eq : A -> A -> bool; eq_proof : forall x y, eq x y = true <-> x = y }.

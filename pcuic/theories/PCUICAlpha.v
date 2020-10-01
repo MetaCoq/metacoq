@@ -1,16 +1,8 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import Bool List Lia.
-From MetaCoq.Template Require Import config monad_utils utils.
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-     PCUICLiftSubst PCUICTyping PCUICWeakening
-     PCUICCumulativity PCUICEquality
+     PCUICLiftSubst PCUICTyping PCUICWeakening PCUICCumulativity PCUICEquality
      PCUICContextConversion PCUICValidity.
-Derive Signature for red.
-Import MonadNotation.
-
-Local Set Keyed Unification.
-Set Equations With UIP.
 
 
 Section Alpha.
@@ -132,7 +124,7 @@ Section Alpha.
       nth_error (Γ ,,, Δ) i = Some d.
   Proof.
     intros Γ Δ i d h.
-    rewrite nth_error_app_lt.
+    rewrite nth_error_app_context_lt.
     - assumption.
     - apply nth_error_Some_length in h. assumption.
   Qed.

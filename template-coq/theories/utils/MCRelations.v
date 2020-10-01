@@ -1,3 +1,6 @@
+Require Import CRelationClasses.
+
+Infix "<~>" := iffT (at level 90).
 
 Notation "'precompose'" := (fun R f x y => R (f x) (f y)) (only parsing).
 

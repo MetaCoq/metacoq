@@ -1,17 +1,15 @@
-
-From Coq Require Import Bool List Program ZArith Lia.
-From MetaCoq.Template Require Import config utils monad_utils.
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils 
   PCUICClosed PCUICTyping PCUICWcbvEval PCUICLiftSubst PCUICInversion PCUICArities
   PCUICSR PCUICPrincipality PCUICGeneration PCUICSubstitution PCUICElimination
-  PCUICContextConversion PCUICConversion PCUICCanonicity.
-
+  PCUICContextConversion PCUICConversion PCUICCanonicity
+  PCUICSpine PCUICInductives PCUICInductiveInversion PCUICConfluence.
+Require Import ssreflect.
+From MetaCoq.Erasure Require Import Extract.
+  
+Require Import Program.
 From Equations Require Import Equations.
-Local Open Scope string_scope.
-Set Asymmetric Patterns.
-Import MonadNotation.
-Set Keyed Unification.
-Require Import Extract.
 
 Local Existing Instance extraction_checker_flags.
 
@@ -128,38 +126,39 @@ Proof.
            rewrite mkApps_nested in x.
            rewrite !decompose_app_mkApps in x; cbn; eauto. cbn in x. inv x.
         -- eapply IHl in X as [].  subst.
-           exists (x0 ++ [x])%list. now rewrite <- mkApps_nested.
-        -- exists (l ++ [N2])%list. now rewrite <- mkApps_nested.
+           exists (x0 ++ [x]). now rewrite <- mkApps_nested.
+        -- exists (l ++ [N2]). now rewrite <- mkApps_nested.
   - rewrite it_mkProd_or_LetIn_app in X.
     cbn in X.
     destruct x, decl_body; cbn in *.
     + dependent destruction X.
-      * unfold subst1. rewrite subst_it_mkProd_or_LetIn, subst_mkApps. eauto.
+      * unfold subst1. rewrite subst_it_mkProd_or_LetIn subst_mkApps. eauto.
       * destruct args using rev_ind; try rewrite <- mkApps_nested in x; cbn in x; inv x.
-      * eexists (l ++ [mkdecl decl_name (Some r) decl_type])%list, l0.
+      * eexists (l ++ [mkdecl decl_name (Some r) decl_type]), l0.
         now rewrite it_mkProd_or_LetIn_app.
-      * eexists (l ++ [mkdecl decl_name (Some t0) r])%list, l0.
+      * eexists (l ++ [mkdecl decl_name (Some t0) r]), l0.
         now rewrite it_mkProd_or_LetIn_app.
       * eapply IHL in X as (? & ? & ?). subst.
-        eexists (x ++ [mkdecl decl_name (Some t0) decl_type])%list, x0.
+        eexists (x ++ [mkdecl decl_name (Some t0) decl_type]), x0.
         rewrite it_mkProd_or_LetIn_app. reflexivity.
     + dependent destruction X.
       * eapply (f_equal decompose_app) in x.
         rewrite decompose_app_mkApps in x; cbn; eauto. cbn in x. inv x.
-      * eexists (l ++ [mkdecl decl_name None N1])%list, l0.
+      * eexists (l ++ [mkdecl decl_name None N1]), l0.
         now rewrite it_mkProd_or_LetIn_app.
       * eapply IHL in X as (? & ? & ?). subst.
-        eexists (x ++ [mkdecl decl_name None decl_type])%list, x0.
+        eexists (x ++ [mkdecl decl_name None decl_type]), x0.
         rewrite it_mkProd_or_LetIn_app. reflexivity.
 Qed.
 
 Lemma invert_it_Ind_red Σ L i u l t Γ : wf Σ ->
-  red Σ Γ (it_mkProd_or_LetIn L (mkApps (tInd i u) l)) t -> exists L' l', t = it_mkProd_or_LetIn L' (mkApps (tInd i u) l').
+  red Σ Γ (it_mkProd_or_LetIn L (mkApps (tInd i u) l)) t
+  -> exists L' l', t = it_mkProd_or_LetIn L' (mkApps (tInd i u) l').
 Proof.
-  intros. induction X0.
+  intros. induction X0 using red_rect'.
   - eauto.
   - destruct IHX0 as (? & ? & ->).
-    eapply invert_it_Ind_red1 in r as (? & ? & ?); eauto.
+    eapply invert_it_Ind_red1 in X1 as (? & ? & ?); eauto.
 Qed.
 
 Lemma it_mkProd_red_Arity Σ  c0 i u l : wf Σ ->
@@ -177,10 +176,11 @@ Proof.
   revert x0 x3 x1 x H0. induction x2 using rev_ind; intros.
   - cbn. assert (decompose_app (tProd x x0 x1) = decompose_app (mkApps (tInd i u) x3)) by now rewrite H0.
     rewrite decompose_app_mkApps in H; cbn; eauto. cbn in H. inv H.
-  - rewrite it_mkProd_or_LetIn_app in *. cbn in *.
+  - rewrite it_mkProd_or_LetIn_app in H0. cbn in *.
     destruct x, decl_body; cbn in H0; try now inv H0.
 Qed.
 
+(* if a constructor is a type or proof, it is a proof *)
 
 Lemma tConstruct_no_Type (Σ : global_env_ext) ind c u x1 : wf Σ ->
   isErasable Σ [] (mkApps (tConstruct ind c u) x1) ->
@@ -218,8 +218,8 @@ Proof.
     rewrite PCUICSubstitution.subst_it_mkProd_or_LetIn in c2.
     rewrite subst_mkApps in c2.
     cbn in c2.
-    rewrite PCUICUnivSubst.subst_instance_context_length in *.
-    rewrite app_length in *.
+    rewrite PCUICUnivSubst.subst_instance_context_length in c2.
+    rewrite app_length in c2.
     destruct (Nat.leb_spec (#|cshape_args s| + #|ind_params x3| + 0) (#|ind_bodies x3| - S (inductive_ind ind) + #|ind_params x3| + #|cshape_args s|)). 2:lia.
     clear H.
     assert ((#|ind_bodies x3| - S (inductive_ind ind) + #|ind_params x3| +
@@ -268,7 +268,46 @@ Proof.
       rewrite subst_it_mkProd_or_LetIn in c1.
       rewrite subst_mkApps in c1. eassumption.
   - exists x, x0. eauto.
-Qed.                       (* if a constructor is a type or proof, it is a proof *)
+Qed.                      
+
+(* if a cofixpoint is a type or proof, it is a proof *)
+
+Lemma tCoFix_no_Type (Σ : global_env_ext) mfix idx x1 : wf Σ ->
+  isErasable Σ [] (mkApps (tCoFix mfix idx) x1) ->
+  Is_proof Σ [] (mkApps (tCoFix mfix idx) x1).
+Proof.
+  intros wfΣ (? & ? & [ | (? & ? & ?)]).
+  - exfalso.
+    eapply PCUICValidity.inversion_mkApps in t as (? & ? & ?); eauto.
+    assert(c0 : Σ ;;; [] |- x <= x) by reflexivity.
+    revert c0 t0 i. generalize x at 1 3.
+    intros x2 c0 t0 i.
+    assert (HWF : isWfArity_or_Type Σ [] x2).
+    { eapply PCUICValidity.validity.
+      - eauto.
+      - eapply type_mkApps. 2:eauto. eauto.
+    }
+    eapply inversion_CoFix in t as (? & ? & ? & ? & ? & ? & ?) ; auto.
+    eapply invert_cumul_arity_r in c0; eauto.
+    eapply typing_spine_strengthen in t0; eauto.
+    eapply wf_cofixpoint_spine in i1; eauto.
+    2:eapply nth_error_all in a; eauto; simpl in a; eauto.
+    destruct i1 as (Γ' & T & DA & ind & u & indargs & (eqT & ck) & cum).
+    destruct (Nat.ltb #|x1| (context_assumptions Γ')).
+    eapply invert_cumul_arity_r_gen in c0; eauto.
+    destruct c0. destruct H as [[r] isA].
+    move: r; rewrite subst_it_mkProd_or_LetIn eqT; autorewrite with len.
+    rewrite expand_lets_mkApps subst_mkApps /=.
+    move/red_it_mkProd_or_LetIn_mkApps_Ind => [ctx' [args' eq]].
+    subst x4. now eapply it_mkProd_arity, isArity_mkApps in isA.
+    move: cum => [] Hx1; rewrite eqT expand_lets_mkApps subst_mkApps /= => cum.
+    eapply invert_cumul_arity_r_gen in c0; eauto.
+    destruct c0 as [? [[r] isA]].
+    eapply red_mkApps_tInd in r as [args' [eq _]]; auto.
+    subst x4.
+    now eapply isArity_mkApps in isA.
+  - eexists _, _; intuition eauto.
+Qed.
 
 Inductive conv_decls (Σ : global_env_ext) Γ (Γ' : context) : forall (x y : context_decl), Type :=
 | conv_vass : forall (na na' : name) (T T' : term),
@@ -287,14 +326,12 @@ Proof.
   constructor; auto.
 Qed.
 
-Hint Constructors red red1 : core.
-
 Lemma context_conversion_red1 (Σ : global_env_ext) Γ Γ' s t : wf Σ -> (* Σ ;;; Γ' |- t : T -> *)
    context_relation (@conv_decls Σ) Γ Γ' -> red1 Σ Γ s t -> red Σ Γ' s t.
 Proof.
   intros HΣ HT X0. induction X0 using red1_ind_all in Γ', HΣ, HT |- *; eauto.
-  all:eauto.
-  - econstructor. econstructor. econstructor.
+  all:pcuic.
+  - econstructor. econstructor.
     rewrite <- H.
     induction HT in i |- *; destruct i; eauto.
     now inv p.
@@ -316,15 +353,15 @@ Proof.
     eapply All_All2_refl. induction brs; eauto.
   -     eapply PCUICReduction.red_case; eauto. clear.
     eapply All_All2_refl. induction brs; eauto.
-  - destruct ind.
-    eapply PCUICReduction.red_case; eauto.
+  - destruct a.
+    eapply red_case; eauto.
     clear - HΣ X HT.
     induction X.
     + econstructor. destruct p. destruct p.
       split; eauto.
       eapply All_All2_refl.
       induction tl; eauto.
-    + econstructor.  repeat econstructor.
+    + econstructor. now split.
       eassumption.
   -
     eapply PCUICReduction.red_proj_c. eauto.
@@ -381,7 +418,7 @@ Qed.
 Lemma context_conversion_red (Σ : global_env_ext) Γ Γ' s t : wf Σ ->
   context_relation (@conv_decls Σ) Γ Γ' -> red Σ Γ s t -> red Σ Γ' s t.
 Proof.
-  intros. induction X1; eauto.
+  intros. induction X1 using red_rect'; eauto.
   etransitivity. eapply IHX1.
   eapply context_conversion_red1; eauto.
 Qed.

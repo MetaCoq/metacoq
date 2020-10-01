@@ -1,14 +1,7 @@
-(* Distributed under the terms of the MIT license.   *)
-
-Set Warnings "-notation-overridden".
-
-From Coq Require Import Bool String List Program BinPos Compare_dec.
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils.
 From MetaCoq.Template Require Import config utils AstUtils BasicAst Ast.
 
-Require Import String.
-Local Open Scope string_scope.
-Set Asymmetric Patterns.
 
 Fixpoint trans (t : PCUICAst.term) : Ast.term :=
   match t with

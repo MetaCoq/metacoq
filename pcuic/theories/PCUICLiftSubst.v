@@ -1,16 +1,7 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import List.
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction.
-From Coq Require Import BinPos Lia.
-Require Import PeanoNat.
-Import Nat.
-Require Import ssreflect.
-Require Import Morphisms.
-
-Notation "`=1`" := (pointwise_relation _ Logic.eq) (at level 80).
-Infix "=1" := (pointwise_relation _ Logic.eq) (at level 90).
+Require Import ssreflect Morphisms. Import Nat.
 
 (** * Lifting and substitution for the AST
 
@@ -18,7 +9,10 @@ Infix "=1" := (pointwise_relation _ Logic.eq) (at level 90).
   Definition of [closedn] (boolean) predicate for checking if
   a term is closed. *)
 
-Set Asymmetric Patterns.
+
+Notation "`=1`" := (pointwise_relation _ Logic.eq) (at level 80).
+Infix "=1" := (pointwise_relation _ Logic.eq) (at level 90).
+
 Derive Signature for Peano.le.
 
 (** Shift a renaming [f] by [k]. *)
@@ -135,7 +129,7 @@ Derive Signature for assumption_context.
 Fixpoint smash_context (Γ Γ' : context) : context :=
   match Γ' with
   | {| decl_body := Some b |} :: Γ' => smash_context (subst_context [b] 0 Γ) Γ'
-  | {| decl_body := None |} as d :: Γ' => smash_context (Γ ++ [d])%list Γ'
+  | {| decl_body := None |} as d :: Γ' => smash_context (Γ ++ [d]) Γ'
   | [] => Γ
   end.
 

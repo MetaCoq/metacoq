@@ -1,8 +1,6 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import Bool String List BinPos Compare_dec Arith Lia
-     Classes.CRelationClasses ProofIrrelevance ssreflect.
-From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
+(* Distributed under the terms of the MIT license. *)
+From Coq Require Import CRelationClasses ProofIrrelevance.
+From MetaCoq.Template Require Import config Universes utils BasicAst
      AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICSigmaCalculus 
@@ -14,11 +12,12 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICClosed PCUICSubstitution
      PCUICWeakening PCUICGeneration PCUICUtils PCUICCtxShape PCUICContexts
      PCUICArities.
-From Equations Require Import Equations.
 
+From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 Require Import Equations.Type.Relation_Properties.
 Require Import ssreflect.
+
 
 Derive Signature for ctx_inst.
   
@@ -1226,7 +1225,7 @@ Proof.
       destruct (nth_error_spec (all_rels Δ 0 #|Δ|) (#|Δ| + n - #|Δ'|));
       rewrite all_rels_length in l0 |- *. lia.
       assert (#|Δ| + n - #|Δ| = n) as -> by lia.
-      constructor. lia.
+      reflexivity. lia.
     **
       elim: leb_spec_Set => Hle.
       destruct (nth_error_spec (all_rels Δ 0 #|Δ|) (n - #|Δ'|));
@@ -1272,8 +1271,8 @@ Proof.
         now rewrite skipn_length in Xb; try lia.
         rewrite skipn_length; lia.
       + simpl. assert(#|Δ'| + (n - #|Δ'|) = n) as -> by lia.
-        constructor.
-      + constructor.
+        reflexivity.
+      + reflexivity.
 
   * simpl; eapply red_evar.
     do 2 apply All2_map_right.

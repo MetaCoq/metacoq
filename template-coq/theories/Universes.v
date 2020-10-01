@@ -1,9 +1,9 @@
-From Coq Require Import Ascii String ZArith Lia.
 From Coq Require Import MSetList MSetFacts MSetProperties.
 From MetaCoq.Template Require Import utils BasicAst config.
-Import ListNotations.
 
 Local Open Scope Z_scope.
+Local Open Scope string_scope2.
+
 
 (** * Valuations *)
 
@@ -200,7 +200,7 @@ Module NoPropLevel.
 
   Definition eq : t -> t -> Prop := Logic.eq.
 
-  Definition eq_equiv : RelationClasses.Equivalence eq := _.
+  Definition eq_equiv : Equivalence eq := _.
 
   Definition eq_dec (l1 l2 : t) : {l1 = l2}+{l1 <> l2}.
   Proof.
@@ -1064,7 +1064,7 @@ Module ConstraintType.
   Inductive t_ : Set := Lt | Le | Eq.
   Definition t := t_.
   Definition eq : t -> t -> Prop := eq.
-  Definition eq_equiv : RelationClasses.Equivalence eq := _.
+  Definition eq_equiv : Equivalence eq := _.
 
   Inductive lt_ : t -> t -> Prop :=
   | LtLe : lt_ Lt Le
@@ -1109,7 +1109,7 @@ End ConstraintType.
 Module UnivConstraint.
   Definition t : Set := Level.t * ConstraintType.t * Level.t.
   Definition eq : t -> t -> Prop := eq.
-  Definition eq_equiv : RelationClasses.Equivalence eq := _.
+  Definition eq_equiv : Equivalence eq := _.
 
   Definition make l1 ct l2 : t := (l1, ct, l2).
 
@@ -1376,12 +1376,6 @@ Context {cf:checker_flags}.
 
 
   (** **** Lemmas about eq and leq **** *)
-
-  (** We show that equality and inequality of universes form an equivalence and
-      a partial order (one w.r.t. the other).
-      We use classes from [CRelationClasses] for consistency with the rest of the
-      development which uses relations in [Type] rather than [Prop].
-      These definitions hence use [Prop <= Type]. *)
 
   Global Instance eq_universe0_refl φ : Reflexive (eq_universe0 φ).
   Proof.
@@ -1725,20 +1719,18 @@ Hint Resolve subst_instance_level_closedu subst_instance_level_expr_closedu
      subst_instance_univ_closedu subst_instance_instance_closedu : substu.
 
 
-Local Open Scope string_scope.
-
 Definition string_of_level (l : Level.t) : string :=
   match l with
   | Level.lProp => "Prop"
   | Level.lSet => "Set"
   | Level.Level s => s
-  | Level.Var n => "Var" ++ string_of_nat n
+  | Level.Var n => "Var" ^ string_of_nat n
   end.
 
 Definition string_of_level_expr (e : UnivExpr.t) : string :=
   match e with
   | UnivExpr.lProp => "Prop"
-  | UnivExpr.npe (l, b) => string_of_level l ++ (if b then "+1" else "")
+  | UnivExpr.npe (l, b) => string_of_level l ^ (if b then "+1" else "")
   end.
 
 Definition string_of_sort (u : Universe.t) :=
@@ -1769,7 +1761,7 @@ Definition polymorphic_instance uctx :=
 Definition print_universe_instance u :=
   match u with
   | [] => ""
-  | _ => "@{" ++ print_list string_of_level " " u ++ "}"
+  | _ => "@{" ^ print_list string_of_level " " u ^ "}"
   end.
 
 Definition print_lset t :=
@@ -1783,8 +1775,8 @@ Definition print_constraint_type d :=
   end.
 
 Definition print_constraint_set t :=
-  print_list (fun '(l1, d, l2) => string_of_level l1 ++ " " ++
-                         print_constraint_type d ++ " " ++ string_of_level l2)
+  print_list (fun '(l1, d, l2) => string_of_level l1 ^ " " ^
+                         print_constraint_type d ^ " " ^ string_of_level l2)
              " /\ " (ConstraintSet.elements t).
 
 

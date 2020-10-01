@@ -1,14 +1,10 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import Bool List.
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICTyping.
-Set Asymmetric Patterns.
-
-Import ListNotations.
 
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
+
 
 Derive NoConfusion NoConfusionHom for term.
 Derive NoConfusion NoConfusionHom for context_decl.

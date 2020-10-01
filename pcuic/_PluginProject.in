@@ -62,8 +62,6 @@ src/pCUICPretty.mli
 src/pCUICPretty.ml
 src/pCUICRetyping.ml
 src/pCUICRetyping.mli
-src/pCUICMetaTheory.ml
-src/pCUICMetaTheory.mli
 # src/pCUICNameless.mli
 # src/pCUICNameless.ml
 # src/pCUICGeneration.mli

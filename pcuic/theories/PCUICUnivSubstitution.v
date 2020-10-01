@@ -1,15 +1,15 @@
-(* Distributed under the terms of the MIT license.   *)
+(* Distributed under the terms of the MIT license. *)
+From Coq Require Import CRelationClasses.
+From MetaCoq.Template Require Import utils config Universes uGraph.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
+     PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICTyping PCUICWeakeningEnv
+     PCUICClosed PCUICPosition PCUICWeakening.
+
+Require Import Equations.Prop.DepElim.
+From Equations Require Import Equations.
 
 (** * Universe Substitution lemmas for typing derivations. *)
 
-Require Import Equations.Prop.DepElim.
-From Coq Require Import Bool List Lia ZArith CRelationClasses.
-From MetaCoq.Template Require Import utils config.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICLiftSubst PCUICEquality
-     PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICClosed PCUICPosition
-     PCUICWeakening.
-From Equations Require Import Equations.
 
 Local Set Keyed Unification.
 
@@ -22,7 +22,6 @@ Create HintDb univ_subst.
 
 Local Ltac aa := rdest; eauto with univ_subst.
 
-From MetaCoq.Template Require Import Universes uGraph.
 
 Lemma subst_instance_level_val u l v v'
       (H1 : forall s, valuation_mono v s = valuation_mono v' s)
@@ -833,10 +832,10 @@ Proof.
 Qed.
 
 Definition precompose_subst_instance_instance__1 Rle u i i'
-  := equiv _ _ (precompose_subst_instance_instance Rle u i i').
+  := fst (precompose_subst_instance_instance Rle u i i').
 
 Definition precompose_subst_instance_instance__2 Rle u i i'
-  := equiv_inv _ _ (precompose_subst_instance_instance Rle u i i').
+  := snd (precompose_subst_instance_instance Rle u i i').
 
 Lemma precompose_subst_instance_global Σ Re Rle gr napp u i i' :
   precompose (R_global_instance Σ Re Rle gr napp) (subst_instance_instance u) i i'
@@ -859,10 +858,10 @@ Proof.
 Qed.
 
 Definition precompose_subst_instance_global__1 Σ Re Rle gr napp u i i'
-  := equiv _ _ (precompose_subst_instance_global Σ Re Rle gr napp u i i').
+  := fst (precompose_subst_instance_global Σ Re Rle gr napp u i i').
 
 Definition precompose_subst_instance_global__2 Σ Re Rle gr napp u i i'
-  := equiv_inv _ _ (precompose_subst_instance_global Σ Re Rle gr napp u i i').
+  := snd (precompose_subst_instance_global Σ Re Rle gr napp u i i').
 
 Global Instance eq_term_upto_univ_subst_instance Σ
          (Re Rle : ConstraintSet.t -> Universe.t -> Universe.t -> Prop) napp
@@ -980,7 +979,7 @@ Proof.
   unfold isConstruct_app.
   assert (HH: (decompose_app (subst_instance_constr u t)).1
               = subst_instance_constr u (decompose_app t).1). {
-    unfold decompose_app. generalize (nil term) at 1. generalize (nil term).
+    unfold decompose_app. generalize (@nil term) at 1. generalize (@nil term).
     induction t; cbn; try reflexivity.
     intros l l'. erewrite IHt1; reflexivity. }
   rewrite HH. destruct (decompose_app t).1; reflexivity.
@@ -1228,7 +1227,7 @@ Lemma subst_instance_instantiate_params u0 params pars ty :
                        (subst_instance_constr u0 ty).
 Proof.
   unfold instantiate_params.
-  change (nil term) with (map (subst_instance_constr u0) []) at 2.
+  change (@nil term) with (map (subst_instance_constr u0) []) at 2.
   rewrite rev_subst_instance_context.
   rewrite <- subst_instance_instantiate_params_subst.
   destruct ?; cbnr. destruct p; cbn.
@@ -1273,7 +1272,7 @@ Lemma subst_instance_to_extended_list u l
 Proof.
   - unfold to_extended_list, to_extended_list_k.
     change [] with (map (subst_instance_constr u) []) at 2.
-    unf_term. generalize (nil term), 0. induction l as [|[aa [ab|] ac] bb].
+    unf_term. generalize (@nil term), 0. induction l as [|[aa [ab|] ac] bb].
     + reflexivity.
     + intros l n; cbn. now rewrite IHbb.
     + intros l n; cbn. now rewrite IHbb.

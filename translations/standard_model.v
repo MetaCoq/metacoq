@@ -1,14 +1,12 @@
-Require Import MetaCoq.Template.All.
-Require Import Arith.Compare_dec.
-From MetaCoq.Translations Require Import translation_utils.
-Import String List Lists.List.ListNotations MonadNotation.
-Open Scope list_scope.
-Open Scope string_scope.
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import utils All.
+From MetaCoq.Translations Require Import translation_utils sigma.
+
 
 Infix "<=" := Nat.leb.
 
 Definition default_term := tVar "constant_not_found".
-Definition debug_term msg:= tVar ("debug: " ++ msg).
+Definition debug_term msg:= tVar ("debug: " ^ msg).
 
 
 (** * ****************** WARNING : WIP ! ****************** * **)
@@ -16,7 +14,7 @@ Definition debug_term msg:= tVar ("debug: " ++ msg).
 (** Uses unsafe termination for the translation function *)
 Print Typing Flags.
 Unset Guard Checking.
-Require Import sigma.
+
 
 MetaCoq Quote Definition tUnit := unit.
 MetaCoq Quote Definition ttt := tt.

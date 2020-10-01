@@ -1,24 +1,366 @@
-(* Distributed under the terms of the MIT license.   *)
-Require Import ssreflect.
-From Coq Require Import Bool List Utf8
-  ZArith Lia.
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICPosition.
+From MetaCoq.PCUIC Require Import PCUICRelations PCUICAst PCUICAstUtils
+     PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICInduction.
 
+Require Import ssreflect.
 Require Import Equations.Prop.DepElim.
-
-(* Type-valued relations. *)
-Require Import CRelationClasses.
-Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 From Equations Require Import Equations.
 
-Local Open Scope string_scope.
-Set Asymmetric Patterns.
 
 Set Default Goal Selector "!".
 
-(** * Parallel reduction and confluence *)
+Definition tDummy := tVar String.EmptyString.
+
+Definition iota_red npar c args brs :=
+  (mkApps (snd (List.nth c brs (0, tDummy))) (List.skipn npar args)).
+
+
+(** ** Reduction *)
+
+(** *** Helper functions for reduction *)
+
+Definition fix_subst (l : mfixpoint term) :=
+  let fix aux n :=
+      match n with
+      | 0 => []
+      | S n => tFix l n :: aux n
+      end
+  in aux (List.length l).
+
+Definition unfold_fix (mfix : mfixpoint term) (idx : nat) :=
+  match List.nth_error mfix idx with
+  | Some d => Some (d.(rarg), subst0 (fix_subst mfix) d.(dbody))
+  | None => None
+  end.
+
+Definition cofix_subst (l : mfixpoint term) :=
+  let fix aux n :=
+      match n with
+      | 0 => []
+      | S n => tCoFix l n :: aux n
+      end
+  in aux (List.length l).
+
+Definition unfold_cofix (mfix : mfixpoint term) (idx : nat) :=
+  match List.nth_error mfix idx with
+  | Some d => Some (d.(rarg), subst0 (cofix_subst mfix) d.(dbody))
+  | None => None
+  end.
+
+Definition is_constructor n ts :=
+  match List.nth_error ts n with
+  | Some a => isConstruct_app a
+  | None => false
+  end.
+
+Lemma fix_subst_length mfix : #|fix_subst mfix| = #|mfix|.
+Proof.
+  unfold fix_subst. generalize (tFix mfix). intros.
+  induction mfix; simpl; auto.
+Qed.
+
+Lemma cofix_subst_length mfix : #|cofix_subst mfix| = #|mfix|.
+Proof.
+  unfold cofix_subst. generalize (tCoFix mfix). intros.
+  induction mfix; simpl; auto.
+Qed.
+
+Lemma fix_context_length mfix : #|fix_context mfix| = #|mfix|.
+Proof. unfold fix_context. now rewrite List.rev_length mapi_length. Qed.
+
+
+(** *** One step strong beta-zeta-iota-fix-delta reduction
+
+  Inspired by the reduction relation from Coq in Coq [Barras'99].
+*)
+
+Local Open Scope type_scope.
+Arguments OnOne2 {A} P%type l l'.
+
+Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
+(** Reductions *)
+(** Beta *)
+| red_beta na t b a :
+    red1 Σ Γ (tApp (tLambda na t b) a) (subst10 a b)
+
+(** Let *)
+| red_zeta na b t b' :
+    red1 Σ Γ (tLetIn na b t b') (subst10 b b')
+
+| red_rel i body :
+    option_map decl_body (nth_error Γ i) = Some (Some body) ->
+    red1 Σ Γ (tRel i) (lift0 (S i) body)
+
+(** Case *)
+| red_iota ind pars c u args p brs :
+    red1 Σ Γ (tCase (ind, pars) p (mkApps (tConstruct ind c u) args) brs)
+         (iota_red pars c args brs)
+
+(** Fix unfolding, with guard *)
+| red_fix mfix idx args narg fn :
+    unfold_fix mfix idx = Some (narg, fn) ->
+    is_constructor narg args = true ->
+    red1 Σ Γ (mkApps (tFix mfix idx) args) (mkApps fn args)
+
+(** CoFix-case unfolding *)
+| red_cofix_case ip p mfix idx args narg fn brs :
+    unfold_cofix mfix idx = Some (narg, fn) ->
+    red1 Σ Γ (tCase ip p (mkApps (tCoFix mfix idx) args) brs)
+         (tCase ip p (mkApps fn args) brs)
+
+(** CoFix-proj unfolding *)
+| red_cofix_proj p mfix idx args narg fn :
+    unfold_cofix mfix idx = Some (narg, fn) ->
+    red1 Σ Γ (tProj p (mkApps (tCoFix mfix idx) args))
+         (tProj p (mkApps fn args))
+
+(** Constant unfolding *)
+| red_delta c decl body (isdecl : declared_constant Σ c decl) u :
+    decl.(cst_body) = Some body ->
+    red1 Σ Γ (tConst c u) (subst_instance_constr u body)
+
+(** Proj *)
+| red_proj i pars narg args u arg:
+    nth_error args (pars + narg) = Some arg ->
+    red1 Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i 0 u) args)) arg
+
+
+| abs_red_l na M M' N : red1 Σ Γ M M' -> red1 Σ Γ (tLambda na M N) (tLambda na M' N)
+| abs_red_r na M M' N : red1 Σ (Γ ,, vass na N) M M' -> red1 Σ Γ (tLambda na N M) (tLambda na N M')
+
+| letin_red_def na b t b' r : red1 Σ Γ b r -> red1 Σ Γ (tLetIn na b t b') (tLetIn na r t b')
+| letin_red_ty na b t b' r : red1 Σ Γ t r -> red1 Σ Γ (tLetIn na b t b') (tLetIn na b r b')
+| letin_red_body na b t b' r : red1 Σ (Γ ,, vdef na b t) b' r -> red1 Σ Γ (tLetIn na b t b') (tLetIn na b t r)
+
+| case_red_pred ind p p' c brs : red1 Σ Γ p p' -> red1 Σ Γ (tCase ind p c brs) (tCase ind p' c brs)
+| case_red_discr ind p c c' brs : red1 Σ Γ c c' -> red1 Σ Γ (tCase ind p c brs) (tCase ind p c' brs)
+| case_red_brs ind p c brs brs' :
+    OnOne2 (on_Trel_eq (red1 Σ Γ) snd fst) brs brs' ->
+    red1 Σ Γ (tCase ind p c brs) (tCase ind p c brs')
+
+| proj_red p c c' : red1 Σ Γ c c' -> red1 Σ Γ (tProj p c) (tProj p c')
+
+| app_red_l M1 N1 M2 : red1 Σ Γ M1 N1 -> red1 Σ Γ (tApp M1 M2) (tApp N1 M2)
+| app_red_r M2 N2 M1 : red1 Σ Γ M2 N2 -> red1 Σ Γ (tApp M1 M2) (tApp M1 N2)
+
+| prod_red_l na M1 M2 N1 : red1 Σ Γ M1 N1 -> red1 Σ Γ (tProd na M1 M2) (tProd na N1 M2)
+| prod_red_r na M2 N2 M1 : red1 Σ (Γ ,, vass na M1) M2 N2 ->
+                               red1 Σ Γ (tProd na M1 M2) (tProd na M1 N2)
+
+| evar_red ev l l' : OnOne2 (red1 Σ Γ) l l' -> red1 Σ Γ (tEvar ev l) (tEvar ev l')
+
+| fix_red_ty mfix0 mfix1 idx :
+    OnOne2 (on_Trel_eq (red1 Σ Γ) dtype (fun x => (dname x, dbody x, rarg x))) mfix0 mfix1 ->
+    red1 Σ Γ (tFix mfix0 idx) (tFix mfix1 idx)
+
+| fix_red_body mfix0 mfix1 idx :
+    OnOne2 (on_Trel_eq (red1 Σ (Γ ,,, fix_context mfix0)) dbody (fun x => (dname x, dtype x, rarg x)))
+           mfix0 mfix1 ->
+    red1 Σ Γ (tFix mfix0 idx) (tFix mfix1 idx)
+
+| cofix_red_ty mfix0 mfix1 idx :
+    OnOne2 (on_Trel_eq (red1 Σ Γ) dtype (fun x => (dname x, dbody x, rarg x))) mfix0 mfix1 ->
+    red1 Σ Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx)
+
+| cofix_red_body mfix0 mfix1 idx :
+    OnOne2 (on_Trel_eq (red1 Σ (Γ ,,, fix_context mfix0)) dbody (fun x => (dname x, dtype x, rarg x))) mfix0 mfix1 ->
+    red1 Σ Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx).
+
+Lemma red1_ind_all :
+  forall (Σ : global_env) (P : context -> term -> term -> Type),
+
+       (forall (Γ : context) (na : name) (t b a : term),
+        P Γ (tApp (tLambda na t b) a) (b {0 := a})) ->
+
+       (forall (Γ : context) (na : name) (b t b' : term), P Γ (tLetIn na b t b') (b' {0 := b})) ->
+
+       (forall (Γ : context) (i : nat) (body : term),
+        option_map decl_body (nth_error Γ i) = Some (Some body) -> P Γ (tRel i) ((lift0 (S i)) body)) ->
+
+       (forall (Γ : context) (ind : inductive) (pars c : nat) (u : Instance.t) (args : list term)
+          (p : term) (brs : list (nat * term)),
+        P Γ (tCase (ind, pars) p (mkApps (tConstruct ind c u) args) brs) (iota_red pars c args brs)) ->
+
+       (forall (Γ : context) (mfix : mfixpoint term) (idx : nat) (args : list term) (narg : nat) (fn : term),
+        unfold_fix mfix idx = Some (narg, fn) ->
+        is_constructor narg args = true -> P Γ (mkApps (tFix mfix idx) args) (mkApps fn args)) ->
+
+       (forall (Γ : context) (ip : inductive * nat) (p : term) (mfix : mfixpoint term) (idx : nat)
+          (args : list term) (narg : nat) (fn : term) (brs : list (nat * term)),
+        unfold_cofix mfix idx = Some (narg, fn) ->
+        P Γ (tCase ip p (mkApps (tCoFix mfix idx) args) brs) (tCase ip p (mkApps fn args) brs)) ->
+
+       (forall (Γ : context) (p : projection) (mfix : mfixpoint term) (idx : nat) (args : list term)
+          (narg : nat) (fn : term),
+        unfold_cofix mfix idx = Some (narg, fn) -> P Γ (tProj p (mkApps (tCoFix mfix idx) args)) (tProj p (mkApps fn args))) ->
+
+       (forall (Γ : context) c (decl : constant_body) (body : term),
+        declared_constant Σ c decl ->
+        forall u : Instance.t, cst_body decl = Some body -> P Γ (tConst c u) (subst_instance_constr u body)) ->
+
+       (forall (Γ : context) (i : inductive) (pars narg : nat) (args : list term) (u : Instance.t)
+         (arg : term),
+           nth_error args (pars + narg) = Some arg ->
+           P Γ (tProj (i, pars, narg) (mkApps (tConstruct i 0 u) args)) arg) ->
+
+       (forall (Γ : context) (na : name) (M M' N : term),
+        red1 Σ Γ M M' -> P Γ M M' -> P Γ (tLambda na M N) (tLambda na M' N)) ->
+
+       (forall (Γ : context) (na : name) (M M' N : term),
+        red1 Σ (Γ,, vass na N) M M' -> P (Γ,, vass na N) M M' -> P Γ (tLambda na N M) (tLambda na N M')) ->
+
+       (forall (Γ : context) (na : name) (b t b' r : term),
+        red1 Σ Γ b r -> P Γ b r -> P Γ (tLetIn na b t b') (tLetIn na r t b')) ->
+
+       (forall (Γ : context) (na : name) (b t b' r : term),
+        red1 Σ Γ t r -> P Γ t r -> P Γ (tLetIn na b t b') (tLetIn na b r b')) ->
+
+       (forall (Γ : context) (na : name) (b t b' r : term),
+        red1 Σ (Γ,, vdef na b t) b' r -> P (Γ,, vdef na b t) b' r -> P Γ (tLetIn na b t b') (tLetIn na b t r)) ->
+
+       (forall (Γ : context) (ind : inductive * nat) (p p' c : term) (brs : list (nat * term)),
+        red1 Σ Γ p p' -> P Γ p p' -> P Γ (tCase ind p c brs) (tCase ind p' c brs)) ->
+
+       (forall (Γ : context) (ind : inductive * nat) (p c c' : term) (brs : list (nat * term)),
+        red1 Σ Γ c c' -> P Γ c c' -> P Γ (tCase ind p c brs) (tCase ind p c' brs)) ->
+
+       (forall (Γ : context) (ind : inductive * nat) (p c : term) (brs brs' : list (nat * term)),
+           OnOne2 (on_Trel_eq (Trel_conj (red1 Σ Γ) (P Γ)) snd fst) brs brs' ->
+           P Γ (tCase ind p c brs) (tCase ind p c brs')) ->
+
+       (forall (Γ : context) (p : projection) (c c' : term), red1 Σ Γ c c' -> P Γ c c' ->
+                                                             P Γ (tProj p c) (tProj p c')) ->
+
+       (forall (Γ : context) (M1 N1 : term) (M2 : term), red1 Σ Γ M1 N1 -> P Γ M1 N1 ->
+                                                         P Γ (tApp M1 M2) (tApp N1 M2)) ->
+
+       (forall (Γ : context) (M2 N2 : term) (M1 : term), red1 Σ Γ M2 N2 -> P Γ M2 N2 ->
+                                                         P Γ (tApp M1 M2) (tApp M1 N2)) ->
+
+       (forall (Γ : context) (na : name) (M1 M2 N1 : term),
+        red1 Σ Γ M1 N1 -> P Γ M1 N1 -> P Γ (tProd na M1 M2) (tProd na N1 M2)) ->
+
+       (forall (Γ : context) (na : name) (M2 N2 M1 : term),
+        red1 Σ (Γ,, vass na M1) M2 N2 -> P (Γ,, vass na M1) M2 N2 -> P Γ (tProd na M1 M2) (tProd na M1 N2)) ->
+
+       (forall (Γ : context) (ev : nat) (l l' : list term),
+           OnOne2 (Trel_conj (red1 Σ Γ) (P Γ)) l l' -> P Γ (tEvar ev l) (tEvar ev l')) ->
+
+       (forall (Γ : context) (mfix0 mfix1 : list (def term)) (idx : nat),
+        OnOne2 (on_Trel_eq (Trel_conj (red1 Σ Γ) (P Γ)) dtype (fun x => (dname x, dbody x, rarg x))) mfix0 mfix1 ->
+        P Γ (tFix mfix0 idx) (tFix mfix1 idx)) ->
+
+       (forall (Γ : context) (mfix0 mfix1 : list (def term)) (idx : nat),
+        OnOne2 (on_Trel_eq (Trel_conj (red1 Σ (Γ ,,, fix_context mfix0))
+                                      (P (Γ ,,, fix_context mfix0))) dbody
+                           (fun x => (dname x, dtype x, rarg x))) mfix0 mfix1 ->
+        P Γ (tFix mfix0 idx) (tFix mfix1 idx)) ->
+
+       (forall (Γ : context) (mfix0 mfix1 : list (def term)) (idx : nat),
+        OnOne2 (on_Trel_eq (Trel_conj (red1 Σ Γ) (P Γ)) dtype (fun x => (dname x, dbody x, rarg x))) mfix0 mfix1 ->
+        P Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx)) ->
+
+       (forall (Γ : context) (mfix0 mfix1 : list (def term)) (idx : nat),
+        OnOne2 (on_Trel_eq (Trel_conj (red1 Σ (Γ ,,, fix_context mfix0))
+                                      (P (Γ ,,, fix_context mfix0))) dbody
+                           (fun x => (dname x, dtype x, rarg x))) mfix0 mfix1 ->
+        P Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx)) ->
+
+       forall (Γ : context) (t t0 : term), red1 Σ Γ t t0 -> P Γ t t0.
+Proof.
+  intros. rename X26 into Xlast. revert Γ t t0 Xlast.
+  fix aux 4. intros Γ t T.
+  move aux at top.
+  destruct 1; match goal with
+              | |- P _ (tFix _ _) (tFix _ _) => idtac
+              | |- P _ (tCoFix _ _) (tCoFix _ _) => idtac
+              | |- P _ (mkApps (tFix _ _) _) _ => idtac
+              | |- P _ (tCase _ _ (mkApps (tCoFix _ _) _) _) _ => idtac
+              | |- P _ (tProj _ (mkApps (tCoFix _ _) _)) _ => idtac
+              | H : _ |- _ => eapply H; eauto
+              end.
+  - eapply X3; eauto.
+  - eapply X4; eauto.
+  - eapply X5; eauto.
+
+  - revert brs brs' o.
+    fix auxl 3.
+    intros l l' Hl. destruct Hl.
+    + constructor. intuition auto.
+    + constructor. intuition auto.
+
+  - revert l l' o.
+    fix auxl 3.
+    intros l l' Hl. destruct Hl.
+    + constructor. split; auto.
+    + constructor. auto.
+
+  - eapply X22.
+    revert mfix0 mfix1 o; fix auxl 3; intros l l' Hl; destruct Hl;
+      constructor; try split; auto; intuition.
+
+  - eapply X23.
+    revert o. generalize (fix_context mfix0). intros c Xnew.
+    revert mfix0 mfix1 Xnew; fix auxl 3; intros l l' Hl;
+    destruct Hl; constructor; try split; auto; intuition.
+
+  - eapply X24.
+    revert mfix0 mfix1 o.
+    fix auxl 3; intros l l' Hl; destruct Hl;
+      constructor; try split; auto; intuition.
+
+  - eapply X25.
+    revert o. generalize (fix_context mfix0). intros c new.
+    revert mfix0 mfix1 new; fix auxl 3; intros l l' Hl; destruct Hl;
+      constructor; try split; auto; intuition.
+Defined.
+
+Hint Constructors red1 : pcuic.
+
+Definition red Σ Γ := clos_refl_trans (red1 Σ Γ).
+
+
+Lemma refl_red Σ Γ t : red Σ Γ t t.
+Proof.
+  reflexivity.
+Defined.
+
+Lemma trans_red Σ Γ M P N : red Σ Γ M P -> red1 Σ Γ P N -> red Σ Γ M N.
+Proof.
+  etransitivity; tea. now constructor.
+Defined.
+
+Definition red_rect' Σ Γ M (P : term -> Type) :
+  P M ->
+  (forall P0 N, red Σ Γ M P0 -> P P0 -> red1 Σ Γ P0 N -> P N) ->
+  forall (t : term) (r : red Σ Γ M t), P t.
+Proof.
+  intros X X0 t r. apply clos_rt_rtn1_iff in r.
+  induction r; eauto.
+  eapply X0; tea. now apply clos_rt_rtn1_iff.
+Defined.
+
+
+(** Simple lemmas about reduction *)
+
+Lemma red1_red Σ Γ t u : red1 Σ Γ t u -> red Σ Γ t u.
+Proof.
+  econstructor; eauto.
+Qed.
+
+Hint Resolve red1_red refl_red : core pcuic.
+
+Lemma red_step Σ Γ t u v : red1 Σ Γ t u -> red Σ Γ u v -> red Σ Γ t v.
+Proof.
+  etransitivity; tea. now constructor.
+Qed.
+
+Lemma red_trans Σ Γ t u v : red Σ Γ t u -> red Σ Γ u v -> red Σ Γ t v.
+Proof.
+  etransitivity; tea.
+Defined.
+
 
 (** For this notion of reductions, theses are the atoms that reduce to themselves:
 
@@ -35,41 +377,9 @@ Definition atom t :=
   | _ => false
   end.
 
-(** Simple lemmas about reduction *)
-
-Lemma red1_red (Σ : global_env) Γ t u : red1 Σ Γ t u -> red Σ Γ t u.
-Proof. econstructor; eauto. constructor. Qed.
-Hint Resolve red1_red refl_red : core pcuic.
-
-Lemma red_step Σ Γ t u v : red1 Σ Γ t u -> red Σ Γ u v -> red Σ Γ t v.
-Proof.
-  induction 2.
-  - econstructor; auto.
-  - econstructor 2; eauto.
-Qed.
-
-Lemma red_alt@{i j +} Σ Γ t u : red Σ Γ t u <~> clos_refl_trans@{i j} (red1 Σ Γ) t u.
-Proof.
-  split.
-  - intros H. apply clos_rt_rtn1_iff.
-    induction H; econstructor; eauto.
-  - intros H. apply clos_rt_rtn1_iff in H.
-    induction H; econstructor; eauto.
-Qed.
-
-Lemma red_trans Σ Γ t u v : red Σ Γ t u -> red Σ Γ u v -> red Σ Γ t v.
-Proof.
-  intros. apply red_alt. apply red_alt in X. apply red_alt in X0. now econstructor 3.
-Defined.
-
-Instance red_Transitive Σ Γ : Transitive (red Σ Γ).
-Proof. refine (red_trans _ _). Qed.
-
-Instance red_Reflexive Σ Γ : Reflexive (red Σ Γ)
-  := refl_red _ _.
-
 (** Generic method to show that a relation is closed by congruence using
     a notion of one-hole context. *)
+
 
 Section ReductionCongruence.
   Context {Σ : global_env}.
@@ -188,7 +498,7 @@ Section ReductionCongruence.
 
   End FillContext.
 
-  Inductive contextual_closure (red : ∀ Γ, term -> term -> Type) : context -> term -> term -> Type :=
+  Inductive contextual_closure (red : forall Γ, term -> term -> Type) : context -> term -> term -> Type :=
   | ctxclos_atom Γ t : atom t -> contextual_closure red Γ t t
   | ctxclos_ctx Γ (ctx : term_context) (u u' : term) :
       red (hole_context ctx Γ) u u' -> contextual_closure red Γ (fill_context u ctx) (fill_context u' ctx).
@@ -203,11 +513,11 @@ Section ReductionCongruence.
 
   Lemma contextual_closure_red Γ t u : contextual_closure (red Σ) Γ t u -> red Σ Γ t u.
   Proof.
-    induction 1. 1: constructor.
-    apply red_alt in r. apply clos_rt_rt1n in r.
-    induction r. 1: constructor.
-    apply clos_rt_rt1n_iff in r0. apply red_alt in r0.
-    eapply red_step; eauto. clear r0 IHr z.
+    induction 1; trea.
+    apply clos_rt_rt1n in r. induction r; trea.
+    apply clos_rt_rt1n_iff in r0.
+    etransitivity; tea. constructor.
+    clear -r.
     set (P := fun ctx t => forall Γ y, red1 Σ (hole_context ctx Γ) x y ->
                                      red1 Σ Γ t (fill_context y ctx)).
     set (P' := fun l fill_l =>
@@ -255,6 +565,7 @@ Section ReductionCongruence.
           OnOne2 (Trel_conj (on_Trel (red1 Σ Γ) fst) (on_Trel eq snd)) l1 l2 ->
           redl Γ l l2.
 
+    
     Lemma OnOne2_red_redl :
       forall Γ A (l l' : list (term × A)),
         OnOne2 (Trel_conj (on_Trel (red Σ Γ) fst) (on_Trel eq snd)) l l' ->
@@ -265,7 +576,7 @@ Section ReductionCongruence.
       - destruct p as [p1 p2].
         unfold on_Trel in p1, p2.
         destruct hd as [t a], hd' as [t' a']. simpl in *. subst.
-        induction p1.
+        induction p1 using red_rect'.
         + constructor.
         + econstructor.
           * eapply IHp1.
@@ -386,8 +697,9 @@ Section ReductionCongruence.
 
     Context {Γ : context}.
 
-    Lemma red_abs na M M' N N' : red Σ Γ M M' -> red Σ (Γ ,, vass na M') N N' ->
-                                               red Σ Γ (tLambda na M N) (tLambda na M' N').
+    Lemma red_abs na M M' N N' :
+      red Σ Γ M M' -> red Σ (Γ ,, vass na M') N N'
+      -> red Σ Γ (tLambda na M N) (tLambda na M' N').
     Proof.
       intros. eapply (transitivity (y := tLambda na M' N)).
       - now apply (red_ctx (tCtxLambda_l _ tCtxHole _)).
@@ -398,11 +710,7 @@ Section ReductionCongruence.
         red Σ Γ v1 v2 ->
         red Σ Γ (tApp u v1) (tApp u v2).
     Proof.
-      intro h. revert u. induction h ; intros u.
-      - constructor.
-      - econstructor.
-        + eapply IHh.
-        + constructor. assumption.
+      intro h. rst_induction h; eauto with pcuic.
     Qed.
 
     Lemma red_app M0 M1 N0 N1 :
@@ -448,11 +756,8 @@ Section ReductionCongruence.
         red Σ Γ t u ->
         red Σ Γ (mkApps t l) (mkApps u l).
     Proof.
-      intros t u π h. induction h.
-      - constructor.
-      - econstructor.
-        + eapply IHh.
-        + eapply red1_mkApps_f. assumption.
+      intros t u π h. rst_induction h; eauto with pcuic.
+      eapply red1_mkApps_f. assumption.
     Qed.
 
     Lemma red_mkApps M0 M1 N0 N1 :
@@ -482,10 +787,7 @@ Section ReductionCongruence.
         red Σ Γ (tCase indn p c brs) (tCase indn p' c brs).
     Proof.
       intros indn p c brs p' h.
-      induction h.
-      - constructor.
-      - econstructor ; try eassumption.
-        constructor. assumption.
+      rst_induction h; eauto with pcuic.
     Qed.
 
     Lemma red_case_c :
@@ -494,10 +796,7 @@ Section ReductionCongruence.
         red Σ Γ (tCase indn p c brs) (tCase indn p c' brs).
     Proof.
       intros indn p c brs c' h.
-      induction h.
-      - constructor.
-      - econstructor ; try eassumption.
-        constructor. assumption.
+      rst_induction h; eauto with pcuic.
     Qed.
 
     Derive Signature for redl.
@@ -510,10 +809,10 @@ Section ReductionCongruence.
       intros indn p c brs brs' h.
       apply OnOne2_on_Trel_eq_red_redl in h.
       dependent induction h.
-      - apply list_map_swap_eq in H. subst. constructor.
-      - econstructor.
+      - apply list_map_swap_eq in H. now subst.
+      - etransitivity.
         + eapply IHh. rewrite <- map_swap_invol. reflexivity.
-        + constructor. rewrite (map_swap_invol _ _ brs').
+        + constructor. constructor. rewrite (map_swap_invol _ _ brs').
           eapply OnOne2_map.
           eapply OnOne2_impl ; eauto.
     Qed.
@@ -551,11 +850,10 @@ Section ReductionCongruence.
     Proof.
       intros indn p c brs brs' h.
       apply All2_many_OnOne2 in h.
-      induction h.
-      - constructor.
-      - eapply red_trans.
-        + eapply IHh.
-        + eapply red_case_one_brs. assumption.
+      induction h; trea.
+      eapply red_trans.
+      + eapply IHh.
+      + eapply red_case_one_brs. assumption.
     Qed.
 
     (* Fixpoint brs_n_context l := *)
@@ -568,8 +866,8 @@ Section ReductionCongruence.
       All2 P l l' ->
       forall x a a', nth_error l x = Some a ->
                      nth_error l' x = Some a' ->
-                     OnOne2 P (firstn x l ++ [a] ++ skipn (S x) l)%list
-                            (firstn x l ++ [a'] ++ skipn (S x) l)%list.
+                     OnOne2 P (firstn x l ++ [a] ++ skipn (S x) l)
+                              (firstn x l ++ [a'] ++ skipn (S x) l).
     Proof.
       induction 1.
       - simpl. intros x a a' Hnth. now rewrite nth_error_nil in Hnth.
@@ -631,11 +929,8 @@ Section ReductionCongruence.
             (it_mkLambda_or_LetIn Δ v).
     Proof.
       intros Δ u v h.
-      induction h.
-      - constructor.
-      - econstructor.
-        + eassumption.
-        + eapply red1_it_mkLambda_or_LetIn. assumption.
+      rst_induction h; eauto with pcuic.
+      eapply red1_it_mkLambda_or_LetIn. assumption.
     Qed.
 
     Lemma red_it_mkProd_or_LetIn :
@@ -645,11 +940,8 @@ Section ReductionCongruence.
             (it_mkProd_or_LetIn Δ v).
     Proof.
       intros Δ u v h.
-      induction h.
-      - constructor.
-      - econstructor.
-        + eassumption.
-        + eapply red1_it_mkProd_or_LetIn. assumption.
+      rst_induction h; eauto with pcuic.
+      eapply red1_it_mkProd_or_LetIn. assumption.
     Qed.
 
     Lemma red_proj_c :
@@ -658,11 +950,7 @@ Section ReductionCongruence.
         red Σ Γ (tProj p c) (tProj p c').
     Proof.
       intros p c c' h.
-      induction h in p |- *.
-      - constructor.
-      - econstructor.
-        + eapply IHh.
-        + econstructor. assumption.
+      rst_induction h; eauto with pcuic.
     Qed.
 
     Lemma red_fix_one_ty :
@@ -675,9 +963,8 @@ Section ReductionCongruence.
       dependent induction h.
       - assert (mfix = mfix').
         { eapply map_inj ; eauto.
-          intros y z e. cbn in e. destruct y, z. inversion e. eauto.
-        } subst.
-        constructor.
+          intros y z e. destruct y, z. inversion e. now subst.
+        } now subst.
       - set (f := fun x : def term => (dtype x, (dname x, dbody x, rarg x))) in *.
         set (g := fun '(ty, (na, bo, ra)) => mkdef term na ty bo ra).
         assert (el :  forall l, l = map f (map g l)).
@@ -690,7 +977,7 @@ Section ReductionCongruence.
           - reflexivity.
           - cbn. destruct a. cbn. f_equal. assumption.
         }
-        econstructor.
+        eapply trans_red.
         + eapply IHh. symmetry. apply el.
         + constructor. rewrite (el' mfix').
           eapply OnOne2_map.
@@ -708,7 +995,7 @@ Section ReductionCongruence.
       intros mfix idx mfix' h.
       apply All2_many_OnOne2 in h.
       induction h.
-      - constructor.
+      - reflexivity.
       - eapply red_trans.
         + eapply IHh.
         + eapply red_fix_one_ty. assumption.
@@ -728,7 +1015,7 @@ Section ReductionCongruence.
         { eapply map_inj ; eauto.
           intros y z e. cbn in e. destruct y, z. inversion e. eauto.
         } subst.
-        constructor.
+        reflexivity.
       - set (f := fun x : def term => (dbody x, (dname x, dtype x, rarg x))) in *.
         set (g := fun '(bo, (na, ty, ra)) => mkdef term na ty bo ra).
         assert (el :  forall l, l = map f (map g l)).
@@ -741,7 +1028,7 @@ Section ReductionCongruence.
           - reflexivity.
           - cbn. destruct a. cbn. f_equal. assumption.
         }
-        econstructor.
+        eapply trans_red.
         + eapply IHh. symmetry. apply el.
         + eapply fix_red_body. rewrite (el' mfix').
           eapply OnOne2_map.
@@ -785,7 +1072,7 @@ Section ReductionCongruence.
       intros mfix idx mfix' h.
       apply All2_many_OnOne2 in h.
       induction h.
-      - constructor.
+      - reflexivity.
       - eapply red_trans.
         + eapply IHh.
         + eapply red_fix_one_body.
@@ -827,11 +1114,11 @@ Section ReductionCongruence.
       assert (∑ mfixi,
         All2 (
           on_Trel_eq (red Σ (Γ ,,, fix_context mfix)) dbody
-                     (λ x : def term, (dname x, dtype x, rarg x))
+                     (fun x : def term => (dname x, dtype x, rarg x))
         ) mfix mfixi ×
         All2 (
           on_Trel_eq (red Σ Γ) dtype
-                     (λ x : def term, (dname x, dbody x, rarg x))
+                     (fun x : def term => (dname x, dbody x, rarg x))
 
         ) mfixi mfix'
       ) as [mfixi [h1 h2]].
@@ -862,7 +1149,7 @@ Section ReductionCongruence.
         { eapply map_inj ; eauto.
           intros y z e. cbn in e. destruct y, z. inversion e. eauto.
         } subst.
-        constructor.
+        reflexivity.
       - set (f := fun x : def term => (dtype x, (dname x, dbody x, rarg x))) in *.
         set (g := fun '(ty, (na, bo, ra)) => mkdef term na ty bo ra).
         assert (el :  forall l, l = map f (map g l)).
@@ -875,7 +1162,7 @@ Section ReductionCongruence.
           - reflexivity.
           - cbn. destruct a. cbn. f_equal. assumption.
         }
-        econstructor.
+        eapply trans_red.
         + eapply IHh. symmetry. apply el.
         + constructor. rewrite (el' mfix').
           eapply OnOne2_map.
@@ -893,7 +1180,7 @@ Section ReductionCongruence.
       intros mfix idx mfix' h.
       apply All2_many_OnOne2 in h.
       induction h.
-      - constructor.
+      - reflexivity.
       - eapply red_trans.
         + eapply IHh.
         + eapply red_cofix_one_ty. assumption.
@@ -913,7 +1200,7 @@ Section ReductionCongruence.
         { eapply map_inj ; eauto.
           intros y z e. cbn in e. destruct y, z. inversion e. eauto.
         } subst.
-        constructor.
+        reflexivity.
       - set (f := fun x : def term => (dbody x, (dname x, dtype x, rarg x))) in *.
         set (g := fun '(bo, (na, ty, ra)) => mkdef term na ty bo ra).
         assert (el :  forall l, l = map f (map g l)).
@@ -926,7 +1213,7 @@ Section ReductionCongruence.
           - reflexivity.
           - cbn. destruct a. cbn. f_equal. assumption.
         }
-        econstructor.
+        eapply trans_red.
         + eapply IHh. symmetry. apply el.
         + eapply cofix_red_body. rewrite (el' mfix').
           eapply OnOne2_map.
@@ -970,7 +1257,7 @@ Section ReductionCongruence.
       intros mfix idx mfix' h.
       apply All2_many_OnOne2 in h.
       induction h.
-      - constructor.
+      - reflexivity.
       - eapply red_trans.
         + eapply IHh.
         + eapply red_cofix_one_body.
@@ -1012,11 +1299,11 @@ Section ReductionCongruence.
       assert (∑ mfixi,
         All2 (
           on_Trel_eq (red Σ (Γ ,,, fix_context mfix)) dbody
-                     (λ x : def term, (dname x, dtype x, rarg x))
+                     (fun x : def term => (dname x, dtype x, rarg x))
         ) mfix mfixi ×
         All2 (
           on_Trel_eq (red Σ Γ) dtype
-                     (λ x : def term, (dname x, dbody x, rarg x))
+                     (fun x : def term => (dname x, dbody x, rarg x))
 
         ) mfixi mfix'
       ) as [mfixi [h1 h2]].
@@ -1041,10 +1328,7 @@ Section ReductionCongruence.
         red Σ Γ (tProd na A B) (tProd na A' B).
     Proof.
       intros na A B A' h.
-      induction h.
-      - constructor.
-      - econstructor ; try eassumption.
-        constructor. assumption.
+      rst_induction h; eauto with pcuic.
     Qed.
 
     Lemma red_prod_r :
@@ -1053,10 +1337,7 @@ Section ReductionCongruence.
         red Σ Γ (tProd na A B) (tProd na A B').
     Proof.
       intros na A B B' h.
-      induction h.
-      - constructor.
-      - econstructor ; try eassumption.
-        constructor. assumption.
+      rst_induction h; eauto with pcuic.
     Qed.
 
     Lemma red_prod :
@@ -1093,7 +1374,7 @@ Section ReductionCongruence.
         { eapply map_inj ; eauto.
           intros y z e. cbn in e. inversion e. eauto.
         } subst.
-        constructor.
+        reflexivity.
       - set (f := fun x : term => (x, tt)) in *.
         set (g := (fun '(x, _) => x) : term × unit -> term).
         assert (el :  forall l, l = map f (map g l)).
@@ -1106,7 +1387,7 @@ Section ReductionCongruence.
           - reflexivity.
           - cbn. f_equal. assumption.
         }
-        econstructor.
+        eapply trans_red.
         + eapply IHh. symmetry. apply el.
         + constructor. rewrite (el' l').
           eapply OnOne2_map.
@@ -1124,7 +1405,7 @@ Section ReductionCongruence.
       intros ev l l' h.
       apply All2_many_OnOne2 in h.
       induction h.
-      - constructor.
+      - reflexivity.
       - eapply red_trans.
         + eapply IHh.
         + eapply red_one_evar. assumption.
@@ -1132,12 +1413,11 @@ Section ReductionCongruence.
 
     Lemma red_atom t : atom t -> red Σ Γ t t.
     Proof.
-      intros. constructor.
+      intros. reflexivity.
     Qed.
 
   End Congruences.
 End ReductionCongruence.
-
 
 
 Lemma red_rel_all Σ Γ i body t :
@@ -1152,7 +1432,7 @@ Proof.
       * apply red1_red.
         rewrite simpl_lift; cbn; try lia.
         assert (n = i) by lia; subst. now constructor.
-      * enough (nth_error (nil term) n0 = None) as ->;
+      * enough (nth_error (@nil term) n0 = None) as ->;
           [cbn|now destruct n0].
         enough (i <=? n - 1 = true) as ->; try (apply Nat.leb_le; lia).
         enough (S (n - 1) = n) as ->; try lia. auto.
@@ -1199,6 +1479,7 @@ Ltac OnOne2_All2 :=
 Hint Extern 0 (All2 _ _ _) => OnOne2_All2; intuition auto with pred : pred.
 
 (* TODO Find a better place for this. *)
+Require Import PCUICPosition.
 Section Stacks.
 
   Context (Σ : global_env_ext).
@@ -1234,11 +1515,9 @@ Section Stacks.
       red Σ (Γ ,,, stack_context π) t u ->
       red Σ Γ (zip (t, π)) (zip (u, π)).
   Proof.
-    intros Γ t u π h. induction h.
-    - constructor.
-    - econstructor.
-      + eapply IHh.
-      + eapply red1_context. assumption.
+    intros Γ t u π h.
+      rst_induction h; eauto with pcuic.
+      eapply red1_context. assumption.
   Qed.
 
   Lemma red1_zipp :
@@ -1258,11 +1537,9 @@ Section Stacks.
       red Σ Γ t u ->
       red Σ Γ (zipp t π) (zipp u π).
   Proof.
-    intros Γ t u π h. induction h.
-    - constructor.
-    - econstructor.
-      + eapply IHh.
-      + eapply red1_zipp. assumption.
+    intros Γ t u π h.
+    rst_induction h; eauto with pcuic.
+    eapply red1_zipp. assumption.
   Qed.
 
   Lemma red1_zippx :
@@ -1285,11 +1562,9 @@ Section Stacks.
       red Σ (Γ ,,, stack_context π) t u ->
       red Σ Γ (zippx t π) (zippx u π).
   Proof.
-    intros Γ t u π h. induction h.
-    - constructor.
-    - econstructor.
-      + eapply IHh.
-      + eapply red1_zippx. assumption.
+    intros Γ t u π h.
+    rst_induction h; eauto with pcuic.
+    eapply red1_zippx. assumption.
   Qed.
 
 End Stacks.

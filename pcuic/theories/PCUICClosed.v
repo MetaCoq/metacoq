@@ -1,11 +1,11 @@
-(* Distributed under the terms of the MIT license.   *)
-From Coq Require Import Bool List Arith Lia.
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv.
-Require Import ssreflect ssrbool.
 
+Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
+
 
 Lemma All_forallb_eq_forallb {A} (P : A -> Type) (p q : A -> bool) l :
   All P l ->

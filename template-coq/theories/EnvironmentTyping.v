@@ -1,9 +1,7 @@
-From Coq Require Import Ascii String OrderedType.
-From MetaCoq.Template Require Import config utils BasicAst AstUtils.
-From MetaCoq.Template Require Import Universes Environment.
-Import List.ListNotations.
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import config utils BasicAst AstUtils
+     Universes Environment.
 
-Set Asymmetric Patterns.
 
 Module Lookup (T : Term) (E : EnvironmentSig T).
 

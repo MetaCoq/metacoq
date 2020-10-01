@@ -1,9 +1,7 @@
-(* Distributed under the terms of the MIT license.   *)
-
-
-Require Import List. Import ListNotations.
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils Environment.
 From MetaCoq.Template Require Export Universes.
+
 
 (** * AST of Coq kernel terms and kernel data structures
 

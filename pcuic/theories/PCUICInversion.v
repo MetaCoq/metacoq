@@ -1,12 +1,10 @@
-(* Distributed under the terms of the MIT license.   *)
-From Coq Require Import Bool List.
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICUnivSubst
      PCUICTyping PCUICCumulativity PCUICConversion.
-Set Asymmetric Patterns.
-Import ListNotations.
 
 Require Import Equations.Prop.DepElim.
+
 
 Section Inversion.
 

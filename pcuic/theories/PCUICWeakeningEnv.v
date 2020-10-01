@@ -1,9 +1,10 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import Bool List Lia.
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICEquality PCUICTyping.
+
 Require Import ssreflect.
+
+
 Derive Signature for Alli.
 
 Set Default Goal Selector "!".
@@ -54,12 +55,10 @@ Qed.
 
 (** * Weakening lemmas w.r.t. the global environment *)
 
-Set Asymmetric Patterns.
-
 Generalizable Variables Σ Γ t T.
 
 Definition extends (Σ Σ' : global_env) :=
-  { Σ'' & Σ' = (Σ'' ++ Σ)%list }.
+  { Σ'' & Σ' = Σ'' ++ Σ }.
 
 
 Lemma weakening_env_global_ext_levels Σ Σ' φ (H : extends Σ Σ') l
@@ -495,8 +494,6 @@ Proof.
   - red in onP |- *. eapply All_local_env_impl; eauto.
 Qed.
 
-Local Open Scope list_scope.
-
 Lemma weakening_env_lookup_on_global_env `{checker_flags} P Σ Σ' c decl :
   weaken_env_prop P ->
   wf Σ' -> extends Σ Σ' -> on_global_env P Σ ->
@@ -507,7 +504,7 @@ Proof.
   induction HΣ; simpl. 1: congruence.
   assert (HH: extends Σ Σ'). {
     destruct Hext as [Σ'' HΣ''].
-    exists ((Σ'' ++ [(kn, d)])%list). now rewrite <- app_assoc.
+    exists (Σ'' ++ [(kn, d)]). now rewrite <- app_assoc.
   }
   unfold eq_kername; destruct kername_eq_dec; subst.
   - intros [= ->]. subst.

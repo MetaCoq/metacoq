@@ -1,13 +1,10 @@
-From Coq Require Import Bool String List Lia PeanoNat Peano_dec.
-From MetaCoq.Template Require Import All.
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import utils All.
+
 From Equations Require Import Equations.
-Set Keyed Unification.
-Import ListNotations.
-Import MonadNotation.
-Local Open Scope list_scope.
 
-Existing Instance config.default_checker_flags.
 
+Local Existing Instance config.default_checker_flags.
 
 Definition var := nat.
 
@@ -815,9 +812,9 @@ Definition inspect {A} (x : A) : { y : A | y = x } := exist _ x eq_refl.
 Definition tmLocateInd (q : qualid) : TemplateMonad kername :=
   l <- tmLocate q ;;
   match l with
-  | [] => tmFail ("Inductive [" ++ q ++ "] not found")
+  | [] => tmFail ("Inductive [" ^ q ^ "] not found")
   | (IndRef ind) :: _ => tmReturn ind.(inductive_mind)
-  | _ :: _ => tmFail ("[" ++ q ++ "] not an inductive")
+  | _ :: _ => tmFail ("[" ^ q ^ "] not an inductive")
   end.
 
 
@@ -938,6 +935,8 @@ Proof.
     constructor.
 Qed.
 
+Local Set Keyed Unification.
+
 Definition reify_correct :
   forall Σ Γ P,
     well_prop Σ Γ P ->
@@ -996,8 +995,6 @@ Section Plugin.
   Transparent reify. 
 
   Inductive NotSolvable (s: string) : Prop := notSolvable: NotSolvable s.
-
-  Local Open Scope string_scope.
 
   Definition inhabit_formula gamma Mphi Gamma :
     match reify (empty_ext []) gamma Mphi with

@@ -1,17 +1,11 @@
-(* Distributed under the terms of the MIT license.   *)
-Set Warnings "-notation-overridden".
-
-From Coq Require Import Bool List Compare_dec PeanoNat.
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils Ast TypingWf WfInv.
-
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCumulativity
      PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICTyping TemplateToPCUIC
      PCUICSubstitution PCUICGeneration.
 
 From Equations.Prop Require Import DepElim.
 
-Local Open Scope string_scope.
-Set Asymmetric Patterns.
 
 Module T := Template.Ast.
 Module TTy := Template.Typing.

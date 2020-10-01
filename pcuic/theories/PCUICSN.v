@@ -1,21 +1,13 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import Bool List.
-From MetaCoq.Template
-Require Import config monad_utils utils.
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-     PCUICTyping
-     PCUICSafeLemmata
-     PCUICValidity PCUICNameless
+     PCUICTyping PCUICSafeLemmata PCUICValidity PCUICNameless
      PCUICEquality PCUICConfluence PCUICUnivSubstitution.
-
-Import MonadNotation.
-Open Scope type_scope.
 
 Require Import Equations.Prop.DepElim.
 
 (* We assume normalisation of the reduction.
-    We state is as well-foundedness of the reduction.
+   We state is as well-foundedness of the reduction.
  *)
 
 Section Normalisation.

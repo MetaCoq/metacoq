@@ -1,6 +1,5 @@
-From Coq Require Import Bool String List BinPos Compare_dec Arith Lia
-     Classes.CRelationClasses ProofIrrelevance.
-From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
+From Coq Require Import CRelationClasses ProofIrrelevance.
+From MetaCoq.Template Require Import config Universes utils BasicAst
      AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
@@ -8,14 +7,13 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICInversion PCUICCumulativity PCUICReduction
      PCUICConfluence PCUICConversion PCUICContextConversion
      PCUICParallelReductionConfluence PCUICWeakeningEnv
-     PCUICClosed PCUICSubstitution
-     PCUICWeakening PCUICGeneration PCUICUtils.
+     PCUICClosed PCUICSubstitution PCUICWeakening PCUICGeneration PCUICUtils.
 
 From Equations Require Import Equations.
-
 Require Import Equations.Prop.DepElim.
 Require Import Equations.Type.Relation_Properties.
 Require Import ssreflect ssrbool.
+
 
 Definition same_shape (d d' : context_decl) := 
   match decl_body d, decl_body d' with
@@ -31,7 +29,7 @@ Hint Unfold same_ctx_shape : core.
 
 Lemma same_ctx_shape_app Γ Γ' Δ Δ' : same_ctx_shape Γ Γ' -> 
   same_ctx_shape Δ Δ' ->
-  same_ctx_shape (Γ ++ Δ)%list (Γ' ++ Δ')%list.
+  same_ctx_shape (Γ ++ Δ) (Γ' ++ Δ').
 Proof.
   unfold same_ctx_shape.
   induction 1; simpl; try constructor; eauto. 
@@ -77,7 +75,7 @@ Proof. move=> same. induction same in s, k |- *. constructor; auto.
   rewrite !subst_context_snoc. constructor; auto. apply IHsame.
 Qed.
 
-Lemma context_assumptions_app Γ Γ' : context_assumptions (Γ ++ Γ')%list = 
+Lemma context_assumptions_app Γ Γ' : context_assumptions (Γ ++ Γ') = 
   context_assumptions Γ + context_assumptions Γ'.
 Proof.
   induction Γ; simpl; auto.

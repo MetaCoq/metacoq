@@ -1,11 +1,7 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import Bool List.
-From MetaCoq.Template Require Import config monad_utils utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICTyping PCUICChecker PCUICConversion PCUICCumulativity.
-Local Open Scope string_scope.
-Set Asymmetric Patterns.
-Import monad_utils.MonadNotation.
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import config utils.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICTyping
+     PCUICChecker PCUICConversion PCUICCumulativity.
 
 (** * Retyping
 

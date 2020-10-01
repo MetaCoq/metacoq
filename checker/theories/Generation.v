@@ -1,14 +1,10 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import Bool List Program.
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils Ast AstUtils LiftSubst Typing.
 From MetaCoq.Checker Require Import Reflect.
 Require Import Equations.Prop.DepElim.
 
 (** * Substitution lemmas for typing derivations. *)
 
-Set Asymmetric Patterns.
-Close Scope string_scope.
 
 Derive Signature for typing.
 

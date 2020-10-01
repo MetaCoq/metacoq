@@ -1,23 +1,19 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import Bool String List Program Arith Lia.
-From MetaCoq.Template Require Import config monad_utils utils
-     uGraph.
+(* Distributed under the terms of the MIT license. *)
+From Coq Require Import ProofIrrelevance.
+From MetaCoq.Template Require Import config utils uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
      PCUICCumulativity PCUICEquality PCUICConversion
      PCUICSafeLemmata PCUICNormal PCUICInversion PCUICReduction PCUICPosition
-     PCUICContextConversion PCUICSN PCUICUtils
-     PCUICWeakening.
+     PCUICContextConversion PCUICSN PCUICUtils PCUICWeakening.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce.
+
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
 
 Local Set Keyed Unification.
 
 Set Default Goal Selector "!".
-
-Import MonadNotation.
 
 Module PSR := PCUICSafeReduce.
 
@@ -1168,7 +1164,7 @@ Section Conversion.
     pose proof (decompose_stack_eq _ _ _ e'). subst.
     rewrite stack_context_appstack in r1.
     rewrite stack_context_appstack.
-    econstructor.
+    eapply trans_red.
     - eapply red_app_r. exact r1.
     - repeat lazymatch goal with
       | |- context [ tApp (mkApps ?t ?l) ?u ] =>
@@ -1217,7 +1213,7 @@ Section Conversion.
     rewrite <- 2!mkApps_nested. cbn. eapply red_mkApps_f.
     pose proof (decompose_stack_eq _ _ _ e'). subst.
     rewrite stack_context_appstack in r1.
-    econstructor.
+    eapply trans_red.
     - eapply red_app_r. exact r1.
     - repeat lazymatch goal with
       | |- context [ tApp (mkApps ?t ?l) ?u ] =>
@@ -1260,7 +1256,7 @@ Section Conversion.
     rewrite <- e1 in r1. cbn in r1.
     rewrite <- e1 in hd. cbn in hd.
     do 2 zip fold. constructor. eapply red_context.
-    econstructor.
+    eapply trans_red.
     - eapply red_app_r. exact r1.
     - repeat lazymatch goal with
       | |- context [ tApp (mkApps ?t ?l) ?u ] =>
@@ -2500,7 +2496,7 @@ Section Conversion.
       constructor.
       eapply red_zipc.
       eapply red_case.
-      + constructor.
+      + reflexivity.
       + assumption.
       + clear.
         induction brs ; eauto.
@@ -2515,7 +2511,7 @@ Section Conversion.
       constructor.
       eapply red_zipc.
       eapply red_case.
-      + constructor.
+      + reflexivity.
       + assumption.
       + clear.
         induction brs' ; eauto.
@@ -2601,7 +2597,7 @@ Section Conversion.
     - eapply red_conv_cum_l ; try assumption.
       eapply red_zipp.
       eapply red_case.
-      + constructor.
+      + reflexivity.
       + eassumption.
       + instantiate (1 := brs).
         clear.
@@ -2612,7 +2608,7 @@ Section Conversion.
       + eapply red_conv_cum_r. 1: assumption.
         eapply red_zipp.
         eapply red_case. 2: eassumption.
-        * constructor.
+        * reflexivity.
         * clear.
           induction brs' ; eauto.
       + eapply conv_context_sym. all: auto.
@@ -2963,7 +2959,7 @@ Section Conversion.
   Next Obligation.
     destruct h1 as [h1].
     destruct hΣ.
-    eapply conv_conv_cum_l. 1: assumption.
+    eapply conv_conv_cum_l.
     change (true = eqb idx idx') in eq4.
     destruct (eqb_spec idx idx'). 2: discriminate.
     subst.
@@ -3390,7 +3386,7 @@ Section Conversion.
       case_eq (decompose_stack π). intros l s eq.
       eapply red_mkApps_f.
       eapply trans_red.
-      + constructor.
+      + reflexivity.
       + eapply red_delta.
         * unfold declared_constant. eauto.
         * reflexivity.
@@ -3424,7 +3420,7 @@ Section Conversion.
       case_eq (decompose_stack π). intros l s eq.
       eapply red_it_mkLambda_or_LetIn. eapply red_mkApps_f.
       eapply trans_red.
-      + constructor.
+      + reflexivity.
       + eapply red_delta.
         * unfold declared_constant. eauto.
         * reflexivity.

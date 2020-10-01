@@ -1,19 +1,16 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import Bool List Arith Lia.
-From Coq Require String.
-From MetaCoq.Template Require Import config utils monad_utils
-  EnvironmentTyping.
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
   PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICUtils
   PCUICPosition.
+From MetaCoq.PCUIC Require Export PCUICReduction PCUICCumulativity.
 
+(* TODO: remove this export *)
 From MetaCoq Require Export LibHypsNaming.
+
 Require Import ssreflect.
-Set Asymmetric Patterns.
 Require Import Equations.Type.Relation.
 From Equations Require Import Equations.
-Import MonadNotation.
 
 (** * Typing derivations
 
@@ -22,6 +19,13 @@ Import MonadNotation.
   deal with arities, declarations in the environment etc...
 
  *)
+
+
+Hint Rewrite subst_context_length subst_instance_context_length
+  app_context_length map_context_length fix_context_length fix_subst_length cofix_subst_length
+  map_length app_length lift_context_length
+  @mapi_length @mapi_rec_length List.rev_length Nat.add_0_r : len.
+
 
 Definition isSort T :=
   match T with
@@ -38,7 +42,6 @@ Fixpoint isArity T :=
   end.
 
 
-Module PCUICLookup := Lookup PCUICTerm PCUICEnvironment.
 Include PCUICLookup.
 
 (** Inductive substitution, to produce a constructors' type *)
@@ -66,349 +69,6 @@ Qed.
 Definition type_of_constructor mdecl (cdecl : ident * term * nat) (c : inductive * nat) (u : list Level.t) :=
   let mind := inductive_mind (fst c) in
   subst0 (inds mind u mdecl.(ind_bodies)) (subst_instance_constr u (snd (fst cdecl))).
-
-(** ** Reduction *)
-
-(** *** Helper functions for reduction *)
-
-Definition fix_subst (l : mfixpoint term) :=
-  let fix aux n :=
-      match n with
-      | 0 => []
-      | S n => tFix l n :: aux n
-      end
-  in aux (List.length l).
-
-Definition unfold_fix (mfix : mfixpoint term) (idx : nat) :=
-  match List.nth_error mfix idx with
-  | Some d => Some (d.(rarg), subst0 (fix_subst mfix) d.(dbody))
-  | None => None
-  end.
-
-Definition cofix_subst (l : mfixpoint term) :=
-  let fix aux n :=
-      match n with
-      | 0 => []
-      | S n => tCoFix l n :: aux n
-      end
-  in aux (List.length l).
-
-Definition unfold_cofix (mfix : mfixpoint term) (idx : nat) :=
-  match List.nth_error mfix idx with
-  | Some d => Some (d.(rarg), subst0 (cofix_subst mfix) d.(dbody))
-  | None => None
-  end.
-
-Definition is_constructor n ts :=
-  match List.nth_error ts n with
-  | Some a => isConstruct_app a
-  | None => false
-  end.
-
-Lemma fix_subst_length mfix : #|fix_subst mfix| = #|mfix|.
-Proof.
-  unfold fix_subst. generalize (tFix mfix). intros.
-  induction mfix; simpl; auto.
-Qed.
-
-Lemma cofix_subst_length mfix : #|cofix_subst mfix| = #|mfix|.
-Proof.
-  unfold cofix_subst. generalize (tCoFix mfix). intros.
-  induction mfix; simpl; auto.
-Qed.
-
-Lemma fix_context_length mfix : #|fix_context mfix| = #|mfix|.
-Proof. unfold fix_context. now rewrite List.rev_length mapi_length. Qed.
-
-Hint Rewrite subst_context_length subst_instance_context_length 
-  app_context_length map_context_length fix_context_length fix_subst_length cofix_subst_length 
-  map_length app_length lift_context_length 
-  @mapi_length @mapi_rec_length List.rev_length Nat.add_0_r : len.
-
-Definition tDummy := tVar String.EmptyString.
-
-Definition iota_red npar c args brs :=
-  (mkApps (snd (List.nth c brs (0, tDummy))) (List.skipn npar args)).
-
-
-(** *** One step strong beta-zeta-iota-fix-delta reduction
-
-  Inspired by the reduction relation from Coq in Coq [Barras'99].
-*)
-
-Local Open Scope type_scope.
-Arguments OnOne2 {A} P%type l l'.
-
-Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
-(** Reductions *)
-(** Beta *)
-| red_beta na t b a :
-    red1 Σ Γ (tApp (tLambda na t b) a) (subst10 a b)
-
-(** Let *)
-| red_zeta na b t b' :
-    red1 Σ Γ (tLetIn na b t b') (subst10 b b')
-
-| red_rel i body :
-    option_map decl_body (nth_error Γ i) = Some (Some body) ->
-    red1 Σ Γ (tRel i) (lift0 (S i) body)
-
-(** Case *)
-| red_iota ind pars c u args p brs :
-    red1 Σ Γ (tCase (ind, pars) p (mkApps (tConstruct ind c u) args) brs)
-         (iota_red pars c args brs)
-
-(** Fix unfolding, with guard *)
-| red_fix mfix idx args narg fn :
-    unfold_fix mfix idx = Some (narg, fn) ->
-    is_constructor narg args = true ->
-    red1 Σ Γ (mkApps (tFix mfix idx) args) (mkApps fn args)
-
-(** CoFix-case unfolding *)
-| red_cofix_case ip p mfix idx args narg fn brs :
-    unfold_cofix mfix idx = Some (narg, fn) ->
-    red1 Σ Γ (tCase ip p (mkApps (tCoFix mfix idx) args) brs)
-         (tCase ip p (mkApps fn args) brs)
-
-(** CoFix-proj unfolding *)
-| red_cofix_proj p mfix idx args narg fn :
-    unfold_cofix mfix idx = Some (narg, fn) ->
-    red1 Σ Γ (tProj p (mkApps (tCoFix mfix idx) args))
-         (tProj p (mkApps fn args))
-
-(** Constant unfolding *)
-| red_delta c decl body (isdecl : declared_constant Σ c decl) u :
-    decl.(cst_body) = Some body ->
-    red1 Σ Γ (tConst c u) (subst_instance_constr u body)
-
-(** Proj *)
-| red_proj i pars narg args u arg:
-    nth_error args (pars + narg) = Some arg ->
-    red1 Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i 0 u) args)) arg
-
-
-| abs_red_l na M M' N : red1 Σ Γ M M' -> red1 Σ Γ (tLambda na M N) (tLambda na M' N)
-| abs_red_r na M M' N : red1 Σ (Γ ,, vass na N) M M' -> red1 Σ Γ (tLambda na N M) (tLambda na N M')
-
-| letin_red_def na b t b' r : red1 Σ Γ b r -> red1 Σ Γ (tLetIn na b t b') (tLetIn na r t b')
-| letin_red_ty na b t b' r : red1 Σ Γ t r -> red1 Σ Γ (tLetIn na b t b') (tLetIn na b r b')
-| letin_red_body na b t b' r : red1 Σ (Γ ,, vdef na b t) b' r -> red1 Σ Γ (tLetIn na b t b') (tLetIn na b t r)
-
-| case_red_pred ind p p' c brs : red1 Σ Γ p p' -> red1 Σ Γ (tCase ind p c brs) (tCase ind p' c brs)
-| case_red_discr ind p c c' brs : red1 Σ Γ c c' -> red1 Σ Γ (tCase ind p c brs) (tCase ind p c' brs)
-| case_red_brs ind p c brs brs' :
-    OnOne2 (on_Trel_eq (red1 Σ Γ) snd fst) brs brs' ->
-    red1 Σ Γ (tCase ind p c brs) (tCase ind p c brs')
-
-| proj_red p c c' : red1 Σ Γ c c' -> red1 Σ Γ (tProj p c) (tProj p c')
-
-| app_red_l M1 N1 M2 : red1 Σ Γ M1 N1 -> red1 Σ Γ (tApp M1 M2) (tApp N1 M2)
-| app_red_r M2 N2 M1 : red1 Σ Γ M2 N2 -> red1 Σ Γ (tApp M1 M2) (tApp M1 N2)
-
-| prod_red_l na M1 M2 N1 : red1 Σ Γ M1 N1 -> red1 Σ Γ (tProd na M1 M2) (tProd na N1 M2)
-| prod_red_r na M2 N2 M1 : red1 Σ (Γ ,, vass na M1) M2 N2 ->
-                               red1 Σ Γ (tProd na M1 M2) (tProd na M1 N2)
-
-| evar_red ev l l' : OnOne2 (red1 Σ Γ) l l' -> red1 Σ Γ (tEvar ev l) (tEvar ev l')
-
-| fix_red_ty mfix0 mfix1 idx :
-    OnOne2 (on_Trel_eq (red1 Σ Γ) dtype (fun x => (dname x, dbody x, rarg x))) mfix0 mfix1 ->
-    red1 Σ Γ (tFix mfix0 idx) (tFix mfix1 idx)
-
-| fix_red_body mfix0 mfix1 idx :
-    OnOne2 (on_Trel_eq (red1 Σ (Γ ,,, fix_context mfix0)) dbody (fun x => (dname x, dtype x, rarg x)))
-           mfix0 mfix1 ->
-    red1 Σ Γ (tFix mfix0 idx) (tFix mfix1 idx)
-
-| cofix_red_ty mfix0 mfix1 idx :
-    OnOne2 (on_Trel_eq (red1 Σ Γ) dtype (fun x => (dname x, dbody x, rarg x))) mfix0 mfix1 ->
-    red1 Σ Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx)
-
-| cofix_red_body mfix0 mfix1 idx :
-    OnOne2 (on_Trel_eq (red1 Σ (Γ ,,, fix_context mfix0)) dbody (fun x => (dname x, dtype x, rarg x))) mfix0 mfix1 ->
-    red1 Σ Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx).
-
-Lemma red1_ind_all :
-  forall (Σ : global_env) (P : context -> term -> term -> Type),
-
-       (forall (Γ : context) (na : name) (t b a : term),
-        P Γ (tApp (tLambda na t b) a) (b {0 := a})) ->
-
-       (forall (Γ : context) (na : name) (b t b' : term), P Γ (tLetIn na b t b') (b' {0 := b})) ->
-
-       (forall (Γ : context) (i : nat) (body : term),
-        option_map decl_body (nth_error Γ i) = Some (Some body) -> P Γ (tRel i) ((lift0 (S i)) body)) ->
-
-       (forall (Γ : context) (ind : inductive) (pars c : nat) (u : Instance.t) (args : list term)
-          (p : term) (brs : list (nat * term)),
-        P Γ (tCase (ind, pars) p (mkApps (tConstruct ind c u) args) brs) (iota_red pars c args brs)) ->
-
-       (forall (Γ : context) (mfix : mfixpoint term) (idx : nat) (args : list term) (narg : nat) (fn : term),
-        unfold_fix mfix idx = Some (narg, fn) ->
-        is_constructor narg args = true -> P Γ (mkApps (tFix mfix idx) args) (mkApps fn args)) ->
-
-       (forall (Γ : context) (ip : inductive * nat) (p : term) (mfix : mfixpoint term) (idx : nat)
-          (args : list term) (narg : nat) (fn : term) (brs : list (nat * term)),
-        unfold_cofix mfix idx = Some (narg, fn) ->
-        P Γ (tCase ip p (mkApps (tCoFix mfix idx) args) brs) (tCase ip p (mkApps fn args) brs)) ->
-
-       (forall (Γ : context) (p : projection) (mfix : mfixpoint term) (idx : nat) (args : list term)
-          (narg : nat) (fn : term),
-        unfold_cofix mfix idx = Some (narg, fn) -> P Γ (tProj p (mkApps (tCoFix mfix idx) args)) (tProj p (mkApps fn args))) ->
-
-       (forall (Γ : context) c (decl : constant_body) (body : term),
-        declared_constant Σ c decl ->
-        forall u : Instance.t, cst_body decl = Some body -> P Γ (tConst c u) (subst_instance_constr u body)) ->
-
-       (forall (Γ : context) (i : inductive) (pars narg : nat) (args : list term) (u : Instance.t)
-         (arg : term),
-           nth_error args (pars + narg) = Some arg ->
-           P Γ (tProj (i, pars, narg) (mkApps (tConstruct i 0 u) args)) arg) ->
-
-       (forall (Γ : context) (na : name) (M M' N : term),
-        red1 Σ Γ M M' -> P Γ M M' -> P Γ (tLambda na M N) (tLambda na M' N)) ->
-
-       (forall (Γ : context) (na : name) (M M' N : term),
-        red1 Σ (Γ,, vass na N) M M' -> P (Γ,, vass na N) M M' -> P Γ (tLambda na N M) (tLambda na N M')) ->
-
-       (forall (Γ : context) (na : name) (b t b' r : term),
-        red1 Σ Γ b r -> P Γ b r -> P Γ (tLetIn na b t b') (tLetIn na r t b')) ->
-
-       (forall (Γ : context) (na : name) (b t b' r : term),
-        red1 Σ Γ t r -> P Γ t r -> P Γ (tLetIn na b t b') (tLetIn na b r b')) ->
-
-       (forall (Γ : context) (na : name) (b t b' r : term),
-        red1 Σ (Γ,, vdef na b t) b' r -> P (Γ,, vdef na b t) b' r -> P Γ (tLetIn na b t b') (tLetIn na b t r)) ->
-
-       (forall (Γ : context) (ind : inductive * nat) (p p' c : term) (brs : list (nat * term)),
-        red1 Σ Γ p p' -> P Γ p p' -> P Γ (tCase ind p c brs) (tCase ind p' c brs)) ->
-
-       (forall (Γ : context) (ind : inductive * nat) (p c c' : term) (brs : list (nat * term)),
-        red1 Σ Γ c c' -> P Γ c c' -> P Γ (tCase ind p c brs) (tCase ind p c' brs)) ->
-
-       (forall (Γ : context) (ind : inductive * nat) (p c : term) (brs brs' : list (nat * term)),
-           OnOne2 (on_Trel_eq (Trel_conj (red1 Σ Γ) (P Γ)) snd fst) brs brs' ->
-           P Γ (tCase ind p c brs) (tCase ind p c brs')) ->
-
-       (forall (Γ : context) (p : projection) (c c' : term), red1 Σ Γ c c' -> P Γ c c' ->
-                                                             P Γ (tProj p c) (tProj p c')) ->
-
-       (forall (Γ : context) (M1 N1 : term) (M2 : term), red1 Σ Γ M1 N1 -> P Γ M1 N1 ->
-                                                         P Γ (tApp M1 M2) (tApp N1 M2)) ->
-
-       (forall (Γ : context) (M2 N2 : term) (M1 : term), red1 Σ Γ M2 N2 -> P Γ M2 N2 ->
-                                                         P Γ (tApp M1 M2) (tApp M1 N2)) ->
-
-       (forall (Γ : context) (na : name) (M1 M2 N1 : term),
-        red1 Σ Γ M1 N1 -> P Γ M1 N1 -> P Γ (tProd na M1 M2) (tProd na N1 M2)) ->
-
-       (forall (Γ : context) (na : name) (M2 N2 M1 : term),
-        red1 Σ (Γ,, vass na M1) M2 N2 -> P (Γ,, vass na M1) M2 N2 -> P Γ (tProd na M1 M2) (tProd na M1 N2)) ->
-
-       (forall (Γ : context) (ev : nat) (l l' : list term),
-           OnOne2 (Trel_conj (red1 Σ Γ) (P Γ)) l l' -> P Γ (tEvar ev l) (tEvar ev l')) ->
-
-       (forall (Γ : context) (mfix0 mfix1 : list (def term)) (idx : nat),
-        OnOne2 (on_Trel_eq (Trel_conj (red1 Σ Γ) (P Γ)) dtype (fun x => (dname x, dbody x, rarg x))) mfix0 mfix1 ->
-        P Γ (tFix mfix0 idx) (tFix mfix1 idx)) ->
-
-       (forall (Γ : context) (mfix0 mfix1 : list (def term)) (idx : nat),
-        OnOne2 (on_Trel_eq (Trel_conj (red1 Σ (Γ ,,, fix_context mfix0))
-                                      (P (Γ ,,, fix_context mfix0))) dbody
-                           (fun x => (dname x, dtype x, rarg x))) mfix0 mfix1 ->
-        P Γ (tFix mfix0 idx) (tFix mfix1 idx)) ->
-
-       (forall (Γ : context) (mfix0 mfix1 : list (def term)) (idx : nat),
-        OnOne2 (on_Trel_eq (Trel_conj (red1 Σ Γ) (P Γ)) dtype (fun x => (dname x, dbody x, rarg x))) mfix0 mfix1 ->
-        P Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx)) ->
-
-       (forall (Γ : context) (mfix0 mfix1 : list (def term)) (idx : nat),
-        OnOne2 (on_Trel_eq (Trel_conj (red1 Σ (Γ ,,, fix_context mfix0))
-                                      (P (Γ ,,, fix_context mfix0))) dbody
-                           (fun x => (dname x, dtype x, rarg x))) mfix0 mfix1 ->
-        P Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx)) ->
-
-       forall (Γ : context) (t t0 : term), red1 Σ Γ t t0 -> P Γ t t0.
-Proof.
-  intros. rename X26 into Xlast. revert Γ t t0 Xlast.
-  fix aux 4. intros Γ t T.
-  move aux at top.
-  destruct 1; match goal with
-              | |- P _ (tFix _ _) (tFix _ _) => idtac
-              | |- P _ (tCoFix _ _) (tCoFix _ _) => idtac
-              | |- P _ (mkApps (tFix _ _) _) _ => idtac
-              | |- P _ (tCase _ _ (mkApps (tCoFix _ _) _) _) _ => idtac
-              | |- P _ (tProj _ (mkApps (tCoFix _ _) _)) _ => idtac
-              | H : _ |- _ => eapply H; eauto
-              end.
-  - eapply X3; eauto.
-  - eapply X4; eauto.
-  - eapply X5; eauto.
-
-  - revert brs brs' o.
-    fix auxl 3.
-    intros l l' Hl. destruct Hl.
-    constructor. intuition auto. constructor. intuition auto.
-
-  - revert l l' o.
-    fix auxl 3.
-    intros l l' Hl. destruct Hl.
-    constructor. split; auto.
-    constructor. auto.
-
-  - eapply X22.
-    revert mfix0 mfix1 o; fix auxl 3; intros l l' Hl; destruct Hl;
-      constructor; try split; auto; intuition.
-
-  - eapply X23.
-    revert o. generalize (fix_context mfix0). intros c Xnew.
-    revert mfix0 mfix1 Xnew; fix auxl 3; intros l l' Hl;
-    destruct Hl; constructor; try split; auto; intuition.
-
-  - eapply X24.
-    revert mfix0 mfix1 o.
-    fix auxl 3; intros l l' Hl; destruct Hl;
-      constructor; try split; auto; intuition.
-
-  - eapply X25.
-    revert o. generalize (fix_context mfix0). intros c new.
-    revert mfix0 mfix1 new; fix auxl 3; intros l l' Hl; destruct Hl;
-      constructor; try split; auto; intuition.
-Defined.
-
-
-(** *** Reduction
-
-  The reflexive-transitive closure of 1-step reduction. *)
-
-Inductive red Σ Γ M : term -> Type :=
-| refl_red : red Σ Γ M M
-| trans_red : forall (P : term) N, red Σ Γ M P -> red1 Σ Γ P N -> red Σ Γ M N.
-
-Reserved Notation " Σ ;;; Γ |- t : T " (at level 50, Γ, t, T at next level).
-Reserved Notation " Σ ;;; Γ |- t <= u " (at level 50, Γ, t, u at next level).
-Reserved Notation " Σ ;;; Γ |- t = u " (at level 50, Γ, t, u at next level).
-
-(** ** Cumulativity *)
-
-Inductive cumul `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
-| cumul_refl t u : leq_term Σ.1 (global_ext_constraints Σ) t u -> Σ ;;; Γ |- t <= u
-| cumul_red_l t u v : red1 Σ.1 Γ t v -> Σ ;;; Γ |- v <= u -> Σ ;;; Γ |- t <= u
-| cumul_red_r t u v : Σ ;;; Γ |- t <= v -> red1 Σ.1 Γ u v -> Σ ;;; Γ |- t <= u
-
-where " Σ ;;; Γ |- t <= u " := (cumul Σ Γ t u) : type_scope.
-
-(** *** Conversion   
- *)
-
-Inductive conv `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
-| conv_refl t u : eq_term Σ.1 (global_ext_constraints Σ) t u -> Σ ;;; Γ |- t = u
-| conv_red_l t u v : red1 Σ Γ t v -> Σ ;;; Γ |- v = u -> Σ ;;; Γ |- t = u
-| conv_red_r t u v : Σ ;;; Γ |- t = v -> red1 (fst Σ) Γ u v -> Σ ;;; Γ |- t = u
-
-where " Σ ;;; Γ |- t = u " := (@conv _ Σ Γ t u) : type_scope.
-
-Hint Resolve cumul_refl conv_refl : pcuic.
 
 
 (** ** Typing relation *)
@@ -560,7 +220,7 @@ Definition build_branches_type ind mdecl idecl params u p : list (option (nat ×
       let allargs := snd (decompose_app ccl) in
       let '(paramrels, args) := chop mdecl.(ind_npars) allargs in
       let cstr := tConstruct ind i u in
-      let args := (args ++ [mkApps cstr (paramrels ++ to_extended_list sign)])%list in
+      let args := (args ++ [mkApps cstr (paramrels ++ to_extended_list sign)]) in
       Some (ar, it_mkProd_or_LetIn sign (mkApps (lift0 nargs p) args))
     | None => None
     end
@@ -577,7 +237,7 @@ Lemma build_branches_type_ ind mdecl idecl params u p :
          let allargs := snd (decompose_app ccl) in
          let '(paramrels, args) := chop mdecl.(ind_npars) allargs in
          let cstr := tConstruct ind i u in
-         let args := (args ++ [mkApps cstr (paramrels ++ to_extended_list sign)])%list in
+         let args := (args ++ [mkApps cstr (paramrels ++ to_extended_list sign)]) in
          (ar, it_mkProd_or_LetIn sign (mkApps (lift0 nargs p) args)))
                   (instantiate_params (subst_instance_context u mdecl.(ind_params))
                                       params ty)

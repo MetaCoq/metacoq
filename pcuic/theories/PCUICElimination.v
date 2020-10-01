@@ -1,6 +1,4 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import String Arith Bool List Lia.
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils Universes.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICInductives PCUICGeneration PCUICSpine PCUICWeakeningEnv
@@ -8,9 +6,11 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
      PCUICCtxShape PCUICConversion PCUICCumulativity PCUICConfluence PCUICContexts
      PCUICSR PCUICInversion PCUICValidity PCUICSafeLemmata PCUICContextConversion
      PCUICPrincipality PCUICCumulProp.
+
 Require Equations.Prop.DepElim.
 From Equations Require Import Equations.
 Require Import ssreflect.
+
 
 Lemma consistent_instance_ext_noprop {cf:checker_flags} {Σ univs u} : 
   consistent_instance_ext Σ univs u ->

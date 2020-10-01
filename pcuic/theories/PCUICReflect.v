@@ -1,12 +1,9 @@
-From Coq Require Import Ascii String Bool OrderedType Arith.
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICInduction.
-Import List.ListNotations.
+
 Require Import ssreflect.
-
 From Equations Require Import Equations.
-
-Set Asymmetric Patterns.
 
 Open Scope pcuic.
 
@@ -24,6 +21,21 @@ Qed.
 Lemma reflect_reflectT (A : Prop) b : reflect A b -> reflectT A b.
 Proof.
   destruct 1; now constructor.
+Qed.
+
+Lemma equiv_reflectT P (b : bool) : (P -> b) -> (b -> P) -> reflectT P b.
+Proof.
+  intros. destruct b; constructor; auto.
+Qed.
+
+Lemma reflectT_subrelation {A} {R} {r : A -> A -> bool} : (forall x y, reflectT (R x y) (r x y)) -> CRelationClasses.subrelation R r.
+Proof.
+  intros. intros x y h. destruct (X x y); auto.
+Qed.
+
+Lemma reflectT_subrelation' {A} {R} {r : A -> A -> bool} : (forall x y, reflectT (R x y) (r x y)) -> CRelationClasses.subrelation r R.
+Proof.
+  intros. intros x y h. destruct (X x y); auto. discriminate.
 Qed.
 
 (* Some reflection / EqDec lemmata *)
@@ -439,4 +451,144 @@ Instance reflect_recursivity_kind : ReflectEq recursivity_kind.
 Proof.
   refine {| eqb := eqb_recursivity_kind |}.
   destruct x, y; simpl; constructor; congruence.
+Defined.
+
+Definition eqb_ConstraintType x y :=
+  match x, y with
+  | ConstraintType.Lt, ConstraintType.Lt
+  | ConstraintType.Le, ConstraintType.Le
+  | ConstraintType.Eq, ConstraintType.Eq => true
+  | _, _ => false
+  end.
+
+Instance reflect_ConstraintType : ReflectEq ConstraintType.t.
+Proof.
+  refine {| eqb := eqb_ConstraintType |}.
+  destruct x, y; simpl; constructor; congruence.
+Defined.
+
+Definition eqb_ConstraintSet x y :=
+  eqb (ConstraintSet.this x) (ConstraintSet.this y).
+
+Instance reflect_ConstraintSet : ReflectEq ConstraintSet.t.
+Proof.
+  refine {| eqb := eqb_ConstraintSet |}.
+  intros [thisx okx] [thisy oky].
+  unfold eqb_ConstraintSet.
+  cbn -[eqb].
+  destruct (eqb_spec thisx thisy); subst; constructor.
+  - f_equal; apply uip.
+  - congruence.
+Defined.
+
+Definition eqb_LevelSet x y :=
+  eqb (LevelSet.this x) (LevelSet.this y).
+
+Instance reflect_LevelSet : ReflectEq LevelSet.t.
+Proof.
+  refine {| eqb := eqb_LevelSet |}.
+  intros [thisx okx] [thisy oky].
+  unfold eqb_LevelSet.
+  cbn -[eqb].
+  destruct (eqb_spec thisx thisy); subst; constructor.
+  - f_equal; apply uip.
+  - congruence.
+Defined.
+
+Definition eqb_universes_decl x y :=
+  match x, y with
+  | Monomorphic_ctx cx, Monomorphic_ctx cy => eqb cx cy
+  | Polymorphic_ctx cx, Polymorphic_ctx cy => eqb cx cy
+  | _, _ => false
+  end.
+
+Ltac finish_reflect :=
+  (repeat
+    match goal with
+    | |- context[eqb ?a ?b] => destruct (eqb_spec a b); [subst|constructor; congruence]
+    end);
+  constructor; trivial; congruence.
+Instance reflect_universes_decl : ReflectEq universes_decl.
+Proof.
+  refine {| eqb := eqb_universes_decl |}.
+  unfold eqb_universes_decl.
+  intros [] []; finish_reflect.
+Defined.
+
+Definition eqb_constant_body (x y : constant_body) :=
+  let (tyx, bodyx, univx) := x in
+  let (tyy, bodyy, univy) := y in
+  eqb tyx tyy && eqb bodyx bodyy && eqb univx univy.
+
+Instance reflect_constant_body : ReflectEq constant_body.
+Proof.
+  refine {| eqb := eqb_constant_body |}.
+  intros [] [].
+  unfold eqb_constant_body; finish_reflect.
+Defined.
+
+Definition eqb_sort_family x y :=
+  match x, y with
+  | InProp, InProp
+  | InSet, InSet
+  | InType, InType => true
+  | _, _ => false
+  end.
+
+Instance reflect_sort_family : ReflectEq sort_family.
+Proof.
+  refine {| eqb := eqb_sort_family |}.
+  intros [] []; simpl; constructor; congruence.
+Defined.
+
+Definition eqb_one_inductive_body (x y : one_inductive_body) :=
+  let (n, t, k, c, p) := x in
+  let (n', t', k', c', p') := y in
+  eqb n n' && eqb t t' && eqb k k' && eqb c c' && eqb p p'.
+
+Instance reflect_one_inductive_body : ReflectEq one_inductive_body.
+Proof.
+  refine {| eqb := eqb_one_inductive_body |}.
+  intros [] [].
+  unfold eqb_one_inductive_body; finish_reflect.
+Defined.
+
+Definition eqb_Variance x y :=
+  match x, y with
+  | Variance.Irrelevant, Variance.Irrelevant
+  | Variance.Covariant, Variance.Covariant
+  | Variance.Invariant, Variance.Invariant => true
+  | _, _ => false
+  end.
+
+Instance reflect_Variance : ReflectEq Variance.t.
+Proof.
+  refine {| eqb := eqb_Variance |}.
+  intros [] []; constructor; congruence.
+Defined.
+
+Definition eqb_mutual_inductive_body (x y : mutual_inductive_body) :=
+  let (f, n, p, b, u, v) := x in
+  let (f', n', p', b', u', v') := y in
+  eqb f f' && eqb n n' && eqb b b' && eqb p p' && eqb u u' && eqb v v'.
+
+Instance reflect_mutual_inductive_body : ReflectEq mutual_inductive_body.
+Proof.
+  refine {| eqb := eqb_mutual_inductive_body |}.
+  intros [] [].
+  unfold eqb_mutual_inductive_body; finish_reflect.
+Defined.
+
+Definition eqb_global_decl x y :=
+  match x, y with
+  | ConstantDecl cst, ConstantDecl cst' => eqb cst cst'
+  | InductiveDecl mib, InductiveDecl mib' => eqb mib mib'
+  | _, _ => false
+  end.
+
+Instance reflect_global_decl : ReflectEq global_decl.
+Proof.
+  refine {| eqb := eqb_global_decl |}.
+  unfold eqb_global_decl.
+  intros [] []; finish_reflect.
 Defined.

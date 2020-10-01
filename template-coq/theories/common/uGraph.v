@@ -1,10 +1,8 @@
-Require Import Nat String BinInt Lia ssrbool.
-Require Import MSetWeakList MSetFacts MSetProperties.
-From MetaCoq.Template Require Import utils config Universes monad_utils wGraph.
+(* Distributed under the terms of the MIT license. *)
+Require Import ssrbool MSetWeakList MSetFacts MSetProperties.
+From MetaCoq.Template Require Import utils config Universes wGraph.
 
-Import ListNotations.
-Import ConstraintType MonadNotation.
-Local Open Scope nat_scope.
+Import ConstraintType.
 
 Arguments Z.add : simpl nomatch.
 Arguments Nat.leb : simpl nomatch.

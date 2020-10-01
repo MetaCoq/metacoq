@@ -1,14 +1,15 @@
-(** Extraction setup for the safechecker phase of MetaCoq.
+(* Distributed under the terms of the MIT license. *)
+Require Import OrdersTac ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt.
+Require Import MetaCoq.Template.utils.
+From MetaCoq.SafeChecker Require Import PCUICSafeChecker PCUICSafeConversion
+     SafeTemplateChecker.
+
+(** * Extraction setup for the safechecker phase of MetaCoq.
 
     Any extracted code planning to link with the plugin's OCaml reifier
     should use these same directives for consistency.
 *)
 
-Require Import MetaCoq.Template.utils.
-Require Import OrdersTac.
-Require Import ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt.
-
-From MetaCoq.SafeChecker Require Import PCUICSafeChecker PCUICSafeConversion SafeTemplateChecker.
 
 (* Ignore [Decimal.int] before the extraction issue is solved:
    https://github.com/coq/coq/issues/7017. *)

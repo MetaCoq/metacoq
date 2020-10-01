@@ -1,8 +1,4 @@
-(* Distributed under the terms of the MIT license.   *)
-Set Warnings "-notation-overridden".
-
-Require Import Equations.Prop.DepElim.
-From Coq Require Import Bool String List Lia Arith.
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
@@ -12,14 +8,12 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICConversion PCUICInversion PCUICContexts PCUICArities
      PCUICParallelReduction PCUICSpine.
      
-Close Scope string_scope.
-
 Require Import ssreflect. 
-
-Set Asymmetric Patterns.
-Set SimplIsCbn.
-
 From Equations Require Import Equations.
+Require Import Equations.Prop.DepElim.
+
+
+Local Set SimplIsCbn.
 
 Arguments subst_context !s _ !Γ.
 Arguments it_mkProd_or_LetIn !l _.
@@ -80,7 +74,7 @@ Definition branch_type ind mdecl (idecl : one_inductive_body) params u p i (br :
   let allargs := snd (decompose_app ccl) in
   let '(paramrels, args) := chop mdecl.(ind_npars) allargs in
   let cstr := tConstruct ind i u in
-  let args := (args ++ [mkApps cstr (paramrels ++ to_extended_list sign)])%list in
+  let args := (args ++ [mkApps cstr (paramrels ++ to_extended_list sign)]) in
   Some (ar, it_mkProd_or_LetIn sign (mkApps (lift0 nargs p) args))
 | None => None
 end.
@@ -483,7 +477,7 @@ Proof.
   destruct X as [_ _ _ on_projs_all on_projs].
   eapply forall_nth_error_Alli.
   intros.
-  pose proof (equiv_inv _ _ (nth_error_Some' (ind_projs idecl) (context_assumptions (cshape_args cs) - S i))).
+  pose proof (snd (nth_error_Some' (ind_projs idecl) (context_assumptions (cshape_args cs) - S i))).
   apply X. eapply nth_error_Some_length in H. 
     autorewrite with len in H. simpl in H; lia.
 Qed.
@@ -1092,7 +1086,7 @@ Proof.
       split; auto.
     destruct (on_declared_inductive wfΣ decli) as [onmind oib].
     eapply typing_spine_app; eauto.
-  - destruct (declared_inductive_inj isdecl decli) as [-> ->].
+  - invs H0. destruct (declared_inductive_inj isdecl decli) as [-> ->].
     clear decli. split; auto.
     constructor; [|reflexivity].
     destruct (on_declared_inductive wfΣ isdecl) as [onmind oib].
@@ -1316,8 +1310,7 @@ Lemma red_destInd (Σ : global_env_ext) Γ t t' ind u :
   red Σ.1 Γ t t' -> destInd (head t) = Some (ind, u) -> 
   destInd (head t') = Some (ind, u).
 Proof.
-  intros r%red_alt.
-  apply Relation_Properties.clos_rt_rt1n_iff in r.
+  intros r%Relation_Properties.clos_rt_rt1n_iff.
   induction r.
   auto.
   intros.

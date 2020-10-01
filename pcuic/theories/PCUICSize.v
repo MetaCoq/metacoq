@@ -1,16 +1,10 @@
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils.
 From MetaCoq.PCUIC Require Import PCUICAst.
-Import List.ListNotations.
-
-From Equations Require Import Equations.
-
-Set Asymmetric Patterns.
-
-Derive NoConfusion for term.
-Derive Signature for All2.
 
 
-Definition def_size (size : term -> nat) (x : def term) := size (dtype x) + size (dbody x).
+Definition def_size (size : term -> nat) (x : def term)
+  := size (dtype x) + size (dbody x).
 Definition mfixpoint_size (size : term -> nat) (l : mfixpoint term) :=
   list_size (def_size size) l.
 

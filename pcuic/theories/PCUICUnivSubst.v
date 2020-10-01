@@ -1,10 +1,6 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import Bool List.
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICInduction PCUICLiftSubst.
-Local Open Scope string_scope.
-Set Asymmetric Patterns.
 
 (** * Universe substitution
 

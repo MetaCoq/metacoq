@@ -1,3 +1,5 @@
+(* Distributed under the terms of the MIT license. *)
+
 Section VarCheck.
 
   Section AllDefs.

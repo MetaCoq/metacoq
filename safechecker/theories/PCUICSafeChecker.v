@@ -1,20 +1,14 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import Bool String List Program BinPos Arith.
-From MetaCoq.Template Require Import config monad_utils utils
-     uGraph.
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import config utils uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICNormal PCUICSR
      PCUICGeneration PCUICReflect PCUICEquality PCUICInversion PCUICValidity
      PCUICWeakening PCUICPosition PCUICCumulativity PCUICSafeLemmata PCUICSN
      PCUICPretty PCUICArities.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeConversion.
+
 From Equations Require Import Equations.
 
-
-Import MonadNotation.
-Open Scope type_scope.
-Open Scope list_scope.
 Local Set Keyed Unification.
 
 
@@ -122,19 +116,17 @@ Inductive type_error :=
 | UnsatisfiedConstraints (c : ConstraintSet.t)
 | Msg (s : string).
 
-Local Open Scope string_scope.
-
 Definition print_no_prop_level := string_of_level ∘ NoPropLevel.to_level.
 
 Definition print_edge '(l1, n, l2)
-  := "(" ++ print_no_prop_level l1 ++ ", " ++ string_of_nat n ++ ", "
-         ++ print_no_prop_level l2 ++ ")".
+  := "(" ^ print_no_prop_level l1 ^ ", " ^ string_of_nat n ^ ", "
+         ^ print_no_prop_level l2 ^ ")".
 
 Definition print_universes_graph (G : universes_graph) :=
   let levels := wGraph.VSet.elements G.1.1 in
   let edges := wGraph.EdgeSet.elements G.1.2 in
   string_of_list print_no_prop_level levels
-  ++ "\n" ++ string_of_list print_edge edges.
+  ^ "\n" ^ string_of_list print_edge edges.
 
 Definition string_of_conv_pb (c : conv_pb) : string :=
   match c with
@@ -148,110 +140,110 @@ Definition print_term Σ Γ t :=
 Fixpoint string_of_conv_error Σ (e : ConversionError) : string :=
   match e with
   | NotFoundConstants c1 c2 =>
-      "Both constants " ++ string_of_kername c1 ++ " and " ++ string_of_kername c2 ++
+      "Both constants " ^ string_of_kername c1 ^ " and " ^ string_of_kername c2 ^
       " are not found in the environment."
   | NotFoundConstant c =>
-      "Constant " ++ string_of_kername c ++
+      "Constant " ^ string_of_kername c ^
       " common in both terms is not found in the environment."
   | LambdaNotConvertibleTypes Γ1 na A1 t1 Γ2 na' A2 t2 e =>
-      "When comparing\n" ++ print_term Σ Γ1 (tLambda na A1 t1) ++
-      "\nand\n" ++ print_term Σ Γ2 (tLambda na' A2 t2) ++
-      "\ntypes are not convertible:\n" ++
+      "When comparing\n" ^ print_term Σ Γ1 (tLambda na A1 t1) ^
+      "\nand\n" ^ print_term Σ Γ2 (tLambda na' A2 t2) ^
+      "\ntypes are not convertible:\n" ^
       string_of_conv_error Σ e
   | ProdNotConvertibleDomains Γ1 na A1 B1 Γ2 na' A2 B2 e =>
-      "When comparing\n" ++ print_term Σ Γ1 (tProd na A1 B1) ++
-      "\nand\n" ++ print_term Σ Γ2 (tProd na' A2 B2) ++
-      "\ndomains are not convertible:\n" ++
+      "When comparing\n" ^ print_term Σ Γ1 (tProd na A1 B1) ^
+      "\nand\n" ^ print_term Σ Γ2 (tProd na' A2 B2) ^
+      "\ndomains are not convertible:\n" ^
       string_of_conv_error Σ e
   | CaseOnDifferentInd Γ ind par p c brs Γ' ind' par' p' c' brs' =>
-      "The two stuck pattern-matching\n" ++
-      print_term Σ Γ (tCase (ind, par) p c brs) ++
-      "\nand\n" ++ print_term Σ Γ' (tCase (ind', par') p' c' brs') ++
+      "The two stuck pattern-matching\n" ^
+      print_term Σ Γ (tCase (ind, par) p c brs) ^
+      "\nand\n" ^ print_term Σ Γ' (tCase (ind', par') p' c' brs') ^
       "\nare done on distinct inductive types."
   | CaseBranchNumMismatch
       ind par Γ p c brs1 m br brs2 Γ' p' c' brs1' m' br' brs2' =>
-      "The two stuck pattern-matching\n" ++
-      print_term Σ Γ (tCase (ind, par) p c (brs1 ++ (m,br) :: brs2)) ++
-      "\nand\n" ++
-      print_term Σ Γ' (tCase (ind, par) p' c' (brs1' ++ (m',br') :: brs2')) ++
-      "\nhave a mistmatch in the branch number " ++ string_of_nat #|brs1| ++
-      "\nthe number of parameters do not coincide\n" ++
-      print_term Σ Γ br ++
-      "\nhas " ++ string_of_nat m ++ " parameters while\n" ++
-      print_term Σ Γ br' ++
-      "\nhas " ++ string_of_nat m' ++ "."
+      "The two stuck pattern-matching\n" ^
+      print_term Σ Γ (tCase (ind, par) p c (brs1 ++ (m,br) :: brs2)) ^
+      "\nand\n" ^
+      print_term Σ Γ' (tCase (ind, par) p' c' (brs1' ++ (m',br') :: brs2')) ^
+      "\nhave a mistmatch in the branch number " ^ string_of_nat #|brs1| ^
+      "\nthe number of parameters do not coincide\n" ^
+      print_term Σ Γ br ^
+      "\nhas " ^ string_of_nat m ^ " parameters while\n" ^
+      print_term Σ Γ br' ^
+      "\nhas " ^ string_of_nat m' ^ "."
   | DistinctStuckProj Γ p c Γ' p' c' =>
-      "The two stuck projections\n" ++
-      print_term Σ Γ (tProj p c) ++
-      "\nand\n" ++
-      print_term Σ Γ' (tProj p' c') ++
+      "The two stuck projections\n" ^
+      print_term Σ Γ (tProj p c) ^
+      "\nand\n" ^
+      print_term Σ Γ' (tProj p' c') ^
       "\nare syntactically different."
   | CannotUnfoldFix Γ mfix idx Γ' mfix' idx' =>
-      "The two fixed-points\n" ++
-      print_term Σ Γ (tFix mfix idx) ++
-      "\nand\n" ++ print_term Σ Γ' (tFix mfix' idx') ++
+      "The two fixed-points\n" ^
+      print_term Σ Γ (tFix mfix idx) ^
+      "\nand\n" ^ print_term Σ Γ' (tFix mfix' idx') ^
       "\ncorrespond to syntactically distinct terms that can't be unfolded."
   | FixRargMismatch idx Γ u mfix1 mfix2 Γ' v mfix1' mfix2' =>
-      "The two fixed-points\n" ++
-      print_term Σ Γ (tFix (mfix1 ++ u :: mfix2)%list idx) ++
-      "\nand\n" ++ print_term Σ Γ' (tFix (mfix1' ++ v :: mfix2')%list idx) ++
-      "\nhave a mismatch in the function number " ++ string_of_nat #|mfix1| ++
-      ": arguments " ++ string_of_nat u.(rarg) ++
-      " and " ++ string_of_nat v.(rarg) ++ "are different."
+      "The two fixed-points\n" ^
+      print_term Σ Γ (tFix (mfix1 ++ u :: mfix2) idx) ^
+      "\nand\n" ^ print_term Σ Γ' (tFix (mfix1' ++ v :: mfix2') idx) ^
+      "\nhave a mismatch in the function number " ^ string_of_nat #|mfix1| ^
+      ": arguments " ^ string_of_nat u.(rarg) ^
+      " and " ^ string_of_nat v.(rarg) ^ "are different."
   | FixMfixMismatch idx Γ mfix Γ' mfix' =>
-      "The two fixed-points\n" ++
-      print_term Σ Γ (tFix mfix idx) ++
-      "\nand\n" ++
-      print_term Σ Γ' (tFix mfix' idx) ++
+      "The two fixed-points\n" ^
+      print_term Σ Γ (tFix mfix idx) ^
+      "\nand\n" ^
+      print_term Σ Γ' (tFix mfix' idx) ^
       "\nhave a different number of mutually defined functions."
   | DistinctCoFix Γ mfix idx Γ' mfix' idx' =>
-      "The two cofixed-points\n" ++
-      print_term Σ Γ (tCoFix mfix idx) ++
-      "\nand\n" ++ print_term Σ Γ' (tCoFix mfix' idx') ++
+      "The two cofixed-points\n" ^
+      print_term Σ Γ (tCoFix mfix idx) ^
+      "\nand\n" ^ print_term Σ Γ' (tCoFix mfix' idx') ^
       "\ncorrespond to syntactically distinct terms."
   | StackHeadError leq Γ1 t1 args1 u1 l1 Γ2 t2 u2 l2 e =>
-      "TODO stackheaderror\n" ++
+      "TODO stackheaderror\n" ^
       string_of_conv_error Σ e
   | StackTailError leq Γ1 t1 args1 u1 l1 Γ2 t2 u2 l2 e =>
-      "TODO stacktailerror\n" ++
+      "TODO stacktailerror\n" ^
       string_of_conv_error Σ e
   | StackMismatch Γ1 t1 args1 l1 Γ2 t2 l2 =>
-      "Convertible terms\n" ++
-      print_term Σ Γ1 t1 ++
-      "\nand\n" ++ print_term Σ Γ2 t2 ++
-      "are convertible/convertible (TODO) but applied to a different number" ++
+      "Convertible terms\n" ^
+      print_term Σ Γ1 t1 ^
+      "\nand\n" ^ print_term Σ Γ2 t2 ^
+      "are convertible/convertible (TODO) but applied to a different number" ^
       " of arguments."
   | HeadMistmatch leq Γ1 t1 Γ2 t2 =>
-      "Terms\n" ++
-      print_term Σ Γ1 t1 ++
-      "\nand\n" ++ print_term Σ Γ2 t2 ++
-      "\ndo not have the same head when comparing for " ++
+      "Terms\n" ^
+      print_term Σ Γ1 t1 ^
+      "\nand\n" ^ print_term Σ Γ2 t2 ^
+      "\ndo not have the same head when comparing for " ^
       string_of_conv_pb leq
   end.
 
 Definition string_of_type_error Σ (e : type_error) : string :=
   match e with
-  | UnboundRel n => "Unbound rel " ++ string_of_nat n
-  | UnboundVar id => "Unbound var " ++ id
-  | UnboundEvar ev => "Unbound evar " ++ string_of_nat ev
-  | UndeclaredConstant c => "Undeclared constant " ++ string_of_kername c
-  | UndeclaredInductive c => "Undeclared inductive " ++ string_of_kername (inductive_mind c)
-  | UndeclaredConstructor c i => "Undeclared inductive " ++ string_of_kername (inductive_mind c)
-  | NotCumulSmaller G Γ t u t' u' e => "Terms are not <= for cumulativity:\n" ++
-      print_term Σ Γ t ++ "\nand:\n" ++ print_term Σ Γ u ++
-      "\nafter reduction:\n" ++
-      print_term Σ Γ t' ++ "\nand:\n" ++ print_term Σ Γ u' ++
-      "\nerror:\n" ++ string_of_conv_error Σ e ++
-      "\nin universe graph:\n" ++ print_universes_graph G
-  | NotConvertible G Γ t u => "Terms are not convertible:\n" ++
-      print_term Σ Γ t ++ "\nand:\n" ++ print_term Σ Γ u ++
-      "\nin universe graph:\n" ++ print_universes_graph G
+  | UnboundRel n => "Unbound rel " ^ string_of_nat n
+  | UnboundVar id => "Unbound var " ^ id
+  | UnboundEvar ev => "Unbound evar " ^ string_of_nat ev
+  | UndeclaredConstant c => "Undeclared constant " ^ string_of_kername c
+  | UndeclaredInductive c => "Undeclared inductive " ^ string_of_kername (inductive_mind c)
+  | UndeclaredConstructor c i => "Undeclared inductive " ^ string_of_kername (inductive_mind c)
+  | NotCumulSmaller G Γ t u t' u' e => "Terms are not <= for cumulativity:\n" ^
+      print_term Σ Γ t ^ "\nand:\n" ^ print_term Σ Γ u ^
+      "\nafter reduction:\n" ^
+      print_term Σ Γ t' ^ "\nand:\n" ^ print_term Σ Γ u' ^
+      "\nerror:\n" ^ string_of_conv_error Σ e ^
+      "\nin universe graph:\n" ^ print_universes_graph G
+  | NotConvertible G Γ t u => "Terms are not convertible:\n" ^
+      print_term Σ Γ t ^ "\nand:\n" ^ print_term Σ Γ u ^
+      "\nin universe graph:\n" ^ print_universes_graph G
   | NotASort t => "Not a sort"
   | NotAProduct t t' => "Not a product"
   | NotAnInductive t => "Not an inductive"
   | IllFormedFix m i => "Ill-formed recursive definition"
   | UnsatisfiedConstraints c => "Unsatisfied constraints"
-  | Msg s => "Msg: " ++ s
+  | Msg s => "Msg: " ^ s
   end.
 
 Inductive typing_result (A : Type) :=
@@ -707,9 +699,7 @@ Section Typecheck.
   Qed.
 
 
-  Open Scope nat.
-
-  Obligation Tactic := program_simplify ; eauto.
+  Obligation Tactic := Program.Tactics.program_simplify ; eauto.
 
   Program Fixpoint infer (Γ : context) (HΓ : ∥ wf_local Σ Γ ∥) (t : term) {struct t}
     : typing_result ({ A : term & ∥ Σ ;;; Γ |- t : A ∥ }) :=
@@ -727,9 +717,9 @@ Section Typecheck.
           match Universe.get_is_level u with
           | Some l =>
             check_eq_true (LevelSet.mem l (global_ext_levels Σ))
-                          (Msg ("undeclared level " ++ string_of_level l));;
+                          (Msg ("undeclared level " ^ string_of_level l));;
             ret (tSort (Universe.super l); _)
-          | None  => raise (Msg (string_of_sort u ++ " is not a level"))
+          | None  => raise (Msg (string_of_sort u ^ " is not a level"))
           end
 
     | tProd na A B =>
@@ -1155,7 +1145,7 @@ Section Typecheck.
   Program Definition check_isWfArity Γ (HΓ : ∥ wf_local Σ Γ ∥) A
     : typing_result (∥ isWfArity typing Σ Γ A ∥) :=
     match destArity [] A with
-    | None => raise (Msg (print_term Σ Γ A ++ " is not an arity"))
+    | None => raise (Msg (print_term Σ Γ A ^ " is not an arity"))
     | Some (ctx, s) => XX <- check_context (Γ ,,, ctx) ;;
                       ret _
     end.
@@ -1449,10 +1439,10 @@ Section CheckEnv.
     let global_levels := global_levels Σ in
     let all_levels := LevelSet.union levels global_levels in
     check_eq_true (LevelSet.for_all (fun l => negb (LevelSet.mem l global_levels)) levels) 
-       (empty_ext Σ, IllFormedDecl id (Msg ("non fresh level in " ++ print_lset levels)));;
+       (empty_ext Σ, IllFormedDecl id (Msg ("non fresh level in " ^ print_lset levels)));;
     check_eq_true (ConstraintSet.for_all (fun '(l1, _, l2) => LevelSet.mem l1 all_levels && LevelSet.mem l2 all_levels) (constraints_of_udecl udecl))
-                                    (empty_ext Σ, IllFormedDecl id (Msg ("non declared level in " ++ print_lset levels ++
-                                    " |= " ++ print_constraint_set (constraints_of_udecl udecl))));;
+                                    (empty_ext Σ, IllFormedDecl id (Msg ("non declared level in " ^ print_lset levels ^
+                                    " |= " ^ print_constraint_set (constraints_of_udecl udecl))));;
     check_eq_true match udecl with
                   | Monomorphic_ctx ctx
                     => LevelSet.for_all (negb ∘ Level.is_var) ctx.1

@@ -1,19 +1,18 @@
-(* Distributed under the terms of the MIT license.   *)
-From Coq Require Import Bool List Lia Arith.
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping
      PCUICSubstitution PCUICPosition PCUICCumulativity PCUICReduction
      PCUICConfluence PCUICClosed PCUICParallelReductionConfluence PCUICEquality
      PCUICContextConversion PCUICWeakening PCUICUnivSubst PCUICUnivSubstitution
 .
+
 Require Import ssreflect.
-Local Open Scope string_scope.
-Set Asymmetric Patterns.
 Require Import CRelationClasses.
 Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 Require Import Equations.Prop.DepElim.
 
 Set Default Goal Selector "!".
+
 
 Ltac tc := try typeclasses eauto 10.
 Ltac pcuic := intuition eauto 5 with pcuic ||
@@ -107,34 +106,72 @@ Proof.
     apply conv_context_sym => //.
 Qed.
 
-(* Properties about η
-   Maybe they should be moved somewhere else.
-*)
-Section Eta.
 
-  Context `{cf : checker_flags}.
-  Context {Σ : global_env_ext}.
-  Context {hΣ : wf Σ}.
+Section EquivalenceConvCumulDefs.
 
-  (* TODO MOVE *)
-  Fixpoint isFixApp t : bool :=
-    match t with
-    | tApp f u => isFixApp f
-    | tFix mfix idx => true
-    | _ => false
-    end.
+  Context {cf:checker_flags} (Σ : global_env_ext) (wfΣ : wf Σ) (Γ : context).
 
-  (* TODO MOVE *)
-  Lemma isFixApp_mkApps :
-    forall t l,
-      isFixApp (mkApps t l) = isFixApp t.
+  Proposition conv_conv1 M N : 
+    conv1 Σ Γ M N <~> conv Σ Γ M N.
   Proof.
-    intros t l. induction l in t |- *.
-    - cbn. reflexivity.
-    - cbn. rewrite IHl. reflexivity.
+    split; intro H.
+    - induction H.
+      + destruct r as [[r|r]|r].
+        * eapply red_conv; eauto.
+        * now econstructor 3; tea.
+        * now constructor.
+      + reflexivity.
+      + etransitivity; tea.
+    - induction H.
+      + constructor. now right.
+      + etransitivity; tea.
+        constructor. left. now left.
+      + etransitivity; tea.
+        constructor. left. now right.
   Qed.
 
-End Eta.
+
+  Proposition cumul_cumul1 M N : 
+    cumul1 Σ Γ M N <~> cumul Σ Γ M N.
+  Proof.
+    split; intro H.
+    - induction H.
+      + destruct r as [[r|r]|r].
+        * eapply red_cumul; eauto.
+        * now econstructor 3; tea.
+        * now constructor.
+      + reflexivity.
+      + etransitivity; tea.
+    - induction H.
+      + constructor. now right.
+      + etransitivity; tea.
+        constructor. left. now left.
+      + etransitivity; tea.
+        constructor. left. now right.
+  Qed.
+
+End EquivalenceConvCumulDefs.
+
+
+
+(* TODO MOVE *)
+Fixpoint isFixApp t : bool :=
+  match t with
+  | tApp f u => isFixApp f
+  | tFix mfix idx => true
+  | _ => false
+  end.
+
+(* TODO MOVE *)
+Lemma isFixApp_mkApps :
+  forall t l,
+    isFixApp (mkApps t l) = isFixApp t.
+Proof.
+  intros t l. induction l in t |- *.
+  - cbn. reflexivity.
+  - cbn. rewrite IHl. reflexivity.
+Qed.
+
 
 Lemma congr_cumul_prod_l : forall `{checker_flags} Σ Γ na na' M1 M2 N1,
   wf Σ.1 ->
@@ -465,8 +502,8 @@ Section Inversions.
   Proof.
     intros Γ T a.
     induction T in Γ, a |- *. all: try contradiction.
-    - right. eexists. constructor. constructor.
-    - left. eexists _,_,_. constructor. constructor.
+    - right. eexists. constructor. reflexivity.
+    - left. eexists _,_,_. constructor. reflexivity.
     - simpl in a. eapply IHT3 in a as [[na' [A [B [r]]]] | [u [r]]].
       + left. eexists _,_,_. constructor.
         eapply red_trans.
@@ -515,8 +552,7 @@ Section Inversions.
   Lemma invert_red_sort Γ u v :
     red Σ Γ (tSort u) v -> v = tSort u.
   Proof.
-    intros H; apply red_alt in H.
-    generalize_eq x (tSort u).
+    intros H. generalize_eq x (tSort u).
     induction H; simplify *.
     - depind r. solve_discr.
     - reflexivity.
@@ -549,8 +585,7 @@ Section Inversions.
              (red Σ Γ A A') *
              (red Σ (vass na A :: Γ) B B').
   Proof.
-    intros H. apply red_alt in H.
-    generalize_eq x (tProd na A B). revert na A B.
+    intros H. generalize_eq x (tProd na A B). revert na A B.
     induction H; simplify_dep_elim.
     - depelim r.
       + solve_discr.
@@ -599,7 +634,7 @@ Section Inversions.
     induction u in Γ, a, v, Rle, e |- *. all: try contradiction.
     all: dependent destruction e.
     - eexists. split.
-      + constructor. constructor.
+      + constructor. reflexivity.
       + reflexivity.
     - simpl in a.
       eapply IHu2 in e2. 2: assumption.
@@ -627,7 +662,7 @@ Section Inversions.
     induction u in Γ, a, v, Rle, e |- *. all: try contradiction.
     all: dependent destruction e.
     - eexists. split.
-      + constructor. constructor.
+      + constructor. reflexivity.
       + reflexivity.
     - simpl in a.
       eapply IHu2 in e2. 2: assumption.
@@ -701,7 +736,7 @@ Section Inversions.
       exists v'. split.
       + constructor. eapply red_trans.
         * eapply trans_red.
-          -- constructor.
+          -- reflexivity.
           -- eassumption.
         * assumption.
       + assumption.
@@ -724,7 +759,7 @@ Section Inversions.
       exists v'. split.
       + constructor. eapply red_trans.
         * eapply trans_red.
-          -- constructor.
+          -- reflexivity.
           -- eassumption.
         * assumption.
       + assumption.
@@ -760,14 +795,13 @@ Section Inversions.
     (red Σ.1 Γ (subst10 d b) C)%type.
   Proof.
     generalize_eq x (tLetIn na d ty b).
-    intros e H. apply red_alt in H.
-    revert na d ty b e.
+    intros e H. revert na d ty b e.
     eapply clos_rt_rt1n_iff in H.
     induction H; simplify_dep_elim.
     + left; do 4 eexists. repeat split; eauto with pcuic.
     + depelim r; try specialize (IHclos_refl_trans_1n _ _ _ _ eq_refl) as
       [(? & ? & ? & ? & ((? & ?) & ?) & ?)|?].
-      - right. now apply red_alt, clos_rt_rt1n_iff.
+      - right. now apply clos_rt_rt1n_iff.
       - solve_discr.
       - left. do 4 eexists. repeat split; eauto with pcuic.
         * now transitivity r.
@@ -886,7 +920,7 @@ Section Inversions.
       isApp t = false ->
       tApp u v = mkApps t l ->
       ∑ l',
-        (l = l' ++ [v])%list ×
+        (l = l' ++ [v]) ×
         u = mkApps t l'.
   Proof.
     intros u v t l h e.
@@ -1074,7 +1108,7 @@ Qed.
 
 Lemma tProd_it_mkProd_or_LetIn na A B ctx s :
   tProd na A B = it_mkProd_or_LetIn ctx (tSort s) ->
-  { ctx' & ctx = (ctx' ++ [vass na A])%list /\
+  { ctx' & ctx = (ctx' ++ [vass na A]) /\
            destArity [] B = Some (ctx', s) }.
 Proof.
   intros. exists (removelast ctx).
@@ -1209,31 +1243,20 @@ Section Inversions.
   Lemma red_conv_cum_l {leq Γ u v} :
     red (fst Σ) Γ u v -> conv_cum leq Σ Γ u v.
   Proof.
-    induction 1.
-    - reflexivity.
-    - etransitivity; tea.
-      destruct leq.
-      + simpl. destruct IHX. constructor.
-        eapply conv_red_l; eauto.
-      + simpl. constructor.
-        eapply cumul_red_l.
-        * eassumption.
-        * eapply cumul_refl'.
+    destruct leq; constructor.
+    + now eapply red_conv.
+    + now eapply red_cumul.
   Qed.
 
   Lemma red_conv_cum_r {leq Γ u v} :
     red (fst Σ) Γ u v -> conv_cum leq Σ Γ v u.
   Proof.
-    induction 1.
-    - reflexivity.
-    - etransitivity; tea.
-      destruct leq.
-      + simpl. destruct IHX. constructor.
-        eapply conv_red_r; eauto.
-      + simpl. constructor.
-        eapply cumul_red_r.
-        * eapply cumul_refl'.
-        * assumption.
+   induction 1.
+   - destruct leq; constructor.
+     + now eapply conv_red_r.
+     + now eapply cumul_red_r.
+   - reflexivity.
+   - etransitivity; tea.
   Qed.
 
   Lemma conv_cum_Prod leq Γ na1 na2 A1 A2 B1 B2 :
@@ -1883,9 +1906,7 @@ Section Inversions.
     ∑ A2 b2, (T = tLambda na A2 b2) *
              red Σ Γ A1 A2 * red Σ (Γ ,, vass na A1) b1 b2.
   Proof.
-    intros.
-    eapply red_alt in X. eapply clos_rt_rt1n_iff in X.
-    depind X.
+    intros. eapply clos_rt_rt1n_iff in X. depind X.
     - eexists _, _; intuition eauto.
     - depelim r; solve_discr; specialize (IHX _ _ _ _ eq_refl);
       destruct IHX as [A2 [B2 [[-> ?] ?]]].

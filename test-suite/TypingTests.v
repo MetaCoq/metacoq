@@ -1,13 +1,5 @@
-Require Import Recdef.
-Require Import Coq.omega.Omega.
-Require Import Morphisms.
-Require Import Coq.Lists.List.
-Require Import Coq.Strings.String.
-Require Import Coq.Strings.Ascii.
-Require Import Coq.Bool.Bool.
-Import ListNotations.
-
-Require Import MetaCoq.Template.All.
+Require Import Recdef Morphisms.
+From MetaCoq.Template Require Import utils All.
 Require Import MetaCoq.Checker.All.
 
 Unset Template Cast Propositions.
@@ -60,8 +52,8 @@ Definition test_reduction (p : program) :=
 
 Definition string_of_env_error e :=
   match e with
-  | IllFormedDecl s e => ("IllFormedDecl " ++ s ++ "\nType error: " ++ string_of_type_error e)%string
-  | AlreadyDeclared s => ("Alreadydeclared " ++ s)%string
+  | IllFormedDecl s e => ("IllFormedDecl " ^ s ^ "\nType error: " ^ string_of_type_error e)%string
+  | AlreadyDeclared s => ("Alreadydeclared " ^ s)%string
   end.
 
 Definition out_typing c :=

@@ -1,13 +1,6 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import Bool List Program.
-From MetaCoq.Template Require Import config monad_utils utils Ast LiftSubst.
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import config utils Ast LiftSubst.
 From MetaCoq.Checker Require Import Checker.
-Local Open Scope string_scope.
-Set Asymmetric Patterns.
-Import monad_utils.MonadNotation.
-
-Existing Instance default_checker_flags.
 
 (** * Retyping
 
@@ -17,6 +10,9 @@ Existing Instance default_checker_flags.
   head-reducing types to uncover dependent products or inductives) and
   substitution are costly here. No universe checking or conversion is done
   in particular. *)
+
+
+Local Existing Instance default_checker_flags.
 
 Section TypeOf.
   Context `{F : Fuel}.

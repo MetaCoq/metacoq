@@ -1,22 +1,15 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import Bool String List Program
-     Classes.RelationClasses.
-From MetaCoq.Template
-Require Import config monad_utils utils.
+(* Distributed under the terms of the MIT license. *)
+From Coq Require Import RelationClasses.
+From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICPosition
      PCUICNormal PCUICInversion PCUICSafeLemmata
      PCUICSR PCUICSN PCUICUtils PCUICReduction.
+
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
-
-Import MonadNotation.
-Open Scope type_scope.
-
-Set Default Goal Selector "!".
-
 Set Equations Transparent.
+Set Equations With UIP.
 
 (** * Reduction machine for PCUIC without fuel
 
@@ -28,7 +21,11 @@ Set Equations Transparent.
 
  *)
 
-Set Equations With UIP.
+(* From Program *)
+Notation " `  t " := (proj1_sig t) (at level 10, t at next level) : metacoq_scope.
+
+Set Default Goal Selector "!".
+
 Local Set Keyed Unification.
 
 (* We assume normalisation of the reduction.
@@ -252,20 +249,19 @@ Section Reduce.
     intros Γ [t π] [t' π'] h. cbn.
     dependent destruction h.
     - repeat zip fold. rewrite H.
-      constructor. constructor.
+      constructor. reflexivity.
     - dependent destruction H.
       + eapply cored_red. assumption.
       + cbn in H0. inversion H0.
-        constructor. constructor.
+        constructor. reflexivity.
   Qed.
 
   (* Show Obligation Tactic. *)
-
   Ltac obTac :=
     (* program_simpl ; *)
-    program_simplify ;
+    Program.Tactics.program_simplify ;
     Equations.CoreTactics.equations_simpl ;
-    try program_solve_wf ;
+    try Program.Tactics.program_solve_wf ;
     try reflexivity.
 
   Obligation Tactic := obTac.
@@ -1123,43 +1119,43 @@ Section Reduce.
     refine (reduce_stack_sound _ _ ε _).
   Qed.
 
-  (* Potentially hard? Ok with SN? *)
-  Lemma Ind_canonicity :
-    forall Γ ind uni args t,
-      Σ ;;; Γ |- t : mkApps (tInd ind uni) args ->
-      RedFlags.iota flags ->
-      let '(u,l) := decompose_app t in
-      (isLambda u -> l = []) ->
-      whnf flags Σ Γ u ->
-      discr_construct u ->
-      whne flags Σ Γ u.
-  Proof.
-    intros Γ ind uni args t ht hiota.
-    case_eq (decompose_app t).
-    intros u l e hl h d.
-    induction h.
-    - assumption.
-    - apply decompose_app_inv in e. subst.
-      (* Inversion on ht *)
-      admit.
-    - apply decompose_app_inv in e. subst.
-      (* Inversion on ht *)
-      admit.
-    - cbn in hl. specialize (hl eq_refl). subst.
-      apply decompose_app_inv in e. subst. cbn in ht.
-      (* Inversion on ht *)
-      admit.
-    - apply decompose_app_eq_mkApps in e. subst.
-      cbn in d. simp discr_construct in d. easy.
-    - apply decompose_app_inv in e. subst.
-      (* Inversion on ht *)
-      admit.
-    - apply decompose_app_inv in e. subst.
-      (* Not very clear now.
-         Perhaps we ought to show whnf of the mkApps entirely.
-         And have a special whne case for Fix that don't reduce?
-       *)
-  Abort.
+  (* (* Potentially hard? Ok with SN? *) *)
+  (* Lemma Ind_canonicity : *)
+  (*   forall Γ ind uni args t, *)
+  (*     Σ ;;; Γ |- t : mkApps (tInd ind uni) args -> *)
+  (*     RedFlags.iota flags -> *)
+  (*     let '(u,l) := decompose_app t in *)
+  (*     (isLambda u -> l = []) -> *)
+  (*     whnf flags Σ Γ u -> *)
+  (*     discr_construct u -> *)
+  (*     whne flags Σ Γ u. *)
+  (* Proof. *)
+  (*   intros Γ ind uni args t ht hiota. *)
+  (*   case_eq (decompose_app t). *)
+  (*   intros u l e hl h d. *)
+  (*   induction h. *)
+  (*   - assumption. *)
+  (*   - apply decompose_app_inv in e. subst. *)
+  (*     (* Inversion on ht *) *)
+  (*     admit. *)
+  (*   - apply decompose_app_inv in e. subst. *)
+  (*     (* Inversion on ht *) *)
+  (*     admit. *)
+  (*   - cbn in hl. specialize (hl eq_refl). subst. *)
+  (*     apply decompose_app_inv in e. subst. cbn in ht. *)
+  (*     (* Inversion on ht *) *)
+  (*     admit. *)
+  (*   - apply decompose_app_eq_mkApps in e. subst. *)
+  (*     cbn in d. simp discr_construct in d. easy. *)
+  (*   - apply decompose_app_inv in e. subst. *)
+  (*     (* Inversion on ht *) *)
+  (*     admit. *)
+  (*   - apply decompose_app_inv in e. subst. *)
+  (*     (* Not very clear now. *)
+  (*        Perhaps we ought to show whnf of the mkApps entirely. *)
+  (*        And have a special whne case for Fix that don't reduce? *)
+  (*      *) *)
+  (* Abort. *)
 
   Scheme Acc_ind' := Induction for Acc Sort Prop.
 

@@ -1,42 +1,37 @@
-From Coq Require Import Ascii String Bool OrderedType Lia Arith.
-From MetaCoq.Template Require Import BasicAst Ast utils.
-Import List.ListNotations.
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import utils BasicAst Ast.
 Require Import ssreflect.
-Local Open Scope string_scope.
-
-Set Asymmetric Patterns.
 
 (** Raw term printing *)
 
 Fixpoint string_of_term (t : term) :=
   match t with
-  | tRel n => "Rel(" ++ string_of_nat n ++ ")"
-  | tVar n => "Var(" ++ n ++ ")"
-  | tEvar ev args => "Evar(" ++ string_of_nat ev ++ "," ++ string_of_list string_of_term args ++ ")"
-  | tSort s => "Sort(" ++ string_of_sort s ++ ")"
-  | tCast c k t => "Cast(" ++ string_of_term c ++ (* TODO *) ","
-                           ++ string_of_term t ++ ")"
-  | tProd na b t => "Prod(" ++ string_of_name na ++ "," ++
-                            string_of_term b ++ "," ++ string_of_term t ++ ")"
-  | tLambda na b t => "Lambda(" ++ string_of_name na ++ "," ++ string_of_term b
-                                ++ "," ++ string_of_term t ++ ")"
-  | tLetIn na b t' t => "LetIn(" ++ string_of_name na ++ "," ++ string_of_term b
-                                 ++ "," ++ string_of_term t' ++ "," ++ string_of_term t ++ ")"
-  | tApp f l => "App(" ++ string_of_term f ++ "," ++ string_of_list string_of_term l ++ ")"
-  | tConst c u => "Const(" ++ string_of_kername c ++ "," ++ string_of_universe_instance u ++ ")"
-  | tInd i u => "Ind(" ++ string_of_inductive i ++ "," ++ string_of_universe_instance u ++ ")"
-  | tConstruct i n u => "Construct(" ++ string_of_inductive i ++ "," ++ string_of_nat n ++ ","
-                                    ++ string_of_universe_instance u ++ ")"
+  | tRel n => "Rel(" ^ string_of_nat n ^ ")"
+  | tVar n => "Var(" ^ n ^ ")"
+  | tEvar ev args => "Evar(" ^ string_of_nat ev ^ "," ^ string_of_list string_of_term args ^ ")"
+  | tSort s => "Sort(" ^ string_of_sort s ^ ")"
+  | tCast c k t => "Cast(" ^ string_of_term c ^ (* TODO *) ","
+                           ^ string_of_term t ^ ")"
+  | tProd na b t => "Prod(" ^ string_of_name na ^ "," ^
+                            string_of_term b ^ "," ^ string_of_term t ^ ")"
+  | tLambda na b t => "Lambda(" ^ string_of_name na ^ "," ^ string_of_term b
+                                ^ "," ^ string_of_term t ^ ")"
+  | tLetIn na b t' t => "LetIn(" ^ string_of_name na ^ "," ^ string_of_term b
+                                 ^ "," ^ string_of_term t' ^ "," ^ string_of_term t ^ ")"
+  | tApp f l => "App(" ^ string_of_term f ^ "," ^ string_of_list string_of_term l ^ ")"
+  | tConst c u => "Const(" ^ string_of_kername c ^ "," ^ string_of_universe_instance u ^ ")"
+  | tInd i u => "Ind(" ^ string_of_inductive i ^ "," ^ string_of_universe_instance u ^ ")"
+  | tConstruct i n u => "Construct(" ^ string_of_inductive i ^ "," ^ string_of_nat n ^ ","
+                                    ^ string_of_universe_instance u ^ ")"
   | tCase (ind, i) t p brs =>
-    "Case(" ++ string_of_inductive ind ++ "," ++ string_of_nat i ++ "," ++ string_of_term t ++ ","
-            ++ string_of_term p ++ "," ++ string_of_list (fun b => string_of_term (snd b)) brs ++ ")"
+    "Case(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_term t ^ ","
+            ^ string_of_term p ^ "," ^ string_of_list (fun b => string_of_term (snd b)) brs ^ ")"
   | tProj (ind, i, k) c =>
-    "Proj(" ++ string_of_inductive ind ++ "," ++ string_of_nat i ++ "," ++ string_of_nat k ++ ","
-            ++ string_of_term c ++ ")"
-  | tFix l n => "Fix(" ++ (string_of_list (string_of_def string_of_term) l) ++ "," ++ string_of_nat n ++ ")"
-  | tCoFix l n => "CoFix(" ++ (string_of_list (string_of_def string_of_term) l) ++ "," ++ string_of_nat n ++ ")"
+    "Proj(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_nat k ^ ","
+            ^ string_of_term c ^ ")"
+  | tFix l n => "Fix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
+  | tCoFix l n => "CoFix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
   end.
-Local Close Scope string_scope.
 
 Definition decompose_app (t : term) :=
   match t with

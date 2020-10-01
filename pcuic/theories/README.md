@@ -55,7 +55,6 @@
 | [PCUICSR] | Subject reduction |
 | [PCUICCSubst]    | Definition of closed (capturing) substitution             |
 | [PCUICWcbvEval] | Weak-head call-by-value evaluation strategy |
-| [PCUICMetaTheory] |   |
 
 [PCUICPretty]: PCUICPretty.v
 [PCUICSize]: PCUICSize.v
@@ -82,18 +81,15 @@
 [PCUICSR]: PCUICSR.v
 [PCUICCSubst]: PCUICCSubst.v
 [PCUICWcbvEval]: PCUICWcbvEval.v
-[PCUICMetaTheory]: PCUICMetaTheory.v
 
 ## Fueled type checker
 
 | File             | Description                                               |
 |------------------|-----------------------------------------------------------|
 | [PCUICChecker]   | Fueled type checker for PCUIC                             |
-| [PCUICCheckerCompleteness] | Completeness of the aforementioned checker      |
 | [PCUICRetyping]  | `type_of` function to get the type without re-checking it is well-typed |
 
 [PCUICChecker]: PCUICChecker.v
-[PCUICCheckerCompleteness]: PCUICCheckerCompleteness.v
 [PCUICRetyping]: PCUICRetyping.v
 
 ## Relation with Template-Coq

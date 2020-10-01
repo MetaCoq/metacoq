@@ -1,6 +1,4 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import String Arith Bool List Lia.
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils Universes.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICInductives PCUICGeneration PCUICSpine PCUICWeakeningEnv
@@ -13,6 +11,7 @@ Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 Require Equations.Prop.DepElim.
 From Equations Require Import Equations.
 Require Import ssreflect.
+
 
 Lemma not_prop_not_leq_prop sf : sf <> InProp -> ~ leb_sort_family sf InProp.
 Proof.
@@ -88,14 +87,14 @@ Definition eq_univ_prop (u v : Universe.t) :=
 Definition eq_term_prop (Σ : global_env) napp :=
   PCUICEquality.eq_term_upto_univ_napp Σ eq_univ_prop eq_univ_prop napp.
 
-Reserved Notation " Σ ;;; Γ |- t ~ u " (at level 50, Γ, t, u at next level).
+Reserved Notation " Σ ;;; Γ |- t ~~ u " (at level 50, Γ, t, u at next level).
 
 Inductive cumul_prop `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
-  | cumul_refl t u : eq_term_prop Σ.1 0 t u -> Σ ;;; Γ |- t ~ u
-  | cumul_red_l t u v : red1 Σ.1 Γ t v -> Σ ;;; Γ |- v ~ u -> Σ ;;; Γ |- t ~ u
-  | cumul_red_r t u v : Σ ;;; Γ |- t ~ v -> red1 Σ.1 Γ u v -> Σ ;;; Γ |- t ~ u
+  | cumul_refl t u : eq_term_prop Σ.1 0 t u -> Σ ;;; Γ |- t ~~ u
+  | cumul_red_l t u v : red1 Σ.1 Γ t v -> Σ ;;; Γ |- v ~~ u -> Σ ;;; Γ |- t ~~ u
+  | cumul_red_r t u v : Σ ;;; Γ |- t ~~ v -> red1 Σ.1 Γ u v -> Σ ;;; Γ |- t ~~ u
   
-where " Σ ;;; Γ |- t ~ u " := (cumul_prop Σ Γ t u) : type_scope.
+where " Σ ;;; Γ |- t ~~ u " := (cumul_prop Σ Γ t u) : type_scope.
 
 Lemma eq_term_prop_impl Σ Re Rle t u :
   wf_ext Σ ->
@@ -158,7 +157,7 @@ Qed.
 Lemma cumul_cumul_prop Σ Γ A B : 
   wf_ext Σ ->
   Σ ;;; Γ |- A <= B ->
-  Σ ;;; Γ |- A ~ B.
+  Σ ;;; Γ |- A ~~ B.
 Proof.
   intros wfΣ. induction 1.
   - constructor. now apply leq_term_eq_term_prop_impl in l.
@@ -169,7 +168,7 @@ Qed.
 Lemma conv_cumul_prop Σ Γ A B : 
   wf_ext Σ ->
   Σ ;;; Γ |- A = B ->
-  Σ ;;; Γ |- A ~ B.
+  Σ ;;; Γ |- A ~~ B.
 Proof.
   intros wfΣ. induction 1.
   - constructor. now apply eq_term_eq_term_prop_impl in e.
@@ -178,7 +177,7 @@ Proof.
 Qed.
 
 Lemma cumul_prop_alt Σ Γ T U :
-  Σ ;;; Γ |- T ~ U <~>
+  Σ ;;; Γ |- T ~~ U <~>
   ∑ nf nf', (red Σ Γ T nf * red Σ Γ U nf' * eq_term_prop Σ 0 nf nf').
 Proof.
   split.
@@ -191,7 +190,6 @@ Proof.
     exists nf, nf'; intuition pcuic.
     now transitivity v.
   - intros [nf [nf' [[redv redv'] eq]]].
-    apply red_alt in redv. apply red_alt in redv'.
     apply clos_rt_rt1n in redv.
     apply clos_rt_rt1n in redv'.
     induction redv.
@@ -203,7 +201,7 @@ Qed.
 
 Lemma cumul_prop_props Σ Γ u u' : 
   Universe.is_prop u ->
-  Σ ;;; Γ |- tSort u ~ tSort u' ->
+  Σ ;;; Γ |- tSort u ~~ tSort u' ->
   Universe.is_prop u'.
 Proof.
   intros isp equiv.
@@ -333,8 +331,8 @@ Qed.
 
 Lemma cumul_prop_sym Σ Γ T U : 
   wf Σ.1 ->
-  Σ ;;; Γ |- T ~ U ->
-  Σ ;;; Γ |- U ~ T.
+  Σ ;;; Γ |- T ~~ U ->
+  Σ ;;; Γ |- U ~~ T.
 Proof.
   intros wfΣ Hl.
   eapply cumul_prop_alt in Hl as [t' [u' [[tt' uu'] eq]]].
@@ -345,9 +343,9 @@ Qed.
 
 Lemma cumul_prop_trans Σ Γ T U V : 
   wf_ext Σ ->
-  Σ ;;; Γ |- T ~ U ->
-  Σ ;;; Γ |- U ~ V ->
-  Σ ;;; Γ |- T ~ V.
+  Σ ;;; Γ |- T ~~ U ->
+  Σ ;;; Γ |- U ~~ V ->
+  Σ ;;; Γ |- T ~~ V.
 Proof.
   intros wfΣ Hl Hr.
   eapply cumul_prop_alt in Hl as [t' [u' [[tt' uu'] eq]]].
@@ -369,9 +367,9 @@ Existing Class wf_ext.
 
 Lemma cumul_prop_cum_l Σ Γ A T B : 
   wf_ext Σ ->
-  Σ ;;; Γ |- A ~ T -> 
+  Σ ;;; Γ |- A ~~ T -> 
   Σ ;;; Γ |- A <= B ->
-  Σ ;;; Γ |- B ~ T.
+  Σ ;;; Γ |- B ~~ T.
 Proof.
   intros wfΣ HT cum.
   eapply cumul_cumul_prop in cum; auto.
@@ -381,9 +379,9 @@ Qed.
 
 Lemma cumul_prop_cum_r Σ Γ A T B : 
   wf_ext Σ ->
-  Σ ;;; Γ |- A ~ T -> 
+  Σ ;;; Γ |- A ~~ T -> 
   Σ ;;; Γ |- B <= A ->
-  Σ ;;; Γ |- B ~ T.
+  Σ ;;; Γ |- B ~~ T.
 Proof.
   intros wfΣ HT cum.
   eapply cumul_cumul_prop in cum; auto.
@@ -392,9 +390,9 @@ Qed.
 
 Lemma cumul_prop_conv_l Σ Γ A T B : 
   wf_ext Σ ->
-  Σ ;;; Γ |- A ~ T -> 
+  Σ ;;; Γ |- A ~~ T -> 
   Σ ;;; Γ |- A = B ->
-  Σ ;;; Γ |- B ~ T.
+  Σ ;;; Γ |- B ~~ T.
 Proof.
   intros wfΣ HT cum.
   eapply conv_cumul_prop in cum; auto.
@@ -404,9 +402,9 @@ Qed.
 
 Lemma cumul_prop_conv_r Σ Γ A T B : 
   wf_ext Σ ->
-  Σ ;;; Γ |- A ~ T -> 
+  Σ ;;; Γ |- A ~~ T -> 
   Σ ;;; Γ |- B = A ->
-  Σ ;;; Γ |- B ~ T.
+  Σ ;;; Γ |- B ~~ T.
 Proof.
   intros wfΣ HT cum.
   eapply conv_cumul_prop in cum; auto.
@@ -466,8 +464,7 @@ Lemma red_upto_conv_ctx_prop Σ Γ Γ' t t' :
   conv_ctx_prop Σ Γ Γ' ->
   red Σ.1 Γ' t t'.
 Proof.
-  intros Hred. eapply red_alt in Hred.
-  intros convctx. eapply red_alt.
+  intros Hred. intros convctx.
   induction Hred; eauto.
   constructor. now eapply red1_upto_conv_ctx_prop.
   eapply rt_trans; eauto.
@@ -475,8 +472,8 @@ Qed.
 
 Lemma cumul_prop_prod_inv Σ Γ na A B na' A' B' :
   wf Σ.1 ->
-  Σ ;;; Γ |- tProd na A B ~ tProd na' A' B' ->
-  Σ ;;; Γ ,, vass na A |- B ~ B'.
+  Σ ;;; Γ |- tProd na A B ~~ tProd na' A' B' ->
+  Σ ;;; Γ ,, vass na A |- B ~~ B'.
 Proof.
   intros wfΣ H; eapply cumul_prop_alt in H as [nf [nf' [[redv redv'] eq]]].
   eapply invert_red_prod in redv as (? & ? & (? & ?) & ?).
@@ -491,8 +488,8 @@ Qed.
 
 Lemma substitution_untyped_cumul_prop Σ Γ Δ Γ' s M N :
   wf Σ.1 -> untyped_subslet Γ s Δ ->
-  Σ ;;; (Γ ,,, Δ ,,, Γ') |- M ~ N ->
-  Σ ;;; (Γ ,,, subst_context s 0 Γ') |- (subst s #|Γ'| M) ~ (subst s #|Γ'| N).
+  Σ ;;; (Γ ,,, Δ ,,, Γ') |- M ~~ N ->
+  Σ ;;; (Γ ,,, subst_context s 0 Γ') |- (subst s #|Γ'| M) ~~ (subst s #|Γ'| N).
 Proof.
   intros wfΣ subs Hcum.
   eapply cumul_prop_alt in Hcum as [nf [nf' [[redl redr] eq']]].
@@ -510,7 +507,7 @@ Lemma substitution_untyped_cumul_prop_equiv Σ Γ Δ Γ' s s' M :
   untyped_subslet Γ s Δ ->
   untyped_subslet Γ s' Δ ->
   All2 (eq_term_prop Σ.1 0) s s' ->
-  Σ ;;; (Γ ,,, subst_context s 0 Γ') |- (subst s #|Γ'| M) ~ (subst s' #|Γ'| M).
+  Σ ;;; (Γ ,,, subst_context s 0 Γ') |- (subst s #|Γ'| M) ~~ (subst s' #|Γ'| M).
 Proof.
   intros wfΣ subs subs' Heq.
   eapply cumul_prop_alt.
@@ -537,7 +534,7 @@ Lemma substitution_untyped_cumul_prop_cumul Σ Γ Δ Γ' Δ' s s' M :
   untyped_subslet Γ s Δ ->
   untyped_subslet Γ s' Δ' ->
   All2 (cumul_prop Σ Γ) s s' ->
-  Σ ;;; (Γ ,,, subst_context s 0 Γ') |- (subst s #|Γ'| M) ~ (subst s' #|Γ'| M).
+  Σ ;;; (Γ ,,, subst_context s 0 Γ') |- (subst s #|Γ'| M) ~~ (subst s' #|Γ'| M).
 Proof.
   intros wfΣ subs subs' Heq.
   eapply cumul_prop_args in Heq as (nf & nf' & (redl & redr) & eq) => //.
@@ -553,8 +550,8 @@ Qed.
 
 Lemma substitution1_untyped_cumul_prop Σ Γ na t u M N :
   wf Σ.1 -> 
-  Σ ;;; (Γ ,, vass na t) |- M ~ N ->
-  Σ ;;; Γ |- M {0 := u} ~ N {0 := u}.
+  Σ ;;; (Γ ,, vass na t) |- M ~~ N ->
+  Σ ;;; Γ |- M {0 := u} ~~ N {0 := u}.
 Proof.
   intros wfΣ Hcum.
   eapply (substitution_untyped_cumul_prop Σ Γ [_] []) in Hcum; auto.
@@ -636,7 +633,7 @@ Lemma cumul_prop_subst_instance_constr Σ Γ univs u u' T :
   wf Σ.1 ->
   consistent_instance_ext Σ univs u ->
   consistent_instance_ext Σ univs u' ->
-  Σ ;;; Γ |- subst_instance_constr u T ~ subst_instance_constr u' T.
+  Σ ;;; Γ |- subst_instance_constr u T ~~ subst_instance_constr u' T.
 Proof.
   intros wfΣ cu cu'.
   eapply cumul_prop_alt.
@@ -708,8 +705,8 @@ Hint Resolve conv_ctx_prop_refl : core.
 Lemma cumul_prop_tProd {Σ : global_env_ext} {Γ na t ty na' t' ty'} : 
   wf_ext Σ ->
   eq_term Σ.1 Σ t t' ->
-  Σ ;;; Γ ,, vass na t |- ty ~ ty' ->
-  Σ ;;; Γ |- tProd na t ty ~ tProd na' t' ty'.
+  Σ ;;; Γ ,, vass na t |- ty ~~ ty' ->
+  Σ ;;; Γ |- tProd na t ty ~~ tProd na' t' ty'.
 Proof.
   intros wfΣ eq cum.
   eapply cumul_prop_alt in cum as (nf & nf' & ((redl & redr) & eq')).
@@ -725,8 +722,8 @@ Lemma cumul_prop_tLetIn (Σ : global_env_ext) {Γ na t d ty na' t' d' ty'} :
   wf_ext Σ ->
   eq_term Σ.1 Σ t t' ->
   eq_term Σ.1 Σ d d' ->
-  Σ ;;; Γ ,, vdef na d t |- ty ~ ty' ->
-  Σ ;;; Γ |- tLetIn na d t ty ~ tLetIn na' d' t' ty'.
+  Σ ;;; Γ ,, vdef na d t |- ty ~~ ty' ->
+  Σ ;;; Γ |- tLetIn na d t ty ~~ tLetIn na' d' t' ty'.
 Proof.
   intros wfΣ eq eq' cum.
   eapply cumul_prop_alt in cum as (nf & nf' & ((redl & redr) & eq'')).
@@ -747,7 +744,7 @@ Lemma cumul_prop_mkApps (Σ : global_env_ext) {Γ f args f' args'} :
   wf_ext Σ ->
   eq_term Σ.1 Σ f f' ->
   All2 (cumul_prop Σ Γ) args args' ->
-  Σ ;;; Γ |- mkApps f args ~ mkApps f' args'.
+  Σ ;;; Γ |- mkApps f args ~~ mkApps f' args'.
 Proof.
   intros wfΣ eq eq'.
   eapply cumul_prop_alt.
@@ -788,7 +785,7 @@ Qed.
 
 Lemma cumul_prop_mkApps_Ind_inv (Σ : global_env_ext) {Γ ind u args ind' u' args'} :
   wf_ext Σ ->
-  Σ ;;; Γ |- mkApps (tInd ind u) args ~ mkApps (tInd ind' u') args' ->
+  Σ ;;; Γ |- mkApps (tInd ind u) args ~~ mkApps (tInd ind' u') args' ->
   All2 (cumul_prop Σ Γ) args args'.
 Proof.
   intros wfΣ eq.
@@ -816,7 +813,7 @@ Lemma typing_leq_term_prop (Σ : global_env_ext) Γ t t' T T' :
   on_udecl Σ.1 Σ.2 ->
   Σ ;;; Γ |- t' : T' ->
   forall n, leq_term_napp Σ n t' t ->
-  Σ ;;; Γ |- T ~ T'.
+  Σ ;;; Γ |- T ~~ T'.
 Proof.
   intros wfΣ Ht.
   revert Σ wfΣ Γ t T Ht t' T'.
@@ -826,7 +823,7 @@ Proof.
   on_udecl Σ.1 Σ.2 ->
   Σ;;; Γ |- t' : T' ->
   forall n, leq_term_napp Σ n t' t ->
-  Σ ;;; Γ |- T ~ T')%type 
+  Σ ;;; Γ |- T ~~ T')%type 
   (fun Σ Γ wfΓ => wf_local Σ Γ)); auto;intros Σ wfΣ Γ wfΓ; intros.
 
   1-13:match goal with

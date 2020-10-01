@@ -1,20 +1,19 @@
-(* Distributed under the terms of the MIT license.   *)
-From Coq Require Import Bool List ZArith Lia.
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
   PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICTyping PCUICWeakeningEnv
   PCUICClosed PCUICReduction PCUICPosition PCUICGeneration.
+
 Require Import ssreflect.
-
 From Equations Require Import Equations.
-
-Set Default Goal Selector "!".
 
 (** * Weakening lemmas for typing derivations.
 
-  [weakening_*] proves weakening of typing, reduction etc... w.r.t. the *local* environment. *)
+  [weakening_*] proves weakening of typing, reduction etc... w.r.t. the *local*
+  environment. *)
 
-Set Asymmetric Patterns.
+
+Set Default Goal Selector "!".
 Generalizable Variables Σ Γ t T.
 
 Derive Signature NoConfusion for All_local_env.
@@ -550,7 +549,7 @@ Lemma to_extended_list_lift n k c :
   to_extended_list (lift_context n k c) = to_extended_list c.
 Proof.
   unfold to_extended_list, to_extended_list_k. generalize 0.
-  unf_term. generalize (nil term) at 1 2.
+  unf_term. generalize (@nil term) at 1 2.
   induction c in n, k |- *; simpl; intros. 1: reflexivity.
   rewrite -> lift_context_snoc0. unfold snoc. simpl.
   destruct a. destruct decl_body.
@@ -667,9 +666,9 @@ Lemma weakening_red `{CF:checker_flags} Σ Γ Γ' Γ'' M N :
   red Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (lift #|Γ''| #|Γ'| M) (lift #|Γ''| #|Γ'| N).
 Proof.
   intros wfΣ; induction 1.
-  - constructor.
-  - eapply red_trans with (lift #|Γ''| #|Γ'| P); eauto.
-    simpl; eapply red1_red. eapply weakening_red1; auto.
+  - constructor. eapply weakening_red1; auto.
+  - reflexivity.
+  - etransitivity; eassumption.
 Qed.
 
 Fixpoint lift_stack n k π :=

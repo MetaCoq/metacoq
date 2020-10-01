@@ -1,16 +1,9 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import Bool String List.
-From MetaCoq.Template Require Import utils config monad_utils.
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import utils config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICUnivSubst
      PCUICTyping.
 
-Import MonadNotation.
-Open Scope pcuic.
-
 (** * Coq type-checker for kernel terms
-
-  *WIP*
 
   Implemets [typecheck_program] which returns an error and
   on success should guarantee that the term has the given type.

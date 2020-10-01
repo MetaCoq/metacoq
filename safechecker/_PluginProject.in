@@ -15,8 +15,6 @@ src/ssrbool.ml
 src/ssrbool.mli
 src/monad_utils.ml
 src/monad_utils.mli
-src/utils.ml
-src/utils.mli
 src/uGraph0.ml
 src/uGraph0.mli
 src/wGraph.ml
@@ -39,6 +37,8 @@ src/pCUICReflect.mli
 src/pCUICReflect.ml
 src/pCUICEquality.mli
 src/pCUICEquality.ml
+src/pCUICReduction.ml
+src/pCUICReduction.mli
 src/pCUICTyping.ml
 src/pCUICTyping.mli
 src/pCUICUnivSubst.ml
@@ -53,8 +53,6 @@ src/pCUICNormal.ml
 # src/pCUICChecker.mli
 # src/pCUICRetyping.ml
 # src/pCUICRetyping.mli
-# src/pCUICMetaTheory.ml
-# src/pCUICMetaTheory.mli
 # src/pCUICWeakeningEnv.ml
 # src/pCUICWeakeningEnv.mli
 # src/pCUICWeakening.mli

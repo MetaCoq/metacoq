@@ -1,9 +1,10 @@
-From Coq Require Import String Bool List PeanoNat Lia Morphisms.
+(* Distributed under the terms of the MIT license. *)
+From Coq Require Import Morphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst
      PCUICLiftSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening PCUICInversion
-     PCUICSubstitution PCUICReduction PCUICCumulativity PCUICGeneration PCUICUnivSubst
-     PCUICParallelReductionConfluence
+     PCUICSubstitution PCUICReduction PCUICCumulativity PCUICGeneration
+     PCUICUnivSubst PCUICParallelReductionConfluence
      PCUICUnivSubstitution PCUICConversion PCUICContexts PCUICArities
      PCUICSpine PCUICInductives PCUICContexts
      PCUICSigmaCalculus PCUICClosed.
@@ -11,6 +12,7 @@ From MetaCoq.PCUIC Require Import PCUICAst
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 Require Import ssreflect.
+
 
 Derive Signature for typing cumul.
 

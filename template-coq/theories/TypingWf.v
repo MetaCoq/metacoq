@@ -1,10 +1,7 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import Bool String List Arith Lia.
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils Ast AstUtils Induction LiftSubst
      UnivSubst Typing.
 Require Import ssreflect.
-Set Asymmetric Patterns.
 
 (** * Well-formedness of terms and types in typing derivations
 

@@ -1,9 +1,7 @@
-Require Import MetaCoq.Template.All.
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import utils All.
 Require Import MetaCoq.Checker.All.
-From MetaCoq.Template Require Import TemplateMonad.Core monad_utils.
-Require Import List String.
-Import ListNotations MonadNotation.
-Open Scope string_scope.
+
 
 (* Should be in AstUtils probably *)
 Fixpoint subst_app (t : term) (us : list term) : term :=
@@ -80,7 +78,7 @@ Class Translation :=
               -> tsl_result (tsl_table * list mutual_inductive_body) }.
 
 
-Definition tsl_ident (id : ident) : ident := (id ++ "ᵗ")%string.
+Definition tsl_ident (id : ident) : ident := (id ^ "ᵗ").
 
 Definition tsl_name tsl_ident n :=
   match n with
@@ -100,9 +98,9 @@ Definition add_global_decl d (Σ : global_env_ext) : global_env_ext
 Definition tmLocateCst (q : qualid) : TemplateMonad kername :=
   l <- tmLocate q ;;
   match l with
-  | [] => tmFail ("Constant [" ++ q ++ "] not found")
+  | [] => tmFail ("Constant [" ^ q ^ "] not found")
   | (ConstRef kn) :: _ => tmReturn kn
-  | _ :: _ => tmFail ("[" ++ q ++ "] is not a constant")
+  | _ :: _ => tmFail ("[" ^ q ^ "] is not a constant")
   end.
 
 Definition monomorph_globref_term (gr : global_reference) : term :=
@@ -116,7 +114,7 @@ Definition monomorph_globref_term (gr : global_reference) : term :=
 
 Definition Translate {tsl : Translation} (ΣE : tsl_context) (id : ident)
   : TemplateMonad tsl_context :=
-  tmDebug ("Translate " ++ id);;
+  tmDebug ("Translate " ^ id);;
   gr <- tmLocate1 id ;;
   tmDebug gr;;
   match gr with
@@ -129,14 +127,14 @@ Definition Translate {tsl : Translation} (ΣE : tsl_context) (id : ident)
     match d' with
     | Error e =>
       print_nf e ;;
-      fail_nf ("Translation error during the translation of the inductive " ++ id)
+      fail_nf ("Translation error during the translation of the inductive " ^ id)
     | Success (E, decls) =>
       monad_iter (fun x => tmDebug x ;; tmMkInductive' x) decls ;;
       let Σ' := add_global_decl (kn,InductiveDecl d) (fst ΣE) in
-      let E' := (E ++ (snd ΣE))%list in
+      let E' := (E ++ snd ΣE) in
       Σ' <- tmEval lazy Σ' ;;
       E' <- tmEval lazy E' ;;
-      tmMsg (string_of_kername kn ++ " has been translated.") ;;
+      tmMsg (string_of_kername kn ^ " has been translated.") ;;
       ret (Σ', E')
     end
     
@@ -144,7 +142,7 @@ Definition Translate {tsl : Translation} (ΣE : tsl_context) (id : ident)
     e <- tmQuoteConstant kn true ;;
     match e.(cst_body) with
     | None =>
-      fail_nf (id ++ " is an axiom, not a definition. Use Implement Existing.")
+      fail_nf (id ^ " is an axiom, not a definition. Use Implement Existing.")
     | Some t =>
       let A := e.(cst_type) in
       let univs := e.(cst_universes) in
@@ -154,7 +152,7 @@ Definition Translate {tsl : Translation} (ΣE : tsl_context) (id : ident)
       match t' with
       | Error e =>
         print_nf e ;;
-        fail_nf ("Translation error during the translation of the body of " ++ id)
+        fail_nf ("Translation error during the translation of the body of " ^ id)
       | Success t' =>
         id' <- tmEval all (tsl_id id) ;;
         tmDebug "here" ;;
@@ -169,7 +167,7 @@ Definition Translate {tsl : Translation} (ΣE : tsl_context) (id : ident)
         let E' := (ConstRef kn, monomorph_globref_term gr') :: (snd ΣE) in
         Σ' <- tmEval lazy Σ' ;;
         E' <- tmEval lazy E' ;;
-        print_nf (id ++ " has been translated as " ++ id') ;;
+        print_nf (id ^ " has been translated as " ^ id') ;;
         ret (Σ', E')
       end
     end
@@ -200,7 +198,7 @@ Definition Implement {tsl : Translation} (ΣE : tsl_context)
                      cst_type := tA; cst_body := None |} in
       let Σ' := add_global_decl (kn, ConstantDecl decl) (fst ΣE) in
       let E' := (ConstRef kn, monomorph_globref_term gr') :: (snd ΣE) in
-      print_nf (id ++ " has been translated as " ++ id') ;;
+      print_nf (id ^ " has been translated as " ^ id') ;;
       ret (Σ', E'))
   end
   end.
@@ -227,7 +225,7 @@ Definition ImplementExisting {tsl : Translation} (ΣE : tsl_context) (id : ident
     match tA' with
     | Error e =>
       print_nf e ;;
-    fail_nf ("Translation error during the translation of the type of " ++ id)
+    fail_nf ("Translation error during the translation of the type of " ^ id)
     | Success tA' =>
       tmDebug "plop2" ;;
       tmBind (tmUnquoteTyped Type tA') (fun A' =>
@@ -238,20 +236,20 @@ Definition ImplementExisting {tsl : Translation} (ΣE : tsl_context) (id : ident
                      cst_type := A; cst_body := e.(cst_body) |} in
       let Σ' := add_global_decl (kn, ConstantDecl decl) (fst ΣE) in
       let E' := (ConstRef kn, monomorph_globref_term gr') :: (snd ΣE) in
-      print_nf (id ++ " has been translated as " ++ id') ;;
+      print_nf (id ^ " has been translated as " ^ id') ;;
       ret (Σ', E'))
     end
   | IndRef (mkInd kn n) =>
     d <- tmQuoteInductive kn ;;
     match List.nth_error (ind_bodies d) n with
       | None => fail_nf ("The declaration of "
-                          ++ id ++ " has not enough bodies. This is a bug.")
+                          ^ id ^ " has not enough bodies. This is a bug.")
       | Some {| ind_type := A |} => 
       tA' <- tmEval lazy (tsl_ty ΣE A) ;;
       match tA' with
       | Error e =>
         print_nf e ;;
-        fail_nf ("Translation error during the translation of the type of " ++ id)
+        fail_nf ("Translation error during the translation of the type of " ^ id)
       | Success tA' =>
         id' <- tmEval all (tsl_id id) ;;
         tmBind (tmUnquoteTyped Type tA') (fun A' =>
@@ -259,7 +257,7 @@ Definition ImplementExisting {tsl : Translation} (ΣE : tsl_context) (id : ident
         gr' <- tmLocate1 id' ;;
         let Σ' := add_global_decl (kn, InductiveDecl d) (fst ΣE) in
         let E' := (IndRef (mkInd kn n), monomorph_globref_term gr') :: (snd ΣE) in
-        print_nf (id ++ " has been translated as " ++ id') ;;
+        print_nf (id ^ " has been translated as " ^ id') ;;
         ret (Σ', E'))
       end
     end
@@ -269,12 +267,12 @@ Definition ImplementExisting {tsl : Translation} (ΣE : tsl_context) (id : ident
     tmDebug "plop1" ;;
     match List.nth_error (ind_bodies d) n with
     | None => fail_nf ("The declaration of "
-                        ++ id ++ " has not enough bodies. This is a bug.")
+                        ^ id ^ " has not enough bodies. This is a bug.")
     | Some {| ind_ctors := ctors |} => 
       tmDebug "plop2" ;;
       match List.nth_error ctors k with
       | None => fail_nf ("The body of "
-                          ++ id ++ " has not enough constructors. This is a bug.")
+                          ^ id ^ " has not enough constructors. This is a bug.")
       | Some (_, ty, _) =>  (* keep id? *)
         tmDebug "plop3" ;;
         let A := subst0 (inds kn [] (* FIXME uctx *) (ind_bodies d)) ty in
@@ -284,7 +282,7 @@ Definition ImplementExisting {tsl : Translation} (ΣE : tsl_context) (id : ident
         match tA' with
         | Error e =>
           print_nf e ;;
-          fail_nf ("Translation error during the translation of the type of " ++ id)
+          fail_nf ("Translation error during the translation of the type of " ^ id)
         | Success tA' =>
           tmDebug "plop6" ;;
           id' <- tmEval all (tsl_id id) ;;
@@ -293,7 +291,7 @@ Definition ImplementExisting {tsl : Translation} (ΣE : tsl_context) (id : ident
           tmLemma id' A' ;;
           gr' <- tmLocate1 id' ;;
           let E' := (ConstructRef (mkInd kn n) k, monomorph_globref_term gr') :: (snd ΣE) in
-          print_nf (id ++ " has been translated as " ++ id') ;;
+          print_nf (id ^ " has been translated as " ^ id') ;;
           ret (fst ΣE, E'))
         end
       end
@@ -308,15 +306,15 @@ Definition TranslateRec {tsl : Translation} (ΣE : tsl_context) {A} (t : A) :=
   p <- tmQuoteRec t ;;
   tmPrint "~~~~~~~~~~~~~~~~~~" ;;
   monad_fold_right (fun ΣE '(kn, decl) =>
-    print_nf ("Translating " ++ string_of_kername kn) ;;
+    print_nf ("Translating " ^ string_of_kername kn) ;;
     match decl with
     | ConstantDecl decl =>
       match lookup_tsl_table (snd ΣE) (ConstRef kn) with
-      | Some _ => print_nf (string_of_kername kn ++ " was already translated") ;; ret ΣE
+      | Some _ => print_nf (string_of_kername kn ^ " was already translated") ;; ret ΣE
       | None => 
         match decl with
         | {| cst_body := None |} =>
-          fail_nf (string_of_kername kn ++ " is an axiom. Use Implement Existing.")
+          fail_nf (string_of_kername kn ^ " is an axiom. Use Implement Existing.")
                     
         | {| cst_type := A; cst_body := Some t; cst_universes := univs |} =>
           tmDebug "go";;
@@ -326,7 +324,7 @@ Definition TranslateRec {tsl : Translation} (ΣE : tsl_context) {A} (t : A) :=
           | Error e =>
             print_nf e ;;
             fail_nf ("Translation error during the translation of the body of "
-                       ++ string_of_kername kn)
+                       ^ string_of_kername kn)
           | Success t' =>
             let id := kn.2 in
             let id' := tsl_ident id in
@@ -340,7 +338,7 @@ Definition TranslateRec {tsl : Translation} (ΣE : tsl_context) {A} (t : A) :=
             let E' := (ConstRef kn, monomorph_globref_term gr') :: (snd ΣE) in
             Σ' <- tmEval lazy Σ' ;;
             E' <- tmEval lazy E' ;;
-            print_nf  (id ++ " has been translated as " ++ id') ;;
+            print_nf  (id ^ " has been translated as " ^ id') ;;
             ret (Σ', E')
           end
         end
@@ -348,7 +346,7 @@ Definition TranslateRec {tsl : Translation} (ΣE : tsl_context) {A} (t : A) :=
 
     | InductiveDecl d => 
       match lookup_tsl_table (snd ΣE) (IndRef (mkInd kn 0)) with
-      | Some _ => print_nf (string_of_kername kn ++ " was already translated") ;; ret ΣE
+      | Some _ => print_nf (string_of_kername kn ^ " was already translated") ;; ret ΣE
       | None => 
         tmDebug "go'";;
         mp <- tmCurrentModPath tt ;;
@@ -358,14 +356,14 @@ Definition TranslateRec {tsl : Translation} (ΣE : tsl_context) {A} (t : A) :=
          | Error e => 
            print_nf e ;;
            fail_nf ("Translation error during the translation of the inductive "
-                      ++ string_of_kername kn)
+                      ^ string_of_kername kn)
          | Success (E, decls) =>
            monad_iter tmMkInductive' decls ;;
            let Σ' := add_global_decl (kn, InductiveDecl d) (fst ΣE) in
-           let E' := (E ++ (snd ΣE))%list in
+           let E' := (E ++ snd ΣE) in
            Σ' <- tmEval lazy Σ' ;;
            E' <- tmEval lazy E' ;;
-           print_nf  (string_of_kername kn ++ " has been translated.") ;;
+           print_nf  (string_of_kername kn ^ " has been translated.") ;;
            ret (Σ', E')
          end
       end

@@ -1,6 +1,7 @@
 -R theories MetaCoq.PCUIC
 
 theories/PCUICUtils.v
+theories/PCUICRelations.v
 theories/PCUICAst.v
 theories/PCUICSize.v
 theories/PCUICAstUtils.v
@@ -39,13 +40,11 @@ theories/PCUICValidity.v
 theories/PCUICInductiveInversion.v
 theories/PCUICSR.v
 theories/PCUICCanonicity.v
-theories/PCUICMetaTheory.v
 
 theories/PCUICCSubst.v
 theories/PCUICWcbvEval.v
 theories/PCUICChecker.v
 theories/PCUICPretty.v
-theories/PCUICCheckerCompleteness.v
 theories/PCUICRetyping.v
 theories/PCUICCumulProp.v
 theories/PCUICElimination.v

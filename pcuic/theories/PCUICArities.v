@@ -1,8 +1,6 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import Bool String List BinPos Compare_dec Arith Lia
-     Classes.CRelationClasses ProofIrrelevance ssreflect.
-From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
+(* Distributed under the terms of the MIT license. *)
+From Coq Require Import CRelationClasses ProofIrrelevance ssreflect.
+From MetaCoq.Template Require Import config Universes utils BasicAst
      AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICUnivSubstitution
@@ -14,9 +12,9 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICWeakening PCUICGeneration PCUICUtils PCUICCtxShape PCUICContexts.
 
 From Equations Require Import Equations.
-
 Require Import Equations.Prop.DepElim.
 Require Import Equations.Type.Relation_Properties.
+
 
 Derive Signature for typing_spine.
 
@@ -78,7 +76,7 @@ induction n; intros ctx Hlen Γ T HT.
       forward IHn. eapply cumul_conv_ctx; eauto.
       constructor; pcuic. clear IHctx.
       destruct IHn as [T' [ctx' [s' [[[redT' destT] convctx] leq]]]].
-      exists (tProd na' A' T'), (ctx' ++ [vass na' A'])%list, s'. intuition auto. 2:simpl.
+      exists (tProd na' A' T'), (ctx' ++ [vass na' A']), s'. intuition auto. 2:simpl.
       -- transitivity (tProd na' A' B'); auto.
         eapply red_prod. reflexivity. apply redT'.
       -- now rewrite destArity_app destT.

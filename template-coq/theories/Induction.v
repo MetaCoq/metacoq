@@ -1,15 +1,11 @@
-(* Distributed under the terms of the MIT license.   *)
-
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq Require Import utils Ast AstUtils.
-Require Import List.
-Set Asymmetric Patterns.
 
 (** * Deriving a compact induction principle for terms
 
-  *WIP*
-
   Allows to get the right induction principle on lists of terms appearing
   in the term syntax (in evar, applications, branches of cases and (co-)fixpoints. *)
+
 
 (** Custom induction principle on syntax, dealing with the various lists appearing in terms. *)
 

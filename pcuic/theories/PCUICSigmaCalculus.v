@@ -1,25 +1,25 @@
-(* Distributed under the terms of the MIT license.   *)
-From Equations Require Import Equations.
-From Coq Require Import String Bool List ZArith Lia Morphisms.
+(* Distributed under the terms of the MIT license. *)
+From Coq Require Import Morphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
     PCUICLiftSubst PCUICUnivSubst
      PCUICTyping PCUICClosed PCUICEquality.
-Require Import ssreflect.
 
-Set Keyed Unification.
+Require Import ssreflect.
+From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 Set Equations With UIP.
+
+(** * Type preservation for σ-calculus *)
+
+
+Open Scope sigma_scope.
+Set Keyed Unification.
 
 Set Default Goal Selector "!".
 
 (* TODO Maybe remove later? *)
 Require PCUICWeakening.
-
-(** * Type preservation for σ-calculus *)
-
-Set Asymmetric Patterns.
-Open Scope sigma_scope.
 
 Hint Rewrite @lift_rename Nat.add_0_r : sigma.
 
@@ -402,7 +402,7 @@ Proof.
   eapply inst_ext_closed; eauto.
   intros.
   unfold ids, subst_consn. simpl.
-  destruct (equiv_inv _ _ (nth_error_Some' s x) H). rewrite e.
+  destruct (snd (nth_error_Some' s x) H). rewrite e.
   subst s.
   rewrite /to_extended_list /to_extended_list_k in e.
   rewrite List.rev_length in cl, H. autorewrite with len in *.

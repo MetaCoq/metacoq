@@ -1,9 +1,5 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import Bool List.
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq Require Import utils Ast AstUtils Induction LiftSubst.
-Local Open Scope string_scope.
-Set Asymmetric Patterns.
 
 (** * Universe substitution
 

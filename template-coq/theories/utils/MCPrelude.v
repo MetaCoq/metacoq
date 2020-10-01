@@ -1,3 +1,4 @@
+
 Declare Scope metacoq_scope.
 
 Notation "'eta_compose'" := (fun g f x => g (f x)).
@@ -6,13 +7,6 @@ Notation "'eta_compose'" := (fun g f x => g (f x)).
 Notation "g ∘ f" := (eta_compose g f) (at level 40, left associativity).
 
 Notation " ! " := (@False_rect _ _) : metacoq_scope.
-
-(** "Incoherent" notion of equivalence, that we only apply to hProps actually. *)
-Record isEquiv (A B : Type) :=
-  { equiv : A -> B;
-    equiv_inv : B -> A}.
-
-Infix "<~>" := isEquiv (at level 90).
 
 (* Use \sum to input ∑ in Company Coq (it is not a sigma Σ). *)
 Notation "'∑' x .. y , p" := (sigT (fun x => .. (sigT (fun y => p%type)) ..))

@@ -1,15 +1,14 @@
-(* Distributed under the terms of the MIT license.   *)
-
-
-Require Import List. Import ListNotations.
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Export BasicAst Universes.
+From MetaCoq.Template Require Import utils.
 
-(** Extracted terms
+(** * Extracted terms
 
   These are the terms produced by extraction: compared to kernel terms,
   all proofs and types are translated to [tBox] or erased (type annotations
   at lambda and let-ins, types of fix/cofixpoints), applications
   are in binary form and casts are removed.  *)
+
 
 (* todo reuse the one of BasicASt *)
 Record def (term : Set) := { dname : name; dbody : term; rarg : nat }.

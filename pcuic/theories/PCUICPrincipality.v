@@ -1,7 +1,4 @@
-(* Distributed under the terms of the MIT license.   *)
-Set Warnings "-notation-overridden".
-
-From Coq Require Import String Bool List.
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICTyping PCUICSubstitution PCUICEquality
@@ -10,13 +7,10 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICArities PCUICValidity PCUICInductives PCUICSR.
 
 Require Import ssreflect.
-
-Set Asymmetric Patterns.
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
-
 Set Equations With UIP.
-Set Printing Universes.
+
 
 Derive NoConfusion for global_decl.
 
@@ -58,9 +52,6 @@ Section Principality.
     | ih : _ × _ |- _ =>
       destruct ih as [? ?]
     end.
-
-  Arguments equiv {A B}.
-  Arguments equiv_inv {A B}.
 
   Lemma cumul_sort_confluence {Γ A u v} :
     Σ ;;; Γ |- A <= tSort u ->

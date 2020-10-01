@@ -1,17 +1,14 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import Bool List Program Lia.
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils Ast AstUtils
      LibHypsNaming Typing.
 Require Import ssreflect.
 
 (** * Weakening lemmas w.r.t. the global environment *)
 
-Set Asymmetric Patterns.
 
 Generalizable Variables Σ Γ t T.
 
-Definition extends (Σ Σ' : global_env) := { Σ'' & Σ' = (Σ'' ++ Σ)%list }.
+Definition extends (Σ Σ' : global_env) := { Σ'' & Σ' = Σ'' ++ Σ }.
 
 Lemma weakening_env_global_ext_levels Σ Σ' φ (H : extends Σ Σ') l
   : LevelSet.In l (global_ext_levels (Σ, φ))
@@ -431,7 +428,7 @@ Proof.
   induction HΣ; simpl. congruence.
   assert (HH: extends Σ Σ'). {
     destruct Hext as [Σ'' HΣ''].
-    exists ((Σ'' ++ [(kn, d)])%list). now rewrite <- app_assoc. }
+    exists (Σ'' ++ [(kn, d)]). now rewrite <- app_assoc. }
   unfold eq_kername; destruct kername_eq_dec; subst.
   - intros [= ->].
     clear Hext; eapply weakening_on_global_decl; eauto.

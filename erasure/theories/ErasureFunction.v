@@ -1,19 +1,17 @@
-
-From Coq Require Import Bool String List Program.
-From MetaCoq.Template Require Import config utils monad_utils.
+(* Distributed under the terms of the MIT license. *)
+From Coq Require Import Program.
+From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-     PCUICTyping PCUICLiftSubst PCUICInversion
-     PCUICConfluence PCUICConversion 
+     PCUICTyping PCUICLiftSubst PCUICInversion PCUICConfluence PCUICConversion 
      PCUICCumulativity PCUICSR PCUICNormal PCUICSafeLemmata
      PCUICValidity PCUICPrincipality PCUICElimination PCUICSN.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker.
+Require Import EArities Extract Prelim EDeps.
+
 From Equations Require Import Equations.
-Local Open Scope string_scope.
-Set Asymmetric Patterns.
-Import MonadNotation.
+
 Local Set Keyed Unification.
 
-Require Import EArities Extract Prelim.
 Section fix_sigma.
 Local Existing Instance extraction_checker_flags.
 Variable Σ : global_env_ext.
@@ -54,7 +52,7 @@ Proof.
   induction (wf_cod' s) as [s _ IH_sub] in Γ, H, IH |- *.
   econstructor.
   intros (Γ' & B & ?) [(na & A & ? & ?)]. subst.
-    inversion r.
+  eapply Relation_Properties.clos_rt_rtn1 in r. inversion r.
     + subst. eapply IH_sub. econstructor. cbn. reflexivity.
       intros. eapply IH.
       inversion H0.
@@ -62,15 +60,19 @@ Proof.
       * subst. eapply cored_red in H2 as [].
         eapply cored_red_trans. 2: eapply prod_red_r. 2:eassumption.
         eapply PCUICReduction.red_prod_r. eauto.
-      * repeat econstructor.
+      * constructor. do 2 eexists. now split.
     + subst. eapply IH.
-      * eapply red_neq_cored. exact r. intros ?. subst.
-        eapply cored_red_trans in X0; eauto.
+      * eapply red_neq_cored.
+        eapply Relation_Properties.clos_rtn1_rt. exact r.
+        intros ?. subst.
+        eapply Relation_Properties.clos_rtn1_rt in X1.
+        eapply cored_red_trans in X0; [| exact X1 ].
         eapply Acc_no_loop in X0. eauto.
         eapply @normalisation'; eauto.
-      * repeat econstructor.
+      * constructor. do 2 eexists. now split.
 Grab Existential Variables.
-- eapply red_wellformed; sq. 3:eauto. all:eauto.
+- eapply red_wellformed; sq.
+  3:eapply Relation_Properties.clos_rtn1_rt in r; eassumption. all:eauto.
 - destruct H as [[] |[]].
   -- eapply inversion_Prod in X0 as (? & ? & ? & ? & ?) ; auto.
      eapply cored_red in H0 as [].
@@ -80,7 +82,7 @@ Grab Existential Variables.
      econstructor 2. sq.
      eapply isWfArity_red in i; eauto.
      destruct i as (? & ? & ? & ?).
-     exists (x ++ [vass na A])%list, x0. cbn; split.
+     exists (x ++ [vass na A]), x0. cbn; split.
      2:{ unfold snoc, app_context in *. rewrite <- app_assoc. eassumption. }
      change ([] ,, vass na A) with ([vass na A] ,,, []).
      rewrite destArity_app_aux. rewrite e. cbn. reflexivity.
@@ -90,57 +92,6 @@ Ltac sq := try (destruct HΣ as [wfΣ]; clear HΣ);
   repeat match goal with
          | H : ∥ _ ∥ |- _ => destruct H
          end; try eapply sq.
-
-Hint Constructors normal neutral : core.
-
-Derive Signature for normal.
-Derive Signature for neutral.
-
-(* Definition normal_neutral_dec Γ t : ({normal Σ Γ t} + {~ (normal Σ Γ t)}) * ({neutral Σ Γ t} + {~ (neutral Σ Γ t)}). *)
-(* Proof. *)
-(*   induction t in Γ |- *; split; eauto. *)
-(*   all: try now (right; intros H; depelim H). *)
-(*   - destruct (option_map decl_body (nth_error Γ n)) as [ [ | ] | ] eqn:E. *)
-(*     + right. intros H. depelim H. depelim H. congruence. admit. admit. *)
-(*     + eauto. *)
-(*     + right. intros H. depelim H. depelim H. congruence. admit. admit. *)
-(*   - destruct (option_map decl_body (nth_error Γ n)) as [ [ | ] | ] eqn:E. *)
-(*     + right. intros H. depelim H. congruence.  *)
-(*     + eauto. *)
-(*     + right. intros H. depelim H. congruence. *)
-(*   - destruct (IHt1 Γ) as [[] _]; *)
-(*       [destruct (IHt2 (Γ,, vass na t1)) as [[] _]|]; eauto. *)
-(*     + right. intros H. depelim H. depelim H. eauto. admit. admit. *)
-(*     + right. intros H. depelim H. depelim H. eauto. admit. admit. *)
-(*   - destruct (IHt1 Γ) as [[] _]; *)
-(*       [destruct (IHt2 (Γ,, vass na t1)) as [[] _]|]; eauto. *)
-(*     + right. intros H. depelim H. depelim H. eauto. admit. admit. *)
-(*     + right. intros H. depelim H. depelim H. eauto. admit. admit. *)
-(*   - right. intros H. depelim H. depelim H. admit. admit. *)
-(*   - destruct (IHt1 Γ) as [_ []]; *)
-(*       [destruct (IHt2 Γ) as [[] _]|]; eauto. *)
-(*     + right. intros H. depelim H. depelim H. eauto. admit. admit. *)
-(*     + right. intros H. depelim H. depelim H. eauto. admit. admit. *)
-(*   - destruct (IHt1 Γ) as [_ []]; *)
-(*       [destruct (IHt2 Γ) as [[] _]|]; eauto. *)
-(*     + right. intros H. depelim H. eauto.  *)
-(*     + right. intros H. depelim H. eauto. *)
-(*   - destruct (lookup_env Σ k) as [[] | ] eqn:E. *)
-(*     + destruct (cst_body c) eqn:E2. *)
-(*       * right. intros H. depelim H. depelim H. congruence. admit. admit. *)
-(*       * destruct (string_dec k k0). subst. left. eauto.  *)
-(*         right. intros H. depelim H. depelim H. congruence. admit. admit. *)
-(*     +   right. intros H. depelim H. depelim H. congruence. admit. admit. *)
-(*     +   right. intros H. depelim H. depelim H. congruence. admit. admit. *)
-(*   - destruct (lookup_env Σ k) as [[] | ] eqn:E. *)
-(*     + destruct (cst_body c) eqn:E2. *)
-(*       * right. intros H. depelim H. congruence.  *)
-(*       * destruct (string_dec k k0). subst. left. eauto.  *)
-(*         right. intros H. depelim H. congruence. *)
-(*     +   right. intros H. depelim H. congruence. *)
-(*     +   right. intros H. depelim H. congruence. *)
-(*   - *)
-(* Admitted. *)
 
 Lemma mkApps_tFix_inv t mfix n L :
   t = mkApps (tFix mfix n) L ->
@@ -154,78 +105,9 @@ Proof.
       rewrite e. eauto.
 Qed.
 
+Require Import MetaCoq.PCUIC.PCUICNormal.
+
 Notation err := (TypeError  (Msg "hnf did not return normal form")).
-Program Fixpoint normal_dec Γ t : typing_result (forall t', red1 Σ Γ t t' -> False) :=
-  match t with
-  | tRel n => match option_map decl_body (nth_error Γ n) with
-               Some (Some body) => err
-             | _ => ret _
-             end
-  | tVar n => ret _
-  | tSort u => ret _
-  | tProd na A B => H1 <- normal_dec Γ A ;;
-                      H2 <- normal_dec (Γ,, vass na A) B;;
-                      ret _
-  | tLambda na A B => H1 <- normal_dec Γ A ;;
-                      H2 <- normal_dec (Γ,, vass na A) B;;
-                      ret _
-  | tLetIn _ _ _ _ => err
-  | tConst c u => match lookup_env Σ c  with Some (ConstantDecl (Build_constant_body _ (Some _) _)) => err
-                                       | _ => ret _
-                 end
-  | tInd _ _ => ret _
-  | tConstruct _ _ _ => ret _
-  | tCase _ _ _ _ => err
-  | tProj _ _ => err
-  (* | tFix _ _ => ret _ *)
-  (* | tCoFix _ _ => ret _ *)
-  | _ => TypeError (Msg "not implemented")
-  end.
-Next Obligation.
-  intros; depelim X; try congruence; eapply mkApps_tFix_inv in H0 as [(? & ? & ?) | [] ]; congruence.
-Qed.
-Next Obligation.
-  intros; depelim X; try congruence; try eapply mkApps_tFix_inv in H as [(? & ? & ?) | [] ]; try congruence.
-Qed.
-Next Obligation.
-  intros; depelim X; try congruence; try eapply mkApps_tFix_inv in H as [(? & ? & ?) | [] ]; try congruence.
-Qed.
-Next Obligation.
-  intros; depelim X; try congruence; try eapply mkApps_tFix_inv in H as [(? & ? & ?) | [] ]; try congruence; eauto.
-Qed.
-Next Obligation.
-  intros; depelim X; try congruence; try eapply mkApps_tFix_inv in H as [(? & ? & ?) | []]; try congruence; eauto.
-Qed.
-Next Obligation.
-  intros; depelim X; try congruence; try eapply mkApps_tFix_inv in H0 as [(? & ? & ?) | [] ]; try congruence; eauto.
-  unfold declared_constant in *. rewrite isdecl in H. destruct decl. destruct cst_body; cbn in *; firstorder congruence.
-Qed.
-Next Obligation.
-  intros; depelim X; try congruence; try eapply mkApps_tFix_inv in H as [(? & ? & ?) | [] ]; try congruence; eauto.
-Qed.
-Next Obligation.
-  intros; depelim X; try congruence; try eapply mkApps_tFix_inv in H as [(? & ? & ?) | [] ]; try congruence; eauto.
-Qed.
-Solve All Obligations with firstorder congruence.
-
-Inductive red' (Σ : global_env) (Γ : context) : term -> term -> Type :=
-  refl_red' M : red' Σ Γ M M
-| trans_red' : forall M P N : term, red1 Σ Γ M P -> red' Σ Γ P N -> red' Σ Γ M N.
-
-Instance red'_transitive Γ : CRelationClasses.Transitive (red' Σ Γ).
-Proof.
-  intros ? ? ? ?. revert z. induction X; intros.
-  - eauto.
-  - econstructor. eauto. eauto.
-Qed.
-
-Lemma red_red' Γ t t' : red Σ Γ t t' -> red' Σ Γ t t'.
-Proof.
-  induction 1.
-  - econstructor.
-  - etransitivity. eassumption. econstructor. eauto. econstructor.
-Qed.
-
 Program Definition reduce_to_sort' Γ t (h : wellformed Σ Γ t)
   : typing_result ((∑ u, ∥ red (fst Σ) Γ t (tSort u) ∥) + ((∑ u, ∥ red (fst Σ) Γ t (tSort u) ∥) -> False)) :=
   match t with
@@ -233,7 +115,9 @@ Program Definition reduce_to_sort' Γ t (h : wellformed Σ Γ t)
   | _ =>
     match hnf HΣ Γ t h with
     | tSort u => ret (inl (u; _))
-    | t' => match normal_dec Γ t' with Checked H => ret (inr _) | TypeError t => TypeError t end
+    | t' =>
+      match whnf_dec RedFlags.default Σ Γ t' with left H => ret (inr _)
+                                             | right _ => TypeError (Msg ("reduction did not return normal form for term:" ++ PCUICPretty.print_term Σ Γ true false t ++ "which was found to be " ++ PCUICPretty.print_term Σ Γ true false t'))%string end
     end
   end.
 Next Obligation.
@@ -245,11 +129,8 @@ Next Obligation.
   repeat match goal with [H : squash (red _ _ _ _ ) |- _ ] => destruct H end.
   destruct HΣ.
   eapply PCUICConfluence.red_confluence in X0 as [t'' []]. 3:exact X1. 2:eauto.
-  eapply red_red' in r.
-  inversion r; subst.
-  - eapply invert_red_sort in r0; eauto.
-    edestruct H0. eauto.
-  - eauto.
+  eapply invert_red_sort in r0; eauto. subst.
+  eapply whnf_red_sort in r. congruence. eauto.
 Qed.
 
 Program Definition reduce_to_prod' Γ t (h : wellformed Σ Γ t)
@@ -259,7 +140,7 @@ Program Definition reduce_to_prod' Γ t (h : wellformed Σ Γ t)
   | _ =>
     match hnf HΣ Γ t h with
     | tProd na a b => ret (inl (na; a; b; _))
-    | t' => match normal_dec Γ t' with Checked H => ret (inr _) | _ => TypeError (Msg "hnf did not return normal form") end
+    | t' => match whnf_dec RedFlags.default Σ Γ t' with left H => ret (inr _) | right _ => TypeError (Msg ("reduction did not return normal form for term:" ++ PCUICPretty.print_term Σ Γ true false t ++ "which was found to be " ++ PCUICPretty.print_term Σ Γ true false t'))%string end
     end
   end.
 Next Obligation.
@@ -271,11 +152,8 @@ Next Obligation.
   repeat match goal with [H : squash (red _ _ _ _ ) |- _ ] => destruct H end.
   destruct HΣ.
   eapply PCUICConfluence.red_confluence in X2 as [t'' []]. 3:exact X3. 2:eauto.
-  eapply red_red' in r.
-  inversion r; subst.
-  - eapply invert_red_prod in r0 as (? & ? & [] & ?); eauto.
-    edestruct H0. eauto.
-  - eauto.
+  eapply invert_red_prod in r0 as (? & ? & [] & ?); eauto. subst.
+  eapply whnf_red_prod in r as (? & ? & ?). congruence. eauto.
 Qed.
 
 Equations is_arity Γ (HΓ : ∥wf_local Σ Γ∥) T (HT : wellformed Σ Γ T) :
@@ -325,7 +203,7 @@ Qed.
 Next Obligation.
   clear He.
   destruct H as (? & ? & ?). eexists (tProd _ _ _). split; sq.
-  etransitivity. eassumption. eapply PCUICReduction.red_prod. econstructor.
+  etransitivity. eassumption. eapply PCUICReduction.red_prod. reflexivity.
   eassumption. now cbn.
 Qed.
 Next Obligation.
@@ -474,7 +352,7 @@ Section Erase.
     Context (erase : forall  (Γ : context) (HΓ : ∥ wf_local Σ Γ ∥) (t : term), typing_result E.term).
 
     Program Definition erase_mfix Γ (HΓ : ∥wf_local Σ Γ∥) (defs : mfixpoint term) : typing_result (EAst.mfixpoint E.term) :=
-      let Γ' := (PCUICLiftSubst.fix_context defs ++ Γ)%list in
+      let Γ' := PCUICLiftSubst.fix_context defs ++ Γ in
       monad_map (fun d => H <- _ ;;
                    dbody' <- erase Γ' H d.(dbody);;
                           ret ({| E.dname := d.(dname); E.rarg := d.(rarg);
@@ -824,11 +702,11 @@ Lemma erase_correct (Σ : global_env_ext) (wfΣ : wf_ext Σ) t T v Σ' t' :
   erase_global Σ (wf_ext_wf_squash wfΣ) = Checked Σ' ->
   erase Σ (sq wfΣ) [] (sq localenv_nil) t = Checked t' ->
   Σ |-p t ▷ v -> 
-  exists v', Σ;;; [] |- v ⇝ℇ v' /\ Σ' ⊢ t' ▷ v'.
+  exists v', Σ;;; [] |- v ⇝ℇ v' /\ ∥Σ' ⊢ t' ▷ v'∥.
 Proof.
-  intros axiomfree Ht HΣ' Ht'.
+  intros axiomfree Ht HΣ' Ht' ev.
   assert (extraction_pre Σ) by now constructor.
   eapply erases_erase in Ht'; eauto.
-  eapply erase_global_correct in HΣ'.
+  eapply erase_global_correct, erases_global_erases_deps in HΣ'; eauto.
   eapply erases_correct; eauto.
 Qed.

@@ -1,8 +1,6 @@
-Require Import List Arith String.
-Require Import MetaCoq.Template.All.
-Import ListNotations MonadNotation.
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import utils All.
 
-Local Open Scope string_scope.
 
 (** This is just printing **)
 MetaCoq Test Quote (fun x : nat => x).
@@ -209,7 +207,7 @@ Definition printInductive (q : qualid): TemplateMonad unit :=
   kn <- tmLocate1 q ;;
   match kn with
   | IndRef ind => (tmQuoteInductive ind.(inductive_mind)) >>= tmPrint
-  | _ => tmFail ("[" ++ q ++ "] is not an inductive")
+  | _ => tmFail ("[" ^ q ^ "] is not an inductive")
   end.
 
 MetaCoq Run (printInductive "Coq.Init.Datatypes.nat").
@@ -223,7 +221,7 @@ Definition printConstant (q : qualid) b : TemplateMonad unit :=
   kn <- tmLocate1 q ;;
   match kn with
   | ConstRef kn => (tmQuoteConstant kn b) >>= tmPrint
-  | _ => tmFail ("[" ++ q ++ "] is not a constant")
+  | _ => tmFail ("[" ^ q ^ "] is not a constant")
   end.
 
 MetaCoq Run (printConstant "add" false).
@@ -287,7 +285,7 @@ Definition printConstant' (name  : qualid): TemplateMonad unit :=
   | ConstRef kn => X <- tmUnquote (tConst kn []) ;;
                   X' <- tmEval all (my_projT2 X) ;;
                   tmPrint X'
-  | _ => tmFail ("[" ++ name ++ "] is not a constant")
+  | _ => tmFail ("[" ^ name ^ "] is not a constant")
   end.
 
 Fail MetaCoq Run (printInductive "Coq.Arith.PeanoNat.Nat.add").
@@ -396,7 +394,7 @@ Definition kername_of_qualid (q : qualid) : TemplateMonad kername :=
   | ConstRef kn  => ret kn
   | IndRef ind => ret ind.(inductive_mind)
   | ConstructRef ind _ => ret ind.(inductive_mind)
-  | VarRef _ => tmFail ("tmLocate: " ++ q ++ " is a Var")
+  | VarRef _ => tmFail ("tmLocate: " ^ q ^ " is a Var")
   end.
 
 MetaCoq Run (kername_of_qualid "add" >>= tmPrint).

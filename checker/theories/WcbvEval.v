@@ -1,15 +1,11 @@
-(* Distributed under the terms of the MIT license.   *)
-Set Warnings "-notation-overridden".
-
-From Coq Require Import Arith Bool List Program Lia CRelationClasses.
-From MetaCoq.Template Require Import config utils Ast AstUtils LiftSubst MCList UnivSubst WfInv Typing.
+(* Distributed under the terms of the MIT license. *)
+From Coq Require Import CRelationClasses.
+From MetaCoq.Template Require Import config utils Ast AstUtils LiftSubst MCList
+     UnivSubst WfInv Typing.
 From MetaCoq.Checker Require Import Reflect.
 
-Set Asymmetric Patterns.
 Require Import ssreflect ssrbool.
 Require Import Equations.Prop.DepElim.
-
-Local Ltac inv H := inversion H; subst.
 
 (** * Weak-head call-by-value evaluation strategy.
 
@@ -22,6 +18,9 @@ Local Ltac inv H := inversion H; subst.
   reduction strategy of ML programming languages. It is used to state
   the extraction conjecture that can be applied to Coq terms to produce
   (untyped) terms where all proofs are erased to a dummy value. *)
+
+
+Local Ltac inv H := inversion H; subst.
 
 (** ** Big step version of weak cbv beta-zeta-iota-fix-delta reduction. *)
 
@@ -358,9 +357,9 @@ Section Wcbv.
     value (mkApps t l) ->
     ((l = []) * atom t) + (value_head t * All value l) + (isStuckFix t l * All value l).
   Proof.
-    intros H H'. generalize_eqs H'. revert t H. induction H' using value_values_ind.
-    intros.
-    subst.
+    intros H H'. generalize_eq x (mkApps t l).
+    revert t H. induction H' using value_values_ind.
+    intros. subst.
     - now eapply atom_mkApps in H.
     - intros * isapp appeq. move: (value_head_nApp H) => Ht.
       apply mkApps_eq_inj in appeq; intuition subst; auto.
@@ -627,7 +626,7 @@ Section Wcbv.
   (*     solve_discr'. *)
   (*     specialize (IHeval1 _ _ _ eq_refl). *)
   (*     firstorder eauto. subst. *)
-  (*     exists (x ++ [a'])%list. *)
+  (*     exists (x ++ [a']). *)
   (*     split. eapply All2_app; auto. *)
   (*     now rewrite -mkApps_nested. *)
   (*   - eapply atom_mkApps in i; intuition try easy. *)
@@ -726,7 +725,7 @@ Lemma All2_app_inv_l :
   forall A B R l1 l2 r,
     @All2 A B R (l1 ++ l2) r ->
     ∑ r1 r2,
-      (r = r1 ++ r2)%list ×
+      (r = r1 ++ r2) ×
       All2 R l1 r1 ×
       All2 R l2 r2.
 Proof.

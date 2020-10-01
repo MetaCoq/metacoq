@@ -1,24 +1,19 @@
-(* Distributed under the terms of the MIT license.   *)
-Set Warnings "-notation-overridden".
-
-From Coq Require Import Bool String List Program BinPos Compare_dec ZArith.
-
-
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICLiftSubst PCUICEquality
-     PCUICUnivSubst PCUICTyping PCUICGeneration.
+     PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICTyping PCUICGeneration.
 
-From MetaCoq.Template Require Import config utils Ast TypingWf WfInv UnivSubst LiftSubst.
-
+From MetaCoq.Template Require Import config utils Ast TypingWf WfInv UnivSubst
+     LiftSubst.
 
 Require Import PCUICToTemplate.
 
-Require Import String.
-Local Open Scope string_scope.
-Set Asymmetric Patterns.
+(* from Checker Generation to avoid dependencies *)
 
+Derive Signature for Template.Typing.typing.
+Derive NoConfusion for term.
 
-
+From Equations Require Import Equations.
+Require Import Equations.Prop.DepElim.
 
 Module P := PCUICAst.
 Module PT := PCUICTyping.
@@ -435,9 +430,6 @@ Proof.
   - now destruct mdecl;cbn in *.
 Qed.
 
-From MetaCoq.Template Require Import monad_utils.
-Import MonadNotation.
-
 Lemma inv_opt_monad {X Y Z} (f:option X) (g:X->option Y) (h:X->Y->option Z) c:
   (x <- f;;
   y <- g x;;
@@ -788,11 +780,6 @@ Proof.
 Qed.
 
 
-
-(* from Checker Generation to avoid dependencies *)
-
-Derive Signature for typing.
-
 Lemma invert_type_App `{checker_flags} Σ Γ f u T :
   TT.typing Σ Γ (tApp f u) T ->
   { T' : term & { U' & ((TT.typing Σ Γ f T') * TT.typing_spine Σ Γ T' u U' *
@@ -803,7 +790,6 @@ Proof.
   dependent induction Hty.
   - exists t_ty, t'. intuition.
   - edestruct IHHty as [T' [U' [H' H'']]].
-    1: reflexivity.
     exists T', U'. split; auto.
     eapply TT.cumul_trans; eauto.
 Qed.

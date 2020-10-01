@@ -1,18 +1,15 @@
-From Coq Require Import Strings.String.
-From MetaCoq.Template Require Import
-     Ast AstUtils TemplateMonad.Common.
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import utils Ast AstUtils TemplateMonad.Common.
 
-Set Universe Polymorphism.
-Set Universe Minimization ToSet.
-Set Primitive Projections.
-Set Printing Universes.
+Local Set Universe Polymorphism.
 
-(** ** The Extractable Template Monad
+(** * The Extractable Template Monad
 
   A monad for programming with Template Coq structures. Use [Run
   TemplateProgram] on a monad action to produce its side-effects.
 
  *)
+
 
 Cumulative Inductive TM@{t} : Type@{t} -> Type :=
 (* Monadic operations *)

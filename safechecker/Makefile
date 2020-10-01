@@ -29,6 +29,10 @@ install: theory plugin
 	$(MAKE) -f Makefile.safechecker install
 	$(MAKE) -f Makefile.plugin install
 
+uninstall: theory plugin
+	$(MAKE) -f Makefile.safechecker uninstall
+	$(MAKE) -f Makefile.plugin uninstall
+
 clean: Makefile.safechecker Makefile.plugin
 	make -f Makefile.safechecker clean
 	make -f Makefile.plugin clean

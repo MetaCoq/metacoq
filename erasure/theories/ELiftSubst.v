@@ -1,6 +1,4 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import List Program Lia.
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils.
 From MetaCoq.Erasure Require Import EAst EInduction.
 
@@ -10,8 +8,6 @@ From MetaCoq.Erasure Require Import EAst EInduction.
   Along with standard commutation lemmas.
   Definition of [closedn] (boolean) predicate for checking if
   a term is closed. *)
-
-Set Asymmetric Patterns.
 
 Fixpoint lift n k t : term :=
   match t with
@@ -223,10 +219,6 @@ Ltac change_Sk :=
     |- context [S (?x + ?y)] => progress change (S (x + y)) with (S x + y)
   end.
 
-Ltac all_simpl :=
-  progress (unfold compose; simpl).
-
-Hint Extern 10 => all_simpl : all.
 
 Ltac solve_all :=
   unfold tCaseBrsProp, tFixProp in *;
@@ -261,8 +253,6 @@ Lemma lift0_p : forall M, lift0 0 M = M.
   intros; unfold lift in |- *.
   apply lift0_id; easy.
 Qed.
-
-Hint Extern 10 => progress unfold compose : all.
 
 Hint Extern 10 => apply_spec : all.
 
@@ -328,8 +318,6 @@ Proof. destruct bod; simpl; try congruence. Qed.
 
 Hint Resolve lift_isApp map_non_nil isLambda_lift : all.
 
-Hint Unfold compose : core.
-Hint Transparent compose : core.
 
 Lemma simpl_subst_rec :
   forall M N n p k,

@@ -4,7 +4,7 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICTyping PCUICLiftSubst PCUICInversion PCUICConfluence PCUICConversion 
      PCUICCumulativity PCUICSR PCUICNormal PCUICSafeLemmata
-     PCUICValidity PCUICPrincipality PCUICElimination PCUICSN.
+     PCUICValidity PCUICPrincipality PCUICElimination PCUICSN PCUICNormal.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker.
 Require Import EArities Extract Prelim EDeps.
 
@@ -104,8 +104,6 @@ Proof.
     + cbn. edestruct IHL as (? & ? & ?).
       rewrite e. eauto.
 Qed.
-
-Require Import MetaCoq.PCUIC.PCUICNormal.
 
 Notation err := (TypeError  (Msg "hnf did not return normal form")).
 Program Definition reduce_to_sort' Γ t (h : wellformed Σ Γ t)

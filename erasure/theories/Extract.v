@@ -197,7 +197,7 @@ Definition erases_one_inductive_body (Σ : global_env_ext) (npars : nat) (aritie
 Definition erases_mutual_inductive_body (Σ : global_env_ext) (mib : mutual_inductive_body) (mib' : E.mutual_inductive_body) :=
   let bds := mib.(ind_bodies) in
   let arities := arities_context bds in
-  Forall2 (erases_one_inductive_body Σ mib.(ind_npars) arities) bds (mib'.(E.ind_bodies)) /\
+  Forall2 (erases_one_inductive_body Σ #|ind_params mib| arities) bds (mib'.(E.ind_bodies)) /\
   mib.(ind_npars) = mib'.(E.ind_npars).
 
 Inductive erases_global_decls : global_env -> E.global_declarations -> Prop :=

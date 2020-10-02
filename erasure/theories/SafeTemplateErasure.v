@@ -141,40 +141,27 @@ Program Fixpoint check_wf_env_only_univs (Σ : global_env)
 
 From MetaCoq.Erasure Require Import SafeErasureFunction.
 
-Program Definition erase_template_program (p : Ast.program)
-  : EnvCheck (EAst.global_context * EAst.term) :=
-  let Σ := 
-    (* To get timing info, use 
-      SafeErasureFunction.time "Translating global environment to PCUIC" (fun _ => *)
-    (trans_global (Ast.empty_ext p.1)).1 in
-  t <- 
-  (* SafeErasureFunction.time "Erasing main term" (fun _ =>  *)
-  wrap_error (empty_ext Σ) ("During erasure of " ++ string_of_term (trans p.2)) 
-    (SafeErasureFunction.erase (empty_ext Σ) _ nil (trans p.2) _);;
-  Σ' <-
-  (* SafeErasureFunction.time "Erasing environment" (fun _ => *)
-   (SafeErasureFunction.erase_global (SafeErasureFunction.term_global_deps t) Σ _) ;;
-  ret (Monad:=envcheck_monad) (Σ', t).
+Program Definition erase_template_program (p : Ast.program) 
+  : (EAst.global_context * EAst.term) :=
+  let Σ := (trans_global (Ast.empty_ext p.1)).1 in
+  let t := SafeErasureFunction.erase (empty_ext Σ) _ nil (trans p.2) _ in
+  let Σ' := SafeErasureFunction.erase_global (term_global_deps t) Σ _ in
+  (Σ', t).
 
 Next Obligation.
   unfold trans_global.
-  simpl. unfold wf_ext, empty_ext. simpl. 
-  unfold on_global_env_ext. constructor.
-  split; auto. simpl. todo "global env is correct".
-  simpl. todo "on_udecl empty".
-Qed.
+  simpl. unfold wf_ext, empty_ext. simpl.
+  unfold on_global_env_ext. constructor. todo "assuming wf environment".
+Defined.
 
 Next Obligation.
   unfold trans_global.
   simpl. unfold wf_ext, empty_ext. simpl.
   unfold on_global_env_ext. todo "assuming well-typedness".
-Qed.
-
+Defined.
 Next Obligation.
-  sq. todo "assuming wf env".
-Qed.
-
-
+  constructor. todo "assuming wf environment".
+Defined.
 Local Open Scope string_scope.
 
 (** This uses the checker-based erasure *)
@@ -193,17 +180,12 @@ Program Definition erase_and_print_template_program_check {cf : checker_flags} (
 
 (** This uses the retyping-based erasure *)
 Program Definition erase_and_print_template_program {cf : checker_flags} (p : Ast.program)
-  : string + string :=
+  : string :=
   let p := fix_program_universes p in
-  match erase_template_program p return string + string with
-  | CorrectDecl (Σ', t) =>
-    inl ("Environment is well-formed and " ^ Pretty.print_term (Ast.empty_ext p.1) [] true p.2 ^
-         " erases to: " ^ nl ^ print_term Σ' [] true false t)
-  | EnvError Σ' (AlreadyDeclared id) =>
-    inr ("Already declared: " ^ id)
-  | EnvError Σ' (IllFormedDecl id e) =>
-    inr ("Type error: " ^ PCUICSafeChecker.string_of_type_error Σ' e ^ ", while checking " ^ id)
-  end.
+  let (Σ', t) := erase_template_program p in
+  "Environment is well-formed and " ^ Pretty.print_term (Ast.empty_ext p.1) [] true p.2 ^
+  " erases to: " ^ nl ^ print_term Σ' [] true false t.
+  
 
 (* Program Definition check_template_program {cf : checker_flags} (p : Ast.program) (ty : Ast.term) *)
 (*   : EnvCheck (∥ trans_global (AstUtils.empty_ext (List.rev p.1)) ;;; [] |- trans p.2 : trans ty ∥) := *)

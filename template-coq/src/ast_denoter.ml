@@ -11,6 +11,8 @@ struct
   type quoted_int = Datatypes.nat
   type quoted_bool = bool
   type quoted_name = name
+  type quoted_aname = name binder_annot
+  type quoted_relevance = relevance
   type quoted_sort = Universes0.Universe.t
   type quoted_cast_kind = cast_kind
   type quoted_kernel_name = BasicAst.kername
@@ -67,7 +69,7 @@ struct
   let mkCase = mkCase
   let mkProj = mkProj
 
-  let unquote_def (x: 't BasicAst.def) : ('t, name, quoted_int) adef =
+  let unquote_def (x: 't BasicAst.def) : ('t, name binder_annot, quoted_int) adef =
     {
       adname=dname x;
       adtype=dtype x;
@@ -75,7 +77,7 @@ struct
       rarg=rarg x
     }
 
-  let inspect_term (tt: t):(t, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_univ_instance, quoted_proj) structure_of_term=
+  let inspect_term (tt: t):(t, quoted_int, quoted_ident, quoted_aname, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_relevance, quoted_univ_instance, quoted_proj) structure_of_term=
     match tt with
     | Coq_tRel n -> ACoq_tRel n
     | Coq_tVar v -> ACoq_tVar v
@@ -99,10 +101,19 @@ struct
     let s = list_to_string qi in
     Id.of_string s
 
+  let unquote_relevance (r : relevance) : Sorts.relevance =
+    match r with
+    | BasicAst.Relevant -> Sorts.Relevant
+    | BasicAst.Irrelevant -> Sorts.Irrelevant
+
   let unquote_name (q: quoted_name) : Name.t =
     match q with
     | Coq_nAnon -> Anonymous
     | Coq_nNamed n -> Name (unquote_ident n)
+
+  let unquote_aname (q: quoted_aname) : Name.t Context.binder_annot =
+    {Context.binder_name = unquote_name q.binder_name;
+     Context.binder_relevance = unquote_relevance q.binder_relevance}
 
   let rec unquote_int (q: quoted_int) : int =
     match q with
@@ -146,6 +157,7 @@ struct
 
   let unquote_level (trm : Universes0.Level.t) : Univ.Level.t =
     match trm with
+    | Universes0.Level.Coq_lSProp -> Univ.Level.sprop
     | Universes0.Level.Coq_lProp -> Univ.Level.prop
     | Universes0.Level.Coq_lSet -> Univ.Level.set
     | Universes0.Level.Level s ->

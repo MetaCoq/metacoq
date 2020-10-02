@@ -9,7 +9,9 @@ struct
   type quoted_ident = char list
   type quoted_int = Datatypes.nat
   type quoted_bool = bool
-  type quoted_name = name
+  type quoted_name = BasicAst.name
+  type quoted_aname = BasicAst.aname
+  type quoted_relevance = BasicAst.relevance
   type quoted_sort = Universes0.Universe.t
   type quoted_cast_kind = cast_kind
   type quoted_kernel_name = BasicAst.kername
@@ -49,11 +51,19 @@ struct
   let quote_ident id =
     string_to_list (Id.to_string id)
 
+  let quote_relevance = function
+    | Sorts.Relevant -> BasicAst.Relevant
+    | Sorts.Irrelevant -> BasicAst.Irrelevant
+ 
   let quote_name = function
     | Anonymous -> Coq_nAnon
     | Name i -> Coq_nNamed (quote_ident i)
 
-  let quote_int i =
+  let quote_aname ann_n =
+    let {Context.binder_name = n; Context.binder_relevance = relevance} = ann_n in
+    { BasicAst.binder_name = quote_name n; BasicAst.binder_relevance = quote_relevance relevance }
+
+ let quote_int i =
     let rec aux acc i =
       if i < 0 then acc
       else aux (Datatypes.S acc) (i - 1)
@@ -63,6 +73,7 @@ struct
 
   let quote_level l =
     if Univ.Level.is_prop l then Universes0.Level.Coq_lProp
+    else if Univ.Level.is_sprop l then Universes0.Level.Coq_lSProp
     else if Univ.Level.is_set l then Universes0.Level.Coq_lSet
     else match Univ.Level.var_index l with
          | Some x -> Universes0.Level.Var (quote_int x)
@@ -155,6 +166,15 @@ struct
   let mkAnon () = Coq_nAnon
   let mkName i = Coq_nNamed i
 
+  let mkBindAnn nm r = { BasicAst.binder_name = nm; BasicAst.binder_relevance = r}
+
+  let mkAAnon r = mkBindAnn mkAnon r
+  let mkAName i r = mkBindAnn (mkName i) r
+
+  (* let mkAAnon r = {BasicAst.binder_name = mkAnon; BasicAst.binder_relevance = r}
+   * let mkAName i r = {BasicAst.binder_name = mkName i; BasicAst.binder_relevance = r} *)
+
+
   let mkRel n = Coq_tRel n
   let mkVar id = Coq_tVar id
   let mkEvar n args = Coq_tEvar (n,Array.to_list args)
@@ -196,8 +216,8 @@ struct
     let block = List.rev defs in
     Coq_tFix (block, a)
 
-  let mkCase (ind, npar) nargs p c brs =
-    let info = (ind, npar) in
+  let mkCase (ind, npar, r) nargs p c brs =
+    let info = ((ind, npar), r) in
     let branches = List.map2 (fun br nargs ->  (nargs, br)) brs nargs in
     Coq_tCase (info,p,c,branches)
   let mkProj p c = Coq_tProj (p,c)
@@ -206,10 +226,11 @@ struct
   let mkMonomorphic_ctx tm = Universes0.Monomorphic_ctx tm
   let mkPolymorphic_ctx tm = Universes0.Polymorphic_ctx tm
 
-  let mk_one_inductive_body (id, ty, kel, ctr, proj) =
+  let mk_one_inductive_body (id, ty, kel, ctr, proj, relevance) =
     let ctr = List.map (fun (a, b, c) -> ((a, b), c)) ctr in
     { ind_name = id; ind_type = ty;
-      ind_kelim = kel; ind_ctors = ctr; ind_projs = proj }
+      ind_kelim = kel; ind_ctors = ctr;
+      ind_projs = proj; ind_relevance = relevance }
 
   let mk_mutual_inductive_body finite npars params inds uctx variance =
     {ind_finite = finite;
@@ -272,7 +293,7 @@ struct
        Some (Right mind_entry)
     | None -> None *)
 
-  let inspectTerm (t : term) :  (term, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_univ_instance, quoted_proj) structure_of_term =
+  let inspectTerm (t : term) :  (term, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_relevance, quoted_univ_instance, quoted_proj) structure_of_term =
    match t with
   | Coq_tRel n -> ACoq_tRel n
     (* so on *)

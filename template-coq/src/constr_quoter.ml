@@ -29,6 +29,8 @@ struct
   let mkAnon () = Lazy.force nAnon
   let mkName id = constr_mkApp (nNamed, [| id |])
 
+  let mkBindAnn id r = constr_mkApp (tmkBindAnn, [| id ; r |])
+
   let mkRel i = constr_mkApp (tRel, [| i |])
   let mkVar id = constr_mkApp (tVar, [| id |])
   let mkEvar n args = constr_mkApp (tEvar, [| n; to_coq_listl tTerm (Array.to_list args) |])
@@ -68,8 +70,9 @@ struct
 
   let mkInd i u = constr_mkApp (tInd, [| i ; u |])
 
-  let mkCase (ind, npar) nargs p c brs =
-    let info = pairl tIndTy tnat ind npar in
+  let mkCase (ind, npar, r) nargs p c brs =
+    let info = pair (prodl tIndTy tnat) (Lazy.force tRelevance)
+                     (pairl tIndTy tnat ind npar) r in
     let branches = List.map2 (fun br nargs ->  pairl tnat tTerm nargs br) brs nargs in
     let tl = prodl tnat tTerm in
     constr_mkApp (tCase, [| info ; p ; c ; to_coq_list tl branches |])
@@ -136,10 +139,23 @@ struct
     let s = Id.to_string i in
     quote_string s
 
+  let quote_relevance r =
+    match r with
+    | Sorts.Relevant -> Lazy.force tRelevant
+    | Sorts.Irrelevant -> Lazy.force tIrrelevant
+  
   let quote_name n =
     match n with
       Names.Name id -> constr_mkApp (nNamed, [| quote_ident id |])
     | Names.Anonymous -> Lazy.force nAnon
+
+  let quote_aname ann_n =
+    let { Context.binder_name = n; Context.binder_relevance = relevance} = ann_n in
+    let r = quote_relevance relevance in
+    match n with
+    | Names.Anonymous -> Constr.mkApp (Lazy.force tmkBindAnn, [|Lazy.force tname; Lazy.force nAnon; r|])
+    | Names.Name id -> let nm = Constr.mkApp (Lazy.force nNamed, [| quote_ident id |]) in
+                       Constr.mkApp (Lazy.force tmkBindAnn, [| Lazy.force tname; nm; r|])
 
   let quote_cast_kind k =
     match k with
@@ -288,10 +304,10 @@ struct
   let quote_proj ind pars args =
     pair (prodl tIndTy tnat) (Lazy.force tnat) (pairl tIndTy tnat ind pars) args
 
-  let mk_one_inductive_body (a, b, c, d, e) =
+  let mk_one_inductive_body (a, b, c, d, e, r) =
     let d = mk_ctor_list d in
     let e = mk_proj_list e in
-    constr_mkApp (tBuild_one_inductive_body, [| a; b; c; d; e |])
+    constr_mkApp (tBuild_one_inductive_body, [| a; b; c; d; e ; r |])
 
   let to_coq_option ty f ind =
     match ind with

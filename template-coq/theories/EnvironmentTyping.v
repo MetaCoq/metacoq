@@ -471,7 +471,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
 
     Definition lift_level n l :=
       match l with 
-      | Level.lProp | Level.lSet | Level.Level _ => l
+      | Level.lSProp | Level.lProp | Level.lSet | Level.Level _ => l
       | Level.Var k => Level.Var (n + k)
       end.
 
@@ -636,7 +636,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
           type substituted along with the previous arguments replaced by projections.
           All projections must also be named.
           *)
-        (decl_name decl = nNamed (fst p)) /\
+        (binder_name (decl_name decl) = nNamed (fst p)) /\
         (snd p = subst (inds mind u mdecl.(ind_bodies)) (S (ind_npars mdecl))
               (subst (projs ind mdecl.(ind_npars) k) 0 
                 (lift 1 k (decl_type decl))))

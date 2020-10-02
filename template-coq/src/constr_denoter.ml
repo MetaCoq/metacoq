@@ -27,6 +27,22 @@ struct
     else
       not_supported_verb trm "unquote_pair"
 
+  let unquote_case_info trm =
+    let (h,args) = app_full trm [] in
+    if constr_equall h c_pair then
+      match args with
+        _ :: _ :: ind_nparam :: relevance :: [] ->
+         let (h1,args1) = app_full ind_nparam [] in
+         if constr_equall h1 texistT then
+           (match args with
+           | _ :: _ :: ind :: nparam :: [] -> ((ind, nparam), relevance)
+           | _ -> bad_term_verb trm "unquote_case_info")
+         else not_supported_verb trm "unquote_case_info"
+      | _ -> bad_term_verb trm "unquote_case_info"
+    else
+      not_supported_verb trm "unquote_case_info"
+
+
   let rec unquote_list trm =
     let (h,args) = app_full trm [] in
     if constr_equall h c_nil then
@@ -112,6 +128,22 @@ struct
       | _ -> bad_term_verb trm "unquote_name"
     else
       not_supported_verb trm "unquote_name"
+
+  let unquote_relevance trm =
+    if Constr.equal trm (Lazy.force tRelevant) then
+      Sorts.Relevant
+    else if Constr.equal trm (Lazy.force tIrrelevant) then
+      Sorts.Irrelevant
+    else raise (Failure "Invalid relevance")
+
+  let unquote_aname trm =
+    let (h,args) = app_full trm [] in
+    if Constr.equal h (Lazy.force tmkBindAnn) then
+      match args with
+        _ :: nm :: relevance :: _ -> { Context.binder_name = unquote_name nm; Context.binder_relevance = unquote_relevance relevance }
+      | _ -> raise (Failure "ill-typed, expected annotated name")
+    else
+      raise (Failure "non-value")
 
   let get_level evm s =
     if CString.string_contains ~where:s ~what:"." then
@@ -309,7 +341,7 @@ struct
 
 
   let inspect_term (t:Constr.t)
-  : (Constr.t, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_univ_instance, quoted_proj) structure_of_term =
+  : (Constr.t, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_relevance, quoted_univ_instance, quoted_proj) structure_of_term =
     let (h,args) = app_full t [] in
     if constr_equall h tRel then
       match args with
@@ -357,7 +389,7 @@ struct
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure: constructor case"))
     else if constr_equall h tCase then
       match args with
-        info::ty::d::brs::_ -> ACoq_tCase (unquote_pair info, ty, d, List.map unquote_pair (unquote_list brs))
+        info::ty::d::brs::_ -> ACoq_tCase (unquote_case_info info, ty, d, List.map unquote_pair (unquote_list brs))
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
     else if constr_equall h tFix then
       match args with

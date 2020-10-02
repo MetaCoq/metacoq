@@ -7,7 +7,9 @@ struct
   type quoted_ident = Constr.t (* of type Ast.ident *)
   type quoted_int = Constr.t (* of type nat *)
   type quoted_bool = Constr.t (* of type bool *)
-  type quoted_name = Constr.t (* of type Ast.name *)
+  type quoted_name = Constr.t (* of type BasicAst.name *)
+  type quoted_aname = Constr.t (* of type BasicAst.aname (names with relevance) *)
+  type quoted_relevance = Constr.t (* of type BasicAst.relevance *)
   type quoted_sort = Constr.t (* of type Ast.universe *)
   type quoted_cast_kind = Constr.t  (* of type Ast.cast_kind *)
   type quoted_kernel_name = Constr.t (* of type Ast.kername *)
@@ -56,6 +58,7 @@ struct
     lazy (Coqlib.lib_ref tm)
 
   let ast s = resolve ("metacoq.ast." ^ s)
+  let basicAst s = resolve ("metacoq.basicAst." ^ s)
   let template s = resolve ("metacoq.template." ^ s)
   let template_ref s = resolve_ref ("metacoq.template." ^ s)
 
@@ -98,7 +101,11 @@ struct
   let pair a b f s = constr_mkApp (c_pair, [| a ; b ; f ; s |])
   let pairl a b f s = pair (Lazy.force a) (Lazy.force b) f s
 
-    (* reify the constructors in Template.Ast.v, which are the building blocks of reified terms *)
+  (* reify the constructors in Template.Ast.v, which are the building blocks of reified terms *)
+  let tRelevance = ast "relevance"
+  let (tRelevant,tIrrelevant) = (ast "Relevant", ast "Irrelevant")
+  let taname = ast "aname"
+  let tmkBindAnn = ast "mkBindAnn"
   let nAnon = ast "nAnon"
   let nNamed = ast "nNamed"
   let kVmCast = ast "VmCast"
@@ -106,11 +113,13 @@ struct
   let kCast = ast "Cast"
   let kRevertCast = ast "RevertCast"
   let lProp = ast "level.lProp"
+  let lSProp = ast "level.lSProp"
   let lSet = ast "level.lSet"
   let tsort_family = ast "sort_family"
   let lfresh_universe = ast "fresh_universe"
   let lfresh_level = ast "fresh_level"
   let sfProp = ast "InProp"
+  let sfSProp = ast "InSProp"
   let sfSet = ast "InSet"
   let sfType = ast "InType"
   let tident = ast "ident"

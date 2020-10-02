@@ -1,5 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 Require Import List.
+From MetaCoq Require Import utils.
 From MetaCoq.Erasure Require Import EAst.
 
 (** * Deriving a compact induction principle for terms

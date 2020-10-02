@@ -1462,11 +1462,12 @@ Proof.
       depelim w. auto. eauto. eauto.
       eapply IHΣ.
 
-      intros d ind. todo "non circular".
-      rewrite -Heqdeps. eapply KernameSet.subset_spec.
+      intros d ind.
+      eapply term_global_deps_spec in Hebod; eauto.
+      eapply KernameSet.subset_spec.
       intros x hin'. eapply KernameSet.union_spec. right; auto.
-      congruence.
-      eexists; intuition auto. red.
+      congruence. congruence.
+      eexists; red; intuition eauto.
       simpl. rewrite eq_kername_refl. reflexivity.
     * intros ikn Hi.
       destruct d as [|].
@@ -1509,7 +1510,7 @@ Proof.
         intros d ind%KernameSet.singleton_spec.
         subst. constructor; eexists; eauto.
         eapply KernameSet.subset_spec.
-        intros ? hin'. eapply sub. eapply KernameSet.singleton_spec in hin'. now subst.        
+        intros ? hin'. eapply sub. eapply KernameSet.singleton_spec in hin'. now subst.
 Qed.
 
 Lemma erase_correct (Σ : global_env_ext) (wfΣ : wf_ext Σ) t T v Σ' t' :

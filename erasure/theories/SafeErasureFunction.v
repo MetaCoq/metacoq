@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Program.
-From MetaCoq.Template Require Import config utils.
+From MetaCoq.Template Require Import config utils Kernames.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICTyping PCUICInversion PCUICGeneration
      PCUICConfluence PCUICConversion 
@@ -369,7 +369,7 @@ Qed.
 Section Erase.
 
   Definition is_box c :=
-    match c with
+    match EAstUtils.head c with
     | E.tBox => true
     | _ => false
     end.
@@ -473,7 +473,7 @@ Section Erase.
   End EraseMfix.
 
   Equations? (noeqns noind) erase (Γ : context) (t : term) (Ht : welltyped Σ Γ t) : E.term
-      by struct t  :=
+      by struct t :=
     erase Γ t Ht with (is_erasable Σ HΣ Γ t Ht) :=
     {
       erase Γ _ Ht (left _) := E.tBox;
@@ -585,23 +585,47 @@ Proof.
   exists (tSort s). intuition auto. left; simpl; auto.
 Qed.
 
+Lemma is_box_mkApps f a : is_box (E.mkApps f a) = is_box f.
+Proof.
+  now rewrite /is_box EAstUtils.head_mkApps.
+Qed.
+
+Lemma is_box_tApp f a : is_box (E.tApp f a) = is_box f.
+Proof.
+  now rewrite /is_box EAstUtils.head_tApp.
+Qed.
+
 Lemma erase_to_box {Σ : global_env_ext} {wfΣ : ∥wf_ext Σ∥} {Γ t} (wt : welltyped Σ Γ t) :
   is_box (erase Σ wfΣ Γ t wt) -> ∥ isErasable Σ Γ t ∥.
 Proof.
   revert Γ t wt.
   fix IH 2. intros.
   destruct (is_erasable Σ wfΣ Γ t wt) eqn:ise; auto. 
-  destruct t; simpl in *; rewrite ise in H; simpl in *; try discriminate. 
+  destruct t; simpl in *; rewrite ise ?is_box_tApp in H; simpl in *; try discriminate.
+   
+  - eapply IH in H.
+    destruct H, wfΣ, s.
+    destruct wt as [ty Hty].
+    eapply (EArities.Is_type_app _ _ _ [_]); eauto.
+    eauto using typing_wf_local.
+
   - intros. destruct wt. sq. clear ise.
     eapply inversion_Ind in t as (? & ? & ? & ? & ? & ?) ; auto.
     red. eexists. split. econstructor; eauto. left.
     eapply isArity_subst_instance.
     eapply isArity_ind_type; eauto.
   - simpl.
-    destruct is_box eqn:isb.
-    simp erase. clear IH. todo "box".
-    clear IH. todo "box".
-  - todo "box".
+    destruct is_box eqn:isb; simpl in * => //.
+    simp erase.
+    destruct (is_box (erase _ _ _ t2 _)) eqn:isb'; simpl in * => //.
+    destruct brs as [|(n, br) tl]; simpl in *. discriminate.
+    set (eb := (erase Σ wfΣ Γ br
+    (erase_obligation_8 Σ wfΣ n br tl Γ indn t1 t2 wt s))) in *.
+    rewrite is_box_mkApps in isb.
+    eapply IH in isb.
+    sq.
+    red. todo "if a branch is erasable the whole case is". 
+  - todo "if the record is erasable each projection is".
 Admitted.
 
 (* Lemma All2_map_in {A B C} (P : A -> B -> Type) (Q : A -> Type) (f : forall x : A, Q x -> B) l H:
@@ -740,213 +764,6 @@ Definition optM {M : Type -> Type} `{Monad M} {A B} (x : option A) (f : A -> M B
 
 Lemma wf_local_nil {Σ} : ∥ wf_local Σ [] ∥.
 Proof. repeat econstructor. Qed.
-
-          
-
-
-Require Import MSetList OrderedTypeAlt OrderedTypeEx.
-
-Definition compare_ident := string_compare.
-
-Require Import Lia.
-
-Module IdentComp <: OrderedTypeAlt.
-  Definition t := string.
-
-  Definition eq := @eq string.
-  Definition eq_univ : RelationClasses.Equivalence eq := _.
-
-  Definition compare := string_compare.
-
-  Infix "?=" := compare (at level 70, no associativity).
-
-  Lemma compare_sym : forall x y, (y ?= x) = CompOpp (x ?= y).
-  Proof.
-    induction x; destruct y; simpl; auto;
-    destruct (ascii_compare a0 a) eqn:eq.
-    apply ascii_Compare_eq in eq; subst a0.
-    destruct (ascii_compare a a) eqn:eq'.
-    apply ascii_Compare_eq in eq'. apply IHx.
-    simpl.
-  Admitted.
- 
-  Lemma compare_trans :
-    forall c x y z, (x?=y) = c -> (y?=z) = c -> (x?=z) = c.
-  Proof.
-    intros c x y z. revert c.
-    induction x in y, z |- *; destruct y, z; intros c; simpl; auto; try congruence.
-    unfold compare_ident.
-  Admitted.
-
-End IdentComp.
-
-Module IdentOT := OrderedType_from_Alt IdentComp.
-
-Module DirPathComp <: OrderedTypeAlt.
-  Definition t := dirpath.
-
-  Definition eq := @eq dirpath.
-  Definition eq_univ : RelationClasses.Equivalence eq := _.
-
-  Fixpoint compare dp dp' :=
-    match dp, dp' with
-    | hd :: tl, hd' :: tl' => 
-      match IdentComp.compare hd hd' with
-      | Eq => compare tl tl'
-      | x => x
-      end
-    | [], [] => Eq
-    | [], _ => Lt
-    | _, [] => Gt
-    end.
-
-  Infix "?=" := compare (at level 70, no associativity).
-
-  Lemma compare_sym : forall x y, (y ?= x) = CompOpp (x ?= y).
-  Proof.
-    induction x; destruct y; simpl; auto.
-    unfold compare_ident.
-    rewrite IdentComp.compare_sym.
-    destruct (IdentComp.compare a s); simpl; auto.
-  Qed.
- 
-  Lemma compare_trans :
-    forall c x y z, (x?=y) = c -> (y?=z) = c -> (x?=z) = c.
-  Proof.
-    intros c x y z. revert c.
-    induction x in y, z |- *; destruct y, z; intros c; simpl; auto; try congruence.
-    unfold compare_ident.
-    destruct (IdentComp.compare a s) eqn:eqc;
-    destruct (IdentComp.compare s s0) eqn:eqc'; simpl; try congruence;
-    try rewrite (IdentComp.compare_trans _ _ _ _ eqc eqc'); auto.
-    apply IHx.
-    intros; subst. rewrite <- H0.
-    unfold IdentComp.compare in *.
-    destruct (string_compare s s0);
-    destruct (string_compare a s); try congruence.
-    destruct (string_compare a s0); try congruence.
-  Admitted.
-
-End DirPathComp.
-
-Module DirPathOT := OrderedType_from_Alt DirPathComp.
-Require Import ssreflect.
-Print DirPathOT.compare.
-
-(* Eval compute in DirPathComp.compare ["foo"; "bar"] ["baz"].
- *)
-
-Module ModPathComp.
-  Definition t := modpath.
-
-  Definition eq := @eq modpath.
-  Definition eq_univ : RelationClasses.Equivalence eq := _.
-
-  Fixpoint compare mp mp' :=
-    match mp, mp' with
-    | MPfile dp, MPfile dp' => DirPathComp.compare dp dp'
-    | MPbound dp id k, MPbound dp' id' k' => 
-      if DirPathComp.compare dp dp' is Eq then
-        if IdentComp.compare id id' is Eq then
-          Nat.compare k k'
-        else IdentComp.compare id id'
-      else DirPathComp.compare dp dp'
-    | MPdot mp id, MPdot mp' id' => 
-      if compare mp mp' is Eq then
-        IdentComp.compare id id'
-      else compare mp mp'
-    | MPfile _, _ => Gt
-    | _, MPfile _ => Lt
-    | MPbound _ _ _, _ => Gt
-    | _, MPbound _ _ _ => Lt
-    end.
-
-  Infix "?=" := compare (at level 70, no associativity).
-
-  Lemma compare_sym : forall x y, (y ?= x) = CompOpp (x ?= y).
-  Proof.
-    induction x; destruct y; simpl; auto.
-    unfold compare_ident.
-  Admitted.          
- 
-  Lemma compare_trans :
-    forall c x y z, (x?=y) = c -> (y?=z) = c -> (x?=z) = c.
-  Proof.
-  Admitted.
-
-End ModPathComp.
-
-Module ModPathOT := OrderedType_from_Alt ModPathComp.
-
-Module KernameComp.
-  Definition t := kername.
-
-  Definition eq := @eq kername.
-  Lemma eq_equiv : RelationClasses.Equivalence eq.
-  Proof. apply _. Qed.
-
-  Definition compare kn kn' := 
-    match kn, kn' with
-    | (mp, id), (mp', id') => 
-      if ModPathComp.compare mp mp' is Eq then
-        IdentComp.compare id id'
-      else ModPathComp.compare mp mp'
-    end.
-
-  Infix "?=" := compare (at level 70, no associativity).
-
-  Lemma compare_sym : forall x y, (y ?= x) = CompOpp (x ?= y).
-  Proof.
-    induction x; destruct y; simpl; auto.
-    unfold compare_ident.
-  Admitted.          
- 
-  Lemma compare_trans :
-    forall c x y z, (x?=y) = c -> (y?=z) = c -> (x?=z) = c.
-  Proof.
-  Admitted.
-
-End KernameComp.
-
-Module KernameOT.
- Include KernameComp.
- Module OT := OrderedType_from_Alt KernameComp.
-
- Definition lt := OT.lt.
- Global Instance lt_strorder : StrictOrder OT.lt.
-  Proof.
-    constructor.
-    - intros x X; admit.
-    - intros x y z X1 X2. admit.
-  Admitted.
-
-  Definition lt_compat : Proper (eq ==> eq ==> iff) OT.lt.
-    intros x x' H1 y y' H2.
-  Admitted.
-
-  Definition compare_spec : forall x y, CompareSpec (eq x y) (lt x y) (lt y x) (compare x y).
-  Proof.
-    induction x; destruct y.
-    simpl. 
-    destruct (ModPathComp.compare a m) eqn:eq.
-    destruct (IdentComp.compare b i) eqn:eq'.
-    all:constructor; todo "compare".
-  Defined.
-
-  Definition eq_dec : forall x y, {eq x y} + {~ eq x y}.
-  Proof.
-    intros k k'. destruct (PCUICReflect.eqb_spec k k').
-    left; auto. right; auto.
-  Defined.
-
-End KernameOT.
-
-Eval compute in KernameOT.compare (MPfile ["fdejrkjl"], "A") (MPfile ["lfrk;k"], "B").
-
-  
-Module KernameSet := MSetList.Make KernameOT.
-(*Module KernameSetFact := WFactsOn Kername KernameSet.
-Module KernameSetProp := WPropertiesOn Kername KernameSet.*)
   
 Fixpoint term_global_deps (t : EAst.term) :=
   match t with
@@ -1468,7 +1285,7 @@ Proof.
       intros x hin'. eapply KernameSet.union_spec. right; auto.
       congruence. congruence.
       eexists; red; intuition eauto.
-      simpl. rewrite eq_kername_refl. reflexivity.
+      simpl. rewrite eq_kername_refl.  reflexivity.
     * intros ikn Hi.
       destruct d as [|].
       ++ destruct (KernameSet.mem kn deps) eqn:eqkn.

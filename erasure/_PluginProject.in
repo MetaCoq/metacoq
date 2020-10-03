@@ -23,6 +23,8 @@ src/uGraph0.ml
 src/uGraph0.mli
 src/wGraph.ml
 src/wGraph.mli
+src/kernames.mli
+src/kernames.ml
 src/typing0.mli
 src/typing0.ml
 

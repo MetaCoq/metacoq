@@ -12,6 +12,9 @@ Fixpoint decompose_app_rec t l :=
 
 Definition decompose_app f := decompose_app_rec f [].
 
+Definition head t := fst (decompose_app t).
+Definition spine t := snd (decompose_app t).
+
 Lemma decompose_app_rec_mkApps f l l' :
   decompose_app_rec (mkApps f l) l' = decompose_app_rec f (l ++ l').
 Proof.
@@ -184,6 +187,19 @@ Proof.
   intros Happ Ht Ht'. eapply (f_equal decompose_app) in Happ. unfold decompose_app in Happ.
   rewrite !decompose_app_rec_mkApps in Happ. rewrite !nApp_decompose_app in Happ; auto.
   rewrite !app_nil_r in Happ. intuition congruence.
+Qed.
+
+Lemma head_mkApps f a : head (mkApps f a) = head f.
+Proof.
+  rewrite /head /decompose_app /=.
+  rewrite decompose_app_rec_mkApps /= app_nil_r.
+  induction f in a |- *; simpl; auto.
+  now rewrite !IHf1.
+Qed.
+
+Lemma head_tApp f a : head (tApp f a) = head f.
+Proof.
+  eapply (head_mkApps f [a]).
 Qed.
 
 Ltac solve_discr :=

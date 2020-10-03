@@ -564,3 +564,30 @@ Proof.
   red in X1. destruct X1 as [T [HT _]].
   eapply wcbeval_red; eauto. assumption.
 Qed.
+
+(* Thanks to the restriction to Prop </= Type, erasability is also closed by expansion 
+  on well-typed terms. *)
+
+Lemma Is_type_eval_inv (Σ : global_env_ext) t v:
+  wf_ext Σ ->
+  axiom_free Σ ->
+  PCUICSafeLemmata.welltyped Σ [] t ->
+  PCUICWcbvEval.eval Σ t v ->
+  isErasable Σ [] v ->
+  ∥ isErasable Σ [] t ∥.
+Proof.
+  intros wfΣ axfree [T HT] ev [vt [Ht Hp]].
+  eapply wcbeval_red in ev; eauto.
+  pose proof (subject_reduction _ _ _ _ _ wfΣ.1 HT ev).
+  pose proof (principal_typing _ wfΣ.1 Ht X) as [P [Pvt [Pt vP]]].
+  destruct Hp.
+  eapply arity_type_inv in X. 5:eauto. all:eauto.
+  red in X. destruct X as [T' [[red] isA]].
+  eapply type_reduction in HT; eauto.
+  sq. exists T'; intuition auto.
+  sq. exists T. intuition auto. right.
+  destruct s as [u [vtu isp]].
+  exists u; intuition auto.
+  eapply cumul_prop2; eauto. now eapply PCUICValidity.validity in HT.
+  eapply cumul_prop1; eauto. now eapply PCUICValidity.validity in vP.
+Qed.

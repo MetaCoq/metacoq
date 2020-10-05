@@ -1,6 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils uGraph.
-From MetaCoq.Checker Require Import Reflect.
+From MetaCoq.Template Require Import utils uGraph Reflect.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICSize.
 
 Require Import ssreflect.

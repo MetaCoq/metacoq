@@ -154,7 +154,7 @@ Section Spines.
     eapply forallb_All in eqhd.
     destruct idx; simpl in Hl; [congruence|].
     eapply All_nth_error in eqhd; eauto.
-    now eapply PCUICReflect.eqb_eq in eqhd.
+    now eapply Reflect.eqb_eq in eqhd.
   Qed.
   
   Lemma wf_cofixpoint_inv mfix idx decl :
@@ -178,7 +178,7 @@ Section Spines.
     eapply forallb_All in eqhd.
     destruct idx; simpl in Hl; [congruence|].
     eapply All_nth_error in eqhd; eauto.
-    now eapply PCUICReflect.eqb_eq in eqhd.
+    now eapply Reflect.eqb_eq in eqhd.
   Qed.
 
   Lemma expand_lets_nil t : expand_lets [] t = t.
@@ -1001,7 +1001,7 @@ Section WeakNormalization.
 
   Lemma invert_cumul_ind_ind {Γ ind ind' u u' args args'} :
     Σ ;;; Γ |- mkApps (tInd ind u) args <= mkApps (tInd ind' u') args' ->
-    (PCUICReflect.eqb ind ind' * PCUICEquality.R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) #|args| u u' *
+    (Reflect.eqb ind ind' * PCUICEquality.R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) #|args| u u' *
       All2 (conv Σ Γ) args args').
   Proof.
     intros ht; eapply invert_cumul_ind_l in ht as (? & ? & ? & ? & ?); auto.
@@ -1041,7 +1041,7 @@ Section WeakNormalization.
     - move=> [hargs ccum'].
       rewrite expand_lets_mkApps subst_mkApps /= in ccum'.
       eapply invert_cumul_ind_ind in ccum' as ((? & ?) & ?).
-      len in r. eapply PCUICReflect.eqb_eq in i1. now subst ind'.
+      len in r. eapply Reflect.eqb_eq in i1. now subst ind'.
   Qed.
 
   Lemma check_recursivity_kind_inj {mind rk rk'} :
@@ -1050,8 +1050,8 @@ Section WeakNormalization.
   Proof.
     rewrite /check_recursivity_kind.
     case: lookup_env => //; case => // m.
-    elim: PCUICReflect.eqb_spec;
-    elim: PCUICReflect.eqb_spec; congruence.
+    elim: Reflect.eqb_spec;
+    elim: Reflect.eqb_spec; congruence.
   Qed.
 
   Lemma wh_neutral_empty_gen t ty Γ : axiom_free Σ -> Σ ;;; Γ |- t : ty -> wh_neutral Σ Γ t -> Γ = [] -> False

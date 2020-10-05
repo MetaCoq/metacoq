@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils.
+From MetaCoq.Template Require Import utils Kernames.
 From MetaCoq.Erasure Require Import EAst.
 Require Import ssreflect ssrbool.
 
@@ -267,4 +267,26 @@ Fixpoint string_of_term (t : term) : string :=
             ^ string_of_term c ^ ")"
   | tFix l n => "Fix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
   | tCoFix l n => "CoFix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
+  end.
+
+(** Compute all the global environment dependencies of the term *)
+
+Fixpoint term_global_deps (t : EAst.term) :=
+  match t with
+  | EAst.tConst kn
+  | EAst.tConstruct {| inductive_mind := kn |} _ => KernameSet.singleton kn
+  | EAst.tLambda _ x => term_global_deps x
+  | EAst.tApp x y
+  | EAst.tLetIn _ x y => KernameSet.union (term_global_deps x) (term_global_deps y)
+  | EAst.tCase (ind, _) x brs =>
+    KernameSet.union (KernameSet.singleton (inductive_mind ind)) 
+      (List.fold_left (fun acc x => KernameSet.union (term_global_deps (snd x)) acc) brs 
+        (term_global_deps x))
+   | EAst.tFix mfix _ | EAst.tCoFix mfix _ =>
+     List.fold_left (fun acc x => KernameSet.union (term_global_deps (EAst.dbody x)) acc) mfix
+      KernameSet.empty
+  | EAst.tProj p c => 
+    KernameSet.union (KernameSet.singleton (inductive_mind (fst (fst p))))
+      (term_global_deps c)
+  | _ => KernameSet.empty
   end.

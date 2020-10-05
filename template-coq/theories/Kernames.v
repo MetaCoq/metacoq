@@ -338,3 +338,19 @@ End KernameOT.
 Module KernameSet := MSetList.Make KernameOT.
 Module KernameSetFact := MSetFacts.WFactsOn KernameOT KernameSet.
 Module KernameSetProp := MSetProperties.WPropertiesOn KernameOT KernameSet.
+
+Lemma knset_in_fold_left {A} kn f (l : list A) acc : 
+  KernameSet.In kn (fold_left (fun acc x => KernameSet.union (f x) acc) l acc) <->
+  (KernameSet.In kn acc \/ exists a, In a l /\ KernameSet.In kn (f a)).
+Proof.
+  induction l in acc |- *; simpl.
+  - split; auto. intros [H0|H0]; auto. now destruct H0.
+  - rewrite IHl. rewrite KernameSet.union_spec.
+    intuition auto.
+    * right. now exists a; intuition auto.
+    * destruct H0 as [a' [ina inkn]].
+      right. now exists a'; intuition auto.
+    * destruct H0 as [a' [ina inkn]].
+      destruct ina as [<-|ina'];
+      intuition auto. right. now exists a'.
+Qed.

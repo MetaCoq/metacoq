@@ -68,3 +68,6 @@ Qed.
 
 Definition swap {A B : Type} (x : A * B) : B * A :=
   (snd x, fst x).
+
+Definition on_snd_map {A B C} (f : B -> C) (p : A * B) :=
+  (fst p, f (snd p)).

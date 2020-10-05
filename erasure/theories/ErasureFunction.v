@@ -324,21 +324,6 @@ Qed.
 
 Section Erase.
 
-  Definition is_box c :=
-    match c with
-    | E.tBox => true
-    | _ => false
-    end.
-
-  Fixpoint mkAppBox c n :=
-    match n with
-    | 0 => c
-    | S n => mkAppBox (E.tApp c E.tBox) n
-    end.
-
-  Definition on_snd_map {A B C} (f : B -> C) (p : A * B) :=
-    (fst p, f (snd p)).
-
   Variable (Σ : global_env_ext)( HΣ :∥ wf_ext Σ ∥).
 
   Ltac sq' := try (destruct HΣ; clear HΣ);

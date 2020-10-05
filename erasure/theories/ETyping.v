@@ -2,7 +2,7 @@
 From Coq Require Import Program.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst.
-
+Require Import ssreflect.
 
 (** * Typing derivations
 
@@ -15,7 +15,7 @@ Fixpoint lookup_env (Σ : global_declarations) id : option global_decl :=
   match Σ with
   | nil => None
   | hd :: tl =>
-    if kername_eq_dec id hd.1 then Some hd.2
+    if kername_eq_dec id hd.1 is left _ then Some hd.2
     else lookup_env tl id
   end.
 
@@ -36,6 +36,14 @@ Definition declared_constructor Σ mdecl idecl cstr cdecl : Prop :=
 Definition declared_projection Σ mdecl idecl (proj : projection) pdecl : Prop :=
   declared_inductive Σ mdecl (fst (fst proj)) idecl /\
   List.nth_error idecl.(ind_projs) (snd proj) = Some pdecl.
+
+Lemma elookup_env_cons_fresh {kn d Σ kn'} : 
+  kn <> kn' ->
+  ETyping.lookup_env ((kn, d) :: Σ) kn' = ETyping.lookup_env Σ kn'.
+Proof.
+  simpl. destruct kername_eq_dec. subst => //. auto. 
+Qed.
+
 
 (** ** Reduction *)
 

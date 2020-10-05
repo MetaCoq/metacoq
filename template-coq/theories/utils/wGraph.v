@@ -235,8 +235,7 @@ Module Nbar.
 
   Lemma le_antisymm {n m} : n <= m -> m <= n -> n = m.
   Proof.
-    destruct n, m; cbn; try easy.
-    intros. f_equal. now apply PeanoNat.Nat.le_antisymm.
+    now destruct n, m; cbn.
   Qed.
 
 End Nbar.

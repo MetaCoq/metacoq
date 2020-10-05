@@ -5,7 +5,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping
      TemplateToPCUIC.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker
      SafeTemplateChecker.
-From MetaCoq.Erasure Require Import ErasureFunction EPretty.
+From MetaCoq.Erasure Require Import EAstUtils ErasureFunction EPretty.
 From MetaCoq.Erasure Require SafeErasureFunction.
 
 Existing Instance envcheck_monad.
@@ -16,7 +16,7 @@ Program Definition erase_template_program_check (p : Ast.program)
   let Σ := (trans_global (Ast.empty_ext p.1)).1 in
   G <- check_wf_env Σ ;;
   Σ' <- wrap_error (empty_ext Σ) "erasure of the global context" (erase_global Σ _) ;;
-  t <- wrap_error (empty_ext Σ) ("During erasure of " ^ string_of_term (trans p.2)) (erase (empty_ext Σ) _ nil _ (trans p.2));;
+  t <- wrap_error (empty_ext Σ) ("During erasure of " ^ PCUICAstUtils.string_of_term (trans p.2)) (erase (empty_ext Σ) _ nil _ (trans p.2));;
   ret (Monad:=envcheck_monad) (Σ', t).
 
 Next Obligation.
@@ -185,22 +185,3 @@ Program Definition erase_and_print_template_program {cf : checker_flags} (p : As
   let (Σ', t) := erase_template_program p in
   "Environment is well-formed and " ^ Pretty.print_term (Ast.empty_ext p.1) [] true p.2 ^
   " erases to: " ^ nl ^ print_term Σ' [] true false t.
-  
-
-(* Program Definition check_template_program {cf : checker_flags} (p : Ast.program) (ty : Ast.term) *)
-(*   : EnvCheck (∥ trans_global (AstUtils.empty_ext (List.rev p.1)) ;;; [] |- trans p.2 : trans ty ∥) := *)
-(*   p <- typecheck_program (cf:=cf) ((trans_global (AstUtils.empty_ext p.1)).1, trans p.2) ;; *)
-(*   wrap_error "During checking of type constraints" (check p.1 _ _ _ (trans ty));; *)
-(*   ret (Monad:=envcheck_monad) _. *)
-
-(* Next Obligation. *)
-(*   unfold trans_global. *)
-(*   simpl. unfold empty_ext in X. *)
-(*   unfold trans_global_decls in X. *)
-(*   rewrite <-map_rev in X. *)
-(* Qed. *)
-
-(* Program Definition typecheck_template_program' {cf : checker_flags} (p : Ast.program) *)
-(*   : EnvCheck (∑ A, ∥ Typing.typing (AstUtils.empty_ext (List.rev p.1)) [] p.2 A ∥) := *)
-(*   p <- typecheck_template_program (cf:=cf) p ;; *)
-(*   ret (Monad:=envcheck_monad) (p.π1 ; _). *)

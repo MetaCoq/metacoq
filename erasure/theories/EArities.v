@@ -591,3 +591,16 @@ Proof.
   eapply cumul_prop2; eauto. now eapply PCUICValidity.validity in HT.
   eapply cumul_prop1; eauto. now eapply PCUICValidity.validity in vP.
 Qed.
+
+Lemma nIs_conv_to_Arity_isWfArity_elim {Σ : global_env_ext} {Γ x} : 
+  ~ Is_conv_to_Arity Σ Γ x ->
+  isWfArity typing Σ Γ x ->
+  False.
+Proof.
+  intros nis [ctx [s [da wf]]]. apply nis.
+  red. exists (it_mkProd_or_LetIn ctx (tSort s)).
+  split. sq. apply PCUICArities.destArity_spec_Some in da.
+  simpl in da. subst x.
+  reflexivity.
+  now eapply it_mkProd_isArity.
+Qed.

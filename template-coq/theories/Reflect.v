@@ -1,11 +1,9 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils AstUtils BasicAst Ast Induction.
 Require Import ssreflect.
-
 From Equations Require Import Equations.
 
 (** * Notion of reflection for Type-based properties *)
-
 
 Inductive reflectT (A : Type) : bool -> Type :=
 | ReflectT : A -> reflectT A true

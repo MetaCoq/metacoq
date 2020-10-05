@@ -1,3 +1,4 @@
+From MetaCoq.Template Require Import Reflect.
 From MetaCoq.Erasure Require Import EAst EInduction.
 From MetaCoq.PCUIC Require Import PCUICReflect.
 From Equations Require Import Equations.
@@ -101,7 +102,7 @@ Proof.
         subst. left. reflexivity.
 Defined.
 
-Instance ReflectEq_term : PCUICReflect.ReflectEq _ :=
+Instance ReflectEq_term : Reflect.ReflectEq _ :=
   @EqDec_ReflectEq _ EqDec_term.
 
 Definition eqb_constant_body (x y : constant_body) :=

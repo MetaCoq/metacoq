@@ -25,6 +25,8 @@ src/wGraph.ml
 src/wGraph.mli
 src/kernames.mli
 src/kernames.ml
+src/reflect.mli
+src/reflect.ml
 src/typing0.mli
 src/typing0.ml
 

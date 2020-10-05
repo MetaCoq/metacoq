@@ -11,11 +11,12 @@ Makefile.coq: _CoqProject
 clean: Makefile.coq
 	$(MAKE) -f Makefile.coq clean
 
-install: all
-	$(MAKE) -f Makefile.coq install
-
-uninstall: all
-	$(MAKE) -f Makefile.coq uninstall
-
 mrproper:
 	rm -f Makefile.coq
+
+force Makefile _CoqProject.in metacoq-config: ;
+
+%: Makefile.coq force
+	+$(MAKE) -f Makefile.coq $@
+
+.PHONY: all clean mrproper force

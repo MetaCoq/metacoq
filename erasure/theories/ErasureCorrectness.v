@@ -509,7 +509,7 @@ Proof.
     eapply b0. eauto. now rewrite app_length fix_context_length.
 Qed.
 
-Lemma eval_to_mkApps_tBox_inv Σ t argsv :
+Lemma eval_to_mkApps_tBox_inv {wfl:WcbvFlags} Σ t argsv :
   Σ ⊢ t ▷ E.mkApps E.tBox argsv ->
   argsv = [].
 Proof.
@@ -583,13 +583,13 @@ Qed.
 
 Transparent PCUICParallelReductionConfluence.construct_cofix_discr.
 
-Lemma erases_correct Σ t T t' v Σ' :
+Lemma erases_correct (wfl := default_wcbv_flags) Σ t T t' v Σ' :
   extraction_pre Σ ->
   Σ;;; [] |- t : T ->
   Σ;;; [] |- t ⇝ℇ t' ->  
   erases_deps Σ Σ' t' ->
   Σ |-p t ▷ v ->
-  exists v', Σ;;; [] |- v ⇝ℇ v' /\ ∥Σ' ⊢ t' ▷ v'∥.
+  exists v', Σ;;; [] |- v ⇝ℇ v' /\ ∥ Σ' ⊢ t' ▷ v' ∥.
 Proof.
   intros pre Hty He Hed H.
   revert T Hty t' He Hed.
@@ -774,7 +774,7 @@ Proof.
         now constructor.
 
         (* destruct x4; cbn in e2; subst. destruct X2. destruct p0; cbn in e2; subst. cbn in *.  destruct y.  *)
-        exists x3. split; eauto. constructor. eapply eval_iota_sing.  2:eauto.
+        exists x3. split; eauto. constructor. eapply eval_iota_sing => //. 2:eauto.
         pose proof (Ee.eval_to_value _ _ _ He_v').
         eapply value_app_inv in H5. subst. eassumption.
 
@@ -862,7 +862,7 @@ Proof.
            now constructor.
 
            exists x0. split; eauto.
-           constructor. eapply eval_iota_sing.
+           constructor. eapply eval_iota_sing => //.
            pose proof (Ee.eval_to_value _ _ _ He_v').
            2:eauto. auto.
            apply value_app_inv in H9; subst x1.
@@ -906,7 +906,7 @@ Proof.
         eassumption.
         eapply isErasable_Proof. constructor. eauto.
 
-        eapply eval_proj_box.
+        eapply eval_proj_box => //.
         pose proof (Ee.eval_to_value _ _ _ Hty_vc').
         eapply value_app_inv in H1. subst. eassumption.
       * rename H3 into Hinf.
@@ -935,7 +935,7 @@ Proof.
            eassumption.
            eapply isErasable_Proof. eauto.
 
-           constructor. eapply eval_proj_box.
+           constructor. eapply eval_proj_box => //.
            pose proof (Ee.eval_to_value _ _ _ Hty_vc').
            eapply value_app_inv in H2. subst. eassumption.
         -- eapply erases_deps_eval in Hty_vc'; [|now eauto].
@@ -972,7 +972,8 @@ Proof.
       { exists E.tBox.
         eapply eval_to_mkApps_tBox_inv in ev_stuck as ?; subst.
         cbn in *.
-        split; [|now constructor; eauto using Ee.eval].
+        split; [|constructor; eauto using Ee.eval].
+        2:{ eapply (eval_box_apps _ _ [_]); eauto. }
         destruct H2.
         eapply (Is_type_app _ _ _ (x5 ++ [av])) in X as []; eauto; first last.
         - rewrite mkApps_nested app_assoc mkApps_snoc.
@@ -1115,7 +1116,7 @@ Proof.
     eapply erases_App in He as He'; [|eauto].
     destruct He' as [(-> & [])|(? & ? & -> & ? & ?)].
     + exists E.tBox.
-      split; [|now constructor; eauto using Ee.eval].
+      split; [|now constructor; eauto using @Ee.eval].
       constructor.
       eapply Is_type_red.
       * eauto.
@@ -1136,7 +1137,7 @@ Proof.
         rewrite -> !app_nil_r in *.
         cbn in *.
         exists E.tBox.
-        split; [|now constructor; eauto using Ee.eval].
+        split; [|now constructor; eauto using @Ee.eval].
         eapply (Is_type_app _ _ _ [av]) in X as [].
         -- constructor.
            apply X.
@@ -1160,7 +1161,7 @@ Proof.
               
         -- exists E.tBox.
            apply eval_to_mkApps_tBox_inv in H3 as ?; subst.
-           split; [|now constructor; eauto using Ee.eval].
+           split; [|now constructor; eauto using @Ee.eval].
            eapply Is_type_app in X as [].
            ++ constructor.
               rewrite <- mkApps_snoc.

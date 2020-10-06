@@ -253,7 +253,7 @@ Qed.
 
 Notation "Σ ⊢ s ▷ t" := (eval Σ s t) (at level 50, s, t at next level) : type_scope.
 
-Lemma erases_deps_eval Σ t v Σ' :
+Lemma erases_deps_eval {wfl:WcbvFlags} Σ t v Σ' :
   Σ' ⊢ t ▷ v ->
   erases_deps Σ Σ' t ->
   erases_deps Σ Σ' v.

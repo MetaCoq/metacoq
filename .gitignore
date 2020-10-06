@@ -401,3 +401,7 @@ erasure/src/orderedTypeAlt.ml
 erasure/src/orderedTypeAlt.mli
 erasure/src/orderedTypeEx.ml
 erasure/src/orderedTypeEx.mli
+erasure/src/kernames.ml
+erasure/src/kernames.mli
+erasure/src/reflect.ml
+erasure/src/reflect.mli

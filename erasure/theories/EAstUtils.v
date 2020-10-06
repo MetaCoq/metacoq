@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils.
+From MetaCoq.Template Require Import utils Kernames.
 From MetaCoq.Erasure Require Import EAst.
 Require Import ssreflect ssrbool.
 
@@ -11,6 +11,9 @@ Fixpoint decompose_app_rec t l :=
   end.
 
 Definition decompose_app f := decompose_app_rec f [].
+
+Definition head t := fst (decompose_app t).
+Definition spine t := snd (decompose_app t).
 
 Lemma decompose_app_rec_mkApps f l l' :
   decompose_app_rec (mkApps f l) l' = decompose_app_rec f (l ++ l').
@@ -186,6 +189,19 @@ Proof.
   rewrite !app_nil_r in Happ. intuition congruence.
 Qed.
 
+Lemma head_mkApps f a : head (mkApps f a) = head f.
+Proof.
+  rewrite /head /decompose_app /=.
+  rewrite decompose_app_rec_mkApps /= app_nil_r.
+  induction f in a |- *; simpl; auto.
+  now rewrite !IHf1.
+Qed.
+
+Lemma head_tApp f a : head (tApp f a) = head f.
+Proof.
+  eapply (head_mkApps f [a]).
+Qed.
+
 Ltac solve_discr :=
   match goal with
     H : mkApps _ _ = mkApps ?f ?l |- _ =>
@@ -251,4 +267,26 @@ Fixpoint string_of_term (t : term) : string :=
             ^ string_of_term c ^ ")"
   | tFix l n => "Fix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
   | tCoFix l n => "CoFix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
+  end.
+
+(** Compute all the global environment dependencies of the term *)
+
+Fixpoint term_global_deps (t : EAst.term) :=
+  match t with
+  | EAst.tConst kn
+  | EAst.tConstruct {| inductive_mind := kn |} _ => KernameSet.singleton kn
+  | EAst.tLambda _ x => term_global_deps x
+  | EAst.tApp x y
+  | EAst.tLetIn _ x y => KernameSet.union (term_global_deps x) (term_global_deps y)
+  | EAst.tCase (ind, _) x brs =>
+    KernameSet.union (KernameSet.singleton (inductive_mind ind)) 
+      (List.fold_left (fun acc x => KernameSet.union (term_global_deps (snd x)) acc) brs 
+        (term_global_deps x))
+   | EAst.tFix mfix _ | EAst.tCoFix mfix _ =>
+     List.fold_left (fun acc x => KernameSet.union (term_global_deps (EAst.dbody x)) acc) mfix
+      KernameSet.empty
+  | EAst.tProj p c => 
+    KernameSet.union (KernameSet.singleton (inductive_mind (fst (fst p))))
+      (term_global_deps c)
+  | _ => KernameSet.empty
   end.

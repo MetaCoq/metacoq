@@ -458,7 +458,7 @@ Section TypeOf.
       pose proof (declared_inductive_inj (proj1 declp) decli) as [-> ->].
       assert (declared_projection Σ mdecl idecl (ind, n, k) pdecl).
       { red; intuition eauto. simpl. eapply declp. }
-      pose proof (@PCUICReflect.eqb_eq inductive _). apply H0 in eqi'. subst ind.
+      pose proof (@Reflect.eqb_eq inductive _). apply H0 in eqi'. subst ind.
       destruct (declared_projection_inj declp H) as [_ [_ ->]].
       sq. split; auto.
       * econstructor; eauto. now rewrite (All2_length _ _ cl').

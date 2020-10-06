@@ -7,6 +7,9 @@ Utils
 WGraph
 UGraph0
 Typing0
+OrderedTypeAlt
+Kernames
+Reflect
 
 Init
 Classes0
@@ -18,7 +21,6 @@ PCUICAstUtils
 PCUICUnivSubst
 PCUICLiftSubst
 EqDecInstances
-PCUICReflect
 PCUICEquality
 PCUICTyping
 PCUICReduction
@@ -46,7 +48,6 @@ ETyping
 EPretty
 Extract
 ErasureFunction
-OrderedTypeAlt
 SafeErasureFunction
 SafeTemplateErasure
 

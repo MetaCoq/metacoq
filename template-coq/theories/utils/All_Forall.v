@@ -1084,6 +1084,16 @@ Proof.
   induction 1; eauto.
 Qed.
 
+(* Bad! Uses template polymorphism. *)
+Lemma Forall2_All2 {A B} {P : A -> B -> Prop} l l' : Forall2 P l l' -> All2 P l l'.
+Proof.
+  intros f; induction l in l', f |- *; destruct l'; try constructor; auto.
+  elimtype False. inv f.
+  elimtype False. inv f.
+  inv f; auto.
+  apply IHl. inv f; auto.
+Qed.
+
 Lemma Forall2_nth_error_Some {A B} {P : A -> B -> Prop} {l l'} n t :
   Forall2 P l l' ->
   nth_error l n = Some t ->
@@ -1410,13 +1420,6 @@ Proof.
 Qed.
 
 Require Import MCSquash.
-
-Lemma All_In X (P : X -> Type) (l : list X) x : All P l -> In x l -> squash (P x).
-Proof.
-  induction 1; cbn; intros; destruct H.
-  - subst. econstructor. eauto.
-  - eauto.
-Qed.
 
 Lemma All2_swap :
   forall A B R l l',
@@ -1852,4 +1855,42 @@ Proof.
   - destruct l'. 1: discriminate.
     simpl in h. apply andP in h as [? ?].
     constructor. all: auto.
+Qed.
+
+(** All, All2 and In interactions. *)
+
+Lemma All2_In {A B} (P : A -> B -> Type) l l' x : In x l -> 
+  All2 P l l' -> ∥ ∑ x', P x x' ∥.
+Proof.
+  induction 2; simpl in H => //.
+  destruct H as [-> | H].
+  constructor. now exists y.
+  now eapply IHX.
+Qed.
+
+Lemma All2_In_right {A B} (P : A -> B -> Type) l l' x' : In x' l' -> 
+  All2 P l l' -> ∥ ∑ x, P x x' ∥.
+Proof.
+  induction 2; simpl in H => //.
+  destruct H as [-> | H].
+  constructor. now exists x.
+  now eapply IHX.
+Qed.
+
+Lemma All_In {A} (P : A -> Type) l x : In x l -> 
+  All P l -> ∥ P x ∥.
+Proof.
+  induction 2; simpl in H => //.
+  destruct H as [-> | H].
+  now constructor.
+  now eapply IHX.
+Qed.
+
+Lemma In_Forall {A} {P : A -> Prop} l : 
+  (forall x, In x l -> P x) ->
+  Forall P l.
+Proof.
+  intros H; induction l; constructor; auto.
+  now apply H; simpl. apply IHl.
+  intros x xin; apply H; simpl; auto.
 Qed.

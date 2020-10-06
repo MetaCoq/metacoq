@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import config utils Ast AstUtils Induction
+From MetaCoq.Template Require Import config utils Ast AstUtils Reflect Induction
   LiftSubst UnivSubst Typing TypingWf LibHypsNaming.
-From MetaCoq.Checker Require Import WeakeningEnv Closed Reflect.
+From MetaCoq.Checker Require Import WeakeningEnv Closed.
 
 Require Import ssreflect.
 From Equations Require Import Equations.

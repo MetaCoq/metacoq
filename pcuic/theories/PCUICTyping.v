@@ -278,7 +278,7 @@ Definition isCoFinite (r : recursivity_kind) :=
 
 Definition check_recursivity_kind Σ ind r :=
   match lookup_env Σ ind with
-  | Some (InductiveDecl mib) => PCUICReflect.eqb mib.(ind_finite) r
+  | Some (InductiveDecl mib) => Reflect.eqb mib.(ind_finite) r
   | _ => false
   end.
 
@@ -304,7 +304,7 @@ Definition wf_fixpoint (Σ : global_env) mfix :=
   | Some (ind :: inds) =>
     (* Check that mutually recursive fixpoints are all on the same mututal
        inductive block *)
-    forallb (PCUICReflect.eqb ind) inds &&
+    forallb (Reflect.eqb ind) inds &&
     check_recursivity_kind Σ ind Finite
   | _ => false
   end.
@@ -327,7 +327,7 @@ Definition wf_cofixpoint (Σ : global_env) mfix :=
   | Some (ind :: inds) =>
     (* Check that mutually recursive cofixpoints are all producing
        coinductives in the same mututal coinductive block *)
-    forallb (PCUICReflect.eqb ind) inds &&
+    forallb (Reflect.eqb ind) inds &&
     check_recursivity_kind Σ ind CoFinite
   | _ => false
   end.

@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import CMorphisms.
-From MetaCoq.Template Require Import config utils.
+From MetaCoq.Template Require Import config utils Reflect.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICReflect PCUICLiftSubst.
+     PCUICLiftSubst PCUICReflect.
 
 Require Import ssreflect.
 From Equations.Prop Require Import DepElim.
@@ -223,7 +223,7 @@ Proof.
     split; auto.
     destruct t; simpl; auto.
   - apply Forall2_same; eauto.
-Qed.    
+Qed.
 
 Instance eq_term_upto_univ_refl Σ Re Rle napp :
   RelationClasses.Reflexive Re ->

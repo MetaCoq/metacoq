@@ -659,7 +659,7 @@ Proof.
     2:eapply validity_term; eauto.
     unfold check_recursivity_kind in t.
     rewrite isdecl.p1 in t.
-    apply PCUICReflect.eqb_eq in t. rewrite t /= in heq_isCoFinite.
+    apply Reflect.eqb_eq in t. rewrite t /= in heq_isCoFinite.
     discriminate.
 
   - (* Case congruence on the predicate *) 

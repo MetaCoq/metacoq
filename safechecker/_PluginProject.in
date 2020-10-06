@@ -21,6 +21,8 @@ src/wGraph.ml
 src/wGraph.mli
 src/typing0.mli
 src/typing0.ml
+src/reflect.mli
+src/reflect.ml
 
 # From PCUIC
 src/pCUICAst.ml
@@ -33,8 +35,8 @@ src/eqDecInstances.ml
 src/eqDecInstances.mli
 # src/pCUICInduction.mli
 # src/pCUICInduction.ml
-src/pCUICReflect.mli
-src/pCUICReflect.ml
+# src/pCUICReflect.mli
+# src/pCUICReflect.ml
 src/pCUICEquality.mli
 src/pCUICEquality.ml
 src/pCUICReduction.ml

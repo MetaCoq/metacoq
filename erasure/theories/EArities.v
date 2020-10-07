@@ -604,3 +604,21 @@ Proof.
   reflexivity.
   now eapply it_mkProd_isArity.
 Qed.
+
+Lemma isErasable_any_type {Σ Γ t T} : 
+  wf_ext Σ -> 
+  isErasable Σ Γ t ->
+  Σ ;;; Γ |- t : T ->
+  isErasable_Type Σ Γ T.
+Proof.
+  intros wfΣ [T' [Ht Ha]].
+  intros HT.
+  pose proof (PCUICPrincipality.principal_typing _ (fst wfΣ) Ht HT) as [P [le [le' tC]]].
+  destruct Ha.
+  left. eapply arity_type_inv. 3:exact Ht. all:eauto using typing_wf_local.
+  destruct s as [u [Hu isp]].
+  right.
+  exists u; split; auto.
+  eapply cumul_prop2; eauto. eapply PCUICValidity.validity; eauto.
+  eapply cumul_prop1; eauto. eapply PCUICValidity.validity; eauto.
+Qed.

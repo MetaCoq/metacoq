@@ -605,6 +605,10 @@ Proof.
   now eapply it_mkProd_isArity.
 Qed.
 
+Definition isErasable_Type (Σ : global_env_ext) Γ T := 
+  (Is_conv_to_Arity Σ Γ T +
+    (∑ u : Universe.t, Σ;;; Γ |- T : tSort u × Universe.is_prop u))%type.
+
 Lemma isErasable_any_type {Σ Γ t T} : 
   wf_ext Σ -> 
   isErasable Σ Γ t ->

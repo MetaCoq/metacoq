@@ -1513,7 +1513,7 @@ Fixpoint noccur_between k n (t : term) : bool :=
     List.forallb (test_def (noccur_between k' n)) mfix
   | x => true
   end.
-
+(*
 Lemma erases_erasable_vars Σ Γ t u : 
   Σ ;;; Γ |- t ⇝ℇ u ->
   forall n decl, nth_error Γ n = Some decl ->
@@ -1522,7 +1522,7 @@ Lemma erases_erasable_vars Σ Γ t u :
 Proof.
   induction 1.
   - intros n decl hnth ise.
-    admit.
+    admit.*)
 
 
 Lemma erase_opt_correct (wfl := Ee.default_wcbv_flags) (Σ : global_env_ext) (wfΣ : wf_ext Σ) t v T Σ' t' v' deps :
@@ -1569,10 +1569,9 @@ Proof.
       eapply erase_eval_to_box in H0; eauto.
       2:{ eapply KernameSet.subset_spec. intros x hin. eapply sub.
           rewrite KernameSet.union_spec; auto. }
-      assert (optimize (ECSubst.csubst tBox 0 b0) = ECSubst.csubst tBox 0 (optimize b0)).
       epose proof (erase_correct _ _ _ _ _ _ deps axiomfree (erase_obligation_5 Σ (sq wfΣ) [] f a w s) eq_refl) as ec. 
       forward ec. admit.
-      specialize (ec eq_refl ev1) as [lamv [erv' [ev']]].
+      specialize (ec eq_refl ev1) as [lamv [erv' ev']].
       pose proof (Ee.eval_deterministic _ H ev'). subst lamv.
       depelim erv'.
       destruct w as [appT app].

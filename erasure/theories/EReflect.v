@@ -117,10 +117,23 @@ Proof.
   finish_reflect.
 Defined.
 
+Definition eqb_informative (x y : informative) :=
+  match x, y with
+  | Computational, Computational => true
+  | Propositional, Propositional => true
+  | _, _ => false
+  end.
+
+Instance reflect_informative : ReflectEq informative.
+Proof.
+  refine {| eqb := eqb_informative |}.
+  intros [] []; finish_reflect.
+Defined.
+
 Definition eqb_one_inductive_body (x y : one_inductive_body) :=
-  let (n, k, c, p) := x in
-  let (n', k', c', p') := y in
-  eqb n n' && eqb k k' && eqb c c' && eqb p p'.
+  let (n, i, k, c, p) := x in
+  let (n', i', k', c', p') := y in
+  eqb n n' && eqb i i' && eqb k k' && eqb c c' && eqb p p'.
 
 Instance reflect_one_inductive_body : ReflectEq one_inductive_body.
 Proof.

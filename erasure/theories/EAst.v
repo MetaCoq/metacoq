@@ -166,9 +166,14 @@ Notation " Γ ,, d " := (snoc Γ d) (at level 20, d at next level).
 
 (** *** Environments *)
 
+Variant informative := 
+  | Computational
+  | Propositional. 
+
 (** See [one_inductive_body] from [declarations.ml]. *)
 Record one_inductive_body : Set := {
   ind_name : ident;
+  ind_informative : informative;
   ind_kelim : sort_family; (* Top allowed elimination sort *)
   ind_ctors : list (ident * nat (* arity, w/o lets, w/o parameters *));
   ind_projs : list (ident) (* names of projections, if any. *) }.

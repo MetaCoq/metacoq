@@ -582,16 +582,49 @@ Proof.
 Qed.
 
 Transparent PCUICParallelReductionConfluence.construct_cofix_discr.
+Require Import EArities.
+From MetaCoq.PCUIC Require Import PCUICArities PCUICInductiveInversion.
+Lemma isErasable_Propositional {Σ : global_env_ext} {Γ ind n u args} : 
+  wf_ext Σ ->
+  isErasable Σ Γ (mkApps (tConstruct ind n u) args) -> isPropositional Σ ind true.
+Proof.
+  intros wfΣ ise.
+  eapply tConstruct_no_Type in ise; eauto.
+  destruct ise as [T [s [HT [Ts isp]]]].
+  unfold isPropositional.
+  eapply PCUICValidity.inversion_mkApps in HT as (? & ? & ?); auto.
+  eapply inversion_Construct in t as (? & ? & ? & ? & ? & ? & ?); auto.
+  pose proof d as [decli ?]. pose proof decli as [-> ->].
+  destruct (on_declared_constructor wfΣ d).
+  destruct p as [onind oib].
+  rewrite oib.(ind_arity_eq).
+  rewrite !destArity_it_mkProd_or_LetIn /=.
+  eapply PCUICSpine.typing_spine_strengthen in t0; eauto.
+  unfold type_of_constructor in t0.
+  destruct s0 as [indctors [nthcs onc]].
+  rewrite [x2.1.2]onc.(cstr_eq) in t0.
+  rewrite !subst_instance_constr_it_mkProd_or_LetIn !subst_it_mkProd_or_LetIn in t0.
+  len in t0.
+  rewrite subst_cstr_concl_head in t0. 
+  destruct decli. eapply nth_error_Some_length in H1; eauto.
+  rewrite -it_mkProd_or_LetIn_app in t0.
+  eapply PCUICElimination.typing_spine_proofs in Ts; eauto.
+  destruct Ts as [_ Hs].
+  specialize (Hs _ _ (proj1 d) oib c isp).
+  rewrite is_prop_subst_instance_univ in Hs => //.
+  apply (consistent_instance_ext_noprop c).
+Qed.
 
 Lemma erases_correct (wfl := default_wcbv_flags) Σ t T t' v Σ' :
   extraction_pre Σ ->
   Σ;;; [] |- t : T ->
   Σ;;; [] |- t ⇝ℇ t' ->  
   erases_deps Σ Σ' t' ->
+  (forall ind b, isPropositional Σ ind b -> is_propositional Σ' ind = Some b) ->
   Σ |-p t ▷ v ->
   exists v', Σ;;; [] |- v ⇝ℇ v' /\ ∥ Σ' ⊢ t' ▷ v' ∥.
 Proof.
-  intros pre Hty He Hed H.
+  intros pre Hty He Hed Hedi H.
   revert T Hty t' He Hed.
   induction H; intros T Hty t' He Hed; destruct pre as [axfree wfΣ].
   - assert (Hty' := Hty).
@@ -738,6 +771,7 @@ Proof.
         rewrite mkApps_nested in X1.
 
         eapply tConstruct_no_Type in X1; auto.
+        
         eapply H10 in X1 as []; eauto. 2: exists []; now destruct Σ.
 
         destruct (ind_ctors idecl'). cbn in *. destruct c; invs H3.
@@ -773,10 +807,12 @@ Proof.
         apply All_Forall, All_repeat.
         now constructor.
 
-        (* destruct x4; cbn in e2; subst. destruct X2. destruct p0; cbn in e2; subst. cbn in *.  destruct y.  *)
-        exists x3. split; eauto. constructor. eapply eval_iota_sing => //. 2:eauto.
+        (* destruct x4; cbn in e2; subst. destruct X2. destruct p0; cbn in e2; subst. csbn in *.  destruct y.  *)
+        exists x3. split; eauto. constructor. eapply eval_iota_sing => //. 3:eauto.
         pose proof (Ee.eval_to_value _ _ _ He_v').
         eapply value_app_inv in H5. subst. eassumption.
+        depelim H6.
+        eapply isErasable_Propositional in X0; eauto.
 
         eapply wf_ext_wf in wfΣ.
         eapply tCase_length_branch_inv in wfΣ.
@@ -784,7 +820,8 @@ Proof.
             exact Hty.
             eapply PCUICReduction.red_case_c. eapply wcbeval_red; eauto. }
         2: reflexivity.
-
+        
+        
         enough (#|skipn (ind_npars mdecl') (x0 ++ x1)| = narg) as <- by eauto.
         rewrite skipn_length; lia.
         
@@ -820,10 +857,14 @@ Proof.
 
         invs H6.
         -- exists x3. split; eauto.
-           constructor. econstructor. eauto. unfold ETyping.iota_red.
-           rewrite <- nth_default_eq. unfold nth_default. rewrite e1. cbn. eauto.
+           constructor. econstructor. eauto. 2:{ unfold ETyping.iota_red.
+           rewrite <- nth_default_eq. unfold nth_default. rewrite e1. cbn. eauto. }
+           now eapply Hedi.
+
         -- eapply Is_type_app in X1 as []; auto.
            2:{ eapply subject_reduction_eval. 2:eassumption. eauto. }
+           assert (ispind : is_propositional Σ' ind = Some true).
+           { eapply Hedi, isErasable_Propositional; eauto. }
 
            eapply tConstruct_no_Type in X1; auto.
            eapply H10 in X1 as []; eauto. 2: exists []; now destruct Σ.
@@ -867,6 +908,8 @@ Proof.
            2:eauto. auto.
            apply value_app_inv in H9; subst x1.
            apply He_v'.
+
+           
            enough (#|skipn (ind_npars mdecl') args| = n) as <- by eauto.
 
            eapply wf_ext_wf in wfΣ.
@@ -890,8 +933,10 @@ Proof.
       eapply erases_mkApps_inv in Hvc'; eauto.
       2: eapply subject_reduction_eval; eauto.
       destruct Hvc' as [ (? & ? & ? & ? & [] & ? & ? & ?) | (? & ? & ? & ? & ?)]; subst.
-      * exists EAst.tBox. split.
-
+      * exists EAst.tBox.
+        assert (isprop : is_propositional Σ' i = Some true).
+        { eapply Hedi, isErasable_Propositional; eauto. }
+        split.
         eapply Is_type_app in X as []; eauto. 2:{ rewrite mkApps_nested. eapply subject_reduction_eval; eauto. }
         rewrite mkApps_nested in X.
 
@@ -906,7 +951,7 @@ Proof.
         eassumption.
         eapply isErasable_Proof. constructor. eauto.
 
-        eapply eval_proj_box => //.
+        eapply eval_proj_prop => //.
         pose proof (Ee.eval_to_value _ _ _ Hty_vc').
         eapply value_app_inv in H1. subst. eassumption.
       * rename H3 into Hinf.
@@ -918,10 +963,12 @@ Proof.
         eapply IHeval2 in H3 as (? & ? & [?]); eauto.
         invs H2.
         -- exists x8. split; eauto. constructor. econstructor. eauto.
+           now apply Hedi.
            rewrite <- nth_default_eq. unfold nth_default. now rewrite H1.
-        -- exists EAst.tBox. split.
-
-
+        -- exists EAst.tBox.
+           assert (isprop : is_propositional Σ' i = Some true).
+           { eapply Hedi, (isErasable_Propositional (args:=[])); eauto. }
+           split.
            eapply Is_type_app in X as []; eauto. 2:{ eapply subject_reduction_eval; [|eauto]; eauto. }
 
            eapply tConstruct_no_Type in X. eapply Hinf in X as [? []]; eauto.
@@ -935,7 +982,7 @@ Proof.
            eassumption.
            eapply isErasable_Proof. eauto.
 
-           constructor. eapply eval_proj_box => //.
+           constructor. eapply eval_proj_prop => //.
            pose proof (Ee.eval_to_value _ _ _ Hty_vc').
            eapply value_app_inv in H2. subst. eassumption.
         -- eapply erases_deps_eval in Hty_vc'; [|now eauto].
@@ -1248,7 +1295,7 @@ Proof.
           eapply erases_mkApps. instantiate(1:=EAst.tBox).
           constructor.
           eapply isErasable_Proof.
-          eapply (tCoFix_no_Type _ _ _ []) in X; auto.
+          eapply (tCoFix_no_Type _ _ _ _ []) in X; auto.
           pose proof X as X'. destruct X' as [tyapp [u [Htyapp Hu]]].
           eapply Is_proof_ty; eauto.
           eapply (unfold_cofix_type _ _ _ []); eauto.
@@ -1344,7 +1391,7 @@ Proof.
           eapply erases_mkApps. instantiate(1:=EAst.tBox).
           constructor.
           eapply isErasable_Proof.
-          eapply (tCoFix_no_Type _ _ _ []) in X; auto.
+          eapply (tCoFix_no_Type _ _ _ _ []) in X; auto.
           pose proof X as X'. destruct X' as [tyapp [u [Htyapp Hu]]].
           eapply Is_proof_ty; eauto.
           eapply (unfold_cofix_type _ _ _ []); eauto.

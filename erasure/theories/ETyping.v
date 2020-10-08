@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Program.
-From MetaCoq.Template Require Import config utils.
-From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst.
+From MetaCoq.Template Require Import config utils Reflect.
+From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst EReflect.
 Require Import ssreflect.
 
 (** * Typing derivations
@@ -44,6 +44,17 @@ Proof.
   simpl. destruct kername_eq_dec. subst => //. auto. 
 Qed.
 
+(** Knowledge of propositionality status oof an inductive type *)
+
+Definition is_propositional Σ ind :=
+  match lookup_env Σ (inductive_mind ind) with
+  | Some (InductiveDecl mdecl) =>
+    match nth_error mdecl.(ind_bodies) (inductive_ind ind) with 
+    | Some idecl => Some (Reflect.eqb idecl.(ind_informative) Propositional)
+    | None => None
+    end
+  | _ => None
+  end.
 
 (** ** Reduction *)
 

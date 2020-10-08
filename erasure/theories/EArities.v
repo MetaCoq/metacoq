@@ -161,8 +161,8 @@ Proof.
     eapply invert_it_Ind_red1 in X1 as (? & ? & ?); eauto.
 Qed.
 
-Lemma it_mkProd_red_Arity Σ  c0 i u l : wf Σ ->
-  ~ Is_conv_to_Arity Σ [] (it_mkProd_or_LetIn c0 (mkApps (tInd i u) l)).
+Lemma it_mkProd_red_Arity Σ Γ c0 i u l : wf Σ ->
+  ~ Is_conv_to_Arity Σ Γ (it_mkProd_or_LetIn c0 (mkApps (tInd i u) l)).
 Proof.
   intros HS (? & [] & ?). eapply invert_it_Ind_red in X as (? & ? & ?). subst.
   eapply it_mkProd_arity in H. eapply isArity_mkApps in H as [[] ]. eauto.
@@ -182,17 +182,17 @@ Qed.
 
 (* if a constructor is a type or proof, it is a proof *)
 
-Lemma tConstruct_no_Type (Σ : global_env_ext) ind c u x1 : wf Σ ->
-  isErasable Σ [] (mkApps (tConstruct ind c u) x1) ->
-  Is_proof Σ [] (mkApps (tConstruct ind c u) x1).
+Lemma tConstruct_no_Type (Σ : global_env_ext) Γ ind c u x1 : wf Σ ->
+  isErasable Σ Γ (mkApps (tConstruct ind c u) x1) ->
+  Is_proof Σ Γ (mkApps (tConstruct ind c u) x1).
 Proof.
   intros wfΣ (? & ? & [ | (? & ? & ?)]).
   - exfalso.
     eapply PCUICValidity.inversion_mkApps in t as (? & ? & ?); eauto.
-    assert(c0 : Σ ;;; [] |- x <= x) by reflexivity.
+    assert(c0 : Σ ;;; Γ |- x <= x) by reflexivity.
     revert c0 t0 i. generalize x at 1 3.
     intros x2 c0 t0 i.
-    assert (HWF : isWfArity_or_Type Σ [] x2).
+    assert (HWF : isWfArity_or_Type Σ Γ x2).
     { eapply PCUICValidity.validity.
       - eauto.
       - eapply type_mkApps. 2:eauto. eauto.
@@ -263,7 +263,7 @@ Proof.
       subst.
       eapply IHt0; eauto.
 
-      eapply (substitution_untyped_cumul Σ [] [_] [] [hd]) in c1.
+      eapply (substitution_untyped_cumul Σ Γ [_] [] [hd]) in c1.
       cbn in c1. 2:eauto. 2:{ repeat econstructor. }
       rewrite subst_it_mkProd_or_LetIn in c1.
       rewrite subst_mkApps in c1. eassumption.
@@ -272,17 +272,17 @@ Qed.
 
 (* if a cofixpoint is a type or proof, it is a proof *)
 
-Lemma tCoFix_no_Type (Σ : global_env_ext) mfix idx x1 : wf Σ ->
-  isErasable Σ [] (mkApps (tCoFix mfix idx) x1) ->
-  Is_proof Σ [] (mkApps (tCoFix mfix idx) x1).
+Lemma tCoFix_no_Type (Σ : global_env_ext) Γ mfix idx x1 : wf Σ ->
+  isErasable Σ Γ (mkApps (tCoFix mfix idx) x1) ->
+  Is_proof Σ Γ (mkApps (tCoFix mfix idx) x1).
 Proof.
   intros wfΣ (? & ? & [ | (? & ? & ?)]).
   - exfalso.
     eapply PCUICValidity.inversion_mkApps in t as (? & ? & ?); eauto.
-    assert(c0 : Σ ;;; [] |- x <= x) by reflexivity.
+    assert(c0 : Σ ;;; Γ |- x <= x) by reflexivity.
     revert c0 t0 i. generalize x at 1 3.
     intros x2 c0 t0 i.
-    assert (HWF : isWfArity_or_Type Σ [] x2).
+    assert (HWF : isWfArity_or_Type Σ Γ x2).
     { eapply PCUICValidity.validity.
       - eauto.
       - eapply type_mkApps. 2:eauto. eauto.

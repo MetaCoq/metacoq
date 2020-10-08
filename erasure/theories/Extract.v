@@ -12,6 +12,20 @@ Local Existing Instance extraction_checker_flags.
 Definition isErasable Σ Γ t := ∑ T, Σ ;;; Γ |- t : T × 
   (isArity T + (∑ u, (Σ ;;; Γ |- T : tSort u) * Universe.is_prop u))%type.
 
+Definition isPropositional Σ ind b := 
+  match lookup_env Σ (inductive_mind ind) with
+  | Some (InductiveDecl mdecl) =>
+    match nth_error mdecl.(ind_bodies) (inductive_ind ind) with 
+    | Some idecl =>
+      match destArity [] idecl.(ind_type) with
+      | Some (_, s) => Universe.is_prop s = b
+      | None => False
+      end
+    | None => False
+    end
+  | _ => False
+  end.
+
 Fixpoint mkAppBox c n :=
   match n with
   | 0 => c
@@ -45,7 +59,8 @@ Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :
   | erases_tConst : forall (kn : kername) (u : Instance.t),
                     Σ;;; Γ |- tConst kn u ⇝ℇ E.tConst kn
   | erases_tConstruct : forall (kn : inductive) (k : nat) (n : Instance.t),
-                        Σ;;; Γ |- tConstruct kn k n ⇝ℇ E.tConstruct kn k
+        isPropositional Σ kn false ->
+        Σ;;; Γ |- tConstruct kn k n ⇝ℇ E.tConstruct kn k
   | erases_tCase1 : forall (ind : inductive) (npar : nat) (T c : term)
                       (brs : list (nat × term)) (c' : E.term)
                       (brs' : list (nat × E.term)),
@@ -103,6 +118,7 @@ Lemma erases_forall_list_ind
       (Hconst : forall Γ kn u,
           P Γ (tConst kn u) (E.tConst kn))
       (Hconstruct : forall Γ kn k n,
+          isPropositional Σ kn false ->
           P Γ (tConstruct kn k n) (E.tConstruct kn k))
       (Hcase : forall Γ ind npar T c brs c' brs',
           PCUICElimination.Informative Σ ind ->

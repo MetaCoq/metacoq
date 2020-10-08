@@ -78,6 +78,8 @@ Proof.
   split. eauto. econstructor. eauto.
 Qed.
 
+Require Import ssrbool.
+
 Lemma erases_extends :
   env_prop (fun Σ Γ t T =>
               forall Σ', wf Σ' -> extends Σ Σ' -> forall t', erases Σ Γ t t' -> erases (Σ', Σ.2) Γ t t')
@@ -87,6 +89,11 @@ Proof.
   all: match goal with [ H : erases _ _ ?a _ |- _ ] => tryif is_var a then idtac else inv H end.
   all: try now (econstructor; eauto).
   all: try now (econstructor; eapply Is_type_extends; eauto).
+  - econstructor.
+    red.
+    destruct isdecl as [[? ?] ?]. red in H0.
+    red in H5. rewrite H0 in H5.
+    eapply extends_lookup in H0; eauto. now rewrite H0.
   - econstructor. all:eauto.
     2:{ eauto. eapply All2_All_left in X3.
         2:{ intros ? ? [[[? ?] ?] ?]. exact e. }
@@ -403,7 +410,7 @@ Proof.
   - inv H0. econstructor.
     eapply is_type_subst; eauto.
   - inv H0.
-    + cbn. econstructor.
+    + cbn. econstructor; auto.
     + econstructor.
       eapply is_type_subst; eauto.
   - depelim H6.

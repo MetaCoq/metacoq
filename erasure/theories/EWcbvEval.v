@@ -74,11 +74,11 @@ Definition cunfold_cofix (mfix : mfixpoint term) (idx : nat) :=
   | None => None
   end.
 
-(* Tells if the evaluation relation should include match-box and proj-box reduction rules. *)
-Class WcbvFlags := { with_box_case : bool }.
+(* Tells if the evaluation relation should include match-prop and proj-prop reduction rules. *)
+Class WcbvFlags := { with_prop_case : bool }.
 
-Definition default_wcbv_flags := {| with_box_case := true |}.
-Definition opt_wcbv_flags := {| with_box_case := false |}.
+Definition default_wcbv_flags := {| with_prop_case := true |}.
+Definition opt_wcbv_flags := {| with_prop_case := false |}.
 
 Section Wcbv.
   Context {wfl : WcbvFlags}.
@@ -108,13 +108,15 @@ Section Wcbv.
   (** Case *)
   | eval_iota ind pars discr c args brs res :
       eval discr (mkApps (tConstruct ind c) args) ->
+      is_propositional Σ ind = Some false ->
       eval (iota_red pars c args brs) res ->
       eval (tCase (ind, pars) discr brs) res
 
   (** Singleton case on a proof *)
   | eval_iota_sing ind pars discr brs n f res :
-      with_box_case ->
+      with_prop_case ->
       eval discr tBox ->
+      is_propositional Σ ind = Some true ->
       brs = [ (n,f) ] ->
       eval (mkApps f (repeat tBox n)) res ->
       eval (tCase (ind, pars) discr brs) res
@@ -156,13 +158,15 @@ Section Wcbv.
   (** Proj *)
   | eval_proj i pars arg discr args res :
       eval discr (mkApps (tConstruct i 0) args) ->
+      is_propositional Σ i = Some false ->
       eval (List.nth (pars + arg) args tDummy) res ->
       eval (tProj (i, pars, arg) discr) res
 
   (** Proj *)
-  | eval_proj_box i pars arg discr :
-      with_box_case ->
+  | eval_proj_prop i pars arg discr :
+      with_prop_case ->
       eval discr tBox ->
+      is_propositional Σ i = Some true ->
       eval (tProj (i, pars, arg) discr) tBox
 
   (** Atoms (non redex-producing heads) applied to values are values *)
@@ -529,14 +533,16 @@ Section Wcbv.
         noconf eq1.
         noconf eq2.
         noconf IHev1.
+        rewrite (uip e e0).
         now specialize (IHev2 _ ev'2); noconf IHev2.
       + apply eval_mkApps_tCoFix in ev1 as H.
         destruct H as (? & ?); solve_discr.
     - depelim ev'; try go.
       + subst.
-        noconf e0.
+        noconf e2.
         simpl.
         specialize (IHev1 _ ev'1); noconf IHev1. simpl.
+        pose proof (uip e e1). subst.
         pose proof (uip i i0). subst i0.
         now specialize (IHev2 _ ev'2); noconf IHev2.
       + apply eval_mkApps_tCoFix in ev1 as H; destruct H; solve_discr.
@@ -620,9 +626,11 @@ Section Wcbv.
         pose proof (mkApps_eq_inj (f_equal pr1 IHev1) eq_refl eq_refl) as (? & <-).
         noconf H.
         noconf IHev1.
+        rewrite (uip e e0).
         now specialize (IHev2 _ ev'2); noconf IHev2.
     - depelim ev'; try go.
       apply eval_mkApps_tCoFix in ev as H; destruct H; solve_discr.
+      rewrite (uip e e0).
       rewrite (uip i0 i2).
       now specialize (IHev _ ev'); noconf IHev.
     - depelim ev'; try go.

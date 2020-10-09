@@ -50,7 +50,7 @@ Definition is_propositional Σ ind :=
   match lookup_env Σ (inductive_mind ind) with
   | Some (InductiveDecl mdecl) =>
     match nth_error mdecl.(ind_bodies) (inductive_ind ind) with 
-    | Some idecl => Some (Reflect.eqb idecl.(ind_informative) Propositional)
+    | Some idecl => Some (idecl.(ind_propositional))
     | None => None
     end
   | _ => None

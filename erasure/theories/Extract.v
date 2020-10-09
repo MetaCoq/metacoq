@@ -12,6 +12,12 @@ Local Existing Instance extraction_checker_flags.
 Definition isErasable Σ Γ t := ∑ T, Σ ;;; Γ |- t : T × 
   (isArity T + (∑ u, (Σ ;;; Γ |- T : tSort u) * Universe.is_prop u))%type.
 
+Definition isPropositionalArity ar b :=
+  match destArity [] ar with
+  | Some (_, s) => Universe.is_prop s = b
+  | None => False
+  end.
+
 Definition isPropositional Σ ind b := 
   match lookup_env Σ (inductive_mind ind) with
   | Some (InductiveDecl mdecl) =>
@@ -210,7 +216,8 @@ Definition erases_one_inductive_body (oib : one_inductive_body) (oib' : E.one_in
   Forall2 (fun '((i,t), n) '(i', n') => n = n' /\ i = i') oib.(ind_ctors) oib'.(E.ind_ctors) /\
   Forall2 (fun '(i,t) i' => i = i') oib.(ind_projs) oib'.(E.ind_projs) /\
   oib'.(E.ind_name) = oib.(ind_name) /\
-  oib'.(E.ind_kelim) = oib.(ind_kelim).
+  oib'.(E.ind_kelim) = oib.(ind_kelim) /\ 
+  isPropositionalArity oib.(ind_type) oib'.(E.ind_propositional).
 
 Definition erases_mutual_inductive_body (mib : mutual_inductive_body) (mib' : E.mutual_inductive_body) :=
   let bds := mib.(ind_bodies) in
@@ -233,7 +240,7 @@ Definition erases_global Σ Σ' := erases_global_decls Σ Σ'.
 
 (* For erasure evaluation correctness we do not need the full global
    environment to be erased, rather only (constant) dependencies of
-   terms need to be there. *)
+   terms need to be there along with the inductive types that are used. *)
 Inductive erases_deps (Σ : global_env) (Σ' : E.global_declarations) : E.term -> Prop :=
 | erases_deps_tBox : erases_deps Σ Σ' E.tBox
 | erases_deps_tRel i : erases_deps Σ Σ' (E.tRel i)
@@ -260,11 +267,17 @@ Inductive erases_deps (Σ : global_env) (Σ' : E.global_declarations) : E.term -
     erases_deps Σ Σ' (E.tConst kn)
 | erases_deps_tConstruct ind c :
     erases_deps Σ Σ' (E.tConstruct ind c)
-| erases_deps_tCase p discr brs :
+| erases_deps_tCase p mdecl idecl mdecl' idecl' discr brs :
+    PCUICTyping.declared_inductive Σ mdecl (fst p) idecl ->
+    ETyping.declared_inductive Σ' mdecl' (fst p) idecl' ->
+    erases_one_inductive_body idecl idecl' ->
     erases_deps Σ Σ' discr ->
     Forall (fun br => erases_deps Σ Σ' br.2) brs ->
     erases_deps Σ Σ' (E.tCase p discr brs)
-| erases_deps_tProj p t :
+| erases_deps_tProj p mdecl idecl mdecl' idecl' t :
+    PCUICTyping.declared_inductive Σ mdecl p.1.1 idecl ->
+    ETyping.declared_inductive Σ' mdecl' p.1.1 idecl' ->
+    erases_one_inductive_body idecl idecl' ->
     erases_deps Σ Σ' t ->
     erases_deps Σ Σ' (E.tProj p t)
 | erases_deps_tFix defs i :

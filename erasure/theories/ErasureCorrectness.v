@@ -620,7 +620,6 @@ Lemma erases_correct (wfl := default_wcbv_flags) Σ t T t' v Σ' :
   Σ;;; [] |- t : T ->
   Σ;;; [] |- t ⇝ℇ t' ->  
   erases_deps Σ Σ' t' ->
-  (forall ind b, isPropositional Σ ind b -> is_propositional Σ' ind = Some b) ->
   Σ |-p t ▷ v ->
   exists v', Σ;;; [] |- v ⇝ℇ v' /\ ∥ Σ' ⊢ t' ▷ v' ∥.
 Proof.

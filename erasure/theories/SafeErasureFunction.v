@@ -22,69 +22,6 @@ Require Import ssreflect.
 
 Derive Signature for on_global_env.
 
-Reserved Notation "Σ ;;; Γ |- s ⇝⧈ t" (at level 50, Γ, s, t at next level).
-Reserved Notation "Σ ;;; Γ |- s ⇝⧆ t" (at level 50, Γ, s, t at next level).
-(* 
-Section ErasesAll.
-  Context {cf:checker_flags}.
-
-  Inductive erases_comp (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :=
-    erases_tRel : forall i : nat, Σ;;; Γ |- tRel i ⇝⧆ E.tRel i
-  | erases_tVar : forall n : ident, Σ;;; Γ |- tVar n ⇝⧆ E.tVar n
-  | erases_tEvar : forall (m m' : nat) (l : list term) (l' : list E.term),
-                   All2 (erases Σ Γ) l l' -> Σ;;; Γ |- tEvar m l ⇝⧆ E.tEvar m' l'
-  | erases_tLambda : forall (na : name) (b t : term) (t' : E.term),
-                     Σ;;; (vass na b :: Γ) |- t ⇝⧆ t' ->
-                     Σ;;; Γ |- tLambda na b t ⇝⧆ E.tLambda na t'
-  | erases_tLetIn : forall (na : name) (t1 : term) (t1' : E.term)
-                      (T t2 : term) (t2' : E.term),
-                    Σ;;; Γ |- t1 ⇝⧈ t1' ->
-                    Σ;;; (vdef na t1 T :: Γ) |- t2 ⇝⧆ t2' ->
-                    Σ;;; Γ |- tLetIn na t1 T t2 ⇝⧆ E.tLetIn na t1' t2'
-  | erases_tApp : forall (f u : term) (f' u' : E.term),
-                  Σ;;; Γ |- f ⇝⧆ f' ->
-                  Σ;;; Γ |- u ⇝⧈ u' -> Σ;;; Γ |- tApp f u ⇝⧆ E.tApp f' u'
-  | erases_tConst : forall (kn : kername) (u : Instance.t),
-                    Σ;;; Γ |- tConst kn u ⇝⧆ E.tConst kn
-  | erases_tConstruct : forall (kn : inductive) (k : nat) (n : Instance.t),
-                        Σ;;; Γ |- tConstruct kn k n ⇝⧆ E.tConstruct kn k
-  | erases_tCase1 : forall (ind : inductive) (npar : nat) (T c : term)
-                      (brs : list (nat × term)) (c' : E.term)
-                      (brs' : list (nat × E.term)),
-                    Informative Σ ind ->
-                    Σ;;; Γ |- c ⇝⧈ c' ->
-                    All2
-                      (fun (x : nat × term) (x' : nat × E.term) =>
-                       Σ;;; Γ |- snd x ⇝⧆ snd x' × fst x = fst x') brs brs' ->
-                    Σ;;; Γ |- tCase (ind, npar) T c brs ⇝⧆ E.tCase (ind, npar) c' brs'
-  | erases_tProj : forall (p : (inductive × nat) × nat) (c : term) (c' : E.term),
-                   let ind := fst (fst p) in
-                   Informative Σ ind ->
-                   Σ;;; Γ |- c ⇝⧆ c' -> Σ;;; Γ |- tProj p c ⇝⧆ E.tProj p c'
-  | erases_tFix : forall (mfix : mfixpoint term) (n : nat) (mfix' : list (E.def E.term)),
-                  All2
-                    (fun (d : def term) (d' : E.def E.term) =>
-                     dname d = E.dname d'
-                     × rarg d = E.rarg d'
-                       × Σ;;; Γ ,,, PCUICLiftSubst.fix_context mfix |-
-                         dbody d ⇝⧆ E.dbody d') mfix mfix' ->
-                  Σ;;; Γ |- tFix mfix n ⇝⧆ E.tFix mfix' n
-  | erases_tCoFix : forall (mfix : mfixpoint term) (n : nat) (mfix' : list (E.def E.term)),
-                    All2
-                      (fun (d : def term) (d' : E.def E.term) =>
-                       dname d = E.dname d'
-                       × rarg d = E.rarg d'
-                         × Σ;;; Γ ,,, PCUICLiftSubst.fix_context mfix |-
-                           dbody d ⇝⧆ E.dbody d') mfix mfix' ->
-                    Σ;;; Γ |- tCoFix mfix n ⇝⧆ E.tCoFix mfix' n
-  with erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :=
-  | erases_nonbox t u : (isErasable Σ Γ t -> False) -> Σ ;;; Γ |- t ⇝⧆ u -> Σ ;;; Γ |- t ⇝⧈ u
-  | erases_box t : isErasable Σ Γ t -> Σ;;; Γ |- t ⇝⧈ E.tBox 
-  
-  where "Σ ;;; Γ |- s ⇝⧈ t" := (erases Σ Γ s t)
-  and "Σ ;;; Γ |- s ⇝⧆ t" := (erases_comp Σ Γ s t).
-End ErasesAll. *)
-
 (* To debug performance issues *)
 (* 
 Axiom time : forall {A}, string -> (unit -> A) -> A.
@@ -615,8 +552,6 @@ Proof.
     eapply isArity_ind_type; eauto.
 Defined.
 
-Require Import ssrbool.
-
 Lemma erases_erase {Σ : global_env_ext} {wfΣ : ∥wf_ext Σ∥} {Γ t} (wt : welltyped Σ Γ t) :
   erases Σ Γ t (erase Σ wfΣ Γ t wt).
 Proof.
@@ -673,7 +608,8 @@ Proof.
     eapply isArity_ind_type; eauto.
 
   - constructor. clear E.
-    todo "not erasable not propositional".
+    eapply nisErasable_Propositional in f; auto.
+    now exists A.
 
   - constructor. clear E.
     eapply inversion_Proj in t as (? & ? & ? & ? & ? & ? & ? & ? & ?) ; auto.
@@ -728,16 +664,15 @@ Definition erase_one_inductive_body (oib : one_inductive_body) : E.one_inductive
   (* Projection and constructor types are types, hence always erased *)
   let ctors := map (A:=(ident * term) * nat) (fun '((x, y), z) => (x, z)) oib.(ind_ctors) in
   let projs := map (fun '(x, y) => x) oib.(ind_projs) in
-  let is_informative := 
+  let is_propositional := 
     match destArity [] oib.(ind_type) with
-    | Some (_, u) => if Universe.is_prop u then E.Propositional
-      else E.Computational
-    | None => E.Computational (* dummy, impossible case *)
+    | Some (_, u) => Universe.is_prop u
+    | None => false (* dummy, impossible case *)
     end
   in
   {| E.ind_name := oib.(ind_name);
      E.ind_kelim := oib.(ind_kelim);
-     E.ind_informative := is_informative;
+     E.ind_propositional := is_propositional;
      E.ind_ctors := ctors;
      E.ind_projs := projs |}.
 
@@ -800,7 +735,9 @@ Definition global_erased_with_deps Σ Σ' kn :=
     erases_constant_body (Σ, cst_universes cst) cst cst' /\
     (forall body : EAst.term,
      EAst.cst_body cst' = Some body -> erases_deps Σ Σ' body)) \/
-  (exists mib, declared_minductive Σ kn mib).
+  (exists mib mib', declared_minductive Σ kn mib /\ 
+    ETyping.declared_minductive Σ' kn mib' /\
+    erases_mutual_inductive_body mib mib').
 
 Definition includes_deps Σ Σ' deps :=  
   forall kn, 
@@ -940,13 +877,24 @@ Proof.
     destruct Σer as [[c' [declc' (? & ? & ? & ?)]]|].
     pose proof (PCUICWeakeningEnv.declared_constant_inj _ _ d declc'). subst x.
     now econstructor; eauto.
-    destruct H as [mib declm].
+    destruct H as [mib [mib' [declm declm']]].
     red in declm, d. rewrite d in declm. noconf declm.
   - apply inversion_Case in wt
       as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?); eauto.
     destruct ind as [kn i']; simpl in *.
     apply includes_deps_fold in H2 as [? ?].
+
+    specialize (H1 kn). forward H1.
+    now rewrite KernameSet.singleton_spec. red in H1. destruct H1.
+    elimtype False. destruct H1 as [cst [declc _]].
+    { red in declc. destruct d as [d _]. red in d. rewrite d in declc. noconf declc. }
+    destruct H1 as [mib [mib' [declm [declm' em]]]].
+    destruct em.
+    pose proof d as [].
+    eapply Forall2_nth_error_left in H1; eauto. destruct H1 as [? [? ?]].
     eapply erases_deps_tCase; eauto.
+    split; eauto.
+    destruct H1.
     eapply In_Forall in H3.
     eapply All_Forall. eapply Forall_All in H3.
     eapply Forall2_All2 in H0.
@@ -955,10 +903,21 @@ Proof.
     eapply All2_All_left. eapply a.
     simpl. intuition auto. eexists ; eauto.
     ELiftSubst.solve_all. destruct a2 as [T' HT]. eauto.
+    simpl.
+    destruct d. red in H7, declm. rewrite H7 in declm. now noconf declm.
 
   - apply inversion_Proj in wt as (?&?&?&?&?&?&?&?&?); eauto.
-    constructor.
-    now eapply IHer; eauto.
+    destruct (proj1 d).
+    specialize (H0 (inductive_mind p.1.1)). forward H0.
+    now rewrite KernameSet.singleton_spec. red in H0. destruct H0.
+    elimtype False. destruct H0 as [cst [declc _]].
+    { red in declc. destruct d as [[d _] _]. red in d. rewrite d in declc. noconf declc. }
+    destruct H0 as [mib [mib' [declm [declm' em]]]].
+    destruct d. destruct em.
+    eapply Forall2_nth_error_left in H5 as (x' & ? & ?); eauto.
+    econstructor; eauto. split; eauto.
+    destruct H0. red in H0, declm. rewrite H0 in declm. now noconf declm.
+
   - constructor.
     apply inversion_Fix in wt as (?&?&?&?&?&?&?); eauto.
     eapply All_Forall. eapply includes_deps_fold in Σer as [_ Σer].
@@ -1008,6 +967,45 @@ Proof.
      (Σ' := (((kn, d) :: Σ), cst_universes cb))); eauto.
   simpl. now inv wfΣ.
   eexists [(kn, d)]; intuition eauto.
+  econstructor; eauto.
+  red. destruct H. split; eauto.
+  inv wfΣ.
+  red in d0 |- *.
+  rewrite -d0. simpl. unfold eq_kername. destruct kername_eq_dec; try congruence.
+  eapply lookup_env_Some_fresh in d0. subst kn; contradiction.
+  econstructor; eauto.
+  red. destruct H. split; eauto.
+  inv wfΣ.
+  red in d0 |- *.
+  rewrite -d0. simpl. unfold eq_kername. destruct kername_eq_dec; try congruence.
+  eapply lookup_env_Some_fresh in d0. subst kn; contradiction.
+Qed.
+
+Lemma lookup_env_ext {Σ kn kn' d d'} : 
+  wf ((kn', d') :: Σ) ->
+  lookup_env Σ kn = Some d ->
+  kn <> kn'.
+Proof.
+  intros wf hl.
+  eapply lookup_env_Some_fresh in hl.
+  inv wf.
+  destruct (kername_eq_dec kn kn'); subst; congruence.
+Qed.
+
+Lemma lookup_env_cons_disc {Σ kn kn' d} : 
+  kn <> kn' ->
+  lookup_env ((kn', d) :: Σ) kn = lookup_env Σ kn.
+Proof.
+  intros Hk. simpl; unfold eq_kername.
+  destruct kername_eq_dec; congruence.
+Qed.
+
+Lemma elookup_env_cons_disc {Σ kn kn' d} : 
+  kn <> kn' ->
+  ETyping.lookup_env ((kn', d) :: Σ) kn = ETyping.lookup_env Σ kn.
+Proof.
+  intros Hk. simpl; unfold eq_kername.
+  destruct kername_eq_dec; congruence.
 Qed.
 
 Lemma global_erases_with_deps_cons kn kn' d d' Σ Σ' : 
@@ -1038,13 +1036,12 @@ Proof.
   eapply erases_deps_cons; eauto.
   constructor; auto.
 
-  right. destruct H as [mib Hm].
-  exists mib.
-  red.
-  rewrite lookup_env_cons_fresh //.
-  inv wf.
-  { eapply lookup_env_Some_fresh in Hm.
-    intros <-; contradiction. }
+  right. destruct H as [mib [mib' [? [? ?]]]].
+  exists mib, mib'. intuition eauto.
+  * red. red in H. pose proof (lookup_env_ext wf H).
+    now rewrite lookup_env_cons_disc.
+  * red. pose proof (lookup_env_ext wf H).
+    now rewrite elookup_env_cons_disc.
 Qed.
 
 Lemma global_erases_with_deps_weaken kn kn' d Σ Σ' : 
@@ -1072,13 +1069,11 @@ Proof.
   noconf H.
   eapply erases_deps_weaken; eauto. constructor; eauto.
 
-  right. destruct H as [mib Hm].
-  exists mib.
+  right. destruct H as [mib [mib' [Hm [? ?]]]].
+  exists mib, mib'; intuition auto.
   red.
   rewrite lookup_env_cons_fresh //.
-  inv wf.
-  { eapply lookup_env_Some_fresh in Hm.
-    intros <-; contradiction. }
+  now epose proof (lookup_env_ext wf Hm).
 Qed.
 
 Lemma erase_constant_body_correct Σ Σ' cb (wfΣ : ∥  wf_ext Σ ∥) (onc : ∥ on_constant_decl (lift_typing typing) Σ cb ∥) :
@@ -1106,6 +1101,30 @@ Proof.
   destruct obl. sq.
   exists bod, A; intuition auto. simpl.
   eapply erases_erase. now simpl in H.
+Qed.
+
+Lemma erases_mutual {Σ mdecl m} : 
+  wf Σ ->
+  declared_minductive Σ mdecl m ->
+  erases_mutual_inductive_body m (erase_mutual_inductive_body m).
+Proof.
+  destruct m; constructor; simpl; auto.
+  eapply on_declared_minductive in H; auto. simpl in H. clear X.
+  eapply onInductives in H; simpl in *.
+  assert (Alli (fun i oib => match destArity [] oib.(ind_type) with Some _ => True | None => False end) 0 ind_bodies).
+  { eapply Alli_impl; eauto.
+    simpl. intros n x []. simpl in *. rewrite ind_arity_eq.
+    rewrite !destArity_it_mkProd_or_LetIn /= //. } clear H.
+  induction X; constructor; auto.
+  destruct hd; constructor; simpl; auto.
+  clear.
+  induction ind_ctors; constructor; auto.
+  destruct a as [[? ?] ?]; constructor; auto.
+  intuition auto.
+  induction ind_projs; constructor; auto.
+  destruct a; auto.
+  unfold isPropositionalArity.
+  destruct destArity as [[? ?]|] eqn:da; auto.
 Qed.
 
 Lemma erase_global_includes Σ deps deps' wfΣ :
@@ -1148,8 +1167,16 @@ Proof.
       eapply KernameSet.subset_spec.
       intros x hin'. eapply KernameSet.union_spec. right; auto.
       congruence. congruence.
-      eexists; red; intuition eauto.
-      simpl. rewrite eq_kername_refl.  reflexivity.
+      eexists m, _; intuition eauto.
+      simpl. unfold declared_minductive.
+      simpl. rewrite eq_kername_refl. reflexivity.
+      specialize (sub _ hin).
+      eapply KernameSet.mem_spec in sub. rewrite sub.
+      red. cbn. destruct kername_eq_dec; try congruence.
+      reflexivity.
+      eapply erases_mutual; eauto.
+      rewrite /declared_minductive /=; rewrite -> eq_kername_refl => //. 
+
     * intros ikn Hi.
       destruct d as [|].
       ++ destruct (KernameSet.mem kn deps) eqn:eqkn.
@@ -1213,653 +1240,9 @@ Proof.
   unshelve epose proof (erase_global_erases_deps wfΣ wt H _); cycle 2.
   eapply erases_correct; eauto.
   intros.
-  rewrite <- Ht'. todo "ispropo".
   rewrite <- Ht'.
   eapply erase_global_includes.
   intros.
   eapply term_global_deps_spec in H; eauto.
   assumption.
-Qed.
-
-
-Require Import ELiftSubst.
-
-Import E.
-
-Section optimize.
-  Context (Σ : global_context).
-
-Fixpoint optimize (t : term) : term :=
-  match t with
-  | tRel i => tRel i
-  | tEvar ev args => tEvar ev (List.map optimize args)
-  | tLambda na M => tLambda na (optimize M)
-  | tApp u v => tApp (optimize u) (optimize v)
-  | tLetIn na b b' => tLetIn na (optimize b) (optimize b')
-  | tCase ind c brs =>
-    let brs' := List.map (on_snd optimize) brs in
-    match ETyping.is_propositional Σ (fst ind) with
-    | Some true =>
-      match brs' with
-      | [(a, b)] => E.mkApps b (repeat E.tBox a)
-      | _ => E.tCase ind (optimize c) brs'
-      end
-    | _ => E.tCase ind (optimize c) brs'
-    end
-  | tProj p c =>
-    match ETyping.is_propositional Σ p.1.1 with 
-    | Some true => tBox
-    | _ => tProj p (optimize c)
-    end
-  | tFix mfix idx =>
-    let mfix' := List.map (map_def optimize) mfix in
-    tFix mfix' idx
-  | tCoFix mfix idx =>
-    let mfix' := List.map (map_def optimize) mfix in
-    tCoFix mfix' idx
-  | tBox => t
-  | tVar _ => t
-  | tConst _ => t
-  | tConstruct _ _ => t
-  end.
-
-  Lemma optimize_mkApps f l : optimize (mkApps f l) = mkApps (optimize f) (map optimize l).
-  Proof.
-    induction l using rev_ind; simpl; auto.
-    now rewrite -mkApps_nested /= IHl map_app /= -mkApps_nested /=.
-  Qed.
-  
-  Lemma optimize_iota_red pars n args brs :
-    optimize (ETyping.iota_red pars n args brs) = ETyping.iota_red pars n (map optimize args) (map (on_snd optimize) brs).
-  Proof.
-    unfold ETyping.iota_red.
-    rewrite !nth_nth_error nth_error_map.
-    destruct nth_error eqn:hnth => /=;
-    now rewrite optimize_mkApps map_skipn.
-  Qed.
-  
-  Lemma map_repeat {A B} (f : A -> B) x n : map f (repeat x n) = repeat (f x) n.
-  Proof.
-    now induction n; simpl; auto; rewrite IHn.
-  Qed.
-  
-  Lemma map_optimize_repeat_box n : map optimize (repeat tBox n) = repeat tBox n.
-  Proof. by rewrite map_repeat. Qed.
-
-  Import ECSubst.
-
-  Lemma csubst_mkApps {a k f l} : csubst a k (mkApps f l) = mkApps (csubst a k f) (map (csubst a k) l).
-  Proof.
-    induction l using rev_ind; simpl; auto.
-    rewrite - mkApps_nested /= IHl.
-    now rewrite [EAst.tApp _ _](mkApps_nested _ _ [_]) map_app.
-  Qed.
-
-  Lemma optimize_csubst a k b : 
-    optimize (ECSubst.csubst a k b) = ECSubst.csubst (optimize a) k (optimize b).
-  Proof.
-    induction b in k |- * using EInduction.term_forall_list_ind; simpl; auto; 
-      try solve [f_equal; eauto; ELiftSubst.solve_all].
-    
-    - destruct (k ?= n); auto.
-    - f_equal; eauto. rewrite !map_map_compose; eauto.
-      solve_all.
-    - destruct ETyping.is_propositional as [[|]|] => /= //.
-      destruct l as [|[br n] [|l']] eqn:eql; simpl.
-      * f_equal; auto.
-      * depelim X. simpl in *.
-        rewrite e. rewrite csubst_mkApps.
-        now rewrite map_repeat /=.
-      * depelim X.
-        f_equal; eauto.
-        f_equal; eauto. now rewrite e.
-        f_equal; eauto.
-        f_equal. depelim X.
-        now rewrite e0. depelim X. rewrite !map_map_compose.
-        solve_all.
-      * f_equal; eauto.
-        rewrite !map_map_compose; solve_all.
-      * f_equal; eauto.
-        rewrite !map_map_compose; solve_all.
-    - destruct ETyping.is_propositional as [[|]|]=> //;
-      now rewrite IHb.
-    - rewrite !map_map_compose; f_equal; solve_all.
-      destruct x; unfold EAst.map_def; simpl in *. 
-      autorewrite with len. f_equal; eauto.
-    - rewrite !map_map_compose; f_equal; solve_all.
-      destruct x; unfold EAst.map_def; simpl in *. 
-      autorewrite with len. f_equal; eauto.
-  Qed.
-
-  Lemma optimize_substl s t : optimize (Ee.substl s t) = Ee.substl (map optimize s) (optimize t).
-  Proof.
-    induction s in t |- *; simpl; auto.
-    rewrite IHs. f_equal.
-    now rewrite optimize_csubst.
-  Qed.
-
-  Lemma optimize_fix_subst mfix : ETyping.fix_subst (map (map_def optimize) mfix) = map optimize (ETyping.fix_subst mfix).
-  Proof.
-    unfold ETyping.fix_subst.
-    rewrite map_length.
-    generalize #|mfix|.
-    induction n; simpl; auto.
-    f_equal; auto.
-  Qed.
-
-  Lemma optimize_cofix_subst mfix : ETyping.cofix_subst (map (map_def optimize) mfix) = map optimize (ETyping.cofix_subst mfix).
-  Proof.
-    unfold ETyping.cofix_subst.
-    rewrite map_length.
-    generalize #|mfix|.
-    induction n; simpl; auto.
-    f_equal; auto.
-  Qed.
-
-  Lemma optimize_cunfold_fix mfix idx n f : 
-    Ee.cunfold_fix mfix idx = Some (n, f) ->
-    Ee.cunfold_fix (map (map_def optimize) mfix) idx = Some (n, optimize f).
-  Proof.
-    unfold Ee.cunfold_fix.
-    rewrite nth_error_map.
-    destruct nth_error.
-    intros [= <- <-] => /=. f_equal.
-    now rewrite optimize_substl optimize_fix_subst.
-    discriminate.
-  Qed.
-
-  Lemma optimize_cunfold_cofix mfix idx n f : 
-    Ee.cunfold_cofix mfix idx = Some (n, f) ->
-    Ee.cunfold_cofix (map (map_def optimize) mfix) idx = Some (n, optimize f).
-  Proof.
-    unfold Ee.cunfold_cofix.
-    rewrite nth_error_map.
-    destruct nth_error.
-    intros [= <- <-] => /=. f_equal.
-    now rewrite optimize_substl optimize_cofix_subst.
-    discriminate.
-  Qed.
-
-  Lemma optimize_nth {n l d} : 
-    optimize (nth n l d) = nth n (map optimize l) (optimize d).
-  Proof.
-    induction l in n |- *; destruct n; simpl; auto.
-  Qed.
-
-End optimize.
-
-
-Lemma is_box_inv b : is_box b -> ∑ args, b = mkApps tBox args.
-Proof.
-  unfold is_box, EAstUtils.head.
-  destruct decompose_app eqn:da.
-  simpl. destruct t => //.
-  eapply decompose_app_inv in da. subst.
-  eexists; eauto.
-Qed.
-
-Lemma eval_is_box {wfl:Ee.WcbvFlags} Σ t u : Σ ⊢ t ▷ u -> is_box t -> u = EAst.tBox.
-Proof.
-  intros ev; induction ev => //.
-  - rewrite is_box_tApp.
-    intros isb. intuition congruence.
-  - rewrite is_box_tApp. move/IHev1 => ?; solve_discr.
-  - rewrite is_box_tApp. move/IHev1 => ?; solve_discr.
-  - rewrite is_box_tApp. move/IHev1 => ?. subst => //.
-  - destruct t => //.
-Qed. 
-
-
-
-(* 
-Lemma nisErasable_eval_tBox  (wfl := Ee.default_wcbv_flags) Σ Σ' Γ t t' deps (wfΣ : wf_ext Σ) : ∥ isErasable Σ Γ t -> False ∥ -> 
-  forall wt : welltyped Σ Γ t,
-  erase Σ (sq wfΣ) Γ t wt = t' ->
-  erase_global_decls deps Σ (sq wfΣ.1) = Σ' -> 
-  Σ' ⊢ t' ▷ tBox -> False.
-Proof.
-  intros [ise]. *)
-
-  
-  
-(*
-
-Lemma eval_to_tbox (wfl := Ee.default_wcbv_flags) (Σ : global_env_ext) (wfΣ : wf_ext Σ) deps Γ t Σ' t' :
-  forall wt : welltyped Σ Γ t,
-  erase Σ (sq wfΣ) Γ t wt = t' ->
-  erase_global_decls deps Σ (sq wfΣ.1) = Σ' -> 
-  Σ' ⊢ t' ▷ tBox -> ∥ isErasable Σ Γ t ∥.
-Proof.
-  induction t in Γ, t', Σ' |- * using PCUICInduction.term_forall_list_ind; simpl; intros [T wt].
-  all:try solve [try destruct is_erasable; auto; simpl; intros <-; auto; intros eg ev; try solve[depelim ev]].
-  - intros <-.
-    intros. sq. admit.
-  - admit.
-  - destruct is_erasable; auto; move=> <- Hg ev.
-    depelim ev.
-
-
-
-  
-  
-  destruct is_erasable; simpl. intros <-; auto.
-  
-
-  simpl.
-  intros.
-  intros wt et eg.
-
-Lemma erase_opt_correct (wfl := Ee.default_wcbv_flags) (Σ : global_env_ext) (wfΣ : wf_ext Σ) Σ' t' v :
-  axiom_free Σ.1 ->
-  @Ee.eval Ee.default_wcbv_flags Σ' t' v -> 
-  @Ee.eval Ee.opt_wcbv_flags Σ' (optimize t') (optimize v).
-Proof.
-  intros axiomfree ev.
-  induction ev; simpl in *; try econstructor; eauto.
-  - now rewrite -csubst_optimize.
-  - now rewrite -csubst_optimize.
-  - destruct (is_box discr) eqn:isb.
-    eapply eval_is_box in ev1; eauto. solve_discr.
-    econstructor; eauto.
-    now rewrite optimize_mkApps in IHev1.
-    now rewrite optimize_iota_red in IHev2.
-  - destruct (is_box discr) eqn:isb.
-    rewrite optimize_mkApps in IHev2.
-    subst brs => /=. now rewrite map_optimize_repeat_box in IHev2.
-    eapply econstructor; eauto.
-    now rewrite optimize_mkApps in IHev1.
-    now rewrite optimize_iota_red in IHev2.
-  -
-    rewrite 
-    
-  admit.
-
-Lemma erase_opt_correct (wfl := Ee.default_wcbv_flags) (Σ : global_env_ext) (wfΣ : wf_ext Σ) Γ t Σ' t' v :
-  axiom_free Σ.1 ->
-  forall wt : welltyped Σ Γ t,
-  @Ee.eval Ee.default_wcbv_flags Σ' t' v -> 
-  erase Σ (sq wfΣ) Γ t wt = t' ->
-  @Ee.eval Ee.opt_wcbv_flags Σ' (optimize t') (optimize v).
-Proof.
-  intros axiomfree wt ev. revert t wt.
-  induction ev; simpl in *; intros ot wt et.
-
-*)
-
-Lemma isType_tSort {Σ : global_env_ext} {Γ l A} {wfΣ : wf Σ} : Σ ;;; Γ |- tSort (Universe.make l) : A -> isType Σ Γ (tSort (Universe.make l)).
-Proof.
-  intros HT.
-  eapply inversion_Sort in HT as [l' [wfΓ [inl [eq Hs]]]]; auto.
-  eexists; econstructor; eauto.
-  now eapply Universe.make_inj in eq as ->.
-Qed.
-
-Lemma isType_it_mkProd {Σ : global_env_ext} {Γ na dom codom A} {wfΣ : wf Σ} :   
-  Σ ;;; Γ |- tProd na dom codom : A -> 
-  isType Σ Γ (tProd na dom codom).
-Proof.
-  intros HT.
-  eapply inversion_Prod in HT as (? & ? & ? & ? & ?); auto.
-  eexists; econstructor; eauto.
-Qed.
-
-Lemma erasable_tBox_value (wfl := Ee.default_wcbv_flags) (Σ : global_env_ext) (wfΣ : wf_ext Σ) t T v :
-  axiom_free Σ.1 ->
-  forall wt : Σ ;;; [] |- t : T,
-  Σ |-p t ▷ v -> erases Σ [] v tBox -> ∥ isErasable Σ [] t ∥.
-Proof.
-  intros.
-  depind H0.
-  eapply Is_type_eval_inv; eauto. eexists; eauto.
-Qed.
-
-Lemma erase_eval_to_box (wfl := Ee.default_wcbv_flags) {Σ : global_env_ext}  {wfΣ : wf_ext Σ} {t v Σ' t' deps} :
-  axiom_free Σ.1 ->
-  forall wt : welltyped Σ [] t,
-  erase Σ (sq wfΣ) [] t wt = t' ->
-  KernameSet.subset (term_global_deps t') deps ->
-  erase_global deps Σ (sq wfΣ.1) = Σ' ->
-  PCUICWcbvEval.eval Σ t v ->
-  @Ee.eval Ee.default_wcbv_flags Σ' t' tBox -> ∥ isErasable Σ [] t ∥.
-Proof.
-  intros axiomfree [T wt].
-  intros.
-  destruct (erase_correct Σ wfΣ _ _ _ _ _ axiomfree _ H H0 H1 X) as [ev [eg [eg']]].
-  pose proof (Ee.eval_deterministic _ H2 eg'). subst.
-  eapply erasable_tBox_value; eauto.
-Qed.
-
-(* Lemma csubst_reduce Σ t k v u : Σ |- ECSubst.csubst t k v ▷ tBox -> 
-  s *)
-(*
-Lemma erase_opt_correct (wfl := Ee.default_wcbv_flags) (Σ : global_env_ext) (wfΣ : wf_ext Σ) Γ t T Σ' t' :
-  axiom_free Σ.1 ->
-  forall wt : Σ ;;; Γ |- t : T,
-  erase Σ (sq wfΣ) Γ t (iswelltyped wt) = t' ->
-  Σ ⊢p t ▷ v -> 
-  Σ' ⊢ t' ▷ tBox -> ∥ isErasable Σ Γ t ∥.
-Proof.
-  intros axiomfree wt.
-  generalize (iswelltyped wt).
-  intros wt'.
-  set (wfΣ' := sq _).
-  clearbody wfΣ'.
-  revert Γ t T wt wt' wfΣ' t' Σ'.
-  eapply(typing_ind_env (fun Σ Γ t T =>
-  forall (wt' : welltyped Σ Γ t) (wfΣ' : ∥ wf_ext Σ ∥) t' Σ',
-  erase Σ wfΣ' Γ t wt' = t' ->
-  Σ' ⊢ t' ▷ tBox -> ∥ isErasable Σ Γ t ∥
-         )
-         (fun Σ Γ wfΓ => wf_local Σ Γ)); try intros Σ0 wfΣ' Γ wfΓ; auto; clear Σ wfΣ axiomfree; rename Σ0 into Σ;
-         intros.
-
-  all:try match goal with
-    [ H : erase _ _ _ _ _ = _ |- _ ] => simpl in H; try destruct is_erasable; simpl in *; subst; simpl
-  end; auto.
-    
-  all:intros; try match goal with
-    [ H : _ ⊢ _ ▷ _ |- _ ] => try solve[depelim H; constructor; simpl; auto]
-  end; auto; try solve [constructor; auto].
-  
-  - destruct wt'. sq. eapply isType_isErasable. now eapply isType_tSort.
-
-  - destruct wt'. sq. eapply isType_isErasable.
-    now eapply isType_it_mkProd.
-
-  - depelim H3.
-    
-
-    
-
-
-  depelim H2.
-  2:{ simpl in H0. subst. simpl.  }
-*)
-
-Require Import Utf8.
-
-Inductive obs_eq : EAst.term -> EAst.term -> Type :=
-| obs_eq_atom t : Ee.atom t -> obs_eq t t
-| obs_eq_tconstr h args args' : Ee.value_head h -> 
-  All2 obs_eq args args' ->
-  obs_eq (mkApps h args) (mkApps h args')
-| obs_eq_stuckfix f args : Ee.isStuckFix f args -> obs_eq (mkApps f args) (mkApps f args)
-| obs_eq_tlam na na' b b' :
-  (∀ v, obs_eq (ECSubst.csubst v 0 b) (ECSubst.csubst v 0 b')) -> obs_eq (tLambda na b) (tLambda na' b').
-
-Ltac introdep := let H := fresh in intros H; depelim H.
-
-Hint Constructors Ee.eval obs_eq : core.
-
-Lemma value_obs_eq v : Ee.value v -> obs_eq v v.
-Proof.
-  intros val; induction val using Ee.value_values_ind.
-  - constructor; auto.
-  - constructor 2; auto. now eapply All_All2_refl.
-  - constructor 3; auto.
-Qed.
-
-Definition optimize_constant_decl Σ cb := 
-  {| cst_body := option_map (optimize Σ) cb.(cst_body) |}.
-  
-Definition optimize_decl Σ d :=
-  match d with
-  | ConstantDecl cb => ConstantDecl (optimize_constant_decl Σ cb)
-  | InductiveDecl idecl => d
-  end.
-
-Definition optimize_env (Σ : EAst.global_declarations) := 
-  map (on_snd (optimize_decl Σ)) Σ.
-
-Import ETyping.
-
-(* Lemma optimize_extends Σ Σ' : extends Σ Σ' ->
-  optimize Σ t = optimize Σ' t. *)
-
-Lemma lookup_env_optimize Σ kn : 
-  lookup_env (optimize_env Σ) kn = 
-  option_map (optimize_decl Σ) (lookup_env Σ kn).
-Proof.
-  unfold optimize_env.
-  induction Σ at 2 4; simpl; auto.
-  destruct kername_eq_dec => //.
-Qed.
-
-Lemma is_propositional_optimize Σ ind : 
-  is_propositional Σ ind = is_propositional (optimize_env Σ) ind.
-Proof.
-  rewrite /is_propositional.
-  rewrite lookup_env_optimize.
-  destruct lookup_env; simpl; auto.
-  destruct g; simpl; auto.
-Qed.
-
-Lemma isLambda_mkApps f l : ~~ isLambda f -> ~~ EAst.isLambda (mkApps f l).
-Proof.
-  induction l using rev_ind; simpl; auto => //.
-  intros isf; specialize (IHl isf).
-  now rewrite -mkApps_nested.
-Qed.
- 
-Lemma isFixApp_mkApps f l : ~~ Ee.isFixApp f -> ~~ Ee.isFixApp (mkApps f l).
-Proof.
-  unfold Ee.isFixApp.
-  erewrite <- (fst_decompose_app_rec _ l).
-  now rewrite /decompose_app decompose_app_rec_mkApps app_nil_r.
-Qed.
-
-Lemma isBox_mkApps f l : ~~ isBox f -> ~~ isBox (mkApps f l).
-Proof.
-  induction l using rev_ind; simpl; auto => //.
-  intros isf; specialize (IHl isf).
-  now rewrite -mkApps_nested.
-Qed.
-
-
-Inductive optimized_env : global_declarations -> Type :=
-| optimized_env_nil : optimized_env []
-| optimized_env_cons Σ kn d : optimized_env Σ -> 
-  (match d with  
-  | ConstantDecl d =>
-    match d.(cst_body) with
-    | Some b =>
-      forall v,
-      @Ee.eval Ee.default_wcbv_flags Σ b v ->
-      @Ee.eval Ee.opt_wcbv_flags (optimize_env Σ) (optimize Σ b) (optimize Σ v)
-    | None => True
-    end
-  | InductiveDecl d => True
-  end) -> optimized_env ((kn, d) :: Σ).
-
-Definition extends (Σ Σ' : global_declarations) := ∑ Σ'', Σ' = Σ'' ++ Σ.
-
-Definition fresh_global kn (Σ : global_declarations) :=
-  Forall (fun x => x.1 <> kn) Σ.
- 
-Inductive wf_glob : global_declarations -> Type :=
-| wf_glob_nil : wf_glob []
-| wf_glob_cons kn d Σ : 
-  wf_glob Σ ->
-  fresh_global kn Σ ->
-  wf_glob ((kn, d) :: Σ).
-Derive Signature for wf_glob.
-
-Lemma lookup_env_optimized Σ : optimized_env Σ -> 
-  forall kn d b, lookup_env Σ kn = Some (ConstantDecl d) ->
-  cst_body d = Some b ->
-  ∑ Σ', (extends Σ' Σ) *
-  (forall v, 
-  @Ee.eval Ee.default_wcbv_flags Σ' b v ->
-  @Ee.eval Ee.opt_wcbv_flags (optimize_env Σ') (optimize Σ' b) (optimize Σ' v)).
-Proof.
-  induction 1; simpl; intros => //.
-  destruct kername_eq_dec. subst.
-  noconf H; simpl in *. rewrite H0 in y.
-  exists Σ.
-  split; simpl. eexists [_] => //. auto.
-  specialize (IHX _ _ _ H H0) as [Σ' [ext ev]].
-  exists Σ'. split. destruct ext.
-  subst Σ. exists ((kn, d) :: x) => //.
-  auto.
-Qed.
-
-Lemma lookup_env_Some_fresh {Σ c decl} :
-  lookup_env Σ c = Some decl -> ~ (fresh_global c Σ).
-Proof.
-  induction Σ; cbn. 1: congruence.
-  unfold eq_kername; destruct kername_eq_dec; subst.
-  - intros [= <-] H2. inv H2.
-    contradiction.
-  - intros H1 H2. apply IHΣ; tas.
-    now inv H2.
-Qed.
-
-Lemma extends_lookup {Σ Σ' c decl} :
-  wf_glob Σ' ->
-  extends Σ Σ' ->
-  lookup_env Σ c = Some decl ->
-  lookup_env Σ' c = Some decl.
-Proof.
-  intros wfΣ' [Σ'' ->]. simpl.
-  induction Σ'' in wfΣ', c, decl |- *.
-  - simpl. auto.
-  - specialize (IHΣ'' c decl). forward IHΣ''.
-    + now inv wfΣ'.
-    + intros HΣ. specialize (IHΣ'' HΣ).
-      inv wfΣ'. simpl in *.
-      unfold eq_kername; destruct kername_eq_dec; subst; auto.
-      apply lookup_env_Some_fresh in IHΣ''; contradiction.
-Qed.
-
-Lemma extends_is_propositional {Σ Σ'} : 
-  wf_glob Σ' -> extends Σ Σ' ->
-  forall ind b, is_propositional Σ ind = Some b -> is_propositional Σ' ind = Some b.
-Proof.
-  intros wf ex ind b.
-  rewrite /is_propositional.
-  destruct lookup_env eqn:lookup => //.
-  now rewrite (extends_lookup wf ex lookup).
-Qed.
-
-Lemma weakening_eval_env (wfl : Ee.WcbvFlags) {Σ Σ'} : 
-  wf_glob Σ' -> extends Σ Σ' ->
-  ∀ v t, Ee.eval Σ v t -> Ee.eval Σ' v t.
-Proof.
-  intros wf ex t v ev.
-  induction ev; try solve [econstructor; eauto using (extends_is_propositional wf ex)].
-  econstructor; eauto.
-  red in isdecl |- *. eauto using extends_lookup.
-Qed.
-
-Lemma optimize_correct Σ t v :
-  @Ee.eval Ee.default_wcbv_flags Σ t v ->
-  @Ee.eval Ee.opt_wcbv_flags (optimize_env Σ) (optimize Σ t) (optimize Σ v).
-Proof.
-  intros ev.
-  induction ev; simpl in *; try solve [econstructor; eauto].
-
-  - econstructor; eauto.
-    now rewrite optimize_csubst in IHev3.
-
-  - rewrite optimize_csubst in IHev2.
-    econstructor; eauto.
-
-  - rewrite optimize_mkApps in IHev1.
-    rewrite optimize_iota_red in IHev2.
-    destruct ETyping.is_propositional as [[]|]eqn:isp => //.
-    eapply Ee.eval_iota; eauto.
-    now rewrite -is_propositional_optimize.
-  
-  - rewrite e e0 /=.
-    now rewrite optimize_mkApps map_optimize_repeat_box in IHev2.
-
-  - rewrite optimize_mkApps in IHev1.
-    simpl in *. eapply Ee.eval_fix; eauto.
-    rewrite map_length. now eapply optimize_cunfold_fix. 
-    now rewrite optimize_mkApps in IHev3.
-
-  - rewrite optimize_mkApps in IHev1 |- *.
-    simpl in *. eapply Ee.eval_fix_value. auto. auto.
-    eapply optimize_cunfold_fix; eauto. now rewrite map_length. 
-
-  - destruct ETyping.is_propositional as [[]|] eqn:isp => //.
-    destruct brs as [|[a b] []]; simpl in *; auto.
-    rewrite -> optimize_mkApps in IHev |- *. simpl.
-    econstructor; eauto.
-    now apply optimize_cunfold_cofix.
-    rewrite -> optimize_mkApps in IHev |- *. simpl.
-    econstructor; eauto.
-    now apply optimize_cunfold_cofix.
-    rewrite -> optimize_mkApps in IHev |- *. simpl.
-    econstructor; eauto.
-    now apply optimize_cunfold_cofix.
-    rewrite -> optimize_mkApps in IHev |- *. simpl.
-    econstructor; eauto.
-    now apply optimize_cunfold_cofix.
-
-  - destruct ETyping.is_propositional as [[]|] eqn:isp; auto.
-    rewrite -> optimize_mkApps in IHev |- *. simpl.
-    econstructor; eauto.
-    now apply optimize_cunfold_cofix.
-    rewrite -> optimize_mkApps in IHev |- *. simpl.
-    econstructor; eauto.
-    now apply optimize_cunfold_cofix.
-  
-  - econstructor. red in isdecl |- *.
-    rewrite lookup_env_optimize isdecl //.
-    now rewrite /optimize_constant_decl e.
-    apply IHev.
-  
-  - destruct ETyping.is_propositional as [[]|] eqn:isp => //.
-    rewrite optimize_mkApps in IHev1.
-    rewrite optimize_nth in IHev2.
-    econstructor; eauto. now rewrite -is_propositional_optimize.
-  
-  - now rewrite e.
-
-  - eapply Ee.eval_app_cong; eauto.
-    eapply Ee.eval_to_value in ev1.
-    destruct ev1; simpl in *; eauto.
-    * destruct t => //; rewrite optimize_mkApps /=.
-    * destruct t => /= //; rewrite optimize_mkApps /=;
-      rewrite (negbTE (isLambda_mkApps _ _ _)) // (negbTE (isBox_mkApps _ _ _)) 
-        // (negbTE (isFixApp_mkApps _ _ _)) //.
-    * destruct f0 => //.
-      rewrite optimize_mkApps /=.
-      unfold Ee.isFixApp in i.
-      rewrite decompose_app_mkApps /= in i => //.
-      rewrite orb_true_r /= // in i.
-  - destruct t => //.
-    all:constructor; eauto.
-Qed.
-
-Lemma erase_opt_correct (wfl := Ee.default_wcbv_flags) (Σ : global_env_ext) (wfΣ : wf_ext Σ) t v Σ' t' :
-  axiom_free Σ.1 ->
-  forall wt : welltyped Σ [] t,
-  erase Σ (sq wfΣ) [] t wt = t' ->
-  erase_global (term_global_deps t') Σ (sq wfΣ.1) = Σ' ->
-  PCUICWcbvEval.eval Σ t v ->
-  ∃ v' : term, Σ;;; [] |- v ⇝ℇ v' ∧ 
-  ∥ @Ee.eval Ee.opt_wcbv_flags (optimize_env Σ') (optimize Σ' t') (optimize Σ' v') ∥.
-Proof.
-  intros axiomfree wt.
-  generalize (sq wfΣ.1) as swfΣ.
-  intros swfΣ HΣ' Ht' ev.
-  assert (extraction_pre Σ) by now constructor.
-  pose proof (erases_erase (wfΣ := sq wfΣ) wt); eauto.
-  rewrite HΣ' in H.
-  destruct wt as [T wt].
-  unshelve epose proof (erase_global_erases_deps wfΣ wt H _); cycle 2.
-  eapply erases_correct in ev; eauto.
-  destruct ev as [v' [ev evv]].
-  exists v'. split.
-  2:{ sq. now apply optimize_correct. }
-  auto. 
-  rewrite <- Ht'. todo "ispropo".
-  rewrite <- Ht'.
-  eapply erase_global_includes.
-  intros.
-  eapply term_global_deps_spec in H; eauto.
-  eapply KernameSet.subset_spec.
-  intros x hin; auto.
 Qed.

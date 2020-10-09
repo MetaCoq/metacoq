@@ -584,12 +584,10 @@ Qed.
 
 Lemma Forall2_nth_error_left {A B} {P} {l : list A} {l' : list B} : Forall2 P l l' ->
   forall n x, nth_error l n = Some x ->
-  exists x', nth_error l' n = Some x'.
+  exists x', nth_error l' n = Some x' /\ P x x'.
 Proof.  
   induction 1; destruct n; simpl; auto; try discriminate.
   intros x' [= ->]. eexists; eauto.
-  intros x' Hnth.
-  destruct (IHForall2 _ _ Hnth). eexists; eauto.
 Qed.
 
 Lemma erases_global_all_deps Σ Σ' :

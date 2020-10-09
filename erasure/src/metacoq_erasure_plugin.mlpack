@@ -49,6 +49,7 @@ EPretty
 Extract
 ErasureFunction
 SafeErasureFunction
+EOptimizePropDiscr
 SafeTemplateErasure
 
 G_metacoq_erasure

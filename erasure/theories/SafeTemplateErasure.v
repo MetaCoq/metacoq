@@ -6,7 +6,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker
      SafeTemplateChecker.
 From MetaCoq.Erasure Require Import EAstUtils ErasureFunction EPretty.
-From MetaCoq.Erasure Require SafeErasureFunction.
+From MetaCoq.Erasure Require SafeErasureFunction EOptimizePropDiscr.
 
 Existing Instance envcheck_monad.
 Existing Instance extraction_checker_flags.
@@ -17,7 +17,7 @@ Program Definition erase_template_program_check (p : Ast.program)
   G <- check_wf_env Σ ;;
   Σ' <- wrap_error (empty_ext Σ) "erasure of the global context" (erase_global Σ _) ;;
   t <- wrap_error (empty_ext Σ) ("During erasure of " ^ PCUICAstUtils.string_of_term (trans p.2)) (erase (empty_ext Σ) _ nil _ (trans p.2));;
-  ret (Monad:=envcheck_monad) (Σ', t).
+  ret (Monad:=envcheck_monad) (EOptimizePropDiscr.optimize_env Σ', EOptimizePropDiscr.optimize Σ' t).
 
 Next Obligation.
   unfold trans_global.
@@ -141,12 +141,15 @@ Program Fixpoint check_wf_env_only_univs (Σ : global_env)
 
 From MetaCoq.Erasure Require Import SafeErasureFunction.
 
+(* This is the total erasure function + the optimization that removes all 
+  pattern-matches on propositions. *)
+
 Program Definition erase_template_program (p : Ast.program) 
   : (EAst.global_context * EAst.term) :=
   let Σ := (trans_global (Ast.empty_ext p.1)).1 in
   let t := SafeErasureFunction.erase (empty_ext Σ) _ nil (trans p.2) _ in
   let Σ' := SafeErasureFunction.erase_global (term_global_deps t) Σ _ in
-  (Σ', t).
+  (EOptimizePropDiscr.optimize_env Σ', EOptimizePropDiscr.optimize Σ' t).
 
 Next Obligation.
   unfold trans_global.

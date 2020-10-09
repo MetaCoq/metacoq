@@ -6,7 +6,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICCumulativity PCUICSR PCUICNormal PCUICSafeLemmata
      PCUICValidity PCUICPrincipality PCUICElimination PCUICSN PCUICNormal.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker.
-Require Import EArities Extract Prelim EDeps.
+Require Import EArities Extract Prelim EDeps ErasureCorrectness.
 
 From Equations Require Import Equations.
 
@@ -106,6 +106,8 @@ Proof.
 Qed.
 
 Notation err := (TypeError  (Msg "hnf did not return normal form")).
+
+Obligation Tactic := program_simplify; auto.
 Program Definition reduce_to_sort' Γ t (h : wellformed Σ Γ t)
   : typing_result ((∑ u, ∥ red (fst Σ) Γ t (tSort u) ∥) + ((∑ u, ∥ red (fst Σ) Γ t (tSort u) ∥) -> False)) :=
   match t with
@@ -204,9 +206,10 @@ Next Obligation.
   etransitivity. eassumption. eapply PCUICReduction.red_prod. reflexivity.
   eassumption. now cbn.
 Qed.
+
 Next Obligation.
   destruct HΣ as [wΣ].
-  destruct H1 as (? & ? & ?). clear He. sq.
+  intros (? & ? & ?). clear He. sq.
   destruct H.
   edestruct (red_confluence wfΣ X X0) as (? & ? & ?); eauto.
   eapply invert_red_prod in r0 as (? & ? & [] & ?); eauto. subst.
@@ -241,6 +244,7 @@ Hint Constructors squash : core.
 
 Next Obligation.
 destruct HΣ.
+intros H.
   eapply Is_conv_to_Arity_inv in H
     as [ (? & ? & ? & ?) | (? & ?) ].
   all: eauto.
@@ -478,6 +482,9 @@ Proof.
     eapply isArity_subst_instance.
     eapply isArity_ind_type; eauto.
   - econstructor.
+    eapply nisErasable_Propositional; eauto.
+    now exists A.
+  - econstructor.
     eapply elim_restriction_works. eauto. eauto. eauto. eauto. intros.
     eapply f, isErasable_Proof. eauto. eauto.
 
@@ -545,6 +552,7 @@ Definition erase_one_inductive_body (oib : one_inductive_body) : E.one_inductive
   let projs := map (fun '(x, y) => x) oib.(ind_projs) in
   {| E.ind_name := oib.(ind_name);
      E.ind_kelim := oib.(ind_kelim);
+     E.ind_propositional := false; 
      E.ind_ctors := ctors;
      E.ind_projs := projs |}.
 
@@ -630,7 +638,7 @@ Proof.
       rewrite <- (map_id ind_projs) at 1.
       eapply Forall2_map.
       clear. induction ind_projs; constructor; auto.
-      destruct a; auto.
+      destruct a; auto. todo "isprop".
 Qed.
 
 Lemma wf_ext_wf_squash {Σ} : wf_ext Σ -> ∥ wf Σ ∥.
@@ -638,7 +646,7 @@ Proof.
   intros wf; now constructor.
 Defined.
 
-Lemma erase_correct (Σ : global_env_ext) (wfΣ : wf_ext Σ) t T v Σ' t' :
+Lemma erase_correct (wfl:=EWcbvEval.default_wcbv_flags) (Σ : global_env_ext) (wfΣ : wf_ext Σ) t T v Σ' t' :
   axiom_free Σ.1 ->
   Σ ;;; [] |- t : T ->
   erase_global Σ (wf_ext_wf_squash wfΣ) = Checked Σ' ->

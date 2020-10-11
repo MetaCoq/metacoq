@@ -169,6 +169,7 @@ Notation " Γ ,, d " := (snoc Γ d) (at level 20, d at next level).
 (** See [one_inductive_body] from [declarations.ml]. *)
 Record one_inductive_body : Set := {
   ind_name : ident;
+  ind_propositional : bool; (* True iff the inductive lives in Prop *)
   ind_kelim : sort_family; (* Top allowed elimination sort *)
   ind_ctors : list (ident * nat (* arity, w/o lets, w/o parameters *));
   ind_projs : list (ident) (* names of projections, if any. *) }.

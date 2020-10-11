@@ -21,4 +21,5 @@ theories/EArities.v
 theories/ErasureCorrectness.v
 theories/ErasureFunction.v
 theories/SafeErasureFunction.v
+theories/EOptimizePropDiscr.v
 theories/SafeTemplateErasure.v

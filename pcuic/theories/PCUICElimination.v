@@ -240,12 +240,14 @@ Lemma typing_spine_proofs {cf:checker_flags} Σ Γ Δ ind u args' args T' s :
     (oib : on_ind_body (lift_typing typing) (Σ.1, ind_universes mdecl)
       (inductive_mind ind) mdecl (inductive_ind ind) idecl),
       consistent_instance_ext Σ (ind_universes mdecl) u ->
-      Universe.is_prop s -> Universe.is_prop (subst_instance_univ u oib.(ind_sort))))%type.
+      (Universe.is_prop s -> Universe.is_prop (subst_instance_univ u oib.(ind_sort))) /\
+      (prop_sub_type = false -> Universe.is_prop (subst_instance_univ u oib.(ind_sort)) ->
+        Universe.is_prop s)))%type.
 Proof.
   intros checku wfΣ Ht.
   induction Δ using ctx_length_rev_ind in Γ, args', args, T', Ht |- *; simpl; intros sp.
-  - depelim sp. repeat constructor. 
-    * eapply invert_cumul_ind_l in c as [ui' [l' [red  [Req argeq]]]] => //.
+  - depelim sp. split; [repeat constructor|].
+    * eapply invert_cumul_ind_l in c as [ui' [l' [red  [Req argeq]]]] => //; auto.
       intros mdecl idecl decli oib cu.
       eapply subject_reduction in Ht; eauto.
       eapply inversion_mkApps in Ht as [A [tInd sp]]; auto.
@@ -259,9 +261,12 @@ Proof.
       eapply typing_spine_it_mkProd_or_LetIn_full_inv in sp; auto.
       rewrite (is_prop_subst_instance_univ u).
       apply (consistent_instance_ext_noprop cu).
-      intros props; eapply leq_universe_prop in sp; eauto.
-      rewrite (is_prop_subst_instance_univ ui') in sp => //.
-      now apply (consistent_instance_ext_noprop cu'). apply wfΣ.
+      rewrite -(is_prop_subst_instance_univ ui' (ind_sort oib)).
+      now apply (consistent_instance_ext_noprop cu').
+      split.
+      + intros props. eapply leq_universe_prop; eauto.
+      + intros propsub props. 
+        apply leq_universe_prop_no_prop_sub_type in sp; eauto.
       
     * eapply cumul_Prod_r_inv in c; auto.
       destruct c as [na' [dom' [codom' [[red _] ?]]]].
@@ -294,7 +299,7 @@ Proof.
       * intros mdecl idec decli oib.
         now apply H.
     + rewrite it_mkProd_or_LetIn_app in sp.
-      destruct args. repeat constructor.
+      destruct args. split; [repeat constructor|].
       * simpl in sp. depelim sp.
         unfold mkProd_or_LetIn in c; simpl in c.
         eapply cumul_Prod_l_inv in c as [na' [dom' [codom' [[red conv] cum]]]]; auto.
@@ -420,7 +425,8 @@ Proof.
     simpl in sp.
     eapply typing_spine_proofs in sp; eauto.
     destruct sp.
-    specialize (i _ _ (proj1 declc) onib cu hp). 
+    specialize (a _ _ (proj1 declc) onib cu) as [a _].
+    specialize (a hp). 
     
     pose proof (onc.(on_cargs)).
     pose proof (onib.(ind_sorts)).
@@ -469,7 +475,8 @@ Proof.
     eapply All2_length in X. now rewrite X. now rewrite -H.
     rewrite -it_mkProd_or_LetIn_app in sp.
     eapply typing_spine_proofs in sp; eauto.
-    destruct sp as [_ sp]. specialize (sp _ _ decli onib cu hp).
+    destruct sp as [_ sp]. specialize (sp _ _ decli onib cu) as [sp _].
+    specialize (sp hp).
     { rewrite -(is_prop_subst_instance_univ u) //.
       now apply (consistent_instance_ext_noprop cu). }
 Qed.

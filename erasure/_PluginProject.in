@@ -118,6 +118,8 @@ src/safeErasureFunction.mli
 src/safeErasureFunction.ml
 src/ePretty.mli
 src/ePretty.ml
+src/eOptimizePropDiscr.mli
+src/eOptimizePropDiscr.ml
 
 src/safeTemplateErasure.mli
 src/safeTemplateErasure.ml

@@ -428,16 +428,13 @@ Section Erase.
         let f' := erase Γ f _ in
         let l' := erase Γ u _ in
         E.tApp f' l';
-      erase Γ (tCase ip p c brs) Ht _ with (let c' := erase Γ c _ in (c', is_box c')) := 
-        { | (c', true) with brs :=
-             { | (a, b) :: brs => let b' := erase Γ b _ in E.mkApps b' (repeat E.tBox a);
-               | [] => E.tCase ip c' [] } ;
-          | (c', false) :=
-            let brs' := erase_brs erase Γ brs _ in
-            E.tCase ip c' brs' } ;
+      erase Γ (tCase ip p c brs) Ht _ with erase Γ c _ :=
+       { | c' :=
+          let brs' := erase_brs erase Γ brs _ in
+          E.tCase ip c' brs' } ;
       erase Γ (tProj p c) Ht _ :=
         let c' := erase Γ c _ in
-        if is_box c' then E.tBox else E.tProj p c' ;
+        E.tProj p c' ;
       erase Γ (tFix mfix n) Ht _ :=
         let mfix' := erase_mfix erase Γ mfix _ in
         E.tFix mfix' n;
@@ -446,7 +443,7 @@ Section Erase.
         E.tCoFix mfix' n
     }.
   Proof.
-    all:try clear b'; try clear f'; try clear erase.
+    all:try clear b'; try clear f'; try clear brs'; try clear erase.
     all:destruct HΣ, Ht as [ty Ht]; try destruct s0; simpl in *.
     - now eapply inversion_Evar in Ht.
     - eapply inversion_Lambda in Ht as (? & ? & ? & ? & ?); auto.
@@ -462,14 +459,8 @@ Section Erase.
       eexists; eauto.
     - eapply inversion_Case in Ht as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?); auto.
       eexists; eauto.
-    - clear wildcard11.
-      eapply inversion_Case in Ht as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?); auto.
-      simpl in *.
-      depelim a0. simpl in p0. intuition subst.
-      eexists; eauto.
-    - clear wildcard11.
-      eapply inversion_Case in Ht as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?); auto.
-      simpl in *.
+    - apply inversion_Case in Ht as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?); auto.
+      simpl in *. 
       eapply All2_In in a as [(x' & (? & ?) & ?)]; eauto.
       simpl in *. subst. eexists; eauto.
     - clear wildcard12.
@@ -524,45 +515,42 @@ Proof.
   now rewrite /is_box EAstUtils.head_tApp.
 Qed.
 
-Lemma erase_to_box {Σ : global_env_ext} {wfΣ : ∥wf_ext Σ∥} {Γ t} (wt : welltyped Σ Γ t) :
-  is_box (erase Σ wfΣ Γ t wt) -> ∥ isErasable Σ Γ t ∥.
-Proof.
-  revert Γ t wt.
-  fix IH 2. intros.
-  destruct (is_erasable Σ wfΣ Γ t wt) eqn:ise; auto. 
-  destruct t; simpl in *; rewrite ise ?is_box_tApp in H; simpl in *; try discriminate.
-   
-  - eapply IH in H.
-    destruct H, wfΣ, s.
-    destruct wt as [ty Hty].
-    eapply (EArities.Is_type_app _ _ _ [_]); eauto.
-    eauto using typing_wf_local.
-
-  - intros. destruct wt. sq. clear ise.
-    eapply inversion_Ind in t as (? & ? & ? & ? & ? & ?) ; auto.
-    red. eexists. split. econstructor; eauto. left.
-    eapply isArity_subst_instance.
-    eapply isArity_ind_type; eauto.
-  - simpl.
-    destruct is_box eqn:isb; simpl in * => //.
-    simp erase.
-    destruct (is_box (erase _ _ _ t2 _)) eqn:isb'; simpl in * => //.
-    destruct brs as [|(n, br) tl]; simpl in *. discriminate.
-    set (eb := (erase Σ wfΣ Γ br
-    (erase_obligation_8 Σ wfΣ n br tl Γ indn t1 t2 wt s))) in *.
-    rewrite is_box_mkApps in isb.
-    eapply IH in isb.
-    sq.
-    red. todo "if a branch is erasable the whole case is". 
-  - todo "if the record is erasable each projection is".
-Admitted.
-
 Lemma erase_erase_clause_1 {Σ} {wfΣ : ∥wf_ext Σ∥} {Γ t} (wt : welltyped Σ Γ t) : 
   erase Σ wfΣ Γ t wt = erase_clause_1 Σ wfΣ (erase Σ wfΣ) Γ t wt (is_erasable Σ wfΣ Γ t wt).
 Proof.
   destruct t; simpl; auto.
 Qed.
 Hint Rewrite @erase_erase_clause_1 : erase.
+
+Lemma welltyped_app_left {Σ Γ t u} : welltyped Σ Γ (tApp t u) -> welltyped Σ Γ t.
+Proof.
+Admitted.
+
+
+Lemma erase_to_box {Σ : global_env_ext} {wfΣ : ∥wf_ext Σ∥} {Γ t} (wt : welltyped Σ Γ t) :
+  let et := erase Σ wfΣ Γ t wt in 
+  if is_box et then ∥ isErasable Σ Γ t ∥
+  else ∥ isErasable Σ Γ t -> False ∥.
+Proof.
+  revert Γ t wt. simpl.
+  fix IH 2. intros.
+  simp erase.
+  destruct (is_erasable Σ wfΣ Γ t wt) eqn:ise; simpl. assumption.
+  destruct t; simpl in *; simpl in *; try (clear IH; discriminate); try assumption.
+   
+  - specialize (IH _ t1 ((erase_obligation_5 Σ wfΣ Γ t1 t2 wt s))).
+    rewrite is_box_tApp. destruct is_box.
+    destruct wt, wfΣ, s, IH.
+    eapply (EArities.Is_type_app _ _ _ [_]); eauto.
+    eauto using typing_wf_local.
+    assumption.
+
+  - clear IH. intros. destruct wt. sq. clear ise.
+    eapply inversion_Ind in t as (? & ? & ? & ? & ? & ?) ; auto.
+    red. eexists. split. econstructor; eauto. left.
+    eapply isArity_subst_instance.
+    eapply isArity_ind_type; eauto.
+Defined.
 
 Lemma erases_erase {Σ : global_env_ext} {wfΣ : ∥wf_ext Σ∥} {Γ t} (wt : welltyped Σ Γ t) :
   erases Σ Γ t (erase Σ wfΣ Γ t wt).
@@ -582,6 +570,24 @@ Proof.
          )
          (fun Σ Γ wfΓ => wf_local Σ Γ)); intros; auto; clear Σ w; rename Σ0 into Σ.
 
+  10:{ simpl erase.
+    destruct is_erasable. simp erase. sq.
+    destruct brs; simp erase.
+    constructor; auto.
+    constructor; auto.
+    destruct wt.
+    sq; constructor.
+    eapply elim_restriction_works; eauto.
+    intros isp. eapply isErasable_Proof in isp. eauto.
+    eapply H4.
+    unfold erase_brs. eapply All2_from_nth_error. now autorewrite with len.
+    intros. eapply All2_nth_error_Some in X3; eauto.
+    destruct X3 as [t' [htnh eq]].
+    eapply nth_error_map_InP in H8.
+    destruct H8 as [a [Hnth [p' eq']]].
+    subst. simpl. rewrite Hnth in H7. noconf H7.
+    intuition auto. }
+
   all:simpl erase; eauto.
 
   all: simpl erase in *.
@@ -600,37 +606,12 @@ Proof.
     red. eexists. split. econstructor; eauto. left.
     eapply isArity_subst_instance.
     eapply isArity_ind_type; eauto.
-  - simp erase. clear E.
-    destruct is_erasable. simp erase.
-    destruct brs; simp erase.
-    constructor.
-    eapply elim_restriction_works; eauto.
-    intros isp. eapply isErasable_Proof in isp. eauto.
-    destruct s. constructor; auto.
-    constructor. 
-    destruct p0 as [na ?]. simp erase.
-    simpl. todo "erasure optimization". 
-    eapply erase_to_box in E0. elimtype False.
-    sq. eauto.
-    
-  - constructor. 
-    eapply elim_restriction_works; eauto.
-    intros isp. eapply isErasable_Proof in isp. eauto.
-    eapply H4.
-    unfold erase_brs. eapply All2_from_nth_error. now autorewrite with len.
-    intros. eapply All2_nth_error_Some in X3; eauto.
-    destruct X3 as [t' [htnh eq]].
-    eapply nth_error_map_InP in H8.
-    destruct H8 as [a [Hnth [p' eq']]].
-    subst. simpl. rewrite Hnth in H7. noconf H7.
-    intuition auto.
 
-  - eapply erase_to_box in E0. clear E.
-    destruct E0.
-    constructor.
-    destruct X2. todo "erasure optimization on projections".
-    
-  - constructor. clear E. clear E0.
+  - constructor. clear E.
+    eapply nisErasable_Propositional in f; auto.
+    now exists A.
+
+  - constructor. clear E.
     eapply inversion_Proj in t as (? & ? & ? & ? & ? & ? & ? & ? & ?) ; auto.
     eapply elim_restriction_works_proj; eauto.
     destruct d; eauto. intros isp. eapply isErasable_Proof in isp. eauto.
@@ -683,8 +664,15 @@ Definition erase_one_inductive_body (oib : one_inductive_body) : E.one_inductive
   (* Projection and constructor types are types, hence always erased *)
   let ctors := map (A:=(ident * term) * nat) (fun '((x, y), z) => (x, z)) oib.(ind_ctors) in
   let projs := map (fun '(x, y) => x) oib.(ind_projs) in
+  let is_propositional := 
+    match destArity [] oib.(ind_type) with
+    | Some (_, u) => Universe.is_prop u
+    | None => false (* dummy, impossible case *)
+    end
+  in
   {| E.ind_name := oib.(ind_name);
      E.ind_kelim := oib.(ind_kelim);
+     E.ind_propositional := is_propositional;
      E.ind_ctors := ctors;
      E.ind_projs := projs |}.
 
@@ -747,7 +735,9 @@ Definition global_erased_with_deps Σ Σ' kn :=
     erases_constant_body (Σ, cst_universes cst) cst cst' /\
     (forall body : EAst.term,
      EAst.cst_body cst' = Some body -> erases_deps Σ Σ' body)) \/
-  (exists mib, declared_minductive Σ kn mib).
+  (exists mib mib', declared_minductive Σ kn mib /\ 
+    ETyping.declared_minductive Σ' kn mib' /\
+    erases_mutual_inductive_body mib mib').
 
 Definition includes_deps Σ Σ' deps :=  
   forall kn, 
@@ -809,8 +799,8 @@ Proof.
   - apply inversion_Construct in wt as (? & ? & ? & ? & ? & ? & ?); eauto.
     destruct kn.
     eapply KernameSet.singleton_spec in hin; subst.
-    destruct d as [[H _] _]. red in H. simpl in *.
-    red. sq. rewrite H. intuition eauto.
+    destruct d as [[H' _] _]. red in H'. simpl in *.
+    red. sq. rewrite H'. intuition eauto.
   - apply inversion_Case in wt
       as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?); eauto.
     destruct ind as [kn i']; simpl in *.
@@ -887,13 +877,24 @@ Proof.
     destruct Σer as [[c' [declc' (? & ? & ? & ?)]]|].
     pose proof (PCUICWeakeningEnv.declared_constant_inj _ _ d declc'). subst x.
     now econstructor; eauto.
-    destruct H as [mib declm].
+    destruct H as [mib [mib' [declm declm']]].
     red in declm, d. rewrite d in declm. noconf declm.
   - apply inversion_Case in wt
       as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?); eauto.
     destruct ind as [kn i']; simpl in *.
     apply includes_deps_fold in H2 as [? ?].
+
+    specialize (H1 kn). forward H1.
+    now rewrite KernameSet.singleton_spec. red in H1. destruct H1.
+    elimtype False. destruct H1 as [cst [declc _]].
+    { red in declc. destruct d as [d _]. red in d. rewrite d in declc. noconf declc. }
+    destruct H1 as [mib [mib' [declm [declm' em]]]].
+    destruct em.
+    pose proof d as [].
+    eapply Forall2_nth_error_left in H1; eauto. destruct H1 as [? [? ?]].
     eapply erases_deps_tCase; eauto.
+    split; eauto.
+    destruct H1.
     eapply In_Forall in H3.
     eapply All_Forall. eapply Forall_All in H3.
     eapply Forall2_All2 in H0.
@@ -902,10 +903,21 @@ Proof.
     eapply All2_All_left. eapply a.
     simpl. intuition auto. eexists ; eauto.
     ELiftSubst.solve_all. destruct a2 as [T' HT]. eauto.
+    simpl.
+    destruct d. red in H7, declm. rewrite H7 in declm. now noconf declm.
 
   - apply inversion_Proj in wt as (?&?&?&?&?&?&?&?&?); eauto.
-    constructor.
-    now eapply IHer; eauto.
+    destruct (proj1 d).
+    specialize (H0 (inductive_mind p.1.1)). forward H0.
+    now rewrite KernameSet.singleton_spec. red in H0. destruct H0.
+    elimtype False. destruct H0 as [cst [declc _]].
+    { red in declc. destruct d as [[d _] _]. red in d. rewrite d in declc. noconf declc. }
+    destruct H0 as [mib [mib' [declm [declm' em]]]].
+    destruct d. destruct em.
+    eapply Forall2_nth_error_left in H5 as (x' & ? & ?); eauto.
+    econstructor; eauto. split; eauto.
+    destruct H0. red in H0, declm. rewrite H0 in declm. now noconf declm.
+
   - constructor.
     apply inversion_Fix in wt as (?&?&?&?&?&?&?); eauto.
     eapply All_Forall. eapply includes_deps_fold in Σer as [_ Σer].
@@ -955,6 +967,45 @@ Proof.
      (Σ' := (((kn, d) :: Σ), cst_universes cb))); eauto.
   simpl. now inv wfΣ.
   eexists [(kn, d)]; intuition eauto.
+  econstructor; eauto.
+  red. destruct H. split; eauto.
+  inv wfΣ.
+  red in d0 |- *.
+  rewrite -d0. simpl. unfold eq_kername. destruct kername_eq_dec; try congruence.
+  eapply lookup_env_Some_fresh in d0. subst kn; contradiction.
+  econstructor; eauto.
+  red. destruct H. split; eauto.
+  inv wfΣ.
+  red in d0 |- *.
+  rewrite -d0. simpl. unfold eq_kername. destruct kername_eq_dec; try congruence.
+  eapply lookup_env_Some_fresh in d0. subst kn; contradiction.
+Qed.
+
+Lemma lookup_env_ext {Σ kn kn' d d'} : 
+  wf ((kn', d') :: Σ) ->
+  lookup_env Σ kn = Some d ->
+  kn <> kn'.
+Proof.
+  intros wf hl.
+  eapply lookup_env_Some_fresh in hl.
+  inv wf.
+  destruct (kername_eq_dec kn kn'); subst; congruence.
+Qed.
+
+Lemma lookup_env_cons_disc {Σ kn kn' d} : 
+  kn <> kn' ->
+  lookup_env ((kn', d) :: Σ) kn = lookup_env Σ kn.
+Proof.
+  intros Hk. simpl; unfold eq_kername.
+  destruct kername_eq_dec; congruence.
+Qed.
+
+Lemma elookup_env_cons_disc {Σ kn kn' d} : 
+  kn <> kn' ->
+  ETyping.lookup_env ((kn', d) :: Σ) kn = ETyping.lookup_env Σ kn.
+Proof.
+  intros Hk. simpl; unfold eq_kername.
+  destruct kername_eq_dec; congruence.
 Qed.
 
 Lemma global_erases_with_deps_cons kn kn' d d' Σ Σ' : 
@@ -985,13 +1036,12 @@ Proof.
   eapply erases_deps_cons; eauto.
   constructor; auto.
 
-  right. destruct H as [mib Hm].
-  exists mib.
-  red.
-  rewrite lookup_env_cons_fresh //.
-  inv wf.
-  { eapply lookup_env_Some_fresh in Hm.
-    intros <-; contradiction. }
+  right. destruct H as [mib [mib' [? [? ?]]]].
+  exists mib, mib'. intuition eauto.
+  * red. red in H. pose proof (lookup_env_ext wf H).
+    now rewrite lookup_env_cons_disc.
+  * red. pose proof (lookup_env_ext wf H).
+    now rewrite elookup_env_cons_disc.
 Qed.
 
 Lemma global_erases_with_deps_weaken kn kn' d Σ Σ' : 
@@ -1019,13 +1069,11 @@ Proof.
   noconf H.
   eapply erases_deps_weaken; eauto. constructor; eauto.
 
-  right. destruct H as [mib Hm].
-  exists mib.
+  right. destruct H as [mib [mib' [Hm [? ?]]]].
+  exists mib, mib'; intuition auto.
   red.
   rewrite lookup_env_cons_fresh //.
-  inv wf.
-  { eapply lookup_env_Some_fresh in Hm.
-    intros <-; contradiction. }
+  now epose proof (lookup_env_ext wf Hm).
 Qed.
 
 Lemma erase_constant_body_correct Σ Σ' cb (wfΣ : ∥  wf_ext Σ ∥) (onc : ∥ on_constant_decl (lift_typing typing) Σ cb ∥) :
@@ -1053,6 +1101,30 @@ Proof.
   destruct obl. sq.
   exists bod, A; intuition auto. simpl.
   eapply erases_erase. now simpl in H.
+Qed.
+
+Lemma erases_mutual {Σ mdecl m} : 
+  wf Σ ->
+  declared_minductive Σ mdecl m ->
+  erases_mutual_inductive_body m (erase_mutual_inductive_body m).
+Proof.
+  destruct m; constructor; simpl; auto.
+  eapply on_declared_minductive in H; auto. simpl in H. clear X.
+  eapply onInductives in H; simpl in *.
+  assert (Alli (fun i oib => match destArity [] oib.(ind_type) with Some _ => True | None => False end) 0 ind_bodies).
+  { eapply Alli_impl; eauto.
+    simpl. intros n x []. simpl in *. rewrite ind_arity_eq.
+    rewrite !destArity_it_mkProd_or_LetIn /= //. } clear H.
+  induction X; constructor; auto.
+  destruct hd; constructor; simpl; auto.
+  clear.
+  induction ind_ctors; constructor; auto.
+  destruct a as [[? ?] ?]; constructor; auto.
+  intuition auto.
+  induction ind_projs; constructor; auto.
+  destruct a; auto.
+  unfold isPropositionalArity.
+  destruct destArity as [[? ?]|] eqn:da; auto.
 Qed.
 
 Lemma erase_global_includes Σ deps deps' wfΣ :
@@ -1095,8 +1167,16 @@ Proof.
       eapply KernameSet.subset_spec.
       intros x hin'. eapply KernameSet.union_spec. right; auto.
       congruence. congruence.
-      eexists; red; intuition eauto.
-      simpl. rewrite eq_kername_refl.  reflexivity.
+      eexists m, _; intuition eauto.
+      simpl. unfold declared_minductive.
+      simpl. rewrite eq_kername_refl. reflexivity.
+      specialize (sub _ hin).
+      eapply KernameSet.mem_spec in sub. rewrite sub.
+      red. cbn. destruct kername_eq_dec; try congruence.
+      reflexivity.
+      eapply erases_mutual; eauto.
+      rewrite /declared_minductive /=; rewrite -> eq_kername_refl => //. 
+
     * intros ikn Hi.
       destruct d as [|].
       ++ destruct (KernameSet.mem kn deps) eqn:eqkn.
@@ -1141,25 +1221,28 @@ Proof.
         intros ? hin'. eapply sub. eapply KernameSet.singleton_spec in hin'. now subst.
 Qed.
 
-Lemma erase_correct (Σ : global_env_ext) (wfΣ : wf_ext Σ) t T v Σ' t' :
+Lemma erase_correct (wfl := Ee.default_wcbv_flags) (Σ : global_env_ext) (wfΣ : wf_ext Σ) t v Σ' t' deps :
   axiom_free Σ.1 ->
-  forall wt : Σ ;;; [] |- t : T,
-  erase Σ (sq wfΣ) [] t (iswelltyped wt) = t' ->
-  erase_global (term_global_deps t') Σ (sq (wfΣ.1)) = Σ' ->
-  Σ |-p t ▷ v -> 
+  forall wt : welltyped Σ [] t,
+  erase Σ (sq wfΣ) [] t wt = t' ->
+  KernameSet.subset (term_global_deps t') deps ->
+  erase_global deps Σ (sq (wfΣ.1)) = Σ' ->
+  Σ |-p t ▷ v ->
   exists v', Σ;;; [] |- v ⇝ℇ v' /\ ∥ Σ' ⊢ t' ▷ v' ∥.
 Proof.
   intros axiomfree wt.
-  generalize (iswelltyped wt).
   generalize (sq wfΣ.1) as swfΣ.
-  intros swfΣ wt' HΣ' Ht' ev.
+  intros swfΣ HΣ' Hsub Ht' ev.
   assert (extraction_pre Σ) by now constructor.
-  pose proof (erases_erase (wfΣ := sq wfΣ) wt'); eauto.
+  pose proof (erases_erase (wfΣ := sq wfΣ) wt); eauto.
   rewrite HΣ' in H.
+  destruct wt as [T wt].
   unshelve epose proof (erase_global_erases_deps wfΣ wt H _); cycle 2.
   eapply erases_correct; eauto.
+  intros.
   rewrite <- Ht'.
   eapply erase_global_includes.
-  intros. 2:eapply KernameSet.subset_spec; intros ? ?; auto.
+  intros.
   eapply term_global_deps_spec in H; eauto.
+  assumption.
 Qed.

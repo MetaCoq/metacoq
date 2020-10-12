@@ -486,7 +486,7 @@ Section Pred1_inversion.
     revert c. induction args using rev_ind; intros; simpl in *.
     depelim X...
     - red in H, isdecl. rewrite isdecl in H; noconf H.
-      simpl in H. injection H. intros. subst. congruence.
+      congruence.
     - exists []. intuition auto.
     - rewrite <- mkApps_nested in X.
       depelim X...

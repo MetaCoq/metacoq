@@ -1186,7 +1186,7 @@ Proof.
   rewrite -(map_map_compose  _ _  _ _ (lift0 #|cshape_args cshape|)) in spr.
   rewrite -(spine_subst_extended_subst sp) in spr.
   rewrite subst_map_lift_lift_context in spr.
-  rewrite -(context_subst_length _ _ _ sp).
+  rewrite -(context_subst_length sp).
   len.
   rewrite closed_ctx_subst //. 
   rewrite (closed_ctx_subst (List.rev pars)) // in spr.
@@ -1419,7 +1419,7 @@ Proof.
   rewrite (subst_inds_concl_head i) in hs => //.
   rewrite -it_mkProd_or_LetIn_app in hs.
   assert(ind_npars mdecl = PCUICAst.context_assumptions (ind_params mdecl)).
-  { now pose (onNpars _ _ _ _ onmind). }
+  { now pose (onNpars onmind). }
   assert (closed_ctx (ind_params mdecl)).
   { destruct onmind.
     red in onParams. now apply closed_wf_local in onParams. }
@@ -2991,6 +2991,26 @@ Qed.
 
 Hint Rewrite subst_instance_constr_expand_lets closedn_subst_instance_constr : substu.
 
+Lemma inductive_cumulative_indices {cf:checker_flags} {Σ : global_env_ext} (wfΣ : wf Σ.1) :
+  forall {ind mdecl idecl u u' napp},
+  declared_inductive Σ mdecl ind idecl ->
+  forall (oib : on_ind_body (lift_typing typing) (Σ.1, ind_universes mdecl) (inductive_mind ind) mdecl 
+    (inductive_ind ind) idecl),
+  on_udecl_prop Σ (ind_universes mdecl) ->
+  consistent_instance_ext Σ (ind_universes mdecl) u ->
+  consistent_instance_ext Σ (ind_universes mdecl) u' ->
+  R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) napp u u' ->
+  forall Γ pars pars' parsubst parsubst',
+  spine_subst Σ Γ pars parsubst (subst_instance_context u (ind_params mdecl)) ->
+  spine_subst Σ Γ pars' parsubst' (subst_instance_context u' (ind_params mdecl)) ->  
+  All2 (conv Σ Γ) pars pars' ->
+  let indctx := subst_instance_context u oib.(ind_indices) in
+  let indctx' := subst_instance_context u' oib.(ind_indices) in
+  let pindctx := subst_context parsubst 0 indctx in
+  let pindctx' := subst_context parsubst' 0 indctx' in
+  cumul_ctx_rel Σ Γ (smash_context [] pindctx) (smash_context [] pindctx').
+Proof.
+Admitted.
 
 Lemma constructor_cumulative_indices {cf:checker_flags} {Σ : global_env_ext} (wfΣ : wf Σ.1) :
   forall {ind mdecl idecl cdecl cs u u' napp},
@@ -3050,11 +3070,11 @@ Proof.
     pose proof (onc.(on_ctype_variance)) as respv.
     specialize (respv _ indv).
     simpl in respv.
-    unfold respects_variance in respv.
+    unfold cstr_respects_variance in respv.
     destruct variance_universes as [[[v i] i']|] eqn:vu => //.
     destruct respv as [args idx].
     simpl => Ru.
-    pose proof (onVariance _ _ _ _ onind) as onvari.
+    pose proof (onVariance onind) as onvari.
     rewrite indv in onvari.
     split.
     { eapply All2_local_env_inst in args.

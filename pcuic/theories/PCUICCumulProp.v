@@ -406,7 +406,6 @@ Qed.
 
 Instance cumul_prop_transitive Σ Γ : wf_ext Σ -> CRelationClasses.Transitive (cumul_prop Σ Γ).
 Proof. intros. red. intros. now eapply cumul_prop_trans. Qed.
-Existing Class wf_ext.
 
 Lemma cumul_prop_cum_l Σ Γ A T B : 
   wf_ext Σ ->

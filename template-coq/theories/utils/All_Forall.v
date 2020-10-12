@@ -6,6 +6,7 @@ Import ListNotations.
 Local Ltac inv H := inversion_clear H.
 Local Coercion is_true : bool >-> Sortclass.
 
+Derive Signature for Forall.
 
 (** Combinators *)
 

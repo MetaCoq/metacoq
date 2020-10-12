@@ -389,8 +389,8 @@ Proof.
   pose proof (declared_projection_inv weaken_env_prop_closed wfΣ X0 isdecl) as onp.
   set (declared_inductive_inv _ wfΣ X0 isdecl.p1) as oib in *.
   clearbody oib.
-  have onpars := onParams _ _ _ _ (declared_minductive_inv weaken_env_prop_closed wfΣ X0 isdecl.p1.p1).
-  have parslen := onNpars _ _ _ _ (declared_minductive_inv weaken_env_prop_closed wfΣ X0 isdecl.p1.p1).
+  have onpars := onParams (declared_minductive_inv weaken_env_prop_closed wfΣ X0 isdecl.p1.p1).
+  have parslen := onNpars (declared_minductive_inv weaken_env_prop_closed wfΣ X0 isdecl.p1.p1).
   simpl in onp. destruct (ind_cshapes oib) as [|? []] eqn:Heq; try contradiction.
   red in onp.
   destruct (nth_error (smash_context [] _) _) eqn:Heq'; try contradiction.

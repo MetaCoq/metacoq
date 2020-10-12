@@ -5,19 +5,25 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReduction PCUICCumulativity PCUICConfluence
      PCUICContextConversion PCUICConversion PCUICInversion PCUICUnivSubst
      PCUICArities PCUICValidity PCUICInductives PCUICSR.
+From MetaCoq.SafeChecker Require Import PCUICSafeRetyping.
 
 Require Import ssreflect.
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
 Set Equations With UIP.
 
-
 Derive NoConfusion for global_decl.
+
+(** We show a weak version of principal typing, close to uniqueness of types.
+  Given two typings of the same terms, we can always find a typing that is
+  smaller that both. It follows trivially from the later definition of 
+  [PCUICSafeRetyping.type_of] which computes the principal type of a terrm
+  but whose correctness proof also requires completeness of weak-head-reduction. *)
 
 Section Principality.
   Context {cf : checker_flags}.
   Context (Σ : global_env_ext).
-  Context (wfΣ : wf Σ).
+  Context (wfΣ : wf_ext Σ).
 
   Ltac pih :=
     lazymatch goal with
@@ -53,50 +59,6 @@ Section Principality.
       destruct ih as [? ?]
     end.
 
-  Lemma cumul_sort_confluence {Γ A u v} :
-    Σ ;;; Γ |- A <= tSort u ->
-    Σ ;;; Γ |- A <= tSort v ->
-    ∑ v', (Σ ;;; Γ |- A = tSort v') *
-          (leq_universe (global_ext_constraints Σ) v' u /\
-           leq_universe (global_ext_constraints Σ) v' v).
-  Proof.
-    move=> H H'.
-    eapply invert_cumul_sort_r in H as [u'u ?].
-    eapply invert_cumul_sort_r in H' as [vu ?].
-    destruct p, p0.
-    destruct (red_confluence wfΣ r r0).
-    destruct p.
-    eapply invert_red_sort in r1.
-    eapply invert_red_sort in r2. subst. noconf r2.
-    exists u'u. split; auto.
-  Qed.
-
-
-  Lemma cumul_ind_confluence {Γ A ind u v l l'} :
-    Σ ;;; Γ |- A <= mkApps (tInd ind u) l  ->
-    Σ ;;; Γ |- A <= mkApps (tInd ind v) l' ->
-    ∑ v' l'', (red Σ Γ A (mkApps (tInd ind v') l'')) *
-          All2 (conv Σ Γ) l l'' *
-          All2 (conv Σ Γ) l' l'' *          
-          (R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) #|l| v' u /\
-           R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) #|l'| v' v).
-  Proof.
-    move=> H H'.
-    eapply invert_cumul_ind_r in H as [u'u [l'u [redl [ru ?]]]].
-    eapply invert_cumul_ind_r in H' as [vu [l''u [redr [ru' ?]]]].
-    destruct (red_confluence wfΣ redl redr) as [nf [redl' redr']].
-    eapply red_mkApps_tInd in redl'  as [args' [eqnf conv]].
-    eapply red_mkApps_tInd in redr'  as [args'' [eqnf' conv']].
-    rewrite eqnf in eqnf'. solve_discr. subst nf.
-    all:auto. exists u'u, args'; intuition auto.
-    transitivity (mkApps (tInd ind u'u) l'u).
-    auto. eapply red_mkApps. reflexivity. auto.
-    - apply All2_trans with l'u => //. typeclasses eauto.
-      eapply (All2_impl conv). intros. now apply red_conv.
-    - apply All2_trans with l''u => //. typeclasses eauto.
-      eapply (All2_impl conv'). intros. now apply red_conv.
-  Qed.
-
   Lemma isWfArity_sort Γ u :
     wf_local Σ Γ ->
     isWfArity typing Σ Γ (tSort u).
@@ -106,9 +68,12 @@ Section Principality.
   Hint Extern 10 (isWfArity _ _ _ (tSort _)) => apply isWfArity_sort : pcuic.
 
   Theorem principal_typing {Γ u A B} : Σ ;;; Γ |- u : A -> Σ ;;; Γ |- u : B ->
-    ∑ C, Σ ;;; Γ |- C <= A  ×  Σ ;;; Γ |- C <= B × Σ ;;; Γ |- u : C.
+    ∑ C, ∥ Σ ;;; Γ |- C <= A  ×  Σ ;;; Γ |- C <= B × Σ ;;; Γ |- u : C ∥.
   Proof.
     intros hA hB.
+    destruct (principal_types Σ (sq wfΣ) (sq wfΣ.2) (PCUICSafeLemmata.welltyped hA)) as [P [pty Hp]].
+    exists P; split; auto.
+
     induction u in Γ, A, B, hA, hB |- * using term_forall_list_ind.
     - apply inversion_Rel in hA as iA. 2: auto.
       destruct iA as [decl [? [e ?]]].

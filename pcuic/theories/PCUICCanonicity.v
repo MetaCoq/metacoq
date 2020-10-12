@@ -1137,7 +1137,7 @@ Section WeakNormalization.
       Σ ;;; [] |- t : mkApps (tInd i u) args -> 
       wh_normal Σ [] t -> 
       construct_cofix_discr (head t).
-  Proof. Admitted. (* intros. eapply wh_normal_empty_gen. Qed.  *)
+  Proof. intros. eapply wh_normal_empty_gen; eauto. Qed.
 
   Lemma whnf_ind_finite t ind u indargs : 
     axiom_free Σ ->

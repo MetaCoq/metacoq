@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICPrincipality PCUICConfluence
+     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICConfluence
      PCUICCumulativity PCUICSR PCUICPosition PCUICEquality PCUICNameless
      PCUICAlpha PCUICNormal PCUICInversion PCUICReduction PCUICSubstitution
      PCUICConversion PCUICContextConversion PCUICValidity PCUICCtxShape

@@ -2,8 +2,8 @@
 -Q src MetaCoq.SafeChecker
 -R theories MetaCoq.SafeChecker
 
-src/classes0.mli
-src/classes0.ml
+# src/classes0.mli
+# src/classes0.ml
 
 # From Coq's stdlib
 src/mSetWeakList.mli

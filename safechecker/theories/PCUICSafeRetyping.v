@@ -170,9 +170,9 @@ Section TypeOf.
 
     infer Γ (tProd n ty b) wt :=
       let ty1 := infer Γ ty _ in
-      let s1 := infer_as_sort (todo "wt") ty1 in
+      let s1 := infer_as_sort _ ty1 in
       let ty2 := infer (Γ ,, vass n ty) b _  in
-      let s2 := infer_as_sort (todo "wt2") ty2 in
+      let s2 := infer_as_sort _ ty2 in
       ret (tSort (Universe.sort_of_product s1 s2));
 
     infer Γ (tLambda n t b) wt :=
@@ -332,7 +332,7 @@ Section TypeOf.
         now rewrite subst_empty.
 
     - eapply inversion_Const in HT as [decl ?] => //.
-      intuition auto. red in a0. rewrite a0 in wildcard. noconf wildcard.
+      intuition auto. rewrite a0 in wildcard. noconf wildcard.
       sq. split.
       * constructor; eauto.
       * intros T' [decl [wf [lookup [cu cum]]]]%inversion_Const; auto.

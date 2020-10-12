@@ -11,6 +11,7 @@ From MetaCoq Require Export LibHypsNaming.
 Require Import ssreflect.
 Require Import Equations.Type.Relation.
 From Equations Require Import Equations.
+Set Equations With UIP.
 
 (** * Typing derivations
 
@@ -75,6 +76,8 @@ Definition type_of_constructor mdecl (cdecl : ident * term * nat) (c : inductive
 
 Module PCUICEnvTyping := EnvTyping PCUICTerm PCUICEnvironment.
 Include PCUICEnvTyping.
+
+Derive Signature NoConfusion for All_local_env.
 
 Section WfArity.
   Context (typing : forall (Σ : global_env_ext) (Γ : context), term -> term -> Type).
@@ -440,7 +443,6 @@ Proof.
   intros h []; assumption.
 Qed.
 
-
 (** ** Typechecking of global environments *)
 
 Definition has_nparams npars ty :=
@@ -534,22 +536,26 @@ Fixpoint globenv_size (Σ : global_env) : size :=
 
 Arguments lexprod [A B].
 
+(** We make these well-formedness conditions type-classes as they are genrally 
+    globally available. *)
 Definition wf `{checker_flags} := Forall_decls_typing typing.
+Existing Class wf.
+Hint Mode wf + + : typeclass_intances.
+
 Definition wf_ext `{checker_flags} := on_global_env_ext (lift_typing typing).
+Existing Class wf_ext.
+Hint Mode wf_ext + + : typeclass_intances.
 
 Lemma wf_ext_wf {cf:checker_flags} Σ : wf_ext Σ -> wf Σ.
 Proof. intro H; apply H. Qed.
-
+Existing Instance wf_ext_wf.
+Coercion wf_ext_wf : wf_ext >-> wf.
 Hint Resolve wf_ext_wf : core.
 
 Lemma wf_ext_consistent {cf:checker_flags} Σ :
   wf_ext Σ -> consistent Σ.
-Proof.
-  intros [? [? [? [? ?]]]]; assumption.
-Qed.
-
+Proof. intros [? [? [? [? ?]]]]; assumption. Qed.
 Hint Resolve wf_ext_consistent : core.
-
 
 Lemma wf_local_app `{checker_flags} Σ (Γ Γ' : context) : wf_local Σ (Γ ,,, Γ') -> wf_local Σ Γ.
 Proof.
@@ -601,14 +607,6 @@ Proof.
   apply wfΣ.
   apply type_Prop.
 Defined.
-
-
-Derive Signature for All_local_env.
-
-Set Equations With UIP.
-Derive NoConfusion for context_decl.
-Derive NoConfusion for list.
-Derive NoConfusion for All_local_env.
 
 Lemma size_wf_local_app `{checker_flags} {Σ} (Γ Γ' : context) (Hwf : wf_local Σ (Γ ,,, Γ')) :
   wf_local_size Σ (@typing_size _) _ (wf_local_app _ _ _ Hwf) <=
@@ -669,8 +667,6 @@ Proof.
     intuition eauto.
     all: try lia.
 Qed.
-
-Derive Signature for Alli.
 
 (** *** An induction principle ensuring the Σ declarations enjoy the same properties.
     Also theads the well-formedness of the local context and the induction principle for it,

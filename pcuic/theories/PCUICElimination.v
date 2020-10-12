@@ -5,7 +5,7 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
      PCUICSubstitution PCUICUnivSubst PCUICUnivSubstitution
      PCUICCtxShape PCUICConversion PCUICCumulativity PCUICConfluence PCUICContexts
      PCUICSR PCUICInversion PCUICValidity PCUICSafeLemmata PCUICContextConversion
-     PCUICPrincipality PCUICCumulProp.
+     PCUICCumulProp.
 
 Require Equations.Prop.DepElim.
 From Equations Require Import Equations.

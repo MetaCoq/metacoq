@@ -2991,6 +2991,15 @@ Qed.
 
 Hint Rewrite subst_instance_constr_expand_lets closedn_subst_instance_constr : substu.
 
+Lemma subst_instance_context_expand_lets u Γ Δ :
+  subst_instance_context u (expand_lets_ctx Γ Δ) =
+  expand_lets_ctx (subst_instance_context u Γ) (subst_instance_context u Δ).
+Proof.
+  rewrite /expand_lets_ctx /expand_lets_k_ctx.
+  rewrite !subst_instance_subst_context !subst_instance_lift_context; len.
+  now rewrite -extended_subst_subst_instance_constr.
+Qed.
+
 Lemma inductive_cumulative_indices {cf:checker_flags} {Σ : global_env_ext} (wfΣ : wf Σ.1) :
   forall {ind mdecl idecl u u' napp},
   declared_inductive Σ mdecl ind idecl ->
@@ -3010,7 +3019,115 @@ Lemma inductive_cumulative_indices {cf:checker_flags} {Σ : global_env_ext} (wf�
   let pindctx' := subst_context parsubst' 0 indctx' in
   cumul_ctx_rel Σ Γ (smash_context [] pindctx) (smash_context [] pindctx').
 Proof.
-Admitted.
+  intros * decli oib onu cu cu' Ru Γ * spu spu' cpars *. move: Ru.
+  unfold R_global_instance.
+  pose proof decli as decli'.
+  assert (closed_ctx
+    (subst_instance_context u
+      (PCUICEnvironment.ind_params mdecl))) as clpu.
+  { eapply closed_wf_local; eauto; eapply on_minductive_wf_params; eauto. }
+  assert (closed_ctx
+  (subst_instance_context u'
+    (PCUICEnvironment.ind_params mdecl)))  as clpu'.
+  {  eapply closed_wf_local; eauto; eapply on_minductive_wf_params; eauto. }
+  assert (closed_ctx
+    (subst_instance_context u
+      (smash_context [] (PCUICEnvironment.ind_params mdecl)))) as clspu.
+  { rewrite subst_instance_context_smash. now eapply closedn_smash_context. }
+  eapply on_declared_inductive in decli' as [onind _]; eauto.
+  assert (wf_local Σ
+  (smash_context []
+     (subst_instance_context u (PCUICEnvironment.ind_params mdecl)) ,,,
+   smash_context []
+     (subst_instance_context u
+        (expand_lets_ctx (PCUICEnvironment.ind_params mdecl)
+           (ind_indices oib))))).
+  { pose proof (on_minductive_wf_params_indices_inst _ _ _ _ _ wfΣ (proj1 decli) oib cu) as wf.
+    eapply wf_local_smash_context in wf; auto.
+    rewrite subst_instance_context_app smash_context_app_expand in wf.
+    rewrite expand_lets_smash_context expand_lets_k_ctx_nil in wf.
+    now rewrite subst_instance_context_expand_lets. }
+  destruct global_variance eqn:gv.
+  { move:gv.
+    simpl. rewrite (declared_inductive_lookup_inductive decli).
+    rewrite oib.(ind_arity_eq). 
+    rewrite !destArity_it_mkProd_or_LetIn. simpl.
+    rewrite app_context_nil_l context_assumptions_app.
+    elim: leb_spec_Set => // comp.
+    destruct ind_variance eqn:indv => //.
+    move=> [=] eq. subst l0.
+    pose proof (oib.(onIndices)) as respv.
+    specialize (respv _ indv).
+    simpl in respv.
+    unfold ind_respects_variance in respv.
+    destruct variance_universes as [[[v i] i']|] eqn:vu => //.
+    simpl => Ru.
+    pose proof (onVariance onind) as onvari.
+    rewrite indv in onvari.
+    eapply All2_local_env_inst in respv.
+    8:eauto. all:eauto. move: respv.
+    rewrite !expand_lets_smash_context.
+    autorewrite with pcuic.
+    rewrite !subst_instance_context_smash /= => args.
+    eapply (weaken_cumul_ctx _ Γ) in args => //.
+    4:eapply spu.
+    2:{ eapply closed_wf_local; eauto. }
+    2:{ rewrite closedn_ctx_app; apply /andP. split => //. simpl.
+        len. simpl. eapply closedn_smash_context => //.
+        len; simpl. 
+        pose proof (on_minductive_wf_params_indices_inst _ _ _ _ _ wfΣ (proj1 decli) oib cu') as wf'.
+        eapply closed_wf_local in wf'; eauto.
+        rewrite subst_instance_context_app in wf'.
+        rewrite closedn_ctx_app in wf'. move/andP: wf'=> [_ clargs].
+        simpl in clargs; autorewrite with len in clargs.
+        eapply closedn_smash_context => //.
+        rewrite closedn_subst_instance_context.
+        rewrite -(Nat.add_0_l (context_assumptions (ind_params _))).
+        eapply closedn_ctx_expand_lets.
+        now rewrite -(closedn_subst_instance_context (u:=u)).
+        now rewrite closedn_subst_instance_context in clargs. }
+    pose proof (spine_subst_smash wfΣ spu) as sspu.
+    pose proof (spine_subst_smash wfΣ spu') as sspu'.
+    eapply (cumul_ctx_subst _ Γ _ _ [] _ _ (List.rev pars) (List.rev pars')) in args; eauto.
+    3:{ eapply All2_rev => //. }
+    3:{ eapply subslet_untyped_subslet. eapply sspu. }
+    3:{ eapply subslet_untyped_subslet. eapply sspu'. }
+    2:{ rewrite - !app_context_assoc. eapply weaken_wf_local; eauto.
+        eapply spu. now rewrite app_context_nil_l. }
+    move: args.
+    rewrite subst_context_nil /= - !smash_context_subst /= subst_context_nil; len.
+    rewrite !subst_instance_subst_context.
+    rewrite !extended_subst_subst_instance_constr.
+    rewrite (subst_context_subst_context (List.rev pars)) /=; len.
+    rewrite -(spine_subst_extended_subst spu).
+    rewrite !subst_instance_lift_context. len.
+    rewrite subst_context_lift_context_cancel.
+    len. rewrite (context_subst_length2 spu); len; lia.
+    rewrite (subst_context_subst_context (List.rev pars')) /=; len.
+    rewrite -(spine_subst_extended_subst spu').
+    len. rewrite subst_context_lift_context_cancel.
+    len. rewrite (context_subst_length2 spu'); len; lia.
+    now rewrite subst_context_nil. }
+  simpl. intros.
+  { rewrite /pindctx /pindctx' /indctx /indctx'.
+    rewrite !(smash_context_subst []).
+    eapply (cumul_ctx_subst _ _ _ _ []); eauto.
+    4:eapply subslet_untyped_subslet; eapply spu.
+    4:eapply subslet_untyped_subslet; eapply spu'.
+    { simpl. eapply wf_local_smash_end; eauto.
+      rewrite -app_context_assoc. eapply weaken_wf_local; eauto. eapply spu.
+      rewrite -subst_instance_context_app.
+      apply (on_minductive_wf_params_indices_inst _ _ _ _ _ wfΣ (proj1 decli) oib cu). }
+    2:{ eapply spine_subst_conv; eauto.
+      eapply context_relation_subst_instance; eauto. apply spu.
+      eapply on_minductive_wf_params; eauto. }
+    simpl.
+    rewrite -(subst_instance_context_smash u _ []).
+    rewrite -(subst_instance_context_smash u' _ []).
+    eapply cumul_ctx_subst_instance => //.
+    eapply weaken_wf_local; pcuic. eapply spu.
+    eapply on_minductive_wf_params; eauto. }
+Qed.
 
 Lemma constructor_cumulative_indices {cf:checker_flags} {Σ : global_env_ext} (wfΣ : wf Σ.1) :
   forall {ind mdecl idecl cdecl cs u u' napp},

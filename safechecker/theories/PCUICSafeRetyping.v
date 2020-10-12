@@ -9,11 +9,13 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLif
      PCUICUnivSubst PCUICTyping PCUICSafeLemmata PCUICSubstitution PCUICValidity
      PCUICGeneration PCUICInversion PCUICValidity PCUICInductives PCUICSR
      PCUICCumulativity PCUICConversion PCUICConfluence PCUICArities
-     PCUICWeakeningEnv.
+     PCUICWeakeningEnv PCUICContexts.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 Import monad_utils.MonadNotation.
+
+Hint Constructors assumption_context : pcuic.
 
 Derive NoConfusion for type_error.
 
@@ -461,7 +463,8 @@ Section TypeOf.
             eapply type_mkApps. econstructor; pcuic.
             eapply wf_arity_spine_typing_spine; eauto.
             constructor. 
-            epose proof (on_inductive_inst _ _ _ _ _ _ w ltac:(pcuic) _ _ oib cu).
+            unshelve epose proof (on_inductive_inst _ _ _ _ _ _ w ltac:(pcuic) _ _ oib cu); eauto.
+            eapply on_declared_inductive; eauto.
             rewrite oib.(ind_arity_eq) -it_mkProd_or_LetIn_app subst_instance_constr_it_mkProd_or_LetIn.
             eapply isWAT_weaken; eauto. pcuic.
             rewrite oib.(ind_arity_eq) subst_instance_constr_it_mkProd_or_LetIn.
@@ -475,11 +478,14 @@ Section TypeOf.
             unshelve epose proof (isWAT_mkApps_Ind w decli _ Hty) as [parsubst' [argsubst' [[spars' spargs'] ?]]]; pcuic.
             eapply (subslet_cumul _ _ _ (smash_context [] (subst_context parsubst' 0 
               (subst_instance_context u' (ind_indices oib))))); pcuic.
-
-
-            eapply arity_spine_it_mkProd_or_LetIn_Sort; eauto.
-            
-            
+            eapply wf_local_smash_end; eauto. eapply spargs'.
+            eapply wf_local_smash_end; eauto. eapply spargs.  
+            eapply inductive_cumulative_indices; eauto.
+            destruct decli as [declm ?]. 
+            apply (weaken_lookup_on_global_env' _ _ _ w declm).
+            now eapply All2_firstn.
+            eapply spine_subst_smash in spargs'.
+            eapply spargs'. auto.
 
           + transitivity (mkApps (tInd ind u) l).
             constructor. eapply PCUICEquality.eq_term_upto_univ_napp_mkApps.
@@ -495,7 +501,7 @@ Section TypeOf.
         unshelve epose proof (isWAT_mkApps_Ind w decli _ vt) as [parsubst' [argsubst' [[spars' spargs'] ?]]]; pcuic.
         change (ind_indices (on_declared_inductive w decli).2) with (ind_indices oib) in spargs'.
         subst oib; destruct on_declared_inductive as [onmind oib].
-        rewrite onmind.(onNpars _ _ _ _) in H.
+        rewrite onmind.(onNpars) in H.
         pose proof (firstn_length_le_inv _ _ H).
         pose proof (subslet_length spargs'). len in H1.
         rewrite skipn_all_app_eq in spargs'. now rewrite H.
@@ -512,12 +518,14 @@ Section TypeOf.
           rewrite map_map_compose map_subst_lift_id.
           relativize (to_extended_list _).
           erewrite (spine_subst_subst_to_extended_list_k spargs').
-          2:{ rewrite to_extended_list_k_subst. eapply map_subst_instance_constr_to_extended_list_k. }
+          2:{ rewrite to_extended_list_k_subst. simpl. 
+              eapply PCUICSubstitution.map_subst_instance_constr_to_extended_list_k. }
           eapply isWAT_mkApps_Ind_isType in vt; eauto.
           rewrite subst_mkApps. rewrite -H1 map_app map_map_compose map_subst_lift_id.
           relativize (to_extended_list _).
           erewrite (spine_subst_subst_to_extended_list_k spargs').
-          2:{ rewrite to_extended_list_k_subst. eapply map_subst_instance_constr_to_extended_list_k. }
+          2:{ rewrite to_extended_list_k_subst. 
+            eapply PCUICSubstitution.map_subst_instance_constr_to_extended_list_k. }
           assumption.
         + simpl. now eapply validity in Hpty.
         + simpl.

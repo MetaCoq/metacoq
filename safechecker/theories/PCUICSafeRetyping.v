@@ -588,7 +588,47 @@ Section TypeOf.
         assert (Σ ;;; Γ |- mkApps (tInd i u') l <= mkApps (tInd i u'') args').
         { eapply cumul_red_l_inv; eauto. }
         eapply cumul_Ind_Ind_inv in X0 as [[eqi'' Ru''] cl'']; auto.
-        todo "cumulative inductives here"%string.
+        assert (consistent_instance_ext Σ (ind_universes mdecl) u').
+        { eapply validity in Hc'; eauto.
+          eapply PCUICInductiveInversion.isWAT_mkApps_Ind_isType in Hc'; auto.
+          destruct Hc' as [s Hs].
+          eapply invert_type_mkApps_ind in Hs. intuition eauto. all:auto. eapply declp. }
+        assert (consistent_instance_ext Σ (ind_universes mdecl) u'').
+          { eapply validity in Hc'''; eauto.
+            eapply PCUICInductiveInversion.isWAT_mkApps_Ind_isType in Hc''' as [s Hs]; auto.
+            eapply invert_type_mkApps_ind in Hs. intuition eauto. all:auto. eapply declp. }
+        transitivity (subst0 (c :: List.rev l) (subst_instance_constr u'' pdecl''.2)); cycle 1.
+        eapply conv_cumul.
+        eapply (subst_conv _ (projection_context mdecl idecl i u')
+        (projection_context mdecl idecl i u'') []); auto.
+        eapply (projection_subslet _ _ _ _ _ _ (i, n, k)); eauto.
+        simpl. eapply validity; eauto.
+        eapply (projection_subslet _ _ _ _ _ _ (i, n, k)); eauto.
+        simpl. eapply validity; eauto.
+        constructor; auto. now apply All2_rev.
+        eapply PCUICWeakening.weaken_wf_local; eauto.
+        eapply PCUICWeakening.weaken_wf_local; pcuic.
+        eapply (wf_projection_context _ (p:= (i, n, k))); pcuic.
+        eapply (substitution_cumul _ Γ (projection_context mdecl idecl i u') []); auto.
+        eapply PCUICWeakening.weaken_wf_local; pcuic.
+        eapply PCUICWeakening.weaken_wf_local; pcuic.
+        eapply (wf_projection_context _ (p:=(i, n, k))); pcuic.
+        eapply (projection_subslet _ _ _ _ _ _ (i, n, k)); eauto.
+        simpl. eapply validity; eauto.
+        rewrite -(All2_length _ _ cl'') in Hargs'. rewrite Hargs' in Ru''.
+        unshelve epose proof (projection_cumulative_indices w declp _ H1 H2 Ru'').
+        { eapply (PCUICWeakeningEnv.weaken_lookup_on_global_env' _ _ _ w (proj1 (proj1 declp))). }
+        eapply PCUICWeakeningEnv.on_declared_projection in declp; eauto.
+        eapply weaken_cumul in X0; eauto.
+        eapply PCUICClosed.closed_wf_local; eauto.
+        eapply (wf_projection_context _ (p:= (i, n, k))); pcuic.
+        len. simpl. len. simpl.
+        rewrite declp.(onNpars).
+        rewrite PCUICClosed.closedn_subst_instance_constr.
+        now apply (PCUICClosed.declared_projection_closed w declp').
+        simpl; len. rewrite declp.(onNpars).
+        rewrite PCUICClosed.closedn_subst_instance_constr.
+        now apply (PCUICClosed.declared_projection_closed w declp').
 
     - simpl in *.
       destruct inversion_Proj as (u & mdecl & idecl & pdecl' & args & declp & Hc & Hargs & cum); auto.
@@ -671,8 +711,8 @@ Section TypeOf.
 
   (* Note the careful use of squashing here: the principal type is accessible 
     computationally but the proof it is principal is squashed (in Prop).
-    One could also easily modify the above function to return non-squashed 
-    principal typing derivations, if there is some use for it. *)
+    The [PCUICPrincipality.principal_type] proof gives an unsquashed version of the
+    same theorem. *)
   Theorem principal_types {Γ t} (wt : welltyped Σ Γ t) : 
     ∑ P, ∥ forall T, Σ ;;; Γ |- t : T -> (Σ ;;; Γ |- t : P) * (Σ ;;; Γ |- P <= T) ∥.
   Proof.
@@ -682,3 +722,5 @@ Section TypeOf.
   Qed.
 
 End TypeOf.
+
+Print Assumptions type_of.

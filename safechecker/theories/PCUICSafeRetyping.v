@@ -197,9 +197,6 @@ Section TypeOf.
     congruence.
   Qed.
 
-
-    
-
   Obligation Tactic := idtac.
 
   Equations? infer (Γ : context) (t : term) (wt : welltyped Σ Γ t) : principal_type Σ Γ t 

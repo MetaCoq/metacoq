@@ -3475,6 +3475,242 @@ Proof.
   } 
 Qed.
 
+Lemma declared_projection_constructor {cf:checker_flags} {Σ : global_env_ext} (wfΣ : wf Σ.1) :
+  forall {mdecl idecl p pdecl},
+  declared_projection Σ mdecl idecl p pdecl ->
+  ∑ cdecl, declared_constructor Σ mdecl idecl (p.1.1, 0) cdecl.
+Proof.
+  intros * declp.
+  set (onp := on_declared_projection wfΣ declp).
+  set (oib := declared_inductive_inv _ _ _ _) in *.
+  clearbody onp.
+  destruct oib. simpl in *. destruct onp.
+  destruct ind_cshapes as [|[] []] eqn:cseq => //.
+  depelim onConstructors. exists x.
+  split; eauto. eapply declp. simpl. now rewrite H.
+Qed.
+
+Lemma declared_inductive_unique {Σ mdecl idecl p} (q r : declared_inductive Σ mdecl p idecl) : q = r.
+Proof.
+  unfold declared_inductive in q, r.
+  destruct q, r.
+  now rewrite (uip e e0) (uip d d0).
+Qed.
+
+Lemma length_nil {A} (l : list A) : #|l| = 0 -> l = [].
+Proof. destruct l => //. Qed.
+
+Lemma assumption_context_expand_lets_ctx Γ Δ :
+  assumption_context Δ ->
+  assumption_context (expand_lets_ctx Γ Δ).
+Proof.
+  intros ass.
+  rewrite /expand_lets_ctx /expand_lets_k_ctx.
+  now do 2 apply assumption_context_fold.
+Qed.
+
+Lemma assumption_context_subst_context s k Γ : 
+  assumption_context Γ ->
+  assumption_context (subst_context s k Γ).
+Proof. apply assumption_context_fold. Qed.
+
+Lemma assumption_context_lift_context s k Γ : 
+  assumption_context Γ ->
+  assumption_context (lift_context s k Γ).
+Proof. apply assumption_context_fold. Qed.
+
+Hint Resolve assumption_context_fold assumption_context_expand_lets_ctx 
+  smash_context_assumption_context assumption_context_nil assumption_context_subst_instance 
+  assumption_context_subst_context assumption_context_lift_context : pcuic.
+
+Lemma subst_inds_smash_params {cf:checker_flags} {Σ : global_env_ext} {mdecl ind idecl u} {wfΣ : wf Σ} :
+  declared_inductive Σ mdecl ind idecl ->
+  consistent_instance_ext Σ (ind_universes mdecl) u ->
+  subst_context (inds (inductive_mind ind) u (ind_bodies mdecl)) 0
+    (subst_instance_context u (smash_context [] (PCUICEnvironment.ind_params mdecl))) =
+    (subst_instance_context u (smash_context [] (PCUICEnvironment.ind_params mdecl))).
+Proof.
+  intros decli cu.
+  rewrite closed_ctx_subst //.
+  eapply closed_wf_local; eauto.
+  rewrite subst_instance_context_smash /= //.
+  eapply wf_local_smash_context; auto.
+  now eapply on_minductive_wf_params; pcuic.
+Qed.
+
+Lemma nth_error_expand_lets Γ Δ n : 
+  nth_error (expand_lets_ctx Γ Δ) n = 
+  option_map (map_decl (expand_lets_k Γ (#|Δ| - S n))) (nth_error Δ n).
+Proof.
+  rewrite /expand_lets_ctx /expand_lets_k_ctx nth_error_subst_context; len.
+  relativize (context_assumptions Γ).
+  erewrite (nth_error_lift_context_eq _ (smash_context [] Γ)).
+  2:len; simpl; lia.
+  simpl. destruct nth_error; simpl; auto.
+  f_equal.
+  rewrite /expand_lets_k /subst_decl /lift_decl compose_map_decl.
+  eapply map_decl_ext => t.
+  now len.
+Qed.
+
+
+Lemma subslet_projs_smash {cf:checker_flags} (Σ : global_env_ext) i mdecl idecl :
+  forall (wfΣ : wf Σ.1) 
+  (Hdecl : declared_inductive Σ.1 mdecl i idecl),
+  let oib := declared_inductive_inv weaken_env_prop_typing wfΣ wfΣ Hdecl in
+  match ind_cshapes oib return Type with
+  | [cs] => 
+    on_projections mdecl (inductive_mind i) (inductive_ind i) 
+     idecl (ind_indices oib) cs -> 
+     forall Γ t u,
+     let indsubst := inds (inductive_mind i) u (ind_bodies mdecl) in
+     untyped_subslet Γ
+     (projs_inst i (ind_npars mdecl) (context_assumptions (cshape_args cs)) t)
+     (lift_context 1 0 (subst_context (inds (inductive_mind i) u (ind_bodies mdecl))
+        (context_assumptions (ind_params mdecl))
+        (subst_instance_context u (expand_lets_ctx (ind_params mdecl) (smash_context [] (cshape_args cs))))))
+  | _ => True
+  end.
+Proof.
+  intros wfΣ Hdecl oib.
+  destruct ind_cshapes as [|cs []] eqn:Heq; trivial.
+  intros onp. simpl. intros Γ t u. 
+  destruct onp.
+  assert (#|PCUICEnvironment.ind_projs idecl| >=
+  PCUICEnvironment.context_assumptions (cshape_args cs)). lia.
+  clear on_projs_all.
+  induction (cshape_args cs) as [|[? [] ?] ?].
+  - simpl. constructor.
+  - simpl. apply IHc. now simpl in H.
+  - simpl. rewrite smash_context_acc /=. simpl.
+    rewrite /subst_decl {2}/map_decl /=.
+    rewrite /expand_lets_ctx {1}/map_decl /= /expand_lets_k_ctx.
+    rewrite !lift_context_snoc /= subst_context_snoc /=; len.
+    rewrite !subst_context_snoc; len.
+    rewrite lift_context_snoc.
+    constructor. apply IHc. simpl in H. lia.
+Qed.
+
+Lemma skipn_lift_context (m n : nat) (k : nat) (Γ : context) :
+  skipn m (lift_context n k Γ) = lift_context n k (skipn m Γ).
+Proof.
+  rewrite !lift_context_alt.
+  rewrite skipn_mapi_rec. rewrite mapi_rec_add /mapi.
+  apply mapi_rec_ext. intros.
+  f_equal. rewrite List.skipn_length. lia.
+Qed.
+
+Lemma projs_inst_0 ind n k : projs_inst ind n k (tRel 0) = projs ind n k.
+Proof.
+  induction k in n |- * => /= //.
+  simpl. now f_equal.
+Qed.
+
+Lemma projection_cumulative_indices {cf:checker_flags} {Σ : global_env_ext} (wfΣ : wf Σ.1) :
+  forall {mdecl idecl p pdecl u u' },
+  declared_projection Σ mdecl idecl p pdecl ->
+  on_udecl_prop Σ (ind_universes mdecl) ->
+  consistent_instance_ext Σ (ind_universes mdecl) u ->
+  consistent_instance_ext Σ (ind_universes mdecl) u' ->
+  R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef p.1.1) (ind_npars mdecl) u u' ->
+  Σ ;;; projection_context mdecl idecl p.1.1 u |- 
+    subst_instance_constr u pdecl.2 <= subst_instance_constr u' pdecl.2.
+Proof.
+  intros * declp onudecl cu cu' Ru.
+  epose proof (declared_projection_constructor wfΣ declp) as [cdecl declc].
+  destruct (on_declared_constructor wfΣ declc) as [_ [sort onc]].
+  destruct declc. simpl in d.
+  pose proof (declared_inductive_unique d (let (x, _) := declp in x)). subst d.
+  epose proof (declared_projection_type_and_eq wfΣ declp).
+  destruct (on_declared_projection wfΣ declp).
+  set (oib := declared_inductive_inv _ _ _ _) in *. simpl in X, y.
+  destruct ind_cshapes as [|[] []] eqn:cseq => //.
+  simpl in *. destruct y as [[[_ onps] onidx] onproj].
+  simpl in X.
+  destruct X as [_ [idecl' [[[idecl'nth _] pty] pty']]].
+  rewrite -pty.
+  destruct onc as [eqs onc]. rewrite cseq in eqs. noconf eqs.
+  unfold R_global_instance in Ru.
+  unfold global_variance, lookup_inductive, lookup_minductive in Ru.
+  pose proof declp as declp'.
+  destruct declp' as [[? ?] ?]. red in H. rewrite H H0 in Ru.
+  rewrite oib.(ind_arity_eq) in Ru.
+  rewrite !destArity_it_mkProd_or_LetIn /= in Ru.
+    
+  destruct (context_assumptions _ <=? _) eqn:eq.
+  2:{ 
+    rewrite app_context_nil_l context_assumptions_app in eq.
+    eapply Nat.leb_nle in eq.
+    destruct onps. len in eq.
+    apply length_nil in on_projs_noidx. 
+    rewrite on_projs_noidx in eq. simpl in *.
+    rewrite o.(onNpars) in eq. lia. }
+  destruct (ind_variance mdecl) eqn:eqv.
+  { simpl in Ru.
+    epose proof (on_ctype_variance onc _ eqv).
+    red in X.
+    destruct variance_universes as [[[udecl i] i']|] eqn:vu => //.
+    destruct X as [onctx _]. simpl in onctx.
+    eapply (All2_local_env_inst _ _ _ _ _ _ u u') in onctx; eauto.
+    2:{ rewrite -eqv. 
+      destruct (on_declared_projection wfΣ declp).
+      now apply (onVariance o). }
+    rewrite subst_instance_context_app in onctx.
+    epose proof (positive_cstr_closed_args (proj1 declp) o oib onc cu). rewrite eqv in X; simpl in X.
+    specialize (X Ru).
+    rewrite - !(subst_instance_context_smash _ _ []) in X.
+    rewrite - !(expand_lets_smash_context _ []) in X.
+    apply X in onctx. clear X.
+    destruct onctx as [onctx wfctx].
+    eapply All2_local_env_nth_error in onctx.
+    3:{ rewrite nth_error_subst_context; len.
+      simpl. rewrite nth_error_map nth_error_expand_lets.
+      erewrite idecl'nth. simpl. reflexivity. }
+    2:pcuic.
+    move:onctx => [decl' []].
+    rewrite nth_error_subst_context nth_error_map nth_error_expand_lets idecl'nth; len.
+    simpl. move=> [= <-]. simpl.
+    rewrite subst_instance_context_smash. len. simpl.
+    epose proof (subslet_projs_smash _ _ _ _ wfΣ (let (x, _) := declp in x)). simpl in X.
+    rewrite cseq in X.
+    unfold projection_context.
+    set (ind_decl := vass (nNamed _) _).
+    specialize (X onps (smash_context [] (subst_instance_context u (ind_params mdecl)) ,, ind_decl) (tRel 0) u).
+    simpl in X.
+    eapply untyped_subslet_skipn in X.
+    rewrite skipn_lift_context in X.
+    move=> Hty.
+    eapply (weakening_cumul _ _ _ [ind_decl]) in Hty; auto.
+    simpl in Hty. len in Hty.
+    eapply (substitution_untyped_cumul _ _ _ []) in Hty; eauto.
+    move: Hty; rewrite subst_context_nil /=.
+    rewrite skipn_length. len. simpl. lia. len.
+    rewrite /projection_type /=.
+    fold (expand_lets_k (ind_params mdecl) p.2 (decl_type idecl')).
+    rewrite projs_inst_skipn.
+    assert (context_assumptions cshape_args - S (PCUICEnvironment.context_assumptions cshape_args - S p.2) = p.2) as -> by lia.
+    clear X.
+    rewrite - subst_subst_instance_constr.
+    rewrite [map _ (inds _ _ _)](instantiate_inds _ u _ mdecl wfΣ (proj1 (proj1 declp)) cu).
+    rewrite - (subst_subst_instance_constr u').
+    rewrite [map _ (inds _ _ _)](instantiate_inds _ u' _ mdecl wfΣ (proj1 (proj1 declp)) cu').
+    rewrite - !subst_subst_instance_constr subst_instance_constr_projs.
+    rewrite !subst_subst_instance_constr.
+    fold (expand_lets_k (ind_params mdecl) p.2 (decl_type idecl')).
+    rewrite commut_lift_subst_rec. lia.
+    rewrite commut_lift_subst_rec. lia.
+    rewrite distr_subst projs_subst_above. lia.
+    rewrite - subst_subst_instance_constr subst_instance_constr_projs.
+    rewrite distr_subst projs_subst_above. lia.
+    rewrite projs_length !Nat.add_succ_r Nat.add_0_r /= //.
+    rewrite !lift_subst_instance_constr // projs_inst_0 //.
+    rewrite o.(onNpars) //. }
+  { simpl in Ru.
+    constructor. eapply eq_term_leq_term.
+    eapply eq_term_upto_univ_subst_instance_constr; eauto. all:typeclasses eauto.
+  }
+Qed.
+
 Lemma wt_ind_app_variance {cf:checker_flags} {Σ : global_env_ext} {Γ ind u l}:
   wf Σ.1 ->
   isWfArity_or_Type Σ Γ (mkApps (tInd ind u) l) ->

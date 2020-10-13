@@ -868,7 +868,6 @@ Lemma declared_projection_type_and_eq {cf:checker_flags} {Σ : global_env_ext} {
   forall (wfΣ : wf Σ.1) (Hdecl : declared_projection Σ mdecl idecl p pdecl),
   let u := PCUICLookup.abstract_instance (ind_universes mdecl) in
   let oib := declared_inductive_inv weaken_env_prop_typing wfΣ wfΣ (let (x, _) := Hdecl in x) in
-  let u := PCUICLookup.abstract_instance (ind_universes mdecl) in
   match ind_cshapes oib return Type with
   | [cs] => 
     isType (Σ.1, ind_universes mdecl)
@@ -1040,20 +1039,18 @@ Proof.
   eapply spine_subst_smash_inv; eauto.
 Qed.
 
-Lemma wf_projection_context {cf:checker_flags} (Σ : global_env_ext) Γ mdecl idecl p pdecl u : 
+Lemma wf_projection_context {cf:checker_flags} (Σ : global_env_ext) {mdecl idecl p pdecl u} : 
   wf Σ.1 ->
   declared_projection Σ mdecl idecl p pdecl ->
   consistent_instance_ext Σ (PCUICAst.ind_universes mdecl) u ->
-  wf_local Σ Γ ->
-  wf_local Σ (Γ ,,, projection_context mdecl idecl p.1.1 u).
+  wf_local Σ (projection_context mdecl idecl p.1.1 u).
 Proof.
   move=> wfΣ decli.
   pose proof (on_declared_projection wfΣ decli) as [onmind onind].
   set (oib := declared_inductive_inv _ _ _ _) in *. clearbody oib.
   simpl in onind; destruct ind_cshapes as [|? []]; try contradiction.
   destruct onind as [[[_ onps] Hpe] onp].
-  move=> cu wfΓ.
-  apply weaken_wf_local; auto.
+  move=> cu.
   assert(wfparams : wf_local Σ (subst_instance_context u (ind_params mdecl))).
   { eapply on_minductive_wf_params; eauto. eapply decli. }
   assert(wfsmash : wf_local Σ (smash_context [] (subst_instance_context u (ind_params mdecl)))).

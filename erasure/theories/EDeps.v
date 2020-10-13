@@ -50,7 +50,7 @@ Proof.
   - depelim er.
     constructor.
     induction H; cbn in *; [easy|].
-    now depelim H0.
+    now depelim X.
   - depelim er.
     now constructor.
   - depelim er.
@@ -67,20 +67,20 @@ Proof.
     now econstructor.
   - depelim er.
     constructor.
-    induction H in k, H, H0 |- *; [easy|].
+    induction H in k, X |- *; [simpl; easy|].
     cbn in *.
     rewrite <- !Nat.add_succ_r.
-    depelim H0.
+    depelim X.
     constructor; [|easy].
-    now apply p.
+    now apply e.
   - depelim er.
     constructor.
-    induction H in k, H, H0 |- *; [easy|].
+    induction H in k, H, X |- *; [simpl; easy|].
     cbn in *.
     rewrite <- !Nat.add_succ_r.
-    depelim H0.
+    depelim X.
     constructor; [|easy].
-    now apply p.
+    now apply e.
 Qed.
 
 Lemma erases_deps_subst Σ Σ' s k t :
@@ -96,8 +96,8 @@ Proof.
     now apply erases_deps_lift.
   - depelim er.
     constructor.
-    induction H; [easy|].
-    depelim H0.
+    induction H; [simpl; easy|].
+    depelim X.
     now constructor.
   - depelim er.
     now constructor.
@@ -115,20 +115,20 @@ Proof.
     now econstructor.
   - depelim er.
     constructor.
-    induction H in k, H, H0 |- *; [easy|].
+    induction H in k, H, X |- *; [simpl; easy|].
     cbn in *.
     rewrite <- !Nat.add_succ_r.
-    depelim H0.
+    depelim X.
     constructor; [|easy].
-    now apply p.
+    now apply e.
   - depelim er.
     constructor.
-    induction H in k, H, H0 |- *; [easy|].
+    induction H in k, H, X |- *; [simpl; easy|].
     cbn in *.
     rewrite <- !Nat.add_succ_r.
-    depelim H0.
+    depelim X.
     constructor; [|easy].
-    now apply p.
+    now apply e.
 Qed.
 
 Lemma erases_deps_subst1 Σ Σ' t k u :
@@ -151,8 +151,8 @@ Proof.
   - destruct (_ ?= _); try constructor; easy.
   - depelim er.
     constructor.
-    induction H; [easy|].
-    depelim H0.
+    induction H; [simpl; easy|].
+    depelim X.
     now constructor.
   - depelim er.
     now constructor.
@@ -170,20 +170,20 @@ Proof.
     now econstructor.
   - depelim er.
     constructor.
-    induction H in k, H, H0 |- *; [easy|].
+    induction H in k, H, X |- *; [simpl;easy|].
     cbn in *.
     rewrite <- !Nat.add_succ_r.
-    depelim H0.
+    depelim X.
     constructor; [|easy].
-    now apply p.
+    now apply e.
   - depelim er.
     constructor.
-    induction H in k, H, H0 |- *; [easy|].
+    induction H in k, H, X |- *; [simpl; easy|].
     cbn in *.
     rewrite <- !Nat.add_succ_r.
-    depelim H0.
+    depelim X.
     constructor; [|easy].
-    now apply p.
+    now apply e.
 Qed.
 
 Lemma erases_deps_substl Σ Σ' s t :

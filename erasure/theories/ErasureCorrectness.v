@@ -528,7 +528,7 @@ Lemma Is_proof_ty Σ Γ t :
 Proof.
   intros wfΣ [ty [u [Hty isp]]].
   intros t' ty' Hty'.
-  epose proof (PCUICPrincipality.principal_typing _ wfΣ Hty Hty') as [C [Cty [Cty' Ht'']]].
+  epose proof (PCUICPrincipality.principal_typing _ wfΣ Hty Hty') as [C [[Cty [Cty' Ht'']]]].
   intros Ht'.
   exists ty', u; intuition auto.
   eapply PCUICValidity.validity in Hty; eauto.

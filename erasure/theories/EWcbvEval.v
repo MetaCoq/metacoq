@@ -258,7 +258,7 @@ Section Wcbv.
     - now eapply atom_mkApps in H.
     - intros * isapp appeq. move: (value_head_nApp H) => Ht.
       apply mkApps_eq_inj in appeq; intuition subst; auto.
-    - intros * isapp appeq. move: (isStuckfix_nApp H1) => Hf.
+    - intros * isapp appeq. move: (isStuckfix_nApp H) => Hf.
       apply mkApps_eq_inj in appeq; intuition subst; auto.
   Qed.
 
@@ -478,7 +478,7 @@ Section Wcbv.
   Lemma value_final e : value e -> eval e e.
   Proof.
     induction 1 using value_values_ind; simpl; auto using value.
-    - apply All_All2_refl in H1 as H2.
+    - apply All_All2_refl in X0 as H2.
       move/implyP: (value_head_spec_impl t).
       move/(_ H) => Ht.
       induction l using rev_ind. simpl.
@@ -486,8 +486,8 @@ Section Wcbv.
       * repeat constructor.
       * repeat constructor.
       * rewrite -mkApps_nested.
-        eapply All_app in H0 as [Hl Hx]. depelim Hx.
-        eapply All_app in H1 as [Hl' Hx']. depelim Hx'.
+        eapply All_app in X as [Hl Hx]. depelim Hx.
+        eapply All_app in X0 as [Hl' Hx']. depelim Hx'.
         eapply All2_app_inv_r in H2 as [Hl'' [Hx'' [? [? ?]]]].
         depelim a0.
         eapply eval_app_cong; auto.
@@ -500,7 +500,7 @@ Section Wcbv.
         rewrite orb_false_r.
         destruct t; auto.
     - destruct f; try discriminate.
-      apply All_All2_refl in H0.
+      apply All_All2_refl in X0.
       now apply eval_stuck_fix.
   Qed.
 

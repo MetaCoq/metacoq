@@ -12,11 +12,10 @@ Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
 Set Equations With UIP.
 
-(** We show a weak version of principal typing, close to uniqueness of types.
-  Given two typings of the same terms, we can always find a typing that is
-  smaller that both. It follows trivially from the later definition of 
-  [PCUICSafeRetyping.type_of] which computes the principal type of a terrm
-  but whose correctness proof also requires completeness of weak-head-reduction. *)
+(** We show that principal types are derivable, without relying on normalization.
+  The principal type is burried in the proof here, but [PCUICSafeRetyping.type_of]
+  gives an explicit computation, but its definition and correctness proof requires
+  completeness of weak-head-reduction. *)
 
 Section Principality.
   Context {cf : checker_flags}.
@@ -31,7 +30,6 @@ Section Principality.
     |- _ =>
   specialize (ih _ _ _ h1 h2)
   end.
-
 
   Ltac insum :=
     match goal with
@@ -432,25 +430,6 @@ Lemma eq_term_upto_univ_napp_leq {cf:checker_flags} {Σ : global_env_ext} {n x y
 Proof.
   eapply eq_term_upto_univ_impl; auto; typeclasses eauto.
 Qed.
-(* 
-Lemma typing_leq_term_app {cf:checker_flags} (Σ : global_env_ext) Γ t t' l l' T T' : 
-  wf Σ.1 ->
-  Σ ;;; Γ |- mkApps t l : T ->
-  Σ ;;; Γ |- mkApps t' l' : T' ->
-  All2 (eq_term Σ Σ) l l' ->
-  leq_term_napp Σ #|l| t' t ->
-  Σ ;;; Γ |- mkApps t' l' : T.
-Proof.
-  intros wfΣ Ht Ht' Hl Heq.
-  depind Heq.        *)
-(* 
-Lemma typing_leq_term_gen {cf:checker_flags} (Σ : global_env_ext) Γ t t' T T' : 
-  wf Σ.1 ->
-  Σ ;;; Γ |- t : T ->
-  Σ ;;; Γ |- t' : T' ->
-  leq_term Σ Σ t' t ->
-  Σ ;;; Γ |- t' : T.
-Proof. *)
 
 Lemma R_global_instance_empty_universe_instance Re Rle ref napp u u' :
   R_global_instance [] Re Rle ref napp u u' ->

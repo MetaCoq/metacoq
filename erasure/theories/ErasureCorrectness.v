@@ -528,7 +528,7 @@ Lemma Is_proof_ty Σ Γ t :
 Proof.
   intros wfΣ [ty [u [Hty isp]]].
   intros t' ty' Hty'.
-  epose proof (PCUICPrincipality.principal_typing _ wfΣ Hty Hty') as [C [[Cty [Cty' Ht'']]]].
+  epose proof (PCUICPrincipality.common_typing _ wfΣ Hty Hty') as [C [Cty [Cty' Ht'']]].
   intros Ht'.
   exists ty', u; intuition auto.
   eapply PCUICValidity.validity in Hty; eauto.
@@ -547,7 +547,7 @@ Proof.
   eapply PCUICValidity.inversion_mkApps in Htargs as [A [Ht sp]].
   pose proof (PCUICValidity.validity_term wfΣ Hty).  
   pose proof (PCUICValidity.validity_term wfΣ Ht).  
-  epose proof (PCUICPrincipality.principal_typing _ wfΣ Hty Ht) as [C [Cty [Cty' Ht'']]].
+  epose proof (PCUICPrincipality.common_typing _ wfΣ Hty Ht) as [C [Cty [Cty' Ht'']]].
   eapply PCUICSpine.typing_spine_strengthen in sp; eauto.
   edestruct (sort_typing_spine _ _ _ u _ _ _ pu sp) as [u' [Hty' isp']].
   eapply PCUICElimination.cumul_prop1; eauto.
@@ -881,7 +881,7 @@ Proof.
         (* destruct x4; cbn in e2; subst. destruct X2. destruct p0; cbn in e2; subst. csbn in *.  destruct y.  *)
         exists x3. split; eauto. constructor. eapply eval_iota_sing => //. 3:eauto.
         pose proof (Ee.eval_to_value _ _ _ He_v').
-        eapply value_app_inv in H8. subst. eassumption.
+        eapply value_app_inv in X0. subst. eassumption.
         depelim H2.
         eapply isErasable_Propositional in X0; eauto.
         eapply isPropositional_propositional; eauto.
@@ -977,7 +977,7 @@ Proof.
            constructor. eapply eval_iota_sing => //.
            pose proof (Ee.eval_to_value _ _ _ He_v').
            2:eauto. auto.
-           apply value_app_inv in H9; subst x1.
+           apply value_app_inv in X0; subst x1.
            apply He_v'.
 
            
@@ -1028,7 +1028,7 @@ Proof.
 
         eapply eval_proj_prop => //.
         pose proof (Ee.eval_to_value _ _ _ Hty_vc').
-        eapply value_app_inv in H1. subst. eassumption.
+        eapply value_app_inv in X0. subst. eassumption.
       * rename H3 into Hinf.
         eapply Forall2_nth_error_Some in H4 as (? & ? & ?); eauto.
         assert (Σ ;;; [] |- mkApps (tConstruct i 0 u) args : mkApps (tInd i x) x2).
@@ -1061,7 +1061,7 @@ Proof.
 
            constructor. eapply eval_proj_prop => //.
            pose proof (Ee.eval_to_value _ _ _ Hty_vc').
-           eapply value_app_inv in H2. subst. eassumption.
+           eapply value_app_inv in X0. subst. eassumption.
         -- eapply erases_deps_eval in Hty_vc'; [|now eauto].
            eapply erases_deps_mkApps_inv in Hty_vc' as (? & ?).
            now eapply nth_error_forall in H1; eauto.

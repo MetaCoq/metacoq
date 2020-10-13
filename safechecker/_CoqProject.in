@@ -5,6 +5,5 @@ theories/PCUICSafeConversion.v
 theories/PCUICSafeChecker.v
 theories/SafeTemplateChecker.v
 theories/PCUICSafeRetyping.v
-theories/PCUICPrincipality.v
 
 theories/Extraction.v

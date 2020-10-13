@@ -48,7 +48,7 @@ theories/PCUICRetyping.v
 theories/PCUICCumulProp.v
 theories/PCUICElimination.v
 theories/PCUICSN.v
-
+theories/PCUICPrincipality.v
 theories/PCUICSigmaCalculus.v
 
 theories/PCUICSafeLemmata.v

@@ -40,6 +40,8 @@ Section Normal.
   (* Relative to reduction flags *)
   Inductive whnf (Γ : context) : term -> Prop :=
   | whnf_ne t : whne Γ t -> whnf Γ t
+  | whnf_sort s : whnf Γ (tSort s)
+  | whnf_prod na A B : whnf Γ (tProd na A B)
   | whnf_lam na A B : whnf Γ (tLambda na A B)
   | whnf_cstrapp i n u v : whnf Γ (mkApps (tConstruct i n u) v)
   | whnf_indapp i u v : whnf Γ (mkApps (tInd i u) v)
@@ -65,10 +67,6 @@ Section Normal.
 
   | whne_evar n l :
       whne Γ (tEvar n l)
-
-  | whne_sort s : whne Γ (tSort s)
-
-  | whne_prod na A B : whne Γ (tProd na A B)
 
   | whne_letin_nozeta na B b t :
       RedFlags.zeta flags = false ->
@@ -266,6 +264,18 @@ Proof.
            eapply whne_mkApps_inv in H0 as []; eauto.
            ++ depelim H0. help.
            ++ firstorder congruence.
+      * destruct v as [ | ? v].
+        -- eauto.
+        -- right. intros ?. depelim H0. depelim H0. all:help. clear IHl.
+            eapply whne_mkApps_inv in H0 as []; eauto.
+            ++ depelim H0. help.
+            ++ firstorder congruence.
+      * destruct v as [ | ? v].
+        -- eauto.
+        -- right. intros ?. depelim H0. depelim H0. all:help. clear IHl.
+            eapply whne_mkApps_inv in H0 as []; eauto.
+            ++ depelim H0. help.
+            ++ firstorder congruence.
       * destruct (unfold_fix mfix idx) as [(narg, body) |] eqn:E1.
         -- destruct (nth_error v narg) as [a  | ] eqn:E2.
            ++ destruct (nth_error_all E2 X Γ) as [_ []].

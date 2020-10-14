@@ -2,9 +2,10 @@
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils 
   PCUICClosed PCUICTyping PCUICWcbvEval PCUICLiftSubst PCUICInversion PCUICArities
-  PCUICSR PCUICPrincipality PCUICGeneration PCUICSubstitution PCUICElimination
+  PCUICSR PCUICGeneration PCUICSubstitution PCUICElimination
   PCUICContextConversion PCUICConversion PCUICCanonicity
-  PCUICSpine PCUICInductives PCUICInductiveInversion PCUICConfluence.
+  PCUICSpine PCUICInductives PCUICInductiveInversion PCUICConfluence PCUICPrincipality.
+
 Require Import ssreflect.
 From MetaCoq.Erasure Require Import Extract.
   
@@ -463,10 +464,11 @@ Proof.
     eapply substitution0; eauto.
 Qed.
 
-Lemma arity_type_inv (Σ : global_env_ext) Γ t T1 T2 : wf Σ -> wf_local Σ Γ ->
+Lemma arity_type_inv (Σ : global_env_ext) Γ t T1 T2 : wf_ext Σ -> wf_local Σ Γ ->
   Σ ;;; Γ |- t : T1 -> isArity T1 -> Σ ;;; Γ |- t : T2 -> Is_conv_to_Arity Σ Γ T2.
 Proof.
-  intros wfΣ wfΓ. intros. eapply principal_typing in X as (? & ? & ? & ?). 2:eauto. 2:exact X0.
+  intros wfΣ wfΓ. intros. 
+  eapply common_typing in X as (? & ? & ? & ?). 2:eauto. 2:exact X0.
 
   eapply invert_cumul_arity_r in c0 as (? & X & ?); eauto. sq.
   eapply PCUICCumulativity.red_cumul_inv in X.
@@ -487,7 +489,7 @@ Proof.
   assert (HW : isWfArity_or_Type Σ Γ T). eapply PCUICValidity.validity; eauto.
   eapply PCUICValidity.inversion_mkApps in X as (? & ? & ?); auto.
   destruct X0 as (? & ? & [ | [u]]).
-  - eapply principal_typing in t2 as (? & ? & ? & ?). 2:eauto. 2:exact t0.
+  - eapply common_typing in t2 as (? & ? & ? & ?). 2:eauto. 2:exact t0.
     eapply invert_cumul_arity_r in c0; eauto.
     destruct c0 as (? & ? & ?). destruct H as [].
     eapply PCUICCumulativity.red_cumul_inv in X.
@@ -509,7 +511,7 @@ Proof.
 
     eapply isWfArity_or_Type_red; eauto. exists x3; split; sq; eauto.
   - destruct p.
-    eapply PCUICPrincipality.principal_typing in t2 as (? & ? & ? & ?). 2:eauto. 2:exact t0.
+    eapply PCUICPrincipality.common_typing in t2 as (? & ? & ? & ?). 2:eauto. 2:exact t0.
     eapply cumul_prop1 in c0; eauto.
     eapply cumul_prop2 in c; eauto.
     econstructor. exists T. split. eapply type_mkApps. 2:eassumption. eassumption. right.
@@ -579,7 +581,7 @@ Proof.
   intros wfΣ axfree [T HT] ev [vt [Ht Hp]].
   eapply wcbeval_red in ev; eauto.
   pose proof (subject_reduction _ _ _ _ _ wfΣ.1 HT ev).
-  pose proof (principal_typing _ wfΣ.1 Ht X) as [P [Pvt [Pt vP]]].
+  pose proof (common_typing _ wfΣ Ht X) as [P [Pvt [Pt vP]]].
   destruct Hp.
   eapply arity_type_inv in X. 5:eauto. all:eauto.
   red in X. destruct X as [T' [[red] isA]].
@@ -617,7 +619,7 @@ Lemma isErasable_any_type {Σ Γ t T} :
 Proof.
   intros wfΣ [T' [Ht Ha]].
   intros HT.
-  pose proof (PCUICPrincipality.principal_typing _ (fst wfΣ) Ht HT) as [P [le [le' tC]]].
+  destruct (PCUICPrincipality.common_typing _ wfΣ Ht HT) as [P [le [le' tC]]]. sq.
   destruct Ha.
   left. eapply arity_type_inv. 3:exact Ht. all:eauto using typing_wf_local.
   destruct s as [u [Hu isp]].

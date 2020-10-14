@@ -146,3 +146,5 @@ Include PCUICEnvironment.
 
 Module PCUICLookup := Lookup PCUICTerm PCUICEnvironment.
 Include PCUICLookup.
+
+Derive NoConfusion for global_decl context_decl.

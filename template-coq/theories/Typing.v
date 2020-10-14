@@ -1318,6 +1318,7 @@ Proof.
              pose proof (typing_wf_local Hu).
              specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ X14 (existT _ _ (existT _ _ Hu))))))).
              apply IH. simpl. constructor 1. simpl. auto with arith.
+        -- apply (onIndices Xg).
       * red in onP |- *.
         eapply All_local_env_impl; eauto.
         intros. destruct T; simpl in X14.

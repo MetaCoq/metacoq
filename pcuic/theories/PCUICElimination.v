@@ -5,7 +5,7 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
      PCUICSubstitution PCUICUnivSubst PCUICUnivSubstitution
      PCUICCtxShape PCUICConversion PCUICCumulativity PCUICConfluence PCUICContexts
      PCUICSR PCUICInversion PCUICValidity PCUICSafeLemmata PCUICContextConversion
-     PCUICPrincipality PCUICCumulProp.
+     PCUICCumulProp.
 
 Require Equations.Prop.DepElim.
 From Equations Require Import Equations.
@@ -106,7 +106,7 @@ Proof.
   rewrite PCUICLiftSubst.subst_mkApps. simpl.
   rewrite map_app map_map_compose.
   rewrite PCUICLiftSubst.map_subst_lift_id_eq. 
-  { rewrite - (PCUICSubstitution.context_subst_length _ _ _ spa).
+  { rewrite - (PCUICSubstitution.context_subst_length spa).
       now autorewrite with len. }
   { unfold to_extended_list. 
     rewrite (spine_subst_subst_to_extended_list_k_gen spa).
@@ -456,7 +456,7 @@ Proof.
 
     apply s.
     rewrite subst_app_context in X0.
-    rewrite -(context_subst_length _ _ _ sub) in X0.
+    rewrite -(context_subst_length sub) in X0.
     autorewrite with len in X0.
     eapply (type_local_ctx_All_local_assum_impl Σ 
       (fun Γ Γ' t => 

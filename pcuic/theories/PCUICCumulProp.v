@@ -5,7 +5,7 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
      PCUICSubstitution PCUICUnivSubst PCUICUnivSubstitution
      PCUICCtxShape PCUICConversion PCUICCumulativity PCUICConfluence PCUICContexts
      PCUICSR PCUICInversion PCUICValidity PCUICSafeLemmata PCUICContextConversion
-     PCUICPrincipality PCUICEquality PCUICReduction.
+     PCUICEquality PCUICReduction.
 
 Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 Require Equations.Prop.DepElim.
@@ -23,6 +23,49 @@ Section no_prop_leq_type.
 Context `{cf : checker_flags}.
 Variable Hcf : prop_sub_type = false.
 Variable Hcf' : check_univs = true.
+
+Lemma cumul_sort_confluence {Σ : global_env_ext} {wfΣ : wf Σ} {Γ A u v} :
+  Σ ;;; Γ |- A <= tSort u ->
+  Σ ;;; Γ |- A <= tSort v ->
+  ∑ v', (Σ ;;; Γ |- A = tSort v') *
+        (leq_universe (global_ext_constraints Σ) v' u /\
+          leq_universe (global_ext_constraints Σ) v' v).
+Proof.
+  move=> H H'.
+  eapply invert_cumul_sort_r in H as [u'u ?].
+  eapply invert_cumul_sort_r in H' as [vu ?].
+  destruct p, p0.
+  destruct (red_confluence wfΣ r r0).
+  destruct p.
+  eapply invert_red_sort in r1.
+  eapply invert_red_sort in r2. subst. noconf r2.
+  exists u'u. split; auto.
+Qed.
+
+Lemma cumul_ind_confluence {Σ : global_env_ext} {wfΣ : wf Σ} {Γ A ind u v l l'} :
+  Σ ;;; Γ |- A <= mkApps (tInd ind u) l  ->
+  Σ ;;; Γ |- A <= mkApps (tInd ind v) l' ->
+  ∑ v' l'', (red Σ Γ A (mkApps (tInd ind v') l'')) *
+        All2 (conv Σ Γ) l l'' *
+        All2 (conv Σ Γ) l' l'' *          
+        (R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) #|l| v' u /\
+          R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) #|l'| v' v).
+Proof.
+  move=> H H'.
+  eapply invert_cumul_ind_r in H as [u'u [l'u [redl [ru ?]]]].
+  eapply invert_cumul_ind_r in H' as [vu [l''u [redr [ru' ?]]]].
+  destruct (red_confluence wfΣ redl redr) as [nf [redl' redr']].
+  eapply red_mkApps_tInd in redl'  as [args' [eqnf conv]].
+  eapply red_mkApps_tInd in redr'  as [args'' [eqnf' conv']].
+  rewrite eqnf in eqnf'. solve_discr. subst nf.
+  all:auto. exists u'u, args'; intuition auto.
+  transitivity (mkApps (tInd ind u'u) l'u).
+  auto. eapply red_mkApps. reflexivity. auto.
+  - apply All2_trans with l'u => //. typeclasses eauto.
+    eapply (All2_impl conv). intros. now apply red_conv.
+  - apply All2_trans with l''u => //. typeclasses eauto.
+    eapply (All2_impl conv'). intros. now apply red_conv.
+Qed.
 
 Lemma invert_conv_letin_l_alt {Σ Γ C na d ty b} :
   wf Σ.1 -> wf_local Σ (Γ ,, vdef na d ty) ->
@@ -43,7 +86,7 @@ Lemma is_prop_bottom {Σ Γ T s s'} :
   Universe.is_prop s -> Universe.is_prop s'.
 Proof.
   intros wfΣ hs hs'.
-  destruct (cumul_sort_confluence _ wfΣ.1 hs hs') as [x' [conv [leq leq']]].
+  destruct (cumul_sort_confluence hs hs') as [x' [conv [leq leq']]].
   intros isp.
   unshelve eapply (leq_prop_is_prop _ _ _ _ leq'); auto.
   now unshelve eapply (leq_prop_is_prop _ _ _ _ leq).
@@ -363,7 +406,6 @@ Qed.
 
 Instance cumul_prop_transitive Σ Γ : wf_ext Σ -> CRelationClasses.Transitive (cumul_prop Σ Γ).
 Proof. intros. red. intros. now eapply cumul_prop_trans. Qed.
-Existing Class wf_ext.
 
 Lemma cumul_prop_cum_l Σ Γ A T B : 
   wf_ext Σ ->
@@ -805,6 +847,19 @@ Qed.
 Instance cumul_prop_sym' Σ Γ : wf Σ.1 -> CRelationClasses.Symmetric (cumul_prop Σ Γ).
 Proof.
   now intros wf x y; eapply cumul_prop_sym.
+Qed.
+
+Notation eq_term_napp Σ n x y :=
+  (eq_term_upto_univ_napp Σ (eq_universe Σ) (eq_universe Σ) n x y).
+
+Notation leq_term_napp Σ n x y :=
+    (eq_term_upto_univ_napp Σ (eq_universe Σ) (leq_universe Σ) n x y).
+    
+Lemma eq_term_upto_univ_napp_leq {Σ : global_env_ext} {n x y} :
+  eq_term_napp Σ n x y -> 
+  leq_term_napp Σ n x y.
+Proof.
+  eapply eq_term_upto_univ_impl; auto; typeclasses eauto.
 Qed.
 
 Lemma typing_leq_term_prop (Σ : global_env_ext) Γ t t' T T' :

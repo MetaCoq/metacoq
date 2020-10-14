@@ -104,10 +104,10 @@ Proof.
   rewrite -(firstn_skipn (context_assumptions ctx') args).
   assert (lenctx' : context_assumptions ctx' + context_assumptions ctx = #|args|).
   { assert (lenctx'' : context_assumptions ctx' <= #|args|).
-    move: (context_subst_assumptions_length _ _ _ Hr).
+    move: (context_subst_assumptions_length Hr).
     rewrite firstn_length; lia.
-    move: (context_subst_assumptions_length _ _ _ Hr).
-    move: (context_subst_assumptions_length _ _ _ Hl).
+    move: (context_subst_assumptions_length Hr).
+    move: (context_subst_assumptions_length Hl).
     rewrite firstn_length skipn_length; try lia.
     intros H1 H2. rewrite context_assumptions_subst in H1. lia. }
   move: args s ctx' lenctx' Hl Hr.
@@ -133,7 +133,7 @@ Proof.
       now econstructor.
     * destruct a as [na' [b'|] ty']; simpl in *; noconf H.
       rewrite skipn_S in Hl, Hr, H. subst b.
-      pose proof (context_subst_length _ _ _ Hl). rewrite subst_context_length in H.
+      pose proof (context_subst_length Hl). rewrite subst_context_length in H.
       rewrite {3}H -subst_app_simpl [firstn #|ctx| _ ++ _]firstn_skipn. constructor.
       apply IHctx => //.
 Qed.
@@ -313,7 +313,7 @@ Proof.
           rewrite !skipn_0 {1}subst_empty.
           assert(#|l| <= n) by lia.
           rewrite context_assumptions_subst in instlen.
-          pose proof (context_subst_length _ _ _ cs). rewrite subst_context_length in H0.
+          pose proof (context_subst_length cs). rewrite subst_context_length in H0.
           rewrite !(firstn_app_left _ 0). lia. simpl. rewrite !app_nil_r.
           split. now rewrite H0 skipn_all_app.
           rewrite H0 skipn_all_app. repeat constructor.
@@ -352,7 +352,7 @@ Proof.
         * apply context_subst_app_inv. cbn.
           rewrite !skipn_S skipn_0.
           assert(#|l| <= n) by lia.
-          pose proof (context_subst_length _ _ _ cs). rewrite subst_context_length in H0.
+          pose proof (context_subst_length cs). rewrite subst_context_length in H0.
           rewrite !(firstn_app_left _ 0). lia. simpl. rewrite !app_nil_r.
           split. now rewrite H0 skipn_all_app.
           rewrite H0 skipn_all_app. apply (context_subst_ass _ []). constructor.
@@ -555,7 +555,7 @@ Proof.
   epose proof (context_subst_def _ _ _ na (subst sub (#|Γ1| + #|Γ'|) b) (subst sub (#|Γ1| + #|Γ'|) t) IHcs).
   rewrite /subst_decl /map_decl /=.
   rewrite distr_subst. 
-  now rewrite (context_subst_length _ _ _ cs) in X |- *.
+  now rewrite (context_subst_length cs) in X |- *.
   clear cs wfΔ.
   induction subl; rewrite ?subst_context_snoc ?map_app; simpl; try constructor; auto.
   - eapply substitution in t0; eauto. simpl.
@@ -1685,7 +1685,7 @@ Proof.
       exists (args_sub ++ [b]); split; [split;[constructor|]|]; auto.
       * eapply context_subst_app_inv.
         simpl. rewrite skipn_0.
-        move: (context_subst_length _ _ _ sps).
+        move: (context_subst_length sps).
         autorewrite with len.
         move=> eq'. rewrite eq'.
         rewrite skipn_all_app (firstn_app_left _ 0) //.
@@ -1699,10 +1699,10 @@ Proof.
         eapply All_local_env_app in wf as [wfd _].
         depelim wfd. apply l0.
       * rewrite subst_app_simpl.
-        move: (context_subst_length _ _ _ sps).
+        move: (context_subst_length sps).
         now  autorewrite with len => <-.
       * rewrite subst_app_simpl.
-        move: (context_subst_length _ _ _ sps).
+        move: (context_subst_length sps).
         now  autorewrite with len => <-.
 
     + rewrite /mkProd_or_LetIn /= in sp, wat.
@@ -1730,7 +1730,7 @@ Proof.
       exists (args_sub ++ [a]); split; [split;[constructor|]|]; auto.
       * eapply context_subst_app_inv.
         simpl. rewrite skipn_S skipn_0.
-        move: (context_subst_length _ _ _ sps).
+        move: (context_subst_length sps).
         autorewrite with len.
         move=> eq'. rewrite eq'.
         rewrite skipn_all_app (firstn_app_left _ 0) //.
@@ -1741,10 +1741,10 @@ Proof.
         rewrite -{1}(subst_empty 0 a).
         repeat constructor. now rewrite !subst_empty.
       * rewrite subst_app_simpl.
-        move: (context_subst_length _ _ _ sps).
+        move: (context_subst_length sps).
         now autorewrite with len => <-.
       * rewrite subst_app_simpl.
-        move: (context_subst_length _ _ _ sps).
+        move: (context_subst_length sps).
         now autorewrite with len => <-.
       * apply conv_cumul. now symmetry.
 Qed.

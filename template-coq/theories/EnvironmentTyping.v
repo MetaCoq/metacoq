@@ -526,7 +526,19 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
 
     Definition ind_arities mdecl := arities_context (ind_bodies mdecl).
 
-    Definition respects_variance Σ mdecl v cs :=
+    Definition ind_respects_variance Σ mdecl v indices :=
+      let univs := ind_universes mdecl in
+      match variance_universes univs v with
+      | Some (univs, u, u') =>
+        All2_local_env 
+          (on_decl (fun Γ Γ' t t' => 
+            cumul (Σ, univs) (subst_instance_context u (smash_context [] (ind_params mdecl)) ,,, Γ) t t'))
+          (subst_instance_context u (expand_lets_ctx (ind_params mdecl) (smash_context [] indices)))
+          (subst_instance_context u' (expand_lets_ctx (ind_params mdecl) (smash_context [] indices)))
+      | None => False
+      end.
+
+    Definition cstr_respects_variance Σ mdecl v cs :=
       let univs := ind_universes mdecl in
       match variance_universes univs v with
       | Some (univs, u, u') =>
@@ -578,7 +590,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       on_ctype_variance : (* The constructor type respect the variance annotation 
         on polymorphic universes, if any. *)
         forall v, ind_variance mdecl = Some v -> 
-        respects_variance Σ mdecl v cshape
+        cstr_respects_variance Σ mdecl v cshape
     }.
 
     Arguments on_ctype {Σ mdecl i idecl ind_indices cdecl cshape}.
@@ -715,6 +727,11 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
         ind_sorts :
           check_ind_sorts Σ mdecl.(ind_params) idecl.(ind_kelim)
                           ind_indices ind_cshapes ind_sort;
+
+        onIndices : 
+          (* The inductive type respect the variance annotation  on polymorphic universes, if any. *)
+          forall v, ind_variance mdecl = Some v -> 
+          ind_respects_variance Σ mdecl v ind_indices
       }.
 
     Definition on_variance univs (variances : option (list Variance.t)) :=
@@ -817,6 +834,13 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
   Arguments onConstructors {_ P Σ mind mdecl i idecl}.
   Arguments onProjections {_ P Σ mind mdecl i idecl}.
   Arguments ind_sorts {_ P Σ mind mdecl i idecl}.
+  Arguments onIndices {_ P Σ mind mdecl i idecl}.
+
+  Arguments onInductives {_ P Σ mind mdecl}.
+  Arguments onParams {_ P Σ mind mdecl}.
+  Arguments onNpars {_ P Σ mind mdecl}.
+  Arguments onVariance {_ P Σ mind mdecl}.
+  Arguments onGuard {_ P Σ mind mdecl}.
 
   Lemma All_local_env_impl (P Q : context -> term -> option term -> Type) l :
     All_local_env P l ->

@@ -80,10 +80,12 @@ Proof.
   clear -H. induction H; simpl; auto. constructor. constructor.
   constructor. auto.
 Qed.
+Hint Resolve smash_context_assumption_context : pcuic.
 
 Lemma assumption_context_length ctx : assumption_context ctx ->
   context_assumptions ctx = #|ctx|.
 Proof. induction 1; simpl; auto. Qed.
+Hint Resolve assumption_context_length : pcuic.
 
 Lemma context_subst_length2 {ctx args s} : context_subst ctx args s -> #|args| = context_assumptions ctx.
 Proof.
@@ -138,7 +140,7 @@ Proof.
     pose proof (context_subst_length2 Hc).
     rewrite context_assumptions_app in H.
     destruct IHctx as [IHctx _].
-    pose proof (context_subst_length _ _ _ IHctx).
+    pose proof (context_subst_length IHctx).
     rewrite subst_context_snoc. rewrite !skipn_S.
     rewrite /subst_decl /map_decl /= Nat.add_0_r.
     rewrite -{4}(firstn_skipn #|ctx| s0).
@@ -217,7 +219,7 @@ Proof.
   rewrite lift_context_snoc map_app /=; constructor; auto.
   rewrite lift_context_snoc /= /lift_decl /map_decl /=.
   rewrite Nat.add_0_r.
-  rewrite (context_subst_length _ _ _ X).
+  rewrite (context_subst_length X).
   rewrite distr_lift_subst Nat.add_0_r.
   now constructor.
 Qed.

@@ -145,14 +145,14 @@ Lemma branch_type_spec {cf:checker_flags} Σ ind mdecl idecl cdecl pars u p c na
          (map (lift0 nargs') pars ++         
           to_extended_list substargs)])).
 Proof.
-  move=> decli onmib [] indices ps aeq onAr indsorts onC onP inds.
-  intros cs onc brty.
+  move=> decli onmib [] indices ps aeq onAr indsorts onC onP inds onIndices.
+  intros cs onc brty. simpl in *.
   simpl in onc.
   clear onP.
   assert(lenbodies: inductive_ind ind < #|ind_bodies mdecl|).
   { destruct decli as [_ Hnth]. now apply nth_error_Some_length in Hnth. }
   clear decli.
-  destruct onc.
+  destruct onc. simpl in *.
   destruct cs as [args indi csort] => /=. simpl in *. 
   rewrite cstr_eq in on_ctype.
   unfold branch_type in brty.
@@ -195,7 +195,7 @@ Proof.
   rewrite !map_map_compose map_app.
   rewrite chop_n_app.
   rewrite map_length to_extended_list_k_length.
-  by rewrite (onmib.(onNpars _ _ _ _)).
+  by rewrite (onmib.(onNpars)).
 
   move=> [=] Hargs Hbty. subst nargs. split;auto. rewrite -Hbty.
   clear Hbty bty.
@@ -524,10 +524,8 @@ Proof.
   set (declared_inductive_inv _ _ _ _) as oib' in onp.
   change oib' with oib in *. clear oib'.
   simpl in oib.
-  have onpars := onParams _ _ _ _ 
-    (declared_minductive_inv weaken_env_prop_typing wfΣ wfΣ decli.p1).
-  have parslen := onNpars _ _ _ _ 
-    (declared_minductive_inv weaken_env_prop_typing wfΣ wfΣ decli.p1).
+  have onpars := onParams (declared_minductive_inv weaken_env_prop_typing wfΣ wfΣ decli.p1).
+  have parslen := onNpars (declared_minductive_inv weaken_env_prop_typing wfΣ wfΣ decli.p1).
   simpl in onp. rewrite Heq in onp. 
   destruct onp as [[[wfargs onProjs] Hp2] onp].
   red in onp.
@@ -870,7 +868,6 @@ Lemma declared_projection_type_and_eq {cf:checker_flags} {Σ : global_env_ext} {
   forall (wfΣ : wf Σ.1) (Hdecl : declared_projection Σ mdecl idecl p pdecl),
   let u := PCUICLookup.abstract_instance (ind_universes mdecl) in
   let oib := declared_inductive_inv weaken_env_prop_typing wfΣ wfΣ (let (x, _) := Hdecl in x) in
-  let u := PCUICLookup.abstract_instance (ind_universes mdecl) in
   match ind_cshapes oib return Type with
   | [cs] => 
     isType (Σ.1, ind_universes mdecl)
@@ -1042,20 +1039,18 @@ Proof.
   eapply spine_subst_smash_inv; eauto.
 Qed.
 
-Lemma wf_projection_context {cf:checker_flags} (Σ : global_env_ext) Γ mdecl idecl p pdecl u : 
+Lemma wf_projection_context {cf:checker_flags} (Σ : global_env_ext) {mdecl idecl p pdecl u} : 
   wf Σ.1 ->
   declared_projection Σ mdecl idecl p pdecl ->
   consistent_instance_ext Σ (PCUICAst.ind_universes mdecl) u ->
-  wf_local Σ Γ ->
-  wf_local Σ (Γ ,,, projection_context mdecl idecl p.1.1 u).
+  wf_local Σ (projection_context mdecl idecl p.1.1 u).
 Proof.
   move=> wfΣ decli.
   pose proof (on_declared_projection wfΣ decli) as [onmind onind].
   set (oib := declared_inductive_inv _ _ _ _) in *. clearbody oib.
   simpl in onind; destruct ind_cshapes as [|? []]; try contradiction.
   destruct onind as [[[_ onps] Hpe] onp].
-  move=> cu wfΓ.
-  apply weaken_wf_local; auto.
+  move=> cu.
   assert(wfparams : wf_local Σ (subst_instance_context u (ind_params mdecl))).
   { eapply on_minductive_wf_params; eauto. eapply decli. }
   assert(wfsmash : wf_local Σ (smash_context [] (subst_instance_context u (ind_params mdecl)))).
@@ -1129,7 +1124,7 @@ Proof.
   apply context_subst_app in cs as [parsubst argsubst].
   eexists _, _. move=> lk parctx argctx. subst lk.
   rewrite subst_instance_context_assumptions in argsubst, parsubst.
-  rewrite declm.(onNpars _ _ _ _) in argsubst, parsubst.
+  rewrite declm.(onNpars) in argsubst, parsubst.
   eapply subslet_app_inv in subs as [subp suba].
   rewrite subst_instance_context_length in subp, suba.
   subst parctx argctx.
@@ -1160,7 +1155,7 @@ Proof.
   simpl in y. destruct (ind_cshapes oib) as [|cs []]; try contradiction.
   destruct y as [[[_ onps] ?] ?].
   pose proof (on_projs_noidx _ _ _ _ _ _ onps).
-  pose proof (onNpars _ _ _ _ o).
+  pose proof (onNpars o).
   pose proof (context_subst_length2 spargs).
   rewrite context_assumptions_fold in H1.
   autorewrite with len in H1.

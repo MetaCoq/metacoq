@@ -391,7 +391,7 @@ Proof.
          rewrite {6}/pargctxu in X0.
          rewrite distr_lift_subst_context in X0.
          rewrite closed_ctx_lift in X0.
-         { rewrite /argctxu. rewrite -(context_subst_length _ _ _ csubst).
+         { rewrite /argctxu. rewrite -(context_subst_length csubst).
            rewrite subst_instance_context_length. rewrite Nat.add_comm. eapply closedn_ctx_subst.
           2:eapply declared_minductive_closed_inds; eauto.
           rewrite /argctx. autorewrite with len. simpl.
@@ -447,7 +447,7 @@ Proof.
            simpl in sp. instantiate (1:=inst).
            eapply spine_subst_eq; [eapply sp|].
            rewrite distr_lift_subst_context -H. f_equal.
-           rewrite -(context_subst_length _ _ _ iparsubst0).
+           rewrite -(context_subst_length iparsubst0).
            autorewrite with len. rewrite closed_ctx_lift //.
            epose proof (on_minductive_wf_params_indices_inst _ _ u _ _ _ (proj1 decli) oib cu).
            rewrite subst_instance_context_app in X1. eapply closed_wf_local in X1; eauto.
@@ -487,7 +487,7 @@ Proof.
              eapply (closedn_expand_lets 0) in cl.
              rewrite subst_closedn closedn_subst_instance_constr.
              now len in cl.
-             rewrite -(context_subst_length _ _ _ iparsubst0).
+             rewrite -(context_subst_length iparsubst0).
              autorewrite with len. now rewrite Nat.add_comm; len in cl. }  
            rewrite !map_map_compose. apply (All_All2 X1).
            intros x cl.
@@ -799,7 +799,7 @@ Proof.
       eapply (All2_impl (P:=fun x y => red Σ.1 Γ x y)).
       2:{ intros x' y' hred. rewrite heq_length.
           eapply weakening_red_0; auto. autorewrite with len.
-          pose proof (onNpars _ _ _ _ oi). simpl; lia. }
+          pose proof (onNpars oi). simpl; lia. }
       elim: p.2. simpl. constructor.
       intros n Hn. constructor; auto.
       eapply red1_red. eapply red_cofix_proj. eauto.

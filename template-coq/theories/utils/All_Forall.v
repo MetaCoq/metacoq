@@ -1,11 +1,12 @@
 From Coq Require Import List Bool Arith ssreflect Lia.
 From MetaCoq.Template Require Import MCPrelude MCList MCRelations MCProd MCOption.
-
+From Equations Require Import Equations.
 Import ListNotations.
 
 Local Ltac inv H := inversion_clear H.
 Local Coercion is_true : bool >-> Sortclass.
 
+Derive Signature for Forall.
 
 (** Combinators *)
 
@@ -16,12 +17,15 @@ Inductive All {A} (P : A -> Type) : list A -> Type :=
                   P x -> All P l -> All P (x :: l).
 Arguments All_nil {_ _}.
 Arguments All_cons {_ _ _ _}.
+Derive Signature NoConfusion for All.
 
 Inductive Alli {A} (P : nat -> A -> Type) (n : nat) : list A -> Type :=
 | Alli_nil : Alli P n []
 | Alli_cons hd tl : P n hd -> Alli P (S n) tl -> Alli P n (hd :: tl).
 Arguments Alli_nil {_ _ _}.
 Arguments Alli_cons {_ _ _ _ _}.
+Derive Signature for Alli.
+Derive NoConfusionHom for Alli.
 
 Inductive All2 {A B : Type} (R : A -> B -> Type) : list A -> list B -> Type :=
   All2_nil : All2 R [] []
@@ -29,6 +33,8 @@ Inductive All2 {A B : Type} (R : A -> B -> Type) : list A -> list B -> Type :=
     R x y -> All2 R l l' -> All2 R (x :: l) (y :: l').
 Arguments All2_nil {_ _ _}.
 Arguments All2_cons {_ _ _ _ _ _ _}.
+Derive Signature for All2.
+Derive NoConfusionHom for All2.
 
 Fixpoint alli {A} (p : nat -> A -> bool) (l : list A) (n : nat) : bool :=
   match l with
@@ -496,6 +502,7 @@ Qed.
 Inductive OnOne2 {A : Type} (P : A -> A -> Type) : list A -> list A -> Type :=
 | OnOne2_hd hd hd' tl : P hd hd' -> OnOne2 P (hd :: tl) (hd' :: tl)
 | OnOne2_tl hd tl tl' : OnOne2 P tl tl' -> OnOne2 P (hd :: tl) (hd :: tl').
+Derive Signature NoConfusion for OnOne2.
 
 Lemma OnOne2_All_mix_left {A} {P : A -> A -> Type} {Q : A -> Type} {l l'} :
   All Q l -> OnOne2 P l l' -> OnOne2 (fun x y => (P x y * Q x)%type) l l'.
@@ -1694,6 +1701,7 @@ Inductive All2i {A B : Type} (R : nat -> A -> B -> Type) (n : nat)
       R n x y ->
       All2i R (S n) l r ->
       All2i R n (x :: l) (y :: r).
+Derive Signature NoConfusionHom for All2i.
 
 Lemma All2i_impl :
   forall A B R R' n l l',

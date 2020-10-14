@@ -298,14 +298,14 @@ Next Obligation.
   - intros (? & ? & ?). sq.
      destruct s as [ | (? & ? & ?)].
      + destruct H. eapply arity_type_inv; eauto.
-     + eapply principal_typing in X2 as (? & ? & ? &?). 2:eauto. 2:exact t0.
+     + eapply common_typing in X2 as (? & ? & ? &?). 2:eauto. 2:exact t0.
 
        eapply cumul_prop1 in c; eauto.
        eapply cumul_prop2 in c0; eauto.
 
        eapply type_reduction in X0; eauto.
 
-       eapply principal_typing in c0 as (? & ? & ? & ?). 2:eauto. 2:{ exact X0. }
+       eapply common_typing in c0 as (? & ? & ? & ?). 2:eauto. 2:{ exact X0. }
 
        eapply cumul_prop1 in c; eauto.
 

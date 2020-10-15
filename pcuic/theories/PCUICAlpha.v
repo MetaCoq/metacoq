@@ -382,10 +382,6 @@ Section Alpha.
       econstructor ; eauto.
     - intros ind u npar p c brs args mdecl idecl isdecl X X0 H pars ps pty
              Hcpt X1 X2 H1 H2 X3 X4 btys Hbbt Hbrs v e; invs e.
-      (* intros ind u npar p c brs args mdecl idecl isdecl X X0 H pars pty X1 *)
-      (*        indctx pctx ps btys htc H1 H2 ihp hc ihc ihbrs v e. *)
-      (* eapply types_of_case_eq_term in htc as htc' ; eauto. *)
-      (* destruct htc' as [btys' [ebtys' he]]. *)
       econstructor.
       + eapply build_branches_type_eq_term in Hbbt; tea.
         destruct Hbbt as [btys' [Hbbt1 Hbbt2]].
@@ -393,25 +389,26 @@ Section Alpha.
         unshelve eapply All2_trans'; [..|eassumption].
         * exact (fun br bty : nat × term =>
                    (((br.1 = bty.1 × Σ;;; Γ |- br.2 : bty.2)
-                       × (forall v : term, upto_names' br.2 v -> Σ;;; Γ |- v : bty.2))
-                      × Σ;;; Γ |- bty.2 : tSort ps)
-                     × (forall v : term, upto_names' bty.2 v -> Σ;;; Γ |- v : tSort ps)).
-        * clear. intros x y z X; rdest; cbn in *.
-          congruence. 2: eauto. econstructor; tea. 
-          right. exists ps. eauto. constructor.
+                       × (forall v : term, upto_names' br.2 v -> Σ;;; Γ |- v : bty.2))) × 
+                    (∑ s, (Σ ;;; Γ |- bty.2 : tSort s) × 
+                    (forall v : term, upto_names' bty.2 v -> Σ ;;; Γ |- v : tSort s))).
+        * clear. intros x y z X; intuition auto; cbn in *.
+          congruence.
+          destruct b0 as [s [Hs IH]]; eauto.
+          specialize (IH _ a).
+          econstructor; eauto. constructor.
           now eapply upto_names_impl_leq_term.
+          destruct b0 as [s [Hs IH]]; eauto.
         * eapply All2_trans'; [..|eassumption].
           2: apply All2_sym; tea.
           clear. intros x y z X; rdest; cbn in *; eauto. congruence.
           intros v H. unshelve eapply (upto_names_trans _ _ _ _) in H; tea.
           eauto.
+
       + eapply validity_term ; eauto.
         instantiate (1 := tCase (ind, ind_npars mdecl) p c brs).
         econstructor ; eauto.
-        apply All2_prod_inv in Hbrs as [a1 a4].
-        apply All2_prod_inv in a1 as [a1 a3].
-        apply All2_prod_inv in a1 as [a1 a2].
-        apply All2_prod. all: assumption.
+        solve_all. destruct b0 as [s [Hs IH]]; eauto.
       + constructor.
         eapply eq_term_leq_term.
         apply eq_term_sym.

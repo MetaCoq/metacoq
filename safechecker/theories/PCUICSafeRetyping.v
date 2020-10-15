@@ -157,7 +157,7 @@ Section TypeOf.
     Qed.
     Next Obligation.
       simpl. intros.
-      todo "sort"%string.
+      todo "completeness of reduce_to_sort"%string.
     Qed.
   End SortOf.
 
@@ -694,10 +694,10 @@ Section TypeOf.
   Proof.
     funelim (infer Γ t wt); try solve [simp infer; simpl; try bang; auto].
 
-    simp infer. simpl. f_equal. todo "sorts".
+    simp infer. simpl. f_equal. 
     simp infer. simpl. f_equal. apply H.
     simp infer; simpl; f_equal. apply H.
-    simp infer. simpl. todo "prod".
+    simp infer. simpl. 
     simp infer. eapply infer_clause_1_irrel. revert Heqcall. bang.
   Qed.*)
 

@@ -670,7 +670,9 @@ Proof.
       intros.
       intuition auto. now transitivity y.1.
       eapply type_Cumul; eauto.
-      now eapply conv_cumul, red_conv, red1_red.
+      2:now eapply conv_cumul, red_conv, red1_red.
+      destruct b0 as [s [Hs IH]]; eauto.
+      destruct b0 as [s [Hs IH]]; eauto.
     * right.
       pose proof typec as typec'.
       eapply (env_prop_typing _ _ validity) in typec' as wat; auto.
@@ -700,7 +702,7 @@ Proof.
 
   - (* Case congruence on discriminee *) 
     eapply type_Cumul. eapply type_Case; eauto.
-    * solve_all.
+    * solve_all. destruct b0 as [s [Hs IH]]; eauto.
     * right.
       pose proof typec as typec'.
       eapply (env_prop_typing _ _ validity) in typec' as wat; auto.
@@ -733,10 +735,11 @@ Proof.
     eapply type_Case; eauto.
     eapply (OnOne2_All2_All2 o X5).
     intros [] []; simpl. intros.
-    intuition auto. subst.
+    intuition auto. destruct b as [s [Hs IH]]; eauto. subst.
     intros [] [] []; simpl. intros.
     intuition auto. subst.    
     reflexivity.
+    destruct b0 as [s [Hs IH]]; eauto.
 
   - (* Proj CoFix congruence *)
     assert(typecofix : Σ ;;; Γ |- tProj p (mkApps (tCoFix mfix idx) args0) : subst0 (mkApps (tCoFix mfix idx) args0 :: List.rev args)

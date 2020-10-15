@@ -10,7 +10,6 @@ From Equations Require Import Equations.
 
 (** * Substitution lemmas for typing derivations. *)
 
-
 Local Set Keyed Unification.
 
 Set Default Goal Selector "!".
@@ -2590,6 +2589,7 @@ Proof.
       * subst params. rewrite firstn_map. exact H3.
       * now rewrite closedn_subst_instance_context.
     + solve_all.
+      destruct b0 as [s' [Hs IH]]; eexists; eauto.
 
   - specialize (X2 Γ Γ' Δ s sub eq_refl).
     eapply refine_type.

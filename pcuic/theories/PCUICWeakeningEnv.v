@@ -414,6 +414,7 @@ Proof.
     + eapply p; eauto.
   - econstructor; eauto 2 with extends.
     close_Forall. intros; intuition eauto with extends.
+    destruct b as [s [Hs IH]]; eauto.
   - econstructor; eauto with extends.
     + eapply (All_impl X0); simpl; intuition eauto with extends.
       destruct X as [s Hs]; exists s. intuition eauto with extends.

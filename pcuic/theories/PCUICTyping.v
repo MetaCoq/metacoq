@@ -397,7 +397,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
     isCoFinite mdecl.(ind_finite) = false ->
     forall btys, map_option_out (build_branches_type ind mdecl idecl params u p) = Some btys ->
-    All2 (fun br bty => (br.1 = bty.1) * (Σ ;;; Γ |- br.2 : bty.2) * (Σ ;;; Γ |- bty.2 : tSort ps)) brs btys ->
+    All2 (fun br bty => (br.1 = bty.1) * (Σ ;;; Γ |- br.2 : bty.2) * (∑ s, Σ ;;; Γ |- bty.2 : tSort s)) brs btys ->
     Σ ;;; Γ |- tCase indnpar p c brs : mkApps p (skipn npar args ++ [c])
 
 | type_Proj p c u :
@@ -485,6 +485,8 @@ Module PCUICDeclarationTyping :=
     PCUICLookup.
 Include PCUICDeclarationTyping.
 
+Definition isWfArity_or_Type {cf:checker_flags} Σ Γ T : Type := (isWfArity typing Σ Γ T + isType Σ Γ T).
+
 Definition typing_size `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t : T) : size.
 Proof.
   revert Σ Γ t T d.
@@ -509,7 +511,7 @@ Proof.
   - exact (S (S (wf_local_size _ typing_size _ a))).
   - exact (S (S (wf_local_size _ typing_size _ a))).
   - exact (S (Nat.max d1 (Nat.max d2
-                                (all2_size _ (fun x y p => Nat.max (typing_size Σ Γ (snd x) (snd y) (snd (fst p))) (typing_size _ _ _ _ (snd p))) a)))).
+                                (all2_size _ (fun x y p => Nat.max (typing_size Σ Γ (snd x) (snd y) (snd (fst p))) (typing_size _ _ _ _ (snd p).π2)) a)))).
   - exact (S (Nat.max (Nat.max (wf_local_size _ typing_size _ a) (all_size _ (fun x  p => typing_size Σ _ _ _ p.π2) a0)) (all_size _ (fun x p => typing_size Σ _ _ _ (fst p)) a1))).
   - exact (S (Nat.max (Nat.max (wf_local_size _ typing_size _ a) (all_size _ (fun x  p => typing_size Σ _ _ _ p.π2) a0)) (all_size _ (fun x p => typing_size Σ _ _ _ p) a1))).
   - destruct s. red in i.
@@ -759,7 +761,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         forall btys, map_option_out (build_branches_type ind mdecl idecl params u p) = Some btys ->
         All2 (fun br bty => (br.1 = bty.1) *
                          (Σ ;;; Γ |- br.2 : bty.2) * P Σ Γ br.2 bty.2 *
-                         (Σ ;;; Γ |- bty.2 : tSort ps) * P Σ Γ bty.2 (tSort ps))
+                         ∑ s, (Σ ;;; Γ |- bty.2 : tSort s) * P Σ Γ bty.2 (tSort s))
              brs btys ->
         P Σ Γ (tCase (ind, npar) p c brs) (mkApps p (skipn npar args ++ [c]))) ->
 
@@ -1005,7 +1007,8 @@ Proof.
              --- intuition eauto.
                  +++ eapply (X14 _ _ _ t); eauto. simpl; auto with arith.
                      lia.
-                 +++ eapply (X14 _ _ _ t0); eauto. simpl; auto with arith.
+                 +++ destruct s as [s Hs]. exists s; split; [auto|].
+                     eapply (X14 _ _ _ Hs); eauto. simpl; auto with arith.
                      lia.
              --- apply IHa. auto. intros.
                  eapply (X14 _ _ _ Hty). lia.

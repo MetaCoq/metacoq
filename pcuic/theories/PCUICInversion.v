@@ -186,7 +186,7 @@ Section Inversion.
         map_option_out (build_branches_type ind mdecl idecl params u p)
                      = Some btys ×
         All2 (fun br bty => (br.1 = bty.1 × Σ ;;; Γ |- br.2 : bty.2)
-                           × Σ ;;; Γ |- bty.2 : tSort ps) brs btys ×
+                           × isType Σ Γ bty.2) brs btys ×
         Σ ;;; Γ |- mkApps p (skipn npar args ++ [c]) <= T.
   Proof.
     intros Γ indnpar p c brs T h. invtac h.

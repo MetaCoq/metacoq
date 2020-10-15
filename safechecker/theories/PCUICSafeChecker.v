@@ -98,6 +98,15 @@ Definition mkApps_decompose_app t :
   t = mkApps  (fst (decompose_app t)) (snd (decompose_app t))
   := mkApps_decompose_app_rec t [].
 
+Lemma isType_red {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ T U} : 
+  isType Σ Γ T -> red Σ Γ T U -> isType Σ Γ U.
+Proof.
+  intros [s Hs] red; exists s.
+  eapply subject_reduction; eauto.
+Qed.
+
+  
+
 
 Derive NoConfusion EqDec for sort_family.
 
@@ -700,7 +709,7 @@ Section Typecheck.
   Qed.
 
 
-  Obligation Tactic := Program.Tactics.program_simplify ; eauto.
+  Obligation Tactic := Program.Tactics.program_simplify ; eauto 2.
 
   Program Fixpoint infer (Γ : context) (HΓ : ∥ wf_local Σ Γ ∥) (t : term) {struct t}
     : typing_result ({ A : term & ∥ Σ ;;; Γ |- t : A ∥ }) :=
@@ -952,7 +961,6 @@ Section Typecheck.
   (* tApp *)
   Next Obligation. simpl; eauto using validity_wf. Qed.
   Next Obligation.
-    (* intros Γ HΓ t0 t u Heq_t [A X1] [na [a [b hab]]]; *)
     cbn in *; sq.
     eapply type_reduction in X1 ; try eassumption.
     eapply validity_term in X1 ; try assumption. destruct X1.
@@ -967,7 +975,6 @@ Section Typecheck.
       right. eexists. eassumption.
   Defined.
   Next Obligation.
-    (* intros Γ HΓ t0 t u Heq_t [A X1] [na [a [b hab]]] H; *)
     cbn in *; sq; econstructor.
     2: eassumption.
     eapply type_reduction; eassumption.
@@ -975,7 +982,6 @@ Section Typecheck.
 
   (* tConst *)
   Next Obligation.
-    (* intros Γ HΓ t cst u Heq_t wildcard' d HH H.  *)
     rename Heq_anonymous into HH.
     sq; constructor; try assumption.
     symmetry in HH.
@@ -984,7 +990,6 @@ Section Typecheck.
 
   (* tInd *)
   Next Obligation.
-    (* intros Γ HΓ t ind u Heq_t [? [? ?]] H; *)
     sq; econstructor; eassumption.
   Defined.
 
@@ -1004,19 +1009,12 @@ Section Typecheck.
     change (eqb (ind_npars d) par = true) in H1.
     destruct (eqb_spec (ind_npars d) par) as [e|e]; [|discriminate].
     rename Heq_anonymous into HH. symmetry in HH.
-    todo "case predicacte is well-typed".
-    (*eapply (type_Case_valid_btys Σ Γ) in HH; tea.
-    eapply All_Forall, All_impl; tea. clear.
-    intros x X; constructor; now exists ps.
-    eapply type_Cumul. eapply X4.
-    right.
-    unshelve epose (validity _ _ _ _ _ _ X4). eauto using typing_wf_local.
-    destruct p0.
-    eapply isWfArity_or_Type_red in i. 3:eapply X8. all:eauto.
-    destruct i. red in i. destruct i as [ctx [s' [eq ?]]].
-    rewrite destArity_tInd in eq. discriminate. apply i.
-    eapply red_cumul. apply X8.*)
-  Defined.
+    eapply WfArity_build_case_predicate_type; eauto. simpl in *.
+    2:rewrite e; eauto.
+    eapply type_reduction in t0; eauto. eapply validity in t0; eauto.
+    now eapply PCUICInductiveInversion.isWAT_mkApps_Ind_isType in t0.
+  Qed.
+  
   Next Obligation.
     rename Heq_anonymous2 into XX2. destruct wildcard'.
     symmetry in XX2. simpl in *. eapply isconv_sound in XX2.
@@ -1031,8 +1029,26 @@ Section Typecheck.
     now depelim HH.
   Defined.
   Next Obligation.
-    todo "valid btys".
-(*    assert (∥ All2 (fun x y  => ((fst x = fst y) *
+    symmetry in Heq_anonymous2.
+    unfold iscumul in Heq_anonymous2. simpl in Heq_anonymous2. destruct wildcard'.
+    apply isconv_term_sound in Heq_anonymous2.
+    red in Heq_anonymous2. sq. destruct X.
+    noconf Heq_I''.
+    noconf Heq_I'. noconf Heq_I.
+    noconf Heq_d. noconf Heq_d'.
+    simpl in *. destruct H, X9.
+    change (eqb ind I = true) in H0.
+    destruct (eqb_spec ind I) as [e|e]; [destruct e|discriminate H0].
+    change (eqb (ind_npars d) par = true) in H1.
+    destruct (eqb_spec (ind_npars d) par) as [e|e]; [|discriminate]; subst.
+    eapply type_Cumul in t; eauto.
+    2:{ left. eapply WfArity_build_case_predicate_type; eauto. simpl in *.
+        eapply type_reduction in X0; eauto. eapply validity in X0; eauto.
+        eapply PCUICInductiveInversion.isWAT_mkApps_Ind_isType in X0; eauto. }
+    eapply type_reduction in X0; eauto.
+    
+
+   assert (∥ All2 (fun x y  => ((fst x = fst y) *
                               (Σ;;; Γ |- snd x : snd y))%type) brs btys ∥). {
       depelim HH.
       eapply All2_sq. eapply All2_impl.

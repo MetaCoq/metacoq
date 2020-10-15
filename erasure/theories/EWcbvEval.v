@@ -674,6 +674,6 @@ Section Wcbv.
 
 End Wcbv.
 
-Arguments eval_unique_sig {_ _ _ _}.
-Arguments eval_deterministic {_ _ _ _}.
-Arguments eval_unique {_ _ _}.
+Arguments eval_unique_sig {_ _ _ _ _}.
+Arguments eval_deterministic {_ _ _ _ _}.
+Arguments eval_unique {_ _ _ _}.

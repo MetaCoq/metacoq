@@ -252,7 +252,7 @@ Proof.
   intros axiomfree [T wt].
   intros.
   destruct (erase_correct Σ wfΣ _ _ _ _ _ axiomfree _ H H0 H1 X) as [ev [eg [eg']]].
-  pose proof (Ee.eval_deterministic _ H2 eg'). subst.
+  pose proof (Ee.eval_deterministic H2 eg'). subst.
   eapply erasable_tBox_value; eauto.
 Qed.
 

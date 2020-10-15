@@ -8,10 +8,9 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeConversion.
 
 From Equations Require Import Equations.
+Require Import ssreflect.
 
 Local Set Keyed Unification.
-
-
 
 Lemma weakening_sq `{cf : checker_flags} {Σ Γ} Γ' {t T} :
   ∥ wf Σ.1 ∥ -> ∥ wf_local Σ (Γ ,,, Γ') ∥ ->
@@ -97,6 +96,15 @@ Qed.
 Definition mkApps_decompose_app t :
   t = mkApps  (fst (decompose_app t)) (snd (decompose_app t))
   := mkApps_decompose_app_rec t [].
+
+Lemma isType_red {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ T U} : 
+  isType Σ Γ T -> red Σ Γ T U -> isType Σ Γ U.
+Proof.
+  intros [s Hs] red; exists s.
+  eapply subject_reduction; eauto.
+Qed.
+
+  
 
 
 Derive NoConfusion EqDec for sort_family.
@@ -335,55 +343,6 @@ Lemma map_squash {A B} (f : A -> B) : ∥ A ∥ -> ∥ B ∥.
 Proof.
   intros []; constructor; auto.
 Qed.
-
-(* From valid_btys *)
-Lemma inversion_WAT_indapp {cf:checker_flags} Σ Γ ind u args :
-    forall mdecl idecl (isdecl : declared_inductive Σ.1 mdecl ind idecl),
-    wf Σ.1 ->
-    isType Σ Γ (mkApps (tInd ind u) args) ->
-    mdecl.(ind_npars) <= #|args| /\ inductive_ind ind < #|ind_bodies mdecl| /\
-    consistent_instance_ext Σ (ind_universes mdecl) u.
-Proof.
-Admitted.
-
-
-Lemma wf_local_vass {cf:checker_flags} Σ {Γ na A} s :
-  Σ ;;; Γ |- A : tSort s -> wf_local Σ (Γ ,, vass na A).
-Proof.
-  intro X; apply typing_wf_local in X as Y.
-  constructor; tea. eexists; eassumption.
-Qed.
-
-Lemma WfArity_build_case_predicate_type {cf:checker_flags} Σ
-      Γ ind u args mdecl idecl ps pty :
-  wf Σ.1 ->
-  declared_inductive Σ.1 mdecl ind idecl ->
-  isType Σ Γ (mkApps (tInd ind u) args) ->
-  let params := firstn (ind_npars mdecl) args in
-  build_case_predicate_type ind mdecl idecl params u ps = Some pty ->
-  isWfArity typing Σ Γ pty.
-Proof.
-  intros wfΣ isdecl X params XX. unfold build_case_predicate_type in XX.
-  case_eq (instantiate_params
-             (subst_instance_context u (ind_params mdecl))
-             params (subst_instance_constr u (ind_type idecl)));
-    [|intro e; rewrite e in XX; discriminate].
-  intros ipars Hipars; rewrite Hipars in XX; simpl in XX.
-  case_eq (destArity [] ipars);
-    [|intro e; rewrite e in XX; discriminate].
-  intros [ictx is] Hictxs; rewrite Hictxs in XX; apply some_inj in XX.
-  subst pty. eexists _, _.
-  rewrite destArity_it_mkProd_or_LetIn. split. reflexivity.
-  simpl. eapply wf_local_vass.
-  eapply type_mkApps. econstructor; tea.
-  * admit.
-  * eapply inversion_WAT_indapp with (mdecl0:=mdecl) in X; tea.
-    apply X.
-  * eapply PCUICWeakeningEnv.on_declared_inductive in isdecl as oind; tea.
-    rewrite oind.2.(ind_arity_eq). cbn.
-    admit.
-Admitted.
-
 Lemma destArity_mkApps_None ctx t l :
   destArity ctx t = None -> destArity ctx (mkApps t l) = None.
 Proof.
@@ -396,7 +355,6 @@ Lemma destArity_mkApps_Ind ctx ind u l :
 Proof.
     apply destArity_mkApps_None. reflexivity.
 Qed.
-
 
 Section Typecheck.
   Context {cf : checker_flags} {Σ : global_env_ext} (HΣ : ∥ wf Σ ∥)
@@ -606,7 +564,7 @@ Section Typecheck.
   Proof.
     unfold is_graph_of_uctx in HG.
     case_eq (gc_of_uctx (global_ext_uctx Σ)); [intros [lvs cts] XX|intro XX];
-      rewrite XX in *; simpl in *; [|contradiction].
+      rewrite -> XX in *; simpl in *; [|contradiction].
     unfold gc_of_uctx in XX; simpl in XX.
     destruct (gc_of_constraints Σ); [|discriminate].
     inversion XX; subst. generalize (global_ext_levels Σ); intros lvs; cbn.
@@ -699,8 +657,7 @@ Section Typecheck.
     cbn. apply eqb_decl_spec.
   Qed.
 
-
-  Obligation Tactic := Program.Tactics.program_simplify ; eauto.
+  Obligation Tactic := Program.Tactics.program_simplify ; eauto 2.
 
   Program Fixpoint infer (Γ : context) (HΓ : ∥ wf_local Σ Γ ∥) (t : term) {struct t}
     : typing_result ({ A : term & ∥ Σ ;;; Γ |- t : A ∥ }) :=
@@ -778,6 +735,8 @@ Section Typecheck.
                     (NotConvertible G Γ (tInd ind u) (tInd ind' u)) ;;
       d <- lookup_ind_decl ind' ;;
       let '(decl; d') := d in let '(body; HH) := d' in
+      check_coind <- check_eq_true (negb (isCoFinite (ind_finite decl)))
+            (Msg "Case on coinductives disallowed") ;;
       check_eq_true (ind_npars decl =? par)
                     (Msg "not the right number of parameters") ;;
       pty <- infer Γ HΓ p ;;
@@ -799,8 +758,9 @@ Section Typecheck.
             match map_option_out (build_branches_type ind decl body params u p) with
             | None => raise (Msg "failure in build_branches_type")
             | Some btys => 
+              let btyswf : ∥ All (isType Σ Γ ∘ snd) btys ∥ := _ in
               (fix check_branches (brs btys : list (nat * term))
-                (HH : Forall (squash ∘ (isType Σ Γ) ∘ snd) btys) {struct brs}
+                (HH : ∥ All (isType Σ Γ ∘ snd) btys ∥) {struct brs}
                   : typing_result
                     (All2 (fun br bty => br.1 = bty.1 /\ ∥ Σ ;;; Γ |- br.2 : bty.2 ∥) brs btys)
                           := match brs, btys with
@@ -813,7 +773,7 @@ Section Typecheck.
                                ret (All2_cons (conj _ _) X)
                              | [], _ :: _
                              | _ :: _, [] => raise (Msg "wrong number of branches")
-                             end) brs btys _ ;;
+                             end) brs btys btyswf ;;
                 ret (mkApps p (List.skipn par args ++ [c]); _)
             end
           end
@@ -952,7 +912,6 @@ Section Typecheck.
   (* tApp *)
   Next Obligation. simpl; eauto using validity_wf. Qed.
   Next Obligation.
-    (* intros Γ HΓ t0 t u Heq_t [A X1] [na [a [b hab]]]; *)
     cbn in *; sq.
     eapply type_reduction in X1 ; try eassumption.
     eapply validity_term in X1 ; try assumption. destruct X1.
@@ -967,7 +926,6 @@ Section Typecheck.
       right. eexists. eassumption.
   Defined.
   Next Obligation.
-    (* intros Γ HΓ t0 t u Heq_t [A X1] [na [a [b hab]]] H; *)
     cbn in *; sq; econstructor.
     2: eassumption.
     eapply type_reduction; eassumption.
@@ -975,7 +933,6 @@ Section Typecheck.
 
   (* tConst *)
   Next Obligation.
-    (* intros Γ HΓ t cst u Heq_t wildcard' d HH H.  *)
     rename Heq_anonymous into HH.
     sq; constructor; try assumption.
     symmetry in HH.
@@ -984,7 +941,6 @@ Section Typecheck.
 
   (* tInd *)
   Next Obligation.
-    (* intros Γ HΓ t ind u Heq_t [? [? ?]] H; *)
     sq; econstructor; eassumption.
   Defined.
 
@@ -1004,19 +960,39 @@ Section Typecheck.
     change (eqb (ind_npars d) par = true) in H1.
     destruct (eqb_spec (ind_npars d) par) as [e|e]; [|discriminate].
     rename Heq_anonymous into HH. symmetry in HH.
-    todo "case predicacte is well-typed".
-    (*eapply (type_Case_valid_btys Σ Γ) in HH; tea.
-    eapply All_Forall, All_impl; tea. clear.
-    intros x X; constructor; now exists ps.
-    eapply type_Cumul. eapply X4.
-    right.
-    unshelve epose (validity _ _ _ _ _ _ X4). eauto using typing_wf_local.
-    destruct p0.
-    eapply isWfArity_or_Type_red in i. 3:eapply X8. all:eauto.
-    destruct i. red in i. destruct i as [ctx [s' [eq ?]]].
-    rewrite destArity_tInd in eq. discriminate. apply i.
-    eapply red_cumul. apply X8.*)
+    eapply PCUICInductiveInversion.WfArity_build_case_predicate_type; eauto. simpl in *.
+    2:rewrite e; eauto.
+    eapply type_reduction in t0; eauto. eapply validity in t0; eauto.
+    now eapply PCUICInductiveInversion.isWAT_mkApps_Ind_isType in t0.
+  Qed.
+
+  Next Obligation.
+    symmetry in Heq_anonymous2.
+    unfold iscumul in Heq_anonymous2. simpl in Heq_anonymous2. destruct wildcard'.
+    apply isconv_term_sound in Heq_anonymous2.
+    red in Heq_anonymous2.
+    noconf Heq_I''.
+    noconf Heq_I'. noconf Heq_I.
+    noconf Heq_d. noconf Heq_d'.
+    simpl in *; sq.
+    change (eqb ind I = true) in H0.
+    destruct (eqb_spec ind I) as [e|e]; [destruct e|discriminate H0].
+    change (eqb (ind_npars d) par = true) in H1.
+    destruct (eqb_spec (ind_npars d) par) as [e|e]; [|discriminate]; subst.
+    assert (wfΣ : wf_ext Σ) by (split; auto).
+    eapply type_reduction in X9; eauto.
+    have val:= validity_term wfΣ X9.
+    eapply PCUICInductiveInversion.isWAT_mkApps_Ind_isType in val; eauto.
+    eapply type_Cumul in X; [| |eassumption].
+    2:{ left. eapply PCUICInductiveInversion.WfArity_build_case_predicate_type; eauto. }
+    have [pctx' da] : (∑ pctx', destArity [] pty' =  Some (pctx', ps)).
+    { symmetry in Heq_anonymous1.
+      unshelve eapply (PCUICInductives.build_case_predicate_type_spec (Σ.1, ind_universes d)) in Heq_anonymous1 as [parsubst [_ ->]].
+      eauto. eapply (PCUICWeakeningEnv.on_declared_inductive wfΣ) in HH as [? ?]. eauto.
+      eexists. rewrite !destArity_it_mkProd_or_LetIn; simpl. reflexivity. }
+    eapply PCUICInductiveInversion.build_branches_type_wt. 6:eapply X. all:eauto.
   Defined.
+    
   Next Obligation.
     rename Heq_anonymous2 into XX2. destruct wildcard'.
     symmetry in XX2. simpl in *. eapply isconv_sound in XX2.
@@ -1024,39 +1000,50 @@ Section Typecheck.
     destruct (eqb_spec ind ind') as [e|e]; [destruct e|discriminate H0].
     change (eqb (ind_npars decl) par = true) in H1.
     destruct (eqb_spec (ind_npars decl) par) as [e|e]; [|discriminate]; subst.
-    depelim HH.
-    sq. right; auto.
+    sq. depelim HH. now right.
   Defined.
   Next Obligation.
-    now depelim HH.
+    sq. now depelim HH.
   Defined.
+
+  (* The obligation tactic removes a useful let here. *)
+  Obligation Tactic := idtac.
   Next Obligation.
-    todo "valid btys".
-(*    assert (∥ All2 (fun x y  => ((fst x = fst y) *
-                              (Σ;;; Γ |- snd x : snd y))%type) brs btys ∥). {
-      depelim HH.
-      eapply All2_sq. eapply All2_impl.
-      specialize (check_branches brs _ HH).
-      eassumption.
-      cbn; intros ? ? []. now sq. }
-    destruct H as [H], X9, XX2 as [XX2]. sq.
-    eapply type_Case' with (pty0:=pty'); tea.
+    intros. clearbody btyswf. idtac; Program.Tactics.program_simplify.
+    symmetry in Heq_anonymous2.
+    unfold iscumul in Heq_anonymous2. simpl in Heq_anonymous2. destruct wildcard'.
+    apply isconv_term_sound in Heq_anonymous2.
+    noconf Heq_I''. noconf Heq_I'. noconf Heq_I.
+    noconf Heq_d. noconf Heq_d'. simpl in *.
+    assert (∥ All2 (fun x y  => ((fst x = fst y) *
+                              (Σ;;; Γ |- snd x : snd y) * isType Σ Γ y.2)%type) brs btys ∥). {
+      solve_all. simpl in *.
+      destruct btyswf. eapply All2_sq. solve_all. simpl in *; intuition (sq; auto). }
+    clear H3. sq.
+    change (eqb ind I = true) in H0.
+    destruct (eqb_spec ind I) as [e|e]; [destruct e|discriminate H0].
+    change (eqb (ind_npars d) par = true) in H1.
+    destruct (eqb_spec (ind_npars d) par) as [e|e]; [|discriminate]; subst.
+    assert (wfΣ : wf_ext Σ) by (split; auto).
+    eapply type_reduction in X9; eauto.
+    eapply type_Cumul in X; eauto.
+    2:{ left. eapply PCUICInductiveInversion.WfArity_build_case_predicate_type; eauto. simpl in *.
+        eapply validity in X9; eauto.
+        eapply PCUICInductiveInversion.isWAT_mkApps_Ind_isType in X9; eauto. }
+    have [pctx' da] : (∑ pctx', destArity [] pty' =  Some (pctx', ps)).
+    { symmetry in Heq_anonymous1.
+      unshelve eapply (PCUICInductives.build_case_predicate_type_spec (Σ.1, ind_universes d)) in Heq_anonymous1 as [parsubst [_ ->]].
+      eauto. eapply (PCUICWeakeningEnv.on_declared_inductive wfΣ) in HH as [? ?]. eauto.
+      eexists. rewrite !destArity_it_mkProd_or_LetIn; simpl. reflexivity. }
+    eapply type_Case with (pty0:=pty'); tea.
     - reflexivity.
     - symmetry; eassumption.
-    - econstructor; tea.
-      rename Heq_anonymous1 into XX. left.
-      eapply WfArity_build_case_predicate_type; tea.
-      2: symmetry; eassumption.
-      simpl in *. apply validity_term in X9; tea.
-      eapply isWfArity_or_Type_red in X9; tea.
-      destruct X9; [|assumption].
-      destruct i as [ctx [s [HH1 _]]]. cbn in HH1.
-      rewrite destArity_mkApps_Ind in HH1; discriminate.
-    - eapply type_reduction; tea.
-    - symmetry; eassumption.*)
+    - destruct isCoFinite; auto.
+    - symmetry; eauto.
   Defined.
-  Next Obligation. todo "type_Case". Qed.
   
+  Obligation Tactic := Program.Tactics.program_simplify ; eauto 2.
+
   (* tProj *)
   Next Obligation. simpl; eauto using validity_wf. Qed.
   Next Obligation.
@@ -1502,7 +1489,7 @@ Section CheckEnv.
       unfold is_consistent, global_ext_uctx, gc_of_uctx, global_ext_constraints.
       simpl.
       rewrite gc_of_constraints_union.
-      rewrite HΣctrs, Hctrs.
+      rewrite HΣctrs Hctrs.
       inversion Huctx; subst; clear Huctx.
       clear -H2 cf. rewrite add_uctx_make_graph in H2.
       refine (eq_rect _ (fun G => wGraph.is_acyclic G = true) H2 _ _).
@@ -1538,14 +1525,14 @@ Section CheckEnv.
     unfold gc_of_uctx in e. simpl in e.
     case_eq (gc_of_constraints (constraints_of_udecl (universes_decl_of_decl g)));
       [|intro HH; rewrite HH in e; discriminate e].
-    intros ctrs' Hctrs'. rewrite Hctrs' in *.
+    intros ctrs' Hctrs'. rewrite Hctrs' in e.
     cbn in e. inversion e; subst; clear e.
     unfold global_ext_constraints; simpl.
     rewrite gc_of_constraints_union. rewrite Hctrs'.
     red in i. unfold gc_of_uctx in i; simpl in i.
     case_eq (gc_of_constraints (global_constraints Σ));
       [|intro HH; rewrite HH in i; cbn in i; contradiction i].
-    intros Σctrs HΣctrs; rewrite HΣctrs in *; simpl in *.
+    intros Σctrs HΣctrs; rewrite HΣctrs in i; simpl in *.
     subst G. unfold global_ext_levels; simpl. rewrite no_prop_levels_union.
     symmetry; apply add_uctx_make_graph.
   Qed.
@@ -1555,7 +1542,7 @@ Section CheckEnv.
     unfold gc_of_uctx in e. simpl in e.
     case_eq (gc_of_constraints (constraints_of_udecl (universes_decl_of_decl g)));
       [|intro HH; rewrite HH in e; discriminate e].
-    intros ctrs' Hctrs'. rewrite Hctrs' in *.
+    intros ctrs' Hctrs'. rewrite Hctrs' in e.
     cbn in e. inversion e; subst; clear e.
     unfold global_ext_constraints; simpl.
     rewrite gc_of_constraints_union.
@@ -1567,7 +1554,7 @@ Section CheckEnv.
     red in i. unfold gc_of_uctx in i; simpl in i.
     case_eq (gc_of_constraints (global_constraints Σ));
       [|intro HH; rewrite HH in i; cbn in i; contradiction i].
-    intros Σctrs HΣctrs; rewrite HΣctrs in *; simpl in *.
+    intros Σctrs HΣctrs; rewrite HΣctrs in i; simpl in *.
     subst G. unfold global_ext_levels; simpl. rewrite no_prop_levels_union.
     assert (eq: monomorphic_levels_decl g
                 = levels_of_udecl (universes_decl_of_decl g)). {
@@ -1622,14 +1609,14 @@ Section CheckEnv.
     unfold gc_of_uctx in e. simpl in e.
     case_eq (gc_of_constraints (constraints_of_udecl φ));
       [|intro HH; rewrite HH in e; discriminate e].
-    intros ctrs' Hctrs'. rewrite Hctrs' in *.
+    intros ctrs' Hctrs'. rewrite Hctrs' in e.
     cbn in e. inversion e; subst; clear e.
     unfold global_ext_constraints; simpl.
     rewrite gc_of_constraints_union. rewrite Hctrs'.
     red in i. unfold gc_of_uctx in i; simpl in i.
     case_eq (gc_of_constraints (global_constraints p.1));
       [|intro HH; rewrite HH in i; cbn in i; contradiction i].
-    intros Σctrs HΣctrs; rewrite HΣctrs in *; simpl in *.
+    intros Σctrs HΣctrs; rewrite HΣctrs in i; simpl in *.
     subst G. unfold global_ext_levels; simpl. rewrite no_prop_levels_union.
     symmetry; apply add_uctx_make_graph.
   Qed.

@@ -220,10 +220,10 @@ Qed.
 
 Inductive arity_spine {cf : checker_flags} (Σ : PCUICAst.global_env_ext) (Γ : PCUICAst.context) : 
   term -> list term -> term -> Type :=
-| arity_spine_nil ty ty' :
-  isWfArity_or_Type Σ Γ ty' ->
-  Σ ;;; Γ |- ty <= ty' ->
-  arity_spine Σ Γ ty [] ty'
+| arity_spine_nil ty : arity_spine Σ Γ ty [] ty
+| arity_spine_conv ty ty' : isWfArity_or_Type Σ Γ ty' ->
+  Σ ;;; Γ |- ty <= ty' -> arity_spine Σ Γ ty [] ty'
+  
 | arity_spine_def : forall (tl : list term) 
                       (na : name) (A a B B' : term),                      
                     arity_spine Σ Γ (B {0 := a}) tl B' ->
@@ -247,7 +247,7 @@ Lemma wf_arity_spine_typing_spine {cf:checker_flags} Σ Γ T args T' :
 Proof.
   intros wfΣ [wf sp].
   have wfΓ := isWAT_wf_local wf.
-  induction sp; try constructor; auto.
+  induction sp; try constructor; auto. reflexivity.
   eapply isWAT_tLetIn_red in wf; auto.
   specialize (IHsp wf).
   eapply typing_spine_strengthen; eauto.
@@ -869,8 +869,7 @@ Lemma arity_spine_it_mkProd_or_LetIn_Sort {cf:checker_flags} Σ Γ ctx s args in
 Proof.
   intros wfΣ sp. rewrite -(app_nil_r args).
   eapply arity_spine_it_mkProd_or_LetIn => //.
-  eauto. constructor. left. eexists _, _; intuition eauto.
-  eapply sp. simpl. reflexivity.
+  eauto. constructor.
 Qed.
 
 Lemma ctx_inst_app {cf:checker_flags} {Σ Γ} {Δ : context} {Δ' args} (c : ctx_inst Σ Γ args (Δ ++ Δ')) :
@@ -1625,30 +1624,19 @@ Qed.
 Lemma arity_spine_eq {cf:checker_flags} Σ Γ T T' :
   isWfArity_or_Type Σ Γ T' ->
   T = T' -> arity_spine Σ Γ T [] T'.
-Proof. intros H  ->; constructor;auto. reflexivity. Qed.
-(* 
-Lemma typing_spine_isWAT {cf : checker_flags} {Σ : global_env × universes_decl}
-  {Γ T args T'} :
-  wf Σ.1 ->
-  wf_local Σ Γ ->
-  typing_spine Σ Γ T args T' ->
-  isWfArity_or_Type Σ Γ T.
-Proof.
-  intros wfΣ wfΓ.
-  induction 1. *)
+Proof. intros H ->; constructor;auto. Qed.
 
-
-Lemma arity_spine_letin_inv {cf:checker_flags} {Σ Γ na b B T args S} : 
+(* Lemma arity_spine_letin_inv {cf:checker_flags} {Σ Γ na b B T args S} : 
   wf Σ.1 ->
   arity_spine Σ Γ (tLetIn na b B T) args S ->
   arity_spine Σ Γ (T {0 := b}) args S.
 Proof.
   intros wfΣ Hsp.
   depelim Hsp.
-  constructor. auto.
+  econstructor. auto.
   now eapply invert_cumul_letin_l in c.
   auto.
-Qed.
+Qed. *)
 
 Lemma typing_spine_inv {cf : checker_flags} {Σ : global_env × universes_decl}
   {Γ Δ : context} {T args args' T'} :

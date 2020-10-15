@@ -1033,9 +1033,7 @@ Proof.
   eapply isWAT_it_mkProd_or_LetIn; auto. now rewrite app_context_nil_l.
   rewrite -(app_nil_r (to_extended_list (smash_context [] (subst_instance_context u Δ)))).
   eapply arity_spine_it_mkProd_or_LetIn; auto.
-  2:{ simpl; constructor; [|reflexivity].
-      eapply isWAT_tSort; auto.
-      now apply wf_local_smash_context. }
+  2:{ simpl; constructor. }
   eapply spine_subst_smash_inv; eauto.
 Qed.
 

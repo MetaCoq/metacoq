@@ -367,8 +367,7 @@ Proof.
          simpl in sp. rewrite !map_map_compose in sp. eapply sp.
          autorewrite with len.
          simpl. constructor.
-         2:{ simpl; constructor; auto. left; eexists _, _; intuition eauto.
-             reflexivity. }
+         2:{ simpl; constructor; auto. }
          rewrite lift_mkApps subst_mkApps.
          simpl. eapply type_mkApps. econstructor; eauto.
          split; eauto.
@@ -533,7 +532,7 @@ Proof.
       split. eapply validity; eauto.
       eapply arity_spine_it_mkProd_or_LetIn; eauto.
       simpl. constructor. 
-      2:{ constructor; pcuic. left; eexists _, _; intuition eauto. }
+      2:{ constructor; pcuic. }
       rewrite subst_mkApps /= map_app. unfold to_extended_list.
       generalize (spine_subst_subst_to_extended_list_k subsidx).
       rewrite to_extended_list_k_subst 
@@ -670,7 +669,9 @@ Proof.
       intros.
       intuition auto. now transitivity y.1.
       eapply type_Cumul; eauto.
-      now eapply conv_cumul, red_conv, red1_red.
+      2:now eapply conv_cumul, red_conv, red1_red.
+      destruct b0 as [s [Hs IH]]; eauto.
+      destruct b0 as [s [Hs IH]]; eauto.
     * right.
       pose proof typec as typec'.
       eapply (env_prop_typing _ _ validity) in typec' as wat; auto.
@@ -688,8 +689,6 @@ Proof.
       split. apply (env_prop_typing _ _ validity) in typep as ?; eauto.
       eapply arity_spine_it_mkProd_or_LetIn; eauto.
       simpl. constructor; [ |constructor].
-      2:{ left; eexists _, _; split. simpl; eauto. auto. }
-      2:reflexivity.
       rewrite subst_mkApps. simpl.
       rewrite map_app. rewrite map_map_compose.
       rewrite map_subst_lift_id_eq. now rewrite (subslet_length sargs); autorewrite with len.
@@ -700,7 +699,7 @@ Proof.
 
   - (* Case congruence on discriminee *) 
     eapply type_Cumul. eapply type_Case; eauto.
-    * solve_all.
+    * solve_all. destruct b0 as [s [Hs IH]]; eauto.
     * right.
       pose proof typec as typec'.
       eapply (env_prop_typing _ _ validity) in typec' as wat; auto.
@@ -718,8 +717,6 @@ Proof.
       split. apply (env_prop_typing _ _ validity) in typep; eauto.
       eapply arity_spine_it_mkProd_or_LetIn; eauto.
       simpl. constructor; [ |constructor].
-      2:{ left; eexists _, _; split. simpl; eauto. auto. }
-      2:reflexivity.
       rewrite subst_mkApps. simpl.
       rewrite map_app. rewrite map_map_compose.
       rewrite map_subst_lift_id_eq. now rewrite (subslet_length sargs); autorewrite with len.
@@ -733,10 +730,11 @@ Proof.
     eapply type_Case; eauto.
     eapply (OnOne2_All2_All2 o X5).
     intros [] []; simpl. intros.
-    intuition auto. subst.
+    intuition auto. destruct b as [s [Hs IH]]; eauto. subst.
     intros [] [] []; simpl. intros.
     intuition auto. subst.    
     reflexivity.
+    destruct b0 as [s [Hs IH]]; eauto.
 
   - (* Proj CoFix congruence *)
     assert(typecofix : Σ ;;; Γ |- tProj p (mkApps (tCoFix mfix idx) args0) : subst0 (mkApps (tCoFix mfix idx) args0 :: List.rev args)

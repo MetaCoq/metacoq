@@ -938,7 +938,7 @@ in All (for wf_local assumptions)
       apply X4.
     + admit. (* map_option_out build branche type *)
     (* this should be similar to trans_build_case_predicate_type *)
-    + now apply trans_branches.
+    + admit. (* now apply trans_branches.*)
   - rewrite trans_subst.
     rewrite trans_subst_instance_constr.
     cbn.

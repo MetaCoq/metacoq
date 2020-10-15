@@ -115,7 +115,14 @@ Qed.
 Lemma decompose_app_size_tApp2 t1 t2 :
   Forall (fun t => size t < size (tApp t1 t2)) (decompose_app (tApp t1 t2)).2.
 Proof.
-  todo String.EmptyString.
+  destruct decompose_app eqn:da.
+  eapply decompose_app_inv in da. rewrite da. simpl. clear da.
+  induction l using rev_ind; try constructor.
+  eapply app_Forall; [|constructor].
+  eapply Forall_impl; eauto; simpl; intros.
+  rewrite <- mkApps_nested; simpl. lia.
+  rewrite <- mkApps_nested; simpl. lia.
+  constructor.
 Qed.
 
 Definition mkApps_decompose_app_rec t l :

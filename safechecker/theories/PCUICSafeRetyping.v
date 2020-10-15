@@ -157,7 +157,7 @@ Section TypeOf.
     Qed.
     Next Obligation.
       simpl. intros.
-      todo "sort"%string.
+      todo "completeness of reduce_to_sort"%string.
     Qed.
   End SortOf.
 
@@ -469,8 +469,7 @@ Section TypeOf.
             rewrite subst_instance_constr_it_mkProd_or_LetIn subst_it_mkProd_or_LetIn.
             simpl. rewrite -(app_nil_r (skipn _ _)).
             eapply arity_spine_it_mkProd_or_LetIn_smash; eauto.
-            2:{ simpl. constructor; auto. left; eexists _, _; intuition eauto. pcuic.
-                constructor. reflexivity. }
+            2:{ simpl. constructor; auto. }
             eapply validity_term in Hty; eauto.
             unshelve epose proof (isWAT_mkApps_Ind w decli _ Hty) as [parsubst' [argsubst' [[spars' spargs'] ?]]]; pcuic.
             eapply (subslet_cumul _ _ _ (smash_context [] (subst_context parsubst' 0 
@@ -694,10 +693,10 @@ Section TypeOf.
   Proof.
     funelim (infer Γ t wt); try solve [simp infer; simpl; try bang; auto].
 
-    simp infer. simpl. f_equal. todo "sorts".
+    simp infer. simpl. f_equal. 
     simp infer. simpl. f_equal. apply H.
     simp infer; simpl; f_equal. apply H.
-    simp infer. simpl. todo "prod".
+    simp infer. simpl. 
     simp infer. eapply infer_clause_1_irrel. revert Heqcall. bang.
   Qed.*)
 

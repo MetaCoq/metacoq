@@ -490,7 +490,7 @@ Proof.
 
     pose proof (Prelim.monad_map_All2 _ _ _ brs a2 E2).
 
-    eapply All2_All_left in X3. 2:{ intros. destruct X5. destruct p0. destruct p0. exact e0. }
+    eapply All2_All_left in X3. 2:{ intros. destruct X5. destruct p0. destruct p0. exact e. }
 
     eapply All2_impl.
     eapply All2_All_mix_left. eassumption. eassumption.

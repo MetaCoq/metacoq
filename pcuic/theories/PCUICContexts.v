@@ -190,14 +190,13 @@ Proof.
 Qed.
 
 Lemma map_subst_instance_constr_to_extended_list_k u ctx k :
-  map (subst_instance_constr u) (to_extended_list_k (subst_instance_context u ctx) k)
-  = to_extended_list_k (subst_instance_context u ctx) k.
+  map (subst_instance_constr u) (to_extended_list_k ctx k)
+  = to_extended_list_k ctx k.
 Proof.
-  pose proof (to_extended_list_k_spec (subst_instance_context u ctx) k).
+  pose proof (to_extended_list_k_spec ctx k).
   solve_all.
   now destruct H as [n [-> _]].
 Qed.
-
 
 Lemma subst_instance_to_extended_list_k u l k
   : map (subst_instance_constr u) (to_extended_list_k l k)

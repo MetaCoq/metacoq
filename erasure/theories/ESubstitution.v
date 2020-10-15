@@ -96,7 +96,7 @@ Proof.
     eapply extends_lookup in H0; eauto. now rewrite H0.
   - econstructor. all:eauto.
     2:{ eauto. eapply All2_All_left in X3.
-        2:{ intros ? ? [[[? ?] ?] ?]. exact e. }
+        2:{ intros ? ? [[[? ?] ?] ?]. exact e0. }
         eapply All2_All_mix_left in X3; eauto.
         eapply All2_impl. exact X3.
         intros. destruct H as [? []].
@@ -198,7 +198,7 @@ Proof.
     + eapply H4; eauto.
     + eapply All2_map.
       eapply All2_All_left in X3.
-      2:{ idtac. intros ? ? [[[[? ?] e0] ?] e']. exact e0. }
+      2:{ idtac. intros ? ? [[[? ?] ?] [? [? ?]]]. exact e0. }
       eapply All2_impl. eapply All2_All_mix_left.
       eassumption. eassumption. intros.
       destruct H. destruct p0.
@@ -421,7 +421,7 @@ Proof.
         eapply All2_impl_In; eauto.
         intros. destruct H10, x, y. cbn in *. subst. split; eauto.
         eapply All2_All_left in X3.
-        2:{ intros ? ? [[[[? ?] e1] ?] ?]. exact e1. }
+        2:{ intros ? ? [[[? ?] e1]]. exact e1. }
 
         eapply In_nth_error in H8 as [].
         eapply nth_error_all in X3; eauto.

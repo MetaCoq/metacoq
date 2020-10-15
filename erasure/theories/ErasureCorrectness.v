@@ -128,7 +128,7 @@ Proof.
     eapply PCUICContextConversion.context_conversion with Γ; eauto.
     eassumption.
   - econstructor. eauto. eauto.
-    eapply All2_All_left in X3. 2:{ idtac. intros ? ? [[[? e] ?] ?]. exact e. }
+    eapply All2_All_left in X3. 2:{ idtac. intros ? ? [[? e] ?]. exact e. }
 
     eapply All2_impl. eapply All2_All_mix_left.
     all: firstorder.
@@ -254,7 +254,7 @@ Proof.
   - cbn. econstructor; eauto.
     eapply All2_map_left.
     eapply All2_impl. eapply All2_All_mix_left.
-    eapply All2_All_left. exact X3. intros ? ? [[[? e] ?] ?].
+    eapply All2_All_left. exact X3. intros ? ? [[? e] ?].
     exact e. exact X6.
     intros; cbn in *. destruct H. destruct p0. split; eauto.
   - assert (Hw :  wf_local (Σ.1, univs) (subst_instance_context u (Γ ,,, types))).

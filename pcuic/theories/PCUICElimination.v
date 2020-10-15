@@ -115,9 +115,6 @@ Proof.
     subst npar.
     now rewrite firstn_skipn. }
   - constructor.
-    * left; eexists _, _; intuition eauto. simpl.
-      eapply typing_wf_local; eauto.
-    * reflexivity.
   - unfold universe_family in Huf.
     destruct (Universe.is_prop ps); auto.
     destruct (Universe.is_small ps); discriminate.

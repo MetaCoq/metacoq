@@ -1703,6 +1703,57 @@ Proof.
   destruct y as [[_ onps] onp]. lia.
 Qed.
 
+Lemma declared_inductive_unique {Σ mdecl idecl p} (q r : declared_inductive Σ mdecl p idecl) : q = r.
+Proof.
+  unfold declared_inductive in q, r.
+  destruct q, r.
+  now rewrite (uip e e0) (uip d d0).
+Qed.
+
+Lemma declared_inductive_unique_sig {cf:checker_flags} {Σ ind mib decl mib' decl'}
+      (decl1 : declared_inductive Σ mib ind decl)
+      (decl2 : declared_inductive Σ mib' ind decl') :
+  @sigmaI _ (fun '(m, d) => declared_inductive Σ m ind d)
+          (mib, decl) decl1 =
+  @sigmaI _ _ (mib', decl') decl2.
+Proof.
+  pose proof (declared_inductive_inj decl1 decl2) as (<-&<-).
+  pose proof (declared_inductive_unique decl1 decl2) as ->.
+  reflexivity.
+Qed.
+
+Lemma projected_constructor_eq
+      {cf:checker_flags} Σ (hΣ : ∥wf Σ.1∥) Γ ind c u args ind' u' args' mib oib npars idx proj :
+  Σ;;; Γ |- mkApps (tConstruct ind c u) args : mkApps (tInd ind' u') args' ->
+  declared_projection Σ.1 mib oib (ind', npars, idx) proj ->
+  c = 0.
+Proof.
+  intros typ decl.
+  destruct hΣ as [wfΣ].
+  pose proof (inversion_mkApps wfΣ typ) as (?&ctor_typ&_); auto.
+  apply inversion_Construct in ctor_typ as (?&?&?&?&?&?&?); auto.
+  unshelve eapply Construct_Ind_ind_eq in typ.
+  5: eassumption.
+  1: now auto.
+  cbn in typ.
+  destruct d; cbn in typ.
+  destruct All2_nth_error_Some; cbn in typ.
+  destruct p; cbn in typ.
+  destruct typ as ((((<-&?)&?)&?)&?).
+  pose proof (on_declared_projection wfΣ decl) as (_&proj').
+  clear -e0 proj'.
+  cbn in *.
+  destruct decl as (decl_oib&?&?).
+  pose proof (declared_inductive_unique_sig decl_oib d) as H'.
+  noconf H'.
+  destruct ind_cshapes; [easy|].
+  destruct l; [|easy].
+  destruct c; [easy|].
+  cbn in *.
+  now rewrite nth_error_nil in e0.
+Qed.
+
+
 Ltac unf_env := 
   change PCUICEnvironment.it_mkProd_or_LetIn with it_mkProd_or_LetIn in *; 
   change PCUICEnvironment.to_extended_list_k with to_extended_list_k in *; 
@@ -3487,13 +3538,6 @@ Proof.
   destruct ind_cshapes as [|[] []] eqn:cseq => //.
   depelim onConstructors. exists x.
   split; eauto. eapply declp. simpl. now rewrite H.
-Qed.
-
-Lemma declared_inductive_unique {Σ mdecl idecl p} (q r : declared_inductive Σ mdecl p idecl) : q = r.
-Proof.
-  unfold declared_inductive in q, r.
-  destruct q, r.
-  now rewrite (uip e e0) (uip d d0).
 Qed.
 
 Lemma length_nil {A} (l : list A) : #|l| = 0 -> l = [].

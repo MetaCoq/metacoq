@@ -744,9 +744,9 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma nth_error_snoc {A} (l : list A) (a : A) i :
+Lemma nth_error_snoc {A} (l : list A) (a : A) (l' : list A) i :
   i = #|l| ->
-  nth_error (l ++ [a]) i = Some a.
+  nth_error (l ++ a :: l') i = Some a.
 Proof.
   intros ->.
   rewrite nth_error_app_ge; [easy|].

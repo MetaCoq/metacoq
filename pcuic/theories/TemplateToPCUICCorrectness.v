@@ -1168,10 +1168,11 @@ Proof.
   - (* Sorts *)
     constructor; eauto.
     eapply trans_wf_local; eauto.
-    now rewrite global_ext_levels_trans.
+    admit. (* todo *)
+    (* now rewrite global_ext_levels_trans. *)
 
   - (* Casts *)
-    eapply refine_type. eapply type_App with nAnon (trans t).
+    eapply refine_type. eapply type_App with _ (trans t).
     eapply type_Lambda; eauto. eapply type_Rel. econstructor; auto.
     eapply typing_wf_local. eauto. eauto. simpl. exists s; auto. reflexivity. eauto.
     simpl. unfold subst1. rewrite simpl_subst; auto. now rewrite lift0_p.
@@ -1185,7 +1186,7 @@ Proof.
     simpl in p.
     destruct (TypingWf.typing_wf _ wfΣ _ _ _ typrod) as [wfAB _].
     intros wfT.
-    econstructor; eauto. right. exists s; eauto.
+    econstructor; eauto. exists s; eauto.
     change (tProd na (trans A) (trans B)) with (trans (T.tProd na A B)).
     apply trans_cumul; auto with trans.
     apply TypingWf.typing_wf_sigma; auto.
@@ -1303,21 +1304,21 @@ Proof.
       now apply (isWFArity_wf _ _ _ wfΣ wfa).
       destruct s as [s [H ?]].
       eapply typing_wf in H; intuition eauto. }
-    eapply type_Cumul. eauto.
-    * destruct X2. red in i.
-      destruct i as [wfa allwfa].
-      left.
-      destruct wfa as [ctx [s ?]].
-      exists (trans_local ctx), s. destruct p.
+    destruct X2. red in i.
+    destruct i as [wfa allwfa].
+    destruct wfa as [ctx [s ?]].
+    * admit.
+      (* exists (trans_local ctx), s. destruct p.
       generalize (trans_destArity [] B); rewrite e.
       intros. split; auto.
       eapply trans_wf_local in allwfa. simpl in allwfa.
       rewrite /trans_local in allwfa.
       now rewrite map_app in allwfa.
-      right.
-      destruct s as [s [? ?]]; exists s; auto.
-    * clear X2. pose proof (typing_wf _ wfΣ _ _ _ X0).
-      eapply trans_cumul; eauto with trans.
+      right. *)
+    * destruct s as [s [? ?]]; eauto.
+      eapply type_Cumul; eauto.
+      eapply trans_cumul; eauto with trans. 
       eapply typing_wf_sigma; auto.
-      clear X. apply typing_all_wf_decl in wfΓ; auto. solve_all.
+      clear X. apply typing_all_wf_decl in wfΓ; auto.
+      eapply typing_wf in X0; eauto. destruct X0. auto.
 Admitted.

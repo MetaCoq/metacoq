@@ -758,6 +758,15 @@ Definition build_case_predicate_type ind mdecl idecl params u ps : option term :
          decl_type := mkApps (tInd ind u) (map (lift0 #|X.1|) params ++ to_extended_list X.1) |} in
   ret (it_mkProd_or_LetIn (X.1 ,, inddecl) (tSort ps)).
 
+Definition wf_universe Σ s := 
+  match s with
+  | Universe.lProp 
+  | Universe.lSProp => True
+  | Universe.lType u => 
+    forall l, UnivExprSet.In l u -> LevelSet.In (UnivExpr.get_level l) (global_ext_levels Σ)
+  end.
+  
+
 Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
 | type_Rel n decl :
     All_local_env (lift_typing typing Σ) Γ ->
@@ -769,7 +778,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     (l = inl PropLevel.lSProp \/
     l = inl PropLevel.lProp \/
     (exists l', LevelSet.In l' (global_ext_levels Σ) /\ l = inr l')) ->
-    Σ ;;; Γ |- tSort (Universe.of_levels l) : tSort (Universe.super l)
+    Σ ;;; Γ |- tSort (Universe.of_levels l) : tSort (Universe.super (Universe.of_levels l))
 
 | type_Cast c k t s :
     Σ ;;; Γ |- t : tSort s ->
@@ -886,6 +895,7 @@ Module TemplateTyping <: Typing TemplateTerm TemplateEnvironment TemplateEnvTypi
 
   Definition ind_guard := ind_guard.
   Definition typing := @typing.
+  Definition wf_universe := @wf_universe.
   Definition conv := @conv.
   Definition cumul := @cumul.
   Definition smash_context := smash_context.
@@ -1105,7 +1115,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
      l = inl PropLevel.lProp \/
      (exists l', LevelSet.In l' (global_ext_levels Σ) /\ l = inr l')) ->
 
-        P Σ Γ (tSort (Universe.of_levels l)) (tSort (Universe.super l))) ->
+        P Σ Γ (tSort (Universe.of_levels l)) (tSort (Universe.super (Universe.of_levels l)))) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (c : term) (k : cast_kind)
             (t : term) (s : Universe.t),

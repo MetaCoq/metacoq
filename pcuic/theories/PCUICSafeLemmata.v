@@ -105,7 +105,7 @@ Section Lemmata.
     induction π in u, v, h |- *.
     all: try solve [
                simpl ; try apply IHπ ;
-               cbn ; constructor ; try apply eq_term_upto_univ_refl ; assumption
+               cbn ; constructor ; try reflexivity; try apply eq_term_upto_univ_refl ; assumption
              ].
     - assumption.
     - simpl. apply IHπ. constructor.
@@ -114,22 +114,22 @@ Section Lemmata.
     - simpl. apply IHπ. constructor.
       apply All2_app.
       + apply All2_same.
-        intros. split ; auto. split. all: apply eq_term_upto_univ_refl.
+        intros. split ; auto. split; [split|]; auto. all: apply eq_term_upto_univ_refl.
         all: assumption.
       + constructor.
         * simpl. intuition eauto. reflexivity.
         * apply All2_same.
-          intros. split ; auto. split. all: apply eq_term_upto_univ_refl.
+          intros. split ; auto. splits. all: apply eq_term_upto_univ_refl.
           all: assumption.
     - simpl. apply IHπ. constructor.
       apply All2_app.
       + apply All2_same.
-        intros. split ; auto. split. all: apply eq_term_upto_univ_refl.
+        intros. split ; auto. splits. all: apply eq_term_upto_univ_refl.
         all: assumption.
       + constructor.
         * simpl. intuition eauto. reflexivity.
         * apply All2_same.
-          intros. split ; auto. split. all: apply eq_term_upto_univ_refl.
+          intros. split ; auto. splits. all: apply eq_term_upto_univ_refl.
           all: assumption.
     - simpl. apply IHπ. constructor.
       apply All2_app.
@@ -275,17 +275,6 @@ Section Lemmata.
 
   Arguments iswelltyped {Σ Γ t A} h.
 
-  Definition wellformed Σ Γ t :=
-    welltyped Σ Γ t \/ ∥ isWfArity typing Σ Γ t ∥.
-
-  (* Here we use use the proof irrelevance axiom to show that wellformed is really squashed.
-     Using SProp would avoid this.
-   *)
-
-  Lemma wellformed_irr :
-    forall {Σ Γ t} (h1 h2 : wellformed Σ Γ t), h1 = h2.
-  Proof. intros. apply ProofIrrelevance.proof_irrelevance. Qed.
-
   Context (hΣ : ∥ wf Σ ∥).
 
   Lemma welltyped_alpha Γ u v :
@@ -297,19 +286,6 @@ Section Lemmata.
     destruct hΣ.
     exists A. eapply typing_alpha ; eauto.
   Qed.
-
-  Lemma wellformed_alpha Γ u v :
-      wellformed Σ Γ u ->
-      eq_term_upto_univ [] eq eq u v ->
-      wellformed Σ Γ v.
-  Proof.
-    destruct hΣ as [hΣ'].
-    intros [X|X] e; [left|right].
-    - destruct X as [A Hu]. eexists. eapply typing_alpha; tea.
-    - destruct X. constructor.
-      now eapply isWfArity_alpha.
-  Qed.
-
 
   Lemma red_cored_or_eq :
     forall Γ u v,
@@ -556,129 +532,6 @@ Section Lemmata.
       apply inversion_App in h as hh ; auto.
       destruct hh as [na [A' [B' [? [? ?]]]]].
       eexists. eassumption.
-  Qed.
-
-  Lemma wellformed_context :
-    forall Γ t,
-      wellformed Σ Γ (zip t) ->
-      wellformed Σ (Γ ,,, stack_context (snd t)) (fst t).
-  Proof.
-    destruct hΣ as [wΣ].
-    intros Γ [t π] [[A h]|h].
-    - destruct (welltyped_context Γ (t, π) (iswelltyped h)) as [? ?].
-      left. econstructor. eassumption.
-    - simpl. induction π in t, h |- *.
-      all: try (specialize (IHπ _ h)).
-      all: simpl in *.
-      1: right ; assumption.
-      all: destruct IHπ as [[A' h'] | [[Δ [s [h1 h2]]]]] ; [| try discriminate].
-      all: try solve [
-        apply inversion_App in h' ; auto ;
-        rdestruct h' ;
-        left ; econstructor ; eassumption
-      ].
-      + assert (hwf := typing_wf_local h').
-        apply inversion_Fix in h'. 2: assumption.
-        destruct h' as [decl [? [? [hw [? ?]]]]].
-        clear - hw wΣ.
-        eapply All_app in hw as [_ hw]. depelim hw.
-        left;  exists (tSort i.π1). apply i.π2.
-      + apply inversion_Fix in h'. 2: assumption.
-        destruct h' as [decl [? [? [? [ha ?]]]]].
-        clear - ha wΣ.
-        apply All_app in ha as [_ ha].
-        inversion ha. subst.
-        intuition eauto. simpl in *.
-        match goal with
-        | hh : _ ;;; _ |- _ : _ |- _ => rename hh into h
-        end.
-        rewrite fix_context_length in h.
-        rewrite app_length in h. simpl in h.
-        rewrite fix_context_fix_context_alt in h.
-        rewrite map_app in h. simpl in h.
-        unfold def_sig at 2 in h. simpl in h.
-        rewrite <- app_context_assoc in h.
-        left. eexists. eassumption.
-      + assert (hwf := typing_wf_local h').
-        apply inversion_CoFix in h'. 2: assumption.
-        destruct h' as [decl [? [? [hw [? ?]]]]].
-        clear - hw wΣ.
-        eapply All_app in hw as [_ hw]. depelim hw.
-        left;  exists (tSort i.π1). apply i.π2.
-      + apply inversion_CoFix in h'. 2: assumption.
-        destruct h' as [decl [? [? [? [ha ?]]]]].
-        clear - ha wΣ.
-        apply All_app in ha as [_ ha].
-        inversion ha. subst.
-        intuition eauto. simpl in *.
-        match goal with
-        | hh : _ ;;; _ |- _ : _ |- _ => rename hh into h
-        end.
-        rewrite fix_context_length in h.
-        rewrite app_length in h. simpl in h.
-        rewrite fix_context_fix_context_alt in h.
-        rewrite map_app in h. simpl in h.
-        unfold def_sig at 2 in h. simpl in h.
-        rewrite <- app_context_assoc in h.
-        left. eexists. eassumption.
-      + destruct indn.
-        apply inversion_Case in h' ; auto. cbn in h'. rdestruct h'.
-        left. econstructor. eassumption.
-      + destruct indn.
-        apply inversion_Case in h' ; auto. cbn in h'. rdestruct h'.
-        left. econstructor. eassumption.
-      + destruct indn.
-        apply inversion_Case in h' ; auto. cbn in h'. rdestruct h'.
-        match goal with
-        | h : All2 _ _ _ |- _ => rename h into a
-        end.
-        apply All2_app_inv in a as [[? ?] [[? ?] ha]].
-        inversion ha. subst. intuition eauto.
-        simpl in *.
-        left. econstructor. eassumption.
-      + apply inversion_Proj in h' ; auto.
-        cbn in h'. rdestruct h'.
-        left. eexists. eassumption.
-      + apply inversion_Prod in h' ; auto. rdestruct h'.
-        left. eexists. eassumption.
-      + cbn in h1. apply destArity_app_Some in h1 as [Δ' [h1 h1']].
-        subst. left. rewrite app_context_assoc in h2. cbn in *.
-        apply wf_local_app in h2. inversion h2. subst. cbn in *.
-        destruct X0. eexists. eassumption.
-      + apply inversion_Prod in h' ; auto. rdestruct h'.
-        left. eexists. eassumption.
-      + cbn in h1. apply destArity_app_Some in h1 as [Δ' [h1 h1']].
-        subst. right. constructor. exists Δ', s.
-        rewrite app_context_assoc in h2. cbn in h2.
-        split ; eauto.
-      + apply inversion_Lambda in h' ; auto. rdestruct h'.
-        left. eexists. eassumption.
-      + apply inversion_Lambda in h' ; auto. rdestruct h'.
-        left. eexists. eassumption.
-      + apply inversion_LetIn in h'. 2: auto. rdestruct h'.
-        left. eexists. eassumption.
-      + cbn in h1. apply destArity_app_Some in h1 as [Δ' [h1 h1']].
-        subst. rewrite app_context_assoc in h2. simpl in h2.
-        left. apply wf_local_app in h2.
-        inversion h2. subst. cbn in *.
-        eexists. eassumption.
-      + apply inversion_LetIn in h'. 2: auto. rdestruct h'.
-        left. eexists. eassumption.
-      + cbn in h1. apply destArity_app_Some in h1 as [Δ' [h1 h1']].
-        subst. rewrite app_context_assoc in h2. simpl in h2.
-        left. apply wf_local_app in h2.
-        inversion h2. subst. cbn in *.
-        match goal with
-        | h : ∑ s : Universe.t, _ |- _ =>
-          destruct h
-        end.
-        eexists. eassumption.
-      + apply inversion_LetIn in h'. 2: auto. rdestruct h'.
-        left. eexists. eassumption.
-      + cbn in h1. apply destArity_app_Some in h1 as [Δ' [h1 h1']].
-        subst. rewrite app_context_assoc in h2. simpl in h2.
-        right. constructor. exists Δ', s.
-        split. all: auto.
   Qed.
 
   Lemma cored_red :
@@ -963,104 +816,30 @@ Section Lemmata.
       destruct HH as [Δ' [s [HH HH']]]. discriminate.
   Qed.
 
-  Lemma wellformed_it_mkLambda_or_LetIn :
-    forall Γ Δ t,
-      wellformed Σ Γ (it_mkLambda_or_LetIn Δ t) ->
-      wellformed Σ (Γ ,,, Δ) t.
-  Proof.
-    intros Γ Δ t [Hwf|Hwf];
-      [left; now apply welltyped_it_mkLambda_or_LetIn |
-       right; destruct Hwf; constructor].
-    now apply isWfArity_it_mkLambda_or_LetIn.
-  Qed.
-
-
-  Lemma wellformed_zipp :
-    forall Γ t ρ,
-      wellformed Σ Γ (zipp t ρ) ->
-      wellformed Σ Γ t.
-  Proof.
-    destruct hΣ as [wΣ].
-    intros Γ t ρ h.
-    unfold zipp in h.
-    case_eq (decompose_stack ρ). intros l π e.
-    rewrite e in h. clear - h wΣ.
-    destruct h as [[A h]|[h]].
-    - left.
-      induction l in t, A, h |- *.
-      + eexists. eassumption.
-      + apply IHl in h.
-        destruct h as [T h].
-        apply inversion_App in h as hh ; auto.
-        rdestruct hh. econstructor. eassumption.
-    - right. constructor. destruct l.
-      + assumption.
-      + destruct h as [ctx [s [h1 _]]].
-        rewrite destArity_tApp in h1. discriminate.
-  Qed.
-
-  (* WRONG *)
-  Lemma it_mkLambda_or_LetIn_wellformed :
-    forall Γ Δ t,
-      wellformed Σ (Γ ,,, Δ) t ->
-      wellformed Σ Γ (it_mkLambda_or_LetIn Δ t).
-  Abort.
-
-  (* Wrong for t = alg univ, π = ε, Γ = vass A *)
-  Lemma zipx_wellformed :
+  Lemma welltyped_zipx :
     forall {Γ t π},
-      wellformed Σ Γ (zipc t π) ->
-      wellformed Σ [] (zipx Γ t π).
-  (* Proof. *)
-  (*   intros Γ t π h. *)
-  (*   eapply it_mkLambda_or_LetIn_wellformed. *)
-  (*   rewrite app_context_nil_l. *)
-  (*   assumption. *)
-  (* Qed. *)
-  Abort.
-
-  Lemma wellformed_zipx :
-    forall {Γ t π},
-      wellformed Σ [] (zipx Γ t π) ->
-      wellformed Σ Γ (zipc t π).
+      welltyped Σ [] (zipx Γ t π) ->
+      welltyped Σ Γ (zipc t π).
   Proof.
     intros Γ t π h.
-    apply wellformed_it_mkLambda_or_LetIn in h.
+    apply welltyped_it_mkLambda_or_LetIn in h.
     rewrite app_context_nil_l in h.
     assumption.
   Qed.
 
-  Lemma wellformed_zipc_stack_context Γ t π ρ args
+  Lemma welltyped_zipc_stack_context Γ t π ρ args
     : decompose_stack π = (args, ρ)
-      -> wellformed Σ Γ (zipc t π)
-      -> wellformed Σ (Γ ,,, stack_context π) (zipc t (appstack args ε)).
+      -> welltyped Σ Γ (zipc t π)
+      -> welltyped Σ (Γ ,,, stack_context π) (zipc t (appstack args ε)).
   Proof.
     intros h h1.
     apply decompose_stack_eq in h. subst.
     rewrite stack_context_appstack.
     induction args in Γ, t, ρ, h1 |- *.
     - cbn in *.
-      now apply (wellformed_context Γ (t, ρ)).
+      now apply (welltyped_context Γ (t, ρ)).
     - simpl. eauto.
   Qed.
-
-  (* Wrong  *)
-  Lemma wellformed_zipc_zippx :
-    forall Γ t π,
-      wellformed Σ Γ (zipc t π) ->
-      wellformed Σ Γ (zippx t π).
-  (* Proof. *)
-  (*   intros Γ t π h. *)
-  (*   unfold zippx. *)
-  (*   case_eq (decompose_stack π). intros l ρ e. *)
-  (*   pose proof (decompose_stack_eq _ _ _ e). subst. clear e. *)
-  (*   rewrite zipc_appstack in h. *)
-  (*   zip fold in h. *)
-  (*   apply wellformed_context in h ; simpl in h. *)
-  (*   eapply it_mkLambda_or_LetIn_wellformed. *)
-  (*   assumption. *)
-  (* Qed. *)
-  Abort.
 
   Lemma red_const :
     forall {Γ c u cty cb cu},
@@ -1179,7 +958,7 @@ Section Lemmata.
       destruct ihw' as [na' [A' [B' [hP [? ?]]]]].
       apply inversion_Prod in hP as [s1 [s2 [? [? bot]]]] ; auto.
       apply PCUICConversion.invert_cumul_prod_r in bot ; auto.
-      destruct bot as [? [? [? [[r ?] ?]]]].
+      destruct bot as [? [? [? [[[r ?] ?] ?]]]].
       exfalso. clear - r wΣ.
       revert r. generalize (Universe.sort_of_product s1 s2). intro s. clear.
       intro r. eapply Relation_Properties.clos_rt_rt1n in r.
@@ -1212,16 +991,6 @@ Section Lemmata.
     apply isProdmkApps in hh. assumption.
   Qed.
 
-  Lemma mkApps_Prod_nil' :
-    forall Γ na A B l,
-      wellformed Σ Γ (mkApps (tProd na A B) l) ->
-      l = [].
-  Proof.
-    intros Γ na A B l [h | [[ctx [s [hd hw]]]]].
-    - eapply mkApps_Prod_nil. eassumption.
-    - destruct l ; auto.
-      cbn in hd. rewrite destArity_tApp in hd. discriminate.
-  Qed.
 
   (* TODO MOVE or even replace old lemma *)
   Lemma decompose_stack_noStackApp :
@@ -1484,11 +1253,10 @@ Section Lemmata.
 
   Lemma Proj_red_cond :
     forall Γ i pars narg i' c u l,
-      wellformed Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i' c u) l)) ->
+      welltyped Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i' c u) l)) ->
       nth_error l (pars + narg) <> None.
   Proof.
-    intros Γ i pars narg i' c u l [[T h]|[[ctx [s [e _]]]]];
-      [|discriminate].
+    intros Γ i pars narg i' c u l [T h].
     apply PCUICInductiveInversion.invert_Proj_Construct in h as (<-&->&?); auto.
     now apply nth_error_Some.
   Qed.
@@ -1511,10 +1279,10 @@ Section Lemmata.
     do 2 zip fold. eapply red_context. assumption.
   Qed.
 
-  Lemma wellformed_zipc_zipp :
+  Lemma welltyped_zipc_zipp :
     forall Γ t π,
-      wellformed Σ Γ (zipc t π) ->
-      wellformed Σ (Γ ,,, stack_context π) (zipp t π).
+      welltyped Σ Γ (zipc t π) ->
+      welltyped Σ (Γ ,,, stack_context π) (zipp t π).
   Proof.
     intros Γ t π h.
     unfold zipp.
@@ -1522,7 +1290,7 @@ Section Lemmata.
     pose proof (decompose_stack_eq _ _ _ e). subst. clear e.
     rewrite zipc_appstack in h.
     zip fold in h.
-    apply wellformed_context in h. simpl in h.
+    apply welltyped_context in h. simpl in h.
     rewrite stack_context_appstack.
     assumption.
   Qed.
@@ -1617,3 +1385,25 @@ Section Lemmata.
   Qed.
   
 End Lemmata.
+
+(*Lemma Case_Construct_ind_eq {cf:checker_flags} Σ (hΣ : ∥ wf Σ.1 ∥) :
+  forall {Γ ind ind' npar pred i u brs args},
+  welltyped Σ Γ (tCase (ind, npar) pred (mkApps (tConstruct ind' i u) args) brs) ->
+  ind = ind'.
+Proof.
+destruct hΣ as [wΣ].
+intros Γ ind ind' npar pred i u brs args [A h].
+  eapply PCUICInductiveInversion.Case_Construct_ind_eq; eauto.
+  sq; auto.
+Qed.
+
+Lemma Proj_Constuct_ind_eq {cf:checker_flags} Σ (hΣ : ∥ wf Σ.1 ∥):
+forall Γ i i' pars narg c u l,
+  welltyped Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i' c u) l)) ->
+  i = i'.
+Proof.
+  destruct hΣ as [wΣ].
+  intros Γ i i' pars narg c u l [T h].
+    eapply PCUICInductiveInversion.Proj_Constuct_ind_eq; eauto.
+    sq; auto.
+Qed.*)

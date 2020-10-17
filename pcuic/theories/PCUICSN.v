@@ -49,49 +49,6 @@ Section Normalisation.
     eapply IHl. 2: eassumption. intros e''; discriminate e''.
   Qed.
 
-  Corollary normalisation' :
-    forall Γ t, wf Σ -> wellformed Σ Γ t -> Acc (cored (fst Σ) Γ) t.
-  Proof.
-    intros Γ t HΣ Ht. destruct Ht as [HH|[HH]].
-    - now apply normalisation.
-    - revert Γ HH; induction t;
-        intros Γ [ctx [s [H1 H2]]]; cbn in *; try discriminate H1.
-      + constructor. intros y Hy. cut False. intros [].
-        dependent induction Hy.
-        * inversion X. eapply neq_mkApps.
-          2: eassumption. intro HH; discriminate HH.
-        * easy.
-      + eapply Acc_cored_Prod.
-        * apply normalisation.
-          apply destArity_app_Some in H1. destruct H1 as [ctx' [e1 e2]]; subst.
-          rewrite app_context_assoc in H2. cbn in H2.
-          apply wf_local_app in H2.
-          destruct (wf_local_inv H2 _ _ eq_refl) as [_ [u [Ht1 _]]].
-          econstructor; exact Ht1.
-        * apply destArity_app_Some in H1. destruct H1 as [ctx' [e1 e2]]; subst.
-          apply IHt2. exists ctx', s. split. assumption.
-          now rewrite app_context_assoc in H2.
-      + apply Acc_cored_LetIn.
-        * apply normalisation.
-          apply destArity_app_Some in H1. destruct H1 as [ctx' [e1 e2]]; subst.
-          rewrite app_context_assoc in H2. cbn in H2.
-          apply wf_local_app in H2.
-          destruct (wf_local_inv H2 _ _ eq_refl) as [_ [_ [Ht1 _]]].
-          econstructor; exact Ht1.
-        * apply destArity_app_Some in H1. destruct H1 as [ctx' [e1 e2]]; subst.
-          rewrite app_context_assoc in H2. cbn in H2.
-          apply wf_local_app in H2.
-          destruct (wf_local_inv H2 _ _ eq_refl) as [? [u [Ht1 _]]].
-          apply validity_term in Ht1; cbn in Ht1; try assumption.
-          destruct Ht1. now apply IHt2.
-          apply normalisation. destruct i as [uu HH].
-          econstructor; exact HH.
-        * change (destArity ([vdef na t1 t2] ,,, []) t3 = Some (ctx, s)) in H1.
-          apply destArity_app_Some in H1. destruct H1 as [ctx' [e1 e2]]; subst.
-          apply IHt3. exists ctx', s. split. assumption.
-          now rewrite app_context_assoc in H2.
-  Admitted.
-
 End Normalisation.
 
 
@@ -202,12 +159,12 @@ Section Alpha.
 
   Lemma normalisation_upto :
     forall Γ u,
-      wellformed Σ Γ u ->
+      welltyped Σ Γ u ->
       Acc (cored' Γ) u.
   Proof.
     destruct hΣ.
     intros Γ u h.
-    apply normalisation' in h. 2: auto.
+    apply normalisation in h.
     eapply Acc_cored_cored'.
     - eassumption.
     - apply eq_term_refl.
@@ -292,13 +249,14 @@ Section Alpha.
     intros Γ.
     induction Γ as [| [na [b|] A] Γ ih ].
     - constructor.
-    - simpl. constructor.
+    - simpl. constructor; simpl; try apply binder_anonymize.
       + eapply eq_term_upto_univ_tm_nl.
         all: auto.
       + simpl. eapply eq_term_upto_univ_tm_nl.
         all: auto.
       + assumption.
     - simpl. constructor.
+      + apply binder_anonymize.
       + simpl. eapply eq_term_upto_univ_tm_nl.
         all: auto.
       + assumption.

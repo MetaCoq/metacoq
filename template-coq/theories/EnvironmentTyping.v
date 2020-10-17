@@ -163,10 +163,12 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T).
     | localenv2_nil : All2_local_env [] []
     | localenv2_cons_abs Γ Γ' na na' t t' :
         All2_local_env Γ Γ' ->
+        eq_binder_annot na na' ->
         P Γ Γ' None t t' ->
         All2_local_env (Γ ,, vass na t) (Γ' ,, vass na' t')
     | localenv2_cons_def Γ Γ' na na' b b' t t' :
         All2_local_env Γ Γ' ->
+        eq_binder_annot na na' ->
         P Γ Γ' (Some (b, b')) t t' ->
         All2_local_env (Γ ,, vdef na b t) (Γ' ,, vdef na' b' t').
   End All_local_2.
@@ -186,8 +188,8 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T).
     All2_local_env (on_decl Q) par par'.
   Proof.
     intros H aux.
-    induction H; constructor. auto. red in p. apply aux, p.
-    apply IHAll2_local_env. red. split.
+    induction H; constructor. auto. red in p. assumption. apply aux, p.
+    apply IHAll2_local_env. assumption. red. split.
     apply aux. apply p. apply aux. apply p.
   Defined.
 
@@ -266,6 +268,8 @@ Module Type Typing (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E).
 
   Parameter (typing : forall `{checker_flags}, global_env_ext -> context -> term -> term -> Type).
 
+  Parameter (wf_universe : global_env_ext -> Universe.t -> Type).
+
   Notation " Σ ;;; Γ |- t : T " :=
     (typing Σ Γ t T) (at level 50, Γ, t, T at next level) : type_scope.
 
@@ -314,7 +318,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       in any universe to imply wf_local. *)
     Fixpoint type_local_ctx Σ (Γ Δ : context) (u : Universe.t) : Type :=
       match Δ with
-      | [] => True
+      | [] => wf_universe Σ u
       | {| decl_body := None; decl_type := t |} :: Δ => (type_local_ctx Σ Γ Δ u * (P Σ (Γ ,,, Δ) t (Some (tSort u))))
       | {| decl_body := Some b; decl_type := t |} :: Δ => (type_local_ctx Σ Γ Δ u * (P Σ (Γ ,,, Δ) t None * P Σ (Γ ,,, Δ) b (Some t)))
       end.    
@@ -477,7 +481,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       | v :: vs, u :: us, u' :: us' => 
         match v with
         | Variance.Irrelevant => variance_cstrs vs us us'
-        | Variance.Covariant => ConstraintSet.add (u, ConstraintType.Le, u') (variance_cstrs vs us us')
+        | Variance.Covariant => ConstraintSet.add (u, ConstraintType.Le 0, u') (variance_cstrs vs us us')
         | Variance.Invariant => ConstraintSet.add (u, ConstraintType.Eq, u') (variance_cstrs vs us us')
         end
       | _, _, _ => (* Impossible due to on_variance invariant *) ConstraintSet.empty

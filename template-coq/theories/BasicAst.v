@@ -78,6 +78,12 @@ Arguments mkBindAnn {_}.
 Arguments binder_name {_}.
 Arguments binder_relevance {_}.
 
+Definition map_binder_annot {A B} (f : A -> B) (b : binder_annot A) : binder_annot B :=
+  {| binder_name := f b.(binder_name); binder_relevance := b.(binder_relevance) |}.
+
+Definition eq_binder_annot {A} (b b' : binder_annot A) : Prop :=
+  b.(binder_relevance) = b'.(binder_relevance).
+
 (** Type of annotated names *)
 Definition aname := binder_annot name.
 

@@ -33,6 +33,7 @@ Local Ltac term_dec_tac term_dec :=
          | i : kername, i' : kername |- _ => fcase (kername_eq_dec i i')
          | i : string, i' : kername |- _ => fcase (string_dec i i')
          | n : name, n' : name |- _ => fcase (eq_dec n n')
+         | n : aname, n' : aname |- _ => fcase (eq_dec n n')
          | i : inductive, i' : inductive |- _ => fcase (eq_dec i i')
          | x : inductive * nat, y : inductive * nat |- _ =>
            fcase (eq_dec x y)
@@ -150,9 +151,9 @@ Proof.
 Defined.
 
 Definition eqb_one_inductive_body (x y : one_inductive_body) :=
-  let (n, t, k, c, p) := x in
-  let (n', t', k', c', p') := y in
-  eqb n n' && eqb t t' && eqb k k' && eqb c c' && eqb p p'.
+  let (n, t, k, c, p, r) := x in
+  let (n', t', k', c', p', r') := y in
+  eqb n n' && eqb t t' && eqb k k' && eqb c c' && eqb p p' && eqb r r'.
 
 Instance reflect_one_inductive_body : ReflectEq one_inductive_body.
 Proof.

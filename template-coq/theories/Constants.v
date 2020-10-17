@@ -87,7 +87,6 @@ Register MetaCoq.Template.Universes.InProp as metacoq.ast.InProp.
 Register MetaCoq.Template.Universes.InSet as metacoq.ast.InSet.
 Register MetaCoq.Template.Universes.InType as metacoq.ast.InType.
 Register MetaCoq.Template.Universes.ConstraintType.Le as metacoq.ast.constraints.Le.
-Register MetaCoq.Template.Universes.ConstraintType.Lt as metacoq.ast.constraints.Lt.
 Register MetaCoq.Template.Universes.ConstraintType.Eq as metacoq.ast.constraints.Eq.
 Register MetaCoq.Template.Universes.Universe.from_kernel_repr as metacoq.ast.universe.from_kernel_repr.
 Register MetaCoq.Template.Universes.Universe.of_levels as metacoq.ast.universe.of_levels.
@@ -99,13 +98,14 @@ Register MetaCoq.Template.Universes.PropLevel.lProp as metacoq.ast.level.lprop.
 Register MetaCoq.Template.Universes.PropLevel.lSProp as metacoq.ast.level.lsprop.
 Register MetaCoq.Template.Universes.Level.lSet as metacoq.ast.level.lSet.
 Register MetaCoq.Template.Universes.Level.Var as metacoq.ast.level.Var.
-Register MetaCoq.Template.Universes.UnivExpr.npe as metacoq.ast.univexpr.npe.
+(* FIXME*)
+Register MetaCoq.Template.Universes.Universe.lType as metacoq.ast.univexpr.npe.
 
 Register MetaCoq.Template.Universes.UnivExprSet.Mkt as metacoq.ast.univexprset.mkt.
 Register MetaCoq.Template.Universes.Universe.Build_t0 as metacoq.ast.universe.build0.
 Register MetaCoq.Template.Universes.Universe.lSProp as metacoq.ast.universe.lsprop.
 Register MetaCoq.Template.Universes.Universe.lProp as metacoq.ast.universe.lprop.
-Register MetaCoq.Template.Universes.Universe.lnpe as metacoq.ast.universe.lnpe.
+Register MetaCoq.Template.Universes.Universe.lType as metacoq.ast.universe.lnpe.
 
 
 Register MetaCoq.Template.Universes.Variance.t as metacoq.ast.variance.t.

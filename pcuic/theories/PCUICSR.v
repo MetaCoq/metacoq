@@ -198,17 +198,17 @@ Proof.
     constructor; auto. exists s1; auto.
 
   - (* Lambda *)
-    eapply type_Cumul. eapply type_Lambda; eauto.
+    eapply type_Cumul'. eapply type_Lambda; eauto.
     eapply (context_conversion _ wf _ _ _ typeb).
     constructor; auto with pcuic.
     constructor; auto. exists s1; auto.
     assert (Σ ;;; Γ |- tLambda n t b : tProd n t bty). econstructor; eauto.
-    edestruct (validity _ wf _ _ _ X0). apply i.
+    now eapply validity_term in X0.
     eapply cumul_red_r.
     apply cumul_refl'. constructor. apply Hu.
 
   - (* LetIn body *)
-    eapply type_Cumul.
+    eapply type_Cumul'.
     apply (substitution_let _ Γ n b b_ty b' b'_ty wf typeb').
     specialize (typing_wf_local typeb') as wfd.
     assert (Σ ;;; Γ |- tLetIn n b b_ty b' : tLetIn n b b_ty b'_ty). econstructor; eauto.
@@ -217,7 +217,7 @@ Proof.
     apply cumul_refl'. constructor.
 
   - (* LetIn value *)
-    eapply type_Cumul.
+    eapply type_Cumul'.
     econstructor; eauto.
     eapply (context_conversion _ wf _ _ _ typeb').
     constructor. auto with pcuic. constructor; eauto. constructor; auto.
@@ -229,14 +229,14 @@ Proof.
 
   - (* LetIn type annotation *)
     specialize (forall_u _ Hu).
-    eapply type_Cumul.
+    eapply type_Cumul'.
     econstructor; eauto.
-    eapply type_Cumul. eauto. right; exists s1; auto.
+    eapply type_Cumul'. eauto. exists s1; auto.
     apply red_cumul; eauto.
     eapply (context_conversion _ wf _ _ _ typeb').
     constructor. auto with pcuic. constructor; eauto. constructor; auto.
     exists s1; auto. red; eauto.
-    eapply type_Cumul. eauto. right. exists s1; auto. eapply red_cumul. now eapply red1_red.
+    eapply type_Cumul'. eauto. exists s1; auto. eapply red_cumul. now eapply red1_red.
     assert (Σ ;;; Γ |- tLetIn n b b_ty b' : tLetIn n b b_ty b'_ty). econstructor; eauto.
     edestruct (validity _ wf _ _ _ X0). apply i.
     eapply cumul_red_r.
@@ -246,15 +246,15 @@ Proof.
     eapply substitution0; eauto.
     pose proof typet as typet'.
     eapply inversion_Lambda in typet' as [s1 [B' [Ht [Hb HU]]]]=>//.
-    apply cumul_Prod_inv in HU as [eqA leqB] => //.
+    apply cumul_Prod_inv in HU as [[eqann eqA] leqB] => //.
     destruct (validity _ wf _ _ _ typet).
 
-    eapply type_Cumul; eauto.
+    eapply type_Cumul'; eauto.
     unshelve eapply (context_conversion _ wf _ _ _ Hb); eauto with wf.
     constructor. auto with pcuic. constructor ; eauto.
     constructor; auto with pcuic. red; eauto.
-    eapply isWAT_tProd in i as [Hs _]; auto.
-    eapply isWAT_tProd in i as [_ Hs]; intuition auto.
+    eapply isType_tProd in i as [Hs _]; auto.
+    eapply isType_tProd in i as [_ Hs]; intuition auto.
 
   - (* Fixpoint unfolding *)
     assert (args <> []) by (destruct args; simpl in *; congruence).
@@ -267,11 +267,11 @@ Proof.
     eapply type_tFix_inv in appty as [T [arg [fn' [[[Hnth wffix] Hty]]]]]; auto.
     rewrite e in Hnth. noconf Hnth.
     eapply type_App.
-    eapply type_mkApps. eapply type_Cumul; eauto. eapply spty.
+    eapply type_mkApps. eapply type_Cumul'; eauto. eapply spty.
     eauto.
 
   - (* Congruence *)
-    eapply type_Cumul; [eapply type_App| |]; eauto with wf.
+    eapply type_Cumul'; [eapply type_App| |]; eauto with wf.
     eapply validity. eauto. eauto.
     eapply type_App; eauto. eapply red_cumul_inv.
     eapply (red_red Σ Γ [vass na A] [] [u] [N2]); auto.
@@ -342,11 +342,17 @@ Proof.
     destruct X as [cumargs convidx]; eauto.
     assert(wfparu : wf_local Σ (subst_instance_context u (ind_params mdecl))). 
     { eapply on_minductive_wf_params; eauto. }
+    assert (wfps : wf_universe Σ ps).
+    { eapply validity in typep; auto. eapply PCUICWfUniverses.isType_wf_universes in typep.
+      rewrite PCUICWfUniverses.wf_universes_it_mkProd_or_LetIn in typep.
+      move/andP: typep => /= [_ /andP[_ typep]]. 
+      now apply (PCUICWfUniverses.reflect_bP (PCUICWfUniverses.wf_universe_reflect _ _)) in typep. auto. }
     eapply wf_arity_spine_typing_spine => //.
     split.
     { (* Predicate instantiation is well typed *) 
-      right. exists (Universe.sort_of_product s ps).
+      exists (Universe.sort_of_product s ps).
       eapply type_it_mkProd_or_LetIn; eauto.
+      now eapply type_local_ctx_wf in typectx.
       assert (wf_local Σ (Γ ,,, pargctxu)).
       { eapply type_local_ctx_wf_local in typectx; eauto. }
       assert (#|argctx| = #|pargctxu|).
@@ -355,9 +361,8 @@ Proof.
       eapply weakening_gen; eauto.
       eapply wf_arity_spine_typing_spine => //.
       split.
-      ** eapply validity in typep. eapply isWfArity_or_Type_lift.
-         autorewrite with len. lia.
-         all:auto. rewrite skipn_all_app_eq //.
+      ** eapply validity in typep. eapply isType_lift. len. lia.
+         all:auto.  rewrite skipn_all_app_eq //.
       ** rewrite lift_it_mkProd_or_LetIn.
          pose proof onc as onc'.
          eapply on_constructor_inst_pars_indices in onc'; eauto.
@@ -367,12 +372,13 @@ Proof.
          simpl in sp. rewrite !map_map_compose in sp. eapply sp.
          autorewrite with len.
          simpl. constructor.
-         2:{ simpl; constructor; auto. }
+         2:{ simpl; constructor; auto. eapply isType_Sort; eauto.
+             reflexivity. }
          rewrite lift_mkApps subst_mkApps.
          simpl. eapply type_mkApps. econstructor; eauto.
          split; eauto.
          eapply wf_arity_spine_typing_spine; eauto.
-         split; eauto. right; eapply declared_constructor_valid_ty; eauto.
+         split; eauto. eapply declared_constructor_valid_ty; eauto.
          split; eauto.
          unfold type_of_constructor.
          rewrite [cdecl'.1.2](onc.(cstr_eq)).
@@ -427,12 +433,12 @@ Proof.
          rewrite subst_inds_concl_head. simpl.
          { simpl. destruct decli. now eapply nth_error_Some_length in H2. }
          simpl.
-         constructor. right. exists (subst_instance_univ u (ind_sort oib)).
+         constructor. exists (subst_instance_univ u (ind_sort oib)).
          { red. eapply type_mkApps. econstructor; eauto.
            eapply wf_arity_spine_typing_spine; eauto.
            constructor. epose proof (oib.(onArity)).
            rewrite (oib.(ind_arity_eq)) !subst_instance_constr_it_mkProd_or_LetIn.
-           pose proof (on_declared_inductive wf decli) as [ondi _].
+           pose proof (on_declared_inductive wf decli) as [ondi oni].
            generalize (on_inductive_inst _ _ _ u _ _ wf X (proj1 decli) ondi oib cu).
            now rewrite subst_instance_context_app it_mkProd_or_LetIn_app.
            rewrite (oib.(ind_arity_eq)) !subst_instance_constr_it_mkProd_or_LetIn.
@@ -443,7 +449,10 @@ Proof.
              rewrite H; eapply iparsubst0. all:eauto. }
            rewrite subst_it_mkProd_or_LetIn.
            eapply arity_spine_it_mkProd_or_LetIn_Sort => //.
-           simpl in sp. instantiate (1:=inst).
+           simpl in sp.
+           pose proof (on_declared_inductive wf decli) as [ondi oni].
+           eapply (on_inductive_sort_inst); eauto.
+           instantiate (1:=inst).
            eapply spine_subst_eq; [eapply sp|].
            rewrite distr_lift_subst_context -H. f_equal.
            rewrite -(context_subst_length iparsubst0).
@@ -526,7 +535,7 @@ Proof.
     apply argsubst.
     rewrite lift_mkApps !subst_mkApps.
     constructor.
-    { right. exists ps. red.
+    { exists ps. red.
       eapply type_mkApps; eauto.
       eapply wf_arity_spine_typing_spine; eauto.
       split. eapply validity; eauto.
@@ -669,26 +678,29 @@ Proof.
       intros.
       intuition auto. now transitivity y.1.
       eapply type_Cumul; eauto.
-      2:now eapply conv_cumul, red_conv, red1_red.
-      destruct b0 as [s [Hs IH]]; eauto.
-      destruct b0 as [s [Hs IH]]; eauto.
-    * right.
-      pose proof typec as typec'.
+      now eapply conv_cumul, red_conv, red1_red.
+    * pose proof typec as typec'.
       eapply (env_prop_typing _ _ validity) in typec' as wat; auto.
-      unshelve eapply isWAT_mkApps_Ind in wat as [parsubst [argsubst wat]]; eauto.
+      unshelve eapply isType_mkApps_Ind in wat as [parsubst [argsubst wat]]; eauto.
       set (oib := on_declared_inductive wf isdecl) in *. clearbody oib.
       destruct oib as [onind oib].
       destruct wat  as [[spars sargs] cu].
       unshelve eapply (build_case_predicate_type_spec (Σ.1, _)) in heq_build_case_predicate_type as [parsubst' [cparsubst Hpty]]; eauto.
       rewrite {}Hpty in typep.
-      exists ps.
       subst npar.
+      assert (wfps : wf_universe Σ ps).
+      { eapply validity in typep; auto. eapply PCUICWfUniverses.isType_wf_universes in typep.
+        rewrite PCUICWfUniverses.wf_universes_it_mkProd_or_LetIn in typep.
+        move/andP: typep => /= [_ /andP[_ typep]]. 
+        now apply (PCUICWfUniverses.reflect_bP (PCUICWfUniverses.wf_universe_reflect _ _)) in typep. auto. }
       pose proof (context_subst_fun cparsubst spars). subst parsubst'. clear cparsubst.
       eapply type_mkApps. eauto.
       eapply wf_arity_spine_typing_spine; eauto.
       split. apply (env_prop_typing _ _ validity) in typep as ?; eauto.
       eapply arity_spine_it_mkProd_or_LetIn; eauto.
       simpl. constructor; [ |constructor].
+      2:{ eapply isType_Sort; eauto. }
+      2:reflexivity.
       rewrite subst_mkApps. simpl.
       rewrite map_app. rewrite map_map_compose.
       rewrite map_subst_lift_id_eq. now rewrite (subslet_length sargs); autorewrite with len.
@@ -699,17 +711,20 @@ Proof.
 
   - (* Case congruence on discriminee *) 
     eapply type_Cumul. eapply type_Case; eauto.
-    * solve_all. destruct b0 as [s [Hs IH]]; eauto.
-    * right.
-      pose proof typec as typec'.
+    * solve_all.
+    * pose proof typec as typec'.
       eapply (env_prop_typing _ _ validity) in typec' as wat; auto.
-      unshelve eapply isWAT_mkApps_Ind in wat as [parsubst [argsubst wat]]; eauto.
+      unshelve eapply isType_mkApps_Ind in wat as [parsubst [argsubst wat]]; eauto.
       set (oib := on_declared_inductive wf isdecl) in *. clearbody oib.
       destruct oib as [onind oib].
       destruct wat  as [[spars sargs] cu].
       unshelve eapply (build_case_predicate_type_spec (Σ.1, _)) in heq_build_case_predicate_type as [parsubst' [cparsubst Hpty]]; eauto.
       rewrite {}Hpty in typep.
-      exists ps.
+      assert (wfps : wf_universe Σ ps).
+      { eapply validity in typep; auto. eapply PCUICWfUniverses.isType_wf_universes in typep.
+        rewrite PCUICWfUniverses.wf_universes_it_mkProd_or_LetIn in typep.
+        move/andP: typep => /= [_ /andP[_ typep]]. 
+        now apply (PCUICWfUniverses.reflect_bP (PCUICWfUniverses.wf_universe_reflect _ _)) in typep. auto. }
       subst npar.
       pose proof (context_subst_fun cparsubst spars). subst parsubst'. clear cparsubst.
       eapply type_mkApps. eauto.
@@ -717,6 +732,8 @@ Proof.
       split. apply (env_prop_typing _ _ validity) in typep; eauto.
       eapply arity_spine_it_mkProd_or_LetIn; eauto.
       simpl. constructor; [ |constructor].
+      2:{ eapply isType_Sort; pcuic. }
+      2:reflexivity.
       rewrite subst_mkApps. simpl.
       rewrite map_app. rewrite map_map_compose.
       rewrite map_subst_lift_id_eq. now rewrite (subslet_length sargs); autorewrite with len.
@@ -747,7 +764,7 @@ Proof.
     unfold unfold_cofix in e.
     rewrite Hnth in e. noconf e.
     simpl in X1.
-    eapply type_Cumul; [econstructor|..]; eauto.
+    eapply type_Cumul'; [econstructor|..]; eauto.
     eapply typing_spine_strengthen in tsp; eauto.
     eapply type_mkApps. eauto. eauto.
     now eapply validity in typecofix.
@@ -769,7 +786,7 @@ Proof.
     rewrite eq.
     eapply (substitution_untyped_red _ Γ
       (smash_context [] (subst_instance_context u (ind_params mdecl))) []). auto.
-    { unshelve eapply isWAT_mkApps_Ind in X1 as [parsubst [argsubst Hind]]; eauto.
+    { unshelve eapply isType_mkApps_Ind in X1 as [parsubst [argsubst Hind]]; eauto.
       eapply (let (x, _) := isdecl in x).
       unfold on_declared_inductive in Hind. fold oib in Hind. simpl in Hind.
       destruct Hind as [[sppars spargs] cu].
@@ -862,7 +879,6 @@ Proof.
     rewrite [cdecl'.1.2]onc.(cstr_eq) in tyargs, Hty.
     rewrite !subst_instance_constr_it_mkProd_or_LetIn !subst_it_mkProd_or_LetIn in tyargs, Hty.
     eapply typing_spine_inv in tyargs as [arg_sub [[spargs iswat] sp]]; eauto.
-    3:{ right; simpl; auto. }
     2:{ rewrite !context_assumptions_fold.
         rewrite subst_instance_context_assumptions. rewrite H.
         apply onNpars in onmind. lia. }
@@ -878,10 +894,10 @@ Proof.
         clear iswat sp. eapply nth_error_Some_length in H0. lia. }
     destruct sp as [decl [Hnth Hu0]].
     simpl in on_projs. red in on_projs.
-    eapply type_Cumul; eauto.
+    eapply type_Cumul'; eauto.
     { rewrite firstn_skipn.
-      eapply (isType_subst_instance_decl (u:=u) wf isdecl.p1.p1) in projty; eauto.
-      right. destruct projty as [s' Hs].
+      eapply (isType_subst_instance_decl _ _ _ _ _ u wf isdecl.p1.p1) in projty; eauto.
+      destruct projty as [s' Hs].
       exists s'. red in Hs.
       rewrite /= /map_decl /= in Hs.
       eapply (weaken_ctx Γ) in Hs; auto.
@@ -1088,21 +1104,19 @@ Proof.
     lia. auto.
 
   - (* Proj congruence: discriminee reduction *) 
-    eapply type_Cumul; [econstructor|..]; eauto.
+    eapply type_Cumul'; [econstructor|..]; eauto.
     eapply validity; eauto.
     instantiate (1:= tProj p c).
     econstructor; eauto.
     eapply conv_cumul.
     rewrite (subst_app_simpl [c']) (subst_app_simpl [c]).
-    eapply (untyped_subst_conv Γ [vass nAnon (mkApps (tInd p.1.1 u) args)] 
-      [vass nAnon (mkApps (tInd p.1.1 u) args)] []); auto.
+    set(bann := {| binder_name := nAnon; binder_relevance := idecl.(ind_relevance) |}).
+    eapply (untyped_subst_conv Γ [vass bann (mkApps (tInd p.1.1 u) args)] 
+      [vass bann (mkApps (tInd p.1.1 u) args)] []); auto.
     repeat constructor. repeat constructor. constructor.
     now apply conv_sym, red_conv, red1_red. constructor.
     simpl. constructor. auto.
     eapply validity in typec; auto.
-    destruct typec; auto.
-    destruct i as [ctx [s [dA _]]].
-    rewrite destArity_tInd in dA. discriminate.
 
   - (* Fix congruence *)
     symmetry in H0; apply mkApps_Fix_spec in H0. simpl in H0. subst args.
@@ -1116,9 +1130,11 @@ Proof.
       apply conv_ctx_refl. clear X.
       apply conv_decls_fix_context => //.
       induction o; constructor.
-      destruct p. now apply red_conv, red1_red.
-      apply All2_refl. reflexivity.
-      reflexivity. apply IHo. rewrite !fix_context_length in fixl |- *; simpl in *. lia. }
+      destruct p. split. now noconf e.
+      now noconf e.
+      apply All2_refl. intros; split; reflexivity.
+      split; reflexivity.
+      apply IHo. rewrite !fix_context_length in fixl |- *; simpl in *. lia. }
     assert(All (fun d => isType Σ Γ (dtype d)) mfix).
     { apply (All_impl X0).
       now intros x [s' [Hs' _]]; exists s'. }
@@ -1131,7 +1147,7 @@ Proof.
     assert (wf_local Σ (Γ ,,, fix_context mfix1)).
     { apply All_mfix_wf; auto. }
     destruct (OnOne2_nth_error _ _ _ decl _ o heq_nth_error) as [decl' [eqnth disj]].
-    eapply type_Cumul.
+    eapply type_Cumul'.
     econstructor; eauto.
     * eapply (fix_guard_red1 _ _ _ _ 0); eauto.
       constructor; eauto.
@@ -1145,8 +1161,8 @@ Proof.
         noconf eq. split; auto.
         eapply context_conversion'; eauto.
         rewrite -fixl.
-        eapply type_Cumul. eapply Hb.
-        right. exists s. specialize (IH _ red).
+        eapply type_Cumul'. eapply Hb.
+        exists s. specialize (IH _ red).
         eapply (weakening _ _ _ _ (tSort _)); auto.
         apply All_mfix_wf; auto. 
         apply (weakening_cumul _ _ []); auto.
@@ -1179,7 +1195,7 @@ Proof.
     assert (wf_local Σ (Γ ,,, fix_context mfix1)).
     { apply All_mfix_wf; auto. }
     destruct (OnOne2_nth_error _ _ _ decl _ o heq_nth_error) as [decl' [eqnth disj]].
-    eapply type_Cumul.
+    eapply type_Cumul'.
     econstructor; eauto.
     * eapply (fix_guard_red1 _ _ _ _ 0); eauto.
       apply fix_red_body; eauto.
@@ -1206,10 +1222,10 @@ Proof.
       eapply context_relation_app_inv => //.
       apply conv_ctx_refl. clear X.
       apply conv_decls_fix_context => //.
-      induction o; constructor.
-      destruct p. now apply red_conv, red1_red.
-      apply All2_refl. reflexivity.
-      reflexivity. apply IHo. rewrite !fix_context_length /= in fixl |- *; lia. }
+      induction o; constructor; try split; auto;
+      try (destruct p; now noconf e).
+      apply All2_refl; split; reflexivity.
+      apply IHo. rewrite !fix_context_length /= in fixl |- *; lia. }
     assert(All (fun d => isType Σ Γ (dtype d)) mfix).
     { apply (All_impl X0).
       now intros x [s' [Hs' _]]; exists s'. }
@@ -1222,7 +1238,7 @@ Proof.
     assert (wf_local Σ (Γ ,,, fix_context mfix1)).
     { apply All_mfix_wf; auto. }
     destruct (OnOne2_nth_error _ _ _ decl _ o heq_nth_error) as [decl' [eqnth disj]].
-    eapply type_Cumul.
+    eapply type_Cumul'.
     econstructor; eauto.
     * eapply (cofix_guard_red1 _ _ _ _ 0); eauto.
       constructor; eauto.
@@ -1235,8 +1251,8 @@ Proof.
         noconf eq. 
         eapply context_conversion'; eauto.
         rewrite -fixl.
-        eapply type_Cumul. eapply Hb.
-        right. exists s. specialize (IH _ red).
+        eapply type_Cumul'. eapply Hb.
+        exists s. specialize (IH _ red).
         eapply (weakening _ _ _ _ (tSort _)); auto.
         apply All_mfix_wf; auto. 
         apply (weakening_cumul _ _ []); auto.
@@ -1268,7 +1284,7 @@ Proof.
     assert (wf_local Σ (Γ ,,, fix_context mfix1)).
     { apply All_mfix_wf; auto. }
     destruct (OnOne2_nth_error _ _ _ decl _ o heq_nth_error) as [decl' [eqnth disj]].
-    eapply type_Cumul.
+    eapply type_Cumul'.
     econstructor; eauto.
     * eapply (cofix_guard_red1 _ _ _ _ 0); eauto.
       apply cofix_red_body; eauto.
@@ -1287,9 +1303,6 @@ Proof.
   - (* Conversion *)
     specialize (forall_u _ Hu).
     eapply type_Cumul; eauto.
-    destruct X2 as [[wf' _]|[s Hs]].
-    now left.
-    now right.
 Qed.
 
 Print Assumptions sr_red1.
@@ -1358,8 +1371,8 @@ Section SRContext.
     red_ctx Σ Γ Γ'.
   Proof.
     induction 1; cbn in *.
-    - constructor. reflexivity. cbn; eauto using red1_red.
-    - constructor. reflexivity.
+    - constructor; try reflexivity. cbn; eauto using red1_red.
+    - constructor; try reflexivity.
       destruct p as [[? []]|[? []]]; cbn; eauto using red1_red.
     - destruct d as [na [bo|] ty]; constructor; eauto.
       split; eapply refl_red.
@@ -1432,7 +1445,8 @@ Section SRContext.
          conv_context Σ Γ Γ').
     { clear. induction 1.
       - red in p. constructor; auto.
-        apply conv_ctx_refl. constructor. now apply red_conv, red1_red.
+        apply conv_ctx_refl. constructor. reflexivity.
+        now apply red_conv, red1_red.
       - destruct p. constructor.
         apply conv_ctx_refl. destruct p as [red ->].
         constructor; auto; now apply red_conv, red1_red.
@@ -1460,7 +1474,7 @@ Section SRContext.
       constructor; auto. exists s; auto.
       eapply subject_reduction1; eauto.
       constructor; auto. exists s; eapply subject_reduction1; eauto.
-      eapply type_Cumul; eauto. right. exists s.
+      eapply type_Cumul'; eauto. exists s.
       eapply subject_reduction1; eauto.
       now apply red_cumul, red1_red.
     - depelim X. destruct t1 as [s Hs].
@@ -1484,8 +1498,8 @@ Section SRContext.
       destruct p as [[? []]|[? []]]; constructor; cbn; tas.
       + eapply subject_reduction1; tea.
       + destruct X0; eexists; eapply subject_reduction1; tea.
-      + econstructor; tea.
-        right; destruct X0; eexists; eapply subject_reduction1; tea.
+      + eapply type_Cumul'; tea.
+        destruct X0. exists x. eapply subject_reduction1; tea.
         econstructor 2. eassumption. reflexivity.
     - intro H; inversion H; subst; constructor; cbn in *; auto.
       + destruct X1 as [s Ht]. exists s.
@@ -1499,8 +1513,8 @@ Section SRContext.
     eq_context_upto_names Γ Δ -> Γ ≡Γ Δ.
   Proof.
     induction 1; cbnr; try constructor; eauto.
-    destruct x as [? [] ?], y as [? [] ?]; cbn in *; subst; inversion e.
-    all: constructor; cbnr; eauto.
+    destruct x as [? [] ?], y as [? [] ?]; cbn in *; subst; inversion e0; cbn.
+    all:constructor; cbnr; eauto.
   Qed.
 
   Lemma wf_local_red {Σ Γ Γ'} :
@@ -1578,7 +1592,7 @@ Section SRContext.
        cbn in H1. inversion H1; subst.
        eapply wf_local_red; try exact H2; tas.
        rewrite !app_context_assoc. apply red_ctx_app_context_l.
-       constructor; cbn. reflexivity. split; auto.
+       constructor; cbn; try reflexivity. split; auto.
      - rewrite destArity_app in H1.
        case_eq (destArity [] b'); [intros [ctx' s']|]; intro ee;
          rewrite ee in H1; [|discriminate].
@@ -1586,7 +1600,7 @@ Section SRContext.
        cbn in H1. inversion H1; subst.
        eapply wf_local_red; try exact H2; tas.
        rewrite !app_context_assoc. apply red_ctx_app_context_l.
-       constructor; cbn. reflexivity. split; auto.
+       constructor; cbn; try reflexivity. split; auto.
      - rewrite destArity_app in H1.
        case_eq (destArity [] b'); [intros [ctx' s']|]; intro ee;
          rewrite ee in H1; [|discriminate].
@@ -1603,7 +1617,7 @@ Section SRContext.
        cbn in H1. inversion H1; subst.
        eapply wf_local_red; try exact H2; tas.
        rewrite !app_context_assoc. apply red_ctx_app_context_l.
-       constructor; cbn. reflexivity. auto.
+       constructor; cbn; try reflexivity. auto.
      - rewrite destArity_app in H1.
        case_eq (destArity [] M2); [intros [ctx' s']|]; intro ee;
          rewrite ee in H1; [|discriminate].
@@ -1629,11 +1643,10 @@ Section SRContext.
    Lemma isWfArity_or_Type_red {Σ Γ A B} :
      wf Σ.1 ->
      red (fst Σ) Γ A B ->
-     isWfArity_or_Type Σ Γ A ->
-     isWfArity_or_Type Σ Γ B.
+     isType Σ Γ A ->
+     isType Σ Γ B.
    Proof.
-     intros ? ? [?|[? ?]]; [left|right].
-     eapply isWfArity_red; eassumption.
+     intros ? ? [? ?].
      eexists. eapply subject_reduction; tea.
    Qed.
 
@@ -1641,50 +1654,39 @@ Section SRContext.
     : wf Σ.1 ->  Σ ;;; Γ |- t : A -> red (fst Σ) Γ A B -> Σ ;;; Γ |- t : B.
   Proof.
     intros HΣ' Ht Hr.
-    econstructor. eassumption.
+    eapply type_Cumul'. eassumption.
     2: now eapply cumul_red_l'.
-    destruct (validity_term HΣ' Ht).
-    - left. eapply isWfArity_red; try eassumption.
-    - destruct i as [s HA]. right.
-      exists s. eapply subject_reduction; eassumption.
+    destruct (validity_term HΣ' Ht) as [s HA]. 
+    exists s; eapply subject_reduction; eassumption.
   Defined.
 
 End SRContext.
 
 Lemma isWAT_tLetIn {cf:checker_flags} {Σ : global_env_ext} (HΣ' : wf Σ)
       {Γ} (HΓ : wf_local Σ Γ) {na t A B}
-  : isWfArity_or_Type Σ Γ (tLetIn na t A B)
+  : isType Σ Γ (tLetIn na t A B)
     <~> (isType Σ Γ A × (Σ ;;; Γ |- t : A)
-                      × isWfArity_or_Type Σ (Γ,, vdef na t A) B).
+                      × isType Σ (Γ,, vdef na t A) B).
 Proof.
   split; intro HH.
-  - destruct HH as [[ctx [s [H1 H2]]]|[s H]].
-    + cbn in H1. apply destArity_app_Some in H1.
-      destruct H1 as [ctx' [H1 HH]]; subst ctx.
-      rewrite app_context_assoc in H2. repeat split.
-      * apply wf_local_app in H2. inversion H2; subst. assumption.
-      * apply wf_local_app in H2. inversion H2; subst. assumption.
-      * left. exists ctx', s. split; tas.
-    + apply inversion_LetIn in H; tas. destruct H as [s1 [A' [HA [Ht [HB H]]]]].
-      repeat split; tas. 1: eexists; eassumption.
-      apply cumul_Sort_r_inv in H.
-      destruct H as [s' [H H']].
-      right. exists s'. eapply type_reduction; tea.
-      apply invert_red_letin in H; tas.
-      destruct H as [[? [? [? [? [[[H ?] ?] ?]]]]]|H].
-      * discriminate.
-      * etransitivity.
-        2: apply weakening_red_0 with (Γ' := [_]) (N := tSort _);
-          tea; reflexivity.
-        exact (red_rel_all _ (Γ ,, vdef na t A) 0 t A' eq_refl).
-  - destruct HH as [HA [Ht [[ctx [s [H1 H2]]]|HB]]].
-    + left. exists ([vdef na t A] ,,, ctx), s. split.
-      cbn. now rewrite destArity_app H1.
-      now rewrite app_context_assoc.
-    + right. destruct HB as [sB HB].
-      eexists. eapply type_reduction; tas.
-      * econstructor; tea.
-        apply HA.π2.
-      * apply red1_red.
-        apply red_zeta with (b':=tSort sB).
+  - destruct HH as [s H].
+    apply inversion_LetIn in H; tas. destruct H as [s1 [A' [HA [Ht [HB H]]]]].
+    repeat split; tas. 1: eexists; eassumption.
+    apply cumul_Sort_r_inv in H.
+    destruct H as [s' [H H']].
+    exists s'. eapply type_reduction; tea.
+    apply invert_red_letin in H; tas.
+    destruct H as [[? [? [? [[[H ?] ?] ?]]]]|H].
+    * discriminate.
+    * etransitivity.
+      2: apply weakening_red_0 with (Γ' := [_]) (N := tSort _);
+        tea; reflexivity.
+      exact (red_rel_all _ (Γ ,, vdef na t A) 0 t A' eq_refl).
+  - destruct HH as [HA [Ht HB]].
+    destruct HB as [sB HB].
+    eexists. eapply type_reduction; tas.
+    * econstructor; tea.
+      apply HA.π2.
+    * apply red1_red.
+      apply red_zeta with (b':=tSort sB).
 Defined.

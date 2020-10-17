@@ -789,8 +789,8 @@ Inductive stack : Type :=
 | Empty
 | App (t : term) (π : stack)
 | Fix (f : mfixpoint term) (n : nat) (args : list term) (π : stack)
-| Fix_mfix_ty (na : name) (bo : term) (ra : nat) (mfix1 mfix2 : mfixpoint term) (id : nat) (π : stack)
-| Fix_mfix_bd (na : name) (ty : term) (ra : nat)  (mfix1 mfix2 : mfixpoint term) (id : nat) (π : stack)
+| Fix_mfix_ty (na : aname) (bo : term) (ra : nat) (mfix1 mfix2 : mfixpoint term) (id : nat) (π : stack)
+| Fix_mfix_bd (na : aname) (ty : term) (ra : nat)  (mfix1 mfix2 : mfixpoint term) (id : nat) (π : stack)
 | CoFix (f : mfixpoint term) (n : nat) (args : list term) (π : stack)
 | CoFix_mfix_ty (na : name) (bo : term) (ra : nat) (mfix1 mfix2 : mfixpoint term) (id : nat) (π : stack)
 | CoFix_mfix_bd (na : name) (ty : term) (ra : nat)  (mfix1 mfix2 : mfixpoint term) (id : nat) (π : stack)
@@ -798,13 +798,13 @@ Inductive stack : Type :=
 | Case (indn : inductive * nat) (p : term) (brs : list (nat * term)) (π : stack)
 | Case_brs (indn : inductive * nat) (p c : term) (m : nat) (brs1 brs2 : list (nat * term)) (π : stack)
 | Proj (p : projection) (π : stack)
-| Prod_l (na : name) (B : term) (π : stack)
-| Prod_r (na : name) (A : term) (π : stack)
-| Lambda_ty (na : name) (b : term) (π : stack)
-| Lambda_tm (na : name) (A : term) (π : stack)
-| LetIn_bd (na : name) (B t : term) (π : stack)
-| LetIn_ty (na : name) (b t : term) (π : stack)
-| LetIn_in (na : name) (b B : term) (π : stack)
+| Prod_l (na : aname) (B : term) (π : stack)
+| Prod_r (na : aname) (A : term) (π : stack)
+| Lambda_ty (na : aname) (b : term) (π : stack)
+| Lambda_tm (na : aname) (A : term) (π : stack)
+| LetIn_bd (na : aname) (B t : term) (π : stack)
+| LetIn_ty (na : aname) (b t : term) (π : stack)
+| LetIn_in (na : aname) (b B : term) (π : stack)
 | coApp (t : term) (π : stack).
 
 Notation "'ε'" := (Empty).
@@ -985,10 +985,10 @@ Qed.
 
 (* TODO Find a better place for this. *)
 (* The current fix_context asks for too much information. *)
-Definition fix_context_alt (l : list (name × term)) : context :=
+Definition fix_context_alt (l : list (aname × term)) : context :=
   List.rev (mapi (fun i d => vass d.1 (lift0 i d.2)) l).
 
-Definition def_sig (d : def term) : name × term :=
+Definition def_sig (d : def term) : aname × term :=
   (d.(dname), d.(dtype)).
 
 Lemma fix_context_fix_context_alt :

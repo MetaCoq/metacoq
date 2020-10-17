@@ -262,6 +262,11 @@ Lemma type_local_ctx_instantiate {cf:checker_flags} Σ ind mdecl Γ Δ u s :
 Proof.
   intros Hctx Hu.
   induction Δ; simpl in *; intuition auto.
+  { destruct Σ as [Σ univs]. eapply (wf_universe_subst_instance (Σ, ind_universes mdecl)); eauto.
+    simpl in *.
+    assert (wg := weaken_lookup_on_global_env'' _ _ _ Hctx Hu).
+    eapply sub_context_set_trans. eauto.
+    eapply global_context_set_sub_ext. }
   destruct a as [na [b|] ty]; simpl; intuition auto.
   - destruct a0.
     exists (subst_instance_univ u x).
@@ -281,8 +286,8 @@ Lemma wf_local_instantiate {cf:checker_flags} Σ (decl : global_decl) Γ u c :
   wf_local Σ (subst_instance_context u Γ).
 Proof.
   intros wfΣ Hdecl Huniv wf.
-  epose proof (type_Sort _ _ Universes.Level.lProp wf) as ty. forward ty.
-  - apply prop_global_ext_levels.
+  epose proof (type_Sort _ _ Universes.Universe.lProp wf) as ty. forward ty.
+  - now simpl.
   - eapply PCUICUnivSubstitution.typing_subst_instance_decl in ty;   
     eauto using typing_wf_local.
 Qed.

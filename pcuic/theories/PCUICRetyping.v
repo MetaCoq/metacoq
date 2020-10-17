@@ -47,7 +47,7 @@ Section TypeOf.
     | tVar n => raise (UnboundVar n)
     | tEvar ev args => raise (UnboundEvar ev)
 
-    | tSort s => ret (tSort (Universe.try_suc s))
+    | tSort s => ret (tSort (Universe.super s))
 
     | tProd n t b =>
       s1 <- type_of_as_sort type_of Γ t ;;
@@ -210,12 +210,9 @@ Section TypeOf.
     - go eq.
       split.
       + econstructor ; try eassumption ; try ih ; try cih.
-        (* Again we're missing result on how to type sorts... *)
-        left. red. exists [], a.
-        unfold app_context; simpl; intuition auto with pcuic.
-        eapply typing_wf_local; tea.
-        left. red. exists [], a0. unfold app_context; simpl; intuition auto with pcuic.
-        eapply typing_wf_local; tea.
+        constructor; eauto with pcuic.
+        admit.
+        admit.
       + (* Sorts again *)
         simpl.
         admit.

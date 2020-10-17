@@ -52,7 +52,6 @@ Module Environment (T : Term).
 
   Notation " Γ ,, d " := (snoc Γ d) (at level 20, d at next level).
 
-
   Definition map_decl f (d : context_decl) :=
     {| decl_name := d.(decl_name);
        decl_body := option_map f d.(decl_body);
@@ -199,7 +198,7 @@ Module Environment (T : Term).
   (* TODO MOVE AstUtils factorisation *)
 
   Definition app_context (Γ Γ' : context) : context := Γ' ++ Γ.
-  Notation " Γ  ,,, Γ' " :=
+  Notation "Γ ,,, Γ'" :=
     (app_context Γ Γ') (at level 25, Γ' at next level, left associativity).
 
   (** Make a lambda/let-in string of abstractions from a context [Γ], ending with term [t]. *)

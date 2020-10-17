@@ -33,6 +33,10 @@ Proof. intro H; apply H. Qed.
 
 Hint Resolve wf_ext_wk_wf : core.
 
+Lemma is_propositional_subst_instance u s :
+  is_propositional (subst_instance_univ u s) = is_propositional s.
+Proof. destruct s => //. Qed.
+
 Lemma isErasable_subst_instance (Σ : global_env_ext) Γ T univs u :
   wf_ext_wk Σ ->  wf_local Σ Γ ->
   wf_local (Σ.1, univs) (PCUICUnivSubst.subst_instance_context u Γ) ->
@@ -53,7 +57,7 @@ Proof.
       eapply typing_subst_instance in t0; eauto.
       eexists. split.
       * eapply t0; tas.
-      * now eapply is_prop_subst_instance.
+      * now rewrite is_propositional_subst_instance.
 Qed.
 
 (** * Correctness of erasure  *)
@@ -534,8 +538,8 @@ Proof.
   eapply PCUICValidity.validity in Hty; eauto.
   eapply PCUICValidity.validity in Hty'; eauto.
   eapply PCUICValidity.validity in Ht''; eauto.
-  eapply PCUICElimination.cumul_prop1 in Cty; eauto.
-  eapply PCUICElimination.cumul_prop2 in Cty'; eauto.
+  eapply cumul_prop1' in Cty; eauto.
+  eapply cumul_propositional in Cty'; eauto.
 Qed.
 
 Lemma Is_proof_app {Σ Γ t args ty} {wfΣ : wf_ext Σ} :
@@ -550,7 +554,7 @@ Proof.
   epose proof (PCUICPrincipality.common_typing _ wfΣ Hty Ht) as [C [Cty [Cty' Ht'']]].
   eapply PCUICSpine.typing_spine_strengthen in sp; eauto.
   edestruct (sort_typing_spine _ _ _ u _ _ _ pu sp) as [u' [Hty' isp']].
-  eapply PCUICElimination.cumul_prop1; eauto.
+  eapply cumul_prop1'; eauto.
   eapply PCUICValidity.validity; eauto.
   exists ty, u'; split; auto.
   eapply PCUICGeneration.type_mkApps. 2:eauto. auto. auto.
@@ -708,7 +712,7 @@ Proof.
       eapply inversion_Lambda in X0 as (? & ? & ? & ? & ?).
       assert (Σ ;;; [] |- a' : t). {
           eapply subject_reduction_eval; eauto.
-          eapply PCUICConversion.cumul_Prod_inv in c0 as [].
+          eapply PCUICConversion.cumul_Prod_inv in c0 as [[? ?] ?].
           econstructor. eassumption. eauto. eapply conv_sym in c0; eauto.
           now eapply conv_cumul. auto. auto. }
       assert (eqs := type_closed_subst b wfΣ X0).
@@ -749,7 +753,7 @@ Proof.
     + depelim Hed.
       eapply IHeval1 in H6 as (vt1' & Hvt2' & [He_vt1']); eauto.
       assert (Hc : PCUICContextConversion.conv_context Σ ([],, vdef na b0 t) [vdef na b0' t]). {
-        econstructor. econstructor. econstructor.
+        econstructor. econstructor. econstructor. reflexivity.
         eapply PCUICCumulativity.red_conv.
         now eapply wcbeval_red; eauto.
         reflexivity.

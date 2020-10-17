@@ -9,8 +9,11 @@ Module E := EAst.
 
 Local Existing Instance extraction_checker_flags.
 
-Definition isErasable Σ Γ t := ∑ T, Σ ;;; Γ |- t : T × 
-  (isArity T + (∑ u, (Σ ;;; Γ |- T : tSort u) * Universe.is_prop u))%type.
+Definition is_propositional u := 
+  Universe.is_prop u || Universe.is_sprop u.
+
+Definition isErasable Σ Γ t := ∑ T, Σ ;;; Γ |- t : T × (isArity T + (∑ u, (Σ ;;; Γ |- T : tSort u) * 
+  is_propositional u))%type.
 
 Definition isPropositionalArity ar b :=
   match destArity [] ar with
@@ -51,14 +54,14 @@ Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :
   | erases_tVar : forall n : ident, Σ;;; Γ |- tVar n ⇝ℇ E.tVar n
   | erases_tEvar : forall (m m' : nat) (l : list term) (l' : list E.term),
                    All2 (erases Σ Γ) l l' -> Σ;;; Γ |- tEvar m l ⇝ℇ E.tEvar m' l'
-  | erases_tLambda : forall (na : name) (b t : term) (t' : E.term),
+  | erases_tLambda : forall (na : aname) (b t : term) (t' : E.term),
                      Σ;;; (vass na b :: Γ) |- t ⇝ℇ t' ->
-                     Σ;;; Γ |- tLambda na b t ⇝ℇ E.tLambda na t'
-  | erases_tLetIn : forall (na : name) (t1 : term) (t1' : E.term)
+                     Σ;;; Γ |- tLambda na b t ⇝ℇ E.tLambda na.(binder_name) t'
+  | erases_tLetIn : forall (na : aname) (t1 : term) (t1' : E.term)
                       (T t2 : term) (t2' : E.term),
                     Σ;;; Γ |- t1 ⇝ℇ t1' ->
                     Σ;;; (vdef na t1 T :: Γ) |- t2 ⇝ℇ t2' ->
-                    Σ;;; Γ |- tLetIn na t1 T t2 ⇝ℇ E.tLetIn na t1' t2'
+                    Σ;;; Γ |- tLetIn na t1 T t2 ⇝ℇ E.tLetIn na.(binder_name) t1' t2'
   | erases_tApp : forall (f u : term) (f' u' : E.term),
                   Σ;;; Γ |- f ⇝ℇ f' ->
                   Σ;;; Γ |- u ⇝ℇ u' -> Σ;;; Γ |- tApp f u ⇝ℇ E.tApp f' u'
@@ -83,7 +86,7 @@ Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :
   | erases_tFix : forall (mfix : mfixpoint term) (n : nat) (mfix' : list (E.def E.term)),
                   All2
                     (fun (d : def term) (d' : E.def E.term) =>
-                     dname d = E.dname d'
+                     d.(dname).(binder_name) = E.dname d'
                      × rarg d = E.rarg d'
                        × Σ;;; Γ ,,, PCUICLiftSubst.fix_context mfix |-
                          dbody d ⇝ℇ E.dbody d') mfix mfix' ->
@@ -91,7 +94,7 @@ Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :
   | erases_tCoFix : forall (mfix : mfixpoint term) (n : nat) (mfix' : list (E.def E.term)),
                     All2
                       (fun (d : def term) (d' : E.def E.term) =>
-                       dname d = E.dname d'
+                      d.(dname).(binder_name) = E.dname d'
                        × rarg d = E.rarg d'
                          × Σ;;; Γ ,,, PCUICLiftSubst.fix_context mfix |-
                            dbody d ⇝ℇ E.dbody d') mfix mfix' ->
@@ -109,13 +112,13 @@ Lemma erases_forall_list_ind
       (Hlam : forall Γ na b t t',
           Σ;;; (vass na b :: Γ) |- t ⇝ℇ t' ->
           P (vass na b :: Γ) t t' ->
-          P Γ (tLambda na b t) (E.tLambda na t'))
+          P Γ (tLambda na b t) (E.tLambda na.(binder_name) t'))
       (Hletin : forall Γ na t1 t1' T t2 t2',
           Σ;;; Γ |- t1 ⇝ℇ t1' ->
           P Γ t1 t1' ->
           Σ;;; (vdef na t1 T :: Γ) |- t2 ⇝ℇ t2' ->
           P (vdef na t1 T :: Γ) t2 t2' ->
-          P Γ (tLetIn na t1 T t2) (E.tLetIn na t1' t2'))
+          P Γ (tLetIn na t1 T t2) (E.tLetIn na.(binder_name) t1' t2'))
       (Happ : forall Γ f4 u f' u',
           Σ;;; Γ |- f4 ⇝ℇ f' ->
           P Γ f4 f' -> Σ;;; Γ |- u ⇝ℇ u' ->
@@ -142,7 +145,7 @@ Lemma erases_forall_list_ind
       (Hfix : forall Γ mfix n mfix',
           All2
             (fun d d' =>
-               dname d = E.dname d' ×
+               (dname d).(binder_name) = E.dname d' ×
                rarg d = E.rarg d' ×
                Σ;;; app_context Γ (PCUICLiftSubst.fix_context mfix) |- dbody d ⇝ℇ E.dbody d')
             mfix mfix' ->
@@ -154,7 +157,7 @@ Lemma erases_forall_list_ind
       (Hcofix : forall Γ mfix n mfix',
           All2
             (fun d d' =>
-               dname d = E.dname d' ×
+               (dname d).(binder_name) = E.dname d' ×
                rarg d = E.rarg d' ×
                Σ;;; app_context Γ (PCUICLiftSubst.fix_context mfix) |- dbody d ⇝ℇ E.dbody d')
             mfix mfix' ->

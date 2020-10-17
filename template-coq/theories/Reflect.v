@@ -158,6 +158,41 @@ Next Obligation.
     constructor. subst. reflexivity.
 Defined.
 
+Definition eq_prop_level l1 l2 :=
+  match l1, l2 with
+  | PropLevel.lProp, PropLevel.lProp => true
+  | PropLevel.lSProp, PropLevel.lSProp => true
+  | _, _ => false
+  end.
+
+#[program] Instance reflect_prop_level : ReflectEq PropLevel.t := {
+  eqb := eq_prop_level
+}.
+Next Obligation.
+  intros x y. destruct x, y.
+  all: unfold eq_prop_level.
+  all: try solve [ constructor ; reflexivity ].
+  all: try solve [ constructor ; discriminate ].
+Defined.
+
+Definition eq_levels (l1 l2 : PropLevel.t + Level.t) :=
+  match l1, l2 with
+  | inl l, inl l' => eqb l l'
+  | inr l, inr l' => eqb l l'
+  | _, _ => false
+  end.
+
+#[program] Instance reflect_levels : ReflectEq (PropLevel.t + Level.t) := {
+  eqb := eq_levels
+}.
+Next Obligation.
+  intros x y. destruct x, y.
+  cbn -[eqb]. destruct (eqb_spec t t0). subst. now constructor.
+  all:try (constructor; cong).
+  cbn -[eqb]. destruct (eqb_spec t t0). subst; now constructor.
+  constructor; cong.
+Defined.
+
 Definition eq_prod {A B} (eqA : A -> A -> bool) (eqB : B -> B -> bool) x y :=
   let '(a1, b1) := x in
   let '(a2, b2) := y in
@@ -217,6 +252,38 @@ Next Obligation.
   - cbn. constructor. discriminate.
   - unfold eq_name. destruct (eqb_spec i i0); nodec.
     constructor. f_equal. assumption.
+Defined.
+
+Definition eq_relevance r r' :=
+  match r, r' with
+  | Relevant, Relevant => true
+  | Irrelevant, Irrelevant => true
+  | _, _ => false
+  end.
+
+#[program] Instance reflect_relevance : ReflectEq relevance := {
+  eqb := eq_relevance
+}.
+Next Obligation.
+  intros x y. destruct x, y.
+  - cbn. constructor. reflexivity.
+  - cbn. constructor. discriminate.
+  - cbn. constructor. discriminate.
+  - simpl. now constructor.
+Defined.
+
+Definition eq_aname (na nb : binder_annot name) :=
+  eqb na.(binder_name) nb.(binder_name) &&
+  eqb na.(binder_relevance) nb.(binder_relevance).
+
+#[program] Instance reflect_aname : ReflectEq aname := {
+  eqb := eq_aname
+}.
+Next Obligation.
+  intros x y. unfold eq_aname.
+  destruct (eqb_spec x.(binder_name) y.(binder_name));
+  destruct (eqb_spec x.(binder_relevance) y.(binder_relevance));
+  constructor; destruct x, y; simpl in *; cong.
 Defined.
 
 #[program] Instance reflect_kername : ReflectEq kername := {
@@ -476,8 +543,7 @@ Defined.
 
 Definition eqb_ConstraintType x y :=
   match x, y with
-  | ConstraintType.Lt, ConstraintType.Lt
-  | ConstraintType.Le, ConstraintType.Le
+  | ConstraintType.Le n, ConstraintType.Le m => Z.eqb n m
   | ConstraintType.Eq, ConstraintType.Eq => true
   | _, _ => false
   end.
@@ -485,7 +551,9 @@ Definition eqb_ConstraintType x y :=
 Instance reflect_ConstraintType : ReflectEq ConstraintType.t.
 Proof.
   refine {| eqb := eqb_ConstraintType |}.
-  destruct x, y; simpl; constructor; congruence.
+  destruct x, y; simpl; try constructor; try congruence.
+  destruct (Z.eqb_spec z z0); constructor. now subst.
+  cong.
 Defined.
 
 Definition eqb_ConstraintSet x y :=
@@ -553,6 +621,7 @@ Definition eqb_sort_family x y :=
   | InProp, InProp
   | InSet, InSet
   | InType, InType => true
+  | InSProp, InSProp => true
   | _, _ => false
   end.
 

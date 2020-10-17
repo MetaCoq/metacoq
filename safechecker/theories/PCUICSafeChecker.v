@@ -11,6 +11,7 @@ From Equations Require Import Equations.
 Require Import ssreflect.
 
 Local Set Keyed Unification.
+Set Equations Transparent.
 
 Lemma weakening_sq `{cf : checker_flags} {Σ Γ} Γ' {t T} :
   ∥ wf Σ.1 ∥ -> ∥ wf_local Σ (Γ ,,, Γ') ∥ ->
@@ -360,6 +361,9 @@ Section Typecheck.
   Context {cf : checker_flags} {Σ : global_env_ext} (HΣ : ∥ wf Σ ∥)
           (Hφ : ∥ on_udecl Σ.1 Σ.2 ∥)
           (G : universes_graph) (HG : is_graph_of_uctx G (global_ext_uctx Σ)).
+  
+  (* We get stack overflow on Qed after Equations definitions when this is transparent *)
+  Opaque reduce_stack_full.
 
   Local Definition HΣ' : ∥ wf_ext Σ ∥.
   Proof.
@@ -430,8 +434,6 @@ Section Typecheck.
     now rewrite eq.
   Qed.
   
-  Global Transparent reduce_to_sort.
-  
   Lemma reduce_to_sort_complete {Γ t wt} e : 
     reduce_to_sort Γ t wt = TypeError e ->
     (forall s, red Σ Γ t (tSort s) -> False).
@@ -471,7 +473,6 @@ Section Typecheck.
     pose proof (hnf_sound (h:=h)).
     now rewrite eq.
   Qed.
-  Global Transparent reduce_to_prod.
   
   Lemma reduce_to_prod_complete {Γ t wt} e :
     reduce_to_prod Γ t wt = TypeError e ->
@@ -504,7 +505,6 @@ Section Typecheck.
     view_indc (tInd ind u) => view_ind_tInd ind u;
     view_indc t => view_ind_other t _.
 
-  Opaque reduce_stack_full.
   Equations? reduce_to_ind (Γ : context) (t : term) (h : wellformed Σ Γ t)
     : typing_result (∑ i u l, ∥ red (fst Σ) Γ t (mkApps (tInd i u) l) ∥) :=
     reduce_to_ind Γ t h with inspect (decompose_app t) := {
@@ -540,7 +540,6 @@ Section Typecheck.
       apply decompose_stack_eq in decomp as ->.
       now rewrite <- eq_decomp0.
   Qed.
-  Global Transparent reduce_to_ind.
   
   Lemma reduce_to_ind_complete Γ ty wat e : 
     reduce_to_ind Γ ty wat = TypeError e ->  
@@ -578,7 +577,6 @@ Section Typecheck.
     cbn in *.
     easy.
   Qed.
-  Transparent reduce_stack_full.
   
   Definition iscumul Γ := isconv_term Σ HΣ Hφ G HG Γ Cumul.
 
@@ -1307,10 +1305,6 @@ Definition infer' {cf:checker_flags} {Σ} (HΣ : ∥ wf_ext Σ ∥)
 Definition make_graph_and_infer {cf:checker_flags} {Σ} (HΣ : ∥ wf_ext Σ ∥)
   := let '(G; HG) := wf_ext_is_graph HΣ in infer' HΣ G HG.
 
-
-Print Assumptions infer.
-(* Require Import ExtrOcamlBasic ExtrOcamlNatInt ExtrOcamlString. *)
-(* Extraction infer. *)
 
 
 Section CheckEnv.

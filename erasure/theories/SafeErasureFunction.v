@@ -132,19 +132,19 @@ Section fix_sigma.
     {Is_conv_to_Arity Σ Γ T} + {~ Is_conv_to_Arity Σ Γ T}
     by wf ((Γ;T;HT) : (∑ Γ t, wellformed Σ Γ t)) term_rel :=
     {
-      is_arity Γ HΓ T HT with (@reduce_to_sort _ Σ HΣ Γ T HT) => {
-      | Checked H => left _ ;
-      | TypeError _ with inspect (@reduce_to_prod _ Σ HΣ Γ T _) => {
-        | exist (Checked (na; A; B; H)) He with is_arity (Γ,, vass na A) _ B _ :=
+      is_arity Γ HΓ T HT with inspect (@reduce_to_sort _ Σ HΣ Γ T HT) => {
+      | exist (Checked H) rsort => left _ ;
+      | exist (TypeError _) rsort with inspect (@reduce_to_prod _ Σ HΣ Γ T _) => {
+        | exist (Checked (na; A; B; H)) rprod with is_arity (Γ,, vass na A) _ B _ :=
           { | left H => left _;
             | right H => right _ };
-        | exist (TypeError e) He => right _ } }
+        | exist (TypeError e) rprod => right _ } }
     }.
   Next Obligation.
     sq. econstructor. split. sq. eassumption. econstructor.
   Qed.
   Next Obligation.
-    clear He.
+    clear rprod.
     destruct HT as [ [] | [] ]; sq.
     - eapply subject_reduction in X; eauto.
       eapply inversion_Prod in X as (? & ? & ? & ? & ?).
@@ -154,7 +154,7 @@ Section fix_sigma.
       cbn. eapply isWfArity_prod_inv; eauto.
   Qed.
   Next Obligation.
-    clear He.
+    clear rprod.
     sq. destruct HT as [ [] | [] ].
     - eapply subject_reduction in X; eauto.
       eapply inversion_Prod in X as (? & ? & ? & ? & ?).
@@ -172,7 +172,7 @@ Section fix_sigma.
     eassumption. now cbn.
   Qed.
   Next Obligation.
-    clear He.
+    clear rprod.
     destruct HΣ as [wΣ].
     destruct H1 as (? & ? & ?). sq.
     destruct H.
@@ -187,13 +187,13 @@ Section fix_sigma.
     exists x4; split; eauto.
 
     destruct HT as [ [] | [] ].
-    ++ sq. pose proof (X2). pose proof X2.
+    ++ sq. pose proof t. pose proof t.
 
-      eapply subject_reduction in X4. 2:eauto. 2:{ etransitivity. exact X. exact r0. }
-      eapply inversion_Prod in X4 as (? & ? & ? & ? & ?) ; auto.
-
-      eapply subject_reduction in X3. 2:eauto. 2:{ exact X0. }
+      eapply subject_reduction in X3. 2:eauto. 2:{ etransitivity. exact X. exact r0. }
       eapply inversion_Prod in X3 as (? & ? & ? & ? & ?) ; auto.
+
+      eapply subject_reduction in X2. 2:eauto. 2:{ exact X0. }
+      eapply inversion_Prod in X2 as (? & ? & ? & ? & ?) ; auto.
 
       etransitivity. eassumption.
 
@@ -214,7 +214,11 @@ Section fix_sigma.
   Qed.
 
   Next Obligation.
-  Admitted. (* reduce to prod cannot fail on types convertible to arities *)
+    pose proof (reduce_to_sort_complete HΣ _ (eq_sym rsort)).
+    pose proof (reduce_to_prod_complete HΣ _ (eq_sym rprod)).
+    destruct HΣ.
+    apply Is_conv_to_Arity_inv in H as [(?&?&?&[r])|(?&[r])]; eauto.
+  Qed.
 
 End fix_sigma.
 
@@ -231,12 +235,6 @@ Local Ltac sq :=
   - it represents a type, i.e., its type is an arity
   - it represents a proof: its sort is Prop.
 *)
-
-Lemma reduce_to_sort_complete {cf:checker_flags} {Σ : global_env_ext} {wfΣ : ∥ wf Σ ∥} {Γ t wt} e : 
-  reduce_to_sort wfΣ Γ t wt = TypeError e ->
-  (forall s, red Σ Γ t (tSort s) -> False).
-Proof.
-Admitted.
 
 Program Definition is_erasable (Σ : PCUICAst.global_env_ext) (HΣ : ∥wf_ext Σ∥) (Γ : context) (t : PCUICAst.term) (Ht : welltyped Σ Γ t) :
   ({∥isErasable Σ Γ t∥} + {∥(isErasable Σ Γ t -> False)∥}) :=
@@ -342,7 +340,7 @@ Next Obligation.
   unfold type_of in *.
   destruct HΣ.
   symmetry in Heq_anonymous.
-  pose proof (reduce_to_sort_complete _ Heq_anonymous).
+  pose proof (reduce_to_sort_complete _ _ Heq_anonymous).
   clear Heq_anonymous.
   destruct (infer _ (is_erasable_obligation_7 _ _ _ _ _ _)) as [? [[? ?]]].
   destruct (infer _ (is_erasable_obligation_1 _ _)) as [? [[? ?]]].
@@ -521,11 +519,6 @@ Proof.
   destruct t; simpl; auto.
 Qed.
 Hint Rewrite @erase_erase_clause_1 : erase.
-
-Lemma welltyped_app_left {Σ Γ t u} : welltyped Σ Γ (tApp t u) -> welltyped Σ Γ t.
-Proof.
-Admitted.
-
 
 Lemma erase_to_box {Σ : global_env_ext} {wfΣ : ∥wf_ext Σ∥} {Γ t} (wt : welltyped Σ Γ t) :
   let et := erase Σ wfΣ Γ t wt in 

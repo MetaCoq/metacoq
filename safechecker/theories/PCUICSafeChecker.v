@@ -4,7 +4,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICNormal PCUICSR
      PCUICGeneration PCUICReflect PCUICEquality PCUICInversion PCUICValidity
      PCUICWeakening PCUICPosition PCUICCumulativity PCUICSafeLemmata PCUICSN
-     PCUICPretty PCUICArities.
+     PCUICPretty PCUICArities PCUICConfluence PCUICConversion.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeConversion.
 
 From Equations Require Import Equations.
@@ -401,81 +401,185 @@ Section Typecheck.
   Proof.
     apply reduce_term_sound.
   Defined.
-
-  Program Definition reduce_to_sort Γ t (h : wellformed Σ Γ t)
-    : typing_result (∑ u, ∥ red (fst Σ) Γ t (tSort u) ∥) :=
-    match t with
-    | tSort s => ret (s; sq (refl_red _ _ _))
-    | _ =>
-      match hnf Γ t h with
-      | tSort s => ret (s; _)
-      | _ => raise (NotASort t)
-      end
-    end.
-  Next Obligation.
-    pose proof (hnf_sound (h:=h)).
-    now rewrite <- Heq_anonymous in H0.
-  Defined.
-
-  Program Definition reduce_to_prod Γ t (h : wellformed Σ Γ t)
-       : typing_result (∑ na a b, ∥ red (fst Σ) Γ t (tProd na a b) ∥) :=
-    match t with
-    | tProd na a b => ret (na; a; b; sq (refl_red _ _ _))
-    | _ =>
-      match hnf Γ t h with
-      | tProd na a b => ret (na; a; b; _)
-      | t' => raise (NotAProduct t t')
-      end
-    end.
-  Next Obligation.
-    pose proof (hnf_sound (h:=h)).
-    now rewrite <- Heq_anonymous in H0.
-  Defined.
-
-  Fixpoint stack_to_apps π : typing_result (list term) :=
-    match π with
-    | Empty => ret []
-    | App t π => l <- stack_to_apps π ;; ret (t :: l)
-    | _ => raise (Msg "not some applications")
-    end.
-
-  Lemma zip_stack_to_apps t π l :
-    stack_to_apps π = Checked l -> zipc t π = mkApps t l.
+  
+  Theorem hnf_complete {Γ t h} : whnf RedFlags.default Σ Γ (hnf Γ t h).
   Proof.
-    revert t l. induction π; cbn; try inversion 1.
-    reflexivity.
-    destruct (stack_to_apps π); inversion H1.
-    erewrite IHπ; reflexivity.
+    apply reduce_term_complete.
+  Qed.
+  
+  Inductive view_sort : term -> Type :=
+  | view_sort_sort s : view_sort (tSort s)
+  | view_sort_other t : ~isSort t -> view_sort t.
+  
+  Equations view_sortc (t : term) : view_sort t :=
+    view_sortc (tSort s) := view_sort_sort s;
+    view_sortc t := view_sort_other t _.
+  
+  Equations? reduce_to_sort (Γ : context) (t : term) (h : wellformed Σ Γ t)
+    : typing_result (∑ u, ∥ red (fst Σ) Γ t (tSort u) ∥) :=
+    reduce_to_sort Γ t h with view_sortc t := {
+      | view_sort_sort s => ret (s; sq (refl_red _ _ _));
+      | view_sort_other t _ with inspect (hnf Γ t h) :=
+        | exist hnft eq with view_sortc hnft := {
+          | view_sort_sort s => ret (s; _);
+          | view_sort_other t _ => raise (NotASort t)
+        }
+      }.
+  Proof.
+    pose proof (hnf_sound (h:=h)).
+    now rewrite eq.
+  Qed.
+  
+  Global Transparent reduce_to_sort.
+  
+  Lemma reduce_to_sort_complete {Γ t wt} e : 
+    reduce_to_sort Γ t wt = TypeError e ->
+    (forall s, red Σ Γ t (tSort s) -> False).
+  Proof.
+    funelim (reduce_to_sort Γ t wt); try congruence.
+    intros _ s r.
+    pose proof (@hnf_complete Γ t0 h).
+    pose proof (@hnf_sound Γ t0 h) as [r'].
+    destruct HΣ.
+    eapply red_confluence in r as (?&r1&r2); eauto.
+    apply invert_red_sort in r2 as ->.
+    apply whnf_red_sort in r1; auto.
+    clear Heq.
+    rewrite r1 in n0.
+    now cbn in n0.
   Qed.
 
+  Inductive view_prod : term -> Type :=
+  | view_prod_prod na A b : view_prod (tProd na A b)
+  | view_prod_other t : ~isProd t -> view_prod t.
+  
+  Equations view_prodc (t : term) : view_prod t :=
+    view_prodc (tProd na A b) := view_prod_prod na A b;
+    view_prodc t := view_prod_other t _.
 
-  Program Definition reduce_to_ind Γ t (h : wellformed Σ Γ t)
-    : typing_result (∑ i u l, ∥ red (fst Σ) Γ t (mkApps (tInd i u) l) ∥) :=
-    match decompose_app t with
-    | (tInd i u, l) => ret (i; u; l; sq _)
-    | _ =>
-      match reduce_stack RedFlags.default Σ HΣ Γ t Empty h with
-      | (tInd i u, π) => match stack_to_apps π with
-                        | Checked l => ret (i; u; l; _)
-                        | TypeError e => raise e
-                        end
-      | _ => raise (NotAnInductive t)
-      end
+  Equations? reduce_to_prod (Γ : context) (t : term) (h : wellformed Σ Γ t)
+    : typing_result (∑ na a b, ∥ red (fst Σ) Γ t (tProd na a b) ∥) :=
+    reduce_to_prod Γ t h with view_prodc t := {
+      | view_prod_prod na a b => ret (na; a; b; sq (refl_red _ _ _));
+      | view_prod_other t _ with inspect (hnf Γ t h) :=
+        | exist hnft eq with view_prodc hnft := {
+          | view_prod_prod na a b => ret (na; a; b; _);
+          | view_prod_other t' _ => raise (NotAProduct t t')
+        }
+      }.
+  Proof.
+    pose proof (hnf_sound (h:=h)).
+    now rewrite eq.
+  Qed.
+  Global Transparent reduce_to_prod.
+  
+  Lemma reduce_to_prod_complete {Γ t wt} e :
+    reduce_to_prod Γ t wt = TypeError e ->
+    (forall na a b, red Σ Γ t (tProd na a b) -> False).
+  Proof.
+    funelim (reduce_to_prod Γ t wt); try congruence.
+    intros _ na a b r.
+    pose proof (@hnf_complete Γ t0 h).
+    pose proof (@hnf_sound Γ t0 h) as [r'].
+    destruct HΣ.
+    eapply red_confluence in r as (?&r1&r2); eauto.
+    apply invert_red_prod in r2 as (?&?&(->&?)&?); auto.
+    apply whnf_red_prod in r1 as (?&?&eq); auto.
+    clear Heq.
+    rewrite eq in n0.
+    now cbn in n0.
+  Qed.
+  
+  Definition isInd (t : term) : bool :=
+    match t with
+    | tInd _ _ => true
+    | _ => false
     end.
-  Next Obligation.
-    assert (X : mkApps (tInd i u) l = t); [|rewrite X; apply refl_red].
-    etransitivity. 2: symmetry; eapply mkApps_decompose_app.
-    pose proof (f_equal fst Heq_anonymous) as X; cbn in X; rewrite X; clear X.
-    pose proof (f_equal snd Heq_anonymous) as X; cbn in X; rewrite X; clear X.
-    reflexivity.
-  Defined.
-  Next Obligation.
-    pose proof (reduce_stack_sound RedFlags.default Σ HΣ _ _ Empty h).
-    rewrite <- Heq_anonymous1 in H0.
-    now erewrite <- zip_stack_to_apps.
-  Defined.
+  
+  Inductive view_ind : term -> Type :=
+  | view_ind_tInd ind u : view_ind (tInd ind u)
+  | view_ind_other t : negb (isInd t) -> view_ind t.
+  
+  Equations view_indc (t : term) : view_ind t :=
+    view_indc (tInd ind u) => view_ind_tInd ind u;
+    view_indc t => view_ind_other t _.
 
+  Opaque reduce_stack_full.
+  Equations? reduce_to_ind (Γ : context) (t : term) (h : wellformed Σ Γ t)
+    : typing_result (∑ i u l, ∥ red (fst Σ) Γ t (mkApps (tInd i u) l) ∥) :=
+    reduce_to_ind Γ t h with inspect (decompose_app t) := {
+      | exist (thd, args) eq_decomp with view_indc thd := {
+        | view_ind_tInd i u => ret (i; u; args; sq _);
+        | view_ind_other t _ with inspect (reduce_stack RedFlags.default Σ HΣ Γ t Empty h) := {
+          | exist (hnft, π) eq with view_indc hnft := {
+            | view_ind_tInd i u with inspect (decompose_stack π) := {
+              | exist (l, _) eq_decomp => ret (i; u; l; _)
+              };
+            | view_ind_other _ _ => raise (NotAnInductive t)
+            }
+          }
+        }
+      }.
+  Proof.
+    - assert (X : mkApps (tInd i u) args = t); [|rewrite X; apply refl_red].
+      etransitivity. 2: symmetry; eapply mkApps_decompose_app.
+      now rewrite <- eq_decomp.
+    - pose proof (reduce_stack_sound RedFlags.default Σ HΣ _ _ Empty h).
+      rewrite <- eq in H.
+      cbn in *.
+      assert (π = appstack l ε) as ->.
+      2: { now rewrite zipc_appstack in H. }
+      unfold reduce_stack in eq.
+      destruct reduce_stack_full as (?&_&stack_val&?).
+      subst x.
+      unfold Pr in stack_val.
+      cbn in *.
+      assert (decomp: decompose_stack π = ((decompose_stack π).1, ε)).
+      { rewrite stack_val.
+        now destruct decompose_stack. }
+      apply decompose_stack_eq in decomp as ->.
+      now rewrite <- eq_decomp0.
+  Qed.
+  Global Transparent reduce_to_ind.
+  
+  Lemma reduce_to_ind_complete Γ ty wat e : 
+    reduce_to_ind Γ ty wat = TypeError e ->  
+    forall ind u args,
+      red Σ Γ ty (mkApps (tInd ind u) args) ->
+      False.
+  Proof.
+    funelim (reduce_to_ind Γ ty wat); try congruence.
+    intros _ ind u args r.
+    pose proof (reduce_stack_whnf RedFlags.default Σ HΣ Γ t ε h) as wh.
+    unfold reduce_stack in *.
+    destruct reduce_stack_full as ((hd&π)&r'&stack_valid&(notapp&_)).
+    apply Req_red in r' as [r'].
+    unfold Pr in stack_valid.
+    cbn in *.
+    destruct HΣ.
+    eapply red_confluence in r as (?&r1&r2); [|eassumption|exact r'].
+    assert (exists args, π = appstack args ε) as (?&->).
+    { exists ((decompose_stack π).1).
+      assert (decomp: decompose_stack π = ((decompose_stack π).1, ε)).
+      { now rewrite stack_valid; destruct decompose_stack. }
+      now apply decompose_stack_eq in decomp. }
 
+    unfold zipp in wh.
+    rewrite stack_context_appstack decompose_stack_appstack in wh.
+    rewrite zipc_appstack in r1.
+    cbn in *.
+    rewrite app_nil_r in wh.
+    apply red_mkApps_tInd in r2 as (?&->&?); auto.
+    apply whnf_red_mkApps_tInd in r1 as (?&eq); auto.
+    apply (f_equal decompose_app) in eq.
+    rewrite !decompose_app_mkApps in eq; [now rewrite notapp|easy|].
+    noconf eq.
+    noconf e0.
+    cbn in *.
+    easy.
+  Qed.
+  Transparent reduce_stack_full.
+  
   Definition iscumul Γ := isconv_term Σ HΣ Hφ G HG Γ Cumul.
 
   Program Definition convert_leq Γ t u

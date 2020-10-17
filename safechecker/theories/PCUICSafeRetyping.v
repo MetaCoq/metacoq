@@ -5,10 +5,10 @@ From Equations Require Import Equations.
 
 From Coq Require Import Bool String List Program.
 From MetaCoq.Template Require Import config monad_utils utils uGraph.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst
-     PCUICUnivSubst PCUICTyping PCUICSafeLemmata PCUICSubstitution PCUICValidity
-     PCUICGeneration PCUICInversion PCUICValidity PCUICInductives PCUICSR
-     PCUICCumulativity PCUICConversion PCUICConfluence PCUICArities
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICArities PCUICInduction
+     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICSafeLemmata PCUICSubstitution PCUICValidity
+     PCUICGeneration PCUICInversion PCUICValidity PCUICInductives PCUICInductiveInversion
+     PCUICSpine PCUICSR PCUICCumulativity PCUICConversion PCUICConfluence PCUICArities
      PCUICWeakeningEnv PCUICContexts.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker.
 Local Open Scope string_scope.
@@ -44,7 +44,6 @@ Proof.
   eapply All2_symmetry. typeclasses eauto.
   eapply (All2_impl red'). intros x y; apply red_conv.
 Qed.
-
 
 Definition well_sorted {cf:checker_flags} Σ Γ T := 
   ∥ ∑ s, Σ ;;; Γ |- T : tSort s ∥.
@@ -88,28 +87,6 @@ Section TypeOf.
   Qed.
 End TypeOf.
 
-Lemma reduce_to_ind_complete {cf:checker_flags} {Σ : global_env_ext} (wfΣ : wf Σ) Γ ty wat e : 
-  reduce_to_ind (sq wfΣ) Γ ty wat = TypeError e ->  
-  (∑ ind u args, red Σ Γ ty (mkApps (tInd ind u) args)) -> False.
-Proof.
-Admitted.
-
-From MetaCoq.PCUIC Require Import PCUICInductives PCUICInductiveInversion PCUICSpine PCUICArities.
-
-Lemma isWAT_mkApps_Ind_conv_args  {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ ind mdecl idecl u args args'} :
-  declared_inductive Σ mdecl ind idecl ->
-  wf_local Σ Γ ->
-  isWfArity_or_Type Σ Γ (mkApps (tInd ind u) args) ->
-  conv_terms Σ Γ args args' ->
-  isWfArity_or_Type Σ Γ (mkApps (tInd ind u) args').
-Proof.
-  move=> decli wf; move/(isWAT_mkApps_Ind_isType _ _ _ _ _ wfΣ) => [s Hs] convargs.
-  right; exists s.
-  eapply invert_type_mkApps_ind in Hs as [sp cu]; eauto.
-  eapply type_mkApps; eauto.
-  econstructor; eauto.
-Admitted.
-
 Definition on_subterm P Pty Γ t : Type := 
   match t with
   | tProd na t b => Pty Γ t * Pty (Γ ,, vass na t) b
@@ -149,28 +126,46 @@ Section TypeOf.
     Next Obligation. intros Γ t ws [s [[Hs Hp]]]. simpl in *.
       unfold infer_as_sort_obligation_1.
       destruct ws as [[s' Hs']]. 
-      specialize (Hp _ Hs').
-      eapply invert_cumul_sort_r in Hp as [u' [redu' leq]].
+      specialize (Hp _ Hs') as s'cum.
+      eapply invert_cumul_sort_r in s'cum as [u' [redu' leq]].
       destruct reduce_to_sort => //.
       intros u wc [= <-].
-      todo "Needs completeness of reduce_to_sort"%string.
+      sq.
+      split.
+      - now eauto using type_reduction.
+      - intros ? typ.
+        apply (cumul_Sort_inv _ Γ).
+        specialize (Hp _ typ).
+        eapply cumul_red_l_inv; eauto.
     Qed.
     Next Obligation.
       simpl. intros.
-      todo "completeness of reduce_to_sort"%string.
+      pose proof (reduce_to_sort_complete hΣ _ (eq_sym Heq_anonymous)).
+      clear Heq_anonymous.
+      destruct tx as (?&[(?&?)]).
+      destruct wf as [(?&?)].
+      apply c in t1.
+      eapply invert_cumul_sort_r in t1 as (?&r&_).
+      eauto.
     Qed.
   End SortOf.
 
   Program Definition infer_as_prod Γ T
+    (wf : wellformed Σ Γ T)
     (isprod : ∥ ∑ na A B, Σ ;;; Γ |- T <= tProd na A B ∥) : 
     ∑ na' A' B', ∥ red Σ.1 Γ T (tProd na' A' B') ∥ :=
-    match @reduce_to_prod cf Σ hΣ Γ T _ with
+    match @reduce_to_prod cf Σ hΣ Γ T wf with
     | Checked p => p
     | TypeError e => !
     end.
-    Next Obligation. exact (todo "completeness"). Qed.
-    Next Obligation. exact (todo "completeness"). Qed.
-  
+    Next Obligation.
+      destruct isprod as [(?&?&?&cum)].
+      destruct hΣ.
+      apply invert_cumul_prod_r in cum as cum'; auto;
+        destruct cum' as (?&?&?&(?&?)&?).
+      symmetry in Heq_anonymous.
+      now eapply reduce_to_prod_complete in Heq_anonymous.
+    Qed.
   
   Equations lookup_ind_decl ind : typing_result
         ({decl & {body & declared_inductive (fst Σ) decl ind body}}) :=
@@ -228,7 +223,7 @@ Section TypeOf.
 
     infer Γ (tApp t a) wt :=
       let ty := infer Γ t _ in
-      let pi := infer_as_prod Γ ty _  in
+      let pi := infer_as_prod Γ ty _ _ in
       ret (subst10 a pi.π2.π2.π1);
 
     infer Γ (tConst cst u) wt with inspect (lookup_env (fst Σ) cst) :=
@@ -337,6 +332,12 @@ Section TypeOf.
         eapply cumul_LetIn_bo; eauto.
 
     - eapply inversion_App in HT as (? & ? & ? & ? & ?); try econstructor; eauto.
+
+    - simpl in ty. destruct inversion_App as (? & ? & ? & ? & ? & ?).
+      destruct infer as [bty' [[Hbty pbty]]]; subst ty; simpl in *.
+      apply wat_wellformed; auto.
+      sq.
+      eapply validity_term; eauto.
     - simpl in ty. destruct inversion_App as (? & ? & ? & ? & ? & ?).
       destruct infer as [bty' [[Hbty pbty]]]; subst ty; simpl in *.
       sq. exists x, x0, x1. now eapply pbty.
@@ -549,7 +550,7 @@ Section TypeOf.
       specialize (Hp _ Hc).
       eapply invert_cumul_ind_r in Hp as [ui' [l' [red [Ru ca]]]]; auto.
       symmetry in wildcard1; eapply reduce_to_ind_complete in wildcard1 => //.
-      now exists ind, ui', l'.
+      eauto.
 
     - eapply inversion_Proj in HT as (u & mdecl & idecl & pdecl' & args & declp & Hc & Hargs & cum); auto.
       simpl in cum.
@@ -633,10 +634,10 @@ Section TypeOf.
       destruct inversion_Proj as (u & mdecl & idecl & pdecl' & args & declp & Hc & Hargs & cum); auto.
       destruct infer as [cty [[Hc' Hc'']]]. simpl.
       symmetry in wildcard3.
-      eapply reduce_to_ind_complete in wildcard3; auto.
-      clear wildcard3; simpl. specialize (Hc'' _ Hc).
-      eapply invert_cumul_ind_r in Hc'' as [ui' [l' [red [Rgl Ra]]]]; auto.
-      eexists _, _, _; eauto.      
+      pose proof (reduce_to_ind_complete _ _ _ _ _ wildcard3).
+      clear wildcard3; simpl. specialize (Hc'' _ Hc) as typ.
+      eapply invert_cumul_ind_r in typ as [ui' [l' [red [Rgl Ra]]]]; auto.
+      eauto.
 
     - eapply inversion_Proj in HT as (u & mdecl & idecl & pdecl' & args & declp & Hc & Hargs & cum); auto.
       destruct declp; simpl in *.
@@ -721,5 +722,3 @@ Section TypeOf.
   Qed.
 
 End TypeOf.
-
-Print Assumptions type_of.

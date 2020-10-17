@@ -754,18 +754,6 @@ Proof.
     eapply whnf_pres; eauto.
 Qed.
 
-Ltac mkApps_eq :=
-  match goal with
-  | [H: ?a = mkApps ?hd ?args |- _] =>
-    match a with
-    | tApp ?hd' ?a' => fail 1
-    | ?a =>
-      destruct args as [|? ? _] using MCList.rev_ind;
-      [|rewrite <- mkApps_nested in H; cbn in H; congruence];
-      cbn in H
-    end
-  end.
-
 Lemma whne_mkApps_tInd Σ Γ ind u args :
   whne RedFlags.default Σ Γ (mkApps (tInd ind u) args) ->
   False.

@@ -1514,18 +1514,59 @@ Section Conversion.
       now eapply All_local_env_app in wf.
   Qed.
 
-  (* Q: Shouldnt't we have as hypothesis that [c <> c'] ? *)
+  (* TODO MOVE *)
+  Definition eqb_universe_instance u v :=
+    forallb2 (check_eqb_universe G) (map Universe.make u) (map Universe.make v).
+
+  (* TODO MOVE *)
+  Lemma eqb_universe_instance_spec :
+    forall u v,
+      eqb_universe_instance u v ->
+      R_universe_instance (eq_universe (global_ext_constraints Σ)) u v.
+  Proof.
+    intros u v e.
+    unfold eqb_universe_instance in e.
+    eapply forallb2_Forall2 in e.
+    eapply Forall2_impl. 1: eassumption.
+    intros. eapply (check_eqb_universe_spec' G (global_ext_uctx Σ)).
+    all: auto.
+    - eapply wf_ext_global_uctx_invariants.
+      eapply hΣ'.
+    - eapply global_ext_uctx_consistent.
+      eapply hΣ'.
+  Qed.
+  
+  Definition eq_termp leq v v' :=
+    match leq with
+    | Conv => eq_term Σ v v'
+    | Cumul => leq_term Σ Σ v v'
+    end.
+
+  Lemma conv_cum_alt leq Γ t t' :
+    conv_cum leq Σ Γ t t' ->
+    ∥∑ v v', (red Σ Γ t v × red Σ Γ t' v') × eq_termp leq v v'∥.
+  Proof.
+    destruct leq; cbn.
+    - intros [c].
+      apply conv_alt_red in c.
+      now constructor.
+    - intros [c].
+      apply cumul_alt in c.
+      now constructor.
+  Qed.
+  
   (* Also, is there an invariant of injectivity on the assignment between kernames and inductives *)
   Equations(noeqns) unfold_constants (Γ : context) (leq : conv_pb)
             (c : kername) (u : Instance.t) (π1 : stack)
             (h1 : wtp Γ (tConst c u) π1)
             (c' : kername) (u' : Instance.t) (π2 : stack)
             (h2 : wtp Γ (tConst c' u') π2)
+            (ne : c <> c' \/ (c = c' /\ ~eqb_universe_instance u u'))
             (hx : conv_stack_ctx Γ π1 π2)
             (aux : Aux Term Γ (tConst c u) π1 (tConst c' u') π2 h2)
     : ConversionResult (conv_term leq Γ (tConst c u) π1 (tConst c' u') π2) :=
 
-    unfold_constants Γ leq c u π1 h1 c' u' π2 h2 hx aux
+    unfold_constants Γ leq c u π1 h1 c' u' π2 h2 ne hx aux
     with inspect (lookup_env Σ c') := {
     | @exist (Some (ConstantDecl {| cst_body := Some b |})) eq1 :=
       isconv_red leq (tConst c u) π1 (subst_instance_constr u' b) π2 aux ;
@@ -1588,9 +1629,12 @@ Section Conversion.
     eapply red_zipp. eapply red_const. eassumption.
   Qed.
   Next Obligation.
-    (* No definition to unfold... 
-    Should we have an hypothesis ditching that case ? *)
-    todo "Completeness"%string.
+    (* Both c and c' are axioms. Either they are different constants or they are not
+       convertible because the universes are different. *)
+    destruct ne.
+    - apply conv_cum_alt in H as [(?&?&(r1&r2)&e)].
+      unfold zipp in r1, r2.
+      eapply red_zipp_inv in r1.
   Qed.
   Next Obligation.
     (* inductive vs non-defined constant *)
@@ -1672,28 +1716,6 @@ Section Conversion.
   Qed.
   
     
-  (* TODO MOVE *)
-  Definition eqb_universe_instance u v :=
-    forallb2 (check_eqb_universe G) (map Universe.make u) (map Universe.make v).
-
-  (* TODO MOVE *)
-  Lemma eqb_universe_instance_spec :
-    forall u v,
-      eqb_universe_instance u v ->
-      R_universe_instance (eq_universe (global_ext_constraints Σ)) u v.
-  Proof.
-    intros u v e.
-    unfold eqb_universe_instance in e.
-    eapply forallb2_Forall2 in e.
-    eapply Forall2_impl. 1: eassumption.
-    intros. eapply (check_eqb_universe_spec' G (global_ext_uctx Σ)).
-    all: auto.
-    - eapply wf_ext_global_uctx_invariants.
-      eapply hΣ'.
-    - eapply global_ext_uctx_consistent.
-      eapply hΣ'.
-  Qed.
-
   (* TODO (RE)MOVE *)
   Lemma destArity_eq_term_upto_univ :
     forall Re Rle Γ1 Γ2 t1 t2 Δ1 s1,
@@ -2402,8 +2424,7 @@ Section Conversion.
     : ConversionResult (conv_term leq Γ t1 π1 t2 π2) :=
 
     _isconv_prog Γ leq t1 π1 h1 t2 π2 h2 hx ir1 ir2 aux with prog_viewc t1 t2 := {
-    | prog_view_App _ _ _ _ :=
-      False_rect _ _ ;
+    | prog_view_App _ _ _ _ := !;
 
     | prog_view_Const c u c' u' with eq_dec c c' := {
       | left eq1 with inspect (eqb_universe_instance u u') := {

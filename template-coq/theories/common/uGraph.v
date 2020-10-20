@@ -1721,7 +1721,6 @@ Section CheckLeq2.
     exact I.
   Qed.
 
-  (* todo complete *)
   Lemma check_eqb_universe_spec' u1 u2
     : check_eqb_universe G u1 u2 -> eq_universe uctx.2 u1 u2.
   Proof.
@@ -1739,6 +1738,23 @@ Section CheckLeq2.
     apply eq_leq_universe.
     split; eapply gc_leq_universe_n_iff;
       (destruct (gc_of_constraints uctx.2); [cbn in *|contradiction HG]); tas.
+  Qed.
+  
+  Lemma eq_universe_spec' u1 u2 :
+    levels_declared u1 ->
+    levels_declared u2 ->
+    eq_universe uctx.2 u1 u2 ->
+    check_eqb_universe G u1 u2.
+  Proof.
+    intros decl1 decl2.
+    apply levels_gc_declared_declared in decl1.
+    apply levels_gc_declared_declared in decl2.
+    rewrite gc_eq_universe_iff.
+    unfold is_graph_of_uctx, gc_of_uctx in HG.
+    destruct gc_of_constraints; [cbn in *|contradiction HG].
+    intros eq.
+    apply <- check_eqb_universe_spec; eauto.
+    exact eq.
   Qed.
 
   (* todo complete *)

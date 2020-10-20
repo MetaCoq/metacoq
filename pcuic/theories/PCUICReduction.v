@@ -341,6 +341,20 @@ Proof.
   eapply X0; tea. now apply clos_rt_rtn1_iff.
 Defined.
 
+Definition red_rect_n1 := red_rect'.
+Definition red_rect_1n Σ Γ (P : term -> term -> Type) :
+  (forall x, P x x) ->
+  (forall x y z, red1 Σ Γ x y -> red Σ Γ y z -> P y z -> P x z) ->
+  forall x y, red Σ Γ x y -> P x y.
+Proof.
+  intros Hrefl Hstep x y r.
+  apply clos_rt_rt1n_iff in r.
+  induction r; eauto.
+  eapply Hstep; eauto.
+  now apply clos_rt_rt1n_iff.
+Defined.
+  
+
 
 (** Simple lemmas about reduction *)
 

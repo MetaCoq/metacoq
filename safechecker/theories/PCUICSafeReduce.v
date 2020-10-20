@@ -1658,6 +1658,9 @@ Section Reduce.
       rewrite eq in haux. cbn in haux.
       assumption.
   Qed.
+              
+  Lemma stack_context_decompose' π π' :
+    stack_context (decompose_stack π).2 = stack_context p.
 
   Theorem reduce_term_complete Γ t h :
     whnf flags Σ Γ (reduce_term Γ t h).

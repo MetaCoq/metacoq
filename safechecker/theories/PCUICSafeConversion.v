@@ -2100,20 +2100,6 @@ Section Conversion.
     intuition eauto.
   Qed.
 
-  (* TODO MOVE to SafeLemmata *)
-  Lemma cored_proj :
-    forall Γ p c c',
-      cored Σ Γ c c' ->
-      cored Σ Γ (tProj p c) (tProj p c').
-  Proof.
-    intros Γ p c c' h.
-    induction h in p |- *.
-    - constructor. constructor. assumption.
-    - eapply cored_trans.
-      + eapply IHh.
-      + econstructor. assumption.
-  Qed.
-
   Opaque reduce_stack.
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)

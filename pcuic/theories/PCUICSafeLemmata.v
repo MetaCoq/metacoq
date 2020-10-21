@@ -1387,23 +1387,6 @@ Section Lemmata.
       eapply cumul_conv_ctx. all: eauto.
   Qed.
   
-  Lemma conv_cum_zipp :
-    forall Γ leq u v π1 π2,
-      conv_cum leq Σ Γ u v ->
-      conv_context Σ (Γ,,, stack_context π1) (Γ,,, stack_context π2) ->
-      conv_cum leq Σ Γ (zipp u π1) (zipp v π2).
-  Proof.
-    intros Γ leq u v π1 π2 c_uv c_stacks.
-    unfold zipp.
-    destruct (decompose_stack π1) eqn:decomp1, (decompose_stack π2) eqn:decomp2.
-    apply decompose_stack_eq in decomp1 as ->.
-    apply decompose_stack_eq in decomp2 as ->.
-    rewrite !stack_context_appstack in c_stacks.
-    destruct hΣ.
-    destruct leq.
-    - destruct c_uv as [c_uv].
-      constructor.
-      apply mkApps_conv_args; auto.
 End Lemmata.
 
 Lemma Case_Construct_ind_eq {cf:checker_flags} Σ (hΣ : ∥ wf Σ.1 ∥) :

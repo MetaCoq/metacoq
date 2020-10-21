@@ -5,7 +5,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
      PCUICCumulativity PCUICEquality PCUICConversion
      PCUICSafeLemmata PCUICNormal PCUICInversion PCUICReduction PCUICPosition
-     PCUICContextConversion PCUICSN PCUICUtils PCUICWeakening.
+     PCUICContextConversion PCUICSN PCUICUtils PCUICWeakening
+     PCUICConversionInversion.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce.
 
 Require Import Equations.Prop.DepElim.
@@ -1635,41 +1636,7 @@ Section Conversion.
       unfold global_ext_levels in *.
       now apply LevelSet.mem_spec in y_mem.
   Qed.
-  
-  Definition conv_pb_rel (pb : conv_pb) :=
-    match pb with
-    | Conv => eq_universe
-    | Cumul => leq_universe
-    end.
-  
-  Definition eq_termp_napp leq napp :=
-    eq_term_upto_univ_napp Σ (eq_universe Σ) (conv_pb_rel leq Σ) napp.
-  
-  Notation eq_termp leq := (eq_termp_napp leq 0).
-  
-  Lemma eq_termp_mkApps_inv leq v args v' args' :
-    isApp v = false ->
-    isApp v' = false ->
-    eq_termp leq (mkApps v args) (mkApps v' args') ->
-    eq_termp_napp leq #|args| v v' × All2 (fun x y => eq_term Σ x y) args args'.
-  Proof.
-    intros noapp1 noapp2 eq.
-    now apply eq_term_upto_univ_mkApps_inv in eq as (?&?).
-  Qed.
 
-  Lemma conv_cum_alt leq Γ t t' :
-    conv_cum leq Σ Γ t t' ->
-    ∥∑ v v', (red Σ Γ t v × red Σ Γ t' v') × eq_termp leq v v'∥.
-  Proof.
-    destruct leq; cbn.
-    - intros [c].
-      apply conv_alt_red in c.
-      now constructor.
-    - intros [c].
-      apply cumul_alt in c.
-      now constructor.
-  Qed.
-  
   Lemma zipp_as_mkApps t π :
     zipp t π = mkApps t (decompose_stack π).1.
   Proof.
@@ -2492,6 +2459,72 @@ Section Conversion.
     now apply invert_type_mkApps_tProd in typ.
   Qed.
 
+  Lemma whnf_whne_upgrade Γ t :
+    whnf RedFlags.default Σ Γ t ->
+    whne nodelta_flags Σ Γ t ->
+    whne RedFlags.default Σ Γ t.
+  Proof.
+    intros whn whe.
+    induction whe; cbn in *; try easy.
+    - now depelim whn; solve_discr.
+    - depelim whn.
+      + easy.
+      + destruct v0 as [|? ? _] using List.rev_ind; [discriminate H|].
+        rewrite <- mkApps_nested in H.
+        cbn in H; noconf H.
+        constructor.
+        eapply IHwhe.
+        apply whnf_cstrapp.
+      + destruct v0 as [|? ? _] using List.rev_ind; [discriminate H|].
+        rewrite <- mkApps_nested in H.
+        cbn in H; noconf H.
+        constructor.
+        eapply IHwhe.
+        apply whnf_indapp.
+      + destruct v0 as [|? ? _] using List.rev_ind; [discriminate H0|].
+        rewrite <- mkApps_nested in H0.
+        cbn in H0; noconf H0.
+        constructor.
+        eapply IHwhe.
+        apply whnf_fixapp.
+        destruct unfold_fix; [|easy].
+        destruct p.
+        apply nth_error_None.
+        apply nth_error_None in H.
+        rewrite app_length in H; cbn in H.
+        lia.
+      + destruct v0 as [|? ? _] using List.rev_ind; [discriminate H|].
+        rewrite <- mkApps_nested in H.
+        cbn in H; noconf H.
+        constructor.
+        eapply IHwhe.
+        apply whnf_cofixapp.
+    - depelim whn; solve_discr; try easy.
+      rewrite H1 in H.
+      congruence.
+    - depelim whn; solve_discr; easy.
+    - depelim whn; solve_discr; easy.
+  Qed.
+  
+  Lemma whne_conv_context f Γ Γ' t :
+    whne f Σ Γ t ->
+    conv_context Σ Γ Γ' ->
+    whne f Σ Γ' t.
+  Proof.
+    intros wh conv.
+    induction wh; eauto using whne.
+    destruct nth_error eqn:nth; [|easy].
+    cbn in H.
+    eapply context_relation_nth in nth; eauto.
+    destruct nth as (?&?&?&?).
+    constructor.
+    rewrite e.
+    cbn.
+    depelim c1; auto.
+    cbn in *.
+    congruence.
+  Qed.
+    
 (* 
   Notation whne := (whne flags Σ).
 
@@ -2541,6 +2574,9 @@ Section Conversion.
     
     todo "Completeness"%string.
   Qed. *)
+  
+  Axiom marker : string -> Type.
+  Axiom unwrap_marker : forall s {m : marker s} {A}, A.
 
   Opaque reduce_stack.
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
@@ -3029,33 +3065,92 @@ Section Conversion.
   Qed.
   Next Obligation.
     apply h; clear h.
+    (* Proof idea:
+      1) prove that the 2 tCase are fully whnf because the discriminees are
+         equal to their full reduction
+      2) prove that the 2 tCase are in conv_cum relation because they are whnf
+      3) wlog leq = Conv because there is no cumulativity between tCase
+      4) invert the conv judgement using that the tCase are whne
+         (so preserved by wh-reductions) 
+    *)
     destruct ir1 as (_&wh1), ir2 as (_&wh2).
     cbn in *.
-    apply conv_cum_alt in H.
-    rewrite !zipp_as_mkApps in *.
+    symmetry in eq3; apply Bool.andb_true_iff in eq3 as (c_is_red&c'_is_red).
+    apply eqb_term_spec in c_is_red.
+    apply eqb_term_spec in c'_is_red.
+    eapply whnf_eq_term in c_is_red; [|now apply reduce_term_complete].
+    eapply whnf_eq_term in c'_is_red; [|now apply reduce_term_complete].
+    rewrite !zipp_as_mkApps in H.
+    rewrite zipp_as_mkApps in wh1, wh2.
     apply whnf_mkApps_inv in wh1; [|easy].
     apply whnf_mkApps_inv in wh2; [|easy].
     depelim wh1; solve_discr.
     depelim wh2; solve_discr.
-    unfold zipp in wh1, wh2.
-    (* Proof idea:
-      1) prove that the 2 tCase are in conv_cum relation 
-        because they are whne (needs to add thys hypothesis)
-      2) wlog leq = Conv because there is no cumulativity between tCase
-      3) invert the conv judgement using that the tCase are whne
-         (so preserved by wh-reductions) 
-    *)
-    todo "Completeness"%string.
+    depelim H; cbn in *; try easy; solve_discr.
+    depelim H0; cbn in *; try easy; solve_discr.
+    apply whnf_whne_upgrade in c_is_red; auto.
+    apply whnf_whne_upgrade in c'_is_red; auto.
+    destruct hΣ, hx.
+    assert (whne RedFlags.default Σ (Γ,,, stack_context π1) c').
+    { eapply whne_conv_context; eauto.
+      apply conv_context_sym; eauto. }
+    apply conv_cum_mkApps_inv in H1 as [(conv_case&conv_args)]; auto.
+    apply conv_cum_tCase_inv in conv_case as [([= <- <-]&conv_p&conv_c&conv_brs)]; eauto.
+    now constructor.
   Qed.
   Next Obligation.
-    apply h ; clear h.
-    cbn. (* Same idea as previous case *)
-    todo "Completeness"%string.
+    apply h; cbn; clear h.
+    destruct ir1 as (_&wh1), ir2 as (_&wh2).
+    cbn in *.
+    symmetry in eq3; apply Bool.andb_true_iff in eq3 as (c_is_red&c'_is_red).
+    apply eqb_term_spec in c_is_red.
+    apply eqb_term_spec in c'_is_red.
+    eapply whnf_eq_term in c_is_red; [|now apply reduce_term_complete].
+    eapply whnf_eq_term in c'_is_red; [|now apply reduce_term_complete].
+    rewrite !zipp_as_mkApps in H.
+    rewrite zipp_as_mkApps in wh1, wh2.
+    apply whnf_mkApps_inv in wh1; [|easy].
+    apply whnf_mkApps_inv in wh2; [|easy].
+    depelim wh1; solve_discr.
+    depelim wh2; solve_discr.
+    depelim H; cbn in *; try easy; solve_discr.
+    depelim H0; cbn in *; try easy; solve_discr.
+    apply whnf_whne_upgrade in c_is_red; auto.
+    apply whnf_whne_upgrade in c'_is_red; auto.
+    destruct hΣ, hx.
+    assert (whne RedFlags.default Σ (Γ,,, stack_context π1) c').
+    { eapply whne_conv_context; eauto.
+      apply conv_context_sym; eauto. }
+    apply conv_cum_mkApps_inv in H1 as [(conv_case&conv_args)]; auto.
+    apply conv_cum_tCase_inv in conv_case as [([= <- <-]&conv_p&conv_c&conv_brs)]; eauto.
+    now constructor.
   Qed.
   Next Obligation.
-    apply h; clear h.
-    cbn. (* Same idea as previous case *)
-    todo "Completeness"%string.
+    apply h; cbn; clear h.
+    destruct ir1 as (_&wh1), ir2 as (_&wh2).
+    cbn in *.
+    symmetry in eq3; apply Bool.andb_true_iff in eq3 as (c_is_red&c'_is_red).
+    apply eqb_term_spec in c_is_red.
+    apply eqb_term_spec in c'_is_red.
+    eapply whnf_eq_term in c_is_red; [|now apply reduce_term_complete].
+    eapply whnf_eq_term in c'_is_red; [|now apply reduce_term_complete].
+    rewrite !zipp_as_mkApps in H.
+    rewrite zipp_as_mkApps in wh1, wh2.
+    apply whnf_mkApps_inv in wh1; [|easy].
+    apply whnf_mkApps_inv in wh2; [|easy].
+    depelim wh1; solve_discr.
+    depelim wh2; solve_discr.
+    depelim H; cbn in *; try easy; solve_discr.
+    depelim H0; cbn in *; try easy; solve_discr.
+    apply whnf_whne_upgrade in c_is_red; auto.
+    apply whnf_whne_upgrade in c'_is_red; auto.
+    destruct hΣ, hx.
+    assert (whne RedFlags.default Σ (Γ,,, stack_context π1) c').
+    { eapply whne_conv_context; eauto.
+      apply conv_context_sym; eauto. }
+    apply conv_cum_mkApps_inv in H1 as [(conv_case&conv_args)]; auto.
+    apply conv_cum_tCase_inv in conv_case as [([= <- <-]&conv_p&conv_c&conv_brs)]; eauto.
+    now constructor.
   Qed.
   Next Obligation.
     (* Proof idea: 
@@ -3066,7 +3161,31 @@ Section Conversion.
       2) deduce that ind = ind' and par = par'
       3) conclude that it contradicts eqDiff
     *)
-    todo "Completeness"%string.
+    destruct ir1 as (_&wh1), ir2 as (_&wh2).
+    cbn in *.
+    symmetry in eq3; apply Bool.andb_true_iff in eq3 as (c_is_red&c'_is_red).
+    apply eqb_term_spec in c_is_red.
+    apply eqb_term_spec in c'_is_red.
+    eapply whnf_eq_term in c_is_red; [|now apply reduce_term_complete].
+    eapply whnf_eq_term in c'_is_red; [|now apply reduce_term_complete].
+    rewrite !zipp_as_mkApps in H.
+    rewrite zipp_as_mkApps in wh1, wh2.
+    apply whnf_mkApps_inv in wh1; [|easy].
+    apply whnf_mkApps_inv in wh2; [|easy].
+    depelim wh1; solve_discr.
+    depelim wh2; solve_discr.
+    depelim H; cbn in *; try easy; solve_discr.
+    depelim H0; cbn in *; try easy; solve_discr.
+    apply whnf_whne_upgrade in c_is_red; auto.
+    apply whnf_whne_upgrade in c'_is_red; auto.
+    destruct hΣ, hx.
+    assert (whne RedFlags.default Σ (Γ,,, stack_context π1) c').
+    { eapply whne_conv_context; eauto.
+      apply conv_context_sym; eauto. }
+    apply conv_cum_mkApps_inv in H1 as [(conv_case&conv_args)]; auto.
+    apply conv_cum_tCase_inv in conv_case as [([= <- <-]&conv_p&conv_c&conv_brs)]; eauto.
+    rewrite eq_inductive_refl, Nat.eqb_refl in eqDiff.
+    congruence.
   Qed.
   Next Obligation.
     eapply red_wellformed ; auto.
@@ -3249,13 +3368,30 @@ Section Conversion.
     eapply conv_Proj_c. assumption.
   Qed.
   Next Obligation.
-    apply h; clear h.
-    cbn.
-    todo "Completeness"%string.
+    todo "incompleteness".
+    (*exfalso; apply h; cbn; clear h.
+    destruct ir1 as (_&wh1), ir2 as (_&wh2).
+    (*symmetry in eq3; apply Bool.andb_true_iff in eq3 as (c_is_red&c'_is_red).
+    apply eqb_term_spec in c_is_red.
+    apply eqb_term_spec in c'_is_red.
+    eapply whnf_eq_term in c_is_red; [|now apply reduce_term_complete].
+    eapply whnf_eq_term in c'_is_red; [|now apply reduce_term_complete].*)
+    rewrite !zipp_as_mkApps in H.
+    rewrite zipp_as_mkApps in wh1, wh2.
+    apply whnf_mkApps_inv in wh1; [|easy].
+    apply whnf_mkApps_inv in wh2; [|easy].
+    depelim wh1; solve_discr.
+    depelim wh2; solve_discr.
+    depelim H; cbn in *; try easy; solve_discr.
+    depelim H0; cbn in *; try easy; solve_discr.
+    apply whnf_whne_upgrade in c_is_red; auto.
+    apply whnf_whne_upgrade in c'_is_red; auto.
+    rewrite zipp_as_mkApps in H.
+    todo "Completeness"%string.*)
   Qed.
   Next Obligation.
     (* Proof idea: c and c' are whne so from H, p = p' contradicting eqDiff *)
-    todo "Completeness"%string.
+    todo "Incompleteness"%string.
   Qed.
 
   (* tFix *)
@@ -3427,9 +3563,50 @@ Section Conversion.
     - rewrite e. assumption.
   Qed.
   Next Obligation.
+    destruct hΣ as [wΣ].
+    apply unfold_one_fix_red_zipp in eq1 as r1.
+    destruct r1 as [r1].
+    match type of eq3 with
+    | _ = reduce_stack ?f ?Σ ?hΣ ?Γ ?t ?π ?h =>
+      destruct (reduce_stack_sound f Σ hΣ Γ t π h) as [r2] ;
+      pose proof (reduce_stack_decompose nodelta_flags _ hΣ _ _ _ h) as d2
+    end.
+    rewrite <- eq3 in r2.
+    rewrite <- eq3 in d2. cbn in d2. rewrite decompose_stack_appstack in d2.
+    cbn in d2.
+    apply unfold_one_fix_decompose in eq1 as d1.
+    assert (r2' : red (fst Σ) (Γ ,,, stack_context π1) (zipp fn θ) (zipp fn' (ρ +++ θ'))).
+    { unfold zipp.
+      case_eq (decompose_stack ρ). intros l ξ e.
+      rewrite e in d2. cbn in d2. subst.
+      pose proof (decompose_stack_eq _ _ _ e). subst.
+      rewrite stack_cat_appstack. rewrite decompose_stack_appstack.
+      rewrite <- eq2.
+      cbn in r2. rewrite 2!zipc_appstack in r2. cbn in r2.
+      rewrite <- eq2 in d1. cbn in d1. subst.
+      case_eq (decompose_stack π1). intros l1 ρ1 e1.
+      simpl. rewrite e1 in r2. simpl in r2.
+      pose proof (decompose_stack_eq _ _ _ e1). subst.
+      rewrite decompose_stack_twice with (1 := e1). cbn.
+      rewrite app_nil_r.
+      rewrite stack_context_appstack. assumption.
+    }
+    pose proof (red_trans _ _ _ _ _ r1 r2') as r.
+    assert (e : stack_context π1 = stack_context (ρ +++ θ')).
+    { case_eq (decompose_stack ρ). intros l ξ e.
+      rewrite e in d2. cbn in d2. subst.
+      pose proof (decompose_stack_eq _ _ _ e). subst.
+      rewrite stack_cat_appstack.
+      rewrite stack_context_appstack.
+      rewrite <- eq2 in d1. cbn in d1. subst.
+      case_eq (decompose_stack π1). intros l1 ρ1 e1.
+      pose proof (decompose_stack_eq _ _ _ e1). subst.
+      rewrite stack_context_appstack. reflexivity.
+    }
     apply h; clear h.
-    (* Idea: a fixpoint should be convertible to its unfolding +  *)
-    todo "Completeness"%string.
+    rewrite <- e.
+    eapply conv_cum_red_inv; eauto.
+    exact hΣ'.
   Qed.
   Next Obligation.
     cbn. rewrite zipc_appstack. cbn.

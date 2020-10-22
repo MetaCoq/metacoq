@@ -513,6 +513,11 @@ Qed.
 Lemma OnOne2_app {A} (P : A -> A -> Type) l tl tl' : OnOne2 P tl tl' -> OnOne2 P (l ++ tl) (l ++ tl').
 Proof. induction l; simpl; try constructor; auto. Qed.
 
+Lemma OnOne2_app_r {A} (P : A -> A -> Type) l l' tl :
+  OnOne2 P l l' ->
+  OnOne2 P (l ++ tl) (l' ++ tl).
+Proof. induction 1; constructor; auto. Qed.
+
 Lemma OnOne2_length {A} {P} {l l' : list A} : OnOne2 P l l' -> #|l| = #|l'|.
 Proof. induction 1; simpl; congruence. Qed.
 
@@ -648,6 +653,19 @@ Proof.
     intros [= ->]. exists t; intuition auto.
 Qed.
 
+Lemma OnOne2_nth_error_r {A} (l l' : list A) n t' P :
+  OnOne2 P l l' ->        
+  nth_error l' n = Some t' ->
+  ∑ t, (nth_error l n = Some t) *
+  ((t = t') + (P t t')).
+Proof.
+  induction 1 in n |- *.
+  destruct n; simpl.
+  - intros [= ->]. exists hd; intuition auto.
+  - exists t'. intuition auto.
+  - destruct n; simpl; auto.
+    intros [= ->]. exists t'; intuition auto.
+Qed.
 
 Ltac toAll :=
   match goal with

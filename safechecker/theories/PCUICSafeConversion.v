@@ -774,7 +774,7 @@ Section Conversion.
     isred_full Γ t π ->
     isLambda t ->
     isStackApp π = false.
-   Proof.
+  Proof.
     intros (?&isr) islam.
     destruct t; cbn in *; try easy.
     unfold zipp in isr.
@@ -3527,11 +3527,67 @@ Section Conversion.
     eapply conv_Proj_c. assumption.
   Qed.
   Next Obligation.
-    todo "Completeness".
+    apply h; cbn; clear h.
+    destruct ir1 as (_&wh1), ir2 as (_&wh2).
+    cbn in *.
+    rename eq3 into c_is_red.
+    rename eq4 into c'_is_red.
+    symmetry in c'_is_red.
+    apply eqb_term_spec in c'_is_red.
+    eapply whnf_eq_term in c'_is_red; [|now apply reduce_term_complete].
+    symmetry in c_is_red.
+    apply eqb_term_spec in c_is_red.
+    eapply whnf_eq_term in c_is_red; [|now apply reduce_term_complete].
+    rewrite !zipp_as_mkApps in H.
+    rewrite zipp_as_mkApps in wh1, wh2.
+    apply whnf_mkApps_inv in wh1; [|easy].
+    apply whnf_mkApps_inv in wh2; [|easy].
+    depelim wh1; solve_discr.
+    depelim wh2; solve_discr.
+    depelim H; cbn in *; try easy; solve_discr.
+    depelim H0; cbn in *; try easy; solve_discr.
+    apply whnf_whne_upgrade in c_is_red; auto.
+    apply whnf_whne_upgrade in c'_is_red; auto.
+    destruct hΣ, hx.
+    assert (whne RedFlags.default Σ (Γ,,, stack_context π1) c').
+    { eapply whne_conv_context; eauto.
+      apply conv_context_sym; eauto. }
+    apply conv_cum_mkApps_inv in H1 as [(conv_proj&conv_args)]; auto.
+    2-3: apply whnf_mkApps; eauto using whne.
+    apply conv_cum_tProj_inv in conv_proj as [(->&?)]; auto.
+    constructor; auto.
   Qed.
   Next Obligation.
     (* Proof idea: c and c' are whne so from H, p = p' contradicting eqDiff *)
-    todo "Completeness".
+    destruct ir1 as (_&wh1), ir2 as (_&wh2).
+    cbn in *.
+    rename eq3 into c_is_red.
+    rename eq4 into c'_is_red.
+    symmetry in c'_is_red.
+    apply eqb_term_spec in c'_is_red.
+    eapply whnf_eq_term in c'_is_red; [|now apply reduce_term_complete].
+    symmetry in c_is_red.
+    apply eqb_term_spec in c_is_red.
+    eapply whnf_eq_term in c_is_red; [|now apply reduce_term_complete].
+    rewrite !zipp_as_mkApps in H.
+    rewrite zipp_as_mkApps in wh1, wh2.
+    apply whnf_mkApps_inv in wh1; [|easy].
+    apply whnf_mkApps_inv in wh2; [|easy].
+    depelim wh1; solve_discr.
+    depelim wh2; solve_discr.
+    depelim H; cbn in *; try easy; solve_discr.
+    depelim H0; cbn in *; try easy; solve_discr.
+    apply whnf_whne_upgrade in c_is_red; auto.
+    apply whnf_whne_upgrade in c'_is_red; auto.
+    destruct hΣ, hx.
+    assert (whne RedFlags.default Σ (Γ,,, stack_context π1) c').
+    { eapply whne_conv_context; eauto.
+      apply conv_context_sym; eauto. }
+    apply conv_cum_mkApps_inv in H1 as [(conv_proj&conv_args)]; auto.
+    2-3: apply whnf_mkApps; eauto using whne.
+    apply conv_cum_tProj_inv in conv_proj as [(->&?)]; auto.
+    rewrite eq_prod_refl in eq5;
+      eauto using eq_prod_refl, Nat.eqb_refl, eq_string_refl, eq_inductive_refl.
   Qed.
   Next Obligation.
     eapply red_wellformed ; auto.
@@ -3592,7 +3648,21 @@ Section Conversion.
       + eapply conv_context_sym. all: auto.
   Qed.
   Next Obligation.
-    todo "Completeness".
+    apply h; cbn; clear h.
+    pose proof hΣ as w. destruct w.
+    destruct hx as [hx].
+    match type of eq4 with
+    | context [ reduce_term ?f ?Σ ?hΣ ?Γ c' ?h ] =>
+      pose proof (reduce_term_sound f Σ hΣ Γ c' h) as hr
+    end.
+    destruct hr as [hr].
+    etransitivity; [eassumption|].
+    eapply conv_cum_context_convp; eauto.
+    2: eapply conv_context_sym; eauto.
+    eapply red_conv_cum_l ; try assumption.
+    eapply red_zipp.
+    eapply red_proj_c.
+    eassumption.
   Qed.
   Next Obligation.
     eapply red_wellformed ; auto.
@@ -3647,7 +3717,20 @@ Section Conversion.
     - assumption.
   Qed.
   Next Obligation.
-    todo "Completeness".
+    apply h; cbn; clear h.
+    destruct hΣ as [wΣ].
+    destruct hx as [hx].
+    match type of eq3 with
+    | context [ reduce_term ?f ?Σ ?hΣ ?Γ c ?h ] =>
+      pose proof (reduce_term_sound f Σ hΣ Γ c h) as hr
+    end.
+    destruct hr as [hr].
+    etransitivity.
+    - eapply red_conv_cum_r ; try assumption.
+      eapply red_zipp.
+      eapply red_proj_c.
+      eassumption.
+    - assumption.
   Qed.
 
   (* tFix *)

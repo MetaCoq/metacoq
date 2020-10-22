@@ -1346,6 +1346,40 @@ Proof.
     + eapply whne_pres; eauto.
 Qed.
 
+Lemma whne_red1_from_tProj Σ Γ p c t :
+  whne RedFlags.default Σ Γ (tProj p c) ->
+  red1 Σ Γ (tProj p c) t ->
+  ∥∑ c', t = tProj p c' × red Σ Γ c c'∥.
+Proof.
+  intros wh r.
+  remember (tProj p c) as from eqn:fromeq.
+  revert c fromeq.
+  apply (whne_red1_ind
+           RedFlags.default Σ Γ
+           (fun t t' => (forall c, t = _ -> _ : Prop)))
+         with (t0 := from) (t' := t); intros; cbn in *; try discriminate; solve_discr; auto.
+  inv H1.
+  constructor; eexists _; split; [reflexivity|].
+  eauto.
+Qed.
+
+Lemma whne_red_from_tProj Σ Γ p c t :
+  whne RedFlags.default Σ Γ (tProj p c) ->
+  red Σ Γ (tProj p c) t ->
+  ∥∑ c', t = tProj p c' × red Σ Γ c c'∥.
+Proof.
+  intros wh r.
+  remember (tProj p c) eqn:fromeq.
+  revert fromeq.
+  induction r using red_rect_n1; intros ->.
+  - constructor; eauto 9 with pcuic.
+  - destruct (IHr eq_refl) as [(?&->&?)].
+    eapply whne_red1_from_tProj in X as [(?&->&?)].
+    + constructor; eexists _; split; [reflexivity|].
+      etransitivity; eauto.
+    + eapply whne_pres; eauto.
+Qed.
+
 (* 
 
   Definition head_arg_is_constructor mfix idx args :=

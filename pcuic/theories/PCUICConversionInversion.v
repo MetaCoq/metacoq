@@ -362,4 +362,24 @@ Section fixed.
       auto.
   Qed.
 
+  Lemma conv_cum_tProj_inv leq Γ p c p' c' :
+    conv_cum leq Σ Γ (tProj p c) (tProj p' c') ->
+    whnf RedFlags.default Σ Γ (tProj p c) ->
+    whnf RedFlags.default Σ Γ (tProj p' c') ->
+    ∥ p = p' × Σ;;; Γ |- c = c' ∥.
+  Proof.
+    intros conv whl whr.
+    depelim whl; solve_discr.
+    depelim H; solve_discr; try discriminate.
+    depelim whr; solve_discr.
+    depelim H0; solve_discr; try discriminate.
+    apply conv_cum_alt in conv as [(?&?&(r1&r2)&?)].
+    apply whne_red_from_tProj in r1 as [(?&->&?)]; auto.
+    apply whne_red_from_tProj in r2 as [(?&->&?)]; auto.
+    depelim e.
+    constructor.
+    split; [easy|].
+    now apply conv_alt_red; exists x1, x.
+  Qed.
+
 End fixed.

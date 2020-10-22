@@ -1292,6 +1292,38 @@ Section Reduce.
     - unfold isCoFix_app in cof.
       now rewrite decompose_app_mkApps in cof.
   Qed.
+  
+  Lemma whnf_fix_arg_whne mfix idx body Γ t before args aftr ty :
+    unfold_fix mfix idx = Some (#|before|, body) ->
+    match t with
+    | tConstruct _ _ _ => False
+    | tApp _ _ => False
+    | _ => True
+    end ->
+    whnf flags Σ Γ (mkApps t args) ->
+    Σ;;; Γ |- mkApps (tFix mfix idx) (before ++ mkApps t args :: aftr) : ty ->
+    whne flags Σ Γ (mkApps t args).
+  Proof.
+    destruct hΣ.
+    intros uf shape wh typ.
+    apply inversion_mkApps in typ as (fix_ty & typ_fix & typ_args); auto.
+    apply inversion_Fix in typ_fix as (def&?&?&?&?&?&?); auto.
+    eapply All_nth_error in a; eauto.
+    eapply wf_fixpoint_spine in i0; eauto.
+    2: { eapply PCUICSpine.typing_spine_strengthen; eauto. }
+    unfold unfold_fix in uf.
+    rewrite e in uf.
+    rewrite nth_error_snoc in i0 by congruence.
+    destruct i0 as (?&?&?&typ&fin).
+    eapply whnf_non_ctor_finite_ind_typed; try eassumption.
+    - unfold isConstruct_app.
+      rewrite decompose_app_mkApps by (now destruct t).
+      cbn.
+      now destruct t.
+    - destruct check_recursivity_kind eqn:cofin in |- *; [|easy].
+      eapply check_recursivity_kind_inj in fin; [|exact cofin].
+      congruence.
+  Qed.
 
   Lemma reduce_stack_whnf :
     forall Γ t π h,
@@ -1490,24 +1522,8 @@ Section Reduce.
       eapply whne_fixapp.
       + eassumption.
       + now apply nth_error_snoc.
-      + destruct hΣ.
-        apply inversion_mkApps in typ as (fix_ty & typ_fix & typ_args); auto.
-        apply inversion_Fix in typ_fix as (def&?&?&?&?&?&?); auto.
-        eapply All_nth_error in a; eauto.
-        eapply wf_fixpoint_spine in i0; eauto.
-        2: { eapply PCUICSpine.typing_spine_strengthen; eauto. }
-        unfold unfold_fix in e.
-        rewrite e0 in e.
-        rewrite nth_error_snoc in i0 by congruence.
-        destruct i0 as (?&?&?&typ&fin).
-        eapply whnf_non_ctor_finite_ind_typed; try eassumption.
-        * unfold isConstruct_app.
-          rewrite decompose_app_mkApps by (now rewrite noapp).
-          cbn.
-          now destruct t2.
-        * destruct check_recursivity_kind eqn:cofin in |- *; [|easy].
-          eapply check_recursivity_kind_inj in fin; [|exact cofin].
-          congruence.
+      + eapply whnf_fix_arg_whne; eauto.
+        now destruct t2.
 
     - unfold zipp.
       destruct decompose_stack.

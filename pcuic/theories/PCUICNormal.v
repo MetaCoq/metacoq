@@ -980,16 +980,6 @@ Proof.
     eapply whnf_pres; eauto.
 Qed.
 
-Lemma notapp_eq_mkApps_inv t hd args :
-  negb (isApp t) ->
-  t = mkApps hd args ->
-  args = [] /\ hd = t.
-Proof.
-  intros noapp ->.
-  destruct args using List.rev_ind; [|rewrite <- mkApps_nested in noapp; discriminate noapp].
-  easy.
-Qed.
-
 Lemma whne_red1_isApp Σ Γ t t' :
   whne RedFlags.default Σ Γ t ->
   red1 Σ Γ t t' ->
@@ -1012,94 +1002,199 @@ Proof.
     now rewrite <- !mkApps_nested.
 Qed.
 
-Lemma whne_red_isApp Σ Γ t t' :
-  whne RedFlags.default Σ Γ t ->
+Lemma isApp_mkApps' hd args hd' args' :
+  isApp hd = isApp hd' ->
+  #|args| = #|args'| ->
+  isApp (mkApps hd args) = isApp (mkApps hd' args').
+Proof.
+  intros hd_app len.
+  destruct args using List.rev_ind; destruct args' using List.rev_ind; auto.
+  all: rewrite !app_length in len; cbn in len; try lia.
+  now rewrite <- !mkApps_nested.
+Qed.
+
+Lemma whnf_red1_isApp Σ Γ t t' :
+  whnf RedFlags.default Σ Γ t ->
+  red1 Σ Γ t t' ->
+  isApp t' = isApp t.
+Proof.
+  intros wh r.
+  depelim wh.
+  - eapply whne_red1_isApp; eauto.
+  - depelim r; solve_discr.
+  - depelim r; auto; solve_discr.
+  - depelim r; auto; solve_discr.
+  - apply red1_mkApps_tConstruct_inv in r as (?&->&?).
+    apply OnOne2_length in o.
+    now apply isApp_mkApps'.
+  - apply red1_mkApps_tInd_inv in r as (?&->&?).
+    apply OnOne2_length in o.
+    now apply isApp_mkApps'.
+  - apply red1_mkApps_tFix_inv in r.
+    2: { destruct unfold_fix as [(?&?)|]; [|easy].
+         now unfold is_constructor; rewrite H. }
+    now destruct r as [[(?&->&o)|(?&->&o)]|(?&->&o)];
+                   apply OnOne2_length in o;
+                   apply isApp_mkApps'.
+  - apply red1_mkApps_tCoFix_inv in r.
+    now destruct r as [[(?&->&o)|(?&->&o)]|(?&->&o)];
+                   apply OnOne2_length in o;
+                   apply isApp_mkApps'.
+Qed.
+
+Lemma whnf_red_isApp Σ Γ t t' :
+  whnf RedFlags.default Σ Γ t ->
   red Σ Γ t t' ->
   isApp t' = isApp t.
 Proof.
   intros wh r.
   induction r in wh |- * using red_rect_n1.
   - easy.
-  - apply whne_red1_isApp in X as ->; eauto.
-    eapply whne_pres; eauto.
+  - apply whnf_red1_isApp in X as ->; eauto.
+    eapply whnf_pres; eauto.
 Qed.
 
-Lemma whne_red1_from_mkApps f Σ Γ hd args t :
-  RedFlags.beta f = true ->
-  RedFlags.fix_ f = true ->
-  (* Can we get rid of this precondition? *)
-  isApp hd = false ->
-  whne f Σ Γ (mkApps hd args) ->
+Ltac solve_red_from_mkApps :=
+  match goal with
+  | [H: ?a = mkApps ?h ?args |- _] =>
+    destruct args using List.rev_ind; [|rewrite <- mkApps_nested in H; discriminate H];
+    cbn in H; subst;
+    constructor; eexists _, []; split; [reflexivity|];
+    eauto with pcuic
+  end.
+
+Hint Resolve All2_same All2_firstn All2_skipn OnOne2_All2 red_mkApps All2_app : pcuic.
+Lemma whne_red1_from_mkApps Σ Γ hd args t :
+  whne RedFlags.default Σ Γ (mkApps hd args) ->
   red1 Σ Γ (mkApps hd args) t ->
   ∥∑ hd' args',
     t = mkApps hd' args' × red Σ Γ hd hd' × All2 (red Σ Γ) args args'∥.
 Proof.
-  intros redbeta redfix noapp wh r.
+  intros wh r.
   remember (mkApps hd args) eqn:eq.
   revert args eq.
   apply (whne_red1_ind
-           f Σ Γ
+           RedFlags.default Σ Γ
            (fun t t' => (forall args, t = mkApps hd args -> _ : Prop)))
          with (t1 := t0) (t' := t); intros; cbn in *;
-    try solve [congruence];
-    try solve [
-          match goal with
-          | [H: ?a = mkApps ?h ?args |- _] =>
-            apply (mkApps_notApp_inj a h [] args) in H as (<-&<-); auto;
-            constructor; eexists _, []; split; [reflexivity|];
-            eauto with pcuic
-          end].
-  - destruct args as [|? ? _] using List.rev_ind; [destruct hd; cbn in *; congruence|].
-    rewrite <- mkApps_nested in H1.
-    inv H1.
-    destruct (H0 _ eq_refl) as [(?&?&->&?&?)].
-    constructor; exists x0, (x1 ++ [x]).
-    rewrite <- mkApps_nested.
+    try congruence; try solve [solve_red_from_mkApps].
+  - destruct args as [|? ? _] using List.rev_ind.
+    + cbn in H1; subst.
+      constructor; eexists _, []; split; [reflexivity|].
+      eauto with pcuic.
+    + rewrite <- mkApps_nested in H1.
+      inv H1.
+      specialize (H0 _ eq_refl) as [(?&?&->&?&?)].
+      constructor; exists x0, (x1 ++ [x]).
+      rewrite <- mkApps_nested; split; [reflexivity|].
+      split; [easy|]; eauto with pcuic.
+  - destruct args as [|? ? _] using List.rev_ind.
+    + cbn in H0; subst.
+      constructor; eexists _, []; split; [reflexivity|].
+      eauto with pcuic.
+    + rewrite <- mkApps_nested in H0.
+      inv H0.
+      constructor; exists hd, (args ++ [N2]).
+      rewrite <- mkApps_nested; split; [reflexivity|].
+      split; [reflexivity|]; eauto with pcuic.
+  - destruct (mkApps_elim hd args0).
+    apply mkApps_notApp_inj in H3 as (<-&<-); auto; [|now destruct (isApp f)].
+    constructor; exists (mkApps (tFix mfix idx) (firstn n x)), (skipn n x).
+    rewrite mkApps_nested.
+    rewrite firstn_skipn.
     split; [easy|].
-    split; [now eauto|].
-    apply All2_app; eauto.
-  - destruct args as [|? ? _] using List.rev_ind; [destruct hd; cbn in *; congruence|].
-    rewrite <- mkApps_nested in H0.
-    inv H0.
-    constructor; exists hd, (args ++ [N2]).
-    rewrite <- mkApps_nested.
+    split; eauto with pcuic.
+  - destruct (mkApps_elim hd args0).
+    apply mkApps_notApp_inj in H2 as (<-&<-); auto; [|now destruct (isApp f)].
+    constructor; exists (mkApps (tFix x idx) (firstn n args)), (skipn n args).
+    rewrite mkApps_nested.
+    rewrite firstn_skipn.
     split; [easy|].
+    split; eauto with pcuic.
+  - destruct (mkApps_elim hd args0).
+    apply mkApps_notApp_inj in H2 as (<-&<-); auto; [|now destruct (isApp f)].
+    constructor; exists (mkApps (tFix x idx) (firstn n args)), (skipn n args).
+    rewrite mkApps_nested.
+    rewrite firstn_skipn.
     split; [easy|].
-    apply All2_app; eauto with pcuic.
-    apply All2_same; eauto.
-  - apply mkApps_notApp_inj in H3 as (<-&<-); auto.
-    constructor; eexists _, _; split; [reflexivity|].
-    split; [eauto|].
-    eapply OnOne2_All2; eauto.
-  - apply mkApps_notApp_inj in H2 as (<-&<-); auto.
-    constructor; eexists _, _; split; [reflexivity|].
-    split; [|now apply All2_same].
-    eauto with pcuic.
-  - apply mkApps_notApp_inj in H2 as (<-&<-); auto.
-    constructor; eexists _, _; split; [reflexivity|].
-    split; [|now apply All2_same].
-    eauto with pcuic.
+    split; eauto with pcuic.
 Qed.
 
-Lemma whne_red_from_mkApps Σ Γ hd args t :
-  whne RedFlags.default Σ Γ hd ->
-  isApp hd = false ->
+Lemma whnf_red1_from_mkApps Σ Γ hd args t :
+  whnf RedFlags.default Σ Γ (mkApps hd args) ->
+  red1 Σ Γ (mkApps hd args) t ->
+  ∥∑ hd' args',
+    t = mkApps hd' args' × red Σ Γ hd hd' × All2 (red Σ Γ) args args'∥.
+Proof.
+  intros wh r.
+  depelim wh; try solve [solve_red_from_mkApps].
+  - eapply whne_red1_from_mkApps; eauto.
+  - destruct (mkApps_elim hd args).
+    apply mkApps_notApp_inj in x as (<-&<-); auto; [|now destruct (isApp f)].
+    apply red1_mkApps_tConstruct_inv in r as (?&->&?).
+    constructor; exists (mkApps (tConstruct i n u) (firstn n0 x)), (skipn n0 x).
+    rewrite mkApps_nested.
+    rewrite firstn_skipn.
+    split; [reflexivity|].
+    eauto 9 with pcuic.
+  - destruct (mkApps_elim hd args).
+    apply mkApps_notApp_inj in x as (<-&<-); auto; [|now destruct (isApp f)].
+    apply red1_mkApps_tInd_inv in r as (?&->&?).
+    constructor; exists (mkApps (tInd i u) (firstn n x)), (skipn n x).
+    rewrite mkApps_nested.
+    rewrite firstn_skipn.
+    split; [reflexivity|].
+    split; eauto with pcuic.
+  - destruct (mkApps_elim hd args).
+    apply mkApps_notApp_inj in x as (<-&<-); auto; [|now destruct (isApp f)].
+    apply red1_mkApps_tFix_inv in r.
+    2: { destruct unfold_fix as [(?&?)|]; [|easy].
+         now unfold is_constructor; rewrite H. }
+    destruct r as [[(?&->&?)|(?&->&?)]|(?&->&?)].
+    + constructor; exists (mkApps (tFix mfix idx) (firstn n x)), (skipn n x).
+      rewrite mkApps_nested firstn_skipn.
+      split; [easy|].
+      eauto 9 with pcuic.
+    + constructor; exists (mkApps (tFix x idx) (firstn n v)), (skipn n v).
+      rewrite mkApps_nested firstn_skipn.
+      split; [easy|].
+      split; eauto 9 with pcuic.
+    + constructor; exists (mkApps (tFix x idx) (firstn n v)), (skipn n v).
+      rewrite mkApps_nested firstn_skipn.
+      split; [easy|].
+      split; eauto 9 with pcuic.
+  - destruct (mkApps_elim hd args).
+    apply mkApps_notApp_inj in x as (<-&<-); auto; [|now destruct (isApp f)].
+    apply red1_mkApps_tCoFix_inv in r.
+    destruct r as [[(?&->&?)|(?&->&?)]|(?&->&?)].
+    + constructor; exists (mkApps (tCoFix mfix idx) (firstn n x)), (skipn n x).
+      rewrite mkApps_nested firstn_skipn.
+      split; [easy|].
+      eauto 9 with pcuic.
+    + constructor; exists (mkApps (tCoFix x idx) (firstn n v)), (skipn n v).
+      rewrite mkApps_nested firstn_skipn.
+      split; [easy|].
+      split; eauto 9 with pcuic.
+    + constructor; exists (mkApps (tCoFix x idx) (firstn n v)), (skipn n v).
+      rewrite mkApps_nested firstn_skipn.
+      split; [easy|].
+      split; eauto 9 with pcuic.
+Qed.
+
+Lemma whnf_red_from_mkApps Σ Γ hd args t :
+  whnf RedFlags.default Σ Γ (mkApps hd args) ->
   red Σ Γ (mkApps hd args) t ->
   ∥∑ hd' args',
     t = mkApps hd' args' × red Σ Γ hd hd' × All2 (red Σ Γ) args args'∥.
 Proof.
   remember (mkApps hd args) as from eqn:fromeq.
-  intros wh notapp r.
-  revert hd notapp wh args fromeq.
-  induction r using red_rect_n1; intros hd notapp wh args ->.
-  - constructor; eexists _, _; split; [reflexivity|].
-    split; [easy|].
-    now apply All2_same.
-  - specialize (IHr _ notapp wh _ eq_refl) as [(?&?&->&?&?)].
-    eapply whne_red1_from_mkApps in X as [(?&?&->&?&?)]; eauto.
-    5: apply whne_mkApps; eapply whne_pres; eauto.
-    all: auto.
-    2: erewrite whne_red_isApp; eauto.
+  intros wh r.
+  revert hd wh args fromeq.
+  induction r using red_rect_n1; intros hd wh args ->.
+  - constructor; eauto 10 with pcuic.
+  - specialize (IHr _ wh _ eq_refl) as [(?&?&->&?&?)].
+    eapply whnf_red1_from_mkApps in X as [(?&?&->&?&?)]; eauto.
+    2: eapply whnf_pres; eauto.
     constructor; eexists _, _; split; [reflexivity|].
     split; [now etransitivity; eauto|].
     eapply All2_trans; eauto.

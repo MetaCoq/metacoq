@@ -642,6 +642,116 @@ Notation conv_context Σ Γ Γ' := (context_relation (conv_decls Σ) Γ Γ').
 
 Hint Resolve conv_ctx_refl' : pcuic.
 
+Section ContextChangeTypesReduction.
+  Context {cf : checker_flags}.
+  Context (Σ : global_env_ext).
+  Context (wfΣ : wf Σ).
+
+  Inductive change_decl_type : context_decl -> context_decl -> Type :=
+  | change_vass_type : forall (na na' : name) (T T' : term),
+      change_decl_type (vass na T) (vass na' T')
+  | change_vdef_type : forall (na na' : name) (b T T'  : term),
+      change_decl_type (vdef na b T) (vdef na' b T').
+
+  Lemma context_change_decl_types_red1 Γ Γ' s t :
+    context_relation (fun _ _ => change_decl_type) Γ Γ' -> red1 Σ Γ s t -> red Σ Γ' s t.
+  Proof.
+    intros HT X0. induction X0 using red1_ind_all in Γ', HT |- *; eauto.
+    all:pcuic.
+    - econstructor. econstructor.
+      rewrite <- H.
+      induction HT in i |- *; destruct i; eauto.
+      now inv p.
+    -
+      eapply PCUICReduction.red_abs. eapply IHX0; eauto.  eauto.
+    -
+      eapply PCUICReduction.red_abs. eauto. eapply IHX0. eauto.
+      eauto. econstructor. eauto. econstructor.
+    -
+      eapply PCUICReduction.red_letin. eapply IHX0; eauto.
+      all:eauto.
+    -
+      eapply PCUICReduction.red_letin; eauto.
+    -
+      eapply PCUICReduction.red_letin; eauto. eapply IHX0; eauto.
+      econstructor. eauto. econstructor.
+    -     eapply PCUICReduction.red_case; eauto. clear.
+          eapply All_All2_refl. induction brs; eauto.
+    -     eapply PCUICReduction.red_case; eauto. clear.
+          eapply All_All2_refl. induction brs; eauto.
+    - destruct ind.
+      eapply red_case; eauto.
+      clear - X HT.
+      induction X.
+      + econstructor. destruct p. destruct p.
+        split; eauto.
+        eapply All_All2_refl.
+        induction tl; eauto.
+      + econstructor. now split.
+        eassumption.
+    -
+      eapply PCUICReduction.red_proj_c. eauto.
+    -
+      eapply PCUICReduction.red_app; eauto.
+    -     eapply PCUICReduction.red_app; eauto.
+    -
+      eapply PCUICReduction.red_prod; eauto.
+    -
+      eapply PCUICReduction.red_prod; eauto. eapply IHX0. eauto. eauto.
+      econstructor.
+      eauto. econstructor.
+    - eapply PCUICReduction.red_evar; eauto.
+      induction X; eauto. econstructor. eapply p; eauto.
+      induction tl; eauto.
+    - eapply PCUICReduction.red_fix_one_ty.
+      eapply OnOne2_impl ; eauto.
+      intros [? ? ? ?] [? ? ? ?] [[r ih] e]. simpl in *.
+      inversion e. subst. clear e.
+      split ; auto.
+    - eapply PCUICReduction.red_fix_one_body.
+      eapply OnOne2_impl ; eauto.
+      intros [? ? ? ?] [? ? ? ?] [[r ih] e]. simpl in *.
+      inversion e. subst. clear e.
+      split ; auto.
+      eapply ih ; auto.
+      clear - HT.
+      induction (fix_context mfix0) as [| [na [b|] ty] Δ ihΔ].
+      + auto.
+      + simpl. constructor ; eauto.
+        constructor.
+      + simpl. constructor ; eauto.
+        constructor.
+    - eapply PCUICReduction.red_cofix_one_ty.
+      eapply OnOne2_impl ; eauto.
+      intros [? ? ? ?] [? ? ? ?] [[r ih] e]. simpl in *.
+      inversion e. subst. clear e.
+      split ; auto.
+    - eapply PCUICReduction.red_cofix_one_body.
+      eapply OnOne2_impl ; eauto.
+      intros [? ? ? ?] [? ? ? ?] [[r ih] e]. simpl in *.
+      inversion e. subst. clear e.
+      split ; auto.
+      eapply ih ; auto.
+      clear - HT.
+      induction (fix_context mfix0) as [| [na [b|] ty] Δ ihΔ].
+      + auto.
+      + simpl. constructor ; eauto.
+        constructor.
+      + simpl. constructor ; eauto.
+        constructor.
+  Qed.
+
+  (* todo: update erasure to use this *)
+  Lemma context_change_decl_types_red Γ Γ' s t :
+    context_relation (fun _ _ => change_decl_type) Γ Γ' -> red Σ Γ s t -> red Σ Γ' s t.
+  Proof.
+    intros. induction X0 using red_rect'; eauto.
+    etransitivity. eapply IHX0.
+    eapply context_change_decl_types_red1; eauto.
+  Qed.
+End ContextChangeTypesReduction.
+
+
 (* Lemma wf_local_conv_ctx {cf:checker_flags} Σ Γ Δ (wfΓ : wf_local Σ Γ) : wf Σ -> *)
 (*   All_local_env_over typing *)
 (*     (fun (Σ : global_env_ext) (Γ : context) wfΓ (t T : term) Ht => *)

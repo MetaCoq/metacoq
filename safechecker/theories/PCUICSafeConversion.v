@@ -2100,6 +2100,8 @@ Section Conversion.
     intuition eauto.
   Qed.
 
+  (* See https://github.com/coq/coq/blob/master/kernel/reduction.ml#L367 *)
+
   Opaque reduce_stack.
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
@@ -2206,7 +2208,40 @@ Section Conversion.
         }
       } ;
 
-    | prog_view_Proj p c p' c' with inspect (eqb p p') := {
+    | prog_view_Proj p c p' c' with inspect (reduce_term RedFlags.default Σ hΣ (Γ ,,, stack_context π1) c _) := {
+      | @exist cred eq1 with inspect (eqb_term cred c) := {
+        | @exist true eq3 with inspect (reduce_term RedFlags.default Σ hΣ (Γ ,,, stack_context π2) c' _) := {
+          | @exist cred' eq2 with inspect (eqb_term cred' c') := {
+            | @exist true eq4 with inspect (eqb p p') := {
+              | @exist true eq5 with isconv_red_raw Conv c (Proj p π1) c' (Proj p' π2) aux := {
+                | Success h1 := isconv_args leq (tProj p c) π1 (tProj p' c') π2 aux ;
+                | Error e := Error e
+                } ;
+              | @exist false eq5 :=
+                Error (
+                  DistinctStuckProj
+                    (Γ ,,, stack_context π1) p c
+                    (Γ ,,, stack_context π2) p' c'
+                )
+              } ;
+            | @exist false eq4 :=
+              isconv_red leq
+                (tProj p c) π1
+                (tProj p' cred') π2
+                aux
+          }
+        } ;
+        | @exist false eq3 :=
+          isconv_red leq
+            (tProj p cred) π1
+            (tProj p' c') π2
+            aux
+      }
+    } ;
+
+
+    (* Incomplete alternative *)
+    (* | prog_view_Proj p c p' c' with inspect (eqb p p') := {
       | @exist true eq1
         with isconv_red_raw Conv c (Proj p π1) c' (Proj p' π2) aux := {
         | Success h1 := isconv_args leq (tProj p c) π1 (tProj p' c') π2 aux ;
@@ -2229,7 +2264,7 @@ Section Conversion.
             }
           }
         }
-      } ;
+      } ; *)
 
     | prog_view_Fix mfix idx mfix' idx'
       with inspect (eqb_term (tFix mfix idx) (tFix mfix' idx')) := {
@@ -2627,25 +2662,6 @@ Section Conversion.
 
   (* tProj *)
   Next Obligation.
-    eapply R_aux_positionR. all: simpl.
-    - reflexivity.
-    - rewrite <- app_nil_r. apply positionR_poscat. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    destruct hΣ.
-    destruct h1 as [h].
-    change (true = eqb p p') in eq1.
-    destruct (eqb_spec p p'). 2: discriminate. subst.
-    eapply conv_conv_cum.
-    constructor.
-    eapply conv_Proj_c. assumption.
-  Qed.
-  Next Obligation.
     destruct hΣ as [wΣ].
     zip fold in h1. apply wellformed_context in h1 ; auto. simpl in h1.
     destruct h1 as [[T h1] | [[ctx [s [h1 _]]]]] ; [| discriminate ].
@@ -2662,16 +2678,23 @@ Section Conversion.
     left. eexists. eassumption.
   Qed.
   Next Obligation.
-    eapply red_wellformed ; auto.
-    - exact h1.
-    - match goal with
-      | |- context [ reduce_term ?f ?Σ ?hΣ ?Γ ?t ?h ] =>
-        pose proof (reduce_term_sound f Σ hΣ Γ t h) as [hr]
-      end.
-      constructor.
-      eapply red_zipc.
-      eapply red_proj_c.
-      assumption.
+    eapply R_aux_positionR. all: simpl.
+    - reflexivity.
+    - rewrite <- app_nil_r. apply positionR_poscat. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    (* destruct hΣ. *)
+    destruct h1 as [h].
+    change (true = eqb p p') in eq5.
+    destruct (eqb_spec p p'). 2: discriminate. subst.
+    eapply conv_conv_cum.
+    constructor.
+    eapply conv_Proj_c. assumption.
   Qed.
   Next Obligation.
     eapply red_wellformed ; auto.
@@ -2687,68 +2710,86 @@ Section Conversion.
   Qed.
   Next Obligation.
     match goal with
-    | |- context [ reduce_term ?f ?Σ ?hΣ ?Γ c ?h ] =>
-      destruct (reduce_stack_Req f Σ hΣ Γ c ε h) as [e | hr]
+    | |- context [ reduce_term ?f ?Σ ?hΣ ?Γ c' ?h ] =>
+      destruct (reduce_stack_Req f Σ hΣ Γ c' ε h) as [e' | hr]
     end.
+    1:{
+      exfalso.
+      unfold reduce_term in eq4.
+      rewrite e' in eq4. cbn in eq4.
+      rewrite eqb_term_refl in eq4.
+      discriminate.
+    }
+    dependent destruction hr.
+    2:{
+      exfalso.
+      destruct y'. simpl in H0. inversion H0. subst.
+      unfold reduce_term in eq4.
+      rewrite <- H2 in eq4.
+      cbn in eq4.
+      rewrite eqb_term_refl in eq4.
+      discriminate.
+    }
+    unshelve eapply R_cored2.
+    all: try reflexivity.
+    simpl. eapply cored_zipc. eapply cored_proj. assumption.
+  Qed.
+  Next Obligation.
+    (* destruct hΣ as [wΣ]. *)
+    (* Why doesn't the above work anymore? *)
+    pose proof hΣ as w. destruct w.
+    destruct hx as [hx].
+    match type of h with
+    | context [ reduce_term ?f ?Σ ?hΣ ?Γ c' ?h ] =>
+      pose proof (reduce_term_sound f Σ hΣ Γ c' h) as hr
+    end.
+    destruct hr as [hr].
+    etransitivity.
+    - eassumption.
+    - eapply conv_cum_context_convp.
+      + assumption.
+      + eapply red_conv_cum_r ; try assumption.
+        eapply red_zipp.
+        eapply red_proj_c.
+        eassumption.
+      + eapply conv_context_sym. all: auto.
+  Qed.
+  Next Obligation.
+    eapply red_wellformed ; auto.
+    - exact h1.
     - match goal with
-      | |- context [ reduce_term ?f ?Σ ?hΣ ?Γ c' ?h ] =>
-        destruct (reduce_stack_Req f Σ hΣ Γ c' ε h) as [e' | hr]
+      | |- context [ reduce_term ?f ?Σ ?hΣ ?Γ ?t ?h ] =>
+        pose proof (reduce_term_sound f Σ hΣ Γ t h) as [hr]
       end.
-      + exfalso.
-        unfold reduce_term in eq3.
-        rewrite e in eq3.
-        rewrite e' in eq3.
-        cbn in eq3. symmetry in eq3.
-        apply andb_false_elim in eq3 as [bot | bot].
-        all: rewrite eqb_term_refl in bot.
-        all: discriminate.
-      + dependent destruction hr.
-        * unshelve eapply R_cored2.
-          all: try reflexivity.
-          -- simpl. unfold reduce_term. rewrite e. reflexivity.
-          -- simpl. eapply cored_zipc. eapply cored_proj. assumption.
-        * exfalso.
-          destruct y'. simpl in H0. inversion H0. subst.
-          unfold reduce_term in eq3.
-          rewrite e in eq3.
-          rewrite <- H2 in eq3.
-          cbn in eq3. symmetry in eq3.
-          apply andb_false_elim in eq3 as [bot | bot].
-          all: rewrite eqb_term_refl in bot.
-          all: discriminate.
-    - dependent destruction hr.
-      + eapply R_cored. simpl.
-        eapply cored_zipc. eapply cored_proj. assumption.
-      + match goal with
-        | |- context [ reduce_term ?f ?Σ ?hΣ ?Γ c' ?h ] =>
-          destruct (reduce_stack_Req f Σ hΣ Γ c' ε h) as [e' | hr]
-        end.
-        * exfalso.
-          destruct y'. simpl in H0. inversion H0. subst.
-          unfold reduce_term in eq3.
-          rewrite e' in eq3.
-          rewrite <- H2 in eq3.
-          cbn in eq3. symmetry in eq3.
-          apply andb_false_elim in eq3 as [bot | bot].
-          all: rewrite eqb_term_refl in bot.
-          all: discriminate.
-        * dependent destruction hr.
-          -- unshelve eapply R_cored2.
-             all: try reflexivity.
-             ++ simpl. unfold reduce_term.
-                destruct y'. simpl in H0. inversion H0. subst.
-                rewrite <- H3. reflexivity.
-             ++ simpl. eapply cored_zipc. eapply cored_proj. assumption.
-          -- exfalso.
-             destruct y'. simpl in H0. inversion H0. subst.
-             destruct y'0. simpl in H2. inversion H2. subst.
-             unfold reduce_term in eq3.
-             rewrite <- H4 in eq3.
-             rewrite <- H5 in eq3.
-             cbn in eq3. symmetry in eq3.
-             apply andb_false_elim in eq3 as [bot | bot].
-             all: rewrite eqb_term_refl in bot.
-             all: discriminate.
+      constructor.
+      eapply red_zipc.
+      eapply red_proj_c.
+      assumption.
+  Qed.
+  Next Obligation.
+    match goal with
+    | |- context [ reduce_term ?f ?Σ ?hΣ ?Γ c ?h ] =>
+      destruct (reduce_stack_Req f Σ hΣ Γ c ε h) as [e' | hr]
+    end.
+    1:{
+      exfalso.
+      unfold reduce_term in eq3.
+      rewrite e' in eq3. cbn in eq3.
+      rewrite eqb_term_refl in eq3.
+      discriminate.
+    }
+    dependent destruction hr.
+    2:{
+      exfalso.
+      destruct y'. simpl in H0. inversion H0. subst.
+      unfold reduce_term in eq3.
+      rewrite <- H2 in eq3.
+      cbn in eq3.
+      rewrite eqb_term_refl in eq3.
+      discriminate.
+    }
+    unshelve eapply R_cored.
+    simpl. eapply cored_zipc. eapply cored_proj. assumption.
   Qed.
   Next Obligation.
     destruct hΣ as [wΣ].
@@ -2757,23 +2798,13 @@ Section Conversion.
     | context [ reduce_term ?f ?Σ ?hΣ ?Γ c ?h ] =>
       pose proof (reduce_term_sound f Σ hΣ Γ c h) as hr
     end.
-    match type of h with
-    | context [ reduce_term ?f ?Σ ?hΣ ?Γ c' ?h ] =>
-      pose proof (reduce_term_sound f Σ hΣ Γ c' h) as hr'
-    end.
-    destruct hr as [hr], hr' as [hr'].
+    destruct hr as [hr].
     etransitivity.
     - eapply red_conv_cum_l ; try assumption.
       eapply red_zipp.
       eapply red_proj_c.
       eassumption.
-    - etransitivity ; try eassumption.
-      eapply conv_cum_context_convp.
-      + assumption.
-      + eapply red_conv_cum_r. 1: assumption.
-        eapply red_zipp.
-        eapply red_proj_c. eassumption.
-      + eapply conv_context_sym. all: auto.
+    - assumption.
   Qed.
 
   (* tFix *)

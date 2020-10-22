@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICPrincipality PCUICConfluence
+     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICConfluence
      PCUICCumulativity PCUICSR PCUICPosition PCUICEquality PCUICNameless
      PCUICAlpha PCUICNormal PCUICInversion PCUICReduction PCUICSubstitution
      PCUICConversion PCUICContextConversion PCUICValidity PCUICCtxShape
@@ -374,6 +374,19 @@ Section Lemmata.
   Proof.
     intros Γ ind p c c' brs h.
     revert ind p brs. induction h ; intros ind p brs.
+    - constructor. constructor. assumption.
+    - eapply cored_trans.
+      + eapply IHh.
+      + econstructor. assumption.
+  Qed.
+
+  Lemma cored_proj :
+    forall Γ p c c',
+      cored Σ Γ c c' ->
+      cored Σ Γ (tProj p c) (tProj p c').
+  Proof.
+    intros Γ p c c' h.
+    induction h in p |- *.
     - constructor. constructor. assumption.
     - eapply cored_trans.
       + eapply IHh.

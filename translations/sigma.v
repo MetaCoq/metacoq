@@ -3,6 +3,7 @@ From MetaCoq.Template Require Import utils All.
 
 Local Set Primitive Projections.
 
+#[universes(template)]
 Record sigma A B :=
   mk_sig { π1 : A ; π2 : B π1 }.
 

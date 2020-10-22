@@ -601,8 +601,8 @@ Proof.
   pose proof (declared_projection_inv weaken_env_prop_closed wfΣ X0 isdecl) as onp.
   set (declared_inductive_inv _ wfΣ X0 _) as oib in *.
   clearbody oib.
-  have onpars := onParams _ _ _ _ (declared_minductive_inv weaken_env_prop_closed wfΣ X0 isdecl.p1.p1).
-  have parslen := onNpars _ _ _ _ (declared_minductive_inv weaken_env_prop_closed wfΣ X0 isdecl.p1.p1).
+  have onpars := onParams (declared_minductive_inv weaken_env_prop_closed wfΣ X0 isdecl.p1.p1).
+  have parslen := onNpars (declared_minductive_inv weaken_env_prop_closed wfΣ X0 isdecl.p1.p1).
   simpl in onp. destruct (ind_cshapes oib) as [|? []] eqn:Heq; try contradiction.
   destruct onp as [_ onp].
   red in onp.
@@ -812,6 +812,7 @@ Proof.
            eapply Forall_impl; tea. auto.
            destruct indices_matter; [|trivial].
            eapply type_local_ctx_impl; tea. eauto.
+      --- eapply onIndices.
     -- red in onP. red.
        eapply All_local_env_impl. eauto.
        intros. now apply X.

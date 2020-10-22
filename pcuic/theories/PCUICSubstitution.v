@@ -10,7 +10,6 @@ From Equations Require Import Equations.
 
 (** * Substitution lemmas for typing derivations. *)
 
-
 Local Set Keyed Unification.
 
 Set Default Goal Selector "!".
@@ -623,10 +622,10 @@ Proof.
   - simpl. now rewrite -> inds_length, closedn_subst_instance_constr.
 Qed.
 
-Lemma context_subst_length Γ a s : context_subst Γ a s -> #|Γ| = #|s|.
+Lemma context_subst_length {Γ a s} : context_subst Γ a s -> #|Γ| = #|s|.
 Proof. induction 1; simpl; congruence. Qed.
 
-Lemma context_subst_assumptions_length Γ a s : context_subst Γ a s -> context_assumptions Γ = #|a|.
+Lemma context_subst_assumptions_length {Γ a s} : context_subst Γ a s -> context_assumptions Γ = #|a|.
 Proof. induction 1; simpl; try congruence. rewrite app_length /=. lia. Qed.
 
 (* Lemma context_subst_app {cf:checker_flags} Γ Γ' a s : *)
@@ -939,7 +938,7 @@ Proof.
   rewrite !XX; clear XX.
   apply make_context_subst_spec in Hsubst as Hsubst'.
   rewrite rev_involutive in Hsubst'.
-  pose proof (context_subst_assumptions_length _ _ _ Hsubst') as H1.
+  pose proof (context_subst_assumptions_length Hsubst') as H1.
   case E: chop => [l l'].
   have chopm := (chop_map _ _ _ _ _ E).
   move: E chopm.
@@ -2590,6 +2589,7 @@ Proof.
       * subst params. rewrite firstn_map. exact H3.
       * now rewrite closedn_subst_instance_context.
     + solve_all.
+      destruct b0 as [s' [Hs IH]]; eexists; eauto.
 
   - specialize (X2 Γ Γ' Δ s sub eq_refl).
     eapply refine_type.

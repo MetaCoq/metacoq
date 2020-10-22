@@ -2,9 +2,10 @@
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils 
   PCUICClosed PCUICTyping PCUICWcbvEval PCUICLiftSubst PCUICInversion PCUICArities
-  PCUICSR PCUICPrincipality PCUICGeneration PCUICSubstitution PCUICElimination
+  PCUICSR PCUICGeneration PCUICSubstitution PCUICElimination
   PCUICContextConversion PCUICConversion PCUICCanonicity
-  PCUICSpine PCUICInductives PCUICInductiveInversion PCUICConfluence.
+  PCUICSpine PCUICInductives PCUICInductiveInversion PCUICConfluence PCUICPrincipality.
+
 Require Import ssreflect.
 From MetaCoq.Erasure Require Import Extract.
   
@@ -161,8 +162,8 @@ Proof.
     eapply invert_it_Ind_red1 in X1 as (? & ? & ?); eauto.
 Qed.
 
-Lemma it_mkProd_red_Arity Σ  c0 i u l : wf Σ ->
-  ~ Is_conv_to_Arity Σ [] (it_mkProd_or_LetIn c0 (mkApps (tInd i u) l)).
+Lemma it_mkProd_red_Arity Σ Γ c0 i u l : wf Σ ->
+  ~ Is_conv_to_Arity Σ Γ (it_mkProd_or_LetIn c0 (mkApps (tInd i u) l)).
 Proof.
   intros HS (? & [] & ?). eapply invert_it_Ind_red in X as (? & ? & ?). subst.
   eapply it_mkProd_arity in H. eapply isArity_mkApps in H as [[] ]. eauto.
@@ -182,17 +183,17 @@ Qed.
 
 (* if a constructor is a type or proof, it is a proof *)
 
-Lemma tConstruct_no_Type (Σ : global_env_ext) ind c u x1 : wf Σ ->
-  isErasable Σ [] (mkApps (tConstruct ind c u) x1) ->
-  Is_proof Σ [] (mkApps (tConstruct ind c u) x1).
+Lemma tConstruct_no_Type (Σ : global_env_ext) Γ ind c u x1 : wf Σ ->
+  isErasable Σ Γ (mkApps (tConstruct ind c u) x1) ->
+  Is_proof Σ Γ (mkApps (tConstruct ind c u) x1).
 Proof.
   intros wfΣ (? & ? & [ | (? & ? & ?)]).
   - exfalso.
     eapply PCUICValidity.inversion_mkApps in t as (? & ? & ?); eauto.
-    assert(c0 : Σ ;;; [] |- x <= x) by reflexivity.
+    assert(c0 : Σ ;;; Γ |- x <= x) by reflexivity.
     revert c0 t0 i. generalize x at 1 3.
     intros x2 c0 t0 i.
-    assert (HWF : isWfArity_or_Type Σ [] x2).
+    assert (HWF : isWfArity_or_Type Σ Γ x2).
     { eapply PCUICValidity.validity.
       - eauto.
       - eapply type_mkApps. 2:eauto. eauto.
@@ -263,7 +264,7 @@ Proof.
       subst.
       eapply IHt0; eauto.
 
-      eapply (substitution_untyped_cumul Σ [] [_] [] [hd]) in c1.
+      eapply (substitution_untyped_cumul Σ Γ [_] [] [hd]) in c1.
       cbn in c1. 2:eauto. 2:{ repeat econstructor. }
       rewrite subst_it_mkProd_or_LetIn in c1.
       rewrite subst_mkApps in c1. eassumption.
@@ -272,17 +273,17 @@ Qed.
 
 (* if a cofixpoint is a type or proof, it is a proof *)
 
-Lemma tCoFix_no_Type (Σ : global_env_ext) mfix idx x1 : wf Σ ->
-  isErasable Σ [] (mkApps (tCoFix mfix idx) x1) ->
-  Is_proof Σ [] (mkApps (tCoFix mfix idx) x1).
+Lemma tCoFix_no_Type (Σ : global_env_ext) Γ mfix idx x1 : wf Σ ->
+  isErasable Σ Γ (mkApps (tCoFix mfix idx) x1) ->
+  Is_proof Σ Γ (mkApps (tCoFix mfix idx) x1).
 Proof.
   intros wfΣ (? & ? & [ | (? & ? & ?)]).
   - exfalso.
     eapply PCUICValidity.inversion_mkApps in t as (? & ? & ?); eauto.
-    assert(c0 : Σ ;;; [] |- x <= x) by reflexivity.
+    assert(c0 : Σ ;;; Γ |- x <= x) by reflexivity.
     revert c0 t0 i. generalize x at 1 3.
     intros x2 c0 t0 i.
-    assert (HWF : isWfArity_or_Type Σ [] x2).
+    assert (HWF : isWfArity_or_Type Σ Γ x2).
     { eapply PCUICValidity.validity.
       - eauto.
       - eapply type_mkApps. 2:eauto. eauto.
@@ -463,10 +464,11 @@ Proof.
     eapply substitution0; eauto.
 Qed.
 
-Lemma arity_type_inv (Σ : global_env_ext) Γ t T1 T2 : wf Σ -> wf_local Σ Γ ->
+Lemma arity_type_inv (Σ : global_env_ext) Γ t T1 T2 : wf_ext Σ -> wf_local Σ Γ ->
   Σ ;;; Γ |- t : T1 -> isArity T1 -> Σ ;;; Γ |- t : T2 -> Is_conv_to_Arity Σ Γ T2.
 Proof.
-  intros wfΣ wfΓ. intros. eapply principal_typing in X as (? & ? & ? & ?). 2:eauto. 2:exact X0.
+  intros wfΣ wfΓ. intros. 
+  eapply common_typing in X as (? & ? & ? & ?). 2:eauto. 2:exact X0.
 
   eapply invert_cumul_arity_r in c0 as (? & X & ?); eauto. sq.
   eapply PCUICCumulativity.red_cumul_inv in X.
@@ -487,7 +489,7 @@ Proof.
   assert (HW : isWfArity_or_Type Σ Γ T). eapply PCUICValidity.validity; eauto.
   eapply PCUICValidity.inversion_mkApps in X as (? & ? & ?); auto.
   destruct X0 as (? & ? & [ | [u]]).
-  - eapply principal_typing in t2 as (? & ? & ? & ?). 2:eauto. 2:exact t0.
+  - eapply common_typing in t2 as (? & ? & ? & ?). 2:eauto. 2:exact t0.
     eapply invert_cumul_arity_r in c0; eauto.
     destruct c0 as (? & ? & ?). destruct H as [].
     eapply PCUICCumulativity.red_cumul_inv in X.
@@ -509,7 +511,7 @@ Proof.
 
     eapply isWfArity_or_Type_red; eauto. exists x3; split; sq; eauto.
   - destruct p.
-    eapply PCUICPrincipality.principal_typing in t2 as (? & ? & ? & ?). 2:eauto. 2:exact t0.
+    eapply PCUICPrincipality.common_typing in t2 as (? & ? & ? & ?). 2:eauto. 2:exact t0.
     eapply cumul_prop1 in c0; eauto.
     eapply cumul_prop2 in c; eauto.
     econstructor. exists T. split. eapply type_mkApps. 2:eassumption. eassumption. right.
@@ -563,4 +565,66 @@ Proof.
   intros; eapply Is_type_red. eauto.
   red in X1. destruct X1 as [T [HT _]].
   eapply wcbeval_red; eauto. assumption.
+Qed.
+
+(* Thanks to the restriction to Prop </= Type, erasability is also closed by expansion 
+  on well-typed terms. *)
+
+Lemma Is_type_eval_inv (Σ : global_env_ext) t v:
+  wf_ext Σ ->
+  axiom_free Σ ->
+  PCUICSafeLemmata.welltyped Σ [] t ->
+  PCUICWcbvEval.eval Σ t v ->
+  isErasable Σ [] v ->
+  ∥ isErasable Σ [] t ∥.
+Proof.
+  intros wfΣ axfree [T HT] ev [vt [Ht Hp]].
+  eapply wcbeval_red in ev; eauto.
+  pose proof (subject_reduction _ _ _ _ _ wfΣ.1 HT ev).
+  pose proof (common_typing _ wfΣ Ht X) as [P [Pvt [Pt vP]]].
+  destruct Hp.
+  eapply arity_type_inv in X. 5:eauto. all:eauto.
+  red in X. destruct X as [T' [[red] isA]].
+  eapply type_reduction in HT; eauto.
+  sq. exists T'; intuition auto.
+  sq. exists T. intuition auto. right.
+  destruct s as [u [vtu isp]].
+  exists u; intuition auto.
+  eapply cumul_prop2; eauto. now eapply PCUICValidity.validity in HT.
+  eapply cumul_prop1; eauto. now eapply PCUICValidity.validity in vP.
+Qed.
+
+Lemma nIs_conv_to_Arity_isWfArity_elim {Σ : global_env_ext} {Γ x} : 
+  ~ Is_conv_to_Arity Σ Γ x ->
+  isWfArity typing Σ Γ x ->
+  False.
+Proof.
+  intros nis [ctx [s [da wf]]]. apply nis.
+  red. exists (it_mkProd_or_LetIn ctx (tSort s)).
+  split. sq. apply PCUICArities.destArity_spec_Some in da.
+  simpl in da. subst x.
+  reflexivity.
+  now eapply it_mkProd_isArity.
+Qed.
+
+Definition isErasable_Type (Σ : global_env_ext) Γ T := 
+  (Is_conv_to_Arity Σ Γ T +
+    (∑ u : Universe.t, Σ;;; Γ |- T : tSort u × Universe.is_prop u))%type.
+
+Lemma isErasable_any_type {Σ Γ t T} : 
+  wf_ext Σ -> 
+  isErasable Σ Γ t ->
+  Σ ;;; Γ |- t : T ->
+  isErasable_Type Σ Γ T.
+Proof.
+  intros wfΣ [T' [Ht Ha]].
+  intros HT.
+  destruct (PCUICPrincipality.common_typing _ wfΣ Ht HT) as [P [le [le' tC]]]. sq.
+  destruct Ha.
+  left. eapply arity_type_inv. 3:exact Ht. all:eauto using typing_wf_local.
+  destruct s as [u [Hu isp]].
+  right.
+  exists u; split; auto.
+  eapply cumul_prop2; eauto. eapply PCUICValidity.validity; eauto.
+  eapply cumul_prop1; eauto. eapply PCUICValidity.validity; eauto.
 Qed.

@@ -11,6 +11,7 @@ From MetaCoq Require Export LibHypsNaming.
 Require Import ssreflect.
 Require Import Equations.Type.Relation.
 From Equations Require Import Equations.
+Set Equations With UIP.
 
 (** * Typing derivations
 
@@ -75,6 +76,8 @@ Definition type_of_constructor mdecl (cdecl : ident * term * nat) (c : inductive
 
 Module PCUICEnvTyping := EnvTyping PCUICTerm PCUICEnvironment.
 Include PCUICEnvTyping.
+
+Derive Signature NoConfusion for All_local_env.
 
 Section WfArity.
   Context (typing : forall (Σ : global_env_ext) (Γ : context), term -> term -> Type).
@@ -278,7 +281,7 @@ Definition isCoFinite (r : recursivity_kind) :=
 
 Definition check_recursivity_kind Σ ind r :=
   match lookup_env Σ ind with
-  | Some (InductiveDecl mib) => PCUICReflect.eqb mib.(ind_finite) r
+  | Some (InductiveDecl mib) => Reflect.eqb mib.(ind_finite) r
   | _ => false
   end.
 
@@ -304,7 +307,7 @@ Definition wf_fixpoint (Σ : global_env) mfix :=
   | Some (ind :: inds) =>
     (* Check that mutually recursive fixpoints are all on the same mututal
        inductive block *)
-    forallb (PCUICReflect.eqb ind) inds &&
+    forallb (Reflect.eqb ind) inds &&
     check_recursivity_kind Σ ind Finite
   | _ => false
   end.
@@ -327,7 +330,7 @@ Definition wf_cofixpoint (Σ : global_env) mfix :=
   | Some (ind :: inds) =>
     (* Check that mutually recursive cofixpoints are all producing
        coinductives in the same mututal coinductive block *)
-    forallb (PCUICReflect.eqb ind) inds &&
+    forallb (Reflect.eqb ind) inds &&
     check_recursivity_kind Σ ind CoFinite
   | _ => false
   end.
@@ -394,7 +397,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
     isCoFinite mdecl.(ind_finite) = false ->
     forall btys, map_option_out (build_branches_type ind mdecl idecl params u p) = Some btys ->
-    All2 (fun br bty => (br.1 = bty.1) * (Σ ;;; Γ |- br.2 : bty.2) * (Σ ;;; Γ |- bty.2 : tSort ps)) brs btys ->
+    All2 (fun br bty => (br.1 = bty.1) * (Σ ;;; Γ |- br.2 : bty.2) * (∑ s, Σ ;;; Γ |- bty.2 : tSort s)) brs btys ->
     Σ ;;; Γ |- tCase indnpar p c brs : mkApps p (skipn npar args ++ [c])
 
 | type_Proj p c u :
@@ -440,7 +443,6 @@ Proof.
   intros h []; assumption.
 Qed.
 
-
 (** ** Typechecking of global environments *)
 
 Definition has_nparams npars ty :=
@@ -483,6 +485,8 @@ Module PCUICDeclarationTyping :=
     PCUICLookup.
 Include PCUICDeclarationTyping.
 
+Definition isWfArity_or_Type {cf:checker_flags} Σ Γ T : Type := (isWfArity typing Σ Γ T + isType Σ Γ T).
+
 Definition typing_size `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t : T) : size.
 Proof.
   revert Σ Γ t T d.
@@ -507,7 +511,7 @@ Proof.
   - exact (S (S (wf_local_size _ typing_size _ a))).
   - exact (S (S (wf_local_size _ typing_size _ a))).
   - exact (S (Nat.max d1 (Nat.max d2
-                                (all2_size _ (fun x y p => Nat.max (typing_size Σ Γ (snd x) (snd y) (snd (fst p))) (typing_size _ _ _ _ (snd p))) a)))).
+                                (all2_size _ (fun x y p => Nat.max (typing_size Σ Γ (snd x) (snd y) (snd (fst p))) (typing_size _ _ _ _ (snd p).π2)) a)))).
   - exact (S (Nat.max (Nat.max (wf_local_size _ typing_size _ a) (all_size _ (fun x  p => typing_size Σ _ _ _ p.π2) a0)) (all_size _ (fun x p => typing_size Σ _ _ _ (fst p)) a1))).
   - exact (S (Nat.max (Nat.max (wf_local_size _ typing_size _ a) (all_size _ (fun x  p => typing_size Σ _ _ _ p.π2) a0)) (all_size _ (fun x p => typing_size Σ _ _ _ p) a1))).
   - destruct s. red in i.
@@ -534,22 +538,26 @@ Fixpoint globenv_size (Σ : global_env) : size :=
 
 Arguments lexprod [A B].
 
+(** We make these well-formedness conditions type-classes as they are genrally 
+    globally available. *)
 Definition wf `{checker_flags} := Forall_decls_typing typing.
+Existing Class wf.
+Hint Mode wf + + : typeclass_intances.
+
 Definition wf_ext `{checker_flags} := on_global_env_ext (lift_typing typing).
+Existing Class wf_ext.
+Hint Mode wf_ext + + : typeclass_intances.
 
 Lemma wf_ext_wf {cf:checker_flags} Σ : wf_ext Σ -> wf Σ.
 Proof. intro H; apply H. Qed.
-
+Existing Instance wf_ext_wf.
+Coercion wf_ext_wf : wf_ext >-> wf.
 Hint Resolve wf_ext_wf : core.
 
 Lemma wf_ext_consistent {cf:checker_flags} Σ :
   wf_ext Σ -> consistent Σ.
-Proof.
-  intros [? [? [? [? ?]]]]; assumption.
-Qed.
-
+Proof. intros [? [? [? [? ?]]]]; assumption. Qed.
 Hint Resolve wf_ext_consistent : core.
-
 
 Lemma wf_local_app `{checker_flags} Σ (Γ Γ' : context) : wf_local Σ (Γ ,,, Γ') -> wf_local Σ Γ.
 Proof.
@@ -601,14 +609,6 @@ Proof.
   apply wfΣ.
   apply type_Prop.
 Defined.
-
-
-Derive Signature for All_local_env.
-
-Set Equations With UIP.
-Derive NoConfusion for context_decl.
-Derive NoConfusion for list.
-Derive NoConfusion for All_local_env.
 
 Lemma size_wf_local_app `{checker_flags} {Σ} (Γ Γ' : context) (Hwf : wf_local Σ (Γ ,,, Γ')) :
   wf_local_size Σ (@typing_size _) _ (wf_local_app _ _ _ Hwf) <=
@@ -669,8 +669,6 @@ Proof.
     intuition eauto.
     all: try lia.
 Qed.
-
-Derive Signature for Alli.
 
 (** *** An induction principle ensuring the Σ declarations enjoy the same properties.
     Also theads the well-formedness of the local context and the induction principle for it,
@@ -763,7 +761,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         forall btys, map_option_out (build_branches_type ind mdecl idecl params u p) = Some btys ->
         All2 (fun br bty => (br.1 = bty.1) *
                          (Σ ;;; Γ |- br.2 : bty.2) * P Σ Γ br.2 bty.2 *
-                         (Σ ;;; Γ |- bty.2 : tSort ps) * P Σ Γ bty.2 (tSort ps))
+                         ∑ s, (Σ ;;; Γ |- bty.2 : tSort s) * P Σ Γ bty.2 (tSort s))
              brs btys ->
         P Σ Γ (tCase (ind, npar) p c brs) (mkApps p (skipn npar args ++ [c]))) ->
 
@@ -910,6 +908,7 @@ Proof.
              destruct X14 as [u Hu]. exists u.
              specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ _ (existT _ _ Hu)))))).
              apply IH. simpl. constructor 1. simpl. auto with arith.
+      ++ apply onIndices.
       ++ red in onP |- *.
          eapply All_local_env_impl; eauto.
          intros. destruct T; simpl in X14.
@@ -1008,7 +1007,8 @@ Proof.
              --- intuition eauto.
                  +++ eapply (X14 _ _ _ t); eauto. simpl; auto with arith.
                      lia.
-                 +++ eapply (X14 _ _ _ t0); eauto. simpl; auto with arith.
+                 +++ destruct s as [s Hs]. exists s; split; [auto|].
+                     eapply (X14 _ _ _ Hs); eauto. simpl; auto with arith.
                      lia.
              --- apply IHa. auto. intros.
                  eapply (X14 _ _ _ Hty). lia.

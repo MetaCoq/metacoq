@@ -5,7 +5,6 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICTyping.
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
 
-
 Derive NoConfusion NoConfusionHom for term.
 Derive NoConfusion NoConfusionHom for context_decl.
 Derive NoConfusion NoConfusionHom for list.
@@ -13,8 +12,6 @@ Derive NoConfusion NoConfusionHom for option.
 
 Section Generation.
   Context `{cf : config.checker_flags}.
-
-  Definition isWfArity_or_Type Σ Γ T : Type := (isWfArity typing Σ Γ T + isType Σ Γ T).
 
   Inductive typing_spine (Σ : global_env_ext) (Γ : context) :
     term -> list term -> term -> Type :=

@@ -4,9 +4,9 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICTyping PCUICLiftSubst PCUICInversion PCUICConfluence PCUICConversion 
      PCUICCumulativity PCUICSR PCUICNormal PCUICSafeLemmata
-     PCUICValidity PCUICPrincipality PCUICElimination PCUICSN.
+     PCUICValidity PCUICPrincipality PCUICElimination PCUICSN PCUICNormal.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker.
-Require Import EArities Extract Prelim EDeps.
+Require Import EArities Extract Prelim EDeps ErasureCorrectness.
 
 From Equations Require Import Equations.
 
@@ -105,9 +105,9 @@ Proof.
       rewrite e. eauto.
 Qed.
 
-Require Import MetaCoq.PCUIC.PCUICNormal.
-
 Notation err := (TypeError  (Msg "hnf did not return normal form")).
+
+Obligation Tactic := program_simplify; auto.
 Program Definition reduce_to_sort' Γ t (h : wellformed Σ Γ t)
   : typing_result ((∑ u, ∥ red (fst Σ) Γ t (tSort u) ∥) + ((∑ u, ∥ red (fst Σ) Γ t (tSort u) ∥) -> False)) :=
   match t with
@@ -206,9 +206,10 @@ Next Obligation.
   etransitivity. eassumption. eapply PCUICReduction.red_prod. reflexivity.
   eassumption. now cbn.
 Qed.
+
 Next Obligation.
   destruct HΣ as [wΣ].
-  destruct H1 as (? & ? & ?). clear He. sq.
+  intros (? & ? & ?). clear He. sq.
   destruct H.
   edestruct (red_confluence wfΣ X X0) as (? & ? & ?); eauto.
   eapply invert_red_prod in r0 as (? & ? & [] & ?); eauto. subst.
@@ -243,6 +244,7 @@ Hint Constructors squash : core.
 
 Next Obligation.
 destruct HΣ.
+intros H.
   eapply Is_conv_to_Arity_inv in H
     as [ (? & ? & ? & ?) | (? & ?) ].
   all: eauto.
@@ -296,14 +298,14 @@ Next Obligation.
   - intros (? & ? & ?). sq.
      destruct s as [ | (? & ? & ?)].
      + destruct H. eapply arity_type_inv; eauto.
-     + eapply principal_typing in X2 as (? & ? & ? &?). 2:eauto. 2:exact t0.
+     + eapply common_typing in X2 as (? & ? & ? &?). 2:eauto. 2:exact t0.
 
        eapply cumul_prop1 in c; eauto.
        eapply cumul_prop2 in c0; eauto.
 
        eapply type_reduction in X0; eauto.
 
-       eapply principal_typing in c0 as (? & ? & ? & ?). 2:eauto. 2:{ exact X0. }
+       eapply common_typing in c0 as (? & ? & ? & ?). 2:eauto. 2:{ exact X0. }
 
        eapply cumul_prop1 in c; eauto.
 
@@ -325,21 +327,6 @@ Next Obligation.
 Qed.
 
 Section Erase.
-
-  Definition is_box c :=
-    match c with
-    | E.tBox => true
-    | _ => false
-    end.
-
-  Fixpoint mkAppBox c n :=
-    match n with
-    | 0 => c
-    | S n => mkAppBox (E.tApp c E.tBox) n
-    end.
-
-  Definition on_snd_map {A B C} (f : B -> C) (p : A * B) :=
-    (fst p, f (snd p)).
 
   Variable (Σ : global_env_ext)( HΣ :∥ wf_ext Σ ∥).
 
@@ -495,12 +482,15 @@ Proof.
     eapply isArity_subst_instance.
     eapply isArity_ind_type; eauto.
   - econstructor.
+    eapply nisErasable_Propositional; eauto.
+    now exists A.
+  - econstructor.
     eapply elim_restriction_works. eauto. eauto. eauto. eauto. intros.
     eapply f, isErasable_Proof. eauto. eauto.
 
     pose proof (Prelim.monad_map_All2 _ _ _ brs a2 E2).
 
-    eapply All2_All_left in X3. 2:{ intros. destruct X5. destruct p0. destruct p0. exact e0. }
+    eapply All2_All_left in X3. 2:{ intros. destruct X5. destruct p0. destruct p0. exact e. }
 
     eapply All2_impl.
     eapply All2_All_mix_left. eassumption. eassumption.
@@ -527,7 +517,6 @@ Proof.
     eapply p. eauto.
   - clear E. todo "erasure cofix"%string.
 Qed.
-Print Assumptions erases_erase.
 
 Lemma erase_Some_typed {Σ wfΣ Γ wfΓ t r} :
   erase Σ wfΣ Γ wfΓ t = Checked r -> exists T, ∥Σ ;;; Γ |- t : T∥.
@@ -558,28 +547,21 @@ Definition lift_opt_typing {A} (a : option A) (e : type_error) : typing_result A
   | None => raise e
   end.
 
-Definition erase_one_inductive_body Σ wfΣ npars arities Har
-           (oib : one_inductive_body) : typing_result E.one_inductive_body :=
-  decty <- lift_opt_typing (decompose_prod_n_assum [] npars oib.(ind_type))
-        (NotAnInductive oib.(ind_type)) ;;
-  let '(params, arity) := decty in
-  type <- erase Σ wfΣ [] wf_local_nil oib.(ind_type) ;;
-  ctors <- monad_map (fun '(x, y, z) => y' <- erase Σ wfΣ arities Har y;; ret (x, y', z)) oib.(ind_ctors);;
-  let projctx := arities ,,, params ,, vass nAnon oib.(ind_type) in
-  projs <- monad_map (fun '(x, y) => y' <- erase Σ wfΣ [] wf_local_nil y;; ret (x, y')) oib.(ind_projs);;
-  ret {| E.ind_name := oib.(ind_name);
-         E.ind_kelim := oib.(ind_kelim);
-         E.ind_ctors := ctors;
-         E.ind_projs := projs |}.
+Definition erase_one_inductive_body (oib : one_inductive_body) : E.one_inductive_body :=
+  let ctors := map (fun '(x, y, z) => (x, z)) oib.(ind_ctors) in
+  let projs := map (fun '(x, y) => x) oib.(ind_projs) in
+  {| E.ind_name := oib.(ind_name);
+     E.ind_kelim := oib.(ind_kelim);
+     E.ind_propositional := false; 
+     E.ind_ctors := ctors;
+     E.ind_projs := projs |}.
 
-Program Definition erase_mutual_inductive_body Σ wfΣ
-           (mib : mutual_inductive_body) (Hm :   ∥ wf_local Σ (arities_context (ind_bodies mib)) ∥)
-: typing_result E.mutual_inductive_body :=
+Program Definition erase_mutual_inductive_body (mib : mutual_inductive_body) : E.mutual_inductive_body :=
   let bds := mib.(ind_bodies) in
   let arities := arities_context bds in
-  bodies <- monad_map (erase_one_inductive_body Σ wfΣ mib.(ind_npars) arities _) bds ;;
-  ret {| E.ind_npars := mib.(ind_npars);
-         E.ind_bodies := bodies; |}.
+  let bodies := map erase_one_inductive_body bds in
+  {| E.ind_npars := mib.(ind_npars);
+     E.ind_bodies := bodies; |}.
 
 Program Fixpoint erase_global_decls Σ : ∥ wf Σ ∥ -> typing_result E.global_declarations := fun wfΣ =>
   match Σ with
@@ -589,7 +571,7 @@ Program Fixpoint erase_global_decls Σ : ∥ wf Σ ∥ -> typing_result E.global
     Σ' <- erase_global_decls Σ _;;
     ret ((kn, E.ConstantDecl cb') :: Σ')
   | (kn, InductiveDecl mib) :: Σ =>
-    mib' <- erase_mutual_inductive_body (Σ, ind_universes mib) _ mib _ ;;
+    let mib' := erase_mutual_inductive_body mib in
     Σ' <- erase_global_decls Σ _;;
     ret ((kn, E.InductiveDecl mib') :: Σ')
   end.
@@ -602,17 +584,8 @@ Next Obligation.
   sq. eapply PCUICWeakeningEnv.wf_extends. eauto. eexists [_]; reflexivity.
 Qed.
 Next Obligation.
-  sq. split. cbn.
-  eapply PCUICWeakeningEnv.wf_extends. eauto. eexists [_]; reflexivity.
-  now inversion X; subst.
-Qed.
-Next Obligation.
-  sq. inv X. cbn in *.
-  eapply PCUICSubstitution.wf_arities_context'; eauto.
-Qed.
-Next Obligation.
   sq. eapply PCUICWeakeningEnv.wf_extends. eauto. eexists [_]; reflexivity.
-Qed.
+Defined.
 
 Program Definition erase_global Σ : ∥wf Σ∥ -> _:=
   fun wfΣ  =>
@@ -650,45 +623,22 @@ Proof.
            rewrite E1. cbn. econstructor.
       * eapply IHΣ. unfold erase_global. rewrite E3. reflexivity.
     + inv H. inv E. inv E2.
-      unfold erase_mutual_inductive_body, bind in H0. cbn in H0.
-      destruct ?; try congruence. inv H0.
       econstructor.
-      * econstructor; cbn; eauto.
-        pose proof (Prelim.monad_map_All2 _ _ _ _ _ E).
-        eapply All2_Forall2.
-        eapply All2_impl. eassumption.
-
-        intros. cbn in H.
-        unfold erase_one_inductive_body, bind in H. cbn in H.
-        repeat destruct ?; try congruence.
-        inv H.
-        unfold erases_one_inductive_body. cbn. destruct ?; cbn.
-        (* unfold lift_opt_typing in E. *)
-        (* destruct decompose_prod_n_assum eqn:E6; inv E. cbn. *)
-        pose proof (Prelim.monad_map_All2 _ _ _ _ _ E4).
-        pose proof (Prelim.monad_map_All2 _ _ _ _ _ E5). repeat split; eauto.
-        -- eapply All2_Forall2.
-           eapply All2_impl_In. eassumption.
-           intros. destruct x0, p, y, p. cbn in *.
-           destruct ?; try congruence.
-           inv H1. split; eauto.
-
-           (* pose (t' := t). inv t'. cbn in *. *)
-           destruct (erase_Some_typed E6) as [? []].
-
-           eapply erases_erase. 2:eauto. eauto.
-        -- eapply All2_Forall2.
-           eapply All2_impl_In. eassumption.
-           intros. cbn in H1. destruct x0, y.
-           destruct ?; try congruence;
-             inv H1. split; eauto.
-
-           (* pose (t' := t). inv t'. cbn in *. *)
-           destruct (erase_Some_typed E6) as [? []].
-
-           eapply erases_erase.
-           2:{ eauto. } eauto.
-  * eapply IHΣ. unfold erase_global. rewrite E3. reflexivity.
+      2:{ simpl in H0. eapply IHΣ; eauto. unfold erase_global. rewrite H0. now simpl. }
+      destruct m. constructor; simpl; auto.
+      rewrite <- (map_id ind_bodies) at 1.
+      eapply Forall2_map. clear.
+      induction ind_bodies; constructor; auto.
+      destruct a; simpl. constructor; simpl.
+      rewrite <- (map_id ind_ctors) at 1.
+      eapply Forall2_map. clear.
+      induction ind_ctors; constructor; auto.
+      destruct a as [[id ty] nargs]; simpl; auto.
+      intuition auto.
+      rewrite <- (map_id ind_projs) at 1.
+      eapply Forall2_map.
+      clear. induction ind_projs; constructor; auto.
+      destruct a; auto. todo "isprop".
 Qed.
 
 Lemma wf_ext_wf_squash {Σ} : wf_ext Σ -> ∥ wf Σ ∥.
@@ -696,7 +646,7 @@ Proof.
   intros wf; now constructor.
 Defined.
 
-Lemma erase_correct (Σ : global_env_ext) (wfΣ : wf_ext Σ) t T v Σ' t' :
+Lemma erase_correct (wfl:=EWcbvEval.default_wcbv_flags) (Σ : global_env_ext) (wfΣ : wf_ext Σ) t T v Σ' t' :
   axiom_free Σ.1 ->
   Σ ;;; [] |- t : T ->
   erase_global Σ (wf_ext_wf_squash wfΣ) = Checked Σ' ->
@@ -710,3 +660,5 @@ Proof.
   eapply erase_global_correct, erases_global_erases_deps in HΣ'; eauto.
   eapply erases_correct; eauto.
 Qed.
+
+Print Assumptions erases_erase.

@@ -96,7 +96,7 @@ Section print_term.
                                 ^ " => " ^ print_term (vass na' :: Γ) true false body)
   | tLetIn na def body =>
     let na' := fresh_name Γ na t in
-    parens top ("let" ^ string_of_name na' ^
+    parens top ("let " ^ string_of_name na' ^
                       " := " ^ print_term Γ true false def ^ " in " ^ nl ^
                       print_term (vdef na' def :: Γ) true false body)
   | tApp f l =>
@@ -106,7 +106,7 @@ Section print_term.
     match lookup_ind_decl i k with
     | Some oib =>
       match nth_error oib.(ind_ctors) l with
-      | Some (na, _, _) => na
+      | Some (na, _) => na
       | None =>
         "UnboundConstruct(" ^ string_of_inductive ind ^ "," ^ string_of_nat l ^ ")"
       end
@@ -133,7 +133,7 @@ Section print_term.
         let brs := combine brs oib.(ind_ctors) in
         parens top ("match " ^ print_term Γ true false t ^
                     " with " ^ nl ^
-                    print_list (fun '(b, (na, _, _)) => na ^ " " ^ b)
+                    print_list (fun '(b, (na, _)) => na ^ " " ^ b)
                     (nl ^ " | ") brs ^ nl ^ "end" ^ nl)
     | None =>
       "Case(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_term t ^ ","
@@ -143,7 +143,7 @@ Section print_term.
     match lookup_ind_decl mind i with
     | Some oib =>
       match nth_error oib.(ind_projs) k with
-      | Some (na, _) => print_term Γ false false c ^ ".(" ^ na ^ ")"
+      | Some na => print_term Γ false false c ^ ".(" ^ na ^ ")"
       | None =>
         "UnboundProj(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_nat k ^ ","
                        ^ print_term Γ true false c ^ ")"

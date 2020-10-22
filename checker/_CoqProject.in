@@ -2,7 +2,6 @@
 -I src
 -R theories MetaCoq.Checker
 
-theories/Reflect.v
 theories/Generation.v
 theories/WeakeningEnv.v
 theories/Closed.v

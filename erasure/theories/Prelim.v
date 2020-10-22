@@ -16,8 +16,6 @@ Module P := PCUICWcbvEval.
 
 Ltac inv H := inversion H; subst; clear H.
 
-Coercion wf_ext_wf : wf_ext >-> wf.
-Existing Instance wf_ext_wf.
 Existing Class axiom_free.
 
 Lemma nth_error_app_inv X (x : X) n l1 l2 :
@@ -263,7 +261,7 @@ Lemma value_app_inv L :
   Ee.value (EAst.mkApps EAst.tBox L) ->
   L = nil.
 Proof.
-  intros. depelim H.
+  intros. depelim X.
   - destruct L using rev_ind.
     reflexivity.
     rewrite emkApps_snoc in i. inv i.

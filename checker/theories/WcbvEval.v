@@ -1,8 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import CRelationClasses.
-From MetaCoq.Template Require Import config utils Ast AstUtils LiftSubst MCList
+From MetaCoq.Template Require Import config utils Ast AstUtils Reflect LiftSubst MCList
      UnivSubst WfInv Typing.
-From MetaCoq.Checker Require Import Reflect.
 
 Require Import ssreflect ssrbool.
 Require Import Equations.Prop.DepElim.

@@ -22,7 +22,6 @@ Create HintDb univ_subst.
 
 Local Ltac aa := rdest; eauto with univ_subst.
 
-
 Lemma subst_instance_level_val u l v v'
       (H1 : forall s, valuation_mono v s = valuation_mono v' s)
       (H2 : forall n, val v (nth n u Level.lSet) = Z.of_nat (valuation_poly v' n))
@@ -1540,7 +1539,7 @@ Proof.
       * cbn. eauto.
       * cbn.
         destruct x, y; cbn in *; subst.
-        eapply t1; assumption.
+        destruct s as [s [Hs IH]]. eexists; eauto.
 
   - intros p c u mdecl idecl pdecl isdecl args X X0 X1 X2 H u0 univs wfΣ' HSub H0.
     rewrite <- subst_subst_instance_constr. cbn.

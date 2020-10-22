@@ -1,4 +1,4 @@
-From MetaCoq.Template Require Import utils.
+From MetaCoq.Template Require Import Reflect.
 From MetaCoq.Erasure Require Import EAst EInduction.
 From MetaCoq.PCUIC Require Import PCUICReflect.
 From Equations Require Import Equations.
@@ -41,13 +41,13 @@ Proof.
     destruct t ; try (right ; discriminate).
   all: term_dec_tac term_dec.
   - left; reflexivity.
-  - revert l0. induction H ; intro l0.
+  - revert l0. induction X ; intro l0.
     + destruct l0.
       * left. reflexivity.
       * right. discriminate.
     + destruct l0.
       * right. discriminate.
-      * destruct (IHAll l0) ; nodec.
+      * destruct (IHX l0) ; nodec.
         destruct (p t) ; nodec.
         subst. left. inversion e. reflexivity.
   - destruct (IHx t) ; nodec.
@@ -74,27 +74,27 @@ Proof.
         cbn in *. subst. inversion e. reflexivity.
   - destruct (IHx t) ; nodec.
     left. subst. reflexivity.
-  - revert m0. induction H ; intro m0.
+  - revert m0. induction X ; intro m0.
     + destruct m0.
       * left. reflexivity.
       * right. discriminate.
     + destruct m0.
       * right. discriminate.
       * destruct (p (dbody d)) ; nodec.
-        destruct (IHAll m0) ; nodec.
+        destruct (IHX m0) ; nodec.
         destruct x, d ; subst. cbn in *.
         destruct (eq_dec dname dname0) ; nodec.
         subst. inversion e0. subst.
         destruct (eq_dec rarg rarg0) ; nodec.
         subst. left. reflexivity.
-  - revert m0. induction H ; intro m0.
+  - revert m0. induction X ; intro m0.
     + destruct m0.
       * left. reflexivity.
       * right. discriminate.
     + destruct m0.
       * right. discriminate.
       * destruct (p (dbody d)) ; nodec.
-        destruct (IHAll m0) ; nodec.
+        destruct (IHX m0) ; nodec.
         destruct x, d ; subst. cbn in *.
         destruct (eq_dec dname dname0) ; nodec.
         subst. inversion e0. subst.
@@ -102,7 +102,7 @@ Proof.
         subst. left. reflexivity.
 Defined.
 
-Instance ReflectEq_term : PCUICReflect.ReflectEq _ :=
+Instance ReflectEq_term : Reflect.ReflectEq _ :=
   @EqDec_ReflectEq _ EqDec_term.
 
 Definition eqb_constant_body (x y : constant_body) :=
@@ -118,9 +118,9 @@ Proof.
 Defined.
 
 Definition eqb_one_inductive_body (x y : one_inductive_body) :=
-  let (n, k, c, p) := x in
-  let (n', k', c', p') := y in
-  eqb n n' && eqb k k' && eqb c c' && eqb p p'.
+  let (n, i, k, c, p) := x in
+  let (n', i', k', c', p') := y in
+  eqb n n' && eqb i i' && eqb k k' && eqb c c' && eqb p p'.
 
 Instance reflect_one_inductive_body : ReflectEq one_inductive_body.
 Proof.

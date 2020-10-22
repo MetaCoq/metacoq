@@ -1,11 +1,12 @@
 From Coq Require Import List Bool Arith ssreflect Lia.
 From MetaCoq.Template Require Import MCPrelude MCList MCRelations MCProd MCOption.
-
+From Equations Require Import Equations.
 Import ListNotations.
 
 Local Ltac inv H := inversion_clear H.
 Local Coercion is_true : bool >-> Sortclass.
 
+Derive Signature for Forall.
 
 (** Combinators *)
 
@@ -16,12 +17,15 @@ Inductive All {A} (P : A -> Type) : list A -> Type :=
                   P x -> All P l -> All P (x :: l).
 Arguments All_nil {_ _}.
 Arguments All_cons {_ _ _ _}.
+Derive Signature NoConfusion for All.
 
 Inductive Alli {A} (P : nat -> A -> Type) (n : nat) : list A -> Type :=
 | Alli_nil : Alli P n []
 | Alli_cons hd tl : P n hd -> Alli P (S n) tl -> Alli P n (hd :: tl).
 Arguments Alli_nil {_ _ _}.
 Arguments Alli_cons {_ _ _ _ _}.
+Derive Signature for Alli.
+Derive NoConfusionHom for Alli.
 
 Inductive All2 {A B : Type} (R : A -> B -> Type) : list A -> list B -> Type :=
   All2_nil : All2 R [] []
@@ -29,6 +33,8 @@ Inductive All2 {A B : Type} (R : A -> B -> Type) : list A -> list B -> Type :=
     R x y -> All2 R l l' -> All2 R (x :: l) (y :: l').
 Arguments All2_nil {_ _ _}.
 Arguments All2_cons {_ _ _ _ _ _ _}.
+Derive Signature for All2.
+Derive NoConfusionHom for All2.
 
 Fixpoint alli {A} (p : nat -> A -> bool) (l : list A) (n : nat) : bool :=
   match l with
@@ -496,6 +502,7 @@ Qed.
 Inductive OnOne2 {A : Type} (P : A -> A -> Type) : list A -> list A -> Type :=
 | OnOne2_hd hd hd' tl : P hd hd' -> OnOne2 P (hd :: tl) (hd' :: tl)
 | OnOne2_tl hd tl tl' : OnOne2 P tl tl' -> OnOne2 P (hd :: tl) (hd :: tl').
+Derive Signature NoConfusion for OnOne2.
 
 Lemma OnOne2_All_mix_left {A} {P : A -> A -> Type} {Q : A -> Type} {l l'} :
   All Q l -> OnOne2 P l l' -> OnOne2 (fun x y => (P x y * Q x)%type) l l'.
@@ -505,6 +512,11 @@ Qed.
 
 Lemma OnOne2_app {A} (P : A -> A -> Type) l tl tl' : OnOne2 P tl tl' -> OnOne2 P (l ++ tl) (l ++ tl').
 Proof. induction l; simpl; try constructor; auto. Qed.
+
+Lemma OnOne2_app_r {A} (P : A -> A -> Type) l l' tl :
+  OnOne2 P l l' ->
+  OnOne2 P (l ++ tl) (l' ++ tl).
+Proof. induction 1; constructor; auto. Qed.
 
 Lemma OnOne2_length {A} {P} {l l' : list A} : OnOne2 P l l' -> #|l| = #|l'|.
 Proof. induction 1; simpl; congruence. Qed.
@@ -641,6 +653,19 @@ Proof.
     intros [= ->]. exists t; intuition auto.
 Qed.
 
+Lemma OnOne2_nth_error_r {A} (l l' : list A) n t' P :
+  OnOne2 P l l' ->        
+  nth_error l' n = Some t' ->
+  ∑ t, (nth_error l n = Some t) *
+  ((t = t') + (P t t')).
+Proof.
+  induction 1 in n |- *.
+  destruct n; simpl.
+  - intros [= ->]. exists hd; intuition auto.
+  - exists t'. intuition auto.
+  - destruct n; simpl; auto.
+    intros [= ->]. exists t'; intuition auto.
+Qed.
 
 Ltac toAll :=
   match goal with
@@ -1084,6 +1109,16 @@ Proof.
   induction 1; eauto.
 Qed.
 
+(* Bad! Uses template polymorphism. *)
+Lemma Forall2_All2 {A B} {P : A -> B -> Prop} l l' : Forall2 P l l' -> All2 P l l'.
+Proof.
+  intros f; induction l in l', f |- *; destruct l'; try constructor; auto.
+  elimtype False. inv f.
+  elimtype False. inv f.
+  inv f; auto.
+  apply IHl. inv f; auto.
+Qed.
+
 Lemma Forall2_nth_error_Some {A B} {P : A -> B -> Prop} {l l'} n t :
   Forall2 P l l' ->
   nth_error l n = Some t ->
@@ -1411,13 +1446,6 @@ Qed.
 
 Require Import MCSquash.
 
-Lemma All_In X (P : X -> Type) (l : list X) x : All P l -> In x l -> squash (P x).
-Proof.
-  induction 1; cbn; intros; destruct H.
-  - subst. econstructor. eauto.
-  - eauto.
-Qed.
-
 Lemma All2_swap :
   forall A B R l l',
     @All2 A B R l l' ->
@@ -1691,6 +1719,7 @@ Inductive All2i {A B : Type} (R : nat -> A -> B -> Type) (n : nat)
       R n x y ->
       All2i R (S n) l r ->
       All2i R n (x :: l) (y :: r).
+Derive Signature NoConfusionHom for All2i.
 
 Lemma All2i_impl :
   forall A B R R' n l l',
@@ -1852,4 +1881,42 @@ Proof.
   - destruct l'. 1: discriminate.
     simpl in h. apply andP in h as [? ?].
     constructor. all: auto.
+Qed.
+
+(** All, All2 and In interactions. *)
+
+Lemma All2_In {A B} (P : A -> B -> Type) l l' x : In x l -> 
+  All2 P l l' -> ∥ ∑ x', P x x' ∥.
+Proof.
+  induction 2; simpl in H => //.
+  destruct H as [-> | H].
+  constructor. now exists y.
+  now eapply IHX.
+Qed.
+
+Lemma All2_In_right {A B} (P : A -> B -> Type) l l' x' : In x' l' -> 
+  All2 P l l' -> ∥ ∑ x, P x x' ∥.
+Proof.
+  induction 2; simpl in H => //.
+  destruct H as [-> | H].
+  constructor. now exists x.
+  now eapply IHX.
+Qed.
+
+Lemma All_In {A} (P : A -> Type) l x : In x l -> 
+  All P l -> ∥ P x ∥.
+Proof.
+  induction 2; simpl in H => //.
+  destruct H as [-> | H].
+  now constructor.
+  now eapply IHX.
+Qed.
+
+Lemma In_Forall {A} {P : A -> Prop} l : 
+  (forall x, In x l -> P x) ->
+  Forall P l.
+Proof.
+  intros H; induction l; constructor; auto.
+  now apply H; simpl. apply IHl.
+  intros x xin; apply H; simpl; auto.
 Qed.

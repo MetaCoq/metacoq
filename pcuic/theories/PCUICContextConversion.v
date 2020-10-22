@@ -9,8 +9,6 @@ From MetaCoq.PCUIC Require Import PCUICAst
 From Coq Require Import CRelationClasses ssreflect.
 From Equations Require Import Equations.
 
-
-
 Arguments red_ctx : clear implicits.
 
 Ltac my_rename_hyp h th :=
@@ -832,6 +830,7 @@ Proof.
     eapply forall_Γ'1; repeat (constructor; pcuic).
   - econstructor; pcuic. intuition auto. eapply isdecl. eapply isdecl.
     eauto. solve_all.
+    destruct b0 as [? [? ?]]; eauto.
   - econstructor; pcuic.
     eapply (All_impl X0).
     intros x [s [Hs IH]].

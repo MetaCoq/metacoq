@@ -367,8 +367,7 @@ Proof.
          simpl in sp. rewrite !map_map_compose in sp. eapply sp.
          autorewrite with len.
          simpl. constructor.
-         2:{ simpl; constructor; auto. left; eexists _, _; intuition eauto.
-             reflexivity. }
+         2:{ simpl; constructor; auto. }
          rewrite lift_mkApps subst_mkApps.
          simpl. eapply type_mkApps. econstructor; eauto.
          split; eauto.
@@ -391,7 +390,7 @@ Proof.
          rewrite {6}/pargctxu in X0.
          rewrite distr_lift_subst_context in X0.
          rewrite closed_ctx_lift in X0.
-         { rewrite /argctxu. rewrite -(context_subst_length _ _ _ csubst).
+         { rewrite /argctxu. rewrite -(context_subst_length csubst).
            rewrite subst_instance_context_length. rewrite Nat.add_comm. eapply closedn_ctx_subst.
           2:eapply declared_minductive_closed_inds; eauto.
           rewrite /argctx. autorewrite with len. simpl.
@@ -447,7 +446,7 @@ Proof.
            simpl in sp. instantiate (1:=inst).
            eapply spine_subst_eq; [eapply sp|].
            rewrite distr_lift_subst_context -H. f_equal.
-           rewrite -(context_subst_length _ _ _ iparsubst0).
+           rewrite -(context_subst_length iparsubst0).
            autorewrite with len. rewrite closed_ctx_lift //.
            epose proof (on_minductive_wf_params_indices_inst _ _ u _ _ _ (proj1 decli) oib cu).
            rewrite subst_instance_context_app in X1. eapply closed_wf_local in X1; eauto.
@@ -487,7 +486,7 @@ Proof.
              eapply (closedn_expand_lets 0) in cl.
              rewrite subst_closedn closedn_subst_instance_constr.
              now len in cl.
-             rewrite -(context_subst_length _ _ _ iparsubst0).
+             rewrite -(context_subst_length iparsubst0).
              autorewrite with len. now rewrite Nat.add_comm; len in cl. }  
            rewrite !map_map_compose. apply (All_All2 X1).
            intros x cl.
@@ -533,7 +532,7 @@ Proof.
       split. eapply validity; eauto.
       eapply arity_spine_it_mkProd_or_LetIn; eauto.
       simpl. constructor. 
-      2:{ constructor; pcuic. left; eexists _, _; intuition eauto. }
+      2:{ constructor; pcuic. }
       rewrite subst_mkApps /= map_app. unfold to_extended_list.
       generalize (spine_subst_subst_to_extended_list_k subsidx).
       rewrite to_extended_list_k_subst 
@@ -659,7 +658,7 @@ Proof.
     2:eapply validity_term; eauto.
     unfold check_recursivity_kind in t.
     rewrite isdecl.p1 in t.
-    apply PCUICReflect.eqb_eq in t. rewrite t /= in heq_isCoFinite.
+    apply Reflect.eqb_eq in t. rewrite t /= in heq_isCoFinite.
     discriminate.
 
   - (* Case congruence on the predicate *) 
@@ -670,7 +669,9 @@ Proof.
       intros.
       intuition auto. now transitivity y.1.
       eapply type_Cumul; eauto.
-      now eapply conv_cumul, red_conv, red1_red.
+      2:now eapply conv_cumul, red_conv, red1_red.
+      destruct b0 as [s [Hs IH]]; eauto.
+      destruct b0 as [s [Hs IH]]; eauto.
     * right.
       pose proof typec as typec'.
       eapply (env_prop_typing _ _ validity) in typec' as wat; auto.
@@ -688,8 +689,6 @@ Proof.
       split. apply (env_prop_typing _ _ validity) in typep as ?; eauto.
       eapply arity_spine_it_mkProd_or_LetIn; eauto.
       simpl. constructor; [ |constructor].
-      2:{ left; eexists _, _; split. simpl; eauto. auto. }
-      2:reflexivity.
       rewrite subst_mkApps. simpl.
       rewrite map_app. rewrite map_map_compose.
       rewrite map_subst_lift_id_eq. now rewrite (subslet_length sargs); autorewrite with len.
@@ -700,7 +699,7 @@ Proof.
 
   - (* Case congruence on discriminee *) 
     eapply type_Cumul. eapply type_Case; eauto.
-    * solve_all.
+    * solve_all. destruct b0 as [s [Hs IH]]; eauto.
     * right.
       pose proof typec as typec'.
       eapply (env_prop_typing _ _ validity) in typec' as wat; auto.
@@ -718,8 +717,6 @@ Proof.
       split. apply (env_prop_typing _ _ validity) in typep; eauto.
       eapply arity_spine_it_mkProd_or_LetIn; eauto.
       simpl. constructor; [ |constructor].
-      2:{ left; eexists _, _; split. simpl; eauto. auto. }
-      2:reflexivity.
       rewrite subst_mkApps. simpl.
       rewrite map_app. rewrite map_map_compose.
       rewrite map_subst_lift_id_eq. now rewrite (subslet_length sargs); autorewrite with len.
@@ -733,10 +730,11 @@ Proof.
     eapply type_Case; eauto.
     eapply (OnOne2_All2_All2 o X5).
     intros [] []; simpl. intros.
-    intuition auto. subst.
+    intuition auto. destruct b as [s [Hs IH]]; eauto. subst.
     intros [] [] []; simpl. intros.
     intuition auto. subst.    
     reflexivity.
+    destruct b0 as [s [Hs IH]]; eauto.
 
   - (* Proj CoFix congruence *)
     assert(typecofix : Σ ;;; Γ |- tProj p (mkApps (tCoFix mfix idx) args0) : subst0 (mkApps (tCoFix mfix idx) args0 :: List.rev args)
@@ -799,7 +797,7 @@ Proof.
       eapply (All2_impl (P:=fun x y => red Σ.1 Γ x y)).
       2:{ intros x' y' hred. rewrite heq_length.
           eapply weakening_red_0; auto. autorewrite with len.
-          pose proof (onNpars _ _ _ _ oi). simpl; lia. }
+          pose proof (onNpars oi). simpl; lia. }
       elim: p.2. simpl. constructor.
       intros n Hn. constructor; auto.
       eapply red1_red. eapply red_cofix_proj. eauto.

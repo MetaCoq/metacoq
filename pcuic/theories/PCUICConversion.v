@@ -23,9 +23,6 @@ Hint Resolve eq_universe_leq_universe' : pcuic.
 Derive Signature for conv cumul assumption_context.
 Derive Signature for clos_refl_trans_1n. 
 
-(* So that we can use [conv_trans]... *)
-Existing Class wf.
-
 (* todo move *)
 Lemma All2_refl {A} {P : A -> A -> Type} l : 
   (forall x, P x x) ->

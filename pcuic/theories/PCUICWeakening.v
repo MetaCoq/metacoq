@@ -1015,6 +1015,7 @@ Proof.
     -- destruct idecl; simpl in *; auto.
     -- now rewrite -> !lift_mkApps in IHc.
     -- solve_all.
+      destruct b0 as [s [Hs IH]]; eauto.
 
   - simpl.
     erewrite (distr_lift_subst_rec _ _ _ 0 #|Γ'|).

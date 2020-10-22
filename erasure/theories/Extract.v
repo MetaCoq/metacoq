@@ -5,18 +5,43 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping
      PCUICElimination.
 From MetaCoq.Erasure Require EAst ETyping.
 
+Module E := EAst.
 
 Local Existing Instance extraction_checker_flags.
 
-Definition isErasable Σ Γ t := ∑ T, Σ ;;; Γ |- t : T × (isArity T + (∑ u, (Σ ;;; Γ |- T : tSort u) * Universe.is_prop u))%type.
+Definition isErasable Σ Γ t := ∑ T, Σ ;;; Γ |- t : T × 
+  (isArity T + (∑ u, (Σ ;;; Γ |- T : tSort u) * Universe.is_prop u))%type.
 
-Module E := EAst.
+Definition isPropositionalArity ar b :=
+  match destArity [] ar with
+  | Some (_, s) => Universe.is_prop s = b
+  | None => False
+  end.
 
+Definition isPropositional Σ ind b := 
+  match lookup_env Σ (inductive_mind ind) with
+  | Some (InductiveDecl mdecl) =>
+    match nth_error mdecl.(ind_bodies) (inductive_ind ind) with 
+    | Some idecl =>
+      match destArity [] idecl.(ind_type) with
+      | Some (_, s) => Universe.is_prop s = b
+      | None => False
+      end
+    | None => False
+    end
+  | _ => False
+  end.
 
 Fixpoint mkAppBox c n :=
   match n with
   | 0 => c
   | S n => mkAppBox (E.tApp c E.tBox) n
+  end.
+
+Definition is_box c :=
+  match EAstUtils.head c with
+  | E.tBox => true
+  | _ => false
   end.
 
 Reserved Notation "Σ ;;; Γ |- s ⇝ℇ t" (at level 50, Γ, s, t at next level).
@@ -40,7 +65,8 @@ Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :
   | erases_tConst : forall (kn : kername) (u : Instance.t),
                     Σ;;; Γ |- tConst kn u ⇝ℇ E.tConst kn
   | erases_tConstruct : forall (kn : inductive) (k : nat) (n : Instance.t),
-                        Σ;;; Γ |- tConstruct kn k n ⇝ℇ E.tConstruct kn k
+        isPropositional Σ kn false ->
+        Σ;;; Γ |- tConstruct kn k n ⇝ℇ E.tConstruct kn k
   | erases_tCase1 : forall (ind : inductive) (npar : nat) (T c : term)
                       (brs : list (nat × term)) (c' : E.term)
                       (brs' : list (nat × E.term)),
@@ -98,6 +124,7 @@ Lemma erases_forall_list_ind
       (Hconst : forall Γ kn u,
           P Γ (tConst kn u) (E.tConst kn))
       (Hconstruct : forall Γ kn k n,
+          isPropositional Σ kn false ->
           P Γ (tConstruct kn k n) (E.tConstruct kn k))
       (Hcase : forall Γ ind npar T c brs c' brs',
           PCUICElimination.Informative Σ ind ->
@@ -185,19 +212,17 @@ Definition erases_constant_body (Σ : global_env_ext) (cb : constant_body) (cb' 
   | _, _ => False
   end.
 
-Definition erases_one_inductive_body (Σ : global_env_ext) (npars : nat) (arities : context) (oib : one_inductive_body) (oib' : E.one_inductive_body) :=
-  let decty := option_get ([], tRel 0) (decompose_prod_n_assum [] npars oib.(ind_type)) in
-  let '(params, arity) := decty in
-  let projctx := arities ,,, params ,, vass nAnon oib.(ind_type) in
-  Forall2 (fun '((i,t), n) '((i',t'), n') => erases Σ arities t t' /\ n = n' /\ i = i') oib.(ind_ctors) oib'.(E.ind_ctors) /\
-  Forall2 (fun '(i,t) '(i',t') => erases Σ [] t t' /\ i = i') oib.(ind_projs) oib'.(E.ind_projs) /\
+Definition erases_one_inductive_body (oib : one_inductive_body) (oib' : E.one_inductive_body) :=
+  Forall2 (fun '((i,t), n) '(i', n') => n = n' /\ i = i') oib.(ind_ctors) oib'.(E.ind_ctors) /\
+  Forall2 (fun '(i,t) i' => i = i') oib.(ind_projs) oib'.(E.ind_projs) /\
   oib'.(E.ind_name) = oib.(ind_name) /\
-  oib'.(E.ind_kelim) = oib.(ind_kelim).
+  oib'.(E.ind_kelim) = oib.(ind_kelim) /\ 
+  isPropositionalArity oib.(ind_type) oib'.(E.ind_propositional).
 
-Definition erases_mutual_inductive_body (Σ : global_env_ext) (mib : mutual_inductive_body) (mib' : E.mutual_inductive_body) :=
+Definition erases_mutual_inductive_body (mib : mutual_inductive_body) (mib' : E.mutual_inductive_body) :=
   let bds := mib.(ind_bodies) in
   let arities := arities_context bds in
-  Forall2 (erases_one_inductive_body Σ mib.(ind_npars) arities) bds (mib'.(E.ind_bodies)) /\
+  Forall2 erases_one_inductive_body bds (mib'.(E.ind_bodies)) /\
   mib.(ind_npars) = mib'.(E.ind_npars).
 
 Inductive erases_global_decls : global_env -> E.global_declarations -> Prop :=
@@ -206,8 +231,8 @@ Inductive erases_global_decls : global_env -> E.global_declarations -> Prop :=
     erases_constant_body (Σ, cst_universes cb) cb cb' ->
     erases_global_decls Σ Σ' ->
     erases_global_decls ((kn, ConstantDecl cb) :: Σ) ((kn, E.ConstantDecl cb') :: Σ')
-| erases_global_ind Σ univs mib mib' kn Σ' :
-    erases_mutual_inductive_body (Σ, univs) mib mib' ->
+| erases_global_ind Σ mib mib' kn Σ' :
+    erases_mutual_inductive_body mib mib' ->
     erases_global_decls Σ Σ' ->
     erases_global_decls ((kn, InductiveDecl mib) :: Σ) ((kn, E.InductiveDecl mib') :: Σ').
 
@@ -215,7 +240,7 @@ Definition erases_global Σ Σ' := erases_global_decls Σ Σ'.
 
 (* For erasure evaluation correctness we do not need the full global
    environment to be erased, rather only (constant) dependencies of
-   terms need to be there. *)
+   terms need to be there along with the inductive types that are used. *)
 Inductive erases_deps (Σ : global_env) (Σ' : E.global_declarations) : E.term -> Prop :=
 | erases_deps_tBox : erases_deps Σ Σ' E.tBox
 | erases_deps_tRel i : erases_deps Σ Σ' (E.tRel i)
@@ -242,11 +267,17 @@ Inductive erases_deps (Σ : global_env) (Σ' : E.global_declarations) : E.term -
     erases_deps Σ Σ' (E.tConst kn)
 | erases_deps_tConstruct ind c :
     erases_deps Σ Σ' (E.tConstruct ind c)
-| erases_deps_tCase p discr brs :
+| erases_deps_tCase p mdecl idecl mdecl' idecl' discr brs :
+    PCUICTyping.declared_inductive Σ mdecl (fst p) idecl ->
+    ETyping.declared_inductive Σ' mdecl' (fst p) idecl' ->
+    erases_one_inductive_body idecl idecl' ->
     erases_deps Σ Σ' discr ->
     Forall (fun br => erases_deps Σ Σ' br.2) brs ->
     erases_deps Σ Σ' (E.tCase p discr brs)
-| erases_deps_tProj p t :
+| erases_deps_tProj p mdecl idecl mdecl' idecl' t :
+    PCUICTyping.declared_inductive Σ mdecl p.1.1 idecl ->
+    ETyping.declared_inductive Σ' mdecl' p.1.1 idecl' ->
+    erases_one_inductive_body idecl idecl' ->
     erases_deps Σ Σ' t ->
     erases_deps Σ Σ' (E.tProj p t)
 | erases_deps_tFix defs i :

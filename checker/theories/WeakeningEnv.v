@@ -394,7 +394,7 @@ Proof.
       simpl.
       intros v indv. specialize (on_ctype_variance v indv).
       simpl in *. move: on_ctype_variance.
-      unfold respects_variance. destruct variance_universes as [[[univs u] u']|]; auto.
+      unfold cstr_respects_variance. destruct variance_universes as [[[univs u] u']|]; auto.
       intros [args idxs]. split.
       eapply (All2_local_env_impl args); intros.
       eapply weakening_env_cumul; eauto.
@@ -415,6 +415,11 @@ Proof.
           destruct indices_matter; [|trivial]. clear -ind_sorts HPΣ wfΣ' Hext.
           induction ind_indices; simpl in *; auto.
           destruct a as [na [b|] ty]; simpl in *; intuition eauto.
+      -- intros v onv.
+          move: (onIndices v onv). unfold ind_respects_variance.
+         destruct variance_universes as [[[univs u] u']|] => //.
+         intros idx; eapply (All2_local_env_impl idx); simpl.
+         intros par par' t t'. eapply weakening_env_cumul; eauto.
   - red in onP |- *. eapply All_local_env_impl; eauto.
 Qed.
 

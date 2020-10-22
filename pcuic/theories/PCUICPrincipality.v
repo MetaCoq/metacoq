@@ -250,9 +250,6 @@ Section Principality.
       etransitivity. 2:eapply c1.
       eapply conv_cumul, mkApps_conv_args; auto.
       eapply All2_app. 2:constructor; auto.
-      (* eapply All2_skipn. eapply All2_sym, (All2_impl X0); firstorder auto with *. *)
-      (* econstructor; eauto. simpl. split; auto. *)
-      (* eapply type_Cumul; eauto. auto.  *)
       now eapply All2_skipn.
     - destruct s as [[ind k] pars]; simpl in *.
       eapply inversion_Proj in hA=>//; auto.

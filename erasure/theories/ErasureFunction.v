@@ -221,23 +221,13 @@ Next Obligation.
   eapply invert_red_prod in X2 as (? & ? & [] & ?); eauto. subst. cbn in *.
   exists x4; split; eauto.
 
-  destruct HT as [ [] | [] ].
-  ++ sq. etransitivity; eauto.
-     eapply context_conversion_red; eauto. econstructor.
-
-     eapply conv_context_refl; eauto. econstructor.
-
-     eapply conv_sym, red_conv; eauto.
-
-  ++ sq. etransitivity. eassumption.
-
-     eapply context_conversion_red; eauto. econstructor.
-
-     eapply conv_context_refl; eauto.
-
-     econstructor.
-
-     eapply conv_sym, red_conv; eauto.
+  constructor.
+  etransitivity; eauto.
+  eapply PCUICContextConversion.context_change_decl_types_red; eauto.
+  constructor; [|constructor].
+  eapply PCUICContextConversion.context_relation_refl.
+  intros.
+  destruct x0 as [? [|]? ]; constructor.
 Qed.
 
 Hint Constructors squash : core.

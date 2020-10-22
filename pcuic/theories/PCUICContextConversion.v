@@ -741,7 +741,6 @@ Section ContextChangeTypesReduction.
         constructor.
   Qed.
 
-  (* todo: update erasure to use this *)
   Lemma context_change_decl_types_red Γ Γ' s t :
     context_relation (fun _ _ => change_decl_type) Γ Γ' -> red Σ Γ s t -> red Σ Γ' s t.
   Proof.

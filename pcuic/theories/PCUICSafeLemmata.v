@@ -380,6 +380,19 @@ Section Lemmata.
       + econstructor. assumption.
   Qed.
 
+  Lemma cored_proj :
+    forall Γ p c c',
+      cored Σ Γ c c' ->
+      cored Σ Γ (tProj p c) (tProj p c').
+  Proof.
+    intros Γ p c c' h.
+    induction h in p |- *.
+    - constructor. constructor. assumption.
+    - eapply cored_trans.
+      + eapply IHh.
+      + econstructor. assumption.
+  Qed.
+
   Lemma welltyped_context :
     forall Γ t,
       welltyped Σ Γ (zip t) ->

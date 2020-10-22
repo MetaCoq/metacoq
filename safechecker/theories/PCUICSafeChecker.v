@@ -1070,7 +1070,7 @@ Section Typecheck.
 
   Next Obligation.
     symmetry in Heq_anonymous2.
-    unfold iscumul in Heq_anonymous2. simpl in Heq_anonymous2. destruct wildcard'.
+    unfold iscumul in Heq_anonymous2. simpl in Heq_anonymous2.
     apply isconv_term_sound in Heq_anonymous2.
     red in Heq_anonymous2.
     noconf Heq_I''.
@@ -1113,7 +1113,7 @@ Section Typecheck.
   Next Obligation.
     intros. clearbody btyswf. idtac; Program.Tactics.program_simplify.
     symmetry in Heq_anonymous2.
-    unfold iscumul in Heq_anonymous2. simpl in Heq_anonymous2. destruct wildcard'.
+    unfold iscumul in Heq_anonymous2. simpl in Heq_anonymous2.
     apply isconv_term_sound in Heq_anonymous2.
     noconf Heq_I''. noconf Heq_I'. noconf Heq_I.
     noconf Heq_d. noconf Heq_d'. simpl in *.

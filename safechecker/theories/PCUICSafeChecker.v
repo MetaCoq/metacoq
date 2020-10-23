@@ -445,9 +445,10 @@ Section Typecheck.
     destruct HΣ.
     eapply red_confluence in r as (?&r1&r2); eauto.
     apply invert_red_sort in r2 as ->.
-    apply whnf_red_sort in r1; auto.
+    eapply whnf_red_shape in r1; eauto.
+    depelim r1.
     clear Heq.
-    rewrite r1 in n0.
+    rewrite H0 in n0.
     now cbn in n0.
   Qed.
 
@@ -485,9 +486,10 @@ Section Typecheck.
     destruct HΣ.
     eapply red_confluence in r as (?&r1&r2); eauto.
     apply invert_red_prod in r2 as (?&?&(->&?)&?); auto.
-    apply whnf_red_prod in r1 as (?&?&eq); auto.
+    eapply whnf_red_shape in r1; auto.
+    depelim r1.
     clear Heq.
-    rewrite eq in n0.
+    rewrite H0 in n0.
     now cbn in n0.
   Qed.
   
@@ -569,13 +571,11 @@ Section Typecheck.
     cbn in *.
     rewrite app_nil_r in wh.
     apply red_mkApps_tInd in r2 as (?&->&?); auto.
-    apply whnf_red_mkApps_tInd in r1 as (?&eq); auto.
-    apply (f_equal decompose_app) in eq.
-    rewrite !decompose_app_mkApps in eq; [now rewrite notapp|easy|].
-    noconf eq.
+    apply whnf_red_mkApps in r1 as [(?&?)]; auto.
+    apply whnf_red_shape in r; [|now apply whnf_mkApps_inv in wh].
+    depelim r.
     noconf e0.
-    cbn in *.
-    easy.
+    discriminate i0.
   Qed.
   
   Definition iscumul Γ := isconv_term Σ HΣ Hφ G HG Γ Cumul.

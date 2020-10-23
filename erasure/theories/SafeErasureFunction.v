@@ -188,11 +188,10 @@ Section fix_sigma.
     
     constructor.
     etransitivity; eauto.
-    eapply PCUICContextConversion.context_change_decl_types_red; eauto.
+    eapply PCUICContextRelation.context_change_decl_types_red; eauto.
     constructor; [|constructor].
-    eapply PCUICContextConversion.context_relation_refl.
-    intros.
-    destruct x0 as [? [|]? ]; constructor.
+    eapply PCUICContextRelation.context_relation_refl.
+    reflexivity.
   Qed.
 
   Next Obligation.

@@ -162,8 +162,8 @@ Section fixed.
   Proof.
     intros conv shape shape' wh wh'.
     apply conv_cum_alt in conv as [(?&?&(r1&r2)&e)].
-    apply whnf_red_from_mkApps in r1 as [(?&?&->&?&?)]; auto.
-    apply whnf_red_from_mkApps in r2 as [(?&?&->&?&?)]; auto.
+    apply whnf_red_mkApps_l in r1 as [(?&?&->&?&?)]; auto.
+    apply whnf_red_mkApps_l in r2 as [(?&?&->&?&?)]; auto.
     assert (isApp x1 = false).
     { erewrite whnf_red_isApp.
       3: eauto.
@@ -211,94 +211,23 @@ Section fixed.
     depelim whr; solve_discr.
     depelim H0; solve_discr; try discriminate.
     apply conv_cum_alt in conv as [(?&?&(r1&r2)&?)].
-    apply whne_red_from_tCase in r1 as [(?&?&?&->&?&?&?)]; auto.
-    apply whne_red_from_tCase in r2 as [(?&?&?&->&?&?&?)]; auto.
+    eapply whnf_red_shape in r1; eauto.
+    eapply whnf_red_shape in r2; eauto.
+    depelim r1.
+    depelim r2.
     depelim e.
     constructor.
     split; [easy|].
-    split; [apply conv_alt_red; now exists x1, x|].
-    split; [apply conv_alt_red; now exists x2, x4|].
-    clear -a a0 a1.
-    induction a1 in brs, brs', x3, a, x5, a0, a1 |- *; depelim a; depelim a0; [now constructor|].
+    split; [apply conv_alt_red; now exists motive'0, motive'1|].
+    split; [apply conv_alt_red; now exists discr'0, discr'1|].
+    clear -a X1 X4.
+    induction a in brs, brs', brs'0, brs'1, X1, X4, a |- *;
+      depelim X1; depelim X4; [now constructor|].
     constructor.
     + destruct p, p0, r.
       split; [congruence|].
       apply conv_alt_red; now exists x.2, y.2.
-    + now apply IHa1.
-  Qed.
-  
-  Lemma fix_context_change_decl_types Γ mfix mfix' :
-    #|mfix| = #|mfix'| ->
-    context_relation (fun _ _ => change_decl_type) (Γ,,, fix_context mfix) (Γ,,, fix_context mfix').
-  Proof.
-    intros len.
-    apply context_relation_app_inv.
-    - now rewrite !fix_context_length.
-    - apply context_relation_refl.
-      intros.
-      destruct x.
-      destruct decl_body; constructor.
-    - unfold fix_context, mapi.
-      generalize 0 at 2 4.
-      induction mfix in mfix', len |- *; intros n.
-      + destruct mfix'; [|cbn in *; discriminate len].
-        constructor.
-      + destruct mfix'; cbn in *; [discriminate len|].
-        apply context_relation_app_inv.
-        * now rewrite !List.rev_length, !mapi_rec_length.
-        * constructor; [constructor|].
-          constructor.
-        * apply IHmfix; lia.
-  Qed.
-  
-  Lemma red_tFix_inv Γ mfix idx t :
-    red Σ Γ (tFix mfix idx) t ->
-    ∑ mfix',
-     t = tFix mfix' idx ×
-     All2 (fun d d' => dname d = dname d' × rarg d = rarg d' ×
-                       red Σ Γ (dtype d) (dtype d') ×
-                       red Σ (Γ,,, fix_context mfix) (dbody d) (dbody d'))
-          mfix mfix'.
-  Proof.
-    intros r.
-    remember (tFix mfix idx) eqn:fromeq.
-    revert mfix fromeq.
-    induction r using red_rect_n1; intros mfix ->.
-    - eexists _; split; [reflexivity|].
-      apply All2_same.
-      eauto.
-    - specialize (IHr _ eq_refl) as (?&->&all).
-      depelim X.
-      + exfalso.
-        destruct args using List.rev_ind; [|rewrite <- mkApps_nested in H; discriminate H].
-        unfold is_constructor in e0.
-        rewrite nth_error_nil in e0; congruence.
-      + match type of all with
-        | All2 ?P _ _ => eapply OnOne2_All2 with (Q := P) in o
-        end; eauto.
-        2: intros ? ? (?&[= -> -> ->]); eauto.
-        eexists _; split; [reflexivity|].
-        eapply All2_trans; eauto.
-        intros ? ? ? (?&?&?&?) (?&?&?&?); eauto.
-        do 2 (split; [easy|]).
-        split; [etransitivity; eauto|].
-        etransitivity; eauto.
-      + match type of all with
-        | All2 ?P _ _ => eapply OnOne2_All2 with (Q := P) in o
-        end; eauto.
-        2: { intros ? ? (?&[= -> -> ->]); eauto.
-             do 2 (split; [easy|]).
-             split; [etransitivity; eauto|].
-             eapply context_change_decl_types_red; eauto.
-             apply fix_context_change_decl_types.
-             apply All2_length in all.
-             easy. }
-        eexists _; split; [reflexivity|].
-        eapply All2_trans; eauto.
-        intros ? ? ? (?&?&?&?) (?&?&?&?); eauto.
-        do 2 (split; [easy|]).
-        split; [etransitivity; eauto|].
-        etransitivity; eauto.
+    + now apply IHa.
   Qed.
   
   Lemma conv_cum_tFix_inv leq Γ mfix idx mfix' idx' :
@@ -311,23 +240,30 @@ Section fixed.
   Proof.
     intros conv.
     apply conv_cum_alt in conv as [(?&?&(r1&r2)&?)].
-    apply red_tFix_inv in r1 as (?&->&?).
-    apply red_tFix_inv in r2 as (?&->&?).
+    assert (forall defs i, whnf RedFlags.default Σ Γ (tFix defs i)).
+    { intros defs i.
+      apply whnf_fixapp with (v := []).
+      destruct unfold_fix as [(?&?)|]; [|easy].
+      now rewrite nth_error_nil. }
+    eapply whnf_red_shape in r1; eauto.
+    eapply whnf_red_shape in r2; eauto.
+    depelim r1.
+    depelim r2.
     depelim e.
     constructor.
     split; [easy|].
-    clear -a a0 a1.
+    clear -a X X0.
     cut (#|mfix| = #|mfix'|);
-      [|now apply All2_length in a; apply All2_length in a0; apply All2_length in a1].
-    revert a a0 a1.
+      [|now apply All2_length in a; apply All2_length in X; apply All2_length in X0].
+    revert a X X0.
     generalize mfix at 1 3 4.
     generalize mfix' at 1 3.
     intros ctx_fix ctx_fix'.
     intros all1 all2 all len_eq.
-    induction all in mfix, mfix', x1, x, all1, all2, all |- *;
+    induction all in mfix, mfix', mfix'0, mfix'1, all1, all2, all |- *;
       depelim all1; depelim all2; [constructor|].
     constructor; [|now auto].
-    destruct p as (?&?&?&?), p0 as (?&?&?&?), r as ((?&?)&?).
+    destruct p as ((?&?)&?), p0 as (?&?&?&?), r as (?&?&?&?).
     split; [congruence|].
     split; [now apply conv_alt_red; exists (dtype x), (dtype y)|].
     apply conv_alt_red.
@@ -336,6 +272,24 @@ Section fixed.
     split; [easy|].
     eapply context_change_decl_types_red; eauto.
     eapply fix_context_change_decl_types; eauto.
+  Qed.
+
+  Lemma conv_cum_tProj_inv leq Γ p c p' c' :
+    conv_cum leq Σ Γ (tProj p c) (tProj p' c') ->
+    whnf RedFlags.default Σ Γ (tProj p c) ->
+    whnf RedFlags.default Σ Γ (tProj p' c') ->
+    ∥ p = p' × Σ;;; Γ |- c = c' ∥.
+  Proof.
+    intros conv whl whr.
+    apply conv_cum_alt in conv as [(?&?&(r1&r2)&?)].
+    eapply whnf_red_shape in r1; eauto.
+    eapply whnf_red_shape in r2; eauto.
+    depelim r1.
+    depelim r2.
+    depelim e.
+    constructor.
+    split; [easy|].
+    now apply conv_alt_red; exists c'0, c'1.
   Qed.
   
   (* TODO: Move to a place that actually should be depending on typing *)
@@ -360,26 +314,6 @@ Section fixed.
       eapply PCUICConversion.cumul_red_l_inv; [eauto| |eauto].
       eapply PCUICConversion.cumul_red_r_inv; [eauto| |eauto].
       auto.
-  Qed.
-
-  Lemma conv_cum_tProj_inv leq Γ p c p' c' :
-    conv_cum leq Σ Γ (tProj p c) (tProj p' c') ->
-    whnf RedFlags.default Σ Γ (tProj p c) ->
-    whnf RedFlags.default Σ Γ (tProj p' c') ->
-    ∥ p = p' × Σ;;; Γ |- c = c' ∥.
-  Proof.
-    intros conv whl whr.
-    depelim whl; solve_discr.
-    depelim H; solve_discr; try discriminate.
-    depelim whr; solve_discr.
-    depelim H0; solve_discr; try discriminate.
-    apply conv_cum_alt in conv as [(?&?&(r1&r2)&?)].
-    apply whne_red_from_tProj in r1 as [(?&->&?)]; auto.
-    apply whne_red_from_tProj in r2 as [(?&->&?)]; auto.
-    depelim e.
-    constructor.
-    split; [easy|].
-    now apply conv_alt_red; exists x1, x.
   Qed.
 
 End fixed.

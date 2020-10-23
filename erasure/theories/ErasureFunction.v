@@ -130,7 +130,9 @@ Next Obligation.
   destruct HΣ.
   eapply PCUICConfluence.red_confluence in X0 as [t'' []]. 3:exact X1. 2:eauto.
   eapply invert_red_sort in r0; eauto. subst.
-  eapply whnf_red_sort in r. congruence. eauto.
+  eapply whnf_red_shape in r; auto.
+  depelim r.
+  congruence.
 Qed.
 
 Program Definition reduce_to_prod' Γ t (h : wellformed Σ Γ t)
@@ -153,7 +155,9 @@ Next Obligation.
   destruct HΣ.
   eapply PCUICConfluence.red_confluence in X2 as [t'' []]. 3:exact X3. 2:eauto.
   eapply invert_red_prod in r0 as (? & ? & [] & ?); eauto. subst.
-  eapply whnf_red_prod in r as (? & ? & ?). congruence. eauto.
+  eapply whnf_red_shape in r; auto.
+  depelim r.
+  congruence.
 Qed.
 
 Equations is_arity Γ (HΓ : ∥wf_local Σ Γ∥) T (HT : wellformed Σ Γ T) :
@@ -223,11 +227,11 @@ Next Obligation.
 
   constructor.
   etransitivity; eauto.
-  eapply PCUICContextConversion.context_change_decl_types_red; eauto.
+  eapply PCUICContextRelation.context_change_decl_types_red; eauto.
   constructor; [|constructor].
-  eapply PCUICContextConversion.context_relation_refl.
+  eapply PCUICContextRelation.context_relation_refl.
   intros.
-  destruct x0 as [? [|]? ]; constructor.
+  reflexivity.
 Qed.
 
 Hint Constructors squash : core.

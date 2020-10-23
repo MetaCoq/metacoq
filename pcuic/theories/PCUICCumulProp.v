@@ -932,7 +932,7 @@ Proof.
     specialize (X1 _ _ H dom _ (eq_term_upto_univ_napp_leq X5_1)).
     specialize (X3 t0 B H). 
     assert(conv_context Σ (Γ ,, vass na ty) (Γ ,, vass n t)).
-    { repeat constructor; pcuic. eapply conv_ctx_refl. }
+    { repeat constructor; pcuic. }
     forward X3 by eapply context_conversion; eauto; pcuic.
     specialize (X3 _ X5_2). eapply cumul_cumul_prop in cum; eauto.
     eapply cumul_prop_trans; eauto.
@@ -942,7 +942,7 @@ Proof.
     specialize (X1 _ _ H dom _ (eq_term_upto_univ_napp_leq X7_2)).
     specialize (X3 _ _ H bod _  (eq_term_upto_univ_napp_leq X7_1)).
     assert(conv_context Σ (Γ ,, vdef na t ty) (Γ ,, vdef n b b_ty)).
-    { repeat constructor; pcuic. eapply conv_ctx_refl. }
+    { repeat constructor; pcuic. }
     specialize (X5 u A H).
     forward X5 by eapply context_conversion; eauto; pcuic.
     specialize (X5 _ X7_3).

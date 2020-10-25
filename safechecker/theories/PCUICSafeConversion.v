@@ -1672,49 +1672,62 @@ Section Conversion.
     + eapply global_ext_uctx_consistent.
       eapply hΣ'.
   Qed.
-
-  Lemma mem_level_declared_level x :
-    LevelSet.mem x (global_ext_levels Σ) ->
+  
+  Arguments LevelSet.mem : simpl never.
+  
+  Lemma For_all_to_spec u :
+    UnivExprSet.For_all
+      (fun e => LevelSet.mem (UnivExpr.get_level e) (global_ext_levels Σ)) (Universe.t_set u) ->
     UnivExprSet.For_all
       (fun e =>
-         on_Some_or_None (fun l => LevelSet.In (NoPropLevel.to_level l) (global_ext_uctx Σ).1)
-                         (UnivExpr.get_noprop e)) (Universe.make x).
+         on_Some_or_None (fun l => LevelSet.In (NoPropLevel.to_level l) (global_ext_levels Σ))
+                         (UnivExpr.get_noprop e)) u.
   Proof.
-    intros mem ? ->%UnivExprSet.singleton_spec.
-    destruct (UnivExpr.get_noprop (UnivExpr.make x)) eqn:np; [|easy].
-    cbn.
-    replace x with (NoPropLevel.to_level t) in *.
-    2: { destruct x; cbn in *; try easy.
-         all: now inv np. }
-    unfold global_ext_levels in *.
-    now apply LevelSet.mem_spec in mem.
+    intros all ? isin.
+    specialize (all _ isin).
+    destruct x; [easy|].
+    destruct e.
+    cbn in *.
+    now apply LevelSet.mem_spec.
   Qed.
   
-  Lemma conv_pb_rel_spec leq x y :
+  Lemma conv_pb_relb_complete leq u u' :
+    UnivExprSet.For_all
+      (fun e => LevelSet.mem (UnivExpr.get_level e) (global_ext_levels Σ)) (Universe.t_set u) ->
+    UnivExprSet.For_all
+      (fun e => LevelSet.mem (UnivExpr.get_level e) (global_ext_levels Σ)) (Universe.t_set u') ->
+    conv_pb_rel leq (global_ext_constraints Σ) u u' ->
+    conv_pb_relb leq u u'.
+  Proof.
+    intros all1%For_all_to_spec all2%For_all_to_spec conv.
+    destruct leq.
+    - eapply eq_universe_spec'; eauto.
+      + apply wf_ext_global_uctx_invariants, hΣ'.
+      + apply global_ext_uctx_consistent, hΣ'.
+    - eapply leq_universe_spec'; eauto.
+      + apply wf_ext_global_uctx_invariants, hΣ'.
+      + apply global_ext_uctx_consistent, hΣ'.
+  Qed.
+  
+  Lemma get_level_make l :
+    UnivExpr.get_level (UnivExpr.make l) = l.
+  Proof. now destruct l. Qed.
+  
+  Lemma conv_pb_relb_make_complete leq x y :
     LevelSet.mem x (global_ext_levels Σ) ->
     LevelSet.mem y (global_ext_levels Σ) ->
     conv_pb_rel leq (global_ext_constraints Σ) (Universe.make x) (Universe.make y) ->
     conv_pb_relb leq (Universe.make x) (Universe.make y).
   Proof.
     intros memx memy r.
-    destruct leq.
-    - eapply eq_universe_spec'; eauto.
-      + eapply wf_ext_global_uctx_invariants.
-        eapply hΣ'.
-      + eapply global_ext_uctx_consistent.
-        eapply hΣ'.
-      + now apply mem_level_declared_level.
-      + now apply mem_level_declared_level.
-    - eapply leq_universe_spec'; eauto.
-      + eapply wf_ext_global_uctx_invariants.
-        eapply hΣ'.
-      + eapply global_ext_uctx_consistent.
-        eapply hΣ'.
-      + now apply mem_level_declared_level.
-      + now apply mem_level_declared_level.
+    apply conv_pb_relb_complete; auto.
+    - intros ? ->%UnivExprSet.singleton_spec.
+      now rewrite get_level_make.
+    - intros ? ->%UnivExprSet.singleton_spec.
+      now rewrite get_level_make.
   Qed.
   
-  Lemma R_universe_instance_spec u u' :
+  Lemma eqb_universe_instance_complete u u' :
     Forall (fun u => LevelSet.mem u (global_ext_levels Σ)) u ->
     Forall (fun u => LevelSet.mem u (global_ext_levels Σ)) u' ->
     R_universe_instance (eq_universe (global_ext_constraints Σ)) u u' ->
@@ -1730,11 +1743,11 @@ Section Conversion.
       cbn in *.
       apply Bool.andb_true_iff.
       split.
-      + apply (conv_pb_rel_spec Conv); auto.
+      + apply (conv_pb_relb_make_complete Conv); auto.
       + now apply IHu.
   Qed.
 
-  Lemma R_universe_variance_spec leq v u u' :
+  Lemma compare_universe_variance_complete leq v u u' :
     LevelSet.mem u (global_ext_levels Σ) ->
     LevelSet.mem u' (global_ext_levels Σ) ->
     R_universe_variance (eq_universe Σ) (conv_pb_rel leq Σ) v u u' ->
@@ -1742,11 +1755,11 @@ Section Conversion.
   Proof.
     intros memu memu' r.
     destruct v; cbn in *; auto.
-    - apply conv_pb_rel_spec; auto.
-    - apply (conv_pb_rel_spec Conv); auto.
+    - apply conv_pb_relb_make_complete; auto.
+    - apply (conv_pb_relb_make_complete Conv); auto.
   Qed.
 
-  Lemma R_universe_instance_variance_spec leq v u u' :
+  Lemma compare_universe_instance_variance_complete leq v u u' :
     Forall (fun u => LevelSet.mem u (global_ext_levels Σ)) u ->
     Forall (fun u => LevelSet.mem u (global_ext_levels Σ)) u' ->
     R_universe_instance_variance (eq_universe Σ) (conv_pb_rel leq Σ) v u u' ->
@@ -1763,11 +1776,11 @@ Section Conversion.
       apply Bool.andb_true_iff.
       destruct r.
       split.
-      + apply R_universe_variance_spec; auto.
+      + apply compare_universe_variance_complete; auto.
       + now apply IHu.
   Qed.
 
-  Lemma R_global_instance_spec u v leq gr napp :
+  Lemma compare_global_instance_complete u v leq gr napp :
     Forall (fun u => LevelSet.mem u (global_ext_levels Σ)) u ->
     Forall (fun u => LevelSet.mem u (global_ext_levels Σ)) v->
     R_global_instance Σ (eq_universe Σ) (conv_pb_rel leq Σ) gr napp u v ->
@@ -1776,8 +1789,8 @@ Section Conversion.
     intros consu consv r.
     unfold compare_global_instance, R_global_instance, R_opt_variance in *.
     destruct global_variance.
-    - apply R_universe_instance_variance_spec; auto.
-    - apply R_universe_instance_spec; auto.
+    - apply compare_universe_instance_variance_complete; auto.
+    - apply eqb_universe_instance_complete; auto.
   Qed.
   
   Lemma consistent_instance_ext_all_mem udecl u :
@@ -1934,7 +1947,7 @@ Section Conversion.
     eapply PCUICWeakeningEnv.declared_constant_inj in decl1; eauto; subst.
     apply consistent_instance_ext_all_mem in cons1.
     apply consistent_instance_ext_all_mem in cons2.
-    eapply R_universe_instance_spec in r; auto.
+    eapply eqb_universe_instance_complete in r; auto.
   Qed.
     
   (* TODO (RE)MOVE *)
@@ -4448,12 +4461,14 @@ Section Conversion.
     eapply eqb_term_spec. auto.
   Qed.
   (* Beware !! There is a TODO in the code *)
+  Axiom todo_cofix_conversion : forall {A}, A.
   Next Obligation.
     apply h; clear h.
-    todo "Cofix".
+    exact todo_cofix_conversion.
   Qed.
   Next Obligation.
     todo "Cofix".
+    exact todo_cofix_conversion.
   Qed.
 
   (* Fallback *)
@@ -5130,6 +5145,12 @@ Section Conversion.
     - reflexivity.
   Qed.
   
+  Axiom wellformed_sort_declared :
+    forall Σ Γ s,
+      wellformed Σ Γ (tSort s) ->
+      UnivExprSet.For_all
+        (fun e => LevelSet.mem (UnivExpr.get_level e) (global_ext_levels Σ)) (Universe.t_set s).
+  
   Lemma reducible_head_None Γ t π h :
     isApp t = false ->
     whnf RedFlags.nodelta Σ (Γ,,, stack_context π) (mkApps t (decompose_stack π).1) ->
@@ -5729,7 +5750,7 @@ Section Conversion.
          apply inversion_Ind in typ2 as (?&?&?&?&?&?); auto.
          apply consistent_instance_ext_all_mem in c1.
          apply consistent_instance_ext_all_mem in c.
-         apply R_global_instance_spec in r; auto.
+         apply compare_global_instance_complete in r; auto.
          rewrite eq_inductive_refl in noteq.
          apply All2_length in rargs1.
          rewrite <- rargs1 in r.
@@ -5749,7 +5770,7 @@ Section Conversion.
          apply inversion_Construct in typ2 as (?&?&?&?&?&?&?); auto.
          apply consistent_instance_ext_all_mem in c1.
          apply consistent_instance_ext_all_mem in c.
-         apply R_global_instance_spec in r; auto.
+         apply compare_global_instance_complete in r; auto.
          rewrite eq_inductive_refl, Nat.eqb_refl in noteq.
          apply All2_length in rargs1.
          rewrite <- rargs1 in r.
@@ -5777,16 +5798,9 @@ Section Conversion.
       apply wellformed_context in h1; auto.
       clear aux.
       apply wellformed_context in h2; auto.
-      eapply conv_pb_rel_spec in H0.
-      assert (forall Σ Γ s, wellformed Σ Γ (tSort s) ->
-                            Forall (fun s => LevelSet.In s (global_ext_levels Σ)) s).
-      destruct h1 as [(?&typ)|].
-      + apply inversion_Sort in typ as (?&?&?&?&?); auto.
-        apply conv_pb_rel_spec in H0:
-        admit.
-      + destruct H as [(?&?&?&?)].
-        cbn in *.
-      apply conv_pb_rel_spec in H0.
+      apply wellformed_sort_declared in h1.
+      apply wellformed_sort_declared in h2.
+      eapply conv_pb_relb_complete in H0; eauto.
   Qed.
   
   Equations _isconv (s : state) (Γ : context)

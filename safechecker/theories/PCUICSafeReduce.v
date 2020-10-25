@@ -1325,6 +1325,58 @@ Section Reduce.
       congruence.
   Qed.
 
+  Lemma whnf_case_arg_whne Γ hd args ind par p brs T :
+    match hd with
+    | tApp _ _
+    | tConstruct _ _ _ 
+    | tCoFix _ _ => False
+    | _ => True
+    end ->
+    whnf flags Σ Γ (mkApps hd args) ->
+    Σ;;; Γ |- tCase (ind, par) p (mkApps hd args) brs : T ->
+    whne flags Σ Γ (mkApps hd args).
+  Proof.
+    intros shape wh typ.
+    destruct hΣ.
+    apply inversion_Case in typ as (?&?&?&?&?&?&?&?&?&?&?&?&?&?&?&?&?); auto.
+    eapply whnf_non_ctor_finite_ind_typed; try eassumption.
+    - unfold isConstruct_app.
+      now rewrite decompose_app_mkApps; destruct hd.
+    - unfold isCoFinite in e1.
+      unfold check_recursivity_kind.
+      cbn.
+      unfold declared_inductive, declared_minductive in d.
+      cbn in d.
+      rewrite (proj1 d).
+      now destruct ind_finite.
+  Qed.
+
+  Lemma whnf_proj_arg_whne Γ hd args p T :
+    match hd with
+    | tApp _ _
+    | tCoFix _ _ => False
+    | tConstruct _ c _ => c <> 0
+    | _ => True
+    end ->
+    whnf flags Σ Γ (mkApps hd args) ->
+    Σ;;; Γ |- tProj p (mkApps hd args) : T ->
+    whne flags Σ Γ (mkApps hd args).
+  Proof.
+    intros shape wh typ.
+    destruct hΣ as [wfΣ].
+    apply inversion_Proj in typ as (?&?&?&?&?&?&?&?&?); auto.
+    cbn in *.
+    eapply whnf_non_ctor_non_cofix_ind_typed; try eassumption.
+    - unfold isConstruct_app.
+      rewrite decompose_app_mkApps by (now destruct hd).
+      cbn.
+      destruct hd; try easy.
+      eapply PCUICInductiveInversion.projected_constructor_eq in d; [|eassumption|eassumption].
+      congruence.
+    - unfold isCoFix_app.
+      now rewrite decompose_app_mkApps; destruct hd.
+  Qed.
+
   Lemma reduce_stack_whnf :
     forall Γ t π h,
       let '(u, ρ) := reduce_stack Γ t π h in
@@ -1575,22 +1627,10 @@ Section Reduce.
         try rewrite stack_context_appstack in H;
         cbn in *).
       rewrite app_nil_r in *.
-      destruct hΣ.
-      apply inversion_Case in typ as (?&?&?&?&?&?&?&?&?&?&?&?&?&?&?&?&?); auto.
       apply whnf_mkApps, whne_case.
-      eapply whnf_non_ctor_finite_ind_typed; try eassumption.
-      + unfold isConstruct_app.
-        destruct H as (noapp&_).
-        rewrite decompose_app_mkApps by (now rewrite noapp).
-        cbn.
-        now destruct t0.
-      + unfold isCoFinite in e1.
-        unfold check_recursivity_kind.
-        cbn.
-        unfold declared_inductive, declared_minductive in d0.
-        cbn in d0.
-        rewrite (proj1 d0).
-        now destruct ind_finite.
+      eapply whnf_case_arg_whne; eauto.
+      destruct H as (noapp&_).
+      now destruct t0.
     - match goal with
       | |- context [ reduce ?x ?y ?z ] =>
         case_eq (reduce x y z) ;
@@ -1639,24 +1679,10 @@ Section Reduce.
         try rewrite stack_context_appstack in H;
         cbn in *).
       rewrite app_nil_r in *.
-      destruct hΣ as [wfΣ].
-      apply inversion_Proj in typ as (?&?&?&?&?&?&?&?&?); auto.
-      cbn in *.
       apply whnf_mkApps, whne_proj.
-      eapply whnf_non_ctor_non_cofix_ind_typed; try eassumption.
-      + unfold isConstruct_app.
-        destruct H as (noapp&_).
-        rewrite decompose_app_mkApps by (now rewrite noapp).
-        cbn.
-        destruct t0; try easy.
-        cbn in *.
-        eapply PCUICInductiveInversion.projected_constructor_eq in t; [|eassumption|eassumption].
-        congruence.
-      + unfold isCoFix_app.
-        destruct H as (noapp&_).
-        rewrite decompose_app_mkApps by (now rewrite noapp).
-        cbn.
-        now destruct t0.
+      eapply whnf_proj_arg_whne; eauto.
+      destruct H as (noapp&_).
+      now destruct t0.
     - match goal with
       | |- context [ reduce ?x ?y ?z ] =>
         case_eq (reduce x y z) ;

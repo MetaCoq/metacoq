@@ -1461,33 +1461,6 @@ Section Inversions.
       + apply conv_Case_brs. all: assumption.
   Qed.
 
-  Lemma Case_conv_inv :
-    forall Γ indn p p' c c' brs brs',
-    Σ ;;; Γ |- tCase indn p c brs = tCase indn p' c' brs' ->
-    Σ ;;; Γ |- p = p' × Σ ;;; Γ |- c = c' ×
-    All2 (fun u v => u.1 = v.1 × Σ ;;; Γ |- u.2 = v.2) brs brs'.
-  Proof.
-    (* intros Γ indn p p' c c' brs brs' H.
-    depind H.
-    + depelim e; split; [| split]. 
-      1,2: by apply conv_refl.
-      apply (All2_impl a).
-      intros x y [? ?] ; split. 1: by [].
-      by apply conv_refl. *)
-    (* TODO needs to add a whne hypothesis *)
-    todo "Completeness"%string.
-  Qed.
-  
-(* 
-  Lemma Case_conv_cum_inv :
-    forall leq Γ indn p p' c c' brs brs',
-    conv_cum leq (tCase indn p c brs) (tCase indn p' c' brs') ->
-    Σ ;;; Γ |- p = p' /\ Σ ;;; Γ |- c = c' /\ 
-    ∥ All2 (fun u v => u.1 = v.1 × Σ ;;; Γ |- u.2 = v.2) brs brs' ∥.
-  Proof.
-    todo "Completeness"%string.
-  Qed. *)
-
   Lemma conv_Proj_c :
     forall Γ p u v,
       Σ ;;; Γ |- u = v ->

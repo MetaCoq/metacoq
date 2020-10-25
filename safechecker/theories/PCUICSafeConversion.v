@@ -1672,52 +1672,125 @@ Section Conversion.
     + eapply global_ext_uctx_consistent.
       eapply hΣ'.
   Qed.
-  
-  Lemma eq_universe_instance_spec udecl u v :
-    consistent_instance_ext Σ udecl u ->
-    consistent_instance_ext Σ udecl v ->
-    R_universe_instance (eq_universe (global_ext_constraints Σ)) u v ->
-    eqb_universe_instance u v.
+
+  Lemma mem_level_declared_level x :
+    LevelSet.mem x (global_ext_levels Σ) ->
+    UnivExprSet.For_all
+      (fun e =>
+         on_Some_or_None (fun l => LevelSet.In (NoPropLevel.to_level l) (global_ext_uctx Σ).1)
+                         (UnivExpr.get_noprop e)) (Universe.make x).
   Proof.
-    intros consu consv r.
-    apply Forall2_forallb2.
-    unfold consistent_instance_ext, consistent_instance, R_universe_instance in *.
-    destruct udecl; [destruct u,v; cbn in *; try congruence; constructor|].
-    destruct consu as (_&all_mem_u&_&_).
-    destruct consv as (_&all_mem_v&_&_).
-    apply forallb_Forall in all_mem_u.
-    apply forallb_Forall in all_mem_v.
-    apply Forall2_map.
-    apply Forall2_map_inv in r.
-    eapply Forall_Forall2_and in r; [|exact all_mem_u].
-    eapply Forall_Forall2_and' in r; [|exact all_mem_v].
-    clear all_mem_u all_mem_v.
-    cbn beta in r.
-    eapply Forall2_impl; [eassumption|]; cbn beta in *.
-    intros x y ((x_mem&x_eq_y)&y_mem).
-    eapply eq_universe_spec'; eauto.
-    - eapply wf_ext_global_uctx_invariants.
-      eapply hΣ'.
-    - eapply global_ext_uctx_consistent.
-      eapply hΣ'.
-    - intros ? ->%UnivExprSet.singleton_spec.
-      destruct (UnivExpr.get_noprop (UnivExpr.make x)) eqn:np; [|easy].
-      cbn.
-      replace x with (NoPropLevel.to_level t) in *.
-      2: { destruct x; cbn in *; try easy.
-           all: now inv np. }
-      unfold global_ext_levels in *.
-      now apply LevelSet.mem_spec in x_mem.
-    - intros ? ->%UnivExprSet.singleton_spec.
-      destruct (UnivExpr.get_noprop (UnivExpr.make y)) eqn:np; [|easy].
-      cbn.
-      replace y with (NoPropLevel.to_level t) in *.
-      2: { destruct y; cbn in *; try easy.
-           all: now inv np. }
-      unfold global_ext_levels in *.
-      now apply LevelSet.mem_spec in y_mem.
+    intros mem ? ->%UnivExprSet.singleton_spec.
+    destruct (UnivExpr.get_noprop (UnivExpr.make x)) eqn:np; [|easy].
+    cbn.
+    replace x with (NoPropLevel.to_level t) in *.
+    2: { destruct x; cbn in *; try easy.
+         all: now inv np. }
+    unfold global_ext_levels in *.
+    now apply LevelSet.mem_spec in mem.
+  Qed.
+  
+  Lemma conv_pb_rel_spec leq x y :
+    LevelSet.mem x (global_ext_levels Σ) ->
+    LevelSet.mem y (global_ext_levels Σ) ->
+    conv_pb_rel leq (global_ext_constraints Σ) (Universe.make x) (Universe.make y) ->
+    conv_pb_relb leq (Universe.make x) (Universe.make y).
+  Proof.
+    intros memx memy r.
+    destruct leq.
+    - eapply eq_universe_spec'; eauto.
+      + eapply wf_ext_global_uctx_invariants.
+        eapply hΣ'.
+      + eapply global_ext_uctx_consistent.
+        eapply hΣ'.
+      + now apply mem_level_declared_level.
+      + now apply mem_level_declared_level.
+    - eapply leq_universe_spec'; eauto.
+      + eapply wf_ext_global_uctx_invariants.
+        eapply hΣ'.
+      + eapply global_ext_uctx_consistent.
+        eapply hΣ'.
+      + now apply mem_level_declared_level.
+      + now apply mem_level_declared_level.
+  Qed.
+  
+  Lemma R_universe_instance_spec u u' :
+    Forall (fun u => LevelSet.mem u (global_ext_levels Σ)) u ->
+    Forall (fun u => LevelSet.mem u (global_ext_levels Σ)) u' ->
+    R_universe_instance (eq_universe (global_ext_constraints Σ)) u u' ->
+    eqb_universe_instance u u'.
+  Proof.
+    intros memu memu' r.
+    induction u in u', memu, memu', r |- *.
+    - now destruct u'.
+    - destruct u'; [easy|].
+      depelim memu.
+      depelim memu'.
+      depelim r.
+      cbn in *.
+      apply Bool.andb_true_iff.
+      split.
+      + apply (conv_pb_rel_spec Conv); auto.
+      + now apply IHu.
   Qed.
 
+  Lemma R_universe_variance_spec leq v u u' :
+    LevelSet.mem u (global_ext_levels Σ) ->
+    LevelSet.mem u' (global_ext_levels Σ) ->
+    R_universe_variance (eq_universe Σ) (conv_pb_rel leq Σ) v u u' ->
+    compare_universe_variance (check_eqb_universe G) (conv_pb_relb leq) v u u'.
+  Proof.
+    intros memu memu' r.
+    destruct v; cbn in *; auto.
+    - apply conv_pb_rel_spec; auto.
+    - apply (conv_pb_rel_spec Conv); auto.
+  Qed.
+
+  Lemma R_universe_instance_variance_spec leq v u u' :
+    Forall (fun u => LevelSet.mem u (global_ext_levels Σ)) u ->
+    Forall (fun u => LevelSet.mem u (global_ext_levels Σ)) u' ->
+    R_universe_instance_variance (eq_universe Σ) (conv_pb_rel leq Σ) v u u' ->
+    compare_universe_instance_variance (check_eqb_universe G) (conv_pb_relb leq) v u u'.
+  Proof.
+    intros memu memu' r.
+    induction u in v, u', memu, memu', r |- *.
+    - now destruct u'.
+    - destruct u'; [easy|].
+      depelim memu.
+      depelim memu'.
+      cbn in *.
+      destruct v; auto.
+      apply Bool.andb_true_iff.
+      destruct r.
+      split.
+      + apply R_universe_variance_spec; auto.
+      + now apply IHu.
+  Qed.
+
+  Lemma R_global_instance_spec u v leq gr napp :
+    Forall (fun u => LevelSet.mem u (global_ext_levels Σ)) u ->
+    Forall (fun u => LevelSet.mem u (global_ext_levels Σ)) v->
+    R_global_instance Σ (eq_universe Σ) (conv_pb_rel leq Σ) gr napp u v ->
+    compare_global_instance Σ (check_eqb_universe G) (conv_pb_relb leq) gr napp u v.
+  Proof.
+    intros consu consv r.
+    unfold compare_global_instance, R_global_instance, R_opt_variance in *.
+    destruct global_variance.
+    - apply R_universe_instance_variance_spec; auto.
+    - apply R_universe_instance_spec; auto.
+  Qed.
+  
+  Lemma consistent_instance_ext_all_mem udecl u :
+    consistent_instance_ext Σ udecl u ->
+    Forall (fun u => LevelSet.mem u (global_ext_levels Σ)) u.
+  Proof.
+    intros cons.
+    unfold consistent_instance_ext, consistent_instance in *.
+    destruct udecl; [now destruct u|].
+    destruct cons as (_&mems&_).
+    now apply forallb_Forall.
+  Qed.
+  
   Lemma wellformed_nonarity Γ t :
     destArity [] t = None ->
     wellformed Σ Γ t ->
@@ -1859,7 +1932,9 @@ Section Conversion.
     apply wellformed_zipc_tConst_inv in h1 as (cst1&decl1&cons1).
     apply wellformed_zipc_tConst_inv in h2 as (cst2&decl2&cons2).
     eapply PCUICWeakeningEnv.declared_constant_inj in decl1; eauto; subst.
-    eapply eq_universe_instance_spec in r; eauto.
+    apply consistent_instance_ext_all_mem in cons1.
+    apply consistent_instance_ext_all_mem in cons2.
+    eapply R_universe_instance_spec in r; auto.
   Qed.
     
   (* TODO (RE)MOVE *)
@@ -4606,7 +4681,7 @@ Section Conversion.
         | @exist (Some (narg, fn)) eq2 with inspect (decompose_stack ρ) := {
           | @exist (args, ξ) eq' := Some (tCase (ind, par) p (mkApps fn args) brs)
           } ;
-        | @exist None eq2 := None
+        | @exist None eq2 := False_rect _ _ (* why does ! not work in this file? *)
         } ;
       | ccview_other t _ := None
       }
@@ -4619,6 +4694,31 @@ Section Conversion.
     destruct h as [uni [args [mdecl [idecl [ps [pty [btys
                                  [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]].
     left; eexists. eassumption.
+  Qed.
+  Next Obligation.
+    exfalso.
+    match type of eq with
+    | _ = reduce_stack ?f ?Σ ?hΣ ?Γ ?t ?π ?h =>
+      pose proof (reduce_stack_sound f Σ hΣ Γ t π h) as [r] ;
+        pose proof (reduce_stack_decompose f Σ hΣ Γ t π h) as decomp
+    end.
+    rewrite <- eq in r, decomp.
+    cbn in *.
+    destruct (decompose_stack ρ) eqn:decomp'.
+    apply decompose_stack_eq in decomp' as ->.
+    cbn in *; subst.
+    rewrite zipc_appstack in r.
+    cbn in *.
+    clear eq.
+    apply wellformed_nonarity in h as (?&typ); auto.
+    destruct hΣ.
+    apply inversion_Case in typ as (?&?&?&?&?&?&?&?&?&?&?&?&?&?&?&?&?); auto.
+    eapply PCUICSR.subject_reduction in t0; eauto.
+    apply PCUICValidity.inversion_mkApps in t0 as (?&?&?); auto.
+    apply inversion_CoFix in t0 as (?&?&?&?&?&?&?); auto.
+    unfold unfold_cofix in eq2.
+    rewrite e3 in eq2.
+    congruence.
   Qed.
 
   Lemma unfold_one_case_cored :
@@ -4647,6 +4747,9 @@ Section Conversion.
       eapply cored_red_cored.
       + constructor. eapply red_iota.
       + eapply red_case_c. eassumption.
+    - match type of eq with
+      | _ = False_rect _ ?f => destruct f
+      end.
     - match type of e with
       | _ = reduce_stack ?f ?Σ ?hΣ ?Γ ?t ?π ?h =>
         pose proof (reduce_stack_sound f Σ hΣ Γ t π h) as [r] ;
@@ -4664,6 +4767,42 @@ Section Conversion.
       + constructor. eapply red_cofix_case. eauto.
       + eapply red_case_c. eassumption.
   Qed.
+  
+  Lemma unfold_one_case_None Γ ind par p c brs h :
+    None = unfold_one_case Γ ind par p c brs h ->
+    ∥∑ c', red Σ Γ c c' × whne RedFlags.default Σ Γ c'∥.
+  Proof.
+    funelim (unfold_one_case Γ ind par p c brs h); intros [=].
+    - match type of e with
+      | _ = reduce_stack ?f ?Σ ?hΣ ?Γ ?t ?π ?h =>
+        pose proof (reduce_stack_sound f Σ hΣ Γ t π h) as [r] ;
+          pose proof (reduce_stack_whnf f Σ hΣ Γ t π h) as wh;
+          pose proof (reduce_stack_isred f Σ hΣ Γ t π h eq_refl) as isr;
+          pose proof (reduce_stack_decompose f Σ hΣ Γ t π h) as decomp
+      end.
+      rewrite <- e in r, decomp, wh, isr.
+      cbn in *.
+      constructor; exists (zipc t0 s).
+      split; [easy|].
+      destruct (decompose_stack s) eqn:decomp'.
+      apply decompose_stack_eq in decomp' as ->.
+      cbn in *; subst.
+      rewrite zipc_appstack in r |- *.
+      rewrite zipp_appstack, stack_context_appstack in wh.
+      cbn in *.
+      destruct isr as (noapp&_).
+      clear e H.
+      apply wellformed_nonarity in h as (?&typ); auto.
+      destruct hΣ.
+      eapply PCUICSR.subject_reduction in typ.
+      2: eauto.
+      2: eapply red_case_c; eauto.
+      eapply whnf_case_arg_whne; eauto.
+      now destruct t0.
+    - match type of H2 with
+      | _ = False_rect _ ?f => destruct f
+      end.
+  Qed.
 
   Equations unfold_one_proj (Γ : context) (p : projection) (c : term)
             (h : wellformed Σ Γ (tProj p c)) : option term :=
@@ -4674,14 +4813,14 @@ Section Conversion.
         | cc0view_construct ind' ui with inspect (decompose_stack ρ) := {
           | @exist (args, ξ) eq' with inspect (nth_error args (pars + narg)) := {
             | @exist (Some arg) eq2 := Some arg ;
-            | @exist None _ := None
+            | @exist None _ := False_rect _ _
             }
           } ;
         | cc0view_cofix mfix idx with inspect (decompose_stack ρ) := {
           | @exist (args, ξ) eq' with inspect (unfold_cofix mfix idx) := {
             | @exist (Some (narg, fn)) eq2 :=
               Some (tProj (i, pars, narg) (mkApps fn args)) ;
-            | @exist None eq2 := None
+            | @exist None eq2 := False_rect _ _
             }
           } ;
         | cc0view_other t _ := None
@@ -4694,6 +4833,76 @@ Section Conversion.
     apply inversion_Proj in h ; auto.
     destruct h as [uni [mdecl [idecl [pdecl [args' [? [? [? ?]]]]]]]].
     left. eexists. eassumption.
+  Qed.
+  Next Obligation.
+    match type of eq with
+    | _ = reduce_stack ?f ?Σ ?hΣ ?Γ ?t ?π ?h =>
+      pose proof (reduce_stack_sound f Σ hΣ Γ t π h) as [r] ;
+        pose proof (reduce_stack_decompose f Σ hΣ Γ t π h) as decomp
+    end.
+    rewrite <- eq in r, decomp.
+    cbn in *.
+    destruct (decompose_stack ρ) eqn:decomp'.
+    apply decompose_stack_eq in decomp' as ->.
+    noconf eq'.
+    cbn in *; subst.
+    rewrite zipc_appstack in r.
+    cbn in *.
+    clear eq.
+    apply wellformed_nonarity in h as (?&typ); auto.
+    destruct hΣ.
+    apply inversion_Proj in typ as (?&?&?&?&?&decl&?&?&?); auto.
+    assert (d := decl).
+    eapply PCUICSR.subject_reduction in t; eauto.
+    apply PCUICValidity.inversion_mkApps in t as spine; auto.
+    destruct spine as (?&typ_ctor&_).
+    apply inversion_Construct in typ_ctor as (?&?&?&?&decl_ctor&?&?); auto.
+    destruct hΣ as [wfΣ].
+    eapply PCUICInductiveInversion.Construct_Ind_ind_eq with (wfΣ0 := wfΣ) (Hdecl := decl_ctor) in t.
+    cbn in t.
+    destruct decl_ctor as (?&?); cbn in *.
+    destruct All2_nth_error_Some; cbn in t.
+    destruct p0; cbn in t.
+    destruct t as ((((<-&?)&?)&?)&?).
+    clear s.
+    destruct decl as (?&?&?).
+    pose proof (PCUICInductiveInversion.declared_inductive_unique_sig d0 H) as H''; noconf H''.
+    cbn in *.
+    pose proof (PCUICWeakeningEnv.on_declared_projection wfΣ d) as (_&proj').
+    destruct d.
+    pose proof (PCUICInductiveInversion.declared_inductive_unique_sig H d) as H''; noconf H''.
+    cbn in *.
+    destruct ind_cshapes; [easy|].
+    destruct l; [|easy].
+    noconf e1.
+    destruct proj' as ((_&?)&_).
+    symmetry in wildcard.
+    apply nth_error_None in wildcard.
+    lia.
+  Qed.
+  Next Obligation.
+    match type of eq with
+    | _ = reduce_stack ?f ?Σ ?hΣ ?Γ ?t ?π ?h =>
+      pose proof (reduce_stack_sound f Σ hΣ Γ t π h) as [r] ;
+        pose proof (reduce_stack_decompose f Σ hΣ Γ t π h) as decomp
+    end.
+    rewrite <- eq in r, decomp.
+    cbn in *.
+    destruct (decompose_stack ρ) eqn:decomp'.
+    apply decompose_stack_eq in decomp' as ->.
+    cbn in *; subst.
+    rewrite zipc_appstack in r.
+    cbn in *.
+    clear eq.
+    apply wellformed_nonarity in h as (?&typ); auto.
+    destruct hΣ.
+    apply inversion_Proj in typ as (?&?&?&?&?&?&?&?&?); auto.
+    eapply PCUICSR.subject_reduction in t; eauto.
+    apply PCUICValidity.inversion_mkApps in t as (?&?&?); auto.
+    apply inversion_CoFix in t as (?&?&?&?&?&?&?); auto.
+    unfold unfold_cofix in eq2.
+    rewrite e0 in eq2.
+    congruence.
   Qed.
 
   Lemma unfold_one_proj_cored :
@@ -4721,6 +4930,9 @@ Section Conversion.
       eapply cored_red_cored.
       + constructor. eapply red_proj. eauto.
       + eapply red_proj_c. eassumption.
+    - match type of eq with
+      | _ = False_rect _ ?f => destruct f
+      end.
     - match type of e with
       | _ = reduce_stack ?f ?Σ ?hΣ ?Γ ?t ?π ?h =>
         pose proof (reduce_stack_sound f Σ hΣ Γ t π h) as [r] ;
@@ -4736,6 +4948,48 @@ Section Conversion.
       eapply cored_red_cored.
       + constructor. eapply red_cofix_proj. eauto.
       + eapply red_proj_c. eassumption.
+    - match type of eq with
+      | _ = False_rect _ ?f => destruct f
+      end.
+  Qed.
+
+  Lemma unfold_one_proj_None Γ p c h :
+    None = unfold_one_proj Γ p c h ->
+    ∥∑ c', red Σ Γ c c' × whne RedFlags.default Σ Γ c'∥.
+  Proof.
+    funelim (unfold_one_proj Γ p c h); intros [=].
+    - match type of e with
+      | _ = reduce_stack ?f ?Σ ?hΣ ?Γ ?t ?π ?h =>
+        pose proof (reduce_stack_sound f Σ hΣ Γ t π h) as [r] ;
+          pose proof (reduce_stack_whnf f Σ hΣ Γ t π h) as wh;
+          pose proof (reduce_stack_isred f Σ hΣ Γ t π h eq_refl) as isr;
+          pose proof (reduce_stack_decompose f Σ hΣ Γ t π h) as decomp
+      end.
+      rewrite <- e in r, decomp, wh, isr.
+      cbn in *.
+      constructor; exists (zipc t0 s).
+      split; [easy|].
+      destruct (decompose_stack s) eqn:decomp'.
+      apply decompose_stack_eq in decomp' as ->.
+      cbn in *; subst.
+      rewrite zipc_appstack in r |- *.
+      rewrite zipp_appstack, stack_context_appstack in wh.
+      cbn in *.
+      destruct isr as (noapp&_).
+      clear e H.
+      apply wellformed_nonarity in h as (?&typ); auto.
+      destruct hΣ.
+      eapply PCUICSR.subject_reduction in typ.
+      2: eauto.
+      2: eapply red_proj_c; eauto.
+      eapply whnf_proj_arg_whne; eauto.
+      now destruct t0.
+    - match type of H3 with
+      | _ = False_rect _ ?f => destruct f
+      end.
+    - match type of H3 with
+      | _ = False_rect _ ?f => destruct f
+      end.
   Qed.
 
   Equations reducible_head (Γ : context) (t : term) (π : stack)
@@ -4951,9 +5205,23 @@ Section Conversion.
       apply wellformed_nonarity in h as (?&typ); auto.
       apply inversion_Const in typ as (?&?&?&?); auto.
       unfold declared_constant in d; congruence.
-    - admit.
-    - admit.
-  Admitted.
+    - clear H.
+      apply unfold_one_case_None in e as [(c'&r&whcase)].
+      constructor; exists (tCase (i, n) p c' brs), (decompose_stack π).1.
+      split.
+      + constructor; eauto with pcuic.
+      + split; [eauto with pcuic|].
+        apply whnf_mkApps.
+        auto.
+    - clear H.
+      apply unfold_one_proj_None in e as [(c'&r&whproj)].
+      constructor; exists (tProj p0 c'), (decompose_stack π).1.
+      split.
+      + constructor; eauto with pcuic.
+      + split; [eauto with pcuic|].
+        apply whnf_mkApps.
+        auto.
+  Qed.
   
   (* TODO Factorise *)
   Equations(noeqns) _isconv_fallback (Γ : context) (leq : conv_pb)
@@ -5385,12 +5653,18 @@ Section Conversion.
   Qed.
   Next Obligation.
     destruct h, hΣ.
-    todo "variant of conv_cum_mkApps".
-    (*constructor.
+    apply conv_terms_alt in X as (argsr&argsr'&?&?&?).
     rewrite !zipp_as_mkApps.
-    apply mkApps_conv_args; auto.
-    constructor.
-    eapply eqb_term_spec. auto.*)
+    apply conv_cum_alt.
+    constructor; eexists _, _.
+    split; [split|].
+    - apply red_mkApps; [reflexivity|eassumption].
+    - apply red_mkApps; [reflexivity|eassumption].
+    - apply eq_term_upto_univ_napp_mkApps; auto.
+      rewrite Nat.add_0_r.
+      apply All2_length in a.
+      rewrite a in eq1.
+      apply eqb_termp_napp_spec; eauto.
   Qed.
   Next Obligation.
     apply h; clear h.
@@ -5416,6 +5690,7 @@ Section Conversion.
     constructor.
     eapply conv_terms_red'; eauto.
   Qed.
+
   Next Obligation.
     unfold eqb_termp_napp in noteq.
     destruct ir1 as (notapp1&whδ1), ir2 as (notapp2&whδ2).
@@ -5443,11 +5718,43 @@ Section Conversion.
     9: { destruct conv_hds as [H].
          depelim H.
          depelim s2.
-         todo "R_global_instance => compare_global_instance". }
+         zip fold in h1.
+         zip fold in h2.
+         apply wellformed_context in h1; auto.
+         clear aux.
+         apply wellformed_context in h2; auto.
+         apply wellformed_nonarity in h1 as (?&typ1); auto.
+         apply wellformed_nonarity in h2 as (?&typ2); auto.
+         apply inversion_Ind in typ1 as (?&?&?&?&?&?); auto.
+         apply inversion_Ind in typ2 as (?&?&?&?&?&?); auto.
+         apply consistent_instance_ext_all_mem in c1.
+         apply consistent_instance_ext_all_mem in c.
+         apply R_global_instance_spec in r; auto.
+         rewrite eq_inductive_refl in noteq.
+         apply All2_length in rargs1.
+         rewrite <- rargs1 in r.
+         cbn in *.
+         easy. }
     9: { destruct conv_hds as [H].
          depelim H.
          depelim s2.
-         todo "R_global_instance => compare_global_instance". }
+         zip fold in h1.
+         zip fold in h2.
+         apply wellformed_context in h1; auto.
+         clear aux.
+         apply wellformed_context in h2; auto.
+         apply wellformed_nonarity in h1 as (?&typ1); auto.
+         apply wellformed_nonarity in h2 as (?&typ2); auto.
+         apply inversion_Construct in typ1 as (?&?&?&?&?&?&?); auto.
+         apply inversion_Construct in typ2 as (?&?&?&?&?&?&?); auto.
+         apply consistent_instance_ext_all_mem in c1.
+         apply consistent_instance_ext_all_mem in c.
+         apply R_global_instance_spec in r; auto.
+         rewrite eq_inductive_refl, Nat.eqb_refl in noteq.
+         apply All2_length in rargs1.
+         rewrite <- rargs1 in r.
+         cbn in *.
+         easy. }
     all: apply conv_cum_alt in conv_hds as [(?&?&(r1&r2)&?)].
     all: eapply whnf_red_inv in r1; auto.
     all: inversion r1; subst; clear r1.
@@ -5465,7 +5772,21 @@ Section Conversion.
       destruct h1 as [(?&typ)|[(?&?&?&?)]].
       + now apply inversion_Evar in typ.
       + cbn in e; congruence.
-    - todo "conv_pb_rel -> conv_pb_relb".
+    - zip fold in h1.
+      zip fold in h2.
+      apply wellformed_context in h1; auto.
+      clear aux.
+      apply wellformed_context in h2; auto.
+      eapply conv_pb_rel_spec in H0.
+      assert (forall Σ Γ s, wellformed Σ Γ (tSort s) ->
+                            Forall (fun s => LevelSet.In s (global_ext_levels Σ)) s).
+      destruct h1 as [(?&typ)|].
+      + apply inversion_Sort in typ as (?&?&?&?&?); auto.
+        apply conv_pb_rel_spec in H0:
+        admit.
+      + destruct H as [(?&?&?&?)].
+        cbn in *.
+      apply conv_pb_rel_spec in H0.
   Qed.
   
   Equations _isconv (s : state) (Γ : context)

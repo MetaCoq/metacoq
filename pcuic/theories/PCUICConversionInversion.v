@@ -123,6 +123,27 @@ Section fixed.
         (intros P Q H; split; intros [p]; constructor; apply H in p; auto).
     destruct leq; cbn; apply H; [apply conv_alt_red|apply cumul_alt].
   Qed.
+  
+  Lemma conv_terms_alt Γ args args' :
+    conv_terms Σ Γ args args' <~>
+    ∑ argsr argsr',
+      All2 (red Σ Γ) args argsr ×
+      All2 (red Σ Γ) args' argsr' ×
+      All2 (eq_term Σ Σ) argsr argsr'.
+  Proof.
+    split.
+    - intros conv.
+      induction conv.
+      + exists [], []; eauto with pcuic.
+      + apply conv_alt_red in r as (xr&yr&(xred&yred)&xy).
+        specialize IHconv as (argsr&argsr'&?&?&?).
+        exists (xr :: argsr), (yr :: argsr').
+        eauto 7 with pcuic.
+    - intros (argsr&argsr'&r&r'&eqs).
+      induction eqs in args, args', r, r' |- *; depelim r; depelim r'; [constructor|].
+      constructor; auto.
+      apply conv_alt_red; eauto.
+  Qed.
 
   Lemma eq_term_eq_termp leq x y :
     eq_term Σ Σ x y ->

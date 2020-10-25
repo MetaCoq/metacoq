@@ -223,7 +223,7 @@ Fixpoint string_of_conv_error Σ (e : ConversionError) : string :=
       "\nand\n" ^ print_term Σ Γ2 t2 ^
       "are convertible/convertible (TODO) but applied to a different number" ^
       " of arguments."
-  | HeadMistmatch leq Γ1 t1 Γ2 t2 =>
+  | HeadMismatch leq Γ1 t1 Γ2 t2 =>
       "Terms\n" ^
       print_term Σ Γ1 t1 ^
       "\nand\n" ^ print_term Σ Γ2 t2 ^
@@ -445,7 +445,7 @@ Section Typecheck.
     destruct HΣ.
     eapply red_confluence in r as (?&r1&r2); eauto.
     apply invert_red_sort in r2 as ->.
-    eapply whnf_red_shape in r1; eauto.
+    eapply whnf_red_inv in r1; eauto.
     depelim r1.
     clear Heq.
     rewrite H0 in n0.
@@ -486,7 +486,7 @@ Section Typecheck.
     destruct HΣ.
     eapply red_confluence in r as (?&r1&r2); eauto.
     apply invert_red_prod in r2 as (?&?&(->&?)&?); auto.
-    eapply whnf_red_shape in r1; auto.
+    eapply whnf_red_inv in r1; auto.
     depelim r1.
     clear Heq.
     rewrite H0 in n0.
@@ -571,8 +571,8 @@ Section Typecheck.
     cbn in *.
     rewrite app_nil_r in wh.
     apply red_mkApps_tInd in r2 as (?&->&?); auto.
-    apply whnf_red_mkApps in r1 as [(?&?)]; auto.
-    apply whnf_red_shape in r; [|now apply whnf_mkApps_inv in wh].
+    apply whnf_red_mkApps_inv in r1 as [(?&?)]; auto.
+    apply whnf_red_inv in r; [|now apply whnf_mkApps_inv in wh].
     depelim r.
     noconf e0.
     discriminate i0.

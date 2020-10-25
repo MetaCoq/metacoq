@@ -551,9 +551,9 @@ Section Conversion.
         * assumption.
   Qed.
   
-  Notation eqb_termp pb := (eqb_termp_napp pb 0).
-  Notation eqb_term := (eqb_termp Conv).
-  Notation leqb_term := (eqb_termp Cumul).
+  Definition eqb_termp pb := (eqb_termp_napp pb 0).
+  Definition eqb_term := (eqb_termp Conv).
+  Definition leqb_term := (eqb_termp Cumul).
   
   Lemma leqb_term_spec t u :
     leqb_term t u ->
@@ -743,22 +743,6 @@ Section Conversion.
   Arguments Success {_} _.
   Arguments Error {_} _.
 
-  (* Definition Ret s Γ t π t' π' :=
-    forall leq,
-      conv_stack_ctx Γ π π' ->
-      match s with
-      | Reduction =>
-        { b : bool | if b then conv_term leq Γ t π t' π' else True }
-      | Fallback
-      | Term =>
-        isred (t, π) ->
-        isred (t', π') ->
-        { b : bool | if b then conv_term leq Γ t π t' π' else True }
-      | Args =>
-        conv leq Σ (Γ ,,, stack_context π) t t' ->
-        { b : bool | if b then conv_term leq Γ t π t' π' else True }
-      end. *)
-  
   Definition isred_full Γ t π :=
     isApp t = false /\
     whnf RedFlags.nodelta Σ (Γ,,, stack_context π) (zipp t π).
@@ -820,7 +804,7 @@ Section Conversion.
     now destruct decompose_stack.
   Qed.
 
-  (* Tailored view for isconv_prog *)
+  (* Tailored view for isconv_prog and precondition for fallback case *)
   Equations prog_discr (t1 t2 : term) : Prop :=
     prog_discr (tApp _ _) (tApp _ _) := False ;
     prog_discr (tConst _ _) (tConst _ _) := False ;
@@ -832,28 +816,32 @@ Section Conversion.
     prog_discr (tCoFix _ _) (tCoFix _ _) := False ;
     prog_discr _ _ := True.
   
+  (* Note that the arity of this should be the same for all s as otherwise
+     the extracted code is not correct *)
   Definition Ret s Γ t π t' π' :=
     forall (leq : conv_pb),
       conv_stack_ctx Γ π π' ->
       match s with
-      | Reduction =>
-        ConversionResult (conv_term leq Γ t π t' π')
-
-      | Term =>
-        isred_full Γ t π ->
-        isred_full Γ t' π' ->
-        ConversionResult (conv_term leq Γ t π t' π')
-
-      | Fallback =>
-        isred_full Γ t π ->
-        isred_full Γ t' π' ->
-        prog_discr t t' ->
-        ConversionResult (conv_term leq Γ t π t' π')
-
-      | Args => 
-        ConversionResult (∥conv_terms Σ (Γ,,, stack_context π)
-                           (decompose_stack π).1
-                           (decompose_stack π').1∥)
+      | Term
+      | Fallback => isred_full Γ t π
+      | _ => True
+      end ->
+      match s with
+      | Term
+      | Fallback => isred_full Γ t' π'
+      | _ => True
+      end ->
+      match s with
+      | Fallback => prog_discr t t'
+      | _ => True
+      end ->
+      match s with
+      | Reduction
+      | Term
+      | Fallback => ConversionResult (conv_term leq Γ t π t' π')
+      | Args => ConversionResult (∥conv_terms Σ (Γ,,, stack_context π)
+                                   (decompose_stack π).1
+                                   (decompose_stack π').1∥)
       end.
 
   Definition Aux s Γ t1 π1 t2 π2 h2 :=
@@ -879,11 +867,11 @@ Section Conversion.
     (only parsing).
 
   Notation isconv_red_raw leq t1 π1 t2 π2 aux :=
-    (aux Reduction t1 π1 t2 π2 _ _ _ _ leq _) (only parsing).
+    (aux Reduction t1 π1 t2 π2 _ _ _ _ leq _ I I I) (only parsing).
   Notation isconv_prog_raw leq t1 π1 t2 π2 aux :=
-    (aux Term t1 π1 t2 π2 _ _ _ _ leq _ _ _) (only parsing).
+    (aux Term t1 π1 t2 π2 _ _ _ _ leq _ _ _ I) (only parsing).
   Notation isconv_args_raw leq t1 π1 t2 π2 aux :=
-    (aux Args t1 π1 t2 π2 _ _ _ _ leq _) (only parsing).
+    (aux Args t1 π1 t2 π2 _ _ _ _ leq _ I I I) (only parsing).
   Notation isconv_fallback_raw leq t1 π1 t2 π2 aux :=
     (aux Fallback t1 π1 t2 π2 _ _ _ _ leq _ _ _ _) (only parsing).
 
@@ -2662,58 +2650,6 @@ Section Conversion.
     now depelim r.
   Qed.
     
-(* 
-  Notation whne := (whne flags Σ).
-
-  Lemma app_conv_inv : forall Γ t t' u u',
-    (forall napp, eq_term_upto_univ_napp Σ.1 (eq_universe Σ) (eq_universe Σ) napp t t' ->
-      eq_term Σ t t') ->
-    whne Γ t -> 
-    whne Γ t' ->
-    Σ ;;; Γ |- tApp t u = tApp t' u' ->
-    Σ ;;; Γ |- t = t'.
-  Proof.
-    intros Γ t t' u u' cum_irr wh wh' hconv.
-    depind hconv.
-    + intros **. depelim e. eapply conv_refl, cum_irr; eassumption.  
-    + (* Proof idea: invert the reduction r using thw whne hyp to apply the IH *)
-      todo "Completeness"%string.
-    + (* Proof idea: invert the reduction r using thw whne hyp to apply the IH *)
-      todo "Completeness"%string.
-  Qed.
-
-  
-
-  Lemma zipp_Case_conv_inv :
-    forall Γ indn p p' c c' brs brs' π π',
-    let t := tCase indn p c brs in
-    let t' := tCase indn p' c' brs' in
-    whne Γ t -> whne Γ t' ->
-    Σ ;;; Γ |- zipp t π = zipp t' π' ->
-    Σ ;;; Γ |- t = t'.
-  Proof.
-    (* Proof idea: decompose the stacks, prove by induction that the
-    each side is applied to the same number of arguments. *)
-    intros Γ indn p p' c c' brs brs' π π' t t' wht wht'.
-(* 
-    destruct (decompose_stack π) as [l s] eqn:Hpi.
-    destruct (decompose_stack π') as [l' s'] eqn: Hpi'.
-    unfold zipp; rewrite Hpi, Hpi'; clear s s' Hpi Hpi'.
-    induction l as [|x l IH] in l' |- *; destruct l' as [|x' l'].
-    + trivial.
-    + simpl. intro H. depelim H.
-    
-
-    assert (cum_irr : forall napp, eq_term_upto_univ_napp Σ.1 (eq_universe Σ) (eq_universe Σ) napp t t' -> eq_term Σ t t').
-    - intros n heq; depelim heq; now constructor.
-    -
-     *)
-    
-    todo "Completeness"%string.
-  Qed. *)
-  
-  (* See https://github.com/coq/coq/blob/master/kernel/reduction.ml#L367 *)
-  
   Lemma cumul_mkApps Γ hd args hd' args' :
     wf Σ ->
     Σ;;; Γ |- hd <= hd' ->
@@ -2806,6 +2742,7 @@ Section Conversion.
     else
       false).
 
+  (* See https://github.com/coq/coq/blob/master/kernel/reduction.ml#L367 *)
   Opaque reduce_stack.
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
@@ -4371,9 +4308,9 @@ Section Conversion.
     destruct hΣ, hx.
     eapply conv_cum_red_inv' in H.
     2: exact hΣ'.
+    2: eassumption.
     2: apply red_mkApps; [reflexivity|exact a].
     2: apply red_mkApps; [reflexivity|exact a0].
-    2: eassumption.
     apply conv_cum_mkApps_inv in H as [(_&conv_args)]; auto.
     2: eapply whnf_conv_context; eauto.
     2: eapply conv_context_sym; eauto.
@@ -4390,9 +4327,9 @@ Section Conversion.
     destruct hΣ, hx.
     eapply conv_cum_red_inv' in H.
     2: exact hΣ'.
+    2: eassumption.
     2: apply red_mkApps; [reflexivity|exact a].
     2: apply red_mkApps; [reflexivity|exact a0].
-    2: eassumption.
     apply conv_cum_mkApps_inv in H as [(?&?)]; auto.
     2: eapply whnf_conv_context; eauto.
     2: eapply conv_context_sym; eauto.
@@ -4411,9 +4348,9 @@ Section Conversion.
     destruct hΣ, hx.
     eapply conv_cum_red_inv' in H.
     2: exact hΣ'.
+    2: eassumption.
     2: apply red_mkApps; [reflexivity|exact a].
     2: apply red_mkApps; [reflexivity|exact a0].
-    2: eauto.
     apply conv_cum_mkApps_inv in H as [(?&?)]; auto.
     2: eapply whnf_conv_context; eauto.
     2: eapply conv_context_sym; eauto.
@@ -4505,7 +4442,7 @@ Section Conversion.
             (aux : Aux' Γ t1 args1 l1 π1 t2 (appstack l2 π2) h2)
     : ConversionResult (∥conv_terms Σ (Γ,,, stack_context π1) l1 l2∥) by struct l1 :=
     _isconv_args' leq Γ t1 args1 (u1 :: l1) π1 h1 hπ1 t2 (u2 :: l2) π2 h2 hπ2 hx aux
-    with aux u1 u2 args1 l1 (coApp t2 (appstack l2 π2)) _ _ _ _ Conv _ := {
+    with aux u1 u2 args1 l1 (coApp t2 (appstack l2 π2)) _ _ _ _ Conv _ I I I := {
     | Success H1 with _isconv_args' leq Γ t1 (args1 ++ [u1]) l1 π1 _ _ (tApp t2 u2) l2 π2 _ _ _ _ := {
       | Success H2 := yes ;
       | Error e herr :=
@@ -4630,11 +4567,6 @@ Section Conversion.
     rewrite 2!stack_context_appstack in hx.
     assumption.
   Qed.
-  (*Next Obligation.
-    pose proof (decompose_stack_eq _ _ _ (eq_sym eq1)). subst.
-    rewrite stack_context_appstack in he.
-    assumption.
-  Qed.*)
   Next Obligation.
     specialize (aux Reduction) as h. cbn in h.
     eapply h. all: auto.
@@ -4949,7 +4881,7 @@ Section Conversion.
     whnf RedFlags.nodelta Σ (Γ,,, stack_context π) (mkApps t (decompose_stack π).1) ->
     None = reducible_head Γ t π h ->
     ∥∑ t' args',
-      whnf_red_shape_spec Σ (Γ,,, stack_context π) t t' ×
+      whnf_red Σ (Γ,,, stack_context π) t t' ×
       All2 (red Σ (Γ,,, stack_context π)) (decompose_stack π).1 args' ×
       whnf RedFlags.default Σ (Γ,,, stack_context π) (mkApps t' args')∥.
   Proof.
@@ -4978,23 +4910,23 @@ Section Conversion.
       depelim H; solve_discr; eauto with pcuic.
     - apply whnf_mkApps_tSort_inv in wh as ->.
       constructor; eexists _, [].
-      eauto using whnf_red_shape_spec with pcuic.
+      eauto using whnf_red with pcuic.
     - apply whnf_mkApps_tProd_inv in wh as ->.
       constructor; eexists _, [].
-      eauto using whnf_red_shape_spec with pcuic.
+      eauto using whnf_red with pcuic.
     - depelim wh; solve_discr.
       + apply whne_mkApps_inv in H as [|(?&?&?&?&?&?&?&?&?)]; auto; try discriminate.
         depelim H; solve_discr.
         discriminate.
       + rewrite H1.
-        constructor; eexists _, []; eauto using whnf_red_shape_spec with pcuic.
+        constructor; eexists _, []; eauto using whnf_red with pcuic.
     - apply whnf_mkApps_inv in wh; auto.
       depelim wh; solve_discr.
       depelim H; solve_discr.
       discriminate.
     - discriminate.
-    - constructor; eexists _, (decompose_stack π).1; eauto using whnf_red_shape_spec with pcuic.
-    - constructor; eexists _, (decompose_stack π).1; eauto using whnf_red_shape_spec with pcuic.
+    - constructor; eexists _, (decompose_stack π).1; eauto using whnf_red with pcuic.
+    - constructor; eexists _, (decompose_stack π).1; eauto using whnf_red with pcuic.
     - eapply unfold_one_fix_None in H0 as [(?&?&?)].
       constructor; eexists _, x.
       split; [constructor; eauto with pcuic|].
@@ -5023,34 +4955,6 @@ Section Conversion.
     - admit.
   Admitted.
   
-  Lemma whnf_red_shape_spec_red Γ t t' :
-    whnf_red_shape_spec Σ Γ t t' ->
-    ∥red Σ Γ t t'∥.
-  Proof.
-    intros wh.
-    depelim wh; constructor; eauto with pcuic.
-    - apply red_evar; auto.
-    - apply red_app; auto.
-    - apply red_fix_congr.
-      eapply All2_impl; eauto.
-      cbn.
-      intros ? ? (->&->&r1&r2).
-      eauto.
-    - apply red_case; auto.
-      eapply All2_impl; eauto.
-      cbn.
-      intros ? ? (->&?).
-      eauto.
-    - apply red_proj_c; auto.
-    - apply red_prod; auto.
-    - apply PCUICConfluence.red_abs_alt; auto.
-    - apply red_cofix_congr.
-      eapply All2_impl; eauto.
-      cbn.
-      intros ? ? (->&->&r1&r2).
-      eauto.
-  Qed.
-
   (* TODO Factorise *)
   Equations(noeqns) _isconv_fallback (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
@@ -5495,15 +5399,15 @@ Section Conversion.
     apply reducible_head_None in nored1 as [(?&?&s1&r1&wh1)]; auto.
     apply reducible_head_None in nored2 as [(?&?&s2&r2&wh2)]; auto.
     destruct hΣ, hx.
-    apply whnf_red_shape_spec_red in s1 as H'.
+    apply whnf_red_red in s1 as H'.
     destruct H'.
-    apply whnf_red_shape_spec_red in s2 as H'.
+    apply whnf_red_red in s2 as H'.
     destruct H'.
     eapply conv_cum_red_inv' in H.
-    2: apply hΣ'.
-    2: apply red_mkApps; [eassumption|eassumption].
-    2: apply red_mkApps; [eassumption|eassumption].
+    2: exact hΣ'.
     2: eassumption.
+    2: apply red_mkApps; [eassumption|eassumption].
+    2: apply red_mkApps; [eassumption|eassumption].
     apply conv_cum_mkApps_inv in H as [(?&?)]; auto.
     2: now depelim s1.
     2: now depelim s2.
@@ -5519,15 +5423,15 @@ Section Conversion.
     apply reducible_head_None in nored1 as [(?&?&s1&rargs1&wh1)]; auto.
     apply reducible_head_None in nored2 as [(?&?&s2&rargs2&wh2)]; auto.
     destruct hΣ, hx.
-    apply whnf_red_shape_spec_red in s1 as H'.
+    apply whnf_red_red in s1 as H'.
     destruct H'.
-    apply whnf_red_shape_spec_red in s2 as H'.
+    apply whnf_red_red in s2 as H'.
     destruct H'.
     eapply conv_cum_red_inv' in H.
-    2: apply hΣ'.
-    2: apply red_mkApps; eassumption.
-    2: apply red_mkApps; eassumption.
+    2: exact hΣ'.
     2: eassumption.
+    2: apply red_mkApps; eassumption.
+    2: apply red_mkApps; eassumption.
     apply conv_cum_mkApps_inv in H as [(conv_hds&_)]; auto.
     2: now depelim s1.
     2: now depelim s2.
@@ -5545,14 +5449,14 @@ Section Conversion.
          depelim s2.
          todo "R_global_instance => compare_global_instance". }
     all: apply conv_cum_alt in conv_hds as [(?&?&(r1&r2)&?)].
-    all: eapply whnf_red_shape in r1; auto.
-    all: depelim r1.
-    all: depelim e.
+    all: eapply whnf_red_inv in r1; auto.
+    all: inversion r1; subst; clear r1.
+    all: inversion e; subst; clear e.
     all: apply whnf_mkApps_inv in wh2; [|now depelim s2].
     all: eapply whnf_conv_context in wh2; [|apply conv_context_sym; eauto].
-    all: eapply whnf_red_shape in r2; auto.
-    all: depelim r2.
-    all: depelim s2.
+    all: eapply whnf_red_inv in r2; auto.
+    all: inversion r2; subst; clear r2.
+    all: inversion s2; subst; clear s2.
     all: destruct hdiscr.
     - now rewrite Nat.eqb_refl in noteq.
     - now rewrite eq_string_refl in noteq.
@@ -5570,13 +5474,13 @@ Section Conversion.
             (aux : Aux s Γ t1 π1 t2 π2 h2)
   : Ret s Γ t1 π1 t2 π2 :=
     _isconv Reduction Γ t1 π1 h1 t2 π2 h2 aux :=
-      λ { | leq | hx := _isconv_red Γ leq t1 π1 h1 t2 π2 h2 hx aux } ;
+      λ { | leq | hx | _ | _ | _ := _isconv_red Γ leq t1 π1 h1 t2 π2 h2 hx aux } ;
 
     _isconv Term Γ t1 π1 h1 t2 π2 h2 aux :=
-      λ { | leq | hx | r1 | r2 := _isconv_prog Γ leq t1 π1 h1 t2 π2 h2 hx r1 r2 aux } ;
+      λ { | leq | hx | r1 | r2 | _ := _isconv_prog Γ leq t1 π1 h1 t2 π2 h2 hx r1 r2 aux } ;
 
     _isconv Args Γ t1 π1 h1 t2 π2 h2 aux :=
-      λ { | leq | hx := _isconv_args leq Γ t1 π1 h1 t2 π2 h2 hx aux } ;
+      λ { | leq | hx | _ | _ | _ := _isconv_args leq Γ t1 π1 h1 t2 π2 h2 hx aux } ;
 
     _isconv Fallback Γ t1 π1 h1 t2 π2 h2 aux :=
       λ { | leq | hx | r1 | r2 | hd := _isconv_fallback Γ leq t1 π1 h1 t2 π2 h2 r1 r2 hd hx aux }.
@@ -5614,7 +5518,7 @@ Section Conversion.
   | ConvError : ConversionError -> ConversionResultSummary.
 
   Definition isconv Γ leq t1 π1 h1 t2 π2 h2 hx :=
-    match isconv_full Reduction Γ t1 π1 h1 t2 π2 h2 leq hx with
+    match isconv_full Reduction Γ t1 π1 h1 t2 π2 h2 leq hx I I I with
     | Success _ => ConvSuccess
     | Error e _ => ConvError e
     end.

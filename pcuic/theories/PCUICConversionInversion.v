@@ -190,10 +190,10 @@ Section fixed.
       1-13: (eapply eq_term_upto_univ_napp_nonind; [exact e|try exact H1]).
       1: discriminate notapp.
       all: apply whnf_mkApps_inv in wh; auto.
-      all: eapply whnf_red_shape in r; auto.
+      all: eapply whnf_red_inv in r; auto.
       all: depelim r.
       all: apply whnf_mkApps_inv in wh'; auto; [|now rewrite notapp'].
-      all: eapply whnf_red_shape in r0; auto.
+      all: eapply whnf_red_inv in r0; auto.
       all: depelim e.
       all: depelim r0.
       all: apply All2_length in a.
@@ -221,8 +221,8 @@ Section fixed.
     depelim whr; solve_discr.
     depelim H0; solve_discr; try discriminate.
     apply conv_cum_alt in conv as [(?&?&(r1&r2)&?)].
-    eapply whnf_red_shape in r1; eauto.
-    eapply whnf_red_shape in r2; eauto.
+    eapply whnf_red_inv in r1; eauto.
+    eapply whnf_red_inv in r2; eauto.
     depelim r1.
     depelim r2.
     depelim e.
@@ -255,8 +255,8 @@ Section fixed.
       apply whnf_fixapp with (v := []).
       destruct unfold_fix as [(?&?)|]; [|easy].
       now rewrite nth_error_nil. }
-    eapply whnf_red_shape in r1; eauto.
-    eapply whnf_red_shape in r2; eauto.
+    eapply whnf_red_inv in r1; eauto.
+    eapply whnf_red_inv in r2; eauto.
     depelim r1.
     depelim r2.
     depelim e.
@@ -292,8 +292,8 @@ Section fixed.
   Proof.
     intros conv whl whr.
     apply conv_cum_alt in conv as [(?&?&(r1&r2)&?)].
-    eapply whnf_red_shape in r1; eauto.
-    eapply whnf_red_shape in r2; eauto.
+    eapply whnf_red_inv in r1; eauto.
+    eapply whnf_red_inv in r2; eauto.
     depelim r1.
     depelim r2.
     depelim e.

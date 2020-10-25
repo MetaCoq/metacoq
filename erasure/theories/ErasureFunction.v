@@ -130,7 +130,7 @@ Next Obligation.
   destruct HΣ.
   eapply PCUICConfluence.red_confluence in X0 as [t'' []]. 3:exact X1. 2:eauto.
   eapply invert_red_sort in r0; eauto. subst.
-  eapply whnf_red_shape in r; auto.
+  eapply whnf_red_inv in r; auto.
   depelim r.
   congruence.
 Qed.
@@ -155,7 +155,7 @@ Next Obligation.
   destruct HΣ.
   eapply PCUICConfluence.red_confluence in X2 as [t'' []]. 3:exact X3. 2:eauto.
   eapply invert_red_prod in r0 as (? & ? & [] & ?); eauto. subst.
-  eapply whnf_red_shape in r; auto.
+  eapply whnf_red_inv in r; auto.
   depelim r.
   congruence.
 Qed.

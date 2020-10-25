@@ -2,6 +2,7 @@ From Equations Require Import Equations.
 From MetaCoq.PCUIC Require Import PCUICAst.
 From MetaCoq.PCUIC Require Import PCUICAstUtils.
 From MetaCoq.PCUIC Require Import PCUICContextConversion.
+From MetaCoq.PCUIC Require Import PCUICConversion.
 From MetaCoq.PCUIC Require Import PCUICCumulativity.
 From MetaCoq.PCUIC Require Import PCUICCumulProp.
 From MetaCoq.PCUIC Require Import PCUICEquality.
@@ -141,53 +142,62 @@ Section fixed.
     intros noapp1 noapp2 eq.
     now apply eq_term_upto_univ_mkApps_inv in eq as (?&?).
   Qed.
+  
+  Definition conv_cum_napp leq Γ napp t t' :=
+    match t with
+    | tInd _ _
+    | tConstruct _ _ _ => ∥eq_termp_napp leq napp t t'∥
+    | _ => conv_cum leq Σ Γ t t'
+    end.
 
   Lemma conv_cum_mkApps_inv leq Γ hd args hd' args' :
     conv_cum leq Σ Γ (mkApps hd args) (mkApps hd' args') ->
-    match hd with
-    | tApp _ _
-    | tInd _ _
-    | tConstruct _ _ _ => False
-    | _ => True
-    end ->
-    match hd' with
-    | tApp _ _
-    | tInd _ _
-    | tConstruct _ _ _ => False
-    | _ => True
-    end ->
+    isApp hd = false ->
+    isApp hd' = false ->
     whnf RedFlags.default Σ Γ (mkApps hd args) ->
     whnf RedFlags.default Σ Γ (mkApps hd' args') ->
-    ∥conv_cum leq Σ Γ hd hd' × All2 (conv Σ Γ) args args'∥.
+    ∥conv_cum_napp leq Γ #|args| hd hd' × conv_terms Σ Γ args args'∥.
   Proof.
-    intros conv shape shape' wh wh'.
+    intros conv notapp notapp' wh wh'.
     apply conv_cum_alt in conv as [(?&?&(r1&r2)&e)].
     apply whnf_red_mkApps_l in r1 as [(?&?&->&?&?)]; auto.
     apply whnf_red_mkApps_l in r2 as [(?&?&->&?&?)]; auto.
     assert (isApp x1 = false).
     { erewrite whnf_red_isApp.
       3: eauto.
-      1: now destruct hd.
+      1: assumption.
       apply whnf_mkApps_inv in wh; auto.
-      now destruct hd. }
+      now rewrite notapp. }
     assert (isApp x = false).
     { erewrite whnf_red_isApp.
       3: eauto.
-      1: now destruct hd'.
+      1: assumption.
       apply whnf_mkApps_inv in wh'; auto.
-      now destruct hd'. }
+      now rewrite notapp'. }
     apply eq_termp_mkApps_inv in e as (?&?); auto.
     constructor.
     split.
-    - apply conv_cum_alt.
-      constructor.
-      exists x1, x.
-      split; [split|]; eauto with pcuic.
-      eapply eq_term_upto_univ_napp_nonind; eauto.
-      erewrite whnf_red_isIndConstructApp; [| |now eauto].
-      1: now destruct hd.
-      apply whnf_mkApps_inv in wh; auto.
-      now destruct hd.
+    - assert (isIndConstructApp x1 = isIndConstructApp hd).
+      { eapply whnf_red_isIndConstructApp; eauto.
+        apply whnf_mkApps_inv in wh; auto.
+        now rewrite notapp. }
+      destruct hd.
+      all: cbn.
+      1-9, 12-15: apply conv_cum_alt.
+      1-13: constructor.
+      1-13: exists x1, x.
+      1-13: split; [split|]; eauto with pcuic.
+      1-13: (eapply eq_term_upto_univ_napp_nonind; [exact e|try exact H1]).
+      1: discriminate notapp.
+      all: apply whnf_mkApps_inv in wh; auto.
+      all: eapply whnf_red_shape in r; auto.
+      all: depelim r.
+      all: apply whnf_mkApps_inv in wh'; auto; [|now rewrite notapp'].
+      all: eapply whnf_red_shape in r0; auto.
+      all: depelim e.
+      all: depelim r0.
+      all: apply All2_length in a.
+      all: constructor; constructor; rewrite a; auto.
     - clear -a1 a a0.
       induction a1 in args, args', x2, a, x3, a0, a1 |- *; depelim a; depelim a0; [now constructor|].
       constructor.
@@ -315,5 +325,20 @@ Section fixed.
       eapply PCUICConversion.cumul_red_r_inv; [eauto| |eauto].
       auto.
   Qed.
-
+  
+  Lemma conv_cum_red_inv' leq Γ Γ' t1 t2 t1' t2' :
+    conv_context Σ Γ Γ' ->
+    conv_cum leq Σ Γ t1 t2 ->
+    red Σ Γ t1 t1' ->
+    red Σ Γ' t2 t2' ->
+    conv_cum leq Σ Γ t1' t2'.
+  Proof.
+    intros cc r1 r2 conv_ctx.
+    destruct wf.
+    eapply conv_cum_red_inv; [|now eauto|reflexivity].
+    eapply conv_cum_conv_ctx; eauto.
+    2: apply conv_context_sym; eauto.
+    eapply conv_cum_red_inv; [|reflexivity|now eauto].
+    eapply conv_cum_conv_ctx; eauto.
+  Qed.
 End fixed.

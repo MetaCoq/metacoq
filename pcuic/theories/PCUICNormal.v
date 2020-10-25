@@ -22,6 +22,7 @@ Module RedFlags.
   }.
 
   Definition default := mk true true true true true true.
+  Definition nodelta := mk true true true false true true.
 
 End RedFlags.
 
@@ -512,6 +513,59 @@ Proof.
   destruct wh as [wh|(?&?&?&?&?&?&?)]; [|easy].
   depelim wh.
   solve_discr.
+Qed.
+
+  
+Lemma whnf_mkApps_tSort_inv f Σ Γ s args :
+  whnf f Σ Γ (mkApps (tSort s) args) -> args = [].
+Proof.
+  intros wh.
+  inversion wh; solve_discr.
+  clear -H.
+  remember (mkApps (tSort s) args) eqn:teq.
+  exfalso.
+  revert teq.
+  induction H in args |- *; intros; solve_discr.
+  destruct args as [|? ? _] using List.rev_ind; [easy|].
+  rewrite <- mkApps_nested in teq.
+  cbn in teq.
+  inv teq.
+  eauto.
+Qed.
+
+Lemma whnf_mkApps_tProd_inv f Σ Γ na A B args :
+  whnf f Σ Γ (mkApps (tProd na A B) args) -> args = [].
+Proof.
+  intros wh.
+  inversion wh; solve_discr.
+  clear -H.
+  remember (mkApps (tProd na A B) args) eqn:teq.
+  exfalso.
+  revert teq.
+  induction H in args |- *; intros; solve_discr.
+  destruct args as [|? ? _] using List.rev_ind; [easy|].
+  rewrite <- mkApps_nested in teq.
+  cbn in teq.
+  inv teq.
+  eauto.
+Qed.
+
+Lemma whnf_mkApps_tLambda_inv f Σ Γ na A b args :
+  RedFlags.beta f = true ->
+  whnf f Σ Γ (mkApps (tLambda na A b) args) -> args = [].
+Proof.
+  intros nobeta wh.
+  inversion wh; solve_discr.
+  clear -H nobeta.
+  remember (mkApps (tLambda na A b) args) eqn:teq.
+  exfalso.
+  revert teq.
+  induction H in args |- *; intros; solve_discr.
+  destruct args as [|? ? _] using List.rev_ind; [easy|].
+  rewrite <- mkApps_nested in teq.
+  cbn in teq.
+  inv teq.
+  eauto.
 Qed.
 
 Section whne_red1_ind.

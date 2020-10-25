@@ -17,8 +17,6 @@ Local Set Keyed Unification.
 
 Set Default Goal Selector "!".
 
-Definition nodelta_flags := RedFlags.mk true true true false true true.
-
 (* TODO MOVE *)
 Lemma All2_app_inv_both :
   forall A B (P : A -> B -> Type) l1 l2 r1 r2,

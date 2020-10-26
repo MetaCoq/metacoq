@@ -199,40 +199,51 @@ Hint Resolve negb_is_true : core.
 
 Lemma whnf_mkApps_inv flags :
   forall Σ Γ t l,
-    ~ isApp t ->
     whnf flags Σ Γ (mkApps t l) ->
     whnf flags Σ Γ t.
 Proof.
-  intros Σ Γ t l Hr h.
-  induction l using rev_ind.
-  - assumption.
-  - rewrite <- mkApps_nested in h. cbn in h. depelim h. depelim H. eauto.
-    + change (tApp (mkApps t l) x0) with (mkApps (mkApps t l) [x0]) in *.
-      rewrite mkApps_nested in x.
-      eapply (f_equal decompose_app) in x;
-      rewrite !decompose_app_mkApps in x; cbn in *; try congruence. eauto. inv x.
-      eapply whnf_fixapp with (v := []); eauto. rewrite H. now destruct rarg.    
-    + change (tApp (mkApps t l) x0) with (mkApps (mkApps t l) [x0]) in *.
-      rewrite mkApps_nested in x.
-      eapply (f_equal decompose_app) in x.
-      rewrite !decompose_app_mkApps in x; cbn in *; try congruence. firstorder. inv x.
-      eapply whnf_cstrapp with (v := []).
-    + change (tApp (mkApps t l) x0) with (mkApps (mkApps t l) [x0]) in *.
-        rewrite mkApps_nested in x.
-      eapply (f_equal decompose_app) in x.
-      rewrite !decompose_app_mkApps in x; cbn in *; try congruence. firstorder. inv x.
-      eapply whnf_indapp with (v := []).
-    + change (tApp (mkApps t l) x0) with (mkApps (mkApps t l) [x0]) in *.
-      rewrite mkApps_nested in x.
-      eapply (f_equal decompose_app) in x.
-      rewrite !decompose_app_mkApps in x; cbn in *; try congruence. firstorder. inv x.
-      eapply whnf_fixapp with (v := []).
-      destruct unfold_fix as [[rarg arg] | ]; eauto. now destruct rarg.
-    + change (tApp (mkApps t l) x0) with (mkApps (mkApps t l) [x0]) in *.
-      rewrite mkApps_nested in x.
-      eapply (f_equal decompose_app) in x.
-      rewrite !decompose_app_mkApps in x; cbn in *; try congruence. firstorder. inv x.
-      eauto.
+  intros Σ Γ t l h.
+  remember (mkApps t l) eqn:hdeq.
+  revert hdeq.
+  induction h in h, t, l, t0 |- *; intros eq; subst.
+  - destruct (mkApps_elim t l).
+    apply whne_mkApps_inv in H; auto.
+    destruct H as [wh|(?&?&?&?&?&->&?&?&?)].
+    + now apply whnf_mkApps.
+    + destruct (Nat.leb_spec n x1).
+      * apply whnf_fixapp.
+        rewrite H.
+        apply nth_error_Some_length in H0.
+        apply nth_error_None.
+        rewrite firstn_length.
+        lia.
+      * apply whnf_ne.
+        eapply whne_fixapp; eauto.
+        assert (x1 < #|l|) by (now apply nth_error_Some_length in H0).
+        rewrite <- (firstn_skipn n l) in H0.
+        rewrite nth_error_app1 in H0; auto.
+        rewrite firstn_length.
+        lia.
+  - destruct l using List.rev_ind; [|now rewrite <- mkApps_nested in eq].
+    cbn in *; subst; auto.
+  - destruct l using List.rev_ind; [|now rewrite <- mkApps_nested in eq].
+    cbn in *; subst; auto.
+  - destruct l using List.rev_ind; [|now rewrite <- mkApps_nested in eq].
+    cbn in *; subst; auto.
+  - destruct (mkApps_elim t l).
+    apply mkApps_eq_inj in eq as (<-&<-); auto.
+  - destruct (mkApps_elim t l).
+    apply mkApps_eq_inj in eq as (<-&<-); auto.
+  - destruct (mkApps_elim t l).
+    apply mkApps_eq_inj in eq as (<-&<-); auto.
+    apply whnf_fixapp.
+    destruct unfold_fix as [(?&?)|]; [|easy].
+    apply nth_error_None.
+    apply nth_error_None in H.
+    rewrite firstn_length.
+    lia.
+  - destruct (mkApps_elim t l).
+    apply mkApps_eq_inj in eq as (<-&<-); auto.
 Qed.
 
 Lemma whnf_fixapp' {flags} Σ Γ mfix idx narg body v :
@@ -243,6 +254,53 @@ Proof.
  intros E1 H. eapply whnf_fixapp. rewrite E1. eauto.
 Qed. 
 Hint Resolve whnf_fixapp' : core.
+
+Lemma whnf_whne_nodelta_upgrade Σ Γ t :
+  whnf RedFlags.default Σ Γ t ->
+  whne RedFlags.nodelta Σ Γ t ->
+  whne RedFlags.default Σ Γ t.
+Proof.
+  intros whn whe.
+  induction whe; cbn in *; try easy.
+  - now inv whn; solve_discr.
+  - inv whn.
+    + easy.
+    + destruct v0 as [|? ? _] using List.rev_ind; [discriminate|].
+      rewrite <- mkApps_nested in *.
+      cbn in *; inv H0.
+      constructor.
+      eapply IHwhe.
+      apply whnf_cstrapp.
+    + destruct v0 as [|? ? _] using List.rev_ind; [discriminate|].
+      rewrite <- mkApps_nested in *.
+      cbn in *; inv H0.
+      constructor.
+      eapply IHwhe.
+      apply whnf_indapp.
+    + destruct v0 as [|? ? _] using List.rev_ind; [discriminate|].
+      rewrite <- mkApps_nested in *.
+      cbn in *; inv H.
+      constructor.
+      eapply IHwhe.
+      apply whnf_fixapp.
+      destruct unfold_fix; [|easy].
+      destruct p.
+      apply nth_error_None.
+      apply nth_error_None in H0.
+      rewrite app_length in H0; cbn in *.
+      lia.
+    + destruct v0 as [|? ? _] using List.rev_ind; [discriminate|].
+      rewrite <- mkApps_nested in *.
+      cbn in *; inv H0.
+      constructor.
+      eapply IHwhe.
+      apply whnf_cofixapp.
+  - inv whn; solve_discr; try easy.
+    rewrite H in H2.
+    congruence.
+  - inv whn; solve_discr; easy.
+  - inv whn; solve_discr; easy.
+Qed.
 
 Definition whnf_whne_dec flags Σ Γ t : ({whnf flags Σ Γ t} + {~ (whnf flags Σ  Γ t)}) * ({whne flags Σ Γ t} + {~ (whne flags Σ Γ t)}).
 Proof.
@@ -1262,7 +1320,7 @@ Lemma whnf_red_mkApps_inv Σ Γ hd args hd' args' :
 Proof.
   intros wh r notapp notapp'.
   apply whnf_red_mkApps_l in r as [(?&?&eq&?&?)]; auto.
-  apply whnf_mkApps_inv in wh; [|now destruct (isApp hd)].
+  apply whnf_mkApps_inv in wh.
   eapply whnf_red_isApp in wh as ?; eauto.
   apply mkApps_notApp_inj in eq as (->&->); auto; [|congruence].
   easy.

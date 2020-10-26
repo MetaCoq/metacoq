@@ -337,7 +337,6 @@ Proof.
       repeat constructor.
 Qed.
 
-
 Lemma conv_Prod_l_inv {cf:checker_flags} (Σ : global_env_ext) Γ na dom codom T :
   wf Σ ->
   Σ ;;; Γ |- tProd na dom codom = T ->
@@ -1137,6 +1136,21 @@ Section Inversions.
     - eapply cumul_red_r ; try eassumption.
       econstructor. assumption.
   Qed.
+  
+  Lemma cumul_mkApps Γ hd args hd' args' :
+    Σ;;; Γ |- hd <= hd' ->
+    All2 (conv Σ Γ) args args' ->
+    Σ;;; Γ |- mkApps hd args <= mkApps hd' args'.
+  Proof.
+    intros cum cum_args.
+    revert hd hd' cum.
+    induction cum_args; intros hd hd' cum; auto.
+    cbn.
+    apply IHcum_args.
+    eapply cumul_trans; auto.
+    - eapply cumul_App_l; eauto.
+    - eapply cumul_App_r; eauto.
+  Qed.
 
   Lemma conv_App_r {Γ f x y} :
     Σ ;;; Γ |- x = y ->
@@ -1298,7 +1312,112 @@ Section Inversions.
       apply ctx_rel_vass. 1: reflexivity.
       now constructor.  
   Qed.
+  
+  Lemma conv_cum_conv_ctx leq Γ Γ' T U :
+    conv_cum leq Σ Γ T U ->
+    conv_context Σ Γ Γ' ->
+    conv_cum leq Σ Γ' T U.
+  Proof.
+    destruct leq; cbn; intros; sq.
+    - eapply conv_conv_ctx; eassumption.
+    - eapply cumul_conv_ctx; eassumption.
+  Qed.
+  
+  Lemma conv_cum_red leq Γ t1 t2 t1' t2' :
+    red Σ Γ t1' t1 ->
+    red Σ Γ t2' t2 ->
+    conv_cum leq Σ Γ t1 t2 ->
+    conv_cum leq Σ Γ t1' t2'.
+  Proof.
+    intros r1 r2 cc.
+    destruct leq; cbn in *.
+    - destruct cc.
+      constructor.
+      eapply red_conv_conv; eauto.
+      apply conv_sym.
+      eapply red_conv_conv; eauto.
+      apply conv_sym.
+      auto.
+    - destruct cc.
+      constructor.
+      eapply red_cumul_cumul; eauto.
+      eapply red_cumul_cumul_inv; eauto.
+  Qed.
 
+  Lemma conv_cum_red_conv leq Γ Γ' t1 t2 t1' t2' :
+    conv_context Σ Γ Γ' ->
+    red Σ Γ t1' t1 ->
+    red Σ Γ' t2' t2 ->
+    conv_cum leq Σ Γ t1 t2 ->
+    conv_cum leq Σ Γ t1' t2'.
+  Proof.
+    intros conv_ctx r1 r2 cc.
+    eapply conv_cum_red; [now eauto|reflexivity|].
+    eapply conv_cum_conv_ctx; eauto.
+    2: apply conv_context_sym; eauto.
+    eapply conv_cum_red; [reflexivity|now eauto|].
+    eapply conv_cum_conv_ctx; eauto.
+  Qed.
+
+  Lemma conv_cum_red_inv leq Γ t1 t2 t1' t2' :
+    red Σ Γ t1 t1' ->
+    red Σ Γ t2 t2' ->
+    conv_cum leq Σ Γ t1 t2 ->
+    conv_cum leq Σ Γ t1' t2'.
+  Proof.
+    intros r1 r2 cc.
+    destruct leq; cbn in *.
+    - destruct cc.
+      constructor.
+      eapply conv_red_l_inv; [eauto| |eauto].
+      apply conv_sym.
+      eapply conv_red_l_inv; [eauto| |eauto].
+      apply conv_sym.
+      auto.
+    - destruct cc.
+      constructor.
+      eapply cumul_red_l_inv; [eauto| |eauto].
+      eapply cumul_red_r_inv; [eauto| |eauto].
+      auto.
+  Qed.
+  
+  Lemma conv_cum_red_conv_inv leq Γ Γ' t1 t2 t1' t2' :
+    conv_context Σ Γ Γ' ->
+    red Σ Γ t1 t1' ->
+    red Σ Γ' t2 t2' ->
+    conv_cum leq Σ Γ t1 t2 ->
+    conv_cum leq Σ Γ t1' t2'.
+  Proof.
+    intros conv_ctx r1 r2 cc.
+    eapply conv_cum_red_inv; [now eauto|reflexivity|].
+    eapply conv_cum_conv_ctx; eauto.
+    2: apply conv_context_sym; eauto.
+    eapply conv_cum_red_inv; [reflexivity|now eauto|].
+    eapply conv_cum_conv_ctx; eauto.
+  Qed.
+  
+  Lemma conv_cum_red_iff leq Γ t1 t2 t1' t2' :
+    red Σ Γ t1' t1 ->
+    red Σ Γ t2' t2 ->
+    conv_cum leq Σ Γ t1 t2 <-> conv_cum leq Σ Γ t1' t2'.
+  Proof.
+    intros r1 r2.
+    split; intros cc.
+    - eapply conv_cum_red; eauto.
+    - eapply conv_cum_red_inv; eauto.
+  Qed.
+
+  Lemma conv_cum_red_conv_iff leq Γ Γ' t1 t2 t1' t2' :
+    conv_context Σ Γ Γ' ->
+    red Σ Γ t1' t1 ->
+    red Σ Γ' t2' t2 ->
+    conv_cum leq Σ Γ t1 t2 <-> conv_cum leq Σ Γ t1' t2'.
+  Proof.
+    intros conv_ctx r1 r2.
+    split; intros cc.
+    - eapply conv_cum_red_conv; eauto.
+    - eapply conv_cum_red_conv_inv; eauto.
+  Qed.
 
   Lemma cumul_Case_c :
     forall Γ indn p brs u v,
@@ -1868,17 +1987,6 @@ Section Inversions.
         * eapply conv_cumul, conv_LetIn_ty with (na := na1); tea.
   Qed.
 
-  Lemma conv_cum_conv_ctx leq Γ Γ' T U :
-    conv_cum leq Σ Γ T U ->
-    conv_context Σ Γ Γ' ->
-    conv_cum leq Σ Γ' T U.
-  Proof.
-    destruct leq; cbn; intros; sq.
-    - eapply conv_conv_ctx; eassumption.
-    - eapply cumul_conv_ctx; eassumption.
-  Qed.
-
-
   Lemma it_mkLambda_or_LetIn_conv_cum leq Γ Δ1 Δ2 t1 t2 :
       conv_context Σ (Γ ,,, Δ1) (Γ ,,, Δ2) ->
       conv_cum leq Σ (Γ ,,, Δ1) t1 t2 ->
@@ -2386,6 +2494,92 @@ Notation conv_terms Σ Γ := (All2 (conv Σ Γ)).
 
 Instance conv_terms_Proper {cf:checker_flags} Σ Γ : CMorphisms.Proper (eq ==> eq ==> arrow)%signature (conv_terms Σ Γ).
 Proof. intros x y -> x' y' -> f. exact f. Qed.
+
+Lemma conv_terms_alt {cf:checker_flags} Σ Γ args args' :
+  conv_terms Σ Γ args args' <~>
+  ∑ argsr argsr',
+    All2 (red Σ Γ) args argsr ×
+    All2 (red Σ Γ) args' argsr' ×
+    All2 (eq_term Σ Σ) argsr argsr'.
+Proof.
+  split.
+  - intros conv.
+    induction conv.
+    + exists [], []; eauto with pcuic.
+    + apply conv_alt_red in r as (xr&yr&(xred&yred)&xy).
+      specialize IHconv as (argsr&argsr'&?&?&?).
+      exists (xr :: argsr), (yr :: argsr').
+      eauto 7 with pcuic.
+  - intros (argsr&argsr'&r&r'&eqs).
+    induction eqs in args, args', r, r' |- *; depelim r; depelim r'; [constructor|].
+    constructor; auto.
+    apply conv_alt_red; eauto.
+Qed.
+
+Lemma conv_terms_conv_ctx {cf:checker_flags} (Σ : global_env_ext) Γ Γ' ts ts' :
+  wf Σ ->
+  conv_context Σ Γ Γ' ->
+  conv_terms Σ Γ ts ts' ->
+  conv_terms Σ Γ' ts ts'.
+Proof.
+  intros wf ctx conv.
+  induction conv; [constructor|].
+  constructor; auto.
+  eapply conv_conv_ctx; eauto.
+Qed.
+
+Lemma conv_terms_red {cf:checker_flags} (Σ : global_env_ext) Γ ts ts' tsr tsr' :
+  All2 (red Σ Γ) ts tsr ->
+  All2 (red Σ Γ) ts' tsr' ->
+  conv_terms Σ Γ tsr tsr' ->
+  conv_terms Σ Γ ts ts'.
+Proof.
+  intros all all' conv.
+  induction conv in ts, ts', all, all' |- *; depelim all; depelim all'; [constructor|].
+  constructor; [|auto].
+  eapply red_conv_conv; eauto.
+  symmetry.
+  eapply red_conv_conv; eauto.
+  symmetry.
+  eauto.
+Qed.
+
+Lemma conv_terms_red_inv {cf:checker_flags} (Σ : global_env_ext) Γ ts ts' tsr tsr' :
+  wf Σ ->
+  All2 (red Σ Γ) ts tsr ->
+  All2 (red Σ Γ) ts' tsr' ->
+  conv_terms Σ Γ ts ts' ->
+  conv_terms Σ Γ tsr tsr'.
+Proof.
+  intros wf all all' conv.
+  induction conv in tsr, tsr', all, all' |- *; depelim all; depelim all'; [constructor|].
+  constructor; [|auto].
+  eapply conv_red_l_inv; [eauto| |eauto].
+  symmetry.
+  eapply conv_red_l_inv; [eauto| |eauto].
+  symmetry.
+  eauto.
+Qed.
+
+Lemma conv_terms_red_conv {cf:checker_flags} (Σ : global_env_ext) Γ Γ' ts ts' tsr tsr' :
+  wf Σ ->
+  conv_context Σ Γ Γ' ->
+  All2 (red Σ Γ) ts tsr ->
+  All2 (red Σ Γ') ts' tsr' ->
+  conv_terms Σ Γ tsr tsr' ->
+  conv_terms Σ Γ ts ts'.
+Proof.
+  intros wf convctx all all2 conv.
+  eapply conv_terms_red.
+  1: eassumption.
+  1: apply All2_same; reflexivity.
+  eapply conv_terms_conv_ctx; eauto.
+  1: eapply conv_context_sym; eauto.
+  eapply conv_terms_red.
+  1: apply All2_same; reflexivity.
+  1: eauto.
+  eapply conv_terms_conv_ctx; eauto.
+Qed.
 
 Lemma cumul_subst_conv {cf:checker_flags} (Σ : global_env_ext) Γ Δ Δ' Γ' s s' b : wf Σ ->
   All2 (conv Σ Γ) s s' ->

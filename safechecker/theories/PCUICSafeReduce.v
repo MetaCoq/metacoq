@@ -865,7 +865,7 @@ Section Reduce.
     constructor.
     cbn in hh. rewrite zipc_appstack in hh. cbn in hh.
     zip fold in hh. apply wellformed_context in hh. 2: assumption.
-    simpl in hh. apply Proj_Constuct_ind_eq in hh. all: eauto.
+    simpl in hh. apply Proj_Construct_ind_eq in hh. all: eauto.
     subst. constructor. eauto.
   Qed.
   Next Obligation.
@@ -1364,6 +1364,7 @@ Section Reduce.
   Proof.
     intros shape wh typ.
     destruct hΣ as [wfΣ].
+    assert (typ' := typ).
     apply inversion_Proj in typ as (?&?&?&?&?&?&?&?&?); auto.
     cbn in *.
     eapply whnf_non_ctor_non_cofix_ind_typed; try eassumption.
@@ -1371,7 +1372,8 @@ Section Reduce.
       rewrite decompose_app_mkApps by (now destruct hd).
       cbn.
       destruct hd; try easy.
-      eapply PCUICInductiveInversion.projected_constructor_eq in d; [|eassumption|eassumption].
+      destruct p as ((?&?)&?).
+      eapply PCUICInductiveInversion.invert_Proj_Construct in typ' as (->&->&?); auto.
       congruence.
     - unfold isCoFix_app.
       now rewrite decompose_app_mkApps; destruct hd.

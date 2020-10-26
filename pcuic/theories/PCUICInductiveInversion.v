@@ -1634,75 +1634,6 @@ Proof.
   constructor. constructor.
 Qed.
 
-Lemma Case_Construct_ind_eq {cf:checker_flags} Σ (hΣ : ∥ wf Σ.1 ∥) 
-  {Γ ind ind' npar pred i u brs args} :
-  (∑ T, Σ ;;; Γ |- tCase (ind, npar) pred (mkApps (tConstruct ind' i u) args) brs : T) ->
-  ind = ind'.
-Proof.
-  destruct hΣ as [wΣ].
-  intros [A h].
-  apply inversion_Case in h as ih ; auto.
-  destruct ih
-    as [uni [args' [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]].
-    pose proof ht0 as typec.
-    eapply inversion_mkApps in typec as [A' [tyc tyargs]]; auto.
-    eapply (inversion_Construct Σ wΣ) in tyc as [mdecl' [idecl' [cdecl' [wfl [declc [Hu tyc]]]]]].
-    epose proof (PCUICInductiveInversion.Construct_Ind_ind_eq _ ht0 declc); eauto.
-    destruct on_declared_constructor as [[onmind oib] [cs [? ?]]].
-    simpl in *.
-    intuition auto.
-Qed.
-
-Lemma Proj_Constuct_ind_eq {cf:checker_flags} Σ (hΣ : ∥ wf Σ.1 ∥) {Γ i i' pars narg c u l} :
-  (∑ T, Σ ;;; Γ |- tProj (i, pars, narg) (mkApps (tConstruct i' c u) l) : T) ->
-  i = i'.
-Proof.
-  destruct hΣ as [wΣ].
-  intros [T h].
-  apply inversion_Proj in h ; auto.
-  destruct h as [uni [mdecl [idecl [pdecl [args' [? [hc [? ?]]]]]]]].
-  pose proof hc as typec.
-  eapply inversion_mkApps in typec as [A' [tyc tyargs]]; auto.
-  eapply (inversion_Construct Σ wΣ) in tyc as [mdecl' [idecl' [cdecl' [wfl [declc [Hu tyc]]]]]].
-  epose proof (PCUICInductiveInversion.Construct_Ind_ind_eq _ hc declc); eauto.
-  destruct on_declared_constructor as [[onmind oib] [cs [? ?]]].
-  simpl in *.
-  intuition auto.
-Qed.
-
-Lemma Proj_Constuct_projargs {cf:checker_flags} Σ (hΣ : ∥ wf Σ.1 ∥) {Γ i pars narg c u l} :
-  (∑ T, Σ ;;; Γ |- tProj (i, pars, narg) (mkApps (tConstruct i c u) l) : T) ->
-  pars + narg < #|l|.
-Proof.
-  destruct hΣ as [wΣ].
-  intros [T h].
-  apply inversion_Proj in h ; auto.
-  destruct h as [uni [mdecl [idecl [pdecl [args' [? [hc [? ?]]]]]]]].
-  clear c0.
-  pose proof hc as typec.
-  eapply inversion_mkApps in typec as [A' [tyc tyargs]]; auto.
-  eapply (inversion_Construct Σ wΣ) in tyc as [mdecl' [idecl' [cdecl' [wfl [declc [Hu tyc]]]]]].
-  pose proof (declared_inductive_inj d.p1 declc.p1) as [? ?]; subst mdecl' idecl'.
-  set (declc' :=  
-   (conj (let (x, _) := d in x) declc.p2) : declared_constructor Σ.1  mdecl idecl (i, c) cdecl').
-  epose proof (PCUICInductiveInversion.Construct_Ind_ind_eq _ hc declc'); eauto.
-  simpl in X.
-  destruct (on_declared_projection wΣ d).
-  set (oib := declared_inductive_inv _ _ _ _) in *.
-  simpl in *. 
-  set (foo := (All2_nth_error_Some _ _ _ _)) in X.
-  clearbody foo.
-  destruct (ind_cshapes oib) as [|? []] eqn:Heq; try contradiction.
-  destruct foo as [t' [ntht' onc]].
-  destruct c; simpl in ntht'; try discriminate.
-  noconf ntht'.
-  2:{ rewrite nth_error_nil in ntht'. discriminate. }
-  destruct X as [[[_ Ru] Hl] Hpars]. rewrite Hl.
-  destruct d as [decli [nthp parseq]].
-  simpl in *. rewrite parseq.
-  destruct y as [[_ onps] onp]. lia.
-Qed.
-
 Lemma declared_inductive_unique {Σ mdecl idecl p} (q r : declared_inductive Σ mdecl p idecl) : q = r.
 Proof.
   unfold declared_inductive in q, r.
@@ -1722,37 +1653,77 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma projected_constructor_eq
-      {cf:checker_flags} Σ (hΣ : ∥wf Σ.1∥) Γ ind c u args ind' u' args' mib oib npars idx proj :
-  Σ;;; Γ |- mkApps (tConstruct ind c u) args : mkApps (tInd ind' u') args' ->
-  declared_projection Σ.1 mib oib (ind', npars, idx) proj ->
-  c = 0.
+Lemma invert_Case_Construct {cf:checker_flags} Σ (hΣ : ∥ wf Σ.1 ∥) 
+  {Γ ind ind' npar pred i u brs args T} :
+  Σ ;;; Γ |- tCase (ind, npar) pred (mkApps (tConstruct ind' i u) args) brs : T ->
+  ind = ind'.
 Proof.
-  intros typ decl.
-  destruct hΣ as [wfΣ].
-  pose proof (inversion_mkApps wfΣ typ) as (?&ctor_typ&_); auto.
-  apply inversion_Construct in ctor_typ as (?&?&?&?&?&?&?); auto.
-  unshelve eapply Construct_Ind_ind_eq in typ.
-  5: eassumption.
-  1: now auto.
-  cbn in typ.
-  destruct d; cbn in typ.
-  destruct All2_nth_error_Some; cbn in typ.
-  destruct p; cbn in typ.
-  destruct typ as ((((<-&?)&?)&?)&?).
-  pose proof (on_declared_projection wfΣ decl) as (_&proj').
-  clear -e0 proj'.
-  cbn in *.
-  destruct decl as (decl_oib&?&?).
-  pose proof (declared_inductive_unique_sig decl_oib d) as H'.
-  noconf H'.
-  destruct ind_cshapes; [easy|].
-  destruct l; [|easy].
-  destruct c; [easy|].
-  cbn in *.
-  now rewrite nth_error_nil in e0.
+  destruct hΣ as [wΣ].
+  intros h.
+  apply inversion_Case in h as ih ; auto.
+  destruct ih
+    as [uni [args' [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]].
+  pose proof ht0 as typec.
+  eapply inversion_mkApps in typec as [A' [tyc tyargs]]; auto.
+  eapply (inversion_Construct Σ wΣ) in tyc as [mdecl' [idecl' [cdecl' [wfl [declc [Hu tyc]]]]]].
+  epose proof (PCUICInductiveInversion.Construct_Ind_ind_eq _ ht0 declc); eauto.
+  destruct on_declared_constructor as [[onmind oib] [cs [? ?]]].
+  simpl in *.
+  intuition auto.
 Qed.
 
+Lemma Proj_Construct_ind_eq {cf:checker_flags} Σ (hΣ : ∥ wf Σ.1 ∥) {Γ i i' pars narg c u l T} :
+  Σ ;;; Γ |- tProj (i, pars, narg) (mkApps (tConstruct i' c u) l) : T ->
+  i = i'.
+Proof.
+  destruct hΣ as [wΣ].
+  intros h.
+  apply inversion_Proj in h ; auto.
+  destruct h as [uni [mdecl [idecl [pdecl [args' [? [hc [? ?]]]]]]]].
+  pose proof hc as typec.
+  eapply inversion_mkApps in typec as [A' [tyc tyargs]]; auto.
+  eapply (inversion_Construct Σ wΣ) in tyc as [mdecl' [idecl' [cdecl' [wfl [declc [Hu tyc]]]]]].
+  epose proof (PCUICInductiveInversion.Construct_Ind_ind_eq _ hc declc); eauto.
+  destruct on_declared_constructor as [[onmind oib] [cs [? ?]]].
+  simpl in *.
+  intuition auto.
+Qed.
+
+Lemma invert_Proj_Construct {cf:checker_flags} Σ (hΣ : ∥ wf Σ.1 ∥) {Γ i i' pars narg c u l T} :
+  Σ ;;; Γ |- tProj (i, pars, narg) (mkApps (tConstruct i' c u) l) : T ->
+  i = i' /\ c = 0 /\ pars + narg < #|l|.
+Proof.
+  intros h.
+  assert (h' := h).
+  apply Proj_Construct_ind_eq in h' as <-; auto.
+  destruct hΣ as [wΣ].
+  split; [reflexivity|].
+  apply inversion_Proj in h ; auto.
+  destruct h as [uni [mdecl [idecl [pdecl [args' [? [hc [? ?]]]]]]]].
+  clear c0.
+  pose proof hc as typec.
+  eapply inversion_mkApps in typec as [A' [tyc tyargs]]; auto.
+  eapply (inversion_Construct Σ wΣ) in tyc as [mdecl' [idecl' [cdecl' [wfl [declc [Hu tyc]]]]]].
+  pose proof (declared_inductive_unique_sig d.p1 declc.p1) as H; noconf H.
+  set (declc' :=  
+   (conj (let (x, _) := d in x) declc.p2) : declared_constructor Σ.1  mdecl idecl (i, c) cdecl').
+  epose proof (PCUICInductiveInversion.Construct_Ind_ind_eq _ hc declc'); eauto.
+  simpl in X.
+  destruct (on_declared_projection wΣ d).
+  set (oib := declared_inductive_inv _ _ _ _) in *.
+  simpl in *. 
+  set (foo := (All2_nth_error_Some _ _ _ _)) in X.
+  clearbody foo.
+  destruct (ind_cshapes oib) as [|? []] eqn:Heq; try contradiction.
+  destruct foo as [t' [ntht' onc]].
+  destruct c; simpl in ntht'; try discriminate.
+  noconf ntht'.
+  2:{ rewrite nth_error_nil in ntht'. discriminate. }
+  destruct X as [[[_ Ru] Hl] Hpars]. rewrite Hl.
+  destruct d as [decli [nthp parseq]].
+  simpl in *. rewrite parseq.
+  destruct y as [[_ onps] onp]. lia.
+Qed.
 
 Ltac unf_env := 
   change PCUICEnvironment.it_mkProd_or_LetIn with it_mkProd_or_LetIn in *; 

@@ -20,18 +20,6 @@ Set Default Goal Selector "!".
 Section fixed.
   Context {cf : checker_flags}.
   Context (Σ : global_env_ext).
-  Context (wf : ∥wf_ext Σ∥).
-  
-  Definition conv_pb_rel (pb : conv_pb) :=
-    match pb with
-    | Conv => eq_universe
-    | Cumul => leq_universe
-    end.
-  
-  Definition eq_termp_napp leq napp :=
-    eq_term_upto_univ_napp Σ (eq_universe Σ) (conv_pb_rel leq Σ) napp.
-  
-  Notation eq_termp leq := (eq_termp_napp leq 0).
   
   Definition isIndConstructApp (t : term) : bool :=
     match (decompose_app t).1 with
@@ -62,46 +50,6 @@ Section fixed.
     - discriminate not_ind.
     - discriminate not_ind.
   Qed.
-
-  Lemma whne_red1_isIndConstructApp Γ t t' :
-    whne RedFlags.default Σ Γ t ->
-    red1 Σ Γ t t' ->
-    isIndConstructApp t' = isIndConstructApp t.
-  Proof.
-    apply (whne_red1_ind
-             RedFlags.default Σ Γ
-             (fun t t' => isIndConstructApp t' = isIndConstructApp t)); intros; cbn in *; try easy.
-    - now rewrite !(isIndConstructApp_mkApps _ [v]).
-    - now rewrite (isIndConstructApp_mkApps _ [v]), (isIndConstructApp_mkApps _ [N2]).
-    - now rewrite !isIndConstructApp_mkApps.
-    - now rewrite !isIndConstructApp_mkApps.
-    - now rewrite !isIndConstructApp_mkApps.
-  Qed.
-  
-  Lemma whnf_red1_isIndConstructApp Γ t t' :
-    whnf RedFlags.default Σ Γ t ->
-    red1 Σ Γ t t' ->
-    isIndConstructApp t' = isIndConstructApp t.
-  Proof.
-    intros wh r.
-    depelim wh.
-    - eapply whne_red1_isIndConstructApp; eauto.
-    - depelim r; solve_discr.
-    - depelim r; auto; solve_discr.
-    - depelim r; auto; solve_discr.
-    - apply red1_mkApps_tConstruct_inv in r as (?&->&?).
-      now rewrite !isIndConstructApp_mkApps.
-    - apply red1_mkApps_tInd_inv in r as (?&->&?).
-      now rewrite !isIndConstructApp_mkApps.
-    - apply red1_mkApps_tFix_inv in r.
-      2: { destruct unfold_fix as [(?&?)|]; [|easy].
-           now unfold is_constructor; rewrite H. }
-      now destruct r as [[(?&->&o)|(?&->&o)]|(?&->&o)];
-        rewrite !isIndConstructApp_mkApps.
-    - apply red1_mkApps_tCoFix_inv in r.
-      now destruct r as [[(?&->&o)|(?&->&o)]|(?&->&o)];
-        rewrite !isIndConstructApp_mkApps.
-  Qed.
   
   Lemma whnf_red_isIndConstructApp Γ t t' :
     whnf RedFlags.default Σ Γ t ->
@@ -109,56 +57,18 @@ Section fixed.
     isIndConstructApp t' = isIndConstructApp t.
   Proof.
     intros wh r.
-    induction r in wh |- * using red_rect_n1.
-    - easy.
-    - apply whnf_red1_isIndConstructApp in X as ->; eauto.
-      eapply whnf_pres; eauto.
-  Qed.
-
-  Lemma conv_cum_alt leq Γ t t' :
-    conv_cum leq Σ Γ t t' <->
-    ∥∑ v v', (red Σ Γ t v × red Σ Γ t' v') × eq_termp leq v v'∥.
-  Proof.
-    assert (forall P Q, (P <~> Q) -> (∥P∥ <-> ∥Q∥)) by
-        (intros P Q H; split; intros [p]; constructor; apply H in p; auto).
-    destruct leq; cbn; apply H; [apply conv_alt_red|apply cumul_alt].
-  Qed.
-  
-  Lemma conv_terms_alt Γ args args' :
-    conv_terms Σ Γ args args' <~>
-    ∑ argsr argsr',
-      All2 (red Σ Γ) args argsr ×
-      All2 (red Σ Γ) args' argsr' ×
-      All2 (eq_term Σ Σ) argsr argsr'.
-  Proof.
-    split.
-    - intros conv.
-      induction conv.
-      + exists [], []; eauto with pcuic.
-      + apply conv_alt_red in r as (xr&yr&(xred&yred)&xy).
-        specialize IHconv as (argsr&argsr'&?&?&?).
-        exists (xr :: argsr), (yr :: argsr').
-        eauto 7 with pcuic.
-    - intros (argsr&argsr'&r&r'&eqs).
-      induction eqs in args, args', r, r' |- *; depelim r; depelim r'; [constructor|].
-      constructor; auto.
-      apply conv_alt_red; eauto.
-  Qed.
-
-  Lemma eq_term_eq_termp leq x y :
-    eq_term Σ Σ x y ->
-    eq_termp leq x y.
-  Proof.
-    destruct leq; [easy|].
-    cbn.
-    now apply PCUICCumulProp.eq_term_upto_univ_napp_leq.
+    eapply whnf_red_inv in r; eauto.
+    induction r; auto.
+    rewrite (isIndConstructApp_mkApps _ [arg']), (isIndConstructApp_mkApps _ [arg]).
+    apply IHr.
+    now apply whnf_mkApps_inv with (l := [arg]) in wh.
   Qed.
   
   Lemma eq_termp_mkApps_inv leq v args v' args' :
     isApp v = false ->
     isApp v' = false ->
-    eq_termp leq (mkApps v args) (mkApps v' args') ->
-    eq_termp_napp leq #|args| v v' × All2 (fun x y => eq_term Σ Σ x y) args args'.
+    eq_termp leq Σ (mkApps v args) (mkApps v' args') ->
+    eq_termp_napp leq Σ #|args| v v' × All2 (fun x y => eq_term Σ Σ x y) args args'.
   Proof.
     intros noapp1 noapp2 eq.
     now apply eq_term_upto_univ_mkApps_inv in eq as (?&?).
@@ -167,7 +77,7 @@ Section fixed.
   Definition conv_cum_napp leq Γ napp t t' :=
     match t with
     | tInd _ _
-    | tConstruct _ _ _ => ∥eq_termp_napp leq napp t t'∥
+    | tConstruct _ _ _ => ∥eq_termp_napp leq Σ napp t t'∥
     | _ => conv_cum leq Σ Γ t t'
     end.
 
@@ -187,21 +97,18 @@ Section fixed.
     { erewrite whnf_red_isApp.
       3: eauto.
       1: assumption.
-      apply whnf_mkApps_inv in wh; auto.
-      now rewrite notapp. }
+      apply whnf_mkApps_inv in wh; auto. }
     assert (isApp x = false).
     { erewrite whnf_red_isApp.
       3: eauto.
       1: assumption.
-      apply whnf_mkApps_inv in wh'; auto.
-      now rewrite notapp'. }
+      apply whnf_mkApps_inv in wh'; auto. }
     apply eq_termp_mkApps_inv in e as (?&?); auto.
     constructor.
     split.
     - assert (isIndConstructApp x1 = isIndConstructApp hd).
       { eapply whnf_red_isIndConstructApp; eauto.
-        apply whnf_mkApps_inv in wh; auto.
-        now rewrite notapp. }
+        apply whnf_mkApps_inv in wh; auto. }
       destruct hd.
       all: cbn.
       1-9, 12-15: apply conv_cum_alt.
@@ -213,7 +120,7 @@ Section fixed.
       all: apply whnf_mkApps_inv in wh; auto.
       all: eapply whnf_red_inv in r; auto.
       all: depelim r.
-      all: apply whnf_mkApps_inv in wh'; auto; [|now rewrite notapp'].
+      all: apply whnf_mkApps_inv in wh'; auto.
       all: eapply whnf_red_inv in r0; auto.
       all: depelim e.
       all: depelim r0.
@@ -321,45 +228,5 @@ Section fixed.
     constructor.
     split; [easy|].
     now apply conv_alt_red; exists c'0, c'1.
-  Qed.
-  
-  (* TODO: Move to a place that actually should be depending on typing *)
-  Lemma conv_cum_red_inv leq Γ t1 t2 t1' t2' :
-    conv_cum leq Σ Γ t1 t2 ->
-    red Σ Γ t1 t1' ->
-    red Σ Γ t2 t2' ->
-    conv_cum leq Σ Γ t1' t2'.
-  Proof.
-    destruct wf.
-    intros cc r1 r2.
-    destruct leq; cbn in *.
-    - destruct cc.
-      constructor.
-      eapply PCUICConversion.conv_red_l_inv; [eauto| |eauto].
-      apply conv_sym.
-      eapply PCUICConversion.conv_red_l_inv; [eauto| |eauto].
-      apply conv_sym.
-      auto.
-    - destruct cc.
-      constructor.
-      eapply PCUICConversion.cumul_red_l_inv; [eauto| |eauto].
-      eapply PCUICConversion.cumul_red_r_inv; [eauto| |eauto].
-      auto.
-  Qed.
-  
-  Lemma conv_cum_red_inv' leq Γ Γ' t1 t2 t1' t2' :
-    conv_context Σ Γ Γ' ->
-    conv_cum leq Σ Γ t1 t2 ->
-    red Σ Γ t1 t1' ->
-    red Σ Γ' t2 t2' ->
-    conv_cum leq Σ Γ t1' t2'.
-  Proof.
-    intros cc r1 r2 conv_ctx.
-    destruct wf.
-    eapply conv_cum_red_inv; [|now eauto|reflexivity].
-    eapply conv_cum_conv_ctx; eauto.
-    2: apply conv_context_sym; eauto.
-    eapply conv_cum_red_inv; [|reflexivity|now eauto].
-    eapply conv_cum_conv_ctx; eauto.
   Qed.
 End fixed.

@@ -1721,7 +1721,7 @@ Section CheckLeq2.
     exact I.
   Qed.
   
-  Lemma leq_universe_spec' u1 u2 :
+  Lemma check_leqb_universe_complete u1 u2 :
     levels_declared u1 ->
     levels_declared u2 ->
     leq_universe uctx.2 u1 u2 ->
@@ -1757,7 +1757,7 @@ Section CheckLeq2.
       (destruct (gc_of_constraints uctx.2); [cbn in *|contradiction HG]); tas.
   Qed.
   
-  Lemma eq_universe_spec' u1 u2 :
+  Lemma check_eqb_universe_complete u1 u2 :
     levels_declared u1 ->
     levels_declared u2 ->
     eq_universe uctx.2 u1 u2 ->

@@ -2165,13 +2165,12 @@ Section Conversion.
       } ;
 
     | prog_view_Case ind par p c brs ind' par' p' c' brs'
-      with inspect (eqb (ind, par) (ind', par')) := {
-      | @exist true eq4
-        with inspect (reduce_term RedFlags.default Σ hΣ (Γ ,,, stack_context π1) c _) := {
-        | @exist cred eq1 with inspect (eqb_term cred c) := {
-          | @exist true eq3 with inspect (reduce_term RedFlags.default Σ hΣ (Γ ,,, stack_context π2) c' _) := {
-            | @exist cred' eq2 with inspect (eqb_term cred' c') := {
-              | @exist true eq5 with
+      with inspect (reduce_term RedFlags.default Σ hΣ (Γ ,,, stack_context π1) c _) := {
+      | @exist cred eq1 with inspect (eqb_term cred c) := {
+        | @exist true eq3 with inspect (reduce_term RedFlags.default Σ hΣ (Γ ,,, stack_context π2) c' _) := {
+          | @exist cred' eq2 with inspect (eqb_term cred' c') := {
+            | @exist true eq5 with inspect (eqb (ind, par) (ind', par')) := {
+              | @exist true eq4 with
                   isconv_red_raw Conv
                     p (Case_p (ind, par) c brs π1)
                     p' (Case_p (ind',par') c' brs' π2)
@@ -2194,29 +2193,27 @@ Section Conversion.
                   } ;
                 | Error e := Error e
                 } ;
-              | @exist false eq5 :=
-                isconv_red leq
-                  (tCase (ind, par) p c brs) π1
-                  (tCase (ind', par') p' cred' brs') π2
-                  aux
-              }
-            } ;
-          | @exist false eq3 :=
-            isconv_red leq
-              (tCase (ind, par) p cred brs) π1
-              (tCase (ind', par') p' c' brs') π2
-              aux
-          }
-        } ;
-      | @exist false eq4 :=
-        Error (
-          CaseOnDifferentInd
-            (Γ ,,, stack_context π1) ind par p c brs
-            (Γ ,,, stack_context π2) ind' par' p' c' brs'
-        )
+              | @exist false eq4 :=
+                Error (
+                  CaseOnDifferentInd
+                    (Γ ,,, stack_context π1) ind par p c brs
+                    (Γ ,,, stack_context π2) ind' par' p' c' brs'
+                )
+              } ;
+            | @exist false eq5 :=
+              isconv_red leq
+                (tCase (ind, par) p c brs) π1
+                (tCase (ind', par') p' cred' brs') π2
+                aux
+            }
+          } ;
+        | @exist false eq3 :=
+          isconv_red leq
+            (tCase (ind, par) p cred brs) π1
+            (tCase (ind', par') p' c' brs') π2
+            aux
+        }
       } ;
-
-
 
     (* Incomplete alternative *)
     (* NOTE that it presents a syntactic optimisation that is removed

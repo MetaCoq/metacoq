@@ -44,6 +44,11 @@ Register Coq.Init.Specif.existT as metacoq.sigma.intro.
 Register MetaCoq.Template.TemplateMonad.Common.existT_typed_term as metacoq.sigma.typed_term.
 
 (* Ast *)
+Register MetaCoq.Template.BasicAst.relevance as metacoq.ast.relevance.
+Register MetaCoq.Template.BasicAst.Relevant as metacoq.ast.Relevant.
+Register MetaCoq.Template.BasicAst.Irrelevant as metacoq.ast.Irrelevant.
+Register MetaCoq.Template.BasicAst.mkBindAnn as metacoq.ast.mkBindAnn.
+Register MetaCoq.Template.BasicAst.aname as metacoq.ast.aname.
 
 Register MetaCoq.Template.BasicAst.nAnon as metacoq.ast.nAnon.
 Register MetaCoq.Template.BasicAst.nNamed as metacoq.ast.nNamed.

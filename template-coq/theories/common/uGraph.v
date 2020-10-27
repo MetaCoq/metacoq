@@ -142,75 +142,57 @@ Definition gc_of_constraint `{checker_flags} (uc : UnivConstraint.t)
      let singleton := fun x => Some (GoodConstraintSet.singleton x) in
      let pair := fun x y => Some (GoodConstraintSet_pair x y) in
      match uc with
-     (* SProp _ _ *)
-     (* CHECKME:SPROP: the rules are the same as for Prop *)
-     | (Level.lSProp, Le, Level.lSProp) => empty
-     | (Level.lSProp, Le, _) => if prop_sub_type then empty else None
-     | (Level.lSProp, Eq, Level.lSProp) => empty
-     | (Level.lSProp, Eq, _) => None
-     | (Level.lSProp, Lt, Level.lSProp) => None
-     | (Level.lSProp, Lt, _) => if prop_sub_type then empty else None
+     (* (* SProp _ _ *) *)
+     (* (* CHECKME:SPROP: the rules are the same as for Prop *) *)
+     (* | (Level.lSProp, Le, Level.lSProp) => empty *)
+     (* | (Level.lSProp, Le, _) => if prop_sub_type then empty else None *)
+     (* | (Level.lSProp, Eq, Level.lSProp) => empty *)
+     (* | (Level.lSProp, Eq, _) => None *)
+     (* | (Level.lSProp, Lt, Level.lSProp) => None *)
+     (* | (Level.lSProp, Lt, _) => if prop_sub_type then empty else None *)
 
-     (* Prop _ _ *)
-     | (Level.lProp, Le, Level.lProp) => empty
-     | (Level.lProp, Le, _) => if prop_sub_type then empty else None
-     | (Level.lProp, Eq, Level.lProp) => empty
-     | (Level.lProp, Eq, _) => None
-     | (Level.lProp, Lt, Level.lProp) => None
-     | (Level.lProp, Lt, _) => if prop_sub_type then empty else None
+     (* (* Prop _ _ *) *)
+     (* | (Level.lProp, Le, Level.lProp) => empty *)
+     (* | (Level.lProp, Le, _) => if prop_sub_type then empty else None *)
+     (* | (Level.lProp, Eq, Level.lProp) => empty *)
+     (* | (Level.lProp, Eq, _) => None *)
+     (* | (Level.lProp, Lt, Level.lProp) => None *)
+     (* | (Level.lProp, Lt, _) => if prop_sub_type then empty else None *)
 
      (* Set _ _ *)
-     | (Level.lSet, Le, Level.lSProp) => None
-     | (Level.lSet, Le, Level.lProp) => None
      | (Level.lSet, Le, _) => empty
-     | (Level.lSet, Eq, Level.lSProp) => None
-     | (Level.lSet, Eq, Level.lProp) => None
      | (Level.lSet, Eq, Level.lSet) => empty
      | (Level.lSet, Eq, Level.Level _) => None
      | (Level.lSet, Eq, Level.Var n) => singleton (gc_eq_set n)
-     | (Level.lSet, Lt, Level.lSProp) => None
-     | (Level.lSet, Lt, Level.lProp) => None
      | (Level.lSet, Lt, Level.lSet) => None
      | (Level.lSet, Lt, Level.Level _) => empty
      | (Level.lSet, Lt, Level.Var n) => singleton (gc_lt_set n)
 
      (* Level _ _ *)
-     | (Level.Level _, Le, Level.lSProp) => None
-     | (Level.Level _, Le, Level.lProp) => None
      | (Level.Level _, Le, Level.lSet) => None
      | (Level.Level l, Le, Level.Level l')
        => singleton (gc_le (Level l) (Level l'))
      | (Level.Level l, Le, Level.Var n) => singleton (gc_le (Level l) (Var n))
-     | (Level.Level _, Eq, Level.lSProp) => None
-     | (Level.Level _, Eq, Level.lProp) => None
      | (Level.Level _, Eq, Level.lSet) => None
      | (Level.Level l, Eq, Level.Level l')
        => pair (gc_le (Level l) (Level l')) (gc_le (Level l') (Level l))
      | (Level.Level l, Eq, Level.Var n)
        => pair (gc_le (Level l) (Var n)) (gc_le (Var n) (Level l))
-     | (Level.Level _, Lt, Level.lSProp) => None
-     | (Level.Level _, Lt, Level.lProp) => None
      | (Level.Level _, Lt, Level.lSet) => None
      | (Level.Level l, Lt, Level.Level l')
        => singleton (gc_lt (Level l) (Level l'))
      | (Level.Level l, Lt, Level.Var n) => singleton (gc_lt (Level l) (Var n))
 
      (* Var _ _ *)
-     | (Level.Var _, Le, Level.lSProp) => None
-     | (Level.Var _, Le, Level.lProp) => None
      | (Level.Var n, Le, Level.lSet) => singleton (gc_eq_set n)
      | (Level.Var n, Le, Level.Level l) => singleton (gc_le (Var n) (Level l))
      | (Level.Var n, Le, Level.Var n') => singleton (gc_le (Var n) (Var n'))
-     | (Level.Var _, Eq, Level.lSProp) => None
-     | (Level.Var _, Eq, Level.lProp) => None
      | (Level.Var n, Eq, Level.lSet) => singleton (gc_eq_set n)
      | (Level.Var n, Eq, Level.Level l)
        => pair (gc_le (Var n) (Level l)) (gc_le (Level l) (Var n))
 
      | (Level.Var n, Eq, Level.Var n')
        => pair (gc_le (Var n) (Var n')) (gc_le (Var n') (Var n))
-     | (Level.Var _, Lt, Level.lSProp) => None
-     | (Level.Var _, Lt, Level.lProp) => None
      | (Level.Var _, Lt, Level.lSet) => None
      | (Level.Var n, Lt, Level.Level l) => singleton (gc_lt (Var n) (Level l))
      | (Level.Var n, Lt, Level.Var n') => singleton (gc_lt (Var n) (Var n'))
@@ -233,10 +215,9 @@ Proof.
     all: cbn -[GoodConstraintSet_pair] in *; try contradiction.
     all: rewrite ?if_true_false in *; lled; cbn -[GoodConstraintSet_pair] in *;
       try contradiction; repeat toProp; try lia.
-(*     all: apply gc_satisfies_pair in H; destruct H as [H1 H2]; cbn in *; *)
-(*       repeat toProp; try lia. *)
-(* Qed. *)
-Admitted.
+    all: apply gc_satisfies_pair in H; destruct H as [H1 H2]; cbn in *;
+      repeat toProp; try lia.
+Qed.
 
 Definition add_gc_of_constraint uc (S : option GoodConstraintSet.t)
   := S1 <- S ;;
@@ -414,13 +395,10 @@ Proof.
   rewrite H; constructor.
 Defined.
 
-Definition no_prop_levels (X : LevelSet.t) : VSet.t
-  := LevelSet.fold (fun l X => match NoPropLevel.of_level l with
-                            | inl l => VSet.add l X
-                            | inr _ => X
-                            end)
-                   X VSet.empty.
 
+Definition no_prop_levels (X : LevelSet.t) : VSet.t
+  := LevelSet.fold (fun l X =>  VSet.add (NoPropLevel.of_level l) X)
+                   X VSet.empty.
 
 Definition declared : Level.t -> LevelSet.t -> Prop := LevelSet.In.
 
@@ -463,7 +441,6 @@ Proof.
       apply VSet.add_spec; intuition.
     + apply IHl0. now left.
     + apply IHl0. right.
-      destruct (NoPropLevel.of_level a); tas.
       apply VSet.add_spec; intuition.
 Qed.
 
@@ -837,7 +814,7 @@ Section CheckLeq.
 
   
   Definition gc_level_declared l
-    := on_inl (fun l => VSet.In l uctx.1) (NoPropLevel.of_level l).
+    := VSet.In (NoPropLevel.of_level l) uctx.1.
 
   Lemma gc_level_declared_make_graph (l : NoPropLevel.t) :
     gc_level_declared l -> VSet.In l (wGraph.V G).
@@ -849,9 +826,8 @@ Section CheckLeq.
   Definition gc_expr_declared e
     := on_Some_or_None (fun l => VSet.In l uctx.1) (UnivExpr.get_noprop e).
 
-  Definition gc_levels_declared (u : Universe.t)
+  Definition gc_levels_declared (u : Universe.t0)
     := UnivExprSet.For_all gc_expr_declared u.
-
 
   Lemma val_level_of_variable_level v (l : VariableLevel.t)
     : val v (l : Level.t) = val v l.
@@ -959,34 +935,8 @@ Section CheckLeq.
 
 
   (* this is function [check_smaller_expr] of kernel/uGraph.ml *)
-  (* CHECKME:SPROP: added [SProp] cases smilarly to [Prop].
-     Comparing [SProp] and [Prop] gives [false]*)
   Definition leqb_expr_n n (e1 e2 : UnivExpr.t) :=
     match e1, e2 with
-    | UnivExpr.lProp, UnivExpr.lSProp => false
-    | UnivExpr.lSProp, UnivExpr.lProp => false
-    | UnivExpr.lSProp, UnivExpr.lSProp => false
-    | UnivExpr.npe _, UnivExpr.lSProp => false
-    | UnivExpr.lSProp, UnivExpr.npe (l, false) => match n with
-                     | O => prop_sub_type
-                     | S n => leqb_no_prop_n n lSet l
-                     end
-    | UnivExpr.lSProp, UnivExpr.npe (l, true) => match n with
-                     | O => prop_sub_type
-                     | S O => true
-                     | S (S n) => leqb_no_prop_n n lSet l
-                     end
-    | UnivExpr.lProp, UnivExpr.lProp => n =? 0
-    | UnivExpr.npe _, UnivExpr.lProp => false
-    | UnivExpr.lProp, UnivExpr.npe (l, false) => match n with
-                     | O => prop_sub_type
-                     | S n => leqb_no_prop_n n lSet l
-                     end
-    | UnivExpr.lProp, UnivExpr.npe (l, true) => match n with
-                     | O => prop_sub_type
-                     | S O => true
-                     | S (S n) => leqb_no_prop_n n lSet l
-                     end
     | UnivExpr.npe (l1, false), UnivExpr.npe (l2, false)
     | UnivExpr.npe (l1, true), UnivExpr.npe (l2, true) => leqb_no_prop_n n l1 l2
     | UnivExpr.npe (l1, true), UnivExpr.npe (l2, false) => leqb_no_prop_n (S n) l1 l2
@@ -1052,27 +1002,18 @@ Section CheckLeq.
 
   Lemma leqb_expr_n_spec0 n e e'
     : leqb_expr_n n e e'
-      -> gc_leq_universe_n n uctx.2 (Universe.make' e) (Universe.make' e').
+      -> gc_leq_universe_n n uctx.2 (Universe.lnpe (Universe.make' e))
+                          (Universe.lnpe (Universe.make' e')).
   Proof.
     unfold leqb_expr_n.
-    destruct e as [| |[l []]], e' as [| |[l' []]]; cbn in *; try discriminate;
+    destruct e as [ [l []]], e' as [[l' []]]; cbn in *;
       intros H v Hv; cbn;
-      try (apply leqb_no_prop_n_spec0 in H; specialize (H v Hv); cbn in H;
-           rewrite ?UnivExpr.val_make_npl in H; try (lled; lia)).
-    - toProp; subst; reflexivity.
-    - destruct n as [|[|n]].
-      * pose proof (NoPropLevel.val_zero l' v); lled; lia.
-      * pose proof (NoPropLevel.val_zero l' v); lled; lia.
-      * apply leqb_no_prop_n_spec0 in H. specialize (H v Hv).
-        cbn in H. rewrite ?UnivExpr.val_make_npl in H. lled; lia.
-    - destruct n.
-      * pose proof (NoPropLevel.val_zero l' v); lled; lia.
-      * apply leqb_no_prop_n_spec0 in H. specialize (H v Hv).
-        cbn in H. rewrite ?UnivExpr.val_make_npl in H. lled; lia.
-  (*   - pose proof (NoPropLevel.val_zero l v). *)
-  (*     destruct n; lled; lia. *)
-  (* Qed. *)
-  Admitted.
+        apply leqb_no_prop_n_spec0 in H;
+        specialize (H v Hv); cbn in H;
+          try pose proof (NoPropLevel.val_zero l v);
+          rewrite ?NoPropLevel.of_to_level in H;try (lled;lia).
+  Qed.
+
   Local Ltac tac0 v :=
     repeat match goal with
            | l : NoPropLevel.t |- _
@@ -1094,48 +1035,47 @@ Section CheckLeq.
         (HHl  : gc_expr_declared e)
         (HHl' : gc_expr_declared e')
     : leqb_expr_n n e e'
-      <-> gc_leq_universe_n n uctx.2 (Universe.make' e) (Universe.make' e').
+      <-> gc_leq_universe_n n uctx.2 (Universe.lnpe (Universe.make' e))
+                            (Universe.lnpe (Universe.make' e')).
   Proof.
     split; [apply leqb_expr_n_spec0|].
     unfold leqb_expr_n.
-    destruct e as [| |[l []]], e' as [| |[l' []]]; cbn; intro H;
-      destruct HC as  [v0 Hv0]; pose proof (H v0 Hv0) as H0; cbn in H0.
-    - toProp. lled; lia.
-    - destruct n as [|[|n]]; tac1; lled; try reflexivity; try lia.
-    - destruct n as [|n]; tac1; lled; try reflexivity; try lia.
-  (*   - tac1; lled; try reflexivity; try lia. *)
-  (*   - tac1; lled; try reflexivity; try lia. *)
-  (*   - tac1; lled; try reflexivity; try lia. *)
-  (*   - tac1; lled; try reflexivity; try lia. *)
-  (*   - destruct n as [|n]. *)
-  (*     + apply leqb_no_prop_n_spec; tas. *)
-  (*       intros v Hv. *)
-  (*       simple refine (let HH := constraint_strengthening l l' _ _ H v Hv in _). *)
-  (*       * red. rewrite NoPropLevel.of_to_level; tas. *)
-  (*       * red. rewrite NoPropLevel.of_to_level; tas. *)
-  (*       * clearbody HH. rewrite !Universe.val_make_npl; assumption. *)
-  (*     + tac1; lled; try reflexivity; try lia. *)
-  (*   - tac1; lled; try reflexivity; try lia. *)
-  (* Qed. *)
-Admitted.
-
+    destruct e as [[l []]], e' as [[l' []]];cbn; intro H;
+      unfold gc_leq_universe_n,val,Universe.Evaluable in H;
+      apply leqb_no_prop_n_spec; tas; intros v Hv;
+      pose proof (H v Hv) as HH; cbn in HH;
+      cbn in *;rewrite ?NoPropLevel.of_to_level;
+        tac1;try (lled;lia).
+    assert (gc_level_declared l).
+    { unfold gc_level_declared. now rewrite ?NoPropLevel.of_to_level. }
+    assert (gc_level_declared l').
+    { unfold gc_level_declared. now rewrite ?NoPropLevel.of_to_level. }
+    destruct n as [|n].
+    + cbn. apply constraint_strengthening;eauto.
+    + tac1; lled; try reflexivity; try lia.
+  Qed.
+  
   (* this is function [exists_bigger] of kernel/uGraph.ml *)
   Definition leqb_expr_univ_n n (e1 : UnivExpr.t ) (u : Universe.t) :=
-    if UnivExpr.is_prop e1 && (n =? 0) then
-      prop_sub_type || Universe.is_prop u
-    else
-      let '(e2, u) := Universe.exprs u in
+    match u with
+      | Universe.lSProp | Universe.lProp => false
+    (* if UnivExpr.is_prop e1 && (n =? 0) then *)
+    (*   prop_sub_type || Universe.is_prop u *)
+                                             (* else *)
+      | Universe.lnpe l =>
+      let '(e2, u) := Universe.exprs l in
       List.fold_left (fun b e2 => leqb_expr_n n e1 e2 || b)
-                     u (leqb_expr_n n e1 e2).
+                     u (leqb_expr_n n e1 e2)
+    end.
 
-  Lemma no_prop_not_zero_le_zero e n :
-    UnivExpr.is_prop e && (n =? 0) = false
-    -> forall v, (0 <= Z.of_nat n + val v e)%Z.
+  Lemma no_prop_not_zero_le_zero (e : UnivExpr.t) n :
+    (* (n =? 0) = false -> *)
+    forall v, (0 <= Z.of_nat n + val v e)%Z.
   Proof.
-    intros Hp v. apply andb_false_iff in Hp; destruct Hp as [H|H].
-  (*   apply (UnivExpr.is_prop_val_false e) with (v:=v) in H. lia. *)
-  (*   pose proof (UnivExpr.val_minus_one e v). *)
-  (*   destruct n; [discriminate|lia]. *)
+    intros v. (* apply andb_false_iff in Hp; destruct Hp as [H|H]. *)
+    (* apply (UnivExpr.is_prop_val_false e) with (v:=v) in H. lia. *)
+    pose proof (UnivExpr.val_minus_one e v).
+    destruct n; try lia. [discriminate|lia].
   (* Qed. *)
   Admitted.
 

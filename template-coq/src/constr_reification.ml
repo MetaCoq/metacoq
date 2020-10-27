@@ -58,7 +58,6 @@ struct
     lazy (Coqlib.lib_ref tm)
 
   let ast s = resolve ("metacoq.ast." ^ s)
-  let basicAst s = resolve ("metacoq.basicAst." ^ s)
   let template s = resolve ("metacoq.template." ^ s)
   let template_ref s = resolve_ref ("metacoq.template." ^ s)
 

@@ -1,3 +1,4 @@
+Require Import String.
 Require Import MetaCoq.Template.Ast.
 Require Import MetaCoq.Template.Loader.
 
@@ -13,3 +14,5 @@ Locate nAnon.
 MetaCoq Quote Recursively Definition zzz' := (fun x : nat => x).
 
 MetaCoq Quote Recursively Definition zzz := blah.
+
+MetaCoq Unquote Definition ddd := (snd zzz).

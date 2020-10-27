@@ -1468,11 +1468,11 @@ Section Lemmata.
     intros behaves wh conv.
     induction wh; eauto using whne.
     destruct nth_error eqn:nth; [|easy].
-    cbn in H.
+    cbn in *.
     eapply context_relation_nth in nth; eauto.
-    destruct nth as (?&?&?&?).
+    destruct nth as (?&eq&?&?).
     constructor.
-    rewrite e.
+    rewrite eq.
     cbn.
     specialize (behaves _ _ _ _ r).
     f_equal.

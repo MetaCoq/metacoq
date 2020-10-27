@@ -406,7 +406,7 @@ Section Typecheck.
     apply reduce_term_sound.
   Defined.
   
-  Theorem hnf_complete {Γ t h} : whnf RedFlags.default Σ Γ (hnf Γ t h).
+  Theorem hnf_complete {Γ t h} : ∥whnf RedFlags.default Σ Γ (hnf Γ t h)∥.
   Proof.
     apply reduce_term_complete.
   Qed.
@@ -440,7 +440,7 @@ Section Typecheck.
   Proof.
     funelim (reduce_to_sort Γ t wt); try congruence.
     intros _ s r.
-    pose proof (@hnf_complete Γ t0 h).
+    pose proof (@hnf_complete Γ t0 h) as [wh].
     pose proof (@hnf_sound Γ t0 h) as [r'].
     destruct HΣ.
     eapply red_confluence in r as (?&r1&r2); eauto.
@@ -448,7 +448,7 @@ Section Typecheck.
     eapply whnf_red_inv in r1; eauto.
     depelim r1.
     clear Heq.
-    rewrite H0 in n0.
+    rewrite H in n0.
     now cbn in n0.
   Qed.
 
@@ -481,7 +481,7 @@ Section Typecheck.
   Proof.
     funelim (reduce_to_prod Γ t wt); try congruence.
     intros _ na a b r.
-    pose proof (@hnf_complete Γ t0 h).
+    pose proof (@hnf_complete Γ t0 h) as [wh].
     pose proof (@hnf_sound Γ t0 h) as [r'].
     destruct HΣ.
     eapply red_confluence in r as (?&r1&r2); eauto.
@@ -489,7 +489,7 @@ Section Typecheck.
     eapply whnf_red_inv in r1; auto.
     depelim r1.
     clear Heq.
-    rewrite H0 in n0.
+    rewrite H in n0.
     now cbn in n0.
   Qed.
   
@@ -554,6 +554,7 @@ Section Typecheck.
     pose proof (reduce_stack_whnf RedFlags.default Σ HΣ Γ t ε h) as wh.
     unfold reduce_stack in *.
     destruct reduce_stack_full as ((hd&π)&r'&stack_valid&(notapp&_)).
+    destruct wh as [wh].
     apply Req_red in r' as [r'].
     unfold Pr in stack_valid.
     cbn in *.
@@ -571,9 +572,9 @@ Section Typecheck.
     cbn in *.
     rewrite app_nil_r in wh.
     apply red_mkApps_tInd in r2 as (?&->&?); auto.
-    apply whnf_red_mkApps_inv in r1 as [(?&?)]; auto.
-    apply whnf_red_inv in r; [|now apply whnf_mkApps_inv in wh].
-    depelim r.
+    eapply whnf_red_inv in r1; eauto.
+    apply whnf_red_mkApps_inv in r1 as (?&?); auto.
+    depelim w.
     noconf e0.
     discriminate i0.
   Qed.

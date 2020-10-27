@@ -1158,10 +1158,10 @@ Section Reduce.
   (*      *) *)
   (* Abort. *)
 
-  Scheme Acc_ind' := Induction for Acc Sort Prop.
+  Scheme Acc_ind' := Induction for Acc Sort Type.
 
   Lemma Fix_F_prop :
-    forall A R P f (pred : forall x : A, P x -> Prop) x hx,
+    forall A R P f (pred : forall x : A, P x -> Type) x hx,
       (forall x aux, (forall y hy, pred y (aux y hy)) -> pred x (f x aux)) ->
       pred x (@Fix_F A R P f x hx).
   Proof.
@@ -1171,7 +1171,7 @@ Section Reduce.
   Qed.
 
   Lemma reduce_stack_prop :
-    forall Γ t π h (P : term × stack -> term × stack -> Prop),
+    forall Γ t π h (P : term × stack -> term × stack -> Type),
       (forall t π h aux,
           (forall t' π' hR, P (t', π') (` (aux t' π' hR))) ->
           P (t, π) (` (_reduce_stack Γ t π h aux))) ->
@@ -1236,14 +1236,14 @@ Section Reduce.
   Qed.
 
   Lemma whnf_non_ctor_finite_ind_typed Γ t ind u args :
+    wf Σ ->
     whnf flags Σ Γ t ->
     isConstruct_app t = false ->
     check_recursivity_kind Σ (inductive_mind ind) CoFinite = false ->
     Σ;;; Γ |- t : mkApps (tInd ind u) args ->
     whne flags Σ Γ t.
   Proof.
-    destruct hΣ.
-    intros wh ctor fin typ.
+    intros wf wh ctor fin typ.
     destruct wh.
     - easy.
     - apply inversion_Sort in typ as (?&?&?&?&?); auto.
@@ -1269,14 +1269,14 @@ Section Reduce.
     end.
 
   Lemma whnf_non_ctor_non_cofix_ind_typed Γ t ind u args :
+    wf Σ ->
     whnf flags Σ Γ t ->
     isConstruct_app t = false ->
     isCoFix_app t = false ->
     Σ;;; Γ |- t : mkApps (tInd ind u) args ->
     whne flags Σ Γ t.
   Proof.
-    destruct hΣ.
-    intros wh ctor cof typ.
+    intros wf wh ctor cof typ.
     destruct wh.
     - easy.
     - apply inversion_Sort in typ as (?&?&?&?&?); auto.
@@ -1294,6 +1294,7 @@ Section Reduce.
   Qed.
   
   Lemma whnf_fix_arg_whne mfix idx body Γ t before args aftr ty :
+    wf Σ ->
     unfold_fix mfix idx = Some (#|before|, body) ->
     match t with
     | tConstruct _ _ _ => False
@@ -1304,8 +1305,7 @@ Section Reduce.
     Σ;;; Γ |- mkApps (tFix mfix idx) (before ++ mkApps t args :: aftr) : ty ->
     whne flags Σ Γ (mkApps t args).
   Proof.
-    destruct hΣ.
-    intros uf shape wh typ.
+    intros wf uf shape wh typ.
     apply inversion_mkApps in typ as (fix_ty & typ_fix & typ_args); auto.
     apply inversion_Fix in typ_fix as (def&?&?&?&?&?&?); auto.
     eapply All_nth_error in a; eauto.
@@ -1326,6 +1326,7 @@ Section Reduce.
   Qed.
 
   Lemma whnf_case_arg_whne Γ hd args ind par p brs T :
+    wf Σ ->
     match hd with
     | tApp _ _
     | tConstruct _ _ _ 
@@ -1336,8 +1337,7 @@ Section Reduce.
     Σ;;; Γ |- tCase (ind, par) p (mkApps hd args) brs : T ->
     whne flags Σ Γ (mkApps hd args).
   Proof.
-    intros shape wh typ.
-    destruct hΣ.
+    intros wf shape wh typ.
     apply inversion_Case in typ as (?&?&?&?&?&?&?&?&?&?&?&?&?&?&?&?&?); auto.
     eapply whnf_non_ctor_finite_ind_typed; try eassumption.
     - unfold isConstruct_app.
@@ -1352,6 +1352,7 @@ Section Reduce.
   Qed.
 
   Lemma whnf_proj_arg_whne Γ hd args p T :
+    wf Σ ->
     match hd with
     | tApp _ _
     | tCoFix _ _ => False
@@ -1362,8 +1363,7 @@ Section Reduce.
     Σ;;; Γ |- tProj p (mkApps hd args) : T ->
     whne flags Σ Γ (mkApps hd args).
   Proof.
-    intros shape wh typ.
-    destruct hΣ as [wfΣ].
+    intros wf shape wh typ.
     assert (typ' := typ).
     apply inversion_Proj in typ as (?&?&?&?&?&?&?&?&?); auto.
     cbn in *.
@@ -1382,13 +1382,13 @@ Section Reduce.
   Lemma reduce_stack_whnf :
     forall Γ t π h,
       let '(u, ρ) := reduce_stack Γ t π h in
-      whnf flags Σ (Γ ,,, stack_context ρ) (zipp u ρ).
+      ∥whnf flags Σ (Γ ,,, stack_context ρ) (zipp u ρ)∥.
   Proof.
     intros Γ t π h.
     eapply reduce_stack_prop
       with (P := fun x y =>
         let '(u, ρ) := y in
-        whnf flags Σ (Γ ,,, stack_context ρ) (zipp u ρ)
+        ∥whnf flags Σ (Γ ,,, stack_context ρ) (zipp u ρ)∥
       ).
     clear.
     intros t π h aux haux.
@@ -1411,13 +1411,13 @@ Section Reduce.
       all: try solve [ constructor ; constructor ].
       all: try solve [
         unfold zipp ; case_eq (decompose_stack π) ; intros ;
-        constructor ; eapply whne_mkApps ; constructor
+        do 2 constructor ; eapply whne_mkApps ; constructor
       ].
       + unfold zipp.
         case_eq (decompose_stack π). intros l ρ e.
         apply decompose_stack_eq in e. subst.
         destruct l.
-        * simpl. eapply whnf_sort.
+        * simpl. eauto with pcuic.
         * exfalso.
           destruct hΣ.
           cbn in h. zip fold in h. apply wellformed_context in h; auto.
@@ -1432,7 +1432,7 @@ Section Reduce.
         case_eq (decompose_stack π). intros l ρ e.
         apply decompose_stack_eq in e. subst.
         destruct l.
-        * simpl. eapply whnf_prod.
+        * simpl. eauto with pcuic.
         * exfalso.
           destruct hΣ.
           cbn in h. zip fold in h. apply wellformed_context in h; auto.
@@ -1444,7 +1444,7 @@ Section Reduce.
           -- destruct H as [(?&?&?&?)].
              cbn in *; easy.
     - unfold zipp. case_eq (decompose_stack π0). intros l ρ e.
-      constructor. eapply whne_mkApps.
+      constructor. constructor. eapply whne_mkApps.
       eapply whne_rel_nozeta. assumption.
     - match goal with
       | |- context [ reduce ?x ?y ?z ] =>
@@ -1455,7 +1455,7 @@ Section Reduce.
       rewrite eq in haux. cbn in haux.
       assumption.
     - unfold zipp. case_eq (decompose_stack π0). intros.
-      constructor. eapply whne_mkApps. econstructor.
+      constructor. constructor. eapply whne_mkApps. econstructor.
       rewrite <- e. cbn.
       cbn in H. inversion H. reflexivity.
     - match goal with
@@ -1467,9 +1467,9 @@ Section Reduce.
       rewrite eq in haux. cbn in haux.
       assumption.
     - unfold zipp. case_eq (decompose_stack π1). intros.
-      constructor. eapply whne_mkApps. eapply whne_letin_nozeta. assumption.
+      constructor. constructor. eapply whne_mkApps. eapply whne_letin_nozeta. assumption.
     - unfold zipp. case_eq (decompose_stack π2). intros.
-      constructor. eapply whne_mkApps. eapply whne_const_nodelta. assumption.
+      constructor. constructor. eapply whne_mkApps. eapply whne_const_nodelta. assumption.
     - match goal with
       | |- context [ reduce ?x ?y ?z ] =>
         case_eq (reduce x y z) ;
@@ -1479,7 +1479,7 @@ Section Reduce.
       rewrite eq in haux. cbn in haux.
       assumption.
     - unfold zipp. case_eq (decompose_stack π2). intros.
-      constructor. eapply whne_mkApps. econstructor.
+      constructor. constructor. eapply whne_mkApps. econstructor.
       + symmetry. exact e.
       + reflexivity.
     - match goal with
@@ -1497,15 +1497,18 @@ Section Reduce.
       + cbn in *; subst.
         cbn in *; congruence.
       + cbn.
+        constructor.
         apply whnf_mkApps.
         apply whne_app.
         now apply whne_lam_nobeta.
     - unfold zipp.
       destruct decompose_stack.
+      constructor.
       apply whnf_mkApps.
       now apply whne_fix_nofix.
     - unfold zipp.
       destruct decompose_stack.
+      constructor.
       apply whnf_fixapp.
       now rewrite <- e.
     - unfold zipp.
@@ -1513,6 +1516,7 @@ Section Reduce.
       apply decompose_stack_noStackApp in eq as ?.
       apply decompose_stack_eq in eq.
       subst.
+      constructor.
       apply whnf_fixapp.
       rewrite <- e.
       apply <- decompose_stack_at_appstack_None; eauto.
@@ -1545,8 +1549,7 @@ Section Reduce.
       rewrite zipc_appstack in h.
       apply Req_red in r as [r].
       cbn in *.
-      eapply red_wellformed in h; eauto.
-      2: constructor; exact r.
+      eapply red_wellformed in h; eauto using sq.
       clear r.
       rewrite zipc_appstack in h.
       cbn in h.
@@ -1571,16 +1574,18 @@ Section Reduce.
       rewrite app_nil_r in *.
       rewrite <- app_assoc in *.
       cbn in *.
-      constructor.
+      destruct hΣ, haux.
       symmetry in e.
+      constructor.
+      constructor.
       eapply whne_fixapp.
       + eassumption.
       + now apply nth_error_snoc.
       + eapply whnf_fix_arg_whne; eauto.
         now destruct t2.
-
     - unfold zipp.
       destruct decompose_stack.
+      constructor.
       apply whnf_mkApps.
       now apply whne_case_noiota.
     - match goal with
@@ -1608,8 +1613,7 @@ Section Reduce.
       apply decompose_stack_eq in e0 as ->.
       apply Req_red in r as [r].
       cbn in *.
-      eapply red_wellformed in h; eauto.
-      2: constructor; exact r.
+      eapply red_wellformed in h; eauto using sq.
       clear r.
       rewrite zipc_appstack in h.
       cbn in h.
@@ -1629,6 +1633,8 @@ Section Reduce.
         try rewrite stack_context_appstack in H;
         cbn in *).
       rewrite app_nil_r in *.
+      destruct hΣ, haux.
+      constructor.
       apply whnf_mkApps, whne_case.
       eapply whnf_case_arg_whne; eauto.
       destruct H as (noapp&_).
@@ -1642,7 +1648,7 @@ Section Reduce.
       rewrite eq in haux. cbn in haux.
       assumption.
     - unfold zipp. case_eq (decompose_stack π6). intros.
-      constructor. eapply whne_mkApps. eapply whne_proj_noiota. assumption.
+      constructor. constructor. eapply whne_mkApps. eapply whne_proj_noiota. assumption.
     - match type of e with
       | _ = reduce ?x ?y ?z =>
         specialize (haux x y z);
@@ -1660,8 +1666,7 @@ Section Reduce.
       apply decompose_stack_eq in e0 as ->.
       apply Req_red in r as [r].
       cbn in *.
-      eapply red_wellformed in h; eauto.
-      2: constructor; exact r.
+      eapply red_wellformed in h; eauto using sq.
       clear r.
       rewrite zipc_appstack in h.
       cbn in h.
@@ -1681,7 +1686,8 @@ Section Reduce.
         try rewrite stack_context_appstack in H;
         cbn in *).
       rewrite app_nil_r in *.
-      apply whnf_mkApps, whne_proj.
+      destruct hΣ, haux.
+      constructor. apply whnf_mkApps, whne_proj.
       eapply whnf_proj_arg_whne; eauto.
       destruct H as (noapp&_).
       now destruct t0.
@@ -1704,7 +1710,7 @@ Section Reduce.
   Qed.
               
   Theorem reduce_term_complete Γ t h :
-    whnf flags Σ Γ (reduce_term Γ t h).
+    ∥whnf flags Σ Γ (reduce_term Γ t h)∥.
   Proof.
     pose proof (reduce_stack_whnf Γ t ε h) as H.
     unfold reduce_term.

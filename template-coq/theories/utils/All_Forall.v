@@ -1058,7 +1058,7 @@ Proof.
     eexists (y :: l, l0). repeat split; eauto.
 Qed.
 
-Lemma All2_ind_rev : forall (A B : Type) (R : A -> B -> Type) (P : forall (l : list A) (l0 : list B), Prop),
+Lemma All2_rect_rev : forall (A B : Type) (R : A -> B -> Type) (P : forall (l : list A) (l0 : list B), Type),
     P [] [] ->
     (forall (x : A) (y : B) (l : list A) (l' : list B) (r : R x y) (a : All2 R l l'),
         P l l' -> P (l ++ [x])%list (l' ++ [y]))%list ->
@@ -1067,9 +1067,18 @@ Proof.
   intros. revert l0 a. induction l using rev_ind; cbn; intros.
   - inv a. eauto.
   - eapply All2_app_inv in a as ([] & [[]]). subst.
-    inv a0. inv X0. eauto.
+    inv a0. inv X2. eauto.
 Qed.
 
+Lemma All2_ind_rev : forall (A B : Type) (R : A -> B -> Type) (P : forall (l : list A) (l0 : list B), Prop),
+    P [] [] ->
+    (forall (x : A) (y : B) (l : list A) (l' : list B) (r : R x y) (a : All2 R l l'),
+        P l l' -> P (l ++ [x])%list (l' ++ [y]))%list ->
+    forall (l : list A) (l0 : list B) (a : All2 R l l0), P l l0.
+Proof.
+  intros.
+  eapply All2_rect_rev; eauto.
+Qed.
 
 Lemma All2_app :
   forall (A B : Type) (R : A -> B -> Type),

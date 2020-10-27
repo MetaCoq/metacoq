@@ -127,7 +127,7 @@ Defined.
 Next Obligation.
   pose proof (hnf_sound HΣ (h := h)).
   repeat match goal with [H : squash (red _ _ _ _ ) |- _ ] => destruct H end.
-  destruct HΣ.
+  destruct H, HΣ.
   eapply PCUICConfluence.red_confluence in X0 as [t'' []]. 3:exact X1. 2:eauto.
   eapply invert_red_sort in r0; eauto. subst.
   eapply whnf_red_inv in r; auto.
@@ -152,7 +152,7 @@ Defined.
 Next Obligation.
   pose proof (hnf_sound HΣ (h := h)).
   repeat match goal with [H : squash (red _ _ _ _ ) |- _ ] => destruct H end.
-  destruct HΣ.
+  destruct H, HΣ.
   eapply PCUICConfluence.red_confluence in X2 as [t'' []]. 3:exact X3. 2:eauto.
   eapply invert_red_prod in r0 as (? & ? & [] & ?); eauto. subst.
   eapply whnf_red_inv in r; auto.

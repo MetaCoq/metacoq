@@ -52,16 +52,13 @@ Section fixed.
   Qed.
   
   Lemma whnf_red_isIndConstructApp Γ t t' :
-    whnf RedFlags.default Σ Γ t ->
-    red Σ Γ t t' ->
+    whnf_red Σ Γ t t' ->
     isIndConstructApp t' = isIndConstructApp t.
   Proof.
-    intros wh r.
-    eapply whnf_red_inv in r; eauto.
+    intros r.
     induction r; auto.
     rewrite (isIndConstructApp_mkApps _ [arg']), (isIndConstructApp_mkApps _ [arg]).
     apply IHr.
-    now apply whnf_mkApps_inv with (l := [arg]) in wh.
   Qed.
   
   Lemma eq_termp_mkApps_inv leq v args v' args' :
@@ -91,24 +88,14 @@ Section fixed.
   Proof.
     intros conv notapp notapp' wh wh'.
     apply conv_cum_alt in conv as [(?&?&(r1&r2)&e)].
-    apply whnf_red_mkApps_l in r1 as [(?&?&->&?&?)]; auto.
-    apply whnf_red_mkApps_l in r2 as [(?&?&->&?&?)]; auto.
-    assert (isApp x1 = false).
-    { erewrite whnf_red_isApp.
-      3: eauto.
-      1: assumption.
-      apply whnf_mkApps_inv in wh; auto. }
-    assert (isApp x = false).
-    { erewrite whnf_red_isApp.
-      3: eauto.
-      1: assumption.
-      apply whnf_mkApps_inv in wh'; auto. }
-    apply eq_termp_mkApps_inv in e as (?&?); auto.
+    apply whnf_red_inv, whnf_red_mkApps_l_inv in r1 as (?&?&->&?&?); auto.
+    apply whnf_red_inv, whnf_red_mkApps_l_inv in r2 as (?&?&->&?&?); auto.
+    apply whnf_red_isApp in w as ?.
+    apply whnf_red_isApp in w0 as ?.
+    apply eq_termp_mkApps_inv in e as (?&?); try congruence.
     constructor.
     split.
-    - assert (isIndConstructApp x1 = isIndConstructApp hd).
-      { eapply whnf_red_isIndConstructApp; eauto.
-        apply whnf_mkApps_inv in wh; auto. }
+    - apply whnf_red_isIndConstructApp in w as ?.
       destruct hd.
       all: cbn.
       1-9, 12-15: apply conv_cum_alt.
@@ -116,14 +103,10 @@ Section fixed.
       1-13: exists x1, x.
       1-13: split; [split|]; eauto with pcuic.
       1-13: (eapply eq_term_upto_univ_napp_nonind; [exact e|try exact H1]).
-      1: discriminate notapp.
-      all: apply whnf_mkApps_inv in wh; auto.
-      all: eapply whnf_red_inv in r; auto.
-      all: depelim r.
-      all: apply whnf_mkApps_inv in wh'; auto.
-      all: eapply whnf_red_inv in r0; auto.
+      1-13: cbn in *; congruence.
+      all: depelim w.
       all: depelim e.
-      all: depelim r0.
+      all: depelim w0.
       all: apply All2_length in a.
       all: constructor; constructor; rewrite a; auto.
     - clear -a1 a a0.
@@ -145,27 +128,27 @@ Section fixed.
   Proof.
     intros conv whl whr.
     depelim whl; solve_discr.
-    depelim H; solve_discr; try discriminate.
+    depelim w; solve_discr; try discriminate.
     depelim whr; solve_discr.
-    depelim H0; solve_discr; try discriminate.
-    apply conv_cum_alt in conv as [(?&?&(r1&r2)&?)].
+    depelim w0; solve_discr; try discriminate.
+    apply conv_cum_alt in conv as [(?&?&(r1&r2)&eq)].
     eapply whnf_red_inv in r1; eauto.
     eapply whnf_red_inv in r2; eauto.
     depelim r1.
     depelim r2.
-    depelim e.
+    depelim eq.
     constructor.
     split; [easy|].
     split; [apply conv_alt_red; now exists motive'0, motive'1|].
     split; [apply conv_alt_red; now exists discr'0, discr'1|].
-    clear -a X1 X4.
-    induction a in brs, brs', brs'0, brs'1, X1, X4, a |- *;
-      depelim X1; depelim X4; [now constructor|].
-    constructor.
-    + destruct p, p0, r.
-      split; [congruence|].
-      apply conv_alt_red; now exists x.2, y.2.
-    + now apply IHa.
+    clear -a a0 a1.
+    induction a in brs, brs', brs'0, brs'1, a0, a1, a |- *;
+      depelim a0; depelim a1; [now constructor|].
+    constructor; eauto.
+    destruct p, p0, r.
+    split; [congruence|].
+    apply conv_alt_red.
+    eauto.
   Qed.
   
   Lemma conv_cum_tFix_inv leq Γ mfix idx mfix' idx' :
@@ -177,7 +160,7 @@ Section fixed.
           mfix mfix'∥.
   Proof.
     intros conv.
-    apply conv_cum_alt in conv as [(?&?&(r1&r2)&?)].
+    apply conv_cum_alt in conv as [(?&?&(r1&r2)&eq)].
     assert (forall defs i, whnf RedFlags.default Σ Γ (tFix defs i)).
     { intros defs i.
       apply whnf_fixapp with (v := []).
@@ -187,13 +170,13 @@ Section fixed.
     eapply whnf_red_inv in r2; eauto.
     depelim r1.
     depelim r2.
-    depelim e.
+    depelim eq.
     constructor.
     split; [easy|].
-    clear -a X X0.
+    clear -a a0 a1.
     cut (#|mfix| = #|mfix'|);
-      [|now apply All2_length in a; apply All2_length in X; apply All2_length in X0].
-    revert a X X0.
+      [|now apply All2_length in a; apply All2_length in a0; apply All2_length in a1].
+    revert a a0 a1.
     generalize mfix at 1 3 4.
     generalize mfix' at 1 3.
     intros ctx_fix ctx_fix'.
@@ -201,7 +184,7 @@ Section fixed.
     induction all in mfix, mfix', mfix'0, mfix'1, all1, all2, all |- *;
       depelim all1; depelim all2; [constructor|].
     constructor; [|now auto].
-    destruct p as ((?&?)&?), p0 as (?&?&?&?), r as (?&?&?&?).
+    destruct r as ((?&?)&?), p as (?&?&?&?), p0 as (?&?&?&?).
     split; [congruence|].
     split; [now apply conv_alt_red; exists (dtype x), (dtype y)|].
     apply conv_alt_red.
@@ -227,6 +210,6 @@ Section fixed.
     depelim e.
     constructor.
     split; [easy|].
-    now apply conv_alt_red; exists c'0, c'1.
+    apply conv_alt_red; eauto.
   Qed.
 End fixed.

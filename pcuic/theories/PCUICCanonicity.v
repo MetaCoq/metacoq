@@ -1030,7 +1030,7 @@ Section WeakNormalization.
     - clear wh_neutral_empty_gen wh_normal_empty_gen. subst.
       apply inversion_Const in typed as [decl' [wfd [declc [cu cum]]]]; eauto.
       specialize (axfree  _ _ declc).
-      red in declc. rewrite declc in H. noconf H. congruence.
+      red in declc. rewrite declc in e. noconf e. congruence.
     - simpl in cl; move/andP: cl => [clf cla].
       eapply inversion_App in typed as [na [A [B [Hf _]]]]; eauto.
     - specialize (wh_neutral_empty_gen _ _ axfree ne). subst.
@@ -1039,15 +1039,15 @@ Section WeakNormalization.
       eapply inversion_Fix in t as (? & ? & ? & ? & ? & ? & ?); auto.
       eapply typing_spine_strengthen in t0; eauto.
       eapply nth_error_all in a; eauto. simpl in a.
-      rewrite /unfold_fix in H. rewrite e in H. noconf H.
+      rewrite /unfold_fix in e. rewrite e1 in e. noconf e.
       eapply (wf_fixpoint_spine wfΣ) in t0; eauto.
-      rewrite H0 in t0. destruct t0 as [ind [u [indargs [tyarg ckind]]]].
+      rewrite e0 in t0. destruct t0 as [ind [u [indargs [tyarg ckind]]]].
       clear wh_normal_empty_gen.
       now specialize (wh_neutral_empty_gen _ tyarg eq_refl).
     - move/andP: cl => [/andP[_ clc] _].
       eapply inversion_Case in typed; firstorder eauto.
     - eapply inversion_Proj in typed; firstorder auto.
-    - eapply wh_neutral_empty_gen in H; eauto.
+    - eapply wh_neutral_empty_gen in w; eauto.
     - eapply inversion_Sort in typed as (? & ? & ? & ? & ?); auto.
       eapply invert_cumul_sort_l in c as (? & ? & ?); auto.
       eapply red_mkApps_tInd in r as (? & eq & ?); eauto; eauto.

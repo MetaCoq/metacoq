@@ -1207,19 +1207,6 @@ Proof.
     intros ? ? (?&?); auto.
 Qed.
 
-Lemma whne_red_inv Σ Γ t t' :
-  whne RedFlags.default Σ Γ t ->
-  red Σ Γ t t' ->
-  whnf_red Σ Γ t t'.
-Proof.
-  intros wh r.
-  induction r using red_rect_n1.
-  - now apply whnf_red_refl.
-  - eapply whne_red1_inv in X; eauto.
-    + etransitivity; eassumption.
-    + eapply whne_pres; eauto.
-Qed.
-
 Lemma whnf_red1_inv Σ Γ t t' :
   whnf RedFlags.default Σ Γ t ->
   red1 Σ Γ t t' ->

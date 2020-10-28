@@ -353,8 +353,6 @@ Proof.
   eapply Hstep; eauto.
   now apply clos_rt_rt1n_iff.
 Defined.
-  
-
 
 (** Simple lemmas about reduction *)
 

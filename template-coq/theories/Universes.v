@@ -372,7 +372,6 @@ Module UnivExpr.
 
   Definition eq_leibniz (x y : t) : eq x y -> x = y := id.
 
-
   Lemma val_make v l
     : val v (UnivExpr.make l) = val v l.
   Proof.
@@ -389,11 +388,6 @@ Module UnivExpr.
   Proof.
     destruct e as [[[] b]]; cbn; try destruct b; try lia.
   Qed.
-
-  (* Lemma val_minus_one e v : -1 <= val v e. *)
-  (* Proof. *)
-  (*   destruct e as [[[] b]]; cbn; try destruct b; try lia. *)
-  (* Qed. *)
 
 End UnivExpr.
 
@@ -999,14 +993,22 @@ Proof.
     * destruct e,b;inversion H;subst.
 Qed.
 
+Lemma univ_expr_eqb_true_iff (u v : Universe.t0) :
+  UnivExprSet.equal u v <-> u = v.
+Proof.
+  split.
+  - intros.
+    apply eq_univ'. now apply UnivExprSet.equal_spec.
+  - intros ->. now apply UnivExprSet.equal_spec.
+Qed.
+
 Lemma eqb_true_iff u v :
   Universe.eqb u v <-> u = v.
 Proof.
   split. 2: intros ->; apply Universe.eqb_refl.
   intro H.
   destruct u,v;auto;try discriminate.
-  apply f_equal.
-  apply eq_univ'. now apply UnivExprSet.equal_spec.
+  apply f_equal. now apply univ_expr_eqb_true_iff.
 Qed.
 
 Lemma UnivExprSet_for_all_false f u :
@@ -1328,7 +1330,9 @@ Definition constraints_of_udecl u :=
 
 
 
-
+(* NOTE:SPROP: [prop_sub_type] controls both [SProp] and [Prop],
+   since the valuation of universes does not distinguish between
+   [SProp] and [Prop] (they are both [-1]). *)
 Definition llt {cf:checker_flags} (x y : Z) : Prop :=
   if prop_sub_type then x < y else 0 <= x /\ x < y.
 
@@ -1349,6 +1353,13 @@ Ltac lled := lle; match goal with
                   | _ => destruct prop_sub_type eqn:?Hb
                   end.
 
+Ltac prop_non_prop :=
+  match goal with
+  | |- context[ Universe.is_prop ?u || Universe.is_sprop ?u]  =>
+    destruct (Universe.is_prop u || Universe.is_sprop u)
+  | H : context[ Universe.is_prop ?u || Universe.is_sprop ?u] |- _ =>
+    destruct (Universe.is_prop u || Universe.is_sprop u)
+  end.
 
 Section Univ.
 
@@ -1406,9 +1417,17 @@ Context {cf:checker_flags}.
     forall v, satisfies v φ -> val v u = val v u'.
 
   Definition leq_universe_n n (φ : ConstraintSet.t) u u' :=
-    forall v, satisfies v φ -> (Z.of_nat n + val v u <= val v u')%u.
+    forall v, satisfies v φ ->
+              ((if Universe.is_prop u || Universe.is_sprop u then 0%Z
+                else Z.of_nat n) + val v u <= val v u')%u.
 
-  Definition leq_universe0 := leq_universe_n 0.
+  Definition leq_universe0 (φ : ConstraintSet.t) u u' :=
+    forall v, satisfies v φ -> (val v u <= val v u')%u.
+
+  Lemma leq_universe0_leq_universe_n (φ : ConstraintSet.t) u u' :
+    leq_universe0 φ u u' = leq_universe_n 0 φ u u'.
+  Proof. unfold leq_universe_n. prop_non_prop;auto. Qed.
+
   Definition lt_universe := leq_universe_n 1.
 
   Definition eq_universe φ u u'
@@ -1452,7 +1471,7 @@ Context {cf:checker_flags}.
 
   Global Instance leq_universe0_refl φ : Reflexive (leq_universe0 φ).
   Proof.
-    intros s vH; reflexivity.
+    intros s vH;cbn;reflexivity.
   Qed.
 
   Global Instance leq_universe_refl φ : Reflexive (leq_universe φ).

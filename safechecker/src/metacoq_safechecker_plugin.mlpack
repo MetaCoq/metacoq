@@ -29,7 +29,6 @@ PCUICChecker
 PCUICPretty
 PCUICRetyping
 TemplateToPCUIC
-PCUICSafeLemmata
 PCUICCumulativity
 
 PCUICUnivSubst

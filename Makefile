@@ -93,8 +93,6 @@ ci-local:
 	$(MAKE) all test-suite TIMED=pretty-timed
 
 ci-opam:
-	for pkg in coq-metacoq coq-metacoq-template coq-metacoq-checker coq-metacoq-translations coq-metacoq-pcuic coq-metacoq-safechecker coq-metacoq-erasure; do
-	  opam remove -y $pkg || true
-	done
 	# Use -v so that regular output is produced
 	opam install -v -y .
+	opam remove -y coq-metacoq coq-metacoq-template

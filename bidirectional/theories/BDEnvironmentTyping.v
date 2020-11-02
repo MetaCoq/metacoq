@@ -1,4 +1,4 @@
-From Coq Require Import Ascii String OrderedType.
+From Coq Require Import Ascii String OrderedType Lia.
 From MetaCoq.Template Require Import config utils BasicAst AstUtils.
 From MetaCoq.Template Require Import Universes Environment.
 Import List.ListNotations.
@@ -396,13 +396,13 @@ Module Type Typing (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E).
 
   Import T E ET.
 
-  Parameter (ind_guard : mutual_inductive_body -> bool).
+  Parameter Inline ind_guard : mutual_inductive_body -> bool.
 
-  Parameter (conv : forall `{checker_flags}, global_env_ext -> context -> term -> term -> Type).
-  Parameter (cumul : forall `{checker_flags}, global_env_ext -> context -> term -> term -> Type).
+  Parameter Inline conv : forall `{checker_flags}, global_env_ext -> context -> term -> term -> Type.
+  Parameter Inline cumul : forall `{checker_flags}, global_env_ext -> context -> term -> term -> Type.
 
-  Parameter (checking : forall `{checker_flags}, global_env_ext -> context -> term -> term -> Type).
-  Parameter (sorting : forall `{checker_flags}, global_env_ext -> context -> term -> Universe.t -> Type).
+  Parameter Inline checking : forall `{checker_flags}, global_env_ext -> context -> term -> term -> Type.
+  Parameter Inline sorting : forall `{checker_flags}, global_env_ext -> context -> term -> Universe.t -> Type.
 
   Notation " Σ ;;; Γ |- t ◃ T " :=
     (checking Σ Γ t T) (at level 50, Γ, t, T at next level) : type_scope.
@@ -982,10 +982,16 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
 
     Fixpoint All_local_env_size Γ (w : All_local_env (lift_sorting checking sorting Σ) Γ) : size :=
       match w with
-      | localenv_nil => 0
+      | localenv_nil => 1
       | localenv_cons_abs Γ na t wfΓ h => ssize _ _ _ _ h.π2 + All_local_env_size _ wfΓ
       | localenv_cons_def Γ na b t wfΓ h => ssize _ _ _ _ h.1.π2 + csize _ _ _ _ h.2 + All_local_env_size _ wfΓ
       end.
+
+    Lemma All_local_env_size_pos Γ w : 0 < All_local_env_size Γ w.
+    Proof.
+      induction w.
+      all: simpl ; lia.
+    Qed.
 
   End All_local_env_size.
 
@@ -1014,6 +1020,11 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
 
     Definition wf_local_size Γ (w : wf_local Σ Γ) : size :=
       All_local_env_size checking sorting csize ssize Σ Γ w.
+
+    Lemma wf_local_size_pos Γ w : 0 < wf_local_size Γ w.
+    Proof.
+      apply All_local_env_size_pos.
+    Qed.
 
     Definition wf_local_rel_size Γ Γ' (w : wf_local_rel Σ Γ Γ') : size :=
       All_local_env_rel_size checking sorting csize ssize Σ Γ Γ' w. 

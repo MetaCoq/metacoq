@@ -766,8 +766,10 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
 
 | type_Sort l :
     All_local_env (lift_typing typing Σ) Γ ->
-    LevelSet.In l (global_ext_levels Σ) ->
-    Σ ;;; Γ |- tSort (Universe.make l) : tSort (Universe.super l)
+    (l = inl PropLevel.lSProp \/
+    l = inl PropLevel.lProp \/
+    (exists l', LevelSet.In l' (global_ext_levels Σ) /\ l = inr l')) ->
+    Σ ;;; Γ |- tSort (Universe.of_levels l) : tSort (Universe.super l)
 
 | type_Cast c k t s :
     Σ ;;; Γ |- t : tSort s ->
@@ -992,9 +994,10 @@ Lemma env_prop_typing `{checker_flags} P : env_prop P ->
     Σ ;;; Γ |- t : T -> P Σ Γ t T.
 Proof. intros. now apply X. Qed.
 
-Lemma type_Prop `{checker_flags} Σ : Σ ;;; [] |- tSort Universe.type0m : tSort Universe.type1.
-  repeat constructor.
-  apply prop_global_ext_levels.
+Lemma type_Prop `{checker_flags} Σ :
+  Σ ;;; [] |- tSort Universe.lProp : tSort Universe.type1.
+  change (  Σ ;;; [] |- tSort (Universe.of_levels (inl PropLevel.lProp)) : tSort Universe.type1);
+  constructor;auto. constructor.
 Defined.
 
 Lemma env_prop_sigma `{checker_flags} P : env_prop P ->
@@ -1095,10 +1098,14 @@ Lemma typing_ind_env `{cf : checker_flags} :
         nth_error Γ n = Some decl ->
         All_local_env_over typing Pdecl Σ Γ wfΓ ->
         P Σ Γ (tRel n) (lift0 (S n) decl.(decl_type))) ->
-    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (l : Level.t),
+    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ)
+       (l : PropLevel.t + Level.t),
         All_local_env_over typing Pdecl Σ Γ wfΓ ->
-        LevelSet.In l (global_ext_levels Σ) ->
-        P Σ Γ (tSort (Universe.make l)) (tSort (Universe.super l))) ->
+        (l = inl PropLevel.lSProp \/
+     l = inl PropLevel.lProp \/
+     (exists l', LevelSet.In l' (global_ext_levels Σ) /\ l = inr l')) ->
+
+        P Σ Γ (tSort (Universe.of_levels l)) (tSort (Universe.super l))) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (c : term) (k : cast_kind)
             (t : term) (s : Universe.t),
@@ -1243,7 +1250,7 @@ Proof.
   inv wfΣ.
   rename X14 into Xg.
   constructor; auto. unfold Forall_decls_typing in IH.
-  - simple refine (let IH' := IH ((Σ, udecl); (X13; []; _; (tSort Universe.type0m ); _; _)) in _).
+  - simple refine (let IH' := IH ((Σ, udecl); (X13; []; _; (tSort Universe.lProp ); _; _)) in _).
     constructor. shelve. apply type_Prop.
     cbn in IH'; forward IH'. constructor 1; cbn. lia.
     apply IH'; auto.

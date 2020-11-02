@@ -16,6 +16,7 @@ Record valuation :=
 
 Class Evaluable (A : Type) := val : valuation -> A -> Z.
 
+(** Levels are Set or Level or Var *)
 Module Level.
   Inductive t_ : Set :=
   | lSet
@@ -50,7 +51,6 @@ Module Level.
                end.
 
 
-  (* CHECKME:SPROP: [SProp] is added in the same way as [Prop], seems to match [univ.ml] *)
   Definition compare (l1 l2 : t) : comparison :=
     match l1, l2 with
     | lSet, lSet => Eq
@@ -135,6 +135,12 @@ Module Level.
   Qed.
 
   Definition eq_leibniz (x y : t) : eq x y -> x = y := id.
+
+  Lemma val_zero l v : 0 <= val v l.
+  Proof.
+    destruct l; cbn; lia.
+  Qed.
+
 End Level.
 
 Module LevelSet := MSetList.MakeWithLeibniz Level.
@@ -160,125 +166,41 @@ Proof.
 Qed.
 
 
-(** no prop levels are levels which are Set or Level or Var *)
-Module NoPropLevel.
-  Inductive t_ := lSet |  Level (_ : string) | Var (_ : nat).
+(* prop level is Prop or SProp *)
+Module PropLevel.
 
-  Definition t : Set := t_.
+  Inductive t := lSProp | lProp.
 
-  Global Instance Level_Evaluable : Evaluable t
-    := fun v l => match l with
-               | lSet => 0
-               | Level s => Z.pos (v.(valuation_mono) s)
-               | Var x => Z.of_nat (v.(valuation_poly) x)
-               end.
-
+  Global Instance PropLevel_Evaluable : Evaluable t :=
+    fun v l => match l with
+              lSProp => -1
+            | lProp => -1
+            end.
 
   Definition compare (l1 l2 : t) : comparison :=
     match l1, l2 with
-    | lSet, lSet => Eq
-    | lSet, _ => Lt
-    | _, lSet => Gt
-    | Level s1, Level s2 => string_compare s1 s2
-    | Level _, _ => Lt
-    | _, Level _ => Gt
-    | Var n, Var m => Nat.compare n m
+    | lSProp, lSProp  => Eq
+    | lProp, lProp  => Eq
+    | lProp, lSProp => Gt
+    | lSProp, lProp => Lt
     end.
 
-  Definition eq : t -> t -> Prop := Logic.eq.
-
-  Definition eq_equiv : Equivalence eq := _.
-
-  Definition eq_dec (l1 l2 : t) : {l1 = l2}+{l1 <> l2}.
-  Proof.
-    decide equality. apply string_dec. apply Peano_dec.eq_nat_dec.
-  Defined.
-
   Inductive lt_ : t -> t -> Prop :=
-  | ltSetLevel s : lt_ lSet (Level s)
-  | ltSetVar n : lt_ lSet (Var n)
-  | ltLevelLevel s s' : string_lt s s' -> lt_ (Level s) (Level s')
-  | ltLevelVar s n : lt_ (Level s) (Var n)
-  | ltVarVar n n' : Nat.lt n n' -> lt_ (Var n) (Var n').
+    ltSPropProp : lt_ lSProp lProp.
 
   Definition lt := lt_.
 
   Global Instance lt_strorder : StrictOrder lt.
-    split.
-    - intros [| |] X; inversion X.
-      eapply string_lt_irreflexive; tea.
-      eapply Nat.lt_irrefl; tea.
-    - intros [| |] [| |] [| |] X1 X2;
-        inversion X1; inversion X2; constructor.
-      eapply transitive_string_lt; tea.
-      etransitivity; tea.
-  Qed.
+  split.
+  - intros n X. destruct n;inversion X.
+  - intros n1 n2 n3 X1 X2. destruct n1,n2,n3;auto; try inversion X1;try inversion X2.
+  Defined.
 
-  Definition lt_compat : Proper (eq ==> eq ==> iff) lt.
-  Proof.
-    intros x y e z t e'. unfold eq in *; subst. reflexivity.
-  Qed.
-
-  Definition compare_spec :
-    forall x y : t, CompareSpec (x = y) (lt x y) (lt y x) (compare x y).
-  Proof.
-    intros [] []; repeat constructor.
-    - eapply CompareSpec_Proper.
-      5: eapply CompareSpec_string. 4: reflexivity.
-      all: split; [now inversion 1|]. now intros ->.
-      all: intro; now constructor.
-    - eapply CompareSpec_Proper.
-      5: eapply Nat.compare_spec. 4: reflexivity.
-      all: split; [now inversion 1|]. now intros ->.
-      all: intro; now constructor.
-  Qed.
-
-  Definition eq_leibniz (x y : t) : eq x y -> x = y := id.
-
-  Definition of_level (l : Level.t) : t :=
-    match l with
-    | Level.lSet => lSet
-    | Level.Level s => Level s
-    | Level.Var n => Var n
-    end.
-
-  Definition to_level (l : t) : Level.t :=
-    match l with
-    | lSet => Level.lSet
-    | Level s => Level.Level s
-    | Var n => Level.Var n
-    end.
-
-  Lemma of_to_level l
-    : of_level (to_level l) = l.
-  Proof.
-    destruct l; reflexivity.
-  Qed.
-
-  Definition is_small (e : t) : bool :=
-    match e with
-    | lSet => true
-    | _ => false
-    end.
-
-  Lemma val_to_level v l :
-    val v (to_level l) = val v l.
-  Proof.
-    destruct l; cbnr.
-  Qed.
-
-  Lemma val_zero l v : 0 <= val v l.
-  Proof.
-    destruct l; cbn; lia.
-  Qed.
-End NoPropLevel.
-
-Coercion NoPropLevel.to_level : NoPropLevel.t >-> Level.t.
-
+End PropLevel.
 
 Module UnivExpr.
   (* npe = no prop expression, +1 if true *)
-  Inductive t_ := npe (e : NoPropLevel.t * bool).
+  Inductive t_ := npe (e : Level.t * bool).
 
   Definition t := t_.
 
@@ -300,7 +222,7 @@ Module UnivExpr.
 
   Definition is_small (e : t) : bool :=
     match e with
-    | npe (NoPropLevel.lSet, false) => true
+    | npe (Level.lSet, false) => true
     | _  => false
     end.
 
@@ -311,18 +233,18 @@ Module UnivExpr.
     end.
 
   Definition make (l : Level.t) : t :=
-    npe (NoPropLevel.of_level l, false).
+    npe ( l, false).
 
-  Definition set : t := npe (NoPropLevel.lSet, false).
-  Definition type1 : t := npe (NoPropLevel.lSet, true).
+  Definition set : t := npe (Level.lSet, false).
+  Definition type1 : t := npe (Level.lSet, true).
 
   (* Used for (un)quoting. *)
   Definition from_kernel_repr (e : Level.t * bool) : t
-    := npe (NoPropLevel.of_level e.1, e.2).
+    := npe (e.1, e.2).
 
   Definition to_kernel_repr (e : t) : Level.t * bool
     := match e with
-       | npe (l, b) => (NoPropLevel.to_level l, b)
+       | npe (l, b) => (l, b)
        end.
 
   Definition eq : t -> t -> Prop := eq.
@@ -331,7 +253,7 @@ Module UnivExpr.
 
   Inductive lt_ : t -> t -> Prop :=
   | ltUnivExpr1 l : lt_ (npe (l, false)) (npe (l, true))
-  | ltUnivExpr2 l l' b b' : NoPropLevel.lt l l' -> lt_ (npe (l, b)) (npe (l', b')).
+  | ltUnivExpr2 l l' b b' : Level.lt l l' -> lt_ (npe (l, b)) (npe (l', b')).
 
   Definition lt := lt_.
 
@@ -339,7 +261,7 @@ Module UnivExpr.
   Proof.
     constructor.
     - intros x X; inversion X.
-      eapply NoPropLevel.lt_strorder; eassumption.
+      eapply Level.lt_strorder; eassumption.
     - intros x y z X1 X2; invs X1; invs X2; constructor; tea.
       etransitivity; tea.
   Qed.
@@ -351,7 +273,7 @@ Module UnivExpr.
   Definition compare (x y : t) : comparison :=
     match x, y with
     | npe (l1, b1), npe (l2, b2) =>
-      match NoPropLevel.compare l1 l2 with
+      match Level.compare l1 l2 with
       | Eq => bool_compare b1 b2
       | x => x
       end
@@ -361,7 +283,7 @@ Module UnivExpr.
     forall x y : t, CompareSpec (x = y) (lt x y) (lt y x) (compare x y).
   Proof.
     intros [[]] [[]]; cbn; repeat constructor.
-    destruct (NoPropLevel.compare_spec t0 t1); repeat constructor; tas.
+    destruct (Level.compare_spec t0 t1); repeat constructor; tas.
     subst. destruct b, b0; repeat constructor.
   Qed.
 
@@ -378,7 +300,7 @@ Module UnivExpr.
     destruct l eqn:H; cbnr.
   Qed.
 
-  Lemma val_make_npl v (l : NoPropLevel.t)
+  Lemma val_make_npl v (l : Level.t)
     : val v (UnivExpr.make l) = val v l.
   Proof.
     destruct l; cbnr.
@@ -518,6 +440,24 @@ Module Universe.
   Definition type0 : t := make Level.lSet.
   Definition type1 : t := lnpe (make' UnivExpr.type1).
 
+
+  Definition of_levels (l : PropLevel.t + Level.t) : t :=
+    match l with
+    | inl PropLevel.lSProp => lSProp
+    | inl PropLevel.lProp => lProp
+    | inr l => lnpe (make' (UnivExpr.npe (l, false)))
+    end.
+
+    (** The universe strictly above FOR TYPING (not cumulativity) *)
+
+  Definition super (l : PropLevel.t + Level.t) : t :=
+    match l with
+    | inl PropLevel.lSProp => type1
+    | inl PropLevel.lProp => type1
+    | inr Level.lSet => type1
+    | inr l => lnpe (make' (UnivExpr.npe (l, true)))
+    end.
+
   (* Used for quoting. *)
   Definition from_kernel_repr (e : Level.t * bool) (es : list (Level.t * bool)) : t
     := lnpe (add_list (map UnivExpr.from_kernel_repr es)
@@ -536,9 +476,6 @@ Module Universe.
   (*      | lnpe l => map uex_to_kernel_repr (UnivExprSet.elements l) *)
   (*      end. *)
 
-  (** The universe strictly above FOR TYPING (not cumulativity) *)
-  Definition super (l : Level.t) : t :=
-    lnpe (make' (UnivExpr.npe (NoPropLevel.of_level l, true))).
 
   (** The non empty / sorted / without dup list of univ expressions, the
       components of the pair are the head and the tail of the (non empty) list *)
@@ -688,7 +625,7 @@ Module Universe.
     | lSProp => None
     | lProp => None
     | lnpe l => match UnivExprSet.elements l with
-                 [UnivExpr.npe (l, false)] => Some (NoPropLevel.to_level l)
+                 [UnivExpr.npe (l, false)] => Some l
                | _ => None
                end
     end.
@@ -715,7 +652,7 @@ Module Universe.
     destruct l; cbnr.
   Qed.
 
-  Lemma val_make_npl v (l : NoPropLevel.t)
+  Lemma val_make_npl v (l : Level.t)
     : val v (make l) = val v l.
   Proof.
     destruct l; cbnr.
@@ -919,7 +856,7 @@ Proof.
   - destruct e as [npl_expr].
     destruct npl_expr as [t b].
     cbn.
-    assert (0 <= val v t) by apply NoPropLevel.val_zero.
+    assert (0 <= val v t) by apply Level.val_zero.
     destruct b;lia.
   - pose proof (UnivExpr.val_zero a v); lia.
 Qed.
@@ -989,7 +926,7 @@ Proof.
     * destruct e,b;inversion H;subst.
       apply f_equal.
       apply eq_univ'';unfold UnivExpr.make.
-      now rewrite NoPropLevel.of_to_level.
+      cbn. rewrite Hu1. reflexivity.
     * destruct e,b;inversion H;subst.
 Qed.
 
@@ -1685,12 +1622,12 @@ Instance subst_instance_cstrs : UnivSubst ConstraintSet.t :=
 
 Instance subst_instance_level_expr : UnivSubst UnivExpr.t :=
   fun u e => match e with
-          | UnivExpr.npe (NoPropLevel.lSet, _)
-          | UnivExpr.npe (NoPropLevel.Level _, _) => e
-          | UnivExpr.npe (NoPropLevel.Var n, b) =>
+          | UnivExpr.npe (Level.lSet, _)
+          | UnivExpr.npe (Level.Level _, _) => e
+          | UnivExpr.npe (Level.Var n, b) =>
             match nth_error u n with
-            | Some l => UnivExpr.npe (NoPropLevel.of_level l,b)
-            | None => UnivExpr.npe (NoPropLevel.lSet, b)
+            | Some l => UnivExpr.npe (l,b)
+            | None => UnivExpr.npe (Level.lSet, b)
             end
           end.
 
@@ -2006,12 +1943,13 @@ Section no_prop_leq_type.
 
 
   Lemma leq_universe_super l l' :
-    leq_universe ϕ (Universe.make l) (Universe.make l') ->
+    leq_universe ϕ (Universe.of_levels l) (Universe.of_levels l') ->
     leq_universe ϕ (Universe.super l) (Universe.super l').
   Proof.
     unfold leq_universe. destruct check_univs; [|trivial].
     intros H v Hv. specialize (H v Hv). simpl in *.
-    destruct l, l'; lled; cbn -[Z.add] in *; destruct H; lia.
+    destruct l as [l|l], l' as  [l'|l'];
+      destruct l, l';lled; cbn -[Z.add] in *;destruct H; try lia.
   Qed.
 
   Hint Resolve lle_le val_is_prop_or_sprop : univ_lemmas.
@@ -2104,7 +2042,7 @@ Section no_prop_leq_type.
   Proof.
     intros Hcf [v Hv] H1 H2. unfold leq_universe in *; rewrite Hcf in *.
     eapply is_prop_val with (v:=v) in H2. specialize (H1 _ Hv).
-    rewrite H2 in H1. destruct l; lled; cbn -[Z.add] in *; lia.
+    rewrite H2 in H1. destruct l as [l|l];destruct l; lled; cbn -[Z.add] in *; lia.
   Qed.
 
 End no_prop_leq_type.

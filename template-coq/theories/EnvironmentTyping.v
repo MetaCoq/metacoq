@@ -54,7 +54,7 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
   Definition global_levels (Σ : global_env) : LevelSet.t :=
     fold_right
       (fun decl lvls => LevelSet.union (monomorphic_levels_decl decl.2) lvls)
-      (LevelSet_pair Level.lSet Level.lProp) Σ.
+      (LevelSet.singleton (Level.lSet)) Σ.
 
   Lemma global_levels_Set Σ :
     LevelSet.mem Level.lSet (global_levels Σ) = true.
@@ -64,13 +64,6 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     now apply LevelSet.mem_spec in IHΣ.
   Qed.
 
-  Lemma global_levels_Prop Σ :
-    LevelSet.mem Level.lProp (global_levels Σ) = true.
-  Proof.
-    induction Σ; simpl. reflexivity.
-    apply LevelSet.mem_spec, LevelSet.union_spec; right.
-    now apply LevelSet.mem_spec in IHΣ.
-  Qed.
 
   (** One can compute the constraints associated to a global environment or its
       extension by folding over its constituent definitions.
@@ -103,15 +96,6 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     (global_ext_levels Σ, global_ext_constraints Σ).
 
 
-  Lemma prop_global_ext_levels Σ : LevelSet.In Level.lProp (global_ext_levels Σ).
-  Proof.
-    destruct Σ as [Σ φ]; cbn.
-    apply LevelSetFact.union_3. cbn -[global_levels]; clear φ.
-    induction Σ.
-    - cbn. now apply LevelSetFact.add_1.
-    - simpl. now apply LevelSetFact.union_3.
-  Qed.
-
   (** Check that [uctx] instantiated at [u] is consistent with
     the current universe graph. *)
 
@@ -119,8 +103,6 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     match uctx with
     | Monomorphic_ctx c => List.length u = 0
     | Polymorphic_ctx c =>
-      (* no prop levels in instances *)
-      forallb (negb ∘ Level.is_prop) u /\
       (* levels of the instance already declared *)
       forallb (fun l => LevelSet.mem l lvs) u /\
       List.length u = List.length c.1 /\
@@ -471,7 +453,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
 
     Definition lift_level n l :=
       match l with 
-      | Level.lSProp | Level.lProp | Level.lSet | Level.Level _ => l
+      | Level.lSet | Level.Level _ => l
       | Level.Var k => Level.Var (n + k)
       end.
 

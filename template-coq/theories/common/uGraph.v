@@ -55,10 +55,10 @@ Module VariableLevel.
     destruct (PeanoNat.Nat.eq_dec n n'); [left|right]; congruence.
   Defined.
 
-  Definition to_noprop (l : t) : NoPropLevel.t :=
+  Definition to_noprop (l : t) : Level.t :=
     match l with
-    | Level s => NoPropLevel.Level s
-    | Var n => NoPropLevel.Var n
+    | Level s => Level.Level s
+    | Var n => Level.Var n
     end.
 
   Definition to_level (l : t) : Level.t := to_noprop l.
@@ -70,7 +70,7 @@ Module VariableLevel.
                end.
 End VariableLevel.
 
-Coercion VariableLevel.to_noprop : VariableLevel.t >-> NoPropLevel.t.
+Coercion VariableLevel.to_noprop : VariableLevel.t >-> Level.t.
 
 
 Module GoodConstraint.
@@ -142,23 +142,6 @@ Definition gc_of_constraint `{checker_flags} (uc : UnivConstraint.t)
      let singleton := fun x => Some (GoodConstraintSet.singleton x) in
      let pair := fun x y => Some (GoodConstraintSet_pair x y) in
      match uc with
-     (* (* SProp _ _ *) *)
-     (* (* CHECKME:SPROP: the rules are the same as for Prop *) *)
-     (* | (Level.lSProp, Le, Level.lSProp) => empty *)
-     (* | (Level.lSProp, Le, _) => if prop_sub_type then empty else None *)
-     (* | (Level.lSProp, Eq, Level.lSProp) => empty *)
-     (* | (Level.lSProp, Eq, _) => None *)
-     (* | (Level.lSProp, Lt, Level.lSProp) => None *)
-     (* | (Level.lSProp, Lt, _) => if prop_sub_type then empty else None *)
-
-     (* (* Prop _ _ *) *)
-     (* | (Level.lProp, Le, Level.lProp) => empty *)
-     (* | (Level.lProp, Le, _) => if prop_sub_type then empty else None *)
-     (* | (Level.lProp, Eq, Level.lProp) => empty *)
-     (* | (Level.lProp, Eq, _) => None *)
-     (* | (Level.lProp, Lt, Level.lProp) => None *)
-     (* | (Level.lProp, Lt, _) => if prop_sub_type then empty else None *)
-
      (* Set _ _ *)
      | (Level.lSet, Le, _) => empty
      | (Level.lSet, Eq, Level.lSet) => empty
@@ -389,9 +372,9 @@ End GC.
 
 
 
-Module Import wGraph := wGraph.WeightedGraph NoPropLevel.
+Module Import wGraph := wGraph.WeightedGraph Level.
 
-Local Notation lSet := NoPropLevel.lSet.
+Local Notation lSet := Level.lSet.
 (* vtn = variable to noprop *)
 Local Notation vtn := VariableLevel.to_noprop.
 
@@ -410,7 +393,7 @@ Defined.
 
 
 Definition no_prop_levels (X : LevelSet.t) : VSet.t
-  := LevelSet.fold (fun l X =>  VSet.add (NoPropLevel.of_level l) X)
+  := LevelSet.fold (fun l X =>  VSet.add l X)
                    X VSet.empty.
 
 Definition declared : Level.t -> LevelSet.t -> Prop := LevelSet.In.
@@ -429,7 +412,7 @@ Definition global_gc_uctx_invariants (uctx : VSet.t * GoodConstraintSet.t)
                  | gc_lt l l'  => VSet.In (vtn l) uctx.1
                                  /\ VSet.In (vtn l') uctx.1
                  | gc_lt_set n
-                 | gc_eq_set n => VSet.In (NoPropLevel.Var n) uctx.1
+                 | gc_eq_set n => VSet.In (Level.Var n) uctx.1
                  end) uctx.2.
 
 Definition gc_of_uctx `{checker_flags} (uctx : ContextSet.t)
@@ -438,7 +421,7 @@ Definition gc_of_uctx `{checker_flags} (uctx : ContextSet.t)
      ret (no_prop_levels uctx.1, ctrs).
 
 
-Lemma no_prop_levels_no_prop_level (l : NoPropLevel.t) levels
+Lemma no_prop_levels_no_prop_level (l : Level.t) levels
   : declared l levels ->  VSet.In l (no_prop_levels levels).
 Proof.
   unfold no_prop_levels, declared. rewrite LevelSet.fold_spec.
@@ -450,11 +433,9 @@ Proof.
   - intuition.
   - intros X [[HH|HH]|HH].
     + subst a; cbn. apply IHl0.
-      right. rewrite NoPropLevel.of_to_level.
-      apply VSet.add_spec; intuition.
+      right. cbn. auto with set.
     + apply IHl0. now left.
-    + apply IHl0. right.
-      apply VSet.add_spec; intuition.
+    + apply IHl0. right;auto with set.
 Qed.
 
 Lemma gc_of_constraint_iff `{cf:checker_flags} ctrs0 ctrs gc
@@ -534,8 +515,8 @@ Qed.
 
 Definition edge_of_level (l : VariableLevel.t) : EdgeSet.elt :=
   match l with
-  | Level l => (lSet, 1, NoPropLevel.Level l)
-  | Var n => (lSet, 0, NoPropLevel.Var n)
+  | Level l => (lSet, 1, Level.Level l)
+  | Var n => (lSet, 0, Level.Var n)
   end.
 
 Definition EdgeSet_pair x y
@@ -565,9 +546,9 @@ Qed.
 
 Definition make_graph (uctx : VSet.t * GoodConstraintSet.t) : wGraph.t :=
   let init_edges := VSet.fold (fun l E => match l with
-                                       | NoPropLevel.Level s =>
+                                       | Level.Level s =>
                                          EdgeSet.add (edge_of_level (Level s)) E
-                                       | NoPropLevel.Var n =>
+                                       | Level.Var n =>
                                          EdgeSet.add (edge_of_level (Var n)) E
                                        | lSet => E end) uctx.1 EdgeSet.empty in
   let edges := GoodConstraintSet.fold
@@ -704,8 +685,8 @@ Ltac simplify_sets :=
 Definition labelling_of_valuation (v : valuation) : labelling
   := fun x => match x with
            | lSet => 0
-           | NoPropLevel.Level l => Pos.to_nat (v.(valuation_mono) l)
-           | NoPropLevel.Var n => v.(valuation_poly) n
+           | Level.Level l => Pos.to_nat (v.(valuation_mono) l)
+           | Level.Var n => v.(valuation_poly) n
            end.
 
 Definition valuation_of_labelling (l : labelling) : valuation
@@ -827,13 +808,12 @@ Section CheckLeq.
 
   
   Definition gc_level_declared l
-    := VSet.In (NoPropLevel.of_level l) uctx.1.
+    := VSet.In l uctx.1.
 
-  Lemma gc_level_declared_make_graph (l : NoPropLevel.t) :
+  Lemma gc_level_declared_make_graph (l : Level.t) :
     gc_level_declared l -> VSet.In l (wGraph.V G).
   Proof.
-    intros Hl. red in Hl. rewrite NoPropLevel.of_to_level in Hl; cbn in Hl.
-    subst G; assumption.
+    intros Hl;subst;assumption.
   Qed.
 
   Definition gc_expr_declared e
@@ -854,20 +834,20 @@ Section CheckLeq.
     destruct l; cbn; lia.
   Qed.
 
-  Lemma val_labelling_of_valuation v (l : NoPropLevel.t)
+  Lemma val_labelling_of_valuation v (l : Level.t)
     : val v (Universe.make l) = Z.of_nat (labelling_of_valuation v l).
   Proof.
     destruct l; cbnr. lia.
   Qed.
 
-  Lemma val_labelling_of_valuation' v (l : NoPropLevel.t) b :
+  Lemma val_labelling_of_valuation' v (l : Level.t) b :
     val v (Universe.make' (UnivExpr.npe (l, b)))
     = ((if b then 1 else 0) + Z.of_nat (labelling_of_valuation v l))%Z.
   Proof.
     destruct l; cbnr. lia.
   Qed.
 
-  Lemma val_valuation_of_labelling' L  (l : NoPropLevel.t) b
+  Lemma val_valuation_of_labelling' L  (l : Level.t) b
         (e := UnivExpr.npe (l, b)) :
     gc_level_declared l ->
     correct_labelling G L ->
@@ -879,12 +859,12 @@ Section CheckLeq.
     forward H. {
       left. eexists; split; try reflexivity; tas. }
     specialize (HG2 _ H); cbn in HG2. rewrite HG1 in HG2; cbn in HG2.
-    f_equal. clear -HG2. set (L (NoPropLevel.Level l)) in *; clearbody n.
+    f_equal. clear -HG2. set (L (Level.Level l)) in *; clearbody n.
     destruct n; try lia.
     rewrite <- Pos.of_nat_succ. lia.
   Qed.
 
-  Lemma val_valuation_of_labelling L  (l : NoPropLevel.t) :
+  Lemma val_valuation_of_labelling L  (l : Level.t) :
     gc_level_declared l ->
     correct_labelling G L ->
     val (valuation_of_labelling L) l = Z.of_nat (L l)%Z.
@@ -896,7 +876,7 @@ Section CheckLeq.
 
   (** ** Check of leq ** *)
 
-  Lemma leq_universe_vertices0 n (l l' : NoPropLevel.t)
+  Lemma leq_universe_vertices0 n (l l' : Level.t)
     : leq_vertices G n l l'
       -> gc_leq_universe_n n uctx.2 (Universe.make l) (Universe.make l').
   Proof.
@@ -908,7 +888,7 @@ Section CheckLeq.
     lled; lia.
   Qed.
 
-  Lemma leq_universe_vertices1 n (l l' : NoPropLevel.t)
+  Lemma leq_universe_vertices1 n (l l' : Level.t)
         (Hl : VSet.In l (wGraph.V G)) (Hl' : VSet.In l' (wGraph.V G))
     : gc_leq_universe_n n uctx.2 (Universe.make l) (Universe.make l')
       -> leq_vertices G n l l'.
@@ -922,7 +902,7 @@ Section CheckLeq.
     cbn in *; lled; lia.
   Qed.
 
-  Lemma leq_universe_vertices n (l l' : NoPropLevel.t)
+  Lemma leq_universe_vertices n (l l' : Level.t)
         (Hl : VSet.In l (wGraph.V G)) (Hl' : VSet.In l' (wGraph.V G))
     : gc_leq_universe_n n uctx.2 (Universe.make l) (Universe.make l')
       <-> leq_vertices G n l l'.
@@ -933,7 +913,7 @@ Section CheckLeq.
   Qed.
 
 
-  Definition leqb_no_prop_n n (l l' : NoPropLevel.t)
+  Definition leqb_no_prop_n n (l l' : Level.t)
     := leqb_vertices G n l l'.
 
   Lemma leqb_no_prop_n_spec0 n l l'
@@ -944,7 +924,7 @@ Section CheckLeq.
     apply leqb_vertices_correct; tas; subst G; exact _.
   Qed.
 
-  Lemma leqb_no_prop_n_spec n (l l' : NoPropLevel.t)
+  Lemma leqb_no_prop_n_spec n (l l' : Level.t)
         (Hl : VSet.In l uctx.1) (Hl' : VSet.In l' uctx.1)
     : leqb_no_prop_n n l l'
       <-> gc_leq_universe_n n uctx.2 (Universe.make l) (Universe.make l').
@@ -967,7 +947,7 @@ Section CheckLeq.
 
 
   (* Non trivial lemma *)
-  Lemma constraint_strengthening (l1 l2 : NoPropLevel.t) :
+  Lemma constraint_strengthening (l1 l2 : Level.t) :
     gc_level_declared l1 -> gc_level_declared l2 ->
     (forall v, gc_satisfies v uctx.2 -> (val v l1 <= 1 + val v l2)%u) ->
     forall v, gc_satisfies v uctx.2 -> (val v l1 <= val v l2)%u.
@@ -1031,15 +1011,14 @@ Section CheckLeq.
       intros H v Hv; cbn;
         apply leqb_no_prop_n_spec0 in H;
         specialize (H v Hv); cbn in H;
-          try pose proof (NoPropLevel.val_zero l v);
-          rewrite ?NoPropLevel.of_to_level in H;try (lled;lia).
+          try pose proof (Level.val_zero l v);lled;lia.
   Qed.
 
   Local Ltac tac0 v :=
     repeat match goal with
-           | l : NoPropLevel.t |- _
-             => pose proof (NoPropLevel.val_zero l v);
-               change (id NoPropLevel.t) in l
+           | l : Level.t |- _
+             => pose proof (Level.val_zero l v);
+               change (id Level.t) in l
            end;
     unfold id in *.
   Local Ltac tac1
@@ -1065,12 +1044,9 @@ Section CheckLeq.
       unfold gc_leq_universe_n,val,Universe.Evaluable in H;
       apply leqb_no_prop_n_spec; tas; intros v Hv;
       pose proof (H v Hv) as HH; cbn in HH;
-      cbn in *;rewrite ?NoPropLevel.of_to_level;
-        tac1;try (lled;lia).
-    assert (gc_level_declared l).
-    { unfold gc_level_declared. now rewrite ?NoPropLevel.of_to_level. }
-    assert (gc_level_declared l').
-    { unfold gc_level_declared. now rewrite ?NoPropLevel.of_to_level. }
+      cbn in *;tac1;try (lled;lia).
+    assert (gc_level_declared l) by auto.
+    assert (gc_level_declared l') by auto.
     destruct n as [|n].
     + cbn. apply constraint_strengthening;eauto.
     + tac1; lled; try reflexivity; try lia.
@@ -1113,7 +1089,7 @@ Section CheckLeq.
   Coercion Universe.lnpe : Universe.t0 >-> Universe.t_.
   
   (* Non trivial lemma *)
-  Lemma gc_leq_universe_n_sup n (l : NoPropLevel.t) b (u : Universe.t0)
+  Lemma gc_leq_universe_n_sup n (l : Level.t) b (u : Universe.t0)
         (e := UnivExpr.npe (l, b)) :
       gc_level_declared l ->
       gc_levels_declared u ->
@@ -1133,7 +1109,7 @@ Section CheckLeq.
         intros v Hv. apply make_graph_spec in Hv.
         enough (val v (Universe.make l) <= 0)%Z as HH. {
           rewrite Universe.val_make_npl in HH.
-          pose proof (NoPropLevel.val_zero l v); lia. }
+          pose proof (Level.val_zero l v); lia. }
         rewrite <- HG in Hv.
         eapply correct_labelling_lsp in Hm; tea.
         cbn in Hm. rewrite val_labelling_of_valuation; lia. }
@@ -1168,8 +1144,7 @@ Section CheckLeq.
           end.
           assert (val (valuation_of_labelling lab) li = Z.of_nat ni) as XX. {
             rewrite val_valuation_of_labelling; tas.
-            subst lab; cbn; now rewrite Hni.
-            { red. now rewrite NoPropLevel.of_to_level. } }
+            subst lab; cbn; now rewrite Hni. }
           rewrite XX in H; clear Hni XX.
           cbn in H; destruct b, bi; lia. }
       apply UnivExprSet_for_all_false in HH.
@@ -1205,8 +1180,7 @@ Section CheckLeq.
                 u = false) as HH. {
         apply not_true_iff_false; intro HH.
         assert (Hl' : VSet.In l (wGraph.V G)). {
-          red in Hl; rewrite NoPropLevel.of_to_level in Hl; cbn in Hl;
-            now subst G. }
+          red in Hl; now subst. }
         destruct (lsp_s G _ Hl') as [nl Hnl]; cbn in Hnl.
 
         assert (exists K, nl <= K /\
@@ -1268,7 +1242,6 @@ Section CheckLeq.
         specialize (Hu _ Hei).
         destruct ei as [[li bi]]; cbn in H.
         rewrite val_valuation_of_labelling in H; tas.
-        2:{ red. now rewrite NoPropLevel.of_to_level. }
         match goal with
         | H : is_left ?X = true |- _ =>
           destruct X as [HH'|HH']; try discriminate; clear H
@@ -1338,7 +1311,6 @@ Section CheckLeq.
       apply Universe.In_exprs. right. now rewrite ee. }
       destruct e1 as [[l1 b1]].
       apply gc_leq_universe_n_sup in HH; tas.
-      2:{ red.  now rewrite NoPropLevel.of_to_level. }
       destruct HH as [e' [He' HH]]. apply leqb_expr_n_spec in HH; tas.
       2:{ now apply Hu. }
       apply Universe.In_exprs in He'. rewrite ee in He'; cbn in He'.
@@ -1557,9 +1529,7 @@ Qed.
       specialize (HH v Hv). cbn -[Z.of_nat] in HH. unfold gc_satisfies0. toProp.
       pose proof (val_level_of_variable_level v l) as H1.
       pose proof (val_level_of_variable_level v l') as H2.
-      cbn in *. rewrite !NoPropLevel.of_to_level in *.
-      rewrite NoPropLevel.val_to_level in *.
-      rewrite H1, H2 in HH. clear -HH. lled; lia.
+      cbn in *. lled; lia.
     - intros HH v Hv; apply leqb_no_prop_n_spec0 in HH.
       specialize (HH v Hv). cbn in HH. unfold gc_satisfies0. toProp.
       lled; lia.
@@ -1635,7 +1605,7 @@ Section CheckLeq2.
   Let level_declared (l : Level.t) := LevelSet.In l uctx.1.
 
   Let expr_declared (e : UnivExpr.t)
-    := on_Some_or_None (fun l : NoPropLevel.t => level_declared l)
+    := on_Some_or_None (fun l : Level.t => level_declared l)
                        (UnivExpr.get_noprop e).
 
   Let levels_declared (u : Universe.t)
@@ -1659,8 +1629,7 @@ Section CheckLeq2.
     : expr_declared e -> gc_expr_declared uctx' e.
   Proof.
     destruct e as [[l b]]; cbn; trivial.
-    intro; apply (level_gc_declared_declared l) in H.
-    red in H. now rewrite NoPropLevel.of_to_level in H.
+    intro; now apply (level_gc_declared_declared l) in H.
   Qed.
 
   Lemma levels_gc_declared_declared (u : Universe.t)

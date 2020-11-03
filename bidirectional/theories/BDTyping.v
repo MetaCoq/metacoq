@@ -26,7 +26,7 @@ Section WfArity.
   Context (checking : forall (Σ : global_env_ext) (Γ : context), term -> term -> Type).
   Context (sorting : forall (Σ : global_env_ext) (Γ : context), term -> Universe.t -> Type).
 
-  Definition isWfArity Σ (Γ : context) T :=
+  Definition isWfArity_sorting Σ (Γ : context) T :=
     { ctx & { s & (destArity [] T = Some (ctx, s)) ×
       All_local_env (lift_sorting checking sorting Σ) (Γ,,,ctx) } }.
 
@@ -37,9 +37,9 @@ Section WfArity.
               All_local_env (lift_sorting checking sorting Σ) Γ ->
               forall (t : term) (u : Universe.t), sorting Σ Γ t u -> Type).
 
-  Definition isWfArity_prop Σ (Γ : context) T :=
-    { wfa : isWfArity Σ Γ T &
-      All_local_env_over checking sorting cproperty sproperty Σ (Γ,,,wfa.π1) wfa.π2.π2.2 }.
+  Definition isWfArity_sorting_prop Σ (Γ : context) T :=
+    { wfa : isWfArity_sorting Σ Γ T &
+      All_local_env_over_sorting checking sorting cproperty sproperty Σ (Γ,,,wfa.π1) wfa.π2.π2.2 }.
 End WfArity.
 
 Notation "Σ ;;; Γ |- t --> t'" := (red Σ Γ t t') (at level 50, Γ, t, t' at next level) : type_scope.
@@ -167,7 +167,7 @@ with infering_indu `{checker_flags} (Σ : global_env_ext) (Γ : context) : induc
 with checking `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
 | check_Cons t T T' :
   Σ ;;; Γ |- t ▹ T ->
-  isWfArity checking infering_sort Σ Γ T' + {s & Σ ;;; Γ |- T' ▸□ s} ->
+  isWfArity_sorting checking infering_sort Σ Γ T' + {s & Σ ;;; Γ |- T' ▸□ s} ->
   Σ ;;; Γ |- T <= T' ->
   Σ ;;; Γ |- t ◃ T'
 
@@ -178,8 +178,6 @@ and " Σ ;;; Γ |- t ▸{ ind } ( u , args ) " := (@infering_indu _ Σ Γ ind t 
 and " Σ ;;; Γ |- t ◃ T " := (@checking _ Σ Γ t T) : type_scope.
 
 Notation wf_local Σ Γ := (All_local_env (lift_sorting checking infering_sort Σ) Γ).
-Notation wf_local_rel Σ Γ Γ' := (All_local_env_rel (lift_sorting checking infering_sort Σ) Γ Γ').
-
 
 (* Lemma meta_conv {cf : checker_flags} Σ Γ t A B :
     Σ ;;; Γ |- t : A ->
@@ -258,7 +256,7 @@ Proof.
         exact (S (i +  Hu)). 
   Defined.
 
-Definition wfarity_size `{checker_flags} {Σ Γ T} (d : isWfArity checking infering_sort Σ Γ T) : size.
+Definition wfarity_size `{checker_flags} {Σ Γ T} (d : isWfArity_sorting checking infering_sort Σ Γ T) : size.
 Proof.
   destruct d as (ctx & u & e & wf).
   exact (wf_local_size Σ (@checking_size _) (@infering_sort_size _) _ wf).
@@ -293,7 +291,7 @@ Fixpoint globenv_size (Σ : global_env) : size :=
 
 Arguments lexprod [A B].
 
-Definition wf `{checker_flags} := Forall_decls_typing checking infering_sort.
+Definition wf `{checker_flags} := Forall_decls_sorting checking infering_sort.
 Definition wf_ext `{checker_flags} := on_global_env_ext checking infering_sort.
 
 Lemma wf_ext_wf {cf:checker_flags} Σ : wf_ext Σ -> wf Σ.
@@ -345,7 +343,7 @@ Section TypingInduction.
 
   Definition env_prop `{checker_flags} :=
     forall Σ (wfΣ : wf Σ.1),
-    (Forall_decls_typing Pcheck Psort Σ.1) ×
+    (Forall_decls_sorting Pcheck Psort Σ.1) ×
     (forall Γ (wfΓ : wf_local Σ Γ), PΓ Σ Γ wfΓ) ×
     (forall Γ t T, Σ ;;; Γ |- t ◃ T -> Pcheck Σ Γ t T) ×
     (forall Γ t T, Σ ;;; Γ |- t ▹ T -> Pinfer Σ Γ t T) ×
@@ -399,7 +397,7 @@ Section TypingInduction.
     all: lia.
   Qed.
 
-  Lemma isWfArity_sort `{checker_flags} {Σ Γ} (wfΓ : wf_local Σ Γ) u : isWfArity checking infering_sort Σ Γ (tSort u).
+  Lemma isWfArity_sort `{checker_flags} {Σ Γ} (wfΓ : wf_local Σ Γ) u : isWfArity_sorting checking infering_sort Σ Γ (tSort u).
   Proof.
     red. exists []. exists u.
     split.
@@ -436,7 +434,7 @@ Section TypingInduction.
   
   Definition Ptyping_sum `{checker_flags} {Σ wfΣ} (d : typing_sum Σ wfΣ) :=
   match d with
-    | env_cons => Forall_decls_typing Pcheck Psort Σ.1
+    | env_cons => Forall_decls_sorting Pcheck Psort Σ.1
     | context_cons Γ wfΓ => PΓ Σ Γ wfΓ
     | check_cons Γ T t _ => Pcheck Σ Γ t T
     | inf_cons Γ T t _ => Pinfer Σ Γ t T
@@ -446,7 +444,7 @@ Section TypingInduction.
   end.
 
   Ltac applyIH := match goal with
-    | IH : forall _ _ d', _ -> Ptyping_sum d' |- Forall_decls_typing Pcheck Psort _ =>
+    | IH : forall _ _ d', _ -> Ptyping_sum d' |- Forall_decls_sorting Pcheck Psort _ =>
           unshelve eapply (IH _ _ (env_cons _ _))
     | IH : forall Σ' wfΣ' d', _ -> Ptyping_sum d' |- PΓ _ ?Γ ?wfΓ =>
           unshelve eapply (IH _ _ (context_cons _ _ Γ wfΓ))
@@ -477,159 +475,175 @@ Section TypingInduction.
     let Pdecl_check := fun Σ Γ wfΓ t T tyT => Pcheck Σ Γ t T in
     let Pdecl_sort := fun Σ Γ wfΓ t u tyT => Psort Σ Γ t u in
 
-    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ), 
-          All_local_env_over checking infering_sort Pdecl_check Pdecl_sort Σ Γ wfΓ -> PΓ Σ Γ wfΓ) ->
+    (forall Σ (wfΣ : wf Σ.1) (PΣ : Forall_decls_sorting Pcheck Psort Σ.1)
+      (Γ : context) (wfΓ : wf_local Σ Γ), 
+      All_local_env_over_sorting checking infering_sort Pdecl_check Pdecl_sort Σ Γ wfΓ -> PΓ Σ Γ wfΓ) ->
 
-    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (n : nat) decl,
-        PΓ Σ Γ wfΓ ->
-        nth_error Γ n = Some decl ->
-        Pinfer Σ Γ (tRel n) (lift0 (S n) decl.(decl_type))) ->
+    (forall Σ (wfΣ : wf Σ.1) (PΣ : Forall_decls_sorting Pcheck Psort Σ.1)
+      (Γ : context) (wfΓ : wf_local Σ Γ) (n : nat) decl,
+      PΓ Σ Γ wfΓ ->
+      nth_error Γ n = Some decl ->
+      Pinfer Σ Γ (tRel n) (lift0 (S n) decl.(decl_type))) ->
 
-    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (l : Level.t),
-        PΓ Σ Γ wfΓ ->
-        LevelSet.In l (global_ext_levels Σ) ->
-        Pinfer Σ Γ (tSort (Universe.make l)) (tSort (Universe.super l))) ->
+    (forall Σ (wfΣ : wf Σ.1)(PΣ : Forall_decls_sorting Pcheck Psort Σ.1)
+      (Γ : context) (wfΓ : wf_local Σ Γ) (l : Level.t),
+      PΓ Σ Γ wfΓ ->
+      LevelSet.In l (global_ext_levels Σ) ->
+      Pinfer Σ Γ (tSort (Universe.make l)) (tSort (Universe.super l))) ->
 
-    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (n : name) (t b : term) (s1 s2 : Universe.t),
-        PΓ Σ Γ wfΓ ->
-        Σ ;;; Γ |- t ▸□ s1 ->
-        Psort Σ Γ t s1 ->
-        Σ ;;; Γ,, vass n t |- b ▸□ s2 ->
-        Psort Σ (Γ,, vass n t) b s2 -> Pinfer Σ Γ (tProd n t b) (tSort (Universe.sort_of_product s1 s2))) ->
+    (forall Σ (wfΣ : wf Σ.1) (PΣ : Forall_decls_sorting Pcheck Psort Σ.1)
+      (Γ : context) (wfΓ : wf_local Σ Γ) (n : name) (t b : term) (s1 s2 : Universe.t),
+      PΓ Σ Γ wfΓ ->
+      Σ ;;; Γ |- t ▸□ s1 ->
+      Psort Σ Γ t s1 ->
+      Σ ;;; Γ,, vass n t |- b ▸□ s2 ->
+      Psort Σ (Γ,, vass n t) b s2 -> Pinfer Σ Γ (tProd n t b) (tSort (Universe.sort_of_product s1 s2))) ->
 
-    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (n : name) (t b : term)
-            (s : Universe.t) (bty : term),
-        PΓ Σ Γ wfΓ ->
-        Σ ;;; Γ |- t ▸□ s ->
-        Psort Σ Γ t s ->
-        Σ ;;; Γ,, vass n t |- b ▹ bty -> Pinfer Σ (Γ,, vass n t) b bty ->
-        Pinfer Σ Γ (tLambda n t b) (tProd n t bty)) ->
+    (forall Σ (wfΣ : wf Σ.1) (PΣ : Forall_decls_sorting Pcheck Psort Σ.1)
+      (Γ : context) (wfΓ : wf_local Σ Γ) (n : name) (t b : term) (s : Universe.t) (bty : term),
+      PΓ Σ Γ wfΓ ->
+      Σ ;;; Γ |- t ▸□ s ->
+      Psort Σ Γ t s ->
+      Σ ;;; Γ,, vass n t |- b ▹ bty -> Pinfer Σ (Γ,, vass n t) b bty ->
+      Pinfer Σ Γ (tLambda n t b) (tProd n t bty)) ->
 
-    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (n : name) (b B t : term)
-            (s : Universe.t) (A : term),
-        PΓ Σ Γ wfΓ ->
-        Σ ;;; Γ |- B ▸□ s ->
-        Psort Σ Γ B s ->
-        Σ ;;; Γ |- b ◃ B ->
-        Pcheck Σ Γ b B ->
-        Σ ;;; Γ,, vdef n b B |- t ▹ A ->
-        Pinfer Σ (Γ,, vdef n b B) t A -> Pinfer Σ Γ (tLetIn n b B t) (tLetIn n b B A)) ->
+    (forall Σ (wfΣ : wf Σ.1) (PΣ : Forall_decls_sorting Pcheck Psort Σ.1)
+      (Γ : context) (wfΓ : wf_local Σ Γ) (n : name) (b B t : term) (s : Universe.t) (A : term),
+      PΓ Σ Γ wfΓ ->
+      Σ ;;; Γ |- B ▸□ s ->
+      Psort Σ Γ B s ->
+      Σ ;;; Γ |- b ◃ B ->
+      Pcheck Σ Γ b B ->
+      Σ ;;; Γ,, vdef n b B |- t ▹ A ->
+      Pinfer Σ (Γ,, vdef n b B) t A -> Pinfer Σ Γ (tLetIn n b B t) (tLetIn n b B A)) ->
 
-    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (t : term) na A B u,
-        PΓ Σ Γ wfΓ ->
-        Σ ;;; Γ |- t ▸Π (na, A, B) -> Pprod Σ Γ t na A B ->
-        Σ ;;; Γ |- u ◃ A -> Pcheck Σ Γ u A ->
-        Pinfer Σ Γ (tApp t u) (subst10 u B)) ->
+    (forall Σ (wfΣ : wf Σ.1) (PΣ : Forall_decls_sorting Pcheck Psort Σ.1)
+      (Γ : context) (wfΓ : wf_local Σ Γ) (t : term) na A B u,
+      PΓ Σ Γ wfΓ ->
+      Σ ;;; Γ |- t ▸Π (na, A, B) -> Pprod Σ Γ t na A B ->
+      Σ ;;; Γ |- u ◃ A -> Pcheck Σ Γ u A ->
+      Pinfer Σ Γ (tApp t u) (subst10 u B)) ->
 
-    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (cst : kername) u (decl : constant_body),
-        PΓ Σ Γ wfΓ ->
-        Forall_decls_typing Pcheck Psort Σ.1 ->
-        declared_constant Σ.1 cst decl ->
-        consistent_instance_ext Σ decl.(cst_universes) u ->
-        Pinfer Σ Γ (tConst cst u) (subst_instance_constr u (cst_type decl))) ->
+    (forall Σ (wfΣ : wf Σ.1) (PΣ : Forall_decls_sorting Pcheck Psort Σ.1)
+      (Γ : context) (wfΓ : wf_local Σ Γ) (cst : kername) u (decl : constant_body),
+      PΓ Σ Γ wfΓ ->
+      Forall_decls_sorting Pcheck Psort Σ.1 ->
+      declared_constant Σ.1 cst decl ->
+      consistent_instance_ext Σ decl.(cst_universes) u ->
+      Pinfer Σ Γ (tConst cst u) (subst_instance_constr u (cst_type decl))) ->
 
-    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (ind : inductive) u mdecl idecl,
-        PΓ Σ Γ wfΓ ->
-        Forall_decls_typing Pcheck Psort Σ.1 ->
-        declared_inductive Σ.1 mdecl ind idecl ->
-        consistent_instance_ext Σ mdecl.(ind_universes) u ->
-        Pinfer Σ Γ (tInd ind u) (subst_instance_constr u (ind_type idecl))) ->
+    (forall Σ (wfΣ : wf Σ.1) (PΣ : Forall_decls_sorting Pcheck Psort Σ.1)
+      (Γ : context) (wfΓ : wf_local Σ Γ) (ind : inductive) u mdecl idecl,
+      PΓ Σ Γ wfΓ ->
+      Forall_decls_sorting Pcheck Psort Σ.1 ->
+      declared_inductive Σ.1 mdecl ind idecl ->
+      consistent_instance_ext Σ mdecl.(ind_universes) u ->
+      Pinfer Σ Γ (tInd ind u) (subst_instance_constr u (ind_type idecl))) ->
 
-    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (ind : inductive) (i : nat) u
-            mdecl idecl cdecl,
-        PΓ Σ Γ wfΓ ->
-        Forall_decls_typing Pcheck Psort Σ.1 ->
-        declared_constructor Σ.1 mdecl idecl (ind, i) cdecl ->
-        consistent_instance_ext Σ mdecl.(ind_universes) u ->
-        Pinfer Σ Γ (tConstruct ind i u)
-          (type_of_constructor mdecl cdecl (ind, i) u)) ->
+    (forall Σ (wfΣ : wf Σ.1) (PΣ : Forall_decls_sorting Pcheck Psort Σ.1)
+      (Γ : context) (wfΓ : wf_local Σ Γ) (ind : inductive) (i : nat) u
+      mdecl idecl cdecl,
+      PΓ Σ Γ wfΓ ->
+      Forall_decls_sorting Pcheck Psort Σ.1 ->
+      declared_constructor Σ.1 mdecl idecl (ind, i) cdecl ->
+      consistent_instance_ext Σ mdecl.(ind_universes) u ->
+      Pinfer Σ Γ (tConstruct ind i u)
+        (type_of_constructor mdecl cdecl (ind, i) u)) ->
 
-    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (ind : inductive) u (npar : nat)
-            (p c : term) (brs : list (nat * term))
-            (args : list term) (mdecl : mutual_inductive_body) (idecl : one_inductive_body)
-            (isdecl : declared_inductive (fst Σ) mdecl ind idecl),
-        PΓ Σ Γ wfΓ ->
-        Forall_decls_typing Pcheck Psort Σ.1 ->
-        isCoFinite mdecl.(ind_finite) = false ->
-        Σ ;;; Γ |- c ▸{ind} (u,args) ->
-        Pind Σ Γ ind c u args ->
-        ind_npars mdecl = npar ->
-        let params := firstn npar args in
-        forall ps pty,
-        build_case_predicate_type ind mdecl idecl params u ps = Some pty ->
-        Σ ;;; Γ |- p ◃ pty ->
-        Pcheck Σ Γ p pty ->
-        leb_sort_family (universe_family ps) idecl.(ind_kelim) ->
-        forall btys,
-        map_option_out (build_branches_type ind mdecl idecl params u p) = Some btys ->
-        All2 (fun br bty => (br.1 = bty.1) ×
-                          (Σ ;;; Γ |- bty.2 ▸□ ps) × Psort Σ Γ bty.2 ps ×
-                          (Σ ;;; Γ |- br.2 ◃ bty.2) × Pcheck Σ Γ br.2 bty.2)
-              brs btys ->
-        Pinfer Σ Γ (tCase (ind,npar) p c brs) (mkApps p (skipn npar args ++ [c]))) ->
+    (forall Σ (wfΣ : wf Σ.1) (PΣ : Forall_decls_sorting Pcheck Psort Σ.1)
+      (Γ : context) (wfΓ : wf_local Σ Γ) (ind : inductive) u (npar : nat)
+      (p c : term) (brs : list (nat * term)) (args : list term)
+      (mdecl : mutual_inductive_body) (idecl : one_inductive_body)
+      (isdecl : declared_inductive (fst Σ) mdecl ind idecl),
+      PΓ Σ Γ wfΓ ->
+      Forall_decls_sorting Pcheck Psort Σ.1 ->
+      isCoFinite mdecl.(ind_finite) = false ->
+      Σ ;;; Γ |- c ▸{ind} (u,args) ->
+      Pind Σ Γ ind c u args ->
+      ind_npars mdecl = npar ->
+      let params := firstn npar args in
+      forall ps pty,
+      build_case_predicate_type ind mdecl idecl params u ps = Some pty ->
+      Σ ;;; Γ |- p ◃ pty ->
+      Pcheck Σ Γ p pty ->
+      leb_sort_family (universe_family ps) idecl.(ind_kelim) ->
+      forall btys,
+      map_option_out (build_branches_type ind mdecl idecl params u p) = Some btys ->
+      All2 (fun br bty => (br.1 = bty.1) ×
+                        (Σ ;;; Γ |- bty.2 ▸□ ps) × Psort Σ Γ bty.2 ps ×
+                        (Σ ;;; Γ |- br.2 ◃ bty.2) × Pcheck Σ Γ br.2 bty.2)
+            brs btys ->
+      Pinfer Σ Γ (tCase (ind,npar) p c brs) (mkApps p (skipn npar args ++ [c]))) ->
 
-    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : projection) (c : term) u
-          mdecl idecl pdecl args,
-        PΓ Σ Γ wfΓ ->
-        Forall_decls_typing Pcheck Psort Σ.1 ->
-        declared_projection Σ.1 mdecl idecl p pdecl ->
-        Σ ;;; Γ |- c ▸{fst (fst p)} (u,args) ->
-        Pind Σ Γ (fst (fst p)) c u args ->
-        #|args| = ind_npars mdecl ->
-        let ty := snd pdecl in
-        Pinfer Σ Γ (tProj p c) (subst0 (c :: List.rev args) (subst_instance_constr u ty))) ->
+    (forall Σ (wfΣ : wf Σ.1) (PΣ : Forall_decls_sorting Pcheck Psort Σ.1)
+      (Γ : context) (wfΓ : wf_local Σ Γ) (p : projection) (c : term) u
+      mdecl idecl pdecl args,
+      PΓ Σ Γ wfΓ ->
+      Forall_decls_sorting Pcheck Psort Σ.1 ->
+      declared_projection Σ.1 mdecl idecl p pdecl ->
+      Σ ;;; Γ |- c ▸{fst (fst p)} (u,args) ->
+      Pind Σ Γ (fst (fst p)) c u args ->
+      #|args| = ind_npars mdecl ->
+      let ty := snd pdecl in
+      Pinfer Σ Γ (tProj p c) (subst0 (c :: List.rev args) (subst_instance_constr u ty))) ->
 
-    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (mfix : mfixpoint term) (n : nat) decl,
-        PΓ Σ Γ wfΓ ->
-        fix_guard mfix ->
-        nth_error mfix n = Some decl ->
-        All (fun d => {s & (Σ ;;; Γ |- d.(dtype) ▸□ s) × Psort Σ Γ d.(dtype) s}) mfix ->
-        All (fun d => (Σ ;;; Γ ,,, fix_context mfix |- d.(dbody) ◃ lift0 #|fix_context mfix| d.(dtype)) ×
-                  (isLambda d.(dbody) = true) ×
-                  Pcheck Σ (Γ ,,, fix_context mfix) d.(dbody) (lift0 #|fix_context mfix| d.(dtype))) mfix ->
-        wf_fixpoint Σ.1 mfix ->
-        Pinfer Σ Γ (tFix mfix n) decl.(dtype)) ->
+    (forall Σ (wfΣ : wf Σ.1) (PΣ : Forall_decls_sorting Pcheck Psort Σ.1)
+      (Γ : context) (wfΓ : wf_local Σ Γ) (mfix : mfixpoint term) (n : nat) decl,
+      PΓ Σ Γ wfΓ ->
+      fix_guard mfix ->
+      nth_error mfix n = Some decl ->
+      All (fun d => {s & (Σ ;;; Γ |- d.(dtype) ▸□ s) × Psort Σ Γ d.(dtype) s}) mfix ->
+      All (fun d => (Σ ;;; Γ ,,, fix_context mfix |- d.(dbody) ◃ lift0 #|fix_context mfix| d.(dtype)) ×
+                (isLambda d.(dbody) = true) ×
+                Pcheck Σ (Γ ,,, fix_context mfix) d.(dbody) (lift0 #|fix_context mfix| d.(dtype))) mfix ->
+      wf_fixpoint Σ.1 mfix ->
+      Pinfer Σ Γ (tFix mfix n) decl.(dtype)) ->
     
-    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (mfix : mfixpoint term) (n : nat) decl,
-        PΓ Σ Γ wfΓ ->
-        cofix_guard mfix ->
-        nth_error mfix n = Some decl ->
-        All (fun d => {s & (Σ ;;; Γ |- d.(dtype) ▸□ s) × Psort Σ Γ d.(dtype) s}) mfix ->
-        All (fun d => (Σ ;;; Γ ,,, fix_context mfix |- d.(dbody) ◃ lift0 #|fix_context mfix| d.(dtype)) ×
-                  Pcheck Σ (Γ ,,, fix_context mfix) d.(dbody) (lift0 #|fix_context mfix| d.(dtype))) mfix ->
-        wf_cofixpoint Σ.1 mfix ->
-        Pinfer Σ Γ (tCoFix mfix n) decl.(dtype)) ->
+    (forall Σ (wfΣ : wf Σ.1) (PΣ : Forall_decls_sorting Pcheck Psort Σ.1)
+      (Γ : context) (wfΓ : wf_local Σ Γ) (mfix : mfixpoint term) (n : nat) decl,
+      PΓ Σ Γ wfΓ ->
+      cofix_guard mfix ->
+      nth_error mfix n = Some decl ->
+      All (fun d => {s & (Σ ;;; Γ |- d.(dtype) ▸□ s) × Psort Σ Γ d.(dtype) s}) mfix ->
+      All (fun d => (Σ ;;; Γ ,,, fix_context mfix |- d.(dbody) ◃ lift0 #|fix_context mfix| d.(dtype)) ×
+                Pcheck Σ (Γ ,,, fix_context mfix) d.(dbody) (lift0 #|fix_context mfix| d.(dtype))) mfix ->
+      wf_cofixpoint Σ.1 mfix ->
+      Pinfer Σ Γ (tCoFix mfix n) decl.(dtype)) ->
 
-    (forall (Σ : global_env_ext) (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (t T : term) (u : Universe.t),
-        PΓ Σ Γ wfΓ ->
-        Σ ;;; Γ |- t ▹ T ->
-        Pinfer Σ Γ t T ->
-        Σ ;;; Γ |- T --> tSort u ->
-        Psort Σ Γ t u) ->
+    (forall (Σ : global_env_ext) (wfΣ : wf Σ.1) (PΣ : Forall_decls_sorting Pcheck Psort Σ.1)
+      (Γ : context) (wfΓ : wf_local Σ Γ) (t T : term) (u : Universe.t),
+      PΓ Σ Γ wfΓ ->
+      Σ ;;; Γ |- t ▹ T ->
+      Pinfer Σ Γ t T ->
+      Σ ;;; Γ |- T --> tSort u ->
+      Psort Σ Γ t u) ->
 
-    (forall (Σ : global_env_ext) (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (t T : term) (na : name) (A B : term),
-        PΓ Σ Γ wfΓ ->
-        Σ ;;; Γ |- t ▹ T ->
-        Pinfer Σ Γ t T ->
-        Σ ;;; Γ |- T --> tProd na A B ->
-        Pprod Σ Γ t na A B) ->
+    (forall (Σ : global_env_ext) (wfΣ : wf Σ.1) (PΣ : Forall_decls_sorting Pcheck Psort Σ.1)
+      (Γ : context) (wfΓ : wf_local Σ Γ) (t T : term) (na : name) (A B : term),
+      PΓ Σ Γ wfΓ ->
+      Σ ;;; Γ |- t ▹ T ->
+      Pinfer Σ Γ t T ->
+      Σ ;;; Γ |- T --> tProd na A B ->
+      Pprod Σ Γ t na A B) ->
 
-    (forall (Σ : global_env_ext) (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (ind : inductive) (t T : term) (ui : Instance.t)
-          (args : list term),
-        PΓ Σ Γ wfΓ ->
-        Σ ;;; Γ |- t ▹ T ->
-        Pinfer Σ Γ t T ->
-        Σ ;;; Γ |- T --> mkApps (tInd ind ui) args ->
-        Pind Σ Γ ind t ui args) ->
+    (forall (Σ : global_env_ext) (wfΣ : wf Σ.1) (PΣ : Forall_decls_sorting Pcheck Psort Σ.1)
+      (Γ : context) (wfΓ : wf_local Σ Γ) (ind : inductive) (t T : term) (ui : Instance.t)
+      (args : list term),
+      PΓ Σ Γ wfΓ ->
+      Σ ;;; Γ |- t ▹ T ->
+      Pinfer Σ Γ t T ->
+      Σ ;;; Γ |- T --> mkApps (tInd ind ui) args ->
+      Pind Σ Γ ind t ui args) ->
 
-    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (t T T' : term),
-        PΓ Σ Γ wfΓ ->
-        Σ ;;; Γ |- t ▹ T ->
-        Pinfer Σ Γ t T ->
-        (isWfArity_prop checking infering_sort Pdecl_check Pdecl_sort Σ Γ T')
-          + {s & (Σ ;;; Γ |- T' ▸□ s) × Psort Σ Γ T' s} ->
-        Σ ;;; Γ |- T <= T' ->
-        Pcheck Σ Γ t T') ->
+    (forall (Σ : global_env_ext) (wfΣ : wf Σ.1) (PΣ : Forall_decls_sorting Pcheck Psort Σ.1)
+      (Γ : context) (wfΓ : wf_local Σ Γ) (t T T' : term),
+      PΓ Σ Γ wfΓ ->
+      Σ ;;; Γ |- t ▹ T ->
+      Pinfer Σ Γ t T ->
+      (isWfArity_sorting_prop checking infering_sort Pdecl_check Pdecl_sort Σ Γ T')
+        + {s & (Σ ;;; Γ |- T' ▸□ s) × Psort Σ Γ T' s} ->
+      Σ ;;; Γ |- T <= T' ->
+      Pcheck Σ Γ t T') ->
       
     env_prop.
   Proof.
@@ -672,7 +686,7 @@ Section TypingInduction.
       clear IH.
       inversion_clear wfΣ as [|? ? ? wfΣ' ? ? ? wfg].
       constructor.
-      + change (Forall_decls_typing Pcheck Psort (Σ,φ).1).
+      + change (Forall_decls_sorting Pcheck Psort (Σ,φ).1).
         applyIH.
       + assumption.
       + assumption.
@@ -752,6 +766,7 @@ Section TypingInduction.
 
     - apply HΓ.
       1: assumption.
+      1:{ applyIH. constructor 2. simpl. apply wf_local_size_pos. }
       dependent induction wfΓ.
       + constructor.
       + destruct t0 as (u & d).
@@ -761,8 +776,7 @@ Section TypingInduction.
         dependent destruction H ; [constructor | constructor 2] ; auto.
         etransitivity ; eauto.
         simpl ; cbn in d ; pose proof (infering_sort_size_pos d) ; lia.
-        * constructor.
-          red ; applyIH.
+        * simpl ; red ; applyIH.
           constructor 2. simpl.
           have ? : 0 < wfl_size wfΓ by apply wf_local_size_pos.
           lia.
@@ -781,6 +795,7 @@ Section TypingInduction.
     - destruct c.
       unshelve (eapply HCheck ; eauto) ; auto.
       + eapply infering_wf_local ; eassumption.
+      + applyIH. constructor 2. cbn. destruct s as [|[]] ; lia. 
       + applyIH.
         pose proof (infering_wf_local_size i).
         constructor 2.
@@ -811,7 +826,7 @@ Section TypingInduction.
                 intros.
                 apply IH'.
                 simpl. lia. }
-              constructor.
+              simpl.
               red.
               eapply (IH' (sort_cons _ wfΣ _ _ _ t1.π2)).
               simpl. lia.
@@ -854,8 +869,8 @@ Section TypingInduction.
       all: applyIH.
       pose proof (infering_sort_wf_local_size i). lia.
 
-    - unshelve eapply (HApp _ _ _ _ _ _ A) ; auto.
-      1: apply (infering_prod_wf_local i).
+    - unshelve eapply (HApp _ _ _ _ _ _ _ A) ; auto.
+      2: apply (infering_prod_wf_local i).
       all: applyIH.
       pose proof (infering_prod_wf_local_size i). lia.
 
@@ -871,7 +886,7 @@ Section TypingInduction.
     - destruct indnpar as [ind' npar'] ; cbn in ind ; cbn in npar ; subst ind ; subst npar.
       unshelve eapply HCase ; auto.
       1: apply (infering_indu_wf_local i).
-      1-4: applyIH.
+      1-5: applyIH.
       1: pose proof (infering_indu_wf_local_size i) ; lia.
       match goal with | IH : forall Σ' wfΣ' d', _ _ (_ ; _ ; ?d) -> _ |- _ =>
         have IH' : forall d' : typing_sum Σ wfΣ, (typing_sum_size d') < (typing_sum_size d) -> Ptyping_sum d' end.
@@ -895,7 +910,7 @@ Section TypingInduction.
       pose proof (infering_indu_wf_local_size i). lia.
 
     - unshelve eapply HFix ; eauto.
-      1: applyIH.
+      1-2: applyIH.
 
       all: have IH' : (forall d' : typing_sum Σ wfΣ,
       (typing_sum_size d') <
@@ -935,7 +950,7 @@ Section TypingInduction.
         cbn. lia.
 
     - unshelve eapply HCoFix ; eauto.
-      1: applyIH.
+      1-2: applyIH.
 
       all: have IH' : (forall d' : typing_sum Σ wfΣ,
       (typing_sum_size d') <

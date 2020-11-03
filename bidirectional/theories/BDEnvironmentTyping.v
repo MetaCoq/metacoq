@@ -286,6 +286,15 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T).
     | Some T => checking Σ Γ t T
     | None => { s : Universe.t & sorting Σ Γ t s }
     end.
+  
+  Definition lift_typing (typing : global_env_ext -> context -> term -> term -> Type) :=
+      lift_sorting typing (fun Σ Γ t u => typing Σ Γ t (tSort u)).
+  
+  Definition on_local_decl (P : context -> term -> option term -> Type) Γ d :=
+        match d.(decl_body) with
+        | Some b => P Γ b (Some d.(decl_type))
+        | None => P Γ d.(decl_type) None
+        end.
 
     Section All_local_env_rel.
     Context (P : forall (Γ : context), term -> option term -> Type).
@@ -336,35 +345,39 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T).
                 All_local_env (lift_sorting checking sorting Σ) Γ ->
                 forall (t : term) (s : Universe.t), sorting Σ Γ t s -> Type).
 
-    Inductive type_local_decl_over {Σ Γ} (wfΓ : All_local_env (lift_sorting checking sorting Σ) Γ) :
-    forall (d : context_decl), type_local_decl (lift_sorting checking sorting Σ) Γ d -> Type :=
-    | decl_abs na t : forall H : type_local_decl (lift_sorting checking sorting Σ) Γ (vass na t),
-      sproperty Σ Γ wfΓ _ _ H.π2 -> type_local_decl_over wfΓ (vass na t) H
-    | decl_def na b t : forall H : type_local_decl (lift_sorting checking sorting Σ) Γ (vdef na b t),
-      sproperty Σ Γ wfΓ _ _ H.1.π2 -> cproperty Σ Γ wfΓ _ _ H.2 -> type_local_decl_over wfΓ (vdef na b t) H.
-          
+    Definition type_local_decl_over {Σ Γ} (wfΓ : All_local_env (lift_sorting checking sorting Σ) Γ)
+    (d : context_decl) : type_local_decl (lift_sorting checking sorting Σ) Γ d -> Type :=
+    match d with
+      | {| decl_body := Some b |} => fun tyd => (sproperty Σ Γ wfΓ _ _ tyd.1.π2) × (cproperty Σ Γ wfΓ _ _ tyd.2)
+      | {| decl_body := None |}  => fun tyd => sproperty Σ Γ wfΓ _ _ tyd.π2
+    end.          
 
-    Inductive All_local_env_over (Σ : global_env_ext) :
+    Inductive All_local_env_over_sorting (Σ : global_env_ext) :
       forall (Γ : context), All_local_env (lift_sorting checking sorting Σ) Γ -> Type :=
     | localenv_over_nil :
-        All_local_env_over Σ [] localenv_nil
+        All_local_env_over_sorting Σ [] localenv_nil
 
     | localenv_over_cons_abs Γ na t
         (all : All_local_env (lift_sorting checking sorting Σ) Γ) :
-        All_local_env_over Σ Γ all ->
+        All_local_env_over_sorting Σ Γ all ->
         forall (tu : type_local_decl (lift_sorting checking sorting Σ) Γ (vass na t)),
           type_local_decl_over all (vass na t) tu ->
-          All_local_env_over Σ (Γ ,, vass na t)
+          All_local_env_over_sorting Σ (Γ ,, vass na t)
                             (localenv_cons_abs all tu)
 
     | localenv_over_cons_def Γ na b t
         (all : All_local_env (lift_sorting checking sorting Σ) Γ) :
-        All_local_env_over Σ Γ all ->
+        All_local_env_over_sorting Σ Γ all ->
         forall (tu : type_local_decl (lift_sorting checking sorting Σ) Γ (vdef na b t)),
           type_local_decl_over all (vdef na b t) tu ->
-          All_local_env_over Σ (Γ ,, vdef na b t)
+          All_local_env_over_sorting Σ (Γ ,, vdef na b t)
                             (localenv_cons_def all tu).
+
   End TypeLocalOver.
+
+  Definition All_local_env_over typing property Σ Γ wfΓ :=
+    All_local_env_over_sorting typing (fun Σ Γ t u => typing Σ Γ t (tSort u)) property 
+      (fun Σ Γ wfΓ t u (d : typing Σ Γ t (tSort u)) => property Σ Γ wfΓ t (tSort u) d) Σ Γ wfΓ.
 
   Section TypeLocalOverRel.
     Context (checking : global_env_ext -> context -> term -> term -> Type).
@@ -375,14 +388,6 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T).
     Context (sproperty : forall (Σ : global_env_ext) (Γ Γ' : context),
                 All_local_env_rel (lift_sorting checking sorting Σ) Γ Γ' ->
                 forall (t : term) (s : Universe.t), sorting Σ (Γ,,,Γ') t s -> Type).
-
-    Definition All_local_env_over_rel Σ Γ Γ' (all : All_local_env_rel (lift_sorting checking sorting Σ) Γ Γ') : Type :=
-    All_local_env_over
-      (fun Σ0 Γ0 => checking Σ0 (Γ,,,Γ0))
-      (fun Σ0 Γ0 => sorting Σ0 (Γ,,,Γ0))
-      (fun Σ Γ' => cproperty Σ Γ Γ')
-      (fun Σ Γ' => sproperty Σ Γ Γ')
-      Σ Γ' all.
 
   End TypeLocalOverRel.
 
@@ -423,8 +428,6 @@ Module Type Typing (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E).
   Parameter Inline closedn : nat -> term -> bool.
   
   Notation wf_local Σ Γ := (All_local_env (lift_sorting checking sorting Σ) Γ).
-  Notation wf_local_rel Σ Γ Γ' := (All_local_env_rel (lift_sorting checking sorting Σ) Γ Γ').
-
 
 End Typing.
 
@@ -963,15 +966,63 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
 
   (** This predicate enforces that there exists typing derivations for every typable term in env. *)
 
+  Definition Forall_decls_sorting `{checker_flags}
+    (checking : global_env_ext -> context -> term -> term -> Type)
+    (sorting : global_env_ext -> context -> term -> Universe.t -> Type)
+  := on_global_env checking sorting.
+
   Definition Forall_decls_typing `{checker_flags}
-            (checking : global_env_ext -> context -> term -> term -> Type)
-            (sorting : global_env_ext -> context -> term -> Universe.t -> Type)
-    := on_global_env checking sorting.
+    (typing : global_env_ext -> context -> term -> term -> Type)
+  := on_global_env typing (fun Σ Γ t u => typing Σ Γ t (tSort u)).
 
   (** ** Induction principle for typing up-to a global environment *)
 
   (* Lemma refine_type `{checker_flags} Σ Γ t T U : Σ ;;; Γ |- t : T -> T = U -> Σ ;;; Γ |- t : U.
   Proof. now intros Ht ->. Qed. *)
+
+  Section wf_local.
+    Context `{checker_flags}.
+
+    Definition wf_local_rel Σ Γ Γ'
+      := (All_local_env (lift_sorting (fun Σ0 Γ0 t T => checking Σ0 (Γ ,,, Γ0) t T)
+            (fun Σ0 Γ0 t u => sorting Σ0 (Γ ,,, Γ0) t u) Σ) Γ').
+
+    Definition wf_local_rel_nil {Σ Γ} : wf_local_rel Σ Γ []
+      := localenv_nil.
+
+    Definition wf_local_rel_abs {Σ Γ Γ' A na} :
+      wf_local_rel Σ Γ Γ' -> {u & sorting Σ (Γ ,,, Γ') A u }
+      -> wf_local_rel Σ Γ (Γ',, vass na A)
+      := localenv_cons_abs.
+
+    Definition wf_local_rel_def {Σ Γ Γ' t A na} :
+      wf_local_rel Σ Γ Γ' ->
+      isType Σ (Γ ,,, Γ') A ->
+      Σ ;;; Γ ,,, Γ' |- t ◃ A ->
+      wf_local_rel Σ Γ (Γ',, vdef na t A)
+      := fun wf ty b => localenv_cons_def wf (ty , b).
+
+    Lemma wf_local_rel_local :
+      forall Σ Γ,
+        wf_local Σ Γ ->
+        wf_local_rel Σ [] Γ.
+    Proof.
+      intros Σ Γ h. eapply All_local_env_impl.
+      - exact h.
+      - intros Δ t [] h'.
+        all: cbn.
+        + rewrite app_context_nil_l. assumption.
+        + rewrite app_context_nil_l. assumption.
+    Defined.
+
+    Lemma wf_local_local_rel Σ Γ :
+      wf_local_rel Σ [] Γ -> wf_local Σ Γ.
+    Proof.
+      intro X. eapply All_local_env_impl. exact X.
+      intros Γ0 t [] XX; cbn in XX; rewrite app_context_nil_l in XX; assumption.
+    Defined.
+
+  End wf_local.
 
   Section All_local_env_size.
     Context (checking : global_env_ext -> context -> term -> term -> Type).

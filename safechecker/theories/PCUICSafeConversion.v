@@ -2247,41 +2247,37 @@ Section Conversion.
     } ;
 
     | prog_view_Fix mfix idx mfix' idx'
-      with inspect (eqb_term (tFix mfix idx) (tFix mfix' idx')) := {
-      | @exist true eq1 := isconv_args leq (tFix mfix idx) π1 (tFix mfix' idx') π2 aux ;
-      | @exist false _ with inspect (unfold_one_fix Γ mfix idx π1 _) := {
+      with inspect (unfold_one_fix Γ mfix idx π1 _) := {
+      | @exist (Some (fn, θ)) eq1 with inspect (decompose_stack θ) := {
+        | @exist (l', θ') eq2
+          with inspect (reduce_stack nodelta_flags Σ hΣ (Γ ,,, stack_context θ') fn (appstack l' ε) _) := {
+          | @exist (fn', ρ) eq3 :=
+            isconv_prog leq fn' (ρ +++ θ') (tFix mfix' idx') π2 aux
+          }
+        } ;
+      | _ with inspect (unfold_one_fix Γ mfix' idx' π2 _) := {
         | @exist (Some (fn, θ)) eq1
           with inspect (decompose_stack θ) := {
           | @exist (l', θ') eq2
             with inspect (reduce_stack nodelta_flags Σ hΣ (Γ ,,, stack_context θ') fn (appstack l' ε) _) := {
             | @exist (fn', ρ) eq3 :=
-              isconv_prog leq fn' (ρ +++ θ') (tFix mfix' idx') π2 aux
+              isconv_prog leq (tFix mfix idx) π1 fn' (ρ +++ θ') aux
             }
           } ;
-        | _ with inspect (unfold_one_fix Γ mfix' idx' π2 _) := {
-          | @exist (Some (fn, θ)) eq1
-            with inspect (decompose_stack θ) := {
-            | @exist (l', θ') eq2
-              with inspect (reduce_stack nodelta_flags Σ hΣ (Γ ,,, stack_context θ') fn (appstack l' ε) _) := {
-              | @exist (fn', ρ) eq3 :=
-                isconv_prog leq (tFix mfix idx) π1 fn' (ρ +++ θ') aux
-              }
-            } ;
-          | _ with inspect (eqb idx idx') := {
-            | @exist true eq4 with isconv_fix Γ mfix idx π1 _ mfix' idx' π2 _ _ _ aux := {
-              | Success h1 with isconv_args_raw leq (tFix mfix idx) π1 (tFix mfix' idx') π2 aux := {
-                | Success h2 := yes ;
-                | Error e := Error e
-                } ;
+        | _ with inspect (eqb idx idx') := {
+          | @exist true eq4 with isconv_fix Γ mfix idx π1 _ mfix' idx' π2 _ _ _ aux := {
+            | Success h1 with isconv_args_raw leq (tFix mfix idx) π1 (tFix mfix' idx') π2 aux := {
+              | Success h2 := yes ;
               | Error e := Error e
               } ;
-            | @exist false _ :=
-              Error (
-                CannotUnfoldFix
-                  (Γ ,,, stack_context π1) mfix idx
-                  (Γ ,,, stack_context π2) mfix' idx'
-              )
-            }
+            | Error e := Error e
+            } ;
+          | @exist false _ :=
+            Error (
+              CannotUnfoldFix
+                (Γ ,,, stack_context π1) mfix idx
+                (Γ ,,, stack_context π2) mfix' idx'
+            )
           }
         }
       } ;
@@ -2764,17 +2760,6 @@ Section Conversion.
   Qed.
 
   (* tFix *)
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    destruct hΣ.
-    eapply conv_conv_cum.
-    constructor. constructor.
-    eapply eqb_term_spec. auto.
-  Qed.
   Next Obligation.
     cbn. rewrite zipc_appstack. cbn.
     apply unfold_one_fix_red_zipp in eq1 as r.

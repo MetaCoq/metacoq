@@ -2215,54 +2215,6 @@ Section Conversion.
         }
       } ;
 
-    (* Incomplete alternative *)
-    (* NOTE that it presents a syntactic optimisation that is removed
-      in the current implementation. Should it be added?
-    *)
-    (* | prog_view_Case ind par p c brs ind' par' p' c' brs'
-      with inspect (eqb_term (tCase (ind, par) p c brs) (tCase (ind', par') p' c' brs')) := {
-      | @exist true eq1 := isconv_args leq (tCase (ind, par) p c brs) π1 (tCase (ind', par') p' c' brs') π2 aux ;
-      | @exist false _ with inspect (reduce_term RedFlags.default Σ hΣ (Γ ,,, stack_context π1) c _) := {
-        | @exist cred eq1 with inspect (reduce_term RedFlags.default Σ hΣ (Γ ,,, stack_context π2) c' _) := {
-           | @exist cred' eq2 with inspect (eqb_term cred c && eqb_term cred' c') := {
-              | @exist true eq3 with inspect (eqb (ind, par) (ind', par')) := {
-                | @exist true eq4
-                  with isconv_red_raw Conv
-                        p (Case_p (ind, par) c brs π1)
-                        p' (Case_p (ind',par') c' brs' π2)
-                        aux := {
-                  | Success h1
-                    with isconv_red_raw Conv
-                          c (Case (ind, par) p brs π1)
-                          c' (Case (ind', par') p' brs' π2)
-                          aux := {
-                    | Success h2 with isconv_branches' Γ ind par p c brs π1 _ ind' par' p' c' brs' π2 _ _ _ _ aux := {
-                      | Success h3
-                        with isconv_args_raw leq (tCase (ind, par) p c brs) π1 (tCase (ind', par') p' c' brs') π2 aux := {
-                        | Success h4 := yes ;
-                        | Error e := Error e
-                        } ;
-                      | Error e := Error e
-                      } ;
-                    | Error e := Error e
-                    } ;
-                  | Error e := Error e
-                  } ;
-                | @exist false _ :=
-                  Error (
-                    CaseOnDifferentInd
-                      (Γ ,,, stack_context π1) ind par p c brs
-                      (Γ ,,, stack_context π2) ind' par' p' c' brs'
-                  )
-                } ;
-              | @exist false eq3 :=
-                isconv_red leq (tCase (ind, par) p cred brs) π1
-                               (tCase (ind', par') p' cred' brs') π2 aux
-              }
-           }
-        }
-      } ; *)
-
     | prog_view_Proj p c p' c' with inspect (reduce_term RedFlags.default Σ hΣ (Γ ,,, stack_context π1) c _) := {
       | @exist cred eq1 with inspect (eqb_term cred c) := {
         | @exist true eq3 with inspect (reduce_term RedFlags.default Σ hΣ (Γ ,,, stack_context π2) c' _) := {
@@ -2294,69 +2246,38 @@ Section Conversion.
       }
     } ;
 
-
-    (* Incomplete alternative *)
-    (* | prog_view_Proj p c p' c' with inspect (eqb p p') := {
-      | @exist true eq1
-        with isconv_red_raw Conv c (Proj p π1) c' (Proj p' π2) aux := {
-        | Success h1 := isconv_args leq (tProj p c) π1 (tProj p' c') π2 aux ;
-        | Error e := Error e (* TODO Does not seem complete, c and c' could be different but have the same projection *)
-        } ;
-      | @exist false _ with inspect (reduce_term RedFlags.default Σ hΣ (Γ ,,, stack_context π1) c _) := {
-        | @exist cred eq1 with inspect (reduce_term RedFlags.default Σ hΣ (Γ ,,, stack_context π2) c' _) := {
-          | @exist cred' eq2 with inspect (eqb_term cred c && eqb_term cred' c') := {
-            | @exist true eq3 :=
-              Error (
-                DistinctStuckProj
-                  (Γ ,,, stack_context π1) p c
-                  (Γ ,,, stack_context π2) p' c'
-              ) ;
-            | @exist false eq3 :=
-              isconv_red leq
-                (tProj p cred) π1
-                (tProj p' cred') π2
-                aux
-            }
-          }
-        }
-      } ; *)
-
     | prog_view_Fix mfix idx mfix' idx'
-      with inspect (eqb_term (tFix mfix idx) (tFix mfix' idx')) := {
-      | @exist true eq1 := isconv_args leq (tFix mfix idx) π1 (tFix mfix' idx') π2 aux ;
-      | @exist false _ with inspect (unfold_one_fix Γ mfix idx π1 _) := {
+      with inspect (unfold_one_fix Γ mfix idx π1 _) := {
+      | @exist (Some (fn, θ)) eq1 with inspect (decompose_stack θ) := {
+        | @exist (l', θ') eq2
+          with inspect (reduce_stack nodelta_flags Σ hΣ (Γ ,,, stack_context θ') fn (appstack l' ε) _) := {
+          | @exist (fn', ρ) eq3 :=
+            isconv_prog leq fn' (ρ +++ θ') (tFix mfix' idx') π2 aux
+          }
+        } ;
+      | _ with inspect (unfold_one_fix Γ mfix' idx' π2 _) := {
         | @exist (Some (fn, θ)) eq1
           with inspect (decompose_stack θ) := {
           | @exist (l', θ') eq2
             with inspect (reduce_stack nodelta_flags Σ hΣ (Γ ,,, stack_context θ') fn (appstack l' ε) _) := {
             | @exist (fn', ρ) eq3 :=
-              isconv_prog leq fn' (ρ +++ θ') (tFix mfix' idx') π2 aux
+              isconv_prog leq (tFix mfix idx) π1 fn' (ρ +++ θ') aux
             }
           } ;
-        | _ with inspect (unfold_one_fix Γ mfix' idx' π2 _) := {
-          | @exist (Some (fn, θ)) eq1
-            with inspect (decompose_stack θ) := {
-            | @exist (l', θ') eq2
-              with inspect (reduce_stack nodelta_flags Σ hΣ (Γ ,,, stack_context θ') fn (appstack l' ε) _) := {
-              | @exist (fn', ρ) eq3 :=
-                isconv_prog leq (tFix mfix idx) π1 fn' (ρ +++ θ') aux
-              }
-            } ;
-          | _ with inspect (eqb idx idx') := {
-            | @exist true eq4 with isconv_fix Γ mfix idx π1 _ mfix' idx' π2 _ _ _ aux := {
-              | Success h1 with isconv_args_raw leq (tFix mfix idx) π1 (tFix mfix' idx') π2 aux := {
-                | Success h2 := yes ;
-                | Error e := Error e
-                } ;
+        | _ with inspect (eqb idx idx') := {
+          | @exist true eq4 with isconv_fix Γ mfix idx π1 _ mfix' idx' π2 _ _ _ aux := {
+            | Success h1 with isconv_args_raw leq (tFix mfix idx) π1 (tFix mfix' idx') π2 aux := {
+              | Success h2 := yes ;
               | Error e := Error e
               } ;
-            | @exist false _ :=
-              Error (
-                CannotUnfoldFix
-                  (Γ ,,, stack_context π1) mfix idx
-                  (Γ ,,, stack_context π2) mfix' idx'
-              )
-            }
+            | Error e := Error e
+            } ;
+          | @exist false _ :=
+            Error (
+              CannotUnfoldFix
+                (Γ ,,, stack_context π1) mfix idx
+                (Γ ,,, stack_context π2) mfix' idx'
+            )
           }
         }
       } ;
@@ -2839,17 +2760,6 @@ Section Conversion.
   Qed.
 
   (* tFix *)
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    destruct hΣ.
-    eapply conv_conv_cum.
-    constructor. constructor.
-    eapply eqb_term_spec. auto.
-  Qed.
   Next Obligation.
     cbn. rewrite zipc_appstack. cbn.
     apply unfold_one_fix_red_zipp in eq1 as r.

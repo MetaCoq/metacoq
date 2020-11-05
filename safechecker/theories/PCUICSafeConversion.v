@@ -2349,14 +2349,20 @@ Section Conversion.
       } ;
 
     | prog_view_CoFix mfix idx mfix' idx'
-      with inspect (eqb_term (tCoFix mfix idx) (tCoFix mfix' idx')) := {
-      | @exist true eq1 := isconv_args leq (tCoFix mfix idx) π1 (tCoFix mfix' idx') π2 aux ;
+      with inspect (eqb idx idx') := {
+      | @exist true eq4 with isconv_fix CoIndFix Γ mfix idx π1 _ mfix' idx' π2 _ _ _ aux := {
+        | Success h1 with isconv_args_raw leq (tCoFix mfix idx) π1 (tCoFix mfix' idx') π2 aux := {
+          | Success h2 := yes ;
+          | Error e := Error e
+          } ;
+        | Error e := Error e
+        } ;
       | @exist false _ :=
         Error (
           DistinctCoFix
             (Γ ,,, stack_context π1) mfix idx
             (Γ ,,, stack_context π2) mfix' idx'
-        ) (* TODO Incomplete *)
+        )
       } ;
 
     | prog_view_other t1 t2 h :=
@@ -3147,15 +3153,24 @@ Section Conversion.
 
   (* tCoFix *)
   Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
+    change (true = eqb idx idx') in eq4.
+    destruct (eqb_spec idx idx'). 2: discriminate.
+    assumption.
   Qed.
   Next Obligation.
+    eapply R_stateR.
+    all: simpl.
+    all: try reflexivity.
+    constructor.
+  Qed.
+  Next Obligation.
+    destruct h1 as [h1].
     destruct hΣ.
-    eapply conv_conv_cum.
-    constructor. constructor.
-    eapply eqb_term_spec. auto.
+    eapply conv_conv_cum_l.
+    change (true = eqb idx idx') in eq4.
+    destruct (eqb_spec idx idx'). 2: discriminate.
+    subst.
+    eapply conv_CoFix. all: assumption.
   Qed.
 
   (* Fallback *)

@@ -98,14 +98,14 @@ Definition mkApps_decompose_app t :
   t = mkApps  (fst (decompose_app t)) (snd (decompose_app t))
   := mkApps_decompose_app_rec t [].
 
-Lemma isType_red {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ T U} : 
+Lemma isType_red {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ T U} :
   isType Σ Γ T -> red Σ Γ T U -> isType Σ Γ U.
 Proof.
   intros [s Hs] red; exists s.
   eapply subject_reduction; eauto.
 Qed.
 
-  
+
 
 
 Derive NoConfusion EqDec for sort_family.
@@ -211,6 +211,19 @@ Fixpoint string_of_conv_error Σ (e : ConversionError) : string :=
       print_term Σ Γ (tCoFix mfix idx) ^
       "\nand\n" ^ print_term Σ Γ' (tCoFix mfix' idx') ^
       "\ncorrespond to syntactically distinct terms."
+  | CoFixRargMismatch idx Γ u mfix1 mfix2 Γ' v mfix1' mfix2' =>
+      "The two co-fixed-points\n" ^
+      print_term Σ Γ (tCoFix (mfix1 ++ u :: mfix2) idx) ^
+      "\nand\n" ^ print_term Σ Γ' (tCoFix (mfix1' ++ v :: mfix2') idx) ^
+      "\nhave a mismatch in the function number " ^ string_of_nat #|mfix1| ^
+      ": arguments " ^ string_of_nat u.(rarg) ^
+      " and " ^ string_of_nat v.(rarg) ^ "are different."
+  | CoFixMfixMismatch idx Γ mfix Γ' mfix' =>
+      "The two co-fixed-points\n" ^
+      print_term Σ Γ (tCoFix mfix idx) ^
+      "\nand\n" ^
+      print_term Σ Γ' (tCoFix mfix' idx) ^
+      "\nhave a different number of mutually defined functions."
   | StackHeadError leq Γ1 t1 args1 u1 l1 Γ2 t2 u2 l2 e =>
       "TODO stackheaderror\n" ^
       string_of_conv_error Σ e
@@ -361,7 +374,7 @@ Section Typecheck.
   Context {cf : checker_flags} {Σ : global_env_ext} (HΣ : ∥ wf Σ ∥)
           (Hφ : ∥ on_udecl Σ.1 Σ.2 ∥)
           (G : universes_graph) (HG : is_graph_of_uctx G (global_ext_uctx Σ)).
-  
+
   (* We get stack overflow on Qed after Equations definitions when this is transparent *)
   Opaque reduce_stack_full.
 
@@ -405,20 +418,20 @@ Section Typecheck.
   Proof.
     apply reduce_term_sound.
   Defined.
-  
+
   Theorem hnf_complete {Γ t h} : whnf RedFlags.default Σ Γ (hnf Γ t h).
   Proof.
     apply reduce_term_complete.
   Qed.
-  
+
   Inductive view_sort : term -> Type :=
   | view_sort_sort s : view_sort (tSort s)
   | view_sort_other t : ~isSort t -> view_sort t.
-  
+
   Equations view_sortc (t : term) : view_sort t :=
     view_sortc (tSort s) := view_sort_sort s;
     view_sortc t := view_sort_other t _.
-  
+
   Equations? reduce_to_sort (Γ : context) (t : term) (h : wellformed Σ Γ t)
     : typing_result (∑ u, ∥ red (fst Σ) Γ t (tSort u) ∥) :=
     reduce_to_sort Γ t h with view_sortc t := {
@@ -433,8 +446,8 @@ Section Typecheck.
     pose proof (hnf_sound (h:=h)).
     now rewrite eq.
   Qed.
-  
-  Lemma reduce_to_sort_complete {Γ t wt} e : 
+
+  Lemma reduce_to_sort_complete {Γ t wt} e :
     reduce_to_sort Γ t wt = TypeError e ->
     (forall s, red Σ Γ t (tSort s) -> False).
   Proof.
@@ -454,7 +467,7 @@ Section Typecheck.
   Inductive view_prod : term -> Type :=
   | view_prod_prod na A b : view_prod (tProd na A b)
   | view_prod_other t : ~isProd t -> view_prod t.
-  
+
   Equations view_prodc (t : term) : view_prod t :=
     view_prodc (tProd na A b) := view_prod_prod na A b;
     view_prodc t := view_prod_other t _.
@@ -473,7 +486,7 @@ Section Typecheck.
     pose proof (hnf_sound (h:=h)).
     now rewrite eq.
   Qed.
-  
+
   Lemma reduce_to_prod_complete {Γ t wt} e :
     reduce_to_prod Γ t wt = TypeError e ->
     (forall na a b, red Σ Γ t (tProd na a b) -> False).
@@ -490,17 +503,17 @@ Section Typecheck.
     rewrite eq in n0.
     now cbn in n0.
   Qed.
-  
+
   Definition isInd (t : term) : bool :=
     match t with
     | tInd _ _ => true
     | _ => false
     end.
-  
+
   Inductive view_ind : term -> Type :=
   | view_ind_tInd ind u : view_ind (tInd ind u)
   | view_ind_other t : negb (isInd t) -> view_ind t.
-  
+
   Equations view_indc (t : term) : view_ind t :=
     view_indc (tInd ind u) => view_ind_tInd ind u;
     view_indc t => view_ind_other t _.
@@ -540,9 +553,9 @@ Section Typecheck.
       apply decompose_stack_eq in decomp as ->.
       now rewrite <- eq_decomp0.
   Qed.
-  
-  Lemma reduce_to_ind_complete Γ ty wat e : 
-    reduce_to_ind Γ ty wat = TypeError e ->  
+
+  Lemma reduce_to_ind_complete Γ ty wat e :
+    reduce_to_ind Γ ty wat = TypeError e ->
     forall ind u args,
       red Σ Γ ty (mkApps (tInd ind u) args) ->
       False.
@@ -577,7 +590,7 @@ Section Typecheck.
     cbn in *.
     easy.
   Qed.
-  
+
   Definition iscumul Γ := isconv_term Σ HΣ Hφ G HG Γ Cumul.
 
   Program Definition convert_leq Γ t u
@@ -859,7 +872,7 @@ Section Typecheck.
           | Success _ =>
             match map_option_out (build_branches_type ind decl body params u p) with
             | None => raise (Msg "failure in build_branches_type")
-            | Some btys => 
+            | Some btys =>
               let btyswf : ∥ All (isType Σ Γ ∘ snd) btys ∥ := _ in
               (fix check_branches (brs btys : list (nat * term))
                 (HH : ∥ All (isType Σ Γ ∘ snd) btys ∥) {struct brs}
@@ -966,7 +979,7 @@ Section Typecheck.
                    ret (All_cons W1 Z)
                  end) mfix _ ;;
         guarded <- check_eq_true (cofix_guard mfix) (Msg "Unguarded cofixpoint") ;;
-        wfcofix <- check_eq_true (wf_cofixpoint Σ.1 mfix) (Msg "Ill-formed cofixpoint: not producing values in a mutually coinductive family") ;;         
+        wfcofix <- check_eq_true (wf_cofixpoint Σ.1 mfix) (Msg "Ill-formed cofixpoint: not producing values in a mutually coinductive family") ;;
         ret (dtype decl; _)
       end
     end.
@@ -1094,7 +1107,7 @@ Section Typecheck.
       eexists. rewrite !destArity_it_mkProd_or_LetIn; simpl. reflexivity. }
     eapply PCUICInductiveInversion.build_branches_type_wt. 6:eapply X. all:eauto.
   Defined.
-    
+
   Next Obligation.
     rename Heq_anonymous2 into XX2. destruct wildcard'.
     symmetry in XX2. simpl in *. eapply isconv_sound in XX2.
@@ -1143,7 +1156,7 @@ Section Typecheck.
     - destruct isCoFinite; auto.
     - symmetry; eauto.
   Defined.
-  
+
   Obligation Tactic := Program.Tactics.program_simplify ; eauto 2.
 
   (* tProj *)
@@ -1400,18 +1413,18 @@ Section CheckEnv.
   Definition check_variance univs (variances : option (list Variance.t)) :=
     match variances with
     | None => true
-    | Some v => 
+    | Some v =>
       match univs with
       | Monomorphic_ctx _ => false
       | Polymorphic_ctx auctx => eqb #|v| #|UContext.instance (AUContext.repr auctx)|
       end
     end.
-    
+
   Definition Build_on_inductive_sq {Σ ind mdecl}
     : ∥ Alli (on_ind_body (lift_typing typing) Σ ind mdecl) 0 (ind_bodies mdecl) ∥ ->
       ∥ wf_local Σ (ind_params mdecl) ∥ ->
       context_assumptions (ind_params mdecl) = ind_npars mdecl ->
-      ind_guard mdecl -> 
+      ind_guard mdecl ->
       check_variance (ind_universes mdecl) (ind_variance mdecl) ->
       ∥ on_inductive (lift_typing typing) Σ ind mdecl ∥.
   Proof.
@@ -1458,7 +1471,7 @@ Section CheckEnv.
   Proof.
     intros Σ HΣ HΣ'0 G HG id mdecl n [].
   Admitted.
-  
+
   Program Definition check_wf_decl (Σ : global_env_ext) HΣ HΣ' G HG
              kn (d : global_decl)
     : EnvCheck (∥ on_global_decl (lift_typing typing) Σ kn d ∥) :=
@@ -1524,7 +1537,7 @@ Section CheckEnv.
     let levels := levels_of_udecl udecl in
     let global_levels := global_levels Σ in
     let all_levels := LevelSet.union levels global_levels in
-    check_eq_true (LevelSet.for_all (fun l => negb (LevelSet.mem l global_levels)) levels) 
+    check_eq_true (LevelSet.for_all (fun l => negb (LevelSet.mem l global_levels)) levels)
        (empty_ext Σ, IllFormedDecl id (Msg ("non fresh level in " ^ print_lset levels)));;
     check_eq_true (ConstraintSet.for_all (fun '(l1, _, l2) => LevelSet.mem l1 all_levels && LevelSet.mem l2 all_levels) (constraints_of_udecl udecl))
                                     (empty_ext Σ, IllFormedDecl id (Msg ("non declared level in " ^ print_lset levels ^

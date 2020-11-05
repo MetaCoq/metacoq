@@ -133,6 +133,26 @@ Section Lemmata.
         * apply All2_same.
           intros. split ; auto. split. all: apply eq_term_upto_univ_refl.
           all: assumption.
+    - simpl. apply IHπ. constructor.
+      apply All2_app.
+      + apply All2_same.
+        intros. split ; auto. split. all: apply eq_term_upto_univ_refl.
+        all: assumption.
+      + constructor.
+        * simpl. intuition eauto. reflexivity.
+        * apply All2_same.
+          intros. split ; auto. split. all: apply eq_term_upto_univ_refl.
+          all: assumption.
+    - simpl. apply IHπ. constructor.
+      apply All2_app.
+      + apply All2_same.
+        intros. split ; auto. split. all: apply eq_term_upto_univ_refl.
+        all: assumption.
+      + constructor.
+        * simpl. intuition eauto. reflexivity.
+        * apply All2_same.
+          intros. split ; auto. split. all: apply eq_term_upto_univ_refl.
+          all: assumption.
     - simpl. apply IHπ. destruct indn as [i n].
       constructor.
       + assumption.
@@ -447,6 +467,33 @@ Section Lemmata.
       eexists. eassumption.
     - simpl. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [B h].
+      apply inversion_CoFix in h as hh. 2: assumption.
+      destruct hh as [decl [? [? [hw [? ?]]]]].
+      apply typing_wf_local in h.
+      clear -h hw wΣ.
+      eapply All_app in hw as [_ hw].
+      depelim hw. simpl in i.
+      destruct i as [s Hs]. eexists; eauto.
+    - simpl. cbn in h. cbn in IHπ. apply IHπ in h.
+      destruct h as [B h].
+      apply inversion_CoFix in h as hh. 2: assumption.
+      destruct hh as [decl [? [? [? [ha ?]]]]].
+      clear - ha wΣ.
+      apply All_app in ha as [_ ha].
+      inversion ha. subst.
+      intuition eauto. simpl in *.
+      match goal with
+      | hh : _ ;;; _ |- _ : _ |- _ => rename hh into h
+      end.
+      rewrite fix_context_length in h.
+      rewrite app_length in h. simpl in h.
+      rewrite fix_context_fix_context_alt in h.
+      rewrite map_app in h. simpl in h.
+      unfold def_sig at 2 in h. simpl in h.
+      rewrite <- app_context_assoc in h.
+      eexists. eassumption.
+    - simpl. cbn in h. cbn in IHπ. apply IHπ in h.
+      destruct h as [B h].
       destruct indn.
       apply inversion_Case in h as hh ; auto.
       destruct hh as [uni [args [mdecl [idecl [ps [pty [btys
@@ -539,6 +586,28 @@ Section Lemmata.
         eapply All_app in hw as [_ hw]. depelim hw.
         left;  exists (tSort i.π1). apply i.π2.
       + apply inversion_Fix in h'. 2: assumption.
+        destruct h' as [decl [? [? [? [ha ?]]]]].
+        clear - ha wΣ.
+        apply All_app in ha as [_ ha].
+        inversion ha. subst.
+        intuition eauto. simpl in *.
+        match goal with
+        | hh : _ ;;; _ |- _ : _ |- _ => rename hh into h
+        end.
+        rewrite fix_context_length in h.
+        rewrite app_length in h. simpl in h.
+        rewrite fix_context_fix_context_alt in h.
+        rewrite map_app in h. simpl in h.
+        unfold def_sig at 2 in h. simpl in h.
+        rewrite <- app_context_assoc in h.
+        left. eexists. eassumption.
+      + assert (hwf := typing_wf_local h').
+        apply inversion_CoFix in h'. 2: assumption.
+        destruct h' as [decl [? [? [hw [? ?]]]]].
+        clear - hw wΣ.
+        eapply All_app in hw as [_ hw]. depelim hw.
+        left;  exists (tSort i.π1). apply i.π2.
+      + apply inversion_CoFix in h'. 2: assumption.
         destruct h' as [decl [? [? [? [ha ?]]]]].
         clear - ha wΣ.
         apply All_app in ha as [_ ha].
@@ -1246,6 +1315,8 @@ Section Lemmata.
     | Fix_mfix_ty na bo ra mfix1 mfix2 idx ρ => let_free_stack ρ
     | Fix_mfix_bd na ty ra mfix1 mfix2 idx ρ => let_free_stack ρ
     | CoFix f n args ρ => let_free_stack ρ
+    | CoFix_mfix_ty na bo ra mfix1 mfix2 idx ρ => let_free_stack ρ
+    | CoFix_mfix_bd na ty ra mfix1 mfix2 idx ρ => let_free_stack ρ
     | Case_p indn c brs ρ => let_free_stack ρ
     | Case indn p brs ρ => let_free_stack ρ
     | Case_brs indn p c m brs1 brs2 ρ => let_free_stack ρ
@@ -1268,17 +1339,28 @@ Section Lemmata.
     intros π h.
     induction π.
     all: try solve [ simpl ; rewrite ?IHπ // ].
-    simpl. rewrite let_free_context_app.
-    rewrite IHπ => //. rewrite andb_true_r. rewrite let_free_context_rev.
-    match goal with
-    | |- context [ mapi ?f ?l ] =>
-      generalize l
-    end.
-    intro l. unfold mapi.
-    generalize 0 at 2. intro n.
-    induction l in n |- *.
-    - simpl. reflexivity.
-    - simpl. apply IHl.
+    - simpl. rewrite let_free_context_app.
+      rewrite IHπ => //. rewrite andb_true_r. rewrite let_free_context_rev.
+      match goal with
+      | |- context [ mapi ?f ?l ] =>
+        generalize l
+      end.
+      intro l. unfold mapi.
+      generalize 0 at 2. intro n.
+      induction l in n |- *.
+      + simpl. reflexivity.
+      + simpl. apply IHl.
+    - simpl. rewrite let_free_context_app.
+      rewrite IHπ => //. rewrite andb_true_r. rewrite let_free_context_rev.
+      match goal with
+      | |- context [ mapi ?f ?l ] =>
+        generalize l
+      end.
+      intro l. unfold mapi.
+      generalize 0 at 2. intro n.
+      induction l in n |- *.
+      + simpl. reflexivity.
+      + simpl. apply IHl.
   Qed.
 
   Lemma cored_red_cored :

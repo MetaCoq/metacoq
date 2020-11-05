@@ -257,12 +257,12 @@ Qed.
 
 Lemma nl_destArity :
   forall Γ A,
-    destArity (nlctx Γ) (nl A) = 
+    destArity (nlctx Γ) (nl A) =
     option_map (fun '(ctx, s) => (nlctx ctx, s)) (destArity Γ A).
 Proof.
   intros Γ A.
   induction A in Γ |- *.
-  all: simpl in *. all:auto. 
+  all: simpl in *. all:auto.
   - apply (IHA2 (Γ ,, vass na A1)).
   - apply (IHA3 (Γ ,, vdef na A1 A2)).
 Qed.
@@ -274,29 +274,29 @@ Proof.
   f_equal; auto.
 Qed.
 
-Lemma global_variance_nl_sigma_mon {Σ gr napp} : 
-  global_variance (map (on_snd nl_global_decl) Σ) gr napp = 
-  global_variance Σ gr napp. 
+Lemma global_variance_nl_sigma_mon {Σ gr napp} :
+  global_variance (map (on_snd nl_global_decl) Σ) gr napp =
+  global_variance Σ gr napp.
 Proof.
   rewrite /global_variance /lookup_constructor /lookup_inductive /lookup_minductive.
   destruct gr as [|ind|[ind i]|] => /= //.
   - rewrite nl_lookup_env.
-    destruct lookup_env => /= //.      
+    destruct lookup_env => /= //.
     destruct g; simpl => //.
-    rewrite nth_error_map. 
+    rewrite nth_error_map.
     destruct nth_error => /= //.
     rewrite (nl_destArity []).
     destruct (destArity [] (ind_type o)) as [[ctx s]|] eqn:da => /= //.
     now rewrite nl_context_assumptions.
   - rewrite nl_lookup_env.
-    destruct lookup_env => /= //.      
+    destruct lookup_env => /= //.
     destruct g; simpl => //.
-    rewrite nth_error_map. 
+    rewrite nth_error_map.
     destruct nth_error => /= //.
-    rewrite nth_error_map. 
+    rewrite nth_error_map.
     destruct nth_error => /= //.
     destruct p as [[id t] args] => /= //.
-Qed.  
+Qed.
 
 Lemma R_global_instance_nl Σ Re Rle gr napp :
   CRelationClasses.subrelation (R_global_instance Σ Re Rle gr napp)
@@ -328,16 +328,16 @@ Proof.
     eapply R_global_instance_nl; eauto.
   - econstructor; eauto.
     induction a; constructor; auto.
-    intuition auto. 
+    intuition auto.
     destruct x, y; simpl in *. apply aux; auto.
   - econstructor; eauto.
     induction a; constructor; auto.
-    intuition auto. 
+    intuition auto.
     * destruct x, y; simpl in *. apply aux; auto.
     * destruct x, y; simpl in *. apply aux; auto.
   - econstructor; eauto.
     induction a; constructor; auto.
-    intuition auto. 
+    intuition auto.
     * destruct x, y; simpl in *. apply aux; auto.
     * destruct x, y; simpl in *. apply aux; auto.
 Qed.
@@ -484,6 +484,10 @@ Fixpoint nlstack (π : stack) : stack :=
     Fix_mfix_bd nAnon (nl ty) ra (map (map_def_anon nl nl) mfix1) (map (map_def_anon nl nl) mfix2) idx (nlstack ρ)
   | CoFix f n args ρ =>
     CoFix (map (map_def_anon nl nl) f) n (map nl args) (nlstack ρ)
+  | CoFix_mfix_ty na bo ra mfix1 mfix2 idx ρ =>
+    CoFix_mfix_ty nAnon (nl bo) ra (map (map_def_anon nl nl) mfix1) (map (map_def_anon nl nl) mfix2) idx (nlstack ρ)
+  | CoFix_mfix_bd na ty ra mfix1 mfix2 idx ρ =>
+    CoFix_mfix_bd nAnon (nl ty) ra (map (map_def_anon nl nl) mfix1) (map (map_def_anon nl nl) mfix2) idx (nlstack ρ)
   | Case_p indn c brs ρ =>
     Case_p indn (nl c) (map (on_snd nl) brs) (nlstack ρ)
   | Case indn p brs ρ =>
@@ -538,6 +542,8 @@ Proof.
   intros ρ.
   induction ρ.
   all: try solve [ simpl ; rewrite ?IHρ ; reflexivity ].
+  - simpl. rewrite IHρ. rewrite map_length. reflexivity.
+  - simpl. rewrite IHρ. rewrite map_length. reflexivity.
   - simpl. rewrite IHρ. rewrite map_length. reflexivity.
   - simpl. rewrite IHρ. rewrite map_length. reflexivity.
   - simpl. rewrite IHρ. rewrite map_length. reflexivity.
@@ -659,6 +665,10 @@ Proof.
     simpl ; rewrite IHπ ; cbn ; f_equal ;
     rewrite nl_mkApps ; reflexivity
   ].
+  - simpl. rewrite IHπ. cbn. f_equal.
+    rewrite map_app. cbn. reflexivity.
+  - simpl. rewrite IHπ. cbn. f_equal.
+    rewrite map_app. cbn. reflexivity.
   - simpl. rewrite IHπ. cbn. f_equal.
     rewrite map_app. cbn. reflexivity.
   - simpl. rewrite IHπ. cbn. f_equal.
@@ -800,11 +810,16 @@ Lemma nlctx_stack_context :
 Proof.
   intro ρ. induction ρ.
   all: try (simpl ; rewrite ?IHρ ; reflexivity).
-  simpl. rewrite nlctx_app_context. rewrite IHρ.
-  rewrite nlctx_fix_context_alt.
-  rewrite map_app. simpl.
-  rewrite 2!map_def_sig_nl.
-  reflexivity.
+  - simpl. rewrite nlctx_app_context. rewrite IHρ.
+    rewrite nlctx_fix_context_alt.
+    rewrite map_app. simpl.
+    rewrite 2!map_def_sig_nl.
+    reflexivity.
+  - simpl. rewrite nlctx_app_context. rewrite IHρ.
+    rewrite nlctx_fix_context_alt.
+    rewrite map_app. simpl.
+    rewrite 2!map_def_sig_nl.
+    reflexivity.
 Qed.
 
 Lemma nl_subst :
@@ -1088,13 +1103,13 @@ Proof.
     all: apply IHindctx.
 Qed.
 
-Lemma nl_wf_fixpoint Σ mfix : 
+Lemma nl_wf_fixpoint Σ mfix :
   wf_fixpoint Σ.1 mfix = wf_fixpoint (nlg Σ).1 (map (map_def_anon nl nl) mfix).
 Proof.
   unfold wf_fixpoint.
 Admitted.
 
-Lemma nl_wf_cofixpoint Σ mfix : 
+Lemma nl_wf_cofixpoint Σ mfix :
   wf_cofixpoint Σ.1 mfix = wf_cofixpoint (nlg Σ).1 (map (map_def_anon nl nl) mfix).
 Proof.
   unfold wf_fixpoint.

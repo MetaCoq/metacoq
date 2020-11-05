@@ -2539,8 +2539,8 @@ Section Conversion.
     conv_stack_ctx Γ π π' ->
     true = eqb_term (reduce_term
                        RedFlags.default
-                       Σ hΣ (Γ,,, stack_context π) c h) c &&
-           eqb_term (reduce_term
+                       Σ hΣ (Γ,,, stack_context π) c h) c ->
+    true = eqb_term (reduce_term
                        RedFlags.default
                        Σ hΣ (Γ,,, stack_context π') c' h') c' ->
     isred_full Γ (tCase (ind, par) p c brs) π ->
@@ -2555,8 +2555,7 @@ Section Conversion.
      All2 (fun br br' => br.1 = br'.1 × (Σ;;; Γ,,, stack_context π |- br.2 = br'.2)) brs brs' ×
      conv_terms Σ (Γ,,, stack_context π) (decompose_stack π).1 (decompose_stack π').1∥.
   Proof.
-    intros [] eq isr1 isr2 cc.
-    symmetry in eq; apply Bool.andb_true_iff in eq as (c_is_red&c'_is_red).
+    intros [] c_is_red%eq_sym c'_is_red%eq_sym isr1 isr2 cc.
     eapply reduced_case_discriminee_whne in c_is_red as wh1; eauto.
     eapply reduced_case_discriminee_whne in c'_is_red as wh2; eauto.
     destruct hΣ, wh1 as [wh1], wh2 as [wh2].
@@ -3079,11 +3078,11 @@ Section Conversion.
     assumption.
   Qed.
   Next Obligation.
-    change (eq_inductive ind ind') with (eqb ind ind') in eq5.
-    destruct (eqb_spec ind ind'). 2: discriminate.
-    change (Nat.eqb par par') with (eqb par par') in eq5.
-    destruct (eqb_spec par par'). 2: discriminate.
-    assumption.
+   change (eq_inductive ind ind') with (eqb ind ind') in eq5.
+   destruct (eqb_spec ind ind'). 2: discriminate.
+   change (Nat.eqb par par') with (eqb par par') in eq5.
+   destruct (eqb_spec par par'). 2: discriminate.
+   assumption.
   Qed.
   Next Obligation.
     unshelve eapply R_stateR.
@@ -3105,19 +3104,29 @@ Section Conversion.
     eapply conv_Case. all: assumption.
   Qed.
   Next Obligation.
-    todo "Completeness".
+    apply h; clear h.
+    eapply inv_reduced_discriminees_case in H as [([= <- <-]&?&?&?&?)]; eauto.
+    constructor; auto.
   Qed.
   Next Obligation.
-    todo "Completeness".
+    apply h; cbn; clear h.
+    eapply inv_reduced_discriminees_case in H as [([= <- <-]&?&?&?&?)]; eauto.
+    constructor; auto.
   Qed.
   Next Obligation.
-    todo "Completeness".
+    apply h; cbn; clear h.
+    eapply inv_reduced_discriminees_case in H as [([= <- <-]&?&?&?&?)]; eauto.
+    constructor; auto.
   Qed.
   Next Obligation.
-    todo "Completeness".
+    apply h; cbn; clear h.
+    eapply inv_reduced_discriminees_case in H as [([= <- <-]&?&?&?&?)]; eauto.
+    constructor; auto.
   Qed.
   Next Obligation.
-    todo "Completeness".
+    eapply inv_reduced_discriminees_case in H as [([= <- <-]&?&?&?&?)]; eauto.
+    rewrite eq_inductive_refl, Nat.eqb_refl in eq5.
+    congruence.
   Qed.
   Next Obligation.
     eapply red_wellformed ; auto.
@@ -3179,7 +3188,16 @@ Section Conversion.
       + eapply conv_context_sym. all: auto.
   Qed.
   Next Obligation.
-    todo "Completeness".
+    apply h; clear h.
+    pose proof hΣ as [].
+    destruct hx.
+    epose proof (reduce_term_sound _ _ _ _ _ _) as [r].
+    eapply conv_cum_red_conv_inv.
+    1,2,5: eassumption.
+    1: reflexivity.
+    apply red_zipp.
+    apply red_case_c.
+    exact r.
   Qed.
   Next Obligation.
     eapply red_wellformed ; auto.
@@ -3237,7 +3255,14 @@ Section Conversion.
     - assumption.
   Qed.
   Next Obligation.
-    todo "Completeness".
+    apply h; clear h.
+    pose proof hΣ as [].
+    destruct hx.
+    epose proof (reduce_term_sound _ _ _ _ _ _) as [r].
+    eapply conv_cum_red_inv.
+    1,4: eassumption.
+    2: reflexivity.
+    apply red_zipp, red_case_c, r.
   Qed.
 
   (* tProj *)

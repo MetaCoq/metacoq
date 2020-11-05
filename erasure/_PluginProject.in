@@ -81,8 +81,6 @@ src/pCUICChecker.ml
 src/pCUICChecker.mli
 src/pCUICPretty.mli
 src/pCUICPretty.ml
-#src/pCUICSafeLemmata.mli
-#src/pCUICSafeLemmata.ml
 src/templateToPCUIC.mli
 src/templateToPCUIC.ml
 

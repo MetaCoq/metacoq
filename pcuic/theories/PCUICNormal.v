@@ -1019,11 +1019,10 @@ Hint Resolve whnf_red_red : pcuic.
 
 Lemma whnf_red_mkApps Σ Γ hd hd' args args' :
   whnf_red Σ Γ hd hd' ->
-  red Σ Γ hd hd' ->
   All2 (red Σ Γ) args args' ->
   whnf_red Σ Γ (mkApps hd args) (mkApps hd' args').
 Proof.
-  intros shape r ra.
+  intros r ra.
   induction ra using All2_rect_rev; auto.
   rewrite <- !mkApps_nested.
   cbn.
@@ -1188,7 +1187,6 @@ Proof.
       cbn.
       intros ? ? (?&[= -> -> ->]).
       auto.
-    + now apply red1_red, fix_red_ty.
     + apply All2_same; auto.
   - apply whnf_red_mkApps; eauto.
     + constructor.
@@ -1196,7 +1194,6 @@ Proof.
       cbn.
       intros ? ? (?&[= -> -> ->]).
       auto.
-    + now apply red1_red, fix_red_body.
     + apply All2_same; auto.
   - constructor; auto.
     apply All2_same; auto.
@@ -1233,16 +1230,14 @@ Proof.
       constructor.
       apply All2_same; auto.
     + apply whnf_red_mkApps.
-      3: apply All2_same; auto.
-      2: apply red1_red, fix_red_ty; auto.
+      2: apply All2_same; auto.
       constructor.
       eapply OnOne2_All2; eauto.
       cbn.
       intros ? ? (?&[= -> -> ->]).
       auto.
     + apply whnf_red_mkApps.
-      3: apply All2_same; auto.
-      2: apply red1_red, fix_red_body; auto.
+      2: apply All2_same; auto.
       constructor.
       eapply OnOne2_All2; eauto.
       cbn.
@@ -1255,16 +1250,14 @@ Proof.
       constructor.
       apply All2_same; auto.
     + apply whnf_red_mkApps.
-      3: apply All2_same; auto.
-      2: apply red1_red, cofix_red_ty; auto.
+      2: apply All2_same; auto.
       constructor.
       eapply OnOne2_All2; eauto.
       cbn.
       intros ? ? (?&[= -> -> ->]).
       auto.
     + apply whnf_red_mkApps.
-      3: apply All2_same; auto.
-      2: apply red1_red, cofix_red_body; auto.
+      2: apply All2_same; auto.
       constructor.
       eapply OnOne2_All2; eauto.
       cbn.

@@ -16,8 +16,6 @@ Local Set Keyed Unification.
 
 Set Default Goal Selector "!".
 
-Set Equations Transparent.
-
 Module PSR := PCUICSafeReduce.
 
 (** * Conversion for PCUIC without fuel
@@ -3096,11 +3094,11 @@ Section Conversion.
     assumption.
   Qed.
   Next Obligation.
-   change (eq_inductive ind ind') with (eqb ind ind') in eq5.
-   destruct (eqb_spec ind ind'). 2: discriminate.
-   change (Nat.eqb par par') with (eqb par par') in eq5.
-   destruct (eqb_spec par par'). 2: discriminate.
-   assumption.
+    change (eq_inductive ind ind') with (eqb ind ind') in eq5.
+    destruct (eqb_spec ind ind'). 2: discriminate.
+    change (Nat.eqb par par') with (eqb par par') in eq5.
+    destruct (eqb_spec par par'). 2: discriminate.
+    assumption.
   Qed.
   Next Obligation.
     unshelve eapply R_stateR.

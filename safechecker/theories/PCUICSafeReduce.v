@@ -1158,10 +1158,10 @@ Section Reduce.
   (*      *) *)
   (* Abort. *)
 
-  Scheme Acc_ind' := Induction for Acc Sort Type.
+  Scheme Acc_ind' := Induction for Acc Sort Prop.
 
   Lemma Fix_F_prop :
-    forall A R P f (pred : forall x : A, P x -> Type) x hx,
+    forall A R P f (pred : forall x : A, P x -> Prop) x hx,
       (forall x aux, (forall y hy, pred y (aux y hy)) -> pred x (f x aux)) ->
       pred x (@Fix_F A R P f x hx).
   Proof.
@@ -1171,7 +1171,7 @@ Section Reduce.
   Qed.
 
   Lemma reduce_stack_prop :
-    forall Γ t π h (P : term × stack -> term × stack -> Type),
+    forall Γ t π h (P : term × stack -> term × stack -> Prop),
       (forall t π h aux,
           (forall t' π' hR, P (t', π') (` (aux t' π' hR))) ->
           P (t, π) (` (_reduce_stack Γ t π h aux))) ->

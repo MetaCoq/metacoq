@@ -139,7 +139,7 @@ Proof.
       * clear - onParams.
         induction onParams.
         all: constructor ; intuition.
-Admitted.
+Qed.
       
 
 Lemma bd_wf_local `{checker_flags} Σ Γ (all: wf_local Σ Γ) :

@@ -194,6 +194,47 @@ Section fixed.
     eapply context_change_decl_types_red; eauto.
     eapply fix_context_change_decl_types; eauto.
   Qed.
+  
+  Lemma conv_cum_tCoFix_inv leq Γ mfix idx mfix' idx' :
+    conv_cum leq Σ Γ (tCoFix mfix idx) (tCoFix mfix' idx') ->
+    ∥idx = idx' ×
+     All2 (fun d d' => rarg d = rarg d' ×
+                       Σ;;; Γ |- dtype d = dtype d' ×
+                       Σ;;; Γ,,, fix_context mfix |- dbody d = dbody d')
+          mfix mfix'∥.
+  Proof.
+    intros conv.
+    apply conv_cum_alt in conv as [(?&?&(r1&r2)&eq)].
+    assert (forall defs i, whnf RedFlags.default Σ Γ (tCoFix defs i))
+      by (intros; apply whnf_cofixapp with (v := [])).
+    eapply whnf_red_inv in r1; eauto.
+    eapply whnf_red_inv in r2; eauto.
+    depelim r1.
+    depelim r2.
+    depelim eq.
+    constructor.
+    split; [easy|].
+    clear -a a0 a1.
+    cut (#|mfix| = #|mfix'|);
+      [|now apply All2_length in a; apply All2_length in a0; apply All2_length in a1].
+    revert a a0 a1.
+    generalize mfix at 1 3 4.
+    generalize mfix' at 1 3.
+    intros ctx_fix ctx_fix'.
+    intros all1 all2 all len_eq.
+    induction all in mfix, mfix', mfix'0, mfix'1, all1, all2, all |- *;
+      depelim all1; depelim all2; [constructor|].
+    constructor; [|now auto].
+    destruct r as ((?&?)&?), p as (?&?&?&?), p0 as (?&?&?&?).
+    split; [congruence|].
+    split; [now apply conv_alt_red; exists (dtype x), (dtype y)|].
+    apply conv_alt_red.
+    exists (dbody x), (dbody y).
+    split; [|easy].
+    split; [easy|].
+    eapply context_change_decl_types_red; eauto.
+    eapply fix_context_change_decl_types; eauto.
+  Qed.
 
   Lemma conv_cum_tProj_inv leq Γ p c p' c' :
     conv_cum leq Σ Γ (tProj p c) (tProj p' c') ->

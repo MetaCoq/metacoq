@@ -2646,6 +2646,24 @@ Section Conversion.
     eapply conv_terms_red_conv; eauto.
   Qed.
 
+  Lemma inv_stuck_cofixes leq Γ mfix idx π mfix' idx' π' :
+    conv_stack_ctx Γ π π' ->
+    conv_cum leq Σ (Γ,,, stack_context π) (zipp (tCoFix mfix idx) π) (zipp (tCoFix mfix' idx') π') ->
+    ∥idx = idx' ×
+     All2 (fun d d' =>
+             rarg d = rarg d' ×
+             Σ;;; Γ,,, stack_context π |- dtype d = dtype d' ×
+             Σ;;; Γ,,, stack_context π,,, fix_context mfix |- dbody d = dbody d')
+          mfix mfix' ×
+     conv_terms Σ (Γ,,, stack_context π) (decompose_stack π).1 (decompose_stack π').1∥.
+  Proof.
+    intros [?] cc.
+    rewrite !zipp_as_mkApps in cc.
+    apply conv_cum_mkApps_inv in cc as [(conv_cofix&conv_args)]; auto.
+    apply conv_cum_tCoFix_inv in conv_cofix as [(<-&?)].
+    constructor; split; [|split]; auto.
+  Qed.
+
   (* See https://github.com/coq/coq/blob/master/kernel/reduction.ml#L367 *)
   Opaque reduce_stack.
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
@@ -2835,7 +2853,7 @@ Section Conversion.
           } ;
         | Error e h := no e
         } ;
-      | @exist false _ :=
+      | @exist false idx_uneq :=
         no (
           DistinctCoFix
             (Γ ,,, stack_context π1) mfix idx
@@ -3715,13 +3733,21 @@ Section Conversion.
     eapply conv_CoFix. all: assumption.
   Qed.
   Next Obligation.
-    todo "Completeness".
+    apply h; clear h.
+    eapply inv_stuck_cofixes in H as [(<-&?&?)]; eauto.
+    constructor; auto.
   Qed.
   Next Obligation.
-    todo "Completeness".
+    apply h; clear h.
+    eapply inv_stuck_cofixes in H as [(<-&?&?)]; eauto.
+    constructor; auto.
+    eapply All2_impl; eauto.
+    cbn; intros; easy.
   Qed.
   Next Obligation.
-    todo "Completeness".
+    eapply inv_stuck_cofixes in H as [(<-&?&?)]; eauto.
+    rewrite Nat.eqb_refl in idx_uneq.
+    congruence.
   Qed.
 
   (* Fallback *)
@@ -3921,7 +3947,7 @@ Section Conversion.
         | @exist (Some (narg, fn)) eq2 with inspect (decompose_stack ρ) := {
           | @exist (args, ξ) eq' := Some (tCase (ind, par) p (mkApps fn args) brs)
           } ;
-        | @exist None eq2 := False_rect _ _ (* why does ! not work in this file? *)
+        | @exist None eq2 := False_rect _ _
         } ;
       | ccview_other t _ := None
       }
@@ -4797,5 +4823,5 @@ Section Conversion.
     apply isconv_complete in h. apply h.
   Qed.
   Transparent reduce_stack.
-
+  
 End Conversion.

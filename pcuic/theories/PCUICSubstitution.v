@@ -2089,6 +2089,18 @@ Fixpoint subst_stack s k π :=
       let k'' := #|mfix| + k' in
       let mfix' := List.map (map_def (subst s k') (subst s k'')) mfix in
       CoFix mfix' idx (map (subst s k') args) (subst_stack s k π)
+  | CoFix_mfix_ty na bo ra mfix1 mfix2 idx π =>
+      let k' := #|stack_context π| + k in
+      let k'' := #|mfix1| + S #|mfix2| + k' in
+      let mfix1' := List.map (map_def (subst s k') (subst s k'')) mfix1 in
+      let mfix2' := List.map (map_def (subst s k') (subst s k'')) mfix2 in
+      CoFix_mfix_ty na (subst s k'' bo) ra mfix1' mfix2' idx (subst_stack s k π)
+  | CoFix_mfix_bd na ty ra mfix1 mfix2 idx π =>
+      let k' := #|stack_context π| + k in
+      let k'' := #|mfix1| + S #|mfix2| + k' in
+      let mfix1' := List.map (map_def (subst s k') (subst s k'')) mfix1 in
+      let mfix2' := List.map (map_def (subst s k') (subst s k'')) mfix2 in
+      CoFix_mfix_bd na (subst s k' ty) ra mfix1' mfix2' idx (subst_stack s k π)
   | Case_p indn c brs π =>
       let k' := #|stack_context π| + k in
       let brs' := List.map (on_snd (subst s k')) brs in
@@ -2154,6 +2166,14 @@ Proof.
     f_equal. f_equal. lia.
   - simpl. rewrite IHπ. cbn. f_equal. f_equal.
     rewrite subst_mkApps. cbn. reflexivity.
+  - simpl. rewrite IHπ. cbn. f_equal. f_equal.
+    rewrite map_app. rewrite !app_length. cbn. reflexivity.
+  - simpl. rewrite IHπ. cbn. f_equal. f_equal.
+    rewrite map_app. rewrite !app_length. cbn. f_equal.
+    unfold map_def at 1. cbn. f_equal.
+    rewrite fix_context_alt_length.
+    rewrite !app_length. cbn. rewrite !map_length.
+    f_equal. f_equal. lia.
   - simpl. rewrite IHπ. cbn. f_equal. f_equal.
     rewrite map_app. cbn. reflexivity.
 Qed.

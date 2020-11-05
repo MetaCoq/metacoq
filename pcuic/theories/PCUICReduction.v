@@ -577,7 +577,7 @@ Section ReductionCongruence.
           OnOne2 (Trel_conj (on_Trel (red1 Σ Γ) fst) (on_Trel eq snd)) l1 l2 ->
           redl Γ l l2.
 
-    
+
     Lemma OnOne2_red_redl :
       forall Γ A (l l' : list (term × A)),
         OnOne2 (Trel_conj (on_Trel (red Σ Γ) fst) (on_Trel eq snd)) l l' ->
@@ -1520,6 +1520,16 @@ Section Stacks.
     - cbn. apply IHπ. constructor.
       apply OnOne2_app. constructor.
       simpl. intuition eauto.
+    - cbn. apply IHπ. eapply cofix_red_body.
+      apply OnOne2_app. constructor.
+      simpl in *.
+      rewrite fix_context_fix_context_alt.
+      rewrite map_app. cbn. unfold def_sig at 2. simpl.
+      rewrite app_context_assoc in h.
+      intuition eauto.
+    - cbn. apply IHπ. constructor.
+      apply OnOne2_app. constructor.
+      simpl. intuition eauto.
   Qed.
 
   Corollary red_context :
@@ -1671,6 +1681,21 @@ Proof.
     rewrite stack_context_stack_cat in h. cbn in h.
     rewrite app_context_nil_l in h.
     eapply fix_red_body. eapply OnOne2_app. constructor. cbn.
+    intuition auto.
+    eapply IHπ.
+    rewrite fix_context_fix_context_alt.
+    rewrite map_app. cbn. unfold def_sig at 2. cbn.
+    rewrite app_context_assoc in h.
+    assumption.
+  - rewrite 2!zipc_stack_cat. cbn.
+    rewrite stack_context_stack_cat in h. cbn in h.
+    rewrite app_context_nil_l in h.
+    eapply cofix_red_ty. eapply OnOne2_app. constructor. cbn.
+    intuition auto.
+  - rewrite 2!zipc_stack_cat. cbn.
+    rewrite stack_context_stack_cat in h. cbn in h.
+    rewrite app_context_nil_l in h.
+    eapply cofix_red_body. eapply OnOne2_app. constructor. cbn.
     intuition auto.
     eapply IHπ.
     rewrite fix_context_fix_context_alt.

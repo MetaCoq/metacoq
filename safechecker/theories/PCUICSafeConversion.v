@@ -698,6 +698,14 @@ Section Conversion.
       (Γ : context) (mfix : mfixpoint term) (idx : nat)
       (Γ' : context) (mfix' : mfixpoint term) (idx' : nat)
 
+  | CoFixRargMismatch (idx : nat)
+      (Γ : context) (u : def term) (mfix1 mfix2 : mfixpoint term)
+      (Γ' : context) (v : def term) (mfix1' mfix2' : mfixpoint term)
+
+  | CoFixMfixMismatch (idx : nat)
+      (Γ : context) (mfix : mfixpoint term)
+      (Γ' : context) (mfix' : mfixpoint term)
+
   | StackHeadError
       (leq : conv_pb)
       (Γ1 : context)
@@ -1964,18 +1972,63 @@ Section Conversion.
     unshelve eapply aux. all: eassumption.
   Qed.
 
-  Equations isconv_fix_types (Γ : context)
+  (* Factorise notions of fixpoints *)
+  Inductive fix_kind :=
+  | IndFix
+  | CoIndFix.
+
+  Definition mFix k :=
+    match k with
+    | IndFix => tFix
+    | CoIndFix => tCoFix
+    end.
+
+  Definition mFix_mfix_ty fk :=
+    match fk with
+    | IndFix => Fix_mfix_ty
+    | CoIndFix => CoFix_mfix_ty
+    end.
+
+  Definition mFix_mfix_bd fk :=
+    match fk with
+    | IndFix => Fix_mfix_bd
+    | CoIndFix => CoFix_mfix_bd
+    end.
+
+  Definition mFixRargMismatch fk :=
+    match fk with
+    | IndFix => FixRargMismatch
+    | CoIndFix => CoFixRargMismatch
+    end.
+
+  Definition mFixMfixMismatch fk :=
+    match fk with
+    | IndFix => FixMfixMismatch
+    | CoIndFix => CoFixMfixMismatch
+    end.
+
+  Lemma stack_context_mFix_mfix_bd :
+    forall fk na ty ra mfix1 mfix2 idx π,
+      stack_context (mFix_mfix_bd fk na ty ra mfix1 mfix2 idx π) =
+      stack_context π ,,,
+        fix_context_alt (map def_sig mfix1 ++ (na,ty) :: map def_sig mfix2).
+  Proof.
+    intros fk na ty ra mfix1 mfix2 idx π.
+    destruct fk. all: reflexivity.
+  Qed.
+
+  Equations isconv_fix_types (fk : fix_kind) (Γ : context)
     (idx : nat)
     (mfix1 mfix2 : mfixpoint term) (π : stack)
-    (h : wtp Γ (tFix (mfix1 ++ mfix2) idx) π)
+    (h : wtp Γ (mFix fk (mfix1 ++ mfix2) idx) π)
     (mfix1' mfix2' : mfixpoint term) (π' : stack)
-    (h' : wtp Γ (tFix (mfix1' ++ mfix2') idx) π')
+    (h' : wtp Γ (mFix fk (mfix1' ++ mfix2') idx) π')
     (hx : conv_stack_ctx Γ π π')
     (h1 : ∥ All2 (fun u v =>
                    Σ ;;; Γ ,,, stack_context π |- u.(dtype) = v.(dtype) ×
                    u.(rarg) = v.(rarg)
             ) mfix1 mfix1' ∥)
-    (aux : Aux Term Γ (tFix (mfix1 ++ mfix2) idx) π (tFix (mfix1' ++ mfix2') idx) π' h')
+    (aux : Aux Term Γ (mFix fk (mfix1 ++ mfix2) idx) π (mFix fk (mfix1' ++ mfix2') idx) π' h')
     : ConversionResult (∥ All2 (fun u v =>
           Σ ;;; Γ ,,, stack_context π |- u.(dtype) = v.(dtype) ×
           u.(rarg) = v.(rarg)
@@ -1983,18 +2036,18 @@ Section Conversion.
     by struct mfix2 :=
 
     isconv_fix_types
-      Γ idx mfix1 (u :: mfix2) π h mfix1' (v :: mfix2') π' h' hx h1 aux
+      fk Γ idx mfix1 (u :: mfix2) π h mfix1' (v :: mfix2') π' h' hx h1 aux
     with inspect (eqb u.(rarg) v.(rarg)) := {
     | @exist true eq1
       with isconv_red_raw Conv
              u.(dtype)
-             (Fix_mfix_ty u.(dname) u.(dbody) u.(rarg) mfix1 mfix2 idx π)
+             (mFix_mfix_ty fk u.(dname) u.(dbody) u.(rarg) mfix1 mfix2 idx π)
              v.(dtype)
-             (Fix_mfix_ty v.(dname) v.(dbody) v.(rarg) mfix1' mfix2' idx π')
+             (mFix_mfix_ty fk v.(dname) v.(dbody) v.(rarg) mfix1' mfix2' idx π')
              aux
       := {
       | Success h2 with
-          isconv_fix_types Γ idx
+          isconv_fix_types fk Γ idx
             (mfix1 ++ [u]) mfix2 π _
             (mfix1' ++ [v]) mfix2' π' _
             hx _ _
@@ -2005,20 +2058,20 @@ Section Conversion.
       | Error e h := no e
       } ;
     | @exist false eq1 := no (
-        FixRargMismatch idx
+        mFixRargMismatch fk idx
           (Γ ,,, stack_context π) u mfix1 mfix2
           (Γ ,,, stack_context π') v mfix1' mfix2'
       )
     } ;
 
-    isconv_fix_types Γ idx mfix1 [] π h mfix1' [] π' h' hx h1 aux := yes ;
+    isconv_fix_types fk Γ idx mfix1 [] π h mfix1' [] π' h' hx h1 aux := yes ;
 
     (* TODO It might be more efficient to check the lengths first
        and then conclude this case is not possible.
     *)
-    isconv_fix_types Γ idx mfix1 mfix2 π h mfix1' mfix2' π' h' hx h1 aux :=
+    isconv_fix_types fk Γ idx mfix1 mfix2 π h mfix1' mfix2' π' h' hx h1 aux :=
       no (
-        FixMfixMismatch idx
+        mFixMfixMismatch fk idx
           (Γ ,,, stack_context π) (mfix1 ++ mfix2)
           (Γ ,,, stack_context π') (mfix1' ++ mfix2')
       ).
@@ -2035,16 +2088,22 @@ Section Conversion.
     destruct H as [H]; inversion H.
   Qed.  
   Next Obligation.
-    destruct u. assumption.
+    destruct u. destruct fk. all: assumption.
   Qed.
   Next Obligation.
-    destruct v. assumption.
+    destruct v. destruct fk. all: assumption.
   Qed.
   Next Obligation.
     eapply R_positionR. all: simpl.
-    - destruct u. reflexivity.
-    - rewrite <- app_nil_r. eapply positionR_poscat.
-      constructor.
+    - destruct u. destruct fk. all: reflexivity.
+    - rewrite <- app_nil_r. destruct fk.
+      + eapply positionR_poscat. constructor.
+      + eapply positionR_poscat. constructor.
+  Qed.
+  Next Obligation.
+    destruct fk.
+    - simpl. assumption.
+    - simpl. assumption.
   Qed.
   Next Obligation.
     rewrite <- app_assoc. simpl. assumption.
@@ -2055,14 +2114,15 @@ Section Conversion.
   Next Obligation.
     destruct hx as [hx], h1 as [h1], h2 as [h2].
     destruct hΣ as [wΣ].
-    unfold zipp in h2. simpl in h2.
+    unfold zipp in h2.
     constructor.
     apply All2_app. 1: assumption.
     constructor. 2: constructor.
     change (true = eqb u.(rarg) v.(rarg)) in eq1.
     destruct (eqb_spec u.(rarg) v.(rarg)). 2: discriminate.
     clear eq1.
-    intuition eauto.
+    destruct fk.
+    all: intuition eauto.
   Qed.
   Next Obligation.
     unshelve eapply aux. all: try eassumption.
@@ -2087,13 +2147,14 @@ Section Conversion.
   Next Obligation.
     destruct hx as [hx], h1 as [h1], h2 as [h2], h3 as [h3].
     destruct hΣ as [wΣ].
-    unfold zipp in h2. simpl in h2.
+    unfold zipp in h2.
     constructor.
     constructor. 2: assumption.
     change (true = eqb u.(rarg) v.(rarg)) in eq1.
     destruct (eqb_spec u.(rarg) v.(rarg)). 2: discriminate.
     clear eq1.
-    intuition eauto.
+    destruct fk.
+    all: intuition eauto.
   Qed.
   Next Obligation.
     (* Contrapositive of previous obligation *)
@@ -2103,7 +2164,8 @@ Section Conversion.
   Qed.  
   Next Obligation.
     destruct H as [H]; inversion H; destruct X as [eq_uv _].
-    apply h; clear h; constructor; apply eq_uv.
+    apply h; clear h; constructor.
+    destruct fk; apply eq_uv.
   Qed.
   Next Obligation.
     destruct H as [H]; inversion H; destruct X as [_ eq_uv].
@@ -2125,31 +2187,31 @@ Section Conversion.
     all: constructor. all: assumption.
   Qed.
 
-  Equations isconv_fix_bodies (Γ : context) (idx : nat)
+  Equations isconv_fix_bodies (fk : fix_kind) (Γ : context) (idx : nat)
     (mfix1 mfix2 : mfixpoint term) (π : stack)
-    (h : wtp Γ (tFix (mfix1 ++ mfix2) idx) π)
+    (h : wtp Γ (mFix fk (mfix1 ++ mfix2) idx) π)
     (mfix1' mfix2' : mfixpoint term) (π' : stack)
-    (h' : wtp Γ (tFix (mfix1' ++ mfix2') idx) π')
+    (h' : wtp Γ (mFix fk (mfix1' ++ mfix2') idx) π')
     (hx : conv_stack_ctx Γ π π')
     (h1 : ∥ All2 (fun u v => Σ ;;; Γ ,,, stack_context π ,,, fix_context_alt (map def_sig mfix1 ++ map def_sig mfix2) |- u.(dbody) = v.(dbody)) mfix1 mfix1' ∥)
     (ha : ∥ All2 (fun u v =>
                     Σ ;;; Γ ,,, stack_context π |- u.(dtype) = v.(dtype) ×
                     u.(rarg) = v.(rarg)
            ) (mfix1 ++ mfix2) (mfix1' ++ mfix2') ∥)
-    (aux : Aux Term Γ (tFix (mfix1 ++ mfix2) idx) π (tFix (mfix1' ++ mfix2') idx) π' h')
+    (aux : Aux Term Γ (mFix fk (mfix1 ++ mfix2) idx) π (mFix fk (mfix1' ++ mfix2') idx) π' h')
     : ConversionResult (∥ All2 (fun u v => Σ ;;; Γ ,,, stack_context π ,,, fix_context_alt (map def_sig mfix1 ++ map def_sig mfix2) |- u.(dbody) = v.(dbody)) mfix2 mfix2' ∥)
     by struct mfix2 :=
 
-  isconv_fix_bodies Γ idx mfix1 (u :: mfix2) π h mfix1' (v :: mfix2') π' h' hx h1 ha aux
+  isconv_fix_bodies fk Γ idx mfix1 (u :: mfix2) π h mfix1' (v :: mfix2') π' h' hx h1 ha aux
   with isconv_red_raw Conv
         u.(dbody)
-        (Fix_mfix_bd u.(dname) u.(dtype) u.(rarg) mfix1 mfix2 idx π)
+        (mFix_mfix_bd fk u.(dname) u.(dtype) u.(rarg) mfix1 mfix2 idx π)
         v.(dbody)
-        (Fix_mfix_bd v.(dname) v.(dtype) v.(rarg) mfix1' mfix2' idx π')
+        (mFix_mfix_bd fk v.(dname) v.(dtype) v.(rarg) mfix1' mfix2' idx π')
         aux
   := {
   | Success h2
-    with isconv_fix_bodies Γ idx
+    with isconv_fix_bodies fk Γ idx
            (mfix1 ++ [u]) mfix2 π _
            (mfix1' ++ [v]) mfix2' π' _
            hx _ _ _
@@ -2160,9 +2222,9 @@ Section Conversion.
   | Error e h := no e
   } ;
 
-  isconv_fix_bodies Γ idx mfix1 [] π h mfix1' [] π' h' hx h1 ha aux := yes ;
+  isconv_fix_bodies fk Γ idx mfix1 [] π h mfix1' [] π' h' hx h1 ha aux := yes ;
 
-  isconv_fix_bodies Γ idx mfix1 mfix2 π h mfix1' mfix2' π' h' hx h1 ha aux :=
+  isconv_fix_bodies fk Γ idx mfix1 mfix2 π h mfix1' mfix2' π' h' hx h1 ha aux :=
     False_rect _ _.
 
   Next Obligation.
@@ -2181,20 +2243,23 @@ Section Conversion.
     rewrite !app_length in ea. simpl in ea. lia.
   Qed.
   Next Obligation.
-    destruct u. assumption.
+    destruct u. destruct fk. all: assumption.
   Qed.
   Next Obligation.
-    destruct v. assumption.
+    destruct v. destruct fk. all: assumption.
   Qed.
   Next Obligation.
     eapply R_positionR. all: simpl.
-    - destruct u. reflexivity.
-    - rewrite <- app_nil_r. eapply positionR_poscat.
-      constructor.
+    - destruct u. destruct fk. all: reflexivity.
+    - rewrite <- app_nil_r.
+      destruct fk.
+      + eapply positionR_poscat. constructor.
+      + eapply positionR_poscat. constructor.
   Qed.
   Next Obligation.
     destruct hΣ as [wΣ], ha as [ha], hx as [hx].
     clear - wΣ ha hx. constructor.
+    rewrite 2!stack_context_mFix_mfix_bd.
     change (dname u, dtype u) with (def_sig u).
     change (dname v, dtype v) with (def_sig v).
     repeat match goal with
@@ -2278,7 +2343,7 @@ Section Conversion.
   Next Obligation.
     destruct hx as [hx], h1 as [h1], h2 as [h2], ha as [ha].
     destruct hΣ as [wΣ].
-    unfold zipp in h2. simpl in h2.
+    unfold zipp in h2. (* simpl in h2. *)
     constructor.
     apply All2_app.
     - eapply All2_impl. 1: exact h1.
@@ -2292,8 +2357,9 @@ Section Conversion.
       rewrite <- !app_assoc. simpl.
       destruct u as [na ty bo ra], v as [na' ty' bo' ra']. simpl in *.
       unfold def_sig at 2. simpl.
-      rewrite app_context_assoc in h2.
-      assumption.
+      destruct fk.
+      + rewrite app_context_assoc in h2. assumption.
+      + rewrite app_context_assoc in h2. assumption.
   Qed.
   Next Obligation.
     destruct ha as [ha].
@@ -2328,8 +2394,9 @@ Section Conversion.
     constructor.
     - destruct u as [na ty bo ra], v as [na' ty' bo' ra']. simpl in *.
       unfold def_sig at 2. simpl.
-      rewrite app_context_assoc in h2.
-      assumption.
+      destruct fk.
+      + rewrite app_context_assoc in h2. assumption.
+      + rewrite app_context_assoc in h2. assumption.
     - eapply All2_impl. 1: exact h3.
       simpl. intros [? ? ? ?] [? ? ? ?] hh.
       simpl in *.
@@ -2345,33 +2412,34 @@ Section Conversion.
   Next Obligation.
     apply h; clear h.
     destruct H as [H]; inversion H; constructor.
-    rewrite app_context_assoc; apply X.
+    destruct fk; cbn -[app_context].
+    all: rewrite app_context_assoc; apply X.
   Qed.  
 
-  Equations isconv_fix (Γ : context)
+  Equations isconv_fix (fk : fix_kind) (Γ : context)
     (mfix : mfixpoint term) (idx : nat) (π : stack)
-    (h : wtp Γ (tFix mfix idx) π)
+    (h : wtp Γ (mFix fk mfix idx) π)
     (mfix' : mfixpoint term) (idx' : nat) (π' : stack)
-    (h' : wtp Γ (tFix mfix' idx') π')
+    (h' : wtp Γ (mFix fk mfix' idx') π')
     (hx : conv_stack_ctx Γ π π')
     (ei : idx = idx')
-    (aux : Aux Term Γ (tFix mfix idx) π (tFix mfix' idx') π' h')
+    (aux : Aux Term Γ (mFix fk mfix idx) π (mFix fk mfix' idx') π' h')
     : ConversionResult (∥ All2 (fun u v =>
           Σ ;;; Γ ,,, stack_context π |- u.(dtype) = v.(dtype) ×
           Σ ;;; Γ ,,, stack_context π ,,, fix_context mfix |- u.(dbody) = v.(dbody) ×
           u.(rarg) = v.(rarg)
       ) mfix mfix' ∥) :=
 
-    isconv_fix Γ mfix idx π h mfix' idx' π' h' hx ei aux
+    isconv_fix fk Γ mfix idx π h mfix' idx' π' h' hx ei aux
     with
-      isconv_fix_types Γ idx
+      isconv_fix_types fk Γ idx
         [] mfix π _
         [] mfix' π' _
         hx _ _
     := {
     | Success h1
       with
-        isconv_fix_bodies Γ idx
+        isconv_fix_bodies fk Γ idx
           [] mfix π _
           [] mfix' π' _
           hx _ _ _
@@ -2579,17 +2647,6 @@ Section Conversion.
     eapply conv_terms_red_conv; eauto.
   Qed.
 
-  (* Check if the heads of an application are equal, and if so,
-     if all args are convertible *)
-  Notation eqb_heads_and_convertible_args leq hd hd' π π' aux :=
-    (if eqb_term hd hd' then
-      if isconv_args_raw leq hd π hd' π' aux then
-        true
-      else
-        false
-    else
-      false).
-
   (* See https://github.com/coq/coq/blob/master/kernel/reduction.ml#L367 *)
   Opaque reduce_stack.
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
@@ -2653,48 +2710,53 @@ Section Conversion.
       } ;
 
     | prog_view_Case ind par p c brs ind' par' p' c' brs'
-      with inspect (eqb_heads_and_convertible_args
-                      leq
-                      (tCase (ind, par) p c brs)
-                      (tCase (ind', par') p' c' brs')
-                      π1 π2 aux) := {
-      | @exist true eq1 := yes;
-      | @exist false not_eqb with inspect (reduce_term RedFlags.default Σ hΣ (Γ ,,, stack_context π1) c _) := {
-        | @exist cred eq1 with inspect (reduce_term RedFlags.default Σ hΣ (Γ ,,, stack_context π2) c' _) := {
-           | @exist cred' eq2 with inspect (eqb_term cred c && eqb_term cred' c') := {
-              | @exist true eq3 with inspect (eqb (ind, par) (ind', par')) := {
-                | @exist true eq4
-                  with isconv_red_raw Conv
-                        p (Case_p (ind, par) c brs π1)
-                        p' (Case_p (ind',par') c' brs' π2)
-                        aux := {
-                  | Success h1
-                    with isconv_red_raw Conv
-                          c (Case (ind, par) p brs π1)
-                          c' (Case (ind', par') p' brs' π2)
-                          aux := {
-                    | Success h2 with isconv_branches' Γ ind par p c brs π1 _ ind' par' p' c' brs' π2 _ _ _ _ aux := {
-                      | Success h3 := isconv_args leq
-                                                  (tCase (ind, par) p c brs) π1
-                                                  (tCase (ind', par') p' c' brs') π2 aux;
+      with inspect (reduce_term RedFlags.default Σ hΣ (Γ ,,, stack_context π1) c _) := {
+      | @exist cred eq1 with inspect (eqb_term cred c) := {
+        | @exist true eq2 with inspect (reduce_term RedFlags.default Σ hΣ (Γ ,,, stack_context π2) c' _) := {
+          | @exist cred' eq3 with inspect (eqb_term cred' c') := {
+            | @exist true eq4 with inspect (eqb (ind, par) (ind', par')) := {
+              | @exist true eq5 with
+                  isconv_red_raw Conv
+                    p (Case_p (ind, par) c brs π1)
+                    p' (Case_p (ind',par') c' brs' π2)
+                    aux
+                := {
+                | Success h1 with
+                    isconv_red_raw Conv
+                      c (Case (ind, par) p brs π1)
+                      c' (Case (ind', par') p' brs' π2)
+                      aux
+                  := {
+                  | Success h2 with isconv_branches' Γ ind par p c brs π1 _ ind' par' p' c' brs' π2 _ _ _ _ aux := {
+                    | Success h3 with isconv_args_raw leq (tCase (ind, par) p c brs) π1 (tCase (ind', par') p' c' brs') π2 aux := {
+                      | Success h4 := yes ;
                       | Error e h := no e
                       } ;
                     | Error e h := no e
                     } ;
                   | Error e h := no e
                   } ;
-                | @exist false eqDiff :=
-                  no (
-                    CaseOnDifferentInd
-                      (Γ ,,, stack_context π1) ind par p c brs
-                      (Γ ,,, stack_context π2) ind' par' p' c' brs'
-                  )
+                | Error e h := no e
                 } ;
-              | @exist false eq3 :=
-                isconv_red leq (tCase (ind, par) p cred brs) π1
-                               (tCase (ind', par') p' cred' brs') π2 aux
-              }
-           }
+              | @exist false eq5 :=
+                no (
+                  CaseOnDifferentInd
+                    (Γ ,,, stack_context π1) ind par p c brs
+                    (Γ ,,, stack_context π2) ind' par' p' c' brs'
+                )
+              } ;
+            | @exist false eq4 :=
+              isconv_red leq
+                (tCase (ind, par) p c brs) π1
+                (tCase (ind', par') p' cred' brs') π2
+                aux
+            }
+          } ;
+        | @exist false eq3 :=
+          isconv_red leq
+            (tCase (ind, par) p cred brs) π1
+            (tCase (ind', par') p' c' brs') π2
+            aux
         }
       } ;
 
@@ -2730,58 +2792,56 @@ Section Conversion.
     } ;
 
     | prog_view_Fix mfix idx mfix' idx'
-      with inspect (eqb_heads_and_convertible_args
-                      leq
-                      (tFix mfix idx) 
-                      (tFix mfix' idx')
-                      π1 π2 aux) := {
-      | @exist true eq1 := yes;
-      | @exist false eqDiff with inspect (unfold_one_fix Γ mfix idx π1 _) := {
+      with inspect (unfold_one_fix Γ mfix idx π1 _) := {
+      | @exist (Some (fn, θ)) eq1 with inspect (decompose_stack θ) := {
+        | @exist (l', θ') eq2
+          with inspect (reduce_stack RedFlags.nodelta Σ hΣ (Γ ,,, stack_context θ') fn (appstack l' ε) _) := {
+          | @exist (fn', ρ) eq3 :=
+            isconv_prog leq fn' (ρ +++ θ') (tFix mfix' idx') π2 aux
+          }
+        } ;
+      | _ with inspect (unfold_one_fix Γ mfix' idx' π2 _) := {
         | @exist (Some (fn, θ)) eq1
           with inspect (decompose_stack θ) := {
           | @exist (l', θ') eq2
             with inspect (reduce_stack RedFlags.nodelta Σ hΣ (Γ ,,, stack_context θ') fn (appstack l' ε) _) := {
             | @exist (fn', ρ) eq3 :=
-              isconv_prog leq fn' (ρ +++ θ') (tFix mfix' idx') π2 aux
+              isconv_prog leq (tFix mfix idx) π1 fn' (ρ +++ θ') aux
             }
           } ;
-        | @exist None unfold_fix1 with inspect (unfold_one_fix Γ mfix' idx' π2 _) := {
-          | @exist (Some (fn, θ)) eq1
-            with inspect (decompose_stack θ) := {
-            | @exist (l', θ') eq2
-              with inspect (reduce_stack RedFlags.nodelta Σ hΣ (Γ ,,, stack_context θ') fn (appstack l' ε) _) := {
-              | @exist (fn', ρ) eq3 :=
-                isconv_prog leq (tFix mfix idx) π1 fn' (ρ +++ θ') aux
-              }
-            } ;
-          | @exist None unfold_fix2 with inspect (eqb idx idx') := {
-            | @exist true eq4 with isconv_fix Γ mfix idx π1 _ mfix' idx' π2 _ _ _ aux := {
-              | Success h1 with isconv_args_raw leq (tFix mfix idx) π1 (tFix mfix' idx') π2 aux := {
-                | Success h2 := yes ;
-                | Error e h := no e
-                } ;
+        | _ with inspect (eqb idx idx') := {
+          | @exist true eq4 with isconv_fix IndFix Γ mfix idx π1 _ mfix' idx' π2 _ _ _ aux := {
+            | Success h1 with isconv_args_raw leq (tFix mfix idx) π1 (tFix mfix' idx') π2 aux := {
+              | Success h2 := yes ;
               | Error e h := no e
               } ;
-            | @exist false idx_uneq :=
-              no (
-                CannotUnfoldFix
-                  (Γ ,,, stack_context π1) mfix idx
-                  (Γ ,,, stack_context π2) mfix' idx'
-              )
-            }
+            | Error e h := no e
+            } ;
+          | @exist false _ :=
+            no (
+              CannotUnfoldFix
+                (Γ ,,, stack_context π1) mfix idx
+                (Γ ,,, stack_context π2) mfix' idx'
+            )
           }
         }
       } ;
 
     | prog_view_CoFix mfix idx mfix' idx'
-      with inspect (eqb_term (tCoFix mfix idx) (tCoFix mfix' idx')) := {
-      | @exist true eq1 := isconv_args leq (tCoFix mfix idx) π1 (tCoFix mfix' idx') π2 aux ;
+      with inspect (eqb idx idx') := {
+      | @exist true eq4 with isconv_fix CoIndFix Γ mfix idx π1 _ mfix' idx' π2 _ _ _ aux := {
+        | Success h1 with isconv_args_raw leq (tCoFix mfix idx) π1 (tCoFix mfix' idx') π2 aux := {
+          | Success h2 := yes ;
+          | Error e h := no e
+          } ;
+        | Error e h := no e
+        } ;
       | @exist false _ :=
         no (
           DistinctCoFix
             (Γ ,,, stack_context π1) mfix idx
             (Γ ,,, stack_context π2) mfix' idx'
-        ) (* TODO Incomplete *)
+        )
       } ;
 
     | prog_view_other t1 t2 h :=
@@ -2981,24 +3041,9 @@ Section Conversion.
     rewrite h1, h2 in H.
     apply Prod_conv_cum_inv in H as (?&_); auto.
   Qed.
-
+  
   (* tCase *)
   Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    destruct eqb_term eqn:eq_terms; [|congruence].
-    destruct aux eqn:conv_args; [|congruence].
-    apply conv_cum_zipp; auto.
-    destruct hΣ.
-    eapply conv_conv_cum.
-    constructor. constructor.
-    eapply eqb_term_spec. auto.
-  Qed.
-  Next Obligation.
-    clear not_eqb.
     destruct hΣ as [wΣ].
     zip fold in h1. apply wellformed_context in h1 ; auto. simpl in h1.
     destruct h1 as [[T h1] | [[ctx [s [h1 _]]]]] ; [| discriminate ].
@@ -3009,10 +3054,9 @@ Section Conversion.
   Qed.
   Next Obligation.
     destruct hΣ as [wΣ].
-    clear aux not_eqb.
-    zip fold in h2. apply wellformed_context in h2 ; auto. simpl in h2.
-    destruct h2 as [[T h2] | [[ctx [s [h2 _]]]]] ; [| discriminate ].
-    apply inversion_Case in h2 as hh ; auto.
+    zip fold in h2. apply wellformed_context in h2 as h2' ; auto. simpl in h2'.
+    destruct h2' as [[T h2'] | [[ctx [s [h2' _]]]]] ; [| discriminate ].
+    apply inversion_Case in h2' as hh ; auto.
     destruct hh as [uni [args [mdecl [idecl [ps [pty [btys
                                  [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]].
     left. eexists. eassumption.
@@ -3030,74 +3074,50 @@ Section Conversion.
     eapply positionR_poscat. constructor.
   Qed.
   Next Obligation.
-    change (eq_inductive ind ind') with (eqb ind ind') in eq4.
+    change (eq_inductive ind ind') with (eqb ind ind') in eq5.
     destruct (eqb_spec ind ind'). 2: discriminate.
     assumption.
   Qed.
   Next Obligation.
-    change (eq_inductive ind ind') with (eqb ind ind') in eq4.
+    change (eq_inductive ind ind') with (eqb ind ind') in eq5.
     destruct (eqb_spec ind ind'). 2: discriminate.
-    change (Nat.eqb par par') with (eqb par par') in eq4.
+    change (Nat.eqb par par') with (eqb par par') in eq5.
     destruct (eqb_spec par par'). 2: discriminate.
     assumption.
   Qed.
   Next Obligation.
-    eapply R_stateR. all: simpl. all: try reflexivity.
-    constructor.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
   Qed.
   Next Obligation.
+    apply conv_cum_zipp; auto.
     destruct h1 as [h1], h2 as [h2], h3 as [h3].
     unfold zipp in h1, h2. simpl in h1, h2.
-    destruct hΣ as [wΣ].
-    change (eq_inductive ind ind') with (eqb ind ind') in eq4.
-    destruct (eqb_spec ind ind'). 2: discriminate.
-    change (Nat.eqb par par') with (eqb par par') in eq4.
-    destruct (eqb_spec par par'). 2: discriminate.
-    subst.
-    eapply conv_cum_zipp; auto.
+    pose proof hΣ as wΣ. destruct wΣ.
     eapply conv_conv_cum.
     constructor.
+    change (eq_inductive ind ind') with (eqb ind ind') in eq5.
+    destruct (eqb_spec ind ind'). 2: discriminate.
+    change (Nat.eqb par par') with (eqb par par') in eq5.
+    destruct (eqb_spec par par'). 2: discriminate.
+    subst.
     eapply conv_Case. all: assumption.
   Qed.
   Next Obligation.
-    apply h; clear h.
-    eapply inv_reduced_discriminees_case in H as [([= <- <-]&?&?&?&?)]; eauto.
-    constructor; auto.
+    todo "Completeness".
   Qed.
   Next Obligation.
-    apply h; cbn; clear h.
-    eapply inv_reduced_discriminees_case in H as [([= <- <-]&?&?&?&?)]; eauto.
-    constructor; auto.
+    todo "Completeness".
   Qed.
   Next Obligation.
-    apply h; cbn; clear h.
-    eapply inv_reduced_discriminees_case in H as [([= <- <-]&?&?&?&?)]; eauto.
-    constructor; auto.
+    todo "Completeness".
   Qed.
   Next Obligation.
-    apply h; cbn; clear h.
-    eapply inv_reduced_discriminees_case in H as [([= <- <-]&?&?&?&?)]; eauto.
-    constructor; auto.
+    todo "Completeness".
   Qed.
   Next Obligation.
-    eapply inv_reduced_discriminees_case in H as [([= <- <-]&?&?&?&?)]; eauto.
-    rewrite eq_inductive_refl, Nat.eqb_refl in eqDiff.
-    congruence.
-  Qed.
-  Next Obligation.
-    eapply red_wellformed ; auto.
-    - exact h1.
-    - match goal with
-      | |- context [ reduce_term ?f ?Σ ?hΣ ?Γ ?t ?h ] =>
-        pose proof (reduce_term_sound f Σ hΣ Γ t h) as [hr]
-      end.
-      constructor.
-      eapply red_zipc.
-      eapply red_case.
-      + reflexivity.
-      + assumption.
-      + clear.
-        induction brs ; eauto.
+    todo "Completeness".
   Qed.
   Next Obligation.
     eapply red_wellformed ; auto.
@@ -3116,68 +3136,90 @@ Section Conversion.
   Qed.
   Next Obligation.
     match goal with
-    | |- context [ reduce_term ?f ?Σ ?hΣ ?Γ c ?h ] =>
-      destruct (reduce_stack_Req f Σ hΣ Γ c ε h) as [e | hr]
+    | |- context [ reduce_term ?f ?Σ ?hΣ ?Γ c' ?h ] =>
+      destruct (reduce_stack_Req f Σ hΣ Γ c' ε h) as [e' | hr]
     end.
+    1:{
+      exfalso.
+      unfold reduce_term in eq4.
+      rewrite e' in eq4. cbn in eq4.
+      rewrite eqb_term_refl in eq4.
+      discriminate.
+    }
+    dependent destruction hr.
+    2:{
+      exfalso.
+      destruct y'. simpl in H0. inversion H0. subst.
+      unfold reduce_term in eq4.
+      rewrite <- H2 in eq4.
+      cbn in eq4.
+      rewrite eqb_term_refl in eq4.
+      discriminate.
+    }
+    unshelve eapply R_cored2.
+    all: try reflexivity.
+    simpl. eapply cored_zipc. eapply cored_case. assumption.
+  Qed.
+  Next Obligation.
+    pose proof hΣ as w. destruct w.
+    destruct hx as [hx].
+    match type of h with
+    | context [ reduce_term ?f ?Σ ?hΣ ?Γ c' ?h ] =>
+      pose proof (reduce_term_sound f Σ hΣ Γ c' h) as hr
+    end.
+    destruct hr as [hr].
+    etransitivity.
+    - eassumption.
+    - eapply conv_cum_conv_ctx.
+      + assumption.
+      + eapply red_conv_cum_r ; try assumption.
+        eapply red_zipp.
+        eapply red_case_c.
+        eassumption.
+      + eapply conv_context_sym. all: auto.
+  Qed.
+  Next Obligation.
+    todo "Completeness".
+  Qed.
+  Next Obligation.
+    eapply red_wellformed ; auto.
+    - exact h1.
     - match goal with
-      | |- context [ reduce_term ?f ?Σ ?hΣ ?Γ c' ?h ] =>
-        destruct (reduce_stack_Req f Σ hΣ Γ c' ε h) as [e' | hr]
+      | |- context [ reduce_term ?f ?Σ ?hΣ ?Γ ?t ?h ] =>
+        pose proof (reduce_term_sound f Σ hΣ Γ t h) as [hr]
       end.
-      + exfalso.
-        unfold reduce_term in eq3.
-        rewrite e in eq3.
-        rewrite e' in eq3.
-        cbn in eq3. symmetry in eq3.
-        apply andb_false_elim in eq3 as [bot | bot].
-        all: rewrite eqb_term_refl in bot.
-        all: discriminate.
-      + dependent destruction hr.
-        * unshelve eapply R_cored2.
-          all: try reflexivity.
-          -- simpl. unfold reduce_term. rewrite e. reflexivity.
-          -- simpl. eapply cored_zipc. eapply cored_case. assumption.
-        * exfalso.
-          destruct y'. simpl in H0. inversion H0. subst.
-          unfold reduce_term in eq3.
-          rewrite e in eq3.
-          rewrite <- H2 in eq3.
-          cbn in eq3. symmetry in eq3.
-          apply andb_false_elim in eq3 as [bot | bot].
-          all: rewrite eqb_term_refl in bot.
-          all: discriminate.
-    - dependent destruction hr.
-      + eapply R_cored. simpl.
-        eapply cored_zipc. eapply cored_case. assumption.
-      + match goal with
-        | |- context [ reduce_term ?f ?Σ ?hΣ ?Γ c' ?h ] =>
-          destruct (reduce_stack_Req f Σ hΣ Γ c' ε h) as [e' | hr]
-        end.
-        * exfalso.
-          destruct y'. simpl in H0. inversion H0. subst.
-          unfold reduce_term in eq3.
-          rewrite e' in eq3.
-          rewrite <- H2 in eq3.
-          cbn in eq3. symmetry in eq3.
-          apply andb_false_elim in eq3 as [bot | bot].
-          all: rewrite eqb_term_refl in bot.
-          all: discriminate.
-        * dependent destruction hr.
-          -- unshelve eapply R_cored2.
-             all: try reflexivity.
-             ++ simpl. unfold reduce_term.
-                destruct y'. simpl in H0. inversion H0. subst.
-                rewrite <- H3. reflexivity.
-             ++ simpl. eapply cored_zipc. eapply cored_case. assumption.
-          -- exfalso.
-             destruct y'. simpl in H0. inversion H0. subst.
-             destruct y'0. simpl in H2. inversion H2. subst.
-             unfold reduce_term in eq3.
-             rewrite <- H4 in eq3.
-             rewrite <- H5 in eq3.
-             cbn in eq3. symmetry in eq3.
-             apply andb_false_elim in eq3 as [bot | bot].
-             all: rewrite eqb_term_refl in bot.
-             all: discriminate.
+      constructor.
+      eapply red_zipc.
+      eapply red_case.
+      + reflexivity.
+      + assumption.
+      + clear.
+        induction brs ; eauto.
+  Qed.
+  Next Obligation.
+    match goal with
+    | |- context [ reduce_term ?f ?Σ ?hΣ ?Γ c ?h ] =>
+      destruct (reduce_stack_Req f Σ hΣ Γ c ε h) as [e' | hr]
+    end.
+    1:{
+      exfalso.
+      unfold reduce_term in eq3.
+      rewrite e' in eq3. cbn in eq3.
+      rewrite eqb_term_refl in eq3.
+      discriminate.
+    }
+    dependent destruction hr.
+    2:{
+      exfalso.
+      destruct y'. simpl in H0. inversion H0. subst.
+      unfold reduce_term in eq3.
+      rewrite <- H2 in eq3.
+      cbn in eq3.
+      rewrite eqb_term_refl in eq3.
+      discriminate.
+    }
+    unshelve eapply R_cored.
+    simpl. eapply cored_zipc. eapply cored_case. assumption.
   Qed.
   Next Obligation.
     destruct hΣ as [wΣ].
@@ -3186,62 +3228,16 @@ Section Conversion.
     | context [ reduce_term ?f ?Σ ?hΣ ?Γ c ?h ] =>
       pose proof (reduce_term_sound f Σ hΣ Γ c h) as hr
     end.
-    match type of h with
-    | context [ reduce_term ?f ?Σ ?hΣ ?Γ c' ?h ] =>
-      pose proof (reduce_term_sound f Σ hΣ Γ c' h) as hr'
-    end.
-    destruct hr as [hr], hr' as [hr'].
+    destruct hr as [hr].
     etransitivity.
     - eapply red_conv_cum_l ; try assumption.
       eapply red_zipp.
-      eapply red_case.
-      + reflexivity.
-      + eassumption.
-      + instantiate (1 := brs).
-        clear.
-        induction brs ; eauto.
-    - etransitivity ; try eassumption.
-      eapply conv_cum_conv_ctx.
-      + assumption.
-      + eapply red_conv_cum_r. 1: assumption.
-        eapply red_zipp.
-        eapply red_case. 2: eassumption.
-        * reflexivity.
-        * clear.
-          induction brs' ; eauto.
-      + eapply conv_context_sym. all: auto.
+      eapply red_case_c.
+      eassumption.
+    - assumption.
   Qed.
   Next Obligation.
-    apply h; clear h.
-    set (redc := reduce_term _ _ _ _ _ _);
-    assert (∥ red Σ.1 (Γ ,,, stack_context π1) c redc ∥)
-    as [hc]
-    by apply reduce_term_sound.
-    set (redc' := reduce_term _ _ _ _ _ _);
-    assert (∥ red Σ.1 (Γ ,,, stack_context π2) c' redc' ∥)
-    as [hc']
-    by apply reduce_term_sound.
-    destruct hx as [hx].
-    destruct hΣ as [ wfΣ].
-    destruct leq.
-    - set (t0 := zipp _ _).
-      destruct H as [Hconv].
-      constructor.
-      unfold Aux in aux.
-      eapply conv_red_l_inv. 1: auto. 2: apply red_zipp, red_case_c, hc.
-      symmetry.
-      eapply conv_conv_ctx. 1: assumption.
-      2: eapply conv_context_sym; eassumption.
-      eapply conv_red_l_inv. 1: auto. 2: apply red_zipp, red_case_c, hc'. 
-      eapply conv_conv_ctx; try eassumption.
-      symmetry; assumption.
-    - destruct H as [Hconv].
-      constructor.
-      eapply cumul_red_l_inv. 1: auto. 2: apply red_zipp, red_case_c, hc.
-      eapply cumul_conv_ctx. 1: assumption.
-      2: eapply conv_context_sym; eassumption.
-      eapply cumul_red_r_inv; [auto|eauto|]. 2: apply red_zipp, red_case_c, hc'.
-      eapply cumul_conv_ctx; eauto.
+    todo "Completeness".
   Qed.
 
   (* tProj *)
@@ -3441,22 +3437,8 @@ Section Conversion.
       eassumption.
     - assumption.
   Qed.
-
+  
   (* tFix *)
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    destruct hΣ.
-    destruct eqb_term eqn:eq_term; [|congruence].
-    destruct aux eqn:eq_args; [|congruence].
-    apply conv_cum_zipp; auto.
-    eapply conv_conv_cum.
-    constructor. constructor.
-    eapply eqb_term_spec. auto.
-  Qed.
   Next Obligation.
     cbn. rewrite zipc_appstack. cbn.
     apply unfold_one_fix_red_zipp in eq1 as r.
@@ -3477,20 +3459,26 @@ Section Conversion.
   Next Obligation.
     apply unfold_one_fix_red in eq1 as r1.
     apply unfold_one_fix_decompose in eq1 as d1.
-    reduce_stack_facts.
-    clear eqDiff.
-    simpl_stacks.
-    destruct r1 as [r1].
-    eapply red_wellformed.
-    1: eauto.
-    1: exact h1.
-    constructor.
-    etransitivity.
-    2: { apply red_zipc.
-         rewrite stack_context_decompose.
-         exact r. }
-    simpl_stacks.
-    eassumption.
+    match type of eq3 with
+    | _ = reduce_stack ?f ?Σ ?hΣ ?Γ ?t ?π ?h =>
+      destruct (reduce_stack_sound f Σ hΣ Γ t π h) as [r2] ;
+      pose proof (reduce_stack_decompose RedFlags.nodelta _ hΣ _ _ _ h) as d2 ;
+      pose proof (reduce_stack_context f Σ hΣ Γ t π h) as c2
+    end.
+    rewrite <- eq3 in r2. cbn in r2. rewrite zipc_appstack in r2. cbn in r2.
+    rewrite <- eq3 in d2. cbn in d2. rewrite decompose_stack_appstack in d2.
+    cbn in d2.
+    rewrite <- eq3 in c2. cbn in c2. rewrite stack_context_appstack in c2.
+    cbn in c2.
+    case_eq (decompose_stack ρ). intros l ξ e.
+    rewrite e in d2. cbn in d2. subst.
+    pose proof (red_wellformed _ hΣ h1 r1) as hh.
+    apply red_context in r2.
+    pose proof (decompose_stack_eq _ _ _ (eq_sym eq2)). subst.
+    rewrite zipc_appstack in hh. cbn in r2.
+    pose proof (red_wellformed _ hΣ hh (sq r2)) as hh2.
+    rewrite zipc_stack_cat.
+    assumption.
   Qed.
   Next Obligation.
     apply unfold_one_fix_cored in eq1 as r1.
@@ -3511,51 +3499,93 @@ Section Conversion.
   Qed.
   Next Obligation.
     apply unfold_one_fix_decompose in eq1 as d1.
-    reduce_stack_facts.
-    clear eqDiff.
-    now simpl_stacks.
+    rewrite <- eq2 in d1. simpl in d1.
+    match type of eq3 with
+    | _ = reduce_stack ?f ?Σ ?hΣ ?Γ ?t ?π ?h =>
+      pose proof (reduce_stack_decompose RedFlags.nodelta _ hΣ _ _ _ h) as d2
+    end.
+    rewrite <- eq3 in d2. cbn in d2. rewrite decompose_stack_appstack in d2.
+    cbn in d2.
+    case_eq (decompose_stack ρ). intros l ξ e.
+    rewrite e in d2. cbn in d2. subst.
+    pose proof (decompose_stack_eq _ _ _ (eq_sym eq2)). subst.
+    apply decompose_stack_eq in e as ?. subst.
+    rewrite stack_cat_appstack.
+    rewrite stack_context_appstack.
+    case_eq (decompose_stack π1). intros args ρ e'.
+    simpl.
+    apply decompose_stack_eq in e'. subst.
+    clear eq3.
+    rewrite stack_context_appstack in hx.
+    assumption.
   Qed.
   Next Obligation.
-    simpl_reduce_stack.
-    specialize (isr eq_refl) as (?&_).
-    split; [easy|].
-    cbn in *.
-    now simpl_stacks.
+    todo "Completeness".
   Qed.
   Next Obligation.
+    destruct hΣ as [wΣ].
     apply unfold_one_fix_red_zipp in eq1 as r1.
+    destruct r1 as [r1].
+    match type of eq3 with
+    | _ = reduce_stack ?f ?Σ ?hΣ ?Γ ?t ?π ?h =>
+      destruct (reduce_stack_sound f Σ hΣ Γ t π h) as [r2] ;
+      pose proof (reduce_stack_decompose RedFlags.nodelta _ hΣ _ _ _ h) as d2
+    end.
+    rewrite <- eq3 in r2.
+    rewrite <- eq3 in d2. cbn in d2. rewrite decompose_stack_appstack in d2.
+    cbn in d2.
     apply unfold_one_fix_decompose in eq1 as d1.
-    reduce_stack_facts.
-    clear eqDiff.
-    simpl_reduce_stack.
-    destruct hΣ, r1 as [r1].
-    eapply conv_cum_trans; auto.
-    2: exact h.
-    eapply red_conv_cum_l.
-    etransitivity; eauto.
+    assert (r2' : red (fst Σ) (Γ ,,, stack_context π1) (zipp fn θ) (zipp fn' (ρ +++ θ'))).
+    { unfold zipp.
+      case_eq (decompose_stack ρ). intros l ξ e.
+      rewrite e in d2. cbn in d2. subst.
+      pose proof (decompose_stack_eq _ _ _ e). subst.
+      rewrite stack_cat_appstack. rewrite decompose_stack_appstack.
+      rewrite <- eq2.
+      cbn in r2. rewrite 2!zipc_appstack in r2. cbn in r2.
+      rewrite <- eq2 in d1. cbn in d1. subst.
+      case_eq (decompose_stack π1). intros l1 ρ1 e1.
+      simpl. rewrite e1 in r2. simpl in r2.
+      pose proof (decompose_stack_eq _ _ _ e1). subst.
+      rewrite decompose_stack_twice with (1 := e1). cbn.
+      rewrite app_nil_r.
+      rewrite stack_context_appstack. assumption.
+    }
+    pose proof (red_trans _ _ _ _ _ r1 r2') as r.
+    assert (e : stack_context π1 = stack_context (ρ +++ θ')).
+    { case_eq (decompose_stack ρ). intros l ξ e.
+      rewrite e in d2. cbn in d2. subst.
+      pose proof (decompose_stack_eq _ _ _ e). subst.
+      rewrite stack_cat_appstack.
+      rewrite stack_context_appstack.
+      rewrite <- eq2 in d1. cbn in d1. subst.
+      case_eq (decompose_stack π1). intros l1 ρ1 e1.
+      pose proof (decompose_stack_eq _ _ _ e1). subst.
+      rewrite stack_context_appstack. reflexivity.
+    }
+    etransitivity.
+    - eapply red_conv_cum_l. all: eassumption.
+    - rewrite e. assumption.
   Qed.
   Next Obligation.
-    apply h; clear h.
-    apply unfold_one_fix_red_zipp in eq1 as r1.
-    apply unfold_one_fix_decompose in eq1 as d1.
-    reduce_stack_facts.
-    clear eqDiff.
-    simpl_reduce_stack.
-    destruct hΣ, r1 as [r1].
-    eapply conv_cum_red_inv.
-    1: auto.
-    2: reflexivity.
-    2: exact H.
-    etransitivity; eauto.
+    todo "Completeness".
   Qed.
   Next Obligation.
+    cbn. rewrite zipc_appstack. cbn.
     apply unfold_one_fix_red_zipp in eq1 as r.
     apply unfold_one_fix_decompose in eq1 as d.
-    clear eqDiff aux eq1.
-    apply wellformed_zipc_zipp in h2; auto.
-    cbn in *.
-    simpl_stacks.
-    eapply red_wellformed; eauto.
+    rewrite <- eq2 in d. simpl in d.
+    unfold zipp in r.
+    rewrite <- eq2 in r.
+    case_eq (decompose_stack π2). intros l2 ρ2 e2.
+    rewrite e2 in r.
+    rewrite e2 in d. simpl in d. subst.
+    apply wellformed_zipc_zipp in h2 as hh2 ; auto.
+    pose proof (decompose_stack_eq _ _ _ e2). subst.
+    unfold zipp in hh2. rewrite e2 in hh2.
+    pose proof (red_wellformed _ hΣ hh2 r) as hh.
+    rewrite stack_context_appstack in hh.
+    assumption.
   Qed.
   Next Obligation.
     apply unfold_one_fix_red in eq1 as r1.
@@ -3616,43 +3646,70 @@ Section Conversion.
     rewrite stack_cat_appstack.
     rewrite stack_context_appstack.
     apply decompose_stack_eq in e2 as ?. subst.
-    clear eq3 eqDiff.
+    clear eq3.
     rewrite stack_context_appstack in hx.
     assumption.
   Qed.
   Next Obligation.
-    simpl_reduce_stack.
-    specialize (isr eq_refl) as (?&_).
-    split; [easy|].
-    simpl_stacks.
-    eauto.
+    todo "Completeness".
   Qed.
   Next Obligation.
+    destruct hΣ as [wΣ].
     apply unfold_one_fix_red_zipp in eq1 as r1.
-    apply unfold_one_fix_decompose in eq1 as d1.
-    reduce_stack_facts.
-    clear eqDiff.
-    simpl_reduce_stack.
     destruct r1 as [r1].
-    destruct hΣ, hx.
-    eapply conv_cum_red_conv.
-    1,2,5: eauto.
-    1: reflexivity.
-    etransitivity; eauto.
+    match type of eq3 with
+    | _ = reduce_stack ?f ?Σ ?hΣ ?Γ ?t ?π ?h =>
+      destruct (reduce_stack_sound f Σ hΣ Γ t π h) as [r2] ;
+      pose proof (reduce_stack_decompose RedFlags.nodelta _ hΣ _ _ _ h) as d2
+    end.
+    rewrite <- eq3 in r2.
+    rewrite <- eq3 in d2. cbn in d2. rewrite decompose_stack_appstack in d2.
+    cbn in d2.
+    apply unfold_one_fix_decompose in eq1 as d1.
+    assert (r2' : ∥ red (fst Σ) (Γ ,,, stack_context π2) (zipp fn θ) (zipp fn' (ρ +++ θ')) ∥).
+    { unfold zipp.
+      destruct hx as [hx].
+      constructor.
+      case_eq (decompose_stack ρ). intros l ξ e.
+      rewrite e in d2. cbn in d2. subst.
+      pose proof (decompose_stack_eq _ _ _ e). subst.
+      rewrite stack_cat_appstack. rewrite decompose_stack_appstack.
+      rewrite <- eq2.
+      cbn in r2. rewrite 2!zipc_appstack in r2. cbn in r2.
+      rewrite <- eq2 in d1. cbn in d1. subst.
+      case_eq (decompose_stack π2). intros l2 ρ2 e2.
+      simpl. rewrite e2 in r2. simpl in r2.
+      pose proof (decompose_stack_eq _ _ _ e2). subst.
+      rewrite decompose_stack_twice with (1 := e2). cbn.
+      rewrite app_nil_r.
+      rewrite stack_context_appstack.
+      assumption.
+    }
+    assert (e : stack_context π2 = stack_context (ρ +++ θ')).
+    { case_eq (decompose_stack ρ). intros l ξ e.
+      rewrite e in d2. cbn in d2. subst.
+      pose proof (decompose_stack_eq _ _ _ e). subst.
+      rewrite stack_cat_appstack.
+      rewrite stack_context_appstack.
+      rewrite <- eq2 in d1. cbn in d1. subst.
+      case_eq (decompose_stack π2). intros l2 ρ2 e2. simpl.
+      pose proof (decompose_stack_eq _ _ _ e2). subst.
+      rewrite stack_context_appstack. reflexivity.
+    }
+    destruct r2' as [r2'].
+    destruct hx as [hx].
+    pose proof (red_trans _ _ _ _ _ r1 r2') as r.
+    etransitivity ; revgoals.
+    - eapply conv_cum_conv_ctx.
+      + assumption.
+      + eapply red_conv_cum_r. 1: assumption.
+        eassumption.
+      + eapply conv_context_sym. 1: auto.
+        assumption.
+    - assumption.
   Qed.
   Next Obligation.
-    apply h; clear h.
-    apply unfold_one_fix_red_zipp in eq1 as r1.
-    apply unfold_one_fix_decompose in eq1 as d1.
-    reduce_stack_facts.
-    clear eqDiff.
-    simpl_reduce_stack.
-    destruct r1 as [r1].
-    destruct hΣ, hx.
-    eapply conv_cum_red_conv_inv.
-    1,2,5: eauto.
-    1: reflexivity.
-    etransitivity; eauto.
+    todo "Completeness".
   Qed.
   Next Obligation.
     change (true = eqb idx idx') in eq4.
@@ -3666,54 +3723,55 @@ Section Conversion.
     constructor.
   Qed.
   Next Obligation.
+    apply conv_cum_zipp; auto.
     destruct h1 as [h1].
     destruct hΣ.
+    eapply conv_conv_cum_l.
     change (true = eqb idx idx') in eq4.
     destruct (eqb_spec idx idx'). 2: discriminate.
     subst.
-    apply conv_cum_zipp; auto.
-    eapply conv_conv_cum_l.
     eapply conv_Fix. all: assumption.
   Qed.
   Next Obligation.
-    apply h; clear h.
-    eapply inv_stuck_fixes in H as [(<-&?&?)]; eauto.
-    constructor; auto.
+    todo "Completeness".
   Qed.
   Next Obligation.
-    apply h; clear h.
-    eapply inv_stuck_fixes in H as [(<-&?&?)]; eauto.
-    constructor; auto.
-    eapply All2_impl; eauto.
-    cbn; intros; easy.
+    todo "Completeness".
   Qed.
   Next Obligation.
-    eapply inv_stuck_fixes in H as [(<-&?&?)]; eauto.
-    rewrite Nat.eqb_refl in idx_uneq.
-    congruence.
+    todo "Completeness".
   Qed.
 
   (* tCoFix *)
   Next Obligation.
-    unshelve eapply R_stateR.
+    change (true = eqb idx idx') in eq4.
+    destruct (eqb_spec idx idx'). 2: discriminate.
+    assumption.
+  Qed.
+  Next Obligation.
+    eapply R_stateR.
+    all: simpl.
     all: try reflexivity.
-    simpl. constructor.
+    constructor.
   Qed.
   Next Obligation.
-    destruct hΣ.
     apply conv_cum_zipp; auto.
-    eapply conv_conv_cum.
-    constructor. constructor.
-    eapply eqb_term_spec. auto.
-  Qed.
-  (* Beware !! There is a TODO in the code *)
-  Axiom todo_cofix_conversion : forall {A}, A.
-  Next Obligation.
-    apply h; clear h.
-    exact todo_cofix_conversion.
+    destruct h1 as [h1].
+    destruct hΣ.
+    eapply conv_conv_cum_l.
+    change (true = eqb idx idx') in eq4.
+    destruct (eqb_spec idx idx'). 2: discriminate.
+    subst.
+    eapply conv_CoFix. all: assumption.
   Qed.
   Next Obligation.
-    exact todo_cofix_conversion.
+    todo "Completeness".
+  Qed.
+  Next Obligation.
+    todo "Completeness".
+  Qed.
+  Next Obligation.
+    todo "Completeness".
   Qed.
 
   (* Fallback *)

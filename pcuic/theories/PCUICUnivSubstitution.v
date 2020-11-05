@@ -838,7 +838,7 @@ Definition precompose_subst_instance_instance__2 Rle u i i'
 
 Lemma precompose_subst_instance_global Σ Re Rle gr napp u i i' :
   precompose (R_global_instance Σ Re Rle gr napp) (subst_instance_instance u) i i'
-  <~> R_global_instance Σ (precompose Re (subst_instance_univ u)) 
+  <~> R_global_instance Σ (precompose Re (subst_instance_univ u))
     (precompose Rle (subst_instance_univ u)) gr napp i i'.
 Proof.
   unfold R_global_instance, R_opt_variance, subst_instance_instance.
@@ -1104,6 +1104,14 @@ Fixpoint subst_instance_stack l π :=
   | CoFix mfix idx args π =>
       let mfix' := List.map (map_def (subst_instance_constr l) (subst_instance_constr l)) mfix in
       CoFix mfix' idx (map (subst_instance_constr l) args) (subst_instance_stack l π)
+  | CoFix_mfix_ty na bo ra mfix1 mfix2 idx π =>
+      let mfix1' := List.map (map_def (subst_instance_constr l) (subst_instance_constr l)) mfix1 in
+      let mfix2' := List.map (map_def (subst_instance_constr l) (subst_instance_constr l)) mfix2 in
+      CoFix_mfix_ty na (subst_instance_constr l bo) ra mfix1' mfix2' idx (subst_instance_stack l π)
+  | CoFix_mfix_bd na ty ra mfix1 mfix2 idx π =>
+      let mfix1' := List.map (map_def (subst_instance_constr l) (subst_instance_constr l)) mfix1 in
+      let mfix2' := List.map (map_def (subst_instance_constr l) (subst_instance_constr l)) mfix2 in
+      CoFix_mfix_bd na (subst_instance_constr l ty) ra mfix1' mfix2' idx (subst_instance_stack l π)
   | Case_p indn c brs π =>
       let brs' := List.map (on_snd (subst_instance_constr l)) brs in
       Case_p indn (subst_instance_constr l c) brs' (subst_instance_stack l π)
@@ -1153,6 +1161,10 @@ Proof.
     rewrite map_app. cbn. reflexivity.
   - simpl. rewrite IHπ. cbn. f_equal. f_equal.
     rewrite subst_instance_constr_mkApps. cbn. reflexivity.
+  - simpl. rewrite IHπ. cbn. f_equal. f_equal.
+    rewrite map_app. cbn. reflexivity.
+  - simpl. rewrite IHπ. cbn. f_equal. f_equal.
+    rewrite map_app. cbn. reflexivity.
   - simpl. rewrite IHπ. cbn. f_equal. f_equal.
     rewrite map_app. cbn. reflexivity.
 Qed.
@@ -1309,7 +1321,7 @@ Proof.
     apply subst_instance_to_extended_list.
 Qed.
 
-Lemma subst_instance_subst_context u s k Γ : 
+Lemma subst_instance_subst_context u s k Γ :
   subst_instance_context u (subst_context s k Γ) =
   subst_context (map (subst_instance_constr u) s) k (subst_instance_context u Γ).
 Proof.
@@ -1321,8 +1333,8 @@ Proof.
   rewrite map_length. now rewrite subst_subst_instance_constr.
 Qed.
 
-Lemma subst_instance_context_smash u Γ Δ : 
-  subst_instance_context u (smash_context Δ Γ) = 
+Lemma subst_instance_context_smash u Γ Δ :
+  subst_instance_context u (smash_context Δ Γ) =
   smash_context (subst_instance_context u Δ) (subst_instance_context u Γ).
 Proof.
   induction Γ as [|[? [] ?] ?] in Δ |- *; simpl; auto.
@@ -1331,7 +1343,7 @@ Proof.
   - rewrite IHΓ, subst_instance_context_app; trivial.
 Qed.
 
-Lemma destInd_subst_instance u t : 
+Lemma destInd_subst_instance u t :
   destInd (subst_instance u t) = option_map (fun '(i, u') => (i, subst_instance u u')) (destInd t).
 Proof.
   destruct t; simpl; try congruence.
@@ -1408,7 +1420,7 @@ Axiom cofix_guard_subst_instance :
   cofix_guard (map (map_def (subst_instance_constr u) (subst_instance_constr u))
                   mfix).
 
-                 
+
 Lemma All_local_env_over_subst_instance Σ Γ (wfΓ : wf_local Σ Γ) :
   All_local_env_over typing
                      (fun Σ0 Γ0 (_ : wf_local Σ0 Γ0) t T (_ : Σ0;;; Γ0 |- t : T) =>
@@ -1454,7 +1466,7 @@ Proof.
       exists (subst_instance_univ u tu.π1). eapply p; auto.
     + simpl. constructor; auto.
       ++ exists (subst_instance_univ u tu.π1). eapply p0; auto.
-      ++ apply p; auto. 
+      ++ apply p; auto.
 
   - intros n decl eq X u univs wfΣ' H Hsub. rewrite <- lift_subst_instance_constr.
     rewrite map_decl_type. econstructor; aa.
@@ -1552,7 +1564,7 @@ Proof.
     erewrite map_dtype. econstructor.
     + now apply fix_guard_subst_instance.
     + rewrite nth_error_map, H0. reflexivity.
-    + eapply H1; eauto. 
+    + eapply H1; eauto.
     + apply All_map, (All_impl X); simpl; intuition auto.
       destruct X1 as [s Hs]. exists (subst_instance_univ u s).
       now apply Hs.
@@ -1593,7 +1605,7 @@ Proof.
       unfold wf_cofixpoint.
       rewrite map_map_compose.
       now rewrite subst_instance_check_one_cofix.
-      
+
   - intros t0 A B X X0 X1 X2 X3 u univs wfΣ' HSub H.
     econstructor.
     + eapply X1; aa.
@@ -1706,7 +1718,7 @@ Proof.
   - destruct t0 as [s Hs]. hnf.
     eapply typing_subst_instance'' in Hs; eauto; apply X.
   - destruct t0 as [s Hs]. hnf.
-    eapply typing_subst_instance'' in Hs; eauto; apply X. 
+    eapply typing_subst_instance'' in Hs; eauto; apply X.
   - hnf in t1 |- *.
     eapply typing_subst_instance'' in t1; eauto; apply X.
 Qed.
@@ -1744,7 +1756,7 @@ Section SubstIdentity.
     simpl. intros [= Hl]. f_equal. now rewrite mapi_rec_Sk.
   Qed.
 
-  Lemma subst_instance_instance_id Σ u mdecl : 
+  Lemma subst_instance_instance_id Σ u mdecl :
     consistent_instance_ext Σ (ind_universes mdecl) u ->
     subst_instance_instance u (PCUICLookup.abstract_instance (ind_universes mdecl)) = u.
   Proof.
@@ -1806,7 +1818,7 @@ Section SubstIdentity.
       * destruct H.
   Qed.
 
-  Lemma In_fold_right_add x l : 
+  Lemma In_fold_right_add x l :
     In x l <-> LevelSet.In x (fold_right LevelSet.add LevelSet.empty l).
   Proof.
     split.
@@ -1819,7 +1831,7 @@ Section SubstIdentity.
       * rewrite LevelSet.add_spec. intuition auto.
   Qed.
 
-  Lemma CS_For_all_union f cst cst' : ConstraintSet.For_all f (ConstraintSet.union cst cst') -> 
+  Lemma CS_For_all_union f cst cst' : ConstraintSet.For_all f (ConstraintSet.union cst cst') ->
     ConstraintSet.For_all f cst.
   Proof.
     unfold CS.For_all.
@@ -1852,12 +1864,12 @@ Section SubstIdentity.
   Hint Resolve declared_inductive_wf_ext_wk declared_inductive_wf_global_ext : pcuic.
 
   Instance For_all_proper P : Morphisms.Proper (CS.Equal ==> iff)%signature (ConstraintSet.For_all P).
-  Proof. 
+  Proof.
     intros s s' eqs.
     unfold CS.For_all. split; intros IH x inxs; apply (IH x);
     now apply eqs.
   Qed.
-   
+
   Lemma unfold_length {A} (f : nat -> A) m : #|unfold m f| = m.
   Proof.
     induction m; simpl; rewrite ?app_length /=; auto. lia.
@@ -1874,7 +1886,7 @@ Section SubstIdentity.
     - simpl in Hn. eapply nth_error_Some_length in Hn.
       rewrite app_length /= unfold_length in Hn. lia.
   Qed.
-  
+
   Lemma nth_error_unfold_inv {A} (f : nat -> A) m n t : nth_error (unfold m f) n = Some t -> t = (f n).
   Proof.
     induction m in n |- *; intros Hn; try lia.
@@ -1890,12 +1902,12 @@ Section SubstIdentity.
   Lemma CS_For_all_add P x s : CS.For_all P (CS.add x s) -> P x /\ CS.For_all P s.
   Proof.
     intros.
-    split. 
+    split.
     * apply (H x), CS.add_spec; left => //.
     * intros y iny. apply (H y), CS.add_spec; right => //.
   Qed.
 
-  Lemma subst_instance_level_abs l n Σ : 
+  Lemma subst_instance_level_abs l n Σ :
     wf Σ ->
     LevelSet.In l (LevelSet.union
      (fold_right LevelSet.add LevelSet.empty
@@ -1913,7 +1925,7 @@ Section SubstIdentity.
     - eapply not_var_global_levels in wfΣ.
       specialize (wfΣ l H). simpl in wfΣ.
       destruct l => //.
-  Qed.    
+  Qed.
 
   Lemma consistent_instance_ext_abstract_instance Σ udecl :
     wf Σ ->
@@ -1940,7 +1952,7 @@ Section SubstIdentity.
     - now rewrite mapi_length.
     - simpl. rewrite (mapi_unfold Level.Var).
       assert(CS.Equal (subst_instance_cstrs (unfold #|univs| Level.Var) cst) cst).
-      { unfold CS.Equal; intros a. 
+      { unfold CS.Equal; intros a.
         unfold subst_instance_cstrs.
         red in wf_glob_ext. destruct wf_glob_ext as [[_ [wfext _]] _].
         unfold on_udecl_prop in wfext.
@@ -1978,7 +1990,7 @@ Section SubstIdentity.
 
   Lemma in_var_global_ext n Σ :
     wf Σ.1 ->
-    LevelSet.In (Level.Var n) (global_ext_levels Σ) -> 
+    LevelSet.In (Level.Var n) (global_ext_levels Σ) ->
     LevelSet.In (Level.Var n) (levels_of_udecl Σ.2).
   Proof.
     intros wfΣ Hin.
@@ -2026,12 +2038,12 @@ Section SubstIdentity.
       now rewrite (nth_error_nth _ _ _ ina).
   Qed.
 
-  Lemma subst_abstract_instance_id : 
+  Lemma subst_abstract_instance_id :
     env_prop (fun Σ Γ t T =>
         wf_ext_wk Σ ->
         let u := PCUICLookup.abstract_instance (snd Σ) in
         subst_instance_constr u t = t)
-        (fun Σ Γ wfΓ => 
+        (fun Σ Γ wfΓ =>
         wf_ext_wk Σ ->
         let u := PCUICLookup.abstract_instance (snd Σ) in
         subst_instance_context u Γ = Γ).
@@ -2042,7 +2054,7 @@ Section SubstIdentity.
       * f_equal; auto.
         unfold map_decl. simpl. unfold vass. f_equal. auto.
       * unfold map_decl. simpl. unfold vdef. repeat f_equal; auto.
-      
+
     - unfold Universe.make.
       unfold subst_instance_level_expr.
       destruct (UnivExpr.make l) eqn:eql; auto.
@@ -2089,11 +2101,11 @@ Section SubstIdentity.
     let u := PCUICLookup.abstract_instance Σ.2 in
     subst_instance_constr u t = t.
   Proof.
-    intros [wfΣ onu] H. eapply (env_prop_typing _ _ subst_abstract_instance_id) in H; eauto. 
+    intros [wfΣ onu] H. eapply (env_prop_typing _ _ subst_abstract_instance_id) in H; eauto.
     split; auto.
   Qed.
 
-  Lemma subst_instance_context_id Σ Γ : 
+  Lemma subst_instance_context_id Σ Γ :
     wf_ext_wk Σ ->
     wf_local Σ Γ ->
     let u := PCUICLookup.abstract_instance Σ.2 in
@@ -2103,7 +2115,7 @@ Section SubstIdentity.
     apply X.
   Qed.
 
-  Lemma subst_instance_ind_sort_id Σ mdecl ind idecl : 
+  Lemma subst_instance_ind_sort_id Σ mdecl ind idecl :
     wf Σ ->
     declared_inductive Σ mdecl ind idecl ->
     forall (oib : on_ind_body (lift_typing typing) (Σ, ind_universes mdecl)
@@ -2126,7 +2138,7 @@ Section SubstIdentity.
       destruct declm. apply w.
   Qed.
 
-  Lemma subst_instance_ind_type_id Σ mdecl ind idecl : 
+  Lemma subst_instance_ind_type_id Σ mdecl ind idecl :
     wf Σ ->
     declared_inductive Σ mdecl ind idecl ->
     let u := PCUICLookup.abstract_instance (ind_universes mdecl) in
@@ -2143,7 +2155,7 @@ Section SubstIdentity.
     destruct declm. apply w.
   Qed.
 
-  Lemma isType_subst_instance_id Σ Γ T : 
+  Lemma isType_subst_instance_id Σ Γ T :
     wf_ext_wk Σ ->
     let u := PCUICLookup.abstract_instance Σ.2 in
     isType Σ Γ T -> subst_instance_constr u T = T.

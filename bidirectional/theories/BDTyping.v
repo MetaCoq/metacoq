@@ -23,6 +23,8 @@ Module BDEnvTyping := EnvTyping PCUICTerm PCUICEnvironment.
 Include BDEnvTyping.
 
 Section WfArity.
+(*modification of arity well-formedness to separated checking and sorting *)
+
   Context (checking : forall (Σ : global_env_ext) (Γ : context), term -> term -> Type).
   Context (sorting : forall (Σ : global_env_ext) (Γ : context), term -> Universe.t -> Type).
 
@@ -179,16 +181,8 @@ and " Σ ;;; Γ |- t ◃ T " := (@checking _ Σ Γ t T) : type_scope.
 
 Notation wf_local Σ Γ := (All_local_env (lift_sorting checking infering_sort Σ) Γ).
 
-(* Lemma meta_conv {cf : checker_flags} Σ Γ t A B :
-    Σ ;;; Γ |- t : A ->
-    A = B ->
-    Σ ;;; Γ |- t : B.
-Proof.
-  intros h []; assumption.
-Qed. *)
 
-
-(** ** Typechecking of global environments *)
+(** ** Typechecking of global environments, using BDEnvironment to separte typing into checking and sorting *)
 
 Module BDTypingDef <: Typing PCUICTerm PCUICEnvironment BDEnvTyping.
 
@@ -284,10 +278,6 @@ Fixpoint globenv_size (Σ : global_env) : size :=
   | d :: Σ => S (globenv_size Σ)
   end.
 
-(** To get a good induction principle for typing derivations,
-     we need:
-    - size of the global_env_ext, including size of the global declarations in it
-    - size of the derivation. *)
 
 Arguments lexprod [A B].
 
@@ -341,6 +331,7 @@ Section TypingInduction.
   Context (PΓ : forall `{checker_flags} Σ Γ, wf_local Σ Γ -> Type).
   Arguments PΓ {_}.
 
+(* This is what we wish to prove with our mutual induction principle, note how also global environment and local context are built-in *)
   Definition env_prop `{checker_flags} :=
     forall Σ (wfΣ : wf Σ.1),
     (Forall_decls_sorting Pcheck Psort Σ.1) ×
@@ -407,8 +398,8 @@ Section TypingInduction.
 
   Derive Signature for Alli.
 
-  (** *** Inductive principle, giving extra-strong premisses,
-          including environment and context well-formedness
+  (** *** To prove the needed induction principle, we unite all possible typing judgments in a big sum type,
+          on which we define a suitable notion of size, wrt. which we perform well-founded induction
   *)
 
   Inductive typing_sum `{checker_flags} Σ (wfΣ : wf Σ.1) : Type :=

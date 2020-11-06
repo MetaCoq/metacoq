@@ -1,9 +1,6 @@
 From Coq Require Import Ascii String OrderedType Lia.
 From MetaCoq.Template Require Import config utils BasicAst AstUtils.
 From MetaCoq.Template Require Import Universes Environment.
-Import List.ListNotations.
-
-Set Asymmetric Patterns.
 
 Module Lookup (T : Term) (E : EnvironmentSig T).
 
@@ -416,12 +413,17 @@ Module Type Typing (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E).
 
   Parameter Inline smash_context : context -> context -> context.
   Parameter Inline lift_context : nat -> nat -> context -> context.
+  Parameter Inline subst_context : list term -> nat ->  context -> context.
+  Parameter Inline expand_lets : context -> term -> term.
+  Parameter Inline expand_lets_ctx : context -> context -> context.
   Parameter Inline subst_telescope : list term -> nat -> context -> context.
   Parameter Inline subst_instance_context : Instance.t -> context -> context.
   Parameter Inline subst_instance_constr : Instance.t -> term  -> term.
   Parameter Inline lift : nat -> nat -> term -> term.
   Parameter Inline subst : list term -> nat -> term -> term.
   Parameter Inline inds : kername -> Instance.t -> list one_inductive_body -> list term.
+  Parameter Inline extended_subst : context -> nat -> list term. (* Let expansion substitution *)
+  Parameter destArity : term -> option (context * Universe.t).
   
   (* [noccur_between n k t] Checks that deBruijn indices between n and n+k do not appear in t (even under binders).  *)
   Parameter Inline noccur_between : nat -> nat -> term -> bool.
@@ -467,7 +469,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
     Inductive ctx_inst Σ (Γ : context) : list term -> context -> Type :=
     | ctx_inst_nil : ctx_inst Σ Γ [] []
     | ctx_inst_ass na t i inst Δ : 
-      (lift_sorting checking sorting) Σ Γ i (Some t) ->
+      lift_sorting checking sorting Σ Γ i (Some t) ->
       ctx_inst Σ Γ inst (subst_telescope [i] 0 Δ) ->
       ctx_inst Σ Γ (i :: inst) (vass na t :: Δ)
     | ctx_inst_def na b t inst Δ :
@@ -538,30 +540,38 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
         - None of the variable assumptions in Δ refer to any inductive in the block, 
           but the conclusion [concl] is of the form [mkApps (tRel k) args] for k 
           refering to an inductive in the block, and none of the arguments [args]
-          refer to the inductive.          
+          refer to the inductive. #|args| must be the length of the full inductive application.         
       
       Let-in assumptions in Δ are systematically unfolded, i.e. we really consider:
       the zeta-reduction of [t]. *)
     
-    Inductive positive_cstr_arg mdecl i ctx : term -> Type :=
+    Definition ind_realargs (o : one_inductive_body) := 
+      match destArity o.(ind_type) with
+      | Some (ctx, _) => #|smash_context [] ctx|
+      | _ => 0
+      end.
+
+    Inductive positive_cstr_arg mdecl ctx : term -> Type :=
     | positive_cstr_arg_closed t : 
       closedn #|ctx| t ->
-      positive_cstr_arg mdecl i ctx t
+      positive_cstr_arg mdecl ctx t
 
-    | positive_cstr_arg_concl l k : 
+    | positive_cstr_arg_concl l k i : 
       (** Mutual inductive references in the conclusion are ok *)
-      #|ctx| <= i -> i < #|ctx| + #|mdecl.(ind_bodies)| ->
+      #|ctx| <= k -> k < #|ctx| + #|mdecl.(ind_bodies)| ->
       All (closedn #|ctx|) l ->
-      positive_cstr_arg mdecl i ctx (mkApps (tRel k) l)
+      nth_error (List.rev mdecl.(ind_bodies)) (k - #|ctx|) = Some i ->
+      #|l| = ind_realargs i ->
+      positive_cstr_arg mdecl ctx (mkApps (tRel k) l)
 
     | positive_cstr_arg_let na b ty t :
-      positive_cstr_arg mdecl i ctx (subst [b] 0 ty) ->
-      positive_cstr_arg mdecl i ctx (tLetIn na b ty t) 
+      positive_cstr_arg mdecl ctx (subst [b] 0 t) ->
+      positive_cstr_arg mdecl ctx (tLetIn na b ty t) 
 
     | positive_cstr_arg_ass na ty t :
       closedn #|ctx| ty ->
-      positive_cstr_arg mdecl i (vass na ty :: ctx) t ->
-      positive_cstr_arg mdecl i ctx (tProd na ty t).
+      positive_cstr_arg mdecl (vass na ty :: ctx) t ->
+      positive_cstr_arg mdecl ctx (tProd na ty t).
 
     (** A constructor type [t] is positive w.r.t. an inductive block [mdecl]
       and inductive [i] when it's zeta normal-form is of the shape Π Δ. concl and: 
@@ -583,7 +593,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       positive_cstr mdecl i ctx (tLetIn na b ty t) 
 
     | positive_cstr_ass na ty t :
-      positive_cstr_arg mdecl i ctx ty ->
+      positive_cstr_arg mdecl ctx ty ->
       positive_cstr mdecl i (vass na ty :: ctx) t ->
       positive_cstr mdecl i ctx (tProd na ty t).
 
@@ -592,6 +602,9 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       | Level.lProp | Level.lSet | Level.Level _ => l
       | Level.Var k => Level.Var (n + k)
       end.
+
+    Definition lift_instance n l :=
+      map (lift_level n) l.
 
     Definition lift_constraint n (c : Level.t * ConstraintType.t * Level.t) :=
       let '((l, r), l') := c in
@@ -604,16 +617,16 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
     Definition level_var_instance n (inst : list name) :=
       mapi_rec (fun i _ => Level.Var i) inst n.
 
-    Fixpoint add_variance (v : list Variance.t) (u u' : Instance.t) cstrs :=
+    Fixpoint variance_cstrs (v : list Variance.t) (u u' : Instance.t) :=
       match v, u, u' with
-      | _, [], [] => cstrs
+      | _, [], [] => ConstraintSet.empty
       | v :: vs, u :: us, u' :: us' => 
         match v with
-        | Variance.Irrelevant => add_variance vs us us' cstrs
-        | Variance.Covariant => add_variance vs us us' (ConstraintSet.add (u, ConstraintType.Le, u') cstrs)
-        | Variance.Invariant => add_variance vs us us' (ConstraintSet.add (u, ConstraintType.Eq, u') cstrs)
+        | Variance.Irrelevant => variance_cstrs vs us us'
+        | Variance.Covariant => ConstraintSet.add (u, ConstraintType.Le, u') (variance_cstrs vs us us')
+        | Variance.Invariant => ConstraintSet.add (u, ConstraintType.Eq, u') (variance_cstrs vs us us')
         end
-      | _, _, _ => (* Impossible *) cstrs
+      | _, _, _ => (* Impossible due to on_variance invariant *) ConstraintSet.empty
       end.
 
     (** This constructs a duplication of the polymorphic universe context of the inductive,  
@@ -622,15 +635,15 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
 
     Definition variance_universes univs v :=
       match univs with
-      | Monomorphic_ctx ctx => (univs, [], []) (* Dummy value: impossible case *)
+      | Monomorphic_ctx ctx => None
       | Polymorphic_ctx auctx =>
         let (inst, cstrs) := auctx in
-        let u := level_var_instance #|inst| inst in
         let u' := level_var_instance 0 inst in
+        let u := lift_instance #|inst| u' in
         let cstrs := ConstraintSet.union cstrs (lift_constraints #|inst| cstrs) in
-        let cstra := add_variance v u u' cstrs in
-        let auctx' := (inst ++ inst, cstrs) in
-        (Polymorphic_ctx auctx', u, u')
+        let cstrv := variance_cstrs v u u' in
+        let auctx' := (inst ++ inst, ConstraintSet.union cstrs cstrv) in
+        Some (Polymorphic_ctx auctx', u, u')
       end.
 
     (** A constructor type respects the given variance [v] if each constructor 
@@ -641,17 +654,33 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
 
     Definition ind_arities mdecl := arities_context (ind_bodies mdecl).
 
-    Definition respects_variance Σ mdecl v cs :=
+    Definition ind_respects_variance Σ mdecl v indices :=
       let univs := ind_universes mdecl in
-      let '(univs, u, u') := variance_universes univs v in
-      All2_local_env 
-        (on_decl (fun Γ Γ' t t' => cumul (Σ, univs) (ind_arities mdecl ,,, ind_params mdecl ,,, Γ) t t'))
-        (subst_instance_context u (cshape_args cs))
-        (subst_instance_context u' (cshape_args cs)) *
-      All2 
-        (conv (Σ, univs) (ind_arities mdecl ,,, ind_params mdecl ,,, cshape_args cs))
-        (map (subst_instance_constr u) (cshape_indices cs))
-        (map (subst_instance_constr u') (cshape_indices cs)).
+      match variance_universes univs v with
+      | Some (univs, u, u') =>
+        All2_local_env 
+          (on_decl (fun Γ Γ' t t' => 
+            cumul (Σ, univs) (subst_instance_context u (smash_context [] (ind_params mdecl)) ,,, Γ) t t'))
+          (subst_instance_context u (expand_lets_ctx (ind_params mdecl) (smash_context [] indices)))
+          (subst_instance_context u' (expand_lets_ctx (ind_params mdecl) (smash_context [] indices)))
+      | None => False
+      end.
+
+    Definition cstr_respects_variance Σ mdecl v cs :=
+      let univs := ind_universes mdecl in
+      match variance_universes univs v with
+      | Some (univs, u, u') =>
+        All2_local_env 
+          (on_decl (fun Γ Γ' t t' => 
+            cumul (Σ, univs) (subst_instance_context u (ind_arities mdecl ,,, smash_context [] (ind_params mdecl)) ,,, Γ) t t'))
+          (subst_instance_context u (expand_lets_ctx (ind_params mdecl) (smash_context [] (cshape_args cs))))
+          (subst_instance_context u' (expand_lets_ctx (ind_params mdecl) (smash_context [] (cshape_args cs)))) *
+        All2 
+          (conv (Σ, univs) (subst_instance_context u (ind_arities mdecl ,,, smash_context [] (ind_params mdecl ,,, cshape_args cs))))
+          (map (subst_instance_constr u ∘ expand_lets (ind_params mdecl ,,, cshape_args cs)) (cshape_indices cs))
+          (map (subst_instance_constr u' ∘ expand_lets (ind_params mdecl ,,, cshape_args cs)) (cshape_indices cs))
+      | None => False (* Monomorphic inductives have no variance attached *)
+      end.
 
     Record on_constructor Σ mdecl i idecl ind_indices cdecl (cshape : constructor_shape) := {
       (* cdecl.1 fresh ?? *)
@@ -689,7 +718,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       on_ctype_variance : (* The constructor type respect the variance annotation 
         on polymorphic universes, if any. *)
         forall v, ind_variance mdecl = Some v -> 
-        respects_variance Σ mdecl v cshape
+        cstr_respects_variance Σ mdecl v cshape
     }.
 
     Arguments on_ctype {Σ mdecl i idecl ind_indices cdecl cshape}.
@@ -826,6 +855,11 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
         ind_sorts :
           check_ind_sorts Σ mdecl.(ind_params) idecl.(ind_kelim)
                           ind_indices ind_cshapes ind_sort;
+
+        onIndices : 
+          (* The inductive type respect the variance annotation  on polymorphic universes, if any. *)
+          forall v, ind_variance mdecl = Some v -> 
+          ind_respects_variance Σ mdecl v ind_indices
       }.
 
     Definition on_variance univs (variances : option (list Variance.t)) :=
@@ -928,6 +962,13 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
   Arguments onConstructors {_ checking sorting Σ mind mdecl i idecl}.
   Arguments onProjections {_ checking sorting Σ mind mdecl i idecl}.
   Arguments ind_sorts {_ checking sorting Σ mind mdecl i idecl}.
+  Arguments onIndices {_ checking sorting Σ mind mdecl i idecl}.
+
+  Arguments onInductives {_ checking sorting Σ mind mdecl}.
+  Arguments onParams {_ checking sorting Σ mind mdecl}.
+  Arguments onNpars {_ checking sorting Σ mind mdecl}.
+  Arguments onVariance {_ checking sorting Σ mind mdecl}.
+  Arguments onGuard {_ checking sorting Σ mind mdecl}.
 
   Lemma Alli_impl_trans : forall (A : Type) (P Q : nat -> A -> Type) (l : list A) (n : nat),
   Alli P n l -> (forall (n0 : nat) (x : A), P n0 x -> Q n0 x) -> Alli Q n l.

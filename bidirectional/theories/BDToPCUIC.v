@@ -1,7 +1,7 @@
 From Coq Require Import Bool List Arith Lia.
 From MetaCoq.Template Require Import config utils monad_utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICTyping.
-From MetaCoq.PCUIC Require Import PCUICPrincipality PCUICClosed PCUICValidity PCUICCumulativity PCUICSR.
+From MetaCoq.PCUIC Require Import PCUICPrincipality PCUICCumulativity.
 From MetaCoq.Bidirectional Require Import BDEnvironmentTyping BDTyping.
 
 Require Import ssreflect.
@@ -79,24 +79,17 @@ Proof.
               all: constructor ; auto.
               clear - p. induction p.
               ** constructor ; assumption.
-              ** constructor 2 ; auto.
+              ** econstructor 2 ; eauto.
               ** constructor 3 ; auto.
               ** constructor 4 ; auto.
            ++ clear - on_ctype_variance.
               intros v e.
               specialize (on_ctype_variance v e).
-              unfold respects_variance in on_ctype_variance.
-              unfold PT.respects_variance.
-              destruct (PCUICEnvironment.ind_universes m) ; simpl in *.
-              ** destruct on_ctype_variance as [a ?] ; split ; auto.
-                 induction a ; intuition.
-              ** destruct cst ; intuition.
-                 unfold level_var_instance in a ; unfold PT.level_var_instance.
-                 match goal with |- PT.All2_local_env (PT.on_decl ?Q) ?ctx ?ctx' =>
-                  remember ctx as Γ ; remember ctx' as Γ' end.
-                  clear - a.
-                  induction a.
-                  all: constructor ; auto.
+              unfold cstr_respects_variance in on_ctype_variance.
+              unfold PT.cstr_respects_variance.
+              destruct (variance_universes (PCUICEnvironment.ind_universes m)) ; simpl in * ; auto.
+              destruct p as [[]]. intuition.
+              induction a ; intuition.
             
         -- intros projs ; specialize (onProjections projs).
            clear - onProjections.
@@ -136,10 +129,19 @@ Proof.
               ** destruct y as [[] ].
                  repeat split ; auto.
               ** destruct y. repeat split ; auto.
+
+        -- clear -onIndices.
+           intros v e. specialize (onIndices v e).
+           unfold ind_respects_variance in onIndices.
+           unfold PT.ind_respects_variance.
+           destruct (PCUICEnvironment.ind_universes m) ; simpl in * ; auto.
+           destruct cst.
+           admit.
+
       * clear - onParams.
         induction onParams.
         all: constructor ; intuition.
-Qed.
+Admitted.
       
 
 Lemma bd_wf_local `{checker_flags} Σ Γ (all: wf_local Σ Γ) :
@@ -159,7 +161,7 @@ Proof.
     eassumption.
   - destruct t0.
     assumption.
-Qed.   
+Qed.
   
 Theorem Bidirectional_to_PCUIC `{cf : checker_flags} : env_prop Pcheck Pinfer Psort Pprod Pind (@PΓ).
 Proof.
@@ -194,22 +196,30 @@ Proof.
     all: intuition.
     
   - left.
-    apply PCUICPrincipality.isWfArity_sort.
+    apply isWfArity_sort.
     assumption.
 
   - apply red_cumul.
     assumption.
   
-  - have ? : PT.wf Σ.1 by apply bd_wf.
-    eapply isWfArity_or_Type_red ; eauto.
-    eapply validity_term ; eauto.
+  - destruct X3 as [ [[? [? []]] ] | [? []]].
+    + left.
+      eexists ; eexists ; split ; eauto.
+      eapply bd_wf_local ; eassumption.
+    + right.
+      eexists.
+      eassumption.
 
   - apply red_cumul.
     assumption.
     
-  - have ? : PT.wf Σ.1 by apply bd_wf.
-    eapply isWfArity_or_Type_red ; eauto.
-    eapply validity_term ; eauto.
+  - destruct X3 as [ [[? [? []]] ] | [? []]].
+    + left.
+      eexists ; eexists ; split ; eauto.
+      eapply bd_wf_local ; eassumption.
+    + right.
+      eexists.
+      eassumption.
 
   - apply red_cumul.
     assumption.
@@ -221,7 +231,6 @@ Proof.
     + right.
       eexists.
       eassumption.
-  
 Qed.
 
   

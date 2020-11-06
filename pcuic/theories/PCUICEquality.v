@@ -1680,11 +1680,11 @@ Proof.
 Qed.
 
 
-Lemma eq_term_upto_univ_mkApps_inv Σ Re u l u' l' :
+Lemma eq_term_upto_univ_mkApps_inv Σ Re Rle u l u' l' :
   isApp u = false ->
   isApp u' = false ->
-  eq_term_upto_univ Σ Re Re (mkApps u l) (mkApps u' l') ->
-  eq_term_upto_univ_napp Σ Re Re #|l| u u' * All2 (eq_term_upto_univ Σ Re Re) l l'.
+  eq_term_upto_univ Σ Re Rle (mkApps u l) (mkApps u' l') ->
+  eq_term_upto_univ_napp Σ Re Rle #|l| u u' * All2 (eq_term_upto_univ Σ Re Re) l l'.
 Proof.
   intros hu hu' h.
   apply eq_term_upto_univ_mkApps_l_inv in h as hh.

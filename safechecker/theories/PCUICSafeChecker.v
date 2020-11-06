@@ -236,7 +236,7 @@ Fixpoint string_of_conv_error Σ (e : ConversionError) : string :=
       "\nand\n" ^ print_term Σ Γ2 t2 ^
       "are convertible/convertible (TODO) but applied to a different number" ^
       " of arguments."
-  | HeadMistmatch leq Γ1 t1 Γ2 t2 =>
+  | HeadMismatch leq Γ1 t1 Γ2 t2 =>
       "Terms\n" ^
       print_term Σ Γ1 t1 ^
       "\nand\n" ^ print_term Σ Γ2 t2 ^
@@ -418,8 +418,8 @@ Section Typecheck.
   Proof.
     apply reduce_term_sound.
   Defined.
-
-  Theorem hnf_complete {Γ t h} : whnf RedFlags.default Σ Γ (hnf Γ t h).
+  
+  Theorem hnf_complete {Γ t h} : ∥whnf RedFlags.default Σ Γ (hnf Γ t h)∥.
   Proof.
     apply reduce_term_complete.
   Qed.
@@ -453,14 +453,15 @@ Section Typecheck.
   Proof.
     funelim (reduce_to_sort Γ t wt); try congruence.
     intros _ s r.
-    pose proof (@hnf_complete Γ t0 h).
+    pose proof (@hnf_complete Γ t0 h) as [wh].
     pose proof (@hnf_sound Γ t0 h) as [r'].
     destruct HΣ.
     eapply red_confluence in r as (?&r1&r2); eauto.
     apply invert_red_sort in r2 as ->.
-    apply whnf_red_sort in r1; auto.
+    eapply whnf_red_inv in r1; eauto.
+    depelim r1.
     clear Heq.
-    rewrite r1 in n0.
+    rewrite H in n0.
     now cbn in n0.
   Qed.
 
@@ -493,14 +494,15 @@ Section Typecheck.
   Proof.
     funelim (reduce_to_prod Γ t wt); try congruence.
     intros _ na a b r.
-    pose proof (@hnf_complete Γ t0 h).
+    pose proof (@hnf_complete Γ t0 h) as [wh].
     pose proof (@hnf_sound Γ t0 h) as [r'].
     destruct HΣ.
     eapply red_confluence in r as (?&r1&r2); eauto.
     apply invert_red_prod in r2 as (?&?&(->&?)&?); auto.
-    apply whnf_red_prod in r1 as (?&?&eq); auto.
+    eapply whnf_red_inv in r1; auto.
+    depelim r1.
     clear Heq.
-    rewrite eq in n0.
+    rewrite H in n0.
     now cbn in n0.
   Qed.
 
@@ -565,6 +567,7 @@ Section Typecheck.
     pose proof (reduce_stack_whnf RedFlags.default Σ HΣ Γ t ε h) as wh.
     unfold reduce_stack in *.
     destruct reduce_stack_full as ((hd&π)&r'&stack_valid&(notapp&_)).
+    destruct wh as [wh].
     apply Req_red in r' as [r'].
     unfold Pr in stack_valid.
     cbn in *.
@@ -582,13 +585,11 @@ Section Typecheck.
     cbn in *.
     rewrite app_nil_r in wh.
     apply red_mkApps_tInd in r2 as (?&->&?); auto.
-    apply whnf_red_mkApps_tInd in r1 as (?&eq); auto.
-    apply (f_equal decompose_app) in eq.
-    rewrite !decompose_app_mkApps in eq; [now rewrite notapp|easy|].
-    noconf eq.
+    eapply whnf_red_inv in r1; eauto.
+    apply whnf_red_mkApps_inv in r1 as (?&?); auto.
+    depelim w.
     noconf e0.
-    cbn in *.
-    easy.
+    discriminate i0.
   Qed.
 
   Definition iscumul Γ := isconv_term Σ HΣ Hφ G HG Γ Cumul.
@@ -598,8 +599,8 @@ Section Typecheck.
     : typing_result (∥ Σ ;;; Γ |- t <= u ∥) :=
     match leqb_term Σ G t u with true => ret _ | false =>
     match iscumul Γ t ht u hu with
-    | Success _ => ret _
-    | Error e => (* fallback *)  (* nico *)
+    | ConvSuccess => ret _
+    | ConvError e => (* fallback *)  (* nico *)
       let t' := hnf Γ t ht in
       let u' := hnf Γ u hu in
       (* match leq_term (snd Σ) t' u' with true => ret _ | false => *)
@@ -868,8 +869,8 @@ Section Typecheck.
           (* We could avoid one useless sort comparison by only comparing *)
           (* the contexts [pctx] and [indctx] (what is done in Coq). *)
           match iscumul Γ pty.π1 _ pty' _ with
-          | Error e => raise (NotCumulSmaller G Γ pty.π1 pty' pty.π1 pty' e)
-          | Success _ =>
+          | ConvError e => raise (NotCumulSmaller G Γ pty.π1 pty' pty.π1 pty' e)
+          | ConvSuccess =>
             match map_option_out (build_branches_type ind decl body params u p) with
             | None => raise (Msg "failure in build_branches_type")
             | Some btys =>
@@ -1083,7 +1084,7 @@ Section Typecheck.
 
   Next Obligation.
     symmetry in Heq_anonymous2.
-    unfold iscumul in Heq_anonymous2. simpl in Heq_anonymous2. destruct wildcard'.
+    unfold iscumul in Heq_anonymous2. simpl in Heq_anonymous2.
     apply isconv_term_sound in Heq_anonymous2.
     red in Heq_anonymous2.
     noconf Heq_I''.
@@ -1109,7 +1110,7 @@ Section Typecheck.
   Defined.
 
   Next Obligation.
-    rename Heq_anonymous2 into XX2. destruct wildcard'.
+    rename Heq_anonymous2 into XX2.
     symmetry in XX2. simpl in *. eapply isconv_sound in XX2.
     change (eqb ind ind' = true) in H0.
     destruct (eqb_spec ind ind') as [e|e]; [destruct e|discriminate H0].
@@ -1126,7 +1127,7 @@ Section Typecheck.
   Next Obligation.
     intros. clearbody btyswf. idtac; Program.Tactics.program_simplify.
     symmetry in Heq_anonymous2.
-    unfold iscumul in Heq_anonymous2. simpl in Heq_anonymous2. destruct wildcard'.
+    unfold iscumul in Heq_anonymous2. simpl in Heq_anonymous2.
     apply isconv_term_sound in Heq_anonymous2.
     noconf Heq_I''. noconf Heq_I'. noconf Heq_I.
     noconf Heq_d. noconf Heq_d'. simpl in *.

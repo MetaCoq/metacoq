@@ -290,13 +290,43 @@ Inductive conv_pb :=
 | Conv
 | Cumul.
 
-Definition conv_cum `{cf : checker_flags} leq Σ Γ u v :=
+Definition conv_cum {cf:checker_flags} leq Σ Γ u v :=
   match leq with
   | Conv => ∥ Σ ;;; Γ |- u = v ∥
   | Cumul => ∥ Σ ;;; Γ |- u <= v ∥
   end.
 
-Lemma conv_conv_cum_l `{cf : checker_flags} :
+Definition conv_pb_rel {cf:checker_flags} (pb : conv_pb) :=
+  match pb with
+  | Conv => eq_universe
+  | Cumul => leq_universe
+  end.
+
+Definition eq_termp_napp {cf:checker_flags} leq (Σ : global_env_ext) napp :=
+  eq_term_upto_univ_napp Σ (eq_universe Σ) (conv_pb_rel leq Σ) napp.
+
+Definition eq_termp {cf:checker_flags} leq Σ := (eq_termp_napp leq Σ 0).
+
+Lemma eq_term_eq_termp {cf:checker_flags} leq (Σ : global_env_ext) x y :
+  eq_term Σ Σ x y ->
+  eq_termp leq Σ x y.
+Proof.
+  destruct leq; [easy|].
+  cbn.
+  apply eq_term_upto_univ_leq; auto.
+  typeclasses eauto.
+Qed.
+
+Lemma conv_cum_alt {cf:checker_flags} leq Σ Γ t t' :
+  conv_cum leq Σ Γ t t' <->
+  ∥∑ v v', (red Σ Γ t v × red Σ Γ t' v') × eq_termp leq Σ v v'∥.
+Proof.
+  assert (forall P Q, (P <~> Q) -> (∥P∥ <-> ∥Q∥)) by
+      (intros P Q H; split; intros [p]; constructor; apply H in p; auto).
+  destruct leq; cbn; apply H; [apply conv_alt_red|apply cumul_alt].
+Qed.
+
+Lemma conv_conv_cum_l {cf:checker_flags} :
   forall (Σ : global_env_ext) leq Γ u v,
       Σ ;;; Γ |- u = v ->
       conv_cum leq Σ Γ u v.
@@ -306,7 +336,7 @@ Proof.
   - cbn. constructor. now apply conv_cumul.
 Qed.
 
-Lemma conv_conv_cum_r `{cf : checker_flags} :
+Lemma conv_conv_cum_r {cf:checker_flags} :
   forall (Σ : global_env_ext) leq Γ u v,
       Σ ;;; Γ |- u = v ->
       conv_cum leq Σ Γ v u.
@@ -317,7 +347,7 @@ Proof.
     now apply conv_sym.
 Qed.
 
-Lemma cumul_App_l `{cf : checker_flags} :
+Lemma cumul_App_l {cf:checker_flags} :
   forall {Σ Γ f g x},
     Σ ;;; Γ |- f <= g ->
     Σ ;;; Γ |- tApp f x <= tApp g x.

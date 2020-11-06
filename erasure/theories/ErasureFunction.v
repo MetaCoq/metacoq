@@ -127,10 +127,12 @@ Defined.
 Next Obligation.
   pose proof (hnf_sound HΣ (h := h)).
   repeat match goal with [H : squash (red _ _ _ _ ) |- _ ] => destruct H end.
-  destruct HΣ.
+  destruct H, HΣ.
   eapply PCUICConfluence.red_confluence in X0 as [t'' []]. 3:exact X1. 2:eauto.
   eapply invert_red_sort in r0; eauto. subst.
-  eapply whnf_red_sort in r. congruence. eauto.
+  eapply whnf_red_inv in r; auto.
+  depelim r.
+  congruence.
 Qed.
 
 Program Definition reduce_to_prod' Γ t (h : wellformed Σ Γ t)
@@ -150,10 +152,12 @@ Defined.
 Next Obligation.
   pose proof (hnf_sound HΣ (h := h)).
   repeat match goal with [H : squash (red _ _ _ _ ) |- _ ] => destruct H end.
-  destruct HΣ.
+  destruct H, HΣ.
   eapply PCUICConfluence.red_confluence in X2 as [t'' []]. 3:exact X3. 2:eauto.
   eapply invert_red_prod in r0 as (? & ? & [] & ?); eauto. subst.
-  eapply whnf_red_prod in r as (? & ? & ?). congruence. eauto.
+  eapply whnf_red_inv in r; auto.
+  depelim r.
+  congruence.
 Qed.
 
 Equations is_arity Γ (HΓ : ∥wf_local Σ Γ∥) T (HT : wellformed Σ Γ T) :
@@ -221,23 +225,13 @@ Next Obligation.
   eapply invert_red_prod in X2 as (? & ? & [] & ?); eauto. subst. cbn in *.
   exists x4; split; eauto.
 
-  destruct HT as [ [] | [] ].
-  ++ sq. etransitivity; eauto.
-     eapply context_conversion_red; eauto. econstructor.
-
-     eapply conv_context_refl; eauto. econstructor.
-
-     eapply conv_sym, red_conv; eauto.
-
-  ++ sq. etransitivity. eassumption.
-
-     eapply context_conversion_red; eauto. econstructor.
-
-     eapply conv_context_refl; eauto.
-
-     econstructor.
-
-     eapply conv_sym, red_conv; eauto.
+  constructor.
+  etransitivity; eauto.
+  eapply PCUICContextRelation.context_change_decl_types_red; eauto.
+  constructor; [|constructor].
+  eapply PCUICContextRelation.context_relation_refl.
+  intros.
+  reflexivity.
 Qed.
 
 Hint Constructors squash : core.

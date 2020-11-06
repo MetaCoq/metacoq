@@ -25,8 +25,10 @@ theories/PCUICReduction.v
 theories/PCUICParallelReduction.v
 theories/PCUICParallelReductionConfluence.v
 theories/PCUICConfluence.v
+theories/PCUICContextRelation.v
 theories/PCUICContextConversion.v
 theories/PCUICConversion.v
+theories/PCUICConvCumInversion.v
 theories/PCUICGeneration.v
 theories/PCUICAlpha.v
 theories/PCUICCtxShape.v

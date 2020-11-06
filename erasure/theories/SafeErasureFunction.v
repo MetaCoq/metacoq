@@ -185,32 +185,13 @@ Section fix_sigma.
 
     eapply invert_red_prod in X2 as (? & ? & [] & ?); eauto. subst. cbn in *.
     exists x4; split; eauto.
-
-    destruct HT as [ [] | [] ].
-    ++ sq. pose proof t. pose proof t.
-
-      eapply subject_reduction in X3. 2:eauto. 2:{ etransitivity. exact X. exact r0. }
-      eapply inversion_Prod in X3 as (? & ? & ? & ? & ?) ; auto.
-
-      eapply subject_reduction in X2. 2:eauto. 2:{ exact X0. }
-      eapply inversion_Prod in X2 as (? & ? & ? & ? & ?) ; auto.
-
-      etransitivity. eassumption.
-
-      eapply context_conversion_red; eauto. econstructor.
-
-      eapply conv_context_refl; eauto. econstructor.
-
-      eapply conv_sym, red_conv; eauto.
-    ++ sq. etransitivity. eassumption.
-
-      eapply context_conversion_red; eauto. econstructor.
-
-      eapply conv_context_refl; eauto.
-
-      econstructor.
-
-      eapply conv_sym, red_conv; eauto.
+    
+    constructor.
+    etransitivity; eauto.
+    eapply PCUICContextRelation.context_change_decl_types_red; eauto.
+    constructor; [|constructor].
+    eapply PCUICContextRelation.context_relation_refl.
+    reflexivity.
   Qed.
 
   Next Obligation.

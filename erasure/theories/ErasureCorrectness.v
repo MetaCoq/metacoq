@@ -79,7 +79,7 @@ Lemma wf_local_rel_conv:
   forall Σ : global_env × universes_decl,
     wf Σ.1 ->
     forall Γ Γ' : context,
-      PCUICContextConversion.context_relation (PCUICContextConversion.conv_decls Σ) Γ Γ' ->
+      PCUICContextRelation.context_relation (PCUICContextConversion.conv_decls Σ) Γ Γ' ->
       forall Γ0 : context, wf_local Σ Γ' -> wf_local_rel Σ Γ Γ0 -> wf_local_rel Σ Γ' Γ0.
 Proof.
   intros Σ wfΣ Γ Γ' X1 Γ0 ? w0. induction w0.

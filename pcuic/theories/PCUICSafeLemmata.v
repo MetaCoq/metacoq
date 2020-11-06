@@ -17,8 +17,6 @@ Local Set Keyed Unification.
 
 Set Default Goal Selector "!".
 
-Definition nodelta_flags := RedFlags.mk true true true false true true.
-
 (* TODO MOVE *)
 Lemma All2_app_inv_both :
   forall A B (P : A -> B -> Type) l1 l2 r1 r2,
@@ -1235,7 +1233,7 @@ Section Lemmata.
     destruct ρ. all: auto.
     exfalso. eapply decompose_stack_not_app. eassumption.
   Qed.
-
+  
   (* TODO MOVE *)
   Lemma stack_context_decompose :
     forall π,
@@ -1246,7 +1244,72 @@ Section Lemmata.
     cbn. pose proof (decompose_stack_eq _ _ _ e). subst.
     rewrite stack_context_appstack. reflexivity.
   Qed.
+  
+  Lemma decompose_stack_stack_cat π π' :
+    decompose_stack (π +++ π') =
+    ((decompose_stack π).1 ++
+     match (decompose_stack π).2 with
+     | ε => (decompose_stack π').1
+     | _ => []
+     end,
+     (decompose_stack π).2 +++
+     match (decompose_stack π).2 with
+     | ε => (decompose_stack π').2
+     | _ => π'
+     end).
+  Proof.
+    induction π in π' |- *; cbn in *; auto.
+    - now destruct decompose_stack.
+    - rewrite !IHπ.
+      now destruct (decompose_stack π).
+  Qed.
 
+  Lemma zipp_stack_cat π π' t :
+    isStackApp π = false ->
+    zipp t (π' +++ π) = zipp t π'.
+  Proof.
+    intros no_stack_app.
+    unfold zipp.
+    rewrite decompose_stack_stack_cat.
+    destruct (decompose_stack π') eqn:decomp.
+    cbn.
+    destruct s; try now rewrite app_nil_r.
+    now destruct π; cbn in *; rewrite ?app_nil_r.
+  Qed.
+  
+  Lemma zipp_appstack t args π :
+    zipp t (appstack args π) = zipp (mkApps t args) π.
+  Proof.
+    unfold zipp.
+    rewrite decompose_stack_appstack.
+    rewrite <- mkApps_nested.
+    now destruct decompose_stack.
+  Qed.
+
+  Lemma appstack_cons a args π :
+    appstack (a :: args) π = App a (appstack args π).
+  Proof. reflexivity. Qed.
+  
+  Lemma fst_decompose_stack_nil π :
+    isStackApp π = false ->
+    (decompose_stack π).1 = [].
+  Proof. now destruct π. Qed.
+  
+  Lemma zipp_as_mkApps t π :
+    zipp t π = mkApps t (decompose_stack π).1.
+  Proof.
+    unfold zipp.
+    now destruct decompose_stack.
+  Qed.
+  
+  Lemma zipp_noStackApp t π :
+    isStackApp π = false ->
+    zipp t π = t.
+  Proof.
+    intros.
+    now rewrite zipp_as_mkApps fst_decompose_stack_nil.
+  Qed.
+  
   Lemma it_mkLambda_or_LetIn_inj :
     forall Γ u v,
       it_mkLambda_or_LetIn Γ u =
@@ -1426,11 +1489,8 @@ Section Lemmata.
   Proof.
     intros Γ i pars narg i' c u l [[T h]|[[ctx [s [e _]]]]];
       [|discriminate].
-    epose proof (PCUICInductiveInversion.Proj_Constuct_ind_eq _ hΣ).
-    forward H by (exists T; eauto). subst i'.
-    epose proof (PCUICInductiveInversion.Proj_Constuct_projargs _ hΣ).
-    forward H by (exists T; eauto).
-    now apply (nth_error_Some).
+    apply PCUICInductiveInversion.invert_Proj_Construct in h as (<-&->&?); auto.
+    now apply nth_error_Some.
   Qed.
 
   Lemma cored_zipc :
@@ -1466,44 +1526,94 @@ Section Lemmata.
     rewrite stack_context_appstack.
     assumption.
   Qed.
-
-  Lemma conv_cum_context_convp :
-    forall Γ Γ' leq u v,
-      conv_cum leq Σ Γ u v ->
-      conv_context Σ Γ Γ' ->
-      conv_cum leq Σ Γ' u v.
+  
+  Lemma conv_cum_zipp leq Γ t t' π π' :
+    conv_cum leq Σ Γ t t' ->
+    ∥conv_terms Σ Γ (decompose_stack π).1 (decompose_stack π').1∥ ->
+    conv_cum leq Σ Γ (zipp t π) (zipp t' π').
   Proof.
-    intros Γ Γ' leq u v h hx.
-    destruct hΣ.
-    destruct leq.
-    - simpl. destruct h. constructor.
-      eapply conv_conv_ctx. all: eauto.
-    - simpl in *. destruct h. constructor.
-      eapply cumul_conv_ctx. all: eauto.
+    intros conv conv_args.
+    rewrite !zipp_as_mkApps.
+    destruct leq; cbn in *.
+    - sq.
+      apply mkApps_conv_args; auto.
+    - sq.
+      apply cumul_mkApps; auto.
   Qed.
 
+  Lemma whne_context_relation f rel Γ Γ' t :
+    (forall Γ Γ' c c', rel Γ Γ' c c' -> (decl_body c = None <-> decl_body c' = None)) ->
+    whne f Σ Γ t ->
+    context_relation rel Γ Γ' ->
+    whne f Σ Γ' t.
+  Proof.
+    intros behaves wh conv.
+    induction wh; eauto using whne.
+    destruct nth_error eqn:nth; [|easy].
+    cbn in *.
+    eapply context_relation_nth in nth; eauto.
+    destruct nth as (?&eq&?&?).
+    constructor.
+    rewrite eq.
+    cbn.
+    specialize (behaves _ _ _ _ r).
+    f_equal.
+    apply behaves.
+    congruence.
+  Qed.
+
+  Lemma whnf_context_relation f rel Γ Γ' t :
+    (forall Γ Γ' c c', rel Γ Γ' c c' -> (decl_body c = None <-> decl_body c' = None)) ->
+    whnf f Σ Γ t ->
+    context_relation rel Γ Γ' ->
+    whnf f Σ Γ' t.
+  Proof.
+    intros behaves wh conv.
+    destruct wh; eauto using whnf.
+    apply whnf_ne.
+    eapply whne_context_relation; eauto.
+  Qed.
+
+  Lemma whne_conv_context f Γ Γ' t :
+    whne f Σ Γ t ->
+    conv_context Σ Γ Γ' ->
+    whne f Σ Γ' t.
+  Proof.
+    apply whne_context_relation.
+    intros ? ? ? ? r.
+    now depelim r.
+  Qed.
+
+  Lemma whnf_conv_context f Γ Γ' t :
+    whnf f Σ Γ t ->
+    conv_context Σ Γ Γ' ->
+    whnf f Σ Γ' t.
+  Proof.
+    apply whnf_context_relation.
+    intros ? ? ? ? r.
+    now depelim r.
+  Qed.
+
+  Lemma Case_Construct_ind_eq :
+    forall {Γ ind ind' npar pred i u brs args},
+      wellformed Σ Γ (tCase (ind, npar) pred (mkApps (tConstruct ind' i u) args) brs) ->
+      ind = ind'.
+  Proof.
+    destruct hΣ as [wΣ].
+    intros Γ ind ind' npar pred i u brs args [[A h]|[[ctx [s [e _]]]]];
+      [|discriminate].
+    apply PCUICInductiveInversion.invert_Case_Construct in h; auto.
+  Qed.
+
+  Lemma Proj_Construct_ind_eq :
+    forall Γ i i' pars narg c u l,
+      wellformed Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i' c u) l)) ->
+      i = i'.
+  Proof.
+    destruct hΣ as [wΣ].
+    intros Γ i i' pars narg c u l [[T h]|[[ctx [s [e _]]]]];
+      [|discriminate].
+    now apply PCUICInductiveInversion.invert_Proj_Construct in h.
+  Qed.
+  
 End Lemmata.
-
-Lemma Case_Construct_ind_eq {cf:checker_flags} Σ (hΣ : ∥ wf Σ.1 ∥) :
-  forall {Γ ind ind' npar pred i u brs args},
-  wellformed Σ Γ (tCase (ind, npar) pred (mkApps (tConstruct ind' i u) args) brs) ->
-  ind = ind'.
-Proof.
-destruct hΣ as [wΣ].
-intros Γ ind ind' npar pred i u brs args [[A h]|[[ctx [s [e _]]]]];
-  [|discriminate].
-  eapply PCUICInductiveInversion.Case_Construct_ind_eq; eauto.
-  sq; auto.
-Qed.
-
-Lemma Proj_Constuct_ind_eq {cf:checker_flags} Σ (hΣ : ∥ wf Σ.1 ∥):
-forall Γ i i' pars narg c u l,
-  wellformed Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i' c u) l)) ->
-  i = i'.
-Proof.
-  destruct hΣ as [wΣ].
-  intros Γ i i' pars narg c u l [[T h]|[[ctx [s [e _]]]]];
-    [|discriminate].
-    eapply PCUICInductiveInversion.Proj_Constuct_ind_eq; eauto.
-    sq; auto.
-Qed.

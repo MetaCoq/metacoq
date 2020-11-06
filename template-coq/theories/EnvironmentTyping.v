@@ -11,14 +11,6 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
 
   (** ** Environment lookup *)
 
-  Fixpoint lookup_env (Σ : global_env) (kn : kername) : option global_decl :=
-    match Σ with
-    | nil => None
-    | d :: tl =>
-      if eq_kername kn d.1 then Some d.2
-      else lookup_env tl kn
-    end.
-
   Definition declared_constant (Σ : global_env) (id : kername) decl : Prop :=
     lookup_env Σ id = Some (ConstantDecl decl).
 
@@ -175,6 +167,63 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T).
   Arguments localenv_cons_def {_ _ _ _ _} _ _.
   Arguments localenv_cons_abs {_ _ _ _} _ _.
 
+  Section All2_local_env.
+
+  Definition on_decl (P : context -> context -> term -> term -> Type)
+             (Γ Γ' : context) (b : option (term * term)) (t t' : term) :=
+    match b with
+    | Some (b, b') => (P Γ Γ' b b' * P Γ Γ' t t')%type
+    | None => P Γ Γ' t t'
+    end.
+
+  Section All_local_2.
+    Context (P : forall (Γ Γ' : context), option (term * term) -> term -> term -> Type).
+
+    Inductive All2_local_env : context -> context -> Type :=
+    | localenv2_nil : All2_local_env [] []
+    | localenv2_cons_abs Γ Γ' na na' t t' :
+        All2_local_env Γ Γ' ->
+        P Γ Γ' None t t' ->
+        All2_local_env (Γ ,, vass na t) (Γ' ,, vass na' t')
+    | localenv2_cons_def Γ Γ' na na' b b' t t' :
+        All2_local_env Γ Γ' ->
+        P Γ Γ' (Some (b, b')) t t' ->
+        All2_local_env (Γ ,, vdef na b t) (Γ' ,, vdef na' b' t').
+  End All_local_2.
+
+  Definition on_decl_over (P : context -> context -> term -> term -> Type) Γ Γ' :=
+    fun Δ Δ' => P (Γ ,,, Δ) (Γ' ,,, Δ').
+
+  Definition All2_local_env_over P Γ Γ' := All2_local_env (on_decl (on_decl_over P Γ Γ')).
+
+  Lemma All2_local_env_length {P l l'} : @All2_local_env P l l' -> #|l| = #|l'|.
+  Proof. induction 1; simpl; auto. Qed.
+
+
+  Lemma All2_local_env_impl {P Q : context -> context -> term -> term -> Type} {par par'} :
+    All2_local_env (on_decl P) par par' ->
+    (forall par par' x y, P par par' x y -> Q par par' x y) ->
+    All2_local_env (on_decl Q) par par'.
+  Proof.
+    intros H aux.
+    induction H; constructor. auto. red in p. apply aux, p.
+    apply IHAll2_local_env. red. split.
+    apply aux. apply p. apply aux. apply p.
+  Defined.
+
+  Lemma All2_local_env_app_inv :
+    forall P (Γ Γ' Γl Γr : context),
+      All2_local_env (on_decl P) Γ Γl ->
+      All2_local_env (on_decl (on_decl_over P Γ Γl)) Γ' Γr ->
+      All2_local_env (on_decl P) (Γ ,,, Γ') (Γl ,,, Γr).
+  Proof.
+    induction 2; auto.
+    - simpl. constructor; auto.
+    - simpl. constructor; auto.
+  Qed.
+
+  End All2_local_env.
+
   (** Well-formedness of local environments embeds a sorting for each variable *)
 
   Definition lift_typing (P : global_env_ext -> context -> term -> term -> Type) :
@@ -232,6 +281,9 @@ Module Type Typing (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E).
 
   Parameter (ind_guard : mutual_inductive_body -> bool).
 
+  Parameter (conv : forall `{checker_flags}, global_env_ext -> context -> term -> term -> Type).
+  Parameter (cumul : forall `{checker_flags}, global_env_ext -> context -> term -> term -> Type).
+
   Parameter (typing : forall `{checker_flags}, global_env_ext -> context -> term -> term -> Type).
 
   Notation " Σ ;;; Γ |- t : T " :=
@@ -239,10 +291,22 @@ Module Type Typing (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E).
 
   Parameter Inline smash_context : context -> context -> context.
   Parameter Inline lift_context : nat -> nat -> context -> context.
+  Parameter Inline subst_context : list term -> nat ->  context -> context.
+  Parameter Inline expand_lets : context -> term -> term.
+  Parameter Inline expand_lets_ctx : context -> context -> context.
   Parameter Inline subst_telescope : list term -> nat -> context -> context.
+  Parameter Inline subst_instance_context : Instance.t -> context -> context.
+  Parameter Inline subst_instance_constr : Instance.t -> term  -> term.
   Parameter Inline lift : nat -> nat -> term -> term.
   Parameter Inline subst : list term -> nat -> term -> term.
-  Parameter Inline inds : kername -> Instance.t -> list one_inductive_body -> list term. 
+  Parameter Inline inds : kername -> Instance.t -> list one_inductive_body -> list term.
+  Parameter Inline extended_subst : context -> nat -> list term. (* Let expansion substitution *)
+  Parameter destArity : term -> option (context * Universe.t).
+
+  (* [noccur_between n k t] Checks that deBruijn indices between n and n+k do not appear in t (even under binders).  *)
+  Parameter Inline noccur_between : nat -> nat -> term -> bool.
+  Parameter Inline closedn : nat -> term -> bool.
+  
   Notation wf_local Σ Γ := (All_local_env (lift_typing typing Σ) Γ).
 
 End Typing.
@@ -308,6 +372,178 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
 
     Open Scope type_scope.
 
+    (** Positivity checking of the inductive, ensuring that the inductive itself 
+      can only appear at the right of an arrow in each argument's types. *)
+    (*
+    Definition positive_cstr_arg ninds npars narg (arg : term) : bool :=
+      (* We decompose the constructor's arguments' type and verify the inductive references
+        only appear in the conclusion, if any. *)
+      let (ctx, concl) := decompose_prod_assum [] arg in
+      (* Again, we smash the context, as Coq does *)
+      let ctx := smash_context [] ctx in
+      alli (fun i d => noccur_between (npars + narg + i) ninds d.(decl_type)) 0 (List.rev ctx) &&
+      let (hd, args) := decompose_app concl in
+      match hd with
+      | tRel i => 
+        if noccur_between (npars + narg + #|ctx|) ninds (tRel i) then 
+          (* Call to an unrelated variable *)
+          true
+        else (* Recursive call to the inductive *)
+          (* Coq disallows the inductive to be applied to another inductive in the block *)
+          forallb (noccur_between (npars + narg + #|ctx|) ninds) args
+      | tInd ind u => 
+        if forallb (noccur_between (npars + narg + #|ctx|) ninds) args then
+          (* Unrelated inductive *)
+          true
+        else (* Nested inductive *)
+          true
+      end.
+
+    Definition positive_cstr_args ninds npars (args : context) : bool :=
+      alli (fun i decl => positive_cstr_arg nind npars i decl.(decl_type))
+      (* We smash the context, just as Coq's kernel computes positivity on 
+        weak-head normalized types *)
+      (List.rev (smash_context [] args))
+    *)
+
+    (** A constructor argument type [t] is positive w.r.t. an inductive block [mdecl]
+      when it's zeta-normal form is of the shape Π Δ. concl and: 
+        - [t] does not refer to any inductive in the block.
+          In that case [t] must be a closed type under the context of parameters and
+          previous arguments.
+        - None of the variable assumptions in Δ refer to any inductive in the block, 
+          but the conclusion [concl] is of the form [mkApps (tRel k) args] for k 
+          refering to an inductive in the block, and none of the arguments [args]
+          refer to the inductive. #|args| must be the length of the full inductive application.         
+      
+      Let-in assumptions in Δ are systematically unfolded, i.e. we really consider:
+      the zeta-reduction of [t]. *)
+    
+    Definition ind_realargs (o : one_inductive_body) := 
+      match destArity o.(ind_type) with
+      | Some (ctx, _) => #|smash_context [] ctx|
+      | _ => 0
+      end.
+
+    Inductive positive_cstr_arg mdecl ctx : term -> Type :=
+    | positive_cstr_arg_closed t : 
+      closedn #|ctx| t ->
+      positive_cstr_arg mdecl ctx t
+
+    | positive_cstr_arg_concl l k i : 
+      (** Mutual inductive references in the conclusion are ok *)
+      #|ctx| <= k -> k < #|ctx| + #|mdecl.(ind_bodies)| ->
+      All (closedn #|ctx|) l ->
+      nth_error (List.rev mdecl.(ind_bodies)) (k - #|ctx|) = Some i ->
+      #|l| = ind_realargs i ->
+      positive_cstr_arg mdecl ctx (mkApps (tRel k) l)
+
+    | positive_cstr_arg_let na b ty t :
+      positive_cstr_arg mdecl ctx (subst [b] 0 t) ->
+      positive_cstr_arg mdecl ctx (tLetIn na b ty t) 
+
+    | positive_cstr_arg_ass na ty t :
+      closedn #|ctx| ty ->
+      positive_cstr_arg mdecl (vass na ty :: ctx) t ->
+      positive_cstr_arg mdecl ctx (tProd na ty t).
+
+    (** A constructor type [t] is positive w.r.t. an inductive block [mdecl]
+      and inductive [i] when it's zeta normal-form is of the shape Π Δ. concl and: 
+        - All of the arguments in Δ are positive.
+        - The conclusion is of the shape [mkApps (tRel k) indices] 
+          where [k] refers to the current inductive [i] and [indices] does not mention
+          any of the inductive types in the block. I.e. [indices] are closed terms
+          in [params ,,, args]. *)
+          
+    Inductive positive_cstr mdecl i (ctx : context) : term -> Type :=
+    | positive_cstr_concl indices :
+      let headrel : nat := 
+        (#|mdecl.(ind_bodies)| - S i + #|ctx|)%nat in
+      All (closedn #|ctx|) indices ->
+      positive_cstr mdecl i ctx (mkApps (tRel headrel) indices)
+
+    | positive_cstr_let na b ty t :
+      positive_cstr mdecl i ctx (subst [b] 0 t) ->
+      positive_cstr mdecl i ctx (tLetIn na b ty t) 
+
+    | positive_cstr_ass na ty t :
+      positive_cstr_arg mdecl ctx ty ->
+      positive_cstr mdecl i (vass na ty :: ctx) t ->
+      positive_cstr mdecl i ctx (tProd na ty t).
+
+    Definition lift_level n l :=
+      match l with 
+      | Level.lProp | Level.lSet | Level.Level _ => l
+      | Level.Var k => Level.Var (n + k)
+      end.
+
+    Definition lift_instance n l :=
+      map (lift_level n) l.
+
+    Definition lift_constraint n (c : Level.t * ConstraintType.t * Level.t) :=
+      let '((l, r), l') := c in
+      ((lift_level n l, r), lift_level n l').
+
+    Definition lift_constraints n cstrs :=
+      ConstraintSet.fold (fun elt acc => ConstraintSet.add (lift_constraint n elt) acc)
+        cstrs ConstraintSet.empty.
+
+    Definition level_var_instance n (inst : list name) :=
+      mapi_rec (fun i _ => Level.Var i) inst n.
+
+    Fixpoint variance_cstrs (v : list Variance.t) (u u' : Instance.t) :=
+      match v, u, u' with
+      | _, [], [] => ConstraintSet.empty
+      | v :: vs, u :: us, u' :: us' => 
+        match v with
+        | Variance.Irrelevant => variance_cstrs vs us us'
+        | Variance.Covariant => ConstraintSet.add (u, ConstraintType.Le, u') (variance_cstrs vs us us')
+        | Variance.Invariant => ConstraintSet.add (u, ConstraintType.Eq, u') (variance_cstrs vs us us')
+        end
+      | _, _, _ => (* Impossible due to on_variance invariant *) ConstraintSet.empty
+      end.
+
+    (** This constructs a duplication of the polymorphic universe context of the inductive,  
+      where the two instances are additionally related according to the variance information.
+    *)
+
+    Definition variance_universes univs v :=
+      match univs with
+      | Monomorphic_ctx ctx => None
+      | Polymorphic_ctx auctx =>
+        let (inst, cstrs) := auctx in
+        let u' := level_var_instance 0 inst in
+        let u := lift_instance #|inst| u' in
+        let cstrs := ConstraintSet.union cstrs (lift_constraints #|inst| cstrs) in
+        let cstrv := variance_cstrs v u u' in
+        let auctx' := (inst ++ inst, ConstraintSet.union cstrs cstrv) in
+        Some (Polymorphic_ctx auctx', u, u')
+      end.
+
+    (** A constructor type respects the given variance [v] if each constructor 
+        argument respects it and each index (in the conclusion) does as well.
+        We formalize this by asking for a cumulativity relation between the contexts
+        of arguments and conversion of the lists of indices instanciated with [u] and 
+        [u'] where [u `v` u']. *)
+
+    Definition ind_arities mdecl := arities_context (ind_bodies mdecl).
+
+    Definition respects_variance Σ mdecl v cs :=
+      let univs := ind_universes mdecl in
+      match variance_universes univs v with
+      | Some (univs, u, u') =>
+        All2_local_env 
+          (on_decl (fun Γ Γ' t t' => 
+            cumul (Σ, univs) (subst_instance_context u (ind_arities mdecl ,,, smash_context [] (ind_params mdecl)) ,,, Γ) t t'))
+          (subst_instance_context u (expand_lets_ctx (ind_params mdecl) (smash_context [] (cshape_args cs))))
+          (subst_instance_context u' (expand_lets_ctx (ind_params mdecl) (smash_context [] (cshape_args cs)))) *
+        All2 
+          (conv (Σ, univs) (subst_instance_context u (ind_arities mdecl ,,, smash_context [] (ind_params mdecl ,,, cshape_args cs))))
+          (map (subst_instance_constr u ∘ expand_lets (ind_params mdecl ,,, cshape_args cs)) (cshape_indices cs))
+          (map (subst_instance_constr u' ∘ expand_lets (ind_params mdecl ,,, cshape_args cs)) (cshape_indices cs))
+      | None => False (* Monomorphic inductives have no variance attached *)
+      end.
+
     Record on_constructor Σ mdecl i idecl ind_indices cdecl (cshape : constructor_shape) := {
       (* cdecl.1 fresh ?? *)
       cstr_args_length : context_assumptions (cshape_args cshape) = cdecl_args cdecl;
@@ -336,8 +572,16 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       on_cindices : 
         ctx_inst Σ (arities_context mdecl.(ind_bodies) ,,, mdecl.(ind_params) ,,, cshape.(cshape_args))
                       cshape.(cshape_indices)
-                      (List.rev (lift_context #|cshape.(cshape_args)| 0 ind_indices))
-        }.
+                      (List.rev (lift_context #|cshape.(cshape_args)| 0 ind_indices));
+
+      on_ctype_positive : (* The constructor type is positive *)
+        positive_cstr mdecl i [] (cdecl_type cdecl);
+
+      on_ctype_variance : (* The constructor type respect the variance annotation 
+        on polymorphic universes, if any. *)
+        forall v, ind_variance mdecl = Some v -> 
+        respects_variance Σ mdecl v cshape
+    }.
 
     Arguments on_ctype {Σ mdecl i idecl ind_indices cdecl cshape}.
     Arguments on_cargs {Σ mdecl i idecl ind_indices cdecl cshape}.
@@ -475,6 +719,16 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
                           ind_indices ind_cshapes ind_sort;
       }.
 
+    Definition on_variance univs (variances : option (list Variance.t)) :=
+      match univs with
+      | Monomorphic_ctx _ => variances = None
+      | Polymorphic_ctx auctx => 
+        match variances with
+        | None => True
+        | Some v => List.length v = #|UContext.instance (AUContext.repr auctx)|
+        end
+      end.
+    
     (** We allow empty blocks for simplicity
         (no well-typed reference to them can be made). *)
 
@@ -484,6 +738,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
             the size annotation counts assumptions only (no let-ins). *)
         onParams : on_context Σ mdecl.(ind_params);
         onNpars : context_assumptions mdecl.(ind_params) = mdecl.(ind_npars);
+        onVariance : on_variance mdecl.(ind_universes) mdecl.(ind_variance);
         onGuard : ind_guard mdecl
       }.
 
@@ -548,11 +803,13 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
 
   End GlobalMaps.
 
-  Arguments cstr_args_length {P Σ mdecl i idecl ind_indices cdecl cshape}.
-  Arguments cstr_eq {P Σ mdecl i idecl ind_indices cdecl cshape}.
-  Arguments on_ctype {P Σ mdecl i idecl ind_indices cdecl cshape}.
-  Arguments on_cargs {P Σ mdecl i idecl ind_indices cdecl cshape}.
-  Arguments on_cindices {P Σ mdecl i idecl ind_indices cdecl cshape}.
+  Arguments cstr_args_length {_ P Σ mdecl i idecl ind_indices cdecl cshape}.
+  Arguments cstr_eq {_ P Σ mdecl i idecl ind_indices cdecl cshape}.
+  Arguments on_ctype {_ P Σ mdecl i idecl ind_indices cdecl cshape}.
+  Arguments on_cargs {_ P Σ mdecl i idecl ind_indices cdecl cshape}.
+  Arguments on_cindices {_ P Σ mdecl i idecl ind_indices cdecl cshape}.
+  Arguments on_ctype_positive {_ P Σ mdecl i idecl ind_indices cdecl cshape}.
+  Arguments on_ctype_variance {_ P Σ mdecl i idecl ind_indices cdecl cshape}.
 
   Arguments ind_indices {_ P Σ mind mdecl i idecl}.
   Arguments ind_sort {_ P Σ mind mdecl i idecl}.

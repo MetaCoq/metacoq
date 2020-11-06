@@ -827,7 +827,7 @@ Lemma lookup_constant_type_is_declared Σ cst u T :
            subst_instance_constr u decl.(cst_type) = fst T }.
 Proof.
   unfold lookup_constant_type_cstrs, lookup_env, declared_constant.
-  destruct Typing.lookup_env eqn:Hlook; try discriminate.
+  destruct Ast.lookup_env eqn:Hlook; try discriminate.
   destruct g eqn:Hg; intros; try discriminate. destruct c.
   injection H as eq. subst T. simpl.
   eexists. split; eauto.

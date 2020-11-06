@@ -3,8 +3,8 @@ MetaCoq
 
 <img src="https://raw.githubusercontent.com/MetaCoq/metacoq.github.io/master/assets/LOGO.png" alt="MetaCoq" width="50px"/>
 
-[![Build Status](https://travis-ci.org/MetaCoq/metacoq.svg?branch=master)](https://travis-ci.org/MetaCoq/metacoq)
-[![Gitter](https://badges.gitter.im/coq/metacoq.svg)](https://gitter.im/coq/metacoq?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+[![Build Status](https://travis-ci.com/MetaCoq/metacoq.svg?branch=coq-8.12)](https://travis-ci.com/MetaCoq/metacoq)
+[![MetaCoq Chat](https://img.shields.io/badge/zulip-join_chat-brightgreen.svg)](https://coq.zulipchat.com)
 
 MetaCoq is a project formalizing Coq in Coq and providing tools for
 manipulating Coq terms and developing certified plugins
@@ -39,14 +39,14 @@ The [master](https://github.com/MetaCoq/metacoq/tree/master) branch is following
 branch and gets regular updates from the the main development branch which follows the latest 
 stable release of Coq.
 
-Currently, the [coq-8.11](https://github.com/MetaCoq/metacoq/tree/coq-8.11) branch is the main stable branch.
-The branch [coq-8.10](https://github.com/MetaCoq/metacoq/tree/coq-8.10) 
-gets backports from `coq-8.11` when possible. Both `coq-8.11` and `coq-8.10` have associated 
+Currently, the [coq-8.12](https://github.com/MetaCoq/metacoq/tree/coq-8.12) branch is the main stable branch.
+The branch [coq-8.11](https://github.com/MetaCoq/metacoq/tree/coq-8.12) 
+gets backports from `coq-8.11` when possible. Both `coq-8.12` and `coq-8.11` have associated 
 "alpha"-quality `opam` packages.
+The `opam` packages of `coq-8.10` are usable, but are no longer updated.
 
 The branches [coq-8.6](https://github.com/MetaCoq/metacoq/tree/coq-8.6),
-[coq-8.7](https://github.com/MetaCoq/metacoq/tree/coq-8.7), [coq-8.8](https://github.com/MetaCoq/metacoq/tree/coq-8.8)
-and [coq-8.9](https://github.com/MetaCoq/metacoq/tree/coq-8.9) are frozen.
+[coq-8.7](https://github.com/MetaCoq/metacoq/tree/coq-8.7), [coq-8.8](https://github.com/MetaCoq/metacoq/tree/coq-8.8), [coq-8.9](https://github.com/MetaCoq/metacoq/tree/coq-8.9), and [coq-8.10](https://github.com/MetaCoq/metacoq/tree/coq-8.10) are frozen.
 
 Installation instructions (for developers only)
 =========================
@@ -62,7 +62,7 @@ To setup a fresh `opam` installation, you might want to create a
 one yet. You need to use **opam 2** to obtain the right version of
 `Equations`.
 
-    # opam switch create coq.8.11 4.07.1
+    # opam switch create coq.8.12 4.07.1
     # eval $(opam env)
 
 This creates the `coq.8.11` switch which initially contains only the
@@ -71,12 +71,9 @@ basic `OCaml` `4.07.1` compiler, and puts you in the right environment
 
 Once in the right switch, you can install `Coq` and the `Equations` package using:
 
-    # opam pin add coq 8.11.0
-    # opam pin add coq-equations 1.2.1+8.11
+    # opam install . --deps-only
 
-Pinning the packages prevents opam from trying to upgrade it afterwards, in
-this switch. If the commands are successful you should have `coq`
-available (check with `coqc -v`). 
+If the commands are successful you should have `coq` available (check with `coqc -v`). 
 
 Installing from GitHub repository (for developers)
 ------------------------------
@@ -84,10 +81,10 @@ Installing from GitHub repository (for developers)
 To get the source code:
 
     # git clone https://github.com/MetaCoq/metacoq.git
-    # git checkout -b coq-8.11 origin/coq-8.11
+    # git checkout -b coq-8.12 origin/coq-8.12
     # git status
 
-This checks that you are indeed on the `coq-8.11` branch.
+This checks that you are indeed on the `coq-8.12` branch.
 
 You can create a [local
 switch](https://opam.ocaml.org/blog/opam-20-tips/#Local-switches) for
@@ -103,11 +100,11 @@ Requirements
 
 To compile the library, you need:
 
-- The `Coq` version corrsponding to your branch (you can use the `coq.dev` package 
+- The `Coq` version corresponding to your branch (you can use the `coq.dev` package 
   for the `master` branch).
-- `OCaml` (tested with `4.06.1` and `4.07.1`, beware that `OCaml 4.06.0`
+- `OCaml` (tested with `4.07.1` and `4.09.1`, beware that `OCaml 4.06.0`
   can produce linking errors on some platforms)
-- [`Equations 1.2.1`](http://mattam82.github.io/Coq-Equations/)
+- [`Equations 1.2.3`](http://mattam82.github.io/Coq-Equations/)
 
 When using `opam` you can get those using `opam install --deps-only .`.
 

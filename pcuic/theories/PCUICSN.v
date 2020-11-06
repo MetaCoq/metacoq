@@ -3,7 +3,7 @@
 From Coq Require Import Bool List.
 From MetaCoq.Template
 Require Import config monad_utils utils.
-From MetaCoq.PCUIC Require Import PCUICAst
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICTyping
      PCUICSafeLemmata
      PCUICValidity PCUICNameless
@@ -115,7 +115,7 @@ Section Alpha.
   Context (hΣ : ∥ wf Σ ∥).
 
   Notation eqt u v :=
-    (∥ eq_term (global_ext_constraints Σ) u v ∥).
+    (∥ eq_term Σ (global_ext_constraints Σ) u v ∥).
 
   Definition cored' Γ u v :=
     exists u' v', cored Σ Γ u' v' /\ eqt u u' /\ eqt v v'.
@@ -159,9 +159,9 @@ Section Alpha.
           eapply eq_term_sym. assumption.
       + eapply leq_term_SubstUnivPreserving.
       + intros ? ?. auto.
-    - specialize IHr1 with (1 := eq_term_refl _ _) (2 := hv).
+    - specialize IHr1 with (1 := eq_term_refl _ _ _) (2 := hv).
       destruct IHr1 as [y' [h1 [e1]]].
-      specialize IHr2 with (1 := hu) (2 := eq_term_sym _ _ _ e1).
+      specialize IHr2 with (1 := hu) (2 := eq_term_sym _ _ _ _ e1).
       destruct IHr2 as [u' [h2 ?]].
       exists u'. split.
       + eapply cored_trans'. all: eauto.
@@ -171,7 +171,7 @@ Section Alpha.
   Corollary cored_upto :
     forall Γ u v v',
       cored Σ Γ u v ->
-      eq_term Σ v v' ->
+      eq_term Σ Σ v v' ->
       exists u', cored Σ Γ u' v' /\ eqt u u'.
   Proof.
     intros Γ u v v' h e.
@@ -195,11 +195,11 @@ Section Alpha.
   Lemma Acc_cored_cored' :
     forall Γ u,
       Acc (cored Σ Γ) u ->
-      forall u', eq_term Σ u u' -> Acc (cored' Γ) u'.
+      forall u', eq_term Σ Σ u u' -> Acc (cored' Γ) u'.
   Proof.
     intros Γ u h. induction h as [u h ih].
     intros u' e. constructor. intros v [v' [u'' [r [[e1] [e2]]]]].
-    assert (ee : eq_term Σ u'' u).
+    assert (ee : eq_term Σ Σ u'' u).
     { eapply eq_term_sym. eapply eq_term_trans. all: eassumption. }
     eapply cored_upto in r as hh. 2: exact ee.
     destruct hh as [v'' [r' [e']]].
@@ -246,9 +246,9 @@ Section Alpha.
       RelationClasses.Transitive Re ->
       RelationClasses.Transitive Rle ->
       RelationClasses.subrelation Re Rle ->
-      eq_term_upto_univ Re Rle u u' ->
+      eq_term_upto_univ Σ Re Rle u u' ->
       cored Σ Γ v u ->
-      exists v', cored Σ Γ v' u' /\ ∥ eq_term_upto_univ Re Rle v v' ∥.
+      exists v', cored Σ Γ v' u' /\ ∥ eq_term_upto_univ Σ Re Rle v v' ∥.
   Proof.
     intros Re Rle Γ u v u' X X0 X1 X2 X3 X4 X5 e h.
     apply cored_alt in h as [h].
@@ -271,9 +271,9 @@ Section Alpha.
       RelationClasses.Symmetric Re ->
       RelationClasses.Transitive Re ->
       SubstUnivPreserving Re ->
-      eq_context_upto Re Γ Δ ->
+      eq_context_upto Σ Re Γ Δ ->
       cored Σ Γ u v ->
-      exists u', cored Σ Δ u' v /\ ∥ eq_term_upto_univ Re Re u u' ∥.
+      exists u', cored Σ Δ u' v /\ ∥ eq_term_upto_univ Σ Re Re u u' ∥.
   Proof.
     intros Re Γ Δ u v hRe1 hRe2 hRe3 hRe4 e h.
     apply cored_alt in h as [h].
@@ -295,7 +295,7 @@ Section Alpha.
 
   Lemma eq_context_upto_nlctx :
     forall Γ,
-      eq_context_upto eq Γ (nlctx Γ).
+      eq_context_upto Σ eq Γ (nlctx Γ).
   Proof.
     intros Γ.
     induction Γ as [| [na [b|] A] Γ ih ].
@@ -325,7 +325,7 @@ Section Alpha.
       eexists _, _. intuition eauto.
       + constructor. eapply eq_term_trans.
         * eapply eq_term_sym. eapply eq_term_tm_nl.
-        * eapply upto_names_impl_eq_term. assumption.
+        * eapply eq_term_upto_univ_impl; eauto. all:typeclasses eauto.
       + constructor. eapply eq_term_sym. eapply eq_term_tm_nl.
     - intros ? ? ? []. auto.
     - intros ? ? ? r. apply Forall2_eq in r. apply map_inj in r.

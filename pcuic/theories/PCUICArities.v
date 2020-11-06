@@ -7,7 +7,7 @@ From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICUnivSubstitution
      PCUICCumulativity PCUICPosition PCUICEquality PCUICNameless
-     PCUICNormal PCUICInversion PCUICCumulativity PCUICReduction
+     PCUICInversion PCUICCumulativity PCUICReduction
      PCUICConfluence PCUICConversion PCUICContextConversion
      PCUICParallelReductionConfluence PCUICWeakeningEnv
      PCUICClosed PCUICSubstitution
@@ -172,6 +172,27 @@ Proof.
     exists s'. eapply (substitution _ _ Δ s [] _ _ HΣ' sub Hs).
 Qed.
 
+Lemma isWAT_subst_gen {cf:checker_flags} {Σ : global_env_ext} (HΣ' : wf Σ) {Γ Δ Δ'} {A} s :
+  subslet Σ Γ s Δ ->
+  isWfArity_or_Type Σ (Γ ,,, Δ ,,, Δ') A -> 
+  isWfArity_or_Type Σ (Γ ,,, subst_context s 0 Δ') (subst s #|Δ'| A).
+Proof.
+  intros sub WAT.
+  destruct WAT.
+  - left.
+    destruct i as [ctx [s' [wfa wfl]]].
+    exists (subst_context s #|Δ'|ctx), s'.
+    generalize (subst_destArity [] A s #|Δ'|).
+    rewrite wfa /=.
+    split; auto.
+    epose proof (subst_context_app _ 0 _ _).
+    rewrite Nat.add_0_r in H0. rewrite <- app_context_assoc, <- H0.
+    eapply substitution_wf_local; eauto.
+    now rewrite app_context_assoc.
+  - right.
+    destruct i as [s' Hs].
+    exists s'. eapply (substitution _ _ Δ s _ _ _ HΣ' sub Hs).
+Qed.
 
 Lemma typing_spine_letin_inv {cf:checker_flags} {Σ Γ na b B T args S} : 
   wf Σ.1 ->
@@ -408,50 +429,6 @@ Proof.
       now eapply skipn_n_Sn.
 Qed.
 
-Lemma consistent_instance_ext_abstract_instance {cf:checker_flags} Σ ind mdecl :
-  wf Σ ->
-  declared_minductive Σ ind mdecl ->
-  let u := PCUICLookup.abstract_instance (ind_universes mdecl) in
-  consistent_instance_ext (Σ, ind_universes mdecl) (ind_universes mdecl) u.
-Proof.
-  intros wfΣ declm u.
-  unfold consistent_instance_ext, consistent_instance.
-  revert u. destruct (ind_universes mdecl) eqn:Heq; simpl; auto.
-  destruct cst. simpl.
-  split.
-  { unfold AUContext.repr. simpl.
-    apply All_forallb. apply All_mapi. simpl.
-    clear; generalize 0; induction l; constructor; eauto. }
-  split. apply All_forallb.
-  eapply All_mapi.
-  unfold global_ext_levels. simpl.
-  unfold AUContext.levels. simpl.
-  clear. unfold mapi. generalize 0; induction l; constructor; auto.
-  simpl. apply LevelSet.mem_spec. apply LevelSet.union_spec. left.
-  apply LevelSet.add_spec. left; reflexivity.
-  simpl. eapply (Alli_impl _ (IHl (S n))).
-  intros.
-  eapply LevelSet.mem_spec in H. eapply LevelSet.mem_spec.
-  apply LevelSet.union_spec in H. destruct H; apply LevelSet.union_spec; intuition auto.
-  left. apply LevelSet.add_spec. right; auto.
-  rewrite mapi_length. intuition auto.
-  simpl. red. destruct check_univs; auto.
-  unfold valid_constraints0. simpl.
-  intros v sv.
-  intro. intros hin.
-  specialize (sv x). apply sv. unfold global_ext_constraints in *.
-  eapply ConstraintSet.union_spec. simpl. left.
-  todounivs. (* Simon: this  subst_instance_cstrs is the identity *)
-  (* revert hin. unfold subst_instance_cstrs.
-  rewrite ConstraintSet.fold_spec.
-  intros. rewrite -(ConstraintSet.elements_spec1 t x).
-  apply ConstraintSet.elements_spec1 in hin.
-  induction (ConstraintSet.elements t). simpl in *. simpl in hin. inv hin.
-  simpl in hin.
-  depelim hin. subst. simpl in H0.
-  constructor. *)
-Qed.
-
 Lemma subslet_inds_gen {cf:checker_flags} Σ ind mdecl idecl :
   wf Σ ->
   declared_inductive Σ mdecl ind idecl ->
@@ -461,19 +438,20 @@ Lemma subslet_inds_gen {cf:checker_flags} Σ ind mdecl idecl :
 Proof.
   intros wfΣ isdecl u.
   unfold inds.
-  destruct isdecl as [declm _].
-  pose proof declm as declm'. 
+  pose proof (proj1 isdecl) as declm'. 
   apply PCUICWeakeningEnv.on_declared_minductive in declm' as [oind oc]; auto.
   clear oc.
   assert (Alli (fun i x =>
    (Σ, ind_universes mdecl) ;;; [] |- tInd {| inductive_mind := inductive_mind ind; inductive_ind := i |} u : (ind_type x)) 0 (ind_bodies mdecl)).
   { apply forall_nth_error_Alli. intros.
     eapply type_Cumul.
-    econstructor; eauto. split; eauto.
+    econstructor; eauto. split; eauto with pcuic.
     eapply consistent_instance_ext_abstract_instance; eauto.
+    eapply declared_inductive_wf_global_ext; eauto with pcuic.
     eapply Alli_nth_error in oind; eauto. simpl in oind.
     destruct oind. red in onArity. right. apply onArity.
-    todounivs. (* Same thing, the abstract universe instance is an identity *) }
+    rewrite (subst_instance_ind_type_id Σ _ {| inductive_mind := inductive_mind ind; inductive_ind := i |}); eauto.
+    destruct isdecl. split; eauto. reflexivity. }
   clear oind.
   revert X. clear onNpars onGuard.
   generalize (le_n #|ind_bodies mdecl|).
@@ -572,8 +550,7 @@ Proof.
     eapply substitution_let in t1; auto.
     eapply invert_cumul_letin_l in c; auto.
     pose proof (subslet_app_inv _ _ _ _ _ sub) as [subl subr].
-    depelim subl.
-    depelim subl. rewrite subst_empty in H0. rewrite H0 in subr.
+    depelim subl. depelim subl. rewrite subst_empty in H0. rewrite H0 in subr.
     specialize (IHn (subst_context [b] 0 l) (subst [b] #|l| T) ltac:(rewrite subst_context_length; lia)).
     specialize (IHn _ _ subr).
     rewrite /subst1 subst_it_mkProd_or_LetIn Nat.add_0_r in t1.
@@ -586,8 +563,7 @@ Proof.
     intros Hs.
     eapply inversion_Prod in Hs as [? [? [? [? ?]]]]; auto.
     pose proof (subslet_app_inv _ _ _ _ _ sub) as [subl subr].
-    depelim subl.
-    depelim subl. rewrite subst_empty in t2. rewrite H0 in subr.
+    depelim subl; depelim subl. rewrite subst_empty in t2. rewrite H0 in subr.
     epose proof (substitution0 _ _ na _ _ _ _ wfΣ t0 t2).
     specialize (IHn (subst_context [t1] 0 l) (subst [t1] #|l| T)).
     forward IHn. rewrite subst_context_length; lia.

@@ -30,6 +30,12 @@ Inductive All2 {A B : Type} (R : A -> B -> Type) : list A -> list B -> Type :=
 Arguments All2_nil {_ _ _}.
 Arguments All2_cons {_ _ _ _ _ _ _}.
 
+Fixpoint alli {A} (p : nat -> A -> bool) (l : list A) (n : nat) : bool :=
+  match l with
+  | [] => true
+  | hd :: tl => p n hd && alli p tl (S n)
+  end.
+
 Section Forallb2.
   Context {A} (f : A -> A -> bool).
 
@@ -277,7 +283,28 @@ Proof.
   intros ->. induction l';  constructor; auto.
 Qed.
 
+Lemma All2_symmetry {A} (R : A -> A -> Type) : 
+  CRelationClasses.Symmetric R ->
+  CRelationClasses.Symmetric (All2 R).
+Proof.
+  intros HR x y l. 
+  induction l; constructor; auto.
+Qed.
+
+Lemma All2_transitivity {A} (R : A -> A -> Type) :
+  CRelationClasses.Transitive R ->
+  CRelationClasses.Transitive (All2 R).
+Proof.
+  intros HR x y z l; induction l in z |- *; auto.
+  intros H; inv H. constructor; eauto.
+Qed.
+
 Hint Constructors All All2 : core.
+
+Lemma All_refl {A} (P : A -> Type) l : (forall x, P x) -> All P l.
+Proof.
+  intros Hp; induction l; constructor; auto.
+Qed.
 
 Lemma All_rev_map {A B} (P : A -> Type) f (l : list B) : All (fun x => P (f x)) l -> All P (rev_map f l).
 Proof. induction 1. constructor. rewrite rev_map_cons. apply All_app_inv; auto. Qed.
@@ -1561,8 +1588,8 @@ Proof.
 Qed.
 
 Lemma All2_map_left' {A B} (P : A -> A -> Type) l l' (f : B -> A) :
-  All2 (fun x y => P (f x) y) l l' -> All2 P (map f l) l'.
-Proof. intros. rewrite - (map_id l'). eapply All2_map; eauto. Qed.
+  All2 P (map f l) l' -> All2 (fun x y => P (f x) y) l l'.
+Proof. intros. rewrite - (map_id l') in X. eapply All2_map_inv; eauto. Qed.
 
 Lemma All2_map_right' {A B} (P : A -> A -> Type) l l' (f : B -> A) :
   All2 P l (map f l') ->  All2 (fun x y => P x (f y)) l l'.

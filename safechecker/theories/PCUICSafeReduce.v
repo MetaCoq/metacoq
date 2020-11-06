@@ -331,6 +331,21 @@ Section Reduce.
     cc_viewc (tCoFix mfix idx) := ccview_cofix mfix idx ;
     cc_viewc t := ccview_other t I.
 
+  Equations discr_construct0_cofix (t : term) : Prop :=
+    discr_construct0_cofix (tConstruct ind n ui) := n <> 0 ;
+    discr_construct0_cofix (tCoFix mfix idx) := False ;
+    discr_construct0_cofix _ := True.
+
+  Inductive construct0_cofix_view : term -> Type :=
+  | cc0view_construct : forall ind ui, construct0_cofix_view (tConstruct ind 0 ui)
+  | cc0view_cofix : forall mfix idx, construct0_cofix_view (tCoFix mfix idx)
+  | cc0view_other : forall t, discr_construct0_cofix t -> construct0_cofix_view t.
+
+  Equations cc0_viewc t : construct0_cofix_view t :=
+    cc0_viewc (tConstruct ind 0 ui) := cc0view_construct ind ui ;
+    cc0_viewc (tCoFix mfix idx) := cc0view_cofix mfix idx ;
+    cc0_viewc t := cc0view_other t _.
+
   Equations _reduce_stack (Γ : context) (t : term) (π : stack)
             (h : wellformed Σ Γ (zip (t,π)))
             (reduce : forall t' π', R Σ Γ (t',π') (t,π) ->
@@ -416,18 +431,18 @@ Section Reduce.
     | red_view_Proj (i, pars, narg) c π with RedFlags.iota flags := {
       | true with inspect (reduce c (Proj (i, pars, narg) π) _) := {
         | @exist (@exist (t,π') prf) eq with inspect (decompose_stack π') := {
-          | @exist (args, ρ) prf' with cc_viewc t := {
-            | ccview_construct ind' c' _
+          | @exist (args, ρ) prf' with cc0_viewc t := {
+            | cc0view_construct ind' _
               with inspect (nth_error args (pars + narg)) := {
               | @exist (Some arg) eqa := rec reduce arg π ;
               | @exist None eqa := False_rect _ _
               } ;
-            | ccview_cofix mfix idx with inspect (unfold_cofix mfix idx) := {
+            | cc0view_cofix mfix idx with inspect (unfold_cofix mfix idx) := {
               | @exist (Some (narg, fn)) eq' :=
                 rec reduce (tProj (i, pars, narg) (mkApps fn args)) π ;
               | @exist None bot := False_rect _ _
               } ;
-            | ccview_other t ht := give (tProj (i, pars, narg) (mkApps t args)) π
+            | cc0view_other t ht := give (tProj (i, pars, narg) (mkApps t args)) π
             }
           }
         } ;

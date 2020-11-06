@@ -38,6 +38,7 @@ run_in_tactic.v
 safechecker_test.v
 # test_term.v -> loaded in TypingTests.v
 tmExistingInstance.v
+tmFreshName.v
 tmInferInstance.v
 TypingTests.v
 unfold.v
@@ -45,3 +46,4 @@ univ.v
 vs.v
 tmVariable.v
 order_rec.v
+issue453.v

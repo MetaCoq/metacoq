@@ -45,8 +45,10 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=
 (* Quoting and unquoting commands *)
 (* Similar to MetaCoq Quote Definition ... := ... *)
 | tmQuote : forall {A:Type@{t}}, A  -> TemplateMonad Ast.term
-(* Similar to MetaCoq Quote Recursively Definition ... := ...*)
-| tmQuoteRec : forall {A:Type@{t}}, A  -> TemplateMonad program
+(* Similar to MetaCoq Quote Recursively Definition but takes a boolean "bypass opacity" flag.
+  ([true] - quote bodies of all dependencies (transparent and opaque);
+   [false] -quote bodies of transparent definitions only) *)
+| tmQuoteRecTransp : forall {A:Type@{t}}, A -> bool(* bypass opacity? *) -> TemplateMonad program
 (* Quote the body of a definition or inductive. Its name need not be fully qualified *)
 | tmQuoteInductive : kername -> TemplateMonad mutual_inductive_body
 | tmQuoteUniverses : TemplateMonad ConstraintSet.t
@@ -90,6 +92,9 @@ Definition tmMkInductive' (mind : mutual_inductive_body) : TemplateMonad unit
 
 Definition tmAxiom id := tmAxiomRed id None.
 Definition tmDefinition id {A} t := @tmDefinitionRed_ false id None A t.
+
+(** We keep the original behaviour of [tmQuoteRec]: it quotes all the dependencies regardless of the opaqueness settings *)
+Definition tmQuoteRec {A} (a : A) := tmQuoteRecTransp a true.
 
 Definition tmLocate1 (q : qualid) : TemplateMonad global_reference :=
   l <- tmLocate q ;;

@@ -1340,9 +1340,9 @@ Inductive tred1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
     tred1 Σ Γ (tConst c u) (subst_instance_constr u body)
 
 (** Proj *)
-| tred_proj i pars narg args k u arg:
+| tred_proj i pars narg args u arg:
     nth_error args (pars + narg) = Some arg ->
-    tred1 Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i k u) args)) arg.
+    tred1 Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i 0 u) args)) arg.
 
 Definition ctred1 Σ :=
   context_env_clos (tred1 Σ).

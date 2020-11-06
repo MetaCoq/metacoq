@@ -363,12 +363,13 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
     let pm, _ = Declare.Obls.add_definition ~pm:st ~cinfo ~info ~term:c ~uctx ~obl_hook obls in
     pm
 
-  | TmQuote (false, trm) ->
+  | TmQuote trm ->
     (* user should do the reduction (using tmEval) if they want *)
     let qt = quote_term env trm
     in k ~st env evm qt
-  | TmQuote (true, trm) ->
-    let qt = quote_term_rec env trm in
+  | TmQuoteRecTransp  (bypass, trm) ->
+    let bypass = unquote_bool (reduce_all env evm bypass) in
+    let qt = quote_term_rec bypass env trm in
     k ~st env evm qt
   | TmQuoteInd (name, strict) ->
        let kn = unquote_kn (reduce_all env evm name) in
@@ -448,6 +449,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
        let evm = Typing.check env evm (EConstr.of_constr t') (EConstr.of_constr typ) in
        k ~st env evm t'
   | TmFreshName name ->
+    let name = reduce_all env evm name in
     let name' = Namegen.next_ident_away_from (unquote_ident name) (fun id -> Nametab.exists_cci (Lib.make_path id)) in
     k ~st env evm (quote_ident name')
   | TmExistingInstance gr ->

@@ -8,8 +8,7 @@ jobs:
 
     strategy:
       matrix:
-        jobs: [2]
-        target: [ ci-local ]
+        target: [ local, opam ]
 
     steps:
 
@@ -35,4 +34,5 @@ jobs:
       - run: opam repo add coq-released https://coq.inria.fr/opam/released
       - run: opam install . --deps-only --with-doc --with-test
 
-      - run: opam exec -- make -j ${{matrix.jobs}} ${{matrix.target}}
+      - run: opam exec -- ./configure.sh ${{matrix.target}}
+      - run: opam exec -- make -j 2 ci-${{matrix.target}}

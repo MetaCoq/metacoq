@@ -1,0 +1,32 @@
+name: Test compilation
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Try to restore opam cache
+        id: opam-cache
+        uses: actions/cache@v2
+        with:
+          path: "~/.opam"
+          key: opam-${{github.base_ref}}-${{github.ref}} 
+          restore-keys: |
+            opam--refs/heads/${{github.base_ref}}
+
+      - name: Install OCaml
+        uses: avsm/setup-ocaml@v1
+        with:
+          ocaml-version: 4.07.1
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+
+      - run: opam repo add coq-released https://coq.inria.fr/opam/released
+      - run: opam install . --deps-only --with-doc --with-test
+
+      - run: opam exec -- make -j 2 all TIMED=1

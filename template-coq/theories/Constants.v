@@ -90,17 +90,23 @@ Register MetaCoq.Template.Universes.ConstraintType.Le as metacoq.ast.constraints
 Register MetaCoq.Template.Universes.ConstraintType.Lt as metacoq.ast.constraints.Lt.
 Register MetaCoq.Template.Universes.ConstraintType.Eq as metacoq.ast.constraints.Eq.
 Register MetaCoq.Template.Universes.Universe.from_kernel_repr as metacoq.ast.universe.from_kernel_repr.
-(* Register MetaCoq.Template.Universes.Universe.to_kernel_repr as metacoq.ast.universe.to_kernel_repr. *)
+Register MetaCoq.Template.Universes.Universe.of_levels as metacoq.ast.universe.of_levels.
 Register MetaCoq.Template.Universes.LevelSetProp.of_list as metacoq.ast.universe.of_list.
 Register MetaCoq.Template.Universes.Level.t as metacoq.ast.level.t.
 Register MetaCoq.Template.Universes.Level.Level as metacoq.ast.level.Level.
-Register MetaCoq.Template.Universes.PropLevel.lProp as metacoq.ast.level.lProp.
+Register MetaCoq.Template.Universes.PropLevel.t as metacoq.ast.level.prop_level_type.
+Register MetaCoq.Template.Universes.PropLevel.lProp as metacoq.ast.level.lprop.
+Register MetaCoq.Template.Universes.PropLevel.lSProp as metacoq.ast.level.lsprop.
 Register MetaCoq.Template.Universes.Level.lSet as metacoq.ast.level.lSet.
 Register MetaCoq.Template.Universes.Level.Var as metacoq.ast.level.Var.
 Register MetaCoq.Template.Universes.UnivExpr.npe as metacoq.ast.univexpr.npe.
 
 Register MetaCoq.Template.Universes.UnivExprSet.Mkt as metacoq.ast.univexprset.mkt.
-(* Register MetaCoq.Template.Universes.Universe.Build_t as metacoq.ast.universe.build. *)
+Register MetaCoq.Template.Universes.Universe.Build_t0 as metacoq.ast.universe.build0.
+Register MetaCoq.Template.Universes.Universe.lSProp as metacoq.ast.universe.lsprop.
+Register MetaCoq.Template.Universes.Universe.lProp as metacoq.ast.universe.lprop.
+Register MetaCoq.Template.Universes.Universe.lnpe as metacoq.ast.universe.lnpe.
+
 
 Register MetaCoq.Template.Universes.Variance.t as metacoq.ast.variance.t.
 Register MetaCoq.Template.Universes.Variance.Irrelevant as metacoq.ast.variance.Irrelevant.

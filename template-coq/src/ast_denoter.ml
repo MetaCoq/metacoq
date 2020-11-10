@@ -157,8 +157,6 @@ struct
 
   let unquote_level (trm : Universes0.Level.t) : Univ.Level.t =
     match trm with
-    | Universes0.Level.Coq_lSProp -> Univ.Level.sprop
-    | Universes0.Level.Coq_lProp -> Univ.Level.prop
     | Universes0.Level.Coq_lSet -> Univ.Level.set
     | Universes0.Level.Level s ->
       let s = list_to_string s in
@@ -176,9 +174,15 @@ struct
     else u
 
   let unquote_universe evd (trm : Universes0.Universe.t) =
-    let l = Universes0.Universe.to_kernel_repr trm in
-    let l = List.map unquote_level_expr l in
-    evd, List.fold_left Univ.Universe.sup (List.hd l) (List.tl l)
+    match trm with
+    | Universes0.Universe.Coq_lSProp -> evd, Univ.Universe.sprop
+    | Universes0.Universe.Coq_lProp -> evd, Univ.Universe.type0m
+    | Universes0.Universe.Coq_lnpe u ->
+       (* let u = Universes0.Universe.t_set l in *)
+       let ux_list = Universes0.UnivExprSet.elements u in
+       (* let l = Universes0.Universe.to_kernel_repr l in *)
+       let l = List.map unquote_level_expr ux_list in
+       evd, List.fold_left Univ.Universe.sup (List.hd l) (List.tl l)
 
   let unquote_universe_instance(evm: Evd.evar_map) (l: quoted_univ_instance): Evd.evar_map * Univ.Instance.t
   = (evm,  Univ.Instance.of_array (Array.of_list (List0.map unquote_level l)))

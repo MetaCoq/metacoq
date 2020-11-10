@@ -167,23 +167,34 @@ struct
   let string_of_level s =
     to_string (Univ.Level.to_string s)
 
-  let quote_level l =
-    Tm_util.debug (fun () -> str"quote_level " ++ Level.pr l);
-    if Level.is_prop l then Lazy.force lProp
+  let quote_nonprop_level l =
+    if Univ.Level.is_prop l || Univ.Level.is_sprop l then
+      failwith "quote_nonprop_level : Prop or SProp found in levels"
     else if Level.is_set l then Lazy.force lSet
     else match Level.var_index l with
          | Some x -> constr_mkApp (tLevelVar, [| quote_int x |])
          | None -> constr_mkApp (tLevel, [| string_of_level l|])
 
+  let quote_level l =
+    Tm_util.debug (fun () -> str"quote_level " ++ Level.pr l);
+    if Level.is_sprop l then
+      constr_mkApp (cInl, [|Lazy.force tproplevel;Lazy.force tlevel;Lazy.force tlevelSProp |])
+    else if Level.is_prop l then
+      constr_mkApp (cInl, [|Lazy.force tproplevel;Lazy.force tlevel;Lazy.force tlevelProp |])
+    else constr_mkApp (cInr, [|Lazy.force tproplevel;Lazy.force tlevel; quote_nonprop_level l |])
+
   let quote_universe s =
-    let levels = Universe.map (fun (l,i) -> pairl tlevel bool_type (quote_level l) (quote_bool (i > 0))) s in
-    let hd = List.hd levels in
-    let tl = to_coq_list (prodl tlevel bool_type) (List.tl levels) in
-    constr_mkApp (tfrom_kernel_repr, [| hd ; tl |])
+    match Univ.Universe.level s with
+      Some l -> constr_mkApp (tof_levels, [| quote_level l |])
+    | _ -> let levels =
+             Universe.map (fun (l,i) -> pairl tlevel bool_type (quote_nonprop_level l) (quote_bool (i > 0))) s in
+           let hd = List.hd levels in
+           let tl = to_coq_list (prodl tlevel bool_type) (List.tl levels) in
+           constr_mkApp (tfrom_kernel_repr, [| hd ; tl |])
 
   let quote_levelset s =
     let levels = LSet.elements s in
-    let levels' =  to_coq_listl tlevel (List.map quote_level levels) in
+    let levels' =  to_coq_listl tlevel (List.map quote_nonprop_level levels) in
     constr_mkApp (tLevelSet_of_list, [|levels'|])
 
   let quote_constraint_type (c : Univ.constraint_type) =
@@ -193,23 +204,48 @@ struct
     | Eq -> Lazy.force tunivEq
 
   let quote_univ_constraint ((l1, ct, l2) : Univ.univ_constraint) =
-    let l1 = quote_level l1 in
-    let l2 = quote_level l2 in
+    let l1 = quote_nonprop_level l1 in
+    let l2 = quote_nonprop_level l2 in
     let ct = quote_constraint_type ct in
     constr_mkApp (tmake_univ_constraint, [| l1; ct; l2 |])
 
   (* todo : can be deduced from quote_level, hence shoud be in the Reify module *)
   let quote_univ_instance u =
     let arr = Univ.Instance.to_array u in
-    to_coq_listl tlevel (CArray.map_to_list quote_level arr)
+    (* we assume that valid instances do not contain [Prop] or [SProp] *)
+    to_coq_listl tlevel (CArray.map_to_list quote_nonprop_level arr)
 
+  let is_Lt = function
+    | Univ.Lt -> true
+    | _ -> false
+
+  let is_Le = function
+    | Univ.Le -> true
+    | _ -> false
+
+  let is_Eq = function
+    | Univ.Eq -> true
+    | _ -> false
+
+   (* (Prop, Le | Lt, l),  (Prop, Eq, Prop) -- trivial, (l, c, Prop)  -- unsatisfiable  *)
+  let rec constraints_ (cs : Univ.univ_constraint list) =
+    match cs with
+    | [] -> []
+    | (l, ct, l') :: cs' ->
+       if (* ignore trivial constraints *)
+         (Univ.Level.is_prop l && (is_Le ct || is_Lt ct)) ||
+          (Univ.Level.is_prop l && is_Eq ct && Univ.Level.is_prop l')
+       then constraints_ cs'
+       else if (* fail on unisatisfiable ones -- well-typed term is expected *)
+         Univ.Level.is_prop l' then failwith "Unisatisfiable constraint (l <= Prop)"
+       else (* NOTE:SPROP: we don't expect SProp to be in the constraint set *)
+         quote_univ_constraint (l,ct,l') :: constraints_ cs'
 
   let quote_univ_constraints const =
     let const = Univ.Constraint.elements const in
     List.fold_left (fun tm c ->
-        let c = quote_univ_constraint c in
         constr_mkApp (tConstraintSetadd, [| c; tm|])
-      ) (Lazy.force tConstraintSetempty) const
+      ) (Lazy.force tConstraintSetempty) (constraints_ const)
 
   let quote_variance v =
     match v with

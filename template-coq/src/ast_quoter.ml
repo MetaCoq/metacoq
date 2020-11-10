@@ -1,4 +1,5 @@
 open Names
+open Datatypes
 open BasicAst
 open Ast0
 open Tm_util
@@ -71,16 +72,31 @@ struct
 
   let quote_bool x = x
 
-  let quote_level l =
-    if Univ.Level.is_prop l then Universes0.Level.Coq_lProp
-    else if Univ.Level.is_sprop l then Universes0.Level.Coq_lSProp
+  (* NOTE: fails if it hits Prop or SProp *)
+  let quote_nonprop_level (l : Univ.Level.t) : Universes0.Level.t =
+    if Univ.Level.is_prop l || Univ.Level.is_sprop l then
+      failwith "Prop or SProp found in levels"
     else if Univ.Level.is_set l then Universes0.Level.Coq_lSet
     else match Univ.Level.var_index l with
          | Some x -> Universes0.Level.Var (quote_int x)
          | None -> Universes0.Level.Level (string_to_list (Univ.Level.to_string l))
 
+  let quote_level (l : Univ.Level.t) : (Universes0.PropLevel.t, Universes0.Level.t) Datatypes.sum =
+    if Univ.Level.is_prop l then Coq_inl Universes0.PropLevel.Coq_lProp
+    else if Univ.Level.is_sprop l then Coq_inl Universes0.PropLevel.Coq_lSProp
+    else (* NOTE: in this branch we know that [l] is neither [SProp] nor [Prop]*)
+      Coq_inr (quote_nonprop_level l)
+    (* else if Univ.Level.is_set l then Coq_inr Universes0.Level.Coq_lSet
+     * else let l' = match Univ.Level.var_index l with
+     *         | Some x -> Universes0.Level.Var (quote_int x)
+     *         | None -> Universes0.Level.Level (string_to_list (Univ.Level.to_string l))
+     *      in Coq_inr l' *)
+
   let quote_universe s : Universes0.Universe.t =
-    let univs = Univ.Universe.map (fun (l,i) -> (quote_level l, i > 0)) s in
+    match Univ.Universe.level s with
+      Some l -> Universes0.Universe.of_levels (quote_level l)
+    | _ -> let univs =
+          Univ.Universe.map (fun (l,i) -> (quote_nonprop_level l, i > 0)) s in
     Universes0.Universe.from_kernel_repr (List.hd univs) (List.tl univs)
 
   let quote_sort s =
@@ -123,15 +139,42 @@ struct
     | Univ.Le -> Universes0.ConstraintType.Le
     | Univ.Eq -> Universes0.ConstraintType.Eq
 
+  let is_Lt = function
+    | Univ.Lt -> true
+    | _ -> false
+
+  let is_Le = function
+    | Univ.Le -> true
+    | _ -> false
+
+  let is_Eq = function
+    | Univ.Eq -> true
+    | _ -> false
+               
   let quote_univ_constraint ((l, ct, l') : Univ.univ_constraint) : quoted_univ_constraint =
-    ((quote_level l, quote_constraint_type ct), quote_level l')
+    ((quote_nonprop_level l, quote_constraint_type ct), quote_nonprop_level l')
 
   let quote_univ_instance (i : Univ.Instance.t) : quoted_univ_instance =
     let arr = Univ.Instance.to_array i in
-    CArray.map_to_list quote_level arr
+    (* we assume that valid instances do not contain [Prop] or [SProp] *)
+    CArray.map_to_list quote_nonprop_level arr
+
+   (* (Prop, Le | Lt, l),  (Prop, Eq, Prop) -- trivial, (l, c, Prop)  -- unsatisfiable  *)
+  let rec constraints_ (cs : Univ.univ_constraint list) : quoted_univ_constraint list =
+    match cs with
+    | [] -> []
+    | (l, ct, l') :: cs' ->
+       if (* ignore trivial constraints *)
+         (Univ.Level.is_prop l && (is_Le ct || is_Lt ct)) ||
+          (Univ.Level.is_prop l && is_Eq ct && Univ.Level.is_prop l')
+       then constraints_ cs'
+       else if (* fail on unisatisfiable ones -- well-typed term is expected *)
+         Univ.Level.is_prop l' then failwith "Unisatisfiable constraint (l <= Prop)"
+       else (* NOTE:SPROP: we don't expect SProp to be in the constraint set *)
+         quote_univ_constraint (l,ct,l') :: constraints_ cs'
 
   let quote_univ_constraints (c : Univ.Constraint.t) : quoted_univ_constraints =
-    let l = List.map quote_univ_constraint (Univ.Constraint.elements c) in
+    let l = constraints_ (Univ.Constraint.elements c) in
     Universes0.ConstraintSet.(List.fold_right add l empty)
 
   let quote_variance (v : Univ.Variance.t) =
@@ -146,7 +189,8 @@ struct
     (quote_univ_instance levels, quote_univ_constraints constraints)
 
   let quote_univ_contextset (uctx : Univ.ContextSet.t) : quoted_univ_contextset =
-    let levels = List.map quote_level (Univ.LSet.elements (Univ.ContextSet.levels uctx)) in
+    (* CHECKME: is is safe to assume that there will be no Prop or SProp? *)
+    let levels = List.map quote_nonprop_level (Univ.LSet.elements (Univ.ContextSet.levels uctx)) in
     let constraints = Univ.ContextSet.constraints uctx in
     (Universes0.LevelSetProp.of_list levels, quote_univ_constraints constraints)
 

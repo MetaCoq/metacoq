@@ -141,9 +141,9 @@ struct
     if Constr.equal h (Lazy.force tmkBindAnn) then
       match args with
         _ :: nm :: relevance :: _ -> { Context.binder_name = unquote_name nm; Context.binder_relevance = unquote_relevance relevance }
-      | _ -> raise (Failure "ill-typed, expected annotated name")
+      | _ -> bad_term_verb trm "unquote_aname"
     else
-      raise (Failure "non-value")
+      not_supported_verb trm "unquote_aname"
 
   let get_level evm s =
     if CString.string_contains ~where:s ~what:"." then
@@ -180,10 +180,6 @@ struct
         let evm, l = Evd.new_univ_level_variable (Evd.UnivFlexible false) evm in
         Feedback.msg_info (str"Fresh level " ++ Univ.Level.pr l ++ str" was added to the context.");
         evm, l
-    else if constr_equall h lProp then
-      match args with
-      | [] -> evm, Univ.Level.prop
-      | _ -> bad_term_verb trm "unquote_level"
     else if constr_equall h lSet then
       match args with
       | [] -> evm, Univ.Level.set
@@ -200,43 +196,20 @@ struct
     else
       not_supported_verb trm "unquote_level"
 
-  let unquote_noproplevel evm trm (* of type noproplevel *) : Evd.evar_map * Univ.Level.t =
-    let (h,args) = app_full trm [] in
-    if constr_equall h noprop_tSet then
-      match args with
-      | [] -> evm, Univ.Level.set
-      | _ -> bad_term_verb trm "unquote_noproplevel"
-    else if constr_equall h noprop_tLevel then
-      match args with
-      | s :: [] -> debug (fun () -> str "Unquoting level " ++ Printer.pr_constr_env (Global.env ()) evm trm);
-        get_level evm (unquote_string s)
-      | _ -> bad_term_verb trm "unquote_noproplevel"
-    else if constr_equall h noprop_tLevelVar then
-      match args with
-      | l :: [] -> evm, Univ.Level.var (unquote_nat l)
-      | _ -> bad_term_verb trm "unquote_noproplevel"
-    else
-      not_supported_verb trm "unquote_noproplevel"
-
   let unquote_univ_expr evm trm (* of type UnivExpr.t *) : Evd.evar_map * Univ.Universe.t =
     let (h,args) = app_full trm [] in
-    if constr_equall h univexpr_lProp then
-      match args with
-      | [] -> evm, Univ.Universe.type0m
-      | _ -> bad_term_verb trm "unquote_univ_expr"
-    else if constr_equall h univexpr_npe then
+    if constr_equall h univexpr_npe then
       match args with
       | [x] ->
         let l, b = unquote_pair x in
-        let evm, l' = unquote_noproplevel evm l in
+        let evm, l' = unquote_level evm l in
         let u = Univ.Universe.make l' in
         evm, if unquote_bool b then Univ.Universe.super u else u
       | _ -> bad_term_verb trm "unquote_univ_expr"
     else
       not_supported_verb trm "unquote_univ_expr"
 
-
-  let unquote_universe evm trm (* of type universe *) =
+  let unquote_universe evm trm (* of type universe *)  =
     let (h,args) = app_full trm [] in
     if constr_equall h lfresh_universe then
       if !strict_unquote_universe_mode then
@@ -245,22 +218,37 @@ struct
         let evm, u = Evd.new_univ_variable (Evd.UnivFlexible false) evm in
         Feedback.msg_info (str"Fresh universe " ++ Univ.Universe.pr u ++ str" was added to the context.");
         evm, u
-    else if constr_equall h tBuild_Universe then
+    else if constr_equall h lSProp then
       match args with
-        x :: _ :: [] -> (let (h,args) = app_full x [] in
-                         if constr_equall h tMktUnivExprSet then
-                           match args with
-                             x :: _ :: [] -> (match unquote_list x with
+         | [] -> evm, Univ.Universe.sprop
+         | _ -> bad_term_verb trm "unquote_univ_expr"
+    else if constr_equall h lProp then
+      match args with
+         | [] -> evm, Univ.Universe.type0m
+         | _ -> bad_term_verb trm "unquote_univ_expr"
+    else if constr_equall h lnpe then
+      match args with
+      | [x] ->
+         let (h,args) = app_full x [] in
+         if constr_equall h tBuild_Universe then
+                     match args with
+                       x :: _ :: [] -> (let (h,args) = app_full x [] in
+                                        if constr_equall h tMktUnivExprSet then
+                                          match args with
+                                          | x :: _ :: [] ->
+                                             (match unquote_list x with
                                               | [] -> assert false
-                                              | e::q -> List.fold_left (fun (evm,u) e -> let evm, u' = unquote_univ_expr evm e
-                                                                             in evm, Univ.Universe.sup u u')
-                                                              (unquote_univ_expr evm e) q)
-                           | _ -> bad_term_verb trm "unquote_universe 0"
-                         else
-                           not_supported_verb trm "unquote_universe 0")
-      | _ -> bad_term_verb trm "unquote_universe 1"
-    else
-      not_supported_verb trm "unquote_universe 1"
+                                              | e::q -> List.fold_left (fun (evm,u) e ->
+                                                            let evm, u' = unquote_univ_expr evm e
+                                                            in evm, Univ.Universe.sup u u')
+                                                          (unquote_univ_expr evm e) q)
+                                          | _ -> bad_term_verb trm "unquote_universe 0"
+                                        else
+                                          not_supported_verb trm "unquote_universe 0")
+                     | _ -> bad_term_verb trm "unquote_universe 1"
+               else  not_supported_verb trm "unquote_universe 2"
+      | _ -> bad_term_verb trm "unquote_universe 3"
+    else bad_term_verb trm "unquote_universe 4"
 
 
   let unquote_universe_instance evm trm (* of type universe_instance *) =

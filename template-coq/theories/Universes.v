@@ -459,9 +459,21 @@ Module Universe.
     end.
 
   (* Used for quoting. *)
-  Definition from_kernel_repr (e : Level.t * bool) (es : list (Level.t * bool)) : t
-    := lnpe (add_list (map UnivExpr.from_kernel_repr es)
-                (make' (UnivExpr.from_kernel_repr e))).
+  Definition of_prop_level (l : PropLevel.t) : t :=
+    match l with
+    | PropLevel.lSProp => Universe.lSProp
+    | PropLevel.lProp => Universe.lProp
+    end.
+
+  Definition from_kernel_repr (e : Level.t * bool)
+             (es : list (Level.t * bool)) : t
+    := (* match e with *)
+       (* | inl PropLevel.lSProp => Universe.lSProp *)
+       (* | inl PropLevel.lProp => Universe.lProp *)
+     (* | inr l => *)
+       lnpe (add_list (map UnivExpr.from_kernel_repr es)
+                                (make' (UnivExpr.from_kernel_repr e))).
+       (* end. *)
 
   (* Definition uex_to_kernel_repr (e : UnivExpr.t) : Level.t * bool := *)
   (*   match e with *)

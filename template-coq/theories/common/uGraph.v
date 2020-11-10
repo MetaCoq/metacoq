@@ -1335,7 +1335,7 @@ Section CheckLeq.
       List.fold_left (fun b e1 => leqb_expr_univ_n n e1 u2 && b)
                      u1 (leqb_expr_univ_n n e1 u2)
     end.
-
+  
   (* this is function [real_check_leq] of kernel/uGraph.ml *)
   Definition leqb_universe_exprs_n n (l1 l2 : Universe.t0) :=
       let '(e1, u1) := Universe.exprs l1 in

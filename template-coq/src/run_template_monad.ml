@@ -221,12 +221,12 @@ let denote_decl evm d =
   if constr_equall h tmkdecl then
     match args with
     | name :: body :: typ :: [] ->
-      let name = unquote_name name in
+      let name = unquote_aname name in
       let evm, ty = denote_term evm typ in
       (match unquote_option body with
-      | None -> evm, Context.Rel.Declaration.LocalAssum (Context.annotR name, ty)
+      | None -> evm, Context.Rel.Declaration.LocalAssum (name, ty)
       | Some body -> let evm, body = denote_term evm body in
-        evm, Context.Rel.Declaration.LocalDef (Context.annotR name, body, ty))
+        evm, Context.Rel.Declaration.LocalDef (name, body, ty))
     | _ -> bad_term_verb d "denote_decl"
   else bad_term_verb d "denote_decl"
 

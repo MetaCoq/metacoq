@@ -5,6 +5,12 @@ on: [push, pull_request]
 jobs:
   build:
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        jobs: 2
+        target: [ ci-local, ci-opam ]
+
     steps:
 
       - name: Try to restore opam cache
@@ -29,4 +35,4 @@ jobs:
       - run: opam repo add coq-released https://coq.inria.fr/opam/released
       - run: opam install . --deps-only --with-doc --with-test
 
-      - run: opam exec -- make -j 2 all TIMED=1
+      - run: opam exec -- make -j ${{matrix.jobs}} ${{matrix.target}}

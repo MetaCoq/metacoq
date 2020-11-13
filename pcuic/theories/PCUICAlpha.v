@@ -716,19 +716,27 @@ Section Alpha.
         * constructor; now apply upto_names_impl_leq_term.
   Qed.
 
+  Lemma isType_alpha Σ Γ u v :
+    wf Σ.1 ->
+    isType Σ Γ u ->
+    u ≡ v ->
+    isType Σ Γ v.
+  Proof.
+    intros hΣ [s Hs] eq.
+    exists s; eapply typing_alpha; eauto.
+  Qed.
 
   Lemma isWfArity_alpha Σ Γ u v :
     wf Σ.1 ->
-    isWfArity typing Σ Γ u ->
+    isWfArity Σ Γ u ->
     u ≡ v ->
-    isWfArity typing Σ Γ v.
+    isWfArity Σ Γ v.
   Proof.
-    intros hΣ [ctx [s [X1 X2]]] e.
+    intros hΣ [isTy [ctx [s X1]]] e.
     eapply destArity_alpha in X1; tea.
+    split; [eapply isType_alpha; eauto|].
     destruct X1 as [ctx' [X1 X1']].
-    exists ctx', s. split; tas.
-    eapply wf_local_alpha; tea.
-    now eapply eq_context_upto_cat.
+    exists ctx', s; auto.
   Qed.
 
 End Alpha.

@@ -154,7 +154,7 @@ Section fixed.
   Lemma conv_cum_tFix_inv leq Γ mfix idx mfix' idx' :
     conv_cum leq Σ Γ (tFix mfix idx) (tFix mfix' idx') ->
     ∥idx = idx' ×
-     All2 (fun d d' => rarg d = rarg d' ×
+     All2 (fun d d' => rarg d = rarg d' × eq_binder_annot d.(dname) d'.(dname) ×
                        Σ;;; Γ |- dtype d = dtype d' ×
                        Σ;;; Γ,,, fix_context mfix |- dbody d = dbody d')
           mfix mfix'∥.
@@ -185,7 +185,7 @@ Section fixed.
       depelim all1; depelim all2; [constructor|].
     constructor; [|now auto].
     destruct r as ((?&?)&?), p as (?&?&?&?), p0 as (?&?&?&?).
-    split; [congruence|].
+    split; [congruence|]. split; auto; try congruence.
     split; [now apply conv_alt_red; exists (dtype x), (dtype y)|].
     apply conv_alt_red.
     exists (dbody x), (dbody y).
@@ -198,7 +198,7 @@ Section fixed.
   Lemma conv_cum_tCoFix_inv leq Γ mfix idx mfix' idx' :
     conv_cum leq Σ Γ (tCoFix mfix idx) (tCoFix mfix' idx') ->
     ∥idx = idx' ×
-     All2 (fun d d' => rarg d = rarg d' ×
+     All2 (fun d d' => rarg d = rarg d' × eq_binder_annot d.(dname) d'.(dname) ×
                        Σ;;; Γ |- dtype d = dtype d' ×
                        Σ;;; Γ,,, fix_context mfix |- dbody d = dbody d')
           mfix mfix'∥.
@@ -226,7 +226,7 @@ Section fixed.
       depelim all1; depelim all2; [constructor|].
     constructor; [|now auto].
     destruct r as ((?&?)&?), p as (?&?&?&?), p0 as (?&?&?&?).
-    split; [congruence|].
+    split; [congruence|]. split; [congruence|].
     split; [now apply conv_alt_red; exists (dtype x), (dtype y)|].
     apply conv_alt_red.
     exists (dbody x), (dbody y).

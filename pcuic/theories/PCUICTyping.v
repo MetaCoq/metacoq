@@ -81,20 +81,6 @@ Derive Signature NoConfusion for All_local_env.
 Derive NoConfusion for context_decl.
 Derive NoConfusion for list.
 
-Section WfArity.
-  Context (typing : forall (Σ : global_env_ext) (Γ : context), term -> term -> Type).
-
-  Definition isWfArity Σ (Γ : context) T :=
-    { ctx & { s & (destArity [] T = Some (ctx, s)) * All_local_env (lift_typing typing Σ) (Γ ,,, ctx) } }.
-
-  Context (property : forall (Σ : global_env_ext) (Γ : context),
-              All_local_env (lift_typing typing Σ) Γ ->
-              forall (t T : term), typing Σ Γ t T -> Type).
-
-  Definition isWfArity_prop Σ (Γ : context) T :=
-    { wfa : isWfArity Σ Γ T & All_local_env_over typing property Σ _ (snd (projT2 (projT2 wfa))) }.
-End WfArity.
-
 (* AXIOM GUARD CONDITION *)
 Axiom fix_guard : mfixpoint term -> bool.
 
@@ -496,7 +482,8 @@ Module PCUICDeclarationTyping :=
     PCUICLookup.
 Include PCUICDeclarationTyping.
 
-Definition isWfArity_or_Type {cf:checker_flags} Σ Γ T : Type := (isWfArity typing Σ Γ T + isType Σ Γ T).
+Definition isWfArity {cf:checker_flags} Σ (Γ : context) T :=
+  (isType Σ Γ T × { ctx & { s & (destArity [] T = Some (ctx, s)) } }).
 
 Definition typing_size `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t : T) : size.
 Proof.

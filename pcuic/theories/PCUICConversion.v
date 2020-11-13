@@ -1306,7 +1306,7 @@ Section Inversions.
   Lemma Prod_conv_cum_inv : 
     forall {Γ leq na1 na2 A1 A2 B1 B2},
     conv_cum leq Σ Γ (tProd na1 A1 B1) (tProd na2 A2 B2) ->
-      ∥ Σ ;;; Γ |- A1 = A2 ∥ /\
+      eq_binder_annot na1 na2 /\ ∥ Σ ;;; Γ |- A1 = A2 ∥ /\
       conv_cum leq Σ (Γ,, vass na1 A1) B1 B2.
   Proof.
     intros *; destruct leq; simpl.
@@ -1316,13 +1316,14 @@ Section Inversions.
       subst.
       assert (Σ;;;Γ |- A1 = A2) as HA by
         (etransitivity; [apply red_conv, redA | assumption]).
+      split; auto.        
       split; constructor. 1: assumption.
       etransitivity. 1: apply red_conv, redB. 
       eapply conv_conv_ctx. 1,2 : eassumption.
       apply ctx_rel_vass. 1: reflexivity.
       now constructor.
     - intros [[eqann [eqA cumB]]%cumul_Prod_Prod_inv]. 2: assumption.
-      split; constructor. 1: assumption.
+      split; auto; split; constructor. 1: assumption.
       eapply cumul_conv_ctx. 1,2: eassumption.
       apply ctx_rel_vass. 1: reflexivity.
       now constructor.  

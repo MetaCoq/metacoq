@@ -1565,80 +1565,71 @@ Section SRContext.
       intro H; simpl; constructor; cbn; eauto; now apply IHΔ.
   Qed.
 
+  Lemma isType_red1 {Σ Γ A B} :
+     wf Σ.1 ->
+     red1 (fst Σ) Γ A B ->
+     isType Σ Γ A ->
+     isType Σ Γ B.
+   Proof.
+     intros wf red [s Hs].
+     exists s. eapply subject_reduction1; eauto.
+   Qed.
 
    Lemma isWfArity_red1 {Σ Γ A B} :
      wf Σ.1 ->
-       red1 (fst Σ) Γ A B ->
-       isWfArity typing Σ Γ A ->
-       isWfArity typing Σ Γ B.
+     red1 (fst Σ) Γ A B ->
+     isWfArity Σ Γ A ->
+     isWfArity Σ Γ B.
    Proof.
-     intro wfΣ. induction 1 using red1_ind_all.
-     all: intros [ctx [s [H1 H2]]]; cbn in *; try discriminate.
+     intros wfΣ re [isty H].
+     split. eapply isType_red1; eauto.
+     clear isty; revert H.
+     induction re using red1_ind_all.
+     all: intros [ctx [s H1]]; cbn in *; try discriminate.
      - rewrite destArity_app in H1.
        case_eq (destArity [] b'); [intros [ctx' s']|]; intro ee;
          [|rewrite ee in H1; discriminate].
        pose proof (subst_destArity [] b' [b] 0) as H; cbn in H.
-       rewrite ee in H. eexists _, s'. split. eassumption.
-       rewrite ee in H1. cbn in *. inversion H1; subst.
-       rewrite app_context_assoc in H2.
-       now eapply wf_local_subst1.
+       rewrite ee in H. eexists _, s'. eassumption.
      - rewrite destArity_tFix in H1; discriminate.
      - rewrite destArity_app in H1.
        case_eq (destArity [] b'); [intros [ctx' s']|]; intro ee;
          rewrite ee in H1; [|discriminate].
-       eexists _, s'; split. cbn. rewrite destArity_app ee. reflexivity.
-       cbn in H1. inversion H1; subst.
-       eapply wf_local_red; try exact H2; tas.
-       rewrite !app_context_assoc. apply red_ctx_app_context_l.
-       constructor; cbn; try reflexivity. split; auto.
+       eexists _, s'. cbn. rewrite destArity_app ee. reflexivity.
      - rewrite destArity_app in H1.
        case_eq (destArity [] b'); [intros [ctx' s']|]; intro ee;
          rewrite ee in H1; [|discriminate].
-       eexists _, s'; split. cbn. rewrite destArity_app ee. reflexivity.
-       cbn in H1. inversion H1; subst.
-       eapply wf_local_red; try exact H2; tas.
-       rewrite !app_context_assoc. apply red_ctx_app_context_l.
-       constructor; cbn; try reflexivity. split; auto.
+       eexists _, s'. cbn. rewrite destArity_app ee. reflexivity.
      - rewrite destArity_app in H1.
        case_eq (destArity [] b'); [intros [ctx' s']|]; intro ee;
          rewrite ee in H1; [|discriminate].
-       forward IHX. {
-         eexists _, s'; split; tea. cbn in H1.
-         inversion H1; subst. now rewrite app_context_assoc in H2. }
-       destruct IHX as [ctx'' [s'' [ee' ?]]].
-       eexists _, s''; split. cbn. rewrite destArity_app ee'. reflexivity.
-       now rewrite app_context_assoc.
+       forward IHre. { eexists _, s'; tea. }
+       destruct IHre as [ctx'' [s'' ee']].
+       eexists _, s''. cbn. rewrite destArity_app ee'. reflexivity.
      - rewrite destArity_app in H1.
        case_eq (destArity [] M2); [intros [ctx' s']|]; intro ee;
          rewrite ee in H1; [|discriminate].
-       eexists _, s'; split. cbn. rewrite destArity_app ee. reflexivity.
-       cbn in H1. inversion H1; subst.
-       eapply wf_local_red; try exact H2; tas.
-       rewrite !app_context_assoc. apply red_ctx_app_context_l.
-       constructor; cbn; try reflexivity. auto.
+       eexists _, s'. cbn. rewrite destArity_app ee. reflexivity.
      - rewrite destArity_app in H1.
        case_eq (destArity [] M2); [intros [ctx' s']|]; intro ee;
          rewrite ee in H1; [|discriminate].
-       forward IHX. {
-         eexists _, s'; split; tea. cbn in H1.
-         inversion H1; subst. now rewrite app_context_assoc in H2. }
-       destruct IHX as [ctx'' [s'' [ee' ?]]].
-       eexists _, s''; split. cbn. rewrite destArity_app ee'. reflexivity.
-       now rewrite app_context_assoc.
+       forward IHre. { eexists _, s'; tea. }
+       destruct IHre as [ctx'' [s'' ee']].
+       eexists _, s''. cbn. rewrite destArity_app ee'. reflexivity.
    Qed.
 
    Lemma isWfArity_red {Σ Γ A B} :
      wf Σ.1 ->
      red (fst Σ) Γ A B ->
-     isWfArity typing Σ Γ A ->
-     isWfArity typing Σ Γ B.
+     isWfArity Σ Γ A ->
+     isWfArity Σ Γ B.
    Proof.
      induction 2 using red_rect'.
      - easy.
      - intro. now eapply isWfArity_red1.
    Qed.
 
-   Lemma isWfArity_or_Type_red {Σ Γ A B} :
+   Lemma isType_red {Σ Γ A B} :
      wf Σ.1 ->
      red (fst Σ) Γ A B ->
      isType Σ Γ A ->

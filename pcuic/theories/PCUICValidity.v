@@ -89,15 +89,14 @@ Section Validity.
   Lemma isWfArity_subst_instance_decl {Σ Γ T c decl u} :
     wf Σ.1 ->
     lookup_env Σ.1 c = Some decl ->
-    isWfArity typing (Σ.1, universes_decl_of_decl decl) Γ T ->
+    isWfArity (Σ.1, universes_decl_of_decl decl) Γ T ->
     consistent_instance_ext Σ (universes_decl_of_decl decl) u ->
-    isWfArity typing Σ (subst_instance_context u Γ) (subst_instance_constr u T).
+    isWfArity Σ (subst_instance_context u Γ) (subst_instance_constr u T).
   Proof.
-    destruct Σ as [Σ φ]. intros X X0 [ctx [s [eq wf]]] X1.
+    destruct Σ as [Σ φ]. intros X X0 [isTy [ctx [s eq]]] X1.
+    split. eapply isType_subst_instance_decl; eauto.
     exists (subst_instance_context u ctx), (subst_instance_univ u s).
     rewrite (subst_instance_destArity []) eq. intuition auto.
-    rewrite -subst_instance_context_app.  
-    eapply wf_local_subst_instance_decl; eauto.  
   Qed.
   
   Lemma isType_weakening {Σ Γ T} : 

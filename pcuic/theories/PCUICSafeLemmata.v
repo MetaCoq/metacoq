@@ -797,24 +797,6 @@ Section Lemmata.
     - apply it_mkLambda_or_LetIn_welltyped.
   Qed.
 
-  Lemma isWfArity_it_mkLambda_or_LetIn :
-    forall Γ Δ T,
-      isWfArity typing Σ Γ (it_mkLambda_or_LetIn Δ T) ->
-      isWfArity typing Σ (Γ ,,, Δ) T.
-  Proof.
-    intro Γ; induction Δ in Γ |- *; intro T; [easy|].
-    destruct a as [na [bd|] ty].
-    - simpl. cbn. intro HH. apply IHΔ in HH.
-      destruct HH as [Δ' [s [HH HH']]].
-      cbn in HH; apply destArity_app_Some in HH.
-      destruct HH as [Δ'' [HH1 HH2]].
-      exists Δ'', s. split; tas.
-      refine (eq_rect _ (fun Γ => wf_local Σ Γ) HH' _ _).
-      rewrite HH2. rewrite app_context_assoc. reflexivity.
-    - simpl. cbn. intro HH. apply IHΔ in HH.
-      destruct HH as [Δ' [s [HH HH']]]. discriminate.
-  Qed.
-
   Lemma welltyped_zipx :
     forall {Γ t π},
       welltyped Σ [] (zipx Γ t π) ->

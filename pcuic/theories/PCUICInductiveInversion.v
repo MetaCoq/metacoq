@@ -3750,26 +3750,61 @@ Proof.
   constructor; tea. eexists; eassumption.
 Qed.
 
+Lemma isType_it_mkProd_or_LetIn {cf:checker_flags} {Σ Γ Δ T} : 
+  wf Σ.1 ->
+  isType Σ (Γ ,,, Δ) T ->
+  isType Σ Γ (it_mkProd_or_LetIn Δ T).
+Proof.
+  intros wfΣ. revert T.
+  induction Δ as [|[na [b|] ty] Δ].
+  - now simpl.
+  - intros T [s Hs].
+    rewrite /= /mkProd_or_LetIn /=.
+    eapply IHΔ.
+    red in Hs.
+    exists s.
+    have wf := typing_wf_local Hs.
+    depelim wf.
+    unfold PCUICTypingDef.typing.
+    destruct l as [s1 Hs1]. red in l0.
+    eapply type_Cumul'.
+    econstructor; eauto. pcuic.
+    eapply red_cumul. repeat constructor.
+  - intros T [s Hs].
+    apply IHΔ.
+    red.
+    unfold PCUICTypingDef.typing in *.
+    have wf := typing_wf_local Hs.
+    depelim wf.
+    destruct l as [s1 Hs1].
+    exists (Universe.sort_of_product s1 s).
+    econstructor; eauto.
+Qed.
+
 Lemma WfArity_build_case_predicate_type {cf:checker_flags} Σ
       Γ ind u args mdecl idecl ps pty :
   wf Σ.1 ->
   declared_inductive Σ.1 mdecl ind idecl ->
   isType Σ Γ (mkApps (tInd ind u) args) ->
   let params := firstn (ind_npars mdecl) args in
+  wf_universe Σ ps ->
   build_case_predicate_type ind mdecl idecl params u ps = Some pty ->
-  isWfArity typing Σ Γ pty.
+  isWfArity Σ Γ pty.
 Proof.
-  intros wfΣ isdecl X params XX. unfold build_case_predicate_type in XX.
+  intros wfΣ isdecl X params wfps XX. unfold build_case_predicate_type in XX.
   case_eq (instantiate_params
              (subst_instance_context u (ind_params mdecl))
              params (subst_instance_constr u (ind_type idecl)));
     [|intro e; rewrite e in XX; discriminate].
-  intros ipars Hipars; rewrite Hipars in XX; simpl in XX.
+  intros ipars Hipars; rewrite Hipars in XX. cbn -[it_mkProd_or_LetIn] in XX.
   case_eq (destArity [] ipars);
     [|intro e; rewrite e in XX; discriminate].
   intros [ictx iu] Hictxs; rewrite Hictxs in XX; apply some_inj in XX.
-  subst pty. eexists _, _.
-  rewrite destArity_it_mkProd_or_LetIn. split. reflexivity.
+  subst pty. cbn -[it_mkProd_or_LetIn].
+  split.
+  2:{ eexists _, _. rewrite destArity_it_mkProd_or_LetIn. reflexivity. }
+  eapply isType_it_mkProd_or_LetIn; eauto.
+  eapply isType_Sort; auto.
   simpl. eapply wf_local_vass.
   assert (wfΓ : wf_local Σ Γ). { destruct X as [s Hs]; pcuic. }
   move:Hipars.
@@ -3785,7 +3820,6 @@ Proof.
   rewrite decompose_prod_n_assum_it_mkProd in dp. noconf dp.
   rewrite subst_instance_constr_it_mkProd_or_LetIn PCUICSubstitution.subst_it_mkProd_or_LetIn in Hictxs.
   rewrite destArity_it_mkProd_or_LetIn /= app_context_nil_l in Hictxs. noconf Hictxs.
-  rewrite app_nil_r.
   destruct X as [s Hs].
   eapply invert_type_mkApps_ind in Hs as [spargs cu]; eauto.
   rewrite oib.(ind_arity_eq) in spargs.
@@ -3870,37 +3904,6 @@ Qed.
 Lemma arity_spine_eq {cf:checker_flags} {Σ Γ T T'} : T = T' -> arity_spine Σ Γ T [] T'.
 Proof.
   intros ->; constructor.
-Qed.
-
-Lemma isType_it_mkProd_or_LetIn {cf:checker_flags} {Σ Γ Δ T} : 
-  wf Σ.1 ->
-  isType Σ (Γ ,,, Δ) T ->
-  isType Σ Γ (it_mkProd_or_LetIn Δ T).
-Proof.
-  intros wfΣ. revert T.
-  induction Δ as [|[na [b|] ty] Δ].
-  - now simpl.
-  - intros T [s Hs].
-    rewrite /= /mkProd_or_LetIn /=.
-    eapply IHΔ.
-    red in Hs.
-    exists s.
-    have wf := typing_wf_local Hs.
-    depelim wf.
-    unfold PCUICTypingDef.typing.
-    destruct l as [s1 Hs1]. red in l0.
-    eapply type_Cumul'.
-    econstructor; eauto. pcuic.
-    eapply red_cumul. repeat constructor.
-  - intros T [s Hs].
-    apply IHΔ.
-    red.
-    unfold PCUICTypingDef.typing in *.
-    have wf := typing_wf_local Hs.
-    depelim wf.
-    destruct l as [s1 Hs1].
-    exists (Universe.sort_of_product s1 s).
-    econstructor; eauto.
 Qed.
 
 Lemma build_branches_type_wt {cf : checker_flags}	(Σ : global_env × universes_decl) Γ ind mdecl idecl u 

@@ -57,11 +57,13 @@ Section Principality.
 
   Lemma isWfArity_sort Γ u :
     wf_local Σ Γ ->
-    isWfArity typing Σ Γ (tSort u).
+    wf_universe Σ u ->
+    isWfArity Σ Γ (tSort u).
   Proof.
-    move=> wfΓ. red. exists [], u. intuition auto.
+    move=> wfΓ wfu.
+    split. eapply PCUICSpine.isType_Sort; eauto. exists [], u. intuition auto.
   Qed.
-  Hint Extern 10 (isWfArity _ _ _ (tSort _)) => apply isWfArity_sort : pcuic.
+  Hint Extern 10 (isWfArity _ _ (tSort _)) => apply isWfArity_sort : pcuic.
 
   Ltac int inv := intros B hB; eapply inv in hB; auto; split; [|econstructor; eauto].
   Hint Resolve wf_ext_wf : core.

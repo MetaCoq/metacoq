@@ -448,10 +448,10 @@ Section TypeOf.
         pose proof (PCUICContexts.context_subst_length2 sppars).
         len in H.
         set (oib := (on_declared_inductive w decli).2) in *.
-        eapply type_Cumul. econstructor; eauto.
+        eapply type_Cumul'. econstructor; eauto.
         assert (Σ ;;; Γ |- c : mkApps (tInd ind u) (firstn (ind_npars mdecl) args ++  skipn (ind_npars mdecl) l)).
-        { eapply type_Cumul. eauto.
-          + right. exists (subst_instance_univ u (ind_sort oib)).
+        { eapply type_Cumul'. eauto.
+          + exists (subst_instance_univ u (ind_sort oib)).
             eapply type_mkApps. econstructor; pcuic.
             eapply wf_arity_spine_typing_spine; eauto.
             constructor. 
@@ -484,8 +484,10 @@ Section TypeOf.
             eapply All2_refl. intros. reflexivity. 
             rewrite -{1}(firstn_skipn (ind_npars mdecl) l). eapply conv_cumul, mkApps_conv_args; auto.
             eapply All2_app. now eapply All2_firstn. eapply All2_refl; eauto. }
-        right. exists ps.
+        exists ps.
         eapply type_mkApps; eauto.
+        eapply wf_arity_spine_typing_spine; eauto.
+        split. now eapply validity in Hpty.
         pose proof (validity_term w X0) as vt; auto.
         eapply (build_case_predicate_type_spec _ _ _ _ _ _ _ _ oib) in bcp as [parsubst' [csubst ->]]; auto.
         pose proof (PCUICContexts.context_subst_fun sppars csubst). subst parsubst'.
@@ -499,26 +501,17 @@ Section TypeOf.
         rewrite (firstn_app_left _ 0) in spars'; try lia.
         simpl in spars'. rewrite app_nil_r in spars'.
         pose proof (PCUICContexts.context_subst_fun spars' csubst). subst parsubst'.
-        eapply PCUICSpine.typing_spine_it_mkProd_or_LetIn'; eauto.
-        + simpl. econstructor. 2:reflexivity. 3:{ constructor; eauto. 
-          left; eexists _, _; intuition eauto with pcuic.
-          reflexivity. }
-          left; eexists _, _; intuition eauto. simpl. constructor; eauto with pcuic.
-          red. rewrite subst_mkApps /= map_app.
+        eapply PCUICSpine.arity_spine_it_mkProd_or_LetIn; eauto.
+        + simpl.
+          econstructor. 2:constructor.
+          rewrite subst_mkApps /= map_app.
           rewrite -H1.
           rewrite map_map_compose map_subst_lift_id.
           relativize (to_extended_list _).
           erewrite (spine_subst_subst_to_extended_list_k spargs').
           2:{ rewrite to_extended_list_k_subst. simpl. 
               eapply PCUICSubstitution.map_subst_instance_constr_to_extended_list_k. }
-          eapply isType_mkApps_Ind_isType in vt; eauto.
-          rewrite subst_mkApps. rewrite -H1 map_app map_map_compose map_subst_lift_id.
-          relativize (to_extended_list _).
-          erewrite (spine_subst_subst_to_extended_list_k spargs').
-          2:{ rewrite to_extended_list_k_subst. 
-            eapply PCUICSubstitution.map_subst_instance_constr_to_extended_list_k. }
           assumption.
-        + simpl. now eapply validity in Hpty.
         + simpl.
           eapply conv_cumul.
           eapply mkApps_conv_args; auto.
@@ -584,12 +577,11 @@ Section TypeOf.
         eapply cumul_Ind_Ind_inv in X0 as [[eqi'' Ru''] cl'']; auto.
         assert (consistent_instance_ext Σ (ind_universes mdecl) u').
         { eapply validity in Hc'; eauto.
-          eapply PCUICInductiveInversion.isType_mkApps_Ind_isType in Hc'; auto.
           destruct Hc' as [s Hs].
           eapply invert_type_mkApps_ind in Hs. intuition eauto. all:auto. eapply declp. }
         assert (consistent_instance_ext Σ (ind_universes mdecl) u'').
           { eapply validity in Hc'''; eauto.
-            eapply PCUICInductiveInversion.isType_mkApps_Ind_isType in Hc''' as [s Hs]; auto.
+            destruct Hc''' as [s Hs]; auto.
             eapply invert_type_mkApps_ind in Hs. intuition eauto. all:auto. eapply declp. }
         transitivity (subst0 (c :: List.rev l) (subst_instance_constr u'' pdecl''.2)); cycle 1.
         eapply conv_cumul.
@@ -654,15 +646,15 @@ Section TypeOf.
       
     - now eapply inversion_Fix in HT as [decl [fg [hnth [htys [hbods [wf cum]]]]]]; auto.
 
-  - eapply inversion_CoFix in HT as [decl [fg [hnth [htys [hbods [wf cum]]]]]]; auto.
-    sq; split.
-    * econstructor; eauto.
-      eapply nth_error_all in htys; eauto. destruct htys as [s Hs]. pcuic.
-    * intros T' HT'.
-      eapply inversion_CoFix in HT' as [decl' [fg' [hnth' [htys' [hbods' [wf' cum']]]]]]; auto.
-      congruence.
-    
-  - now eapply inversion_CoFix in HT as [decl [fg [hnth [htys [hbods [wf cum]]]]]]; auto.
+    - eapply inversion_CoFix in HT as [decl [fg [hnth [htys [hbods [wf cum]]]]]]; auto.
+      sq; split.
+      * econstructor; eauto.
+        eapply nth_error_all in htys; eauto. destruct htys as [s Hs]. pcuic.
+      * intros T' HT'.
+        eapply inversion_CoFix in HT' as [decl' [fg' [hnth' [htys' [hbods' [wf' cum']]]]]]; auto.
+        congruence.
+      
+    - now eapply inversion_CoFix in HT as [decl [fg [hnth [htys [hbods [wf cum]]]]]]; auto.
   Defined.
 
   Definition type_of Γ t wt : term := (infer Γ t wt).

@@ -787,7 +787,7 @@ Section Typecheck.
 
     | tSort u =>
             check_eq_true (wf_universeb Σ u)
-                          (Msg ("Sort containts an undeclared level " ^ string_of_sort u));;
+                          (Msg ("Sort contains an undeclared level " ^ string_of_sort u));;
             ret (tSort (Universe.super u); _)
 
     | tProd na A B =>
@@ -954,7 +954,7 @@ Section Typecheck.
         := match mfix with
            | [] => ret (sq All_nil)
            | def :: mfix =>
- (* probably not tail recursive but needed so that next line terminates *)
+            (* probably not tail recursive but needed so that next line terminates *)
              W <- infer_type infer Γ HΓ (dtype def) ;;
              Z <- check_types mfix ;;
              ret _
@@ -1048,7 +1048,6 @@ Section Typecheck.
 
   (* tConstruct *)
   Next Obligation.
-    (* intros Γ HΓ t ind k u Heq_t [? [? ?]] cdecl HH H; *)
     sq; econstructor; tea. now split.
   Defined.
 
@@ -1062,10 +1061,17 @@ Section Typecheck.
     change (eqb (ind_npars d) par = true) in H1.
     destruct (eqb_spec (ind_npars d) par) as [e|e]; [|discriminate].
     rename Heq_anonymous into HH. symmetry in HH.
-    eapply PCUICInductiveInversion.WfArity_build_case_predicate_type; eauto. simpl in *.
-    2:rewrite e; eauto.
+    simpl in *.
     eapply type_reduction in t0; eauto. eapply validity in t0; eauto.
-    now eapply PCUICInductiveInversion.isWAT_mkApps_Ind_isType in t0.
+    rewrite <- e in HH.
+    eapply PCUICInductiveInversion.WfArity_build_case_predicate_type in HH; eauto.
+    destruct HH as [[s Hs] ?]. eexists; eauto.
+    eapply validity in t; eauto.
+    generalize (PCUICClosed.destArity_spec [] pty).
+    rewrite -Heq_anonymous0 /=. intros ->.
+    eapply PCUICInductives.isType_it_mkProd_or_LetIn_inv in t; eauto.
+    eapply isType_wf_universes in t. simpl in t.
+    now exact (PCUICWfUniverses.reflect_bP (wf_universe_reflect _ _) t). auto.
   Qed.
 
   Next Obligation.
@@ -1084,9 +1090,14 @@ Section Typecheck.
     assert (wfΣ : wf_ext Σ) by (split; auto).
     eapply type_reduction in X9; eauto.
     have val:= validity_term wfΣ X9.
-    eapply PCUICInductiveInversion.isWAT_mkApps_Ind_isType in val; eauto.
-    eapply type_Cumul in X; [| |eassumption].
-    2:{ left. eapply PCUICInductiveInversion.WfArity_build_case_predicate_type; eauto. }
+    eapply type_Cumul' in X; [| |eassumption].
+    2:{ eapply PCUICInductiveInversion.WfArity_build_case_predicate_type; eauto.
+        eapply validity in X; eauto.
+        generalize (PCUICClosed.destArity_spec [] pty).
+        rewrite -Heq_anonymous0 /=. intros ->.
+        eapply PCUICInductives.isType_it_mkProd_or_LetIn_inv in X; eauto.
+        eapply isType_wf_universes in X. simpl in X.
+        now exact (PCUICWfUniverses.reflect_bP (wf_universe_reflect _ _) X). auto. }
     have [pctx' da] : (∑ pctx', destArity [] pty' =  Some (pctx', ps)).
     { symmetry in Heq_anonymous1.
       unshelve eapply (PCUICInductives.build_case_predicate_type_spec (Σ.1, ind_universes d)) in Heq_anonymous1 as [parsubst [_ ->]].
@@ -1103,7 +1114,7 @@ Section Typecheck.
     change (eqb (ind_npars decl) par = true) in H1.
     destruct (eqb_spec (ind_npars decl) par) as [e|e]; [|discriminate]; subst.
     depelim HH.
-    sq. auto.
+    sq. auto. now depelim X10.
   Defined.
   Next Obligation.
     sq. now depelim HH.
@@ -1129,10 +1140,15 @@ Section Typecheck.
     destruct (eqb_spec (ind_npars d) par) as [e|e]; [|discriminate]; subst.
     assert (wfΣ : wf_ext Σ) by (split; auto).
     eapply type_reduction in X9; eauto.
-    eapply type_Cumul in X; eauto.
-    2:{ left. eapply PCUICInductiveInversion.WfArity_build_case_predicate_type; eauto. simpl in *.
-        eapply validity in X9; eauto.
-        eapply PCUICInductiveInversion.isWAT_mkApps_Ind_isType in X9; eauto. }
+    eapply type_Cumul' in X; eauto.
+    2:{ eapply PCUICInductiveInversion.WfArity_build_case_predicate_type; eauto.
+        now eapply validity in X9.
+        eapply validity in X; eauto.
+        generalize (PCUICClosed.destArity_spec [] pty).
+        rewrite -Heq_anonymous0 /=. intros ->.
+        eapply PCUICInductives.isType_it_mkProd_or_LetIn_inv in X; eauto.
+        eapply isType_wf_universes in X. simpl in X.
+        now exact (PCUICWfUniverses.reflect_bP (wf_universe_reflect _ _) X). auto. }
     have [pctx' da] : (∑ pctx', destArity [] pty' =  Some (pctx', ps)).
     { symmetry in Heq_anonymous1.
       unshelve eapply (PCUICInductives.build_case_predicate_type_spec (Σ.1, ind_universes d)) in Heq_anonymous1 as [parsubst [_ ->]].
@@ -1232,9 +1248,9 @@ Section Typecheck.
     sq. econstructor; tas. econstructor; eauto.
   Qed.
 
-
+(* 
   Program Definition check_isWfArity Γ (HΓ : ∥ wf_local Σ Γ ∥) A
-    : typing_result (∥ isWfArity typing Σ Γ A ∥) :=
+    : typing_result (∥ isWfArity Σ Γ A ∥) :=
     match destArity [] A with
     | None => raise (Msg (print_term Σ Γ A ^ " is not an arity"))
     | Some (ctx, s) => XX <- check_context (Γ ,,, ctx) ;;
@@ -1243,7 +1259,7 @@ Section Typecheck.
   Next Obligation.
     destruct XX. constructor. exists ctx, s.
     split; auto.
-  Defined.
+  Defined. *)
 
   Program Definition check_isType Γ (HΓ : ∥ wf_local Σ Γ ∥) A
     : typing_result (∥ isType Σ Γ A ∥) :=

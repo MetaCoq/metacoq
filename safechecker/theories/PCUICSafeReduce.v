@@ -861,7 +861,7 @@ Section Reduce.
     constructor.
     cbn in hh. rewrite zipc_appstack in hh. cbn in hh.
     zip fold in hh. apply welltyped_context in hh. 2: assumption.
-    simpl in hh. apply Proj_Constuct_ind_eq in hh. all: eauto.
+    simpl in hh. apply Proj_Construct_ind_eq in hh. all: eauto.
     subst. constructor. eauto.
   Qed.
   Next Obligation.
@@ -1241,7 +1241,7 @@ Section Reduce.
     intros wf wh ctor fin typ.
     destruct wh.
     - easy.
-    - apply inversion_Sort in typ as (?&?&?&?&?); auto.
+    - apply inversion_Sort in typ as (?&?&?); auto.
       exfalso; eapply invert_cumul_sort_ind; eauto.
     - apply inversion_Prod in typ as (?&?&?&?&?); auto.
       exfalso; eapply invert_cumul_sort_ind; eauto.
@@ -1274,7 +1274,7 @@ Section Reduce.
     intros wf wh ctor cof typ.
     destruct wh.
     - easy.
-    - apply inversion_Sort in typ as (?&?&?&?&?); auto.
+    - apply inversion_Sort in typ as (?&?&?); auto.
       exfalso; eapply invert_cumul_sort_ind; eauto.
     - apply inversion_Prod in typ as (?&?&?&?&?); auto.
       exfalso; eapply invert_cumul_sort_ind; eauto.
@@ -1417,12 +1417,10 @@ Section Reduce.
           destruct hΣ.
           cbn in h. zip fold in h. apply welltyped_context in h; auto.
           simpl in h. rewrite stack_context_appstack in h.
-          destruct h as [[T h]|].
-          -- apply inversion_App in h as (?&?&?&?&?); auto.
-             apply inversion_Sort in t0 as (?&?&?&?&?); auto.
-             eapply PCUICConversion.cumul_Sort_Prod_inv; eauto.
-          -- destruct H as [(?&?&?&?)].
-             cbn in *; easy.
+          destruct h as [T h].
+          apply inversion_App in h as (?&?&?&?&?); auto.
+          apply inversion_Sort in t0 as (?&?&?); auto.
+          eapply PCUICConversion.cumul_Sort_Prod_inv; eauto.
       + unfold zipp.
         case_eq (decompose_stack π). intros l ρ e.
         apply decompose_stack_eq in e. subst.
@@ -1432,12 +1430,10 @@ Section Reduce.
           destruct hΣ.
           cbn in h. zip fold in h. apply welltyped_context in h; auto.
           simpl in h. rewrite stack_context_appstack in h.
-          destruct h as [[T h]|].
-          -- apply inversion_App in h as (?&?&?&?&?); auto.
-             apply inversion_Prod in t0 as (?&?&?&?&?); auto.
-             eapply PCUICConversion.cumul_Sort_Prod_inv; eauto.
-          -- destruct H as [(?&?&?&?)].
-             cbn in *; easy.
+          destruct h as [T h].
+          apply inversion_App in h as (?&?&?&?&?); auto.
+          apply inversion_Prod in t0 as (?&?&?&?&?); auto.
+          eapply PCUICConversion.cumul_Sort_Prod_inv; eauto.
     - unfold zipp. case_eq (decompose_stack π0). intros l ρ e.
       constructor. constructor. eapply whne_mkApps.
       eapply whne_rel_nozeta. assumption.
@@ -1558,8 +1554,7 @@ Section Reduce.
       apply decompose_stack_eq in decomp as ->.
       cbn in *.
       rewrite mkApps_nested in h.
-      destruct h as [(ty&typ)|[(?&?&dar&?)]]; cycle 1.
-      { cbn in dar. rewrite destArity_tFix in dar; congruence. }
+      destruct h as (ty&typ).
       repeat (try rewrite stack_context_appstack;
         try rewrite stack_context_appstack in typ;
         try rewrite stack_context_appstack in haux;
@@ -1615,8 +1610,7 @@ Section Reduce.
       zip fold in h.
       apply welltyped_context in h; auto.
       cbn in *.
-      destruct h as [(ty&typ)|[(?&?&dar&?)]]; cycle 1.
-      { cbn in dar. congruence. }
+      destruct h as (ty&typ).
       unfold zipp in *.
       rewrite decompose_stack_appstack in haux; cbn in *.
 
@@ -1668,8 +1662,7 @@ Section Reduce.
       zip fold in h.
       apply welltyped_context in h; auto.
       cbn in *.
-      destruct h as [(ty&typ)|[(?&?&dar&?)]]; cycle 1.
-      { cbn in dar. congruence. }
+      destruct h as (ty&typ).
       unfold zipp in *.
       rewrite decompose_stack_appstack in haux; cbn in *.
 

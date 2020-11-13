@@ -1393,8 +1393,7 @@ Section Conversion.
       change (App t0 s) with (appstack [t0] s) in *.
       rewrite !decompose_stack_appstack.
       rewrite zipp_as_mkApps, !decompose_stack_appstack in h.
-      destruct h as [(ty&typ)|[(?&?&dar&?)]]; cycle 1.
-      { cbn in dar. rewrite destArity_tFix in dar; congruence. }
+      destruct h as (ty&typ).
       cbn in *.
       rewrite stack_context_appstack in typ.
       cbn in *.
@@ -1516,32 +1515,14 @@ Section Conversion.
   Qed.
   
   Arguments LevelSet.mem : simpl never.
-  
-  Lemma For_all_to_spec u :
-    UnivExprSet.For_all
-      (fun e => LevelSet.mem (UnivExpr.get_level e) (global_ext_levels Σ)) (Universe.t_set u) ->
-    UnivExprSet.For_all
-      (fun e =>
-         on_Some_or_None (fun l => LevelSet.In (NoPropLevel.to_level l) (global_ext_levels Σ))
-                         (UnivExpr.get_noprop e)) u.
-  Proof.
-    intros all ? isin.
-    specialize (all _ isin).
-    destruct x; [easy|].
-    destruct e.
-    cbn in *.
-    now apply LevelSet.mem_spec.
-  Qed.
-  
+
   Lemma conv_pb_relb_complete leq u u' :
-    UnivExprSet.For_all
-      (fun e => LevelSet.mem (UnivExpr.get_level e) (global_ext_levels Σ)) (Universe.t_set u) ->
-    UnivExprSet.For_all
-      (fun e => LevelSet.mem (UnivExpr.get_level e) (global_ext_levels Σ)) (Universe.t_set u') ->
+    wf_universe Σ u ->
+    wf_universe Σ u' ->
     conv_pb_rel leq (global_ext_constraints Σ) u u' ->
     conv_pb_relb leq u u'.
   Proof.
-    intros all1%For_all_to_spec all2%For_all_to_spec conv.
+    intros all1 all2 conv.
     destruct leq; cbn.
     - eapply check_eqb_universe_complete; eauto.
       + apply wf_ext_global_uctx_invariants, hΣ'.
@@ -1564,9 +1545,9 @@ Section Conversion.
     intros memx memy r.
     apply conv_pb_relb_complete; auto.
     - intros ? ->%UnivExprSet.singleton_spec.
-      now rewrite get_level_make.
-    - intros ? ->%UnivExprSet.singleton_spec.
-      now rewrite get_level_make.
+      simpl. now apply LevelSet.mem_spec.
+    - intros ? ->%UnivExprSet.singleton_spec; simpl.
+      now apply LevelSet.mem_spec.
   Qed.
   
   Lemma eqb_universe_instance_complete u u' :
@@ -1642,16 +1623,8 @@ Section Conversion.
     intros cons.
     unfold consistent_instance_ext, consistent_instance in *.
     destruct udecl; [now destruct u|].
-    destruct cons as (_&mems&_).
+    destruct cons as (mems&_&_).
     now apply forallb_Forall.
-  Qed.
-  
-  Lemma welltyped_nonarity Γ t :
-    destArity [] t = None ->
-    welltyped Σ Γ t ->
-    welltyped Σ Γ t.
-  Proof.
-    now intros dar [|[(?&?&?&?)]].
   Qed.
   
   Lemma welltyped_zipc_tConst_inv Γ c u π :
@@ -1664,7 +1637,6 @@ Section Conversion.
     destruct hΣ.
     zip fold in h.
     apply welltyped_context in h; auto.
-    apply welltyped_nonarity in h; auto.
     destruct h as (?&typ).
     apply inversion_Const in typ as (?&?&?&wfu&_); auto.
     now unfold declared_constant in d.
@@ -1810,8 +1782,8 @@ Section Conversion.
     intros wf.
     zip fold in wf.
     apply welltyped_context in wf; [|assumption].
-    apply welltyped_nonarity in wf as (?&typ); [|easy].
     destruct hΣ.
+    destruct wf as [ctyp typ].
     apply inversion_Case in typ as (?&?&?&?&?&?&?&?&?&?&?&?&?&?&?&?&?); auto.
     exists x1, x2.
     split; [easy|].
@@ -2066,7 +2038,7 @@ Section Conversion.
         } ;
       | Error e h := no e
       } ;
-      | @exist false neqann := Error (
+      | @exist false neqann := no (
         FixRargMismatch idx
           (Γ ,,, stack_context π) u mfix1 mfix2
           (Γ ,,, stack_context π') v mfix1' mfix2'
@@ -2137,6 +2109,8 @@ Section Conversion.
     symmetry in eqann.
     apply (PCUICWfUniverses.reflect_bP (eq_binder_annot_reflect _ _)) in eqann.
     split; auto.
+    destruct fk; simpl in *.
+    all: intuition eauto.
   Qed.
   Next Obligation.
     unshelve eapply aux. all: try eassumption.
@@ -2184,7 +2158,13 @@ Section Conversion.
     destruct fk; apply eq_uv.
   Qed.
   Next Obligation.
-    destruct H as [H]; inversion H; destruct X as [_ eq_uv].
+    destruct H as [H]; inversion H; destruct X as [_ [eq_uv eqann]].
+    change (?ru =? ?rv) with (eqb ru rv) in eq1.
+    pose proof (PCUICWfUniverses.reflect_Pb (eq_binder_annot_reflect (dname u) (dname v))).
+    rewrite <- neqann in H0. specialize (H0 eqann). discriminate.
+  Qed.
+  Next Obligation.
+    destruct H as [H]; inversion H; destruct X as [_ [eq_uv eqann]].
     change (?ru =? ?rv) with (eqb ru rv) in eq1.
     destruct (eqb_spec (rarg u) (rarg v)) as [|neq_uv]; [discriminate|].
     exact (neq_uv eq_uv).
@@ -2526,8 +2506,7 @@ Section Conversion.
     cbn in wh.
     destruct l as [|? ? _] using List.rev_ind; [easy|].
     rewrite <- mkApps_nested in wh.
-    cbn in wh.
-    apply welltyped_nonarity in wh as (?&typ); auto.
+    cbn in wh. destruct wh as (?&typ); auto.
     change (tApp ?h ?a) with (mkApps h [a]) in typ.
     rewrite mkApps_nested in typ.
     now apply invert_type_mkApps_tProd in typ.
@@ -2639,7 +2618,7 @@ Section Conversion.
     conv_cum leq Σ (Γ,,, stack_context π) (zipp (tFix mfix idx) π) (zipp (tFix mfix' idx') π') ->
     ∥idx = idx' ×
      All2 (fun d d' =>
-             rarg d = rarg d' ×
+             rarg d = rarg d' × eq_binder_annot d.(dname) d'.(dname) ×
              Σ;;; Γ,,, stack_context π |- dtype d = dtype d' ×
              Σ;;; Γ,,, stack_context π,,, fix_context mfix |- dbody d = dbody d')
           mfix mfix' ×
@@ -2668,7 +2647,7 @@ Section Conversion.
     conv_cum leq Σ (Γ,,, stack_context π) (zipp (tCoFix mfix idx) π) (zipp (tCoFix mfix' idx') π') ->
     ∥idx = idx' ×
      All2 (fun d d' =>
-             rarg d = rarg d' ×
+             rarg d = rarg d' × eq_binder_annot d.(dname) d'.(dname) ×
              Σ;;; Γ,,, stack_context π |- dtype d = dtype d' ×
              Σ;;; Γ,,, stack_context π,,, fix_context mfix |- dbody d = dbody d')
           mfix mfix' ×
@@ -2723,7 +2702,7 @@ Section Conversion.
                      t1 (Lambda_tm na A1 π1)
                      t2 (Lambda_tm na' A2 π2) aux ;
         | exist false e := 
-          Error (
+          no (
             LambdaNotConvertibleAnn
               (Γ ,,, stack_context π1) na A1 t1
               (Γ ,,, stack_context π2) na' A2 t2
@@ -2744,7 +2723,7 @@ Section Conversion.
                    B1 (Prod_r na A1 π1)
                    B2 (Prod_r na' A2 π2) aux ;
         | exist false e := 
-          Error (
+          no (
             ProdNotConvertibleAnn
               (Γ ,,, stack_context π1) na A1 B1
               (Γ ,,, stack_context π2) na' A2 B2
@@ -2994,7 +2973,7 @@ Section Conversion.
     destruct h as [h].
     constructor. constructor. 1: assumption.
     constructor.
-    - symmetry in wildcard9. now apply eqb_binder_annot_spec.
+    - symmetry in wildcard7. now apply eqb_binder_annot_spec.
     - assumption.
   Qed.
   Next Obligation.
@@ -3005,7 +2984,7 @@ Section Conversion.
     cbn in *.
     simpl_stacks.
     destruct hΣ.
-    symmetry in wildcard9; apply eqb_binder_annot_spec in wildcard9.
+    symmetry in wildcard7; apply eqb_binder_annot_spec in wildcard7.
     now eapply conv_cum_Lambda.
   Qed.
   Next Obligation.
@@ -3018,7 +2997,21 @@ Section Conversion.
     cbn in *.
     simpl_stacks.
     destruct hΣ.
-    apply Lambda_conv_cum_inv in H as (_&?); auto.
+    symmetry in wildcard7; apply eqb_binder_annot_spec in wildcard7.
+    apply Lambda_conv_cum_inv in H as (?&?&?); auto.
+  Qed.
+  Next Obligation.
+    symmetry in e0.
+    destruct hx as [hx].
+    apply isred_full_nobeta in ir1; [|easy].
+    apply isred_full_nobeta in ir2; [|easy].
+    cbn in *.
+    simpl_stacks.
+    destruct hΣ.
+    apply Lambda_conv_cum_inv in H as (?&?&?); auto.
+    apply (PCUICWfUniverses.reflect_Pb (eq_binder_annot_reflect _ _)) in H.
+    unfold eq_binder_annot in H. unfold eqb_binder_annot in H; simpl in H. 
+    congruence.
   Qed.
   Next Obligation.
     (* Contrapositive of previous obligation *)
@@ -3029,7 +3022,7 @@ Section Conversion.
     cbn in *.
     simpl_stacks.
     destruct hΣ.
-    apply Lambda_conv_cum_inv in H as (?&_); auto.
+    apply Lambda_conv_cum_inv in H as (?&?&?); auto.
   Qed.
 
   (* tProd *)
@@ -3048,7 +3041,7 @@ Section Conversion.
     destruct h as [h].
     constructor. constructor. 1: assumption.
     constructor.
-    - symmetry in wildcard10.
+    - symmetry in wildcard8.
       now apply eqb_binder_annot_spec.
     - assumption.
   Qed.
@@ -3061,24 +3054,43 @@ Section Conversion.
     clear aux.
     apply welltyped_zipc_zipp in h2; auto.
     rewrite !zipp_as_mkApps in *.
-    apply mkApps_Prod_nil' in h1 as ->; auto.
-    apply mkApps_Prod_nil' in h2 as ->; auto.
+    apply mkApps_Prod_nil in h1 as ->; auto.
+    apply mkApps_Prod_nil in h2 as ->; auto.
     eapply conv_cum_Prod; auto.
+    symmetry in wildcard8. now apply eqb_binder_annot_spec.
   Qed.
   Next Obligation.
     (* Codomains are not convertible *)
     apply h; clear h.
+    symmetry in wildcard8. apply eqb_binder_annot_spec in wildcard8.
     destruct hΣ as [wΣ], h0 as [h0], hx as [hx].
     cbn in *.
     apply welltyped_zipc_zipp in h1; auto.
     clear aux.
     apply welltyped_zipc_zipp in h2; auto.
     rewrite !zipp_as_mkApps in *.
-    apply mkApps_Prod_nil' in h1; auto.
-    apply mkApps_Prod_nil' in h2; auto.
+    apply mkApps_Prod_nil in h1; auto.
+    apply mkApps_Prod_nil in h2; auto.
     rewrite h1, h2 in H.
-    apply Prod_conv_cum_inv in H as (_&?); auto.
-   Qed.
+    apply Prod_conv_cum_inv in H as (?&_&?); auto.
+  Qed.
+  Next Obligation.
+    (* Annotations are not convertible *)
+    destruct hΣ as [wΣ].
+    destruct hx as [hx].
+    cbn in *.
+    apply welltyped_zipc_zipp in h1; auto.
+    clear aux.
+    apply welltyped_zipc_zipp in h2; auto.
+    rewrite !zipp_as_mkApps in *.
+    apply mkApps_Prod_nil in h1; auto.
+    apply mkApps_Prod_nil in h2; auto.
+    rewrite h1, h2 in H.
+    apply Prod_conv_cum_inv in H as (?&?&?); auto.
+    apply (PCUICWfUniverses.reflect_Pb (eq_binder_annot_reflect _ _)) in H.
+    unfold eq_binder_annot in H. unfold eqb_binder_annot in H; simpl in H. 
+    congruence.
+  Qed.
   Next Obligation.
     (* Domains are not convertible *)
     apply h; clear h.
@@ -3088,10 +3100,10 @@ Section Conversion.
     clear aux.
     apply welltyped_zipc_zipp in h2; auto.
     rewrite !zipp_as_mkApps in *.
-    apply mkApps_Prod_nil' in h1; auto.
-    apply mkApps_Prod_nil' in h2; auto.
+    apply mkApps_Prod_nil in h1; auto.
+    apply mkApps_Prod_nil in h2; auto.
     rewrite h1, h2 in H.
-    apply Prod_conv_cum_inv in H as (?&_); auto.
+    apply Prod_conv_cum_inv in H as (?&?&_); auto.
   Qed.
   
   (* tCase *)
@@ -3255,7 +3267,7 @@ Section Conversion.
   Qed.
   Next Obligation.
     eapply red_welltyped ; auto.
-    - exact h2. (* h1*)
+    - exact h1.
     - match goal with
       | |- context [ reduce_term ?f ?Σ ?hΣ ?Γ ?t ?h ] =>
         pose proof (reduce_term_sound f Σ hΣ Γ t h) as [hr]
@@ -3323,18 +3335,18 @@ Section Conversion.
   Next Obligation.
     destruct hΣ as [wΣ].
     zip fold in h1. apply welltyped_context in h1 ; auto. simpl in h1.
-    destruct h1 as [[T h1] | [[ctx [s [h1 _]]]]] ; [| discriminate ].
+    destruct h1 as [T h1].
     apply inversion_Proj in h1 as hh. 2: auto.
     destruct hh as [? [? [? [? [? [? [? [? ?]]]]]]]].
-    left. eexists. eassumption.
+    eexists. eassumption.
   Qed.
   Next Obligation.
     destruct hΣ as [wΣ].
     zip fold in h2. apply welltyped_context in h2 as h2' ; auto. simpl in h2'.
-    destruct h2' as [[T h2'] | [[ctx [s [h2' _]]]]] ; [| discriminate ].
+    destruct h2' as [T h2'].
     apply inversion_Proj in h2' as hh. 2: auto.
     destruct hh as [? [? [? [? [? [? [? [? ?]]]]]]]].
-    left. eexists. eassumption.
+    eexists. eassumption.
   Qed.
   Next Obligation.
     eapply R_aux_positionR. all: simpl.
@@ -3999,7 +4011,7 @@ Section Conversion.
   Next Obligation.
     exfalso.
     simpl_reduce_stack.
-    apply welltyped_nonarity in h as (?&typ); auto.
+    destruct h as (?&typ); auto.
     destruct hΣ.
     apply inversion_Case in typ as (?&?&?&?&?&?&?&?&?&?&?&?&?&?&?&?&?); auto.
     eapply PCUICSR.subject_reduction in t0; eauto.
@@ -4050,7 +4062,7 @@ Section Conversion.
     funelim (unfold_one_case Γ ind par p c brs h); intros [=].
     - clear H.
       simpl_reduce_stack.
-      apply welltyped_nonarity in h as (?&typ); auto.
+      destruct h as (?&typ); auto.
       destruct hΣ, w.
       constructor; exists (mkApps t0 (decompose_stack s).1).
       split; [easy|].
@@ -4097,7 +4109,7 @@ Section Conversion.
   Qed.
   Next Obligation.
     simpl_reduce_stack.
-    apply welltyped_nonarity in h as (?&typ); auto.
+    destruct h as (?&typ); auto.
     destruct hΣ.
     eapply PCUICSR.subject_reduction in typ.
     2: auto.
@@ -4108,7 +4120,7 @@ Section Conversion.
   Qed.
   Next Obligation.
     simpl_reduce_stack.
-    apply welltyped_nonarity in h as (?&typ); auto.
+    destruct h as (?&typ); auto.
     destruct hΣ.
     apply inversion_Proj in typ as (?&?&?&?&?&?&?&?&?); auto.
     eapply PCUICSR.subject_reduction in t; eauto.
@@ -4159,7 +4171,7 @@ Section Conversion.
     - clear H.
       simpl_reduce_stack.
       destruct hΣ, w.
-      apply welltyped_nonarity in h as (?&typ); auto.
+      destruct h as (?&typ); auto.
       constructor; exists (mkApps t0 (decompose_stack s).1).
       split; [easy|].
       specialize (isr eq_refl) as (noapp&_).
@@ -4309,12 +4321,6 @@ Section Conversion.
     - reflexivity.
   Qed.
   
-  Axiom welltyped_sort_declared :
-    forall Σ Γ s,
-      welltyped Σ Γ (tSort s) ->
-      UnivExprSet.For_all
-        (fun e => LevelSet.mem (UnivExpr.get_level e) (global_ext_levels Σ)) (Universe.t_set s).
-  
   Lemma reducible_head_None Γ t π h :
     isApp t = false ->
     whnf RedFlags.nodelta Σ (Γ,,, stack_context π) (mkApps t (decompose_stack π).1) ->
@@ -4381,13 +4387,13 @@ Section Conversion.
     - zip fold in h.
       apply welltyped_context in h; auto.
       destruct hΣ.
-      apply welltyped_nonarity in h as (?&typ); auto.
+      destruct h as (?&typ); auto.
       apply inversion_Const in typ as (?&?&?&?); auto.
       unfold declared_constant in d; congruence.
     - zip fold in h.
       apply welltyped_context in h; auto.
       destruct hΣ.
-      apply welltyped_nonarity in h as (?&typ); auto.
+      destruct h as (?&typ); auto.
       apply inversion_Const in typ as (?&?&?&?); auto.
       unfold declared_constant in d; congruence.
     - clear H.
@@ -4699,8 +4705,8 @@ Section Conversion.
          apply welltyped_context in h1; auto.
          clear aux.
          apply welltyped_context in h2; auto.
-         apply welltyped_nonarity in h1 as (?&typ1); auto.
-         apply welltyped_nonarity in h2 as (?&typ2); auto.
+         destruct h1 as (?&typ1); auto.
+         destruct h2 as (?&typ2); auto.
          apply inversion_Ind in typ1 as (?&?&?&?&?&?); auto.
          apply inversion_Ind in typ2 as (?&?&?&?&?&?); auto.
          apply consistent_instance_ext_all_mem in c1.
@@ -4719,8 +4725,8 @@ Section Conversion.
          apply welltyped_context in h1; auto.
          clear aux.
          apply welltyped_context in h2; auto.
-         apply welltyped_nonarity in h1 as (?&typ1); auto.
-         apply welltyped_nonarity in h2 as (?&typ2); auto.
+         destruct h1 as (?&typ1); auto.
+         destruct h2 as (?&typ2); auto.
          apply inversion_Construct in typ1 as (?&?&?&?&?&?&?); auto.
          apply inversion_Construct in typ2 as (?&?&?&?&?&?&?); auto.
          apply consistent_instance_ext_all_mem in c1.
@@ -4745,16 +4751,16 @@ Section Conversion.
     - now rewrite eq_string_refl in noteq.
     - zip fold in h1.
       apply welltyped_context in h1; auto.
-      destruct h1 as [(?&typ)|[(?&?&?&?)]].
-      + now apply inversion_Evar in typ.
-      + cbn in e0; congruence.
+      destruct h1 as (?&typ).
+      now apply inversion_Evar in typ.
     - zip fold in h1.
       zip fold in h2.
-      apply welltyped_context in h1; auto.
+      apply welltyped_context in h1 as [s1 h1]; auto.
       clear aux.
-      apply welltyped_context in h2; auto.
-      apply welltyped_sort_declared in h1.
-      apply welltyped_sort_declared in h2.
+      apply welltyped_context in h2 as [s2 h2]; auto.
+      simpl in h2.
+      apply inversion_Sort in h2 as (_&h2&_); auto.
+      apply inversion_Sort in h1 as (_&h1&_); auto.      
       eapply conv_pb_relb_complete in H0; eauto.
   Qed.
   

@@ -930,7 +930,6 @@ Proof.
              destruct X14 as [u Hu]. exists u.
              specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ _ (existT _ _ Hu)))))).
              apply IH. simpl. constructor 1. simpl. auto with arith.
-          +++ apply onIndices.
           +++ split. apply ind_sorts0. destruct indices_matter; auto.
             eapply type_local_ctx_impl. eapply ind_sorts0.
             intros. red in X14.
@@ -940,14 +939,15 @@ Proof.
             destruct X14 as [u Hu]. exists u.
             specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ _ (existT _ _ Hu)))))).
             apply IH. simpl. constructor 1. simpl. auto with arith.
-      ++ red in onP |- *.
-         eapply All_local_env_impl; eauto.
-         intros. destruct T; simpl in X14.
-         specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ _ (existT _ _ X14)))))).
-         simpl in IH. apply IH. constructor 1. simpl. lia.
-         destruct X14 as [u Hu].
-         specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ _ (existT _ _ Hu)))))).
-         simpl in IH. simpl. exists u. apply IH. constructor 1. simpl. lia.
+        ++ apply onIndices.
+        ++ red in onP |- *.
+          eapply All_local_env_impl; eauto.
+          intros. destruct T; simpl in X14.
+          specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ _ (existT _ _ X14)))))).
+          simpl in IH. apply IH. constructor 1. simpl. lia.
+          destruct X14 as [u Hu].
+          specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ _ (existT _ _ Hu)))))).
+          simpl in IH. simpl. exists u. apply IH. constructor 1. simpl. lia.
 
   - assert (forall Γ t T (Hty : Σ ;;; Γ |- t : T),
                typing_size Hty < typing_size H ->

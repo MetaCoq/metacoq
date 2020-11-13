@@ -390,13 +390,12 @@ Section Alpha.
         * exact (fun br bty : nat × term =>
                    (((br.1 = bty.1 × Σ;;; Γ |- br.2 : bty.2)
                        × (forall v : term, upto_names' br.2 v -> Σ;;; Γ |- v : bty.2))
-                      × Σ;;; Γ |- bty.2 : tSort ps)
-                     × (forall v : term, upto_names' bty.2 v -> Σ;;; Γ |- v : tSort ps)).
+                      × ∑ s, Σ;;; Γ |- bty.2 : tSort s ×
+                        (forall v : term, upto_names' bty.2 v -> Σ;;; Γ |- v : tSort s))).
         * clear. intros x y z X; rdest; cbn in *.
           congruence. 2: eauto. econstructor; tea. 
            eauto. constructor.
           now eapply upto_names_impl_leq_term.
-          destruct b0 as [s [Hs IH]]; eauto.
         * eapply All2_trans'; [..|eassumption].
           2: apply All2_sym; tea.
           clear. intros x y z X; rdest; cbn in *; eauto. congruence.

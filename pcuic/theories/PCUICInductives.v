@@ -977,25 +977,6 @@ Proof.
   induction Δ as [|[na [b|] ty] Δ]; simpl; intuition auto.
 Qed.
 
-Lemma wf_local_type_local_ctx {cf:checker_flags} {Σ Γ Δ} : 
-  wf Σ.1 ->
-  wf_local Σ (Γ ,,, Δ) ->
-  ∑ s, type_local_ctx (lift_typing typing) Σ Γ Δ s.
-Proof.
-  intros wfΣ.
-  induction Δ as [|[na [b|] ty] Δ].
-  - simpl. intros _. now exists (Universe.lProp).
-  - intros wf. depelim wf. specialize (IHΔ wf) as [s tys].
-    exists s; splits; auto.
-  - intros wf. depelim wf. specialize (IHΔ wf) as [s tys].
-    simpl. destruct l as [s' Hs'].
-    exists (Universe.sup s' s); splits; auto.
-    eapply type_local_ctx_cum. 4:eauto. all:eauto.
-    eapply type_local_ctx_wf in tys.
-    eapply typing_wf_universe in Hs'; auto.
-    now eapply wf_universe_sup. auto. admit.
-Abort.
-
 Lemma isType_it_mkProd_or_LetIn {cf:checker_flags} Σ Γ Δ s s': 
   wf Σ.1 ->
   wf_local Σ Γ ->

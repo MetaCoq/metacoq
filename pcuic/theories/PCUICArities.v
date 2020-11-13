@@ -236,7 +236,7 @@ Proof.
   - have wf := typing_wf_local Ht.
     depelim wf. clear l.
     eapply type_Cumul. econstructor; eauto.
-    econstructor; eauto. pcuic.
+    econstructor; eauto. now eapply typing_wf_universe in Ht.
     transitivity (tSort s).
     eapply red_cumul. eapply red1_red. constructor. reflexivity.
   - have wf := typing_wf_local Ht.

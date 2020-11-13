@@ -111,12 +111,7 @@ Proof.
     apply PCUICSubstitution.map_subst_instance_constr_to_extended_list_k.
     subst npar.
     now rewrite firstn_skipn. }
-  - constructor. eapply isType_Sort; eauto.
-    apply validity in t; auto. eapply PCUICWfUniverses.isType_wf_universes in t; auto.
-    rewrite PCUICWfUniverses.wf_universes_it_mkProd_or_LetIn in t. simpl in t.
-    move/andP: t => [_ /andP[_ Ht]]. intros.
-    destruct (PCUICWfUniverses.wf_universe_reflect Σ ps); auto. discriminate. pcuic.
-    reflexivity.
+  - constructor.
   - unfold universe_family in H1.
     destruct (Universe.is_prop ps); auto.
     destruct (Universe.is_sprop ps); auto;
@@ -284,7 +279,6 @@ Proof.
       eapply leq_universe_sprop_r in sp; auto.
       rewrite (is_sprop_subst_instance_univ ui') in sp => //.
       now rewrite sp orb_true_r.
-      apply wfΣ.
       apply wfΣ.
       
     * eapply cumul_Prod_r_inv in c; auto.
@@ -465,7 +459,7 @@ Proof.
     simpl in sp.
     eapply typing_spine_proofs in sp; eauto.
     destruct sp.
-    specialize (a _ _ (proj1 declc) onib cu) as [a _].
+    specialize (i _ _ (proj1 declc) onib cu) as a.
     specialize (a hp). 
     
     pose proof (onc.(on_cargs)).

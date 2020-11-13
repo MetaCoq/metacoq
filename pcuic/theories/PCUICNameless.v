@@ -500,7 +500,6 @@ Proof.
   - intro. eapply eq_universe_refl.
 Qed.
 
-
 Fixpoint nlstack (π : stack) : stack :=
   match π with
   | ε => ε
@@ -515,9 +514,9 @@ Fixpoint nlstack (π : stack) : stack :=
   | CoFix f n args ρ =>
     CoFix (map (map_def_anon nl nl) f) n (map nl args) (nlstack ρ)
   | CoFix_mfix_ty na bo ra mfix1 mfix2 idx ρ =>
-    CoFix_mfix_ty nAnon (nl bo) ra (map (map_def_anon nl nl) mfix1) (map (map_def_anon nl nl) mfix2) idx (nlstack ρ)
+    CoFix_mfix_ty (anonymize na) (nl bo) ra (map (map_def_anon nl nl) mfix1) (map (map_def_anon nl nl) mfix2) idx (nlstack ρ)
   | CoFix_mfix_bd na ty ra mfix1 mfix2 idx ρ =>
-    CoFix_mfix_bd nAnon (nl ty) ra (map (map_def_anon nl nl) mfix1) (map (map_def_anon nl nl) mfix2) idx (nlstack ρ)
+    CoFix_mfix_bd (anonymize na) (nl ty) ra (map (map_def_anon nl nl) mfix1) (map (map_def_anon nl nl) mfix2) idx (nlstack ρ)
   | Case_p indn c brs ρ =>
     Case_p indn (nl c) (map (on_snd nl) brs) (nlstack ρ)
   | Case indn p brs ρ =>

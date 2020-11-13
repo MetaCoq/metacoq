@@ -3649,7 +3649,7 @@ Proof.
     epose proof (subslet_projs_smash _ _ _ _ wfΣ (let (x, _) := declp in x)). simpl in X.
     rewrite cseq in X.
     unfold projection_context.
-    set (ind_decl := vass (nNamed _) _).
+    set (ind_decl := vass _ _).
     specialize (X onps (smash_context [] (subst_instance_context u (ind_params mdecl)) ,, ind_decl) (tRel 0) u).
     simpl in X.
     eapply untyped_subslet_skipn in X.
@@ -3771,7 +3771,7 @@ Proof.
   subst pty. eexists _, _.
   rewrite destArity_it_mkProd_or_LetIn. split. reflexivity.
   simpl. eapply wf_local_vass.
-  assert (wfΓ : wf_local Σ Γ). { destruct X as [s Hs]; pcuic. red in Hs. pcuic. }
+  assert (wfΓ : wf_local Σ Γ). { destruct X as [s Hs]; pcuic. }
   move:Hipars.
   rewrite instantiate_params_.
   destruct instantiate_params_subst as [[parsubst ty]|] eqn:ip => // => [= eqip].
@@ -3840,11 +3840,11 @@ Proof.
       eapply PCUICClosed.closed_wf_local in X; auto. move: X.
       now rewrite subst_instance_context_app PCUICClosed.closedn_ctx_app /=; len => /andP [_ H].
       rewrite lift_context_subst_context //.
-    + eapply isWAT_weaken; eauto.
+    + eapply isType_weakening; eauto.
       eapply spargs.
       move: (f_equal (subst_instance_constr u) oib.(ind_arity_eq)).
       rewrite -it_mkProd_or_LetIn_app subst_instance_constr_it_mkProd_or_LetIn => <-.
-      right; eapply declared_inductive_valid_type; eauto.
+      eapply declared_inductive_valid_type; eauto.
 Qed.
 
 Lemma leb_elim_prop_sort shapes f n cs : 
@@ -3857,18 +3857,50 @@ Proof.
   - destruct n => // /= leb. now intros [= ->].
     simpl. rewrite nth_error_nil //.
   - destruct f => //.
+    destruct universe_family => //.
 Qed.
 
 Lemma universe_family_prop s : universe_family s = InProp -> Universe.is_prop s.
 Proof. 
   unfold universe_family.
-  destruct Universe.is_prop => //.
-  destruct Universe.is_small => //.
+  destruct s => /= //.
+  destruct UnivExprSet.for_all => //.
 Qed.
 
 Lemma arity_spine_eq {cf:checker_flags} {Σ Γ T T'} : T = T' -> arity_spine Σ Γ T [] T'.
 Proof.
   intros ->; constructor.
+Qed.
+
+Lemma isType_it_mkProd_or_LetIn {cf:checker_flags} {Σ Γ Δ T} : 
+  wf Σ.1 ->
+  isType Σ (Γ ,,, Δ) T ->
+  isType Σ Γ (it_mkProd_or_LetIn Δ T).
+Proof.
+  intros wfΣ. revert T.
+  induction Δ as [|[na [b|] ty] Δ].
+  - now simpl.
+  - intros T [s Hs].
+    rewrite /= /mkProd_or_LetIn /=.
+    eapply IHΔ.
+    red in Hs.
+    exists s.
+    have wf := typing_wf_local Hs.
+    depelim wf.
+    unfold PCUICTypingDef.typing.
+    destruct l as [s1 Hs1]. red in l0.
+    eapply type_Cumul'.
+    econstructor; eauto. pcuic.
+    eapply red_cumul. repeat constructor.
+  - intros T [s Hs].
+    apply IHΔ.
+    red.
+    unfold PCUICTypingDef.typing in *.
+    have wf := typing_wf_local Hs.
+    depelim wf.
+    destruct l as [s1 Hs1].
+    exists (Universe.sort_of_product s1 s).
+    econstructor; eauto.
 Qed.
 
 Lemma build_branches_type_wt {cf : checker_flags}	(Σ : global_env × universes_decl) Γ ind mdecl idecl u 
@@ -3904,7 +3936,6 @@ Proof.
   rewrite !destArity_it_mkProd_or_LetIn /= in ptyeq. noconf ptyeq.
   rewrite !app_context_nil_l in H0. subst pctx.
   eapply PCUICValidity.validity in Hc; eauto.
-  eapply isWAT_mkApps_Ind_isType in Hc; auto.
   destruct Hc as [s Hs].
   eapply invert_type_mkApps_ind in Hs as [spargs cu]; eauto.
   rewrite oib.(ind_arity_eq) in spargs.
@@ -3920,6 +3951,12 @@ Proof.
   2:{ len. rewrite firstn_length_le. lia. lia. }
   len in spsubst. destruct spsubst as [sppars spargs].
   destruct (on_constructor_inst _ wfΣ decli onind _ onc cu) as [wf _].
+  assert (wfps : wf_universe Σ ps).
+  { eapply validity in Hp; auto.
+    eapply PCUICWfUniverses.isType_wf_universes in Hp.
+    rewrite PCUICWfUniverses.wf_universes_it_mkProd_or_LetIn in Hp.
+    move/andP: Hp => [_ Hp].
+    now apply (PCUICWfUniverses.reflect_bP (PCUICWfUniverses.wf_universe_reflect _ _)) in Hp. auto. }
   rewrite !subst_instance_context_app in wf.
   assert (type_local_ctx (lift_typing typing) Σ Γ
   (subst_context parsubst 0
@@ -3949,6 +3986,8 @@ Proof.
     rewrite (context_subst_fun csub sppars).
     eapply sppars. }
   eexists.
+  assert (wfcs : wf_universe Σ (subst_instance u (cshape_sort cs))).
+  { eapply type_local_ctx_wf in X; pcuic. }
   eapply type_it_mkProd_or_LetIn; eauto.
   eapply type_local_ctx_All_local_env in X; pcuic; len.
   eapply type_mkApps. 
@@ -3960,6 +3999,7 @@ Proof.
   pose proof (context_subst_fun csub sppars); subst parsubst.
   set (parsubst := skipn #|ind_indices oib| instsubst) in *.
   eapply wf_arity_spine_typing_spine; eauto.
+  set (binder := vass _ _).
   assert(wf_local Σ
   (Γ ,,,
    subst_context (skipn #|ind_indices oib| instsubst) 0
@@ -3971,11 +4011,7 @@ Proof.
    lift_context #|cshape_args cs| 0
      (subst_context (skipn #|ind_indices oib| instsubst) 0
         (subst_instance_context u (ind_indices oib))) ,,,
-   [lift_decl #|cshape_args cs| #|ind_indices oib|
-      (vass (nNamed (ind_name idecl))
-         (mkApps (tInd ind u)
-            (map (lift0 #|ind_indices oib|) (firstn (ind_npars mdecl) args) ++
-             to_extended_list (ind_indices oib))))])).
+   [lift_decl #|cshape_args cs| #|ind_indices oib| binder])).
   { constructor. 
     relativize #|cshape_args cs|.
     eapply weakening_wf_local; eauto. eapply spargs. now len.
@@ -3993,7 +4029,7 @@ Proof.
     eapply typing_spine_it_mkProd_or_LetIn_close'; eauto.
     2:{ rewrite -[_ ++ _]subst_instance_context_app -subst_instance_constr_it_mkProd_or_LetIn
           it_mkProd_or_LetIn_app.
-        right. rewrite -oib.(ind_arity_eq). eapply declared_inductive_valid_type; eauto.
+        rewrite -oib.(ind_arity_eq). eapply declared_inductive_valid_type; eauto.
         eapply spargs. }
     eapply spine_subst_app; eauto. len.
     rewrite firstn_length_le; lia.
@@ -4027,9 +4063,9 @@ Proof.
       now rewrite subst_instance_context_app PCUICClosed.closedn_ctx_app /=; len => /andP [_ ?].
       rewrite lift_context_subst_context //. }
   split.      
-  { eapply isWAT_it_mkProd_or_LetIn; eauto.
-    rewrite lift_context_snoc. len.
-    apply X0. }
+  { eapply isType_it_mkProd_or_LetIn; eauto.
+    eapply isType_Sort; eauto.
+    subst binder. rewrite lift_context_snoc. simpl. len. exact X0. }
   eapply (arity_spine_it_mkProd_or_LetIn_Sort _ _ _ _ _ ([_] ++ instps)); eauto.
   rewrite lift_context_snoc /=. len.
   eapply (spine_subst_app _ _ _ [_]); len; auto.
@@ -4067,8 +4103,7 @@ Proof.
     eapply type_mkApps. econstructor; eauto.
     eapply wf_arity_spine_typing_spine; eauto.
     split.
-    epose proof (declared_constructor_valid_ty _ _ _ _ _ _ _ _ wfΣ (spinst.(spine_dom_wf _ _ _ _ _)) H cu).
-    now right.
+    apply (declared_constructor_valid_ty _ _ _ _ _ _ _ _ wfΣ (spinst.(spine_dom_wf _ _ _ _ _)) H cu).
     pose proof onc.(cstr_eq). unfold cdecl_type in H0.
     unfold type_of_constructor; rewrite {}H0.
     rewrite !subst_instance_constr_it_mkProd_or_LetIn !subst_it_mkProd_or_LetIn.
@@ -4107,7 +4142,7 @@ Proof.
     rewrite subst_mkApps /= map_app.
     eapply arity_spine_conv.
     { depelim X0.
-      destruct l as [s' Hs]. right; exists s'. red.
+      destruct l as [s' Hs]. exists s'. red.
       simpl in Hs.
       eapply (substitution _ _ _ _ []) in Hs; eauto.
       2:{ eapply spinst. }

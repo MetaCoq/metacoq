@@ -227,8 +227,7 @@ Section Validity.
       pose proof (context_subst_fun cs sparsubst). subst pars.
       eapply sargsubst.
       simpl. constructor; first last.
-      constructor; auto. eapply isType_Sort; eauto.
-      reflexivity.
+      constructor; auto.
       rewrite subst_mkApps.
       simpl.
       rewrite map_app. subst params.

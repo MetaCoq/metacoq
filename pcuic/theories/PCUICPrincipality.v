@@ -82,42 +82,10 @@ Section Principality.
     - apply inversion_Evar in hA. destruct hA.
     - apply inversion_Sort in hA as iA. 2: auto.
       repeat outsum. repeat outtimes. subst.
-      exists (tSort (Universe.super x)).
+      exists (tSort (Universe.super s)).
       int inversion_Sort.
-      repeat outsum. repeat outtimes. subst.
-      assert (x0 = x) as ee. {
-        clear -e. destruct x, x0; cbnr; invs e; reflexivity. }
-      subst. repeat insum. repeat intimes; tea.
-    - apply inversion_Prod in hA as [dom1 [codom1 iA]]; auto.
-      (*destruct iA as (wf & wfs & Ht).
-      exists (tSort (Universe.super s)); split.
-      econstructor; eauto.
-      intros B hB.
-      apply inversion_Sort in hB as iB. 2: auto.
       repeat outsum. repeat outtimes. now subst.
     - apply inversion_Prod in hA as [dom1 [codom1 iA]]; auto.
-      repeat outsum. repeat outtimes.
-      repeat pih.
-      specialize (IHu1 _ _ t).
-      specialize (IHu2 _ _ t0).
-      destruct IHu1 as [dom [Hdom Hdom']].
-      destruct IHu2 as [codom [Hcodom Hcodom']].
-      pose proof (Hdom' _ t).
-      
-      destruct (invert_cumul_sort_r _ _ _ _ X) as [u' [red leq]].
-      pose proof (Hcodom' _ t0).
-      destruct (invert_cumul_sort_r _ _ _ _ X0) as [u'' [red' leq']].
-      exists (tSort (Universe.sort_of_product u' u'')).
-      split; [econstructor; eauto|].
-      eapply type_Cumul'; eauto.
-      eapply type_reduction in Hdom; eauto. now eapply validity in Hdom.
-      now eapply red_cumul.
-      eapply type_Cumul'; eauto. 
-      eapply type_reduction in Hcodom; eauto. now eapply validity in Hcodom.
-      now eapply red_cumul.
-
-      intros B hB.
-      apply inversion_Prod in hB as [dom2 [codom2 iB]]=> //.*)
       repeat outtimes.
       specialize (IHu1 _ _ t) as [dom Hdom].
       specialize (IHu2 _ _ t0) as [codom Hcodom].
@@ -172,60 +140,17 @@ Section Principality.
       eapply cum_LetIn; eauto.
       now specialize (p'' _ Hu3') as [? ?].
 
-    - eapply inversion_App in hA as [na [dom [codom [tydom [tyarg tycodom]]]]] => //; auto.
+      - eapply inversion_App in hA as [na [dom [codom [tydom [tyarg tycodom]]]]] => //; auto.
       destruct (IHu2 _ _ tyarg).
       destruct (IHu1 _ _ tydom).
       destruct (p _ tyarg). destruct (p0 _ tydom).
-      apply invert_cumul_prod_r in c0 as [? [A' [B' [[redA u1eq] ?]]]] => //; auto.
+      apply invert_cumul_prod_r in c0 as [? [A' [B' [[[redA eqann] u1eq] ?]]]] => //; auto.
       exists (subst [u2] 0 B').
       intros ? hB.
       eapply inversion_App in hB as [na' [dom' [codom' [tydom' [tyarg' tycodom']]]]] => //; auto.
       destruct (p0 _ tydom').
       destruct (p _ tyarg').
-      apply invert_cumul_prod_r in c1 as [? [A'' [B'' [[redA' u1eq'] ?]]]] => //; auto.
-      (*specialize (Hdom' _ t1). specialize (Hcodom' _ t2).
-      apply invert_cumul_prod_l in c0 as [na' [A' [B' [[[redA eqann] u1eq] ?]]]] => //.
-      apply invert_cumul_prod_l in c as [na'' [A'' [B'' [[[redA' eqann'] u1eq'] ?]]]] => //.
-      eapply cumul_trans with (tProd na' A' x2); auto.
-      * eapply congr_cumul_prod => //.
-      * eapply cumul_trans with (tProd na' A' B'); auto.
-        2:{ eapply cumul_red_l_inv; eauto. reflexivity. }
-        eapply congr_cumul_prod => //. reflexivity.
-        eapply cumul_conv_ctx; eauto. constructor; pcuic.
-
-    - eapply inversion_LetIn in hA; auto.
-      destruct hA as [tty [bty ?]].
-      repeat outtimes.
-      specialize (IHu1 _ _ t0) as (u1' & tyu1 & Hu1).
-      specialize (IHu2 _ _ t) as (u1'' & tyu1' & Hu1').
-      specialize (IHu3 _ _ t1) as (u3' & tyu3' & Hu3').
-      exists (tLetIn n u1 u2 u3').
-      split. econstructor; eauto.
-      intros B hB. eapply inversion_LetIn in hB; auto.
-      destruct hB as [tty' [bty' ?]].
-      repeat outtimes.
-      etransitivity; [|eassumption].
-      specialize (Hu3' _ t4).
-      now eapply cumul_LetIn_bo.
-
-    - eapply inversion_App in hA as [na [dom [codom [tydom [tyarg tycodom]]]]] => //.
-      specialize (IHu1 _ _ tydom) as (tyf & Htyfg & Hf).
-      specialize (IHu2 _ _ tyarg) as (tyarg' & Htyarg & Harg).
-      epose proof (Hf _ tydom).
-      epose proof (Harg _ tyarg).
-      apply invert_cumul_prod_r in X as [? [A' [B' [[[redA eqann] u1eq] ?]]]] => //.
-      eapply type_reduction in Htyfg; eauto.
-      exists (subst1 u2 0 B').
-      split. econstructor; eauto.
-      eapply type_Cumul'; eauto.
-      eapply validity in Htyfg; auto.
-      eapply isType_tProd in Htyfg; pcuic. auto.
-      etransitivity; eauto. now apply conv_cumul.
-      intros B hB.
-      eapply inversion_App in hB as [na' [dom' [codom' [tydom' [tyarg'' tycodom']]]]] => //.
-      specialize (Hf _ tydom').
-      specialize (Harg _ tyarg'').
-      apply invert_cumul_prod_r in Hf as [? [A'' [B'' [[[redA' eqann'] u1eq'] ?]]]] => //.*)
+      apply invert_cumul_prod_r in c1 as [? [A'' [B'' [[[redA' eqann'] u1eq'] ?]]]] => //; auto.
       destruct (red_confluence wfΣ redA redA') as [nfprod [redl redr]].
       eapply invert_red_prod in redl as [? [? [[? ?] ?]]] => //. subst.
       eapply invert_red_prod in redr as [? [? [[? ?] ?]]] => //. noconf e.
@@ -239,38 +164,27 @@ Section Principality.
         - apply conv_sym; auto.
           eapply conv_conv_ctx; eauto.
           constructor; auto. 1: eapply conv_ctx_refl.
-          constructor. reflexivity. now eapply conv_sym.
-      }
+          constructor. reflexivity. now eapply conv_sym. }
       split.
       etransitivity; eauto.
       eapply substitution_cumul0 => //. auto.
       transitivity x4; eauto. now eapply red_cumul.
       transitivity B''.
       eapply cumul_conv_ctx; eauto. eapply red_cumul_inv; eauto.
-      constructor. apply conv_ctx_refl. constructor. now apply conv_sym.
+      constructor. apply conv_ctx_refl. constructor. reflexivity.
+      now apply conv_sym.
       eapply cumul_conv_ctx; eauto.
-      constructor. apply conv_ctx_refl. constructor. 
+      constructor. apply conv_ctx_refl. constructor. assumption. 
       eapply conv_trans; eauto. now apply conv_sym.
       econstructor. eapply type_reduction; eauto.
-      eapply type_Cumul; eauto.
+      eapply type_Cumul'; eauto.
       2:transitivity dom; auto; now apply conv_cumul.
       eapply type_reduction in t0. 3:eapply redA. 2:auto.
       eapply validity in t0; auto.
-      eapply isWAT_tProd in t0 as [? ?]; eauto.
+      eapply isType_tProd in t0 as [? ?]; eauto.
       eapply typing_wf_local; eauto.
 
-    - eapply inversion_Const in hA as [decl ?] => //; eauto.
-      (*eapply cumul_trans with (codom' {0 := u2}) => //.
-      eapply cumul_trans with (B'' {0 := u2}) => //.  
-      eapply substitution_cumul0 => //. eapply conv_cumul. eapply X1. 
-      eapply substitution_cumul0 => //. eapply c0.
-
-    - eapply inversion_Const in hA as [decl ?] => //.
-      repeat outtimes.
-      exists (subst_instance_constr u (cst_type decl)).
-      split. constructor; eauto.
-      intros B hB.
-      eapply inversion_Const in hB as [decl' ?] => //.*)
+    - eapply inversion_Const in hA as [decl ?] => //; auto.
       repeat outtimes.
       eexists; int inversion_Const.
       destruct hB as [decl' [wf [declc' [cu cum]]]].
@@ -364,12 +278,10 @@ Section Principality.
       assert (consistent_instance_ext Σ (ind_universes x0) u').
       { eapply type_reduction in t1. 3:eapply redr. all:pcuic. 
         eapply validity in t1; eauto.
-        eapply PCUICInductiveInversion.isWAT_mkApps_Ind_isType in t1; auto.
         destruct t1 as [s Hs].
         eapply invert_type_mkApps_ind in Hs. intuition eauto. all:auto. eapply d. }
       assert (consistent_instance_ext Σ (ind_universes x0) x2).
         { eapply validity in t2; eauto.
-          eapply PCUICInductiveInversion.isWAT_mkApps_Ind_isType in t2; auto.
           destruct t2 as [s Hs].
           eapply invert_type_mkApps_ind in Hs. intuition eauto. all:auto. eapply d. }
         transitivity (subst0 (u :: List.rev x0') (subst_instance_constr x2 t3)); cycle 1.
@@ -544,8 +456,8 @@ Proof.
     [ H : leq_term _ _ _ _ |- _ ] => depelim H
     end.
   all:try solve [econstructor; eauto].
-  13:{ eapply type_Cumul.
-       eapply X1. eauto. eauto. eauto. 
+  13:{ eapply type_Cumul'.
+       eapply X1; eauto. now exists s.
        auto. }
   - eapply inversion_Sort in X0 as [wf [wfs cum]].
     eapply type_Cumul' with (tSort (Universe.super s)).
@@ -694,9 +606,7 @@ Proof.
     eapply eq_term_empty_eq_term in X4.
     assert (wf_ext Σ) by (split; assumption).
     pose proof (principal_type_ind X3 a0) as [Ruu' X3'].
-    eapply type_Cumul. clear a0.
-    (*pose proof (principal_type_ind X2 a0) as [Ruu' X3].
-    eapply type_Cumul'. clear a0.*)
+    eapply type_Cumul'. clear a0.
     econstructor; eauto.
     now rewrite (All2_length _ _ X3').
     eapply PCUICValidity.validity; eauto.
@@ -740,7 +650,7 @@ Proof.
     eapply All2_nth_error in a; eauto.
     destruct a as [[[eqty _] _] _].
     constructor. apply eq_term_empty_leq_term in eqty.
-    now eapply leq_term_empty_leq_term.
+    now eapply leq_term_empty_leq_term. Show Existentials.
 Qed.
 
 Lemma typing_eq_term {cf:checker_flags} (Σ : global_env_ext) Γ t t' T T' : 

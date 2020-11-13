@@ -14,7 +14,6 @@ Set Equations With UIP.
 
 Local Set Keyed Unification.
 
-
 Set Default Goal Selector "!".
 
 (* TODO MOVE *)
@@ -134,22 +133,22 @@ Section Lemmata.
     - simpl. apply IHπ. constructor.
       apply All2_app.
       + apply All2_same.
-        intros. split ; auto. split. all: apply eq_term_upto_univ_refl.
+        intros. split ; [split|]; auto. split. all: apply eq_term_upto_univ_refl.
         all: assumption.
       + constructor.
         * simpl. intuition eauto. reflexivity.
         * apply All2_same.
-          intros. split ; auto. split. all: apply eq_term_upto_univ_refl.
+          intros. splits ; auto. all: apply eq_term_upto_univ_refl.
           all: assumption.
     - simpl. apply IHπ. constructor.
       apply All2_app.
       + apply All2_same.
-        intros. split ; auto. split. all: apply eq_term_upto_univ_refl.
+        intros. splits ; auto. all: apply eq_term_upto_univ_refl.
         all: assumption.
       + constructor.
         * simpl. intuition eauto. reflexivity.
         * apply All2_same.
-          intros. split ; auto. split. all: apply eq_term_upto_univ_refl.
+          intros. splits ; auto. all: apply eq_term_upto_univ_refl.
           all: assumption.
     - simpl. apply IHπ. destruct indn as [i n].
       constructor.
@@ -1364,46 +1363,22 @@ Section Lemmata.
 
   Lemma Case_Construct_ind_eq :
     forall {Γ ind ind' npar pred i u brs args},
-      wellformed Σ Γ (tCase (ind, npar) pred (mkApps (tConstruct ind' i u) args) brs) ->
+      welltyped Σ Γ (tCase (ind, npar) pred (mkApps (tConstruct ind' i u) args) brs) ->
       ind = ind'.
   Proof.
     destruct hΣ as [wΣ].
-    intros Γ ind ind' npar pred i u brs args [[A h]|[[ctx [s [e _]]]]];
-      [|discriminate].
+    intros Γ ind ind' npar pred i u brs args [A h].
     apply PCUICInductiveInversion.invert_Case_Construct in h; auto.
   Qed.
 
   Lemma Proj_Construct_ind_eq :
     forall Γ i i' pars narg c u l,
-      wellformed Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i' c u) l)) ->
+      welltyped Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i' c u) l)) ->
       i = i'.
   Proof.
     destruct hΣ as [wΣ].
-    intros Γ i i' pars narg c u l [[T h]|[[ctx [s [e _]]]]];
-      [|discriminate].
+    intros Γ i i' pars narg c u l [T h].
     now apply PCUICInductiveInversion.invert_Proj_Construct in h.
   Qed.
   
 End Lemmata.
-
-(*Lemma Case_Construct_ind_eq {cf:checker_flags} Σ (hΣ : ∥ wf Σ.1 ∥) :
-  forall {Γ ind ind' npar pred i u brs args},
-  welltyped Σ Γ (tCase (ind, npar) pred (mkApps (tConstruct ind' i u) args) brs) ->
-  ind = ind'.
-Proof.
-destruct hΣ as [wΣ].
-intros Γ ind ind' npar pred i u brs args [A h].
-  eapply PCUICInductiveInversion.Case_Construct_ind_eq; eauto.
-  sq; auto.
-Qed.
-
-Lemma Proj_Constuct_ind_eq {cf:checker_flags} Σ (hΣ : ∥ wf Σ.1 ∥):
-forall Γ i i' pars narg c u l,
-  welltyped Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i' c u) l)) ->
-  i = i'.
-Proof.
-  destruct hΣ as [wΣ].
-  intros Γ i i' pars narg c u l [T h].
-    eapply PCUICInductiveInversion.Proj_Constuct_ind_eq; eauto.
-    sq; auto.
-Qed.*)

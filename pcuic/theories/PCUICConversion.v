@@ -1310,7 +1310,7 @@ Section Inversions.
       conv_cum leq Σ (Γ,, vass na1 A1) B1 B2.
   Proof.
     intros *; destruct leq; simpl.
-    - intros [[na1' [A1' [B1' [[Hred eqA] eqB]]]]%conv_Prod_r_inv]. 2: assumption.
+    - intros [[na1' [A1' [B1' [[[Hred eqann] eqA] eqB]]]]%conv_Prod_r_inv]. 2: assumption.
       apply invert_red_prod in Hred. 2: assumption.
       destruct Hred as [? [? [[[= ? ?%eq_sym ?%eq_sym] redA] redB]]].
       subst.
@@ -1321,7 +1321,7 @@ Section Inversions.
       eapply conv_conv_ctx. 1,2 : eassumption.
       apply ctx_rel_vass. 1: reflexivity.
       now constructor.
-    - intros [[eqA cumB]%cumul_Prod_Prod_inv]. 2: assumption.
+    - intros [[eqann [eqA cumB]]%cumul_Prod_Prod_inv]. 2: assumption.
       split; constructor. 1: assumption.
       eapply cumul_conv_ctx. 1,2: eassumption.
       apply ctx_rel_vass. 1: reflexivity.
@@ -1852,7 +1852,8 @@ Section Inversions.
       OnOne2 (fun u v =>
         Σ ;;; Γ |- dtype u = dtype v ×
         dbody u = dbody v ×
-        rarg u = rarg v
+        rarg u = rarg v ×
+        eq_binder_annot (dname u) (dname v)
       ) mfix mfix' ->
       Σ ;;; Γ |- tCoFix mfix idx = tCoFix mfix' idx.
   Proof.
@@ -1865,7 +1866,7 @@ Section Inversions.
       apply All2_app.
       + apply All2_same. intros. intuition reflexivity.
       + constructor.
-        * simpl. intuition reflexivity.
+        * simpl. intuition try reflexivity.
         * apply All2_same. intros. intuition reflexivity.
     - eapply conv_red_l ; eauto.
       constructor. apply OnOne2_app. constructor. simpl.
@@ -1881,7 +1882,8 @@ Section Inversions.
       All2 (fun u v =>
         Σ ;;; Γ |- dtype u = dtype v ×
         dbody u = dbody v ×
-        rarg u = rarg v
+        rarg u = rarg v ×
+        eq_binder_annot (dname u) (dname v)
       ) mfix mfix' ->
       Σ ;;; Γ |- tCoFix mfix idx = tCoFix mfix' idx.
   Proof.
@@ -1900,13 +1902,14 @@ Section Inversions.
       OnOne2 (fun u v =>
         dtype u = dtype v ×
         Σ ;;; Γ ,,, fix_context mfix |- dbody u = dbody v ×
-        rarg u = rarg v
+        rarg u = rarg v ×
+        eq_binder_annot u.(dname) v.(dname)
       ) mfix mfix' ->
       Σ ;;; Γ |- tCoFix mfix idx = tCoFix mfix' idx.
   Proof.
     intros Γ mfix mfix' idx wΣ h.
     apply OnOne2_split in h
-      as [[na ty bo ra] [[na' ty' bo' ra'] [l1 [l2 [[? [h ?]] [? ?]]]]]].
+      as [[na ty bo ra] [[na' ty' bo' ra'] [l1 [l2 [[? [h []]] [? ?]]]]]].
     simpl in *. subst.
     induction h.
     - constructor. constructor.
@@ -1937,6 +1940,7 @@ Section Inversions.
           rewrite 2!mapi_app. cbn.
           eapply eq_context_upto_cat.
           + constructor.
+            * assumption.
             * eapply eq_term_upto_univ_refl. all: auto.
             * eapply eq_context_upto_refl. auto.
           + eapply eq_context_upto_refl. auto.
@@ -1971,7 +1975,8 @@ Section Inversions.
       All2 (fun u v =>
         dtype u = dtype v ×
         Σ ;;; Γ ,,, fix_context mfix |- dbody u = dbody v ×
-        rarg u = rarg v
+        rarg u = rarg v ×
+        eq_binder_annot u.(dname) v.(dname)
       ) mfix mfix' ->
       Σ ;;; Γ |- tCoFix mfix idx = tCoFix mfix' idx.
   Proof.
@@ -1998,7 +2003,7 @@ Section Inversions.
           * intros ? ? ? [] []. reflexivity.
           * eassumption.
           * apply OnOne2_split in r
-              as [[na ty bo ra] [[na' ty' bo' ra'] [l1 [l2 [[? [? ?]] [? ?]]]]]].
+              as [[na ty bo ra] [[na' ty' bo' ra'] [l1 [l2 [[? [? []]] [? ?]]]]]].
             simpl in *. subst.
             rewrite 2!fix_context_fix_context_alt.
             rewrite 2!map_app. simpl.
@@ -2009,6 +2014,7 @@ Section Inversions.
                rewrite 2!mapi_app. cbn.
                eapply eq_context_upto_cat.
                ++ constructor.
+                  ** assumption.
                   ** eapply eq_term_upto_univ_refl. all: auto.
                   ** eapply eq_context_upto_refl. auto.
                ++ eapply eq_context_upto_refl. auto.
@@ -2022,7 +2028,8 @@ Section Inversions.
     All2 (fun u v =>
       Σ;;; Γ |- dtype u = dtype v ×
       Σ;;; Γ ,,, fix_context mfix |- dbody u = dbody v ×
-      rarg u = rarg v
+      rarg u = rarg v ×
+      eq_binder_annot u.(dname) v.(dname)
     ) mfix mfix' ->
     Σ ;;; Γ |- tCoFix mfix idx = tCoFix mfix' idx.
   Proof.
@@ -2031,12 +2038,14 @@ Section Inversions.
       All2 (fun u v =>
         Σ;;; Γ |- dtype u = dtype v ×
         dbody u = dbody v ×
-        rarg u = rarg v
+        rarg u = rarg v ×
+        eq_binder_annot u.(dname) v.(dname)
       ) mfix'' mfix' ×
       All2 (fun u v =>
         dtype u = dtype v ×
         Σ;;; Γ ,,, fix_context mfix |- dbody u = dbody v ×
-        rarg u = rarg v
+        rarg u = rarg v ×
+        eq_binder_annot u.(dname) v.(dname)
       ) mfix mfix''
     ).
     { set (P1 := fun u v => Σ ;;; Γ |- u = v).
@@ -2045,16 +2054,19 @@ Section Inversions.
         All2 (fun u v =>
           P1 u.(dtype) v.(dtype) ×
           P2 u.(dbody) v.(dbody) ×
-          rarg u = rarg v
+          rarg u = rarg v ×
+          eq_binder_annot u.(dname) v.(dname)
         ) mfix mfix'
       ) in h.
       change (
         ∑ mfix'',
           All2 (fun u v =>
-            P1 u.(dtype) v.(dtype) × dbody u = dbody v × rarg u = rarg v
+            P1 u.(dtype) v.(dtype) × dbody u = dbody v × rarg u = rarg v ×
+            eq_binder_annot u.(dname) v.(dname)
           ) mfix'' mfix' ×
           All2 (fun u v =>
-            dtype u = dtype v × P2 u.(dbody) v.(dbody) × rarg u = rarg v
+            dtype u = dtype v × P2 u.(dbody) v.(dbody) × rarg u = rarg v ×
+            eq_binder_annot u.(dname) v.(dname)
           ) mfix mfix''
       ).
       clearbody P1 P2.

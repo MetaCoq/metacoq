@@ -99,7 +99,7 @@ Lemma is_sprop_bottom {Σ Γ T s s'} :
   Universe.is_sprop s -> Universe.is_sprop s'.
 Proof.
   intros wfΣ hs hs'.
-  destruct (cumul_sort_confluence _ wfΣ.1 hs hs') as [x' [conv [leq leq']]].
+  destruct (cumul_sort_confluence hs hs') as [x' [conv [leq leq']]].
   intros isp.
   eapply leq_universe_sprop_r in leq; eauto.
   unshelve eapply (leq_universe_sprop_l _ _ _ _ _ leq'); eauto.

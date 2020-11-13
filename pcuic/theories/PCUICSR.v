@@ -372,8 +372,7 @@ Proof.
          simpl in sp. rewrite !map_map_compose in sp. eapply sp.
          autorewrite with len.
          simpl. constructor.
-         2:{ simpl; constructor; auto. eapply isType_Sort; eauto.
-             reflexivity. }
+         2:{ simpl; constructor; auto. }
          rewrite lift_mkApps subst_mkApps.
          simpl. eapply type_mkApps. econstructor; eauto.
          split; eauto.
@@ -675,10 +674,12 @@ Proof.
     eapply build_branches_type_red in heq_map_option_out as [brtys' [eqbrtys alleq]]; eauto.
     eapply type_Case; eauto.
     * eapply All2_trans'; eauto. simpl.
-      intros.
+      intros. destruct X1 as ((((? & ?) & ?) & [s [Hs IH]]) & ? & ?).
+      specialize (IH _ r).
       intuition auto. now transitivity y.1.
-      eapply type_Cumul; eauto.
+      eapply type_Cumul'; eauto. now exists s.
       now eapply conv_cumul, red_conv, red1_red.
+      now exists s.
     * pose proof typec as typec'.
       eapply (env_prop_typing _ _ validity) in typec' as wat; auto.
       unshelve eapply isType_mkApps_Ind in wat as [parsubst [argsubst wat]]; eauto.
@@ -699,8 +700,6 @@ Proof.
       split. apply (env_prop_typing _ _ validity) in typep as ?; eauto.
       eapply arity_spine_it_mkProd_or_LetIn; eauto.
       simpl. constructor; [ |constructor].
-      2:{ eapply isType_Sort; eauto. }
-      2:reflexivity.
       rewrite subst_mkApps. simpl.
       rewrite map_app. rewrite map_map_compose.
       rewrite map_subst_lift_id_eq. now rewrite (subslet_length sargs); autorewrite with len.
@@ -712,6 +711,7 @@ Proof.
   - (* Case congruence on discriminee *) 
     eapply type_Cumul. eapply type_Case; eauto.
     * solve_all.
+      firstorder auto.
     * pose proof typec as typec'.
       eapply (env_prop_typing _ _ validity) in typec' as wat; auto.
       unshelve eapply isType_mkApps_Ind in wat as [parsubst [argsubst wat]]; eauto.
@@ -732,8 +732,6 @@ Proof.
       split. apply (env_prop_typing _ _ validity) in typep; eauto.
       eapply arity_spine_it_mkProd_or_LetIn; eauto.
       simpl. constructor; [ |constructor].
-      2:{ eapply isType_Sort; pcuic. }
-      2:reflexivity.
       rewrite subst_mkApps. simpl.
       rewrite map_app. rewrite map_map_compose.
       rewrite map_subst_lift_id_eq. now rewrite (subslet_length sargs); autorewrite with len.

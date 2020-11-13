@@ -1010,11 +1010,10 @@ Section WeakNormalization.
     eapply (wf_fixpoint_spine wfΣ) in t0; eauto.
     rewrite no_arg in t0. destruct t0 as [na [dom [codom cum]]].
     eapply PCUICConversion.invert_cumul_prod_l in cum; auto.
-    destruct cum as (? & ? & ? & (? & ?) & ?).
+    destruct cum as (? & ? & ? & ((? & ?) & ?) & ?).
     eapply PCUICConfluence.red_mkApps_tInd in r as [? [eq _]]; auto.
     solve_discr.
   Qed.
-
 
   Lemma wh_neutral_empty_gen t Γ : axiom_free Σ -> wh_neutral Σ Γ t -> forall ty, Σ ;;; Γ |- t : ty -> Γ = [] -> False
   with wh_normal_empty_gen t Γ i u args : axiom_free Σ -> wh_normal Σ Γ t -> Σ ;;; Γ |- t : mkApps (tInd i u) args -> 
@@ -1048,7 +1047,7 @@ Section WeakNormalization.
       eapply inversion_Case in typed; firstorder eauto.
     - eapply inversion_Proj in typed; firstorder auto.
     - eapply wh_neutral_empty_gen in w; eauto.
-    - eapply inversion_Sort in typed as (? & ? & ? & ? & ?); auto.
+    - eapply inversion_Sort in typed as (? & ? & ?); auto.
       eapply invert_cumul_sort_l in c as (? & ? & ?); auto.
       eapply red_mkApps_tInd in r as (? & eq & ?); eauto; eauto.
       solve_discr.
@@ -1063,26 +1062,6 @@ Section WeakNormalization.
     - now rewrite head_mkApps /= /head /=.
     - exfalso; eapply invert_ind_ind; eauto.
     - exfalso; eapply invert_fix_ind; eauto.
-    (*- eapply PCUICValidity.inversion_mkApps in typed as (? & ? & ?); auto.
-      eapply inversion_Ind in t as (? & ? & ? & decli & ? & ?); auto.
-      eapply PCUICSpine.typing_spine_strengthen in t0; eauto.
-      pose proof (on_declared_inductive wfΣ decli) as [onind oib].
-      rewrite oib.(ind_arity_eq) in t0.
-      rewrite !subst_instance_constr_it_mkProd_or_LetIn in t0.
-      eapply typing_spine_arity_mkApps_Ind in t0; eauto.
-      eexists; split; [sq|]; eauto.
-      now do 2 eapply isArity_it_mkProd_or_LetIn.
-    - eapply inversion_mkApps in typed as (? & ? & ?); eauto.
-      eapply inversion_Fix in t as (? & ? & ? & ? & ? & ? & ?); auto.
-      eapply typing_spine_strengthen in t0; eauto.
-      eapply nth_error_all in a; eauto. simpl in a.
-      rewrite /unfold_fix in H. rewrite e in H.
-      eapply (wf_fixpoint_spine wfΣ) in t0; eauto.
-      rewrite H in t0. destruct t0 as [na [dom [codom cum]]].
-      eapply invert_cumul_prod_l in cum; auto.
-      destruct cum as (? & ? & ? & ((? & ?) & ?) & ?).
-      eapply red_mkApps_tInd in r as [? [eq _]]; auto.
-      solve_discr.*)
     - now rewrite head_mkApps /head /=.
   Qed.
 

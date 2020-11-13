@@ -655,6 +655,9 @@ Module Universe.
 
 End Universe.
 
+Definition is_propositional u := 
+  Universe.is_prop u || Universe.is_sprop u.
+
 (** This coercion allows to see the universes as a [UnivExprSet.t] *)
 Coercion Universe.t_set : Universe.t0 >-> UnivExprSet.t.
 

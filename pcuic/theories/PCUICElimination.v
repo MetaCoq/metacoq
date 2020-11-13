@@ -226,6 +226,26 @@ Lemma wf_ext_wf {cf:checker_flags} Σ : wf_ext Σ -> wf Σ.
 Proof. move=> wfe; apply wfe. Qed.
 Hint Resolve wf_ext_wf : core.
 
+Lemma is_propositional_subst_instance u s :
+  is_propositional (subst_instance_univ u s) = is_propositional s.
+Proof. destruct s => //. Qed.
+
+Lemma leq_universe_propositional_l {cf:checker_flags} ϕ u1 u2 :
+  check_univs ->
+  prop_sub_type = false ->
+  consistent ϕ ->
+  leq_universe ϕ u1 u2 -> is_propositional u1 -> u1 = u2.
+Proof.
+  intros Hcf ps cu le.
+  unfold is_propositional.
+  destruct (Universe.is_prop u1) eqn:eq.
+  apply leq_universe_prop_no_prop_sub_type in le; auto.
+  simpl. now destruct u1, u2.
+  simpl. intros sp.
+  apply leq_universe_sprop_l in le; auto.
+  now destruct u1, u2.
+Qed.
+
 Lemma typing_spine_proofs {cf:checker_flags} Σ Γ Δ ind u args' args T' s :
   check_univs ->
   wf_ext Σ ->
@@ -239,12 +259,9 @@ Lemma typing_spine_proofs {cf:checker_flags} Σ Γ Δ ind u args' args T' s :
     (oib : on_ind_body (lift_typing typing) (Σ.1, ind_universes mdecl)
       (inductive_mind ind) mdecl (inductive_ind ind) idecl),
       consistent_instance_ext Σ (ind_universes mdecl) u ->
-      (* (Universe.is_prop s -> Universe.is_prop (subst_instance_univ u oib.(ind_sort))) /\
-      (prop_sub_type = false -> Universe.is_prop (subst_instance_univ u oib.(ind_sort)) ->
-        Universe.is_prop s)))%type. *)
-      (Universe.is_prop s || Universe.is_sprop s) -> 
-      (Universe.is_prop (subst_instance_univ u oib.(ind_sort)) || 
-       Universe.is_sprop (subst_instance_univ u oib.(ind_sort)))))%type.
+      ((is_propositional s -> s = subst_instance_univ u oib.(ind_sort)) /\ 
+       (prop_sub_type = false ->
+        is_propositional (subst_instance_univ u oib.(ind_sort)) -> s = subst_instance_univ u oib.(ind_sort)))))%type.
 Proof.
   intros checku wfΣ Ht.
   induction Δ using ctx_length_rev_ind in Γ, args', args, T', Ht |- *; simpl; intros sp.
@@ -260,26 +277,23 @@ Proof.
       rewrite (oib.(ind_arity_eq)) in sp.
       rewrite !subst_instance_constr_it_mkProd_or_LetIn in sp.
       rewrite -it_mkProd_or_LetIn_app in sp.
-      intros Hs.
       eapply typing_spine_it_mkProd_or_LetIn_full_inv in sp; auto.
-      rewrite (is_prop_subst_instance_univ u).
-      (*apply (consistent_instance_ext_noprop cu).
-      rewrite -(is_prop_subst_instance_univ ui' (ind_sort oib)).
-      now apply (consistent_instance_ext_noprop cu').
       split.
-      + intros props. eapply leq_universe_prop; eauto.
-      + intros propsub props. 
-        apply leq_universe_prop_no_prop_sub_type in sp; eauto.*)
-      rewrite (is_sprop_subst_instance_univ u).
+      intros Hs.
       destruct s => //.
       eapply leq_universe_prop_r in sp; auto.
       rewrite (is_prop_subst_instance_univ ui') in sp => //.
-      now rewrite sp.
+      now destruct (ind_sort oib).
       apply wfΣ.
       eapply leq_universe_sprop_r in sp; auto.
       rewrite (is_sprop_subst_instance_univ ui') in sp => //.
-      now rewrite sp orb_true_r.
+      now destruct (ind_sort oib).
       apply wfΣ.
+      intros propsub props.
+      rewrite is_propositional_subst_instance in props.
+      apply leq_universe_propositional_l in sp; eauto. subst s.
+      now destruct (ind_sort oib).
+      now destruct (ind_sort oib).
       
     * eapply cumul_Prod_r_inv in c; auto.
       destruct c as [na' [dom' [codom' [[[red _] _] ?]]]].
@@ -317,10 +331,12 @@ Proof.
         unfold mkProd_or_LetIn in c; simpl in c.
         eapply cumul_Prod_l_inv in c as [na' [dom' [codom' [[[red eqann] conv] cum]]]]; auto.
         eapply subject_reduction in Ht; eauto.
-        intros. eapply inversion_Prod in Ht as [s1 [s2 [dom [codom cum']]]]; auto.
+        intros.
+        pose proof (PCUICWfUniverses.typing_wf_universe wfΣ Ht).
+        eapply inversion_Prod in Ht as [s1 [s2 [dom [codom cum']]]]; auto.
         specialize (H Γ0 ltac:(reflexivity) (Γ ,, vass na' dom') args' []).
         eapply (type_Cumul _ _ _ _ (tSort s)) in codom; cycle 1; eauto.
-        { destruct s => //; econstructor; pcuic. }
+        { econstructor; pcuic. }
         { eapply cumul_Sort_inv in cum'.
           do 2 constructor. etransitivity; eauto. eapply leq_universe_product. }
         specialize (H _ codom).
@@ -349,7 +365,7 @@ Proof.
           eapply All_local_assum_subst; eauto.
           simpl. intros.
           destruct X as [s [Ht2 isp]].
-          exists s; firstorder.
+          exists s; firstorder auto.
           rewrite Nat.add_0_r. eapply (substitution _ Γ [vass na ty] [t] Γ1 _ (tSort s)); auto.
           repeat (constructor; auto). now rewrite subst_empty.
           now rewrite app_context_assoc in Ht2. }
@@ -459,13 +475,13 @@ Proof.
     simpl in sp.
     eapply typing_spine_proofs in sp; eauto.
     destruct sp.
-    specialize (i _ _ (proj1 declc) onib cu) as a.
+    specialize (a _ _ (proj1 declc) onib cu) as [a a'].
     specialize (a hp). 
     
     pose proof (onc.(on_cargs)).
     pose proof (onib.(ind_sorts)).
     assert (Universe.is_prop (ind_sort onib) || Universe.is_sprop (ind_sort onib)).
-    { rewrite -(is_prop_subst_instance_univ u) -(is_sprop_subst_instance_univ u) => //. }
+    { rewrite -(is_prop_subst_instance_univ u) -(is_sprop_subst_instance_univ u) => //. now subst tycs. }
     apply check_ind_sorts_is_prop in X1 as [nctors X1]; eauto.
     assert(#|ind_cshapes onib| = #|ind_ctors idecl|).
     clear wat X. clear -onib. pose proof (onib.(onConstructors)).
@@ -514,8 +530,10 @@ Proof.
     specialize (sp hp).
     { rewrite -(is_prop_subst_instance_univ u) //.
       now apply (consistent_instance_ext_noprop cu). } *)
-    destruct sp as [_ sp]. specialize (sp _ _ decli onib cu hp).
-    { rewrite -(is_prop_subst_instance_univ u) //. todo "sprop". }
+    destruct sp as [_ sp]. specialize (sp _ _ decli onib cu) as [a a'].
+    specialize (a hp).
+    { rewrite -(is_prop_subst_instance_univ u) //. subst tycs.
+      todo "sprop". }
 Qed.
     
 Lemma elim_restriction_works_kelim `{cf : checker_flags} (Σ : global_env_ext) ind mind idecl :

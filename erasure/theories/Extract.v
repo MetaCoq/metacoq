@@ -9,15 +9,12 @@ Module E := EAst.
 
 Local Existing Instance extraction_checker_flags.
 
-Definition is_propositional u := 
-  Universe.is_prop u || Universe.is_sprop u.
-
 Definition isErasable Σ Γ t := ∑ T, Σ ;;; Γ |- t : T × (isArity T + (∑ u, (Σ ;;; Γ |- T : tSort u) * 
   is_propositional u))%type.
 
 Definition isPropositionalArity ar b :=
   match destArity [] ar with
-  | Some (_, s) => Universe.is_prop s = b
+  | Some (_, s) => is_propositional s = b
   | None => False
   end.
 
@@ -27,7 +24,7 @@ Definition isPropositional Σ ind b :=
     match nth_error mdecl.(ind_bodies) (inductive_ind ind) with 
     | Some idecl =>
       match destArity [] idecl.(ind_type) with
-      | Some (_, s) => Universe.is_prop s = b
+      | Some (_, s) => is_propositional s = b
       | None => False
       end
     | None => False

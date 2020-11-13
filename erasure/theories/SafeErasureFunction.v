@@ -124,26 +124,26 @@ Section fix_sigma.
     {Is_conv_to_Arity Σ Γ T} + {~ Is_conv_to_Arity Σ Γ T}
     by wf ((Γ;T;HT) : (∑ Γ t, welltyped Σ Γ t)) term_rel :=
     {
-      is_arity Γ HΓ T HT with (@reduce_to_sort _ Σ HΣ Γ T HT) => {
-      | Checked H => left _ ;
-      | TypeError _ with inspect (@reduce_to_prod _ Σ HΣ Γ T _) => {
-        | exist (Checked (na; A; B; H)) He with is_arity (Γ,, vass na A) _ B _ :=
+      is_arity Γ HΓ T HT with inspect (@reduce_to_sort _ Σ HΣ Γ T HT) => {
+      | exist (Checked H) rsort => left _ ;
+      | exist (TypeError _) rsort with inspect (@reduce_to_prod _ Σ HΣ Γ T _) => {
+        | exist (Checked (na; A; B; H)) rprod with is_arity (Γ,, vass na A) _ B _ :=
           { | left H => left _;
             | right H => right _ };
-        | exist (TypeError e) He => right _ } }
+        | exist (TypeError e) rprod => right _ } }
     }.
   Next Obligation.
     sq. econstructor. split. sq. eassumption. econstructor.
   Qed.
   Next Obligation.
-    clear He.
+    clear rprod.
     destruct HT as []; sq.
     eapply subject_reduction in X; eauto.
     eapply inversion_Prod in X as (? & ? & ? & ? & ?).
     econstructor. eauto. cbn. eauto. auto.
   Qed.
   Next Obligation.
-    clear He.
+    clear rprod.
     sq. destruct HT as [].
     eapply subject_reduction in X; eauto.
     eapply inversion_Prod in X as (? & ? & ? & ? & ?).
@@ -158,7 +158,7 @@ Section fix_sigma.
     eassumption. now cbn.
   Qed.
   Next Obligation.
-    clear He.
+    clear rprod.
     destruct HΣ as [wΣ].
     destruct H1 as (? & ? & ?). sq.
     destruct H.
@@ -624,7 +624,7 @@ Definition erase_one_inductive_body (oib : one_inductive_body) : E.one_inductive
   let projs := map (fun '(x, y) => x) oib.(ind_projs) in
   let is_propositional := 
     match destArity [] oib.(ind_type) with
-    | Some (_, u) => Universe.is_prop u
+    | Some (_, u) => is_propositional u
     | None => false (* dummy, impossible case *)
     end
   in

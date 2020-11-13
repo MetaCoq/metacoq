@@ -412,3 +412,4 @@ erasure/src/pCUICWfUniverses.ml
 erasure/src/pCUICWfUniverses.mli
 erasure/src/signature.ml
 erasure/src/signature.mli
+erasure/src/eOptimizePropDiscr.ml

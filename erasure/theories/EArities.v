@@ -52,23 +52,18 @@ Proof.
     eapply it_mkProd_isArity. econstructor.
 Qed.
 
-Lemma isWfArity_prod_inv:
-  forall (Σ : global_env_ext) (Γ : context) (x : aname) (x0 x1 : term),
-    isWfArity typing Σ Γ (tProd x x0 x1) -> (∑ s : Universe.t, Σ;;; Γ |- x0 : tSort s) × isWfArity typing Σ (Γ,, vass x x0) x1.
+Lemma isWfArity_prod_inv (Σ : global_env_ext) (Γ : context) (x : aname) (x0 x1 : term) :
+    wf Σ ->
+    isWfArity Σ Γ (tProd x x0 x1) -> (isType Σ Γ x0 × isWfArity Σ (Γ,, vass x x0) x1).
 Proof.
-  intros. destruct X as (? & ? & ? & ?). cbn in e.
+  intros wfΣ (? & ? & ? & ?). cbn in e.
+  eapply isType_tProd in i as [dom codom]; auto. 2:pcuic.
+  split; auto.
+  split; auto. 2:{ now eapply isType_wf_local in i. }
+  clear dom codom.
   eapply destArity_app_Some in e as (? & ? & ?); subst.
-  split.
-  - unfold snoc, app_context in *. rewrite <- app_assoc in *.
-    clear H. induction x4.
-    + inv a. eauto.
-    + cbn in a. inv a.
-      * eapply IHx4. eauto.
-      * eapply IHx4. eauto.
-  - eexists. eexists. split; eauto. subst.
-    unfold snoc, app_context in *. rewrite <- app_assoc in *. eassumption.
+  eexists. eexists; eauto.
 Qed.
-
 
 Lemma inds_nth_error ind u l n t :
   nth_error (inds ind u l) n = Some t -> exists n, t = tInd {| inductive_mind := ind ; inductive_ind := n |} u.
@@ -198,11 +193,12 @@ Lemma tConstruct_no_Type (Σ : global_env_ext) Γ ind c u x1 : wf Σ ->
 Proof.
   intros wfΣ (? & ? & [ | (? & ? & ?)]).
   - exfalso.
+    pose proof (PCUICValidity.validity_term wfΣ t).
     eapply PCUICValidity.inversion_mkApps in t as (? & ? & ?); eauto.
     assert(c0 : Σ ;;; Γ |- x <= x) by reflexivity.
     revert c0 t0 i. generalize x at 1 3.
     intros x2 c0 t0 i.
-    assert (HWF : isType Σ [] x2).
+    assert (HWF : isType Σ Γ x2).
     { eapply PCUICValidity.validity.
       - eauto.
       - eapply type_mkApps. 2:eauto. eauto.
@@ -251,7 +247,7 @@ Proof.
     | |- context [ tInd ?i _ ] =>
       generalize i
     end.
-    clear - wfΣ HWF t0 c0. intros.
+    clear -a wfΣ HWF t0 c0. intros.
     destruct c0 as (? & [] & ?).
     eapply typing_spine_red in t0. 3:auto. 2:{ eapply All_All2_refl. clear. induction x1; eauto. }
     2: eapply PCUICCumulativity.red_cumul. 2: eassumption. 2:eapply PCUICCumulativity.cumul_refl'.
@@ -465,7 +461,7 @@ Proof.
 
     eapply isType_red; eauto. exists x3; split; sq; eauto.
   - destruct p.
-    eapply PCUICPrincipality.principal_typing in t2 as (? & ? & ? & ?). 2:eauto. 2:exact t0.
+    eapply PCUICPrincipality.common_typing in t2 as (? & ? & ? & ?). 2:eauto. 2:exact t0.
     eapply cumul_prop1' in c0; eauto.
     eapply cumul_propositional in c; eauto.
     econstructor. exists T. split. eapply type_mkApps. 2:eassumption. eassumption. right.
@@ -585,16 +581,16 @@ Proof.
   sq. exists T. intuition auto. right.
   destruct s as [u [vtu isp]].
   exists u; intuition auto.
-  eapply cumul_prop2; eauto. now eapply PCUICValidity.validity in HT.
-  eapply cumul_prop1; eauto. now eapply PCUICValidity.validity in vP.
+  eapply cumul_propositional; eauto. now eapply PCUICValidity.validity in HT.
+  eapply cumul_prop1'; eauto. now eapply PCUICValidity.validity in vP.
 Qed.
 
 Lemma nIs_conv_to_Arity_isWfArity_elim {Σ : global_env_ext} {Γ x} : 
   ~ Is_conv_to_Arity Σ Γ x ->
-  isWfArity typing Σ Γ x ->
+  isWfArity Σ Γ x ->
   False.
 Proof.
-  intros nis [ctx [s [da wf]]]. apply nis.
+  intros nis [isTy [ctx [s da]]]. apply nis.
   red. exists (it_mkProd_or_LetIn ctx (tSort s)).
   split. sq. apply PCUICArities.destArity_spec_Some in da.
   simpl in da. subst x.
@@ -604,7 +600,7 @@ Qed.
 
 Definition isErasable_Type (Σ : global_env_ext) Γ T := 
   (Is_conv_to_Arity Σ Γ T +
-    (∑ u : Universe.t, Σ;;; Γ |- T : tSort u × Universe.is_prop u))%type.
+    (∑ u : Universe.t, Σ;;; Γ |- T : tSort u × is_propositional u))%type.
 
 Lemma isErasable_any_type {Σ Γ t T} : 
   wf_ext Σ -> 
@@ -620,6 +616,6 @@ Proof.
   destruct s as [u [Hu isp]].
   right.
   exists u; split; auto.
-  eapply cumul_prop2; eauto. eapply PCUICValidity.validity; eauto.
-  eapply cumul_prop1; eauto. eapply PCUICValidity.validity; eauto.
+  eapply cumul_propositional; eauto. eapply PCUICValidity.validity; eauto.
+  eapply cumul_prop1'; eauto. eapply PCUICValidity.validity; eauto.
 Qed.

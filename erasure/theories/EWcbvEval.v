@@ -108,7 +108,7 @@ Section Wcbv.
   (** Case *)
   | eval_iota ind pars discr c args brs res :
       eval discr (mkApps (tConstruct ind c) args) ->
-      is_propositional Σ ind = Some false ->
+      is_propositional_ind Σ ind = Some false ->
       eval (iota_red pars c args brs) res ->
       eval (tCase (ind, pars) discr brs) res
 
@@ -116,7 +116,7 @@ Section Wcbv.
   | eval_iota_sing ind pars discr brs n f res :
       with_prop_case ->
       eval discr tBox ->
-      is_propositional Σ ind = Some true ->
+      is_propositional_ind Σ ind = Some true ->
       brs = [ (n,f) ] ->
       eval (mkApps f (repeat tBox n)) res ->
       eval (tCase (ind, pars) discr brs) res
@@ -158,7 +158,7 @@ Section Wcbv.
   (** Proj *)
   | eval_proj i pars arg discr args res :
       eval discr (mkApps (tConstruct i 0) args) ->
-      is_propositional Σ i = Some false ->
+      is_propositional_ind Σ i = Some false ->
       eval (List.nth (pars + arg) args tDummy) res ->
       eval (tProj (i, pars, arg) discr) res
 
@@ -166,7 +166,7 @@ Section Wcbv.
   | eval_proj_prop i pars arg discr :
       with_prop_case ->
       eval discr tBox ->
-      is_propositional Σ i = Some true ->
+      is_propositional_ind Σ i = Some true ->
       eval (tProj (i, pars, arg) discr) tBox
 
   (** Atoms (non redex-producing heads) applied to values are values *)

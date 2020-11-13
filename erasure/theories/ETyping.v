@@ -46,7 +46,7 @@ Qed.
 
 (** Knowledge of propositionality status oof an inductive type *)
 
-Definition is_propositional Σ ind :=
+Definition is_propositional_ind Σ ind :=
   match lookup_env Σ (inductive_mind ind) with
   | Some (InductiveDecl mdecl) =>
     match nth_error mdecl.(ind_bodies) (inductive_ind ind) with 

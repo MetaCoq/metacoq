@@ -154,8 +154,8 @@ Definition gc_of_constraint `{checker_flags} (uc : UnivConstraint.t)
      | (Level.lSet, Le z, r) => 
       match Z.compare z 0 with
       | Datatypes.Eq => empty
-      | Lt => (* Set <= l + n *) empty
-      | Gt => (* Set + n <= l *) 
+      | Datatypes.Lt => (* Set <= l + n *) empty
+      | Datatypes.Gt => (* Set + n <= l *) 
         match r with
         | Level.lSet => None
         | Level.Level s => singleton (gc_lt_set_level (Z.to_nat (z - 1)) s)
@@ -1651,6 +1651,36 @@ Section CheckLeq.
       rewrite H. reflexivity.
   Qed.
 
+  Let levels_declared (u : Universe.t)
+  := match u with
+     | Universe.lSProp | Universe.lProp => True
+     | Universe.lType l => gc_levels_declared l
+     end.
+
+  Lemma fold_left_false {A} l : fold_left (B:=A) (fun _ : bool => xpred0) l false = false.
+  Proof.
+    induction l; simpl; eauto.
+  Qed.
+
+  Lemma check_eqb_universe_spec (u1 u2 : Universe.t)
+        (Hu1  : levels_declared u1)
+        (Hu2  : levels_declared u2)
+    : check_eqb_universe u1 u2 <-> gc_eq_universe uctx.2 u1 u2.
+  Proof.
+    destruct u1, u2; simpl; rewrite ?check_eqb_universe_exprs_spec; auto; cbn; unfold check_eqb_universe; 
+    repeat rewrite ?orb_true_r ?orb_false_r ?andb_true_r ?andb_false_r; cbn.
+    9:reflexivity.
+    all:unfold gc_eq_universe; destruct check_univs eqn:cu; cbn; try split; auto; try discriminate.
+    intros. all: try (red; intros v gc; simpl; auto).
+    all:try solve [intros Hgc; destruct HC as [v Hv]; specialize (Hgc v Hv); simpl in Hgc; try discriminate].
+    rewrite !andb_true_r in v.
+    intros Hgc.
+    destruct (Universe.exprs t0).
+    now rewrite fold_left_false andb_false_r in v.
+    destruct (Universe.exprs t0).
+    now rewrite fold_left_false /= in v.
+  Qed.
+
   Lemma check_eqb_universe_refl :
     forall u, check_eqb_universe u u.
   Proof.
@@ -1892,7 +1922,7 @@ Section CheckLeq2.
     rewrite gc_eq_universe_iff.
     unfold is_graph_of_uctx, gc_of_uctx in HG.
     destruct gc_of_constraints; [cbn in *|contradiction HG].
-    intros eq.
+    intros eq. 
     apply <- check_eqb_universe_spec; eauto.
     exact eq.
   Qed.

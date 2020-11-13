@@ -37,6 +37,8 @@ Local Ltac term_dec_tac term_dec :=
          | i : inductive, i' : inductive |- _ => fcase (eq_dec i i')
          | x : inductive * nat, y : inductive * nat |- _ =>
            fcase (eq_dec x y)
+         | x : (inductive * nat) * relevance, y : (inductive * nat) * relevance |- _ =>
+           fcase (eq_dec x y)
          | x : projection, y : projection |- _ => fcase (eq_dec x y)
          end.
 

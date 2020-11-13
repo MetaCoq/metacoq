@@ -1054,6 +1054,9 @@ Module ConstraintType.
   Definition eq : t -> t -> Prop := eq.
   Definition eq_equiv : Equivalence eq := _.
 
+  Definition Le0 := Le 0.
+  Definition Lt := Le 1.
+
   Inductive lt_ : t -> t -> Prop :=
   | LeLe n m : (n < m)%Z -> lt_ (Le n) (Le m)
   | LeEq n : lt_ (Le n) Eq.
@@ -1450,7 +1453,6 @@ Section Univ.
     intros [H1 H2] v Hv; specialize (H1 v Hv); specialize (H2 v Hv).
     unfold univ_le_n in *.
     destruct (Universe.univ_val v u), (Universe.univ_val v u'); try now auto.
-    f_equal; lia.
   Qed.
 
   Lemma leq_universe0_sup_l φ s1 s2 :

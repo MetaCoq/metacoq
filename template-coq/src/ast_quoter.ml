@@ -135,8 +135,8 @@ struct
   let quote_proj ind p a = ((ind,p),a)
 
   let quote_constraint_type = function
-    | Univ.Lt -> Universes0.ConstraintType.Lt
-    | Univ.Le -> Universes0.ConstraintType.Le
+    | Univ.Lt -> Universes0.ConstraintType.Le 1
+    | Univ.Le -> Universes0.ConstraintType.Le 0
     | Univ.Eq -> Universes0.ConstraintType.Eq
 
   let is_Lt = function
@@ -169,7 +169,7 @@ struct
           (Univ.Level.is_prop l && is_Eq ct && Univ.Level.is_prop l')
        then constraints_ cs'
        else if (* fail on unisatisfiable ones -- well-typed term is expected *)
-         Univ.Level.is_prop l' then failwith "Unisatisfiable constraint (l <= Prop)"
+         Univ.Level.is_prop l' then failwith "Unsatisfiable constraint (l <= Prop)"
        else (* NOTE:SPROP: we don't expect SProp to be in the constraint set *)
          quote_univ_constraint (l,ct,l') :: constraints_ cs'
 

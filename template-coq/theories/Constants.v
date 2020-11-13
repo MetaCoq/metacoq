@@ -86,7 +86,9 @@ Register MetaCoq.Template.Universes.fresh_universe as metacoq.ast.fresh_universe
 Register MetaCoq.Template.Universes.InProp as metacoq.ast.InProp.
 Register MetaCoq.Template.Universes.InSet as metacoq.ast.InSet.
 Register MetaCoq.Template.Universes.InType as metacoq.ast.InType.
-Register MetaCoq.Template.Universes.ConstraintType.Le as metacoq.ast.constraints.Le.
+(* We convert from simple constraints to ones in Z *)
+Register MetaCoq.Template.Universes.ConstraintType.Lt as metacoq.ast.constraints.Lt.
+Register MetaCoq.Template.Universes.ConstraintType.Le0 as metacoq.ast.constraints.Le.
 Register MetaCoq.Template.Universes.ConstraintType.Eq as metacoq.ast.constraints.Eq.
 Register MetaCoq.Template.Universes.Universe.from_kernel_repr as metacoq.ast.universe.from_kernel_repr.
 Register MetaCoq.Template.Universes.Universe.of_levels as metacoq.ast.universe.of_levels.

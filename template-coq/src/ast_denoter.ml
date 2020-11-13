@@ -167,20 +167,20 @@ struct
       Univ.Level.make (Univ.Level.UGlobal.make dp idx)
     | Universes0.Level.Var n -> Univ.Level.var (unquote_int n)
 
-  let unquote_level_expr (trm : Universes0.Level.t * quoted_bool) : Univ.Universe.t =
+  let unquote_level_expr (trm : Universes0.Level.t * Datatypes.nat) : Univ.Universe.t =
     let l = unquote_level (fst trm) in
     let u = Univ.Universe.make l in
-    if snd trm && not (Univ.Level.is_prop l) then Univ.Universe.super u
+    let n = unquote_int (snd trm) in
+    if n > 0 && not (Univ.Level.is_prop l) then Univ.Universe.super u
     else u
 
   let unquote_universe evd (trm : Universes0.Universe.t) =
     match trm with
     | Universes0.Universe.Coq_lSProp -> evd, Univ.Universe.sprop
     | Universes0.Universe.Coq_lProp -> evd, Univ.Universe.type0m
-    | Universes0.Universe.Coq_lnpe u ->
+    | Universes0.Universe.Coq_lType u ->
        (* let u = Universes0.Universe.t_set l in *)
        let ux_list = Universes0.UnivExprSet.elements u in
-       (* let l = Universes0.Universe.to_kernel_repr l in *)
        let l = List.map unquote_level_expr ux_list in
        evd, List.fold_left Univ.Universe.sup (List.hd l) (List.tl l)
 

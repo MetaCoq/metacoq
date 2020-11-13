@@ -261,7 +261,6 @@ Module Nbar.
   Lemma le_antisymm {n m} : n <= m -> m <= n -> n = m.
   Proof.
     destruct n, m; cbn; try easy.
-    intros. f_equal. lia.
   Qed.
 
 End Nbar.

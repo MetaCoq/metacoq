@@ -32,7 +32,7 @@ Extraction Inline Equations.Init.pr2.
 Extraction Inline Equations.Init.hidebody.
 Extraction Inline Equations.Prop.DepElim.solution_left.
 
-Extract Inductive Equations.Init.sigma => "(*)" ["(,)"].
+Extract Inductive Equations.Init.sigma => "( * )" ["(,)"].
 
 Extract Constant PCUICTyping.fix_guard => "(fun x -> true)".
 Extract Constant PCUICTyping.cofix_guard => "(fun x -> true)".

@@ -25,6 +25,7 @@ PCUICEquality
 PCUICTyping
 PCUICReduction
 PCUICInduction
+PCUICWfUniverses
 PCUICNormal
 PCUICPosition
 PCUICChecker

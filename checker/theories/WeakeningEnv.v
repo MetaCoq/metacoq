@@ -301,7 +301,7 @@ Proof.
   destruct ctrs=> //.
   destruct cst as [nas cst]; simpl in *.
   intuition auto.
-  eapply forallb_Forall in H1. eapply forallb_Forall, Forall_impl; tea.
+  eapply forallb_Forall in H. eapply forallb_Forall, Forall_impl; tea.
   intros ? ? ; now eapply weakening_env_global_ext_levels'.
   eapply valid_subset; tea;
     now eapply weakening_env_global_ext_constraints.
@@ -337,6 +337,7 @@ Proof.
   apply typing_ind_env; intros;
     rename_all_hyps; try solve [econstructor; eauto 2 with extends].
 
+  - todo "sorts".
   - econstructor; eauto 2 with extends.
     destruct Σ as [Σ φ].
     clear typet heq_isApp forall_Σ' hneq_l.
@@ -386,6 +387,7 @@ Proof.
       red in on_ctype |- *. eauto.
       clear on_cindices cstr_eq cstr_args_length cstr_concl_head.
       induction (cshape_args cs); simpl in *; auto.
+      todo "sorts".
       destruct a as [na [b|] ty]; simpl in *; intuition eauto.
       clear on_ctype on_cargs.
       revert on_cindices.
@@ -407,6 +409,7 @@ Proof.
           apply weakening_env_global_ext_constraints; tea.
           destruct indices_matter; [|trivial]. clear -ind_sorts HPΣ wfΣ' Hext.
           induction ind_indices; simpl in *; auto.
+          todo "sorts".
           destruct a as [na [b|] ty]; simpl in *; intuition eauto.
       --- split; [apply fst in ind_sorts|apply snd in ind_sorts].
           eapply Forall_impl; tea; cbn.
@@ -414,6 +417,15 @@ Proof.
           apply weakening_env_global_ext_constraints; tea.
           destruct indices_matter; [|trivial]. clear -ind_sorts HPΣ wfΣ' Hext.
           induction ind_indices; simpl in *; auto.
+          todo "sorts".
+          destruct a as [na [b|] ty]; simpl in *; intuition eauto.
+      --- split; [apply fst in ind_sorts|apply snd in ind_sorts].
+          eapply Forall_impl; tea; cbn.
+          intros. eapply leq_universe_subset; tea.
+          apply weakening_env_global_ext_constraints; tea.
+          destruct indices_matter; [|trivial]. clear -ind_sorts HPΣ wfΣ' Hext.
+          induction ind_indices; simpl in *; auto.
+          todo "sorts".
           destruct a as [na [b|] ty]; simpl in *; intuition eauto.
       -- intros v onv.
           move: (onIndices v onv). unfold ind_respects_variance.

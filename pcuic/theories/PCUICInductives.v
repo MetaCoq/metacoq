@@ -338,6 +338,7 @@ Proof.
   generalize (on_inductive_sort wfΣ wfΓ declm oi oib) => wf.
   destruct Σ.
   eapply wf_universe_instantiate; eauto.
+  now eapply consistent_instance_ext_wf.
   eapply sub_context_set_trans.
   eapply (weaken_lookup_on_global_env'' _ _ (InductiveDecl mdecl)); eauto.
   eapply global_context_set_sub_ext.

@@ -1465,8 +1465,6 @@ Proof.
   - specialize (Hl (Level.Level s, n) inl).
     simpl in Hl.
     destruct sub. unfold levels_of_udecl in H.
-    apply consistent_instance_declared in Hu.
-    apply forallb_Forall in Hu.
     unfold global_ext_levels in Hl.
     destruct Σ.2.
     * eapply LS.union_spec in Hl.

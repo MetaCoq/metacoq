@@ -60,15 +60,43 @@ let unquote_map_option f trm =
 
 let unquote_option = unquote_map_option (fun x -> x)
 
+let rec unquote_pos trm : int =
+  let (h,args) = app_full trm [] in
+  match args with
+    [x] ->
+    if constr_equall h cposI then 
+      (2 * unquote_pos x + 1)
+    else if constr_equall h cposO then
+      (2 * unquote_pos x)
+    else not_supported_verb trm "unquote_pos"
+  | [] -> 
+    if constr_equall h cposzero then 1
+    else not_supported_verb trm "unquote_pos"
+  | _ -> bad_term_verb trm "unquote_pos"
 
+let unquote_Z trm : int =
+  let (h,args) = app_full trm [] in
+  match args with
+    [x] ->
+     if constr_equall h cZpos then unquote_pos x
+     else if constr_equall h cZneg then - unquote_pos x
+     else not_supported_verb trm "unquote_pos"
+  | [] -> 
+    if constr_equall h cZ0 then 0
+    else not_supported_verb trm "unquote_pos"
+  | _ -> bad_term_verb trm "unquote_pos"
 
 let unquote_constraint_type trm (* of type constraint_type *) : constraint_type =
   let (h,args) = app_full trm [] in
   match args with
-    [] ->
-    if constr_equall h tunivLt then Univ.Lt
-    else if constr_equall h tunivLe then Univ.Le
-    else if constr_equall h tunivEq then Univ.Eq
+    [x] ->
+    if constr_equall h tunivLe then 
+      let n = unquote_Z x in
+      if n = 0 then Univ.Le
+      else Univ.Lt
+    else not_supported_verb trm "unquote_constraint_type"
+  | [] -> 
+    if constr_equall h tunivEq then Univ.Eq
     else not_supported_verb trm "unquote_constraint_type"
   | _ -> bad_term_verb trm "unquote_constraint_type"
 

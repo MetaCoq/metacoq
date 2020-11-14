@@ -27,12 +27,18 @@ Fixpoint tsl_rec0 (n : nat) (o : nat) (t : term) {struct t} : term :=
   end.
 
 
-Definition suffix (n : name) s : name :=
+Definition suffix0 (n : name) s : name :=
   match n with
-  | nAnon     => nAnon
-  | nNamed id => nNamed (id ^ s)
+  | BasicAst.nAnon     => BasicAst.nAnon
+  | BasicAst.nNamed id => BasicAst.nNamed (id ^ s)
   end.
 
+Definition nAnon := {| binder_name := BasicAst.nAnon; binder_relevance := Relevant |}.
+Definition nNamed n := {| binder_name := BasicAst.nNamed n; binder_relevance := Relevant |}.
+  
+Definition suffix na n := map_binder_annot (fun na => suffix0 na n) na.
+
+  
 Fixpoint apply (app : list term) (t : term) :=
   match app with
   | t' :: app =>  apply app (mkApp t (t' {3 := tRel 1} {2 := tRel 0}))
@@ -111,13 +117,13 @@ Fixpoint tsl_rec1_app (app : list term) (E : tsl_table) (t : term) : term :=
     let brs' := List.map (on_snd (lift0 1)) brs in
     let case1 := tCase ik (lift0 3 t) (tRel 2) brs' in
     let case2 := tCase ik (lift0 3 t) (tRel 1) brs' in
-    match lookup_tsl_table E (IndRef (fst ik)) with
+    match lookup_tsl_table E (IndRef (fst (fst ik))) with
     | Some (tInd i _univ) =>
-      tCase (i, (snd ik) * 3)%nat
+      tCase ((i, (snd (fst ik)) * 3), snd ik)%nat
             (tsl_rec1_app [tsl_rec0 0 2 case1; tsl_rec0 0 1 case2] E t)
             (tsl_rec1 E u)
             (map (on_snd (tsl_rec1 E)) brs)
-    | _ => debug "tCase" (match (fst ik) with mkInd s _ => string_of_kername s end)
+    | _ => debug "tCase" (match fst (fst ik) with mkInd s _ => string_of_kername s end)
     end
 
   | tLetIn na t A u =>
@@ -164,7 +170,8 @@ Definition tsl_mind_body (E : tsl_table) (mp : modpath) (kn : kername)
               ind_type := _;
               ind_kelim := ind.(ind_kelim);
               ind_ctors := _;
-              ind_projs := [] |}. (* UGLY HACK!!! todo *)
+              ind_projs := [];
+              ind_relevance := ind.(ind_relevance) |}. (* UGLY HACK!!! todo *)
     + (* arity  *)
       refine (let ar := subst_app (tsl_rec1 E ind.(ind_type))
                                   [tInd (mkInd kn i) []; tInd (mkInd kn i) []] in

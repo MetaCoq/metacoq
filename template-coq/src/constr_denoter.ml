@@ -33,9 +33,9 @@ struct
       match args with
         _ :: _ :: ind_nparam :: relevance :: [] ->
          let (h1,args1) = app_full ind_nparam [] in
-         if constr_equall h1 texistT then
-           (match args with
-           | _ :: _ :: ind :: nparam :: [] -> ((ind, nparam), relevance)
+         if constr_equall h1 c_pair then
+           (match args1 with
+           | _ :: _ :: ind :: nparam :: [] ->  ((ind, nparam), relevance)
            | _ -> bad_term_verb trm "unquote_case_info")
          else not_supported_verb trm "unquote_case_info"
       | _ -> bad_term_verb trm "unquote_case_info"
@@ -198,14 +198,11 @@ struct
 
   let unquote_univ_expr evm trm (* of type UnivExpr.t *) : Evd.evar_map * Univ.Universe.t =
     let (h,args) = app_full trm [] in
-    if constr_equall h univexpr_npe then
-      match args with
-      | [x] ->
-        let l, b = unquote_pair x in
-        let evm, l' = unquote_level evm l in
-        let u = Univ.Universe.make l' in
-        evm, if unquote_bool b then Univ.Universe.super u else u
-      | _ -> bad_term_verb trm "unquote_univ_expr"
+    if constr_equall h c_pair then
+      let l, b = unquote_pair trm in
+      let evm, l' = unquote_level evm l in
+      let u = Univ.Universe.make l' in
+      evm, if unquote_nat b > 0 then Univ.Universe.super u else u
     else
       not_supported_verb trm "unquote_univ_expr"
 

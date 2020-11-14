@@ -73,6 +73,16 @@ struct
   let cSome = resolve "metacoq.option.some"
   let cNone = resolve "metacoq.option.none"
 
+  let tZ = resolve "metacoq.Z.type"
+  let cZ0 = resolve "metacoq.Z.zero"
+  let cZpos = resolve "metacoq.Z.pos"
+  let cZneg = resolve "metacoq.Z.neg"
+  
+  let tpos = resolve "metacoq.pos.type"
+  let cposzero = resolve "metacoq.pos.xH"
+  let cposI = resolve "metacoq.pos.xI"
+  let cposO = resolve "metacoq.pos.xO"
+  
   let cSome_instance = resolve "metacoq.option_instance.some"
   let cNone_instance = resolve "metacoq.option_instance.none"
 
@@ -146,6 +156,7 @@ struct
   let tLevel = ast "level.Level"
   let tLevelVar = ast "level.Var"
   let tunivLe = ast "constraints.Le"
+  let tunivLe0 = ast "constraints.Le0"
   let tunivLt = ast "constraints.Lt"
   let tunivEq = ast "constraints.Eq"
   let tMktUnivExprSet = ast "univexprset.mkt"

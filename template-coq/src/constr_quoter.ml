@@ -200,7 +200,7 @@ struct
   let quote_constraint_type (c : Univ.constraint_type) =
     match c with
     | Lt -> Lazy.force tunivLt
-    | Le -> Lazy.force tunivLe
+    | Le -> Lazy.force tunivLe0
     | Eq -> Lazy.force tunivEq
 
   let quote_univ_constraint ((l1, ct, l2) : Univ.univ_constraint) =

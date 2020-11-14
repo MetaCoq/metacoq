@@ -58,7 +58,7 @@ Definition tmResolve (nm : String.string) : TM (option kername) :=
 
 (* ^^ Everything above here is generic *)
 
-Require Import Lens.
+Require Import MetaCoq.ExtractedPluginDemo.Lens.
 
 
 Set Primitive Projections.
@@ -91,7 +91,8 @@ Require Import Coq.Bool.Bool.
 Definition mentions (v : nat) (ls : list (ident * term)) : bool :=
   false.
 
-
+Definition nAnon := {| binder_name := nAnon; binder_relevance := Relevant |}.
+Definition nNamed s := {| binder_name := nNamed s; binder_relevance := Relevant |}.
 
 Definition mkLens (At : term) (fields : list (ident * term)) (i : nat)
 : option (ident * term) :=

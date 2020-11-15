@@ -656,10 +656,18 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       | [ s ] => match universe_family (cshape_sort s) with
                 | InProp => (* Not squashed: all arguments are in Prop  *)
                   (* This is singleton elimination *) InType
+                | InSProp => (* Not squashed: all arguments are in SProp *)
+                  InType
                 | _ => (* Squashed: some arguments are higher than Prop,
                         restrict to Prop *) InProp
                 end
       | _ => (* Squashed: at least 2 constructors *) InProp
+      end.
+      
+    Fixpoint elim_sort_sprop_ind (ind_ctors_sort : list constructor_shape) :=
+      match ind_ctors_sort with
+      | [] => (* Empty inductive strict proposition: *) InType
+      | _ => (* All other inductives in SProp are squashed *) InSProp
       end.
 
     Definition check_ind_sorts (Σ : global_env_ext)
@@ -670,6 +678,11 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
         (** No universe-checking to do: any size of constructor argument is allowed,
             however elimination restrictions apply. *)
         leb_sort_family kelim (elim_sort_prop_ind cshapes)
+      | InSProp => 
+        (** The inductive is declared in the impredicative sort SProp *)
+        (** No universe-checking to do: any size of constructor argument is allowed,
+            however elimination restrictions apply. *)
+        leb_sort_family kelim (elim_sort_sprop_ind cshapes)
       | _ =>
         (** The inductive is predicative: check that all constructors arguments are
             smaller than the declared universe. *)

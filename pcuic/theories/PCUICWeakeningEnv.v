@@ -544,14 +544,6 @@ Proof.
            induction ind_indices; simpl in *; auto.
            ** eapply (extends_wf_universe (Σ:=(Σ,φ)) Σ'); auto.
            ** destruct a as [na [b|] ty]; simpl in *; intuition eauto.
-      * split; [apply fst in ind_sorts|apply snd in ind_sorts].
-        -- eapply Forall_impl; tea; cbn.
-           intros. eapply leq_universe_subset; tea.
-           apply weakening_env_global_ext_constraints; tea.
-        -- destruct indices_matter; [|trivial]. clear -ind_sorts HPΣ wfΣ' Hext.
-           induction ind_indices; simpl in *; auto.
-           ** eapply (extends_wf_universe (Σ:=(Σ,φ)) Σ'); auto.
-           ** destruct a as [na [b|] ty]; simpl in *; intuition eauto.
     + intros v onv.
       move: (onIndices v onv). unfold ind_respects_variance.
       destruct variance_universes as [[[univs u] u']|] => //.

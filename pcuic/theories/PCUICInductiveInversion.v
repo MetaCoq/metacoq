@@ -3884,11 +3884,11 @@ Qed.
 Lemma leb_elim_prop_sort shapes f n cs : 
   leb_sort_family f (elim_sort_prop_ind shapes) ->
   nth_error shapes n = Some cs ->
-  leb_sort_family f (match universe_family cs.(cshape_sort) with InProp => InType | _ => InProp end).
+  leb_sort_family f (match universe_family cs.(cshape_sort) with InProp | InSProp => InType | _ => InProp end).
 Proof.
   destruct shapes as [|? []]; simpl.
   - rewrite nth_error_nil => //.
-  - destruct n => // /= leb. now intros [= ->].
+  - destruct n => // /= leb. simpl. now intros [= ->].
     simpl. rewrite nth_error_nil //.
   - destruct f => //.
     destruct universe_family => //.

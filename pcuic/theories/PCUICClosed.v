@@ -804,10 +804,6 @@ Proof.
              eapply Forall_impl; tea. auto.
              destruct indices_matter; [|trivial].
              eapply type_local_ctx_impl; tea. eauto.
-           * split; [apply fst in ind_sorts|apply snd in ind_sorts].
-             eapply Forall_impl; tea. auto.
-             destruct indices_matter; [|trivial].
-             eapply type_local_ctx_impl; tea. eauto.
       --- eapply X1.(onIndices).
     -- red in onP. red.
        eapply All_local_env_impl. eauto.

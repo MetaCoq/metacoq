@@ -917,15 +917,6 @@ Proof.
              destruct X14 as [u Hu]. exists u.
              specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ _ (existT _ _ Hu)))))).
              apply IH. simpl. constructor 1. simpl. auto with arith.
-          +++ split. apply ind_sorts0. destruct indices_matter; auto.
-            eapply type_local_ctx_impl. eapply ind_sorts0.
-            intros. red in X14.
-            destruct T.
-            specialize (IH ((Σ, udecl); (X13; _; _; _; X14))).
-            apply IH. simpl. constructor 1. simpl. auto with arith.
-            destruct X14 as [u Hu]. exists u.
-            specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ _ (existT _ _ Hu)))))).
-            apply IH. simpl. constructor 1. simpl. auto with arith.
         ++ apply onIndices.
         ++ red in onP |- *.
           eapply All_local_env_impl; eauto.

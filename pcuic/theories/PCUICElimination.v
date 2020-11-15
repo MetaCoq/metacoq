@@ -141,7 +141,7 @@ Lemma elim_sort_intype {cf:checker_flags} Σ mdecl ind idecl ind_indices ind_sor
   (∑ cdecl cshape, 
     (ind_ctors idecl = [cdecl]) * 
     (cshapes = [cshape]) * 
-    (universe_family cshape.(cshape_sort) = InProp) *
+    (match universe_family cshape.(cshape_sort) with InProp | InSProp => True | _ => False end) *
     (on_constructor (lift_typing typing) (Σ, ind_universes mdecl) mdecl 
         (inductive_ind ind) idecl ind_indices cdecl cshape))%type.
 Proof.
@@ -152,7 +152,10 @@ Proof.
   - simpl in *. depelim onc.
     right.
     destruct (universe_family y.(cshape_sort)) eqn:heq; try discriminate.
-    eexists; eauto.
+    eexists; eauto. eexists; split; eauto.
+    rewrite heq. auto.
+    do 2 eexists; split; eauto. split; eauto.
+    now rewrite heq.
   - discriminate.
 Qed.
 
@@ -252,7 +255,7 @@ Lemma typing_spine_proofs {cf:checker_flags} Σ Γ Δ ind u args' args T' s :
   Σ ;;; Γ |-  T' : tSort s ->
   typing_spine Σ Γ (it_mkProd_or_LetIn Δ (mkApps (tInd ind u) args')) args T' ->
   ((All_local_assum (fun Γ' t =>
-      (∑ s, (Σ ;;; Γ ,,, Γ' |- t : tSort s) * Universe.is_prop s)%type) Δ ->
+      (∑ s, (Σ ;;; Γ ,,, Γ' |- t : tSort s) * is_propositional s)%type) Δ ->
     ∥ All (Is_proof Σ Γ) args ∥) *
     (forall mdecl idecl 
     (Hdecl : declared_inductive Σ.1 mdecl ind idecl)
@@ -371,52 +374,35 @@ Proof.
           now rewrite app_context_assoc in Ht2. }
         sq. constructor; auto. simpl in conv.
         red. destruct s0 as [s' [Ht' sprop]].
-        exists ty, s'. intuition auto. now rewrite sprop.
+        exists ty, s'. intuition auto.
         intros. now apply H.
 Qed.
 
-Lemma check_ind_sorts_is_prop {cf:checker_flags} (Σ : global_env_ext) mdecl idecl ind
+Lemma check_ind_sorts_is_propositional {cf:checker_flags} (Σ : global_env_ext) mdecl idecl ind
   (onib : on_ind_body (lift_typing typing) (Σ.1, ind_universes mdecl)
     (inductive_mind ind) mdecl (inductive_ind ind) idecl) : 
-  ind_kelim idecl <> InProp ->
-  Universe.is_prop (ind_sort onib) -> 
+  (ind_kelim idecl <> InProp /\ ind_kelim idecl <> InSProp) ->
+  is_propositional (ind_sort onib) -> 
   check_ind_sorts (lift_typing typing) (Σ.1, ind_universes mdecl)
     (PCUICEnvironment.ind_params mdecl) (PCUICEnvironment.ind_kelim idecl)
     (ind_indices onib) (ind_cshapes onib) (ind_sort onib) ->
-  (#|ind_cshapes onib| <= 1) * All (fun cs => Universe.is_prop cs.(cshape_sort)) (ind_cshapes onib).
+  (#|ind_cshapes onib| <= 1) * All (fun cs => is_propositional cs.(cshape_sort)) (ind_cshapes onib).
 Proof.
   intros kelim isp.
   unfold check_ind_sorts, universe_family. simpl.
-  rewrite isp. simpl.
-  induction (ind_cshapes onib); simpl; auto; try discriminate.
-  apply not_prop_not_leq_prop in kelim.
-  destruct l; simpl in *; try contradiction.
-  destruct (universe_family a.(cshape_sort)) eqn:Heq; try contradiction.
-  intros leb.
-  apply family_InProp in Heq. now constructor.
+  destruct Universe.is_prop eqn:isp'.
+  + induction (ind_cshapes onib); simpl; auto; try discriminate.
+    destruct l; simpl. intros; split; eauto. constructor; [|constructor].
+    destruct (cshape_sort a) => //. cbn in H.
+    destruct (UnivExprSet.for_all UnivExpr.is_small t);
+    destruct (ind_kelim idecl); intuition congruence.
+    destruct (ind_kelim idecl); simpl; intuition congruence.
+  + destruct Universe.is_sprop eqn:issp.
+    induction (ind_cshapes onib); simpl; auto; try discriminate.
+    destruct (ind_kelim idecl); simpl; intuition congruence.
+    unfold is_propositional in isp.
+    now rewrite isp' issp in isp.
 Qed.
-(*
-Lemma check_ind_sorts_is_sprop {cf:checker_flags} (Σ : global_env_ext) mdecl idecl ind
-  (onib : on_ind_body (lift_typing typing) (Σ.1, ind_universes mdecl)
-    (inductive_mind ind) mdecl (inductive_ind ind) idecl) : 
-  ind_kelim idecl <> InSProp ->
-  Universe.is_sprop (ind_sort onib) -> 
-  check_ind_sorts (lift_typing typing) (Σ.1, ind_universes mdecl)
-    (PCUICEnvironment.ind_params mdecl) (PCUICEnvironment.ind_kelim idecl)
-    (ind_indices onib) (ind_cshapes onib) (ind_sort onib) ->
-  (#|ind_cshapes onib| <= 1) * All (fun cs => Universe.is_sprop cs.(cshape_sort)) (ind_cshapes onib).
-Proof.
-  intros kelim isp.
-  unfold check_ind_sorts, universe_family. simpl.
-  rewrite isp. simpl.
-  destruct (ind_sort onib) => //. simpl.
-  induction (ind_cshapes onib); simpl; auto; try discriminate.
-  apply not_sprop_not_leq_sprop in kelim.
-  destruct l; simpl in *; try contradiction.
-  destruct (universe_family a.(cshape_sort)) eqn:Heq; try contradiction.
-  intros leb.
-  apply family_InSProp in Heq. now constructor.
-Qed.*)
 
 Lemma type_local_ctx_All_local_assum_impl {cf:checker_flags} Σ 
   (P : context -> context -> term -> Type) {Γ Δ cs} : 
@@ -438,7 +424,7 @@ Lemma Is_proof_mkApps_tConstruct `{cf : checker_flags} (Σ : global_env_ext) Γ 
   check_univs = true ->
   wf_ext Σ ->
   declared_inductive (fst Σ) mdecl ind idecl ->
-  ind_kelim idecl <> InProp ->
+  (ind_kelim idecl <> InProp /\ ind_kelim idecl <> InSProp) ->
   Is_proof Σ Γ (mkApps (tConstruct ind n u) args) ->
   #|ind_ctors idecl| <= 1 /\ ∥ All (Is_proof Σ Γ) (skipn (ind_npars mdecl) args) ∥.
 Proof.
@@ -482,7 +468,7 @@ Proof.
     pose proof (onib.(ind_sorts)).
     assert (Universe.is_prop (ind_sort onib) || Universe.is_sprop (ind_sort onib)).
     { rewrite -(is_prop_subst_instance_univ u) -(is_sprop_subst_instance_univ u) => //. now subst tycs. }
-    apply check_ind_sorts_is_prop in X1 as [nctors X1]; eauto.
+    apply check_ind_sorts_is_propositional in X1 as [nctors X1]; eauto.
     assert(#|ind_cshapes onib| = #|ind_ctors idecl|).
     clear wat X. clear -onib. pose proof (onib.(onConstructors)).
     eapply All2_length in X. now rewrite X. 
@@ -509,38 +495,32 @@ Proof.
     autorewrite with len in X0.
     eapply (type_local_ctx_All_local_assum_impl Σ 
       (fun Γ Γ' t => 
-      ∑ s0 : Universe.t, Σ;;; Γ ,,, Γ' |- t : tSort s0 × Universe.is_prop s0)).
+      ∑ s0 : Universe.t, Σ;;; Γ ,,, Γ' |- t : tSort s0 × is_propositional s0)).
     2:eauto.
     intros. exists (subst_instance_univ u cs.(cshape_sort)). intuition auto.
-    now eapply is_prop_subst_instance.
-    destruct (ind_sort onib) => //. todo "sprop".
+    now rewrite is_propositional_subst_instance.
     
   * intros _ sp.
     rewrite List.skipn_all2. lia.
     split; [|repeat constructor].
     pose proof (onc.(on_cargs)).
     pose proof (onib.(ind_sorts)).
-    eapply check_ind_sorts_is_prop in X0 as [nctors X1]; eauto.
+    eapply check_ind_sorts_is_propositional in X0 as [nctors X1]; eauto.
     assert(#|ind_cshapes onib| = #|ind_ctors idecl|).
     clear -onib. pose proof (onib.(onConstructors)).
     eapply All2_length in X. now rewrite X. now rewrite -H.
     rewrite -it_mkProd_or_LetIn_app in sp.
     eapply typing_spine_proofs in sp; eauto.
-    (*destruct sp as [_ sp]. specialize (sp _ _ decli onib cu) as [sp _].
-    specialize (sp hp).
-    { rewrite -(is_prop_subst_instance_univ u) //.
-      now apply (consistent_instance_ext_noprop cu). } *)
     destruct sp as [_ sp]. specialize (sp _ _ decli onib cu) as [a a'].
     specialize (a hp).
-    { rewrite -(is_prop_subst_instance_univ u) //. subst tycs.
-      todo "sprop". }
+    subst tycs. rewrite -(is_propositional_subst_instance u) //.
 Qed.
     
 Lemma elim_restriction_works_kelim `{cf : checker_flags} (Σ : global_env_ext) ind mind idecl :
   check_univs = true ->
   wf_ext Σ ->
   declared_inductive (fst Σ) mind ind idecl ->
-  ind_kelim idecl <> InProp -> Informative Σ ind.
+  (ind_kelim idecl <> InProp /\ ind_kelim idecl <> InSProp) -> Informative Σ ind.
 Proof.
   intros cu HΣ H indk.
   assert (wfΣ : wf Σ) by apply HΣ.
@@ -561,7 +541,7 @@ Proof.
   intros cu wfΣ decli HT H.
   eapply elim_restriction_works_kelim1 in HT; eauto.
   eapply elim_restriction_works_kelim; eauto.
-  destruct HT; congruence.
+  destruct (ind_kelim idecl); intuition congruence.
 Qed.
 
 Lemma declared_projection_projs_nonempty `{cf : checker_flags} {Σ : global_env_ext} { mind ind p a} :
@@ -591,7 +571,7 @@ Proof.
   simpl in onp. destruct ind_cshapes as [|? []]; try contradiction.
   destruct onp as (((? & ?) & ?) & ?).
   inv o. auto.
-Qed. (* elim_restriction_works_proj *)
+Qed.
 
 Lemma elim_restriction_works_proj `{cf : checker_flags} (Σ : global_env_ext) Γ  p c mind idecl T :
   check_univs = true -> wf_ext Σ ->
@@ -601,7 +581,7 @@ Lemma elim_restriction_works_proj `{cf : checker_flags} (Σ : global_env_ext) Γ
 Proof.
   intros cu; intros. eapply elim_restriction_works_kelim; eauto.
   eapply elim_restriction_works_proj_kelim1 in H0; eauto.
-  congruence.
+  intuition congruence.
 Qed.
 
 Lemma length_of_btys {ind mdecl' idecl' args' u' p} :

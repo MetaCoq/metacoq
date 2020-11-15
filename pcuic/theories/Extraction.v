@@ -25,7 +25,7 @@ Extraction Library Init.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICUnivSubst
   PCUICInduction PCUICLiftSubst PCUICTyping PCUICNormal PCUICSafeLemmata
   PCUICEquality (* PCUICWeakeningEnv *) (* PCUICWeakening *)
-  (* PCUICSubstitution *) PCUICPretty PCUICChecker PCUICRetyping TemplateToPCUIC.
+  (* PCUICSubstitution *) PCUICPretty TemplateToPCUIC.
 From Equations Require Import Equations.
 
 (* Should be in Equations *)
@@ -55,7 +55,7 @@ Extraction Library CMorphisms.
 (* Separate Extraction PCUICNormal PCUICAst PCUICAstUtils PCUICUnivSubst PCUICLiftSubst PCUICReflect PCUICPosition *)
 (*          PCUICCumulativity PCUICSubstitution *)
 (*          (* PCUICTyping PCUICEquality *) *)
-(*          PCUICChecker.type_of PCUICRetyping TemplateToPCUIC (* PCUICSafeLemmata *). *)
+(*          TemplateToPCUIC (* PCUICSafeLemmata *). *)
 Extraction Library PCUICAst.
 Extraction Library PCUICAstUtils.
 Extraction Library PCUICUtils.
@@ -66,8 +66,6 @@ Extraction Library PCUICReflect.
 Extraction Library EqDecInstances.
 Extraction Library PCUICEquality.
 Extraction Library PCUICTyping.
-Extraction Library PCUICChecker.
-Extraction Library PCUICRetyping.
 Extraction Library TemplateToPCUIC.
 Extraction Library PCUICPretty.
 Cd "..".

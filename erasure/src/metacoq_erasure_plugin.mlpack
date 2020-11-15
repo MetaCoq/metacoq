@@ -28,9 +28,7 @@ PCUICInduction
 PCUICWfUniverses
 PCUICNormal
 PCUICPosition
-PCUICChecker
 PCUICPretty
-PCUICRetyping
 TemplateToPCUIC
 PCUICCumulativity
 

@@ -20,29 +20,6 @@ Section Normalisation.
       welltyped Σ Γ t ->
       Acc (cored (fst Σ) Γ) t.
 
-  Lemma Acc_cored_Prod Γ n t1 t2 :
-    Acc (cored Σ Γ) t1 ->
-    Acc (cored Σ (Γ,, vass n t1)) t2 ->
-    Acc (cored Σ Γ) (tProd n t1 t2).
-  Proof.
-    (*intros a a'.
-    constructor.
-    intros y cored.
-    depind cored.
-    depelim cored.
-    depelim X. PCUICAstUtils.solve_discr.
-    constructor.
-    eapply invert_red1_prod in X.*)
-
-  Admitted.
-
-  Lemma Acc_cored_LetIn Γ n t1 t2 t3 :
-    Acc (cored Σ Γ) t1 ->
-    Acc (cored Σ Γ) t2 -> Acc (cored Σ (Γ,, vdef n t1 t2)) t3 ->
-    Acc (cored Σ Γ) (tLetIn n t1 t2 t3).
-  Proof.
-  Admitted.
-
   Lemma neq_mkApps u l : forall t, t <> tSort u -> mkApps t l <> tSort u.
   Proof.
     induction l; cbn; intros t e e'; try easy.

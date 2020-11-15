@@ -408,3 +408,9 @@ erasure/src/kernames.ml
 erasure/src/kernames.mli
 erasure/src/reflect.ml
 erasure/src/reflect.mli
+erasure/src/pCUICWfUniverses.ml
+erasure/src/pCUICWfUniverses.mli
+erasure/src/signature.ml
+erasure/src/signature.mli
+erasure/src/eOptimizePropDiscr.ml
+erasure/src/eOptimizePropDiscr.mli

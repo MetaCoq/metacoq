@@ -7,7 +7,9 @@ struct
   type quoted_ident = Constr.t (* of type Ast.ident *)
   type quoted_int = Constr.t (* of type nat *)
   type quoted_bool = Constr.t (* of type bool *)
-  type quoted_name = Constr.t (* of type Ast.name *)
+  type quoted_name = Constr.t (* of type BasicAst.name *)
+  type quoted_aname = Constr.t (* of type BasicAst.aname (names with relevance) *)
+  type quoted_relevance = Constr.t (* of type BasicAst.relevance *)
   type quoted_sort = Constr.t (* of type Ast.universe *)
   type quoted_cast_kind = Constr.t  (* of type Ast.cast_kind *)
   type quoted_kernel_name = Constr.t (* of type Ast.kername *)
@@ -71,6 +73,16 @@ struct
   let cSome = resolve "metacoq.option.some"
   let cNone = resolve "metacoq.option.none"
 
+  let tZ = resolve "metacoq.Z.type"
+  let cZ0 = resolve "metacoq.Z.zero"
+  let cZpos = resolve "metacoq.Z.pos"
+  let cZneg = resolve "metacoq.Z.neg"
+  
+  let tpos = resolve "metacoq.pos.type"
+  let cposzero = resolve "metacoq.pos.xH"
+  let cposI = resolve "metacoq.pos.xI"
+  let cposO = resolve "metacoq.pos.xO"
+  
   let cSome_instance = resolve "metacoq.option_instance.some"
   let cNone_instance = resolve "metacoq.option_instance.none"
 
@@ -98,19 +110,26 @@ struct
   let pair a b f s = constr_mkApp (c_pair, [| a ; b ; f ; s |])
   let pairl a b f s = pair (Lazy.force a) (Lazy.force b) f s
 
-    (* reify the constructors in Template.Ast.v, which are the building blocks of reified terms *)
+  (* reify the constructors in Template.Ast.v, which are the building blocks of reified terms *)
+  let tRelevance = ast "relevance"
+  let (tRelevant,tIrrelevant) = (ast "Relevant", ast "Irrelevant")
+  let taname = ast "aname"
+  let tmkBindAnn = ast "mkBindAnn"
   let nAnon = ast "nAnon"
   let nNamed = ast "nNamed"
   let kVmCast = ast "VmCast"
   let kNative = ast "NativeCast"
   let kCast = ast "Cast"
   let kRevertCast = ast "RevertCast"
-  let lProp = ast "level.lProp"
+  let lSProp = ast "universe.lsprop"
+  let lProp = ast "universe.lprop"
+  let lnpe = ast "universe.lnpe"
   let lSet = ast "level.lSet"
   let tsort_family = ast "sort_family"
   let lfresh_universe = ast "fresh_universe"
   let lfresh_level = ast "fresh_level"
   let sfProp = ast "InProp"
+  let sfSProp = ast "InSProp"
   let sfSet = ast "InSet"
   let sfType = ast "InType"
   let tident = ast "ident"
@@ -130,16 +149,21 @@ struct
   let tMPbound = ast "MPbound"
   let tMPdot = ast "MPdot"
 
+  let tproplevel = ast "level.prop_level_type"
+  let tlevelSProp = ast "level.lsprop"
+  let tlevelProp = ast "level.lprop"
   let tlevel = ast "level.t"
   let tLevel = ast "level.Level"
   let tLevelVar = ast "level.Var"
   let tunivLe = ast "constraints.Le"
+  let tunivLe0 = ast "constraints.Le0"
   let tunivLt = ast "constraints.Lt"
   let tunivEq = ast "constraints.Eq"
   let tMktUnivExprSet = ast "univexprset.mkt"
-  let tBuild_Universe = ast "universe.build"
+  let tBuild_Universe = ast "universe.build0"
   let tfrom_kernel_repr = ast "universe.from_kernel_repr"
-  let tto_kernel_repr = ast "universe.to_kernel_repr"
+  (* let tto_kernel_repr = ast "universe.to_kernel_repr" *)
+  let tof_levels = ast "universe.of_levels"
   let tLevelSet_of_list = ast "universe.of_list"
 
   let noprop_tSet = ast "noproplevel.lSet"

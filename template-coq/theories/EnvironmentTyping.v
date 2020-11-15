@@ -54,7 +54,7 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
   Definition global_levels (Σ : global_env) : LevelSet.t :=
     fold_right
       (fun decl lvls => LevelSet.union (monomorphic_levels_decl decl.2) lvls)
-      (LevelSet_pair Level.lSet Level.lProp) Σ.
+      (LevelSet.singleton (Level.lSet)) Σ.
 
   Lemma global_levels_Set Σ :
     LevelSet.mem Level.lSet (global_levels Σ) = true.
@@ -64,13 +64,6 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     now apply LevelSet.mem_spec in IHΣ.
   Qed.
 
-  Lemma global_levels_Prop Σ :
-    LevelSet.mem Level.lProp (global_levels Σ) = true.
-  Proof.
-    induction Σ; simpl. reflexivity.
-    apply LevelSet.mem_spec, LevelSet.union_spec; right.
-    now apply LevelSet.mem_spec in IHΣ.
-  Qed.
 
   (** One can compute the constraints associated to a global environment or its
       extension by folding over its constituent definitions.
@@ -103,15 +96,6 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     (global_ext_levels Σ, global_ext_constraints Σ).
 
 
-  Lemma prop_global_ext_levels Σ : LevelSet.In Level.lProp (global_ext_levels Σ).
-  Proof.
-    destruct Σ as [Σ φ]; cbn.
-    apply LevelSetFact.union_3. cbn -[global_levels]; clear φ.
-    induction Σ.
-    - cbn. now apply LevelSetFact.add_1.
-    - simpl. now apply LevelSetFact.union_3.
-  Qed.
-
   (** Check that [uctx] instantiated at [u] is consistent with
     the current universe graph. *)
 
@@ -119,8 +103,6 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     match uctx with
     | Monomorphic_ctx c => List.length u = 0
     | Polymorphic_ctx c =>
-      (* no prop levels in instances *)
-      forallb (negb ∘ Level.is_prop) u /\
       (* levels of the instance already declared *)
       forallb (fun l => LevelSet.mem l lvs) u /\
       List.length u = List.length c.1 /\
@@ -181,10 +163,12 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T).
     | localenv2_nil : All2_local_env [] []
     | localenv2_cons_abs Γ Γ' na na' t t' :
         All2_local_env Γ Γ' ->
+        eq_binder_annot na na' ->
         P Γ Γ' None t t' ->
         All2_local_env (Γ ,, vass na t) (Γ' ,, vass na' t')
     | localenv2_cons_def Γ Γ' na na' b b' t t' :
         All2_local_env Γ Γ' ->
+        eq_binder_annot na na' ->
         P Γ Γ' (Some (b, b')) t t' ->
         All2_local_env (Γ ,, vdef na b t) (Γ' ,, vdef na' b' t').
   End All_local_2.
@@ -204,8 +188,8 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T).
     All2_local_env (on_decl Q) par par'.
   Proof.
     intros H aux.
-    induction H; constructor. auto. red in p. apply aux, p.
-    apply IHAll2_local_env. red. split.
+    induction H; constructor. auto. red in p. assumption. apply aux, p.
+    apply IHAll2_local_env. assumption. red. split.
     apply aux. apply p. apply aux. apply p.
   Defined.
 
@@ -284,6 +268,8 @@ Module Type Typing (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E).
 
   Parameter (typing : forall `{checker_flags}, global_env_ext -> context -> term -> term -> Type).
 
+  Parameter (wf_universe : global_env_ext -> Universe.t -> Type).
+
   Notation " Σ ;;; Γ |- t : T " :=
     (typing Σ Γ t T) (at level 50, Γ, t, T at next level) : type_scope.
 
@@ -332,7 +318,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       in any universe to imply wf_local. *)
     Fixpoint type_local_ctx Σ (Γ Δ : context) (u : Universe.t) : Type :=
       match Δ with
-      | [] => True
+      | [] => wf_universe Σ u
       | {| decl_body := None; decl_type := t |} :: Δ => (type_local_ctx Σ Γ Δ u * (P Σ (Γ ,,, Δ) t (Some (tSort u))))
       | {| decl_body := Some b; decl_type := t |} :: Δ => (type_local_ctx Σ Γ Δ u * (P Σ (Γ ,,, Δ) t None * P Σ (Γ ,,, Δ) b (Some t)))
       end.    
@@ -471,7 +457,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
 
     Definition lift_level n l :=
       match l with 
-      | Level.lProp | Level.lSet | Level.Level _ => l
+      | Level.lSet | Level.Level _ => l
       | Level.Var k => Level.Var (n + k)
       end.
 
@@ -495,7 +481,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       | v :: vs, u :: us, u' :: us' => 
         match v with
         | Variance.Irrelevant => variance_cstrs vs us us'
-        | Variance.Covariant => ConstraintSet.add (u, ConstraintType.Le, u') (variance_cstrs vs us us')
+        | Variance.Covariant => ConstraintSet.add (u, ConstraintType.Le 0, u') (variance_cstrs vs us us')
         | Variance.Invariant => ConstraintSet.add (u, ConstraintType.Eq, u') (variance_cstrs vs us us')
         end
       | _, _, _ => (* Impossible due to on_variance invariant *) ConstraintSet.empty
@@ -636,7 +622,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
           type substituted along with the previous arguments replaced by projections.
           All projections must also be named.
           *)
-        (decl_name decl = nNamed (fst p)) /\
+        (binder_name (decl_name decl) = nNamed (fst p)) /\
         (snd p = subst (inds mind u mdecl.(ind_bodies)) (S (ind_npars mdecl))
               (subst (projs ind mdecl.(ind_npars) k) 0 
                 (lift 1 k (decl_type decl))))
@@ -670,10 +656,18 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       | [ s ] => match universe_family (cshape_sort s) with
                 | InProp => (* Not squashed: all arguments are in Prop  *)
                   (* This is singleton elimination *) InType
+                | InSProp => (* Not squashed: all arguments are in SProp *)
+                  InType
                 | _ => (* Squashed: some arguments are higher than Prop,
                         restrict to Prop *) InProp
                 end
       | _ => (* Squashed: at least 2 constructors *) InProp
+      end.
+      
+    Fixpoint elim_sort_sprop_ind (ind_ctors_sort : list constructor_shape) :=
+      match ind_ctors_sort with
+      | [] => (* Empty inductive strict proposition: *) InType
+      | _ => (* All other inductives in SProp are squashed *) InSProp
       end.
 
     Definition check_ind_sorts (Σ : global_env_ext)
@@ -684,6 +678,11 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
         (** No universe-checking to do: any size of constructor argument is allowed,
             however elimination restrictions apply. *)
         leb_sort_family kelim (elim_sort_prop_ind cshapes)
+      | InSProp => 
+        (** The inductive is declared in the impredicative sort SProp *)
+        (** No universe-checking to do: any size of constructor argument is allowed,
+            however elimination restrictions apply. *)
+        leb_sort_family kelim (elim_sort_sprop_ind cshapes)
       | _ =>
         (** The inductive is predicative: check that all constructors arguments are
             smaller than the declared universe. *)

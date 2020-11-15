@@ -170,10 +170,10 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
 Lemma red1_ind_all :
   forall (Σ : global_env) (P : context -> term -> term -> Type),
 
-       (forall (Γ : context) (na : name) (t b a : term),
+       (forall (Γ : context) (na : aname) (t b a : term),
         P Γ (tApp (tLambda na t b) a) (b {0 := a})) ->
 
-       (forall (Γ : context) (na : name) (b t b' : term), P Γ (tLetIn na b t b') (b' {0 := b})) ->
+       (forall (Γ : context) (na : aname) (b t b' : term), P Γ (tLetIn na b t b') (b' {0 := b})) ->
 
        (forall (Γ : context) (i : nat) (body : term),
         option_map decl_body (nth_error Γ i) = Some (Some body) -> P Γ (tRel i) ((lift0 (S i)) body)) ->
@@ -204,19 +204,19 @@ Lemma red1_ind_all :
            nth_error args (pars + narg) = Some arg ->
            P Γ (tProj (i, pars, narg) (mkApps (tConstruct i 0 u) args)) arg) ->
 
-       (forall (Γ : context) (na : name) (M M' N : term),
+       (forall (Γ : context) (na : aname) (M M' N : term),
         red1 Σ Γ M M' -> P Γ M M' -> P Γ (tLambda na M N) (tLambda na M' N)) ->
 
-       (forall (Γ : context) (na : name) (M M' N : term),
+       (forall (Γ : context) (na : aname) (M M' N : term),
         red1 Σ (Γ,, vass na N) M M' -> P (Γ,, vass na N) M M' -> P Γ (tLambda na N M) (tLambda na N M')) ->
 
-       (forall (Γ : context) (na : name) (b t b' r : term),
+       (forall (Γ : context) (na : aname) (b t b' r : term),
         red1 Σ Γ b r -> P Γ b r -> P Γ (tLetIn na b t b') (tLetIn na r t b')) ->
 
-       (forall (Γ : context) (na : name) (b t b' r : term),
+       (forall (Γ : context) (na : aname) (b t b' r : term),
         red1 Σ Γ t r -> P Γ t r -> P Γ (tLetIn na b t b') (tLetIn na b r b')) ->
 
-       (forall (Γ : context) (na : name) (b t b' r : term),
+       (forall (Γ : context) (na : aname) (b t b' r : term),
         red1 Σ (Γ,, vdef na b t) b' r -> P (Γ,, vdef na b t) b' r -> P Γ (tLetIn na b t b') (tLetIn na b t r)) ->
 
        (forall (Γ : context) (ind : inductive * nat) (p p' c : term) (brs : list (nat * term)),
@@ -238,10 +238,10 @@ Lemma red1_ind_all :
        (forall (Γ : context) (M2 N2 : term) (M1 : term), red1 Σ Γ M2 N2 -> P Γ M2 N2 ->
                                                          P Γ (tApp M1 M2) (tApp M1 N2)) ->
 
-       (forall (Γ : context) (na : name) (M1 M2 N1 : term),
+       (forall (Γ : context) (na : aname) (M1 M2 N1 : term),
         red1 Σ Γ M1 N1 -> P Γ M1 N1 -> P Γ (tProd na M1 M2) (tProd na N1 M2)) ->
 
-       (forall (Γ : context) (na : name) (M2 N2 M1 : term),
+       (forall (Γ : context) (na : aname) (M2 N2 M1 : term),
         red1 Σ (Γ,, vass na M1) M2 N2 -> P (Γ,, vass na M1) M2 N2 -> P Γ (tProd na M1 M2) (tProd na M1 N2)) ->
 
        (forall (Γ : context) (ev : nat) (l l' : list term),
@@ -399,15 +399,15 @@ Section ReductionCongruence.
   Inductive term_context :=
   | tCtxHole : term_context
   | tCtxEvar      : nat -> list_context -> term_context
-  | tCtxProd_l      : name -> term_context (* the type *) -> term -> term_context
-  | tCtxProd_r      : name -> term (* the type *) -> term_context -> term_context
-  | tCtxLambda_l    : name -> term_context (* the type *) -> term -> term_context
-  | tCtxLambda_r    : name -> term (* the type *) -> term_context -> term_context
-  | tCtxLetIn_l     : name -> term_context (* the term *) -> term (* the type *) ->
+  | tCtxProd_l      : aname -> term_context (* the type *) -> term -> term_context
+  | tCtxProd_r      : aname -> term (* the type *) -> term_context -> term_context
+  | tCtxLambda_l    : aname -> term_context (* the type *) -> term -> term_context
+  | tCtxLambda_r    : aname -> term (* the type *) -> term_context -> term_context
+  | tCtxLetIn_l     : aname -> term_context (* the term *) -> term (* the type *) ->
                     term -> term_context
-  | tCtxLetIn_b     : name -> term (* the term *) -> term_context (* the type *) ->
+  | tCtxLetIn_b     : aname -> term (* the term *) -> term_context (* the type *) ->
                     term -> term_context
-  | tCtxLetIn_r     : name -> term (* the term *) -> term (* the type *) ->
+  | tCtxLetIn_r     : aname -> term (* the term *) -> term (* the type *) ->
                     term_context -> term_context
   | tCtxApp_l       : term_context -> term -> term_context
   | tCtxApp_r      : term -> term_context -> term_context

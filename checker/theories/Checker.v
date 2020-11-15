@@ -103,12 +103,12 @@ Section Reduce.
 
   | tCast c _ _ => reduce_stack Γ n c stack
 
-  | tCase (ind, par) p c brs =>
+  | tCase ((ind, par), relevance) p c brs =>
     if RedFlags.iota flags then
       c' <- reduce_stack Γ n c [] ;;
       match c' with
       | (tConstruct ind c _, args) => reduce_stack Γ n (iota_red par c args brs) stack
-      | _ => ret (tCase (ind, par) p (zip c') brs, stack)
+      | _ => ret (tCase ((ind, par), relevance) p (zip c') brs, stack)
       end
     else ret (t, stack)
 
@@ -206,8 +206,8 @@ Fixpoint eq_term `{checker_flags} (φ : universes_graph) (t u : term) {struct t}
   | tLambda _ b t, tLambda _ b' t' => eq_term φ b b' && eq_term φ t t'
   | tProd _ b t, tProd _ b' t' => eq_term φ b b' && eq_term φ t t'
   | tLetIn _ b t c, tLetIn _ b' t' c' => eq_term φ b b' && eq_term φ t t' && eq_term φ c c'
-  | tCase (ind, par) p c brs,
-    tCase (ind',par') p' c' brs' =>
+  | tCase ((ind, par), rel) p c brs,
+    tCase ((ind',par'), rel') p' c' brs' =>
     eq_inductive ind ind' && Nat.eqb par par' &&
     eq_term φ p p' && eq_term φ c c' && forallb2 (fun '(a, b) '(a', b') => eq_term φ b b') brs brs'
   | tProj p c, tProj p' c' => eq_projection p p' && eq_term φ c c'
@@ -238,8 +238,8 @@ Fixpoint leq_term `{checker_flags} (φ : universes_graph) (t u : term) {struct t
   | tLambda _ b t, tLambda _ b' t' => eq_term φ b b' && eq_term φ t t'
   | tProd _ b t, tProd _ b' t' => eq_term φ b b' && leq_term φ t t'
   | tLetIn _ b t c, tLetIn _ b' t' c' => eq_term φ b b' && eq_term φ t t' && leq_term φ c c'
-  | tCase (ind, par) p c brs,
-    tCase (ind',par') p' c' brs' =>
+  | tCase ((ind, par), rel) p c brs,
+    tCase ((ind',par'), rel') p' c' brs' =>
     eq_inductive ind ind' && Nat.eqb par par' &&
     eq_term φ p p' && eq_term φ c c' && forallb2 (fun '(a, b) '(a', b') => eq_term φ b b') brs brs'
   | tProj p c, tProj p' c' => eq_projection p p' && eq_term φ c c'
@@ -695,7 +695,7 @@ Section Typecheck2.
     | tVar n => raise (UnboundVar n)
     | tEvar ev args => raise (UnboundEvar ev)
 
-    | tSort s => ret (tSort (Universe.try_suc s))
+    | tSort s => ret (tSort (Universe.super s))
 
     | tCast c k t =>
       infer_type infer Γ t ;;
@@ -740,7 +740,7 @@ Section Typecheck2.
       check_consistent_constraints cstrs;;
       ret ty
 
-    | tCase (ind, par) p c brs =>
+    | tCase ((ind, par), rel) p c brs =>
       ty <- infer Γ c ;;
       indargs <- reduce_to_ind Σ Γ ty ;;
       (** TODO check branches *)

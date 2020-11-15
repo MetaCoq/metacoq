@@ -15,11 +15,11 @@ Fixpoint trans (t : Ast.term) : term :=
   | Ast.tLambda na T M => tLambda na (trans T) (trans M)
   | Ast.tApp u v => mkApps (trans u) (List.map trans v)
   | Ast.tProd na A B => tProd na (trans A) (trans B)
-  | Ast.tCast c kind t => tApp (tLambda nAnon (trans t) (tRel 0)) (trans c)
+  | Ast.tCast c kind t => tApp (tLambda (mkBindAnn nAnon Relevant) (trans t) (tRel 0)) (trans c)
   | Ast.tLetIn na b t b' => tLetIn na (trans b) (trans t) (trans b')
   | Ast.tCase ind p c brs =>
     let brs' := List.map (on_snd trans) brs in
-    tCase ind (trans p) (trans c) brs'
+    tCase (fst ind) (trans p) (trans c) brs'
   | Ast.tProj p c => tProj p (trans c)
   | Ast.tFix mfix idx =>
     let mfix' := List.map (map_def trans trans) mfix in
@@ -39,6 +39,7 @@ Definition trans_local Γ := List.map trans_decl Γ.
 
 Definition trans_one_ind_body (d : Ast.one_inductive_body) :=
   {| ind_name := d.(Ast.ind_name);
+     ind_relevance := d.(Ast.ind_relevance);
      ind_type := trans d.(Ast.ind_type);
      ind_kelim := d.(Ast.ind_kelim);
      ind_ctors := List.map (fun '(x, y, z) => (x, trans y, z)) d.(Ast.ind_ctors);

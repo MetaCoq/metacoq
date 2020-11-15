@@ -2,7 +2,6 @@
 From MetaCoq.Template Require Import utils All.
 Require Import MetaCoq.Checker.All.
 
-
 (* Should be in AstUtils probably *)
 Fixpoint subst_app (t : term) (us : list term) : term :=
   match t, us with
@@ -80,11 +79,16 @@ Class Translation :=
 
 Definition tsl_ident (id : ident) : ident := (id ^ "ᵗ").
 
-Definition tsl_name tsl_ident n :=
+Definition tsl_name0 tsl_ident n :=
   match n with
   | nAnon => nAnon
   | nNamed n => nNamed (tsl_ident n)
   end.
+
+Definition nAnon := {| binder_name := nAnon; binder_relevance := Relevant |}.
+Definition nNamed n := {| binder_name := nNamed n; binder_relevance := Relevant |}.
+  
+Definition tsl_name f := map_binder_annot (tsl_name0 f).
 
 
 Definition tmDebug {A} : A -> TemplateMonad unit

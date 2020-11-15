@@ -4,7 +4,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICNormal PCUICSR
      PCUICGeneration PCUICReflect PCUICEquality PCUICInversion PCUICValidity
      PCUICWeakening PCUICPosition PCUICCumulativity PCUICSafeLemmata PCUICSN
-     PCUICPretty PCUICArities PCUICConfluence PCUICConversion.
+     PCUICPretty PCUICArities PCUICConfluence PCUICConversion PCUICWfUniverses.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeConversion.
 
 From Equations Require Import Equations.
@@ -126,16 +126,19 @@ Inductive type_error :=
 | UnsatisfiedConstraints (c : ConstraintSet.t)
 | Msg (s : string).
 
-Definition print_no_prop_level := string_of_level ∘ NoPropLevel.to_level.
+Definition print_level := string_of_level.
+
+Definition string_of_Z z :=
+  if (z <=? 0)%Z then "-" ^ string_of_nat (Z.to_nat (- z)) else string_of_nat (Z.to_nat z).
 
 Definition print_edge '(l1, n, l2)
-  := "(" ^ print_no_prop_level l1 ^ ", " ^ string_of_nat n ^ ", "
-         ^ print_no_prop_level l2 ^ ")".
+  := "(" ^ print_level l1 ^ ", " ^ string_of_Z n ^ ", "
+         ^ print_level l2 ^ ")".
 
 Definition print_universes_graph (G : universes_graph) :=
   let levels := wGraph.VSet.elements G.1.1 in
   let edges := wGraph.EdgeSet.elements G.1.2 in
-  string_of_list print_no_prop_level levels
+  string_of_list print_level levels
   ^ "\n" ^ string_of_list print_edge edges.
 
 Definition string_of_conv_pb (c : conv_pb) : string :=
@@ -155,11 +158,19 @@ Fixpoint string_of_conv_error Σ (e : ConversionError) : string :=
   | NotFoundConstant c =>
       "Constant " ^ string_of_kername c ^
       " common in both terms is not found in the environment."
+  | LambdaNotConvertibleAnn Γ1 na A1 t1 Γ2 na' A2 t2 =>
+      "When comparing\n" ^ print_term Σ Γ1 (tLambda na A1 t1) ^
+      "\nand\n" ^ print_term Σ Γ2 (tLambda na' A2 t2) ^
+      "\nbinding annotations are not convertible\n"
   | LambdaNotConvertibleTypes Γ1 na A1 t1 Γ2 na' A2 t2 e =>
       "When comparing\n" ^ print_term Σ Γ1 (tLambda na A1 t1) ^
       "\nand\n" ^ print_term Σ Γ2 (tLambda na' A2 t2) ^
       "\ntypes are not convertible:\n" ^
       string_of_conv_error Σ e
+  | ProdNotConvertibleAnn Γ1 na A1 B1 Γ2 na' A2 B2 =>
+      "When comparing\n" ^ print_term Σ Γ1 (tProd na A1 B1) ^
+      "\nand\n" ^ print_term Σ Γ2 (tProd na' A2 B2) ^
+      "\nbinding annotations are not convertible:\n"
   | ProdNotConvertibleDomains Γ1 na A1 B1 Γ2 na' A2 B2 e =>
       "When comparing\n" ^ print_term Σ Γ1 (tProd na A1 B1) ^
       "\nand\n" ^ print_term Σ Γ2 (tProd na' A2 B2) ^
@@ -357,6 +368,7 @@ Lemma map_squash {A B} (f : A -> B) : ∥ A ∥ -> ∥ B ∥.
 Proof.
   intros []; constructor; auto.
 Qed.
+
 Lemma destArity_mkApps_None ctx t l :
   destArity ctx t = None -> destArity ctx (mkApps t l) = None.
 Proof.
@@ -383,33 +395,25 @@ Section Typecheck.
     destruct HΣ, Hφ; now constructor.
   Defined.
 
-  Definition isType_wellformed {Γ t}
-    : isType Σ Γ t -> wellformed Σ Γ t.
+  Definition isType_welltyped {Γ t}
+    : isType Σ Γ t -> welltyped Σ Γ t.
   Proof.
-    intros []. left; now econstructor.
+    intros []. now econstructor.
   Qed.
 
-  (* Definition typ_to_wf {Γ t} *)
-  (*   : { A : term | ∥ Σ ;;; Γ |- t : A ∥ } -> wellformed Σ Γ t. *)
-  (* Proof. *)
-  (*   intros [A h]. sq. left. now exists A. *)
-  (* Defined. *)
-
   Lemma validity_wf {Γ t T} :
-    ∥ wf_local Σ Γ ∥ -> ∥ Σ ;;; Γ |- t : T ∥ -> wellformed Σ Γ T.
+    ∥ wf_local Σ Γ ∥ -> ∥ Σ ;;; Γ |- t : T ∥ -> welltyped Σ Γ T.
   Proof.
     destruct HΣ as [wΣ]. intros [wΓ] [X].
     intros. eapply validity_term in X; try assumption.
-    destruct X. now right.
-    left; destruct i. now exists (tSort x).
+    destruct X. now exists (tSort x).
   Defined.
 
-  Lemma wat_wellformed {Γ T} :
-    ∥ isWfArity_or_Type Σ Γ T ∥ -> wellformed Σ Γ T.
+  Lemma wat_welltyped {Γ T} :
+    ∥ isType Σ Γ T ∥ -> welltyped Σ Γ T.
   Proof.
-    destruct HΣ as [wΣ]. intros [[X|X]].
-    right; now constructor.
-    now apply isType_wellformed.
+    destruct HΣ as [wΣ]. intros [X].
+    now apply isType_welltyped.
   Defined.
 
   Definition hnf := reduce_term RedFlags.default Σ HΣ.
@@ -432,7 +436,7 @@ Section Typecheck.
     view_sortc (tSort s) := view_sort_sort s;
     view_sortc t := view_sort_other t _.
 
-  Equations? reduce_to_sort (Γ : context) (t : term) (h : wellformed Σ Γ t)
+  Equations? reduce_to_sort (Γ : context) (t : term) (h : welltyped Σ Γ t)
     : typing_result (∑ u, ∥ red (fst Σ) Γ t (tSort u) ∥) :=
     reduce_to_sort Γ t h with view_sortc t := {
       | view_sort_sort s => ret (s; sq (refl_red _ _ _));
@@ -473,7 +477,7 @@ Section Typecheck.
     view_prodc (tProd na A b) := view_prod_prod na A b;
     view_prodc t := view_prod_other t _.
 
-  Equations? reduce_to_prod (Γ : context) (t : term) (h : wellformed Σ Γ t)
+  Equations? reduce_to_prod (Γ : context) (t : term) (h : welltyped Σ Γ t)
     : typing_result (∑ na a b, ∥ red (fst Σ) Γ t (tProd na a b) ∥) :=
     reduce_to_prod Γ t h with view_prodc t := {
       | view_prod_prod na a b => ret (na; a; b; sq (refl_red _ _ _));
@@ -520,7 +524,7 @@ Section Typecheck.
     view_indc (tInd ind u) => view_ind_tInd ind u;
     view_indc t => view_ind_other t _.
 
-  Equations? reduce_to_ind (Γ : context) (t : term) (h : wellformed Σ Γ t)
+  Equations? reduce_to_ind (Γ : context) (t : term) (h : welltyped Σ Γ t)
     : typing_result (∑ i u l, ∥ red (fst Σ) Γ t (mkApps (tInd i u) l) ∥) :=
     reduce_to_ind Γ t h with inspect (decompose_app t) := {
       | exist (thd, args) eq_decomp with view_indc thd := {
@@ -595,7 +599,7 @@ Section Typecheck.
   Definition iscumul Γ := isconv_term Σ HΣ Hφ G HG Γ Cumul.
 
   Program Definition convert_leq Γ t u
-          (ht : wellformed Σ Γ t) (hu : wellformed Σ Γ u)
+          (ht : welltyped Σ Γ t) (hu : welltyped Σ Γ u)
     : typing_result (∥ Σ ;;; Γ |- t <= u ∥) :=
     match leqb_term Σ G t u with true => ret _ | false =>
     match iscumul Γ t ht u hu with
@@ -633,15 +637,15 @@ Section Typecheck.
       now constructor; eapply type_reduction.
     Defined.
 
-    Program Definition infer_cumul Γ HΓ t A (hA : ∥ isWfArity_or_Type Σ Γ A ∥)
+    Program Definition infer_cumul Γ HΓ t A (hA : ∥ isType Σ Γ A ∥)
       : typing_result (∥ Σ ;;; Γ |- t : A ∥) :=
       A' <- infer Γ HΓ t ;;
       X <- convert_leq Γ A'.π1 A _ _ ;;
       ret _.
     Next Obligation. now eapply validity_wf. Qed.
-    Next Obligation. destruct hA; now apply wat_wellformed. Qed.
+    Next Obligation. destruct hA; now apply wat_welltyped. Qed.
     Next Obligation.
-      destruct HΣ, HΓ, hA, X, X0. constructor. econstructor; eassumption.
+      destruct HΣ, HΓ, hA, X, X0. constructor. eapply type_Cumul'; eassumption.
     Qed.
   End InferAux.
 
@@ -674,9 +678,9 @@ Section Typecheck.
     now apply global_ext_uctx_consistent.
   Qed.
 
-  Lemma is_graph_of_uctx_levels (l : NoPropLevel.t) :
+  Lemma is_graph_of_uctx_levels (l : Level.t) :
     wGraph.VSet.mem l (uGraph.wGraph.V G) ->
-    LevelSet.mem (NoPropLevel.to_level l) (global_ext_levels Σ).
+    LevelSet.mem l (global_ext_levels Σ).
   Proof.
     unfold is_graph_of_uctx in HG.
     case_eq (gc_of_uctx (global_ext_uctx Σ)); [intros [lvs cts] XX|intro XX];
@@ -688,7 +692,7 @@ Section Typecheck.
     apply LevelSetProp.FM.elements_2.
     unfold no_prop_levels in H.
     rewrite LevelSet.fold_spec in H.
-    cut (SetoidList.InA eq (NoPropLevel.to_level l) (LevelSet.elements lvs)
+    cut (SetoidList.InA eq l (LevelSet.elements lvs)
          \/ wGraph.VSet.In l wGraph.VSet.empty). {
       intros [|H0]; [trivial|].
       now apply wGraph.VSet.empty_spec in H0. }
@@ -696,7 +700,7 @@ Section Typecheck.
     intros lvs; induction lvs; cbn; [intuition|].
     intros S H. apply IHlvs in H. destruct H as [H|H].
     - left. now constructor 2.
-    - destruct a; cbn in *. now right.
+    - destruct a; cbn in *. 
       all: apply wGraph.VSet.add_spec in H; destruct H as [H|H]; [left|now right].
       all: rewrite H; now constructor.
   Qed.
@@ -709,10 +713,7 @@ Section Typecheck.
          check_eq_nat #|u| 0 (Msg "monomorphic instance should be of length 0")
        | Polymorphic_ctx (inst, cstrs) =>
          let '(inst, cstrs) := AUContext.repr (inst, cstrs) in
-         check_eq_true (forallb (fun l => match NoPropLevel.of_level l with
-                                       | Some l => wGraph.VSet.mem l (uGraph.wGraph.V G)
-                                       | None => false
-                                       end) u)
+         check_eq_true (forallb (fun l => wGraph.VSet.mem l (uGraph.wGraph.V G)) u)
                        (Msg "instance does not have the right length") ;;
          (* check_eq_true (forallb (fun l => LevelSet.mem l lvs) u) ;; *)
          X <- check_eq_nat #|u| #|inst|
@@ -725,13 +726,10 @@ Section Typecheck.
        end.
   Next Obligation.
     eapply forallb_All in H. eapply All_forallb'; tea.
-    clear. intros []; cbnr; trivial.
+    clear -cf HG. intros x; simpl. apply is_graph_of_uctx_levels.
   Qed.
   Next Obligation.
     repeat split.
-    - eapply forallb_All in H. eapply All_forallb'; tea.
-      intros []; simpl. discriminate.
-      all: apply is_graph_of_uctx_levels.
     - now rewrite mapi_length in X.
     - eapply check_constraints_spec; eauto.
   Qed.
@@ -788,13 +786,9 @@ Section Typecheck.
     | tEvar ev args => raise (UnboundEvar ev)
 
     | tSort u =>
-          match Universe.get_is_level u with
-          | Some l =>
-            check_eq_true (LevelSet.mem l (global_ext_levels Σ))
-                          (Msg ("undeclared level " ^ string_of_level l));;
-            ret (tSort (Universe.super l); _)
-          | None  => raise (Msg (string_of_sort u ^ " is not a level"))
-          end
+            check_eq_true (wf_universeb Σ u)
+                          (Msg ("Sort contains an undeclared level " ^ string_of_sort u));;
+            ret (tSort (Universe.super u); _)
 
     | tProd na A B =>
           s1 <- infer_type infer Γ HΓ A ;;
@@ -960,7 +954,7 @@ Section Typecheck.
         := match mfix with
            | [] => ret (sq All_nil)
            | def :: mfix =>
- (* probably not tail recursive but needed so that next line terminates *)
+            (* probably not tail recursive but needed so that next line terminates *)
              W <- infer_type infer Γ HΓ (dtype def) ;;
              Z <- check_types mfix ;;
              ret _
@@ -989,10 +983,8 @@ Section Typecheck.
   Next Obligation. intros; sq; now econstructor. Defined.
   (* tSort *)
   Next Obligation.
-    symmetry in Heq_anonymous.
-    apply get_is_level_correct in Heq_anonymous.
-    subst u. sq; econstructor; tas.
-    now apply LevelSetFact.mem_2.
+    eapply (reflect_bP (wf_universe_reflect _ _)) in H.
+    sq; econstructor; tas.
   Defined.
   (* tProd *)
   Next Obligation.
@@ -1014,7 +1006,7 @@ Section Typecheck.
   (* tLetIn *)
   Next Obligation.
     (* intros Γ HΓ t n b b_ty b' Heq_t [? ?]; *)
-      sq; right. econstructor; eauto.
+      sq. econstructor; eauto.
   Defined.
   Next Obligation.
     (* intros Γ HΓ t n b b_ty b' Heq_t [? ?] H0; *)
@@ -1030,16 +1022,10 @@ Section Typecheck.
   Next Obligation.
     cbn in *; sq.
     eapply type_reduction in X1 ; try eassumption.
-    eapply validity_term in X1 ; try assumption. destruct X1.
-    - destruct i as [ctx [s [H1 H2]]]. cbn in H1.
-      apply destArity_app_Some in H1. destruct H1 as [ctx' [e1 e2]] ; subst.
-      rewrite app_context_assoc in H2. cbn in H2.
-      apply wf_local_app in H2.
-      inversion H2; subst. right. assumption.
-    - destruct i as [s HH].
-      eapply inversion_Prod in HH ; try assumption.
-      destruct HH as [s1 [_ [HH _]]].
-      right. eexists. eassumption.
+    eapply validity_term in X1 ; try assumption. destruct X1 as [s HH].
+    eapply inversion_Prod in HH ; try assumption.
+    destruct HH as [s1 [_ [HH _]]].
+    eexists. eassumption.
   Defined.
   Next Obligation.
     cbn in *; sq; econstructor.
@@ -1062,7 +1048,6 @@ Section Typecheck.
 
   (* tConstruct *)
   Next Obligation.
-    (* intros Γ HΓ t ind k u Heq_t [? [? ?]] cdecl HH H; *)
     sq; econstructor; tea. now split.
   Defined.
 
@@ -1070,16 +1055,23 @@ Section Typecheck.
   Next Obligation. simpl; eauto using validity_wf. Qed.
   Next Obligation. simpl; eauto using validity_wf. Qed.
   Next Obligation.
-    right. destruct X, X9. sq.
+    destruct X, X9. sq.
     change (eqb ind I = true) in H0.
     destruct (eqb_spec ind I) as [e|e]; [destruct e|discriminate].
     change (eqb (ind_npars d) par = true) in H1.
     destruct (eqb_spec (ind_npars d) par) as [e|e]; [|discriminate].
     rename Heq_anonymous into HH. symmetry in HH.
-    eapply PCUICInductiveInversion.WfArity_build_case_predicate_type; eauto. simpl in *.
-    2:rewrite e; eauto.
+    simpl in *.
     eapply type_reduction in t0; eauto. eapply validity in t0; eauto.
-    now eapply PCUICInductiveInversion.isWAT_mkApps_Ind_isType in t0.
+    rewrite <- e in HH.
+    eapply PCUICInductiveInversion.WfArity_build_case_predicate_type in HH; eauto.
+    destruct HH as [[s Hs] ?]. eexists; eauto.
+    eapply validity in t; eauto.
+    generalize (PCUICClosed.destArity_spec [] pty).
+    rewrite -Heq_anonymous0 /=. intros ->.
+    eapply PCUICInductives.isType_it_mkProd_or_LetIn_inv in t; eauto.
+    eapply isType_wf_universes in t. simpl in t.
+    now exact (PCUICWfUniverses.reflect_bP (wf_universe_reflect _ _) t). auto.
   Qed.
 
   Next Obligation.
@@ -1098,9 +1090,14 @@ Section Typecheck.
     assert (wfΣ : wf_ext Σ) by (split; auto).
     eapply type_reduction in X9; eauto.
     have val:= validity_term wfΣ X9.
-    eapply PCUICInductiveInversion.isWAT_mkApps_Ind_isType in val; eauto.
-    eapply type_Cumul in X; [| |eassumption].
-    2:{ left. eapply PCUICInductiveInversion.WfArity_build_case_predicate_type; eauto. }
+    eapply type_Cumul' in X; [| |eassumption].
+    2:{ eapply PCUICInductiveInversion.WfArity_build_case_predicate_type; eauto.
+        eapply validity in X; eauto.
+        generalize (PCUICClosed.destArity_spec [] pty).
+        rewrite -Heq_anonymous0 /=. intros ->.
+        eapply PCUICInductives.isType_it_mkProd_or_LetIn_inv in X; eauto.
+        eapply isType_wf_universes in X. simpl in X.
+        now exact (PCUICWfUniverses.reflect_bP (wf_universe_reflect _ _) X). auto. }
     have [pctx' da] : (∑ pctx', destArity [] pty' =  Some (pctx', ps)).
     { symmetry in Heq_anonymous1.
       unshelve eapply (PCUICInductives.build_case_predicate_type_spec (Σ.1, ind_universes d)) in Heq_anonymous1 as [parsubst [_ ->]].
@@ -1116,7 +1113,8 @@ Section Typecheck.
     destruct (eqb_spec ind ind') as [e|e]; [destruct e|discriminate H0].
     change (eqb (ind_npars decl) par = true) in H1.
     destruct (eqb_spec (ind_npars decl) par) as [e|e]; [|discriminate]; subst.
-    sq. depelim HH. now right.
+    depelim HH.
+    sq. auto. now depelim X10.
   Defined.
   Next Obligation.
     sq. now depelim HH.
@@ -1142,10 +1140,15 @@ Section Typecheck.
     destruct (eqb_spec (ind_npars d) par) as [e|e]; [|discriminate]; subst.
     assert (wfΣ : wf_ext Σ) by (split; auto).
     eapply type_reduction in X9; eauto.
-    eapply type_Cumul in X; eauto.
-    2:{ left. eapply PCUICInductiveInversion.WfArity_build_case_predicate_type; eauto. simpl in *.
-        eapply validity in X9; eauto.
-        eapply PCUICInductiveInversion.isWAT_mkApps_Ind_isType in X9; eauto. }
+    eapply type_Cumul' in X; eauto.
+    2:{ eapply PCUICInductiveInversion.WfArity_build_case_predicate_type; eauto.
+        now eapply validity in X9.
+        eapply validity in X; eauto.
+        generalize (PCUICClosed.destArity_spec [] pty).
+        rewrite -Heq_anonymous0 /=. intros ->.
+        eapply PCUICInductives.isType_it_mkProd_or_LetIn_inv in X; eauto.
+        eapply isType_wf_universes in X. simpl in X.
+        now exact (PCUICWfUniverses.reflect_bP (wf_universe_reflect _ _) X). auto. }
     have [pctx' da] : (∑ pctx', destArity [] pty' =  Some (pctx', ps)).
     { symmetry in Heq_anonymous1.
       unshelve eapply (PCUICInductives.build_case_predicate_type_spec (Σ.1, ind_universes d)) in Heq_anonymous1 as [parsubst [_ ->]].
@@ -1177,7 +1180,7 @@ Section Typecheck.
   Next Obligation.
     sq. cbn in *. depelim XX.
     destruct i as [s HH].
-    right. exists s.
+    exists s.
     change (tSort s) with (lift0 #|fix_context mfix| (tSort s)).
     apply weakening; try assumption.
     now apply All_mfix_wf.
@@ -1200,7 +1203,7 @@ Section Typecheck.
   Next Obligation.
     sq. cbn in *. depelim XX'.
     destruct i as [s HH].
-    right. exists s.
+    exists s.
     change (tSort s) with (lift0 #|fix_context mfix| (tSort s)).
     apply weakening; try assumption.
     now apply All_mfix_wf.
@@ -1239,15 +1242,15 @@ Section Typecheck.
     sq. econstructor; tas. econstructor; eauto.
   Qed.
   Next Obligation.
-    sq. right. econstructor; tea.
+    sq. econstructor; tea.
   Qed.
   Next Obligation.
     sq. econstructor; tas. econstructor; eauto.
   Qed.
 
-
+(* 
   Program Definition check_isWfArity Γ (HΓ : ∥ wf_local Σ Γ ∥) A
-    : typing_result (∥ isWfArity typing Σ Γ A ∥) :=
+    : typing_result (∥ isWfArity Σ Γ A ∥) :=
     match destArity [] A with
     | None => raise (Msg (print_term Σ Γ A ^ " is not an arity"))
     | Some (ctx, s) => XX <- check_context (Γ ,,, ctx) ;;
@@ -1256,7 +1259,7 @@ Section Typecheck.
   Next Obligation.
     destruct XX. constructor. exists ctx, s.
     split; auto.
-  Defined.
+  Defined. *)
 
   Program Definition check_isType Γ (HΓ : ∥ wf_local Σ Γ ∥) A
     : typing_result (∥ isType Σ Γ A ∥) :=
@@ -1266,48 +1269,9 @@ Section Typecheck.
   Next Obligation. now eapply validity_wf. Defined.
   Next Obligation. destruct X0. sq. eexists. eapply type_reduction; tea. Defined.
 
-
-  Lemma isType_isWAT_sq {Γ A} : ∥ isType Σ Γ A ∥ -> ∥ isWfArity_or_Type Σ Γ A ∥.
-  Proof.
-    intro; sq; now right.
-  Qed.
-
-  Equations check_isWAT Γ (HΓ : ∥ wf_local Σ Γ ∥) A
-    : typing_result (∥ isWfArity_or_Type Σ Γ A ∥) :=
-    check_isWAT Γ HΓ (tSort s) := ret _;
-    check_isWAT Γ HΓ (tProd na A B) :=
-      XX <- infer_type infer Γ HΓ A ;;
-      YY <- check_isWAT (Γ ,, vass na A) _ B ;;
-      ret _;
-    check_isWAT Γ HΓ (tLetIn na t A B) :=
-      XX <- infer_type infer Γ HΓ A ;;
-      YY <- infer_cumul infer Γ HΓ t A _ ;;
-      ZZ <- check_isWAT (Γ ,, vdef na t A) _ B ;;
-      ret _;
-    check_isWAT Γ HΓ A :=  XX <- check_isType Γ HΓ A ;; ret (isType_isWAT_sq XX).
-  Next Obligation.
-    sq. left. eexists. eexists. now split.
-  Qed.
-  Next Obligation.
-    sq. constructor; cbn; eauto.
-  Qed.
-  Next Obligation.
-    sq. eapply isWAT_tProd; tas. split; tas. econstructor; tea.
-  Qed.
-  Next Obligation.
-    sq. right. eexists; eassumption.
-  Qed.
-  Next Obligation.
-    sq. constructor; tas. eexists; eassumption.
-  Qed.
-  Next Obligation.
-    sq. eapply isWAT_tLetIn; tas. repeat split; tas. econstructor; tea.
-  Defined.
-
-
   Program Definition check Γ (HΓ : ∥ wf_local Σ Γ ∥) t A
     : typing_result (∥ Σ;;; Γ |- t : A ∥) :=
-    check_isWAT Γ HΓ A ;;
+    check_isType Γ HΓ A ;;
     infer_cumul infer Γ HΓ t A _.
 
 End Typecheck.
@@ -1388,11 +1352,11 @@ Section CheckEnv.
   Defined.
 
   (* todo move *)
-  Definition VariableLevel_get_noprop (l : NoPropLevel.t) : option VariableLevel.t
+  Definition VariableLevel_get_noprop (l : Level.t) : option VariableLevel.t
     := match l with
-       | NoPropLevel.lSet => None
-       | NoPropLevel.Level s => Some (VariableLevel.Level s)
-       | NoPropLevel.Var n => Some (VariableLevel.Var n)
+       | Level.lSet => None
+       | Level.Level s => Some (VariableLevel.Level s)
+       | Level.Var n => Some (VariableLevel.Var n)
        end.
 
   Definition add_uctx (uctx : wGraph.VSet.t × GoodConstraintSet.t)

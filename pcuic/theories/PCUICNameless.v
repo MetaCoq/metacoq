@@ -6,6 +6,12 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
 Require Import Equations.Prop.DepElim.
 Require Import ssreflect.
 
+(** Typing / conversion does not rely on name annotations of binders.
+
+  We prove this by constructing a type-preserving translation to 
+  terms where all binders are anonymous. An alternative would be to 
+  be parametrically polymorphic everywhere on the binder name type.
+  This would allow to add implicit information too. *)
 
 Local Set Keyed Unification.
 
@@ -17,15 +23,17 @@ Definition anon (na : name) : bool :=
   | nNamed s => false
   end.
 
+Definition banon (na : binder_annot name) : bool := anon na.(binder_name).
+
 Fixpoint nameless (t : term) : bool :=
   match t with
   | tRel n => true
   | tVar n => true
   | tEvar n l => forallb nameless l
   | tSort s => true
-  | tProd na A B => anon na && nameless A && nameless B
-  | tLambda na A b => anon na && nameless A && nameless b
-  | tLetIn na b B t => anon na && nameless b && nameless B && nameless t
+  | tProd na A B => banon na && nameless A && nameless B
+  | tLambda na A b => banon na && nameless A && nameless b
+  | tLetIn na b B t => banon na && nameless b && nameless B && nameless t
   | tApp u v => nameless u && nameless v
   | tConst c u => true
   | tInd i u => true
@@ -34,15 +42,18 @@ Fixpoint nameless (t : term) : bool :=
     nameless p && nameless c && forallb (test_snd nameless) brs
   | tProj p c => nameless c
   | tFix mfix idx =>
-    forallb (fun d => anon d.(dname)) mfix &&
+    forallb (fun d => banon d.(dname)) mfix &&
     forallb (test_def nameless nameless) mfix
   | tCoFix mfix idx =>
-    forallb (fun d => anon d.(dname)) mfix &&
+    forallb (fun d => banon d.(dname)) mfix &&
     forallb (test_def nameless nameless) mfix
   end.
 
+Definition anonymize (b : binder_annot name) : binder_annot name :=  
+  map_binder_annot (fun _ => nAnon) b.
+
 Definition map_def_anon {A B} (tyf bodyf : A -> B) (d : def A) := {|
-  dname := nAnon ;
+  dname := anonymize d.(dname) ;
   dtype := tyf d.(dtype) ;
   dbody := bodyf d.(dbody) ;
   rarg  := d.(rarg)
@@ -54,9 +65,9 @@ Fixpoint nl (t : term) : term :=
   | tVar n => tVar n
   | tEvar n l => tEvar n (map nl l)
   | tSort s => tSort s
-  | tProd na A B => tProd nAnon (nl A) (nl B)
-  | tLambda na A b => tLambda nAnon (nl A) (nl b)
-  | tLetIn na b B t => tLetIn nAnon (nl b) (nl B) (nl t)
+  | tProd na A B => tProd (anonymize na) (nl A) (nl B)
+  | tLambda na A b => tLambda (anonymize na) (nl A) (nl b)
+  | tLetIn na b B t => tLetIn (anonymize na) (nl b) (nl B) (nl t)
   | tApp u v => tApp (nl u) (nl v)
   | tConst c u => tConst c u
   | tInd i u => tInd i u
@@ -68,7 +79,7 @@ Fixpoint nl (t : term) : term :=
   end.
 
 Definition map_decl_anon f (d : context_decl) := {|
-  decl_name := nAnon ;
+  decl_name := anonymize d.(decl_name) ;
   decl_body := option_map f d.(decl_body) ;
   decl_type := f d.(decl_type)
 |}.
@@ -87,7 +98,8 @@ Definition nl_one_inductive_body o :=
     (nl o.(ind_type))
     o.(ind_kelim)
     (map (fun '((x,y),n) => ((x, nl y), n)) o.(ind_ctors))
-    (map (fun '(x,y) => (x, nl y)) o.(ind_projs)).
+    (map (fun '(x,y) => (x, nl y)) o.(ind_projs))
+    o.(ind_relevance).
 
 Definition nl_mutual_inductive_body m :=
   Build_mutual_inductive_body
@@ -129,6 +141,18 @@ Local Ltac ih :=
     eapply ih ; eassumption
   end.
 
+Lemma banon_spec na : banon na -> na = {| binder_name := nAnon; binder_relevance := na.(binder_relevance) |}.
+Proof.
+  unfold banon, anon; destruct na; simpl; try congruence.
+  destruct binder_name; auto. congruence.
+Qed.
+
+Lemma banon_eq_binder_annot na na' : banon na -> banon na' -> eq_binder_annot na na' -> na = na'.
+Proof.
+  intros ->%banon_spec ->%banon_spec.
+  now unfold eq_binder_annot; simpl; intros ->.
+Qed.
+
 Lemma nameless_eq_term_spec :
   forall u v napp,
     nameless u ->
@@ -142,7 +166,7 @@ Proof.
   all: dependent destruction e.
   all: cbn in hu, hv ; destruct_andb ; anonify.
   all: try reflexivity.
-  all: try solve [ f_equal ; try ih ; try assumption ].
+  all: try solve [ f_equal ; try ih ; try assumption; try now apply banon_eq_binder_annot].
   - f_equal. cbn in hu, hv.
     revert args' hu hv a. induction l ; intros args' hu hv h.
     + destruct args' ; try solve [ inversion h ].
@@ -179,11 +203,12 @@ Proof.
       inversion X. subst.
       cbn in h1, h2, h3, h4. destruct_andb.
       f_equal.
-      * destruct a, d. cbn in *. destruct X0 as [[? ?] ?].
+      * destruct a, d. cbn in *. destruct X0 as [[[? ?] ?] ?].
         destruct H0 as [Hty Hbod].
         unfold test_def in H4, H. cbn in H4, H.
-        destruct_andb. anonify.
+        destruct_andb.
         f_equal.
+        -- now apply banon_eq_binder_annot.
         -- eapply Hty; eassumption.
         -- eapply Hbod ; eassumption.
         -- eassumption.
@@ -196,11 +221,12 @@ Proof.
       inversion X. subst.
       cbn in h1, h2, h3, h4. destruct_andb.
       f_equal.
-      * destruct a, d. cbn in *. destruct X0 as [[? ?] ?].
+      * destruct a, d. cbn in *. destruct X0 as [[[? ?] ?] ?].
         destruct H0 as [Hty Hbod].
         unfold test_def in H4, H. cbn in H4, H.
         destruct_andb. anonify.
         f_equal.
+        -- now apply banon_eq_binder_annot.
         -- eapply Hty; eassumption.
         -- eapply Hbod ; eassumption.
         -- assumption.
@@ -414,7 +440,7 @@ Definition test_option {A} f (o : option A) : bool :=
 
 Definition nameless_ctx (Γ : context) : bool :=
   forallb (fun d =>
-    anon d.(decl_name) &&
+    banon d.(decl_name) &&
     test_option nameless d.(decl_body) &&
     nameless d.(decl_type)
   ) Γ.
@@ -427,6 +453,10 @@ Proof.
   - simpl. rewrite 2!nl_spec ih. reflexivity.
   - simpl. rewrite nl_spec ih. reflexivity.
 Qed.
+
+Lemma binder_anonymize n : eq_binder_annot n (anonymize n).
+Proof. destruct n; reflexivity. Qed.
+Hint Resolve binder_anonymize : core.
 
 Lemma eq_term_upto_univ_tm_nl :
   forall Σ Re Rle napp u,
@@ -470,7 +500,6 @@ Proof.
   - intro. eapply eq_universe_refl.
 Qed.
 
-
 Fixpoint nlstack (π : stack) : stack :=
   match π with
   | ε => ε
@@ -479,15 +508,15 @@ Fixpoint nlstack (π : stack) : stack :=
   | Fix f n args ρ =>
     Fix (map (map_def_anon nl nl) f) n (map nl args) (nlstack ρ)
   | Fix_mfix_ty na bo ra mfix1 mfix2 idx ρ =>
-    Fix_mfix_ty nAnon (nl bo) ra (map (map_def_anon nl nl) mfix1) (map (map_def_anon nl nl) mfix2) idx (nlstack ρ)
+    Fix_mfix_ty (anonymize na) (nl bo) ra (map (map_def_anon nl nl) mfix1) (map (map_def_anon nl nl) mfix2) idx (nlstack ρ)
   | Fix_mfix_bd na ty ra mfix1 mfix2 idx ρ =>
-    Fix_mfix_bd nAnon (nl ty) ra (map (map_def_anon nl nl) mfix1) (map (map_def_anon nl nl) mfix2) idx (nlstack ρ)
+    Fix_mfix_bd (anonymize na) (nl ty) ra (map (map_def_anon nl nl) mfix1) (map (map_def_anon nl nl) mfix2) idx (nlstack ρ)
   | CoFix f n args ρ =>
     CoFix (map (map_def_anon nl nl) f) n (map nl args) (nlstack ρ)
   | CoFix_mfix_ty na bo ra mfix1 mfix2 idx ρ =>
-    CoFix_mfix_ty nAnon (nl bo) ra (map (map_def_anon nl nl) mfix1) (map (map_def_anon nl nl) mfix2) idx (nlstack ρ)
+    CoFix_mfix_ty (anonymize na) (nl bo) ra (map (map_def_anon nl nl) mfix1) (map (map_def_anon nl nl) mfix2) idx (nlstack ρ)
   | CoFix_mfix_bd na ty ra mfix1 mfix2 idx ρ =>
-    CoFix_mfix_bd nAnon (nl ty) ra (map (map_def_anon nl nl) mfix1) (map (map_def_anon nl nl) mfix2) idx (nlstack ρ)
+    CoFix_mfix_bd (anonymize na) (nl ty) ra (map (map_def_anon nl nl) mfix1) (map (map_def_anon nl nl) mfix2) idx (nlstack ρ)
   | Case_p indn c brs ρ =>
     Case_p indn (nl c) (map (on_snd nl) brs) (nlstack ρ)
   | Case indn p brs ρ =>
@@ -499,19 +528,19 @@ Fixpoint nlstack (π : stack) : stack :=
   | Proj p ρ =>
     Proj p (nlstack ρ)
   | Prod_l na B ρ =>
-    Prod_l nAnon (nl B) (nlstack ρ)
+    Prod_l (anonymize na) (nl B) (nlstack ρ)
   | Prod_r na A ρ =>
-    Prod_r nAnon (nl A) (nlstack ρ)
+    Prod_r (anonymize na) (nl A) (nlstack ρ)
   | Lambda_ty na b ρ =>
-    Lambda_ty nAnon (nl b) (nlstack ρ)
+    Lambda_ty (anonymize na) (nl b) (nlstack ρ)
   | Lambda_tm na A ρ =>
-    Lambda_tm nAnon (nl A) (nlstack ρ)
+    Lambda_tm (anonymize na) (nl A) (nlstack ρ)
   | LetIn_bd na B u ρ =>
-    LetIn_bd nAnon (nl B) (nl u) (nlstack ρ)
+    LetIn_bd (anonymize na) (nl B) (nl u) (nlstack ρ)
   | LetIn_ty na b u ρ =>
-    LetIn_ty nAnon (nl b) (nl u) (nlstack ρ)
+    LetIn_ty (anonymize na) (nl b) (nl u) (nlstack ρ)
   | LetIn_in na b B ρ =>
-    LetIn_in nAnon (nl b) (nl B) (nlstack ρ)
+    LetIn_in (anonymize na) (nl b) (nl B) (nlstack ρ)
   | coApp t ρ =>
     coApp (nl t) (nlstack ρ)
   end.
@@ -779,7 +808,7 @@ Qed.
 Lemma nlctx_fix_context_alt :
   forall l,
     nlctx (fix_context_alt l) =
-    fix_context_alt (map (fun d => (nAnon, nl d.2)) l).
+    fix_context_alt (map (fun d => (anonymize d.1, nl d.2)) l).
 Proof.
   intro l.
   unfold fix_context_alt. unfold nlctx.
@@ -794,7 +823,7 @@ Qed.
 
 Lemma map_def_sig_nl :
   forall m,
-    map (fun d : name × term => (nAnon, nl d.2)) (map def_sig m) =
+    map (fun d : aname × term => (anonymize d.1, nl d.2)) (map def_sig m) =
     map def_sig (map (map_def_anon nl nl) m).
 Proof.
   intro m.
@@ -1124,6 +1153,33 @@ Proof.
   all: now rewrite nl_subst_instance_constr.
 Qed.
 
+Lemma nl_monomorphic_levels_decl g : monomorphic_levels_decl (nl_global_decl g) = monomorphic_levels_decl g.
+Proof.
+  destruct g; simpl.
+  - destruct c; cbn. reflexivity.
+  - destruct m; reflexivity.
+Qed.
+
+Lemma nl_global_levels Σ : global_levels (map (on_snd nl_global_decl) Σ) = global_levels Σ.
+Proof.
+  induction Σ; simpl; auto.
+  destruct a; simpl. now rewrite IHΣ nl_monomorphic_levels_decl.
+Qed.
+
+Lemma nl_global_ext_levels Σ :
+  LevelSet.Equal (global_ext_levels (nlg Σ)) (global_ext_levels Σ).
+Proof.
+  destruct Σ as [Σ univ].
+  unfold global_ext_levels; simpl.
+  intros x. now rewrite !LevelSet.union_spec nl_global_levels.
+Qed.
+
+Lemma wf_universe_nl Σ u : wf_universe Σ u -> wf_universe (nlg Σ) u.
+Proof.
+  destruct u; simpl; auto.
+  intros.
+  now rewrite nl_global_ext_levels.
+Qed.
 
 Lemma typing_nlg {cf : checker_flags} :
   env_prop (fun Σ Γ t T => nlg Σ ;;; nlctx Γ |- nl t : nl T)
@@ -1142,7 +1198,7 @@ Proof.
     constructor. 1: eauto using nlg_wf_local.
     unfold nlctx. rewrite nth_error_map. now rewrite H.
   - constructor; eauto using nlg_wf_local.
-    now rewrite global_ext_levels_nlg.
+    now apply wf_universe_nl.
   - replace (nl (cst_type decl)) with (cst_type (map_constant_body nl decl));
       [|destruct decl; reflexivity].
     constructor; eauto using nlg_wf_local.
@@ -1310,13 +1366,7 @@ Proof.
         now rewrite -> XX, <- nl_lift.
     + now rewrite <-nl_wf_cofixpoint.
   - econstructor; tea.
-    + destruct X2 as [[[Δ [s [H1 H2]]] HH]|?]; [left|right].
-      * exists (nlctx Δ), s. split.
-        -- rewrite (nl_destArity []) H1 /= //.
-        -- cbn in *. rewrite <- nlctx_app_context.
-           eapply nlg_wf_local. eassumption.
-      * destruct s as [? [? ?]]; eauto.
-    + now apply nl_cumul.
+    now apply nl_cumul.
 Qed.
 
 (* Corollary reflect_nleq_term : *)
@@ -1357,6 +1407,11 @@ Qed.
 (*       * assumption. *)
 (* Qed. *)
 
+Lemma anonymize_two na : anonymize (anonymize na) = anonymize na.
+Proof.
+  destruct na; simpl; reflexivity.
+Qed.
+
 Lemma nl_two M :
   nl (nl M) = nl M.
 Proof.
@@ -1366,9 +1421,11 @@ Proof.
   - f_equal. induction X; cbnr. f_equal; tas.
     destruct x; unfold on_snd; simpl in *. congruence.
   - f_equal. induction X; cbnr. f_equal; tas.
-    destruct p, x; unfold map_def_anon; simpl in *. congruence.
+    destruct p, x; unfold map_def_anon; simpl in *.
+    rewrite anonymize_two; congruence.
   - f_equal. induction X; cbnr. f_equal; tas.
-    destruct p, x; unfold map_def_anon; simpl in *. congruence.
+    destruct p, x; unfold map_def_anon; simpl in *. 
+    rewrite anonymize_two; congruence.
 Qed.
 
 

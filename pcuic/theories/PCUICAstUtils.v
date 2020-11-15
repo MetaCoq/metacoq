@@ -7,17 +7,20 @@ From Equations Require Import Equations.
 
 Derive Signature for All All2.
 
+Definition string_of_aname (b : binder_annot name) :=
+  string_of_name b.(binder_name).
+
 Fixpoint string_of_term (t : term) :=
   match t with
   | tRel n => "Rel(" ^ string_of_nat n ^ ")"
   | tVar n => "Var(" ^ n ^ ")"
   | tEvar ev args => "Evar(" ^ string_of_nat ev ^ "," ^ string_of_list string_of_term args ^ ")"
   | tSort s => "Sort(" ^ string_of_sort s ^ ")"
-  | tProd na b t => "Prod(" ^ string_of_name na ^ "," ^
+  | tProd na b t => "Prod(" ^ string_of_aname na ^ "," ^
                             string_of_term b ^ "," ^ string_of_term t ^ ")"
-  | tLambda na b t => "Lambda(" ^ string_of_name na ^ "," ^ string_of_term b
+  | tLambda na b t => "Lambda(" ^ string_of_aname na ^ "," ^ string_of_term b
                                 ^ "," ^ string_of_term t ^ ")"
-  | tLetIn na b t' t => "LetIn(" ^ string_of_name na ^ "," ^ string_of_term b
+  | tLetIn na b t' t => "LetIn(" ^ string_of_aname na ^ "," ^ string_of_term b
                                  ^ "," ^ string_of_term t' ^ "," ^ string_of_term t ^ ")"
   | tApp f l => "App(" ^ string_of_term f ^ "," ^ string_of_term l ^ ")"
   | tConst c u => "Const(" ^ string_of_kername c ^ "," ^ string_of_universe_instance u ^ ")"
@@ -86,7 +89,7 @@ Proof.
   rewrite <- IHl. simpl. reflexivity.
 Qed.
 
-Fixpoint decompose_prod (t : term) : (list name) * (list term) * term :=
+Fixpoint decompose_prod (t : term) : (list aname) * (list term) * term :=
   match t with
   | tProd n A B => let (nAs, B) := decompose_prod B in
                   let (ns, As) := nAs in
@@ -128,7 +131,7 @@ Proof.
     apply (List.firstn decl.(ind_npars)) in names.
     apply (List.firstn decl.(ind_npars)) in types.
     refine (List.combine _ _).
-    exact (List.map string_of_name names).
+    exact (List.map string_of_aname names).
     exact (List.map LocalAssum types).
   - refine (List.map _ decl.(ind_bodies)).
     intros [].

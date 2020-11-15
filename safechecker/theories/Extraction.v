@@ -25,7 +25,7 @@ Set Warnings "-extraction-reserved-identifier".
 
 Extraction Inline PCUICSafeConversion.Ret.
 
-Extract Inductive Equations.Init.sigma => "(,)" ["(,)"].
+Extract Inductive Equations.Init.sigma => "( * )" ["(,)"].
 
 Extract Constant PCUICTyping.fix_guard => "(fun x -> true)".
 Extract Constant PCUICTyping.cofix_guard => "(fun x -> true)".

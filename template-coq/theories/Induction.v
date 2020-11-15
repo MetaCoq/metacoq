@@ -16,15 +16,15 @@ Lemma term_forall_list_ind :
     (forall (n : nat) (l : list term), Forall P l -> P (tEvar n l)) ->
     (forall s, P (tSort s)) ->
     (forall t : term, P t -> forall (c : cast_kind) (t0 : term), P t0 -> P (tCast t c t0)) ->
-    (forall (n : name) (t : term), P t -> forall t0 : term, P t0 -> P (tProd n t t0)) ->
-    (forall (n : name) (t : term), P t -> forall t0 : term, P t0 -> P (tLambda n t t0)) ->
-    (forall (n : name) (t : term),
+    (forall (n : aname) (t : term), P t -> forall t0 : term, P t0 -> P (tProd n t t0)) ->
+    (forall (n : aname) (t : term), P t -> forall t0 : term, P t0 -> P (tLambda n t t0)) ->
+    (forall (n : aname) (t : term),
         P t -> forall t0 : term, P t0 -> forall t1 : term, P t1 -> P (tLetIn n t t0 t1)) ->
     (forall t : term, P t -> forall l : list term, Forall P l -> P (tApp t l)) ->
     (forall s (u : list Level.t), P (tConst s u)) ->
     (forall (i : inductive) (u : list Level.t), P (tInd i u)) ->
     (forall (i : inductive) (n : nat) (u : list Level.t), P (tConstruct i n u)) ->
-    (forall (p : inductive * nat) (t : term),
+    (forall (p : inductive * nat * relevance) (t : term),
         P t -> forall t0 : term, P t0 -> forall l : list (nat * term),
             tCaseBrsProp P l -> P (tCase p t t0 l)) ->
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
@@ -72,16 +72,16 @@ Lemma term_wf_forall_list_ind :
     (forall (n : nat) (l : list term), Forall P l -> P (tEvar n l)) ->
     (forall s, P (tSort s)) ->
     (forall t : term, P t -> forall (c : cast_kind) (t0 : term), P t0 -> P (tCast t c t0)) ->
-    (forall (n : name) (t : term), P t -> forall t0 : term, P t0 -> P (tProd n t t0)) ->
-    (forall (n : name) (t : term), P t -> forall t0 : term, P t0 -> P (tLambda n t t0)) ->
-    (forall (n : name) (t : term),
+    (forall (n : aname) (t : term), P t -> forall t0 : term, P t0 -> P (tProd n t t0)) ->
+    (forall (n : aname) (t : term), P t -> forall t0 : term, P t0 -> P (tLambda n t t0)) ->
+    (forall (n : aname) (t : term),
         P t -> forall t0 : term, P t0 -> forall t1 : term, P t1 -> P (tLetIn n t t0 t1)) ->
     (forall t : term, isApp t = false -> wf t -> P t ->
                       forall l : list term, l <> nil -> Forall wf l -> Forall P l -> P (tApp t l)) ->
     (forall s (u : list Level.t), P (tConst s u)) ->
     (forall (i : inductive) (u : list Level.t), P (tInd i u)) ->
     (forall (i : inductive) (n : nat) (u : list Level.t), P (tConstruct i n u)) ->
-    (forall (p : inductive * nat) (t : term),
+    (forall (p : inductive * nat * relevance) (t : term),
         P t -> forall t0 : term, P t0 -> forall l : list (nat * term),
             tCaseBrsProp P l -> P (tCase p t t0 l)) ->
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
@@ -141,15 +141,15 @@ Lemma term_forall_list_rect :
     (forall (n : nat) (l : list term), All P l -> P (tEvar n l)) ->
     (forall s, P (tSort s)) ->
     (forall t : term, P t -> forall (c : cast_kind) (t0 : term), P t0 -> P (tCast t c t0)) ->
-    (forall (n : name) (t : term), P t -> forall t0 : term, P t0 -> P (tProd n t t0)) ->
-    (forall (n : name) (t : term), P t -> forall t0 : term, P t0 -> P (tLambda n t t0)) ->
-    (forall (n : name) (t : term),
+    (forall (n : aname) (t : term), P t -> forall t0 : term, P t0 -> P (tProd n t t0)) ->
+    (forall (n : aname) (t : term), P t -> forall t0 : term, P t0 -> P (tLambda n t t0)) ->
+    (forall (n : aname) (t : term),
         P t -> forall t0 : term, P t0 -> forall t1 : term, P t1 -> P (tLetIn n t t0 t1)) ->
     (forall t : term, P t -> forall l : list term, All P l -> P (tApp t l)) ->
     (forall s (u : list Level.t), P (tConst s u)) ->
     (forall (i : inductive) (u : list Level.t), P (tInd i u)) ->
     (forall (i : inductive) (n : nat) (u : list Level.t), P (tConstruct i n u)) ->
-    (forall (p : inductive * nat) (t : term),
+    (forall (p : inductive * nat * relevance) (t : term),
         P t -> forall t0 : term, P t0 -> forall l : list (nat * term),
             tCaseBrsType P l -> P (tCase p t t0 l)) ->
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->

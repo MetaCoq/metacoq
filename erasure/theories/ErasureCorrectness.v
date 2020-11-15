@@ -53,7 +53,7 @@ Proof.
       eapply typing_subst_instance in t0; eauto.
       eexists. split.
       * eapply t0; tas.
-      * now eapply is_prop_subst_instance.
+      * now rewrite is_propositional_subst_instance.
 Qed.
 
 (** * Correctness of erasure  *)
@@ -229,7 +229,7 @@ Lemma erases_subst_instance_constr0
   : env_prop (fun Σ Γ t T => wf_ext_wk Σ ->
                            forall t' u univs,
                              wf_local (Σ.1, univs) (PCUICUnivSubst.subst_instance_context u Γ) ->
-sub_context_set (monomorphic_udecl Σ.2) (global_ext_context_set (Σ.1, univs)) ->
+      sub_context_set (monomorphic_udecl Σ.2) (global_ext_context_set (Σ.1, univs)) ->
       consistent_instance_ext (Σ.1,univs) (Σ.2) u ->
     Σ ;;; Γ |- t ⇝ℇ t' ->
     (Σ.1,univs) ;;; (PCUICUnivSubst.subst_instance_context u Γ) |- PCUICUnivSubst.subst_instance_constr u t ⇝ℇ t')
@@ -237,7 +237,7 @@ sub_context_set (monomorphic_udecl Σ.2) (global_ext_context_set (Σ.1, univs)) 
 Proof.
   apply typing_ind_env; intros; cbn -[PCUICUnivSubst.subst_instance_constr] in *; auto.
   all: match goal with [ H : erases _ _ ?a _ |- ?G ] => tryif is_var a then idtac else invs H end.
-  all: try now (econstructor; eauto using isErasable_subst_instance).
+  all: try now (econstructor; eauto 2 using isErasable_subst_instance).
   - cbn. econstructor.
     eapply H0 in X2; eauto.
     econstructor. eauto. cbn. econstructor.
@@ -534,8 +534,8 @@ Proof.
   eapply PCUICValidity.validity in Hty; eauto.
   eapply PCUICValidity.validity in Hty'; eauto.
   eapply PCUICValidity.validity in Ht''; eauto.
-  eapply PCUICElimination.cumul_prop1 in Cty; eauto.
-  eapply PCUICElimination.cumul_prop2 in Cty'; eauto.
+  eapply cumul_prop1' in Cty; eauto.
+  eapply cumul_propositional in Cty'; eauto.
 Qed.
 
 Lemma Is_proof_app {Σ Γ t args ty} {wfΣ : wf_ext Σ} :
@@ -550,7 +550,7 @@ Proof.
   epose proof (PCUICPrincipality.common_typing _ wfΣ Hty Ht) as [C [Cty [Cty' Ht'']]].
   eapply PCUICSpine.typing_spine_strengthen in sp; eauto.
   edestruct (sort_typing_spine _ _ _ u _ _ _ pu sp) as [u' [Hty' isp']].
-  eapply PCUICElimination.cumul_prop1; eauto.
+  eapply cumul_prop1'; eauto.
   eapply PCUICValidity.validity; eauto.
   exists ty, u'; split; auto.
   eapply PCUICGeneration.type_mkApps. 2:eauto. auto. auto.
@@ -611,9 +611,8 @@ Proof.
   eapply PCUICElimination.typing_spine_proofs in Ts; eauto.
   destruct Ts as [_ Hs].
   specialize (Hs _ _ (proj1 d) oib c) as [Hs _].
-  specialize (Hs isp).
-  rewrite is_prop_subst_instance_univ in Hs => //.
-  apply (consistent_instance_ext_noprop c).
+  specialize (Hs isp). subst s. move: isp. change (ind_sort oib) with (ind_sort oib) in *.
+  now destruct (ind_sort oib).
 Qed.
 
 Lemma nisErasable_Propositional {Σ : global_env_ext} {Γ ind n u} : 
@@ -633,7 +632,7 @@ Proof.
   rewrite (proj1 (proj1 d)) (proj2 (proj1 d)).
   rewrite oib.(ind_arity_eq).
   rewrite !destArity_it_mkProd_or_LetIn /=.
-  destruct (Universe.is_prop (ind_sort oib)) eqn:isp; auto.
+  destruct (is_propositional (ind_sort oib)) eqn:isp; auto.
   elimtype False; eapply ise.
   red. eexists; intuition eauto. right.
   unfold type_of_constructor in c0, X.
@@ -645,39 +644,35 @@ Proof.
   destruct decli. eapply nth_error_Some_length in H1; eauto.
   rewrite -it_mkProd_or_LetIn_app in c0, X.
   exists (subst_instance_univ u (ind_sort oib)).
-  rewrite is_prop_subst_instance_univ => //.
-  apply (consistent_instance_ext_noprop c).
+  rewrite is_propositional_subst_instance => //.
   split; auto.
-  eapply cumul_prop2; eauto.
-  rewrite is_prop_subst_instance_univ => //.
-  apply (consistent_instance_ext_noprop c).
+  eapply cumul_propositional; eauto.
+  rewrite is_propositional_subst_instance => //.
   eapply PCUICValidity.validity; eauto.
   destruct X as [cty ty].
-  eapply type_Cumul; eauto.
-  left. eexists _, _; intuition eauto.
+  eapply type_Cumul'; eauto.
+  eapply PCUICSpine.isType_Sort; pcuic.
+  destruct (ind_sort oib) => //.
   eapply PCUICSpine.inversion_it_mkProd_or_LetIn in ty; eauto.
   epose proof (typing_spine_proofs _ _ [] _ _ _ [] _ _ eq_refl wfΣ ty).
-  forward H0 by constructor. right; eexists; eauto.
+  forward H0 by constructor. eexists; eauto.
   simpl. reflexivity.
   destruct H0 as [_ sorts].
   specialize (sorts _ _ decli oib c) as [sorts sorts'].
   forward sorts' by constructor.
   do 2 constructor.
-  rewrite is_prop_subst_instance_univ in sorts, sorts' |- *; 
-    try apply (consistent_instance_ext_noprop c).
-  specialize (sorts' isp). specialize (sorts sorts').
-  apply leq_prop_prop; auto.
-  now rewrite is_prop_subst_instance_univ; try apply (consistent_instance_ext_noprop c).
+  rewrite is_propositional_subst_instance in sorts, sorts' |- *.
+  specialize (sorts' isp). rewrite -sorts'. reflexivity.
 Qed.  
 
 Lemma isPropositional_propositional Σ Σ' ind mdecl idecl mdecl' idecl' : 
   PCUICTyping.declared_inductive Σ mdecl ind idecl ->
   ETyping.declared_inductive Σ' mdecl' ind idecl' ->
   erases_one_inductive_body idecl idecl' ->
-  forall b, isPropositional Σ ind b -> is_propositional Σ' ind = Some b.
+  forall b, isPropositional Σ ind b -> is_propositional_ind Σ' ind = Some b.
 Proof.
   intros [] [] [].
-  intros b. unfold isPropositional, is_propositional.
+  intros b. unfold isPropositional, is_propositional_ind.
   rewrite H H1 H0 H2. destruct destArity eqn:da => //.
   destruct p as [ctx s].
   destruct H4 as [_ [_ [_ isP]]].
@@ -708,7 +703,7 @@ Proof.
       eapply inversion_Lambda in X0 as (? & ? & ? & ? & ?).
       assert (Σ ;;; [] |- a' : t). {
           eapply subject_reduction_eval; eauto.
-          eapply PCUICConversion.cumul_Prod_inv in c0 as [].
+          eapply PCUICConversion.cumul_Prod_inv in c0 as [[? ?] ?].
           econstructor. eassumption. eauto. eapply conv_sym in c0; eauto.
           now eapply conv_cumul. auto. auto. }
       assert (eqs := type_closed_subst b wfΣ X0).
@@ -749,7 +744,7 @@ Proof.
     + depelim Hed.
       eapply IHeval1 in H6 as (vt1' & Hvt2' & [He_vt1']); eauto.
       assert (Hc : PCUICContextConversion.conv_context Σ ([],, vdef na b0 t) [vdef na b0' t]). {
-        econstructor. econstructor. econstructor.
+        econstructor. econstructor. econstructor. reflexivity.
         eapply PCUICCumulativity.red_conv.
         now eapply wcbeval_red; eauto.
         reflexivity.
@@ -934,7 +929,7 @@ Proof.
 
         -- eapply Is_type_app in X1 as []; auto.
            2:{ eapply subject_reduction_eval. 2:eassumption. eauto. }
-           assert (ispind : is_propositional Σ' ind = Some true).
+           assert (ispind : is_propositional_ind Σ' ind = Some true).
            { eapply isPropositional_propositional; eauto. eapply isErasable_Propositional; eauto. }
 
            eapply tConstruct_no_Type in X1; auto.
@@ -1006,7 +1001,7 @@ Proof.
       2: eapply subject_reduction_eval; eauto.
       destruct Hvc' as [ (? & ? & ? & ? & [] & ? & ? & ?) | (? & ? & ? & ? & ?)]; subst.
       * exists EAst.tBox.
-        assert (isprop : is_propositional Σ' i = Some true).
+        assert (isprop : is_propositional_ind Σ' i = Some true).
         { eapply isPropositional_propositional; eauto. eapply isErasable_Propositional; eauto. }
         split.
         eapply Is_type_app in X as []; eauto. 2:{ rewrite mkApps_nested. eapply subject_reduction_eval; eauto. }
@@ -1041,7 +1036,7 @@ Proof.
            now eapply isPropositional_propositional; eauto.
            rewrite <- nth_default_eq. unfold nth_default. now rewrite H1.
         -- exists EAst.tBox.
-           assert (isprop : is_propositional Σ' i = Some true).
+           assert (isprop : is_propositional_ind Σ' i = Some true).
            { eapply isPropositional_propositional; eauto; eapply (isErasable_Propositional (args:=[])); eauto. }
            split.
            eapply Is_type_app in X as []; eauto. 2:{ eapply subject_reduction_eval; [|eauto]; eauto. }

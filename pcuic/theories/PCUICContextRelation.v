@@ -111,26 +111,26 @@ Section ContextChangeTypesReduction.
   Context (Σ : global_env).
 
   Inductive change_decl_type : context_decl -> context_decl -> Type :=
-  | change_vass_type : forall (na na' : name) (T T' : term),
+  | change_vass_type : forall (na na' : aname) (T T' : term),
       change_decl_type (vass na T) (vass na' T')
-  | change_vdef_type : forall (na na' : name) (b T T'  : term),
+  | change_vdef_type : forall (na na' : aname) (b T T'  : term),
       change_decl_type (vdef na b T) (vdef na' b T').
   
   Derive Signature for change_decl_type.
   
   Global Instance change_decl_type_refl : Reflexive change_decl_type.
-  Proof. intros [? [|]]; constructor. Qed.
+  Proof. intros [? [|]]; constructor; reflexivity. Qed.
 
   Global Instance change_decl_type_sym : Symmetric change_decl_type.
   Proof.
     intros x y rel.
-    depelim rel; constructor.
+    depelim rel; constructor; now symmetry.
   Qed.
 
   Global Instance change_decl_type_trans : Transitive change_decl_type.
   Proof.
     intros x y z xy yz.
-    depelim xy; depelim yz; constructor.
+    depelim xy; depelim yz; constructor; now etransitivity.
   Qed.
   
   Global Instance change_decl_type_equiv : Equivalence change_decl_type.
@@ -158,6 +158,7 @@ Section ContextChangeTypesReduction.
     -
       eapply PCUICReduction.red_letin; eauto. eapply IHX0; eauto.
       econstructor. eauto. econstructor.
+      
     -     eapply PCUICReduction.red_case; eauto. clear.
           eapply All_All2_refl. induction brs; eauto.
     -     eapply PCUICReduction.red_case; eauto. clear.
@@ -182,7 +183,7 @@ Section ContextChangeTypesReduction.
     -
       eapply PCUICReduction.red_prod; eauto. eapply IHX0. eauto. eauto.
       econstructor.
-      eauto. econstructor.
+      eauto. econstructor. 
     - eapply PCUICReduction.red_evar; eauto.
       induction X; eauto. econstructor. eapply p; eauto.
       induction tl; eauto.
@@ -201,9 +202,9 @@ Section ContextChangeTypesReduction.
       induction (fix_context mfix0) as [| [na [b|] ty] Δ ihΔ].
       + auto.
       + simpl. constructor ; eauto.
-        constructor.
+        constructor. 
       + simpl. constructor ; eauto.
-        constructor.
+        constructor. 
     - eapply PCUICReduction.red_cofix_one_ty.
       eapply OnOne2_impl ; eauto.
       intros [? ? ? ?] [? ? ? ?] [[r ih] e]. simpl in *.
@@ -219,9 +220,9 @@ Section ContextChangeTypesReduction.
       induction (fix_context mfix0) as [| [na [b|] ty] Δ ihΔ].
       + auto.
       + simpl. constructor ; eauto.
-        constructor.
+        constructor. 
       + simpl. constructor ; eauto.
-        constructor.
+        constructor. 
   Qed.
 
   Lemma context_change_decl_types_red Γ Γ' s t :
@@ -243,7 +244,8 @@ Proof.
   - apply context_relation_refl.
     intros.
     destruct x.
-    destruct decl_body; constructor.
+    destruct decl_body; constructor;
+    reflexivity.
   - unfold fix_context, mapi.
     generalize 0 at 2 4.
     induction mfix in mfix', len |- *; intros n.

@@ -1312,8 +1312,8 @@ Proof.
     + unfold unfold_fix.
       rewrite e1.
       reflexivity.
-    + rewrite <- e2.
-      eassumption.
+    + rewrite <- e.
+      destruct p. rewrite e3. reflexivity.
     + eapply IHwh; eauto.
   - destruct args using MCList.rev_ind; [|rewrite <- mkApps_nested in x; discriminate x].
     now rewrite nth_error_nil in e0.
@@ -1346,7 +1346,7 @@ Proof.
     unfold unfold_fix in *.
     destruct (nth_error mfix' idx) eqn:nth; [|easy].
     eapply All2_nth_error_Some_r in nth; eauto.
-    destruct nth as (?&?&(?&?)&?).
+    destruct nth as (?&?&((? & ?)&?)&?).
     rewrite e e2 in y.
     eapply All2_nth_error_None; eauto.
   - apply eq_term_upto_univ_napp_mkApps_l_inv in eq as (?&?&(?&?)&->).

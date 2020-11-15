@@ -34,6 +34,7 @@ theories/PCUICAlpha.v
 theories/PCUICCtxShape.v
 theories/PCUICContexts.v
 theories/PCUICArities.v
+theories/PCUICWfUniverses.v
 theories/PCUICSpine.v
 theories/PCUICInductives.v
 

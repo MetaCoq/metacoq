@@ -2679,38 +2679,7 @@ Proof.
       rewrite map_map_compose. now rewrite H1.
 
   - econstructor; eauto.
-    + destruct X2 as [Bs|[u Hu]].
-      * left. destruct Bs as [[ctx [u [Hd IH]]]]. simpl in *.
-        exists (subst_context s #|Δ| ctx), u.
-        pose proof (subst_destArity [] B s #|Δ|). rewrite Hd in H.
-        rewrite {}H.
-        split; auto.
-        apply All_local_env_app_inv; intuition auto.
-        clear -sub a.
-        induction ctx; try constructor; depelim a.
-        -- rewrite subst_context_snoc.
-           unfold snoc.
-           econstructor; auto.
-           ++ eapply IHctx. eapply a.
-           ++ simpl. destruct tu as [u tu]. exists u.
-              specialize (t0 _ _ (Δ ,,, ctx) _ sub). forward t0.
-              1: now rewrite app_context_assoc.
-              simpl in t0.
-              now rewrite subst_context_app Nat.add_0_r app_context_assoc app_length in t0.
-      -- rewrite subst_context_snoc.
-         constructor; auto.
-         ++ eapply IHctx. eapply a.
-         ++ simpl.
-            specialize (t1 _ _ (Δ ,,, ctx) _ sub).
-            forward t1. 1: now rewrite app_context_assoc.
-            simpl in t1.
-            now rewrite subst_context_app Nat.add_0_r app_context_assoc app_length in t1.
-         ++ simpl.
-            specialize (t0 _ _ (Δ ,,, ctx) _ sub). forward t0.
-            1: now rewrite app_context_assoc. simpl in t0.
-            now rewrite subst_context_app Nat.add_0_r app_context_assoc app_length in t0.
-      * right; exists u; intuition eauto.
-    + eapply substitution_cumul; eauto.
+    eapply substitution_cumul; eauto.
 Qed.
 
 Corollary substitution `{cf : checker_flags} (Σ : global_env_ext) Γ Γ' s Δ (t : term) T :

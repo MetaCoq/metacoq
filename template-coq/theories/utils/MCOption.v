@@ -99,3 +99,19 @@ Proof.
   destruct o => /= //.
   move=> [] <-. exists a; auto.
 Qed.
+
+(** Analogous to Forall, but for the [option] type *)
+(* Helpful for induction principles and predicates on [term] *)
+Inductive ForOption {A} (P : A -> Prop) : option A -> Prop :=
+| fo_Some : forall t, P t -> ForOption P (Some t)
+| fo_None : ForOption P None.
+
+Definition foroptb {A : Type} (p : A -> bool) (o : option A) : bool :=
+  option_get true (option_map p o).
+
+Definition foroptb2 {A : Type} (p : A -> A -> bool) (o o': option A) : bool :=
+  match o, o' with
+  | Some v, Some v' => p v v'
+  | None, None => true
+  | _, _ => false
+  end.

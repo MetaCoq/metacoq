@@ -17,7 +17,7 @@ Local Existing Instance extraction_checker_flags.
 Variable Σ : global_env_ext.
 Variable HΣ : ∥wf Σ∥.
 
-Definition term_rel : Relation_Definitions.relation (∑ Γ t, wellformed Σ Γ t) :=
+Definition term_rel : Relation_Definitions.relation (∑ Γ t, welltyped Σ Γ t) :=
   fun '(Γ2; B; H) '(Γ1; t1; H2) =>
     ∥∑ na A, red (fst Σ) Γ1 t1 (tProd na A B) × (Γ1,, vass na A) = Γ2∥.
 
@@ -48,7 +48,7 @@ Ltac sq' := try (destruct HΣ; clear HΣ);
 Instance wf_reduction : WellFounded term_rel.
 Proof.
   intros (Γ & s & H). sq'.
-  induction (normalisation' Σ Γ s X H) as [s _ IH].
+  induction (normalisation Σ Γ s H) as [s _ IH].
   induction (wf_cod' s) as [s _ IH_sub] in Γ, H, IH |- *.
   econstructor.
   intros (Γ' & B & ?) [(na & A & ? & ?)]. subst.
@@ -68,24 +68,15 @@ Proof.
         eapply Relation_Properties.clos_rtn1_rt in X1.
         eapply cored_red_trans in X0; [| exact X1 ].
         eapply Acc_no_loop in X0. eauto.
-        eapply @normalisation'; eauto.
+        eapply @normalisation; eauto.
       * constructor. do 2 eexists. now split.
 Grab Existential Variables.
-- eapply red_wellformed; sq.
+- eapply red_welltyped; sq.
   3:eapply Relation_Properties.clos_rtn1_rt in r; eassumption. all:eauto.
-- destruct H as [[] |[]].
-  -- eapply inversion_Prod in X0 as (? & ? & ? & ? & ?) ; auto.
-     eapply cored_red in H0 as [].
-     econstructor. econstructor. econstructor. eauto. eapply subject_reduction; eauto.
-  -- eapply cored_red in H0 as [].
-     eapply isWfArity_prod_inv in X0 as [_ ?].
-     econstructor 2. sq.
-     eapply isWfArity_red in i; eauto.
-     destruct i as (? & ? & ? & ?).
-     exists (x ++ [vass na A]), x0. cbn; split.
-     2:{ unfold snoc, app_context in *. rewrite <- app_assoc. eassumption. }
-     change ([] ,, vass na A) with ([vass na A] ,,, []).
-     rewrite destArity_app_aux. rewrite e. cbn. reflexivity.
+- destruct H as [].
+  eapply inversion_Prod in X0 as (? & ? & ? & ? & ?) ; auto.
+  eapply cored_red in H0 as [].
+  econstructor. econstructor; eauto. eapply subject_reduction; eauto.
 Qed.
 
 Ltac sq := try (destruct HΣ as [wfΣ]; clear HΣ);
@@ -108,7 +99,8 @@ Qed.
 Notation err := (TypeError  (Msg "hnf did not return normal form")).
 
 Obligation Tactic := program_simplify; auto.
-Program Definition reduce_to_sort' Γ t (h : wellformed Σ Γ t)
+
+Program Definition reduce_to_sort' Γ t (h : welltyped Σ Γ t)
   : typing_result ((∑ u, ∥ red (fst Σ) Γ t (tSort u) ∥) + ((∑ u, ∥ red (fst Σ) Γ t (tSort u) ∥) -> False)) :=
   match t with
   | tSort u => ret (inl (u; sq (refl_red _ _ _)))
@@ -135,7 +127,7 @@ Next Obligation.
   congruence.
 Qed.
 
-Program Definition reduce_to_prod' Γ t (h : wellformed Σ Γ t)
+Program Definition reduce_to_prod' Γ t (h : welltyped Σ Γ t)
   : typing_result ((∑ na a b, ∥ red (fst Σ) Γ t (tProd na a b) ∥) + ((∑ na a b, ∥ red (fst Σ) Γ t (tProd na a b) ∥) -> False)) :=
   match t with
   | tProd na a b => ret (inl (na; a; b; sq (refl_red _ _ _)))
@@ -160,9 +152,9 @@ Next Obligation.
   congruence.
 Qed.
 
-Equations is_arity Γ (HΓ : ∥wf_local Σ Γ∥) T (HT : wellformed Σ Γ T) :
+Equations is_arity Γ (HΓ : ∥wf_local Σ Γ∥) T (HT : welltyped Σ Γ T) :
   typing_result ({Is_conv_to_Arity Σ Γ T} + {~ Is_conv_to_Arity Σ Γ T})
-  by wf ((Γ;T;HT) : (∑ Γ t, wellformed Σ Γ t)) term_rel :=
+  by wf ((Γ;T;HT) : (∑ Γ t, welltyped Σ Γ t)) term_rel :=
   {
     is_arity Γ HΓ T HT with (@reduce_to_sort' Γ T HT) => {
     | Checked (inl H) => ret (left _) ;
@@ -183,22 +175,16 @@ Next Obligation.
 Qed.
 Next Obligation.
   clear He.
-  destruct HT as [ [] | [] ]; sq.
-  - eapply subject_reduction in X; eauto.
-    eapply inversion_Prod in X as (? & ? & ? & ? & ?).
-    econstructor. eauto. cbn. eauto. auto.
-  - econstructor. eauto.
-    eapply isWfArity_red in X; eauto.
-    cbn. eapply isWfArity_prod_inv; eauto.
+  destruct HT as [];sq.
+  eapply subject_reduction in X; eauto.
+  eapply inversion_Prod in X as (? & ? & ? & ? & ?).
+  econstructor. eauto. cbn. eauto. auto.
 Qed.
 Next Obligation.
-  clear He. sq. destruct HT as [ [] | [] ].
-  - eapply subject_reduction in X; eauto.
-    eapply inversion_Prod in X as (? & ? & ? & ? & ?).
-    do 2 econstructor. eauto. auto.
-  - econstructor 2. sq.
-    eapply isWfArity_red in X; eauto.
-    eapply isWfArity_prod_inv; eauto.
+  clear He. sq. destruct HT as [].
+  eapply subject_reduction in X; eauto.
+  eapply inversion_Prod in X as (? & ? & ? & ? & ?).
+  econstructor; eauto. auto.
 Qed.
 Next Obligation.
   clear He.
@@ -232,13 +218,20 @@ Next Obligation.
   eapply PCUICContextRelation.context_relation_refl.
   intros.
   reflexivity.
+  (* destruct HT as [].
+  sq. etransitivity; eauto.
+  eapply context_conversion_red; eauto. econstructor.
+
+  eapply conv_context_refl; eauto. econstructor.
+
+  eapply conv_sym, red_conv; eauto. *)
 Qed.
 
 Hint Constructors squash : core.
 
 Next Obligation.
-destruct HΣ.
-intros H.
+  destruct HΣ.
+  intros H.
   eapply Is_conv_to_Arity_inv in H
     as [ (? & ? & ? & ?) | (? & ?) ].
   all: eauto.
@@ -264,11 +257,11 @@ Program Definition is_erasable (Sigma : PCUICAst.global_env_ext) (HΣ : ∥wf_ex
     ret (left _)
   else mlet (K; _) <-  @make_graph_and_infer _ _ HΣ Gamma HΓ T ;;
        mlet (u;_) <- @reduce_to_sort _ Sigma _ Gamma K _ ;;
-      match Universe.is_prop u with true => ret (left _) | false => ret (right _) end
+      match is_propositional u with true => ret (left _) | false => ret (right _) end
 .
 Next Obligation. sq; eauto. Qed.
 Next Obligation.
-  sq. eapply wat_wellformed. sq;auto.
+  sq. eapply wat_welltyped. sq;auto.
   sq. now eapply PCUICValidity.validity in X.
 Qed.
 Next Obligation.
@@ -278,7 +271,7 @@ Next Obligation.
 Qed.
 Next Obligation. sq; eauto. Qed.
 Next Obligation.
-  sq. apply wat_wellformed. sq;auto. now eapply PCUICValidity.validity in X.
+  sq. apply wat_welltyped. sq;auto. now eapply PCUICValidity.validity in X.
 Qed.
 Next Obligation.
   sq. econstructor. split. eauto.
@@ -288,36 +281,36 @@ Next Obligation.
   rename pat0 into T.
   rename pat1 into K.
   rename pat into u.
-  sq. split.
-  - intros (? & ? & ?). sq.
-     destruct s as [ | (? & ? & ?)].
-     + destruct H. eapply arity_type_inv; eauto.
-     + eapply common_typing in X2 as (? & ? & ? &?). 2:eauto. 2:exact t0.
+  sq. split; eauto.
+  2:eexists; eauto.
+  intros (? & ? & ?).
+  destruct s as [ | (? & ? & ?)].
+  + destruct H. eapply arity_type_inv; eauto.
+  + eapply common_typing in X2 as (? & ? & ? &?). 2:eauto. 2:exact t0.
 
-       eapply cumul_prop1 in c; eauto.
-       eapply cumul_prop2 in c0; eauto.
+    eapply cumul_prop1' in c; eauto.
+    eapply cumul_propositional in c0; eauto.
 
-       eapply type_reduction in X0; eauto.
+    eapply type_reduction in X0; eauto.
 
-       eapply common_typing in c0 as (? & ? & ? & ?). 2:eauto. 2:{ exact X0. }
+    eapply common_typing in c0 as (? & ? & ? & ?). 2:eauto. 2:{ exact X0. }
 
-       eapply cumul_prop1 in c; eauto.
+    eapply cumul_prop1' in c; eauto.
 
-       { destruct (invert_cumul_sort_r _ _ _ _ c0) as (? & ? & ?).
-         destruct (invert_cumul_sort_r _ _ _ _ c1) as (? & ? & ?).
-         eapply red_confluence in r as (? & ? & ?); eauto.
+    { destruct (invert_cumul_sort_r _ _ _ _ c0) as (? & ? & ?).
+      destruct (invert_cumul_sort_r _ _ _ _ c1) as (? & ? & ?).
+      eapply red_confluence in r as (? & ? & ?); eauto.
 
-         eapply invert_red_sort in r.
-         eapply invert_red_sort in r1. subst. inv r1.
+      eapply invert_red_sort in r.
+      eapply invert_red_sort in r1. subst. inv r1.
 
-         eapply leq_universe_prop in l0; auto.
-         eapply leq_universe_prop_no_prop_sub_type in l; auto.
-         intuition eauto. }
+      eapply leq_universe_propositional_r in l0; auto.
+      eapply leq_universe_propositional_l in l; auto.
+      congruence. apply X4. apply X4. }
 
-       2:reflexivity. now right; exists x0.
-       now apply PCUICValidity.validity in X1.
-       now apply PCUICValidity.validity in t2.
-  - sq. econstructor. eauto.
+    2:reflexivity. now exists x0.
+    now apply PCUICValidity.validity in X1.
+    now apply PCUICValidity.validity in t2.
 Qed.
 
 Section Erase.
@@ -336,7 +329,7 @@ Section Erase.
       let Γ' := PCUICLiftSubst.fix_context defs ++ Γ in
       monad_map (fun d => H <- _ ;;
                    dbody' <- erase Γ' H d.(dbody);;
-                          ret ({| E.dname := d.(dname); E.rarg := d.(rarg);
+                          ret ({| E.dname := d.(dname).(binder_name); E.rarg := d.(rarg);
                                   E.dbody := dbody' |})) defs.
     Next Obligation.
       clear erase.
@@ -386,11 +379,11 @@ Section Erase.
       ; erase Γ HΓ (tProd na b t) _ := ret E.tBox
       ; erase Γ HΓ (tLambda na b t) _ :=
                            t' <- erase (vass na b :: Γ) _ t;;
-                              ret (E.tLambda na t')
+                            ret (E.tLambda na.(binder_name) t')
       ; erase Γ HΓ (tLetIn na b t0 t1) _ :=
                               b' <- erase Γ HΓ b;;
                                  t1' <- erase (vdef na b t0 :: Γ) _ t1;;
-                                 ret (E.tLetIn na b' t1')
+                                 ret (E.tLetIn na.(binder_name) b' t1')
       ; erase Γ HΓ (tApp f u) _ :=
                      f' <- erase Γ HΓ f;;
                         l' <- erase Γ HΓ u;;

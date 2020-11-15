@@ -137,7 +137,6 @@ Instance reflect_nat : ReflectEq nat := {
 
 Definition eq_level l1 l2 :=
   match l1, l2 with
-  | Level.lProp, Level.lProp => true
   | Level.lSet, Level.lSet => true
   | Level.Level s1, Level.Level s2 => eqb s1 s2
   | Level.Var n1, Level.Var n2 => eqb n1 n2
@@ -156,6 +155,41 @@ Next Obligation.
     constructor. f_equal. assumption.
   - destruct (eqb_spec n n0) ; nodec.
     constructor. subst. reflexivity.
+Defined.
+
+Definition eq_prop_level l1 l2 :=
+  match l1, l2 with
+  | PropLevel.lProp, PropLevel.lProp => true
+  | PropLevel.lSProp, PropLevel.lSProp => true
+  | _, _ => false
+  end.
+
+#[program] Instance reflect_prop_level : ReflectEq PropLevel.t := {
+  eqb := eq_prop_level
+}.
+Next Obligation.
+  destruct x, y.
+  all: unfold eq_prop_level.
+  all: try solve [ constructor ; reflexivity ].
+  all: try solve [ constructor ; discriminate ].
+Defined.
+
+Definition eq_levels (l1 l2 : PropLevel.t + Level.t) :=
+  match l1, l2 with
+  | inl l, inl l' => eqb l l'
+  | inr l, inr l' => eqb l l'
+  | _, _ => false
+  end.
+
+#[program] Instance reflect_levels : ReflectEq (PropLevel.t + Level.t) := {
+  eqb := eq_levels
+}.
+Next Obligation.
+  destruct x, y.
+  cbn -[eqb]. destruct (eqb_spec t t0). subst. now constructor.
+  all:try (constructor; cong).
+  cbn -[eqb]. destruct (eqb_spec t t0). subst; now constructor.
+  constructor; cong.
 Defined.
 
 Definition eq_prod {A B} (eqA : A -> A -> bool) (eqB : B -> B -> bool) x y :=
@@ -219,6 +253,38 @@ Next Obligation.
     constructor. f_equal. assumption.
 Defined.
 
+Definition eq_relevance r r' :=
+  match r, r' with
+  | Relevant, Relevant => true
+  | Irrelevant, Irrelevant => true
+  | _, _ => false
+  end.
+
+#[program] Instance reflect_relevance : ReflectEq relevance := {
+  eqb := eq_relevance
+}.
+Next Obligation.
+  intros x y. destruct x, y.
+  - cbn. constructor. reflexivity.
+  - cbn. constructor. discriminate.
+  - cbn. constructor. discriminate.
+  - simpl. now constructor.
+Defined.
+
+Definition eq_aname (na nb : binder_annot name) :=
+  eqb na.(binder_name) nb.(binder_name) &&
+  eqb na.(binder_relevance) nb.(binder_relevance).
+
+#[program] Instance reflect_aname : ReflectEq aname := {
+  eqb := eq_aname
+}.
+Next Obligation.
+  intros x y. unfold eq_aname.
+  destruct (eqb_spec x.(binder_name) y.(binder_name));
+  destruct (eqb_spec x.(binder_relevance) y.(binder_relevance));
+  constructor; destruct x, y; simpl in *; cong.
+Defined.
+
 #[program] Instance reflect_kername : ReflectEq kername := {
   eqb := eq_kername
 }.
@@ -276,13 +342,13 @@ Next Obligation.
 Defined.
 
 (* TODO: move *)
-Lemma eq_universe_iff (u v : Universe.t) :
+Lemma eq_universe_iff (u v : Universe.t0) :
   u = v <-> u = v :> UnivExprSet.t.
 Proof.
   destruct u, v; cbn; split. now inversion 1.
   intros ->. f_equal. apply uip.
 Qed.
-Lemma eq_universe_iff' (u v : Universe.t) :
+Lemma eq_universe_iff' (u v : Universe.t0) :
   u = v <-> UnivExprSet.elements u = UnivExprSet.elements v.
 Proof.
   etransitivity. apply eq_universe_iff.
@@ -294,7 +360,7 @@ Qed.
 Instance eq_dec_UnivExpr : EqDec UnivExpr.t.
 Proof. intros e e'. repeat decide equality. Qed.
 
-Instance eq_dec_univ : EqDec Universe.t.
+Instance eq_dec_univ0 : EqDec Universe.t0.
 Proof.
   intros u v.
   assert (H : {UnivExprSet.elements u = UnivExprSet.elements v}
@@ -302,7 +368,13 @@ Proof.
     repeat decide equality. }
   destruct H as [H|H]; [left; now apply eq_universe_iff' in H|right].
   intro X; apply H; now apply eq_universe_iff' in X.
-Qed.
+Defined.
+
+Instance eq_dec_univ : EqDec Universe.t.
+Proof.
+  red. decide equality.
+  apply eq_dec_univ0.
+Defined.
 
 Local Ltac finish :=
   let h := fresh "h" in
@@ -329,8 +401,11 @@ Local Ltac term_dec_tac term_dec :=
          | i : kername, i' : kername |- _ => fcase (kername_eq_dec i i')
          | i : string, i' : kername |- _ => fcase (string_dec i i')
          | n : name, n' : name |- _ => fcase (eq_dec n n')
+         | n : aname, n' : aname |- _ => fcase (eq_dec n n')
          | i : inductive, i' : inductive |- _ => fcase (eq_dec i i')
          | x : inductive * nat, y : inductive * nat |- _ =>
+           fcase (eq_dec x y)
+         | x : (inductive * nat) * relevance, y : (inductive * nat) * relevance |- _ =>
            fcase (eq_dec x y)
          | x : projection, y : projection |- _ => fcase (eq_dec x y)
          | x : cast_kind, y : cast_kind |- _ => fcase (eq_dec x y)
@@ -476,8 +551,7 @@ Defined.
 
 Definition eqb_ConstraintType x y :=
   match x, y with
-  | ConstraintType.Lt, ConstraintType.Lt
-  | ConstraintType.Le, ConstraintType.Le
+  | ConstraintType.Le n, ConstraintType.Le m => Z.eqb n m
   | ConstraintType.Eq, ConstraintType.Eq => true
   | _, _ => false
   end.
@@ -485,7 +559,9 @@ Definition eqb_ConstraintType x y :=
 Instance reflect_ConstraintType : ReflectEq ConstraintType.t.
 Proof.
   refine {| eqb := eqb_ConstraintType |}.
-  destruct x, y; simpl; constructor; congruence.
+  destruct x, y; simpl; try constructor; try congruence.
+  destruct (Z.eqb_spec z z0); constructor. now subst.
+  cong.
 Defined.
 
 Definition eqb_ConstraintSet x y :=
@@ -553,6 +629,7 @@ Definition eqb_sort_family x y :=
   | InProp, InProp
   | InSet, InSet
   | InType, InType => true
+  | InSProp, InSProp => true
   | _, _ => false
   end.
 
@@ -563,9 +640,9 @@ Proof.
 Defined.
 
 Definition eqb_one_inductive_body (x y : one_inductive_body) :=
-  let (n, t, k, c, p) := x in
-  let (n', t', k', c', p') := y in
-  eqb n n' && eqb t t' && eqb k k' && eqb c c' && eqb p p'.
+  let (n, t, k, c, p, r) := x in
+  let (n', t', k', c', p', r') := y in
+  eqb n n' && eqb t t' && eqb k k' && eqb c c' && eqb p p' && eqb r r'.
 
 Instance reflect_one_inductive_body : ReflectEq one_inductive_body.
 Proof.

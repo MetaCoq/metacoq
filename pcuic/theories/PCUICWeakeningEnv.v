@@ -60,6 +60,10 @@ Generalizable Variables Σ Γ t T.
 Definition extends (Σ Σ' : global_env) :=
   { Σ'' & Σ' = Σ'' ++ Σ }.
 
+Definition weaken_env_prop_full {cf:checker_flags}
+  (P : global_env_ext -> context -> term -> term -> Type) :=
+  forall (Σ : global_env_ext) (Σ' : global_env), wf Σ' -> extends Σ.1 Σ' ->
+                                      forall Γ t T, P Σ Γ t T -> P (Σ', Σ.2) Γ t T.
 
 Lemma weakening_env_global_ext_levels Σ Σ' φ (H : extends Σ Σ') l
   : LevelSet.In l (global_ext_levels (Σ, φ))
@@ -249,11 +253,11 @@ Proof.
   - inversion 1; subst; constructor.
     eapply All2_impl'; tea.
     eapply All_impl; eauto.
-    cbn. intros x [? ?] y [[? ?] ?]. repeat split; eauto.
+    cbn. intros x [? ?] y [[[? ?] ?] ?]. repeat split; eauto.
   - inversion 1; subst; constructor.
     eapply All2_impl'; tea.
     eapply All_impl; eauto.
-    cbn. intros x [? ?] y [[? ?] ?]. repeat split; eauto.
+    cbn. intros x [? ?] y [[[? ?] ?] ?]. repeat split; eauto.
 Qed.
 
 Lemma weakening_env_conv `{CF:checker_flags} Σ Σ' φ Γ M N :
@@ -360,7 +364,7 @@ Proof.
     intros X.
     destruct ctrs; tas.
     intuition auto.
-    - eapply forallb_Forall in H2; eapply forallb_Forall, Forall_impl; tea.
+    - eapply forallb_Forall in H0; eapply forallb_Forall, Forall_impl; tea.
       intros x ?; now eapply weakening_env_global_ext_levels'.
     - eapply valid_subset; tea;
       now eapply weakening_env_global_ext_constraints.
@@ -397,6 +401,51 @@ Proof.
   now apply extends_check_recursivity_kind.
 Qed.
 
+Lemma global_levels_Set Σ : 
+  LevelSet.In Level.lSet (global_levels Σ).
+Proof.
+  unfold global_levels.
+  induction Σ; simpl; auto.
+  - now apply LevelSet.singleton_spec.
+  - apply LevelSet.union_spec. right; auto.
+Qed.
+
+Lemma global_levels_set Σ : 
+  LevelSet.Equal (LevelSet.union (LevelSet.singleton Level.lSet) (global_levels Σ))
+  (global_levels Σ).
+Proof.
+  apply LevelSetProp.union_subset_equal.
+  intros x hin. eapply LevelSet.singleton_spec in hin; subst x.
+  apply global_levels_Set.
+Qed.
+
+Lemma global_levels_ext {Σ Σ'} : 
+  LevelSet.Equal (global_levels (Σ ++ Σ')) (LevelSet.union (global_levels Σ) (global_levels Σ')).
+Proof.
+  unfold global_levels at 1.
+  induction Σ; simpl.
+  - rewrite global_levels_set. reflexivity.
+  - rewrite IHΣ. lsets.
+Qed.
+
+Lemma extends_wf_universe {cf:checker_flags} {Σ : global_env_ext} Σ' u : extends Σ Σ' -> wf Σ' ->
+  wf_universe Σ u -> wf_universe (Σ', Σ.2) u.
+Proof.
+  destruct Σ as [Σ univ]; cbn.
+  intros [Σ'' eq] wf.
+  destruct u; simpl; auto.
+  intros Hl.
+  intros l inl; specialize (Hl l inl).
+  cbn. rewrite eq /=.
+  unfold global_ext_levels.
+  eapply LevelSet.union_spec; simpl.
+  apply LevelSet.union_spec in Hl as [Hl|Hl]; cbn in Hl.
+  - simpl. simpl in Hl. now left.
+  - right. rewrite global_levels_ext.
+    eapply LevelSet.union_spec. right.
+    apply Hl.
+Qed.
+
 Hint Resolve extends_wf_fixpoint extends_wf_cofixpoint : extends.
 
 Lemma weakening_env `{checker_flags} :
@@ -413,6 +462,8 @@ Proof.
     + eexists; eapply p0; eauto.
     + eapply p; eauto.
   - econstructor; eauto 2 with extends.
+    now apply extends_wf_universe.
+  - econstructor; eauto 2 with extends.
     close_Forall. intros; intuition eauto with extends.
     destruct b as [s [Hs IH]]; eauto.
   - econstructor; eauto with extends.
@@ -424,10 +475,7 @@ Proof.
       destruct X as [s Hs]; exists s. intuition eauto with extends.
     + eapply All_impl; eauto; simpl; intuition eauto with extends.
   - econstructor. 1: eauto.
-    + destruct X2 as [isB|[u [Hu Ps]]].
-      * left. auto. destruct isB. destruct x as [ctx [u [Heq Hu]]].
-        exists ctx, u. split; eauto with extends.
-      * right. exists u. eapply Ps; auto.
+    + eapply forall_Σ'1; eauto.
     + destruct Σ as [Σ φ]. eapply weakening_env_cumul in cumulA; eauto.
 Qed.
 
@@ -462,7 +510,8 @@ Proof.
       * unfold on_type in *; eauto.
       * clear on_cindices cstr_eq cstr_args_length.
         induction (cshape_args y); simpl in *; auto.
-        destruct a as [na [b|] ty]; simpl in *; intuition eauto.
+        ** eapply (extends_wf_universe (Σ:=(Σ,φ)) Σ'); auto.
+        ** destruct a as [na [b|] ty]; simpl in *; intuition eauto.
       * clear on_ctype on_cargs.
         revert on_cindices.
         generalize (List.rev (PCUICLiftSubst.lift_context #|cshape_args y| 0 ind_indices)).
@@ -477,21 +526,24 @@ Proof.
            eapply weakening_env_cumul; eauto.
         ** eapply (All2_impl idxs); intros.
           eapply weakening_env_conv; eauto.
-    + unfold check_ind_sorts in *. destruct universe_family; auto.
+    + unfold check_ind_sorts in *.
+      destruct universe_family; auto.
       * split; [apply fst in ind_sorts|apply snd in ind_sorts].
         -- eapply Forall_impl; tea; cbn.
            intros. eapply leq_universe_subset; tea.
            apply weakening_env_global_ext_constraints; tea.
         -- destruct indices_matter; [|trivial]. clear -ind_sorts HPΣ wfΣ' Hext.
            induction ind_indices; simpl in *; auto.
-           destruct a as [na [b|] ty]; simpl in *; intuition eauto.
+           ** eapply (extends_wf_universe (Σ:=(Σ,φ)) Σ'); auto.
+           ** destruct a as [na [b|] ty]; simpl in *; intuition eauto.
       * split; [apply fst in ind_sorts|apply snd in ind_sorts].
         -- eapply Forall_impl; tea; cbn.
            intros. eapply leq_universe_subset; tea.
            apply weakening_env_global_ext_constraints; tea.
         -- destruct indices_matter; [|trivial]. clear -ind_sorts HPΣ wfΣ' Hext.
            induction ind_indices; simpl in *; auto.
-           destruct a as [na [b|] ty]; simpl in *; intuition eauto.
+           ** eapply (extends_wf_universe (Σ:=(Σ,φ)) Σ'); auto.
+           ** destruct a as [na [b|] ty]; simpl in *; intuition eauto.
     + intros v onv.
       move: (onIndices v onv). unfold ind_respects_variance.
       destruct variance_universes as [[[univs u] u']|] => //.

@@ -1102,39 +1102,7 @@ Proof.
       rewrite map_map_compose.
       now rewrite weakening_check_one_cofix.
 
-  - econstructor; eauto; [|now eapply weakening_cumul].
-    destruct IHB.
-    + left. destruct i as [[ctx [u [Hd IH]]]]. simpl in *.
-      exists (lift_context #|Γ''| #|Γ'| ctx), u.
-      rewrite (lift_destArity [] B #|Γ''| #|Γ'|) ?Hd.
-      split; auto.
-      apply All_local_env_app_inv; intuition auto.
-      clear -wf a.
-      induction ctx; try constructor; depelim a.
-      -- rewrite lift_context_snoc.
-          constructor; auto.
-          * eapply IHctx. eapply a.
-          * simpl. destruct tu as [u tu]. exists u.
-            specialize (t0 Γ (Γ' ,,, ctx) Γ''). forward t0; auto.
-            rewrite app_context_assoc in t0.
-            specialize (t0 eq_refl). simpl in t0.
-            rewrite app_context_length lift_context_app app_context_assoc Nat.add_0_r in t0. apply t0.
-      -- rewrite lift_context_snoc.
-          constructor; auto.
-          ++ eapply IHctx. eapply a.
-          ++ simpl.
-            specialize (t1 Γ (Γ' ,,, ctx) Γ''). forward t1 by auto.
-            rewrite app_context_assoc in t1.
-            specialize (t1 eq_refl). simpl in t1.
-            rewrite app_context_length lift_context_app app_context_assoc Nat.add_0_r in t1.
-            eexists. apply t1.
-          ++ simpl.
-            specialize (t0 Γ (Γ' ,,, ctx) Γ'' wf).
-            rewrite app_context_assoc in t0.
-            specialize (t0 eq_refl). simpl in t0.
-            rewrite app_context_length lift_context_app app_context_assoc Nat.add_0_r in t0.
-            apply t0.
-    + right. destruct s as [u Hu]; exists u. intuition; now eapply weakening_cumul.
+  - econstructor; eauto; now eapply weakening_cumul.
 Qed.
 
 Lemma weakening_typing `{cf : checker_flags} Σ Γ Γ' Γ'' (t : term) :
@@ -1264,32 +1232,16 @@ Proof.
         rewrite app_context_assoc. apply X.
 Qed.
 
-
-Lemma isWfArity_or_Type_lift {cf:checker_flags} {Σ : global_env_ext} {n Γ ty}
+Lemma isType_lift {cf:checker_flags} {Σ : global_env_ext} {n Γ ty} 
   (isdecl : n <= #|Γ|):
   wf Σ -> wf_local Σ Γ ->
-  isWfArity_or_Type Σ (skipn n Γ) ty ->
-  isWfArity_or_Type Σ Γ (lift0 n ty).
+  isType Σ (skipn n Γ) ty ->
+  isType Σ Γ (lift0 n ty).
 Proof.
   intros wfΣ wfΓ wfty. rewrite <- (firstn_skipn n Γ) in wfΓ |- *.
   assert (n = #|firstn n Γ|).
   { rewrite firstn_length_le; auto with arith. }
-  destruct wfty.
-  - red. left. destruct i as [ctx [u [da Hd]]].
-    exists (lift_context n 0 ctx), u. split.
-    1: now rewrite (lift_destArity [] ty n 0) da.
-    eapply All_local_env_app_inv.
-    eapply All_local_env_app in Hd. intuition eauto.
-    rewrite {3}H.
-    clear -wfΣ wfΓ isdecl a b.
-    induction b; rewrite ?lift_context_snoc; econstructor; simpl; auto.
-    + destruct t0 as [u Hu]. exists u. rewrite Nat.add_0_r.
-      unshelve eapply (weakening_typing Σ (skipn n Γ) Γ0 (firstn n Γ) t _ _ (tSort u)); eauto with wf.
-    + destruct t0 as [u Hu]. exists u. rewrite Nat.add_0_r.
-      unshelve eapply (weakening_typing Σ (skipn n Γ) Γ0 (firstn n Γ) t _ _ (tSort u)); eauto with wf.
-    + rewrite Nat.add_0_r.
-      unshelve eapply (weakening_typing Σ (skipn n Γ) Γ0 (firstn n Γ) b _ _ t); eauto with wf.
-  - right. destruct i as [u Hu]. exists u.
-    rewrite {3}H.
-    unshelve eapply (weakening_typing Σ (skipn n Γ) [] (firstn n Γ) ty _ _ (tSort u)); eauto with wf.
+  destruct wfty as [u Hu]. exists u.
+  rewrite {3}H.
+  unshelve eapply (weakening_typing Σ (skipn n Γ) [] (firstn n Γ) ty _ _ (tSort u)); eauto with wf.
 Qed.

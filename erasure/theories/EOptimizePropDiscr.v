@@ -10,7 +10,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker PCUICSafeRetyping.
 From MetaCoq.Erasure Require Import EAstUtils EArities Extract Prelim ErasureCorrectness EDeps 
-    SafeErasureFunction ELiftSubst.
+    ErasureFunction ELiftSubst.
 
 Local Open Scope string_scope.
 Set Asymmetric Patterns.

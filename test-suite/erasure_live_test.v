@@ -1,6 +1,6 @@
 From Coq Require Import Recdef.
 From MetaCoq.Template Require Import Loader.
-From MetaCoq.Erasure Require Import SafeTemplateErasure.
+From MetaCoq.Erasure Require Import Erasure.
 From Coq Require Import String.
 Local Open Scope string_scope.
 
@@ -325,6 +325,7 @@ MetaCoq Quote Recursively Definition p_provedCopyx := provedCopyx. (* program *)
 (* We don't run those every time as they are really expensive *)
 Time Definition P_provedCopyx := Eval lazy in (test cbv_provedCopyx).
 Time Definition P_provedCopyxvm := Eval vm_compute in (test p_provedCopyx).
+
 From MetaCoq.Erasure Require Import Loader.
 MetaCoq Erase provedCopyx.
 (* 2m purely in the bytecode VM *)

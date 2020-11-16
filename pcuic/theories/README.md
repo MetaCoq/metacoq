@@ -82,16 +82,6 @@
 [PCUICCSubst]: PCUICCSubst.v
 [PCUICWcbvEval]: PCUICWcbvEval.v
 
-## Fueled type checker
-
-| File             | Description                                               |
-|------------------|-----------------------------------------------------------|
-| [PCUICChecker]   | Fueled type checker for PCUIC                             |
-| [PCUICRetyping]  | `type_of` function to get the type without re-checking it is well-typed |
-
-[PCUICChecker]: PCUICChecker.v
-[PCUICRetyping]: PCUICRetyping.v
-
 ## Relation with Template-Coq
 
 | File              | Description                                              |

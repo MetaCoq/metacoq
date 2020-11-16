@@ -902,8 +902,3 @@ End Wcbv.
 Arguments eval_unique_sig {_ _ _ _}.
 Arguments eval_deterministic {_ _ _ _}.
 Arguments eval_unique {_ _ _}.
-
-(** Well-typed closed programs can't go wrong: they always evaluate to a value. *)
-
-Conjecture closed_typed_wcbeval : forall {cf : checker_flags} (Σ : global_env_ext) t T,
-    Σ ;;; [] |- t : T -> ∑ u, eval (fst Σ) t u.

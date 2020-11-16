@@ -1,28 +1,23 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import Bool String Program.
-From MetaCoq.Template Require Import config monad_utils utils uGraph Pretty.
+(* Distributed under the terms of the MIT license. *)
+From Coq Require Import Program.
+From MetaCoq.Template Require Import config utils uGraph Pretty.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping
      TemplateToPCUIC.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker
      SafeTemplateChecker.
-From MetaCoq.Erasure Require Import ErasureFunction EPretty.
-From MetaCoq.Erasure Require SafeErasureFunction.
-
-Import MonadNotation.
+From MetaCoq.Erasure Require Import EAstUtils ErasureFunction EPretty.
+From MetaCoq.Erasure Require SafeErasureFunction EOptimizePropDiscr.
 
 Existing Instance envcheck_monad.
 Existing Instance extraction_checker_flags.
-
-Local Open Scope string_scope.
 
 Program Definition erase_template_program_check (p : Ast.program)
   : EnvCheck (EAst.global_context * EAst.term) :=
   let Σ := (trans_global (Ast.empty_ext p.1)).1 in
   G <- check_wf_env Σ ;;
   Σ' <- wrap_error (empty_ext Σ) "erasure of the global context" (erase_global Σ _) ;;
-  t <- wrap_error (empty_ext Σ) ("During erasure of " ++ string_of_term (trans p.2)) (erase (empty_ext Σ) _ nil _ (trans p.2));;
-  ret (Monad:=envcheck_monad) (Σ', t).
+  t <- wrap_error (empty_ext Σ) ("During erasure of " ^ PCUICAstUtils.string_of_term (trans p.2)) (erase (empty_ext Σ) _ nil _ (trans p.2));;
+  ret (Monad:=envcheck_monad) (EOptimizePropDiscr.optimize_env Σ', EOptimizePropDiscr.optimize Σ' t).
 
 Next Obligation.
   unfold trans_global.
@@ -51,15 +46,32 @@ Proof.
   intros. apply CorrectDecl. constructor. todo "assumed correct global declaration".
 Defined.
 
+Definition assume_fresh id env : EnvCheck (∥ fresh_global id env ∥).
+Proof.
+  left. todo "assumed fresh".
+Defined.
+
+Program Definition compute_udecl (id : string) (Σ : global_env) (HΣ : ∥ wf Σ ∥) G
+  (HG : is_graph_of_uctx G (global_uctx Σ)) (udecl : universes_decl)
+  : EnvCheck (∑ uctx', gc_of_uctx (uctx_of_udecl udecl) = Some uctx' /\
+               ∥ on_udecl Σ udecl ∥) :=
+    match gc_of_uctx (uctx_of_udecl udecl) with
+    | Some uctx => ret (uctx; conj _ _)
+    | None => raise (empty_ext Σ, IllFormedDecl id (Msg "constraints not satisfiable"))
+    end.
+  Next Obligation.
+    constructor. todo "assume udecl is ok".
+  Defined.
+
 Program Fixpoint check_wf_env_only_univs (Σ : global_env)
   : EnvCheck (∑ G, (is_graph_of_uctx G (global_uctx Σ) /\ ∥ wf Σ ∥)) :=
   match Σ with
   | nil => ret (init_graph; _)
   | d :: Σ =>
     G <- check_wf_env_only_univs Σ ;;
-    check_fresh d.1 Σ ;;
+    assume_fresh d.1 Σ ;;
     let udecl := universes_decl_of_decl d.2 in
-    uctx <- check_udecl (string_of_kername d.1) Σ _ G.π1 (proj1 G.π2) udecl ;;
+    uctx <- compute_udecl (string_of_kername d.1) Σ _ G.π1 (proj1 G.π2) udecl ;;
     let G' := add_uctx uctx.π1 G.π1 in
     assume_wf_decl (Σ, udecl) _ _ G' _ d.1 d.2 ;;
     match udecl with
@@ -127,27 +139,32 @@ Program Fixpoint check_wf_env_only_univs (Σ : global_env)
     assumption.
   Qed.
 
-Program Definition erase_template_program (p : Ast.program)
-  : EnvCheck (EAst.global_context * EAst.term) :=
+From MetaCoq.Erasure Require Import SafeErasureFunction.
+
+(* This is the total erasure function + the optimization that removes all 
+  pattern-matches on propositions. *)
+
+Program Definition erase_template_program (p : Ast.program) 
+  : (EAst.global_context * EAst.term) :=
   let Σ := (trans_global (Ast.empty_ext p.1)).1 in
-  G <- check_wf_env_only_univs Σ ;;
-  Σ' <- (SafeErasureFunction.erase_global Σ _) ;;
-  t <- wrap_error (empty_ext Σ) ("During erasure of " ++ string_of_term (trans p.2)) (SafeErasureFunction.erase (empty_ext Σ) _ nil (trans p.2) _);;
-  ret (Monad:=envcheck_monad) (Σ', t).
+  let t := SafeErasureFunction.erase (empty_ext Σ) _ nil (trans p.2) _ in
+  let Σ' := SafeErasureFunction.erase_global (term_global_deps t) Σ _ in
+  (EOptimizePropDiscr.optimize_env Σ', EOptimizePropDiscr.optimize Σ' t).
 
 Next Obligation.
   unfold trans_global.
   simpl. unfold wf_ext, empty_ext. simpl.
-  unfold on_global_env_ext. destruct H0. constructor.
-  split; auto. simpl. todo "on_udecl on empty universe context".
-Qed.
+  unfold on_global_env_ext. constructor. todo "assuming wf environment".
+Defined.
 
 Next Obligation.
   unfold trans_global.
   simpl. unfold wf_ext, empty_ext. simpl.
-  unfold on_global_env_ext. destruct H0. todo "assuming well-typedness".
-Qed.
-
+  unfold on_global_env_ext. todo "assuming well-typedness".
+Defined.
+Next Obligation.
+  constructor. todo "assuming wf environment".
+Defined.
 Local Open Scope string_scope.
 
 (** This uses the checker-based erasure *)
@@ -156,42 +173,18 @@ Program Definition erase_and_print_template_program_check {cf : checker_flags} (
   let p := fix_program_universes p in
   match erase_template_program_check p return string + string with
   | CorrectDecl (Σ', t) =>
-    inl ("Environment is well-formed and " ++ Pretty.print_term (Ast.empty_ext p.1) [] true p.2 ++
-         " erases to: " ++ nl ++ print_term Σ' [] true false t)
+    inl ("Environment is well-formed and " ^ Pretty.print_term (Ast.empty_ext p.1) [] true p.2 ^
+         " erases to: " ^ nl ^ print_term Σ' [] true false t)
   | EnvError Σ' (AlreadyDeclared id) =>
-    inr ("Already declared: " ++ id)
+    inr ("Already declared: " ^ id)
   | EnvError Σ' (IllFormedDecl id e) =>
-    inr ("Type error: " ++ PCUICSafeChecker.string_of_type_error Σ' e ++ ", while checking " ++ id)
+    inr ("Type error: " ^ PCUICSafeChecker.string_of_type_error Σ' e ^ ", while checking " ^ id)
   end.
 
 (** This uses the retyping-based erasure *)
 Program Definition erase_and_print_template_program {cf : checker_flags} (p : Ast.program)
-  : string + string :=
+  : string :=
   let p := fix_program_universes p in
-  match erase_template_program p return string + string with
-  | CorrectDecl (Σ', t) =>
-    inl ("Environment is well-formed and " ++ Pretty.print_term (Ast.empty_ext p.1) [] true p.2 ++
-         " erases to: " ++ nl ++ print_term Σ' [] true false t)
-  | EnvError Σ' (AlreadyDeclared id) =>
-    inr ("Already declared: " ++ id)
-  | EnvError Σ' (IllFormedDecl id e) =>
-    inr ("Type error: " ++ PCUICSafeChecker.string_of_type_error Σ' e ++ ", while checking " ++ id)
-  end.
-
-(* Program Definition check_template_program {cf : checker_flags} (p : Ast.program) (ty : Ast.term) *)
-(*   : EnvCheck (∥ trans_global (AstUtils.empty_ext (List.rev p.1)) ;;; [] |- trans p.2 : trans ty ∥) := *)
-(*   p <- typecheck_program (cf:=cf) ((trans_global (AstUtils.empty_ext p.1)).1, trans p.2) ;; *)
-(*   wrap_error "During checking of type constraints" (check p.1 _ _ _ (trans ty));; *)
-(*   ret (Monad:=envcheck_monad) _. *)
-
-(* Next Obligation. *)
-(*   unfold trans_global. *)
-(*   simpl. unfold empty_ext in X. *)
-(*   unfold trans_global_decls in X. *)
-(*   rewrite <-map_rev in X. *)
-(* Qed. *)
-
-(* Program Definition typecheck_template_program' {cf : checker_flags} (p : Ast.program) *)
-(*   : EnvCheck (∑ A, ∥ Typing.typing (AstUtils.empty_ext (List.rev p.1)) [] p.2 A ∥) := *)
-(*   p <- typecheck_template_program (cf:=cf) p ;; *)
-(*   ret (Monad:=envcheck_monad) (p.π1 ; _). *)
+  let (Σ', t) := erase_template_program p in
+  "Environment is well-formed and " ^ Pretty.print_term (Ast.empty_ext p.1) [] true p.2 ^
+  " erases to: " ^ nl ^ print_term Σ' [] true false t.

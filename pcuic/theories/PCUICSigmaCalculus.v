@@ -1,25 +1,25 @@
-(* Distributed under the terms of the MIT license.   *)
-From Equations Require Import Equations.
-From Coq Require Import String Bool List ZArith Lia Morphisms.
+(* Distributed under the terms of the MIT license. *)
+From Coq Require Import Morphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
     PCUICLiftSubst PCUICUnivSubst
      PCUICTyping PCUICClosed PCUICEquality.
-Require Import ssreflect.
 
-Set Keyed Unification.
+Require Import ssreflect.
+From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 Set Equations With UIP.
+
+(** * Type preservation for σ-calculus *)
+
+
+Open Scope sigma_scope.
+Set Keyed Unification.
 
 Set Default Goal Selector "!".
 
 (* TODO Maybe remove later? *)
 Require PCUICWeakening.
-
-(** * Type preservation for σ-calculus *)
-
-Set Asymmetric Patterns.
-Open Scope sigma_scope.
 
 Hint Rewrite @lift_rename Nat.add_0_r : sigma.
 
@@ -402,7 +402,7 @@ Proof.
   eapply inst_ext_closed; eauto.
   intros.
   unfold ids, subst_consn. simpl.
-  destruct (equiv_inv _ _ (nth_error_Some' s x) H). rewrite e.
+  destruct (snd (nth_error_Some' s x) H). rewrite e.
   subst s.
   rewrite /to_extended_list /to_extended_list_k in e.
   rewrite List.rev_length in cl, H. autorewrite with len in *.
@@ -1771,44 +1771,10 @@ Proof.
       * admit.
     + reflexivity.
 
-  - intros Σ wfΣ Γ wfΓ t A B X ht iht hwf hcu Δ f hf.
+  - intros Σ wfΣ Γ wfΓ t A B X hwf ht iht htB ihB cum Δ f hf.
     eapply type_Cumul.
     + eapply iht. assumption.
-    + destruct hwf as [[[ctx [s [e h1]]] h2] | [s [hB ihB]]].
-      * left.
-        simpl in h2. eapply inst_destArity with (σ := ren f) in e as e'.
-        cbn in e'.
-        exists (rename_context f ctx), s. split.
-        -- rewrite rename_context_inst_context. rewrite <- e'.
-           f_equal. autorewrite with sigma. reflexivity.
-        -- clear - h2 hf.
-           induction ctx as [| [na [b|] A] Ξ ih].
-           ++ apply hf.
-           ++ rewrite rename_context_snoc. simpl.
-              unfold rename_decl, map_decl. simpl.
-              simpl in h2. inversion h2. subst. simpl in *.
-              destruct tu as [? ?].
-              constructor.
-              ** eapply ih. eassumption.
-              ** simpl. eexists. eapply X1.
-                 split.
-                 --- eapply ih. eassumption.
-                 --- eapply urenaming_context. apply hf.
-              ** simpl. eapply X0.
-                 split.
-                 --- eapply ih. eassumption.
-                 --- eapply urenaming_context. apply hf.
-           ++ rewrite rename_context_snoc. simpl.
-              unfold rename_decl, map_decl. simpl.
-              simpl in h2. inversion h2. subst. simpl in *.
-              destruct tu as [? ?]. simpl in *.
-              constructor.
-              ** eapply ih. eassumption.
-              ** simpl. eexists. eapply X0.
-                 split.
-                 --- eapply ih. eassumption.
-                 --- eapply urenaming_context. apply hf.
-      * right. eexists. eapply ihB. assumption.
+    + eapply ihB. assumption.
     + eapply cumul_rename. all: try eassumption.
       apply hf.
 Abort.
@@ -2308,14 +2274,10 @@ Proof.
   - intros Σ wfΣ Γ wfΓ mfix n decl types H0 X X0 ihmfix Δ σ hΔ hσ.
     autorewrite with sigma.
     admit.
-  - intros Σ wfΣ Γ wfΓ t A B X ht iht hwf hcu Δ σ hΔ hσ.
+  - intros Σ wfΣ Γ wfΓ t A B X hwf ht iht hB ihB hcu Δ σ hΔ hσ.
     eapply type_Cumul.
     + eapply iht. all: auto.
-    + destruct hwf as [[[ctx [s [? ?]]] ?] | [s [? ihB]]].
-      * left. eexists _,_. split.
-        -- admit.
-        -- admit.
-      * right. eexists. eapply ihB. all: auto.
+    + eapply ihB. all: auto.
     + admit.
 Admitted.
 

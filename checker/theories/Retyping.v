@@ -1,13 +1,6 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import Bool List Program.
-From MetaCoq.Template Require Import config monad_utils utils Ast LiftSubst.
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import config utils Ast LiftSubst.
 From MetaCoq.Checker Require Import Checker.
-Local Open Scope string_scope.
-Set Asymmetric Patterns.
-Import monad_utils.MonadNotation.
-
-Existing Instance default_checker_flags.
 
 (** * Retyping
 
@@ -17,6 +10,9 @@ Existing Instance default_checker_flags.
   head-reducing types to uncover dependent products or inductives) and
   substitution are costly here. No universe checking or conversion is done
   in particular. *)
+
+
+Local Existing Instance default_checker_flags.
 
 Section TypeOf.
   Context `{F : Fuel}.
@@ -52,7 +48,7 @@ Section TypeOf.
     | tVar n => raise (UnboundVar n)
     | tEvar ev args => raise (UnboundEvar ev)
 
-    | tSort s => ret (tSort (Universe.try_suc s))
+    | tSort s => ret (tSort (Universe.super s))
 
     | tCast c k t => ret t
 
@@ -80,7 +76,7 @@ Section TypeOf.
     | tConstruct (mkInd ind i) k u =>
       lookup_constructor_type Σ ind i k u
 
-    | tCase (ind, par) p c brs =>
+    | tCase ((ind, par), rel) p c brs =>
       ty <- type_of Γ c ;;
       indargs <- reduce_to_ind Σ Γ ty ;;
       let '(ind', u, args) := indargs in

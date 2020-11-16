@@ -1,17 +1,14 @@
-(* Distributed under the terms of the MIT license.   *)
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import utils.
 
-Require Import Coq.Strings.String.
-Require Import Coq.PArith.BinPos.
-Require Import List. Import ListNotations.
-From MetaCoq.Template Require Import monad_utils.
-From MetaCoq.Template Require Export uGraph Ast.
-
-(** Erased terms
+(** * Erased terms
 
   These are the terms produced by erasure:
   compared to kernel terms, all proofs are translated to [tBox] and
   casts are removed.
 *)
+
+
 Inductive term : Set :=
 | tBox (t : term) (* Represents all proofs *)
 | tRel (n : nat)

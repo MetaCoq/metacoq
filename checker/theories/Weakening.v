@@ -1,20 +1,19 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import Bool List Program ZArith Lia.
-From MetaCoq.Template Require Import config utils Ast AstUtils Induction
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import config utils Ast AstUtils Reflect Induction
   LiftSubst UnivSubst Typing TypingWf LibHypsNaming.
-From MetaCoq.Checker Require Import WeakeningEnv Closed Reflect.
-Require Import ssreflect.
+From MetaCoq.Checker Require Import WeakeningEnv Closed.
 
+Require Import ssreflect.
 From Equations Require Import Equations.
 
 (** * Weakening lemmas for typing derivations.
 
-  [weakening_*] proves weakening of typing, reduction etc... w.r.t. the *local* environment. *)
+  [weakening_*] proves weakening of typing, reduction etc... w.r.t. the *local*
+  environment. *)
+
 
 Derive Signature for Ast.wf Forall.
 
-Set Asymmetric Patterns.
 Generalizable Variables Σ Γ t T.
 
 Lemma typed_liftn `{checker_flags} Σ Γ t T n k :
@@ -900,6 +899,7 @@ Proof.
   simpl. rewrite Nat.add_0_r. apply t0; auto.
 Qed.
 
+
 Lemma weakening_typing `{cf : checker_flags} Σ Γ Γ' Γ'' (t : term) :
   wf Σ.1 ->
   wf_local Σ (Γ ,,, Γ') ->
@@ -909,7 +909,7 @@ Lemma weakening_typing `{cf : checker_flags} Σ Γ Γ' Γ'' (t : term) :
     lift #|Γ''| #|Γ'| t : lift #|Γ''| #|Γ'| T).
 Proof.
   intros HΣ HΓΓ' HΓ'' * H.
-  generalize_eqs H. intros eqw. rewrite <- eqw in HΓΓ'.
+  generalize_eq Γ0 (Γ ,,, Γ'). intros eqw.
   revert Γ Γ' Γ'' HΓ'' eqw.
   revert Σ HΣ Γ0 HΓΓ' t T H.
   apply (typing_ind_env (fun Σ Γ0 t T =>  forall Γ Γ' Γ'' : context,
@@ -1030,7 +1030,6 @@ Proof.
     * eapply All_map.
       eapply (All_impl X1); simpl.
       intros x [[Hb Hlam] IH].
-      unfold compose; simpl.
       rewrite lift_fix_context.
       specialize (IH Γ (Γ' ,,,  (fix_context mfix)) Γ'' wf).
       rewrite app_context_assoc in IH. specialize (IH eq_refl).
@@ -1051,7 +1050,6 @@ Proof.
     * eapply All_map.
       eapply (All_impl X1); simpl.
       intros x [Hb IH].
-      unfold compose; simpl.
       rewrite lift_fix_context.
       specialize (IH Γ (Γ' ,,,  (fix_context mfix)) Γ'' wf).
       rewrite app_context_assoc in IH. specialize (IH eq_refl).

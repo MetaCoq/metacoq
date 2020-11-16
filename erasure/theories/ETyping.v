@@ -1,15 +1,10 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import Bool String List Program.
-From MetaCoq.Template Require Import config utils.
-From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst.
-Local Open Scope string_scope.
-Set Asymmetric Patterns.
-
+(* Distributed under the terms of the MIT license. *)
+From Coq Require Import Program.
+From MetaCoq.Template Require Import config utils Reflect.
+From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst EReflect.
+Require Import ssreflect.
 
 (** * Typing derivations
-
-  *WIP*
 
   Inductive relations for reduction, conversion and typing of CIC terms.
 
@@ -20,7 +15,7 @@ Fixpoint lookup_env (Σ : global_declarations) id : option global_decl :=
   match Σ with
   | nil => None
   | hd :: tl =>
-    if kername_eq_dec id hd.1 then Some hd.2
+    if kername_eq_dec id hd.1 is left _ then Some hd.2
     else lookup_env tl id
   end.
 
@@ -41,6 +36,25 @@ Definition declared_constructor Σ mdecl idecl cstr cdecl : Prop :=
 Definition declared_projection Σ mdecl idecl (proj : projection) pdecl : Prop :=
   declared_inductive Σ mdecl (fst (fst proj)) idecl /\
   List.nth_error idecl.(ind_projs) (snd proj) = Some pdecl.
+
+Lemma elookup_env_cons_fresh {kn d Σ kn'} : 
+  kn <> kn' ->
+  ETyping.lookup_env ((kn, d) :: Σ) kn' = ETyping.lookup_env Σ kn'.
+Proof.
+  simpl. destruct kername_eq_dec. subst => //. auto. 
+Qed.
+
+(** Knowledge of propositionality status oof an inductive type *)
+
+Definition is_propositional_ind Σ ind :=
+  match lookup_env Σ (inductive_mind ind) with
+  | Some (InductiveDecl mdecl) =>
+    match nth_error mdecl.(ind_bodies) (inductive_ind ind) with 
+    | Some idecl => Some (idecl.(ind_propositional))
+    | None => None
+    end
+  | _ => None
+  end.
 
 (** ** Reduction *)
 
@@ -103,7 +117,7 @@ Proof.
   induction mfix; simpl; auto.
 Qed.
 
-Definition tDummy := tVar "".
+Definition tDummy := tVar ""%string.
 
 Definition iota_red npar c args brs :=
   (mkApps (snd (List.nth c brs (0, tDummy))) (List.skipn npar args)).

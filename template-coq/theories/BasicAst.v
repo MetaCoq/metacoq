@@ -1,7 +1,5 @@
-(* Distributed under the terms of the MIT license.   *)
-From Coq Require Import String Bool List.
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils.
-Local Open Scope string_scope.
 
 
 (** ** Reification of names ** *)
@@ -55,15 +53,15 @@ Inductive modpath :=
 Fixpoint string_of_modpath (mp : modpath) : string :=
   match mp with
   | MPfile dp => string_of_dirpath dp
-  | MPbound dp id _ => string_of_dirpath dp ++ "." ++ id
-  | MPdot mp id => string_of_modpath mp ++ "." ++ id
+  | MPbound dp id _ => string_of_dirpath dp ^ "." ^ id
+  | MPdot mp id => string_of_modpath mp ^ "." ^ id
   end.
 
 (** The absolute names of objects seen by kernel *)
 Definition kername := modpath × ident.
 
 Definition string_of_kername (kn : kername) :=
-  string_of_modpath kn.1 ++ "." ++ kn.2.
+  string_of_modpath kn.1 ^ "." ^ kn.2.
 
 
 (** Identifiers that are allowed to be anonymous (i.e. "_" in concrete syntax). *)
@@ -71,10 +69,34 @@ Inductive name : Set :=
 | nAnon
 | nNamed (_ : ident).
 
+Inductive relevance : Set := Relevant | Irrelevant.
+
+(** Binders annotated with relevance *)
+Record binder_annot (A : Type) := mkBindAnn { binder_name : A; binder_relevance : relevance }.
+
+Arguments mkBindAnn {_}.
+Arguments binder_name {_}.
+Arguments binder_relevance {_}.
+
+Definition map_binder_annot {A B} (f : A -> B) (b : binder_annot A) : binder_annot B :=
+  {| binder_name := f b.(binder_name); binder_relevance := b.(binder_relevance) |}.
+
+Definition eq_binder_annot {A} (b b' : binder_annot A) : Prop :=
+  b.(binder_relevance) = b'.(binder_relevance).
+
+(** Type of annotated names *)
+Definition aname := binder_annot name.
+
 Definition string_of_name (na : name) :=
   match na with
   | nAnon => "_"
   | nNamed n => n
+  end.
+
+Definition string_of_relevance (r : relevance) :=
+  match r with
+  | Relevant => "Relevant"
+  | Irrelevant => "Irrelevant"
   end.
 
 (** Designation of a (particular) inductive type. *)
@@ -83,7 +105,7 @@ Record inductive : Set := mkInd { inductive_mind : kername ;
 Arguments mkInd _%string _%nat.
 
 Definition string_of_inductive (i : inductive) :=
-  string_of_kername (inductive_mind i) ++ "," ++ string_of_nat (inductive_ind i).
+  string_of_kername (inductive_mind i) ^ "," ^ string_of_nat (inductive_ind i).
 
 Definition projection : Set := inductive * nat (* params *) * nat (* argument *).
 
@@ -100,9 +122,9 @@ Definition string_of_gref gr : string :=
   | VarRef v => v
   | ConstRef s => string_of_kername s
   | IndRef (mkInd s n) =>
-    "Inductive " ++ string_of_kername s ++ " " ++ (string_of_nat n)
+    "Inductive " ^ string_of_kername s ^ " " ^ (string_of_nat n)
   | ConstructRef (mkInd s n) k =>
-    "Constructor " ++ string_of_kername s ++ " " ++ (string_of_nat n) ++ " " ++ (string_of_nat k)
+    "Constructor " ^ string_of_kername s ^ " " ^ (string_of_nat n) ^ " " ^ (string_of_nat k)
   end.
 
 Definition kername_eq_dec (k k0 : kername) : {k = k0} + {k <> k0}.
@@ -190,7 +212,7 @@ Inductive recursivity_kind :=
 
 (* Parametrized by term because term is not yet defined *)
 Record def term := mkdef {
-  dname : name; (* the name **)
+  dname : aname; (* the name, annotated with relevance **)
   dtype : term;
   dbody : term; (* the body (a lambda term). Note, this may mention other (mutually-defined) names **)
   rarg  : nat  (* the index of the recursive argument, 0 for cofixpoints **) }.
@@ -201,12 +223,15 @@ Arguments dbody {term} _.
 Arguments rarg {term} _.
 
 Definition string_of_def {A} (f : A -> string) (def : def A) :=
-  "(" ++ string_of_name (dname def) ++ "," ++ f (dtype def) ++ "," ++ f (dbody def) ++ ","
-      ++ string_of_nat (rarg def) ++ ")".
+  "(" ^ string_of_name (binder_name (dname def))
+      ^ "," ^ string_of_relevance (binder_relevance (dname def))
+      ^ "," ^ f (dtype def)
+      ^ "," ^ f (dbody def)
+      ^ "," ^ string_of_nat (rarg def) ^ ")".
 
 Definition print_def {A} (f : A -> string) (g : A -> string) (def : def A) :=
-  string_of_name (dname def) ++ " { struct " ++ string_of_nat (rarg def) ++ " }" ++
-                 " : " ++ f (dtype def) ++ " := " ++ nl ++ g (dbody def).
+  string_of_name (binder_name (dname def)) ^ " { struct " ^ string_of_nat (rarg def) ^ " }" ^
+                 " : " ^ f (dtype def) ^ " := " ^ nl ^ g (dbody def).
 
 
 Definition map_def {A B} (tyf bodyf : A -> B) (d : def A) :=

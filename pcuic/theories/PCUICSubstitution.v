@@ -1,20 +1,16 @@
- (* Distributed under the terms of the MIT license.   *)
+ (* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import utils config.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
+     PCUICLiftSubst PCUICEquality PCUICPosition PCUICSigmaCalculus
+     PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICClosed
+     PCUICReduction PCUICWeakening PCUICCumulativity PCUICUnivSubstitution.
+
+Require Import ssreflect.
+From Equations Require Import Equations.
 
 (** * Substitution lemmas for typing derivations. *)
 
-From Coq Require Import Bool List Arith Lia.
-From MetaCoq.Template Require Import utils config.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-  PCUICLiftSubst PCUICEquality PCUICPosition PCUICSigmaCalculus
-  PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICClosed
-  PCUICReduction PCUICWeakening PCUICCumulativity PCUICUnivSubstitution.
-Require Import ssreflect.
-
-From Equations Require Import Equations.
-
-Set Asymmetric Patterns.
 Local Set Keyed Unification.
-Close Scope string_scope.
 
 Set Default Goal Selector "!".
 
@@ -366,7 +362,7 @@ Proof.
     * simpl; intros.
       move: H. rewrite /closed_inductive_body.
       destruct x; simpl. move=> /andP[/andP [ci ct] cp].
-      f_equal. 
+      f_equal.
       + rewrite subst_closedn; eauto.
         eapply closed_upwards; eauto; lia.
       + eapply All_map_id. eapply forallb_All in ct.
@@ -443,10 +439,10 @@ Proof.
   intros.
   eapply (declared_projection_closed (Σ:=empty_ext Σ)) in H; auto.
   unfold on_snd. simpl.
-  rewrite subst_closedn. 
+  rewrite subst_closedn.
   - eapply closed_upwards; eauto; try lia.
   - destruct pdecl; reflexivity.
-Qed.  
+Qed.
 
 Lemma subst_fix_context:
   forall (mfix : list (def term)) n (k : nat),
@@ -530,7 +526,7 @@ Lemma to_extended_list_k_subst n k c k' :
   to_extended_list_k (subst_context n k c) k' = to_extended_list_k c k'.
 Proof.
   unfold to_extended_list_k. revert k'.
-  unf_term. generalize (nil term) at 1 2.
+  unf_term. generalize (@nil term) at 1 2.
   induction c in n, k |- *; simpl; intros. 1: reflexivity.
   rewrite subst_context_snoc. unfold snoc. simpl.
   destruct a. destruct decl_body.
@@ -626,10 +622,10 @@ Proof.
   - simpl. now rewrite -> inds_length, closedn_subst_instance_constr.
 Qed.
 
-Lemma context_subst_length Γ a s : context_subst Γ a s -> #|Γ| = #|s|.
+Lemma context_subst_length {Γ a s} : context_subst Γ a s -> #|Γ| = #|s|.
 Proof. induction 1; simpl; congruence. Qed.
 
-Lemma context_subst_assumptions_length Γ a s : context_subst Γ a s -> context_assumptions Γ = #|a|.
+Lemma context_subst_assumptions_length {Γ a s} : context_subst Γ a s -> context_assumptions Γ = #|a|.
 Proof. induction 1; simpl; try congruence. rewrite app_length /=. lia. Qed.
 
 (* Lemma context_subst_app {cf:checker_flags} Γ Γ' a s : *)
@@ -687,11 +683,11 @@ Proof.
   rewrite app_nil_r /= //.
 Qed.
 
-Lemma subst_telescope_cons s k d Γ : 
-  subst_telescope s k (d :: Γ) = 
+Lemma subst_telescope_cons s k d Γ :
+  subst_telescope s k (d :: Γ) =
   map_decl (subst s k) d :: subst_telescope s (S k) Γ.
 Proof.
-  simpl. 
+  simpl.
   unfold subst_telescope, mapi. simpl.
   rewrite Nat.add_0_r; f_equal.
   rewrite mapi_rec_Sk. apply mapi_rec_ext.
@@ -830,7 +826,7 @@ Lemma map_subst_instance_constr_to_extended_list_k u ctx k :
 Proof.
   unfold to_extended_list_k.
   cut (map (subst_instance_constr u) [] = []); [|reflexivity].
-  unf_term. generalize (nil term); intros l Hl.
+  unf_term. generalize (@nil term); intros l Hl.
   induction ctx in k, l, Hl |- *; cbnr.
   destruct a as [? [] ?]; cbnr; eauto.
   unf_term. eapply IHctx; cbn; congruence.
@@ -942,7 +938,7 @@ Proof.
   rewrite !XX; clear XX.
   apply make_context_subst_spec in Hsubst as Hsubst'.
   rewrite rev_involutive in Hsubst'.
-  pose proof (context_subst_assumptions_length _ _ _ Hsubst') as H1.
+  pose proof (context_subst_assumptions_length Hsubst') as H1.
   case E: chop => [l l'].
   have chopm := (chop_map _ _ _ _ _ E).
   move: E chopm.
@@ -979,9 +975,9 @@ Inductive untyped_subslet (Γ : context) : list term -> context -> Type :=
 | untyped_cons_let_def Δ s na t T :
     untyped_subslet Γ s Δ ->
     untyped_subslet Γ (subst0 s t :: s) (Δ ,, vdef na t T).
- 
+
 Lemma decompose_prod_assum_it_mkProd_or_LetIn ctx t ctx' t' :
- decompose_prod_assum ctx t = (ctx', t') -> 
+ decompose_prod_assum ctx t = (ctx', t') ->
  it_mkProd_or_LetIn ctx t = it_mkProd_or_LetIn ctx' t'.
 Proof.
   induction t in ctx, ctx', t' |- *; simpl; try intros [= -> <-]; auto.
@@ -992,7 +988,7 @@ Qed.
 Inductive decompose_prod_assum_graph : term -> (context * term) -> Type :=
 | decompose_arity ctx t : decompose_prod_assum_graph (it_mkProd_or_LetIn ctx t) (ctx, t).
 
-Lemma decompose_prod_assum_spec ctx t : 
+Lemma decompose_prod_assum_spec ctx t :
   decompose_prod_assum_graph (it_mkProd_or_LetIn ctx t) (decompose_prod_assum ctx t).
 Proof.
  induction t in ctx |- *; simpl; try constructor 1.
@@ -1003,7 +999,7 @@ Qed.
 
 Lemma subst_decompose_prod_assum_rec ctx t s k :
   let (ctx', t') := decompose_prod_assum ctx t in
-  ∑ ctx'' t'', 
+  ∑ ctx'' t'',
     (decompose_prod_assum [] (subst s (#|ctx'| + k) t') = (ctx'', t'')) *
   (decompose_prod_assum (subst_context s k ctx) (subst s (length ctx + k) t) =
   (subst_context s k ctx' ,,, ctx'', t'')).
@@ -1067,11 +1063,11 @@ Proof.
       subst c. rewrite app_context_assoc.
       unfold snoc. simpl. lia_f_equal.
 Qed.
-(* 
+(*
 
 Lemma subst_decompose_prod_assum_rec ctx t s k :
   let (ctx', t') := decompose_prod_assum ctx t in
-  let (ctx'', t'') := decompose_prod_assum (subst_context s k ctx) (subst s (length ctx + k) t) in 
+  let (ctx'', t'') := decompose_prod_assum (subst_context s k ctx) (subst s (length ctx + k) t) in
   subst s k (it_mkProd_or_LetIn ctx' t') = it_mkProd_or_LetIn ctx'' t''.
 Proof.
   rewrite decompose_prod_assum_ctx.
@@ -1101,7 +1097,7 @@ Proof.
     apply mapi_ext=> n' x.
     destruct x as [na' [b'|] ty']; simpl.
     * rewrite !mapi_length /subst_decl /= /map_decl /=; f_equal.
-      + rewrite Nat.add_0_r distr_subst_rec. simpl. lia_f_equal. 
+      + rewrite Nat.add_0_r distr_subst_rec. simpl. lia_f_equal.
       + rewrite Nat.add_0_r distr_subst_rec; simpl. lia_f_equal.
     * rewrite !mapi_length /subst_decl /= /map_decl /=; f_equal.
       rewrite Nat.add_0_r distr_subst_rec /=. lia_f_equal.
@@ -1115,7 +1111,8 @@ Proof.
       lia_f_equal.
 Qed.
 
-Lemma smash_context_app Δ Γ Γ' : smash_context Δ (Γ ++ Γ')%list = smash_context (smash_context Δ Γ) Γ'.
+Lemma smash_context_app Δ Γ Γ' :
+  smash_context Δ (Γ ++ Γ') = smash_context (smash_context Δ Γ) Γ'.
 Proof.
   revert Δ; induction Γ as [|[na [b|] ty]]; intros Δ; simpl; auto.
 Qed.
@@ -1125,17 +1122,17 @@ Arguments Nat.sub : simpl nomatch.
 Lemma extended_subst_length Γ n : #|extended_subst Γ n| = #|Γ|.
 Proof.
   induction Γ in n |- *; simpl; auto.
-  now destruct a as [? [?|] ?] => /=; simpl; rewrite IHΓ. 
+  now destruct a as [? [?|] ?] => /=; simpl; rewrite IHΓ.
 Qed.
 Hint Rewrite extended_subst_length : len.
 
-Lemma assumption_context_skipn Γ n : 
-  assumption_context Γ -> 
+Lemma assumption_context_skipn Γ n :
+  assumption_context Γ ->
   assumption_context (skipn n Γ).
 Proof.
   induction 1 in n |- *; simpl.
   - destruct n; constructor.
-  - destruct n. 
+  - destruct n.
     * rewrite skipn_0. constructor; auto.
     * now rewrite skipn_S.
 Qed.
@@ -1147,7 +1144,7 @@ Proof.
   intros -> ; reflexivity.
 Qed.
 
-Lemma lift_extended_subst (Γ : context) k : 
+Lemma lift_extended_subst (Γ : context) k :
   extended_subst Γ k = map (lift0 k) (extended_subst Γ 0).
 Proof.
   induction Γ as [|[? [] ?] ?] in k |- *; simpl; auto.
@@ -1175,7 +1172,7 @@ Proof.
     rewrite simpl_lift; lia_f_equal.
 Qed.
 
-Lemma subst_extended_subst_k s Γ k k' : extended_subst (subst_context s k Γ) k' = 
+Lemma subst_extended_subst_k s Γ k k' : extended_subst (subst_context s k Γ) k' =
   map (subst s (k + context_assumptions Γ + k')) (extended_subst Γ k').
 Proof.
   induction Γ as [|[na [b|] ty] Γ]; simpl; auto; rewrite subst_context_snoc /=;
@@ -1185,11 +1182,11 @@ Proof.
     rewrite distr_subst. autorewrite with len. f_equal.
     now rewrite context_assumptions_fold.
   - elim: Nat.leb_spec => //. lia.
-  - rewrite (lift_extended_subst' _ 1 k') IHΓ. 
-    rewrite (lift_extended_subst' _ 1 k'). 
+  - rewrite (lift_extended_subst' _ 1 k') IHΓ.
+    rewrite (lift_extended_subst' _ 1 k').
     rewrite !map_map_compose.
     apply map_ext.
-    intros x. 
+    intros x.
     erewrite (commut_lift_subst_rec); lia_f_equal.
 Qed.
 
@@ -1208,7 +1205,7 @@ Qed.
 
 Local Open Scope sigma_scope.
 
-Lemma inst_extended_subst_shift (Γ : context) k : 
+Lemma inst_extended_subst_shift (Γ : context) k :
   map (inst ((extended_subst Γ 0 ⋅n ids) ∘s ↑^k)) (idsn #|Γ|) =
   map (inst (extended_subst Γ k ⋅n ids)) (idsn #|Γ|).
 Proof.
@@ -1230,7 +1227,7 @@ Proof.
   now autorewrite with sigma.
 Qed.
 
-Lemma subst_context_decompo s s' Γ k : 
+Lemma subst_context_decompo s s' Γ k :
   subst_context (s ++ s') k Γ =
   subst_context s' k (subst_context (map (lift0 #|s'|) s) k Γ).
 Proof.
@@ -1247,7 +1244,7 @@ Proof.
     rewrite !mapi_length. now rewrite subst_app_decomp.
 Qed.
 
-Lemma fold_context_compose f g Γ : 
+Lemma fold_context_compose f g Γ :
   fold_context f (fold_context g Γ) = fold_context (fun n x => f n (g n x)) Γ.
 Proof.
   induction Γ; simpl; auto; rewrite !fold_context_snoc0.
@@ -1256,7 +1253,7 @@ Proof.
   now rewrite fold_context_length.
 Qed.
 
-Lemma fold_context_ext f g Γ : 
+Lemma fold_context_ext f g Γ :
   f =2 g ->
   fold_context f Γ = fold_context g Γ.
 Proof.
@@ -1266,7 +1263,7 @@ Proof.
   intros. now apply hfg.
 Qed.
 
-Lemma smash_context_acc Γ Δ : 
+Lemma smash_context_acc Γ Δ :
   smash_context Δ Γ =
       subst_context (extended_subst Γ 0) 0 (lift_context (context_assumptions Γ) #|Γ| Δ)
    ++ smash_context [] Γ.
@@ -1291,13 +1288,13 @@ Proof.
     setoid_rewrite ren_lift_renaming.
     autorewrite with sigma.
     rewrite !Upn_compose.
-    apply Upn_ext. 
+    apply Upn_ext.
     autorewrite with sigma.
     unfold Up.
     rewrite subst_consn_subst_cons.
     autorewrite with sigma.
     reflexivity.
-    
+
   - simpl.
     rewrite IHΓ /=. auto.
     rewrite (IHΓ [_]). auto. rewrite !app_assoc. f_equal.
@@ -1317,7 +1314,7 @@ Proof.
     autorewrite with sigma.
     apply Upn_ext.
     unfold Up.
-    
+
     rewrite subst_consn_subst_cons.
     autorewrite with sigma.
     apply subst_cons_proper; auto.
@@ -1340,7 +1337,7 @@ Proof.
     rewrite -shiftk_compose subst_compose_assoc.
     rewrite subst_consn_shiftn.
     2:now autorewrite with len.
-    autorewrite with sigma. 
+    autorewrite with sigma.
     rewrite -shiftk_shift.
     rewrite -shiftk_compose subst_compose_assoc.
     rewrite subst_consn_shiftn.
@@ -1350,7 +1347,7 @@ Qed.
 
 Hint Rewrite context_assumptions_app context_assumptions_fold : len.
 
-Lemma map_option_out_impl {A B} (l : list A) (f g : A -> option B) x : 
+Lemma map_option_out_impl {A B} (l : list A) (f g : A -> option B) x :
   (forall x y, f x = Some y -> g x = Some y) ->
   map_option_out (map f l) = Some x ->
   map_option_out (map g l) = Some x.
@@ -1388,7 +1385,7 @@ Proof.
   rewrite List.rev_app_distr.
   destruct (nth_error_spec (List.rev (smash_context [] c0)) rarg) => /= //;
   autorewrite with len in l; simpl in *.
-  rewrite nth_error_app_lt; autorewrite with len; simpl; try lia. 
+  rewrite nth_error_app_lt; autorewrite with len; simpl; try lia.
   rewrite (smash_context_subst []) /=.
   rewrite nth_error_rev_inv; autorewrite with len; simpl; try lia.
   rewrite nth_error_subst_context /=.
@@ -1400,7 +1397,7 @@ Proof.
   destruct t0; try discriminate. simpl in *.
   erewrite decompose_app_subst; eauto. simpl. auto.
 Qed.
- 
+
 Lemma decompose_prod_assum_mkApps ctx ind u args :
   decompose_prod_assum ctx (mkApps (tInd ind u) args) = (ctx, mkApps (tInd ind u) args).
 Proof.
@@ -1664,7 +1661,7 @@ Proof.
            simpl. rewrite subst_skipn. 1: auto with arith.
            rewrite simpl_lift; auto with arith.
            assert(S (i - #|Γ'|) + #|Γ'| = S i) as -> by lia.
-           constructor.
+           reflexivity.
         -- noconf H.
       * apply nth_error_None in Heq.
         assert(S i = #|s| + (S (i - #|s|))) by lia.
@@ -1698,7 +1695,7 @@ Proof.
     now rewrite nth_error_map H.
 
   - specialize (IHred1 Γ0 Δ Γ' eq_refl wfΓ Hs).
-    apply red_abs. 1: auto. constructor.
+    apply red_abs. 1: auto. reflexivity.
 
   - specialize (IHred1 Γ0 Δ (Γ' ,, _) eq_refl wfΓ Hs).
     apply red_abs; auto.
@@ -1831,7 +1828,7 @@ Proof.
         simpl. rewrite subst_skipn. 1: auto with arith.
         rewrite simpl_lift; auto with arith.
         assert(S (i - #|Γ'|) + #|Γ'| = S i) as -> by lia.
-        constructor.
+        reflexivity.
       * apply nth_error_None in Heq.
         assert(S i = #|s| + (S (i - #|s|))) by lia.
         rewrite H1. rewrite -> simpl_subst; try lia.
@@ -1864,7 +1861,7 @@ Proof.
     now rewrite nth_error_map H.
 
   - specialize (IHred1 Γ0 Δ Γ' eq_refl Hs).
-    apply red_abs. 1: auto. constructor.
+    apply red_abs. 1: auto. reflexivity.
 
   - specialize (IHred1 Γ0 Δ (Γ' ,, _) eq_refl Hs).
     apply red_abs; auto with pcuic.
@@ -1969,11 +1966,9 @@ Lemma substitution_untyped_red {cf:checker_flags} Σ Γ Δ Γ' s M N :
   red Σ (Γ ,,, subst_context s 0 Γ') (subst s #|Γ'| M) (subst s #|Γ'| N).
 Proof.
   intros wfΣ subsl.
-  induction 1. 
-  - constructor.
-  - etransitivity.
-    * eapply IHX.
-    * eapply substitution_untyped_let_red; eauto.
+  induction 1; trea.
+  - eapply substitution_untyped_let_red; eassumption.
+  - etransitivity; eauto.
 Qed.
 
 Lemma subst_eq_decl `{checker_flags} Σ ϕ l k d d' :
@@ -1999,9 +1994,9 @@ Lemma substitution_red `{cf : checker_flags} (Σ : global_env_ext) Γ Δ Γ' s M
   red Σ (Γ ,,, Δ ,,, Γ') M N ->
   red Σ (Γ ,,, subst_context s 0 Γ') (subst s #|Γ'| M) (subst s #|Γ'| N).
 Proof.
-  intros HG Hs Hl Hred. induction Hred. 1: constructor.
-  eapply red_trans with (subst s #|Γ'| P); auto.
-  eapply substitution_let_red; eauto.
+  intros HG Hs Hl Hred. induction Hred; trea.
+  - eapply substitution_let_red; eauto.
+  - etransitivity; eauto.
 Qed.
 
 Lemma red_red {cf:checker_flags} (Σ : global_env_ext) Γ Δ Γ' s s' b : wf Σ ->
@@ -2025,8 +2020,8 @@ Proof.
       * destruct (All2_nth_error_Some _ _ Hall Heq') as [t' [-> Ptt']].
         intros. apply (weakening_red Σ Γ [] Γ' t t'); auto.
       * rewrite (All2_nth_error_None _ Hall Heq').
-        apply All2_length in Hall as ->. constructor.
-    + constructor.
+        apply All2_length in Hall as ->. reflexivity.
+    + reflexivity.
 
   - apply red_evar. apply All2_map. solve_all.
   - apply red_prod; eauto.
@@ -2059,9 +2054,9 @@ Lemma untyped_substitution_red {cf:checker_flags} Σ Γ Δ Γ' s M N :
   red Σ (Γ ,,, Δ ,,, Γ') M N ->
   red Σ (Γ ,,, subst_context s 0 Γ') (subst s #|Γ'| M) (subst s #|Γ'| N).
 Proof.
-  intros HG Hs Hred. induction Hred. 1: constructor.
-  eapply red_trans with (subst s #|Γ'| P); auto.
-  eapply substitution_untyped_let_red; eauto.
+  intros HG Hs Hred. induction Hred; trea.
+  - eapply substitution_untyped_let_red; eauto.
+  - etransitivity; eauto.
 Qed.
 
 (** The cumulativity relation is substitutive, yay! *)
@@ -2094,6 +2089,18 @@ Fixpoint subst_stack s k π :=
       let k'' := #|mfix| + k' in
       let mfix' := List.map (map_def (subst s k') (subst s k'')) mfix in
       CoFix mfix' idx (map (subst s k') args) (subst_stack s k π)
+  | CoFix_mfix_ty na bo ra mfix1 mfix2 idx π =>
+      let k' := #|stack_context π| + k in
+      let k'' := #|mfix1| + S #|mfix2| + k' in
+      let mfix1' := List.map (map_def (subst s k') (subst s k'')) mfix1 in
+      let mfix2' := List.map (map_def (subst s k') (subst s k'')) mfix2 in
+      CoFix_mfix_ty na (subst s k'' bo) ra mfix1' mfix2' idx (subst_stack s k π)
+  | CoFix_mfix_bd na ty ra mfix1 mfix2 idx π =>
+      let k' := #|stack_context π| + k in
+      let k'' := #|mfix1| + S #|mfix2| + k' in
+      let mfix1' := List.map (map_def (subst s k') (subst s k'')) mfix1 in
+      let mfix2' := List.map (map_def (subst s k') (subst s k'')) mfix2 in
+      CoFix_mfix_bd na (subst s k' ty) ra mfix1' mfix2' idx (subst_stack s k π)
   | Case_p indn c brs π =>
       let k' := #|stack_context π| + k in
       let brs' := List.map (on_snd (subst s k')) brs in
@@ -2159,6 +2166,14 @@ Proof.
     f_equal. f_equal. lia.
   - simpl. rewrite IHπ. cbn. f_equal. f_equal.
     rewrite subst_mkApps. cbn. reflexivity.
+  - simpl. rewrite IHπ. cbn. f_equal. f_equal.
+    rewrite map_app. rewrite !app_length. cbn. reflexivity.
+  - simpl. rewrite IHπ. cbn. f_equal. f_equal.
+    rewrite map_app. rewrite !app_length. cbn. f_equal.
+    unfold map_def at 1. cbn. f_equal.
+    rewrite fix_context_alt_length.
+    rewrite !app_length. cbn. rewrite !map_length.
+    f_equal. f_equal. lia.
   - simpl. rewrite IHπ. cbn. f_equal. f_equal.
     rewrite map_app. cbn. reflexivity.
 Qed.
@@ -2474,7 +2489,7 @@ Proof.
       * exists (tu.π1). rewrite Nat.add_0_r; now eapply t0.
       * exists (tu.π1). rewrite Nat.add_0_r; now eapply t1.
       * rewrite Nat.add_0_r; now eapply t0.
-      
+
   - elim (leb_spec_Set); intros Hn.
     + elim nth_error_spec.
       * intros x Heq Hlt.
@@ -2594,6 +2609,7 @@ Proof.
       * subst params. rewrite firstn_map. exact H3.
       * now rewrite closedn_subst_instance_context.
     + solve_all.
+      destruct b0 as [s' [Hs IH]]; eexists; eauto.
 
   - specialize (X2 Γ Γ' Δ s sub eq_refl).
     eapply refine_type.
@@ -2654,7 +2670,7 @@ Proof.
       rewrite subst_context_app Nat.add_0_r app_context_assoc in IH.
       rewrite app_context_length fix_context_length in IH.
       rewrite subst_context_length fix_context_length.
-      rewrite commut_lift_subst_rec; try lia. now rewrite (Nat.add_comm #|Δ|).      
+      rewrite commut_lift_subst_rec; try lia. now rewrite (Nat.add_comm #|Δ|).
     * move: H1.
       rewrite /wf_cofixpoint.
       pose proof (substitution_check_one_cofix s #|Δ| mfix).
@@ -2663,38 +2679,7 @@ Proof.
       rewrite map_map_compose. now rewrite H1.
 
   - econstructor; eauto.
-    + destruct X2 as [Bs|[u Hu]].
-      * left. destruct Bs as [[ctx [u [Hd IH]]]]. simpl in *.
-        exists (subst_context s #|Δ| ctx), u.
-        pose proof (subst_destArity [] B s #|Δ|). rewrite Hd in H.
-        rewrite {}H.
-        split; auto.
-        apply All_local_env_app_inv; intuition auto.
-        clear -sub a.
-        induction ctx; try constructor; depelim a.
-        -- rewrite subst_context_snoc.
-           unfold snoc. 
-           econstructor; auto.
-           ++ eapply IHctx. eapply a.
-           ++ simpl. destruct tu as [u tu]. exists u.
-              specialize (t0 _ _ (Δ ,,, ctx) _ sub). forward t0.
-              1: now rewrite app_context_assoc.
-              simpl in t0.
-              now rewrite subst_context_app Nat.add_0_r app_context_assoc app_length in t0.
-      -- rewrite subst_context_snoc.
-         constructor; auto.
-         ++ eapply IHctx. eapply a.
-         ++ simpl.
-            specialize (t1 _ _ (Δ ,,, ctx) _ sub).
-            forward t1. 1: now rewrite app_context_assoc.
-            simpl in t1.
-            now rewrite subst_context_app Nat.add_0_r app_context_assoc app_length in t1.
-         ++ simpl.
-            specialize (t0 _ _ (Δ ,,, ctx) _ sub). forward t0.
-            1: now rewrite app_context_assoc. simpl in t0.
-            now rewrite subst_context_app Nat.add_0_r app_context_assoc app_length in t0.
-      * right; exists u; intuition eauto.
-    + eapply substitution_cumul; eauto.
+    eapply substitution_cumul; eauto.
 Qed.
 
 Corollary substitution `{cf : checker_flags} (Σ : global_env_ext) Γ Γ' s Δ (t : term) T :
@@ -2754,7 +2739,7 @@ Qed.
 
 (* TODO Move to liftsubst *)
 
-Lemma subst_context_comm s s' Γ : 
+Lemma subst_context_comm s s' Γ :
   subst_context s 0 (subst_context s' 0 Γ) =
   subst_context (map (subst s 0) s' ++ s) 0 Γ.
 Proof.
@@ -2791,7 +2776,7 @@ Proof.
     now rewrite subst_app_simpl.
 Qed.
 
-Lemma context_assumptions_subst s n Γ : 
+Lemma context_assumptions_subst s n Γ :
   context_assumptions (subst_context s n Γ) = context_assumptions Γ.
 Proof. apply context_assumptions_fold. Qed.
 Hint Rewrite context_assumptions_subst : pcuic.
@@ -2804,13 +2789,13 @@ Proof. intros ->; apply subst_app_simpl. Qed.
 
 
 Lemma subst_app_context' (s s' : list term) (Γ : context) n :
-  n = #|s| ->  
+  n = #|s| ->
   subst_context (s ++ s') 0 Γ = subst_context s 0 (subst_context s' n Γ).
 Proof.
   intros ->; apply subst_app_context.
 Qed.
 
-Lemma map_subst_app_simpl l l' k (ts : list term) : 
+Lemma map_subst_app_simpl l l' k (ts : list term) :
   map (subst l k ∘ subst l' (k + #|l|)) ts =
   map (subst (l ++ l') k) ts.
 Proof.
@@ -2819,7 +2804,7 @@ Proof.
 Qed.
 
 Lemma simpl_map_lift x n k :
-  map (lift0 n ∘ lift0 k) x = 
+  map (lift0 n ∘ lift0 k) x =
   map (lift k n ∘ lift0 n) x.
 Proof.
   apply map_ext => t.

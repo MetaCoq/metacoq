@@ -1,17 +1,14 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import Bool List Program Lia.
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils Ast AstUtils
      LibHypsNaming Typing.
 Require Import ssreflect.
 
 (** * Weakening lemmas w.r.t. the global environment *)
 
-Set Asymmetric Patterns.
 
 Generalizable Variables Σ Γ t T.
 
-Definition extends (Σ Σ' : global_env) := { Σ'' & Σ' = (Σ'' ++ Σ)%list }.
+Definition extends (Σ Σ' : global_env) := { Σ'' & Σ' = Σ'' ++ Σ }.
 
 Lemma weakening_env_global_ext_levels Σ Σ' φ (H : extends Σ Σ') l
   : LevelSet.In l (global_ext_levels (Σ, φ))
@@ -304,12 +301,59 @@ Proof.
   destruct ctrs=> //.
   destruct cst as [nas cst]; simpl in *.
   intuition auto.
-  eapply forallb_Forall in H1. eapply forallb_Forall, Forall_impl; tea.
+  eapply forallb_Forall in H. eapply forallb_Forall, Forall_impl; tea.
   intros ? ? ; now eapply weakening_env_global_ext_levels'.
   eapply valid_subset; tea;
     now eapply weakening_env_global_ext_constraints.
 Qed.
 Hint Resolve weakening_env_consistent_instance : extends.
+
+
+Lemma global_levels_Set Σ : 
+  LevelSet.In Level.lSet (global_levels Σ).
+Proof.
+  unfold global_levels.
+  induction Σ; simpl; auto.
+  - now apply LevelSet.singleton_spec.
+  - apply LevelSet.union_spec. right; auto.
+Qed.
+
+Lemma global_levels_set Σ : 
+  LevelSet.Equal (LevelSet.union (LevelSet.singleton Level.lSet) (global_levels Σ))
+  (global_levels Σ).
+Proof.
+  apply LevelSetProp.union_subset_equal.
+  intros x hin. eapply LevelSet.singleton_spec in hin; subst x.
+  apply global_levels_Set.
+Qed.
+
+Lemma global_levels_ext {Σ Σ'} : 
+  LevelSet.Equal (global_levels (Σ ++ Σ')) (LevelSet.union (global_levels Σ) (global_levels Σ')).
+Proof.
+  unfold global_levels at 1.
+  induction Σ; simpl.
+  - rewrite global_levels_set. reflexivity.
+  - rewrite IHΣ. lsets.
+Qed.
+
+Lemma extends_wf_universe {cf:checker_flags} {Σ : global_env_ext} Σ' u : extends Σ Σ' -> wf Σ' ->
+  wf_universe Σ u -> wf_universe (Σ', Σ.2) u.
+Proof.
+  destruct Σ as [Σ univ]; cbn.
+  intros [Σ'' eq] wf.
+  destruct u; simpl; auto.
+  intros Hl.
+  intros l inl; specialize (Hl l inl).
+  cbn. rewrite eq /=.
+  unfold global_ext_levels.
+  eapply LevelSet.union_spec; simpl.
+  apply LevelSet.union_spec in Hl as [Hl|Hl]; cbn in Hl.
+  - simpl. simpl in Hl. now left.
+  - right. rewrite global_levels_ext.
+    eapply LevelSet.union_spec. right.
+    apply Hl.
+Qed.
+
 
 Ltac typing_my_rename_hyp h th :=
   match th with
@@ -340,6 +384,10 @@ Proof.
   apply typing_ind_env; intros;
     rename_all_hyps; try solve [econstructor; eauto 2 with extends].
 
+  - econstructor; eauto 2 with extends.
+    intuition auto.
+    destruct H1 as [l' [inl' eq]]. right; right.
+    exists l'. split; eauto 2 with extends.
   - econstructor; eauto 2 with extends.
     destruct Σ as [Σ φ].
     clear typet heq_isApp forall_Σ' hneq_l.
@@ -389,20 +437,21 @@ Proof.
       red in on_ctype |- *. eauto.
       clear on_cindices cstr_eq cstr_args_length cstr_concl_head.
       induction (cshape_args cs); simpl in *; auto.
-      destruct a as [na [b|] ty]; simpl in *; intuition eauto.
-      clear on_ctype on_cargs.
-      revert on_cindices.
-      generalize (List.rev (LiftSubst.lift_context #|cshape_args cs| 0 ind_indices)).
-      generalize (cshape_indices cs). induction 1; constructor; eauto.
-      simpl.
-      intros v indv. specialize (on_ctype_variance v indv).
-      simpl in *. move: on_ctype_variance.
-      unfold respects_variance. destruct variance_universes as [[[univs u] u']|]; auto.
-      intros [args idxs]. split.
-      eapply (All2_local_env_impl args); intros.
-      eapply weakening_env_cumul; eauto.
-      eapply (All2_impl idxs); intros.
-      eapply weakening_env_conv; eauto.
+      ** eapply (extends_wf_universe (Σ:=(Σ,φ)) Σ'); auto.
+      ** destruct a as [na [b|] ty]; simpl in *; intuition eauto.
+      ** clear on_ctype on_cargs.
+        revert on_cindices.
+        generalize (List.rev (LiftSubst.lift_context #|cshape_args cs| 0 ind_indices)).
+        generalize (cshape_indices cs). induction 1; constructor; eauto.
+      ** simpl.
+        intros v indv. specialize (on_ctype_variance v indv).
+        simpl in *. move: on_ctype_variance.
+        unfold cstr_respects_variance. destruct variance_universes as [[[univs u] u']|]; auto.
+        intros [args idxs]. split.
+        eapply (All2_local_env_impl args); intros.
+        eapply weakening_env_cumul; eauto.
+        eapply (All2_impl idxs); intros.
+        eapply weakening_env_conv; eauto.
     -- unfold check_ind_sorts in *. destruct universe_family; auto.
       --- split; [apply fst in ind_sorts|apply snd in ind_sorts].
           eapply Forall_impl; tea; cbn.
@@ -410,14 +459,21 @@ Proof.
           apply weakening_env_global_ext_constraints; tea.
           destruct indices_matter; [|trivial]. clear -ind_sorts HPΣ wfΣ' Hext.
           induction ind_indices; simpl in *; auto.
-          destruct a as [na [b|] ty]; simpl in *; intuition eauto.
+          ** eapply (extends_wf_universe (Σ:=(Σ,φ)) Σ'); auto.
+          ** destruct a as [na [b|] ty]; simpl in *; intuition eauto.
       --- split; [apply fst in ind_sorts|apply snd in ind_sorts].
           eapply Forall_impl; tea; cbn.
           intros. eapply leq_universe_subset; tea.
           apply weakening_env_global_ext_constraints; tea.
           destruct indices_matter; [|trivial]. clear -ind_sorts HPΣ wfΣ' Hext.
           induction ind_indices; simpl in *; auto.
-          destruct a as [na [b|] ty]; simpl in *; intuition eauto.
+          ** eapply (extends_wf_universe (Σ:=(Σ,φ)) Σ'); auto.
+          ** destruct a as [na [b|] ty]; simpl in *; intuition eauto.
+      -- intros v onv.
+          move: (onIndices v onv). unfold ind_respects_variance.
+         destruct variance_universes as [[[univs u] u']|] => //.
+         intros idx; eapply (All2_local_env_impl idx); simpl.
+         intros par par' t t'. eapply weakening_env_cumul; eauto.
   - red in onP |- *. eapply All_local_env_impl; eauto.
 Qed.
 
@@ -431,7 +487,7 @@ Proof.
   induction HΣ; simpl. congruence.
   assert (HH: extends Σ Σ'). {
     destruct Hext as [Σ'' HΣ''].
-    exists ((Σ'' ++ [(kn, d)])%list). now rewrite <- app_assoc. }
+    exists (Σ'' ++ [(kn, d)]). now rewrite <- app_assoc. }
   unfold eq_kername; destruct kername_eq_dec; subst.
   - intros [= ->].
     clear Hext; eapply weakening_on_global_decl; eauto.

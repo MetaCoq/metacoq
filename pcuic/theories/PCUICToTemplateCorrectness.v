@@ -1,24 +1,19 @@
-(* Distributed under the terms of the MIT license.   *)
-Set Warnings "-notation-overridden".
-
-From Coq Require Import Bool String List Program BinPos Compare_dec ZArith.
-
-
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICLiftSubst PCUICEquality
-     PCUICUnivSubst PCUICTyping PCUICGeneration.
+     PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICTyping PCUICGeneration.
 
-From MetaCoq.Template Require Import config utils Ast TypingWf WfInv UnivSubst LiftSubst.
-
+From MetaCoq.Template Require Import config utils Ast TypingWf WfInv UnivSubst
+     LiftSubst.
 
 Require Import PCUICToTemplate.
 
-Require Import String.
-Local Open Scope string_scope.
-Set Asymmetric Patterns.
+(* from Checker Generation to avoid dependencies *)
 
+Derive Signature for Template.Typing.typing.
+Derive NoConfusion for term.
 
-
+From Equations Require Import Equations.
+Require Import Equations.Prop.DepElim.
 
 Module P := PCUICAst.
 Module PT := PCUICTyping.
@@ -172,10 +167,10 @@ Proof.
   unfold consistent_instance_ext, PT.consistent_instance_ext in *.
   unfold consistent_instance, PT.consistent_instance in *.
   destruct decl;trivial.
-  destruct H as (?&?&?&?).
+  destruct H as (?&?&?).
   repeat split;trivial.
   - eapply forallb_impl.
-    2: apply H0.
+    2: apply H.
     cbv beta.
     intros.
     now apply trans_mem_level_set.
@@ -183,11 +178,11 @@ Proof.
     destruct config.check_univs;trivial.
     unfold valid_constraints0 in *.
     intros.
-    apply H2.
+    apply H1.
     unfold satisfies in *.
     unfold ConstraintSet.For_all in *.
     intros.
-    apply H3.
+    apply H2.
     now apply trans_constraintSet_in.
 Qed.
 
@@ -434,9 +429,6 @@ Proof.
     now apply map_nth_error.
   - now destruct mdecl;cbn in *.
 Qed.
-
-From MetaCoq.Template Require Import monad_utils.
-Import MonadNotation.
 
 Lemma inv_opt_monad {X Y Z} (f:option X) (g:X->option Y) (h:X->Y->option Z) c:
   (x <- f;;
@@ -788,11 +780,6 @@ Proof.
 Qed.
 
 
-
-(* from Checker Generation to avoid dependencies *)
-
-Derive Signature for typing.
-
 Lemma invert_type_App `{checker_flags} Σ Γ f u T :
   TT.typing Σ Γ (tApp f u) T ->
   { T' : term & { U' & ((TT.typing Σ Γ f T') * TT.typing_spine Σ Γ T' u U' *
@@ -803,7 +790,6 @@ Proof.
   dependent induction Hty.
   - exists t_ty, t'. intuition.
   - edestruct IHHty as [T' [U' [H' H'']]].
-    1: reflexivity.
     exists T', U'. split; auto.
     eapply TT.cumul_trans; eauto.
 Qed.
@@ -892,8 +878,9 @@ in All (for wf_local assumptions)
     rewrite trans_decl_type.
     eapply TT.type_Rel; eauto.
     + now apply map_nth_error.
-  - eapply TT.type_Sort; eauto.
-    now apply trans_in_level_set.
+  - admit. (* TODO adapt Template Coq to new sort typing rule *)
+     (* eapply TT.type_Sort; eauto.
+    now apply trans_in_level_set. *)
   - eapply TT.type_Prod;assumption.
   - eapply TT.type_Lambda;eassumption.
   - eapply TT.type_LetIn;eassumption.
@@ -952,7 +939,7 @@ in All (for wf_local assumptions)
       apply X4.
     + admit. (* map_option_out build branche type *)
     (* this should be similar to trans_build_case_predicate_type *)
-    + now apply trans_branches.
+    + admit. (* now apply trans_branches.*)
   - rewrite trans_subst.
     rewrite trans_subst_instance_constr.
     cbn.

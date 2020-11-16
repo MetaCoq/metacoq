@@ -47,23 +47,26 @@ sig
   val mkEvar : quoted_int -> t array -> t
   val mkSort : quoted_sort -> t
   val mkCast : t -> quoted_cast_kind -> t -> t
-  val mkProd : quoted_name -> t -> t -> t
-  val mkLambda : quoted_name -> t -> t -> t
-  val mkLetIn : quoted_name -> t -> t -> t -> t
+  val mkProd : quoted_aname -> t -> t -> t
+  val mkLambda : quoted_aname -> t -> t -> t
+  val mkLetIn : quoted_aname -> t -> t -> t -> t
   val mkApp : t -> t array -> t
   val mkConst : quoted_kernel_name -> quoted_univ_instance -> t
   val mkInd : quoted_inductive -> quoted_univ_instance -> t
   val mkConstruct : quoted_inductive * quoted_int -> quoted_univ_instance -> t
-  val mkCase : (quoted_inductive * quoted_int) -> quoted_int list -> t -> t -> t list -> t
+  val mkCase : (quoted_inductive * quoted_int * quoted_relevance) -> quoted_int list -> t -> t -> t list -> t
   val mkProj : quoted_proj -> t -> t
-  val mkFix : (quoted_int array * quoted_int) * (quoted_name array * t array * t array) -> t
-  val mkCoFix : quoted_int * (quoted_name array * t array * t array) -> t
+  val mkFix : (quoted_int array * quoted_int) * (quoted_aname array * t array * t array) -> t
+  val mkCoFix : quoted_int * (quoted_aname array * t array * t array) -> t
 
+  val mkBindAnn : quoted_name -> quoted_relevance -> quoted_aname
   val mkName : quoted_ident -> quoted_name
   val mkAnon : unit -> quoted_name
 
   val quote_ident : Id.t -> quoted_ident
   val quote_name : Name.t -> quoted_name
+  val quote_aname : Name.t Context.binder_annot -> quoted_aname
+  val quote_relevance : Sorts.relevance -> quoted_relevance
   val quote_int : int -> quoted_int
   val quote_bool : bool -> quoted_bool
   val quote_sort : Sorts.t -> quoted_sort
@@ -100,12 +103,13 @@ sig
 
   (* val quote_entry : (quoted_constant_entry, quoted_mind_entry) sum option > quoted_entry *)
 
-  val quote_context_decl : quoted_name -> t option -> t -> quoted_context_decl
+  val quote_context_decl : quoted_aname -> t option -> t -> quoted_context_decl
   val quote_context : quoted_context_decl list -> quoted_context
 
   val mk_one_inductive_body : quoted_ident * t (* ind type *) * quoted_sort_family
                                  * (quoted_ident * t (* constr type *) * quoted_int) list
                                  * (quoted_ident * t (* projection type *)) list
+                                 * quoted_relevance 
                                  -> quoted_one_inductive_body
 
   val mk_mutual_inductive_body :
@@ -157,12 +161,12 @@ struct
   let quote_rel_decl quote_term acc env = function
       | Context.Rel.Declaration.LocalAssum (na, t) ->
         let t', acc = quote_term acc env t in
-        (Q.quote_context_decl (Q.quote_name (Context.binder_name na)) None t', acc)
+        (Q.quote_context_decl (Q.quote_aname na) None t', acc)
       | Context.Rel.Declaration.LocalDef (na, b, t) ->
         let b', acc = quote_term acc env b in
         let t', acc = quote_term acc env t in
-        (Q.quote_context_decl (Q.quote_name (Context.binder_name na)) (Some b') t', acc)
-
+        (Q.quote_context_decl (Q.quote_aname na) (Some b') t', acc)
+  
   let quote_rel_context quote_term acc env ctx =
       let decls, env, acc =
         List.fold_right (fun decl (ds, env, acc) ->
@@ -171,8 +175,8 @@ struct
           ctx ([],env,acc) in
       Q.quote_context decls, acc
 
-  let quote_binder b =
-    Q.quote_name (Context.binder_name b)
+  let quote_binder b = 
+    Q.quote_aname b
 
   let quote_term_remember
       (add_constant : KerName.t -> 'a -> 'a)
@@ -200,18 +204,18 @@ struct
               let (t',acc) = quote_term acc env t in
         let env = push_rel (toDecl (n, None, t)) env in
         let (b',acc) = quote_term acc env b in
-        (Q.mkProd (Q.quote_name (Context.binder_name n)) t' b', acc)
+        (Q.mkProd (Q.quote_aname n) t' b', acc)
 
       | Constr.Lambda (n,t,b) ->
-              let (t',acc) = quote_term acc env t in
-        let (b',acc) = quote_term acc (push_rel (toDecl (n, None, t)) env) b in
-        (Q.mkLambda (Q.quote_name (Context.binder_name n)) t' b', acc)
+	      let (t',acc) = quote_term acc env t in
+              let (b',acc) = quote_term acc (push_rel (toDecl (n, None, t)) env) b in
+        (Q.mkLambda (Q.quote_aname n) t' b', acc)
 
       | Constr.LetIn (n,e,t,b) ->
-              let (e',acc) = quote_term acc env e in
-              let (t',acc) = quote_term acc env t in
-              let (b',acc) = quote_term acc (push_rel (toDecl (n, Some e, t)) env) b in
-        (Q.mkLetIn (Q.quote_name (Context.binder_name n)) e' t' b', acc)
+	      let (e',acc) = quote_term acc env e in
+	      let (t',acc) = quote_term acc env t in
+	      let (b',acc) = quote_term acc (push_rel (toDecl (n, Some e, t)) env) b in
+      	(Q.mkLetIn (Q.quote_aname n) e' t' b', acc)
 
       | Constr.App (f,xs) ->
         let (f',acc) = quote_term acc env f in
@@ -250,9 +254,9 @@ struct
                let (x,acc) = quote_term acc env x in
                let narg = Q.quote_int narg in
                (x :: xs, narg :: nargs, acc))
-             ([],[],acc) e ci.Constr.ci_cstr_nargs
-         in
-         (Q.mkCase (ind, npar) (List.rev nargs) qtypeInfo qdiscriminant (List.rev branches), acc)
+             ([],[],acc) e ci.Constr.ci_cstr_nargs in
+         let q_relevance = Q.quote_relevance ci.Constr.ci_relevance in
+         (Q.mkCase (ind, npar, q_relevance) (List.rev nargs) qtypeInfo qdiscriminant (List.rev branches), acc)
 
       | Constr.Fix fp -> quote_fixpoint acc env fp
       | Constr.CoFix fp -> quote_cofixpoint acc env fp
@@ -355,8 +359,8 @@ struct
             | _ -> [], acc
           in
           let sf = Q.quote_sort_family oib.Declarations.mind_kelim in
-          (Q.quote_ident oib.mind_typename, indty, sf, (List.rev reified_ctors), projs) :: ls, acc)
-        ([],acc) (Array.to_list mib.mind_packets)
+	  (Q.quote_ident oib.mind_typename, indty, sf, (List.rev reified_ctors), projs, Q.quote_relevance oib.mind_relevance) :: ls, acc)
+	  ([],acc) (Array.to_list mib.mind_packets)
       in
       let nparams = Q.quote_int mib.Declarations.mind_nparams in
       let paramsctx, acc = quote_rel_context quote_term acc env mib.Declarations.mind_params_ctxt in

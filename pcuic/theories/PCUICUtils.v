@@ -1,11 +1,10 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import Bool RelationClasses.
+(* Distributed under the terms of the MIT license. *)
+From Coq Require Import RelationClasses.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils.
-Set Keyed Unification.
 
 Require Import Equations.Equations Equations.Prop.DepElim.
+
 
 (* Dependent lexicographic order *)
 Inductive dlexprod {A} {B : A -> Type}
@@ -144,7 +143,7 @@ Proof.
     set (e1 := sym _ _ e2).
     replace y'' with (coe _ _ e1 (coe _ _ e2 y''))
       by eauto using coesym.
-    eapply ih2.
+    eapply ih2. subst e2.
     rewrite coetrans.
     eapply lesym.
     assumption.

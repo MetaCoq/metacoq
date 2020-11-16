@@ -1,12 +1,10 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import Bool List Program.
-From MetaCoq.Template Require Import config utils monad_utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICTyping PCUICWeakening PCUICSubstitution PCUICWeakeningEnv PCUICElimination.
+(* Distributed under the terms of the MIT license. *)
+From Coq Require Import Program.
+From MetaCoq.Template Require Import config utils.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICTyping
+     PCUICWeakening PCUICSubstitution PCUICWeakeningEnv PCUICElimination.
 From MetaCoq.Erasure Require Import ETyping Extract Prelim.
-Local Open Scope list_scope.
-Set Asymmetric Patterns.
-Import MonadNotation.
+
 
 Local Set Keyed Unification.
 
@@ -80,6 +78,8 @@ Proof.
   split. eauto. econstructor. eauto.
 Qed.
 
+Require Import ssrbool.
+
 Lemma erases_extends :
   env_prop (fun Σ Γ t T =>
               forall Σ', wf Σ' -> extends Σ Σ' -> forall t', erases Σ Γ t t' -> erases (Σ', Σ.2) Γ t t')
@@ -89,9 +89,14 @@ Proof.
   all: match goal with [ H : erases _ _ ?a _ |- _ ] => tryif is_var a then idtac else inv H end.
   all: try now (econstructor; eauto).
   all: try now (econstructor; eapply Is_type_extends; eauto).
+  - econstructor.
+    red.
+    destruct isdecl as [[? ?] ?]. red in H0.
+    red in H5. rewrite H0 in H5.
+    eapply extends_lookup in H0; eauto. now rewrite H0.
   - econstructor. all:eauto.
     2:{ eauto. eapply All2_All_left in X3.
-        2:{ intros ? ? [[[? ?] ?] ?]. exact e. }
+        2:{ intros ? ? [[[? ?] ?] ?]. exact e0. }
         eapply All2_All_mix_left in X3; eauto.
         eapply All2_impl. exact X3.
         intros. destruct H as [? []].
@@ -193,7 +198,7 @@ Proof.
     + eapply H4; eauto.
     + eapply All2_map.
       eapply All2_All_left in X3.
-      2:{ idtac. intros ? ? [[[[? ?] e0] ?] e']. exact e0. }
+      2:{ idtac. intros ? ? [[[? ?] ?] [? [? ?]]]. exact e0. }
       eapply All2_impl. eapply All2_All_mix_left.
       eassumption. eassumption. intros.
       destruct H. destruct p0.
@@ -405,7 +410,7 @@ Proof.
   - inv H0. econstructor.
     eapply is_type_subst; eauto.
   - inv H0.
-    + cbn. econstructor.
+    + cbn. econstructor; auto.
     + econstructor.
       eapply is_type_subst; eauto.
   - depelim H6.
@@ -416,7 +421,7 @@ Proof.
         eapply All2_impl_In; eauto.
         intros. destruct H10, x, y. cbn in *. subst. split; eauto.
         eapply All2_All_left in X3.
-        2:{ intros ? ? [[[[? ?] e1] ?] ?]. exact e1. }
+        2:{ intros ? ? [[[? ?] e1]]. exact e1. }
 
         eapply In_nth_error in H8 as [].
         eapply nth_error_all in X3; eauto.

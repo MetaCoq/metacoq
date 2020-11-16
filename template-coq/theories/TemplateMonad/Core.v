@@ -1,19 +1,15 @@
-From Coq Require Import Strings.String List.
-Import ListNotations.
-Open Scope string_scope.
-From MetaCoq.Template Require Import Ast AstUtils Common.
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import utils Ast AstUtils Common.
 
-Set Universe Polymorphism.
-Set Universe Minimization ToSet.
-Set Primitive Projections.
-Set Printing Universes.
+Local Set Universe Polymorphism.
 
-(** ** The Template Monad
+(** * The Template Monad
 
   A monad for programming with Template Coq structures. Use [Run
   TemplateProgram] on a monad action to produce its side-effects.
 
   Uses a reduction strategy specifier [reductionStrategy]. *)
+
 
 (** *** The TemplateMonad type *)
 Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=
@@ -65,13 +61,9 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=
 | tmInferInstance : option reductionStrategy -> forall A : Type@{t}, TemplateMonad (option_instance A)
 .
 
-From MetaCoq.Template Require Import monad_utils.
-
 (** This allow to use notations of MonadNotation *)
 Instance TemplateMonad_Monad@{t u} : Monad@{t u} TemplateMonad@{t u} :=
   {| ret := @tmReturn ; bind := @tmBind |}.
-
-Import MonadNotation.
 
 
 Polymorphic Definition tmDefinitionRed
@@ -99,7 +91,7 @@ Definition tmQuoteRec {A} (a : A) := tmQuoteRecTransp a true.
 Definition tmLocate1 (q : qualid) : TemplateMonad global_reference :=
   l <- tmLocate q ;;
   match l with
-  | [] => tmFail ("Constant [" ++ q ++ "] not found")
+  | [] => tmFail ("Constant [" ^ q ^ "] not found")
   | x :: _ => tmReturn x
   end.
 

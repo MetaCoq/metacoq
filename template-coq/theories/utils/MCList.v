@@ -1,5 +1,5 @@
 From Coq Require Import Bool Arith Lia SetoidList.
-From MetaCoq Require Import MCPrelude.
+From MetaCoq Require Import MCPrelude MCRelations.
 
 Export ListNotations.
 
@@ -744,9 +744,9 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma nth_error_snoc {A} (l : list A) (a : A) i :
+Lemma nth_error_snoc {A} (l : list A) (a : A) (l' : list A) i :
   i = #|l| ->
-  nth_error (l ++ [a]) i = Some a.
+  nth_error (l ++ a :: l') i = Some a.
 Proof.
   intros ->.
   rewrite nth_error_app_ge; [easy|].
@@ -788,6 +788,13 @@ Section ListSize.
     induction l; simpl. reflexivity.
     rewrite rev_cons list_size_app IHl; cbn; lia.
   Qed.
+
+  Lemma list_size_length (l : list A)
+    : list_size l >= length l.
+  Proof.
+    induction l; simpl; lia.
+  Qed.    
+
 
 End ListSize.
 

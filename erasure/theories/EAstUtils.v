@@ -1,10 +1,8 @@
-From Coq Require Import Ascii String OrderedType Arith.
-From MetaCoq.Template Require Import utils.
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import utils Kernames.
 From MetaCoq.Erasure Require Import EAst.
-Import List.ListNotations.
 Require Import ssreflect ssrbool.
 
-Set Asymmetric Patterns.
 
 Fixpoint decompose_app_rec t l :=
   match t with
@@ -13,6 +11,9 @@ Fixpoint decompose_app_rec t l :=
   end.
 
 Definition decompose_app f := decompose_app_rec f [].
+
+Definition head t := fst (decompose_app t).
+Definition spine t := snd (decompose_app t).
 
 Lemma decompose_app_rec_mkApps f l l' :
   decompose_app_rec (mkApps f l) l' = decompose_app_rec f (l ++ l').
@@ -133,7 +134,6 @@ Lemma decompose_app_rec_eq f l :
 Proof.
   destruct f; simpl; try discriminate; congruence.
 Qed.
-Close Scope string_scope.
 
 Lemma decompose_app_rec_inv' f l hd args :
   decompose_app_rec f l = (hd, args) ->
@@ -189,6 +189,19 @@ Proof.
   rewrite !app_nil_r in Happ. intuition congruence.
 Qed.
 
+Lemma head_mkApps f a : head (mkApps f a) = head f.
+Proof.
+  rewrite /head /decompose_app /=.
+  rewrite decompose_app_rec_mkApps /= app_nil_r.
+  induction f in a |- *; simpl; auto.
+  now rewrite !IHf1.
+Qed.
+
+Lemma head_tApp f a : head (tApp f a) = head f.
+Proof.
+  eapply (head_mkApps f [a]).
+Qed.
+
 Ltac solve_discr :=
   match goal with
     H : mkApps _ _ = mkApps ?f ?l |- _ =>
@@ -231,29 +244,49 @@ Definition isBox t :=
   | _ => false
   end.
 
-Local Open Scope string_scope.
-
 Definition string_of_def {A : Set} (f : A -> string) (def : def A) :=
-  "(" ++ string_of_name (dname def) ++ "," ++ f (dbody def) ++ ","
-      ++ string_of_nat (rarg def) ++ ")".
+  "(" ^ string_of_name (dname def) ^ "," ^ f (dbody def) ^ ","
+      ^ string_of_nat (rarg def) ^ ")".
 
 Fixpoint string_of_term (t : term) : string :=
   match t with
   | tBox => "∎"
-  | tRel n => "Rel(" ++ string_of_nat n ++ ")"
-  | tVar n => "Var(" ++ n ++ ")"
-  | tEvar ev args => "Evar(" ++ string_of_nat ev ++ "[]" (* TODO *)  ++ ")"
-  | tLambda na t => "Lambda(" ++ string_of_name na ++ "," ++ string_of_term t ++ ")"
-  | tLetIn na b t => "LetIn(" ++ string_of_name na ++ "," ++ string_of_term b ++ "," ++ string_of_term t ++ ")"
-  | tApp f l => "App(" ++ string_of_term f ++ "," ++ string_of_term l ++ ")"
-  | tConst c => "Const(" ++ string_of_kername c ++ ")"
-  | tConstruct i n => "Construct(" ++ string_of_inductive i ++ "," ++ string_of_nat n ++ ")"
+  | tRel n => "Rel(" ^ string_of_nat n ^ ")"
+  | tVar n => "Var(" ^ n ^ ")"
+  | tEvar ev args => "Evar(" ^ string_of_nat ev ^ "[]" (* TODO *)  ^ ")"
+  | tLambda na t => "Lambda(" ^ string_of_name na ^ "," ^ string_of_term t ^ ")"
+  | tLetIn na b t => "LetIn(" ^ string_of_name na ^ "," ^ string_of_term b ^ "," ^ string_of_term t ^ ")"
+  | tApp f l => "App(" ^ string_of_term f ^ "," ^ string_of_term l ^ ")"
+  | tConst c => "Const(" ^ string_of_kername c ^ ")"
+  | tConstruct i n => "Construct(" ^ string_of_inductive i ^ "," ^ string_of_nat n ^ ")"
   | tCase (ind, i) t brs =>
-    "Case(" ++ string_of_inductive ind ++ "," ++ string_of_nat i ++ "," ++ string_of_term t ++ ","
-            ++ string_of_list (fun b => string_of_term (snd b)) brs ++ ")"
+    "Case(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_term t ^ ","
+            ^ string_of_list (fun b => string_of_term (snd b)) brs ^ ")"
   | tProj (ind, i, k) c =>
-    "Proj(" ++ string_of_inductive ind ++ "," ++ string_of_nat i ++ "," ++ string_of_nat k ++ ","
-            ++ string_of_term c ++ ")"
-  | tFix l n => "Fix(" ++ (string_of_list (string_of_def string_of_term) l) ++ "," ++ string_of_nat n ++ ")"
-  | tCoFix l n => "CoFix(" ++ (string_of_list (string_of_def string_of_term) l) ++ "," ++ string_of_nat n ++ ")"
+    "Proj(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_nat k ^ ","
+            ^ string_of_term c ^ ")"
+  | tFix l n => "Fix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
+  | tCoFix l n => "CoFix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
+  end.
+
+(** Compute all the global environment dependencies of the term *)
+
+Fixpoint term_global_deps (t : EAst.term) :=
+  match t with
+  | EAst.tConst kn
+  | EAst.tConstruct {| inductive_mind := kn |} _ => KernameSet.singleton kn
+  | EAst.tLambda _ x => term_global_deps x
+  | EAst.tApp x y
+  | EAst.tLetIn _ x y => KernameSet.union (term_global_deps x) (term_global_deps y)
+  | EAst.tCase (ind, _) x brs =>
+    KernameSet.union (KernameSet.singleton (inductive_mind ind)) 
+      (List.fold_left (fun acc x => KernameSet.union (term_global_deps (snd x)) acc) brs 
+        (term_global_deps x))
+   | EAst.tFix mfix _ | EAst.tCoFix mfix _ =>
+     List.fold_left (fun acc x => KernameSet.union (term_global_deps (EAst.dbody x)) acc) mfix
+      KernameSet.empty
+  | EAst.tProj p c => 
+    KernameSet.union (KernameSet.singleton (inductive_mind (fst (fst p))))
+      (term_global_deps c)
+  | _ => KernameSet.empty
   end.

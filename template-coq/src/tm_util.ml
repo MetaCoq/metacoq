@@ -10,7 +10,7 @@ let gen_constant_in_modules s =
   (* lazy (Universes.constr_of_global (Coqlib.gen_reference_in_modules locstr dirs s)) *)
 
 
-let opt_debug = ref false
+let opt_debug = ref true
 
 let debug (m : unit ->Pp.t) =
   if !opt_debug then
@@ -68,7 +68,7 @@ type ('term, 'name, 'nat) adef = { adname : 'name; adtype : 'term; adbody : 'ter
 
 type ('term, 'name, 'nat) amfixpoint = ('term, 'name, 'nat) adef list
 
-type ('term, 'nat, 'ident, 'name, 'quoted_sort, 'cast_kind, 'kername, 'inductive, 'universe_instance, 'projection) structure_of_term =
+type ('term, 'nat, 'ident, 'name, 'quoted_sort, 'cast_kind, 'kername, 'inductive, 'relevance, 'universe_instance, 'projection) structure_of_term =
   | ACoq_tRel of 'nat
   | ACoq_tVar of 'ident
   | ACoq_tEvar of 'nat * 'term list
@@ -81,7 +81,7 @@ type ('term, 'nat, 'ident, 'name, 'quoted_sort, 'cast_kind, 'kername, 'inductive
   | ACoq_tConst of 'kername * 'universe_instance
   | ACoq_tInd of 'inductive * 'universe_instance
   | ACoq_tConstruct of 'inductive * 'nat * 'universe_instance
-  | ACoq_tCase of ('inductive * 'nat) * 'term * 'term * ('nat * 'term) list
+  | ACoq_tCase of (('inductive * 'nat) * 'relevance) * 'term * 'term * ('nat * 'term) list
   | ACoq_tProj of 'projection * 'term
   | ACoq_tFix of ('term, 'name, 'nat) amfixpoint * 'nat
   | ACoq_tCoFix of ('term, 'name, 'nat) amfixpoint * 'nat

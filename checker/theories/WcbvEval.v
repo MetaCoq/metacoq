@@ -1,15 +1,10 @@
-(* Distributed under the terms of the MIT license.   *)
-Set Warnings "-notation-overridden".
+(* Distributed under the terms of the MIT license. *)
+From Coq Require Import CRelationClasses.
+From MetaCoq.Template Require Import config utils Ast AstUtils Reflect LiftSubst MCList
+     UnivSubst WfInv Typing.
 
-From Coq Require Import Arith Bool List Program Lia CRelationClasses.
-From MetaCoq.Template Require Import config utils Ast AstUtils LiftSubst MCList UnivSubst WfInv Typing.
-From MetaCoq.Checker Require Import Reflect.
-
-Set Asymmetric Patterns.
 Require Import ssreflect ssrbool.
 Require Import Equations.Prop.DepElim.
-
-Local Ltac inv H := inversion H; subst.
 
 (** * Weak-head call-by-value evaluation strategy.
 
@@ -22,6 +17,9 @@ Local Ltac inv H := inversion H; subst.
   reduction strategy of ML programming languages. It is used to state
   the extraction conjecture that can be applied to Coq terms to produce
   (untyped) terms where all proofs are erased to a dummy value. *)
+
+
+Local Ltac inv H := inversion H; subst.
 
 (** ** Big step version of weak cbv beta-zeta-iota-fix-delta reduction. *)
 
@@ -152,10 +150,10 @@ Section Wcbv.
       eval (tConst c u) (tConst c u)
 
   (** Case *)
-  | eval_iota ind pars discr c u args p brs res :
+  | eval_iota ind pars r discr c u args p brs res :
       eval discr (mkApps (tConstruct ind c u) args) ->
       eval (iota_red pars c args brs) res ->
-      eval (tCase (ind, pars) p discr brs) res
+      eval (tCase ((ind, pars), r) p discr brs) res
 
   (** Proj *)
   | eval_proj i pars arg discr args u a res :
@@ -215,12 +213,12 @@ Section Wcbv.
   (* Scheme Minimality for eval Sort Type. *)
   Definition eval_evals_ind :
     forall P : term -> term -> Type,
-      (forall (f : term) (na : name) t b a a' l res,
+      (forall (f : term) (na : aname) t b a a' l res,
           eval f (tLambda na t b) ->
           P f (tLambda na t b) -> eval a a' -> P a a' ->
           eval (mkApps (b {0 := a'}) l) res -> P (mkApps (b {0 := a'}) l) res ->
           P (tApp f (a :: l)) res) ->
-      (forall (na : name) (b0 b0' t b1 res : term),
+      (forall (na : aname) (b0 b0' t b1 res : term),
           eval b0 b0' -> P b0 b0' -> eval (b1 {0 := b0'}) res -> P (b1 {0 := b0'}) res -> P (tLetIn na b0 t b1) res) ->
       (forall (i : nat) (body res : term),
           option_map decl_body (nth_error Γ i) = Some (Some body) ->
@@ -233,11 +231,11 @@ Section Wcbv.
             eval (subst_instance_constr u body) res -> P (subst_instance_constr u body) res -> P (tConst c u) res) ->
       (forall c (decl : constant_body),
           declared_constant Σ c decl -> forall u : Instance.t, cst_body decl = None -> P (tConst c u) (tConst c u)) ->
-      (forall (ind : inductive) (pars : nat) (discr : term) (c : nat) (u : Instance.t)
+      (forall (ind : inductive) (pars : nat) r (discr : term) (c : nat) (u : Instance.t)
               (args : list term) (p : term) (brs : list (nat × term)) (res : term),
           eval discr (mkApps (tConstruct ind c u) args) ->
           P discr (mkApps (tConstruct ind c u) args) ->
-          eval (iota_red pars c args brs) res -> P (iota_red pars c args brs) res -> P (tCase (ind, pars) p discr brs) res) ->
+          eval (iota_red pars c args brs) res -> P (iota_red pars c args brs) res -> P (tCase ((ind, pars), r) p discr brs) res) ->
       (forall (i : inductive) (pars arg : nat) (discr : term) (args : list term) (u : Instance.t)
               (a res : term),
           eval discr (mkApps (tConstruct i 0 u) args) ->
@@ -263,7 +261,7 @@ Section Wcbv.
           unfold_fix mfix idx = Some (narg, fn) ->
           ~~ is_constructor narg (fixargsv ++ argsv) ->
           P (mkApps f args) (mkApps (tFix mfix idx) (fixargsv ++ argsv))) ->
-      (forall (ip : inductive × nat) (mfix : mfixpoint term) (idx : nat) (p : term) (args : list term)
+      (forall (ip : (inductive × nat) × relevance) (mfix : mfixpoint term) (idx : nat) (p : term) (args : list term)
               (narg : nat) (fn : term) (brs : list (nat × term)) (res : term),
           unfold_cofix mfix idx = Some (narg, fn) ->
           eval (tCase ip p (mkApps fn args) brs) res ->
@@ -358,9 +356,9 @@ Section Wcbv.
     value (mkApps t l) ->
     ((l = []) * atom t) + (value_head t * All value l) + (isStuckFix t l * All value l).
   Proof.
-    intros H H'. generalize_eqs H'. revert t H. induction H' using value_values_ind.
-    intros.
-    subst.
+    intros H H'. generalize_eq x (mkApps t l).
+    revert t H. induction H' using value_values_ind.
+    intros. subst.
     - now eapply atom_mkApps in H.
     - intros * isapp appeq. move: (value_head_nApp H) => Ht.
       apply mkApps_eq_inj in appeq; intuition subst; auto.
@@ -627,7 +625,7 @@ Section Wcbv.
   (*     solve_discr'. *)
   (*     specialize (IHeval1 _ _ _ eq_refl). *)
   (*     firstorder eauto. subst. *)
-  (*     exists (x ++ [a'])%list. *)
+  (*     exists (x ++ [a']). *)
   (*     split. eapply All2_app; auto. *)
   (*     now rewrite -mkApps_nested. *)
   (*   - eapply atom_mkApps in i; intuition try easy. *)
@@ -726,7 +724,7 @@ Lemma All2_app_inv_l :
   forall A B R l1 l2 r,
     @All2 A B R (l1 ++ l2) r ->
     ∑ r1 r2,
-      (r = r1 ++ r2)%list ×
+      (r = r1 ++ r2) ×
       All2 R l1 r1 ×
       All2 R l2 r2.
 Proof.

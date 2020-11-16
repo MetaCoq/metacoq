@@ -4,25 +4,29 @@
 
 src/init.mli
 src/init.ml
-src/classes0.mli
-src/classes0.ml
+# src/classes0.mli
+# src/classes0.ml
 
 # From Coq's stdlib
 src/mSetWeakList.mli
 src/mSetWeakList.ml
 src/eqdepFacts.mli
 src/eqdepFacts.ml
+src/orderedTypeAlt.mli
+src/orderedTypeAlt.ml
 
 src/ssrbool.ml
 src/ssrbool.mli
-src/utils.ml
-src/utils.mli
 src/monad_utils.ml
 src/monad_utils.mli
 src/uGraph0.ml
 src/uGraph0.mli
 src/wGraph.ml
 src/wGraph.mli
+src/kernames.mli
+src/kernames.ml
+src/reflect.mli
+src/reflect.ml
 src/typing0.mli
 src/typing0.ml
 
@@ -35,12 +39,14 @@ src/pCUICLiftSubst.ml
 src/pCUICLiftSubst.mli
 src/eqDecInstances.ml
 src/eqDecInstances.mli
-# src/pCUICInduction.mli
-# src/pCUICInduction.ml
-src/pCUICReflect.mli
-src/pCUICReflect.ml
+src/pCUICInduction.mli
+src/pCUICInduction.ml
+# src/pCUICReflect.mli
+# src/pCUICReflect.ml
 src/pCUICEquality.mli
 src/pCUICEquality.ml
+src/pCUICReduction.ml
+src/pCUICReduction.mli
 src/pCUICTyping.ml
 src/pCUICTyping.mli
 src/pCUICUnivSubst.ml
@@ -51,12 +57,12 @@ src/pCUICPosition.mli
 src/pCUICPosition.ml
 src/pCUICNormal.mli
 src/pCUICNormal.ml
+src/pCUICWfUniverses.mli
+src/pCUICWfUniverses.ml
 # src/pCUICChecker.ml
 # src/pCUICChecker.mli
 # src/pCUICRetyping.ml
 # src/pCUICRetyping.mli
-# src/pCUICMetaTheory.ml
-# src/pCUICMetaTheory.mli
 # src/pCUICWeakeningEnv.ml
 # src/pCUICWeakeningEnv.mli
 # src/pCUICWeakening.mli
@@ -77,8 +83,6 @@ src/pCUICChecker.ml
 src/pCUICChecker.mli
 src/pCUICPretty.mli
 src/pCUICPretty.ml
-src/pCUICSafeLemmata.mli
-src/pCUICSafeLemmata.ml
 src/templateToPCUIC.mli
 src/templateToPCUIC.ml
 
@@ -114,6 +118,8 @@ src/safeErasureFunction.mli
 src/safeErasureFunction.ml
 src/ePretty.mli
 src/ePretty.ml
+src/eOptimizePropDiscr.mli
+src/eOptimizePropDiscr.ml
 
 src/safeTemplateErasure.mli
 src/safeTemplateErasure.ml

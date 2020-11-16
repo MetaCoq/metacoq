@@ -1,9 +1,5 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import List BinPos Lia.
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq Require Import utils Ast AstUtils Induction.
-
-Import ListNotations.
 
 (** * Lifting and substitution for the AST
 
@@ -11,7 +7,6 @@ Import ListNotations.
   Definition of [closedn] (boolean) predicate for checking if
   a term is closed. *)
 
-Set Asymmetric Patterns.
 
 Fixpoint lift n k t : term :=
   match t with

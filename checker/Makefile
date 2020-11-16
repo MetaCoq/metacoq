@@ -24,6 +24,10 @@ install: coq # plugin
 	$(MAKE) -f Makefile.coq install
 	# $(MAKE) -f Makefile.plugin install
 
+uninstall: coq # plugin
+	$(MAKE) -f Makefile.coq uninstall
+	# $(MAKE) -f Makefile.plugin uninstall
+
 .PHONY: plugin
 
 clean: Makefile.coq Makefile.plugin

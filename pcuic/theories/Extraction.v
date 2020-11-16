@@ -1,12 +1,13 @@
-(** Extraction setup for the pcuic phase of MetaCoq.
+(* Distributed under the terms of the MIT license. *)
+Require Import MetaCoq.Template.utils.
+Require Import FSets ssreflect ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt.
+
+(** * Extraction setup for the pcuic phase of MetaCoq.
 
     Any extracted code planning to link with the plugin's OCaml reifier
     should use these same directives for consistency.
 *)
 
-From Coq Require Import FSets ssreflect.
-Require Import ExtrOcamlBasic.
-Require Import ExtrOcamlString ExtrOcamlZInt.
 
 (* Ignore [Decimal.int] before the extraction issue is solved:
    https://github.com/coq/coq/issues/7017. *)
@@ -14,9 +15,10 @@ Extract Inductive Decimal.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun 
 Extract Inductive Hexadecimal.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
 Extract Inductive Numeral.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
 
-Extraction Blacklist config uGraph universes Ast String List Logic Logic0 Nat Int
+Extraction Blacklist Classes config uGraph universes Ast String List Logic Logic0 Nat Int
            UnivSubst Typing Checker Retyping OrderedType Classes equality.
 Set Warnings "-extraction-opaque-accessed".
+Set Warnings "-extraction-reserved-identifier".
 
 Cd "src".
 
@@ -25,8 +27,7 @@ Extraction Library Init.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICUnivSubst
   PCUICInduction PCUICLiftSubst PCUICTyping PCUICNormal PCUICSafeLemmata
   PCUICEquality (* PCUICWeakeningEnv *) (* PCUICWeakening *)
-  (* PCUICSubstitution *) PCUICPretty PCUICChecker PCUICRetyping PCUICMetaTheory
-  TemplateToPCUIC.
+  (* PCUICSubstitution *) PCUICPretty TemplateToPCUIC.
 From Equations Require Import Equations.
 
 (* Should be in Equations *)
@@ -42,6 +43,7 @@ Extraction Inline Equations.Init.pr2.
 Extraction Inline Equations.Init.hidebody.
 Extraction Inline Equations.Prop.DepElim.solution_left.
 
+Extraction Inline MCEquality.transport.
 (* Extraction Inline NoConfusionPackage_All_local_env_over. *)
 (* Extraction Inline NoConfusionPackage_context_decl. *)
 Extraction Library Signature.
@@ -55,7 +57,7 @@ Extraction Library CMorphisms.
 (* Separate Extraction PCUICNormal PCUICAst PCUICAstUtils PCUICUnivSubst PCUICLiftSubst PCUICReflect PCUICPosition *)
 (*          PCUICCumulativity PCUICSubstitution *)
 (*          (* PCUICTyping PCUICEquality *) *)
-(*          PCUICChecker.type_of PCUICRetyping TemplateToPCUIC (* PCUICSafeLemmata *). *)
+(*          TemplateToPCUIC (* PCUICSafeLemmata *). *)
 Extraction Library PCUICAst.
 Extraction Library PCUICAstUtils.
 Extraction Library PCUICUtils.
@@ -66,9 +68,6 @@ Extraction Library PCUICReflect.
 Extraction Library EqDecInstances.
 Extraction Library PCUICEquality.
 Extraction Library PCUICTyping.
-Extraction Library PCUICChecker.
-Extraction Library PCUICRetyping.
-Extraction Library PCUICMetaTheory.
 Extraction Library TemplateToPCUIC.
 Extraction Library PCUICPretty.
 Cd "..".

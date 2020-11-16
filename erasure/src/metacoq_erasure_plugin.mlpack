@@ -7,6 +7,9 @@ Utils
 WGraph
 UGraph0
 Typing0
+OrderedTypeAlt
+Kernames
+Reflect
 
 Init
 Classes0
@@ -18,18 +21,15 @@ PCUICAstUtils
 PCUICUnivSubst
 PCUICLiftSubst
 EqDecInstances
-PCUICReflect
 PCUICEquality
 PCUICTyping
 PCUICReduction
+PCUICInduction
+PCUICWfUniverses
 PCUICNormal
 PCUICPosition
-PCUICChecker
 PCUICPretty
-PCUICRetyping
-PCUICMetaTheory
 TemplateToPCUIC
-PCUICSafeLemmata
 PCUICCumulativity
 
 PCUICUnivSubst
@@ -46,7 +46,7 @@ ETyping
 EPretty
 Extract
 ErasureFunction
-SafeErasureFunction
-SafeTemplateErasure
+EOptimizePropDiscr
+Erasure
 
 G_metacoq_erasure

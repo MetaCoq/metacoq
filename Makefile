@@ -1,3 +1,5 @@
+TIMED ?=
+
 all: template-coq checker pcuic safechecker erasure examples
 
 .PHONY: all template-coq checker pcuic erasure install html clean mrproper .merlin test-suite translations
@@ -9,6 +11,14 @@ install: all
 	$(MAKE) -C safechecker install
 	$(MAKE) -C erasure install
 	$(MAKE) -C translations install
+
+uninstall: all
+	$(MAKE) -C template-coq uninstall
+	$(MAKE) -C checker uninstall
+	$(MAKE) -C pcuic uninstall
+	$(MAKE) -C safechecker uninstall
+	$(MAKE) -C erasure uninstall
+	$(MAKE) -C translations uninstall
 
 html: all
 	"coqdoc" -toc -utf8 -interpolate -l -html \
@@ -79,7 +89,8 @@ cleanplugins:
 	$(MAKE) -C erasure cleanplugin
 
 ci-local:
-	$(MAKE) all test-suite
+	./configure.sh local
+	$(MAKE) all test-suite TIMED=pretty-timed
 
 ci-opam:
 	# Use -v so that regular output is produced

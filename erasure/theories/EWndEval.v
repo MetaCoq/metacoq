@@ -1,11 +1,8 @@
-
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq.Erasure Require Import EAst ELiftSubst ETyping.
-Local Open Scope string_scope.
-Set Asymmetric Patterns.
-
-Local Existing Instance config.default_checker_flags.
 
 (** * 1-step non-deterministic weak reduction **)
+
 
 Section Wnd.
   Context (Σ : global_declarations).

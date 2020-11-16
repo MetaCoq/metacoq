@@ -1,6 +1,4 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import List Program Lia.
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils.
 From MetaCoq.Erasure Require Import EAst EInduction.
 
@@ -10,8 +8,6 @@ From MetaCoq.Erasure Require Import EAst EInduction.
   Along with standard commutation lemmas.
   Definition of [closedn] (boolean) predicate for checking if
   a term is closed. *)
-
-Set Asymmetric Patterns.
 
 Fixpoint lift n k t : term :=
   match t with
@@ -101,40 +97,6 @@ Fixpoint closedn k (t : term) : bool :=
 
 Notation closed t := (closedn 0 t).
 
-Create HintDb terms.
-
-Ltac arith_congr := repeat (try lia; progress f_equal).
-
-Ltac easy0 :=
-  let rec use_hyp H :=
-   (match type of H with
-    | _ /\ _ => exact H || destruct_hyp H
-    | _ * _ => exact H || destruct_hyp H
-    | _ => try (solve [ inversion H ])
-    end)
-  with do_intro := (let H := fresh in
-                    intro H; use_hyp H)
-  with destruct_hyp H := (case H; clear H; do_intro; do_intro)
-  in
-  let rec use_hyps :=
-   (match goal with
-    | H:_ /\ _ |- _ => exact H || (destruct_hyp H; use_hyps)
-    | H:_ * _ |- _ => exact H || (destruct_hyp H; use_hyps)
-    | H:_ |- _ => solve [ inversion H ]
-    | _ => idtac
-    end)
-  in
-  let do_atom := (solve [ trivial with eq_true | reflexivity | symmetry; trivial | contradiction | congruence]) in
-  let rec do_ccl := (try do_atom; repeat (do_intro; try do_atom); try arith_congr; (solve [ split; do_ccl ])) in
-  (solve [ do_atom | use_hyps; do_ccl ]) || fail "Cannot solve this goal".
-
-
-Hint Extern 10 (_ < _)%nat => lia : terms.
-Hint Extern 10 (_ <= _)%nat => lia : terms.
-Hint Extern 10 (@eq nat _ _) => lia : terms.
-
-Ltac easy ::= easy0 || solve [intuition eauto 3 with core terms].
-
 Notation subst_rec N M k := (subst N k M) (only parsing).
 
 Require Import PeanoNat.
@@ -223,10 +185,6 @@ Ltac change_Sk :=
     |- context [S (?x + ?y)] => progress change (S (x + y)) with (S x + y)
   end.
 
-Ltac all_simpl :=
-  progress (unfold compose; simpl).
-
-Hint Extern 10 => all_simpl : all.
 
 Ltac solve_all :=
   unfold tCaseBrsProp, tFixProp in *;
@@ -261,8 +219,6 @@ Lemma lift0_p : forall M, lift0 0 M = M.
   intros; unfold lift in |- *.
   apply lift0_id; easy.
 Qed.
-
-Hint Extern 10 => progress unfold compose : all.
 
 Hint Extern 10 => apply_spec : all.
 
@@ -328,8 +284,6 @@ Proof. destruct bod; simpl; try congruence. Qed.
 
 Hint Resolve lift_isApp map_non_nil isLambda_lift : all.
 
-Hint Unfold compose : core.
-Hint Transparent compose : core.
 
 Lemma simpl_subst_rec :
   forall M N n p k,

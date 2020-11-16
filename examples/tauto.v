@@ -1,13 +1,12 @@
-From Coq Require Import Bool String List Lia PeanoNat Peano_dec.
-From MetaCoq.Template Require Import All.
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import utils All.
+
 From Equations Require Import Equations.
-Set Keyed Unification.
-Import ListNotations.
-Import MonadNotation.
-Local Open Scope list_scope.
 
-Existing Instance config.default_checker_flags.
+Definition banon := {| binder_name := nAnon; binder_relevance := Relevant |}.
+Definition bnamed n := {| binder_name := nNamed n; binder_relevance := Relevant |}.
 
+Local Existing Instance config.default_checker_flags.
 
 Definition var := nat.
 
@@ -482,7 +481,7 @@ MetaCoq Quote Definition Mand := and.
 MetaCoq Quote Definition Mor := or.
 
 Definition tImpl (A B : term) :=
-  tProd nAnon A (lift0 1 B).
+  tProd banon A (lift0 1 B).
 
 Definition tAnd (A B : term) :=
   tApp Mand [ A ; B ].
@@ -815,9 +814,9 @@ Definition inspect {A} (x : A) : { y : A | y = x } := exist _ x eq_refl.
 Definition tmLocateInd (q : qualid) : TemplateMonad kername :=
   l <- tmLocate q ;;
   match l with
-  | [] => tmFail ("Inductive [" ++ q ++ "] not found")
+  | [] => tmFail ("Inductive [" ^ q ^ "] not found")
   | (IndRef ind) :: _ => tmReturn ind.(inductive_mind)
-  | _ :: _ => tmFail ("[" ++ q ++ "] not an inductive")
+  | _ :: _ => tmFail ("[" ^ q ^ "] not an inductive")
   end.
 
 
@@ -938,6 +937,8 @@ Proof.
     constructor.
 Qed.
 
+Local Set Keyed Unification.
+
 Definition reify_correct :
   forall Σ Γ P,
     well_prop Σ Γ P ->
@@ -987,7 +988,7 @@ Qed.
 Section Plugin.
 
   Definition cdecl_Type (P:term) :=
-    {| decl_name := nAnon; decl_body := None; decl_type := P |}.
+    {| decl_name := banon; decl_body := None; decl_type := P |}.
 
   Definition trivial_hyp (h:list form) v : forall h : form, In h [] -> sem h v.
     intro. destruct 1.
@@ -996,8 +997,6 @@ Section Plugin.
   Transparent reify. 
 
   Inductive NotSolvable (s: string) : Prop := notSolvable: NotSolvable s.
-
-  Local Open Scope string_scope.
 
   Definition inhabit_formula gamma Mphi Gamma :
     match reify (empty_ext []) gamma Mphi with

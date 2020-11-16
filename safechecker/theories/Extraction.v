@@ -1,14 +1,15 @@
-(** Extraction setup for the safechecker phase of MetaCoq.
+(* Distributed under the terms of the MIT license. *)
+Require Import OrdersTac ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt.
+Require Import MetaCoq.Template.utils.
+From MetaCoq.SafeChecker Require Import PCUICSafeChecker PCUICSafeConversion
+     SafeTemplateChecker.
+
+(** * Extraction setup for the safechecker phase of MetaCoq.
 
     Any extracted code planning to link with the plugin's OCaml reifier
     should use these same directives for consistency.
 *)
 
-Require Import MetaCoq.Template.utils.
-Require Import OrdersTac.
-Require Import ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt.
-
-From MetaCoq.SafeChecker Require Import PCUICSafeChecker PCUICSafeConversion SafeTemplateChecker.
 
 (* Ignore [Decimal.int] before the extraction issue is solved:
    https://github.com/coq/coq/issues/7017. *)
@@ -19,14 +20,14 @@ Extract Inductive Numeral.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun 
 Extract Constant ascii_compare =>
  "fun x y -> match Char.compare x y with 0 -> Eq | x when x < 0 -> Lt | _ -> Gt".
 
-Extraction Blacklist config uGraph Universes Ast String List Nat Int
+Extraction Blacklist Classes config uGraph Universes Ast String List Nat Int
            UnivSubst Typing Checker Retyping OrderedType Logic Common Equality Classes.
 Set Warnings "-extraction-opaque-accessed".
 Set Warnings "-extraction-reserved-identifier".
 
 Extraction Inline PCUICSafeConversion.Ret.
 
-Extract Inductive Equations.Init.sigma => "(,)" ["(,)"].
+Extract Inductive Equations.Init.sigma => "( * )" ["(,)"].
 
 Extract Constant PCUICTyping.fix_guard => "(fun x -> true)".
 Extract Constant PCUICTyping.cofix_guard => "(fun x -> true)".

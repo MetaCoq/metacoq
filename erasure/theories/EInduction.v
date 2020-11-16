@@ -1,24 +1,22 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From MetaCoq.Erasure Require Import EAst.
+(* Distributed under the terms of the MIT license. *)
 Require Import List.
-Set Asymmetric Patterns.
+From MetaCoq.Template Require Import utils.
+From MetaCoq.Erasure Require Import EAst.
 
 (** * Deriving a compact induction principle for terms
-
-  *WIP*
 
   Allows to get the right induction principle on lists of terms appearing
   in the term syntax (in evar, applications, branches of cases and (co-)fixpoints. *)
 
+
 (** Custom induction principle on syntax, dealing with the various lists appearing in terms. *)
 
 Lemma term_forall_list_ind :
-  forall P : term -> Prop,
+  forall P : term -> Type,
     (P tBox) ->
     (forall n : nat, P (tRel n)) ->
     (forall i : ident, P (tVar i)) ->
-    (forall (n : nat) (l : list term), Forall P l -> P (tEvar n l)) ->
+    (forall (n : nat) (l : list term), All P l -> P (tEvar n l)) ->
     (forall (n : name) (t : term), P t -> P (tLambda n t)) ->
     (forall (n : name) (t : term),
         P t -> forall t0 : term, P t0 -> P (tLetIn n t t0)) ->
@@ -29,8 +27,8 @@ Lemma term_forall_list_ind :
         P t -> forall l : list (nat * term),
             tCaseBrsProp P l -> P (tCase p t l)) ->
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
-    (forall (m : mfixpoint term) (n : nat), Forall (fun x => P (dbody x)) m -> P (tFix m n)) ->
-    (forall (m : mfixpoint term) (n : nat), Forall (fun x => P (dbody x)) m -> P (tCoFix m n)) ->
+    (forall (m : mfixpoint term) (n : nat), All (fun x => P (dbody x)) m -> P (tFix m n)) ->
+    (forall (m : mfixpoint term) (n : nat), All (fun x => P (dbody x)) m -> P (tCoFix m n)) ->
     forall t : term, P t.
 Proof.
   intros until t. revert t.

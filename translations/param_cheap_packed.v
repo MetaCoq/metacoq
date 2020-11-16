@@ -1,11 +1,7 @@
-Require Import MetaCoq.Template.All.
-Require Import Arith.Compare_dec.
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import utils All.
+From MetaCoq.Checker Require Import All.
 From MetaCoq.Translations Require Import translation_utils sigma.
-Require Import MetaCoq.Checker.All.
-Import String Lists.List.ListNotations MonadNotation.
-Open Scope string_scope.
-Open Scope list_scope.
-Open Scope sigma_scope.
 
 Local Existing Instance config.default_checker_flags.
 Local Existing Instance default_fuel.
@@ -159,7 +155,10 @@ Definition tsl_mind_body (ΣE : tsl_context) (mp : modpath)
                  bodies <- _ ;;
                  ret (_, [{| ind_npars := mind.(ind_npars);
                              ind_bodies := bodies ;
-                 ind_universes := mind.(ind_universes);
+                 ind_universes := match mind.(ind_universes) with 
+                  | Monomorphic_ctx _ => Monomorphic_ctx ContextSet.empty (* Don't redeclare universes *)
+                  | Polymorphic_ctx ctx => Polymorphic_ctx ctx
+                 end;
                  ind_variance := mind.(ind_variance) |}])).  (* FIXME always ok? *)
   (* L is [(tInd n, tRel 0); ... ; (tInd 0, tRel n)] *)
   simple refine (let L : list term := _ in _).
@@ -176,7 +175,8 @@ Definition tsl_mind_body (ΣE : tsl_context) (mp : modpath)
                    ind_type := A;
                    ind_kelim := ind.(ind_kelim);
                    ind_ctors := ctors;
-                   ind_projs := [] |}).  (* TODO *)
+                   ind_projs := [];
+                   ind_relevance := ind.(ind_relevance) |}).  (* TODO *)
     + (* arity  *)
       refine (t2 <- tsl2' ind.(ind_type) ;;
               let i1 := tsl_rec1 0 (tInd (mkInd kn i) []) in
@@ -198,9 +198,8 @@ Definition tsl_mind_body (ΣE : tsl_context) (mp : modpath)
     + (* ind *)
       refine (IndRef (mkInd kn i), pair ind.(ind_type) a2 (tInd (mkInd kn i) []) (tInd (mkInd kn' i) [])).
     + (* ctors *)
-      (* refine (fold_left_i (fun E k _ => _ :: E) ind.(ind_ctors) []). *)
-      (* exact (ConstructRef (mkInd id i) k, tConstruct (mkInd id' i) k []). *)
-      refine [].
+      refine (fold_left_i (fun E k _ => _ :: E) ind.(ind_ctors) []).
+      exact (ConstructRef (mkInd kn i) k, tConstruct (mkInd kn' i) k []). 
   - exact mind.(ind_finite).
   - (* FIXME don't know what to do *) refine (mind.(ind_params)).
 Defined.

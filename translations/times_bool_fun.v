@@ -1,11 +1,12 @@
-From MetaCoq Require Import Template.All Checker.All.
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import utils All.
+From MetaCoq Require Import Checker.All.
 From MetaCoq.Translations Require Import translation_utils MiniHoTT.
-Import String Lists.List.ListNotations MonadNotation.
-Open Scope list_scope. Open Scope string_scope.
+
 
 Unset Strict Unquote Universe Mode.
 
-Set Primitive Projections.
+Local Set Primitive Projections.
 Record prod A B := pair { π1 : A ; π2 : B }.
 
 Arguments π1 {_ _} _.
@@ -87,7 +88,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_env_ext) (E : tsl_table) (Γ : contex
                    bodies;;
     bodies' <- monad_map (fun '{| dname := na; dtype := ty; dbody := b; rarg := r |} =>
                            ty' <- tsl_rec fuel Σ E Γ ty ;;
-                           b'  <- tsl_rec fuel Σ E (Γ ++ Γ')%list b ;;
+                           b'  <- tsl_rec fuel Σ E (Γ ++ Γ') b ;;
                            ret {| dname := na; dtype := ty';
                                   dbody := b'; rarg := r |})
                         bodies ;;
@@ -165,7 +166,8 @@ Definition tsl_mind_body (ΣE : tsl_context) (mp : modpath) (kn : kername)
                      ind_type := ind_type';
                      ind_kelim := ind.(ind_kelim);
                      ind_ctors := snd ctors';
-                     ind_projs := [] |})).
+                     ind_projs := [];
+                     ind_relevance := ind.(ind_relevance) |})).
   + (* arity *)
     refine (let L := decompose_prod ind.(ind_type) in _).
     simple refine (let L' := List.fold_left _ (combine' (fst L)) [] in _).

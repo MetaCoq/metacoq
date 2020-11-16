@@ -1,6 +1,4 @@
-Require Import List Arith String.
-Require Import MetaCoq.Template.All.
-Import ListNotations MonadNotation.
+From MetaCoq.Template Require Import utils All.
 
 Section test.
 

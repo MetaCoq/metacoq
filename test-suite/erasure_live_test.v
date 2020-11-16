@@ -1,16 +1,13 @@
 From Coq Require Import Recdef.
 From MetaCoq.Template Require Import Loader.
-From MetaCoq.Erasure Require Import SafeTemplateErasure.
+From MetaCoq.Erasure Require Import Erasure.
 From Coq Require Import String.
 Local Open Scope string_scope.
 
-From MetaCoq.Template Require Import utils monad_utils.
+From MetaCoq.Template Require Import utils.
 
 Definition test (p : Ast.program) : string :=
-  match erase_and_print_template_program p with
-  | inl s => s
-  | inr s => s
-  end.
+  erase_and_print_template_program p.
 
 MetaCoq Quote Recursively Definition zero := 0.
 Definition zerocst := Eval lazy in test zero.
@@ -76,7 +73,7 @@ Fixpoint ack (n m:nat) {struct n} : nat :=
   end.
 Definition ack35 := (ack 3 5).
 MetaCoq Quote Recursively Definition cbv_ack35 :=
-  ltac:(let t:=(eval cbv in ack35) in exact t).
+  ltac:(let t:=(eval cbv delta [ack35] in ack35) in exact t).
 
 Time Definition testack35 := Eval lazy in test cbv_ack35.
 
@@ -96,7 +93,7 @@ Arguments fcons {A}.
 Arguments node {A}.
 Definition sf: forest bool := (fcons (node true (leaf false)) (leaf true)).
 MetaCoq Quote Recursively Definition p_sf := sf.
-Time Definition testp_sf := Eval cbv in test p_sf.
+Time Definition testp_sf := Eval lazy in test p_sf.
 
 Fixpoint tree_size (t:tree bool) : nat :=
   match t with
@@ -117,12 +114,11 @@ Definition arden_size := (forest_size arden).
 MetaCoq Quote Recursively Definition cbv_arden_size :=
   ltac:(let t:=(eval cbv in arden_size) in exact t).
 Definition ans_arden_size :=
- Eval cbv in test cbv_arden_size.
+ Eval lazy in test cbv_arden_size.
 (* [program] of the program *)
 MetaCoq Quote Recursively Definition p_arden_size := arden_size.
 
-Definition P_arden_size := Eval cbv in test p_arden_size.
-
+Definition P_arden_size := Eval lazy in test p_arden_size.
 
 (** SASL tautology function: variable arity **)
 Require Import Bool.
@@ -142,12 +138,12 @@ MetaCoq Quote Recursively Definition cbv_pierce :=
   ltac:(let t:=(eval cbv in pierce) in exact t).
 
 Definition ans_pierce :=
-  Eval cbv in (test cbv_pierce).
+  Eval lazy in (test cbv_pierce).
 
 (* [program] of the program *)
 MetaCoq Quote Recursively Definition p_pierce := pierce.
 
-Definition P_pierce := Eval cbv in test p_pierce.
+Definition P_pierce := Eval lazy in test p_pierce.
 
 (* Goal
   let env := (env P_pierce) in
@@ -163,12 +159,12 @@ MetaCoq Quote Recursively Definition cbv_Scomb :=
   ltac:(let t:=(eval cbv in Scomb) in exact t).
 
 Definition ans_Scomb :=
-  Eval cbv in (test cbv_Scomb).
+  Eval lazy in (test cbv_Scomb).
 
 (* [program] of the program *)
 MetaCoq Quote Recursively Definition p_Scomb := Scomb.
 
-Definition P_Scomb := Eval cbv in (test p_Scomb).
+Definition P_Scomb := Eval lazy in (test p_Scomb).
 
 (* Goal
   let env := (env P_Scomb) in
@@ -190,10 +186,10 @@ Definition slowFib3 := (slowFib 3).
 MetaCoq Quote Recursively Definition cbv_slowFib3 :=
   ltac:(let t:=(eval cbv in slowFib3) in exact t).
 Definition ans_slowFib3 :=
- Eval cbv in (test cbv_slowFib3).
+ Eval lazy in (test cbv_slowFib3).
 (* [program] of the program *)
 MetaCoq Quote Recursively Definition p_slowFib3 := slowFib3.
-Definition P_slowFib3 := Eval cbv in (test p_slowFib3).
+Definition P_slowFib3 := Eval lazy in (test p_slowFib3).
 (* Goal
   let env := (env P_slowFib3) in
   let main := (main P_slowFib3) in
@@ -212,10 +208,10 @@ Definition fib9 := fib 9.
 MetaCoq Quote Recursively Definition cbv_fib9 :=
   ltac:(let t:=(eval cbv in fib9) in exact t).
 Time Definition ans_fib9 :=
-  Eval cbv in (test cbv_fib9).
+  Eval lazy in (test cbv_fib9).
 (* [program] of the program *)
 MetaCoq Quote Recursively Definition p_fib9 := fib9.
-Definition P_fib9 := Eval cbv in (test p_fib9).
+Definition P_fib9 := Eval lazy in (test p_fib9).
 (* 
 Goal
   let env := (env P_fib9) in
@@ -259,10 +255,10 @@ Definition sumPL_myPL := (sumPList myPList).
 MetaCoq Quote Recursively Definition cbv_sumPL_myPL :=
   ltac:(let t:=(eval cbv in sumPL_myPL) in exact t).
 Definition ans_sumPL_myPL :=
-  Eval cbv in (test cbv_sumPL_myPL).
+  Eval lazy in (test cbv_sumPL_myPL).
 (* [program] of the program *)
 MetaCoq Quote Recursively Definition p_sumPL_myPL := sumPL_myPL.
-Definition P_sumPL_myPL := Eval cbv in (test p_sumPL_myPL).
+Definition P_sumPL_myPL := Eval lazy in (test p_sumPL_myPL).
 (* Goal
   let env := (env P_sumPL_myPL) in
   let main := (main P_sumPL_myPL) in
@@ -295,10 +291,10 @@ Definition size_myTree := size myTree.
 MetaCoq Quote Recursively Definition cbv_size_myTree :=
   ltac:(let t:=(eval cbv in size_myTree) in exact t).
 Definition ans_size_myTree :=
-  Eval cbv in (test cbv_size_myTree).
+  Eval lazy in (test cbv_size_myTree).
 (* [program] of the program *)
 MetaCoq Quote Recursively Definition p_size_myTree := size_myTree.
-Definition P_size_myTree := Eval cbv in (test p_size_myTree).
+Definition P_size_myTree := Eval lazy in (test p_size_myTree).
 (* Goal
   let env := (env P_size_myTree) in
   let main := (main P_size_myTree) in
@@ -322,15 +318,14 @@ Definition x := 3.
 Definition provedCopyx := provedCopy x.
 (* Compute provedCopyx.  * evals correctly in Coq * *)
 MetaCoq Quote Recursively Definition cbv_provedCopyx :=
-  ltac:(let t:=(eval cbv in provedCopyx) in exact t).
+  ltac:(let t:=(eval cbv delta [provedCopyx provedCopy] in provedCopyx) in exact t).
 Definition ans_provedCopyx :=
-  Eval cbv in (test cbv_provedCopyx).
+  Eval lazy in (test cbv_provedCopyx).
 MetaCoq Quote Recursively Definition p_provedCopyx := provedCopyx. (* program *)
 (* We don't run those every time as they are really expensive *)
-(* Time Definition P_provedCopyx := Eval lazy in (test p_provedCopyx).
- *)(* 2 min purely inside Coq *)
-(* Time Definition P_provedCopyxvm := Eval vm_compute in (test p_provedCopyx).
- *)
+Time Definition P_provedCopyx := Eval lazy in (test cbv_provedCopyx).
+Time Definition P_provedCopyxvm := Eval vm_compute in (test p_provedCopyx).
+
 From MetaCoq.Erasure Require Import Loader.
 MetaCoq Erase provedCopyx.
 (* 2m purely in the bytecode VM *)

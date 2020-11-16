@@ -1,6 +1,4 @@
-Require Import List String.
-Require Import MetaCoq.Template.All.
-Import ListNotations MonadNotation.
+From MetaCoq.Template Require Import utils All.
 
 
 Module Type A.

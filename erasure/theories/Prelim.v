@@ -1,19 +1,13 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import Bool List Program ZArith.
-From MetaCoq.Template Require Import config utils monad_utils.
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import config utils.
 From MetaCoq.Erasure Require Import EAstUtils Extract EArities EWcbvEval.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
      PCUICSubstitution PCUICLiftSubst PCUICClosed
      PCUICWcbvEval PCUICSR  PCUICInversion PCUICGeneration
      PCUICContextConversion PCUICCanonicity.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker.
-From Coq Require Import ssreflect.
-Local Open Scope string_scope.
-Set Asymmetric Patterns.
-Import MonadNotation.
+From Coq Require Import Program ssreflect.
 
-Require Import Lia.
 
 Local Existing Instance extraction_checker_flags.
 
@@ -22,8 +16,6 @@ Module P := PCUICWcbvEval.
 
 Ltac inv H := inversion H; subst; clear H.
 
-Coercion wf_ext_wf : wf_ext >-> wf.
-Existing Instance wf_ext_wf.
 Existing Class axiom_free.
 
 Lemma nth_error_app_inv X (x : X) n l1 l2 :
@@ -67,7 +59,7 @@ Proof.
 Qed.
 
 Lemma monad_map_app X Y (f : X -> typing_result Y) (l1 l2 : list X) a1 a2 :
-  monad_map f l1 = Checked a1 -> monad_map f l2 = Checked a2 -> monad_map f (l1 ++ l2) = Checked (a1 ++ a2)%list.
+  monad_map f l1 = Checked a1 -> monad_map f l2 = Checked a2 -> monad_map f (l1 ++ l2) = Checked (a1 ++ a2).
 Proof.
   revert a1. induction l1; intros.
   - cbn in *. invs H. eauto.
@@ -81,7 +73,7 @@ Proof.
 Qed.
 
 Lemma monad_map_app_invs X Y (f : X -> typing_result Y) (l1 l2 : list X) a :
-  monad_map f (l1 ++ l2) = Checked a -> exists a1 a2, monad_map f l1 = Checked a1 /\ monad_map f l2 = Checked a2 /\ (a = a1 ++ a2)%list.
+  monad_map f (l1 ++ l2) = Checked a -> exists a1 a2, monad_map f l1 = Checked a1 /\ monad_map f l2 = Checked a2 /\ (a = a1 ++ a2).
 Proof.
   intros. revert a H. induction l1; intros.
   - cbn in *. eauto.
@@ -141,7 +133,7 @@ Lemma typing_spine_eval:
   (X : All2 (PCUICWcbvEval.eval Σ) args args') (bla : wf Σ)
     (T x x0 : PCUICAst.term) (t0 : typing_spine Σ [] x args x0) 
     (c : Σ;;; [] |- x0 <= T) (x1 : PCUICAst.term)
-    (c0 : Σ;;; [] |- x1 <= x), axiom_free Σ -> isWfArity_or_Type Σ [] T -> typing_spine Σ [] x1 args' T.
+    (c0 : Σ;;; [] |- x1 <= x), axiom_free Σ -> isType Σ [] T -> typing_spine Σ [] x1 args' T.
 Proof.
   intros. eapply typing_spine_red; eauto.
   eapply typing_spine_wt in t0; auto.
@@ -269,18 +261,18 @@ Lemma value_app_inv L :
   Ee.value (EAst.mkApps EAst.tBox L) ->
   L = nil.
 Proof.
-  intros. depelim H.
+  intros. depelim X.
   - destruct L using rev_ind.
     reflexivity.
-    rewrite emkApps_snoc in H. inv H.
+    rewrite emkApps_snoc in i. inv i.
   - destruct (EAstUtils.mkApps_elim t l). EAstUtils.solve_discr.
-    rewrite Ee.value_head_spec in H.
-    move/andP: H => [H H'].
+    rewrite Ee.value_head_spec in i.
+    move/andP: i => [H H'].
     eapply Ee.atom_mkApps in H' as [H1 _].
     destruct n, L; discriminate.
-  - unfold Ee.isStuckFix in H0. destruct f; try now inversion H0.
+  - unfold Ee.isStuckFix in i. destruct f; try now inversion i.
     assert (EAstUtils.decompose_app (EAst.mkApps (EAst.tFix m n) args) = EAstUtils.decompose_app (EAst.mkApps EAst.tBox L)) by congruence.
-    rewrite !EAstUtils.decompose_app_mkApps in H1; eauto. inv H1.
+    rewrite !EAstUtils.decompose_app_mkApps in H; eauto. inv H.
 Qed.
 
 (** ** Prelim on eliminations  *)
@@ -321,11 +313,11 @@ Lemma subslet_fix_subst `{cf : checker_flags} Σ mfix1 T n :
   wf Σ.1 ->
   Σ ;;; [] |- tFix mfix1 n : T ->
   (* wf_local Σ (PCUICLiftSubst.fix_context mfix1) -> *)
-  subslet Σ [] (PCUICTyping.fix_subst mfix1) (PCUICLiftSubst.fix_context mfix1).
+  subslet Σ [] (fix_subst mfix1) (PCUICLiftSubst.fix_context mfix1).
 Proof.
   intro hΣ.
   unfold fix_subst, PCUICLiftSubst.fix_context.
-  assert (exists L, mfix1 = mfix1 ++ L)%list by (exists []; now simpl_list). revert H.
+  assert (exists L, mfix1 = mfix1 ++ L) by (exists []; now simpl_list). revert H.
   generalize mfix1 at 2 5 6.  intros.
   induction mfix0 using rev_ind.
   - econstructor.
@@ -340,18 +332,67 @@ Proof.
       rewrite minus_diag. cbn. reflexivity.
 Qed.
 
+Lemma cofix_subst_nth mfix n :
+  n < #|mfix| ->
+  nth_error (cofix_subst mfix) n = Some (tCoFix mfix (#|mfix| - n - 1)).
+Proof.
+  unfold cofix_subst. generalize (#|mfix|).
+  intros m. revert n. induction m; cbn; intros.
+  - destruct n; inv H.
+  - destruct n.
+    + cbn. now rewrite <- minus_n_O.
+    + cbn. rewrite IHm. lia. reflexivity.
+Qed.
+
+Lemma ecofix_subst_nth mfix n :
+  n < #|mfix| ->
+  nth_error (ETyping.cofix_subst mfix) n = Some (EAst.tCoFix mfix (#|mfix| - n - 1)).
+Proof.
+  unfold ETyping.cofix_subst. generalize (#|mfix|).
+  intros m. revert n. induction m; cbn; intros.
+  - destruct n; inv H.
+  - destruct n.
+    + cbn. now rewrite <- minus_n_O.
+    + cbn. rewrite IHm. lia. reflexivity.
+Qed.
+
+Lemma subslet_cofix_subst `{cf : checker_flags} Σ mfix1 T n :
+  wf Σ.1 ->
+  Σ ;;; [] |- tCoFix mfix1 n : T ->
+  subslet Σ [] (cofix_subst mfix1) (PCUICLiftSubst.fix_context mfix1).
+Proof.
+  intro hΣ.
+  unfold cofix_subst, PCUICLiftSubst.fix_context.
+  assert (exists L, mfix1 = mfix1 ++ L)%list by (exists []; now simpl_list). revert H.
+  generalize mfix1 at 2 5 6.  intros.
+  induction mfix0 using rev_ind.
+  - econstructor.
+  - rewrite mapi_app. cbn in *. rewrite rev_app_distr. cbn in *.
+    rewrite app_length. cbn. rewrite plus_comm. cbn. econstructor.
+    + eapply IHmfix0. destruct H as [L]. exists (x :: L). subst. now rewrite <- app_assoc.
+    + rewrite <- plus_n_O.
+      rewrite PCUICLiftSubst.simpl_subst_k. clear. induction l; cbn; try congruence.
+      eapply inversion_CoFix in X as (? & ? & ? & ? & ? & ? & ?) ; auto.
+      econstructor; eauto. destruct H. subst.
+      rewrite <- app_assoc. rewrite nth_error_app_ge. lia.
+      rewrite minus_diag. cbn. reflexivity.
+Qed.
+
 (** ** Prelim on typing *)
 
 Inductive red_decls Σ Γ Γ' : forall (x y : PCUICAst.context_decl), Type :=
 | conv_vass na na' T T' : isType Σ Γ' T' -> red Σ Γ T T' ->
-                      red_decls Σ Γ Γ' (PCUICAst.vass na T) (PCUICAst.vass na' T')
+  eq_binder_annot na na' ->
+  red_decls Σ Γ Γ' (PCUICAst.vass na T) (PCUICAst.vass na' T')
 
 | conv_vdef_type na na' b T T' : isType Σ Γ' T' -> red Σ Γ T T' ->
-                             red_decls Σ Γ Γ' (PCUICAst.vdef na b T) (PCUICAst.vdef na' b T')
+  eq_binder_annot na na' ->
+  red_decls Σ Γ Γ' (PCUICAst.vdef na b T) (PCUICAst.vdef na' b T')
 
 | conv_vdef_body na na' b b' T : isType Σ Γ' T ->
-                                 Σ ;;; Γ' |- b' : T -> red Σ Γ b b' ->
-                                                  red_decls Σ Γ Γ' (PCUICAst.vdef na b T) (PCUICAst.vdef na' b' T).
+  eq_binder_annot na na' ->
+  Σ ;;; Γ' |- b' : T -> red Σ Γ b b' ->
+  red_decls Σ Γ Γ' (PCUICAst.vdef na b T) (PCUICAst.vdef na' b' T).
 
 Notation red_context Σ := (context_relation (red_decls Σ)).
 
@@ -364,6 +405,6 @@ Proof.
   - cbn; eauto.
   - destruct a. destruct decl_body.
     + cbn. econstructor. inv X0. eauto. econstructor.
-      depelim X0. reflexivity.
+      depelim X0. reflexivity. reflexivity.
     + cbn. econstructor. inv X0. eauto. now econstructor.
 Qed.

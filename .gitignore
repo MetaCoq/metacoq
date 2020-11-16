@@ -217,8 +217,6 @@ checker/src/wf.mli
 /pcuic/src/pCUICRetyping.mli
 /pcuic/src/templateToPCUIC.ml.rej
 /pcuic/src/templateToPCUIC.mli.rej
-/pcuic/src/pCUICMetaTheory.ml
-/pcuic/src/pCUICMetaTheory.mli
 /checker/src/basicAst.ml
 /checker/src/basicAst.mli
 /checker/src/typingWf.ml
@@ -323,8 +321,8 @@ checker/src/wf.mli
 /erasure/Makefile.erasure.conf
 /erasure/src/classes0.ml
 /erasure/src/classes0.mli
-/erasure/src/safeTemplateErasure.ml
-/erasure/src/safeTemplateErasure.mli
+/erasure/src/erasure.ml
+/erasure/src/erasure.mli
 /erasure/src/templateToPCUIC.ml
 /erasure/src/templateToPCUIC.mli
 erasure/src/eqdepFacts.mli
@@ -348,6 +346,8 @@ pcuic/src/pCUICReflect.ml
 pcuic/src/pCUICReflect.mli
 pcuic/src/pCUICUtils.ml
 pcuic/src/pCUICUtils.mli
+erasure/src/pCUICReduction.ml
+erasure/src/pCUICReduction.mli
 
 /pcuic/src/ssreflect.mli
 /_opam
@@ -357,8 +357,8 @@ pcuic/src/pCUICUtils.mli
 /erasure/src/typing0.mli
 /erasure/src/pCUICSafeRetyping.ml
 /erasure/src/pCUICSafeRetyping.mli
-/erasure/src/safeErasureFunction.ml
-/erasure/src/safeErasureFunction.mli
+erasure/src/pCUICInduction.ml
+erasure/src/pCUICInduction.mli
 erasure/src/mSetWeakList.ml
 erasure/src/mSetWeakList.mli
 erasure/src/utils.ml
@@ -395,3 +395,20 @@ vs.mli
 *.v.timing
 time-of-build.log
 time-of-build-pretty.log
+_build/**
+extraction/src/*.ml
+extraction/src/*.mli
+erasure/src/orderedTypeAlt.ml
+erasure/src/orderedTypeAlt.mli
+erasure/src/orderedTypeEx.ml
+erasure/src/orderedTypeEx.mli
+erasure/src/kernames.ml
+erasure/src/kernames.mli
+erasure/src/reflect.ml
+erasure/src/reflect.mli
+erasure/src/pCUICWfUniverses.ml
+erasure/src/pCUICWfUniverses.mli
+erasure/src/signature.ml
+erasure/src/signature.mli
+erasure/src/eOptimizePropDiscr.ml
+erasure/src/eOptimizePropDiscr.mli

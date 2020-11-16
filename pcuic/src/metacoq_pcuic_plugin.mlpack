@@ -11,8 +11,5 @@ EqDecInstances
 PCUICReflect
 PCUICEquality
 PCUICTyping
-PCUICChecker
 PCUICPretty
-PCUICRetyping
-PCUICMetaTheory
 TemplateToPCUIC

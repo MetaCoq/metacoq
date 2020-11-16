@@ -1,14 +1,6 @@
-(* Distributed under the terms of the MIT license.   *)
-
-Set Warnings "-notation-overridden".
-
-From Coq Require Import Bool String List Program BinPos Compare_dec.
+(* Distributed under the terms of the MIT license. *)
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils.
 From MetaCoq.Template Require Import config utils AstUtils BasicAst Ast.
-
-Require Import String.
-Local Open Scope string_scope.
-Set Asymmetric Patterns.
 
 Fixpoint trans (t : PCUICAst.term) : Ast.term :=
   match t with
@@ -25,7 +17,7 @@ Fixpoint trans (t : PCUICAst.term) : Ast.term :=
   | PCUICAst.tLetIn na b t b' => tLetIn na (trans b) (trans t) (trans b')
   | PCUICAst.tCase ind p c brs =>
     let brs' := List.map (on_snd trans) brs in
-    tCase ind (trans p) (trans c) brs'
+    tCase (ind, Relevant) (trans p) (trans c) brs'
   | PCUICAst.tProj p c => tProj p (trans c)
   | PCUICAst.tFix mfix idx =>
     let mfix' := List.map (map_def trans trans) mfix in
@@ -48,6 +40,7 @@ Definition trans_ctor : (ident × PCUICAst.term) × nat -> (ident × term) × na
 
 Definition trans_one_ind_body (d : PCUICAst.one_inductive_body) :=
   {| ind_name := d.(PCUICAst.ind_name);
+     ind_relevance := d.(PCUICAst.ind_relevance);
      ind_type := trans d.(PCUICAst.ind_type);
      ind_kelim := d.(PCUICAst.ind_kelim);
      ind_ctors := List.map trans_ctor d.(PCUICAst.ind_ctors);

@@ -1,14 +1,13 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import Bool List Program ZArith Lia.
-From MetaCoq.Template Require Import config utils Ast AstUtils Induction
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import config utils Ast AstUtils Reflect Induction
   LiftSubst UnivSubst Typing TypingWf.
-From MetaCoq.Checker Require Import Reflect WeakeningEnv.
-Require Import ssreflect.
+From MetaCoq.Checker Require Import WeakeningEnv.
 
+Require Import ssreflect.
 From Equations Require Import Equations.
 
 (** * Lemmas about the [closedn] predicate *)
+
 
 Definition closed_decl n d :=
   option_default (closedn n) d.(decl_body) true && closedn n d.(decl_type).
@@ -32,7 +31,7 @@ Proof.
     simpl in *; rewrite -> ?andb_and in *;
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
     simpl closed in *; solve_all;
-    unfold compose, test_def, test_snd in *;
+    unfold test_def, test_snd in *;
       try solve [simpl lift; simpl closed; f_equal; auto; repeat (rtoProp; solve_all)]; try easy.
 
   - elim (Nat.leb_spec k' n0); intros. simpl.
@@ -49,7 +48,7 @@ Proof.
     simpl in *;
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc in *;
     simpl closed in *; repeat (rtoProp; solve_all); try change_Sk;
-    unfold compose, test_def, on_snd, test_snd in *; simpl in *; eauto with all.
+    unfold test_def, on_snd, test_snd in *; simpl in *; eauto with all.
 
   - revert H0.
     elim (Nat.leb_spec k n0); intros. simpl in *.
@@ -93,7 +92,7 @@ Proof.
     simpl in *;
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
     simpl closed in *; try change_Sk; repeat (rtoProp; solve_all);
-    unfold compose, test_def, on_snd, test_snd in *; simpl in *; eauto with all.
+    unfold test_def, on_snd, test_snd in *; simpl in *; eauto with all.
 
   - elim (Nat.leb_spec k' n); intros. simpl.
     apply Nat.ltb_lt in H.
@@ -158,14 +157,13 @@ Proof.
       intros [] XX; apply XX.
   - red in X. rewrite forallb_map.
     eapply Forall_forallb_eq_forallb. eapply All_Forall; eauto.
-    unfold test_def, compose, map_def. simpl.
+    unfold test_def, map_def. simpl.
     do 3 (f_equal; intuition eauto).
   - red in X. rewrite forallb_map.
     eapply Forall_forallb_eq_forallb. eapply All_Forall; eauto.
-    unfold test_def, compose, map_def. simpl.
+    unfold test_def, map_def. simpl.
     do 3 (f_equal; intuition eauto).
 Qed.
-
 
 
 Lemma destArity_spec ctx T :
@@ -174,7 +172,7 @@ Lemma destArity_spec ctx T :
   | None => True
   end.
 Proof.
-  induction T in ctx |- *; simpl; simplify_dep_elim; try easy.
+  induction T in ctx |- *; simpl; try easy.
   specialize (IHT2 (ctx,, vass na T1)). now destruct destArity.
   specialize (IHT3 (ctx,, vdef na T1 T2)). now destruct destArity.
 Qed.
@@ -391,8 +389,8 @@ Proof.
   pose proof (declared_projection_inv weaken_env_prop_closed wfΣ X0 isdecl) as onp.
   set (declared_inductive_inv _ wfΣ X0 isdecl.p1) as oib in *.
   clearbody oib.
-  have onpars := onParams _ _ _ _ (declared_minductive_inv weaken_env_prop_closed wfΣ X0 isdecl.p1.p1).
-  have parslen := onNpars _ _ _ _ (declared_minductive_inv weaken_env_prop_closed wfΣ X0 isdecl.p1.p1).
+  have onpars := onParams (declared_minductive_inv weaken_env_prop_closed wfΣ X0 isdecl.p1.p1).
+  have parslen := onNpars (declared_minductive_inv weaken_env_prop_closed wfΣ X0 isdecl.p1.p1).
   simpl in onp. destruct (ind_cshapes oib) as [|? []] eqn:Heq; try contradiction.
   red in onp.
   destruct (nth_error (smash_context [] _) _) eqn:Heq'; try contradiction.

@@ -1,6 +1,5 @@
-Require Import MetaCoq.Template.All.
-Require Import List String.
-Import ListNotations MonadNotation.
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import utils All.
 
 (* **************************************************** *)
 (* In this file we define a small plugin which allow to *)
@@ -15,13 +14,13 @@ Import ListNotations MonadNotation.
 Class TslIdent := { tsl_ident : ident -> ident }.
 
 Instance prime_tsl_ident : TslIdent
-  := {| tsl_ident := fun id => (id ++ "'")%string |}.
+  := {| tsl_ident := fun id => id ^ "'" |}.
 
 Fixpoint try_remove_n_lambdas (n : nat) (t : term) {struct n} : term :=
   match n, t with
   | 0, _ => t
   | S n, tLambda _ _ t => try_remove_n_lambdas n t
-  | S n, _ => t
+  | S _, _ => t
   end.
 
 
@@ -48,7 +47,8 @@ Polymorphic Definition add_ctor (mind : mutual_inductive_body) (ind0 : inductive
                                            let typ := try_remove_n_lambdas n ctor in
                                            ctors ++ [(idc, typ, 0)]  (* fixme 0 *)
                                          else ctors;
-                            ind_projs := ind.(ind_projs) |})
+                            ind_projs := ind.(ind_projs);
+                            ind_relevance := ind.(ind_relevance) |})
                             mind.(ind_bodies) |}.
 
 

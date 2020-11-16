@@ -1,6 +1,4 @@
-Require Import MetaCoq.Template.All.
-Require Import List String.
-Import ListNotations MonadNotation.
+From MetaCoq.Template Require Import utils All.
 
 Goal True.
   let k x := pose (y := x) in

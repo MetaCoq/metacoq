@@ -1,16 +1,14 @@
-(* Distributed under the terms of the MIT license.   *)
-Require Import ssreflect.
-From Coq Require Import Bool List Lia.
+(* Distributed under the terms of the MIT license. *)
+Require Import CRelationClasses.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICUtils PCUICAst PCUICSize
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakening PCUICSubstitution.
 
-(* Type-valued relations. *)
-Require Import CRelationClasses.
-Local Set Keyed Unification.
-Set Asymmetric Patterns.
-
+Require Import ssreflect.
 From Equations Require Import Equations.
+
+
+Local Set Keyed Unification.
 
 Derive NoConfusion for term.
 Derive Subterm for term.
@@ -47,7 +45,7 @@ Proof.
   reflexivity.
 Qed.
 
-Require Import RelationClasses Arith.
+Require Import RelationClasses.
 
 Arguments All {A} P%type _.
 
@@ -80,9 +78,9 @@ Lemma term_forall_ctx_list_ind :
     (forall Γ (i : ident), P Γ (tVar i)) ->
     (forall Γ (n : nat) (l : list term), All (P Γ) l -> P Γ (tEvar n l)) ->
     (forall Γ s, P Γ (tSort s)) ->
-    (forall Γ (n : name) (t : term), P Γ t -> forall t0 : term, P (vass n t :: Γ) t0 -> P Γ (tProd n t t0)) ->
-    (forall Γ (n : name) (t : term), P Γ t -> forall t0 : term, P (vass n t :: Γ) t0 -> P Γ (tLambda n t t0)) ->
-    (forall Γ (n : name) (t : term),
+    (forall Γ (n : aname) (t : term), P Γ t -> forall t0 : term, P (vass n t :: Γ) t0 -> P Γ (tProd n t t0)) ->
+    (forall Γ (n : aname) (t : term), P Γ t -> forall t0 : term, P (vass n t :: Γ) t0 -> P Γ (tLambda n t t0)) ->
+    (forall Γ (n : aname) (t : term),
         P Γ t -> forall t0 : term, P Γ t0 -> forall t1 : term, P (vdef n t t0 :: Γ) t1 -> P Γ (tLetIn n t t0 t1)) ->
     (forall Γ (t u : term), P Γ t -> P Γ u -> P Γ (tApp t u)) ->
     (forall Γ s (u : list Level.t), P Γ (tConst s u)) ->
@@ -226,8 +224,8 @@ Section All2_local_env.
     All2_local_env (on_decl Q) par par'.
   Proof.
     intros H aux.
-    induction H; constructor. auto. red in p. apply aux, p.
-    apply IHAll2_local_env. red. split.
+    induction H; constructor. auto. red in p. assumption. apply aux, p.
+    apply IHAll2_local_env. red. assumption. split.
     apply aux. apply p. apply aux. apply p.
   Defined.
 
@@ -307,10 +305,10 @@ Section All2_local_env.
     intros. unfold app_context in X. depelim X.
     destruct (IHΓ' _ X) as [Γl [Γr [[HeqΓ H2] H3]]]. subst.
     eexists _, _. intuition eauto. unfold snoc, app_context.
-    now rewrite app_comm_cons. constructor. auto. auto.
+    now rewrite app_comm_cons. constructor; auto.
     destruct (IHΓ' _ X) as [Γl [Γr [[HeqΓ H2] H3]]]. subst.
     eexists _, _. intuition eauto. unfold snoc, app_context.
-    now rewrite app_comm_cons. constructor. auto. auto.
+    now rewrite app_comm_cons. constructor; auto.
   Qed.
 
   Lemma All2_local_env_app :
@@ -545,11 +543,11 @@ Section ParallelReduction.
            (Pctx : forall (Γ Γ' : context), Type),
       let P' Γ Γ' x y := ((pred1 Γ Γ' x y) * P Γ Γ' x y)%type in
       (forall Γ Γ', All2_local_env (on_decl pred1) Γ Γ' -> All2_local_env (on_decl P) Γ Γ' -> Pctx Γ Γ') ->
-      (forall (Γ Γ' : context) (na : name) (t0 t1 b0 b1 a0 a1 : term),
+      (forall (Γ Γ' : context) (na : aname) (t0 t1 b0 b1 a0 a1 : term),
           pred1 (Γ ,, vass na t0) (Γ' ,, vass na t1) b0 b1 -> P (Γ ,, vass na t0) (Γ' ,, vass na t1) b0 b1 ->
           pred1 Γ Γ' t0 t1 -> P Γ Γ' t0 t1 ->
           pred1 Γ Γ' a0 a1 -> P Γ Γ' a0 a1 -> P Γ Γ' (tApp (tLambda na t0 b0) a0) (b1 {0 := a1})) ->
-      (forall (Γ Γ' : context) (na : name) (d0 d1 t0 t1 b0 b1 : term),
+      (forall (Γ Γ' : context) (na : aname) (d0 d1 t0 t1 b0 b1 : term),
           pred1 Γ Γ' t0 t1 -> P Γ Γ' t0 t1 ->
           pred1 Γ Γ' d0 d1 -> P Γ Γ' d0 d1 ->
           pred1 (Γ ,, vdef na d0 t0) (Γ' ,, vdef na d1 t1) b0 b1 ->
@@ -625,14 +623,14 @@ Section ParallelReduction.
           All2 (P Γ Γ') args0 args1 ->
           nth_error args1 (pars + narg) = Some arg1 ->
           P Γ Γ' (tProj (i, pars, narg) (mkApps (tConstruct i 0 u) args0)) arg1) ->
-      (forall (Γ Γ' : context) (na : name) (M M' N N' : term),
+      (forall (Γ Γ' : context) (na : aname) (M M' N N' : term),
           pred1 Γ Γ' M M' ->
           P Γ Γ' M M' -> pred1 (Γ,, vass na M) (Γ' ,, vass na M') N N' ->
           P (Γ,, vass na M) (Γ' ,, vass na M') N N' -> P Γ Γ' (tLambda na M N) (tLambda na M' N')) ->
       (forall (Γ Γ' : context) (M0 M1 N0 N1 : term),
           pred1 Γ Γ' M0 M1 -> P Γ Γ' M0 M1 -> pred1 Γ Γ' N0 N1 ->
           P Γ Γ' N0 N1 -> P Γ Γ' (tApp M0 N0) (tApp M1 N1)) ->
-      (forall (Γ Γ' : context) (na : name) (d0 d1 t0 t1 b0 b1 : term),
+      (forall (Γ Γ' : context) (na : aname) (d0 d1 t0 t1 b0 b1 : term),
           pred1 Γ Γ' d0 d1 ->
           P Γ Γ' d0 d1 ->
           pred1 Γ Γ' t0 t1 ->
@@ -663,7 +661,7 @@ Section ParallelReduction.
           All2_local_env (on_decl (on_decl_over P Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
           All2_prop2_eq Γ Γ' (Γ ,,, fix_context mfix0) (Γ' ,,, fix_context mfix1) dtype dbody (fun x => (dname x, rarg x)) P' mfix0 mfix1 ->
           P Γ Γ' (tCoFix mfix0 idx) (tCoFix mfix1 idx)) ->
-      (forall (Γ Γ' : context) (na : name) (M0 M1 N0 N1 : term),
+      (forall (Γ Γ' : context) (na : aname) (M0 M1 N0 N1 : term),
           pred1 Γ Γ' M0 M1 ->
           P Γ Γ' M0 M1 -> pred1 (Γ,, vass na M0) (Γ' ,, vass na M1) N0 N1 ->
           P (Γ,, vass na M0) (Γ' ,, vass na M1) N0 N1 -> P Γ Γ' (tProd na M0 N0) (tProd na M1 N1)) ->
@@ -897,9 +895,9 @@ Section ParallelWeakening.
     pose proof (All2_local_env_length X0).
     eapply All2_local_env_app in X1 as [Xl Xr]; auto.
     induction Xr; simpl; auto. apply All2_local_env_over_app; pcuic.
-    rewrite !lift_context_snoc. simpl. constructor. auto. red in p.
-    specialize (p _ _ eq_refl _ _ eq_refl). forward p by auto.
-    red. rewrite !Nat.add_0_r. simpl. specialize (p Γ'' Δ'').
+    rewrite !lift_context_snoc. simpl. constructor. auto. assumption. red in p.
+    specialize (p _ _ eq_refl _ _ eq_refl). forward p by auto. simpl.
+    rewrite !Nat.add_0_r. simpl. specialize (p Γ'' Δ'').
     forward p. auto. pose proof (All2_local_env_length X0).
     rewrite H0 in p. congruence.
 

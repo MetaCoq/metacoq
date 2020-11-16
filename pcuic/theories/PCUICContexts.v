@@ -1,6 +1,7 @@
-From Coq Require Import Bool String List BinPos Compare_dec Arith Lia
-     Classes.CRelationClasses ProofIrrelevance.
-From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
+(* Distributed under the terms of the MIT license. *)
+From MetaCoq.Template Require Import config utils.
+From Coq Require Import CRelationClasses ProofIrrelevance.
+From MetaCoq.Template Require Import config Universes utils BasicAst
      AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
@@ -12,10 +13,10 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICWeakening PCUICGeneration PCUICUtils PCUICCtxShape.
 
 From Equations Require Import Equations.
-
 Require Import Equations.Prop.DepElim.
 Require Import Equations.Type.Relation_Properties.
 Require Import ssreflect ssrbool.
+
 
 Derive Signature for context_subst.
 
@@ -79,10 +80,12 @@ Proof.
   clear -H. induction H; simpl; auto. constructor. constructor.
   constructor. auto.
 Qed.
+Hint Resolve smash_context_assumption_context : pcuic.
 
 Lemma assumption_context_length ctx : assumption_context ctx ->
   context_assumptions ctx = #|ctx|.
 Proof. induction 1; simpl; auto. Qed.
+Hint Resolve assumption_context_length : pcuic.
 
 Lemma context_subst_length2 {ctx args s} : context_subst ctx args s -> #|args| = context_assumptions ctx.
 Proof.
@@ -106,10 +109,9 @@ Proof.
 Qed.
 
 Hint Constructors context_subst : core.
-Close Scope string_scope.
 
 Lemma context_subst_app {ctx ctx' args s} : 
-  context_subst (ctx ++ ctx')%list args s -> 
+  context_subst (ctx ++ ctx') args s -> 
   context_subst (subst_context (skipn #|ctx| s) 0 ctx) (skipn (context_assumptions ctx') args) (firstn #|ctx| s) *
   context_subst ctx' (firstn (context_assumptions ctx') args) (skipn #|ctx| s).
 Proof.
@@ -138,7 +140,7 @@ Proof.
     pose proof (context_subst_length2 Hc).
     rewrite context_assumptions_app in H.
     destruct IHctx as [IHctx _].
-    pose proof (context_subst_length _ _ _ IHctx).
+    pose proof (context_subst_length IHctx).
     rewrite subst_context_snoc. rewrite !skipn_S.
     rewrite /subst_decl /map_decl /= Nat.add_0_r.
     rewrite -{4}(firstn_skipn #|ctx| s0).
@@ -150,7 +152,7 @@ Qed.
 Lemma make_context_subst_rec_spec ctx args s tele args' s' :
   context_subst ctx args s ->
   (make_context_subst tele args' s = Some s') <~>
-  context_subst (List.rev tele ++ ctx)%list (args ++ args') s'.
+  context_subst (List.rev tele ++ ctx) (args ++ args') s'.
 Proof.
   induction tele in ctx, args, s, args', s' |- *.
   - move=> /= Hc. case: args'.
@@ -171,7 +173,7 @@ Proof.
       rewrite !context_assumptions_app ?app_length ?List.rev_length /= Nat.add_0_r in H.
       pose proof (context_subst_length2 Hc). lia.
       
-      specialize (IHtele (vass na ty :: ctx) (args ++ [a])%list (a :: s) args' s').
+      specialize (IHtele (vass na ty :: ctx) (args ++ [a]) (a :: s) args' s').
       forward IHtele. econstructor. auto.
       rewrite -app_assoc. rewrite -app_comm_cons /=.
       rewrite -app_assoc in IHtele. apply IHtele.
@@ -188,14 +190,13 @@ Proof.
 Qed.
 
 Lemma map_subst_instance_constr_to_extended_list_k u ctx k :
-  map (subst_instance_constr u) (to_extended_list_k (subst_instance_context u ctx) k)
-  = to_extended_list_k (subst_instance_context u ctx) k.
+  map (subst_instance_constr u) (to_extended_list_k ctx k)
+  = to_extended_list_k ctx k.
 Proof.
-  pose proof (to_extended_list_k_spec (subst_instance_context u ctx) k).
+  pose proof (to_extended_list_k_spec ctx k).
   solve_all.
   now destruct H as [n [-> _]].
 Qed.
-
 
 Lemma subst_instance_to_extended_list_k u l k
   : map (subst_instance_constr u) (to_extended_list_k l k)
@@ -217,7 +218,7 @@ Proof.
   rewrite lift_context_snoc map_app /=; constructor; auto.
   rewrite lift_context_snoc /= /lift_decl /map_decl /=.
   rewrite Nat.add_0_r.
-  rewrite (context_subst_length _ _ _ X).
+  rewrite (context_subst_length X).
   rewrite distr_lift_subst Nat.add_0_r.
   now constructor.
 Qed.
@@ -261,6 +262,11 @@ Lemma type_local_ctx_instantiate {cf:checker_flags} Σ ind mdecl Γ Δ u s :
 Proof.
   intros Hctx Hu.
   induction Δ; simpl in *; intuition auto.
+  { destruct Σ as [Σ univs]. eapply (wf_universe_subst_instance (Σ, ind_universes mdecl)); eauto.
+    simpl in *.
+    assert (wg := weaken_lookup_on_global_env'' _ _ _ Hctx Hu).
+    eapply sub_context_set_trans. eauto.
+    eapply global_context_set_sub_ext. }
   destruct a as [na [b|] ty]; simpl; intuition auto.
   - destruct a0.
     exists (subst_instance_univ u x).
@@ -280,8 +286,8 @@ Lemma wf_local_instantiate {cf:checker_flags} Σ (decl : global_decl) Γ u c :
   wf_local Σ (subst_instance_context u Γ).
 Proof.
   intros wfΣ Hdecl Huniv wf.
-  epose proof (type_Sort _ _ Universes.Level.lProp wf) as ty. forward ty.
-  - apply prop_global_ext_levels.
+  epose proof (type_Sort _ _ Universes.Universe.lProp wf) as ty. forward ty.
+  - now simpl.
   - eapply PCUICUnivSubstitution.typing_subst_instance_decl in ty;   
     eauto using typing_wf_local.
 Qed.

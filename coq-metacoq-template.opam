@@ -24,6 +24,7 @@ install: [
 depends: [
   "ocaml" {>= "4.07.1"}
   "coq" { = "dev" }
+  "coq-equations" { = "dev" }
 ]
 synopsis: "A quoting and unquoting library for Coq in Coq"
 description: """

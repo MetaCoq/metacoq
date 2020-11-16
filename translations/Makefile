@@ -1,5 +1,5 @@
 all: Makefile.coq
-	$(MAKE) -f Makefile.coq pretty-timed
+	$(MAKE) -f Makefile.coq $(TIMED)
 
 _CoqProject: _CoqProject.in metacoq-config
 	cat metacoq-config > _CoqProject 
@@ -11,8 +11,12 @@ Makefile.coq: _CoqProject
 clean: Makefile.coq
 	$(MAKE) -f Makefile.coq clean
 
-install: all
-	$(MAKE) -f Makefile.coq install
-	
 mrproper:
 	rm -f Makefile.coq
+
+force Makefile _CoqProject.in metacoq-config: ;
+
+%: Makefile.coq force
+	+$(MAKE) -f Makefile.coq $@
+
+.PHONY: all clean mrproper force

@@ -1,23 +1,21 @@
-(* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import List Program String.
+(* Distributed under the terms of the MIT license. *)
+From Coq Require Import Program.
 From MetaCoq.Template Require Import utils.
 From MetaCoq.Erasure Require Import EAst EAstUtils ETyping.
 
-(** Pretty printing *)
+(** * Pretty printing *)
+
 
 Section print_term.
   Context (Σ : global_context).
 
-  Local Open Scope string_scope.
-
   Definition print_def {A : Set} (f : A -> string) (def : def A) :=
-    string_of_name (dname def) ++ " { struct " ++ string_of_nat (rarg def) ++ " }"
-                   ++ " := " ++ nl ++ f (dbody def).
+    string_of_name (dname def) ^ " { struct " ^ string_of_nat (rarg def) ^ " }"
+                   ^ " := " ^ nl ^ f (dbody def).
 
   Definition print_defs (print_term : context -> bool -> bool -> term -> string) Γ (defs : mfixpoint term) :=
     let ctx' := List.map (fun d => {| decl_name := dname d; decl_body := None |}) defs in
-    print_list (print_def (print_term (ctx' ++ Γ)%list true false)) (nl ++ " with ") defs.
+    print_list (print_def (print_term (ctx' ++ Γ) true false)) (nl ^ " with ") defs.
 
   Definition lookup_ind_decl ind i :=
     match lookup_env Σ ind with
@@ -63,7 +61,7 @@ Section print_term.
       match i with
       | 0 => id
       | S i' =>
-        let id' := id ++ string_of_nat (n - i) in
+        let id' := id ^ string_of_nat (n - i) in
         if is_fresh Γ id' then id'
         else aux i'
       end
@@ -85,83 +83,83 @@ Section print_term.
     match nth_error Γ n with
     | Some {| decl_name := na |} =>
       match na with
-      | nAnon => "Anonymous (" ++ string_of_nat n ++ ")"
+      | nAnon => "Anonymous (" ^ string_of_nat n ^ ")"
       | nNamed id => id
       end
-    | None => "UnboundRel(" ++ string_of_nat n ++ ")"
+    | None => "UnboundRel(" ^ string_of_nat n ^ ")"
     end
-  | tVar n => "Var(" ++ n ++ ")"
-  | tEvar ev args => "Evar(" ++ string_of_nat ev ++ "[]" (* TODO *)  ++ ")"
+  | tVar n => "Var(" ^ n ^ ")"
+  | tEvar ev args => "Evar(" ^ string_of_nat ev ^ "[]" (* TODO *)  ^ ")"
   | tLambda na body =>
     let na' := fresh_name Γ na t in
-    parens top ("fun " ++ string_of_name na'
-                                ++ " => " ++ print_term (vass na' :: Γ) true false body)
+    parens top ("fun " ^ string_of_name na'
+                                ^ " => " ^ print_term (vass na' :: Γ) true false body)
   | tLetIn na def body =>
     let na' := fresh_name Γ na t in
-    parens top ("let" ++ string_of_name na' ++
-                      " := " ++ print_term Γ true false def ++ " in " ++ nl ++
+    parens top ("let " ^ string_of_name na' ^
+                      " := " ^ print_term Γ true false def ^ " in " ^ nl ^
                       print_term (vdef na' def :: Γ) true false body)
   | tApp f l =>
-    parens (top || inapp) (print_term Γ false true f ++ " " ++ print_term Γ false false l)
+    parens (top || inapp) (print_term Γ false true f ^ " " ^ print_term Γ false false l)
   | tConst c => string_of_kername c
   | tConstruct (mkInd i k as ind) l =>
     match lookup_ind_decl i k with
     | Some oib =>
       match nth_error oib.(ind_ctors) l with
-      | Some (na, _, _) => na
+      | Some (na, _) => na
       | None =>
-        "UnboundConstruct(" ++ string_of_inductive ind ++ "," ++ string_of_nat l ++ ")"
+        "UnboundConstruct(" ^ string_of_inductive ind ^ "," ^ string_of_nat l ^ ")"
       end
     | None =>
-      "UnboundConstruct(" ++ string_of_inductive ind ++ "," ++ string_of_nat l ++ ")"
+      "UnboundConstruct(" ^ string_of_inductive ind ^ "," ^ string_of_nat l ^ ")"
     end
   | tCase (mkInd mind i as ind, pars) t brs =>
     match lookup_ind_decl mind i with
     | Some oib =>
       let fix print_branch Γ arity br {struct br} :=
           match arity with
-            | 0 => "=> " ++ print_term Γ true false br
+            | 0 => "=> " ^ print_term Γ true false br
             | S n =>
               match br with
               | tLambda na B =>
                 let na' := fresh_name Γ na br in
-                string_of_name na' ++ "  " ++ print_branch (vass na' :: Γ) n B
-              | t => "=> " ++ print_term Γ true false br
+                string_of_name na' ^ "  " ^ print_branch (vass na' :: Γ) n B
+              | t => "=> " ^ print_term Γ true false br
               end
             end
         in
         let brs := map (fun '(arity, br) =>
                           print_branch Γ arity br) brs in
         let brs := combine brs oib.(ind_ctors) in
-        parens top ("match " ++ print_term Γ true false t ++
-                    " with " ++ nl ++
-                    print_list (fun '(b, (na, _, _)) => na ++ " " ++ b)
-                    (nl ++ " | ") brs ++ nl ++ "end" ++ nl)
+        parens top ("match " ^ print_term Γ true false t ^
+                    " with " ^ nl ^
+                    print_list (fun '(b, (na, _)) => na ^ " " ^ b)
+                    (nl ^ " | ") brs ^ nl ^ "end" ^ nl)
     | None =>
-      "Case(" ++ string_of_inductive ind ++ "," ++ string_of_nat i ++ "," ++ string_of_term t ++ ","
-              ++ string_of_list (fun b => string_of_term (snd b)) brs ++ ")"
+      "Case(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_term t ^ ","
+              ^ string_of_list (fun b => string_of_term (snd b)) brs ^ ")"
     end
   | tProj (mkInd mind i as ind, pars, k) c =>
     match lookup_ind_decl mind i with
     | Some oib =>
       match nth_error oib.(ind_projs) k with
-      | Some (na, _) => print_term Γ false false c ++ ".(" ++ na ++ ")"
+      | Some na => print_term Γ false false c ^ ".(" ^ na ^ ")"
       | None =>
-        "UnboundProj(" ++ string_of_inductive ind ++ "," ++ string_of_nat i ++ "," ++ string_of_nat k ++ ","
-                       ++ print_term Γ true false c ++ ")"
+        "UnboundProj(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_nat k ^ ","
+                       ^ print_term Γ true false c ^ ")"
       end
     | None =>
-      "UnboundProj(" ++ string_of_inductive ind ++ "," ++ string_of_nat i ++ "," ++ string_of_nat k ++ ","
-                     ++ print_term Γ true false c ++ ")"
+      "UnboundProj(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_nat k ^ ","
+                     ^ print_term Γ true false c ^ ")"
     end
 
 
   | tFix l n =>
-    parens top ("let fix " ++ print_defs print_term Γ l ++ nl ++
-                          " in " ++ List.nth_default (string_of_nat n) (map (string_of_name ∘ dname) l) n)
+    parens top ("let fix " ^ print_defs print_term Γ l ^ nl ^
+                          " in " ^ List.nth_default (string_of_nat n) (map (string_of_name ∘ dname) l) n)
   | tCoFix l n =>
-    parens top ("let cofix " ++ print_defs print_term Γ l ++ nl ++
-                              " in " ++ List.nth_default (string_of_nat n) (map (string_of_name ∘ dname) l) n)
+    parens top ("let cofix " ^ print_defs print_term Γ l ^ nl ^
+                              " in " ^ List.nth_default (string_of_nat n) (map (string_of_name ∘ dname) l) n)
   end.
 
 End print_term.

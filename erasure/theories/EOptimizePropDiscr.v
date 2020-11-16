@@ -311,7 +311,7 @@ Proof.
   now rewrite -mkApps_nested.
 Qed.
 
-Definition extends (Σ Σ' : global_declarations) := ∑ Σ'', Σ' = Σ'' ++ Σ.
+Definition extends (Σ Σ' : global_declarations) := ∑ Σ'', Σ' = (Σ'' ++ Σ)%list.
 
 Definition fresh_global kn (Σ : global_declarations) :=
   Forall (fun x => x.1 <> kn) Σ.

@@ -914,7 +914,6 @@ Section CheckLeq.
     specialize (HG2 _ H); cbn in HG2. rewrite HG1 in HG2; cbn in HG2.
     f_equal. clear -HG2. set (L (Level.Level l)) in *; clearbody n.
     destruct n; try lia.
-    rewrite <- Pos.of_nat_succ. lia.
   Qed.
 
   Lemma val_valuation_of_labelling L  (l : Level.t) :

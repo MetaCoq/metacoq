@@ -650,7 +650,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
         or equal to the top elimination sort, if set.
         For inductives in Type we do not check [kelim] currently. *)
 
-    Fixpoint elim_sort_prop_ind ind_ctors_sort :=
+    Definition elim_sort_prop_ind ind_ctors_sort :=
       match ind_ctors_sort with
       | [] => (* Empty inductive proposition: *) InType
       | [ s ] => match universe_family (cshape_sort s) with
@@ -664,7 +664,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       | _ => (* Squashed: at least 2 constructors *) InProp
       end.
       
-    Fixpoint elim_sort_sprop_ind (ind_ctors_sort : list constructor_shape) :=
+    Definition elim_sort_sprop_ind (ind_ctors_sort : list constructor_shape) :=
       match ind_ctors_sort with
       | [] => (* Empty inductive strict proposition: *) InType
       | _ => (* All other inductives in SProp are squashed *) InSProp

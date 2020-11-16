@@ -96,7 +96,7 @@ struct
     match Univ.Universe.level s with
       Some l -> Universes0.Universe.of_levels (quote_level l)
     | _ -> let univs =
-          Univ.Universe.map (fun (l,i) -> (quote_nonprop_level l, i > 0)) s in
+          List.map (fun (l,i) -> (quote_nonprop_level l, i > 0)) (Univ.Universe.repr s) in
     Universes0.Universe.from_kernel_repr (List.hd univs) (List.tl univs)
 
   let quote_sort s =

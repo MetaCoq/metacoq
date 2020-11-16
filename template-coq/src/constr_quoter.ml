@@ -186,8 +186,7 @@ struct
   let quote_universe s =
     match Univ.Universe.level s with
       Some l -> constr_mkApp (tof_levels, [| quote_level l |])
-    | _ -> let levels =
-             Universe.map (fun (l,i) -> pairl tlevel bool_type (quote_nonprop_level l) (quote_bool (i > 0))) s in
+    | _ -> let levels = List.map (fun (l,i) -> pairl tlevel bool_type (quote_nonprop_level l) (quote_bool (i > 0))) (Universe.repr s) in
            let hd = List.hd levels in
            let tl = to_coq_list (prodl tlevel bool_type) (List.tl levels) in
            constr_mkApp (tfrom_kernel_repr, [| hd ; tl |])

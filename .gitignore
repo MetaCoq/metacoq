@@ -321,8 +321,8 @@ checker/src/wf.mli
 /erasure/Makefile.erasure.conf
 /erasure/src/classes0.ml
 /erasure/src/classes0.mli
-/erasure/src/safeTemplateErasure.ml
-/erasure/src/safeTemplateErasure.mli
+/erasure/src/erasure.ml
+/erasure/src/erasure.mli
 /erasure/src/templateToPCUIC.ml
 /erasure/src/templateToPCUIC.mli
 erasure/src/eqdepFacts.mli
@@ -357,8 +357,6 @@ erasure/src/pCUICReduction.mli
 /erasure/src/typing0.mli
 /erasure/src/pCUICSafeRetyping.ml
 /erasure/src/pCUICSafeRetyping.mli
-/erasure/src/safeErasureFunction.ml
-/erasure/src/safeErasureFunction.mli
 erasure/src/pCUICInduction.ml
 erasure/src/pCUICInduction.mli
 erasure/src/mSetWeakList.ml

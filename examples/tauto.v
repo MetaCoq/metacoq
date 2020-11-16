@@ -3,6 +3,8 @@ From MetaCoq.Template Require Import utils All.
 
 From Equations Require Import Equations.
 
+Definition banon := {| binder_name := nAnon; binder_relevance := Relevant |}.
+Definition bnamed n := {| binder_name := nNamed n; binder_relevance := Relevant |}.
 
 Local Existing Instance config.default_checker_flags.
 
@@ -479,7 +481,7 @@ MetaCoq Quote Definition Mand := and.
 MetaCoq Quote Definition Mor := or.
 
 Definition tImpl (A B : term) :=
-  tProd nAnon A (lift0 1 B).
+  tProd banon A (lift0 1 B).
 
 Definition tAnd (A B : term) :=
   tApp Mand [ A ; B ].
@@ -986,7 +988,7 @@ Qed.
 Section Plugin.
 
   Definition cdecl_Type (P:term) :=
-    {| decl_name := nAnon; decl_body := None; decl_type := P |}.
+    {| decl_name := banon; decl_body := None; decl_type := P |}.
 
   Definition trivial_hyp (h:list form) v : forall h : form, In h [] -> sem h v.
     intro. destruct 1.

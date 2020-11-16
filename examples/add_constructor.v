@@ -47,7 +47,8 @@ Polymorphic Definition add_ctor (mind : mutual_inductive_body) (ind0 : inductive
                                            let typ := try_remove_n_lambdas n ctor in
                                            ctors ++ [(idc, typ, 0)]  (* fixme 0 *)
                                          else ctors;
-                            ind_projs := ind.(ind_projs) |})
+                            ind_projs := ind.(ind_projs);
+                            ind_relevance := ind.(ind_relevance) |})
                             mind.(ind_bodies) |}.
 
 

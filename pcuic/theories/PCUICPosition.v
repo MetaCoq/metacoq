@@ -24,6 +24,8 @@ Inductive choice :=
 | proj_c
 | fix_mfix_ty (n : nat)
 | fix_mfix_bd (n : nat)
+| cofix_mfix_ty (n : nat)
+| cofix_mfix_bd (n : nat)
 | lam_ty
 | lam_tm
 | prod_l
@@ -60,6 +62,16 @@ Fixpoint validpos t (p : position) {struct p} :=
         | None => false
         end
     | fix_mfix_bd n, tFix mfix idx =>
+        match nth_error mfix n with
+        | Some d => validpos d.(dbody) p
+        | None => false
+        end
+    | cofix_mfix_ty n, tCoFix mfix idx =>
+        match nth_error mfix n with
+        | Some d => validpos d.(dtype) p
+        | None => false
+        end
+    | cofix_mfix_bd n, tCoFix mfix idx =>
         match nth_error mfix n with
         | Some d => validpos d.(dbody) p
         | None => false
@@ -146,6 +158,22 @@ Proof.
       destruct n.
       * simpl in *. apply some_inj in e. subst.
         destruct y. simpl in *. intuition eauto.
+      * simpl in *. eapply IHa. all: eauto.
+    + dependent destruction e. simpl in *.
+      destruct (nth_error mfix n) as [[na ty bo ra]|] eqn:e. 2: discriminate.
+      induction a in n, na, ty, bo, ra, e, ih, vp |- *.
+      1:{ rewrite e. assumption. }
+      destruct n.
+      * simpl in *. apply some_inj in e. subst.
+        destruct y as [na' ty' bo' ra']. simpl in *. intuition eauto.
+      * simpl in *. eapply IHa. all: eauto.
+    + dependent destruction e. simpl in *.
+      destruct (nth_error mfix n) as [[na ty bo ra]|] eqn:e. 2: discriminate.
+      induction a in n, na, ty, bo, ra, e, ih, vp |- *.
+      1:{ rewrite e. assumption. }
+      destruct n.
+      * simpl in *. apply some_inj in e. subst.
+        destruct y as [na' ty' bo' ra']. simpl in *. intuition eauto.
       * simpl in *. eapply IHa. all: eauto.
     + dependent destruction e. simpl in *.
       destruct (nth_error mfix n) as [[na ty bo ra]|] eqn:e. 2: discriminate.
@@ -340,6 +368,36 @@ Proof.
     - simpl. cbn in e2. rewrite e in e2. assumption.
     - specialize (ih2 q). eapply ih2. all: assumption.
   }
+  assert (
+    forall n mfix idx d (p : pos d.(dtype))
+      (e : nth_error mfix n = Some d)
+      (e1 : validpos (tCoFix mfix idx) (cofix_mfix_ty n :: proj1_sig p)),
+      Acc posR p ->
+      Acc posR (exist (cofix_mfix_ty n :: proj1_sig p) e1)
+  ) as Acc_cofix_mfix_ty.
+  { intros n mfix idx d p e e1 h.
+    induction h as [p ih1 ih2] in e, e1 |- *.
+    constructor. intros [q e2] h.
+    dependent destruction h.
+    simple refine (let q := exist p0 _ : pos d.(dtype) in _).
+    - simpl. cbn in e2. rewrite e in e2. assumption.
+    - specialize (ih2 q). eapply ih2. all: assumption.
+  }
+  assert (
+    forall n mfix idx d (p : pos d.(dbody))
+      (e : nth_error mfix n = Some d)
+      (e1 : validpos (tCoFix mfix idx) (cofix_mfix_bd n :: proj1_sig p)),
+      Acc posR p ->
+      Acc posR (exist (cofix_mfix_bd n :: proj1_sig p) e1)
+  ) as Acc_cofix_mfix_bd.
+  { intros n mfix idx d p e e1 h.
+    induction h as [p ih1 ih2] in e, e1 |- *.
+    constructor. intros [q e2] h.
+    dependent destruction h.
+    simple refine (let q := exist p0 _ : pos d.(dbody) in _).
+    - simpl. cbn in e2. rewrite e in e2. assumption.
+    - specialize (ih2 q). eapply ih2. all: assumption.
+  }
   intro t. induction t using term_forall_list_ind ; intros q.
   all: try solve [
              destruct q as [q e] ; destruct q as [| c q] ; [
@@ -496,6 +554,48 @@ Proof.
         unshelve eapply Acc_fix_mfix_bd with (1 := e1) (p := exist q _).
         -- simpl. rewrite e1 in e. assumption.
         -- eapply ihm.
+  - destruct q as [q e]. destruct q as [| c q].
+    + constructor. intros [p' e'] h.
+      unfold posR in h. cbn in h.
+      dependent destruction h.
+      destruct c. all: noconf e'.
+      * simpl in e'.
+        case_eq (nth_error m n0).
+        2:{ intro h. pose proof e' as hh. rewrite h in hh. discriminate. }
+        intros [na ty bo ra] e1.
+        eapply All_nth_error in X as ihm. 2: exact e1.
+        simpl in ihm.
+        unshelve eapply Acc_cofix_mfix_ty with (1 := e1) (p := exist p _).
+        -- simpl. rewrite e1 in e'. assumption.
+        -- eapply ihm.
+      * simpl in e'.
+        case_eq (nth_error m n0).
+        2:{ intro h. pose proof e' as hh. rewrite h in hh. discriminate. }
+        intros [na ty bo ra] e1.
+        eapply All_nth_error in X as ihm. 2: exact e1.
+        simpl in ihm.
+        unshelve eapply Acc_cofix_mfix_bd with (1 := e1) (p := exist p _).
+        -- simpl. rewrite e1 in e'. assumption.
+        -- eapply ihm.
+    + destruct c. all: noconf e.
+      * simpl in e.
+        case_eq (nth_error m n0).
+        2:{ intro h. pose proof e as hh. rewrite h in hh. discriminate. }
+        intros [na ty bo ra] e1.
+        eapply All_nth_error in X as ihm. 2: exact e1.
+        simpl in ihm.
+        unshelve eapply Acc_cofix_mfix_ty with (1 := e1) (p := exist q _).
+        -- simpl. rewrite e1 in e. assumption.
+        -- eapply ihm.
+      * simpl in e.
+        case_eq (nth_error m n0).
+        2:{ intro h. pose proof e as hh. rewrite h in hh. discriminate. }
+        intros [na ty bo ra] e1.
+        eapply All_nth_error in X as ihm. 2: exact e1.
+        simpl in ihm.
+        unshelve eapply Acc_cofix_mfix_bd with (1 := e1) (p := exist q _).
+        -- simpl. rewrite e1 in e. assumption.
+        -- eapply ihm.
 Qed.
 
 Fixpoint atpos t (p : position) {struct p} : term :=
@@ -519,6 +619,16 @@ Fixpoint atpos t (p : position) {struct p} : term :=
         | None => tRel 0
         end
     | fix_mfix_bd n, tFix mfix idx =>
+        match nth_error mfix n with
+        | Some d => atpos d.(dbody) p
+        | None => tRel 0
+        end
+    | cofix_mfix_ty n, tCoFix mfix idx =>
+        match nth_error mfix n with
+        | Some d => atpos d.(dtype) p
+        | None => tRel 0
+        end
+    | cofix_mfix_bd n, tCoFix mfix idx =>
         match nth_error mfix n with
         | Some d => atpos d.(dbody) p
         | None => tRel 0
@@ -557,6 +667,12 @@ Proof.
     + simpl. destruct nth_error as [[na ty bo ra]|] eqn:e.
       * apply IHp.
       * rewrite hh. reflexivity.
+    + simpl. destruct nth_error as [[na ty bo ra]|] eqn:e.
+      * apply IHp.
+      * rewrite hh. reflexivity.
+    + simpl. destruct nth_error as [[na ty bo ra]|] eqn:e.
+      * apply IHp.
+      * rewrite hh. reflexivity.
 Qed.
 
 Lemma poscat_valid :
@@ -573,6 +689,10 @@ Proof.
     all: try noconf hp.
     all: try (apply IHp ; assumption).
     + simpl in *. destruct nth_error as [[m br]|] eqn:e. 2: discriminate.
+      apply IHp. all: assumption.
+    + simpl in *. destruct nth_error as [[na ty bo ra]|] eqn:e. 2: discriminate.
+      apply IHp. all: assumption.
+    + simpl in *. destruct nth_error as [[na ty bo ra]|] eqn:e. 2: discriminate.
       apply IHp. all: assumption.
     + simpl in *. destruct nth_error as [[na ty bo ra]|] eqn:e. 2: discriminate.
       apply IHp. all: assumption.
@@ -605,6 +725,16 @@ Proof.
     + destruct nth_error as [[m br]|] eqn:e. 2: reflexivity.
       simpl. rewrite app_nil_r. reflexivity.
     + destruct nth_error as [[m br]|] eqn:e.
+      * apply IHp.
+      * destruct c. all: reflexivity.
+    + destruct nth_error as [[na ty bo ra]|] eqn:e. 2: reflexivity.
+      simpl. rewrite app_nil_r. reflexivity.
+    + destruct nth_error as [[na ty bo ra]|] eqn:e.
+      * apply IHp.
+      * destruct c. all: reflexivity.
+    + destruct nth_error as [[na ty bo ra]|] eqn:e. 2: reflexivity.
+      simpl. rewrite app_nil_r. reflexivity.
+    + destruct nth_error as [[na ty bo ra]|] eqn:e.
       * apply IHp.
       * destruct c. all: reflexivity.
     + destruct nth_error as [[na ty bo ra]|] eqn:e. 2: reflexivity.
@@ -659,20 +789,22 @@ Inductive stack : Type :=
 | Empty
 | App (t : term) (π : stack)
 | Fix (f : mfixpoint term) (n : nat) (args : list term) (π : stack)
-| Fix_mfix_ty (na : name) (bo : term) (ra : nat) (mfix1 mfix2 : mfixpoint term) (id : nat) (π : stack)
-| Fix_mfix_bd (na : name) (ty : term) (ra : nat)  (mfix1 mfix2 : mfixpoint term) (id : nat) (π : stack)
+| Fix_mfix_ty (na : aname) (bo : term) (ra : nat) (mfix1 mfix2 : mfixpoint term) (id : nat) (π : stack)
+| Fix_mfix_bd (na : aname) (ty : term) (ra : nat)  (mfix1 mfix2 : mfixpoint term) (id : nat) (π : stack)
 | CoFix (f : mfixpoint term) (n : nat) (args : list term) (π : stack)
+| CoFix_mfix_ty (na : aname) (bo : term) (ra : nat) (mfix1 mfix2 : mfixpoint term) (id : nat) (π : stack)
+| CoFix_mfix_bd (na : aname) (ty : term) (ra : nat)  (mfix1 mfix2 : mfixpoint term) (id : nat) (π : stack)
 | Case_p (indn : inductive * nat) (c : term) (brs : list (nat * term)) (π : stack)
 | Case (indn : inductive * nat) (p : term) (brs : list (nat * term)) (π : stack)
 | Case_brs (indn : inductive * nat) (p c : term) (m : nat) (brs1 brs2 : list (nat * term)) (π : stack)
 | Proj (p : projection) (π : stack)
-| Prod_l (na : name) (B : term) (π : stack)
-| Prod_r (na : name) (A : term) (π : stack)
-| Lambda_ty (na : name) (b : term) (π : stack)
-| Lambda_tm (na : name) (A : term) (π : stack)
-| LetIn_bd (na : name) (B t : term) (π : stack)
-| LetIn_ty (na : name) (b t : term) (π : stack)
-| LetIn_in (na : name) (b B : term) (π : stack)
+| Prod_l (na : aname) (B : term) (π : stack)
+| Prod_r (na : aname) (A : term) (π : stack)
+| Lambda_ty (na : aname) (b : term) (π : stack)
+| Lambda_tm (na : aname) (A : term) (π : stack)
+| LetIn_bd (na : aname) (B t : term) (π : stack)
+| LetIn_ty (na : aname) (b t : term) (π : stack)
+| LetIn_in (na : aname) (b B : term) (π : stack)
 | coApp (t : term) (π : stack).
 
 Notation "'ε'" := (Empty).
@@ -702,6 +834,10 @@ Fixpoint zipc t stack :=
   | Fix_mfix_bd na ty ra mfix1 mfix2 idx π =>
       zipc (tFix (mfix1 ++ mkdef _ na ty t ra :: mfix2) idx) π
   | CoFix f n args π => zipc (tApp (mkApps (tCoFix f n) args) t) π
+  | CoFix_mfix_ty na bo ra mfix1 mfix2 idx π =>
+      zipc (tCoFix (mfix1 ++ mkdef _ na t bo ra :: mfix2) idx) π
+  | CoFix_mfix_bd na ty ra mfix1 mfix2 idx π =>
+      zipc (tCoFix (mfix1 ++ mkdef _ na ty t ra :: mfix2) idx) π
   | Case_p indn c brs π => zipc (tCase indn t c brs) π
   | Case indn pred brs π => zipc (tCase indn pred t brs) π
   | Case_brs indn pred c m brs1 brs2 π =>
@@ -849,10 +985,10 @@ Qed.
 
 (* TODO Find a better place for this. *)
 (* The current fix_context asks for too much information. *)
-Definition fix_context_alt (l : list (name × term)) : context :=
+Definition fix_context_alt (l : list (aname × term)) : context :=
   List.rev (mapi (fun i d => vass d.1 (lift0 i d.2)) l).
 
-Definition def_sig (d : def term) : name × term :=
+Definition def_sig (d : def term) : aname × term :=
   (d.(dname), d.(dtype)).
 
 Lemma fix_context_fix_context_alt :
@@ -875,6 +1011,10 @@ Fixpoint stack_context π : context :=
       stack_context π ,,,
       fix_context_alt (map def_sig mfix1 ++ (na,ty) :: map def_sig mfix2)
   | CoFix f n args π => stack_context π
+  | CoFix_mfix_ty na bo ra mfix1 mfix2 idx π => stack_context π
+  | CoFix_mfix_bd na ty ra mfix1 mfix2 idx π =>
+      stack_context π ,,,
+      fix_context_alt (map def_sig mfix1 ++ (na,ty) :: map def_sig mfix2)
   | Case_p indn c brs π => stack_context π
   | Case indn pred brs π => stack_context π
   | Case_brs indn pred c m brs1 brs2 π => stack_context π
@@ -909,6 +1049,10 @@ Fixpoint stack_position π : position :=
   | Fix_mfix_bd na ty ra mfix1 mfix2 idx ρ =>
       stack_position ρ ++ [ fix_mfix_bd #|mfix1| ]
   | CoFix f n args ρ => stack_position ρ ++ [ app_r ]
+  | CoFix_mfix_ty na bo ra mfix1 mfix2 idx ρ =>
+      stack_position ρ ++ [ cofix_mfix_ty #|mfix1| ]
+  | CoFix_mfix_bd na ty ra mfix1 mfix2 idx ρ =>
+      stack_position ρ ++ [ cofix_mfix_bd #|mfix1| ]
   | Case_p indn c brs ρ => stack_position ρ ++ [ case_p ]
   | Case indn pred brs ρ => stack_position ρ ++ [ case_c ]
   | Case_brs indn pred c m brs1 brs2 ρ =>
@@ -939,6 +1083,14 @@ Proof.
     reflexivity.
   - cbn. rewrite poscat_atpos. rewrite IHπ.
     cbn. rewrite nth_error_app_ge by lia.
+    replace (#|mfix1| - #|mfix1|) with 0 by lia. simpl.
+    reflexivity.
+  - cbn. rewrite poscat_atpos. rewrite IHπ.
+    cbn. rewrite nth_error_app_ge by lia.
+    replace (#|mfix1| - #|mfix1|) with 0 by lia. simpl.
+    reflexivity.
+  - cbn. rewrite poscat_atpos. rewrite IHπ.
+    cbn. rewrite nth_error_app_ge by lia.
     replace (#|brs1| - #|brs1|) with 0 by lia. simpl.
     reflexivity.
 Qed.
@@ -954,6 +1106,18 @@ Proof.
     ]
   ].
   - reflexivity.
+  - cbn. eapply poscat_valid.
+    + eapply IHπ.
+    + rewrite stack_position_atpos.
+      cbn. rewrite nth_error_app_ge by lia.
+      replace (#|mfix1| - #|mfix1|) with 0 by lia. simpl.
+      reflexivity.
+  - cbn. eapply poscat_valid.
+    + eapply IHπ.
+    + rewrite stack_position_atpos.
+      cbn. rewrite nth_error_app_ge by lia.
+      replace (#|mfix1| - #|mfix1|) with 0 by lia. simpl.
+      reflexivity.
   - cbn. eapply poscat_valid.
     + eapply IHπ.
     + rewrite stack_position_atpos.
@@ -1017,6 +1181,20 @@ Section Stacks.
     induction π ; intros u v e.
     all: try solve [ cbn in e ; apply IHπ in e ; inversion e ; reflexivity ].
     - cbn in e. assumption.
+    - apply IHπ in e.
+      assert (em :
+        mfix1 ++ mkdef _ na u bo ra :: mfix2 =
+        mfix1 ++ mkdef _ na v bo ra :: mfix2
+      ).
+      { inversion e. reflexivity. }
+      apply app_inv_head in em. inversion em. reflexivity.
+    - apply IHπ in e.
+      assert (em :
+        mfix1 ++ mkdef _ na ty u ra :: mfix2 =
+        mfix1 ++ mkdef _ na ty v ra :: mfix2
+      ).
+      { inversion e. reflexivity. }
+      apply app_inv_head in em. inversion em. reflexivity.
     - apply IHπ in e.
       assert (em :
         mfix1 ++ mkdef _ na u bo ra :: mfix2 =
@@ -1166,6 +1344,10 @@ Section Stacks.
     | Fix_mfix_bd na ty ra mfix1 mfix2 idx ρ =>
         Fix_mfix_bd na ty ra mfix1 mfix2 idx (stack_cat ρ θ)
     | CoFix f n args ρ => CoFix f n args (stack_cat ρ θ)
+    | CoFix_mfix_ty na bo ra mfix1 mfix2 idx ρ =>
+        CoFix_mfix_ty na bo ra mfix1 mfix2 idx (stack_cat ρ θ)
+    | CoFix_mfix_bd na ty ra mfix1 mfix2 idx ρ =>
+        CoFix_mfix_bd na ty ra mfix1 mfix2 idx (stack_cat ρ θ)
     | Case_p indn c brs ρ => Case_p indn c brs (stack_cat ρ θ)
     | Case indn p brs ρ => Case indn p brs (stack_cat ρ θ)
     | Case_brs indn p c m brs1 brs2 ρ =>
@@ -1225,6 +1407,10 @@ Section Stacks.
     | Fix_mfix_bd na ty ra mfix1 mfix2 idx ρ =>
         rev_stack ρ +++ Fix_mfix_bd na ty ra mfix1 mfix2 idx ε
     | CoFix f n args ρ => rev_stack ρ +++ CoFix f n args ε
+    | CoFix_mfix_ty na bo ra mfix1 mfix2 idx ρ =>
+        rev_stack ρ +++ CoFix_mfix_ty na bo ra mfix1 mfix2 idx ε
+    | CoFix_mfix_bd na ty ra mfix1 mfix2 idx ρ =>
+        rev_stack ρ +++ CoFix_mfix_bd na ty ra mfix1 mfix2 idx ε
     | Case_p indn c brs ρ => rev_stack ρ +++ Case_p indn c brs ε
     | Case indn p brs ρ => rev_stack ρ +++ Case indn p brs ε
     | Case_brs indn p c m brs1 brs2 ρ =>
@@ -1290,6 +1476,14 @@ Section Stacks.
         P π ->
         P (π +++ CoFix mfix idx args ε)
       ) ->
+      (forall na bo ra mfix1 mfix2 id π,
+        P π ->
+        P (π +++ CoFix_mfix_ty na bo ra mfix1 mfix2 id ε)
+      ) ->
+      (forall na ty ra mfix1 mfix2 id π,
+        P π ->
+        P (π +++ CoFix_mfix_bd na ty ra mfix1 mfix2 id ε)
+      ) ->
       (forall indn c brs π,
         P π ->
         P (π +++ Case_p indn c brs ε)
@@ -1340,8 +1534,8 @@ Section Stacks.
       ) ->
       forall π, P π.
   Proof.
-    intros P hε hApp hFix hFixty hFixbd hCoFix hCasep hCase hCasebrs hProj
-      hProdl hProdr hLamty hLamtm hLetbd hLetty hLetin hcoApp.
+    intros P hε hApp hFix hFixty hFixbd hCoFix hCoFixty hCoFixbd hCasep hCase
+      hCasebrs hProj hProdl hProdr hLamty hLamtm hLetbd hLetty hLetin hcoApp.
     assert (h : forall π, P (rev_stack π)).
     { intro π. induction π.
       all: eauto.
@@ -1401,8 +1595,10 @@ Section Stacks.
   Proof.
     intros π ρ. revert π. induction ρ ; intros π.
     all: try (cbn ; rewrite ?IHρ ; reflexivity).
-    cbn. rewrite IHρ. unfold ",,,".
-    rewrite app_assoc. reflexivity.
+    - cbn. rewrite IHρ. unfold ",,,".
+      rewrite app_assoc. reflexivity.
+    - cbn. rewrite IHρ. unfold ",,,".
+      rewrite app_assoc. reflexivity.
   Qed.
 
   Definition zippx t π :=

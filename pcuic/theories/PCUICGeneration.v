@@ -5,7 +5,6 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICTyping.
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
 
-
 Derive NoConfusion NoConfusionHom for term.
 Derive NoConfusion NoConfusionHom for context_decl.
 Derive NoConfusion NoConfusionHom for list.
@@ -14,17 +13,15 @@ Derive NoConfusion NoConfusionHom for option.
 Section Generation.
   Context `{cf : config.checker_flags}.
 
-  Definition isWfArity_or_Type Σ Γ T : Type := (isWfArity typing Σ Γ T + isType Σ Γ T).
-
   Inductive typing_spine (Σ : global_env_ext) (Γ : context) :
     term -> list term -> term -> Type :=
   | type_spine_nil ty ty' :
-      isWfArity_or_Type Σ Γ ty' ->
+      isType Σ Γ ty' ->
       Σ ;;; Γ |- ty <= ty' ->
       typing_spine Σ Γ ty [] ty'
 
   | type_spine_cons hd tl na A B T B' :
-      isWfArity_or_Type Σ Γ (tProd na A B) ->
+      isType Σ Γ (tProd na A B) ->
       Σ ;;; Γ |- T <= tProd na A B ->
       Σ ;;; Γ |- hd : A ->
       typing_spine Σ Γ (subst10 hd B) tl B' ->
@@ -37,12 +34,13 @@ Section Generation.
   Proof.
     intros Ht Hsp.
     revert t Ht. induction Hsp; simpl; auto.
-    intros t Ht. eapply type_Cumul; eauto.
+    intros t Ht. eapply type_Cumul; eauto. eapply i.π2.
 
     intros.
     specialize (IHHsp (tApp t0 hd)). apply IHHsp.
     eapply type_App.
-    eapply type_Cumul; eauto. eauto.
+    eapply type_Cumul; eauto.
+    eapply i.π2. eauto.
   Qed.
 
   Lemma type_it_mkLambda_or_LetIn :

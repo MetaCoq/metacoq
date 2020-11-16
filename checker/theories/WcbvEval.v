@@ -1,8 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import CRelationClasses.
-From MetaCoq.Template Require Import config utils Ast AstUtils LiftSubst MCList
+From MetaCoq.Template Require Import config utils Ast AstUtils Reflect LiftSubst MCList
      UnivSubst WfInv Typing.
-From MetaCoq.Checker Require Import Reflect.
 
 Require Import ssreflect ssrbool.
 Require Import Equations.Prop.DepElim.
@@ -151,10 +150,10 @@ Section Wcbv.
       eval (tConst c u) (tConst c u)
 
   (** Case *)
-  | eval_iota ind pars discr c u args p brs res :
+  | eval_iota ind pars r discr c u args p brs res :
       eval discr (mkApps (tConstruct ind c u) args) ->
       eval (iota_red pars c args brs) res ->
-      eval (tCase (ind, pars) p discr brs) res
+      eval (tCase ((ind, pars), r) p discr brs) res
 
   (** Proj *)
   | eval_proj i pars arg discr args u a res :
@@ -214,12 +213,12 @@ Section Wcbv.
   (* Scheme Minimality for eval Sort Type. *)
   Definition eval_evals_ind :
     forall P : term -> term -> Type,
-      (forall (f : term) (na : name) t b a a' l res,
+      (forall (f : term) (na : aname) t b a a' l res,
           eval f (tLambda na t b) ->
           P f (tLambda na t b) -> eval a a' -> P a a' ->
           eval (mkApps (b {0 := a'}) l) res -> P (mkApps (b {0 := a'}) l) res ->
           P (tApp f (a :: l)) res) ->
-      (forall (na : name) (b0 b0' t b1 res : term),
+      (forall (na : aname) (b0 b0' t b1 res : term),
           eval b0 b0' -> P b0 b0' -> eval (b1 {0 := b0'}) res -> P (b1 {0 := b0'}) res -> P (tLetIn na b0 t b1) res) ->
       (forall (i : nat) (body res : term),
           option_map decl_body (nth_error Γ i) = Some (Some body) ->
@@ -232,11 +231,11 @@ Section Wcbv.
             eval (subst_instance_constr u body) res -> P (subst_instance_constr u body) res -> P (tConst c u) res) ->
       (forall c (decl : constant_body),
           declared_constant Σ c decl -> forall u : Instance.t, cst_body decl = None -> P (tConst c u) (tConst c u)) ->
-      (forall (ind : inductive) (pars : nat) (discr : term) (c : nat) (u : Instance.t)
+      (forall (ind : inductive) (pars : nat) r (discr : term) (c : nat) (u : Instance.t)
               (args : list term) (p : term) (brs : list (nat × term)) (res : term),
           eval discr (mkApps (tConstruct ind c u) args) ->
           P discr (mkApps (tConstruct ind c u) args) ->
-          eval (iota_red pars c args brs) res -> P (iota_red pars c args brs) res -> P (tCase (ind, pars) p discr brs) res) ->
+          eval (iota_red pars c args brs) res -> P (iota_red pars c args brs) res -> P (tCase ((ind, pars), r) p discr brs) res) ->
       (forall (i : inductive) (pars arg : nat) (discr : term) (args : list term) (u : Instance.t)
               (a res : term),
           eval discr (mkApps (tConstruct i 0 u) args) ->
@@ -262,7 +261,7 @@ Section Wcbv.
           unfold_fix mfix idx = Some (narg, fn) ->
           ~~ is_constructor narg (fixargsv ++ argsv) ->
           P (mkApps f args) (mkApps (tFix mfix idx) (fixargsv ++ argsv))) ->
-      (forall (ip : inductive × nat) (mfix : mfixpoint term) (idx : nat) (p : term) (args : list term)
+      (forall (ip : (inductive × nat) × relevance) (mfix : mfixpoint term) (idx : nat) (p : term) (args : list term)
               (narg : nat) (fn : term) (brs : list (nat × term)) (res : term),
           unfold_cofix mfix idx = Some (narg, fn) ->
           eval (tCase ip p (mkApps fn args) brs) res ->

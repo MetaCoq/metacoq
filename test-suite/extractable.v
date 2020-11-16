@@ -55,6 +55,9 @@ Definition empty_constraints : ConstraintSet.t_.
   constructor.
 Defined.
 
+Definition nAnon := {| binder_name := nAnon; binder_relevance := Relevant |}.
+
+
 MetaCoq Run
     (tmInductive {| mind_entry_record := None
                   ; mind_entry_finite := Finite

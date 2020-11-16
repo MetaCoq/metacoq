@@ -79,11 +79,9 @@ Section Inversion.
   Lemma inversion_Sort :
     forall {Γ s T},
       Σ ;;; Γ |- tSort s : T ->
-      ∑ l,
-        wf_local Σ Γ ×
-        LevelSet.In l (global_ext_levels Σ) ×
-        (s = Universe.make l) ×
-        Σ ;;; Γ |- tSort (Universe.super l) <= T.
+      wf_local Σ Γ ×
+      wf_universe Σ s ×
+      Σ ;;; Γ |- tSort (Universe.super s) <= T.
   Proof.
     intros Γ s T h. invtac h.
   Qed.
@@ -186,7 +184,7 @@ Section Inversion.
         map_option_out (build_branches_type ind mdecl idecl params u p)
                      = Some btys ×
         All2 (fun br bty => (br.1 = bty.1 × Σ ;;; Γ |- br.2 : bty.2)
-                           × Σ ;;; Γ |- bty.2 : tSort ps) brs btys ×
+                           × isType Σ Γ bty.2) brs btys ×
         Σ ;;; Γ |- mkApps p (skipn npar args ++ [c]) <= T.
   Proof.
     intros Γ indnpar p c brs T h. invtac h.

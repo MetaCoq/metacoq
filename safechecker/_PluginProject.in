@@ -2,8 +2,8 @@
 -Q src MetaCoq.SafeChecker
 -R theories MetaCoq.SafeChecker
 
-src/classes0.mli
-src/classes0.ml
+# src/classes0.mli
+# src/classes0.ml
 
 # From Coq's stdlib
 src/mSetWeakList.mli
@@ -21,6 +21,8 @@ src/wGraph.ml
 src/wGraph.mli
 src/typing0.mli
 src/typing0.ml
+src/reflect.mli
+src/reflect.ml
 
 # From PCUIC
 src/pCUICAst.ml
@@ -33,8 +35,8 @@ src/eqDecInstances.ml
 src/eqDecInstances.mli
 # src/pCUICInduction.mli
 # src/pCUICInduction.ml
-src/pCUICReflect.mli
-src/pCUICReflect.ml
+# src/pCUICReflect.mli
+# src/pCUICReflect.ml
 src/pCUICEquality.mli
 src/pCUICEquality.ml
 src/pCUICReduction.ml
@@ -49,6 +51,8 @@ src/pCUICPosition.mli
 src/pCUICPosition.ml
 src/pCUICNormal.mli
 src/pCUICNormal.ml
+src/pCUICWfUniverses.mli
+src/pCUICWfUniverses.ml
 # src/pCUICChecker.ml
 # src/pCUICChecker.mli
 # src/pCUICRetyping.ml
@@ -69,8 +73,8 @@ src/pCUICNormal.ml
 # src/pCUICContextConversion.ml
 # src/pCUICConversion.mli
 # src/pCUICConversion.ml
-src/pCUICSafeLemmata.mli
-src/pCUICSafeLemmata.ml
+# src/pCUICSafeLemmata.mli
+# src/pCUICSafeLemmata.ml
 src/templateToPCUIC.mli
 src/templateToPCUIC.ml
 src/pCUICChecker.ml

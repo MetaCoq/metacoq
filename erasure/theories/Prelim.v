@@ -16,8 +16,6 @@ Module P := PCUICWcbvEval.
 
 Ltac inv H := inversion H; subst; clear H.
 
-Coercion wf_ext_wf : wf_ext >-> wf.
-Existing Instance wf_ext_wf.
 Existing Class axiom_free.
 
 Lemma nth_error_app_inv X (x : X) n l1 l2 :
@@ -135,7 +133,7 @@ Lemma typing_spine_eval:
   (X : All2 (PCUICWcbvEval.eval Σ) args args') (bla : wf Σ)
     (T x x0 : PCUICAst.term) (t0 : typing_spine Σ [] x args x0) 
     (c : Σ;;; [] |- x0 <= T) (x1 : PCUICAst.term)
-    (c0 : Σ;;; [] |- x1 <= x), axiom_free Σ -> isWfArity_or_Type Σ [] T -> typing_spine Σ [] x1 args' T.
+    (c0 : Σ;;; [] |- x1 <= x), axiom_free Σ -> isType Σ [] T -> typing_spine Σ [] x1 args' T.
 Proof.
   intros. eapply typing_spine_red; eauto.
   eapply typing_spine_wt in t0; auto.
@@ -263,7 +261,7 @@ Lemma value_app_inv L :
   Ee.value (EAst.mkApps EAst.tBox L) ->
   L = nil.
 Proof.
-  intros. depelim H.
+  intros. depelim X.
   - destruct L using rev_ind.
     reflexivity.
     rewrite emkApps_snoc in i. inv i.
@@ -384,14 +382,17 @@ Qed.
 
 Inductive red_decls Σ Γ Γ' : forall (x y : PCUICAst.context_decl), Type :=
 | conv_vass na na' T T' : isType Σ Γ' T' -> red Σ Γ T T' ->
-                      red_decls Σ Γ Γ' (PCUICAst.vass na T) (PCUICAst.vass na' T')
+  eq_binder_annot na na' ->
+  red_decls Σ Γ Γ' (PCUICAst.vass na T) (PCUICAst.vass na' T')
 
 | conv_vdef_type na na' b T T' : isType Σ Γ' T' -> red Σ Γ T T' ->
-                             red_decls Σ Γ Γ' (PCUICAst.vdef na b T) (PCUICAst.vdef na' b T')
+  eq_binder_annot na na' ->
+  red_decls Σ Γ Γ' (PCUICAst.vdef na b T) (PCUICAst.vdef na' b T')
 
 | conv_vdef_body na na' b b' T : isType Σ Γ' T ->
-                                 Σ ;;; Γ' |- b' : T -> red Σ Γ b b' ->
-                                                  red_decls Σ Γ Γ' (PCUICAst.vdef na b T) (PCUICAst.vdef na' b' T).
+  eq_binder_annot na na' ->
+  Σ ;;; Γ' |- b' : T -> red Σ Γ b b' ->
+  red_decls Σ Γ Γ' (PCUICAst.vdef na b T) (PCUICAst.vdef na' b' T).
 
 Notation red_context Σ := (context_relation (red_decls Σ)).
 
@@ -404,6 +405,6 @@ Proof.
   - cbn; eauto.
   - destruct a. destruct decl_body.
     + cbn. econstructor. inv X0. eauto. econstructor.
-      depelim X0. reflexivity.
+      depelim X0. reflexivity. reflexivity.
     + cbn. econstructor. inv X0. eauto. now econstructor.
 Qed.

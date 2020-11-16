@@ -20,14 +20,14 @@ Extract Inductive Numeral.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun 
 Extract Constant ascii_compare =>
  "fun x y -> match Char.compare x y with 0 -> Eq | x when x < 0 -> Lt | _ -> Gt".
 
-Extraction Blacklist config uGraph Universes Ast String List Nat Int
+Extraction Blacklist Classes config uGraph Universes Ast String List Nat Int
            UnivSubst Typing Checker Retyping OrderedType Logic Common Equality Classes.
 Set Warnings "-extraction-opaque-accessed".
 Set Warnings "-extraction-reserved-identifier".
 
 Extraction Inline PCUICSafeConversion.Ret.
 
-Extract Inductive Equations.Init.sigma => "(,)" ["(,)"].
+Extract Inductive Equations.Init.sigma => "( * )" ["(,)"].
 
 Extract Constant PCUICTyping.fix_guard => "(fun x -> true)".
 Extract Constant PCUICTyping.cofix_guard => "(fun x -> true)".

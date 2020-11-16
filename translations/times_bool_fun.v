@@ -166,7 +166,8 @@ Definition tsl_mind_body (ΣE : tsl_context) (mp : modpath) (kn : kername)
                      ind_type := ind_type';
                      ind_kelim := ind.(ind_kelim);
                      ind_ctors := snd ctors';
-                     ind_projs := [] |})).
+                     ind_projs := [];
+                     ind_relevance := ind.(ind_relevance) |})).
   + (* arity *)
     refine (let L := decompose_prod ind.(ind_type) in _).
     simple refine (let L' := List.fold_left _ (combine' (fst L)) [] in _).

@@ -14,7 +14,7 @@ Extract Inductive Decimal.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun 
 Extract Inductive Hexadecimal.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
 Extract Inductive Numeral.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
 
-Extraction Blacklist config uGraph Universes Ast String List Nat Int
+Extraction Blacklist Classes config uGraph Universes Ast String List Nat Int
            UnivSubst Typing Checker Retyping OrderedType Logic Common Equality Classes.
 Set Warnings "-extraction-opaque-accessed".
 Set Warnings "-extraction-reserved-identifier".
@@ -34,7 +34,7 @@ Extraction Inline Equations.Init.pr2.
 Extraction Inline Equations.Init.hidebody.
 Extraction Inline Equations.Prop.DepElim.solution_left.
 
-Extract Inductive Equations.Init.sigma => "(*)" ["(,)"].
+Extract Inductive Equations.Init.sigma => "( * )" ["(,)"].
 
 Extract Constant PCUICTyping.fix_guard => "(fun x -> true)".
 Extract Constant PCUICTyping.cofix_guard => "(fun x -> true)".
@@ -46,6 +46,6 @@ Cd "src".
 
 Separate Extraction ErasureFunction.erase SafeTemplateErasure
          (* The following directives ensure separate extraction does not produce name clashes *)
-         String utils Template.UnivSubst ELiftSubst ETyping.
+         Coq.Strings.String utils Template.UnivSubst ELiftSubst ETyping.
 
 Cd "..".

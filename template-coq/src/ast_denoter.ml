@@ -11,6 +11,8 @@ struct
   type quoted_int = Datatypes.nat
   type quoted_bool = bool
   type quoted_name = name
+  type quoted_aname = name binder_annot
+  type quoted_relevance = relevance
   type quoted_sort = Universes0.Universe.t
   type quoted_cast_kind = cast_kind
   type quoted_kernel_name = BasicAst.kername
@@ -67,7 +69,7 @@ struct
   let mkCase = mkCase
   let mkProj = mkProj
 
-  let unquote_def (x: 't BasicAst.def) : ('t, name, quoted_int) adef =
+  let unquote_def (x: 't BasicAst.def) : ('t, name binder_annot, quoted_int) adef =
     {
       adname=dname x;
       adtype=dtype x;
@@ -75,7 +77,7 @@ struct
       rarg=rarg x
     }
 
-  let inspect_term (tt: t):(t, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_univ_instance, quoted_proj) structure_of_term=
+  let inspect_term (tt: t):(t, quoted_int, quoted_ident, quoted_aname, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_relevance, quoted_univ_instance, quoted_proj) structure_of_term=
     match tt with
     | Coq_tRel n -> ACoq_tRel n
     | Coq_tVar v -> ACoq_tVar v
@@ -99,10 +101,19 @@ struct
     let s = list_to_string qi in
     Id.of_string s
 
+  let unquote_relevance (r : relevance) : Sorts.relevance =
+    match r with
+    | BasicAst.Relevant -> Sorts.Relevant
+    | BasicAst.Irrelevant -> Sorts.Irrelevant
+
   let unquote_name (q: quoted_name) : Name.t =
     match q with
     | Coq_nAnon -> Anonymous
     | Coq_nNamed n -> Name (unquote_ident n)
+
+  let unquote_aname (q: quoted_aname) : Name.t Context.binder_annot =
+    {Context.binder_name = unquote_name q.binder_name;
+     Context.binder_relevance = unquote_relevance q.binder_relevance}
 
   let rec unquote_int (q: quoted_int) : int =
     match q with
@@ -146,7 +157,6 @@ struct
 
   let unquote_level (trm : Universes0.Level.t) : Univ.Level.t =
     match trm with
-    | Universes0.Level.Coq_lProp -> Univ.Level.prop
     | Universes0.Level.Coq_lSet -> Univ.Level.set
     | Universes0.Level.Level s ->
       let s = list_to_string s in
@@ -157,16 +167,22 @@ struct
       Univ.Level.make (Univ.Level.UGlobal.make dp idx)
     | Universes0.Level.Var n -> Univ.Level.var (unquote_int n)
 
-  let unquote_level_expr (trm : Universes0.Level.t * quoted_bool) : Univ.Universe.t =
+  let unquote_level_expr (trm : Universes0.Level.t * Datatypes.nat) : Univ.Universe.t =
     let l = unquote_level (fst trm) in
     let u = Univ.Universe.make l in
-    if snd trm && not (Univ.Level.is_prop l) then Univ.Universe.super u
+    let n = unquote_int (snd trm) in
+    if n > 0 && not (Univ.Level.is_prop l) then Univ.Universe.super u
     else u
 
   let unquote_universe evd (trm : Universes0.Universe.t) =
-    let l = Universes0.Universe.to_kernel_repr trm in
-    let l = List.map unquote_level_expr l in
-    evd, List.fold_left Univ.Universe.sup (List.hd l) (List.tl l)
+    match trm with
+    | Universes0.Universe.Coq_lSProp -> evd, Univ.Universe.sprop
+    | Universes0.Universe.Coq_lProp -> evd, Univ.Universe.type0m
+    | Universes0.Universe.Coq_lType u ->
+       (* let u = Universes0.Universe.t_set l in *)
+       let ux_list = Universes0.UnivExprSet.elements u in
+       let l = List.map unquote_level_expr ux_list in
+       evd, List.fold_left Univ.Universe.sup (List.hd l) (List.tl l)
 
   let unquote_universe_instance(evm: Evd.evar_map) (l: quoted_univ_instance): Evd.evar_map * Univ.Instance.t
   = (evm,  Univ.Instance.of_array (Array.of_list (List0.map unquote_level l)))

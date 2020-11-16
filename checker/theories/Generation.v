@@ -1,10 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import config utils Ast AstUtils LiftSubst Typing.
-From MetaCoq.Checker Require Import Reflect.
+From MetaCoq.Template Require Import config utils Ast AstUtils Reflect LiftSubst Typing.
 Require Import Equations.Prop.DepElim.
 
 (** * Substitution lemmas for typing derivations. *)
-
 
 Derive Signature for typing.
 

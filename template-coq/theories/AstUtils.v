@@ -12,20 +12,31 @@ Fixpoint string_of_term (t : term) :=
   | tSort s => "Sort(" ^ string_of_sort s ^ ")"
   | tCast c k t => "Cast(" ^ string_of_term c ^ (* TODO *) ","
                            ^ string_of_term t ^ ")"
-  | tProd na b t => "Prod(" ^ string_of_name na ^ "," ^
-                            string_of_term b ^ "," ^ string_of_term t ^ ")"
-  | tLambda na b t => "Lambda(" ^ string_of_name na ^ "," ^ string_of_term b
-                                ^ "," ^ string_of_term t ^ ")"
-  | tLetIn na b t' t => "LetIn(" ^ string_of_name na ^ "," ^ string_of_term b
-                                 ^ "," ^ string_of_term t' ^ "," ^ string_of_term t ^ ")"
+  | tProd na b t => "Prod(" ^ string_of_name na.(binder_name) ^ ","
+                            ^ string_of_relevance na.(binder_relevance) ^ ","
+                            ^ string_of_term b ^ ","
+                            ^ string_of_term t ^ ")"
+  | tLambda na b t => "Lambda(" ^ string_of_name na.(binder_name) ^ ","
+                                ^ string_of_term b ^ ","
+                                ^ string_of_relevance na.(binder_relevance) ^ ","
+                                ^ string_of_term t ^ ")"
+  | tLetIn na b t' t => "LetIn(" ^ string_of_name na.(binder_name) ^ ","
+                                 ^ string_of_relevance na.(binder_relevance) ^ ","
+                                 ^ string_of_term b ^ ","
+                                 ^ string_of_term t' ^ ","
+                                 ^ string_of_term t ^ ")"
   | tApp f l => "App(" ^ string_of_term f ^ "," ^ string_of_list string_of_term l ^ ")"
   | tConst c u => "Const(" ^ string_of_kername c ^ "," ^ string_of_universe_instance u ^ ")"
   | tInd i u => "Ind(" ^ string_of_inductive i ^ "," ^ string_of_universe_instance u ^ ")"
   | tConstruct i n u => "Construct(" ^ string_of_inductive i ^ "," ^ string_of_nat n ^ ","
                                     ^ string_of_universe_instance u ^ ")"
-  | tCase (ind, i) t p brs =>
-    "Case(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_term t ^ ","
-            ^ string_of_term p ^ "," ^ string_of_list (fun b => string_of_term (snd b)) brs ^ ")"
+  | tCase (ind, i, r) t p brs =>
+    "Case(" ^ string_of_inductive ind ^ ","
+            ^ string_of_nat i ^ ","
+            ^ string_of_relevance r ^ ","
+            ^ string_of_term t ^ ","
+            ^ string_of_term p ^ ","
+            ^ string_of_list (fun b => string_of_term (snd b)) brs ^ ")"
   | tProj (ind, i, k) c =>
     "Proj(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_nat k ^ ","
             ^ string_of_term c ^ ")"
@@ -62,7 +73,7 @@ Qed.
 Lemma mkApp_tApp f u : isApp f = false -> mkApp f u = tApp f [u].
 Proof. intros. destruct f; (discriminate || reflexivity). Qed.
 
-Fixpoint decompose_prod (t : term) : (list name) * (list term) * term :=
+Fixpoint decompose_prod (t : term) : (list aname) * (list term) * term :=
   match t with
   | tProd n A B => let (nAs, B) := decompose_prod B in
                   let (ns, As) := nAs in

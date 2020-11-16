@@ -72,7 +72,7 @@ Lemma mfixpoint_size_In {mfix d} :
   size (dbody d) < mfixpoint_size size mfix /\
   size (dtype d) < mfixpoint_size size mfix.
 Proof.
-  induction mfix in d |- *; simpl; auto. intros [].
+  induction mfix in d |- *; simpl; auto.
   move=> [->|H]. unfold def_size. split; lia.
   destruct (IHmfix d H). split; lia.
 Qed.
@@ -225,9 +225,9 @@ Lemma term_ind_size_app :
     (forall (i : ident), P (tVar i)) ->
     (forall (n : nat) (l : list term), All (P) l -> P (tEvar n l)) ->
     (forall s, P (tSort s)) ->
-    (forall (n : name) (t : term), P t -> forall t0 : term, P t0 -> P (tProd n t t0)) ->
-    (forall (n : name) (t : term), P t -> forall t0 : term, P t0 -> P (tLambda n t t0)) ->
-    (forall (n : name) (t : term),
+    (forall (n : aname) (t : term), P t -> forall t0 : term, P t0 -> P (tProd n t t0)) ->
+    (forall (n : aname) (t : term), P t -> forall t0 : term, P t0 -> P (tLambda n t t0)) ->
+    (forall (n : aname) (t : term),
         P t -> forall t0 : term, P t0 -> forall t1 : term, P t1 ->
                                                    P (tLetIn n t t0 t1)) ->
     (forall (t u : term),
@@ -2071,10 +2071,10 @@ Section Rho.
     intros.
     rewrite fix_context_map_fix.
     revert X. generalize (fix_context mfix0) (fix_context mfix1).
-    induction 1; simpl; constructor; auto.
+    induction 1; simpl; constructor; auto. 1,3:now symmetry.
     unfold on_decl, on_decl_over in p |- *.
     now rewrite rho_ctx_app in p.
-    unfold on_decl, on_decl_over in p |- *.
+    unfold on_decl, on_decl_over in p |- *. 
     now rewrite rho_ctx_app in p.
   Qed.
   
@@ -2082,7 +2082,7 @@ Section Rho.
     All2_local_env (on_decl (on_decl_over (fun Γ Γ' t t' => P Γ' Γ t' t) Γ' Γ)) Δ' Δ ->
     All2_local_env (on_decl (on_decl_over P Γ Γ')) Δ Δ'.
   Proof.
-    induction 1; constructor; eauto.
+    induction 1; constructor; eauto. all:now symmetry.
   Qed.
 
   Lemma wf_rho_fix_subst Γ Γ' mfix0 mfix1 :
@@ -2450,20 +2450,20 @@ Section Rho.
   Proof.
     induction 1. simpl. constructor.
     - simpl. eapply All2_local_env_over_app. constructor. constructor.
-      simpl. apply p.
+      simpl. reflexivity. apply p.
       revert IHX.
       generalize (List.rev Δ) (List.rev Δ'). induction 1. constructor.
-      constructor. auto. red in p0. red. red. red. red in p0.
+      constructor; auto. red in p0. red. red. red. red in p0.
       rewrite !app_context_assoc. cbn. apply p0.
-      constructor. auto. destruct p0. unfold on_decl_over in *. simpl.
+      constructor; auto. destruct p0. unfold on_decl_over in *. simpl.
       rewrite !app_context_assoc. cbn. intuition.
-    - simpl. eapply All2_local_env_over_app. constructor. constructor.
+    - simpl. eapply All2_local_env_over_app. constructor. constructor; auto. reflexivity.
       simpl. unfold on_decl_over, on_decl in *. destruct p. split; intuition auto.
       revert IHX.
       generalize (List.rev Δ) (List.rev Δ'). induction 1. constructor.
-      constructor. auto. red in p0. red. red. red. red in p0.
+      constructor; auto. red in p0. red. red. red. red in p0.
       rewrite !app_context_assoc. cbn. apply p0.
-      constructor. auto. destruct p0. unfold on_decl_over in *. simpl.
+      constructor; auto. destruct p0. unfold on_decl_over in *. simpl.
       rewrite !app_context_assoc. cbn. intuition.
   Qed.
 
@@ -2494,7 +2494,7 @@ Section Rho.
     rewrite {2}H.
     rewrite rho_lift0.
     unfold snoc. forward IHX. simpl. lia.
-    forward IHX. cbn. constructor. apply X0.
+    forward IHX. cbn. constructor. apply X0. reflexivity.
     red. red.
     assert (#|Δ'| = #|rho_ctx_over (rho_ctx Γ) Δ'|) by now rewrite rho_ctx_over_length.
     rewrite H0.
@@ -2535,11 +2535,11 @@ Section Rho.
     cbn in H. destruct c as [? [?|] ?]; noconf H.
     depelim X0.
     - destruct Δ'. noconf H. destruct c as [? [?|] ?]; noconf H.
-      constructor. eapply IHΔ. auto. red. red in o. intros.
+      constructor. 2:auto. eapply IHΔ; auto. red. red in o. intros.
       red in o. rewrite !rho_ctx_app. eapply o.
     - destruct Δ'. noconf H. destruct c as [? [?|] ?]; noconf H.
       destruct o.
-      constructor. eapply IHΔ. auto. red. red in o, o0. intros.
+      constructor. 2:auto. eapply IHΔ. auto. red. red in o, o0. intros.
       rewrite !rho_ctx_app. split; eauto.
   Qed.
 
@@ -2606,7 +2606,7 @@ Section Rho.
   end : pcuic.
 
   Lemma pred1_subst_Up:
-    forall (Γ : context) (na : name) (t0 t1 : term) (Δ Δ' : context) (σ τ : nat -> term),
+    forall (Γ : context) (na : aname) (t0 t1 : term) (Δ Δ' : context) (σ τ : nat -> term),
       pred1 Σ Δ Δ' t0.[σ] t1.[τ] ->
       pred1_subst Γ Δ Δ' σ τ ->
       pred1_subst (Γ,, vass na t0) (Δ,, vass na t0.[σ]) (Δ',, vass na t1.[τ]) (⇑ σ) (⇑ τ).
@@ -2615,12 +2615,12 @@ Section Rho.
     intros x. destruct x; simpl. split; auto. eapply pred1_refl_gen. constructor; eauto with pcuic.
     unfold subst_compose. rewrite - !(lift0_inst 1).
     split. eapply (weakening_pred1_pred1 Σ _ _ [_] [_]); auto.
-    constructor. constructor. red. red. eapply X2. eapply Hrel.
+    constructor. 2:auto. constructor. red. red. eapply X2. eapply Hrel.
     destruct (Hrel x). destruct option_map as [[o|]|]; now rewrite ?y.
   Qed.
 
   Lemma pred1_subst_vdef_Up:
-    forall (Γ : context) (na : name) (b0 b1 t0 t1 : term) (Δ Δ' : context) (σ τ : nat -> term),
+    forall (Γ : context) (na : aname) (b0 b1 t0 t1 : term) (Δ Δ' : context) (σ τ : nat -> term),
       pred1 Σ Δ Δ' t0.[σ] t1.[τ] ->
       pred1 Σ Δ Δ' b0.[σ] b1.[τ] ->
       pred1_subst Γ Δ Δ' σ τ ->
@@ -2630,7 +2630,7 @@ Section Rho.
     intros x. destruct x; simpl. split; auto. eapply pred1_refl_gen. constructor; eauto with pcuic.
     unfold subst_compose. rewrite - !(lift0_inst 1).
     split. eapply (weakening_pred1_pred1 Σ _ _ [_] [_]); auto.
-    constructor. constructor. red. split; red. eapply Xb. apply Xt.
+    constructor. 2:auto. constructor. red. split; red. eapply Xb. apply Xt.
     eapply Hrel.
     destruct (Hrel x). destruct option_map as [[o|]|]; now rewrite ?y.
   Qed.
@@ -3061,8 +3061,7 @@ Section Rho.
         try solve [simpl; econstructor; simpl; eauto].
 
     simpl.
-    - induction X0; simpl; depelim predΓ'; constructor; rewrite ?app_context_nil_l; eauto.
-      all:simpl NoConfusion in *; noconf H; noconf H0; auto.
+    - induction X0; simpl; depelim predΓ'; constructor; rewrite ?app_context_nil_l; eauto. all:now symmetry.
 
     - simpl.
       rewrite (rho_app_lambda _ _ _ _ _ []).

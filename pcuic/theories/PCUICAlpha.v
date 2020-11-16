@@ -4,7 +4,6 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICTyping PCUICWeakening PCUICCumulativity PCUICEquality
      PCUICContextConversion PCUICValidity.
 
-
 Section Alpha.
   Context {cf:checker_flags}.
 
@@ -290,10 +289,10 @@ Section Alpha.
         * eapply ihB. assumption.
         * constructor.
           -- apply conv_ctx_refl ; auto.
-          -- constructor. constructor.
+          -- constructor. assumption. constructor.
              eapply upto_names_impl_eq_term. assumption.
     - intros na A t s1 B ih hA ihA hB ihB v e; invs e.
-      econstructor.
+      eapply type_Cumul'.
       + econstructor.
         * eapply ihA. assumption.
         * eapply context_conversion'.
@@ -303,23 +302,24 @@ Section Alpha.
           -- eapply ihB. assumption.
           -- constructor.
              ++ apply conv_ctx_refl ; auto.
-             ++ do 2 constructor.
+             ++ constructor. assumption. constructor.
                 eapply upto_names_impl_eq_term. assumption.
-      + eapply validity_term ; eauto.
-        econstructor ; eauto.
+      + eapply validity in hB as [? hB]; eauto.
+        econstructor; eauto. 
+        econstructor ; eauto with pcuic.
       + constructor.
         eapply eq_term_leq_term.
         apply eq_term_sym.
-        constructor.
+        constructor; auto.
         all: try (eapply upto_names_impl_eq_term ; assumption).
         all: eapply eq_term_refl.
     - intros na b B t s1 A ih hB ihB hb ihb hA ihA v e; invs e.
-      econstructor.
+      eapply type_Cumul'.
       + econstructor.
         * eapply ihB. assumption.
         * econstructor.
           -- eapply ihb. assumption.
-          -- right. eexists. eapply ihB. assumption.
+          -- eapply ihB. assumption.
           -- constructor. eapply eq_term_leq_term.
              eapply upto_names_impl_eq_term. assumption.
         * eapply context_conversion'.
@@ -329,7 +329,7 @@ Section Alpha.
              ++ simpl. eexists. eapply ihB. assumption.
              ++ simpl. eapply type_Cumul.
                 ** eapply ihb. assumption.
-                ** right. eexists. eapply ihB. assumption.
+                ** eapply ihB. assumption.
                 ** eapply cumul_refl.
                    eapply eq_term_upto_univ_empty_impl. 4:eassumption.
                    all:try typeclasses eauto.
@@ -339,7 +339,7 @@ Section Alpha.
           -- eapply ihA. assumption.
           -- constructor.
              ++ apply conv_ctx_refl ; auto.
-             ++ econstructor. constructor.
+             ++ econstructor. assumption. constructor.
                 now apply upto_names_impl_eq_term.
                 constructor.
                 now apply upto_names_impl_eq_term.
@@ -348,11 +348,11 @@ Section Alpha.
       + constructor.
         eapply eq_term_leq_term.
         apply eq_term_sym.
-        constructor.
+        constructor. assumption.
         all: try (eapply upto_names_impl_eq_term ; assumption).
         all: eapply eq_term_refl.
     - intros t na A B u ih ht iht hu ihu v e; invs e.
-      econstructor.
+      eapply type_Cumul'.
       + econstructor.
         * eapply iht.
           eapply eq_term_upto_univ_empty_impl in X; eauto.
@@ -382,11 +382,7 @@ Section Alpha.
       econstructor ; eauto.
     - intros ind u npar p c brs args mdecl idecl isdecl X X0 H pars ps pty
              Hcpt X1 X2 H1 H2 X3 X4 btys Hbbt Hbrs v e; invs e.
-      (* intros ind u npar p c brs args mdecl idecl isdecl X X0 H pars pty X1 *)
-      (*        indctx pctx ps btys htc H1 H2 ihp hc ihc ihbrs v e. *)
-      (* eapply types_of_case_eq_term in htc as htc' ; eauto. *)
-      (* destruct htc' as [btys' [ebtys' he]]. *)
-      econstructor.
+      eapply type_Cumul'.
       + eapply build_branches_type_eq_term in Hbbt; tea.
         destruct Hbbt as [btys' [Hbbt1 Hbbt2]].
         econstructor; tea; eauto.
@@ -394,24 +390,22 @@ Section Alpha.
         * exact (fun br bty : nat × term =>
                    (((br.1 = bty.1 × Σ;;; Γ |- br.2 : bty.2)
                        × (forall v : term, upto_names' br.2 v -> Σ;;; Γ |- v : bty.2))
-                      × Σ;;; Γ |- bty.2 : tSort ps)
-                     × (forall v : term, upto_names' bty.2 v -> Σ;;; Γ |- v : tSort ps)).
+                      × ∑ s, Σ;;; Γ |- bty.2 : tSort s ×
+                        (forall v : term, upto_names' bty.2 v -> Σ;;; Γ |- v : tSort s))).
         * clear. intros x y z X; rdest; cbn in *.
           congruence. 2: eauto. econstructor; tea. 
-          right. exists ps. eauto. constructor.
+           eauto. constructor.
           now eapply upto_names_impl_leq_term.
         * eapply All2_trans'; [..|eassumption].
           2: apply All2_sym; tea.
           clear. intros x y z X; rdest; cbn in *; eauto. congruence.
           intros v H. unshelve eapply (upto_names_trans _ _ _ _) in H; tea.
           eauto.
+
       + eapply validity_term ; eauto.
         instantiate (1 := tCase (ind, ind_npars mdecl) p c brs).
         econstructor ; eauto.
-        apply All2_prod_inv in Hbrs as [a1 a4].
-        apply All2_prod_inv in a1 as [a1 a3].
-        apply All2_prod_inv in a1 as [a1 a2].
-        apply All2_prod. all: assumption.
+        solve_all. destruct b0 as [s [Hs IH]]; eauto.
       + constructor.
         eapply eq_term_leq_term.
         apply eq_term_sym.
@@ -422,7 +416,7 @@ Section Alpha.
         * constructor ; eauto.
           eapply upto_names_impl_eq_term. assumption.
     - intros p c u mdecl idecl pdecl isdecl args X X0 hc ihc H ty v e; invs e.
-      econstructor.
+      eapply type_Cumul'.
       + econstructor. all: try eassumption.
         eapply ihc. assumption.
       + eapply validity_term ; eauto.
@@ -438,13 +432,13 @@ Section Alpha.
     - intros mfix n decl types hguard hnth hwf ihmfix ihmfixb wffix v e; invs e.
       eapply All2_nth_error_Some in hnth as hnth' ; eauto.
       destruct hnth' as [decl' [hnth' hh]].
-      destruct hh as [[ety ebo] era].
+      destruct hh as [[[ety eqann] ebo] era].
       assert (hwf' : wf_local Σ (Γ ,,, fix_context mfix')).
       { apply PCUICWeakening.All_mfix_wf; auto.
         eapply (All2_All_mix_left ihmfix) in X.
         clear -X.
         induction X; constructor; simpl; auto.
-        destruct r as [[s [Hs IH]] [[eqty eqbod] eqrarg]].
+        destruct r as [[s [Hs IH]] [[[eqty eqann] eqbod] eqrarg]].
         exists s; apply IH; eauto. }
       assert (convctx : conv_context Σ (Γ ,,, fix_context mfix) (Γ ,,, fix_context mfix')).
       { eapply eq_context_upto_univ_conv_context.
@@ -458,15 +452,15 @@ Section Alpha.
           eapply (All2_All_mix_left ihmfix) in X.
           clear -X.
           induction X; try constructor; simpl; intros n; auto.
-          destruct r as [[s [Hs IH]] [[eqty eqbod] eqrarg]].
+          destruct r as [[s [Hs IH]] [[[eqty eqann] eqbod] eqrarg]].
           eapply eq_context_upto_cat.
-          + constructor; [|constructor].
+          + constructor; [assumption| |constructor].
             eapply eq_term_upto_univ_empty_impl; eauto.
             4:now eapply eq_term_upto_univ_lift. all:intros ? ? []; trivial.
           + apply IHX. }
       assert(#|fix_context mfix| = #|fix_context mfix'|).
       { now rewrite !fix_context_length, (All2_length _ _ X). } 
-      eapply type_Cumul.
+      eapply type_Cumul'.
       + econstructor.
         * eapply (fix_guard_eq_term _ _ n); eauto.
           constructor. assumption.
@@ -475,15 +469,15 @@ Section Alpha.
         * eapply (All2_All_mix_left ihmfix) in X.
           clear -X.
           induction X; constructor; simpl; auto.
-          destruct r as [[s [Hs IH]] [[eqty eqbod] eqrarg]].
+          destruct r as [[s [Hs IH]] [[[eqty eqann] eqbod] eqrarg]].
           exists s; apply IH; eauto.
         * solve_all.
           ** destruct a0 as [s [Hs IH]].
-            specialize (IH _ a2).
-            specialize (b _ b0).
+            specialize (IH _ a1).
+            specialize (b _ b3).
             eapply context_conversion'; eauto.
-            eapply type_Cumul with (lift0 #|fix_context mfix| (dtype x)); auto.
-            right. exists s. rewrite <-H.
+            eapply (type_Cumul' (lift0 #|fix_context mfix| (dtype x))); auto.
+            exists s. rewrite <-H.
             eapply (weakening _ _ _ _ (tSort _)); eauto. now eapply typing_wf_local in b.
             apply cumul_refl. rewrite <- H.
             eapply eq_term_upto_univ_lift.
@@ -499,8 +493,8 @@ Section Alpha.
         * revert wffix.
           unfold wf_fixpoint.
           enough (map check_one_fix mfix = map check_one_fix mfix') as ->; auto.
-          now apply upto_names_check_fix.
-        + eapply All_nth_error in ihmfix as [s [Hs _]]; eauto.
+          apply upto_names_check_fix. solve_all.
+        + eapply All_nth_error in ihmfix as [s [Hs _]]; eauto. exists s; apply Hs.
         + apply cumul_refl. eapply eq_term_upto_univ_empty_impl.
           4:intuition eauto. 4:symmetry; eauto.
           all: intros ? ? []; reflexivity.
@@ -508,13 +502,13 @@ Section Alpha.
   - intros mfix n decl types guard hnth hwf ihmfix ihmfixb wfcofix v e; invs e.
     eapply All2_nth_error_Some in hnth as hnth' ; eauto.
     destruct hnth' as [decl' [hnth' hh]].
-    destruct hh as [[ety ebo] era].
+    destruct hh as [[[ety eann] ebo] era].
     assert (hwf' : wf_local Σ (Γ ,,, fix_context mfix')).
     { apply PCUICWeakening.All_mfix_wf; auto.
       eapply (All2_All_mix_left ihmfix) in X.
       clear -X.
       induction X; constructor; simpl; auto.
-      destruct r as [[s [Hs IH]] [[eqty eqbod] eqrarg]].
+      destruct r as [[s [Hs IH]] [[[eqty eqann] eqbod] eqrarg]].
       exists s; apply IH; eauto. }
     assert (convctx : conv_context Σ (Γ ,,, fix_context mfix) (Γ ,,, fix_context mfix')).
     { eapply eq_context_upto_univ_conv_context.
@@ -528,16 +522,16 @@ Section Alpha.
         eapply (All2_All_mix_left ihmfix) in X.
         clear -X.
         induction X; try constructor; simpl; intros n; auto.
-        destruct r as [[s [Hs IH]] [[eqty eqbod] eqrarg]].
+        destruct r as [[s [Hs IH]] [[[eqty eqann] eqbod] eqrarg]].
         eapply eq_context_upto_cat.
-        + constructor; [|constructor].
+        + constructor; [assumption| |constructor].
           eapply eq_term_upto_univ_empty_impl.
           4:now eapply eq_term_upto_univ_lift.
           all: intros ? ? []; reflexivity.
         + apply IHX. }
     assert(#|fix_context mfix| = #|fix_context mfix'|).
     { now rewrite !fix_context_length, (All2_length _ _ X). } 
-    eapply type_Cumul.
+    eapply type_Cumul'.
     + econstructor.
       * eapply (cofix_guard_eq_term _ _ n) ; eauto.
         constructor. assumption.
@@ -546,15 +540,15 @@ Section Alpha.
       * eapply (All2_All_mix_left ihmfix) in X.
         clear -X.
         induction X; constructor; simpl; auto.
-        destruct r as [[s [Hs IH]] [[eqty eqbod] eqrarg]].
+        destruct r as [[s [Hs IH]] [[[eqty eqann] eqbod] eqrarg]].
         exists s; apply IH; eauto.
       * solve_all.
         destruct a0 as [s [Hs IH]].
-        specialize (IH _ a2).
-        specialize (b _ b0).
+        specialize (IH _ a).
+        specialize (b _ b2).
         eapply context_conversion'; eauto.
-        eapply type_Cumul with (lift0 #|fix_context mfix| (dtype x)); auto.
-        right. exists s. rewrite <-H.
+        eapply (type_Cumul' (lift0 #|fix_context mfix| (dtype x))); auto.
+        exists s. rewrite <-H.
         eapply (weakening _ _ _ _ (tSort _)); eauto. now eapply typing_wf_local in b.
         apply cumul_refl. rewrite <- H.
         eapply eq_term_upto_univ_lift.
@@ -563,18 +557,16 @@ Section Alpha.
         all: intros ? ? []; reflexivity.
       * revert wfcofix; unfold wf_cofixpoint.
         enough (map check_one_cofix mfix = map check_one_cofix mfix') as ->; auto.
-        now apply upto_names_check_cofix.
-      + eapply All_nth_error in ihmfix as [s [Hs _]]; eauto.
+        apply upto_names_check_cofix. solve_all.
+      + eapply All_nth_error in ihmfix as [s [Hs _]]; eauto. exists s; apply Hs.
       + apply cumul_refl. eapply eq_term_upto_univ_empty_impl.
         3:intuition eauto. 4:symmetry; eauto.
         all: intros ? ? []; reflexivity.
 
-    - intros t A B X ht iht har hcu v e.
-      eapply type_Cumul.
+    - intros t A B X wf ht iht har ihar hcu v e.
+      eapply type_Cumul'.
       + eapply iht. assumption.
-      + destruct har as [[? ?] | [? [? ?]]].
-        * left. assumption.
-        * right. eexists. eassumption.
+      + exists X; auto.
       + assumption.
     - rename wfΣ into Γ, wfΓ into v, Γ into u.
       intros A hΣ hu e.
@@ -617,7 +609,16 @@ Section Alpha.
       apply Forall2_eq, map_inj in H4.
       congruence.
       all: apply Universe.make_inj.
-    - revert brs'0 brs'1 X3 X6.
+    - simpl. transitivity na'.
+      transitivity na; auto.
+      now symmetry. assumption.
+    - simpl. transitivity na'.
+      transitivity na; auto.
+      now symmetry. assumption.
+    - simpl. transitivity na'.
+      transitivity na; auto.
+      now symmetry. assumption.
+    - auto. revert brs'0 brs'1 X3 X6.
       induction a; simpl; intros args0 args'0 H1 H2.
       + inv H1; inv H2; constructor; eauto.
       + inv H1; inv H2. constructor; eauto.
@@ -626,14 +627,18 @@ Section Alpha.
       induction a; simpl; intros args0 args'0 H1 H2.
       + inv H1; inv H2; constructor; eauto.
       + inv H1; inv H2. constructor; eauto.
-        destruct X as [[? ?] ?], X1 as [[? ?] ?], r as [[? ?] ?].
+        destruct X as [[[? ?] ?] ?], X1 as [[[? ?] ?] ?], r as [[[? ?] ?] ?].
         repeat split; eauto. congruence.
+        etransitivity. symmetry. apply e2.
+        etransitivity. eapply e10. assumption.
     - revert mfix'0 mfix'1 X X0.
       induction a; simpl; intros args0 args'0 H1 H2.
       + inv H1; inv H2; constructor; eauto.
       + inv H1; inv H2. constructor; eauto.
-        destruct X as [[? ?] ?], X1 as [[? ?] ?], r as [[? ?] ?].
+        destruct X as [[[? ?] ?] ?], X1 as [[[? ?] ?] ?], r as [[[? ?] ?] ?].
         repeat split; eauto. congruence.
+        etransitivity. symmetry. apply e2.
+        etransitivity. eapply e10. assumption.
   Qed.
 
   Lemma upto_names_leq_term Σ φ t u t' u'
@@ -700,30 +705,38 @@ Section Alpha.
         eapply context_conversion'; tea. auto.
         now apply upto_names_conv_context.
       + cbn in *.
-        eapply type_Cumul with t.
+        eapply type_Cumul' with t.
         * eapply typing_alpha; tea.
         eapply context_conversion'; tea. auto.
         apply upto_names_conv_context; tea.
-        * right. destruct t0 as [s Ht]. exists s.
+        * destruct t0 as [s Ht]. exists s.
           eapply typing_alpha; tea.
           eapply context_conversion'; tea. auto.
           now apply upto_names_conv_context.
         * constructor; now apply upto_names_impl_leq_term.
   Qed.
 
+  Lemma isType_alpha Σ Γ u v :
+    wf Σ.1 ->
+    isType Σ Γ u ->
+    u ≡ v ->
+    isType Σ Γ v.
+  Proof.
+    intros hΣ [s Hs] eq.
+    exists s; eapply typing_alpha; eauto.
+  Qed.
 
   Lemma isWfArity_alpha Σ Γ u v :
     wf Σ.1 ->
-    isWfArity typing Σ Γ u ->
+    isWfArity Σ Γ u ->
     u ≡ v ->
-    isWfArity typing Σ Γ v.
+    isWfArity Σ Γ v.
   Proof.
-    intros hΣ [ctx [s [X1 X2]]] e.
+    intros hΣ [isTy [ctx [s X1]]] e.
     eapply destArity_alpha in X1; tea.
+    split; [eapply isType_alpha; eauto|].
     destruct X1 as [ctx' [X1 X1']].
-    exists ctx', s. split; tas.
-    eapply wf_local_alpha; tea.
-    now eapply eq_context_upto_cat.
+    exists ctx', s; auto.
   Qed.
 
 End Alpha.

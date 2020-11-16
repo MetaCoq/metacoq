@@ -9,9 +9,9 @@ Module Type Term.
 
   Parameter Inline tRel : nat -> term.
   Parameter Inline tSort : Universe.t -> term.
-  Parameter Inline tProd : name -> term -> term -> term.
-  Parameter Inline tLambda : name -> term -> term -> term.
-  Parameter Inline tLetIn : name -> term -> term -> term -> term.
+  Parameter Inline tProd : aname -> term -> term -> term.
+  Parameter Inline tLambda : aname -> term -> term -> term.
+  Parameter Inline tLetIn : aname -> term -> term -> term -> term.
   Parameter Inline tInd : inductive -> Instance.t -> term.
   Parameter Inline tProj : projection -> term -> term.
   Parameter Inline mkApps : term -> list term -> term.
@@ -27,7 +27,7 @@ Module Environment (T : Term).
   (** *** The context of De Bruijn indices *)
 
   Record context_decl := mkdecl {
-    decl_name : name ;
+    decl_name : aname ;
     decl_body : option term ;
     decl_type : term
   }.
@@ -51,7 +51,6 @@ Module Environment (T : Term).
   Definition snoc {A} (Γ : list A) (d : A) := d :: Γ.
 
   Notation " Γ ,, d " := (snoc Γ d) (at level 20, d at next level).
-
 
   Definition map_decl f (d : context_decl) :=
     {| decl_name := d.(decl_name);
@@ -128,17 +127,19 @@ Module Environment (T : Term).
     ind_kelim : sort_family; (* Top allowed elimination sort *)
     ind_ctors : list (ident * term (* Under context of arities of the mutual inductive *)
                       * nat (* arity, w/o lets, w/o parameters *));
-    ind_projs : list (ident * term) (* names and types of projections, if any.
-                                      Type under context of params and inductive object *) }.
+    ind_projs : list (ident * term); (* names and types of projections, if any.
+                                      Type under context of params and inductive object *)
+    ind_relevance : relevance (* relevance of the inductive definition *) }.
 
   Definition map_one_inductive_body npars arities f (n : nat) m :=
     match m with
-    | Build_one_inductive_body ind_name ind_type ind_kelim ind_ctors ind_projs =>
+    | Build_one_inductive_body ind_name ind_type ind_kelim ind_ctors ind_projs ind_relevance =>
       Build_one_inductive_body ind_name
                                (f 0 ind_type)
                                ind_kelim
                                (map (on_pi2 (f arities)) ind_ctors)
                                (map (on_snd (f (S npars))) ind_projs)
+                               ind_relevance
     end.
 
 
@@ -197,7 +198,7 @@ Module Environment (T : Term).
   (* TODO MOVE AstUtils factorisation *)
 
   Definition app_context (Γ Γ' : context) : context := Γ' ++ Γ.
-  Notation " Γ  ,,, Γ' " :=
+  Notation "Γ ,,, Γ'" :=
     (app_context Γ Γ') (at level 25, Γ' at next level, left associativity).
 
   (** Make a lambda/let-in string of abstractions from a context [Γ], ending with term [t]. *)
@@ -305,7 +306,8 @@ Module Environment (T : Term).
 
 
   Definition arities_context (l : list one_inductive_body) :=
-    rev_map (fun ind => vass (nNamed ind.(ind_name)) ind.(ind_type)) l.
+    rev_map (fun ind => vass (mkBindAnn (nNamed ind.(ind_name))
+                            (ind.(ind_relevance))) ind.(ind_type)) l.
 
   Lemma arities_context_length l : #|arities_context l| = #|l|.
   Proof. unfold arities_context. now rewrite rev_map_length. Qed.

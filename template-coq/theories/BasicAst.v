@@ -69,10 +69,34 @@ Inductive name : Set :=
 | nAnon
 | nNamed (_ : ident).
 
+Inductive relevance : Set := Relevant | Irrelevant.
+
+(** Binders annotated with relevance *)
+Record binder_annot (A : Type) := mkBindAnn { binder_name : A; binder_relevance : relevance }.
+
+Arguments mkBindAnn {_}.
+Arguments binder_name {_}.
+Arguments binder_relevance {_}.
+
+Definition map_binder_annot {A B} (f : A -> B) (b : binder_annot A) : binder_annot B :=
+  {| binder_name := f b.(binder_name); binder_relevance := b.(binder_relevance) |}.
+
+Definition eq_binder_annot {A} (b b' : binder_annot A) : Prop :=
+  b.(binder_relevance) = b'.(binder_relevance).
+
+(** Type of annotated names *)
+Definition aname := binder_annot name.
+
 Definition string_of_name (na : name) :=
   match na with
   | nAnon => "_"
   | nNamed n => n
+  end.
+
+Definition string_of_relevance (r : relevance) :=
+  match r with
+  | Relevant => "Relevant"
+  | Irrelevant => "Irrelevant"
   end.
 
 (** Designation of a (particular) inductive type. *)
@@ -188,7 +212,7 @@ Inductive recursivity_kind :=
 
 (* Parametrized by term because term is not yet defined *)
 Record def term := mkdef {
-  dname : name; (* the name **)
+  dname : aname; (* the name, annotated with relevance **)
   dtype : term;
   dbody : term; (* the body (a lambda term). Note, this may mention other (mutually-defined) names **)
   rarg  : nat  (* the index of the recursive argument, 0 for cofixpoints **) }.
@@ -199,11 +223,14 @@ Arguments dbody {term} _.
 Arguments rarg {term} _.
 
 Definition string_of_def {A} (f : A -> string) (def : def A) :=
-  "(" ^ string_of_name (dname def) ^ "," ^ f (dtype def) ^ "," ^ f (dbody def) ^ ","
-      ^ string_of_nat (rarg def) ^ ")".
+  "(" ^ string_of_name (binder_name (dname def))
+      ^ "," ^ string_of_relevance (binder_relevance (dname def))
+      ^ "," ^ f (dtype def)
+      ^ "," ^ f (dbody def)
+      ^ "," ^ string_of_nat (rarg def) ^ ")".
 
 Definition print_def {A} (f : A -> string) (g : A -> string) (def : def A) :=
-  string_of_name (dname def) ^ " { struct " ^ string_of_nat (rarg def) ^ " }" ^
+  string_of_name (binder_name (dname def)) ^ " { struct " ^ string_of_nat (rarg def) ^ " }" ^
                  " : " ^ f (dtype def) ^ " := " ^ nl ^ g (dbody def).
 
 

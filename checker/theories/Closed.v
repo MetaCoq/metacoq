@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import config utils Ast AstUtils Induction
+From MetaCoq.Template Require Import config utils Ast AstUtils Reflect Induction
   LiftSubst UnivSubst Typing TypingWf.
-From MetaCoq.Checker Require Import Reflect WeakeningEnv.
+From MetaCoq.Checker Require Import WeakeningEnv.
 
 Require Import ssreflect.
 From Equations Require Import Equations.
@@ -389,8 +389,8 @@ Proof.
   pose proof (declared_projection_inv weaken_env_prop_closed wfΣ X0 isdecl) as onp.
   set (declared_inductive_inv _ wfΣ X0 isdecl.p1) as oib in *.
   clearbody oib.
-  have onpars := onParams _ _ _ _ (declared_minductive_inv weaken_env_prop_closed wfΣ X0 isdecl.p1.p1).
-  have parslen := onNpars _ _ _ _ (declared_minductive_inv weaken_env_prop_closed wfΣ X0 isdecl.p1.p1).
+  have onpars := onParams (declared_minductive_inv weaken_env_prop_closed wfΣ X0 isdecl.p1.p1).
+  have parslen := onNpars (declared_minductive_inv weaken_env_prop_closed wfΣ X0 isdecl.p1.p1).
   simpl in onp. destruct (ind_cshapes oib) as [|? []] eqn:Heq; try contradiction.
   red in onp.
   destruct (nth_error (smash_context [] _) _) eqn:Heq'; try contradiction.

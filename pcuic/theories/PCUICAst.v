@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Export utils Universes BasicAst
      Environment EnvironmentTyping.
-
+From Equations Require Import Equations.
 (** * AST of the Polymorphic Cumulative Calculus of Inductive Constructions
 
    This AST is a cleaned-up version of Coq's internal AST better suited for
@@ -19,9 +19,9 @@ Inductive term :=
 | tVar (i : ident) (* For free variables (e.g. in a goal) *)
 | tEvar (n : nat) (l : list term)
 | tSort (u : Universe.t)
-| tProd (na : name) (A B : term)
-| tLambda (na : name) (A t : term)
-| tLetIn (na : name) (b B t : term) (* let na := b : B in t *)
+| tProd (na : aname) (A B : term)
+| tLambda (na : aname) (A t : term)
+| tLetIn (na : aname) (b B t : term) (* let na := b : B in t *)
 | tApp (u v : term)
 | tConst (k : kername) (ui : Instance.t)
 | tInd (ind : inductive) (ui : Instance.t)
@@ -30,6 +30,8 @@ Inductive term :=
 | tProj (p : projection) (c : term)
 | tFix (mfix : mfixpoint term) (idx : nat)
 | tCoFix (mfix : mfixpoint term) (idx : nat).
+
+Derive NoConfusion for term.
 
 Fixpoint mkApps t us :=
   match us with
@@ -67,10 +69,11 @@ Record definition_entry := {
   definition_entry_universes : universes_decl;
   definition_entry_opaque    : bool }.
 
-
 Inductive constant_entry :=
 | ParameterEntry  (p : parameter_entry)
 | DefinitionEntry (def : definition_entry).
+
+Derive NoConfusion for parameter_entry definition_entry constant_entry.
 
 (** *** Inductive entries *)
 
@@ -116,30 +119,32 @@ Record mutual_inductive_entry := {
   (* Private flag for sealing an inductive definition in an enclosing
      module. Not handled by Template Coq yet. *) }.
 
+Derive NoConfusion for local_entry one_inductive_entry mutual_inductive_entry.
 
+Module PCUICTerm <: Term.
 
-  Module PCUICTerm <: Term.
+  Definition term := term.
 
-    Definition term := term.
+  Definition tRel := tRel.
+  Definition tSort := tSort.
+  Definition tProd := tProd.
+  Definition tLambda := tLambda.
+  Definition tLetIn := tLetIn.
+  Definition tInd := tInd.
+  Definition tProj := tProj.
+  Definition mkApps := mkApps.
 
-    Definition tRel := tRel.
-    Definition tSort := tSort.
-    Definition tProd := tProd.
-    Definition tLambda := tLambda.
-    Definition tLetIn := tLetIn.
-    Definition tInd := tInd.
-    Definition tProj := tProj.
-    Definition mkApps := mkApps.
+End PCUICTerm.
 
-  End PCUICTerm.
+Ltac unf_term := unfold PCUICTerm.term in *; unfold PCUICTerm.tRel in *;
+                  unfold PCUICTerm.tSort in *; unfold PCUICTerm.tProd in *;
+                  unfold PCUICTerm.tLambda in *; unfold PCUICTerm.tLetIn in *;
+                  unfold PCUICTerm.tInd in *; unfold PCUICTerm.tProj in *.
 
-  Ltac unf_term := unfold PCUICTerm.term in *; unfold PCUICTerm.tRel in *;
-                   unfold PCUICTerm.tSort in *; unfold PCUICTerm.tProd in *;
-                   unfold PCUICTerm.tLambda in *; unfold PCUICTerm.tLetIn in *;
-                   unfold PCUICTerm.tInd in *; unfold PCUICTerm.tProj in *.
+Module PCUICEnvironment := Environment PCUICTerm.
+Include PCUICEnvironment.
 
-  Module PCUICEnvironment := Environment PCUICTerm.
-  Include PCUICEnvironment.
+Module PCUICLookup := Lookup PCUICTerm PCUICEnvironment.
+Include PCUICLookup.
 
-  Module PCUICLookup := Lookup PCUICTerm PCUICEnvironment.
-  Include PCUICLookup.
+Derive NoConfusion for global_decl context_decl.

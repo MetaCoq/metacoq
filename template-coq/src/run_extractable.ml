@@ -27,11 +27,11 @@ let of_qualid (q : Libnames.qualid) : char list =
 let quote_rel_decl env = function
   | Context.Rel.Declaration.LocalAssum (na, t) ->
     let t' = quote_term env t in
-    quote_context_decl (quote_name (Context.binder_name na)) None t'
+    quote_context_decl (quote_aname na) None t'
   | Context.Rel.Declaration.LocalDef (na, b, t) ->
     let b' = quote_term env b in
     let t' = quote_term env t in
-    quote_context_decl (quote_name (Context.binder_name na)) (Some b') t'
+    quote_context_decl (quote_aname na) (Some b') t'
 
 (* todo(gmm): this definition adapted from quoter.ml *)
 let quote_rel_context env ctx =
@@ -88,8 +88,9 @@ let of_mib (env : Environ.env) (t : Names.MutInd.t) (mib : Plugin_core.mutual_in
         in ps, acc
       | _ -> [], acc
     in
+    let relevance = quote_relevance oib.mind_relevance in
     let sf = quote_sort_family oib.mind_kelim in
-    (quote_ident oib.mind_typename, indty, sf, (List.rev reified_ctors), projs) :: ls, acc)
+    (quote_ident oib.mind_typename, indty, sf, (List.rev reified_ctors), projs, relevance) :: ls, acc)
         ([],env) (Array.to_list mib.mind_packets)
   in
   let nparams = quote_int mib.mind_nparams in

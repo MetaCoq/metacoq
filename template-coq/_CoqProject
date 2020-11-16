@@ -28,6 +28,8 @@ theories/BasicAst.v
 theories/Environment.v
 theories/Ast.v
 theories/AstUtils.v
+theories/Reflect.v
+theories/Kernames.v
 theories/Induction.v
 theories/LiftSubst.v
 theories/UnivSubst.v

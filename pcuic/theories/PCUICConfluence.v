@@ -162,7 +162,8 @@ Proof.
       All2 (fun x y =>
         eq_term_upto_univ Σ Re Re (dtype x) (dtype y) *
         eq_term_upto_univ Σ Re Re (dbody x) (dbody y) *
-        (rarg x = rarg y))%type mfix1 mfix').
+        (rarg x = rarg y) *
+        (eq_binder_annot (dname x) (dname y)))%type mfix1 mfix').
     { induction X.
       - destruct p as [[p1 p2] p3].
         eapply p2 in e as hh. destruct hh as [? [? ?]].
@@ -175,13 +176,13 @@ Proof.
             eapply eq_term_upto_univ_refl ; eauto.
           * eapply All2_same.
             intros. repeat split ; eauto.
-            all: eapply eq_term_upto_univ_refl ; eauto.
+            1-2: eapply eq_term_upto_univ_refl ; eauto.
       - destruct IHX as [? [? ?]].
         eexists. split.
         + eapply OnOne2_tl. eassumption.
         + constructor ; eauto.
           repeat split ; eauto.
-          all: eapply eq_term_upto_univ_refl ; eauto.
+          1-2: eapply eq_term_upto_univ_refl ; eauto.
     }
     destruct h as [? [? ?]].
     eexists. split.
@@ -196,7 +197,8 @@ Proof.
       All2 (fun x y =>
         eq_term_upto_univ Σ Re Re (dtype x) (dtype y) *
         eq_term_upto_univ Σ Re Re (dbody x) (dbody y) *
-        (rarg x = rarg y))%type mfix1 mfix').
+        (rarg x = rarg y) * 
+        eq_binder_annot (dname x) (dname y))%type mfix1 mfix').
     { (* Maybe we should use a lemma using firstn or skipn to keep
          fix_context intact. Anything general?
        *)
@@ -230,9 +232,10 @@ Proof.
        × (dname d, dtype d, rarg d) = (dname d', dtype d', rarg d')) mfix0 mfix'
     × All2
         (fun x y : def term =>
-         (eq_term_upto_univ Σ Re Re (dtype x) (dtype y)
+         ((eq_term_upto_univ Σ Re Re (dtype x) (dtype y)
           × eq_term_upto_univ Σ Re Re (dbody x) (dbody y)) ×
-         rarg x = rarg y) mfix1 mfix') _ _).
+         (rarg x = rarg y)) *
+         eq_binder_annot (dname x) (dname y)) mfix1 mfix') _ _).
       - intros L x y l [[p1 p2] p3].
         assert (
            e' : eq_context_upto Σ Re (Γ ,,, fix_context L) (Δ ,,, fix_context L)
@@ -271,7 +274,8 @@ Proof.
       All2 (fun x y =>
         eq_term_upto_univ Σ Re Re (dtype x) (dtype y) *
         eq_term_upto_univ Σ Re Re (dbody x) (dbody y) *
-        (rarg x = rarg y))%type mfix1 mfix'
+        (rarg x = rarg y) *
+        eq_binder_annot (dname x) (dname y))%type mfix1 mfix'
     ).
     { induction X.
       - destruct p as [[p1 p2] p3].
@@ -306,7 +310,8 @@ Proof.
       All2 (fun x y =>
         eq_term_upto_univ Σ Re Re (dtype x) (dtype y) *
         eq_term_upto_univ Σ Re Re (dbody x) (dbody y) *
-        (rarg x = rarg y))%type mfix1 mfix').
+        (rarg x = rarg y) * 
+        eq_binder_annot (dname x) (dname y))%type mfix1 mfix').
     { (* Maybe we should use a lemma using firstn or skipn to keep
          fix_context intact. Anything general?
        *)
@@ -339,9 +344,10 @@ Proof.
        × (dname d, dtype d, rarg d) = (dname d', dtype d', rarg d')) mfix0 mfix'
     × All2
         (fun x y : def term =>
-         (eq_term_upto_univ Σ Re Re (dtype x) (dtype y)
+         ((eq_term_upto_univ Σ Re Re (dtype x) (dtype y)
           × eq_term_upto_univ Σ Re Re (dbody x) (dbody y)) ×
-         rarg x = rarg y) mfix1 mfix')) _ _).
+         rarg x = rarg y) *
+         eq_binder_annot (dname x) (dname y)) mfix1 mfix')) _ _).
       - intros L x y l [[p1 p2] p3].
         assert (
            e' : eq_context_upto Σ Re (Γ ,,, fix_context L) (Δ ,,, fix_context L)
@@ -398,10 +404,10 @@ Proof.
     ]
   ].
   (* tLambda and tProd *)
-  10,13: solve [
+  10,13:solve [
     dependent destruction e ;
     edestruct IHh as [? [? ?]] ; [ .. | eassumption | ] ; eauto ;
-    clear h ;
+    clear h;
     lazymatch goal with
     | r : red1 _ (?Γ,, vass ?na ?A) ?u ?v,
       e :  eq_term_upto_univ_napp _ _ _ _ ?A ?B
@@ -409,16 +415,16 @@ Proof.
       let hh := fresh "hh" in
       eapply red1_eq_context_upto_l in r as hh ; revgoals ; [
         eapply eq_context_vass (* with (nb := na) *) ; [
-          eapply e
+          eassumption
+        | eapply e
         | eapply eq_context_upto_refl ; eauto
         ]
       | assumption
       | assumption
       | destruct hh as [? [? ?]]
       ]
-    end ;
-    eexists ; split ; [
-      solve [ econstructor ; eauto ]
+    end;
+    eexists ; split; [ solve [ econstructor ; eauto ]
     | constructor ; eauto ;
       eapply eq_term_upto_univ_trans ; eauto ;
       eapply eq_term_upto_univ_leq ; eauto
@@ -458,7 +464,7 @@ Proof.
       try (intros e ; rewrite e in H ; discriminate H).
     intros d e. rewrite e in H. inversion H. subst. clear H.
     eapply All2_nth_error_Some in a as hh ; try eassumption.
-    destruct hh as [d' [e' [[? ?] erarg]]].
+    destruct hh as [d' [e' [[[? ?] erarg] eann]]].
     unfold is_constructor in H0.
     case_eq (nth_error args (rarg d)) ;
       try (intros bot ; rewrite bot in H0 ; discriminate H0).
@@ -490,7 +496,7 @@ Proof.
       try (intros e ; rewrite e in H ; discriminate H).
     intros d e. rewrite e in H. inversion H. subst. clear H.
     eapply All2_nth_error_Some in e as hh ; try eassumption.
-    destruct hh as [d' [e' [[? ?] erarg]]].
+    destruct hh as [d' [e' [[[? ?] erarg] eann]]].
     eexists. split.
     + eapply red_cofix_case.
       unfold unfold_cofix. rewrite e'. reflexivity.
@@ -514,7 +520,7 @@ Proof.
       try (intros e ; rewrite e in H ; discriminate H).
     intros d e. rewrite e in H. inversion H. subst. clear H.
     eapply All2_nth_error_Some in e as hh ; try eassumption.
-    destruct hh as [d' [e' [[? ?] erarg]]].
+    destruct hh as [d' [e' [[[? ?] erarg] eann]]].
     eexists. split.
     + eapply red_cofix_proj.
       unfold unfold_cofix. rewrite e'. reflexivity.
@@ -555,7 +561,8 @@ Proof.
       let hh := fresh "hh" in
       eapply red1_eq_context_upto_l in r as hh ; revgoals ; [
         eapply eq_context_vdef (* with (nb := na) *) ; [
-          eapply e2
+          eassumption
+        | eapply e2
         | eapply e1
         | eapply eq_context_upto_refl ; eauto
         ]
@@ -630,12 +637,13 @@ Proof.
                All2 (fun x y =>
                  eq_term_upto_univ Σ Re Re x.(dtype) y.(dtype) *
                  eq_term_upto_univ Σ Re Re x.(dbody) y.(dbody) *
-                 (x.(rarg) = y.(rarg)))%type mfix1 mfix
+                 (x.(rarg) = y.(rarg)) * 
+                 eq_binder_annot (dname x) (dname y))%type mfix1 mfix
            ).
     { induction X in a, mfix' |- *.
       - destruct p as [[p1 p2] p3].
         dependent destruction a.
-        destruct p as [[h1 h2] h3].
+        destruct p as [[[h1 h2] h3] h4].
         eapply p2 in h1 as hh ; eauto.
         destruct hh as [? [? ?]].
         eexists. split.
@@ -645,7 +653,7 @@ Proof.
         + constructor. all: eauto.
           simpl. inversion p3.
           repeat split ; eauto.
-      - dependent destruction a. destruct p as [[h1 h2] h3].
+      - dependent destruction a. destruct p as [[[h1 h2] h3] h4].
         destruct (IHX _ a) as [? [? ?]].
         eexists. split.
         + eapply OnOne2_tl. eassumption.
@@ -664,8 +672,8 @@ Proof.
                All2 (fun x y =>
                  eq_term_upto_univ Σ Re Re x.(dtype) y.(dtype) *
                  eq_term_upto_univ Σ Re Re x.(dbody) y.(dbody) *
-                 (x.(rarg) = y.(rarg))
-               ) mfix1 mfix
+                 (x.(rarg) = y.(rarg)) * 
+                 eq_binder_annot (dname x) (dname y)) mfix1 mfix
            ).
     { revert mfix' a.
       refine (OnOne2_ind_l _ (fun L x y => (red1 Σ (Γ ,,, fix_context L) (dbody x) (dbody y)
@@ -679,20 +687,20 @@ Proof.
                   × eq_term_upto_univ_napp Σ Re Rle napp (dbody y) v' ))
        × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)) (fun L mfix0 mfix1 o => forall mfix', All2
       (fun x y : def term =>
-       (eq_term_upto_univ Σ Re Re (dtype x) (dtype y)
+       ((eq_term_upto_univ Σ Re Re (dtype x) (dtype y)
         × eq_term_upto_univ Σ Re Re (dbody x) (dbody y)) ×
-       rarg x = rarg y) mfix0 mfix' -> ∑ mfix : list (def term),
+       rarg x = rarg y) * eq_binder_annot (dname x) (dname y)) mfix0 mfix' -> ∑ mfix : list (def term),
   ( OnOne2
       (fun x y : def term =>
        red1 Σ (Γ ,,, fix_context L) (dbody x) (dbody y)
        × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)) mfix' mfix ) *
   ( All2
       (fun x y : def term =>
-       (eq_term_upto_univ Σ Re Re (dtype x) (dtype y)
+       ((eq_term_upto_univ Σ Re Re (dtype x) (dtype y)
         × eq_term_upto_univ Σ Re Re (dbody x) (dbody y)) ×
-       rarg x = rarg y) mfix1 mfix )) _ _ _ _ X).
+       (rarg x = rarg y)) * eq_binder_annot (dname x) (dname y)) mfix1 mfix )) _ _ _ _ X).
       - clear X. intros L x y l [[p1 p2] p3] mfix' h.
-        dependent destruction h. destruct p as [[h1 h2] h3].
+        dependent destruction h. destruct p as [[[h1 h2] h3] h4].
         eapply p2 in h2 as hh ; eauto.
         destruct hh as [? [? ?]].
         eexists. split.
@@ -719,7 +727,8 @@ Proof.
         All2 (fun x y =>
                 eq_term_upto_univ Σ Re Re x.(dtype) y.(dtype) *
                 eq_term_upto_univ Σ Re Re x.(dbody) y.(dbody) *
-                (x.(rarg) = y.(rarg))
+                (x.(rarg) = y.(rarg)) *
+                eq_binder_annot (dname x) (dname y)
              ) mfix1 mfix %type
     ).
     { clear X.
@@ -732,23 +741,25 @@ Proof.
         - eapply eq_context_upto_refl. assumption.
         - clear - a. induction a.
           + constructor.
-          + destruct r as [[? ?] ?].
+          + destruct r as [[[? ?] ?] ?].
             eapply All2_eq_context_upto.
             eapply All2_rev.
             eapply All2_mapi.
             constructor.
-            * intros i. split.
+            * intros i. split; [split|]; cbn.
+              -- assumption.
               -- cbn. constructor.
               -- cbn. eapply eq_term_upto_univ_lift. eauto.
             * eapply All2_impl ; eauto.
-              intros ? ? [[? ?] ?] i. split.
+              intros ? ? [[[? ?] ?] ?] i. split; [split|].
+              -- assumption.
               -- cbn. constructor.
               -- cbn. eapply eq_term_upto_univ_lift. eauto.
       }
       clear a.
       eapply OnOne2_impl_exist_and_All ; try eassumption.
       clear o a0.
-      intros x x' y [r e] [[? ?] ?].
+      intros x x' y [r e] [[[? ?] ?] ?].
       inversion e. clear e.
       eapply red1_eq_context_upto_l in r as [? [? ?]].
       3: eassumption. all: tea.
@@ -759,6 +770,7 @@ Proof.
       - rewrite H1. eauto.
       - eapply eq_term_upto_univ_trans ; eassumption.
       - etransitivity ; eauto.
+      - now simpl.
     }
     destruct h as [? [? ?]].
     eexists. split.
@@ -774,12 +786,13 @@ Proof.
                All2 (fun x y =>
                  eq_term_upto_univ Σ Re Re x.(dtype) y.(dtype) *
                  eq_term_upto_univ Σ Re Re x.(dbody) y.(dbody) *
-                 (x.(rarg) = y.(rarg)))%type mfix1 mfix
+                 (x.(rarg) = y.(rarg)) *
+                 eq_binder_annot (dname x) (dname y))%type mfix1 mfix
            ).
     { induction X in a, mfix' |- *.
       - destruct p as [[p1 p2] p3].
         dependent destruction a.
-        destruct p as [[h1 h2] h3].
+        destruct p as [[[h1 h2] h3] h4].
         eapply p2 in h1 as hh ; eauto.
         destruct hh as [? [? ?]].
         eexists. split.
@@ -808,7 +821,8 @@ Proof.
                All2 (fun x y =>
                  eq_term_upto_univ Σ Re Re x.(dtype) y.(dtype) *
                  eq_term_upto_univ Σ Re Re x.(dbody) y.(dbody) *
-                 (x.(rarg) = y.(rarg))
+                 (x.(rarg) = y.(rarg)) * 
+                 eq_binder_annot (dname x) (dname y)
                ) mfix1 mfix
            ).
     { revert mfix' a.
@@ -823,20 +837,20 @@ Proof.
                × eq_term_upto_univ_napp Σ Re Rle napp (dbody y) v'))
        × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)) (fun L mfix0 mfix1 o => forall mfix', All2
       (fun x y : def term =>
-       (eq_term_upto_univ Σ Re Re (dtype x) (dtype y)
+       ((eq_term_upto_univ Σ Re Re (dtype x) (dtype y)
         × eq_term_upto_univ Σ Re Re (dbody x) (dbody y)) ×
-       rarg x = rarg y) mfix0 mfix' -> ∑ mfix : list (def term),
+       rarg x = rarg y) * eq_binder_annot (dname x) (dname y)) mfix0 mfix' -> ∑ mfix : list (def term),
   ( OnOne2
       (fun x y : def term =>
        red1 Σ (Γ ,,, fix_context L) (dbody x) (dbody y)
        × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)) mfix' mfix ) *
   ( All2
       (fun x y : def term =>
-       (eq_term_upto_univ Σ Re Re (dtype x) (dtype y)
+       ((eq_term_upto_univ Σ Re Re (dtype x) (dtype y)
         × eq_term_upto_univ Σ Re Re (dbody x) (dbody y)) ×
-       rarg x = rarg y) mfix1 mfix )) _ _ _ _ X).
+       rarg x = rarg y) * eq_binder_annot (dname x) (dname y)) mfix1 mfix )) _ _ _ _ X).
       - clear X. intros L x y l [[p1 p2] p3] mfix' h.
-        dependent destruction h. destruct p as [[h1 h2] h3].
+        dependent destruction h. destruct p as [[[h1 h2] h3] h4].
         eapply p2 in h2 as hh ; eauto.
         destruct hh as [? [? ?]].
         noconf p3. hnf in H. noconf H.
@@ -862,7 +876,8 @@ Proof.
         All2 (fun x y =>
                 eq_term_upto_univ Σ Re Re x.(dtype) y.(dtype) *
                 eq_term_upto_univ Σ Re Re x.(dbody) y.(dbody) *
-                (x.(rarg) = y.(rarg))
+                (x.(rarg) = y.(rarg)) *
+                eq_binder_annot (dname x) (dname y)
              ) mfix1 mfix
     ).
     { clear X.
@@ -875,16 +890,18 @@ Proof.
         - eapply eq_context_upto_refl. assumption.
         - clear - a. induction a.
           + constructor.
-          + destruct r as [[? ?] ?].
+          + destruct r as [[[? ?] ?] ?].
             eapply All2_eq_context_upto.
             eapply All2_rev.
             eapply All2_mapi.
             constructor.
-            * intros i. split.
+            * intros i. split; [split|].
+              -- assumption.
               -- cbn. constructor.
               -- cbn. eapply eq_term_upto_univ_lift. eauto.
             * eapply All2_impl ; eauto.
-              intros ? ? [[? ?] ?] i. split.
+              intros ? ? [[[? ?] ?] ?] i. split; [split|].
+              -- assumption.
               -- cbn. constructor.
               -- cbn. eapply eq_term_upto_univ_lift. eauto.
       }
@@ -901,6 +918,7 @@ Proof.
       - rewrite H1. eauto.
       - eapply eq_term_upto_univ_trans ; eassumption.
       - etransitivity ; eauto.
+      - congruence.
     }
     destruct h as [? [? ?]].
     eexists. split.
@@ -1002,21 +1020,21 @@ Lemma local_env_telescope P Γ Γ' Δ Δ' :
   All2_local_env_over P Γ Γ' (List.rev Δ) (List.rev Δ').
 Proof.
   induction 1. simpl. constructor.
-  - simpl. eapply All2_local_env_over_app. constructor. constructor.
+  - simpl. eapply All2_local_env_over_app. constructor. constructor. reflexivity.
     simpl. apply p.
     revert IHX.
     generalize (List.rev Δ) (List.rev Δ'). induction 1. constructor.
-    constructor. auto. red in p0. red. red. red. red in p0.
+    constructor; auto. red in p0. red. red. red. red in p0.
     rewrite !app_context_assoc. cbn. apply p0.
-    constructor. auto. destruct p0. unfold on_decl_over in *. simpl.
+    constructor; auto. destruct p0. unfold on_decl_over in *. simpl.
     rewrite !app_context_assoc. cbn. intuition.
-  - simpl. eapply All2_local_env_over_app. constructor. constructor.
+  - simpl. eapply All2_local_env_over_app. constructor. 2:auto. constructor.
     simpl. unfold on_decl_over, on_decl in *. destruct p. split; intuition auto.
     revert IHX.
     generalize (List.rev Δ) (List.rev Δ'). induction 1. constructor.
-    constructor. auto. red in p0. red. red. red. red in p0.
+    constructor; auto. red in p0. red. red. red. red in p0.
     rewrite !app_context_assoc. cbn. apply p0.
-    constructor. auto. destruct p0. unfold on_decl_over in *. simpl.
+    constructor; auto. destruct p0. unfold on_decl_over in *. simpl.
     rewrite !app_context_assoc. cbn. intuition.
 Qed.
 
@@ -1170,17 +1188,20 @@ Section RedPred.
 
   Ltac noconf H := repeat (DepElim.noconf H; simpl NoConfusion in * ).
 
+  Hint Extern 1 (eq_binder_annot _ _) => reflexivity : pcuic.
+  Hint Extern 2 (All2_local_env _ _ _) => apply localenv2_cons_abs : pcuic.
+  Hint Extern 2 (All2_local_env _ _ _) => apply localenv2_cons_def : pcuic.
+  
   Lemma red1_pred1 Γ : forall M N, red1 Σ Γ M N -> pred1 Σ Γ Γ M N.
   Proof with pcuic.
     induction 1 using red1_ind_all; intros; pcuic.
     - constructor; pcuic.
-      eapply OnOne2_All2 ...
+      eapply OnOne2_All2...
     - constructor; pcuic.
       eapply OnOne2_All2...
     - constructor; pcuic.
       + apply All2_All2_local_env_fix_context.
         now intros; eapply weakening_pred1_pred1.
-        (* Missing name equality *)
         eapply OnOne2_All2...
         intros.
         simpl in *. intuition auto. now noconf b.
@@ -1191,7 +1212,6 @@ Section RedPred.
         eapply All2_local_env_app_inv; pcuic.
         apply All2_All2_local_env_fix_context.
         now intros; eapply weakening_pred1_pred1.
-        (* Missing name equality *)
         eapply OnOne2_All2...
         intros.
         intros. unfold on_Trel.
@@ -1203,7 +1223,6 @@ Section RedPred.
         eapply All2_local_env_app_inv; pcuic.
         apply All2_All2_local_env_fix_context.
         now intros; eapply weakening_pred1_pred1.
-        (* Missing name equality *)
         eapply OnOne2_All2...
         intros.
         intros. unfold on_Trel.
@@ -1212,7 +1231,6 @@ Section RedPred.
     - constructor; pcuic.
       apply All2_All2_local_env_fix_context.
       now intros; eapply weakening_pred1_pred1.
-      (* Missing name equality *)
       + eapply OnOne2_All2...
         intros.
         intros. unfold on_Trel.
@@ -1242,7 +1260,6 @@ Section RedPred.
     - constructor; pcuic.
       apply All2_All2_local_env_fix_context.
       now intros; eapply weakening_pred1_pred1.
-      (* Missing name equality *)
       + eapply OnOne2_All2...
         intros.
         intros. unfold on_Trel.
@@ -1867,14 +1884,15 @@ Section RedConfluence.
 
   Inductive clos_refl_trans_ctx_decl (R : relation context_decl) (x : context_decl) : context_decl -> Type :=
     rt_ctx_decl_step : forall y, R x y -> clos_refl_trans_ctx_decl R x y
-  | rt_ctx_decl_refl y : decl_body x = decl_body y -> decl_type x = decl_type y -> clos_refl_trans_ctx_decl R x y
+  | rt_ctx_decl_refl y : eq_binder_annot x.(decl_name) y.(decl_name) -> 
+    decl_body x = decl_body y -> decl_type x = decl_type y -> clos_refl_trans_ctx_decl R x y
   | rt_ctx_decl_trans : forall y z, clos_refl_trans_ctx_decl R x y -> clos_refl_trans_ctx_decl R y z ->
                                clos_refl_trans_ctx_decl R x z.
 
   Inductive eq_context_upto_names : context -> context -> Type :=
   | eq_context_nil : eq_context_upto_names [] []
   | eq_context_decl x y Γ Γ' :
-      decl_body x = decl_body y -> decl_type x = decl_type y ->
+      eq_binder_annot x.(decl_name) y.(decl_name) -> decl_body x = decl_body y -> decl_type x = decl_type y ->
       eq_context_upto_names Γ Γ' ->
       eq_context_upto_names (Γ ,, x) (Γ' ,, y).
 
@@ -1884,12 +1902,13 @@ Section RedConfluence.
   Proof. intros Γ; induction Γ; constructor; auto. Qed.
 
   Global Instance eq_context_upto_names_sym : Symmetric eq_context_upto_names.
-  Proof. intros Γ Γ' H; induction H; constructor; auto. Qed.
+  Proof. intros Γ Γ' H; induction H; constructor; auto. now symmetry. Qed.
 
   Global Instance eq_context_upto_names_trans : Transitive eq_context_upto_names.
   Proof.
     intros Γ0 Γ1 Γ2 H.
     induction H in Γ2 |- *; intros H2; depelim H2; econstructor; auto.
+    etransitivity; eauto.
     etransitivity; eauto.
     etransitivity; eauto.
   Qed.
@@ -1920,8 +1939,8 @@ Section RedConfluence.
   Lemma red1_ctx_pred1_ctx Γ Γ' : red1_ctx Γ Γ' -> pred1_ctx Σ Γ Γ'.
   Proof.
     intros. induction X; try constructor. pcuic. red. pcuic.
-    now eapply red1_pred1. pcuic.
-    destruct p as [[redb ->]|[redt ->]].
+    now eapply red1_pred1. pcuic. reflexivity.
+    destruct p as [[redb ->]|[redt ->]]; try reflexivity.
     - split; pcuic. now eapply red1_pred1.
     - split; pcuic. now eapply red1_pred1.
     - destruct d as [na [b|] ty].
@@ -2008,7 +2027,7 @@ Section RedConfluence.
     eassumption.
     clear p H.
     transitivity (Γ ,, vass na' t').
-    { constructor 2. repeat constructor; auto. apply reflexivity. }
+    { constructor 2. repeat constructor; auto. simpl. reflexivity. }
     induction IHAll2_local_env; try solve[repeat constructor; auto].
     etransitivity; eauto.
     transitivity (Γ ,, vdef na b t').
@@ -2017,9 +2036,9 @@ Section RedConfluence.
     - transitivity (Γ ,, vdef na b' t').
       eapply clos_rt_OnOne2_local_env_ctx_incl, clos_rt_OnOne2_local_env_incl.
       constructor 2. red. left; split; auto.
-      clear -IHAll2_local_env.
+      clear -e IHAll2_local_env.
       transitivity (Γ ,, vdef na' b' t').
-      { constructor 2. repeat constructor; auto. apply reflexivity. }
+      { constructor 2. repeat constructor; auto. simpl. reflexivity. }
       induction IHAll2_local_env; try solve[repeat constructor; auto].
       etransitivity; eauto.
   Qed.
@@ -2093,7 +2112,7 @@ Section RedConfluence.
         instantiate (1:= (Γ',, vass na' t', x)).
         eapply clos_refl_trans_ctx_t_prod_l. intros. split; eauto.
         transitivity (Γ ,, vass na' t).
-        constructor 2. repeat constructor; apply reflexivity.
+        constructor 2. repeat constructor. simpl. auto. reflexivity.
         apply red_ctx_clos_rt_red1_ctx. constructor; auto.
       * clear p. eapply clos_rt_ctx_t_disjunction_right.
         constructor 2; simpl; reflexivity.
@@ -2140,8 +2159,9 @@ Section RedConfluence.
       induction r.
       * constructor.
       * destruct x as [na [b|] ty], y as [na' [b'|] ty']; simpl in *; noconf e; try noconf e0.
-        constructor; auto. red. split; now apply pred1_refl_gen.
-        constructor; auto. red; now apply pred1_refl_gen.
+        constructor; auto. red. split. now apply pred1_refl_gen. subst. 
+        eapply pred1_refl_gen; eauto.
+        constructor; auto. red. subst; apply pred1_refl_gen; auto.
   Qed.
 
   Lemma pred1_rel_red1_rel_alpha : inclusion pred1_rel (clos_refl_trans red1_rel_alpha).
@@ -2327,10 +2347,11 @@ Section RedConfluence.
     move=> Γ Γ' Γ'' H1 H2.
     unfold red_ctx in *.
     induction H1 in Γ'', H2 |- *; depelim H2; try (hnf in H; noconf H);
-    constructor; auto.
+    constructor; auto. transitivity na'; eauto.
     red in o, p. red.
     transitivity t'; eauto.
     eapply red_red_ctx; eauto.
+    now transitivity na'.
     destruct p, o. red.
     split.
     transitivity b'; eauto.
@@ -2369,7 +2390,7 @@ Section RedConfluence.
     option_map decl_body (nth_error Γ' n) = Some d.
   Proof.
     move: Γ' n d; induction Γ; destruct n; simpl; intros; try congruence.
-    noconf H. depelim X. simpl. now rewrite -e.
+    noconf H. depelim X. simpl. now rewrite -e0.
     depelim X. simpl. apply IHΓ; auto.
   Qed.
 
@@ -2379,7 +2400,7 @@ Section RedConfluence.
     option_map decl_type (nth_error Γ' n) = Some d.
   Proof.
     move: Γ' n d; induction Γ; destruct n; simpl; intros; try congruence.
-    noconf H. depelim X. simpl. now rewrite -e0.
+    noconf H. depelim X. simpl. now rewrite -e1.
     depelim X. simpl. apply IHΓ; auto.
   Qed.
 
@@ -2445,12 +2466,17 @@ Section RedConfluence.
     subst.
     depelim X1. depelim X0. 
     red in o. simpl in *. subst.
-    destruct y as [? [b'|] ?]; noconf e.
+    destruct y as [? [b'|] ?]; noconf e1. simpl.
     constructor; auto. eapply IHX; eauto.
+    transitivity na. now symmetry.
+    transitivity na'0; auto.
     red. eapply red_eq_context_upto_names; eauto.
     destruct o. depelim X0. simpl in *.
-    destruct y as [? [b'|] ?]; noconf e. subst; simpl in *.
-    constructor. eapply IHX; eauto.
+    destruct y as [? [b'|] ?]; noconf e1; subst; simpl in *.
+    constructor; auto.
+    eapply IHX; eauto.
+    transitivity na. now symmetry.
+    transitivity na'0; auto.
     red.
     split; eauto using red_eq_context_upto_names.
   Qed.

@@ -3,7 +3,7 @@
 all: bugs plugin-demo
 
 bugs: Makefile.coq
-	$(MAKE) -f Makefile.coq pretty-timed	
+	$(MAKE) -f Makefile.coq $(TIMED)
 
 Makefile.coq: Makefile
 	coq_makefile -f _CoqProject -o Makefile.coq

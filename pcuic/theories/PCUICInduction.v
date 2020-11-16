@@ -21,9 +21,9 @@ Lemma term_forall_list_ind :
     (forall i : ident, P (tVar i)) ->
     (forall (n : nat) (l : list term), All P l -> P (tEvar n l)) ->
     (forall s, P (tSort s)) ->
-    (forall (n : name) (t : term), P t -> forall t0 : term, P t0 -> P (tProd n t t0)) ->
-    (forall (n : name) (t : term), P t -> forall t0 : term, P t0 -> P (tLambda n t t0)) ->
-    (forall (n : name) (t : term),
+    (forall (n : aname) (t : term), P t -> forall t0 : term, P t0 -> P (tProd n t t0)) ->
+    (forall (n : aname) (t : term), P t -> forall t0 : term, P t0 -> P (tLambda n t t0)) ->
+    (forall (n : aname) (t : term),
         P t -> forall t0 : term, P t0 -> forall t1 : term, P t1 -> P (tLetIn n t t0 t1)) ->
     (forall t u : term, P t -> P u -> P (tApp t u)) ->
     (forall s (u : list Level.t), P (tConst s u)) ->
@@ -115,7 +115,14 @@ Qed.
 Lemma decompose_app_size_tApp2 t1 t2 :
   Forall (fun t => size t < size (tApp t1 t2)) (decompose_app (tApp t1 t2)).2.
 Proof.
-  todo String.EmptyString.
+  destruct decompose_app eqn:da.
+  eapply decompose_app_inv in da. rewrite da. simpl. clear da.
+  induction l using rev_ind; try constructor.
+  eapply app_Forall; [|constructor].
+  eapply Forall_impl; eauto; simpl; intros.
+  rewrite <- mkApps_nested; simpl. lia.
+  rewrite <- mkApps_nested; simpl. lia.
+  constructor.
 Qed.
 
 Definition mkApps_decompose_app_rec t l :
@@ -210,9 +217,9 @@ Lemma term_forall_mkApps_ind :
     (forall i : ident, P (tVar i)) ->
     (forall (n : nat) (l : list term), All P l -> P (tEvar n l)) ->
     (forall s, P (tSort s)) ->
-    (forall (n : name) (t : term), P t -> forall t0 : term, P t0 -> P (tProd n t t0)) ->
-    (forall (n : name) (t : term), P t -> forall t0 : term, P t0 -> P (tLambda n t t0)) ->
-    (forall (n : name) (t : term),
+    (forall (n : aname) (t : term), P t -> forall t0 : term, P t0 -> P (tProd n t t0)) ->
+    (forall (n : aname) (t : term), P t -> forall t0 : term, P t0 -> P (tLambda n t t0)) ->
+    (forall (n : aname) (t : term),
         P t -> forall t0 : term, P t0 -> forall t1 : term, P t1 -> P (tLetIn n t t0 t1)) ->
     (forall t : term, forall v, ~ isApp t -> P t -> All P v -> P (mkApps t v)) ->
     (forall (s : kername) (u : list Level.t), P (tConst s u)) ->

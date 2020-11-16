@@ -601,8 +601,8 @@ Proof.
   pose proof (declared_projection_inv weaken_env_prop_closed wfΣ X0 isdecl) as onp.
   set (declared_inductive_inv _ wfΣ X0 _) as oib in *.
   clearbody oib.
-  have onpars := onParams _ _ _ _ (declared_minductive_inv weaken_env_prop_closed wfΣ X0 isdecl.p1.p1).
-  have parslen := onNpars _ _ _ _ (declared_minductive_inv weaken_env_prop_closed wfΣ X0 isdecl.p1.p1).
+  have onpars := onParams (declared_minductive_inv weaken_env_prop_closed wfΣ X0 isdecl.p1.p1).
+  have parslen := onNpars (declared_minductive_inv weaken_env_prop_closed wfΣ X0 isdecl.p1.p1).
   simpl in onp. destruct (ind_cshapes oib) as [|? []] eqn:Heq; try contradiction.
   destruct onp as [_ onp].
   red in onp.
@@ -759,15 +759,6 @@ Proof.
     eapply nth_error_all in X0; eauto.
     destruct X0 as [s [Hs cl]].
     now rewrite andb_true_r in cl.
-    
-  - destruct X1; intuition eauto.
-    + destruct i as [[u [ctx [Heq Hi]]] Hwfi]. simpl in Hwfi.
-      generalize (destArity_spec [] B). rewrite Heq.
-      simpl; intros ->.
-      apply closedn_All_local_closed in Hwfi.
-      move/andP: Hwfi => [] clΓ clctx.
-      apply closedn_it_mkProd_or_LetIn => //.
-    + destruct s. rewrite andb_true_r in p. intuition auto.
 Qed.
 
 Lemma on_global_env_impl `{checker_flags} Σ P Q :
@@ -806,12 +797,14 @@ Proof.
        --- simpl; intros. pose (onProjections X1 H0). simpl in *; auto.
        --- destruct X1. simpl. unfold check_ind_sorts in *.
            destruct universe_family; auto.
-           split. apply ind_sorts. destruct indices_matter; auto.
-           eapply type_local_ctx_impl. eapply ind_sorts. auto.
-           split; [apply fst in ind_sorts|apply snd in ind_sorts].
-           eapply Forall_impl; tea. auto.
-           destruct indices_matter; [|trivial].
-           eapply type_local_ctx_impl; tea. eauto.
+           split. apply ind_sorts.
+           * destruct indices_matter; auto.
+             eapply type_local_ctx_impl. eapply ind_sorts. auto.
+           * split; [apply fst in ind_sorts|apply snd in ind_sorts].
+             eapply Forall_impl; tea. auto.
+             destruct indices_matter; [|trivial].
+             eapply type_local_ctx_impl; tea. eauto.
+      --- eapply X1.(onIndices).
     -- red in onP. red.
        eapply All_local_env_impl. eauto.
        intros. now apply X.
@@ -1178,9 +1171,9 @@ Lemma term_closedn_list_ind :
     (forall k (i : ident), P k (tVar i)) ->
     (forall k (n : nat) (l : list term), All (P k) l -> P k (tEvar n l)) ->
     (forall k s, P k (tSort s)) ->
-    (forall k (n : name) (t : term), P k t -> forall t0 : term, P (S k) t0 -> P k (tProd n t t0)) ->
-    (forall k (n : name) (t : term), P k t -> forall t0 : term, P (S k)  t0 -> P k (tLambda n t t0)) ->
-    (forall k (n : name) (t : term),
+    (forall k (n : aname) (t : term), P k t -> forall t0 : term, P (S k) t0 -> P k (tProd n t t0)) ->
+    (forall k (n : aname) (t : term), P k t -> forall t0 : term, P (S k)  t0 -> P k (tLambda n t t0)) ->
+    (forall k (n : aname) (t : term),
         P k t -> forall t0 : term, P k t0 -> forall t1 : term, P (S k) t1 -> P k (tLetIn n t t0 t1)) ->
     (forall k (t u : term), P k t -> P k u -> P k (tApp t u)) ->
     (forall k s (u : list Level.t), P  k (tConst s u)) ->

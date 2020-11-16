@@ -10,7 +10,6 @@ From Equations Require Import Equations.
 
 (** * Substitution lemmas for typing derivations. *)
 
-
 Local Set Keyed Unification.
 
 Set Default Goal Selector "!".
@@ -623,10 +622,10 @@ Proof.
   - simpl. now rewrite -> inds_length, closedn_subst_instance_constr.
 Qed.
 
-Lemma context_subst_length Γ a s : context_subst Γ a s -> #|Γ| = #|s|.
+Lemma context_subst_length {Γ a s} : context_subst Γ a s -> #|Γ| = #|s|.
 Proof. induction 1; simpl; congruence. Qed.
 
-Lemma context_subst_assumptions_length Γ a s : context_subst Γ a s -> context_assumptions Γ = #|a|.
+Lemma context_subst_assumptions_length {Γ a s} : context_subst Γ a s -> context_assumptions Γ = #|a|.
 Proof. induction 1; simpl; try congruence. rewrite app_length /=. lia. Qed.
 
 (* Lemma context_subst_app {cf:checker_flags} Γ Γ' a s : *)
@@ -939,7 +938,7 @@ Proof.
   rewrite !XX; clear XX.
   apply make_context_subst_spec in Hsubst as Hsubst'.
   rewrite rev_involutive in Hsubst'.
-  pose proof (context_subst_assumptions_length _ _ _ Hsubst') as H1.
+  pose proof (context_subst_assumptions_length Hsubst') as H1.
   case E: chop => [l l'].
   have chopm := (chop_map _ _ _ _ _ E).
   move: E chopm.
@@ -2090,6 +2089,18 @@ Fixpoint subst_stack s k π :=
       let k'' := #|mfix| + k' in
       let mfix' := List.map (map_def (subst s k') (subst s k'')) mfix in
       CoFix mfix' idx (map (subst s k') args) (subst_stack s k π)
+  | CoFix_mfix_ty na bo ra mfix1 mfix2 idx π =>
+      let k' := #|stack_context π| + k in
+      let k'' := #|mfix1| + S #|mfix2| + k' in
+      let mfix1' := List.map (map_def (subst s k') (subst s k'')) mfix1 in
+      let mfix2' := List.map (map_def (subst s k') (subst s k'')) mfix2 in
+      CoFix_mfix_ty na (subst s k'' bo) ra mfix1' mfix2' idx (subst_stack s k π)
+  | CoFix_mfix_bd na ty ra mfix1 mfix2 idx π =>
+      let k' := #|stack_context π| + k in
+      let k'' := #|mfix1| + S #|mfix2| + k' in
+      let mfix1' := List.map (map_def (subst s k') (subst s k'')) mfix1 in
+      let mfix2' := List.map (map_def (subst s k') (subst s k'')) mfix2 in
+      CoFix_mfix_bd na (subst s k' ty) ra mfix1' mfix2' idx (subst_stack s k π)
   | Case_p indn c brs π =>
       let k' := #|stack_context π| + k in
       let brs' := List.map (on_snd (subst s k')) brs in
@@ -2155,6 +2166,14 @@ Proof.
     f_equal. f_equal. lia.
   - simpl. rewrite IHπ. cbn. f_equal. f_equal.
     rewrite subst_mkApps. cbn. reflexivity.
+  - simpl. rewrite IHπ. cbn. f_equal. f_equal.
+    rewrite map_app. rewrite !app_length. cbn. reflexivity.
+  - simpl. rewrite IHπ. cbn. f_equal. f_equal.
+    rewrite map_app. rewrite !app_length. cbn. f_equal.
+    unfold map_def at 1. cbn. f_equal.
+    rewrite fix_context_alt_length.
+    rewrite !app_length. cbn. rewrite !map_length.
+    f_equal. f_equal. lia.
   - simpl. rewrite IHπ. cbn. f_equal. f_equal.
     rewrite map_app. cbn. reflexivity.
 Qed.
@@ -2590,6 +2609,7 @@ Proof.
       * subst params. rewrite firstn_map. exact H3.
       * now rewrite closedn_subst_instance_context.
     + solve_all.
+      destruct b0 as [s' [Hs IH]]; eexists; eauto.
 
   - specialize (X2 Γ Γ' Δ s sub eq_refl).
     eapply refine_type.
@@ -2659,38 +2679,7 @@ Proof.
       rewrite map_map_compose. now rewrite H1.
 
   - econstructor; eauto.
-    + destruct X2 as [Bs|[u Hu]].
-      * left. destruct Bs as [[ctx [u [Hd IH]]]]. simpl in *.
-        exists (subst_context s #|Δ| ctx), u.
-        pose proof (subst_destArity [] B s #|Δ|). rewrite Hd in H.
-        rewrite {}H.
-        split; auto.
-        apply All_local_env_app_inv; intuition auto.
-        clear -sub a.
-        induction ctx; try constructor; depelim a.
-        -- rewrite subst_context_snoc.
-           unfold snoc.
-           econstructor; auto.
-           ++ eapply IHctx. eapply a.
-           ++ simpl. destruct tu as [u tu]. exists u.
-              specialize (t0 _ _ (Δ ,,, ctx) _ sub). forward t0.
-              1: now rewrite app_context_assoc.
-              simpl in t0.
-              now rewrite subst_context_app Nat.add_0_r app_context_assoc app_length in t0.
-      -- rewrite subst_context_snoc.
-         constructor; auto.
-         ++ eapply IHctx. eapply a.
-         ++ simpl.
-            specialize (t1 _ _ (Δ ,,, ctx) _ sub).
-            forward t1. 1: now rewrite app_context_assoc.
-            simpl in t1.
-            now rewrite subst_context_app Nat.add_0_r app_context_assoc app_length in t1.
-         ++ simpl.
-            specialize (t0 _ _ (Δ ,,, ctx) _ sub). forward t0.
-            1: now rewrite app_context_assoc. simpl in t0.
-            now rewrite subst_context_app Nat.add_0_r app_context_assoc app_length in t0.
-      * right; exists u; intuition eauto.
-    + eapply substitution_cumul; eauto.
+    eapply substitution_cumul; eauto.
 Qed.
 
 Corollary substitution `{cf : checker_flags} (Σ : global_env_ext) Γ Γ' s Δ (t : term) T :

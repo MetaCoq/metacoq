@@ -1,14 +1,14 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils uGraph.
+From MetaCoq.Template Require Import utils uGraph Reflect.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICSize.
 
 Require Import ssreflect.
 From Equations Require Import Equations.
 
+Derive Signature for All All2.
 
-Derive NoConfusion for term.
-Derive Signature for All.
-Derive Signature for All2.
+Definition string_of_aname (b : binder_annot name) :=
+  string_of_name b.(binder_name).
 
 Fixpoint string_of_term (t : term) :=
   match t with
@@ -16,11 +16,11 @@ Fixpoint string_of_term (t : term) :=
   | tVar n => "Var(" ^ n ^ ")"
   | tEvar ev args => "Evar(" ^ string_of_nat ev ^ "," ^ string_of_list string_of_term args ^ ")"
   | tSort s => "Sort(" ^ string_of_sort s ^ ")"
-  | tProd na b t => "Prod(" ^ string_of_name na ^ "," ^
+  | tProd na b t => "Prod(" ^ string_of_aname na ^ "," ^
                             string_of_term b ^ "," ^ string_of_term t ^ ")"
-  | tLambda na b t => "Lambda(" ^ string_of_name na ^ "," ^ string_of_term b
+  | tLambda na b t => "Lambda(" ^ string_of_aname na ^ "," ^ string_of_term b
                                 ^ "," ^ string_of_term t ^ ")"
-  | tLetIn na b t' t => "LetIn(" ^ string_of_name na ^ "," ^ string_of_term b
+  | tLetIn na b t' t => "LetIn(" ^ string_of_aname na ^ "," ^ string_of_term b
                                  ^ "," ^ string_of_term t' ^ "," ^ string_of_term t ^ ")"
   | tApp f l => "App(" ^ string_of_term f ^ "," ^ string_of_term l ^ ")"
   | tConst c u => "Const(" ^ string_of_kername c ^ "," ^ string_of_universe_instance u ^ ")"
@@ -36,6 +36,29 @@ Fixpoint string_of_term (t : term) :=
   | tFix l n => "Fix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
   | tCoFix l n => "CoFix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
   end.
+
+Lemma lookup_env_nil c s : lookup_env [] c = Some s -> False.
+Proof.
+  induction c; simpl; auto => //.
+Qed.
+
+Lemma lookup_env_cons {kn d Σ kn' d'} : lookup_env ((kn, d) :: Σ) kn' = Some d' ->
+  (kn = kn' /\ d = d') \/ (kn <> kn' /\ lookup_env Σ kn' = Some d').
+Proof.
+  simpl.
+  epose proof (Reflect.eqb_spec (A:=kername) kn' kn). simpl in H.
+  elim: H. intros -> [= <-]; intuition auto.
+  intros diff look. intuition auto.
+Qed.
+
+Lemma lookup_env_cons_fresh {kn d Σ kn'} : 
+  kn <> kn' ->
+  lookup_env ((kn, d) :: Σ) kn' = lookup_env Σ kn'.
+Proof.
+  simpl.
+  epose proof (Reflect.eqb_spec (A:=kername) kn' kn). simpl in H.
+  elim: H. intros -> => //. auto.
+Qed.
 
 Fixpoint decompose_app_rec (t : term) l :=
   match t with
@@ -66,7 +89,7 @@ Proof.
   rewrite <- IHl. simpl. reflexivity.
 Qed.
 
-Fixpoint decompose_prod (t : term) : (list name) * (list term) * term :=
+Fixpoint decompose_prod (t : term) : (list aname) * (list term) * term :=
   match t with
   | tProd n A B => let (nAs, B) := decompose_prod B in
                   let (ns, As) := nAs in
@@ -108,7 +131,7 @@ Proof.
     apply (List.firstn decl.(ind_npars)) in names.
     apply (List.firstn decl.(ind_npars)) in types.
     refine (List.combine _ _).
-    exact (List.map string_of_name names).
+    exact (List.map string_of_aname names).
     exact (List.map LocalAssum types).
   - refine (List.map _ decl.(ind_bodies)).
     intros [].
@@ -753,3 +776,43 @@ Proof.
   intros e; discriminate e.
   reflexivity.
 Qed.
+
+(* Helper for nested recursive functions on well-typed terms *)
+
+Section MapInP.
+  Context {A B : Type}.
+  Context {P : A -> Type}.
+  Context (f : forall (x : A), P x -> B).
+
+  Equations map_InP (l : list A) (H : forall x, In x l -> P x) : list B :=
+  map_InP nil _ := nil;
+  map_InP (cons x xs) H := cons (f x (H x (or_introl eq_refl))) (map_InP xs (fun x inx => H x _)).
+End MapInP.
+Global Transparent map_InP.
+
+Lemma map_InP_spec {A B : Type} {P : A -> Type} (f : A -> B) (l : list A) (H : forall x, In x l -> P x) :
+  map_InP (fun (x : A) (_ : P x) => f x) l H = List.map f l.
+Proof.
+  remember (fun (x : A) (_ : P x) => f x) as g.
+  funelim (map_InP g l H) => //; simpl. f_equal.
+  now rewrite H0.
+Qed.
+
+Lemma nth_error_map_InP {A B : Type} {P : A -> Type} (f : forall x : A, P x -> B) (l : list A) (H : forall x, In x l -> P x) n x :
+  nth_error (map_InP f l H) n = Some x ->
+  ∑ a, (nth_error l n = Some a) * 
+  ∑ p : P a, x = f a p.
+Proof.
+  induction l in n, H |- *. simpl. rewrite nth_error_nil => //.
+  destruct n; simpl; intros [=].
+  subst x.
+  eexists; intuition eauto.
+  eapply IHl. eapply H1.
+Qed.
+
+Lemma map_InP_length {A B : Type} {P : A -> Type} (f : forall x : A, P x -> B) (l : list A) (H : forall x, In x l -> P x) :
+  #|map_InP f l H| = #|l|.
+Proof.
+  induction l; simpl; auto.
+Qed.
+Hint Rewrite @map_InP_length : len.

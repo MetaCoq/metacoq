@@ -97,40 +97,6 @@ Fixpoint closedn k (t : term) : bool :=
 
 Notation closed t := (closedn 0 t).
 
-Create HintDb terms.
-
-Ltac arith_congr := repeat (try lia; progress f_equal).
-
-Ltac easy0 :=
-  let rec use_hyp H :=
-   (match type of H with
-    | _ /\ _ => exact H || destruct_hyp H
-    | _ * _ => exact H || destruct_hyp H
-    | _ => try (solve [ inversion H ])
-    end)
-  with do_intro := (let H := fresh in
-                    intro H; use_hyp H)
-  with destruct_hyp H := (case H; clear H; do_intro; do_intro)
-  in
-  let rec use_hyps :=
-   (match goal with
-    | H:_ /\ _ |- _ => exact H || (destruct_hyp H; use_hyps)
-    | H:_ * _ |- _ => exact H || (destruct_hyp H; use_hyps)
-    | H:_ |- _ => solve [ inversion H ]
-    | _ => idtac
-    end)
-  in
-  let do_atom := (solve [ trivial with eq_true | reflexivity | symmetry; trivial | contradiction | congruence]) in
-  let rec do_ccl := (try do_atom; repeat (do_intro; try do_atom); try arith_congr; (solve [ split; do_ccl ])) in
-  (solve [ do_atom | use_hyps; do_ccl ]) || fail "Cannot solve this goal".
-
-
-Hint Extern 10 (_ < _)%nat => lia : terms.
-Hint Extern 10 (_ <= _)%nat => lia : terms.
-Hint Extern 10 (@eq nat _ _) => lia : terms.
-
-Ltac easy ::= easy0 || solve [intuition eauto 3 with core terms].
-
 Notation subst_rec N M k := (subst N k M) (only parsing).
 
 Require Import PeanoNat.

@@ -20,7 +20,7 @@ Fixpoint try_remove_n_lambdas (n : nat) (t : term) {struct n} : term :=
   match n, t with
   | 0, _ => t
   | S n, tLambda _ _ t => try_remove_n_lambdas n t
-  | S n, _ => t
+  | S _, _ => t
   end.
 
 

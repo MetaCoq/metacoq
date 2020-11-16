@@ -1090,7 +1090,7 @@ Proof.
       { exists E.tBox.
         eapply eval_to_mkApps_tBox_inv in ev_stuck as ?; subst.
         cbn in *.
-        split; [|constructor; eauto using Ee.eval].
+        split; [|constructor; eauto].
         2:{ eapply (eval_box_apps _ _ [_]); eauto. }
         destruct H2.
         eapply (Is_type_app _ _ _ (x5 ++ [av])) in X as []; eauto; first last.

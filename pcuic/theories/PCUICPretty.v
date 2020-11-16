@@ -1,10 +1,22 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICChecker
-     PCUICLiftSubst.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst.
 
 (** * Pretty printing *)
 
+Section lookups.
+  Context (Σ : global_env).
+
+  Definition lookup_ind_decl ind i :=
+    match lookup_env Σ ind with
+    | Some (InductiveDecl {| ind_bodies := l; ind_universes := uctx |}) =>
+      match nth_error l i with
+      | Some body => Some (l, uctx, body)
+      | None => None
+      end
+    | _ => None
+    end.
+End lookups.
 
 Section print_term.
   Context (Σ : global_env_ext).
@@ -44,8 +56,8 @@ Section print_term.
     | tConst c u => "x"
     | tInd (mkInd i k) u =>
       match lookup_ind_decl Σ i k with
-      | Checked (_, body) => substring 0 1 (body.(ind_name))
-      | TypeError _ => "X"
+      | Some (_, body) => substring 0 1 (body.(ind_name))
+      | None => "X"
       end
     | _ => "U"
     end.
@@ -106,26 +118,26 @@ Section print_term.
   | tConst c u => string_of_kername c ^ print_universe_instance u
   | tInd (mkInd i k) u =>
     match lookup_ind_decl Σ i k with
-    | Checked (_, oib) => oib.(ind_name) ^ print_universe_instance u
-    | TypeError _ =>
+    | Some (_, oib) => oib.(ind_name) ^ print_universe_instance u
+    | None =>
       "UnboundInd(" ^ string_of_inductive (mkInd i k) ^ "," ^ string_of_universe_instance u ^ ")"
     end
   | tConstruct (mkInd i k as ind) l u =>
     match lookup_ind_decl Σ i k with
-    | Checked (_, oib) =>
+    | Some (_, oib) =>
       match nth_error oib.(ind_ctors) l with
       | Some (na, _, _) => na ^ print_universe_instance u
       | None =>
         "UnboundConstruct(" ^ string_of_inductive ind ^ "," ^ string_of_nat l ^ ","
                             ^ string_of_universe_instance u ^ ")"
       end
-    | TypeError _ =>
+    | None =>
       "UnboundConstruct(" ^ string_of_inductive ind ^ "," ^ string_of_nat l ^ ","
                           ^ string_of_universe_instance u ^ ")"
     end
   | tCase (mkInd mind i as ind, pars) p t brs =>
     match lookup_ind_decl Σ mind i with
-    | Checked (_, oib) =>
+    | Some (_, oib) =>
       match p with
       | tLambda na _ty b =>
         let fix print_branch Γ arity br {struct br} :=
@@ -153,20 +165,20 @@ Section print_term.
         "Case(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_term t ^ ","
                 ^ string_of_term p ^ "," ^ string_of_list (fun b => string_of_term (snd b)) brs ^ ")"
       end
-    | TypeError _ =>
+    | None =>
       "Case(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_term t ^ ","
               ^ string_of_term p ^ "," ^ string_of_list (fun b => string_of_term (snd b)) brs ^ ")"
     end
   | tProj (mkInd mind i as ind, pars, k) c =>
     match lookup_ind_decl Σ mind i with
-    | Checked (_, oib) =>
+    | Some (_, oib) =>
       match nth_error oib.(ind_projs) k with
       | Some (na, _) => print_term Γ false false c ^ ".(" ^ na ^ ")"
       | None =>
         "UnboundProj(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_nat k ^ ","
                        ^ print_term Γ true false c ^ ")"
       end
-    | TypeError _ =>
+    | None =>
       "UnboundProj(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_nat k ^ ","
                      ^ print_term Γ true false c ^ ")"
     end

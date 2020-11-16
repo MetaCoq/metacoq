@@ -14,11 +14,11 @@ Set Equations With UIP.
 
 (** * Reduction machine for PCUIC without fuel
 
-  We subsume the reduction machine of PCUICChecker without relying on fuel.
+  We implement the reduction machine of Coq without relying on fuel.
   Instead we assume strong normalisation of the system (for well-typed terms)
   and proceed by well-founded induction.
 
-  Once extracted, this should roughly correspond to the ocaml implementation.
+  Once extracted, this should roughly correspond to the OCaml implementation.
 
  *)
 

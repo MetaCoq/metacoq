@@ -28,9 +28,7 @@ PCUICInduction
 PCUICWfUniverses
 PCUICNormal
 PCUICPosition
-PCUICChecker
 PCUICPretty
-PCUICRetyping
 TemplateToPCUIC
 PCUICCumulativity
 
@@ -48,8 +46,7 @@ ETyping
 EPretty
 Extract
 ErasureFunction
-SafeErasureFunction
 EOptimizePropDiscr
-SafeTemplateErasure
+Erasure
 
 G_metacoq_erasure

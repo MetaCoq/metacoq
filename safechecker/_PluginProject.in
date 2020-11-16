@@ -53,8 +53,6 @@ src/pCUICNormal.mli
 src/pCUICNormal.ml
 src/pCUICWfUniverses.mli
 src/pCUICWfUniverses.ml
-# src/pCUICChecker.ml
-# src/pCUICChecker.mli
 # src/pCUICRetyping.ml
 # src/pCUICRetyping.mli
 # src/pCUICWeakeningEnv.ml
@@ -77,8 +75,6 @@ src/pCUICWfUniverses.ml
 # src/pCUICSafeLemmata.ml
 src/templateToPCUIC.mli
 src/templateToPCUIC.ml
-src/pCUICChecker.ml
-src/pCUICChecker.mli
 src/pCUICPretty.mli
 src/pCUICPretty.ml
 

@@ -2376,7 +2376,7 @@ Module WeightedGraph (V : UsualOrderedType).
             destruct (V.eq_dec y y) as [?|?]; [|contradiction].
             destruct (V.eq_dec x y) as [Hy|Hy]. simpl in *. contradiction.
             simple refine (let YY := lsp0_spec_le G'
-                                (spaths_step G' _ (V G) (s G) x x ?[XX] (1; _)
+                                (spaths_step G' _ (V G) (s G) x x ?[XX] (K; _)
                                              (spaths_refl _ _ _)) in _).
             [XX]: apply DisjointAdd_remove1. apply HI.
             apply EdgeSet.add_spec. left; reflexivity.

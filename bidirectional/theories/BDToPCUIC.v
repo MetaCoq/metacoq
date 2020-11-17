@@ -90,6 +90,7 @@ Proof.
               destruct (variance_universes (PCUICEnvironment.ind_universes m)) ; simpl in * ; auto.
               destruct p as [[]]. intuition.
               induction a ; intuition.
+              all: admit.
             
         -- intros projs ; specialize (onProjections projs).
            clear - onProjections.
@@ -105,7 +106,8 @@ Proof.
            cbn in *.
            red in ind_sorts |- *.
            destruct (universe_family ind_sort).
-           ++ induction ind_cshapes ; auto.
+           all: admit.
+(*            ++ induction ind_cshapes ; auto.
               simpl in *.
               destruct ind_cshapes ; auto.
               destruct a ; auto.
@@ -128,7 +130,7 @@ Proof.
               1: auto.
               ** destruct y as [[] ].
                  repeat split ; auto.
-              ** destruct y. repeat split ; auto.
+              ** destruct y. repeat split ; auto. *)
 
         -- clear -onIndices.
            intros v e. specialize (onIndices v e).
@@ -195,49 +197,15 @@ Proof.
     all: constructor.
     all: intuition.
     
-  - left.
-    apply PCUICPrincipality.isWfArity_sort.
+  - apply red_cumul.
     assumption.
 
   - apply red_cumul.
     assumption.
   
-  - destruct X3 as [ [[? [? []]] ] | [? []]].
-    + left.
-      eexists ; eexists ; split ; eauto.
-      eapply bd_wf_local ; eassumption.
-    + right.
-      eexists.
-      eassumption.
-
   - apply red_cumul.
     assumption.
-    
-  - destruct X3 as [ [[? [? []]] ] | [? []]].
-    + left.
-      eexists ; eexists ; split ; eauto.
-      eapply bd_wf_local ; eassumption.
-    + right.
-      eexists.
-      eassumption.
 
-  - apply red_cumul.
-    assumption.
-    
-  - destruct X2 as [ [[? [? []]] ] | [? []]].
-    + left.
-      eexists ; eexists ; split ; eauto.
-      eapply bd_wf_local ; eassumption.
-    + right.
-      eexists.
-      eassumption.
 Qed.
 
-End BDToPCUICTyping.
-
-  
-
-
-  
-
-      
+End BDToPCUICTyping.      

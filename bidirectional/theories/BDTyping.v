@@ -22,7 +22,7 @@ Include BDLookup.
 Module BDEnvTyping := EnvTyping PCUICTerm PCUICEnvironment.
 Include BDEnvTyping.
 
-Section WfArity.
+(* Section WfArity.
 (*modification of arity well-formedness to separated checking and sorting *)
 
   Context (checking : forall (Σ : global_env_ext) (Γ : context), term -> term -> Type).
@@ -42,7 +42,7 @@ Section WfArity.
   Definition isWfArity_sorting_prop Σ (Γ : context) T :=
     { wfa : isWfArity_sorting Σ Γ T &
       All_local_env_over_sorting checking sorting cproperty sproperty Σ (Γ,,,wfa.π1) wfa.π2.π2.2 }.
-End WfArity.
+End WfArity. *)
 
 Notation "Σ ;;; Γ |- t --> t'" := (red Σ Γ t t') (at level 50, Γ, t, t' at next level) : type_scope.
 Reserved Notation " Σ ;;; Γ |- t ▹ T " (at level 50, Γ, t, T at next level).
@@ -58,10 +58,10 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
     nth_error Γ n = Some decl ->
     Σ ;;; Γ |- tRel n ▹ lift0 (S n) decl.(decl_type)
 
-| infer_Sort l :
+| infer_Sort s :
     All_local_env (lift_sorting checking infering_sort Σ) Γ ->
-    LevelSet.In l (global_ext_levels Σ) ->
-    Σ ;;; Γ |- tSort (Universe.make l) ▹ tSort (Universe.super l)
+    wf_universe Σ s->
+    Σ ;;; Γ |- tSort s ▹ tSort (Universe.super s)
 
 | infer_Prod na A B s1 s2 :
     Σ ;;; Γ |- A ▸□ s1 ->
@@ -149,30 +149,30 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
     Σ ;;; Γ |- tCoFix mfix n ▹ decl.(dtype)
 
 with infering_sort `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> Universe.t -> Type :=
-| infer_sort_Sort t T u :
+| infer_sort_Sort t T u s :
   Σ ;;; Γ |- t ▹ T ->
   Σ ;;; Γ |- T --> tSort u ->
+  Σ ;;; Γ |- tSort u ▸□ s ->
   Σ ;;; Γ |- t ▸□ u
 
-with infering_prod `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> name -> term -> term -> Type :=
-| infer_prod_Prod t T na A B:
+with infering_prod `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> aname -> term -> term -> Type :=
+| infer_prod_Prod t T na A B s:
   Σ ;;; Γ |- t ▹ T ->
   Σ ;;; Γ |- T --> tProd na A B ->
-  isWfArity_sorting checking infering_sort Σ Γ (tProd na A B) + {s & Σ ;;; Γ |- tProd na A B ▸□ s} ->
+  Σ ;;; Γ |- tProd na A B ▸□ s ->
   Σ ;;; Γ |- t ▸Π (na,A,B)
 
 with infering_indu `{checker_flags} (Σ : global_env_ext) (Γ : context) : inductive -> term -> Instance.t -> list term -> Type :=
-| infer_ind_Ind ind t T u args:
+| infer_ind_Ind ind t T u args s:
   Σ ;;; Γ |- t ▹ T ->
   Σ ;;; Γ |- T --> mkApps (tInd ind u) args ->
-  isWfArity_sorting checking infering_sort Σ Γ (mkApps (tInd ind u) args) +
-    {s & Σ ;;; Γ |- mkApps (tInd ind u) args ▸□ s} ->
+  Σ ;;; Γ |- mkApps (tInd ind u) args ▸□ s ->
   Σ ;;; Γ |- t ▸{ind} (u,args)
 
 with checking `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
-| check_Cons t T T' :
+| check_Cons t T T' s:
   Σ ;;; Γ |- t ▹ T ->
-  isWfArity_sorting checking infering_sort Σ Γ T' + {s & Σ ;;; Γ |- T' ▸□ s} ->
+  Σ ;;; Γ |- T' ▸□ s ->
   Σ ;;; Γ |- T <= T' ->
   Σ ;;; Γ |- t ◃ T'
 
@@ -192,6 +192,7 @@ Module BDTypingDef <: Typing PCUICTerm PCUICEnvironment BDEnvTyping.
   Definition ind_guard := ind_guard.
   Definition checking `{checker_flags} := checking.
   Definition sorting `{checker_flags} := infering_sort.
+  Definition wf_universe := @wf_universe.
   Definition conv := @conv.
   Definition cumul := @cumul.
   Definition smash_context := smash_context.
@@ -229,7 +230,6 @@ with checking_size `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t ◃ T) {stru
 Proof.
   all: destruct d ;
     repeat match goal with
-          | H : (isWfArity_sorting _ _ _ _ _) + _ |- _ => destruct H as [[? [? []]]|[]] 
           | H : infering _ _ _ _ |- _ => apply infering_size in H
           | H : infering_sort _ _ _ _ |- _ => apply infering_sort_size in H
           | H : infering_prod _ _ _ _ _ _ |- _ => apply infering_prod_size in H
@@ -240,7 +240,6 @@ Proof.
     match goal with
     | H : All2 _ _ _ |- _ => idtac
     | H : All _ _ |- _ => idtac
-    | H : _ + _ |- _ => idtac
     | H1 : size, H2 : size, H3 : size |- _ => exact (S (H1 + H2 + H3))
     | H1 : size, H2 : size |- _ => exact (S (H1 + H2))
     | H1 : size |- _  => exact (S H1)
@@ -254,11 +253,11 @@ Proof.
                (all_size _ (fun x => checking_size _ _ _ _ _) a1))).
   Defined.
 
-Definition wfarity_size `{checker_flags} {Σ Γ T} (d : isWfArity_sorting checking infering_sort Σ Γ T) : size.
+(* Definition wfarity_size `{checker_flags} {Σ Γ T} (d : isWfArity_sorting checking infering_sort Σ Γ T) : size.
 Proof.
   destruct d as (ctx & u & e & wf).
   exact (wf_local_size Σ (@checking_size _) (@infering_sort_size _) _ wf).
-Defined.
+Defined. *)
 
 Fixpoint infering_size_pos `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t ▹ T)
   : infering_size d > 0
@@ -330,7 +329,7 @@ Section TypingInduction.
   Context (Pcheck : global_env_ext -> context -> term -> term -> Type).
   Context (Pinfer : global_env_ext -> context -> term -> term -> Type).
   Context (Psort : global_env_ext -> context -> term -> Universe.t -> Type).
-  Context (Pprod : global_env_ext -> context -> term -> name -> term -> term -> Type).
+  Context (Pprod : global_env_ext -> context -> term -> aname -> term -> term -> Type).
   Context (Pind : global_env_ext -> context -> inductive -> term -> Instance.t -> list term -> Type).
   Context (PΓ : forall `{checker_flags} Σ Γ, wf_local Σ Γ -> Type).
   Arguments PΓ {_}.
@@ -392,13 +391,13 @@ Section TypingInduction.
     all: lia.
   Qed.
 
-  Lemma isWfArity_sort `{checker_flags} {Σ Γ} (wfΓ : wf_local Σ Γ) u : isWfArity_sorting checking infering_sort Σ Γ (tSort u).
+ (*  Lemma isWfArity_sort `{checker_flags} {Σ Γ} (wfΓ : wf_local Σ Γ) u : isWfArity_sorting checking infering_sort Σ Γ (tSort u).
   Proof.
     red. exists []. exists u.
     split.
     1: by rewrite /destArity /=.
     assumption.
-  Defined.
+  Defined. *)
 
   Derive Signature for Alli.
 
@@ -455,7 +454,7 @@ Section TypingInduction.
           unshelve eapply (IH _ _ (ind_cons _ _ Γ ind t u args _))
     end ;
     match goal with
-    | |- isWfArity _ _ _ (tSort _) => apply isWfArity_sort ; try assumption ; try (by constructor)
+(*     | |- isWfArity _ _ _ (tSort _) => apply isWfArity_sort ; try assumption ; try (by constructor) *)
     | |- dlexprod _ _ _ _ => constructor ; simpl ; lia
     | |- dlexprod _ _ _ _ =>
             constructor 2 ; simpl ;
@@ -481,13 +480,13 @@ Section TypingInduction.
       Pinfer Σ Γ (tRel n) (lift0 (S n) decl.(decl_type))) ->
 
     (forall Σ (wfΣ : wf Σ.1)(PΣ : Forall_decls_sorting Pcheck Psort Σ.1)
-      (Γ : context) (wfΓ : wf_local Σ Γ) (l : Level.t),
+      (Γ : context) (wfΓ : wf_local Σ Γ) (s : Universe.t),
       PΓ Σ Γ wfΓ ->
-      LevelSet.In l (global_ext_levels Σ) ->
-      Pinfer Σ Γ (tSort (Universe.make l)) (tSort (Universe.super l))) ->
+      wf_universe Σ s->
+      Pinfer Σ Γ (tSort s) (tSort (Universe.super s))) ->
 
     (forall Σ (wfΣ : wf Σ.1) (PΣ : Forall_decls_sorting Pcheck Psort Σ.1)
-      (Γ : context) (wfΓ : wf_local Σ Γ) (n : name) (t b : term) (s1 s2 : Universe.t),
+      (Γ : context) (wfΓ : wf_local Σ Γ) (n : aname) (t b : term) (s1 s2 : Universe.t),
       PΓ Σ Γ wfΓ ->
       Σ ;;; Γ |- t ▸□ s1 ->
       Psort Σ Γ t s1 ->
@@ -495,7 +494,7 @@ Section TypingInduction.
       Psort Σ (Γ,, vass n t) b s2 -> Pinfer Σ Γ (tProd n t b) (tSort (Universe.sort_of_product s1 s2))) ->
 
     (forall Σ (wfΣ : wf Σ.1) (PΣ : Forall_decls_sorting Pcheck Psort Σ.1)
-      (Γ : context) (wfΓ : wf_local Σ Γ) (n : name) (t b : term) (s : Universe.t) (bty : term),
+      (Γ : context) (wfΓ : wf_local Σ Γ) (n : aname) (t b : term) (s : Universe.t) (bty : term),
       PΓ Σ Γ wfΓ ->
       Σ ;;; Γ |- t ▸□ s ->
       Psort Σ Γ t s ->
@@ -503,7 +502,7 @@ Section TypingInduction.
       Pinfer Σ Γ (tLambda n t b) (tProd n t bty)) ->
 
     (forall Σ (wfΣ : wf Σ.1) (PΣ : Forall_decls_sorting Pcheck Psort Σ.1)
-      (Γ : context) (wfΓ : wf_local Σ Γ) (n : name) (b B t : term) (s : Universe.t) (A : term),
+      (Γ : context) (wfΓ : wf_local Σ Γ) (n : aname) (b B t : term) (s : Universe.t) (A : term),
       PΓ Σ Γ wfΓ ->
       Σ ;;; Γ |- B ▸□ s ->
       Psort Σ Γ B s ->
@@ -606,41 +605,43 @@ Section TypingInduction.
       Pinfer Σ Γ (tCoFix mfix n) decl.(dtype)) ->
 
     (forall (Σ : global_env_ext) (wfΣ : wf Σ.1) (PΣ : Forall_decls_sorting Pcheck Psort Σ.1)
-      (Γ : context) (wfΓ : wf_local Σ Γ) (t T : term) (u : Universe.t),
+      (Γ : context) (wfΓ : wf_local Σ Γ) (t T : term) (u s : Universe.t),
       PΓ Σ Γ wfΓ ->
       Σ ;;; Γ |- t ▹ T ->
       Pinfer Σ Γ t T ->
       Σ ;;; Γ |- T --> tSort u ->
+      Σ ;;; Γ |- tSort u ▸□ s ->
+      Psort Σ Γ (tSort u) s ->
       Psort Σ Γ t u) ->
 
     (forall (Σ : global_env_ext) (wfΣ : wf Σ.1) (PΣ : Forall_decls_sorting Pcheck Psort Σ.1)
-      (Γ : context) (wfΓ : wf_local Σ Γ) (t T : term) (na : name) (A B : term),
+      (Γ : context) (wfΓ : wf_local Σ Γ) (t T : term) (na : aname) (A B : term) (s : Universe.t),
       PΓ Σ Γ wfΓ ->
       Σ ;;; Γ |- t ▹ T ->
       Pinfer Σ Γ t T ->
       Σ ;;; Γ |- T --> tProd na A B ->
-      (isWfArity_sorting_prop checking infering_sort Pdecl_check Pdecl_sort Σ Γ (tProd na A B))
-        + {s & (Σ ;;; Γ |- (tProd na A B) ▸□ s) × Psort Σ Γ (tProd na A B) s} ->
+      Σ ;;; Γ |- tProd na A B ▸□ s ->
+      Psort Σ Γ (tProd na A B) s ->
       Pprod Σ Γ t na A B) ->
 
     (forall (Σ : global_env_ext) (wfΣ : wf Σ.1) (PΣ : Forall_decls_sorting Pcheck Psort Σ.1)
       (Γ : context) (wfΓ : wf_local Σ Γ) (ind : inductive) (t T : term) (ui : Instance.t)
-      (args : list term),
+      (args : list term) (s : Universe.t),
       PΓ Σ Γ wfΓ ->
       Σ ;;; Γ |- t ▹ T ->
       Pinfer Σ Γ t T ->
       Σ ;;; Γ |- T --> mkApps (tInd ind ui) args ->
-      (isWfArity_sorting_prop checking infering_sort Pdecl_check Pdecl_sort Σ Γ (mkApps (tInd ind ui) args))
-        + {s & (Σ ;;; Γ |- (mkApps (tInd ind ui) args) ▸□ s) × Psort Σ Γ (mkApps (tInd ind ui) args) s} ->
+      Σ ;;; Γ |- mkApps (tInd ind ui) args ▸□ s ->
+      Psort Σ Γ (mkApps (tInd ind ui) args) s ->
       Pind Σ Γ ind t ui args) ->
 
     (forall (Σ : global_env_ext) (wfΣ : wf Σ.1) (PΣ : Forall_decls_sorting Pcheck Psort Σ.1)
-      (Γ : context) (wfΓ : wf_local Σ Γ) (t T T' : term),
+      (Γ : context) (wfΓ : wf_local Σ Γ) (t T T' : term) (s : Universe.t),
       PΓ Σ Γ wfΓ ->
       Σ ;;; Γ |- t ▹ T ->
       Pinfer Σ Γ t T ->
-      (isWfArity_sorting_prop checking infering_sort Pdecl_check Pdecl_sort Σ Γ T')
-        + {s & (Σ ;;; Γ |- T' ▸□ s) × Psort Σ Γ T' s} ->
+      Σ ;;; Γ |- T' ▸□ s ->
+      Psort Σ Γ T' s ->
       Σ ;;; Γ |- T <= T' ->
       Pcheck Σ Γ t T') ->
       
@@ -761,6 +762,10 @@ Section TypingInduction.
               ** eapply type_local_ctx_impl.
                 1: eassumption.
                 all: intros ; applyIH ; eapply type_local_ctx_wf_local ; eassumption.
+              ** eapply type_local_ctx_impl.
+                 1: eassumption.
+                 all: intros.
+                 all: applyIH.
 
 
     - apply HΓ.
@@ -793,59 +798,10 @@ Section TypingInduction.
 
     - destruct c.
       unshelve (eapply HCheck ; eauto) ; auto.
-      + eapply infering_wf_local ; eassumption.
-      + applyIH. constructor 2. cbn. destruct s as [[? [? []]]|[]] ; lia. 
-      + applyIH.
-        pose proof (infering_wf_local_size i).
-        constructor 2.
-        destruct s as [[? [? []]]|[]] ; simpl ; lia.
-      + applyIH.
-        pose proof (infering_wf_local_size i).
-        constructor 2.
-        destruct s as [[? [? []]]|[]] ; simpl ; lia.
-      + destruct s as [wfar | [s ?]].
-        * left.
-          exists wfar.
-          destruct wfar as [Γ' [s [? wfΓ']]].
-          simpl.
-
-          have IH' : (forall d' : typing_sum Σ wfΣ,
-            (typing_sum_size d') <
-              (typing_sum_size (check_cons _ wfΣ _ _ _
-              (check_Cons Σ Γ t T T' i (inl (Γ' ; s; (e, wfΓ'))) c)))
-            -> Ptyping_sum d')
-            by intros ; apply IH ; constructor 2 ; assumption.
-          simpl in IH'.
-          clear -IH'.
-          induction wfΓ'.
-          1: by constructor.
-          -- constructor.
-             1:{
-                apply IHwfΓ'.
-                intros.
-                apply IH'.
-                simpl. lia. }
-              simpl.
-              red.
-              eapply (IH' (sort_cons _ wfΣ _ _ _ t1.π2)).
-              simpl. lia.
-          -- constructor.
-             1:{
-               apply IHwfΓ'.
-               intros.
-               apply IH'.
-               simpl. lia.
-             }
-             constructor.
-             all: cbn.
-             1: eapply (IH' (sort_cons _ wfΣ _ _ _ t1.1.π2)).
-             2: eapply (IH' (check_cons _ wfΣ _ _ _ t1.2)).
-             all: simpl ; lia.
-          
-        * right.
-          exists s.
-          split ; [auto|].
-          applyIH.
+      1: eapply infering_wf_local ; eassumption.
+      all: applyIH.
+      pose proof (infering_wf_local_size i).
+      lia.
 
     - unshelve eapply HRel ; auto.
       all: applyIH.
@@ -997,113 +953,15 @@ Section TypingInduction.
 
     - destruct i.
       unshelve (eapply HiProd ; try eassumption) ; try eassumption.
-      + eapply infering_wf_local ; eauto.
-      + applyIH. constructor 2. cbn. destruct s as [[? [? []]]|[]] ; lia. 
-      + applyIH.
-        pose proof (infering_wf_local_size i).
-        constructor 2.
-        destruct s as [[? [? []]]|[]] ; simpl ; lia.
-      + applyIH.
-        pose proof (infering_wf_local_size i).
-        constructor 2.
-        destruct s as [[? [? []]]|[]] ; simpl ; lia.
-      + destruct s as [wfar | [s ?]].
-        * left.
-          exists wfar.
-          destruct wfar as [Γ' [s [? wfΓ']]].
-          simpl.
-          have IH' : (forall d' : typing_sum Σ wfΣ,
-          (typing_sum_size d') <
-            (typing_sum_size (prod_cons _ wfΣ _ _ _ _ _
-            (infer_prod_Prod Σ Γ t T _ _ _ i r (inl (Γ' ; s; (e, wfΓ'))))))
-          -> Ptyping_sum d')
-          by intros ; apply IH ; constructor 2 ; assumption.
-        simpl in IH'.
-        clear -IH'.
-        induction wfΓ'.
-        1: by constructor.
-        -- constructor.
-          1:{
-              apply IHwfΓ'.
-              intros.
-              apply IH'.
-              simpl. lia. }
-            simpl.
-            red.
-            eapply (IH' (sort_cons _ wfΣ _ _ _ t1.π2)).
-            simpl. lia.
-        -- constructor.
-          1:{
-            apply IHwfΓ'.
-            intros.
-            apply IH'.
-            simpl. lia.
-          }
-          constructor.
-          all: cbn.
-          1: eapply (IH' (sort_cons _ wfΣ _ _ _ t1.1.π2)).
-          2: eapply (IH' (check_cons _ wfΣ _ _ _ t1.2)).
-          all: simpl ; lia.
-        
-    * right.
-      exists s.
-      split ; [auto|].
-      applyIH.
+      1: eapply infering_wf_local ; eauto.
+      all: applyIH.
+      pose proof (infering_wf_local_size i). lia.
 
     - destruct i.
       unshelve (eapply HiInd ; try eassumption) ; try eassumption.
-      + eapply infering_wf_local ; eauto.
-      + applyIH. constructor 2. cbn. destruct s as [[? [? []]]|[]] ; lia. 
-      + applyIH.
-        pose proof (infering_wf_local_size i).
-        constructor 2.
-        destruct s as [[? [? []]]|[]] ; simpl ; lia.
-      + applyIH.
-        pose proof (infering_wf_local_size i).
-        constructor 2.
-        destruct s as [[? [? []]]|[]] ; simpl ; lia.
-      + destruct s as [wfar | [s ?]].
-        * left.
-          exists wfar.
-          destruct wfar as [Γ' [s [? wfΓ']]].
-          simpl.
-          have IH' : (forall d' : typing_sum Σ wfΣ,
-          (typing_sum_size d') <
-            (typing_sum_size (ind_cons _ wfΣ _ _ _ _ _
-            (infer_ind_Ind Σ Γ ind t T _ _ i r (inl (Γ' ; s; (e, wfΓ'))))))
-          -> Ptyping_sum d')
-          by intros ; apply IH ; constructor 2 ; assumption.
-        simpl in IH'.
-        clear -IH'.
-        induction wfΓ'.
-        1: by constructor.
-        -- constructor.
-          1:{
-              apply IHwfΓ'.
-              intros.
-              apply IH'.
-              simpl. lia. }
-            simpl.
-            red.
-            eapply (IH' (sort_cons _ wfΣ _ _ _ t1.π2)).
-            simpl. lia.
-        -- constructor.
-          1:{
-            apply IHwfΓ'.
-            intros.
-            apply IH'.
-            simpl. lia.
-          }
-          constructor.
-          all: cbn.
-          1: eapply (IH' (sort_cons _ wfΣ _ _ _ t1.1.π2)).
-          2: eapply (IH' (check_cons _ wfΣ _ _ _ t1.2)).
-          all: simpl ; lia.
-        
-    * right.
-      exists s.
-      split ; [auto|].
-      applyIH.
+      1: eapply infering_wf_local ; eauto.
+      all: applyIH.
+      pose proof (infering_wf_local_size i). lia.
 Qed.
 
 End TypingInduction.

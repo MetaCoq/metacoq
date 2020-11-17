@@ -34,7 +34,7 @@ Section BDToPCUICTyping.
 
 Lemma bd_wf `{checker_flags} Σ : Forall_decls_sorting Pcheck Psort Σ -> PT.wf Σ.
 Proof.
-   intros wfΣ. induction wfΣ.
+  intros wfΣ. induction wfΣ.
   all: constructor.
   - assumption.
   - assumption.
@@ -196,7 +196,7 @@ Proof.
     all: intuition.
     
   - left.
-    apply isWfArity_sort.
+    apply PCUICPrincipality.isWfArity_sort.
     assumption.
 
   - apply red_cumul.
@@ -232,6 +232,8 @@ Proof.
       eexists.
       eassumption.
 Qed.
+
+End BDToPCUICTyping.
 
   
 

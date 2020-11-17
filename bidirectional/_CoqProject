@@ -1,6 +1,5 @@
 -R ../template-coq/theories MetaCoq.Template
 -R ../pcuic/theories MetaCoq.PCUIC
--R ../safechecker/theories MetaCoq.SafeChecker
 
 -R theories MetaCoq.Bidirectional
 

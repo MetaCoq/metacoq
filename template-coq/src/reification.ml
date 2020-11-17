@@ -7,6 +7,8 @@ sig
   type quoted_int
   type quoted_bool
   type quoted_name
+  type quoted_aname
+  type quoted_relevance
   type quoted_sort
   type quoted_cast_kind
   type quoted_kernel_name

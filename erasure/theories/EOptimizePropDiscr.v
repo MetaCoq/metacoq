@@ -10,7 +10,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker PCUICSafeRetyping.
 From MetaCoq.Erasure Require Import EAstUtils EArities Extract Prelim ErasureCorrectness EDeps 
-    SafeErasureFunction ELiftSubst.
+    ErasureFunction ELiftSubst.
 
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -42,7 +42,7 @@ Section optimize.
     | tLetIn na b b' => tLetIn na (optimize b) (optimize b')
     | tCase ind c brs =>
       let brs' := List.map (on_snd optimize) brs in
-      match ETyping.is_propositional Σ (fst ind) with
+      match ETyping.is_propositional_ind Σ (fst ind) with
       | Some true =>
         match brs' with
         | [(a, b)] => E.mkApps b (repeat E.tBox a)
@@ -51,7 +51,7 @@ Section optimize.
       | _ => E.tCase ind (optimize c) brs'
       end
     | tProj p c =>
-      match ETyping.is_propositional Σ p.1.1 with 
+      match ETyping.is_propositional_ind Σ p.1.1 with 
       | Some true => tBox
       | _ => tProj p (optimize c)
       end
@@ -108,7 +108,7 @@ Section optimize.
     - destruct (k ?= n); auto.
     - f_equal; eauto. rewrite !map_map_compose; eauto.
       solve_all.
-    - destruct ETyping.is_propositional as [[|]|] => /= //.
+    - destruct ETyping.is_propositional_ind as [[|]|] => /= //.
       destruct l as [|[br n] [|l']] eqn:eql; simpl.
       * f_equal; auto.
       * depelim X. simpl in *.
@@ -125,7 +125,7 @@ Section optimize.
         rewrite !map_map_compose; solve_all.
       * f_equal; eauto.
         rewrite !map_map_compose; solve_all.
-    - destruct ETyping.is_propositional as [[|]|]=> //;
+    - destruct ETyping.is_propositional_ind as [[|]|]=> //;
       now rewrite IHb.
     - rewrite !map_map_compose; f_equal; solve_all.
       destruct x; unfold EAst.map_def; simpl in *. 
@@ -216,9 +216,8 @@ Qed.
 Lemma isType_tSort {cf:checker_flags} {Σ : global_env_ext} {Γ l A} {wfΣ : wf Σ} : Σ ;;; Γ |- tSort (Universe.make l) : A -> isType Σ Γ (tSort (Universe.make l)).
 Proof.
   intros HT.
-  eapply inversion_Sort in HT as [l' [wfΓ [inl [eq Hs]]]]; auto.
+  eapply inversion_Sort in HT as [l' [wfΓ Hs]]; auto.
   eexists; econstructor; eauto.
-  now eapply Universe.make_inj in eq as ->.
 Qed.
 
 Lemma isType_it_mkProd {cf:checker_flags} {Σ : global_env_ext} {Γ na dom codom A} {wfΣ : wf Σ} :   
@@ -283,9 +282,9 @@ Proof.
 Qed.
 
 Lemma is_propositional_optimize Σ ind : 
-  is_propositional Σ ind = is_propositional (optimize_env Σ) ind.
+  is_propositional_ind Σ ind = is_propositional_ind (optimize_env Σ) ind.
 Proof.
-  rewrite /is_propositional.
+  rewrite /is_propositional_ind.
   rewrite lookup_env_optimize.
   destruct lookup_env; simpl; auto.
   destruct g; simpl; auto.
@@ -355,10 +354,10 @@ Qed.
 
 Lemma extends_is_propositional {Σ Σ'} : 
   wf_glob Σ' -> extends Σ Σ' ->
-  forall ind b, is_propositional Σ ind = Some b -> is_propositional Σ' ind = Some b.
+  forall ind b, is_propositional_ind Σ ind = Some b -> is_propositional_ind Σ' ind = Some b.
 Proof.
   intros wf ex ind b.
-  rewrite /is_propositional.
+  rewrite /is_propositional_ind.
   destruct lookup_env eqn:lookup => //.
   now rewrite (extends_lookup wf ex lookup).
 Qed.
@@ -388,7 +387,7 @@ Proof.
 
   - rewrite optimize_mkApps in IHev1.
     rewrite optimize_iota_red in IHev2.
-    destruct ETyping.is_propositional as [[]|]eqn:isp => //.
+    destruct ETyping.is_propositional_ind as [[]|]eqn:isp => //.
     eapply Ee.eval_iota; eauto.
     now rewrite -is_propositional_optimize.
   
@@ -404,7 +403,7 @@ Proof.
     simpl in *. eapply Ee.eval_fix_value. auto. auto.
     eapply optimize_cunfold_fix; eauto. now rewrite map_length. 
 
-  - destruct ETyping.is_propositional as [[]|] eqn:isp => //.
+  - destruct ETyping.is_propositional_ind as [[]|] eqn:isp => //.
     destruct brs as [|[a b] []]; simpl in *; auto.
     rewrite -> optimize_mkApps in IHev |- *. simpl.
     econstructor; eauto.
@@ -419,7 +418,7 @@ Proof.
     econstructor; eauto.
     now apply optimize_cunfold_cofix.
 
-  - destruct ETyping.is_propositional as [[]|] eqn:isp; auto.
+  - destruct ETyping.is_propositional_ind as [[]|] eqn:isp; auto.
     rewrite -> optimize_mkApps in IHev |- *. simpl.
     econstructor; eauto.
     now apply optimize_cunfold_cofix.
@@ -432,7 +431,7 @@ Proof.
     now rewrite /optimize_constant_decl e.
     apply IHev.
   
-  - destruct ETyping.is_propositional as [[]|] eqn:isp => //.
+  - destruct ETyping.is_propositional_ind as [[]|] eqn:isp => //.
     rewrite optimize_mkApps in IHev1.
     rewrite optimize_nth in IHev2.
     econstructor; eauto. now rewrite -is_propositional_optimize.

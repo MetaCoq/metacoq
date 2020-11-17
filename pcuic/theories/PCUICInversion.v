@@ -79,11 +79,9 @@ Section Inversion.
   Lemma inversion_Sort :
     forall {Γ s T},
       Σ ;;; Γ |- tSort s : T ->
-      ∑ l,
-        wf_local Σ Γ ×
-        LevelSet.In l (global_ext_levels Σ) ×
-        (s = Universe.make l) ×
-        Σ ;;; Γ |- tSort (Universe.super l) <= T.
+      wf_local Σ Γ ×
+      wf_universe Σ s ×
+      Σ ;;; Γ |- tSort (Universe.super s) <= T.
   Proof.
     intros Γ s T h. invtac h.
   Qed.

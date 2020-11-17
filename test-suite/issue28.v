@@ -17,11 +17,14 @@ Definition tmLocateInd (q : qualid) : TemplateMonad kername :=
 MetaCoq Run (tmLocateInd "Datatypes.unit" >>= tmDefinition "q_unit").
 MetaCoq Run (tmLocateInd "test" >>= tmDefinition "q_test").
 
+Definition nAnon := {| binder_name := nAnon; binder_relevance := Relevant |}.
+Definition nNamed s := {| binder_name := nNamed s; binder_relevance := Relevant |}.
+
 Definition T :=
 tFix
   [mkdef term (nNamed "f") (tProd (nNamed "x") (tApp (tInd (mkInd q_test 0) []) [tInd (mkInd q_unit 0) []]) (tInd (mkInd q_unit 0) []))
      (tLambda (nNamed "x") (tApp (tInd (mkInd q_test 0) []) [tRel 0])
-        (tCase (mkInd q_test 0, 1)
+        (tCase ((mkInd q_test 0, 1), Relevant)
            (tLambda (nNamed "x") (tApp (tInd (mkInd q_test 0) []) [tInd (mkInd q_unit 0) []]) (tInd (mkInd q_unit 0) []))
            (tRel 0)
            [(1, tLambda (nNamed "x0") (tApp (tInd (mkInd q_test 0) []) [tInd (mkInd q_unit 0) []]) (tApp (tRel 2) [tRel 0]))]))

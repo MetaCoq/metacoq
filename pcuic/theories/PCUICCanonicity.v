@@ -289,7 +289,7 @@ Section Spines.
       eapply All_local_env_app in wfty as [wfty _]. depelim wfty.
       eapply cumul_Prod_inv in c as [dom codom]. 2-3:pcuic.
       assert (Σ ;;; Γ |- hd : ty).
-      { eapply type_Cumul; pcuic. eapply conv_cumul. now symmetry. }
+      { eapply type_Cumul'; pcuic. eapply conv_cumul. now symmetry. }
       eapply (substitution_cumul0 _ _ _ _ _ _ hd) in codom; eauto.
       eapply typing_spine_strengthen in sp; eauto.
       rewrite /subst1 subst_it_mkProd_or_LetIn Nat.add_0_r in sp.
@@ -321,7 +321,7 @@ Section Spines.
   Lemma typing_spine_all_inv Γ Δ T args T' :
     typing_spine Σ Γ (it_mkProd_or_LetIn Δ T) args T' ->
     #|args| = context_assumptions Δ ->
-    (Σ ;;; Γ |- subst (List.rev args) 0 (expand_lets Δ T) <= T') * (isWfArity_or_Type Σ Γ T').
+    (Σ ;;; Γ |- subst (List.rev args) 0 (expand_lets Δ T) <= T') * (isType Σ Γ T').
   Proof.
     induction Δ in args, T |- * using ctx_length_rev_ind.
     - simpl. destruct args => // sp _ /=; rewrite subst_empty expand_lets_nil.
@@ -356,7 +356,7 @@ Section Spines.
     induction Δ in args, args' |- * using ctx_length_rev_ind.
     - simpl. destruct args' using rev_case => /= // sp hargs // /=; try lia.
       depelim sp. eapply (f_equal (@length _)) in H; simpl in H; len in H. lia.
-      eapply invert_cumul_prod_r in c as (? & ? & ? & (? & ?) & ?); auto.
+      eapply invert_cumul_prod_r in c as (? & ? & ? & ((? & ?) & ?) & ?); auto.
       eapply red_mkApps_tInd in r as (? & ? & ?); auto. solve_discr.
     - rewrite it_mkProd_or_LetIn_app /=; destruct d as [na [b|] ty].
       * rewrite /mkProd_or_LetIn /=. simpl => /= sp.
@@ -415,7 +415,7 @@ Section Spines.
       intros Hargs. eapply nth_error_None in Hargs.
       len in Hargs. len; simpl.      
       depelim sp. 
-      + eapply invert_cumul_prod_l in c as [na' [dom [codom [[red eqdom] cum]]]]; auto.
+      + eapply invert_cumul_prod_l in c as [na' [dom [codom [[[red eqann] eqdom] cum]]]]; auto.
         simpl. rewrite subst_empty. simpl; len.
         simpl. rewrite Nat.sub_0_r firstn_app_2. simpl.
         rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /=.
@@ -424,7 +424,7 @@ Section Spines.
         eapply congr_cumul_prod; eauto.
       + eapply cumul_Prod_inv in c as [dom codom]. 2-3:pcuic.
         assert (Σ ;;; Γ |- hd : ty).
-        { eapply type_Cumul; pcuic. eapply conv_cumul. now symmetry. }
+        { eapply type_Cumul'; pcuic. eapply conv_cumul. now symmetry. }
         eapply (substitution_cumul0 _ _ _ _ _ _ hd) in codom; eauto.
         eapply typing_spine_strengthen in sp; eauto.
         rewrite /subst1 subst_it_mkProd_or_LetIn Nat.add_0_r in sp.
@@ -903,14 +903,14 @@ Section WeakNormalization.
   Lemma invert_cumul_prod_ind {Γ na dom codom ind u args} :
     Σ ;;; Γ |- tProd na dom codom <= mkApps (tInd ind u) args -> False.
   Proof.
-    intros ht; eapply invert_cumul_prod_l in ht as (? & ? & ? & (? & ?) & ?); auto.
+    intros ht; eapply invert_cumul_prod_l in ht as (? & ? & ? & ((? & ?) & ?) & ?); auto.
     eapply red_mkApps_tInd in r as (? & ? & ?); auto. solve_discr.
   Qed.
 
   Lemma invert_cumul_ind_prod {Γ na dom codom ind u args} :
     Σ ;;; Γ |- mkApps (tInd ind u) args <= tProd na dom codom -> False.
   Proof.
-    intros ht; eapply invert_cumul_prod_r in ht as (? & ? & ? & (? & ?) & ?); auto.
+    intros ht; eapply invert_cumul_prod_r in ht as (? & ? & ? & ((? & ?) & ?) & ?); auto.
     eapply red_mkApps_tInd in r as (? & ? & ?); auto. solve_discr.
   Qed.
 
@@ -1010,11 +1010,10 @@ Section WeakNormalization.
     eapply (wf_fixpoint_spine wfΣ) in t0; eauto.
     rewrite no_arg in t0. destruct t0 as [na [dom [codom cum]]].
     eapply PCUICConversion.invert_cumul_prod_l in cum; auto.
-    destruct cum as (? & ? & ? & (? & ?) & ?).
+    destruct cum as (? & ? & ? & ((? & ?) & ?) & ?).
     eapply PCUICConfluence.red_mkApps_tInd in r as [? [eq _]]; auto.
     solve_discr.
   Qed.
-
 
   Lemma wh_neutral_empty_gen t Γ : axiom_free Σ -> wh_neutral Σ Γ t -> forall ty, Σ ;;; Γ |- t : ty -> Γ = [] -> False
   with wh_normal_empty_gen t Γ i u args : axiom_free Σ -> wh_normal Σ Γ t -> Σ ;;; Γ |- t : mkApps (tInd i u) args -> 
@@ -1030,7 +1029,7 @@ Section WeakNormalization.
     - clear wh_neutral_empty_gen wh_normal_empty_gen. subst.
       apply inversion_Const in typed as [decl' [wfd [declc [cu cum]]]]; eauto.
       specialize (axfree  _ _ declc).
-      red in declc. rewrite declc in H. noconf H. congruence.
+      red in declc. rewrite declc in e. noconf e. congruence.
     - simpl in cl; move/andP: cl => [clf cla].
       eapply inversion_App in typed as [na [A [B [Hf _]]]]; eauto.
     - specialize (wh_neutral_empty_gen _ _ axfree ne). subst.
@@ -1039,16 +1038,16 @@ Section WeakNormalization.
       eapply inversion_Fix in t as (? & ? & ? & ? & ? & ? & ?); auto.
       eapply typing_spine_strengthen in t0; eauto.
       eapply nth_error_all in a; eauto. simpl in a.
-      rewrite /unfold_fix in H. rewrite e in H. noconf H.
+      rewrite /unfold_fix in e. rewrite e1 in e. noconf e.
       eapply (wf_fixpoint_spine wfΣ) in t0; eauto.
-      rewrite H0 in t0. destruct t0 as [ind [u [indargs [tyarg ckind]]]].
+      rewrite e0 in t0. destruct t0 as [ind [u [indargs [tyarg ckind]]]].
       clear wh_normal_empty_gen.
       now specialize (wh_neutral_empty_gen _ tyarg eq_refl).
     - move/andP: cl => [/andP[_ clc] _].
       eapply inversion_Case in typed; firstorder eauto.
     - eapply inversion_Proj in typed; firstorder auto.
-    - eapply wh_neutral_empty_gen in H; eauto.
-    - eapply inversion_Sort in typed as (? & ? & ? & ? & ?); auto.
+    - eapply wh_neutral_empty_gen in w; eauto.
+    - eapply inversion_Sort in typed as (? & ? & ?); auto.
       eapply invert_cumul_sort_l in c as (? & ? & ?); auto.
       eapply red_mkApps_tInd in r as (? & eq & ?); eauto; eauto.
       solve_discr.
@@ -1057,7 +1056,7 @@ Section WeakNormalization.
       eapply red_mkApps_tInd in r as (? & eq & ?); eauto; eauto.
       solve_discr.
     - eapply inversion_Lambda in typed as (? & ? & ? & ? & ?); auto.
-      eapply invert_cumul_prod_l in c as (? & ? & ? & (? & ?) & ?); auto.
+      eapply invert_cumul_prod_l in c as (? & ? & ? & ((? & ?) & ?) & ?); auto.
       eapply red_mkApps_tInd in r as (? & eq & ?); eauto; eauto.
       solve_discr.
     - now rewrite head_mkApps /= /head /=.

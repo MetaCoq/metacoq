@@ -8,6 +8,8 @@ sig
 
   val unquote_ident : quoted_ident -> Id.t
   val unquote_name : quoted_name -> Name.t
+  val unquote_aname : quoted_aname -> Name.t Context.binder_annot
+  val unquote_relevance : quoted_relevance -> Sorts.relevance
   val unquote_int :  quoted_int -> int
   val unquote_bool : quoted_bool -> bool
   (* val unquote_sort : quoted_sort -> Sorts.t *)
@@ -20,7 +22,7 @@ sig
   val unquote_universe : Evd.evar_map -> quoted_sort -> Evd.evar_map * Univ.Universe.t
   val unquote_universe_instance: Evd.evar_map -> quoted_univ_instance -> Evd.evar_map * Univ.Instance.t
   (* val representsIndConstuctor : quoted_inductive -> Term.constr -> bool *)
-  val inspect_term : t -> (t, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_univ_instance, quoted_proj) structure_of_term
+  val inspect_term : t -> (t, quoted_int, quoted_ident, quoted_aname, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_relevance, quoted_univ_instance, quoted_proj) structure_of_term
 
 end
 
@@ -55,14 +57,14 @@ struct
         evm, Constr.mkCast (t, D.unquote_cast_kind c, ty)
       | ACoq_tProd (n,t,b) -> let evm, t = aux evm t in
         let evm, b = aux evm b in
-        evm, Constr.mkProd (Context.annotR (D.unquote_name n), t, b)
+        evm, Constr.mkProd (D.unquote_aname n, t, b)
       | ACoq_tLambda (n,t,b) -> let evm, t = aux evm t in
         let evm, b = aux evm b in
-        evm, Constr.mkLambda (Context.annotR (D.unquote_name n), t, b)
+        evm, Constr.mkLambda (D.unquote_aname n, t, b)
       | ACoq_tLetIn (n,e,t,b) -> let evm, e = aux evm e in
         let evm, t = aux evm t in
         let evm, b = aux evm b in
-        evm, Constr.mkLetIn (Context.annotR (D.unquote_name n), e, t, b)
+        evm, Constr.mkLetIn (D.unquote_aname n, e, t, b)
       | ACoq_tApp (f,xs) -> let evm, f = aux evm f in
         let evm, xs = map_evm aux evm xs in
         evm, Constr.mkApp (f, Array.of_list xs)
@@ -78,20 +80,21 @@ struct
         let i = D.unquote_inductive i in
         let evm, u = D.unquote_universe_instance evm u in
         evm, Constr.mkIndU (i, u)
-      | ACoq_tCase ((i, _), ty, d, brs) ->
+      | ACoq_tCase (((i, _), r), ty, d, brs) ->
         let ind = D.unquote_inductive i in
+        let relevance = D.unquote_relevance r in 
         let evm, ty = aux evm ty in
         let evm, d = aux evm d in
         let evm, brs = map_evm aux evm (List.map snd brs) in
         (* todo: reify better case_info *)
-        let ci = Inductiveops.make_case_info (Global.env ()) ind Sorts.Relevant Constr.RegularStyle in
+        let ci = Inductiveops.make_case_info (Global.env ()) ind relevance Constr.RegularStyle in
         evm, Constr.mkCase (ci, ty, d, Array.of_list brs)
       | ACoq_tFix (lbd, i) ->
         let (names,types,bodies,rargs) = (List.map (fun p->p.adname) lbd,  List.map (fun p->p.adtype) lbd, List.map (fun p->p.adbody) lbd,
                                           List.map (fun p->p.rarg) lbd) in
         let evm, types = map_evm aux evm types in
         let evm, bodies = map_evm aux evm bodies in
-        let (names,rargs) = (List.map (fun x -> Context.annotR (D.unquote_name x)) names, List.map D.unquote_int rargs) in
+        let (names,rargs) = (List.map D.unquote_aname names, List.map D.unquote_int rargs) in
         let la = Array.of_list in
         evm, Constr.mkFix ((la rargs, D.unquote_int i), (la names, la types, la bodies))
       | ACoq_tCoFix (lbd, i) ->
@@ -99,7 +102,7 @@ struct
                                           List.map (fun p->p.rarg) lbd) in
         let evm, types = map_evm aux evm types in
         let evm, bodies = map_evm aux evm bodies in
-        let (names,rargs) = (List.map (fun x -> Context.annotR (D.unquote_name x))  names, List.map D.unquote_int rargs) in
+        let (names,rargs) = (List.map D.unquote_aname names, List.map D.unquote_int rargs) in
         let la = Array.of_list in
         evm, Constr.mkCoFix (D.unquote_int i, (la names, la types, la bodies))
 

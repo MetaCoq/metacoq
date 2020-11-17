@@ -14,7 +14,7 @@ Section print_term.
     let ctx' := fix_context defs in
     print_list (print_def (print_term Γ true) (print_term (ctx' ++ Γ) true)) (nl ^ " with ") defs.
 
-  Fixpoint decompose_lam (t : term) (n : nat) : (list name) * (list term) * term :=
+  Fixpoint decompose_lam (t : term) (n : nat) : (list aname) * (list term) * term :=
     match n with
     | 0 => ([], [], t)
     | S n =>
@@ -29,7 +29,7 @@ Section print_term.
   Definition is_fresh (Γ : context) (id : ident) :=
     List.forallb
       (fun decl =>
-         match decl.(decl_name) with
+         match decl.(decl_name).(binder_name) with
          | nNamed id' => negb (ident_eq id id')
          | nAnon => true
          end) Γ.
@@ -90,12 +90,13 @@ Section print_term.
     if is_fresh Γ id then nNamed id
     else nNamed (fresh_id_from Γ 10 id).
 
+  (* TODO: SPROP: we ignore relevance on printing, maybe add print config? *)
   Fixpoint print_term (Γ : context) (top : bool) (t : term) {struct t} :=
   match t with
   | tRel n =>
     match nth_error Γ n with
     | Some {| decl_name := na |} =>
-      match na with
+      match na.(binder_name) with
       | nAnon => "Anonymous (" ^ string_of_nat n ^ ")"
       | nNamed id => id
       end
@@ -106,19 +107,22 @@ Section print_term.
   | tSort s => string_of_sort s
   | tCast c k t => parens top (print_term Γ true c ^ ":"  ^ print_term Γ true t)
   | tProd na dom codom =>
-    let na' := fresh_name Γ na dom in
+    let na' := (fresh_name Γ na.(binder_name) dom) in
+    let ann_na' := mkBindAnn na' na.(binder_relevance) in
     parens top
            ("∀ " ^ string_of_name na' ^ " : " ^
-                     print_term Γ true dom ^ ", " ^ print_term (vass na' dom :: Γ) true codom)
+                     print_term Γ true dom ^ ", " ^ print_term (vass ann_na' dom :: Γ) true codom)
   | tLambda na dom body =>
-    let na' := fresh_name Γ na dom in
+    let na' := (fresh_name Γ na.(binder_name) dom) in
+    let ann_na' := mkBindAnn na' na.(binder_relevance) in
     parens top ("fun " ^ string_of_name na' ^ " : " ^ print_term Γ true dom
-                                ^ " => " ^ print_term (vass na' dom :: Γ) true body)
+                                ^ " => " ^ print_term (vass ann_na' dom :: Γ) true body)
   | tLetIn na def dom body =>
-    let na' := fresh_name Γ na dom in
+    let na' := (fresh_name Γ na.(binder_name) dom) in
+    let ann_na' := mkBindAnn na' na.(binder_relevance) in
     parens top ("let" ^ string_of_name na' ^ " : " ^ print_term Γ true dom ^
                       " := " ^ print_term Γ true def ^ " in " ^ nl ^
-                      print_term (vdef na' def dom :: Γ) true body)
+                      print_term (vdef ann_na' def dom :: Γ) true body)
   | tApp f l =>
     parens top (print_term Γ false f ^ " " ^ print_list (print_term Γ false) " " l)
   | tConst c u => string_of_kername c ^ print_universe_instance u
@@ -141,7 +145,7 @@ Section print_term.
       "UnboundConstruct(" ^ string_of_inductive ind ^ "," ^ string_of_nat l ^ ","
                           ^ string_of_universe_instance u ^ ")"
     end
-  | tCase (mkInd mind i as ind, pars) p t brs =>
+  | tCase (mkInd mind i as ind, pars, _) p t brs =>
     match lookup_ind_decl mind i with
     | Some oib =>
       match p with
@@ -152,8 +156,9 @@ Section print_term.
             | S n =>
               match br with
               | tLambda na A B =>
-                let na' := fresh_name Γ na A in
-                string_of_name na' ^ "  " ^ print_branch (vass na' A :: Γ) n B
+                let na' := (fresh_name Γ na.(binder_name) A) in
+                let ann_na' := mkBindAnn na' na.(binder_relevance) in
+                string_of_name na' ^ "  " ^ print_branch (vass ann_na' A :: Γ) n B
               | t => "=> " ^ print_term Γ true br
               end
             end
@@ -162,7 +167,7 @@ Section print_term.
                           print_branch Γ arity br) brs in
         let brs := combine brs oib.(ind_ctors) in
         parens top ("match " ^ print_term Γ true t ^
-                    " as " ^ string_of_name na ^
+                    " as " ^ string_of_name na.(binder_name) ^
                     " in " ^ oib.(ind_name) ^ " return " ^ print_term Γ true b ^
                     " with " ^ nl ^
                     print_list (fun '(b, (na, _, _)) => na ^ " " ^ b)
@@ -192,10 +197,10 @@ Section print_term.
 
   | tFix l n =>
     parens top ("let fix " ^ print_defs print_term Γ l ^ nl ^
-                          " in " ^ List.nth_default (string_of_nat n) (map (string_of_name ∘ dname) l) n)
+                          " in " ^ List.nth_default (string_of_nat n) (map (string_of_name ∘ binder_name ∘ dname) l) n)
   | tCoFix l n =>
     parens top ("let cofix " ^ print_defs print_term Γ l ^ nl ^
-                              " in " ^ List.nth_default (string_of_nat n) (map (string_of_name ∘ dname) l) n)
+                              " in " ^ List.nth_default (string_of_nat n) (map (string_of_name ∘ binder_name ∘ dname) l) n)
   end.
 
 End print_term.

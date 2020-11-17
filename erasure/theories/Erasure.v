@@ -6,32 +6,10 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker
      SafeTemplateChecker.
 From MetaCoq.Erasure Require Import EAstUtils ErasureFunction EPretty.
-From MetaCoq.Erasure Require SafeErasureFunction EOptimizePropDiscr.
+From MetaCoq.Erasure Require ErasureFunction EOptimizePropDiscr.
 
 Existing Instance envcheck_monad.
 Existing Instance extraction_checker_flags.
-
-Program Definition erase_template_program_check (p : Ast.program)
-  : EnvCheck (EAst.global_context * EAst.term) :=
-  let Σ := (trans_global (Ast.empty_ext p.1)).1 in
-  G <- check_wf_env Σ ;;
-  Σ' <- wrap_error (empty_ext Σ) "erasure of the global context" (erase_global Σ _) ;;
-  t <- wrap_error (empty_ext Σ) ("During erasure of " ^ PCUICAstUtils.string_of_term (trans p.2)) (erase (empty_ext Σ) _ nil _ (trans p.2));;
-  ret (Monad:=envcheck_monad) (EOptimizePropDiscr.optimize_env Σ', EOptimizePropDiscr.optimize Σ' t).
-
-Next Obligation.
-  unfold trans_global.
-  simpl. unfold wf_ext, empty_ext. simpl.
-  unfold on_global_env_ext. destruct H0. constructor.
-  split; auto. simpl. todo "on_udecl on empty universe context".
-Qed.
-
-Next Obligation.
-  unfold trans_global.
-  simpl. unfold wf_ext, empty_ext. simpl.
-  unfold on_global_env_ext. destruct H0. constructor.
-  auto.
-Qed.
 
 (** This is a hack to avoid having to handle template polymorphism and make
     erasure fast: we actually admit the proof of wf Σ and never build it. *)
@@ -139,16 +117,14 @@ Program Fixpoint check_wf_env_only_univs (Σ : global_env)
     assumption.
   Qed.
 
-From MetaCoq.Erasure Require Import SafeErasureFunction.
-
 (* This is the total erasure function + the optimization that removes all 
   pattern-matches on propositions. *)
 
 Program Definition erase_template_program (p : Ast.program) 
   : (EAst.global_context * EAst.term) :=
   let Σ := (trans_global (Ast.empty_ext p.1)).1 in
-  let t := SafeErasureFunction.erase (empty_ext Σ) _ nil (trans p.2) _ in
-  let Σ' := SafeErasureFunction.erase_global (term_global_deps t) Σ _ in
+  let t := ErasureFunction.erase (empty_ext Σ) _ nil (trans p.2) _ in
+  let Σ' := ErasureFunction.erase_global (term_global_deps t) Σ _ in
   (EOptimizePropDiscr.optimize_env Σ', EOptimizePropDiscr.optimize Σ' t).
 
 Next Obligation.
@@ -166,20 +142,6 @@ Next Obligation.
   constructor. todo "assuming wf environment".
 Defined.
 Local Open Scope string_scope.
-
-(** This uses the checker-based erasure *)
-Program Definition erase_and_print_template_program_check {cf : checker_flags} (p : Ast.program)
-  : string + string :=
-  let p := fix_program_universes p in
-  match erase_template_program_check p return string + string with
-  | CorrectDecl (Σ', t) =>
-    inl ("Environment is well-formed and " ^ Pretty.print_term (Ast.empty_ext p.1) [] true p.2 ^
-         " erases to: " ^ nl ^ print_term Σ' [] true false t)
-  | EnvError Σ' (AlreadyDeclared id) =>
-    inr ("Already declared: " ^ id)
-  | EnvError Σ' (IllFormedDecl id e) =>
-    inr ("Type error: " ^ PCUICSafeChecker.string_of_type_error Σ' e ^ ", while checking " ^ id)
-  end.
 
 (** This uses the retyping-based erasure *)
 Program Definition erase_and_print_template_program {cf : checker_flags} (p : Ast.program)

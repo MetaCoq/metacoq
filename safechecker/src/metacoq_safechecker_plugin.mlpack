@@ -22,14 +22,12 @@ EqDecInstances
 PCUICEquality
 PCUICTyping
 PCUICInduction
+PCUICWfUniverses
 PCUICReduction
 PCUICNormal
 PCUICPosition
-PCUICChecker
 PCUICPretty
-PCUICRetyping
 TemplateToPCUIC
-PCUICSafeLemmata
 PCUICCumulativity
 
 PCUICUnivSubst

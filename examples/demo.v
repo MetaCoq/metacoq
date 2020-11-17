@@ -68,8 +68,13 @@ MetaCoq Quote Definition add'_syntax := Eval compute in add'.
 
 (** Reflecting definitions **)
 MetaCoq Unquote Definition zero_from_syntax := (Ast.tConstruct (mkInd (MPfile ["Datatypes"; "Init"; "Coq"], "nat") 0) 0 []).
-
+Set Printing All.
 (* the function unquote_kn in reify.ml4 is not yet implemented *)
+
+Print add_syntax.
+Print tCase.
+Print add_syntax.
+Check tCase.
 MetaCoq Unquote Definition add_from_syntax := add_syntax.
 
 MetaCoq Unquote Definition eo_from_syntax := eo_syntax.
@@ -132,9 +137,11 @@ Definition mut_i : mutual_inductive_entry :=
 
 MetaCoq Unquote Inductive mut_i.
 
+Definition anonb := {| binder_name := nAnon; binder_relevance := Relevant |}.
+Definition bnamed n := {| binder_name := nNamed n; binder_relevance := Relevant |}.
 
 Definition mkImpl (A B : term) : term :=
-tProd nAnon A B.
+  tProd anonb A B.
 
 
 Definition one_list_i : one_inductive_entry :=
@@ -151,7 +158,7 @@ Definition mut_list_i : mutual_inductive_entry :=
 {|
   mind_entry_record := None;
   mind_entry_finite := Finite;
-  mind_entry_params := [{| decl_name := nNamed "A"; decl_body := None;
+  mind_entry_params := [{| decl_name := bnamed "A"; decl_body := None;
                          decl_type := (tSort Universe.type0) |}];
   mind_entry_inds := [one_list_i];
   mind_entry_universes := Monomorphic_entry (LevelSet.empty, ConstraintSet.empty);
@@ -178,7 +185,7 @@ Definition mut_pt_i : mutual_inductive_entry :=
 {|
   mind_entry_record := Some (Some "pp");
   mind_entry_finite := BiFinite;
-  mind_entry_params := [{| decl_name := nNamed "A"; decl_body := None;
+  mind_entry_params := [{| decl_name := bnamed "A"; decl_body := None;
                          decl_type := (tSort Universe.type0) |}];
   mind_entry_inds := [one_pt_i];
   mind_entry_universes := Monomorphic_entry (LevelSet.empty, ConstraintSet.empty);
@@ -366,8 +373,7 @@ MetaCoq Quote Recursively Definition TT := T.
 Unset Strict Unquote Universe Mode.
 MetaCoq Unquote Definition t := (tSort (Universe.make (Level.Level "Top.20000"))).
 MetaCoq Unquote Definition t' := (tSort fresh_universe).
-MetaCoq Unquote Definition myProp := (tSort (Universe.make Level.lProp)).
-MetaCoq Unquote Definition myProp' := (tSort Universe.type0m).
+MetaCoq Unquote Definition myProp := (tSort (Universe.lProp)).
 MetaCoq Unquote Definition mySet := (tSort (Universe.make Level.lSet)).
 
 (** Cofixpoints *)

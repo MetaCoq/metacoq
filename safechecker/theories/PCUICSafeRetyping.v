@@ -78,12 +78,12 @@ Section TypeOf.
   Context (hΣ : ∥ wf Σ ∥) (Hφ : ∥ on_udecl Σ.1 Σ.2 ∥).
   Context (G : universes_graph) (HG : is_graph_of_uctx G (global_ext_uctx Σ)).
 
-  Lemma typing_wellformed Γ t T : Σ ;;; Γ |- t : T -> wellformed Σ Γ T.
+  Lemma typing_welltyped Γ t T : Σ ;;; Γ |- t : T -> welltyped Σ Γ T.
   Proof.
     intros H.
     destruct hΣ. destruct Hφ.
-    apply validity in H; auto. destruct H as [wfA | [s tyT]].
-    right. constructor. auto. left. econstructor; eauto.
+    apply validity in H; auto. destruct H as [s tyT].
+    econstructor; eauto.
   Qed.
 End TypeOf.
 
@@ -122,7 +122,7 @@ Section TypeOf.
       end.
       
     Next Obligation. intros Γ t [[s Hs]] [ty [[Hty Hp]]]; simpl.
-      eapply typing_wellformed; eauto. Defined.
+      eapply typing_welltyped; eauto. Defined.
     Next Obligation. intros Γ t ws [s [[Hs Hp]]]. simpl in *.
       unfold infer_as_sort_obligation_1.
       destruct ws as [[s' Hs']]. 
@@ -151,7 +151,7 @@ Section TypeOf.
   End SortOf.
 
   Program Definition infer_as_prod Γ T
-    (wf : wellformed Σ Γ T)
+    (wf : welltyped Σ Γ T)
     (isprod : ∥ ∑ na A B, Σ ;;; Γ |- T <= tProd na A B ∥) : 
     ∑ na' A' B', ∥ red Σ.1 Γ T (tProd na' A' B') ∥ :=
     match @reduce_to_prod cf Σ hΣ Γ T wf with
@@ -204,7 +204,7 @@ Section TypeOf.
     infer Γ (tVar n) wt := !;
     infer Γ (tEvar ev args) wt := !;
 
-    infer Γ (tSort s) _ := ret (tSort (Universe.try_suc s));
+    infer Γ (tSort s) _ := ret (tSort (Universe.super s));
 
     infer Γ (tProd n ty b) wt :=
       let ty1 := infer Γ ty (welltyped_subterm hΣ wt).1 in
@@ -279,25 +279,19 @@ Section TypeOf.
     - eapply inversion_Rel in HT as (? & ? & ? & ?); auto.
       rewrite e in wildcard => //.
      
-    - depind HT. eapply IHHT; eauto.
+    - depind HT. eapply IHHT1; eauto.
 
-    - depind HT; eapply IHHT; eauto.
+    - depind HT; eapply IHHT1; eauto.
 
-    - eapply inversion_Sort in HT as (l & wf & inl & eqs & cum); auto; subst s.
+    - eapply inversion_Sort in HT as (wfΓ & wf & cum); auto.
       sq.
-      split. eapply meta_conv. econstructor; eauto.
-      f_equal; eapply eq_univ''. simpl.
-      unfold UnivExpr.make, Universe.super.
-      destruct (NoPropLevel.of_level l); simpl; auto.
-      destruct t; simpl; auto.
-      intros T' (l' & wf' & inl' & eqs' & cum')%inversion_Sort; auto.
-      eapply Universe.make_inj in eqs'; subst l'.
-      etransitivity; eauto.
-      do 2 constructor.
-      unfold Universe.make, UnivExpr.make, Universe.super.
-      destruct (NoPropLevel.of_level l); simpl; auto;
-      try destruct t; simpl; auto; reflexivity.
+      split. econstructor; eauto.
+      intros T' (wfΓ'' & wf' & cum')%inversion_Sort; auto.
             
+    (*- eapply inversion_Prod in HT as (? & ? & ? & ? & ?); try econstructor; eauto.
+
+    - destruct hΣ. destruct Hφ. destruct (inversion_Prod Σ w HT) as (? & ? & ? & ? & ?); try econstructor; eauto.*)
+
     - simpl in *.
       destruct (inversion_Prod Σ w HT) as (? & ? & ? & ? & ?).
       subst ty1 s1.
@@ -335,7 +329,7 @@ Section TypeOf.
 
     - simpl in ty. destruct inversion_App as (? & ? & ? & ? & ? & ?).
       destruct infer as [bty' [[Hbty pbty]]]; subst ty; simpl in *.
-      apply wat_wellformed; auto.
+      apply wat_welltyped; auto.
       sq.
       eapply validity_term; eauto.
     - simpl in ty. destruct inversion_App as (? & ? & ? & ? & ? & ?).
@@ -352,21 +346,21 @@ Section TypeOf.
         specialize (pbty _ t0).
         assert (Σ ;;; Γ |- tProd na' A' B' <= tProd x x0 x1).
         eapply cumul_red_l_inv; eauto.
-        eapply cumul_Prod_Prod_inv in X as [Ha _]; auto.
-        eapply type_Cumul; eauto.
+        eapply cumul_Prod_Prod_inv in X as [_ [Ha _]]; auto.
+        eapply type_Cumul'; eauto.
         eapply validity in Htty; auto.
-        eapply isWAT_tProd in Htty; pcuic.
+        eapply isType_tProd in Htty; pcuic.
         eapply conv_cumul. now symmetry.
       * intros T' (? & ? & ? & ? & ? & ?)%inversion_App; auto.
         specialize (pbty _ t2). simpl.
         etransitivity; [|eassumption].
         assert (Σ ;;; Γ |- tProd na' A' B' <= tProd x2 x3 x4).
         { eapply cumul_red_l_inv; eauto. }
-        eapply cumul_Prod_Prod_inv in X as [Ha Hb]; auto.
+        eapply cumul_Prod_Prod_inv in X as [eqann [Ha Hb]]; auto.
         eapply (substitution_cumul _ Γ [vass x2 x3] []); eauto.
         eapply validity in t2; pcuic.
-        eapply isWAT_tProd in t2 as [_ isWAT]; auto.
-        now eapply isWAT_wf_local in isWAT. pcuic.
+        eapply isType_tProd in t2 as [_ ist]; auto.
+        now eapply isType_wf_local in ist. pcuic.
         constructor. constructor.
         now rewrite subst_empty.
 
@@ -432,7 +426,7 @@ Section TypeOf.
         & isco & Hc & Hbtys & all & cum).
       destruct infer as [cty [[Hty Hp]]]. simpl.
       eapply validity in Hty.
-      eapply wat_wellformed; auto. sq; auto. auto.
+      eapply wat_welltyped; auto. sq; auto. auto.
     - simpl in *.
       destruct inversion_Case as (u & args & mdecl & idecl & ps & pty & btys & decli & indp & bcp & Hpty & lebs
         & isco & Hc & Hbtys & all & cum).
@@ -450,21 +444,21 @@ Section TypeOf.
       * pose proof (Reflect.eqb_eq i ind eqi) as ->.
         simpl in *. subst par.
         pose proof (validity_term _ Hc).
-        eapply (isWAT_mkApps_Ind w decli) in X0 as [parsubst [argsubst [[sppars spargs] cu]]]; pcuic.
+        eapply (isType_mkApps_Ind w decli) in X0 as [parsubst [argsubst [[sppars spargs] cu]]]; pcuic.
         pose proof (PCUICContexts.context_subst_length2 sppars).
         len in H.
         set (oib := (on_declared_inductive w decli).2) in *.
-        eapply type_Cumul. econstructor; eauto.
+        eapply type_Cumul'. econstructor; eauto.
         assert (Σ ;;; Γ |- c : mkApps (tInd ind u) (firstn (ind_npars mdecl) args ++  skipn (ind_npars mdecl) l)).
-        { eapply type_Cumul. eauto.
-          + right. exists (subst_instance_univ u (ind_sort oib)).
+        { eapply type_Cumul'. eauto.
+          + exists (subst_instance_univ u (ind_sort oib)).
             eapply type_mkApps. econstructor; pcuic.
             eapply wf_arity_spine_typing_spine; eauto.
             constructor. 
             unshelve epose proof (on_inductive_inst _ _ _ _ _ _ w ltac:(pcuic) _ _ oib cu); eauto.
             eapply on_declared_inductive; eauto.
             rewrite oib.(ind_arity_eq) -it_mkProd_or_LetIn_app subst_instance_constr_it_mkProd_or_LetIn.
-            eapply isWAT_weaken; eauto. pcuic.
+            eapply isType_weaken; eauto. pcuic.
             rewrite oib.(ind_arity_eq) subst_instance_constr_it_mkProd_or_LetIn.
             eapply arity_spine_it_mkProd_or_LetIn; eauto.
             rewrite subst_instance_constr_it_mkProd_or_LetIn subst_it_mkProd_or_LetIn.
@@ -472,7 +466,7 @@ Section TypeOf.
             eapply arity_spine_it_mkProd_or_LetIn_smash; eauto.
             2:{ simpl. constructor; auto. }
             eapply validity_term in Hty; eauto.
-            unshelve epose proof (isWAT_mkApps_Ind w decli _ Hty) as [parsubst' [argsubst' [[spars' spargs'] ?]]]; pcuic.
+            unshelve epose proof (isType_mkApps_Ind w decli _ Hty) as [parsubst' [argsubst' [[spars' spargs'] ?]]]; pcuic.
             eapply (subslet_cumul _ _ _ (smash_context [] (subst_context parsubst' 0 
               (subst_instance_context u' (ind_indices oib))))); pcuic.
             eapply wf_local_smash_end; eauto. eapply spargs'.
@@ -490,12 +484,14 @@ Section TypeOf.
             eapply All2_refl. intros. reflexivity. 
             rewrite -{1}(firstn_skipn (ind_npars mdecl) l). eapply conv_cumul, mkApps_conv_args; auto.
             eapply All2_app. now eapply All2_firstn. eapply All2_refl; eauto. }
-        right. exists ps.
+        exists ps.
         eapply type_mkApps; eauto.
+        eapply wf_arity_spine_typing_spine; eauto.
+        split. now eapply validity in Hpty.
         pose proof (validity_term w X0) as vt; auto.
         eapply (build_case_predicate_type_spec _ _ _ _ _ _ _ _ oib) in bcp as [parsubst' [csubst ->]]; auto.
         pose proof (PCUICContexts.context_subst_fun sppars csubst). subst parsubst'.
-        unshelve epose proof (isWAT_mkApps_Ind w decli _ vt) as [parsubst' [argsubst' [[spars' spargs'] ?]]]; pcuic.
+        unshelve epose proof (isType_mkApps_Ind w decli _ vt) as [parsubst' [argsubst' [[spars' spargs'] ?]]]; pcuic.
         change (ind_indices (on_declared_inductive w decli).2) with (ind_indices oib) in spargs'.
         subst oib; destruct on_declared_inductive as [onmind oib].
         rewrite onmind.(onNpars) in H.
@@ -505,26 +501,17 @@ Section TypeOf.
         rewrite (firstn_app_left _ 0) in spars'; try lia.
         simpl in spars'. rewrite app_nil_r in spars'.
         pose proof (PCUICContexts.context_subst_fun spars' csubst). subst parsubst'.
-        eapply PCUICSpine.typing_spine_it_mkProd_or_LetIn'; eauto.
-        + simpl. econstructor. 2:reflexivity. 3:{ constructor; eauto. 
-          left; eexists _, _; intuition eauto with pcuic.
-          reflexivity. }
-          left; eexists _, _; intuition eauto. simpl. constructor; eauto with pcuic.
-          red. rewrite subst_mkApps /= map_app.
+        eapply PCUICSpine.arity_spine_it_mkProd_or_LetIn; eauto.
+        + simpl.
+          econstructor. 2:constructor.
+          rewrite subst_mkApps /= map_app.
           rewrite -H1.
           rewrite map_map_compose map_subst_lift_id.
           relativize (to_extended_list _).
           erewrite (spine_subst_subst_to_extended_list_k spargs').
           2:{ rewrite to_extended_list_k_subst. simpl. 
               eapply PCUICSubstitution.map_subst_instance_constr_to_extended_list_k. }
-          eapply isWAT_mkApps_Ind_isType in vt; eauto.
-          rewrite subst_mkApps. rewrite -H1 map_app map_map_compose map_subst_lift_id.
-          relativize (to_extended_list _).
-          erewrite (spine_subst_subst_to_extended_list_k spargs').
-          2:{ rewrite to_extended_list_k_subst. 
-            eapply PCUICSubstitution.map_subst_instance_constr_to_extended_list_k. }
           assumption.
-        + simpl. now eapply validity in Hpty.
         + simpl.
           eapply conv_cumul.
           eapply mkApps_conv_args; auto.
@@ -558,7 +545,7 @@ Section TypeOf.
     - simpl; destruct inversion_Proj as (u & mdecl & idecl & pdecl' & args & declp & Hc & Hargs & cum); auto.
       destruct infer as [cty [[Hc' Hc'']]]. simpl.
       eapply validity in Hc'; auto.
-      eapply wat_wellformed; auto. sq; auto.
+      eapply wat_welltyped; auto. sq; auto.
     - simpl in *. destruct inversion_Proj as (u & mdecl & idecl & pdecl' & args & declp & Hc & Hargs & cum); auto.
       destruct infer as [cty [[Hc' Hc'']]]. simpl.
       destruct reduce_to_ind => //. injection wildcard1. intros ->.
@@ -590,12 +577,11 @@ Section TypeOf.
         eapply cumul_Ind_Ind_inv in X0 as [[eqi'' Ru''] cl'']; auto.
         assert (consistent_instance_ext Σ (ind_universes mdecl) u').
         { eapply validity in Hc'; eauto.
-          eapply PCUICInductiveInversion.isWAT_mkApps_Ind_isType in Hc'; auto.
           destruct Hc' as [s Hs].
           eapply invert_type_mkApps_ind in Hs. intuition eauto. all:auto. eapply declp. }
         assert (consistent_instance_ext Σ (ind_universes mdecl) u'').
           { eapply validity in Hc'''; eauto.
-            eapply PCUICInductiveInversion.isWAT_mkApps_Ind_isType in Hc''' as [s Hs]; auto.
+            destruct Hc''' as [s Hs]; auto.
             eapply invert_type_mkApps_ind in Hs. intuition eauto. all:auto. eapply declp. }
         transitivity (subst0 (c :: List.rev l) (subst_instance_constr u'' pdecl''.2)); cycle 1.
         eapply conv_cumul.
@@ -654,23 +640,21 @@ Section TypeOf.
       sq; split.
       * econstructor; eauto.
         eapply nth_error_all in htys; eauto. destruct htys as [s Hs]. pcuic.
-        eapply typing_wf_local; eauto.
       * intros T' HT'.
         eapply inversion_Fix in HT' as [decl' [fg' [hnth' [htys' [hbods' [wf' cum']]]]]]; auto.
         congruence.
       
     - now eapply inversion_Fix in HT as [decl [fg [hnth [htys [hbods [wf cum]]]]]]; auto.
 
-  - eapply inversion_CoFix in HT as [decl [fg [hnth [htys [hbods [wf cum]]]]]]; auto.
-    sq; split.
-    * econstructor; eauto.
-      eapply nth_error_all in htys; eauto. destruct htys as [s Hs]. pcuic.
-      eapply typing_wf_local; eauto.
-    * intros T' HT'.
-      eapply inversion_CoFix in HT' as [decl' [fg' [hnth' [htys' [hbods' [wf' cum']]]]]]; auto.
-      congruence.
-    
-  - now eapply inversion_CoFix in HT as [decl [fg [hnth [htys [hbods [wf cum]]]]]]; auto.
+    - eapply inversion_CoFix in HT as [decl [fg [hnth [htys [hbods [wf cum]]]]]]; auto.
+      sq; split.
+      * econstructor; eauto.
+        eapply nth_error_all in htys; eauto. destruct htys as [s Hs]. pcuic.
+      * intros T' HT'.
+        eapply inversion_CoFix in HT' as [decl' [fg' [hnth' [htys' [hbods' [wf' cum']]]]]]; auto.
+        congruence.
+      
+    - now eapply inversion_CoFix in HT as [decl [fg [hnth [htys [hbods [wf cum]]]]]]; auto.
   Defined.
 
   Definition type_of Γ t wt : term := (infer Γ t wt).

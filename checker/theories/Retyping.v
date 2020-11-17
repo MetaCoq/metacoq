@@ -48,7 +48,7 @@ Section TypeOf.
     | tVar n => raise (UnboundVar n)
     | tEvar ev args => raise (UnboundEvar ev)
 
-    | tSort s => ret (tSort (Universe.try_suc s))
+    | tSort s => ret (tSort (Universe.super s))
 
     | tCast c k t => ret t
 
@@ -76,7 +76,7 @@ Section TypeOf.
     | tConstruct (mkInd ind i) k u =>
       lookup_constructor_type Σ ind i k u
 
-    | tCase (ind, par) p c brs =>
+    | tCase ((ind, par), rel) p c brs =>
       ty <- type_of Γ c ;;
       indargs <- reduce_to_ind Σ Γ ty ;;
       let '(ind', u, args) := indargs in

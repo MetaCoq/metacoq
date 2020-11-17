@@ -175,7 +175,8 @@ Definition tsl_mind_body (ΣE : tsl_context) (mp : modpath)
                    ind_type := A;
                    ind_kelim := ind.(ind_kelim);
                    ind_ctors := ctors;
-                   ind_projs := [] |}).  (* TODO *)
+                   ind_projs := [];
+                   ind_relevance := ind.(ind_relevance) |}).  (* TODO *)
     + (* arity  *)
       refine (t2 <- tsl2' ind.(ind_type) ;;
               let i1 := tsl_rec1 0 (tInd (mkInd kn i) []) in

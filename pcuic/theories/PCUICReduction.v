@@ -170,10 +170,10 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
 Lemma red1_ind_all :
   forall (Σ : global_env) (P : context -> term -> term -> Type),
 
-       (forall (Γ : context) (na : name) (t b a : term),
+       (forall (Γ : context) (na : aname) (t b a : term),
         P Γ (tApp (tLambda na t b) a) (b {0 := a})) ->
 
-       (forall (Γ : context) (na : name) (b t b' : term), P Γ (tLetIn na b t b') (b' {0 := b})) ->
+       (forall (Γ : context) (na : aname) (b t b' : term), P Γ (tLetIn na b t b') (b' {0 := b})) ->
 
        (forall (Γ : context) (i : nat) (body : term),
         option_map decl_body (nth_error Γ i) = Some (Some body) -> P Γ (tRel i) ((lift0 (S i)) body)) ->
@@ -204,19 +204,19 @@ Lemma red1_ind_all :
            nth_error args (pars + narg) = Some arg ->
            P Γ (tProj (i, pars, narg) (mkApps (tConstruct i 0 u) args)) arg) ->
 
-       (forall (Γ : context) (na : name) (M M' N : term),
+       (forall (Γ : context) (na : aname) (M M' N : term),
         red1 Σ Γ M M' -> P Γ M M' -> P Γ (tLambda na M N) (tLambda na M' N)) ->
 
-       (forall (Γ : context) (na : name) (M M' N : term),
+       (forall (Γ : context) (na : aname) (M M' N : term),
         red1 Σ (Γ,, vass na N) M M' -> P (Γ,, vass na N) M M' -> P Γ (tLambda na N M) (tLambda na N M')) ->
 
-       (forall (Γ : context) (na : name) (b t b' r : term),
+       (forall (Γ : context) (na : aname) (b t b' r : term),
         red1 Σ Γ b r -> P Γ b r -> P Γ (tLetIn na b t b') (tLetIn na r t b')) ->
 
-       (forall (Γ : context) (na : name) (b t b' r : term),
+       (forall (Γ : context) (na : aname) (b t b' r : term),
         red1 Σ Γ t r -> P Γ t r -> P Γ (tLetIn na b t b') (tLetIn na b r b')) ->
 
-       (forall (Γ : context) (na : name) (b t b' r : term),
+       (forall (Γ : context) (na : aname) (b t b' r : term),
         red1 Σ (Γ,, vdef na b t) b' r -> P (Γ,, vdef na b t) b' r -> P Γ (tLetIn na b t b') (tLetIn na b t r)) ->
 
        (forall (Γ : context) (ind : inductive * nat) (p p' c : term) (brs : list (nat * term)),
@@ -238,10 +238,10 @@ Lemma red1_ind_all :
        (forall (Γ : context) (M2 N2 : term) (M1 : term), red1 Σ Γ M2 N2 -> P Γ M2 N2 ->
                                                          P Γ (tApp M1 M2) (tApp M1 N2)) ->
 
-       (forall (Γ : context) (na : name) (M1 M2 N1 : term),
+       (forall (Γ : context) (na : aname) (M1 M2 N1 : term),
         red1 Σ Γ M1 N1 -> P Γ M1 N1 -> P Γ (tProd na M1 M2) (tProd na N1 M2)) ->
 
-       (forall (Γ : context) (na : name) (M2 N2 M1 : term),
+       (forall (Γ : context) (na : aname) (M2 N2 M1 : term),
         red1 Σ (Γ,, vass na M1) M2 N2 -> P (Γ,, vass na M1) M2 N2 -> P Γ (tProd na M1 M2) (tProd na M1 N2)) ->
 
        (forall (Γ : context) (ev : nat) (l l' : list term),
@@ -341,6 +341,18 @@ Proof.
   eapply X0; tea. now apply clos_rt_rtn1_iff.
 Defined.
 
+Definition red_rect_n1 := red_rect'.
+Definition red_rect_1n Σ Γ (P : term -> term -> Type) :
+  (forall x, P x x) ->
+  (forall x y z, red1 Σ Γ x y -> red Σ Γ y z -> P y z -> P x z) ->
+  forall x y, red Σ Γ x y -> P x y.
+Proof.
+  intros Hrefl Hstep x y r.
+  apply clos_rt_rt1n_iff in r.
+  induction r; eauto.
+  eapply Hstep; eauto.
+  now apply clos_rt_rt1n_iff.
+Defined.
 
 (** Simple lemmas about reduction *)
 
@@ -387,15 +399,15 @@ Section ReductionCongruence.
   Inductive term_context :=
   | tCtxHole : term_context
   | tCtxEvar      : nat -> list_context -> term_context
-  | tCtxProd_l      : name -> term_context (* the type *) -> term -> term_context
-  | tCtxProd_r      : name -> term (* the type *) -> term_context -> term_context
-  | tCtxLambda_l    : name -> term_context (* the type *) -> term -> term_context
-  | tCtxLambda_r    : name -> term (* the type *) -> term_context -> term_context
-  | tCtxLetIn_l     : name -> term_context (* the term *) -> term (* the type *) ->
+  | tCtxProd_l      : aname -> term_context (* the type *) -> term -> term_context
+  | tCtxProd_r      : aname -> term (* the type *) -> term_context -> term_context
+  | tCtxLambda_l    : aname -> term_context (* the type *) -> term -> term_context
+  | tCtxLambda_r    : aname -> term (* the type *) -> term_context -> term_context
+  | tCtxLetIn_l     : aname -> term_context (* the term *) -> term (* the type *) ->
                     term -> term_context
-  | tCtxLetIn_b     : name -> term (* the term *) -> term_context (* the type *) ->
+  | tCtxLetIn_b     : aname -> term (* the term *) -> term_context (* the type *) ->
                     term -> term_context
-  | tCtxLetIn_r     : name -> term (* the term *) -> term (* the type *) ->
+  | tCtxLetIn_r     : aname -> term (* the term *) -> term (* the type *) ->
                     term_context -> term_context
   | tCtxApp_l       : term_context -> term -> term_context
   | tCtxApp_r      : term -> term_context -> term_context
@@ -565,7 +577,7 @@ Section ReductionCongruence.
           OnOne2 (Trel_conj (on_Trel (red1 Σ Γ) fst) (on_Trel eq snd)) l1 l2 ->
           redl Γ l l2.
 
-    
+
     Lemma OnOne2_red_redl :
       forall Γ A (l l' : list (term × A)),
         OnOne2 (Trel_conj (on_Trel (red Σ Γ) fst) (on_Trel eq snd)) l l' ->
@@ -1508,6 +1520,16 @@ Section Stacks.
     - cbn. apply IHπ. constructor.
       apply OnOne2_app. constructor.
       simpl. intuition eauto.
+    - cbn. apply IHπ. eapply cofix_red_body.
+      apply OnOne2_app. constructor.
+      simpl in *.
+      rewrite fix_context_fix_context_alt.
+      rewrite map_app. cbn. unfold def_sig at 2. simpl.
+      rewrite app_context_assoc in h.
+      intuition eauto.
+    - cbn. apply IHπ. constructor.
+      apply OnOne2_app. constructor.
+      simpl. intuition eauto.
   Qed.
 
   Corollary red_context :
@@ -1659,6 +1681,21 @@ Proof.
     rewrite stack_context_stack_cat in h. cbn in h.
     rewrite app_context_nil_l in h.
     eapply fix_red_body. eapply OnOne2_app. constructor. cbn.
+    intuition auto.
+    eapply IHπ.
+    rewrite fix_context_fix_context_alt.
+    rewrite map_app. cbn. unfold def_sig at 2. cbn.
+    rewrite app_context_assoc in h.
+    assumption.
+  - rewrite 2!zipc_stack_cat. cbn.
+    rewrite stack_context_stack_cat in h. cbn in h.
+    rewrite app_context_nil_l in h.
+    eapply cofix_red_ty. eapply OnOne2_app. constructor. cbn.
+    intuition auto.
+  - rewrite 2!zipc_stack_cat. cbn.
+    rewrite stack_context_stack_cat in h. cbn in h.
+    rewrite app_context_nil_l in h.
+    eapply cofix_red_body. eapply OnOne2_app. constructor. cbn.
     intuition auto.
     eapply IHπ.
     rewrite fix_context_fix_context_alt.

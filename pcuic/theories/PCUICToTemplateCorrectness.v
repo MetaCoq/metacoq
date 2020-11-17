@@ -167,10 +167,10 @@ Proof.
   unfold consistent_instance_ext, PT.consistent_instance_ext in *.
   unfold consistent_instance, PT.consistent_instance in *.
   destruct decl;trivial.
-  destruct H as (?&?&?&?).
+  destruct H as (?&?&?).
   repeat split;trivial.
   - eapply forallb_impl.
-    2: apply H0.
+    2: apply H.
     cbv beta.
     intros.
     now apply trans_mem_level_set.
@@ -178,11 +178,11 @@ Proof.
     destruct config.check_univs;trivial.
     unfold valid_constraints0 in *.
     intros.
-    apply H2.
+    apply H1.
     unfold satisfies in *.
     unfold ConstraintSet.For_all in *.
     intros.
-    apply H3.
+    apply H2.
     now apply trans_constraintSet_in.
 Qed.
 
@@ -878,8 +878,9 @@ in All (for wf_local assumptions)
     rewrite trans_decl_type.
     eapply TT.type_Rel; eauto.
     + now apply map_nth_error.
-  - eapply TT.type_Sort; eauto.
-    now apply trans_in_level_set.
+  - admit. (* TODO adapt Template Coq to new sort typing rule *)
+     (* eapply TT.type_Sort; eauto.
+    now apply trans_in_level_set. *)
   - eapply TT.type_Prod;assumption.
   - eapply TT.type_Lambda;eassumption.
   - eapply TT.type_LetIn;eassumption.

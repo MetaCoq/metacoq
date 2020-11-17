@@ -10,6 +10,7 @@ Existing Instance config.default_checker_flags.
 Existing Instance Checker.default_fuel.
 
 Definition  test0 := Eval vm_compute in typecheck_program idq.
+Definition nAnon := {| binder_name := nAnon; binder_relevance := Relevant |}.
 
 Definition timpl x y := tProd nAnon x (LiftSubst.lift0 1 y).
 

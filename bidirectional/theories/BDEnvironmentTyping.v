@@ -1,6 +1,5 @@
-From Coq Require Import Ascii String OrderedType Lia.
-From MetaCoq.Template Require Import config utils BasicAst AstUtils.
-From MetaCoq.Template Require Import Universes Environment.
+From MetaCoq.Template Require Import config utils BasicAst AstUtils
+      Universes Environment.
 
 Module Lookup (T : Term) (E : EnvironmentSig T).
 
@@ -53,18 +52,10 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
   Definition global_levels (Σ : global_env) : LevelSet.t :=
     fold_right
       (fun decl lvls => LevelSet.union (monomorphic_levels_decl decl.2) lvls)
-      (LevelSet_pair Level.lSet Level.lProp) Σ.
+      (LevelSet.singleton (Level.lSet)) Σ.
 
   Lemma global_levels_Set Σ :
     LevelSet.mem Level.lSet (global_levels Σ) = true.
-  Proof.
-    induction Σ; simpl. reflexivity.
-    apply LevelSet.mem_spec, LevelSet.union_spec; right.
-    now apply LevelSet.mem_spec in IHΣ.
-  Qed.
-
-  Lemma global_levels_Prop Σ :
-    LevelSet.mem Level.lProp (global_levels Σ) = true.
   Proof.
     induction Σ; simpl. reflexivity.
     apply LevelSet.mem_spec, LevelSet.union_spec; right.
@@ -102,15 +93,6 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     (global_ext_levels Σ, global_ext_constraints Σ).
 
 
-  Lemma prop_global_ext_levels Σ : LevelSet.In Level.lProp (global_ext_levels Σ).
-  Proof.
-    destruct Σ as [Σ φ]; cbn.
-    apply LevelSetFact.union_3. cbn -[global_levels]; clear φ.
-    induction Σ.
-    - cbn. now apply LevelSetFact.add_1.
-    - simpl. now apply LevelSetFact.union_3.
-  Qed.
-
   (** Check that [uctx] instantiated at [u] is consistent with
     the current universe graph. *)
 
@@ -118,8 +100,6 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     match uctx with
     | Monomorphic_ctx c => List.length u = 0
     | Polymorphic_ctx c =>
-      (* no prop levels in instances *)
-      forallb (negb ∘ Level.is_prop) u /\
       (* levels of the instance already declared *)
       forallb (fun l => LevelSet.mem l lvs) u /\
       List.length u = List.length c.1 /\
@@ -406,6 +386,8 @@ Module Type Typing (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E).
   Parameter Inline checking : forall `{checker_flags}, global_env_ext -> context -> term -> term -> Type.
   Parameter Inline sorting : forall `{checker_flags}, global_env_ext -> context -> term -> Universe.t -> Type.
 
+  Parameter (wf_universe : global_env_ext -> Universe.t -> Type).
+
   Notation " Σ ;;; Γ |- t ◃ T " :=
     (checking Σ Γ t T) (at level 50, Γ, t, T at next level) : type_scope.
   Notation " Σ ;;; Γ |- t ▸□ u " :=
@@ -457,7 +439,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       in any universe to imply wf_local. *)
     Fixpoint type_local_ctx Σ (Γ Δ : context) (u : Universe.t) : Type :=
       match Δ with
-      | [] => True
+      | [] => wf_universe Σ u
       | {| decl_body := None; decl_type := t |} :: Δ =>
         (type_local_ctx Σ Γ Δ u × (sorting Σ (Γ ,,, Δ) t u))
       | {| decl_body := Some b; decl_type := t |} :: Δ =>
@@ -599,7 +581,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
 
     Definition lift_level n l :=
       match l with 
-      | Level.lProp | Level.lSet | Level.Level _ => l
+      | Level.lSet | Level.Level _ => l
       | Level.Var k => Level.Var (n + k)
       end.
 
@@ -623,7 +605,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       | v :: vs, u :: us, u' :: us' => 
         match v with
         | Variance.Irrelevant => variance_cstrs vs us us'
-        | Variance.Covariant => ConstraintSet.add (u, ConstraintType.Le, u') (variance_cstrs vs us us')
+        | Variance.Covariant => ConstraintSet.add (u, ConstraintType.Le 0, u') (variance_cstrs vs us us')
         | Variance.Invariant => ConstraintSet.add (u, ConstraintType.Eq, u') (variance_cstrs vs us us')
         end
       | _, _, _ => (* Impossible due to on_variance invariant *) ConstraintSet.empty
@@ -764,7 +746,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
           type substituted along with the previous arguments replaced by projections.
           All projections must also be named.
           *)
-        (decl_name decl = nNamed (fst p)) /\
+        (binder_name (decl_name decl) = nNamed (fst p)) /\
         (snd p = subst (inds mind u mdecl.(ind_bodies)) (S (ind_npars mdecl))
               (subst (projs ind mdecl.(ind_npars) k) 0 
                 (lift 1 k (decl_type decl))))

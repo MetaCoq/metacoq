@@ -204,14 +204,17 @@ Proof.
     all: constructor.
     all: intuition.
     
-  - apply red_cumul.
-    assumption.
+  - constructor.
+    all: assumption.
 
   - apply red_cumul.
     assumption.
   
   - apply red_cumul.
     assumption.
+
+  - apply red_cumul.
+    assumption. 
 
 Qed.
 

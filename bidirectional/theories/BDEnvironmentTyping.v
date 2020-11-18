@@ -455,6 +455,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
     Inductive ctx_inst Σ (Γ : context) : list term -> context -> Type :=
     | ctx_inst_nil : ctx_inst Σ Γ [] []
     | ctx_inst_ass na t i inst Δ : 
+      lift_sorting checking sorting Σ Γ t None ->
       lift_sorting checking sorting Σ Γ i (Some t) ->
       ctx_inst Σ Γ inst (subst_telescope [i] 0 Δ) ->
       ctx_inst Σ Γ (i :: inst) (vass na t :: Δ)
@@ -888,8 +889,9 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
 
     Definition on_constant_decl Σ d :=
       match d.(cst_body) with
-      | Some trm => lift_sorting checking sorting Σ [] trm (Some d.(cst_type))
-      | None => on_type Σ [] d.(cst_type)
+      | Some b => (lift_sorting checking sorting Σ [] d.(cst_type) None) ×
+                  (lift_sorting checking sorting Σ [] b (Some d.(cst_type)))
+      | None => (lift_sorting checking sorting Σ [] d.(cst_type) None)
       end.
 
     Definition on_global_decl Σ kn decl :=

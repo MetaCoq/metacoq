@@ -84,6 +84,7 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
   isCoFinite mdecl.(ind_finite) = false ->
   let params := List.firstn npar args in
   forall ps pty, build_case_predicate_type ind mdecl idecl params u ps = Some pty ->
+  wf_universe Σ ps ->
   Σ ;;; Γ |- p ◃ pty ->
   leb_sort_family (universe_family ps) idecl.(ind_kelim) ->
   forall (btys : list (nat × term)),
@@ -453,6 +454,7 @@ Section TypingInduction.
       ind_npars mdecl = npar ->
       let params := firstn npar args in
       forall ps pty,
+      wf_universe Σ ps ->
       build_case_predicate_type ind mdecl idecl params u ps = Some pty ->
       Σ ;;; Γ |- p ◃ pty ->
       Pcheck Σ Γ p pty ->
@@ -572,7 +574,11 @@ Section TypingInduction.
       + assumption.
       + assumption.
       + destruct g as [[? [] ?]| ]; cbn.
-        * applyIH.
+        * inversion wfg as [[] ?].
+        split.
+        1: eexists.
+        all: applyIH.
+        eassumption.
         * inversion wfg.
           eexists. applyIH.
           eassumption.
@@ -628,9 +634,12 @@ Section TypingInduction.
                 all: intros ; applyIH ; eapply type_local_ctx_wf_local ; try eassumption.
 
             ** clear - wfΣ' IH' onParams0 on_cargs0 on_cindices0.
-               induction on_cindices0.
-               all: constructor ; auto.
-               cbn. applyIH.
+                induction on_cindices0.
+                all: constructor ; auto.
+                1: destruct l ; eexists.
+                2: cbn.
+                all: applyIH.
+                eassumption.
 
           ++ clear - wfΣ' IH' ind_sorts0 onParams0.
               red in ind_sorts0 |- *.

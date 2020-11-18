@@ -456,6 +456,7 @@ Qed.
 
 Lemma binder_anonymize n : eq_binder_annot n (anonymize n).
 Proof. destruct n; reflexivity. Qed.
+#[global]
 Hint Resolve binder_anonymize : core.
 
 Lemma eq_term_upto_univ_tm_nl :

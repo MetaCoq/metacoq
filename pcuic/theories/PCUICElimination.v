@@ -227,6 +227,7 @@ Qed.
 
 Lemma wf_ext_wf {cf:checker_flags} Σ : wf_ext Σ -> wf Σ.
 Proof. move=> wfe; apply wfe. Qed.
+#[global]
 Hint Resolve wf_ext_wf : core.
 
 Lemma is_propositional_subst_instance u s :

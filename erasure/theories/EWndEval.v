@@ -60,6 +60,7 @@ End Wnd.
     wndEval mch can -> wndEval (TCase nl mch brs) (TCase nl can brs)
 | sProjBod: forall prj bod Bod,
     wndEval bod Bod -> wndEval (TProj prj bod) (TProj prj Bod).
+#[global]
 Hint Constructors wndEval.
 
 

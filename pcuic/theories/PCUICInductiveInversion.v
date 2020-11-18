@@ -3494,6 +3494,7 @@ Lemma assumption_context_lift_context s k Γ :
   assumption_context (lift_context s k Γ).
 Proof. apply assumption_context_fold. Qed.
 
+#[global]
 Hint Resolve assumption_context_fold assumption_context_expand_lets_ctx 
   smash_context_assumption_context assumption_context_nil assumption_context_subst_instance 
   assumption_context_subst_context assumption_context_lift_context : pcuic.

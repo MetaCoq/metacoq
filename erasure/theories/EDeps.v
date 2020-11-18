@@ -329,6 +329,7 @@ Proof.
   - easy.
 Qed.
 
+#[global]
 Hint Resolve erases_deps_eval erases_deps_subst erases_deps_subst1 : core.
 
 Local Existing Instance config.extraction_checker_flags.

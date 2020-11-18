@@ -23,6 +23,7 @@ Proof.
   - now rewrite app_nil_l.
   - simpl. apply LevelSet.union_spec. right; eauto.
 Qed.
+#[global]
 Hint Resolve weakening_env_global_ext_levels : extends.
 
 Lemma weakening_env_global_ext_levels' Σ Σ' φ (H : extends Σ Σ') l
@@ -56,6 +57,7 @@ Proof.
   eapply lookup_env_Some_fresh in IHΣ''; eauto. contradiction.
   assumption.
 Qed.
+#[global]
 Hint Resolve extends_lookup : extends.
 
 Lemma extends_wf_local `{checker_flags} Σ Γ (wfΓ : wf_local Σ Γ) :
@@ -73,6 +75,7 @@ Proof.
   - destruct tu as [u Hu]; exists u; auto.
   - destruct tu as [u Hu]; exists u; auto.
 Qed.
+#[global]
 Hint Resolve extends_wf_local : extends.
 
 Lemma weakening_env_red1 `{CF:checker_flags} Σ Σ' Γ M N :
@@ -212,6 +215,7 @@ Proof.
   intros Σ cst decl H0 Σ' X2 H2.
   eapply extends_lookup; eauto.
 Qed.
+#[global]
 Hint Resolve weakening_env_declared_constant : extends.
 
 Lemma weakening_env_declared_minductive `{CF:checker_flags}:
@@ -222,6 +226,7 @@ Proof.
   intros Σ cst decl H0 Σ' X2 H2.
   eapply extends_lookup; eauto.
 Qed.
+#[global]
 Hint Resolve weakening_env_declared_minductive : extends.
 
 Lemma weakening_env_declared_inductive:
@@ -231,6 +236,7 @@ Lemma weakening_env_declared_inductive:
 Proof.
   intros H Σ cst decl H0 [Hmdecl Hidecl] Σ' X2 H2. split; eauto with extends.
 Qed.
+#[global]
 Hint Resolve weakening_env_declared_inductive : extends.
 
 Lemma weakening_env_declared_constructor :
@@ -242,6 +248,7 @@ Proof.
   intros H Σ cst mdecl idecl cdecl [Hidecl Hcdecl] Σ' X2 H2.
   split; eauto with extends.
 Qed.
+#[global]
 Hint Resolve weakening_env_declared_constructor : extends.
 
 Lemma weakening_env_declared_projection :
@@ -253,6 +260,7 @@ Proof.
   intros H Σ cst mdecl idecl cdecl [Hidecl Hcdecl] Σ' X2 H2.
   split; eauto with extends.
 Qed.
+#[global]
 Hint Resolve weakening_env_declared_projection : extends.
 
 Lemma weakening_All_local_env_impl `{checker_flags}
@@ -306,6 +314,7 @@ Proof.
   eapply valid_subset; tea;
     now eapply weakening_env_global_ext_constraints.
 Qed.
+#[global]
 Hint Resolve weakening_env_consistent_instance : extends.
 
 
@@ -585,6 +594,7 @@ Proof.
   eapply (weakening_env (_, _)); eauto. eapply typing_wf_local in Ht; eauto.
 Qed.
 
+#[global]
 Hint Unfold weaken_env_prop : pcuic.
 
 Lemma on_declared_minductive `{checker_flags} {Σ ref decl} :

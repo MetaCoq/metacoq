@@ -68,6 +68,7 @@ Proof.
     forward IHu.
     induction u; trivial. discriminate.
 Qed.
+#[global]
 Hint Resolve wf_mkApps_napp : wf.
 
 Lemma wf_mkApps_inv t u : Ast.wf (mkApps t u) -> List.Forall Ast.wf u.
@@ -82,7 +83,9 @@ Proof.
     intuition. inv H.
     apply Forall_app in H3. intuition.
 Qed.
+#[global]
 Hint Resolve wf_mkApps_inv : wf.
+#[global]
 Hint Constructors Ast.wf : wf.
 
 Lemma isLambda_isApp t : isLambda t = true -> isApp t = false.
@@ -143,6 +146,7 @@ Lemma wf_nth:
 Proof.
   intros n args H. induction H in n; destruct n; simpl; try constructor; auto.
 Qed.
+#[global]
 Hint Resolve wf_nth : core.
 
 Lemma red1_isLambda Σ Γ t u :
@@ -265,11 +269,17 @@ Proof.
 Qed.
 
 Ltac wf := intuition try (eauto with wf || congruence || solve [constructor]).
+#[global]
 Hint Unfold wf_decl vass vdef : wf.
+#[global]
 Hint Extern 10 => progress simpl : wf.
+#[global]
 Hint Unfold snoc : wf.
+#[global]
 Hint Extern 3 => apply wf_lift || apply wf_subst || apply wf_subst_instance_constr : wf.
+#[global]
 Hint Extern 10 => constructor : wf.
+#[global]
 Hint Resolve All_skipn : wf.
 
 Lemma wf_inds mind bodies u : Forall Ast.wf (inds mind u bodies).
@@ -278,6 +288,7 @@ Proof.
   constructor; auto. wf.
 Qed.
 
+#[global]
 Hint Resolve wf_inds : wf.
 
 Lemma wf_projs ind npars p : Forall Ast.wf (projs ind npars p).
@@ -563,6 +574,7 @@ Proof.
   - constructor; auto. red; simpl. apply typing_wf_gen in t1; auto.
     intuition auto.
 Qed.
+#[global]
 Hint Resolve typing_all_wf_decl : wf.
 
 (* TODO MOVE? *)

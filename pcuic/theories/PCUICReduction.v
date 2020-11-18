@@ -316,6 +316,7 @@ Proof.
       constructor; try split; auto; intuition.
 Defined.
 
+#[global]
 Hint Constructors red1 : pcuic.
 
 Definition red Σ Γ := clos_refl_trans (red1 Σ Γ).
@@ -361,6 +362,7 @@ Proof.
   econstructor; eauto.
 Qed.
 
+#[global]
 Hint Resolve red1_red refl_red : core pcuic.
 
 Lemma red_step Σ Γ t u v : red1 Σ Γ t u -> red Σ Γ u v -> red Σ Γ t v.
@@ -1467,8 +1469,10 @@ Qed.
 
 
 
+#[global]
 Hint Resolve All_All2 : all.
 
+#[global]
 Hint Resolve All2_same : pred.
 
 Lemma OnOne2_All2 {A}:
@@ -1488,6 +1492,7 @@ Ltac OnOne2_All2 :=
     unshelve eapply (OnOne2_All2 _ _ P Q H); simpl; intros
   end.
 
+#[global]
 Hint Extern 0 (All2 _ _ _) => OnOne2_All2; intuition auto with pred : pred.
 
 (* TODO Find a better place for this. *)

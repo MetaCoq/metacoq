@@ -25,6 +25,7 @@ Definition same_shape (d d' : context_decl) :=
 Definition same_ctx_shape (Γ Γ' : context) :=
   context_relation (fun _ _ => same_shape) Γ Γ'.
   
+#[global]
 Hint Unfold same_ctx_shape : core.
 
 Lemma same_ctx_shape_app Γ Γ' Δ Δ' : same_ctx_shape Γ Γ' -> 
@@ -57,6 +58,7 @@ Proof.
   unfold to_extended_list. apply to_extended_list_k_eq.
 Qed.
 
+#[global]
 Hint Constructors context_relation : core.
 
 Lemma same_ctx_shape_refl Γ : same_ctx_shape Γ Γ.

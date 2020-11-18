@@ -462,6 +462,7 @@ Qed.
 
 Lemma var_cspec : StrictCompSpec (@Logic.eq var) Ident.lt Ident.compare.
 Proof. split; [apply Ident.lt_strorder|apply Ident.compare_spec]. Qed.
+#[global]
 Hint Resolve var_cspec : core.
 
 Definition pure_atom_cmp (a a': pure_atom) : comparison :=
@@ -684,6 +685,7 @@ Proof.
   - admit.
   - intros. unfold CompSpec. admit.
 Admitted.
+#[global]
 Hint Resolve clause_cspec' : core.
 
 Definition clause_length (cl : clause) : Z :=
@@ -1153,6 +1155,7 @@ End DebuggingHooks.
 
 Export DebuggingHooks.
 
+#[global]
 Hint Unfold print_new_pures_set print_wf_set print_inferred_list print_spatial_model
             print_pures_list print_eqs_list
   : DEBUG_UNFOLD.

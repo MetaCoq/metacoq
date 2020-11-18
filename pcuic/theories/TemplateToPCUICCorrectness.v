@@ -514,8 +514,10 @@ Admitted.
 (*   reflexivity. *)
 (* Admitted. *)
 
+#[global]
 Hint Constructors T.wf : wf.
 
+#[global]
 Hint Resolve Template.TypingWf.typing_wf : wf.
 
 Lemma mkApps_trans_wf U l : T.wf (T.tApp U l) -> exists U' V', trans (T.tApp U l) = tApp U' V'.
@@ -1121,6 +1123,7 @@ Admitted.
 (*   eapply typing_wf; eauto. destruct ont. exists x; eapply typing_wf; intuition eauto. *)
 (* Qed. *)
 
+#[global]
 Hint Resolve trans_wf_local : trans.
 
 Axiom fix_guard_trans :

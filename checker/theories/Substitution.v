@@ -231,6 +231,7 @@ Proof.
   generalize #|mfix| at 2 3. induction n0; auto. simpl.
   f_equal. apply IHn0.
 Qed.
+#[global]
 Hint Resolve subst_unfold_fix : core.
 
 Lemma subst_unfold_cofix n k mfix idx narg fn :
@@ -247,6 +248,7 @@ Proof.
   generalize #|mfix| at 2 3. induction n0; auto. simpl.
   f_equal. apply IHn0.
 Qed.
+#[global]
 Hint Resolve subst_unfold_cofix : core.
 
 Lemma subst_is_constructor:
@@ -260,7 +262,9 @@ Proof.
   destruct t; try discriminate || reflexivity. simpl.
   destruct args0; auto.
 Qed.
+#[global]
 Hint Resolve subst_is_constructor : core.
+#[global]
 Hint Constructors All_local_env : core.
 
 Lemma typed_subst `{checker_flags} Σ Γ t T n k :
@@ -898,6 +902,7 @@ Proof.
   eauto using wf_context_subst.
 Qed.
 
+#[global]
 Hint Resolve All_Forall : wf.
 
 (* TODO Duplicate of PCUICSubstitution *)
@@ -1114,6 +1119,7 @@ Proof.
 Qed.
 
 
+#[global]
 Hint Unfold subst1 : subst.
 Hint Rewrite subst_mkApps distr_subst: subst.
 

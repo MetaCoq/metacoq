@@ -15,6 +15,7 @@ Local Open Scope string_scope.
 Set Asymmetric Patterns.
 Import monad_utils.MonadNotation.
 
+#[global]
 Hint Constructors assumption_context : pcuic.
 
 Derive NoConfusion for type_error.

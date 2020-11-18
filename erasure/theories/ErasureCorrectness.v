@@ -31,6 +31,7 @@ Qed.
 Lemma wf_ext_wk_wf {cf:checker_flags} Σ : wf_ext_wk Σ -> wf Σ.
 Proof. intro H; apply H. Qed.
 
+#[global]
 Hint Resolve wf_ext_wk_wf : core.
 
 Lemma isErasable_subst_instance (Σ : global_env_ext) Γ T univs u :
@@ -101,6 +102,7 @@ Proof.
       eapply PCUICSafeChecker.wf_local_app_inv; eauto.
 Qed.
 
+#[global]
 Hint Resolve Is_type_conv_context : core.
 
 Lemma erases_context_conversion :
@@ -433,6 +435,7 @@ Record extraction_pre (Σ : global_env_ext) : Type
   { extr_env_axiom_free' : axiom_free (fst Σ);
     extr_env_wf' : wf_ext Σ }.
 
+#[global]
 Hint Constructors PCUICWcbvEval.eval erases : core.
 Arguments extr_env_wf' {Σ}.
 Arguments extr_env_axiom_free' {Σ}.

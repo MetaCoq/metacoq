@@ -113,7 +113,7 @@ Fixpoint closedn k (t : term) : bool :=
   | tCoFix mfix idx =>
     let k' := List.length mfix + k in
     List.forallb (test_def (closedn k) (closedn k')) mfix
-  | x => true
+  | _ => true
   end.
 
 Notation closed t := (closedn 0 t).
@@ -136,7 +136,7 @@ Fixpoint noccur_between k n (t : term) : bool :=
   | tCoFix mfix idx =>
     let k' := List.length mfix + k in
     List.forallb (test_def (noccur_between k n) (noccur_between k' n)) mfix
-  | x => true
+  | _ => true
   end.
 
 Fixpoint extended_subst (Γ : context) (n : nat) 
@@ -196,8 +196,11 @@ Ltac easy0 :=
   (solve [ do_atom | use_hyps; do_ccl ]) || fail "Cannot solve this goal".
 
 
+#[global]
 Hint Extern 10 (_ < _)%nat => lia : terms.
+#[global]
 Hint Extern 10 (_ <= _)%nat => lia : terms.
+#[global]
 Hint Extern 10 (@eq nat _ _) => lia : terms.
 
 Ltac easy ::= easy0 || solve [intuition eauto 3 with core terms].
@@ -245,7 +248,9 @@ Proof.
   reflexivity. intros. lia.
 Qed.
 
+#[global]
 Hint Extern 0 (_ = _) => progress f_equal : all.
+#[global]
 Hint Unfold on_snd snd : all.
 
 Lemma on_snd_eq_id_spec {A B} (f : B -> B) (x : A * B) :
@@ -254,7 +259,9 @@ Lemma on_snd_eq_id_spec {A B} (f : B -> B) (x : A * B) :
 Proof.
   destruct x; simpl; unfold on_snd; simpl. split; congruence.
 Qed.
+#[global]
 Hint Resolve -> on_snd_eq_id_spec : all.
+#[global]
 Hint Resolve -> on_snd_eq_spec : all.
 
 Lemma map_def_eq_spec {A B} (f f' g g' : A -> B) (x : def A) :
@@ -264,6 +271,7 @@ Lemma map_def_eq_spec {A B} (f f' g g' : A -> B) (x : def A) :
 Proof.
   intros. unfold map_def; f_equal; auto.
 Qed.
+#[global]
 Hint Resolve map_def_eq_spec : all.
 
 Lemma map_def_id_spec {A} (f f' : A -> A) (x : def A) :
@@ -273,10 +281,14 @@ Lemma map_def_id_spec {A} (f f' : A -> A) (x : def A) :
 Proof.
   intros. rewrite (map_def_eq_spec _ _ id id); auto. destruct x; auto.
 Qed.
+#[global]
 Hint Resolve map_def_id_spec : all.
 
+#[global]
 Hint Extern 10 (_ < _)%nat => lia : all.
+#[global]
 Hint Extern 10 (_ <= _)%nat => lia : all.
+#[global]
 Hint Extern 10 (@eq nat _ _) => lia : all.
 
 Ltac change_Sk :=
@@ -375,6 +387,7 @@ Lemma isLambda_lift n k (bod : term) :
   isLambda bod = true -> isLambda (lift n k bod) = true.
 Proof. destruct bod; simpl; try congruence. Qed.
 
+#[global]
 Hint Resolve lift_isApp map_non_nil isLambda_lift : all.
 
 Lemma wf_lift n k t : wf t -> wf (lift n k t).
@@ -624,6 +637,7 @@ Proof.
   intros wft wfu. apply wf_subst. constructor; auto. auto.
 Qed.
 
+#[global]
 Hint Resolve wf_mkApps wf_subst wf_subst1 wf_lift : wf.
 
 Lemma subst_empty k a : Ast.wf a -> subst [] k a = a.

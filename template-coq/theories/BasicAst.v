@@ -131,6 +131,7 @@ Definition kername_eq_dec (k k0 : kername) : {k = k0} + {k <> k0}.
 Proof.
   repeat (decide equality; eauto with eq_dec).
 Defined.
+#[global]
 Hint Resolve kername_eq_dec : eq_dec.
 
 Definition gref_eq_dec (gr gr' : global_reference) : {gr = gr'} + {~ gr = gr'}.

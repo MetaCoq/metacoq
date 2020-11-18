@@ -24,6 +24,7 @@ Ltac my_rename_hyp h th :=
 
 Ltac rename_hyp h ht ::= my_rename_hyp h ht.
 
+#[global]
 Hint Resolve conv_refl' : pcuic.
 Arguments skipn : simpl never.
 
@@ -34,7 +35,9 @@ Lemma weakening_cumul0 `{CF:checker_flags} Σ Γ Γ'' M N n :
   Σ ;;; Γ ,,, Γ'' |- lift0 n M <= lift0 n N.
 Proof. intros; subst; now apply (weakening_cumul _ _ []). Qed.
 
+#[global]
 Hint Constructors red1 : pcuic.
+#[global]
 Hint Resolve refl_red : pcuic.
 
 Section ContextReduction.
@@ -572,6 +575,7 @@ End ContextConversion.
 
 Notation conv_context Σ Γ Γ' := (context_relation (conv_decls Σ) Γ Γ').
 
+#[global]
 Hint Resolve conv_ctx_refl' : pcuic.
 
 (* Lemma wf_local_conv_ctx {cf:checker_flags} Σ Γ Δ (wfΓ : wf_local Σ Γ) : wf Σ -> *)
@@ -608,6 +612,7 @@ Proof.
 Qed.
 
 
+#[global]
 Hint Constructors conv_decls : pcuic.
 
 Lemma eq_context_upto_conv_context {cf:checker_flags} (Σ : global_env_ext) Re :

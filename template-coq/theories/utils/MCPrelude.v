@@ -50,8 +50,11 @@ Ltac easy0 :=
   let rec do_ccl := (try do_atom; repeat (do_intro; try do_atom); try arith_congr; (solve [ split; do_ccl ])) in
   (solve [ do_atom | use_hyps; do_ccl ]) || fail "Cannot solve this goal".
 
+#[global]
 Hint Extern 10 (_ < _)%nat => lia : terms.
+#[global]
 Hint Extern 10 (_ <= _)%nat => lia : terms.
+#[global]
 Hint Extern 10 (@eq nat _ _) => lia : terms.
 
 Ltac easy ::= easy0 || solve [intuition eauto 3 with core terms].

@@ -109,7 +109,7 @@ Proof.
       unfold PCUICLiftSubst.subst1.
       eapply (red_red Σ Γ [_] [] [_] [_]).
       eauto. econstructor. eauto. econstructor. econstructor. econstructor.
-      Grab Existential Variables. all: repeat econstructor.
+      Unshelve. all: repeat econstructor.
 Qed.
 
 

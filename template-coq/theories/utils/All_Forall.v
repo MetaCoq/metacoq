@@ -305,6 +305,7 @@ Proof.
   intros H; inv H. constructor; eauto.
 Qed.
 
+#[global]
 Hint Constructors All All2 : core.
 
 Lemma All_refl {A} (P : A -> Type) l : (forall x, P x) -> All P l.

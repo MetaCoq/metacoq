@@ -80,11 +80,13 @@ Proof.
   clear -H. induction H; simpl; auto. constructor. constructor.
   constructor. auto.
 Qed.
+#[global]
 Hint Resolve smash_context_assumption_context : pcuic.
 
 Lemma assumption_context_length ctx : assumption_context ctx ->
   context_assumptions ctx = #|ctx|.
 Proof. induction 1; simpl; auto. Qed.
+#[global]
 Hint Resolve assumption_context_length : pcuic.
 
 Lemma context_subst_length2 {ctx args s} : context_subst ctx args s -> #|args| = context_assumptions ctx.
@@ -108,6 +110,7 @@ Proof.
   now specialize (IHX _ _ H').
 Qed.
 
+#[global]
 Hint Constructors context_subst : core.
 
 Lemma context_subst_app {ctx ctx' args s} : 

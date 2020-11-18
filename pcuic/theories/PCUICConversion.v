@@ -18,6 +18,7 @@ Ltac tc := try typeclasses eauto 10.
 Ltac pcuic := intuition eauto 5 with pcuic ||
   (try solve [repeat red; cbn in *; intuition auto; eauto 5 with pcuic || (try lia || congruence)]).
 
+#[global]
 Hint Resolve eq_universe_leq_universe' : pcuic.
 
 Derive Signature for conv cumul assumption_context.

@@ -80,6 +80,7 @@ Definition string_of_nat n : string :=
   | _ => "todo string_of_nat"
   end.
 
+#[global]
 Hint Resolve String.string_dec : eq_dec.
 
 

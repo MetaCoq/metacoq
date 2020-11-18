@@ -846,64 +846,64 @@ Section Typecheck.
     : typing_result ({ A : term & ∥ Σ ;;; Γ |- t : A ∥ }) :=
     match t with
     | tRel n =>
-          match nth_error Γ n with
-          | Some c => ret ((lift0 (S n)) (decl_type c); _)
-          | None   => raise (UnboundRel n)
-          end
+      match nth_error Γ n with
+      | Some c => ret ((lift0 (S n)) (decl_type c); _)
+      | None   => raise (UnboundRel n)
+      end
 
     | tVar n  => raise (UnboundVar n)
     | tEvar ev args => raise (UnboundEvar ev)
 
     | tSort u =>
-            check_eq_true (wf_universeb Σ u)
-                          (Msg ("Sort contains an undeclared level " ^ string_of_sort u));;
-            ret (tSort (Universe.super u); _)
+      check_eq_true (wf_universeb Σ u)
+                    (Msg ("Sort contains an undeclared level " ^ string_of_sort u));;
+      ret (tSort (Universe.super u); _)
 
     | tProd na A B =>
-          s1 <- infer_type infer Γ HΓ A ;;
-          s2 <- infer_type infer (Γ ,, vass na A) _ B ;;
-          ret (tSort (Universe.sort_of_product s1.π1 s2.π1); _)
+      s1 <- infer_type infer Γ HΓ A ;;
+      s2 <- infer_type infer (Γ ,, vass na A) _ B ;;
+      ret (tSort (Universe.sort_of_product s1.π1 s2.π1); _)
 
     | tLambda na A t =>
-          s1 <- infer_type infer Γ HΓ A ;;
-          B <- infer (Γ ,, vass na A) _ t ;;
-          ret (tProd na A B.π1; _)
+      s1 <- infer_type infer Γ HΓ A ;;
+      B <- infer (Γ ,, vass na A) _ t ;;
+      ret (tProd na A B.π1; _)
 
     | tLetIn n b b_ty b' =>
-          infer_type infer Γ HΓ b_ty ;;
-          infer_cumul infer Γ HΓ b b_ty _ ;;
-          b'_ty <- infer (Γ ,, vdef n b b_ty) _ b' ;;
-          ret (tLetIn n b b_ty b'_ty.π1; _)
+      infer_type infer Γ HΓ b_ty ;;
+      infer_cumul infer Γ HΓ b b_ty _ ;;
+      b'_ty <- infer (Γ ,, vdef n b b_ty) _ b' ;;
+      ret (tLetIn n b b_ty b'_ty.π1; _)
 
     | tApp t u =>
-          ty <- infer Γ HΓ t ;;
-          pi <- reduce_to_prod Γ ty.π1 _ ;;
-          infer_cumul infer Γ HΓ u pi.π2.π1 _ ;;
-          ret (subst10 u pi.π2.π2.π1; _)
+      ty <- infer Γ HΓ t ;;
+      pi <- reduce_to_prod Γ ty.π1 _ ;;
+      infer_cumul infer Γ HΓ u pi.π2.π1 _ ;;
+      ret (subst10 u pi.π2.π2.π1; _)
 
     | tConst cst u =>
-          match lookup_env (fst Σ) cst with
-          | Some (ConstantDecl d) =>
-            check_consistent_instance d.(cst_universes) u ;;
-            let ty := subst_instance_constr u d.(cst_type) in
-            ret (ty; _)
-          |  _ => raise (UndeclaredConstant cst)
-          end
+      match lookup_env (fst Σ) cst with
+      | Some (ConstantDecl d) =>
+        check_consistent_instance d.(cst_universes) u ;;
+        let ty := subst_instance_constr u d.(cst_type) in
+        ret (ty; _)
+      |  _ => raise (UndeclaredConstant cst)
+      end
 
     | tInd ind u =>
-          d <- lookup_ind_decl ind ;;
-          check_consistent_instance d.π1.(ind_universes) u ;;
-          let ty := subst_instance_constr u d.π2.π1.(ind_type) in
-          ret (ty; _)
+      d <- lookup_ind_decl ind ;;
+      check_consistent_instance d.π1.(ind_universes) u ;;
+      let ty := subst_instance_constr u d.π2.π1.(ind_type) in
+      ret (ty; _)
 
     | tConstruct ind k u =>
-          d <- lookup_ind_decl ind ;;
-          match nth_error d.π2.π1.(ind_ctors) k with
-          | Some cdecl =>
-            check_consistent_instance d.π1.(ind_universes) u ;;
-            ret (type_of_constructor d.π1 cdecl (ind, k) u; _)
-          | None => raise (UndeclaredConstructor ind k)
-          end
+      d <- lookup_ind_decl ind ;;
+      match nth_error d.π2.π1.(ind_ctors) k with
+      | Some cdecl =>
+        check_consistent_instance d.π1.(ind_universes) u ;;
+        ret (type_of_constructor d.π1 cdecl (ind, k) u; _)
+      | None => raise (UndeclaredConstructor ind k)
+      end
 
     | tCase (ind, par) p c brs =>
       cty <- infer Γ HΓ c ;;
@@ -958,23 +958,21 @@ Section Typecheck.
       end
 
     | tProj (ind, n, k) c =>
-          d <- lookup_ind_decl ind ;;
-          match nth_error d.π2.π1.(ind_projs) k with
-          | Some pdecl =>
-            c_ty <- infer Γ HΓ c ;;
-            I <- reduce_to_ind Γ c_ty.π1 _ ;;
-            let '(ind'; I') := I in let '(u; I'') := I' in let '(args; H) := I'' in
-            check_eq_true (eqb ind ind')
-                          (NotConvertible G Γ (tInd ind u) (tInd ind' u)) ;;
-            check_eq_true (ind_npars d.π1 =? n)
-                          (Msg "not the right number of parameters") ;;
-            check_eq_true (#|args| =? ind_npars d.π1) (* probably redundant *)
-                          (Msg "not the right number of parameters") ;;
-            let ty := snd pdecl in
-            ret (subst0 (c :: List.rev args) (subst_instance_constr u ty);
-                   _)
-          | None => raise (Msg "projection not found")
-          end
+      d <- lookup_ind_decl ind ;;
+      match nth_error d.π2.π1.(ind_projs) k with
+      | Some pdecl =>
+        c_ty <- infer Γ HΓ c ;;
+        I <- reduce_to_ind Γ c_ty.π1 _ ;;
+        let '(ind'; I') := I in let '(u; I'') := I' in let '(args; H) := I'' in
+        check_eq_true (eqb ind ind')
+                      (NotConvertible G Γ (tInd ind u) (tInd ind' u)) ;;
+        check_eq_true (ind_npars d.π1 =? n)
+                      (Msg "not the right number of parameters") ;;
+        let ty := snd pdecl in
+        ret (subst0 (c :: List.rev args) (subst_instance_constr u ty);
+                _)
+      | None => raise (Msg "projection not found")
+      end
 
     | tFix mfix n =>
       match nth_error mfix n with
@@ -1238,8 +1236,27 @@ Section Typecheck.
       now apply beq_nat_true.
     - cbn. destruct (ssrbool.elimT (eqb_spec ind I)); [assumption|].
       eapply type_reduction; eassumption.
-    - now apply beq_nat_true.
-  Defined.
+    - eapply type_reduction in X5; eauto.
+      eapply validity_term in X5; eauto.
+      destruct (ssrbool.elimT (eqb_spec ind I)); auto.
+      unshelve eapply (PCUICInductives.isType_mkApps_Ind _ X7 _) in X5 as [parsubst [argsubst [[sp sp'] cu]]]; eauto.
+      pose proof (PCUICContexts.context_subst_length2 (PCUICSpine.inst_ctx_subst sp)).
+      pose proof (PCUICContexts.context_subst_length2 (PCUICSpine.inst_ctx_subst sp')).
+      autorewrite with len in H, H2.
+      destruct (PCUICWeakeningEnv.on_declared_inductive HΣ X7) eqn:ond.
+      rewrite -o.(onNpars) -H.
+      forward (o0.(onProjections)).
+      intros H'; rewrite H' nth_error_nil // in Heq_anonymous.
+      destruct ind_cshapes as [|cs []]; auto.
+      intros onps.
+      unshelve epose proof (onps.(on_projs_noidx _ _ _ _ _ _)).
+      rewrite ond /= in H2.
+      change (ind_indices o0) with (ind_indices o0) in *.
+      destruct (ind_indices o0) => //.
+      simpl in H2.
+      rewrite List.skipn_length in H2.
+      rewrite List.firstn_length. lia.
+  Qed.
 
   (* tFix *)
   Next Obligation. sq. constructor; auto. exists W; auto. Defined.

@@ -4,7 +4,7 @@ all: template-coq checker pcuic safechecker erasure examples
 
 .PHONY: all template-coq checker pcuic erasure install html clean mrproper .merlin test-suite translations
 
-install: all
+install: all translations
 	$(MAKE) -C template-coq install
 	$(MAKE) -C checker install
 	$(MAKE) -C pcuic install

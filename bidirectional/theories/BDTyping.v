@@ -762,10 +762,6 @@ Section TypingInduction.
               ** eapply type_local_ctx_impl.
                 1: eassumption.
                 all: intros ; applyIH ; eapply type_local_ctx_wf_local ; eassumption.
-              ** eapply type_local_ctx_impl.
-                 1: eassumption.
-                 all: intros.
-                 all: applyIH.
 
 
     - apply HΓ.

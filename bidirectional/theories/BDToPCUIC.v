@@ -14,22 +14,22 @@ Module BD := Bidirectional.BDTyping.
 
 Section BDToPCUICTyping.
 
-  Definition Pcheck `{checker_flags} Σ Γ t T :=
+  Let Pcheck `{checker_flags} Σ Γ t T :=
     Σ ;;; Γ |- t : T.
 
-  Definition Pinfer `{checker_flags} Σ Γ t T :=
+  Let Pinfer `{checker_flags} Σ Γ t T :=
     Σ ;;; Γ |- t : T.
 
-  Definition Psort `{checker_flags} Σ Γ t u :=
+  Let Psort `{checker_flags} Σ Γ t u :=
     Σ ;;; Γ |- t : (tSort u).
 
-  Definition Pprod `{checker_flags} Σ Γ t na A B :=
+  Let Pprod `{checker_flags} Σ Γ t na A B :=
     Σ ;;; Γ |- t : tProd na A B.
 
-  Definition Pind `{checker_flags} Σ Γ ind t u args :=
+  Let Pind `{checker_flags} Σ Γ ind t u args :=
     Σ ;;; Γ |- t : mkApps (tInd ind u) args.
 
-  Definition PΓ `{checker_flags} Σ Γ (wfΓ : wf_local Σ Γ) :=
+  Let PΓ `{checker_flags} Σ Γ (wfΓ : wf_local Σ Γ) :=
     PT.wf_local Σ Γ.
 
 Lemma bd_wf `{checker_flags} Σ : Forall_decls_sorting Pcheck Psort Σ -> PT.wf Σ.
@@ -172,7 +172,7 @@ Proof.
     assumption.
 Qed.
   
-Theorem Bidirectional_to_PCUIC `{cf : checker_flags} : env_prop Pcheck Pinfer Psort Pprod Pind (@PΓ).
+Theorem bidirectional_to_PCUIC `{cf : checker_flags} : env_prop Pcheck Pinfer Psort Pprod Pind (@PΓ).
 Proof.
   apply BD.typing_ind_env.
 
@@ -219,3 +219,45 @@ Proof.
 Qed.
 
 End BDToPCUICTyping.
+
+Theorem infering_typing `{checker_flags} (Σ : global_env_ext) Γ t T (wfΣ : wf Σ) :
+  Σ ;;; Γ |- t ▹ T -> Σ ;;; Γ |- t : T.
+Proof.
+  apply bidirectional_to_PCUIC.
+  assumption.
+Qed.
+
+Theorem checking_typing `{checker_flags} (Σ : global_env_ext) Γ t T (wfΣ : wf Σ) :
+  Σ ;;; Γ |- t ◃ T -> Σ ;;; Γ |- t : T.
+Proof.
+  apply bidirectional_to_PCUIC.
+  assumption.
+Qed.
+
+Theorem infering_sort_typing `{checker_flags} (Σ : global_env_ext) Γ t u (wfΣ : wf Σ) :
+Σ ;;; Γ |- t ▸□ u -> Σ ;;; Γ |- t : tSort u.
+Proof.
+apply bidirectional_to_PCUIC.
+assumption.
+Qed.
+
+Theorem infering_prod_typing `{checker_flags} (Σ : global_env_ext) Γ t na A B (wfΣ : wf Σ) :
+Σ ;;; Γ |- t ▸Π (na,A,B) -> Σ ;;; Γ |- t : tProd na A B.
+Proof.
+apply bidirectional_to_PCUIC.
+assumption.
+Qed.
+
+Theorem infering_ind_typing `{checker_flags} (Σ : global_env_ext) Γ t ind u args (wfΣ : wf Σ) :
+Σ ;;; Γ |- t ▸{ind} (u,args) -> Σ ;;; Γ |- t : mkApps (tInd ind u) args.
+Proof.
+apply bidirectional_to_PCUIC.
+assumption.
+Qed.
+
+Theorem wf_local_bd_typing `{checker_flags} (Σ : global_env_ext) Γ (wfΣ : wf Σ) :
+BD.wf_local Σ Γ -> PT.wf_local Σ Γ.
+Proof.
+  apply bidirectional_to_PCUIC.
+  assumption.
+Qed.

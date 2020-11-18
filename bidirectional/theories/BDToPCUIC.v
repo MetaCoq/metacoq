@@ -89,8 +89,9 @@ Proof.
               unfold PT.cstr_respects_variance.
               destruct (variance_universes (PCUICEnvironment.ind_universes m)) ; simpl in * ; auto.
               destruct p as [[]]. intuition.
-              induction a ; intuition.
-              all: admit.
+              induction a.
+              all: constructor ; auto.
+
             
         -- intros projs ; specialize (onProjections projs).
            clear - onProjections.
@@ -106,10 +107,11 @@ Proof.
            cbn in *.
            red in ind_sorts |- *.
            destruct (universe_family ind_sort).
-           all: admit.
-(*            ++ induction ind_cshapes ; auto.
+           ++ induction ind_cshapes ; auto.
+           ++ induction ind_cshapes ; auto.
               simpl in *.
               destruct ind_cshapes ; auto.
+              simpl in *.
               destruct a ; auto.
            ++ destruct ind_sorts. split.
               { apply Forall_map.
@@ -130,7 +132,7 @@ Proof.
               1: auto.
               ** destruct y as [[] ].
                  repeat split ; auto.
-              ** destruct y. repeat split ; auto. *)
+              ** destruct y. repeat split ; auto.
 
         -- clear -onIndices.
            intros v e. specialize (onIndices v e).
@@ -138,13 +140,18 @@ Proof.
            unfold PT.ind_respects_variance.
            destruct (PCUICEnvironment.ind_universes m) ; simpl in * ; auto.
            destruct cst.
-           admit.
+           replace (PT.level_var_instance 0 l) with (level_var_instance 0 l).
+           2:{ by induction l ; auto. }
+           match goal with |- context [PT.lift_instance ?len ?list] =>
+            replace (PT.lift_instance len list) with (lift_instance len list) end.
+           2:{ apply map_ext. intros []. all: reflexivity. }
+           induction onIndices.
+           all: constructor ; auto.
 
       * clear - onParams.
         induction onParams.
         all: constructor ; intuition.
-Admitted.
-      
+Qed.      
 
 Lemma bd_wf_local `{checker_flags} Σ Γ (all: wf_local Σ Γ) :
   BD.All_local_env_over_sorting checking infering_sort 
@@ -208,4 +215,4 @@ Proof.
 
 Qed.
 
-End BDToPCUICTyping.      
+End BDToPCUICTyping.

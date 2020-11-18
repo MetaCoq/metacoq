@@ -149,10 +149,10 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
     Σ ;;; Γ |- tCoFix mfix n ▹ decl.(dtype)
 
 with infering_sort `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> Universe.t -> Type :=
-| infer_sort_Sort t T u s :
+| infer_sort_Sort t T u:
   Σ ;;; Γ |- t ▹ T ->
   Σ ;;; Γ |- T --> tSort u ->
-  Σ ;;; Γ |- tSort u ▸□ s ->
+  wf_universe Σ u ->
   Σ ;;; Γ |- t ▸□ u
 
 with infering_prod `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> aname -> term -> term -> Type :=
@@ -605,13 +605,12 @@ Section TypingInduction.
       Pinfer Σ Γ (tCoFix mfix n) decl.(dtype)) ->
 
     (forall (Σ : global_env_ext) (wfΣ : wf Σ.1) (PΣ : Forall_decls_sorting Pcheck Psort Σ.1)
-      (Γ : context) (wfΓ : wf_local Σ Γ) (t T : term) (u s : Universe.t),
+      (Γ : context) (wfΓ : wf_local Σ Γ) (t T : term) (u : Universe.t),
       PΓ Σ Γ wfΓ ->
       Σ ;;; Γ |- t ▹ T ->
       Pinfer Σ Γ t T ->
       Σ ;;; Γ |- T --> tSort u ->
-      Σ ;;; Γ |- tSort u ▸□ s ->
-      Psort Σ Γ (tSort u) s ->
+      wf_universe Σ u ->
       Psort Σ Γ t u) ->
 
     (forall (Σ : global_env_ext) (wfΣ : wf Σ.1) (PΣ : Forall_decls_sorting Pcheck Psort Σ.1)

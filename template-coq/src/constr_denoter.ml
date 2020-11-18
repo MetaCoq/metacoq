@@ -253,6 +253,13 @@ struct
     let evm, l = map_evm unquote_level evm l in
     evm, Univ.Instance.of_array (Array.of_list l)
 
+  let unquote_variance v =
+    let open Univ.Variance in
+    if constr_equall v cIrrelevant then Irrelevant
+    else if constr_equall v cCovariant then Covariant
+    else if constr_equall v cInvariant then Invariant
+    else not_supported_verb v "unquote_variance"
+
   let unquote_dirpath dp : DirPath.t =
     let l = List.map unquote_ident (unquote_list dp) in
     DirPath.make l

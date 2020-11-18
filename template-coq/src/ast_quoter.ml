@@ -305,14 +305,14 @@ struct
       mind_entry_consnames = consnames;
       mind_entry_lc = constypes }
 
-  let quote_mutual_inductive_entry (mf, mp, is, univs, cumulative) =
+  let quote_mutual_inductive_entry (mf, mp, is, univs, variance) =
     { mind_entry_record = None;
       mind_entry_finite = mf;
       mind_entry_params = mp;
       mind_entry_inds = List.map quote_one_inductive_entry is;
       mind_entry_template = false;
       mind_entry_universes = univs;
-      mind_entry_cumulative = cumulative;
+      mind_entry_variance = variance;
       mind_entry_private = None }
 
   let quote_definition_entry ty body ctx = 

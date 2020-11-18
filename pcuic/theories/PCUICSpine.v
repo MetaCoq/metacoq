@@ -195,6 +195,7 @@ Record spine_subst {cf:checker_flags} Σ Γ inst s Δ := mkSpineSubst {
   inst_subslet :> subslet Σ Γ s Δ }.
 Arguments inst_ctx_subst {cf Σ Γ inst s Δ}.
 Arguments inst_subslet {cf Σ Γ inst s Δ}.
+#[global]
 Hint Resolve inst_ctx_subst inst_subslet : pcuic.
 
 Lemma spine_subst_eq {cf:checker_flags} {Σ Γ inst s Δ Δ'} : 
@@ -869,7 +870,8 @@ Proof.
   eexists; econstructor; eauto.
 Qed.
 
-Hint Resolve @isType_Sort : pcuic.
+#[global]
+Hint Resolve isType_Sort : pcuic.
 
 Lemma arity_spine_it_mkProd_or_LetIn_Sort {cf:checker_flags} Σ Γ ctx s args inst : 
   wf Σ.1 -> wf_universe Σ s ->

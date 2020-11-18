@@ -572,7 +572,7 @@ Fixpoint tsize t : nat :=
   | tProj p c => S (tsize c)
   | tFix mfix idx => S (mfixpoint_size tsize mfix)
   | tCoFix mfix idx => S (mfixpoint_size tsize mfix)
-  | x => 1
+  | _ => 1
   end.
 
 Lemma tsize_nonzero :

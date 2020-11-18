@@ -124,7 +124,7 @@ Section print_term.
               | tLambda na B =>
                 let na' := fresh_name Γ na br in
                 string_of_name na' ^ "  " ^ print_branch (vass na' :: Γ) n B
-              | t => "=> " ^ print_term Γ true false br
+              | _ => "=> " ^ print_term Γ true false br
               end
             end
         in

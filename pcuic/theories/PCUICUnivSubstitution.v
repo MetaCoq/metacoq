@@ -1075,7 +1075,7 @@ Proof.
     rewrite <- (fix_context_subst_instance u mfix0).
     unfold subst_instance_context, map_context in *. rewrite map_app in *.
     eassumption.
-    Grab Existential Variables. all:repeat econstructor.
+    Unshelve. all:repeat econstructor.
 Qed.
 
 Fixpoint subst_instance_stack l π :=

@@ -808,23 +808,32 @@ Section ParallelReduction.
 
 End ParallelReduction.
 
+#[global]
 Hint Constructors pred1 : pcuic.
+#[global]
 Hint Unfold All2_prop2_eq All2_prop2 on_decl on_decl_over on_rel on_Trel snd on_snd : pcuic.
+#[global]
 Hint Resolve All2_same: pcuic.
+#[global]
 Hint Constructors All2_local_env : pcuic.
 
+#[global]
 Hint Resolve pred1_ctx_refl : pcuic.
 
 Ltac pcuic_simplify :=
   simpl || split || rdest || red.
 
+#[global]
 Hint Extern 10 => progress pcuic_simplify : pcuic.
 
 Notation pred1_ctx Σ Γ Γ' := (All2_local_env (on_decl (pred1 Σ)) Γ Γ').
 
+#[global]
 Hint Extern 4 (pred1 _ _ _ ?t _) => tryif is_evar t then fail 1 else eapply pred1_refl_gen : pcuic.
+#[global]
 Hint Extern 4 (pred1 _ _ _ ?t _) => tryif is_evar t then fail 1 else eapply pred1_refl : pcuic.
 
+#[global]
 Hint Extern 20 (#|?X| = #|?Y|) =>
 match goal with
   [ H : All2_local_env _ ?X ?Y |- _ ] => apply (All2_local_env_length H)
@@ -833,6 +842,7 @@ match goal with
 | [ H : All2_local_env_over _ _ _ ?Y ?X |- _ ] => symmetry; apply (All2_local_env_length H)
 end : pcuic.
 
+#[global]
 Hint Extern 4 (pred1_ctx ?Σ ?Γ ?Γ') =>
   match goal with
   | [ H : pred1_ctx Σ (Γ ,,, _) (Γ' ,,, _) |- _ ] => apply (All2_local_env_app_left H)
@@ -858,6 +868,7 @@ Proof.
   destruct a as [na [b|] ty]; constructor; pcuic.
 Qed.
 
+#[global]
 Hint Extern 4 (All2_local_env_over _ _ _ ?X) =>
   tryif is_evar X then fail 1 else eapply All2_local_env_over_refl : pcuic.
 
@@ -1283,6 +1294,7 @@ Section ParallelWeakening.
 
 End ParallelWeakening.
 
+#[global]
 Hint Resolve pred1_pred1_ctx : pcuic.
 
 Section ParallelSubstitution.

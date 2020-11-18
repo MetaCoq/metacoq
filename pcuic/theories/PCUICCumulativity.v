@@ -76,6 +76,7 @@ Inductive conv `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> t
 
 where " Σ ;;; Γ |- t = u " := (@conv _ Σ Γ t u) : type_scope.
 
+#[global]
 Hint Resolve cumul_refl conv_refl : pcuic.
 
 
@@ -182,6 +183,7 @@ Proof.
   - econstructor 2; eauto. 
 Qed.
 
+#[global]
 Hint Resolve red_conv : core.
 
 Lemma eq_term_App `{checker_flags} Σ φ f f' :
@@ -239,6 +241,7 @@ Proof.
     + assumption.
 Qed.
 
+#[global]
 Hint Resolve leq_term_refl cumul_refl' : core.
 
 Lemma red_conv_conv `{cf : checker_flags} Σ Γ t u v :

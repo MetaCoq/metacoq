@@ -133,6 +133,7 @@ Notation "g 'o' f" := (compose g%function f%function) (at level 40, left associa
 
 Definition composeD {A B C} (g : forall b, C b) (f : A -> B) := fun x : A => g (f x).
 Global Arguments composeD {A B C}%type_scope (g f)%function_scope x.
+#[global]
 Hint Unfold composeD.
 Notation "g 'oD' f" := (composeD g f) (at level 40, left associativity) : function_scope.
 
@@ -189,6 +190,7 @@ Definition pointwise_paths {A} {P:A->Type} (f g:forall x:A, P x)
 
 Global Arguments pointwise_paths {A}%type_scope {P} (f g)%function_scope.
 
+#[global]
 Hint Unfold pointwise_paths : typeclass_instances.
 
 Notation "f == g" := (pointwise_paths f g) (at level 70, no associativity) : type_scope.
@@ -1304,6 +1306,7 @@ Defined.
 
 Notation concatR := (fun p q => concat q p).
 
+#[global]
 Hint Resolve
   concat_1p concat_p1 concat_p_pp
   inv_pp inv_V
@@ -1558,6 +1561,7 @@ Section EquivInverse.
 End EquivInverse.
 
 (** If the goal is [IsEquiv _^-1], then use [isequiv_inverse]; otherwise, don't pretend worry about if the goal is an evar and we want to add a [^-1]. *)
+#[global]
 Hint Extern 0 (IsEquiv _^-1) => apply @isequiv_inverse : typeclass_instances.
 
 (** [Equiv A B] is a symmetric relation. *)

@@ -193,6 +193,7 @@ Proof.
   generalize #|mfix| at 2 3. induction n0; auto. simpl.
   f_equal. apply IHn0.
 Qed.
+#[global]
 Hint Resolve lift_unfold_fix : core.
 
 Lemma lift_unfold_cofix n k mfix idx narg fn :
@@ -208,6 +209,7 @@ Proof.
   generalize #|mfix| at 2 3. induction n0; auto. simpl.
   f_equal. apply IHn0.
 Qed.
+#[global]
 Hint Resolve lift_unfold_cofix : core.
 
 Lemma lift_is_constructor:
@@ -220,6 +222,7 @@ Proof.
   destruct t; try discriminate || reflexivity.
   destruct t; try discriminate || reflexivity.
 Qed.
+#[global]
 Hint Resolve lift_is_constructor : core.
 
 Hint Rewrite UnivSubst.lift_subst_instance_constr : lift.
@@ -859,6 +862,7 @@ Proof.
   red in H0. apply onInductives in H0.
   eapply (nth_error_alli H1) in H0. apply onArity in H0 as [Hs Hpars]. wf.
 Qed.
+#[global]
 Hint Resolve wf_ind_type : wf.
 
 

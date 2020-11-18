@@ -242,7 +242,8 @@ Qed.
 Definition eq_binder_annot_refl {A} x : @eq_binder_annot A x x.
 Proof. reflexivity. Qed.
 
-Hint Resolve @eq_binder_annot_refl : core.
+#[global]
+Hint Resolve eq_binder_annot_refl : core.
 
 Instance eq_term_upto_univ_refl Σ Re Rle napp :
   RelationClasses.Reflexive Re ->

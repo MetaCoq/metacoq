@@ -165,7 +165,9 @@ End Normal.
 Derive Signature for whnf.
 Derive Signature for whne.
 Derive Signature for All.
+#[global]
 Hint Constructors whnf whne : core.
+#[global]
 Hint Constructors whnf whne : pcuic.
 
 Local Ltac inv H := inversion H; subst; clear H.
@@ -181,6 +183,7 @@ Ltac help' := try repeat match goal with
         end.
 Ltac help := help'; try match goal with | [ H0 : mkApps _ _ = _ |- _ ] => symmetry in H0 end; help'.
 
+#[global]
 Hint Resolve All_Forall : core.
 
 Notation decision P := ({P} + {~P}).
@@ -200,6 +203,7 @@ Lemma negb_is_true b :
 Proof.
   destruct b; firstorder.
 Qed.
+#[global]
 Hint Resolve negb_is_true : core.
 
 Lemma whnf_mkApps_inv flags :
@@ -258,6 +262,7 @@ Lemma whnf_fixapp' {flags} Σ Γ mfix idx narg body v :
 Proof.
  intros E1 H. eapply whnf_fixapp. rewrite E1. eauto.
 Qed. 
+#[global]
 Hint Resolve whnf_fixapp' : core.
 
 Lemma whnf_whne_nodelta_upgrade Σ Γ t :
@@ -923,6 +928,7 @@ Proof.
   induction 1 using red_rect_n1; eauto using whnf_pres1.
 Qed.
 
+#[global]
 Hint Resolve All2_same All2_firstn All2_skipn OnOne2_All2 red_mkApps All2_app : pcuic.
 
 (* For terms in whnf we have a very useful inversion lemma for reductions.
@@ -981,6 +987,7 @@ Inductive whnf_red Σ Γ : term -> term -> Type :=
 
 Derive Signature for whnf_red.
 
+#[global]
 Hint Constructors whnf_red : pcuic.
 
 Lemma whnf_red_red Σ Γ t t' :
@@ -1015,6 +1022,7 @@ Proof.
     eauto.
 Qed.
 
+#[global]
 Hint Resolve whnf_red_red : pcuic.
 
 Lemma whnf_red_mkApps Σ Γ hd hd' args args' :
@@ -1029,6 +1037,7 @@ Proof.
   constructor; auto.
 Qed.
 
+#[global]
 Hint Resolve whnf_red_mkApps : pcuic.
 
 Lemma whnf_red_mkApps_l_inv Σ Γ hd args t :

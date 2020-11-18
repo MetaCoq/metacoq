@@ -536,21 +536,25 @@ Arguments lexprod [A B].
     globally available. *)
 Definition wf `{checker_flags} := Forall_decls_typing typing.
 Existing Class wf.
+#[global]
 Hint Mode wf + + : typeclass_intances.
 
 Definition wf_ext `{checker_flags} := on_global_env_ext (lift_typing typing).
 Existing Class wf_ext.
+#[global]
 Hint Mode wf_ext + + : typeclass_intances.
 
 Lemma wf_ext_wf {cf:checker_flags} Σ : wf_ext Σ -> wf Σ.
 Proof. intro H; apply H. Qed.
 Existing Instance wf_ext_wf.
 Coercion wf_ext_wf : wf_ext >-> wf.
+#[global]
 Hint Resolve wf_ext_wf : core.
 
 Lemma wf_ext_consistent {cf:checker_flags} Σ :
   wf_ext Σ -> consistent Σ.
 Proof. intros [? [? [? [? ?]]]]; assumption. Qed.
+#[global]
 Hint Resolve wf_ext_consistent : core.
 
 Lemma wf_local_app `{checker_flags} Σ (Γ Γ' : context) : wf_local Σ (Γ ,,, Γ') -> wf_local Σ Γ.
@@ -558,6 +562,7 @@ Proof.
   induction Γ'. auto.
   simpl. intros H'; inv H'; eauto.
 Defined.
+#[global]
 Hint Resolve wf_local_app : wf.
 
 Lemma typing_wf_local `{checker_flags} {Σ} {Γ t T} :
@@ -566,12 +571,14 @@ Proof.
   induction 1; eauto using wf_local_app.
 Defined.
 
+#[global]
 Hint Extern 4 (wf_local _ ?Γ) =>
   match goal with
   | [ H : typing _ _ _ _ |- _ ] => exact (typing_wf_local H)
   | [ H : PCUICTypingDef.typing _ _ _ _ _ |- _ ] => exact (typing_wf_local H)  
   end : pcuic.
 
+#[global]
 Hint Resolve typing_wf_local : wf.
 
 Definition env_prop `{checker_flags} (P : forall Σ Γ t T, Type) (PΓ : forall Σ Γ, wf_local Σ Γ ->  Type) :=

@@ -37,6 +37,7 @@ Extract Constant time =>
 
 Local Existing Instance extraction_checker_flags.
 Definition wf_ext_wf Σ : wf_ext Σ -> wf Σ := fst.
+#[global]
 Hint Resolve wf_ext_wf : core.
 
 Section fix_sigma.
@@ -96,15 +97,15 @@ Section fix_sigma.
           eapply Acc_no_loop in X0. eauto.
           eapply @normalisation; eauto.
         * constructor. do 2 eexists. now split.
-  Grab Existential Variables.
-  - eapply red_welltyped; sq.
-    3:eapply Relation_Properties.clos_rtn1_rt in r; eassumption. all:eauto.
+  Unshelve.
   - destruct H as [].
     eapply inversion_Prod in X0 as (? & ? & ? & ? & ?) ; auto.
     eapply cored_red in H0 as [].
     econstructor. econstructor. econstructor. eauto.
     2:reflexivity. econstructor; pcuic. 
     eapply subject_reduction; eauto.
+  - eapply red_welltyped; sq.
+    3:eapply Relation_Properties.clos_rtn1_rt in r; eassumption. all:eauto.
   Qed.
 
   Instance wf_reduction : WellFounded term_rel.
@@ -460,6 +461,7 @@ End Erase.
 
 Opaque wf_reduction.
 Arguments iswelltyped {cf Σ Γ t A}.
+#[global]
 Hint Constructors typing erases : core.
 
 Lemma isType_isErasable Σ Γ T : isType Σ Γ T -> isErasable Σ Γ T.

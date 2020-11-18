@@ -853,6 +853,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
   Proof.
     induction 1; simpl; intros; destruct n; simpl; try econstructor; eauto.
   Qed.
+  #[global] 
   Hint Resolve All_local_env_skipn : wf.
 
   Lemma Alli_impl_trans : forall (A : Type) (P Q : nat -> A -> Type) (l : list A) (n : nat),

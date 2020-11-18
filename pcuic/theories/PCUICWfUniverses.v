@@ -62,7 +62,7 @@ Section CheckerFlags.
     now apply wf_universe_sup.
   Qed.
 
-  Hint Resolve @wf_universe_type1 @wf_universe_super @wf_universe_sup @wf_universe_product : pcuic.
+  Hint Resolve wf_universe_type1 wf_universe_super wf_universe_sup wf_universe_product : pcuic.
 
 
   Definition wf_universeb_level Σ l := 
@@ -76,7 +76,6 @@ Section CheckerFlags.
 
   Definition wf_universeb_instance Σ u :=
     forallb (wf_universeb_level Σ) u.
-
 
   Lemma wf_universe_levelP {Σ l} : reflect (wf_universe_level Σ l) (wf_universeb_level Σ l).
   Proof.
@@ -840,8 +839,10 @@ Section CheckerFlags.
   
 End CheckerFlags.
 
-Hint Resolve @wf_universe_type1 @wf_universe_super @wf_universe_sup @wf_universe_product : pcuic.
+#[global]
+Hint Resolve wf_universe_type1 wf_universe_super wf_universe_sup wf_universe_product : pcuic.
 
+#[global]
 Hint Extern 4 (wf_universe _ ?u) => 
   match goal with
   [ H : typing _ _ _ (tSort u) |- _ ] => apply (typing_wf_universe _ H)

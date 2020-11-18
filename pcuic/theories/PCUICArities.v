@@ -288,6 +288,7 @@ Proof.
   reflexivity.
 Qed.
 
+#[global]
 Hint Extern 4 (_ ;;; _ |- _ <= _) => reflexivity : pcuic.
 Ltac pcuic := eauto 5 with pcuic.
 
@@ -312,6 +313,7 @@ Proof.
     + rewrite !subst_app_simpl /= !(subst_closedn s') //.
 Qed.
 
+#[global]
 Hint Constructors subslet : core pcuic.
 
 Lemma subslet_app_inv {cf:checker_flags} Σ Γ Δ Δ' s : 

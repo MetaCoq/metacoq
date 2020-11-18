@@ -159,7 +159,7 @@ Section print_term.
                 let na' := (fresh_name Γ na.(binder_name) A) in
                 let ann_na' := mkBindAnn na' na.(binder_relevance) in
                 string_of_name na' ^ "  " ^ print_branch (vass ann_na' A :: Γ) n B
-              | t => "=> " ^ print_term Γ true br
+              | _ => "=> " ^ print_term Γ true br
               end
             end
         in

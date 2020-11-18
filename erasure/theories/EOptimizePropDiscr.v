@@ -26,6 +26,7 @@ Local Existing Instance extraction_checker_flags.
 
 Ltac introdep := let H := fresh in intros H; depelim H.
 
+#[global]
 Hint Constructors Ee.eval : core.
 
 Import E.

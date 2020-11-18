@@ -630,6 +630,7 @@ Section Pred1_inversion.
 
 End Pred1_inversion.
 
+#[global]
 Hint Constructors pred1 : pcuic.
 
 Section Rho.

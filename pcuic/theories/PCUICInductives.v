@@ -60,6 +60,7 @@ Proof.
   reflexivity.
 Qed.
 
+#[global]
 Hint Resolve conv_ctx_refl : pcuic.
 
 Definition branch_type ind mdecl (idecl : one_inductive_body) params u p i (br : ident * term * nat) :=
@@ -281,6 +282,7 @@ Lemma isType_intro {cf:checker_flags} {Σ Γ T s} : Σ ;;; Γ |- T : tSort s -> 
 Proof.
   now intros Hty; exists s.
 Qed.
+#[global]
 Hint Resolve isType_intro : pcuic.
 
 Lemma on_inductive_inst {cf:checker_flags} Σ Γ ind u mdecl idecl : 

@@ -9,6 +9,7 @@ Ltac absurd :=
   match goal with
   | [H : False |- _] => elim H
   end.
+#[global]
 Hint Extern 10 => absurd : core.
 (** * Valuations *)
 
@@ -1696,6 +1697,7 @@ Section UniverseClosedSubst.
 
 End UniverseClosedSubst.
 
+#[global]
 Hint Resolve closedu_subst_instance_level closedu_subst_instance_level_expr
      closedu_subst_instance_univ closedu_subst_instance_instance : substu.
 
@@ -1747,6 +1749,7 @@ Section SubstInstanceClosed.
   Qed.
 End SubstInstanceClosed.
 
+#[global]
 Hint Resolve subst_instance_level_closedu subst_instance_level_expr_closedu
      subst_instance_univ_closedu subst_instance_instance_closedu : substu.
 

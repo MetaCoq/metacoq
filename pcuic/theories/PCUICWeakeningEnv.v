@@ -159,6 +159,7 @@ Proof.
       unfold eq_kername; destruct kername_eq_dec; subst; auto.
       apply lookup_env_Some_fresh in IHΣ''; contradiction.
 Qed.
+#[global]
 Hint Resolve extends_lookup : extends.
 
 Lemma extends_wf_local `{checker_flags} Σ Γ (wfΓ : wf_local Σ Γ) :
@@ -176,6 +177,7 @@ Proof.
   - destruct tu as [u Hu]; exists u; auto.
   - destruct tu as [u Hu]; exists u; auto.
 Qed.
+#[global]
 Hint Resolve extends_wf_local : extends.
 
 Lemma weakening_env_red1 `{CF:checker_flags} Σ Σ' Γ M N :
@@ -302,6 +304,7 @@ Proof.
   intros Σ cst decl H0 Σ' X2 H2.
   eapply extends_lookup; eauto.
 Qed.
+#[global]
 Hint Resolve weakening_env_declared_constant : extends.
 
 Lemma weakening_env_declared_minductive `{CF:checker_flags}:
@@ -312,6 +315,7 @@ Proof.
   intros Σ cst decl H0 Σ' X2 H2.
   eapply extends_lookup; eauto.
 Qed.
+#[global]
 Hint Resolve weakening_env_declared_minductive : extends.
 
 Lemma weakening_env_declared_inductive:
@@ -321,6 +325,7 @@ Lemma weakening_env_declared_inductive:
 Proof.
   intros H Σ cst decl H0 [Hmdecl Hidecl] Σ' X2 H2. split; eauto with extends.
 Qed.
+#[global]
 Hint Resolve weakening_env_declared_inductive : extends.
 
 Lemma weakening_env_declared_constructor :
@@ -332,6 +337,7 @@ Proof.
   intros H Σ cst mdecl idecl cdecl [Hidecl Hcdecl] Σ' X2 H2.
   split; eauto with extends.
 Qed.
+#[global]
 Hint Resolve weakening_env_declared_constructor : extends.
 
 Lemma weakening_env_declared_projection :
@@ -343,6 +349,7 @@ Proof.
   intros H Σ cst mdecl idecl cdecl [Hidecl Hcdecl] Σ' X2 H2.
   split; eauto with extends.
 Qed.
+#[global]
 Hint Resolve weakening_env_declared_projection : extends.
 
 Lemma weakening_All_local_env_impl `{checker_flags}
@@ -354,6 +361,7 @@ Proof.
   induction 1; intros; simpl; econstructor; eauto.
 Qed.
 
+#[global]
 Hint Resolve weakening_env_global_ext_levels : extends.
 
 Lemma weakening_env_consistent_instance {cf:checker_flags} Σ Σ' φ ctrs u (H : extends Σ Σ')
@@ -369,6 +377,7 @@ Proof.
     - eapply valid_subset; tea;
       now eapply weakening_env_global_ext_constraints.
 Qed.
+#[global]
 Hint Resolve weakening_env_consistent_instance : extends.
 
 Lemma extends_check_recursivity_kind {cf:checker_flags} Σ ind k Σ' : extends Σ Σ' -> wf Σ' -> 
@@ -446,6 +455,7 @@ Proof.
     apply Hl.
 Qed.
 
+#[global]
 Hint Resolve extends_wf_fixpoint extends_wf_cofixpoint : extends.
 
 Lemma weakening_env `{checker_flags} :
@@ -684,6 +694,7 @@ Proof.
     eapply (weakening_env (_, _)); eauto.
 Qed.
 
+#[global]
 Hint Unfold weaken_env_prop : pcuic.
 
 Lemma declared_constant_inj {Σ c} decl1 decl2 :
@@ -726,6 +737,7 @@ Qed.
 Lemma declared_inductive_minductive Σ ind mdecl idecl :
   declared_inductive Σ mdecl ind idecl -> declared_minductive Σ (inductive_mind ind) mdecl.
 Proof. now intros []. Qed.
+#[global]
 Hint Resolve declared_inductive_minductive : pcuic core.
 
 Lemma on_declared_constant `{checker_flags} Σ cst decl :
@@ -746,6 +758,7 @@ Proof.
   now eapply wf_extends.
 Qed.
 
+#[global]
 Hint Resolve weaken_wf_local | 100 : pcuic.
 
 Lemma on_declared_minductive `{checker_flags} {Σ ref decl} :

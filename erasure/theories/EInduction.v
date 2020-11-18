@@ -63,9 +63,11 @@ Ltac applyhyp :=
   end.
 
 Class Hyp (T : Type) := hyp : T.
+#[global]
 Hint Extern 10 (Hyp _) => exactly_once multimatch goal with H : _ |- _
 => exact H end : typeclass_instances.
 Class AHyp (T : Type) := ahyp : T.
+#[global]
 Hint Extern 10 (AHyp _) => multimatch goal with H : _ |- _
 => eapply H; shelve end : typeclass_instances.
 

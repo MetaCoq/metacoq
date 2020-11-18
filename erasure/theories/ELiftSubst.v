@@ -92,7 +92,7 @@ Fixpoint closedn k (t : term) : bool :=
   | tCoFix mfix idx =>
     let k' := List.length mfix + k in
     List.forallb (test_def (closedn k')) mfix
-  | x => true
+  | _ => true
   end.
 
 Notation closed t := (closedn 0 t).
@@ -145,7 +145,9 @@ Proof.
   reflexivity. intros. lia.
 Qed.
 
+#[global]
 Hint Extern 0 (_ = _) => progress f_equal : all.
+#[global]
 Hint Unfold on_snd snd : all.
 
 Lemma on_snd_eq_id_spec {A B} (f : B -> B) (x : A * B) :
@@ -154,6 +156,7 @@ Lemma on_snd_eq_id_spec {A B} (f : B -> B) (x : A * B) :
 Proof.
   destruct x; simpl; unfold on_snd; simpl. split; congruence.
 Qed.
+#[global]
 Hint Resolve -> on_snd_eq_id_spec : all.
 
 Lemma map_def_eq_spec (f g : term -> term) (x : def term) :
@@ -162,6 +165,7 @@ Lemma map_def_eq_spec (f g : term -> term) (x : def term) :
 Proof.
   intros. unfold map_def; f_equal; auto.
 Qed.
+#[global]
 Hint Resolve map_def_eq_spec : all.
 
 Lemma map_def_id_spec (f : term -> term) (x : def term) :
@@ -170,14 +174,18 @@ Lemma map_def_id_spec (f : term -> term) (x : def term) :
 Proof.
   intros. rewrite (map_def_eq_spec f id); auto. destruct x; auto.
 Qed.
+#[global]
 Hint Resolve map_def_id_spec : all.
 
 Lemma compose_map_def (f g : term -> term) :
   (map_def f) ∘ (map_def g) = map_def (f ∘ g).
 Proof. reflexivity. Qed.
 
+#[global]
 Hint Extern 10 (_ < _)%nat => lia : all.
+#[global]
 Hint Extern 10 (_ <= _)%nat => lia : all.
+#[global]
 Hint Extern 10 (@eq nat _ _) => lia : all.
 
 Ltac change_Sk :=
@@ -220,8 +228,10 @@ Lemma lift0_p : forall M, lift0 0 M = M.
   apply lift0_id; easy.
 Qed.
 
+#[global]
 Hint Extern 10 => apply_spec : all.
 
+#[global]
 Hint Resolve -> on_snd_eq_spec : all.
 
 Lemma simpl_lift :
@@ -282,6 +292,7 @@ Lemma isLambda_lift n k (bod : term) :
   isLambda bod = true -> isLambda (lift n k bod) = true.
 Proof. destruct bod; simpl; try congruence. Qed.
 
+#[global]
 Hint Resolve lift_isApp map_non_nil isLambda_lift : all.
 
 

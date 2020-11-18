@@ -262,6 +262,7 @@ Qed.
 
 Lemma map_nil {A B} (f : A -> B) (l : list A) : l <> [] -> map f l <> [].
 Proof. induction l; simpl; congruence. Qed.
+#[global]
 Hint Resolve map_nil : wf.
 
 Inductive nth_error_Spec {A} (l : list A) (n : nat) : option A -> Type :=

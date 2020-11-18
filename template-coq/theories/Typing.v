@@ -594,6 +594,7 @@ Lemma cumul_trans `{checker_flags} : forall Σ Γ t u v, Σ ;;; Γ |- t <= u -> 
   intros. todo "cumul_trans".
 Defined.
 
+#[global]
 Hint Resolve conv_refl cumul_refl' : typecheck.
 
 Lemma congr_cumul_prod `{checker_flags} : forall Σ Γ na na' M1 M2 N1 N2,
@@ -1024,6 +1025,7 @@ Proof.
   induction Γ'. auto.
   simpl. intros H'; inv H'; eauto.
 Defined.
+#[global]
 Hint Resolve wf_local_app : wf.
 
 Lemma typing_wf_local `{checker_flags} {Σ} {Γ t T} :
@@ -1031,6 +1033,7 @@ Lemma typing_wf_local `{checker_flags} {Σ} {Γ t T} :
 Proof.
   induction 1; eauto using wf_local_app.
 Defined.
+#[global]
 Hint Resolve typing_wf_local : wf.
 
 Lemma typing_wf_local_size `{checker_flags} {Σ} {Γ t T}
@@ -1699,4 +1702,5 @@ Proof.
 Defined.
 
 Definition wf_ext_wf `{checker_flags} Σ : wf_ext Σ -> wf Σ.1 := fst.
+#[global]
 Hint Immediate wf_ext_wf : core.

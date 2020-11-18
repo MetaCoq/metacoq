@@ -211,10 +211,12 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T).
     | localenv2_nil : All2_local_env [] []
     | localenv2_cons_abs Γ Γ' na na' t t' :
         All2_local_env Γ Γ' ->
+        eq_binder_annot na na' ->
         P Γ Γ' None t t' ->
         All2_local_env (Γ ,, vass na t) (Γ' ,, vass na' t')
     | localenv2_cons_def Γ Γ' na na' b b' t t' :
         All2_local_env Γ Γ' ->
+        eq_binder_annot na na' ->
         P Γ Γ' (Some (b, b')) t t' ->
         All2_local_env (Γ ,, vdef na b t) (Γ' ,, vdef na' b' t').
   End All_local_2.
@@ -234,9 +236,11 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T).
     All2_local_env (on_decl Q) par par'.
   Proof.
     intros H aux.
-    induction H; constructor. auto. red in p. apply aux, p.
-    apply IHAll2_local_env. red. split.
-    apply aux. apply p. apply aux. apply p.
+    induction H; constructor.
+    all: auto.
+    1: apply aux ; assumption.
+    destruct p. split.
+    all: apply aux ; assumption.
   Defined.
 
   Lemma All2_local_env_app_inv :
@@ -780,28 +784,41 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       | [ s ] => match universe_family (cshape_sort s) with
                 | InProp => (* Not squashed: all arguments are in Prop  *)
                   (* This is singleton elimination *) InType
+                | InSProp => (* Not squashed: all arguments are in SProp *)
+                  InType
                 | _ => (* Squashed: some arguments are higher than Prop,
                         restrict to Prop *) InProp
                 end
       | _ => (* Squashed: at least 2 constructors *) InProp
       end.
+    
+    Fixpoint elim_sort_sprop_ind (ind_ctors_sort : list constructor_shape) :=
+      match ind_ctors_sort with
+      | [] => (* Empty inductive strict proposition: *) InType
+      | _ => (* All other inductives in SProp are squashed *) InSProp
+      end.
 
     Definition check_ind_sorts (Σ : global_env_ext)
               params kelim ind_indices cshapes ind_sort : Type :=
-      match universe_family ind_sort with
-      | InProp =>
+        match universe_family ind_sort with
+        | InProp =>
         (** The inductive is declared in the impredicative sort Prop *)
         (** No universe-checking to do: any size of constructor argument is allowed,
             however elimination restrictions apply. *)
         leb_sort_family kelim (elim_sort_prop_ind cshapes)
-      | _ =>
+        | InSProp => 
+        (** The inductive is declared in the impredicative sort SProp *)
+        (** No universe-checking to do: any size of constructor argument is allowed,
+            however elimination restrictions apply. *)
+        leb_sort_family kelim (elim_sort_sprop_ind cshapes)
+        | _ =>
         (** The inductive is predicative: check that all constructors arguments are
             smaller than the declared universe. *)
         check_constructors_smaller Σ cshapes ind_sort
         × if indices_matter then
             type_local_ctx Σ params ind_indices ind_sort
           else True
-      end.
+        end.
 
     Record on_ind_body Σ mind mdecl i idecl :=
       { (** The type of the inductive must be an arity, sharing the same params

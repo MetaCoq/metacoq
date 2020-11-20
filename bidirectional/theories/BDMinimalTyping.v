@@ -395,7 +395,8 @@ Section TypingInduction.
       Σ ;;; Γ |- t ▸□ s1 ->
       Psort Σ Γ t s1 ->
       Σ ;;; Γ,, vass n t |- b ▸□ s2 ->
-      Psort Σ (Γ,, vass n t) b s2 -> Pinfer Σ Γ (tProd n t b) (tSort (Universe.sort_of_product s1 s2))) ->
+      Psort Σ (Γ,, vass n t) b s2 ->
+      Pinfer Σ Γ (tProd n t b) (tSort (Universe.sort_of_product s1 s2))) ->
 
     (forall Σ (wfΣ : wf Σ.1) (PΣ : Forall_decls_sorting Pcheck Psort Σ.1)
       (Γ : context) (n : aname) (t b : term) (s : Universe.t) (bty : term),

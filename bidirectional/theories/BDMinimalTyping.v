@@ -91,7 +91,7 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
   map_option_out (build_branches_type ind mdecl idecl params u p) = Some btys ->
   All2 (fun br bty =>
     (br.1 = bty.1) ×
-    (Σ ;;; Γ |- bty.2 ▸□ ps) ×
+    (∑ u , (Σ ;;; Γ |- bty.2 ▸□ u)) ×
     (Σ ;;; Γ |- br.2 ◃ bty.2))
     brs btys ->
   Σ ;;; Γ |- tCase indnpar p c brs ▹ mkApps p (skipn npar args ++ [c])
@@ -213,8 +213,8 @@ Proof.
     | |- _ => exact 1
     end.
     - exact (S (i + c0 + (all2_size _ 
-                                        (fun x y p => (infering_sort_size _ _ _ _ _ (fst (snd p)))
-                                                      + (checking_size _ _ _ _ _ (snd (snd p)))) a))).
+                                      (fun x y p => (infering_sort_size _ _ _ _ _ (fst (snd p)).π2)
+                                                    + (checking_size _ _ _ _ _ (snd (snd p)))) a))).
     - exact (S (all_size _ (fun d p => infering_sort_size _ _ _ _ _ p.π2) a) +
                (all_size _ (fun x p => checking_size _ _ _ _ _ p.1) a0)).
     - exact (S (all_size _ (fun d p => infering_sort_size _ _ _ _ _ p.π2) a) +
@@ -463,7 +463,7 @@ Section TypingInduction.
       forall btys,
       map_option_out (build_branches_type ind mdecl idecl params u p) = Some btys ->
       All2 (fun br bty => (br.1 = bty.1) ×
-                        (Σ ;;; Γ |- bty.2 ▸□ ps) × Psort Σ Γ bty.2 ps ×
+                        (∑ u, (Σ ;;; Γ |- bty.2 ▸□ u) × Psort Σ Γ bty.2 u) ×
                         (Σ ;;; Γ |- br.2 ◃ bty.2) × Pcheck Σ Γ br.2 bty.2)
             brs btys ->
       Pinfer Σ Γ (tCase (ind,npar) p c brs) (mkApps p (skipn npar args ++ [c]))) ->
@@ -723,12 +723,11 @@ Section TypingInduction.
       clear - IH'. cbn in IH' |- *.
       induction a.
       1: by constructor.
-      destruct r as [? [? ?]].
+      destruct r as [? [[? ?] ?]].
       constructor.
       + intuition eauto.
-        1: unshelve eapply (IH' (sort_cons _ wfΣ _ _ _ _)) ; try eassumption.
-        2: unshelve eapply (IH' (check_cons _ wfΣ _ _ _ _)) ; try eassumption.
-        all: simpl ; lia.
+        * eexists. split ; eauto. unshelve eapply (IH' (sort_cons _ wfΣ _ _ _ _)) ; try eassumption. simpl. lia.
+        * unshelve eapply (IH' (check_cons _ wfΣ _ _ _ _)) ; try eassumption. simpl. lia.
       + apply IHa.
         intros. apply IH'. simpl in *. lia.
     

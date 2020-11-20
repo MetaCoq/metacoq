@@ -122,6 +122,7 @@ Inductive type_error :=
 | NotASort (t : term)
 | NotAProduct (t t' : term)
 | NotAnInductive (t : term)
+| NotAnArity (t : term)
 | IllFormedFix (m : mfixpoint term) (i : nat)
 | UnsatisfiedConstraints (c : ConstraintSet.t)
 | Msg (s : string).
@@ -274,6 +275,7 @@ Definition string_of_type_error Σ (e : type_error) : string :=
       "\nin universe graph:\n" ^ print_universes_graph G
   | NotASort t => "Not a sort"
   | NotAProduct t t' => "Not a product"
+  | NotAnArity t => print_term Σ [] t ^ " is not an arity"
   | NotAnInductive t => "Not an inductive"
   | IllFormedFix m i => "Ill-formed recursive definition"
   | UnsatisfiedConstraints c => "Unsatisfied constraints"
@@ -1456,7 +1458,6 @@ Section CheckEnv.
     sq. constructor; assumption.
   Defined.
 
-
   (* Definition Build_on_ind_body Σ mind mdecl i idecl ind_indices ind_sort *)
   (*   : ind_type idecl = *)
   (*     it_mkProd_or_LetIn (ind_params mdecl) *)
@@ -1467,20 +1468,168 @@ Section CheckEnv.
   (*        on_projections P Σ mind mdecl i idecl ind_indices (ind_projs idecl)) -> *)
   (*       check_ind_sorts P onConstructors ind_sort -> on_ind_body P Σ mind mdecl i idecl *)
 
+  (* We pack up all the information required on the global environment and graph in a 
+    single record. *)
+  Record wf_env {cf:checker_flags} := { 
+      wf_env_env :> global_env_ext;
+      wf_env_wf :> ∥ wf_ext wf_env_env ∥;
+      wf_env_graph :> universes_graph;
+      wf_env_graph_wf : is_graph_of_uctx wf_env_graph (global_ext_uctx wf_env_env)
+  }.
 
-  Lemma check_one_ind_body:
-    forall Σ : global_env_ext,
-      ∥ wf Σ ∥ ->
-      ∥ on_udecl Σ.1 Σ.2 ∥ ->
-      forall G : universes_graph,
-        is_graph_of_uctx G (global_ext_uctx Σ) ->
-        forall (id : kername) (mdecl : mutual_inductive_body)
-          (n : nat) (x : one_inductive_body),
-          EnvCheck (∥ on_ind_body (lift_typing typing) Σ id mdecl n x ∥).
+  Definition wf_env_sq_wf (Σ : wf_env) : ∥ wf Σ ∥.
   Proof.
-    intros Σ HΣ HΣ'0 G HG id mdecl n [].
-  Admitted.
+    destruct (wf_env_wf Σ).
+    sq. apply X.
+  Qed.
 
+  Definition check_type_wf_ext (Σ : global_env_ext) (wfΣ : ∥ wf_ext Σ ∥) 
+    (G : universes_graph) (HG : is_graph_of_uctx G (global_ext_uctx Σ)) Γ (wfΓ : ∥ wf_local Σ Γ ∥) t T : 
+    typing_result (∥ Σ ;;; Γ |- t : T ∥) := 
+    @check cf Σ (let 'sq wfΣ := wfΣ in sq wfΣ.1) (let 'sq wfΣ := wfΣ in sq wfΣ.2) G HG Γ wfΓ t T.
+
+  Definition check_type_wf_env (Σ : wf_env) Γ (wfΓ : ∥ wf_local Σ Γ ∥) t T : typing_result (∥ Σ ;;; Γ |- t : T ∥) := 
+    check_type_wf_ext Σ (wf_env_wf Σ) Σ (wf_env_graph_wf Σ) Γ wfΓ t T.
+  
+  Definition infer_type_wf_ext (Σ : global_env_ext) (wfΣ : ∥ wf_ext Σ ∥) 
+    (G : universes_graph) (HG : is_graph_of_uctx G (global_ext_uctx Σ)) Γ (wfΓ : ∥ wf_local Σ Γ ∥) t : 
+    typing_result (∑ T, ∥ Σ ;;; Γ |- t : T ∥) := 
+    @infer cf Σ (let 'sq wfΣ := wfΣ in sq wfΣ.1) (let 'sq wfΣ := wfΣ in sq wfΣ.2) G HG Γ wfΓ t.
+
+  Definition infer_type_wf_env (Σ : wf_env) Γ (wfΓ : ∥ wf_local Σ Γ ∥) t : typing_result (∑ T, ∥ Σ ;;; Γ |- t : T ∥) := 
+    infer_type_wf_ext Σ (wf_env_wf Σ) Σ (wf_env_graph_wf Σ) Γ wfΓ t.
+    
+  Definition wfnil {Σ : global_env_ext} : ∥ wf_local Σ [] ∥ := sq localenv_nil.
+  Print Grammar constr.
+  Notation " ' pat <- m ;; f " := (bind m (fun pat => f)) (pat pattern, right associativity, at level 100, m at next level).
+
+  Fixpoint split_at_aux {A} (n : nat) (acc : list A) (l : list A) : list A * list A :=
+    match n with 
+    | 0 => (List.rev acc, l)
+    | S n' => 
+      match l with
+      | [] => (List.rev acc, [])
+      | hd :: l' => split_at_aux n' (hd :: acc) l'
+      end
+    end.
+
+  Lemma split_at_aux_firstn_skipn {A} n acc (l : list A) : split_at_aux n acc l = (List.rev acc ++ firstn n l, skipn n l).
+  Proof.
+    induction n in acc, l |- *; destruct l; simpl; auto.
+    now rewrite app_nil_r skipn_0.
+    now rewrite app_nil_r skipn_0.
+    now rewrite app_nil_r skipn_nil.
+    rewrite IHn. simpl. 
+    now rewrite -app_assoc skipn_S /=.
+  Qed.
+
+  Definition split_at {A} (n : nat) (l : list A) : list A * list A :=
+    split_at_aux n [] l.
+
+  Lemma split_at_firstn_skipn {A} n (l : list A) : split_at n l = (firstn n l, skipn n l).
+  Proof.
+    now rewrite /split_at split_at_aux_firstn_skipn /= //.
+  Qed.
+  
+  Lemma inversion_it_mkProd_or_LetIn Σ {wfΣ : wf Σ.1}:
+    forall {Γ Δ s A},
+      Σ ;;; Γ |- it_mkProd_or_LetIn Δ (tSort s) : A ->
+      isType Σ Γ (it_mkProd_or_LetIn Δ (tSort s)).
+  Proof.
+    unfold isType. unfold PCUICTypingDef.typing. intros Γ Δ s A h. revert Γ s A h.
+    induction Δ using rev_ind; intros.
+    - simpl in h. eapply inversion_Sort in h as (?&?&?).
+      eexists; constructor; eauto. apply wfΣ.
+    - destruct x as [na [b|] ty]; simpl in *;
+      rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /= in h *.
+      * eapply inversion_LetIn in h as [s' [? [? [? [? ?]]]]]; auto.
+        specialize (IHΔ _ _ _ t1) as [s'' vdefty].
+        exists s''.
+        eapply type_Cumul'. econstructor; eauto. pcuic.
+        eapply red_cumul. repeat constructor.
+      * eapply inversion_Prod in h as [? [? [? [? ]]]]; auto.
+        specialize (IHΔ _ _ _ t0) as [s'' Hs''].
+        eexists (Universe.sort_of_product x s'').
+        eapply type_Cumul'; eauto. econstructor; pcuic. pcuic.
+        reflexivity.
+  Qed.
+
+  Program Definition check_constructors (Σ : wf_env) (id : kername) (mdecl : mutual_inductive_body)
+    (n : nat) (idecl : one_inductive_body) (indices : context) : typing_result (∑ cs : list constructor_shape,
+      on_constructors (lift_typing typing) Σ mdecl n idecl indices (ind_ctors idecl) cs) :=
+      _.
+  Admit Obligations.
+
+  Definition check_projections_type (Σ : wf_env) (mind : kername) (mdecl : mutual_inductive_body)
+  (i : nat) (idecl : one_inductive_body) (indices : context) (cs : list constructor_shape) :=
+    ind_projs idecl <> [] ->
+    match cs return Type with
+    | [cs] => on_projections mdecl mind i idecl indices cs
+    | _ => False
+    end.
+
+  Program Definition check_projections (Σ : wf_env) (mind : kername) (mdecl : mutual_inductive_body)
+    (i : nat) (idecl : one_inductive_body) (indices : context) (cs : list constructor_shape) : 
+    typing_result (check_projections_type Σ mind mdecl i idecl indices cs) := _.
+  Admit Obligations.
+
+  Program Definition check_ind_sorts' (Σ : wf_env) (params : context) (kelim : sort_family) (indices : context) 
+    (cs : list constructor_shape) (ind_sort : Universe.t) : 
+    typing_result (check_ind_sorts (lift_typing typing) Σ params kelim indices cs ind_sort) := _.
+  Admit Obligations.
+
+  Program Definition check_indices Σ mdecl indices :
+    typing_result (forall v : list Variance.t,
+                PCUICEnvironment.ind_variance mdecl = Some v ->
+                ind_respects_variance (PCUICEnvironment.fst_ctx Σ) mdecl v indices) := _.
+  Admit Obligations.
+
+  Program Definition check_one_ind_body (Σ : wf_env) (mind : kername) (mdecl : mutual_inductive_body)
+      (i : nat) (idecl : one_inductive_body) : typing_result (∥ on_ind_body (lift_typing typing) Σ mind mdecl i idecl ∥) :=
+      '(T ; Tty) <- infer_type_wf_env Σ [] wfnil idecl.(ind_type) ;;
+      '(ctxinds; p) <-
+        ((match destArity [] idecl.(ind_type) as da return da = destArity [] idecl.(ind_type) -> typing_result (∑ ctxs, idecl.(ind_type) = it_mkProd_or_LetIn ctxs.1 (tSort ctxs.2)) with
+        | Some (ctx, s) => fun eq => ret ((ctx, s); _)
+        | None => fun _ => raise (NotAnArity T)
+        end eq_refl)) ;;
+      let '(indices, params) := split_at (#|ctxinds.1| - #|mdecl.(ind_params)|) ctxinds.1 in
+      eqpars <- check_eq_true (eqb params mdecl.(ind_params)) (Msg "Inductive arity parameters do not match the parameters of the mutual declaration");;
+      '(cs; oncstrs) <- check_constructors Σ mind mdecl i idecl indices ;;
+      onprojs <- check_projections Σ mind mdecl i idecl indices cs ;;
+      onsorts <- check_ind_sorts' Σ mdecl.(ind_params) idecl.(ind_kelim) indices cs ctxinds.2 ;;
+      onindices <- check_indices Σ mdecl indices ;;
+      ret (let 'sq Tty := Tty in 
+        let 'sq wfext := Σ.(wf_env_wf) in
+        (sq 
+        {| ind_indices := indices; ind_sort := ctxinds.2; 
+           ind_arity_eq := _; onArity := _;
+           ind_cshapes := cs;
+           onConstructors := oncstrs;
+           onProjections := onprojs;
+           ind_sorts := onsorts; 
+           onIndices := onindices |})).
+  Next Obligation. 
+    symmetry in eq.
+    apply destArity_spec_Some in eq. now simpl in eq.
+  Qed.
+  
+  Next Obligation.
+    change (eq_list _ _ _) with (eqb params (ind_params mdecl)) in eqpars.
+    destruct (eqb_spec params (ind_params mdecl)); [|discriminate]. subst params.
+    rewrite split_at_firstn_skipn in Heq_anonymous2. noconf Heq_anonymous2.
+    rewrite -it_mkProd_or_LetIn_app H; autorewrite with len.
+    rewrite List.skipn_length.
+    replace (#|l0| - (#|l0| - (#|l0| - #|ind_params mdecl|))) with (#|l0| - #|ind_params mdecl|) by lia.
+    now rewrite firstn_skipn.
+  Qed.
+
+  Next Obligation.
+    red. red. 
+    rewrite X0 in Tty.
+    eapply inversion_it_mkProd_or_LetIn in Tty; auto.
+    rewrite X0. apply Tty.
+  Qed.
+  
   Program Definition check_wf_decl (Σ : global_env_ext) HΣ HΣ' G HG
              kn (d : global_decl)
     : EnvCheck (∥ on_global_decl (lift_typing typing) Σ kn d ∥) :=
@@ -1491,8 +1640,10 @@ Section CheckEnv.
       | None => check_wf_type kn Σ HΣ HΣ' G HG cst.(cst_type) ;; ret _
       end
     | InductiveDecl mdecl =>
-      X1 <- monad_Alli (check_one_ind_body Σ HΣ HΣ' G HG kn mdecl) _ _ ;;
+      let wfΣ : wf_env := {| wf_env_env := Σ; wf_env_wf := _; 
+        wf_env_graph := G; wf_env_graph_wf := HG |} in
       let id := string_of_kername kn in
+      X1 <- monad_Alli (fun i oib => wrap_error Σ id (check_one_ind_body wfΣ kn mdecl i oib)) _ _ ;;
       X2 <- wrap_error Σ id (check_context HΣ HΣ' G HG (ind_params mdecl)) ;;
       X3 <- wrap_error Σ id (check_eq_nat (context_assumptions (ind_params mdecl))
                                        (ind_npars mdecl)
@@ -1507,6 +1658,9 @@ Section CheckEnv.
   Next Obligation.
     sq. unfold on_constant_decl; rewrite <- Heq_anonymous.
     eexists. eassumption.
+  Qed.
+  Next Obligation.
+    sq. split; auto.
   Qed.
 
   Obligation Tactic := idtac.
@@ -1737,19 +1891,6 @@ Section CheckEnv.
     sq; split; auto.
   Qed.
 
-  Record wf_env {cf:checker_flags} := { 
-      wf_env_env :> global_env_ext;
-      wf_env_wf :> ∥ wf_ext wf_env_env ∥;
-      wf_env_graph :> universes_graph;
-      wf_env_graph_wf : is_graph_of_uctx wf_env_graph (global_ext_uctx wf_env_env)
-  }.
-
-  Definition wf_env_sq_wf (Σ : wf_env) : ∥ wf Σ ∥.
-  Proof.
-    destruct (wf_env_wf Σ).
-    sq. apply X.
-  Qed.
-
   (** We ensure the proof obligations stay opaque. *)
 
   Program Definition make_wf_env Σ : EnvCheck wf_env :=
@@ -1764,14 +1905,6 @@ Section CheckEnv.
       simpl; intros.
       abstract exact (Gwf.π2.1).
     Qed.
-
-  Definition check_type_wf_ext (Σ : global_env_ext) (wfΣ : ∥ wf_ext Σ ∥) 
-    (G : universes_graph) (HG : is_graph_of_uctx G (global_ext_uctx Σ)) Γ (wfΓ : ∥ wf_local Σ Γ ∥) t T : 
-    typing_result (∥ Σ ;;; Γ |- t : T ∥) := 
-    @check cf Σ (let 'sq wfΣ := wfΣ in sq wfΣ.1) (let 'sq wfΣ := wfΣ in sq wfΣ.2) G HG Γ wfΓ t T.
-
-  Definition check_type_wf_env (Σ : wf_env) Γ (wfΓ : ∥ wf_local Σ Γ ∥) t T : typing_result (∥ Σ ;;; Γ |- t : T ∥) := 
-    check_type_wf_ext Σ (wf_env_wf Σ) Σ (wf_env_graph_wf Σ) Γ wfΓ t T.
   
   Definition check_type_wf_env_bool (Σ : wf_env) Γ (wfΓ : ∥ wf_local Σ Γ ∥) t T : bool :=
     match check_type_wf_env Σ Γ wfΓ t T with

@@ -307,7 +307,7 @@ Proof.
   - clear H4.
     induction X4.
     all: constructor ; auto.
-    destruct r as (? & ? & ? & ? & ?).
+    destruct r as (? & (? & ? & ?) & ? & ?).
     repeat split ; auto.
     apply p1 ; auto.
     all: eexists.

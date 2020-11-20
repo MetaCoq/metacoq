@@ -261,3 +261,11 @@ Proof.
   apply bidirectional_to_PCUIC.
   assumption.
 Qed.
+
+Theorem wf_bd_typing `{checker_flags} (Σ : global_env_ext) (wfΣ : BD.wf Σ) :
+  PT.wf Σ.
+Proof.
+  apply bd_wf.
+  apply bidirectional_to_PCUIC.
+  assumption.
+Qed.

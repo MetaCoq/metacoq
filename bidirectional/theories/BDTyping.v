@@ -22,28 +22,6 @@ Include BDLookup.
 Module BDEnvTyping := EnvTyping PCUICTerm PCUICEnvironment.
 Include BDEnvTyping.
 
-(* Section WfArity.
-(*modification of arity well-formedness to separated checking and sorting *)
-
-  Context (checking : forall (Σ : global_env_ext) (Γ : context), term -> term -> Type).
-  Context (sorting : forall (Σ : global_env_ext) (Γ : context), term -> Universe.t -> Type).
-
-  Definition isWfArity_sorting Σ (Γ : context) T :=
-    { ctx & { s & (destArity [] T = Some (ctx, s)) ×
-      All_local_env (lift_sorting checking sorting Σ) (Γ,,,ctx) } }.
-
-  Context (cproperty : forall (Σ : global_env_ext) (Γ : context),
-              All_local_env (lift_sorting checking sorting Σ) Γ ->
-              forall (t T : term), checking Σ Γ t T -> Type).
-  Context (sproperty : forall (Σ : global_env_ext) (Γ : context),
-              All_local_env (lift_sorting checking sorting Σ) Γ ->
-              forall (t : term) (u : Universe.t), sorting Σ Γ t u -> Type).
-
-  Definition isWfArity_sorting_prop Σ (Γ : context) T :=
-    { wfa : isWfArity_sorting Σ Γ T &
-      All_local_env_over_sorting checking sorting cproperty sproperty Σ (Γ,,,wfa.π1) wfa.π2.π2.2 }.
-End WfArity. *)
-
 Notation "Σ ;;; Γ |- t --> t'" := (red Σ Γ t t') (at level 50, Γ, t, t' at next level) : type_scope.
 Reserved Notation " Σ ;;; Γ |- t ▹ T " (at level 50, Γ, t, T at next level).
 Reserved Notation " Σ ;;; Γ |- t ▸□ u " (at level 50, Γ, t, u at next level).
@@ -183,7 +161,6 @@ and " Σ ;;; Γ |- t ▸{ ind } ( u , args ) " := (@infering_indu _ Σ Γ ind t 
 and " Σ ;;; Γ |- t ◃ T " := (@checking _ Σ Γ t T) : type_scope.
 
 Notation wf_local Σ Γ := (All_local_env (lift_sorting checking infering_sort Σ) Γ).
-
 
 (** ** Typechecking of global environments, using BDEnvironment to separte typing into checking and sorting *)
 
@@ -491,7 +468,8 @@ Section TypingInduction.
       Σ ;;; Γ |- t ▸□ s1 ->
       Psort Σ Γ t s1 ->
       Σ ;;; Γ,, vass n t |- b ▸□ s2 ->
-      Psort Σ (Γ,, vass n t) b s2 -> Pinfer Σ Γ (tProd n t b) (tSort (Universe.sort_of_product s1 s2))) ->
+      Psort Σ (Γ,, vass n t) b s2 ->
+      Pinfer Σ Γ (tProd n t b) (tSort (Universe.sort_of_product s1 s2))) ->
 
     (forall Σ (wfΣ : wf Σ.1) (PΣ : Forall_decls_sorting Pcheck Psort Σ.1)
       (Γ : context) (wfΓ : wf_local Σ Γ) (n : aname) (t b : term) (s : Universe.t) (bty : term),
@@ -690,7 +668,11 @@ Section TypingInduction.
       + assumption.
       + assumption.
       + destruct g as [[? [] ?]| ]; cbn.
-        * applyIH.
+        * inversion wfg as [[] ?].
+          split.
+          1: eexists.
+          all: applyIH.
+          eassumption.
         * inversion wfg.
           eexists. applyIH.
           eassumption.
@@ -748,7 +730,10 @@ Section TypingInduction.
             ** clear - wfΣ' IH' onParams0 on_cargs0 on_cindices0.
                induction on_cindices0.
                all: constructor ; auto.
-               cbn. applyIH.
+               1: destruct l ; eexists.
+               2: cbn.
+               all: applyIH.
+               eassumption.
 
           ++ clear - wfΣ' IH' ind_sorts0 onParams0.
               red in ind_sorts0 |- *.

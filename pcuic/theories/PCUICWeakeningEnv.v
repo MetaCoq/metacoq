@@ -4,7 +4,6 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICEquality PCUICTyping.
 
 Require Import ssreflect.
 
-
 Derive Signature for Alli.
 
 Set Default Goal Selector "!".
@@ -106,24 +105,31 @@ Qed.
 
 Lemma eq_term_subset {cf:checker_flags} Σ φ φ' t t'
   : ConstraintSet.Subset φ φ'
-    -> eq_term Σ φ t t' ->  eq_term Σ φ' t t'.
+    -> eq_term Σ φ t t' -> eq_term Σ φ' t t'.
 Proof.
   intro H. apply eq_term_upto_univ_impl; auto.
   all: intros u u'; eapply eq_universe_subset; assumption.
 Qed.
 
-Lemma eq_decl_subset {cf:checker_flags} Σ φ φ' d d'
+Lemma compare_term_subset {cf:checker_flags} le Σ φ φ' t t'
   : ConstraintSet.Subset φ φ'
-    -> eq_decl Σ φ d d' ->  eq_decl Σ φ' d d'.
+    -> compare_term le Σ φ t t' -> compare_term le Σ φ' t t'.
 Proof.
-  intros Hφ [H1 H2]. split; [|eapply eq_term_subset; eauto].
+  destruct le; [apply leq_term_subset|apply eq_term_subset].
+Qed.
+
+Lemma eq_decl_subset {cf:checker_flags} le Σ φ φ' d d'
+  : ConstraintSet.Subset φ φ'
+    -> eq_decl le Σ φ d d' -> eq_decl le Σ φ' d d'.
+Proof.
+  intros Hφ [H1 H2]. split; [|eapply compare_term_subset; eauto].
   destruct d as [na [bd|] ty], d' as [na' [bd'|] ty']; cbn in *; trivial.
   eapply eq_term_subset; eauto.
 Qed.
 
-Lemma eq_context_subset {cf:checker_flags} Σ φ φ' Γ Γ'
+Lemma eq_context_subset {cf:checker_flags} le Σ φ φ' Γ Γ'
   : ConstraintSet.Subset φ φ'
-    -> eq_context Σ φ Γ Γ' ->  eq_context Σ φ' Γ Γ'.
+    -> eq_context le Σ φ Γ Γ' ->  eq_context le Σ φ' Γ Γ'.
 Proof.
   intros Hφ. induction 1; constructor.
   - eapply eq_decl_subset; eassumption.
@@ -546,8 +552,11 @@ Proof.
         simpl in *. move: on_ctype_variance.
         unfold cstr_respects_variance. destruct variance_universes as [[[univs u] u']|]; auto.
         intros [args idxs]. split.
-        ** eapply (All2_local_env_impl args); intros.
-           eapply weakening_env_cumul; eauto.
+        ** eapply (context_relation_impl args); intros.
+           inversion X; constructor; auto.
+           ++ eapply weakening_env_cumul; eauto.
+           ++ eapply weakening_env_conv; eauto.
+           ++ eapply weakening_env_cumul; eauto.
         ** eapply (All2_impl idxs); intros.
           eapply weakening_env_conv; eauto.
     + unfold check_ind_sorts in *.
@@ -564,9 +573,12 @@ Proof.
     + intros v onv.
       move: (onIndices v onv). unfold ind_respects_variance.
       destruct variance_universes as [[[univs u] u']|] => //.
-      intros idx; eapply (All2_local_env_impl idx); simpl.
-      intros par par' t t'. eapply weakening_env_cumul; eauto.
-
+      intros idx; eapply (context_relation_impl idx); simpl.
+      intros par par' t t' d.
+      inv d; constructor; auto.
+      ++ eapply weakening_env_cumul; eauto.
+      ++ eapply weakening_env_conv; eauto.
+      ++ eapply weakening_env_cumul; eauto.
   - red in onP |- *. eapply All_local_env_impl; eauto.
 Qed.
 

@@ -1,40 +1,12 @@
 From Equations Require Import Equations.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICReduction.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICTyping PCUICLiftSubst PCUICReduction.
 
 From Coq Require Import CRelationClasses.
 
 Ltac pcuic :=
   try repeat red; cbn in *;
    try (solve [ intuition auto; eauto with pcuic || (try lia || congruence) ]).
-
-Inductive context_relation (P : context -> context -> context_decl -> context_decl -> Type)
-          : forall (Γ Γ' : context), Type :=
-| ctx_rel_nil : context_relation P nil nil
-| ctx_rel_vass na na' T U Γ Γ' :
-    context_relation P Γ Γ' ->
-    P Γ Γ' (vass na T) (vass na' U) ->
-    context_relation P (vass na T :: Γ) (vass na' U :: Γ')
-| ctx_rel_def na na' t T u U Γ Γ' :
-    context_relation P Γ Γ' ->
-    P Γ Γ' (vdef na t T) (vdef na' u U) ->
-    context_relation P (vdef na t T :: Γ) (vdef na' u U :: Γ').
-
-Derive Signature for context_relation.
-Arguments context_relation P Γ Γ' : clear implicits.
-
-Lemma context_relation_length P Γ Γ' :
-  context_relation P Γ Γ' -> #|Γ| = #|Γ'|.
-Proof.
-  induction 1; cbn; congruence.
-Qed.
-
-Lemma context_relation_impl {P Q Γ Γ'} :
-  (forall Γ Γ' d d', P Γ Γ' d d' -> Q Γ Γ' d d') ->
-  context_relation P Γ Γ' -> context_relation Q Γ Γ'.
-Proof.
-  induction 2; constructor; auto.
-Qed.
 
 Lemma context_relation_refl P : (forall Δ x, P Δ Δ x x) ->
   forall Δ, context_relation P Δ Δ.
@@ -54,6 +26,51 @@ Lemma context_relation_nth {P n Γ Γ' d} :
           P Γs Γs' d d')%type }.
 Proof.
   induction n in Γ, Γ', d |- *; destruct Γ; intros Hrel H; noconf H.
+  - depelim Hrel.
+    simpl. eexists; intuition eauto.
+    eexists; intuition eauto.
+  - depelim Hrel.
+    destruct (IHn _ _ _ Hrel H).
+    cbn -[skipn] in *.
+    eexists; intuition eauto.
+    destruct (IHn _ _ _ Hrel H).
+    eexists; intuition eauto.
+Qed.
+
+Lemma context_relation_nth_ass {P n Γ Γ' d} :
+  context_relation P Γ Γ' -> nth_error Γ n = Some d ->
+  assumption_context Γ ->
+  { d' & ((nth_error Γ' n = Some d') *
+          let Γs := skipn (S n) Γ in
+          let Γs' := skipn (S n) Γ' in
+          context_relation P Γs Γs' *
+          (d.(decl_body) = None) *
+          P Γs Γs' d d')%type }.
+Proof.
+  induction n in Γ, Γ', d |- *; destruct Γ; intros Hrel H; noconf H.
+  - depelim Hrel. intro ass. 
+    simpl. eexists; intuition eauto.
+    eexists; intuition eauto.
+    depelim H.
+  - intros ass. depelim Hrel.
+    destruct (IHn _ _ _ Hrel H).
+    now depelim ass.
+    cbn -[skipn] in *.
+    eexists; intuition eauto.
+    destruct (IHn _ _ _ Hrel H).
+    now depelim ass.
+    eexists; intuition eauto.
+Qed.
+
+Lemma context_relation_nth_r {P n Γ Γ' d'} :
+  context_relation P Γ Γ' -> nth_error Γ' n = Some d' ->
+  { d & ((nth_error Γ n = Some d) *
+          let Γs := skipn (S n) Γ in
+          let Γs' := skipn (S n) Γ' in
+          context_relation P Γs Γs' *
+          P Γs Γs' d d')%type }.
+Proof.
+  induction n in Γ, Γ', d' |- *; destruct Γ'; intros Hrel H; noconf H.
   - depelim Hrel.
     simpl. eexists; intuition eauto.
     eexists; intuition eauto.

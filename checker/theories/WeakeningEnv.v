@@ -471,7 +471,10 @@ Proof.
         simpl in *. move: on_ctype_variance.
         unfold cstr_respects_variance. destruct variance_universes as [[[univs u] u']|]; auto.
         intros [args idxs]. split.
-        eapply (All2_local_env_impl args); intros.
+        eapply (context_relation_impl args); intros.
+        inversion X; constructor; auto.
+        eapply weakening_env_cumul; eauto.
+        eapply weakening_env_conv; eauto.
         eapply weakening_env_cumul; eauto.
         eapply (All2_impl idxs); intros.
         eapply weakening_env_conv; eauto.
@@ -489,8 +492,12 @@ Proof.
       -- intros v onv.
           move: (onIndices v onv). unfold ind_respects_variance.
          destruct variance_universes as [[[univs u] u']|] => //.
-         intros idx; eapply (All2_local_env_impl idx); simpl.
-         intros par par' t t'. eapply weakening_env_cumul; eauto.
+         intros idx; eapply (context_relation_impl idx); simpl.
+         intros par par' t t'.
+         intros d. inv d; constructor; auto.
+         eapply weakening_env_cumul; eauto.
+         eapply weakening_env_conv; eauto.
+         eapply weakening_env_cumul; eauto.
   - red in onP |- *. eapply All_local_env_impl; eauto.
 Qed.
 

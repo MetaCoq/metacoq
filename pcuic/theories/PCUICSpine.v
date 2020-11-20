@@ -2098,7 +2098,8 @@ Proof.
     eapply type_Cumul'; eauto.
     eapply isType_subst; eauto.
     eapply (substitution_cumul _ _ _ []). eauto.
-    eapply wf. assumption. assumption.
+    eapply wf. assumption.
+    now depelim p.
   - elimtype False; inv ass.
 Qed.
 

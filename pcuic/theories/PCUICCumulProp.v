@@ -786,8 +786,8 @@ Proof.
   intros wfΣ eqann eq eq' cum.
   eapply cumul_prop_alt in cum as (nf & nf' & ((redl & redr) & eq'')).
   eapply cumul_prop_alt. 
-  assert(eq_context_upto Σ (eq_universe Σ) (Γ ,, vdef na d t) (Γ ,, vdef na' d' t')).
-  { repeat constructor; pcuic. eapply eq_context_upto_refl. typeclasses eauto. }
+  assert(eq_context_upto Σ (eq_universe Σ) (eq_universe Σ) (Γ ,, vdef na d t) (Γ ,, vdef na' d' t')).
+  { repeat constructor; pcuic. eapply eq_context_upto_refl; typeclasses eauto. }
   eapply red_eq_context_upto_l in redr; eauto. all:try typeclasses eauto.
   destruct redr as [v' [redv' eq''']].
   eexists (tLetIn na d t nf), (tLetIn na' d' t' v'); intuition eauto.
@@ -933,7 +933,7 @@ Proof.
   - eapply inversion_Prod in X4 as [s1' [s2' [Ha [Hb Hs]]]]; auto.
     specialize (X1 _ _ H Ha). 
     specialize (X1 _ (eq_term_upto_univ_napp_leq X5_1)).
-    eapply context_conversion in Hb. 3:{ constructor. apply conv_ctx_refl. constructor. eassumption.
+    eapply context_conversion in Hb. 4:{ constructor. apply conv_ctx_refl. constructor. eassumption.
       constructor. eauto. }
     all:eauto.
     2:{ constructor; eauto. now exists s1. }

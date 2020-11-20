@@ -471,7 +471,7 @@ Proof.
     specialize (X1 onu _ _ Ha). 
     specialize (X1 (eq_term_empty_leq_term X5_1)).
     apply eq_term_empty_eq_term in X5_1.
-    eapply context_conversion in Hb. 3:{ constructor. apply conv_ctx_refl. constructor.
+    eapply context_conversion in Hb. 4:{ constructor. apply conv_ctx_refl. constructor.
       eassumption. constructor. eauto. }
     all:eauto.
     2:{ constructor; eauto. now exists s1. }
@@ -480,8 +480,9 @@ Proof.
     apply leq_term_empty_leq_term in X5_2.
     eapply context_conversion; eauto.
     constructor; pcuic. constructor; try now symmetry; now constructor.
-    now symmetry.
+    pcuic.
     constructor; pcuic.
+    constructor. now symmetry.
 
   - eapply inversion_Lambda in X4 as (s & B & dom & codom & cum); auto.
     specialize (X1 onu _ _ dom (eq_term_empty_leq_term X5_1)).
@@ -514,8 +515,9 @@ Proof.
     econstructor. eauto. eauto.
     instantiate (1 := b'_ty).
     eapply context_conversion; eauto.
+    pcuic.
     apply conv_context_sym; auto.
-    pcuic. eapply PCUICValidity.validity; eauto.
+    eapply PCUICValidity.validity; eauto.
     econstructor; eauto.
     eapply cum_LetIn; pcuic.
     

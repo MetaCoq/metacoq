@@ -729,9 +729,8 @@ Section Typecheck.
     | _, _ => false
     end.
 
-
   Lemma eqb_opt_term_spec t u
-    : eqb_opt_term t u -> eq_opt_term Σ (global_ext_constraints Σ) t u.
+    : eqb_opt_term t u -> eq_opt_term false Σ (global_ext_constraints Σ) t u.
   Proof.
     destruct t, u; try discriminate; cbn.
     apply eqb_term_spec; tea. trivial.
@@ -741,7 +740,7 @@ Section Typecheck.
     eqb_opt_term d.(decl_body) d'.(decl_body) && eqb_term Σ G d.(decl_type) d'.(decl_type).
 
   Lemma eqb_decl_spec d d'
-    : eqb_decl d d' -> eq_decl Σ (global_ext_constraints Σ) d d'.
+    : eqb_decl d d' -> eq_decl false Σ (global_ext_constraints Σ) d d'.
   Proof.
     unfold eqb_decl, eq_decl.
     intro H. rtoProp. apply eqb_opt_term_spec in H.
@@ -751,7 +750,7 @@ Section Typecheck.
   Definition eqb_context (Γ Δ : context) := forallb2 eqb_decl Γ Δ.
 
   Lemma eqb_context_spec Γ Δ
-    : eqb_context Γ Δ -> eq_context Σ (global_ext_constraints Σ) Γ Δ.
+    : eqb_context Γ Δ -> eq_context false Σ (global_ext_constraints Σ) Γ Δ.
   Proof.
     unfold eqb_context, eq_context.
     intro HH. apply forallb2_All2 in HH.
@@ -1628,7 +1627,19 @@ Section CheckEnv.
       fun wtd wtd' => raise (Msg "While checking cumulativity of contexts: declarations do not match")
     end.
 
-  
+  From MetaCoq.PCUIC Require Import PCUICContextConversion.
+
+  Lemma cumul_ctx_rel_close Σ Γ Δ Δ' : 
+    cumul_ctx_rel Σ Γ Δ Δ' ->
+    cumul_context Σ (Γ ,,, Δ) (Γ ,,, Δ').
+  Proof.
+    induction 1; pcuic.
+    constructor. pcuic.
+    constructor; pcuic.
+    
+
+
+
   Program Fixpoint check_cumul_ctx (Σ : wf_env) Γ Δ Δ' (wfΔ : wf_local Σ (Γ ,,, Δ)) (wfΔ' : wf_local Σ (Γ ,,, Δ')) : typing_result (∥ cumul_ctx_rel Σ Γ Δ Δ' ∥) :=
     match Δ, Δ' with
     | [], [] => ret (sq (localenv2_nil _))

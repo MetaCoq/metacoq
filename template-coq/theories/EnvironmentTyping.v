@@ -147,6 +147,34 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T).
   Arguments localenv_cons_def {_ _ _ _ _} _ _.
   Arguments localenv_cons_abs {_ _ _ _} _ _.
 
+  Inductive context_relation (P : context -> context -> context_decl -> context_decl -> Type)
+            : forall (Γ Γ' : context), Type :=
+  | ctx_rel_nil : context_relation P nil nil
+  | ctx_rel_vass na na' T U Γ Γ' :
+      context_relation P Γ Γ' ->
+      P Γ Γ' (vass na T) (vass na' U) ->
+      context_relation P (vass na T :: Γ) (vass na' U :: Γ')
+  | ctx_rel_def na na' t T u U Γ Γ' :
+      context_relation P Γ Γ' ->
+      P Γ Γ' (vdef na t T) (vdef na' u U) ->
+      context_relation P (vdef na t T :: Γ) (vdef na' u U :: Γ').
+
+  Derive Signature for context_relation.
+  Arguments context_relation P Γ Γ' : clear implicits.
+
+  Lemma context_relation_length {P Γ Γ'} :
+    context_relation P Γ Γ' -> #|Γ| = #|Γ'|.
+  Proof.
+    induction 1; cbn; congruence.
+  Qed.
+
+  Lemma context_relation_impl {P Q Γ Γ'} :
+    context_relation P Γ Γ' -> (forall Γ Γ' d d', P Γ Γ' d d' -> Q Γ Γ' d d') ->
+    context_relation Q Γ Γ'.
+  Proof.
+    induction 1; constructor; auto.
+  Qed.
+
   Section All2_local_env.
 
   Definition on_decl (P : context -> context -> term -> term -> Type)
@@ -302,6 +330,42 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
 
   Definition isType `{checker_flags} (Σ : global_env_ext) (Γ : context) (t : term) :=
     { s : _ & Σ ;;; Γ |- t : tSort s }.
+
+  Section ContextConversion.
+    Context {cf : checker_flags}.
+    Context (Σ : global_env_ext).
+  
+    Inductive conv_decls (Γ Γ' : context) : forall (x y : context_decl), Type :=
+    | conv_vass na na' T T' :
+        eq_binder_annot na na' ->
+        conv Σ Γ T T' ->
+        conv_decls Γ Γ' (vass na T) (vass na' T')
+  
+    | conv_vdef_body na na' b b' T T' :
+        eq_binder_annot na na' ->
+        conv Σ Γ b b' ->
+        conv Σ Γ T T' ->
+        conv_decls Γ Γ' (vdef na b T) (vdef na' b' T').
+    Derive Signature NoConfusion for conv_decls.
+  
+    Inductive cumul_decls (Γ Γ' : context) : forall (x y : context_decl), Type :=
+    | cumul_vass na na' T T' :
+        eq_binder_annot na na' ->
+        cumul Σ Γ T T' ->
+        cumul_decls Γ Γ' (vass na T) (vass na' T')
+  
+    | cumul_vdef_body na na' b b' T T' :
+        eq_binder_annot na na' ->
+        conv Σ Γ b b' -> (* Not that definiens must be convertible, otherwise this notion 
+                            of cumulativity is useless *)
+        cumul Σ Γ T T' ->
+        cumul_decls Γ Γ' (vdef na b T) (vdef na' b' T').
+  
+    Derive Signature NoConfusion for cumul_decls.
+  End ContextConversion.
+
+  Definition cumul_ctx_rel {cf:checker_flags} Σ Γ Δ Δ' :=
+    context_relation (fun Δ Δ' => cumul_decls Σ (Γ ,,, Δ) (Γ ,,, Δ')) Δ Δ'.
 
   (** *** Typing of inductive declarations *)
 
@@ -516,9 +580,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       let univs := ind_universes mdecl in
       match variance_universes univs v with
       | Some (univs, u, u') =>
-        All2_local_env 
-          (on_decl (fun Γ Γ' t t' => 
-            cumul (Σ, univs) (subst_instance_context u (smash_context [] (ind_params mdecl)) ,,, Γ) t t'))
+        cumul_ctx_rel (Σ, univs) (subst_instance_context u (smash_context [] (ind_params mdecl)))
           (subst_instance_context u (expand_lets_ctx (ind_params mdecl) (smash_context [] indices)))
           (subst_instance_context u' (expand_lets_ctx (ind_params mdecl) (smash_context [] indices)))
       | None => False
@@ -528,9 +590,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       let univs := ind_universes mdecl in
       match variance_universes univs v with
       | Some (univs, u, u') =>
-        All2_local_env 
-          (on_decl (fun Γ Γ' t t' => 
-            cumul (Σ, univs) (subst_instance_context u (ind_arities mdecl ,,, smash_context [] (ind_params mdecl)) ,,, Γ) t t'))
+        cumul_ctx_rel (Σ, univs) (subst_instance_context u (ind_arities mdecl ,,, smash_context [] (ind_params mdecl)))
           (subst_instance_context u (expand_lets_ctx (ind_params mdecl) (smash_context [] (cshape_args cs))))
           (subst_instance_context u' (expand_lets_ctx (ind_params mdecl) (smash_context [] (cshape_args cs)))) *
         All2 

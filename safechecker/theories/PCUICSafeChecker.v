@@ -1577,14 +1577,130 @@ Section CheckEnv.
     (cs : list constructor_shape) (ind_sort : Universe.t) : 
     typing_result (check_ind_sorts (lift_typing typing) Σ params kelim indices cs ind_sort) := _.
   Admit Obligations.
+ 
+  Definition cumul_decl Σ Γ (d d' : context_decl) : Type :=
+    match d, d' with
+    | {| decl_body := Some b; decl_type := ty |},
+      {| decl_body := Some b'; decl_type := ty' |} => 
+      Σ;;; Γ |- b <= b' × Σ;;; Γ |- ty <= ty'
+    | {| decl_body := None; decl_type := ty |},
+      {| decl_body := None; decl_type := ty' |} => 
+      Σ;;; Γ |- ty <= ty'
+    | _, _ => False
+    end.
 
-  Program Definition check_indices Σ mdecl indices :
-    typing_result (forall v : list Variance.t,
-                PCUICEnvironment.ind_variance mdecl = Some v ->
-                ind_respects_variance (PCUICEnvironment.fst_ctx Σ) mdecl v indices) := _.
+  Program Definition wf_env_convert_leq (Σ : wf_env) (Γ : context) (t u : term) :
+    welltyped Σ Γ t -> welltyped Σ Γ u -> typing_result (∥ Σ;;; Γ |- t <= u ∥) :=
+    @convert_leq _ Σ (wf_env_sq_wf Σ) _ Σ _ Γ t u.
+  Next Obligation.
+   destruct Σ. sq. simpl. apply wf_env_wf0.
+  Qed.
+  Next Obligation.
+    destruct Σ. sq. simpl. apply wf_env_graph_wf0.
+  Qed.
+
+  Definition wt_decl (Σ : wf_env) Γ d :=
+    match d with
+    | {| decl_body := Some b; decl_type := ty |} => 
+      welltyped Σ Γ ty /\ welltyped Σ Γ b
+    | {| decl_body := None; decl_type := ty |} =>
+      welltyped Σ Γ ty
+    end.
+
+  Program Definition check_cumul_decl (Σ : wf_env) Γ d d' : wt_decl Σ Γ d -> wt_decl Σ Γ d' -> typing_result (∥ cumul_decl Σ Γ d d' ∥) := 
+    match d, d' return wt_decl Σ Γ d -> wt_decl Σ Γ d' -> typing_result _ with
+    | {| decl_name := na; decl_body := Some b; decl_type := ty |},
+      {| decl_name := na'; decl_body := Some b'; decl_type := ty' |} => 
+      fun wtd wtd' =>
+      eqna <- check_eq_true (eqb_binder_annot na na') (Msg "Binder annotations do not match") ;;
+      cumb <- wf_env_convert_leq Σ Γ b b' _ _ ;;
+      cumt <- wf_env_convert_leq Σ Γ ty ty' _ _ ;;
+      ret (let 'sq cumb := cumb in 
+           let 'sq cumt := cumt in
+           sq (cumb, cumt))
+    | {| decl_name := na; decl_body := None; decl_type := ty |},
+      {| decl_name := na'; decl_body := None; decl_type := ty' |} => 
+      fun wtd wtd' =>
+      eqna <- check_eq_true (eqb_binder_annot na na') (Msg "Binder annotations do not match") ;;
+      cumt <- wf_env_convert_leq Σ Γ ty ty' wtd wtd' ;;
+      ret cumt      
+    | _, _ =>
+      fun wtd wtd' => raise (Msg "While checking cumulativity of contexts: declarations do not match")
+    end.
+
+  
+  Program Fixpoint check_cumul_ctx (Σ : wf_env) Γ Δ Δ' (wfΔ : wf_local Σ (Γ ,,, Δ)) (wfΔ' : wf_local Σ (Γ ,,, Δ')) : typing_result (∥ cumul_ctx_rel Σ Γ Δ Δ' ∥) :=
+    match Δ, Δ' with
+    | [], [] => ret (sq (localenv2_nil _))
+    | decl :: Δ, decl' :: Δ' => 
+      cctx <- check_cumul_ctx Σ Γ Δ Δ' _ _ ;;
+      cdecl <- check_cumul_decl Σ (Γ ,,, Δ) decl decl' _ _ ;;
+      ret _
+    | _, _ => raise (Msg "While checking cumulativity of contexts: contexts have not the same length")
+    end.
+  Next Obligation.
+    now depelim wfΔ.
+  Qed.
+  Next Obligation.
+    now depelim wfΔ'.
+  Qed.
+  Next Obligation.
+    sq.
+    depelim wfΔ; simpl.
+    destruct l; eexists; eauto.
+    destruct l; split; eexists; eauto.
+  Qed.
+  Next Obligation.
+    sq.
+    depelim wfΔ'; simpl.
+    destruct l; eexists; eauto.
+    
+    destruct l; split; eexists; eauto.
+  Qed.    pcuic.
+
+    destruct decl as [na [b|] ty], decl' as [na' [b'|] ty'].
+    constructor; auto. admit. red.
+
   Admit Obligations.
 
+  Program Definition check_indices Σ mdecl 
+    (mdeclvar : check_variance mdecl.(ind_universes) mdecl.(ind_variance) = true)
+    indices :
+    typing_result (∥ forall v : list Variance.t,
+                    mdecl.(ind_variance) = Some v ->
+                    ind_respects_variance (PCUICEnvironment.fst_ctx Σ) mdecl v indices ∥) :=
+    match mdecl.(ind_variance) with
+    | None => ret _
+    | Some v => 
+      let univs := ind_universes mdecl in
+      match variance_universes univs v with          
+      | Some ((univs0, u), u') => 
+        check <- check_cumul_ctx (Σ.1, univs0) (subst_instance_context u (smash_context [] (ind_params mdecl)))
+          (subst_instance_context u (expand_lets_ctx (ind_params mdecl) (smash_context [] indices)))
+          (subst_instance_context u' (expand_lets_ctx (ind_params mdecl) (smash_context [] indices))) ;;
+        ret _
+      | None => False_rect _ _
+      end
+    end.
+  Next Obligation.
+    sq. discriminate.
+  Qed.
+  Next Obligation.
+    sq. intros ? [= <-]. 
+    red. rewrite -Heq_anonymous. red in check0.
+    apply check0.
+  Qed.
+  Next Obligation.
+    rename Heq_anonymous0 into eqvar.
+    rename Heq_anonymous into eqvaru.
+    unfold variance_universes in eqvaru.
+    unfold check_variance in mdeclvar.
+    rewrite -eqvar in mdeclvar.
+    destruct (ind_universes mdecl) as [|[inst cstrs]] => //.
+  Qed.
+
   Program Definition check_one_ind_body (Σ : wf_env) (mind : kername) (mdecl : mutual_inductive_body)
+      (mdeclvar : check_variance mdecl.(ind_universes) mdecl.(ind_variance) = true)
       (i : nat) (idecl : one_inductive_body) : typing_result (∥ on_ind_body (lift_typing typing) Σ mind mdecl i idecl ∥) :=
       '(T ; Tty) <- infer_type_wf_env Σ [] wfnil idecl.(ind_type) ;;
       '(ctxinds; p) <-
@@ -1597,9 +1713,10 @@ Section CheckEnv.
       '(cs; oncstrs) <- check_constructors Σ mind mdecl i idecl indices ;;
       onprojs <- check_projections Σ mind mdecl i idecl indices cs ;;
       onsorts <- check_ind_sorts' Σ mdecl.(ind_params) idecl.(ind_kelim) indices cs ctxinds.2 ;;
-      onindices <- check_indices Σ mdecl indices ;;
+      onindices <- check_indices Σ mdecl mdeclvar indices ;;
       ret (let 'sq Tty := Tty in 
         let 'sq wfext := Σ.(wf_env_wf) in
+        let 'sq onindices := onindices in
         (sq 
         {| ind_indices := indices; ind_sort := ctxinds.2; 
            ind_arity_eq := _; onArity := _;
@@ -1643,13 +1760,13 @@ Section CheckEnv.
       let wfΣ : wf_env := {| wf_env_env := Σ; wf_env_wf := _; 
         wf_env_graph := G; wf_env_graph_wf := HG |} in
       let id := string_of_kername kn in
-      X1 <- monad_Alli (fun i oib => wrap_error Σ id (check_one_ind_body wfΣ kn mdecl i oib)) _ _ ;;
+      X5 <- wrap_error Σ id (check_eq_true (check_variance mdecl.(ind_universes) mdecl.(ind_variance)) (Msg "variance"));;
+      X1 <- monad_Alli (fun i oib => wrap_error Σ id (check_one_ind_body wfΣ kn mdecl X5 i oib)) _ _ ;;
       X2 <- wrap_error Σ id (check_context HΣ HΣ' G HG (ind_params mdecl)) ;;
       X3 <- wrap_error Σ id (check_eq_nat (context_assumptions (ind_params mdecl))
                                        (ind_npars mdecl)
                                        (Msg "wrong number of parameters")) ;;
       X4 <- wrap_error Σ id (check_eq_true (ind_guard mdecl) (Msg "guard"));;
-      X5 <- wrap_error Σ id (check_eq_true (check_variance mdecl.(ind_universes) mdecl.(ind_variance)) (Msg "variance"));;
       ret (Build_on_inductive_sq X1 X2 X3 X4 X5)
     end.
   Next Obligation.
@@ -1662,6 +1779,7 @@ Section CheckEnv.
   Next Obligation.
     sq. split; auto.
   Qed.
+  Fail Next Obligation.
 
   Obligation Tactic := idtac.
   Program Definition check_udecl id (Σ : global_env) (HΣ : ∥ wf Σ ∥) G

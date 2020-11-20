@@ -6,4 +6,4 @@
 theories/BDEnvironmentTyping.v
 theories/BDTyping.v
 theories/BDMinimalTyping.v
-theories/BDToPCUIC.v
+theories/BDMinimalToPCUIC.v

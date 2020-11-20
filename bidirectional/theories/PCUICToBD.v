@@ -8,6 +8,11 @@ Require Import ssreflect.
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 
+Lemma wf_pt `{checker_flags} Σ : PT.wf Σ -> MT.wf Σ.
+Proof.
+Admitted.
+
+
 Lemma conv_infer_sort `{checker_flags} (Σ : global_env_ext) Γ t s :
   (∑ T' : term, Σ ;;; Γ |- t ▹ T' × Σ ;;; Γ |- T' <= tSort s) ->
   {s' & Σ ;;; Γ |- t ▸□ s' × leq_universe Σ s' s}.
@@ -83,17 +88,15 @@ Proof.
   - intros.
     eexists.
     split.
-    + constructor.
-      eassumption.
-    + apply cumul_refl.
-      apply PCUICEquality.leq_term_refl.
+    2: by reflexivity.
+    constructor.
+    eassumption.
     
   - intros.
     eexists.
     split.
-    + constructor. assumption.
-    + apply cumul_refl.
-      apply PCUICEquality.leq_term_refl.
+    2: by reflexivity.
+    constructor. assumption.
 
   - intros n A B ? ? ? ? CumA ? CumB.
     apply conv_infer_sort in CumA ; auto.
@@ -144,27 +147,24 @@ Proof.
   - intros.
     eexists.
     split.
-    + econstructor.
-      all: eassumption.
-    + apply cumul_refl.
-      apply PCUICEquality.leq_term_refl.
-  
+    2: by reflexivity.
+    econstructor.
+    all: eassumption.
+    
   - intros.
     eexists.
     split.
-    + econstructor.
-      all: eassumption.
-    + apply cumul_refl.
-      apply PCUICEquality.leq_term_refl.
-
+    2: by reflexivity.
+    econstructor.
+    all: eassumption.
+    
   - intros.
     eexists.
     split.
-    + econstructor.
-      all: eassumption.
-    + apply cumul_refl.
-      apply PCUICEquality.leq_term_refl.
-  
+    2: reflexivity.
+    econstructor.
+    all: eassumption.
+    
   - intros ind u npar p c brs args mdecl idecl ? ? ? ? params ps pty ? ? Cump ? ? ? Cumc btys ? Cumbrs.
     apply conv_check in Cump.
     apply conv_infer_ind in Cumc ; auto.
@@ -173,7 +173,7 @@ Proof.
     split.
     2:{
       apply cumul_mkApps ; auto.
-      1: apply cumul_refl ; apply PCUICEquality.leq_term_refl.
+      1: reflexivity.
       eapply All2_app.
       2:constructor ; auto.
       eapply All2_skipn.
@@ -184,11 +184,103 @@ Proof.
     econstructor.
     all:admit.
 
-  - admit.
+  - intros ? c u mdecl idecl [] isdecl args ? ? ? Cumc ? ty.
+    apply conv_infer_ind in Cumc as (ui'&args'&?&?&?) ; auto.
+    eexists.
+    split.
+    + econstructor.
+      1-2: eassumption.
+      etransitivity.
+      2: eassumption.
+      symmetry.
+      eapply All2_length.
+      eassumption.
+
+    + assert (Σ ;;; Γ |- c : mkApps (tInd p.1.1 ui') args').
+      { apply infering_ind_typing in i0 ; auto. by apply wf_pt. }
+      assert (PT.consistent_instance_ext Σ (ind_universes mdecl) u).
+        { destruct isdecl.
+          apply validity_term in X1 as [] ; auto.
+          eapply PCUICInductives.invert_type_mkApps_ind ; eauto.
+        }
+      assert (PT.consistent_instance_ext Σ (ind_universes mdecl) ui').
+        { destruct isdecl.
+          apply validity_term in X2 as [] ; auto.
+          eapply PCUICInductives.invert_type_mkApps_ind ; eauto.
+        }
+      unshelve epose proof (PCUICInductives.wf_projection_context _ _ _ _) ; eauto.
+      change Γ with (Γ,,, subst_context (c :: List.rev args') 0 []).
+      eapply subst_cumul.
+      * assumption.
+      * eapply PCUICInductives.projection_subslet.
+        4: eapply validity_term.
+        all: eassumption.
+      * eapply PCUICInductives.projection_subslet.
+        4: eapply validity_term.
+        all: eassumption.
+      * constructor.
+        1: reflexivity.
+        apply All2_rev.
+        symmetry.
+        assumption.
+      * repeat apply PCUICWeakening.weaken_wf_local.
+        all: auto.
+
+      * change (Γ ,,, _ ,,, _) with (Γ,,, (PCUICInductives.projection_context mdecl idecl p.1.1 ui')).
+        apply weaken_cumul ; auto.
+        --by eapply PCUICClosed.closed_wf_local ; eauto.
+        --simpl. len. simpl.
+          rewrite (PCUICWeakeningEnv.on_declared_projection _ isdecl).1.(PT.onNpars).
+          rewrite PCUICClosed.closedn_subst_instance_constr.
+          change t with (i,t).2.
+          eapply PCUICClosed.declared_projection_closed ; eauto.
+        --simpl. len. simpl.
+          rewrite (PCUICWeakeningEnv.on_declared_projection _ isdecl).1.(PT.onNpars).
+          rewrite PCUICClosed.closedn_subst_instance_constr.
+          change t with (i,t).2.
+          eapply PCUICClosed.declared_projection_closed ; eauto.
+        --eapply projection_cumulative_indices ; auto.
+          1: eapply (PCUICWeakeningEnv.weaken_lookup_on_global_env' _ _ _ _ (proj1 (proj1 isdecl))).
+          by rewrite <- H0.
+
+  - intros mfix n decl types ? ? ? Alltypes Allbodies.
+    eexists.
+    split.
+    2: reflexivity.
+    constructor ; eauto.
+    + clear -Alltypes.
+      induction Alltypes.
+      all: constructor ; auto.
+      destruct p as (?&_&p).
+      apply conv_infer_sort in p as (?&?&?).
+      eexists. eassumption.
+    + clear -Allbodies.
+      fold types.
+      clearbody types.
+      induction Allbodies.
+      all: constructor ; auto.
+      destruct p as ((_&?)&p).
+      apply conv_check in p.
+      split ; auto.
   
-  - admit.
-  
-  - admit.
+  - intros mfix n decl types ? ? ? Alltypes Allbodies.
+    eexists.
+    split.
+    2: reflexivity.
+    constructor ; eauto.
+    + clear -Alltypes.
+      induction Alltypes.
+      all: constructor ; auto.
+      destruct p as (?&_&p).
+      apply conv_infer_sort in p as (?&?&?).
+      eexists. eassumption.
+    + clear -Allbodies.
+      fold types.
+      clearbody types.
+      induction Allbodies.
+      all: constructor ; auto.
+      destruct p as (_&p).
+      by apply conv_check in p.
   
   - intros ? ? ? ? ? ? (?&?&?) ? (?&?&?) ?.
     eexists.

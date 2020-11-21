@@ -213,11 +213,11 @@ Proof.
 
   - (* Prod *)
     constructor; eauto.
-    unshelve eapply (context_conversion wf _ typeb); pcuics.
+    unshelve eapply (context_conversion _ typeb); pcuics.
 
   - (* Lambda *)
     eapply type_Cumul'. eapply type_Lambda; eauto.
-    unshelve eapply (context_conversion wf _ typeb); pcuics.
+    unshelve eapply (context_conversion _ typeb); pcuics.
     assert (Σ ;;; Γ |- tLambda n t b : tProd n t bty). econstructor; pcuics.
     now eapply validity_term in X0.
     eapply cumul_red_r.
@@ -235,7 +235,7 @@ Proof.
   - (* LetIn value *)
     eapply type_Cumul'.
     econstructor; eauto.
-    unshelve eapply (context_conversion wf _ typeb'); pcuics.
+    unshelve eapply (context_conversion _ typeb'); pcuics.
     assert (Σ ;;; Γ |- tLetIn n b b_ty b' : tLetIn n b b_ty b'_ty). econstructor; eauto.
     edestruct (validity _ wf _ _ _ X0). apply i.
     eapply cumul_red_r.
@@ -247,7 +247,7 @@ Proof.
     econstructor; eauto.
     eapply type_Cumul'. eauto. exists s1; auto.
     apply red_cumul; eauto.
-    unshelve eapply (context_conversion wf _ typeb'); pcuics.
+    unshelve eapply (context_conversion _ typeb'); pcuics.
     constructor; pcuic.
     eapply type_Cumul'. eauto. all:pcuic.
     assert (Σ ;;; Γ |- tLetIn n b b_ty b' : tLetIn n b b_ty b'_ty). econstructor; eauto.
@@ -263,7 +263,7 @@ Proof.
     destruct (validity _ wf _ _ _ typet).
     eapply isType_tProd in i as [Hdom Hcodom]; auto.
     eapply type_Cumul'; eauto.
-    unshelve eapply (context_conversion wf _ Hb); pcuics.
+    unshelve eapply (context_conversion _ Hb); pcuics.
 
   - (* Fixpoint unfolding *)
     assert (args <> []) by (destruct args; simpl in *; congruence).

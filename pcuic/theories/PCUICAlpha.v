@@ -283,10 +283,9 @@ Section Alpha.
       econstructor.
       + eapply ihA. assumption.
       + eapply context_conversion.
-        * assumption.
+        * eapply ihB. assumption.
         * constructor. 1: assumption.
           simpl. eexists. eapply ihA. assumption.
-        * eapply ihB. assumption.
         * constructor.
           -- apply conv_ctx_refl ; auto.
           -- constructor. assumption. constructor.
@@ -296,10 +295,9 @@ Section Alpha.
       + econstructor.
         * eapply ihA. assumption.
         * eapply context_conversion.
-          -- assumption.
+          -- eapply ihB. assumption.
           -- constructor. 1: assumption.
              simpl. eexists. eapply ihA. assumption.
-          -- eapply ihB. assumption.
           -- constructor.
              ++ apply conv_ctx_refl ; auto.
              ++ constructor. assumption. constructor.
@@ -323,20 +321,19 @@ Section Alpha.
           -- constructor. eapply eq_term_leq_term.
              eapply upto_names_impl_eq_term. assumption.
         * eapply context_conversion.
-          -- assumption.
-          -- constructor.
-             ++ assumption.
-             ++ simpl. eexists. eapply ihB. assumption.
-             ++ simpl. eapply type_Cumul.
-                ** eapply ihb. assumption.
-                ** eapply ihB. assumption.
-                ** eapply cumul_refl.
-                   eapply eq_term_upto_univ_empty_impl. 4:eassumption.
-                   all:try typeclasses eauto.
-                   all: intros x ? [].
-                   --- reflexivity.
-                   --- reflexivity.
           -- eapply ihA. assumption.
+          -- constructor.
+            ++ assumption.
+            ++ simpl. eexists. eapply ihB. assumption.
+            ++ simpl. eapply type_Cumul.
+              ** eapply ihb. assumption.
+              ** eapply ihB. assumption.
+              ** eapply cumul_refl.
+                  eapply eq_term_upto_univ_empty_impl. 4:eassumption.
+                  all:try typeclasses eauto.
+                  all: intros x ? [].
+                  --- reflexivity.
+                  --- reflexivity.
           -- constructor.
              ++ apply conv_ctx_refl ; auto.
              ++ econstructor. assumption. constructor.

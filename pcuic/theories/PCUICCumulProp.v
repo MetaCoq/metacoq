@@ -933,7 +933,7 @@ Proof.
   - eapply inversion_Prod in X4 as [s1' [s2' [Ha [Hb Hs]]]]; auto.
     specialize (X1 _ _ H Ha). 
     specialize (X1 _ (eq_term_upto_univ_napp_leq X5_1)).
-    eapply context_conversion in Hb. 4:{ constructor. apply conv_ctx_refl. constructor. eassumption.
+    eapply context_conversion in Hb. 3:{ constructor. apply conv_ctx_refl. constructor. eassumption.
       constructor. eauto. }
     all:eauto.
     2:{ constructor; eauto. now exists s1. }

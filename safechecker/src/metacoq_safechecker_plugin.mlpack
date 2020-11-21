@@ -6,6 +6,7 @@ Utils
 Ssrbool
 WGraph
 UGraph0
+EnvironmentTyping
 Typing0
 Reflect
 
@@ -19,6 +20,7 @@ PCUICInduction
 PCUICUnivSubst
 PCUICLiftSubst
 EqDecInstances
+PCUICReflect
 PCUICEquality
 PCUICTyping
 PCUICInduction

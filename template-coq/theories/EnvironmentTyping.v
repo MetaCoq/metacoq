@@ -296,7 +296,7 @@ Module Type Typing (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E).
 
   Parameter (typing : forall `{checker_flags}, global_env_ext -> context -> term -> term -> Type).
 
-  Parameter (wf_universe : global_env_ext -> Universe.t -> Type).
+  Parameter (wf_universe : global_env_ext -> Universe.t -> Prop).
 
   Notation " Σ ;;; Γ |- t : T " :=
     (typing Σ Γ t T) (at level 50, Γ, t, T at next level) : type_scope.

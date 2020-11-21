@@ -471,7 +471,7 @@ Proof.
     specialize (X1 onu _ _ Ha). 
     specialize (X1 (eq_term_empty_leq_term X5_1)).
     apply eq_term_empty_eq_term in X5_1.
-    eapply context_conversion in Hb. 4:{ constructor. apply conv_ctx_refl. constructor.
+    eapply context_conversion in Hb. 3:{ constructor. apply conv_ctx_refl. constructor.
       eassumption. constructor. eauto. }
     all:eauto.
     2:{ constructor; eauto. now exists s1. }

@@ -405,6 +405,6 @@ Proof.
   - cbn; eauto.
   - destruct a. destruct decl_body.
     + cbn. econstructor. inv X0. eauto. econstructor.
-      depelim X0. reflexivity. reflexivity.
+      depelim X0; reflexivity. reflexivity. reflexivity.
     + cbn. econstructor. inv X0. eauto. now econstructor.
 Qed.

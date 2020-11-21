@@ -138,7 +138,7 @@ Proof.
       destruct (eqb_spec ty ty'); subst; constructor; congruence.
 Qed.
 
-Instance eqb_ctx : ReflectEq context := _.
+Instance reflect_eq_context : ReflectEq context := _.
 
 Definition eqb_constant_body (x y : constant_body) :=
   let (tyx, bodyx, univx) := x in

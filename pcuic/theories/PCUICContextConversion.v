@@ -890,7 +890,7 @@ Qed.
 
 Hint Extern 4 (eq_term_upto_univ _ _ _ _ _) => reflexivity : pcuic.
 
-Lemma context_cumulativity {cf:checker_flags} :
+Lemma context_cumulativity_prop {cf:checker_flags} :
   env_prop
     (fun Σ Γ t T =>
        forall Γ', cumul_context Σ Γ' Γ -> wf_local Σ Γ' -> Σ ;;; Γ' |- t : T)
@@ -980,26 +980,24 @@ Proof.
     eapply cumul_cumul_ctx; eauto.
 Qed.
 
-Lemma context_cumulativity' {cf:checker_flags} {Σ Γ t T Γ'} :
-    wf Σ.1 ->
-    wf_local Σ Γ' ->
+Lemma context_cumulativity {cf:checker_flags} {Σ} {wfΣ : wf Σ.1} Γ {t T Γ'} :
     Σ ;;; Γ |- t : T ->
+    wf_local Σ Γ' ->
     cumul_context Σ Γ' Γ ->
     Σ ;;; Γ' |- t : T.
 Proof.
-  intros hΣ hΓ' h e.
-  eapply context_cumulativity; eauto.
+  intros h hΓ' e.
+  eapply context_cumulativity_prop; eauto.
 Qed.
 
-Lemma context_conversion {cf:checker_flags} {Σ Γ t T Γ'} :
-    wf Σ.1 ->
-    wf_local Σ Γ' ->
+Lemma context_conversion {cf:checker_flags} {Σ} {wfΣ : wf Σ.1} Γ {t T Γ'} :
     Σ ;;; Γ |- t : T ->
+    wf_local Σ Γ' ->
     conv_context Σ Γ Γ' ->
     Σ ;;; Γ' |- t : T.
 Proof.
-  intros hΣ hΓ' h e.
+  intros h hΓ' e.
   apply conv_context_sym in e; auto.
   apply conv_cumul_context in e.
-  eapply context_cumulativity'; eauto.
+  eapply context_cumulativity; eauto.
 Qed.

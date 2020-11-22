@@ -385,8 +385,18 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       | [] => wf_universe Σ u
       | {| decl_body := None; decl_type := t |} :: Δ => (type_local_ctx Σ Γ Δ u * (P Σ (Γ ,,, Δ) t (Some (tSort u))))
       | {| decl_body := Some b; decl_type := t |} :: Δ => (type_local_ctx Σ Γ Δ u * (P Σ (Γ ,,, Δ) t None * P Σ (Γ ,,, Δ) b (Some t)))
-      end.    
+      end.
 
+    Fixpoint sorts_local_ctx Σ (Γ Δ : context) (us : list Universe.t) : Type :=
+      match Δ, us with
+      | [], [] => unit
+      | {| decl_body := None; decl_type := t |} :: Δ, u :: us => 
+        (sorts_local_ctx Σ Γ Δ us * (P Σ (Γ ,,, Δ) t (Some (tSort u))))
+      | {| decl_body := Some b; decl_type := t |} :: Δ, us => 
+        (sorts_local_ctx Σ Γ Δ us * (P Σ (Γ ,,, Δ) t None * P Σ (Γ ,,, Δ) b (Some t)))
+      | _, _ => False
+      end.
+  
     (* Delta telescope *)
     Inductive ctx_inst Σ (Γ : context) : list term -> context -> Type :=
     | ctx_inst_nil : ctx_inst Σ Γ [] []
@@ -414,8 +424,8 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
         (* Indices of the constructor, whose length should be the real arguments
         length of the inductive *)
 
-        cshape_sort : Universe.t;
-        (* The sort bounding the arguments context (without lets) *)
+        cshape_sorts : list Universe.t;
+        (* The sorts of the arguments context (without lets) *)
       }.
 
     Open Scope type_scope.
@@ -622,9 +632,9 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
         (non-lets) parameters and arguments *)
 
       on_ctype : on_type Σ (arities_context mdecl.(ind_bodies)) (cdecl_type cdecl);
-      on_cargs : (* FIXME: there is some redundancy with the type_local_ctx *)
-        type_local_ctx Σ (arities_context mdecl.(ind_bodies) ,,, mdecl.(ind_params))
-                      cshape.(cshape_args) cshape.(cshape_sort);
+      on_cargs :
+        sorts_local_ctx Σ (arities_context mdecl.(ind_bodies) ,,, mdecl.(ind_params))
+                      cshape.(cshape_args) cshape.(cshape_sorts);
       on_cindices : 
         ctx_inst Σ (arities_context mdecl.(ind_bodies) ,,, mdecl.(ind_params) ,,, cshape.(cshape_args))
                       cshape.(cshape_indices)
@@ -704,7 +714,8 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
         on_projs : Alli (on_projection mdecl mind i cshape) 0 idecl.(ind_projs) }.
 
     Definition check_constructors_smaller φ cshapes ind_sort :=
-      Forall (fun s => leq_universe φ (cshape_sort s) ind_sort) cshapes.
+      Forall (fun cs => 
+        Forall (fun argsort => leq_universe φ argsort ind_sort) cs.(cshape_sorts)) cshapes.
 
     (** This ensures that all sorts in kelim are lower
         or equal to the top elimination sort, if set.
@@ -714,7 +725,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       match ind_ctors_sort with
       | [] => (* Empty inductive proposition: *) IntoAny
       | [ s ] =>
-        if Universes.is_propositional (cshape_sort s) then
+        if forallb Universes.is_propositional (cshape_sorts s) then
           IntoAny (* Singleton elimination *)
         else
           IntoPropSProp (* Squashed: some arguments are higher than Prop, restrict to Prop *)
@@ -924,6 +935,17 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
     intros HP HPQ. revert HP; induction Δ in Γ, HPQ |- *; simpl; auto.
     destruct a as [na [b|] ty]; simpl; auto.
     intros. intuition auto. intuition auto.
+  Qed.
+
+  Lemma sorts_local_ctx_impl (P Q : global_env_ext -> context -> term -> option term -> Type) Σ Γ Δ u :
+    sorts_local_ctx P Σ Γ Δ u ->
+    (forall Γ t T, P Σ Γ t T -> Q Σ Γ t T) ->
+    sorts_local_ctx Q Σ Γ Δ u.
+  Proof.
+    intros HP HPQ. revert HP; induction Δ in Γ, HPQ, u |- *; simpl; auto.
+    destruct a as [na [b|] ty]; simpl; auto.
+    intros. intuition auto. intuition auto.
+    destruct u; auto. intuition eauto.
   Qed.
 
   (** This predicate enforces that there exists typing derivations for every typable term in env. *)

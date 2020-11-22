@@ -1528,14 +1528,22 @@ Section CheckEnv.
   Definition check_type_wf_env (Σ : wf_env_ext) Γ (wfΓ : ∥ wf_local Σ Γ ∥) t T : typing_result (∥ Σ ;;; Γ |- t : T ∥) := 
     check_type_wf_ext Σ (wf_env_ext_wf Σ) Σ (wf_env_ext_graph_wf Σ) Γ wfΓ t T.
   
-  Definition infer_type_wf_ext (Σ : global_env_ext) (wfΣ : ∥ wf_ext Σ ∥) 
+  Definition infer_wf_ext (Σ : global_env_ext) (wfΣ : ∥ wf_ext Σ ∥) 
     (G : universes_graph) (HG : is_graph_of_uctx G (global_ext_uctx Σ)) Γ (wfΓ : ∥ wf_local Σ Γ ∥) t : 
     typing_result (∑ T, ∥ Σ ;;; Γ |- t : T ∥) := 
     @infer cf Σ (let 'sq wfΣ := wfΣ in sq wfΣ.1) (let 'sq wfΣ := wfΣ in sq wfΣ.2) G HG Γ wfΓ t.
 
-  Definition infer_type_wf_env (Σ : wf_env_ext) Γ (wfΓ : ∥ wf_local Σ Γ ∥) t : typing_result (∑ T, ∥ Σ ;;; Γ |- t : T ∥) := 
+  Definition infer_wf_env (Σ : wf_env_ext) Γ (wfΓ : ∥ wf_local Σ Γ ∥) t : typing_result (∑ T, ∥ Σ ;;; Γ |- t : T ∥) := 
+    infer_wf_ext Σ (wf_env_ext_wf Σ) Σ (wf_env_ext_graph_wf Σ) Γ wfΓ t.
+  
+  Definition infer_type_wf_ext (Σ : global_env_ext) (wfΣ : ∥ wf_ext Σ ∥) 
+    (G : universes_graph) (HG : is_graph_of_uctx G (global_ext_uctx Σ)) Γ (wfΓ : ∥ wf_local Σ Γ ∥) t : 
+    typing_result (∑ s, ∥ Σ ;;; Γ |- t : tSort s ∥) := 
+    @infer_type cf Σ (let 'sq wfΣ := wfΣ in sq wfΣ.1) (@infer_wf_ext Σ wfΣ G HG) Γ wfΓ t.
+
+  Definition infer_type_wf_env (Σ : wf_env_ext) Γ (wfΓ : ∥ wf_local Σ Γ ∥) t : typing_result (∑ s, ∥ Σ ;;; Γ |- t : tSort s ∥) := 
     infer_type_wf_ext Σ (wf_env_ext_wf Σ) Σ (wf_env_ext_graph_wf Σ) Γ wfΓ t.
-    
+
   Definition wfnil {Σ : global_env_ext} : ∥ wf_local Σ [] ∥ := sq localenv_nil.
   
   Notation " ' pat <- m ;; f " := (bind m (fun pat => f)) (pat pattern, right associativity, at level 100, m at next level).
@@ -1590,11 +1598,142 @@ Section CheckEnv.
         eapply type_Cumul'; eauto. econstructor; pcuic. pcuic.
         reflexivity.
   Qed.
+  
+  Require Import PCUICInductives PCUICWfUniverses.
+
+  Program Fixpoint infer_type_local_ctx (Σ : wf_env_ext) Γ Δ (s : Universe.t)
+    (wfs : wf_universe Σ s) (wfΓ : ∥ wf_local Σ Γ ∥) : 
+    typing_result (∑ s, ∥ type_local_ctx (lift_typing typing) Σ Γ Δ s ∥) := 
+    match Δ with
+    | [] => ret (s; sq wfs)
+    | {| decl_body := None; decl_type := ty |} :: Δ => 
+      '(Δs; Δinfer) <- infer_type_local_ctx Σ Γ Δ s wfs wfΓ ;;
+      '(tys; tyinfer) <- infer_type_wf_env Σ (Γ ,,, Δ) _ ty ;;
+      (** Here we do something that Coq doesn't do that is somewhat ill-defined: 
+          it allows to take the sup of SProp and Prop
+          *)
+      check_leqb_universe Σ Δs (Universe.sup Δs tys) ;;
+      check_leqb_universe Σ tys (Universe.sup Δs tys) ;;
+      ret (Universe.sup Δs tys; _)
+    | {| decl_body := Some b; decl_type := ty |} :: Δ => 
+      '(Δs; Δinfer) <- infer_type_local_ctx Σ Γ Δ s wfs wfΓ ;;
+      checkty <- check_type_wf_env Σ (Γ ,,, Δ) _ b ty ;;
+      ret (Δs; _)
+    end.
+    Next Obligation.
+      sq. now eapply PCUICContexts.type_local_ctx_wf_local in Δinfer.
+    Qed.
+    Next Obligation.
+      destruct Σ as [Σ wfΣ G wfG]; simpl in *.
+      sq. split; auto.
+      eapply type_local_ctx_cum; pcuics. apply wfΣ.
+      eapply wf_universe_sup. 2:eapply typing_wf_universe in X; auto.
+      now eapply PCUICInductives.type_local_ctx_wf in Δinfer.
+      eapply leq_universe_sup.
+      pcuic.
+    Qed.
+    Next Obligation.
+      sq. now eapply PCUICContexts.type_local_ctx_wf_local in checkΔ.
+    Qed.
+    Next Obligation.
+    destruct Σ as [Σ wfΣ G wfG]; simpl in *.
+    sq. split; auto. split; auto.
+      eapply PCUICValidity.validity_term in checkty; auto.
+    Qed.
+
+  Program Fixpoint check_type_local_ctx (Σ : wf_env_ext) Γ Δ s (wfΓ : ∥ wf_local Σ Γ ∥) : 
+    typing_result (∥ type_local_ctx (lift_typing typing) Σ Γ Δ s ∥) := 
+    match Δ with
+    | [] => match wf_universeb Σ s with true => ret _ | false => raise (Msg "Ill-formed universe") end
+    | {| decl_body := None; decl_type := ty |} :: Δ => 
+      checkΔ <- check_type_local_ctx Σ Γ Δ s wfΓ ;;
+      checkty <- check_type_wf_env Σ (Γ ,,, Δ) _ ty (tSort s) ;;
+      ret _
+    | {| decl_body := Some b; decl_type := ty |} :: Δ => 
+      checkΔ <- check_type_local_ctx Σ Γ Δ s wfΓ ;;
+      checkty <- check_type_wf_env Σ (Γ ,,, Δ) _ b ty ;;
+      ret _
+    end.
+    Next Obligation.
+      symmetry in Heq_anonymous. sq.
+      now apply/PCUICWfUniverses.wf_universe_reflect.
+    Qed.
+    Next Obligation.
+      sq. now eapply PCUICContexts.type_local_ctx_wf_local in checkΔ.
+    Qed.
+    Next Obligation.
+      sq. split; auto.
+    Qed.
+    Next Obligation.
+      sq. now eapply PCUICContexts.type_local_ctx_wf_local in checkΔ.
+    Qed.
+    Next Obligation.
+      destruct Σ as [Σ wfΣ G wfG]; simpl in *.
+      sq. split; auto. split; auto.
+      eapply PCUICValidity.validity_term in checkty; auto.
+    Qed.
+
+  Section MonadMapi.
+    Context {T} {M : Monad T} {A B : Type} (f : nat -> A -> T B).
+  
+    Fixpoint monad_mapi_rec (n : nat) (l : list A) : T (list B) :=
+      match l with
+      | [] => ret []
+      | x :: xs => x' <- f n x ;;
+        xs' <- monad_mapi_rec (S n) xs ;;
+        ret (x' :: xs')
+      end.
+
+    Definition monad_mapi (l : list A) := monad_mapi_rec 0 l.
+  End MonadMapi.
+
+  Definition check_constructor_spec (Σ : wf_env_ext) (ind : nat) (mdecl : mutual_inductive_body)
+    (k : nat) (d : ((ident × term) × nat)) (cs : constructor_shape) :=
+    isType Σ (arities_context mdecl.(ind_bodies)) d.1.2 * 
+    (d.1.2 = 
+      it_mkProd_or_LetIn 
+        (mdecl.(ind_params) ,,, cs.(cshape_args))
+        (mkApps (tRel (#|mdecl.(ind_params) ,,, cs.(cshape_args)| + (#|ind_bodies mdecl| - k)))
+          (to_extended_list_k mdecl.(ind_params) #|cs.(cshape_args)| ++ 
+          cs.(cshape_indices)))) * 
+    (type_local_ctx (lift_typing typing) Σ (arities_context mdecl.(ind_bodies) ,,, ind_params mdecl) cs.(cshape_args) 
+      cs.(cshape_sort)) * 
+    (d.2 = context_assumptions cs.(cshape_args)).
+
+  Program Definition check_constructor (Σ : wf_env_ext) (ind : nat) (mdecl : mutual_inductive_body)
+    (idecl : one_inductive_body) (k : nat) (d : ((ident × term) × nat)) : 
+    EnvCheck (∑ cs : constructor_shape, check_constructor_spec Σ ind mdecl k d cs) :=
+    '(s; Hs) <- wrap_error Σ ("While checking type of constructor: " ^ d.1.1)
+      (infer_type_wf_env Σ (arities_context mdecl.(ind_bodies)) _ d.1.2) ;;
+    match decompose_prod_n_assum [] #|mdecl.(ind_params)| d.1.2 with
+    | Some (params, concl) => 
+      eqpars <- wrap_error Σ d.1.1
+         (check_eq_true (eqb params mdecl.(ind_params)) 
+        (Msg "Constructor parameters do not match the parameters of the mutual declaration"));;
+      let (args, concl) := decompose_prod_assum [] concl in
+      eqargs <- wrap_error Σ d.1.1
+        (check_eq_true (eqb (context_assumptions args) d.2)
+          (Msg "Constructor arguments do not match the argument number of the declaration"));;
+      check_type_local_ctx Σ (arities_context mdecl.(ind_bodies) ,,, mdecl.(ind_params))
+        args 
+
+      ret _
+    | None =>
+      raise (Σ.(wf_env_ext_env), IllFormedDecl d.1.1 (Msg "Not enough parameters in constructor type"))
+    end.
+
+     
+
+
+  Program Definition constructor_shapes (Σ : wf_env_ext) (id : ident) (mdecl : mutual_inductive_body)
+    (cstrs : list ((ident × term) × nat) : typing_result (list constructor_shape) :=
+    monad_mapi (fun k d => check_constructor Σ k d) cstrs.
+    
 
   Program Definition check_constructors (Σ : wf_env_ext) (id : kername) (mdecl : mutual_inductive_body)
     (n : nat) (idecl : one_inductive_body) (indices : context) : typing_result (∑ cs : list constructor_shape,
-      ∥ on_constructors (lift_typing typing) Σ mdecl n idecl indices (ind_ctors idecl) cs ∥) :=
-      ret _.
+      ∥ on_constructor (lift_typing typing) Σ mdecl n idecl indices (ind_ctors idecl) cs ∥) :=
+      
   Next Obligation. 
     intros. todo "check_constructors".
   Qed.
@@ -1657,38 +1796,7 @@ Section CheckEnv.
     specialize (H1 H0). congruence.
   Qed.
 
-  Program Fixpoint check_type_local_ctx (Σ : wf_env_ext) Γ Δ s (wfΓ : ∥ wf_local Σ Γ ∥) : 
-    typing_result (∥ type_local_ctx (lift_typing typing) Σ Γ Δ s ∥) := 
-    match Δ with
-    | [] => match wf_universeb Σ s with true => ret _ | false => raise (Msg "Ill-formed universe") end
-    | {| decl_body := None; decl_type := ty |} :: Δ => 
-      checkΔ <- check_type_local_ctx Σ Γ Δ s wfΓ ;;
-      checkty <- check_type_wf_env Σ (Γ ,,, Δ) _ ty (tSort s) ;;
-      ret _
-    | {| decl_body := Some b; decl_type := ty |} :: Δ => 
-      checkΔ <- check_type_local_ctx Σ Γ Δ s wfΓ ;;
-      checkty <- check_type_wf_env Σ (Γ ,,, Δ) _ b ty ;;
-      ret _
-    end.
-    Next Obligation.
-      symmetry in Heq_anonymous. sq.
-      now apply/PCUICWfUniverses.wf_universe_reflect.
-    Qed.
-    Next Obligation.
-      sq. now eapply PCUICContexts.type_local_ctx_wf_local in checkΔ.
-    Qed.
-    Next Obligation.
-      sq. split; auto.
-    Qed.
-    Next Obligation.
-      sq. now eapply PCUICContexts.type_local_ctx_wf_local in checkΔ.
-    Qed.
-    Next Obligation.
-      destruct Σ as [Σ wfΣ G wfG]; simpl in *.
-      sq. split; auto. split; auto.
-      eapply PCUICValidity.validity_term in checkty; auto.
-    Qed.
-
+  
   Program Definition do_check_ind_sorts (Σ : wf_env_ext) (params : context) (wfparams : ∥ wf_local Σ params ∥) 
     (kelim : sort_family) (indices : context) 
     (cs : list constructor_shape) (ind_sort : Universe.t) : 

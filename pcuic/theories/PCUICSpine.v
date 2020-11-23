@@ -188,6 +188,37 @@ Proof.
       now rewrite app_context_length in b.
 Qed.
 
+Lemma subst_sorts_local_ctx {cf:checker_flags} Σ Γ Γ' Δ Δ' s ctxs : 
+  wf Σ.1 ->
+  wf_local Σ (Γ ,,, Δ ,,, Γ') ->
+  sorts_local_ctx (lift_typing typing) Σ (Γ ,,, Δ ,,, Γ') Δ' ctxs ->
+  subslet Σ Γ s Δ ->
+  sorts_local_ctx (lift_typing typing) Σ (Γ ,,, subst_context s 0 Γ') (subst_context s #|Γ'| Δ') ctxs.
+Proof.
+  induction Δ' in Γ', ctxs |- *; simpl; auto.
+  destruct a as [na [b|] ty]; simpl; intuition auto.
+  + destruct a0; simpl; rewrite subst_context_snoc /= /subst_decl /map_decl /=.
+    intuition auto.
+    - exists x; auto.
+      rewrite -app_context_assoc in t.
+      eapply substitution in t; eauto.
+      rewrite subst_context_app app_context_assoc in t.
+      simpl in t. rewrite Nat.add_0_r in t. 
+      now rewrite app_context_length in t.
+    - rewrite -app_context_assoc in b1.
+      eapply substitution in b1; eauto.
+      rewrite subst_context_app app_context_assoc Nat.add_0_r in b1.
+      now rewrite app_context_length in b1.
+  + rewrite subst_context_snoc /= /subst_decl /map_decl /=.
+    destruct ctxs => //.
+    intuition auto.
+    rewrite -app_context_assoc in b.
+    eapply substitution in b; eauto.
+    rewrite subst_context_app app_context_assoc in b.
+    rewrite Nat.add_0_r in b. 
+    now rewrite app_context_length in b.
+Qed.
+
 Record spine_subst {cf:checker_flags} Σ Γ inst s Δ := mkSpineSubst {
   spine_dom_wf : wf_local Σ Γ;
   spine_codom_wf : wf_local Σ (Γ ,,, Δ);

@@ -359,11 +359,10 @@ Proof.
     eapply wf_arity_spine_typing_spine => //.
     split.
     { (* Predicate instantiation is well typed *) 
-      exists (Universe.sort_of_product s ps).
-      eapply type_it_mkProd_or_LetIn; eauto.
-      now eapply type_local_ctx_wf in typectx.
+      exists (sort_of_products s ps).
+      eapply type_it_mkProd_or_LetIn_sorts; eauto.
       assert (wf_local Σ (Γ ,,, pargctxu)).
-      { eapply type_local_ctx_wf_local in typectx; eauto. }
+      { eapply sorts_local_ctx_wf_local in typectx; eauto. }
       assert (#|argctx| = #|pargctxu|).
       { now rewrite /argctx /pargctxu /argctxu /argctx; autorewrite with len. }
       eapply type_mkApps.

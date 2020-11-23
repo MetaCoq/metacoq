@@ -506,7 +506,7 @@ Proof.
   - discriminate.
 Qed.
 
-Lemma on_constructor_subst' {cf:checker_flags} Σ ind mdecl idecl cshape cdecl : 
+Lemma on_constructor_wf_args {cf:checker_flags} Σ ind mdecl idecl cshape cdecl : 
   wf Σ -> 
   declared_inductive Σ mdecl ind idecl ->
   on_inductive (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind ind) mdecl ->
@@ -514,27 +514,15 @@ Lemma on_constructor_subst' {cf:checker_flags} Σ ind mdecl idecl cshape cdecl :
            (inductive_ind ind) idecl)
         (onc : on_constructor (lift_typing typing) (Σ, ind_universes mdecl)
           mdecl (inductive_ind ind) idecl (ind_indices oib) cdecl cshape),
-  wf_global_ext Σ (ind_universes mdecl) *
   wf_local (Σ, ind_universes mdecl)
-   (arities_context (ind_bodies mdecl) ,,, ind_params mdecl ,,, cshape_args cshape) *
-  ctx_inst (Σ, ind_universes mdecl)
-             (arities_context (ind_bodies mdecl) ,,, ind_params mdecl ,,,
-              cshape_args cshape)
-             (cshape_indices cshape) 
-            (List.rev (lift_context #|cshape_args cshape| 0 (ind_indices oib))). 
+   (arities_context (ind_bodies mdecl) ,,, ind_params mdecl ,,, cshape_args cshape).
 Proof.
   move=> wfΣ declm oi oib onc.
   pose proof (on_cargs onc). simpl in X.
-  split.
-  - split. split.
-    2:{ eapply (weaken_lookup_on_global_env'' _ _ (InductiveDecl mdecl)); pcuic. destruct declm; pcuic. }
-    red. split; eauto. simpl. eapply (weaken_lookup_on_global_env' _ _ (InductiveDecl mdecl)); eauto.
-    destruct declm; pcuic.
-    eapply type_local_ctx_wf_local in X => //. clear X.
-    eapply weaken_wf_local => //.
-    eapply wf_arities_context; eauto. destruct declm; eauto.
-    now eapply onParams.
-  - apply (on_cindices onc).
+  eapply sorts_local_ctx_wf_local in X => //. clear X.
+  eapply weaken_wf_local => //.
+  eapply wf_arities_context; eauto. destruct declm; eauto.
+  now eapply onParams.
 Qed.
 
 Lemma on_constructor_subst {cf:checker_flags} Σ ind mdecl idecl cshape cdecl : 
@@ -562,7 +550,7 @@ Proof.
   2:{ eapply (weaken_lookup_on_global_env'' _ _ (InductiveDecl mdecl)); pcuic. destruct declm; pcuic. }
   red. split; eauto. simpl. eapply (weaken_lookup_on_global_env' _ _ (InductiveDecl mdecl)); eauto.
   destruct declm; pcuic. 
-  eapply type_local_ctx_wf_local in X => //. clear X.
+  eapply sorts_local_ctx_wf_local in X => //. clear X.
   eapply weaken_wf_local => //.
   eapply wf_arities_context; eauto. destruct declm; eauto.
   now eapply onParams.
@@ -1319,7 +1307,7 @@ Lemma Construct_Ind_ind_eq {cf:checker_flags} {Σ} (wfΣ : wf Σ.1):
     spine_subst Σ Γ (skipn (ind_npars mdecl) args) argsubst argctx *
     spine_subst Σ Γ (skipn (ind_npars mdecl) args')  argsubst' argctx' *
 
-    ∑ s, type_local_ctx (lift_typing typing) Σ Γ argctx2 s *
+    ∑ s, sorts_local_ctx (lift_typing typing) Σ Γ argctx2 s *
     (** Parameters match *)
     (All2 (fun par par' => Σ ;;; Γ |- par = par') 
       (firstn mdecl.(ind_npars) args) 
@@ -1408,7 +1396,7 @@ Proof.
     eapply wf_arities_context => //; eauto. }
   assert(wfpars : wf_local Σ (subst_instance_context u (ind_params mdecl))).
     { eapply on_minductive_wf_params => //; eauto. }
-      
+
   intuition auto; try split; auto.
   - apply weaken_wf_local => //.
   - pose proof (subslet_length a0). rewrite subst_instance_context_length in H1.
@@ -1422,24 +1410,25 @@ Proof.
     eapply weaken_wf_local => //.
     rewrite -subst_instance_context_app. 
     apply a.
-  - exists (subst_instance_univ u' (cshape_sort cshape)). split.
+  - exists (map (subst_instance_univ u') (cshape_sorts cshape)). split.
     move/onParams: onmind. rewrite /on_context.
     pose proof (wf_local_instantiate Σ (InductiveDecl mdecl) (ind_params mdecl) u').
     move=> H'. eapply X in H'; eauto.
     2:destruct decli; eauto.
     clear -wfar wfpars wfΣ hΓ cons decli t cargs sargs H0 H' a spars a0.
-    eapply (subst_type_local_ctx _ _ [] 
-      (subst_context (inds (inductive_mind i) u' (ind_bodies mdecl)) 0 (subst_instance_context u' (ind_params mdecl)))) => //.
+    eapply (subst_sorts_local_ctx _ _ []
+      (subst_context (inds (inductive_mind i) u' (ind_bodies mdecl)) 0 
+        (subst_instance_context u' (ind_params mdecl)))) => //.
     simpl. eapply weaken_wf_local => //.
     rewrite closed_ctx_subst => //.
     now rewrite closedn_subst_instance_context.
     simpl. rewrite -(subst_instance_context_length u' (ind_params mdecl)).
-    eapply (subst_type_local_ctx _ _ _ (subst_instance_context u' (arities_context (ind_bodies mdecl)))) => //.
+    eapply (subst_sorts_local_ctx _ _ _ (subst_instance_context u' (arities_context (ind_bodies mdecl)))) => //.
     eapply weaken_wf_local => //.
     rewrite -app_context_assoc.
-    eapply weaken_type_local_ctx => //.
+    eapply weaken_sorts_local_ctx => //.
     rewrite -subst_instance_context_app.
-    eapply type_local_ctx_instantiate => //; destruct decli; eauto.
+    eapply sorts_local_ctx_instantiate => //; destruct decli; eauto.
     eapply (weaken_subslet _ _ _ _ []) => //.
     now eapply subslet_inds; eauto.
     rewrite closed_ctx_subst ?closedn_subst_instance_context. auto.
@@ -3197,7 +3186,7 @@ Proof.
           rewrite -(Nat.add_0_l (context_assumptions _)).
           eapply closedn_ctx_subst. len; simpl.
           2:{ eapply declared_minductive_closed_inds; eauto. }
-          epose proof (on_constructor_subst' _ _ _ _ _ _ wfΣ decli onind oib onc) as [[_ wf'] _]; eauto.
+          epose proof (on_constructor_wf_args _ _ _ _ _ _ wfΣ decli onind oib onc) as wf'; eauto.
           eapply closed_wf_local in wf'; eauto.
           rewrite closedn_ctx_app in wf'. move/andP: wf'=> [_ clargs].
           simpl in clargs; autorewrite with len in clargs.
@@ -3971,41 +3960,41 @@ Proof.
     move/andP: Hp => [_ Hp].
     now apply (PCUICWfUniverses.reflect_bP (PCUICWfUniverses.wf_universe_reflect _ _)) in Hp. auto. }
   rewrite !subst_instance_context_app in wf.
-  assert (type_local_ctx (lift_typing typing) Σ Γ
+  assert (sorts_local_ctx (lift_typing typing) Σ Γ
   (subst_context parsubst 0
         (subst_context
            (inds (inductive_mind ind) u (PCUICEnvironment.ind_bodies mdecl))
            #|ind_params mdecl|
            (map_context (subst_instance_constr u)
               (cshape_args cs))))
-  (subst_instance_univ u (cshape_sort cs))).
+  (List.map (subst_instance_univ u) (cshape_sorts cs))).
   { pose proof (onc.(on_cargs)).
-    eapply type_local_ctx_instantiate in X; eauto.
+    eapply sorts_local_ctx_instantiate in X; eauto.
     rewrite subst_instance_context_app in X.
     rewrite -(app_context_nil_l (_ ,,, _)) app_context_assoc in X.
-    eapply (subst_type_local_ctx) in X; simpl in *; eauto.
+    eapply (subst_sorts_local_ctx) in X; simpl in *; eauto.
     3:{ eapply subslet_inds; eauto. }
     2:{ rewrite app_context_nil_l.
         now eapply All_local_env_app in wf as [? ?]. }
     simpl in X. len in X.
-    eapply weaken_type_local_ctx in X. 2:eauto. 2:eapply typing_wf_local; eauto.
+    eapply weaken_sorts_local_ctx in X. 2:eauto. 2:eapply typing_wf_local; eauto.
     rewrite app_context_nil_l in X.
     rewrite closed_ctx_subst in X.
     eapply closed_wf_local; eauto.
     eapply on_minductive_wf_params; pcuic.
     eapply decli.
-    eapply (subst_type_local_ctx _ _ []) in X; simpl in *; eauto.
+    eapply (subst_sorts_local_ctx _ _ []) in X; simpl in *; eauto.
     eapply weaken_wf_local; pcuic.
     eapply on_minductive_wf_params; pcuic. eapply decli.
     rewrite (context_subst_fun csub sppars).
     eapply sppars. }
   eexists.
   set (binder := vass _ _) in *.
-  assert (wfcs : wf_universe Σ (subst_instance u (cshape_sort cs))).
-  { eapply type_local_ctx_wf in X; pcuic. }
-  eapply type_it_mkProd_or_LetIn; eauto.
-  eapply type_local_ctx_All_local_env in X. 2:pcuic; len. len.
-  eapply type_mkApps. 
+  (* assert (wfcs : wf_universe Σ (subst_instance u (cshape_sort cs))).
+  { eapply type_local_ctx_wf in X; pcuic. } *)
+  eapply type_it_mkProd_or_LetIn_sorts. eauto. eapply X.
+  eapply sorts_local_ctx_wf_local in X.
+  eapply type_mkApps.
   relativize #|cshape_args cs|.
   eapply weakening; eauto. now len.
   len. rewrite lift_it_mkProd_or_LetIn /=.
@@ -4216,5 +4205,5 @@ Proof.
     * now len. 
     }
     rewrite skipn_S skipn_0.
-    now rewrite !map_map_compose in spinst. 
+    now rewrite !map_map_compose in spinst. pcuic. 
 Qed.

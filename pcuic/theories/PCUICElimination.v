@@ -117,7 +117,7 @@ Lemma elim_sort_intype {cf:checker_flags} Σ mdecl ind idecl ind_indices ind_sor
   (∑ cdecl cshape, 
     (ind_ctors idecl = [cdecl]) * 
     (cshapes = [cshape]) * 
-    (is_propositional cshape.(cshape_sort)) *
+    (Forall is_propositional cshape.(cshape_sorts)) *
     (on_constructor (lift_typing typing) (Σ, ind_universes mdecl) mdecl 
         (inductive_ind ind) idecl ind_indices cdecl cshape))%type.
 Proof.
@@ -127,8 +127,11 @@ Proof.
   destruct l' as [|c cs].
   - simpl in *. depelim onc.
     right.
+    destruct forallb eqn:fo => //.
+    eapply forallb_All in fo.
     destruct (is_propositional y.(cshape_sort)) eqn:heq; try discriminate.
     eexists; eauto.
+    eexists; eauto. eexists; split; eauto.
   - discriminate.
 Qed.
 
@@ -351,6 +354,13 @@ Proof.
         intros. now apply H.
 Qed.
 
+Lemma leb_sort_family_inprop x : leb_sort_family (universe_family x) InProp -> is_propositional x.
+Proof.
+  destruct x; simpl; auto.
+  destruct t; simpl. unfold universe_family, is_propositional. simpl.
+  destruct UnivExprSet.for_all => //.
+Qed.
+
 Lemma check_ind_sorts_is_propositional {cf:checker_flags} (Σ : global_env_ext) mdecl idecl ind
   (onib : on_ind_body (lift_typing typing) (Σ.1, ind_universes mdecl)
     (inductive_mind ind) mdecl (inductive_ind ind) idecl) : 
@@ -359,32 +369,54 @@ Lemma check_ind_sorts_is_propositional {cf:checker_flags} (Σ : global_env_ext) 
   check_ind_sorts (lift_typing typing) (Σ.1, ind_universes mdecl)
     (PCUICEnvironment.ind_params mdecl) (PCUICEnvironment.ind_kelim idecl)
     (ind_indices onib) (ind_cshapes onib) (ind_sort onib) ->
-  (#|ind_cshapes onib| <= 1) * All (fun cs => is_propositional cs.(cshape_sort)) (ind_cshapes onib).
+  (#|ind_cshapes onib| <= 1) * All (fun cs => All is_propositional cs.(cshape_sorts)) (ind_cshapes onib).
 Proof.
   intros kelim isp.
   unfold check_ind_sorts. simpl.
   destruct Universe.is_prop eqn:isp'.
   + induction (ind_cshapes onib); simpl; auto; try discriminate.
     destruct l; simpl. intros; split; eauto. constructor; [|constructor].
-    destruct (cshape_sort a) => //. cbn in H.
+    destruct forallb eqn:fo. eapply forallb_All in fo.
+    eapply All_impl; eauto; simpl. 
+(*    destruct (cshape_sort a) => //. cbn in H.
     destruct (ind_kelim idecl); intuition congruence.
-    destruct (ind_kelim idecl); simpl; intuition congruence.
+    destruct (ind_kelim idecl); simpl; intuition congruence.*)
+
+    apply leb_sort_family_inprop.
+    destruct (ind_kelim idecl); simpl in *; intuition congruence.
+    intros leb.
+    destruct (ind_kelim idecl); simpl in *; intuition congruence.
   + destruct Universe.is_sprop eqn:issp.
     induction (ind_cshapes onib); simpl; auto; try discriminate.
-    destruct (ind_kelim idecl); simpl; intuition congruence.
+    destruct (ind_kelim idecl); simpl in *; intuition congruence.
     unfold is_propositional in isp.
     now rewrite isp' issp in isp.
 Qed.
-
-Lemma type_local_ctx_All_local_assum_impl {cf:checker_flags} Σ 
+ 
+Lemma sorts_local_ctx_All_local_assum_impl {cf:checker_flags} Σ 
   (P : context -> context -> term -> Type) {Γ Δ cs} : 
-  (forall Γ' t, Σ ;;; Γ ,,, Γ' |- t : tSort cs  -> P Γ Γ' t) ->
-  type_local_ctx (lift_typing typing) Σ Γ Δ cs ->
+  (forall Γ' t s, In s cs -> Σ ;;; Γ ,,, Γ' |- t : tSort s  -> P Γ Γ' t) ->
+  sorts_local_ctx (lift_typing typing) Σ Γ Δ cs ->
   All_local_assum (P Γ) Δ.
 Proof.
   intros H.
-  induction Δ; simpl; intros. constructor; intuition auto.
+  induction Δ in cs, H |- *; simpl; intros. constructor; intuition auto.
   destruct a as [na [b|] ty]; constructor; intuition auto.
+  destruct cs => //; eauto.
+  destruct cs => //; eauto. destruct X.
+  eapply IHΔ. intros. apply (H Γ' t1 s0). right; eauto. all:auto.
+  destruct cs => //. destruct X.
+  eapply H. left; eauto. eauto.
+Qed.
+
+Lemma In_map {A B} (f : A -> B) (l : list A) x : 
+  In x (map f l) -> 
+  exists y, In y l /\ x = f y.
+Proof.
+  induction l; simpl; auto.
+  intros [<-|inl].
+  - eexists; intuition eauto.
+  - destruct (IHl inl). exists x0; intuition eauto.
 Qed.
 
 (* We prove that if the (partial) constructor application's type lands in Prop
@@ -447,11 +479,11 @@ Proof.
     rewrite H0 in nctors; split; auto.
 
     eapply nth_error_all in X1; eauto. simpl in X1.
-    eapply type_local_ctx_instantiate in X0. 4:eapply cu.
+    eapply sorts_local_ctx_instantiate in X0. 4:eapply cu.
     all: eauto.
     rewrite subst_instance_context_app in X0.
-    eapply weaken_type_local_ctx in X0; eauto.
-    eapply (subst_type_local_ctx _ _) in X0; eauto.
+    eapply weaken_sorts_local_ctx in X0; eauto.
+    eapply (subst_sorts_local_ctx _ _) in X0; eauto.
     3:{ eapply subslet_app. 
       2:{ eapply (weaken_subslet _ _ _ _ []), PCUICArities.subslet_inds; eauto. } 
       eapply sub. }
@@ -465,12 +497,15 @@ Proof.
     rewrite subst_app_context in X0.
     rewrite -(context_subst_length sub) in X0.
     autorewrite with len in X0.
-    eapply (type_local_ctx_All_local_assum_impl Σ 
+    eapply (sorts_local_ctx_All_local_assum_impl Σ 
       (fun Γ Γ' t => 
       ∑ s0 : Universe.t, Σ;;; Γ ,,, Γ' |- t : tSort s0 × is_propositional s0)).
     2:eauto.
-    intros. exists (subst_instance_univ u cs.(cshape_sort)). intuition auto.
-    now rewrite is_propositional_subst_instance.
+    intros. exists s0. intuition auto.
+    eapply In_map in H1 as [cs' [ins ->]].
+    rewrite is_propositional_subst_instance.
+    eapply All_In in X1; eauto.
+    sq. apply X1.
     
   * intros _ sp.
     rewrite List.skipn_all2. lia.

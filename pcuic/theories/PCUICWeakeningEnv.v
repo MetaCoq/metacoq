@@ -539,8 +539,9 @@ Proof.
       destruct X as [? ? ? ?]. unshelve econstructor; eauto.
       * unfold on_type in *; eauto.
       * clear on_cindices cstr_eq cstr_args_length.
-        induction (cshape_args y); simpl in *; auto.
-        ** eapply (extends_wf_universe (Σ:=(Σ,φ)) Σ'); auto.
+        revert on_cargs; generalize (cshape_sorts y) as l.
+        induction (cshape_args y); destruct l; simpl in *; eauto.
+        ** destruct a as [na [b|] ty]; simpl in *; intuition eauto.
         ** destruct a as [na [b|] ty]; simpl in *; intuition eauto.
       * clear on_ctype on_cargs.
         revert on_cindices.
@@ -671,8 +672,8 @@ Lemma declared_projection_inv `{checker_flags} {Σ P mdecl idecl ref pdecl} :
   let oib := declared_inductive_inv HP wfΣ HΣ (let (x, _) := Hdecl in x) in
   match oib.(ind_cshapes) return Type with
   | [cs] => 
-    type_local_ctx (lift_typing P) (Σ, ind_universes mdecl) (arities_context (ind_bodies mdecl) ,,, ind_params mdecl) (cshape_args cs)
-      (cshape_sort cs) *
+    sorts_local_ctx (lift_typing P) (Σ, ind_universes mdecl) (arities_context (ind_bodies mdecl) ,,, ind_params mdecl) (cshape_args cs)
+      (cshape_sorts cs) *
     on_projections mdecl (inductive_mind ref.1.1) (inductive_ind ref.1.1) idecl (oib.(ind_indices)) cs *
     ((snd ref) < context_assumptions cs.(cshape_args)) *
     on_projection mdecl (inductive_mind ref.1.1) (inductive_ind ref.1.1) cs (snd ref) pdecl
@@ -824,9 +825,9 @@ Lemma on_declared_projection `{checker_flags} {Σ ref mdecl idecl pdecl} :
   let oib := declared_inductive_inv weaken_env_prop_typing wfΣ wfΣ (let (x, _) := Hdecl in x) in
   match oib.(ind_cshapes) return Type with
   | [cs] => 
-    type_local_ctx (lift_typing typing) (Σ, ind_universes mdecl) 
+    sorts_local_ctx (lift_typing typing) (Σ, ind_universes mdecl) 
       (arities_context (ind_bodies mdecl) ,,, ind_params mdecl) (cshape_args cs)
-      (cshape_sort cs) *
+      (cshape_sorts cs) *
     on_projections mdecl (inductive_mind ref.1.1) (inductive_ind ref.1.1) idecl (oib.(ind_indices)) cs *
     ((snd ref) < context_assumptions cs.(cshape_args)) *
     on_projection mdecl (inductive_mind ref.1.1) (inductive_ind ref.1.1) cs (snd ref) pdecl

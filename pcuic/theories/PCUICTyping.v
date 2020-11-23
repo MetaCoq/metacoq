@@ -882,7 +882,7 @@ Proof.
          simpl in Hs.
          specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ _ (existT _ _ Hs)))))).
          simpl in IH. simpl. exists s. simpl. apply IH; constructor 1; simpl; auto with arith.
-         eapply type_local_ctx_impl; eauto. simpl. intros. red in X14.
+         eapply sorts_local_ctx_impl; eauto. simpl. intros. red in X14.
          destruct T.
          specialize (IH ((Σ, udecl); (X13; _; _; _; X14))).
          apply IH. simpl. constructor 1. simpl. auto with arith.

@@ -459,8 +459,10 @@ Proof.
       intros decl cs []. unshelve econstructor; eauto.
       red in on_ctype |- *. eauto.
       clear on_cindices cstr_eq cstr_args_length cstr_concl_head.
-      induction (cshape_args cs); simpl in *; auto.
-      ** eapply (extends_wf_universe (Σ:=(Σ,φ)) Σ'); auto.
+      revert on_cargs.
+      generalize (cshape_sorts cs).
+      induction (cshape_args cs); destruct l; simpl in *; auto.
+      ** destruct a as [na [b|] ty]; simpl in *; intuition eauto.
       ** destruct a as [na [b|] ty]; simpl in *; intuition eauto.
       ** clear on_ctype on_cargs.
         revert on_cindices.

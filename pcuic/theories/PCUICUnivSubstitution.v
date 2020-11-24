@@ -368,20 +368,6 @@ Proof.
   now rewrite is_prop_subst_instance_univ.
 Qed.
 
-Lemma is_small_subst_instance_univ u l
-  : Universe.is_small l -> Universe.is_small (subst_instance_univ u l).
-Proof.
-  assert (He : forall a, UnivExpr.is_small a ->
-             UnivExpr.is_small (subst_instance_level_expr u a)). {
-    intros [[][]]; cbnr; auto. }
-  intro H.
-  destruct l; cbnr.
-  apply UnivExprSet.for_all_spec in H; proper.
-  apply UnivExprSet.for_all_spec; proper; intros e Xe.
-  apply Universe.map_spec in Xe as [e' [H1 H2]]; subst.
-  now apply He, H.
-Qed.
-
 Lemma sup_subst_instance_univ0 u s1 s2 :
   subst_instance u (Universe.sup0 s1 s2)
   = Universe.sup0 (subst_instance u s1) (subst_instance u s2).
@@ -1176,6 +1162,21 @@ Proof.
   - econstructor 3. 1: eauto. eapply red1_subst_instance; cbn; eauto.
 Qed.
 
+Lemma is_allowed_elimination_subst_instance (Σ : global_env_ext) univs inst u al :
+  valid_constraints (global_ext_constraints (Σ.1, univs))
+                    (subst_instance_cstrs inst Σ) ->
+  is_allowed_elimination Σ u al ->
+  is_allowed_elimination (global_ext_constraints (Σ.1, univs)) (subst_instance_univ inst u) al.
+Proof.
+  intros val isal.
+  unfold is_allowed_elimination, is_allowed_elimination0 in *.
+  destruct check_univs eqn:cu; auto.
+  intros ? sat.
+  eapply satisfies_subst_instance in sat; eauto.
+  specialize (isal _ sat).
+  rewrite subst_instance_univ_val'; auto.
+Qed.
+
 Global Instance eq_decl_subst_instance Σ : SubstUnivPreserved (eq_decl Σ).
 Proof.
   intros φ1 φ2 u HH [? [?|] ?] [? [?|] ?] [H1 H2]; split; cbn in *; auto.
@@ -1583,18 +1584,9 @@ Proof.
       * rewrite !map_map, subst_instance_context_length; apply map_ext. clear.
         intro. now apply lift_subst_instance_constr.
       * symmetry; apply subst_instance_to_extended_list.
-    + clear -H1 H4.
-      unfold universe_family in *.
-      rewrite is_prop_subst_instance_univ.
-      rewrite is_sprop_subst_instance_univ.
-      destruct (Universe.is_prop ps); cbnr.
-      ++ destruct (ind_kelim idecl); simpl in H1; congruence.
-      ++ destruct (Universe.is_sprop ps); auto.
-        case_eq (Universe.is_small ps); intro HH; rewrite HH in H1.
-        +++ apply (is_small_subst_instance_univ u0) in HH.
-            now rewrite HH.
-        +++ destruct (ind_kelim idecl); inv H1.
-            destruct ?; constructor.
+    + destruct HSub.
+      cbn in *.
+      eapply is_allowed_elimination_subst_instance; aa.
     + eapply X4 in H4; tea.
       rewrite subst_instance_constr_mkApps in H4; eassumption.
     + cbn. rewrite firstn_map. rewrite <- subst_instance_build_branches_type.

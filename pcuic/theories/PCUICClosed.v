@@ -796,14 +796,11 @@ Proof.
             induction 1; simpl; constructor; auto.
        --- simpl; intros. pose (onProjections X1 H0). simpl in *; auto.
        --- destruct X1. simpl. unfold check_ind_sorts in *.
-           destruct universe_family; auto.
-           split. apply ind_sorts.
+           destruct Universe.is_prop, Universe.is_sprop; auto.
+           split.
+           * apply ind_sorts.
            * destruct indices_matter; auto.
              eapply type_local_ctx_impl. eapply ind_sorts. auto.
-           * split; [apply fst in ind_sorts|apply snd in ind_sorts].
-             eapply Forall_impl; tea. auto.
-             destruct indices_matter; [|trivial].
-             eapply type_local_ctx_impl; tea. eauto.
       --- eapply X1.(onIndices).
     -- red in onP. red.
        eapply All_local_env_impl. eauto.

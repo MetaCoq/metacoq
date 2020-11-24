@@ -108,7 +108,7 @@ Qed.
 
 
 
-Derive NoConfusion EqDec for sort_family.
+Derive NoConfusion EqDec for allowed_eliminations.
 
 Inductive type_error :=
 | UnboundRel (n : nat)
@@ -772,6 +772,75 @@ Section Typecheck.
   Qed.
 
   Obligation Tactic := Program.Tactics.program_simplify ; eauto 2.
+  
+  Program Definition check_is_allowed_elimination (u : Universe.t) (al : allowed_eliminations) :
+    typing_result (is_allowed_elimination Σ u al) :=
+    let o :=
+    match al return option (is_allowed_elimination Σ u al) with
+    | IntoSProp =>
+      match Universe.is_sprop u with
+      | true => Some _
+      | false => None
+      end
+    | IntoPropSProp =>
+      match is_propositional u with
+      | true => Some _
+      | false => None
+      end
+    | IntoSetPropSProp =>
+      match is_propositional u || check_eqb_universe G u Universe.type0 with
+      | true => Some _
+      | false => None
+      end
+    | IntoAny => Some _
+    end in
+    match o with
+    | Some t => Checked t
+    | None => TypeError (Msg "Cannot eliminate over this sort")
+    end.
+  Next Obligation.
+    unfold is_allowed_elimination, is_allowed_elimination0.
+    destruct check_univs; auto.
+    intros val sat.
+    symmetry in Heq_anonymous.
+    apply is_sprop_val with (v := val) in Heq_anonymous.
+    now rewrite Heq_anonymous.
+  Qed.
+  Next Obligation.
+    unfold is_allowed_elimination, is_allowed_elimination0.
+    destruct check_univs; auto.
+    intros val sat.
+    unfold is_propositional in *.
+    destruct Universe.is_prop eqn:prop.
+    - apply is_prop_val with (v := val) in prop; rewrite prop; auto.
+    - destruct Universe.is_sprop eqn:sprop.
+      + apply is_sprop_val with (v := val) in sprop; rewrite sprop; auto.
+      + discriminate.
+  Qed.
+  Next Obligation.
+    unfold is_allowed_elimination, is_allowed_elimination0.
+    destruct check_univs eqn:cu; auto.
+    intros val sat.
+    unfold is_propositional in *.
+    destruct Universe.is_prop eqn:prop.
+    - apply is_prop_val with (v := val) in prop; rewrite prop; auto.
+    - destruct Universe.is_sprop eqn:sprop.
+      + apply is_sprop_val with (v := val) in sprop; rewrite sprop; auto.
+      + destruct check_eqb_universe eqn:check; [|discriminate].
+        eapply check_eqb_universe_spec' in check; eauto.
+        * unfold eq_universe, eq_universe0 in check.
+          rewrite cu in check.
+          specialize (check val sat).
+          now rewrite check.
+        * destruct HΣ, Hφ.
+          now apply wf_ext_global_uctx_invariants.
+        * destruct HΣ, Hφ.
+          now apply global_ext_uctx_consistent.
+  Qed.
+  Next Obligation.
+    unfold is_allowed_elimination, is_allowed_elimination0.
+    destruct check_univs; auto.
+  Qed.
 
   Program Fixpoint infer (Γ : context) (HΓ : ∥ wf_local Σ Γ ∥) (t : term) {struct t}
     : typing_result ({ A : term & ∥ Σ ;;; Γ |- t : A ∥ }) :=
@@ -853,9 +922,7 @@ Section Typecheck.
       match destArity [] pty.π1 with
       | None => raise (Msg "the type of the return predicate of a Case is not an arity")
       | Some (pctx, ps) =>
-        check_eq_true
-          (leb_sort_family (universe_family ps) (ind_kelim body))
-          (Msg "cannot eliminate over this sort") ;;
+        check_is_allowed_elimination ps (ind_kelim body);;
         let params := firstn par args in
         match build_case_predicate_type ind decl body params u ps with
         | None => raise (Msg "failure in build_case_predicate_type")

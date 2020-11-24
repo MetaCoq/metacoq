@@ -22,14 +22,23 @@ Proof.
   - simpl. apply ConstraintSet.union_spec. right; eauto.
 Qed.
 
+Lemma satisfies_subset φ φ' val :
+  ConstraintSet.Subset φ φ' ->
+  satisfies val φ' ->
+  satisfies val φ.
+Proof.
+  intros sub sat ? isin.
+  apply sat, sub; auto.
+Qed.
+
 Lemma leq_universe_subset {cf:checker_flags} ctrs ctrs' t u
-  : ConstraintSet.Subset ctrs ctrs' -> leq_universe ctrs t u -> leq_universe ctrs' t u.
+  : ConstraintSet.Subset ctrs ctrs'
+    -> leq_universe ctrs t u -> leq_universe ctrs' t u.
 Proof.
   intros Hctrs H. unfold leq_universe in *.
   destruct check_univs; [|trivial].
   intros v Hv. apply H.
-  intros ctr Hc. apply Hv.
-  apply Hctrs; eauto.
+  eapply satisfies_subset; eauto.
 Qed.
 
 Lemma eq_universe_subset {cf:checker_flags} ctrs ctrs' t u
@@ -39,8 +48,7 @@ Proof.
   intros Hctrs H. unfold eq_universe in *.
   destruct check_univs; [|trivial].
   intros v Hv. apply H.
-  intros ctr Hc. apply Hv.
-  apply Hctrs; eauto.
+  eapply satisfies_subset; eauto.
 Qed.
 
 Lemma leq_term_subset {cf:checker_flags} Σ ctrs ctrs' t u
@@ -294,6 +302,22 @@ Proof.
   - econstructor 3; eauto. eapply weakening_env_red1; eauto. exists Σ''; eauto.
 Qed.
 
+Lemma weakening_env_is_allowed_elimination `{CF:checker_flags} Σ Σ' φ u allowed :
+  wf Σ' -> extends Σ Σ' ->
+  is_allowed_elimination (global_ext_constraints (Σ, φ)) u allowed ->
+  is_allowed_elimination (global_ext_constraints (Σ', φ)) u allowed.
+Proof.
+  intros wfΣ [Σ'' ->] al.
+  unfold is_allowed_elimination in *.
+  destruct check_univs; auto.
+  intros val sat.
+  unshelve epose proof (al val _) as al.
+  { eapply satisfies_subset; eauto.
+    apply global_ext_constraints_app. }
+  destruct allowed; auto; cbn in *; destruct ?; auto.
+Qed.
+Hint Resolve weakening_env_is_allowed_elimination : extends.
+
 Lemma weakening_env_declared_constant `{CF:checker_flags}:
   forall (Σ : global_env) cst (decl : constant_body),
     declared_constant Σ cst decl ->
@@ -527,23 +551,16 @@ Proof.
         ** eapply (All2_impl idxs); intros.
           eapply weakening_env_conv; eauto.
     + unfold check_ind_sorts in *.
-      destruct universe_family; auto.
-      * split; [apply fst in ind_sorts|apply snd in ind_sorts].
-        -- eapply Forall_impl; tea; cbn.
-           intros. eapply leq_universe_subset; tea.
-           apply weakening_env_global_ext_constraints; tea.
-        -- destruct indices_matter; [|trivial]. clear -ind_sorts HPΣ wfΣ' Hext.
-           induction ind_indices; simpl in *; auto.
-           ** eapply (extends_wf_universe (Σ:=(Σ,φ)) Σ'); auto.
-           ** destruct a as [na [b|] ty]; simpl in *; intuition eauto.
-      * split; [apply fst in ind_sorts|apply snd in ind_sorts].
-        -- eapply Forall_impl; tea; cbn.
-           intros. eapply leq_universe_subset; tea.
-           apply weakening_env_global_ext_constraints; tea.
-        -- destruct indices_matter; [|trivial]. clear -ind_sorts HPΣ wfΣ' Hext.
-           induction ind_indices; simpl in *; auto.
-           ** eapply (extends_wf_universe (Σ:=(Σ,φ)) Σ'); auto.
-           ** destruct a as [na [b|] ty]; simpl in *; intuition eauto.
+      destruct Universe.is_prop; auto.
+      destruct Universe.is_sprop; auto.
+      split; [apply fst in ind_sorts|apply snd in ind_sorts].
+      * eapply Forall_impl; tea; cbn.
+        intros. eapply leq_universe_subset; tea.
+        apply weakening_env_global_ext_constraints; tea.
+      * destruct indices_matter; [|trivial]. clear -ind_sorts HPΣ wfΣ' Hext.
+        induction ind_indices; simpl in *; auto.
+        -- eapply (extends_wf_universe (Σ:=(Σ,φ)) Σ'); auto.
+        -- destruct a as [na [b|] ty]; simpl in *; intuition eauto.
     + intros v onv.
       move: (onIndices v onv). unfold ind_respects_variance.
       destruct variance_universes as [[[univs u] u']|] => //.

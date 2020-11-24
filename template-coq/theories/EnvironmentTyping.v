@@ -635,7 +635,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
         on_projs_noidx : #|ind_indices| = 0;
         (** The inductive cannot have indices *)
 
-        on_projs_elim : idecl.(ind_kelim) = InType;
+        on_projs_elim : idecl.(ind_kelim) = IntoAny;
         (** This ensures that all projections are definable *)
 
         on_projs_all : #|idecl.(ind_projs)| = context_assumptions (cshape_args cshape);
@@ -649,48 +649,43 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
     (** This ensures that all sorts in kelim are lower
         or equal to the top elimination sort, if set.
         For inductives in Type we do not check [kelim] currently. *)
-
-    Fixpoint elim_sort_prop_ind ind_ctors_sort :=
+    
+    Definition elim_sort_prop_ind (ind_ctors_sort : list constructor_shape) :=
       match ind_ctors_sort with
-      | [] => (* Empty inductive proposition: *) InType
-      | [ s ] => match universe_family (cshape_sort s) with
-                | InProp => (* Not squashed: all arguments are in Prop  *)
-                  (* This is singleton elimination *) InType
-                | InSProp => (* Not squashed: all arguments are in SProp *)
-                  InType
-                | _ => (* Squashed: some arguments are higher than Prop,
-                        restrict to Prop *) InProp
-                end
-      | _ => (* Squashed: at least 2 constructors *) InProp
+      | [] => (* Empty inductive proposition: *) IntoAny
+      | [ s ] =>
+        if Universes.is_propositional (cshape_sort s) then
+          IntoAny (* Singleton elimination *)
+        else
+          IntoPropSProp (* Squashed: some arguments are higher than Prop, restrict to Prop *)
+      | _ => (* Squashed: at least 2 constructors *) IntoPropSProp
       end.
       
     Fixpoint elim_sort_sprop_ind (ind_ctors_sort : list constructor_shape) :=
       match ind_ctors_sort with
-      | [] => (* Empty inductive strict proposition: *) InType
-      | _ => (* All other inductives in SProp are squashed *) InSProp
+      | [] => (* Empty inductive strict proposition: *) IntoAny
+      | _ => (* All other inductives in SProp are squashed *) IntoSProp
       end.
 
     Definition check_ind_sorts (Σ : global_env_ext)
               params kelim ind_indices cshapes ind_sort : Type :=
-      match universe_family ind_sort with
-      | InProp =>
+      if Universe.is_prop ind_sort then
         (** The inductive is declared in the impredicative sort Prop *)
         (** No universe-checking to do: any size of constructor argument is allowed,
             however elimination restrictions apply. *)
-        leb_sort_family kelim (elim_sort_prop_ind cshapes)
-      | InSProp => 
+        allowed_eliminations_subset kelim (elim_sort_prop_ind cshapes)
+      else if Universe.is_sprop ind_sort then
         (** The inductive is declared in the impredicative sort SProp *)
         (** No universe-checking to do: any size of constructor argument is allowed,
             however elimination restrictions apply. *)
-        leb_sort_family kelim (elim_sort_sprop_ind cshapes)
-      | _ =>
+        allowed_eliminations_subset kelim (elim_sort_sprop_ind cshapes)
+      else
         (** The inductive is predicative: check that all constructors arguments are
             smaller than the declared universe. *)
         check_constructors_smaller Σ cshapes ind_sort
         × if indices_matter then
             type_local_ctx Σ params ind_indices ind_sort
-          else True
-      end.
+          else True.
 
     Record on_ind_body Σ mind mdecl i idecl :=
       { (** The type of the inductive must be an arity, sharing the same params

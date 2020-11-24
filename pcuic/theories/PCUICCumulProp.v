@@ -12,12 +12,6 @@ Require Equations.Prop.DepElim.
 From Equations Require Import Equations.
 Require Import ssreflect.
 
-
-Lemma not_prop_not_leq_prop sf : sf <> InProp -> ~ leb_sort_family sf InProp.
-Proof.
-  destruct sf; simpl; try congruence.
-Qed.
-
 Section no_prop_leq_type.
 
 Context `{cf : checker_flags}.

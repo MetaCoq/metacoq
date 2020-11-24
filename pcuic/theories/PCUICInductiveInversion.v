@@ -3881,25 +3881,20 @@ Proof.
       eapply declared_inductive_valid_type; eauto.
 Qed.
 
+(*
 Lemma leb_elim_prop_sort shapes f n cs : 
-  leb_sort_family f (elim_sort_prop_ind shapes) ->
+  allowed_eliminations_subset f (elim_sort_prop_ind shapes) ->
   nth_error shapes n = Some cs ->
-  leb_sort_family f (match universe_family cs.(cshape_sort) with InProp | InSProp => InType | _ => InProp end).
+  allowed_eliminations_subset f (if is_propositional cs.(cshape_sort) then IntoAny else IntoPropSProp).
 Proof.
   destruct shapes as [|? []]; simpl.
   - rewrite nth_error_nil => //.
   - destruct n => // /= leb. simpl. now intros [= ->].
     simpl. rewrite nth_error_nil //.
   - destruct f => //.
-    destruct universe_family => //.
+    destruct is_propositional => //.
 Qed.
-
-Lemma universe_family_prop s : universe_family s = InProp -> Universe.is_prop s.
-Proof. 
-  unfold universe_family.
-  destruct s => /= //.
-  destruct UnivExprSet.for_all => //.
-Qed.
+*)
 
 Lemma arity_spine_eq {cf:checker_flags} {Σ Γ T T'} : T = T' -> arity_spine Σ Γ T [] T'.
 Proof.
@@ -3914,7 +3909,7 @@ Lemma build_branches_type_wt {cf : checker_flags}	(Σ : global_env × universes_
   destArity [] pty = Some (pctx, ps) ->
   build_case_predicate_type ind mdecl idecl (firstn (ind_npars mdecl) args) u ps = Some pty ->
   Σ;;; Γ |- p : pty ->
-  leb_sort_family (universe_family ps) (ind_kelim idecl) ->
+  is_allowed_elimination (global_ext_constraints Σ) ps (ind_kelim idecl) ->
   map_option_out (build_branches_type ind mdecl idecl (firstn (ind_npars mdecl) args) u p) = Some btys ->
   All (fun bty : nat × term => isType Σ Γ bty.2) btys.
 Proof.

@@ -24,6 +24,7 @@ theories/common/uGraph.v
 theories/utils.v
 theories/config.v
 theories/Universes.v
+theories/Sorts.v
 theories/BasicAst.v
 theories/Environment.v
 theories/Ast.v

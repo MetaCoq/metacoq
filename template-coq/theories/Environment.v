@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils BasicAst.
-From MetaCoq.Template Require Import Universes.
+From MetaCoq.Template Require Import Universes Sorts.
 
 
 Module Type Term.
@@ -75,7 +75,7 @@ Module Environment (T : Term).
 
   Definition map_context f c :=
     List.map (map_decl f) c.
-    
+
   Lemma map_context_length f l : #|map_context f l| = #|l|.
   Proof. now unfold map_context; rewrite map_length. Qed.
 
@@ -115,7 +115,7 @@ Module Environment (T : Term).
     rewrite List.rev_app_distr.
     rewrite mapi_app. rewrite <- List.rev_app_distr. f_equal. f_equal.
     apply mapi_ext. intros. f_equal. rewrite List.rev_length. f_equal.
-  Qed. 
+  Qed.
 
 
   (** *** Environments *)
@@ -170,6 +170,17 @@ Module Environment (T : Term).
   Lemma map_cst_body f decl :
     option_map f (cst_body decl) = cst_body (map_constant_body f decl).
   Proof. destruct decl; reflexivity. Qed.
+
+
+  (* Sort declaration *)
+
+  Record sort_definition :=
+    mkSortDefinition
+      { is_impredicative : bool ;
+        sort_relation_extension : SortConstraintSet.t ;
+        elimination_constraints : one_inductive_body -> SortConstraintFormula.t
+      }.
+
 
   Inductive global_decl :=
   | ConstantDecl : constant_body -> global_decl

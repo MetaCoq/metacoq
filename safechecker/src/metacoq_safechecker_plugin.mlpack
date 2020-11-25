@@ -19,7 +19,6 @@ PCUICAstUtils
 PCUICInduction
 PCUICUnivSubst
 PCUICLiftSubst
-EqDecInstances
 PCUICReflect
 PCUICEquality
 PCUICTyping

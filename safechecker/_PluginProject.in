@@ -33,8 +33,8 @@ src/pCUICAstUtils.ml
 src/pCUICAstUtils.mli
 src/pCUICLiftSubst.ml
 src/pCUICLiftSubst.mli
-src/eqDecInstances.ml
-src/eqDecInstances.mli
+# src/eqDecInstances.ml
+# src/eqDecInstances.mli
 src/pCUICInduction.mli
 src/pCUICInduction.ml
 src/pCUICReflect.mli
@@ -75,8 +75,8 @@ src/pCUICWfUniverses.ml
 # src/pCUICConversion.ml
 # src/pCUICSafeLemmata.mli
 # src/pCUICSafeLemmata.ml
-src/pCUICCanonicity.mli
-src/pCUICCanonicity.ml
+# src/pCUICCanonicity.mli
+# src/pCUICCanonicity.ml
 src/templateToPCUIC.mli
 src/templateToPCUIC.ml
 src/pCUICPretty.mli

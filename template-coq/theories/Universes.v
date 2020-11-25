@@ -19,8 +19,8 @@ Record valuation :=
   { valuation_mono : string -> positive ;
     valuation_poly : nat -> nat }.
 
-Inductive universes := 
-  | UProp 
+Inductive universes :=
+  | UProp
   | USProp
   | UType (i : nat).
 

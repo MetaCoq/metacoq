@@ -174,31 +174,46 @@ Module Environment (T : Term).
 
   (* Sort declaration *)
 
-  Record sort_definition :=
-    mkSortDefinition
-      { is_impredicative : bool ;
-        sort_relation_extension : SortConstraintSet.t ;
-        elimination_constraints : one_inductive_body -> SortConstraintFormula.t
-      }.
+  Record sort_body := {
+    is_impredicative : bool ;
+    sort_relation_extension : SortConstraintSet.t }.
 
 
   Inductive global_decl :=
   | ConstantDecl : constant_body -> global_decl
-  | InductiveDecl : mutual_inductive_body -> global_decl.
+  | InductiveDecl : mutual_inductive_body -> global_decl
+  | SortDecl : sort_body -> global_decl.
 
   Definition global_env := list (kername * global_decl).
 
-  (** A context of global declarations + global universe constraints,
+  (** A context of global declarations
+      + global sorts constraints,
+      + global elimination sorts for inductives
+      + global universe constraints,
       i.e. a global environment *)
 
-  Definition global_env_ext : Type := global_env * universes_decl.
+  Record global_env_ext : Type := {
+    genv : global_env ;
+    genv_sorts : sorts_decl ;
+    genv_ind_sort_elim : one_inductive_body -> SortConstraintFormula.t ;
+    genv_univs : universes_decl }.
 
   (** Use a coercion for this common projection of the global context. *)
-  Definition fst_ctx : global_env_ext -> global_env := fst.
-  Coercion fst_ctx : global_env_ext >-> global_env.
+  Coercion genv : global_env_ext >-> global_env.
 
   Definition empty_ext (Σ : global_env) : global_env_ext
-    := (Σ, Monomorphic_ctx ContextSet.empty).
+    :=
+      Build_global_env_ext Σ
+                           SortContext.empty
+                           (fun _ => SortConstraintFormula.True)
+                           (Monomorphic_ctx ContextSet.empty).
+
+  (* Temporary function to quickfix compilation of the project *)
+  Definition genv_no_sorts (Σ : global_env) (univs : universes_decl) :=
+    Build_global_env_ext Σ
+                         SortContext.empty
+                         (fun _ => SortConstraintFormula.True)
+                         univs.
 
   (** *** Programs
 

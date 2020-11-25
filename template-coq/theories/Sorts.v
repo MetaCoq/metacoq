@@ -16,7 +16,7 @@ Class EvaluableSort (A : Type) :=
 Module SortRef.
 
   Inductive t_ :=
-  | GlobalSortRef (_ : nat) (* deBruijin index of a globally defined sort *)
+  | GlobalSortRef (_ : kername) (* name of a globally defined sort *)
   | VarSortRef (_ : nat) (* deBruijin index in the local sort context *)
   .
 
@@ -175,6 +175,10 @@ Module Sort.
   Definition eq_leibniz (x y : t) : eq x y -> x = y := id.
 End Sort.
 
+Module SortSet := MSetList.MakeWithLeibniz Sort.
+Module SortSetFact := WFactsOn Sort SortSet.
+Module SortSetProp := WPropertiesOn Sort SortSet.
+
 
 Module SortConstraint.
 
@@ -251,7 +255,28 @@ Module SortConstraintSetProp := WPropertiesOn SortConstraint SortConstraintSet.
 
 
 (* A set of clause representing the conjunction of the disjunctions of literals *)
-Module SortConstraintFormula := MSetList.MakeWithLeibniz SortConstraintSet.
+Module SortConstraintFormula.
+  Include MSetList.MakeWithLeibniz SortConstraintSet.
+
+  Definition True : t := empty.
+  Definition is_True (x : t) := is_empty x.
+  Definition False : t := singleton SortConstraintSet.empty.
+  Definition literal (sc : SortConstraint.t) : t :=
+    singleton (SortConstraintSet.singleton sc).
+  Definition conjunction (sf1 sf2: t) : t := union sf1 sf2.
+  Definition from_cnf (llsc : list (list SortConstraint.t)) : t :=
+    let add_clause sf lsc :=
+      let clause :=
+        fold_left (fun clause sc => SortConstraintSet.add sc clause) lsc SortConstraintSet.empty
+      in
+      add clause sf
+    in
+    fold_left add_clause llsc empty.
+
+  (* Consider adding from_dnf *)
+
+End SortConstraintFormula.
+
 Module SortConstraintFormulaFact := WFactsOn SortConstraintSet SortConstraintFormula.
 Module SortConstraintFormulaProp := WPropertiesOn SortConstraintSet SortConstraintFormula.
 Module SortConstraintFormulaDecide := WDecide SortConstraintFormula.
@@ -264,3 +289,17 @@ Definition clause_satisfiable (sval : sort_valuation) : SortConstraintSet.t -> b
 Definition formula_satisfiable (sval : sort_valuation) :
   SortConstraintFormula.t -> bool :=
   SortConstraintFormula.for_all (clause_satisfiable sval).
+
+
+
+Module SortContext.
+  Definition t := SortSet.t × SortConstraintFormula.t.
+
+  Definition empty : t := (SortSet.empty, SortConstraintFormula.True).
+
+  Definition is_empty (sctx : t) :=
+    SortSet.is_empty sctx.1 && SortConstraintFormula.is_True sctx.2.
+End SortContext.
+
+Definition sorts_decl := SortContext.t.
+

@@ -14,6 +14,15 @@ Require Import ssreflect ssrbool.
 Local Set Keyed Unification.
 Set Equations Transparent.
 
+(** It otherwise tries [auto with *], very bad idea. *)
+Ltac Coq.Program.Tactics.program_solve_wf ::= 
+  match goal with 
+  | |- @Wf.well_founded _ _ => auto with subterm wf
+  | |- ?T => match type of T with
+                | Prop => auto
+                end
+  end.
+
 Lemma weakening_sq `{cf : checker_flags} {Σ Γ} Γ' {t T} :
   ∥ wf Σ.1 ∥ -> ∥ wf_local Σ (Γ ,,, Γ') ∥ ->
   ∥ Σ ;;; Γ |- t : T ∥ ->
@@ -2646,6 +2655,12 @@ Section CheckEnv.
 
     Obligation Tactic := Program.Tactics.program_simpl.
 
+    Program Definition isRel (t : term) : typing_result (∑ n, t = tRel n) :=
+      match t with
+      | tRel k => ret (k; _)
+      | _ => raise (Msg "isRel: not a variable")
+      end.
+
     (** Positivity checking involves reducing let-ins, so it can only be applied to 
         already well-typed terms to ensure termination.
 
@@ -2656,18 +2671,28 @@ Section CheckEnv.
       {measure (Γ; t; wt) (@redp_subterm_rel cf Σ)} : typing_result (∥ positive_cstr_arg mdecl Δ t ∥) :=
       if closedn #|Δ| t then ret _ 
       else 
-      match prod_letin_viewc t with
-      | prod_letin_tProd na ty t => 
+      match prod_letin_viewc t in prod_letin_view t' return t' = t -> _ with
+      | prod_letin_tProd na ty t => fun eq =>
         posarg <- check_eq_true (closedn #|Δ| ty) (Msg "Non-positive occurrence.");;
         post <- check_positive_cstr_arg mdecl (vass na ty :: Γ) t _ (vass na ty :: Δ) ;;
         ret _
-      | prod_letin_tLetIn na b ty t => 
+      | prod_letin_tLetIn na b ty t => fun eq =>
         post <- check_positive_cstr_arg mdecl Γ (subst0 [b] t) _ Δ ;;
         ret _
-      | prod_letin_other t nprodlet =>
-        let (hd, args) := decompose_app t in
-        raise (Msg "Non-positive constructor argument type")
-      end.
+      | prod_letin_other t nprodlet => fun eq =>
+        let '(hd, args) := decompose_app t in
+        '(hdrel; eqr) <- isRel hd ;;
+        isind <- check_eq_true ((#|Δ| <=? hdrel) && (hdrel <? #|Δ| + #|ind_bodies mdecl|)) (Msg "Conclusion is not an inductive type") ;;
+        (** Actually this is the only necessary check *)
+        check_closed <- check_eq_true (forallb (closedn #|Δ|) args) (Msg "Conclusion arguments refer to the inductive type being defined") ;;
+        match nth_error (List.rev mdecl.(ind_bodies)) (hdrel - #|Δ|) with
+        | Some i => 
+          check_eq_true (eqb (ind_realargs i) #|args|) (Msg "Partial application of inductive") ;;
+          ret _
+        | None => False_rect _ _
+        end
+      end eq_refl.
+
       Next Obligation. sq.
         now constructor; rewrite -Heq_anonymous.
       Qed.
@@ -2701,7 +2726,26 @@ Section CheckEnv.
       Next Obligation. sq.
         now constructor 3.
       Qed.
+
+      Next Obligation.
+        clear eqr.
+        move/andP: isind => [/Nat.leb_le le /Nat.ltb_lt lt].
+        eapply forallb_All in check_closed. sq.
+        symmetry in Heq_anonymous1; eapply decompose_app_inv in Heq_anonymous1.
+        subst t0. econstructor 2; eauto.
+        now eapply eqb_eq in H.
+      Qed.
       
+      Next Obligation.
+        clear eqr.
+        move/andP: isind => [/Nat.leb_le le /Nat.ltb_lt lt].
+        eapply forallb_All in check_closed. sq.
+        symmetry in Heq_anonymous1; eapply decompose_app_inv in Heq_anonymous1.
+        subst t0. symmetry in Heq_anonymous.
+        eapply nth_error_None in Heq_anonymous.
+        len in Heq_anonymous. lia.
+      Qed.
+
       Next Obligation.
         eapply Wf.measure_wf.
         unshelve eapply wf_redp_subterm_rel; eauto.
@@ -3212,12 +3256,82 @@ Section CheckEnv.
     | _ => False
     end.
 
-  Program Definition check_projections (Σ : wf_env_ext) (mind : kername) (mdecl : mutual_inductive_body)
-    (i : nat) (idecl : one_inductive_body) (indices : context) (cs : list constructor_shape) : 
-    typing_result (∥ check_projections_type Σ mind mdecl i idecl indices cs ∥) :=
+  Program Definition check_projection (Σ : wf_env_ext) (mind : kername) (mdecl : mutual_inductive_body)
+    (i : nat) (idecl : one_inductive_body) (indices : context) 
+    (cs : constructor_shape) 
+    (oncs : ∥ on_constructors (lift_typing typing) Σ mdecl i idecl indices idecl.(ind_ctors) [cs] ∥) 
+    (k : nat) (p : ident × term) (hnth : nth_error idecl.(ind_projs) k = Some p)
+    (heq : #|idecl.(ind_projs)| = context_assumptions cs.(cshape_args))
+    : typing_result (∥ on_projection mdecl mind i cs k p ∥) :=
+    let Γ :=  smash_context [] (cs.(cshape_args) ++ ind_params mdecl) in
+    match nth_error Γ (context_assumptions (cs.(cshape_args)) - S k) with
+    | Some decl =>
+      let u := abstract_instance (ind_universes mdecl) in
+      let ind := {| inductive_mind := mind; inductive_ind := i |} in
+      check_na <- check_eq_true (eqb (binder_name (decl_name decl)) (nNamed p.1)) 
+        (Msg "Projection name does not match argument binder name");;
+      check_eq <- check_eq_true (eqb p.2
+          (subst (inds mind u (ind_bodies mdecl)) (S (ind_npars mdecl))
+          (subst0 (projs ind (ind_npars mdecl) k) (lift 1 k (decl_type decl)))))
+        (Msg "Projection type does not match argument type") ;;
+      ret _
+    | None => False_rect _ _
+    end.
+  Next Obligation.
+    eapply eqb_eq in check_na.
+    eapply eqb_eq in check_eq.
+    sq.
+    red. rewrite -Heq_anonymous. simpl. split; auto. 
+  Qed.
+  Next Obligation.
+    sq. depelim oncs. depelim oncs.
+    rename Heq_anonymous into hnth'.
+    symmetry in hnth'. eapply nth_error_None in hnth'.
+    eapply nth_error_Some_length in hnth.
+    len in hnth'. lia.
+  Qed.
+
+  Program Definition check_projections_cs (Σ : wf_env_ext) (mind : kername) (mdecl : mutual_inductive_body)
+    (i : nat) (idecl : one_inductive_body) (indices : context) 
+    (cs : constructor_shape) 
+    (oncs : ∥ on_constructors (lift_typing typing) Σ mdecl i idecl indices idecl.(ind_ctors) [cs] ∥) : 
+    typing_result (∥ on_projections mdecl mind i idecl indices cs ∥) :=
+    check_indices <- check_eq_true (eqb [] indices) (Msg "Primitive records cannot have indices") ;;
+    check_elim <- check_eq_true (eqb (ind_kelim idecl) InType) (Msg "Primitive records must be eliminable to Type");;
+    check_length <- check_eq_true (eqb #|idecl.(ind_projs)| (context_assumptions cs.(cshape_args)))
+      (Msg "Invalid number of projections") ;;
+    check_projs <- monad_Alli_nth idecl.(ind_projs) 
+      (fun n p hnth => check_projection Σ mind mdecl i idecl indices cs oncs n p hnth (eqb_eq _ _ check_length)) ;;
     ret _.
-  Next Obligation. 
-    intros. todo "check_projections".
+
+    Next Obligation.
+      sq.
+      depelim oncs. depelim oncs.
+      eapply eqb_eq in check_indices; subst indices.
+      eapply eqb_eq in check_elim. eapply eqb_eq in check_length.
+      constructor => //.
+      now rewrite H.
+    Qed.
+
+  Program Definition check_projections (Σ : wf_env_ext) (mind : kername) (mdecl : mutual_inductive_body)
+    (i : nat) (idecl : one_inductive_body) (indices : context) (cs : list constructor_shape) :
+    ∥ on_constructors (lift_typing typing) Σ mdecl i idecl indices idecl.(ind_ctors) cs ∥ -> 
+    typing_result (∥ check_projections_type Σ mind mdecl i idecl indices cs ∥) :=
+    match ind_projs idecl with
+    | [] => fun _ => ret _
+    | _ => 
+      match cs with
+      | [ cs ] => fun oncs => ccs <- check_projections_cs Σ mind mdecl i idecl indices cs oncs ;; 
+        ret _
+      | _ => fun oncs => raise (Msg "Projections can only be declared for an inductive type with a single constructor")
+      end
+    end.
+  Next Obligation.
+    rename Heq_anonymous into eqp. 
+    sq. red. rewrite -eqp. congruence.
+  Qed.
+  Next Obligation.
+    sq. red. intros. auto.
   Qed.
 
   Definition checkb_constructors_smaller (G : universes_graph) (cs : list constructor_shape) (ind_sort : Universe.t) :=
@@ -3417,7 +3531,7 @@ Section CheckEnv.
         (Msg "Inductive arity parameters do not match the parameters of the mutual declaration"));;
       '(cs; oncstrs) <- (check_constructors Σ0 Σ mind mdecl pf wfars wfpars mdeclvar i idecl indices hnth _) ;;
       onprojs <- wrap_error Σ ("Checking projections of " ^ id)
-       (check_projections Σ mind mdecl i idecl indices cs) ;;
+       (check_projections Σ mind mdecl i idecl indices cs oncstrs) ;;
       onsorts <- wrap_error Σ ("Checking universes of " ^ id)
         (do_check_ind_sorts Σ mdecl.(ind_params) wfpars idecl.(ind_kelim) indices cs _ ctxinds.2 _) ;;
       onindices <- (check_indices Σ0 mdecl mind _ mdeclvar indices _) ;;
@@ -3768,3 +3882,5 @@ Section CheckEnv.
   Qed.
 
 End CheckEnv.
+
+Print Assumptions typecheck_program.

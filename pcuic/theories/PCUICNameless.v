@@ -1302,6 +1302,7 @@ Proof.
     (*     unfold nlctx; now rewrite map_length. *)
     (*   * eapply All2_map, All2_impl; tea. *)
     (*     apply nl_eq_decl'. *)
+    + rewrite global_ext_constraints_nlg. exact H1.
     + rewrite -> nl_mkApps in *; eassumption.
     + exact (todo "build_branches_type Nameless").
     + clear -X5. eapply All2_map, All2_impl; tea. cbn.

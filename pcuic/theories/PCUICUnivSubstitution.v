@@ -1230,7 +1230,6 @@ Proof.
   rewrite subst_instance_univ_val'; auto.
 Qed.
 
-Global Instance eq_decl_subst_instance Σ : SubstUnivPreserved (eq_decl Σ).
 Global Instance eq_decl_subst_instance le Σ : SubstUnivPreserved (eq_decl le Σ).
 Proof.
   intros φ1 φ2 u HH [? [?|] ?] [? [?|] ?] [[Hann H1] H2]; split; cbn in *; auto.

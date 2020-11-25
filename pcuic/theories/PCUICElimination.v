@@ -128,10 +128,8 @@ Proof.
   - simpl in *. depelim onc.
     right.
     destruct forallb eqn:fo => //.
-    eapply forallb_All in fo.
-    destruct (is_propositional y.(cshape_sort)) eqn:heq; try discriminate.
+    eapply forallb_Forall in fo.
     eexists; eauto.
-    eexists; eauto. eexists; split; eauto.
   - discriminate.
 Qed.
 
@@ -354,13 +352,6 @@ Proof.
         intros. now apply H.
 Qed.
 
-Lemma leb_sort_family_inprop x : leb_sort_family (universe_family x) InProp -> is_propositional x.
-Proof.
-  destruct x; simpl; auto.
-  destruct t; simpl. unfold universe_family, is_propositional. simpl.
-  destruct UnivExprSet.for_all => //.
-Qed.
-
 Lemma check_ind_sorts_is_propositional {cf:checker_flags} (Σ : global_env_ext) mdecl idecl ind
   (onib : on_ind_body (lift_typing typing) (Σ.1, ind_universes mdecl)
     (inductive_mind ind) mdecl (inductive_ind ind) idecl) : 
@@ -377,13 +368,8 @@ Proof.
   + induction (ind_cshapes onib); simpl; auto; try discriminate.
     destruct l; simpl. intros; split; eauto. constructor; [|constructor].
     destruct forallb eqn:fo. eapply forallb_All in fo.
-    eapply All_impl; eauto; simpl. 
-(*    destruct (cshape_sort a) => //. cbn in H.
-    destruct (ind_kelim idecl); intuition congruence.
-    destruct (ind_kelim idecl); simpl; intuition congruence.*)
-
-    apply leb_sort_family_inprop.
-    destruct (ind_kelim idecl); simpl in *; intuition congruence.
+    eapply All_impl; eauto; simpl.
+    destruct (ind_kelim idecl); intuition cbn in H; try congruence.
     intros leb.
     destruct (ind_kelim idecl); simpl in *; intuition congruence.
   + destruct Universe.is_sprop eqn:issp.

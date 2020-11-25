@@ -44,6 +44,12 @@
 
 - Verify parsing and printing of terms / votour
 
+- Primivite projections: we could be more relaxed on the elimination sort of the 
+  inductive. If it is e.g. InProp, then all projections to types in Prop should
+  be definable. Probably not very useful though because if the elimination is 
+  restricted then it means some Type is in the constructor and won't be projectable.
+  
+
 ## Website
 
 Put a demo using JS-coq on the webiste
@@ -65,10 +71,3 @@ into β-redexes, hence it is only β-convertible and not a syntactical equality.
 
 - Deduce that we have weakening and substitution lemmas in Template from those of
   PCUIC.
-
-
-## Finish Safechecker correctness
-
-- `valid_btys`
-
-- `check_one_body`

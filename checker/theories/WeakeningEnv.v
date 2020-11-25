@@ -485,7 +485,8 @@ Proof.
        destruct Universe.is_sprop; auto.
        split; [apply fst in ind_sorts|apply snd in ind_sorts].
        eapply Forall_impl; tea; cbn.
-       intros. eapply leq_universe_subset; tea.
+       intros. eapply Forall_impl; eauto; simpl.
+       intros; eapply leq_universe_subset; tea.
        apply weakening_env_global_ext_constraints; tea.
        destruct indices_matter; [|trivial]. clear -ind_sorts HPΣ wfΣ' Hext.
        induction ind_indices; simpl in *; auto.

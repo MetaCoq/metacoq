@@ -5,7 +5,12 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICGeneration PCUICReflect PCUICEquality PCUICInversion PCUICValidity
      PCUICWeakening PCUICPosition PCUICCumulativity PCUICSafeLemmata PCUICSN
      PCUICPretty PCUICArities PCUICConfluence PCUICSize
-     PCUICContextConversion PCUICConversion PCUICWfUniverses.
+     PCUICContextConversion PCUICConversion PCUICWfUniverses
+     (* Used for support lemmas *)
+     PCUICInductives PCUICWfUniverses
+     PCUICContexts PCUICSubstitution PCUICSpine PCUICInductiveInversion
+     PCUICClosed PCUICUnivSubstitution PCUICWeakeningEnv.
+
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeConversion PCUICWfReduction.
 
 From Equations Require Import Equations.
@@ -1797,8 +1802,6 @@ Section CheckEnv.
         reflexivity.
   Qed.
   
-  Require Import PCUICInductives PCUICWfUniverses.
-
   Program Fixpoint check_type_local_ctx (Σ : wf_env_ext) Γ Δ s (wfΓ : ∥ wf_local Σ Γ ∥) : 
     typing_result (∥ type_local_ctx (lift_typing typing) Σ Γ Δ s ∥) := 
     match Δ with
@@ -2254,7 +2257,8 @@ Section CheckEnv.
       destruct Σ as [Σ wfΣ G wfG]; simpl in *.
       sq.
       apply wf_ind_types_wf_arities in wfar.
-      eapply weaken_wf_local; eauto. apply wfΣ.
+      (* TODO lemma name clash between imports *)
+      eapply PCUICWeakening.weaken_wf_local; eauto. apply wfΣ.
     Qed.
     Next Obligation.
       destruct Σ as [Σ wfΣ G wfG]; simpl in *.
@@ -2344,8 +2348,6 @@ Section CheckEnv.
     rewrite List.rev_involutive nth_error_map.
     rewrite hnth. simpl. reflexivity.
   Qed.
-
-  Require Import PCUICContexts PCUICSubstitution PCUICSpine PCUICInductiveInversion.
 
   Lemma ctx_inst_app {Σ : global_env_ext} (wfΣ : wf Σ) Γ args args' Δ Δ' :
     forall dom : ctx_inst Σ Γ args Δ, 
@@ -2449,8 +2451,6 @@ Section CheckEnv.
       now rewrite /subst1 subst_it_mkProd_or_LetIn in codom.
   Qed.
   
-  Require Import PCUICClosed.
-
   Lemma typing_spine_letin_inv' {Σ : global_env_ext} (wfΣ : wf Σ) Γ na b ty Δ T args T' :
     let decl := {| decl_name := na; decl_body := Some b; decl_type := ty |} in
     wf_local Σ (Γ ,, decl) ->
@@ -2857,9 +2857,7 @@ Section CheckEnv.
     eapply In_unfold_var. exists n. intuition auto.
   Qed.
 
-  Require Import PCUICUnivSubstitution.
-  Require Import PCUICWeakeningEnv.
-
+  
   Lemma on_udecl_poly_bounded Σ inst cstrs :
     wf Σ ->
     on_udecl Σ (Polymorphic_ctx (inst, cstrs)) ->
@@ -3297,7 +3295,7 @@ Section CheckEnv.
     (oncs : ∥ on_constructors (lift_typing typing) Σ mdecl i idecl indices idecl.(ind_ctors) [cs] ∥) : 
     typing_result (∥ on_projections mdecl mind i idecl indices cs ∥) :=
     check_indices <- check_eq_true (eqb [] indices) (Msg "Primitive records cannot have indices") ;;
-    check_elim <- check_eq_true (eqb (ind_kelim idecl) InType) (Msg "Primitive records must be eliminable to Type");;
+    check_elim <- check_eq_true (eqb (ind_kelim idecl) IntoAny) (Msg "Primitive records must be eliminable to Type");;
     check_length <- check_eq_true (eqb #|idecl.(ind_projs)| (context_assumptions cs.(cshape_args)))
       (Msg "Invalid number of projections") ;;
     check_projs <- monad_Alli_nth idecl.(ind_projs) 
@@ -3381,18 +3379,21 @@ Section CheckEnv.
     Forall (fun cs => Forall (wf_universe Σ) cs.(cshape_sorts)) cs.
 
   Program Definition do_check_ind_sorts (Σ : wf_env_ext) (params : context) (wfparams : ∥ wf_local Σ params ∥) 
-    (kelim : sort_family) (indices : context) 
+    (kelim : allowed_eliminations) (indices : context) 
     (cs : list constructor_shape) 
     (wfcs : wf_cs_sorts Σ cs)
     (ind_sort : Universe.t) 
     (wfi : wf_universe Σ ind_sort): 
     typing_result (∥ check_ind_sorts (lift_typing typing) Σ params kelim indices cs ind_sort ∥) := 
-    match universe_family ind_sort with
-    | InSProp => 
-      check_eq_true (leb_sort_family kelim (elim_sort_sprop_ind cs)) (Msg "") ;; ret _
-    | InProp => 
-      check_eq_true (leb_sort_family kelim (elim_sort_prop_ind cs)) (Msg "") ;; ret _
-    | _ => 
+    match ind_sort with
+    | Universe.lSProp => 
+      check_eq_true (allowed_eliminations_subset kelim (elim_sort_sprop_ind cs)) 
+        (Msg "Incorrect allowed_elimination for inductive") ;; 
+      ret _
+    | Universe.lProp => 
+      check_eq_true (allowed_eliminations_subset kelim (elim_sort_prop_ind cs)) 
+        (Msg "Incorrect allowed_elimination for inductive") ;; ret _
+    | Universe.lType u => 
       check_eq_true (checkb_constructors_smaller Σ cs ind_sort) (Msg "") ;;
       match indices_matter with
       | true =>
@@ -3402,40 +3403,23 @@ Section CheckEnv.
       end
     end.
     Next Obligation.
-      unfold check_ind_sorts. 
-      now rewrite -Heq_anonymous.
+      unfold check_ind_sorts. simpl. 
+      now rewrite H.
     Qed.
     Next Obligation.
       unfold check_ind_sorts. 
-      now rewrite -Heq_anonymous.
+      now rewrite H.
     Qed.
     Next Obligation.
-      unfold check_ind_sorts.
-      destruct (universe_family ind_sort); try congruence.
-      pose proof (check_constructors_smallerP Σ cs ind_sort wfcs wfi).
-      sq.
-      split. destruct H2 => //.
-      destruct indices_matter; auto.
-      pose proof (check_constructors_smallerP Σ cs ind_sort wfcs wfi).
-      sq.
-      split. destruct H2 => //.
+      unfold check_ind_sorts. simpl.
+      pose proof (check_constructors_smallerP Σ cs u wfcs wfi).
+      sq. split. destruct H0 => //.
       destruct indices_matter; auto.
     Qed.
     Next Obligation.
-      unfold check_ind_sorts.
-      destruct (universe_family ind_sort); try congruence.
-      pose proof (check_constructors_smallerP Σ cs ind_sort wfcs wfi).
-      sq.
-      split. destruct H2 => //. now rewrite -Heq_anonymous.
-      pose proof (check_constructors_smallerP Σ cs ind_sort wfcs wfi).
-      sq.
-      split. destruct H2 => //. now rewrite -Heq_anonymous.
-    Qed.
-    Next Obligation.
-      intuition congruence.
-    Qed.
-    Next Obligation.
-      intuition congruence.
+      unfold check_ind_sorts; simpl.
+      pose proof (check_constructors_smallerP Σ cs u wfcs wfi).
+      sq. split. destruct H0 => //. now rewrite -Heq_anonymous.
     Qed.
 
   Lemma sorts_local_ctx_wf_sorts (Σ : global_env_ext) {wfΣ : wf Σ} Γ Δ s : 
@@ -3574,7 +3558,7 @@ Section CheckEnv.
     eapply nth_error_all in wfars; eauto; simpl in wfars.
     destruct wfars as [s Hs]. red in Hs.
     clear X0; rewrite p in Hs.
-    eapply inversion_it_mkProd_or_LetIn in Hs; eauto.
+    eapply (* todo fix clash *) PCUICSpine.inversion_it_mkProd_or_LetIn in Hs; eauto.
     now eapply inversion_Sort in Hs as [_ [wf _]].
   Qed. 
 
@@ -3591,7 +3575,7 @@ Section CheckEnv.
     rewrite split_at_firstn_skipn in Heq_anonymous1. noconf Heq_anonymous1.
     rewrite {1}H; autorewrite with len. rewrite [_ ,,, _]firstn_skipn.
     rewrite X0 in Hs.
-    eapply inversion_it_mkProd_or_LetIn in Hs; eauto.
+    eapply PCUICSpine.inversion_it_mkProd_or_LetIn in Hs; eauto.
     eapply typing_wf_local in Hs. now rewrite app_context_nil_l in Hs.
   Qed.
 

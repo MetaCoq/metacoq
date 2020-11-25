@@ -1780,6 +1780,22 @@ Proof.
   etransitivity; tea. apply global_context_set_sub_ext.
 Qed.
 
+Lemma typing_subst_instance_ctx (Σ : global_env_ext) Γ t T ctx u :
+  wf Σ.1 ->
+  on_udecl_prop Σ (Polymorphic_ctx ctx) ->
+  (Σ.1, Polymorphic_ctx ctx) ;;; Γ |- t : T ->
+  consistent_instance_ext Σ (Polymorphic_ctx ctx) u ->
+  Σ ;;; subst_instance_context u Γ
+            |- subst_instance_constr u t : subst_instance_constr u T.
+Proof.
+  destruct Σ as [Σ φ]. intros X X0 X1.
+  eapply typing_subst_instance''; tea.
+  - split; tas.
+  - simpl. unfold sub_context_set. split; simpl.
+    * intros x hx. now eapply LS.empty_spec in hx.
+    * intros x hx. now eapply CS.empty_spec in hx. 
+Qed.
+
 Lemma typing_subst_instance_decl Σ Γ t T c decl u :
   wf Σ.1 ->
   lookup_env Σ.1 c = Some decl ->

@@ -313,6 +313,26 @@ Proof.
     now rewrite PCUICUnivSubstitution.subst_instance_context_app in b.
 Qed.
 
+Lemma on_udecl_on_udecl_prop {cf:checker_flags} Σ ctx : 
+  on_udecl Σ (Polymorphic_ctx ctx) -> on_udecl_prop Σ (Polymorphic_ctx ctx).
+Proof.
+  intros [? [? [_ ?]]]. red. split; auto.
+Qed.
+
+Lemma wf_local_instantiate_poly {cf:checker_flags} Σ ctx Γ u : 
+  wf_ext (Σ.1, Polymorphic_ctx ctx) ->
+  consistent_instance_ext Σ (Polymorphic_ctx ctx) u ->
+  wf_local (Σ.1, Polymorphic_ctx ctx) Γ -> 
+  wf_local Σ (subst_instance_context u Γ).
+Proof.
+  intros wfΣ Huniv wf.
+  epose proof (type_Sort _ _ Universes.Universe.lProp wf) as ty. forward ty.
+  - now simpl.
+  - eapply PCUICUnivSubstitution.typing_subst_instance_ctx in ty;   
+    eauto using typing_wf_local. apply wfΣ.
+    destruct wfΣ. now eapply on_udecl_on_udecl_prop.
+Qed.
+
 Lemma wf_local_instantiate {cf:checker_flags} Σ (decl : global_decl) Γ u c : 
   wf Σ.1 ->
   lookup_env Σ.1 c = Some decl ->

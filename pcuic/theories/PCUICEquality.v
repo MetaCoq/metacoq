@@ -1739,6 +1739,7 @@ Definition eq_opt_term `{checker_flags} (le : bool) Σ φ (t u : option term) :=
   end.
 
 Definition eq_decl `{checker_flags} le Σ φ (d d' : context_decl) :=
+  eq_binder_annot d.(decl_name) d'.(decl_name) *
   eq_opt_term false Σ φ d.(decl_body) d'.(decl_body) * compare_term le Σ φ d.(decl_type) d'.(decl_type).
 
 Definition eq_context `{checker_flags} le Σ φ (Γ Δ : context) :=

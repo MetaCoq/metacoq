@@ -760,14 +760,17 @@ Section Typecheck.
   Qed.
 
   Definition eqb_decl (d d' : context_decl) :=
+    eqb_binder_annot d.(decl_name) d'.(decl_name) && 
     eqb_opt_term d.(decl_body) d'.(decl_body) && eqb_term Σ G d.(decl_type) d'.(decl_type).
 
   Lemma eqb_decl_spec d d'
     : eqb_decl d d' -> eq_decl false Σ (global_ext_constraints Σ) d d'.
   Proof.
     unfold eqb_decl, eq_decl.
-    intro H. rtoProp. apply eqb_opt_term_spec in H.
-    eapply eqb_term_spec in H0; tea. now split.
+    intro H. rtoProp. apply eqb_opt_term_spec in H1.
+    eapply eqb_term_spec in H0; tea.
+    eapply eqb_binder_annot_spec in H.
+    repeat split; eauto.
   Qed.
 
   Definition eqb_context (Γ Δ : context) := forallb2 eqb_decl Γ Δ.
@@ -1848,128 +1851,128 @@ Section CheckEnv.
       eapply PCUICValidity.validity_term in checkty; auto.
     Qed.
 
-    Definition cumul_decl Σ Γ (d d' : context_decl) : Type := cumul_decls Σ Γ Γ d d'.
+  Definition cumul_decl Σ Γ (d d' : context_decl) : Type := cumul_decls Σ Γ Γ d d'.
 
-    Program Definition wf_env_conv (Σ : wf_env_ext) (Γ : context) (t u : term) :
-      welltyped Σ Γ t -> welltyped Σ Γ u -> typing_result (∥ Σ;;; Γ |- t = u ∥) :=
-      @convert _ Σ (wf_env_ext_sq_wf Σ) _ Σ _ Γ t u.
-    Next Obligation.
-     destruct Σ. sq. simpl. apply wf_env_ext_wf0.
-    Qed.
-    Next Obligation.
-      destruct Σ. sq. simpl. apply wf_env_ext_graph_wf0.
-    Qed.
-  
-    Program Definition wf_env_cumul (Σ : wf_env_ext) (Γ : context) (t u : term) :
-      welltyped Σ Γ t -> welltyped Σ Γ u -> typing_result (∥ Σ;;; Γ |- t <= u ∥) :=
-      @convert_leq _ Σ (wf_env_ext_sq_wf Σ) _ Σ _ Γ t u.
-    Next Obligation.
-     destruct Σ. sq. simpl. apply wf_env_ext_wf0.
-    Qed.
-    Next Obligation.
-      destruct Σ. sq. simpl. apply wf_env_ext_graph_wf0.
-    Qed.
-  
-    Definition wt_decl (Σ : global_env_ext) Γ d :=
-      match d with
-      | {| decl_body := Some b; decl_type := ty |} => 
-        welltyped Σ Γ ty /\ welltyped Σ Γ b
-      | {| decl_body := None; decl_type := ty |} =>
-        welltyped Σ Γ ty
-      end.
-  
-    Lemma inv_wf_local (Σ : global_env_ext) Γ d :
-      wf_local Σ (Γ ,, d) ->
-      wf_local Σ Γ * wt_decl Σ Γ d.
-    Proof.
-      intros wfd; depelim wfd; split; simpl; pcuic.
-      destruct l as [s Hs]. now exists (tSort s).
-      destruct l as [s Hs]. now exists (tSort s).
-      now exists t.
-    Qed.
-  
-    Program Definition check_cumul_decl (Σ : wf_env_ext) Γ d d' : wt_decl Σ Γ d -> wt_decl Σ Γ d' -> typing_result (∥ cumul_decls Σ Γ Γ d d' ∥) := 
-      match d, d' return wt_decl Σ Γ d -> wt_decl Σ Γ d' -> typing_result _ with
-      | {| decl_name := na; decl_body := Some b; decl_type := ty |},
-        {| decl_name := na'; decl_body := Some b'; decl_type := ty' |} => 
-        fun wtd wtd' =>
-        eqna <- check_eq_true (eqb_binder_annot na na') (Msg "Binder annotations do not match") ;;
-        cumb <- wf_env_conv Σ Γ b b' _ _ ;;
-        cumt <- wf_env_cumul Σ Γ ty ty' _ _ ;;
-        ret (let 'sq cumb := cumb in 
-             let 'sq cumt := cumt in
-             sq _)
-      | {| decl_name := na; decl_body := None; decl_type := ty |},
-        {| decl_name := na'; decl_body := None; decl_type := ty' |} => 
-        fun wtd wtd' =>
-        eqna <- check_eq_true (eqb_binder_annot na na') (Msg "Binder annotations do not match") ;;
-        cumt <- wf_env_cumul Σ Γ ty ty' wtd wtd' ;;
-        ret (let 'sq cumt := cumt in sq _)      
-      | _, _ =>
-        fun wtd wtd' => raise (Msg "While checking cumulativity of contexts: declarations do not match")
-      end.
-    Next Obligation.
-      constructor; pcuics. now apply eqb_binder_annot_spec.
-    Qed.
-    Next Obligation.
-      constructor; pcuics. now apply eqb_binder_annot_spec.
-    Qed.
-  
-    Lemma cumul_ctx_rel_close Σ Γ Δ Δ' : 
-      cumul_ctx_rel Σ Γ Δ Δ' ->
-      cumul_context Σ (Γ ,,, Δ) (Γ ,,, Δ').
-    Proof.
-      induction 1; pcuic.
-    Qed.
-  
-    Lemma wf_ext_wf_p1 (Σ : global_env_ext) (wfΣ : wf_ext Σ) : wf Σ.1.
-    Proof. apply wfΣ. Qed.
-    Hint Resolve wf_ext_wf_p1 : pcuic.
-  
-    Lemma context_cumulativity_welltyped Σ (wfΣ : wf_ext Σ) Γ Γ' t : 
-      welltyped Σ Γ t ->
-      cumul_context Σ Γ' Γ ->
-      wf_local Σ Γ' ->
-      welltyped Σ Γ' t.
-    Proof.
-      intros [s Hs] cum wfΓ'; exists s; eapply context_cumulativity; pcuics.
-    Qed.
-  
-    Lemma context_cumulativity_wt_decl Σ (wfΣ : wf_ext Σ) Γ Γ' d :
-      wt_decl Σ Γ d ->
-      cumul_context Σ Γ' Γ ->
-      wf_local Σ Γ' ->
-      wt_decl Σ Γ' d.
-    Proof.
-      destruct d as [na [b|] ty]; simpl;
-      intuition pcuics; eapply context_cumulativity_welltyped; pcuics.
-    Qed.
-  
-    Lemma cumul_decls_irrel_sec Σ (wfΣ : wf_ext Σ) Γ Γ' d d' :
-      cumul_decls Σ Γ Γ d d' ->
-      cumul_decls Σ Γ Γ' d d'.
-    Proof.
-      intros cum; depelim cum; intros; constructor; auto.
-    Qed.
-  
-    Lemma cumul_ctx_rel_cons {Σ Γ Δ Δ' d d'} (c : cumul_ctx_rel Σ Γ Δ Δ') (p : cumul_decls Σ (Γ,,, Δ) (Γ ,,, Δ') d d') : 
-      cumul_ctx_rel Σ Γ (Δ ,, d) (Δ' ,, d').
-    Proof.
-      destruct d as [na [b|] ty], d' as [na' [b'|] ty']; try constructor; auto.
-      depelim p. depelim p.
-    Qed.
-  
-    Program Fixpoint check_cumul_ctx (Σ : wf_env_ext) Γ Δ Δ' 
-      (wfΔ : ∥ wf_local Σ (Γ ,,, Δ) ∥) (wfΔ' : ∥ wf_local Σ (Γ ,,, Δ') ∥) : 
-      typing_result (∥ cumul_ctx_rel Σ Γ Δ Δ' ∥) :=
-      match Δ, Δ' with
-      | [], [] => ret (sq (ctx_rel_nil _))
-      | decl :: Δ, decl' :: Δ' => 
-        cctx <- check_cumul_ctx Σ Γ Δ Δ' _ _ ;;
-        cdecl <- check_cumul_decl Σ (Γ ,,, Δ) decl decl' _ _ ;;
-        ret _
-      | _, _ => raise (Msg "While checking cumulativity of contexts: contexts have not the same length")
-      end.
+  Program Definition wf_env_conv (Σ : wf_env_ext) (Γ : context) (t u : term) :
+    welltyped Σ Γ t -> welltyped Σ Γ u -> typing_result (∥ Σ;;; Γ |- t = u ∥) :=
+    @convert _ Σ (wf_env_ext_sq_wf Σ) _ Σ _ Γ t u.
+  Next Obligation.
+    destruct Σ. sq. simpl. apply wf_env_ext_wf0.
+  Qed.
+  Next Obligation.
+    destruct Σ. sq. simpl. apply wf_env_ext_graph_wf0.
+  Qed.
+
+  Program Definition wf_env_cumul (Σ : wf_env_ext) (Γ : context) (t u : term) :
+    welltyped Σ Γ t -> welltyped Σ Γ u -> typing_result (∥ Σ;;; Γ |- t <= u ∥) :=
+    @convert_leq _ Σ (wf_env_ext_sq_wf Σ) _ Σ _ Γ t u.
+  Next Obligation.
+    destruct Σ. sq. simpl. apply wf_env_ext_wf0.
+  Qed.
+  Next Obligation.
+    destruct Σ. sq. simpl. apply wf_env_ext_graph_wf0.
+  Qed.
+
+  Definition wt_decl (Σ : global_env_ext) Γ d :=
+    match d with
+    | {| decl_body := Some b; decl_type := ty |} => 
+      welltyped Σ Γ ty /\ welltyped Σ Γ b
+    | {| decl_body := None; decl_type := ty |} =>
+      welltyped Σ Γ ty
+    end.
+
+  Lemma inv_wf_local (Σ : global_env_ext) Γ d :
+    wf_local Σ (Γ ,, d) ->
+    wf_local Σ Γ * wt_decl Σ Γ d.
+  Proof.
+    intros wfd; depelim wfd; split; simpl; pcuic.
+    destruct l as [s Hs]. now exists (tSort s).
+    destruct l as [s Hs]. now exists (tSort s).
+    now exists t.
+  Qed.
+
+  Program Definition check_cumul_decl (Σ : wf_env_ext) Γ d d' : wt_decl Σ Γ d -> wt_decl Σ Γ d' -> typing_result (∥ cumul_decls Σ Γ Γ d d' ∥) := 
+    match d, d' return wt_decl Σ Γ d -> wt_decl Σ Γ d' -> typing_result _ with
+    | {| decl_name := na; decl_body := Some b; decl_type := ty |},
+      {| decl_name := na'; decl_body := Some b'; decl_type := ty' |} => 
+      fun wtd wtd' =>
+      eqna <- check_eq_true (eqb_binder_annot na na') (Msg "Binder annotations do not match") ;;
+      cumb <- wf_env_conv Σ Γ b b' _ _ ;;
+      cumt <- wf_env_cumul Σ Γ ty ty' _ _ ;;
+      ret (let 'sq cumb := cumb in 
+            let 'sq cumt := cumt in
+            sq _)
+    | {| decl_name := na; decl_body := None; decl_type := ty |},
+      {| decl_name := na'; decl_body := None; decl_type := ty' |} => 
+      fun wtd wtd' =>
+      eqna <- check_eq_true (eqb_binder_annot na na') (Msg "Binder annotations do not match") ;;
+      cumt <- wf_env_cumul Σ Γ ty ty' wtd wtd' ;;
+      ret (let 'sq cumt := cumt in sq _)      
+    | _, _ =>
+      fun wtd wtd' => raise (Msg "While checking cumulativity of contexts: declarations do not match")
+    end.
+  Next Obligation.
+    constructor; pcuics. now apply eqb_binder_annot_spec.
+  Qed.
+  Next Obligation.
+    constructor; pcuics. now apply eqb_binder_annot_spec.
+  Qed.
+
+  Lemma cumul_ctx_rel_close Σ Γ Δ Δ' : 
+    cumul_ctx_rel Σ Γ Δ Δ' ->
+    cumul_context Σ (Γ ,,, Δ) (Γ ,,, Δ').
+  Proof.
+    induction 1; pcuic.
+  Qed.
+
+  Lemma wf_ext_wf_p1 (Σ : global_env_ext) (wfΣ : wf_ext Σ) : wf Σ.1.
+  Proof. apply wfΣ. Qed.
+  Hint Resolve wf_ext_wf_p1 : pcuic.
+
+  Lemma context_cumulativity_welltyped Σ (wfΣ : wf_ext Σ) Γ Γ' t : 
+    welltyped Σ Γ t ->
+    cumul_context Σ Γ' Γ ->
+    wf_local Σ Γ' ->
+    welltyped Σ Γ' t.
+  Proof.
+    intros [s Hs] cum wfΓ'; exists s; eapply context_cumulativity; pcuics.
+  Qed.
+
+  Lemma context_cumulativity_wt_decl Σ (wfΣ : wf_ext Σ) Γ Γ' d :
+    wt_decl Σ Γ d ->
+    cumul_context Σ Γ' Γ ->
+    wf_local Σ Γ' ->
+    wt_decl Σ Γ' d.
+  Proof.
+    destruct d as [na [b|] ty]; simpl;
+    intuition pcuics; eapply context_cumulativity_welltyped; pcuics.
+  Qed.
+
+  Lemma cumul_decls_irrel_sec Σ (wfΣ : wf_ext Σ) Γ Γ' d d' :
+    cumul_decls Σ Γ Γ d d' ->
+    cumul_decls Σ Γ Γ' d d'.
+  Proof.
+    intros cum; depelim cum; intros; constructor; auto.
+  Qed.
+
+  Lemma cumul_ctx_rel_cons {Σ Γ Δ Δ' d d'} (c : cumul_ctx_rel Σ Γ Δ Δ') (p : cumul_decls Σ (Γ,,, Δ) (Γ ,,, Δ') d d') : 
+    cumul_ctx_rel Σ Γ (Δ ,, d) (Δ' ,, d').
+  Proof.
+    destruct d as [na [b|] ty], d' as [na' [b'|] ty']; try constructor; auto.
+    depelim p. depelim p.
+  Qed.
+
+  Program Fixpoint check_cumul_ctx (Σ : wf_env_ext) Γ Δ Δ' 
+    (wfΔ : ∥ wf_local Σ (Γ ,,, Δ) ∥) (wfΔ' : ∥ wf_local Σ (Γ ,,, Δ') ∥) : 
+    typing_result (∥ cumul_ctx_rel Σ Γ Δ Δ' ∥) :=
+    match Δ, Δ' with
+    | [], [] => ret (sq (ctx_rel_nil _))
+    | decl :: Δ, decl' :: Δ' => 
+      cctx <- check_cumul_ctx Σ Γ Δ Δ' _ _ ;;
+      cdecl <- check_cumul_decl Σ (Γ ,,, Δ) decl decl' _ _ ;;
+      ret _
+    | _, _ => raise (Msg "While checking cumulativity of contexts: contexts have not the same length")
+    end.
     Next Obligation.
       sq; now depelim wfΔ.
     Qed.
@@ -2005,6 +2008,81 @@ Section CheckEnv.
     Next Obligation.
       split. intros. intros []. congruence. intros []; congruence.
     Qed.
+
+  Program Definition check_eq_term le (Σ : wf_env_ext) t u : typing_result (∥ compare_term le Σ Σ t u ∥) :=
+    check <- check_eq_true (if le then leqb_term Σ Σ t u else eqb_term Σ Σ t u) (Msg "Terms are not equal") ;;
+    ret _.
+    Next Obligation.
+      destruct Σ as [Σ wfΣ G wfG]; simpl in *. sq.
+      destruct le; simpl.
+      - eapply leqb_term_spec in check0; sq; auto.
+        eapply wfΣ.
+      - eapply eqb_term_spec in check0; sq; auto.
+        apply wfΣ.
+    Qed.
+
+  Program Definition check_eq_decl le (Σ : wf_env_ext) d d' : typing_result (∥ eq_decl le Σ Σ d d' ∥) := 
+    match d, d' return typing_result _ with
+    | {| decl_name := na; decl_body := Some b; decl_type := ty |},
+      {| decl_name := na'; decl_body := Some b'; decl_type := ty' |} => 
+      eqna <- check_eq_true (eqb_binder_annot na na') (Msg "Binder annotations do not match") ;;
+      eqb <- check_eq_term false Σ b b' ;;
+      leqty <- check_eq_term le Σ ty ty' ;;
+      ret (let 'sq eqb := eqb in 
+            let 'sq leqty := leqty in
+            sq _)
+    | {| decl_name := na; decl_body := None; decl_type := ty |},
+      {| decl_name := na'; decl_body := None; decl_type := ty' |} => 
+      eqna <- check_eq_true (eqb_binder_annot na na') (Msg "Binder annotations do not match") ;;
+      cumt <- check_eq_term le Σ ty ty' ;;
+      ret (let 'sq cumt := cumt in sq _)  
+    | _, _ => raise (Msg "While checking syntactic cumulativity of contexts: declarations do not match")
+    end.
+    Next Obligation.
+      eapply eqb_binder_annot_spec in eqna.
+      now constructor; simpl.
+    Qed.
+    Next Obligation.
+      eapply eqb_binder_annot_spec in eqna.
+      now constructor; simpl.
+    Qed.
+
+  Program Fixpoint check_leq_context (le : bool) (Σ : wf_env_ext) Γ Δ : typing_result (∥ eq_context le Σ Σ Γ Δ ∥) :=
+    match Γ, Δ with
+    | [], [] => ret (sq All2_nil)
+    | decl :: Γ, decl' :: Δ => 
+      cctx <- check_leq_context le Σ Γ Δ ;;
+      cdecl <- check_eq_decl le Σ decl decl' ;;
+      ret _
+    | _, _ => raise (Msg "While checking equality of contexts: contexts do not have the same length")
+    end.
+
+    Next Obligation.
+      sq.
+      constructor; auto.
+    Qed.
+    Next Obligation.
+      intuition congruence.
+    Qed.
+    Next Obligation.
+      intuition congruence.
+    Qed.
+
+  Program Fixpoint check_leq_terms (le : bool) (Σ : wf_env_ext) l l' : typing_result (∥ All2 (compare_term le Σ Σ) l l' ∥) :=
+    match l, l' with
+    | [], [] => ret (sq All2_nil)
+    | t :: l, t' :: l' => 
+      cctx <- check_leq_terms le Σ l l' ;;
+      cdecl <- check_eq_term le Σ t t' ;;
+      ret _
+    | _, _ => raise (Msg "While checking equality of term lists: lists do not have the same length")
+    end.
+
+    Next Obligation.
+      sq. constructor; auto.
+    Qed.
+    Next Obligation. intuition congruence. Qed.
+    Next Obligation. intuition congruence. Qed.
 
   Definition wt_terms Σ Γ l := Forall (welltyped Σ Γ) l.
   
@@ -2922,6 +3000,45 @@ Section CheckEnv.
     intros x hin. now eapply CS.empty_spec in hin.
   Qed.
 
+  Lemma cumul_ctx_rel_close' Σ Γ Δ Δ' : 
+    cumul_context Σ (Γ ,,, Δ) (Γ ,,, Δ') ->
+    cumul_ctx_rel Σ Γ Δ Δ'.
+  Proof.
+    intros H.
+    eapply context_relation_app in H as [cumΓ cumΔs]; auto.
+    eapply context_relation_length in H. len in H. lia.
+  Qed.
+
+  Lemma eq_decl_eq_decl_upto (Σ : global_env_ext) x y : 
+    eq_decl true Σ Σ x y ->
+    eq_decl_upto Σ (eq_universe Σ) (leq_universe Σ) x y.
+  Proof.
+    destruct x, y; simpl; constructor; simpl in *; auto.
+    destruct X as [[eqann H1] H2]; simpl in *. repeat split; auto.
+    destruct decl_body, decl_body0; simpl in *; try constructor; auto.
+    destruct X as [[eqann H1] H2]; simpl in *. repeat split; auto.
+  Qed.
+
+  Lemma eq_decl_upto_refl (Σ : global_env_ext) x : eq_decl_upto Σ (eq_universe Σ) (leq_universe Σ) x x.
+  Proof.
+    destruct x as [na [b|] ty]; constructor; simpl; auto.
+    split; constructor; reflexivity. reflexivity.
+    split; constructor; reflexivity. reflexivity.
+  Qed.
+  Lemma leq_context_cumul_context (Σ : global_env_ext) Γ Δ Δ' : 
+    eq_context true Σ Σ Δ Δ' ->
+    cumul_ctx_rel Σ Γ Δ Δ'.
+  Proof.
+    intros eqc.
+    apply cumul_ctx_rel_close'.
+    apply eq_context_upto_univ_cumul_context.
+    apply All2_eq_context_upto.
+    eapply All2_app.
+    eapply All2_impl; eauto.
+    intros; now eapply eq_decl_eq_decl_upto.
+    eapply All2_refl. intros. simpl. eapply (eq_decl_upto_refl Σ).
+  Qed.
+
   Program Definition check_cstr_variance (Σ : wf_env) mdecl (id : kername) indices
     (mdeclvar : check_variance mdecl.(ind_universes) mdecl.(ind_variance) = true) cs 
     (wfΣ : ∥ wf_ext (Σ, ind_universes mdecl) ∥)
@@ -2936,27 +3053,28 @@ Section CheckEnv.
       match variance_universes univs v with          
       | Some ((univs0, u), u') => 
         '(exist wfext eq) <- make_wf_env_ext Σ id univs0 ;;
-        (* By positivity, we know that occurrences of I are only at the conclusion of argument types in 
-           (cshape_args cs), so having them live at u is not restrictive. However, if the universe of a 
-           parameter [A : Type@{u}] is used in the args (e.g. [option@{u} A]) appears then it will be replaced
-           by [option@{u'} A] and typechecking will succeed only if the [option] constraints match those of the 
-           inductive. Type@{u} <= Type@{u'} will be required at least.
-           option@{u} A <= option@{u'} A is tested at which type?
+        (* Incompleteness: this is an underapproximation of cumulativity of the contexts: 
+           in general we should allow unfolding and reduction to happen before comparing the types of arguments.
+           However in many cases it will be sufficient. E.g. for lists and regular structures this is enough 
+           to check variance.
+
+           Note that both contexts are well-typed in different contexts: 
+           ind_arities@{u} ,,, params@{u} for args@{u} and
+           ind_arities@{u'} ,,, params@{u'} for args@{u'}. 
            
-           *)
-        check_wfu' <- wrap_error wfext.(@wf_env_ext_env cf) (string_of_kername id)
-          (check_wf_local wfext (subst_instance_context u (ind_arities mdecl ,,, smash_context [] (ind_params mdecl)) ,,,
-            (subst_instance_context u' (expand_lets_ctx (ind_params mdecl) (smash_context [] (cshape_args cs)))))) ;;
+           Hence we cannot use check_cumul_ctx here to verify the variance up-to conversion: the terms to be 
+           converted would be in different, incompatible contexts.
+
+           TODO: do as in Coq's kernel and implement a routine that takes whnfs of both sides and compare
+           syntactically the heads. *)
         check_args <- wrap_error wfext.(@wf_env_ext_env cf) (string_of_kername id)
-          (check_cumul_ctx wfext 
-            (subst_instance_context u (ind_arities mdecl ,,, smash_context [] (ind_params mdecl)))
+          (check_leq_context true wfext 
             (subst_instance_context u (expand_lets_ctx (ind_params mdecl) (smash_context [] (cshape_args cs))))
-            (subst_instance_context u' (expand_lets_ctx (ind_params mdecl) (smash_context [] (cshape_args cs)))) _ check_wfu') ;;
+            (subst_instance_context u' (expand_lets_ctx (ind_params mdecl) (smash_context [] (cshape_args cs))))) ;;
         check_indices <- wrap_error wfext.(@wf_env_ext_env cf) (string_of_kername id)
-          (check_conv_args wfext
-            (subst_instance_context u (ind_arities mdecl ,,, smash_context [] (ind_params mdecl ,,, cs.(cshape_args)))) _
+          (check_leq_terms false wfext
             (map (subst_instance_constr u ∘ expand_lets (ind_params mdecl ,,, cs.(cshape_args))) (cshape_indices cs))
-            (map (subst_instance_constr u' ∘ expand_lets (ind_params mdecl ,,, cs.(cshape_args))) (cshape_indices cs)) _ _) ;;
+            (map (subst_instance_constr u' ∘ expand_lets (ind_params mdecl ,,, cs.(cshape_args))) (cshape_indices cs))) ;;
         ret _
       | None => False_rect _ _
       end
@@ -2969,77 +3087,14 @@ Section CheckEnv.
     Next Obligation.
       destruct pat as [Σ' wfΣ' G wfG]; simpl in *. subst Σ'.
       clear eq.
-      destruct Σ as [Σ [wfΣ''] G' wfG'].
-      sq. simpl in *. 
-      unfold check_variance in mdeclvar.
-      rewrite -Heq_anonymous0 in mdeclvar.
-      destruct (ind_universes mdecl) as [|[inst cstrs]] eqn:indu => //.
-      set (ctx := Polymorphic_ctx _) in *.
-      symmetry in Heq_anonymous1.
-      eapply variance_universes_spec in Heq_anonymous1 as [cu cu']; eauto.
-      destruct wfΓ as [wfΓ wfinds].
-      eapply (wf_local_instantiate_poly (Σ, univs0) _ _ u wfΣ cu) in wfΓ.
-      rewrite -subst_instance_context_app.
-      rewrite -app_context_assoc -smash_context_app_expand.
-      rewrite !subst_instance_context_app subst_instance_context_smash.
-      eapply wf_local_smash_end; eauto.
-      now rewrite - !subst_instance_context_app app_context_assoc.
-    Qed.
-    
-    Next Obligation.
-      destruct pat as [Σ' wfΣ' G wfG]; simpl in *. subst Σ'.
-      clear eq.
-      destruct Σ as [Σ [wfΣ''] G' wfG']; simpl in *. sq.
-      unfold check_variance in mdeclvar.
-      rewrite -Heq_anonymous0 in mdeclvar.
-      destruct (ind_universes mdecl) as [|[inst cstrs]] eqn:indu => //.
-      set (ctx := Polymorphic_ctx _) in *.
-      symmetry in Heq_anonymous1.
-      eapply variance_universes_spec in Heq_anonymous1 as [cu cu']; eauto.
-      destruct wfΓ as [wfΓ wfinds].
-      eapply (wf_local_instantiate_poly (Σ, univs0) _ _ u wfΣ cu) in wfΓ.
-      rewrite !subst_instance_context_app subst_instance_context_smash.
-      eapply wf_local_smash_end; eauto.
-      now rewrite - !subst_instance_context_app app_context_assoc.
-    Qed.
-
-    Next Obligation.
-      destruct pat as [Σ' wfΣ' G wfG]; simpl in *. subst Σ'.
-      clear eq.
-      destruct Σ as [Σ [wfΣ''] G' wfG']; simpl in *. sq.
-      destruct wfΓ as [wfΓ wti].
-      unfold check_variance in mdeclvar.
-      rewrite -Heq_anonymous0 in mdeclvar.
-      destruct (ind_universes mdecl) as [|[inst cstrs]] eqn:indu => //.
-      set (ctx := Polymorphic_ctx _) in *.
-      symmetry in Heq_anonymous1.
-      eapply variance_universes_spec in Heq_anonymous1 as [cu cu']; eauto.
-      eapply (ctx_inst_inst (Σ, univs0) _ u) in wti; simpl; eauto.
-      red.
-      eapply ctx_inst_wt in wti.
-      eapply Forall_map. eapply Forall_map_inv in wti.
-      eapply Forall_impl; eauto; simpl. intros.
-      destruct H as [s Hs].
-      rewrite subst_instance_constr_expand_lets.
-      rewrite subst_instance_context_app subst_instance_context_smash /=.
-      eexists. eapply type_smash. now rewrite -subst_instance_context_app app_context_assoc.
-      red. split. red. simpl. split; auto.
-      eapply on_udecl_on_udecl_prop. apply wfΣ.
-      simpl. apply sub_context_set_empty.
-    Qed.
-
-    Next Obligation.
-      destruct pat as [Σ' wfΣ' G wfG]; simpl in *. subst Σ'.
-      clear eq.
-      destruct Σ as [Σ [wfΣ''] G' wfG']; simpl in *. sq.
-    Admitted.
-    Next Obligation.
-      destruct pat as [Σ' wfΣ' G wfG]; simpl in *. subst Σ'.
-      clear eq.
       destruct Σ as [Σ [wfΣ''] G' wfG']; simpl in *. sq.
       intros v0 [= <-].
       red. rewrite -Heq_anonymous1.
       split; auto.
+      now apply leq_context_cumul_context.
+      clear check_args.
+      eapply All2_impl. eauto. simpl; intros.
+      now constructor.
     Qed.
     Next Obligation.
       unfold variance_universes in Heq_anonymous.
@@ -3207,10 +3262,16 @@ Section CheckEnv.
     red in wfind. destruct ind_sort; auto.
     specialize (H1 H0). congruence.
   Qed.
-  
+
+  Definition wf_cs_sorts (Σ : wf_env_ext) cs := 
+    Forall (fun cs => Forall (wf_universe Σ) cs.(cshape_sorts)) cs.
+
   Program Definition do_check_ind_sorts (Σ : wf_env_ext) (params : context) (wfparams : ∥ wf_local Σ params ∥) 
     (kelim : sort_family) (indices : context) 
-    (cs : list constructor_shape) (ind_sort : Universe.t) : 
+    (cs : list constructor_shape) 
+    (wfcs : wf_cs_sorts Σ cs)
+    (ind_sort : Universe.t) 
+    (wfi : wf_universe Σ ind_sort): 
     typing_result (∥ check_ind_sorts (lift_typing typing) Σ params kelim indices cs ind_sort ∥) := 
     match universe_family ind_sort with
     | InSProp => 
@@ -3237,15 +3298,11 @@ Section CheckEnv.
     Next Obligation.
       unfold check_ind_sorts.
       destruct (universe_family ind_sort); try congruence.
-      pose proof (check_constructors_smallerP Σ cs ind_sort).
-      forward H2. todo "wf univs".
-      forward H2. todo "wf univs".
+      pose proof (check_constructors_smallerP Σ cs ind_sort wfcs wfi).
       sq.
       split. destruct H2 => //.
       destruct indices_matter; auto.
-      pose proof (check_constructors_smallerP Σ cs ind_sort).
-      forward H2. todo "wf univs".
-      forward H2. todo "wf univs".
+      pose proof (check_constructors_smallerP Σ cs ind_sort wfcs wfi).
       sq.
       split. destruct H2 => //.
       destruct indices_matter; auto.
@@ -3253,14 +3310,10 @@ Section CheckEnv.
     Next Obligation.
       unfold check_ind_sorts.
       destruct (universe_family ind_sort); try congruence.
-      pose proof (check_constructors_smallerP Σ cs ind_sort).
-      forward H2. todo "wf univs".
-      forward H2. todo "wf univs".
+      pose proof (check_constructors_smallerP Σ cs ind_sort wfcs wfi).
       sq.
       split. destruct H2 => //. now rewrite -Heq_anonymous.
-      pose proof (check_constructors_smallerP Σ cs ind_sort).
-      forward H2. todo "wf univs".
-      forward H2. todo "wf univs".
+      pose proof (check_constructors_smallerP Σ cs ind_sort wfcs wfi).
       sq.
       split. destruct H2 => //. now rewrite -Heq_anonymous.
     Qed.
@@ -3271,11 +3324,21 @@ Section CheckEnv.
       intuition congruence.
     Qed.
 
-
+  Lemma sorts_local_ctx_wf_sorts (Σ : global_env_ext) {wfΣ : wf Σ} Γ Δ s : 
+    sorts_local_ctx (lift_typing typing) Σ Γ Δ s ->
+    Forall (wf_universe Σ) s.
+  Proof.
+    induction Δ in s |- *; destruct s; simpl; auto.
+    destruct a as [na [b|] ty].
+    - intros []. eauto.
+    - intros []; eauto. constructor; eauto.
+      now eapply typing_wf_universe in t0.
+  Qed.
 
   Obligation Tactic := Program.Tactics.program_simplify.
 
   Program Definition check_indices (Σ : wf_env) mdecl (id : kername)
+    (wfΣ : ∥ wf_ext (Σ, ind_universes mdecl) ∥)
     (mdeclvar : check_variance mdecl.(ind_universes) mdecl.(ind_variance) = true)
     indices (wfΓ : ∥ wf_local (Σ, ind_universes mdecl) (ind_params mdecl ,,, indices) ∥) :
     EnvCheck (∥ forall v : list Variance.t,
@@ -3289,9 +3352,9 @@ Section CheckEnv.
       | Some ((univs0, u), u') => 
         '(exist wfext eq) <- make_wf_env_ext Σ id univs0 ;;
         checkctx <- wrap_error wfext.(@wf_env_ext_env cf) (string_of_kername id)
-          (check_cumul_ctx wfext (subst_instance_context u (smash_context [] (ind_params mdecl)))
+          (check_leq_context true wfext
             (subst_instance_context u (expand_lets_ctx (ind_params mdecl) (smash_context [] indices)))
-            (subst_instance_context u' (expand_lets_ctx (ind_params mdecl) (smash_context [] indices))) _ _) ;;
+            (subst_instance_context u' (expand_lets_ctx (ind_params mdecl) (smash_context [] indices)))) ;;
         ret _
       | None => False_rect _ _
       end
@@ -3301,33 +3364,7 @@ Section CheckEnv.
   Qed.
   Next Obligation. 
     clear H.
-    destruct pat as [Σ' wfΣ G wfG]. simpl in *. subst Σ'.
-    rename Heq_anonymous0 into eqvar.
-    rename Heq_anonymous1 into eqvaru.
-    unfold variance_universes in eqvaru.
-    unfold check_variance in mdeclvar.
-    rewrite -eqvar in mdeclvar.
-    destruct (ind_universes mdecl) as [|[inst cstrs]] => //.
-    noconf eqvaru. simpl in *.
-    rewrite mapi_length in mdeclvar.
-    todo "wf_local_inst".
-  Qed.
-  Next Obligation. 
-    clear H.
-    destruct pat as [Σ' wfΣ G wfG]. simpl in *. subst Σ'.
-    rename Heq_anonymous0 into eqvar.
-    rename Heq_anonymous1 into eqvaru.
-    unfold variance_universes in eqvaru.
-    unfold check_variance in mdeclvar.
-    rewrite -eqvar in mdeclvar.
-    destruct (ind_universes mdecl) as [|[inst cstrs]] => //.
-    noconf eqvaru. simpl in *.
-    rewrite mapi_length in mdeclvar.
-    todo "wf_local_inst".
-  Qed.
-  Next Obligation. 
-    clear H.
-    destruct pat as [Σ' wfΣ G wfG]. simpl in *. subst Σ'.
+    destruct pat as [Σ' wfΣ' G wfG]. simpl in *. subst Σ'.
     rename Heq_anonymous0 into eqvar.
     rename Heq_anonymous1 into eqvaru.
     sq. intros ? [= <-]. red. simpl.
@@ -3336,7 +3373,9 @@ Section CheckEnv.
     unfold check_variance in mdeclvar.
     rewrite -eqvar in mdeclvar.
     destruct (ind_universes mdecl) as [|[inst cstrs]] => //.
+    now eapply leq_context_cumul_context.
   Qed.
+
   Next Obligation.
     rename Heq_anonymous0 into eqvar.
     rename Heq_anonymous into eqvaru.
@@ -3380,8 +3419,8 @@ Section CheckEnv.
       onprojs <- wrap_error Σ ("Checking projections of " ^ id)
        (check_projections Σ mind mdecl i idecl indices cs) ;;
       onsorts <- wrap_error Σ ("Checking universes of " ^ id)
-        (do_check_ind_sorts Σ mdecl.(ind_params) wfpars idecl.(ind_kelim) indices cs ctxinds.2) ;;
-      onindices <- (check_indices Σ0 mdecl mind mdeclvar indices _) ;;
+        (do_check_ind_sorts Σ mdecl.(ind_params) wfpars idecl.(ind_kelim) indices cs _ ctxinds.2 _) ;;
+      onindices <- (check_indices Σ0 mdecl mind _ mdeclvar indices _) ;;
       ret (let 'sq wfars := wfars in 
         let 'sq wfext := Σ.(wf_env_ext_wf) in
         let 'sq oncstrs := oncstrs in
@@ -3408,24 +3447,39 @@ Section CheckEnv.
     rewrite split_at_firstn_skipn in Heq_anonymous. noconf Heq_anonymous.
     rewrite {1}H. now rewrite [_ ,,, _]firstn_skipn.
   Qed.
-
+  
   Next Obligation.
     destruct Σ as [Σ wfΣ G wfG]; simpl in *.
-    sq.
+    sq. red. simpl. red in X. solve_all.
+    destruct X.
+    now eapply sorts_local_ctx_wf_sorts in on_cargs.
+  Qed. 
+
+  Next Obligation.
+    destruct Σ as [Σ wfΣ G wfG]; simpl in *. sq.
+    eapply nth_error_all in wfars; eauto; simpl in wfars.
+    destruct wfars as [s Hs]. red in Hs.
+    clear X0; rewrite p in Hs.
+    eapply inversion_it_mkProd_or_LetIn in Hs; eauto.
+    now eapply inversion_Sort in Hs as [_ [wf _]].
+  Qed. 
+
+  Next Obligation.
+    apply wf_env_ext_wf.
+  Qed.
+  Next Obligation.
+    destruct Σ as [Σ wfΣ G wfG]; simpl in *. sq.
     clear onprojs onsorts X.
     red in wfars. eapply nth_error_all in wfars; eauto; simpl in wfars.
     destruct wfars as [s Hs].
     destruct (eqb_spec params (ind_params mdecl)); [|discriminate]. subst params.
     red in Hs.
     rewrite split_at_firstn_skipn in Heq_anonymous1. noconf Heq_anonymous1.
-    rewrite H; autorewrite with len. simpl. simpl in H.
-    rewrite -H. rewrite X0 in Hs.
+    rewrite {1}H; autorewrite with len. rewrite [_ ,,, _]firstn_skipn.
+    rewrite X0 in Hs.
     eapply inversion_it_mkProd_or_LetIn in Hs; eauto.
-    Admitted.
-    (* eapply PCUICArities.isType_it_mkProd_or_LetIn_wf_local in Hs; auto.
-    rewrite -(firstn_skipn (#|l0| - #|ind_params mdecl|) l0) in Hs.
-    rewrite app_context_nil_l in Hs. now rewrite -H in Hs.
-  Qed.*)
+    eapply typing_wf_local in Hs. now rewrite app_context_nil_l in Hs.
+  Qed.
 
   Next Obligation.
     destruct (eqb_spec params (ind_params mdecl)); [|discriminate]. subst params.

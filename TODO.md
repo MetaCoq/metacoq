@@ -2,6 +2,8 @@
 
 - `assumption_context` should be a boolean function.
 
+- remove duplication of eq_context / eq_context_upto  and eq_decl / eq_decl_upto
+
 - Rename `mkApps_nested` into `mkApps_app` (et inverser la direction de la
   règle)
 
@@ -33,6 +35,14 @@
 
 
 # Big projects
+
+- Refine the longest-simple-path algorithm on universes with the 
+  Bender & al algorithm used in Coq, extended with edges of negative weight.
+  Alternatively prove the spec for that algorithm. Refinement might be easier:
+  it amounts to show that the new algorithm calculates the longest simple
+  path between two universes. 
+
+- Verify parsing and printing of terms / votour
 
 ## Website
 

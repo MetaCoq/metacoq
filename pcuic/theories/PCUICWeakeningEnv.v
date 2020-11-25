@@ -122,8 +122,8 @@ Lemma eq_decl_subset {cf:checker_flags} le Σ φ φ' d d'
   : ConstraintSet.Subset φ φ'
     -> eq_decl le Σ φ d d' -> eq_decl le Σ φ' d d'.
 Proof.
-  intros Hφ [H1 H2]. split; [|eapply compare_term_subset; eauto].
-  destruct d as [na [bd|] ty], d' as [na' [bd'|] ty']; cbn in *; trivial.
+  intros Hφ [[Hann H1] H2]. split; [|eapply compare_term_subset; eauto].
+  destruct d as [na [bd|] ty], d' as [na' [bd'|] ty']; cbn in *; split; trivial.
   eapply eq_term_subset; eauto.
 Qed.
 

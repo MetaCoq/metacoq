@@ -1233,8 +1233,8 @@ Qed.
 Global Instance eq_decl_subst_instance Σ : SubstUnivPreserved (eq_decl Σ).
 Global Instance eq_decl_subst_instance le Σ : SubstUnivPreserved (eq_decl le Σ).
 Proof.
-  intros φ1 φ2 u HH [? [?|] ?] [? [?|] ?] [H1 H2]; split; cbn in *; auto.
-  all: try eapply compare_term_subst_instance; tea.
+  intros φ1 φ2 u HH [? [?|] ?] [? [?|] ?] [[Hann H1] H2]; split; cbn in *; auto.
+  all: try split; try eapply compare_term_subst_instance; tea.
   eapply eq_term_subst_instance; tea.
 Qed.
 

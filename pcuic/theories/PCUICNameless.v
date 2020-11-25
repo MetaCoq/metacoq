@@ -905,11 +905,11 @@ Lemma nl_eq_decl {cf:checker_flags} :
     eq_decl le Σ φ d d' ->
     eq_decl le (map (on_snd nl_global_decl) Σ) φ (map_decl nl d) (map_decl nl d').
 Proof.
-  intros le Σ φ d d' [h1 h2].
+  intros le Σ φ d d' [[hann h1] h2].
   split.
   - simpl. destruct d as [? [?|] ?], d' as [? [?|] ?].
     all: cbn in *.
-    all: trivial.
+    all: split; trivial.
     apply nl_eq_term. assumption.
   - apply nl_compare_term. assumption.
 Qed.
@@ -919,11 +919,11 @@ Lemma nl_eq_decl' {cf:checker_flags} :
     eq_decl le Σ φ d d' ->
     eq_decl le (map (on_snd nl_global_decl) Σ) φ (map_decl_anon nl d) (map_decl_anon nl d').
 Proof.
-  intros le Σ φ d d' [h1 h2].
+  intros le Σ φ d d' [[hann h1] h2].
   split.
   - simpl. destruct d as [? [?|] ?], d' as [? [?|] ?].
     all: cbn in *.
-    all: trivial.
+    all: split; trivial.
     apply nl_eq_term. assumption.
   - apply nl_compare_term. assumption.
 Qed.

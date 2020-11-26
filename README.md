@@ -4,7 +4,7 @@
 <img src="https://raw.githubusercontent.com/MetaCoq/metacoq.github.io/master/assets/LOGO.png" alt="MetaCoq" width="50px"/>
 </p>
 
-[![Build Status](https://travis-ci.com/MetaCoq/metacoq.svg?branch=coq-8.11)](https://travis-ci.com/MetaCoq/metacoq)
+[![Build status](https://github.com/MetaCoq/metacoq/workflows/Test%20compilation/badge.svg?branch=coq-8.11)](https://github.com/MetaCoq/metacoq/actions)
 [![MetaCoq Chat](https://img.shields.io/badge/zulip-join_chat-brightgreen.svg)](https://coq.zulipchat.com)
 
 MetaCoq is a project formalizing Coq in Coq and providing tools for

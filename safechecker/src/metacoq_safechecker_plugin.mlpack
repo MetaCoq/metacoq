@@ -33,6 +33,7 @@ PCUICCumulativity
 
 PCUICUnivSubst
 PCUICSafeReduce
+PCUICEqualityDec
 PCUICSafeConversion
 PCUICSafeChecker
 SafeTemplateChecker

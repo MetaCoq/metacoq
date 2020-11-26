@@ -1186,7 +1186,7 @@ Proof.
               simpl in b.
               rewrite fix_context_length in b.
               now rewrite Nat.add_0_r.
-              unfold test_def in a. apply andP in a as [_ Hbod].
+              unfold test_def in a. apply andb_and in a as [_ Hbod].
               rewrite fix_context_length.
               now rewrite Nat.add_0_r in Hbod.
               eauto with pcuic.

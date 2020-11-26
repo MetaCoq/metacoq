@@ -3,10 +3,12 @@ From Equations Require Import Equations.
 From MetaCoq.PCUIC Require Import
      PCUICAst PCUICAstUtils PCUICTyping
      PCUICInversion PCUICWeakeningEnv.
+Set Warnings "-notation-overridden".
 From MetaCoq.Erasure Require Import
      EAst EAstUtils ECSubst EInduction
      ELiftSubst ESubstitution ETyping Extract
      EWcbvEval Prelim.
+Set Warnings "+notation-overridden".
 From MetaCoq.Template Require Import config utils monad_utils.
 
 Derive NoConfusion for term.

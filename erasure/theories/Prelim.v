@@ -267,7 +267,7 @@ Proof.
     rewrite emkApps_snoc in i. inv i.
   - destruct (EAstUtils.mkApps_elim t l). EAstUtils.solve_discr.
     rewrite Ee.value_head_spec in i.
-    move/andP: i => [H H'].
+    move/andb_and: i => [H H'].
     eapply Ee.atom_mkApps in H' as [H1 _].
     destruct n, L; discriminate.
   - unfold Ee.isStuckFix in i. destruct f; try now inversion i.

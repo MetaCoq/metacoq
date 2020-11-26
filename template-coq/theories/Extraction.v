@@ -38,6 +38,7 @@ Extraction Library EqDecInstances.
 Extraction Library Induction.
 Extraction Library LiftSubst.
 Extraction Library UnivSubst.
+Extraction Library BasicAst.
 Extraction Library Reflect.
 Extraction Library Pretty.
 Extraction Library config.

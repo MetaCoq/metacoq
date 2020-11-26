@@ -85,6 +85,8 @@ src/pCUICPretty.ml
 # From SafeChecker
 src/pCUICSafeReduce.mli
 src/pCUICSafeReduce.ml
+src/pCUICEqualityDec.mli
+src/pCUICEqualityDec.ml
 src/pCUICSafeConversion.mli
 src/pCUICSafeConversion.ml
 src/pCUICSafeChecker.mli

@@ -3394,7 +3394,8 @@ Section CheckEnv.
       check_eq_true (allowed_eliminations_subset kelim (elim_sort_prop_ind cs)) 
         (Msg "Incorrect allowed_elimination for inductive") ;; ret _
     | Universe.lType u => 
-      check_eq_true (checkb_constructors_smaller Σ cs ind_sort) (Msg "") ;;
+      check_eq_true (checkb_constructors_smaller Σ cs ind_sort) 
+        (Msg ("Incorrect inductive sort: The constructor arguments universes are not smaller than the declared inductive sort") ;;
       match indices_matter with
       | true =>
         tyloc <- check_type_local_ctx Σ params indices ind_sort wfparams ;;

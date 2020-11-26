@@ -1,10 +1,11 @@
-(* TODO: Revise the preamble to see what's needed *)
 From Coq Require Import ssreflect MSetList MSetFacts MSetProperties MSetDecide.
 From Coq Require Import Structures.OrdersEx.
-From MetaCoq.Template Require Import utils BasicAst config Universes.
+From MetaCoq.Template Require Import utils BasicAst config Levels.
 
 Local Open Scope nat_scope.
 Local Open Scope string_scope2.
+
+(** TODO: Use Sort families when applicable ? *)
 
 Record sort_valuation :=
   { valuation_global : nat -> nat ;
@@ -13,11 +14,14 @@ Record sort_valuation :=
 Class EvaluableSort (A : Type) :=
   sort_val : sort_valuation -> A -> nat.
 
-Module SortRef.
+(** ** Families of sorts *)
+(* defined either globally or in the local sort context *)
+Module SortFamily.
 
   Inductive t_ :=
-  | GlobalSortRef (_ : kername) (* name of a globally defined sort *)
-  | VarSortRef (_ : nat) (* deBruijin index in the local sort context *)
+  | sfType (* harcoded because it has a special status *)
+  | sfGlobal (_ : nat) (* name of a globally defined sort *)
+  | sfVar (_ : nat) (* deBruijin index in the local sort context *)
   .
 
   Definition t := t_.
@@ -25,25 +29,28 @@ Module SortRef.
   Instance: EvaluableSort t :=
     fun (sval : sort_valuation) (sr : t) =>
       match sr with
-      | GlobalSortRef i => valuation_global sval i
-      | VarSortRef i => valuation_var sval i
+      | sfType => 0
+      | sfGlobal i => valuation_global sval i
+      | sfVar i => valuation_var sval i
       end.
 
   Definition eq : t -> t -> Prop := eq.
   Definition eq_equiv : Equivalence eq := _.
 
   Inductive lt_ : t -> t -> Prop :=
-  | ltGlobalGlobal i j : Nat.lt i j -> lt_ (GlobalSortRef i) (GlobalSortRef j)
-  | ltGlobalVar i j : lt_ (GlobalSortRef i) (VarSortRef j)
-  | ltVarVar i j : Nat.lt i j -> lt_ (VarSortRef i) (VarSortRef j).
+  | ltTypeGlobal i : lt_ sfType (sfGlobal i)
+  | ltTypeVar i : lt_ sfType (sfVar i)
+  | ltGlobalGlobal i j : Nat.lt i j -> lt_ (sfGlobal i) (sfGlobal j)
+  | ltGlobalVar i j : lt_ (sfGlobal i) (sfVar j)
+  | ltVarVar i j : Nat.lt i j -> lt_ (sfVar i) (sfVar j).
 
   Definition lt := lt_.
 
   Lemma lt_strorder : StrictOrder lt.
   Proof.
     constructor.
-    - intros [|] X; inversion X; eapply Nat.lt_irrefl; tea.
-    - intros [|] [|] [|] X1 X2; inversion X1; inversion X2; constructor.
+    - intros [| |] X; inversion X; eapply Nat.lt_irrefl; tea.
+    - intros [| |] [| |] [| |] X1 X2; inversion X1; inversion X2; constructor.
       all: etransitivity; tea.
   Qed.
 
@@ -52,10 +59,13 @@ Module SortRef.
 
   Definition compare (sd1 sd2 : t) : comparison :=
     match sd1, sd2 with
-    | GlobalSortRef i, GlobalSortRef j => Nat.compare i j
-    | GlobalSortRef _, _ => Lt
-    | _, GlobalSortRef _ => Gt
-    | VarSortRef i, VarSortRef j => Nat.compare i j
+    | sfType, sfType => Eq
+    | sfType, _ => Lt
+    | _, sfType => Gt
+    | sfGlobal i, sfGlobal j => Nat.compare i j
+    | sfGlobal _, _ => Lt
+    | _, sfGlobal _ => Gt
+    | sfVar i, sfVar j => Nat.compare i j
     end.
 
   Definition eq_dec (sd1 sd2 : t) : {sd1 = sd2} + {sd1 <> sd2}.
@@ -77,21 +87,24 @@ Module SortRef.
       all: intro; now constructor.
   Qed.
 
-End SortRef.
+  Definition eqb (x y : t) := match compare x y with Eq => true | _ => false end.
+
+End SortFamily.
+
+
+(** ** Sorts / Universe *)
 
 Module Sort.
 
   Inductive t_ :=
-  | TypeSort (_ : Level.t) (* harcoded because it has a special status *)
-  | PredicativeSort (_ : SortRef.t) (_ : Level.t)
-  | ImpredicativeSort (_ : SortRef.t).
+  | PredicativeSort (_ : SortFamily.t) (_ : UniverseLevel.t)
+  | ImpredicativeSort (_ : SortFamily.t).
 
   Definition t := t_.
 
   Instance: EvaluableSort t :=
     fun (sval : sort_valuation) (s : t) =>
       match s with
-      | TypeSort _ => 0
       | PredicativeSort sr _ => sort_val sval sr
       | ImpredicativeSort sr => sort_val sval sr
       end.
@@ -100,29 +113,26 @@ Module Sort.
   Definition eq_equiv : Equivalence eq := _.
 
 
-  Module SortRefLevel := PairOrderedType SortRef Level.
+  Module SortFamilyLevel := PairOrderedType SortFamily UniverseLevel.
 
   Inductive lt_ : t -> t -> Prop :=
-  | ltTypeType l1 l2 : Level.lt l1 l2 -> lt_ (TypeSort l1) (TypeSort l2)
-  | ltTypeImpred l1 sd2 : lt_ (TypeSort l1) (ImpredicativeSort sd2)
-  | ltTypePred l1 sd2 l2 : lt_ (TypeSort l1) (PredicativeSort sd2 l2)
-  | ltImpredImpred sd1 sd2 : SortRef.lt sd1 sd2 -> lt_ (ImpredicativeSort sd1) (ImpredicativeSort sd2)
+  | ltImpredImpred sd1 sd2 : SortFamily.lt sd1 sd2 -> lt_ (ImpredicativeSort sd1) (ImpredicativeSort sd2)
   | ltImpredPred sd1 sd2 l2 : lt_ (ImpredicativeSort sd1) (PredicativeSort sd2 l2)
-  | ltPredPred sd1 l1 sd2 l2 : SortRefLevel.lt (sd1, l1) (sd2, l2) ->lt_ (PredicativeSort sd1 l1) (PredicativeSort sd2 l2)
+  | ltPredPred sd1 l1 sd2 l2 : SortFamilyLevel.lt (sd1, l1) (sd2, l2) ->lt_ (PredicativeSort sd1 l1) (PredicativeSort sd2 l2)
   .
 
   Definition lt := lt_.
 
 
-  Local Existing Instance SortRef.lt_strorder.
+  Local Existing Instance SortFamily.lt_strorder.
+  Local Existing Instance UniverseLevel.lt_strorder.
 
   Lemma lt_strorder : StrictOrder lt.
   Proof.
     constructor.
     - intros [] X; inversion X.
-      + eapply Level.lt_strorder; tea.
-      + eapply SortRefLevel.lt_strorder; tea.
-      + eapply SortRef.lt_strorder; tea.
+      + eapply SortFamilyLevel.lt_strorder; tea.
+      + eapply SortFamily.lt_strorder; tea.
     - intros [] [] [] X1 X2; inversion X1; inversion X2.
       all: constructor; subst=> // ; etransitivity; tea.
   Qed.
@@ -133,14 +143,11 @@ Module Sort.
 
   Definition compare (s1 s2 : t) : comparison :=
     match s1, s2 with
-    | TypeSort l1, TypeSort l2 => Level.compare l1 l2
-    | TypeSort _, _ => Lt
-    | _, TypeSort _ => Gt
-    | ImpredicativeSort sd1, ImpredicativeSort sd2 => SortRef.compare sd1 sd2
+    | ImpredicativeSort sd1, ImpredicativeSort sd2 => SortFamily.compare sd1 sd2
     | ImpredicativeSort _, _ => Lt
     | _, ImpredicativeSort _ => Gt
     | PredicativeSort sd1 l1, PredicativeSort sd2 l2 =>
-      SortRefLevel.compare (sd1, l1) (sd2, l2)
+      SortFamilyLevel.compare (sd1, l1) (sd2, l2)
     end.
 
   Definition compare_spec :
@@ -148,19 +155,13 @@ Module Sort.
   Proof.
     intros [] []; repeat constructor.
     - eapply CompareSpec_Proper.
-      5: eapply Level.compare_spec.
-      4: reflexivity.
-      all: split; [now inversion 1|].
-      1:now intros ->.
-      all: intro; now constructor.
-    - eapply CompareSpec_Proper.
-      5: eapply SortRefLevel.compare_spec.
+      5: eapply SortFamilyLevel.compare_spec.
       4: reflexivity.
       all: split; [now inversion 1|].
       1: by cbv=> -[-> ->].
       all: intro; now constructor.
     - eapply CompareSpec_Proper.
-      5: eapply SortRef.compare_spec.
+      5: eapply SortFamily.compare_spec.
       4: reflexivity.
       all: split; [now inversion 1|].
       1:now intros ->.
@@ -169,22 +170,35 @@ Module Sort.
 
   Definition eq_dec (s1 s2 : t) : {s1 = s2} + {s1 <> s2}.
   Proof.
-    decide equality; first [apply Level.eq_dec|apply SortRef.eq_dec].
+    decide equality; first [apply UniverseLevel.eq_dec|apply SortFamily.eq_dec].
   Defined.
 
   Definition eq_leibniz (x y : t) : eq x y -> x = y := id.
+
+  Definition family (x : t) : SortFamily.t :=
+    match x with
+    | ImpredicativeSort sf => sf
+    | PredicativeSort sf _ => sf
+    end.
+
+  Definition level (x : t) : UniverseLevel.t :=
+    match x with
+    | ImpredicativeSort _ => UniverseLevel.type0 (* should never be used in a meaningful way *)
+    | PredicativeSort _ l => l
+    end.
 End Sort.
 
 Module SortSet := MSetList.MakeWithLeibniz Sort.
 Module SortSetFact := WFactsOn Sort SortSet.
 Module SortSetProp := WPropertiesOn Sort SortSet.
 
+(** ** Constraints on sorts *)
 
 Module SortConstraint.
 
-  (* An atomic constraint on sorts (literal) *)
+  (* An atomic constraint on sorts (litteral) *)
   Inductive t_ :=
-  | Eliminable (_ _ : Sort.t)
+  | Eliminable (_ _ : SortFamily.t)
   .
 
   Definition t := t_.
@@ -197,7 +211,7 @@ Module SortConstraint.
   Definition eq : t -> t -> Prop := eq.
   Definition eq_equiv : Equivalence eq := _.
 
-  Module SortPair := PairOrderedType Sort Sort.
+  Module SortPair := PairOrderedType SortFamily SortFamily.
 
   Inductive lt_ : t -> t -> Prop :=
   | ltElimElim s1 s'1 s2 s'2 : SortPair.lt (s1, s'1) (s2, s'2) -> lt_ (Eliminable s1 s'1) (Eliminable s2 s'2).
@@ -212,7 +226,7 @@ Module SortConstraint.
     constructor.
     - intros [] X; inversion X; eapply SortPair.lt_strorder; tea.
     - intros [] [] [] X1 X2; inversion X1; inversion X2.
-      all: try by (constructor; subst=> // ; etransitivity; tea).
+      all: by (constructor; subst=> // ; etransitivity; tea).
   Qed.
 
   Lemma lt_compat : Proper (eq ==> eq ==> iff) lt.
@@ -239,7 +253,7 @@ Module SortConstraint.
 
   Definition eq_dec (s1 s2 : t) : {s1 = s2} + {s1 <> s2}.
   Proof.
-    decide equality; apply Sort.eq_dec.
+    decide equality; apply SortFamily.eq_dec.
   Defined.
 
   Definition eq_leibniz (x y : t) : eq x y -> x = y := id.
@@ -265,12 +279,7 @@ Module SortConstraintFormula.
     singleton (SortConstraintSet.singleton sc).
   Definition conjunction (sf1 sf2: t) : t := union sf1 sf2.
   Definition from_cnf (llsc : list (list SortConstraint.t)) : t :=
-    let add_clause sf lsc :=
-      let clause :=
-        fold_left (fun clause sc => SortConstraintSet.add sc clause) lsc SortConstraintSet.empty
-      in
-      add clause sf
-    in
+    let add_clause sf lsc := add (SortConstraintSetProp.of_list lsc) sf in
     fold_left add_clause llsc empty.
 
   (* Consider adding from_dnf *)
@@ -282,6 +291,7 @@ Module SortConstraintFormulaProp := WPropertiesOn SortConstraintSet SortConstrai
 Module SortConstraintFormulaDecide := WDecide SortConstraintFormula.
 Ltac sort_constraint_sets := SortConstraintFormulaDecide.fsetdec.
 
+(** ** Sort constraints satisfiability *)
 
 Definition clause_satisfiable (sval : sort_valuation) : SortConstraintSet.t -> bool :=
   SortConstraintSet.exists_ (SortConstraint.satisfiable sval).
@@ -292,14 +302,53 @@ Definition formula_satisfiable (sval : sort_valuation) :
 
 
 
-Module SortContext.
-  Definition t := SortSet.t × SortConstraintFormula.t.
 
-  Definition empty : t := (SortSet.empty, SortConstraintFormula.True).
+(* Module SortArg. *)
 
-  Definition is_empty (sctx : t) :=
-    SortSet.is_empty sctx.1 && SortConstraintFormula.is_True sctx.2.
-End SortContext.
+(*   Inductive t_ := *)
+(*   | TypeArg (_ : Level.t) *)
+(*   | ImpredSortArg (_ : SortFamily.t) *)
+(*   | PredSortArg ( _ : SortFamily.t) (_ : Level.t). *)
 
-Definition sorts_decl := SortContext.t.
+(*   Definition t := t_. *)
 
+(*   Definition level (s : t) := *)
+(*     match s with *)
+(*     | TypeArg l => l *)
+(*     | ImpredSortArg _ => Level.lSet *)
+(*     | PredSortArg _ l => l *)
+(*     end. *)
+
+(*   Module SortFamilyLevel := PairOrderedType SortFamily Level. *)
+
+(*   Definition compare (s1 s2 : t) : comparison := *)
+(*     match s1, s2 with *)
+(*     | TypeArg l1, TypeArg l2 => Level.compare l1 l2 *)
+(*     | TypeArg _, _ => Lt *)
+(*     | _, TypeArg _ => Gt *)
+(*     | ImpredSortArg sr1, ImpredSortArg sr2 => SortFamily.compare sr1 sr2 *)
+(*     | ImpredSortArg _, _ => Lt *)
+(*     | _, ImpredSortArg _ => Gt *)
+(*     | PredSortArg sr1 l1, PredSortArg sr2 l2 => *)
+(*       SortFamilyLevel.compare (sr1, l1) (sr2, l2) *)
+(*     end. *)
+
+(*   Definition eqb (s1 s2 : t) : bool := *)
+(*     match compare s1 s2 with Eq => true | _ => false end. *)
+
+(*   Definition equal_upto (f : Level.t -> Level.t -> bool) (s1 s2 : t) := *)
+(*     match s1, s2 with *)
+(*     | TypeArg l1, TypeArg l2 => f l1 l2 *)
+(*     | TypeArg _, _ | _, TypeArg _ => false *)
+(*     | ImpredSortArg sr1, ImpredSortArg sr2 => *)
+(*       match SortFamily.compare sr1 sr2 with Eq => true | _ => false end *)
+(*     | ImpredSortArg _, _ | _, ImpredSortArg _ => false *)
+(*     | PredSortArg sr1 l1, PredSortArg sr2 l2 => *)
+(*       match SortFamily.compare sr1 sr2 with *)
+(*         | Eq => f l1 l2 *)
+(*         | _ => false *)
+(*       end *)
+(*     end. *)
+
+(*   Definition type0 := SortArg.TypeArg Level.lSet. *)
+(* End SortArg. *)

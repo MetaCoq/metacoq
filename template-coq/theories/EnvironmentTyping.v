@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils BasicAst AstUtils
-     Universes Environment.
+     Universes Sorts Environment.
 
 
 Module Lookup (T : Term) (E : EnvironmentSig T).
@@ -29,10 +29,14 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     List.nth_error idecl.(ind_projs) (snd proj) = Some pdecl /\
     mdecl.(ind_npars) = snd (fst proj).
 
+  Definition declare_sort Σ id (sb : sort_body) : Prop :=
+    lookup_env Σ id = Some (SortDecl sb).
+
   Definition on_udecl_decl {A} (F : universes_decl -> A) d : A :=
   match d with
   | ConstantDecl cb => F cb.(cst_universes)
   | InductiveDecl mb => F mb.(ind_universes)
+  | SortDecl sd => F (Monomorphic_ctx ContextSet.empty)
   end.
 
   Definition monomorphic_udecl_decl := on_udecl_decl monomorphic_udecl.
@@ -83,12 +87,12 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     (global_levels Σ, global_constraints Σ).
 
   Definition global_ext_levels (Σ : global_env_ext) : LevelSet.t :=
-    LevelSet.union (levels_of_udecl (snd Σ)) (global_levels Σ.1).
+    LevelSet.union (levels_of_udecl (genv_univs Σ)) (global_levels Σ).
 
   Definition global_ext_constraints (Σ : global_env_ext) : ConstraintSet.t :=
     ConstraintSet.union
-      (constraints_of_udecl (snd Σ))
-      (global_constraints Σ.1).
+      (constraints_of_udecl (genv_univs Σ))
+      (global_constraints Σ).
 
   Coercion global_ext_constraints : global_env_ext >-> ConstraintSet.t.
 
@@ -516,9 +520,9 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       let univs := ind_universes mdecl in
       match variance_universes univs v with
       | Some (univs, u, u') =>
-        All2_local_env 
-          (on_decl (fun Γ Γ' t t' => 
-            cumul (Σ, univs) (subst_instance_context u (smash_context [] (ind_params mdecl)) ,,, Γ) t t'))
+        All2_local_env
+          (on_decl (fun Γ Γ' t t' =>
+            cumul (genv_no_sorts Σ univs) (subst_instance_context u (smash_context [] (ind_params mdecl)) ,,, Γ) t t'))
           (subst_instance_context u (expand_lets_ctx (ind_params mdecl) (smash_context [] indices)))
           (subst_instance_context u' (expand_lets_ctx (ind_params mdecl) (smash_context [] indices)))
       | None => False
@@ -530,11 +534,11 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       | Some (univs, u, u') =>
         All2_local_env 
           (on_decl (fun Γ Γ' t t' => 
-            cumul (Σ, univs) (subst_instance_context u (ind_arities mdecl ,,, smash_context [] (ind_params mdecl)) ,,, Γ) t t'))
+            cumul (genv_no_sorts Σ univs) (subst_instance_context u (ind_arities mdecl ,,, smash_context [] (ind_params mdecl)) ,,, Γ) t t'))
           (subst_instance_context u (expand_lets_ctx (ind_params mdecl) (smash_context [] (cshape_args cs))))
           (subst_instance_context u' (expand_lets_ctx (ind_params mdecl) (smash_context [] (cshape_args cs)))) *
         All2 
-          (conv (Σ, univs) (subst_instance_context u (ind_arities mdecl ,,, smash_context [] (ind_params mdecl ,,, cshape_args cs))))
+          (conv (genv_no_sorts Σ univs) (subst_instance_context u (ind_arities mdecl ,,, smash_context [] (ind_params mdecl ,,, cshape_args cs))))
           (map (subst_instance_constr u ∘ expand_lets (ind_params mdecl ,,, cshape_args cs)) (cshape_indices cs))
           (map (subst_instance_constr u' ∘ expand_lets (ind_params mdecl ,,, cshape_args cs)) (cshape_indices cs))
       | None => False (* Monomorphic inductives have no variance attached *)
@@ -764,10 +768,28 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       | None => on_type Σ [] d.(cst_type)
       end.
 
+    Definition on_sort Σ s :=
+      match s with
+      | TypeSort l =>
+      | ImpredicativeSort sd =>
+      | PredicativeSort sd l =>
+      end.
+
+    Definition on_sort_constraint sc :=
+      match sc with
+      | SortConstraint.Eliminable s1 s2 =>
+        on_sort Σ s1 × on_sort Σ s2
+      end.
+
+    Definition on_sort_decl Σ sd :=
+      in
+      SortConstraintSet.For_all on_sort_constraint sd.sort_relation_extension.
+
     Definition on_global_decl Σ kn decl :=
       match decl with
       | ConstantDecl d => on_constant_decl Σ d
       | InductiveDecl inds => on_inductive Σ kn inds
+      | SortDecl sd => on_sort_decl Σ sd
       end.
 
     (** *** Typing of global environment

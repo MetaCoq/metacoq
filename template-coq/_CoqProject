@@ -23,8 +23,9 @@ theories/common/uGraph.v
 # Basic Ast files
 theories/utils.v
 theories/config.v
-theories/Universes.v
+theories/Levels.v
 theories/Sorts.v
+theories/Universes.v
 theories/BasicAst.v
 theories/Environment.v
 theories/Ast.v

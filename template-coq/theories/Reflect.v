@@ -677,10 +677,16 @@ Proof.
   unfold eqb_mutual_inductive_body; finish_reflect.
 Defined.
 
+Definition eqb_sort_body (x y : sort_body) :=
+  let ()
+
+Instance reflect_sort_body .
+
 Definition eqb_global_decl x y :=
   match x, y with
   | ConstantDecl cst, ConstantDecl cst' => eqb cst cst'
   | InductiveDecl mib, InductiveDecl mib' => eqb mib mib'
+  | SortDecl sb, SortDecl sb' => eqb sb sb'
   | _, _ => false
   end.
 

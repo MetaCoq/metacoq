@@ -1074,7 +1074,7 @@ Proof.
         eapply typing_wf in t1. intuition. auto.
         eapply typing_wf in t1. intuition. auto. constructor. }
       split; auto.
-      apply All_local_env_app_inv; intuition auto.
+      apply All_local_env_app; intuition auto.
       clear -wf a.
       induction ctx; try constructor; depelim a.
       -- rewrite lift_context_snoc.         
@@ -1132,10 +1132,10 @@ Proof.
   generalize (@nil context_decl) as Δ.
   rewrite /fix_context_gen.
   intros Δ wfΔ.  
-  eapply All_local_env_app_inv. split; auto.
+  eapply All_local_env_app. split; auto.
   induction a in Δ, wfΔ |- *; simpl; auto. constructor.
   simpl.
-  eapply All_local_env_app_inv. split; auto.
+  eapply All_local_env_app. split; auto.
   constructor. constructor. simpl.
   destruct p as [s Hs].
   exists s. eapply (weakening Σ Γ Δ _ (tSort s)); auto.

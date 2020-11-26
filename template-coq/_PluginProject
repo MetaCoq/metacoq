@@ -7,6 +7,8 @@ gen-src/signature.mli
 gen-src/signature.ml
 gen-src/classes0.mli
 gen-src/classes0.ml
+gen-src/eqDec.mli
+gen-src/eqDec.ml
 gen-src/all_Forall.ml
 gen-src/all_Forall.mli
 gen-src/ascii.ml
@@ -60,6 +62,8 @@ gen-src/list0.ml
 gen-src/list0.mli
 gen-src/logic0.ml
 gen-src/logic0.mli
+gen-src/mCPrelude.mli
+gen-src/mCPrelude.ml
 gen-src/mCCompare.ml
 gen-src/mCCompare.mli
 gen-src/mCList.ml

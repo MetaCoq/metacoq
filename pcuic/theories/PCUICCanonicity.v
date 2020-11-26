@@ -285,8 +285,8 @@ Section Spines.
     * elimtype False; depelim ass.
     * simpl. rewrite !it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /= //.
       intros wf sp; depelim sp. rewrite nth_error_nil //.
-      pose proof (All_local_env_app _ _ _ wf) as [_ wfty].
-      eapply All_local_env_app in wfty as [wfty _]. depelim wfty.
+      pose proof (wf_local_app_inv wf) as [_ wfty].
+      eapply wf_local_rel_app_inv in wfty as [wfty _]. depelim wfty.
       eapply cumul_Prod_inv in c as [dom codom]. 2-3:pcuic.
       assert (Σ ;;; Γ |- hd : ty).
       { eapply type_Cumul'; pcuic. eapply conv_cumul. now symmetry. }
@@ -410,8 +410,8 @@ Section Spines.
     * elimtype False; depelim ass.
     * simpl. rewrite !it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /= //.
       intros wf sp.
-      pose proof (All_local_env_app _ _ _ wf) as [_ wfty].
-      eapply All_local_env_app in wfty as [wfty _]. depelim wfty.
+      pose proof (wf_local_app_inv wf) as [_ wfty].
+      eapply All_local_env_app_inv in wfty as [wfty _]. depelim wfty.
       intros Hargs. eapply nth_error_None in Hargs.
       len in Hargs. len; simpl.      
       depelim sp. 
@@ -1044,8 +1044,10 @@ Section WeakNormalization.
       clear wh_normal_empty_gen.
       now specialize (wh_neutral_empty_gen _ tyarg eq_refl).
     - move/andP: cl => [/andP[_ clc] _].
-      eapply inversion_Case in typed; firstorder eauto.
-    - eapply inversion_Proj in typed; firstorder auto.
+      eapply inversion_Case in typed as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?); auto.
+      eapply wh_neutral_empty_gen; eauto.
+    - eapply inversion_Proj in typed as (? & ? & ? & ? & ? & ? & ? & ? & ?); auto.
+      eapply wh_neutral_empty_gen; eauto.
     - eapply wh_neutral_empty_gen in w; eauto.
     - eapply inversion_Sort in typed as (? & ? & ?); auto.
       eapply invert_cumul_sort_l in c as (? & ? & ?); auto.

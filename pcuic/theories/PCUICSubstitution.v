@@ -2371,20 +2371,20 @@ Proof.
 
   - assert (wf_local Σ (Γ ,,, subst_context s 0 Δ ,,, subst_context s #|Δ| (fix_context mfix))).
     subst types.
-    apply All_local_env_app in X as [X Hfixc].
-    apply All_local_env_app_inv. intuition.
+    apply All_local_env_app_inv in X as [X Hfixc].
+    apply All_local_env_app. intuition.
     revert Hfixc. clear X0 X H.
     induction 1; simpl; auto.
     + destruct t0 as [u [Ht IHt]].
       specialize (IHt Γ Γ' (Δ ,,, Γ0) s sub). forward IHt. now rewrite app_context_assoc.
       rewrite app_context_length subst_context_app app_context_assoc Nat.add_0_r in IHt.
       unfold snoc; rewrite subst_context_snoc; econstructor; auto. exists u.
-        apply IHt; apply All_local_env_app_inv; intuition.
+        apply IHt; apply All_local_env_app; intuition.
     + destruct t0 as [Ht IHt].
        specialize (IHt Γ Γ' (Δ ,,, Γ0) s sub). forward IHt. now rewrite app_context_assoc.
        rewrite app_context_length subst_context_app app_context_assoc Nat.add_0_r in IHt.
        unfold snoc; rewrite subst_context_snoc; econstructor; auto;
-       apply IHt; apply All_local_env_app_inv; intuition.
+       apply IHt; apply All_local_env_app; intuition.
     + erewrite map_dtype. eapply type_Fix.
       * rewrite nth_error_map H. reflexivity.
       * now rewrite subst_fix_context.
@@ -2405,20 +2405,20 @@ Proof.
 
   - assert (wf_local Σ (Γ ,,, subst_context s 0 Δ ,,, subst_context s #|Δ| (fix_context mfix))).
     subst types.
-    apply All_local_env_app in X as [X Hfixc].
-    apply All_local_env_app_inv. intuition.
+    apply All_local_env_app_inv in X as [X Hfixc].
+    apply All_local_env_app. intuition.
     revert Hfixc. clear X0 X H.
     induction 1; simpl; auto.
     + destruct t0 as [u [Ht IHt]].
       specialize (IHt Γ Γ' (Δ ,,, Γ0) s sub). forward IHt. now rewrite app_context_assoc.
       rewrite app_context_length subst_context_app app_context_assoc Nat.add_0_r in IHt.
       unfold snoc; rewrite subst_context_snoc; econstructor; auto. exists u.
-        apply IHt; apply All_local_env_app_inv; intuition.
+        apply IHt; apply All_local_env_app; intuition.
     + destruct t0 as [Ht IHt].
        specialize (IHt Γ Γ' (Δ ,,, Γ0) s sub). forward IHt. now rewrite app_context_assoc.
        rewrite app_context_length subst_context_app app_context_assoc Nat.add_0_r in IHt.
        unfold snoc; rewrite subst_context_snoc; econstructor; auto;
-       apply IHt; apply All_local_env_app_inv; intuition.
+       apply IHt; apply All_local_env_app; intuition.
     + erewrite map_dtype. eapply type_CoFix.
       * rewrite nth_error_map H. reflexivity.
       * now rewrite subst_fix_context.
@@ -2444,7 +2444,7 @@ Proof.
       pose proof (subst_destArity [] B s #|Δ|). rewrite Hd in H.
       rewrite H. clear H.
       split; auto.
-      apply All_local_env_app_inv; intuition auto.
+      apply All_local_env_app; intuition auto.
       clear -sub wfsubs a.
       induction ctx; try constructor; depelim a.
       -- rewrite subst_context_snoc.
@@ -2455,7 +2455,7 @@ Proof.
          specialize (t0 _ _ (Δ ,,, ctx) _ sub). forward t0.
          now rewrite app_context_assoc. simpl in t0.
          forward t0. rewrite subst_context_app app_context_assoc Nat.add_0_r.
-         apply All_local_env_app_inv. split; auto.
+         apply All_local_env_app. split; auto.
          eapply IHctx. eapply a.
          now rewrite subst_context_app Nat.add_0_r app_context_assoc app_length in t0.
       -- rewrite subst_context_snoc.
@@ -2466,7 +2466,7 @@ Proof.
          specialize (t0 _ _ (Δ ,,, ctx) _ sub). forward t0.
          now rewrite app_context_assoc. simpl in t0.
          forward t0. rewrite subst_context_app app_context_assoc Nat.add_0_r.
-         apply All_local_env_app_inv. split; auto.
+         apply All_local_env_app. split; auto.
          eapply IHctx. eapply a.
          now rewrite subst_context_app Nat.add_0_r app_context_assoc app_length in t0.
     + right; exists u; intuition eauto.
@@ -2490,7 +2490,7 @@ Proof.
 
 
   - induction Δ.
-    + clear X. simpl in *.  now apply All_local_env_app in wfΓ0.
+    + clear X. simpl in *.  now apply All_local_env_app_inv in wfΓ0.
     + rewrite subst_context_snoc.
       depelim X; simpl;
       econstructor; eauto.

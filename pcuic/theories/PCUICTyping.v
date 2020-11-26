@@ -604,7 +604,7 @@ Lemma type_Prop `{checker_flags} Σ : Σ ;;; [] |- tSort Universe.lProp : tSort 
 Defined.
 
 Lemma env_prop_sigma `{checker_flags} P PΓ : env_prop P PΓ ->
-  forall Σ (wfΣ : wf Σ), Forall_decls_typing P Σ.
+  forall (Σ : global_env) (wfΣ : wf Σ), Forall_decls_typing P Σ.
 Proof.
   intros. red in X. eapply (X (empty_ext Σ)).
   apply wfΣ.
@@ -622,7 +622,7 @@ Proof.
 Qed.
 
 Lemma size_wf_local_app `{checker_flags} {Σ} (Γ Γ' : context) (Hwf : wf_local Σ (Γ ,,, Γ')) :
-  wf_local_size Σ (@typing_size _) _ (wf_local_app _ _ _ Hwf) <=
+  wf_local_size Σ (@typing_size _) _ (wf_local_app_l _ _ _ Hwf) <=
   wf_local_size Σ (@typing_size _) _ Hwf.
 Proof.
   induction Γ' in Γ, Hwf |- *; try lia. simpl. lia.
@@ -1130,7 +1130,7 @@ Section All_local_env.
       apply IHX. simpl in *. lia.
   Qed.
 
-  Lemma lookup_on_global_env P Σ c decl :
+  Lemma lookup_on_global_env P (Σ : global_env) c decl :
     on_global_env P Σ ->
     lookup_env Σ c = Some decl ->
     { Σ' & { wfΣ' : on_global_env P Σ'.1 & on_global_decl P Σ' c decl } }.
@@ -1143,6 +1143,15 @@ Section All_local_env.
   Qed.
 
   Lemma All_local_env_app (P : context -> term -> option term -> Type) l l' :
+    All_local_env P l * All_local_env (fun Γ t T => P (l ,,, Γ) t T) l' ->
+    All_local_env P (l ,,, l').
+  Proof.
+    induction l'; simpl; auto. intuition.
+    intuition. destruct a. destruct decl_body.
+    inv b. econstructor; eauto. inv b; econstructor; eauto.
+  Qed.
+
+  Lemma All_local_env_app_inv (P : context -> term -> option term -> Type) l l' :
     All_local_env P (l ,,, l') ->
     All_local_env P l * All_local_env (fun Γ t T => P (l ,,, Γ) t T) l'.
   Proof.
@@ -1161,12 +1170,12 @@ Section All_local_env.
         * apply X1.
         * apply X2.
   Qed.
-  
-  Definition wf_local_rel_app {Σ Γ1 Γ2 Γ3} :
+
+  Definition wf_local_rel_app_inv {Σ Γ1 Γ2 Γ3} :
     wf_local_rel Σ Γ1 (Γ2 ,,, Γ3) ->
     wf_local_rel Σ Γ1 Γ2 * wf_local_rel Σ (Γ1 ,,, Γ2) Γ3.
   Proof.
-    intros h. apply All_local_env_app in h as [h1 h2].
+    intros h. apply All_local_env_app_inv in h as [h1 h2].
     split.
     - exact h1.
     - eapply All_local_env_impl. 1: exact h2.
@@ -1176,7 +1185,6 @@ Section All_local_env.
       all: rewrite <- app_context_assoc.
       all: auto.
   Defined.
-
 
   Lemma All_local_env_lookup {P Γ n} {decl} :
     All_local_env P Γ ->
@@ -1190,20 +1198,11 @@ Section All_local_env.
     eapply IHX.
   Qed.
 
-  Lemma All_local_env_app_inv (P : context -> term -> option term -> Type) l l' :
-    All_local_env P l * All_local_env (fun Γ t T => P (l ,,, Γ) t T) l' ->
-    All_local_env P (l ,,, l').
-  Proof.
-    induction l'; simpl; auto. intuition.
-    intuition. destruct a. destruct decl_body.
-    inv b. econstructor; eauto. inv b; econstructor; eauto. Qed.
-
-
-  Definition wf_local_rel_app_inv {Σ Γ1 Γ2 Γ3} :
+  Definition wf_local_rel_app {Σ Γ1 Γ2 Γ3} :
     wf_local_rel Σ Γ1 Γ2 -> wf_local_rel Σ (Γ1 ,,, Γ2) Γ3
     -> wf_local_rel Σ Γ1 (Γ2 ,,, Γ3).
   Proof.
-    intros h1 h2. eapply All_local_env_app_inv.
+    intros h1 h2. eapply All_local_env_app.
     split.
     - assumption.
     - eapply All_local_env_impl.
@@ -1212,7 +1211,28 @@ Section All_local_env.
         intros Γ t []; cbn;
         now rewrite app_context_assoc.
   Defined.
+  
+  Definition wf_local_app {Σ Γ1 Γ2} :
+    wf_local Σ Γ1 -> 
+    wf_local_rel Σ Γ1 Γ2 ->
+    wf_local Σ (Γ1 ,,, Γ2).
+  Proof.
+    intros H1 H2. apply wf_local_local_rel.
+    apply wf_local_rel_local in H1.
+    apply wf_local_rel_app; tas.
+    now rewrite app_context_nil_l.
+  Qed.
 
+  Definition wf_local_app_inv {Σ Γ1 Γ2} :
+    wf_local Σ (Γ1 ,,, Γ2) ->
+    wf_local Σ Γ1 * wf_local_rel Σ Γ1 Γ2.
+  Proof.
+    intros H.
+    apply wf_local_rel_local in H.
+    apply wf_local_rel_app_inv in H as [H H']; tas.
+    rewrite app_context_nil_l in H'.
+    now split; [eapply wf_local_local_rel|].
+  Qed.
 
   Lemma All_local_env_map (P : context -> term -> option term -> Type) f l :
     (forall u, f (tSort u) = tSort u) ->

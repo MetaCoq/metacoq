@@ -55,7 +55,7 @@ Definition wf_local_rel_app_inv_sq `{cf : checker_flags} {Σ Γ1 Γ2 Γ3} :
   ∥ wf_local_rel Σ Γ1 Γ2 ∥ -> ∥ wf_local_rel Σ (Γ1 ,,, Γ2) Γ3 ∥
   -> ∥ wf_local_rel Σ Γ1 (Γ2 ,,, Γ3) ∥.
 Proof.
-  intros; sq; now eapply wf_local_rel_app_inv.
+  intros; sq; now eapply wf_local_rel_app.
 Qed.
 
 Inductive type_error :=
@@ -274,7 +274,7 @@ Definition wf_local_app_inv `{cf : checker_flags} {Σ Γ1 Γ2} :
   -> wf_local Σ (Γ1 ,,, Γ2).
 Proof.
   intros H1 H2.
-  apply wf_local_local_rel, wf_local_rel_app_inv.
+  apply wf_local_local_rel, wf_local_rel_app.
   now apply wf_local_rel_local.
   now rewrite app_context_nil_l.
 Defined.
@@ -2099,7 +2099,7 @@ Section CheckEnv.
     unfold arities_context.
     induction 1; simpl; auto.
     rewrite rev_map_cons /=.
-    eapply All_local_env_app_inv; split. constructor; pcuic.
+    eapply All_local_env_app; split. constructor; pcuic.
     eapply All_local_env_impl; eauto.
     move=> Γ t [] /=.
     * move=> ty ht. eapply weaken_ctx; eauto.
@@ -2326,8 +2326,8 @@ Section CheckEnv.
       eapply cumul_Prod_Prod_inv in c as [eqann [eqdom codom]]; auto.
       rewrite List.rev_app_distr.
       constructor.
-      eapply All_local_env_app in wf as [wfΓ wfr].
-      eapply All_local_env_app in wfr as [wfd wfΓ0].
+      eapply All_local_env_app_inv in wf as [wfΓ wfr].
+      eapply All_local_env_app_inv in wfr as [wfd wfΓ0].
       depelim wfd. destruct l as [? Hs].
       red. eapply type_Cumul'; pcuic. eapply conv_cumul. now symmetry.
       rewrite subst_telescope_subst_context. eapply X. now len.
@@ -2335,8 +2335,8 @@ Section CheckEnv.
       eapply substitution_wf_local; eauto.
       2:rewrite app_context_assoc in wf; eapply wf.
       repeat constructor. rewrite subst_empty.
-      eapply All_local_env_app in wf as [wfΓ wfr].
-      eapply All_local_env_app in wfr as [wfd wfΓ0].
+      eapply All_local_env_app_inv in wf as [wfΓ wfr].
+      eapply All_local_env_app_inv in wfr as [wfd wfΓ0].
       depelim wfd. destruct l as [? Hs].
       eapply type_Cumul'; pcuic. eapply conv_cumul. now symmetry.
       eapply typing_spine_strengthen; eauto.
@@ -2443,7 +2443,7 @@ Section CheckEnv.
         forward X. rewrite closedn_ctx_app clΓ0 /=. red. rewrite -clΔ''. lia_f_equal.
         len in X. rewrite app_context_assoc in sp.
         now specialize (X sp).
-        rewrite app_context_assoc in wf. now eapply All_local_env_app in wf as [? ?].
+        rewrite app_context_assoc in wf. now eapply All_local_env_app_inv in wf as [? ?].
       - len in sp.
         rewrite lift_context_app /= it_mkProd_or_LetIn_app lift_context_app it_mkProd_or_LetIn_app /= 
           -it_mkProd_or_LetIn_app in sp.
@@ -2472,7 +2472,7 @@ Section CheckEnv.
         forward X. rewrite closedn_ctx_app clΓ0 /=. red. rewrite -clΔ''. lia_f_equal.
         len in X. rewrite app_context_assoc in sp.
         now specialize (X sp).
-        rewrite app_context_assoc in wf. now eapply All_local_env_app in wf as [? ?].
+        rewrite app_context_assoc in wf. now eapply All_local_env_app_inv in wf as [? ?].
   Qed.
 
   Lemma typing_spine_it_mkProd_or_LetIn_ext_list_inv {Σ : global_env_ext} (wfΣ : wf Σ) Γ Δ Δ' Δ'' s args s' :
@@ -2920,7 +2920,7 @@ Section CheckEnv.
       rewrite -{1}(subst_empty 0 b). repeat constructor.
       rewrite !subst_empty.
       eapply typing_wf_local in h.
-      rewrite app_context_assoc in h. eapply All_local_env_app in h as [h _].
+      rewrite app_context_assoc in h. eapply All_local_env_app_inv in h as [h _].
       now depelim h.
     - intros Γ t T h.
       rewrite !smash_context_app_ass !expand_lets_vass.

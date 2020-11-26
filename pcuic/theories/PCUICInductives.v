@@ -589,7 +589,7 @@ Proof.
       (arities_context (ind_bodies mdecl))).
   { eapply wf_arities_context; eauto. }
   eapply PCUICClosed.sorts_local_ctx_All_local_env in wfargs.
-  2:{ eapply All_local_env_app_inv. split; auto.
+  2:{ eapply All_local_env_app. split; auto.
       red in onpars. eapply (All_local_env_impl _ _ _ onpars).
       intros. destruct T; simpl in *.
       - eapply weaken_ctx; auto.
@@ -676,7 +676,7 @@ Proof.
     eapply declared_minductive_closed_inds.
     2:destruct isdecl as [ [] ?]; eauto. eauto. } 
   rewrite -app_assoc in wfl.
-  apply All_local_env_app in wfl as [wfctx wfsargs].
+  apply All_local_env_app_inv in wfl as [wfctx wfsargs].
   rewrite smash_context_app in Heq'.
   rewrite smash_context_acc in Heq'. 
   rewrite nth_error_app_lt in Heq'.
@@ -717,8 +717,8 @@ Proof.
   { assert(wf_local (Σ.1, ind_universes mdecl)
       (arities_context (ind_bodies mdecl) ,,, ind_params mdecl ,,, 
       smash_context [] (cshape_args c))).
-    apply All_local_env_app_inv; split; auto.
-    now apply All_local_env_app in wfargs as [wfindpars wfargs].
+    apply All_local_env_app; split; auto.
+    now apply All_local_env_app_inv in wfargs as [wfindpars wfargs].
     apply wf_local_rel_smash_context; auto.
     eapply closed_wf_local in X0; auto.
     eapply (closedn_ctx_decl (n:=idx)) in X0; eauto.
@@ -1242,7 +1242,7 @@ Proof.
   rewrite subst_instance_context_length in subp, suba.
   subst parctx argctx.
   repeat split; eauto; rewrite ?subst_instance_context_length => //.
-  rewrite app_context_assoc in wfcodom. now apply All_local_env_app in wfcodom as [? ?].
+  rewrite app_context_assoc in wfcodom. now apply All_local_env_app_inv in wfcodom as [? ?].
   simpl.
   eapply substitution_wf_local; eauto. now rewrite app_context_assoc in wfcodom.
   unshelve eapply on_inductive_inst in declm; pcuic.

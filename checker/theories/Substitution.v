@@ -1644,7 +1644,7 @@ Lemma substitution_All_local_env_over `{cf : checker_flags} {Σ Γ Γ' Δ s} :
 Proof.
   intros wfΣ wfΓ.
   induction Δ; simpl; intros Hwf.
-  intros _. clear Hwf. simpl in wfΓ. now eapply All_local_env_app in wfΓ.
+  intros _. clear Hwf. simpl in wfΓ. now eapply All_local_env_app_inv in wfΓ.
   depelim Hwf;
   rewrite subst_context_snoc; simpl; constructor.
   eapply IHΔ; eauto. red. exists (tu.π1). simpl.
@@ -1880,7 +1880,7 @@ Proof.
       pose proof (subst_destArity [] B s #|Δ|). rewrite Hd in H0.
       rewrite {}H0; auto.
       split; auto.
-      apply All_local_env_app_inv; intuition auto.
+      apply All_local_env_app; intuition auto.
       clear -sub a.
       induction ctx; try constructor; depelim a.
       -- rewrite subst_context_snoc.

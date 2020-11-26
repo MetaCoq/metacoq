@@ -181,7 +181,7 @@ Section Principality.
       econstructor. eapply type_reduction; eauto.
       eapply type_Cumul'; eauto.
       2:transitivity dom; auto; now apply conv_cumul.
-      eapply type_reduction in t0. 3:eapply redA. 2:auto.
+      eapply type_reduction in t0. 2:eapply redA.
       eapply validity in t0; auto.
       eapply isType_tProd in t0 as [? ?]; eauto.
       eapply typing_wf_local; eauto.
@@ -278,7 +278,7 @@ Section Principality.
       solve_discr.
       etransitivity; eauto.
       assert (consistent_instance_ext Σ (ind_universes x0) u').
-      { eapply type_reduction in t1. 3:eapply redr. all:pcuic. 
+      { eapply type_reduction in t1. 2:eapply redr.
         eapply validity in t1; eauto.
         destruct t1 as [s Hs].
         eapply invert_type_mkApps_ind in Hs. intuition eauto. all:auto. eapply d. }
@@ -296,7 +296,7 @@ Section Principality.
       (projection_context x0 x1 ind x2) []); auto.
       eapply (projection_subslet _ _ _ _ _ _ (ind, k, pars)); eauto.
       simpl. eapply type_reduction; eauto. simpl.
-      eapply type_reduction in t0. 3:eapply redr. eapply validity; eauto. auto.
+      eapply type_reduction in t0. 2:eapply redr. eapply validity; eauto.
       eapply (projection_subslet _ _ _ _ _ _ (ind, k, pars)); eauto.
       simpl. eapply validity; eauto.
       constructor; auto. now apply All2_rev.
@@ -309,7 +309,7 @@ Section Principality.
       eapply (wf_projection_context _ (p:=(ind, k, pars))); pcuic.
       eapply (projection_subslet _ _ _ _ _ _ (ind, k, pars)); eauto.
       simpl. eapply type_reduction; eauto. simpl.
-      eapply type_reduction in t0. 3:eapply redr. all:eauto.
+      eapply type_reduction in t0. 2:eapply redr.
       eapply validity; eauto.
       rewrite e0 in redu'.
       unshelve epose proof (projection_cumulative_indices wfΣ d _ H H0 redu').

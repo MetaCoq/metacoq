@@ -588,7 +588,7 @@ Proof.
   apply weaken_wf_local => //.
 
   rewrite [_ ,,, _]app_context_assoc in wfΓ.
-  eapply All_local_env_app in wfΓ as [? ?].
+  eapply All_local_env_app_inv in wfΓ as [? ?].
   apply on_minductive_wf_params_indices => //. pcuic.
 Qed.
 
@@ -1701,7 +1701,7 @@ Proof.
     specialize (X Δ ltac:(len; lia) _ _ H).
     simpl; autorewrite with len in X |- *.
     destruct X; split; auto. simpl.
-    eapply All_local_env_app_inv; split.
+    eapply All_local_env_app; split.
     constructor; auto.
     eapply (All_local_env_impl _ _ _ a). intros; auto.
     now rewrite app_context_assoc. simpl.
@@ -2190,7 +2190,7 @@ Proof.
   rewrite -it_mkProd_or_LetIn_app in cpos.
   eapply positive_cstr_it_mkProd_or_LetIn in cpos as [hpars _].
   rewrite smash_context_app_expand in hpars.
-  eapply All_local_env_app in hpars as [_hpars hargs].
+  eapply All_local_env_app_inv in hpars as [_hpars hargs].
   rewrite expand_lets_smash_context /= expand_lets_k_ctx_nil /= in hargs.
   eapply positive_cstr_closed_args_subst_arities in hargs; eauto.
   split.
@@ -3409,7 +3409,7 @@ Proof.
       eapply cumul_ctx_subst_instance => //.
       rewrite -app_context_assoc. eapply weaken_wf_local; eauto.
       rewrite !subst_instance_context_app in wfargs.
-      now eapply All_local_env_app in wfargs as [wfargs _].
+      now eapply All_local_env_app_inv in wfargs as [wfargs _].
     }
     { rewrite /pargctx.
       rewrite (smash_context_subst []).
@@ -3975,7 +3975,7 @@ Proof.
     eapply (subst_sorts_local_ctx) in X; simpl in *; eauto.
     3:{ eapply subslet_inds; eauto. }
     2:{ rewrite app_context_nil_l.
-        now eapply All_local_env_app in wf as [? ?]. }
+        now eapply All_local_env_app_inv in wf as [? ?]. }
     simpl in X. len in X.
     eapply weaken_sorts_local_ctx in X. 2:eauto. 2:eapply typing_wf_local; eauto.
     rewrite app_context_nil_l in X.

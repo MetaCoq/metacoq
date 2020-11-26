@@ -297,7 +297,7 @@ Proof.
         rewrite -{1}(subst_empty 0 b).
         repeat (constructor; auto). rewrite !subst_empty.
         eapply typing_wf_local in Ht2.
-        rewrite app_context_assoc in Ht2. eapply All_local_env_app in Ht2 as [Ht2 _].
+        rewrite app_context_assoc in Ht2. eapply All_local_env_app_inv in Ht2 as [Ht2 _].
         depelim Ht2. apply l0.
         now rewrite app_context_assoc in Ht2.
       * intros mdecl idec decli oib.
@@ -773,7 +773,7 @@ Proof.
     now apply is_prop_gt in lt.
   - rewrite app_context_assoc in eq.
     pose proof eq as eq'.
-    eapply All_local_env_app in eq' as [wfΓ wf']. depelim wfΓ;
+    eapply All_local_env_app_inv in eq' as [wfΓ wf']. depelim wfΓ;
     rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /= in X2 |- *.
     + eapply invert_cumul_prod_l in X2 as (na' & A & B' & (red & conv) & cum).
       eapply subject_reduction in X1. 3:eassumption. all:auto.
@@ -837,7 +837,7 @@ Proof.
     apply is_prop_gt in lt; auto.
   - rewrite app_context_assoc in eq.
     pose proof eq as eq'.
-    eapply All_local_env_app in eq' as [wfΓ wf']. depelim wfΓ;
+    eapply All_local_env_app_inv in eq' as [wfΓ wf']. depelim wfΓ;
     rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /= in X2 |- *.
     + eapply invert_cumul_prod_r in X2 as (na' & A' & B' & (red & conv) & cum).
       eapply subject_reduction in X1. 3:eassumption. all:auto.

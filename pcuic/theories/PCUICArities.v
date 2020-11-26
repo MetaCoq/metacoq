@@ -267,7 +267,7 @@ Proof.
     eapply (type_mkProd_or_LetIn _ _ {| decl_body := None |}) => /=; eauto.
     econstructor; eauto with pcuic.
     eapply typing_wf_local in Ht.
-    depelim Ht; eapply All_local_env_app in Ht; intuition auto.
+    depelim Ht; eapply All_local_env_app_inv in Ht; intuition auto.
     now rewrite sort_of_product_twice.
 Qed.
 
@@ -594,17 +594,17 @@ Proof.
   + rewrite it_mkProd_or_LetIn_app.
     destruct x as [na [b|] ty]; cbn; move=> H.
     * apply inversion_LetIn in H as (s1 & A & H0 & H1 & H2 & H3); auto.
-      eapply All_local_env_app_inv; split; pcuic.
-      eapply All_local_env_app_inv. split. repeat constructor. now exists s1.
+      eapply All_local_env_app; split; pcuic.
+      eapply All_local_env_app. split. repeat constructor. now exists s1.
       auto. apply IHΔ in H2.
-      eapply All_local_env_app in H2. intuition auto.
+      eapply All_local_env_app_inv in H2. intuition auto.
       eapply All_local_env_impl; eauto. simpl. intros.
       now rewrite app_context_assoc.
     * apply inversion_Prod in H as (s1 & A & H0 & H1 & H2); auto.
-      eapply All_local_env_app_inv; split; pcuic. 
-      eapply All_local_env_app_inv. split. repeat constructor. now exists s1.
+      eapply All_local_env_app; split; pcuic. 
+      eapply All_local_env_app. split. repeat constructor. now exists s1.
       apply IHΔ in H1.
-      eapply All_local_env_app in H1. intuition auto.
+      eapply All_local_env_app_inv in H1. intuition auto.
       eapply All_local_env_impl; eauto. simpl. intros.
       now rewrite app_context_assoc.
 Qed.

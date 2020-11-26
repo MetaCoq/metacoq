@@ -1212,11 +1212,11 @@ Proof.
   generalize (@nil context_decl) as Δ.
   rewrite /fix_context_gen.
   intros Δ wfΔ.
-  eapply All_local_env_app_inv. split; auto.
+  eapply All_local_env_app. split; auto.
   induction a in Δ, wfΔ |- *; simpl; auto.
   + constructor.
   + simpl.
-    eapply All_local_env_app_inv. split; auto.
+    eapply All_local_env_app. split; auto.
     * repeat constructor.
       simpl.
       destruct p as [s Hs].

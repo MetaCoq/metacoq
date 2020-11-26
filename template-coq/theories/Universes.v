@@ -1,5 +1,6 @@
 From Coq Require Import MSetList MSetFacts MSetProperties MSetDecide.
 From MetaCoq.Template Require Import utils BasicAst config.
+From Equations Require Import Equations.
 
 Local Open Scope nat_scope.
 Local Open Scope string_scope2.
@@ -23,8 +24,18 @@ Inductive universes :=
   | UProp 
   | USProp
   | UType (i : nat).
+Derive NoConfusion EqDec for universes.
 
 Class Evaluable (A : Type) := val : valuation -> A -> nat.
+
+(** This inductive classifies which eliminations are allowed for inductive types
+  in various sorts. *)
+Inductive allowed_eliminations : Set :=
+| IntoSProp
+| IntoPropSProp
+| IntoSetPropSProp
+| IntoAny.
+Derive NoConfusion EqDec for allowed_eliminations.
 
 (** Levels are Set or Level or Var *)
 Module Level.
@@ -32,6 +43,7 @@ Module Level.
   | lSet
   | Level (_ : string)
   | Var (_ : nat) (* these are debruijn indices *).
+  Derive NoConfusion EqDec for t_.
 
   Definition t := t_.
 
@@ -171,7 +183,7 @@ Qed.
 Module PropLevel.
 
   Inductive t := lSProp | lProp.
-
+  Derive NoConfusion EqDec for t.
   (* Global Instance PropLevel_Evaluable : Evaluable t :=
     fun v l => match l with
               lSProp => -1
@@ -299,6 +311,16 @@ Module UnivExprSet := MSetList.MakeWithLeibniz UnivExpr.
 Module UnivExprSetFact := WFactsOn UnivExpr UnivExprSet.
 Module UnivExprSetProp := WPropertiesOn UnivExpr UnivExprSet.
 
+(* We have decidable equality w.r.t leibniz equality for sets of levels.
+  This means universes also have a decidable equality. *)
+Instance univexprset_eq_dec : Classes.EqDec UnivExprSet.t.
+Proof.
+  intros p p'.
+  destruct (UnivExprSet.eq_dec p p').
+  - now left; eapply UnivExprSet.eq_leibniz in e.
+  - right. intros ->. apply n. reflexivity.
+Qed.
+
 Module Universe.
   (** A universe is a list of universe expressions which is:
         - sorted
@@ -307,9 +329,20 @@ Module Universe.
   Record t0 := { t_set : UnivExprSet.t ;
                  t_ne  : UnivExprSet.is_empty t_set = false }.
 
+  Derive NoConfusion for t0.
+  
+  (** This needs a propositional UIP proof to show that [is_empty = false] is a set *)
+  Set Equations With UIP.
+  Instance t0_eqdec : EqDec t0.
+  Proof. eqdec_proof. Qed.
+
   Inductive t_ :=
     lProp | lSProp | lType (_ : t0).
+  Derive NoConfusion for t_.
 
+  Instance t_eqdec : EqDec t_.
+  Proof. eqdec_proof. Qed.
+  
   Definition t := t_.
 
   Coercion t_set : t0 >-> UnivExprSet.t.
@@ -1011,10 +1044,12 @@ Qed.
 
 Module ConstraintType.
   Inductive t_ : Set := Le (z : Z) | Eq.
+  Derive NoConfusion EqDec for t_.
+  
   Definition t := t_.
   Definition eq : t -> t -> Prop := eq.
   Definition eq_equiv : Equivalence eq := _.
-
+  
   Definition Le0 := Le 0.
   Definition Lt := Le 1.
 
@@ -1059,6 +1094,7 @@ End ConstraintType.
 
 Module UnivConstraint.
   Definition t : Set := Level.t * ConstraintType.t * Level.t.
+  
   Definition eq : t -> t -> Prop := eq.
   Definition eq_equiv : Equivalence eq := _.
 
@@ -1117,6 +1153,16 @@ Module ConstraintSet := MSetList.MakeWithLeibniz UnivConstraint.
 Module ConstraintSetFact := WFactsOn UnivConstraint ConstraintSet.
 Module ConstraintSetProp := WPropertiesOn UnivConstraint ConstraintSet.
 
+(* Being built up from sorted lists without duplicates, constraint sets have 
+  decidable equality. This is however not used in the development. *)
+Set Equations With UIP.
+Remark ConstraintSet_EqDec : EqDec ConstraintSet.t.
+Proof.
+  intros p p'.
+  destruct (ConstraintSet.eq_dec p p').
+  - now left; eapply ConstraintSet.eq_leibniz in e.
+  - right. intros ->. apply n. reflexivity.
+Qed.
 
 (** {6 Universe instances} *)
 
@@ -1187,6 +1233,7 @@ Module Variance.
   | Irrelevant : t
   | Covariant : t
   | Invariant : t.
+  Derive NoConfusion EqDec for t.
 
   (* val check_subtype : t -> t -> bool *)
   (* val sup : t -> t -> t *)
@@ -1195,6 +1242,8 @@ End Variance.
 Inductive universes_decl : Type :=
 | Monomorphic_ctx (ctx : ContextSet.t)
 | Polymorphic_ctx (cst : AUContext.t).
+
+Derive NoConfusion for universes_decl.
 
 Definition monomorphic_udecl u :=
   match u with
@@ -1530,12 +1579,6 @@ Section Univ.
 
   (** Elimination restriction *)
 
-  Inductive allowed_eliminations : Set :=
-  | IntoSProp
-  | IntoPropSProp
-  | IntoSetPropSProp
-  | IntoAny.
-  
   Definition is_allowed_elimination0
              φ (into : Universe.t) (allowed : allowed_eliminations) : Prop :=
     forall v,
@@ -1562,7 +1605,6 @@ Section Univ.
     end.
 
 End Univ.
-
 
 (* This universe is a hack used in plugings to generate fresh universes *)
 Definition fresh_universe : Universe.t. exact Universe.type0. Qed.
@@ -1765,6 +1807,7 @@ Definition string_of_universe_instance u :=
 Inductive universes_entry :=
 | Monomorphic_entry (ctx : ContextSet.t)
 | Polymorphic_entry (names : list name) (ctx : UContext.t).
+Derive NoConfusion for universes_entry.
 
 Definition universes_entry_of_decl (u : universes_decl) : universes_entry :=
   match u with

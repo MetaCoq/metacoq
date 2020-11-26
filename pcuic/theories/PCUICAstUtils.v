@@ -68,6 +68,19 @@ Fixpoint decompose_app_rec (t : term) l :=
 
 Definition decompose_app t := decompose_app_rec t [].
 
+Definition mkApps_decompose_app_rec t l :
+  mkApps t l = mkApps (fst (decompose_app_rec t l)) (snd (decompose_app_rec t l)).
+Proof.
+  revert l; induction t; try reflexivity.
+  intro l; cbn in *.
+  transitivity (mkApps t1 ((t2 ::l))). reflexivity.
+  now rewrite IHt1.
+Qed.
+
+Definition mkApps_decompose_app t :
+  t = mkApps (fst (decompose_app t)) (snd (decompose_app t))
+  := mkApps_decompose_app_rec t [].
+  
 Lemma decompose_app_rec_mkApps f l l' : decompose_app_rec (mkApps f l) l' =
                                     decompose_app_rec f (l ++ l').
 Proof.

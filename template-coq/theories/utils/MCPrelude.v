@@ -1,4 +1,7 @@
-Require Import Lia.
+Require Import String ZArith Lia.
+From Equations Require Import Equations.
+
+Derive NoConfusion EqDec for Strings.Ascii.ascii string positive Z.
 
 Declare Scope metacoq_scope.
 

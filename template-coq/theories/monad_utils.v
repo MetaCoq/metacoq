@@ -3,6 +3,7 @@
  *)
 Require Import List.
 From MetaCoq.Template Require Import All_Forall.
+Coercion is_true : bool >-> Sortclass.
 
 Import ListNotations.
 
@@ -130,4 +131,19 @@ Fixpoint monad_All2 {T E} {M : Monad T} {M' : MonadExc E T} wrong_sizes
 Definition monad_prod {T} {M : Monad T} {A B} (x : T A) (y : T B): T (A * B)%type
   := X <- x ;; Y <- y ;; ret (X, Y).
  
+(** monadic checks *)
+Definition check_dec {T E} {M : Monad T} {M' : MonadExc E T} (e : E) {P}
+  (H : {P} + {~ P}) : T P
+  := match H with
+  | left x => ret x
+  | right _ => raise e
+  end.
 
+Definition check_eq_true {T E} {M : Monad T} {M' : MonadExc E T} (b : bool) (e : E) : T b := 
+  if b return T b then ret eq_refl else raise e.
+
+Definition check_eq_nat {T E} {M : Monad T} {M' : MonadExc E T} n m (e : E) : T (n = m) :=
+  match PeanoNat.Nat.eq_dec n m with
+  | left p => ret p
+  | right p => raise e
+  end.

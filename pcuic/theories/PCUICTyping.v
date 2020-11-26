@@ -13,6 +13,8 @@ Require Import Equations.Type.Relation.
 From Equations Require Import Equations.
 Set Equations With UIP.
 
+Implicit Types (cf : checker_flags) (Σ : global_env_ext).
+
 (** * Typing derivations
 
   Inductive relations for reduction, conversion and typing of PCUIC terms.
@@ -267,7 +269,7 @@ Definition isCoFinite (r : recursivity_kind) :=
   | _ => false
   end.
 
-Definition check_recursivity_kind Σ ind r :=
+Definition check_recursivity_kind (Σ : global_env) ind r :=
   match lookup_env Σ ind with
   | Some (InductiveDecl mib) => Reflect.eqb mib.(ind_finite) r
   | _ => false

@@ -58,50 +58,6 @@ Proof.
   intros; sq; now eapply wf_local_rel_app_inv.
 Qed.
 
-Definition check_dec {T E} {M : Monad T} {M' : MonadExc E T} (e : E) {P}
-           (H : {P} + {~ P})
-  : T P
-  := match H with
-     | left x => ret x
-     | right _ => raise e
-     end.
-
-Definition check_eq_true {T E} {M : Monad T} {M' : MonadExc E T} b (e : E)
-  : T (b = true)
-  := if b return T (b = true) then ret eq_refl else raise e.
-
-Program Definition check_eq_nat {T E} {M : Monad T} {M' : MonadExc E T} n m (e : E)
-  : T (n = m)
-  := match Nat.eq_dec n m with
-     | left p => ret p
-     | right p => raise e
-     end.
-
-Definition mkApps_decompose_app_rec t l :
-  mkApps t l = mkApps  (fst (decompose_app_rec t l)) (snd (decompose_app_rec t l)).
-Proof.
-  revert l; induction t; try reflexivity.
-  intro l; cbn in *.
-  transitivity (mkApps t1 ((t2 ::l))). reflexivity.
-  now rewrite IHt1.
-Qed.
-
-Definition mkApps_decompose_app t :
-  t = mkApps  (fst (decompose_app t)) (snd (decompose_app t))
-  := mkApps_decompose_app_rec t [].
-
-Lemma isType_red {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ T U} :
-  isType Σ Γ T -> red Σ Γ T U -> isType Σ Γ U.
-Proof.
-  intros [s Hs] red; exists s.
-  eapply subject_reduction; eauto.
-Qed.
-
-
-
-
-Derive NoConfusion EqDec for allowed_eliminations.
-
 Inductive type_error :=
 | UnboundRel (n : nat)
 | UnboundVar (id : string)

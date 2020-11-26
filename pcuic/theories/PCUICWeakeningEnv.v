@@ -417,7 +417,7 @@ Proof.
   intros ext wfΣ'.
   unfold wf_fixpoint.
   destruct map_option_out as [[|ind inds]|]; auto.
-  move/andP => [->] /=.
+  move/andb_and => [->] /=.
   now apply extends_check_recursivity_kind.
 Qed.
 
@@ -427,7 +427,7 @@ Proof.
   intros ext wfΣ'.
   unfold wf_cofixpoint.
   destruct map_option_out as [[|ind inds]|]; auto.
-  move/andP => [->] /=.
+  move/andb_and => [->] /=.
   now apply extends_check_recursivity_kind.
 Qed.
 

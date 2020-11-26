@@ -6,12 +6,13 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICWeakening PCUICPosition PCUICCumulativity PCUICSafeLemmata PCUICSN
      PCUICPretty PCUICArities PCUICConfluence PCUICSize
      PCUICContextConversion PCUICConversion PCUICWfUniverses
+     PCUICGlobalEnv
      (* Used for support lemmas *)
      PCUICInductives PCUICWfUniverses
      PCUICContexts PCUICSubstitution PCUICSpine PCUICInductiveInversion
      PCUICClosed PCUICUnivSubstitution PCUICWeakeningEnv.
 
-From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeConversion PCUICWfReduction.
+From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICEqualityDec PCUICSafeConversion PCUICWfReduction.
 
 From Equations Require Import Equations.
 Require Import ssreflect ssrbool.
@@ -56,29 +57,6 @@ Definition wf_local_rel_app_inv_sq `{cf : checker_flags} {Σ Γ1 Γ2 Γ3} :
 Proof.
   intros; sq; now eapply wf_local_rel_app_inv.
 Qed.
-
-Fixpoint monad_All {T} {M : Monad T} {A} {P} (f : forall x, T (P x)) l : T (@All A P l)
-  := match l with
-     | [] => ret All_nil
-     | a :: l => X <- f a ;;
-                Y <- monad_All f l ;;
-                ret (All_cons X Y)
-     end.
-
-Fixpoint monad_All2 {T E} {M : Monad T} {M' : MonadExc E T} wrong_sizes
-         {A B R} (f : forall x y, T (R x y)) l1 l2
-  : T (@All2 A B R l1 l2)
-  := match l1, l2 with
-     | [], [] => ret All2_nil
-     | a :: l1, b :: l2 => X <- f a b ;;
-                          Y <- monad_All2 wrong_sizes f l1 l2 ;;
-                          ret (All2_cons X Y)
-     | _, _ => raise wrong_sizes
-     end.
-
-
-Definition monad_prod {T} {M : Monad T} {A B} (x : T A) (y : T B): T (A * B)
-  := X <- x ;; Y <- y ;; ret (X, Y).
 
 Definition check_dec {T E} {M : Monad T} {M' : MonadExc E T} (e : E) {P}
            (H : {P} + {~ P})
@@ -363,7 +341,8 @@ Qed.
 Lemma wf_ext_gc_of_uctx {cf:checker_flags} {Σ : global_env_ext} (HΣ : ∥ wf_ext Σ ∥)
   : ∑ uctx', gc_of_uctx (global_ext_uctx Σ) = Some uctx'.
 Proof.
-  pose proof (global_ext_uctx_consistent _ HΣ) as HC.
+  assert (consistent (global_ext_uctx Σ).2) as HC.
+  { sq; apply (global_ext_uctx_consistent _ HΣ). }
   destruct Σ as [Σ φ].
   simpl in HC.
   unfold gc_of_uctx; simpl in *.
@@ -379,11 +358,6 @@ Proof.
   destruct (wf_ext_gc_of_uctx HΣ) as [uctx Huctx].
   exists (make_graph uctx). unfold is_graph_of_uctx. now rewrite Huctx.
 Defined.
-
-Lemma map_squash {A B} (f : A -> B) : ∥ A ∥ -> ∥ B ∥.
-Proof.
-  intros []; constructor; auto.
-Qed.
 
 Lemma destArity_mkApps_None ctx t l :
   destArity ctx t = None -> destArity ctx (mkApps t l) = None.
@@ -713,8 +687,8 @@ Section Typecheck.
     pose proof HΣ'.
     intros HH.
     refine (check_constraints_spec G (global_ext_uctx Σ) _ _ HG _ HH).
-    now apply wf_ext_global_uctx_invariants.
-    now apply global_ext_uctx_consistent.
+    sq; now eapply wf_ext_global_uctx_invariants.
+    sq; now apply global_ext_uctx_consistent.
   Qed.
 
   Lemma is_graph_of_uctx_levels (l : Level.t) :
@@ -757,45 +731,6 @@ Section Typecheck.
     repeat split.
     - now rewrite mapi_length in X.
     - eapply check_constraints_spec; eauto.
-  Qed.
-
-  Definition eqb_opt_term (t u : option term) :=
-    match t, u with
-    | Some t, Some u => eqb_term Σ G t u
-    | None, None => true
-    | _, _ => false
-    end.
-
-  Lemma eqb_opt_term_spec t u
-    : eqb_opt_term t u -> eq_opt_term false Σ (global_ext_constraints Σ) t u.
-  Proof.
-    destruct t, u; try discriminate; cbn.
-    apply eqb_term_spec; tea. trivial.
-  Qed.
-
-  Definition eqb_decl (d d' : context_decl) :=
-    eqb_binder_annot d.(decl_name) d'.(decl_name) && 
-    eqb_opt_term d.(decl_body) d'.(decl_body) && eqb_term Σ G d.(decl_type) d'.(decl_type).
-
-  Lemma eqb_decl_spec d d'
-    : eqb_decl d d' -> eq_decl false Σ (global_ext_constraints Σ) d d'.
-  Proof.
-    unfold eqb_decl, eq_decl.
-    intro H. rtoProp. apply eqb_opt_term_spec in H1.
-    eapply eqb_term_spec in H0; tea.
-    eapply eqb_binder_annot_spec in H.
-    repeat split; eauto.
-  Qed.
-
-  Definition eqb_context (Γ Δ : context) := forallb2 eqb_decl Γ Δ.
-
-  Lemma eqb_context_spec Γ Δ
-    : eqb_context Γ Δ -> eq_context false Σ (global_ext_constraints Σ) Γ Δ.
-  Proof.
-    unfold eqb_context, eq_context.
-    intro HH. apply forallb2_All2 in HH.
-    eapply All2_impl; try eassumption.
-    cbn. apply eqb_decl_spec.
   Qed.
 
   Obligation Tactic := Program.Tactics.program_simplify ; eauto 2.
@@ -1075,7 +1010,7 @@ Section Typecheck.
   Next Obligation. intros; sq; now econstructor. Defined.
   (* tSort *)
   Next Obligation.
-    eapply (reflect_bP (wf_universe_reflect _ _)) in H.
+    eapply (elimT wf_universe_reflect) in H.
     sq; econstructor; tas.
   Defined.
   (* tProd *)
@@ -1163,7 +1098,7 @@ Section Typecheck.
     rewrite -Heq_anonymous0 /=. intros ->.
     eapply PCUICInductives.isType_it_mkProd_or_LetIn_inv in t; eauto.
     eapply isType_wf_universes in t. simpl in t.
-    now exact (PCUICWfUniverses.reflect_bP (wf_universe_reflect _ _) t). auto.
+    now exact (elimT wf_universe_reflect t). auto.
   Qed.
 
   Next Obligation.
@@ -1189,7 +1124,7 @@ Section Typecheck.
         rewrite -Heq_anonymous0 /=. intros ->.
         eapply PCUICInductives.isType_it_mkProd_or_LetIn_inv in X; eauto.
         eapply isType_wf_universes in X. simpl in X.
-        now exact (PCUICWfUniverses.reflect_bP (wf_universe_reflect _ _) X). auto. }
+        now exact (elimT wf_universe_reflect X). auto. }
     have [pctx' da] : (∑ pctx', destArity [] pty' =  Some (pctx', ps)).
     { symmetry in Heq_anonymous1.
       unshelve eapply (PCUICInductives.build_case_predicate_type_spec (Σ.1, ind_universes d)) in Heq_anonymous1 as [parsubst [_ ->]].
@@ -1197,6 +1132,8 @@ Section Typecheck.
       eexists. rewrite !destArity_it_mkProd_or_LetIn; simpl. reflexivity. }
     eapply PCUICInductiveInversion.build_branches_type_wt. 6:eapply X. all:eauto.
   Defined.
+
+  Obligation Tactic := simpl; intros.
 
   Next Obligation.
     rename Heq_anonymous2 into XX2.
@@ -1206,7 +1143,7 @@ Section Typecheck.
     change (eqb (ind_npars decl) par = true) in H1.
     destruct (eqb_spec (ind_npars decl) par) as [e|e]; [|discriminate]; subst.
     depelim HH.
-    sq. auto. now depelim X10.
+    sq. auto. now depelim X.
   Defined.
   Next Obligation.
     sq. now depelim HH.
@@ -1240,7 +1177,7 @@ Section Typecheck.
         rewrite -Heq_anonymous0 /=. intros ->.
         eapply PCUICInductives.isType_it_mkProd_or_LetIn_inv in X; eauto.
         eapply isType_wf_universes in X. simpl in X.
-        now exact (PCUICWfUniverses.reflect_bP (wf_universe_reflect _ _) X). auto. }
+        now exact (elimT wf_universe_reflect X). auto. }
     have [pctx' da] : (∑ pctx', destArity [] pty' =  Some (pctx', ps)).
     { symmetry in Heq_anonymous1.
       unshelve eapply (PCUICInductives.build_case_predicate_type_spec (Σ.1, ind_universes d)) in Heq_anonymous1 as [parsubst [_ ->]].
@@ -1643,7 +1580,7 @@ Section CheckEnv.
         [|intro XX; rewrite XX in Huctx; discriminate Huctx].
       intros ctrs Hctrs. rewrite Hctrs in Huctx. simpl in *.
       eapply (is_consistent_spec (global_ext_uctx (Σ, udecl))).
-      { apply wf_global_uctx_invariants in HΣ.
+      { sq. apply wf_global_uctx_invariants in HΣ.
         split.
         + clear -HΣ. cbn. apply LevelSet.union_spec; right.
           apply HΣ.
@@ -3357,7 +3294,7 @@ Section CheckEnv.
     eapply forallbP_cond; eauto. clear wfcs.
     simpl; intros c wfc.
     pose proof (check_leqb_universe_spec' G (global_ext_uctx Σ)).
-    forward H. apply wf_ext_global_uctx_invariants; auto. now sq.
+    forward H. apply wf_ext_global_uctx_invariants; auto.
     forward H. apply wfΣ.
     eapply forallbP_cond; eauto. simpl. intros x wfx.
     specialize (H wfG x ind_sort). simpl.
@@ -3403,6 +3340,7 @@ Section CheckEnv.
       | false => ret _
       end
     end.
+
     Next Obligation.
       unfold check_ind_sorts. simpl. 
       now rewrite H.

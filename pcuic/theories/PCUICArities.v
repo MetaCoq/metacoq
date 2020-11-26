@@ -319,13 +319,13 @@ Lemma subslet_app_closed {cf:checker_flags} Σ Γ s s' Δ Δ' :
   subslet Σ Γ (s ++ s') (Δ' ,,, Δ).
 Proof.
   induction 1 in s', Δ'; simpl; auto; move=> sub';
-  rewrite closedn_ctx_snoc => /andP [clctx clt];
+  rewrite closedn_ctx_snoc => /andb_and [clctx clt];
   try constructor; auto.
   - pose proof (subslet_length X). rewrite Nat.add_0_r in clt.
     rewrite /closed_decl /= -H in clt.
     rewrite subst_app_simpl /= (subst_closedn s') //.
   - pose proof (subslet_length X). rewrite Nat.add_0_r in clt.
-    rewrite /closed_decl /= -H in clt. move/andP: clt => [clt clT].
+    rewrite /closed_decl /= -H in clt. move/andb_and: clt => [clt clT].
     replace (subst0 s t) with (subst0 (s ++ s') t).
     + constructor; auto.
       rewrite !subst_app_simpl /= !(subst_closedn s') //.

@@ -18,7 +18,7 @@ Module P := PCUICWcbvEval.
 Local Existing Instance config.extraction_checker_flags.
 
 Require Import Equations.Prop.DepElim.
-Require Import ssreflect.
+Require Import ssreflect ssrbool.
 
 Lemma negb_False (p : bool) : negb p -> p -> False.
 Proof.

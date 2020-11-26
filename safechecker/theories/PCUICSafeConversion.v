@@ -2,12 +2,12 @@
 From Coq Require Import ProofIrrelevance.
 From MetaCoq.Template Require Import config utils uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-     PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
+     PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICGlobalEnv
      PCUICCumulativity PCUICEquality PCUICConversion
      PCUICSafeLemmata PCUICNormal PCUICInversion PCUICReduction PCUICPosition
      PCUICPrincipality PCUICContextConversion PCUICSN PCUICUtils PCUICWeakening
      PCUICConvCumInversion.
-From MetaCoq.SafeChecker Require Import PCUICSafeReduce.
+From MetaCoq.SafeChecker Require Import PCUICEqualityDec PCUICSafeReduce.
 
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
@@ -24,79 +24,6 @@ Module PSR := PCUICSafeReduce.
   conversion (and cumulativity) checking for PCUIC.
 
  *)
-
-
-Definition wf_global_uctx_invariants {cf:checker_flags} Σ :
-  ∥ wf Σ ∥ ->
-  global_uctx_invariants (global_uctx Σ).
-Proof.
-  intros [HΣ]. split.
-  - cbn. eapply LevelSet.mem_spec, global_levels_Set.
-  - unfold global_uctx.
-    simpl. intros [[l ct] l'] Hctr. simpl in *.
-    induction Σ in HΣ, l, ct, l', Hctr |- *.
-    + apply ConstraintSetFact.empty_iff in Hctr; contradiction.
-    + simpl in *. apply ConstraintSet.union_spec in Hctr.
-      destruct Hctr as [Hctr|Hctr].
-      * split.
-        -- inversion HΣ; subst.
-           destruct H2 as [HH1 [HH HH3]].
-           subst udecl. destruct d as [decl|decl]; simpl in *.
-           ++ destruct decl; simpl in *.
-              destruct cst_universes ; [
-                eapply (HH (l, ct, l') Hctr)
-              | apply ConstraintSetFact.empty_iff in Hctr ; contradiction
-              ].
-           ++ destruct decl. simpl in *.
-              destruct ind_universes ; [
-                eapply (HH (l, ct, l') Hctr)
-              | apply ConstraintSetFact.empty_iff in Hctr; contradiction
-              ].
-        -- inversion HΣ. subst.
-           destruct H2 as [HH1 [HH HH3]].
-           subst udecl. destruct d as [decl|decl].
-           all: simpl in *.
-           ++ destruct decl. simpl in *.
-              destruct cst_universes ; [
-                eapply (HH (l, ct, l') Hctr)
-              | apply ConstraintSetFact.empty_iff in Hctr; contradiction
-              ].
-           ++ destruct decl. simpl in *.
-              destruct ind_universes; [
-                eapply (HH (l, ct, l') Hctr)
-              | apply ConstraintSetFact.empty_iff in Hctr; contradiction
-              ].
-      * inversion HΣ. subst.
-        split.
-        all: apply LevelSet.union_spec.
-        all: right.
-        all: unshelve eapply (IHΣ _ _ _ _ Hctr).
-        all: try eassumption.
-Qed.
-
-Definition wf_ext_global_uctx_invariants {cf:checker_flags} Σ :
-  ∥ wf_ext Σ ∥ ->
-  global_uctx_invariants (global_ext_uctx Σ).
-Proof.
-  intros [HΣ]. split.
-  - apply LevelSet.union_spec. right. apply LevelSet.mem_spec, global_levels_Set.
-  - destruct Σ as [Σ φ]. destruct HΣ as [HΣ Hφ].
-    destruct (wf_global_uctx_invariants _ (sq HΣ)) as [_ XX].
-    unfold global_ext_uctx, global_ext_levels, global_ext_constraints.
-    simpl. intros [[l ct] l'] Hctr. simpl in *. apply ConstraintSet.union_spec in Hctr.
-    destruct Hctr as [Hctr|Hctr].
-    + destruct Hφ as [_ [HH _]]. apply (HH _ Hctr).
-    + specialize (XX _ Hctr).
-      split; apply LevelSet.union_spec; right; apply XX.
-Qed.
-
-Definition global_ext_uctx_consistent {cf:checker_flags} Σ
-  : ∥ wf_ext Σ ∥ -> consistent (global_ext_uctx Σ).2.
-  intros [HΣ]. cbn. unfold global_ext_constraints.
-  unfold wf_ext, on_global_env_ext in HΣ.
-  destruct HΣ as [_ [_ [_ HH]]]. apply HH.
-Qed.
-
 
 Section Conversion.
 
@@ -492,112 +419,10 @@ Section Conversion.
     simpl in *.
     eapply R_aux_stateR. all: simpl. all: auto.
   Qed.
-  
-  Definition conv_pb_relb pb :=
-    match pb with
-    | Conv => check_eqb_universe G
-    | Cumul => check_leqb_universe G
-    end.
-  
-  Definition eqb_termp_napp pb napp :=
-    eqb_term_upto_univ_napp Σ (check_eqb_universe G) (conv_pb_relb pb) napp.
-  
-  Lemma eqb_termp_napp_spec pb napp t u :
-    eqb_termp_napp pb napp t u ->
-    eq_termp_napp pb Σ napp t u.
-  Proof.
-    pose proof hΣ'.
-    apply eqb_term_upto_univ_impl.
-    - intros u1 u2.
-      eapply (check_eqb_universe_spec' G (global_ext_uctx Σ)).
-      + now eapply wf_ext_global_uctx_invariants.
-      + now eapply global_ext_uctx_consistent.
-      + assumption.
-    - intros u1 u2.
-      destruct pb.
-      + eapply (check_eqb_universe_spec' G (global_ext_uctx Σ)).
-        * now eapply wf_ext_global_uctx_invariants.
-        * now eapply global_ext_uctx_consistent.
-        * assumption.
-      + eapply (check_leqb_universe_spec' G (global_ext_uctx Σ)).
-        * now eapply wf_ext_global_uctx_invariants.
-        * now eapply global_ext_uctx_consistent.
-        * assumption.
-  Qed.
-  
-  Definition eqb_termp pb := (eqb_termp_napp pb 0).
-  Definition eqb_term := (eqb_termp Conv).
-  Definition leqb_term := (eqb_termp Cumul).
-  
-  Lemma leqb_term_spec t u :
-    leqb_term t u ->
-    leq_term Σ (global_ext_constraints Σ) t u.
-  Proof.
-    intros.
-    now apply eqb_termp_napp_spec in H.
-  Qed.
-  
-  Lemma eqb_term_spec t u :
-    eqb_term t u ->
-    eq_term Σ t u.
-  Proof.
-    intros.
-    now apply eqb_termp_napp_spec in H.
-  Qed.
 
-  Lemma eqb_term_refl :
-    forall t, eqb_term t t.
-  Proof.
-    intro t. eapply eqb_term_upto_univ_refl.
-    all: apply check_eqb_universe_refl.
-  Qed.
-
-  Definition eqb_binder_annot {A} (b b' : binder_annot A) : bool :=
-    eqb b.(binder_relevance) b'.(binder_relevance).
-
-  Lemma eq_binder_annot_reflect {A} na na' : reflect (eq_binder_annot (A:=A) na na') (eqb_binder_annot na na').
-  Proof.
-    unfold eq_binder_annot, eqb_binder_annot.
-    destruct (eqb_spec na.(binder_relevance) na'.(binder_relevance)); constructor; auto.
-  Qed.
-
-  Fixpoint eqb_ctx (Γ Δ : context) : bool :=
-    match Γ, Δ with
-    | [], [] => true
-    | {| decl_name := na1 ; decl_body := None ; decl_type := t1 |} :: Γ,
-      {| decl_name := na2 ; decl_body := None ; decl_type := t2 |} :: Δ =>
-      eqb_binder_annot na1 na2 && eqb_term t1 t2 && eqb_ctx Γ Δ
-    | {| decl_name := na1 ; decl_body := Some b1 ; decl_type := t1 |} :: Γ,
-      {| decl_name := na2 ; decl_body := Some b2 ; decl_type := t2 |} :: Δ =>
-      eqb_binder_annot na1 na2 && eqb_term b1 b2 && eqb_term t1 t2 && eqb_ctx Γ Δ
-    | _, _ => false
-    end.
-
-  Lemma eqb_binder_annot_spec {A} na na' : eqb_binder_annot (A:=A) na na' -> eq_binder_annot (A:=A) na na'.
-  Proof. apply (PCUICWfUniverses.reflect_bP (eq_binder_annot_reflect _ _)). Qed.
-
-  Lemma eqb_ctx_spec :
-    forall Γ Δ,
-      eqb_ctx Γ Δ ->
-      eq_context_upto Σ (eq_universe Σ) (eq_universe Σ) Γ Δ.
-  Proof.
-    intros Γ Δ h.
-    induction Γ as [| [na [b|] A] Γ ih ] in Δ, h |- *.
-    all: destruct Δ as [| [na' [b'|] A'] Δ].
-    all: try discriminate.
-    - constructor.
-    - simpl in h. apply andP in h as [[[h1 h2]%andP h3]%andP h4].
-      constructor.
-      + now apply eqb_binder_annot_spec in h1.
-      + eapply eqb_term_spec. assumption.
-      + eapply eqb_term_spec. assumption.
-      + eapply ih. assumption.
-    - simpl in h. apply andP in h as [[h1 h2]%andP h3].
-      constructor.
-      + now apply eqb_binder_annot_spec.
-      + eapply eqb_term_spec. assumption.
-      + eapply ih. assumption.
-  Qed.
+  Notation eqb_ctx := (eqb_ctx Σ G).
+  Notation eqb_term := (eqb_term Σ G).
+  Notation leqb_term := (leqb_term Σ G).
 
   Definition eqb_term_stack t1 π1 t2 π2 :=
     eqb_ctx (stack_context π1) (stack_context π2) &&
@@ -612,12 +437,12 @@ Section Conversion.
       eq_term Σ (zipp t1 π1) (zipp t2 π2).
   Proof.
     intros Γ t1 π1 t2 π2 h.
-    apply andP in h as [h1 h2].
+    apply andb_and in h as [h1 h2].
     split.
     - eapply eq_context_upto_cat.
       + eapply eq_context_upto_refl; tc.
-      + eapply eqb_ctx_spec. assumption.
-    - eapply eqb_term_spec. assumption.
+      + eapply eqb_ctx_spec; eassumption.
+    - eapply eqb_term_spec; eassumption.
   Qed.
 
   Definition leqb_term_stack t1 π1 t2 π2 :=
@@ -633,12 +458,12 @@ Section Conversion.
       leq_term Σ Σ (zipp t1 π1) (zipp t2 π2).
   Proof.
     intros Γ t1 π1 t2 π2 h.
-    apply andP in h as [h1 h2].
+    apply andb_and in h as [h1 h2].
     split.
     - eapply eq_context_upto_cat.
       + eapply eq_context_upto_refl; tc.
-      + eapply eqb_ctx_spec. assumption.
-    - eapply leqb_term_spec. assumption.
+      + eapply eqb_ctx_spec; eassumption.
+    - eapply leqb_term_spec; eassumption.
   Qed.
 
   Notation conv_stack_ctx Γ π1 π2 :=
@@ -1508,13 +1333,14 @@ Section Conversion.
     eapply Forall2_impl. 1: eassumption.
     intros. eapply (check_eqb_universe_spec' G (global_ext_uctx Σ)).
     all: auto.
-    + eapply wf_ext_global_uctx_invariants.
-      eapply hΣ'.
-    + eapply global_ext_uctx_consistent.
-      eapply hΣ'.
+    + destruct hΣ'. sq. eapply wf_ext_global_uctx_invariants.
+      eapply X.
+    + destruct hΣ'. sq; eapply global_ext_uctx_consistent; assumption.
   Qed.
   
   Arguments LevelSet.mem : simpl never.
+
+  Notation conv_pb_relb := (conv_pb_relb G).
 
   Lemma conv_pb_relb_complete leq u u' :
     wf_universe Σ u ->
@@ -1525,11 +1351,11 @@ Section Conversion.
     intros all1 all2 conv.
     destruct leq; cbn.
     - eapply check_eqb_universe_complete; eauto.
-      + apply wf_ext_global_uctx_invariants, hΣ'.
-      + apply global_ext_uctx_consistent, hΣ'.
+      + destruct hΣ' as [hΣ']; apply wf_ext_global_uctx_invariants, hΣ'.
+      + destruct hΣ' as [hΣ']; apply global_ext_uctx_consistent, hΣ'.
     - eapply check_leqb_universe_complete; eauto.
-      + apply wf_ext_global_uctx_invariants, hΣ'.
-      + apply global_ext_uctx_consistent, hΣ'.
+      + destruct hΣ' as [hΣ']; apply wf_ext_global_uctx_invariants, hΣ'.
+      + destruct hΣ' as [hΣ']; apply global_ext_uctx_consistent, hΣ'.
   Qed.
   
   Lemma get_level_make l :
@@ -2107,7 +1933,7 @@ Section Conversion.
     change (true = eqb u.(rarg) v.(rarg)) in eq1.
     destruct (eqb_spec u.(rarg) v.(rarg)). 2: discriminate.
     symmetry in eqann.
-    apply (PCUICWfUniverses.reflect_bP (eq_binder_annot_reflect _ _)) in eqann.
+    apply (ssrbool.elimT (eq_binder_annot_reflect _ _)) in eqann.
     split; auto.
     destruct fk; simpl in *.
     all: intuition eauto.
@@ -2141,7 +1967,7 @@ Section Conversion.
     change (true = eqb u.(rarg) v.(rarg)) in eq1.
     destruct (eqb_spec u.(rarg) v.(rarg)). 2: discriminate.
     symmetry in eqann.
-    apply (PCUICWfUniverses.reflect_bP (eq_binder_annot_reflect _ _)) in eqann.
+    apply (ssrbool.elimT (eq_binder_annot_reflect _ _)) in eqann.
     clear eq1.
     destruct fk.
     all: intuition eauto.
@@ -2160,8 +1986,9 @@ Section Conversion.
   Next Obligation.
     destruct H as [H]; inversion H; destruct X as [_ [eq_uv eqann]].
     change (?ru =? ?rv) with (eqb ru rv) in eq1.
-    pose proof (PCUICWfUniverses.reflect_Pb (eq_binder_annot_reflect (dname u) (dname v))).
-    rewrite <- neqann in H0. specialize (H0 eqann). discriminate.
+    symmetry in neqann.
+    pose proof (eq_binder_annot_reflect (dname u) (dname v)) as r.
+    now apply (ssrbool.elimF r neqann).
   Qed.
   Next Obligation.
     destruct H as [H]; inversion H; destruct X as [_ [eq_uv eqann]].
@@ -2521,7 +2348,7 @@ Section Conversion.
   Proof.
     intros eq ir.
     destruct ir as (_&[wh]).
-    apply eqb_term_spec in eq.
+    apply eqb_term_spec in eq; tea.
     epose proof (reduce_term_complete _ _ _ _ _ _) as [wh'].
     eapply whnf_eq_term in eq; [|exact wh'].
     rewrite zipp_as_mkApps in wh.
@@ -2573,7 +2400,7 @@ Section Conversion.
   Proof.
     intros eq%eq_sym ir.
     destruct ir as (_&[wh]).
-    apply eqb_term_spec in eq.
+    apply eqb_term_spec in eq; tea.
     epose proof (reduce_term_complete _ _ _ _ _ _) as [wh'].
     eapply whnf_eq_term in eq; [|exact wh'].
     rewrite zipp_as_mkApps in wh.
@@ -3009,9 +2836,7 @@ Section Conversion.
     simpl_stacks.
     destruct hΣ.
     apply Lambda_conv_cum_inv in H as (?&?&?); auto.
-    apply (PCUICWfUniverses.reflect_Pb (eq_binder_annot_reflect _ _)) in H.
-    unfold eq_binder_annot in H. unfold eqb_binder_annot in H; simpl in H. 
-    congruence.
+    eapply (ssrbool.elimF (eq_binder_annot_reflect _ _)); tea.
   Qed.
   Next Obligation.
     (* Contrapositive of previous obligation *)
@@ -3087,9 +2912,8 @@ Section Conversion.
     apply mkApps_Prod_nil in h2; auto.
     rewrite h1, h2 in H.
     apply Prod_conv_cum_inv in H as (?&?&?); auto.
-    apply (PCUICWfUniverses.reflect_Pb (eq_binder_annot_reflect _ _)) in H.
-    unfold eq_binder_annot in H. unfold eqb_binder_annot in H; simpl in H. 
-    congruence.
+    eapply (ssrbool.elimF (eq_binder_annot_reflect _ _)); tea.
+    now unfold eqb_binder_annot.
   Qed.
   Next Obligation.
     (* Domains are not convertible *)
@@ -4440,7 +4264,7 @@ Section Conversion.
             isconv_prog leq t1 π1 rt2' (θ2' +++ θ2) aux
           }
         } ;
-      | @exist None nored2 with inspect (eqb_termp_napp leq #|(decompose_stack π1).1| t1 t2) := {
+      | @exist None nored2 with inspect (eqb_termp_napp Σ G leq #|(decompose_stack π1).1| t1 t2) := {
         | @exist true eq1 := isconv_args leq t1 π1 t2 π2 aux;
         | @exist false noteq :=
           no (
@@ -4651,7 +4475,7 @@ Section Conversion.
       rewrite Nat.add_0_r.
       apply All2_length in a.
       rewrite a in eq1.
-      apply eqb_termp_napp_spec; eauto.
+      eapply eqb_termp_napp_spec; eauto.
   Qed.
   Next Obligation.
     apply h; clear h.

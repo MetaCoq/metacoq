@@ -354,8 +354,8 @@ Proof.
     assert (wfps : wf_universe Σ ps).
     { eapply validity in typep; auto. eapply PCUICWfUniverses.isType_wf_universes in typep.
       rewrite PCUICWfUniverses.wf_universes_it_mkProd_or_LetIn in typep.
-      move/andP: typep => /= [_ /andP[_ typep]]. 
-      now apply (PCUICWfUniverses.reflect_bP (PCUICWfUniverses.wf_universe_reflect _ _)) in typep. auto. }
+      move/andb_and: typep => /= [_ /andb_and[_ typep]]. 
+      now apply (ssrbool.elimT PCUICWfUniverses.wf_universe_reflect) in typep. auto. }
     eapply wf_arity_spine_typing_spine => //.
     split.
     { (* Predicate instantiation is well typed *) 
@@ -412,7 +412,7 @@ Proof.
           eapply closed_wf_local in wfcl; auto.
           rewrite !subst_instance_context_app in wfcl.
           rewrite closedn_ctx_app in wfcl.
-          move/andP: wfcl => []. autorewrite with len. now auto. }
+          move/andb_and: wfcl => []. autorewrite with len. now auto. }
          eapply arity_spine_it_mkProd_or_LetIn; eauto.
          { unfold to_extended_list, to_extended_list_k. rewrite /argctxu in X0. simpl. rewrite -H in X0. 
            eapply X0. }
@@ -467,7 +467,7 @@ Proof.
            epose proof (on_minductive_wf_params_indices_inst _ _ u _ _ _ (proj1 decli) oib cu).
            rewrite subst_instance_context_app in X1. eapply closed_wf_local in X1; eauto.
            rewrite closedn_ctx_app in X1. autorewrite with len in X1.
-           now move/andP: X1 => [].
+           now move/andb_and: X1 => [].
          }
          simpl. 
          eapply conv_cumul; apply mkApps_conv_args; auto.
@@ -700,8 +700,8 @@ Proof.
       assert (wfps : wf_universe Σ ps).
       { eapply validity in typep; auto. eapply PCUICWfUniverses.isType_wf_universes in typep.
         rewrite PCUICWfUniverses.wf_universes_it_mkProd_or_LetIn in typep.
-        move/andP: typep => /= [_ /andP[_ typep]]. 
-        now apply (PCUICWfUniverses.reflect_bP (PCUICWfUniverses.wf_universe_reflect _ _)) in typep. auto. }
+        move/andb_and: typep => /= [_ /andb_and[_ typep]]. 
+        now apply (ssrbool.elimT PCUICWfUniverses.wf_universe_reflect) in typep. auto. }
       pose proof (context_subst_fun cparsubst spars). subst parsubst'. clear cparsubst.
       eapply type_mkApps. eauto.
       eapply wf_arity_spine_typing_spine; eauto.
@@ -725,14 +725,14 @@ Proof.
       unshelve eapply isType_mkApps_Ind in wat as [parsubst [argsubst wat]]; eauto.
       set (oib := on_declared_inductive wf isdecl) in *. clearbody oib.
       destruct oib as [onind oib].
-      destruct wat  as [[spars sargs] cu].
+      destruct wat as [[spars sargs] cu].
       unshelve eapply (build_case_predicate_type_spec (Σ.1, _)) in heq_build_case_predicate_type as [parsubst' [cparsubst Hpty]]; eauto.
       rewrite {}Hpty in typep.
       assert (wfps : wf_universe Σ ps).
       { eapply validity in typep; auto. eapply PCUICWfUniverses.isType_wf_universes in typep.
         rewrite PCUICWfUniverses.wf_universes_it_mkProd_or_LetIn in typep.
-        move/andP: typep => /= [_ /andP[_ typep]]. 
-        now apply (PCUICWfUniverses.reflect_bP (PCUICWfUniverses.wf_universe_reflect _ _)) in typep. auto. }
+        move/andb_and: typep => /= [_ /andb_and[_ typep]]. 
+        now apply (ssrbool.elimT PCUICWfUniverses.wf_universe_reflect) in typep. auto. }
       subst npar.
       pose proof (context_subst_fun cparsubst spars). subst parsubst'. clear cparsubst.
       eapply type_mkApps. eauto.
@@ -1102,7 +1102,7 @@ Proof.
     clear projsubsl.
     eapply closed_wf_local in wfdecl.
     rewrite closedn_ctx_app in wfdecl.
-    move/andP: wfdecl => [_ wfdecl].
+    move/andb_and: wfdecl => [_ wfdecl].
     autorewrite with len in wfdecl.
     simpl in wfdecl.
     eapply closedn_ctx_decl in wfdecl; eauto.

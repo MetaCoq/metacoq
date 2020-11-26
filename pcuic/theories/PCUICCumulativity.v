@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import config utils.
+From MetaCoq.Template Require Import config utils BasicAst.
 From MetaCoq.PCUIC Require Import PCUICRelations PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICReduction.
 
@@ -285,10 +285,6 @@ Proof.
     eapply red_conv_conv; eauto.
     eapply red_conv_conv_inv; eauto. now constructor.
 Qed.
-
-Inductive conv_pb :=
-| Conv
-| Cumul.
 
 Definition conv_cum {cf:checker_flags} leq Σ Γ u v :=
   match leq with

@@ -122,7 +122,7 @@ Definition nlg (Σ : global_env_ext) : global_env_ext :=
 Ltac destruct_one_andb :=
   lazymatch goal with
   | h : is_true (_ && _) |- _ =>
-    apply andP in h ; destruct h as [? ?]
+    apply andb_and in h ; destruct h as [? ?]
   end.
 
 Ltac destruct_andb :=

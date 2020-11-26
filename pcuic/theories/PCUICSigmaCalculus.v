@@ -359,21 +359,21 @@ Proof.
     try (try rewrite H; try rewrite H0 ; try rewrite H1 ; easy);
     try solve [f_equal; solve_all].
   - apply Hs. now eapply Nat.ltb_lt. 
-  - move/andP: clt => []. intros. f_equal; eauto.
+  - move/andb_and: clt => []. intros. f_equal; eauto.
     eapply H0; eauto. intros. eapply up_ext_closed; eauto.
-  - move/andP: clt => []. intros. f_equal; eauto. now eapply H0, up_ext_closed.
-  - move/andP: clt => [] /andP[] ?. intros. f_equal; eauto.
+  - move/andb_and: clt => []. intros. f_equal; eauto. now eapply H0, up_ext_closed.
+  - move/andb_and: clt => [] /andb_and[] ?. intros. f_equal; eauto.
     now eapply H1, up_ext_closed.
-  - move/andP: clt => [] ? ?. f_equal; eauto.
-  - move/andP: clt => [] /andP[] ? ? b1.
+  - move/andb_and: clt => [] ? ?. f_equal; eauto.
+  - move/andb_and: clt => [] /andb_and[] ? ? b1.
     red in X. solve_all. f_equal; eauto.
     eapply All_map_eq. eapply (All_impl b1). firstorder.
   - f_equal; eauto. red in X. solve_all.
-    move/andP: b => []. eauto. intros.
+    move/andb_and: b => []. eauto. intros.
     apply map_def_eq_spec; eauto.
     eapply b0; eauto. now apply up_ext_closed.
   - f_equal; eauto. red in X. solve_all.
-    move/andP: b => []. eauto. intros.
+    move/andb_and: b => []. eauto. intros.
     apply map_def_eq_spec; eauto.
     eapply b0; eauto. now apply up_ext_closed.
 Qed.
@@ -1151,7 +1151,7 @@ Lemma inst_decl_closed :
 Proof.
   intros σ k d.
   case: d => na [body|] ty. all: rewrite /closed_decl /inst_decl /map_decl /=.
-  - move /andP => [cb cty]. rewrite !inst_closed //.
+  - move /andb_and => [cb cty]. rewrite !inst_closed //.
   - move => cty. rewrite !inst_closed //.
 Qed.
 
@@ -1166,7 +1166,7 @@ Proof.
   induction ctx using rev_ind; try easy.
   move => n.
   rewrite /closedn_ctx !rev_app_distr /id /=.
-  move /andP => [closedx Hctx].
+  move /andb_and => [closedx Hctx].
   rewrite inst_decl_closed //.
   f_equal. now rewrite IHctx.
 Qed.

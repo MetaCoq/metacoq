@@ -1,6 +1,7 @@
 -R theories MetaCoq.SafeChecker
 
 theories/PCUICSafeReduce.v
+theories/PCUICEqualityDec.v
 theories/PCUICSafeConversion.v
 theories/PCUICWfReduction.v
 theories/PCUICSafeChecker.v

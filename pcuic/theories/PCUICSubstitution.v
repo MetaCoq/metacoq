@@ -100,7 +100,7 @@ Qed.
 Lemma subst_decl_closed n k d : closed_decl k d -> subst_decl n k d = d.
 Proof.
   case: d => na [body|] ty; rewrite /closed_decl /subst_decl /map_decl /=.
-  - move/andP => [cb cty]. rewrite !subst_closedn //.
+  - move/andb_and => [cb cty]. rewrite !subst_closedn //.
   - move=> cty; now rewrite !subst_closedn //.
 Qed.
 
@@ -122,7 +122,7 @@ Proof.
   induction ctx using rev_ind; try easy.
   move=> n0.
   rewrite /closedn_ctx !rev_app_distr /id /=.
-  move/andP => [closedx Hctx].
+  move/andb_and => [closedx Hctx].
   rewrite subst_decl_closed //.
   - rewrite (closed_decl_upwards n0) //; lia.
   - f_equal. now rewrite IHctx.
@@ -353,7 +353,7 @@ Proof.
   move: Hdecl.
   rewrite /closed_inductive_decl /lift_mutual_inductive_body.
   destruct decl; simpl.
-  move/andP => [clpar clbodies]. f_equal.
+  move/andb_and => [clpar clbodies]. f_equal.
   - now rewrite [fold_context _ _]closed_ctx_subst.
   - eapply forallb_All in clbodies.
     eapply Alli_mapi_id.
@@ -361,7 +361,7 @@ Proof.
       intros. eapply H.
     * simpl; intros.
       move: H. rewrite /closed_inductive_body.
-      destruct x; simpl. move=> /andP[/andP [ci ct] cp].
+      destruct x; simpl. move=> /andb_and[/andb_and [ci ct] cp].
       f_equal.
       + rewrite subst_closedn; eauto.
         eapply closed_upwards; eauto; lia.
@@ -2328,7 +2328,7 @@ Proof.
     eapply on_declared_inductive in isdecl as [on_mind on_ind]; auto.
     apply onArity in on_ind as [[s' Hindty] _].
     apply typecheck_closed in Hindty as [_ Hindty]; eauto. symmetry.
-    move/andP/proj1: Hindty. rewrite -(closedn_subst_instance_constr _ _ u) => Hty.
+    move/andb_and/proj1: Hindty. rewrite -(closedn_subst_instance_constr _ _ u) => Hty.
     apply: (subst_closedn s #|Δ|); auto with wf.
     eapply closed_upwards. eauto. simpl; lia.
 
@@ -2578,7 +2578,7 @@ Proof.
     eapply on_declared_inductive in isdecl as [on_mind on_ind]; auto.
     apply onArity in on_ind as [s' Hindty].
     apply typecheck_closed in Hindty as [_ Hindty]; eauto. symmetry.
-    move/andP/proj1: Hindty. rewrite -(closedn_subst_instance_constr _ _ u) => Hty.
+    move/andb_and/proj1: Hindty. rewrite -(closedn_subst_instance_constr _ _ u) => Hty.
     apply: (subst_closedn s #|Δ|); auto with wf.
     eapply closed_upwards. 1: eauto. simpl; lia.
 
@@ -2602,7 +2602,7 @@ Proof.
       destruct isdecl as [_ oind]. clear -oind wfΣ.
       apply onArity in oind; destruct oind as [s HH]; cbn in *.
       apply typecheck_closed in HH; eauto.
-      apply snd in HH. apply andP in HH; apply HH. }
+      apply snd in HH. apply andb_and in HH; apply HH. }
     simpl. econstructor. all: eauto.
     + eapply subst_build_case_predicate_type in H0; tea.
       * simpl in *. subst params. rewrite firstn_map.

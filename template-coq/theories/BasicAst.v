@@ -208,7 +208,11 @@ Inductive recursivity_kind :=
   | CoFinite (* = coinductive *)
   | BiFinite (* = non-recursive, like in "Record" definitions *).
 
-
+(* The kind of a conversion problem *)
+Inductive conv_pb :=
+  | Conv
+  | Cumul.
+  
 
 (* Parametrized by term because term is not yet defined *)
 Record def term := mkdef {

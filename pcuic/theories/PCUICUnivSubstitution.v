@@ -2128,7 +2128,7 @@ Section SubstIdentity.
     - destruct cu as [decl' [sizeu vc]].
       clear sizeu vc.
       induction u; simpl; auto.
-      move/andP: decl' => [ina au]. specialize (IHu au).
+      move/andb_and: decl' => [ina au]. specialize (IHu au).
       rewrite [map _ u]IHu. f_equal. clear au.
       destruct a; simpl; auto.
       eapply LevelSet.mem_spec in ina.

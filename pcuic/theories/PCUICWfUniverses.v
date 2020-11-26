@@ -13,16 +13,6 @@ Require Import ssreflect ssrbool.
 
 From MetaCoq.PCUIC Require Import PCUICInduction.
 
-Lemma forallbP {A} (P : A -> Prop) (p : A -> bool) l : (forall x, reflect (P x) (p x)) -> reflect (Forall P l) (forallb p l).
-Proof.
-  intros Hp.
-  apply: (iffP idP).
-  - induction l; rewrite /= //. move/andP => [pa pl].
-    constructor; auto. now apply/(Hp _).
-  - induction 1; rewrite /= // IHForall // andb_true_r.
-    now apply/(Hp _).
-Qed.
-
 Section CheckerFlags.
   Context {cf:checker_flags}.
 
@@ -284,7 +274,7 @@ Section CheckerFlags.
       | _ => true
       end.
 
-    Lemma wf_universe_reflect (u : Universe.t) : 
+    Lemma wf_universe_reflect {u : Universe.t} : 
       reflect (wf_universe Σ u) (wf_universeb u).
     Proof.
       destruct u; simpl; try now constructor.
@@ -296,12 +286,6 @@ Section CheckerFlags.
       - specialize (H l H0). simpl in H.
         now eapply LS.mem_spec in H.
     Qed.
-
-    Lemma reflect_bP {P b} (r : reflect P b) : b -> P.
-    Proof. destruct r; auto. discriminate. Qed.
-
-    Lemma reflect_Pb {P b} (r : reflect P b) : P -> b.
-    Proof. destruct r; auto. Qed.
 
     Fixpoint wf_universes t := 
       match t with
@@ -366,6 +350,7 @@ Section CheckerFlags.
     Qed.
 
   End WfUniverses.
+  Arguments wf_universe_reflect {Σ u}.
 
   Ltac to_prop := 
     repeat match goal with 
@@ -375,8 +360,8 @@ Section CheckerFlags.
 
   Ltac to_wfu := 
     repeat match goal with 
-    | [ H: is_true (wf_universeb _ ?x) |- _ ] => apply (reflect_bP (wf_universe_reflect _ x)) in H
-    | [ |- is_true (wf_universeb _ ?x) ] => apply (reflect_Pb (wf_universe_reflect _ x))
+    | [ H: is_true (wf_universeb _ ?x) |- _ ] => apply (elimT (@wf_universe_reflect _ x)) in H
+    | [ |- is_true (wf_universeb _ ?x) ] => apply (introT (@wf_universe_reflect _ x))
     end. 
  
   Lemma wf_universes_inst {Σ : global_env_ext} univs t u : 
@@ -580,7 +565,7 @@ Section CheckerFlags.
     rewrite wf_universes_subst.
     clear -s. generalize 0.
     induction args as [|[na [b|] ty] args] in sorts, s |- *; simpl in *; auto.
-    - destruct s as [? [[s' wf] [? ?]%MCProd.andP]].
+    - destruct s as [? [[s' wf] [? ?]%andb_and]].
       constructor; eauto.
       rewrite wf_universes_subst. eapply IHargs; eauto.
       now rewrite wf_universes_lift.
@@ -803,7 +788,7 @@ Section CheckerFlags.
       eapply wf_sorts_local_ctx_smash in s.
       eapply wf_sorts_local_ctx_nth_error in s as [? [? H]]; eauto.
       red in H. destruct x0. now move/andP: H => [].
-      now destruct H as [s [Hs _]%MCProd.andP].
+      now destruct H as [s [Hs _]%andb_and].
     
     - apply/andP; split; auto.
       solve_all. move:a => [s [Hty /andP[wfty wfs]]].
@@ -831,17 +816,18 @@ Section CheckerFlags.
     Σ ;;; Γ |- t : tSort s -> wf_universe Σ s.
   Proof.
     intros wfΣ Hty.
-    apply typing_wf_universes in Hty as [_ wfs]%MCProd.andP; auto.
+    apply typing_wf_universes in Hty as [_ wfs]%andb_and; auto.
     simpl in wfs. now to_wfu.
   Qed.
 
   Lemma isType_wf_universes {Σ Γ T} : wf Σ.1 -> isType Σ Γ T -> wf_universes Σ T.
   Proof.
-    intros wfΣ [s Hs]. now eapply typing_wf_universes in Hs as [HT _]%MCProd.andP.
+    intros wfΣ [s Hs]. now eapply typing_wf_universes in Hs as [HT _]%andb_and.
   Qed.
   
 End CheckerFlags.
 
+Arguments wf_universe_reflect {Σ u}.
 Hint Resolve @wf_universe_type1 @wf_universe_super @wf_universe_sup @wf_universe_product : pcuic.
 
 Hint Extern 4 (wf_universe _ ?u) => 

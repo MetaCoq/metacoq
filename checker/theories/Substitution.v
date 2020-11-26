@@ -125,7 +125,7 @@ Qed.
 Lemma subst_decl_closed n k d : wf_decl d -> closed_decl k d -> subst_decl n k d = d.
 Proof.
   case: d => na [body|] ty; rewrite /closed_decl /subst_decl /map_decl /wf_decl /= => [[wfb wfty]].
-  move/andP => [cb cty]. rewrite !subst_closedn //.
+  move/andb_and => [cb cty]. rewrite !subst_closedn //.
   move=> cty; now rewrite !subst_closedn //.
 Qed.
 
@@ -362,7 +362,7 @@ Proof.
   move: H.
   rewrite /closed_inductive_decl /lift_mutual_inductive_body.
   destruct decl; simpl in *.
-  move/andP => [clpar clbodies]. f_equal.
+  move/andb_and => [clpar clbodies]. f_equal.
   rewrite [fold_context _ _]closed_ctx_subst; try easy. 
   eapply Forall_All; eauto.
   eapply forallb_All in clbodies. apply Forall_All in wfbodies.
@@ -372,7 +372,7 @@ Proof.
   2:{ intros. eapply X0. }
   simpl.
   move: clb. rewrite /closed_inductive_body.
-  destruct oib; simpl. move=> /andP[/andP [ci ct] cp].
+  destruct oib; simpl. move=> /andb_and[/andb_and [ci ct] cp].
   destruct wfb; simpl in *.
   f_equal. rewrite subst_closedn; eauto.
   eapply closed_upwards; eauto; lia.
@@ -581,7 +581,7 @@ Proof.
   induction ctx using rev_ind; try easy.
   move=> n0.
   rewrite /closedn_ctx !rev_app_distr /id /=.
-  intro Hwf. move /andP => [closedx Hctx].
+  intro Hwf. move /andb_and => [closedx Hctx].
   apply All_app in Hwf as [? X]; inv X.
   rewrite subst_decl_closed //.
   rewrite (closed_decl_upwards n0) //; lia.
@@ -1759,7 +1759,7 @@ Proof.
     apply onArity in on_ind as [s' Hindty].
     pose proof (typing_wf (Σ.1, ind_universes mdecl) wfΣ _ _ _ Hindty) as [clty _].
     apply typecheck_closed in Hindty as [_ Hindty]; eauto. symmetry.
-    move/andP/proj1: Hindty. rewrite -(closedn_subst_instance_constr _ _ u) => Hty.
+    move/andb_and/proj1: Hindty. rewrite -(closedn_subst_instance_constr _ _ u) => Hty.
     apply: (subst_closedn s #|Δ|); auto with wf.
     eapply closed_upwards. eauto. simpl; lia.
 
@@ -1784,7 +1784,7 @@ Proof.
       destruct isdecl as [_ oind]. clear -oind wfΣ.
       apply onArity in oind; destruct oind as [s HH]; cbn in *.
       apply typecheck_closed in HH; eauto.
-      apply snd in HH. apply andP in HH; apply HH. }
+      apply snd in HH. apply andb_and in HH; apply HH. }
     simpl. econstructor. all: eauto.
     -- eapply subst_build_case_predicate_type in H1; tea.
        simpl in *. subst params. rewrite firstn_map.

@@ -2,6 +2,9 @@
  * monad library.
  *)
 Require Import List.
+From MetaCoq.Template Require Import All_Forall.
+
+Import ListNotations.
 
 Set Universe Polymorphism.
 
@@ -106,3 +109,25 @@ End MonadOperations.
 
 Definition monad_iter {T : Type -> Type} {M A} (f : A -> T unit) (l : list A) : T unit
   := @monad_fold_left T M _ _ (fun _ => f) l tt.
+
+Fixpoint monad_All {T} {M : Monad T} {A} {P} (f : forall x, T (P x)) l : T (@All A P l) := match l with
+   | [] => ret All_nil
+   | a :: l => X <- f a ;;
+              Y <- monad_All f l ;;
+              ret (All_cons X Y)
+   end.
+
+Fixpoint monad_All2 {T E} {M : Monad T} {M' : MonadExc E T} wrong_sizes
+  {A B R} (f : forall x y, T (R x y)) l1 l2 : T (@All2 A B R l1 l2) := 
+  match l1, l2 with
+   | [], [] => ret All2_nil
+   | a :: l1, b :: l2 => X <- f a b ;;
+                        Y <- monad_All2 wrong_sizes f l1 l2 ;;
+                        ret (All2_cons X Y)
+   | _, _ => raise wrong_sizes
+   end.
+
+Definition monad_prod {T} {M : Monad T} {A B} (x : T A) (y : T B): T (A * B)%type
+  := X <- x ;; Y <- y ;; ret (X, Y).
+ 
+

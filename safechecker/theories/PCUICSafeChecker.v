@@ -3388,8 +3388,7 @@ Section CheckEnv.
     match ind_sort with
     | Universe.lSProp => 
       check_eq_true (allowed_eliminations_subset kelim (elim_sort_sprop_ind cs)) 
-        (Msg "
-        ct allowed_elimination for inductive") ;; 
+        (Msg "Incorrect allowed_elimination for inductive") ;; 
       ret _
     | Universe.lProp => 
       check_eq_true (allowed_eliminations_subset kelim (elim_sort_prop_ind cs)) 

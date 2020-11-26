@@ -1526,7 +1526,7 @@ Section SRContext.
       assert (subslet Σ Γ [b] [vdef na b t]). {
         pose proof (cons_let_def Σ Γ [] [] na b t) as XX.
         rewrite !subst_empty in XX. apply XX. constructor.
-        apply wf_local_app in X. inversion X; subst; cbn in *; assumption.
+        apply wf_local_app_l in X. inversion X; subst; cbn in *; assumption.
       }
       constructor; cbn; auto.
       1: exists s. 1: unfold PCUICTerm.tSort.
@@ -1538,7 +1538,7 @@ Section SRContext.
       assert (subslet Σ Γ [b] [vdef na b t]). {
         pose proof (cons_let_def Σ Γ [] [] na b t) as XX.
         rewrite !subst_empty in XX. apply XX. constructor.
-        apply wf_local_app in X. inversion X; subst; cbn in *; assumption. }
+        apply wf_local_app_l in X. inversion X; subst; cbn in *; assumption. }
       constructor; cbn; auto. exists s.
       unfold PCUICTerm.tSort.
       change (tSort s) with (subst [b] #|Γ'| (tSort s)).

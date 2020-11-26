@@ -298,7 +298,7 @@ Lemma arity_typing_spine {cf:checker_flags} Σ Γ Γ' s inst s' :
   ∑ instsubst, spine_subst Σ Γ inst instsubst Γ'.
 Proof.
   intros wfΣ wfΓ'; revert s inst s'.
-  assert (wf_local Σ Γ). now apply wf_local_app in wfΓ'. move X after wfΓ'.
+  assert (wf_local Σ Γ). now apply wf_local_app_l in wfΓ'. move X after wfΓ'.
   rename X into wfΓ.
   generalize (le_n #|Γ'|).
   generalize (#|Γ'|) at 2.
@@ -349,7 +349,7 @@ Proof.
         * apply subslet_app. now rewrite subst_empty.
           repeat constructor.
           rewrite app_context_assoc in wfΓ'. simpl in wfΓ'.
-          apply wf_local_app in wfΓ'. depelim wfΓ'; now rewrite !subst_empty.
+          apply wf_local_app_l in wfΓ'. depelim wfΓ'; now rewrite !subst_empty.
       + rewrite PCUICCtxShape.context_assumptions_app /=.
         depelim Hsp. 
         now eapply cumul_Prod_Sort_inv in c.
@@ -388,7 +388,7 @@ Proof.
         * apply subslet_app => //.
           repeat constructor.
           rewrite app_context_assoc in wfΓ'. simpl in wfΓ'.
-          apply wf_local_app in wfΓ'. depelim wfΓ'.
+          apply wf_local_app_l in wfΓ'. depelim wfΓ'.
           rewrite !subst_empty. red in l0.
           eapply type_Cumul'; eauto. eapply conv_cumul. now symmetry.
 Qed.
@@ -1430,7 +1430,7 @@ Proof.
       pose proof wf as wf'.
       rewrite -eql in wf'.
       rewrite app_context_assoc in wf'.
-      apply wf_local_app in wf'. depelim wf'.
+      apply wf_local_app_l in wf'. depelim wf'.
       eapply (weakening_typing); auto.
     * rewrite app_length /= Nat.add_1_r in IHc.
       constructor; auto.
@@ -1438,7 +1438,7 @@ Proof.
       pose proof wf as wf'.
       rewrite -eql in wf'.
       rewrite app_context_assoc in wf'.
-      apply wf_local_app in wf'. depelim wf'.
+      apply wf_local_app_l in wf'. depelim wf'.
       rewrite Nat.add_0_r.
 
       eapply type_Cumul'.

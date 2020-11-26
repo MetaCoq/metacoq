@@ -555,17 +555,17 @@ Lemma wf_ext_consistent {cf:checker_flags} Σ :
 Proof. intros [? [? [? [? ?]]]]; assumption. Qed.
 Hint Resolve wf_ext_consistent : core.
 
-Lemma wf_local_app `{checker_flags} Σ (Γ Γ' : context) : wf_local Σ (Γ ,,, Γ') -> wf_local Σ Γ.
+Lemma wf_local_app_l `{checker_flags} Σ (Γ Γ' : context) : wf_local Σ (Γ ,,, Γ') -> wf_local Σ Γ.
 Proof.
   induction Γ'. auto.
   simpl. intros H'; inv H'; eauto.
 Defined.
-Hint Resolve wf_local_app : wf.
+Hint Resolve wf_local_app_l : wf.
 
 Lemma typing_wf_local `{checker_flags} {Σ} {Γ t T} :
   Σ ;;; Γ |- t : T -> wf_local Σ Γ.
 Proof.
-  induction 1; eauto using wf_local_app.
+  induction 1; eauto using wf_local_app_l.
 Defined.
 
 Hint Extern 4 (wf_local _ ?Γ) =>
@@ -1249,7 +1249,7 @@ Section All_local_env.
     rewrite -skipn_app. now apply All_local_env_skipn.
     replace (n - #|Γ'|) with 0 by lia. now rewrite skipn_0.
     rewrite List.skipn_all2. lia.
-    now eapply wf_local_app in wf.
+    now eapply wf_local_app_l in wf.
   Qed.
 
   Definition on_local_decl_glob (P : term -> option term -> Type) d :=

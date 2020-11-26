@@ -1112,7 +1112,7 @@ Proof.
   intros HΣ HΓΓ' * H.
   pose (weakening_typing Σ Γ [] Γ' t).
   forward t0; eauto.
-  forward t0; eauto. now eapply wf_local_app in HΓΓ'.
+  forward t0; eauto. now eapply wf_local_app_l in HΓΓ'.
 Qed.
 
 Definition fix_context_gen k mfix := 

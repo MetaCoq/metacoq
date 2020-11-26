@@ -477,7 +477,7 @@ Proof.
         unshelve eapply PCUICInductiveInversion.on_constructor_inst in oi; eauto.
         destruct oi as [oi _].
         rewrite !subst_instance_context_app in oi.
-        now eapply wf_local_app in oi. }
+        now eapply wf_local_app_l in oi. }
 
     apply s.
     rewrite subst_app_context in X0.

@@ -2,8 +2,10 @@
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICTyping PCUICGeneration.
 
+Set Warnings "-notation-overridden".
 From MetaCoq.Template Require Import config utils Ast TypingWf WfInv UnivSubst
      LiftSubst.
+Set Warnings "+notation_overridden".
 
 Require Import PCUICToTemplate.
 

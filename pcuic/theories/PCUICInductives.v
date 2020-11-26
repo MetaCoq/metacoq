@@ -588,7 +588,7 @@ Proof.
   assert (wfarities : wf_local (Σ.1, ind_universes mdecl)
       (arities_context (ind_bodies mdecl))).
   { eapply wf_arities_context; eauto. }
-  eapply PCUICClosed.type_local_ctx_All_local_env in wfargs.
+  eapply PCUICClosed.sorts_local_ctx_All_local_env in wfargs.
   2:{ eapply All_local_env_app_inv. split; auto.
       red in onpars. eapply (All_local_env_impl _ _ _ onpars).
       intros. destruct T; simpl in *.
@@ -1039,7 +1039,6 @@ Proof.
     rewrite map_map_compose map_subst_lift1.
     simpl. constructor. now apply IHΔ.
 Qed.
-
 
 Lemma subslet_extended_subst {cf:checker_flags} Σ Δ :
   wf Σ.1 ->

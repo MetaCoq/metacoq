@@ -72,19 +72,13 @@ Section Alpha.
     apply cored_alt in r.
     destruct r as [r].
     induction r in u, v, hu, hv.
-    - eapply red1_eq_term_upto_univ_r in r. 9: eassumption.
-      (* all: auto. *)
-      (* They should be automatic... *)
-      all: try eapply eq_universe_refl.
-      all: try eapply eq_universe_sym.
-      all: try eapply eq_universe_trans.
-      + destruct r as [u' [r e]].
-        exists u'. split.
-        * constructor. assumption.
-        * constructor. eapply eq_term_trans. 1: eauto.
-          eapply eq_term_sym. assumption.
-      + eapply leq_term_SubstUnivPreserving.
-      + intros ? ?. auto.
+    - eapply red1_eq_term_upto_univ_r in r. 10: eassumption.
+      all:tc.
+      destruct r as [u' [r e]].
+      exists u'. split.
+      * constructor. assumption.
+      * constructor. eapply eq_term_trans. 1: eauto.
+        eapply eq_term_sym. assumption.
     - specialize IHr1 with (1 := eq_term_refl _ _ _) (2 := hv).
       destruct IHr1 as [y' [h1 [e1]]].
       specialize IHr2 with (1 := hu) (2 := eq_term_sym _ _ _ _ e1).
@@ -168,6 +162,7 @@ Section Alpha.
       RelationClasses.Reflexive Re ->
       SubstUnivPreserving Re ->
       RelationClasses.Reflexive Rle ->
+      SubstUnivPreserving Rle ->
       RelationClasses.Symmetric Re ->
       RelationClasses.Transitive Re ->
       RelationClasses.Transitive Rle ->
@@ -176,10 +171,10 @@ Section Alpha.
       cored Σ Γ v u ->
       exists v', cored Σ Γ v' u' /\ ∥ eq_term_upto_univ Σ Re Rle v v' ∥.
   Proof.
-    intros Re Rle Γ u v u' X X0 X1 X2 X3 X4 X5 e h.
+    intros Re Rle Γ u v u' X X0 X1 X2 X3 X4 X5 X6 e h.
     apply cored_alt in h as [h].
     induction h in u', e |- *.
-    - eapply red1_eq_term_upto_univ_l in r. 8: eauto. all: auto.
+    - eapply red1_eq_term_upto_univ_l in r. 9: eauto. all: auto.
       destruct r as [? [? ?]].
       eexists. split.
       + constructor. eassumption.
@@ -197,31 +192,31 @@ Section Alpha.
       RelationClasses.Symmetric Re ->
       RelationClasses.Transitive Re ->
       SubstUnivPreserving Re ->
-      eq_context_upto Σ Re Γ Δ ->
+      eq_context_upto Σ Re Re Γ Δ ->
       cored Σ Γ u v ->
       exists u', cored Σ Δ u' v /\ ∥ eq_term_upto_univ Σ Re Re u u' ∥.
   Proof.
     intros Re Γ Δ u v hRe1 hRe2 hRe3 hRe4 e h.
     apply cored_alt in h as [h].
     induction h.
-    - eapply red1_eq_context_upto_l in r. all: eauto.
+    - eapply red1_eq_context_upto_l in r. all: eauto. 2:tc.
       destruct r as [? [? ?]].
       eexists. split.
       + constructor. eassumption.
       + constructor. assumption.
     - destruct IHh1 as [x' [r1 [e1]]].
       destruct IHh2 as [y' [r2 [e2]]].
-      eapply cored_eq_term_upto in r2. 9: exact e1. all: auto.
-      + destruct r2 as [y'' [r2' [e2']]].
-        exists y''. split.
-        * eapply cored_trans'. all: eassumption.
-        * constructor. eapply eq_term_upto_univ_trans. all: eauto.
-      + intros ? ? ?. assumption.
+      eapply cored_eq_term_upto in r2. 10: exact e1. all: auto.
+      2:tc.
+      destruct r2 as [y'' [r2' [e2']]].
+      exists y''. split.
+      * eapply cored_trans'. all: eassumption.
+      * constructor. eapply eq_term_upto_univ_trans. all: eauto.
   Qed.
 
   Lemma eq_context_upto_nlctx :
     forall Γ,
-      eq_context_upto Σ eq Γ (nlctx Γ).
+      eq_context_upto Σ eq eq Γ (nlctx Γ).
   Proof.
     intros Γ.
     induction Γ as [| [na [b|] A] Γ ih ].

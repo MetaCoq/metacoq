@@ -459,8 +459,10 @@ Proof.
       intros decl cs []. unshelve econstructor; eauto.
       red in on_ctype |- *. eauto.
       clear on_cindices cstr_eq cstr_args_length cstr_concl_head.
-      induction (cshape_args cs); simpl in *; auto.
-      ** eapply (extends_wf_universe (Σ:=(Σ,φ)) Σ'); auto.
+      revert on_cargs.
+      generalize (cshape_sorts cs).
+      induction (cshape_args cs); destruct l; simpl in *; auto.
+      ** destruct a as [na [b|] ty]; simpl in *; intuition eauto.
       ** destruct a as [na [b|] ty]; simpl in *; intuition eauto.
       ** clear on_ctype on_cargs.
         revert on_cindices.
@@ -471,7 +473,10 @@ Proof.
         simpl in *. move: on_ctype_variance.
         unfold cstr_respects_variance. destruct variance_universes as [[[univs u] u']|]; auto.
         intros [args idxs]. split.
-        eapply (All2_local_env_impl args); intros.
+        eapply (context_relation_impl args); intros.
+        inversion X; constructor; auto.
+        eapply weakening_env_cumul; eauto.
+        eapply weakening_env_conv; eauto.
         eapply weakening_env_cumul; eauto.
         eapply (All2_impl idxs); intros.
         eapply weakening_env_conv; eauto.
@@ -480,7 +485,8 @@ Proof.
        destruct Universe.is_sprop; auto.
        split; [apply fst in ind_sorts|apply snd in ind_sorts].
        eapply Forall_impl; tea; cbn.
-       intros. eapply leq_universe_subset; tea.
+       intros. eapply Forall_impl; eauto; simpl.
+       intros; eapply leq_universe_subset; tea.
        apply weakening_env_global_ext_constraints; tea.
        destruct indices_matter; [|trivial]. clear -ind_sorts HPΣ wfΣ' Hext.
        induction ind_indices; simpl in *; auto.
@@ -489,8 +495,12 @@ Proof.
       -- intros v onv.
           move: (onIndices v onv). unfold ind_respects_variance.
          destruct variance_universes as [[[univs u] u']|] => //.
-         intros idx; eapply (All2_local_env_impl idx); simpl.
-         intros par par' t t'. eapply weakening_env_cumul; eauto.
+         intros idx; eapply (context_relation_impl idx); simpl.
+         intros par par' t t'.
+         intros d. inv d; constructor; auto.
+         eapply weakening_env_cumul; eauto.
+         eapply weakening_env_conv; eauto.
+         eapply weakening_env_cumul; eauto.
   - red in onP |- *. eapply All_local_env_impl; eauto.
 Qed.
 

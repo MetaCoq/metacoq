@@ -1296,7 +1296,7 @@ Proof.
            pose proof (typing_wf_local (Σ:= (Σ, udecl)) Hs). simpl in Hs.
            specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ X14 (existT _ _ (existT _ _ Hs))))))).
            simpl in IH. red. simpl. exists s. simpl. apply IH; constructor 1; simpl; auto with arith.
-           eapply type_local_ctx_impl; eauto. simpl. intros. red in X14.
+           eapply sorts_local_ctx_impl; eauto. simpl. intros. red in X14.
            destruct T.
            pose proof (typing_wf_local X14).
            specialize (IH ((Σ, udecl); (X13; _; X17; _; _; X14))).

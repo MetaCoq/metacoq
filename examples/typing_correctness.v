@@ -25,9 +25,26 @@ Definition gctx : global_env_ext :=
 
 (** We use the environment checker to produce the proof that gctx, which is a singleton with only 
     universe "s" declared  is well-formed. *)
-Definition gctx_wf_env : wf_env.
+
+Program Definition check_wf_env_ext {cf:checker_flags} (Σ : global_env) id (ext : universes_decl) : 
+    EnvCheck ({ Σ' : wf_env_ext | Σ'.(wf_env_ext_env) = (Σ, ext)}) :=
+    '(G; pf) <- check_wf_env Σ ;;
+    '(G'; pf') <- check_wf_env_ext Σ id _ G _ ext ;;
+    ret (exist {| wf_env_ext_env := (Σ, ext) ;
+           wf_env_ext_wf := _ ;
+           wf_env_ext_graph := G' ;
+           wf_env_ext_graph_wf := _ |} eq_refl).
+
+Definition kername_of_string (s : string) : kername :=
+  (MPfile [], s).
+
+Definition make_wf_env_ext {cf:checker_flags} (Σ : global_env_ext) : EnvCheck wf_env_ext :=
+  '(exist Σ' pf) <- check_wf_env_ext Σ.1 (kername_of_string "toplevel") Σ.2 ;;
+  ret Σ'.
+
+Definition gctx_wf_env : wf_env_ext.
 Proof.
-  let wf_proof := eval hnf in (make_wf_env gctx) in 
+  let wf_proof := eval hnf in (make_wf_env_ext gctx) in 
   match wf_proof with
   | CorrectDecl ?x => exact x
   | _ => fail "Couldn't prove the global environment is well-formed"
@@ -36,9 +53,9 @@ Defined.
 
 (** There is always a proof of `forall x : Sort s, x -> x` *)
 
-Definition inh {cf:checker_flags} (Σ : wf_env) Γ T := ∑ t, ∥ Σ ;;; Γ |- t : T ∥.
+Definition inh {cf:checker_flags} (Σ : wf_env_ext) Γ T := ∑ t, ∥ Σ ;;; Γ |- t : T ∥.
 
-Definition check_inh {cf:checker_flags} (Σ : wf_env) Γ (wfΓ : ∥ wf_local Σ Γ ∥) t {T} : typing_result (inh Σ Γ T) := 
+Definition check_inh {cf:checker_flags} (Σ : wf_env_ext) Γ (wfΓ : ∥ wf_local Σ Γ ∥) t {T} : typing_result (inh Σ Γ T) := 
   prf <- check_type_wf_env_fast Σ Γ wfΓ t (T := T) ;;
   ret (t; prf).
 

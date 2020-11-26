@@ -359,8 +359,11 @@ Proof.
   induction h; constructor; auto.
   destruct r.
   clear -on_cargs.
-  induction (cshape_args y) as [|[? [] ?] ?]; simpl in on_cargs; constructor;
-    try red; simpl; intuition auto.
+  revert on_cargs. generalize (cshape_sorts y).
+  induction (cshape_args y) as [|[? [] ?] ?]; simpl;
+    destruct l; intuition auto;
+    constructor;
+    try red; simpl; intuition eauto.
 Qed.
 
 Lemma subst_context_snoc s k Γ d : subst_context s k (d :: Γ) = subst_context s k Γ ,, map_decl (subst s (#|Γ| + k)) d.
@@ -632,8 +635,8 @@ Proof.
            simpl. intros. destruct X2 as [? ? ? ?]; unshelve econstructor; eauto.
            * apply X; eauto.
            * clear -X0 X on_cargs. revert on_cargs.
-              generalize (cshape_args y).
-              induction c; simpl; auto;
+              generalize (cshape_args y), (cshape_sorts y).
+              induction c; destruct l; simpl; auto;
               destruct a as [na [b|] ty]; simpl in *; auto;
            split; intuition eauto.
            * clear -X0 X on_cindices.

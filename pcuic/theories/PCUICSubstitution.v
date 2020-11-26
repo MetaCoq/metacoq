@@ -1971,16 +1971,24 @@ Proof.
   - etransitivity; eauto.
 Qed.
 
-Lemma subst_eq_decl `{checker_flags} Σ ϕ l k d d' :
-  eq_decl Σ ϕ d d' -> eq_decl Σ ϕ (subst_decl l k d) (subst_decl l k d').
+Lemma subst_compare_term {cf:checker_flags} le Σ (φ : ConstraintSet.t) (l : list term) (k : nat) (T U : term) :
+  compare_term le Σ φ T U -> compare_term le Σ φ (subst l k T) (subst l k U).
 Proof.
-  destruct d, d', decl_body, decl_body0;
-    unfold eq_decl, map_decl; cbn; intuition auto using subst_eq_term.
+  destruct le; simpl.
+  - apply subst_leq_term.
+  - apply subst_eq_term. 
 Qed.
 
-Lemma subst_eq_context `{checker_flags} Σ φ l l' n k :
-  eq_context Σ φ l l' ->
-  eq_context Σ φ (subst_context n k l) (subst_context n k l').
+Lemma subst_eq_decl `{checker_flags} le Σ ϕ l k d d' :
+  eq_decl le Σ ϕ d d' -> eq_decl le Σ ϕ (subst_decl l k d) (subst_decl l k d').
+Proof.
+  destruct d, d', decl_body, decl_body0;
+    unfold eq_decl, map_decl; cbn; intuition auto using subst_compare_term, subst_eq_term.
+Qed.
+
+Lemma subst_eq_context `{checker_flags} le Σ φ l l' n k :
+  eq_context le Σ φ l l' ->
+  eq_context le Σ φ (subst_context n k l) (subst_context n k l').
 Proof.
   induction l in l', n, k |- *; inversion 1. 1: constructor.
   rewrite !subst_context_snoc. constructor.

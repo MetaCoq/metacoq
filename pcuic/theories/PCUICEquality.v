@@ -1513,37 +1513,32 @@ Qed.
 
 (** ** Equality on contexts ** *)
 
-Inductive eq_context_upto Σ (Re : Universe.t -> Universe.t -> Prop) : context -> context -> Type :=
-| eq_context_nil : eq_context_upto Σ Re [] []
+Inductive eq_context_upto Σ (Re Rle : Universe.t -> Universe.t -> Prop) : context -> context -> Type :=
+| eq_context_nil : eq_context_upto Σ Re Rle [] []
 | eq_context_vass na A Γ nb B Δ :
     eq_binder_annot na nb ->
-    eq_term_upto_univ Σ Re Re A B ->
-    eq_context_upto Σ Re Γ Δ ->
-    eq_context_upto Σ Re (Γ ,, vass na A) (Δ ,, vass nb B)
+    eq_term_upto_univ Σ Re Rle A B ->
+    eq_context_upto Σ Re Rle Γ Δ ->
+    eq_context_upto Σ Re Rle (Γ ,, vass na A) (Δ ,, vass nb B)
 | eq_context_vdef na u A Γ nb v B Δ :
     eq_binder_annot na nb ->
     eq_term_upto_univ Σ Re Re u v ->
-    eq_term_upto_univ Σ Re Re A B ->
-    eq_context_upto Σ Re Γ Δ ->
-    eq_context_upto Σ Re (Γ ,, vdef na u A) (Δ ,, vdef nb v B).
-
-Definition eq_def_upto Σ Re d d' : Type :=
-  (eq_term_upto_univ Σ Re Re d.(dtype) d'.(dtype)) *
-  (eq_term_upto_univ Σ Re Re d.(dbody) d'.(dbody)) *
-  (d.(rarg) = d'.(rarg)).
+    eq_term_upto_univ Σ Re Rle A B ->
+    eq_context_upto Σ Re Rle Γ Δ ->
+    eq_context_upto Σ Re Rle (Γ ,, vdef na u A) (Δ ,, vdef nb v B).
 
 Inductive rel_option {A B} (R : A -> B -> Type) : option A -> option B -> Type :=
 | rel_some : forall a b, R a b -> rel_option R (Some a) (Some b)
 | rel_none : rel_option R None None.
 
-Definition eq_decl_upto Σ Re d d' : Type :=
+Definition eq_decl_upto Σ Re Rle d d' : Type :=
   eq_binder_annot d.(decl_name) d'.(decl_name) *
   rel_option (eq_term_upto_univ Σ Re Re) d.(decl_body) d'.(decl_body) *
-  eq_term_upto_univ Σ Re Re d.(decl_type) d'.(decl_type).
+  eq_term_upto_univ Σ Re Rle d.(decl_type) d'.(decl_type).
 
 (* TODO perhaps should be def *)
-Lemma All2_eq_context_upto Σ Re :
-  subrelation (All2 (eq_decl_upto Σ  Re)) (eq_context_upto Σ Re).
+Lemma All2_eq_context_upto Σ Re Rle :
+  subrelation (All2 (eq_decl_upto Σ Re Rle)) (eq_context_upto Σ Re Rle).
 Proof.
   intros Γ Δ h.
   induction h.
@@ -1556,11 +1551,12 @@ Proof.
     + constructor ; eauto.
 Qed.
 
-Lemma eq_context_upto_refl Σ Re :
+Lemma eq_context_upto_refl Σ Re Rle :
   RelationClasses.Reflexive Re ->
-  Reflexive (eq_context_upto Σ Re).
+  RelationClasses.Reflexive Rle ->
+  Reflexive (eq_context_upto Σ Re Rle).
 Proof.
-  intros hRe Γ.
+  intros hRe hRle Γ.
   induction Γ as [| [na [bo |] ty] Γ ih].
   - constructor.
   - constructor ; eauto.
@@ -1569,20 +1565,21 @@ Proof.
     all: eapply eq_term_upto_univ_refl ; eauto.
 Qed.
 
-Lemma eq_context_upto_sym Σ Re :
+Lemma eq_context_upto_sym Σ Re Rle :
   RelationClasses.Symmetric Re ->
-  Symmetric (eq_context_upto Σ Re).
+  RelationClasses.Symmetric Rle ->
+  Symmetric (eq_context_upto Σ Re Rle).
 Proof.
-  intros hRe Γ Δ.
+  intros hRe hRle Γ Δ.
   induction 1; constructor; eauto using eq_term_upto_univ_sym.
   all:try now symmetry.
   all:eapply eq_term_upto_univ_sym; auto.
 Qed.
 
-Lemma eq_context_upto_cat Σ Re Γ Δ Γ' Δ' :
-  eq_context_upto Σ Re Γ Γ' ->
-  eq_context_upto Σ Re Δ Δ' ->
-  eq_context_upto Σ Re (Γ ,,, Δ) (Γ' ,,, Δ').
+Lemma eq_context_upto_cat Σ Re Rle Γ Δ Γ' Δ' :
+  eq_context_upto Σ Re Rle Γ Γ' ->
+  eq_context_upto Σ Re Rle Δ Δ' ->
+  eq_context_upto Σ Re Rle (Γ ,,, Δ) (Γ' ,,, Δ').
 Proof.
   intros h1 h2. induction h2 in Γ, Γ', h1 |- *.
   - assumption.
@@ -1590,9 +1587,9 @@ Proof.
   - simpl. constructor ; eauto.
 Qed.
 
-Lemma eq_context_upto_rev Σ Re Γ Δ :
-  eq_context_upto Σ Re Γ Δ ->
-  eq_context_upto Σ Re (rev Γ) (rev Δ).
+Lemma eq_context_upto_rev Σ Re Rle Γ Δ :
+  eq_context_upto Σ Re Rle Γ Δ ->
+  eq_context_upto Σ Re Rle (rev Γ) (rev Δ).
 Proof.
   induction 1.
   - constructor.
@@ -1603,11 +1600,11 @@ Proof.
 Qed.
 
 Lemma eq_context_upto_rev' :
-  forall Σ Γ Δ Re,
-    eq_context_upto Σ Re Γ Δ ->
-    eq_context_upto Σ Re (List.rev Γ) (List.rev Δ).
+  forall Σ Γ Δ Re Rle,
+    eq_context_upto Σ Re Rle Γ Δ ->
+    eq_context_upto Σ Re Rle (List.rev Γ) (List.rev Δ).
 Proof.
-  intros Σ Γ Δ Re h.
+  intros Σ Γ Δ Re Rle h.
   induction h.
   - constructor.
   - simpl. eapply eq_context_upto_cat.
@@ -1619,36 +1616,36 @@ Proof.
 Qed.
 
 Lemma eq_context_upto_length :
-  forall {Σ Re Γ Δ},
-    eq_context_upto Σ Re Γ Δ ->
+  forall {Σ Re Rle Γ Δ},
+    eq_context_upto Σ Re Rle Γ Δ ->
     #|Γ| = #|Δ|.
 Proof.
-  intros Σ Re Γ Δ h.
+  intros Σ Re Rle Γ Δ h.
   induction h. all: simpl ; auto.
 Qed.
 
 Lemma eq_context_upto_subst_context Σ Re Rle :
   RelationClasses.subrelation Re Rle ->
   forall u v n l l',
-    eq_context_upto Σ Re u v ->
+    eq_context_upto Σ Re Rle u v ->
     All2 (eq_term_upto_univ Σ Re Re) l l' ->
-    eq_context_upto Σ Re (subst_context l n u) (subst_context l' n v).
+    eq_context_upto Σ Re Rle (subst_context l n u) (subst_context l' n v).
 Proof.
   intros re u v n l l'.
   induction 1; intros Hl.
   - rewrite !subst_context_nil. constructor.
   - rewrite !subst_context_snoc; constructor; auto.
     simpl. rewrite (eq_context_upto_length X).
-    apply eq_term_upto_univ_substs; auto. typeclasses eauto.
+    apply eq_term_upto_univ_substs; auto.
   - rewrite !subst_context_snoc; constructor; auto;
     simpl; rewrite (eq_context_upto_length X).
-    apply eq_term_upto_univ_substs; auto. typeclasses eauto.
-    apply eq_term_upto_univ_substs; auto. typeclasses eauto.
+    apply eq_term_upto_univ_substs; auto. reflexivity. 
+    apply eq_term_upto_univ_substs; auto.
 Qed.
 
 Lemma eq_context_upto_smash_context Σ ctx ctx' x y :
-  eq_context_upto Σ eq ctx ctx' -> eq_context_upto Σ eq x y -> 
-  eq_context_upto Σ eq (smash_context ctx x) (smash_context ctx' y).
+  eq_context_upto Σ eq eq ctx ctx' -> eq_context_upto Σ eq eq x y -> 
+  eq_context_upto Σ eq eq (smash_context ctx x) (smash_context ctx' y).
 Proof.
   induction x in ctx, ctx', y |- *; intros eqctx eqt; inv eqt; simpl; 
     try split; auto; try constructor; auto.
@@ -1658,9 +1655,9 @@ Proof.
     typeclasses eauto.
 Qed.
 
-Lemma eq_context_upto_nth_error Σ Re ctx ctx' n :
-  eq_context_upto Σ Re ctx ctx' -> 
-  rel_option (eq_decl_upto Σ Re) (nth_error ctx n) (nth_error ctx' n).
+Lemma eq_context_upto_nth_error Σ Re Rle ctx ctx' n :
+  eq_context_upto Σ Re Rle ctx ctx' -> 
+  rel_option (eq_decl_upto Σ Re Rle) (nth_error ctx n) (nth_error ctx' n).
 Proof.
   induction 1 in n |- *.
   - rewrite nth_error_nil. constructor.
@@ -1673,17 +1670,22 @@ Proof.
 Qed.
 
 Lemma eq_context_impl :
-  forall Σ Re Re',
+  forall Σ Re Re' Rle Rle',
     RelationClasses.subrelation Re Re' ->
-    subrelation (eq_context_upto Σ Re) (eq_context_upto Σ Re').
+    RelationClasses.subrelation Rle Rle' ->
+    RelationClasses.subrelation Re' Rle' ->
+    subrelation (eq_context_upto Σ Re Rle) (eq_context_upto Σ Re' Rle').
 Proof.
-  intros Σ Re Re' hR Γ Δ h.
+  intros Σ Re Re' Rle Rle' hR hR' hReRle' Γ Δ h.
   induction h.
   - constructor.
   - constructor; auto. 
-    eapply eq_term_upto_univ_impl. all: try eassumption. auto.
+    eapply eq_term_upto_univ_impl. 5:eauto. all: try eassumption.
+    now transitivity Re'.
+    auto.
   - constructor; auto. 
-    all: eapply eq_term_upto_univ_impl. all: try eassumption. all:auto.
+    all: eapply eq_term_upto_univ_impl. 5:eauto. 9:eauto. all: try eassumption. all:auto.
+    now transitivity Re'.
 Qed.
 
 Section ContextUpTo.
@@ -1692,8 +1694,12 @@ Section ContextUpTo.
   Context (ReR : RelationClasses.Reflexive Re).
   Context (ReS : RelationClasses.Symmetric Re).
   Context (ReT : RelationClasses.Transitive Re).
+  Context (Rle : Universe.t -> Universe.t -> Prop).
+  Context (RleR : RelationClasses.Reflexive Rle).
+  Context (RleS : RelationClasses.Symmetric Rle).
+  Context (RleT : RelationClasses.Transitive Rle).
 
-  Notation eq_ctx := (eq_context_upto Σ Re).
+  Notation eq_ctx := (eq_context_upto Σ Re Rle).
 
   Global Instance eq_ctx_refl : Reflexive eq_ctx.
   Proof. now intros ?; apply eq_context_upto_refl. Qed.
@@ -1715,32 +1721,40 @@ Section ContextUpTo.
 
 End ContextUpTo.
 
+Definition compare_term `{checker_flags} (le : bool) Σ φ (t u : term) :=
+  if le then leq_term Σ φ t u else eq_term Σ φ t u.
+
+Lemma lift_compare_term `{checker_flags} le Σ ϕ n k t t' :
+  compare_term le Σ ϕ t t' -> compare_term le Σ ϕ (lift n k t) (lift n k t').
+Proof.
+  destruct le; intros. now apply lift_leq_term. now apply lift_eq_term.
+Qed.
 
 (* todo: unify *)
-Definition eq_opt_term `{checker_flags} Σ φ (t u : option term) :=
+Definition eq_opt_term `{checker_flags} (le : bool) Σ φ (t u : option term) :=
   match t, u with
-  | Some t, Some u => eq_term Σ φ t u
+  | Some t, Some u => compare_term le Σ φ t u
   | None, None => True
   | _, _ => False
   end.
 
-Definition eq_decl `{checker_flags} Σ φ (d d' : context_decl) :=
-  eq_opt_term Σ φ d.(decl_body) d'.(decl_body) * eq_term Σ φ d.(decl_type) d'.(decl_type).
+Definition eq_decl `{checker_flags} le Σ φ (d d' : context_decl) :=
+  eq_binder_annot d.(decl_name) d'.(decl_name) *
+  eq_opt_term false Σ φ d.(decl_body) d'.(decl_body) * compare_term le Σ φ d.(decl_type) d'.(decl_type).
 
-Definition eq_context `{checker_flags} Σ φ (Γ Δ : context) :=
-  All2 (eq_decl Σ φ) Γ Δ.
+Definition eq_context `{checker_flags} le Σ φ (Γ Δ : context) :=
+  All2 (eq_decl le Σ φ) Γ Δ.
 
-
-Lemma lift_eq_decl `{checker_flags} Σ ϕ n k d d' :
-  eq_decl Σ ϕ d d' -> eq_decl Σ ϕ (lift_decl n k d) (lift_decl n k d').
+Lemma lift_eq_decl `{checker_flags} le Σ ϕ n k d d' :
+  eq_decl le Σ ϕ d d' -> eq_decl le Σ ϕ (lift_decl n k d) (lift_decl n k d').
 Proof.
   destruct d, d', decl_body, decl_body0;
-    unfold eq_decl, map_decl; cbn; intuition auto using lift_eq_term.
+    unfold eq_decl, map_decl; cbn; intuition auto using lift_compare_term, lift_eq_term.
 Qed.
 
-Lemma lift_eq_context `{checker_flags} Σ φ l l' n k :
-  eq_context Σ φ l l' ->
-  eq_context Σ φ (lift_context n k l) (lift_context n k l').
+Lemma lift_eq_context `{checker_flags} le Σ φ l l' n k :
+  eq_context le Σ φ l l' ->
+  eq_context le Σ φ (lift_context n k l) (lift_context n k l').
 Proof.
   induction l in l', n, k |- *; intros; destruct l'; rewrite -> ?lift_context_snoc0.
   constructor.
@@ -1749,7 +1763,6 @@ Proof.
     now apply lift_eq_decl.
   - now apply IHl.
 Qed.
-
 
 Lemma eq_term_upto_univ_mkApps_inv Σ Re Rle u l u' l' :
   isApp u = false ->

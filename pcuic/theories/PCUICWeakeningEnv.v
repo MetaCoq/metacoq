@@ -4,7 +4,6 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICEquality PCUICTyping.
 
 Require Import ssreflect.
 
-
 Derive Signature for Alli.
 
 Set Default Goal Selector "!".
@@ -106,24 +105,31 @@ Qed.
 
 Lemma eq_term_subset {cf:checker_flags} Σ φ φ' t t'
   : ConstraintSet.Subset φ φ'
-    -> eq_term Σ φ t t' ->  eq_term Σ φ' t t'.
+    -> eq_term Σ φ t t' -> eq_term Σ φ' t t'.
 Proof.
   intro H. apply eq_term_upto_univ_impl; auto.
   all: intros u u'; eapply eq_universe_subset; assumption.
 Qed.
 
-Lemma eq_decl_subset {cf:checker_flags} Σ φ φ' d d'
+Lemma compare_term_subset {cf:checker_flags} le Σ φ φ' t t'
   : ConstraintSet.Subset φ φ'
-    -> eq_decl Σ φ d d' ->  eq_decl Σ φ' d d'.
+    -> compare_term le Σ φ t t' -> compare_term le Σ φ' t t'.
 Proof.
-  intros Hφ [H1 H2]. split; [|eapply eq_term_subset; eauto].
-  destruct d as [na [bd|] ty], d' as [na' [bd'|] ty']; cbn in *; trivial.
+  destruct le; [apply leq_term_subset|apply eq_term_subset].
+Qed.
+
+Lemma eq_decl_subset {cf:checker_flags} le Σ φ φ' d d'
+  : ConstraintSet.Subset φ φ'
+    -> eq_decl le Σ φ d d' -> eq_decl le Σ φ' d d'.
+Proof.
+  intros Hφ [[Hann H1] H2]. split; [|eapply compare_term_subset; eauto].
+  destruct d as [na [bd|] ty], d' as [na' [bd'|] ty']; cbn in *; split; trivial.
   eapply eq_term_subset; eauto.
 Qed.
 
-Lemma eq_context_subset {cf:checker_flags} Σ φ φ' Γ Γ'
+Lemma eq_context_subset {cf:checker_flags} le Σ φ φ' Γ Γ'
   : ConstraintSet.Subset φ φ'
-    -> eq_context Σ φ Γ Γ' ->  eq_context Σ φ' Γ Γ'.
+    -> eq_context le Σ φ Γ Γ' ->  eq_context le Σ φ' Γ Γ'.
 Proof.
   intros Hφ. induction 1; constructor.
   - eapply eq_decl_subset; eassumption.
@@ -533,8 +539,9 @@ Proof.
       destruct X as [? ? ? ?]. unshelve econstructor; eauto.
       * unfold on_type in *; eauto.
       * clear on_cindices cstr_eq cstr_args_length.
-        induction (cshape_args y); simpl in *; auto.
-        ** eapply (extends_wf_universe (Σ:=(Σ,φ)) Σ'); auto.
+        revert on_cargs; generalize (cshape_sorts y) as l.
+        induction (cshape_args y); destruct l; simpl in *; eauto.
+        ** destruct a as [na [b|] ty]; simpl in *; intuition eauto.
         ** destruct a as [na [b|] ty]; simpl in *; intuition eauto.
       * clear on_ctype on_cargs.
         revert on_cindices.
@@ -546,8 +553,11 @@ Proof.
         simpl in *. move: on_ctype_variance.
         unfold cstr_respects_variance. destruct variance_universes as [[[univs u] u']|]; auto.
         intros [args idxs]. split.
-        ** eapply (All2_local_env_impl args); intros.
-           eapply weakening_env_cumul; eauto.
+        ** eapply (context_relation_impl args); intros.
+           inversion X; constructor; auto.
+           ++ eapply weakening_env_cumul; eauto.
+           ++ eapply weakening_env_conv; eauto.
+           ++ eapply weakening_env_cumul; eauto.
         ** eapply (All2_impl idxs); intros.
           eapply weakening_env_conv; eauto.
     + unfold check_ind_sorts in *.
@@ -555,7 +565,8 @@ Proof.
       destruct Universe.is_sprop; auto.
       split; [apply fst in ind_sorts|apply snd in ind_sorts].
       * eapply Forall_impl; tea; cbn.
-        intros. eapply leq_universe_subset; tea.
+        intros. eapply Forall_impl; tea; simpl; intros.
+        eapply leq_universe_subset; tea.
         apply weakening_env_global_ext_constraints; tea.
       * destruct indices_matter; [|trivial]. clear -ind_sorts HPΣ wfΣ' Hext.
         induction ind_indices; simpl in *; auto.
@@ -564,9 +575,12 @@ Proof.
     + intros v onv.
       move: (onIndices v onv). unfold ind_respects_variance.
       destruct variance_universes as [[[univs u] u']|] => //.
-      intros idx; eapply (All2_local_env_impl idx); simpl.
-      intros par par' t t'. eapply weakening_env_cumul; eauto.
-
+      intros idx; eapply (context_relation_impl idx); simpl.
+      intros par par' t t' d.
+      inv d; constructor; auto.
+      ++ eapply weakening_env_cumul; eauto.
+      ++ eapply weakening_env_conv; eauto.
+      ++ eapply weakening_env_cumul; eauto.
   - red in onP |- *. eapply All_local_env_impl; eauto.
 Qed.
 
@@ -659,8 +673,8 @@ Lemma declared_projection_inv `{checker_flags} {Σ P mdecl idecl ref pdecl} :
   let oib := declared_inductive_inv HP wfΣ HΣ (let (x, _) := Hdecl in x) in
   match oib.(ind_cshapes) return Type with
   | [cs] => 
-    type_local_ctx (lift_typing P) (Σ, ind_universes mdecl) (arities_context (ind_bodies mdecl) ,,, ind_params mdecl) (cshape_args cs)
-      (cshape_sort cs) *
+    sorts_local_ctx (lift_typing P) (Σ, ind_universes mdecl) (arities_context (ind_bodies mdecl) ,,, ind_params mdecl) (cshape_args cs)
+      (cshape_sorts cs) *
     on_projections mdecl (inductive_mind ref.1.1) (inductive_ind ref.1.1) idecl (oib.(ind_indices)) cs *
     ((snd ref) < context_assumptions cs.(cshape_args)) *
     on_projection mdecl (inductive_mind ref.1.1) (inductive_ind ref.1.1) cs (snd ref) pdecl
@@ -812,9 +826,9 @@ Lemma on_declared_projection `{checker_flags} {Σ ref mdecl idecl pdecl} :
   let oib := declared_inductive_inv weaken_env_prop_typing wfΣ wfΣ (let (x, _) := Hdecl in x) in
   match oib.(ind_cshapes) return Type with
   | [cs] => 
-    type_local_ctx (lift_typing typing) (Σ, ind_universes mdecl) 
+    sorts_local_ctx (lift_typing typing) (Σ, ind_universes mdecl) 
       (arities_context (ind_bodies mdecl) ,,, ind_params mdecl) (cshape_args cs)
-      (cshape_sort cs) *
+      (cshape_sorts cs) *
     on_projections mdecl (inductive_mind ref.1.1) (inductive_ind ref.1.1) idecl (oib.(ind_indices)) cs *
     ((snd ref) < context_assumptions cs.(cshape_args)) *
     on_projection mdecl (inductive_mind ref.1.1) (inductive_ind ref.1.1) cs (snd ref) pdecl

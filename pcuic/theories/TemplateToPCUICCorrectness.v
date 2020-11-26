@@ -1,8 +1,10 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils Ast TypingWf WfInv.
+Set Warnings "-notation-overridden".
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCumulativity
      PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICTyping TemplateToPCUIC
      PCUICSubstitution PCUICGeneration.
+Set Warnings "+notation-overridden".
 
 From Equations.Prop Require Import DepElim.
 

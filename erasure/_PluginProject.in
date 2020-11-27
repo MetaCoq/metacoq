@@ -45,8 +45,8 @@ src/pCUICTyping.ml
 src/pCUICTyping.mli
 src/pCUICUnivSubst.ml
 src/pCUICUnivSubst.mli
-src/pCUICCumulativity.mli
-src/pCUICCumulativity.ml
+# src/pCUICCumulativity.mli
+# src/pCUICCumulativity.ml
 src/pCUICPosition.mli
 src/pCUICPosition.ml
 src/pCUICNormal.mli

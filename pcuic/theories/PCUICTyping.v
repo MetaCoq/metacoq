@@ -29,13 +29,6 @@ Hint Rewrite subst_context_length subst_instance_context_length
   map_length app_length lift_context_length
   @mapi_length @mapi_rec_length List.rev_length Nat.add_0_r : len.
 
-
-Definition isSort T :=
-  match T with
-  | tSort u => True
-  | _ => False
-  end.
-
 Fixpoint isArity T :=
   match T with
   | tSort u => True

@@ -5,6 +5,9 @@ Derive NoConfusion EqDec for Strings.Ascii.ascii string positive Z.
 
 Declare Scope metacoq_scope.
 
+(** We cannot use ssrbool currently as it breaks extraction. *)
+Coercion is_true : bool >-> Sortclass.
+
 Notation "'eta_compose'" := (fun g f x => g (f x)).
 
 (* \circ *)
@@ -58,3 +61,5 @@ Hint Extern 10 (_ <= _)%nat => lia : terms.
 Hint Extern 10 (@eq nat _ _) => lia : terms.
 
 Ltac easy ::= easy0 || solve [intuition eauto 3 with core terms].
+
+Ltac inv H := inversion_clear H.

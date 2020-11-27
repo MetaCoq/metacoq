@@ -1889,74 +1889,6 @@ Section SubstIdentity.
       now rewrite mapi_nth.
   Qed.
 
-  Fixpoint unfold {A} (n : nat) (f : nat -> A) : list A :=
-    match n with
-    | 0 => []
-    | S n => unfold n f ++ [f n]
-    end.
-
-  Lemma mapi_irrel_list {A B} (f : nat -> A) (l l' : list B) :
-    #|l| = #|l'| ->
-    mapi (fun i (x : B) => f i) l = mapi (fun i x => f i) l'.
-  Proof.
-    induction l in f, l' |- *; destruct l' => //; simpl; auto.
-    intros [= eq]. f_equal.
-    rewrite !mapi_rec_Sk.
-    now rewrite [mapi_rec _ _ _](IHl (fun x => (f (S x))) l').
-  Qed.
-
-  Lemma mapi_unfold {A B} (f : nat -> B) l : mapi (fun i (x : A) => f i) l = unfold #|l| f.
-  Proof.
-    induction l in f |- *; simpl; auto.
-    rewrite mapi_rec_Sk.
-    rewrite -IHl. rewrite -(mapi_rec_Sk (fun i x => f i) l 0).
-    change [f #|l|] with (mapi_rec (fun i x => f i) [a] #|l|).
-    rewrite -(Nat.add_0_r #|l|). rewrite -mapi_rec_app.
-    change (f 0 :: _) with (mapi (fun i x => f i) (a :: l)).
-    apply mapi_irrel_list. simpl. rewrite app_length /=; lia.
-  Qed.
-
-  Lemma forallb_mapi {A B} (p : B -> bool) (f : nat -> B) l :
-    (forall i, i < #|l| -> p (f i)) ->
-    forallb p (mapi (fun i (x : A) => f i) l).
-  Proof.
-    intros Hp. rewrite (mapi_unfold f).
-    induction #|l| in *; simpl; auto.
-    rewrite forallb_app. simpl. now rewrite Hp // !andb_true_r.
-  Qed.
-
-  Lemma In_unfold n i : In (Level.Var i) (unfold n Level.Var) -> i < n.
-  Proof.
-    induction n; simpl => //.
-    intros H; apply in_app_or in H.
-    destruct H.
-    - specialize (IHn H). lia.
-    - simpl in H. destruct H; [injection H|].
-      * intros ->. auto.
-      * destruct H.
-  Qed.
-
-  Lemma In_fold_right_add x l :
-    In x l <-> LevelSet.In x (fold_right LevelSet.add LevelSet.empty l).
-  Proof.
-    split.
-    - induction l; simpl => //.
-      intros [<-|H].
-      * eapply LevelSet.add_spec; left; auto.
-      * eapply LevelSet.add_spec; right; auto.
-    - induction l; simpl => //.
-      * now rewrite LevelSetFact.empty_iff.
-      * rewrite LevelSet.add_spec. intuition auto.
-  Qed.
-
-  Lemma CS_For_all_union f cst cst' : ConstraintSet.For_all f (ConstraintSet.union cst cst') ->
-    ConstraintSet.For_all f cst.
-  Proof.
-    unfold CS.For_all.
-    intros IH x inx. apply (IH x).
-    now eapply CS.union_spec; left.
-  Qed.
-
   Lemma declared_inductive_wf_ext_wk Σ mdecl mind :
     wf Σ ->
     declared_minductive Σ mind mdecl ->
@@ -1980,50 +1912,6 @@ Section SubstIdentity.
   Qed.
 
   Hint Resolve declared_inductive_wf_ext_wk declared_inductive_wf_global_ext : pcuic.
-
-  Instance For_all_proper P : Morphisms.Proper (CS.Equal ==> iff)%signature (ConstraintSet.For_all P).
-  Proof.
-    intros s s' eqs.
-    unfold CS.For_all. split; intros IH x inxs; apply (IH x);
-    now apply eqs.
-  Qed.
-
-  Lemma unfold_length {A} (f : nat -> A) m : #|unfold m f| = m.
-  Proof.
-    induction m; simpl; rewrite ?app_length /=; auto. lia.
-  Qed.
-
-  Lemma nth_error_unfold {A} (f : nat -> A) m n : n < m <-> nth_error (unfold m f) n = Some (f n).
-  Proof.
-    induction m in n |- *; split; intros Hn; try lia.
-    - simpl in Hn. rewrite nth_error_nil in Hn. discriminate.
-    - destruct (eq_dec n m); [subst|].
-      * simpl. rewrite nth_error_app_ge unfold_length // Nat.sub_diag /= //.
-      * simpl. rewrite nth_error_app_lt ?unfold_length //; try lia.
-        apply IHm; lia.
-    - simpl in Hn. eapply nth_error_Some_length in Hn.
-      rewrite app_length /= unfold_length in Hn. lia.
-  Qed.
-
-  Lemma nth_error_unfold_inv {A} (f : nat -> A) m n t : nth_error (unfold m f) n = Some t -> t = (f n).
-  Proof.
-    induction m in n |- *; intros Hn; try lia.
-    - simpl in Hn. rewrite nth_error_nil in Hn. discriminate.
-    - simpl in Hn.
-      pose proof (nth_error_Some_length Hn).
-      rewrite app_length /= unfold_length in H.
-      destruct (eq_dec n m); [subst|].
-      * simpl. revert Hn. rewrite nth_error_app_ge unfold_length // Nat.sub_diag /= //; congruence.
-      * simpl. revert Hn. rewrite nth_error_app_lt ?unfold_length //; try lia. auto.
-  Qed.
-
-  Lemma CS_For_all_add P x s : CS.For_all P (CS.add x s) -> P x /\ CS.For_all P s.
-  Proof.
-    intros.
-    split.
-    * apply (H x), CS.add_spec; left => //.
-    * intros y iny. apply (H y), CS.add_spec; right => //.
-  Qed.
 
   Lemma subst_instance_level_abs l n Σ :
     wf Σ ->
@@ -2101,9 +1989,6 @@ Section SubstIdentity.
       intros v. rewrite H.
       eapply CS_For_all_union.
   Qed.
-
-  Lemma isType_closed {Σ Γ T} : wf Σ.1 -> isType Σ Γ T -> closedn #|Γ| T.
-  Proof. intros wfΣ [s Hs]. now eapply subject_closed in Hs. Qed.
 
   Lemma udecl_prop_in_var_poly {Σ n} : on_udecl_prop Σ.1 Σ.2 -> LevelSet.In (Level.Var n) (levels_of_udecl Σ.2) ->
     ∑ ctx, Σ.2 = Polymorphic_ctx ctx.

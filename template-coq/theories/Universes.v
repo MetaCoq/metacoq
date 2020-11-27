@@ -1,6 +1,7 @@
 From Coq Require Import MSetList MSetFacts MSetProperties MSetDecide.
 From MetaCoq.Template Require Import utils BasicAst config.
 From Equations Require Import Equations.
+Require Import ssreflect.
 
 Local Open Scope nat_scope.
 Local Open Scope string_scope2.
@@ -178,6 +179,25 @@ Proof.
   apply orb_true_iff.
 Qed.
 
+Lemma LevelSet_In_fold_right_add x l :
+  In x l <-> LevelSet.In x (fold_right LevelSet.add LevelSet.empty l).
+Proof.
+  split.
+  - induction l; simpl => //.
+    intros [<-|H].
+    * eapply LevelSet.add_spec; left; auto.
+    * eapply LevelSet.add_spec; right; auto.
+  - induction l; simpl => //.
+    * now rewrite LevelSetFact.empty_iff.
+    * rewrite LevelSet.add_spec. intuition auto.
+Qed.
+
+Lemma LevelSet_union_empty s : LevelSet.union LevelSet.empty s = s.
+Proof.
+  apply LevelSet.eq_leibniz.
+  change LevelSet.eq with LevelSet.Equal.
+  intros x; rewrite LevelSet.union_spec. lsets.
+Qed.
 
 (* prop level is Prop or SProp *)
 Module PropLevel.
@@ -265,7 +285,7 @@ Module UnivExpr.
   Qed.
 
   Definition lt_compat : Proper (Logic.eq ==> Logic.eq ==> iff) lt.
-    intros x x' H1 y y' H2; now rewrite H1, H2.
+    intros x x' H1 y y' H2; now rewrite H1 H2.
   Qed.
 
   Definition compare (x y : t) : comparison :=
@@ -1152,6 +1172,37 @@ End UnivConstraint.
 Module ConstraintSet := MSetList.MakeWithLeibniz UnivConstraint.
 Module ConstraintSetFact := WFactsOn UnivConstraint ConstraintSet.
 Module ConstraintSetProp := WPropertiesOn UnivConstraint ConstraintSet.
+Module CS := ConstraintSet.
+
+Lemma CS_union_empty s : ConstraintSet.union ConstraintSet.empty s = s.
+Proof.
+  apply ConstraintSet.eq_leibniz.
+  change ConstraintSet.eq with ConstraintSet.Equal.
+  intros x; rewrite ConstraintSet.union_spec. lsets.
+Qed.
+
+Lemma CS_For_all_union f cst cst' : ConstraintSet.For_all f (ConstraintSet.union cst cst') ->
+  ConstraintSet.For_all f cst.
+Proof.
+  unfold CS.For_all.
+  intros IH x inx. apply (IH x).
+  now eapply CS.union_spec; left.
+Qed.
+
+Lemma CS_For_all_add P x s : CS.For_all P (CS.add x s) -> P x /\ CS.For_all P s.
+Proof.
+  intros.
+  split.
+  * apply (H x), CS.add_spec; left => //.
+  * intros y iny. apply (H y), CS.add_spec; right => //.
+Qed.
+
+Instance CS_For_all_proper P : Morphisms.Proper (CS.Equal ==> iff)%signature (ConstraintSet.For_all P).
+Proof.
+  intros s s' eqs.
+  unfold CS.For_all. split; intros IH x inxs; apply (IH x);
+  now apply eqs.
+Qed.
 
 (* Being built up from sorted lists without duplicates, constraint sets have 
   decidable equality. This is however not used in the development. *)
@@ -1185,8 +1236,6 @@ Module Instance.
   Definition equal_upto (f : Level.t -> Level.t -> bool) (i j : t) :=
     forallb2 f i j.
 End Instance.
-
-
 
 Module UContext.
   Definition t := Instance.t × ConstraintSet.t.
@@ -1471,7 +1520,7 @@ Section Univ.
   Proof.
     intros H1 H2 v Hv.
     specialize (is_prop_and_is_sprop_val_false _ H1 H2 v) as [n Hzero].
-    rewrite val_universe_sup, Hzero. destruct (Universe.univ_val v s2); simpl; lia.
+    rewrite val_universe_sup Hzero. destruct (Universe.univ_val v s2); simpl; lia.
   Qed.
 
   Lemma leq_universe0_sup_r φ s1 s2 :
@@ -1480,7 +1529,7 @@ Section Univ.
   Proof.
     intros H1 H2 v Hv.
     specialize (is_prop_and_is_sprop_val_false _ H1 H2 v) as [n Hzero].
-    rewrite val_universe_sup, Hzero.
+    rewrite val_universe_sup Hzero.
     destruct (Universe.univ_val v s1); simpl; lia.
   Qed.
 
@@ -1711,8 +1760,9 @@ Section UniverseClosedSubst.
     intro e; split; intro He.
     - apply Universe.map_spec in He. destruct He as [e' [He' X]].
       rewrite closedu_subst_instance_level_expr in X.
-      now subst. apply UnivExprSet.for_all_spec in H; proper.
+      apply UnivExprSet.for_all_spec in H; proper.
       exact (H _ He').
+      now subst. 
     - apply Universe.map_spec. exists e; split; tas.
       symmetry; apply closedu_subst_instance_level_expr.
       apply UnivExprSet.for_all_spec in H; proper. now apply H.
@@ -1792,7 +1842,7 @@ Definition string_of_level (l : Level.t) : string :=
   end.
 
 Definition string_of_level_expr (e : UnivExpr.t) : string :=
-  let '(l, b) := e in string_of_level l ^ (if b then "+1" else "").
+  let '(l, n) := e in string_of_level l ^ (if n is 0 then "" else "+" ^ string_of_nat n).
 
 Definition string_of_sort (u : Universe.t) :=
   match u with
@@ -1892,8 +1942,8 @@ Proof.
   - destruct v;discriminate.
   - apply is_prop_val with (v:=vv) in e.
     specialize (is_prop_and_is_sprop_val_false _ f f1 vv) as [n HH].
-    rewrite e, HH.
-    rewrite e, HH in H2. simpl in H2.
+    rewrite e HH.
+    rewrite e HH in H2. simpl in H2.
     simpl. destruct (Universe.univ_val vv u') eqn:eq; simpl; auto.
   - destruct v';discriminate.
   - apply is_prop_val with (v:=vv) in f.
@@ -1901,13 +1951,13 @@ Proof.
     rewrite f in H2. eapply univ_le_prop_inv in H2. cong.
   - apply is_sprop_val with (v:=vv) in e1.
     specialize (is_prop_and_is_sprop_val_false _ f f1 vv) as [n HH].
-    rewrite HH, e1 in H2. now simpl in H2.
+    rewrite HH e1 in H2. now simpl in H2.
   - apply is_sprop_val with (v:=vv) in f1.
     specialize (is_prop_and_is_sprop_val_false _ e e1 vv) as [n HH].
     rewrite f1 in H2. apply univ_le_sprop_inv in H2; cong.
   - specialize (is_prop_and_is_sprop_val_false _ e e1 vv) as [n HH].
     specialize (is_prop_and_is_sprop_val_false _ f f1 vv) as [n' HH'].
-    rewrite HH, HH'. apply univ_val_max_mon; auto.
+    rewrite HH HH'. apply univ_val_max_mon; auto.
     now rewrite <- HH, <- HH'.
 Qed.
 
@@ -1959,7 +2009,7 @@ Section UniverseLemmas.
     intros s1 s1' H1 s2 s2' H2.
     unfold_eq_universe. specialize (H1 v Hv). specialize (H2 v Hv).
     rewrite !val_universe_sup.
-    now rewrite H1, H2.
+    now rewrite H1 H2.
   Qed.
 
   Lemma sort_of_product_twice u s :
@@ -1968,7 +2018,7 @@ Section UniverseLemmas.
   Proof.
     destruct u,s;auto.
     unfold Universe.sort_of_product;cbn.
-    now rewrite sup0_assoc, sup0_idem.
+    now rewrite sup0_assoc sup0_idem.
   Qed.
 End UniverseLemmas.
 
@@ -2100,7 +2150,7 @@ Section no_prop_leq_type.
   Proof.
     red. destruct check_univs; [|trivial].
     intros H1 H2 v Hv. eapply is_prop_val in H1; eapply is_prop_val in H2.
-    rewrite H1, H2. lled; lia.
+    rewrite -> H1, H2. lled; lia.
   Qed.
 
   Lemma leq_sprop_sprop {l l'} :
@@ -2109,7 +2159,7 @@ Section no_prop_leq_type.
   Proof.
     red. destruct check_univs; [|trivial].
     intros H1 H2 v Hv. eapply is_sprop_val in H1; eapply is_sprop_val in H2.
-    rewrite H1, H2. lled; lia.
+    rewrite -> H1, H2. lled; lia.
   Qed.
   
   Lemma leq_prop_is_prop_sprop {x s} :
@@ -2127,7 +2177,7 @@ Section no_prop_leq_type.
     consistent ϕ ->
     leq_universe ϕ (Universe.super l) l' -> Universe.is_prop l' -> False.
   Proof.
-    intros Hcf [v Hv] H1 H2. unfold leq_universe in *; rewrite Hcf in *.
+    intros Hcf [v Hv] H1 H2. rewrite /leq_universe Hcf in H1.
     eapply is_prop_val with (v:=v) in H2. specialize (H1 _ Hv).
     rewrite H2 in H1. destruct l as [| |]; destruct l'; lled; cbn -[Z.add] in *; lia.
   Qed.
@@ -2137,7 +2187,7 @@ Section no_prop_leq_type.
     consistent ϕ ->
     leq_universe ϕ (Universe.super l) l' -> Universe.is_sprop l' -> False.
   Proof.
-    intros Hcf [v Hv] H1 H2. unfold leq_universe in *; rewrite Hcf in *.
+    intros Hcf [v Hv] H1 H2. rewrite /leq_universe Hcf in H1.
     eapply is_sprop_val with (v:=v) in H2. specialize (H1 _ Hv).
     rewrite H2 in H1. destruct l as [| |]; destruct l'; lled; cbn -[Z.add] in *; lia.
   Qed.

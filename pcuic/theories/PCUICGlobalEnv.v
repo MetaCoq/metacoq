@@ -68,6 +68,25 @@ Proof.
      split; apply LevelSet.union_spec; right; apply XX.
 Qed.
 
+Lemma wf_consistent {cf:checker_flags} Σ : wf Σ -> consistent (global_constraints Σ).
+Proof.
+  destruct Σ.
+  - exists {| valuation_mono := fun _ => 1%positive;  valuation_poly := fun _ => 0 |}.
+    intros x Hx; now apply ConstraintSetFact.empty_iff in Hx.
+  - inversion 1; subst. subst udecl. clear -H2.
+    destruct H2 as [_ [_ [_ [v Hv]]]].
+    exists v. intros ct Hc. apply Hv. simpl in *.
+    apply ConstraintSet.union_spec in Hc. destruct Hc.
+    apply ConstraintSet.union_spec; simpl.
+    + left. destruct d.
+      destruct c, cst_universes. assumption.
+      apply ConstraintSetFact.empty_iff in H; contradiction.
+      destruct m, ind_universes. assumption.
+      apply ConstraintSetFact.empty_iff in H; contradiction.
+    + apply ConstraintSet.union_spec; simpl.
+      now right.
+Qed.
+
 Definition global_ext_uctx_consistent {cf:checker_flags} Σ
  : wf_ext Σ -> consistent (global_ext_uctx Σ).2.
 Proof. 
@@ -75,3 +94,5 @@ Proof.
   unfold wf_ext, on_global_env_ext in HΣ.
   destruct HΣ as [_ [_ [_ HH]]]. apply HH.
 Qed.
+
+

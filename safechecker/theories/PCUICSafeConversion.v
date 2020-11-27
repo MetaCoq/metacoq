@@ -7,7 +7,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICSafeLemmata PCUICNormal PCUICInversion PCUICReduction PCUICPosition
      PCUICPrincipality PCUICContextConversion PCUICSN PCUICUtils PCUICWeakening
      PCUICConvCumInversion.
-From MetaCoq.SafeChecker Require Import PCUICEqualityDec PCUICSafeReduce.
+From MetaCoq.SafeChecker Require Import PCUICEqualityDec PCUICErrors PCUICSafeReduce.
 
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
@@ -476,94 +476,6 @@ Section Conversion.
   Notation alt_conv_term Γ t π t' π' :=
     (∥ Σ ;;; Γ ,,, stack_context π |- zipp t π = zipp t' π' ∥)
       (only parsing).
-
-  Inductive ConversionError :=
-  | NotFoundConstants (c1 c2 : kername)
-
-  | NotFoundConstant (c : kername)
-
-  | LambdaNotConvertibleTypes
-      (Γ1 : context) (na : aname) (A1 t1 : term)
-      (Γ2 : context) (na' : aname) (A2 t2 : term)
-      (e : ConversionError)
-
-  | LambdaNotConvertibleAnn
-      (Γ1 : context) (na : aname) (A1 t1 : term)
-      (Γ2 : context) (na' : aname) (A2 t2 : term)
-
-  | ProdNotConvertibleDomains
-      (Γ1 : context) (na : aname) (A1 B1 : term)
-      (Γ2 : context) (na' : aname) (A2 B2 : term)
-      (e : ConversionError)
-  
-  | ProdNotConvertibleAnn
-      (Γ1 : context) (na : aname) (A1 B1 : term)
-      (Γ2 : context) (na' : aname) (A2 B2 : term)
-
-  | CaseOnDifferentInd
-      (Γ1 : context)
-      (ind : inductive) (par : nat) (p c : term) (brs : list (nat × term))
-      (Γ2 : context)
-      (ind' : inductive) (par' : nat) (p' c' : term) (brs' : list (nat × term))
-
-  | CaseBranchNumMismatch
-      (ind : inductive) (par : nat)
-      (Γ : context) (p c : term) (brs1 : list (nat × term))
-      (m : nat) (br : term) (brs2 : list (nat × term))
-      (Γ' : context) (p' c' : term) (brs1' : list (nat × term))
-      (m' : nat) (br' : term) (brs2' : list (nat × term))
-
-  | DistinctStuckProj
-      (Γ : context) (p : projection) (c : term)
-      (Γ' : context) (p' : projection) (c' : term)
-
-  | CannotUnfoldFix
-      (Γ : context) (mfix : mfixpoint term) (idx : nat)
-      (Γ' : context) (mfix' : mfixpoint term) (idx' : nat)
-
-  | FixRargMismatch (idx : nat)
-      (Γ : context) (u : def term) (mfix1 mfix2 : mfixpoint term)
-      (Γ' : context) (v : def term) (mfix1' mfix2' : mfixpoint term)
-
-  | FixMfixMismatch (idx : nat)
-      (Γ : context) (mfix : mfixpoint term)
-      (Γ' : context) (mfix' : mfixpoint term)
-
-  | DistinctCoFix
-      (Γ : context) (mfix : mfixpoint term) (idx : nat)
-      (Γ' : context) (mfix' : mfixpoint term) (idx' : nat)
-
-  | CoFixRargMismatch (idx : nat)
-      (Γ : context) (u : def term) (mfix1 mfix2 : mfixpoint term)
-      (Γ' : context) (v : def term) (mfix1' mfix2' : mfixpoint term)
-
-  | CoFixMfixMismatch (idx : nat)
-      (Γ : context) (mfix : mfixpoint term)
-      (Γ' : context) (mfix' : mfixpoint term)
-
-  | StackHeadError
-      (leq : conv_pb)
-      (Γ1 : context)
-      (t1 : term) (args1 : list term) (u1 : term) (l1 : list term)
-      (Γ2 : context)
-      (t2 : term) (u2 : term) (l2 : list term)
-      (e : ConversionError)
-
-  | StackTailError (leq : conv_pb)
-      (Γ1 : context)
-      (t1 : term) (args1 : list term) (u1 : term) (l1 : list term)
-      (Γ2 : context)
-      (t2 : term) (u2 : term) (l2 : list term)
-      (e : ConversionError)
-
-  | StackMismatch
-      (Γ1 : context) (t1 : term) (args1 l1 : list term)
-      (Γ2 : context) (t2 : term) (l2 : list term)
-
-  | HeadMismatch
-      (leq : conv_pb)
-      (Γ1 : context) (t1 : term)
-      (Γ2 : context) (t2 : term).
 
   Inductive ConversionResult (P : Prop) :=
   | Success (h : P)

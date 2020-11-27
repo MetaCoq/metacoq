@@ -3,9 +3,6 @@ From MetaCoq.Template Require Import MCPrelude MCList MCRelations MCProd MCOptio
 From Equations Require Import Equations.
 Import ListNotations.
 
-Local Ltac inv H := inversion_clear H.
-Local Coercion is_true : bool >-> Sortclass.
-
 Derive Signature for Forall Forall2.
 
 (** Combinators *)
@@ -115,6 +112,18 @@ Proof.
   - induction l; rewrite /= //. rewrite andb_and.
     intros [pa pl].
     constructor; auto. now destruct (Hp a).
+Qed.
+
+Lemma forallbP_cond {A} (P Q : A -> Prop) (p : A -> bool) l : 
+  Forall Q l ->
+  (forall x, Q x -> reflect (P x) (p x)) -> reflect (Forall P l) (forallb p l).
+Proof.
+  intros HQ Hp.
+  apply iff_reflect; split.
+  - induction HQ; intros HP; depelim HP; rewrite /= // IHHQ // andb_true_r.
+    now destruct (Hp x H).
+  - induction HQ; rewrite /= //. move/andb_and => [pa pl].
+    constructor; auto. now destruct (Hp _ H).
 Qed.
 
 Lemma map_eq_inj {A B} (f g : A -> B) l: map f l = map g l ->

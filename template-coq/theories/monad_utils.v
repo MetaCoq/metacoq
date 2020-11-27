@@ -1,8 +1,9 @@
 (* todo(gmm): This file should really be replaced by a real
  * monad library.
  *)
-Require Import List.
-From MetaCoq.Template Require Import All_Forall.
+Require Import Arith List.
+From MetaCoq.Template Require Import All_Forall MCSquash.
+From Equations Require Import Equations.
 Coercion is_true : bool >-> Sortclass.
 
 Import ListNotations.
@@ -147,3 +148,78 @@ Definition check_eq_nat {T E} {M : Monad T} {M' : MonadExc E T} n m (e : E) : T 
   | left p => ret p
   | right p => raise e
   end.
+
+Program Fixpoint monad_Alli {T} {M : Monad T} {A} {P} (f : forall n x, T (∥ P n x ∥)) l n
+  : T (∥ @Alli A P n l ∥)
+  := match l with
+      | [] => ret (sq Alli_nil)
+      | a :: l => X <- f n a ;;
+                  Y <- monad_Alli f l (S n) ;;
+                  ret _
+      end.
+Next Obligation.
+  sq. constructor; assumption.
+Defined.
+
+Program Fixpoint monad_Alli_All {T} {M : Monad T} {A} {P} {Q} (f : forall n x, ∥ Q x ∥ -> T (∥ P n x ∥)) l n :
+  ∥ All Q l ∥ -> T (∥ @Alli A P n l ∥)
+  := match l with
+      | [] => fun _ => ret (sq Alli_nil)
+      | a :: l => fun allq => X <- f n a _ ;;
+                  Y <- monad_Alli_All f l (S n) _ ;;
+                  ret _
+      end.
+Next Obligation. sq.
+  now depelim allq.
+Qed.
+Next Obligation.
+  sq; now depelim allq.
+Qed.
+Next Obligation.
+  sq. constructor; assumption.
+Defined.
+
+Section monad_Alli_nth.
+  Context {T} {M : Monad T} {A} {P : nat -> A -> Type}.
+  Program Fixpoint monad_Alli_nth_gen l k
+    (f : forall n x, nth_error l n = Some x -> T (∥ P (k + n) x ∥)) : 
+    T (∥ @Alli A P k l ∥)
+    := match l with
+      | [] => ret (sq Alli_nil)
+      | a :: l => X <- f 0 a _ ;;
+                  Y <- monad_Alli_nth_gen l (S k) (fun n x hnth => px <- f (S n) x hnth;; ret _) ;;
+                  ret _
+      end.
+    Next Obligation.
+      sq. now rewrite Nat.add_succ_r in px.
+    Qed.
+    Next Obligation.
+      sq. rewrite Nat.add_0_r in X. constructor; auto.
+    Qed.
+
+  Definition monad_Alli_nth l (f : forall n x, nth_error l n = Some x -> T (∥ P n x ∥)) : T (∥ @Alli A P 0 l ∥) :=
+    monad_Alli_nth_gen l 0 f.
+
+End monad_Alli_nth.
+
+Section MonadAllAll.
+  Context {T} {M : Monad T} {A} {P : A -> Type} {Q} (f : forall x, ∥ Q x ∥ -> T (∥ P x ∥)).
+  Program Fixpoint monad_All_All l : ∥ All Q l ∥ -> T (∥ All P l ∥) := 
+    match l return ∥ All Q l ∥ -> T (∥ All P l ∥) with
+      | [] => fun _ => ret (sq All_nil)
+      | a :: l => fun allq => 
+      X <- f a _ ;;
+      Y <- monad_All_All l _ ;;
+      ret _
+      end.
+  Next Obligation. sq.
+    now depelim allq.
+  Qed.
+  Next Obligation.
+    sq; now depelim allq.
+  Qed.
+  Next Obligation.
+    sq. constructor; assumption.
+  Defined.
+End MonadAllAll.
+

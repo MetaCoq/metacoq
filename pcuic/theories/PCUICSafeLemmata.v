@@ -274,7 +274,29 @@ Section Lemmata.
 
   Arguments iswelltyped {Σ Γ t A} h.
 
+  Definition isType_welltyped {Γ T}
+    : isType Σ Γ T -> welltyped Σ Γ T.
+  Proof.
+    intros []. now econstructor.
+  Qed.
+  Hint Resolve isType_welltyped : pcuic.
+
   Context (hΣ : ∥ wf Σ ∥).
+
+  Lemma validity_wf {Γ t T} :
+    ∥ Σ ;;; Γ |- t : T ∥ -> welltyped Σ Γ T.
+  Proof.
+    destruct hΣ as [wΣ]. intros [X].
+    intros. eapply validity_term in X; try assumption.
+    destruct X. now exists (tSort x).
+  Defined.
+
+  Lemma wat_welltyped {Γ T} :
+    ∥ isType Σ Γ T ∥ -> welltyped Σ Γ T.
+  Proof.
+    destruct hΣ as [wΣ]. intros [X].
+    now apply isType_welltyped.
+  Defined.
 
   Lemma welltyped_alpha Γ u v :
       welltyped Σ Γ u ->
@@ -871,12 +893,6 @@ Section Lemmata.
     | _ => false
     end.
 
-  Fixpoint isProd t :=
-    match t with
-    | tProd na A B => true
-    | _ => false
-    end.
-
   Lemma isAppProd_mkApps :
     forall t l, isAppProd (mkApps t l) = isAppProd t.
   Proof.
@@ -1364,3 +1380,5 @@ Section Lemmata.
   Qed.
   
 End Lemmata.
+
+Hint Resolve isType_welltyped : pcuic.

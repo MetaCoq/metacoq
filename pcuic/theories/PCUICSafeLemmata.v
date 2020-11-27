@@ -925,7 +925,7 @@ Section Lemmata.
     induction l ; intros t h.
     - reflexivity.
     - cbn in h. specialize IHl with (1 := h). subst.
-      cbn in h. exfalso. assumption.
+      cbn in h. exfalso. discriminate.
   Qed.
 
   Lemma isAppProd_isProd :

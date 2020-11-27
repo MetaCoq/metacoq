@@ -159,6 +159,7 @@ Module LevelSet := MSetList.MakeWithLeibniz Level.
 Module LevelSetFact := WFactsOn Level LevelSet.
 Module LevelSetProp := WPropertiesOn Level LevelSet.
 Module LevelSetDecide := WDecide (LevelSet).
+Module LS := LevelSet.
 Ltac lsets := LevelSetDecide.fsetdec.
 
 Definition LevelSet_pair x y
@@ -1196,7 +1197,6 @@ Proof.
   * apply (H x), CS.add_spec; left => //.
   * intros y iny. apply (H y), CS.add_spec; right => //.
 Qed.
-
 Instance CS_For_all_proper P : Morphisms.Proper (CS.Equal ==> iff)%signature (ConstraintSet.For_all P).
 Proof.
   intros s s' eqs.

@@ -13,7 +13,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICClosed PCUICUnivSubstitution PCUICWeakeningEnv.
 
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICErrors PCUICEqualityDec
-  PCUICSafeConversion PCUICWfReduction PCUICTypeChecker.
+  PCUICSafeConversion PCUICWfReduction PCUICWfEnv PCUICTypeChecker.
 
 From Equations Require Import Equations.
 Require Import ssreflect ssrbool.
@@ -110,15 +110,14 @@ Section CheckEnv.
     : ∥ Alli (on_ind_body (lift_typing typing) Σ ind mdecl) 0 (ind_bodies mdecl) ∥ ->
       ∥ wf_local Σ (ind_params mdecl) ∥ ->
       context_assumptions (ind_params mdecl) = ind_npars mdecl ->
-      ind_guard mdecl ->
       check_variance (ind_universes mdecl) (ind_variance mdecl) ->
       ∥ on_inductive (lift_typing typing) Σ ind mdecl ∥.
   Proof.
-    intros H H0 H1 H2 H3. sq. econstructor; try eassumption.
-    unfold check_variance in H3. unfold on_variance.
+    intros H H0 H1 H2. sq. econstructor; try eassumption.
+    unfold check_variance in H2. unfold on_variance.
     destruct (ind_universes mdecl) eqn:E;
     destruct (ind_variance mdecl) eqn:E'; try congruence.
-    2:split. now eapply eqb_eq in H3.
+    2:split. now eapply eqb_eq in H2.
   Defined.
 
 
@@ -444,8 +443,6 @@ Section CheckEnv.
     wf_local Σ Γ * wt_decl Σ Γ d.
   Proof.
     intros wfd; depelim wfd; split; simpl; pcuic.
-    destruct l as [s Hs]. now exists (tSort s).
-    destruct l as [s Hs]. now exists (tSort s).
     now exists t.
   Qed.
 
@@ -573,9 +570,9 @@ Section CheckEnv.
     Next Obligation.
       destruct Σ as [Σ wfΣ G wfG]; simpl in *. sq.
       destruct le; simpl.
-      - eapply leqb_term_spec in check0; sq; auto.
+      - eapply leqb_term_spec in check; sq; auto.
         eapply wfΣ.
-      - eapply eqb_term_spec in check0; sq; auto.
+      - eapply eqb_term_spec in check; sq; auto.
         apply wfΣ.
     Qed.
 
@@ -1356,6 +1353,19 @@ Section CheckEnv.
       Qed.
   End PositivityCheck.
 
+  Lemma In_unfold_inj {A} (f : nat -> A) n i : 
+    (forall i j, f i = f j -> i = j) ->
+    In (f i) (unfold n f) <-> i < n.
+  Proof.
+    intros hf. split.
+    now apply In_unfold_inj.
+    intros.
+    induction n in i, H |- *; simpl => //. lia.
+    eapply in_app_iff.
+    destruct (eq_dec i n). subst. right; left; auto.
+    left. eapply IHn. lia.
+  Qed.
+
   Lemma In_Var_global_ext_poly {n Σ inst cstrs} : 
     n < #|inst| ->
     LevelSet.mem (Level.Var n) (global_ext_levels (Σ, Polymorphic_ctx (inst, cstrs))).
@@ -1363,9 +1373,9 @@ Section CheckEnv.
     intros Hn.
     unfold global_ext_levels; simpl.
       apply LevelSet.mem_spec; rewrite LevelSet.union_spec. left.
-    rewrite /AUContext.levels /= PCUICUnivSubstitution.mapi_unfold.
+    rewrite /AUContext.levels /= mapi_unfold.
     apply LevelSetProp.of_list_1, InA_In_eq.
-    eapply In_unfold_inj; try congruence. exists n. intuition auto.
+    eapply In_unfold_inj; try congruence.
   Qed.
   
   Lemma on_udecl_poly_bounded Σ inst cstrs :
@@ -1591,6 +1601,68 @@ Section CheckEnv.
     eapply All2_refl. intros. simpl. eapply (eq_decl_upto_refl Σ).
   Qed.
 
+  Lemma wt_cstrs {Σ : wf_env_ext} {n mdecl cstrs cs} :
+    ∥ All2
+      (fun (cstr : (ident × term) × nat) (cs0 : constructor_shape) =>
+      check_constructor_spec Σ n mdecl cstr cs0) cstrs cs ∥ -> 
+    ∥ All (fun cstr => welltyped Σ (arities_context mdecl.(ind_bodies)) cstr.1.2) cstrs ∥.
+  Proof.
+    intros; sq.
+    solve_all. simpl.
+    destruct X as [[[isTy _] _] _]. simpl in isTy.
+    now eapply isType_welltyped in isTy.
+  Qed.
+  
+  Lemma get_wt_indices {Σ : wf_env_ext} {mdecl cstrs cs}
+    (wfar : ∥ wf_ind_types Σ mdecl ∥)
+    (wfpars : ∥ wf_local Σ (ind_params mdecl) ∥)
+    (n : nat) (idecl : one_inductive_body) (indices : context)
+    (hnth : nth_error mdecl.(ind_bodies) n = Some idecl)    
+    (heq : ∥ ∑ inds, idecl.(ind_type) = it_mkProd_or_LetIn (mdecl.(ind_params) ,,, indices) (tSort inds) ∥) :
+    ∥ All2
+      (fun (cstr : (ident × term) × nat) (cs0 : constructor_shape) =>
+      check_constructor_spec Σ (S n) mdecl cstr cs0) cstrs cs ∥ -> 
+    ∥ All (fun cs => wt_indices Σ mdecl indices cs) cs ∥.
+  Proof.
+    destruct Σ as [Σ wfΣ G wfG]; simpl in *. destruct wfΣ.
+    intros; sq.
+    solve_all. simpl.
+    destruct X as [[[isTy eq] sorts] eq']. simpl in *.
+    assert(wf_local Σ (ind_params mdecl,,, indices)).
+    { eapply nth_error_all in wfar; eauto. simpl in wfar.
+      destruct heq as [s Hs]. rewrite Hs in wfar.
+      eapply isType_it_mkProd_or_LetIn_wf_local in wfar.
+      now rewrite app_context_nil_l in wfar. auto. }
+    red. rewrite eq in isTy.
+    eapply isType_it_mkProd_or_LetIn_inv in isTy; auto.
+    eapply isType_mkApps_inv in isTy as [fty [s [Hf Hsp]]]; auto.
+    eapply inversion_Rel in Hf as [decl [wfctx [Hnth cum]]]; auto.
+    rewrite nth_error_app_ge in Hnth. lia.
+    split. now rewrite app_context_assoc in wfctx.
+    replace (#|ind_params mdecl,,, cshape_args y| + (#|ind_bodies mdecl| - S n) -
+    #|ind_params mdecl,,, cshape_args y|) with (#|ind_bodies mdecl| - S n) in Hnth by lia.
+    pose proof (nth_error_Some_length hnth).
+    rewrite nth_error_rev in hnth => //.
+    eapply nth_error_arities_context in hnth. rewrite Hnth in hnth.
+    noconf hnth; simpl in *. clear Hnth.
+    eapply PCUICSpine.typing_spine_strengthen in Hsp; eauto.
+    clear cum.
+    destruct heq as [inds eqind].
+    move: Hsp. rewrite eqind.
+    rewrite lift_it_mkProd_or_LetIn /= => Hs.
+    rewrite closed_ctx_lift in Hs. eapply PCUICClosed.closed_wf_local; eauto.
+    rewrite app_context_assoc in Hs wfctx.
+    eapply typing_spine_it_mkProd_or_LetIn_ext_list_inv in Hs; auto.
+    2:{ eapply PCUICWeakening.weaken_wf_local; pcuic.
+        now eapply wf_ind_types_wf_arities. }
+    2:{ eapply PCUICClosed.closed_wf_local; eauto. }
+    eapply typing_spine_it_mkProd_or_LetIn_inv in Hs => //. auto.
+    eapply weakening_wf_local; eauto.
+    rewrite -app_context_assoc.
+    eapply PCUICWeakening.weaken_wf_local; eauto.
+    now eapply wf_ind_types_wf_arities.
+  Qed.
+
   Program Definition check_cstr_variance (Σ : wf_env) mdecl (id : kername) indices
     (mdeclvar : check_variance mdecl.(ind_universes) mdecl.(ind_variance) = true) cs 
     (wfΣ : ∥ wf_ext (Σ, ind_universes mdecl) ∥)
@@ -1655,67 +1727,27 @@ Section CheckEnv.
       destruct ind_universes as [|[]] => //.
     Qed.
 
-  Lemma wt_cstrs {Σ : wf_env_ext} {n mdecl cstrs cs} :
-    ∥ All2
-      (fun (cstr : (ident × term) × nat) (cs0 : constructor_shape) =>
-      check_constructor_spec Σ n mdecl cstr cs0) cstrs cs ∥ -> 
-    ∥ All (fun cstr => welltyped Σ (arities_context mdecl.(ind_bodies)) cstr.1.2) cstrs ∥.
-  Proof.
-    intros; sq.
-    solve_all. simpl.
-    destruct X as [[[isTy _] _] _]. simpl in isTy. 
-    apply (isType_welltyped isTy).
-  Qed.
-  
-  Lemma get_wt_indices {Σ : wf_env_ext} {mdecl cstrs cs}
-    (wfar : ∥ wf_ind_types Σ mdecl ∥)
-    (wfpars : ∥ wf_local Σ (ind_params mdecl) ∥)
-    (n : nat) (idecl : one_inductive_body) (indices : context)
-    (hnth : nth_error mdecl.(ind_bodies) n = Some idecl)    
-    (heq : ∥ ∑ inds, idecl.(ind_type) = it_mkProd_or_LetIn (mdecl.(ind_params) ,,, indices) (tSort inds) ∥) :
-    ∥ All2
-      (fun (cstr : (ident × term) × nat) (cs0 : constructor_shape) =>
-      check_constructor_spec Σ (S n) mdecl cstr cs0) cstrs cs ∥ -> 
-    ∥ All (fun cs => wt_indices Σ mdecl indices cs) cs ∥.
-  Proof.
-    destruct Σ as [Σ wfΣ G wfG]; simpl in *. destruct wfΣ.
-    intros; sq.
-    solve_all. simpl.
-    destruct X as [[[isTy eq] sorts] eq']. simpl in *.
-    assert(wf_local Σ (ind_params mdecl,,, indices)).
-    { eapply nth_error_all in wfar; eauto. simpl in wfar.
-      destruct heq as [s Hs]. rewrite Hs in wfar.
-      eapply isType_it_mkProd_or_LetIn_wf_local in wfar.
-      now rewrite app_context_nil_l in wfar. auto. }
-    red. rewrite eq in isTy.
-    eapply isType_it_mkProd_or_LetIn_inv in isTy; auto.
-    eapply isType_mkApps_inv in isTy as [fty [s [Hf Hsp]]]; auto.
-    eapply inversion_Rel in Hf as [decl [wfctx [Hnth cum]]]; auto.
-    rewrite nth_error_app_ge in Hnth. lia.
-    split. now rewrite app_context_assoc in wfctx.
-    replace (#|ind_params mdecl,,, cshape_args y| + (#|ind_bodies mdecl| - S n) -
-    #|ind_params mdecl,,, cshape_args y|) with (#|ind_bodies mdecl| - S n) in Hnth by lia.
-    pose proof (nth_error_Some_length hnth).
-    rewrite nth_error_rev in hnth => //.
-    eapply nth_error_arities_context in hnth. rewrite Hnth in hnth.
-    noconf hnth; simpl in *. clear Hnth.
-    eapply PCUICSpine.typing_spine_strengthen in Hsp; eauto.
-    clear cum.
-    destruct heq as [inds eqind].
-    move: Hsp. rewrite eqind.
-    rewrite lift_it_mkProd_or_LetIn /= => Hs.
-    rewrite closed_ctx_lift in Hs. eapply PCUICClosed.closed_wf_local; eauto.
-    rewrite app_context_assoc in Hs wfctx.
-    eapply typing_spine_it_mkProd_or_LetIn_ext_list_inv in Hs; auto.
-    2:{ eapply PCUICWeakening.weaken_wf_local; pcuic.
-        now eapply wf_ind_types_wf_arities. }
-    2:{ eapply PCUICClosed.closed_wf_local; eauto. }
-    eapply typing_spine_it_mkProd_or_LetIn_inv in Hs => //. auto.
-    eapply weakening_wf_local; eauto.
-    rewrite -app_context_assoc.
-    eapply PCUICWeakening.weaken_wf_local; eauto.
-    now eapply wf_ind_types_wf_arities.
-  Qed.
+  (** Moving it causes a universe bug... *)
+  Section MonadAllAll.
+    Context {T : Type -> Type} {M : Monad T} {A} {P : A -> Type} {Q : A -> Type} (f : forall x, ∥ Q x ∥ -> T (∥ P x ∥)).
+    Program Fixpoint monad_All_All l : ∥ All Q l ∥ -> T (∥ All P l ∥) := 
+      match l return ∥ All Q l ∥ -> T (∥ All P l ∥) with
+        | [] => fun _ => ret (sq All_nil)
+        | a :: l => fun allq => 
+        X <- f a _ ;;
+        Y <- monad_All_All l _ ;;
+        ret _
+        end.
+    Next Obligation. sq.
+      now depelim allq.
+    Qed.
+    Next Obligation.
+      sq; now depelim allq.
+    Qed.
+    Next Obligation.
+      sq. constructor; assumption.
+    Defined.
+  End MonadAllAll.
 
   Program Definition check_constructors (Σ0 : wf_env) (Σ : wf_env_ext) (id : kername) (mdecl : mutual_inductive_body)
     (HΣ : Σ.(wf_env_ext_env) = (Σ0, ind_universes mdecl))
@@ -1738,7 +1770,6 @@ Section CheckEnv.
       
   Next Obligation. now sq. Qed.
   Next Obligation. apply wf_env_ext_wf. Qed.
-  
   Next Obligation.
     epose proof (get_wt_indices wfar wfpars _ _ _ hnth heq Hcs).
     destruct Σ as [Σ wfΣ G wfG]; simpl in *. clear X.
@@ -2118,15 +2149,14 @@ Section CheckEnv.
       let wfΣ : wf_env_ext := {| wf_env_ext_env := Σ; wf_env_ext_wf := _; 
         wf_env_ext_graph := G; wf_env_ext_graph_wf := HG |} in
       let id := string_of_kername kn in
-      X5 <- wrap_error Σ id (check_eq_true (check_variance mdecl.(ind_universes) mdecl.(ind_variance)) (Msg "variance"));;
-      X2 <- wrap_error Σ id (check_context HΣ HΣ' G HG (ind_params mdecl)) ;;
-      X3 <- wrap_error Σ id (check_eq_nat (context_assumptions (ind_params mdecl))
+      check_var <- wrap_error Σ id (check_eq_true (check_variance mdecl.(ind_universes) mdecl.(ind_variance)) (Msg "variance"));;
+      check_pars <- wrap_error Σ id (check_context HΣ HΣ' G HG (ind_params mdecl)) ;;
+      check_npars <- wrap_error Σ id (check_eq_nat (context_assumptions (ind_params mdecl))
                                        (ind_npars mdecl)
                                        (Msg "wrong number of parameters")) ;;
       onarities <- check_ind_types wfΣ mdecl ;;
-      X1 <- monad_Alli_nth mdecl.(ind_bodies) (fun i oib Hoib => check_one_ind_body Σ0 wfΣ kn mdecl eq X2 onarities X5 i oib Hoib);;
-      X4 <- wrap_error Σ id (check_eq_true (ind_guard mdecl) (Msg "guard"));;
-      ret (Build_on_inductive_sq X1 X2 X3 X4 X5)
+      check_bodies <- monad_Alli_nth mdecl.(ind_bodies) (fun i oib Hoib => check_one_ind_body Σ0 wfΣ kn mdecl eq check_pars onarities check_var i oib Hoib);;
+      ret (Build_on_inductive_sq check_bodies check_pars check_npars check_var)
     end.
   Next Obligation.
     sq. unfold on_constant_decl; rewrite <- Heq_anonymous; tas.
@@ -2232,7 +2262,7 @@ Section CheckEnv.
       destruct g. destruct c, cst_universes; try discriminate; reflexivity.
       destruct m, ind_universes; try discriminate; reflexivity. }
     rewrite eq1; clear eq1.
-    now rewrite levelset_union_empty constraintset_union_empty.
+    now rewrite LevelSet_union_empty CS_union_empty.
   Qed.
 
   Obligation Tactic := idtac.

@@ -1338,10 +1338,11 @@ Proof.
                 = nlctx (Γ ,,, fix_context mfix))
       by now rewrite <- nl_fix_context, <- nlctx_app_context.
     constructor.
-    + eapply fix_guard_eq_term with (idx:=n). 1: eassumption.
+    + todo "fix_guard spec".
+      (*eapply fix_guard_eq_term with (idx:=n). 1: eassumption.
       constructor. clear. induction mfix. 1: constructor.
       simpl. constructor; tas. cbn.
-      repeat split; now apply eq_term_upto_univ_tm_nl.
+      repeat split; now apply eq_term_upto_univ_tm_nl.*)
     + now rewrite nth_error_map H0.
     + auto.
     + clear -X0.
@@ -1361,10 +1362,11 @@ Proof.
                 = nlctx (Γ ,,, fix_context mfix))
       by now rewrite <- nl_fix_context, <- nlctx_app_context.
     constructor; auto.
-    + eapply cofix_guard_eq_term with (idx:=n). 1: eassumption.
+    + todo "cofix_guard eq_term".
+      (* eapply cofix_guard_eq_term with (idx:=n). 1: eassumption.
       constructor. clear. induction mfix. 1: constructor.
       simpl. constructor; tas. cbn.
-      repeat split; now apply eq_term_upto_univ_tm_nl.
+      repeat split; now apply eq_term_upto_univ_tm_nl.*)
     + now rewrite nth_error_map H0.
     + clear -X0.
       apply All_map. eapply All_impl; tea.

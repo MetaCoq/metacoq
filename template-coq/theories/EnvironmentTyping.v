@@ -123,7 +123,6 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T).
   Import T E.
 
   Section TypeLocal.
-
     Context (typing : forall (Γ : context), term -> option term -> Type).
 
     Inductive All_local_env : context -> Type :=
@@ -140,7 +139,7 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T).
         typing Γ t None ->
         typing Γ b (Some t) ->
         All_local_env (Γ ,, vdef na b t).
-
+  Derive Signature for All_local_env.
   End TypeLocal.
 
   Arguments localenv_nil {_}.
@@ -288,8 +287,6 @@ End EnvTypingSig.
 Module Type Typing (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E).
 
   Import T E ET.
-
-  Parameter (ind_guard : mutual_inductive_body -> bool).
 
   Parameter (conv : forall `{checker_flags}, global_env_ext -> context -> term -> term -> Type).
   Parameter (cumul : forall `{checker_flags}, global_env_ext -> context -> term -> term -> Type).
@@ -819,7 +816,6 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
         onParams : on_context Σ mdecl.(ind_params);
         onNpars : context_assumptions mdecl.(ind_params) = mdecl.(ind_npars);
         onVariance : on_variance mdecl.(ind_universes) mdecl.(ind_variance);
-        onGuard : ind_guard mdecl
       }.
 
     (** *** Typing of constant declarations *)
@@ -905,7 +901,6 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
   Arguments onParams {_ P Σ mind mdecl}.
   Arguments onNpars {_ P Σ mind mdecl}.
   Arguments onVariance {_ P Σ mind mdecl}.
-  Arguments onGuard {_ P Σ mind mdecl}.
 
   Lemma All_local_env_impl (P Q : context -> term -> option term -> Type) l :
     All_local_env P l ->

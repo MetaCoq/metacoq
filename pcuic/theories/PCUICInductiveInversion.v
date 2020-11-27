@@ -379,7 +379,7 @@ Qed.
 
 Lemma subslet_cofix {cf:checker_flags} (Σ : global_env_ext) Γ mfix :
   wf_local Σ Γ ->
-  cofix_guard mfix ->
+  cofix_guard Σ Γ mfix ->
   All (fun d : def term => ∑ s : Universe.t, Σ;;; Γ |- dtype d : tSort s) mfix ->
   All
   (fun d : def term =>

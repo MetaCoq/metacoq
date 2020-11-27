@@ -1197,14 +1197,14 @@ Proof.
       split; auto.
     destruct (on_declared_inductive wfΣ decli) as [onmind oib].
     eapply typing_spine_app; eauto.
-  - invs H0. destruct (declared_inductive_inj isdecl decli) as [-> ->].
+  - invs H0. destruct (declared_inductive_inj d decli) as [-> ->].
     clear decli. split; auto.
     constructor; [|reflexivity].
-    destruct (on_declared_inductive wfΣ isdecl) as [onmind oib].
+    destruct (on_declared_inductive wfΣ d) as [onmind oib].
     pose proof (oib.(onArity)) as ar.
     eapply isType_weaken; eauto.
     eapply (isType_subst_instance_decl _ []); eauto.
-    destruct isdecl; eauto.
+    destruct d; eauto.
     eapply oib.(onArity). auto.
   - specialize (IHtyping1 _ _ wfΣ decli) as [IH cu]; split; auto.
     eapply typing_spine_weaken_concl; pcuic.

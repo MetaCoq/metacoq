@@ -4,7 +4,7 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.Template Require AstUtils Typing.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping
      TemplateToPCUIC.
-From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker.
+From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeChecker.
 
 
 Program Definition infer_template_program {cf : checker_flags} (p : Ast.program) φ Hφ
@@ -107,7 +107,7 @@ Program Definition infer_and_print_template_program {cf : checker_flags} (p : As
   | EnvError Σ (AlreadyDeclared id) =>
     inr ("Already declared: " ^ id)
   | EnvError Σ (IllFormedDecl id e) =>
-    inr ("Type error: " ^ PCUICSafeChecker.string_of_type_error Σ e ^ ", while checking " ^ id)
+    inr ("Type error: " ^ string_of_type_error Σ e ^ ", while checking " ^ id)
   end.
 
 (* Program Definition check_template_program {cf : checker_flags} (p : Ast.program) (ty : Ast.term) *)

@@ -259,7 +259,7 @@ Section CheckerFlags.
       rewrite mapi_unfold in wfx.
       eapply (proj1 (LevelSetProp.of_list_1 _ _)) in wfx.
       apply SetoidList.InA_alt in wfx as [? [<- wfx]]. simpl in wfx.
-      eapply In_unfold in wfx.
+      eapply In_unfold_inj in wfx; [|congruence].
       destruct (nth_in_or_default n u (Level.lSet)).
       red in cu. eapply Forall_In in cu; eauto. rewrite e.
       red. eapply LS.union_spec. right. eapply global_levels_Set.

@@ -19,7 +19,7 @@ Definition SingletonProp `{cf : checker_flags} (Σ : global_env_ext) (ind : indu
     declared_inductive (fst Σ) mdecl ind idecl ->
     forall Γ args u n (Σ' : global_env_ext),
       wf Σ' ->
-      PCUICWeakeningEnv.extends Σ Σ' ->
+      extends Σ Σ' ->
       welltyped Σ' Γ (mkApps (tConstruct ind n u) args) ->
       ∥Is_proof Σ' Γ (mkApps (tConstruct ind n u) args)∥ /\
        #|ind_ctors idecl| <= 1 /\
@@ -30,7 +30,7 @@ Definition Computational `{cf : checker_flags} (Σ : global_env_ext) (ind : indu
     declared_inductive (fst Σ) mdecl ind idecl ->
     forall Γ args u n (Σ' : global_env_ext),
       wf Σ' ->
-      PCUICWeakeningEnv.extends Σ Σ' ->
+      extends Σ Σ' ->
       welltyped Σ' Γ (mkApps (tConstruct ind n u) args) ->
       Is_proof Σ' Γ (mkApps (tConstruct ind n u) args) -> False.
 
@@ -39,7 +39,7 @@ Definition Informative `{cf : checker_flags} (Σ : global_env_ext) (ind : induct
     declared_inductive (fst Σ) mdecl ind idecl ->
     forall Γ args u n (Σ' : global_env_ext),
       wf_ext Σ' ->
-      PCUICWeakeningEnv.extends Σ Σ' ->
+      extends Σ Σ' ->
       Is_proof Σ' Γ (mkApps (tConstruct ind n u) args) ->
        #|ind_ctors idecl| <= 1 /\
        squash (All (Is_proof Σ' Γ) (skipn (ind_npars mdecl) args)).

@@ -12,7 +12,6 @@ Set Equations With UIP.
 
 (** * Type preservation for σ-calculus *)
 
-
 Open Scope sigma_scope.
 Set Keyed Unification.
 
@@ -1604,6 +1603,20 @@ Proof.
     + eapply red1_rename. all: try eassumption.
 Qed.
 
+Lemma fix_guard_rename Σ Γ Δ mfix f :
+  renaming Σ Γ Δ f ->
+  let mfix' := map (map_def (rename f) (rename (shiftn (List.length mfix) f))) mfix in
+  fix_guard Σ Δ mfix ->
+  fix_guard Σ Γ mfix'.
+Admitted.
+
+Lemma cofix_guard_rename Σ Γ Δ mfix f :
+  renaming Σ Γ Δ f ->
+  let mfix' := map (map_def (rename f) (rename (shiftn (List.length mfix) f))) mfix in
+  cofix_guard Σ Δ mfix ->
+  cofix_guard Σ Γ mfix'.
+Admitted.
+
 Lemma typing_rename_prop : env_prop
   (fun Σ Γ t A =>
     forall Δ f,
@@ -1722,7 +1735,7 @@ Proof.
 
     simpl. eapply meta_conv.
     + eapply type_Fix.
-      * eapply fix_guard_rename. assumption.
+      * eapply fix_guard_rename; eauto.
       * rewrite nth_error_map. rewrite hdecl. simpl. reflexivity.
       * apply hf.
       * apply All_map, (All_impl ihmfixt).

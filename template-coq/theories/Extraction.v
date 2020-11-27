@@ -35,6 +35,7 @@ Recursive Extraction Library Extractable.
 Extraction Library MCPrelude.
 Extraction Library MCOption.
 Extraction Library MCUtils.
+Extraction Library MCList.
 Extraction Library EqDecInstances.
 Extraction Library Induction.
 Extraction Library LiftSubst.

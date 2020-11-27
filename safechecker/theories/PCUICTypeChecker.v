@@ -6,14 +6,14 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICWeakening PCUICPosition PCUICCumulativity PCUICSafeLemmata PCUICSN
      PCUICPretty PCUICArities PCUICConfluence PCUICSize
      PCUICContextConversion PCUICConversion PCUICWfUniverses
-     PCUICGlobalEnv
+     PCUICGlobalEnv 
      (* Used for support lemmas *)
      PCUICInductives PCUICWfUniverses
      PCUICContexts PCUICSubstitution PCUICSpine PCUICInductiveInversion
      PCUICClosed PCUICUnivSubstitution PCUICWeakeningEnv.
 
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICErrors PCUICEqualityDec
-  PCUICSafeConversion PCUICWfReduction.
+  PCUICSafeConversion PCUICWfReduction PCUICWfEnv.
 
 From Equations Require Import Equations.
 Require Import ssreflect ssrbool.
@@ -332,7 +332,7 @@ Section Typecheck.
        end.
   Next Obligation.
     eapply forallb_All in H. eapply All_forallb'; tea.
-    clear -cf HG. intros x; simpl. apply is_graph_of_uctx_levels.
+    clear -cf HG. intros x; simpl. now apply is_graph_of_uctx_levels.
   Qed.
   Next Obligation.
     repeat split.
@@ -574,7 +574,7 @@ Section Typecheck.
                    Z <- check_bodies mfix' _ ;;
                    ret (All_cons (conj W1 W2) Z)
                  end) mfix _ ;;
-        guarded <- check_eq_true (fix_guard mfix) (Msg "Unguarded fixpoint") ;;
+        guarded <- check_eq_true (fix_guard Σ Γ mfix) (Msg "Unguarded fixpoint") ;;
         wffix <- check_eq_true (wf_fixpoint Σ.1 mfix) (Msg "Ill-formed fixpoint: not defined on a mutually inductive family") ;;
         ret (dtype decl; _)
       end
@@ -607,7 +607,7 @@ Section Typecheck.
                    Z <- check_bodies mfix' _ ;;
                    ret (All_cons W1 Z)
                  end) mfix _ ;;
-        guarded <- check_eq_true (cofix_guard mfix) (Msg "Unguarded cofixpoint") ;;
+        guarded <- check_eq_true (cofix_guard Σ Γ mfix) (Msg "Unguarded cofixpoint") ;;
         wfcofix <- check_eq_true (wf_cofixpoint Σ.1 mfix) (Msg "Ill-formed cofixpoint: not producing values in a mutually coinductive family") ;;
         ret (dtype decl; _)
       end

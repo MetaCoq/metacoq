@@ -1125,9 +1125,9 @@ Admitted.
 Hint Resolve trans_wf_local : trans.
 
 Axiom fix_guard_trans :
-  forall mfix,
+  forall Σ Γ mfix,
     TTy.fix_guard mfix ->
-    fix_guard (map (map_def trans trans) mfix).
+    fix_guard Σ Γ (map (map_def trans trans) mfix).
 
 Lemma isWFArity_wf (Σ : Ast.global_env_ext) Γ T : Typing.wf Σ -> TTy.isWfArity TTy.typing Σ Γ T -> T.wf T.
 Proof.

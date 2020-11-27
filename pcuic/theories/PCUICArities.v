@@ -413,7 +413,7 @@ Proof.
     rewrite (subst_instance_ind_type_id Σ _ {| inductive_mind := inductive_mind ind; inductive_ind := i |}); eauto.
     destruct isdecl. split; eauto. reflexivity. }
   clear oind.
-  revert X. clear onNpars onGuard.
+  revert X. clear onNpars.
   generalize (le_n #|ind_bodies mdecl|).
   generalize (ind_bodies mdecl) at 1 3 4 5.
   induction l using rev_ind; simpl; first constructor.
@@ -448,7 +448,7 @@ Proof.
   { apply forall_nth_error_Alli.
     econstructor; eauto. split; eauto. }
   clear oind.
-  revert X. clear onNpars onGuard.
+  revert X. clear onNpars.
   generalize (le_n #|ind_bodies mdecl|).
   generalize (ind_bodies mdecl) at 1 3 4 5.
   induction l using rev_ind; simpl; first constructor.

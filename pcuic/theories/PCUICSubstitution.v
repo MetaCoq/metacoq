@@ -2663,7 +2663,7 @@ Proof.
 
   - rewrite -> (map_dtype _ (subst s (#|mfix| + #|Δ|))).
     eapply type_CoFix; auto.
-    * eapply cofix_guard_subst; auto.
+    * eapply cofix_guard_subst; eauto.
     * now rewrite -> nth_error_map, H0.
     * eapply All_map.
       eapply (All_impl X0); simpl.

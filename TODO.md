@@ -29,10 +29,9 @@
 
 - Clean `Derive`s: always derive `Siganture`, `NoConf`, ... directly after the
   definition of the inductive. (To avoid doing it several times.)
-
-- Remove `Program` from everywhere.
-
-
+  (Mostly done)
+  
+- Finish the PCUICSigmaCalculus proofs.
 
 # Big projects
 

@@ -209,7 +209,7 @@ Section Inversion.
       Σ ;;; Γ |- tFix mfix n : T ->
       ∑ decl,
         let types := fix_context mfix in
-        fix_guard mfix ×
+        fix_guard Σ Γ mfix ×
         nth_error mfix n = Some decl ×
         All (fun d => isType Σ Γ (dtype d)) mfix ×
         All (fun d =>
@@ -226,7 +226,7 @@ Section Inversion.
     forall {Γ mfix idx T},
       Σ ;;; Γ |- tCoFix mfix idx : T ->
       ∑ decl,
-        cofix_guard mfix ×
+        cofix_guard Σ Γ mfix ×
         let types := fix_context mfix in
         nth_error mfix idx = Some decl ×
         All (fun d => isType Σ Γ (dtype d)) mfix ×

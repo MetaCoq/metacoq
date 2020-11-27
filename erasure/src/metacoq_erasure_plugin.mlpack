@@ -34,7 +34,6 @@ TemplateToPCUIC
 PCUICErrors
 PCUICUnivSubst
 PCUICSafeReduce
-PCUICSafeConversion
 PCUICTypeChecker
 PCUICSafeChecker
 PCUICSafeRetyping

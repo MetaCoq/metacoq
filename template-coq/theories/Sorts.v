@@ -8,7 +8,7 @@ Local Open Scope string_scope2.
 (** TODO: Use Sort families when applicable ? *)
 
 Record sort_valuation :=
-  { valuation_global : nat -> nat ;
+  { valuation_global : ident -> nat ;
     valuation_var : nat -> nat }.
 
 Class EvaluableSort (A : Type) :=
@@ -20,7 +20,7 @@ Module SortFamily.
 
   Inductive t_ :=
   | sfType (* harcoded because it has a special status *)
-  | sfGlobal (_ : nat) (* name of a globally defined sort *)
+  | sfGlobal (_ : ident) (* name of a globally defined sort *)
   | sfVar (_ : nat) (* deBruijin index in the local sort context *)
   .
 
@@ -30,7 +30,7 @@ Module SortFamily.
     fun (sval : sort_valuation) (sr : t) =>
       match sr with
       | sfType => 0
-      | sfGlobal i => valuation_global sval i
+      | sfGlobal s => valuation_global sval s
       | sfVar i => valuation_var sval i
       end.
 
@@ -40,17 +40,19 @@ Module SortFamily.
   Inductive lt_ : t -> t -> Prop :=
   | ltTypeGlobal i : lt_ sfType (sfGlobal i)
   | ltTypeVar i : lt_ sfType (sfVar i)
-  | ltGlobalGlobal i j : Nat.lt i j -> lt_ (sfGlobal i) (sfGlobal j)
+  | ltGlobalGlobal i j : string_lt i j -> lt_ (sfGlobal i) (sfGlobal j)
   | ltGlobalVar i j : lt_ (sfGlobal i) (sfVar j)
   | ltVarVar i j : Nat.lt i j -> lt_ (sfVar i) (sfVar j).
 
   Definition lt := lt_.
 
+  Local Existing Instance transitive_string_lt.
+
   Lemma lt_strorder : StrictOrder lt.
   Proof.
     constructor.
-    - intros [| |] X; inversion X; eapply Nat.lt_irrefl; tea.
-    - intros [| |] [| |] [| |] X1 X2; inversion X1; inversion X2; constructor.
+    - intros [| |] X; inversion X; [eapply string_lt_irreflexive|eapply Nat.lt_irrefl]; tea.
+    - intros [| |] [| |] [| |] X1 X2; inversion X1; inversion X2;  constructor.
       all: etransitivity; tea.
   Qed.
 
@@ -62,7 +64,7 @@ Module SortFamily.
     | sfType, sfType => Eq
     | sfType, _ => Lt
     | _, sfType => Gt
-    | sfGlobal i, sfGlobal j => Nat.compare i j
+    | sfGlobal i, sfGlobal j => string_compare i j
     | sfGlobal _, _ => Lt
     | _, sfGlobal _ => Gt
     | sfVar i, sfVar j => Nat.compare i j
@@ -70,7 +72,7 @@ Module SortFamily.
 
   Definition eq_dec (sd1 sd2 : t) : {sd1 = sd2} + {sd1 <> sd2}.
   Proof.
-    decide equality; apply Peano_dec.eq_nat_dec.
+    decide equality; [apply string_dec | apply Peano_dec.eq_nat_dec].
   Defined.
 
   Definition compare_spec :
@@ -78,7 +80,7 @@ Module SortFamily.
   Proof.
     intros [] []; repeat constructor.
     - eapply CompareSpec_Proper.
-      5: eapply Nat.compare_spec. 4: reflexivity.
+      5: eapply CompareSpec_string. 4: reflexivity.
       all: split; [now inversion 1|]. now intros ->.
       all: intro; now constructor.
     - eapply CompareSpec_Proper.
@@ -293,14 +295,27 @@ Ltac sort_constraint_sets := SortConstraintFormulaDecide.fsetdec.
 
 (** ** Sort constraints satisfiability *)
 
-Definition clause_satisfiable (sval : sort_valuation) : SortConstraintSet.t -> bool :=
+Definition clause_satisfiesb (sval : sort_valuation) : SortConstraintSet.t -> bool :=
   SortConstraintSet.exists_ (SortConstraint.satisfiable sval).
 
-Definition formula_satisfiable (sval : sort_valuation) :
+Definition formula_satisfiesb (sval : sort_valuation) :
   SortConstraintFormula.t -> bool :=
-  SortConstraintFormula.for_all (clause_satisfiable sval).
+  SortConstraintFormula.for_all (clause_satisfiesb sval).
 
 
+Inductive sort_satisfies_constraint (sv : sort_valuation) : SortConstraint.t -> Prop :=
+| sort_satisfies_constraint_eliminable s1 s2 :
+    sort_val sv s1 <= sort_val sv s2 ->
+    sort_satisfies_constraint sv (SortConstraint.Eliminable s1 s2).
+
+Definition sort_satisfies_clause sv : SortConstraintSet.t -> Prop :=
+  SortConstraintSet.Exists (sort_satisfies_constraint sv).
+
+Definition sort_satisfies sv : SortConstraintFormula.t -> Prop :=
+  SortConstraintFormula.For_all (sort_satisfies_clause sv).
+
+Definition valid_sort_constraints (ϕ sctrs : SortConstraintFormula.t) :=
+  forall sval, sort_satisfies sval ϕ -> sort_satisfies sval sctrs.
 
 
 (* Module SortArg. *)

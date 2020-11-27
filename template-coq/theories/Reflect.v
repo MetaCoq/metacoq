@@ -157,40 +157,6 @@ Next Obligation.
     constructor. subst. reflexivity.
 Defined.
 
-Definition eq_prop_level l1 l2 :=
-  match l1, l2 with
-  | PropLevel.lProp, PropLevel.lProp => true
-  | PropLevel.lSProp, PropLevel.lSProp => true
-  | _, _ => false
-  end.
-
-#[program] Instance reflect_prop_level : ReflectEq PropLevel.t := {
-  eqb := eq_prop_level
-}.
-Next Obligation.
-  destruct x, y.
-  all: unfold eq_prop_level.
-  all: try solve [ constructor ; reflexivity ].
-  all: try solve [ constructor ; discriminate ].
-Defined.
-
-Definition eq_levels (l1 l2 : PropLevel.t + Level.t) :=
-  match l1, l2 with
-  | inl l, inl l' => eqb l l'
-  | inr l, inr l' => eqb l l'
-  | _, _ => false
-  end.
-
-#[program] Instance reflect_levels : ReflectEq (PropLevel.t + Level.t) := {
-  eqb := eq_levels
-}.
-Next Obligation.
-  destruct x, y.
-  cbn -[eqb]. destruct (eqb_spec t t0). subst. now constructor.
-  all:try (constructor; cong).
-  cbn -[eqb]. destruct (eqb_spec t t0). subst; now constructor.
-  constructor; cong.
-Defined.
 
 Definition eq_prod {A B} (eqA : A -> A -> bool) (eqB : B -> B -> bool) x y :=
   let '(a1, b1) := x in
@@ -282,7 +248,7 @@ Next Obligation.
   intros x y. unfold eq_aname.
   destruct (eqb_spec x.(binder_name) y.(binder_name));
   destruct (eqb_spec x.(binder_relevance) y.(binder_relevance));
-  constructor; destruct x, y; simpl in *; cong.
+  constructor; destruct x, y; simpl in * ; congruence.
 Defined.
 
 #[program] Instance reflect_kername : ReflectEq kername := {
@@ -341,39 +307,24 @@ Next Obligation.
   all: left. all: reflexivity.
 Defined.
 
-(* TODO: move *)
-Lemma eq_universe_iff (u v : Universe.t0) :
-  u = v <-> u = v :> UnivExprSet.t.
-Proof.
-  destruct u, v; cbn; split. now inversion 1.
-  intros ->. f_equal. apply uip.
-Qed.
-Lemma eq_universe_iff' (u v : Universe.t0) :
-  u = v <-> UnivExprSet.elements u = UnivExprSet.elements v.
-Proof.
-  etransitivity. apply eq_universe_iff.
-  destruct u as [[u1 u2] ?], v as [[v1 v2] ?]; cbn; clear; split.
-  now inversion 1. intros ->. f_equal. apply uip.
-Qed.
 
 (* move in Universes.v ?? *)
 Instance eq_dec_UnivExpr : EqDec UnivExpr.t.
 Proof. intros e e'. repeat decide equality. Qed.
 
-Instance eq_dec_univ0 : EqDec Universe.t0.
+Instance eq_dec_univ_level : EqDec UniverseLevel.t.
 Proof.
-  intros u v.
-  assert (H : {UnivExprSet.elements u = UnivExprSet.elements v}
-              + {~ UnivExprSet.elements u = UnivExprSet.elements v}). {
-    repeat decide equality. }
-  destruct H as [H|H]; [left; now apply eq_universe_iff' in H|right].
-  intro X; apply H; now apply eq_universe_iff' in X.
+  intros u v. apply UniverseLevel.eq_dec.
 Defined.
 
 Instance eq_dec_univ : EqDec Universe.t.
 Proof.
-  red. decide equality.
-  apply eq_dec_univ0.
+  intros ? ?; apply Universe.eq_dec.
+Defined.
+
+Instance eq_dec_sort_family : EqDec SortFamily.t.
+Proof.
+  intros ? ?; apply SortFamily.eq_dec.
 Defined.
 
 Local Ltac finish :=
@@ -549,29 +500,30 @@ Proof.
   destruct x, y; simpl; constructor; congruence.
 Defined.
 
-Definition eqb_ConstraintType x y :=
+(* Looks a lot like what is already in UnivConstraintType... *)
+Definition eqb_UnivConstraintType x y :=
   match x, y with
-  | ConstraintType.Le n, ConstraintType.Le m => Z.eqb n m
-  | ConstraintType.Eq, ConstraintType.Eq => true
+  | UnivConstraintType.Le n, UnivConstraintType.Le m => Z.eqb n m
+  | UnivConstraintType.Eq, UnivConstraintType.Eq => true
   | _, _ => false
   end.
 
-Instance reflect_ConstraintType : ReflectEq ConstraintType.t.
+Instance reflect_UnivConstraintType : ReflectEq UnivConstraintType.t.
 Proof.
-  refine {| eqb := eqb_ConstraintType |}.
+  refine {| eqb := eqb_UnivConstraintType |}.
   destruct x, y; simpl; try constructor; try congruence.
   destruct (Z.eqb_spec z z0); constructor. now subst.
-  cong.
+  congruence.
 Defined.
 
-Definition eqb_ConstraintSet x y :=
-  eqb (ConstraintSet.this x) (ConstraintSet.this y).
+Definition eqb_UnivConstraintSet x y :=
+  eqb (UnivConstraintSet.this x) (UnivConstraintSet.this y).
 
-Instance reflect_ConstraintSet : ReflectEq ConstraintSet.t.
+Instance reflect_UnivConstraintSet : ReflectEq UnivConstraintSet.t.
 Proof.
-  refine {| eqb := eqb_ConstraintSet |}.
+  refine {| eqb := eqb_UnivConstraintSet |}.
   intros [thisx okx] [thisy oky].
-  unfold eqb_ConstraintSet.
+  unfold eqb_UnivConstraintSet.
   cbn -[eqb].
   destruct (eqb_spec thisx thisy); subst; constructor.
   - f_equal; apply uip.
@@ -591,6 +543,40 @@ Proof.
   - f_equal; apply uip.
   - congruence.
 Defined.
+
+Definition eqb_SortConstraint x y :=
+  proj1_sig (Sumbool.bool_of_sumbool (SortConstraint.eq_dec x y)).
+
+Instance reflect_SortConstraint : ReflectEq SortConstraint.t.
+Proof.
+  refine {| eqb := eqb_SortConstraint |}.
+  intros x y; unfold eqb_SortConstraint.
+  destruct (SortConstraint.eq_dec x y); subst; by constructor.
+Qed.
+
+Definition eqb_SortConstraintSet x y :=
+  proj1_sig (Sumbool.bool_of_sumbool (SortConstraintSet.eq_dec x y)).
+
+Instance reflect_SortConstraintSet : ReflectEq SortConstraintSet.t.
+Proof.
+  refine {| eqb := eqb_SortConstraintSet |}.
+  intros x y; unfold eqb_SortConstraintSet.
+  destruct (SortConstraintSet.eq_dec x y)as [|h]; subst;  constructor.
+  2: intros e; apply h ; by rewrite e.
+  1: by apply SortConstraintSet.eq_leibniz.
+Qed.
+
+Definition eqb_SortConstraintFormula x y :=
+  proj1_sig (Sumbool.bool_of_sumbool (SortConstraintFormula.eq_dec x y)).
+
+Instance reflect_SortConstraintFormula : ReflectEq SortConstraintFormula.t.
+Proof.
+  refine {| eqb := eqb_SortConstraintFormula |}.
+  intros x y; unfold eqb_SortConstraintFormula.
+  destruct (SortConstraintFormula.eq_dec x y)as [|h]; subst;  constructor.
+  2: intros e; apply h ; by rewrite e.
+  1: by apply SortConstraintFormula.eq_leibniz.
+Qed.
 
 Definition eqb_universes_decl x y :=
   match x, y with
@@ -624,25 +610,10 @@ Proof.
   unfold eqb_constant_body; finish_reflect.
 Defined.
 
-Definition eqb_sort_family x y :=
-  match x, y with
-  | InProp, InProp
-  | InSet, InSet
-  | InType, InType => true
-  | InSProp, InSProp => true
-  | _, _ => false
-  end.
-
-Instance reflect_sort_family : ReflectEq sort_family.
-Proof.
-  refine {| eqb := eqb_sort_family |}.
-  intros [] []; simpl; constructor; congruence.
-Defined.
-
 Definition eqb_one_inductive_body (x y : one_inductive_body) :=
-  let (n, t, k, c, p, r) := x in
-  let (n', t', k', c', p', r') := y in
-  eqb n n' && eqb t t' && eqb k k' && eqb c c' && eqb p p' && eqb r r'.
+  let (n, t, (* k, *) c, p, r) := x in
+  let (n', t', (* k', *) c', p', r') := y in
+  eqb n n' && eqb t t' (* && eqb k k' *) && eqb c c' && eqb p p' && eqb r r'.
 
 Instance reflect_one_inductive_body : ReflectEq one_inductive_body.
 Proof.
@@ -677,16 +648,11 @@ Proof.
   unfold eqb_mutual_inductive_body; finish_reflect.
 Defined.
 
-Definition eqb_sort_body (x y : sort_body) :=
-  let ()
-
-Instance reflect_sort_body .
 
 Definition eqb_global_decl x y :=
   match x, y with
   | ConstantDecl cst, ConstantDecl cst' => eqb cst cst'
   | InductiveDecl mib, InductiveDecl mib' => eqb mib mib'
-  | SortDecl sb, SortDecl sb' => eqb sb sb'
   | _, _ => false
   end.
 

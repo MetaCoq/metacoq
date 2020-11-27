@@ -13,6 +13,10 @@ Ltac absurd :=
   end.
 Hint Extern 10 => absurd : core.
 
+
+(* For compatibility purpose ; Maybe it makes sense to keep this name actually. *)
+Module Universe := Sort.
+
 (** {6 Universe instances} *)
 
 Module Instance.
@@ -209,14 +213,14 @@ Section Univ.
   Definition valid_constraints0 φ ctrs
     := forall v, satisfies v φ -> satisfies v ctrs.
 
-  Definition valid_constraints φ ctrs
+  Definition valid_univ_constraints φ ctrs
     := if check_univs then valid_constraints0 φ ctrs else True.
 
   Lemma valid_subset φ φ' ctrs
-    : UnivConstraintSet.Subset φ φ' -> valid_constraints φ ctrs
-      ->  valid_constraints φ' ctrs.
+    : UnivConstraintSet.Subset φ φ' -> valid_univ_constraints φ ctrs
+      ->  valid_univ_constraints φ' ctrs.
   Proof.
-    unfold valid_constraints.
+    unfold valid_univ_constraints.
     destruct check_univs; [|trivial].
     intros Hφ H v Hv. apply H.
     intros ctr Hc. apply Hv. now apply Hφ.
@@ -398,6 +402,9 @@ Section Univ.
 End Univ.
 
 
+Definition valid_constraints `{checker_flags} (ϕ ctrs : ConstraintSet.t) :=
+  valid_sort_constraints ϕ.1 ctrs.1 /\
+  valid_univ_constraints ϕ.2 ctrs.2.
 
 
 
@@ -816,7 +823,7 @@ Definition string_of_universe_level (e : UniverseLevel.t) : string :=
 Definition string_of_sort_family (sf : SortFamily.t) :=
   match sf with
   | SortFamily.sfType => "Type"
-  | SortFamily.sfGlobal i (* FIXME : should have a name *) => "Sort_" ^ string_of_nat i
+  | SortFamily.sfGlobal name => name
   | SortFamily.sfVar i => "SortVar_" ^ string_of_nat i
   end.
 
@@ -827,8 +834,9 @@ Definition string_of_sort (u : Sort.t) :=
   | Sort.ImpredicativeSort sf => string_of_sort_family sf
   end.
 
-Definition string_of_universe_instance u :=
-  string_of_list string_of_level u.
+Definition string_of_universe_instance (u : Instance.t) :=
+  "{" ^ print_list string_of_level " " (fst u) ^ ";"
+  ^ print_list string_of_sort_family " " (snd u) ^ "}".
 
 Definition string_of_level_list u :=
   match u with
@@ -836,7 +844,7 @@ Definition string_of_level_list u :=
   | _ => "@{" ^ print_list string_of_level " " u ^ "}"
   end.
 
-#[deprecated(note="Use string_of_level_list")]
+#[deprecated(note="Use string_of_level_list or string_of_universe_instance")]
 Notation print_universe_instance := string_of_level_list.
 
 Definition print_lset t :=

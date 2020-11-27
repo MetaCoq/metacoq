@@ -1863,9 +1863,9 @@ Section CheckLeq2.
   Qed.
 
   Lemma check_constraints_spec ctrs
-    : check_constraints G ctrs -> valid_constraints uctx.2 ctrs.
+    : check_constraints G ctrs -> valid_univ_constraints uctx.2 ctrs.
   Proof.
-    unfold check_constraints, valid_constraints.
+    unfold check_constraints, valid_univ_constraints.
     case_eq (gc_of_constraints ctrs); [|discriminate].
     intros ctrs' Hctrs' HH.
     eapply (check_gc_constraints_spec _ uctx' Huctx' HC' HG') in HH.

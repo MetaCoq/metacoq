@@ -758,6 +758,22 @@ Proof.
   destruct H. now rewrite (uip_bool _ _ u2 v2).
 Qed.
 
+Lemma eq_universe_iff (u v : UniverseLevel.t) :
+  u = v <-> u = v :> UnivExprSet.t.
+Proof.
+  destruct u, v; cbn; split. now inversion 1.
+  intros ->. f_equal. apply uip_bool.
+Qed.
+
+Lemma eq_universe_iff' (u v : UniverseLevel.t) :
+  u = v <-> UnivExprSet.elements u = UnivExprSet.elements v.
+Proof.
+  etransitivity. apply eq_universe_iff.
+  destruct u as [[u1 u2] ?], v as [[v1 v2] ?]; cbn; clear; split.
+  now inversion 1. intros ->. f_equal. apply uip_bool.
+Qed.
+
+
 Lemma get_is_level_correct u l :
   UniverseLevel.get_is_level u = Some l -> u = UniverseLevel.make l.
 Proof.

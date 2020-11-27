@@ -12,7 +12,7 @@ Instance subst_instance_constr : UnivSubst term :=
   match c with
   | tRel _ | tVar _  => c
   | tEvar ev args => tEvar ev (List.map (subst_instance_constr u) args)
-  | tSort s => tSort (subst_instance_univ u s)
+  | tSort s => tSort (subst_instance_sort u s)
   | tConst c u' => tConst c (subst_instance_instance u u')
   | tInd i u' => tInd i (subst_instance_instance u u')
   | tConstruct ind k u' => tConstruct ind k (subst_instance_instance u u')
@@ -97,32 +97,32 @@ Proof.
   solve_all. now destruct H as [n [-> _]].
 Qed.
 
-(** Tests that the term is closed over [k] universe variables *)
-Fixpoint closedu (k : nat) (t : term) : bool :=
+(** Tests that the term is closed over [j] sort variables and [k] universe variables *)
+Fixpoint closedu (j:nat) (k : nat) (t : term) : bool :=
   match t with
-  | tSort univ => closedu_universe k univ
-  | tInd _ u => closedu_instance k u
-  | tConstruct _ _ u => closedu_instance k u
-  | tConst _ u => closedu_instance k u
+  | tSort univ => closedu_universe j k univ
+  | tInd _ u => closedu_instance j k u
+  | tConstruct _ _ u => closedu_instance j k u
+  | tConst _ u => closedu_instance j k u
   | tRel i => true
-  | tEvar ev args => forallb (closedu k) args
-  | tLambda _ T M | tProd _ T M => closedu k T && closedu k M
-  | tApp u v => closedu k u && forallb (closedu k) v
-  | tCast c kind t => closedu k c && closedu k t
-  | tLetIn na b t b' => closedu k b && closedu k t && closedu k b'
+  | tEvar ev args => forallb (closedu j k) args
+  | tLambda _ T M | tProd _ T M => closedu j k T && closedu j k M
+  | tApp u v => closedu j k u && forallb (closedu j k) v
+  | tCast c kind t => closedu j k c && closedu j k t
+  | tLetIn na b t b' => closedu j k b && closedu j k t && closedu j k b'
   | tCase ind p c brs =>
-    let brs' := forallb (test_snd (closedu k)) brs in
-    closedu k p && closedu k c && brs'
-  | tProj p c => closedu k c
+    let brs' := forallb (test_snd (closedu j k)) brs in
+    closedu j k p && closedu j k c && brs'
+  | tProj p c => closedu j k c
   | tFix mfix idx =>
-    forallb (test_def (closedu k) (closedu k)) mfix
+    forallb (test_def (closedu j k) (closedu j k)) mfix
   | tCoFix mfix idx =>
-    forallb (test_def (closedu k) (closedu k)) mfix
+    forallb (test_def (closedu j k) (closedu j k)) mfix
   | x => true
   end.
 
 Lemma closedu_subst_instance_constr u t
-  : closedu 0 t -> subst_instance_constr u t = t.
+  : closedu 0 0 t -> subst_instance_constr u t = t.
 Proof.
   induction t in |- * using term_forall_list_ind; simpl; auto; intros H';
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
@@ -130,8 +130,8 @@ Proof.
       try solve [f_equal; eauto; repeat (rtoProp; solve_all)].
 Qed.
 
-Lemma subst_instance_constr_closedu (u : Instance.t) (Hcl : closedu_instance 0 u) t :
-  closedu #|u| t -> closedu 0 (subst_instance_constr u t).
+Lemma subst_instance_constr_closedu (u : Instance.t) (Hcl : closedu_instance 0 0 u) t :
+  closedu #|snd u| #|fst u| t -> closedu 0 0 (subst_instance_constr u t).
 Proof.
   induction t in |- * using term_forall_list_ind; simpl; auto; intros H';
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?forallb_map;

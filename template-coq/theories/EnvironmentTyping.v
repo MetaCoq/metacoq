@@ -29,14 +29,10 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     List.nth_error idecl.(ind_projs) (snd proj) = Some pdecl /\
     mdecl.(ind_npars) = snd (fst proj).
 
-  Definition declare_sort Σ id (sb : sort_body) : Prop :=
-    lookup_env Σ id = Some (SortDecl sb).
-
   Definition on_udecl_decl {A} (F : universes_decl -> A) d : A :=
   match d with
   | ConstantDecl cb => F cb.(cst_universes)
   | InductiveDecl mb => F mb.(ind_universes)
-  | SortDecl sd => F (Monomorphic_ctx ContextSet.empty)
   end.
 
   Definition monomorphic_udecl_decl := on_udecl_decl monomorphic_udecl.
@@ -78,25 +74,25 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
       be ensured if we added [global_constraints] as well as a coercion, as it
       would forget the extension's constraints. *)
 
-  Definition global_constraints (Σ : global_env) : ConstraintSet.t :=
+  Definition global_constraints (Σ : global_env) : UnivConstraintSet.t :=
     fold_right (fun decl ctrs =>
-        ConstraintSet.union (monomorphic_constraints_decl decl.2) ctrs
-      ) ConstraintSet.empty Σ.
+        UnivConstraintSet.union (monomorphic_constraints_decl decl.2) ctrs
+      ) UnivConstraintSet.empty Σ.
 
-  Definition global_uctx (Σ : global_env) : ContextSet.t :=
+  Definition global_uctx (Σ : global_env) : UnivContextSet.t :=
     (global_levels Σ, global_constraints Σ).
 
   Definition global_ext_levels (Σ : global_env_ext) : LevelSet.t :=
     LevelSet.union (levels_of_udecl (genv_univs Σ)) (global_levels Σ).
 
-  Definition global_ext_constraints (Σ : global_env_ext) : ConstraintSet.t :=
-    ConstraintSet.union
-      (constraints_of_udecl (genv_univs Σ))
+  Definition global_ext_constraints (Σ : global_env_ext) : UnivConstraintSet.t :=
+    UnivConstraintSet.union
+      (universe_constraints_of_udecl (genv_univs Σ))
       (global_constraints Σ).
 
-  Coercion global_ext_constraints : global_env_ext >-> ConstraintSet.t.
+  Coercion global_ext_constraints : global_env_ext >-> UnivConstraintSet.t.
 
-  Definition global_ext_uctx (Σ : global_env_ext) : ContextSet.t :=
+  Definition global_ext_uctx (Σ : global_env_ext) : UnivContextSet.t :=
     (global_ext_levels Σ, global_ext_constraints Σ).
 
 
@@ -105,11 +101,14 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
 
   Definition consistent_instance `{checker_flags} (lvs : LevelSet.t) (φ : ConstraintSet.t) uctx (u : Instance.t) :=
     match uctx with
-    | Monomorphic_ctx c => List.length u = 0
+    | Monomorphic_ctx c => List.length (fst u) = 0 /\ List.length (snd u) = 0
     | Polymorphic_ctx c =>
       (* levels of the instance already declared *)
-      forallb (fun l => LevelSet.mem l lvs) u /\
-      List.length u = List.length c.1 /\
+      forallb (fun l => LevelSet.mem l lvs) (fst u) /\
+      (* instantiation sort_families should be well formed *)
+      (* forallb (fun s => ) (snd u) /\ *)
+      List.length u.1 = List.length c.1.1 /\
+      List.length u.2 = List.length c.1.2 /\
       valid_constraints φ (subst_instance_cstrs u c.2)
     end.
 

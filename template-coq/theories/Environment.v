@@ -124,19 +124,20 @@ Module Environment (T : Term).
   Record one_inductive_body := {
     ind_name : ident;
     ind_type : term; (* Closed arity *)
-    ind_kelim : sort_family; (* Top allowed elimination sort *)
+    (* ind_kelim : sort_family; (* Top allowed elimination sort *) *)
     ind_ctors : list (ident * term (* Under context of arities of the mutual inductive *)
                       * nat (* arity, w/o lets, w/o parameters *));
     ind_projs : list (ident * term); (* names and types of projections, if any.
                                       Type under context of params and inductive object *)
+    (* Should this really be part of the inductive ? Or fetched through the sort ? *)
     ind_relevance : relevance (* relevance of the inductive definition *) }.
 
   Definition map_one_inductive_body npars arities f (n : nat) m :=
     match m with
-    | Build_one_inductive_body ind_name ind_type ind_kelim ind_ctors ind_projs ind_relevance =>
+    | Build_one_inductive_body ind_name ind_type (* ind_kelim *) ind_ctors ind_projs ind_relevance =>
       Build_one_inductive_body ind_name
                                (f 0 ind_type)
-                               ind_kelim
+                               (* ind_kelim *)
                                (map (on_pi2 (f arities)) ind_ctors)
                                (map (on_snd (f (S npars))) ind_projs)
                                ind_relevance
@@ -172,19 +173,28 @@ Module Environment (T : Term).
   Proof. destruct decl; reflexivity. Qed.
 
 
-  (* Sort declaration *)
-
-  Record sort_body := {
-    is_impredicative : bool ;
-    sort_relation_extension : SortConstraintSet.t }.
-
-
   Inductive global_decl :=
   | ConstantDecl : constant_body -> global_decl
-  | InductiveDecl : mutual_inductive_body -> global_decl
-  | SortDecl : sort_body -> global_decl.
+  | InductiveDecl : mutual_inductive_body -> global_decl.
 
   Definition global_env := list (kername * global_decl).
+
+  (** * Global Sort declarations *)
+
+  (* A global sort family is defined through a name and its relationship to previously defined global sorts *)
+  Definition sort_def := ident × SortConstraintSet.t.
+
+  (* A function computing the constraints for eliminating an inductive in a
+  sort. The resulting formula should be able to mention globally defined sorts,
+  the sorts bound by the mutual_inductive_body in the field ind_universes as
+  well as two additional variables for the sort of the inductive and the "output" elimination sort (the sort of
+  the motive in a match) *)
+  Definition ind_sort_elim :=
+    mutual_inductive_body -> SortConstraintFormula.t.
+
+  Definition sort_env := list sort_def × ind_sort_elim.
+
+  Definition empty_sort_env : sort_env := ([] , fun _ => SortConstraintFormula.True).
 
   (** A context of global declarations
       + global sorts constraints,
@@ -194,8 +204,7 @@ Module Environment (T : Term).
 
   Record global_env_ext : Type := {
     genv : global_env ;
-    genv_sorts : sorts_decl ;
-    genv_ind_sort_elim : one_inductive_body -> SortConstraintFormula.t ;
+    genv_sorts : sort_env ;
     genv_univs : universes_decl }.
 
   (** Use a coercion for this common projection of the global context. *)
@@ -204,15 +213,13 @@ Module Environment (T : Term).
   Definition empty_ext (Σ : global_env) : global_env_ext
     :=
       Build_global_env_ext Σ
-                           SortContext.empty
-                           (fun _ => SortConstraintFormula.True)
-                           (Monomorphic_ctx ContextSet.empty).
+                           empty_sort_env
+                           (Monomorphic_ctx UnivContextSet.empty).
 
   (* Temporary function to quickfix compilation of the project *)
   Definition genv_no_sorts (Σ : global_env) (univs : universes_decl) :=
     Build_global_env_ext Σ
-                         SortContext.empty
-                         (fun _ => SortConstraintFormula.True)
+                         empty_sort_env
                          univs.
 
   (** *** Programs

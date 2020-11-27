@@ -125,10 +125,10 @@ Section print_term.
                       print_term (vdef ann_na' def dom :: Γ) true body)
   | tApp f l =>
     parens top (print_term Γ false f ^ " " ^ print_list (print_term Γ false) " " l)
-  | tConst c u => string_of_kername c ^ print_universe_instance u
+  | tConst c u => string_of_kername c ^ string_of_universe_instance u
   | tInd (mkInd i k) u =>
     match lookup_ind_decl i k with
-    | Some oib => oib.(ind_name) ^ print_universe_instance u
+    | Some oib => oib.(ind_name) ^ string_of_universe_instance u
     | None =>
       "UnboundInd(" ^ string_of_inductive (mkInd i k) ^ "," ^ string_of_universe_instance u ^ ")"
     end
@@ -136,7 +136,7 @@ Section print_term.
     match lookup_ind_decl i k with
     | Some oib =>
       match nth_error oib.(ind_ctors) l with
-      | Some (na, _, _) => na ^ print_universe_instance u
+      | Some (na, _, _) => na ^ string_of_universe_instance u
       | None =>
         "UnboundConstruct(" ^ string_of_inductive ind ^ "," ^ string_of_nat l ^ ","
                             ^ string_of_universe_instance u ^ ")"

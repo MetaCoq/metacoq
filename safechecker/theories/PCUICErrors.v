@@ -112,6 +112,7 @@ Inductive type_error :=
 | IllFormedFix (m : mfixpoint term) (i : nat)
 | UnsatisfiedConstraints (c : ConstraintSet.t)
 | Msg (s : string).
+Derive NoConfusion for type_error.
 
 Definition print_level := string_of_level.
 
@@ -267,3 +268,27 @@ Definition string_of_type_error Σ (e : type_error) : string :=
   | UnsatisfiedConstraints c => "Unsatisfied constraints"
   | Msg s => "Msg: " ^ s
   end.
+
+Inductive typing_result (A : Type) :=
+| Checked (a : A)
+| TypeError (t : type_error).
+Global Arguments Checked {A} a.
+Global Arguments TypeError {A} t.
+
+Instance typing_monad : Monad typing_result :=
+  {| ret A a := Checked a ;
+     bind A B m f :=
+       match m with
+       | Checked a => f a
+       | TypeError t => TypeError t
+       end
+  |}.
+
+Instance monad_exc : MonadExc type_error typing_result :=
+  { raise A e := TypeError e;
+    catch A m f :=
+      match m with
+      | Checked a => m
+      | TypeError t => f t
+      end
+  }.

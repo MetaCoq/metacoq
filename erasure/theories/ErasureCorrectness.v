@@ -86,17 +86,17 @@ Proof.
   - econstructor.
   - econstructor; eauto. cbn in *.
     destruct t0. exists x. eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
-    * eapply PCUICSafeChecker.wf_local_app_inv; eauto.
+    * eapply wf_local_app; eauto.
     * eapply conv_context_app; eauto.
       eapply typing_wf_local; eauto.
   - econstructor; eauto.
     + cbn in *.
       destruct t0. exists x. eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
-      * eapply PCUICSafeChecker.wf_local_app_inv; eauto.
+      * eapply wf_local_app; eauto.
       * eapply conv_context_app; eauto.
         eapply typing_wf_local; eauto.
     + cbn in *. eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
-      * eapply PCUICSafeChecker.wf_local_app_inv; eauto.
+      * eapply wf_local_app; eauto.
       * eapply conv_context_app; eauto.
         eapply typing_wf_local; eauto.
 Qed.
@@ -152,7 +152,7 @@ Proof.
     eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
     2:{ eapply conv_context_app; auto. eapply typing_wf_local; eauto. }
     eapply typing_wf_local in X3.
-    eapply PCUICSafeChecker.wf_local_app_inv.
+    eapply wf_local_app.
     eauto. eapply wf_local_rel_local in X3.
     eapply wf_local_rel_app_inv in X3 as []. rewrite app_context_nil_l in w0.
     eapply wf_local_rel_conv; eauto.
@@ -161,7 +161,7 @@ Proof.
     2:{ eapply conv_context_app; auto. eapply typing_wf_local; eauto. }
 
     eapply typing_wf_local in t0.
-    eapply PCUICSafeChecker.wf_local_app_inv.
+    eapply wf_local_app.
     eauto. eapply wf_local_rel_local in t0.
     eapply wf_local_rel_app_inv in t0 as []. rewrite app_context_nil_l in w0.
     eapply wf_local_rel_conv; eauto.
@@ -185,7 +185,7 @@ Proof.
     eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
     2:{ eapply conv_context_app; auto. eapply typing_wf_local; eauto. }
     eapply typing_wf_local in X3.
-    eapply PCUICSafeChecker.wf_local_app_inv.
+    eapply wf_local_app.
     eauto. eapply wf_local_rel_local in X3.
     eapply wf_local_rel_app_inv in X3 as []. rewrite app_context_nil_l in w0.
 
@@ -196,7 +196,7 @@ Proof.
     2:{ eapply conv_context_app; auto. eapply typing_wf_local; eauto. }
 
     eapply typing_wf_local in t0.
-    eapply PCUICSafeChecker.wf_local_app_inv.
+    eapply wf_local_app.
     eauto. eapply wf_local_rel_local in t0.
     eapply wf_local_rel_app_inv in t0 as []. rewrite app_context_nil_l in w0.
     eapply wf_local_rel_conv; eauto.

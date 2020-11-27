@@ -30,30 +30,6 @@ Ltac Coq.Program.Tactics.program_solve_wf ::=
                 end
   end.
 
-Inductive typing_result (A : Type) :=
-| Checked (a : A)
-| TypeError (t : type_error).
-Global Arguments Checked {A} a.
-Global Arguments TypeError {A} t.
-
-Instance typing_monad : Monad typing_result :=
-  {| ret A a := Checked a ;
-     bind A B m f :=
-       match m with
-       | Checked a => f a
-       | TypeError t => TypeError t
-       end
-  |}.
-
-Instance monad_exc : MonadExc type_error typing_result :=
-  { raise A e := TypeError e;
-    catch A m f :=
-      match m with
-      | Checked a => m
-      | TypeError t => f t
-      end
-  }.
-
 Section Typecheck.
   Context {cf : checker_flags} {Σ : global_env_ext} (HΣ : ∥ wf Σ ∥)
           (Hφ : ∥ on_udecl Σ.1 Σ.2 ∥)

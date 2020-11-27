@@ -3,7 +3,7 @@ From Coq Require Import Program.
 From MetaCoq.Template Require Import config utils uGraph Pretty.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping
      TemplateToPCUIC.
-From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker
+From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeReduce PCUICSafeChecker
      SafeTemplateChecker.
 From MetaCoq.Erasure Require Import EAstUtils ErasureFunction EPretty.
 From MetaCoq.Erasure Require ErasureFunction EOptimizePropDiscr.
@@ -127,7 +127,7 @@ Program Fixpoint check_wf_env_only_univs (Σ : global_env)
       destruct g. destruct c, cst_universes; try discriminate; reflexivity.
       destruct m, ind_universes; try discriminate; reflexivity. }
     rewrite eq1; clear eq1.
-    now rewrite levelset_union_empty, constraintset_union_empty.
+    now rewrite LevelSet_union_empty, CS_union_empty.
   Qed.
 
 (* This is the total erasure function + the optimization that removes all 

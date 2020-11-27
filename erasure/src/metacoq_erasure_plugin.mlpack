@@ -31,9 +31,11 @@ PCUICPosition
 PCUICPretty
 TemplateToPCUIC
 
+PCUICErrors
 PCUICUnivSubst
 PCUICSafeReduce
 PCUICSafeConversion
+PCUICTypeChecker
 PCUICSafeChecker
 PCUICSafeRetyping
 SafeTemplateChecker

@@ -1,6 +1,7 @@
 From Coq Require Import ssreflect.
 From Coq Require Import MSetList MSetFacts MSetProperties MSetDecide.
-From MetaCoq.Template Require Import utils BasicAst config Levels Sorts.
+From MetaCoq.Template Require Import utils BasicAst config.
+From MetaCoq.Template Require Export Levels Sorts.
 
 Local Open Scope nat_scope.
 Local Open Scope string_scope2.
@@ -434,7 +435,7 @@ End Univ.
 (* (** This coercion allows to see the universes as a [UnivExprSet.t] *) *)
 (* Coercion Universe.t_set : Universe.t0 >-> UnivExprSet.t. *)
 
-(* Notation "⟦ u ⟧_ v" := (Universe.univ_val v u) (at level 0, format "⟦ u ⟧_ v", v ident) : univ_scope. *)
+Notation "⟦ u ⟧_ v" := (val v u) (at level 0, format "⟦ u ⟧_ v", v ident) : univ_scope.
 
 
 (* (* Definition univ_val_max v1 v2 := *) *)

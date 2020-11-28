@@ -80,9 +80,7 @@ Lemma identity_typing (u := Universe.make univ): inh gctx_wf_env [] (tProd (bNam
 Proof.
   set (impl := tLambda (bNamed "s") (tSort u) (tLambda bAnon (tRel 0) (tRel 0))).
   assert (wfΓ : ∥ wf_local gctx_wf_env [] ∥) by do 2 constructor.
-Admitted.
-(* (** All immediate now *)
   Time fill_inh impl.
 Time Qed.
-*)
-Print identity_typing.
+
+Print identity_typing. (* Still a huge wf_env proof unfolded *)

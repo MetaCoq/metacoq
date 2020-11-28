@@ -10,8 +10,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICArities PCUICInduc
      PCUICGeneration PCUICInversion PCUICValidity PCUICInductives PCUICInductiveInversion
      PCUICSpine PCUICSR PCUICCumulativity PCUICConversion PCUICConfluence PCUICArities
      PCUICWeakeningEnv PCUICContexts.
-From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeReduce 
-  (* For reduce function TODO: move *) PCUICTypeChecker PCUICSafeChecker.
+From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeReduce.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 Import monad_utils.MonadNotation.

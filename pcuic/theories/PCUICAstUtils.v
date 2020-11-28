@@ -4,6 +4,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICSize.
 
 Require Import ssreflect.
 From Equations Require Import Equations.
+Set Equations Transparent.
 
 Derive Signature for All All2.
 
@@ -814,7 +815,6 @@ Section MapInP.
   map_InP nil _ := nil;
   map_InP (cons x xs) H := cons (f x (H x (or_introl eq_refl))) (map_InP xs (fun x inx => H x _)).
 End MapInP.
-Global Transparent map_InP.
 
 Lemma map_InP_spec {A B : Type} {P : A -> Type} (f : A -> B) (l : list A) (H : forall x, In x l -> P x) :
   map_InP (fun (x : A) (_ : P x) => f x) l H = List.map f l.

@@ -30,41 +30,6 @@ Ltac Coq.Program.Tactics.program_solve_wf ::=
                 end
   end.
 
-Inductive env_error :=
-| IllFormedDecl (e : string) (e : type_error)
-| AlreadyDeclared (id : string).
-
-Inductive EnvCheck (A : Type) :=
-| CorrectDecl (a : A)
-| EnvError (Σ : global_env_ext) (e : env_error).
-Global Arguments EnvError {A} Σ e.
-Global Arguments CorrectDecl {A} a.
-
-Global Instance envcheck_monad : Monad EnvCheck :=
-  {| ret A a := CorrectDecl a ;
-      bind A B m f :=
-        match m with
-        | CorrectDecl a => f a
-        | EnvError g e => EnvError g e
-        end
-  |}.
-
-Global Instance envcheck_monad_exc
-  : MonadExc (global_env_ext * env_error) EnvCheck :=
-  { raise A '(g, e) := EnvError g e;
-    catch A m f :=
-      match m with
-      | CorrectDecl a => m
-      | EnvError g t => f (g, t)
-      end
-  }.
-
-Definition wrap_error {A} Σ (id : string) (check : typing_result A) : EnvCheck A :=
-  match check with
-  | Checked a => CorrectDecl a
-  | TypeError e => EnvError Σ (IllFormedDecl id e)
-  end.
-
 Section CheckEnv.
   Context {cf:checker_flags}.
 
@@ -1927,6 +1892,8 @@ Section CheckEnv.
         (Msg ("Incorrect inductive sort: The constructor arguments universes are not smaller than the declared inductive sort")) ;;
       match indices_matter with
       | true =>
+        (* FIXME this is wrong, we should use sorts_local_ctx as the indices might be 
+          in sorts which don't necessarily have a sup. *)
         tyloc <- check_type_local_ctx Σ params indices ind_sort wfparams ;;
         ret _
       | false => ret _

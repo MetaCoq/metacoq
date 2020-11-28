@@ -28,7 +28,9 @@ Ltac introdep := let H := fresh in intros H; depelim H.
 
 Hint Constructors Ee.eval : core.
 
+Set Warnings "-notation-overridden".
 Import E.
+Set Warnings "+notation-overridden".
 
 Section optimize.
   Context (Σ : global_context).

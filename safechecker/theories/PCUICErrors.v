@@ -292,3 +292,38 @@ Instance monad_exc : MonadExc type_error typing_result :=
       | TypeError t => f t
       end
   }.
+
+Inductive env_error :=
+| IllFormedDecl (e : string) (e : type_error)
+| AlreadyDeclared (id : string).
+
+Inductive EnvCheck (A : Type) :=
+| CorrectDecl (a : A)
+| EnvError (Σ : global_env_ext) (e : env_error).
+Global Arguments EnvError {A} Σ e.
+Global Arguments CorrectDecl {A} a.
+
+Global Instance envcheck_monad : Monad EnvCheck :=
+  {| ret A a := CorrectDecl a ;
+      bind A B m f :=
+        match m with
+        | CorrectDecl a => f a
+        | EnvError g e => EnvError g e
+        end
+  |}.
+
+Global Instance envcheck_monad_exc
+  : MonadExc (global_env_ext * env_error) EnvCheck :=
+  { raise A '(g, e) := EnvError g e;
+    catch A m f :=
+      match m with
+      | CorrectDecl a => m
+      | EnvError g t => f (g, t)
+      end
+  }.
+
+Definition wrap_error {A} Σ (id : string) (check : typing_result A) : EnvCheck A :=
+  match check with
+  | Checked a => CorrectDecl a
+  | TypeError e => EnvError Σ (IllFormedDecl id e)
+  end.

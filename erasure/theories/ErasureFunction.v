@@ -8,8 +8,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICCumulativity PCUICSR PCUICSafeLemmata
      PCUICValidity PCUICPrincipality PCUICElimination PCUICSN.
      
-From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeReduce PCUICTypeChecker PCUICSafeRetyping.
-From MetaCoq.Erasure Require Import EAstUtils EArities Extract Prelim ErasureCorrectness EDeps.
+From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeReduce PCUICSafeRetyping.
+From MetaCoq.Erasure Require Import EAstUtils EArities Extract Prelim EDeps ErasureCorrectness.
 
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -20,7 +20,7 @@ Set Equations Transparent.
 Local Set Keyed Unification.
 Require Import ssreflect.
 
-Derive Signature for on_global_env.
+Derive Signature for PCUICTyping.on_global_env.
 
 (* To debug performance issues *)
 (* 
@@ -1117,6 +1117,7 @@ Proof.
       sq. destruct X0 as [bod [bodty [[Hbod Hebod] Heqdeps]]].
       eapply (erase_global_erases_deps (Σ := (Σ, cst_universes c))); simpl; auto.
       constructor; simpl; auto.
+      red in w.
       depelim w. auto. eauto. eauto.
       eapply IHΣ.
 

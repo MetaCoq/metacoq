@@ -3,12 +3,10 @@ From Coq Require Import Program.
 From MetaCoq.Template Require Import config utils uGraph Pretty.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping
      TemplateToPCUIC.
-From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeReduce PCUICSafeChecker
-     SafeTemplateChecker.
+From MetaCoq.SafeChecker Require Import PCUICErrors.
 From MetaCoq.Erasure Require Import EAstUtils ErasureFunction EPretty.
 From MetaCoq.Erasure Require ErasureFunction EOptimizePropDiscr.
 
-Existing Instance envcheck_monad.
 Existing Instance extraction_checker_flags.
 
 (** This is a hack to avoid having to handle template polymorphism and make
@@ -159,7 +157,6 @@ Local Open Scope string_scope.
 (** This uses the retyping-based erasure *)
 Program Definition erase_and_print_template_program {cf : checker_flags} (p : Ast.program)
   : string :=
-  let p := fix_program_universes p in
   let (Σ', t) := erase_template_program p in
   "Environment is well-formed and " ^ Pretty.print_term (Ast.empty_ext p.1) [] true p.2 ^
   " erases to: " ^ nl ^ print_term Σ' [] true false t.

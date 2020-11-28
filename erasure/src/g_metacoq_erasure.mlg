@@ -7,7 +7,6 @@ open Stdarg
 open Pp
 open PeanoNat.Nat
 open Datatypes
-open PCUICSafeChecker
 
 let pr_char c = str (Char.escaped c)
 

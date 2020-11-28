@@ -12,6 +12,7 @@ Program Definition infer_template_program {cf : checker_flags} (p : Ast.program)
   p <- typecheck_program (cf:=cf) (trans_global_decls p.1, trans p.2) φ Hφ ;;
   ret (p.π1 ; _).
 
+(*
 (** In Coq until 8.10, programs can be ill-formed w.r.t. universes as they don't include
     all declarations of universes and constraints coming from section variable declarations.
     We hence write a program that computes the dangling universes in an Ast.program and registers
@@ -96,10 +97,9 @@ Definition fix_global_env_universes (Σ : Ast.global_env) : Ast.global_env :=
 Definition fix_program_universes (p : Ast.program) : Ast.program :=
   let '(Σ, t) := p in
   (fix_global_env_universes Σ, t).
-
+*)
 Program Definition infer_and_print_template_program {cf : checker_flags} (p : Ast.program) φ Hφ
   : string + string :=
-  let p := fix_program_universes p in
   match infer_template_program (cf:=cf) p φ Hφ return string + string with
   | CorrectDecl t =>
     inl ("Environment is well-formed and " ^ string_of_term (trans p.2) ^

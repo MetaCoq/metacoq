@@ -83,14 +83,8 @@ src/pCUICSafeReduce.mli
 src/pCUICSafeReduce.ml
 # src/pCUICSafeConversion.mli
 # src/pCUICSafeConversion.ml
-src/pCUICTypeChecker.mli
-src/pCUICTypeChecker.ml
-src/pCUICSafeChecker.mli
-src/pCUICSafeChecker.ml
 src/pCUICSafeRetyping.ml
 src/pCUICSafeRetyping.mli
-src/safeTemplateChecker.mli
-src/safeTemplateChecker.ml
 
 # src/ssreflect.mli
 # src/ssreflect.ml

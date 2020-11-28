@@ -34,10 +34,7 @@ TemplateToPCUIC
 PCUICErrors
 PCUICUnivSubst
 PCUICSafeReduce
-PCUICTypeChecker
-PCUICSafeChecker
 PCUICSafeRetyping
-SafeTemplateChecker
 
 EAst
 EAstUtils

@@ -1,7 +1,7 @@
 From Coq Require Import Bool List Arith Lia.
 From MetaCoq.Template Require Import config utils monad_utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICTyping PCUICInversion PCUICInductiveInversion.
-From MetaCoq.PCUIC Require Import PCUICWeakening PCUICClosed PCUICSubstitution PCUICPrincipality PCUICValidity PCUICCumulativity.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping PCUICInversion PCUICInductiveInversion.
+From MetaCoq.PCUIC Require Import PCUICWeakening PCUICClosed PCUICSubstitution PCUICPrincipality PCUICValidity PCUICCumulativity PCUICInductives.
 From MetaCoq.PCUIC Require Import PCUICWfUniverses PCUICSR.
 From MetaCoq.Bidirectional Require Import BDEnvironmentTyping BDMinimalTyping.
 
@@ -304,15 +304,28 @@ Proof.
     + eassumption.
     + unfold params in * ; rewrite <- H0 in * ; eassumption.
 
-  - clear H4.
+  - subst npar.
+    assert (PT.wf Σ.1) by (apply bd_wf ; assumption).
+    assert (PT.isType Σ Γ pty).
+    { eapply PCUICInductiveInversion.WfArity_build_case_predicate_type; eauto.
+      by eapply validity_term ; auto.
+    }
+
+    assert (∑ pctx, destArity [] pty =  Some (pctx, ps)) as [].
+    { unshelve eapply (PCUICInductives.build_case_predicate_type_spec (Σ.1, ind_universes mdecl)) in H2 as [parsubst [_ ->]].
+      1: eapply (PCUICWeakeningEnv.on_declared_inductive) in isdecl as [? ?] ; eauto.
+      eexists. rewrite !destArity_it_mkProd_or_LetIn; simpl. reflexivity. }
+
+    assert (All (fun bty => PT.isType Σ Γ bty.2) btys).
+    { by eapply build_branches_type_wt ; eauto. }
+
+    clear H4. 
     induction X4.
     all: constructor ; auto.
-    destruct r as (? & (? & ? & ?) & ? & ?).
+    all: inversion_clear X8.
+    2: auto.
+    destruct r as (? & ? & ?).
     repeat split ; auto.
-    apply p1 ; auto.
-    all: eexists.
-    all: apply p0.
-    all: by auto.
 
   - clear H H0 H1 X0.
     induction X.

@@ -1,5 +1,6 @@
 Require Import String ZArith Lia.
 From Equations Require Import Equations.
+Set Equations Transparent.
 
 Derive NoConfusion EqDec for Strings.Ascii.ascii string positive Z.
 

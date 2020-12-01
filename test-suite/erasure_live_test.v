@@ -13,25 +13,6 @@ Definition test (p : Ast.program) : string :=
 
 MetaCoq Quote Recursively Definition zero := 0.
 
-(* Definition zerocst_test : ∑ s, test zero = s.
-Proof.
-  eexists.
-  unfold test, erase_and_print_template_program.
-  set(e := fix_program_universes zero).
-  cbn in e.
-  unfold erase_template_program.
-  set (foo := ErasureFunction.erase _ _ _ _ _).
-  hnf in foo.
-  unfold ErasureFunction.is_erasable in foo.
-  set (isa := ErasureFunction.is_arity _ _ _ _ _ _) in *.
-  hnf in isa.
-  set (rs := PCUICTypeChecker.reduce_to_sort _ _ _ _) in *.
-  elimtype False. clear foo isa.
-  hnf in rs.
-
-
-  simpl in foo. *)
-
 Definition zerocst := Eval lazy in test zero.
 
 MetaCoq Quote Recursively Definition exproof := I.

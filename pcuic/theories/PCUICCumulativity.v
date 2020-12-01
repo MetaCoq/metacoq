@@ -53,6 +53,7 @@ Section ConvCumulDefs.
 
 End ConvCumulDefs.
 
+(* todo mode typing notation *)
 Reserved Notation " Σ ;;; Γ |- t : T " (at level 50, Γ, t, T at next level).
 Reserved Notation " Σ ;;; Γ |- t <= u " (at level 50, Γ, t, u at next level).
 Reserved Notation " Σ ;;; Γ |- t = u " (at level 50, Γ, t, u at next level).

@@ -9,3 +9,4 @@ demo.v
 add_constructor.v
 tauto.v
 typing_correctness.v
+metacoq_tour_prelude.v

@@ -14,7 +14,7 @@ make -f Makefile mrproper
 
 if command -v coqc >/dev/null 2>&1
 then
-    COQLIB=`coqc -where | tr -d '\r'`
+    COQLIB=` coqc -where | tr -d '\r' | tr '\\' '/'`
 
     if [ "$1" == "local" ]
     then

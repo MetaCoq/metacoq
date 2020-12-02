@@ -1,8 +1,10 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Program.
 From MetaCoq.Template Require Import config utils uGraph Pretty Environment Typing.
+Set Warnings "-notation-overridden".
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping
      TemplateToPCUIC TemplateToPCUICCorrectness.
+Set Warnings "+notation-overridden".
 From MetaCoq.SafeChecker Require Import PCUICErrors.
 From MetaCoq.Erasure Require Import EAstUtils ErasureFunction EPretty.
 From MetaCoq.Erasure Require ErasureFunction EOptimizePropDiscr.

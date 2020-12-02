@@ -27,8 +27,8 @@ src/kernames.mli
 src/kernames.ml
 # src/reflect.mli
 # src/reflect.ml
-src/typing0.mli
-src/typing0.ml
+# src/typing0.mli
+# src/typing0.ml
 
 # From PCUIC
 src/pCUICAst.ml

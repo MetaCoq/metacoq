@@ -12,7 +12,7 @@ authors: ["Simon Boulier <simon.boulier@inria.fr>"
 license: "MIT"
 build: [
   ["sh" "./configure.sh"]
-  [make "-j%{jobs}%" "-C" "translations"]
+  [make "-j" "%{jobs}%" "-C" "translations"]
 ]
 install: [
   [make "-C" "translations" "install"]

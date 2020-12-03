@@ -5,6 +5,7 @@
 -Q ../checker/theories MetaCoq.Checker
 -Q ../pcuic/theories MetaCoq.PCUIC
 -Q ../safechecker/theories MetaCoq.SafeChecker
+-Q ../erasure/theories MetaCoq.Erasure
 -R . MetaCoq.Examples
 
 demo.v

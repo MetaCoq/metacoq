@@ -886,3 +886,17 @@ Inductive view_ind : term -> Type :=
 Equations view_indc (t : term) : view_ind t :=
   view_indc (tInd ind u) => view_ind_tInd ind u;
   view_indc t => view_ind_other t _.
+
+Inductive view_prod_sort : term -> Type :=
+| view_prod_sort_prod na A B : view_prod_sort (tProd na A B)
+| view_prod_sort_sort u : view_prod_sort (tSort u)
+| view_prod_sort_other t :
+    ~isProd t ->
+    ~isSort t ->
+    view_prod_sort t.
+
+Equations view_prod_sortc (t : term) : view_prod_sort t := { 
+  | tProd na A B => view_prod_sort_prod na A B;
+  | tSort u => view_prod_sort_sort u;
+  | t => view_prod_sort_other t _ _
+  }.

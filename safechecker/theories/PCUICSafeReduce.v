@@ -6,6 +6,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICUnivSubst PCUICTyping PCUICPosition PCUICNormal
      PCUICInversion PCUICSafeLemmata PCUICSR PCUICSN
      PCUICUtils PCUICReduction PCUICValidity.
+From MetaCoq.SafeChecker Require Import PCUICWfReduction.
 
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
@@ -1880,5 +1881,142 @@ Section ReduceFns.
     noconf e0.
     discriminate i0.
   Qed.
+  
+  (* Definition of assumption-only arities (without lets) *)
+  Definition arity_ass := aname * term.
+
+  Fixpoint mkAssumArity (l : list arity_ass) (s : Universe.t) : term :=
+    match l with
+    | [] => tSort s
+    | (na, A) :: l => tProd na A (mkAssumArity l s)
+    end.
+  
+  Definition arity_ass_context := rev_map (fun '(na, A) => vass na A).
+  
+  Lemma assumption_context_arity_ass_context l :
+    assumption_context (arity_ass_context l).
+  Proof.
+    unfold arity_ass_context.
+    rewrite rev_map_spec.
+    induction l using MCList.rev_ind; cbn.
+    - constructor.
+    - rewrite map_app, rev_app_distr.
+      cbn.
+      destruct x.
+      constructor; auto.
+  Qed.
+  
+  Lemma mkAssumArity_it_mkProd_or_LetIn (l : list arity_ass) (s : Universe.t) :
+    mkAssumArity l s = it_mkProd_or_LetIn (arity_ass_context l) (tSort s).
+  Proof.
+    unfold arity_ass_context.
+    rewrite rev_map_spec.
+    induction l; auto.
+    cbn.
+    destruct a.
+    rewrite IHl, it_mkProd_or_LetIn_app; auto.
+  Qed.
+
+  Lemma isArity_mkAssumArity l s :
+    isArity (mkAssumArity l s).
+  Proof.
+    induction l as [|(na & A) l IH]; cbn; auto.
+  Qed.
+
+  Record conv_arity {Γ T} : Type :=
+    build_conv_arity {
+        conv_ar_context : list arity_ass;
+        conv_ar_univ : Universe.t;
+        conv_ar_red : ∥red Σ Γ T (mkAssumArity conv_ar_context conv_ar_univ)∥
+      }.
+
+  Global Arguments conv_arity : clear implicits.
+  
+  Lemma conv_arity_Is_conv_to_Arity {Γ T} :
+    conv_arity Γ T ->
+    Is_conv_to_Arity Σ Γ T.
+  Proof.
+    intros [asses univ r].
+    eexists.
+    split; [eassumption|].
+    apply isArity_mkAssumArity.
+  Qed.
+
+  Lemma isArity_red Γ u v :
+    isArity u ->
+    red Σ Γ u v ->
+    isArity v.
+  Proof.
+    intros arity_u r.
+    induction r using red_rect_n1; [easy|].
+    eapply isArity_red1; eassumption.
+  Qed.
+  
+  Lemma Is_conv_to_Arity_red Γ T T' :
+    Is_conv_to_Arity Σ Γ T ->
+    red Σ Γ T T' ->
+    Is_conv_to_Arity Σ Γ T'.
+  Proof.
+    unfold Is_conv_to_Arity.
+    intros [T'' (redT'' & is_arity)] red.
+    sq.
+    destruct (red_confluence HΣ red redT'') as (a & reda' & reda'').
+    exists a.
+    split; [easy|].
+    clear -is_arity reda''.
+    eapply isArity_red; eauto.
+  Qed.
+  
+  Local Instance wellfounded : WellFounded (@hnf_subterm_rel _ Σ) :=
+    @wf_hnf_subterm _ _ HΣ.
+  
+  Equations? (noeqns) reduce_to_arity (Γ : context) (T : term) (wt : welltyped Σ Γ T)
+    : (conv_arity Γ T) + {~Is_conv_to_Arity Σ Γ T}
+    by wf ((Γ;T; wt) : (∑ Γ t, welltyped Σ Γ t)) hnf_subterm_rel  :=
+    reduce_to_arity Γ T wt with inspect (hnf Γ T wt) :=
+      | exist Thnf eqhnf with view_prod_sortc Thnf := {
+        | view_prod_sort_prod na A B with reduce_to_arity (Γ,, vass na A) B _ := {
+          | inleft car => inleft {| conv_ar_context := (na, A) :: conv_ar_context car;
+                                    conv_ar_univ := conv_ar_univ car |};
+          | inright nocar => inright _
+          };
+        | view_prod_sort_sort u => inleft {| conv_ar_context := [];
+                                             conv_ar_univ := u |};
+        | view_prod_sort_other nonar notprod notsort => inright _
+        }.
+  Proof.
+    all: pose proof (@hnf_sound Γ T wt) as [r].
+    all: rewrite <- ?eqhnf in r.
+    all: destruct HΣ as [wf].
+    - destruct wt as (?&typ).
+      eapply subject_reduction in r; eauto.
+      apply inversion_Prod in r as (?&?&?&?&?); auto.
+      econstructor; eauto.
+    - constructor.
+      eexists _; split; eauto.
+      unshelve eexists _; [constructor; constructor|]; auto.
+    - destruct car as [c_ar c_univ [c_red]]; cbn.
+      constructor.
+      etransitivity; eauto.
+      eapply red_prod; eauto.
+    - eapply Is_conv_to_Arity_red in H as (?&[r']&isar); eauto.
+      apply invert_red_prod in r' as (?&?&(->&?)&?); auto.
+      contradiction nocar.
+      eexists; eauto using sq.
+    - constructor; auto.
+    - pose proof (@hnf_complete Γ T wt) as [w].
+      destruct HΣ.
+      apply Is_conv_to_Arity_inv in H as [(na&A&B&[r'])|(u&[r'])]; auto.
+      + eapply red_confluence in r' as (?&r1&r2); eauto.
+        apply invert_red_prod in r2 as (?&?&(->&?)&?); auto.
+        eapply whnf_red_inv in r1; eauto.
+        depelim r1.
+        rewrite H in notprod; auto.
+      + eapply red_confluence in r' as (?&r1&r2); eauto.
+        apply invert_red_sort in r2 as ->.
+        eapply whnf_red_inv in r1; eauto.
+        depelim r1.
+        rewrite H in notsort; cbn in *; auto.
+  Qed. 
 
 End ReduceFns.

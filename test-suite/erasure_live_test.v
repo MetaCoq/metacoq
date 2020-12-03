@@ -1,5 +1,5 @@
 From Coq Require Import Recdef.
-From MetaCoq.Template Require Import Loader.
+From MetaCoq.Template Require Import TemplateMonad Loader.
 From MetaCoq.SafeChecker Require Import SafeTemplateChecker.
 From MetaCoq.PCUIC Require Import PCUICAstUtils.
 From MetaCoq.Erasure Require Import Erasure.
@@ -21,21 +21,26 @@ Definition exprooftest := Eval lazy in test exproof.
 MetaCoq Quote Recursively Definition exintro := (@exist _ _ 0 (@eq_refl _ 0) : {x : nat | x = 0}).
 Definition exintrotest := Eval lazy in test exintro.
 
-MetaCoq Quote Recursively Definition idnat := ((fun (X : Set) (x : X) => x) nat).
-Definition test_idnat := Eval lazy in test idnat.
+Definition idnat := ((fun (X : Set) (x : X) => x) nat).
+
+MetaCoq Quote Recursively Definition idnatc := idnat.
+Definition test_idnat := Eval lazy in test idnatc.
 
 (** Check that optimization of singleton pattern-matchings work *)
-MetaCoq Quote Recursively Definition singlelim := ((fun (X : Set) (x : X) (e : x = x) =>
+Definition singlelim := ((fun (X : Set) (x : X) (e : x = x) =>
                   match e in eq _ x' return bool with
                   | eq_refl => true
                   end)).
 
-Time Definition singelim_test := Eval lazy in test singlelim.
+Definition erase {A} (a : A) : TemplateMonad unit :=
+  aq <- tmQuoteRec a ;;  
+  s <- tmEval lazy (erase_and_print_template_program aq) ;;
+  tmMsg s.
 
-MetaCoq Quote Recursively Definition plusr := (plus 0 1).
-
-Time Definition plusrtest := Eval lazy in test plusr.
-
+MetaCoq Run (erase 0).
+MetaCoq Run (tmEval hnf idnat >>= erase).
+MetaCoq Run (tmEval hnf singlelim >>= erase).
+MetaCoq Run (erase (plus 0 1)).
 
 (** vector addition **)
 Require Coq.Vectors.Vector.
@@ -47,21 +52,7 @@ Definition v01 : Vector.t nat 2 :=
 Definition v23 : Vector.t nat 2 :=
   (Vector.cons nat 2 1 (Vector.cons nat 3 0 (Vector.nil nat))).
 Definition vplus0123 := (vplus v01 v23).
-MetaCoq Quote Recursively Definition cbv_vplus0123 := (* [program] of Coq's answer *)
-  ltac:(let t:=(eval cbv in (vplus0123)) in exact t).
-
-(* [Term] of Coq's answer *)
-Definition ans_vplus0123 := Eval lazy in test cbv_vplus0123.
-
-(* [program] of the program *)
-MetaCoq Quote Recursively Definition p_vplus0123 := vplus0123.
-Time Definition test_p_vplus0123 := Eval lazy in test p_vplus0123. (* 5s *)
-(*
-  Time Eval vm_compute in test p_vplus0123. (* 3.54s *)
-Time Eval native_compute in test p_vplus0123. (* 23.54s on first run *)
-
-Time Eval native_compute in test p_vplus0123. (* 2.8s on second run *)
-*)
+MetaCoq Run (tmEval hnf vplus0123 >>= erase).
 
 (** Ackermann **)
 Fixpoint ack (n m:nat) {struct n} : nat :=

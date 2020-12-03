@@ -72,7 +72,7 @@ erasure: template-coq safechecker pcuic
 checker: template-coq
 	$(MAKE) -C checker
 
-examples: checker safechecker
+examples: checker safechecker erasure
 	$(MAKE) -C examples
 
 test-suite: template-coq checker safechecker erasure
@@ -90,7 +90,7 @@ cleanplugins:
 
 ci-local:
 	./configure.sh local
-	$(MAKE) all test-suite TIMED=pretty-timed
+	$(MAKE) all test-suite
 
 ci-opam:
 	# Use -v so that regular output is produced

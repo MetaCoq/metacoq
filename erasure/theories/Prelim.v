@@ -5,7 +5,7 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
      PCUICSubstitution PCUICLiftSubst PCUICClosed
      PCUICWcbvEval PCUICSR  PCUICInversion PCUICGeneration
      PCUICContextConversion PCUICCanonicity.
-From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker.
+From MetaCoq.SafeChecker Require Import PCUICErrors.
 From Coq Require Import Program ssreflect.
 
 
@@ -267,7 +267,7 @@ Proof.
     rewrite emkApps_snoc in i. inv i.
   - destruct (EAstUtils.mkApps_elim t l). EAstUtils.solve_discr.
     rewrite Ee.value_head_spec in i.
-    move/andP: i => [H H'].
+    move/andb_and: i => [H H'].
     eapply Ee.atom_mkApps in H' as [H1 _].
     destruct n, L; discriminate.
   - unfold Ee.isStuckFix in i. destruct f; try now inversion i.
@@ -405,6 +405,6 @@ Proof.
   - cbn; eauto.
   - destruct a. destruct decl_body.
     + cbn. econstructor. inv X0. eauto. econstructor.
-      depelim X0. reflexivity. reflexivity.
+      depelim X0; reflexivity. reflexivity. reflexivity.
     + cbn. econstructor. inv X0. eauto. now econstructor.
 Qed.

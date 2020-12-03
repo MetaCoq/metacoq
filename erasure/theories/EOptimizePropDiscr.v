@@ -8,7 +8,6 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICCumulativity PCUICSR PCUICSafeLemmata
      PCUICValidity PCUICPrincipality PCUICElimination PCUICSN.
      
-From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker PCUICSafeRetyping.
 From MetaCoq.Erasure Require Import EAstUtils EArities Extract Prelim ErasureCorrectness EDeps 
     ErasureFunction ELiftSubst.
 
@@ -28,7 +27,9 @@ Ltac introdep := let H := fresh in intros H; depelim H.
 
 Hint Constructors Ee.eval : core.
 
+Set Warnings "-notation-overridden".
 Import E.
+Set Warnings "+notation-overridden".
 
 Section optimize.
   Context (Σ : global_context).

@@ -359,8 +359,11 @@ Proof.
   induction h; constructor; auto.
   destruct r.
   clear -on_cargs.
-  induction (cshape_args y) as [|[? [] ?] ?]; simpl in on_cargs; constructor;
-    try red; simpl; intuition auto.
+  revert on_cargs. generalize (cshape_sorts y).
+  induction (cshape_args y) as [|[? [] ?] ?]; simpl;
+    destruct l; intuition auto;
+    constructor;
+    try red; simpl; intuition eauto.
 Qed.
 
 Lemma subst_context_snoc s k Γ d : subst_context s k (d :: Γ) = subst_context s k Γ ,, map_decl (subst s (#|Γ| + k)) d.
@@ -632,8 +635,8 @@ Proof.
            simpl. intros. destruct X2 as [? ? ? ?]; unshelve econstructor; eauto.
            * apply X; eauto.
            * clear -X0 X on_cargs. revert on_cargs.
-              generalize (cshape_args y).
-              induction c; simpl; auto;
+              generalize (cshape_args y), (cshape_sorts y).
+              induction c; destruct l; simpl; auto;
               destruct a as [na [b|] ty]; simpl in *; auto;
            split; intuition eauto.
            * clear -X0 X on_cindices.
@@ -643,13 +646,10 @@ Proof.
              induction 1; simpl; constructor; auto.
        --- simpl; intros. apply (onProjections X1 H0).
        --- destruct X1. simpl. unfold check_ind_sorts in *.
-           destruct universe_family; auto.
+           destruct Universe.is_prop; auto.
+           destruct Universe.is_sprop; auto.
            split. apply ind_sorts. destruct indices_matter; auto.
            eapply type_local_ctx_impl. eapply ind_sorts. auto.
-           split; [apply fst in ind_sorts|apply snd in ind_sorts].
-           eapply Forall_impl; tea. auto.
-           destruct indices_matter; [|trivial].
-           eapply type_local_ctx_impl; tea. eauto.
        --- apply (onIndices X1).
     -- red in onP. red.
        eapply All_local_env_impl. eauto.

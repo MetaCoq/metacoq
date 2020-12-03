@@ -122,7 +122,7 @@ Definition nlg (Σ : global_env_ext) : global_env_ext :=
 Ltac destruct_one_andb :=
   lazymatch goal with
   | h : is_true (_ && _) |- _ =>
-    apply andP in h ; destruct h as [? ?]
+    apply andb_and in h ; destruct h as [? ?]
   end.
 
 Ltac destruct_andb :=
@@ -382,6 +382,16 @@ Lemma nl_eq_term {cf:checker_flags} Σ:
     eq_term (map (on_snd nl_global_decl) Σ) φ (nl t) (nl t').
 Proof.
   intros. apply nl_eq_term_upto_univ. assumption.
+Qed.
+
+Lemma nl_compare_term {cf:checker_flags} le Σ:
+  forall φ t t',
+    compare_term le Σ φ t t' ->
+    compare_term le (map (on_snd nl_global_decl) Σ) φ (nl t) (nl t').
+Proof.
+  destruct le; intros.
+  - apply nl_leq_term. assumption.
+  - apply nl_eq_term. assumption.
 Qed.
 
 Corollary eq_term_nl_eq :
@@ -891,39 +901,39 @@ Proof.
 Qed.
 
 Lemma nl_eq_decl {cf:checker_flags} :
-  forall Σ φ d d',
-    eq_decl Σ φ d d' ->
-    eq_decl (map (on_snd nl_global_decl) Σ) φ (map_decl nl d) (map_decl nl d').
+  forall le Σ φ d d',
+    eq_decl le Σ φ d d' ->
+    eq_decl le (map (on_snd nl_global_decl) Σ) φ (map_decl nl d) (map_decl nl d').
 Proof.
-  intros Σ φ d d' [h1 h2].
+  intros le Σ φ d d' [[hann h1] h2].
   split.
   - simpl. destruct d as [? [?|] ?], d' as [? [?|] ?].
     all: cbn in *.
-    all: trivial.
+    all: split; trivial.
     apply nl_eq_term. assumption.
-  - apply nl_eq_term. assumption.
+  - apply nl_compare_term. assumption.
 Qed.
 
 Lemma nl_eq_decl' {cf:checker_flags} :
-  forall Σ φ d d',
-    eq_decl Σ φ d d' ->
-    eq_decl (map (on_snd nl_global_decl) Σ) φ (map_decl_anon nl d) (map_decl_anon nl d').
+  forall le Σ φ d d',
+    eq_decl le Σ φ d d' ->
+    eq_decl le (map (on_snd nl_global_decl) Σ) φ (map_decl_anon nl d) (map_decl_anon nl d').
 Proof.
-  intros Σ φ d d' [h1 h2].
+  intros le Σ φ d d' [[hann h1] h2].
   split.
   - simpl. destruct d as [? [?|] ?], d' as [? [?|] ?].
     all: cbn in *.
-    all: trivial.
+    all: split; trivial.
     apply nl_eq_term. assumption.
-  - apply nl_eq_term. assumption.
+  - apply nl_compare_term. assumption.
 Qed.
 
 Lemma nl_eq_context {cf:checker_flags} :
-  forall Σ φ Γ Γ',
-    eq_context Σ φ Γ Γ' ->
-    eq_context (map (on_snd nl_global_decl) Σ) φ (nlctx Γ) (nlctx Γ').
+  forall le Σ φ Γ Γ',
+    eq_context le Σ φ Γ Γ' ->
+    eq_context le (map (on_snd nl_global_decl) Σ) φ (nlctx Γ) (nlctx Γ').
 Proof.
-  intros Σ φ Γ Γ' h.
+  intros le Σ φ Γ Γ' h.
   unfold eq_context, nlctx.
   eapply All2_map, All2_impl.
   - eassumption.
@@ -1302,6 +1312,7 @@ Proof.
     (*     unfold nlctx; now rewrite map_length. *)
     (*   * eapply All2_map, All2_impl; tea. *)
     (*     apply nl_eq_decl'. *)
+    + rewrite global_ext_constraints_nlg. exact H1.
     + rewrite -> nl_mkApps in *; eassumption.
     + exact (todo "build_branches_type Nameless").
     + clear -X5. eapply All2_map, All2_impl; tea. cbn.
@@ -1327,10 +1338,11 @@ Proof.
                 = nlctx (Γ ,,, fix_context mfix))
       by now rewrite <- nl_fix_context, <- nlctx_app_context.
     constructor.
-    + eapply fix_guard_eq_term with (idx:=n). 1: eassumption.
+    + todo "fix_guard spec".
+      (*eapply fix_guard_eq_term with (idx:=n). 1: eassumption.
       constructor. clear. induction mfix. 1: constructor.
       simpl. constructor; tas. cbn.
-      repeat split; now apply eq_term_upto_univ_tm_nl.
+      repeat split; now apply eq_term_upto_univ_tm_nl.*)
     + now rewrite nth_error_map H0.
     + auto.
     + clear -X0.
@@ -1350,10 +1362,11 @@ Proof.
                 = nlctx (Γ ,,, fix_context mfix))
       by now rewrite <- nl_fix_context, <- nlctx_app_context.
     constructor; auto.
-    + eapply cofix_guard_eq_term with (idx:=n). 1: eassumption.
+    + todo "cofix_guard eq_term".
+      (* eapply cofix_guard_eq_term with (idx:=n). 1: eassumption.
       constructor. clear. induction mfix. 1: constructor.
       simpl. constructor; tas. cbn.
-      repeat split; now apply eq_term_upto_univ_tm_nl.
+      repeat split; now apply eq_term_upto_univ_tm_nl.*)
     + now rewrite nth_error_map H0.
     + clear -X0.
       apply All_map. eapply All_impl; tea.

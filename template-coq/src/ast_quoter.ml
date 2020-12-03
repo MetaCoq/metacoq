@@ -20,7 +20,7 @@ struct
   type quoted_proj = projection
   type quoted_global_reference = global_reference
 
-  type quoted_sort_family = Universes0.sort_family
+  type quoted_sort_family = Universes0.allowed_eliminations
   type quoted_constraint_type = Universes0.ConstraintType.t
   type quoted_univ_constraint = Universes0.UnivConstraint.t
   type quoted_univ_constraints = Universes0.ConstraintSet.t
@@ -104,10 +104,10 @@ struct
 
   let quote_sort_family s =
     match s with
-    | Sorts.InProp -> Universes0.InProp
-    | Sorts.InSet -> Universes0.InSet
-    | Sorts.InType -> Universes0.InType
-    | Sorts.InSProp -> Universes0.InProp (* FIXME "SProp sort not supported" *)
+    | Sorts.InSProp -> Universes0.IntoSProp
+    | Sorts.InProp -> Universes0.IntoPropSProp
+    | Sorts.InSet -> Universes0.IntoSetPropSProp
+    | Sorts.InType -> Universes0.IntoAny
 
   let quote_cast_kind = function
     | Constr.DEFAULTcast -> Cast

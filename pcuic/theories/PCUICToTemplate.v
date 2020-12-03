@@ -1,6 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils.
+Set Warnings "-notation-overridden".
 From MetaCoq.Template Require Import config utils AstUtils BasicAst Ast.
+Set Warnings "+notation-overridden".
 
 Fixpoint trans (t : PCUICAst.term) : Ast.term :=
   match t with

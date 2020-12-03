@@ -178,7 +178,7 @@ Section Inversion.
         let params := firstn npar args in
         build_case_predicate_type ind mdecl idecl params u ps = Some pty ×
         Σ ;;; Γ |- p : pty ×
-        leb_sort_family (universe_family ps) (ind_kelim idecl) ×
+        is_allowed_elimination Σ ps (ind_kelim idecl) ×
         isCoFinite (ind_finite mdecl) = false ×
         Σ;;; Γ |- c : mkApps (tInd ind u) args ×
         map_option_out (build_branches_type ind mdecl idecl params u p)
@@ -209,7 +209,7 @@ Section Inversion.
       Σ ;;; Γ |- tFix mfix n : T ->
       ∑ decl,
         let types := fix_context mfix in
-        fix_guard mfix ×
+        fix_guard Σ Γ mfix ×
         nth_error mfix n = Some decl ×
         All (fun d => isType Σ Γ (dtype d)) mfix ×
         All (fun d =>
@@ -226,7 +226,7 @@ Section Inversion.
     forall {Γ mfix idx T},
       Σ ;;; Γ |- tCoFix mfix idx : T ->
       ∑ decl,
-        cofix_guard mfix ×
+        cofix_guard Σ Γ mfix ×
         let types := fix_context mfix in
         nth_error mfix idx = Some decl ×
         All (fun d => isType Σ Γ (dtype d)) mfix ×

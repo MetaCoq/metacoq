@@ -12,9 +12,9 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICUtils
 Require Import ssreflect.
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
-
-
 Local Set SimplIsCbn.
+
+Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
 Derive Signature for OnOne2_local_env.
 
@@ -29,21 +29,20 @@ Hint Rewrite projs_length : len.
 
 (** The subject reduction property of the system: *)
 
-Definition SR_red1 {cf:checker_flags} (Σ : global_env_ext) Γ t T :=
+Definition SR_red1 {cf} Σ Γ t T :=
   forall u (Hu : red1 Σ Γ t u), Σ ;;; Γ |- u : T.
 
 (* Preservation of wf_*fixpoint *)  
 
-Lemma wf_fixpoint_red1_type {cf:checker_flags} (Σ : global_env_ext) Γ mfix mfix1 : 
-  wf Σ.1 ->
-  wf_fixpoint Σ.1 mfix ->
+Lemma wf_fixpoint_red1_type {cf Σ} {wfΣ : wf Σ} Γ mfix mfix1 : 
+  wf_fixpoint Σ mfix ->
   OnOne2
   (fun x y : def term =>
    red1 Σ Γ (dtype x) (dtype y)
    × (dname x, dbody x, rarg x) = (dname y, dbody y, rarg y)) mfix mfix1 ->
-  wf_fixpoint Σ.1 mfix1.
+  wf_fixpoint Σ mfix1.
 Proof.
-  intros wfΣ wffix o.
+  intros wffix o.
   move: wffix; unfold wf_fixpoint.
   enough (forall inds, map_option_out (map check_one_fix mfix) = Some inds ->
      map_option_out (map check_one_fix mfix1) = Some inds) => //.
@@ -75,16 +74,15 @@ Proof.
     discriminate.
 Qed.
 
-Lemma wf_fixpoint_red1_body {cf:checker_flags} (Σ : global_env_ext) Γ mfix mfix1 : 
-  wf Σ.1 ->
-  wf_fixpoint Σ.1 mfix ->
+Lemma wf_fixpoint_red1_body {cf Σ} {wfΣ : wf Σ} Γ mfix mfix1 : 
+  wf_fixpoint Σ mfix ->
   OnOne2
   (fun x y : def term =>
    red1 Σ Γ (dbody x) (dbody y)
    × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)) mfix mfix1 ->
-  wf_fixpoint Σ.1 mfix1.
+  wf_fixpoint Σ mfix1.
 Proof.
-  intros wfΣ wffix o.
+  intros wffix o.
   move: wffix; unfold wf_fixpoint.
   enough (map check_one_fix mfix = map check_one_fix mfix1) as -> => //.
   induction o.
@@ -158,6 +156,26 @@ Proof.
   - simpl. now rewrite IHo.
 Qed.
 
+Hint Extern 0 (conv_decls _ _ _ _ _) => constructor : pcuic.
+Hint Extern 0 (cumul_decls _ _ _ _ _) => constructor : pcuic.
+Hint Extern 0 (conv_context _ _ _) => constructor : pcuic.
+Hint Extern 0 (cumul_context _ _ _) => constructor : pcuic.
+
+Hint Extern 4 (∑ s : Universe.t, typing _ _ ?T (tSort s)) => 
+  match goal with 
+  | [ H : isType _ _ T |- _ ] => exact H
+  end : pcuic.
+
+Ltac unfold_pcuic := 
+  progress (unfold lift_typing, PCUICTypingDef.conv, PCUICTypingDef.cumul, PCUICTypingDef.typing,
+  PCUICTypingDef.wf_universe, PCUICTypingDef.closedn in * ).
+Hint Extern 10 => unfold_pcuic : pcuic.
+
+Hint Resolve red_conv red1_red red_cumul : pcuic.
+Hint Transparent global_env_ext : pcuic.
+Hint Constructors All_local_env context_relation : pcuic.
+Ltac pcuics := try typeclasses eauto with pcuic.
+
 Lemma sr_red1 {cf:checker_flags} :
   env_prop SR_red1
       (fun Σ Γ wfΓ =>
@@ -193,16 +211,12 @@ Proof.
 
   - (* Prod *)
     constructor; eauto.
-    eapply (context_conversion _ wf _ _ _ typeb).
-    constructor; auto with pcuic.
-    constructor; auto. exists s1; auto.
+    unshelve eapply (context_conversion _ typeb); pcuics.
 
   - (* Lambda *)
     eapply type_Cumul'. eapply type_Lambda; eauto.
-    eapply (context_conversion _ wf _ _ _ typeb).
-    constructor; auto with pcuic.
-    constructor; auto. exists s1; auto.
-    assert (Σ ;;; Γ |- tLambda n t b : tProd n t bty). econstructor; eauto.
+    unshelve eapply (context_conversion _ typeb); pcuics.
+    assert (Σ ;;; Γ |- tLambda n t b : tProd n t bty). econstructor; pcuics.
     now eapply validity_term in X0.
     eapply cumul_red_r.
     apply cumul_refl'. constructor. apply Hu.
@@ -219,9 +233,7 @@ Proof.
   - (* LetIn value *)
     eapply type_Cumul'.
     econstructor; eauto.
-    eapply (context_conversion _ wf _ _ _ typeb').
-    constructor. auto with pcuic. constructor; eauto. constructor; auto.
-    now exists s1. red. auto.
+    unshelve eapply (context_conversion _ typeb'); pcuics.
     assert (Σ ;;; Γ |- tLetIn n b b_ty b' : tLetIn n b b_ty b'_ty). econstructor; eauto.
     edestruct (validity _ wf _ _ _ X0). apply i.
     eapply cumul_red_r.
@@ -233,10 +245,9 @@ Proof.
     econstructor; eauto.
     eapply type_Cumul'. eauto. exists s1; auto.
     apply red_cumul; eauto.
-    eapply (context_conversion _ wf _ _ _ typeb').
-    constructor. auto with pcuic. constructor; eauto. constructor; auto.
-    exists s1; auto. red; eauto.
-    eapply type_Cumul'. eauto. exists s1; auto. eapply red_cumul. now eapply red1_red.
+    unshelve eapply (context_conversion _ typeb'); pcuics.
+    constructor; pcuic.
+    eapply type_Cumul'. eauto. all:pcuic.
     assert (Σ ;;; Γ |- tLetIn n b b_ty b' : tLetIn n b b_ty b'_ty). econstructor; eauto.
     edestruct (validity _ wf _ _ _ X0). apply i.
     eapply cumul_red_r.
@@ -248,13 +259,9 @@ Proof.
     eapply inversion_Lambda in typet' as [s1 [B' [Ht [Hb HU]]]]=>//.
     apply cumul_Prod_inv in HU as [[eqann eqA] leqB] => //.
     destruct (validity _ wf _ _ _ typet).
-
+    eapply isType_tProd in i as [Hdom Hcodom]; auto.
     eapply type_Cumul'; eauto.
-    unshelve eapply (context_conversion _ wf _ _ _ Hb); eauto with wf.
-    constructor. auto with pcuic. constructor ; eauto.
-    constructor; auto with pcuic. red; eauto.
-    eapply isType_tProd in i as [Hs _]; auto.
-    eapply isType_tProd in i as [_ Hs]; intuition auto.
+    unshelve eapply (context_conversion _ Hb); pcuics.
 
   - (* Fixpoint unfolding *)
     assert (args <> []) by (destruct args; simpl in *; congruence).
@@ -345,16 +352,15 @@ Proof.
     assert (wfps : wf_universe Σ ps).
     { eapply validity in typep; auto. eapply PCUICWfUniverses.isType_wf_universes in typep.
       rewrite PCUICWfUniverses.wf_universes_it_mkProd_or_LetIn in typep.
-      move/andP: typep => /= [_ /andP[_ typep]]. 
-      now apply (PCUICWfUniverses.reflect_bP (PCUICWfUniverses.wf_universe_reflect _ _)) in typep. auto. }
+      move/andb_and: typep => /= [_ /andb_and[_ typep]]. 
+      now apply (ssrbool.elimT PCUICWfUniverses.wf_universe_reflect) in typep. auto. }
     eapply wf_arity_spine_typing_spine => //.
     split.
     { (* Predicate instantiation is well typed *) 
-      exists (Universe.sort_of_product s ps).
-      eapply type_it_mkProd_or_LetIn; eauto.
-      now eapply type_local_ctx_wf in typectx.
+      exists (sort_of_products s ps).
+      eapply type_it_mkProd_or_LetIn_sorts; eauto.
       assert (wf_local Σ (Γ ,,, pargctxu)).
-      { eapply type_local_ctx_wf_local in typectx; eauto. }
+      { eapply sorts_local_ctx_wf_local in typectx; eauto. }
       assert (#|argctx| = #|pargctxu|).
       { now rewrite /argctx /pargctxu /argctxu /argctx; autorewrite with len. }
       eapply type_mkApps.
@@ -404,7 +410,7 @@ Proof.
           eapply closed_wf_local in wfcl; auto.
           rewrite !subst_instance_context_app in wfcl.
           rewrite closedn_ctx_app in wfcl.
-          move/andP: wfcl => []. autorewrite with len. now auto. }
+          move/andb_and: wfcl => []. autorewrite with len. now auto. }
          eapply arity_spine_it_mkProd_or_LetIn; eauto.
          { unfold to_extended_list, to_extended_list_k. rewrite /argctxu in X0. simpl. rewrite -H in X0. 
            eapply X0. }
@@ -459,7 +465,7 @@ Proof.
            epose proof (on_minductive_wf_params_indices_inst _ _ u _ _ _ (proj1 decli) oib cu).
            rewrite subst_instance_context_app in X1. eapply closed_wf_local in X1; eauto.
            rewrite closedn_ctx_app in X1. autorewrite with len in X1.
-           now move/andP: X1 => [].
+           now move/andb_and: X1 => [].
          }
          simpl. 
          eapply conv_cumul; apply mkApps_conv_args; auto.
@@ -692,8 +698,8 @@ Proof.
       assert (wfps : wf_universe Σ ps).
       { eapply validity in typep; auto. eapply PCUICWfUniverses.isType_wf_universes in typep.
         rewrite PCUICWfUniverses.wf_universes_it_mkProd_or_LetIn in typep.
-        move/andP: typep => /= [_ /andP[_ typep]]. 
-        now apply (PCUICWfUniverses.reflect_bP (PCUICWfUniverses.wf_universe_reflect _ _)) in typep. auto. }
+        move/andb_and: typep => /= [_ /andb_and[_ typep]]. 
+        now apply (ssrbool.elimT PCUICWfUniverses.wf_universe_reflect) in typep. auto. }
       pose proof (context_subst_fun cparsubst spars). subst parsubst'. clear cparsubst.
       eapply type_mkApps. eauto.
       eapply wf_arity_spine_typing_spine; eauto.
@@ -717,14 +723,14 @@ Proof.
       unshelve eapply isType_mkApps_Ind in wat as [parsubst [argsubst wat]]; eauto.
       set (oib := on_declared_inductive wf isdecl) in *. clearbody oib.
       destruct oib as [onind oib].
-      destruct wat  as [[spars sargs] cu].
+      destruct wat as [[spars sargs] cu].
       unshelve eapply (build_case_predicate_type_spec (Σ.1, _)) in heq_build_case_predicate_type as [parsubst' [cparsubst Hpty]]; eauto.
       rewrite {}Hpty in typep.
       assert (wfps : wf_universe Σ ps).
       { eapply validity in typep; auto. eapply PCUICWfUniverses.isType_wf_universes in typep.
         rewrite PCUICWfUniverses.wf_universes_it_mkProd_or_LetIn in typep.
-        move/andP: typep => /= [_ /andP[_ typep]]. 
-        now apply (PCUICWfUniverses.reflect_bP (PCUICWfUniverses.wf_universe_reflect _ _)) in typep. auto. }
+        move/andb_and: typep => /= [_ /andb_and[_ typep]]. 
+        now apply (ssrbool.elimT PCUICWfUniverses.wf_universe_reflect) in typep. auto. }
       subst npar.
       pose proof (context_subst_fun cparsubst spars). subst parsubst'. clear cparsubst.
       eapply type_mkApps. eauto.
@@ -937,8 +943,8 @@ Proof.
     set (pargctxu1 := subst_context cparsubst 0 argctxu1) in *.
     set (pargctxu := subst_context iparsubst 0 argctxu) in *.
     move=> [cumargs _]; eauto.
-    eapply All2_local_env_nth_error in cumargs.
-    2:eapply smash_context_assumption_context; constructor.
+    eapply context_relation_nth_ass in cumargs.
+    3:eapply smash_context_assumption_context; constructor.
     2:{ unfold pargctxu1, argctxu1, argsu1.
         autorewrite with len in Hnth. eapply Hnth. }
     destruct cumargs as [decl' [Hdecl' cum]].
@@ -1020,6 +1026,9 @@ Proof.
     assert (wfpargctxu1 : wf_local Σ (Γ ,,, skipn idx (smash_context [] pargctxu1))).
     { simpl. apply wf_local_app_skipn. apply wf_local_smash_end; auto.
       apply idxsubst0. }
+    destruct cum as [[cr mapd] cdecl].
+    destruct decl'' as [na [b|] ty]; simpl in mapd; try discriminate.
+    depelim cdecl. rename c into cum.
     eapply (substitution_cumul _ Γ (skipn idx (smash_context [] pargctxu1)) [] 
       (skipn idx (List.rev (skipn (ind_npars mdecl) args0)))) in cum.
     all:auto.
@@ -1091,13 +1100,12 @@ Proof.
     clear projsubsl.
     eapply closed_wf_local in wfdecl.
     rewrite closedn_ctx_app in wfdecl.
-    move/andP: wfdecl => [_ wfdecl].
+    move/andb_and: wfdecl => [_ wfdecl].
     autorewrite with len in wfdecl.
     simpl in wfdecl.
     eapply closedn_ctx_decl in wfdecl; eauto.
     autorewrite with len in wfdecl.
     simpl in wfdecl.
-    move/andP: wfdecl => [_ clty].
     eapply closed_upwards. eauto.
     lia. auto.
 
@@ -1153,11 +1161,11 @@ Proof.
       apply (OnOne2_All_All o X1).
       + intros x [[Hb Hlam] IH].
         split; auto.
-        eapply context_conversion'; eauto.
+        eapply context_conversion; eauto.
         now rewrite -fixl.
       + move=> [na ty b rarg] [na' ty' b' rarg'] /= [[red eq] [s [Hs IH]]] [[Hb Hlam] IH'].
         noconf eq. split; auto.
-        eapply context_conversion'; eauto.
+        eapply context_conversion; eauto.
         rewrite -fixl.
         eapply type_Cumul'. eapply Hb.
         exists s. specialize (IH _ red).
@@ -1201,7 +1209,7 @@ Proof.
        apply (OnOne2_All_All o X1).
       + intros x [[Hb Hlam] IH].
         split; auto.
-        eapply context_conversion'; eauto.
+        eapply context_conversion; eauto.
         now rewrite -fixl.
         rewrite convctx. apply conv_ctx_refl.
       + move=> [na ty b rarg] [na' ty' b' rarg'] /= [[red eq] [s [Hs IH]]] [[Hb Hlam] IH'].
@@ -1243,11 +1251,11 @@ Proof.
     * eapply (OnOne2_All_mix_left X0) in o.
       apply (OnOne2_All_All o X1).
       + intros x [Hb IH].
-        eapply context_conversion'; eauto.
+        eapply context_conversion; eauto.
         now rewrite -fixl.
       + move=> [na ty b rarg] [na' ty' b' rarg'] /= [[red eq] [s [Hs IH]]] [Hb IH'].
         noconf eq. 
-        eapply context_conversion'; eauto.
+        eapply context_conversion; eauto.
         rewrite -fixl.
         eapply type_Cumul'. eapply Hb.
         exists s. specialize (IH _ red).
@@ -1303,8 +1311,6 @@ Proof.
     eapply type_Cumul; eauto.
 Qed.
 
-Print Assumptions sr_red1.
-
 Definition sr_stmt {cf:checker_flags} (Σ : global_env_ext) Γ t T :=
   forall u, red Σ Γ t u -> Σ ;;; Γ |- u : T.
 
@@ -1316,8 +1322,8 @@ Proof.
   eapply sr_red1 in Hty; eauto with wf.
 Qed.
 
-Lemma subject_reduction1 {cf:checker_flags} {Σ Γ t u T}
-  : wf Σ.1 -> Σ ;;; Γ |- t : T -> red1 Σ.1 Γ t u -> Σ ;;; Γ |- u : T.
+Lemma subject_reduction1 {cf Σ} {wfΣ : wf Σ} {Γ t u T}
+  : Σ ;;; Γ |- t : T -> red1 Σ Γ t u -> Σ ;;; Γ |- u : T.
 Proof.
   intros. eapply subject_reduction; try eassumption.
   now apply red1_red.
@@ -1326,24 +1332,11 @@ Defined.
 Section SRContext.
   Context {cf:checker_flags}.
 
-  (* todo: rename wf_local_app *)
-  Definition wf_local_app' {Σ Γ1 Γ2} :
-    wf_local Σ Γ1 -> wf_local_rel Σ Γ1 Γ2
-    -> wf_local Σ (Γ1 ,,, Γ2).
-  Proof.
-    intros H1 H2. apply wf_local_local_rel.
-    apply wf_local_rel_local in H1.
-    apply wf_local_rel_app_inv; tas.
-    now rewrite app_context_nil_l.
-  Qed.
-
-  Definition cumul_red_l' `{checker_flags} :
-    forall Σ Γ t u,
-      wf Σ.1 ->
-      red (fst Σ) Γ t u ->
+  Definition cumul_red_l' {Σ} {wfΣ : wf Σ} Γ t u :
+      red Σ Γ t u ->
       Σ ;;; Γ |- t <= u.
   Proof.
-    intros Σ Γ t u hΣ h.
+    intros h.
     induction h using red_rect'.
     - eapply cumul_refl'.
     - eapply PCUICConversion.cumul_trans ; try eassumption.
@@ -1355,8 +1348,7 @@ Section SRContext.
   Hint Constructors OnOne2_local_env : aa.
   Hint Unfold red1_ctx : aa.
 
-
-  Lemma red1_ctx_app Σ Γ Γ' Δ :
+  Lemma red1_ctx_app (Σ : global_env) Γ Γ' Δ :
     red1_ctx Σ Γ Γ' ->
     red1_ctx Σ (Γ ,,, Δ) (Γ' ,,, Δ).
   Proof.
@@ -1364,7 +1356,7 @@ Section SRContext.
     intro H. simpl. constructor. now apply IHΔ.
   Qed.
 
-  Lemma red1_red_ctx Σ Γ Γ' :
+  Lemma red1_red_ctx (Σ : global_env) Γ Γ' :
     red1_ctx Σ Γ Γ' ->
     red_ctx Σ Γ Γ'.
   Proof.
@@ -1377,7 +1369,7 @@ Section SRContext.
       apply refl_red.
   Qed.
 
-  Lemma nth_error_red1_ctx Σ Γ Γ' n decl :
+  Lemma nth_error_red1_ctx (Σ : global_env) Γ Γ' n decl :
     wf Σ ->
     nth_error Γ n = Some decl ->
     red1_ctx Σ Γ Γ' ->
@@ -1411,13 +1403,12 @@ Section SRContext.
         eapply (weakening_red_0 wfΣ _ [_]); tas; cbnr.
   Qed.
 
-  Lemma wf_local_isType_nth Σ Γ n decl :
-    wf Σ.1 ->
+  Lemma wf_local_isType_nth {Σ} {wfΣ : wf Σ} Γ n decl :
     wf_local Σ Γ ->
     nth_error Γ n = Some decl ->
     ∑ s, Σ ;;; Γ |- lift0 (S n) (decl_type decl) : tSort s.
   Proof.
-    induction n in Γ, decl |- *; intros hΣ hΓ e; destruct Γ;
+    induction n in Γ, decl |- *; intros hΓ e; destruct Γ;
       cbn; inversion e; inversion hΓ; subst.
     all: try (destruct X0 as [s Ht]; exists s;
               eapply (weakening _ _ [_] _ (tSort s)); tas).
@@ -1432,9 +1423,8 @@ Section SRContext.
   Ltac invs H := inversion H; subst.
   Ltac invc H := inversion H; subst; clear H.
 
-  Lemma subject_reduction_ctx Σ Γ Γ' t T :
-    wf Σ.1 ->
-    red1_ctx Σ.1 Γ Γ' ->
+  Lemma subject_reduction_ctx {Σ} {wfΣ : wf Σ} Γ Γ' t T :
+    red1_ctx Σ Γ Γ' ->
     Σ ;;; Γ |- t : T -> Σ ;;; Γ' |- t : T.
   Proof.
     assert(OnOne2_local_env
@@ -1447,12 +1437,12 @@ Section SRContext.
         now apply red_conv, red1_red.
       - destruct p. constructor.
         apply conv_ctx_refl. destruct p as [red ->].
-        constructor; auto; now apply red_conv, red1_red.
-        constructor.
-        apply conv_ctx_refl. destruct p as [red ->].
-        constructor; auto; now apply red_conv, red1_red.
-      - destruct d as [na [b|] ?]; constructor; auto; constructor; auto. }
-    intros wfΣ r H.
+        constructor; pcuics. now apply red_conv, red1_red.
+        destruct p as [red ->].
+        constructor. pcuic.
+        constructor; pcuics. now apply red_conv, red1_red.
+      - destruct d as [na [b|] ?]; constructor; auto; constructor; auto. all:pcuic. }
+    intros r H.
     specialize (X r).
     assert(wf_local Σ Γ').
     apply typing_wf_local in H.
@@ -1484,11 +1474,10 @@ Section SRContext.
     - eapply context_conversion; eauto.
   Qed.
   
-  Lemma wf_local_red1 {Σ Γ Γ'} :
-    wf Σ.1 ->
-    red1_ctx Σ.1 Γ Γ' -> wf_local Σ Γ -> wf_local Σ Γ'.
+  Lemma wf_local_red1 {Σ} {wfΣ : wf Σ} {Γ Γ'} :
+    red1_ctx Σ Γ Γ' -> wf_local Σ Γ -> wf_local Σ Γ'.
   Proof.
-    intro hΣ. induction 1; cbn in *.
+    induction 1; cbn in *.
     - intro e. inversion e; subst; cbn in *.
       constructor; tas. destruct X0 as [s Ht]. exists s.
       eapply subject_reduction1; tea.
@@ -1515,17 +1504,16 @@ Section SRContext.
     all:constructor; cbnr; eauto.
   Qed.
 
-  Lemma wf_local_red {Σ Γ Γ'} :
-    wf Σ.1 ->
-    red_ctx Σ.1 Γ Γ' -> wf_local Σ Γ -> wf_local Σ Γ'.
+  Lemma wf_local_red {Σ} {wfΣ : wf Σ} {Γ Γ'} :
+    red_ctx Σ Γ Γ' -> wf_local Σ Γ -> wf_local Σ Γ'.
   Proof.
-    intros hΣ h. apply red_ctx_clos_rt_red1_ctx in h.
+    intros h. apply red_ctx_clos_rt_red1_ctx in h.
     induction h; eauto using wf_local_red1.
     apply eq_context_upto_names_upto_names in e.
     eauto using wf_local_alpha.
   Qed.
 
-  Lemma wf_local_subst1 Σ (wfΣ : wf Σ.1) Γ na b t Γ' :
+  Lemma wf_local_subst1 {Σ} {wfΣ : wf Σ} Γ na b t Γ' :
       wf_local Σ (Γ ,,, [],, vdef na b t ,,, Γ') ->
       wf_local Σ (Γ ,,, subst_context [b] 0 Γ').
   Proof.
@@ -1538,7 +1526,7 @@ Section SRContext.
       assert (subslet Σ Γ [b] [vdef na b t]). {
         pose proof (cons_let_def Σ Γ [] [] na b t) as XX.
         rewrite !subst_empty in XX. apply XX. constructor.
-        apply wf_local_app in X. inversion X; subst; cbn in *; assumption.
+        apply wf_local_app_l in X. inversion X; subst; cbn in *; assumption.
       }
       constructor; cbn; auto.
       1: exists s. 1: unfold PCUICTerm.tSort.
@@ -1550,7 +1538,7 @@ Section SRContext.
       assert (subslet Σ Γ [b] [vdef na b t]). {
         pose proof (cons_let_def Σ Γ [] [] na b t) as XX.
         rewrite !subst_empty in XX. apply XX. constructor.
-        apply wf_local_app in X. inversion X; subst; cbn in *; assumption. }
+        apply wf_local_app_l in X. inversion X; subst; cbn in *; assumption. }
       constructor; cbn; auto. exists s.
       unfold PCUICTerm.tSort.
       change (tSort s) with (subst [b] #|Γ'| (tSort s)).
@@ -1565,23 +1553,21 @@ Section SRContext.
       intro H; simpl; constructor; cbn; eauto; now apply IHΔ.
   Qed.
 
-  Lemma isType_red1 {Σ Γ A B} :
-     wf Σ.1 ->
-     red1 (fst Σ) Γ A B ->
+  Lemma isType_red1 {Σ : global_env_ext} {wfΣ : wf Σ} {Γ A B} :
      isType Σ Γ A ->
+     red1 Σ Γ A B ->
      isType Σ Γ B.
    Proof.
-     intros wf red [s Hs].
+     intros [s Hs] red.
      exists s. eapply subject_reduction1; eauto.
    Qed.
 
-   Lemma isWfArity_red1 {Σ Γ A B} :
-     wf Σ.1 ->
-     red1 (fst Σ) Γ A B ->
+   Lemma isWfArity_red1 {Σ} {wfΣ : wf Σ} {Γ A B} :
      isWfArity Σ Γ A ->
+     red1 Σ Γ A B ->
      isWfArity Σ Γ B.
    Proof.
-     intros wfΣ re [isty H].
+     intros [isty H] re.
      split. eapply isType_red1; eauto.
      clear isty; revert H.
      induction re using red1_ind_all.
@@ -1618,44 +1604,38 @@ Section SRContext.
        eexists _, s''. cbn. rewrite destArity_app ee'. reflexivity.
    Qed.
 
-   Lemma isWfArity_red {Σ Γ A B} :
-     wf Σ.1 ->
-     red (fst Σ) Γ A B ->
+   Lemma isWfArity_red {Σ} {wfΣ : wf Σ} {Γ A B} :
      isWfArity Σ Γ A ->
+     red Σ Γ A B ->
      isWfArity Σ Γ B.
    Proof.
      induction 2 using red_rect'.
      - easy.
-     - intro. now eapply isWfArity_red1.
+     - now eapply isWfArity_red1.
    Qed.
 
-   Lemma isType_red {Σ Γ A B} :
-     wf Σ.1 ->
-     red (fst Σ) Γ A B ->
-     isType Σ Γ A ->
-     isType Σ Γ B.
+   Lemma isType_red {Σ} {wfΣ : wf Σ} {Γ T U} :
+    isType Σ Γ T -> red Σ Γ T U -> isType Σ Γ U.
    Proof.
-     intros ? ? [? ?].
-     eexists. eapply subject_reduction; tea.
+     intros [s Hs] red; exists s.
+     eapply subject_reduction; eauto.
    Qed.
 
-  Lemma type_reduction {Σ Γ t A B}
-    : wf Σ.1 ->  Σ ;;; Γ |- t : A -> red (fst Σ) Γ A B -> Σ ;;; Γ |- t : B.
+  Lemma type_reduction {Σ} {wfΣ : wf Σ} {Γ t A B} : 
+    Σ ;;; Γ |- t : A -> red Σ Γ A B -> Σ ;;; Γ |- t : B.
   Proof.
-    intros HΣ' Ht Hr.
+    intros Ht Hr.
     eapply type_Cumul'. eassumption.
     2: now eapply cumul_red_l'.
-    destruct (validity_term HΣ' Ht) as [s HA]. 
+    destruct (validity_term wfΣ Ht) as [s HA]. 
     exists s; eapply subject_reduction; eassumption.
   Defined.
 
 End SRContext.
 
-Lemma isWAT_tLetIn {cf:checker_flags} {Σ : global_env_ext} (HΣ' : wf Σ)
-      {Γ} (HΓ : wf_local Σ Γ) {na t A B}
+Lemma isType_tLetIn {cf} {Σ} {HΣ' : wf Σ} {Γ} {na t A B}
   : isType Σ Γ (tLetIn na t A B)
-    <~> (isType Σ Γ A × (Σ ;;; Γ |- t : A)
-                      × isType Σ (Γ,, vdef na t A) B).
+    <~> (isType Σ Γ A × (Σ ;;; Γ |- t : A) × isType Σ (Γ,, vdef na t A) B).
 Proof.
   split; intro HH.
   - destruct HH as [s H].
@@ -1679,3 +1659,6 @@ Proof.
     * apply red1_red.
       apply red_zeta with (b':=tSort sB).
 Defined.
+
+(** Keep at the end to not disturb asynchronous proof processing *)
+Print Assumptions sr_red1.

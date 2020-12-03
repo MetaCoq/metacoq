@@ -120,7 +120,8 @@ Proof.
         subst. left. reflexivity.
 Defined.
 
-Instance reflect_term : ReflectEq term :=
+(** Avoid name clash with template's reflect term, namespace handlining bug in extraction. *)
+Instance reflect_pcuic_term : ReflectEq term :=
   let h := EqDec_ReflectEq term in _.
 
 Definition eqb_context_decl (x y : context_decl) :=
@@ -138,7 +139,7 @@ Proof.
       destruct (eqb_spec ty ty'); subst; constructor; congruence.
 Qed.
 
-Instance eqb_ctx : ReflectEq context := _.
+Instance reflect_eq_context : ReflectEq context := _.
 
 Definition eqb_constant_body (x y : constant_body) :=
   let (tyx, bodyx, univx) := x in

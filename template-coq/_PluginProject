@@ -7,6 +7,8 @@ gen-src/signature.mli
 gen-src/signature.ml
 gen-src/classes0.mli
 gen-src/classes0.ml
+gen-src/eqDec.mli
+gen-src/eqDec.ml
 gen-src/all_Forall.ml
 gen-src/all_Forall.mli
 gen-src/ascii.ml
@@ -60,6 +62,8 @@ gen-src/list0.ml
 gen-src/list0.mli
 gen-src/logic0.ml
 gen-src/logic0.mli
+gen-src/mCPrelude.mli
+gen-src/mCPrelude.ml
 gen-src/mCCompare.ml
 gen-src/mCCompare.mli
 gen-src/mCList.ml
@@ -72,6 +76,8 @@ gen-src/mCRelations.ml
 gen-src/mCRelations.mli
 gen-src/mCString.ml
 gen-src/mCString.mli
+gen-src/mCUtils.ml
+gen-src/mCUtils.mli
 gen-src/mSetDecide.ml
 gen-src/mSetDecide.mli
 gen-src/mSetFacts.ml
@@ -98,6 +104,12 @@ gen-src/peanoNat.ml
 gen-src/peanoNat.mli
 gen-src/plugin_core.ml
 gen-src/plugin_core.mli
+gen-src/induction.mli
+gen-src/induction.ml
+gen-src/eqDecInstances.mli
+gen-src/eqDecInstances.ml
+gen-src/reflect.mli
+gen-src/reflect.ml
 gen-src/pretty.ml
 gen-src/pretty.mli
 gen-src/reification.ml

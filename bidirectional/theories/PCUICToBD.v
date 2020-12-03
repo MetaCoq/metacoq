@@ -1,17 +1,13 @@
 From Coq Require Import Bool List Arith Lia.
 From MetaCoq.Template Require Import config utils monad_utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICTyping.
-From MetaCoq.PCUIC Require Import PCUICArities PCUICInversion PCUICInductiveInversion PCUICReduction PCUICSubstitution PCUICConversion PCUICCumulativity PCUICWfUniverses PCUICValidity PCUICSR.
+From MetaCoq.PCUIC Require Import PCUICEquality PCUICArities PCUICInversion PCUICInductives PCUICInductiveInversion PCUICReduction PCUICSubstitution PCUICConversion PCUICCumulativity PCUICWfUniverses PCUICValidity PCUICSR PCUICContextConversion.
 From MetaCoq.Bidirectional Require Import BDEnvironmentTyping BDMinimalTyping BDMinimalToPCUIC.
 
 Require Import ssreflect.
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
-
-Lemma wf_pt `{checker_flags} Σ : PT.wf Σ -> MT.wf Σ.
-Proof.
-Admitted.
-
+     
 
 Lemma conv_infer_sort `{checker_flags} (Σ : global_env_ext) Γ t s :
   (∑ T' : term, Σ ;;; Γ |- t ▹ T' × Σ ;;; Γ |- T' <= tSort s) ->
@@ -165,24 +161,8 @@ Proof.
     econstructor.
     all: eassumption.
     
-  - intros ind u npar p c brs args mdecl idecl ? ? ? ? params ps pty ? ? Cump ? ? ? Cumc btys ? Cumbrs.
-    apply conv_check in Cump.
-    apply conv_infer_ind in Cumc ; auto.
-    destruct Cumc as (ui'&args'&?&?&?).
-    eexists.
-    split.
-    2:{
-      apply cumul_mkApps ; auto.
-      1: reflexivity.
-      eapply All2_app.
-      2:constructor ; auto.
-      eapply All2_skipn.
-      apply conv_terms_sym.
-      eapply All2_impl.
-      1: eassumption.
-      eauto. }
-    econstructor.
-    all:admit.
+  - admit.
+
 
   - intros ? c u mdecl idecl [] isdecl args ? ? ? Cumc ? ty.
     apply conv_infer_ind in Cumc as (ui'&args'&?&?&?) ; auto.
@@ -197,7 +177,7 @@ Proof.
       eassumption.
 
     + assert (Σ ;;; Γ |- c : mkApps (tInd p.1.1 ui') args').
-      { apply infering_ind_typing in i0 ; auto. by apply wf_pt. }
+      { apply infering_ind_typing in i0 ; auto. admit. }
       assert (PT.consistent_instance_ext Σ (ind_universes mdecl) u).
         { destruct isdecl.
           apply validity_term in X1 as [] ; auto.

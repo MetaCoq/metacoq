@@ -137,11 +137,13 @@ let of_cast_kind (ck: BasicAst.cast_kind) : Constr.cast_kind =
   | RevertCast -> Constr.REVERTcast
 
   (* todo(gmm): determine what of these already exist. *)
-let rec to_constr_ev (evm : Evd.evar_map) (t : Ast0.term) : Evd.evar_map * Constr.t =
-  denote_term evm t
+let rec to_constr_ev env (evm : Evd.evar_map) (t : Ast0.term) : Evd.evar_map * Constr.t =
+  denote_term env evm t
 
 let to_constr (t : Ast0.term) : Constr.t =
-  snd (to_constr_ev Evd.empty t)
+  let env = Global.env () in
+  let evm = Evd.from_env env in
+  snd (to_constr_ev env evm t)
 
 let tmOfConstr (t : Constr.t) : Ast0.term tm =
   Plugin_core.with_env_evm (fun env _ -> tmReturn (quote_term env t))

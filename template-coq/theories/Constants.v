@@ -87,6 +87,7 @@ Register MetaCoq.Template.BasicAst.VarRef as metacoq.ast.VarRef.
 Register MetaCoq.Template.BasicAst.ConstRef as metacoq.ast.ConstRef.
 Register MetaCoq.Template.BasicAst.IndRef as metacoq.ast.IndRef.
 Register MetaCoq.Template.BasicAst.ConstructRef as metacoq.ast.ConstructRef.
+Register MetaCoq.Template.BasicAst.fresh_evar_id as metacoq.ast.fresh_evar_id.
 
 (* Universes *)
 

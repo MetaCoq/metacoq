@@ -218,6 +218,10 @@ Inductive conv_pb :=
   | Cumul.
 Derive NoConfusion EqDec for conv_pb.
 
+(* This opaque natural number is a hack to inform unquoting to generate
+  a fresh evar when encountering it. *)
+Definition fresh_evar_id : nat. exact 0. Qed.
+
 (* Parametrized by term because term is not yet defined *)
 Record def term := mkdef {
   dname : aname; (* the name, annotated with relevance **)

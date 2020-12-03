@@ -176,8 +176,7 @@ Proof.
       eapply All2_length.
       eassumption.
 
-    + assert (Σ ;;; Γ |- c : mkApps (tInd p.1.1 ui') args').
-      { apply infering_ind_typing in i0 ; auto. admit. }
+    + assert (Σ ;;; Γ |- c : mkApps (tInd p.1.1 ui') args') by (apply infering_ind_typing in i0 ; auto).
       assert (PT.consistent_instance_ext Σ (ind_universes mdecl) u).
         { destruct isdecl.
           apply validity_term in X1 as [] ; auto.

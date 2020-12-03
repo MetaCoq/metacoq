@@ -14,31 +14,34 @@ Module MT := Bidirectional.BDMinimalTyping.
 
 Section BDMinimalToPCUICTyping.
 
-  Let Pcheck `{checker_flags} Σ Γ t T :=
+  Context `{cf : checker_flags}.
+  Context (Σ : global_env_ext).
+  Context (wfΣ : wf Σ).
+
+  Let Pcheck Γ t T :=
     PT.wf_local Σ Γ -> PT.isType Σ Γ T -> Σ ;;; Γ |- t : T.
 
-  Let Pinfer `{checker_flags} Σ Γ t T :=
+  Let Pinfer Γ t T :=
     PT.wf_local Σ Γ -> Σ ;;; Γ |- t : T.
 
-  Let Psort `{checker_flags} Σ Γ t u :=
+  Let Psort Γ t u :=
     PT.wf_local Σ Γ -> Σ ;;; Γ |- t : (tSort u).
 
-  Let Pprod `{checker_flags} Σ Γ t na A B :=
+  Let Pprod Γ t na A B :=
     PT.wf_local Σ Γ -> Σ ;;; Γ |- t : tProd na A B.
 
-  Let Pind `{checker_flags} Σ Γ ind t u args :=
+  Let Pind Γ ind t u args :=
     PT.wf_local Σ Γ -> Σ ;;; Γ |- t : mkApps (tInd ind u) args.
 
-  Let PΓ `{checker_flags} Σ Γ (wfΓ : wf_local Σ Γ) :=
+  Let PΓ Γ (wfΓ : wf_local Σ Γ) :=
     PT.wf_local Σ Γ.
 
-  Lemma wf_arities_context' {cf:checker_flags}:
-    forall (Σ : global_env_ext) (mdecl : mutual_inductive_body),
-      PT.wf Σ ->
+  Lemma wf_arities_context' :
+    forall (mdecl : mutual_inductive_body),
       All (fun idecl => PT.on_type (PT.lift_typing typing) Σ [] (ind_type idecl)) (ind_bodies mdecl) ->
       PT.wf_local Σ (arities_context (ind_bodies mdecl)).
   Proof.
-    intros Σ mdecl wfΣ Hdecl.
+    intros mdecl Hdecl.
     unfold arities_context.
     revert Hdecl.
     induction (ind_bodies mdecl) using rev_ind. 1: constructor.
@@ -62,10 +65,10 @@ Section BDMinimalToPCUICTyping.
     apply X.
   Qed.
 
-Lemma bd_wf_local `{checker_flags} Σ Γ (all: wf_local Σ Γ) :
+Lemma bd_wf_local Γ (all: wf_local Σ Γ) :
   MT.All_local_env_over_sorting checking infering_sort 
-    (fun Σ Γ _ t T _ => Pcheck Σ Γ t T)
-    (fun Σ Γ _ t u _ => Psort Σ Γ t u) 
+    (fun Σ Γ _ t T _ => Pcheck Γ t T)
+    (fun Σ Γ _ t u _ => Psort Γ t u) 
     Σ Γ all ->
   PT.wf_local Σ Γ.
 Proof.
@@ -82,8 +85,8 @@ Proof.
     eexists. red. auto.
 Qed.
 
-Lemma type_local_ctx_impl `{checker_flags} Σ Γ Δ u (wfΓ : PT.wf_local Σ Γ):
-  type_local_ctx Pcheck Psort Σ Γ Δ u -> PT.type_local_ctx (lift_typing typing) Σ Γ Δ u.
+Lemma type_local_ctx_impl Γ Δ u (wfΓ : PT.wf_local Σ Γ):
+  type_local_ctx (fun _ => Pcheck) (fun _ => Psort) Σ Γ Δ u -> PT.type_local_ctx (lift_typing typing) Σ Γ Δ u.
 Proof.
   intros HΔ.
   induction Δ as [|[? []]].
@@ -99,7 +102,7 @@ Proof.
      all: eauto.
 Qed.
 
-Lemma bd_wf `{checker_flags} Σ : Forall_decls_sorting Pcheck Psort Σ -> PT.wf Σ.
+(* Lemma bd_wf : Forall_decls_sorting Pcheck Psort Σ -> PT.wf Σ.
 Proof.
   intros wfΣ. induction wfΣ.
   all: constructor.
@@ -256,9 +259,9 @@ Proof.
         2:{ apply map_ext. intros []. all: reflexivity. }
         induction onIndices.
         all: constructor ; auto.
-Qed.
+Qed. *)
   
-Theorem bidirectional_to_PCUIC `{cf : checker_flags} : env_prop Pcheck Pinfer Psort Pprod Pind (@PΓ).
+Theorem bidirectional_to_PCUIC : env_prop Σ Pcheck Pinfer Psort Pprod Pind (@PΓ).
 Proof.
   apply MT.typing_ind_env.
 
@@ -286,26 +289,24 @@ Proof.
   - apply X2 ; auto.
     specialize (X0 X3).
     apply validity in X0.
-    2: by apply bd_wf.
+    2: done.
     destruct X0 as [? X0].
     apply inversion_Prod in X0.
-    2: by apply bd_wf.
+    2: done.
     destruct X0 as (? & ? & ? & _).
     eexists. eassumption.
 
-  - apply X3 ; auto.
+  - apply X2 ; auto.
     suff [] : @isWfArity cf Σ Γ pty by done.
     eapply WfArity_build_case_predicate_type.
-    + by apply bd_wf.
+    + done.
     + case isdecl ; split ; eauto.
     + eapply validity.
-      1: by apply bd_wf.
-      by auto.
+      all: by auto.
     + eassumption.
     + unfold params in * ; rewrite <- H0 in * ; eassumption.
 
   - subst npar.
-    assert (PT.wf Σ.1) by (apply bd_wf ; assumption).
     assert (PT.isType Σ Γ pty).
     { eapply PCUICInductiveInversion.WfArity_build_case_predicate_type; eauto.
       by eapply validity_term ; auto.
@@ -320,9 +321,9 @@ Proof.
     { by eapply build_branches_type_wt ; eauto. }
 
     clear H4. 
-    induction X4.
+    induction X3.
     all: constructor ; auto.
-    all: inversion_clear X8.
+    all: inversion_clear X6.
     2: auto.
     destruct r as (? & ? & ?).
     repeat split ; auto.
@@ -344,10 +345,8 @@ Proof.
       apply p.
       auto.
     }
-    have wfΓ' : PT.wf_local Σ (Γ,,,fix_context mfix).
-    { apply All_mfix_wf ; auto.
-      by apply bd_wf.
-    }
+    have wfΓ' : PT.wf_local Σ (Γ,,,fix_context mfix) by apply All_mfix_wf.
+
     remember (fix_context mfix) as Γ'.
     clear H H0 H1 HeqΓ'.
     induction X0.
@@ -361,7 +360,6 @@ Proof.
     change (tSort u) with (lift0 #|Γ'| (tSort u)).
     apply weakening.
     all: auto.
-    by apply bd_wf.
 
     - clear H H0 H1 X0.
     induction X.
@@ -380,10 +378,7 @@ Proof.
       apply p.
       auto.
     }
-    have wfΓ' : PT.wf_local Σ (Γ,,,fix_context mfix).
-    { apply All_mfix_wf ; auto.
-      by apply bd_wf.
-    }
+    have wfΓ' : PT.wf_local Σ (Γ,,,fix_context mfix) by apply All_mfix_wf ; auto.
     remember (fix_context mfix) as Γ'.
     clear H H0 H1 HeqΓ'.
     induction X0.
@@ -396,18 +391,16 @@ Proof.
     change (tSort u) with (lift0 #|Γ'| (tSort u)).
     apply weakening.
     all: auto.
-    by apply bd_wf.
 
   - constructor ; auto.
     suff wfu : (wf_universes Σ (tSort u)) by apply (reflect_bP (wf_universe_reflect _ u)).
     eapply isType_wf_universes.
-    1: by apply bd_wf.
+    1: done.
     eapply isType_red.
-    1: by apply bd_wf.
+    1: done.
     1: eauto.
     eapply validity_term.
-    1: by apply bd_wf.
-    auto.
+    all: auto.
 
   - apply red_cumul.
     assumption.
@@ -415,11 +408,10 @@ Proof.
   - intros. red. intro.
     have [] : (PT.isType Σ Γ (tProd na A B)).
     { eapply isType_red.
-      1: by apply bd_wf.
+      1: done.
       1: eauto.
       eapply validity_term.
-      1: by apply bd_wf.
-      auto.
+      all: auto.
     }
     econstructor.
     + by auto.
@@ -429,11 +421,10 @@ Proof.
   - intros. red. intro.
     have [] : (PT.isType Σ Γ (mkApps (tInd ind ui) args)).
     { eapply isType_red.
-      1: by apply bd_wf.
+      1: done.
       1: eauto.
       eapply validity_term.
-      1: by apply bd_wf.
-      auto.
+      all: auto.
     }
     econstructor.
     + by auto.
@@ -491,14 +482,6 @@ Qed.
 Theorem wf_local_bd_typing `{checker_flags} (Σ : global_env_ext) Γ (wfΣ : wf Σ) :
   MT.wf_local Σ Γ -> PT.wf_local Σ Γ.
 Proof.
-  apply bidirectional_to_PCUIC.
-  assumption.
-Qed.
-
-Theorem wf_bd_typing `{checker_flags} (Σ : global_env_ext) (wfΣ : MT.wf Σ) :
-  PT.wf Σ.
-Proof.
-  apply bd_wf.
   apply bidirectional_to_PCUIC.
   assumption.
 Qed.

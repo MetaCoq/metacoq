@@ -274,7 +274,7 @@ Proof.
   move: Hdecl.
   rewrite /closed_inductive_decl /lift_mutual_inductive_body.
   destruct decl; simpl.
-  move/andP => [clpar clbodies]. f_equal.
+  move/andb_and => [clpar clbodies]. f_equal.
   - now rewrite [fold_context _ _]closed_ctx_lift.
   - eapply forallb_All in clbodies.
     eapply Alli_mapi_id.
@@ -282,7 +282,7 @@ Proof.
       intros. eapply H0.
     * simpl; intros.
       move: H0. rewrite /closed_inductive_body.
-      destruct x; simpl. move=> /andP[/andP [ci ct] cp].
+      destruct x; simpl. move=> /andb_and[/andb_and [ci ct] cp].
       f_equal.
       + rewrite lift_closed; eauto.
         eapply closed_upwards; eauto; lia.
@@ -475,7 +475,7 @@ Proof.
   1: move=> //.
   move=> n0.
   rewrite /closedn_ctx !rev_app_distr /id /=.
-  move/andP => [closedx Hctx].
+  move/andb_and => [closedx Hctx].
   rewrite lift_decl_closed.
   - rewrite (@closed_decl_upwards n0) //; try lia.
   - f_equal. now rewrite IHctx.
@@ -1187,7 +1187,7 @@ Proof.
   pose proof (closed_wf_local wfΣ (typing_wf_local ty)).
   specialize (X _ ty).
   eapply PCUICClosed.typecheck_closed in ty as [_ closed]; auto.
-  move/andP: closed => [ct cT].
+  move/andb_and: closed => [ct cT].
   rewrite !lift_closed // in X.
   now rewrite closed_ctx_lift in X.
 Qed.
@@ -1212,11 +1212,11 @@ Proof.
   generalize (@nil context_decl) as Δ.
   rewrite /fix_context_gen.
   intros Δ wfΔ.
-  eapply All_local_env_app_inv. split; auto.
+  eapply All_local_env_app. split; auto.
   induction a in Δ, wfΔ |- *; simpl; auto.
   + constructor.
   + simpl.
-    eapply All_local_env_app_inv. split; auto.
+    eapply All_local_env_app. split; auto.
     * repeat constructor.
       simpl.
       destruct p as [s Hs].

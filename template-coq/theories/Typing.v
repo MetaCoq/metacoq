@@ -1018,18 +1018,17 @@ Proof.
   apply type_Prop.
 Defined.
 
-
-Lemma wf_local_app `{checker_flags} Σ (Γ Γ' : context) : wf_local Σ (Γ ,,, Γ') -> wf_local Σ Γ.
+Lemma wf_local_app_l `{checker_flags} Σ (Γ Γ' : context) : wf_local Σ (Γ ,,, Γ') -> wf_local Σ Γ.
 Proof.
   induction Γ'. auto.
   simpl. intros H'; inv H'; eauto.
 Defined.
-Hint Resolve wf_local_app : wf.
+Hint Resolve wf_local_app_l : wf.
 
 Lemma typing_wf_local `{checker_flags} {Σ} {Γ t T} :
   Σ ;;; Γ |- t : T -> wf_local Σ Γ.
 Proof.
-  induction 1; eauto using wf_local_app.
+  induction 1; eauto using wf_local_app_l.
 Defined.
 Hint Resolve typing_wf_local : wf.
 
@@ -1567,7 +1566,7 @@ Proof.
   - apply IHX.
 Qed.
 
-Lemma All_local_env_app
+Lemma All_local_env_app_inv
       (P : context -> term -> option term -> Type) l l' :
   All_local_env P (l ,,, l') ->
   All_local_env P l * All_local_env (fun Γ t T => P (l ,,, Γ) t T) l'.
@@ -1603,7 +1602,7 @@ Proof.
     + apply IHX.
 Qed.
 
-Lemma All_local_env_app_inv `{checker_flags} (P : context -> term -> option term -> Type) l l' :
+Lemma All_local_env_app `{checker_flags} (P : context -> term -> option term -> Type) l l' :
   All_local_env P l * All_local_env (fun Γ t T => P (l ,,, Γ) t T) l' ->
   All_local_env P (l ,,, l').
 Proof.

@@ -460,7 +460,7 @@ Section Alpha.
       { now rewrite !fix_context_length, (All2_length _ _ X). } 
       eapply type_Cumul'.
       + econstructor.
-        * eapply (fix_guard_eq_term _ _ n); eauto.
+        * eapply (fix_guard_eq_term _ _ _ _ n); eauto.
           constructor. assumption.
         * eassumption.
         * assumption.
@@ -532,7 +532,7 @@ Section Alpha.
     { now rewrite !fix_context_length, (All2_length _ _ X). } 
     eapply type_Cumul'.
     + econstructor.
-      * eapply (cofix_guard_eq_term _ _ n) ; eauto.
+      * eapply (cofix_guard_eq_term _ _ _ _ n) ; eauto.
         constructor. assumption.
       * eassumption.
       * eassumption.

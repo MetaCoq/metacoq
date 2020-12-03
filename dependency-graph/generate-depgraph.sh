@@ -1,4 +1,8 @@
-#!/bin/bash
+#!/usr/local/bin/bash
+
+SED=`which gsed || which sed`
+
+echo "sed is " $SED
 
 ###############################################################
 #
@@ -10,6 +14,8 @@
 # cd dependency-graph
 # ./generate-depgraph.sh depgraph-2020-09-24
 #
+# Requires: graphviz for .dot to .png/.svg generation,
+# a recent bash (not the one shipped with OS X Catalina for example)
 ###############################################################
 
 
@@ -27,23 +33,23 @@ folders[erasure]=tan
 # Two first lines
 echo "digraph dependencies {" > $dot_file
 echo "node[style=filled]" >> $dot_file
-
 for folder in "${!folders[@]}"
 do
     cd ../$folder
+    echo `pwd`
     coqdep -f _CoqProject -dumpgraph ../dependency-graph/$folder.dot > /dev/null
     cd ../dependency-graph
     # remove the first and last lines
-    sed -i '1d' $folder.dot
-    sed -i '$d' $folder.dot
+    $SED -i '1d' $folder.dot
+    $SED -i '$d' $folder.dot
     # change a bit the names of the nodes
     for otherfolder in "${!folders[@]}"
     do
-	sed -i "s@../$otherfolder/theories@$otherfolder@g" $folder.dot
+	$SED -i "s@../$otherfolder/theories@$otherfolder@g" $folder.dot
     done
-    sed -i "s/theories/$folder/g" $folder.dot
+    $SED -i "s/theories/$folder/g" $folder.dot
     # change the color of the nodes
-    sed -i "s/]/, color=${folders[$folder]}]/g" $folder.dot
+    $SED -i "s/]/, color=${folders[$folder]}]/g" $folder.dot
     # concatenate
     cat $folder.dot >> $dot_file
     rm -f $folder.dot

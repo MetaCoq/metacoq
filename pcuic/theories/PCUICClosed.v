@@ -997,6 +997,9 @@ Proof.
   now move: c => [_ /andP [_ ct]].
 Qed.
 
+Lemma isType_closed {cf:checker_flags} {Σ Γ T} : wf Σ.1 -> isType Σ Γ T -> closedn #|Γ| T.
+Proof. intros wfΣ [s Hs]. now eapply subject_closed in Hs. Qed.
+
 Lemma closed_wf_local `{checker_flags} {Σ Γ} :
   wf Σ.1 ->
   wf_local Σ Γ ->

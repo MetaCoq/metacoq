@@ -412,3 +412,7 @@ erasure/src/signature.ml
 erasure/src/signature.mli
 erasure/src/eOptimizePropDiscr.ml
 erasure/src/eOptimizePropDiscr.mli
+erasure/src/pCUICErrors.ml
+erasure/src/pCUICErrors.mli
+erasure/src/pCUICTypeChecker.ml
+erasure/src/pCUICTypeChecker.mli

@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config Universes All.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping PCUICLiftSubst.
-From MetaCoq.SafeChecker Require Import PCUICSafeChecker.
+From MetaCoq.SafeChecker Require Import PCUICErrors PCUICTypeChecker PCUICSafeChecker.
 From Equations Require Import Equations.
 
 Existing Instance default_checker_flags.
@@ -51,9 +51,11 @@ Proof.
   end.
 Defined.
 
+
+
 (** There is always a proof of `forall x : Sort s, x -> x` *)
 
-Definition inh {cf:checker_flags} (Σ : wf_env_ext) Γ T := ∑ t, ∥ Σ ;;; Γ |- t : T ∥.
+Definition inh {cf:checker_flags} (Σ : wf_env_ext) Γ T := ∑ t, ∥ typing Σ Γ t T ∥.
 
 Definition check_inh {cf:checker_flags} (Σ : wf_env_ext) Γ (wfΓ : ∥ wf_local Σ Γ ∥) t {T} : typing_result (inh Σ Γ T) := 
   prf <- check_type_wf_env_fast Σ Γ wfΓ t (T := T) ;;
@@ -78,8 +80,7 @@ Lemma identity_typing (u := Universe.make univ): inh gctx_wf_env [] (tProd (bNam
 Proof.
   set (impl := tLambda (bNamed "s") (tSort u) (tLambda bAnon (tRel 0) (tRel 0))).
   assert (wfΓ : ∥ wf_local gctx_wf_env [] ∥) by do 2 constructor.
-  (** All immediate now *)
   Time fill_inh impl.
 Time Qed.
 
-Print identity_typing.
+Print identity_typing. (* Still a huge wf_env proof unfolded *)

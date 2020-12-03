@@ -514,7 +514,7 @@ Proof.
   intros wfΣ.
   induction Γ in Δ |- *; simpl; auto.
   intros wfΓ wfΔ. depelim wfΓ; simpl.
-  - apply IHΓ; auto. eapply All_local_env_app_inv. split; auto.
+  - apply IHΓ; auto. eapply All_local_env_app. split; auto.
     repeat constructor; auto.
     eapply All_local_env_impl; eauto. simpl; intros.
     unfold lift_typing in X |- *.
@@ -543,8 +543,8 @@ Lemma wf_local_smash_end {cf:checker_flags} Σ Γ Δ :
   wf_local Σ (Γ ,,, Δ) -> wf_local Σ (Γ ,,, smash_context [] Δ).
 Proof.
   intros wfΣ  wf. 
-  apply All_local_env_app_inv. split.
-  now apply All_local_env_app in wf.
+  apply All_local_env_app. split.
+  now apply All_local_env_app_inv in wf.
   eapply wf_local_rel_smash_context; auto.
 Qed.
 

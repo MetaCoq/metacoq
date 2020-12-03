@@ -90,7 +90,7 @@ cleanplugins:
 
 ci-local:
 	./configure.sh local
-	$(MAKE) all test-suite TIMED=pretty-timed
+	$(MAKE) all test-suite
 
 ci-opam:
 	# Use -v so that regular output is produced

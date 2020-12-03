@@ -86,17 +86,17 @@ Proof.
   - econstructor.
   - econstructor; eauto. cbn in *.
     destruct t0. exists x. eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
-    * eapply PCUICSafeChecker.wf_local_app_inv; eauto.
+    * eapply wf_local_app; eauto.
     * eapply conv_context_app; eauto.
       eapply typing_wf_local; eauto.
   - econstructor; eauto.
     + cbn in *.
       destruct t0. exists x. eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
-      * eapply PCUICSafeChecker.wf_local_app_inv; eauto.
+      * eapply wf_local_app; eauto.
       * eapply conv_context_app; eauto.
         eapply typing_wf_local; eauto.
     + cbn in *. eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
-      * eapply PCUICSafeChecker.wf_local_app_inv; eauto.
+      * eapply wf_local_app; eauto.
       * eapply conv_context_app; eauto.
         eapply typing_wf_local; eauto.
 Qed.
@@ -143,8 +143,8 @@ Proof.
     eapply typing_wf_local in a1. subst types.
     2:eauto.
 
-    eapply All_local_env_app_inv.
-    eapply All_local_env_app in a1. intuition auto.
+    eapply All_local_env_app.
+    eapply All_local_env_app_inv in a1. intuition auto.
 
     (* clear -wfΣ X2 a2 b4 X1. *)
     eapply All_local_env_impl; eauto. simpl; intros.
@@ -152,18 +152,18 @@ Proof.
     eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
     2:{ eapply conv_context_app; auto. eapply typing_wf_local; eauto. }
     eapply typing_wf_local in X3.
-    eapply PCUICSafeChecker.wf_local_app_inv.
+    eapply wf_local_app.
     eauto. eapply wf_local_rel_local in X3.
-    eapply wf_local_rel_app in X3 as []. rewrite app_context_nil_l in w0.
+    eapply wf_local_rel_app_inv in X3 as []. rewrite app_context_nil_l in w0.
     eapply wf_local_rel_conv; eauto.
     destruct X3. exists x0.
     eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
     2:{ eapply conv_context_app; auto. eapply typing_wf_local; eauto. }
 
     eapply typing_wf_local in t0.
-    eapply PCUICSafeChecker.wf_local_app_inv.
+    eapply wf_local_app.
     eauto. eapply wf_local_rel_local in t0.
-    eapply wf_local_rel_app in t0 as []. rewrite app_context_nil_l in w0.
+    eapply wf_local_rel_app_inv in t0 as []. rewrite app_context_nil_l in w0.
     eapply wf_local_rel_conv; eauto.
   - econstructor.
 
@@ -176,8 +176,8 @@ Proof.
     eapply typing_wf_local in a0. subst types.
     2:eauto.
 
-    eapply All_local_env_app_inv.
-    eapply All_local_env_app in a0. intuition auto.
+    eapply All_local_env_app.
+    eapply All_local_env_app_inv in a0. intuition auto.
 
     (* clear -wfΣ X2 a2 b4 X1. *)
     eapply All_local_env_impl; eauto. simpl; intros.
@@ -185,9 +185,9 @@ Proof.
     eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
     2:{ eapply conv_context_app; auto. eapply typing_wf_local; eauto. }
     eapply typing_wf_local in X3.
-    eapply PCUICSafeChecker.wf_local_app_inv.
+    eapply wf_local_app.
     eauto. eapply wf_local_rel_local in X3.
-    eapply wf_local_rel_app in X3 as []. rewrite app_context_nil_l in w0.
+    eapply wf_local_rel_app_inv in X3 as []. rewrite app_context_nil_l in w0.
 
 
     eapply wf_local_rel_conv; eauto.
@@ -196,9 +196,9 @@ Proof.
     2:{ eapply conv_context_app; auto. eapply typing_wf_local; eauto. }
 
     eapply typing_wf_local in t0.
-    eapply PCUICSafeChecker.wf_local_app_inv.
+    eapply wf_local_app.
     eauto. eapply wf_local_rel_local in t0.
-    eapply wf_local_rel_app in t0 as []. rewrite app_context_nil_l in w0.
+    eapply wf_local_rel_app_inv in t0 as []. rewrite app_context_nil_l in w0.
     eapply wf_local_rel_conv; eauto.
 Qed.
 
@@ -1186,7 +1186,7 @@ Proof.
               simpl in b.
               rewrite fix_context_length in b.
               now rewrite Nat.add_0_r.
-              unfold test_def in a. apply andP in a as [_ Hbod].
+              unfold test_def in a. apply andb_and in a as [_ Hbod].
               rewrite fix_context_length.
               now rewrite Nat.add_0_r in Hbod.
               eauto with pcuic.

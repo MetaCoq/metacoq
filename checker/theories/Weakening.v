@@ -134,14 +134,14 @@ Qed.
 Lemma lift_decl_closed n k d : closed_decl k d -> lift_decl n k d = d.
 Proof.
   case: d => na [body|] ty; rewrite /closed_decl /lift_decl /map_decl /=.
-  move/andP => [cb cty]. now rewrite !lift_closed //.
+  move/andb_and => [cb cty]. now rewrite !lift_closed //.
   move=> cty; now rewrite !lift_closed //.
 Qed.
 
 Lemma closed_decl_upwards k d : closed_decl k d -> forall k', k <= k' -> closed_decl k' d.
 Proof.
   case: d => na [body|] ty; rewrite /closed_decl /=.
-  move/andP => [cb cty] k' lek'. do 2 rewrite (@closed_upwards k) //.
+  move/andb_and => [cb cty] k' lek'. do 2 rewrite (@closed_upwards k) //.
   move=> cty k' lek'; rewrite (@closed_upwards k) //.
 Qed.
 
@@ -305,7 +305,7 @@ Proof.
   move: Hdecl.
   rewrite /closed_inductive_decl /lift_mutual_inductive_body.
   destruct decl; simpl.
-  move/andP => [clpar clbodies]. f_equal.
+  move/andb_and => [clpar clbodies]. f_equal.
   now rewrite [fold_context _ _]closed_ctx_lift.
   eapply forallb_All in clbodies.
   eapply Alli_mapi_id.
@@ -313,7 +313,7 @@ Proof.
   2:{ intros. eapply X0. }
   simpl; intros.
   move: H0. rewrite /closed_inductive_body.
-  destruct x; simpl. move=> /andP[/andP [ci ct] cp].
+  destruct x; simpl. move=> /andb_and[/andb_and [ci ct] cp].
   f_equal. rewrite lift_closed; eauto.
   eapply closed_upwards; eauto; lia.
   eapply All_map_id. eapply forallb_All in ct.
@@ -501,7 +501,7 @@ Proof.
   induction ctx using rev_ind. move=> //.
   move=> n0.
   rewrite /closedn_ctx !rev_app_distr /id /=.
-  move/andP => [closedx Hctx].
+  move/andb_and => [closedx Hctx].
   rewrite lift_decl_closed. rewrite (@closed_decl_upwards n0) //; try lia.
   f_equal. now rewrite IHctx.
 Qed.
@@ -1074,7 +1074,7 @@ Proof.
         eapply typing_wf in t1. intuition. auto.
         eapply typing_wf in t1. intuition. auto. constructor. }
       split; auto.
-      apply All_local_env_app_inv; intuition auto.
+      apply All_local_env_app; intuition auto.
       clear -wf a.
       induction ctx; try constructor; depelim a.
       -- rewrite lift_context_snoc.         
@@ -1112,7 +1112,7 @@ Proof.
   intros HΣ HΓΓ' * H.
   pose (weakening_typing Σ Γ [] Γ' t).
   forward t0; eauto.
-  forward t0; eauto. now eapply wf_local_app in HΓΓ'.
+  forward t0; eauto. now eapply wf_local_app_l in HΓΓ'.
 Qed.
 
 Definition fix_context_gen k mfix := 
@@ -1132,10 +1132,10 @@ Proof.
   generalize (@nil context_decl) as Δ.
   rewrite /fix_context_gen.
   intros Δ wfΔ.  
-  eapply All_local_env_app_inv. split; auto.
+  eapply All_local_env_app. split; auto.
   induction a in Δ, wfΔ |- *; simpl; auto. constructor.
   simpl.
-  eapply All_local_env_app_inv. split; auto.
+  eapply All_local_env_app. split; auto.
   constructor. constructor. simpl.
   destruct p as [s Hs].
   exists s. eapply (weakening Σ Γ Δ _ (tSort s)); auto.

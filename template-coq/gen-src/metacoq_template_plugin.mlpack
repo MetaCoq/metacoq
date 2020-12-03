@@ -24,8 +24,12 @@ MSetDecide
 MSetList
 MSetProperties
 BinNums
+EqDec
 CRelationClasses
 Compare_dec
+Classes0
+EqDecInstances
+MCPrelude
 MCList
 MCRelations
 MCOption
@@ -34,7 +38,6 @@ MCCompare
 MCString
 MCUtils
 Signature
-Classes0
 All_Forall
 Config0
 Universes0
@@ -45,7 +48,6 @@ AstUtils
 LiftSubst
 UnivSubst0
 Induction
-EqDecInstances
 Reflect
 Pretty
 Common0

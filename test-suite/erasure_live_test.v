@@ -1,5 +1,7 @@
 From Coq Require Import Recdef.
 From MetaCoq.Template Require Import Loader.
+From MetaCoq.SafeChecker Require Import SafeTemplateChecker.
+From MetaCoq.PCUIC Require Import PCUICAstUtils.
 From MetaCoq.Erasure Require Import Erasure.
 From Coq Require Import String.
 Local Open Scope string_scope.
@@ -10,6 +12,7 @@ Definition test (p : Ast.program) : string :=
   erase_and_print_template_program p.
 
 MetaCoq Quote Recursively Definition zero := 0.
+
 Definition zerocst := Eval lazy in test zero.
 
 MetaCoq Quote Recursively Definition exproof := I.

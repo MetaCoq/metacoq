@@ -18,7 +18,7 @@ Definition closedn_ctx n ctx :=
 Lemma closed_decl_upwards k d : closed_decl k d -> forall k', k <= k' -> closed_decl k' d.
 Proof.
   case: d => na [body|] ty; rewrite /closed_decl /=.
-  move/andP => [cb cty] k' lek'. do 2 rewrite (@closed_upwards k) //.
+  move/andb_and => [cb cty] k' lek'. do 2 rewrite (@closed_upwards k) //.
   move=> cty k' lek'; rewrite (@closed_upwards k) //.
 Qed.
   
@@ -197,7 +197,7 @@ Lemma closedn_ctx_cons n d Γ : closedn_ctx n (d :: Γ) -> closedn_ctx n Γ && c
 Proof.
   unfold closedn_ctx.
   simpl. rewrite mapi_app. rewrite forallb_app.
-  move/andP => [] -> /=. now rewrite Nat.add_0_r List.rev_length andb_true_r.
+  move/andb_and => [] -> /=. now rewrite Nat.add_0_r List.rev_length andb_true_r.
 Qed.
 
 Lemma closedn_ctx_app n Γ Γ' :
@@ -216,8 +216,8 @@ Lemma closedn_mkProd_or_LetIn (Γ : context) d T :
     closedn (S #|Γ|) T -> closedn #|Γ| (mkProd_or_LetIn d T).
 Proof.
   destruct d as [na [b|] ty]; simpl in *. unfold closed_decl.
-  simpl. now move/andP => [] -> ->.
-  simpl. now move/andP => [] /= _ -> ->.
+  simpl. now move/andb_and => [] -> ->.
+  simpl. now move/andb_and => [] /= _ -> ->.
 Qed.
 
 Lemma closedn_mkLambda_or_LetIn (Γ : context) d T :
@@ -225,8 +225,8 @@ Lemma closedn_mkLambda_or_LetIn (Γ : context) d T :
     closedn (S #|Γ|) T -> closedn #|Γ| (mkLambda_or_LetIn d T).
 Proof.
   destruct d as [na [b|] ty]; simpl in *. unfold closed_decl.
-  simpl. now move/andP => [] -> ->.
-  simpl. now move/andP => [] /= _ -> ->.
+  simpl. now move/andb_and => [] -> ->.
+  simpl. now move/andb_and => [] /= _ -> ->.
 Qed.
 
 Lemma closedn_it_mkProd_or_LetIn
@@ -236,7 +236,7 @@ Lemma closedn_it_mkProd_or_LetIn
 Proof.
   induction ctx in Γ, T |- *. simpl.
   - now rewrite Nat.add_0_r.
-  - move/closedn_ctx_cons/andP => [] cctx ca cT.
+  - move/closedn_ctx_cons/andb_and => [] cctx ca cT.
     apply (IHctx Γ (mkProd_or_LetIn a T) cctx).
     simpl in cT. rewrite <- app_length.
     eapply closedn_mkProd_or_LetIn;
@@ -250,7 +250,7 @@ Lemma closedn_it_mkLambda_or_LetIn
 Proof.
   induction ctx in Γ, T |- *. simpl.
   - now rewrite Nat.add_0_r.
-  - move/closedn_ctx_cons/andP => [] cctx ca cT.
+  - move/closedn_ctx_cons/andb_and => [] cctx ca cT.
     apply (IHctx Γ (mkLambda_or_LetIn a T) cctx).
     simpl in cT. rewrite <- app_length.
     eapply closedn_mkLambda_or_LetIn;
@@ -338,7 +338,7 @@ Proof.
     rewrite /closed_decl /map_decl /= Nat.add_0_r List.rev_length subst_context_length.
     inv X'. unfold closed_decl in H0. simpl in H0.
     rewrite List.rev_length Nat.add_0_r in H0.
-    move/andP: H0 => [Hl Hr].
+    move/andb_and: H0 => [Hl Hr].
     rewrite !closedn_subst /= ?H //; eapply closed_upwards; eauto; try lia.
   - intros. eapply Alli_app in X as [X X'].
     rewrite subst_context_snoc. simpl. eapply Alli_app_inv.
@@ -364,7 +364,7 @@ Proof.
     inv X'. unfold closed_decl in H. simpl in H.
     rewrite List.rev_length Nat.add_0_r in H.
     clear X1. eapply closed_subst_context; auto.
-    now move/andP: H => [].
+    now move/andb_and: H => [].
   - intros. eapply Alli_app in X as [X X'].
     eapply IHΔ; eauto.
     inv X'. unfold closed_decl in H. simpl in H.
@@ -451,7 +451,7 @@ Proof.
   rewrite smash_context_length in X. simpl in X.
   eapply nth_error_Some_length in Heq'. rewrite smash_context_length in Heq'.
   simpl in Heq'. unfold closed_decl in X.
-  move/andP: X => [] _ cl.
+  move/andb_and: X => [] _ cl.
   eapply closed_upwards. eauto. rewrite arities_context_length.
   rewrite context_assumptions_app parslen.
   rewrite context_assumptions_app in Heq'. lia.
@@ -569,7 +569,7 @@ Proof.
       simpl; intros ->.
       apply closedn_All_local_closed in Hwfi.
       rewrite closedn_ctx_app in Hwfi.
-      move/andP: Hwfi => [] clΓ clctx.
+      move/andb_and: Hwfi => [] clΓ clctx.
       apply closedn_it_mkProd_or_LetIn => //.
     + destruct s. rewrite andb_true_r in p. intuition auto.
 Qed.
@@ -649,12 +649,12 @@ Proof.
   rewrite /closed_inductive_body.
   apply andb_and; split. apply andb_and. split.
   - apply onArity in oib. hnf in oib.
-    now move/andP: oib => [].
+    now move/andb_and: oib => [].
   - pose proof (onConstructors oib).
     red in X. eapply All_forallb. eapply All2_All_left; eauto.
     firstorder auto.
     eapply on_ctype in X0.
-    now move/andP: X0 => [].
+    now move/andb_and: X0 => [].
   - eapply All_forallb.
     pose proof (onProjections oib).
     destruct (eq_dec (ind_projs x) []) as [->|eq]; try constructor.

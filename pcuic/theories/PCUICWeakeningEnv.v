@@ -4,8 +4,6 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICEquality PCUICTyping.
 
 Require Import ssreflect.
 
-Derive Signature for Alli.
-
 Set Default Goal Selector "!".
 
 Lemma global_ext_constraints_app Σ Σ' φ
@@ -63,9 +61,6 @@ Qed.
 (** * Weakening lemmas w.r.t. the global environment *)
 
 Generalizable Variables Σ Γ t T.
-
-Definition extends (Σ Σ' : global_env) :=
-  { Σ'' & Σ' = Σ'' ++ Σ }.
 
 Definition weaken_env_prop_full {cf:checker_flags}
   (P : global_env_ext -> context -> term -> term -> Type) :=
@@ -417,7 +412,7 @@ Proof.
   intros ext wfΣ'.
   unfold wf_fixpoint.
   destruct map_option_out as [[|ind inds]|]; auto.
-  move/andP => [->] /=.
+  move/andb_and => [->] /=.
   now apply extends_check_recursivity_kind.
 Qed.
 
@@ -427,7 +422,7 @@ Proof.
   intros ext wfΣ'.
   unfold wf_cofixpoint.
   destruct map_option_out as [[|ind inds]|]; auto.
-  move/andP => [->] /=.
+  move/andb_and => [->] /=.
   now apply extends_check_recursivity_kind.
 Qed.
 
@@ -497,10 +492,12 @@ Proof.
     close_Forall. intros; intuition eauto with extends.
     destruct b as [s [Hs IH]]; eauto.
   - econstructor; eauto with extends.
+    + eapply fix_guard_extends; eauto.
     + eapply (All_impl X0); simpl; intuition eauto with extends.
       destruct X as [s Hs]; exists s. intuition eauto with extends.
     + eapply All_impl; eauto; simpl; intuition eauto with extends.
   - econstructor; eauto with extends.
+    + eapply cofix_guard_extends; eauto.
     + eapply (All_impl X0); simpl; intuition eauto with extends.
       destruct X as [s Hs]; exists s. intuition eauto with extends.
     + eapply All_impl; eauto; simpl; intuition eauto with extends.

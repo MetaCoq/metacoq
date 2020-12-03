@@ -31,9 +31,7 @@ Extract Constant Equations.Init.pr2 => "snd".
 Extraction Inline Equations.Init.pr1 Equations.Init.pr2.
 Extraction Inline Equations.Prop.Logic.transport Equations.Prop.Logic.transport_r MCEquality.transport.
 
-Extract Constant PCUICTyping.fix_guard => "(fun x -> true)".
-Extract Constant PCUICTyping.cofix_guard => "(fun x -> true)".
-Extract Constant PCUICTyping.ind_guard => "(fun x -> true)".
+Extract Constant PCUICTyping.guard_checking => "{ fix_guard = (fun _ _ _ -> true); cofix_guard = (fun _ _ _ -> true) }".
 
 Cd "src".
 

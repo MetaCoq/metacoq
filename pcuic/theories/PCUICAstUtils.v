@@ -4,6 +4,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICSize.
 
 Require Import ssreflect.
 From Equations Require Import Equations.
+Set Equations Transparent.
 
 Derive Signature for All All2.
 
@@ -68,6 +69,19 @@ Fixpoint decompose_app_rec (t : term) l :=
 
 Definition decompose_app t := decompose_app_rec t [].
 
+Definition mkApps_decompose_app_rec t l :
+  mkApps t l = mkApps (fst (decompose_app_rec t l)) (snd (decompose_app_rec t l)).
+Proof.
+  revert l; induction t; try reflexivity.
+  intro l; cbn in *.
+  transitivity (mkApps t1 ((t2 ::l))). reflexivity.
+  now rewrite IHt1.
+Qed.
+
+Definition mkApps_decompose_app t :
+  t = mkApps (fst (decompose_app t)) (snd (decompose_app t))
+  := mkApps_decompose_app_rec t [].
+  
 Lemma decompose_app_rec_mkApps f l l' : decompose_app_rec (mkApps f l) l' =
                                     decompose_app_rec f (l ++ l').
 Proof.
@@ -777,6 +791,19 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma destArity_mkApps_None ctx t l :
+  destArity ctx t = None -> destArity ctx (mkApps t l) = None.
+Proof.
+  induction l in t |- *. trivial.
+  intros H. cbn. apply IHl. reflexivity.
+Qed.
+
+Lemma destArity_mkApps_Ind ctx ind u l :
+  destArity ctx (mkApps (tInd ind u) l) = None.
+Proof.
+  apply destArity_mkApps_None. reflexivity.
+Qed.
+
 (* Helper for nested recursive functions on well-typed terms *)
 
 Section MapInP.
@@ -788,7 +815,6 @@ Section MapInP.
   map_InP nil _ := nil;
   map_InP (cons x xs) H := cons (f x (H x (or_introl eq_refl))) (map_InP xs (fun x inx => H x _)).
 End MapInP.
-Global Transparent map_InP.
 
 Lemma map_InP_spec {A B : Type} {P : A -> Type} (f : A -> B) (l : list A) (H : forall x, In x l -> P x) :
   map_InP (fun (x : A) (_ : P x) => f x) l H = List.map f l.
@@ -816,3 +842,47 @@ Proof.
   induction l; simpl; auto.
 Qed.
 Hint Rewrite @map_InP_length : len.
+
+(** Views *)
+
+Definition isSort T :=
+  match T with
+  | tSort u => true
+  | _ => false
+  end.
+
+Inductive view_sort : term -> Type :=
+| view_sort_sort s : view_sort (tSort s)
+| view_sort_other t : ~ isSort t -> view_sort t.
+
+Equations view_sortc (t : term) : view_sort t :=
+  view_sortc (tSort s) := view_sort_sort s;
+  view_sortc t := view_sort_other t _.
+
+Fixpoint isProd t :=
+  match t with
+  | tProd na A B => true
+  | _ => false
+  end.
+
+Inductive view_prod : term -> Type :=
+| view_prod_prod na A b : view_prod (tProd na A b)
+| view_prod_other t : ~ isProd t -> view_prod t.
+
+Equations view_prodc (t : term) : view_prod t :=
+  view_prodc (tProd na A b) := view_prod_prod na A b;
+  view_prodc t := view_prod_other t _.
+
+Definition isInd (t : term) : bool :=
+  match t with
+  | tInd _ _ => true
+  | _ => false
+  end.
+
+Inductive view_ind : term -> Type :=
+| view_ind_tInd ind u : view_ind (tInd ind u)
+| view_ind_other t : negb (isInd t) -> view_ind t.
+
+Equations view_indc (t : term) : view_ind t :=
+  view_indc (tInd ind u) => view_ind_tInd ind u;
+  view_indc t => view_ind_other t _.

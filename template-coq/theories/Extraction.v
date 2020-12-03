@@ -32,12 +32,15 @@ From MetaCoq.Template Require Import TemplateMonad.Extractable config Induction
      LiftSubst UnivSubst Pretty.
 
 Recursive Extraction Library Extractable.
+Extraction Library MCPrelude.
 Extraction Library MCOption.
 Extraction Library MCUtils.
+Extraction Library MCList.
 Extraction Library EqDecInstances.
 Extraction Library Induction.
 Extraction Library LiftSubst.
 Extraction Library UnivSubst.
+Extraction Library BasicAst.
 Extraction Library Reflect.
 Extraction Library Pretty.
 Extraction Library config.

@@ -3,10 +3,7 @@ From MetaCoq.Template Require Import MCPrelude MCList MCRelations MCProd MCOptio
 From Equations Require Import Equations.
 Import ListNotations.
 
-Local Ltac inv H := inversion_clear H.
-Local Coercion is_true : bool >-> Sortclass.
-
-Derive Signature for Forall.
+Derive Signature for Forall Forall2.
 
 (** Combinators *)
 
@@ -99,10 +96,35 @@ Lemma forallb_Forall {A} (p : A -> bool) l
 Proof.
   split.
   induction 1; rewrite /= // H IHForall //.
-  induction l; rewrite /= //. move/andP => [pa pl].
+  induction l; rewrite /= //. rewrite andb_and.
+  intros [pa pl].
   constructor; auto.
 Qed.
 
+Lemma forallbP {A} (P : A -> Prop) (p : A -> bool) l :
+  (forall x, reflect (P x) (p x)) -> 
+  reflect (Forall P l) (forallb p l).
+Proof.
+  intros Hp.
+  apply iff_reflect; change (forallb p l = true) with (forallb p l : Prop); split.
+  - induction 1; rewrite /= // IHForall // andb_true_r.
+    now destruct (Hp x).
+  - induction l; rewrite /= //. rewrite andb_and.
+    intros [pa pl].
+    constructor; auto. now destruct (Hp a).
+Qed.
+
+Lemma forallbP_cond {A} (P Q : A -> Prop) (p : A -> bool) l : 
+  Forall Q l ->
+  (forall x, Q x -> reflect (P x) (p x)) -> reflect (Forall P l) (forallb p l).
+Proof.
+  intros HQ Hp.
+  apply iff_reflect; split.
+  - induction HQ; intros HP; depelim HP; rewrite /= // IHHQ // andb_true_r.
+    now destruct (Hp x H).
+  - induction HQ; rewrite /= //. move/andb_and => [pa pl].
+    constructor; auto. now destruct (Hp _ H).
+Qed.
 
 Lemma map_eq_inj {A B} (f g : A -> B) l: map f l = map g l ->
                                          All (fun x => f x = g x) l.
@@ -162,7 +184,7 @@ Lemma forallb2_app {A} (p : A -> A -> bool) l l' q q' :
   -> is_true (forallb2 p (l ++ q) (l' ++ q')).
 Proof.
   induction l in l' |- *; destruct l'; simpl; try congruence.
-  move=> /andP[/andP[pa pl] pq]. now rewrite pa IHl // pl pq.
+  move=> /andb_and[/andb_and[pa pl] pq]. now rewrite pa IHl // pl pq.
 Qed.
 
 Lemma All2_map {A B C D} (R : C -> D -> Type) (f : A -> C) (g : B -> D) l l' :
@@ -440,18 +462,18 @@ Qed.
 
 Lemma Alli_rev {A} {P : nat -> A -> Type} k l :
   Alli P k l ->
-  Alli (fun k' => P (pred #|l| - k' + k)) 0 (List.rev l).
+  Alli (fun k' => P (Nat.pred #|l| - k' + k)) 0 (List.rev l).
 Proof.
   revert k.
   induction l using rev_ind; simpl; intros; try constructor.
   eapply Alli_app in X. intuition.
   rewrite rev_app_distr. rewrite app_length.
   simpl. constructor.
-  replace (pred (#|l| + 1) - 0) with #|l| by lia.
+  replace (Nat.pred (#|l| + 1) - 0) with #|l| by lia.
   inversion b. eauto. specialize (IHl _ a).
   eapply Alli_shift. eapply Alli_impl. eauto.
   simpl; intros.
-  now replace (pred (#|l| + 1) - S n) with (pred #|l| - n) by lia.
+  now replace (Nat.pred (#|l| + 1) - S n) with (Nat.pred #|l| - n) by lia.
 Qed.
 
 
@@ -1654,8 +1676,8 @@ Lemma forallb_nth {A} (l : list A) (n : nat) P d :
   forallb P l -> n < #|l| -> exists x, (nth n l d = x) /\ P x.
 Proof.
   induction l in n |- *; destruct n; simpl; auto; try easy.
-  move/andP => [pa pl] pn. exists a; easy.
-  move/andP => [pa pl] pn. specialize (IHl n pl).
+  move/andb_and => [pa pl] pn. exists a; easy.
+  move/andb_and => [pa pl] pn. specialize (IHl n pl).
   apply IHl; lia.
 Qed.
 
@@ -1888,7 +1910,7 @@ Proof.
   - destruct l'. 2: discriminate.
     constructor.
   - destruct l'. 1: discriminate.
-    simpl in h. apply andP in h as [? ?].
+    simpl in h. move/andb_and: h => [? ?].
     constructor. all: auto.
 Qed.
 

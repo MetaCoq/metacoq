@@ -2,8 +2,10 @@
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICTyping PCUICGeneration.
 
+Set Warnings "-notation-overridden".
 From MetaCoq.Template Require Import config utils Ast TypingWf WfInv UnivSubst
      LiftSubst.
+Set Warnings "+notation_overridden".
 
 Require Import PCUICToTemplate.
 
@@ -621,10 +623,8 @@ Proof.
   - apply IHmfix.
 Qed.
 
-
-
 Lemma trans_wf_local':
-  forall (Σ : PCUICAst.global_env_ext) Γ (wfΓ : PT.wf_local Σ Γ),
+  forall (Σ : PCUICAst.global_env_ext) Γ (wfΓ : wf_local Σ Γ),
     let P :=
         (fun Σ0 Γ0 _ (t T : PCUICAst.term) _ =>
            TT.typing (trans_global Σ0) (trans_local Γ0) (trans t) (trans T))
@@ -755,7 +755,7 @@ Admitted.
 Lemma All_over_All Σ Γ wfΓ :
 PT.All_local_env_over PT.typing
   (fun (Σ : PCUICAst.global_env_ext) (Γ : PCUICAst.context)
-     (_ : PCUICTyping.wf_local Σ Γ) (t T : PCUICAst.term)
+     (_ : wf_local Σ Γ) (t T : PCUICAst.term)
      (_ : PT.typing Σ Γ t T) =>
    TT.typing (trans_global Σ) (trans_local Γ) (trans t) (trans T)) Σ Γ wfΓ ->
 PT.All_local_env

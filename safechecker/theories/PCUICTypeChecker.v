@@ -119,8 +119,27 @@ Section Typecheck.
     Next Obligation.
       destruct HΣ, HΓ, hA, X, X0. constructor. eapply type_Cumul'; eassumption.
     Qed.
+    
+    Program Definition infer_scheme Γ HΓ t :
+      typing_result (∑ ctx u, ∥ Σ ;;; Γ |- t : mkAssumArity ctx u ∥) :=
+      '(T; p) <- infer Γ HΓ t;;
+      match reduce_to_arity HΣ Γ T _ with
+      | inleft car => ret (conv_ar_context car; conv_ar_univ car; _)
+      | inright _ => TypeError (NotAnArity T)
+      end.
+    Next Obligation.
+      intros; subst.
+      cbn in *.
+      eapply validity_wf; eauto.
+    Qed.
+    Next Obligation.
+      destruct car as [? ? [r]].
+      cbn.
+      clear Heq_anonymous.
+      sq.
+      eapply type_reduction; eauto.
+    Qed.
   End InferAux.
-
 
   Program Definition lookup_ind_decl ind
     : typing_result
@@ -314,41 +333,39 @@ Section Typecheck.
             (Msg "Case on coinductives disallowed") ;;
       check_eq_true (ind_npars decl =? par)
                     (Msg "not the right number of parameters") ;;
-      pty <- infer Γ HΓ p ;;
-      match destArity [] pty.π1 with
-      | None => raise (Msg "the type of the return predicate of a Case is not an arity")
-      | Some (pctx, ps) =>
-        check_is_allowed_elimination ps (ind_kelim body);;
-        let params := firstn par args in
-        match build_case_predicate_type ind decl body params u ps with
-        | None => raise (Msg "failure in build_case_predicate_type")
-        | Some pty' =>
-          (* We could avoid one useless sort comparison by only comparing *)
-          (* the contexts [pctx] and [indctx] (what is done in Coq). *)
-          match iscumul Γ pty.π1 _ pty' _ with
-          | ConvError e => raise (NotCumulSmaller G Γ pty.π1 pty' pty.π1 pty' e)
-          | ConvSuccess =>
-            match map_option_out (build_branches_type ind decl body params u p) with
-            | None => raise (Msg "failure in build_branches_type")
-            | Some btys =>
-              let btyswf : ∥ All (isType Σ Γ ∘ snd) btys ∥ := _ in
-              (fix check_branches (brs btys : list (nat * term))
-                (HH : ∥ All (isType Σ Γ ∘ snd) btys ∥) {struct brs}
-                  : typing_result
-                    (All2 (fun br bty => br.1 = bty.1 /\ ∥ Σ ;;; Γ |- br.2 : bty.2 ∥) brs btys)
-                          := match brs, btys with
-                             | [], [] => ret All2_nil
-                             | (n, t) :: brs , (m, A) :: btys =>
-                               W <- check_dec (Msg "not nat eq")
-                                             (EqDecInstances.nat_eqdec n m) ;;
-                               Z <- infer_cumul infer Γ HΓ t A _ ;;
-                               X <- check_branches brs btys _ ;;
-                               ret (All2_cons (conj _ _) X)
-                             | [], _ :: _
-                             | _ :: _, [] => raise (Msg "wrong number of branches")
-                             end) brs btys btyswf ;;
-                ret (mkApps p (List.skipn par args ++ [c]); _)
-            end
+      IS <- infer_scheme infer Γ HΓ p ;;
+      let '(pctx; IS') := IS in let '(ps; typ_p) := IS' in
+      check_is_allowed_elimination ps (ind_kelim body);;
+      let pty := mkAssumArity pctx ps in
+      let params := firstn par args in
+      match build_case_predicate_type ind decl body params u ps with
+      | None => raise (Msg "failure in build_case_predicate_type")
+      | Some pty' =>
+        (* We could avoid one useless sort comparison by only comparing *)
+        (* the contexts [pctx] and [indctx] (what is done in Coq). *)
+        match iscumul Γ pty _ pty' _ with
+        | ConvError e => raise (NotCumulSmaller G Γ pty pty' pty pty' e)
+        | ConvSuccess =>
+          match map_option_out (build_branches_type ind decl body params u p) with
+          | None => raise (Msg "failure in build_branches_type")
+          | Some btys =>
+            let btyswf : ∥ All (isType Σ Γ ∘ snd) btys ∥ := _ in
+            (fix check_branches (brs btys : list (nat * term))
+              (HH : ∥ All (isType Σ Γ ∘ snd) btys ∥) {struct brs}
+                : typing_result
+                  (All2 (fun br bty => br.1 = bty.1 /\ ∥ Σ ;;; Γ |- br.2 : bty.2 ∥) brs btys)
+                        := match brs, btys with
+                           | [], [] => ret All2_nil
+                           | (n, t) :: brs , (m, A) :: btys =>
+                             W <- check_dec (Msg "not nat eq")
+                                           (EqDecInstances.nat_eqdec n m) ;;
+                             Z <- infer_cumul infer Γ HΓ t A _ ;;
+                             X <- check_branches brs btys _ ;;
+                             ret (All2_cons (conj _ _) X)
+                           | [], _ :: _
+                           | _ :: _, [] => raise (Msg "wrong number of branches")
+                           end) brs btys btyswf ;;
+              ret (mkApps p (List.skipn par args ++ [c]); _)
           end
         end
       end
@@ -516,82 +533,77 @@ Section Typecheck.
   Next Obligation. simpl; eauto using validity_wf. Qed.
   Next Obligation. simpl; eauto using validity_wf. Qed.
   Next Obligation.
-    destruct X, X9. sq.
+    destruct X1, X11. sq.
     change (eqb ind I = true) in H0.
     destruct (eqb_spec ind I) as [e|e]; [destruct e|discriminate].
     change (eqb (ind_npars d) par = true) in H1.
     destruct (eqb_spec (ind_npars d) par) as [e|e]; [|discriminate].
     rename Heq_anonymous into HH. symmetry in HH.
     simpl in *.
-    eapply type_reduction in t0; eauto. eapply validity in t0; eauto.
     rewrite <- e in HH.
     eapply PCUICInductiveInversion.WfArity_build_case_predicate_type in HH; eauto.
     destruct HH as [[s Hs] ?]. eexists; eauto.
-    eapply validity in t; eauto.
-    generalize (PCUICClosed.destArity_spec [] pty).
-    rewrite -Heq_anonymous0 /=. intros ->.
-    eapply PCUICInductives.isType_it_mkProd_or_LetIn_inv in t; eauto.
-    eapply isType_wf_universes in t. simpl in t.
-    now exact (elimT wf_universe_reflect t). auto.
+    eapply isType_red; [|eassumption].
+    eapply validity; eauto.
+    rewrite mkAssumArity_it_mkProd_or_LetIn in X.
+    eapply validity in X; auto.
+    eapply PCUICInductives.isType_it_mkProd_or_LetIn_inv in X; eauto.
+    eapply isType_wf_universes in X; auto.
+    now exact (elimT wf_universe_reflect X).
   Qed.
 
   Next Obligation.
-    symmetry in Heq_anonymous2.
-    unfold iscumul in Heq_anonymous2. simpl in Heq_anonymous2.
-    apply isconv_term_sound in Heq_anonymous2.
-    red in Heq_anonymous2.
+    symmetry in Heq_anonymous1.
+    unfold iscumul in Heq_anonymous1. simpl in Heq_anonymous1.
+    apply isconv_term_sound in Heq_anonymous1.
+    red in Heq_anonymous1.
     noconf Heq_I''.
     noconf Heq_I'. noconf Heq_I.
     noconf Heq_d. noconf Heq_d'.
+    noconf Heq_IS. noconf Heq_IS'.
     simpl in *; sq.
     change (eqb ind I = true) in H0.
     destruct (eqb_spec ind I) as [e|e]; [destruct e|discriminate H0].
     change (eqb (ind_npars d) par = true) in H1.
     destruct (eqb_spec (ind_npars d) par) as [e|e]; [|discriminate]; subst.
     assert (wfΣ : wf_ext Σ) by (split; auto).
-    eapply type_reduction in X9; eauto.
-    have val:= validity_term wfΣ X9.
-    eapply type_Cumul' in X; [| |eassumption].
+    eapply type_reduction in X11; eauto.
+    have val:= validity_term wfΣ X11.
+    eapply type_Cumul' in typ_p; [| |eassumption].
     2:{ eapply PCUICInductiveInversion.WfArity_build_case_predicate_type; eauto.
-        eapply validity in X; eauto.
-        generalize (PCUICClosed.destArity_spec [] pty).
-        rewrite -Heq_anonymous0 /=. intros ->.
-        eapply PCUICInductives.isType_it_mkProd_or_LetIn_inv in X; eauto.
-        eapply isType_wf_universes in X. simpl in X.
-        now exact (elimT wf_universe_reflect X). auto. }
-    have [pctx' da] : (∑ pctx', destArity [] pty' =  Some (pctx', ps)).
-    { symmetry in Heq_anonymous1.
-      unshelve eapply (PCUICInductives.build_case_predicate_type_spec (Σ.1, ind_universes d)) in Heq_anonymous1 as [parsubst [_ ->]].
+        eapply validity in typ_p; eauto.
+        rewrite mkAssumArity_it_mkProd_or_LetIn in typ_p.
+        eapply PCUICInductives.isType_it_mkProd_or_LetIn_inv in typ_p; eauto.
+        apply isType_wf_universes in typ_p; auto.
+        now exact (elimT wf_universe_reflect typ_p). }
+    have [pctx' da] : (∑ pctx', destArity [] pty' =  Some (pctx', X0)).
+    { symmetry in Heq_anonymous0.
+      unshelve eapply (PCUICInductives.build_case_predicate_type_spec (Σ.1, ind_universes d)) in Heq_anonymous0 as [parsubst [_ ->]].
       eauto. eapply (PCUICWeakeningEnv.on_declared_inductive wfΣ) in HH as [? ?]. eauto.
       eexists. rewrite !destArity_it_mkProd_or_LetIn; simpl. reflexivity. }
-    eapply PCUICInductiveInversion.build_branches_type_wt. 6:eapply X. all:eauto.
+    eapply PCUICInductiveInversion.build_branches_type_wt. 6:eapply typ_p. all:eauto.
   Defined.
 
-  Obligation Tactic := simpl; intros.
-
   Next Obligation.
-    rename Heq_anonymous2 into XX2.
-    symmetry in XX2. simpl in *. eapply isconv_sound in XX2.
-    change (eqb ind ind' = true) in H0.
-    destruct (eqb_spec ind ind') as [e|e]; [destruct e|discriminate H0].
-    change (eqb (ind_npars decl) par = true) in H1.
-    destruct (eqb_spec (ind_npars decl) par) as [e|e]; [|discriminate]; subst.
-    depelim HH.
-    sq. auto. now depelim X.
+    sq.
+    depelim HH; auto.
   Defined.
   Next Obligation.
-    sq. now depelim HH.
+    sq.
+    depelim HH; auto.
   Defined.
 
   (* The obligation tactic removes a useful let here. *)
   Obligation Tactic := idtac.
   Next Obligation.
     intros. clearbody btyswf. idtac; Program.Tactics.program_simplify.
-    symmetry in Heq_anonymous2.
-    unfold iscumul in Heq_anonymous2. simpl in Heq_anonymous2.
-    apply isconv_term_sound in Heq_anonymous2.
+    symmetry in Heq_anonymous1.
+    unfold iscumul in Heq_anonymous1. simpl in Heq_anonymous1.
+    apply isconv_term_sound in Heq_anonymous1.
     noconf Heq_I''. noconf Heq_I'. noconf Heq_I.
-    noconf Heq_d. noconf Heq_d'. simpl in *.
+    noconf Heq_d. noconf Heq_d'. 
+    noconf Heq_IS. noconf Heq_IS'.
+    simpl in *.
     assert (∥ All2 (fun x y  => ((fst x = fst y) *
                               (Σ;;; Γ |- snd x : snd y) * isType Σ Γ y.2)%type) brs btys ∥). {
       solve_all. simpl in *.
@@ -602,21 +614,15 @@ Section Typecheck.
     change (eqb (ind_npars d) par = true) in H1.
     destruct (eqb_spec (ind_npars d) par) as [e|e]; [|discriminate]; subst.
     assert (wfΣ : wf_ext Σ) by (split; auto).
-    eapply type_reduction in X9; eauto.
-    eapply type_Cumul' in X; eauto.
+    eapply type_reduction in X11; eauto.
+    eapply type_Cumul' in typ_p; eauto.
     2:{ eapply PCUICInductiveInversion.WfArity_build_case_predicate_type; eauto.
-        now eapply validity in X9.
-        eapply validity in X; eauto.
-        generalize (PCUICClosed.destArity_spec [] pty).
-        rewrite -Heq_anonymous0 /=. intros ->.
-        eapply PCUICInductives.isType_it_mkProd_or_LetIn_inv in X; eauto.
-        eapply isType_wf_universes in X. simpl in X.
-        now exact (elimT wf_universe_reflect X). auto. }
-    have [pctx' da] : (∑ pctx', destArity [] pty' =  Some (pctx', ps)).
-    { symmetry in Heq_anonymous1.
-      unshelve eapply (PCUICInductives.build_case_predicate_type_spec (Σ.1, ind_universes d)) in Heq_anonymous1 as [parsubst [_ ->]].
-      eauto. eapply (PCUICWeakeningEnv.on_declared_inductive wfΣ) in HH as [? ?]. eauto.
-      eexists. rewrite !destArity_it_mkProd_or_LetIn; simpl. reflexivity. }
+        eapply validity in X11; eauto.
+        eapply validity in typ_p; auto.
+        rewrite mkAssumArity_it_mkProd_or_LetIn in typ_p.
+        eapply PCUICInductives.isType_it_mkProd_or_LetIn_inv in typ_p; eauto.
+        apply isType_wf_universes in typ_p; auto.
+        now exact (elimT wf_universe_reflect typ_p). }
     eapply type_Case with (pty0:=pty'); tea.
     - reflexivity.
     - symmetry; eassumption.

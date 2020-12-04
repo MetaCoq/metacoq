@@ -1813,6 +1813,8 @@ Lemma term_forall_ctx_list_ind :
     (forall Γ (s : projection) (t : term), P Γ t -> P Γ (tProj s t)) ->
     (forall Γ (m : mfixpoint term) (n : nat), tFixProp (P Γ) (P (Γ ,,, fix_context m)) m -> P Γ (tFix m n)) ->
     (forall Γ (m : mfixpoint term) (n : nat), tFixProp (P Γ) (P (Γ ,,, fix_context m)) m -> P Γ (tCoFix m n)) ->
+    (forall Γ i, P Γ (tInt i)) ->
+    (forall Γ f, P Γ (tFloat f)) ->
     forall Γ (t : term), P Γ t.
 Proof.
   intros. revert Γ t0.

@@ -130,8 +130,8 @@ Proof.
       rewrite H [firstn _ [u]]firstn_0 // app_nil_r in Hr |- *.
       specialize (IHctx Hr). rewrite app_assoc.
       now econstructor.
-    * destruct a as [na' [b'|] ty']; simpl in *; noconf H.
-      rewrite skipn_S in Hl, Hr, H. subst b.
+    * rewrite skipn_S in Hl, Hr, H.
+      destruct a as [na' [b'|] ty']; simpl in *; noconf H.
       pose proof (context_subst_length Hl). rewrite subst_context_length in H.
       rewrite {3}H -subst_app_simpl [firstn #|ctx| _ ++ _]firstn_skipn. constructor.
       apply IHctx => //.

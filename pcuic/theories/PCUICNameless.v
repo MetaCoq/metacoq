@@ -47,6 +47,7 @@ Fixpoint nameless (t : term) : bool :=
   | tCoFix mfix idx =>
     forallb (fun d => banon d.(dname)) mfix &&
     forallb (test_def nameless nameless) mfix
+  | tInt _ | tFloat _ => true
   end.
 
 Definition anonymize (b : binder_annot name) : binder_annot name :=  
@@ -76,6 +77,8 @@ Fixpoint nl (t : term) : term :=
   | tProj p c => tProj p (nl c)
   | tFix mfix idx => tFix (map (map_def_anon nl nl) mfix) idx
   | tCoFix mfix idx => tCoFix (map (map_def_anon nl nl) mfix) idx
+  | tInt n => tInt n
+  | tFloat f => tFloat f
   end.
 
 Definition map_decl_anon f (d : context_decl) := {|

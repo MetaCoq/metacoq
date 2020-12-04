@@ -966,7 +966,8 @@ in All (for wf_local assumptions)
       unfold map_def.
       reflexivity.
     + eapply All_map, (All_impl X0).
-      firstorder.
+      intuition auto. destruct X2 as [s [? ?]].
+      exists s; intuition auto.
     + fold trans.
       subst types.
       eapply trans_mfix_All2;eassumption.
@@ -978,7 +979,8 @@ in All (for wf_local assumptions)
       unfold map_def.
       reflexivity.
     + fold trans.
-      eapply All_map, (All_impl X0); firstorder.
+      eapply All_map, (All_impl X0).
+      intros x [s ?]; exists s; intuition auto.
     + fold trans;subst types.
       (* like trans_mfix_All2 without isLambda *)
       admit.

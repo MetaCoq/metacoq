@@ -1300,7 +1300,10 @@ Lemma invert_red1_letin {cf:checker_flags} (Σ : global_env_ext) Γ C na d ty b 
     red1 Σ.1 (Γ ,, vdef na d ty) b b') +
   (C = subst10 d b)%type.
 Proof.
-  intros H; depelim H; try solve_discr; firstorder auto.
+  intros H; depelim H; try solve_discr; pcuicfo auto.
+  - left. left. left. eexists; eauto.
+  - left. left. right. eexists; eauto.
+  - left. right. eexists; eauto.
 Qed.
 
 Lemma decompose_prod_assum_it_mkProd_or_LetIn' ctx Γ t :
@@ -1360,7 +1363,7 @@ Lemma destInd_head_subst s k t f : destInd (head (subst s k t)) = Some f ->
   (destInd (head t) = Some f) +  
   (∑ n u, (head t = tRel n) /\ k <= n /\ (nth_error s (n - k) = Some u /\ destInd (head  (lift0 k u)) = Some f)).
 Proof.
-  induction t in s, k, f |- *; simpl; try solve [firstorder auto].
+  induction t in s, k, f |- *; simpl; try solve [pcuicfo auto].
   elim: leb_spec_Set => le; intros destI.
    right.
   destruct nth_error eqn:Heq.

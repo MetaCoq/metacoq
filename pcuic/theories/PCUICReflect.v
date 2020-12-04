@@ -20,6 +20,39 @@ Local Ltac fcase c :=
   let e := fresh "e" in
   case c ; intro e ; [ subst ; try (left ; reflexivity) | finish ].
 
+Instance reflect_eq_Z : ReflectEq Z := EqDec_ReflectEq _.
+
+Lemma exist_irrel_eq {A} (P : A -> bool) (x y : sig P) : proj1_sig x = proj1_sig y -> x = y.
+Proof.
+  destruct x as [x p], y as [y q]; simpl; intros ->.
+  now destruct (uip p q).
+Qed.
+
+Local Obligation Tactic := idtac.
+#[program]
+Instance reflect_eq_uint63 : ReflectEq uint63_model := 
+  { eqb x y := eqb (proj1_sig x) (proj1_sig y) }.
+Next Obligation.
+  cbn -[eqb].
+  intros x y.
+  elim: eqb_spec. constructor.
+  now apply exist_irrel_eq.
+  intros neq; constructor => H'; apply neq; now subst x.
+Qed.
+
+Instance reflect_eq_spec_float : ReflectEq SpecFloat.spec_float := EqDec_ReflectEq _.
+  
+#[program]
+Instance reflect_eq_float64 : ReflectEq float64_model := 
+  { eqb x y := eqb (proj1_sig x) (proj1_sig y) }.
+Next Obligation.
+  cbn -[eqb].
+  intros x y.
+  elim: eqb_spec. constructor.
+  now apply exist_irrel_eq.
+  intros neq; constructor => H'; apply neq; now subst x.
+Qed.
+
 Local Ltac term_dec_tac term_dec :=
   repeat match goal with
          | t : term, u : term |- _ => fcase (term_dec t u)
@@ -34,6 +67,8 @@ Local Ltac term_dec_tac term_dec :=
          | i : string, i' : kername |- _ => fcase (string_dec i i')
          | n : name, n' : name |- _ => fcase (eq_dec n n')
          | n : aname, n' : aname |- _ => fcase (eq_dec n n')
+         | i : uint63_model, j : uint63_model |- _ => fcase (eq_dec i j)
+         | i : float64_model, j : float64_model |- _ => fcase (eq_dec i j)
          | i : inductive, i' : inductive |- _ => fcase (eq_dec i i')
          | x : inductive * nat, y : inductive * nat |- _ =>
            fcase (eq_dec x y)

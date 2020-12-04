@@ -149,11 +149,12 @@ Qed.
  
 Derive NoConfusion EqDec for SpecFloat.spec_float.
 
-Arguments eqb : simpl never.
+Local Obligation Tactic := idtac.
 #[program] 
 Instance reflect_prim_float : ReflectEq PrimFloat.float :=
   { eqb x y := eqb (ReflectEq := EqDec_ReflectEq SpecFloat.spec_float) (FloatOps.Prim2SF x) (FloatOps.Prim2SF y) }.
 Next Obligation.
+  intros. cbn -[eqb].
   destruct (eqb_spec (ReflectEq := EqDec_ReflectEq SpecFloat.spec_float) (FloatOps.Prim2SF x) (FloatOps.Prim2SF y)); constructor.
   now apply FloatAxioms.Prim2SF_inj.
   intros e; apply n. rewrite e.

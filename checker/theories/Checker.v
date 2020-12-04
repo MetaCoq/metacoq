@@ -447,7 +447,8 @@ Inductive type_error :=
 | IllFormedFix (m : mfixpoint term) (i : nat)
 | UnsatisfiedConstraints (c : ConstraintSet.t)
 | UnsatisfiableConstraints (c : ConstraintSet.t)
-| NotEnoughFuel (n : nat).
+| NotEnoughFuel (n : nat)
+| NotSupported (s : string).
 
 Definition string_of_type_error (e : type_error) : string :=
   match e with
@@ -468,6 +469,7 @@ Definition string_of_type_error (e : type_error) : string :=
   | UnsatisfiedConstraints c => "Unsatisfied constraints"
   | UnsatisfiableConstraints c => "Unsatisfiable constraints"
   | NotEnoughFuel n => "Not enough fuel"
+  | NotSupported s => s ^ " are not supported"
   end.
 
 Inductive typing_result (A : Type) :=
@@ -769,6 +771,8 @@ Section Typecheck2.
       | Some f => ret f.(dtype)
       | None => raise (IllFormedFix mfix n)
       end
+
+    | tInt _ | tFloat _ => raise (NotSupported "primitive types")
     end.
 
   Definition check (Γ : context) (t : term) (ty : term) : typing_result unit :=

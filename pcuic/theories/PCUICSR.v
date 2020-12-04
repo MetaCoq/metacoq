@@ -716,8 +716,7 @@ Proof.
 
   - (* Case congruence on discriminee *) 
     eapply type_Cumul. eapply type_Case; eauto.
-    * solve_all.
-      firstorder auto.
+    * solve_all. destruct b0 as [s Hs]; exists s; pcuic.
     * pose proof typec as typec'.
       eapply (env_prop_typing _ _ validity) in typec' as wat; auto.
       unshelve eapply isType_mkApps_Ind in wat as [parsubst [argsubst wat]]; eauto.

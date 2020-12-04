@@ -1,7 +1,20 @@
 (* Distributed under the terms of the MIT license. *)
+From Coq Require Import Int63 FloatOps FloatAxioms.
 From MetaCoq.Template Require Import config utils AstUtils.
 From MetaCoq.PCUIC Require Import PCUICAst.
 
+Lemma to_Z_bounded_bool (i : Int63.int) : 
+  ((0 <=? φ (i)%int63) && (φ (i)%int63 <? wB))%Z.
+Proof.
+  generalize (to_Z_bounded i).
+  now intros [->%Z.leb_le ->%Z.ltb_lt].
+Qed.
+
+Definition uint63_to_model (i : Int63.int) : uint63_model :=
+  exist _ (Int63.to_Z i) (to_Z_bounded_bool i).
+
+Definition float64_to_model (f : PrimFloat.float) : float64_model :=
+  exist _ (FloatOps.Prim2SF f) (FloatAxioms.Prim2SF_valid f).
 
 Fixpoint trans (t : Ast.term) : term :=
   match t with
@@ -27,6 +40,8 @@ Fixpoint trans (t : Ast.term) : term :=
   | Ast.tCoFix mfix idx =>
     let mfix' := List.map (map_def trans trans) mfix in
     tCoFix mfix' idx
+  | Ast.tInt n => tInt (uint63_to_model n)
+  | Ast.tFloat n => tFloat (float64_to_model n)
   end.
 
 Definition trans_decl (d : Ast.context_decl) :=

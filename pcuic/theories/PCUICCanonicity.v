@@ -738,8 +738,8 @@ Section Normalization.
     - simpl in cl; move/andP: cl => [clf cla].
       eapply inversion_App in typed as [na [A [B [Hf _]]]]; eauto.
     - simpl in cl; move/andP: cl => [/andP[_ clc] _].
-      eapply inversion_Case in typed; firstorder eauto.
-    - eapply inversion_Proj in typed; firstorder auto.
+      eapply inversion_Case in typed; pcuicfo eauto.
+    - eapply inversion_Proj in typed; pcuicfo auto.
   Qed.
 
   Lemma ind_normal_constructor t i u args : 

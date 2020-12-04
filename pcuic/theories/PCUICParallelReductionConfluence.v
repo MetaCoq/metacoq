@@ -244,6 +244,8 @@ Lemma term_ind_size_app :
         tFixProp P P m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat),
         tFixProp (P) P m -> P (tCoFix m n)) ->
+    (forall i, P (tInt i)) ->
+    (forall f, P (tFloat f)) ->
     forall (t : term), P t.
 Proof.
   intros.
@@ -1520,7 +1522,7 @@ Section Rho.
     rename r (rho Γ t) = rho Δ (rename r t).
   Proof.
     revert t Γ Δ r.
-    refine (term_ind_size_app _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _);
+    refine (term_ind_size_app _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _);
       intros; try subst Γ; try rename Γ0 into Γ(* ; rename_all_hyps *).
     all:auto 2.
 

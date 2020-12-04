@@ -201,7 +201,10 @@ Inductive eq_term_upto_univ_napp Σ (Re Rle : Universe.t -> Universe.t -> Prop) 
       (x.(rarg) = y.(rarg)) *
       eq_binder_annot x.(dname) y.(dname)
     ) mfix mfix' ->
-    eq_term_upto_univ_napp Σ Re Rle napp (tCoFix mfix idx) (tCoFix mfix' idx).
+    eq_term_upto_univ_napp Σ Re Rle napp (tCoFix mfix idx) (tCoFix mfix' idx)
+    
+| eq_Int i : eq_term_upto_univ_napp Σ Re Rle napp (tInt i) (tInt i)
+| eq_Float f : eq_term_upto_univ_napp Σ Re Rle napp (tFloat f) (tFloat f).
 
 Notation eq_term_upto_univ Σ Re Rle := (eq_term_upto_univ_napp Σ Re Rle 0).
 
@@ -890,6 +893,9 @@ Fixpoint eqb_term_upto_univ_napp Σ (equ lequ : Universe.t -> Universe.t -> bool
       eqb_annot x.(dname) y.(dname)
     ) mfix mfix'
 
+  | tInt i, tInt i' => eqb i i'
+  | tFloat f, tFloat f' => eqb f f'
+
   | _, _ => false
   end.
 
@@ -1030,6 +1036,8 @@ Proof.
     cbn -[eqb]. intros x X0 y. eqspec; [|rewrite andb_false_r; discriminate].
     intro. rtoProp. split; tas. split;tas. split; eapply X0; tea.
     now apply eqb_annot_spec.
+  - eqspec; [|discriminate]. constructor.
+  - eqspec; [|discriminate]. constructor.
 Qed.
 
 Lemma reflect_eq_term_upto_univ Σ equ lequ (Re Rle : Universe.t -> Universe.t -> Prop) napp :
@@ -1222,6 +1230,8 @@ Proof.
               apply X2.
         -- constructor. intro bot. apply f.
            inversion bot. subst. inversion X0. subst. apply X2.
+  - cbn - [eqb]. eqspecs. do 2 constructor.
+  - cbn - [eqb]. eqspecs. do 2 constructor.
 Qed.
 
 Lemma compare_global_instance_refl :
@@ -1237,6 +1247,15 @@ Proof.
   rtoProp. split; auto.
   destruct t; simpl; auto.
   eapply forallb2_map, forallb2_refl; intro; apply eqb_refl.
+Qed.
+
+Lemma eq_dec_to_bool_refl {A} {ea : Classes.EqDec A} (x : A) : 
+  eq_dec_to_bool x x.
+Proof.
+  unfold eq_dec_to_bool.
+  destruct (Classes.eq_dec x x).
+  constructor.
+  congruence.
 Qed.
 
 Lemma eqb_term_upto_univ_refl :
@@ -1281,6 +1300,8 @@ Proof.
       destruct p as [e1 e2].
       rewrite -> e1 by assumption. rewrite -> e2 by assumption.
       rewrite eqb_annot_refl; assumption.
+  - apply eq_dec_to_bool_refl.
+  - apply eq_dec_to_bool_refl.
 Qed.
 
 (** ** Behavior on mkApps and it_mkLambda_or_LetIn **  *)

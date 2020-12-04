@@ -1,4 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
+From Coq Require Import Floats.SpecFloat.
 From MetaCoq.Template Require Export utils Universes BasicAst
      Environment EnvironmentTyping.
 From Equations Require Import Equations.
@@ -9,10 +10,27 @@ From Equations Require Import Equations.
    In particular, it has binary applications and all terms are well-formed.
    Casts are absent as well. *)
 
-
 Declare Scope pcuic.
 Delimit Scope pcuic with pcuic.
 Open Scope pcuic.
+
+(** DO NOT USE firstorder, since the introduction of Ints and Floats, it became unusuable. *)
+Ltac pcuicfo_gen tac :=
+  simpl in *; intuition (simpl; intuition tac).
+
+Tactic Notation "pcuicfo" := pcuicfo_gen auto.
+Tactic Notation "pcuicfo" tactic(tac) := pcuicfo_gen tac.
+
+(** Model of unsigned integers *)   
+Definition uint_size := 63.
+Definition uint_wB := (2 ^ (Z.of_nat uint_size))%Z.
+Definition uint63_model := { z : Z | ((0 <=? z) && (z <? uint_wB))%Z }.
+
+(** Model of floats *)
+Definition prec := 53%Z.
+Definition emax := 1024%Z.
+(** We consider valid binary encordings of floats as our model *)
+Definition float64_model := sig (valid_binary prec emax).
 
 Inductive term :=
 | tRel (n : nat)
@@ -29,7 +47,10 @@ Inductive term :=
 | tCase (indn : inductive * nat) (p c : term) (brs : list (nat * term)) (* # of parameters/type info/discriminee/branches *)
 | tProj (p : projection) (c : term)
 | tFix (mfix : mfixpoint term) (idx : nat)
-| tCoFix (mfix : mfixpoint term) (idx : nat).
+| tCoFix (mfix : mfixpoint term) (idx : nat)
+(** We use faithful models of primitive types in PCUIC *)
+| tInt (z : uint63_model)
+| tFloat (f : float64_model).
 
 Derive NoConfusion for term.
 

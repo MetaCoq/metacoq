@@ -96,6 +96,8 @@ Lemma term_forall_ctx_list_ind :
     (forall Γ (m : mfixpoint term) (n : nat),
         All_local_env (on_local_decl (fun Γ' t => P (Γ ,,, Γ') t)) (fix_context m) ->
         tFixProp (P Γ) (P (Γ ,,, fix_context m)) m -> P Γ (tCoFix m n)) ->
+    (forall Γ i, P Γ (tInt i)) ->
+    (forall Γ f, P Γ (tFloat f)) ->    
     forall Γ (t : term), P Γ t.
 Proof.
   intros.
@@ -148,6 +150,7 @@ Proof.
   eapply X13; try (apply aux; red; simpl; lia).
   apply auxl'. simpl. lia.
   red. apply All_pair. split; apply auxl; simpl; auto.
+
 Defined.
 
 (** All2 lemmas *)
@@ -385,7 +388,9 @@ Section ParallelReduction.
     | tVar _
     | tSort _
     | tInd _ _
-    | tConstruct _ _ _ => true
+    | tConstruct _ _ _ 
+    | tInt _
+    | tFloat _ => true
     | _ => false
     end.
 

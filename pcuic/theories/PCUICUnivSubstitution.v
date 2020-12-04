@@ -347,7 +347,7 @@ Proof.
                       /\ In c' (CS.elements ctrs)).
   - generalize (CS.elements ctrs), CS.empty.
     induction l; cbn.
-    + firstorder.
+    + pcuicfo. now destruct H0 as [? ?].
     + intros t. etransitivity. 1: eapply IHl.
       split; intros [HH|HH].
       * destruct a as [[l1 a] l2]. apply CS.add_spec in HH.
@@ -1085,9 +1085,11 @@ Proof.
     econstructor. now rewrite nth_error_map, H.
   - cbn. econstructor; eauto.
     eapply OnOne2_map. eapply OnOne2_impl. 1: eassumption.
-    firstorder.
+    (* Used to be pcuicfo *)
+    simpl in *; intuition; simpl in *. unfold on_Trel.
+    simpl. split; auto.
   - cbn; econstructor;
-    eapply OnOne2_map; eapply OnOne2_impl; [ eassumption | firstorder].
+    eapply OnOne2_map; eapply OnOne2_impl; [ eassumption | pcuicfo].
   - cbn; econstructor;
       eapply OnOne2_map; eapply OnOne2_impl; [ eassumption | ].
     intros. destruct X1. destruct p. inversion e. destruct x, y; cbn in *; subst.

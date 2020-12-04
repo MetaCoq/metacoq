@@ -35,6 +35,8 @@ Lemma term_forall_list_ind :
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tCoFix m n)) ->
+    (forall i, P (tInt i)) ->
+    (forall f, P (tFloat f)) ->
     forall t : term, P t.
 Proof.
   intros until t. revert t.
@@ -231,9 +233,12 @@ Lemma term_forall_mkApps_ind :
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tCoFix m n)) ->
+    (forall i, P (tInt i)) ->
+    (forall f, P (tFloat f)) ->
     forall t : term, P t.
 Proof.
   intros until t.
+  rename X14 into Pint. rename X15 into Pfloat.
   assert (Acc (MR lt size) t) by eapply measure_wf, Wf_nat.lt_wf.
   induction H. rename X14 into auxt. clear H. rename x into t.
   move auxt at top.

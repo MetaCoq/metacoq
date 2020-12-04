@@ -87,7 +87,7 @@ Proof.
           constructor; pcuic.
           eapply context_relation_app in convctx as [_ convctx].
           unshelve eapply (context_relation_impl convctx).
-          simpl; firstorder. destruct X. constructor; auto.
+          simpl; pcuicfo. destruct X. constructor; auto.
           eapply conv_conv_ctx; eauto.
           eapply context_relation_app_inv. constructor; pcuic.
           constructor; pcuic. constructor; pcuic. now symmetry.

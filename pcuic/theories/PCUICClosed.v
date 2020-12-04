@@ -331,8 +331,6 @@ Proof.
   now rewrite closedn_subst_instance_constr IHl.
 Qed.
 
-Arguments skipn : simpl never.
-
 Lemma destArity_spec ctx T :
   match destArity ctx T with
   | Some (ctx', s) => it_mkProd_or_LetIn ctx T = it_mkProd_or_LetIn ctx' (tSort s)
@@ -940,8 +938,7 @@ Proof.
     now move/andP: oib => [].
   - pose proof (onConstructors oib).
     red in X. eapply All_forallb. eapply All2_All_left; eauto.
-    firstorder auto.
-    eapply on_ctype in X0.
+    intros cdecl cs X0; eapply on_ctype in X0.
     now move/andP: X0 => [].
   - eapply All_forallb.
     pose proof (onProjections oib).
@@ -1130,8 +1127,8 @@ Proof.
   erewrite hidecl in clbodies. simpl in clbodies.
   unfold closed_inductive_body in clbodies.
   move/andP: clbodies => [/andP [_ cl] _].
-  eapply forallb_All in cl. apply (All_impl cl). 
-  intros [[? ?] ?]; simpl; firstorder.
+  eapply forallb_All in cl. apply (All_impl cl).
+  now intros [[? ?] ?]; simpl.
 Qed.
 
 Lemma declared_minductive_closed_inds {cf:checker_flags} :
@@ -1215,6 +1212,8 @@ Lemma term_closedn_list_ind :
     (forall k (s : projection) (t : term), P k t -> P k (tProj s t)) ->
     (forall k (m : mfixpoint term) (n : nat), tFixProp (P k) (P (#|fix_context m| + k)) m -> P k (tFix m n)) ->
     (forall k (m : mfixpoint term) (n : nat), tFixProp (P k) (P (#|fix_context m| + k)) m -> P k (tCoFix m n)) ->
+    (forall k i, P k (tInt i)) ->
+    (forall k f, P k (tFloat f)) ->
     forall k (t : term), closedn k t -> P k t.
 Proof.
   intros until t. revert k t.

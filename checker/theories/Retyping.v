@@ -99,6 +99,8 @@ Section TypeOf.
       | Some f => ret f.(dtype)
       | None => raise (IllFormedFix mfix n)
       end
+
+    | tInt _ | tFloat _ => raise (NotSupported "primitive types")
     end.
 
   Definition sort_of (Γ : context) (t : term) : typing_result Universe.t :=

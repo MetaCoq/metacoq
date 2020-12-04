@@ -293,7 +293,7 @@ Proof.
         eapply closed_upwards; eauto; lia.
       + simpl in X. rewrite -X in cp.
         eapply forallb_All in cp. eapply All_map_id; eauto.
-        eapply (All_impl cp); firstorder auto.
+        eapply (All_impl cp); intuition auto.
         destruct x; unfold on_snd; simpl; f_equal.
         apply lift_closed. rewrite context_assumptions_fold.
         eapply closed_upwards; eauto; lia.

@@ -292,7 +292,7 @@ Proof.
         eapply All_local_assum_subst; eauto.
         simpl. intros.
         destruct X as [s [Ht2 isp]].
-        exists s; firstorder.
+        exists s; pcuicfo.
         rewrite Nat.add_0_r. eapply (substitution _ Γ [vdef na b ty] [b] Γ1 _ (tSort s)); auto.
         rewrite -{1}(subst_empty 0 b).
         repeat (constructor; auto). rewrite !subst_empty.
@@ -342,7 +342,7 @@ Proof.
           eapply All_local_assum_subst; eauto.
           simpl. intros.
           destruct X as [s [Ht2 isp]].
-          exists s; firstorder auto.
+          exists s; pcuicfo auto.
           rewrite Nat.add_0_r. eapply (substitution _ Γ [vass na ty] [t] Γ1 _ (tSort s)); auto.
           repeat (constructor; auto). now rewrite subst_empty.
           now rewrite app_context_assoc in Ht2. }
@@ -619,7 +619,7 @@ Proof.
   eapply build_branches_type_lookup in e2. eauto.
   2:eauto.
   3:destruct declc; eauto.
-  2:{ eapply (All2_impl a); firstorder. }
+  2:{ eapply (All2_impl a); pcuicfo eauto. }
   destruct e2 as [nargs [br [brty [[[Hnth Hnth'] brtyped]]]]].
   epose proof (All2_nth_error _ _ _ a H).
   specialize (X0 Hnth').
@@ -885,7 +885,7 @@ Lemma cumul_prop1 (Σ : global_env_ext) Γ A B u :
 Proof.
   intros.
   destruct X0 as [s Hs].
-  eapply cumul_prop_inv in H. 4:eauto. firstorder. auto.
+  eapply cumul_prop_inv in H. 4:eauto. pcuicfo. auto.
   right; eauto.
 Qed.
 
@@ -899,7 +899,7 @@ Lemma cumul_prop2 (Σ : global_env_ext) Γ A B u :
 Proof.
   intros.
   destruct X0 as [s Hs].
-  eapply cumul_prop_inv in H. 4:eauto. firstorder. auto.
+  eapply cumul_prop_inv in H. 4:eauto. pcuicfo. auto.
   left; eauto.
 Qed.
 
@@ -913,7 +913,7 @@ Lemma cumul_sprop1 (Σ : global_env_ext) Γ A B u :
 Proof.
   intros.
   destruct X0 as [s Hs].
-  eapply cumul_sprop_inv in H. 4:eauto. firstorder. auto.
+  eapply cumul_sprop_inv in H. 4:eauto. pcuicfo. auto.
   right; eauto.
 Qed.
 
@@ -927,7 +927,7 @@ Lemma cumul_sprop2 (Σ : global_env_ext) Γ A B u :
 Proof.
   intros.
   destruct X0 as [s Hs].
-  eapply cumul_sprop_inv in H. 4:eauto. firstorder. auto.
+  eapply cumul_sprop_inv in H. 4:eauto. pcuicfo. auto.
   left; eauto.
 Qed.
 

@@ -73,7 +73,11 @@ struct
       false
     else not_supported_verb trm "from_bool"
 
-  let unquote_int63 i = i
+  let unquote_int63 trm =
+    match Constr.kind trm with 
+    | Constr.Int i -> i
+    | _ -> not_supported_verb trm "unquote_int63"
+  
 
 
   let unquote_char trm =

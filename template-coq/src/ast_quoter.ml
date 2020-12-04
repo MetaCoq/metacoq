@@ -73,6 +73,8 @@ struct
 
   let quote_bool x = x
 
+  let quote_int63 x = x
+
   (* NOTE: fails if it hits Prop or SProp *)
   let quote_nonprop_level (l : Univ.Level.t) : Universes0.Level.t =
     if Univ.Level.is_prop l || Univ.Level.is_sprop l then

@@ -6,7 +6,7 @@ struct
 
   type quoted_ident = Constr.t (* of type Ast.ident *)
   type quoted_int = Constr.t (* of type nat *)
-  type quoted_int63 = Uint63.t (* of type nat *)
+  type quoted_int63 = Constr.t (* of type int63 *)
   type quoted_bool = Constr.t (* of type bool *)
   type quoted_name = Constr.t (* of type BasicAst.name *)
   type quoted_aname = Constr.t (* of type BasicAst.aname (names with relevance) *)
@@ -139,11 +139,11 @@ struct
   let tmkInd = ast "mkInd"
   let tmkdecl = ast "mkdecl"
   let (tTerm,tRel,tVar,tEvar,tSort,tCast,tProd,
-       tLambda,tLetIn,tApp,tCase,tFix,tConstructor,tConst,tInd,tCoFix,tProj) =
+       tLambda,tLetIn,tApp,tCase,tFix,tConstructor,tConst,tInd,tCoFix,tProj,tInt) =
     (ast "term", ast "tRel", ast "tVar", ast "tEvar",
      ast "tSort", ast "tCast", ast "tProd", ast "tLambda",
      ast "tLetIn", ast "tApp", ast "tCase", ast "tFix",
-     ast "tConstruct", ast "tConst", ast "tInd", ast "tCoFix", ast "tProj")
+     ast "tConstruct", ast "tConst", ast "tInd", ast "tCoFix", ast "tProj", ast "tInt")
   let tkername = ast "kername"
   let tmodpath = ast "modpath"
   let tMPfile = ast "MPfile"

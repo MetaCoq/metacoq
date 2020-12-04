@@ -9,6 +9,7 @@ struct
   type t = Ast0.term
   type quoted_ident = char list
   type quoted_int = Datatypes.nat
+  type quoted_int63 = Uint63.t
   type quoted_bool = bool
   type quoted_name = name
   type quoted_aname = name binder_annot
@@ -77,7 +78,7 @@ struct
       rarg=rarg x
     }
 
-  let inspect_term (tt: t):(t, quoted_int, quoted_ident, quoted_aname, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_relevance, quoted_univ_instance, quoted_proj) structure_of_term=
+  let inspect_term (tt: t):(t, quoted_int, quoted_ident, quoted_aname, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_relevance, quoted_univ_instance, quoted_proj, quoted_int63) structure_of_term=
     match tt with
     | Coq_tRel n -> ACoq_tRel n
     | Coq_tVar v -> ACoq_tVar v
@@ -95,6 +96,7 @@ struct
     | Coq_tProj (a,b) -> ACoq_tProj (a,b)
     | Coq_tFix (a,b) -> ACoq_tFix (List.map unquote_def a,b)
     | Coq_tCoFix (a,b) -> ACoq_tCoFix (List.map unquote_def a,b)
+    | Coq_tInt i -> ACoq_tInt i
 
 
   let unquote_ident (qi: quoted_ident) : Id.t =
@@ -125,6 +127,8 @@ struct
     evm, mkEvar (id, Array.of_list l)
 
   let unquote_bool (q : quoted_bool) : bool = q
+  
+  let unquote_int63 i = i
 
   (* val unquote_sort : quoted_sort -> Sorts.t *)
   (* val unquote_sort_family : quoted_sort_family -> Sorts.family *)

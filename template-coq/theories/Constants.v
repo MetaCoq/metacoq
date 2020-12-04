@@ -167,6 +167,7 @@ Register MetaCoq.Template.Ast.tCase as metacoq.ast.tCase.
 Register MetaCoq.Template.Ast.tProj as metacoq.ast.tProj.
 Register MetaCoq.Template.Ast.tFix as metacoq.ast.tFix.
 Register MetaCoq.Template.Ast.tCoFix as metacoq.ast.tCoFix.
+Register MetaCoq.Template.Ast.tCoFix as metacoq.ast.tInt.
 
 (* Local and global declarations *)
 Register MetaCoq.Template.Ast.parameter_entry as metacoq.ast.parameter_entry.

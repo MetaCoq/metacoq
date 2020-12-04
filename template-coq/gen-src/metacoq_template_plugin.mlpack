@@ -11,6 +11,7 @@ BinPosDef
 BinPos
 BinNat
 BinInt
+Int63
 Ascii
 String0
 Orders

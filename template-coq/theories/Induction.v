@@ -30,6 +30,7 @@ Lemma term_forall_list_ind :
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tCoFix m n)) ->
+    (forall (i : Int63.int), P (tInt i)) ->
     forall t : term, P t.
 Proof.
   intros until t. revert t.
@@ -87,16 +88,17 @@ Lemma term_wf_forall_list_ind :
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> Forall (fun def => isLambda (dbody def) = true) m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tCoFix m n)) ->
+    (forall (i : Int63.int), P (tInt i)) ->
     forall t : term, wf t -> P t.
 Proof.
-  pose proof I as H1.  (* can go away, to avoid renaming everything... *)
-  intros until t. revert t.
+  pose proof I as H1.   (* can go away, to avoid renaming everything... *)
+  intros until t. revert t. rename H16 into H16'.
   apply (term_forall_list_ind (fun t => wf t -> P t));
     intros; try solve [match goal with
                  H : _ |- _ => apply H
               end; auto].
   apply H2. inv H17.
-  auto using lift_to_wf_list.
+  { auto using lift_to_wf_list. }
 
   - inv H18; auto.
   - inv H18; auto.
@@ -155,6 +157,7 @@ Lemma term_forall_list_rect :
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat), tFixType P P m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat), tFixType P P m -> P (tCoFix m n)) ->
+    (forall (i : Int63.int), P (tInt i)) ->
     forall t : term, P t.
 Proof.
   intros until t. revert t.

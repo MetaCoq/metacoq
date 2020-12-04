@@ -9,6 +9,7 @@ struct
   type t = Ast0.term
   type quoted_ident = char list
   type quoted_int = Datatypes.nat
+  type quoted_int63 = Uint63.t
   type quoted_bool = bool
   type quoted_name = BasicAst.name
   type quoted_aname = BasicAst.aname
@@ -55,7 +56,7 @@ struct
   let quote_relevance = function
     | Sorts.Relevant -> BasicAst.Relevant
     | Sorts.Irrelevant -> BasicAst.Irrelevant
- 
+
   let quote_name = function
     | Anonymous -> Coq_nAnon
     | Name i -> Coq_nNamed (quote_ident i)
@@ -150,7 +151,7 @@ struct
   let is_Eq = function
     | Univ.Eq -> true
     | _ -> false
-               
+
   let quote_univ_constraint ((l, ct, l') : Univ.univ_constraint) : quoted_univ_constraint =
     ((quote_nonprop_level l, quote_constraint_type ct), quote_nonprop_level l')
 
@@ -232,6 +233,7 @@ struct
   let mkInd i u = Coq_tInd (i, u)
   let mkConstruct (ind, i) u = Coq_tConstruct (ind, i, u)
   let mkLetIn na b t t' = Coq_tLetIn (na,b,t,t')
+  let mkInt i = Coq_tInt i
 
   let rec seq f t =
     if f < t then
@@ -278,7 +280,7 @@ struct
 
   let mk_mutual_inductive_body finite npars params inds uctx variance =
     {ind_finite = finite;
-     ind_npars = npars; ind_params = params; ind_bodies = inds; 
+     ind_npars = npars; ind_params = params; ind_bodies = inds;
      ind_universes = uctx; ind_variance = variance}
 
   let mk_constant_body ty tm uctx =
@@ -315,7 +317,7 @@ struct
       mind_entry_variance = variance;
       mind_entry_private = None }
 
-  let quote_definition_entry ty body ctx = 
+  let quote_definition_entry ty body ctx =
     { definition_entry_type = ty;
       definition_entry_body = body;
       definition_entry_universes = ctx;
@@ -324,11 +326,11 @@ struct
   let quote_parameter_entry ty ctx =
     { parameter_entry_type = ty;
       parameter_entry_universes = ctx }
-  
+
   let quote_constant_entry = function
     | Left ce -> DefinitionEntry ce
     | Right pe -> ParameterEntry pe
-(* 
+(*
   let quote_entry e =
     match e with
     | Some (Left (ty, body, ctx)) ->
@@ -337,7 +339,7 @@ struct
        Some (Right mind_entry)
     | None -> None *)
 
-  let inspectTerm (t : term) :  (term, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_relevance, quoted_univ_instance, quoted_proj) structure_of_term =
+  let inspectTerm (t : term) :  (term, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_relevance, quoted_univ_instance, quoted_proj, quoted_int63) structure_of_term =
    match t with
   | Coq_tRel n -> ACoq_tRel n
     (* so on *)
@@ -364,7 +366,7 @@ struct
 
   let mkPolymorphic_entry names c = Universes0.Polymorphic_entry (names, c)
   let mkMonomorphic_entry c = Universes0.Monomorphic_entry c
-  
+
 end
 
 module ExtractedASTQuoter = Quoter.Quoter(ExtractedASTBaseQuoter)

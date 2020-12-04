@@ -9,7 +9,7 @@ From MetaCoq.Template Require Import config utils Ast AstUtils LiftSubst UnivSub
 
  *)
 
- 
+
 Definition isSort T :=
   match T with
   | tSort u => True
@@ -506,7 +506,10 @@ Inductive eq_term_upto_univ (Re Rle : Universe.t -> Universe.t -> Prop) : term -
       eq_term_upto_univ Re Re x.(dbody) y.(dbody) ×
       x.(rarg) = y.(rarg)
     ) mfix mfix' ->
-    eq_term_upto_univ Re Rle (tCoFix mfix idx) (tCoFix mfix' idx).
+    eq_term_upto_univ Re Rle (tCoFix mfix idx) (tCoFix mfix' idx)
+
+| eq_Int i :
+    eq_term_upto_univ Re Rle (tInt i) (tInt i).
 
 Definition eq_term `{checker_flags} φ :=
   eq_term_upto_univ (eq_universe φ) (eq_universe φ).
@@ -536,7 +539,7 @@ Fixpoint strip_casts t :=
   | tCoFix mfix idx =>
     let mfix' := List.map (map_def strip_casts strip_casts) mfix in
     tCoFix mfix' idx
-  | tRel _ | tVar _ | tSort _ | tConst _ _ | tInd _ _ | tConstruct _ _ _ => t
+  | tRel _ | tVar _ | tSort _ | tConst _ _ | tInd _ _ | tConstruct _ _ _ | tInt _ => t
   end.
 
 Definition eq_term_nocast `{checker_flags} (φ : ConstraintSet.t) (t u : term) :=
@@ -758,14 +761,14 @@ Definition build_case_predicate_type ind mdecl idecl params u ps : option term :
          decl_type := mkApps (tInd ind u) (map (lift0 #|X.1|) params ++ to_extended_list X.1) |} in
   ret (it_mkProd_or_LetIn (X.1 ,, inddecl) (tSort ps)).
 
-Definition wf_universe Σ s := 
+Definition wf_universe Σ s :=
   match s with
-  | Universe.lProp 
+  | Universe.lProp
   | Universe.lSProp => True
-  | Universe.lType u => 
+  | Universe.lType u =>
     forall l, UnivExprSet.In l u -> LevelSet.In (UnivExpr.get_level l) (global_ext_levels Σ)
   end.
-  
+
 
 Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
 | type_Rel n decl :
@@ -1475,7 +1478,7 @@ Proof.
         remember (fix_context mfix) as mfixcontext. clear Heqmfixcontext.
 
         induction a1; econstructor; eauto.
-        ++ split; auto. 
+        ++ split; auto.
           eapply (X _ (typing_wf_local (fst p)) _ _ (fst p)). simpl. lia.
         ++ eapply IHa1. intros.
           eapply (X _ X0 _ _ Hty). simpl; lia.
@@ -1511,9 +1514,9 @@ Proof.
            clear X14 X13.
            clear e decl a0.
            remember (fix_context mfix) as mfixcontext. clear Heqmfixcontext.
-   
+
            induction a1; econstructor; eauto.
-           ++ split; auto. 
+           ++ split; auto.
              eapply (X _ (typing_wf_local p) _ _ p). simpl. lia.
            ++ eapply IHa1. intros.
              eapply (X _ X0 _ _ Hty). simpl; lia.

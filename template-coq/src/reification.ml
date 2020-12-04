@@ -5,6 +5,7 @@ sig
 
   type quoted_ident
   type quoted_int
+  type quoted_int63
   type quoted_bool
   type quoted_name
   type quoted_aname

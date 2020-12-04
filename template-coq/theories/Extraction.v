@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils Ast Reflect Induction.
-Require Import FSets ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt.
-
+Require Import FSets ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt MC_ExtrOCamlInt63 (*b/c nameclash with `comparion` *).
+From Coq Require Extraction.
 (** * Extraction setup for template-coq.
 
     Any extracted code planning to link with the plugin's OCaml reifier
@@ -20,7 +20,7 @@ Extract Inductive Equations.Init.sigma => "( * )" ["(,)"].
 Extract Constant Equations.Init.pr1 => "fst".
 Extract Constant Equations.Init.pr2 => "snd".
 Extraction Inline Equations.Init.pr1 Equations.Init.pr2.
- 
+
 Extraction Blacklist Classes config uGraph Universes Ast String List Nat Int
            UnivSubst Typing Checker Retyping OrderedType Logic Common Equality UnivSubst.
 Set Warnings "-extraction-opaque-accessed".
@@ -30,6 +30,8 @@ Cd "gen-src".
 
 From MetaCoq.Template Require Import TemplateMonad.Extractable config Induction
      LiftSubst UnivSubst Pretty.
+Import Init.Nat.
+Locate Nat.
 
 Recursive Extraction Library Extractable.
 Extraction Library MCPrelude.

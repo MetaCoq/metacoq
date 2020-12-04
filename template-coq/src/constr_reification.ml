@@ -6,6 +6,7 @@ struct
 
   type quoted_ident = Constr.t (* of type Ast.ident *)
   type quoted_int = Constr.t (* of type nat *)
+  type quoted_int63 = Uint63.t (* of type nat *)
   type quoted_bool = Constr.t (* of type bool *)
   type quoted_name = Constr.t (* of type BasicAst.name *)
   type quoted_aname = Constr.t (* of type BasicAst.aname (names with relevance) *)
@@ -77,17 +78,17 @@ struct
   let cZ0 = resolve "metacoq.Z.zero"
   let cZpos = resolve "metacoq.Z.pos"
   let cZneg = resolve "metacoq.Z.neg"
-  
+
   let tpos = resolve "metacoq.pos.type"
   let cposzero = resolve "metacoq.pos.xH"
   let cposI = resolve "metacoq.pos.xI"
   let cposO = resolve "metacoq.pos.xO"
-  
+
   let cSome_instance = resolve "metacoq.option_instance.some"
   let cNone_instance = resolve "metacoq.option_instance.none"
 
   let unit_tt = resolve "metacoq.unit.intro"
-  
+
   let tAscii = resolve "metacoq.ascii.intro"
   let tlist = resolve "metacoq.list.type"
   let c_nil = resolve "metacoq.list.nil"
@@ -223,7 +224,7 @@ struct
   let cMonomorphic_entry = ast "Monomorphic_entry"
   let cPolymorphic_entry = ast "Polymorphic_entry"
 
-  let (tcbv, tcbn, thnf, tall, tlazy, tunfold) = 
+  let (tcbv, tcbn, thnf, tall, tlazy, tunfold) =
     (template "cbv", template "cbn", template "hnf", template "all", template "lazy", template "unfold")
 
 

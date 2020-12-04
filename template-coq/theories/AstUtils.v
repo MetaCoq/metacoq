@@ -42,6 +42,7 @@ Fixpoint string_of_term (t : term) :=
             ^ string_of_term c ^ ")"
   | tFix l n => "Fix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
   | tCoFix l n => "CoFix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
+  | tInt i => "Int(" ^ string_of_int i ^ ")"
   end.
 
 Definition decompose_app (t : term) :=

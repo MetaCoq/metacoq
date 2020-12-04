@@ -73,6 +73,9 @@ struct
       false
     else not_supported_verb trm "from_bool"
 
+  let unquote_int63 i = i
+
+
   let unquote_char trm =
     let (h,args) = app_full trm [] in
     if constr_equall h tAscii then
@@ -336,7 +339,7 @@ struct
 
 
   let inspect_term (t:Constr.t)
-  : (Constr.t, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_relevance, quoted_univ_instance, quoted_proj) structure_of_term =
+  : (Constr.t, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_relevance, quoted_univ_instance, quoted_proj, quoted_int63) structure_of_term =
     let (h,args) = app_full t [] in
     if constr_equall h tRel then
       match args with

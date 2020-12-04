@@ -5,7 +5,6 @@ From MetaCoq.Erasure Require Import EAst EAstUtils ETyping.
 
 (** * Pretty printing *)
 
-
 Section print_term.
   Context (Σ : global_context).
 
@@ -160,6 +159,10 @@ Section print_term.
   | tCoFix l n =>
     parens top ("let cofix " ^ print_defs print_term Γ l ^ nl ^
                               " in " ^ List.nth_default (string_of_nat n) (map (string_of_name ∘ dname) l) n)
+  | tInt i => 
+    parens top (string_of_uint63_model i)
+  | tFloat f => 
+    parens top (string_of_float64_model f)
   end.
 
 End print_term.

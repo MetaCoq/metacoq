@@ -59,14 +59,16 @@ gen-src/extractable.mli
 gen-src/int63.ml
 gen-src/int63.mli
 
-# gen-src/sumbool.mli
-# gen-src/sumbool.ml
-# gen-src/zeven.mli
-# gen-src/zeven.ml
-# gen-src/zArith_dec.mli
-# gen-src/zArith_dec.ml
-# gen-src/zbool.mli
-# gen-src/zbool.ml
+gen-src/sumbool.mli
+gen-src/sumbool.ml
+gen-src/zeven.mli
+gen-src/zeven.ml
+gen-src/zArith_dec.mli
+gen-src/zArith_dec.ml
+gen-src/zbool.mli
+gen-src/zbool.ml
+gen-src/zpower.mli
+gen-src/zpower.ml
 gen-src/specFloat.mli
 gen-src/specFloat.ml
 gen-src/floatOps.mli

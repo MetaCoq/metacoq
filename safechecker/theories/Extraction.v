@@ -1,5 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-Require Import OrdersTac ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt.
+Require Import OrdersTac ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt
+    MC_ExtrOCamlInt63 (*b/c nameclash with `comparion` *) ExtrOCamlFloats.
 Require Import MetaCoq.Template.utils.
 From MetaCoq.SafeChecker Require Import PCUICSafeChecker PCUICSafeConversion
      SafeTemplateChecker.
@@ -10,6 +11,7 @@ From MetaCoq.SafeChecker Require Import PCUICSafeChecker PCUICSafeConversion
     should use these same directives for consistency.
 *)
 
+(** Here we could extract uint63_from/to_model to the identity *)
 
 (* Ignore [Decimal.int] before the extraction issue is solved:
    https://github.com/coq/coq/issues/7017. *)

@@ -1065,6 +1065,8 @@ Section WeakNormalization.
     - exfalso; eapply invert_ind_ind; eauto.
     - exfalso; eapply invert_fix_ind; eauto.
     - now rewrite head_mkApps /head /=.
+    - now eapply inversion_Int in typed.
+    - now eapply inversion_Float in typed. 
   Qed.
 
   Lemma wh_neutral_empty t ty : axiom_free Σ ->

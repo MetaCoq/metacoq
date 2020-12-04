@@ -1,6 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Export utils BasicAst Universes.
-
 (** * Extracted terms
 
   These are the terms produced by extraction: compared to kernel terms,
@@ -37,7 +36,9 @@ Inductive term : Set :=
                term (* discriminee *) -> list (nat * term) (* branches *) -> term
 | tProj      : projection -> term -> term
 | tFix       : mfixpoint term -> nat -> term
-| tCoFix     : mfixpoint term -> nat -> term.
+| tCoFix     : mfixpoint term -> nat -> term
+| tInt       : uint63_model -> term
+| tFloat     : float64_model -> term.
 
 Fixpoint mkApps t us :=
   match us with

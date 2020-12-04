@@ -206,8 +206,9 @@ Proof.
       split; eauto.
   - assert (HT : Σ;;; Γ ,,, Γ' |- PCUICAst.tFix mfix n : (decl.(dtype))).
     econstructor; eauto. eapply All_impl. eassumption. intros.
-    destruct X4; cbn in *; firstorder.
-    eapply (All_impl X1). firstorder.
+    destruct X4; cbn in *; pcuicfo.
+    exists x0; auto.
+    eapply (All_impl X1). pcuicfo.
     
     eapply weakening_typing in HT; auto.
     2:{ apply All_local_env_app_inv in X2 as [X2 _]. eapply X2. }
@@ -238,8 +239,9 @@ Proof.
 
   - assert (HT : Σ;;; Γ ,,, Γ' |- PCUICAst.tCoFix mfix n : (decl.(dtype))).
     econstructor; eauto. eapply All_impl. eassumption. intros.
-    destruct X4; cbn in *; firstorder.
-    eapply (All_impl X1). firstorder.
+    destruct X4; cbn in *; pcuicfo.
+    now exists x0.
+    eapply (All_impl X1). pcuicfo.
     
     eapply weakening_typing in HT; auto.
     2:{ apply All_local_env_app_inv in X2 as [X2 _]. eapply X2. }

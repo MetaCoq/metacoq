@@ -23,6 +23,8 @@ Local Ltac term_dec_tac term_dec :=
          | i : kername, i' : kername |- _ => fcase (kername_eq_dec i i')
          | i : string, i' : kername |- _ => fcase (string_dec i i')
          | n : name, n' : name |- _ => fcase (eq_dec n n')
+         | i : uint63_model, i' : uint63_model |- _ => fcase (eq_dec i i')
+         | i : float64_model, i' : float64_model |- _ => fcase (eq_dec i i')         
          | i : inductive, i' : inductive |- _ => fcase (eq_dec i i')
          | x : inductive * nat, y : inductive * nat |- _ =>
            fcase (eq_dec x y)

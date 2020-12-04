@@ -191,7 +191,7 @@ Section print_term.
     parens top ("let cofix " ^ print_defs print_term Γ l ^ nl ^
                               " in " ^ List.nth_default (string_of_nat n) (map (string_of_aname ∘ dname) l) n)
   | tInt i => 
-    parens top (string_of_Z (proj1_sig i))
+    parens top (string_of_uint63_model i)
   | tFloat f => 
     parens top (string_of_float64_model f)
   end.

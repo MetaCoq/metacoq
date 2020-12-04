@@ -1,5 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-Require Import FSets ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt.
+Require Import FSets ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt
+    MC_ExtrOCamlInt63 (*b/c nameclash with `comparion` *) ExtrOCamlFloats.
 
 (** * Extraction setup for the erasure phase of template-coq.
 

@@ -36,6 +36,11 @@ MCRelations
 MCOption
 MCProd
 MCCompare
+Sumbool
+Zeven
+ZArith_dec
+Zbool
+Zpower
 SpecFloat
 PrimFloat
 FloatOps

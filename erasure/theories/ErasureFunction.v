@@ -403,7 +403,9 @@ Section Erase.
         E.tFix mfix' n;
       erase Γ (tCoFix mfix n) Ht _ :=
         let mfix' := erase_mfix (erase) Γ mfix _ in
-        E.tCoFix mfix' n
+        E.tCoFix mfix' n;
+      erase Γ (tInt i) Ht _ := E.tInt i;
+      erase Γ (tFloat f) Ht _ := E.tFloat f
     }.
   Proof.
     all:try clear b'; try clear f'; try clear brs'; try clear erase.

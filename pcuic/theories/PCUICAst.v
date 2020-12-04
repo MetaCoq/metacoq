@@ -1,5 +1,4 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import Floats.SpecFloat.
 From MetaCoq.Template Require Export utils Universes BasicAst
      Environment EnvironmentTyping.
 From Equations Require Import Equations.
@@ -20,17 +19,6 @@ Ltac pcuicfo_gen tac :=
 
 Tactic Notation "pcuicfo" := pcuicfo_gen auto.
 Tactic Notation "pcuicfo" tactic(tac) := pcuicfo_gen tac.
-
-(** Model of unsigned integers *)   
-Definition uint_size := 63.
-Definition uint_wB := (2 ^ (Z.of_nat uint_size))%Z.
-Definition uint63_model := { z : Z | ((0 <=? z) && (z <? uint_wB))%Z }.
-
-(** Model of floats *)
-Definition prec := 53%Z.
-Definition emax := 1024%Z.
-(** We consider valid binary encordings of floats as our model *)
-Definition float64_model := sig (valid_binary prec emax).
 
 Inductive term :=
 | tRel (n : nat)

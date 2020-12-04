@@ -131,7 +131,8 @@ Proof.
     eapply All2_All_left in X3. 2:{ idtac. intros ? ? [[? e] ?]. exact e. }
 
     eapply All2_impl. eapply All2_All_mix_left.
-    all: firstorder.
+    eauto. eauto.
+    all: pcuicfo.
   - econstructor.
 
     eapply All2_impl. eapply All2_All_mix_left. eassumption. eassumption.
@@ -258,7 +259,8 @@ Proof.
   - assert (Hw :  wf_local (Σ.1, univs) (subst_instance_context u (Γ ,,, types))).
     { (* rewrite subst_instance_context_app. *)
       assert(All (fun d => isType Σ Γ (dtype d)) mfix).
-      eapply (All_impl X0); firstorder. 
+      eapply (All_impl X0); pcuicfo.
+      now destruct X5 as [s [Hs ?]]; exists s.
       eapply All_mfix_wf in X5; auto. subst types.
       
       revert X5. clear - wfΣ wfΓ H2 H3 X2 X3.
@@ -292,7 +294,8 @@ Proof.
   - assert (Hw :  wf_local (Σ.1, univs) (subst_instance_context u (Γ ,,, types))).
   { (* rewrite subst_instance_context_app. *)
     assert(All (fun d => isType Σ Γ (dtype d)) mfix).
-    eapply (All_impl X0); firstorder. 
+    eapply (All_impl X0); pcuicfo.
+    destruct X5 as [s [Hs ?]]; now exists s.
     eapply All_mfix_wf in X5; auto. subst types.
     
     revert X5. clear - wfΣ wfΓ H2 H3 X2 X3.

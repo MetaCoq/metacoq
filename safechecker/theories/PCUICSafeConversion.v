@@ -4056,7 +4056,42 @@ Section Conversion.
     - reflexivity.
     - reflexivity.
   Qed.
+
+  (* TODO move to PCUICNormal *)
+  Lemma whnf_mkApps_tInt_inv : 
+    forall (f : RedFlags.t) (Σ : global_env) (Γ : context) i (args : list term),
+      whnf f Σ Γ (mkApps (tInt i) args) -> args = [].
+  Proof.
+    intros * wh.
+    inversion wh; solve_discr.
+    clear -X.
+    remember (mkApps (tInt i) args) eqn:teq.
+    exfalso.
+    revert teq.
+    induction X in args |- *; intros; solve_discr.
+    destruct args as [|? ? _] using MCList.rev_ind; [easy|].
+    rewrite <- mkApps_nested in teq.
+    cbn in teq. noconf teq.
+    eauto.
+  Qed.
   
+  Lemma whnf_mkApps_tFloat_inv : 
+    forall (rf : RedFlags.t) (Σ : global_env) (Γ : context) f (args : list term),
+      whnf rf Σ Γ (mkApps (tFloat f) args) -> args = [].
+  Proof.
+    intros * wh.
+    inversion wh; solve_discr.
+    clear -X.
+    remember (mkApps (tFloat f) args) eqn:teq.
+    exfalso.
+    revert teq.
+    induction X in args |- *; intros; solve_discr.
+    destruct args as [|? ? _] using MCList.rev_ind; [easy|].
+    rewrite <- mkApps_nested in teq.
+    cbn in teq. noconf teq.
+    eauto.
+  Qed.
+
   Lemma reducible_head_None Γ t π h :
     isApp t = false ->
     whnf RedFlags.nodelta Σ (Γ,,, stack_context π) (mkApps t (decompose_stack π).1) ->
@@ -4115,6 +4150,12 @@ Section Conversion.
     - constructor; eexists _, (decompose_stack π).1.
       split; [constructor; eauto with pcuic|].
       eauto with pcuic.
+    - apply whnf_mkApps_tInt_inv in wh as ->.
+      constructor; eexists _, [].
+      eauto using whnf_red with pcuic.
+    - apply whnf_mkApps_tFloat_inv in wh as ->.
+      constructor; eexists _, [].
+      eauto using whnf_red with pcuic.
     - constructor; eexists _, (decompose_stack π).1.
       split; [econstructor|]; eauto.
       split; [eauto with pcuic|].
@@ -4498,6 +4539,8 @@ Section Conversion.
       apply inversion_Sort in h2 as (_&h2&_); auto.
       apply inversion_Sort in h1 as (_&h1&_); auto.      
       eapply conv_pb_relb_complete in H0; eauto.
+    - now rewrite eq_dec_to_bool_refl in noteq.
+    - now rewrite eq_dec_to_bool_refl in noteq.
   Qed.
   
   Equations _isconv (s : state) (Γ : context)

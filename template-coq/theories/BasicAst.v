@@ -1,5 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils.
+From Coq Require Import Floats.SpecFloat.
 
 (** ** Reification of names ** *)
 
@@ -27,6 +28,8 @@ From MetaCoq.Template Require Import utils.
     - constructor => [inductive * nat]
     - Projection.t => [projection]
     - GlobRef.t => global_reference
+
+    Finally, we define the models of primitive types (uint63 and floats64).
 *)
 
 Definition ident   := string. (* e.g. nat *)
@@ -382,3 +385,21 @@ Ltac close_All :=
   | H : All2 _ _ _ |- All _ _ =>
     (apply (All2_All_left H) || apply (All2_All_right H)); clear H; simpl
   end.
+
+(** Primitive types models (axiom free) *)
+
+(** Model of unsigned integers *)   
+Definition uint_size := 63.
+Definition uint_wB := (2 ^ (Z.of_nat uint_size))%Z.
+Definition uint63_model := { z : Z | ((0 <=? z) && (z <? uint_wB))%Z }.
+
+Definition string_of_uint63_model (i : uint63_model) := string_of_Z (proj1_sig i).
+
+(** Model of floats *)
+Definition prec := 53%Z.
+Definition emax := 1024%Z.
+(** We consider valid binary encordings of floats as our model *)
+Definition float64_model := sig (valid_binary prec emax).
+
+Definition string_of_float64_model (i : float64_model) := 
+  "<float>".

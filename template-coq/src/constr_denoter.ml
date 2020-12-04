@@ -129,6 +129,16 @@ struct
     else
       not_supported_verb trm "unquote_name"
 
+  let unquote_evar env evm id args = 
+    if constr_equall id tfresh_evar_id then
+      let evm, (tyev, s) = Evarutil.new_type_evar env evm Evd.univ_flexible_alg in
+      let evm, ev = Evarutil.new_evar env evm tyev in
+      evm, EConstr.Unsafe.to_constr ev
+    else 
+      let id = unquote_nat id in
+      let ev = Evar.unsafe_of_int id in
+      evm, Constr.mkEvar (ev, Array.of_list args)
+
   let unquote_relevance trm =
     if Constr.equal trm (Lazy.force tRelevant) then
       Sorts.Relevant
@@ -335,6 +345,10 @@ struct
     else if constr_equall h tVar then
       match args with
         x :: _ -> ACoq_tVar x
+      | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+    else if constr_equall h tEvar then
+      match args with
+      | [x; y] -> ACoq_tEvar (x, unquote_list y)
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
     else if constr_equall h tSort then
       match args with

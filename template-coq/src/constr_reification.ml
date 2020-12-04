@@ -148,7 +148,8 @@ struct
   let tMPfile = ast "MPfile"
   let tMPbound = ast "MPbound"
   let tMPdot = ast "MPdot"
-
+  let tfresh_evar_id = ast "fresh_evar_id"
+  
   let tproplevel = ast "level.prop_level_type"
   let tlevelSProp = ast "level.lsprop"
   let tlevelProp = ast "level.lprop"

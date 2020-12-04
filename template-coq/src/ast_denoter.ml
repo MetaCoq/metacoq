@@ -119,6 +119,10 @@ struct
     match q with
     | Datatypes.O -> 0
     | Datatypes.S x -> succ (unquote_int x)
+  
+  let unquote_evar env evm n l = 
+    let id = Evar.unsafe_of_int (unquote_int n) in
+    evm, mkEvar (id, Array.of_list l)
 
   let unquote_bool (q : quoted_bool) : bool = q
 

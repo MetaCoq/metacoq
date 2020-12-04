@@ -509,7 +509,10 @@ Inductive eq_term_upto_univ (Re Rle : Universe.t -> Universe.t -> Prop) : term -
     eq_term_upto_univ Re Rle (tCoFix mfix idx) (tCoFix mfix' idx)
 
 | eq_Int i :
-    eq_term_upto_univ Re Rle (tInt i) (tInt i).
+    eq_term_upto_univ Re Rle (tInt i) (tInt i)
+
+ | eq_Float f :
+    eq_term_upto_univ Re Rle (tFloat f) (tFloat f).
 
 Definition eq_term `{checker_flags} φ :=
   eq_term_upto_univ (eq_universe φ) (eq_universe φ).

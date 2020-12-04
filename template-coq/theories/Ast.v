@@ -1,7 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils Environment.
 From MetaCoq.Template Require Export Universes.
-From Coq Require Int63.
+(* For primitive integers and floats  *)
+From Coq Require Int63 Floats.PrimFloat.
 
 (** * AST of Coq kernel terms and kernel data structures
 
@@ -51,7 +52,14 @@ Inductive term : Type :=
 | tProj (proj : projection) (t : term)
 | tFix (mfix : mfixpoint term) (idx : nat)
 | tCoFix (mfix : mfixpoint term) (idx : nat)
-| tInt (i : Int63.int).
+| tInt (i : Int63.int)
+| tFloat (f : PrimFloat.float).
+
+(** This can be used to represent holes, that, when unquoted, turn into fresh existential variables. 
+    The fresh evar will depend on the whole context at this point in the term, despite the empty instance.
+    Denotation will call Coq's Typing.solve_evars to try and fill these holes using typing information.
+*)
+Definition hole := tEvar fresh_evar_id [].
 
 (** This can be used to represent holes, that, when unquoted, turn into fresh existential variables. 
     The fresh evar will depend on the whole context at this point in the term, despite the empty instance.
@@ -67,7 +75,6 @@ Definition mkApps t us :=
         | _ => tApp t us
         end
   end.
-
 
 Module TemplateTerm <: Term.
 
@@ -126,7 +133,8 @@ Inductive wf : term -> Prop :=
 | wf_tFix mfix k : Forall (fun def => wf def.(dtype) /\ wf def.(dbody) /\ isLambda def.(dbody) = true) mfix ->
                    wf (tFix mfix k)
 | wf_tCoFix mfix k : Forall (fun def => wf def.(dtype) /\ wf def.(dbody)) mfix -> wf (tCoFix mfix k)
-| wf_tInt i : wf (tInt i).
+| wf_tInt i : wf (tInt i)
+| wf_tFloat f : wf (tFloat f).
 
 (** ** Entries
 

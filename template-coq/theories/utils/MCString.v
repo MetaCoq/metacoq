@@ -1,5 +1,4 @@
-From Coq Require Import String.
-From Coq.Numbers Require Import (* DecimalString *) Int63.
+From Coq Require Import String Decimal DecimalString ZArith.
 From MetaCoq.Template Require Import MCCompare.
 
 Local Open Scope string_scope.
@@ -26,8 +25,10 @@ Definition print_list {A} (f : A -> string) (sep : string) (l : list A) : string
 Definition parens (top : bool) (s : string) :=
   if top then s else "(" ++ s ++ ")".
 
+(* TODO: reuse the Decimal support for parsing and printing numbers in Coq *)  
 Definition string_of_nat n : string :=
-  match n with
+  DecimalString.NilEmpty.string_of_uint (Nat.to_uint n).
+(* match n with
   | 0 => "0"
   | 1 => "1"
   | 2 => "2"
@@ -79,12 +80,12 @@ Definition string_of_nat n : string :=
   | 48 => "48"
   | 49 => "49"
   | _ => "todo string_of_nat"
-  end.
+  end. *)
 
 
 (* Definition string_of_nat n : string := DecimalString.NilZero.string_of_uint (Nat.to_uint n). *)
 (* Definition string_of_int (i:Int63.int) : string := BinNat.N.to_uint (BinInt.Z.to_N (Int63.to_Z i))). *)
-Definition string_of_int (i:Int63.int) : string := 
+(* Definition string_of_int (i:Int63.int) : string := 
   (if Int63.ltb i 8
   then
     if Int63.ltb i 4
@@ -96,10 +97,21 @@ Definition string_of_int (i:Int63.int) : string :=
       if Int63.ltb i 6
       then if Int63.ltb i 5 then "4" else "5"
       else if Int63.ltb i 7 then "6" else "7"
-  else if Int63.eqb i 42 then "42" else "todo string_of_int")%int63.
+  else if Int63.eqb i 42 then "42" else "todo string_of_int")%int63. *)
 
 Hint Resolve String.string_dec : eq_dec.
 
+
+
+Definition string_of_positive p := 
+  string_of_nat (Pos.to_nat p).
+
+Definition string_of_Z (z : Z) : string := 
+  match z with
+  | Z0 => "0"
+  | Zpos p => string_of_positive p
+  | Zneg p => "-" ++ string_of_positive p
+  end.
 
 Definition eq_string s s' :=
   match string_compare s s' with

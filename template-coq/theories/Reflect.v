@@ -1,4 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
+(* For primitive integers and floats  *)
+From Coq Require Numbers.Cyclic.Int63.Int63 Floats.PrimFloat Floats.FloatAxioms.
 From MetaCoq.Template Require Import utils AstUtils BasicAst Ast Induction.
 Require Import ssreflect.
 From Equations Require Import Equations.
@@ -134,6 +136,29 @@ Defined.
 Instance reflect_nat : ReflectEq nat := {
   eqb_spec := Nat.eqb_spec
 }.
+
+#[program] 
+Instance reflect_prim_int : ReflectEq Numbers.Cyclic.Int63.Int63.int :=
+  { eqb := Numbers.Cyclic.Int63.Int63.eqb
+}.
+Next Obligation.
+  destruct (Int63.eqb x y) eqn:eq; constructor.
+  now apply (Numbers.Cyclic.Int63.Int63.eqb_spec x y) in eq.
+  now apply (Numbers.Cyclic.Int63.Int63.eqb_false_spec x y) in eq.
+Qed.
+ 
+Derive NoConfusion EqDec for SpecFloat.spec_float.
+
+Arguments eqb : simpl never.
+#[program] 
+Instance reflect_prim_float : ReflectEq PrimFloat.float :=
+  { eqb x y := eqb (ReflectEq := EqDec_ReflectEq SpecFloat.spec_float) (FloatOps.Prim2SF x) (FloatOps.Prim2SF y) }.
+Next Obligation.
+  destruct (eqb_spec (ReflectEq := EqDec_ReflectEq SpecFloat.spec_float) (FloatOps.Prim2SF x) (FloatOps.Prim2SF y)); constructor.
+  now apply FloatAxioms.Prim2SF_inj.
+  intros e; apply n. rewrite e.
+  reflexivity.
+Qed.
 
 Definition eq_level l1 l2 :=
   match l1, l2 with

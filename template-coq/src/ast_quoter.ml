@@ -10,6 +10,7 @@ struct
   type quoted_ident = char list
   type quoted_int = Datatypes.nat
   type quoted_int63 = Uint63.t
+  type quoted_float64 = Float64.t
   type quoted_bool = bool
   type quoted_name = BasicAst.name
   type quoted_aname = BasicAst.aname
@@ -74,6 +75,8 @@ struct
   let quote_bool x = x
 
   let quote_int63 x = x
+
+  let quote_float64 x = x
 
   (* NOTE: fails if it hits Prop or SProp *)
   let quote_nonprop_level (l : Univ.Level.t) : Universes0.Level.t =
@@ -236,6 +239,7 @@ struct
   let mkConstruct (ind, i) u = Coq_tConstruct (ind, i, u)
   let mkLetIn na b t t' = Coq_tLetIn (na,b,t,t')
   let mkInt i = Coq_tInt i
+  let mkFloat f = Coq_tFloat f
 
   let rec seq f t =
     if f < t then
@@ -341,9 +345,12 @@ struct
        Some (Right mind_entry)
     | None -> None *)
 
-  let inspectTerm (t : term) :  (term, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_relevance, quoted_univ_instance, quoted_proj, quoted_int63) structure_of_term =
+  let inspectTerm (t : term) :  (term, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind,
+    quoted_kernel_name, quoted_inductive, quoted_relevance, quoted_univ_instance, quoted_proj, 
+    quoted_int63, quoted_float64) structure_of_term =
    match t with
   | Coq_tRel n -> ACoq_tRel n
+  (* todo ! *)
     (* so on *)
   | _ ->  failwith "not yet implemented"
 

@@ -33,7 +33,6 @@ struct
 
   let mkRel i = constr_mkApp (tRel, [| i |])
   let mkVar id = constr_mkApp (tVar, [| id |])
-  let mkInt i = constr_mkApp (tInt, [| i |])
   let mkEvar n args = constr_mkApp (tEvar, [| n; to_coq_listl tTerm (Array.to_list args) |])
   let mkSort s = constr_mkApp (tSort, [| s |])
   let mkCast c k t = constr_mkApp (tCast, [| c ; k ; t |])
@@ -81,6 +80,9 @@ struct
   let mkProj kn t =
     constr_mkApp (tProj, [| kn; t |])
 
+  let mkInt i = constr_mkApp (tInt, [| i |])
+  let mkFloat f = constr_mkApp (tFloat, [| f |])
+
   let quote_option ty = function
     | Some tm -> constr_mkApp (cSome, [|ty; tm|])
     | None -> constr_mkApp (cNone, [|ty|])
@@ -110,7 +112,9 @@ struct
   let quote_bool b =
     if b then Lazy.force ttrue else Lazy.force tfalse
 
-  let quote_int63 i = Lazy.force tInt
+  let quote_int63 i = constr_mkApp (tInt, [| Constr.mkInt i |])
+
+  let quote_float64 f = constr_mkApp (tFloat, [| Constr.mkFloat f |])
 
   let quote_char i =
     constr_mkApp (tAscii, Array.of_list (List.map (fun m -> quote_bool ((i land m) = m))

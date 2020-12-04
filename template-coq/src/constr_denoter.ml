@@ -78,7 +78,10 @@ struct
     | Constr.Int i -> i
     | _ -> not_supported_verb trm "unquote_int63"
   
-
+  let unquote_float64 trm =
+    match Constr.kind trm with 
+    | Constr.Float f -> f
+    | _ -> not_supported_verb trm "unquote_float64"
 
   let unquote_char trm =
     let (h,args) = app_full trm [] in
@@ -343,7 +346,9 @@ struct
 
 
   let inspect_term (t:Constr.t)
-  : (Constr.t, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_relevance, quoted_univ_instance, quoted_proj, quoted_int63) structure_of_term =
+  : (Constr.t, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, 
+    quoted_inductive, quoted_relevance, quoted_univ_instance, quoted_proj, 
+    quoted_int63, quoted_float64) structure_of_term =
     let (h,args) = app_full t [] in
     if constr_equall h tRel then
       match args with
@@ -435,7 +440,14 @@ struct
       match args with
         proj::t::_ -> ACoq_tProj (proj, t)
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-
+    else if constr_equall h tInt then
+      match args with
+        t::_ -> ACoq_tInt t
+      | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+    else if constr_equall h tFloat then
+      match args with
+        t::_ -> ACoq_tFloat t
+      | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
     else
       CErrors.user_err (str"inspect_term: cannot recognize " ++ print_term t ++ str" (maybe you forgot to reduce it?)")
 

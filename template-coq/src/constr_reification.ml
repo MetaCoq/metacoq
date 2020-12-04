@@ -6,7 +6,6 @@ struct
 
   type quoted_ident = Constr.t (* of type Ast.ident *)
   type quoted_int = Constr.t (* of type nat *)
-  type quoted_int63 = Constr.t (* of type int63 *)
   type quoted_bool = Constr.t (* of type bool *)
   type quoted_name = Constr.t (* of type BasicAst.name *)
   type quoted_aname = Constr.t (* of type BasicAst.aname (names with relevance) *)
@@ -16,8 +15,8 @@ struct
   type quoted_kernel_name = Constr.t (* of type Ast.kername *)
   type quoted_inductive = Constr.t (* of type Ast.inductive *)
   type quoted_proj = Constr.t (* of type Ast.projection *)
-  type quoted_prim_int = Constr.t (* of type UInt63.t *)
-  type quoted_prim_float = Constr.t (* of type Float64.t *)
+  type quoted_int63 = Constr.t (* of type UInt63.t *)
+  type quoted_float64 = Constr.t (* of type Float64.t *)
   type quoted_global_reference = Constr.t (* of type Ast.global_reference *)
 
   type quoted_sort_family = Constr.t (* of type Ast.sort_family *)
@@ -141,11 +140,11 @@ struct
   let tmkInd = ast "mkInd"
   let tmkdecl = ast "mkdecl"
   let (tTerm,tRel,tVar,tEvar,tSort,tCast,tProd,
-       tLambda,tLetIn,tApp,tCase,tFix,tConstructor,tConst,tInd,tCoFix,tProj,tInt) =
+       tLambda,tLetIn,tApp,tCase,tFix,tConstructor,tConst,tInd,tCoFix,tProj,tInt,tFloat) =
     (ast "term", ast "tRel", ast "tVar", ast "tEvar",
      ast "tSort", ast "tCast", ast "tProd", ast "tLambda",
      ast "tLetIn", ast "tApp", ast "tCase", ast "tFix",
-     ast "tConstruct", ast "tConst", ast "tInd", ast "tCoFix", ast "tProj", ast "tInt")
+     ast "tConstruct", ast "tConst", ast "tInd", ast "tCoFix", ast "tProj", ast "tInt", ast "tFloat")
   let tkername = ast "kername"
   let tmodpath = ast "modpath"
   let tMPfile = ast "MPfile"

@@ -13,8 +13,8 @@ sig
   val unquote_evar : Environ.env -> Evd.evar_map -> quoted_int -> Constr.t list -> Evd.evar_map * Constr.t
   val unquote_int : quoted_int -> int
   val unquote_bool : quoted_bool -> bool
-  val unquote_int63 : quoted_prim_int -> Uint63.t
-  val unquote_int63 : quoted_prim_float -> Float64.t
+  val unquote_int63 : quoted_int63 -> Uint63.t
+  val unquote_float64 : quoted_float64 -> Float64.t
   (* val unquote_sort : quoted_sort -> Sorts.t *)
   (* val unquote_sort_family : quoted_sort_family -> Sorts.family *)
   val unquote_cast_kind : quoted_cast_kind -> Constr.cast_kind
@@ -25,7 +25,9 @@ sig
   val unquote_universe : Evd.evar_map -> quoted_sort -> Evd.evar_map * Univ.Universe.t
   val unquote_universe_instance: Evd.evar_map -> quoted_univ_instance -> Evd.evar_map * Univ.Instance.t
   (* val representsIndConstuctor : quoted_inductive -> Term.constr -> bool *)
-  val inspect_term : t -> (t, quoted_int, quoted_ident, quoted_aname, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_relevance, quoted_univ_instance, quoted_proj, quoted_int63) structure_of_term
+  val inspect_term : t -> (t, quoted_int, quoted_ident, quoted_aname, quoted_sort, quoted_cast_kind, 
+    quoted_kernel_name, quoted_inductive, quoted_relevance, quoted_univ_instance, quoted_proj, 
+    quoted_int63, quoted_float64) structure_of_term
 
 end
 

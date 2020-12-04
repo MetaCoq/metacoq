@@ -59,6 +59,7 @@ sig
   val mkFix : (quoted_int array * quoted_int) * (quoted_aname array * t array * t array) -> t
   val mkCoFix : quoted_int * (quoted_aname array * t array * t array) -> t
   val mkInt : quoted_int63 -> t
+  val mkFloat : quoted_float64 -> t
 
   val mkBindAnn : quoted_name -> quoted_relevance -> quoted_aname
   val mkName : quoted_ident -> quoted_name
@@ -69,7 +70,6 @@ sig
   val quote_aname : Name.t Context.binder_annot -> quoted_aname
   val quote_relevance : Sorts.relevance -> quoted_relevance
   val quote_int : int -> quoted_int
-  val quote_int63 : Uint63.t -> quoted_int63
   val quote_bool : bool -> quoted_bool
   val quote_sort : Sorts.t -> quoted_sort
   val quote_sort_family : Sorts.family -> quoted_sort_family
@@ -79,8 +79,8 @@ sig
   val quote_proj : quoted_inductive -> quoted_int -> quoted_int -> quoted_proj
 
   (* Primitive objects *)
-  val quote_prim_int : Uint63.t -> quoted_prim_int
-  val quote_prim_float : Float64.t -> quoted_prim_float
+  val quote_int63 : Uint63.t -> quoted_int63
+  val quote_float64 : Float64.t -> quoted_float64
 
   val quote_constraint_type : Univ.constraint_type -> quoted_constraint_type
   val quote_univ_constraint : Univ.univ_constraint -> quoted_univ_constraint
@@ -267,8 +267,8 @@ struct
          let p' = Q.quote_proj ind pars arg in
          let t', acc = quote_term acc env c in
          (Q.mkProj p' t', add_inductive (Projection.inductive p) acc)
-      | Constr.Int i -> (Q.quote_prim_int i, acc)
-      | Constr.Float f -> (Q.quote_prim_float f, acc)
+      | Constr.Int i -> (Q.mkInt (Q.quote_int63 i), acc)
+      | Constr.Float f -> (Q.mkFloat (Q.quote_float64 f), acc)
       | Constr.Meta _ -> failwith "Meta not supported by TemplateCoq"
       in
       let in_prop, env' = env in

@@ -14,7 +14,7 @@ Fixpoint wf_Inv (t : term) :=
   | tLambda na t b => wf t /\ wf b
   | tLetIn na t b b' => wf t /\ wf b /\ wf b'
   | tApp t u => isApp t = false /\ u <> nil /\ wf t /\ Forall wf u
-  | tConst _ _ | tInd _ _ | tConstruct _ _ _ | tInt _ => True
+  | tConst _ _ | tInd _ _ | tConstruct _ _ _ => True
   | tCase ci p c brs => wf p /\ wf c /\ Forall (wf ∘ snd) brs
   | tProj p t => wf t
   | tFix mfix k => Forall (fun def => wf def.(dtype) /\ wf def.(dbody) /\ isLambda def.(dbody) = true) mfix
@@ -69,7 +69,7 @@ Fixpoint wf_term (t : term) : bool :=
   | tLambda na t b => wf_term t && wf_term b
   | tLetIn na t b b' => wf_term t && wf_term b && wf_term b'
   | tApp t u => ~~ isApp t && ~~ is_empty u && wf_term t && forallb wf_term u
-  | tConst _ _ | tInd _ _ | tConstruct _ _ _ | tInt _ => true
+  | tConst _ _ | tInd _ _ | tConstruct _ _ _ => true
   | tCase ci p c brs => wf_term p && wf_term c && forallb (wf_term ∘ snd) brs
   | tProj p t => wf_term t
   | tFix mfix k =>

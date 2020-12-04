@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils Ast Reflect Induction.
-Require Import FSets ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt MC_ExtrOCamlInt63 (*b/c nameclash with `comparion` *).
+Require Import FSets ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt MC_ExtrOCamlInt63 (*b/c nameclash with `comparion` *)
+    ExtrOCamlFloats.
 From Coq Require Extraction.
 (** * Extraction setup for template-coq.
 
@@ -33,6 +34,15 @@ From MetaCoq.Template Require Import TemplateMonad.Extractable config Induction
 Import Init.Nat.
 Locate Nat.
 
+(* Floats *)
+(* Extraction Library Zeven.
+Extraction Library Zeven.
+Extraction Library ZArith_dec.
+Extraction Library Sumbool.
+Extraction Library Zbool.
+Extraction Library SpecFloat. *)
+Separate Extraction FloatOps.Prim2SF.
+
 Recursive Extraction Library Extractable.
 Extraction Library MCPrelude.
 Extraction Library MCOption.
@@ -43,6 +53,7 @@ Extraction Library Induction.
 Extraction Library LiftSubst.
 Extraction Library UnivSubst.
 Extraction Library BasicAst.
+
 Extraction Library Reflect.
 Extraction Library Pretty.
 Extraction Library config.

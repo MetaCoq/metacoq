@@ -5,7 +5,6 @@ sig
 
   type quoted_ident
   type quoted_int
-  type quoted_int63
   type quoted_bool
   type quoted_name
   type quoted_aname
@@ -15,8 +14,8 @@ sig
   type quoted_kernel_name
   type quoted_inductive
   type quoted_proj
-  type quoted_prim_int
-  type quoted_prim_float
+  type quoted_int63
+  type quoted_float64
 
   type quoted_global_reference
 

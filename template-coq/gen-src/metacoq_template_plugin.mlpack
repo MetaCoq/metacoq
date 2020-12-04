@@ -36,6 +36,10 @@ MCRelations
 MCOption
 MCProd
 MCCompare
+SpecFloat
+PrimFloat
+FloatOps
+DecimalString
 MCString
 MCUtils
 Signature

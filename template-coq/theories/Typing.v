@@ -539,7 +539,8 @@ Fixpoint strip_casts t :=
   | tCoFix mfix idx =>
     let mfix' := List.map (map_def strip_casts strip_casts) mfix in
     tCoFix mfix' idx
-  | tRel _ | tVar _ | tSort _ | tConst _ _ | tInd _ _ | tConstruct _ _ _ | tInt _ => t
+  | tRel _ | tVar _ | tSort _ | tConst _ _ | tInd _ _ | tConstruct _ _ _ 
+  | tInt _ | tFloat _ => t
   end.
 
 Definition eq_term_nocast `{checker_flags} (φ : ConstraintSet.t) (t u : term) :=

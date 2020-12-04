@@ -99,37 +99,37 @@ Proof.
     intros; try solve [match goal with
                  H : _ |- _ => apply H
               end; auto].
-  apply H2. inv H19.
+  apply H2. inv H18.
   auto using lift_to_wf_list.
 
+  - inv H19; auto.
+  - inv H19; auto.
+  - inv H19; auto.
   - inv H20; auto.
-  - inv H20; auto.
-  - inv H20; auto.
-  - inv H21; auto.
-  - inv H20; auto.
+  - inv H19; auto.
     apply H8; auto.
     auto using lift_to_wf_list.
 
-  - inv H20; apply H12; auto.
+  - inv H19; apply H12; auto.
     red. red in X.
     induction X.
     + constructor.
-    + constructor. inv H23; auto. apply IHX. inv H23; auto.
-
-  - inv H19; auto.
+    + constructor. inv H22; auto. apply IHX. inv H22; auto.
 
   - inv H18; auto.
+
+  - inv H16; auto.
     apply H14. red. red in X.
     induction X; constructor.
-    + split; inv H19; intuition.
-    + apply IHX. now inv H19.
+    + split; inv H18; intuition.
+    + apply IHX. now inv H18.
     + eapply Forall_impl; tea. clear; intros; cbn in *; intuition.
 
-  - inv H18; auto.
+  - inv H16; auto.
     apply H15. red. red in X.
     induction X; constructor.
-    + split; inv H19; intuition.
-    + apply IHX. now inv H19.
+    + split; inv H18; intuition.
+    + apply IHX. now inv H18.
 Qed.
 
 Definition tCaseBrsType {A} (P : A -> Type) (l : list (nat * A)) :=

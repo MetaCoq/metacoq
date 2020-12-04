@@ -78,6 +78,10 @@ sig
   val quote_inductive : quoted_kernel_name * quoted_int -> quoted_inductive
   val quote_proj : quoted_inductive -> quoted_int -> quoted_int -> quoted_proj
 
+  (* Primitive objects *)
+  val quote_prim_int : Uint63.t -> quoted_prim_int
+  val quote_prim_float : Float64.t -> quoted_prim_float
+
   val quote_constraint_type : Univ.constraint_type -> quoted_constraint_type
   val quote_univ_constraint : Univ.univ_constraint -> quoted_univ_constraint
   val quote_univ_instance : Univ.Instance.t -> quoted_univ_instance
@@ -229,7 +233,7 @@ struct
 
       | Constr.Const (c,pu) ->
         let kn = Constant.canonical c in
-	(Q.mkConst (Q.quote_kn kn) (Q.quote_univ_instance pu), add_constant kn acc)
+        (Q.mkConst (Q.quote_kn kn) (Q.quote_univ_instance pu), add_constant kn acc)
 
       | Constr.Construct ((mind,c),pu) ->
          (Q.mkConstruct (quote_inductive' mind, Q.quote_int (c - 1)) (Q.quote_univ_instance pu),
@@ -263,9 +267,9 @@ struct
          let p' = Q.quote_proj ind pars arg in
          let t', acc = quote_term acc env c in
          (Q.mkProj p' t', add_inductive (Projection.inductive p) acc)
+      | Constr.Int i -> (Q.quote_prim_int i, acc)
+      | Constr.Float f -> (Q.quote_prim_float f, acc)
       | Constr.Meta _ -> failwith "Meta not supported by TemplateCoq"
-      | Constr.Int i -> (Q.mkInt (Q.quote_int63 i), acc)
-      | Constr.Float _ -> failwith "Native floating point numbers not supported by TemplateCoq"
       in
       let in_prop, env' = env in
       if is_cast_prop () && not in_prop then

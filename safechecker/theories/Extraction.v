@@ -1,7 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-Require Import OrdersTac ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt
-    MC_ExtrOCamlInt63 (*b/c nameclash with `comparion` *) ExtrOCamlFloats.
-Require Import MetaCoq.Template.utils.
+From Coq Require Import OrdersTac ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt ExtrOCamlFloats.
+From MetaCoq.Template Require Import utils MC_ExtrOCamlInt63 (*b/c nameclash with `comparion` *).
 From MetaCoq.SafeChecker Require Import PCUICSafeChecker PCUICSafeConversion
      SafeTemplateChecker.
 

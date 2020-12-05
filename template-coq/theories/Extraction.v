@@ -1,7 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils Ast Reflect Induction.
-Require Import FSets ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt MC_ExtrOCamlInt63 (*b/c nameclash with `comparion` *)
-    ExtrOCamlFloats.
+From MetaCoq.Template Require Import utils Ast Reflect Induction MC_ExtrOCamlInt63 (*b/c nameclash with `comparion` *).
+From Coq Require Import FSets ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt ExtrOCamlFloats.
 From Coq Require Extraction.
 (** * Extraction setup for template-coq.
 

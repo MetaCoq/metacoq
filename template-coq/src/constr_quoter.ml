@@ -80,8 +80,8 @@ struct
   let mkProj kn t =
     constr_mkApp (tProj, [| kn; t |])
 
-  let mkInt i = constr_mkApp (tInt, [| i |])
-  let mkFloat f = constr_mkApp (tFloat, [| f |])
+  let mkInt i = i
+  let mkFloat f = f
 
   let quote_option ty = function
     | Some tm -> constr_mkApp (cSome, [|ty; tm|])

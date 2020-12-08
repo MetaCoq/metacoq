@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Program.
 From MetaCoq.Template Require Import config utils Kernames.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive
      PCUICReflect PCUICWeakeningEnv
      PCUICTyping PCUICInversion PCUICGeneration
      PCUICConfluence PCUICConversion 
@@ -366,6 +366,11 @@ Section Erase.
   
   End EraseMfix.
 
+  Equations erase_prim (ep : prim_val term) : PCUICPrimitive.prim_val E.term :=
+  erase_prim (_; primIntModel i) := (_; primIntModel i);
+  erase_prim (_; primFloatModel f) := (_; primFloatModel f).
+  
+
   Equations? (noeqns noind) erase (Γ : context) (t : term) (Ht : welltyped Σ Γ t) : E.term
       by struct t :=
     erase Γ t Ht with (is_erasable Σ HΣ Γ t Ht) :=
@@ -404,8 +409,7 @@ Section Erase.
       erase Γ (tCoFix mfix n) Ht _ :=
         let mfix' := erase_mfix (erase) Γ mfix _ in
         E.tCoFix mfix' n;
-      erase Γ (tInt i) Ht _ := E.tInt i;
-      erase Γ (tFloat f) Ht _ := E.tFloat f
+      erase Γ (tPrim p) Ht _ := E.tPrim (erase_prim p)
     }.
   Proof.
     all:try clear b'; try clear f'; try clear brs'; try clear erase.

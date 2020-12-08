@@ -14,6 +14,7 @@ Classes0
 Logic1
 Relation
 Relation_Properties
+PCUICPrimitive
 PCUICAst
 PCUICAstUtils
 PCUICUnivSubst

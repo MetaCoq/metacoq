@@ -1,6 +1,6 @@
 From MetaCoq.Template Require Import Reflect.
 From MetaCoq.Erasure Require Import EAst EInduction.
-From MetaCoq.PCUIC Require Import PCUICReflect.
+From MetaCoq.PCUIC Require Import PCUICReflect PCUICPrimitive.
 From Equations Require Import Equations.
 
 Local Ltac finish :=
@@ -23,8 +23,7 @@ Local Ltac term_dec_tac term_dec :=
          | i : kername, i' : kername |- _ => fcase (kername_eq_dec i i')
          | i : string, i' : kername |- _ => fcase (string_dec i i')
          | n : name, n' : name |- _ => fcase (eq_dec n n')
-         | i : uint63_model, i' : uint63_model |- _ => fcase (eq_dec i i')
-         | i : float64_model, i' : float64_model |- _ => fcase (eq_dec i i')         
+         | i : prim_val _, i' : prim_val _ |- _ => fcase (eq_dec i i')
          | i : inductive, i' : inductive |- _ => fcase (eq_dec i i')
          | x : inductive * nat, y : inductive * nat |- _ =>
            fcase (eq_dec x y)

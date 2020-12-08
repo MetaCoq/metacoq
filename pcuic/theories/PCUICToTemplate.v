@@ -11,11 +11,10 @@ Definition uint63_from_model (i : uint63_model) : Int63.int :=
 Definition float64_from_model (f : float64_model) : PrimFloat.float :=
   FloatOps.SF2Prim (proj1_sig f).
 
-Definition trans_prim {term} (t : prim_val term) : Ast.term :=
+Definition trans_prim (t : prim_val) : Ast.term :=
   match t.π2 with
   | primIntModel i => Ast.tInt (uint63_from_model i)
   | primFloatModel f => Ast.tFloat (float64_from_model f)
-  | primArrayModel a => Ast.tRel 0 (* todo *)
   end.
 
 Fixpoint trans (t : PCUICAst.term) : Ast.term :=

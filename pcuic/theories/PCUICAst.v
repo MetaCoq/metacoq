@@ -42,6 +42,8 @@ Inductive term :=
 
 Derive NoConfusion for term.
 
+Notation prim_val := (prim_val term).
+
 Fixpoint mkApps t us :=
   match us with
   | nil => t

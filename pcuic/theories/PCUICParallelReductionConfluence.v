@@ -244,8 +244,7 @@ Lemma term_ind_size_app :
         tFixProp P P m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat),
         tFixProp (P) P m -> P (tCoFix m n)) ->
-    (forall i, P (tInt i)) ->
-    (forall f, P (tFloat f)) ->
+    (forall p, P (tPrim p)) ->
     forall (t : term), P t.
 Proof.
   intros.
@@ -338,32 +337,13 @@ Ltac finish_discr :=
          | [ H : pred_atom (mkApps _ _) |- _ ] => apply pred_atom_mkApps in H; intuition subst
          end.
 
-Definition application_atom t :=
-  match t with
-  | tVar _
-  | tSort _
-  | tInd _ _
-  | tConstruct _ _ _
-  | tLambda _ _ _ => true
-  | _ => false
-  end.
-
-Lemma application_atom_mkApps {t l} : application_atom (mkApps t l) -> application_atom t /\ l = [].
-Proof.
-  induction l in t |- *; simpl; auto.
-  intros. destruct (IHl _ H). discriminate.
-Qed.
-
 Ltac solve_discr ::=
   (try (progress (prepare_discr; finish_discr; cbn [mkApps] in * )));
   (try (match goal with
-        | [ H : is_true (application_atom _) |- _ ] => discriminate
         | [ H : is_true (atom _) |- _ ] => discriminate
         | [ H : is_true (atom (mkApps _ _)) |- _ ] => destruct (atom_mkApps H); subst; try discriminate
         | [ H : is_true (pred_atom _) |- _ ] => discriminate
         | [ H : is_true (pred_atom (mkApps _ _)) |- _ ] => destruct (pred_atom_mkApps H); subst; try discriminate
-        | [ H : is_true (application_atom (mkApps _ _)) |- _ ] =>
-          destruct (application_atom_mkApps H); subst; try discriminate
         end)).
 
 Lemma is_constructor_app_ge n l l' : is_constructor n l -> is_constructor n (l ++ l').
@@ -1522,7 +1502,7 @@ Section Rho.
     rename r (rho Γ t) = rho Δ (rename r t).
   Proof.
     revert t Γ Δ r.
-    refine (term_ind_size_app _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _);
+    refine (term_ind_size_app _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _);
       intros; try subst Γ; try rename Γ0 into Γ(* ; rename_all_hyps *).
     all:auto 2.
 

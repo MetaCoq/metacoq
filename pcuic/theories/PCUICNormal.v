@@ -52,8 +52,7 @@ Section Normal.
     end ->
     whnf Γ (mkApps (tFix mfix idx) v)
   | whnf_cofixapp mfix idx v : whnf Γ (mkApps (tCoFix mfix idx) v)
-  | whnf_int i : whnf Γ (tInt i)
-  | whnf_float f : whnf Γ (tFloat f)
+  | whnf_prim p : whnf Γ (tPrim p)
 
   with whne (Γ : context) : term -> Type :=
   | whne_rel i :
@@ -253,8 +252,6 @@ Proof.
     apply mkApps_eq_inj in eq as (<-&<-); auto.
   - destruct l using MCList.rev_ind; [|now rewrite <- mkApps_nested in eq].
     cbn in *; subst; auto.
-  - destruct l using MCList.rev_ind; [|now rewrite <- mkApps_nested in eq].
-    cbn in *; subst; auto.
 Qed.
 
 Lemma whnf_fixapp' {flags} Σ Γ mfix idx narg body v :
@@ -386,11 +383,6 @@ Proof with eauto using sq with pcuic.
                  constructor.
                  assumption.
         -- left. constructor. eapply whnf_fixapp. rewrite E1. eauto.
-      * destruct v as [ | ? v]...
-        right. intros [w]. depelim w. depelim w. all:help. clear IHt.
-        eapply whne_mkApps_inv in w as []...
-        -- depelim w. help.
-        -- destruct s0 as [? [? [? [? [? [? ?]]]]]]. congruence.
       * destruct v as [ | ? v]...
         right. intros [w]. depelim w. depelim w. all:help. clear IHt.
         eapply whne_mkApps_inv in w as []...
@@ -937,7 +929,6 @@ Proof.
       now inv e.
   - eapply red1_mkApps_tCoFix_inv in r as [[(?&->&?)|(?&->&?)]|(?&->&?)]; eauto.
   - depelim r. solve_discr.
-  - depelim r; solve_discr. 
 Qed.
 
 Lemma whnf_pres Σ Γ t t' :
@@ -1002,8 +993,7 @@ Inductive whnf_red Σ Γ : term -> term -> Type :=
                       red Σ (Γ,,, fix_context mfix) (dbody d) (dbody d'))
          mfix mfix' ->
     whnf_red Σ Γ (tCoFix mfix idx) (tCoFix mfix' idx)
-| whnf_red_tInt i : whnf_red Σ Γ (tInt i) (tInt i)
-| whnf_red_tFloat f : whnf_red Σ Γ (tFloat f) (tFloat f).
+| whnf_red_tPrim i : whnf_red Σ Γ (tPrim i) (tPrim i).
 
 Derive Signature for whnf_red.
 
@@ -1290,7 +1280,6 @@ Proof.
       intros ? ? (?&[= -> -> ->]).
       auto.
   - depelim r; solve_discr.
-  - depelim r; solve_discr. 
 Qed.
 
 Lemma whnf_red_inv Σ Γ t t' :
@@ -1380,7 +1369,6 @@ Proof.
   - apply eq_term_upto_univ_napp_mkApps_l_inv in eq as (?&?&(?&?)&->).
     depelim e.
     apply whnf_cofixapp.
-  - depelim eq; auto.
   - depelim eq; auto.
 Qed.
 

@@ -1212,8 +1212,7 @@ Lemma term_closedn_list_ind :
     (forall k (s : projection) (t : term), P k t -> P k (tProj s t)) ->
     (forall k (m : mfixpoint term) (n : nat), tFixProp (P k) (P (#|fix_context m| + k)) m -> P k (tFix m n)) ->
     (forall k (m : mfixpoint term) (n : nat), tFixProp (P k) (P (#|fix_context m| + k)) m -> P k (tCoFix m n)) ->
-    (forall k i, P k (tInt i)) ->
-    (forall k f, P k (tFloat f)) ->
+    (forall k p, P k (tPrim p)) ->
     forall k (t : term), closedn k t -> P k t.
 Proof.
   intros until t. revert k t.

@@ -343,8 +343,7 @@ Section Principality.
       rewrite nthe' in nthe; noconf nthe.
       repeat split; eauto.
       eapply type_CoFix; eauto.
-    - now apply inversion_Int in hA.
-    - now apply inversion_Float in hA.
+    - now apply inversion_Prim in hA.
   Qed.
 
   (** A weaker version that is often convenient to use. *)

@@ -263,8 +263,7 @@ Section TypeOf.
       { | ret (Some f) => ret f.(dtype);
         | ret None => ! };
 
-    infer Γ (tInt i) wt := ! ;
-    infer Γ (tFloat f) wt := !
+    infer Γ (tPrim p) wt := !
   }.
   Proof.
     all:try clear infer.
@@ -659,8 +658,7 @@ Section TypeOf.
       
     - now eapply inversion_CoFix in HT as [decl [fg [hnth [htys [hbods [wf cum]]]]]]; auto.
 
-    - now eapply inversion_Int in HT.
-    - now eapply inversion_Float in HT.
+    - now eapply inversion_Prim in HT.
   Defined.
 
   Definition type_of Γ t wt : term := (infer Γ t wt).

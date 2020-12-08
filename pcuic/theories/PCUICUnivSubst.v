@@ -32,7 +32,7 @@ Instance subst_instance_constr : UnivSubst term :=
   | tCoFix mfix idx =>
     let mfix' := List.map (map_def (subst_instance_constr u) (subst_instance_constr u)) mfix in
     tCoFix mfix' idx
-  | tInt _ | tFloat _ => c
+  | tPrim _ => c
   end.
 
 Instance subst_instance_decl : UnivSubst context_decl

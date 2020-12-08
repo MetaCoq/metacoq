@@ -2,6 +2,7 @@
 From Coq Require Import Program.
 From MetaCoq.Template Require Import utils.
 From MetaCoq.Erasure Require Import EAst EAstUtils ETyping.
+From MetaCoq.PCUIC Require Import PCUICPrimitive.
 
 (** * Pretty printing *)
 
@@ -159,10 +160,8 @@ Section print_term.
   | tCoFix l n =>
     parens top ("let cofix " ^ print_defs print_term Γ l ^ nl ^
                               " in " ^ List.nth_default (string_of_nat n) (map (string_of_name ∘ dname) l) n)
-  | tInt i => 
-    parens top (string_of_uint63_model i)
-  | tFloat f => 
-    parens top (string_of_float64_model f)
+  | tPrim p => 
+    parens top (string_of_prim (print_term Γ false false) p)
   end.
 
 End print_term.

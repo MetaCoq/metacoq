@@ -239,17 +239,10 @@ Section Inversion.
     intros Γ mfix idx T h. invtac h.
   Qed.
 
-  (** At this stage we don't typecheck primitive types *)
-  Lemma inversion_Int :
+  (** At this stage we don't typecheck primitive values *)
+  Lemma inversion_Prim :
     forall {Γ i T},
-      Σ ;;; Γ |- tInt i : T -> False.
-  Proof.
-    intros Γ i T h. now depind h.
-  Qed.
-
-  Lemma inversion_Float :
-    forall {Γ f T},
-      Σ ;;; Γ |- tFloat f : T -> False.
+      Σ ;;; Γ |- tPrim i : T -> False.
   Proof.
     intros Γ i T h. now depind h.
   Qed.

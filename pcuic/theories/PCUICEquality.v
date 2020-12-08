@@ -203,8 +203,7 @@ Inductive eq_term_upto_univ_napp Σ (Re Rle : Universe.t -> Universe.t -> Prop) 
     ) mfix mfix' ->
     eq_term_upto_univ_napp Σ Re Rle napp (tCoFix mfix idx) (tCoFix mfix' idx)
     
-| eq_Int i : eq_term_upto_univ_napp Σ Re Rle napp (tInt i) (tInt i)
-| eq_Float f : eq_term_upto_univ_napp Σ Re Rle napp (tFloat f) (tFloat f).
+| eq_Prim i : eq_term_upto_univ_napp Σ Re Rle napp (tPrim i) (tPrim i).
 
 Notation eq_term_upto_univ Σ Re Rle := (eq_term_upto_univ_napp Σ Re Rle 0).
 
@@ -893,8 +892,7 @@ Fixpoint eqb_term_upto_univ_napp Σ (equ lequ : Universe.t -> Universe.t -> bool
       eqb_annot x.(dname) y.(dname)
     ) mfix mfix'
 
-  | tInt i, tInt i' => eqb i i'
-  | tFloat f, tFloat f' => eqb f f'
+  | tPrim p, tPrim p' => eqb p p'
 
   | _, _ => false
   end.
@@ -1036,7 +1034,6 @@ Proof.
     cbn -[eqb]. intros x X0 y. eqspec; [|rewrite andb_false_r; discriminate].
     intro. rtoProp. split; tas. split;tas. split; eapply X0; tea.
     now apply eqb_annot_spec.
-  - eqspec; [|discriminate]. constructor.
   - eqspec; [|discriminate]. constructor.
 Qed.
 
@@ -1231,7 +1228,6 @@ Proof.
         -- constructor. intro bot. apply f.
            inversion bot. subst. inversion X0. subst. apply X2.
   - cbn - [eqb]. eqspecs. do 2 constructor.
-  - cbn - [eqb]. eqspecs. do 2 constructor.
 Qed.
 
 Lemma compare_global_instance_refl :
@@ -1300,7 +1296,6 @@ Proof.
       destruct p as [e1 e2].
       rewrite -> e1 by assumption. rewrite -> e2 by assumption.
       rewrite eqb_annot_refl; assumption.
-  - apply eq_dec_to_bool_refl.
   - apply eq_dec_to_bool_refl.
 Qed.
 

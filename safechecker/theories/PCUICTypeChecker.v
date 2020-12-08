@@ -456,7 +456,7 @@ Section Typecheck.
         ret (dtype decl; _)
       end
 
-    | tInt _ | tFloat _ => raise (Msg "Primitive types are not supported")
+    | tPrim _ => raise (Msg "Primitive types are not supported")
     end.
 
   (* tRel *)

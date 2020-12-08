@@ -1256,8 +1256,7 @@ Section Reduce.
       unfold is_true in typ.
       unfold PCUICAst.fst_ctx in *.
       congruence.
-    - now eapply inversion_Int in typ.
-    - now eapply inversion_Float in typ.
+    - now eapply inversion_Prim in typ.
   Qed.
   
   Definition isCoFix_app t :=
@@ -1289,8 +1288,7 @@ Section Reduce.
     - exfalso; eapply invert_fix_ind; eauto.
     - unfold isCoFix_app in cof.
       now rewrite decompose_app_mkApps in cof.
-    - now eapply inversion_Int in typ.
-    - now eapply inversion_Float in typ.
+    - now eapply inversion_Prim in typ.
   Qed.
   
   Lemma whnf_fix_arg_whne mfix idx body Γ t before args aftr ty :
@@ -1441,9 +1439,7 @@ Section Reduce.
           eapply PCUICConversion.cumul_Sort_Prod_inv; eauto.
       + exfalso.
         eapply welltyped_context in h as [s Hs]; tas.
-        now eapply inversion_Int in Hs.
-      + exfalso; eapply welltyped_context in h as [s Hs]; tas.
-        now eapply inversion_Float in Hs.
+        now eapply inversion_Prim in Hs.
     - unfold zipp. case_eq (decompose_stack π0). intros l ρ e.
       constructor. constructor. eapply whne_mkApps.
       eapply whne_rel_nozeta. assumption.

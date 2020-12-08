@@ -11,6 +11,13 @@ Definition uint63_from_model (i : uint63_model) : Int63.int :=
 Definition float64_from_model (f : float64_model) : PrimFloat.float :=
   FloatOps.SF2Prim (proj1_sig f).
 
+Definition trans_prim {term} (t : prim_val term) : Ast.term :=
+  match t.π2 with
+  | primIntModel i => Ast.tInt (uint63_from_model i)
+  | primFloatModel f => Ast.tFloat (float64_from_model f)
+  | primArrayModel a => Ast.tRel 0 (* todo *)
+  end.
+
 Fixpoint trans (t : PCUICAst.term) : Ast.term :=
   match t with
   | PCUICAst.tRel n => tRel n
@@ -34,8 +41,7 @@ Fixpoint trans (t : PCUICAst.term) : Ast.term :=
   | PCUICAst.tCoFix mfix idx =>
     let mfix' := List.map (map_def trans trans) mfix in
     tCoFix mfix' idx
-  | PCUICAst.tInt i => tInt (uint63_from_model i)
-  | PCUICAst.tFloat f => tFloat (float64_from_model f)
+  | PCUICAst.tPrim i => trans_prim i
   end.
 
 Definition trans_decl (d : PCUICAst.context_decl) :=

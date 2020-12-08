@@ -40,8 +40,8 @@ Fixpoint trans (t : Ast.term) : term :=
   | Ast.tCoFix mfix idx =>
     let mfix' := List.map (map_def trans trans) mfix in
     tCoFix mfix' idx
-  | Ast.tInt n => tInt (uint63_to_model n)
-  | Ast.tFloat n => tFloat (float64_to_model n)
+  | Ast.tInt n => tPrim (primInt; primIntModel (uint63_to_model n))
+  | Ast.tFloat n => tPrim (primFloat; primFloatModel (float64_to_model n))
   end.
 
 Definition trans_decl (d : Ast.context_decl) :=

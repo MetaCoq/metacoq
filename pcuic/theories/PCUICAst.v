@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Export utils Universes BasicAst
      Environment EnvironmentTyping.
+From MetaCoq.PCUIC Require Export PCUICPrimitive.
 From Equations Require Import Equations.
 (** * AST of the Polymorphic Cumulative Calculus of Inductive Constructions
 
@@ -36,9 +37,8 @@ Inductive term :=
 | tProj (p : projection) (c : term)
 | tFix (mfix : mfixpoint term) (idx : nat)
 | tCoFix (mfix : mfixpoint term) (idx : nat)
-(** We use faithful models of primitive types in PCUIC *)
-| tInt (z : uint63_model)
-| tFloat (f : float64_model).
+(** We use faithful models of primitive type values in PCUIC *)
+| tPrim (prim : prim_val term).
 
 Derive NoConfusion for term.
 

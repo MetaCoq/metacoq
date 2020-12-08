@@ -11,9 +11,6 @@ Derive Signature for All All2.
 Definition string_of_aname (b : binder_annot name) :=
   string_of_name b.(binder_name).
 
-Definition string_of_float64_model (f : float64_model) := 
-  "<float>".
-
 Fixpoint string_of_term (t : term) :=
   match t with
   | tRel n => "Rel(" ^ string_of_nat n ^ ")"
@@ -39,8 +36,7 @@ Fixpoint string_of_term (t : term) :=
             ^ string_of_term c ^ ")"
   | tFix l n => "Fix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
   | tCoFix l n => "CoFix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
-  | tInt n => "Int(" ^ string_of_Z (proj1_sig n) ^ ")"
-  | tFloat f => "Float(" ^ string_of_float64_model f ^ ")"
+  | tPrim i => "Int(" ^ string_of_prim string_of_term i ^ ")"
   end.
 
 Lemma lookup_env_nil c s : lookup_env [] c = Some s -> False.

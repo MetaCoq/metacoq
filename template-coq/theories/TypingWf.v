@@ -93,18 +93,15 @@ Lemma unfold_fix_wf:
   forall (mfix : mfixpoint term) (idx : nat) (narg : nat) (fn : term),
     unfold_fix mfix idx = Some (narg, fn) ->
     Ast.wf (tFix mfix idx) ->
-    Ast.wf fn /\ isApp fn = false.
+    Ast.wf fn.
 Proof.
   intros mfix idx narg fn Hf Hwf.
   unfold unfold_fix in Hf. inv Hwf.
   destruct nth_error eqn:eqnth; try congruence.
   pose proof (nth_error_forall eqnth H). simpl in H0.
-  destruct H0 as [ _ [ wfd islamd ] ].
-  rewrite islamd in Hf.
+  destruct H0 as [ _ wfd].
   injection Hf. intros <- <-.
-  apply (isLambda_subst (fix_subst mfix) 0) in islamd.
-  apply isLambda_isApp in islamd. split; try congruence.
-  apply wf_subst; auto. clear wfd islamd Hf eqnth.
+  apply wf_subst; auto. clear wfd Hf eqnth.
   assert(forall n, Ast.wf (tFix mfix n)). constructor; auto.
   unfold fix_subst. generalize #|mfix|; intros. induction n; auto.
 Qed.
@@ -134,8 +131,6 @@ Proof.
     now apply Forall_map.
   - constructor; auto. solve_all.
   - constructor. solve_all.
-    destruct x; simpl in *. repeat split; tas.
-    destruct dbody; simpl in *; congruence.
   - constructor. solve_all.
 Qed.
 
@@ -204,7 +199,7 @@ Proof.
     induction brs in c, H1 |- *; destruct c; simpl in *. constructor. constructor.
     inv H1; auto. inv H1; auto.
     induction H0 in pars |- *; destruct pars; try constructor; auto. simpl. auto.
-  - apply unfold_fix_wf in H; auto. constructor; intuition auto.
+  - apply unfold_fix_wf in H; auto. eapply wf_mkApps; auto.
   - constructor; auto. apply wf_mkApps_napp in H1 as [Hcof Hargs]; auto.
     apply unfold_cofix_wf in H; auto.
     apply wf_mkApps; intuition auto.
@@ -235,7 +230,7 @@ Proof.
   - constructor; auto. solve_all.
     pose proof H as H'. revert H.
     apply (OnOne2_All_All X). clear X.
-    intros [na bo ty ra] [nb bb tb rb] [[r ih] e] [? [? ?]].
+    intros [na bo ty ra] [nb bb tb rb] [[r ih] e] [? ?].
     simpl in *.
     inversion e. subst. clear e.
     intuition eauto.
@@ -246,7 +241,6 @@ Proof.
       cbn. unfold wf_decl. simpl.
       intros ? [? ? ? ?] ?. simpl in *.
       intuition eauto with wf.
-    + eapply red1_isLambda. all: eassumption.
   - constructor; auto.
     induction X; inv H; constructor; intuition auto; congruence.
   - constructor; auto. solve_all.
@@ -299,8 +293,6 @@ Proof.
 
   - destruct t; try reflexivity. discriminate.
   - destruct l; simpl in *; congruence.
-  - destruct x; simpl in *; intuition eauto.
-    destruct dbody; simpl in *; try discriminate. destruct Nat.leb; auto.
 Qed.
 
 Lemma declared_inductive_wf {cf:checker_flags} :

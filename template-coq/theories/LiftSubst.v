@@ -634,7 +634,7 @@ Proof.
   - apply wf_mkApps; auto. apply Forall_map. eapply Forall_impl; eauto.
   - apply Forall_map. apply All_Forall. eapply All_impl; tea.
     intros [] XX; cbn in *; apply XX.
-  - solve_all. induction dbody; try discriminate. reflexivity.
+  - solve_all.
   - apply Forall_map. eapply All_Forall, All_impl; eauto.
     intros [] XX; cbn in *; split; apply XX.
 Qed.

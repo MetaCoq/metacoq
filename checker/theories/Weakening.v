@@ -1128,6 +1128,7 @@ Proof.
 
   - rewrite -> (map_dtype _ (lift #|Γ''| (#|mfix| + #|Γ'|))).
     eapply type_CoFix; auto.
+    * eapply cofix_guard_lift; eauto.
     * rewrite -> nth_error_map, heq_nth_error. reflexivity.
     * eapply All_map.
       eapply (All_impl X0); simpl.
@@ -1143,7 +1144,7 @@ Proof.
       rewrite app_context_length fix_context_length in IH.
       rewrite lift_context_length fix_context_length.
       rewrite permute_lift; try lia. now rewrite (Nat.add_comm #|Γ'|).
-    * red; rewrite <- H0. unfold wf_cofixpoint.
+    * red; rewrite <- H1. unfold wf_cofixpoint.
       rewrite map_map_compose.
       now rewrite weakening_check_one_cofix.
 

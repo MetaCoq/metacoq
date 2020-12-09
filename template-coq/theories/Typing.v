@@ -167,7 +167,7 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
 | red_fix mfix idx args narg fn :
     unfold_fix mfix idx = Some (narg, fn) ->
     is_constructor narg args = true ->
-    red1 Σ Γ (tApp (tFix mfix idx) args) (tApp fn args)
+    red1 Σ Γ (tApp (tFix mfix idx) args) (mkApps fn args)
 
 (** CoFix-case unfolding *)
 | red_cofix_case ip p mfix idx args narg fn brs :
@@ -263,7 +263,7 @@ Lemma red1_ind_all :
 
        (forall (Γ : context) (mfix : mfixpoint term) (idx : nat) (args : list term) (narg : nat) (fn : term),
         unfold_fix mfix idx = Some (narg, fn) ->
-        is_constructor narg args = true -> P Γ (tApp (tFix mfix idx) args) (tApp fn args)) ->
+        is_constructor narg args = true -> P Γ (tApp (tFix mfix idx) args) (mkApps fn args)) ->
        (forall (Γ : context) (ip : inductive * nat * relevance) (p : term) (mfix : mfixpoint term) (idx : nat)
           (args : list term) (narg : nat) (fn : term) (brs : list (nat * term)),
         unfold_cofix mfix idx = Some (narg, fn) ->
@@ -627,40 +627,73 @@ Definition eq_context `{checker_flags} φ (Γ Δ : context) :=
 Module TemplateEnvTyping := EnvTyping TemplateTerm TemplateEnvironment.
 Include TemplateEnvTyping.
 
-(* AXIOM GUARD CONDITION *)
-Axiom fix_guard : mfixpoint term -> bool.
-Axiom cofix_guard : mfixpoint term -> bool.
+Definition extends (Σ Σ' : global_env) := { Σ'' & Σ' = Σ'' ++ Σ }.
 
-Axiom fix_guard_red1 :
-  forall Σ Γ mfix mfix' idx,
-    fix_guard mfix ->
-    red1 Σ Γ (tFix mfix idx) (tFix mfix' idx) ->
-    fix_guard mfix'.
+Class GuardChecker := 
+{ (* Structural recursion check *)
+  fix_guard : global_env_ext -> context -> mfixpoint term -> bool ;
+  (* Guarded by destructors check *)
+  cofix_guard : global_env_ext -> context -> mfixpoint term -> bool ;
 
-Axiom fix_guard_lift :
-  forall mfix n k,
-    let k' := (#|mfix| + k)%nat in
-    let mfix' := map (map_def (lift n k) (lift n k')) mfix in
-    fix_guard mfix ->
-    fix_guard mfix'.
+  fix_guard_red1 Σ Γ mfix mfix' idx :
+      fix_guard Σ Γ mfix ->
+      red1 Σ Γ (tFix mfix idx) (tFix mfix' idx) ->
+      fix_guard Σ Γ mfix' ;
+  
+  fix_guard_lift Σ Γ Γ' Γ'' mfix :
+    let k' := (#|mfix| + #|Γ'|)%nat in
+    let mfix' := map (map_def (lift #|Γ''| #|Γ'|) (lift #|Γ''| k')) mfix in
+    fix_guard Σ (Γ ,,, Γ') mfix ->
+    fix_guard Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') mfix' ;
 
-Axiom fix_guard_subst :
-  forall mfix s k,
+  fix_guard_subst Σ Γ Γ' Δ mfix s k :
     let k' := (#|mfix| + k)%nat in
     let mfix' := map (map_def (subst s k) (subst s k')) mfix in
-    fix_guard mfix ->
-    fix_guard mfix'.
+    fix_guard Σ (Γ ,,, Γ' ,,, Δ) mfix ->
+    fix_guard Σ (Γ ,,, subst_context s 0 Δ) mfix' ;
 
-(* AXIOM INDUCTIVE GUARD CONDITION *)
-Axiom ind_guard : mutual_inductive_body -> bool.
+  fix_guard_subst_instance {cf:checker_flags} Σ Γ mfix u univs :
+    consistent_instance_ext (Σ.1, univs) Σ.2 u ->
+    fix_guard Σ Γ mfix ->
+    fix_guard (Σ.1, univs) (subst_instance_context u Γ) (map (map_def (subst_instance_constr u) (subst_instance_constr u))
+                    mfix) ;
 
-Extract Constant fix_guard => "fun m -> assert false".
-Extract Constant fix_guard_red1 => "fun s g m m' i -> assert false".
-Extract Constant fix_guard_lift => "fun m n k -> assert false".
-Extract Constant fix_guard_subst => "fun m s k -> assert false".
+  fix_guard_extends Σ Γ mfix (Σ' : global_env_ext) : 
+    fix_guard Σ Γ mfix ->
+    extends Σ.1 Σ' ->
+    fix_guard Σ' Γ mfix ;
 
-Extract Constant ind_guard => "fun m -> assert false".
+  cofix_guard_red1 Σ Γ mfix mfix' idx :
+    cofix_guard Σ Γ mfix ->
+    red1 Σ Γ (tCoFix mfix idx) (tCoFix mfix' idx) ->
+    cofix_guard Σ Γ mfix' ;
 
+  cofix_guard_lift Σ Γ Γ' Γ'' mfix :
+    let k' := (#|mfix| + #|Γ'|)%nat in
+    let mfix' := map (map_def (lift #|Γ''| #|Γ'|) (lift #|Γ''| k')) mfix in
+    cofix_guard Σ (Γ ,,, Γ') mfix ->
+    cofix_guard Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') mfix' ;
+
+  cofix_guard_subst Σ Γ Γ' Δ mfix s k :
+    let k' := (#|mfix| + k)%nat in
+    let mfix' := map (map_def (subst s k) (subst s k')) mfix in
+    cofix_guard Σ (Γ ,,, Γ' ,,, Δ) mfix ->
+    cofix_guard Σ (Γ ,,, subst_context s 0 Δ) mfix' ;
+
+  cofix_guard_subst_instance {cf:checker_flags} Σ Γ mfix u univs :
+    consistent_instance_ext (Σ.1, univs) Σ.2 u ->
+    cofix_guard Σ Γ mfix ->
+    cofix_guard (Σ.1, univs) (subst_instance_context u Γ) (map (map_def (subst_instance_constr u) (subst_instance_constr u))
+                    mfix) ;
+  
+  cofix_guard_extends Σ Γ mfix (Σ' : global_env_ext) : 
+    cofix_guard Σ Γ mfix ->
+    extends Σ.1 Σ' ->
+    cofix_guard Σ' Γ mfix }.
+
+(* AXIOM GUARD CONDITION *)
+Axiom guard_checking : GuardChecker.
+Existing Instance guard_checking.
 
 (** Compute the type of a case from the predicate [p], actual parameters [pars] and
     an inductive declaration. *)
@@ -914,7 +947,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     Σ ;;; Γ |- tProj p c : subst0 (c :: List.rev args) (subst_instance_constr u pdecl.2)
 
 | type_Fix mfix n decl :
-    fix_guard mfix ->
+    fix_guard Σ Γ mfix ->
     nth_error mfix n = Some decl ->
     wf_local Σ Γ ->
     All (fun d => {s & Σ ;;; Γ |- d.(dtype) :  tSort s}) mfix ->
@@ -924,7 +957,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
       Σ ;;; Γ |- tFix mfix n : decl.(dtype)
 
 | type_CoFix mfix n decl :
-    cofix_guard mfix ->
+    cofix_guard Σ Γ mfix ->
     nth_error mfix n = Some decl ->
     wf_local Σ Γ ->
     All (fun d => {s & Σ ;;; Γ |- d.(dtype) :  tSort s}) mfix ->
@@ -963,7 +996,6 @@ Definition unlift_opt_pred (P : global_env_ext -> context -> option term -> term
 
 Module TemplateTyping <: Typing TemplateTerm TemplateEnvironment TemplateEnvTyping.
 
-  Definition ind_guard := ind_guard.
   Definition typing := @typing.
   Definition wf_universe := @wf_universe.
   Definition conv := @conv.
@@ -1262,7 +1294,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (mfix : list (def term)) (n : nat) decl,
         let types := fix_context mfix in
-        fix_guard mfix ->
+        fix_guard Σ Γ mfix ->
         nth_error mfix n = Some decl ->
         All_local_env_over typing Pdecl Σ Γ wfΓ ->
         All (fun d => {s & (Σ ;;; Γ |- d.(dtype) : tSort s)%type * P Σ Γ d.(dtype) (tSort s)})%type mfix ->
@@ -1274,7 +1306,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (mfix : list (def term)) (n : nat) decl,
         let types := fix_context mfix in
-        cofix_guard mfix ->
+        cofix_guard Σ Γ mfix ->
         nth_error mfix n = Some decl ->
         All_local_env_over typing Pdecl Σ Γ wfΓ ->
         All (fun d => {s & (Σ ;;; Γ |- d.(dtype) : tSort s)%type * P Σ Γ d.(dtype) (tSort s)})%type mfix ->

@@ -5,10 +5,7 @@ Require Import ssreflect.
 
 (** * Weakening lemmas w.r.t. the global environment *)
 
-
 Generalizable Variables Σ Γ t T.
-
-Definition extends (Σ Σ' : global_env) := { Σ'' & Σ' = Σ'' ++ Σ }.
 
 Lemma weakening_env_global_ext_levels Σ Σ' φ (H : extends Σ Σ') l
   : LevelSet.In l (global_ext_levels (Σ, φ))
@@ -448,11 +445,13 @@ Proof.
   - econstructor; eauto 2 with extends.
     close_Forall. intros; intuition eauto with extends.
   - econstructor; eauto with extends.
+    eapply fix_guard_extends; eauto.
     eapply (All_impl X0); intuition eauto.
     destruct X2 as [s Hs]; exists s; intuition eauto.
     eapply All_impl; eauto; simpl; intuition eauto with extends.
 
   - econstructor; eauto with extends. auto.
+    eapply cofix_guard_extends; eauto.
     eapply (All_impl X0); intuition eauto.
     destruct X2 as [s Hs]; exists s; intuition eauto.
     eapply All_impl; eauto; simpl; intuition eauto with extends.

@@ -356,7 +356,10 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     Σ ;;; Γ ,, vdef na b B |- t : A ->
     Σ ;;; Γ |- tLetIn na b B t : tLetIn na b B A
 
-| type_App t na A B u :
+| type_App t na A B s u :
+    (* Paranoid assumption, allows to show equivalence with template-coq, 
+       but eventually unnecessary thanks to validity. *)
+    Σ ;;; Γ |- tProd na A B : tSort s ->
     Σ ;;; Γ |- t : tProd na A B ->
     Σ ;;; Γ |- u : A ->
     Σ ;;; Γ |- tApp t u : B{0 := u}
@@ -698,6 +701,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         nth_error Γ n = Some decl ->
         PΓ Σ Γ wfΓ ->
         P Σ Γ (tRel n) (lift0 (S n) decl.(decl_type))) ->
+
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (u : Universe.t),
         PΓ Σ Γ wfΓ ->
         wf_universe Σ u ->
@@ -727,8 +731,9 @@ Lemma typing_ind_env `{cf : checker_flags} :
         Σ ;;; Γ,, vdef n b b_ty |- b' : b'_ty ->
         P Σ (Γ,, vdef n b b_ty) b' b'_ty -> P Σ Γ (tLetIn n b b_ty b') (tLetIn n b b_ty b'_ty)) ->
 
-    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (t : term) na A B u,
+    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (t : term) na A B u s,
         PΓ Σ Γ wfΓ ->
+        Σ ;;; Γ |- tProd na A B : tSort s -> P Σ Γ (tProd na A B) (tSort s) ->
         Σ ;;; Γ |- t : tProd na A B -> P Σ Γ t (tProd na A B) ->
         Σ ;;; Γ |- u : A -> P Σ Γ u A ->
         P Σ Γ (tApp t u) (B{0 := u})) ->
@@ -988,6 +993,10 @@ Proof.
 
     -- match reverse goal with
          H : _ |- _ => eapply H
+      end; eauto; unshelve eapply X14; simpl; auto; try lia.
+       
+    -- match reverse goal with
+        H : _ |- _ => eapply H
        end; eauto.
        simpl in Hdecls. apply Hdecls; lia.
 

@@ -8,7 +8,6 @@ From Equations Require Import Equations.
 
 (** * Lemmas about the [closedn] predicate *)
 
-
 Definition closed_decl n d :=
   option_default (closedn n) d.(decl_body) true && closedn n d.(decl_type).
 
@@ -526,7 +525,7 @@ Proof.
     apply closedn_mkApps; auto.
     rewrite forallb_app. simpl. rewrite H1.
     rewrite forallb_skipn; auto.
-    now apply closedn_mkApps_inv in H7.
+    now apply closedn_mkApps_inv in H8.
 
   - intuition auto.
     apply closedn_subst0.
@@ -542,36 +541,25 @@ Proof.
     unfold test_def. simpl. rtoProp.
     split.
     rewrite -> app_context_length in *. rewrite -> Nat.add_comm in *.
-    eapply closedn_lift_inv in H2; eauto. lia.
+    eapply closedn_lift_inv in H3; eauto. lia.
     subst types.
-    now rewrite app_context_length fix_context_length in H1.
+    now rewrite app_context_length fix_context_length in H2.
     eapply nth_error_all in H0; eauto. simpl in H0. intuition. rtoProp.
-    subst types. rewrite app_context_length in H1.
-    rewrite Nat.add_comm in H1.
-    now eapply closedn_lift_inv in H1.
+    subst types. rewrite app_context_length in H2.
+    rewrite Nat.add_comm in H2.
+    now eapply closedn_lift_inv in H2.
 
   - split. solve_all. destruct x; simpl in *.
     unfold test_def. simpl. rtoProp.
     split.
     rewrite -> app_context_length in *. rewrite -> Nat.add_comm in *.
-    eapply closedn_lift_inv in H1; eauto. lia.
+    eapply closedn_lift_inv in H2; eauto. lia.
     subst types.
-    now rewrite -> app_context_length, fix_context_length in H0.
+    now rewrite -> app_context_length, fix_context_length in H1.
     eapply (nth_error_all) in H; eauto. simpl in *.
     intuition. rtoProp.
-    subst types. rewrite app_context_length in H0.
-    rewrite Nat.add_comm in H0.
-    now eapply closedn_lift_inv in H0.
-
-  - destruct X2; intuition eauto.
-    + destruct i as [[u [ctx [Heq Hi]]] Hwfi]. simpl in Hwfi.
-      generalize (destArity_spec [] B). rewrite Heq.
-      simpl; intros ->.
-      apply closedn_All_local_closed in Hwfi.
-      rewrite closedn_ctx_app in Hwfi.
-      move/andb_and: Hwfi => [] clΓ clctx.
-      apply closedn_it_mkProd_or_LetIn => //.
-    + destruct s. rewrite andb_true_r in p. intuition auto.
+    subst types. rewrite app_context_length Nat.add_comm in H1.
+    now eapply closedn_lift_inv in H1.
 Qed.
 
 Lemma declared_decl_closed `{checker_flags} {Σ : global_env} {cst decl} :

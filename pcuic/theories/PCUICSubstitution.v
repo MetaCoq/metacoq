@@ -2567,7 +2567,7 @@ Proof.
     rewrite subst_context_snoc0 in X5.
     econstructor; eauto.
 
-  - specialize (X1 Γ Γ' Δ s sub eq_refl).
+  - specialize (X3 _ _ _ s0 sub eq_refl). 
     eapply refine_type. 1: econstructor; eauto.
     unfold subst1. rewrite -> distr_subst. simpl. reflexivity.
 

@@ -331,6 +331,37 @@ Proof.
 Qed.
 Hint Resolve weakening_env_consistent_instance : extends.
 
+Lemma extends_check_recursivity_kind {cf:checker_flags} Σ ind k Σ' : extends Σ Σ' -> wf Σ' -> 
+  check_recursivity_kind Σ ind k -> check_recursivity_kind Σ' ind k.
+Proof.
+  intros ext wfΣ'.
+  rewrite /check_recursivity_kind.
+  destruct lookup_env eqn:Heq => //.
+  eapply extends_lookup in Heq; eauto.
+  now rewrite Heq.
+Qed.
+
+Lemma extends_wf_fixpoint {cf:checker_flags} Σ mfix Σ' : extends Σ Σ' -> wf Σ' ->
+  wf_fixpoint Σ mfix -> wf_fixpoint Σ' mfix.
+Proof.
+  intros ext wfΣ'.
+  unfold wf_fixpoint.
+  destruct map_option_out as [[|ind inds]|]; auto.
+  move/andb_and => [->] /=.
+  now apply extends_check_recursivity_kind.
+Qed.
+
+Lemma extends_wf_cofixpoint {cf:checker_flags} Σ mfix Σ' : extends Σ Σ' -> wf Σ' ->
+  wf_cofixpoint Σ mfix -> wf_cofixpoint Σ' mfix.
+Proof.
+  intros ext wfΣ'.
+  unfold wf_cofixpoint.
+  destruct map_option_out as [[|ind inds]|]; auto.
+  move/andb_and => [->] /=.
+  now apply extends_check_recursivity_kind.
+Qed.
+
+Hint Resolve extends_wf_fixpoint extends_wf_cofixpoint : extends.
 
 Lemma global_levels_Set Σ : 
   LevelSet.In Level.lSet (global_levels Σ).
@@ -408,9 +439,7 @@ Proof.
     rename_all_hyps; try solve [econstructor; eauto 2 with extends].
 
   - econstructor; eauto 2 with extends.
-    intuition auto.
-    destruct H1 as [l' [inl' eq]]. right; right.
-    exists l'. split; eauto 2 with extends.
+    intuition auto. eapply extends_wf_universe; eauto.
   - econstructor; eauto 2 with extends.
     destruct Σ as [Σ φ].
     clear typet heq_isApp forall_Σ' hneq_l.
@@ -422,16 +451,13 @@ Proof.
     eapply (All_impl X0); intuition eauto.
     destruct X2 as [s Hs]; exists s; intuition eauto.
     eapply All_impl; eauto; simpl; intuition eauto with extends.
+
   - econstructor; eauto with extends. auto.
     eapply (All_impl X0); intuition eauto.
     destruct X2 as [s Hs]; exists s; intuition eauto.
     eapply All_impl; eauto; simpl; intuition eauto with extends.
-  - econstructor. eauto.
-    destruct X2 as [isB|[u [Hu Ps]]].
-    + left; auto. destruct isB. destruct x as [ctx [u [Heq Hu]]].
-      exists ctx, u. split; eauto with extends.
-    + right. exists u. eapply Ps; auto.
-    + destruct Σ as [Σ φ]. eapply weakening_env_cumul in cumulA; eauto.
+  - econstructor; eauto with extends.
+    destruct Σ as [Σ φ]. eapply weakening_env_cumul in cumulA; eauto.
 Qed.
 
 Definition weaken_env_prop `{checker_flags}

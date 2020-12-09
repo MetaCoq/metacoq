@@ -3,7 +3,7 @@ From MetaCoq.Template Require Import config utils Ast TypingWf WfInv.
 Set Warnings "-notation-overridden".
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCumulativity
      PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICTyping TemplateToPCUIC
-     PCUICSubstitution PCUICGeneration.
+     PCUICWeakening PCUICSubstitution PCUICGeneration PCUICValidity.
 Set Warnings "+notation-overridden".
 
 From Equations.Prop Require Import DepElim.
@@ -1042,18 +1042,21 @@ Lemma trans_wf_local {cf}:
   forall (Σ : Template.Ast.global_env_ext) (Γ : Tcontext) (wfΓ : TTy.wf_local Σ Γ),
     let P :=
         (fun Σ0 (Γ0 : Tcontext) _ (t T : Tterm) _ =>
+           wf (trans_global Σ0).1 ->
            trans_global Σ0;;; trans_local Γ0 |- trans t : trans T)
     in
+    wf (trans_global Σ).1 ->
     TTy.All_local_env_over TTy.typing P Σ Γ wfΓ ->
     wf_local (trans_global Σ) (trans_local Γ).
 Proof.
   intros.
-  induction X.
+  induction X0.
   - simpl. constructor.
   - simpl. econstructor.
-    + eapply IHX.
-    + simpl. destruct tu. exists x. eapply p.
-  - simpl. constructor; auto. red. destruct tu. exists x. auto.
+    + eapply IHX0.
+    + simpl. destruct tu. exists x. now eapply p.
+  - simpl. constructor; auto. red. destruct tu. exists x; auto.
+    simpl. eauto.
 Qed.
 
 Lemma trans_wf_local_env {cf} Σ Γ :
@@ -1131,11 +1134,29 @@ Proof.
   eapply typing_wf; eauto. constructor.
 Qed.
 
+Lemma trans_global_decl_universes d : 
+  TTy.universes_decl_of_decl d = 
+  universes_decl_of_decl (trans_global_decl d).
+Proof.
+  destruct d; reflexivity.
+Qed.
+
+Lemma trans_consistent_instance_ext {cf:checker_flags} Σ d u : 
+  TTy.consistent_instance_ext Σ (TTy.universes_decl_of_decl d) u ->
+  consistent_instance_ext (trans_global Σ) (universes_decl_of_decl (trans_global_decl d)) u.
+Proof.
+  unfold TTy.consistent_instance_ext, consistent_instance_ext.
+  rewrite global_ext_levels_trans global_ext_constraints_trans trans_global_decl_universes.
+  trivial.
+Qed.
+
 Theorem template_to_pcuic {cf} :
   TTy.env_prop (fun Σ Γ t T =>
+    wf (trans_global Σ).1 ->
     typing (trans_global Σ) (trans_local Γ) (trans t) (trans T)).
 Proof.
   apply (TTy.typing_ind_env (fun Σ Γ t T =>
+    wf (trans_global Σ).1 ->
     typing (trans_global Σ) (trans_local Γ) (trans t) (trans T)
   )%type).
   all: simpl.
@@ -1156,48 +1177,68 @@ Proof.
     (* now rewrite global_ext_levels_trans. *)
 
   - (* Casts *)
-    eapply refine_type. eapply type_App with _ (trans t).
-    eapply type_Lambda; eauto. eapply type_Rel. econstructor; auto.
-    eapply typing_wf_local. eauto. eauto. simpl. exists s; auto. reflexivity. eauto.
+    eapply refine_type. eapply type_App with _ (trans t) _.
+    2:{ eapply type_Lambda; eauto. eapply type_Rel. econstructor; auto.
+    eapply typing_wf_local. eauto. eauto. simpl. exists s; auto. reflexivity. }
+    eapply type_Prod. eauto.
+    instantiate (1 := s). simpl.
+    eapply (weakening _ _ [_] _ (tSort _)); eauto.
+    constructor; eauto. eapply typing_wf_local; eauto. red.
+    exists s; eauto. auto.
     simpl. unfold subst1. rewrite simpl_subst; auto. now rewrite lift0_p.
 
   - (* The interesting application case *)
     eapply type_mkApps; eauto.
+    specialize (X0 X2).
     eapply typing_wf in X; eauto. destruct X.
-    clear H1 X0 H H0. revert H2.
-    induction X1. econstructor; eauto.
-    (* Need updated typing_spine in template-coq *) admit. reflexivity.
-    simpl in p.
-    destruct (TypingWf.typing_wf _ wfΣ _ _ _ typrod) as [wfAB _].
-    intros wfT.
-    econstructor; eauto. exists s; eauto.
-    change (tProd na (trans A) (trans B)) with (trans (T.tProd na A B)).
-    apply trans_cumul; auto with trans.
-    apply TypingWf.typing_wf_sigma; auto.
-    eapply Forall_impl. eapply TypingWf.typing_all_wf_decl; eauto.
-    intros. auto.
-    eapply typing_wf in ty; eauto. destruct ty as [wfhd _].
-    rewrite trans_subst in IHX1; eauto with wf.
-    eapply IHX1. apply Template.LiftSubst.wf_subst; try constructor; auto. now inv wfAB.
+    eapply PCUICValidity.validity in X0.
+    clear H1 H H0. revert H2.
+    induction X1.
+    * econstructor; eauto. reflexivity.
+    * simpl in p.
+      destruct (TypingWf.typing_wf _ wfΣ _ _ _ typrod) as [wfAB _].
+      intros wfT.
+      econstructor; eauto.
+      + exists s; eauto. eapply p; eauto.
+      + change (tProd na (trans A) (trans B)) with (trans (T.tProd na A B)).
+        apply trans_cumul; auto with trans.
+        apply TypingWf.typing_wf_sigma; auto.
+        eapply Forall_impl. eapply TypingWf.typing_all_wf_decl; eauto.
+        intros. auto.
+      + eapply typing_wf in ty; eauto. destruct ty as [wfhd _].
+        rewrite trans_subst in IHX1; eauto with wf.
+        eapply IHX1; cycle 1.
+        apply Template.LiftSubst.wf_subst; try constructor; auto. now inv wfAB.
+        specialize (p X2). specialize (p0 X2).
+        eapply PCUICInversion.inversion_Prod in p as [s1 [s2 [HA [HB Hs]]]]. 
+        eapply PCUICArities.isType_subst with [vass na (trans A)]; eauto.
+        constructor; eauto with pcuic.
+        constructor; eauto with pcuic. now rewrite subst_empty.
+        now exists s2.
+        apply X2.
+    * apply X2.
 
   - rewrite trans_subst_instance_constr.
     pose proof (forall_decls_declared_constant _ _ _ H).
     replace (trans (Template.Ast.cst_type decl)) with
         (cst_type (trans_constant_body decl)) by (destruct decl; reflexivity).
-    constructor; eauto with trans. admit.
+    constructor; eauto with trans.
+    now apply (trans_consistent_instance_ext _ (T.ConstantDecl decl)).
 
   - rewrite trans_subst_instance_constr.
     pose proof (forall_decls_declared_inductive _ _ _ _ isdecl).
     replace (trans (Template.Ast.ind_type idecl)) with
         (ind_type (trans_one_ind_body idecl)) by (destruct idecl; reflexivity).
-    eapply type_Ind; eauto. eauto with trans. admit.
+    eapply type_Ind; eauto. eauto with trans.
+    now apply (trans_consistent_instance_ext _ (T.InductiveDecl mdecl)).
 
   - pose proof (forall_decls_declared_constructor _ _ _ _ _ isdecl).
     unfold TTy.type_of_constructor in *.
     rewrite trans_subst.
     rewrite trans_subst_instance_constr.
     rewrite trans_inds. simpl.
-    eapply refine_type. econstructor; eauto with trans. admit.
+    eapply refine_type. econstructor; eauto with trans.
+    now apply (trans_consistent_instance_ext _ (T.InductiveDecl mdecl)).
     unfold type_of_constructor. simpl. f_equal. f_equal.
     destruct cdecl as [[id t] p]; simpl; auto.
 
@@ -1208,9 +1249,9 @@ Proof.
     apply forall_decls_declared_inductive; eauto. destruct mdecl; auto.
     -- simpl. rewrite firstn_map.
        rewrite trans_build_case_predicate_type. erewrite H0. reflexivity.
-    -- eapply X2.
+    -- eapply X1.
     -- rewrite global_ext_constraints_trans; exact H1.
-    -- rewrite trans_mkApps in X4; auto with wf.
+    -- rewrite trans_mkApps in X2; auto with wf.
     -- admit.
     -- apply trans_build_branches_type in H2.
        rewrite firstn_map. exact H2.
@@ -1245,8 +1286,8 @@ Proof.
     -- apply All_map. eapply All_impl; eauto.
        intuition eauto 3 with wf; cbn.
        rewrite H1. rewrite /trans_local map_length.
-       rewrite /trans_local map_app in X2.
-       rewrite <- trans_lift. apply X2.
+       rewrite /trans_local map_app in X3.
+       rewrite <- trans_lift. apply X3; auto.
        rdest. destruct (dbody x); simpl in *; congruence.
     -- admit.
     -- destruct decl; reflexivity.

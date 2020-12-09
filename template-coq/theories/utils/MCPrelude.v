@@ -33,6 +33,7 @@ Notation "x .π2" := (@projT2 _ _ x) (at level 3, format "x '.π2'").
 Create HintDb terms.
 
 Ltac arith_congr := repeat (try lia; progress f_equal).
+Ltac lia_f_equal := repeat (lia || f_equal).
 
 Ltac easy0 :=
   let rec use_hyp H :=

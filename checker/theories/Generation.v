@@ -15,7 +15,7 @@ Proof.
   intros Hty.
   dependent induction Hty.
   - exists t_ty, t'. intuition.
-  - destruct IHHty as [T' [U' [H' H'']]].
+  - destruct IHHty1 as [T' [U' [H' H'']]].
     exists T', U'. split; auto.
     eapply cumul_trans; eauto.
 Qed.

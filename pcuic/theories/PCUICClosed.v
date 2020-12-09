@@ -713,7 +713,7 @@ Proof.
 
   - intuition auto.
     generalize (closedn_subst [u] #|Γ| 0 B). rewrite Nat.add_0_r.
-    move=> Hs. apply: Hs => /=. rewrite H0 => //.
+    move=> Hs. apply: Hs => /=. rewrite H1 => //.
     rewrite Nat.add_1_r. auto.
 
   - rewrite closedn_subst_instance_constr.

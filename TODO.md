@@ -33,6 +33,12 @@
   
 - Finish the PCUICSigmaCalculus proofs.
 
+# Medium Projects
+
+- Change Template-PCUIC translations to translate casts to applications of 
+  identity functions (vm_cast, default_cast etc) to make the back and forth
+  the identity and derive weakening/substitution/etc.. from the PCUIC theorems.
+  Is that really better than identity functions?
 # Big projects
 
 - Refine the longest-simple-path algorithm on universes with the 
@@ -48,6 +54,9 @@
   be definable. Probably not very useful though because if the elimination is 
   restricted then it means some Type is in the constructor and won't be projectable.
   
+- Verify the substitution calculus of P.M Pédrot using skewed lists at
+  https://github.com/coq/coq/pull/13537 and try to use it to implement efficient explicit 
+  substitutions.
 
 ## Website
 

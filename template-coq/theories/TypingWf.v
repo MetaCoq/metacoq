@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils Ast AstUtils Induction LiftSubst
      UnivSubst Typing.
+From Equations Require Import Equations.
 Require Import ssreflect.
 
 (** * Well-formedness of terms and types in typing derivations
@@ -523,7 +524,7 @@ Proof.
     apply wf_subst; auto with wf. apply wf_subst_instance_constr.
     eapply declared_constructor_wf; eauto.
   - split. wf. constructor; eauto. solve_all.
-    apply wf_mkApps. wf. solve_all. apply wf_mkApps_inv in H7. solve_all.
+    apply wf_mkApps. wf. solve_all. apply wf_mkApps_inv in H8. solve_all.
     apply All_app_inv; solve_all. now apply All_skipn.
   - split. wf. apply wf_subst. solve_all. constructor. wf.
     apply wf_mkApps_inv in H2. apply All_rev. solve_all.
@@ -544,15 +545,6 @@ Proof.
       solve_all. destruct a.
       intuition.
     + eapply All_nth_error in X0; eauto. destruct X0 as [s ?]; intuition. 
-
-  - split. apply H. destruct X1 as [X1|[s X1]]; [|apply X1].
-    destruct X1 as [[Γ' [s [X1 X1']]] XX]; cbn in *.
-    assert (HB : B = it_mkProd_or_LetIn Γ' (tSort s)). {
-      clear -X1. pose proof (destArity_spec [] B) as HH.
-      rewrite X1 in HH. assumption. }
-    rewrite HB. clear -XX.
-    eapply wf_it_mkProd_or_LetIn in XX. rewrite it_mkProd_or_LetIn_app in XX.
-    apply it_mkProd_or_LetIn_wf in XX. exact XX. constructor.
 Qed.
 
 Lemma typing_all_wf_decl {cf:checker_flags} Σ (wfΣ : wf Σ.1) Γ (wfΓ : wf_local Σ Γ) :
@@ -567,49 +559,6 @@ Proof.
     intuition auto.
 Qed.
 Hint Resolve typing_all_wf_decl : wf.
-
-(* TODO MOVE? *)
-Definition sort_irrelevant
-  (P : global_env_ext -> context -> term -> option term -> Type) :=
-  forall Σ Γ b s s', P Σ Γ (tSort s) b -> P Σ Γ (tSort s') b.
-
-
-(* TODO MOVE? *)
-Lemma on_global_env_mix `{checker_flags} {Σ P Q} :
-  sort_irrelevant Q ->
-  on_global_env P Σ ->
-  on_global_env Q Σ ->
-  on_global_env (fun Σ Γ t T => (P Σ Γ t T * Q Σ Γ t T)%type) Σ.
-Proof.
-  intros iQ hP hQ.
-  induction hP in Q, iQ, hQ |- *.
-  1: constructor.
-  invs hQ. constructor.
-  - eapply IHhP. all: eauto.
-  - assumption.
-  - assumption.
-  (* - destruct d. all: simpl in *.
-    + destruct c as [ty [bo|] un]. all: simpl in *.
-      all: unfold on_constant_decl in *.
-      all: simpl in *.
-      * intuition eauto.
-      * unfold on_type in *. intuition eauto.
-    + destruct o0 as [oi op onpars ong].
-      destruct o2 as [oi' op' onpars' ong'].
-      constructor. all: auto.
-      * clear - oi oi'. revert oi oi'.
-        generalize (TemplateEnvironment.ind_bodies m).
-        intros l h1 h2.
-        induction h1 in h2 |- *. 1: constructor.
-        dependent destruction h2.
-        constructor. 2: auto.
-        destruct p, o. econstructor.
-        -- eassumption.
-        -- unfold on_type in *. intuition eauto.
-        -- admit.
-        -- *)
-  - todo "simplify onConstructors"%string.
-Qed.
 
 Lemma on_global_env_impl `{checker_flags} Σ P Q :
   (forall Σ Γ t T, on_global_env P Σ.1 -> P Σ Γ t T -> Q Σ Γ t T) ->
@@ -662,13 +611,8 @@ Proof.
   intros.
   pose proof (env_prop_sigma _ typing_wf_gen _ wfΣ). red in X.
   unfold lift_typing in X. do 2 red in wfΣ.
-  unshelve eapply (on_global_env_mix _ wfΣ) in X.
-  red. intros. destruct b; intuition auto with wf.
-  destruct X0 as [u Hu]. exists u. intuition auto with wf.
-  clear wfΣ.
-  eapply on_global_env_impl; eauto; simpl; intros. clear X.
-  destruct X1 as [Hty Ht].
-  destruct T. apply Ht. destruct Ht; wf.
+  eapply on_global_env_impl; eauto; simpl; intros.
+  destruct T. red. apply X1. red. destruct X1 as [x [a wfs]]. split; auto.
 Qed.
 
 Lemma typing_wf {cf:checker_flags} Σ (wfΣ : wf Σ.1) Γ t T :

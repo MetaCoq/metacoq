@@ -41,6 +41,13 @@ Definition lift_decl n k d := (map_decl (lift n k) d).
 Definition lift_context n k (Γ : context) : context :=
   fold_context (fun k' => lift n (k' + k)) Γ.
 
+Lemma lift_context_alt n k Γ :
+  lift_context n k Γ =
+  mapi (fun k' d => lift_decl n (Nat.pred #|Γ| - k' + k) d) Γ.
+Proof.
+  unfold lift_context. apply fold_context_alt.
+Qed.
+
 (** Parallel substitution: it assumes that all terms in the substitution live in the
     same context *)
 
@@ -83,6 +90,8 @@ Notation "M { j := N }" := (subst1 N j M) (at level 10, right associativity).
 Definition subst_context s k (Γ : context) : context :=
   fold_context (fun k' => subst s (k' + k)) Γ.
 
+Definition subst_decl s k (d : context_decl) := map_decl (subst s k) d.
+
 Lemma subst_context_length s n Γ : #|subst_context s n Γ| = #|Γ|.
 Proof.
   induction Γ as [|[na [body|] ty] tl] in Γ |- *; cbn; eauto.
@@ -90,6 +99,17 @@ Proof.
     lia.
   - rewrite !List.rev_length, !mapi_rec_length, !app_length, !List.rev_length. simpl.
     lia.
+Qed.
+
+Lemma subst_context_nil s n : subst_context s n [] = [].
+Proof. reflexivity. Qed.
+
+Lemma subst_context_alt s k Γ :
+  subst_context s k Γ =
+  mapi (fun k' d => subst_decl s (Nat.pred #|Γ| - k' + k) d) Γ.
+Proof.
+  unfold subst_context, fold_context. rewrite rev_mapi. rewrite List.rev_involutive.
+  apply mapi_ext. intros. f_equal. now rewrite List.rev_length.
 Qed.
 
 Definition subst_telescope s k (Γ : context) : context :=
@@ -711,3 +731,4 @@ Lemma noccur_between_subst k n t : noccur_between k n t ->
   closedn (n + k) t -> closedn k t.
 Proof.
 Admitted. *)
+

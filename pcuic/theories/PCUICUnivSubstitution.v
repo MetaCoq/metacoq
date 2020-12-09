@@ -1580,10 +1580,11 @@ Proof.
     + eapply X3; aa.
   - intros n b b_ty b' s1 b'_ty X X0 X1 X2 X3 X4 X5 u univs wfΣ' HSub H.
     econstructor; eauto. eapply X5; aa.
-  - intros t0 na A B u X X0 X1 X2 X3 u0 univs wfΣ' HSub H.
+  - intros t0 na A B s u X X0 X1 X2 X3 X4 X5 u0 univs wfΣ' HSub H.
     rewrite <- subst_subst_instance_constr. cbn. econstructor.
     + eapply X1; eauto.
     + eapply X3; eauto.
+    + eapply X5; eauto.
   - intros. rewrite subst_instance_constr_two. econstructor; [aa|aa|].
     clear X X0; cbn in *.
     eapply consistent_ext_trans; eauto.

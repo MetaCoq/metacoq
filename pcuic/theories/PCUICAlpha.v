@@ -348,13 +348,14 @@ Section Alpha.
         constructor. assumption.
         all: try (eapply upto_names_impl_eq_term ; assumption).
         all: eapply eq_term_refl.
-    - intros t na A B u ih ht iht hu ihu v e; invs e.
+    - intros t na A B s u ih hty ihty ht iht hu ihu v e; invs e.
       eapply type_Cumul'.
-      + econstructor.
+      + econstructor; cycle 1.
         * eapply iht.
           eapply eq_term_upto_univ_empty_impl in X; eauto.
           all:typeclasses eauto.
         * eapply ihu. assumption.
+        * eapply hty.
       + eapply validity_term ; eauto.
         econstructor ; eauto.
       + constructor.

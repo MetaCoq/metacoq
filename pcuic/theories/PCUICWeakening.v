@@ -118,8 +118,6 @@ Proof.
       * destruct H2. rewrite H2. simpl. now rewrite Nat.sub_0_r.
 Qed.
 
-Ltac lia_f_equal := repeat (lia || f_equal).
-
 Lemma smash_context_lift Δ k n Γ :
   smash_context (lift_context n (k + #|Γ|) Δ) (lift_context n k Γ) =
   lift_context n k (smash_context Δ Γ).
@@ -885,15 +883,6 @@ Qed.
 Lemma destInd_lift n k t : destInd (lift n k t) = destInd t.
 Proof.
   destruct t; simpl; try congruence.
-Qed.
-
-Lemma nth_error_rev_inv {A} (l : list A) i :
-  i < #|l| ->
-  nth_error (List.rev l) i = nth_error l (#|l| - S i).
-Proof.
-  intros Hi.
-  rewrite nth_error_rev; autorewrite with len; auto.
-  now rewrite List.rev_involutive.
 Qed.
 
 Lemma weakening_check_one_fix (Γ' Γ'' : context) mfix :

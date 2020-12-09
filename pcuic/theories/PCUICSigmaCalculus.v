@@ -1071,6 +1071,15 @@ Proof.
   intros Σ Γ t A B h []. assumption.
 Qed.
 
+Lemma meta_conv_term :
+  forall Σ Γ t t' A,
+    Σ ;;; Γ |- t : A ->
+    t = t' ->
+    Σ ;;; Γ |- t' : A.
+Proof.
+  intros Σ Γ t A B h []. assumption.
+Qed.
+
 (* Could be more precise *)
 Lemma instantiate_params_subst_length :
   forall params pars s t s' t',
@@ -1664,9 +1673,10 @@ Proof.
       * destruct hf. assumption.
       * simpl. eexists. eapply ihB. assumption.
       * simpl. eapply ihb. assumption.
-  - intros Σ wfΣ Γ wfΓ t na A B u X ht iht hu ihu Δ f hf.
+  - intros Σ wfΣ Γ wfΓ t na A B s u X hty ihty ht iht hu ihu Δ f hf.
     simpl. eapply meta_conv.
-    + econstructor.
+    + eapply type_App.
+      * simpl in ihty. eapply ihty; eassumption.
       * simpl in iht. eapply iht. assumption.
       * eapply ihu. assumption.
     + autorewrite with sigma. rewrite !subst1_inst. sigma.
@@ -2232,9 +2242,12 @@ Proof.
         constructor; auto.
         ** exists s1. apply ihB; auto.
         ** apply ihb; auto.  
-  - intros Σ wfΣ Γ wfΓ t na A B u X ht iht hu ihu Δ σ hΔ hσ.
+  - intros Σ wfΣ Γ wfΓ t na A B s u X hty ihty ht iht hu ihu Δ σ hΔ hσ.
     autorewrite with sigma.
     econstructor.
+    * specialize (ihty _ _ hΔ hσ).
+      simpl in ihty. eapply meta_conv_term; [eapply ihty|].
+      now rewrite up_Up.
     * specialize (iht _ _ hΔ hσ).
       simpl in iht. eapply meta_conv; [eapply iht|].
       now rewrite up_Up.

@@ -399,10 +399,10 @@ Proof.
       eapply substitution; eauto.
     + econstructor.
       eapply is_type_subst; eauto.
-  - inv H1.
+  - inv H2.
     + cbn. econstructor.
-      eapply H; eauto.
       eapply H0; eauto.
+      eapply H1; eauto.
     + econstructor.
       eapply is_type_subst; eauto.
   - inv H1.

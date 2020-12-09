@@ -508,7 +508,7 @@ Section Typecheck.
     eexists. eassumption.
   Defined.
   Next Obligation.
-    cbn in *; sq; econstructor.
+    cbn in *; sq; eapply type_App'.
     2: eassumption.
     eapply type_reduction; eassumption.
   Defined.

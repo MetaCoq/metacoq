@@ -273,10 +273,9 @@ Proof.
     specialize (validity _ wf _ _ _ appty) as [_ vT'].
     eapply type_tFix_inv in appty as [T [arg [fn' [[[Hnth wffix] Hty]]]]]; auto.
     rewrite e in Hnth. noconf Hnth.
-    eapply type_App.
+    eapply type_App; eauto.
     eapply type_mkApps. eapply type_Cumul'; eauto. eapply spty.
-    eauto.
-
+    
   - (* Congruence *)
     eapply type_Cumul'; [eapply type_App| |]; eauto with wf.
     eapply validity. eauto. eauto.

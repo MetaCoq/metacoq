@@ -629,6 +629,8 @@ Proof.
   - apply IHmfix.
 Qed.
 
+Definition TTwf_local Σ Γ := TT.All_local_env (TT.lift_typing TT.typing Σ) Γ.
+
 Lemma trans_wf_local':
   forall (Σ : PCUICAst.global_env_ext) Γ (wfΓ : wf_local Σ Γ),
     let P :=
@@ -636,7 +638,7 @@ Lemma trans_wf_local':
            TT.typing (trans_global Σ0) (trans_local Γ0) (trans t) (trans T))
     in
     PT.All_local_env_over PT.typing P Σ Γ wfΓ ->
-    TT.wf_local (trans_global Σ) (trans_local Γ).
+    TTwf_local (trans_global Σ) (trans_local Γ).
 Proof.
   intros.
   induction X.
@@ -653,7 +655,7 @@ Lemma trans_wf_local_env Σ Γ :
            (fun (Σ : PCUICAst.global_env_ext) Γ b ty =>
               PT.typing Σ Γ b ty × TT.typing (trans_global Σ) (trans_local Γ) (trans b) (trans ty)) Σ)
         Γ ->
-  TT.wf_local (trans_global Σ) (trans_local Γ).
+  TTwf_local (trans_global Σ) (trans_local Γ).
 Proof.
   intros.
   induction X.
@@ -666,18 +668,18 @@ Proof.
 Qed.
 
 Lemma trans_branches Σ Γ brs btys ps:
-All2
-   (fun br bty : nat × PCUICAst.term =>
-    (((br.1 = bty.1 × PT.typing Σ Γ br.2 bty.2)
-      × TT.typing (trans_global Σ) (trans_local Γ) (trans br.2) (trans bty.2))
-     × PT.typing Σ Γ bty.2 (PCUICAst.tSort ps))
-    × TT.typing (trans_global Σ) (trans_local Γ) (trans bty.2)
-      (trans (PCUICAst.tSort ps))) brs btys ->
-All2
-  (fun br bty : nat × term =>
-   (br.1 = bty.1 × TT.typing (trans_global Σ) (trans_local Γ) br.2 bty.2)
-   × TT.typing (trans_global Σ) (trans_local Γ) bty.2 (tSort ps))
-  (map (on_snd trans) brs) (map (fun '(x, y) => (x, trans y)) btys).
+  All2
+    (fun br bty : nat × PCUICAst.term =>
+      (((br.1 = bty.1 × PT.typing Σ Γ br.2 bty.2)
+        × TT.typing (trans_global Σ) (trans_local Γ) (trans br.2) (trans bty.2))
+      × PT.typing Σ Γ bty.2 (PCUICAst.tSort ps))
+      × TT.typing (trans_global Σ) (trans_local Γ) (trans bty.2)
+        (trans (PCUICAst.tSort ps))) brs btys ->
+  All2
+    (fun br bty : nat × term =>
+    (br.1 = bty.1 × TT.typing (trans_global Σ) (trans_local Γ) br.2 bty.2)
+    × TT.typing (trans_global Σ) (trans_local Γ) bty.2 (tSort ps))
+    (map (on_snd trans) brs) (map (fun '(x, y) => (x, trans y)) btys).
 Proof.
   induction 1;cbn.
   - constructor.
@@ -689,23 +691,21 @@ Proof.
     + apply IHX.
 Qed.
 
-
-
 Lemma trans_mfix_All Σ Γ mfix:
-PT.All_local_env
-  (PT.lift_typing
-     (fun (Σ : PCUICEnvironment.global_env_ext)
-        (Γ : PCUICEnvironment.context) (b ty : PCUICAst.term) =>
-      PT.typing Σ Γ b ty
-      × TT.typing (trans_global Σ) (trans_local Γ) (trans b) (trans ty)) Σ)
-  (PCUICAst.app_context Γ (PCUICLiftSubst.fix_context mfix)) ->
-TT.wf_local (trans_global Σ)
-  (trans_local Γ ,,, TT.fix_context (map (map_def trans trans) mfix)).
+  PT.All_local_env
+    (PT.lift_typing
+      (fun (Σ : PCUICEnvironment.global_env_ext)
+          (Γ : PCUICEnvironment.context) (b ty : PCUICAst.term) =>
+        PT.typing Σ Γ b ty
+        × TT.typing (trans_global Σ) (trans_local Γ) (trans b) (trans ty)) Σ)
+    (PCUICAst.app_context Γ (PCUICLiftSubst.fix_context mfix)) ->
+  TTwf_local (trans_global Σ)
+    (trans_local Γ ,,, TT.fix_context (map (map_def trans trans) mfix)).
 Proof.
   intros.
   rewrite <- trans_fix_context.
   match goal with
-  |- TT.wf_local _ ?A =>
+  |- TTwf_local _ ?A =>
       replace A with (trans_local (PCUICAst.app_context Γ (PCUICLiftSubst.fix_context mfix)))
   end.
   2: {
@@ -798,7 +798,7 @@ Proof.
   intros Hty.
   dependent induction Hty.
   - exists t_ty, t'. intuition.
-  - edestruct IHHty as [T' [U' [H' H'']]].
+  - edestruct IHHty1 as [T' [U' [H' H'']]].
     exists T', U'. split; auto.
     eapply TT.cumul_trans; eauto.
 Qed.
@@ -859,9 +859,10 @@ Proof.
 Qed.
 
 
-
-
-
+Axiom fix_guard_trans :
+  forall Σ Γ mfix,
+    PT.fix_guard Σ Γ mfix ->
+    TT.fix_guard (map (map_def trans trans) mfix).
 
 Theorem template_to_pcuic (Σ : P.global_env_ext) Γ t T :
   PT.wf Σ ->
@@ -887,9 +888,9 @@ in All (for wf_local assumptions)
     rewrite trans_decl_type.
     eapply TT.type_Rel; eauto.
     + now apply map_nth_error.
-  - admit. (* TODO adapt Template Coq to new sort typing rule *)
-     (* eapply TT.type_Sort; eauto.
-    now apply trans_in_level_set. *)
+  - econstructor; eauto.
+    destruct u; auto. simpl in H |- *.
+    intros l inl. now rewrite <-trans_global_ext_levels.
   - eapply TT.type_Prod;assumption.
   - eapply TT.type_Lambda;eassumption.
   - eapply TT.type_LetIn;eassumption.
@@ -944,9 +945,8 @@ in All (for wf_local assumptions)
     + eassumption.
     + rewrite <- trans_global_ext_constraints.
       eassumption.
-    + rewrite trans_mkApps in X4.
-      cbn in X4.
-      apply X4.
+    + auto.
+    + now rewrite trans_mkApps in X4.
     + admit. (* map_option_out build branche type *)
     (* this should be similar to trans_build_case_predicate_type *)
     + admit. (* now apply trans_branches.*)
@@ -965,7 +965,7 @@ in All (for wf_local assumptions)
       reflexivity.
   - rewrite trans_dtype. simpl.
     eapply TT.type_Fix; auto.
-    + admit. (* fix guard *)
+    + now rewrite fix_guard_trans.
     + erewrite map_nth_error. 
       2: apply H0.
       destruct decl.
@@ -977,7 +977,8 @@ in All (for wf_local assumptions)
     + fold trans.
       subst types.
       eapply trans_mfix_All2;eassumption.
-  - rewrite trans_dtype.
+    + admit.
+  - rewrite trans_dtype. simpl.
     eapply TT.type_CoFix; auto.
     + erewrite map_nth_error. 
       2: eassumption.
@@ -990,8 +991,8 @@ in All (for wf_local assumptions)
     + fold trans;subst types.
       (* like trans_mfix_All2 without isLambda *)
       admit.
+    + admit.
   - eapply TT.type_Conv.
     + eassumption.
-    + admit. (* trans isWfArity *)
-    + admit. (* trans_cumul *)
+    + admit. (* eapply trans_cumul. *)
 Admitted.

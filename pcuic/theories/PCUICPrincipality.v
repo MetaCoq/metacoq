@@ -178,7 +178,8 @@ Section Principality.
       eapply cumul_conv_ctx; eauto.
       constructor. apply conv_ctx_refl. constructor. assumption. 
       eapply conv_trans; eauto. now apply conv_sym.
-      econstructor. eapply type_reduction; eauto.
+      eapply type_App'.
+      eapply type_reduction; eauto.
       eapply type_Cumul'; eauto.
       2:transitivity dom; auto; now apply conv_cumul.
       eapply type_reduction in t0. 2:eapply redA.
@@ -522,22 +523,22 @@ Proof.
     econstructor; eauto.
     eapply cum_LetIn; pcuic.
     
-  - eapply inversion_App in X4 as (na' & A' & B' & hf & ha & cum); auto.
+  - eapply inversion_App in X6 as (na' & A' & B' & hf & ha & cum); auto.
     unfold leq_term in X1.
-    eapply eq_term_upto_univ_empty_impl in X5_1.
-    specialize (X1 onu _ _ hf X5_1). all:try typeclasses eauto.
-    specialize (X3 onu _ _ ha (eq_term_empty_leq_term X5_2)).
-    eapply leq_term_empty_leq_term in X5_1.
-    eapply eq_term_empty_eq_term in X5_2.
+    eapply eq_term_upto_univ_empty_impl in X7_1.
+    specialize (X3 onu _ _ hf X7_1). all:try typeclasses eauto.
+    specialize (X5 onu _ _ ha (eq_term_empty_leq_term X7_2)).
+    eapply leq_term_empty_leq_term in X7_1.
+    eapply eq_term_empty_eq_term in X7_2.
     eapply type_Cumul'.
-    econstructor; [eapply X1|eapply X3].
+    eapply type_App'; [eapply X3|eapply X5].
     eapply PCUICValidity.validity; pcuic.
     eapply type_App; eauto.
     eapply conv_cumul. eapply (subst_conv Γ [vass na A] [vass na A] []); pcuic.
     repeat constructor. now rewrite subst_empty.
     repeat constructor. now rewrite subst_empty.
-    eapply PCUICValidity.validity in X0; auto.
-    apply PCUICArities.isType_tProd in X0 as [tyA]; auto.
+    eapply PCUICValidity.validity in X2; auto.
+    apply PCUICArities.isType_tProd in X2 as [tyA]; auto.
     constructor; auto.
 
   - eapply inversion_Const in X1 as [decl' [wf [declc [cu cum]]]]; auto.

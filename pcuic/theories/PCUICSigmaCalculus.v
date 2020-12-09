@@ -5,7 +5,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
     PCUICLiftSubst PCUICUnivSubst
      PCUICTyping PCUICClosed PCUICEquality.
 
-Require Import ssreflect.
+Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 Set Equations With UIP.
@@ -749,15 +749,15 @@ Proof.
 Qed.
 
 Lemma rename_shiftn :
-  forall f t,
-    rename (shiftn 1 f) (lift0 1 t) = lift0 1 (rename f t).
+  forall f k t,
+    rename (shiftn k f) (lift0 k t) = lift0 k (rename f t).
 Proof.
-  intros f t.
+  intros f k t.
   autorewrite with sigma.
   eapply inst_ext. intro i.
   unfold ren, lift_renaming, shiftn, subst_compose. simpl.
-  replace (i - 0) with i by lia.
-  reflexivity.
+  destruct (Nat.ltb_spec (k + i) k); try lia.
+  unfold shiftk. lia_f_equal.
 Qed.
 
 Lemma urenaming_vass :
@@ -1801,7 +1801,7 @@ Proof.
     + eapply ihB. assumption.
     + eapply cumul_rename. all: try eassumption.
       apply hf.
-Abort.
+Admitted.
 
 Lemma typing_rename :
   forall Σ Γ Δ f t A,
@@ -1810,7 +1810,7 @@ Lemma typing_rename :
     Σ ;;; Γ |- t : A ->
     Σ ;;; Δ |- rename f t : rename f A.
 Proof.
-Abort.
+Admitted.
   (* intros Σ Γ Δ f t A hΣ hf h.
   revert Σ hΣ Γ t A h Δ f hf.
   apply typing_rename_prop.

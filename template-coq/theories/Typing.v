@@ -629,6 +629,7 @@ Include TemplateEnvTyping.
 
 (* AXIOM GUARD CONDITION *)
 Axiom fix_guard : mfixpoint term -> bool.
+Axiom cofix_guard : mfixpoint term -> bool.
 
 Axiom fix_guard_red1 :
   forall Σ Γ mfix mfix' idx,
@@ -923,6 +924,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
       Σ ;;; Γ |- tFix mfix n : decl.(dtype)
 
 | type_CoFix mfix n decl :
+    cofix_guard mfix ->
     nth_error mfix n = Some decl ->
     wf_local Σ Γ ->
     All (fun d => {s & Σ ;;; Γ |- d.(dtype) :  tSort s}) mfix ->
@@ -1272,6 +1274,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (mfix : list (def term)) (n : nat) decl,
         let types := fix_context mfix in
+        cofix_guard mfix ->
         nth_error mfix n = Some decl ->
         All_local_env_over typing Pdecl Σ Γ wfΓ ->
         All (fun d => {s & (Σ ;;; Γ |- d.(dtype) : tSort s)%type * P Σ Γ d.(dtype) (tSort s)})%type mfix ->
@@ -1570,7 +1573,7 @@ Proof.
                           Forall_decls_typing P Σ.1 * P Σ Γ0 t T).
            {intros. eapply (X14 _ X _ _ Hty); eauto. lia. }
            clear X14 X13.
-           clear e decl a0 i.
+           clear e decl a0 i i0.
            remember (fix_context mfix) as mfixcontext. clear Heqmfixcontext.
 
            induction a1; econstructor; eauto.

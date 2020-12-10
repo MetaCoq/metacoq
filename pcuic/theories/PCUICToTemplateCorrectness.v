@@ -4,8 +4,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
 
 Set Warnings "-notation-overridden".
 From MetaCoq.Template Require Import config utils Ast TypingWf WfInv UnivSubst
-     TermEquality LiftSubst.
-From MetaCoq.Checker Require Import Substitution.
+     TermEquality LiftSubst Reduction.
 
 Set Warnings "+notation_overridden".
 

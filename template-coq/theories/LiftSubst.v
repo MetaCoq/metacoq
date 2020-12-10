@@ -1,5 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq Require Import utils Ast AstUtils Induction.
+From Coq Require Import ssreflect.
 
 (** * Lifting and substitution for the AST
 
@@ -95,9 +96,9 @@ Definition subst_decl s k (d : context_decl) := map_decl (subst s k) d.
 Lemma subst_context_length s n Γ : #|subst_context s n Γ| = #|Γ|.
 Proof.
   induction Γ as [|[na [body|] ty] tl] in Γ |- *; cbn; eauto.
-  - rewrite !List.rev_length, !mapi_rec_length, !app_length, !List.rev_length. simpl.
+  - rewrite !List.rev_length !mapi_rec_length !app_length !List.rev_length. simpl.
     lia.
-  - rewrite !List.rev_length, !mapi_rec_length, !app_length, !List.rev_length. simpl.
+  - rewrite !List.rev_length !mapi_rec_length !app_length !List.rev_length. simpl.
     lia.
 Qed.
 
@@ -110,6 +111,15 @@ Lemma subst_context_alt s k Γ :
 Proof.
   unfold subst_context, fold_context. rewrite rev_mapi. rewrite List.rev_involutive.
   apply mapi_ext. intros. f_equal. now rewrite List.rev_length.
+Qed.
+
+Lemma subst_context_snoc s k Γ d : subst_context s k (d :: Γ) = subst_context s k Γ ,, subst_decl s (#|Γ| + k) d.
+Proof.
+  unfold subst_context, fold_context.
+  rewrite !rev_mapi !rev_involutive /mapi mapi_rec_eqn /snoc.
+  f_equal. now rewrite Nat.sub_0_r List.rev_length.
+  rewrite mapi_rec_Sk. simpl. apply mapi_rec_ext. intros.
+  rewrite app_length !List.rev_length. simpl. f_equal. f_equal. lia.
 Qed.
 
 Definition subst_telescope s k (Γ : context) : context :=
@@ -261,7 +271,7 @@ Lemma subst_rel_eq :
     subst u n (tRel p) = lift0 n t.
 Proof.
   intros; simpl in |- *. subst p.
-  elim (leb_spec n (n + i)). intros. assert (n + i - n = i) by lia. rewrite H1, H.
+  elim (leb_spec n (n + i)). intros. assert (n + i - n = i) by lia. rewrite H1 H.
   reflexivity. intros. lia.
 Qed.
 
@@ -664,7 +674,7 @@ Lemma lift_to_extended_list_k Γ k : forall k',
     to_extended_list_k Γ (k' + k) = map (lift0 k') (to_extended_list_k Γ k).
 Proof.
   unfold to_extended_list_k.
-  intros k'. rewrite !reln_alt_eq, !app_nil_r.
+  intros k'. rewrite !reln_alt_eq !app_nil_r.
   induction Γ in k, k' |- *; simpl; auto.
   destruct a as [na [body|] ty].
   now rewrite <- Nat.add_assoc, (IHΓ (k + 1) k').
@@ -722,9 +732,9 @@ Lemma map_vass_map_def g l n k :
         (map (map_def (lift n k) g) l)) =
   (mapi (fun i d => map_decl (lift n (i + k)) d) (mapi (fun i (d : def term) => vass (dname d) (lift0 i (dtype d))) l)).
 Proof.
-  rewrite mapi_mapi, mapi_map. apply mapi_ext.
+  rewrite mapi_mapi mapi_map. apply mapi_ext.
   intros. unfold map_decl, vass; simpl; f_equal.
-  rewrite permute_lift. f_equal; lia. lia.
+  rewrite permute_lift. lia. f_equal; lia.
 Qed.
 (* 
 Lemma noccur_between_subst k n t : noccur_between k n t -> 

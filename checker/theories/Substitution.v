@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils Ast AstUtils Induction LiftSubst
-     UnivSubst TermEquality Typing TypingWf.
+     UnivSubst TermEquality Typing Reduction TypingWf.
 From MetaCoq.Checker Require Import Generation Closed WeakeningEnv Weakening.
 
 From Equations Require Import Equations.
@@ -12,11 +12,6 @@ Require Import ssreflect.
 Generalizable Variables Σ Γ t T.
 
 Derive Signature for Ast.wf.
-
-Definition subst_decl s k (d : context_decl) := map_decl (subst s k) d.
-
-Definition subst_context n k (Γ : context) : context :=
-  fold_context (fun k' => subst n (k' + k)) Γ.
 
 (** Well-typed substitution into a context with *no* let-ins *)
 
@@ -82,20 +77,7 @@ Proof.
   unfold fold_context. now rewrite !List.rev_length mapi_length List.rev_length.
 Qed.
 
-Lemma subst_context_length s k Γ : #|subst_context s k Γ| = #|Γ|.
-Proof.
-  unfold subst_context. apply fold_context_length.
-Qed.
 Hint Rewrite subst_context_length : subst.
-
-Lemma subst_context_snoc s k Γ d : subst_context s k (d :: Γ) = subst_context s k Γ ,, subst_decl s (#|Γ| + k) d.
-Proof.
-  unfold subst_context, fold_context.
-  rewrite !rev_mapi !rev_involutive /mapi mapi_rec_eqn /snoc.
-  f_equal. now rewrite Nat.sub_0_r List.rev_length.
-  rewrite mapi_rec_Sk. simpl. apply mapi_rec_ext. intros.
-  rewrite app_length !List.rev_length. simpl. f_equal. f_equal. lia.
-Qed.
 Hint Rewrite subst_context_snoc : subst.
 
 Lemma subst_context_snoc0 s Γ d : subst_context s 0 (Γ ,, d) = subst_context s 0 Γ ,, subst_decl s #|Γ| d.
@@ -135,7 +117,7 @@ Proof.
   unfold closed_ctx, id. intros wfctx. inv wfctx.
   rewrite mapi_app forallb_app List.rev_length /= Nat.add_0_r.
   move/andb_and => /= [Hctx /andb_and [Ha _]].
-  rewrite subst_context_snoc /snoc /= IHctx // subst_decl_closed //.
+  rewrite subst_context_snoc /snoc /= IHctx // /map_decl subst_decl_closed //.
   now apply: closed_decl_upwards.
 Qed.
 
@@ -1313,77 +1295,6 @@ Proof.
   - apply IHX.
 Qed.
 
-Lemma red1_tApp_mkApps_l Σ Γ M1 N1 M2 :
-  red1 Σ Γ M1 N1 -> red1 Σ Γ (tApp M1 M2) (mkApps N1 M2).
-Proof. constructor. auto. Qed.
-
-Lemma red1_tApp_mkApp Σ Γ M1 N1 M2 :
-  red1 Σ Γ M1 N1 -> red1 Σ Γ (tApp M1 [M2]) (mkApp N1 M2).
-Proof.
-  intros.
-  change (mkApp N1 M2) with (mkApps N1 [M2]).
-  apply app_red_l. auto.
-Qed.
-
-Lemma red1_mkApp Σ Γ M1 N1 M2 :
-  Ast.wf M1 ->
-  red1 Σ Γ M1 N1 -> red1 Σ Γ (mkApp M1 M2) (mkApp N1 M2).
-Proof.
-  intros wfM1 H.
-  destruct (isApp M1) eqn:Heq.
-  destruct M1; try discriminate. simpl.
-  revert wfM1. inv H. simpl. intros.
-  rewrite mkApp_mkApps. constructor.
-
-  intros.
-  rewrite mkApp_mkApps.
-  econstructor; eauto.
-  inv wfM1. simpl.
-  clear -H1.
-  unfold is_constructor in *.
-  destruct (nth_error args narg) eqn:Heq.
-  eapply nth_error_app_left in Heq. now rewrite -> Heq. discriminate.
-
-  intros. rewrite mkApp_mkApps. now constructor.
-
-  intros. simpl.
-  constructor. clear -X. induction X; constructor; auto.
-
-  rewrite mkApp_tApp; auto.
-  now apply red1_tApp_mkApp.
-Qed.
-
-Lemma red1_mkApps_l Σ Γ M1 N1 M2 :
-  Ast.wf M1 -> All Ast.wf M2 ->
-  red1 Σ Γ M1 N1 -> red1 Σ Γ (mkApps M1 M2) (mkApps N1 M2).
-Proof.
-  induction M2 in M1, N1 |- *. simpl; auto.
-  intros. specialize (IHM2 (mkApp M1 a) (mkApp N1 a)).
-  inv X.
-  forward IHM2. apply wf_mkApp; auto.
-  forward IHM2. auto.
-  rewrite <- !mkApps_mkApp; auto.
-  apply IHM2.
-  apply red1_mkApp; auto.
-Qed.
-
-Lemma red1_mkApps_r Σ Γ M1 M2 N2 :
-  Ast.wf M1 -> All Ast.wf M2 ->
-  OnOne2 (red1 Σ Γ) M2 N2 -> red1 Σ Γ (mkApps M1 M2) (mkApps M1 N2).
-Proof.
-  intros. induction X0 in M1, H, X |- *.
-  inv X.
-  destruct (isApp M1) eqn:Heq. destruct M1; try discriminate.
-  simpl. constructor. apply OnOne2_app. constructor. auto.
-  rewrite mkApps_tApp; try congruence.
-  rewrite mkApps_tApp; try congruence.
-  constructor. constructor. auto.
-  inv X.
-  specialize (IHX0 (mkApp M1 hd)). forward IHX0.
-  apply wf_mkApp; auto. forward IHX0; auto.
-  now rewrite !mkApps_mkApp in IHX0.
-Qed.
-
 Lemma wf_fix :
   forall (mfix : list (def term)) (k : nat), Ast.wf (tFix mfix k) ->
     Forall
@@ -1578,71 +1489,6 @@ Proof.
         rewrite -> app_context_assoc, Nat.add_0_r in *.
         auto.
       + inversion b0. auto.
-Qed.
-
-Lemma eq_term_leq_term `{checker_flags} Σ φ t u :
-  eq_term Σ φ t u -> leq_term Σ φ t u.
-Proof.
-  eapply eq_term_upto_univ_morphism. auto.
-  intros.
-  now apply eq_universe_leq_universe.
-Qed.
-
-Lemma eq_term_upto_univ_App `{checker_flags} Σ Re Rle napp f f' :
-  eq_term_upto_univ_napp Σ Re Rle napp f f' ->
-  isApp f = isApp f'.
-Proof.
-  inversion 1; reflexivity.
-Qed.
-
-Lemma eq_term_App `{checker_flags} Σ φ f f' :
-  eq_term Σ φ f f' ->
-  isApp f = isApp f'.
-Proof.
-  inversion 1; reflexivity.
-Qed.
-
-Lemma eq_term_upto_univ_mkApps `{checker_flags} Σ Re Rle napp f l f' l' :
-  eq_term_upto_univ_napp Σ Re Rle (#|l| + napp) f f' ->
-  All2 (eq_term_upto_univ Σ Re Re) l l' ->
-  eq_term_upto_univ_napp Σ Re Rle napp (mkApps f l) (mkApps f' l').
-Proof.
-  induction l in f, f' |- *; intro e; inversion_clear 1.
-  - assumption.
-  - pose proof (eq_term_upto_univ_App _ _ _ _ _ _ e).
-    case_eq (isApp f).
-    + intro X; rewrite X in H0.
-      destruct f; try discriminate.
-      destruct f'; try discriminate.
-      cbn. inversion_clear e. constructor.
-      rewrite app_length /= -Nat.add_assoc //.
-      apply All2_app. assumption.
-      now constructor.
-    + intro X; rewrite X in H0.
-      rewrite !mkApps_tApp; eauto.
-      intro; discriminate.
-      intro; discriminate.
-      constructor. simpl. now simpl in e.
-      now constructor.
-Qed.
-
-Lemma leq_term_mkApps `{checker_flags} Σ φ f l f' l' :
-  leq_term Σ φ f f' ->
-  All2 (eq_term Σ φ) l l' ->
-  leq_term Σ φ (mkApps f l) (mkApps f' l').
-Proof.
-  intros.
-  eapply eq_term_upto_univ_mkApps.
-  eapply eq_term_upto_univ_impl. 5:eauto. 4:auto with arith.
-  1-3:typeclasses eauto.
-  apply X0.
-Qed.
-
-Lemma leq_term_App `{checker_flags} Σ φ f f' :
-  leq_term Σ φ f f' ->
-  isApp f = isApp f'.
-Proof.
-  inversion 1; reflexivity.
 Qed.
 
 Lemma subst_eq_term_upto_univ `{checker_flags} Σ Re Rle napp n k T U :

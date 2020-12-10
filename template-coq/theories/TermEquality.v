@@ -434,3 +434,69 @@ Proof.
     eapply All_impl; eauto.
     cbn. intros x [? ?] y [[[? ?] ?] ?]. repeat split; eauto.
 Qed.
+
+
+Lemma eq_term_leq_term `{checker_flags} Σ φ t u :
+  eq_term Σ φ t u -> leq_term Σ φ t u.
+Proof.
+  eapply eq_term_upto_univ_morphism. auto.
+  intros.
+  now apply eq_universe_leq_universe.
+Qed.
+
+Lemma eq_term_upto_univ_App `{checker_flags} Σ Re Rle napp f f' :
+  eq_term_upto_univ_napp Σ Re Rle napp f f' ->
+  isApp f = isApp f'.
+Proof.
+  inversion 1; reflexivity.
+Qed.
+
+Lemma eq_term_App `{checker_flags} Σ φ f f' :
+  eq_term Σ φ f f' ->
+  isApp f = isApp f'.
+Proof.
+  inversion 1; reflexivity.
+Qed.
+
+Lemma eq_term_upto_univ_mkApps `{checker_flags} Σ Re Rle napp f l f' l' :
+  eq_term_upto_univ_napp Σ Re Rle (#|l| + napp) f f' ->
+  All2 (eq_term_upto_univ Σ Re Re) l l' ->
+  eq_term_upto_univ_napp Σ Re Rle napp (mkApps f l) (mkApps f' l').
+Proof.
+  induction l in f, f' |- *; intro e; inversion_clear 1.
+  - assumption.
+  - pose proof (eq_term_upto_univ_App _ _ _ _ _ _ e).
+    case_eq (isApp f).
+    + intro X; rewrite X in H0.
+      destruct f; try discriminate.
+      destruct f'; try discriminate.
+      cbn. inversion_clear e. constructor.
+      rewrite app_length /= -Nat.add_assoc //.
+      apply All2_app. assumption.
+      now constructor.
+    + intro X; rewrite X in H0.
+      rewrite !mkApps_tApp; eauto.
+      intro; discriminate.
+      intro; discriminate.
+      constructor. simpl. now simpl in e.
+      now constructor.
+Qed.
+
+Lemma leq_term_mkApps `{checker_flags} Σ φ f l f' l' :
+  leq_term Σ φ f f' ->
+  All2 (eq_term Σ φ) l l' ->
+  leq_term Σ φ (mkApps f l) (mkApps f' l').
+Proof.
+  intros.
+  eapply eq_term_upto_univ_mkApps.
+  eapply eq_term_upto_univ_impl. 5:eauto. 4:auto with arith.
+  1-3:typeclasses eauto.
+  apply X0.
+Qed.
+
+Lemma leq_term_App `{checker_flags} Σ φ f f' :
+  leq_term Σ φ f f' ->
+  isApp f = isApp f'.
+Proof.
+  inversion 1; reflexivity.
+Qed.

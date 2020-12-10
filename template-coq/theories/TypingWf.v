@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils Ast AstUtils Induction LiftSubst
-     UnivSubst Typing.
+     UnivSubst Reduction Typing.
 From Equations Require Import Equations.
 Require Import ssreflect.
 
@@ -357,15 +357,6 @@ Proof.
     destruct l; intuition auto;
     constructor;
     try red; simpl; intuition eauto.
-Qed.
-
-Lemma subst_context_snoc s k Γ d : subst_context s k (d :: Γ) = subst_context s k Γ ,, map_decl (subst s (#|Γ| + k)) d.
-Proof.
-  unfold subst_context, fold_context.
-  rewrite !rev_mapi !rev_involutive /mapi mapi_rec_eqn /snoc.
-  f_equal. now rewrite Nat.sub_0_r List.rev_length.
-  rewrite mapi_rec_Sk. simpl. apply mapi_rec_ext. intros.
-  rewrite app_length !List.rev_length. simpl. f_equal. f_equal. lia.
 Qed.
 
 Lemma wf_subst_context s k Γ : Forall wf_decl Γ -> Forall Ast.wf s -> Forall wf_decl (subst_context s k Γ).

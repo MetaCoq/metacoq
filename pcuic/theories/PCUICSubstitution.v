@@ -2644,16 +2644,14 @@ Proof.
       now specialize (Hs' _ _ _ _ sub eq_refl).
     * eapply All_map.
       eapply (All_impl X1); simpl.
-      intros x [[Hb Hlam] IH].
+      intros x [Hb IH].
       rewrite subst_fix_context.
       specialize (IH Γ Γ' (Δ ,,,  (fix_context mfix)) _ sub).
       rewrite app_context_assoc in IH. specialize (IH eq_refl).
-      split; auto.
-      + rewrite subst_context_app Nat.add_0_r app_context_assoc in IH.
-        rewrite app_context_length fix_context_length in IH.
-        rewrite subst_context_length fix_context_length.
-        rewrite commut_lift_subst_rec; try lia. now rewrite (Nat.add_comm #|Δ|).
-      + now rewrite isLambda_subst.
+      rewrite subst_context_app Nat.add_0_r app_context_assoc in IH.
+      rewrite app_context_length fix_context_length in IH.
+      rewrite subst_context_length fix_context_length.
+      rewrite commut_lift_subst_rec; try lia. now rewrite (Nat.add_comm #|Δ|).
     * move: H1.
       rewrite /wf_fixpoint.
       pose proof (substitution_check_one_fix s #|Δ| mfix).

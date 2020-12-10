@@ -1656,16 +1656,15 @@ Proof.
       destruct X1 as [s Hs]. exists (subst_instance_univ u s).
       now apply Hs.
     + eapply All_map, All_impl; tea.
-      intros x [[X1 X2] X3]. split.
-      * specialize (X3 u univs wfΣ' HSub H2). erewrite map_dbody in X3.
-        rewrite <- lift_subst_instance_constr in X3.
-        rewrite fix_context_length, map_length in *.
-        erewrite map_dtype with (d := x) in X3.
-        unfold subst_instance_context, map_context in *.
-        rewrite map_app in *.
-        rewrite <- (fix_context_subst_instance u mfix).
-        eapply X3.
-      * destruct x as [? ? []]; cbn in *; tea.
+      intros x [X1 X3]. 
+      specialize (X3 u univs wfΣ' HSub H2). erewrite map_dbody in X3.
+      rewrite <- lift_subst_instance_constr in X3.
+      rewrite fix_context_length, map_length in *.
+      erewrite map_dtype with (d := x) in X3.
+      unfold subst_instance_context, map_context in *.
+      rewrite map_app in *.
+      rewrite <- (fix_context_subst_instance u mfix).
+      eapply X3.
     + red; rewrite <- wffix.
       unfold wf_fixpoint.
       rewrite map_map_compose.

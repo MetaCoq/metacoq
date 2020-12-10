@@ -8,7 +8,6 @@ Require Import ssreflect.
 From Equations.Prop Require Import DepElim.
 Set Equations With UIP.
 
-
 Definition R_universe_instance R :=
   fun u u' => Forall2 R (List.map Universe.make u) (List.map Universe.make u').
 

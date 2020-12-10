@@ -398,7 +398,9 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
     isCoFinite mdecl.(ind_finite) = false ->
     forall btys, map_option_out (build_branches_type ind mdecl idecl params u p) = Some btys ->
-    All2 (fun br bty => (br.1 = bty.1) * (Σ ;;; Γ |- br.2 : bty.2) * (∑ s, Σ ;;; Γ |- bty.2 : tSort s)) brs btys ->
+    All2 (fun br bty => (br.1 = bty.1) * (Σ ;;; Γ |- br.2 : bty.2) *
+      (* This is a paranoid assumption *)
+      (∑ s, Σ ;;; Γ |- bty.2 : tSort s)) brs btys ->
     Σ ;;; Γ |- tCase indnpar p c brs : mkApps p (skipn npar args ++ [c])
 
 | type_Proj p c u :
@@ -415,8 +417,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     nth_error mfix n = Some decl ->
     wf_local Σ Γ ->
     All (fun d => {s & Σ ;;; Γ |- d.(dtype) :  tSort s}) mfix ->
-    All (fun d => (Σ ;;; Γ ,,, fix_context mfix |- d.(dbody) : lift0 #|fix_context mfix| d.(dtype))
-      * (isLambda d.(dbody) = true)%type) mfix ->
+    All (fun d => (Σ ;;; Γ ,,, fix_context mfix |- d.(dbody) : lift0 #|fix_context mfix| d.(dtype))) mfix ->
     wf_fixpoint Σ.1 mfix -> 
     Σ ;;; Γ |- tFix mfix n : decl.(dtype)
   
@@ -515,7 +516,7 @@ Proof.
   - exact (S (S (wf_local_size _ typing_size _ a))).
   - exact (S (Nat.max d2 (Nat.max d3
                                 (all2_size _ (fun x y p => Nat.max (typing_size Σ Γ (snd x) (snd y) (snd (fst p))) (typing_size _ _ _ _ (snd p).π2)) a)))).
-  - exact (S (Nat.max (Nat.max (wf_local_size _ typing_size _ a) (all_size _ (fun x  p => typing_size Σ _ _ _ p.π2) a0)) (all_size _ (fun x p => typing_size Σ _ _ _ (fst p)) a1))).
+  - exact (S (Nat.max (Nat.max (wf_local_size _ typing_size _ a) (all_size _ (fun x p => typing_size Σ _ _ _ p.π2) a0)) (all_size _ (fun x p => typing_size Σ _ _ _ p) a1))).
   - exact (S (Nat.max (Nat.max (wf_local_size _ typing_size _ a) (all_size _ (fun x  p => typing_size Σ _ _ _ p.π2) a0)) (all_size _ (fun x p => typing_size Σ _ _ _ p) a1))).
 Defined.
 
@@ -795,7 +796,6 @@ Lemma typing_ind_env `{cf : checker_flags} :
         PΓ Σ Γ wfΓ ->
         All (fun d => {s & (Σ ;;; Γ |- d.(dtype) : tSort s)%type * P Σ Γ d.(dtype) (tSort s)})%type mfix ->
         All (fun d => (Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype))%type *
-                   (isLambda d.(dbody) = true)%type *
             P Σ (Γ ,,, types) d.(dbody) (lift0 #|types| d.(dtype)))%type mfix ->
         wf_fixpoint Σ.1 mfix ->
         P Σ Γ (tFix mfix n) decl.(dtype)) ->
@@ -1053,7 +1053,7 @@ Proof.
                 forall (t T : term) (Hty : Σ;;; Γ0 |- t : T),
                  typing_size Hty <
                        S
-                         (all_size _ (fun (x : def term) p => typing_size (fst p)) a1) ->
+                         (all_size _ (fun (x : def term) p => typing_size p) a1) ->
                         Forall_decls_typing P Σ.1 * P Σ Γ0 t T).
          {intros. eapply (X14 _ _ _ Hty); eauto. lia. }
          clear X14 X13.
@@ -1062,7 +1062,7 @@ Proof.
  
          induction a1; econstructor; eauto.
          ++ split; auto. 
-           eapply (X _ (typing_wf_local (fst p)) _ _ (fst p)). simpl. lia.
+           eapply (X _ (typing_wf_local p) _ _ p). simpl. lia.
          ++ eapply IHa1. intros.
            eapply (X _ X0 _ _ Hty). simpl; lia.       
 

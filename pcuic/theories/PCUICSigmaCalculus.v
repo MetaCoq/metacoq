@@ -1753,17 +1753,15 @@ Proof.
         intros x [s [Hs IHs]].
         exists s. now apply IHs.
       * apply All_map, (All_impl ihmfixb).
-        intros x [[Hb Hlam] IHb].
+        intros x [Hb IHb].
         destruct x as [na ty bo rarg]. simpl in *.
-        split.
-        -- rewrite rename_fix_context.
-           eapply meta_conv.
-           ++ apply (IHb (Δ ,,, rename_context f types) (shiftn #|mfix| f)).
-              split; auto. subst types. rewrite -(fix_context_length mfix).
-              apply urenaming_context; auto. apply hf.
-           ++ autorewrite with sigma. subst types. rewrite fix_context_length.
-              now rewrite -ren_shiftn up_Upn shiftn_consn_idsn.
-        -- eapply isLambda_rename. assumption.
+        rewrite rename_fix_context.
+        eapply meta_conv.
+        ++ apply (IHb (Δ ,,, rename_context f types) (shiftn #|mfix| f)).
+          split; auto. subst types. rewrite -(fix_context_length mfix).
+          apply urenaming_context; auto. apply hf.
+        ++ autorewrite with sigma. subst types. rewrite fix_context_length.
+          now rewrite -ren_shiftn up_Upn shiftn_consn_idsn.
       * admit (* wf_fixpoint renaming *).
     + reflexivity.
 

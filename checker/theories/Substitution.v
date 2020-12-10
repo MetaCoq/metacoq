@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils Ast AstUtils Induction LiftSubst
-     UnivSubst Typing TypingWf.
+     UnivSubst TermEquality Typing TypingWf.
 From MetaCoq.Checker Require Import Generation Closed WeakeningEnv Weakening.
 
 From Equations Require Import Equations.
@@ -221,10 +221,8 @@ Lemma subst_unfold_fix n k mfix idx narg fn :
 Proof.
   unfold unfold_fix. intros wfn.
   rewrite nth_error_map. destruct (nth_error mfix idx) eqn:Hdef; try congruence.
-  case_eq (isLambda (dbody d)); [|discriminate].
-  move=> Hlam [= <- <-] /=. rewrite isLambda_subst; tas.
+  move=> [= <- <-] /=. 
   f_equal. f_equal.
-  solve_all.
   erewrite (distr_subst_rec _ _ _ wfn k 0).
   rewrite fix_subst_length. simpl. f_equal.
   unfold fix_subst. rewrite !map_length.
@@ -1338,6 +1336,7 @@ Proof.
   rewrite mkApp_mkApps. constructor.
 
   intros.
+  rewrite mkApp_mkApps.
   econstructor; eauto.
   inv wfM1. simpl.
   clear -H1.
@@ -1388,7 +1387,7 @@ Qed.
 Lemma wf_fix :
   forall (mfix : list (def term)) (k : nat), Ast.wf (tFix mfix k) ->
     Forall
-      (fun def : def term => Ast.wf (dtype def) /\ Ast.wf (dbody def) /\ isLambda (dbody def) = true)
+      (fun def : def term => Ast.wf (dtype def) /\ Ast.wf (dbody def))
       mfix.
 Proof.
   intros. inv H. auto.
@@ -1468,20 +1467,9 @@ Proof.
     constructor.
 
   - rewrite mkApps_tApp; simpl; auto with wf.
-    inv wfM. auto with wf. rewrite -> mkApps_tApp; simpl.
+    inv wfM. auto with wf.
     + eapply red_fix. erewrite subst_unfold_fix; eauto.
       now apply subst_is_constructor.
-    + inv wfM. inv H3.
-    unfold unfold_fix in H.
-    destruct nth_error eqn:Heq.
-    destruct (isLambda (dbody d)); [|discriminate].
-    injection H. intros <- <-.
-    eapply nth_error_forall in H5; eauto.
-    destruct d as [na b ty]; simpl in *.
-    destruct H5 as [_ [_ Hty]].
-    destruct ty; try discriminate. reflexivity.
-    discriminate.
-    + apply not_empty_map. now inv wfM.
 
   - pose proof (subst_declared_constant _ _ _ s #|Γ''| u wfΣ H).
     apply (f_equal cst_body) in H1.
@@ -1592,113 +1580,79 @@ Proof.
       + inversion b0. auto.
 Qed.
 
-Lemma eq_term_upto_univ_refl Re Rle :
-  RelationClasses.Reflexive Re ->
-  RelationClasses.Reflexive Rle ->
-  forall t, eq_term_upto_univ Re Rle t t.
+Lemma eq_term_leq_term `{checker_flags} Σ φ t u :
+  eq_term Σ φ t u -> leq_term Σ φ t u.
 Proof.
-  intros hRe hRle.
-  induction t in Rle, hRle |- * using term_forall_list_rect; simpl;
-    try constructor; try apply Forall_Forall2; try apply All_All2 ; try easy;
-      try now (try apply Forall_All ; apply Forall_True).
-  - eapply All_All2. 1: eassumption.
-    intros. easy.
-  - eapply All_All2. 1: eassumption.
-    intros. easy.
-  - destruct p. constructor; try easy.
-    eapply All_All2. 1: eassumption.
-    intros. split ; auto.
-  - eapply All_All2. 1: eassumption.
-    intros x [? ?]. repeat split ; auto.
-  - eapply All_All2. 1: eassumption.
-    intros x [? ?]. repeat split ; auto.
-Qed.
-
-Lemma eq_term_refl `{checker_flags} φ t : eq_term φ t t.
-Proof.
-  apply eq_term_upto_univ_refl.
-  - intro; apply eq_universe_refl.
-  - intro; apply eq_universe_refl.
-Qed.
-
-
-Lemma leq_term_refl `{checker_flags} φ t : leq_term φ t t.
-Proof.
-  apply eq_term_upto_univ_refl.
-  - intro; apply eq_universe_refl.
-  - intro; apply leq_universe_refl.
-Qed.
-
-
-Lemma eq_term_leq_term `{checker_flags} φ t u : eq_term φ t u -> leq_term φ t u.
-Proof.
-  induction t in u |- * using term_forall_list_rect; simpl; inversion 1;
-    subst; constructor; try (now unfold eq_term, leq_term in * );
-  try eapply Forall2_impl' ; try eapply All2_impl' ; try easy.
+  eapply eq_term_upto_univ_morphism. auto.
+  intros.
   now apply eq_universe_leq_universe.
-  all: try (apply Forall_True, eq_universe_leq_universe).
 Qed.
 
-Lemma eq_term_upto_univ_App `{checker_flags} Re Rle f f' :
-  eq_term_upto_univ Re Rle f f' ->
+Lemma eq_term_upto_univ_App `{checker_flags} Σ Re Rle napp f f' :
+  eq_term_upto_univ_napp Σ Re Rle napp f f' ->
   isApp f = isApp f'.
 Proof.
   inversion 1; reflexivity.
 Qed.
 
-Lemma eq_term_App `{checker_flags} φ f f' :
-  eq_term φ f f' ->
+Lemma eq_term_App `{checker_flags} Σ φ f f' :
+  eq_term Σ φ f f' ->
   isApp f = isApp f'.
 Proof.
   inversion 1; reflexivity.
 Qed.
 
-Lemma eq_term_upto_univ_mkApps `{checker_flags} Re Rle f l f' l' :
-  eq_term_upto_univ Re Rle f f' ->
-  All2 (eq_term_upto_univ Re Re) l l' ->
-  eq_term_upto_univ Re Rle (mkApps f l) (mkApps f' l').
+Lemma eq_term_upto_univ_mkApps `{checker_flags} Σ Re Rle napp f l f' l' :
+  eq_term_upto_univ_napp Σ Re Rle (#|l| + napp) f f' ->
+  All2 (eq_term_upto_univ Σ Re Re) l l' ->
+  eq_term_upto_univ_napp Σ Re Rle napp (mkApps f l) (mkApps f' l').
 Proof.
   induction l in f, f' |- *; intro e; inversion_clear 1.
   - assumption.
-  - pose proof (eq_term_upto_univ_App _ _ _ _ e).
+  - pose proof (eq_term_upto_univ_App _ _ _ _ _ _ e).
     case_eq (isApp f).
     + intro X; rewrite X in H0.
       destruct f; try discriminate.
       destruct f'; try discriminate.
-      cbn. inversion_clear e. constructor. assumption.
+      cbn. inversion_clear e. constructor.
+      rewrite app_length /= -Nat.add_assoc //.
       apply All2_app. assumption.
       now constructor.
     + intro X; rewrite X in H0.
       rewrite !mkApps_tApp; eauto.
       intro; discriminate.
       intro; discriminate.
-      constructor. assumption.
+      constructor. simpl. now simpl in e.
       now constructor.
 Qed.
 
-Lemma leq_term_mkApps `{checker_flags} φ f l f' l' :
-  leq_term φ f f' ->
-  All2 (eq_term φ) l l' ->
-  leq_term φ (mkApps f l) (mkApps f' l').
+Lemma leq_term_mkApps `{checker_flags} Σ φ f l f' l' :
+  leq_term Σ φ f f' ->
+  All2 (eq_term Σ φ) l l' ->
+  leq_term Σ φ (mkApps f l) (mkApps f' l').
 Proof.
+  intros.
   eapply eq_term_upto_univ_mkApps.
+  eapply eq_term_upto_univ_impl. 5:eauto. 4:auto with arith.
+  1-3:typeclasses eauto.
+  apply X0.
 Qed.
 
-Lemma leq_term_App `{checker_flags} φ f f' :
-  leq_term φ f f' ->
+Lemma leq_term_App `{checker_flags} Σ φ f f' :
+  leq_term Σ φ f f' ->
   isApp f = isApp f'.
 Proof.
   inversion 1; reflexivity.
 Qed.
 
-Lemma subst_eq_term_upto_univ `{checker_flags} Re Rle n k T U :
+Lemma subst_eq_term_upto_univ `{checker_flags} Σ Re Rle napp n k T U :
   RelationClasses.Reflexive Re ->
   RelationClasses.Reflexive Rle ->
-  eq_term_upto_univ Re Rle T U ->
-  eq_term_upto_univ Re Rle (subst n k T) (subst n k U).
+  eq_term_upto_univ_napp Σ Re Rle napp T U ->
+  eq_term_upto_univ_napp Σ Re Rle napp (subst n k T) (subst n k U).
 Proof.
   intros hRe hRle h.
-  induction T in n, k, U, h, Rle, hRle |- * using term_forall_list_rect.
+  induction T in napp, n, k, U, h, Rle, hRle |- * using term_forall_list_rect.
   all: simpl ; inversion h ; simpl.
   all: try (eapply eq_term_upto_univ_refl ; easy).
   all: try (constructor ; easy).
@@ -1706,7 +1660,8 @@ Proof.
     eapply All2_map. eapply All2_impl' ; try eassumption.
     eapply All_impl ; try eassumption.
     cbn. intros x HH y HH'. now eapply HH.
-  - subst. eapply eq_term_upto_univ_mkApps. all: try easy.
+  - subst. eapply eq_term_upto_univ_mkApps.
+    rewrite map_length. eauto.
     eapply All2_map. eapply All2_impl' ; try eassumption.
     eapply All_impl ; try eassumption.
     cbn. intros x HH y HH'. now eapply HH.
@@ -1729,9 +1684,9 @@ Proof.
     intros x [] y []; now split.
 Qed.
 
-Lemma subst_eq_term `{checker_flags} ϕ n k T U :
-  eq_term ϕ T U ->
-  eq_term ϕ (subst n k T) (subst n k U).
+Lemma subst_eq_term `{checker_flags} Σ ϕ n k T U :
+  eq_term Σ ϕ T U ->
+  eq_term Σ ϕ (subst n k T) (subst n k U).
 Proof.
   intros Hleq.
   eapply subst_eq_term_upto_univ.
@@ -1740,9 +1695,9 @@ Proof.
   - assumption.
 Qed.
 
-Lemma subst_leq_term `{checker_flags} ϕ n k T U :
-  leq_term ϕ T U ->
-  leq_term ϕ (subst n k T) (subst n k U).
+Lemma subst_leq_term `{checker_flags} Σ ϕ n k T U :
+  leq_term Σ ϕ T U ->
+  leq_term Σ ϕ (subst n k T) (subst n k U).
 Proof.
   intros Hleq.
   eapply subst_eq_term_upto_univ.
@@ -1752,16 +1707,16 @@ Proof.
 Qed.
 
 
-Lemma subst_eq_decl `{checker_flags} ϕ l k d d' :
-  eq_decl ϕ d d' -> eq_decl ϕ (subst_decl l k d) (subst_decl l k d').
+Lemma subst_eq_decl `{checker_flags} Σ ϕ l k d d' :
+  eq_decl Σ ϕ d d' -> eq_decl Σ ϕ (subst_decl l k d) (subst_decl l k d').
 Proof.
   destruct d, d', decl_body, decl_body0;
     unfold eq_decl, map_decl; cbn; intuition auto using subst_eq_term.
 Qed.
 
-Lemma subst_eq_context `{checker_flags} φ l l' n k :
-  eq_context φ l l' ->
-  eq_context φ (subst_context n k l) (subst_context n k l').
+Lemma subst_eq_context `{checker_flags} Σ φ l l' n k :
+  eq_context Σ φ l l' ->
+  eq_context Σ φ (subst_context n k l) (subst_context n k l').
 Proof.
   induction l in l', n, k |- *; inversion 1. constructor.
   rewrite !subst_context_snoc. constructor.
@@ -1980,8 +1935,14 @@ Proof.
        subst params. rewrite firstn_map. exact H4.
        4: now rewrite closedn_subst_instance_context.
        all: eauto with wf.
-       admit. admit.
+       subst params. eapply All_firstn.
+       eapply typing_wf in X3; auto.
+       destruct X3 as [wfc wfargs].
+       eapply Forall_All.
+       now eapply wf_mkApps_inv in wfargs.
+       now eapply subs_wf in sub.
     -- solve_all.
+       destruct b0 as [s' [Hs IHs]]; eauto.
 
   - specialize (X2 Γ Γ' Δ s sub eq_refl).
     eapply refine_type. econstructor.
@@ -2011,16 +1972,14 @@ Proof.
       now specialize (Hs' _ _ _ _ sub eq_refl).
     * eapply All_map.
       eapply (All_impl X1); simpl.
-      intros x [[Hb Hlam] IH].
+      intros x [Hb IH].
       rewrite subst_fix_context.
       specialize (IH Γ Γ' (Δ ,,,  (fix_context mfix)) _ sub).
       rewrite app_context_assoc in IH. specialize (IH eq_refl).
-      split; auto.
       rewrite subst_context_app Nat.add_0_r app_context_assoc in IH.
       rewrite app_context_length fix_context_length in IH.
       rewrite subst_context_length fix_context_length.
       rewrite commut_lift_subst_rec; try lia. now rewrite (Nat.add_comm #|Δ|).
-      now rewrite isLambda_subst.
     * move: H2.
       rewrite /wf_fixpoint.
       pose proof (substitution_check_one_fix s #|Δ| mfix).
@@ -2030,7 +1989,8 @@ Proof.
 
   - rewrite -> (map_dtype _ (subst s (#|mfix| + #|Δ|))).
     eapply type_CoFix; auto.
-    * now rewrite -> nth_error_map, H0.
+    * eapply cofix_guard_subst; eauto.
+    * now rewrite -> nth_error_map, H1.
     * eapply All_map.
       eapply (All_impl X0); simpl.
       intros x [u [Hs Hs']]; exists u.
@@ -2045,18 +2005,18 @@ Proof.
       rewrite app_context_length fix_context_length in IH.
       rewrite subst_context_length fix_context_length.
       rewrite commut_lift_subst_rec; try lia. now rewrite (Nat.add_comm #|Δ|).
-    * move: H1.
+    * move: H2.
       rewrite /wf_cofixpoint.
       pose proof (substitution_check_one_cofix s #|Δ| mfix).
       destruct map_option_out eqn:Heq => //.
-      specialize (H1 _ eq_refl).
-      rewrite map_map_compose. now rewrite H1.
+      specialize (H2 _ eq_refl).
+      rewrite map_map_compose. now rewrite H2.
 
   - econstructor; eauto.
     eapply substitution_cumul; eauto.
     now eapply typing_wf in X0.
     now eapply typing_wf in X2.
-Admitted.
+Qed.
 
 Lemma substitution0 `{checker_flags} Σ Γ n u U (t : term) T :
   wf Σ.1 ->

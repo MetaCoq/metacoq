@@ -701,7 +701,7 @@ Admitted.
 Qed.  *)
 
 Lemma trans_leq_term {cf} Σ ϕ T U :
-  T.wf T -> T.wf U -> TTy.leq_term ϕ T U ->
+  T.wf T -> T.wf U -> TTy.leq_term Σ ϕ T U ->
   leq_term Σ ϕ (trans T) (trans U).
 Proof.
   intros HT HU H.

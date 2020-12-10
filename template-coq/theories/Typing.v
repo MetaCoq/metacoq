@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect Wellfounded Relation_Operators.
 From MetaCoq.Template Require Import config utils Ast AstUtils LiftSubst UnivSubst
-     EnvironmentTyping Reflect.
+     EnvironmentTyping Reflect TermEquality.
 
 (** * Typing derivations
 
@@ -417,107 +417,6 @@ Inductive red Σ Γ M : term -> Type :=
   We hence implement first an equality which considers casts and do a stripping
   phase of casts before checking equality. *)
 
-Definition R_universe_instance R :=
-  fun u u' => Forall2 R (List.map Universe.make u) (List.map Universe.make u').
-
-Inductive eq_term_upto_univ (Re Rle : Universe.t -> Universe.t -> Prop) : term -> term -> Type :=
-| eq_Rel n  :
-    eq_term_upto_univ Re Rle (tRel n) (tRel n)
-
-| eq_Evar e args args' :
-    All2 (eq_term_upto_univ Re Re) args args' ->
-    eq_term_upto_univ Re Rle (tEvar e args) (tEvar e args')
-
-| eq_Var id :
-    eq_term_upto_univ Re Rle (tVar id) (tVar id)
-
-| eq_Sort s s' :
-    Rle s s' ->
-    eq_term_upto_univ Re Rle (tSort s) (tSort s')
-
-| eq_Cast f f' k T T' :
-    eq_term_upto_univ Re Re f f' ->
-    eq_term_upto_univ Re Re T T' ->
-    eq_term_upto_univ Re Rle (tCast f k T) (tCast f' k T')
-
-| eq_App t t' args args' :
-    eq_term_upto_univ Re Rle t t' ->
-    All2 (eq_term_upto_univ Re Re) args args' ->
-    eq_term_upto_univ Re Rle (tApp t args) (tApp t' args')
-
-| eq_Const c u u' :
-    R_universe_instance Re u u' ->
-    eq_term_upto_univ Re Rle (tConst c u) (tConst c u')
-
-| eq_Ind i u u' :
-    R_universe_instance Re u u' ->
-    eq_term_upto_univ Re Rle (tInd i u) (tInd i u')
-
-| eq_Construct i k u u' :
-    R_universe_instance Re u u' ->
-    eq_term_upto_univ Re Rle (tConstruct i k u) (tConstruct i k u')
-
-| eq_Lambda na na' ty ty' t t' :
-    eq_term_upto_univ Re Re ty ty' ->
-    eq_term_upto_univ Re Rle t t' ->
-    eq_term_upto_univ Re Rle (tLambda na ty t) (tLambda na' ty' t')
-
-| eq_Prod na na' a a' b b' :
-    eq_term_upto_univ Re Re a a' ->
-    eq_term_upto_univ Re Rle b b' ->
-    eq_term_upto_univ Re Rle (tProd na a b) (tProd na' a' b')
-
-| eq_LetIn na na' ty ty' t t' u u' :
-    eq_term_upto_univ Re Re ty ty' ->
-    eq_term_upto_univ Re Re t t' ->
-    eq_term_upto_univ Re Rle u u' ->
-    eq_term_upto_univ Re Rle (tLetIn na ty t u) (tLetIn na' ty' t' u')
-
-| eq_Case ind par p p' c c' brs brs' :
-    eq_term_upto_univ Re Re p p' ->
-    eq_term_upto_univ Re Re c c' ->
-    All2 (fun x y =>
-      fst x = fst y ×
-      eq_term_upto_univ Re Re (snd x) (snd y)
-    ) brs brs' ->
-    eq_term_upto_univ Re Rle (tCase (ind, par) p c brs) (tCase (ind, par) p' c' brs')
-
-| eq_Proj p c c' :
-    eq_term_upto_univ Re Re c c' ->
-    eq_term_upto_univ Re Rle (tProj p c) (tProj p c')
-
-| eq_Fix mfix mfix' idx :
-    All2 (fun x y =>
-      eq_term_upto_univ Re Re x.(dtype) y.(dtype) ×
-      eq_term_upto_univ Re Re x.(dbody) y.(dbody) ×
-      x.(rarg) = y.(rarg)
-    ) mfix mfix' ->
-    eq_term_upto_univ Re Rle (tFix mfix idx) (tFix mfix' idx)
-
-| eq_CoFix mfix mfix' idx :
-    All2 (fun x y =>
-      eq_term_upto_univ Re Re x.(dtype) y.(dtype) ×
-      eq_term_upto_univ Re Re x.(dbody) y.(dbody) ×
-      x.(rarg) = y.(rarg)
-    ) mfix mfix' ->
-    eq_term_upto_univ Re Rle (tCoFix mfix idx) (tCoFix mfix' idx)
-
-| eq_Int i :
-    eq_term_upto_univ Re Rle (tInt i) (tInt i)
-
- | eq_Float f :
-    eq_term_upto_univ Re Rle (tFloat f) (tFloat f).
-
-Definition eq_term `{checker_flags} φ :=
-  eq_term_upto_univ (eq_universe φ) (eq_universe φ).
-
-(* ** Syntactic cumulativity up-to universes
-
-  We shouldn't look at printing annotations *)
-
-Definition leq_term `{checker_flags} φ :=
-  eq_term_upto_univ (eq_universe φ) (leq_universe φ).
-
 Fixpoint strip_casts t :=
   match t with
   | tEvar ev args => tEvar ev (List.map strip_casts args)
@@ -540,11 +439,11 @@ Fixpoint strip_casts t :=
   | tInt _ | tFloat _ => t
   end.
 
-Definition eq_term_nocast `{checker_flags} (φ : ConstraintSet.t) (t u : term) :=
-  eq_term φ (strip_casts t) (strip_casts u).
+Definition eq_term_nocast `{checker_flags} (Σ : global_env) (φ : ConstraintSet.t) (t u : term) :=
+  eq_term Σ φ (strip_casts t) (strip_casts u).
 
-Definition leq_term_nocast `{checker_flags} (φ : ConstraintSet.t) (t u : term) :=
-  leq_term φ (strip_casts t) (strip_casts u).
+Definition leq_term_nocast `{checker_flags} (Σ : global_env) (φ : ConstraintSet.t) (t u : term) :=
+  leq_term Σ φ (strip_casts t) (strip_casts u).
 
 (** ** Utilities for typing *)
 
@@ -562,10 +461,11 @@ Fixpoint destArity Γ (t : term) :=
 Reserved Notation " Σ ;;; Γ |- t : T " (at level 50, Γ, t, T at next level).
 Reserved Notation " Σ ;;; Γ |- t <= u " (at level 50, Γ, t, u at next level).
 Reserved Notation " Σ ;;; Γ |- t = u " (at level 50, Γ, t, u at next level).
+
 (** ** Cumulativity *)
 
 Inductive cumul `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
-| cumul_refl t u : leq_term (global_ext_constraints Σ) t u -> Σ ;;; Γ |- t <= u
+| cumul_refl t u : leq_term Σ (global_ext_constraints Σ) t u -> Σ ;;; Γ |- t <= u
 | cumul_red_l t u v : red1 Σ.1 Γ t v -> Σ ;;; Γ |- v <= u -> Σ ;;; Γ |- t <= u
 | cumul_red_r t u v : Σ ;;; Γ |- t <= v -> red1 Σ.1 Γ u v -> Σ ;;; Γ |- t <= u
 
@@ -577,7 +477,7 @@ where " Σ ;;; Γ |- t <= u " := (cumul Σ Γ t u) : type_scope.
  *)
 
 Inductive conv `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
- | conv_refl t u : eq_term (global_ext_constraints Σ) t u -> Σ ;;; Γ |- t = u
+ | conv_refl t u : eq_term Σ (global_ext_constraints Σ) t u -> Σ ;;; Γ |- t = u
  | conv_red_l t u v : red1 Σ.1 Γ t v -> Σ ;;; Γ |- v = u -> Σ ;;; Γ |- t = u
  | conv_red_r t u v : Σ ;;; Γ |- t = v -> red1 Σ.1 Γ u v -> Σ ;;; Γ |- t = u
 
@@ -603,18 +503,18 @@ Lemma congr_cumul_prod `{checker_flags} : forall Σ Γ na na' M1 M2 N1 N2,
     cumul Σ Γ (tProd na M1 M2) (tProd na' N1 N2).
 Proof. intros. todo "congr_cumul_prod". Defined.
 
-Definition eq_opt_term `{checker_flags} φ (t u : option term) :=
+Definition eq_opt_term `{checker_flags} Σ φ (t u : option term) :=
   match t, u with
-  | Some t, Some u => eq_term φ t u
+  | Some t, Some u => eq_term Σ φ t u
   | None, None => True
   | _, _ => False
   end.
 
-Definition eq_decl `{checker_flags} φ (d d' : context_decl) :=
-  eq_opt_term φ d.(decl_body) d'.(decl_body) * eq_term φ d.(decl_type) d'.(decl_type).
+Definition eq_decl `{checker_flags} Σ φ (d d' : context_decl) :=
+  eq_opt_term Σ φ d.(decl_body) d'.(decl_body) * eq_term Σ φ d.(decl_type) d'.(decl_type).
 
-Definition eq_context `{checker_flags} φ (Γ Δ : context) :=
-  All2 (eq_decl φ) Γ Δ.
+Definition eq_context `{checker_flags} Σ φ (Γ Δ : context) :=
+  All2 (eq_decl Σ φ) Γ Δ.
 
 (** ** Typing relation *)
 
@@ -931,7 +831,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     isCoFinite mdecl.(ind_finite) = false ->
     Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
     forall btys, map_option_out (build_branches_type ind mdecl idecl params u p) = Some btys ->
-    All2 (fun br bty => (br.1 = bty.1) * (Σ ;;; Γ |- br.2 : bty.2) * (Σ ;;; Γ |- bty.2 : tSort ps)) brs btys ->
+    All2 (fun br bty => (br.1 = bty.1) * (Σ ;;; Γ |- br.2 : bty.2) * (∑ s, Σ ;;; Γ |- bty.2 : tSort s)) brs btys ->
     Σ ;;; Γ |- tCase indnparrel p c brs : mkApps p (skipn npar args ++ [c])
 
 | type_Proj p c u :
@@ -1059,7 +959,7 @@ Proof.
   - exact (S (S (wf_local_size _ typing_size _ a))).
   - exact (S (S (wf_local_size _ typing_size _ a))).
   - exact (S (Nat.max d1 (Nat.max d2
-      (all2_size _ (fun x y p => Nat.max (typing_size Σ Γ (snd x) (snd y) (snd (fst p))) (typing_size _ _ _ _ (snd p))) a)))).
+      (all2_size _ (fun x y p => Nat.max (typing_size Σ Γ (snd x) (snd y) (snd (fst p))) (typing_size _ _ _ _ (snd p).π2)) a)))).
   - exact (S (Nat.max (Nat.max (wf_local_size _ typing_size _ a) (all_size _ (fun x  p => typing_size Σ _ _ _ p.π2) a0)) (all_size _ (fun x p => typing_size Σ _ _ _ p) a1))).
   - exact (S (Nat.max (Nat.max (wf_local_size _ typing_size _ a) (all_size _ (fun x  p => typing_size Σ _ _ _ p.π2) a0)) (all_size _ (fun x p => typing_size Σ _ _ _ p) a1))).
 Defined.
@@ -1273,7 +1173,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         forall btys, map_option_out (build_branches_type ind mdecl idecl params u p) = Some btys ->
         All2 (fun br bty => (br.1 = bty.1) *
                          (Σ ;;; Γ |- br.2 : bty.2) * P Σ Γ br.2 bty.2 *
-                         (Σ ;;; Γ |- bty.2 : tSort ps) * P Σ Γ bty.2 (tSort ps))
+                         ∑ s, (Σ ;;; Γ |- bty.2 : tSort s) * P Σ Γ bty.2 (tSort s))
              brs btys ->
         P Σ Γ (tCase (ind, npar, r) p c brs) (mkApps p (skipn npar args ++ [c]))) ->
 
@@ -1519,7 +1419,8 @@ Proof.
              --- intuition eauto.
              +++ eapply (X14 _ wfΓ _ _ t); eauto. simpl; auto with arith.
                  lia.
-             +++ eapply (X14 _ wfΓ _ _ t0); eauto. simpl; auto with arith.
+             +++ destruct s as [s Hs]. exists s; split; [auto|].
+                 eapply (X14 _ wfΓ _ _ Hs); eauto. simpl; auto with arith.
                  lia.
              --- apply IHa. auto. intros.
                  eapply (X14 _ wfΓ0 _ _ Hty). lia.

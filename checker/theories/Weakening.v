@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils Ast AstUtils Reflect Induction
-  LiftSubst UnivSubst Typing TypingWf LibHypsNaming.
+  LiftSubst UnivSubst TermEquality Typing TypingWf LibHypsNaming.
 From MetaCoq.Checker Require Import WeakeningEnv Closed.
 
 Require Import ssreflect.
@@ -176,9 +176,7 @@ Lemma lift_unfold_fix n k mfix idx narg fn :
 Proof.
   unfold unfold_fix.
   rewrite nth_error_map. destruct (nth_error mfix idx) eqn:Hdef; try congruence.
-  case_eq (isLambda (dbody d)); [|discriminate].
-  intros Hlam [= <- <-]. simpl.
-  rewrite isLambda_lift; tas.
+  intros [= <- <-]. simpl.
   repeat f_equal.
   rewrite (distr_lift_subst_rec _ _ n 0 k).
   rewrite fix_subst_length. f_equal.
@@ -686,19 +684,19 @@ Proof.
     + inversion b. eauto.
 Qed.
 
-Lemma lift_eq_term_upto_univ Re Rl n k T U :
-  eq_term_upto_univ Re Rl T U ->
-  eq_term_upto_univ Re Rl (lift n k T) (lift n k U).
+Lemma lift_eq_term_upto_univ Σ Re Rl n k T U napp :
+  eq_term_upto_univ_napp Σ Re Rl napp T U ->
+  eq_term_upto_univ_napp Σ Re Rl napp (lift n k T) (lift n k U).
 Proof.
-  induction T in n, k, U, Rl |- * using term_forall_list_rect;
+  induction T in napp, n, k, U, Rl |- * using term_forall_list_rect;
     inversion 1; simpl; try (now constructor).
   - constructor. subst. clear - X X1.
     induction l in X, args', X1 |- *.
     + inversion X1; constructor.
     + inversion X1. inversion X. subst.
       simpl. constructor. all: easy.
-  - constructor. easy. clear - X X2.
-    induction l in X, args', X2 |- *.
+  - constructor. rewrite map_length; easy. clear - X X2.
+    induction l in X, u', X2 |- *.
     + inversion X2; constructor.
     + inversion X2; inversion X; subst.
       now constructor.
@@ -708,49 +706,48 @@ Proof.
     + inversion X3; inversion X; subst.
       constructor. cbn; easy.
       easy.
-  - constructor; try easy. clear - X X1.
+  - constructor; try easy. clear -napp X X1.
     assert (XX:forall k k', All2
-                         (fun x y  => eq_term_upto_univ Re Re (dtype x) (dtype y) ×
-                        eq_term_upto_univ Re Re (dbody x) (dbody y) ×
-                                   rarg x = rarg y)
+                         (fun x y  => ((eq_term_upto_univ Σ Re Re (dtype x) (dtype y) ×
+                        eq_term_upto_univ Σ Re Re (dbody x) (dbody y)) ×
+                                   rarg x = rarg y) * eq_binder_annot (dname x) (dname y))
                          (map (map_def (lift n k) (lift n (#|m| + k'))) m)
                          (map (map_def (lift n k) (lift n (#|mfix'| + k'))) mfix'));
       [|now apply XX]. clear k.
     induction m in X, mfix', X1 |- *.
     + inversion X1; constructor.
     + inversion X1; inversion X; subst.
-      simpl. constructor. split. cbn; easy.
+      simpl. constructor. split. split. split. cbn; easy.
       cbn; erewrite All2_length by eassumption.
-      easy.
+      easy. easy. easy.
       unfold tFixProp in IHm. cbn.
       rewrite !plus_n_Sm. now apply IHm.
   - constructor; try easy. clear - X X1.
     assert (XX:forall k k', All2
-                         (fun x y  => eq_term_upto_univ Re Re (dtype x) (dtype y) ×
-                            eq_term_upto_univ Re Re (dbody x) (dbody y) ×
-                                   rarg x = rarg y)
+                         (fun x y  => ((eq_term_upto_univ Σ Re Re (dtype x) (dtype y) ×
+                            eq_term_upto_univ Σ Re Re (dbody x) (dbody y)) ×
+                                   rarg x = rarg y) * eq_binder_annot (dname x) (dname y))
                          (map (map_def (lift n k) (lift n (#|m| + k'))) m)
                          (map (map_def (lift n k) (lift n (#|mfix'| + k'))) mfix'));
       [|now apply XX]. clear k.
     induction m in X, mfix', X1 |- *.
     + inversion X1; constructor.
     + inversion X1; inversion X; subst.
-      simpl. constructor. split. cbn; easy.
+      simpl. constructor. split. split. split. cbn; easy.
       cbn; erewrite All2_length by eassumption.
-      easy.
+      easy. easy. easy.
       unfold tFixProp in IHm. cbn.
       rewrite !plus_n_Sm. now apply IHm.
 Qed.
 
-
-Lemma lift_eq_term `{checker_flags} ϕ n k T U :
-  eq_term ϕ T U -> eq_term ϕ (lift n k T) (lift n k U).
+Lemma lift_eq_term `{checker_flags} Σ ϕ n k T U :
+  eq_term Σ ϕ T U -> eq_term Σ ϕ (lift n k T) (lift n k U).
 Proof.
   apply lift_eq_term_upto_univ.
 Qed.
 
-Lemma lift_leq_term `{checker_flags} ϕ n k T U :
-  leq_term ϕ T U -> leq_term ϕ (lift n k T) (lift n k U).
+Lemma lift_leq_term `{checker_flags} Σ ϕ n k T U :
+  leq_term Σ ϕ T U -> leq_term Σ ϕ (lift n k T) (lift n k U).
 Proof.
   apply lift_eq_term_upto_univ.
 Qed.
@@ -769,16 +766,16 @@ Proof.
     econstructor 3; eauto.
 Qed.
 
-Lemma lift_eq_decl `{checker_flags} ϕ n k d d' :
-  eq_decl ϕ d d' -> eq_decl ϕ (lift_decl n k d) (lift_decl n k d').
+Lemma lift_eq_decl `{checker_flags} Σ ϕ n k d d' :
+  eq_decl Σ ϕ d d' -> eq_decl Σ ϕ (lift_decl n k d) (lift_decl n k d').
 Proof.
   destruct d, d', decl_body, decl_body0;
     unfold eq_decl, map_decl; cbn; intuition auto using lift_eq_term.
 Qed.
 
-Lemma lift_eq_context `{checker_flags} φ l l' n k :
-  eq_context φ l l' ->
-  eq_context φ (lift_context n k l) (lift_context n k l').
+Lemma lift_eq_context `{checker_flags} Σ φ l l' n k :
+  eq_context Σ φ l l' ->
+  eq_context Σ φ (lift_context n k l) (lift_context n k l').
 Proof.
   induction l in l', n, k |- *; intros; destruct l'; rewrite -> ?lift_context_snoc0.
   - constructor.
@@ -1084,6 +1081,7 @@ Proof.
     -- destruct idecl; simpl in *; auto.
     -- now rewrite -> !lift_mkApps in IHc.
     -- solve_all.
+       destruct b0 as [s [Hs IHs]]. exists s; eauto.
 
   - simpl.
     erewrite (distr_lift_subst_rec _ _ _ 0 #|Γ'|).
@@ -1112,16 +1110,14 @@ Proof.
       now specialize (Hs' _ _ _ wf eq_refl).
     * eapply All_map.
       eapply (All_impl X1); simpl.
-      intros x [[Hb Hlam] IH].
+      intros x [Hb IH].
       rewrite lift_fix_context.
       specialize (IH Γ (Γ' ,,,  (fix_context mfix)) Γ'' wf).
       rewrite app_context_assoc in IH. specialize (IH eq_refl).
-      split; auto.
       rewrite lift_context_app Nat.add_0_r app_context_assoc in IH.
       rewrite app_context_length fix_context_length in IH.
       rewrite lift_context_length fix_context_length.
       rewrite permute_lift; try lia. now rewrite (Nat.add_comm #|Γ'|).
-      now rewrite isLambda_lift.
     * red; rewrite <-H1. unfold wf_fixpoint.
       rewrite map_map_compose.
       now rewrite weakening_check_one_fix.

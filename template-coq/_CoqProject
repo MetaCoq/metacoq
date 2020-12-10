@@ -37,6 +37,7 @@ theories/UnivSubst.v
 theories/Pretty.v
 theories/EnvironmentTyping.v
 theories/WfInv.v
+theories/TermEquality.v
 theories/Typing.v
 theories/TypingWf.v
 

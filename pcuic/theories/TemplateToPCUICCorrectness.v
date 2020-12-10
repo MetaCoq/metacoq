@@ -175,7 +175,7 @@ Qed.
 
 Lemma trans_destArity ctx t :
   T.wf t ->
-  match TTy.destArity ctx t with
+  match AstUtils.destArity ctx t with
   | Some (args, s) =>
     destArity (trans_local ctx) (trans t) =
     Some (trans_local args, s)
@@ -591,7 +591,7 @@ Proof.
     destruct g => /= //. rewrite nth_error_map.
     destruct nth_error => /= //.
     move: (trans_destArity [] (Ast.ind_type o)).
-    destruct TTy.destArity as [[ctx ps]|] => /= //.
+    destruct AstUtils.destArity as [[ctx ps]|] => /= //.
     admit. admit.
     (* now rewrite context_assumptions_map. *)
   - unfold PCUICEquality.lookup_constructor, PCUICEquality.lookup_inductive, PCUICEquality.lookup_minductive.

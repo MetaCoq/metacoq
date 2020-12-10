@@ -55,7 +55,15 @@ Fixpoint string_of_term (t : term) :=
   | tInt i => "Int(" ^ string_of_prim_int i ^ ")"
   | tFloat f => "Float(" ^ string_of_float f ^ ")"
   end.
-
+  
+Fixpoint destArity Γ (t : term) :=
+  match t with
+  | tProd na t b => destArity (Γ ,, vass na t) b
+  | tLetIn na b b_ty b' => destArity (Γ ,, vdef na b b_ty) b'
+  | tSort s => Some (Γ, s)
+  | _ => None
+  end.
+  
 Definition decompose_app (t : term) :=
   match t with
   | tApp f l => (f, l)

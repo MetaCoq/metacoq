@@ -528,8 +528,8 @@ Proof.
 Qed.
 
 Lemma trans_destr_arity x:
-TT.destArity [] (trans x) 
-= option_map (fun '(xs,u) => (map trans_decl xs,u)) (PCUICAstUtils.destArity [] x).
+  AstUtils.destArity [] (trans x) 
+  = option_map (fun '(xs,u) => (map trans_decl xs,u)) (PCUICAstUtils.destArity [] x).
 Proof.
   remember (@nil PCUICAst.context_decl) as xs.
   replace (@nil context_decl) with (map trans_decl xs) by (now subst).
@@ -777,7 +777,7 @@ Proof.
     rewrite trans_lookup. destruct PCUICAst.lookup_env => //; simpl.
     destruct g => /= //. rewrite nth_error_map.
     destruct nth_error => /= //.
-    rewrite [destArity _ _]trans_destr_arity.
+    rewrite trans_destr_arity.
     destruct PCUICAstUtils.destArity as [[ctx ps]|] => /= //.
     now rewrite context_assumptions_map.
   - unfold PCUICEquality.lookup_constructor, PCUICEquality.lookup_inductive, PCUICEquality.lookup_minductive.

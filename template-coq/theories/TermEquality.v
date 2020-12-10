@@ -63,13 +63,6 @@ Definition lookup_constructor Σ ind k :=
   | _ => None
   end.
 
-Fixpoint destArity Γ (t : term) :=
-  match t with
-  | tProd na t b => destArity (Γ ,, vass na t) b
-  | tLetIn na b b_ty b' => destArity (Γ ,, vdef na b b_ty) b'
-  | tSort s => Some (Γ, s)
-  | _ => None
-  end.
 Definition global_variance Σ gr napp :=
   match gr with
   | IndRef ind =>

@@ -60,7 +60,7 @@ mrproper:
 template-coq:
 	$(MAKE) -C template-coq
 
-pcuic: template-coq
+pcuic: template-coq checker
 	$(MAKE) -C pcuic
 
 safechecker: template-coq pcuic

@@ -11,6 +11,8 @@ Set Warnings "+notation_overridden".
 Require Import PCUICToTemplate.
 From Coq Require Import ssreflect.
 
+Implicit Types cf : checker_flags. (* Use {cf} to parameterize by checker_flags where needed *)
+
 (* from Checker Generation to avoid dependencies *)
 
 Derive Signature for Template.Typing.typing.
@@ -24,8 +26,6 @@ Module S := PCUICAst.
 Module ST := PCUICTyping.
 Module T := Template.Ast.
 Module TT := Template.Typing.
-
-Local Existing Instance default_checker_flags.
 
 Module SL := PCUICLiftSubst.
 Module TL := Template.LiftSubst.
@@ -164,9 +164,9 @@ Proof.
   trivial.
 Qed.
 
-Lemma trans_consistent_instance_ext Σ decl u:
-ST.consistent_instance_ext Σ decl u ->
-TT.consistent_instance_ext (trans_global Σ) decl u.
+Lemma trans_consistent_instance_ext {cf} Σ decl u:
+  ST.consistent_instance_ext Σ decl u ->
+  TT.consistent_instance_ext (trans_global Σ) decl u.
 Proof.
   intros H.
   unfold consistent_instance_ext, ST.consistent_instance_ext in *.
@@ -790,7 +790,7 @@ Proof.
     destruct Nat.leb => //.
 Qed.  
 
-Lemma trans_eq_term_upto_univ :
+Lemma trans_eq_term_upto_univ {cf} :
   forall Σ Re Rle t u napp,
     PCUICEquality.eq_term_upto_univ_napp Σ Re Rle napp t u ->
     eq_term_upto_univ_napp (trans_global_decls Σ) Re Rle napp (trans t) (trans u).
@@ -812,14 +812,14 @@ Proof.
   - destruct p as [? []]; constructor.
 Qed.
 
-Lemma trans_leq_term Σ ϕ T U :
+Lemma trans_leq_term {cf} Σ ϕ T U :
   PCUICEquality.leq_term Σ ϕ T U ->
   leq_term (trans_global_decls Σ) ϕ (trans T) (trans U).
 Proof.
   eapply trans_eq_term_upto_univ ; eauto.
 Qed.
 
-Lemma trans_cumul Σ Γ T U :
+Lemma trans_cumul {cf} Σ Γ T U :
   cumul Σ Γ T U ->
   TT.cumul (trans_global Σ) (trans_local Γ) (trans T) (trans U).
 Proof.
@@ -873,9 +873,9 @@ Qed.
 
 
 
-Definition TTwf_local Σ Γ := TT.All_local_env (TT.lift_typing TT.typing Σ) Γ.
+Definition TTwf_local {cf} Σ Γ := TT.All_local_env (TT.lift_typing TT.typing Σ) Γ.
 
-Lemma trans_wf_local':
+Lemma trans_wf_local' {cf} :
   forall (Σ : PCUICAst.global_env_ext) Γ (wfΓ : wf_local Σ Γ),
     let P :=
         (fun Σ0 Γ0 _ (t T : PCUICAst.term) _ =>
@@ -893,7 +893,7 @@ Proof.
   - simpl. constructor; auto. red. destruct tu. exists x. auto.
 Qed.
 
-Lemma trans_wf_local_env Σ Γ :
+Lemma trans_wf_local_env {cf} Σ Γ :
   ST.All_local_env
         (ST.lift_typing
            (fun (Σ : PCUICAst.global_env_ext) Γ b ty =>
@@ -911,7 +911,7 @@ Proof.
     red. red in t1. destruct t1. eapply t2.
 Qed.
 
-Lemma trans_branches Σ Γ brs btys ps:
+Lemma trans_branches {cf} Σ Γ brs btys ps:
   All2
     (fun br bty : nat × PCUICAst.term =>
       (((br.1 = bty.1 × ST.typing Σ Γ br.2 bty.2)
@@ -935,7 +935,7 @@ Proof.
     + apply IHX.
 Qed.
 
-Lemma trans_mfix_All Σ Γ mfix:
+Lemma trans_mfix_All {cf} Σ Γ mfix:
   ST.All_local_env
     (ST.lift_typing
       (fun (Σ : PCUICEnvironment.global_env_ext)
@@ -967,7 +967,7 @@ Proof.
     assumption.
 Qed.
 
-Lemma trans_mfix_All2 Σ Γ mfix xfix:
+Lemma trans_mfix_All2 {cf} Σ Γ mfix xfix:
   All
   (fun d : def PCUICAst.term =>
     (ST.typing Σ (PCUICAst.app_context Γ (PCUICLiftSubst.fix_context xfix))
@@ -1001,7 +1001,7 @@ Proof.
     + auto.
 Qed.
 
-Lemma All_over_All Σ Γ wfΓ :
+Lemma All_over_All {cf} Σ Γ wfΓ :
   ST.All_local_env_over ST.typing
     (fun (Σ : PCUICAst.global_env_ext) (Γ : PCUICAst.context)
       (_ : wf_local Σ Γ) (t T : PCUICAst.term)
@@ -1296,12 +1296,11 @@ Axiom cofix_guard_trans :
   ST.cofix_guard Σ Γ mfix ->
   TT.cofix_guard (trans_global Σ) (trans_local Γ) (map (map_def trans trans) mfix).
   
-Theorem pcuic_to_template (Σ : S.global_env_ext) Γ t T :
+Theorem pcuic_to_template {cf} (Σ : S.global_env_ext) Γ t T :
   ST.wf Σ ->
   ST.typing Σ Γ t T ->
   TT.typing (trans_global Σ) (trans_local Γ) (trans t) (trans T).
 Proof.
-
   intros X X0.
   revert Σ X Γ t T X0.
   apply (ST.typing_ind_env (fun Σ Γ t T =>

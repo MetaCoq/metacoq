@@ -261,7 +261,9 @@ Section TypeOf.
 
     infer Γ (tCoFix mfix n) wt with inspect (nth_error mfix n) :=
       { | ret (Some f) => ret f.(dtype);
-        | ret None => ! }
+        | ret None => ! };
+
+    infer Γ (tPrim p) wt := !
   }.
   Proof.
     all:try clear infer.
@@ -655,6 +657,8 @@ Section TypeOf.
         congruence.
       
     - now eapply inversion_CoFix in HT as [decl [fg [hnth [htys [hbods [wf cum]]]]]]; auto.
+
+    - now eapply inversion_Prim in HT.
   Defined.
 
   Definition type_of Γ t wt : term := (infer Γ t wt).

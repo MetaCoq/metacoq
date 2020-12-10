@@ -343,6 +343,7 @@ Section Principality.
       rewrite nthe' in nthe; noconf nthe.
       repeat split; eauto.
       eapply type_CoFix; eauto.
+    - now apply inversion_Prim in hA.
   Qed.
 
   (** A weaker version that is often convenient to use. *)
@@ -594,7 +595,8 @@ Proof.
     eapply PCUICValidity.validity; eauto.
     eapply (type_Case _ _ (ind, npar)). eapply isdecl.
     all:eauto.
-    eapply (All2_impl X5); firstorder.
+    eapply (All2_impl X5); pcuicfo.
+    destruct b1 as [s [? ?]]. now exists s.
     eapply conv_cumul.
     eapply mkApps_conv_args; pcuic.
     eapply All2_app. simpl in *.
@@ -637,8 +639,9 @@ Proof.
     econstructor; eauto.
     eapply PCUICValidity.validity; eauto.
     econstructor. 2:eapply H0. all:eauto.
-    eapply (All_impl X0); firstorder.
-    eapply (All_impl X1); firstorder.
+    eapply (All_impl X0); pcuicfo.
+    destruct X2 as [s [Hs ?]]; now exists s.
+    eapply (All_impl X1); pcuicfo.
     eapply All2_nth_error in a; eauto.
     destruct a as [[[eqty _] _] _].
     constructor. eapply eq_term_empty_leq_term in eqty.
@@ -649,12 +652,13 @@ Proof.
     econstructor; eauto.
     eapply PCUICValidity.validity; eauto.
     eapply type_CoFix. 2:eapply H0. all:eauto.
-    eapply (All_impl X0); firstorder.
-    eapply (All_impl X1); firstorder.
+    eapply (All_impl X0); pcuicfo.
+    destruct X2 as [s [? ?]]; now exists s.
+    eapply (All_impl X1); pcuicfo.
     eapply All2_nth_error in a; eauto.
     destruct a as [[[eqty _] _] _].
     constructor. apply eq_term_empty_leq_term in eqty.
-    now eapply leq_term_empty_leq_term. Show Existentials.
+    now eapply leq_term_empty_leq_term.
 Qed.
 
 Lemma typing_eq_term {cf:checker_flags} (Σ : global_env_ext) Γ t t' T T' : 

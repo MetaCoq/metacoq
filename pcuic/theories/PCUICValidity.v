@@ -267,12 +267,11 @@ Section Validity.
       assumption.
       
     - (* Fix *)
-      eapply nth_error_all in X0; eauto.
-      firstorder auto.
+      eapply nth_error_all in X0 as [s Hs]; eauto.
+      pcuic.
     
     - (* CoFix *)
-      eapply nth_error_all in X0; eauto.
-      firstorder auto.
+      eapply nth_error_all in X0 as [s Hs]; pcuic.
 
     - (* Conv *)
       now exists s.

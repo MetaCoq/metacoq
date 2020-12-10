@@ -11,6 +11,7 @@ BinPosDef
 BinPos
 BinNat
 BinInt
+Int63
 Ascii
 String0
 Orders
@@ -35,6 +36,15 @@ MCRelations
 MCOption
 MCProd
 MCCompare
+Sumbool
+Zeven
+ZArith_dec
+Zbool
+Zpower
+SpecFloat
+PrimFloat
+FloatOps
+DecimalString
 MCString
 MCUtils
 Signature

@@ -455,6 +455,8 @@ Section Typecheck.
         wfcofix <- check_eq_true (wf_cofixpoint Σ.1 mfix) (Msg "Ill-formed cofixpoint: not producing values in a mutually coinductive family") ;;
         ret (dtype decl; _)
       end
+
+    | tPrim _ => raise (Msg "Primitive types are not supported")
     end.
 
   (* tRel *)

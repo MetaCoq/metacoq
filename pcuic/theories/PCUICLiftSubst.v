@@ -1793,6 +1793,7 @@ Hint Rewrite @subst_inst : sigma.
 Hint Rewrite shiftk_shift_l shiftk_shift : sigma.
 (* Hint Rewrite Upn_eq : sigma. *)
 
+(** Can't move to PCUICInduction because of fix_context definition *)
 Lemma term_forall_ctx_list_ind :
   forall P : context -> term -> Type,
     (forall Γ (n : nat), P Γ (tRel n)) ->
@@ -1813,6 +1814,7 @@ Lemma term_forall_ctx_list_ind :
     (forall Γ (s : projection) (t : term), P Γ t -> P Γ (tProj s t)) ->
     (forall Γ (m : mfixpoint term) (n : nat), tFixProp (P Γ) (P (Γ ,,, fix_context m)) m -> P Γ (tFix m n)) ->
     (forall Γ (m : mfixpoint term) (n : nat), tFixProp (P Γ) (P (Γ ,,, fix_context m)) m -> P Γ (tCoFix m n)) ->
+    (forall Γ p, P Γ (tPrim p)) ->
     forall Γ (t : term), P Γ t.
 Proof.
   intros. revert Γ t0.
@@ -1840,6 +1842,7 @@ Proof.
   destruct mfix; constructor.
   split. apply auxt. apply auxt. apply auxm.
 Defined.
+
 
 Fixpoint subst_app (t : term) (us : list term) : term :=
   match t, us with

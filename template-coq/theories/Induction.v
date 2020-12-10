@@ -30,6 +30,8 @@ Lemma term_forall_list_ind :
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tCoFix m n)) ->
+    (forall i, P (tInt i)) ->
+    (forall f, P (tFloat f)) ->    
     forall t : term, P t.
 Proof.
   intros until t. revert t.
@@ -87,45 +89,47 @@ Lemma term_wf_forall_list_ind :
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> Forall (fun def => isLambda (dbody def) = true) m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tCoFix m n)) ->
+    (forall i, P (tInt i)) ->
+    (forall f, P (tFloat f)) ->
     forall t : term, wf t -> P t.
 Proof.
-  pose proof I as H1.  (* can go away, to avoid renaming everything... *)
-  intros until t. revert t.
+  pose proof I as H1.   (* can go away, to avoid renaming everything... *)
+  intros until t. revert t. rename H16 into H16'.
   apply (term_forall_list_ind (fun t => wf t -> P t));
     intros; try solve [match goal with
                  H : _ |- _ => apply H
               end; auto].
-  apply H2. inv H17.
+  apply H2. inv H18.
   auto using lift_to_wf_list.
 
-  - inv H18; auto.
-  - inv H18; auto.
-  - inv H18; auto.
   - inv H19; auto.
-  - inv H18; auto.
+  - inv H19; auto.
+  - inv H19; auto.
+  - inv H20; auto.
+  - inv H19; auto.
     apply H8; auto.
     auto using lift_to_wf_list.
 
-  - inv H18; apply H12; auto.
+  - inv H19; apply H12; auto.
     red. red in X.
     induction X.
     + constructor.
-    + constructor. inv H21; auto. apply IHX. inv H21; auto.
+    + constructor. inv H22; auto. apply IHX. inv H22; auto.
 
-  - inv H17; auto.
+  - inv H18; auto.
 
   - inv H16; auto.
     apply H14. red. red in X.
     induction X; constructor.
-    + split; inv H17; intuition.
-    + apply IHX. now inv H17.
+    + split; inv H18; intuition.
+    + apply IHX. now inv H18.
     + eapply Forall_impl; tea. clear; intros; cbn in *; intuition.
 
   - inv H16; auto.
     apply H15. red. red in X.
     induction X; constructor.
-    + split; inv H17; intuition.
-    + apply IHX. now inv H17.
+    + split; inv H18; intuition.
+    + apply IHX. now inv H18.
 Qed.
 
 Definition tCaseBrsType {A} (P : A -> Type) (l : list (nat * A)) :=
@@ -155,6 +159,8 @@ Lemma term_forall_list_rect :
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat), tFixType P P m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat), tFixType P P m -> P (tCoFix m n)) ->
+    (forall i, P (tInt i)) ->
+    (forall f, P (tFloat f)) ->    
     forall t : term, P t.
 Proof.
   intros until t. revert t.

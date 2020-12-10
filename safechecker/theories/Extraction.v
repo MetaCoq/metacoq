@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-Require Import OrdersTac ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt.
-Require Import MetaCoq.Template.utils.
+From Coq Require Import OrdersTac ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt ExtrOCamlFloats.
+From MetaCoq.Template Require Import utils MC_ExtrOCamlInt63 (*b/c nameclash with `comparion` *).
 From MetaCoq.SafeChecker Require Import PCUICSafeChecker PCUICSafeConversion
      SafeTemplateChecker.
 
@@ -10,6 +10,7 @@ From MetaCoq.SafeChecker Require Import PCUICSafeChecker PCUICSafeConversion
     should use these same directives for consistency.
 *)
 
+(** Here we could extract uint63_from/to_model to the identity *)
 
 (* Ignore [Decimal.int] before the extraction issue is solved:
    https://github.com/coq/coq/issues/7017. *)
@@ -30,6 +31,10 @@ Extract Constant Equations.Init.pr1 => "fst".
 Extract Constant Equations.Init.pr2 => "snd".
 Extraction Inline Equations.Init.pr1 Equations.Init.pr2.
 Extraction Inline Equations.Prop.Logic.transport Equations.Prop.Logic.transport_r MCEquality.transport.
+Extraction Inline Equations.Prop.Logic.True_rect_dep Equations.Prop.Logic.False_rect_dep.
+
+(** This Inline is because of a problem of weak type variables (partial application?) *)
+Extraction Inline PCUICPrimitive.prim_val_reflect_eq.
 
 Extract Constant PCUICTyping.guard_checking => "{ fix_guard = (fun _ _ _ -> true); cofix_guard = (fun _ _ _ -> true) }".
 

@@ -7,7 +7,7 @@ From MetaCoq.Template Require Import config utils Ast AstUtils.
 
 Fixpoint wf_Inv (t : term) :=
   match t with
-  | tRel _ | tVar _ | tSort _ => True
+  | tRel _ | tVar _ | tSort _ | tInt _ | tFloat _ => True
   | tEvar n l => Forall wf l
   | tCast t k t' => wf t /\ wf t'
   | tProd na t b => wf t /\ wf b
@@ -61,7 +61,7 @@ Qed.
 
 Fixpoint wf_term (t : term) : bool :=
   match t with
-  | tRel _ | tVar _ => true
+  | tRel _ | tVar _ | tInt _ | tFloat _ => true
   | tEvar n l => forallb wf_term l
   | tSort u => true
   | tCast t k t' => wf_term t && wf_term t'

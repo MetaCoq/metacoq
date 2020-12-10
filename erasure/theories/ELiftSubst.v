@@ -32,8 +32,8 @@ Fixpoint lift n k t : term :=
   | tVar _ => t
   | tConst _ => t
   | tConstruct _ _ => t
+  | tPrim _ => t
   end.
-
 
 Notation lift0 n := (lift n 0).
 Definition up := lift 1 0.

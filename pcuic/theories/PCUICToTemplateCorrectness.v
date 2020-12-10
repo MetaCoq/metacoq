@@ -59,6 +59,7 @@ Proof.
   - f_equal; auto. red in X. solve_list.
   - f_equal; auto; red in X; solve_list.
   - f_equal; auto; red in X; solve_list.
+  - destruct p as [? []]; eauto.
 Qed.
 
 Definition on_fst {A B C} (f:A->C) (p:A×B) := (f p.1, p.2).
@@ -296,6 +297,7 @@ Proof.
       cbn in *.
       now rewrite e, e0.  
     + apply IHX.
+  - destruct p as [? []]; eauto.
 Qed.
 
 
@@ -355,6 +357,7 @@ Proof.
       destruct p.
       now rewrite e, e0.
     + apply IHX.
+  - destruct p as [? []]; eauto.
 Qed.
 
 Lemma trans_cst_type decl:
@@ -475,10 +478,12 @@ Proof.
       2: destruct (trans ty1);cbn;trivial.
       cbn. rewrite IHparams.
       cbn. now rewrite trans_subst.
+      destruct prim as [? []]; eauto.
     + destruct ty;cbn;trivial.
       2: destruct (trans ty1);cbn;trivial.
       cbn. destruct pars;trivial.
       cbn. now rewrite IHparams.
+      destruct prim as [? []]; eauto.
 Qed.
 
 
@@ -538,6 +543,7 @@ Proof.
   - rewrite <- IHx3.
     reflexivity.
   - destruct (trans x1);cbn;trivial.
+  - destruct prim as [? []]; eauto.
 Qed.
 
 Lemma trans_mkProd_or_LetIn a t:
@@ -966,7 +972,8 @@ in All (for wf_local assumptions)
       unfold map_def.
       reflexivity.
     + eapply All_map, (All_impl X0).
-      firstorder.
+      intuition auto. destruct X2 as [s [? ?]].
+      exists s; intuition auto.
     + fold trans.
       subst types.
       eapply trans_mfix_All2;eassumption.
@@ -978,7 +985,8 @@ in All (for wf_local assumptions)
       unfold map_def.
       reflexivity.
     + fold trans.
-      eapply All_map, (All_impl X0); firstorder.
+      eapply All_map, (All_impl X0).
+      intros x [s ?]; exists s; intuition auto.
     + fold trans;subst types.
       (* like trans_mfix_All2 without isLambda *)
       admit.

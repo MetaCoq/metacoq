@@ -1,8 +1,18 @@
+(* For primitive integers and floats  *)
+From Coq Require Numbers.Cyclic.Int63.Int63 Floats.PrimFloat.
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils BasicAst Ast.
 Require Import ssreflect.
+Require Import ZArith.
 
 (** Raw term printing *)
+
+Definition string_of_prim_int (i:Int63.int) : string := 
+  (* Better? DecimalString.NilZero.string_of_uint (BinNat.N.to_uint (BinInt.Z.to_N (Int63.to_Z i))). ? *)
+  string_of_Z (Numbers.Cyclic.Int63.Int63.to_Z i).
+
+Definition string_of_float (f : PrimFloat.float) :=
+  "<float>".
 
 Fixpoint string_of_term (t : term) :=
   match t with
@@ -42,6 +52,8 @@ Fixpoint string_of_term (t : term) :=
             ^ string_of_term c ^ ")"
   | tFix l n => "Fix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
   | tCoFix l n => "CoFix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
+  | tInt i => "Int(" ^ string_of_prim_int i ^ ")"
+  | tFloat f => "Float(" ^ string_of_float f ^ ")"
   end.
 
 Definition decompose_app (t : term) :=

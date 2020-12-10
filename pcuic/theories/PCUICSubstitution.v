@@ -372,7 +372,7 @@ Proof.
         eapply closed_upwards; eauto; lia.
       + simpl in X. rewrite -X in cp.
         eapply forallb_All in cp. eapply All_map_id; eauto.
-        eapply (All_impl cp); firstorder auto.
+        eapply (All_impl cp); pcuicfo.
         destruct x; unfold on_snd; simpl; f_equal.
         apply subst_closedn. rewrite context_assumptions_fold.
         eapply closed_upwards; eauto; lia.
@@ -1004,14 +1004,14 @@ Lemma subst_decompose_prod_assum_rec ctx t s k :
   (decompose_prod_assum (subst_context s k ctx) (subst s (length ctx + k) t) =
   (subst_context s k ctx' ,,, ctx'', t'')).
 Proof.
-  induction t in ctx, k |- *; simpl; try solve [ eexists _, _; firstorder eauto ].
+  induction t in ctx, k |- *; simpl; try solve [ eexists _, _; pcuicfo ].
   - elim: leb_spec_Set => comp.
     + destruct (nth_error s (n - (#|ctx| + k))) eqn:Heq.
       * destruct decompose_prod_assum eqn:Heq'.
         eexists _, _; intuition eauto.
         now rewrite decompose_prod_assum_ctx Heq'.
-      * eexists _,_; firstorder eauto.
-    + eexists _,_; firstorder eauto.
+      * eexists _,_; pcuicfo.
+    + eexists _,_; pcuicfo.
   - destruct decompose_prod_assum eqn:Heq.
     rewrite decompose_prod_assum_ctx in Heq.
     destruct (decompose_prod_assum [] t2) eqn:Heq'.

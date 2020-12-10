@@ -80,6 +80,9 @@ struct
   let mkProj kn t =
     constr_mkApp (tProj, [| kn; t |])
 
+  let mkInt i = i
+  let mkFloat f = f
+
   let quote_option ty = function
     | Some tm -> constr_mkApp (cSome, [|ty; tm|])
     | None -> constr_mkApp (cNone, [|ty|])
@@ -108,6 +111,10 @@ struct
 
   let quote_bool b =
     if b then Lazy.force ttrue else Lazy.force tfalse
+
+  let quote_int63 i = constr_mkApp (tInt, [| Constr.mkInt i |])
+
+  let quote_float64 f = constr_mkApp (tFloat, [| Constr.mkFloat f |])
 
   let quote_char i =
     constr_mkApp (tAscii, Array.of_list (List.map (fun m -> quote_bool ((i land m) = m))

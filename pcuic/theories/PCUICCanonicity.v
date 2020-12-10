@@ -738,8 +738,8 @@ Section Normalization.
     - simpl in cl; move/andP: cl => [clf cla].
       eapply inversion_App in typed as [na [A [B [Hf _]]]]; eauto.
     - simpl in cl; move/andP: cl => [/andP[_ clc] _].
-      eapply inversion_Case in typed; firstorder eauto.
-    - eapply inversion_Proj in typed; firstorder auto.
+      eapply inversion_Case in typed; pcuicfo eauto.
+    - eapply inversion_Proj in typed; pcuicfo auto.
   Qed.
 
   Lemma ind_normal_constructor t i u args : 
@@ -1065,6 +1065,7 @@ Section WeakNormalization.
     - exfalso; eapply invert_ind_ind; eauto.
     - exfalso; eapply invert_fix_ind; eauto.
     - now rewrite head_mkApps /head /=.
+    - now eapply inversion_Prim in typed.
   Qed.
 
   Lemma wh_neutral_empty t ty : axiom_free Σ ->

@@ -11,7 +11,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICInduction PCUICLiftSubst.
 Instance subst_instance_constr : UnivSubst term :=
   fix subst_instance_constr u c {struct c} : term :=
   match c with
-  | tRel _ | tVar _  => c
+  | tRel _ | tVar _ => c
   | tEvar ev args => tEvar ev (List.map (subst_instance_constr u) args)
   | tSort s => tSort (subst_instance_univ u s)
   | tConst c u' => tConst c (subst_instance_instance u u')
@@ -32,6 +32,7 @@ Instance subst_instance_constr : UnivSubst term :=
   | tCoFix mfix idx =>
     let mfix' := List.map (map_def (subst_instance_constr u) (subst_instance_constr u)) mfix in
     tCoFix mfix' idx
+  | tPrim _ => c
   end.
 
 Instance subst_instance_decl : UnivSubst context_decl

@@ -644,7 +644,7 @@ Section Wcbv.
   (*   intros H; depind H; try solve_discr. *)
   (*   - depelim H. *)
   (*   - depelim H. *)
-  (*   - eexists _, _; firstorder eauto. *)
+  (*   - eexists _, _; pcuicfo eauto. *)
   (*   - now depelim H. *)
   (*   - discriminate. *)
   (* Qed. *)

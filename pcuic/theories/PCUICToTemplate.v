@@ -1,8 +1,21 @@
 (* Distributed under the terms of the MIT license. *)
+From Coq Require Import Int63 FloatOps FloatAxioms.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils.
 Set Warnings "-notation-overridden".
 From MetaCoq.Template Require Import config utils AstUtils BasicAst Ast.
 Set Warnings "+notation-overridden".
+
+Definition uint63_from_model (i : uint63_model) : Int63.int :=
+  Int63.of_Z (proj1_sig i).
+
+Definition float64_from_model (f : float64_model) : PrimFloat.float :=
+  FloatOps.SF2Prim (proj1_sig f).
+
+Definition trans_prim (t : prim_val) : Ast.term :=
+  match t.π2 with
+  | primIntModel i => Ast.tInt (uint63_from_model i)
+  | primFloatModel f => Ast.tFloat (float64_from_model f)
+  end.
 
 Fixpoint trans (t : PCUICAst.term) : Ast.term :=
   match t with
@@ -27,6 +40,7 @@ Fixpoint trans (t : PCUICAst.term) : Ast.term :=
   | PCUICAst.tCoFix mfix idx =>
     let mfix' := List.map (map_def trans trans) mfix in
     tCoFix mfix' idx
+  | PCUICAst.tPrim i => trans_prim i
   end.
 
 Definition trans_decl (d : PCUICAst.context_decl) :=

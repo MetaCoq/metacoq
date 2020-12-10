@@ -2592,7 +2592,7 @@ Proof.
   - subst c.
     exists (lift_constraint #|u| x).
     rewrite -> In_lift_constraints.
-    firstorder eauto.
+    pcuicfo eauto.
     specialize (clcstra _ H0).
     simpl in *.
     destruct x as [[l c] r]; rewrite /subst_instance_cstr; simpl.
@@ -2615,8 +2615,9 @@ Proof.
   subst.
   exists x; intuition eauto.
   now rewrite ConstraintSetFact.add_iff.
-  firstorder eauto.
-  subst. exists x0; firstorder.
+  destruct H0 as [c' [-> ?]].
+  eexists c'; split; firstorder eauto.
+  now rewrite ConstraintSetFact.add_iff.
 Qed.
 
 Lemma subst_instance_variance_cstrs l u i i' :

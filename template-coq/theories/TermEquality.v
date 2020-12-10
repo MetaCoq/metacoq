@@ -208,7 +208,7 @@ Inductive eq_term_upto_univ_napp Σ (Re Rle : Universe.t -> Universe.t -> Prop) 
     eq_term_upto_univ_napp Σ Re Rle napp (tCoFix mfix idx) (tCoFix mfix' idx)
     
 | eq_Cast t1 c t2 t1' c' t2' :
-  eq_term_upto_univ_napp Σ Re Rle napp t1 t1' ->
+  eq_term_upto_univ_napp Σ Re Re napp t1 t1' ->
   eq_cast_kind c c' ->
   eq_term_upto_univ_napp Σ Re Re 0 t2 t2' ->
   eq_term_upto_univ_napp Σ Re Rle napp (tCast t1 c t2) (tCast t1' c' t2')

@@ -437,7 +437,7 @@ Section Erase.
       eexists; eauto.
     - eapply inversion_Fix in Ht as (? & ? & ? & ? & ? & ?); auto.
       eapply All_In in a0; eauto.
-      destruct a0 as [[a0 _]]. eexists; eauto.
+      destruct a0 as [a0]. eexists; eauto.
     - eapply inversion_CoFix in Ht as (? & ? & ? & ? & ? & ?); auto.
       eapply All_In in a0; eauto.
       destruct a0 as [a0]. eexists; eauto.
@@ -800,7 +800,7 @@ Proof.
     eapply Forall2_All2 in H.
     eapply All2_All_mix_left in H; eauto.
     eapply All2_In_right in H; eauto.
-    destruct H as [[def [[Hty _] Hdef]]].
+    destruct H as [[def [Hty Hdef]]].
     eapply Hdef; eauto.
 
   - apply inversion_CoFix in wt as (?&?&?&?&?&?&?); eauto.

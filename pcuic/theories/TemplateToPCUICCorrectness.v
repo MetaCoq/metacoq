@@ -1,5 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils Ast TypingWf WfInv.
+From MetaCoq.Template Require TermEquality.
 Set Warnings "-notation-overridden".
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCumulativity
      PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICTyping TemplateToPCUIC
@@ -7,10 +8,10 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCumulativity
 Set Warnings "+notation-overridden".
 
 From Equations.Prop Require Import DepElim.
-
 Implicit Types cf : checker_flags.
 
 Module T := Template.Ast.
+Module TEq := Template.TermEquality.
 Module TTy := Template.Typing.
 Module TEnv := Template.Ast.TemplateEnvironment.
 
@@ -518,7 +519,7 @@ Proof.
   rewrite mkApps_app. simpl. reflexivity.
 Qed.
 
-Derive Signature for TTy.eq_term_upto_univ.
+Derive Signature for TEq.eq_term_upto_univ_napp.
 
 Lemma leq_term_mkApps {cf} Σ ϕ t u t' u' :
   eq_term Σ ϕ t t' -> All2 (eq_term Σ ϕ) u u' ->
@@ -563,38 +564,78 @@ Proof.
       * assumption.
 Qed.
 
+Lemma trans_lookup Σ cst :
+  lookup_env (trans_global_decls Σ) cst = option_map trans_global_decl (Ast.lookup_env Σ cst).
+Proof.
+  cbn in *.
+  induction Σ.
+  - reflexivity.
+  - cbn.
+    unfold eq_kername in *; destruct kername_eq_dec; subst.
+    + destruct a; auto.
+    + now rewrite IHΣ.
+Qed.
+
+Lemma trans_R_global_instance {cf} Σ Re Rle gref napp u u' :
+  TTy.on_global_env (fun Σ => wf_decl_pred) Σ ->
+  TEq.R_global_instance Σ Re Rle gref napp u u' ->
+  R_global_instance (trans_global_decls Σ) Re Rle gref napp u u'.
+Proof.
+  intros wfe.
+  unfold PCUICEquality.R_global_instance, PCUICEquality.global_variance.
+  unfold TEq.R_global_instance, TEq.global_variance.
+  destruct gref; simpl; auto.
+  - unfold PCUICEquality.lookup_inductive, PCUICEquality.lookup_minductive.
+    unfold TEq.lookup_inductive, TEq.lookup_minductive.
+    rewrite trans_lookup. destruct Ast.lookup_env => //; simpl.
+    destruct g => /= //. rewrite nth_error_map.
+    destruct nth_error => /= //.
+    move: (trans_destArity [] (Ast.ind_type o)).
+    destruct TTy.destArity as [[ctx ps]|] => /= //.
+    admit. admit.
+    (* now rewrite context_assumptions_map. *)
+  - unfold PCUICEquality.lookup_constructor, PCUICEquality.lookup_inductive, PCUICEquality.lookup_minductive.
+    unfold TEq.lookup_constructor, TEq.lookup_inductive, TEq.lookup_minductive.
+    rewrite trans_lookup. destruct Ast.lookup_env => //; simpl.
+    destruct g => /= //. rewrite nth_error_map.
+    destruct nth_error => /= //.
+    rewrite nth_error_map.
+    destruct nth_error => /= //.
+    destruct p as [[id t] nargs]; simpl.
+    destruct Nat.leb => //.
+Admitted.
+
+
 (* TODO update Template Coq's eq_term to reflect PCUIC's cumulativity *)
 Lemma trans_eq_term_upto_univ {cf} :
   forall Σ Re Rle t u napp,
-    T.wf t ->
+  TTy.on_global_env (fun Σ => wf_decl_pred) Σ ->
+  T.wf t ->
     T.wf u ->
-    TTy.eq_term_upto_univ Re Rle t u ->
-    eq_term_upto_univ_napp Σ Re Rle napp (trans t) (trans u).
+    TEq.eq_term_upto_univ_napp Σ Re Rle napp t u ->
+    eq_term_upto_univ_napp (trans_global_decls Σ) Re Rle napp (trans t) (trans u).
 Proof.
-Admitted.
-(* intros Σ Re Rle t u napp wt wu e.
+  intros Σ Re Rle t u napp wfΣ wt wu e.
   induction t using Induction.term_forall_list_rect in Rle, napp, wt, u, wu, e |- *.
   all: invs e; cbn.
   all: try solve [ constructor ; auto ].
+  all: repeat (match goal with 
+    | H : T.wf (_ _) |- _ => apply wf_inv in H; simpl in H
+    | H : _ /\ _ |- _ => destruct H
+  end).
   all: try solve [
-    repeat constructor ;
+    repeat constructor ; auto ;
     match goal with
     | ih : forall Rle (u : Tterm) (napp : nat), _ |- _ =>
-      eapply ih ; [
-        inversion wt ; assumption
-      | inversion wu ; assumption
-      | assumption
-      ]
+      eapply ih ; eauto
     end
   ].
   - constructor.
-    assert (w1 : All T.wf l).
-    { eapply Forall_All. inversion wt. assumption. }
-    assert (w2 : All T.wf args').
-    { eapply Forall_All. inversion wu. assumption. }
+    apply Forall_All in wt.
+    apply Forall_All in wu.
     pose proof (All2_All_mix_left X X0) as h1. simpl in h1.
-    pose proof (All2_All_mix_left w1 h1) as h2.
-    pose proof (All2_All_mix_right w2 h2) as h3.
+    pose proof (All2_All_mix_left wt h1) as h2.
+    pose proof (All2_All_mix_right wu h2) as h3.
     simpl in h3.
     eapply All2_map.
     eapply All2_impl. 1: exact h3.
@@ -602,43 +643,33 @@ Admitted.
     intros ? ? [[? [ih ?]] ?].
     simpl in *.
     eapply ih. all: auto.
-  -s apply eq_term_eq_term_napp.
-    + eapply IHt.
-      * inversion wt. assumption.
-      * inversion wu. assumption.
-      * assumption.
+  - repeat constructor.
+    eapply eq_term_upto_univ_impl. 5:eauto. all:try typeclasses eauto. auto.
+    todo "update template".
+  - eapply eq_term_upto_univ_napp_mkApps.
+    + rewrite map_length. now eapply IHt.
     + pose proof (All2_All_mix_left X X1) as h.
       simpl in h.
-      assert (wl : Forall T.wf l).
-      { inversion wt. assumption. }
-      assert (wargs' : Forall T.wf args').
-      { inversion wu. assumption. }
-      apply Forall_All in wl.
-      apply Forall_All in wargs'.
-      pose proof (All2_All_mix_left wl h) as h1.
-      pose proof (All2_All_mix_right wargs' h1) as h2.
+      apply Forall_All in H6.
+      apply Forall_All in H2.
+      pose proof (All2_All_mix_left H6 h) as h1.
+      pose proof (All2_All_mix_right H2 h1) as h2.
       simpl in h2.
       eapply All2_map.
       eapply All2_impl. 1: exact h2.
       simpl.
       intros u v [[? [ih ?]] ?].
       eapply ih. all: auto.
-  - constructor. todounivs.
-  - constructor. todounivs.
+  - constructor. apply trans_R_global_instance; auto.
+  - constructor. apply trans_R_global_instance; auto.
   - constructor. all: try solve [
       match goal with
       | ih : forall Rle u, _ |- _ =>
-        eapply ih ; [
-          inversion wt ; assumption
-        | inversion wu ; assumption
-        | assumption
-        ]
+        eapply ih ; auto
       end
     ].
-    assert (wl : All (T.wf ∘ snd) l).
-    { eapply Forall_All. inversion wt. assumption. }
-    assert (wbrs' : All (T.wf ∘ snd) brs').
-    { eapply Forall_All. inversion wu. assumption. }
+    assert (wl : All (T.wf ∘ snd) l) by solve_all.
+    assert (wbrs' : All (T.wf ∘ snd) brs') by solve_all.
     pose proof (All2_All_mix_left X X2) as h1. simpl in h1.
     pose proof (All2_All_mix_left wl h1) as h2.
     pose proof (All2_All_mix_right wbrs' h2) as h3.
@@ -653,20 +684,17 @@ Admitted.
       w1 :
         All (fun def =>
           T.wf (dtype def) /\
-          T.wf (dbody def) /\
-          T.isLambda (dbody def) = true
+          T.wf (dbody def)
         ) m
     ).
-    { eapply Forall_All. inversion wt. assumption. }
+    { solve_all. }
     assert (
       w2 :
         All (fun def =>
           T.wf (dtype def) /\
-          T.wf (dbody def) /\
-          T.isLambda (dbody def) = true
-        ) mfix'
+          T.wf (dbody def)) mfix'
     ).
-    { eapply Forall_All. inversion wu. assumption. }
+    { solve_all. }
     pose proof (All2_All_mix_left X X0) as h1. simpl in h1.
     pose proof (All2_All_mix_left w1 h1) as h2.
     pose proof (All2_All_mix_right w2 h2) as h3.
@@ -674,7 +702,7 @@ Admitted.
     eapply All2_map.
     eapply All2_impl. 1: exact h3.
     simpl.
-    intros [? ? ? ?] [? ? ? ?] [[[? [? ?]] [[ih1 ih2] [? [? ?]]]] [? [? ?]]].
+    intros [? ? ? ?] [? ? ? ?] [[[? ?] [[ih1 ih2] [? ?]]] [? ?]].
     simpl in *.
     intuition eauto.
   - constructor.
@@ -682,12 +710,12 @@ Admitted.
       w1 :
         All (fun def => T.wf (dtype def) /\ T.wf (dbody def)) m
     ).
-    { eapply Forall_All. inversion wt. assumption. }
+    { by eapply Forall_All. }
     assert (
       w2 :
         All (fun def => T.wf (dtype def) /\ T.wf (dbody def)) mfix'
     ).
-    { eapply Forall_All. inversion wu. assumption. }
+    { by eapply Forall_All. }
     pose proof (All2_All_mix_left X X0) as h1. simpl in h1.
     pose proof (All2_All_mix_left w1 h1) as h2.
     pose proof (All2_All_mix_right w2 h2) as h3.
@@ -695,22 +723,24 @@ Admitted.
     eapply All2_map.
     eapply All2_impl. 1: exact h3.
     simpl.
-    intros [? ? ? ?] [? ? ? ?] [[[? ?] [[ih1 ih2] [? [? ?]]]] [? ?]].
+    intros [? ? ? ?] [? ? ? ?] [[[? ?] [[ih1 ih2] [? ?]]] [? ?]].
     simpl in *.
     intuition eauto.
-Qed.  *)
+Qed.
 
 Lemma trans_leq_term {cf} Σ ϕ T U :
-  T.wf T -> T.wf U -> TTy.leq_term Σ ϕ T U ->
-  leq_term Σ ϕ (trans T) (trans U).
+  TTy.on_global_env (fun Σ => wf_decl_pred) Σ ->
+  T.wf T -> T.wf U -> TEq.leq_term Σ ϕ T U ->
+  leq_term (trans_global_decls Σ) ϕ (trans T) (trans U).
 Proof.
   intros HT HU H.
   eapply trans_eq_term_upto_univ ; eauto.
 Qed.
 
 Lemma trans_eq_term {cf} Σ φ t u :
-    T.wf t -> T.wf u -> TTy.eq_term φ t u ->
-    eq_term Σ φ (trans t) (trans u).
+  TTy.on_global_env (fun Σ => wf_decl_pred) Σ ->
+  T.wf t -> T.wf u -> TEq.eq_term Σ φ t u ->
+  eq_term (trans_global_decls Σ) φ (trans t) (trans u).
 Proof.
   intros HT HU H.
   eapply trans_eq_term_upto_univ ; eauto.
@@ -718,12 +748,13 @@ Qed.
 
 Lemma trans_eq_term_list {cf}:
   forall Σ φ l l',
+    TTy.on_global_env (fun Σ => wf_decl_pred) Σ ->
     List.Forall T.wf l ->
     List.Forall T.wf l' ->
-    All2 (TTy.eq_term φ) l l' ->
-    All2 (eq_term Σ φ) (List.map trans l) (List.map trans l').
+    All2 (TEq.eq_term Σ φ) l l' ->
+    All2 (eq_term (trans_global_decls Σ) φ) (List.map trans l) (List.map trans l').
 Proof.
-  intros Σ φ l l' w w' h.
+  intros Σ φ l l' wfΣ w w' h.
   eapply All2_map.
   apply Forall_All in w. apply Forall_All in w'.
   pose proof (All2_All_mix_left w h) as h1.
@@ -773,15 +804,13 @@ Proof.
 Qed.
 
 Lemma trans_unfold_fix mfix idx narg fn :
-  List.Forall (fun def : def Tterm => T.wf (dtype def) /\ T.wf (dbody def) /\
-              T.isLambda (dbody def) = true) mfix ->
+  List.Forall (fun def : def Tterm => T.wf (dtype def) /\ T.wf (dbody def)) mfix ->
   TTy.unfold_fix mfix idx = Some (narg, fn) ->
   unfold_fix (map (map_def trans trans) mfix) idx = Some (narg, trans fn).
 Proof.
   unfold TTy.unfold_fix, unfold_fix. intros wffix.
   rewrite nth_error_map. destruct (nth_error mfix idx) eqn:Hdef => //.
   cbn.
-  destruct (Ast.isLambda (dbody d)); [|discriminate].
   intros [= <- <-]. simpl.
   repeat f_equal.
   rewrite trans_subst.
@@ -863,8 +892,9 @@ Proof.
   - rewrite trans_mkApps; eauto with wf; simpl.
     erewrite trans_iota_red; eauto. repeat constructor.
 
-  - simpl. eapply red_fix. wf_inv H3.
-    now apply trans_unfold_fix; eauto.
+  - simpl. rewrite trans_mkApps.
+    eapply red_fix. wf_inv H3.
+    apply trans_unfold_fix; eauto.
     now apply trans_is_constructor.
 
   - apply wf_mkApps_napp in H1; auto.
@@ -1117,13 +1147,13 @@ Qed.
 
 Axiom fix_guard_trans :
   forall Σ Γ mfix,
-    TTy.fix_guard mfix ->
-    fix_guard Σ Γ (map (map_def trans trans) mfix).
+    TTy.fix_guard Σ Γ mfix ->
+    fix_guard (trans_global Σ) (trans_local Γ) (map (map_def trans trans) mfix).
 
 Axiom cofix_guard_trans :
   forall Σ Γ mfix,
-    TTy.cofix_guard mfix ->
-    cofix_guard Σ Γ (map (map_def trans trans) mfix).
+    TTy.cofix_guard Σ Γ mfix ->
+    cofix_guard (trans_global Σ) (trans_local Γ) (map (map_def trans trans) mfix).
   
 Lemma trans_global_decl_universes d : 
   TTy.universes_decl_of_decl d = 
@@ -1248,6 +1278,7 @@ Proof.
     -- apply trans_build_branches_type in H3.
        rewrite firstn_map. exact H3.
     -- eapply All2_map. solve_all.
+       destruct b0 as [s [Hs IHs]]; eauto.
 
   - destruct pdecl as [arity ty]; simpl in *.
     pose proof (TypingWf.declared_projection_wf _ _ _ _ _ isdecl).
@@ -1280,7 +1311,6 @@ Proof.
        rewrite H2. rewrite /trans_local map_length.
        rewrite /trans_local map_app in X3.
        rewrite <- trans_lift. apply X3; auto.
-       rdest. destruct (dbody x); simpl in *; congruence.
     -- todo "wffix".
     -- destruct decl; reflexivity.
 
@@ -1292,14 +1322,14 @@ Proof.
       f_equal. apply mapi_ext => i x.
       simpl. rewrite trans_lift. reflexivity. }
     econstructor; eauto.
-    -- eapply cofix_guard_trans.
-    -- now rewrite nth_error_map H.
+    -- now eapply cofix_guard_trans.
+    -- now rewrite nth_error_map H0.
     -- eapply trans_wf_local; eauto.
     -- eapply All_map, (All_impl X0).
        intros x [s [Hs Hts]]. now exists s.
     -- apply All_map. eapply All_impl; eauto.
        intuition eauto 3 with wf.
-       rewrite H1. rewrite /trans_local map_length.
+       rewrite H2. rewrite /trans_local map_length.
        unfold Template.Ast.app_context in X3.
        rewrite /trans_local map_app in X3.
        cbn. rewrite <- trans_lift. now apply X3.

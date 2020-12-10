@@ -565,8 +565,7 @@ Proof.
     depelim typ.
     depelim er.
     depelim all_deps.
-    destruct p.
-    destruct p0 as (?&?&?).
+    destruct p as (?&?&?).
     now constructor; eauto.
   - constructor.
     apply inversion_CoFix in wt as (?&?&?&?&?&?&?); eauto.

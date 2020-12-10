@@ -449,15 +449,6 @@ Definition leq_term_nocast `{checker_flags} (Σ : global_env) (φ : ConstraintSe
 
 (** Decompose an arity into a context and a sort *)
 
-Fixpoint destArity Γ (t : term) :=
-  match t with
-  | tProd na t b => destArity (Γ ,, vass na t) b
-  | tLetIn na b b_ty b' => destArity (Γ ,, vdef na b b_ty) b'
-  | tSort s => Some (Γ, s)
-  | _ => None
-  end.
-
-
 Reserved Notation " Σ ;;; Γ |- t : T " (at level 50, Γ, t, T at next level).
 Reserved Notation " Σ ;;; Γ |- t <= u " (at level 50, Γ, t, u at next level).
 Reserved Notation " Σ ;;; Γ |- t = u " (at level 50, Γ, t, u at next level).

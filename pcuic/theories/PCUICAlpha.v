@@ -471,24 +471,21 @@ Section Alpha.
           destruct r as [[s [Hs IH]] [[[eqty eqann] eqbod] eqrarg]].
           exists s; apply IH; eauto.
         * solve_all.
-          ** destruct a0 as [s [Hs IH]].
-            specialize (IH _ a1).
-            specialize (b _ b3).
-            eapply context_conversion; eauto.
-            eapply (type_Cumul' (lift0 #|fix_context mfix| (dtype x))); auto.
-            exists s. rewrite <-H.
-            eapply (weakening _ _ _ _ (tSort _)); eauto. now eapply typing_wf_local in b.
-            apply cumul_refl. rewrite <- H.
-            eapply eq_term_upto_univ_lift.
-            eapply eq_term_upto_univ_empty_impl.
-            4: intuition eauto.
-            all: intros ? ? [].
-            *** eapply eq_universe_refl.
-            *** eapply leq_universe_refl.
-            *** eapply leq_universe_refl.
-          ** eapply isLambda_eq_term_l.
-            --- eassumption.
-            --- intuition eauto.
+          destruct a0 as [s [Hs IH]].
+          specialize (IH _ a).
+          specialize (b _ b2).
+          eapply context_conversion; eauto.
+          eapply (type_Cumul' (lift0 #|fix_context mfix| (dtype x))); auto.
+          exists s. rewrite <-H.
+          eapply (weakening _ _ _ _ (tSort _)); eauto. now eapply typing_wf_local in b.
+          apply cumul_refl. rewrite <- H.
+          eapply eq_term_upto_univ_lift.
+          eapply eq_term_upto_univ_empty_impl.
+          4: intuition eauto.
+          all: intros ? ? [].
+          *** eapply eq_universe_refl.
+          *** eapply leq_universe_refl.
+          *** eapply leq_universe_refl.
         * revert wffix.
           unfold wf_fixpoint.
           enough (map check_one_fix mfix = map check_one_fix mfix') as ->; auto.

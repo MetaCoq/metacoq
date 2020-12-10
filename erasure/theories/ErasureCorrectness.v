@@ -141,11 +141,11 @@ Proof.
     eapply b0.
     subst types.
     eapply conv_context_app; auto. eapply typing_wf_local; eassumption.
-    eapply typing_wf_local in a1. subst types.
+    eapply typing_wf_local in a0. subst types.
     2:eauto.
 
     eapply All_local_env_app.
-    eapply All_local_env_app_inv in a1. intuition auto.
+    eapply All_local_env_app_inv in a0. intuition auto.
 
     (* clear -wfΣ X2 a2 b4 X1. *)
     eapply All_local_env_impl; eauto. simpl; intros.
@@ -283,7 +283,7 @@ Proof.
     eapply All2_impl. eapply All2_All_mix_left. eapply X1.
     exact X4.
     intros; cbn in *. destruct X5. destruct p0. destruct p0.
-    destruct p. destruct p. repeat split; eauto.
+    destruct p. repeat split; eauto.
     eapply e2 in e1.
     unfold PCUICUnivSubst.subst_instance_context in *.
     unfold map_context in *. rewrite  ->map_app in *. subst types. 2:eauto.

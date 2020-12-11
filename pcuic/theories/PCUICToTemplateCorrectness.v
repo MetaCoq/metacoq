@@ -1031,10 +1031,6 @@ Proof.
       split;eassumption.
 Qed.
 
-
-
-
-
 Lemma invert_type_App `{checker_flags} Σ Γ f u T :
   TT.typing Σ Γ (tApp f u) T ->
   { T' : term & { U' & ((TT.typing Σ Γ f T') * TT.typing_spine Σ Γ T' u U' *

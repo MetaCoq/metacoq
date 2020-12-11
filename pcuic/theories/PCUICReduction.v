@@ -1,12 +1,11 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICRelations PCUICAst PCUICAstUtils
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICInduction.
 
 Require Import ssreflect.
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
-
 
 Set Default Goal Selector "!".
 

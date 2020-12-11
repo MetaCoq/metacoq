@@ -1,5 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssreflect Wellfounded Relation_Operators.
+(** This defines relation operators in Type *)
+From Equations.Type Require Import Relation.
+From Coq Require Import ssreflect Wellfounded Relation_Operators CRelationClasses.
 From MetaCoq.Template Require Import config utils Ast AstUtils LiftSubst UnivSubst
      EnvironmentTyping Reflect TermEquality.
 
@@ -431,36 +433,33 @@ Reserved Notation " Σ ;;; Γ |- t : T " (at level 50, Γ, t, T at next level).
 Reserved Notation " Σ ;;; Γ |- t <= u " (at level 50, Γ, t, u at next level).
 Reserved Notation " Σ ;;; Γ |- t = u " (at level 50, Γ, t, u at next level).
 
-(** ** Cumulativity *)
+(** ** Cumulativity:
 
-Inductive cumul `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
-| cumul_refl t u : leq_term Σ (global_ext_constraints Σ) t u -> Σ ;;; Γ |- t <= u
-| cumul_red_l t u v : red1 Σ.1 Γ t v -> Σ ;;; Γ |- v <= u -> Σ ;;; Γ |- t <= u
-| cumul_red_r t u v : Σ ;;; Γ |- t <= v -> red1 Σ.1 Γ u v -> Σ ;;; Γ |- t <= u
+  The reflexive-transitive closure of reduction, expansion and term comparison up-to universes.
+*)
 
-where " Σ ;;; Γ |- t <= u " := (cumul Σ Γ t u) : type_scope.
+Definition cumul `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
+  Relation.clos_refl_trans (relation_disjunction (clos_sym (red1 Σ Γ)) (leq_term Σ Σ)).
+Notation " Σ ;;; Γ |- t <= u " := (cumul Σ Γ t u) : type_scope.
 
 (** *** Conversion
 
-   Defined as cumulativity in both directions.
+  The reflexive-symmetric-transitive closure of reduction, expansion and term comparison up-to universes.
  *)
 
-Inductive conv `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
- | conv_refl t u : eq_term Σ (global_ext_constraints Σ) t u -> Σ ;;; Γ |- t = u
- | conv_red_l t u v : red1 Σ.1 Γ t v -> Σ ;;; Γ |- v = u -> Σ ;;; Γ |- t = u
- | conv_red_r t u v : Σ ;;; Γ |- t = v -> red1 Σ.1 Γ u v -> Σ ;;; Γ |- t = u
-
- where " Σ ;;; Γ |- t = u " := (@conv _ Σ Γ t u) : type_scope.
+Definition conv `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
+  Relation.clos_refl_sym_trans (relation_disjunction (red1 Σ Γ) (eq_term Σ Σ)).
+Notation " Σ ;;; Γ |- t = u " := (@conv _ Σ Γ t u) : type_scope.
 
 Lemma conv_refl' `{checker_flags} : forall Σ Γ t, Σ ;;; Γ |- t = t.
-  intros. constructor. apply eq_term_refl.
+  intros. constructor. right. apply eq_term_refl.
 Defined.
 
 Lemma cumul_refl' `{checker_flags} : forall Σ Γ t, Σ ;;; Γ |- t <= t.
-  intros. constructor. apply leq_term_refl.
+  intros. constructor. right. apply leq_term_refl.
 Defined.
 
-Hint Resolve conv_refl cumul_refl' : typecheck.
+Hint Resolve conv_refl' cumul_refl' : typecheck.
 
 Definition eq_opt_term `{checker_flags} Σ φ (t u : option term) :=
   match t, u with

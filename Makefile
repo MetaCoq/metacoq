@@ -1,12 +1,11 @@
 TIMED ?=
 
-all: template-coq checker pcuic safechecker erasure examples
+all: template-coq pcuic safechecker erasure examples
 
-.PHONY: all template-coq checker pcuic erasure install html clean mrproper .merlin test-suite translations
+.PHONY: all template-coq pcuic erasure install html clean mrproper .merlin test-suite translations
 
 install: all
 	$(MAKE) -C template-coq install
-	$(MAKE) -C checker install
 	$(MAKE) -C pcuic install
 	$(MAKE) -C safechecker install
 	$(MAKE) -C erasure install
@@ -14,7 +13,6 @@ install: all
 
 uninstall: all
 	$(MAKE) -C template-coq uninstall
-	$(MAKE) -C checker uninstall
 	$(MAKE) -C pcuic uninstall
 	$(MAKE) -C safechecker uninstall
 	$(MAKE) -C erasure uninstall
@@ -23,7 +21,6 @@ uninstall: all
 html: all
 	"coqdoc" -toc -utf8 -interpolate -l -html \
 		-R template-coq/theories MetaCoq.Template \
-		-R checker/theories MetaCoq.Checker \
 		-R pcuic/theories MetaCoq.PCUIC \
 		-R safechecker/theories MetaCoq.SafeChecker \
 		-R erasure/theories MetaCoq.Erasure \
@@ -32,7 +29,6 @@ html: all
 
 clean:
 	$(MAKE) -C template-coq clean
-	$(MAKE) -C checker clean
 	$(MAKE) -C pcuic clean
 	$(MAKE) -C safechecker clean
 	$(MAKE) -C erasure clean
@@ -45,7 +41,6 @@ mrproper:
 	$(MAKE) -C pcuic mrproper
 	$(MAKE) -C safechecker mrproper
 	$(MAKE) -C erasure mrproper
-	$(MAKE) -C checker mrproper
 	$(MAKE) -C examples mrproper
 	$(MAKE) -C test-suite mrproper
 	$(MAKE) -C translations mrproper
@@ -55,7 +50,6 @@ mrproper:
 	$(MAKE) -C pcuic .merlin
 	$(MAKE) -C safechecker .merlin
 	$(MAKE) -C erasure .merlin
-	$(MAKE) -C checker .merlin
 
 template-coq:
 	$(MAKE) -C template-coq
@@ -69,22 +63,17 @@ safechecker: template-coq pcuic
 erasure: template-coq safechecker pcuic
 	$(MAKE) -C erasure
 
-checker: template-coq
-	$(MAKE) -C checker
-
 examples: checker safechecker erasure
 	$(MAKE) -C examples
 
-test-suite: template-coq checker safechecker erasure
+test-suite: template-coq safechecker erasure
 	$(MAKE) -C test-suite
 
-translations: template-coq checker
+translations: template-coq
 	$(MAKE) -C translations
 
 cleanplugins:
 	$(MAKE) -C template-coq cleanplugin
-	$(MAKE) -C pcuic cleanplugin
-	$(MAKE) -C checker cleanplugin
 	$(MAKE) -C safechecker cleanplugin
 	$(MAKE) -C erasure cleanplugin
 

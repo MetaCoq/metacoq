@@ -41,6 +41,8 @@ theories/TermEquality.v
 theories/Typing.v
 theories/Reduction.v
 theories/TypingWf.v
+theories/Normal.v
+theories/WcbvEval.v
 
 # The Template monad
 theories/TemplateMonad.v

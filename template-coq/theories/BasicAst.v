@@ -232,6 +232,8 @@ Record def term := mkdef {
   dbody : term; (* the body (a lambda term). Note, this may mention other (mutually-defined) names **)
   rarg  : nat  (* the index of the recursive argument, 0 for cofixpoints **) }.
 
+
+
 Arguments dname {term} _.
 Arguments dtype {term} _.
 Arguments dbody {term} _.

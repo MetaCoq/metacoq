@@ -5,6 +5,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
 
 Require Import ssreflect.
 Require Import Equations.Prop.DepElim.
+From Equations.Type Require Import Relation Relation_Properties.
 From Equations Require Import Equations.
 
 Set Default Goal Selector "!".
@@ -13,7 +14,6 @@ Definition tDummy := tVar String.EmptyString.
 
 Definition iota_red npar c args brs :=
   (mkApps (snd (List.nth c brs (0, tDummy))) (List.skipn npar args)).
-
 
 (** ** Reduction *)
 
@@ -318,7 +318,6 @@ Defined.
 Hint Constructors red1 : pcuic.
 
 Definition red Σ Γ := clos_refl_trans (red1 Σ Γ).
-
 
 Lemma refl_red Σ Γ t : red Σ Γ t t.
 Proof.
@@ -712,7 +711,7 @@ Section ReductionCongruence.
       red Σ Γ M M' -> red Σ (Γ ,, vass na M') N N'
       -> red Σ Γ (tLambda na M N) (tLambda na M' N').
     Proof.
-      intros. eapply (transitivity (y := tLambda na M' N)).
+      intros. transitivity (tLambda na M' N).
       - now apply (red_ctx (tCtxLambda_l _ tCtxHole _)).
       - now eapply (red_ctx (tCtxLambda_r _ _ tCtxHole)).
     Qed.
@@ -729,7 +728,7 @@ Section ReductionCongruence.
       red Σ Γ N0 N1 ->
       red Σ Γ (tApp M0 N0) (tApp M1 N1).
     Proof.
-      intros; eapply (transitivity (y := tApp M1 N0)).
+      intros; transitivity (tApp M1 N0).
       - now apply (red_ctx (tCtxApp_l tCtxHole _)).
       - now eapply (red_ctx (tCtxApp_r _ tCtxHole)).
     Qed.
@@ -785,9 +784,9 @@ Section ReductionCongruence.
       red Σ Γ d0 d1 -> red Σ Γ t0 t1 -> red Σ (Γ ,, vdef na d1 t1) b0 b1 ->
       red Σ Γ (tLetIn na d0 t0 b0) (tLetIn na d1 t1 b1).
     Proof.
-      intros; eapply (transitivity (y := tLetIn na d1 t0 b0)).
+      intros; transitivity (tLetIn na d1 t0 b0).
       - now apply (red_ctx (tCtxLetIn_l _ tCtxHole _ _)).
-      - eapply (transitivity (y := tLetIn na d1 t1 b0)).
+      - transitivity (tLetIn na d1 t1 b0).
         + now eapply (red_ctx (tCtxLetIn_b _ _ tCtxHole _)).
         + now eapply (red_ctx (tCtxLetIn_r _ _ _ tCtxHole)).
     Qed.

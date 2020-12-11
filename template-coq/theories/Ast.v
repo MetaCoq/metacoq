@@ -129,6 +129,7 @@ Inductive wf : term -> Prop :=
 | wf_tCoFix mfix k : Forall (fun def => wf def.(dtype) /\ wf def.(dbody)) mfix -> wf (tCoFix mfix k)
 | wf_tInt i : wf (tInt i)
 | wf_tFloat f : wf (tFloat f).
+Derive Signature for wf.
 
 (** ** Entries
 

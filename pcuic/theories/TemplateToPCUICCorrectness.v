@@ -339,10 +339,15 @@ Proof.
   rewrite mkApps_nonempty //.
 Qed.
 
-Lemma trans_decompose_prod_assum :
+(* This is if Template's decompose_prod_assum handled casts. This does not work unless the specs 
+  use a stronger decompose_prod_assum in PCUIC, as decompose_prod_assum is used to check fixpoints types. 
+  Would be fixed having contexts instead of lambda abstractions in the Ast for fixpoints, where casts 
+  cannot be introduced.
+*)
+(*Lemma trans_decompose_prod_assum :
   forall Γ t,
-    let '(Δ, c) := AstUtils.decompose_prod_assum (S.map_context STy.strip_casts Γ) (STy.strip_casts t) in
-    decompose_prod_assum (trans_local (S.map_context STy.strip_casts Γ)) (trans (STy.strip_casts t)) = 
+    let '(Δ, c) := AstUtils.decompose_prod_assum (S.map_context AstUtils.strip_casts Γ) (AstUtils.strip_casts t) in
+    decompose_prod_assum (trans_local (S.map_context AstUtils.strip_casts Γ)) (trans (AstUtils.strip_casts t)) = 
       (trans_local Δ, trans c).
 Proof.
   intros Γ t.
@@ -357,11 +362,31 @@ Proof.
     destruct args.
     * simpl. now apply IHt.
     * move: e. cbn [map].
-      destruct (mkApps_ex (STy.strip_casts t) (STy.strip_casts t0) (map STy.strip_casts args)) as [f [? eq]].
+      destruct (SL.mkApps_ex (AstUtils.strip_casts t) (AstUtils.strip_casts t0) (map AstUtils.strip_casts args)) as [f [? eq]].
       rewrite eq. intros [= <- <-]. rewrite -eq.
       rewrite decompose_prod_assum_mkApps_nonnil //.
       f_equal.
       now rewrite trans_mkApps.
+Qed.
+*)
+
+Lemma trans_decompose_prod_assum :
+  forall Γ t,
+    S.wf t ->
+    let '(Δ, c) := AstUtils.decompose_prod_assum Γ t in
+    decompose_prod_assum (trans_local Γ) (trans t) = (trans_local Δ, trans c).
+Proof.
+  intros Γ t wf.
+  destruct AstUtils.decompose_prod_assum as [Δ c] eqn:e.
+  revert Γ Δ c e.
+  induction wf using Template.Induction.term_wf_forall_list_ind; intros.
+  all: try solve [ inversion e ; subst ; reflexivity ].
+  - simpl in e. eapply IHwf0 in e as e'. now simpl.
+  - simpl. simpl in e. eapply (IHwf1 (Γ ,, Ast.vdef n t t0)) in e as e'. assumption.
+  - simpl in *. noconf e. simpl.
+    destruct l => //.
+    cbn [map].
+    rewrite decompose_prod_assum_mkApps_nonnil //.
 Qed.
 
 Lemma trans_build_branches_type :
@@ -1102,15 +1127,16 @@ Lemma trans_cumul {cf} (Σ : Ast.global_env_ext) Γ T U :
   S.wf T -> S.wf U -> STy.cumul Σ Γ T U ->
   trans_global Σ ;;; trans_local Γ |- trans T <= trans U.
 Proof.
-  intros wfΣ wfΓ.
-  induction 3. constructor; auto.
-  eapply trans_leq_term in l; eauto.
-  now rewrite global_ext_constraints_trans.
-  pose proof r as H3. apply wf_red1 in H3; auto with wf.
-  apply trans_red1 in r; auto. econstructor 2; eauto with wf.
-  econstructor 3.
-  apply IHX; auto. apply wf_red1 in r; auto with wf.
-  apply trans_red1 in r; auto.
+  intros wfΣ.
+  induction 4.
+  - constructor; auto.
+    eapply trans_leq_term in l; eauto.
+    now rewrite global_ext_constraints_trans.
+  - pose proof r as H3. apply wf_red1 in H3; auto with wf.
+    apply trans_red1 in r; auto. econstructor 2; eauto with wf.
+  - econstructor 3.
+    apply IHX; auto. apply wf_red1 in r; auto with wf.
+    apply trans_red1 in r; auto.
 Qed.
 
 Definition Tlift_typing (P : Template.Ast.global_env_ext -> Tcontext -> Tterm -> Tterm -> Type) :=
@@ -1178,77 +1204,178 @@ Axiom cofix_guard_trans :
     STy.cofix_guard Σ Γ mfix ->
     cofix_guard (trans_global Σ) (trans_local Γ) (map (map_def trans trans) mfix).
 
-Lemma trans_check_one_fix mfix :
-  check_one_fix (map_def trans trans mfix) = STy.check_one_fix mfix.
+Notation Swf_fix def := (S.wf (dtype def) /\ S.wf (dbody def)).
+
+Lemma trans_subst_context s k Γ : 
+  trans_local (SL.subst_context s k Γ) = subst_context (map trans s) k (trans_local Γ).
+Proof.
+  induction Γ as [|[na [b|] ty] Γ]; simpl; auto.
+  - rewrite SL.subst_context_snoc /=. rewrite [subst_context _ _ _ ]subst_context_snoc.
+    f_equal; auto. rewrite IHΓ /snoc /subst_decl /map_decl /=; f_equal.
+    now rewrite !trans_subst map_length.
+  - rewrite SL.subst_context_snoc /=. rewrite [subst_context _ _ _ ]subst_context_snoc.
+    f_equal; auto. rewrite IHΓ /snoc /subst_decl /map_decl /=; f_equal.
+    now rewrite !trans_subst map_length.
+Qed.
+
+Lemma trans_smash_context Γ Δ : trans_local (STy.smash_context Γ Δ) = smash_context (trans_local Γ) (trans_local Δ).
+Proof.
+  induction Δ in Γ |- *; simpl; auto.
+  destruct a as [na [b|] ty] => /=.
+  rewrite IHΔ. f_equal.
+  now rewrite (trans_subst_context [_]).
+  rewrite IHΔ. f_equal. rewrite /trans_local map_app //.
+Qed.
+ 
+Lemma trans_decompose_app {t ind u l} : 
+  S.wf t ->
+  AstUtils.decompose_app t = (Ast.tInd ind u, l) ->
+  ∑ l', decompose_app (trans t) = (tInd ind u, l').
+Proof.
+  intros wft. destruct (AstUtils.decompose_app t) eqn:da.
+  pose proof (TypingWf.decompose_app_inv _ [] _ _ wft da) as [n [napp [eqsk ->]]].
+  rewrite trans_mkApps.
+  intros [= -> ->].
+  rewrite decompose_app_mkApps //. eexists _; eauto.
+Qed.
+
+Lemma decompose_prod_assum_it_mkProd_or_LetIn ctx t ctx' t' :
+  AstUtils.decompose_prod_assum ctx t = (ctx', t') ->
+  Ast.it_mkProd_or_LetIn ctx t = Ast.it_mkProd_or_LetIn ctx' t'.
+Proof.
+  induction t in ctx, ctx', t' |- *; simpl; try intros [= -> <-]; auto.
+  - intros H. now apply IHt2 in H.
+  - intros H. now apply IHt3 in H.
+Qed.
+
+Lemma it_mkProd_or_LetIn_wf Γ t
+  : Ast.wf (Ast.it_mkProd_or_LetIn Γ t) <-> Forall wf_decl Γ /\ Ast.wf t .
+Proof.
+  revert t. induction Γ.
+  - intros t. simpl. split => //; try split => //; trivial. now intros [].
+  - intros t.
+    destruct a as [na [b|] ty]; simpl in *. rewrite /Ast.mkProd_or_LetIn /=.
+    * rewrite IHΓ /=. split; intros [].
+      depelim H0. intuition constructor; auto. split; auto. 
+      depelim H. red in H. simpl in H. split; auto with wf. constructor; intuition auto.
+    * rewrite IHΓ /=. split; intros [].
+      depelim H0. simpl in H0_. split; [constructor|];auto.
+      split; simpl; auto.
+      depelim H. destruct H as [_ wfty]. simpl in wfty.
+      split; auto. constructor; simpl; auto.
+Qed.
+
+Lemma trans_check_one_fix mfix ind :
+  Swf_fix mfix ->
+  STy.check_one_fix mfix = Some ind ->
+  check_one_fix (map_def trans trans mfix) = Some ind.
 Proof.
   unfold STy.check_one_fix, check_one_fix.
-  destruct mfix as [na ty arg rarg] => /=.
-  move: (trans_decompose_prod_assum [] ty). simpl.
-  destruct decompose_prod_assum as [ctx p] => /=.
+  case: mfix => [na ty arg rarg] /= [wfty wfarg].
+  move: (trans_decompose_prod_assum [] ty wfty) => /=.
+  destruct AstUtils.decompose_prod_assum as [ctx p] eqn:dp => /= // ->.
   rewrite -(trans_smash_context []) /trans_local.
   rewrite -List.map_rev nth_error_map.
-  destruct nth_error => /= //.
-  move: (trans_decompose_app (PCUICAst.decl_type c)).
-  destruct decompose_app => /=.
-  simpl. destruct c. simpl. intros ->.
-  now rewrite -trans_destInd.
+  destruct nth_error eqn:hnth => /= //.
+  destruct AstUtils.decompose_app eqn:da.
+  destruct t => //.
+  have [| l' eq] := (trans_decompose_app _ da).
+  { eapply decompose_prod_assum_it_mkProd_or_LetIn in dp.
+    simpl in dp; subst ty.
+    eapply it_mkProd_or_LetIn_wf in wfty as [wfctx _].
+    eapply (nth_error_forall (P:=wf_decl)) in hnth; cycle 1.
+    eapply rev_Forall.
+    pose proof (nth_error_Some_length hnth).
+    rewrite nth_error_rev // List.rev_involutive in hnth.
+    now apply wf_smash_context. apply hnth. }
+  destruct c => /=. rewrite eq /= //.
 Qed.
 
-Lemma map_option_out_check_one_fix mfix :
-  map (fun x => TS.check_one_fix (map_def trans trans x)) mfix = 
-  map SS.check_one_fix mfix.
+Lemma Forall_map_option_out_map_Some_spec {A B} {f g : A -> option B} {P : A -> Prop} {l} :
+  (forall x t, P x -> f x = Some t -> g x = Some t) ->
+  Forall P l ->
+  forall t,
+  map_option_out (map f l) = Some t ->
+  map_option_out (map g l) = Some t.
 Proof.
-  eapply map_ext => x. apply trans_check_one_fix.
+  move => Hfg Hl. move: Hl.
+  induction 1; try constructor; auto.
+  simpl. move=> //.
+  case E: (f x) => [b|] //.
+  rewrite (Hfg _ _ H E).
+  case E' : map_option_out => [b'|] //.
+  move=> t [= <-]. now rewrite (IHHl _ E').
 Qed.
 
-
-Lemma trans_check_one_cofix mfix :
-  TS.check_one_cofix (map_def trans trans mfix) = SS.check_one_cofix mfix.
+Lemma map_option_out_check_one_fix {mfix} :
+  Forall (fun def => (S.wf (dtype def) /\ S.wf (dbody def))) mfix ->
+  forall l, 
+  map_option_out (map (fun x => STy.check_one_fix x) mfix) = Some l ->
+  map_option_out (map (fun x => check_one_fix (map_def trans trans x)) mfix) = Some l.
 Proof.
-  unfold SS.check_one_cofix, TS.check_one_cofix.
-  destruct mfix as [na ty arg rarg] => /=.
-  move: (trans_decompose_prod_assum [] ty).
-  destruct decompose_prod_assum as [ctx p] => -> /=.
-  move: (trans_decompose_app p).
-  destruct decompose_app => /= ->.
-  now rewrite -trans_destInd.
+  eapply Forall_map_option_out_map_Some_spec => x kn.
+  apply trans_check_one_fix.
 Qed.
 
-Lemma map_option_out_check_one_cofix mfix :
-  map (fun x => TS.check_one_cofix (map_def trans trans x)) mfix = 
-  map SS.check_one_cofix mfix.
+Lemma trans_check_one_cofix mfix ind :
+  Swf_fix mfix ->
+  STy.check_one_cofix mfix = Some ind ->
+  check_one_cofix (map_def trans trans mfix) = Some ind.
 Proof.
-  eapply map_ext => x. apply trans_check_one_cofix.
+  unfold STy.check_one_cofix, check_one_cofix.
+  case: mfix => [na ty arg rarg] /= [wfty wfarg].
+  move: (trans_decompose_prod_assum [] ty wfty) => /=.
+  destruct AstUtils.decompose_prod_assum as [ctx p] eqn:dp => /= // ->.
+  destruct AstUtils.decompose_app eqn:da.
+  destruct t => //.
+  have [| l' ->] := (trans_decompose_app _ da) => //.
+  { eapply decompose_prod_assum_it_mkProd_or_LetIn in dp.
+    simpl in dp; subst ty.
+    now eapply it_mkProd_or_LetIn_wf in wfty as [_ wfp]. }
 Qed.
 
-Lemma trans_check_rec_kind Σ k f :
-  SS.check_recursivity_kind Σ k f = TS.check_recursivity_kind (trans_global_decls Σ) k f.
+Lemma map_option_out_check_one_cofix {mfix} :
+  Forall (fun def => (S.wf (dtype def) /\ S.wf (dbody def))) mfix ->
+  forall l, 
+  map_option_out (map (fun x => STy.check_one_cofix x) mfix) = Some l ->
+  map_option_out (map (fun x => check_one_cofix (map_def trans trans x)) mfix) = Some l.
 Proof.
-  unfold SS.check_recursivity_kind, TS.check_recursivity_kind.
+  apply Forall_map_option_out_map_Some_spec => x kn.
+  apply trans_check_one_cofix.
+Qed.
+
+Lemma trans_check_rec_kind {Σ k f} :
+  STy.check_recursivity_kind Σ k f = check_recursivity_kind (trans_global_decls Σ) k f.
+Proof.
+  unfold STy.check_recursivity_kind, check_recursivity_kind.
   rewrite trans_lookup.
   destruct S.lookup_env as [[]|] => //.
 Qed.
 
 Lemma trans_wf_fixpoint Σ mfix :
-  TS.wf_fixpoint (trans_global_decls Σ) (map (map_def trans trans) mfix) = 
-  SS.wf_fixpoint Σ mfix.
+  Forall (fun def => (S.wf (dtype def) /\ S.wf (dbody def))) mfix ->
+  STy.wf_fixpoint Σ mfix ->
+  wf_fixpoint (trans_global_decls Σ) (map (map_def trans trans) mfix).
 Proof.
-  unfold SS.wf_fixpoint, TS.wf_fixpoint.
+  unfold STy.wf_fixpoint, wf_fixpoint.
   rewrite map_map_compose.
-  rewrite map_option_out_check_one_fix.
-  destruct map_option_out as [[]|] => //.
-  now rewrite trans_check_rec_kind.
+  intros wf.
+  destruct map_option_out eqn:ma => //.
+  rewrite (map_option_out_check_one_fix wf _ ma).
+  destruct l; auto. now rewrite -trans_check_rec_kind.
 Qed.
 
 Lemma trans_wf_cofixpoint Σ mfix :
-  TS.wf_cofixpoint (trans_global_decls Σ) (map (map_def trans trans) mfix) = 
-  SS.wf_cofixpoint Σ mfix.
+  Forall (fun def => (S.wf (dtype def) /\ S.wf (dbody def))) mfix ->
+  STy.wf_cofixpoint Σ mfix ->
+  wf_cofixpoint (trans_global_decls Σ) (map (map_def trans trans) mfix).
 Proof.
-  unfold SS.wf_cofixpoint, TS.wf_cofixpoint.
+  unfold STy.wf_cofixpoint, wf_cofixpoint.
   rewrite map_map_compose.
-  rewrite map_option_out_check_one_cofix.
-  destruct map_option_out as [[]|] => //.
-  now rewrite trans_check_rec_kind.
+  intros wf.
+  destruct map_option_out eqn:ma => //.
+  rewrite (map_option_out_check_one_cofix wf _ ma).
+  destruct l; auto. now rewrite -trans_check_rec_kind.
 Qed.
 
 Lemma trans_global_decl_universes d : 
@@ -1406,7 +1533,10 @@ Proof.
        rewrite H2. rewrite /trans_local map_length.
        rewrite /trans_local map_app in X3.
        rewrite <- trans_lift. apply X3; auto.
-    -- todo "wffix".
+    -- eapply trans_wf_fixpoint => //.
+        solve_all. destruct a as [s [Hs IH]].
+        now eapply TypingWf.typing_wf in Hs.
+        now eapply TypingWf.typing_wf in a0.
     -- destruct decl; reflexivity.
 
   - eapply refine_type.
@@ -1428,7 +1558,10 @@ Proof.
        unfold Template.Ast.app_context in X3.
        rewrite /trans_local map_app in X3.
        cbn. rewrite <- trans_lift. now apply X3.
-    -- todo "wfcofix".
+    -- eapply trans_wf_cofixpoint => //.
+       solve_all. destruct a as [s [Hs IH]].
+       now eapply TypingWf.typing_wf in Hs.
+       now eapply TypingWf.typing_wf in a0.
     -- destruct decl; reflexivity.
 
   - assert (S.wf B).
@@ -1610,7 +1743,7 @@ Proof.
   eapply trans_on_global_env; eauto. simpl; intros.
   epose proof (STy.env_prop_typing _ template_to_pcuic _ X Γ).
   forward X2.
-  red in X0. destruct S.
+  red in X0. destruct T.
   now eapply STy.typing_wf_local.
   destruct X0 as [s Hs]. eapply STy.typing_wf_local; eauto.
   destruct T; simpl in *.

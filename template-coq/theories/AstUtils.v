@@ -171,7 +171,6 @@ Fixpoint decompose_prod_assum (Γ : context) (t : term) : context * term :=
   match t with
   | tProd n A B => decompose_prod_assum (Γ ,, vass n A) B
   | tLetIn na b bty b' => decompose_prod_assum (Γ ,, vdef na b bty) b'
-  | tCast t _ _ => decompose_prod_assum Γ t
   | _ => (Γ, t)
   end.
 

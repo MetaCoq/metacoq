@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 Require Import ssreflect.
-Require Import CRelationClasses.
 Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
+Require Import CRelationClasses.
 
 Infix "<~>" := iffT (at level 90).
 

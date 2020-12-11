@@ -435,28 +435,33 @@ Reserved Notation " Σ ;;; Γ |- t = u " (at level 50, Γ, t, u at next level).
 
 (** ** Cumulativity:
 
-  The reflexive-transitive closure of reduction, expansion and term comparison up-to universes.
+  Reduction to terms in the leq_term relation.
 *)
 
-Definition cumul `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
-  Relation.clos_refl_trans (relation_disjunction (clos_sym (red1 Σ Γ)) (leq_term Σ Σ)).
-Notation " Σ ;;; Γ |- t <= u " := (cumul Σ Γ t u) : type_scope.
+Inductive cumul `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
+| cumul_refl t u : leq_term Σ (global_ext_constraints Σ) t u -> Σ ;;; Γ |- t <= u
+| cumul_red_l t u v : red1 Σ.1 Γ t v -> Σ ;;; Γ |- v <= u -> Σ ;;; Γ |- t <= u
+| cumul_red_r t u v : Σ ;;; Γ |- t <= v -> red1 Σ.1 Γ u v -> Σ ;;; Γ |- t <= u
+where " Σ ;;; Γ |- t <= u " := (cumul Σ Γ t u) : type_scope.
 
 (** *** Conversion
 
-  The reflexive-symmetric-transitive closure of reduction, expansion and term comparison up-to universes.
+  Reduction to terms in the eq_term relation
  *)
 
-Definition conv `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
-  Relation.clos_refl_sym_trans (relation_disjunction (red1 Σ Γ) (eq_term Σ Σ)).
-Notation " Σ ;;; Γ |- t = u " := (@conv _ Σ Γ t u) : type_scope.
+ Inductive conv `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
+ | conv_refl t u : eq_term Σ (global_ext_constraints Σ) t u -> Σ ;;; Γ |- t = u
+ | conv_red_l t u v : red1 Σ.1 Γ t v -> Σ ;;; Γ |- v = u -> Σ ;;; Γ |- t = u
+ | conv_red_r t u v : Σ ;;; Γ |- t = v -> red1 Σ.1 Γ u v -> Σ ;;; Γ |- t = u
+
+ where " Σ ;;; Γ |- t = u " := (@conv _ Σ Γ t u) : type_scope.
 
 Lemma conv_refl' `{checker_flags} : forall Σ Γ t, Σ ;;; Γ |- t = t.
-  intros. constructor. right. apply eq_term_refl.
+  intros. constructor. apply eq_term_refl.
 Defined.
 
 Lemma cumul_refl' `{checker_flags} : forall Σ Γ t, Σ ;;; Γ |- t <= t.
-  intros. constructor. right. apply leq_term_refl.
+  intros. constructor. apply leq_term_refl.
 Defined.
 
 Hint Resolve conv_refl' cumul_refl' : typecheck.
@@ -666,7 +671,7 @@ Definition check_one_fix d :=
           dtype := ty;
           dbody := b;
           rarg := arg |} := d in
-  let '(ctx, ty) := decompose_prod_assum [] (strip_casts ty) in
+  let '(ctx, ty) := decompose_prod_assum [] ty in
   match nth_error (List.rev (smash_context [] ctx)) arg with
   | Some argd =>
     let (hd, args) := decompose_app argd.(decl_type) in
@@ -693,7 +698,7 @@ Definition check_one_cofix d :=
           dtype := ty;
           dbody := b;
           rarg := arg |} := d in
-  let '(ctx, ty) := decompose_prod_assum [] (strip_casts ty) in
+  let '(ctx, ty) := decompose_prod_assum [] ty in
   let (hd, args) := decompose_app ty in
   match destInd hd with
   | Some (mkInd ind _, u) => Some ind

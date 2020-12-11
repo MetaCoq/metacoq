@@ -1070,11 +1070,6 @@ Proof.
   econstructor; eauto.
 Qed.
 
-Lemma mkApp_ex t u : ∑ f args, mkApp t u = tApp f args.
-Proof.
-  induction t; simpl; eexists _, _; reflexivity.
-Qed.
-
 Lemma trans_decompose_prod_assum :
   forall Γ t,
     let '(Δ, c) := decompose_prod_assum Γ t in
@@ -1213,13 +1208,26 @@ Proof.
   now rewrite trans_to_extended_list trans_lift map_length.
 Qed.
 
+Lemma strip_casts_trans t : AstUtils.strip_casts (trans t) = trans t.
+Proof.
+  induction t using term_forall_list_ind; simpl; auto; 
+    rewrite ?map_map_compose;
+    f_equal; solve_all.
+
+  - rewrite strip_casts_mkApp_wf; auto with wf.
+    now rewrite IHt1 IHt2.
+    
+  - now destruct p as [? []].
+Qed.
+
 Lemma trans_check_one_fix mfix :
   TT.check_one_fix (map_def trans trans mfix) = ST.check_one_fix mfix.
 Proof.
   unfold ST.check_one_fix, TT.check_one_fix.
   destruct mfix as [na ty arg rarg] => /=.
   move: (trans_decompose_prod_assum [] ty).
-  destruct decompose_prod_assum as [ctx p] => -> /=.
+  rewrite strip_casts_trans.
+  destruct decompose_prod_assum as [ctx p] => /= ->.
   rewrite -(trans_smash_context []) /trans_local.
   rewrite -List.map_rev nth_error_map.
   destruct nth_error => /= //.
@@ -1236,13 +1244,13 @@ Proof.
   eapply map_ext => x. apply trans_check_one_fix.
 Qed.
 
-
 Lemma trans_check_one_cofix mfix :
   TT.check_one_cofix (map_def trans trans mfix) = ST.check_one_cofix mfix.
 Proof.
   unfold ST.check_one_cofix, TT.check_one_cofix.
   destruct mfix as [na ty arg rarg] => /=.
   move: (trans_decompose_prod_assum [] ty).
+  rewrite strip_casts_trans.
   destruct decompose_prod_assum as [ctx p] => -> /=.
   move: (trans_decompose_app p).
   destruct decompose_app => /= ->.
@@ -1420,3 +1428,5 @@ Proof.
     + eassumption.
     + now eapply trans_cumul.
 Qed.
+
+Print Assumptions trans_build_branches_type.

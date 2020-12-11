@@ -16,8 +16,10 @@ Proof.
   dependent induction Hty.
   - exists t_ty, t'. intuition.
   - destruct IHHty1 as [T' [U' [H' H'']]].
-    exists T', U'. split; auto.
-    eapply cumul_trans; eauto.
+    exists T', A. split; auto.
+    destruct H' as [[[? ?] ?] ?].
+    repeat split; auto.
+    eapply typing_spine_strengthen.
 Qed.
 
 Lemma type_mkApp `{checker_flags} Σ Γ f u T T' :

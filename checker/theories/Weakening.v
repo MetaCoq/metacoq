@@ -942,10 +942,11 @@ Lemma weakening_check_one_fix (Γ' Γ'' : context) mfix :
 Proof.
   apply map_ext. move=> [na ty def rarg] /=.
   rewrite decompose_prod_assum_ctx.
-  destruct (decompose_prod_assum _ ty) eqn:decomp.
+  rewrite strip_casts_lift.
+  destruct (decompose_prod_assum _ (strip_casts ty)) eqn:decomp.
   rewrite decompose_prod_assum_ctx in decomp.
   rewrite -lift_decompose_prod_assum.
-  destruct (decompose_prod_assum [] ty) eqn:decty.
+  destruct (decompose_prod_assum [] (strip_casts ty)) eqn:decty.
   noconf decomp. rewrite !app_context_nil_l (smash_context_lift []).
   destruct (nth_error_spec (List.rev (smash_context [] c0)) rarg).
   rewrite -> List.rev_length, ?smash_context_length in *; simpl in *.
@@ -970,10 +971,11 @@ Lemma weakening_check_one_cofix (Γ' Γ'' : context) mfix :
 Proof.
   apply map_ext. move=> [na ty def rarg] /=.
   rewrite decompose_prod_assum_ctx.
-  destruct (decompose_prod_assum _ ty) eqn:decomp.
+  destruct (decompose_prod_assum _ (strip_casts ty)) eqn:decomp.
   rewrite decompose_prod_assum_ctx in decomp.
+  rewrite strip_casts_lift.
   rewrite -lift_decompose_prod_assum.
-  destruct (decompose_prod_assum [] ty) eqn:decty.
+  destruct (decompose_prod_assum [] (strip_casts ty)) eqn:decty.
   noconf decomp.
   destruct (decompose_app t) eqn:Happ.
   erewrite decompose_app_lift; eauto.

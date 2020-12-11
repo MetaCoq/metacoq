@@ -1092,6 +1092,48 @@ Proof.
       rewrite !subst_context_length subst_instance_context_length. lia.
       now rewrite to_extended_list_k_subst.
 Qed.
+(*
+Lemma strip_casts_subst s k t : 
+  Ast.wf t ->
+  strip_casts (subst s k t) = subst (map strip_casts s) k (strip_casts t).
+Proof.
+  intros wf; revert s k.
+  induction wf using term_wf_forall_list_ind; simpl; intros; auto; 
+    rewrite ?map_map_compose  ?compose_on_snd ?compose_map_def ?map_length;
+   f_equal; solve_all; eauto.
+  - admit.
+  - rewrite subst_mkApps.
+    rewrite strip_casts_mkApps_wf; auto with wf. admit. admit.
+    rewrite IHwf. f_equal. rewrite !map_map_compose. solve_all.
+
+
+    pose proof (strip_casts_decompose_app (mkApps (subst s k t0) (map (subst s k) l))).
+    forward H1. auto with wf. admit.
+    destruct decompose_app eqn:eq.
+    specialize (H1 _ _ Logic.eq_refl).
+    rewrite map_map_compose.
+    rewrite -IHwf H1. 
+    pose proof (strip_casts_decompose_app (mkApps (strip_casts t0) (map strip_casts l))).
+    forward H3. auto with wf. admit.
+    destruct (decompose_app (mkApps (strip_casts t0) _)) eqn:eq'.
+    specialize (H3 _ _ Logic.eq_refl).
+    
+ 
+
+    rewrite (strip_casts_mkApps_tApp t0) //.
+    simpl. rewrite subst_mkApps -IHwf.
+    rewrite map_map_compose.
+
+  
+  rewrite IHwf. strip_casts_mkApps. map_map_compose.  
+    f_equal; solve_all.
+Qed. *)
+
+Lemma decompose_prod_assum_mkApps_nonnil ctx f a l : 
+  decompose_prod_assum ctx (mkApps f (a :: l)) = (ctx, mkApps f (a :: l)).
+Proof.
+  induction f; simpl; auto.
+Qed.
 
 
 Hint Unfold subst1 : subst.
@@ -1188,7 +1230,22 @@ Proof.
       subst c. rewrite app_context_assoc.
       unfold snoc. simpl. lia_f_equal.
 
-  - todo "applications".
+  - destruct args.
+    * simpl. specialize (IHt ctx k). destruct decompose_prod_assum eqn:da.
+      destruct IHt as [ctx' [t' [dec dec']]].
+      rewrite decompose_prod_assum_ctx in dec'.
+      destruct (decompose_prod_assum [] (subst _ _ t)) eqn:da'.
+      noconf dec'. eexists _, _; split => //.
+      now rewrite decompose_prod_assum_ctx da'.
+    * specialize (IHt ctx k). destruct decompose_prod_assum eqn:da.
+      destruct IHt as [ctx' [t' [dec dec']]].
+      rewrite decompose_prod_assum_ctx in dec'.
+      destruct (decompose_prod_assum [] (subst _ _ t)) eqn:da'.
+      noconf dec'.
+      cbn [map]. rewrite decompose_prod_assum_mkApps_nonnil.
+      eexists _, _; split => //.
+      rewrite decompose_prod_assum_ctx.
+      now rewrite decompose_prod_assum_mkApps_nonnil.
 Qed.
 
 Lemma map_option_out_impl {A B} (l : list A) (f g : A -> option B) x :
@@ -1206,10 +1263,27 @@ Proof.
     * discriminate.
   - discriminate.
 Qed.
+
 Lemma smash_context_app Δ Γ Γ' :
   smash_context Δ (Γ ++ Γ') = smash_context (smash_context Δ Γ) Γ'.
 Proof.
   revert Δ; induction Γ as [|[na [b|] ty]]; intros Δ; simpl; auto.
+Qed.
+
+
+Lemma strip_casts_decompose_app t : 
+  Ast.wf t ->
+  forall f l, decompose_app t = (f, l) ->
+  strip_casts t = mkApps (strip_casts f) (map strip_casts l).
+Proof.
+  intros wf.
+  induction wf using term_wf_forall_list_ind; simpl; intros; auto; noconf H;
+  try noconf H0;
+    rewrite ?map_map_compose  ?compose_on_snd ?compose_map_def ?map_length;
+      f_equal; solve_all; eauto.
+
+  - now noconf H3.
+  - now noconf H3.
 Qed.
 
 Lemma substitution_check_one_fix s k mfix inds :
@@ -1220,7 +1294,7 @@ Proof.
   apply map_option_out_impl.
   move=> [na ty def rarg] /=.
   rewrite decompose_prod_assum_ctx.
-  destruct (decompose_prod_assum _ ty) eqn:decomp.
+  destruct (decompose_prod_assum _ (strip_casts ty)) eqn:decomp.
   rewrite decompose_prod_assum_ctx in decomp.
   destruct (decompose_prod_assum [] ty) eqn:decty.
   noconf decomp. rewrite !app_context_nil_l.
@@ -1228,10 +1302,10 @@ Proof.
   rewrite decty in X.
   destruct X as [ctx'' [t'' [dect decty']]].
   rewrite -> subst_context_nil in decty'. simpl in decty'.
-  rewrite decty'. intros ind.
-  rewrite smash_context_app.
 Admitted.
-  (* rewrite (smash_context_acc _ (smash_context _ _)).
+  (*rewrite decty'. intros ind.
+  rewrite smash_context_app.
+   rewrite (smash_context_acc _ (smash_context _ _)).
   rewrite List.rev_app_distr.
   destruct (nth_error_spec (List.rev (smash_context [] c0)) rarg) => /= //;
   autorewrite with len in l; simpl in *.
@@ -1268,7 +1342,6 @@ Proof.
   pose proof (subst_decompose_prod_assum_rec [] ty s k).
   rewrite decty in X.
   destruct X as [ctx'' [t'' [dect decty']]].
-  rewrite decty'.
 Admitted.
   (* apply decompose_app_mkApps in eqapp. => //.
   subst t.
@@ -1608,7 +1681,6 @@ Proof.
     all:eauto using subs_wf with wf.
     now econstructor 3.
 Qed.
-
 
 Lemma substitution_All_local_env_over `{cf : checker_flags} {Σ Γ Γ' Δ s} :
  wf Σ.1 ->

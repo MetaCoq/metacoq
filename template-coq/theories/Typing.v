@@ -417,28 +417,6 @@ Inductive red Σ Γ M : term -> Type :=
   We hence implement first an equality which considers casts and do a stripping
   phase of casts before checking equality. *)
 
-Fixpoint strip_casts t :=
-  match t with
-  | tEvar ev args => tEvar ev (List.map strip_casts args)
-  | tLambda na T M => tLambda na (strip_casts T) (strip_casts M)
-  | tApp u v => mkApps (strip_casts u) (List.map (strip_casts) v)
-  | tProd na A B => tProd na (strip_casts A) (strip_casts B)
-  | tCast c kind t => strip_casts c
-  | tLetIn na b t b' => tLetIn na (strip_casts b) (strip_casts t) (strip_casts b')
-  | tCase ind p c brs =>
-    let brs' := List.map (on_snd (strip_casts)) brs in
-    tCase ind (strip_casts p) (strip_casts c) brs'
-  | tProj p c => tProj p (strip_casts c)
-  | tFix mfix idx =>
-    let mfix' := List.map (map_def strip_casts strip_casts) mfix in
-    tFix mfix' idx
-  | tCoFix mfix idx =>
-    let mfix' := List.map (map_def strip_casts strip_casts) mfix in
-    tCoFix mfix' idx
-  | tRel _ | tVar _ | tSort _ | tConst _ _ | tInd _ _ | tConstruct _ _ _ 
-  | tInt _ | tFloat _ => t
-  end.
-
 Definition eq_term_nocast `{checker_flags} (Σ : global_env) (φ : ConstraintSet.t) (t u : term) :=
   eq_term Σ φ (strip_casts t) (strip_casts u).
 
@@ -475,24 +453,14 @@ Inductive conv `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> t
  where " Σ ;;; Γ |- t = u " := (@conv _ Σ Γ t u) : type_scope.
 
 Lemma conv_refl' `{checker_flags} : forall Σ Γ t, Σ ;;; Γ |- t = t.
-  intros. todo "conv_refl".
+  intros. constructor. apply eq_term_refl.
 Defined.
 
-Lemma cumul_refl' `{checker_flags} : forall Σ Γ t, Σ ;;; Γ |- t <= t. (* easy *)
-  intros. todo "cumul_refl'".
-Defined.
-
-Lemma cumul_trans `{checker_flags} : forall Σ Γ t u v, Σ ;;; Γ |- t <= u -> Σ ;;; Γ |- u <= v -> Σ ;;; Γ |- t <= v.
-  intros. todo "cumul_trans".
+Lemma cumul_refl' `{checker_flags} : forall Σ Γ t, Σ ;;; Γ |- t <= t.
+  intros. constructor. apply leq_term_refl.
 Defined.
 
 Hint Resolve conv_refl cumul_refl' : typecheck.
-
-Lemma congr_cumul_prod `{checker_flags} : forall Σ Γ na na' M1 M2 N1 N2,
-    cumul Σ Γ M1 N1 ->
-    cumul Σ (Γ ,, vass na M1) M2 N2 ->
-    cumul Σ Γ (tProd na M1 M2) (tProd na' N1 N2).
-Proof. intros. todo "congr_cumul_prod". Defined.
 
 Definition eq_opt_term `{checker_flags} Σ φ (t u : option term) :=
   match t, u with
@@ -699,7 +667,7 @@ Definition check_one_fix d :=
           dtype := ty;
           dbody := b;
           rarg := arg |} := d in
-  let '(ctx, ty) := decompose_prod_assum [] ty in
+  let '(ctx, ty) := decompose_prod_assum [] (strip_casts ty) in
   match nth_error (List.rev (smash_context [] ctx)) arg with
   | Some argd =>
     let (hd, args) := decompose_app argd.(decl_type) in
@@ -726,7 +694,7 @@ Definition check_one_cofix d :=
           dtype := ty;
           dbody := b;
           rarg := arg |} := d in
-  let '(ctx, ty) := decompose_prod_assum [] ty in
+  let '(ctx, ty) := decompose_prod_assum [] (strip_casts ty) in
   let (hd, args) := decompose_app ty in
   match destInd hd with
   | Some (mkInd ind _, u) => Some ind

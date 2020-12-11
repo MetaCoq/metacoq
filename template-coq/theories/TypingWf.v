@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils Ast AstUtils Induction LiftSubst
-     UnivSubst Reduction Typing.
+     UnivSubst Reduction WfInv Typing.
 From Equations Require Import Equations.
-Require Import ssreflect.
+Require Import ssreflect ssrbool.
 
 (** * Well-formedness of terms and types in typing derivations
 
@@ -60,7 +60,7 @@ Proof.
   simpl. intros H; now inv H.
 Qed.
 
-Lemma wf_mkApps_napp t u : isApp t = false -> Ast.wf (mkApps t u) -> Ast.wf t /\ List.Forall Ast.wf u.
+Lemma wf_mkApps_napp t u : ~~ isApp t -> Ast.wf (mkApps t u) -> Ast.wf t /\ List.Forall Ast.wf u.
 Proof.
   induction u in t |- *; simpl.
   - intuition.
@@ -86,7 +86,7 @@ Qed.
 Hint Resolve wf_mkApps_inv : wf.
 Hint Constructors Ast.wf : wf.
 
-Lemma isLambda_isApp t : isLambda t = true -> isApp t = false.
+Lemma isLambda_isApp t : isLambda t = true -> ~~ isApp t.
 Proof. destruct t; simpl; congruence. Qed.
 
 Lemma unfold_fix_wf:
@@ -717,4 +717,156 @@ Proof.
   eapply declared_constructor_wf in H0; eauto. exact [].
   eapply All_Forall, Alli_All; eauto. simpl; intros.
   eapply declared_projection_wf in H0; eauto.
+Qed.
+
+Lemma mkApp_ex_wf t u : Ast.wf (mkApp t u) ->
+  exists f args, mkApp t u = tApp f args /\ ~~ isApp f.
+Proof.
+  induction t; simpl; try solve [eexists _, _; split; reflexivity].
+  intros wf.
+  eapply wf_inv in wf as [appt [_ [wft wfargs]]].
+  eapply Forall_app in wfargs as [wfargs wfu]. depelim wfu.
+  forward IHt. eapply wf_mkApp; intuition auto.
+  destruct IHt as [f [ar [eqf isap]]].
+  eexists _, _; split; auto. rewrite appt //.
+Qed.
+
+Lemma decompose_app_mkApp f u : 
+  (decompose_app (mkApp f u)).2 <> [].
+Proof.
+  induction f; simpl; auto; try congruence.
+  destruct args; simpl; congruence.
+Qed.
+
+Lemma mkApps_tApp' f u f' u' :
+  ~~ isApp f' -> 
+  mkApp f u = tApp f' u' -> mkApps f [u] = mkApps f' u'.
+Proof.
+  intros.
+  rewrite -(mkApp_mkApps f u []).
+  simpl. rewrite H0.
+  rewrite -(mkApps_tApp f') // ?H //.
+  destruct u' => //.
+  eapply (f_equal decompose_app) in H0.
+  simpl in H0. pose proof (decompose_app_mkApp f u).
+  rewrite H0 /= in H1. congruence.
+Qed.
+
+Lemma eq_decompose_app x y :
+  Ast.wf x -> Ast.wf y ->
+  decompose_app x = decompose_app y -> x = y.
+Proof.
+  intros wfx; revert y.
+  induction wfx using term_wf_forall_list_ind; intros [] wfy; 
+  eapply wf_inv in wfy; simpl in wfy; simpl;
+   intros [= ?]; try intuition congruence.
+Qed.
+
+Lemma mkApp_ex t u : ∑ f args, mkApp t u = tApp f args.
+Proof.
+  induction t; simpl; try solve [eexists _, _; reflexivity].
+Qed.
+
+Lemma strip_casts_decompose_app t : 
+  Ast.wf t ->
+  forall f l, decompose_app t = (f, l) ->
+  strip_casts t = mkApps (strip_casts f) (map strip_casts l).
+Proof.
+  intros wf.
+  induction wf using term_wf_forall_list_ind; simpl; intros; auto; noconf H;
+  try noconf H0;
+    rewrite ?map_map_compose  ?compose_on_snd ?compose_map_def ?map_length;
+      f_equal; solve_all; eauto.
+
+  - now noconf H3.
+  - now noconf H3.
+Qed.
+
+Lemma mkApps_tApp f args :
+  ~~ isApp f ->
+  ~~ is_empty args ->
+  tApp f args = mkApps f args.
+Proof.
+  intros.
+  destruct args, f; try discriminate; auto.
+Qed.
+
+Lemma strip_casts_mkApps_napp_wf f u : 
+  ~~ isApp f -> Ast.wf f -> Forall Ast.wf u ->
+  strip_casts (mkApps f u) = mkApps (strip_casts f) (map strip_casts u).
+Proof.
+  intros nisapp wf wf'.
+  destruct u.
+  simpl. auto.
+  rewrite -(mkApps_tApp f (t :: u)) //.
+Qed.
+
+Lemma mkApp_mkApps f u : mkApp f u = mkApps f [u].
+Proof. reflexivity. Qed.
+
+Lemma decompose_app_inv f l hd args : 
+  Ast.wf f ->
+  decompose_app (mkApps f l) = (hd, args) ->
+  ∑ n, ~~ isApp hd /\ l = skipn n args /\ f = mkApps hd (firstn n args).
+Proof.
+  destruct (isApp f) eqn:Heq.
+  revert l args hd.
+  induction f; try discriminate. intros.
+  simpl in H.
+  move/wf_inv: H => /= [isAppf [Hargs [wff wfargs]]].
+  rewrite mkApps_tApp ?isAppf in H0 => //. destruct args => //.
+  rewrite mkApps_nested in H0.
+  rewrite decompose_app_mkApps ?isAppf in H0; auto. noconf H0.
+  exists #|args|; split; auto. now rewrite isAppf.
+  rewrite skipn_all_app.
+  rewrite firstn_app. rewrite firstn_all2. lia.
+  rewrite Nat.sub_diag firstn_O app_nil_r. split; auto.
+  rewrite mkApps_tApp ?isAppf //. now destruct args.
+
+  intros wff fl.
+  rewrite decompose_app_mkApps in fl; auto. now apply negbT.
+  inversion fl. subst; exists 0.
+  split; auto. now eapply negbT.
+Qed.
+
+Lemma eq_tip_skipn {A} (x : A) n l : [x] = skipn n l -> 
+  exists l', l = l' ++ [x] /\ n = #|l'|.
+Proof.
+  induction l in n |- *. rewrite skipn_nil //.
+  destruct n. simpl. destruct l => //.
+  intros eq. noconf eq. exists []; split; auto.
+  rewrite skipn_S. intros Hx.
+  destruct (IHl _ Hx) as [l' [-> ->]].
+  exists (a :: l'); split; reflexivity.
+Qed.
+
+Lemma strip_casts_mkApp_wf f u : 
+  Ast.wf f -> Ast.wf u ->
+  strip_casts (mkApp f u) = mkApp (strip_casts f) (strip_casts u).
+Proof.
+  intros wf wf'.
+  assert (wfa : Ast.wf (mkApp f u)). now apply wf_mkApp.
+  destruct (mkApp_ex_wf f u wfa) as [f' [args [eq isapp]]].
+  eapply (f_equal decompose_app) in eq. simpl in eq.
+  epose proof (strip_casts_decompose_app _ wfa _ _ eq).
+  rewrite H. 
+  rewrite mkApp_mkApps in eq.
+  destruct (decompose_app_inv _ _ _ _ wf eq) as [n [ng [stripeq stripf]]].
+  apply eq_tip_skipn in stripeq. destruct stripeq as [l' [eqargs eqn]].
+  subst n args. rewrite (firstn_app_left _ 0) // /= app_nil_r in stripf. subst f.
+  eapply wf_mkApps_napp in wf as [wff' wfl] => //.
+  rewrite strip_casts_mkApps_napp_wf //.
+  now rewrite mkApp_mkApps mkApps_nested map_app.
+Qed.
+
+Lemma strip_casts_mkApps_wf f u : 
+  Ast.wf f -> Forall Ast.wf u ->
+  strip_casts (mkApps f u) = mkApps (strip_casts f) (map strip_casts u).
+Proof.
+  intros wf wf'. induction wf' in f, wf |- *.
+  simpl. auto.
+  rewrite -mkApps_mkApp IHwf'.
+  apply wf_mkApp; auto with wf.
+  rewrite strip_casts_mkApp_wf //.
+  now rewrite mkApps_mkApp.
 Qed.

@@ -31,6 +31,12 @@ Module RedFlags.
   Definition default := mk true true true true true true.
 End RedFlags.
 
+Lemma congr_cumul_prod `{checker_flags} : forall Σ Γ na na' M1 M2 N1 N2,
+    cumul Σ Γ M1 N1 ->
+    cumul Σ (Γ ,, vass na M1) M2 N2 ->
+    cumul Σ Γ (tProd na M1 M2) (tProd na' N1 N2).
+Proof. intros. todo "congr_cumul_prod". Defined.
+
 Section Reduce.
   Context (flags : RedFlags.t) (Σ : global_env).
 

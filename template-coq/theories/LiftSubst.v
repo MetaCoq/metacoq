@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq Require Import utils Ast AstUtils Induction.
+From MetaCoq.Template Require Import utils Ast AstUtils Induction.
 From Coq Require Import ssreflect.
+From Equations Require Import Equations.
 
 (** * Lifting and substitution for the AST
 
@@ -742,3 +743,51 @@ Lemma noccur_between_subst k n t : noccur_between k n t ->
 Proof.
 Admitted. *)
 
+Lemma strip_casts_lift n k t : 
+  strip_casts (lift n k t) = lift n k (strip_casts t).
+Proof.
+  induction t in k |- * using term_forall_list_ind; simpl; auto; 
+    rewrite ?map_map_compose  ?compose_on_snd ?compose_map_def ?map_length;
+   f_equal; solve_all; eauto.
+
+  - rewrite lift_mkApps IHt map_map_compose.
+    f_equal; solve_all.
+Qed.
+Lemma mkApps_ex t u l : ∑ f args, Ast.mkApps t (u :: l) = Ast.tApp f args.
+Proof.
+  induction t; simpl; eexists _, _; reflexivity.
+Qed.
+(* 
+Lemma mkApps_tApp' f l l' : mkApps (tApp f l) l' = mkApps f (l ++ l').
+Proof.
+  induction l'; simpl. rewrite app_nil_r.  *)
+
+Lemma list_length_ind {A} (P : list A -> Type) (p0 : P [])
+  (pS : forall d Γ, (forall Γ', #|Γ'| <= #|Γ|  -> P Γ') -> P (d :: Γ)) 
+  Γ : P Γ.
+Proof.
+  generalize (le_n #|Γ|).
+  generalize #|Γ| at 2.
+  induction n in Γ |- *.
+  destruct Γ; [|simpl; intros; elimtype False; lia].
+  intros. apply p0.
+  intros.
+  destruct Γ; simpl in *.
+  apply p0. apply pS. intros. apply IHn. simpl. lia.
+Qed.
+
+Lemma strip_casts_mkApps_tApp f l : 
+  isApp f = false ->
+  strip_casts (mkApps f l) = strip_casts (tApp f l).
+Proof.
+  induction l. simpl; auto.
+  intros.
+  rewrite mkApps_tApp //.
+Qed.
+
+Lemma strip_casts_mkApps f l : 
+  isApp f = false ->
+  strip_casts (mkApps f l) = mkApps (strip_casts f) (map strip_casts l).
+Proof.
+  intros Hf. rewrite strip_casts_mkApps_tApp //.
+Qed.

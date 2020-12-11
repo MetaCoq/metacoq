@@ -2,7 +2,6 @@
 From MetaCoq.Template Require Import utils BasicAst.
 From MetaCoq.Template Require Import Universes.
 
-
 Module Type Term.
 
   Parameter Inline term : Type.
@@ -438,3 +437,95 @@ End Environment.
 Module Type EnvironmentSig (T : Term).
  Include Environment T.
 End EnvironmentSig.
+
+(* Defined here since BasicAst does not have access to universe instances.
+   Parameterized by term types as they are not yet defined. *)
+Record predicate {term} := mkpredicate {
+  pparams : list term; (* The parameters *)
+  puinst : Instance.t; (* The universe instance *)
+  pindices : list aname; (* Names of binders of indices and inductive application *)
+  preturn : term; (* The return type *) }.
+
+Arguments predicate : clear implicits.
+
+Derive NoConfusion for predicate.
+Global Instance predicate_eq_dec term :
+  Classes.EqDec term ->
+  Classes.EqDec (predicate term).
+Proof. ltac:(Equations.Prop.Tactics.eqdec_proof). Qed.
+
+Definition string_of_predicate {term} (f : term -> string) (p : predicate term) :=
+  "(" ^ "(" ^ String.concat "," (map f (pparams p)) ^ ")" 
+  ^ "," ^ string_of_universe_instance (puinst p)
+  ^ ",(" ^ String.concat "," (map (string_of_name ∘ binder_name) (pindices p)) ^ ")"
+  ^ "," ^ f (preturn p) ^ ")".
+
+Definition test_predicate {term}
+           (paramf preturnf : term -> bool) (p : predicate term) :=
+  forallb paramf p.(pparams) && preturnf p.(preturn).
+
+Section map_predicate.
+  Context {term term' : Type}.
+  Context (paramf preturnf : term -> term').
+
+  Definition map_predicate (p : predicate term) :=
+    {| pparams := map paramf p.(pparams);
+       puinst := p.(puinst);
+       pindices := p.(pindices);
+       preturn := preturnf p.(preturn) |}.
+
+  Lemma map_pparams (p : predicate term) :
+    map paramf (pparams p) = pparams (map_predicate p).
+  Proof. destruct p; auto. Qed.
+
+  Lemma map_preturn (p : predicate term) :
+    preturnf (preturn p) = preturn (map_predicate p).
+  Proof. destruct p; auto. Qed.
+End map_predicate.
+
+Lemma map_predicate_map_predicate
+      {term term' term''}
+      (f g : term' -> term'')
+      (f' g' : term -> term')
+      (p : predicate term) :
+  map_predicate f g (map_predicate f' g' p) =
+  map_predicate (f ∘ f') (g ∘ g') p.
+Proof.
+  destruct p; cbv.
+  f_equal.
+  apply map_map.
+Qed.
+
+Lemma map_predicate_id {t} x : map_predicate (@id t) (@id t) x = id x.
+Proof.
+  destruct x; cbv.
+  f_equal.
+  apply map_id.
+Qed.
+Hint Rewrite @map_predicate_id : map.
+
+Definition tCasePredProp {term}
+           (Pparams Preturn : term -> Type)
+           (p : predicate term) :=
+  All Pparams p.(pparams) × Preturn p.(preturn).
+
+(*
+Lemma map_predicate_spec
+      {term term' uinst uinst'}
+      (f : term' -> term'')
+      (g : uinst' -> uinst'')
+      (h : term' -> term'')
+      (f' : term -> term')
+      (g' : uinst -> uinst')
+      (h' : term -> term')
+      (p : predicate term uinst) :
+
+Lemma map_def_spec {A B} (P P' : A -> Type) (f f' g g' : A -> B) (x : def A) :
+  P' x.(dbody) -> P x.(dtype) -> (forall x, P x -> f x = g x) ->
+  (forall x, P' x -> f' x = g' x) ->
+  map_def f f' x = map_def g g' x.
+Proof.
+  intros. destruct x. unfold map_def. simpl.
+  now rewrite !H, !H0.
+Qed.
+*)

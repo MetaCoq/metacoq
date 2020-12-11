@@ -47,7 +47,7 @@ Inductive term : Type :=
 | tConst (c : kername) (u : Instance.t)
 | tInd (ind : inductive) (u : Instance.t)
 | tConstruct (ind : inductive) (idx : nat) (u : Instance.t)
-| tCase (ind_nbparams_relevance: inductive*nat*relevance) (type_info:term)
+| tCase (ind_nbparams_relevance: inductive*nat*relevance) (type_info:predicate term)
         (discr:term) (branches : list (nat * term))
 | tProj (proj : projection) (t : term)
 | tFix (mfix : mfixpoint term) (idx : nat)
@@ -122,7 +122,11 @@ Inductive wf : term -> Prop :=
 | wf_tConst k u : wf (tConst k u)
 | wf_tInd i u : wf (tInd i u)
 | wf_tConstruct i k u : wf (tConstruct i k u)
-| wf_tCase ci p c brs : wf p -> wf c -> Forall (wf ∘ snd) brs -> wf (tCase ci p c brs)
+| wf_tCase ci p c brs :
+    Forall wf (pparams p) -> wf (preturn p) ->
+    wf c ->
+    Forall (wf ∘ snd) brs ->
+    wf (tCase ci p c brs)
 | wf_tProj p t : wf t -> wf (tProj p t)
 | wf_tFix mfix k : Forall (fun def => wf def.(dtype) /\ wf def.(dbody)) mfix ->
                    wf (tFix mfix k)

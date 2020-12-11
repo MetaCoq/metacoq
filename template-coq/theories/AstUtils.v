@@ -1,7 +1,7 @@
 (* For primitive integers and floats  *)
 From Coq Require Numbers.Cyclic.Int63.Int63 Floats.PrimFloat.
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils BasicAst Ast.
+From MetaCoq.Template Require Import utils BasicAst Ast Environment.
 Require Import ssreflect.
 Require Import ZArith.
 
@@ -40,12 +40,12 @@ Fixpoint string_of_term (t : term) :=
   | tInd i u => "Ind(" ^ string_of_inductive i ^ "," ^ string_of_universe_instance u ^ ")"
   | tConstruct i n u => "Construct(" ^ string_of_inductive i ^ "," ^ string_of_nat n ^ ","
                                     ^ string_of_universe_instance u ^ ")"
-  | tCase (ind, i, r) t p brs =>
+  | tCase (ind, i, r) p t brs =>
     "Case(" ^ string_of_inductive ind ^ ","
             ^ string_of_nat i ^ ","
             ^ string_of_relevance r ^ ","
+            ^ string_of_predicate string_of_term p ^ ","
             ^ string_of_term t ^ ","
-            ^ string_of_term p ^ ","
             ^ string_of_list (fun b => string_of_term (snd b)) brs ^ ")"
   | tProj (ind, i, k) c =>
     "Proj(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_nat k ^ ","

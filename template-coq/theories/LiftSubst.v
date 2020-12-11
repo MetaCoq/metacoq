@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils Ast AstUtils Induction.
+From MetaCoq.Template Require Import utils Ast AstUtils Environment Induction.
 From Coq Require Import ssreflect.
 From Equations Require Import Equations.
 
@@ -20,8 +20,10 @@ Fixpoint lift n k t : term :=
   | tCast c kind t => tCast (lift n k c) kind (lift n k t)
   | tLetIn na b t b' => tLetIn na (lift n k b) (lift n k t) (lift n (S k) b')
   | tCase ind p c brs =>
+    let k' := List.length (pindices p) + k in
+    let p' := map_predicate (lift n k) (lift n k') p in
     let brs' := List.map (on_snd (lift n k)) brs in
-    tCase ind (lift n k p) (lift n k c) brs'
+    tCase ind p' (lift n k c) brs'
   | tProj p c => tProj p (lift n k c)
   | tFix mfix idx =>
     let k' := List.length mfix + k in
@@ -69,8 +71,10 @@ Fixpoint subst s k u :=
   | tCast c kind ty => tCast (subst s k c) kind (subst s k ty)
   | tLetIn na b ty b' => tLetIn na (subst s k b) (subst s k ty) (subst s (S k) b')
   | tCase ind p c brs =>
+    let k' := List.length (pindices p) + k in
+    let p' := map_predicate (subst s k) (subst s k') p in
     let brs' := List.map (on_snd (subst s k)) brs in
-    tCase ind (subst s k p) (subst s k c) brs'
+    tCase ind p' (subst s k c) brs'
   | tProj p c => tProj p (subst s k c)
   | tFix mfix idx =>
     let k' := List.length mfix + k in
@@ -135,8 +139,10 @@ Fixpoint closedn k (t : term) : bool :=
   | tCast c kind t => closedn k c && closedn k t
   | tLetIn na b t b' => closedn k b && closedn k t && closedn (S k) b'
   | tCase ind p c brs =>
+    let k' := List.length (pindices p) + k in
+    let p' := test_predicate (closedn k) (closedn k') p in
     let brs' := List.forallb (test_snd (closedn k)) brs in
-    closedn k p && closedn k c && brs'
+    p' && closedn k c && brs'
   | tProj p c => closedn k c
   | tFix mfix idx =>
     let k' := List.length mfix + k in
@@ -158,8 +164,10 @@ Fixpoint noccur_between k n (t : term) : bool :=
   | tCast c kind t => noccur_between k n c && noccur_between k n t
   | tLetIn na b t b' => noccur_between k n b && noccur_between k n t && noccur_between (S k) n b'
   | tCase ind p c brs =>
+    let k' := List.length (pindices p) + k in
+    let p' := test_predicate (noccur_between k n) (noccur_between k' n) p in
     let brs' := List.forallb (test_snd (noccur_between k n)) brs in
-    noccur_between k n p && noccur_between k n c && brs'
+    p' && noccur_between k n c && brs'
   | tProj p c => noccur_between k n c
   | tFix mfix idx =>
     let k' := List.length mfix + k in
@@ -306,6 +314,25 @@ Proof.
 Qed.
 Hint Resolve map_def_id_spec : all.
 
+Lemma map_predicate_eq_spec {A B} (f f' g g' : A -> B) (p : predicate A) :
+  map f (pparams p) = map g (pparams p) ->
+  f' (preturn p) = g' (preturn p) ->
+  map_predicate f f' p = map_predicate g g' p.
+Proof.
+  intros. unfold map_predicate; f_equal; auto.
+Qed.
+Hint Resolve map_predicate_eq_spec : all.
+
+Lemma map_predicate_id_spec {A} (f f' : A -> A) (p : predicate A) :
+  map f (pparams p) = pparams p ->
+  f' (preturn p) = preturn p ->
+  map_predicate f f' p = p.
+Proof.
+  unfold map_predicate.
+  intros -> ->; destruct p; auto.
+Qed.
+Hint Resolve map_predicate_id_spec : all.
+
 Hint Extern 10 (_ < _)%nat => lia : all.
 Hint Extern 10 (_ <= _)%nat => lia : all.
 Hint Extern 10 (@eq nat _ _) => lia : all.
@@ -316,7 +343,12 @@ Ltac change_Sk :=
   end.
 
 Ltac solve_all :=
+  try lazymatch goal with
+  | H: tCasePredProp _ _ _ |- _ => destruct H
+  end;
   unfold tCaseBrsProp, tFixProp in *;
+  try apply map_predicate_eq_spec;
+  try apply map_predicate_id_spec;
   repeat toAll; try All_map; try close_Forall;
   change_Sk; auto with all;
   intuition eauto 4 with all.
@@ -358,6 +390,7 @@ Proof.
   elim M using term_forall_list_ind;
     intros; simpl;
       rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+      rewrite -> ?map_predicate_map_predicate;
       try (rewrite -> H, ?H0, ?H1; auto); try (f_equal; auto; solve_all).
 
   - elim (leb_spec k n); intros.
@@ -378,7 +411,7 @@ Proof.
   elim M using term_forall_list_ind;
     intros; simpl; 
       rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length,
-      ?Nat.add_assoc; f_equal;
+      ?Nat.add_assoc, ?map_predicate_map_predicate; f_equal;
       try solve [auto; solve_all]; repeat nth_leb_simpl.
 Qed.
 
@@ -412,7 +445,7 @@ Lemma wf_lift n k t : wf t -> wf (lift n k t).
 Proof.
   intros wft; revert t wft k.
   apply (term_wf_forall_list_ind (fun t => forall k, wf (lift n k t)));
-    simpl; intros; try constructor; auto; solve_all.
+    intros; try constructor; simpl; auto; solve_all.
 Qed.
 
 Lemma mkApps_tApp t l :
@@ -432,7 +465,8 @@ Lemma simpl_subst_rec :
 Proof.
   intros M wfM. induction wfM using term_wf_forall_list_ind;
     intros; simpl;
-      rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+      rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length,
+                 ?map_predicate_map_predicate;
       try solve [f_equal; auto; solve_all]; repeat nth_leb_simpl.
 
   - rewrite IHwfM; auto.
@@ -465,7 +499,8 @@ Proof.
   intros M.
   elim M using term_forall_list_ind;
     intros; simpl; try easy;
-      rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
+      rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc,
+                 ?map_predicate_map_predicate;
       try solve [f_equal; auto; solve_all].
 
   - repeat nth_leb_simpl.
@@ -490,7 +525,8 @@ Proof.
               |- context [tRel _] => idtac
             | |- _ => cbn -[plus]
             end; try easy;
-      rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
+      rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc,
+                 ?map_predicate_map_predicate;
       try solve [f_equal; auto; solve_all].
 
   - unfold subst at 1. unfold lift at 4.
@@ -544,7 +580,8 @@ Proof.
               |- context [tRel _] => idtac
             | |- _ => simpl
             end; try easy;
-      rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
+      rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc,
+                 ?map_predicate_map_predicate;
       try solve [f_equal; auto; solve_all].
 
   - unfold subst at 2.
@@ -586,9 +623,11 @@ Lemma lift_closed n k t : closedn k t -> lift n k t = t.
 Proof.
   revert k.
   elim t using term_forall_list_ind; intros; try easy;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
-    unfold test_def in *;
-    simpl closed in *; try solve [simpl lift; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length,
+               ?map_predicate_map_predicate;
+    simpl closed in *;
+    unfold test_def, test_predicate in *;
+    try solve [simpl lift; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
   - rewrite lift_rel_lt; auto.
     revert H. elim (Nat.ltb_spec n0 k); intros; try easy.
   - simpl lift. f_equal. solve_all. unfold test_def in b. toProp. solve_all.
@@ -599,8 +638,9 @@ Lemma closed_upwards {k t} k' : closedn k t -> k' >= k -> closedn k' t.
 Proof.
   revert k k'.
   elim t using term_forall_list_ind; intros; try lia;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
-    simpl closed in *; unfold test_snd, test_def in *;
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length,
+               ?map_predicate_map_predicate;
+    simpl closed in *; unfold test_snd, test_def, test_predicate in *;
       try solve [(try f_equal; simpl; repeat (rtoProp; solve_all); eauto)].
 
   - elim (ltb_spec n k'); auto. intros.
@@ -643,6 +683,8 @@ Proof.
     apply wf_lift; auto. constructor. constructor.
   - apply Forall_map. eapply Forall_impl; eauto.
   - apply wf_mkApps; auto. apply Forall_map. eapply Forall_impl; eauto.
+  - destruct X. apply Forall_map. apply All_Forall. eapply All_impl; eauto.
+  - destruct X; cbn; auto.
   - apply Forall_map. apply All_Forall. eapply All_impl; tea.
     intros [] XX; cbn in *; apply XX.
   - solve_all.
@@ -695,7 +737,8 @@ Proof.
   intros wft wfl.
   induction wft in k |- * using term_wf_forall_list_ind; simpl; auto;
     rewrite ?subst_mkApps; try change_Sk;
-    try (f_equal; rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+    try (f_equal; rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length,
+                             ?map_predicate_map_predicate;
          eauto; solve_all).
 
   - repeat nth_leb_simpl.
@@ -714,7 +757,8 @@ Proof.
   intros wft wfl wfl'.
   induction wft in k |- * using term_wf_forall_list_ind; simpl; eauto;
     rewrite ?subst_mkApps; try change_Sk;
-    try (f_equal; rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
+    try (f_equal; rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length,
+                             ?Nat.add_assoc, ?map_predicate_map_predicate;
          eauto; solve_all; eauto).
 
   - repeat nth_leb_simpl.

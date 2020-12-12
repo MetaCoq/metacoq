@@ -22,13 +22,10 @@ then
         TRANSLATIONS_DEPS=""
     else
         echo "Building MetaCoq globally (default)"
-        # To find the metacoq template plugin
-        # The pcuic plugin depends on the checker plugin
-        # The safechecker and erasure plugins are self-contained
+        # The safechecker and erasure plugins depend on the extractable template-coq plugin
         # These dependencies should not be necessary when separate linking of ocaml object
         # files is supported by coq_makefile
-        PCUIC_MLDEPS=""
-        PCUIC_VDEPS=""
+        PCUIC_DEPS="-I ${COQLIB}/user-contrib/MetaCoq/Template"
         SAFECHECKER_DEPS=""
         ERASURE_DEPS=""
         TRANSLATIONS_DEPS=""

@@ -26,7 +26,6 @@ depends: [
   "coq" {>= "8.11" & < "8.12~"}
   "coq-equations" {>= "1.2.3"}
   "coq-metacoq-template" {= version}
-  "coq-metacoq-checker" {= version}
 ]
 synopsis: "A type system equivalent to Coq's and its metatheory"
 description: """

@@ -3,7 +3,7 @@ From Coq Require Import ssreflect ssrbool CRelationClasses.
 From Equations.Type Require Import Relation Relation_Properties.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICReduction PCUICUnivSubst PCUICTyping PCUICGeneration
-     TemplateToPCUICCorrectness. (* We use the back and forth to show transitivity of cumulativity *)
+     PCUICConversion. (* Needs transitivity of cumulativity *)
 
 Set Warnings "-notation-overridden".
 From MetaCoq.Template Require Import config utils Ast TypingWf WfInv UnivSubst
@@ -1270,6 +1270,15 @@ Axiom cofix_guard_trans :
   ------------------------      derivations for example.
   |- tApp f u : B [0 := u]
 
+  The typing_spine_nil constructor allows to stack cumulativity steps using transitivity of cumulativity,
+  following from confluence.
+
+  In the end a typing derivation for an application that can mix application and cumulativity steps at any
+  point: 
+
+  tApp (tApp f u) v : T' can be translated to
+
+  typing_spine fty [u; v] T'
 *)  
 
 Import PCUICAst PCUICLiftSubst PCUICTyping.

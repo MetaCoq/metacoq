@@ -1,9 +1,7 @@
 -I ../template-coq/build
--I ../checker/src
 -I ../safechecker/src
 -I ../erasure/src
 -Q ../template-coq/theories MetaCoq.Template
--Q ../checker/theories MetaCoq.Checker
 -Q ../pcuic/theories MetaCoq.PCUIC
 -Q ../safechecker/theories MetaCoq.SafeChecker
 -Q ../erasure/theories MetaCoq.Erasure
@@ -22,6 +20,7 @@ case.v
 castprop.v
 # CheckerTest.v disabled
 cofix.v
+vs.v
 erasure_live_test.v
 erasure_test.v
 evars.v
@@ -43,7 +42,6 @@ tmInferInstance.v
 TypingTests.v
 unfold.v
 univ.v
-vs.v
 tmVariable.v
 order_rec.v
 primitive.v

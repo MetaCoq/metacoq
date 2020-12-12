@@ -394,7 +394,7 @@ Proof.
   destruct t => //. simpl.
   now destruct prim as [? []].
 Qed. *)
-
+(* 
 Lemma trans_decompose_app_args t f l : 
   Ast.wf t ->
   AstUtils.decompose_app t = (f, l) ->
@@ -404,10 +404,92 @@ Proof.
    intros [= <- <-]; auto. admit.
   rewrite decompose_app_mkApps. 
   destruct (AstUtils.decompose_app t).
-Admitted.
+Admitted. *)
 
-Lemma trans_build_branches_type {cf} Σ ind mdecl idecl args u p brtys :
+Lemma trans_ind_params mdecl : trans_local (Ast.ind_params mdecl) = ind_params (trans_minductive_body mdecl).
+Proof. reflexivity. Qed.
+
+Lemma trans_ind_bodies mdecl : map trans_one_ind_body (Ast.ind_bodies mdecl) = ind_bodies (trans_minductive_body mdecl).
+Proof. reflexivity. Qed.
+From MetaCoq.PCUIC Require Import PCUICClosed PCUICInductiveInversion.
+
+Lemma instantiate_params_spec params paramsi concl ty :
+  instantiate_params params paramsi (it_mkProd_or_LetIn params concl) = Some ty ->
+  ty = (subst (List.rev paramsi) 0 (expand_lets params concl)).
+Proof.
+  intros h. eapply instantiate_params_make_context_subst in h as [ctx'' [ms [s' [da [dp ->]]]]].
+  eapply make_context_subst_spec in dp.
+  rewrite List.rev_involutive in dp.
+  pose proof (PCUICContexts.context_subst_length2 dp).
+  rewrite decompose_prod_n_assum_it_mkProd app_nil_r in da. noconf da.
+  apply context_subst_subst_extended_subst in dp as ->.
+  rewrite map_subst_expand_lets ?List.rev_length //.
+Qed.
+
+Lemma trans_ind_bodies_length mdecl : #|TemplateEnvironment.ind_bodies mdecl| = #|ind_bodies (trans_minductive_body mdecl)|.
+Proof. simpl. now rewrite map_length. Qed.
+
+Lemma trans_ind_params_length mdecl : #|TemplateEnvironment.ind_params mdecl| = #|ind_params (trans_minductive_body mdecl)|.
+Proof. simpl. now rewrite map_length. Qed.
+
+Lemma trans_ind_npars mdecl : Ast.ind_npars mdecl = ind_npars (trans_minductive_body mdecl).
+Proof. simpl. reflexivity. Qed.
+
+Lemma trans_reln l p Γ : map trans (Ast.reln l p Γ) = 
+  reln (map trans l) p (trans_local Γ).
+Proof.
+  induction Γ as [|[na [b|] ty] Γ] in l, p |- *; simpl; auto.
+  now rewrite IHΓ.
+Qed.
+
+Lemma trans_to_extended_list Γ n : map trans (Ast.to_extended_list_k Γ n) = to_extended_list_k (trans_local Γ) n.
+Proof.
+  now rewrite /to_extended_list_k trans_reln.
+Qed.
+
+Definition trans_constructor_shape (t : ST.constructor_shape) : constructor_shape :=
+  {| cshape_args := trans_local t.(ST.cshape_args);
+     cshape_indices := map trans t.(ST.cshape_indices); 
+     cshape_sorts := t.(ST.cshape_sorts) |}.
+
+Lemma trans_cshape_args cs : trans_local (ST.cshape_args cs) = cshape_args (trans_constructor_shape cs).
+Proof. reflexivity. Qed.
+
+Lemma trans_cshape_args_length cs : #|ST.cshape_args cs| = #|cshape_args (trans_constructor_shape cs)|.
+Proof. now rewrite -trans_cshape_args map_length. Qed.
+
+Lemma context_assumptions_map ctx : context_assumptions (map trans_decl ctx) = Ast.context_assumptions ctx.
+Proof.
+  induction ctx as [|[na [b|] ty] ctx]; simpl; auto.
+Qed.
+
+(* Lemma decompose_prod_assum_mkApps ctx t f l : 
+  decompose_prod_assum ctx t = (ctx', l) ->
+  it_mkProd_or_LetIn ctx t = it_mkProd_or_LetIn ctx' (mkApps t' -> 
+  () *)
+(* 
+Lemma decompose_app_trans_inv t ind u l :
+  Ast.wf t ->
+  decompose_app (trans t) = (tInd ind u, l) -> 
+  ∑ l', l = map trans l' /\ AstUtils.decompose_app t = (Ast.tInd ind u, l').
+Proof.
+  destruct t => //. simpl.
+  intros wf.
+  destruct decompose_app eqn:da.
+  pose proof (decompose_app_notApp _ _ _ da).
+  rewrite decompose_app_mkApps in da. depelim wf. destruct t => //.
+  destruct t0 => //.
+  intros [= -> -> ->].
+  exists args. noconf da. split; auto. f_equal. rewrite -H0 in H.
+  depelim wf.
+  destruct t => //. simpl in H2. noconf H2. reflexivity.
+  intros. simpl in H0. noconf H0.
+  exists []. split; auto.
+Qed. *)
+Lemma trans_build_branches_type ind mdecl idecl args u p brtys :
+  (* (ST.on_inductive (ST.lift_typing ST.typing) Σ (inductive_mind ind) mdecl) ->
   (ST.on_ind_body (ST.lift_typing ST.typing) Σ (inductive_mind ind) mdecl (inductive_ind ind) idecl) ->
+  inductive_ind ind < #|ind_bodies (trans_minductive_body mdecl)| -> *)
   map_option_out (ST.build_branches_type ind mdecl idecl args u p)
   = Some brtys ->
   map_option_out
@@ -416,7 +498,10 @@ Lemma trans_build_branches_type {cf} Σ ind mdecl idecl args u p brtys :
       (trans p))
   = Some (map (on_snd trans) brtys).
 Proof.
-  intros onind.
+Admitted.
+(* Will likely change with the change of representation of cases *)
+(*
+  intros onmind onind indlt.
   pose proof (ST.onConstructors onind) as onc.
   unfold ST.build_branches_type.
   unfold build_branches_type.
@@ -425,29 +510,103 @@ Proof.
   intros i [[id ty] argn] [nargs br] s oncs.
   simpl.
   destruct ST.instantiate_params eqn:ipars => //.
+  pose proof ipars as ipars'.
   apply trans_instantiate_params in ipars.
-  rewrite trans_subst in ipars.
-  rewrite -trans_inds.
-  rewrite -trans_subst_instance_constr.
-  rewrite [map _ _]trans_local_subst_instance_context in ipars.
+  rewrite trans_subst trans_inds trans_subst_instance_constr in ipars.
+  rewrite [map _ _]trans_local_subst_instance_context trans_ind_params
+    trans_ind_bodies in ipars.
+  
+  rewrite trans_ind_params trans_ind_bodies.
   rewrite ipars.
-  assert (wft : S.wf t). admit.
+  assert (wft : S.wf t). eapply wf_instantiate_params. 4:eapply ipars'. 1-3:admit.
+  pose proof (trans_decompose_prod_assum [] t wft).
+  destruct (AstUtils.decompose_prod_assum [] t) eqn:da'.
+  rewrite H.
+  destruct chop eqn:eqchop.
+  intros [= -> <-].
+  destruct (chop _ (decompose_app (trans t0)).2) eqn:c'.
+  f_equal. f_equal.
+  rewrite [ty]oncs.(ST.cstr_eq) in ipars.
+  rewrite trans_it_mkProd_or_LetIn subst_instance_constr_it_mkProd_or_LetIn 
+    subst_it_mkProd_or_LetIn in ipars. len in ipars.
+  rewrite closed_ctx_subst in ipars.
+  rewrite [map _ _]trans_ind_params. admit.
+  apply instantiate_params_spec in ipars.
+  rewrite trans_it_mkProd_or_LetIn. f_equal.
+  rewrite trans_mkApps map_length trans_lift. f_equal.
+  rewrite map_app /= trans_mkApps /= map_app trans_to_extended_list.
+  assert (l1 = map trans l /\ l2 = map trans l0) as [-> ->].
+  { simpl in H.
+    move: ipars.
+    rewrite trans_it_mkProd_or_LetIn subst_instance_constr_it_mkProd_or_LetIn subst_it_mkProd_or_LetIn.
+    rewrite /expand_lets expand_lets_it_mkProd_or_LetIn. len.
+    rewrite subst_it_mkProd_or_LetIn.
+    rewrite trans_mkApps.
+    rewrite /ST.cstr_concl_head. cbn -[subst].
+    rewrite trans_ind_bodies. len.
+    rewrite trans_ind_bodies_length trans_ind_params_length.
+    rewrite map_app trans_to_extended_list trans_ind_params trans_cshape_args_length.
+    rewrite (subst_cstr_concl_head ind u (trans_minductive_body mdecl)) //.
+    rewrite expand_lets_k_mkApps subst_mkApps /=.
+    intros eqit.
+    rewrite eqit in H.
+    rewrite decompose_prod_assum_it_mkProd // in H.
+    apply is_ind_app_head_mkApps.
+    injection H. clear H. rewrite app_nil_r.
+    intros eqind _.
+    apply (f_equal decompose_app) in eqind.
+    destruct (decompose_app (trans t0)) eqn:dt0.
+    simpl in *.
+    rewrite decompose_app_mkApps // in eqind. noconf eqind.
+
+    noconf H.
+    move: H.
+    
+    rewrite !map_app map_map_compose chop_n_app. len.
+    rewrite context_assumptions_map. now rewrite onmind.(ST.onNpars).
+    destruct AstUtils.decompose_prod_assum eqn:da'.
+    rewrite trans_it_mkProd_or_LetIn trans_mkApps. len.
+    simpl in H. rewrite H.
+  
+
+
+  reflexivity.
+
+
+
+
+
+  f_equal. f_equal. rewrite map_app.
+  rewrite trans_to_extended_list. f_equal.
+
+
+
+  len.
+
+
+  apply instantiate_params_make_context_subst in ipars as [ctx' [ty'' [s' [dass [makes eq]]]]].
+  rewrite eq.
+  eapply make_context_subst_spec in makes.
+  rewrite List.rev_involutive in makes.
+
+
+
   move: (trans_decompose_prod_assum [] t wft).
+  destruct oncs. simpl in cstr_eq.
+  rewrite trans_inds in ipars.
+  rewrite trans_subst_instance_constr in ipars.   
+  intros [= -> <-].
+
   destruct AstUtils.decompose_prod_assum eqn:dp => -> /=.
   destruct (AstUtils.decompose_app t0) eqn:da'. simpl.
   destruct chop as [params argsl] eqn:ceq.
-  destruct oncs. simpl in cstr_eq. 
-  rewrite [ty]cstr_eq in ipars.
-  intros [= -> <-].
   
   rewrite (chop_map _ _ _ _ _ ceq).
   intros [= ->]. f_equal. unfold on_snd. simpl. f_equal. subst br.
   rewrite trans_it_mkProd_or_LetIn trans_mkApps map_app /= trans_mkApps /= map_app.
   now rewrite trans_to_extended_list trans_lift map_length.
 Qed.
-intros. 
-
-Admitted.
+*)
 
 Lemma trans_build_case_predicate_type ind mdecl idecl params u ps :
   build_case_predicate_type ind (trans_minductive_body mdecl)
@@ -669,9 +828,50 @@ Proof.
     + now rewrite IHΣ.
 Qed.
 
-Lemma context_assumptions_map ctx : context_assumptions (map trans_decl ctx) = Ast.context_assumptions ctx.
+Lemma on_global_env_impl `{checker_flags} Σ P Q :
+  (forall Σ Γ t T, ST.on_global_env P Σ.1 -> P Σ Γ t T -> Q Σ Γ t T) ->
+  ST.on_global_env P Σ -> ST.on_global_env Q Σ.
 Proof.
-  induction ctx as [|[na [b|] ty] ctx]; simpl; auto.
+  intros X X0.
+  simpl in *. induction X0; constructor; auto.
+  clear IHX0. destruct d; simpl.
+  - destruct c; simpl. destruct cst_body; simpl in *.
+    red in o |- *. simpl in *. now eapply X.
+    red in o |- *. simpl in *. now eapply X.
+  - red in o. simpl in *.
+    destruct o0 as [onI onP onNP].
+    constructor; auto.
+    -- eapply Alli_impl. exact onI. eauto. intros.
+       refine {| ST.ind_indices := X1.(ST.ind_indices);
+                 ST.ind_arity_eq := X1.(ST.ind_arity_eq);
+                 ST.ind_cshapes := X1.(ST.ind_cshapes) |}.
+       --- apply ST.onArity in X1. unfold on_type in *; simpl in *.
+           now eapply X.
+       --- pose proof X1.(ST.onConstructors) as X11. red in X11.
+          eapply All2_impl; eauto.
+          simpl. intros. destruct X2 as [? ? ? ?]; unshelve econstructor; eauto.
+          * apply X; eauto.
+          * clear -X0 X on_cargs. revert on_cargs.
+            generalize (ST.cshape_args y), (ST.cshape_sorts y).
+            induction c; destruct l; simpl; auto;
+              destruct a as [na [b|] ty]; simpl in *; auto;
+          split; intuition eauto.
+          * clear -X0 X on_cindices.
+            revert on_cindices.
+            generalize (List.rev (SL.lift_context #|ST.cshape_args y| 0 (ST.ind_indices X1))).
+            generalize (ST.cshape_indices y).
+            induction 1; simpl; constructor; auto.
+       --- simpl; intros. pose (ST.onProjections X1 H0). simpl in *; auto.
+       --- destruct X1. simpl. unfold ST.check_ind_sorts in *.
+           destruct Universe.is_prop, Universe.is_sprop; auto.
+           split.
+           * apply ind_sorts.
+           * destruct indices_matter; auto.
+             eapply ST.type_local_ctx_impl. eapply ind_sorts. auto.
+      --- eapply X1.(ST.onIndices).
+    -- red in onP. red.
+       eapply ST.All_local_env_impl. eauto.
+       intros. now apply X.
 Qed.
 
 Lemma typing_wf_wf {cf}:
@@ -1546,7 +1746,7 @@ Proof.
     -- rewrite global_ext_constraints_trans; exact H1.
     -- rewrite trans_mkApps in X2; auto with wf.
     -- apply H2.
-    -- apply trans_build_branches_type in H3.
+    -- eapply trans_build_branches_type in H3; eauto.
        rewrite firstn_map. exact H3.
     -- eapply All2_map. solve_all.
        destruct b0 as [s [Hs IHs]]; eauto.
@@ -1626,18 +1826,6 @@ Lemma Alli_map {A B} (P : nat -> B -> Type) n (f : A -> B) l :
   Alli P n (map f l).
 Proof.
   induction 1; constructor; auto.
-Qed.
-
-Definition trans_constructor_shape (t : ST.constructor_shape) : constructor_shape :=
-  {| cshape_args := trans_local t.(ST.cshape_args);
-     cshape_indices := map trans t.(ST.cshape_indices); 
-     cshape_sorts := t.(ST.cshape_sorts) |}.
-
-Lemma trans_reln l p Γ : map trans (TemplateEnvironment.reln l p Γ) = 
-  PCUICEnvironment.reln (map trans l) p (trans_local Γ).
-Proof.
-  induction Γ as [|[na [b|] ty] Γ] in l, p |- *; simpl; auto.
-  now rewrite IHΓ.
 Qed.
 
 Lemma trans_arities_context m : trans_local (Ast.arities_context (Ast.ind_bodies m)) = 

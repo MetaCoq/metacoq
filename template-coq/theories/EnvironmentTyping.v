@@ -2,7 +2,6 @@
 From MetaCoq.Template Require Import config utils BasicAst AstUtils
      Universes Environment.
 
-
 Module Lookup (T : Term) (E : EnvironmentSig T).
 
   Import T E.
@@ -145,6 +144,20 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T).
   Arguments localenv_nil {_}.
   Arguments localenv_cons_def {_ _ _ _ _} _ _.
   Arguments localenv_cons_abs {_ _ _ _} _ _.
+
+  Section TypeCtxInst.
+    Context (typing : context -> term -> term -> Type).
+    (* Delta telescope *)
+    Inductive ctx_inst Σ (Γ : context) : list term -> context -> Type :=
+    | ctx_inst_nil : ctx_inst Σ Γ [] []
+    | ctx_inst_ass na t i inst Δ : 
+        typing Σ Γ i t ->
+        ctx_inst Σ Γ inst (subst_telescope [i] 0 Δ) ->
+        ctx_inst Σ Γ (i :: inst) (vass na t :: Δ)
+    | ctx_inst_def na b t inst Δ :
+        ctx_inst Σ Γ inst (subst_telescope [b] 0 Δ) ->
+        ctx_inst Σ Γ inst (vdef na b t :: Δ).
+  End TypeCtxInst.
 
   Inductive context_relation (P : context -> context -> context_decl -> context_decl -> Type)
             : forall (Γ Γ' : context), Type :=
@@ -393,17 +406,6 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
         (sorts_local_ctx Σ Γ Δ us * (P Σ (Γ ,,, Δ) t None * P Σ (Γ ,,, Δ) b (Some t)))
       | _, _ => False
       end.
-  
-    (* Delta telescope *)
-    Inductive ctx_inst Σ (Γ : context) : list term -> context -> Type :=
-    | ctx_inst_nil : ctx_inst Σ Γ [] []
-    | ctx_inst_ass na t i inst Δ : 
-      P Σ Γ i (Some t) ->
-      ctx_inst Σ Γ inst (subst_telescope [i] 0 Δ) ->
-      ctx_inst Σ Γ (i :: inst) (vass na t :: Δ)
-    | ctx_inst_def na b t inst Δ :
-      ctx_inst Σ Γ inst (subst_telescope [b] 0 Δ) ->
-      ctx_inst Σ Γ inst (vdef na b t :: Δ).
 
     Implicit Types (mdecl : mutual_inductive_body) (idecl : one_inductive_body) (cdecl : ident * term * nat).
 

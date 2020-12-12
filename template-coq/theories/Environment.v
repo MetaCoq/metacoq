@@ -413,9 +413,10 @@ Module Environment (T : Term).
       + simpl. apply IHΓ'; simpl in *; (lia || congruence).
   Qed.
 
-  Lemma nth_error_ge {Γ Γ' v Γ''} f : length Γ' <= v ->
-                                      nth_error (Γ' ++ Γ) v =
-                                      nth_error (fold_context (f 0) Γ' ++ Γ'' ++ Γ) (length Γ'' + v).
+  Lemma nth_error_ge {Γ Γ' v Γ''} f :
+    length Γ' <= v ->
+    nth_error (Γ' ++ Γ) v =
+    nth_error (fold_context (f 0) Γ' ++ Γ'' ++ Γ) (length Γ'' + v).
   Proof.
     intros Hv.
     rewrite -> !nth_error_app_ge, ?fold_context_length. f_equal. lia.
@@ -423,9 +424,10 @@ Module Environment (T : Term).
     rewrite fold_context_length. lia. auto.
   Qed.
 
-  Lemma nth_error_lt {Γ Γ' Γ'' v} (f : nat -> term -> term) : v < length Γ' ->
-                                                          nth_error (fold_context f Γ' ++ Γ'' ++ Γ) v =
-                                                          option_map (map_decl (f (length Γ' - S v))) (nth_error (Γ' ++ Γ) v).
+  Lemma nth_error_lt {Γ Γ' Γ'' v} (f : nat -> term -> term) :
+    v < length Γ' ->
+    nth_error (fold_context f Γ' ++ Γ'' ++ Γ) v =
+    option_map (map_decl (f (length Γ' - S v))) (nth_error (Γ' ++ Γ) v).
   Proof.
     simpl. intros Hv.
     rewrite -> !nth_error_app_lt.
@@ -443,10 +445,14 @@ End EnvironmentSig.
 Record predicate {term} := mkpredicate {
   pparams : list term; (* The parameters *)
   puinst : Instance.t; (* The universe instance *)
-  pindices : list aname; (* Names of binders of indices and inductive application *)
+  pcontext : list aname; (* Names of binders of indices and inductive application,
+                          in same order as context (i.e. name of "inductive application"
+                          binder is first). Types are obtained from inductive declaration.
+                          Also used for lifting/substitution for the return type. *)
   preturn : term; (* The return type *) }.
 
 Arguments predicate : clear implicits.
+Arguments mkpredicate {_}.
 
 Derive NoConfusion for predicate.
 Global Instance predicate_eq_dec term :
@@ -457,7 +463,7 @@ Proof. ltac:(Equations.Prop.Tactics.eqdec_proof). Qed.
 Definition string_of_predicate {term} (f : term -> string) (p : predicate term) :=
   "(" ^ "(" ^ String.concat "," (map f (pparams p)) ^ ")" 
   ^ "," ^ string_of_universe_instance (puinst p)
-  ^ ",(" ^ String.concat "," (map (string_of_name ∘ binder_name) (pindices p)) ^ ")"
+  ^ ",(" ^ String.concat "," (map (string_of_name ∘ binder_name) (pcontext p)) ^ ")"
   ^ "," ^ f (preturn p) ^ ")".
 
 Definition test_predicate {term}
@@ -471,7 +477,7 @@ Section map_predicate.
   Definition map_predicate (p : predicate term) :=
     {| pparams := map paramf p.(pparams);
        puinst := p.(puinst);
-       pindices := p.(pindices);
+       pcontext := p.(pcontext);
        preturn := preturnf p.(preturn) |}.
 
   Lemma map_pparams (p : predicate term) :

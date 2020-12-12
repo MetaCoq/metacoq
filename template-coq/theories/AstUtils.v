@@ -158,8 +158,9 @@ Fixpoint strip_casts t :=
   | tCast c kind t => strip_casts c
   | tLetIn na b t b' => tLetIn na (strip_casts b) (strip_casts t) (strip_casts b')
   | tCase ind p c brs =>
+    let p' := map_predicate strip_casts strip_casts p in
     let brs' := List.map (on_snd (strip_casts)) brs in
-    tCase ind (strip_casts p) (strip_casts c) brs'
+    tCase ind p' (strip_casts c) brs'
   | tProj p c => tProj p (strip_casts c)
   | tFix mfix idx =>
     let mfix' := List.map (map_def strip_casts strip_casts) mfix in
@@ -203,6 +204,16 @@ Proof.
   destruct x as [na [body|] ty'] => /=;
   now rewrite !Nat.add_1_r /= IHctx' -app_assoc.
 Qed.
+
+(** Decompose an arity into a context and a sort *)
+
+Fixpoint destArity Γ (t : term) :=
+  match t with
+  | tProd na t b => destArity (Γ ,, vass na t) b
+  | tLetIn na b b_ty b' => destArity (Γ ,, vdef na b b_ty) b'
+  | tSort s => Some (Γ, s)
+  | _ => None
+  end.
 
 Definition is_ind_app_head t :=
   match t with

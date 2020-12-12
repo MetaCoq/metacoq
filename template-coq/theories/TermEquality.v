@@ -169,14 +169,16 @@ Inductive eq_term_upto_univ_napp Σ (Re Rle : Universe.t -> Universe.t -> Prop) 
     eq_term_upto_univ_napp Σ Re Rle 0 u u' ->
     eq_term_upto_univ_napp Σ Re Rle napp (tLetIn na t ty u) (tLetIn na' t' ty' u')
 
-| eq_Case indn p p' c c' brs brs' :
-    eq_term_upto_univ_napp Σ Re Re 0 p p' ->
-    eq_term_upto_univ_napp Σ Re Re 0 c c' ->
+| eq_Case ind par p p' c c' brs brs' :
+    All2 (eq_term_upto_univ_napp Re Re 0) p.(pparams) p'.(pparams) ->
+    R_universe_instance Re p.(puinst) p'.(puinst) ->
+    eq_term_upto_univ_napp Re Re 0 p.(preturn) p'.(preturn) ->
+    eq_term_upto_univ_napp Re Re 0 c c' ->
     All2 (fun x y =>
-      (fst x = fst y) *
-      eq_term_upto_univ_napp Σ Re Re 0 (snd x) (snd y)
+      fst x = fst y ×
+      eq_term_upto_univ_napp Re Re (snd x) (snd y) 0
     ) brs brs' ->
-    eq_term_upto_univ_napp Σ Re Rle napp (tCase indn p c brs) (tCase indn p' c' brs')
+  eq_term_upto_univ_napp Σ Re Rle napp (tCase indn p c brs) (tCase indn p' c' brs')
 
 | eq_Proj p c c' :
     eq_term_upto_univ_napp Σ Re Re 0 c c' ->

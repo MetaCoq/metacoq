@@ -1951,3 +1951,15 @@ Proof.
   now apply H; simpl. apply IHl.
   intros x xin; apply H; simpl; auto.
 Qed.
+
+Lemma All_forall {X Y} (f:X->Y->Prop) xs: 
+  All (fun a => forall b, f a b) xs ->
+  (forall b, All (fun a => f a b) xs).
+Proof.
+  intros.
+  induction X0.
+  - constructor.
+  - constructor.
+    + apply p.
+    + apply IHX0.
+Qed.

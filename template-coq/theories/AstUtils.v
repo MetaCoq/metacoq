@@ -90,6 +90,10 @@ Proof.
   rewrite <- mkApps_nested. reflexivity.
 Qed.
 
+Lemma mkAppMkApps s t:
+  mkApp s t = mkApps s [t].
+Proof. reflexivity. Qed.
+
 Lemma mkApp_tApp f u : isApp f = false -> mkApp f u = tApp f [u].
 Proof. intros. destruct f; (discriminate || reflexivity). Qed.
 

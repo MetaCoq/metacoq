@@ -38,13 +38,6 @@ Ltac solve_list :=
   try rewrite !map_length;
   try solve_all; try typeclasses eauto with core.
 
-Lemma mkAppMkApps s t:
-  mkApp s t = mkApps s [t].
-Proof.
-  cbn. unfold mkApp.
-  reflexivity.
-Qed.
-
 Lemma mapOne {X Y} (f:X->Y) x:
   map f [x] = [f x].
 Proof.
@@ -57,7 +50,7 @@ Proof.
   revert k. induction t using PCUICInduction.term_forall_list_ind; simpl; intros; try congruence.
   - f_equal. rewrite !map_map_compose. solve_all.
   - rewrite IHt1 IHt2.
-    rewrite mkAppMkApps.
+    rewrite AstUtils.mkAppMkApps.
     rewrite <- mapOne.
     rewrite <- TL.lift_mkApps.
     f_equal.
@@ -118,8 +111,8 @@ Proof.
 Qed.
 
 Lemma trans_mem_level_set l Σ:
-LevelSet.mem l (ST.global_ext_levels Σ) ->
-LevelSet.mem l (TT.global_ext_levels (trans_global Σ)).
+  LevelSet.mem l (ST.global_ext_levels Σ) ->
+  LevelSet.mem l (TT.global_ext_levels (trans_global Σ)).
 Proof.
   intros.
   rewrite <- trans_global_ext_levels.
@@ -127,8 +120,8 @@ Proof.
 Qed.
 
 Lemma trans_in_level_set l Σ:
-LevelSet.In l (ST.global_ext_levels Σ) ->
-LevelSet.In l (TT.global_ext_levels (trans_global Σ)).
+  LevelSet.In l (ST.global_ext_levels Σ) ->
+  LevelSet.In l (TT.global_ext_levels (trans_global Σ)).
 Proof.
   intros.
   rewrite <- trans_global_ext_levels.
@@ -159,8 +152,8 @@ Proof.
 Qed.
 
 Lemma trans_constraintSet_in x Σ:
-ConstraintSet.In x (ST.global_ext_constraints Σ) ->
-ConstraintSet.In x (TT.global_ext_constraints (trans_global Σ)).
+  ConstraintSet.In x (ST.global_ext_constraints Σ) ->
+  ConstraintSet.In x (TT.global_ext_constraints (trans_global Σ)).
 Proof.
   rewrite trans_global_ext_constraints.
   trivial.
@@ -217,27 +210,13 @@ Proof.
     reflexivity.
 Qed.
 
-
 Lemma trans_decl_type decl:
-trans (PCUICAst.decl_type decl) =
-decl_type (trans_decl decl).
+  trans (PCUICAst.decl_type decl) =
+  decl_type (trans_decl decl).
 Proof.
   destruct decl.
   reflexivity.
 Qed.
-
-Lemma All_forall {X Y} (f:X->Y->Prop) xs: 
-  All (fun a => forall b, f a b) xs ->
-  (forall b, All (fun a => f a b) xs).
-Proof.
-  intros.
-  induction X0.
-  - constructor.
-  - constructor.
-    + apply p.
-    + apply IHX0.
-Qed.
-
 
 Lemma trans_subst xs k t:
   trans (SL.subst xs k t) =
@@ -302,8 +281,8 @@ Qed.
 
 
 Lemma trans_subst10 u B:
-trans (SL.subst1 u 0 B)=
-TL.subst10 (trans u) (trans B).
+  trans (SL.subst1 u 0 B) =
+  TL.subst10 (trans u) (trans B).
 Proof.
   unfold SL.subst1.
   rewrite trans_subst.
@@ -311,8 +290,8 @@ Proof.
 Qed.
 
 Lemma trans_subst_instance_constr u t:
-trans (PCUICUnivSubst.subst_instance_constr u t) =
-Template.UnivSubst.subst_instance_constr u (trans t).
+  trans (PCUICUnivSubst.subst_instance_constr u t) =
+  Template.UnivSubst.subst_instance_constr u (trans t).
 Proof.
   induction t using PCUICInduction.term_forall_list_ind;cbn;auto;try congruence.
   - do 2 rewrite map_map. 
@@ -320,7 +299,7 @@ Proof.
     apply All_map_eq.
     apply X.
   - rewrite IHt1 IHt2.
-    do 2 rewrite mkAppMkApps.
+    do 2 rewrite AstUtils.mkAppMkApps.
     rewrite subst_instance_constr_mkApps.
     cbn.
     reflexivity.
@@ -361,26 +340,26 @@ Proof.
 Qed.
 
 Lemma trans_cst_type decl:
-trans (PCUICAst.cst_type decl) =
-cst_type (trans_constant_body decl).
+  trans (PCUICAst.cst_type decl) =
+  cst_type (trans_constant_body decl).
 Proof.
   reflexivity.
 Qed.
 
 Lemma trans_ind_type idecl:
-trans (PCUICAst.ind_type idecl) =
-ind_type (trans_one_ind_body idecl).
+  trans (PCUICAst.ind_type idecl) =
+  ind_type (trans_one_ind_body idecl).
 Proof.
   reflexivity.
 Qed.
 
 Lemma trans_type_of_constructor mdecl cdecl ind i u:
-trans (ST.type_of_constructor mdecl cdecl (ind, i) u) =
-TT.type_of_constructor 
-  (trans_minductive_body mdecl) 
-  (trans_ctor cdecl)
-  (ind,i)
-  u.
+  trans (ST.type_of_constructor mdecl cdecl (ind, i) u) =
+  TT.type_of_constructor 
+    (trans_minductive_body mdecl) 
+    (trans_ctor cdecl)
+    (ind,i)
+    u.
 Proof.
   unfold ST.type_of_constructor.
   rewrite trans_subst.
@@ -407,24 +386,24 @@ Proof.
 Qed.
 
 Lemma trans_dtype decl:
-trans (dtype decl) =
-dtype (trans_def decl).
+  trans (dtype decl) =
+  dtype (trans_def decl).
 Proof.
   destruct decl.
   reflexivity.
 Qed.
 
 Lemma trans_dbody decl:
-trans (dbody decl) =
-dbody (trans_def decl).
+  trans (dbody decl) =
+  dbody (trans_def decl).
 Proof.
   destruct decl.
   reflexivity.
 Qed.
 
 Lemma trans_declared_projection Σ mdecl idecl p pdecl :
-ST.declared_projection Σ.1 mdecl idecl p pdecl ->
-TT.declared_projection (trans_global Σ).1 (trans_minductive_body mdecl) (trans_one_ind_body idecl) p (on_snd trans pdecl).
+  ST.declared_projection Σ.1 mdecl idecl p pdecl ->
+  TT.declared_projection (trans_global Σ).1 (trans_minductive_body mdecl) (trans_one_ind_body idecl) p (on_snd trans pdecl).
 Proof.
   intros (?&?&?).
   split;[|split].
@@ -451,7 +430,6 @@ Proof.
   do 2 eexists.
   repeat split;eassumption.
 Qed.
-
 
 Lemma trans_instantiate_params params pars ty:
   option_map trans 
@@ -487,7 +465,7 @@ Proof.
 Qed.
 
 Lemma trans_instantiate_params' u mdecl args npar x ty :
-ST.instantiate_params
+  ST.instantiate_params
       (PCUICUnivSubst.subst_instance_context u (PCUICAst.ind_params mdecl))
       (firstn npar args)
       ty =
@@ -529,8 +507,8 @@ Proof.
 Qed.
 
 Lemma trans_destr_arity x:
-  AstUtils.destArity [] (trans x) 
-  = option_map (fun '(xs,u) => (map trans_decl xs,u)) (PCUICAstUtils.destArity [] x).
+  AstUtils.destArity [] (trans x) =
+  option_map (fun '(xs,u) => (map trans_decl xs,u)) (PCUICAstUtils.destArity [] x).
 Proof.
   remember (@nil PCUICAst.context_decl) as xs.
   replace (@nil context_decl) with (map trans_decl xs) by (now subst).
@@ -870,8 +848,6 @@ Proof.
       induction l in n, xs |- *;cbn;trivial.
       now destruct a as [? [] ?];rewrite <- IHl;cbn.
 Qed.
-
-
 
 Definition TTwf_local {cf} Σ Γ := TT.All_local_env (TT.lift_typing TT.typing Σ) Γ.
 
@@ -1284,10 +1260,21 @@ Axiom cofix_guard_trans :
   TT.cofix_guard (trans_global Σ) (trans_local Γ) (map (map_def trans trans) mfix).
 
 (* This version of typing spine allows to not require [isType] assumptions at the end of the 
-  application chain, which is crucial to be able to build an application spine   *)  
-  
+  application chain, which is crucial to be able to build a spine that both encompasses PCUIC's 
+  applications and mimicks the typing rule of Template. Otherwise we would only model:
+
+  |- tProd na A B : s
+  |- f : tProd na A B
+  |- u : A
+  *** |- B [0 := u] : s ***  <- this last hypothesis is problematic, it's not present in PCUIC
+  ------------------------      derivations for example.
+  |- tApp f u : B [0 := u]
+
+*)  
+
+Import PCUICAst PCUICLiftSubst PCUICTyping.
 Inductive typing_spine {cf} (Σ : global_env_ext) (Γ : context) : term -> list term -> term -> Type :=
-| type_spine_eq ty : typing_spine Σ Γ ty [] ty 
+| type_spine_eq ty : typing_spine Σ Γ ty [] ty
 
 | type_spine_nil ty ty' :
   isType Σ Γ ty' ->
@@ -1300,7 +1287,9 @@ Inductive typing_spine {cf} (Σ : global_env_ext) (Γ : context) : term -> list 
   Σ ;;; Γ |- hd : A ->
   typing_spine Σ Γ (subst10 hd B) tl B' ->
   typing_spine Σ Γ T (hd :: tl) B'.
+Derive Signature for typing_spine.
 
+(* The size of a spine is the maximal depth of any typing derivation appearing in it *)
 Section Typing_Spine_size.
   Context `{checker_flags}.
   Context {Σ : global_env_ext} {Γ : context}.
@@ -1314,9 +1303,7 @@ Section Typing_Spine_size.
   end.
 End Typing_Spine_size.
 
-Require Import PCUICArities.
-
-Require Import PCUICSpine.
+(* We can weaken a spine by cumulativity, using the type_spine_nil  *)
 Lemma typing_spine_weaken_concl {cf:checker_flags} {Σ Γ T args S S'} : 
   wf Σ.1 ->
   typing_spine Σ Γ T args S ->
@@ -1331,6 +1318,7 @@ Proof.
   eauto.
 Defined.
 
+(* The size includes the new [isType] hypothesis  *)
 Lemma typing_spine_weaken_concl_size {cf:checker_flags} {Σ Γ T args S S'} 
   (wf : wf Σ.1) 
   (sp  :typing_spine Σ Γ T args S)
@@ -1343,45 +1331,12 @@ Proof.
   rewrite - !Nat.max_assoc. specialize (IHsp Hs). lia.
 Qed.
 
-Lemma typing_spine_strengthen {cf:checker_flags} Σ Γ T args U : 
-  wf Σ.1 ->
-  typing_spine Σ Γ T args U ->
-  forall T', Σ ;;; Γ |- T' <= T ->
-  isType Σ Γ T ->
-  typing_spine Σ Γ T' args U.
-Proof.
-  induction 2 in |- *; intros T' (*WAT*)redT.
-  - intros. econstructor 2. eauto. eauto.
-  - intros. econstructor 2. eauto. transitivity ty; auto.
-  - specialize (IHX0 (B {0 := hd})).
-    forward IHX0. { reflexivity. }
-    intros. eapply type_spine_cons with na A B; auto.
-    etransitivity; eauto.
-Qed.
-(* 
-Lemma typing_spine_app {cf:checker_flags} Σ Γ ty args na A B arg :
-  wf Σ.1 ->
-  isType Σ Γ (tProd na A B) ->
-  typing_spine Σ Γ ty args (tProd na A B) ->
-  Σ ;;; Γ |- arg : A ->
-  typing_spine Σ Γ ty (args ++ [arg]) (B {0 := arg}).
-Proof.
-  intros wfΣ isty H; revert arg.
-  remember (tProd na A B) as prod.
-  revert na A B Heqprod.
-  induction H.
-  - intros na A B eq arg Harg. simpl. econstructor; eauto. now rewrite <-eq. now rewrite <-eq.
-    constructor.
-  - intros na A B eq arg Harg. simpl. 
-    econstructor; eauto. rewrite <- eq. exact i. now rewrite <- eq. constructor.
-  - intros na' A' B'' eq arg Harg. simpl.
-    econstructor. apply i. auto. auto.
-    eapply IHtyping_spine. now rewrite eq. exact eq. apply Harg.
-Defined.
- *)
-
 Ltac sig := unshelve eexists.
 
+(** We can also append an argument to a spine *without* requiring a typing for the new conclusion type.
+  This would be a derivation for a substitution of [B], hence incomparable in depth to the arguments.
+  The invariant is witnessed by the spine size being lower than the arguments.
+*)
 Lemma typing_spine_app {cf:checker_flags} Σ Γ ty args na A B arg
   (wf : wf Σ.1) 
   (isty : isType Σ Γ (tProd na A B))
@@ -1391,26 +1346,24 @@ Lemma typing_spine_app {cf:checker_flags} Σ Γ ty args na A B arg
     typing_spine_size sp' <= max (typing_size isty.π2) (max (typing_spine_size sp) (typing_size argd)).
 Proof.
   revert arg argd.
-  remember (tProd na A B) as prod. symmetry in Heqprod.
-  revert na A B Heqprod.
-  induction sp.
-  - intros na A B eq arg Harg. simpl.
+  depind sp.
+  - intros arg Harg. simpl.
     sig.
-    * econstructor; eauto. now rewrite -> eq. now rewrite -> eq.
+    * econstructor; eauto. apply cumul_refl'. 
       constructor.
-    * destruct eq => /=. unfold eq_rect_r. simpl. lia.
-  - intros na A B eq arg Harg. simpl.
+    * simpl. lia.
+  - intros arg Harg. simpl.
     sig. 
-    * econstructor; eauto. rewrite -> eq. exact i. 
-      now rewrite -> eq. constructor.
-    * simpl. destruct eq. unfold eq_rect_r. simpl. lia.
-  - intros na' A' B'' eq arg Harg. simpl.
-    specialize (IHsp isty _ _ _ eq _ Harg) as [sp' Hsp'].
+    * econstructor; eauto. constructor.
+    * simpl. lia.
+  - intros arg Harg. simpl.
+    specialize (IHsp wf isty _ Harg) as [sp' Hsp'].
     sig.
     * econstructor. apply i. auto. auto. exact sp'.
-    * destruct eq. simpl. lia.
+    * simpl. lia.
 Qed.
 
+(** Likewise, in Template-Coq, we can append without re-typing the result *)
 Lemma TT_typing_spine_app {cf:checker_flags} Σ Γ ty T' args na A B arg s :
   TT.typing Σ Γ (T.tProd na A B) (T.tSort s) ->
   TT.typing_spine Σ Γ ty args T' ->
@@ -1430,27 +1383,10 @@ Proof.
     eapply IHtyping_spine. now rewrite eq. exact eq. apply Harg. apply X.
 Defined.
 
-
-Lemma destrb (b : bool) : b + ~~ b.
-Proof.
-  destruct b. left; auto. right; auto.
-Defined.
-
-Lemma decompose_app_napp_nonnil t f l : 
-  isApp t ->
-  decompose_app t = (f, l) -> 
-  ~~ is_empty l.
-Proof.
-  intros isApp.
-  destruct t; simpl => //.
-  intros da.
-  pose proof (decompose_app_notApp _ _ _ da).
-  apply decompose_app_inv in da.
-  destruct l using rev_ind.
-  unfold decompose_app => /=.
-  destruct f => //.
-  destruct l => //.
-Qed.
+(** This is the central lemma for this translation: 
+  any PCUIC typing of an application `t` can be decomposed as 
+  a typing of the head of `t` followed by a typing spine for 
+  its arguments `l`. *)
 
 Lemma type_app {cf} {Σ Γ t T} (d : Σ ;;; Γ |- t : T) :
   wf Σ.1 ->
@@ -1470,7 +1406,7 @@ Proof.
     simpl in da.
     apply decompose_app_rec_inv' in da as [n [napp [equ eqt]]].
     subst t. clear IHd1 IHd3.
-    rewrite decompose_app_mkApps // in IHd2.
+    rewrite PCUICAstUtils.decompose_app_mkApps // in IHd2.
     destruct IHd2 as [fty [d' [sp hd']]].
     exists fty, d'.
     split. lia.
@@ -1481,7 +1417,7 @@ Proof.
     intros app happ. exists app. lia.
 
     unfold decompose_app. simpl.
-    rewrite atom_decompose_app. destruct t => /= //.
+    rewrite PCUICAstUtils.atom_decompose_app. destruct t => /= //.
     exists _, d2. split. lia.
     unshelve eexists.
     econstructor. exists s; eauto. reflexivity. assumption. constructor.
@@ -1490,7 +1426,7 @@ Proof.
   - destruct (isApp t) eqn:isapp => //.
     destruct (decompose_app t) eqn:da.
     assert (l <> []).
-    { eapply decompose_app_napp_nonnil in da => //. destruct l => //. }
+    { eapply decompose_app_nonnil in da => //. }
     destruct IHd1 as [fty [d' [? ?]]].
     exists fty, d'. split. lia.
     destruct s0 as [sp Hsp].
@@ -1498,6 +1434,12 @@ Proof.
     epose proof (typing_spine_weaken_concl_size wfΣ sp c (s; d2)). simpl in H0. lia.
 Qed.
 
+(** Finally, for each typing spine built above, assuming we can apply the induction hypothesis
+  of the translation to any of the typing derivations in the spine, then we can produce a typing
+  spine in the n-ary application template-coq spec.
+
+  We have two cases to consider at the "end" of the spine: either we have the same translation of the 
+  PCUIC conclusion type, or there is exactly one cumulativity step to get to this type. *)
 Lemma make_typing_spine {cf} {Σ Γ fty l T} 
   (sp : typing_spine Σ Γ fty l T) n 
   (IH : forall t' T' (Ht' : Σ ;;; Γ |- t' : T'), 
@@ -1548,7 +1490,9 @@ Theorem pcuic_to_template {cf} (Σ : S.global_env_ext) Γ t T :
 Proof.
   intros X X0.
   revert Σ X Γ t T X0.
-  apply (typing_ind_env (fun Σ Γ t T =>
+  (** We use an induction principle allowing to apply induction to any subderivation of 
+    functions in applications. *)
+  apply (typing_ind_env_app_size (fun Σ Γ t T =>
     TT.typing (trans_global Σ) (trans_local Γ) (trans t) (trans T)
   )%type
     (fun Σ Γ wfΓ => 
@@ -1572,7 +1516,7 @@ Proof.
     intros [fty [d' [hd' [sp hsp]]]].
     assert (IHt := X3 _ _ d' hd').
     epose proof (make_typing_spine sp (typing_size Ht) X3 hsp) as [T' [IH []]].
-    * subst T'. rewrite (decompose_app_inv da).
+    * subst T'. rewrite (PCUICAstUtils.decompose_app_inv da).
       rewrite trans_mkApps mkApp_mkApps AstUtils.mkApps_nested.
       pose proof (AstUtils.mkApps_nested (trans t0) (map trans l) [trans u]).
       apply decompose_app_notApp in da.
@@ -1583,7 +1527,7 @@ Proof.
       apply IH. apply TT.cumul_refl'.
       apply X5.
     * destruct p as [hcum _].
-      rewrite (decompose_app_inv da).
+      rewrite (PCUICAstUtils.decompose_app_inv da).
       rewrite trans_mkApps mkApp_mkApps AstUtils.mkApps_nested.
       pose proof (AstUtils.mkApps_nested (trans t0) (map trans l) [trans u]).
       apply decompose_app_notApp in da.

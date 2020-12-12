@@ -376,6 +376,34 @@ Proof.
   eapply decompose_app_rec_notApp. eassumption.
 Qed.
 
+
+Lemma decompose_app_rec_inv {t l' f l} :
+  decompose_app_rec t l' = (f, l) ->
+  mkApps t l' = mkApps f l.
+Proof.
+  induction t in f, l', l |- *; try intros [= <- <-]; try reflexivity.
+  simpl. apply/IHt1.
+Qed.
+
+Lemma decompose_app_inv {t f l} :
+  decompose_app t = (f, l) -> t = mkApps f l.
+Proof. by apply/decompose_app_rec_inv. Qed.
+
+Lemma decompose_app_nonnil t f l : 
+  isApp t ->
+  decompose_app t = (f, l) -> l <> [].
+Proof.
+  intros isApp.
+  destruct t; simpl => //.
+  intros da.
+  pose proof (decompose_app_notApp _ _ _ da).
+  apply decompose_app_inv in da.
+  destruct l using rev_ind.
+  unfold decompose_app => /=.
+  destruct f => //.
+  destruct l => //.
+Qed.
+
 Fixpoint nApp t :=
   match t with
   | tApp u _ => S (nApp u)
@@ -449,18 +477,6 @@ Proof.
   - rewrite -> 2!isApp_false_nApp by assumption. reflexivity.
   - assumption.
 Qed.
-
-Lemma decompose_app_rec_inv {t l' f l} :
-  decompose_app_rec t l' = (f, l) ->
-  mkApps t l' = mkApps f l.
-Proof.
-  induction t in f, l', l |- *; try intros [= <- <-]; try reflexivity.
-  simpl. apply/IHt1.
-Qed.
-
-Lemma decompose_app_inv {t f l} :
-  decompose_app t = (f, l) -> t = mkApps f l.
-Proof. by apply/decompose_app_rec_inv. Qed.
 
 Lemma mkApps_Fix_spec mfix idx args t : mkApps (tFix mfix idx) args = t ->
                                         match decompose_app t with

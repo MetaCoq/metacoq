@@ -43,6 +43,7 @@ theories/Reduction.v
 theories/TypingWf.v
 theories/Normal.v
 theories/WcbvEval.v
+theories/Checker.v
 
 # The Template monad
 theories/TemplateMonad.v

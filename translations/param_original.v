@@ -404,6 +404,9 @@ Module Axioms.
     intros H A B []; exact (H A A 1).
   Defined.
 
+  (* The import of CRelationClasses breaks rewrite *)
+  Set Typeclasses Depth 4.
+
   Theorem Univalence'_provably_parametric : forall h : Univalence', Univalence'ᵗ h.
   Proof.
     unfold Univalence', Univalence'ᵗ.
@@ -418,7 +421,7 @@ Module Axioms.
     intros x xᵗ; cbn. eapply pathsᵗ_ok2.
     set (coh x). set (q1 x) in *. set (q2 x) in *.
     clearbody p p1 p0; clear; cbn in *.
-    set (g x) in *. clearbody a.
+    set (g x) in *. clearbody a. simpl.
     rewrite transport_pp.
     destruct p1. cbn in *.
     match goal with

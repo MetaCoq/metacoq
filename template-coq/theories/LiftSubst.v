@@ -20,7 +20,7 @@ Fixpoint lift n k t : term :=
   | tCast c kind t => tCast (lift n k c) kind (lift n k t)
   | tLetIn na b t b' => tLetIn na (lift n k b) (lift n k t) (lift n (S k) b')
   | tCase ind p c brs =>
-    let k' := List.length (pindices p) + k in
+    let k' := List.length (pcontext p) + k in
     let p' := map_predicate (lift n k) (lift n k') p in
     let brs' := List.map (on_snd (lift n k)) brs in
     tCase ind p' (lift n k c) brs'
@@ -71,7 +71,7 @@ Fixpoint subst s k u :=
   | tCast c kind ty => tCast (subst s k c) kind (subst s k ty)
   | tLetIn na b ty b' => tLetIn na (subst s k b) (subst s k ty) (subst s (S k) b')
   | tCase ind p c brs =>
-    let k' := List.length (pindices p) + k in
+    let k' := List.length (pcontext p) + k in
     let p' := map_predicate (subst s k) (subst s k') p in
     let brs' := List.map (on_snd (subst s k)) brs in
     tCase ind p' (subst s k c) brs'
@@ -139,7 +139,7 @@ Fixpoint closedn k (t : term) : bool :=
   | tCast c kind t => closedn k c && closedn k t
   | tLetIn na b t b' => closedn k b && closedn k t && closedn (S k) b'
   | tCase ind p c brs =>
-    let k' := List.length (pindices p) + k in
+    let k' := List.length (pcontext p) + k in
     let p' := test_predicate (closedn k) (closedn k') p in
     let brs' := List.forallb (test_snd (closedn k)) brs in
     p' && closedn k c && brs'
@@ -164,7 +164,7 @@ Fixpoint noccur_between k n (t : term) : bool :=
   | tCast c kind t => noccur_between k n c && noccur_between k n t
   | tLetIn na b t b' => noccur_between k n b && noccur_between k n t && noccur_between (S k) n b'
   | tCase ind p c brs =>
-    let k' := List.length (pindices p) + k in
+    let k' := List.length (pcontext p) + k in
     let p' := test_predicate (noccur_between k n) (noccur_between k' n) p in
     let brs' := List.forallb (test_snd (noccur_between k n)) brs in
     p' && noccur_between k n c && brs'

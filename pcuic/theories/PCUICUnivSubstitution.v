@@ -1580,10 +1580,11 @@ Proof.
     + eapply X3; aa.
   - intros n b b_ty b' s1 b'_ty X X0 X1 X2 X3 X4 X5 u univs wfΣ' HSub H.
     econstructor; eauto. eapply X5; aa.
-  - intros t0 na A B u X X0 X1 X2 X3 u0 univs wfΣ' HSub H.
+  - intros t0 na A B s u X X0 X1 X2 X3 X4 X5 u0 univs wfΣ' HSub H.
     rewrite <- subst_subst_instance_constr. cbn. econstructor.
     + eapply X1; eauto.
     + eapply X3; eauto.
+    + eapply X5; eauto.
   - intros. rewrite subst_instance_constr_two. econstructor; [aa|aa|].
     clear X X0; cbn in *.
     eapply consistent_ext_trans; eauto.
@@ -1655,16 +1656,15 @@ Proof.
       destruct X1 as [s Hs]. exists (subst_instance_univ u s).
       now apply Hs.
     + eapply All_map, All_impl; tea.
-      intros x [[X1 X2] X3]. split.
-      * specialize (X3 u univs wfΣ' HSub H2). erewrite map_dbody in X3.
-        rewrite <- lift_subst_instance_constr in X3.
-        rewrite fix_context_length, map_length in *.
-        erewrite map_dtype with (d := x) in X3.
-        unfold subst_instance_context, map_context in *.
-        rewrite map_app in *.
-        rewrite <- (fix_context_subst_instance u mfix).
-        eapply X3.
-      * destruct x as [? ? []]; cbn in *; tea.
+      intros x [X1 X3]. 
+      specialize (X3 u univs wfΣ' HSub H2). erewrite map_dbody in X3.
+      rewrite <- lift_subst_instance_constr in X3.
+      rewrite fix_context_length, map_length in *.
+      erewrite map_dtype with (d := x) in X3.
+      unfold subst_instance_context, map_context in *.
+      rewrite map_app in *.
+      rewrite <- (fix_context_subst_instance u mfix).
+      eapply X3.
     + red; rewrite <- wffix.
       unfold wf_fixpoint.
       rewrite map_map_compose.

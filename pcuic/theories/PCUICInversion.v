@@ -213,9 +213,7 @@ Section Inversion.
         nth_error mfix n = Some decl ×
         All (fun d => isType Σ Γ (dtype d)) mfix ×
         All (fun d =>
-          Σ ;;; Γ ,,, types |- dbody d : (lift0 #|types|) (dtype d) ×
-          isLambda (dbody d) = true
-        ) mfix ×
+          Σ ;;; Γ ,,, types |- dbody d : (lift0 #|types|) (dtype d)) mfix ×
         wf_fixpoint Σ mfix ×
         Σ ;;; Γ |- dtype decl <= T.
   Proof.

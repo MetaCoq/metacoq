@@ -17,7 +17,7 @@ Fixpoint wf_Inv (t : term) :=
   | tConst _ _ | tInd _ _ | tConstruct _ _ _ => True
   | tCase ci p c brs => wf p /\ wf c /\ Forall (wf ∘ snd) brs
   | tProj p t => wf t
-  | tFix mfix k => Forall (fun def => wf def.(dtype) /\ wf def.(dbody) /\ isLambda def.(dbody) = true) mfix
+  | tFix mfix k => Forall (fun def => wf def.(dtype) /\ wf def.(dbody)) mfix
   | tCoFix mfix k => Forall (fun def => wf def.(dtype) /\ wf def.(dbody)) mfix
   end.
 

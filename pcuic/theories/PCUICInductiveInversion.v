@@ -329,7 +329,7 @@ Proof.
   intros wfΣ H. depind H.
   - unfold unfold_fix. rewrite e.
     specialize (nth_error_all e a0) as [s Hs].
-    specialize (nth_error_all e a1) as [Hty Hlam].
+    specialize (nth_error_all e a1) as Hty.
     simpl.
     destruct decl as [name ty body rarg]; simpl in *.
     clear e.
@@ -359,7 +359,7 @@ Proof.
               apply IHAll.
               --- intros. simpl in Hi. specialize (Hi (S i)). apply Hi. lia.
               --- lia.
-          ** clear IHAll. destruct p.
+          ** clear IHAll.
               simpl in Hlen. assert ((Nat.pred #|mfix| - (#|mfix| - S #|l|)) = #|l|) by lia.
               rewrite H0. rewrite simpl_subst_k.
               --- clear. induction l; simpl; auto with arith.

@@ -5,7 +5,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
     PCUICLiftSubst PCUICUnivSubst
      PCUICTyping PCUICClosed PCUICEquality.
 
-Require Import ssreflect.
+Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 Set Equations With UIP.
@@ -749,15 +749,15 @@ Proof.
 Qed.
 
 Lemma rename_shiftn :
-  forall f t,
-    rename (shiftn 1 f) (lift0 1 t) = lift0 1 (rename f t).
+  forall f k t,
+    rename (shiftn k f) (lift0 k t) = lift0 k (rename f t).
 Proof.
-  intros f t.
+  intros f k t.
   autorewrite with sigma.
   eapply inst_ext. intro i.
   unfold ren, lift_renaming, shiftn, subst_compose. simpl.
-  replace (i - 0) with i by lia.
-  reflexivity.
+  destruct (Nat.ltb_spec (k + i) k); try lia.
+  unfold shiftk. lia_f_equal.
 Qed.
 
 Lemma urenaming_vass :
@@ -1067,6 +1067,15 @@ Lemma meta_conv :
     Σ ;;; Γ |- t : A ->
     A = B ->
     Σ ;;; Γ |- t : B.
+Proof.
+  intros Σ Γ t A B h []. assumption.
+Qed.
+
+Lemma meta_conv_term :
+  forall Σ Γ t t' A,
+    Σ ;;; Γ |- t : A ->
+    t = t' ->
+    Σ ;;; Γ |- t' : A.
 Proof.
   intros Σ Γ t A B h []. assumption.
 Qed.
@@ -1664,9 +1673,10 @@ Proof.
       * destruct hf. assumption.
       * simpl. eexists. eapply ihB. assumption.
       * simpl. eapply ihb. assumption.
-  - intros Σ wfΣ Γ wfΓ t na A B u X ht iht hu ihu Δ f hf.
+  - intros Σ wfΣ Γ wfΓ t na A B s u X hty ihty ht iht hu ihu Δ f hf.
     simpl. eapply meta_conv.
-    + econstructor.
+    + eapply type_App.
+      * simpl in ihty. eapply ihty; eassumption.
       * simpl in iht. eapply iht. assumption.
       * eapply ihu. assumption.
     + autorewrite with sigma. rewrite !subst1_inst. sigma.
@@ -1743,17 +1753,15 @@ Proof.
         intros x [s [Hs IHs]].
         exists s. now apply IHs.
       * apply All_map, (All_impl ihmfixb).
-        intros x [[Hb Hlam] IHb].
+        intros x [Hb IHb].
         destruct x as [na ty bo rarg]. simpl in *.
-        split.
-        -- rewrite rename_fix_context.
-           eapply meta_conv.
-           ++ apply (IHb (Δ ,,, rename_context f types) (shiftn #|mfix| f)).
-              split; auto. subst types. rewrite -(fix_context_length mfix).
-              apply urenaming_context; auto. apply hf.
-           ++ autorewrite with sigma. subst types. rewrite fix_context_length.
-              now rewrite -ren_shiftn up_Upn shiftn_consn_idsn.
-        -- eapply isLambda_rename. assumption.
+        rewrite rename_fix_context.
+        eapply meta_conv.
+        ++ apply (IHb (Δ ,,, rename_context f types) (shiftn #|mfix| f)).
+          split; auto. subst types. rewrite -(fix_context_length mfix).
+          apply urenaming_context; auto. apply hf.
+        ++ autorewrite with sigma. subst types. rewrite fix_context_length.
+          now rewrite -ren_shiftn up_Upn shiftn_consn_idsn.
       * admit (* wf_fixpoint renaming *).
     + reflexivity.
 
@@ -1791,7 +1799,7 @@ Proof.
     + eapply ihB. assumption.
     + eapply cumul_rename. all: try eassumption.
       apply hf.
-Abort.
+Admitted.
 
 Lemma typing_rename :
   forall Σ Γ Δ f t A,
@@ -1800,7 +1808,7 @@ Lemma typing_rename :
     Σ ;;; Γ |- t : A ->
     Σ ;;; Δ |- rename f t : rename f A.
 Proof.
-Abort.
+Admitted.
   (* intros Σ Γ Δ f t A hΣ hf h.
   revert Σ hΣ Γ t A h Δ f hf.
   apply typing_rename_prop.
@@ -2232,9 +2240,12 @@ Proof.
         constructor; auto.
         ** exists s1. apply ihB; auto.
         ** apply ihb; auto.  
-  - intros Σ wfΣ Γ wfΓ t na A B u X ht iht hu ihu Δ σ hΔ hσ.
+  - intros Σ wfΣ Γ wfΓ t na A B s u X hty ihty ht iht hu ihu Δ σ hΔ hσ.
     autorewrite with sigma.
     econstructor.
+    * specialize (ihty _ _ hΔ hσ).
+      simpl in ihty. eapply meta_conv_term; [eapply ihty|].
+      now rewrite up_Up.
     * specialize (iht _ _ hΔ hσ).
       simpl in iht. eapply meta_conv; [eapply iht|].
       now rewrite up_Up.

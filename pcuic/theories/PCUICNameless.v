@@ -1356,7 +1356,6 @@ Proof.
       * rewrite fix_context_length map_length.
         rewrite fix_context_length in Hs.
         now rewrite -> XX, <- nl_lift.
-      * destruct dbody; simpl in *; congruence.
     + now rewrite <-nl_wf_fixpoint.
   - replace (nl (dtype decl)) with (dtype (map_def_anon nl nl decl));
       [|destruct decl; reflexivity].

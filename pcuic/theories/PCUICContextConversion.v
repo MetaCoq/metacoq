@@ -967,7 +967,7 @@ Proof.
     intros x [s [Hs IH]].
     exists s; eauto.
     eapply (All_impl X1).
-    intros x [[Hs Hl] IH]. split; auto.
+    intros x [Hs IH].
     eapply IH.
     now apply cumul_context_app_same.
     eapply (All_mfix_wf); auto.

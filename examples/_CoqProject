@@ -2,7 +2,6 @@
 -I ../safechecker/src
 -I ../erasure/src
 -Q ../template-coq/theories MetaCoq.Template
--Q ../checker/theories MetaCoq.Checker
 -Q ../pcuic/theories MetaCoq.PCUIC
 -Q ../safechecker/theories MetaCoq.SafeChecker
 -Q ../erasure/theories MetaCoq.Erasure

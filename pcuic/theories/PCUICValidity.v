@@ -160,7 +160,7 @@ Section Validity.
       reflexivity.
 
     - (* Application *)
-      destruct X1 as [u' Hu']. exists u'.
+      destruct X3 as [u' Hu']. exists u'.
       move: (typing_wf_universe wf Hu') => wfu'.
       eapply (substitution0 _ _ na _ _ _ (tSort u')); eauto.
       apply inversion_Prod in Hu' as [na' [s1 [s2 Hs]]]; tas. intuition.
@@ -313,4 +313,14 @@ Proof.
     eapply cumul_refl'. auto.
     clear -H'' HA''' wfΣ. depind H''.
     econstructor; eauto. eapply cumul_trans; eauto.  
+Qed.
+
+(** "Economical" typing rule for applications, not requiring to check the product type *)
+Lemma type_App' {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ t na A B u} : 
+  Σ;;; Γ |- t : tProd na A B ->
+  Σ;;; Γ |- u : A -> Σ;;; Γ |- tApp t u : B {0 := u}.
+Proof.
+  intros Ht Hu.
+  have [s Hs] := validity_term wfΣ Ht.
+  eapply type_App; eauto.
 Qed.

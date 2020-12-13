@@ -25,7 +25,7 @@ Program Definition erase_template_program (p : Ast.program)
 
 Next Obligation.
   sq. 
-  apply (template_to_pcuic_env (Ast.empty_ext p.1) wfΣ).
+  apply (template_to_pcuic_env_ext (Ast.empty_ext p.1) wfΣ).
 Qed.
 
 Next Obligation.
@@ -36,7 +36,7 @@ Next Obligation.
   apply Ht.
 Defined.
 Next Obligation.
-  sq. apply (template_to_pcuic_env (Ast.empty_ext p.1) wfΣ).
+  sq. apply (template_to_pcuic_env_ext (Ast.empty_ext p.1) wfΣ).
 Defined.
 Local Open Scope string_scope.
 

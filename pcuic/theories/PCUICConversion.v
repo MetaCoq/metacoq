@@ -58,7 +58,7 @@ Proof.
   eapply cumul_alt in X0 as [w [w' [[redl' redr'] eq']]].
   destruct (red_confluence wfΣ redr redl') as [nf [nfl nfr]].
   eapply cumul_alt.
-  eapply red_eq_term_upto_univ_r in eq; tc;eauto with pcuic.
+  eapply red_eq_term_upto_univ_r in eq. all:tc;eauto with pcuic.
   destruct eq as [v'0 [red'0 eq2]].
   eapply red_eq_term_upto_univ_l in eq'; tc;eauto with pcuic.
   destruct eq' as [v'1 [red'1 eq1]].

@@ -6,9 +6,7 @@ From MetaCoq.Template Require Import config Ast AstUtils utils
 
   Implemets [typecheck_program] which returns an error and
   on success should guarantee that the term has the given type.
-  Currently uses fuel to implement reduction.
-
-  Correctness and completeness proofs are a work-in-progress.
+  Currently uses fuel to implement reduction and is unverified.
 
   This file implements reduction with a stack machine [reduce_stack],
   conversion/cumulativity with the first-order fast-path heuristic [isconv]
@@ -578,7 +576,7 @@ Section Typecheck.
     end.
 End Typecheck.
 
-Section Typecheck2.
+Section Typecheck.
   Context {cf : checker_flags} {F : Fuel}.
   Context (Σ : global_env) (G : universes_graph).
 
@@ -786,257 +784,10 @@ Section Typecheck2.
     | TypeError _ => false
     end.
 
-End Typecheck2.
-
-Lemma cumul_convert_leq : forall `{checker_flags} {F:Fuel} Σ G Γ t t',
-  is_graph_of_global_env_ext Σ G ->
-  Σ ;;; Γ |- t <= t' <~> convert_leq (fst Σ) G Γ t t' = Checked ().
-Proof. intros. todo "Checker.cumul_convert_leq". Defined.
-
-Lemma cumul_reduce_to_sort : forall `{checker_flags} {F:Fuel} Σ G Γ t s',
-  is_graph_of_global_env_ext Σ G ->
-    Σ ;;; Γ |- t <= tSort s' <~>
-    { s'' & reduce_to_sort (fst Σ) Γ t = Checked s''
-            /\ check_leqb_universe G s'' s' = true }.
-Proof. intros. todo "Checker.cumul_reduce_to_sort". Defined.
-
-Lemma cumul_reduce_to_product : forall `{checker_flags} {F:Fuel} Σ Γ t na a b,
-    Σ ;;; Γ |- t <= tProd na a b ->
-               { a' & { b' &
-                        ((reduce_to_prod (fst Σ) Γ t = Checked (a', b')) *
-                         cumul Σ Γ (tProd na a' b') (tProd na a b))%type } }.
-Proof. intros. todo "Checker.cumul_reduce_to_product". Defined.
-
-Lemma cumul_reduce_to_ind : forall `{checker_flags} {F:Fuel} Σ Γ t i u args,
-    Σ ;;; Γ |- t <= mkApps (tInd i u) args <~>
-    { args' &
-      ((reduce_to_ind (fst Σ) Γ t = Checked (i, u, args')) *
-       cumul Σ Γ (mkApps (tInd i u) args') (mkApps (tInd i u) args))%type }.
-Proof. intros. todo "Checker.cumul_reduce_to_ind". Defined.
-
-Lemma lookup_constant_type_declared Σ cst u decl (isdecl : declared_constant Σ cst decl) :
-  lookup_constant_type_cstrs Σ cst u =
-  Checked (subst_instance_constr u decl.(cst_type),
-           subst_instance_cstrs u (polymorphic_constraints decl.(cst_universes))).
-Proof.
-  unfold lookup_constant_type_cstrs, lookup_env.
-  red in isdecl. rewrite isdecl. destruct decl. reflexivity.
-Qed.
-
-Lemma lookup_constant_type_is_declared Σ cst u T :
-  lookup_constant_type_cstrs Σ cst u = Checked T ->
-  { decl | declared_constant Σ cst decl /\
-           subst_instance_constr u decl.(cst_type) = fst T }.
-Proof.
-  unfold lookup_constant_type_cstrs, lookup_env, declared_constant.
-  destruct Ast.lookup_env eqn:Hlook; try discriminate.
-  destruct g eqn:Hg; intros; try discriminate. destruct c.
-  injection H as eq. subst T. simpl.
-  eexists. split; eauto.
-Qed.
-
+End Typecheck.
 
 Arguments bind _ _ _ _ ! _.
 Open Scope monad.
-
-
-Section InferOk.
-  Context {cf : checker_flags} {F : Fuel}.
-  Context (Σ : global_env_ext) (G : universes_graph)
-          (HG : is_graph_of_global_env_ext Σ G).
-
-  Ltac tc := eauto with typecheck.
-
-(*
-  Lemma infer_complete Γ t T :
-    Σ ;;; Γ |- t : T -> { T' & ((infer Γ t = Checked T') /\ squash (cumul Σ Γ T' T)) }.
-  Proof.
-    induction 1; unfold infer_type, infer_cumul in *; simpl; unfold infer_type, infer_cumul in *;
-      repeat match goal with
-        H : { T' & _ } |- _ => destruct H as [? [-> H]]
-      end; simpl; try (eexists; split; [ reflexivity | solve [ tc ] ]).
-
-    - eexists. rewrite e.
-      split; [ reflexivity | constructor; tc ].
-
-    - eexists. split; [reflexivity | tc].
-      constructor. simpl. unfold leq_universe.
-      admit.
-
-    - eexists.
-      apply cumul_reduce_to_sort in IHX1 as [s'' [-> Hs'']].
-      apply cumul_convert_leq in IHX2 as ->.
-      simpl. split; tc.
-
-    - apply cumul_reduce_to_sort in IHX1 as [s'' [-> Hs'']].
-      apply cumul_reduce_to_sort in IHX2 as [s''' [-> Hs''']].
-      simpl. eexists; split; tc.
-      admit.
-
-    - eexists. apply cumul_reduce_to_sort in IHX1 as [s'' [-> Hs'']].
-      split. reflexivity.
-      apply congr_cumul_prod; tc.
-
-    - apply cumul_convert_leq in IHX2 as ->; simpl.
-      eexists ; split; tc.
-      admit.
-
-    - admit.
-
-    - erewrite lookup_constant_type_declared; eauto.
-      eexists ; split; [ try reflexivity | tc ].
-      simpl. unfold consistent_universe_context_instance in c.
-      destruct cst_universes. simpl. reflexivity.
-      simpl in *. destruct cst0. simpl in *.
-      destruct c. unfold check_consistent_constraints. rewrite H0. reflexivity.
-      admit.
-
-    - admit.
-    - admit.
-
-    - (* destruct indpar. *)
-      apply cumul_reduce_to_ind in IHX2 as [args' [-> Hcumul]].
-      simpl in *. rewrite (proj2 (eq_ind_refl ind ind) eq_refl).
-      eexists ; split; [ reflexivity | tc ].
-      admit.
-
-    - admit.
-
-    - eexists. rewrite e.
-      split; [ reflexivity | tc ].
-
-    - eexists. rewrite e.
-      split; [ reflexivity | tc ].
-
-    - eexists.
-      split; [ reflexivity | tc ].
-      eapply cumul_trans; eauto.
-  Admitted.
-   *)
-  Ltac infers :=
-    repeat
-      match goal with
-      | |- context [infer ?Γ ?t] =>
-        destruct (infer Γ t) eqn:?; [ simpl | simpl; intro; discriminate ]
-      | |- context [infer_type ?Γ ?t] =>
-        destruct (infer_type Γ t) eqn:?; [ simpl | simpl; intro; discriminate ]
-      | |- context [infer_cumul ?Γ ?t ?t2] =>
-        destruct (infer_cumul Γ t t2) eqn:?; [ simpl | simpl; intro; discriminate ]
-      | |- context [convert_leq ?Γ ?t ?t2] =>
-        destruct (convert_leq Γ t t2) eqn:?; [ simpl | simpl; intro; discriminate ]
-      end; try intros [= <-].
-
-
-  Lemma infer_type_correct Γ t x :
-    (forall (Γ : context) (T : term), infer (fst Σ) G Γ t = Checked T -> Σ ;;; Γ |- t : T) ->
-    infer_type (fst Σ) (infer (fst Σ) G) Γ t = Checked x ->
-    Σ ;;; Γ |- t : tSort x.
-  Proof.
-    intros IH H.
-    unfold infer_type in H.
-    revert H; infers.
-    specialize (IH _ _ Heqt0).
-    intros.
-    eapply type_Conv. apply IH.
-    admit.
-    eapply cumul_reduce_to_sort. eassumption.
-    exists x. split; tc.
-  Admitted.
-
-
-  Lemma infer_cumul_correct Γ t u x x' :
-    (forall (Γ : context) (T : term), infer (fst Σ) G Γ u = Checked T -> Σ ;;; Γ |- u : T) ->
-    (forall (Γ : context) (T : term), infer (fst Σ) G Γ t = Checked T -> Σ ;;; Γ |- t : T) ->
-    infer_type (fst Σ) (infer (fst Σ) G) Γ u = Checked x' ->
-    infer_cumul (fst Σ) G (infer (fst Σ) G) Γ t u = Checked x ->
-    Σ ;;; Γ |- t : u.
-  Proof.
-    intros IH IH' H H'.
-    unfold infer_cumul in H'.
-    revert H'; infers.
-    specialize (IH' _ _ Heqt0).
-    intros.
-    eapply type_Conv. apply IH'.
-    right. apply infer_type_correct in H; eauto.
-    destruct a0. eapply cumul_convert_leq; eassumption.
-  Qed.
-
-  Ltac infco := eauto using infer_cumul_correct, infer_type_correct.
-
-  (* Axiom cheat : forall A, A. *)
-  (* Ltac admit := apply cheat. *)
-
-  Lemma infer_correct Γ t T : wf_local Σ Γ ->
-    infer (fst Σ) G Γ t = Checked T -> Σ ;;; Γ |- t : T.
-  Proof.
-    (* induction t in Γ, T |- * ; simpl; intros; try discriminate; *)
-    (*   revert H; infers; try solve [econstructor; infco]. *)
-
-    (* - destruct nth_error eqn:Heq; try discriminate. *)
-    (*   intros [= <-]. constructor; auto. *)
-
-    (* - admit. *)
-    (* - admit. *)
-
-    (* - admit. *)
-    (*  intros. *)
-      (* destruct (lookup_constant_type) eqn:?. simpl in *. *)
-      (* apply (lookup_constant_type_is_declared k u) in Heqt. *)
-      (* destruct Heqt as [decl [Hdecl Heq]]. *)
-      (* destruct a eqn:eqa. simpl in *. *)
-      (* destruct check_consistent_constraints eqn:cons. *)
-
-      (* simpl in *. injection H as ->. rewrite <- Heq. constructor. auto. *)
-      (* red in Hdecl. *)
-      (* unfold consistent_universe_context_instance. *)
-      (* unfold check_consistent_constraints in cons. *)
-      (* unfold check_constraints in cons. *)
-      (* destruct decl. simpl in *. *)
-
-      (* destruct decl; simpl in *. destruct cst_universes; simpl in *. auto. *)
-      (* destruct cst. simpl. unfold check_consistent_constraints in cons. split; auto. *)
-      (* unfold lookup_constant_type in Heqt. *)
-
-      (* pose (lookup_constant_type_is_declared k u). _ _ _ H) as [decl [Hdecl <-]]. *)
-      (* constructor. auto. *)
-
-    (* - (* Ind *) admit. *)
-
-    (* - (* Construct *) admit. *)
-
-    (* - (* Case *) *)
-    (*   (* match goal with H : inductive * nat |- _ => destruct H end. *) *)
-    (*   (* infers. *) *)
-    (*   (* destruct reduce_to_ind eqn:?; try discriminate. simpl. *) *)
-    (*   (* destruct a0 as [[ind' u] args]. *) *)
-    (*   (* destruct eq_ind eqn:?; try discriminate. *) *)
-    (*   (* intros [= <-]. *) *)
-    (*   admit. *)
-    (*   (* eapply type_Case. simpl in *. *) *)
-    (*   (* eapply type_Conv. eauto. *) *)
-    (*   (* admit. *) *)
-    (*   (* rewrite cumul_reduce_to_ind. *) *)
-    (*   (* exists args. split; auto. *) *)
-    (*   (* rewrite Heqt0. repeat f_equal. apply eq_ind_refl in Heqb. congruence. *) *)
-    (*   (* tc. *) *)
-
-    (* - (* Proj *) admit. *)
-    (* - admit. *)
-    (* - admit. *)
-    (* - admit. *)
-    (* - admit. *)
-
-    (* - destruct nth_error eqn:?; intros [= <-]. *)
-    (*   constructor; auto. admit. admit. *)
-
-    (* - destruct nth_error eqn:?; intros [= <-]. *)
-    (*   constructor; auto. admit. admit. *)
-  Admitted.
-
-End InferOk.
-
-Extract Constant infer_type_correct => "(fun f sigma ctx t x -> assert false)".
-Extract Constant infer_correct => "(fun f sigma ctx t ty -> assert false)".
 
 Definition default_fuel : Fuel := Nat.pow 2 14.
 
@@ -1158,3 +909,4 @@ Definition infer' `{checker_flags} `{Fuel} (Σ : global_env_ext) Γ t
      | None => raise (UnsatisfiableConstraints uctx.2)
      | Some uctx => infer (fst Σ) (make_graph uctx) Γ t
      end.
+

@@ -713,7 +713,7 @@ Proof.
 
   - intuition auto.
     generalize (closedn_subst [u] #|Γ| 0 B). rewrite Nat.add_0_r.
-    move=> Hs. apply: Hs => /=. rewrite H0 => //.
+    move=> Hs. apply: Hs => /=. rewrite H1 => //.
     rewrite Nat.add_1_r. auto.
 
   - rewrite closedn_subst_instance_constr.
@@ -1261,4 +1261,80 @@ Proof.
   simpl in clt. move/andP: clt  => [clt cll].
   simpl in clt. move/andP: clt. intuition auto.
   move/andP: clt => [cd cmfix]. apply auxm; auto.
+Defined.
+
+Lemma term_noccur_between_list_ind :
+  forall (P : nat -> nat -> term -> Type), 
+    (forall k n (i : nat), i < k \/ k + n <= i -> P k n (tRel i)) ->
+    (forall k n (i : ident), P k n (tVar i)) ->
+    (forall k n (id : nat) (l : list term), All (P k n) l -> P k n (tEvar id l)) ->
+    (forall k n s, P k n (tSort s)) ->
+    (forall k n (na : aname) (t : term), P k n t -> forall t0 : term, P (S k) n t0 -> P k n (tProd na t t0)) ->
+    (forall k n (na : aname) (t : term), P k n t -> forall t0 : term, P (S k) n t0 -> P k n (tLambda na t t0)) ->
+    (forall k n (na : aname) (t : term),
+        P k n t -> forall t0 : term, P k n t0 -> forall t1 : term, P (S k) n t1 -> P k n (tLetIn na t t0 t1)) ->
+    (forall k n (t u : term), P k n t -> P k n u -> P k n (tApp t u)) ->
+    (forall k n s (u : list Level.t), P k n (tConst s u)) ->
+    (forall k n (i : inductive) (u : list Level.t), P k n (tInd i u)) ->
+    (forall k n (i : inductive) (c : nat) (u : list Level.t), P k n (tConstruct i c u)) ->
+    (forall k n (p : inductive * nat) (t : term),
+        P k n t -> forall t0 : term, P k n t0 -> forall l : list (nat * term),
+            tCaseBrsProp (P k n) l -> P k n (tCase p t t0 l)) ->
+    (forall k n (s : projection) (t : term), P k n t -> P k n (tProj s t)) ->
+    (forall k n (m : mfixpoint term) (i : nat), tFixProp (P k n) (P (#|fix_context m| + k) n) m -> P k n (tFix m i)) ->
+    (forall k n (m : mfixpoint term) (i : nat), tFixProp (P k n) (P (#|fix_context m| + k) n) m -> P k n (tCoFix m i)) ->
+    (forall k n p, P k n (tPrim p)) ->
+    forall k n (t : term), noccur_between k n t -> P k n t.
+Proof.
+  intros until t. revert k n t.
+  fix auxt 3.
+  move auxt at top.
+  intros k n t.
+  destruct t; intros clt;  match goal with
+                 H : _ |- _ => apply H
+              end; auto; simpl in clt; 
+            try move/andP: clt => [cl1 cl2]; 
+            try move/andP: cl1 => [cl1 cl1'];
+            try solve[apply auxt; auto];
+              simpl in *.
+
+  - move/orP: clt => [cl|cl]. 
+    now apply Nat.ltb_lt in cl; eauto.
+    now apply Nat.leb_le in cl; eauto. 
+   
+  - revert l clt.
+    fix auxl' 1.
+    destruct l; constructor; [|apply auxl'].
+    apply auxt. simpl in clt. now move/andP: clt  => [clt cll].
+    now move/andP: clt => [clt cll].
+
+  - red.
+    revert brs cl2.
+    fix auxl' 1.
+    destruct brs; constructor; [|apply auxl'].
+    simpl in cl2. move/andP: cl2  => [clt cll].
+    apply auxt, clt. move/andP: cl2  => [clt cll].
+    apply cll.
+
+  - red.
+    rewrite fix_context_length.
+    revert clt.
+    generalize (#|mfix|).
+    revert mfix.
+    fix auxm 1. 
+    destruct mfix; intros; constructor.
+    simpl in clt. move/andP: clt  => [clt cll].
+    simpl in clt. move/andP: clt. intuition auto.
+    move/andP: clt => [cd cmfix]. apply auxm; auto.
+
+  - red.
+    rewrite fix_context_length.
+    revert clt.
+    generalize (#|mfix|).
+    revert mfix.
+    fix auxm 1. 
+    destruct mfix; intros; constructor.
+    simpl in clt. move/andP: clt  => [clt cll].
+    simpl in clt. move/andP: clt. intuition auto.
+    move/andP: clt => [cd cmfix]. apply auxm; auto.
 Defined.

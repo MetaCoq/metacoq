@@ -1219,7 +1219,7 @@ Section WeakNormalization.
       rewrite closedn_mkApps in Ht2. now move/andP: Ht2 => [clf _].
       eapply red_fix; eauto.
       assert (Σ ;;; [] |- mkApps (tFix mfix idx) (argsv ++ [av]) : B {0 := av}).
-      { rewrite -mkApps_nested /=. eapply type_App; eauto. }
+      { rewrite -mkApps_nested /=. eapply type_App'; eauto. }
       epose proof (fix_app_is_constructor axfree X0 e); eauto.
       rewrite /is_constructor.
       destruct nth_error eqn:hnth => //.

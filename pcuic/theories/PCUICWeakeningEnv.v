@@ -213,7 +213,7 @@ Proof.
     eapply extends_lookup in look; eauto. rewrite look //.
   - destruct (lookup_env Σ (inductive_mind i)) eqn:look => //.
     eapply extends_lookup in look; eauto. rewrite look //.
-Qed.  
+Qed.
 
 (** The definition of [R_global_instance] is defined so that it is weakenable. *)
 Lemma R_global_instance_weaken_env {cf:checker_flags} Σ Σ' Re Re' Rle Rle' gr napp :

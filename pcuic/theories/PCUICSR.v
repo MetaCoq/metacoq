@@ -273,10 +273,9 @@ Proof.
     specialize (validity _ wf _ _ _ appty) as [_ vT'].
     eapply type_tFix_inv in appty as [T [arg [fn' [[[Hnth wffix] Hty]]]]]; auto.
     rewrite e in Hnth. noconf Hnth.
-    eapply type_App.
+    eapply type_App; eauto.
     eapply type_mkApps. eapply type_Cumul'; eauto. eapply spty.
-    eauto.
-
+    
   - (* Congruence *)
     eapply type_Cumul'; [eapply type_App| |]; eauto with wf.
     eapply validity. eauto. eauto.
@@ -1158,12 +1157,11 @@ Proof.
       constructor; eauto.
     * eapply (OnOne2_All_mix_left X0) in o.
       apply (OnOne2_All_All o X1).
-      + intros x [[Hb Hlam] IH].
-        split; auto.
+      + intros x [Hb IH].
         eapply context_conversion; eauto.
         now rewrite -fixl.
-      + move=> [na ty b rarg] [na' ty' b' rarg'] /= [[red eq] [s [Hs IH]]] [[Hb Hlam] IH'].
-        noconf eq. split; auto.
+      + move=> [na ty b rarg] [na' ty' b' rarg'] /= [[red eq] [s [Hs IH]]] [Hb IH'].
+        noconf eq.
         eapply context_conversion; eauto.
         rewrite -fixl.
         eapply type_Cumul'. eapply Hb.
@@ -1206,15 +1204,13 @@ Proof.
       apply fix_red_body; eauto.
     * eapply (OnOne2_All_mix_left X0) in o.
        apply (OnOne2_All_All o X1).
-      + intros x [[Hb Hlam] IH].
-        split; auto.
+      + intros x [Hb IH].
         eapply context_conversion; eauto.
         now rewrite -fixl.
         rewrite convctx. apply conv_ctx_refl.
-      + move=> [na ty b rarg] [na' ty' b' rarg'] /= [[red eq] [s [Hs IH]]] [[Hb Hlam] IH'].
+      + move=> [na ty b rarg] [na' ty' b' rarg'] /= [[red eq] [s [Hs IH]]] [Hb IH'].
         noconf eq.
-        rewrite -convctx. split; auto.
-        now eapply isLambda_red1.
+        now rewrite -convctx.        
     * eapply wf_fixpoint_red1_body; eauto.
     * eapply All_nth_error in X2; eauto.
     * apply conv_cumul, conv_sym, red_conv. destruct disj as [<-|[_ eq]].

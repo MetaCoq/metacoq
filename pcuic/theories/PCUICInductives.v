@@ -1190,10 +1190,10 @@ Lemma invert_type_mkApps_ind {cf:checker_flags} Σ Γ ind u args T mdecl idecl :
 Proof.
   intros wfΣ decli.
   intros H; dependent induction H; solve_discr.
-  - destruct args using rev_case; solve_discr. noconf H1.
-    rewrite -PCUICAstUtils.mkApps_nested in H1. simpl in H1.
-    noconf H1.  clear IHtyping2.
-    specialize (IHtyping1 _ _ _ _ _ _ _ wfΣ decli eq_refl) as [IH cu];
+  - destruct args using rev_case; solve_discr. noconf H2.
+    rewrite -PCUICAstUtils.mkApps_nested in H2. simpl in H2.
+    noconf H2. clear IHtyping1 IHtyping3.
+    specialize (IHtyping2 _ _ _ _ _ _ _ wfΣ decli eq_refl) as [IH cu];
       split; auto.
     destruct (on_declared_inductive wfΣ decli) as [onmind oib].
     eapply typing_spine_app; eauto.

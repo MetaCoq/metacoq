@@ -108,7 +108,7 @@ Proof.
   - econstructor.
     eapply All2_All_mix_left in X1; eauto.
     eapply All2_impl. exact X1.
-    intros ? ? [[[]] [? []]].
+    intros ? ? [[?] [? []]].
     split; eauto.
   - econstructor.
     eapply All2_All_mix_left in X1; eauto.
@@ -399,10 +399,10 @@ Proof.
       eapply substitution; eauto.
     + econstructor.
       eapply is_type_subst; eauto.
-  - inv H1.
+  - inv H2.
     + cbn. econstructor.
-      eapply H; eauto.
       eapply H0; eauto.
+      eapply H1; eauto.
     + econstructor.
       eapply is_type_subst; eauto.
   - inv H1.
@@ -459,8 +459,8 @@ Proof.
       * cbn. now rewrite app_context_length, fix_context_length.
       * cbn. now erewrite app_context_length, fix_context_length, All2_length.
       * pose proof (substitution Σ Γ Γ' s (Δ ,,, PCUICLiftSubst.fix_context mfix)).
-        rewrite app_context_assoc in *. destruct Hs.
-        eapply X1 in t; eauto.
+        rewrite app_context_assoc in *.
+        eapply X1 in Hs; eauto.
         eapply typing_wf_local.  eassumption.
     + econstructor.
       eapply is_type_subst; eauto.

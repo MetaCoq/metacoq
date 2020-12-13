@@ -30,6 +30,8 @@ CRelationClasses
 Compare_dec
 Classes0
 EqDecInstances
+Logic1
+Relation
 MCPrelude
 MCList
 MCRelations

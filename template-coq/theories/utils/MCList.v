@@ -236,6 +236,16 @@ Proof.
   destruct l; simpl in *; congruence.
 Qed.
 
+Lemma mapi_rec_compose {A B C} (g : nat -> B -> C) (f : nat -> A -> B) k l :
+  mapi_rec g (mapi_rec f l k) k = mapi_rec (fun k x => g k (f k x)) l k.
+Proof.
+  induction l in k |- *; simpl; auto. now rewrite IHl.
+Qed.
+
+Lemma mapi_compose {A B C} (g : nat -> B -> C) (f : nat -> A -> B) l :
+  mapi g (mapi f l) = mapi (fun k x => g k (f k x)) l.
+Proof. apply mapi_rec_compose. Qed.
+
 Lemma map_ext {A B : Type} (f g : A -> B) (l : list A) :
   (forall x, f x = g x) ->
   map f l = map g l.
@@ -768,6 +778,15 @@ Proof.
   assert (#|l| - S i < #|l|) by lia.
   rewrite nth_error_app_lt. rewrite List.rev_length; auto.
   reflexivity.
+Qed.
+
+Lemma nth_error_rev_inv {A} (l : list A) i :
+  i < #|l| ->
+  nth_error (List.rev l) i = nth_error l (#|l| - S i).
+Proof.
+  intros Hi.
+  rewrite nth_error_rev ?List.rev_length; auto.
+  now rewrite List.rev_involutive.
 Qed.
 
 Lemma nth_error_snoc {A} (l : list A) (a : A) (l' : list A) i :

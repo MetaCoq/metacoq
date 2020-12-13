@@ -406,17 +406,14 @@ Section Typecheck.
               (XX : ∥ All (fun x => isType Σ Γ (dtype x)) mfix' ∥)
             {struct mfix'}
                 : typing_result (All (fun d =>
-              ∥ Σ ;;; Γ ,,, fix_context mfix |- dbody d : (lift0 #|fix_context mfix|) (dtype d) ∥
-              /\ isLambda (dbody d) = true) mfix')
+              ∥ Σ ;;; Γ ,,, fix_context mfix |- dbody d : (lift0 #|fix_context mfix|) (dtype d) ∥) mfix')
               := match mfix' with
                  | [] => ret All_nil
                  | def :: mfix' =>
                    W1 <- infer_cumul infer (Γ ,,, fix_context mfix) _ (dbody def)
                                     (lift0 #|fix_context mfix| (dtype def)) _ ;;
-                   W2 <- check_eq_true (isLambda (dbody def))
-                                      (Msg "not a lambda") ;;
                    Z <- check_bodies mfix' _ ;;
-                   ret (All_cons (conj W1 W2) Z)
+                   ret (All_cons W1 Z)
                  end) mfix _ ;;
         guarded <- check_eq_true (fix_guard Σ Γ mfix) (Msg "Unguarded fixpoint") ;;
         wffix <- check_eq_true (wf_fixpoint Σ.1 mfix) (Msg "Ill-formed fixpoint: not defined on a mutually inductive family") ;;
@@ -508,7 +505,7 @@ Section Typecheck.
     eexists. eassumption.
   Defined.
   Next Obligation.
-    cbn in *; sq; econstructor.
+    cbn in *; sq; eapply type_App'.
     2: eassumption.
     eapply type_reduction; eassumption.
   Defined.
@@ -680,9 +677,9 @@ Section Typecheck.
     now depelim XX.
   Qed.
   Next Obligation.
-    assert (∥ All (fun d => ((Σ;;; Γ ,,, fix_context mfix |- dbody d : (lift0 #|fix_context mfix|) (dtype d)) * (isLambda (dbody d) = true))%type) mfix ∥). {
+    assert (∥ All (fun d => ((Σ;;; Γ ,,, fix_context mfix |- dbody d : (lift0 #|fix_context mfix|) (dtype d)))%type) mfix ∥). {
       eapply All_sq, All_impl.  exact YY.
-      cbn; intros ? []. sq; now constructor. }
+      cbn; intros ? ?. now sq. }
     sq; econstructor; try eassumption.
     symmetry; eassumption.
   Qed.

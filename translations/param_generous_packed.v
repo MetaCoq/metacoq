@@ -1,6 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils All.
-From MetaCoq.Checker Require Import All.
+From MetaCoq.Template Require Import utils Checker All.
 From MetaCoq.Translations Require Import translation_utils MiniHoTT_paths.
 
 

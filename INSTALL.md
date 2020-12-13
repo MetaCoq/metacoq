@@ -25,7 +25,6 @@ MetaCoq is split into multiple packages that get all installed using the
 `coq-metacoq` meta-package:
 
  - `coq-metacoq-template` for the Template Monad and quoting plugin
- - `coq-metacoq-checker` for the UNverified checker of template-coq terms
  - `coq-metacoq-pcuic` for the PCUIC development and proof of the
    Template-Coq -> PCUIC translation
  - `coq-metacoq-safechecker` for the verified checker on PCUIC terms
@@ -103,7 +102,7 @@ the sources directory.
 
 Then use:
 
-- `make` to compile the `template-coq` plugin, the `checker`, the `pcuic`
+- `make` to compile the `template-coq` plugin, the `pcuic`
   development and the `safechecker` and `erasure` plugins.
   You can also selectively build each target.
 

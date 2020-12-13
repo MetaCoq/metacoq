@@ -344,7 +344,7 @@ Section TypeOf.
       sq. split.
       * simpl.
         eapply type_reduction in Htty; eauto.
-        eapply type_App; eauto.
+        eapply type_App'; eauto.
         specialize (pbty _ t0).
         assert (Σ ;;; Γ |- tProd na' A' B' <= tProd x x0 x1).
         eapply cumul_red_l_inv; eauto.

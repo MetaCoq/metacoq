@@ -1783,7 +1783,7 @@ Lemma typing_spine_app {cf:checker_flags} Σ Γ ty args na A B arg :
 Proof.
   intros wfΣ H; revert arg.
   dependent induction H.
-  - intros arg  Harg. simpl. econstructor; eauto.
+  - intros arg Harg. simpl. econstructor; eauto.
     constructor. 2:reflexivity.
     eapply isType_tProd in i as [watd wat].
     eapply (isType_subst wfΣ (Δ:=[vass na A])); eauto.

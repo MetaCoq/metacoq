@@ -677,7 +677,7 @@ Section CheckerFlags.
        
     - simpl in *; to_wfu; eauto with pcuic.
     - rewrite wf_universes_subst. constructor. to_wfu; auto. constructor.
-      now move/andP: H3 => [].
+      now move/andP: H4 => [].
 
     - apply/andP; split.
       { apply/wf_universe_instanceP.

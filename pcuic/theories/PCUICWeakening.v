@@ -118,8 +118,6 @@ Proof.
       * destruct H2. rewrite H2. simpl. now rewrite Nat.sub_0_r.
 Qed.
 
-Ltac lia_f_equal := repeat (lia || f_equal).
-
 Lemma smash_context_lift Δ k n Γ :
   smash_context (lift_context n (k + #|Γ|) Δ) (lift_context n k Γ) =
   lift_context n k (smash_context Δ Γ).
@@ -887,15 +885,6 @@ Proof.
   destruct t; simpl; try congruence.
 Qed.
 
-Lemma nth_error_rev_inv {A} (l : list A) i :
-  i < #|l| ->
-  nth_error (List.rev l) i = nth_error l (#|l| - S i).
-Proof.
-  intros Hi.
-  rewrite nth_error_rev; autorewrite with len; auto.
-  now rewrite List.rev_involutive.
-Qed.
-
 Lemma weakening_check_one_fix (Γ' Γ'' : context) mfix :
   map
        (fun x : def term =>
@@ -1066,16 +1055,14 @@ Proof.
       now specialize (Hs' _ _ _ wf eq_refl).
     * eapply All_map.
       eapply (All_impl X1); simpl.
-      intros x [[Hb Hlam] IH].
+      intros x [Hb IH].
       rewrite lift_fix_context.
       specialize (IH Γ (Γ' ,,,  (fix_context mfix)) Γ'' wf).
       rewrite app_context_assoc in IH. specialize (IH eq_refl).
-      split; auto.
-      + rewrite lift_context_app Nat.add_0_r app_context_assoc in IH.
-        rewrite app_context_length fix_context_length in IH.
-        rewrite lift_context_length fix_context_length.
-        rewrite permute_lift; try lia. now rewrite (Nat.add_comm #|Γ'|).
-      + now rewrite isLambda_lift.
+      rewrite lift_context_app Nat.add_0_r app_context_assoc in IH.
+      rewrite app_context_length fix_context_length in IH.
+      rewrite lift_context_length fix_context_length.
+      rewrite permute_lift; try lia. now rewrite (Nat.add_comm #|Γ'|).
     * red; rewrite <-H1. unfold wf_fixpoint.
       rewrite map_map_compose.
       now rewrite weakening_check_one_fix.

@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import CRelationClasses.
-From MetaCoq.Template Require Import config utils Ast AstUtils Reflect LiftSubst MCList
+From MetaCoq.Template Require Import config utils Environment Ast AstUtils Reflect LiftSubst MCList
      UnivSubst WfInv Typing.
 
 Require Import ssreflect ssrbool.
@@ -121,17 +121,17 @@ Section Wcbv.
       eval (tConst c u) res
 
   (** Case *)
-  | eval_iota ind pars r discr c u args p brs res :
-      eval discr (mkApps (tConstruct ind c u) args) ->
-      eval (iota_red pars c args brs) res ->
-      eval (tCase ((ind, pars), r) p discr brs) res
+  | eval_iota indnparrel discr c u args p brs res :
+      eval discr (mkApps (tConstruct indnparrel.1.1 c u) args) ->
+      eval (iota_red indnparrel.1.2 c args brs) res ->
+      eval (tCase indnparrel p discr brs) res
 
   (** Proj *)
-  | eval_proj i pars arg discr args u a res :
-      eval discr (mkApps (tConstruct i 0 u) args) ->
-      nth_error args (pars + arg) = Some a ->
+  | eval_proj indnpararg discr args u a res :
+      eval discr (mkApps (tConstruct indnpararg.1.1 0 u) args) ->
+      nth_error args (indnpararg.1.2 + indnpararg.2) = Some a ->
       eval a res ->
-      eval (tProj (i, pars, arg) discr) res
+      eval (tProj indnpararg discr) res
            
   (** Fix unfolding, with guard *)
   | eval_fix f mfix idx fixargsv args argsv narg fn res :
@@ -199,16 +199,23 @@ Section Wcbv.
           forall (u : Instance.t) (res : term),
             cst_body decl = Some body ->
             eval (subst_instance_constr u body) res -> P (subst_instance_constr u body) res -> P (tConst c u) res) ->
-      (forall (ind : inductive) (pars : nat) r (discr : term) (c : nat) (u : Instance.t)
-              (args : list term) (p : term) (brs : list (nat × term)) (res : term),
+      (forall c (decl : constant_body),
+          declared_constant Σ c decl -> forall u : Instance.t, cst_body decl = None -> P (tConst c u) (tConst c u)) ->
+      (forall (indnparrel : ((inductive × nat) × relevance)) (discr : term) (c : nat) (u : Instance.t)
+              (args : list term) (p : predicate term) (brs : list (nat × term)) (res : term),
+          let ind := indnparrel.1.1 in
+          let npar := indnparrel.1.2 in
           eval discr (mkApps (tConstruct ind c u) args) ->
           P discr (mkApps (tConstruct ind c u) args) ->
-          eval (iota_red pars c args brs) res -> P (iota_red pars c args brs) res -> P (tCase ((ind, pars), r) p discr brs) res) ->
-      (forall (i : inductive) (pars arg : nat) (discr : term) (args : list term) (u : Instance.t)
+          eval (iota_red npar c args brs) res -> P (iota_red npar c args brs) res -> 
+          P (tCase indnparrel p discr brs) res) ->
+      (forall (indnpararg : ((inductive × nat) × nat)) (discr : term) (args : list term) (u : Instance.t)
               (a res : term),
-          eval discr (mkApps (tConstruct i 0 u) args) ->
-          P discr (mkApps (tConstruct i 0 u) args) ->
-          nth_error args (pars + arg) = Some a -> eval a res -> P a res -> P (tProj (i, pars, arg) discr) res) ->
+          eval discr (mkApps (tConstruct indnpararg.1.1 0 u) args) ->
+          P discr (mkApps (tConstruct indnpararg.1.1 0 u) args) ->
+          nth_error args (indnpararg.1.2 + indnpararg.2) = Some a -> 
+          eval a res -> P a res ->
+          P (tProj indnpararg discr) res) ->
       (forall (f : term) (mfix : mfixpoint term) (idx : nat) (fixargsv args argsv : list term)
              (narg : nat) (fn res : term),
         eval f (mkApps (tFix mfix idx) fixargsv) ->
@@ -229,8 +236,9 @@ Section Wcbv.
           unfold_fix mfix idx = Some (narg, fn) ->
           ~~ is_constructor narg (fixargsv ++ argsv) ->
           P (mkApps f args) (mkApps (tFix mfix idx) (fixargsv ++ argsv))) ->
-      (forall (ip : (inductive × nat) × relevance) (mfix : mfixpoint term) (idx : nat) (p : term) (args : list term)
-              (narg : nat) (fn : term) (brs : list (nat × term)) (res : term),
+      (forall (ip : (inductive × nat) × relevance) (mfix : mfixpoint term) (idx : nat) 
+        (p : predicate term) (args : list term)
+        (narg : nat) (fn : term) (brs : list (nat × term)) (res : term),
           unfold_cofix mfix idx = Some (narg, fn) ->
           eval (tCase ip p (mkApps fn args) brs) res ->
           P (tCase ip p (mkApps fn args) brs) res -> P (tCase ip p (mkApps (tCoFix mfix idx) args) brs) res) ->

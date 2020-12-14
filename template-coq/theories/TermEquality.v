@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import CMorphisms.
-From MetaCoq.Template Require Import config utils Reflect Ast AstUtils Induction LiftSubst Reflect.
+From MetaCoq.Template Require Import config utils Reflect Environment Ast AstUtils Induction LiftSubst Reflect.
 
 Require Import ssreflect.
 From Equations.Prop Require Import DepElim.
@@ -169,16 +169,16 @@ Inductive eq_term_upto_univ_napp Σ (Re Rle : Universe.t -> Universe.t -> Prop) 
     eq_term_upto_univ_napp Σ Re Rle 0 u u' ->
     eq_term_upto_univ_napp Σ Re Rle napp (tLetIn na t ty u) (tLetIn na' t' ty' u')
 
-| eq_Case ind par p p' c c' brs brs' :
-    All2 (eq_term_upto_univ_napp Re Re 0) p.(pparams) p'.(pparams) ->
+| eq_Case ind p p' c c' brs brs' :
+    All2 (eq_term_upto_univ_napp Σ Re Re 0) p.(pparams) p'.(pparams) ->
     R_universe_instance Re p.(puinst) p'.(puinst) ->
-    eq_term_upto_univ_napp Re Re 0 p.(preturn) p'.(preturn) ->
-    eq_term_upto_univ_napp Re Re 0 c c' ->
+    eq_term_upto_univ_napp Σ Re Re 0 p.(preturn) p'.(preturn) ->
+    eq_term_upto_univ_napp Σ Re Re 0 c c' ->
     All2 (fun x y =>
       fst x = fst y ×
-      eq_term_upto_univ_napp Re Re (snd x) (snd y) 0
+      eq_term_upto_univ_napp Σ Re Re 0 (snd x) (snd y)
     ) brs brs' ->
-  eq_term_upto_univ_napp Σ Re Rle napp (tCase indn p c brs) (tCase indn p' c' brs')
+  eq_term_upto_univ_napp Σ Re Rle napp (tCase ind p c brs) (tCase ind p' c' brs')
 
 | eq_Proj p c c' :
     eq_term_upto_univ_napp Σ Re Re 0 c c' ->
@@ -268,10 +268,13 @@ Proof.
     intros. easy.
   - now apply R_global_instance_refl.
   - now apply R_global_instance_refl.
-  - red in X. eapply All_All2. 1:eassumption.
+  - destruct X as [Ppars Preturn]. eapply All_All2. 1:eassumption.
     intros; easy.
+  - destruct X as [Ppars Preturn]. now apply Preturn.
   - eapply All_All2. 1: eassumption.
     simpl.
+    intros [? ?] x. repeat split ; auto.
+  - eapply All_All2. 1: eassumption.
     intros x [? ?]. repeat split ; auto.
   - eapply All_All2. 1: eassumption.
     intros x [? ?]. repeat split ; auto.
@@ -331,7 +334,7 @@ Proof.
        end].
   - eapply R_global_instance_impl_same_napp; eauto.
   - eapply R_global_instance_impl_same_napp; eauto.
-  - induction a; constructor; auto. intuition auto.
+  - induction a0; constructor; auto. intuition auto.
   - induction a; constructor; auto. intuition auto.
   - induction a; constructor; auto. intuition auto.
 Qed.
@@ -353,8 +356,8 @@ Proof.
   - clear X. induction a; constructor; eauto using eq_term_upto_univ_morphism0.
   - eapply R_global_instance_impl_same_napp; eauto.
   - eapply R_global_instance_impl_same_napp; eauto.
-  - clear X1 X2. induction a; constructor; eauto using eq_term_upto_univ_morphism0.
-    destruct r. split; eauto using eq_term_upto_univ_morphism0.
+  - clear X1 X2. induction a0; constructor; eauto using eq_term_upto_univ_morphism0.
+    destruct r0. split; eauto using eq_term_upto_univ_morphism0.
   - induction a; constructor; eauto using eq_term_upto_univ_morphism0.
     destruct r as [[[? ?] ?] ?].
     repeat split; eauto using eq_term_upto_univ_morphism0.
@@ -423,10 +426,15 @@ Proof.
     eapply R_global_instance_impl. 5:eauto. all:auto.
   - inversion 1; subst; constructor.
     eapply R_global_instance_impl. 5:eauto. all:eauto.
-  - inversion 1; subst; constructor; eauto.
+  - destruct X as [IHpars IHret].
+    inversion 1; subst; constructor; eauto.
     eapply All2_impl'; tea.
     eapply All_impl; eauto.
-    cbn. intros x ? y [? ?]. split; eauto.
+    eapply R_universe_instance_impl; eauto.
+    eapply All2_impl'; eauto.
+    cbn.
+    eapply All_impl; eauto.
+    intros x ? y [? ?]. split; eauto.
   - inversion 1; subst; constructor.
     eapply All2_impl'; tea.
     eapply All_impl; eauto.

@@ -145,20 +145,6 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T).
   Arguments localenv_cons_def {_ _ _ _ _} _ _.
   Arguments localenv_cons_abs {_ _ _ _} _ _.
 
-  Section TypeCtxInst.
-    Context (typing : context -> term -> term -> Type).
-    (* Delta telescope *)
-    Inductive ctx_inst Σ (Γ : context) : list term -> context -> Type :=
-    | ctx_inst_nil : ctx_inst Σ Γ [] []
-    | ctx_inst_ass na t i inst Δ : 
-        typing Σ Γ i t ->
-        ctx_inst Σ Γ inst (subst_telescope [i] 0 Δ) ->
-        ctx_inst Σ Γ (i :: inst) (vass na t :: Δ)
-    | ctx_inst_def na b t inst Δ :
-        ctx_inst Σ Γ inst (subst_telescope [b] 0 Δ) ->
-        ctx_inst Σ Γ inst (vdef na b t :: Δ).
-  End TypeCtxInst.
-
   Inductive context_relation (P : context -> context -> context_decl -> context_decl -> Type)
             : forall (Γ Γ' : context), Type :=
   | ctx_rel_nil : context_relation P nil nil
@@ -290,6 +276,21 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T).
           All_local_env_over Σ (Γ ,, vdef na b t)
                              (localenv_cons_def all tu tb).
   End TypeLocalOver.
+  
+  Section TypeCtxInst.
+    Context (typing : forall (Σ : global_env_ext) (Γ : context), term -> term -> Type).
+
+    (* Γ |- s : Δ, where Δ is a telescope (reverse context) *)
+    Inductive ctx_inst Σ (Γ : context) : list term -> context -> Type :=
+    | ctx_inst_nil : ctx_inst Σ Γ [] []
+    | ctx_inst_ass na t i inst Δ : 
+        typing Σ Γ i t ->
+        ctx_inst Σ Γ inst (subst_telescope [i] 0 Δ) ->
+        ctx_inst Σ Γ (i :: inst) (vass na t :: Δ)
+    | ctx_inst_def na b t inst Δ :
+        ctx_inst Σ Γ inst (subst_telescope [b] 0 Δ) ->
+        ctx_inst Σ Γ inst (vdef na b t :: Δ).
+  End TypeCtxInst.
 
 End EnvTyping.
 
@@ -311,24 +312,9 @@ Module Type Typing (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E).
   Notation " Σ ;;; Γ |- t : T " :=
     (typing Σ Γ t T) (at level 50, Γ, t, T at next level) : type_scope.
 
-  Parameter Inline smash_context : context -> context -> context.
-  Parameter Inline lift_context : nat -> nat -> context -> context.
-  Parameter Inline subst_context : list term -> nat ->  context -> context.
-  Parameter Inline expand_lets : context -> term -> term.
-  Parameter Inline expand_lets_ctx : context -> context -> context.
-  Parameter Inline subst_telescope : list term -> nat -> context -> context.
-  Parameter Inline subst_instance_context : Instance.t -> context -> context.
-  Parameter Inline subst_instance_constr : Instance.t -> term  -> term.
-  Parameter Inline lift : nat -> nat -> term -> term.
-  Parameter Inline subst : list term -> nat -> term -> term.
   Parameter Inline inds : kername -> Instance.t -> list one_inductive_body -> list term.
-  Parameter Inline extended_subst : context -> nat -> list term. (* Let expansion substitution *)
   Parameter destArity : term -> option (context * Universe.t).
 
-  (* [noccur_between n k t] Checks that deBruijn indices between n and n+k do not appear in t (even under binders).  *)
-  Parameter Inline noccur_between : nat -> nat -> term -> bool.
-  Parameter Inline closedn : nat -> term -> bool.
-  
   Notation wf_local Σ Γ := (All_local_env (lift_typing typing Σ) Γ).
 
 End Typing.
@@ -341,6 +327,8 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
   Definition isType `{checker_flags} (Σ : global_env_ext) (Γ : context) (t : term) :=
     { s : _ & Σ ;;; Γ |- t : tSort s }.
 
+  Derive Signature NoConfusion for ctx_inst.
+  
   Section ContextConversion.
     Context {cf : checker_flags}.
     Context (Σ : global_env_ext).
@@ -635,7 +623,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
         sorts_local_ctx Σ (arities_context mdecl.(ind_bodies) ,,, mdecl.(ind_params))
                       cshape.(cshape_args) cshape.(cshape_sorts);
       on_cindices : 
-        ctx_inst Σ (arities_context mdecl.(ind_bodies) ,,, mdecl.(ind_params) ,,, cshape.(cshape_args))
+        ctx_inst (fun Σ Γ t T => P Σ Γ t (Some T)) Σ (arities_context mdecl.(ind_bodies) ,,, mdecl.(ind_params) ,,, cshape.(cshape_args))
                       cshape.(cshape_indices)
                       (List.rev (lift_context #|cshape.(cshape_args)| 0 ind_indices));
 

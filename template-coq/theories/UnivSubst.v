@@ -6,41 +6,6 @@ From MetaCoq Require Import utils Ast AstUtils Environment Induction LiftSubst.
   Substitution of universe levels for universe level variables, used to
   implement universe polymorphism. *)
 
-
-Instance subst_instance_constr : UnivSubst term :=
-  fix subst_instance_constr u c {struct c} : term :=
-  match c with
-  | tRel _ | tVar _  | tInt _ | tFloat _ => c
-  | tEvar ev args => tEvar ev (List.map (subst_instance_constr u) args)
-  | tSort s => tSort (subst_instance_univ u s)
-  | tConst c u' => tConst c (subst_instance_instance u u')
-  | tInd i u' => tInd i (subst_instance_instance u u')
-  | tConstruct ind k u' => tConstruct ind k (subst_instance_instance u u')
-  | tLambda na T M => tLambda na (subst_instance_constr u T) (subst_instance_constr u M)
-  | tApp f v => tApp (subst_instance_constr u f) (List.map (subst_instance_constr u) v)
-  | tProd na A B => tProd na (subst_instance_constr u A) (subst_instance_constr u B)
-  | tCast c kind ty => tCast (subst_instance_constr u c) kind (subst_instance_constr u ty)
-  | tLetIn na b ty b' => tLetIn na (subst_instance_constr u b) (subst_instance_constr u ty)
-                                (subst_instance_constr u b')
-  | tCase ind p c brs =>
-    let p' := map_predicate (subst_instance_constr u) (subst_instance_constr u) p in
-    let brs' := List.map (on_snd (subst_instance_constr u)) brs in
-    tCase ind p' (subst_instance_constr u c) brs'
-  | tProj p c => tProj p (subst_instance_constr u c)
-  | tFix mfix idx =>
-    let mfix' := List.map (map_def (subst_instance_constr u) (subst_instance_constr u)) mfix in
-    tFix mfix' idx
-  | tCoFix mfix idx =>
-    let mfix' := List.map (map_def (subst_instance_constr u) (subst_instance_constr u)) mfix in
-    tCoFix mfix' idx
-  end.
-
-Instance subst_instance_decl : UnivSubst context_decl
-  := map_decl ∘ subst_instance_constr.
-
-Instance subst_instance_context : UnivSubst context
-  := map_context ∘ subst_instance_constr.
-
 Lemma lift_subst_instance_constr u c n k :
   lift n k (subst_instance_constr u c) = subst_instance_constr u (lift n k c).
 Proof.

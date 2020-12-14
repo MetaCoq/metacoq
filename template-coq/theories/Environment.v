@@ -15,6 +15,12 @@ Module Type Term.
   Parameter Inline tProj : projection -> term -> term.
   Parameter Inline mkApps : term -> list term -> term.
 
+  Parameter lift : nat -> nat -> term -> term.
+  Parameter subst : list term -> nat -> term -> term.
+  Parameter closedn : nat -> term -> bool.
+  Parameter noccur_between : nat -> nat -> term -> bool.
+  Parameter subst_instance_constr : UnivSubst term.
+  
 End Term.
 
 Module Environment (T : Term).
@@ -116,6 +122,115 @@ Module Environment (T : Term).
     apply mapi_ext. intros. f_equal. rewrite List.rev_length. f_equal.
   Qed. 
 
+  Definition lift_decl n k d := (map_decl (lift n k) d).
+
+  Definition lift_context n k (Γ : context) : context :=
+    fold_context (fun k' => lift n (k' + k)) Γ.
+  
+  Lemma lift_context_alt n k Γ :
+    lift_context n k Γ =
+    mapi (fun k' d => lift_decl n (Nat.pred #|Γ| - k' + k) d) Γ.
+  Proof.
+    unfold lift_context. apply fold_context_alt.
+  Qed.
+  
+  Definition subst_context s k (Γ : context) : context :=
+    fold_context (fun k' => subst s (k' + k)) Γ.
+  
+  Definition subst_decl s k (d : context_decl) := map_decl (subst s k) d.
+  
+  Lemma subst_context_length s n Γ : #|subst_context s n Γ| = #|Γ|.
+  Proof.
+    induction Γ as [|[na [body|] ty] tl] in Γ |- *; cbn; eauto.
+    - rewrite !List.rev_length, !mapi_rec_length, !app_length, !List.rev_length. simpl.
+      lia.
+    - rewrite !List.rev_length, !mapi_rec_length, !app_length, !List.rev_length. simpl.
+      lia.
+  Qed.
+  
+  Lemma subst_context_nil s n : subst_context s n [] = [].
+  Proof. reflexivity. Qed.
+  
+  Lemma subst_context_alt s k Γ :
+    subst_context s k Γ =
+    mapi (fun k' d => subst_decl s (Nat.pred #|Γ| - k' + k) d) Γ.
+  Proof.
+    unfold subst_context, fold_context. rewrite rev_mapi. rewrite List.rev_involutive.
+    apply mapi_ext. intros. f_equal. now rewrite List.rev_length.
+  Qed.
+  
+  Lemma subst_context_snoc s k Γ d : subst_context s k (d :: Γ) = subst_context s k Γ ,, subst_decl s (#|Γ| + k) d.
+  Proof.
+    unfold subst_context, fold_context.
+    rewrite !rev_mapi, !rev_involutive; unfold mapi; rewrite mapi_rec_eqn; unfold snoc.
+    f_equal. now rewrite Nat.sub_0_r, List.rev_length.
+    rewrite mapi_rec_Sk. simpl. apply mapi_rec_ext. intros.
+    rewrite app_length, !List.rev_length. simpl. f_equal. f_equal. lia.
+  Qed.
+  
+  Definition subst_telescope s k (Γ : context) : context :=
+    mapi (fun k' decl => map_decl (subst s (k' + k)) decl) Γ.
+
+  Instance subst_instance_decl : UnivSubst context_decl
+    := map_decl ∘ subst_instance_constr.
+  
+  Instance subst_instance_context : UnivSubst context
+    := map_context ∘ subst_instance_constr.
+  
+      
+
+  Fixpoint context_assumptions (Γ : context) :=
+    match Γ with
+    | [] => 0
+    | d :: Γ =>
+      match d.(decl_body) with
+      | Some _ => context_assumptions Γ
+      | None => S (context_assumptions Γ)
+      end
+    end.
+
+  Fixpoint smash_context (Γ Γ' : context) : context :=
+    match Γ' with
+    | {| decl_body := Some b |} :: Γ' => smash_context (subst_context [b] 0 Γ) Γ'
+    | {| decl_body := None |} as d :: Γ' => smash_context (Γ ++ [d]) Γ'
+    | [] => Γ
+    end.
+    
+  Lemma smash_context_length Γ Γ' : #|smash_context Γ Γ'| = #|Γ| + context_assumptions Γ'.
+  Proof.
+    induction Γ' as [|[na [body|] ty] tl] in Γ |- *; cbn; eauto.
+    - now rewrite IHtl, subst_context_length.
+    - rewrite IHtl, app_length. simpl. lia.
+  Qed.
+    
+  Fixpoint extended_subst (Γ : context) (n : nat) 
+  (* Δ, smash_context Γ, n |- extended_subst Γ n : Γ *) :=
+  match Γ with
+  | nil => nil
+  | cons d vs =>
+    match decl_body d with
+    | Some b =>
+      (* Δ , vs |- b *)
+      let s := extended_subst vs n in
+      (* Δ , smash_context vs , n |- s : vs *)
+      let b' := lift (context_assumptions vs + n) #|s| b in
+      (* Δ, smash_context vs, n , vs |- b' *)
+      let b' := subst s 0 b' in
+      (* Δ, smash_context vs , n |- b' *)
+      b' :: s
+    | None => tRel n :: extended_subst vs (S n)
+    end
+  end.
+
+  Definition expand_lets_k Γ k t := 
+    (subst (extended_subst Γ 0) k (lift (context_assumptions Γ) (k + #|Γ|) t)).
+
+  Definition expand_lets Γ t := expand_lets_k Γ 0 t.
+
+  Definition expand_lets_k_ctx Γ k Δ := 
+    (subst_context (extended_subst Γ 0) k (lift_context (context_assumptions Γ) (k + #|Γ|) Δ)).
+
+  Definition expand_lets_ctx Γ Δ := expand_lets_k_ctx Γ 0 Δ.
 
   (** *** Environments *)
 
@@ -311,15 +426,6 @@ Module Environment (T : Term).
   Lemma arities_context_length l : #|arities_context l| = #|l|.
   Proof. unfold arities_context. now rewrite rev_map_length. Qed.
 
-  Fixpoint context_assumptions (Γ : context) :=
-    match Γ with
-    | [] => 0
-    | d :: Γ =>
-      match d.(decl_body) with
-      | Some _ => context_assumptions Γ
-      | None => S (context_assumptions Γ)
-      end
-    end.
 
   Lemma app_context_nil_l Γ : [] ,,, Γ = Γ.
   Proof.
@@ -434,6 +540,9 @@ Module Environment (T : Term).
     rewrite nth_error_fold_context_eq.
     do 2 f_equal. lia. now rewrite fold_context_length.
   Qed.
+
+
+
 End Environment.
 
 Module Type EnvironmentSig (T : Term).
@@ -514,10 +623,9 @@ Definition tCasePredProp {term}
            (Pparams Preturn : term -> Type)
            (p : predicate term) :=
   All Pparams p.(pparams) × Preturn p.(preturn).
-
 (*
 Lemma map_predicate_spec
-      {term term' uinst uinst'}
+      {term term'}
       (f : term' -> term'')
       (g : uinst' -> uinst'')
       (h : term' -> term'')

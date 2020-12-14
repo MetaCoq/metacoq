@@ -205,16 +205,6 @@ Proof.
   now rewrite !Nat.add_1_r /= IHctx' -app_assoc.
 Qed.
 
-(** Decompose an arity into a context and a sort *)
-
-Fixpoint destArity Γ (t : term) :=
-  match t with
-  | tProd na t b => destArity (Γ ,, vass na t) b
-  | tLetIn na b b_ty b' => destArity (Γ ,, vdef na b b_ty) b'
-  | tSort s => Some (Γ, s)
-  | _ => None
-  end.
-
 Definition is_ind_app_head t :=
   match t with
   | tInd _ _ => true

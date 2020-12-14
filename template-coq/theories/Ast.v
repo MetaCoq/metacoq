@@ -70,6 +70,154 @@ Definition mkApps t us :=
         end
   end.
 
+(** Term lifting / weakening *)
+
+Fixpoint lift n k t : term :=
+  match t with
+  | tRel i => tRel (if Nat.leb k i then n + i else i)
+  | tEvar ev args => tEvar ev (List.map (lift n k) args)
+  | tLambda na T M => tLambda na (lift n k T) (lift n (S k) M)
+  | tApp u v => tApp (lift n k u) (List.map (lift n k) v)
+  | tProd na A B => tProd na (lift n k A) (lift n (S k) B)
+  | tCast c kind t => tCast (lift n k c) kind (lift n k t)
+  | tLetIn na b t b' => tLetIn na (lift n k b) (lift n k t) (lift n (S k) b')
+  | tCase ind p c brs =>
+    let k' := List.length (pcontext p) + k in
+    let p' := map_predicate (lift n k) (lift n k') p in
+    let brs' := List.map (on_snd (lift n k)) brs in
+    tCase ind p' (lift n k c) brs'
+  | tProj p c => tProj p (lift n k c)
+  | tFix mfix idx =>
+    let k' := List.length mfix + k in
+    let mfix' := List.map (map_def (lift n k) (lift n k')) mfix in
+    tFix mfix' idx
+  | tCoFix mfix idx =>
+    let k' := List.length mfix + k in
+    let mfix' := List.map (map_def (lift n k) (lift n k')) mfix in
+    tCoFix mfix' idx
+  | x => x
+  end.
+
+Notation lift0 n := (lift n 0).
+
+(** Parallel substitution: it assumes that all terms in the substitution live in the
+    same context *)
+
+Fixpoint subst s k u :=
+  match u with
+  | tRel n =>
+    if Nat.leb k n then
+      match nth_error s (n - k) with
+      | Some b => lift0 k b
+      | None => tRel (n - List.length s)
+      end
+    else tRel n
+  | tEvar ev args => tEvar ev (List.map (subst s k) args)
+  | tLambda na T M => tLambda na (subst s k T) (subst s (S k) M)
+  | tApp u v => mkApps (subst s k u) (List.map (subst s k) v)
+  | tProd na A B => tProd na (subst s k A) (subst s (S k) B)
+  | tCast c kind ty => tCast (subst s k c) kind (subst s k ty)
+  | tLetIn na b ty b' => tLetIn na (subst s k b) (subst s k ty) (subst s (S k) b')
+  | tCase ind p c brs =>
+    let k' := List.length (pcontext p) + k in
+    let p' := map_predicate (subst s k) (subst s k') p in
+    let brs' := List.map (on_snd (subst s k)) brs in
+    tCase ind p' (subst s k c) brs'
+  | tProj p c => tProj p (subst s k c)
+  | tFix mfix idx =>
+    let k' := List.length mfix + k in
+    let mfix' := List.map (map_def (subst s k) (subst s k')) mfix in
+    tFix mfix' idx
+  | tCoFix mfix idx =>
+    let k' := List.length mfix + k in
+    let mfix' := List.map (map_def (subst s k) (subst s k')) mfix in
+    tCoFix mfix' idx
+  | x => x
+  end.
+
+(** Substitutes [t1 ; .. ; tn] in u for [Rel 0; .. Rel (n-1)] *in parallel* *)
+Notation subst0 t := (subst t 0).
+Definition subst1 t k u := subst [t] k u.
+Notation subst10 t := (subst1 t 0).
+Notation "M { j := N }" := (subst1 N j M) (at level 10, right associativity).
+
+
+Fixpoint closedn k (t : term) : bool :=
+  match t with
+  | tRel i => Nat.ltb i k
+  | tEvar ev args => List.forallb (closedn k) args
+  | tLambda _ T M | tProd _ T M => closedn k T && closedn (S k) M
+  | tApp u v => closedn k u && List.forallb (closedn k) v
+  | tCast c kind t => closedn k c && closedn k t
+  | tLetIn na b t b' => closedn k b && closedn k t && closedn (S k) b'
+  | tCase ind p c brs =>
+    let k' := List.length (pcontext p) + k in
+    let p' := test_predicate (closedn k) (closedn k') p in
+    let brs' := List.forallb (test_snd (closedn k)) brs in
+    p' && closedn k c && brs'
+  | tProj p c => closedn k c
+  | tFix mfix idx =>
+    let k' := List.length mfix + k in
+    List.forallb (test_def (closedn k) (closedn k')) mfix
+  | tCoFix mfix idx =>
+    let k' := List.length mfix + k in
+    List.forallb (test_def (closedn k) (closedn k')) mfix
+  | x => true
+  end.
+
+Notation closed t := (closedn 0 t).
+
+Fixpoint noccur_between k n (t : term) : bool :=
+  match t with
+  | tRel i => Nat.ltb i k && Nat.leb (k + n) i
+  | tEvar ev args => List.forallb (noccur_between k n) args
+  | tLambda _ T M | tProd _ T M => noccur_between k n T && noccur_between (S k) n M
+  | tApp u v => noccur_between k n u && List.forallb (noccur_between k n) v
+  | tCast c kind t => noccur_between k n c && noccur_between k n t
+  | tLetIn na b t b' => noccur_between k n b && noccur_between k n t && noccur_between (S k) n b'
+  | tCase ind p c brs =>
+    let k' := List.length (pcontext p) + k in
+    let p' := test_predicate (noccur_between k n) (noccur_between k' n) p in
+    let brs' := List.forallb (test_snd (noccur_between k n)) brs in
+    p' && noccur_between k n c && brs'
+  | tProj p c => noccur_between k n c
+  | tFix mfix idx =>
+    let k' := List.length mfix + k in
+    List.forallb (test_def (noccur_between k n) (noccur_between k' n)) mfix
+  | tCoFix mfix idx =>
+    let k' := List.length mfix + k in
+    List.forallb (test_def (noccur_between k n) (noccur_between k' n)) mfix
+  | x => true
+  end.
+
+Instance subst_instance_constr : UnivSubst term :=
+  fix subst_instance_constr u c {struct c} : term :=
+  match c with
+  | tRel _ | tVar _  | tInt _ | tFloat _ => c
+  | tEvar ev args => tEvar ev (List.map (subst_instance_constr u) args)
+  | tSort s => tSort (subst_instance_univ u s)
+  | tConst c u' => tConst c (subst_instance_instance u u')
+  | tInd i u' => tInd i (subst_instance_instance u u')
+  | tConstruct ind k u' => tConstruct ind k (subst_instance_instance u u')
+  | tLambda na T M => tLambda na (subst_instance_constr u T) (subst_instance_constr u M)
+  | tApp f v => tApp (subst_instance_constr u f) (List.map (subst_instance_constr u) v)
+  | tProd na A B => tProd na (subst_instance_constr u A) (subst_instance_constr u B)
+  | tCast c kind ty => tCast (subst_instance_constr u c) kind (subst_instance_constr u ty)
+  | tLetIn na b ty b' => tLetIn na (subst_instance_constr u b) (subst_instance_constr u ty)
+                                (subst_instance_constr u b')
+  | tCase ind p c brs =>
+    let p' := map_predicate (subst_instance_constr u) (subst_instance_constr u) p in
+    let brs' := List.map (on_snd (subst_instance_constr u)) brs in
+    tCase ind p' (subst_instance_constr u c) brs'
+  | tProj p c => tProj p (subst_instance_constr u c)
+  | tFix mfix idx =>
+    let mfix' := List.map (map_def (subst_instance_constr u) (subst_instance_constr u)) mfix in
+    tFix mfix' idx
+  | tCoFix mfix idx =>
+    let mfix' := List.map (map_def (subst_instance_constr u) (subst_instance_constr u)) mfix in
+    tCoFix mfix' idx
+  end.
+
 Module TemplateTerm <: Term.
 
 Definition term := term.
@@ -83,13 +231,22 @@ Definition tInd := tInd.
 Definition tProj := tProj.
 Definition mkApps := mkApps.
 
+Definition lift := lift.
+Definition subst := subst.
+Definition closedn := closedn.
+Definition noccur_between := noccur_between.
+Definition subst_instance_constr := subst_instance_constr.
+
 End TemplateTerm.
 
 Ltac unf_term := unfold TemplateTerm.term in *; unfold TemplateTerm.tRel in *;
                  unfold TemplateTerm.tSort in *; unfold TemplateTerm.tProd in *;
                  unfold TemplateTerm.tLambda in *; unfold TemplateTerm.tLetIn in *;
-                 unfold TemplateTerm.tInd in *; unfold TemplateTerm.tProj in *.
-
+                 unfold TemplateTerm.tInd in *; unfold TemplateTerm.tProj in *;
+                 unfold TemplateTerm.lift in *; unfold TemplateTerm.subst in *;
+                 unfold TemplateTerm.closedn in *; unfold TemplateTerm.noccur_between in *;
+                 unfold TemplateTerm.subst_instance_constr in *.
+                 
 Module TemplateEnvironment := Environment TemplateTerm.
 Include TemplateEnvironment.
 

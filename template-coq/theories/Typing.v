@@ -833,7 +833,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     let params := List.firstn npar args in
     forall ps pty, build_case_predicate_type ind mdecl idecl params u ps = Some pty ->
     Σ ;;; Γ |- p : pty ->
-    leb_sort_family (universe_family ps) idecl.(ind_kelim) ->
+    is_allowed_elimination Σ ps idecl.(ind_kelim) ->
     Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
     forall btys, map_option_out (build_branches_type ind mdecl idecl params u p) = Some btys ->
     All2 (fun br bty => (br.1 = bty.1) * (Σ ;;; Γ |- br.2 : bty.2) * (Σ ;;; Γ |- bty.2 : tSort ps)) brs btys ->
@@ -1183,7 +1183,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         forall ps pty, build_case_predicate_type ind mdecl idecl params u ps = Some pty ->
         Σ ;;; Γ |- p : pty ->
         P Σ Γ p pty ->
-        leb_sort_family (universe_family ps) idecl.(ind_kelim) ->
+        is_allowed_elimination (global_ext_constraints Σ) ps idecl.(ind_kelim) ->
         Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
         P Σ Γ c (mkApps (tInd ind u) args) ->
         forall btys, map_option_out (build_branches_type ind mdecl idecl params u p) = Some btys ->
@@ -1296,7 +1296,7 @@ Proof.
            pose proof (typing_wf_local (Σ:= (Σ, udecl)) Hs). simpl in Hs.
            specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ X14 (existT _ _ (existT _ _ Hs))))))).
            simpl in IH. red. simpl. exists s. simpl. apply IH; constructor 1; simpl; auto with arith.
-           eapply type_local_ctx_impl; eauto. simpl. intros. red in X14.
+           eapply sorts_local_ctx_impl; eauto. simpl. intros. red in X14.
            destruct T.
            pose proof (typing_wf_local X14).
            specialize (IH ((Σ, udecl); (X13; _; X17; _; _; X14))).
@@ -1314,29 +1314,19 @@ Proof.
            apply IH. simpl. constructor 1. simpl. auto with arith.
         -- intros Hprojs; pose proof (onProjections Xg Hprojs); auto.
         -- destruct Xg. simpl. unfold check_ind_sorts in *.
-          destruct universe_family;auto.
-          ++ split. apply ind_sorts0. destruct indices_matter; auto.
-             eapply type_local_ctx_impl. eapply ind_sorts0.
-             intros. red in X14.
-             destruct T.
-             pose proof (typing_wf_local X14).
-             specialize (IH ((Σ, udecl); (X13; _; X17; _; _; X14))).
-             apply IH. simpl. constructor 1. simpl. auto with arith.
-             destruct X14 as [u Hu]. exists u.
-             pose proof (typing_wf_local Hu).
-             specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ X14 (existT _ _ (existT _ _ Hu))))))).
-             apply IH. simpl. constructor 1. simpl. auto with arith.
-          ++ split. apply ind_sorts0. destruct indices_matter; auto.
-             eapply type_local_ctx_impl. eapply ind_sorts0.
-             intros. red in X14.
-             destruct T.
-             pose proof (typing_wf_local X14).
-             specialize (IH ((Σ, udecl); (X13; _; X17; _; _; X14))).
-             apply IH. simpl. constructor 1. simpl. auto with arith.
-             destruct X14 as [u Hu]. exists u.
-             pose proof (typing_wf_local Hu).
-             specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ X14 (existT _ _ (existT _ _ Hu))))))).
-             apply IH. simpl. constructor 1. simpl. auto with arith.
+           destruct Universe.is_prop; auto.
+           destruct Universe.is_sprop; auto.
+           split. apply ind_sorts0. destruct indices_matter; auto.
+           eapply type_local_ctx_impl. eapply ind_sorts0.
+           intros. red in X14.
+           destruct T.
+           pose proof (typing_wf_local X14).
+           specialize (IH ((Σ, udecl); (X13; _; X17; _; _; X14))).
+           apply IH. simpl. constructor 1. simpl. auto with arith.
+           destruct X14 as [u Hu]. exists u.
+           pose proof (typing_wf_local Hu).
+           specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ X14 (existT _ _ (existT _ _ Hu))))))).
+           apply IH. simpl. constructor 1. simpl. auto with arith.
         -- apply (onIndices Xg).
       * red in onP |- *.
         eapply All_local_env_impl; eauto.

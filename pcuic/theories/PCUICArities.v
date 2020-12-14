@@ -86,7 +86,7 @@ Proof.
           apply context_relation_app in convctx; auto.
           constructor; pcuic.
           eapply context_relation_app in convctx as [_ convctx].
-          unshelve eapply (context_relation_impl _ convctx).
+          unshelve eapply (context_relation_impl convctx).
           simpl; firstorder. destruct X. constructor; auto.
           eapply conv_conv_ctx; eauto.
           eapply context_relation_app_inv. constructor; pcuic.
@@ -98,13 +98,7 @@ Proof.
           eapply context_relation_app_inv. constructor; pcuic.
           constructor; pcuic. constructor; pcuic. now symmetry.
           apply context_relation_refl. intros.
-          destruct x as [na'' [b'|] ty']; constructor; reflexivity.
-          constructor; pcuic.
-          eapply conv_conv_ctx; eauto.
-          eapply context_relation_app_inv. constructor; pcuic.
-          constructor; pcuic. constructor; pcuic. now symmetry.
-          apply context_relation_refl. intros.
-          destruct x as [? [?|] ?]; constructor; reflexivity.
+          destruct x as [na'' [b''|] ty']; constructor; reflexivity.
           eapply conv_conv_ctx; eauto.
           eapply context_relation_app_inv. constructor; pcuic.
           constructor; pcuic. constructor; pcuic. now symmetry.
@@ -275,6 +269,32 @@ Proof.
     eapply typing_wf_local in Ht.
     depelim Ht; eapply All_local_env_app in Ht; intuition auto.
     now rewrite sort_of_product_twice.
+Qed.
+
+Fixpoint sort_of_products us s :=
+  match us with
+  | [] => s
+  | u :: us => sort_of_products us (Universe.sort_of_product u s)
+  end.
+
+Lemma type_it_mkProd_or_LetIn_sorts {cf:checker_flags} Σ Γ Γ' us t s : 
+  wf Σ.1 ->
+  sorts_local_ctx (lift_typing typing) Σ Γ Γ' us ->
+  Σ ;;; Γ ,,, Γ' |- t : tSort s ->
+  Σ ;;; Γ |- it_mkProd_or_LetIn Γ' t : tSort (sort_of_products us s).
+Proof.
+  revert Γ us s t.
+  induction Γ'; simpl; auto; move=> Γ us s t wfΣ equ Ht.
+  - destruct us => //.
+  - destruct a as [na [b|] ty]; intuition auto.
+    * destruct a0 as [s' Hs].
+      eapply IHΓ'; eauto.
+      eapply (type_mkProd_or_LetIn _ _ {| decl_body := Some b |}); auto.
+      simpl. exact Hs.
+    * destruct us => //. destruct equ.
+      simpl.   
+      eapply IHΓ'; eauto.
+      apply (type_mkProd_or_LetIn _ _ {| decl_body := None |}) => /=; eauto.
 Qed.
 
 Lemma isType_wf_local {cf:checker_flags} {Σ Γ T} : isType Σ Γ T -> wf_local Σ Γ.

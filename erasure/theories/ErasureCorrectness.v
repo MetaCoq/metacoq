@@ -79,26 +79,26 @@ Lemma wf_local_rel_conv:
   forall Σ : global_env × universes_decl,
     wf Σ.1 ->
     forall Γ Γ' : context,
-      PCUICContextRelation.context_relation (PCUICContextConversion.conv_decls Σ) Γ Γ' ->
+      context_relation (conv_decls Σ) Γ Γ' ->
       forall Γ0 : context, wf_local Σ Γ' -> wf_local_rel Σ Γ Γ0 -> wf_local_rel Σ Γ' Γ0.
 Proof.
   intros Σ wfΣ Γ Γ' X1 Γ0 ? w0. induction w0.
   - econstructor.
   - econstructor; eauto. cbn in *.
     destruct t0. exists x. eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
-    eapply conv_context_app; eauto.
-    eapply typing_wf_local; eauto.
-    eapply PCUICSafeChecker.wf_local_app_inv; eauto.
+    * eapply PCUICSafeChecker.wf_local_app_inv; eauto.
+    * eapply conv_context_app; eauto.
+      eapply typing_wf_local; eauto.
   - econstructor; eauto.
     + cbn in *.
       destruct t0. exists x. eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
-      eapply conv_context_app; eauto.
-      eapply typing_wf_local; eauto.
-      eapply PCUICSafeChecker.wf_local_app_inv; eauto.
+      * eapply PCUICSafeChecker.wf_local_app_inv; eauto.
+      * eapply conv_context_app; eauto.
+        eapply typing_wf_local; eauto.
     + cbn in *. eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
-      eapply conv_context_app; eauto.
-      eapply typing_wf_local; eauto.
-      eapply PCUICSafeChecker.wf_local_app_inv; eauto.
+      * eapply PCUICSafeChecker.wf_local_app_inv; eauto.
+      * eapply conv_context_app; eauto.
+        eapply typing_wf_local; eauto.
 Qed.
 
 Hint Resolve Is_type_conv_context : core.
@@ -150,17 +150,15 @@ Proof.
     eapply All_local_env_impl; eauto. simpl; intros.
     destruct T. simpl in *.
     eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
-    eapply conv_context_app; auto. eapply typing_wf_local; eauto.
+    2:{ eapply conv_context_app; auto. eapply typing_wf_local; eauto. }
     eapply typing_wf_local in X3.
     eapply PCUICSafeChecker.wf_local_app_inv.
     eauto. eapply wf_local_rel_local in X3.
     eapply wf_local_rel_app in X3 as []. rewrite app_context_nil_l in w0.
-
-
     eapply wf_local_rel_conv; eauto.
     destruct X3. exists x0.
     eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
-    eapply conv_context_app; auto. eapply typing_wf_local; eauto.
+    2:{ eapply conv_context_app; auto. eapply typing_wf_local; eauto. }
 
     eapply typing_wf_local in t0.
     eapply PCUICSafeChecker.wf_local_app_inv.
@@ -185,7 +183,7 @@ Proof.
     eapply All_local_env_impl; eauto. simpl; intros.
     destruct T. simpl in *.
     eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
-    eapply conv_context_app; auto. eapply typing_wf_local; eauto.
+    2:{ eapply conv_context_app; auto. eapply typing_wf_local; eauto. }
     eapply typing_wf_local in X3.
     eapply PCUICSafeChecker.wf_local_app_inv.
     eauto. eapply wf_local_rel_local in X3.
@@ -195,7 +193,7 @@ Proof.
     eapply wf_local_rel_conv; eauto.
     destruct X3. exists x0.
     eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
-    eapply conv_context_app; auto. eapply typing_wf_local; eauto.
+    2:{ eapply conv_context_app; auto. eapply typing_wf_local; eauto. }
 
     eapply typing_wf_local in t0.
     eapply PCUICSafeChecker.wf_local_app_inv.

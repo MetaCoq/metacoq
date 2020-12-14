@@ -74,6 +74,8 @@ gen-src/mCRelations.ml
 gen-src/mCRelations.mli
 gen-src/mCString.ml
 gen-src/mCString.mli
+gen-src/mCUtils.ml
+gen-src/mCUtils.mli
 gen-src/mSetDecide.ml
 gen-src/mSetDecide.mli
 gen-src/mSetFacts.ml
@@ -102,6 +104,12 @@ gen-src/peanoNat.ml
 gen-src/peanoNat.mli
 gen-src/plugin_core.ml
 gen-src/plugin_core.mli
+gen-src/induction.mli
+gen-src/induction.ml
+gen-src/eqDecInstances.mli
+gen-src/eqDecInstances.ml
+gen-src/reflect.mli
+gen-src/reflect.ml
 gen-src/pretty.ml
 gen-src/pretty.mli
 gen-src/reification.ml

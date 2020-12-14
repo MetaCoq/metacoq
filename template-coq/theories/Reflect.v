@@ -624,18 +624,18 @@ Proof.
   unfold eqb_constant_body; finish_reflect.
 Defined.
 
-Definition eqb_sort_family x y :=
+Definition eqb_allowed_eliminations x y :=
   match x, y with
-  | InProp, InProp
-  | InSet, InSet
-  | InType, InType => true
-  | InSProp, InSProp => true
+  | IntoSProp, IntoSProp
+  | IntoPropSProp, IntoPropSProp
+  | IntoSetPropSProp, IntoSetPropSProp
+  | IntoAny, IntoAny => true
   | _, _ => false
   end.
 
-Instance reflect_sort_family : ReflectEq sort_family.
+Instance reflect_allowed_eliminations : ReflectEq allowed_eliminations.
 Proof.
-  refine {| eqb := eqb_sort_family |}.
+  refine {| eqb := eqb_allowed_eliminations |}.
   intros [] []; simpl; constructor; congruence.
 Defined.
 

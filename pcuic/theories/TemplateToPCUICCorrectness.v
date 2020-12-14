@@ -1233,7 +1233,7 @@ Proof.
     -- simpl. rewrite firstn_map.
        rewrite trans_build_case_predicate_type. erewrite H0. reflexivity.
     -- eapply X2.
-    -- apply H1.
+    -- rewrite global_ext_constraints_trans; exact H1.
     -- rewrite trans_mkApps in X4; auto with wf.
        eapply typing_wf in X3; auto. intuition. eapply wf_mkApps_inv in H4; auto.
     -- admit.

@@ -34,6 +34,7 @@ MCOption
 MCProd
 MCCompare
 MCString
+MCUtils
 Signature
 Classes0
 All_Forall
@@ -45,6 +46,9 @@ Ast0
 AstUtils
 LiftSubst
 UnivSubst0
+Induction
+EqDecInstances
+Reflect
 Pretty
 Common0
 Extractable

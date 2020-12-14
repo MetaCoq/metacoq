@@ -455,6 +455,18 @@ Proof.
    exists s; auto.
 Qed.
 
+Lemma sorts_local_ctx_All_local_env {cf:checker_flags} P Σ Γ Δ s : 
+  All_local_env (lift_typing P Σ) Γ ->
+  sorts_local_ctx (lift_typing P) Σ Γ Δ s ->
+  All_local_env (lift_typing P Σ) (Γ ,,, Δ).
+Proof.
+  induction Δ in s |- *; simpl; eauto.
+  destruct a as [na [b|] ty];
+  intros wfΓ wfctx; constructor; intuition eauto.
+  destruct s => //. destruct wfctx; eauto.
+  destruct s => //. destruct wfctx. exists t; auto.
+Qed.
+
 Definition Pclosed :=
   (fun (_ : global_env_ext) (Γ : context) (t T : term) =>
            closedn #|Γ| t && closedn #|Γ| T).
@@ -470,6 +482,24 @@ Proof.
     unfold closed_decl. unfold Pclosed in b0. simpl.
     rewrite app_context_length in b0. now rewrite Nat.add_comm.
   - apply Alli_app_inv; auto. constructor. simpl.
+    rewrite List.rev_length. 2:constructor.
+    unfold closed_decl. unfold Pclosed in b. simpl.
+    rewrite app_context_length in b. rewrite Nat.add_comm.
+    now rewrite andb_true_r in b.
+Qed.
+
+Lemma sorts_local_ctx_Pclosed Σ Γ Δ s :
+  sorts_local_ctx (lift_typing Pclosed) Σ Γ Δ s ->
+  Alli (fun i d => closed_decl (#|Γ| + i) d) 0 (List.rev Δ).
+Proof.
+  induction Δ in s |- *; simpl; auto; try constructor.  
+  destruct a as [? [] ?]; intuition auto.
+  - apply Alli_app_inv; eauto. constructor. simpl.
+    rewrite List.rev_length. 2:constructor.
+    unfold closed_decl. unfold Pclosed in b0. simpl.
+    rewrite app_context_length in b0. now rewrite Nat.add_comm.
+  - destruct s as [|u us]; auto. destruct X as [X b].
+    apply Alli_app_inv; eauto. constructor. simpl.
     rewrite List.rev_length. 2:constructor.
     unfold closed_decl. unfold Pclosed in b. simpl.
     rewrite app_context_length in b. rewrite Nat.add_comm.
@@ -625,7 +655,7 @@ Proof.
   eapply closedn_lift.
   clear -parslen isdecl Heq' onpars X.
   rename X into args.
-  apply type_local_ctx_Pclosed in args.
+  apply sorts_local_ctx_Pclosed in args.
   red in onpars.
   eapply All_local_env_Pclosed in onpars.
   eapply (Alli_impl (Q:=fun i d => closed_decl (#|ind_params mdecl| + i + #|arities_context (ind_bodies mdecl)|) d)) in args.
@@ -785,8 +815,8 @@ Proof.
           simpl. intros. destruct X2 as [? ? ? ?]; unshelve econstructor; eauto.
           * apply X; eauto.
           * clear -X0 X on_cargs. revert on_cargs.
-              generalize (cshape_args y).
-              induction c; simpl; auto;
+            generalize (cshape_args y), (cshape_sorts y).
+            induction c; destruct l; simpl; auto;
               destruct a as [na [b|] ty]; simpl in *; auto;
           split; intuition eauto.
           * clear -X0 X on_cindices.
@@ -796,14 +826,11 @@ Proof.
             induction 1; simpl; constructor; auto.
        --- simpl; intros. pose (onProjections X1 H0). simpl in *; auto.
        --- destruct X1. simpl. unfold check_ind_sorts in *.
-           destruct universe_family; auto.
-           split. apply ind_sorts.
+           destruct Universe.is_prop, Universe.is_sprop; auto.
+           split.
+           * apply ind_sorts.
            * destruct indices_matter; auto.
              eapply type_local_ctx_impl. eapply ind_sorts. auto.
-           * split; [apply fst in ind_sorts|apply snd in ind_sorts].
-             eapply Forall_impl; tea. auto.
-             destruct indices_matter; [|trivial].
-             eapply type_local_ctx_impl; tea. eauto.
       --- eapply X1.(onIndices).
     -- red in onP. red.
        eapply All_local_env_impl. eauto.

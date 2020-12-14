@@ -818,24 +818,6 @@ Hint Resolve conv_ctx_refl' : pcuic.
 (*     constructor; auto. *)
 (* Qed. *)
 
-Instance conv_context_sym {cf:checker_flags} Σ :
-  wf Σ.1 -> Symmetric (fun Γ Γ' => conv_context Σ Γ Γ').
-Proof.
-  intros HΣ Γ Γ'.
-  induction Γ in Γ' |- *; try econstructor.
-  intros conv; depelim conv; econstructor; eauto;
-  constructor; pcuic. intros.
-  depelim X; constructor; pcuic.
-  - depelim c. constructor. now symmetry.
-    eapply conv_sym, conv_conv_ctx; eauto.
-  - depelim c; constructor; auto. now symmetry.
-    eapply conv_sym, conv_conv_ctx; eauto.
-    now symmetry.
-    eapply conv_sym, conv_conv_ctx; eauto.
-    eapply conv_sym, conv_conv_ctx; eauto.
-Qed.
-
-
 Hint Constructors conv_decls : pcuic.
 
 (* Hint Resolve conv_ctx_refl' cumul_ctx_refl' : pcuic. *)

@@ -1932,6 +1932,7 @@ Section CheckEnv.
     cumul_context Σ (Γ ,,, Δ) (Γ ,,, Δ').
   Proof.
     induction 1; pcuic.
+    reflexivity.
   Qed.
 
   Lemma wf_ext_wf_p1 (Σ : global_env_ext) (wfΣ : wf_ext Σ) : wf Σ.1.

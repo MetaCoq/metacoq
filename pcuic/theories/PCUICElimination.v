@@ -65,7 +65,7 @@ Proof.
     rewrite cu in i.
     specialize (i _ sat).
     destruct (ind_kelim idecl); auto;
-      destruct ⟦ps⟧_val%u eqn:v; try easy;
+      destruct ((Universe.univ_val val ps)) eqn:v; try easy;
         try apply val_is_sprop in v;
         try apply val_is_prop in v;
         intuition congruence. }

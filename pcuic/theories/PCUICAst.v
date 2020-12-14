@@ -33,7 +33,8 @@ Inductive term :=
 | tConst (k : kername) (ui : Instance.t)
 | tInd (ind : inductive) (ui : Instance.t)
 | tConstruct (ind : inductive) (n : nat) (ui : Instance.t)
-| tCase (indn : inductive * nat) (p c : term) (brs : list (nat * term)) (* # of parameters/type info/discriminee/branches *)
+| tCase (indn : ((inductive * nat) * relevance)) (p : predicate term) (c : term) 
+  (brs : list (nat * term)) (* the natural number records the arguments of the constructor (including lets) *)
 | tProj (p : projection) (c : term)
 | tFix (mfix : mfixpoint term) (idx : nat)
 | tCoFix (mfix : mfixpoint term) (idx : nat)
@@ -132,6 +133,152 @@ Record mutual_inductive_entry := {
 
 Derive NoConfusion for local_entry one_inductive_entry mutual_inductive_entry.
 
+(** Basic operations on the AST: lifting, substitution and tests for variable occurrences. *)
+
+Fixpoint lift n k t : term :=
+  match t with
+  | tRel i => tRel (if Nat.leb k i then (n + i) else i)
+  | tEvar ev args => tEvar ev (List.map (lift n k) args)
+  | tLambda na T M => tLambda na (lift n k T) (lift n (S k) M)
+  | tApp u v => tApp (lift n k u) (lift n k v)
+  | tProd na A B => tProd na (lift n k A) (lift n (S k) B)
+  | tLetIn na b t b' => tLetIn na (lift n k b) (lift n k t) (lift n (S k) b')
+  | tCase ind p c brs =>
+    let k' := List.length (pcontext p) + k in
+    let brs' := List.map (fun br => (br.1, lift n (br.1 + k) br.2)) brs in
+    tCase ind (map_predicate (lift n k) (lift n k') p) (lift n k c) brs'
+  | tProj p c => tProj p (lift n k c)
+  | tFix mfix idx =>
+    let k' := List.length mfix + k in
+    let mfix' := List.map (map_def (lift n k) (lift n k')) mfix in
+    tFix mfix' idx
+  | tCoFix mfix idx =>
+    let k' := List.length mfix + k in
+    let mfix' := List.map (map_def (lift n k) (lift n k')) mfix in
+    tCoFix mfix' idx
+  | x => x
+  end.
+
+Notation lift0 n := (lift n 0).
+
+
+(** Parallel substitution: it assumes that all terms in the substitution live in the
+    same context *)
+
+Fixpoint subst s k u :=
+  match u with
+  | tRel n =>
+    if Nat.leb k n then
+      match nth_error s (n - k) with
+      | Some b => lift0 k b
+      | None => tRel (n - List.length s)
+      end
+    else tRel n
+  | tEvar ev args => tEvar ev (List.map (subst s k) args)
+  | tLambda na T M => tLambda na (subst s k T) (subst s (S k) M)
+  | tApp u v => tApp (subst s k u) (subst s k v)
+  | tProd na A B => tProd na (subst s k A) (subst s (S k) B)
+  | tLetIn na b ty b' => tLetIn na (subst s k b) (subst s k ty) (subst s (S k) b')
+  | tCase ind p c brs =>
+    let k' := List.length (pcontext p) + k in
+    let p' := map_predicate (subst s k) (subst s k') p in
+    let brs' := List.map (fun br => (br.1, subst s (br.1 + k) br.2)) brs in
+    tCase ind p' (subst s k c) brs'
+  | tProj p c => tProj p (subst s k c)
+  | tFix mfix idx =>
+    let k' := List.length mfix + k in
+    let mfix' := List.map (map_def (subst s k) (subst s k')) mfix in
+    tFix mfix' idx
+  | tCoFix mfix idx =>
+    let k' := List.length mfix + k in
+    let mfix' := List.map (map_def (subst s k) (subst s k')) mfix in
+    tCoFix mfix' idx
+  | x => x
+  end.
+
+(** Substitutes [t1 ; .. ; tn] in u for [Rel 0; .. Rel (n-1)] *in parallel* *)
+Notation subst0 t := (subst t 0).
+Definition subst1 t k u := subst [t] k u.
+Notation subst10 t := (subst1 t 0).
+Notation "M { j := N }" := (subst1 N j M) (at level 10, right associativity).
+
+Fixpoint closedn k (t : term) : bool :=
+  match t with
+  | tRel i => Nat.ltb i k
+  | tEvar ev args => List.forallb (closedn k) args
+  | tLambda _ T M | tProd _ T M => closedn k T && closedn (S k) M
+  | tApp u v => closedn k u && closedn k v
+  | tLetIn na b t b' => closedn k b && closedn k t && closedn (S k) b'
+  | tCase ind p c brs =>
+    let k' := List.length (pcontext p) + k in
+    let brs' := List.forallb (fun br => closedn (br.1 + k) br.2) brs in
+    test_predicate (closedn k) (closedn k') p && closedn k c && brs'
+  | tProj p c => closedn k c
+  | tFix mfix idx =>
+    let k' := List.length mfix + k in
+    List.forallb (test_def (closedn k) (closedn k')) mfix
+  | tCoFix mfix idx =>
+    let k' := List.length mfix + k in
+    List.forallb (test_def (closedn k) (closedn k')) mfix
+  | x => true
+  end.
+
+Notation closed t := (closedn 0 t).
+
+Fixpoint noccur_between k n (t : term) : bool :=
+  match t with
+  | tRel i => Nat.ltb i k || Nat.leb (k + n) i
+  | tEvar ev args => List.forallb (noccur_between k n) args
+  | tLambda _ T M | tProd _ T M => noccur_between k n T && noccur_between (S k) n M
+  | tApp u v => noccur_between k n u && noccur_between k n v
+  | tLetIn na b t b' => noccur_between k n b && noccur_between k n t && noccur_between (S k) n b'
+  | tCase ind p c brs =>
+    let k' := List.length (pcontext p) + k in
+    let brs' := List.forallb (fun br => noccur_between (br.1 + k) n br.2) brs in
+    test_predicate (noccur_between k n) (noccur_between k' n) p && noccur_between k n c && brs'
+  | tProj p c => noccur_between k n c
+  | tFix mfix idx =>
+    let k' := List.length mfix + k in
+    List.forallb (test_def (noccur_between k n) (noccur_between k' n)) mfix
+  | tCoFix mfix idx =>
+    let k' := List.length mfix + k in
+    List.forallb (test_def (noccur_between k n) (noccur_between k' n)) mfix
+  | x => true
+  end.
+    
+(** * Universe substitution
+
+  Substitution of universe levels for universe level variables, used to
+  implement universe polymorphism. *)
+
+Instance subst_instance_constr : UnivSubst term :=
+  fix subst_instance_constr u c {struct c} : term :=
+  match c with
+  | tRel _ | tVar _ => c
+  | tEvar ev args => tEvar ev (List.map (subst_instance_constr u) args)
+  | tSort s => tSort (subst_instance_univ u s)
+  | tConst c u' => tConst c (subst_instance_instance u u')
+  | tInd i u' => tInd i (subst_instance_instance u u')
+  | tConstruct ind k u' => tConstruct ind k (subst_instance_instance u u')
+  | tLambda na T M => tLambda na (subst_instance_constr u T) (subst_instance_constr u M)
+  | tApp f v => tApp (subst_instance_constr u f) (subst_instance_constr u v)
+  | tProd na A B => tProd na (subst_instance_constr u A) (subst_instance_constr u B)
+  | tLetIn na b ty b' => tLetIn na (subst_instance_constr u b) (subst_instance_constr u ty)
+                                (subst_instance_constr u b')
+  | tCase ind p c brs =>
+    let p' := map_predicate (subst_instance_constr u) (subst_instance_constr u) p in
+    let brs' := List.map (on_snd (subst_instance_constr u)) brs in
+    tCase ind p' (subst_instance_constr u c) brs'
+  | tProj p c => tProj p (subst_instance_constr u c)
+  | tFix mfix idx =>
+    let mfix' := List.map (map_def (subst_instance_constr u) (subst_instance_constr u)) mfix in
+    tFix mfix' idx
+  | tCoFix mfix idx =>
+    let mfix' := List.map (map_def (subst_instance_constr u) (subst_instance_constr u)) mfix in
+    tCoFix mfix' idx
+  | tPrim _ => c
+  end.
+
 Module PCUICTerm <: Term.
 
   Definition term := term.
@@ -145,13 +292,23 @@ Module PCUICTerm <: Term.
   Definition tProj := tProj.
   Definition mkApps := mkApps.
 
+  Definition lift := lift.
+  Definition subst := subst.
+  Definition closedn := closedn.
+  Definition noccur_between := noccur_between.
+  Definition subst_instance_constr := subst_instance_constr.
 End PCUICTerm.
 
 Ltac unf_term := unfold PCUICTerm.term in *; unfold PCUICTerm.tRel in *;
-                  unfold PCUICTerm.tSort in *; unfold PCUICTerm.tProd in *;
-                  unfold PCUICTerm.tLambda in *; unfold PCUICTerm.tLetIn in *;
-                  unfold PCUICTerm.tInd in *; unfold PCUICTerm.tProj in *.
-
+                 unfold PCUICTerm.tSort in *; unfold PCUICTerm.tProd in *;
+                 unfold PCUICTerm.tLambda in *; unfold PCUICTerm.tLetIn in *;
+                 unfold PCUICTerm.tInd in *; unfold PCUICTerm.tProj in *;
+                 unfold PCUICTerm.lift in *; unfold PCUICTerm.subst in *;
+                 unfold PCUICTerm.closedn in *; unfold PCUICTerm.noccur_between in *;
+                 unfold PCUICTerm.subst_instance_constr in *.
+                 
+(* These functors derive the notion of local context and lift substitution, term lifting, 
+  the closed predicate to them. *)                 
 Module PCUICEnvironment := Environment PCUICTerm.
 Include PCUICEnvironment.
 

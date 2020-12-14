@@ -439,6 +439,15 @@ Local Ltac term_dec_tac term_dec :=
          | x : cast_kind, y : cast_kind |- _ => fcase (eq_dec x y)
          end.
 
+Instance eq_predicate {term} `{EqDec term} : EqDec (predicate term).
+Proof.
+  intros [] [].
+  fcase (eq_dec pparams pparams0).
+  fcase (eq_dec puinst puinst0).
+  fcase (eq_dec pcontext pcontext0).
+  fcase (eq_dec preturn preturn0).
+Defined.
+
 Derive NoConfusion NoConfusionHom for term.
 
 Instance EqDec_term : EqDec term.

@@ -119,7 +119,6 @@ Proof.
   eapply subject_reduction; eauto.
 Qed.
 
-Derive NoConfusion EqDec for sort_family.
 Derive NoConfusion EqDec for allowed_eliminations.
 
 Inductive type_error :=

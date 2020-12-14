@@ -30,9 +30,9 @@ Lemma term_forall_list_ind :
     (forall s (u : list Level.t), P (tConst s u)) ->
     (forall (i : inductive) (u : list Level.t), P (tInd i u)) ->
     (forall (i : inductive) (n : nat) (u : list Level.t), P (tConstruct i n u)) ->
-    (forall (p : inductive * nat) (t : term),
-        P t -> forall t0 : term, P t0 -> forall l : list (nat * term),
-            tCaseBrsProp P l -> P (tCase p t t0 l)) ->
+    (forall (ind : (inductive * nat) * relevance) (p : predicate term),
+        tCasePredProp P P p -> forall c : term, P c -> forall l : list (nat * term),
+            tCaseBrsProp P l -> P (tCase ind p c l)) ->
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tCoFix m n)) ->
@@ -49,6 +49,12 @@ Proof.
   fix auxl' 1.
   destruct l; constructor; [|apply auxl'].
   apply auxt.
+  split.
+  generalize (pparams p).
+  fix auxl' 1.
+  destruct l; constructor; [|apply auxl']. apply auxt.
+  apply auxt.
+
   revert brs.
   fix auxl' 1.
   destruct brs; constructor; [|apply auxl'].
@@ -227,9 +233,10 @@ Lemma term_forall_mkApps_ind :
     (forall (s : kername) (u : list Level.t), P (tConst s u)) ->
     (forall (i : inductive) (u : list Level.t), P (tInd i u)) ->
     (forall (i : inductive) (n : nat) (u : list Level.t), P (tConstruct i n u)) ->
-    (forall (p : inductive * nat) (t : term),
-        P t -> forall t0 : term, P t0 -> forall l : list (nat * term),
-            tCaseBrsProp P l -> P (tCase p t t0 l)) ->
+    (forall (ind : ((inductive * nat) * relevance)) (p : predicate term),
+        tCasePredProp P P p ->
+        forall c : term, P c -> forall l : list (nat * term),
+            tCaseBrsProp P l -> P (tCase ind p c l)) ->
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tCoFix m n)) ->
@@ -284,7 +291,14 @@ Proof.
            cbn in E. rewrite H in E.
            inversion E. destruct l; inv H3.
            now rewrite Et1.
-  - eapply X10; [apply auxt; hnf; cbn; lia.. | ]. rename brs into l.
+  - eapply X10; [|apply auxt; hnf; cbn; lia.. | ].
+    split; [|apply auxt; hnf; cbn; lia].
+    unfold MR in auxt. simpl in auxt. revert auxt.
+    generalize (pparams p).
+    fix auxt' 1.
+    destruct l; constructor. apply auxt. hnf; cbn; lia. apply auxt'. intros. apply auxt.
+    hnf in *; cbn in *. lia. 
+    rename brs into l.
     revert l auxt. unfold MR; cbn. fix auxt' 1.
     destruct l; constructor. apply auxt. hnf; cbn; lia. apply auxt'. intros. apply auxt.
     hnf in *; cbn in *. lia. 

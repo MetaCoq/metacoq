@@ -28,6 +28,7 @@ Local Ltac term_dec_tac term_dec :=
            fcase (eq_dec x y)
          | x : list Level.t, y : Instance.t |- _ =>
            fcase (eq_dec x y)
+         | x : list aname, y : list aname |- _ => fcase (eq_dec x y)
          | n : nat, m : nat |- _ => fcase (Nat.eq_dec n m)
          | i : ident, i' : ident |- _ => fcase (string_dec i i')
          | i : kername, i' : kername |- _ => fcase (kername_eq_dec i i')
@@ -72,16 +73,29 @@ Proof.
   - destruct (IHx1 t1) ; nodec.
     destruct (IHx2 t2) ; nodec.
     subst. left. reflexivity.
-  - destruct (IHx1 t1) ; nodec.
-    destruct (IHx2 t2) ; nodec.
-    subst. revert brs. clear IHx1 IHx2.
-    induction X ; intro l0.
+  - destruct (IHx t) ; nodec.
+    destruct p, p0; subst; cbn.
+    term_dec_tac term_dec.
+    destruct X as (?&?).
+    destruct (s preturn0); cbn in * ; nodec.
+    subst.
+    assert ({pparams = pparams0} + {pparams <> pparams0}) as []; nodec.
+    { revert pparams0.
+      clear -a.
+      induction a.
+      - intros []; [left; reflexivity|right; discriminate].
+      - intros []; [right; discriminate|].
+        destruct (p t) ; nodec.
+        destruct (IHa l0) ; nodec.
+        subst; left; reflexivity. }
+    subst. revert brs. clear IHx.
+    induction X0 ; intro l0.
     + destruct l0.
       * left. reflexivity.
       * right. discriminate.
     + destruct l0.
       * right. discriminate.
-      * destruct (IHX l0) ; nodec.
+      * destruct (IHX0 l0) ; nodec.
         destruct (p (snd p0)) ; nodec.
         destruct (eq_dec (fst x) (fst p0)) ; nodec.
         destruct x, p0.

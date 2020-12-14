@@ -176,8 +176,6 @@ Module Environment (T : Term).
   
   Instance subst_instance_context : UnivSubst context
     := map_context ∘ subst_instance_constr.
-  
-      
 
   Fixpoint context_assumptions (Γ : context) :=
     match Γ with
@@ -188,6 +186,8 @@ Module Environment (T : Term).
       | None => S (context_assumptions Γ)
       end
     end.
+
+  (** Smashing a context produces an assumption context. *)
 
   Fixpoint smash_context (Γ Γ' : context) : context :=
     match Γ' with
@@ -202,7 +202,10 @@ Module Environment (T : Term).
     - now rewrite IHtl, subst_context_length.
     - rewrite IHtl, app_length. simpl. lia.
   Qed.
-    
+
+  (* Smashing a context Γ with Δ depending on it is the same as smashing Γ
+    and substituting all references to Γ in Δ by the expansions of let bindings. *)
+  
   Fixpoint extended_subst (Γ : context) (n : nat) 
   (* Δ, smash_context Γ, n |- extended_subst Γ n : Γ *) :=
   match Γ with

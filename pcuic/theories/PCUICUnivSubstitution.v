@@ -117,14 +117,15 @@ Proof.
   - exact (IHu u1 u2 H).
 Qed.
 
-Lemma subst_equal_inst_global_inst Σ Re gr napp :
+Lemma subst_equal_inst_global_inst Σ Re Rle gr napp :
   RelationClasses.Reflexive Re ->
   SubstUnivPreserving Re ->
+  RelationClasses.subrelation Re Rle ->
   forall u u1 u2, R_universe_instance Re u1 u2 ->
-             R_global_instance Σ Re Re gr napp (subst_instance_instance u1 u)
+             R_global_instance Σ Re Rle gr napp (subst_instance_instance u1 u)
                                     (subst_instance_instance u2 u).
 Proof.
-  intros reflRe hRe u u1 u2 Ru1u2.
+  intros reflRe hRe subr u u1 u2 Ru1u2.
   unfold R_global_instance, R_opt_variance.
   destruct global_variance as [v|]; auto using subst_equal_inst_inst.
   induction u in v |- *; cbnr; try now constructor.
@@ -137,22 +138,24 @@ Proof.
       now rewrite !subst_instance_univ_make in HH.
 Qed.
 
-Lemma eq_term_upto_univ_subst_instance_constr Σ Re napp :
+Lemma eq_term_upto_univ_subst_instance_constr Σ Re Rle napp :
   RelationClasses.Reflexive Re ->
   SubstUnivPreserving Re ->
+  RelationClasses.subrelation Re Rle ->
   forall t u1 u2,
     R_universe_instance Re u1 u2 ->
-    eq_term_upto_univ_napp Σ Re Re napp (subst_instance_constr u1 t)
+    eq_term_upto_univ_napp Σ Re Rle napp (subst_instance_constr u1 t)
                             (subst_instance_constr u2 t).
 Proof.
-  intros ref hRe t.
-  induction t in napp |- * using term_forall_list_ind; intros u1 u2 hu.
+  intros ref hRe subr t.
+  induction t in napp, Re, Rle, ref, hRe, subr |- * using term_forall_list_ind; intros u1 u2 hu.
   all: cbn; try constructor; eauto using subst_equal_inst_inst.
   all: try eapply All2_map, All_All2; tea; cbn; intros; rdest; eauto.
-  all:auto using subst_equal_inst_global_inst.
+  all: try (eapply X0 || eapply IHt || eapply IHt1 || eapply IHt2 || eapply e || eapply e0); try typeclasses eauto; auto.
+  all: eauto using subst_equal_inst_global_inst.
 Qed.
 
-Instance leq_term_SubstUnivPreserving {cf:checker_flags} φ :
+Instance eq_universe_SubstUnivPreserving {cf:checker_flags} φ :
   SubstUnivPreserving (eq_universe φ).
 Proof.
   intros s u1 u2 hu.
@@ -187,6 +190,50 @@ Proof.
     apply Universe.map_spec in He1. destruct He1 as [e0 [He0 He1]]; subst.
     eexists; split; [|eapply He]. eapply Universe.map_spec.
     now eexists; split; tea.
+Qed.
+
+Instance leq_universe_SubstUnivPreserving {cf:checker_flags} φ :
+  SubstUnivPreserving (leq_universe φ).
+Proof.
+  intros s u1 u2 hu.
+  unfold leq_universe in *; destruct check_univs; [|trivial].
+  intros v Hv; cbn.
+  assert (He : forall e, val v (subst_instance_level_expr u1 e)
+                    <= val v (subst_instance_level_expr u2 e)). {
+    destruct e as [[] b]; cbnr.
+    case_eq (nth_error u1 n).
+    - intros l1 X. eapply Forall2_nth_error_Some_l in hu.
+      2: now rewrite nth_error_map, X.
+      destruct hu as [l2 [H1 H2]].
+      rewrite nth_error_map in H1.
+      destruct (nth_error u2 n) as [l2'|]; [|discriminate].
+      apply some_inj in H1; subst. clear u1 u2 X.
+      specialize (H2 v Hv).
+      destruct l1, l2'; cbn in *; noconf H2; try lia.
+    - intros X. eapply Forall2_nth_error_None_l in hu.
+      2: now rewrite nth_error_map, X.
+      rewrite nth_error_map in hu.
+      destruct (nth_error u2 n); [discriminate|reflexivity]. }
+  simpl.
+  destruct s; cbnr.
+  f_equal.
+  rewrite Z.sub_0_r.
+  eapply Nat2Z.inj_le.
+  remember (val v (subst_instance u2 t)) as val2 eqn:eq. symmetry in eq.
+  apply val_caract in eq.
+  destruct eq.
+  destruct H0 as [e [inet vale]].
+  apply Universe.map_spec in inet as [e' [H1 H2]]; subst.
+  remember (val v (subst_instance u1 t)) as val1 eqn:eq. symmetry in eq.
+  apply val_caract in eq as [eq' [e'' [ine'' vale'']]].
+  subst val1.
+  apply Universe.map_spec in ine'' as [e0 [ine0 eq]].
+  specialize (He e0). subst e''.
+  etransitivity. 
+  - eassumption.
+  - eapply H.
+    eapply Universe.map_spec.
+    exists e0; split; auto.
 Qed.
 
 Section CheckerFlags.
@@ -366,20 +413,6 @@ Lemma is_prop_subst_instance u x0 :
   Universe.is_prop x0 -> Universe.is_prop (subst_instance_univ u x0).
 Proof.
   now rewrite is_prop_subst_instance_univ.
-Qed.
-
-Lemma is_small_subst_instance_univ u l
-  : Universe.is_small l -> Universe.is_small (subst_instance_univ u l).
-Proof.
-  assert (He : forall a, UnivExpr.is_small a ->
-             UnivExpr.is_small (subst_instance_level_expr u a)). {
-    intros [[][]]; cbnr; auto. }
-  intro H.
-  destruct l; cbnr.
-  apply UnivExprSet.for_all_spec in H; proper.
-  apply UnivExprSet.for_all_spec; proper; intros e Xe.
-  apply Universe.map_spec in Xe as [e' [H1 H2]]; subst.
-  now apply He, H.
 Qed.
 
 Lemma sup_subst_instance_univ0 u s1 s2 :
@@ -864,6 +897,12 @@ Proof. exact _. Qed.
 Lemma eq_term_subst_instance Σ : SubstUnivPreserved (eq_term Σ).
 Proof. exact _. Qed.
 
+Lemma compare_term_subst_instance le Σ : SubstUnivPreserved (compare_term le Σ).
+Proof. destruct le; simpl; unfold compare_term. 
+  - apply leq_term_subst_instance.
+  - apply eq_term_subst_instance.
+Qed.
+
 (** Now routine lemmas ... *)
 
 Lemma In_subst_instance x u (l : Universe.t0) :
@@ -1176,13 +1215,29 @@ Proof.
   - econstructor 3. 1: eauto. eapply red1_subst_instance; cbn; eauto.
 Qed.
 
-Global Instance eq_decl_subst_instance Σ : SubstUnivPreserved (eq_decl Σ).
+Lemma is_allowed_elimination_subst_instance (Σ : global_env_ext) univs inst u al :
+  valid_constraints (global_ext_constraints (Σ.1, univs))
+                    (subst_instance_cstrs inst Σ) ->
+  is_allowed_elimination Σ u al ->
+  is_allowed_elimination (global_ext_constraints (Σ.1, univs)) (subst_instance_univ inst u) al.
 Proof.
-  intros φ1 φ2 u HH [? [?|] ?] [? [?|] ?] [H1 H2]; split; cbn in *; auto.
-  all: eapply eq_term_subst_instance; tea.
+  intros val isal.
+  unfold is_allowed_elimination, is_allowed_elimination0 in *.
+  destruct check_univs eqn:cu; auto.
+  intros ? sat.
+  eapply satisfies_subst_instance in sat; eauto.
+  specialize (isal _ sat).
+  rewrite subst_instance_univ_val'; auto.
 Qed.
 
-Global Instance eq_context_subst_instance Σ : SubstUnivPreserved (eq_context Σ).
+Global Instance eq_decl_subst_instance le Σ : SubstUnivPreserved (eq_decl le Σ).
+Proof.
+  intros φ1 φ2 u HH [? [?|] ?] [? [?|] ?] [[Hann H1] H2]; split; cbn in *; auto.
+  all: try split; try eapply compare_term_subst_instance; tea.
+  eapply eq_term_subst_instance; tea.
+Qed.
+
+Global Instance eq_context_subst_instance le Σ : SubstUnivPreserved (eq_context le Σ).
 Proof.
   intros φ φ' u HH Γ Γ' X. eapply All2_map, All2_impl; tea.
   eapply eq_decl_subst_instance; eassumption.
@@ -1583,18 +1638,9 @@ Proof.
       * rewrite !map_map, subst_instance_context_length; apply map_ext. clear.
         intro. now apply lift_subst_instance_constr.
       * symmetry; apply subst_instance_to_extended_list.
-    + clear -H1 H4.
-      unfold universe_family in *.
-      rewrite is_prop_subst_instance_univ.
-      rewrite is_sprop_subst_instance_univ.
-      destruct (Universe.is_prop ps); cbnr.
-      ++ destruct (ind_kelim idecl); simpl in H1; congruence.
-      ++ destruct (Universe.is_sprop ps); auto.
-        case_eq (Universe.is_small ps); intro HH; rewrite HH in H1.
-        +++ apply (is_small_subst_instance_univ u0) in HH.
-            now rewrite HH.
-        +++ destruct (ind_kelim idecl); inv H1.
-            destruct ?; constructor.
+    + destruct HSub.
+      cbn in *.
+      eapply is_allowed_elimination_subst_instance; aa.
     + eapply X4 in H4; tea.
       rewrite subst_instance_constr_mkApps in H4; eassumption.
     + cbn. rewrite firstn_map. rewrite <- subst_instance_build_branches_type.
@@ -1731,6 +1777,22 @@ Proof.
   intros X X0 X1.
   eapply (typing_subst_instance (Σ, univs)); tas. 1: apply X.
   etransitivity; tea. apply global_context_set_sub_ext.
+Qed.
+
+Lemma typing_subst_instance_ctx (Σ : global_env_ext) Γ t T ctx u :
+  wf Σ.1 ->
+  on_udecl_prop Σ (Polymorphic_ctx ctx) ->
+  (Σ.1, Polymorphic_ctx ctx) ;;; Γ |- t : T ->
+  consistent_instance_ext Σ (Polymorphic_ctx ctx) u ->
+  Σ ;;; subst_instance_context u Γ
+            |- subst_instance_constr u t : subst_instance_constr u T.
+Proof.
+  destruct Σ as [Σ φ]. intros X X0 X1.
+  eapply typing_subst_instance''; tea.
+  - split; tas.
+  - simpl. unfold sub_context_set. split; simpl.
+    * intros x hx. now eapply LS.empty_spec in hx.
+    * intros x hx. now eapply CS.empty_spec in hx. 
 Qed.
 
 Lemma typing_subst_instance_decl Σ Γ t T c decl u :

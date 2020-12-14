@@ -579,7 +579,7 @@ Section Conversion.
   Lemma eqb_ctx_spec :
     forall Γ Δ,
       eqb_ctx Γ Δ ->
-      eq_context_upto Σ (eq_universe Σ) Γ Δ.
+      eq_context_upto Σ (eq_universe Σ) (eq_universe Σ) Γ Δ.
   Proof.
     intros Γ Δ h.
     induction Γ as [| [na [b|] A] Γ ih ] in Δ, h |- *.
@@ -606,7 +606,7 @@ Section Conversion.
   Lemma eqb_term_stack_spec :
     forall Γ t1 π1 t2 π2,
       eqb_term_stack t1 π1 t2 π2 ->
-      eq_context_upto Σ (eq_universe (global_ext_constraints Σ))
+      eq_context_upto Σ (eq_universe Σ) (eq_universe Σ)
                       (Γ ,,, stack_context π1)
                       (Γ ,,, stack_context π2) ×
       eq_term Σ (zipp t1 π1) (zipp t2 π2).
@@ -615,7 +615,7 @@ Section Conversion.
     apply andP in h as [h1 h2].
     split.
     - eapply eq_context_upto_cat.
-      + eapply eq_context_upto_refl. intro. apply eq_universe_refl.
+      + eapply eq_context_upto_refl; tc.
       + eapply eqb_ctx_spec. assumption.
     - eapply eqb_term_spec. assumption.
   Qed.
@@ -627,7 +627,7 @@ Section Conversion.
   Lemma leqb_term_stack_spec :
     forall Γ t1 π1 t2 π2,
       leqb_term_stack t1 π1 t2 π2 ->
-      eq_context_upto Σ (eq_universe (global_ext_constraints Σ))
+      eq_context_upto Σ (eq_universe Σ) (eq_universe Σ)
                       (Γ ,,, stack_context π1)
                       (Γ ,,, stack_context π2) ×
       leq_term Σ Σ (zipp t1 π1) (zipp t2 π2).
@@ -636,7 +636,7 @@ Section Conversion.
     apply andP in h as [h1 h2].
     split.
     - eapply eq_context_upto_cat.
-      + eapply eq_context_upto_refl. intro. apply eq_universe_refl.
+      + eapply eq_context_upto_refl; tc.
       + eapply eqb_ctx_spec. assumption.
     - eapply leqb_term_spec. assumption.
   Qed.
@@ -1752,11 +1752,11 @@ Section Conversion.
   Lemma destArity_eq_term_upto_univ :
     forall Re Rle Γ1 Γ2 t1 t2 Δ1 s1,
       eq_term_upto_univ Σ Re Rle t1 t2 ->
-      eq_context_upto Σ Re Γ1 Γ2 ->
+      eq_context_upto Σ Re Re Γ1 Γ2 ->
       destArity Γ1 t1 = Some (Δ1, s1) ->
       exists Δ2 s2,
         destArity Γ2 t2 = Some (Δ2, s2) /\
-        ∥ eq_context_upto Σ Re Δ1 Δ2 ∥ /\
+        ∥ eq_context_upto Σ Re Re Δ1 Δ2 ∥ /\
         Rle s1 s2.
   Proof.
     intros Re Rle Γ1 Γ2 t1 t2 Δ1 s1 ht hΓ e.

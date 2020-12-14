@@ -14,6 +14,7 @@ then
     (cd gen-src; ./to-lower.sh)
     rm -f gen-src/*.d
     # Fix an extraction bug: wrong type annotation on eq_equivalence
+    sed -i.bak 's/\r//g' gen-src/cRelationClasses.mli
     patch -N -p0 < extraction.patch
     exit 0
 else

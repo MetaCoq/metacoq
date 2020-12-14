@@ -554,51 +554,53 @@ Section CheckerFlags.
     | [ H : on_udecl _ _, H' : on_udecl _ _ -> _ |- _ ] => specialize (H' H)
     end.
 
-  Local Lemma wf_type_local_ctx_smash (Σ : global_env_ext) mdecl args sort :
-    type_local_ctx
+  Local Lemma wf_sorts_local_ctx_smash (Σ : global_env_ext) mdecl args sorts :
+    sorts_local_ctx
     (lift_typing
        (fun (Σ : PCUICEnvironment.global_env_ext)
           (_ : PCUICEnvironment.context) (t T : term) =>
         wf_universes Σ t && wf_universes Σ T)) (Σ.1, ind_universes mdecl)
     (arities_context (ind_bodies mdecl),,, ind_params mdecl)
-    args sort ->
-    type_local_ctx
+    args sorts ->
+    sorts_local_ctx
     (lift_typing
        (fun (Σ : PCUICEnvironment.global_env_ext)
           (_ : PCUICEnvironment.context) (t T : term) =>
         wf_universes Σ t && wf_universes Σ T)) (Σ.1, ind_universes mdecl)
     (arities_context (ind_bodies mdecl),,, ind_params mdecl)
-    (smash_context [] args) sort.
+    (smash_context [] args) sorts.
   Proof.
-    induction args as [|[na [b|] ty] args]; simpl; auto.
+    induction args as [|[na [b|] ty] args] in sorts |- *; simpl; auto.
     intros [].
     rewrite subst_context_nil. auto.
+    destruct sorts; auto.
     intros [].
-    rewrite smash_context_acc /=. split. auto.
+    rewrite smash_context_acc /=. split. eauto.
     rewrite wf_universes_subst.
-    clear -t. generalize 0.
-    induction args as [|[na [b|] ty] args]; simpl in *; auto.
-    destruct t as [? [[s wf] [? ?]%MCProd.andP]].
-    constructor; auto.
-    rewrite wf_universes_subst. apply IHargs; auto.
-    now rewrite wf_universes_lift.
-    constructor => //. now apply IHargs.
-    now rewrite wf_universes_lift.
+    clear -s. generalize 0.
+    induction args as [|[na [b|] ty] args] in sorts, s |- *; simpl in *; auto.
+    - destruct s as [? [[s' wf] [? ?]%MCProd.andP]].
+      constructor; eauto.
+      rewrite wf_universes_subst. eapply IHargs; eauto.
+      now rewrite wf_universes_lift.
+    - destruct sorts => //. destruct s.
+      constructor => //. eapply IHargs; eauto.
+    - now rewrite wf_universes_lift.
   Qed.
 
-  Lemma wf_type_local_ctx_nth_error Σ P Γ Δ s n d : 
-    type_local_ctx P Σ Γ Δ s -> 
+  Lemma wf_sorts_local_ctx_nth_error Σ P Γ Δ s n d : 
+    sorts_local_ctx P Σ Γ Δ s -> 
     nth_error Δ n = Some d ->
     ∑ Γ' t, P Σ Γ' (decl_type d) t.
   Proof.
-    induction Δ as [|[na [b|] ty] Δ] in n |- *; simpl; auto.
+    induction Δ as [|[na [b|] ty] Δ] in n, s |- *; simpl; auto.
     - now rewrite nth_error_nil.
     - intros [h [h' h'']].
       destruct n. simpl. move=> [= <-] /=. do 2 eexists; eauto.
-      now simpl; apply IHΔ.
-    - intros [h h'].
+      now simpl; eapply IHΔ.
+    - destruct s => //. intros [h h'].
       destruct n. simpl. move=> [= <-] /=. eexists; eauto.
-      now simpl; apply IHΔ.
+      now simpl; eapply IHΔ.
   Qed.
 
   Lemma In_unfold_var x n : In x (unfold n Level.Var) <-> exists k, k < n /\ (x = Level.Var k).
@@ -793,12 +795,12 @@ Section CheckerFlags.
       noconf heq. simpl.
       rewrite wf_universes_subst.
       apply wf_extended_subst.
-      rewrite ind_arity_eq in onArity. destruct onArity as [s Hs].
+      rewrite ind_arity_eq in onArity. destruct onArity as [s' Hs].
       rewrite wf_universes_it_mkProd_or_LetIn in Hs.
       now move/andP: Hs => /andP /andP [] /andP [].
       rewrite wf_universes_lift.
-      eapply wf_type_local_ctx_smash in t.
-      eapply wf_type_local_ctx_nth_error in t as [? [? H]]; eauto.
+      eapply wf_sorts_local_ctx_smash in s.
+      eapply wf_sorts_local_ctx_nth_error in s as [? [? H]]; eauto.
       red in H. destruct x0. now move/andP: H => [].
       now destruct H as [s [Hs _]%MCProd.andP].
     

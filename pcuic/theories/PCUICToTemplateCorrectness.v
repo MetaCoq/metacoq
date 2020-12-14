@@ -97,6 +97,13 @@ Proof.
       reflexivity.
 Qed.
 
+Lemma trans_global_ext_constraints Σ :
+  PT.global_ext_constraints Σ = TT.global_ext_constraints (trans_global Σ).
+Proof.
+  destruct Σ.
+  unfold PT.global_ext_constraints, trans_global.
+  cbn [fst snd].
+Admitted.
 
 Lemma trans_mem_level_set l Σ:
 LevelSet.mem l (PT.global_ext_levels Σ) ->
@@ -151,13 +158,9 @@ Lemma trans_constraintSet_in x Σ:
 ConstraintSet.In x (PT.global_ext_constraints Σ) ->
 ConstraintSet.In x (TT.global_ext_constraints (trans_global Σ)).
 Proof.
-  enough (PT.global_ext_constraints Σ = TT.global_ext_constraints (trans_global Σ)) as ->.
+  rewrite trans_global_ext_constraints.
   trivial.
-  destruct Σ.
-  unfold PT.global_ext_constraints, trans_global.
-  cbn [fst snd].
-Admitted.
-
+Qed.
 
 Lemma trans_consistent_instance_ext Σ decl u:
 PT.consistent_instance_ext Σ decl u ->
@@ -933,7 +936,8 @@ in All (for wf_local assumptions)
     + apply trans_build_case_predicate_type.
       eassumption.
     + eassumption.
-    + eassumption.
+    + rewrite <- trans_global_ext_constraints.
+      eassumption.
     + rewrite trans_mkApps in X4.
       cbn in X4.
       apply X4.

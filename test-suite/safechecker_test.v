@@ -3,6 +3,7 @@ From MetaCoq.SafeChecker Require Import Loader.
 
 Local Open Scope string_scope.
 MetaCoq SafeCheck nat.
+
 (*
 Environment is well-formed and Ind(Coq.Init.Datatypes.nat,0,[]) has type: Sort([Set])
 *)

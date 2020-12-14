@@ -36,12 +36,6 @@ Module Level.
 
   Definition t := t_.
 
-  Definition is_small (x : t) :=
-    match x with
-    | lSet => true
-    | _ => false
-    end.
-
   Definition is_set (x : t) :=
     match x with
     | lSet => true
@@ -218,12 +212,6 @@ Module UnivExpr.
   Definition get_level (e : t) : Level.t := fst e.
 
   Definition get_noprop (e : UnivExpr.t) := Some (fst e).
-
-  Definition is_small (e : t) : bool :=
-    match e with
-    | (Level.lSet, 0%nat) => true
-    | _  => false
-    end.
 
   Definition is_level (e : t) : bool :=
     match e with
@@ -413,12 +401,6 @@ Module Universe.
     match u with
     | lProp | lSProp => true
     | lType l => (UnivExprSet.cardinal l =? 1)%nat && is_levels u
-    end.
-
-  Definition is_small (u : t) : bool :=
-    match u with
-      | lProp | lSProp => true
-      | lType l => UnivExprSet.for_all UnivExpr.is_small l
     end.
 
   Definition is_sprop (u : t) : bool :=
@@ -1028,30 +1010,6 @@ Proof.
   intros;simpl in *;destruct x2;auto.
 Qed.
 
-(** Sort families *)
-
-Inductive sort_family : Set := InSProp | InProp | InSet | InType.
-
-(* Prop <= Set, Type but SProp </= Prop, Set, Type *)
-Definition leb_sort_family x y :=
-  match x, y with
-  | InProp, InSProp => false
-  | InProp, _ => true
-  | InSProp, InSProp => true
-  | InSProp, _ => false
-  | InSet, (InProp | InSProp) => false
-  | InSet, _ => true
-  | InType, (InProp | InSProp | InSet) => false
-  | InType, InType => true
-  end.
-
-(** Family of a universe [u]. *)
-Definition universe_family (u : Universe.t) :=
-  if Universe.is_prop u then InProp
-  else if Universe.is_sprop u then InSProp
-  else if Universe.is_small u then InSet
-  else InType.
-
 Module ConstraintType.
   Inductive t_ : Set := Le (z : Z) | Eq.
   Definition t := t_.
@@ -1570,6 +1528,39 @@ Section Univ.
     := @leq_universe_refl φ u.
 
   Hint Resolve eq_universe_leq_universe' leq_universe_refl' : core.
+
+  (** Elimination restriction *)
+
+  Inductive allowed_eliminations : Set :=
+  | IntoSProp
+  | IntoPropSProp
+  | IntoSetPropSProp
+  | IntoAny.
+  
+  Definition is_allowed_elimination0
+             φ (into : Universe.t) (allowed : allowed_eliminations) : Prop :=
+    forall v,
+      satisfies v φ ->
+      match allowed, Universe.univ_val v into with
+      | IntoSProp, USProp
+      | IntoPropSProp, (UProp | USProp)
+      | IntoSetPropSProp, (UProp | USProp | UType 0)
+      | IntoAny, _ => True
+      | _, _ => False
+      end.
+  
+  Definition is_allowed_elimination φ into allowed :=
+    if check_univs then is_allowed_elimination0 φ into allowed else True.
+  
+  (* Is [a] a subset of [a']? *)
+  Definition allowed_eliminations_subset (a a' : allowed_eliminations) : bool :=
+    match a, a' with
+    | IntoSProp, _
+    | IntoPropSProp, (IntoPropSProp | IntoSetPropSProp | IntoAny)
+    | IntoSetPropSProp, (IntoSetPropSProp | IntoAny)
+    | IntoAny, IntoAny => true
+    | _, _ => false
+    end.
 
 End Univ.
 

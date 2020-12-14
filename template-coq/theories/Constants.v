@@ -90,12 +90,13 @@ Register MetaCoq.Template.BasicAst.ConstructRef as metacoq.ast.ConstructRef.
 
 (* Universes *)
 
-Register MetaCoq.Template.Universes.sort_family as metacoq.ast.sort_family.
+Register MetaCoq.Template.Universes.allowed_eliminations as metacoq.ast.allowed_eliminations.
 Register MetaCoq.Template.Universes.fresh_level as metacoq.ast.fresh_level.
 Register MetaCoq.Template.Universes.fresh_universe as metacoq.ast.fresh_universe.
-Register MetaCoq.Template.Universes.InProp as metacoq.ast.InProp.
-Register MetaCoq.Template.Universes.InSet as metacoq.ast.InSet.
-Register MetaCoq.Template.Universes.InType as metacoq.ast.InType.
+Register MetaCoq.Template.Universes.IntoSProp as metacoq.ast.IntoSProp.
+Register MetaCoq.Template.Universes.IntoPropSProp as metacoq.ast.IntoPropSProp.
+Register MetaCoq.Template.Universes.IntoSetPropSProp as metacoq.ast.IntoSetPropSProp.
+Register MetaCoq.Template.Universes.IntoAny as metacoq.ast.IntoAny.
 (* We convert from simple constraints to ones in Z *)
 Register MetaCoq.Template.Universes.ConstraintType.Lt as metacoq.ast.constraints.Lt.
 Register MetaCoq.Template.Universes.ConstraintType.Le0 as metacoq.ast.constraints.Le0.

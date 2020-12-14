@@ -28,8 +28,9 @@ Fixpoint rename f t : term :=
   | tProd na A B => tProd na (rename f A) (rename (shiftn 1 f) B)
   | tLetIn na b t b' => tLetIn na (rename f b) (rename f t) (rename (shiftn 1 f) b')
   | tCase ind p c brs =>
-    let brs' := List.map (on_snd (rename f)) brs in
-    tCase ind (rename f p) (rename f c) brs'
+    let p' := map_predicate (rename f) (rename (shiftn #|p.(pcontext)| f)) p in
+    let brs' := List.map (fun br => (br.1, rename (shiftn br.1 f) br.2)) brs in
+    tCase ind p' (rename f c) brs'
   | tProj p c => tProj p (rename f c)
   | tFix mfix idx =>
     let mfix' := List.map (map_def (rename f) (rename (shiftn (List.length mfix) f))) mfix in
@@ -185,9 +186,11 @@ Proof.
   intros M.
   elim M using term_forall_list_ind; simpl in |- *; intros; try easy ;
     try (try rewrite H; try rewrite H0 ; try rewrite H1 ; easy);
-    try (f_equal; auto; solve_all).
+    try unfold map_predicate; try (f_equal; auto; solve_all).
 
   - now elim (leb k n).
+  - destruct X. destruct p; simpl; f_equal. solve_all. auto.
+  - rewrite H0. now destruct x.
 Qed.
 
 Lemma map_lift0 l : map (lift0 0) l = l.
@@ -210,6 +213,7 @@ Proof.
   - elim (leb_spec k n); intros.
     + elim (leb_spec i (n0 + n)); intros; lia.
     + elim (leb_spec i n); intros; lia.
+  (* TODO Update solve_all to handle predicates and branches *)
 Qed.
 
 Lemma simpl_lift0 : forall M n, lift0 (S n) M = lift0 1 (lift0 n M).

@@ -520,7 +520,6 @@ Proof.
   induction 1; constructor; try inversion X0; intuition auto.
 Qed.
 
-
 Inductive OnOne2 {A : Type} (P : A -> A -> Type) : list A -> list A -> Type :=
 | OnOne2_hd hd hd' tl : P hd hd' -> OnOne2 P (hd :: tl) (hd' :: tl)
 | OnOne2_tl hd tl tl' : OnOne2 P tl tl' -> OnOne2 P (hd :: tl) (hd :: tl').
@@ -689,6 +688,181 @@ Proof.
     intros [= ->]. exists t'; intuition auto.
 Qed.
 
+Inductive OnOne2i {A : Type} (P : nat -> A -> A -> Type) : nat -> list A -> list A -> Type :=
+| OnOne2i_hd i hd hd' tl : P i hd hd' -> OnOne2i P i (hd :: tl) (hd' :: tl)
+| OnOne2i_tl i hd tl tl' : OnOne2i P (S i) tl tl' -> OnOne2i P i (hd :: tl) (hd :: tl').
+Derive Signature NoConfusion for OnOne2i.
+
+Lemma OnOne2i_All_mix_left {A} {P : nat -> A -> A -> Type} {Q : A -> Type} {i l l'} :
+  All Q l -> OnOne2i P i l l' -> OnOne2i (fun i x y => (P i x y * Q x)%type) i l l'.
+Proof.
+  intros H; induction 1; constructor; try inv H; intuition.
+Qed.
+
+Lemma OnOne2i_app {A} (P : nat -> A -> A -> Type) {i l tl tl'} : 
+  OnOne2i P (#|l| + i) tl tl' -> 
+  OnOne2i P i (l ++ tl) (l ++ tl').
+Proof. induction l in i |- *; simpl; try constructor; eauto.
+  eapply IHl. now rewrite Nat.add_succ_r.
+Qed.
+
+Lemma OnOne2i_app_r {A} (P : nat -> A -> A -> Type) i l l' tl :
+  OnOne2i P i l l' ->
+  OnOne2i P i (l ++ tl) (l' ++ tl).
+Proof. induction 1; constructor; auto. Qed.
+
+Lemma OnOne2i_length {A} {P} {i} {l l' : list A} : OnOne2i P i l l' -> #|l| = #|l'|.
+Proof. induction 1; simpl; congruence. Qed.
+
+Lemma OnOne2i_mapP {A B} {P} {i} {l l' : list A} (f : A -> B) :
+  OnOne2i (fun i => on_rel (P i) f) i l l' -> OnOne2i P i (map f l) (map f l').
+Proof. induction 1; simpl; constructor; try congruence. apply p. Qed.
+
+Lemma OnOne2i_map {A B} {P : nat -> B -> B -> Type} {i} {l l' : list A} (f : A -> B) :
+  OnOne2i (fun i => on_Trel (P i) f) i l l' -> OnOne2i P i (map f l) (map f l').
+Proof. induction 1; simpl; constructor; try congruence. apply p. Qed.
+
+Lemma OnOne2i_sym {A} (P : nat -> A -> A -> Type) i l l' : OnOne2i (fun i x y => P i y x) i l' l -> OnOne2i P i l l'.
+Proof.
+  induction 1; constructor; auto.
+Qed.
+
+Lemma OnOne2i_exist {A} (P : nat -> A -> A -> Type) (Q : nat -> A -> A -> Type) i l l' :
+  OnOne2i P i l l' ->
+  (forall i x y, P i x y -> ∑ z, Q i x z × Q i y z) ->
+  ∑ r, (OnOne2i Q i l r × OnOne2i Q i l' r).
+Proof.
+  intros H HPQ. induction H.
+  - destruct (HPQ _ _ _ p). destruct p0.
+    now exists (x :: tl); intuition constructor.
+               - destruct IHOnOne2i as [r [? ?]].
+                 now exists (hd :: r); intuition constructor.
+Qed.
+
+(* Induction principle on OnOne2i when the relation also depends
+     on one of the lists, and should not change.
+   *)
+Lemma OnOne2i_ind_l :
+  forall A (R : list A -> nat -> A -> A -> Type)
+    (P : forall L i l l', OnOne2i (R L) i l l' -> Type),
+    (forall L i x y l (r : R L i x y), P L i (x :: l) (y :: l) (OnOne2i_hd _ _ _ _ l r)) ->
+    (forall L i x l l' (h : OnOne2i (R L) (S i) l l'),
+        P L (S i) l l' h ->
+        P L i (x :: l) (x :: l') (OnOne2i_tl _ i x _ _ h)
+    ) ->
+    forall i l l' h, P l i l l' h.
+Proof.
+  intros A R P hhd htl i l l' h. induction h ; eauto.
+Qed.
+
+Lemma OnOne2i_impl_exist_and_All :
+  forall A i (l1 l2 l3 : list A) R1 R2 R3,
+    OnOne2i R1 i l1 l2 ->
+    All2 R2 l3 l2 ->
+    (forall i x x' y, R1 i x y -> R2 x' y -> ∑ z : A, R3 i x z × R2 x' z) ->
+    ∑ l4, OnOne2i R3 i l1 l4 × All2 R2 l3 l4.
+Proof.
+  intros A i l1 l2 l3 R1 R2 R3 h1 h2 h.
+  induction h1 in l3, h2 |- *.
+  - destruct l3.
+    + inversion h2.
+    + inversion h2. subst.
+    specialize (h _ _ _ _ p X) as hh.
+    destruct hh as [? [? ?]].
+    eexists. constructor.
+      * constructor. eassumption.
+      * constructor ; eauto.
+  - destruct l3.
+    + inversion h2.
+    + inversion h2. subst.
+    specialize (IHh1 _ X0). destruct IHh1 as [? [? ?]].
+    eexists. constructor.
+      * eapply OnOne2i_tl. eassumption.
+      * constructor ; eauto.
+Qed.
+
+Lemma OnOne2i_impl_exist_and_All_r :
+  forall A i (l1 l2 l3 : list A) R1 R2 R3,
+    OnOne2i R1 i l1 l2 ->
+    All2 R2 l2 l3 ->
+    (forall i x x' y, R1 i x y -> R2 y x' -> ∑ z : A, R3 i x z × R2 z x') ->
+    ∑ l4, ( OnOne2i R3 i l1 l4 × All2 R2 l4 l3 ).
+Proof.
+  intros A i l1 l2 l3 R1 R2 R3 h1 h2 h.
+  induction h1 in l3, h2 |- *.
+  - destruct l3.
+    + inversion h2.
+    + inversion h2. subst.
+      specialize (h _ _ _ _ p X) as hh.
+      destruct hh as [? [? ?]].
+      eexists. split.
+      * constructor. eassumption.
+      * constructor ; eauto.
+  - destruct l3.
+    + inversion h2.
+    + inversion h2. subst.
+      specialize (IHh1 _ X0). destruct IHh1 as [? [? ?]].
+      eexists. split.
+      * eapply OnOne2i_tl. eassumption.
+      * constructor ; eauto.
+Qed.
+
+Lemma OnOne2i_split :
+  forall A (P : nat -> A -> A -> Type) i l l',
+    OnOne2i P i l l' ->
+    ∑ i x y u v,
+      P i x y ×
+      (l = u ++ x :: v /\
+      l' = u ++ y :: v).
+Proof.
+  intros A P i l l' h.
+  induction h.
+  - exists i, hd, hd', [], tl.
+    intuition eauto.
+  - destruct IHh as [i' [x [y [u [v ?]]]]].
+    exists i', x, y, (hd :: u), v.
+    intuition eauto. all: subst. all: reflexivity.
+Qed.
+
+Lemma OnOne2i_impl {A} {P Q} {i} {l l' : list A} :
+  OnOne2i P i l l' ->
+  (forall i x y, P i x y -> Q i x y) ->
+  OnOne2i Q i l l'.
+Proof.
+  induction 1; constructor; intuition eauto.
+Qed.
+
+Lemma OnOne2i_nth_error {A} (l l' : list A) i n t P :
+  OnOne2i P i l l' ->        
+  nth_error l n = Some t ->
+  ∑ t', (nth_error l' n = Some t') *
+  ((t = t') + (P (i + n)%nat t t')).
+Proof.
+  induction 1 in n |- *.
+  destruct n; simpl.
+  - intros [= ->]. exists hd'; rewrite Nat.add_0_r; intuition auto.
+  - exists t. intuition auto.
+  - destruct n; simpl; rewrite ?Nat.add_succ_r /=; auto.
+    intros [= ->]. exists t; intuition auto.
+    apply IHX.
+Qed.
+
+Lemma OnOne2i_nth_error_r {A} i (l l' : list A) n t' P :
+  OnOne2i P i l l' ->        
+  nth_error l' n = Some t' ->
+  ∑ t, (nth_error l n = Some t) *
+  ((t = t') + (P (i + n)%nat t t')).
+Proof.
+  induction 1 in n |- *.
+  destruct n; simpl.
+  - intros [= ->]. rewrite Nat.add_0_r; exists hd; intuition auto.
+  - exists t'. intuition auto.
+  - destruct n; simpl; auto.
+    intros [= ->]. exists t'; intuition auto.
+    rewrite Nat.add_succ_r; apply IHX.
+Qed.
+
+
 Ltac toAll :=
   match goal with
   | H : is_true (forallb _ _) |- _ => apply forallb_All in H
@@ -837,6 +1011,7 @@ Ltac close_Forall :=
   | H : Forall _ _ |- Forall _ _ => apply (Forall_impl H); clear H; simpl
   | H : All _ _ |- All _ _ => apply (All_impl H); clear H; simpl
   | H : OnOne2 _ _ _ |- OnOne2 _ _ _ => apply (OnOne2_impl H); clear H; simpl
+  | H : OnOne2i _ _ _ _ |- OnOne2i _ _ _ _ => apply (OnOne2i_impl H); clear H; simpl
   | H : All2 _ _ _ |- All2 _ _ _ => apply (All2_impl H); clear H; simpl
   | H : All2 _ _ _ |- All _ _ =>
     (apply (All2_All_left H) || apply (All2_All_right H)); clear H; simpl

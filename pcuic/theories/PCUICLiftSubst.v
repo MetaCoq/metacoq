@@ -123,47 +123,46 @@ Proof.
   reflexivity. intros. lia.
 Qed.
 
-Hint Extern 0 (_ = _) => progress f_equal : all.
-Hint Unfold on_snd snd : all.
-
-Lemma on_snd_eq_id_spec {A B} (f : B -> B) (x : A * B) :
-  f (snd x) = snd x <->
-  on_snd f x = x.
-Proof.
-  destruct x; simpl; unfold on_snd; simpl. split; congruence.
-Qed.
-Hint Resolve -> on_snd_eq_id_spec : all.
-Hint Resolve -> on_snd_eq_spec : all.
-
-Lemma map_def_eq_spec {A B} (f f' g g' : A -> B) (x : def A) :
-  f (dtype x) = g (dtype x) ->
-  f' (dbody x) = g' (dbody x) ->
-  map_def f f' x = map_def g g' x.
-Proof.
-  intros. unfold map_def; f_equal; auto.
-Qed.
-Hint Resolve map_def_eq_spec : all.
-
-Lemma map_def_id_spec {A} (f f' : A -> A) (x : def A) :
-  f (dtype x) = (dtype x) ->
-  f' (dbody x) = (dbody x) ->
-  map_def f f' x = x.
-Proof.
-  intros. rewrite (map_def_eq_spec _ _ id id); auto. destruct x; auto.
-Qed.
-Hint Resolve map_def_id_spec : all.
-
-Hint Extern 10 (_ < _)%nat => lia : all.
-Hint Extern 10 (_ <= _)%nat => lia : all.
-Hint Extern 10 (@eq nat _ _) => lia : all.
-
 Ltac change_Sk :=
   repeat match goal with
     |- context [S (?x + ?y)] => progress change (S (x + y)) with (S x + y)
   end.
 
+Lemma map_predicate_eq_spec {A B} (f f' g g' : A -> B) (p : Environment.predicate A) :
+  map f (pparams p) = map g (pparams p) ->
+  f' (preturn p) = g' (preturn p) ->
+  map_predicate f f' p = map_predicate g g' p.
+Proof.
+  intros. unfold map_predicate; f_equal; auto.
+Qed.
+Hint Resolve map_predicate_eq_spec : all.
+
+Lemma map_predicate_id_spec {A} (f f' : A -> A) (p : Environment.predicate A) :
+  map f (pparams p) = pparams p ->
+  f' (preturn p) = preturn p ->
+  map_predicate f f' p = p.
+Proof.
+  unfold map_predicate.
+  intros -> ->; destruct p; auto.
+Qed.
+Hint Resolve map_predicate_id_spec : all.
+
+Lemma pair_eq_spec {A B} (x : A) (y : B) (z : A * B) :
+  x = z.1 ->
+  y = z.2 ->
+  (x, y) = z.
+Proof.
+  destruct z; simpl; congruence.
+Qed.
+Hint Resolve pair_eq_spec : all.
+
 Ltac solve_all :=
+  try lazymatch goal with
+  | H: tCasePredProp _ _ _ |- _ => destruct H
+  end;
   unfold tCaseBrsProp, tFixProp in *;
+  try apply map_predicate_eq_spec;
+  try apply map_predicate_id_spec;
   repeat toAll; try All_map; try close_All;
   change_Sk; auto with all;
   intuition eauto 4 with all.
@@ -186,11 +185,9 @@ Proof.
   intros M.
   elim M using term_forall_list_ind; simpl in |- *; intros; try easy ;
     try (try rewrite H; try rewrite H0 ; try rewrite H1 ; easy);
-    try unfold map_predicate; try (f_equal; auto; solve_all).
+    try (f_equal; auto; solve_all).
 
-  - now elim (leb k n).
-  - destruct X. destruct p; simpl; f_equal. solve_all. auto.
-  - rewrite H0. now destruct x.
+  now elim (leb k n).
 Qed.
 
 Lemma map_lift0 l : map (lift0 0) l = l.
@@ -207,17 +204,17 @@ Proof.
   intros M.
   elim M using term_forall_list_ind;
     intros; simpl;
-      rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+      rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, 
+        ?map_predicate_map_predicate;
       try (rewrite -> H, ?H0, ?H1; auto); try (f_equal; auto; solve_all).
 
-  - elim (leb_spec k n); intros.
-    + elim (leb_spec i (n0 + n)); intros; lia.
-    + elim (leb_spec i n); intros; lia.
-  (* TODO Update solve_all to handle predicates and branches *)
+  elim (leb_spec k n); intros.
+  + elim (leb_spec i (n0 + n)); intros; lia.
+  + elim (leb_spec i n); intros; lia.
 Qed.
 
 Lemma simpl_lift0 : forall M n, lift0 (S n) M = lift0 1 (lift0 n M).
-Proof.  intros; now rewrite simpl_lift. Qed.
+Proof. intros; now rewrite simpl_lift. Qed.
 
 Lemma simpl_lift_ext n k p i :
   i <= k + n -> k <= i ->
@@ -233,8 +230,12 @@ Proof.
   elim M using term_forall_list_ind;
     intros; simpl;
       rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def,
+      ?map_predicate_map_predicate,
       ?map_length, ?Nat.add_assoc; f_equal;
       try solve [solve_all]; repeat nth_leb_simpl.
+  solve_all.
+  apply pair_eq_spec. auto with all.
+  simpl. apply H1.
 Qed.
 
 Lemma permute_lift0 :

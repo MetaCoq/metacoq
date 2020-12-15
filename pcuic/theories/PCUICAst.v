@@ -33,8 +33,7 @@ Inductive term :=
 | tConst (k : kername) (ui : Instance.t)
 | tInd (ind : inductive) (ui : Instance.t)
 | tConstruct (ind : inductive) (n : nat) (ui : Instance.t)
-| tCase (indn : ((inductive * nat) * relevance)) (p : predicate term) (c : term) 
-  (brs : list (nat * term)) (* the natural number records the arguments of the constructor (including lets) *)
+| tCase (indn : case_info) (p : predicate term) (c : term) (brs : list (branch term))
 | tProj (p : projection) (c : term)
 | tFix (mfix : mfixpoint term) (idx : nat)
 | tCoFix (mfix : mfixpoint term) (idx : nat)
@@ -266,7 +265,7 @@ Instance subst_instance_constr : UnivSubst term :=
   | tLetIn na b ty b' => tLetIn na (subst_instance_constr u b) (subst_instance_constr u ty)
                                 (subst_instance_constr u b')
   | tCase ind p c brs =>
-    let p' := map_predicate (subst_instance_constr u) (subst_instance_constr u) p in
+    let p' := subst_instance_predicate (subst_instance_constr u) u p in
     let brs' := List.map (on_snd (subst_instance_constr u)) brs in
     tCase ind p' (subst_instance_constr u c) brs'
   | tProj p c => tProj p (subst_instance_constr u c)

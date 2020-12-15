@@ -232,12 +232,12 @@ Section Reduce.
 
   | tCast c _ _ => reduce_stack Γ n c stack
 
-  | tCase ((ind, par), relevance) p c brs =>
+  | tCase ci p c brs =>
     if RedFlags.iota flags then
       c' <- reduce_stack Γ n c [] ;;
       match c' with
-      | (tConstruct ind c _, args) => reduce_stack Γ n (iota_red par c args brs) stack
-      | _ => ret (tCase ((ind, par), relevance) p (zip c') brs, stack)
+      | (tConstruct ind c _, args) => reduce_stack Γ n (iota_red ci.(ci_npar) c args brs) stack
+      | _ => ret (tCase ci p (zip c') brs, stack)
       end
     else ret (t, stack)
 
@@ -278,7 +278,21 @@ Section Reduce.
        puinst := p.(puinst);
        pcontext := p.(pcontext);
        preturn := f Γparams (preturn p) |}.
-    
+  
+  Definition rebuild_case_branch_ctx ind i p :=
+    match lookup_constructor_decl Σ (inductive_mind ind) (inductive_ind ind) i with
+    | TypeError _ => []
+    | Checked (mib, cty) => 
+      match build_branch_context ind mib cty p with
+      | Some ctx => ctx
+      | None => []
+      end
+    end.
+
+  Definition map_case_branch_with_binders ind i (f : context -> term -> term) Γ p br :=
+    let ctx := rebuild_case_branch_ctx ind i p in
+    map_branch (f (Γ ,,, ctx)) br.
+
   Definition map_constr_with_binders (f : context -> term -> term) Γ (t : term) : term :=
     match t with
     | tRel i => t
@@ -293,10 +307,10 @@ Section Reduce.
       let b' := f Γ b in
       let t' := f Γ t in
       tLetIn na b' t' (f (Γ ,, vdef na b' t') c)
-    | tCase ind p c brs =>
-      let p' := map_predicate_with_binders f Γ ind.1.1 p in
-      let brs' := List.map (on_snd (f Γ)) brs in
-      tCase ind p' (f Γ c) brs'
+    | tCase ci p c brs =>
+      let p' := map_predicate_with_binders f Γ ci.(ci_ind) p in
+      let brs' := mapi (fun i x => map_case_branch_with_binders ci.(ci_ind) i f Γ p' x) brs in
+      tCase ci p' (f Γ c) brs'
     | tProj p c => tProj p (f Γ c)
     | tFix mfix idx =>
       let Γ' := fix_decls mfix ++ Γ in
@@ -348,6 +362,9 @@ Definition eq_predicate {cf:checker_flags} {term} (eqterm : universes_graph -> t
   Nat.eqb #|p.(pcontext)| #|p'.(pcontext)| &&
   (eqterm φ) p.(preturn) p'.(preturn).
 
+Definition eq_case_info (ci ci' : case_info) :=
+  eq_inductive ci.(ci_ind) ci'.(ci_ind) && Nat.eqb ci.(ci_npar) ci'.(ci_npar). (* FIXME relevance check *)
+
 Fixpoint eq_term `{checker_flags} (φ : universes_graph) (t u : term) {struct t} :=
   match t, u with
   | tRel n, tRel n' => Nat.eqb n n'
@@ -363,10 +380,10 @@ Fixpoint eq_term `{checker_flags} (φ : universes_graph) (t u : term) {struct t}
   | tLambda _ b t, tLambda _ b' t' => eq_term φ b b' && eq_term φ t t'
   | tProd _ b t, tProd _ b' t' => eq_term φ b b' && eq_term φ t t'
   | tLetIn _ b t c, tLetIn _ b' t' c' => eq_term φ b b' && eq_term φ t t' && eq_term φ c c'
-  | tCase ((ind, par), rel) p c brs,
-    tCase ((ind',par'), rel') p' c' brs' =>
-    eq_inductive ind ind' && Nat.eqb par par' &&
-    eq_predicate eq_term φ p p' && eq_term φ c c' && forallb2 (fun '(a, b) '(a', b') => eq_term φ b b') brs brs'
+  | tCase ci p c brs,
+    tCase ci' p' c' brs' =>
+    eq_case_info ci ci' &&
+    eq_predicate eq_term φ p p' && eq_term φ c c' && forallb2 (fun br br' => eq_term φ br.(bbody) br'.(bbody)) brs brs'
   | tProj p c, tProj p' c' => eq_projection p p' && eq_term φ c c'
   | tFix mfix idx, tFix mfix' idx' =>
     forallb2 (fun x y =>
@@ -395,10 +412,9 @@ Fixpoint leq_term `{checker_flags} (φ : universes_graph) (t u : term) {struct t
   | tLambda _ b t, tLambda _ b' t' => eq_term φ b b' && eq_term φ t t'
   | tProd _ b t, tProd _ b' t' => eq_term φ b b' && leq_term φ t t'
   | tLetIn _ b t c, tLetIn _ b' t' c' => eq_term φ b b' && eq_term φ t t' && leq_term φ c c'
-  | tCase ((ind, par), rel) p c brs,
-    tCase ((ind',par'), rel') p' c' brs' =>
-    eq_inductive ind ind' && Nat.eqb par par' &&
-    eq_predicate eq_term φ p p' && eq_term φ c c' && forallb2 (fun '(a, b) '(a', b') => eq_term φ b b') brs brs'
+  | tCase ci p c brs, tCase ci' p' c' brs' =>
+    eq_case_info ci ci' &&
+    eq_predicate eq_term φ p p' && eq_term φ c c' && forallb2 (fun br br' => eq_term φ br.(bbody) br'.(bbody)) brs brs'
   | tProj p c, tProj p' c' => eq_projection p p' && eq_term φ c c'
   | tFix mfix idx, tFix mfix' idx' =>
     forallb2 (fun x y =>
@@ -541,17 +557,17 @@ Section Conversion.
         isconv n leq (Γ ,, vass na b) t [] t' []
       else ret false
 
-    | tCase (ind,par) p c brs,
-      tCase (ind',par') p' c' brs' => (* Hnf did not reduce, maybe delta needed in c *)
-      if eq_predicate eq_term G p p' && eq_term G c c'
-      && forallb2 (fun '(a, b) '(a', b') => eq_term G b b') brs brs' then
+    | tCase ci p c brs,
+      tCase ci' p' c' brs' => (* Hnf did not reduce, maybe delta needed in c *)
+      if eq_case_info ci ci' && eq_predicate eq_term G p p' && eq_term G c c'
+      && forallb2 (fun br br' => eq_term G br.(bbody) br'.(bbody)) brs brs' then
         ret true
       else
         cred <- reduce_stack_term RedFlags.default Σ Γ n c ;;
         c'red <- reduce_stack_term RedFlags.default Σ Γ n c' ;;
         if eq_term G cred c && eq_term G c'red c' then ret true
         else
-          isconv n leq Γ (tCase (ind, par) p cred brs) l1 (tCase (ind, par) p c'red brs') l2
+          isconv n leq Γ (tCase ci p cred brs) l1 (tCase ci' p c'red brs') l2
 
     | tProj p c, tProj p' c' => on_cond (eq_projection p p' && eq_term G c c')
 
@@ -774,18 +790,18 @@ Section Typecheck.
       check_consistent_constraints cstrs;;
       ret ty
 
-    | tCase ((ind, par), rel) p c brs =>
+    | tCase ci p c brs =>
       ty <- infer Γ c ;;
       indargs <- reduce_to_ind Σ Γ ty ;;
       (** TODO check branches *)
-      let '(ind', u, args) := indargs in
-      if eq_inductive ind ind' then
+      let '(ind, u, args) := indargs in
+      if eq_inductive ind ci.(ci_ind) then
         let pctx := rebuild_case_predicate_ctx Σ ind p in
         let ptm := it_mkLambda_or_LetIn pctx p.(preturn) in
-        ret (tApp ptm (List.skipn par args ++ [c]))
+        ret (tApp ptm (List.skipn ci.(ci_npar) args ++ [c]))
       else
         let ind1 := tInd ind u in
-        let ind2 := tInd ind' u in
+        let ind2 := tInd ci.(ci_ind) u in
         raise (NotConvertible Γ ind1 ind2 ind1 ind2)
 
     | tProj p c =>

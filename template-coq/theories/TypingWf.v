@@ -280,54 +280,6 @@ Proof.
   destruct Hcdecl as [cs [Hnth [? ? ? [? [? ?]] ?]]].
   assumption.
 Qed.
- 
-
-Inductive instantiate_params_subst_spec : context -> list term -> list term -> term -> list term -> term -> Prop :=
-| instantiate_params_subst_nil s ty : instantiate_params_subst_spec [] [] s ty s ty
-| instantiate_params_subst_vass na ty params pari pars s na' ty' pty s' pty' : 
-  instantiate_params_subst_spec params pars (pari :: s) pty s' pty' ->
-  instantiate_params_subst_spec (vass na ty :: params) (pari :: pars) s (tProd na' ty' pty) s' pty'
-| instantiate_params_subst_vdef na b ty params pars s na' b' ty' pty s' pty' : 
-  instantiate_params_subst_spec params pars (subst0 s b :: s) pty s' pty' ->
-  instantiate_params_subst_spec (vdef na b ty :: params) pars s (tLetIn na' b' ty' pty) s' pty'.
-Derive Signature for instantiate_params_subst_spec.
-
-Lemma instantiate_params_substP params pars s ty s' ty' : 
-  instantiate_params_subst params pars s ty = Some (s', ty') <->
-  instantiate_params_subst_spec params pars s ty s' ty'.
-Proof.
-  induction params in pars, s, ty |- *.
-  - split. destruct pars => /= // => [= -> ->].
-    constructor.
-    intros. depelim H. reflexivity.
-  - split.
-    * destruct a as [na [b|] ?] => /=.
-      destruct ty => //.
-      move/IHparams.
-      intros. now constructor.
-      destruct ty => //.
-      destruct pars => //.
-      move/IHparams.
-      now constructor.
-    * intros H; depelim H; simpl.
-      now apply IHparams.
-      now apply IHparams.
-Qed.
-
-Variant build_case_predicate_context_spec ind mdecl idecl params uinst : context -> Prop :=
-| build_case_predicate_context_ok s ty ictx inds : 
-  instantiate_params_subst_spec (List.rev (subst_instance_context uinst (ind_params mdecl))) params []
-    (subst_instance_constr uinst (ind_type idecl)) s ty ->
-  let sty := subst s 0 ty in
-  sty = it_mkProd_or_LetIn ictx (tSort inds) ->
-  let indty := mkApps (tInd ind uinst) (map (lift0 #|ictx|) params ++ to_extended_list ictx) in
-  let inddecl := 
-    {| decl_name := 
-      {| binder_name := nNamed (ind_name idecl); binder_relevance := idecl.(ind_relevance) |};
-       decl_body := None;
-       decl_type := indty |}
-  in
-  build_case_predicate_context_spec ind mdecl idecl params uinst (ictx ,, inddecl).
 
 Lemma destArity_spec ctx T :
   match destArity ctx T with
@@ -357,16 +309,16 @@ Proof.
   now rewrite !app_context_nil_l => [= -> ->].
 Qed.
 
-Lemma build_case_predicate_contextP ind mdecl idecl params uinst pctx :
-  build_case_predicate_context ind mdecl idecl params uinst = Some pctx <->
-  build_case_predicate_context_spec ind mdecl idecl params uinst pctx.
+Lemma case_predicate_contextP ind mdecl idecl params uinst pctx :
+  build_case_predicate_context ind mdecl idecl params uinst = Some pctx <~>
+  case_predicate_context ind mdecl idecl params uinst pctx.
 Proof.
   unfold build_case_predicate_context.
   unfold instantiate_params.
   destruct instantiate_params_subst as [[ictx p]|] eqn:ipars => /= //.
-  2:{ split => //. intros. depelim H. 
-      eapply instantiate_params_substP in H.
-      rewrite ipars in H. discriminate. }
+  2:{ split => //. intros H. depelim H. 
+      eapply instantiate_params_substP in i.
+      rewrite ipars in i. discriminate. }
   move: (destArity_spec [] (subst0 ictx p)).
   destruct destArity as [[idctx inds]|] eqn:da => //.
   simpl. intros eqs.
@@ -374,16 +326,14 @@ Proof.
   eapply instantiate_params_substP in ipars.
   intros [= <-]. econstructor. eauto. eauto.
   intros H. depelim H. subst sty.
-  eapply instantiate_params_substP in H.
-  rewrite ipars in H. noconf H. rewrite eqs in H0.
-  eapply it_mkProd_or_LetIn_inj in H0 as [<- <-].
+  eapply instantiate_params_substP in i.
+  rewrite ipars in i. noconf i. rewrite eqs in e.
+  eapply it_mkProd_or_LetIn_inj in e as [<- <-].
   reflexivity.
-  split => //.
-  intros.
-  destruct H.
-  eapply instantiate_params_substP in H.
-  rewrite ipars in H; noconf H. subst sty.
-  rewrite H0 destArity_it_mkProd_or_LetIn in da.
+  split => // [] [] s ty ictxt inds.
+  move/instantiate_params_substP.
+  rewrite ipars /= => [=] <- <- H.
+  rewrite H destArity_it_mkProd_or_LetIn in da.
   noconf da.
 Qed.
 
@@ -425,7 +375,7 @@ Lemma wf_build_case_predicate_context_spec ind mdecl idecl params uinst pctx :
   Forall wf_decl mdecl.(ind_params) ->
   Ast.wf (ind_type idecl) ->
   Forall Ast.wf params ->
-  build_case_predicate_context_spec ind mdecl idecl params uinst pctx ->
+  case_predicate_context ind mdecl idecl params uinst pctx ->
   Forall wf_decl pctx.
 Proof.
   intros wfparams wfindty wfpars [].
@@ -436,14 +386,14 @@ Proof.
   solve_all; auto with wf. now apply wf_reln.
   subst sty.
   assert (Ast.wf (it_mkProd_or_LetIn ictx (tSort inds))).  
-  rewrite -H0.
-  apply wf_instantiate_params_subst_spec in H as [wfs wfty];
+  rewrite -e.
+  apply wf_instantiate_params_subst_spec in i as [wfs wfty];
   auto with wf.
   apply rev_Forall.
   apply Forall_map. solve_all.
   unfold wf_decl in *; destruct x as [na [b|] ?]; simpl in *;
   intuition auto with wf.
-  now eapply it_mkProd_or_LetIn_wf in H1 as [].
+  now eapply it_mkProd_or_LetIn_wf in H as [].
 Qed.
 
 Lemma on_global_wf_Forall_decls {cf:checker_flags} Σ :
@@ -470,6 +420,27 @@ Qed.
 
 Hint Resolve on_global_wf_Forall_decls : wf.
 
+Lemma wf_case_branches_context {cf:checker_flags} Σ ind mdecl idecl p ctxs :
+  on_global_env (fun Σ => wf_decl_pred) Σ ->
+  declared_inductive Σ mdecl ind idecl ->
+  case_branches_contexts ind mdecl idecl p ctxs ->
+  Forall (fun ctx => Forall wf_decl ctx) ctxs.
+Proof.
+  intros ong decli.
+  unfold case_branches_contexts.
+Admitted.
+(*   
+  solve_all.
+  depelim X. simpl in i.
+  pose proof (declared_inductive_wf_params Σ _ _ _ ong decli); auto.
+  pose proof (declared_inductive_wf Σ _ _ _ ong decli); auto.
+  
+  eapply declared_inductive_wf; eauto; wf.
+
+
+  eapply wf_instantiate_params_subst_spec in i; eauto. *)
+
+
 Lemma wf_red1 {cf:checker_flags} Σ Γ M N :
   on_global_env (fun Σ => wf_decl_pred) Σ ->
   List.Forall wf_decl Γ ->
@@ -492,10 +463,9 @@ Proof.
     apply some_inj in H; rewrite H in wfΓ; apply wfΓ.
   - unfold iota_red.
     apply wf_mkApps_inv in H1.
-    apply wf_mkApps; auto.
-    induction brs in c, H2 |- *; destruct c; simpl in *. constructor. constructor.
+    apply wf_subst. now eapply Forall_skipn.
+    induction brs in c, H2 |- *; destruct c; simpl in *; try constructor.
     inv H2; auto. inv H2; auto.
-    now eapply Forall_skipn.
   - apply unfold_fix_wf in H; auto. eapply wf_mkApps; auto.
   - constructor; auto. apply wf_mkApps_napp in H2 as [Hcof Hargs]; auto.
     apply unfold_cofix_wf in H; auto.
@@ -514,15 +484,21 @@ Proof.
     simpl. constructor; auto. simpl in *. depelim H; simpl in *.
     constructor; auto.
   - constructor; auto; simpl in *.
-    apply build_case_predicate_contextP in H.
-    eapply wf_build_case_predicate_context_spec in H; auto with wf.
+    eapply wf_build_case_predicate_context_spec in X; auto with wf.
     apply IHred1; eauto.
     apply app_Forall => //.
     eapply declared_inductive_wf_params in isdecl; auto.
     eapply declared_inductive_wf; eauto; wf.
-  - constructor; auto.  induction X; try congruence.
-    inv H2. destruct p0 as [[? ?] ?]. constructor; intuition eauto.
+  - constructor; auto.
+    solve_all.
+    eapply OnOne2All_All_mix_left in X0; eauto.
+    eapply wf_case_branches_context in X; eauto. clear -wfΓ X H2 X0.
+    induction X0; try congruence.
+    inv H2. destruct p as [[? ?] ?]. constructor; intuition eauto.
+    apply b0; auto. depelim X.
+    apply app_Forall => //. solve_all.
     inv H2; constructor; intuition auto.
+    apply IHX0 => //. now depelim X.
   - now eapply wf_mkApps.
   - constructor; auto. induction X; auto; congruence.
     clear H H1 H0. induction X; inv H2; constructor; intuition auto; try congruence.

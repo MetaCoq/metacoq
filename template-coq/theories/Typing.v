@@ -4,6 +4,7 @@ From Equations.Type Require Import Relation.
 From Coq Require Import ssreflect Wellfounded Relation_Operators CRelationClasses.
 From MetaCoq.Template Require Import config utils Ast AstUtils Environment LiftSubst UnivSubst
      EnvironmentTyping Reflect TermEquality.
+From Equations Require Import Equations.
 
 (** * Typing derivations
 
@@ -111,9 +112,23 @@ Lemma fix_context_length mfix : #|fix_context mfix| = #|mfix|.
 Proof. unfold fix_context. now rewrite List.rev_length mapi_length. Qed.
 
 Definition tDummy := tVar "".
+Definition dummy_branch : branch term := mkbranch [] tDummy.
 
 Definition iota_red npar c args brs :=
-  (mkApps (snd (List.nth c brs (0, tDummy))) (List.skipn npar args)).
+  subst (List.skipn npar args) 0 (bbody (List.nth c brs dummy_branch)).
+
+(** For cases typing *)
+
+Inductive instantiate_params_subst_spec : context -> list term -> list term -> term -> list term -> term -> Prop :=
+| instantiate_params_subst_nil s ty : instantiate_params_subst_spec [] [] s ty s ty
+| instantiate_params_subst_vass na ty params pari pars s na' ty' pty s' pty' : 
+  instantiate_params_subst_spec params pars (pari :: s) pty s' pty' ->
+  instantiate_params_subst_spec (vass na ty :: params) (pari :: pars) s (tProd na' ty' pty) s' pty'
+| instantiate_params_subst_vdef na b ty params pars s na' b' ty' pty s' pty' : 
+  instantiate_params_subst_spec params pars (subst s 0 b :: s) pty s' pty' ->
+  instantiate_params_subst_spec (vdef na b ty :: params) pars s (tLetIn na' b' ty' pty) s' pty'.
+Derive Signature for instantiate_params_subst_spec.
+
 
 (** Compute the type of a case from the predicate [p], actual parameters [pars] and
     an inductive declaration. *)
@@ -138,6 +153,70 @@ Fixpoint instantiate_params_subst
     | _, _ => None (* Not enough products in the type *)
     end
   end.
+
+Lemma instantiate_params_substP params pars s ty s' ty' : 
+  instantiate_params_subst params pars s ty = Some (s', ty') <->
+  instantiate_params_subst_spec params pars s ty s' ty'.
+Proof.
+  induction params in pars, s, ty |- *.
+  - split. destruct pars => /= // => [= -> ->].
+    constructor.
+    intros. depelim H. reflexivity.
+  - split.
+    * destruct a as [na [b|] ?] => /=.
+      destruct ty => //.
+      move/IHparams.
+      intros. now constructor.
+      destruct ty => //.
+      destruct pars => //.
+      move/IHparams.
+      now constructor.
+    * intros H; depelim H; simpl.
+      now apply IHparams.
+      now apply IHparams.
+Qed.
+
+Variant case_predicate_context ind mdecl idecl params uinst : context -> Type :=
+| mk_case_predicate_context s ty ictx inds : 
+  instantiate_params_subst_spec (List.rev (subst_instance_context uinst (ind_params mdecl))) params []
+    (subst_instance_constr uinst (ind_type idecl)) s ty ->
+  let sty := subst s 0 ty in
+  sty = it_mkProd_or_LetIn ictx (tSort inds) ->
+  let indty := mkApps (tInd ind uinst) (map (lift0 #|ictx|) params ++ to_extended_list ictx) in
+  let inddecl := 
+    {| decl_name := 
+      {| binder_name := nNamed (ind_name idecl); binder_relevance := idecl.(ind_relevance) |};
+       decl_body := None;
+       decl_type := indty |}
+  in
+  case_predicate_context ind mdecl idecl params uinst (ictx ,, inddecl).
+
+Variant case_branch_context ind mdecl (cdecl : ident * term * nat) p : context -> Type :=
+| mk_case_branch_context s ty argctx indices : 
+    instantiate_params_subst_spec (List.rev (subst_instance_context p.(puinst) (ind_params mdecl))) p.(pparams) []
+      (subst_instance_constr p.(puinst) (cdecl.1.2)) s ty ->
+    let sty := subst s 0 ty in
+    sty = it_mkProd_or_LetIn argctx (mkApps (tInd ind p.(puinst)) (map (lift0 #|argctx|) p.(pparams) ++ indices)) ->
+    case_branch_context ind mdecl cdecl p argctx.
+
+Definition case_branches_contexts ind mdecl idecl p : list context -> Type :=
+  All2 (fun cdecl brctx => case_branch_context ind mdecl cdecl p brctx) idecl.(ind_ctors).
+    
+Variant case_branch_type ind mdecl (cdecl : ident * term * nat) i p pctx : context -> term -> Type :=
+| mk_case_branch_type s ty argctx indices : 
+  instantiate_params_subst_spec (List.rev (subst_instance_context p.(puinst) (ind_params mdecl))) p.(pparams) []
+    (subst_instance_constr p.(puinst) (cdecl.1.2)) s ty ->
+  let sty := subst s 0 ty in
+  sty = it_mkProd_or_LetIn argctx (mkApps (tInd ind p.(puinst)) (map (lift0 #|argctx|) p.(pparams) ++ indices)) ->
+  let cstr := tConstruct ind i p.(puinst) in
+  let args := to_extended_list argctx in
+  let cstrapp := mkApps cstr (map (lift0 #|argctx|) p.(pparams) ++ args) in
+  let ptm := it_mkLambda_or_LetIn pctx p.(preturn) in
+  let ty := mkApps (lift0 #|argctx| ptm) (indices ++ [cstrapp]) in
+  case_branch_type ind mdecl cdecl i p pctx argctx ty.
+
+Definition case_branches_types ind mdecl idecl p pctx : list (context * term) -> Type :=
+  All2i (fun i cdecl '(brctx, brty) => case_branch_type ind mdecl cdecl i p pctx brctx brty) 0 idecl.(ind_ctors).
 
 (* If [ty] is [Π params . B] *)
 (* and [⊢ pars : params] *)
@@ -192,9 +271,9 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
     red1 Σ Γ (tRel i) (lift0 (S i) body)
 
 (** Case *)
-| red_iota ind pars r c u args p brs :
-    red1 Σ Γ (tCase (ind, pars, r) p (mkApps (tConstruct ind c u) args) brs)
-         (iota_red pars c args brs)
+| red_iota ci c u args p brs :
+    red1 Σ Γ (tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs)
+         (iota_red ci.(ci_npar) c args brs)
 
 (** Fix unfolding, with guard *)
 | red_fix mfix idx args narg fn :
@@ -247,16 +326,20 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
     OnOne2 (red1 Σ Γ) params params' ->
     red1 Σ Γ (tCase ind (mkpredicate params puinst pcontext preturn) c brs)
              (tCase ind (mkpredicate params' puinst pcontext preturn) c brs)
-| case_red_pred_return ind mdecl idecl (isdecl : declared_inductive Σ mdecl ind.1.1 idecl)
+
+| case_red_pred_return ind mdecl idecl (isdecl : declared_inductive Σ mdecl ind.(ci_ind) idecl)
                        params puinst pcontext preturn preturn' c brs pctx :
-    build_case_predicate_context ind.1.1 mdecl idecl params puinst = Some pctx ->
+    case_predicate_context ind.(ci_ind) mdecl idecl params puinst pctx ->
     red1 Σ (Γ ,,, pctx) preturn preturn' ->
     red1 Σ Γ (tCase ind (mkpredicate params puinst pcontext preturn) c brs)
              (tCase ind (mkpredicate params puinst pcontext preturn') c brs)
     
 | case_red_discr ind p c c' brs : red1 Σ Γ c c' -> red1 Σ Γ (tCase ind p c brs) (tCase ind p c' brs)
-| case_red_brs ind p c brs brs' :
-    OnOne2 (on_Trel_eq (red1 Σ Γ) snd fst) brs brs' ->
+
+| case_red_brs ind mdecl idecl (isdecl : declared_inductive Σ mdecl ind.(ci_ind) idecl) p c brs brs' brsctx :
+    case_branches_contexts ind.(ci_ind) mdecl idecl p brsctx ->
+    OnOne2All (fun brctx br br' => 
+      on_Trel_eq (red1 Σ (Γ ,,, brctx)) bbody bcontext br br') brsctx brs brs' ->
     red1 Σ Γ (tCase ind p c brs) (tCase ind p c brs')
 
 | proj_red p c c' : red1 Σ Γ c c' -> red1 Σ Γ (tProj p c) (tProj p c')
@@ -300,16 +383,16 @@ Lemma red1_ind_all :
        (forall (Γ : context) (i : nat) (body : term),
         option_map decl_body (nth_error Γ i) = Some (Some body) -> P Γ (tRel i) ((lift0 (S i)) body)) ->
 
-       (forall (Γ : context) (ind : inductive) (pars c : nat) (r : relevance) (u : Instance.t) (args : list term)
-          (p : predicate term) (brs : list (nat * term)),
-        P Γ (tCase (ind, pars,r) p (mkApps (tConstruct ind c u) args) brs) (iota_red pars c args brs)) ->
+       (forall (Γ : context) (ci : case_info) (c : nat) (u : Instance.t) (args : list term)
+          (p : predicate term) (brs : list (branch term)),
+        P Γ (tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs) (iota_red ci.(ci_npar) c args brs)) ->
 
        (forall (Γ : context) (mfix : mfixpoint term) (idx : nat) (args : list term) (narg : nat) (fn : term),
         unfold_fix mfix idx = Some (narg, fn) ->
         is_constructor narg args = true -> P Γ (tApp (tFix mfix idx) args) (mkApps fn args)) ->
 
-       (forall (Γ : context) (ip : inductive * nat * relevance) (p : predicate term) (mfix : mfixpoint term) (idx : nat)
-          (args : list term) (narg : nat) (fn : term) (brs : list (nat * term)),
+       (forall (Γ : context) (ip : case_info) (p : predicate term) (mfix : mfixpoint term) (idx : nat)
+          (args : list term) (narg : nat) (fn : term) (brs : list (branch term)),
         unfold_cofix mfix idx = Some (narg, fn) ->
         P Γ (tCase ip p (mkApps (tCoFix mfix idx) args) brs) (tCase ip p (mkApps fn args) brs)) ->
 
@@ -341,26 +424,27 @@ Lemma red1_ind_all :
        (forall (Γ : context) (na : aname) (b t b' r : term),
         red1 Σ (Γ,, vdef na b t) b' r -> P (Γ,, vdef na b t) b' r -> P Γ (tLetIn na b t b') (tLetIn na b t r)) ->
 
-       (forall (Γ : context) (ind : inductive * nat * relevance)
-               params params' puinst pcontext preturn c brs,
+       (forall (Γ : context) (ind : case_info) params params' puinst pcontext preturn c brs,
            OnOne2 (Trel_conj (red1 Σ Γ) (P Γ)) params params' ->
            P Γ (tCase ind (mkpredicate params puinst pcontext preturn) c brs)
                (tCase ind (mkpredicate params' puinst pcontext preturn) c brs)) ->
 
-       (forall (Γ : context) (ind : inductive * nat * relevance)
-               idecl mdecl (isdecl : declared_inductive Σ mdecl ind.1.1 idecl)
+       (forall (Γ : context) (ci : case_info)
+               idecl mdecl (isdecl : declared_inductive Σ mdecl ci.(ci_ind) idecl)
                params puinst pcontext preturn preturn' c brs pctx,
-           build_case_predicate_context ind.1.1 mdecl idecl params puinst = Some pctx ->
+           case_predicate_context ci.(ci_ind) mdecl idecl params puinst pctx ->
            red1 Σ (Γ ,,, pctx) preturn preturn' ->
            P (Γ ,,, pctx) preturn preturn' ->
-           P Γ (tCase ind (mkpredicate params puinst pcontext preturn) c brs)
-               (tCase ind (mkpredicate params puinst pcontext preturn') c brs)) ->
+           P Γ (tCase ci (mkpredicate params puinst pcontext preturn) c brs)
+               (tCase ci (mkpredicate params puinst pcontext preturn') c brs)) ->
        
-       (forall (Γ : context) (ind : inductive * nat * relevance) (p : predicate term) (c c' : term) (brs : list (nat * term)),
+       (forall (Γ : context) (ind : case_info) (p : predicate term) (c c' : term) (brs : list (branch term)),
         red1 Σ Γ c c' -> P Γ c c' -> P Γ (tCase ind p c brs) (tCase ind p c' brs)) ->
 
-       (forall (Γ : context) (ind : inductive * nat * relevance) (p : predicate term) (c : term) (brs brs' : list (nat * term)),
-          OnOne2 (on_Trel_eq (Trel_conj (red1 Σ Γ) (P Γ)) snd fst) brs brs' ->
+       (forall (Γ : context) ind mdecl idecl (isdecl : declared_inductive Σ mdecl ind.(ci_ind) idecl) p c brs brs' brsctx,
+        case_branches_contexts ind.(ci_ind) mdecl idecl p brsctx ->
+          OnOne2All (fun brctx br br' => 
+            on_Trel_eq (Trel_conj (red1 Σ (Γ ,,, brctx)) (P (Γ ,,, brctx))) bbody bcontext br br') brsctx brs brs' ->
           P Γ (tCase ind p c brs) (tCase ind p c brs')) ->
 
        (forall (Γ : context) (p : projection) (c c' : term), red1 Σ Γ c c' -> P Γ c c' -> P Γ (tProj p c) (tProj p c')) ->
@@ -424,12 +508,13 @@ Proof.
     + constructor. split; auto.
     + constructor. auto.
       
-  - apply X16.
-    revert brs brs' o.
-    fix auxl 3.
-    intros l l' Hl. destruct Hl.
-    + constructor. intuition eauto.
-    + constructor. auto.
+  - eapply X16; eauto. clear c0.
+    revert brsctx brs brs' o.
+    fix auxl 4.
+    intros i l l' Hl. destruct Hl.
+    + constructor; intros.
+      intuition auto.
+    + constructor. eapply auxl. apply Hl.
 
   - apply X19.
     revert M2 N2 o.
@@ -612,6 +697,16 @@ Class GuardChecker :=
 Axiom guard_checking : GuardChecker.
 Existing Instance guard_checking.
 
+Definition build_branch_context ind mdecl (cty: term) p : option context :=
+  let inds := inds ind.(inductive_mind) p.(puinst) mdecl.(ind_bodies) in
+  let ty := subst0 inds (subst_instance_constr p.(puinst) cty) in
+  match instantiate_params (subst_instance_context p.(puinst) mdecl.(ind_params)) p.(pparams) ty with
+  | Some ty =>
+    let '(sign, ccl) := decompose_prod_assum [] ty in
+    Some sign
+  | None => None
+  end.
+
 (* [params], [p] and output are already instanciated by [u] *)
 Definition build_branches_type ind mdecl idecl params u p : list (option (nat * context * term)) :=
   let inds := inds ind.(inductive_mind) u mdecl.(ind_bodies) in
@@ -791,21 +886,22 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     consistent_instance_ext Σ mdecl.(ind_universes) u ->
     Σ ;;; Γ |- (tConstruct ind i u) : type_of_constructor mdecl cdecl (ind, i) u
 
-| type_Case (indnparrel : inductive * nat * relevance) p c brs indices ps :
-    let ind := indnparrel.1.1 in
-    let npar := indnparrel.1.2 in
-    forall mdecl idecl (isdecl : declared_inductive Σ.1 mdecl ind idecl),
-    mdecl.(ind_npars) = npar ->
-    forall pctx, build_case_predicate_context ind mdecl idecl p.(pparams) p.(puinst) = Some pctx ->
+| type_Case (ci : case_info) p c brs indices ps :
+    forall mdecl idecl (isdecl : declared_inductive Σ.1 mdecl ci.(ci_ind) idecl),
+    mdecl.(ind_npars) = ci.(ci_npar) ->
+    forall pctx, case_predicate_context ci.(ci_ind) mdecl idecl p.(pparams) p.(puinst) pctx ->
     Σ ;;; Γ ,,, pctx |- p.(preturn) : tSort ps ->
     is_allowed_elimination Σ ps idecl.(ind_kelim) ->
-    Σ ;;; Γ |- c : mkApps (tInd ind p.(puinst)) (p.(pparams) ++ indices) ->
+    Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
     isCoFinite mdecl.(ind_finite) = false ->
-    forall btys, map_option_out (build_branches_type ind mdecl idecl p.(pparams) p.(puinst) p.(preturn)) = Some btys ->
-    All2 (fun br bty => (br.1 = bty.1.1) * (Σ ;;; Γ ,,, bty.1.2 |- br.2 : bty.2) *
-      (Σ ;;; Γ ,,, bty.1.2 |- bty.2 : tSort ps)) brs btys ->
+    forall brtys, 
+    case_branches_types ci.(ci_ind) mdecl idecl p pctx brtys ->
+    All2 (fun br brctxty =>
+      (#|br.(bcontext)| = #|brctxty.1|) *
+      (Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2) *
+      (Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps)) brs brtys ->
     let ptm := it_mkLambda_or_LetIn pctx p.(preturn) in
-    Σ ;;; Γ |- tCase indnparrel p c brs : mkApps ptm (indices ++ [c])
+    Σ ;;; Γ |- tCase ci p c brs : mkApps ptm (indices ++ [c])
 
 | type_Proj p c u :
     forall mdecl idecl pdecl (isdecl : declared_projection Σ.1 mdecl idecl p pdecl) args,
@@ -905,6 +1001,7 @@ Proof.
     | H : All2 _ _ _ |- _ => idtac
     | H : All_local_env _ _ |- _ => idtac
     | H : All _ _ |- _ => idtac
+    | H : Alli _ _ _ |- _ => idtac
     | H : typing_spine _ _ _ _ _ |- _ => idtac
     | H : _ + _ |- _ => idtac
     | H1 : size, H2 : size, H3 : size |- _ => exact (S (Nat.max H1 (Nat.max H2 H3)))
@@ -1002,7 +1099,6 @@ Proof.
   induction d; simpl;
   change (fun (x : global_env_ext) (x0 : context) (x1 x2 : term)
   (x3 : x;;; x0 |- x1 : x2) => typing_size x3) with (@typing_size H); try lia.
-  - destruct indnparrel as ((ind' & npar') & ?); cbn in *; subst ind npar. lia.
 Qed.
 
 Lemma wf_local_inv `{checker_flags} {Σ Γ'} (w : wf_local Σ Γ') :
@@ -1134,33 +1230,28 @@ Lemma typing_ind_env `{cf : checker_flags} :
         consistent_instance_ext Σ mdecl.(ind_universes) u ->
         P Σ Γ (tConstruct ind i u) (type_of_constructor mdecl cdecl (ind, i) u)) ->
 
-    (forall (Σ : global_env_ext) (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (indnparrel : (inductive × nat) × relevance) 
-      (p : predicate term) (c : term) (brs : list (nat * term))
-      (indices : list term) ps,
-      let ind := indnparrel.1.1 in
-      let npar := indnparrel.1.2 in
-      forall (mdecl : mutual_inductive_body) (idecl : one_inductive_body)
-      (isdecl : declared_inductive Σ.1 mdecl ind idecl),
+     (forall (Σ : global_env_ext) (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ),     
+      forall (ci : case_info) p c brs indices ps mdecl idecl
+        (isdecl : declared_inductive Σ.1 mdecl ci.(ci_ind) idecl),
         Forall_decls_typing P Σ.1 -> 
         PΓ Σ Γ wfΓ ->
-        ind_npars mdecl = npar ->
-        forall pctx, 
-        build_case_predicate_context ind mdecl idecl p.(pparams) p.(puinst) = Some pctx ->
-        forall pty : Σ ;;; Γ ,,, pctx |- p.(preturn) : tSort ps,
+        mdecl.(ind_npars) = ci.(ci_npar) ->
+        forall pctx, case_predicate_context ci.(ci_ind) mdecl idecl p.(pparams) p.(puinst) pctx ->
+        forall (pty : Σ ;;; Γ ,,, pctx |- p.(preturn) : tSort ps),
         P Σ (Γ ,,, pctx) p.(preturn) (tSort ps) ->
         PΓ Σ (Γ ,,, pctx) (typing_wf_local pty) ->
         is_allowed_elimination Σ ps idecl.(ind_kelim) ->
-        Σ ;;; Γ |- c : mkApps (tInd ind p.(puinst)) (p.(pparams) ++ indices) ->
-        P Σ Γ c (mkApps (tInd ind p.(puinst)) (p.(pparams) ++ indices)) ->
+        Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
+        P Σ Γ c (mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices)) ->
         isCoFinite mdecl.(ind_finite) = false ->
-        forall btys,
-        map_option_out (build_branches_type ind mdecl idecl p.(pparams) p.(puinst) p.(preturn)) = Some btys ->
-        All2 (fun br bty => (br.1 = bty.1.1) *
-          (Σ ;;; Γ ,,, bty.1.2 |- br.2 : bty.2) * P Σ (Γ ,,, bty.1.2) br.2 bty.2 *
-          (Σ ;;; Γ ,,, bty.1.2 |- bty.2 : tSort ps) * P Σ (Γ ,,, bty.1.2) bty.2 (tSort ps))
-            brs btys ->
+        forall brtys, 
+        case_branches_types ci.(ci_ind) mdecl idecl p pctx brtys ->
+        All2 (fun br brctxty =>
+          (#|br.(bcontext)| = #|brctxty.1|) *
+          (Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2) * P Σ (Γ ,,, brctxty.1) br.(bbody) brctxty.2 *
+          (Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps) * P Σ (Γ ,,, brctxty.1) brctxty.2 (tSort ps)) brs brtys ->
         let ptm := it_mkLambda_or_LetIn pctx p.(preturn) in
-        P Σ Γ (tCase indnparrel p c brs) (mkApps ptm (indices ++ [c]))) ->
+        P Σ Γ (tCase ci p c brs) (mkApps ptm (indices ++ [c]))) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : projection) (c : term) u
           mdecl idecl pdecl (isdecl : declared_projection Σ.1 mdecl idecl p pdecl) args,
@@ -1386,10 +1477,8 @@ Proof.
        specialize (X14 [] _ _ (type_Prop _)).
        simpl in X14. forward X14; auto. lia. apply X14.
 
-    -- destruct indnparrel as ((ind' & npar') & ?);
-         cbn in ind; cbn in npar; subst ind; subst npar; subst ptm.
-       simpl in pΓ.
-       eapply (X8 Σ wfΣ Γ (typing_wf_local H0) ((ind', npar'), r)); eauto.
+    -- simpl in pΓ.
+       eapply (X8 Σ wfΣ Γ (typing_wf_local H0) ci); eauto.
        ++ eapply (X14 _ _ _ H0); eauto. simpl; auto with arith. lia.
        ++ simpl in X13. simpl in pΓ. eapply (X14 _ _ _ H); eauto. simpl; auto with arith.
        ++ simpl in *.

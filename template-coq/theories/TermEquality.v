@@ -175,8 +175,8 @@ Inductive eq_term_upto_univ_napp Σ (Re Rle : Universe.t -> Universe.t -> Prop) 
     eq_term_upto_univ_napp Σ Re Re 0 p.(preturn) p'.(preturn) ->
     eq_term_upto_univ_napp Σ Re Re 0 c c' ->
     All2 (fun x y =>
-      fst x = fst y ×
-      eq_term_upto_univ_napp Σ Re Re 0 (snd x) (snd y)
+      bcontext x = bcontext y ×
+      eq_term_upto_univ_napp Σ Re Re 0 (bbody x) (bbody y)
     ) brs brs' ->
   eq_term_upto_univ_napp Σ Re Rle napp (tCase ind p c brs) (tCase ind p' c' brs')
 

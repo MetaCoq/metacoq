@@ -646,3 +646,25 @@ Proof.
   now rewrite !H, !H0.
 Qed.
 *)
+
+Lemma map_predicate_eq_spec {A B} (f f' g g' : A -> B) (p : predicate A) :
+  map f (pparams p) = map g (pparams p) ->
+  f' (preturn p) = g' (preturn p) ->
+  map_predicate f f' p = map_predicate g g' p.
+Proof.
+  intros. unfold map_predicate; f_equal; auto.
+Qed.
+Hint Resolve map_predicate_eq_spec : all.
+
+Lemma map_predicate_id_spec {A} (f f' : A -> A) (p : predicate A) :
+  map f (pparams p) = pparams p ->
+  f' (preturn p) = preturn p ->
+  map_predicate f f' p = p.
+Proof.
+  unfold map_predicate.
+  intros -> ->; destruct p; auto.
+Qed.
+Hint Resolve map_predicate_id_spec : all.
+
+    
+  

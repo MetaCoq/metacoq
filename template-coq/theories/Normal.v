@@ -29,8 +29,10 @@ Section Normal.
            lookup_env Σ c = Some (ConstantDecl decl) -> decl.(cst_body) = None ->
            neutral Γ (tConst c u)
        | ne_app f v : neutral Γ f -> Forall (normal Γ) v -> neutral Γ (tApp f v)
-       | ne_case i p c brs : neutral Γ c -> Forall (normal Γ ∘ snd) brs ->
-                             neutral Γ (tCase i p c brs)
+       | ne_case i p c brs : neutral Γ c -> 
+            (* FIXME context of the branch can contain let-ins *)
+            Forall (normal Γ ∘ bbody) brs ->
+            neutral Γ (tCase i p c brs)
        | ne_proj p c : neutral Γ c -> neutral Γ (tProj p c).
 
   Inductive whnf (Γ : context) : term -> Prop :=

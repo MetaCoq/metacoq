@@ -88,65 +88,15 @@ Proof.
   reflexivity. intros. lia.
 Qed.
 
-Hint Extern 0 (_ = _) => progress f_equal : all.
-Hint Unfold on_snd snd : all.
-
-Lemma on_snd_eq_id_spec {A B} (f : B -> B) (x : A * B) :
-  f (snd x) = snd x <->
-  on_snd f x = x.
-Proof.
-  destruct x; simpl; unfold on_snd; simpl. split; congruence.
-Qed.
-Hint Resolve -> on_snd_eq_id_spec : all.
-Hint Resolve -> on_snd_eq_spec : all.
-
-Lemma map_def_eq_spec {A B} (f f' g g' : A -> B) (x : def A) :
-  f (dtype x) = g (dtype x) ->
-  f' (dbody x) = g' (dbody x) ->
-  map_def f f' x = map_def g g' x.
-Proof.
-  intros. unfold map_def; f_equal; auto.
-Qed.
-Hint Resolve map_def_eq_spec : all.
-
-Lemma map_def_id_spec {A} (f f' : A -> A) (x : def A) :
-  f (dtype x) = (dtype x) ->
-  f' (dbody x) = (dbody x) ->
-  map_def f f' x = x.
-Proof.
-  intros. rewrite (map_def_eq_spec _ _ id id); auto. destruct x; auto.
-Qed.
-Hint Resolve map_def_id_spec : all.
-
-Lemma map_predicate_eq_spec {A B} (f f' g g' : A -> B) (p : predicate A) :
-  map f (pparams p) = map g (pparams p) ->
-  f' (preturn p) = g' (preturn p) ->
-  map_predicate f f' p = map_predicate g g' p.
-Proof.
-  intros. unfold map_predicate; f_equal; auto.
-Qed.
-Hint Resolve map_predicate_eq_spec : all.
-
-Lemma map_predicate_id_spec {A} (f f' : A -> A) (p : predicate A) :
-  map f (pparams p) = pparams p ->
-  f' (preturn p) = preturn p ->
-  map_predicate f f' p = p.
-Proof.
-  unfold map_predicate.
-  intros -> ->; destruct p; auto.
-Qed.
-Hint Resolve map_predicate_id_spec : all.
-
-Hint Extern 10 (_ < _)%nat => lia : all.
-Hint Extern 10 (_ <= _)%nat => lia : all.
-Hint Extern 10 (@eq nat _ _) => lia : all.
-
 Ltac change_Sk :=
   repeat match goal with
-    |- context [S (?x + ?y)] => progress change (S (x + y)) with (S x + y)
+    | |- context [S (?x + ?y)] => progress change (S (x + y)) with (S x + y)
+    | |- context [#|?l| + (?x + ?y)] => progress replace (#|l| + (x + y)) with ((#|l| + x) + y) by now rewrite Nat.add_assoc
   end.
 
-Ltac solve_all :=
+Hint Extern 10 => progress unfold map_branches_k : all.
+
+Ltac solve_all_one :=
   try lazymatch goal with
   | H: tCasePredProp _ _ _ |- _ => destruct H
   end;
@@ -156,6 +106,8 @@ Ltac solve_all :=
   repeat toAll; try All_map; try close_Forall;
   change_Sk; auto with all;
   intuition eauto 4 with all.
+
+Ltac solve_all := repeat (progress solve_all_one).
 
 Ltac nth_leb_simpl :=
   match goal with
@@ -176,14 +128,16 @@ Proof.
   elim M using term_forall_list_ind; simpl in |- *; intros; try easy ;
     try (try rewrite H; try rewrite H0 ; try rewrite H1 ; easy);
     try (f_equal; auto; solve_all).
-
-  - now elim (leb k n).
+  now elim (leb k n).
 Qed.
 
 Lemma lift0_p : forall M, lift0 0 M = M.
+Proof.
   intros; unfold lift in |- *.
   apply lift0_id; easy.
 Qed.
+
+Hint Extern 10 => rewrite !map_branch_map_branch : all.
 
 Lemma simpl_lift :
   forall M n k p i,
@@ -206,6 +160,20 @@ Lemma simpl_lift0 : forall M n, lift0 (S n) M = lift0 1 (lift0 n M).
   now intros; rewrite simpl_lift.
 Qed.
 
+
+Lemma map_branches_k_map_branches_k
+      {term term' term''}
+      (f : nat -> term' -> term'')
+      (g : branch term -> term -> term')
+      (f' : term -> term')
+      (l : list (branch term)) k :
+  map (fun b => map_branch (f (#|bcontext (map_branch (g b) b)| + k)) (map_branch f' b)) l =
+  map (fun b => map_branch (f (#|bcontext b| + k)) (map_branch f' b)) l.
+Proof.
+  eapply map_ext => b. rewrite map_branch_map_branch.
+  now apply map_branch_eq_spec.
+Qed.
+
 Lemma permute_lift :
   forall M n k p i,
     i <= k ->
@@ -215,7 +183,7 @@ Proof.
   elim M using term_forall_list_ind;
     intros; simpl; 
       rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length,
-      ?Nat.add_assoc, ?map_predicate_map_predicate; f_equal;
+      ?Nat.add_assoc, ?map_predicate_map_predicate, ?map_branches_map_branches; f_equal;
       try solve [auto; solve_all]; repeat nth_leb_simpl.
 Qed.
 
@@ -444,7 +412,7 @@ Proof.
   elim t using term_forall_list_ind; intros; try lia;
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length,
                ?map_predicate_map_predicate;
-    simpl closed in *; unfold test_snd, test_def, test_predicate in *;
+    simpl closed in *; unfold test_snd, test_def, test_predicate, test_branch in *;
       try solve [(try f_equal; simpl; repeat (rtoProp; solve_all); eauto)].
 
   - elim (ltb_spec n k'); auto. intros.

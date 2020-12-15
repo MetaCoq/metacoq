@@ -47,8 +47,8 @@ Inductive term : Type :=
 | tConst (c : kername) (u : Instance.t)
 | tInd (ind : inductive) (u : Instance.t)
 | tConstruct (ind : inductive) (idx : nat) (u : Instance.t)
-| tCase (ind_nbparams_relevance: inductive*nat*relevance) (type_info:predicate term)
-        (discr:term) (branches : list (nat * term))
+| tCase (ci : case_info) (type_info:predicate term)
+        (discr:term) (branches : list (branch term))
 | tProj (proj : projection) (t : term)
 | tFix (mfix : mfixpoint term) (idx : nat)
 | tCoFix (mfix : mfixpoint term) (idx : nat)
@@ -71,7 +71,7 @@ Definition mkApps t us :=
   end.
 
 (** Term lifting / weakening *)
-
+  
 Fixpoint lift n k t : term :=
   match t with
   | tRel i => tRel (if Nat.leb k i then n + i else i)
@@ -84,7 +84,7 @@ Fixpoint lift n k t : term :=
   | tCase ind p c brs =>
     let k' := List.length (pcontext p) + k in
     let p' := map_predicate (lift n k) (lift n k') p in
-    let brs' := List.map (on_snd (lift n k)) brs in
+    let brs' := map_branches_k (lift n) k brs in
     tCase ind p' (lift n k c) brs'
   | tProj p c => tProj p (lift n k c)
   | tFix mfix idx =>
@@ -121,7 +121,7 @@ Fixpoint subst s k u :=
   | tCase ind p c brs =>
     let k' := List.length (pcontext p) + k in
     let p' := map_predicate (subst s k) (subst s k') p in
-    let brs' := List.map (on_snd (subst s k)) brs in
+    let brs' := map_branches_k (subst s) k brs in
     tCase ind p' (subst s k c) brs'
   | tProj p c => tProj p (subst s k c)
   | tFix mfix idx =>
@@ -141,7 +141,6 @@ Definition subst1 t k u := subst [t] k u.
 Notation subst10 t := (subst1 t 0).
 Notation "M { j := N }" := (subst1 N j M) (at level 10, right associativity).
 
-
 Fixpoint closedn k (t : term) : bool :=
   match t with
   | tRel i => Nat.ltb i k
@@ -153,7 +152,7 @@ Fixpoint closedn k (t : term) : bool :=
   | tCase ind p c brs =>
     let k' := List.length (pcontext p) + k in
     let p' := test_predicate (closedn k) (closedn k') p in
-    let brs' := List.forallb (test_snd (closedn k)) brs in
+    let brs' := test_branches_k closedn k brs in
     p' && closedn k c && brs'
   | tProj p c => closedn k c
   | tFix mfix idx =>
@@ -178,7 +177,7 @@ Fixpoint noccur_between k n (t : term) : bool :=
   | tCase ind p c brs =>
     let k' := List.length (pcontext p) + k in
     let p' := test_predicate (noccur_between k n) (noccur_between k' n) p in
-    let brs' := List.forallb (test_snd (noccur_between k n)) brs in
+    let brs' := test_branches_k (fun k => noccur_between k n) k brs in
     p' && noccur_between k n c && brs'
   | tProj p c => noccur_between k n c
   | tFix mfix idx =>
@@ -189,6 +188,12 @@ Fixpoint noccur_between k n (t : term) : bool :=
     List.forallb (test_def (noccur_between k n) (noccur_between k' n)) mfix
   | x => true
   end.
+
+Definition subst_instance_predicate {term} (subst : term -> term) u (p : predicate term) : predicate term := 
+  {| pparams := map subst (pparams p);
+     puinst := subst_instance_instance u (puinst p);
+     pcontext := pcontext p;
+     preturn := subst (preturn p) |}.
 
 Instance subst_instance_constr : UnivSubst term :=
   fix subst_instance_constr u c {struct c} : term :=
@@ -206,8 +211,8 @@ Instance subst_instance_constr : UnivSubst term :=
   | tLetIn na b ty b' => tLetIn na (subst_instance_constr u b) (subst_instance_constr u ty)
                                 (subst_instance_constr u b')
   | tCase ind p c brs =>
-    let p' := map_predicate (subst_instance_constr u) (subst_instance_constr u) p in
-    let brs' := List.map (on_snd (subst_instance_constr u)) brs in
+    let p' := subst_instance_predicate (subst_instance_constr u) u p in
+    let brs' := List.map (map_branch (subst_instance_constr u)) brs in
     tCase ind p' (subst_instance_constr u c) brs'
   | tProj p c => tProj p (subst_instance_constr u c)
   | tFix mfix idx =>
@@ -282,7 +287,7 @@ Inductive wf : term -> Prop :=
 | wf_tCase ci p c brs :
     Forall wf (pparams p) -> wf (preturn p) ->
     wf c ->
-    Forall (wf ∘ snd) brs ->
+    Forall (wf ∘ bbody) brs ->
     wf (tCase ci p c brs)
 | wf_tProj p t : wf t -> wf (tProj p t)
 | wf_tFix mfix k : Forall (fun def => wf def.(dtype) /\ wf def.(dbody)) mfix ->

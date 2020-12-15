@@ -24,9 +24,9 @@ Lemma term_forall_list_ind :
     (forall s (u : list Level.t), P (tConst s u)) ->
     (forall (i : inductive) (u : list Level.t), P (tInd i u)) ->
     (forall (i : inductive) (n : nat) (u : list Level.t), P (tConstruct i n u)) ->
-    (forall (p : inductive * nat * relevance) (t : predicate term),
-        tCasePredProp P P t -> forall t0 : term, P t0 -> forall l : list (nat * term),
-            tCaseBrsProp P l -> P (tCase p t t0 l)) ->
+    (forall (ci : case_info) (t : predicate term),
+        tCasePredProp P P t -> forall t0 : term, P t0 -> forall l : list (branch term),
+        tCaseBrsProp P l -> P (tCase ci t t0 l)) ->
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tCoFix m n)) ->
@@ -85,9 +85,9 @@ Lemma term_wf_forall_list_ind :
     (forall s (u : list Level.t), P (tConst s u)) ->
     (forall (i : inductive) (u : list Level.t), P (tInd i u)) ->
     (forall (i : inductive) (n : nat) (u : list Level.t), P (tConstruct i n u)) ->
-    (forall (p : inductive * nat * relevance) (p0 : predicate term),
-        tCasePredProp P P p0 -> forall t : term, P t -> forall l : list (nat * term),
-            tCaseBrsProp P l -> P (tCase p p0 t l)) ->
+    (forall (ci : case_info) (p0 : predicate term),
+        tCasePredProp P P p0 -> forall t : term, P t -> forall l : list (branch term),
+        tCaseBrsProp P l -> P (tCase ci p0 t l)) ->
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tCoFix m n)) ->
@@ -137,8 +137,8 @@ Proof.
     + apply IHX. now inv H18.
 Qed.
 
-Definition tCaseBrsType {A} (P : A -> Type) (l : list (nat * A)) :=
-  All (fun x => P (snd x)) l.
+Definition tCaseBrsType {A} (P : A -> Type) (l : list (branch A)) :=
+  All (fun x => P (bbody x)) l.
 
 Definition tFixType {A} (P P' : A -> Type) (m : mfixpoint A) :=
   All (fun x : def A => P x.(dtype) * P' x.(dbody))%type m.
@@ -158,9 +158,9 @@ Lemma term_forall_list_rect :
     (forall s (u : list Level.t), P (tConst s u)) ->
     (forall (i : inductive) (u : list Level.t), P (tInd i u)) ->
     (forall (i : inductive) (n : nat) (u : list Level.t), P (tConstruct i n u)) ->
-    (forall (p : inductive * nat * relevance) (p0 : predicate term),
-        tCasePredProp P P p0 -> forall t : term, P t -> forall l : list (nat * term),
-            tCaseBrsType P l -> P (tCase p p0 t l)) ->
+    (forall (ci : case_info) (p0 : predicate term),
+        tCasePredProp P P p0 -> forall t : term, P t -> forall l : list (branch term),
+        tCaseBrsType P l -> P (tCase ci p0 t l)) ->
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat), tFixType P P m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat), tFixType P P m -> P (tCoFix m n)) ->

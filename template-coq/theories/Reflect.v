@@ -433,7 +433,7 @@ Local Ltac term_dec_tac term_dec :=
          | i : inductive, i' : inductive |- _ => fcase (eq_dec i i')
          | x : inductive * nat, y : inductive * nat |- _ =>
            fcase (eq_dec x y)
-         | x : (inductive * nat) * relevance, y : (inductive * nat) * relevance |- _ =>
+         | x : case_info, y : case_info |- _ =>
            fcase (eq_dec x y)
          | x : projection, y : projection |- _ => fcase (eq_dec x y)
          | x : cast_kind, y : cast_kind |- _ => fcase (eq_dec x y)
@@ -510,9 +510,9 @@ Proof.
     + destruct l0.
       * right. discriminate.
       * destruct (IHX0 l0) ; nodec.
-        destruct (p (snd p0)) ; nodec.
-        destruct (eq_dec (fst x) (fst p0)) ; nodec.
-        destruct x, p0.
+        destruct (p (bbody b)) ; nodec.
+        destruct (eq_dec (bcontext x) (bcontext b)) ; nodec.
+        destruct x, b.
         left.
         cbn in *. subst. inversion e. reflexivity.
   - destruct (IHx t) ; nodec.

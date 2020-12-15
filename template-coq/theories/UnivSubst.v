@@ -80,7 +80,7 @@ Fixpoint closedu (k : nat) (t : term) : bool :=
   | tLetIn na b t b' => closedu k b && closedu k t && closedu k b'
   | tCase ind p c brs =>
     let p' := test_predicate (closedu k) (closedu k) p in
-    let brs' := forallb (test_snd (closedu k)) brs in
+    let brs' := forallb (test_branch (closedu k)) brs in
     p' && closedu k c && brs'
   | tProj p c => closedu k c
   | tFix mfix idx =>

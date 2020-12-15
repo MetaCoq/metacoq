@@ -11,6 +11,7 @@ src/mSetWeakList.ml
 src/eqdepFacts.mli
 src/eqdepFacts.ml
 
+# From template
 src/ssrbool.ml
 src/ssrbool.mli
 src/monad_utils.ml
@@ -19,10 +20,11 @@ src/uGraph0.ml
 src/uGraph0.mli
 src/wGraph.ml
 src/wGraph.mli
+src/environmentTyping.mli
+src/environmentTyping.ml
 src/typing0.mli
 src/typing0.ml
-src/reflect.mli
-src/reflect.ml
+
 
 # From PCUIC
 src/pCUICAst.ml
@@ -31,12 +33,12 @@ src/pCUICAstUtils.ml
 src/pCUICAstUtils.mli
 src/pCUICLiftSubst.ml
 src/pCUICLiftSubst.mli
-src/eqDecInstances.ml
-src/eqDecInstances.mli
-# src/pCUICInduction.mli
-# src/pCUICInduction.ml
-# src/pCUICReflect.mli
-# src/pCUICReflect.ml
+# src/eqDecInstances.ml
+# src/eqDecInstances.mli
+src/pCUICInduction.mli
+src/pCUICInduction.ml
+src/pCUICReflect.mli
+src/pCUICReflect.ml
 src/pCUICEquality.mli
 src/pCUICEquality.ml
 src/pCUICReduction.ml
@@ -73,6 +75,8 @@ src/pCUICWfUniverses.ml
 # src/pCUICConversion.ml
 # src/pCUICSafeLemmata.mli
 # src/pCUICSafeLemmata.ml
+# src/pCUICCanonicity.mli
+# src/pCUICCanonicity.ml
 src/templateToPCUIC.mli
 src/templateToPCUIC.ml
 src/pCUICPretty.mli

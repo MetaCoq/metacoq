@@ -289,6 +289,24 @@ Proof.
     now rewrite andb_true_r in b.
 Qed.
 
+Lemma sorts_local_ctx_Pclosed Σ Γ Δ s :
+  sorts_local_ctx (lift_typing Pclosed) Σ Γ Δ s ->
+  Alli (fun i d => closed_decl (#|Γ| + i) d) 0 (List.rev Δ).
+Proof.
+  induction Δ in s |- *; simpl; auto; try constructor.  
+  destruct a as [? [] ?]; intuition auto.
+  - apply Alli_app_inv; eauto. constructor. simpl.
+    rewrite List.rev_length. 2:constructor.
+    unfold closed_decl. unfold Pclosed in b0. simpl.
+    rewrite app_context_length in b0. now rewrite Nat.add_comm.
+  - destruct s; auto. destruct X.
+    apply Alli_app_inv; eauto. constructor. simpl.
+    rewrite List.rev_length. 2:constructor.
+    unfold closed_decl. unfold Pclosed in i. simpl.
+    rewrite app_context_length in i. rewrite Nat.add_comm.
+    now rewrite andb_true_r in i.
+Qed.
+
 Lemma All_local_env_Pclosed Σ Γ :
   All_local_env ( lift_typing Pclosed Σ) Γ ->
   Alli (fun i d => closed_decl i d) 0 (List.rev Γ).
@@ -413,7 +431,7 @@ Proof.
   eapply closedn_lift.
   clear -parslen isdecl Heq' onpars X.
   rename X into args.
-  apply type_local_ctx_Pclosed in args.
+  apply sorts_local_ctx_Pclosed in args.
   red in onpars.
   eapply All_local_env_Pclosed in onpars.
   eapply (Alli_impl (Q:=fun i d => closed_decl (#|ind_params mdecl| + i + #|arities_context (ind_bodies mdecl)|) d)) in args.

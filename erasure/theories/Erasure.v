@@ -58,24 +58,30 @@ Program Fixpoint check_wf_env_only_univs (Σ : global_env)
         end
     end.
   Next Obligation.
-    repeat constructor. apply graph_eq; try reflexivity.
-    cbn. symmetry. apply wGraph.VSetProp.singleton_equal_add.
+    repeat constructor.
   Qed.
   Next Obligation.
     sq. unfold is_graph_of_uctx, gc_of_uctx; simpl.
     unfold gc_of_uctx in e. simpl in e.
     case_eq (gc_of_constraints (constraints_of_udecl (universes_decl_of_decl g)));
       [|intro HH; rewrite HH in e; discriminate e].
-    intros ctrs' Hctrs'. rewrite Hctrs' in *.
+    intros ctrs' Hctrs'. rewrite Hctrs' in e.
     cbn in e. inversion e; subst; clear e.
     unfold global_ext_constraints; simpl.
-    rewrite gc_of_constraints_union. rewrite Hctrs'.
+    pose proof (gc_of_constraints_union 
+      (constraints_of_udecl (universes_decl_of_decl g)) (global_constraints Σ)).
+    rewrite Hctrs' in H0. simpl in H0.
     red in i. unfold gc_of_uctx in i; simpl in i.
     case_eq (gc_of_constraints (global_constraints Σ));
       [|intro HH; rewrite HH in i; cbn in i; contradiction i].
-    intros Σctrs HΣctrs; rewrite HΣctrs in *; simpl in *.
-    subst G. unfold global_ext_levels; simpl. rewrite no_prop_levels_union.
-    symmetry; apply add_uctx_make_graph.
+    intros Σctrs HΣctrs; rewrite HΣctrs in H0, i; simpl in *.
+    destruct (gc_of_constraints (ConstraintSet.union _ _)).
+    simpl in H0. 
+    subst G. unfold global_ext_levels; simpl.
+    symmetry. rewrite add_uctx_make_graph.
+    apply graph_eq. simpl. reflexivity.
+    simpl. now rewrite H0. simpl. reflexivity.
+    now simpl in H0.
   Qed.
   Next Obligation.
     split; sq. 2: constructor; tas.
@@ -83,25 +89,32 @@ Program Fixpoint check_wf_env_only_univs (Σ : global_env)
     unfold gc_of_uctx in e. simpl in e.
     case_eq (gc_of_constraints (constraints_of_udecl (universes_decl_of_decl g)));
       [|intro HH; rewrite HH in e; discriminate e].
-    intros ctrs' Hctrs'. rewrite Hctrs' in *.
+    intros ctrs' Hctrs'. rewrite Hctrs' in e.
     cbn in e. inversion e; subst; clear e.
     unfold global_ext_constraints; simpl.
-    rewrite gc_of_constraints_union.
+    pose proof (gc_of_constraints_union 
+      (constraints_of_udecl (universes_decl_of_decl g)) (global_constraints Σ)).
+    rewrite Hctrs' in H1; simpl in H1.
+    red in i. unfold gc_of_uctx in i; simpl in i.
     assert (eq: monomorphic_constraints_decl g
                 = constraints_of_udecl (universes_decl_of_decl g)). {
       destruct g. destruct c, cst_universes; try discriminate; reflexivity.
       destruct m, ind_universes; try discriminate; reflexivity. }
-    rewrite eq; clear eq. rewrite Hctrs'.
-    red in i. unfold gc_of_uctx in i; simpl in i.
+    rewrite eq; clear eq. 
     case_eq (gc_of_constraints (global_constraints Σ));
       [|intro HH; rewrite HH in i; cbn in i; contradiction i].
-    intros Σctrs HΣctrs; rewrite HΣctrs in *; simpl in *.
-    subst G. unfold global_ext_levels; simpl. rewrite no_prop_levels_union.
+    intros Σctrs HΣctrs; rewrite HΣctrs in H1, i; simpl in *.
+    destruct (gc_of_constraints (ConstraintSet.union _ _)).
+    simpl in H1.
+    subst G. unfold global_ext_levels; simpl.
     assert (eq: monomorphic_levels_decl g
                 = levels_of_udecl (universes_decl_of_decl g)). {
       destruct g. destruct c, cst_universes; try discriminate; reflexivity.
       destruct m, ind_universes; try discriminate; reflexivity. }
-    rewrite eq. symmetry; apply add_uctx_make_graph.
+    rewrite eq. simpl. rewrite add_uctx_make_graph.
+    apply graph_eq; try reflexivity.
+    simpl. now rewrite H1.
+    now simpl in H1.
   Qed.
   Next Obligation.
     split; sq. 2: constructor; tas.
@@ -114,7 +127,7 @@ Program Fixpoint check_wf_env_only_univs (Σ : global_env)
       destruct g. destruct c, cst_universes; try discriminate; reflexivity.
       destruct m, ind_universes; try discriminate; reflexivity. }
     rewrite eq1; clear eq1.
-    assumption.
+    now rewrite levelset_union_empty, constraintset_union_empty.
   Qed.
 
 (* This is the total erasure function + the optimization that removes all 

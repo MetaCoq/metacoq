@@ -2809,7 +2809,7 @@ Section CheckEnv.
   End PositivityCheck.
 
   Section MonadAllAll.
-    Context {T} {M : Monad T} {A} {P : A -> Type} {Q} (f : forall x, ∥ Q x ∥ -> T (∥ P x ∥)).
+    Context {T : Type -> Type} {M : Monad T} {A} {P : A -> Type} {Q} (f : forall x, ∥ Q x ∥ -> T (∥ P x ∥)).
     Program Fixpoint monad_All_All l : ∥ All Q l ∥ -> T (∥ All P l ∥) := 
       match l return ∥ All Q l ∥ -> T (∥ All P l ∥) with
        | [] => fun _ => ret (sq All_nil)
@@ -3218,7 +3218,7 @@ Section CheckEnv.
     
     '(cs; Hcs) <- constructor_shapes Σ (string_of_kername id) mdecl wfar wfpars (S n) idecl.(ind_ctors) ;;
     posc <- wrap_error Σ (string_of_kername id)
-      (monad_All_All (fun x px => @check_positive_cstr Σ (wf_env_ext_sq_wf Σ) mdecl n (arities_context mdecl.(ind_bodies)) x.1.2 _ []) 
+      (monad_All_All (T:=typing_result) (M:=typing_monad) (fun x px => @check_positive_cstr Σ (wf_env_ext_sq_wf Σ) mdecl n (arities_context mdecl.(ind_bodies)) x.1.2 _ []) 
         idecl.(ind_ctors) (wt_cstrs Hcs)) ;;
     var <- monad_All_All (fun cs px => check_cstr_variance Σ0 mdecl id indices mdeclvar cs _ _) cs 
       (get_wt_indices wfar wfpars n idecl indices hnth heq Hcs) ;;

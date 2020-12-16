@@ -19,6 +19,9 @@ Derive Signature for Peano.le.
 Definition shiftn k f :=
   fun n => if Nat.ltb n k then n else k + (f (n - k)).
 
+Notation map_branches_shift f fn brs :=
+  (map (fun b => map_branch (f (shiftn #|bcontext b| fn)) b) brs).
+
 Fixpoint rename f t : term :=
   match t with
   | tRel i => tRel (f i)
@@ -28,8 +31,8 @@ Fixpoint rename f t : term :=
   | tProd na A B => tProd na (rename f A) (rename (shiftn 1 f) B)
   | tLetIn na b t b' => tLetIn na (rename f b) (rename f t) (rename (shiftn 1 f) b')
   | tCase ind p c brs =>
-    let p' := map_predicate (rename f) (rename (shiftn #|p.(pcontext)| f)) p in
-    let brs' := List.map (fun br => (br.1, rename (shiftn br.1 f) br.2)) brs in
+    let p' := map_predicate id (rename f) (rename (shiftn #|p.(pcontext)| f)) p in
+    let brs' := map_branches_shift rename f brs in
     tCase ind p' (rename f c) brs'
   | tProj p c => tProj p (rename f c)
   | tFix mfix idx =>
@@ -123,49 +126,37 @@ Proof.
   reflexivity. intros. lia.
 Qed.
 
-Ltac change_Sk :=
-  repeat match goal with
-    |- context [S (?x + ?y)] => progress change (S (x + y)) with (S x + y)
-  end.
-
-Lemma map_predicate_eq_spec {A B} (f f' g g' : A -> B) (p : Environment.predicate A) :
-  map f (pparams p) = map g (pparams p) ->
-  f' (preturn p) = g' (preturn p) ->
-  map_predicate f f' p = map_predicate g g' p.
-Proof.
-  intros. unfold map_predicate; f_equal; auto.
-Qed.
-Hint Resolve map_predicate_eq_spec : all.
-
-Lemma map_predicate_id_spec {A} (f f' : A -> A) (p : Environment.predicate A) :
-  map f (pparams p) = pparams p ->
-  f' (preturn p) = preturn p ->
-  map_predicate f f' p = p.
-Proof.
-  unfold map_predicate.
-  intros -> ->; destruct p; auto.
-Qed.
-Hint Resolve map_predicate_id_spec : all.
-
-Lemma pair_eq_spec {A B} (x : A) (y : B) (z : A * B) :
+(* Lemma pair_eq_spec {A B} (x : A) (y : B) (z : A * B) :
   x = z.1 ->
   y = z.2 ->
   (x, y) = z.
 Proof.
   destruct z; simpl; congruence.
 Qed.
-Hint Resolve pair_eq_spec : all.
+Hint Resolve pair_eq_spec : all. *)
 
-Ltac solve_all :=
+Ltac change_Sk :=
+  repeat match goal with
+    | |- context [S (?x + ?y)] => progress change (S (x + y)) with (S x + y)
+    | |- context [#|?l| + (?x + ?y)] => progress replace (#|l| + (x + y)) with ((#|l| + x) + y) by now rewrite Nat.add_assoc
+  end.
+
+Hint Extern 10 => progress unfold map_branches_k : all.
+
+Ltac solve_all_one :=
   try lazymatch goal with
   | H: tCasePredProp _ _ _ |- _ => destruct H
   end;
   unfold tCaseBrsProp, tFixProp in *;
   try apply map_predicate_eq_spec;
   try apply map_predicate_id_spec;
-  repeat toAll; try All_map; try close_All;
+  repeat toAll; try All_map; try close_Forall;
   change_Sk; auto with all;
   intuition eauto 4 with all.
+
+Ltac solve_all := repeat (progress solve_all_one).
+Hint Extern 10 => rewrite !map_branch_map_branch : all.
+Hint Extern 10 => rewrite !map_predicate_map_predicate : all.
 
 Ltac nth_leb_simpl :=
   match goal with
@@ -233,9 +224,6 @@ Proof.
       ?map_predicate_map_predicate,
       ?map_length, ?Nat.add_assoc; f_equal;
       try solve [solve_all]; repeat nth_leb_simpl.
-  solve_all.
-  apply pair_eq_spec. auto with all.
-  simpl. apply H1.
 Qed.
 
 Lemma permute_lift0 :
@@ -262,7 +250,8 @@ Lemma simpl_subst_rec :
 Proof.
   intros M. induction M using term_forall_list_ind;
     intros; simpl;
-      rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+      rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, 
+        ?map_predicate_map_predicate;
       try solve [f_equal; auto; solve_all]; repeat nth_leb_simpl.
 Qed.
 
@@ -285,7 +274,7 @@ Lemma commut_lift_subst_rec M N n p k :
 Proof.
   revert N n p k; elim M using term_forall_list_ind; intros; cbnr;
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def,
-    ?map_length, ?Nat.add_assoc;
+    ?map_length, ?map_predicate_map_predicate, ?Nat.add_assoc;
     try solve [f_equal; auto; solve_all].
 
   - repeat nth_leb_simpl.
@@ -304,7 +293,7 @@ Lemma distr_lift_subst_rec M N n p k :
 Proof.
   revert N n p k; elim M using term_forall_list_ind; intros; cbnr;
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def,
-    ?map_length, ?Nat.add_assoc;
+    ?map_length, ?map_predicate_map_predicate, ?Nat.add_assoc;
     try solve [f_equal; auto; solve_all].
 
   - repeat nth_leb_simpl.
@@ -353,7 +342,7 @@ Proof.
     | |- _ => simpl
     end; try reflexivity;
       rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def,
-      ?map_length, ?Nat.add_assoc;
+      ?map_length, ?Nat.add_assoc, ?map_predicate_map_predicate;
       try solve [f_equal; auto; solve_all].
 
   - unfold subst at 2.
@@ -389,10 +378,11 @@ Lemma lift_closed n k t : closedn k t -> lift n k t = t.
 Proof.
   revert k.
   elim t using term_forall_list_ind; intros; try easy;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
-    unfold test_def in *;
-    simpl closed in *; try solve [simpl lift; simpl closed; f_equal; auto;
-                                  rtoProp; solve_all]; try reflexivity.
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length,
+      ?map_predicate_map_predicate, ?map_branch_map_branch;
+    simpl closed in *; 
+    unfold test_predicate, test_def in *;
+    try solve [simpl lift; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
   - rewrite lift_rel_lt; auto.
     revert H. elim (Nat.ltb_spec n0 k); intros; try easy.
   - simpl lift. f_equal. solve_all. unfold test_def in b. toProp. solve_all.
@@ -403,8 +393,9 @@ Lemma closed_upwards {k t} k' : closedn k t -> k' >= k -> closedn k' t.
 Proof.
   revert k k'.
   elim t using term_forall_list_ind; intros; try lia;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
-    simpl closed in *; unfold test_snd, test_def in *;
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length,
+      ?map_predicate_map_predicate;
+    simpl closed in *; unfold test_snd, test_def, test_predicate, test_branch in *;
       try solve [(try f_equal; simpl; repeat (rtoProp; solve_all); eauto)].
 
   - elim (ltb_spec n k'); auto. intros.
@@ -447,7 +438,7 @@ Proof.
   induction t in k |- * using term_forall_list_ind; simpl; auto;
     rewrite ?subst_mkApps; try change_Sk;
     try (f_equal; rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def,
-                  ?map_length; eauto; solve_all).
+                  ?map_length, ?map_predicate_map_predicate; eauto; solve_all).
 
   - repeat nth_leb_simpl.
     rewrite nth_error_map in e0. rewrite e in e0.
@@ -463,7 +454,7 @@ Proof.
   induction t in k |- * using term_forall_list_ind; simpl; eauto;
     rewrite ?subst_mkApps; try change_Sk;
     try (f_equal; rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def,
-                  ?map_length, ?Nat.add_assoc; solve_all).
+                  ?map_length, ?Nat.add_assoc, ?map_predicate_map_predicate; solve_all).
 
   - repeat nth_leb_simpl.
     rewrite -> Nat.add_comm, simpl_subst; eauto.
@@ -485,9 +476,6 @@ Proof.
   intros. unfold map_decl, vass; simpl; f_equal.
   rewrite -> permute_lift. f_equal; lia. lia.
 Qed.
-
-Definition fix_context (m : mfixpoint term) : context :=
-  List.rev (mapi (fun i d => vass d.(dname) (lift0 i d.(dtype))) m).
 
 Definition fix_context_gen k mfix := 
   List.rev (mapi_rec (fun (i : nat) (d : def term) => vass (dname d) (lift0 i (dtype d))) mfix k).
@@ -683,7 +671,7 @@ Proof.
   intros n' x.
   rewrite /lift_decl /subst_decl !compose_map_decl.
   apply map_decl_ext => y.
-  rewrite !mapi_length Nat.add_0_r; autorewrite with len.
+  rewrite !mapi_length Nat.add_0_r; autorewrite with len. unf_term.
   rewrite distr_lift_subst_rec; f_equal. f_equal. lia.
 Qed.
 
@@ -717,11 +705,9 @@ Proof.
   intros. revert f f' H.
   elim t0 using term_forall_list_ind; simpl in |- *; intros; try easy ;
     try (try rewrite H; try rewrite H0 ; try rewrite H1 ; easy);
-    try solve [f_equal; solve_all].
-  - f_equal; auto. apply H0. intros.
-    now apply shiftn_ext.
-  - f_equal; auto. now apply H0, shiftn_ext.
-  - f_equal; auto. now apply H1, shiftn_ext.
+    try solve [f_equal; solve_all; eauto using shiftn_ext].
+  - f_equal; solve_all. now apply e, shiftn_ext.
+    apply map_branch_eq_spec; solve_all; eauto using shiftn_ext.
   - f_equal; auto. red in X. solve_all.
     eapply map_def_eq_spec; auto. now apply b, shiftn_ext.
   - f_equal; auto. red in X. solve_all.
@@ -757,6 +743,9 @@ Proof.
     rewrite H0. eapply rename_ext. intros i. now rewrite shiftn_lift_renaming.
   - f_equal; eauto.
     rewrite H1. eapply rename_ext. intros i. now rewrite shiftn_lift_renaming.
+  - f_equal; auto. solve_all. rewrite e. eapply rename_ext; intros i. now rewrite shiftn_lift_renaming.
+    solve_all. apply map_branch_eq_spec. rewrite H0. eapply rename_ext; intros i.
+    now rewrite shiftn_lift_renaming.
   - f_equal; auto.
     red in X. solve_all. apply map_def_eq_spec; auto.
     rewrite b. apply rename_ext => i; now rewrite shiftn_lift_renaming.
@@ -781,18 +770,30 @@ Proof.
     reflexivity.
 Qed.
 
+Lemma map_branches_shiftn (fn : (nat -> nat) -> term -> term) f f' l : 
+  map_branches_shift fn f (map_branches_shift fn f' l) = 
+  List.map (fun i => map_branch (fn (shiftn #|bcontext i| f) ∘ (fn (shiftn #|bcontext i| f'))) i) l.
+Proof.
+  rewrite map_map_compose. apply map_ext => i.
+  rewrite map_branch_map_branch.
+  simpl. now apply map_branch_eq_spec.
+Qed.
+
 Lemma rename_compose f f' : rename f ∘ rename f' =1 rename (f ∘ f').
 Proof.
   intros x.
-  induction x in f, f' |- * using term_forall_list_ind; simpl; f_equal;
+  induction x in f, f' |- * using term_forall_list_ind; simpl; 
+    rewrite ?map_branch_map_branch ?map_predicate_map_predicate;
+    f_equal;
     auto; solve_all.
 
   - rewrite map_map_compose. apply All_map_eq. solve_all.
   - rewrite IHx2. apply rename_ext, shiftn_compose.
   - rewrite IHx2. apply rename_ext, shiftn_compose.
   - rewrite IHx3. apply rename_ext, shiftn_compose.
-  - rewrite map_map_compose; apply All_map_eq. solve_all.
-    rewrite on_snd_on_snd. apply on_snd_eq_spec, H.
+  - rewrite e. apply rename_ext, shiftn_compose. 
+  - rewrite map_branches_shiftn. solve_all. apply map_branch_eq_spec.
+    rewrite H. apply rename_ext, shiftn_compose.
   - rewrite map_map_compose; apply All_map_eq. solve_all.
     rewrite map_def_map_def map_length.
     apply map_def_eq_spec; auto.
@@ -826,8 +827,9 @@ Fixpoint inst s u :=
   | tProd na A B => tProd na (inst s A) (inst (up 1 s) B)
   | tLetIn na b ty b' => tLetIn na (inst s b) (inst s ty) (inst (up 1 s) b')
   | tCase ind p c brs =>
-    let brs' := List.map (on_snd (inst s)) brs in
-    tCase ind (inst s p) (inst s c) brs'
+    let p' := map_predicate id (inst s) (inst (up #|p.(pcontext)| s)) p in
+    let brs' := map (fun br => map_branch (inst (up #|br.(bcontext)| s)) br) brs in
+    tCase ind p' (inst s c) brs'
   | tProj p c => tProj p (inst s c)
   | tFix mfix idx =>
     let mfix' := map (map_def (inst s) (inst (up (List.length mfix) s))) mfix in
@@ -856,10 +858,9 @@ Proof.
   intros Hs t. revert s s' Hs.
   elim t using term_forall_list_ind; simpl in |- *; intros; try easy ;
     try (try rewrite H; try rewrite H0 ; try rewrite H1 ; easy);
-    try solve [f_equal; solve_all].
-  - f_equal; eauto. apply H0. now apply up_ext.
-  - f_equal; eauto. now apply H0, up_ext.
-  - f_equal; eauto. now apply H1, up_ext.
+    try solve [f_equal; solve_all; eauto using up_ext].
+  - f_equal; solve_all. now apply e, up_ext.
+    apply map_branch_eq_spec; solve_all; eauto using up_ext.
   - f_equal; eauto. red in X. solve_all.
     apply map_def_eq_spec; auto. now apply b, up_ext.
   - f_equal; eauto. red in X. solve_all.
@@ -910,6 +911,8 @@ Proof.
   - f_equal; eauto. now rewrite H0 -ren_shiftn.
   - f_equal; eauto. now rewrite H0 -ren_shiftn.
   - f_equal; eauto. now rewrite H1 -ren_shiftn.
+  - f_equal; eauto; solve_all. now rewrite e -ren_shiftn.
+    apply map_branch_eq_spec. now rewrite H0 -ren_shiftn.
   - f_equal; eauto. solve_all. apply map_def_eq_spec; auto.
     now rewrite b ren_shiftn.
   - f_equal; eauto. solve_all. apply map_def_eq_spec; auto.
@@ -920,6 +923,10 @@ Hint Rewrite @rename_inst : sigma.
 
 Instance rename_proper : Proper (`=1` ==> Logic.eq ==> Logic.eq) rename.
 Proof. intros f f' Hff' t t' ->. now apply rename_ext. Qed.
+
+Instance rename_proper_pointwise : Proper (`=1` ==> pointwise_relation _ Logic.eq) rename.
+Proof. intros f f' Hff' t. now apply rename_ext. Qed.
+
 
 (** Show the σ-calculus equations.
 
@@ -994,6 +1001,35 @@ Proof.
   unfold ren_id. lia.
 Qed.
 
+Instance id_proper_proxy {A} : ProperProxy (`=1`) (@id A).
+Proof.
+  intros x; reflexivity.
+Qed.
+
+Instance map_predicate_proper : Proper (`=1` ==> `=1` ==> Logic.eq ==> Logic.eq) (@map_predicate term term id).
+Proof.
+  intros eqf0 eqf1 eqf.
+  intros eqf'0 eqf'1 eqf'.
+  intros x y ->.
+  apply map_predicate_eq_spec; auto.
+  now apply map_ext => x.
+Qed.
+
+
+Instance map_predicate_proper' f : Proper (`=1` ==> Logic.eq ==> Logic.eq) (@map_predicate term term id f).
+Proof.
+  intros eqf0 eqf1 eqf.
+  intros x y ->.
+  apply map_predicate_eq_spec; auto.
+Qed.
+
+Instance map_branch_proper : Proper (`=1` ==> Logic.eq ==> Logic.eq) (@map_branch term term).
+Proof.
+  intros eqf0 eqf1 eqf.
+  intros x y ->.
+  apply map_branch_eq_spec; auto.
+Qed.
+
 Lemma rename_ren_id : rename ren_id =1 id.
 Proof.
   intros t. unfold id.
@@ -1004,6 +1040,7 @@ Proof.
   - f_equal; auto. now rewrite shiftn_id.
   - f_equal; auto. now rewrite shiftn_id.
   - f_equal; auto. now rewrite shiftn_id.
+  - setoid_rewrite shiftn_id. f_equal; solve_all.
   - f_equal; auto. solve_all.
     apply map_def_id_spec; auto.
     now rewrite shiftn_id.
@@ -1380,10 +1417,15 @@ Proof.
     unfold Up.
     rewrite ren_shift. rewrite compose_ren subst_cons_ren H1.
     apply inst_ext. intros i. destruct i; auto.
-  - f_equal; auto.
-    red in X. rewrite map_map_compose. solve_all.
-    rewrite on_snd_on_snd.
-    solve_all.
+  - f_equal; auto; solve_all; autorewrite with sigma.
+    * rewrite map_predicate_map_predicate; solve_all.
+      unfold Upn. rewrite !compose_ren !subst_consn_ids_ren e.
+      apply inst_ext. apply ren_subst_consn_comm.
+    * rewrite map_map_compose. solve_all.
+      rewrite map_branch_map_branch. apply map_branch_eq_spec.
+      autorewrite with sigma.
+      unfold Upn. rewrite !compose_ren !subst_consn_ids_ren H0.
+      apply inst_ext, ren_subst_consn_comm.
   - f_equal; auto.
     red in X. rewrite map_map_compose. solve_all.
     rewrite map_def_map_def map_length. apply map_def_eq_spec; solve_all.
@@ -1449,10 +1491,14 @@ Proof.
     rewrite ren_shift. rewrite compose_ren subst_cons_ren H1.
     apply inst_ext. intros i. destruct i; auto.
     unfold subst_compose. simpl. now rewrite !rename_inst_assoc !compose_ren.
-  - f_equal; auto.
-    red in X. rewrite map_map_compose. solve_all.
-    rewrite on_snd_on_snd.
-    solve_all.
+  - f_equal; auto; solve_all; autorewrite with sigma.
+    * rewrite map_predicate_map_predicate. apply map_predicate_eq_spec => //.
+      solve_all. unfold Upn; rewrite !compose_ren subst_consn_ids_ren e /=.
+      apply inst_ext, inst_rename_assoc_n.
+    * rewrite map_map_compose; solve_all; rewrite map_branch_map_branch; 
+      apply map_branch_eq_spec. autorewrite with sigma.
+      unfold Upn; rewrite !compose_ren subst_consn_ids_ren H0 /=.
+      apply inst_ext, inst_rename_assoc_n.
   - f_equal; auto.
     red in X. rewrite map_map_compose. solve_all.
     rewrite map_def_map_def map_length. apply map_def_eq_spec; solve_all.
@@ -1535,9 +1581,12 @@ Proof.
     now rewrite H0 Up_Up_assoc.
   - f_equal; auto. autorewrite with sigma.
     now rewrite H1 Up_Up_assoc.
-  - f_equal; auto. autorewrite with sigma.
-    rewrite map_map_compose; solve_all.
-    rewrite on_snd_on_snd. solve_all.
+  - f_equal; auto.
+    * rewrite map_predicate_map_predicate; solve_all.
+      now rewrite e up_up_assoc.
+    * rewrite map_map_compose; solve_all.
+      rewrite map_branch_map_branch. apply map_branch_eq_spec; solve_all.
+      now rewrite H0 up_up_assoc.
   - f_equal; auto. autorewrite with sigma.
     rewrite map_map_compose; solve_all.
     rewrite map_def_map_def.
@@ -1616,8 +1665,11 @@ Proof.
     rewrite H0. apply inst_ext. intros t'; now rewrite (up_up 1 k).
   - f_equal; eauto.
     rewrite H1. apply inst_ext. intros t'; now rewrite (up_up 1 k).
-  - f_equal; eauto.
-    solve_all; auto. apply map_def_eq_spec; auto.
+  - f_equal; eauto. apply map_predicate_eq_spec; auto; solve_all.
+    rewrite e. now rewrite (up_up #|pcontext p| k).
+    solve_all. apply map_branch_eq_spec.
+    now rewrite (up_up #|bcontext x| k).
+  - f_equal; eauto; solve_all; auto. apply map_def_eq_spec; auto.
     rewrite b. apply inst_ext. intros t'; now rewrite (up_up #|m| k).
   - f_equal; eauto.
     solve_all; auto. apply map_def_eq_spec; auto.
@@ -1638,57 +1690,6 @@ Hint Rewrite @subst_inst : sigma.
 
 Hint Rewrite shiftk_shift_l shiftk_shift : sigma.
 (* Hint Rewrite Upn_eq : sigma. *)
-
-(** Can't move to PCUICInduction because of fix_context definition *)
-Lemma term_forall_ctx_list_ind :
-  forall P : context -> term -> Type,
-    (forall Γ (n : nat), P Γ (tRel n)) ->
-    (forall Γ (i : ident), P Γ (tVar i)) ->
-    (forall Γ (n : nat) (l : list term), All (P Γ) l -> P Γ (tEvar n l)) ->
-    (forall Γ s, P Γ (tSort s)) ->
-    (forall Γ (n : aname) (t : term), P Γ t -> forall t0 : term, P (vass n t :: Γ) t0 -> P Γ (tProd n t t0)) ->
-    (forall Γ (n : aname) (t : term), P Γ t -> forall t0 : term, P (vass n t :: Γ) t0 -> P Γ (tLambda n t t0)) ->
-    (forall Γ (n : aname) (t : term),
-        P Γ t -> forall t0 : term, P Γ t0 -> forall t1 : term, P (vdef n t t0 :: Γ) t1 -> P Γ (tLetIn n t t0 t1)) ->
-    (forall Γ (t u : term), P Γ t -> P Γ u -> P Γ (tApp t u)) ->
-    (forall Γ s (u : list Level.t), P Γ (tConst s u)) ->
-    (forall Γ (i : inductive) (u : list Level.t), P Γ (tInd i u)) ->
-    (forall Γ (i : inductive) (n : nat) (u : list Level.t), P Γ (tConstruct i n u)) ->
-    (forall Γ (p : inductive * nat) (t : term),
-        P Γ t -> forall t0 : term, P Γ t0 -> forall l : list (nat * term),
-            tCaseBrsProp (P Γ) l -> P Γ (tCase p t t0 l)) ->
-    (forall Γ (s : projection) (t : term), P Γ t -> P Γ (tProj s t)) ->
-    (forall Γ (m : mfixpoint term) (n : nat), tFixProp (P Γ) (P (Γ ,,, fix_context m)) m -> P Γ (tFix m n)) ->
-    (forall Γ (m : mfixpoint term) (n : nat), tFixProp (P Γ) (P (Γ ,,, fix_context m)) m -> P Γ (tCoFix m n)) ->
-    (forall Γ p, P Γ (tPrim p)) ->
-    forall Γ (t : term), P Γ t.
-Proof.
-  intros. revert Γ t0.
-  fix auxt 2.
-  move auxt at top.
-  destruct t0; match goal with
-                 H : _ |- _ => apply H
-               end; auto.
-  revert l.
-  fix auxl' 1.
-  destruct l; constructor; [|apply auxl'].
-  apply auxt.
-  revert brs.
-  fix auxl' 1.
-  destruct brs; constructor; [|apply auxl'].
-  apply auxt.
-
-  generalize (fix_context mfix). revert mfix.
-  fix auxm 1.
-  destruct mfix; constructor.
-  split. apply auxt. apply auxt. apply auxm.
-
-  generalize (fix_context mfix). revert mfix.
-  fix auxm 1.
-  destruct mfix; constructor.
-  split. apply auxt. apply auxt. apply auxm.
-Defined.
-
 
 Fixpoint subst_app (t : term) (us : list term) : term :=
   match t, us with

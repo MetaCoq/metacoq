@@ -177,8 +177,6 @@ Section print_term.
   | tCase {| ci_ind := mkInd mind i as ind; ci_npar := pars |} p t brs =>
     match lookup_ind_decl mind i with
     | Some oib =>
-      let (context, _) := decompose_prod_assum [] (ind_type oib) in
-
       match build_return_context ind oib p with
       | None =>
         "Case(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_term t ^ ","

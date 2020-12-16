@@ -402,6 +402,8 @@ Proof.
   apply eq_dec_univ0.
 Defined.
 
+Instance reflect_case_info : ReflectEq case_info := EqDec_ReflectEq case_info.
+
 Local Ltac finish :=
   let h := fresh "h" in
   right ;

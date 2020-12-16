@@ -30,9 +30,9 @@ Lemma term_forall_list_ind :
     (forall s (u : list Level.t), P (tConst s u)) ->
     (forall (i : inductive) (u : list Level.t), P (tInd i u)) ->
     (forall (i : inductive) (n : nat) (u : list Level.t), P (tConstruct i n u)) ->
-    (forall (ind : (inductive * nat) * relevance) (p : predicate term),
-        tCasePredProp P P p -> forall c : term, P c -> forall l : list (nat * term),
-            tCaseBrsProp P l -> P (tCase ind p c l)) ->
+    (forall (ind : case_info) (p : predicate term),
+        tCasePredProp P P p -> forall c : term, P c -> forall l : list (branch term),
+        tCaseBrsProp P l -> P (tCase ind p c l)) ->
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tCoFix m n)) ->
@@ -233,9 +233,9 @@ Lemma term_forall_mkApps_ind :
     (forall (s : kername) (u : list Level.t), P (tConst s u)) ->
     (forall (i : inductive) (u : list Level.t), P (tInd i u)) ->
     (forall (i : inductive) (n : nat) (u : list Level.t), P (tConstruct i n u)) ->
-    (forall (ind : ((inductive * nat) * relevance)) (p : predicate term),
+    (forall (ind : case_info) (p : predicate term),
         tCasePredProp P P p ->
-        forall c : term, P c -> forall l : list (nat * term),
+        forall c : term, P c -> forall l : list (branch term),
             tCaseBrsProp P l -> P (tCase ind p c l)) ->
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tFix m n)) ->

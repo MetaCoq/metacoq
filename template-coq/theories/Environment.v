@@ -235,6 +235,9 @@ Module Environment (T : Term).
 
   Definition expand_lets_ctx Γ Δ := expand_lets_k_ctx Γ 0 Δ.
 
+  Definition fix_context (m : mfixpoint term) : context :=
+    List.rev (mapi (fun i d => vass d.(dname) (lift i 0 d.(dtype))) m).
+  
   (** *** Environments *)
 
   (** See [one_inductive_body] from [declarations.ml]. *)
@@ -582,6 +585,12 @@ Definition test_predicate {term}
            (instf : Instance.t -> bool) (paramf preturnf : term -> bool) (p : predicate term) :=
   instf p.(puinst) && forallb paramf p.(pparams) && preturnf p.(preturn).
 
+Definition eqb_predicate {term} (eqb_univ_instance : Instance.t -> Instance.t -> bool) (eqterm : term -> term -> bool) (p p' : predicate term) :=
+  forallb2 eqterm p.(pparams) p'.(pparams) &&
+  eqb_univ_instance p.(puinst) p'.(puinst) &&
+  Nat.eqb #|p.(pcontext)| #|p'.(pcontext)| &&
+  eqterm p.(preturn) p'.(preturn).
+  
 Section map_predicate.
   Context {term term' : Type}.
   Context (uf : Instance.t -> Instance.t).

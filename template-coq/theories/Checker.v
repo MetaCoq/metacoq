@@ -356,12 +356,6 @@ Inductive conv_pb :=
 | Conv
 | Cumul.
 
-Definition eq_predicate {cf:checker_flags} {term} (eqterm : universes_graph -> term -> term -> bool) (φ : universes_graph) (p p' : predicate term) :=
-  forallb2 (eqterm φ) p.(pparams) p'.(pparams) &&
-  eqb_univ_instance φ p.(puinst) p'.(puinst) &&
-  Nat.eqb #|p.(pcontext)| #|p'.(pcontext)| &&
-  (eqterm φ) p.(preturn) p'.(preturn).
-
 Definition eq_case_info (ci ci' : case_info) :=
   eq_inductive ci.(ci_ind) ci'.(ci_ind) && Nat.eqb ci.(ci_npar) ci'.(ci_npar). (* FIXME relevance check *)
 
@@ -383,7 +377,7 @@ Fixpoint eq_term `{checker_flags} (φ : universes_graph) (t u : term) {struct t}
   | tCase ci p c brs,
     tCase ci' p' c' brs' =>
     eq_case_info ci ci' &&
-    eq_predicate eq_term φ p p' && eq_term φ c c' && forallb2 (fun br br' => eq_term φ br.(bbody) br'.(bbody)) brs brs'
+    eqb_predicate (eqb_univ_instance φ) (eq_term φ) p p' && eq_term φ c c' && forallb2 (fun br br' => eq_term φ br.(bbody) br'.(bbody)) brs brs'
   | tProj p c, tProj p' c' => eq_projection p p' && eq_term φ c c'
   | tFix mfix idx, tFix mfix' idx' =>
     forallb2 (fun x y =>
@@ -414,7 +408,7 @@ Fixpoint leq_term `{checker_flags} (φ : universes_graph) (t u : term) {struct t
   | tLetIn _ b t c, tLetIn _ b' t' c' => eq_term φ b b' && eq_term φ t t' && leq_term φ c c'
   | tCase ci p c brs, tCase ci' p' c' brs' =>
     eq_case_info ci ci' &&
-    eq_predicate eq_term φ p p' && eq_term φ c c' && forallb2 (fun br br' => eq_term φ br.(bbody) br'.(bbody)) brs brs'
+    eqb_predicate (eqb_univ_instance φ) (eq_term φ) p p' && eq_term φ c c' && forallb2 (fun br br' => eq_term φ br.(bbody) br'.(bbody)) brs brs'
   | tProj p c, tProj p' c' => eq_projection p p' && eq_term φ c c'
   | tFix mfix idx, tFix mfix' idx' =>
     forallb2 (fun x y =>
@@ -559,7 +553,7 @@ Section Conversion.
 
     | tCase ci p c brs,
       tCase ci' p' c' brs' => (* Hnf did not reduce, maybe delta needed in c *)
-      if eq_case_info ci ci' && eq_predicate eq_term G p p' && eq_term G c c'
+      if eq_case_info ci ci' && eqb_predicate (eqb_univ_instance G) (eq_term G) p p' && eq_term G c c'
       && forallb2 (fun br br' => eq_term G br.(bbody) br'.(bbody)) brs brs' then
         ret true
       else

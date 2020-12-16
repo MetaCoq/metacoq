@@ -21,10 +21,6 @@ End lookups.
 Section print_term.
   Context (Σ : global_env_ext).
 
-  Definition print_defs (print_term : context -> bool -> bool -> term -> string) Γ (defs : mfixpoint term) :=
-    let ctx' := fix_context defs in
-    print_list (print_def (print_term Γ true false) (print_term (ctx' ++ Γ) true false)) (nl ^ " with ") defs.
-
   Fixpoint decompose_lam (t : term) (n : nat) : (list aname) * (list term) * term :=
     match n with
     | 0 => ([], [], t)
@@ -37,13 +33,8 @@ Section print_term.
       end
     end.
 
-  Definition is_fresh (Γ : context) (id : ident) :=
-    List.forallb
-      (fun decl =>
-         match decl.(decl_name).(binder_name) with
-         | nNamed id' => negb (ident_eq id id')
-         | nAnon => true
-         end) Γ.
+  Definition is_fresh (Γ : list ident) (id : ident) :=
+    List.forallb (fun id' => negb (ident_eq id id')) Γ.
 
   Fixpoint name_from_term (t : term) :=
     match t with
@@ -73,46 +64,83 @@ Section print_term.
       end
     in aux n.
 
-  Definition fresh_name (Γ : context) (t : term) (na : name) :=
+  Definition fresh_name (Γ : list ident) (na : name) (t : option term) : ident :=
     let id := match na with
               | nNamed id => id
-              | nAnon => name_from_term t
+              | nAnon => 
+                match t with 
+                | Some t => name_from_term t
+                | None => "_"
+                end
               end
     in
-    if is_fresh Γ id then nNamed id
-    else nNamed (fresh_id_from Γ 10 id).
-  
-  Definition fresh_aname (Γ : context) (na : aname) (t : term) :=
-    map_binder_annot (fresh_name Γ t) na.
+    if is_fresh Γ id then id
+    else fresh_id_from Γ 10 id.
 
-  Fixpoint print_term (Γ : context) (top : bool) (inapp : bool) (t : term) {struct t} :=
+  Definition rename_decl (na : aname) (decl : context_decl) : context_decl :=
+    {| decl_name := na;
+        decl_type := decl_type decl;
+        decl_body := decl_body decl |}.
+  
+  Definition build_return_context
+              (ind : inductive)
+              (oib : one_inductive_body)
+              (pred : predicate term) : option context :=
+    (* Decompose the type. It will contain parameters too, but at the end, which is ok. *)
+    let '(Γ, _) := decompose_prod_assum [] (ind_type oib) in
+    (* We have to skip the first name since that's the name of the inductive binder. *)
+    let index_names := tl (pcontext pred) in
+    match hd_error (pcontext pred) with
+    | Some ind_binder_name =>
+      Some (
+          map (fun '(na, decl) => rename_decl na decl)
+          (combine (tl (pcontext pred)) Γ)
+          ,,
+          vass ind_binder_name (mkApps (tInd ind (puinst pred)) (pparams pred)))
+    | None => None
+    end.
+    
+  Definition fresh_names (Γ : list ident) (Γ' : context) : list ident :=
+    let fix aux Γids Γ :=
+        match Γ with
+        | [] => Γids
+        | decl :: Γ => aux (fresh_name Γids (binder_name (decl_name decl))
+                                        (Some (decl_type decl)) :: Γids)
+                            Γ
+        end in
+    aux Γ (MCList.rev Γ').
+
+  Definition print_defs (print_term : list ident -> bool -> bool -> term -> string)
+              Γ
+            (defs : mfixpoint term) :=
+    let ctx' := fix_context defs in
+    print_list (print_def (print_term Γ true false) (print_term (fresh_names Γ ctx') true false))
+          (nl ^ " with ") defs.
+
+  Fixpoint print_term (Γ : list ident) (top : bool) (inapp : bool) (t : term) {struct t} :=
   match t with
   | tRel n =>
     match nth_error Γ n with
-    | Some {| decl_name := na |} =>
-      match na.(binder_name) with
-      | nAnon => "Anonymous (" ^ string_of_nat n ^ ")"
-      | nNamed id => id
-      end
+    | Some id => id
     | None => "UnboundRel(" ^ string_of_nat n ^ ")"
     end
   | tVar n => "Var(" ^ n ^ ")"
   | tEvar ev args => "Evar(" ^ string_of_nat ev ^ "[]" (* TODO *)  ^ ")"
   | tSort s => string_of_sort s
   | tProd na dom codom =>
-    let na' := fresh_aname Γ na dom in
+    let na' := fresh_name Γ na.(binder_name) (Some dom) in
     parens top
-           ("∀ " ^ string_of_aname na' ^ " : " ^
-                     print_term Γ true false dom ^ ", " ^ print_term (vass na' dom :: Γ) true false codom)
+           ("∀ " ^ na' ^ " : " ^
+                     print_term Γ true false dom ^ ", " ^ print_term (na':: Γ) true false codom)
   | tLambda na dom body =>
-    let na' := fresh_aname Γ na dom in
-    parens top ("fun " ^ string_of_aname na' ^ " : " ^ print_term Γ true false dom
-                                ^ " => " ^ print_term (vass na' dom :: Γ) true false body)
+    let na' := fresh_name Γ na.(binder_name) (Some dom) in
+      parens top ("fun " ^ na' ^ " : " ^ print_term Γ true false dom
+                ^ " => " ^ print_term (na':: Γ) true false body)
   | tLetIn na def dom body =>
-    let na' := fresh_aname Γ na dom in
-    parens top ("let" ^ string_of_aname na' ^ " : " ^ print_term Γ true false dom ^
+    let na' := fresh_name Γ na.(binder_name) (Some dom) in
+    parens top ("let" ^ na' ^ " : " ^ print_term Γ true false dom ^
                       " := " ^ print_term Γ true false def ^ " in " ^ nl ^
-                      print_term (vdef na' def dom :: Γ) true false body)
+                      print_term (na' :: Γ) true false body)
   | tApp f l =>
     parens (top || inapp) (print_term Γ false true f ^ " " ^ print_term Γ false false l)
   | tConst c u => string_of_kername c ^ print_universe_instance u
@@ -135,39 +163,46 @@ Section print_term.
       "UnboundConstruct(" ^ string_of_inductive ind ^ "," ^ string_of_nat l ^ ","
                           ^ string_of_universe_instance u ^ ")"
     end
-  | tCase (mkInd mind i as ind, pars) p t brs =>
-    match lookup_ind_decl Σ mind i with
-    | Some (_, oib) =>
-      match p with
-      | tLambda na _ty b =>
-        let fix print_branch Γ arity br {struct br} :=
-          match arity with
-            | 0 => "=> " ^ print_term Γ true false br
-            | S n =>
-              match br with
-              | tLambda na A B =>
-                let na' := fresh_aname Γ na A in
-                string_of_aname na' ^ "  " ^ print_branch (vass na' A :: Γ) n B
-              | t => "=> " ^ print_term Γ true false br
-              end
-            end
-        in
-        let brs := map (fun '(arity, br) =>
-                          print_branch Γ arity br) brs in
-        let brs := combine brs oib.(ind_ctors) in
-        parens top ("match " ^ print_term Γ true false t ^
-                    " as " ^ string_of_aname na ^
-                    " in " ^ oib.(ind_name) ^ " return " ^ print_term Γ true false b ^
-                    " with " ^ nl ^
-                    print_list (fun '(b, (na, _, _)) => na ^ " " ^ b)
-                    (nl ^ " | ") brs ^ nl ^ "end" ^ nl)
-      | _ =>
-        "Case(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_term t ^ ","
-                ^ string_of_term p ^ "," ^ string_of_list (fun b => string_of_term (snd b)) brs ^ ")"
-      end
+  | tCase {| ci_ind := mkInd mind i as ind; ci_npar := pars |} p t brs =>
+  match lookup_ind_decl Σ mind i with
+  | Some (_, oib) =>
+    match build_return_context ind oib p with
     | None =>
       "Case(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_term t ^ ","
-              ^ string_of_term p ^ "," ^ string_of_list (fun b => string_of_term (snd b)) brs ^ ")"
+              ^ string_of_predicate string_of_term p ^ "," ^ 
+              string_of_list (pretty_string_of_branch string_of_term) brs ^ ")"
+
+    | Some Γret =>
+      let Γret := fresh_names Γ Γret in
+      let ret_binders := firstn #|pcontext p| Γret in
+      let (as_name, indices) := (hd "_" ret_binders, MCList.rev (tail ret_binders)) in
+      let in_args := repeat "_" #|pparams p| ++ indices in
+      let in_str := oib.(ind_name) ^ String.concat "" (map (fun a => " " ^ a) in_args) in
+
+      let fix print_branch Γ names prbr {struct names} :=
+          match names with
+          | [] => "=> " ^ prbr Γ
+          | na :: l =>
+            let na' := (fresh_name Γ na.(binder_name) None) in
+              na' ^ "  " ^ print_branch (na' :: Γ) l prbr
+          end
+      in
+
+      let brs := map (fun br => print_branch Γ (List.rev br.(bcontext)) (fun Γ => print_term Γ true false br.(bbody))) brs in
+      let brs := combine brs oib.(ind_ctors) in
+                            
+      parens top ("match " ^ print_term Γ true false t ^
+                  " as " ^ as_name ^
+                  " in " ^ in_str ^
+                  " return " ^ print_term Γret true false (preturn p) ^
+                  " with " ^ nl ^
+                  print_list (fun '(b, (na, _, _)) => na ^ " " ^ b)
+                  (nl ^ " | ") brs ^ nl ^ "end" ^ nl)
+    end
+  | None =>
+    "Case(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_term t ^ ","
+            ^ string_of_predicate string_of_term p ^ "," ^ 
+            string_of_list (pretty_string_of_branch string_of_term) brs ^ ")"
     end
   | tProj (mkInd mind i as ind, pars, k) c =>
     match lookup_ind_decl Σ mind i with

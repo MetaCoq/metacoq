@@ -31,8 +31,8 @@ Fixpoint trans (t : Ast.term) : term :=
   | Ast.tCast c kind t => tApp (tLambda (mkBindAnn nAnon Relevant) (trans t) (tRel 0)) (trans c)
   | Ast.tLetIn na b t b' => tLetIn na (trans b) (trans t) (trans b')
   | Ast.tCase ind p c brs =>
-    let p' := map_predicate trans trans p in
-    let brs' := List.map (on_snd trans) brs in
+    let p' := map_predicate id trans trans p in
+    let brs' := List.map (map_branch trans) brs in
     tCase ind p' (trans c) brs'
   | Ast.tProj p c => tProj p (trans c)
   | Ast.tFix mfix idx =>

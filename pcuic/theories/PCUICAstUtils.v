@@ -28,9 +28,9 @@ Fixpoint string_of_term (t : term) :=
   | tInd i u => "Ind(" ^ string_of_inductive i ^ "," ^ string_of_universe_instance u ^ ")"
   | tConstruct i n u => "Construct(" ^ string_of_inductive i ^ "," ^ string_of_nat n ^ ","
                                     ^ string_of_universe_instance u ^ ")"
-  | tCase ((ind, i), r) p t brs =>
-    "Case(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_term t ^ ","
-            ^ string_of_predicate string_of_term p ^ "," ^ string_of_list (fun b => string_of_term (snd b)) brs ^ ")"
+  | tCase ci p t brs =>
+    "Case(" ^ string_of_case_info ci ^ "," ^ string_of_term t ^ ","
+            ^ string_of_predicate string_of_term p ^ "," ^ string_of_list (string_of_branch string_of_term) brs ^ ")"
   | tProj (ind, i, k) c =>
     "Proj(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_nat k ^ ","
             ^ string_of_term c ^ ")"

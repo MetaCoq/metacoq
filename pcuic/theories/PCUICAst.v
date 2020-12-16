@@ -144,8 +144,9 @@ Fixpoint lift n k t : term :=
   | tLetIn na b t b' => tLetIn na (lift n k b) (lift n k t) (lift n (S k) b')
   | tCase ind p c brs =>
     let k' := List.length (pcontext p) + k in
-    let brs' := List.map (fun br => (br.1, lift n (br.1 + k) br.2)) brs in
-    tCase ind (map_predicate (lift n k) (lift n k') p) (lift n k c) brs'
+    let p' := map_predicate id (lift n k) (lift n k') p in
+    let brs' := map_branches_k (lift n) k brs in
+    tCase ind p' (lift n k c) brs'
   | tProj p c => tProj p (lift n k c)
   | tFix mfix idx =>
     let k' := List.length mfix + k in
@@ -180,8 +181,8 @@ Fixpoint subst s k u :=
   | tLetIn na b ty b' => tLetIn na (subst s k b) (subst s k ty) (subst s (S k) b')
   | tCase ind p c brs =>
     let k' := List.length (pcontext p) + k in
-    let p' := map_predicate (subst s k) (subst s k') p in
-    let brs' := List.map (fun br => (br.1, subst s (br.1 + k) br.2)) brs in
+    let p' := map_predicate id (subst s k) (subst s k') p in
+    let brs' := map_branches_k (subst s) k brs in
     tCase ind p' (subst s k c) brs'
   | tProj p c => tProj p (subst s k c)
   | tFix mfix idx =>
@@ -210,8 +211,9 @@ Fixpoint closedn k (t : term) : bool :=
   | tLetIn na b t b' => closedn k b && closedn k t && closedn (S k) b'
   | tCase ind p c brs =>
     let k' := List.length (pcontext p) + k in
-    let brs' := List.forallb (fun br => closedn (br.1 + k) br.2) brs in
-    test_predicate (closedn k) (closedn k') p && closedn k c && brs'
+    let p' := test_predicate (fun _ => true) (closedn k) (closedn k') p in
+    let brs' := test_branches_k closedn k brs in
+    p' && closedn k c && brs'
   | tProj p c => closedn k c
   | tFix mfix idx =>
     let k' := List.length mfix + k in
@@ -233,8 +235,9 @@ Fixpoint noccur_between k n (t : term) : bool :=
   | tLetIn na b t b' => noccur_between k n b && noccur_between k n t && noccur_between (S k) n b'
   | tCase ind p c brs =>
     let k' := List.length (pcontext p) + k in
-    let brs' := List.forallb (fun br => noccur_between (br.1 + k) n br.2) brs in
-    test_predicate (noccur_between k n) (noccur_between k' n) p && noccur_between k n c && brs'
+    let p' := test_predicate (fun _ => true) (noccur_between k n) (noccur_between k' n) p in
+    let brs' := test_branches_k (fun k => noccur_between k n) k brs in
+    p' && noccur_between k n c && brs'
   | tProj p c => noccur_between k n c
   | tFix mfix idx =>
     let k' := List.length mfix + k in
@@ -265,8 +268,8 @@ Instance subst_instance_constr : UnivSubst term :=
   | tLetIn na b ty b' => tLetIn na (subst_instance_constr u b) (subst_instance_constr u ty)
                                 (subst_instance_constr u b')
   | tCase ind p c brs =>
-    let p' := subst_instance_predicate (subst_instance_constr u) u p in
-    let brs' := List.map (on_snd (subst_instance_constr u)) brs in
+    let p' := map_predicate (subst_instance_instance u) (subst_instance_constr u) (subst_instance_constr u) p in
+    let brs' := List.map (map_branch (subst_instance_constr u)) brs in
     tCase ind p' (subst_instance_constr u c) brs'
   | tProj p c => tProj p (subst_instance_constr u c)
   | tFix mfix idx =>
@@ -276,6 +279,30 @@ Instance subst_instance_constr : UnivSubst term :=
     let mfix' := List.map (map_def (subst_instance_constr u) (subst_instance_constr u)) mfix in
     tCoFix mfix' idx
   | tPrim _ => c
+  end.
+
+(** Tests that the term is closed over [k] universe variables *)
+Fixpoint closedu (k : nat) (t : term) : bool :=
+  match t with
+  | tSort univ => closedu_universe k univ
+  | tInd _ u => closedu_instance k u
+  | tConstruct _ _ u => closedu_instance k u
+  | tConst _ u => closedu_instance k u
+  | tRel i => true
+  | tEvar ev args => forallb (closedu k) args
+  | tLambda _ T M | tProd _ T M => closedu k T && closedu k M
+  | tApp u v => closedu k u && closedu k v
+  | tLetIn na b t b' => closedu k b && closedu k t && closedu k b'
+  | tCase ind p c brs =>
+    let p' := test_predicate (closedu_instance k) (closedu k) (closedu k) p in
+    let brs' := forallb (test_branch (closedu k)) brs in
+    p' && closedu k c && brs'
+  | tProj p c => closedu k c
+  | tFix mfix idx =>
+    forallb (test_def (closedu k) (closedu k)) mfix
+  | tCoFix mfix idx =>
+    forallb (test_def (closedu k) (closedu k)) mfix
+  | x => true
   end.
 
 Module PCUICTerm <: Term.

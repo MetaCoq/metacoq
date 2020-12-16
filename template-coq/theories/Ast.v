@@ -217,6 +217,31 @@ Instance subst_instance_constr : UnivSubst term :=
     tCoFix mfix' idx
   end.
 
+(** Tests that the term is closed over [k] universe variables *)
+Fixpoint closedu (k : nat) (t : term) : bool :=
+  match t with
+  | tSort univ => closedu_universe k univ
+  | tInd _ u => closedu_instance k u
+  | tConstruct _ _ u => closedu_instance k u
+  | tConst _ u => closedu_instance k u
+  | tRel i => true
+  | tEvar ev args => forallb (closedu k) args
+  | tLambda _ T M | tProd _ T M => closedu k T && closedu k M
+  | tApp u v => closedu k u && forallb (closedu k) v
+  | tCast c kind t => closedu k c && closedu k t
+  | tLetIn na b t b' => closedu k b && closedu k t && closedu k b'
+  | tCase ind p c brs =>
+    let p' := test_predicate (closedu_instance k) (closedu k) (closedu k) p in
+    let brs' := forallb (test_branch (closedu k)) brs in
+    p' && closedu k c && brs'
+  | tProj p c => closedu k c
+  | tFix mfix idx =>
+    forallb (test_def (closedu k) (closedu k)) mfix
+  | tCoFix mfix idx =>
+    forallb (test_def (closedu k) (closedu k)) mfix
+  | x => true
+  end.  
+
 Module TemplateTerm <: Term.
 
 Definition term := term.

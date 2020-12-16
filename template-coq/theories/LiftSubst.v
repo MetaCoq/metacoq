@@ -108,6 +108,7 @@ Ltac solve_all_one :=
   intuition eauto 4 with all.
 
 Ltac solve_all := repeat (progress solve_all_one).
+Hint Extern 10 => rewrite !map_branch_map_branch : all.
 
 Ltac nth_leb_simpl :=
   match goal with
@@ -136,8 +137,6 @@ Proof.
   intros; unfold lift in |- *.
   apply lift0_id; easy.
 Qed.
-
-Hint Extern 10 => rewrite !map_branch_map_branch : all.
 
 Lemma simpl_lift :
   forall M n k p i,

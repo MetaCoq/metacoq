@@ -156,7 +156,7 @@ Fixpoint strip_casts t :=
   | tCast c kind t => strip_casts c
   | tLetIn na b t b' => tLetIn na (strip_casts b) (strip_casts t) (strip_casts b')
   | tCase ind p c brs =>
-    let p' := map_predicate strip_casts strip_casts p in
+    let p' := map_predicate id strip_casts strip_casts p in
     let brs' := List.map (map_branch strip_casts) brs in    
     tCase ind p' (strip_casts c) brs'
   | tProj p c => tProj p (strip_casts c)

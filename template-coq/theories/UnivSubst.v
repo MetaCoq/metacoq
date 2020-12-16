@@ -11,8 +11,9 @@ Lemma lift_subst_instance_constr u c n k :
 Proof.
   induction c in k |- * using term_forall_list_ind; simpl; auto;
     rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length,
-            ?map_predicate_map_predicate;
-    try solve [f_equal; eauto; solve_all; eauto].
+            ?map_predicate_map_predicate, ?map_predicate_subst_instance_predicate, 
+            ?map_branch_map_branch;
+    f_equal; eauto; solve_all; eauto.
 Qed.
 
 Lemma subst_instance_constr_mkApps u f a :
@@ -46,7 +47,8 @@ Lemma subst_subst_instance_constr u c N k :
 Proof.
   induction c in k |- * using term_forall_list_ind; simpl; auto;
     rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, 
-            ?map_predicate_map_predicate;
+            ?map_predicate_map_predicate,
+            ?map_branch_map_branch; simpl;
     try solve [f_equal; eauto; solve_all; eauto].
 
   - elim (Nat.leb k n). rewrite nth_error_map.
@@ -79,7 +81,7 @@ Fixpoint closedu (k : nat) (t : term) : bool :=
   | tCast c kind t => closedu k c && closedu k t
   | tLetIn na b t b' => closedu k b && closedu k t && closedu k b'
   | tCase ind p c brs =>
-    let p' := test_predicate (closedu k) (closedu k) p in
+    let p' := test_predicate (closedu_instance k) (closedu k) (closedu k) p in
     let brs' := forallb (test_branch (closedu k)) brs in
     p' && closedu k c && brs'
   | tProj p c => closedu k c
@@ -95,9 +97,9 @@ Lemma closedu_subst_instance_constr u t
 Proof.
   induction t in |- * using term_forall_list_ind; simpl; auto; intros H';
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length,
-               ?map_predicate_map_predicate;
+               ?map_predicate_map_predicate, ?map_branch_map_branch;
     try f_equal; eauto with substu; unfold test_def, test_predicate in *;
-      try solve [f_equal; eauto; repeat (rtoProp; solve_all)].
+      try solve [f_equal; eauto; repeat (rtoProp; solve_all; eauto with substu)].
 Qed.
 
 Lemma subst_instance_constr_closedu (u : Instance.t) (Hcl : closedu_instance 0 u) t :

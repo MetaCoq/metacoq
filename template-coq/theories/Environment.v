@@ -579,42 +579,49 @@ Definition string_of_predicate {term} (f : term -> string) (p : predicate term) 
   ^ "," ^ f (preturn p) ^ ")".
 
 Definition test_predicate {term}
-           (paramf preturnf : term -> bool) (p : predicate term) :=
-  forallb paramf p.(pparams) && preturnf p.(preturn).
+           (instf : Instance.t -> bool) (paramf preturnf : term -> bool) (p : predicate term) :=
+  instf p.(puinst) && forallb paramf p.(pparams) && preturnf p.(preturn).
 
 Section map_predicate.
   Context {term term' : Type}.
+  Context (uf : Instance.t -> Instance.t).
   Context (paramf preturnf : term -> term').
-
+  
   Definition map_predicate (p : predicate term) :=
     {| pparams := map paramf p.(pparams);
-       puinst := p.(puinst);
+       puinst := uf p.(puinst);
        pcontext := p.(pcontext);
        preturn := preturnf p.(preturn) |}.
 
   Lemma map_pparams (p : predicate term) :
     map paramf (pparams p) = pparams (map_predicate p).
-  Proof. destruct p; auto. Qed.
+  Proof. reflexivity. Qed.
 
   Lemma map_preturn (p : predicate term) :
     preturnf (preturn p) = preturn (map_predicate p).
-  Proof. destruct p; auto. Qed.
+  Proof. reflexivity. Qed.
+
+  Lemma map_puints (p : predicate term) :
+    uf (puinst p) = puinst (map_predicate p).
+  Proof. reflexivity. Qed.
+
 End map_predicate.
 
 Lemma map_predicate_map_predicate
       {term term' term''}
+      (finst finst' : Instance.t -> Instance.t)
       (f g : term' -> term'')
       (f' g' : term -> term')
       (p : predicate term) :
-  map_predicate f g (map_predicate f' g' p) =
-  map_predicate (f ∘ f') (g ∘ g') p.
+  map_predicate finst f g (map_predicate finst' f' g' p) =
+  map_predicate (finst ∘ finst') (f ∘ f') (g ∘ g') p.
 Proof.
   destruct p; cbv.
   f_equal.
   apply map_map.
 Qed.
 
-Lemma map_predicate_id {t} x : map_predicate (@id t) (@id t) x = id x.
+Lemma map_predicate_id {t} x : map_predicate (@id _) (@id t) (@id t) x = id x.
 Proof.
   destruct x; cbv.
   f_equal.
@@ -647,22 +654,24 @@ Proof.
 Qed.
 *)
 
-Lemma map_predicate_eq_spec {A B} (f f' g g' : A -> B) (p : predicate A) :
+Lemma map_predicate_eq_spec {A B} (finst finst' : Instance.t -> Instance.t) (f f' g g' : A -> B) (p : predicate A) :
+  finst (puinst p) = finst' (puinst p) ->
   map f (pparams p) = map g (pparams p) ->
   f' (preturn p) = g' (preturn p) ->
-  map_predicate f f' p = map_predicate g g' p.
+  map_predicate finst f f' p = map_predicate finst' g g' p.
 Proof.
   intros. unfold map_predicate; f_equal; auto.
 Qed.
 Hint Resolve map_predicate_eq_spec : all.
 
-Lemma map_predicate_id_spec {A} (f f' : A -> A) (p : predicate A) :
+Lemma map_predicate_id_spec {A} finst (f f' : A -> A) (p : predicate A) :
+  finst (puinst p) = puinst p ->
   map f (pparams p) = pparams p ->
   f' (preturn p) = preturn p ->
-  map_predicate f f' p = p.
+  map_predicate finst f f' p = p.
 Proof.
   unfold map_predicate.
-  intros -> ->; destruct p; auto.
+  intros -> -> ->; destruct p; auto.
 Qed.
 Hint Resolve map_predicate_id_spec : all.
 

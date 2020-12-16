@@ -83,7 +83,7 @@ Fixpoint lift n k t : term :=
   | tLetIn na b t b' => tLetIn na (lift n k b) (lift n k t) (lift n (S k) b')
   | tCase ind p c brs =>
     let k' := List.length (pcontext p) + k in
-    let p' := map_predicate (lift n k) (lift n k') p in
+    let p' := map_predicate id (lift n k) (lift n k') p in
     let brs' := map_branches_k (lift n) k brs in
     tCase ind p' (lift n k c) brs'
   | tProj p c => tProj p (lift n k c)
@@ -120,7 +120,7 @@ Fixpoint subst s k u :=
   | tLetIn na b ty b' => tLetIn na (subst s k b) (subst s k ty) (subst s (S k) b')
   | tCase ind p c brs =>
     let k' := List.length (pcontext p) + k in
-    let p' := map_predicate (subst s k) (subst s k') p in
+    let p' := map_predicate id (subst s k) (subst s k') p in
     let brs' := map_branches_k (subst s) k brs in
     tCase ind p' (subst s k c) brs'
   | tProj p c => tProj p (subst s k c)
@@ -151,7 +151,7 @@ Fixpoint closedn k (t : term) : bool :=
   | tLetIn na b t b' => closedn k b && closedn k t && closedn (S k) b'
   | tCase ind p c brs =>
     let k' := List.length (pcontext p) + k in
-    let p' := test_predicate (closedn k) (closedn k') p in
+    let p' := test_predicate (fun _ => true) (closedn k) (closedn k') p in
     let brs' := test_branches_k closedn k brs in
     p' && closedn k c && brs'
   | tProj p c => closedn k c
@@ -176,7 +176,7 @@ Fixpoint noccur_between k n (t : term) : bool :=
   | tLetIn na b t b' => noccur_between k n b && noccur_between k n t && noccur_between (S k) n b'
   | tCase ind p c brs =>
     let k' := List.length (pcontext p) + k in
-    let p' := test_predicate (noccur_between k n) (noccur_between k' n) p in
+    let p' := test_predicate (fun _ => true) (noccur_between k n) (noccur_between k' n) p in
     let brs' := test_branches_k (fun k => noccur_between k n) k brs in
     p' && noccur_between k n c && brs'
   | tProj p c => noccur_between k n c
@@ -188,12 +188,6 @@ Fixpoint noccur_between k n (t : term) : bool :=
     List.forallb (test_def (noccur_between k n) (noccur_between k' n)) mfix
   | x => true
   end.
-
-Definition subst_instance_predicate {term} (subst : term -> term) u (p : predicate term) : predicate term := 
-  {| pparams := map subst (pparams p);
-     puinst := subst_instance_instance u (puinst p);
-     pcontext := pcontext p;
-     preturn := subst (preturn p) |}.
 
 Instance subst_instance_constr : UnivSubst term :=
   fix subst_instance_constr u c {struct c} : term :=
@@ -211,7 +205,7 @@ Instance subst_instance_constr : UnivSubst term :=
   | tLetIn na b ty b' => tLetIn na (subst_instance_constr u b) (subst_instance_constr u ty)
                                 (subst_instance_constr u b')
   | tCase ind p c brs =>
-    let p' := subst_instance_predicate (subst_instance_constr u) u p in
+    let p' := map_predicate (subst_instance_instance u) (subst_instance_constr u) (subst_instance_constr u) p in
     let brs' := List.map (map_branch (subst_instance_constr u)) brs in
     tCase ind p' (subst_instance_constr u c) brs'
   | tProj p c => tProj p (subst_instance_constr u c)

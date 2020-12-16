@@ -747,13 +747,12 @@ Proof.
   - split. wf. unfold type_of_constructor.
     apply wf_subst; auto with wf. apply wf_subst_instance_constr.
     eapply declared_constructor_wf; eauto.
-  - apply build_case_predicate_contextP in H1.
-    destruct H2 as [wfret wps].
-    destruct H5 as [wfc wfapps].
+  - destruct H1 as [wfret wps].
+    destruct H4 as [wfc wfapps].
     eapply wf_mkApps_inv in wfapps.
     eapply Forall_app in wfapps as [wfp wfindices].
     assert (Forall wf_decl pctx).
-    { now apply Forall_app in H3 as [? ?]. }
+    { now apply Forall_app in H2 as [? ?]. }
     split; [constructor; simpl; auto; solve_all|].
     apply wf_mkApps. subst ptm. wf. apply wf_it_mkLambda_or_LetIn; auto.
     apply app_Forall; auto.

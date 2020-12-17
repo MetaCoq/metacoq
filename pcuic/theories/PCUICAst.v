@@ -338,6 +338,12 @@ Ltac unf_term := unfold PCUICTerm.term in *; unfold PCUICTerm.tRel in *;
 Module PCUICEnvironment := Environment PCUICTerm.
 Include PCUICEnvironment.
 
+(** This function allows to forget type annotations on a binding context. 
+    Useful to relate the "compact" case representation in terms, with 
+    its typing relation, where the context has types *)
+Definition forget_types (c : context) : list aname := 
+  map (fun decl => decl.(decl_name)) c.
+
 Module PCUICLookup := Lookup PCUICTerm PCUICEnvironment.
 Include PCUICLookup.
 

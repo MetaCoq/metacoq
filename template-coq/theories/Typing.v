@@ -292,18 +292,7 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
     unfold_cofix mfix idx = Some (narg, fn) ->
     red1 Σ Γ (tProj p (mkApps (tCoFix mfix idx) args))
          (tProj p (mkApps fn args))
-(* FIXME: We should really be dual to Fix: ask directly
-   for the constructor, applied, and project the argument:
 
-    unfold_cofix mfix idx = Some (narg, mkApps (tConstruct ind c u) args') ->
-    nth_error args' (pars + narg) = Some arg ->
-    red1 Σ Γ (tProj (i, pars, narg) (mkApps (tCoFix mfix idx) args))
-             (mkApps arg args)
-
-    Otherwise confluence fails, AFAICT.
-
-    (tProj (i, pars, narg) (mkApps fn args))
-*)
 (** Constant unfolding *)
 | red_delta c decl body (isdecl : declared_constant Σ c decl) u :
     decl.(cst_body) = Some body ->

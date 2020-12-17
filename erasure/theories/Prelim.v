@@ -16,8 +16,6 @@ Module P := PCUICWcbvEval.
 
 Ltac inv H := inversion H; subst; clear H.
 
-Existing Class axiom_free.
-
 Lemma nth_error_app_inv X (x : X) n l1 l2 :
   nth_error (l1 ++ l2) n = Some x -> (n < #|l1| /\ nth_error l1 n = Some x) \/ (n >= #|l1| /\ nth_error l2 (n - List.length l1) = Some x).
 Proof.
@@ -121,7 +119,7 @@ Proof.
   now exists A.
 Qed.
 
-Theorem subject_reduction_eval {Σ :global_env_ext} {t u T} {wfΣ : wf Σ} {axfree : axiom_free Σ} :
+Theorem subject_reduction_eval {Σ :global_env_ext} {t u T} {wfΣ : wf Σ} :
   Σ ;;; [] |- t : T -> PCUICWcbvEval.eval Σ t u -> Σ ;;; [] |- u : T.
 Proof.
   intros Hty Hred.
@@ -133,7 +131,7 @@ Lemma typing_spine_eval:
   (X : All2 (PCUICWcbvEval.eval Σ) args args') (bla : wf Σ)
     (T x x0 : PCUICAst.term) (t0 : typing_spine Σ [] x args x0) 
     (c : Σ;;; [] |- x0 <= T) (x1 : PCUICAst.term)
-    (c0 : Σ;;; [] |- x1 <= x), axiom_free Σ -> isType Σ [] T -> typing_spine Σ [] x1 args' T.
+    (c0 : Σ;;; [] |- x1 <= x), isType Σ [] T -> typing_spine Σ [] x1 args' T.
 Proof.
   intros. eapply typing_spine_red; eauto.
   eapply typing_spine_wt in t0; auto.

@@ -429,14 +429,7 @@ Qed.
 
 (** ** The correctness proof  *)
 
-Record extraction_pre (Σ : global_env_ext) : Type
-  := Build_extraction_pre
-  { extr_env_axiom_free' : axiom_free (fst Σ);
-    extr_env_wf' : wf_ext Σ }.
-
 Hint Constructors PCUICWcbvEval.eval erases : core.
-Arguments extr_env_wf' {Σ}.
-Arguments extr_env_axiom_free' {Σ}.
 
 Definition EisConstruct_app :=
   fun t => match (EAstUtils.decompose_app t).1 with
@@ -682,16 +675,16 @@ Proof.
 Qed.
 
 Lemma erases_correct (wfl := default_wcbv_flags) Σ t T t' v Σ' :
-  extraction_pre Σ ->
+  wf_ext Σ ->
   Σ;;; [] |- t : T ->
   Σ;;; [] |- t ⇝ℇ t' ->  
   erases_deps Σ Σ' t' ->
   Σ |-p t ▷ v ->
   exists v', Σ;;; [] |- v ⇝ℇ v' /\ ∥ Σ' ⊢ t' ▷ v' ∥.
 Proof.
-  intros pre Hty He Hed H.
+  intros wfΣ Hty He Hed H.
   revert T Hty t' He Hed.
-  induction H; intros T Hty t' He Hed; destruct pre as [axfree wfΣ].
+  induction H; intros T Hty t' He Hed.
   - assert (Hty' := Hty).
     assert (eval Σ (PCUICAst.tApp f a) res) by eauto.
     eapply inversion_App in Hty as (? & ? & ? & ? & ? & ?).
@@ -805,10 +798,6 @@ Proof.
     + exists EAst.tBox. split. econstructor.
       eapply Is_type_eval. 3: eassumption. eauto. eauto. eauto. constructor. econstructor. eauto.
 
-  - destruct Σ as (Σ, univs).
-    cbn in *.
-    eapply axfree in isdecl. congruence.
-
   - assert (Hty' := Hty).
     assert (Σ |-p tCase (ind, pars) p discr brs ▷ res) by eauto.
     eapply inversion_Case in Hty' as [u' [args' [mdecl [idecl [ps [pty [btys 
@@ -906,7 +895,7 @@ Proof.
         eapply subject_reduction. eauto. exact Hty.
         etransitivity.
         eapply PCUICReduction.red_case_c. eapply wcbeval_red. eauto.
-        now eapply PCUICClosed.subject_closed in t0. eauto. eauto.
+        eauto. eauto.
 
         etransitivity. constructor. constructor.
         unfold iota_red. rewrite <- nth_default_eq. unfold nth_default.
@@ -949,7 +938,7 @@ Proof.
            eapply subject_reduction. eauto. exact Hty.
            etransitivity.
            eapply PCUICReduction.red_case_c. eapply wcbeval_red. eauto.
-           now eapply PCUICClosed.subject_closed in t0; eauto. eauto. eauto.
+           eauto. eauto.
            etransitivity. constructor. constructor.
            unfold iota_red. rewrite <- nth_default_eq. reflexivity.
 
@@ -1062,7 +1051,7 @@ Proof.
            eapply erases_deps_mkApps_inv in Hty_vc' as (? & ?).
            now eapply nth_error_forall in H1; eauto.
     + exists EAst.tBox. split. econstructor.
-      eapply Is_type_eval. 4: eassumption. all:eauto. constructor. econstructor. eauto.
+      eapply Is_type_eval. 3: eassumption. all:eauto. constructor. econstructor. eauto.
 
   - assert (Hty' := Hty).
     assert (Hunf := H).
@@ -1080,7 +1069,7 @@ Proof.
     
     + exists EAst.tBox. split; [|now constructor; constructor].
       econstructor.
-      eapply Is_type_eval. 4:eapply X. eauto. eauto.
+      eapply Is_type_eval. 3:eapply X. eauto.
       eapply eval_fix; eauto.
       rewrite /cunfold_fix e0 //. congruence.
     + depelim Hed.
@@ -1151,10 +1140,11 @@ Proof.
              assert(Σ ;;; [] |- mkApps (tFix mfix idx) (argsv ++ [av]) : PCUICLiftSubst.subst [av] 0 x1).
              { rewrite -mkApps_nested. eapply PCUICValidity.type_App'; eauto.
                eapply subject_reduction_eval; eauto. }
-             epose proof (fix_app_is_constructor Σ (args:=argsv ++ [av]) axfree X).
+             epose proof (fix_app_is_constructor Σ (args:=argsv ++ [av]) X).
              rewrite /unfold_fix e0 in X0.
              specialize (X0 eq_refl). simpl in X0.
              rewrite nth_error_snoc in X0. auto. apply X0.
+             eapply value_axiom_free, eval_to_value; eauto.
              eapply value_whnf; eauto.
              eapply eval_closed; eauto. now eapply PCUICClosed.subject_closed in t0.
              eapply eval_to_value; eauto. }
@@ -1214,7 +1204,7 @@ Proof.
         -- exists EAst.tBox.
            split.
            ++ econstructor.
-              eapply Is_type_eval. 4:eauto. all:eauto.
+              eapply Is_type_eval. 3:eauto. all:eauto.
               rewrite -mkApps_nested.
               eapply eval_fix; eauto. 
               1-2:eapply value_final, eval_to_value; eauto.
@@ -1232,7 +1222,7 @@ Proof.
     destruct Hty' as (? & ? & ? & ? & ? & ?).
 
     eapply subject_reduction in t as typ_stuck_fix; [|eauto|]; first last.
-    { eapply wcbeval_red. 4:eauto. all:eauto. }
+    { eapply wcbeval_red. 3:eauto. all:eauto. }
 
     eapply erases_App in He as He'; [|eauto].
     destruct He' as [(-> & [])|(? & ? & -> & ? & ?)].
@@ -1242,12 +1232,12 @@ Proof.
       eapply Is_type_red.
       * eauto.
       * eapply PCUICReduction.red_app.
-        -- eapply wcbeval_red; [eauto|eauto| |eauto]. eauto.
-        -- eapply wcbeval_red; [eauto|eauto| |eauto]. eauto.
+        -- eapply wcbeval_red; [eauto| |eauto]. eauto.
+        -- eapply wcbeval_red; [eauto| |eauto]. eauto.
       * eauto.
     + depelim Hed.
       eapply subject_reduction in t0 as typ_arg; [|eauto|]; first last.
-      { eapply wcbeval_red; [eauto|eauto| |eauto]. eauto. }
+      { eapply wcbeval_red; [eauto| |eauto]. eauto. }
 
       eapply IHeval1 in H1 as (? & ? & [?]); [|now eauto|now eauto].
       eapply IHeval2 in H2 as (? & ? & [?]); [|now eauto|now eauto].

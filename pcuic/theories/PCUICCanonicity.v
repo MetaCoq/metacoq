@@ -606,188 +606,6 @@ Section Spines.
 
 End Spines.
 
-(*
-Section Normalization.
-  Context {cf:checker_flags} (Σ : global_env_ext).
-  Context {wfΣ : wf Σ}.
-  
-  Section reducible.
-    Lemma reducible Γ t : sum (∑ t', red1 Σ Γ t t') (forall t', red1 Σ Γ t t' -> False).
-    Proof.
-    Local Ltac lefte := left; eexists; econstructor; eauto.
-    Local Ltac leftes := left; eexists; econstructor; solve [eauto].
-    Local Ltac righte := right; intros t' red; depelim red; solve_discr; eauto 2.
-    induction t in Γ |- * using term_forall_list_ind.
-    (*all:try solve [righte].
-    - destruct (nth_error Γ n) eqn:hnth.
-        destruct c as [na [b|] ty]; [lefte|righte].
-        * rewrite hnth; reflexivity.
-        * rewrite hnth /= // in e.
-        * righte. rewrite hnth /= // in e.
-    - admit.
-    - destruct (IHt1 Γ) as [[? ?]|]; [lefte|].
-        destruct (IHt2 (Γ ,, vass n t1)) as [[? ?]|]; [|righte].
-        leftes.
-    - destruct (IHt1 Γ) as [[? ?]|]; [lefte|].
-        destruct (IHt2 (Γ ,, vass n t1)) as [[? ?]|]; [|righte].
-        leftes.
-    - destruct (IHt1 Γ) as [[? ?]|]; [lefte|].
-        destruct (IHt2 Γ) as [[? ?]|]; [lefte|].
-        destruct (IHt3 (Γ ,, vdef n t1 t2)) as [[? ?]|]; [|].
-        leftes. lefte.
-    - destruct (IHt1 Γ) as [[? ?]|]; [lefte|].
-        destruct (IHt2 Γ) as [[? ?]|]; [leftes|].
-        destruct (PCUICParallelReductionConfluence.view_lambda_fix_app t1 t2).
-        * rewrite [tApp _ _](mkApps_nested _ _ [a]).
-        destruct (unfold_fix mfix i) as [[rarg body]|] eqn:unf.
-        destruct (is_constructor rarg (l ++ [a])) eqn:isc; [leftes|]; eauto.
-        right => t' red; depelim red; solve_discr; eauto.
-        rewrite -mkApps_nested in H. noconf H. eauto. 
-        rewrite -mkApps_nested in H. noconf H. eauto.
-        eapply (f_equal (@length _)) in H1. rewrite /= app_length /= // in H1; lia.
-        eapply (f_equal (@length _)) in H1. rewrite /= app_length /= // in H1; lia.
-        righte; try (rewrite -mkApps_nested in H; noconf H); eauto.
-        eapply (f_equal (@length _)) in H1. rewrite /= app_length /= // in H1; lia.
-        eapply (f_equal (@length _)) in H1. rewrite /= app_length /= // in H1; lia.
-        * admit.
-        * righte. destruct args using rev_case; solve_discr; noconf H.
-        rewrite H in i. eapply negb_False; eauto.
-        rewrite -mkApps_nested; eapply isFixLambda_app_mkApps' => //.
-    - admit.
-    - admit.
-    - admit.
-    - admit.
-    - admit.*)
-    
-    Admitted.
-  End reducible.
-
-  Lemma reducible' Γ t : sum (∑ t', red1 Σ Γ t t') (normal Σ Γ t).
-  Proof.
-    Ltac lefte := left; eexists; econstructor; eauto.
-    Ltac leftes := left; eexists; econstructor; solve [eauto].
-    Ltac righte := right; (solve [repeat (constructor; eauto)])||(repeat constructor).
-    induction t in Γ |- * using term_forall_list_ind.
-    all:try solve [righte].
-    - destruct (nth_error Γ n) eqn:hnth.
-      destruct c as [na [b|] ty]; [lefte|].
-      * rewrite hnth; reflexivity.
-      * right. do 2 constructor; rewrite hnth /= //.
-      * righte. rewrite hnth /= //.
-    - admit.
-    - destruct (IHt1 Γ) as [[? ?]|]; [lefte|].
-      destruct (IHt2 (Γ ,, vass n t1)) as [[? ?]|]; [|].
-      leftes. right; solve[constructor; eauto].
-    - destruct (IHt1 Γ) as [[? ?]|]; [lefte|].
-      destruct (IHt2 (Γ ,, vass n t1)) as [[? ?]|]; [leftes|leftes].
-    - destruct (IHt1 Γ) as [[? ?]|]; [lefte|].
-      destruct (IHt2 Γ) as [[? ?]|]; [leftes|].
-      destruct (PCUICParallelReductionConfluence.view_lambda_fix_app t1 t2).
-      * rewrite [tApp _ _](mkApps_nested _ _ [a]).
-        destruct (unfold_fix mfix i) as [[rarg body]|] eqn:unf.
-        destruct (is_constructor rarg (l ++ [a])) eqn:isc; [leftes|]; eauto.
-        right; constructor. rewrite -mkApps_nested. constructor. admit. admit.  admit.
-      * admit.
-      * admit.
-    - admit.
-    - admit.
-    - admit.
-    - admit.
-    - admit.
-  Admitted. 
-
-  Lemma normalizer {Γ t ty} :
-    Σ ;;; Γ |- t : ty ->
-    ∑ nf, (red Σ.1 Γ t nf) * normal Σ Γ nf.
-  Proof.
-    intros Hty.
-    unshelve epose proof (PCUICSN.normalisation Σ Γ t (iswelltyped _ _ _ ty Hty)).
-    clear ty Hty.
-    move: t H. eapply Fix_F.
-    intros x IH.    
-    destruct (reducible' Γ x) as [[t' red]|nred].
-    specialize (IH t'). forward IH by (constructor; auto).
-    destruct IH as [nf [rednf norm]].
-    exists nf; split; auto. now transitivity t'.
-    exists x. split; [constructor|assumption].
-  Qed. 
-
-  Derive Signature for neutral normal.
-
-  Lemma typing_var {Γ n ty} : Σ ;;; Γ |- (tVar n) : ty -> False.
-  Proof. intros Hty; depind Hty; eauto. Qed.
-
-  Lemma typing_evar {Γ n l ty} : Σ ;;; Γ |- (tEvar n l) : ty -> False.
-  Proof. intros Hty; depind Hty; eauto. Qed.
-
-  Definition axiom_free Σ :=
-    forall c decl, declared_constant Σ c decl -> cst_body decl <> None.
-
-  Lemma neutral_empty t ty : axiom_free Σ -> Σ ;;; [] |- t : ty -> neutral Σ [] t -> False.
-  Proof.
-    intros axfree typed ne.
-    pose proof (PCUICClosed.subject_closed wfΣ typed) as cl.
-    depind ne.
-    - now simpl in cl.
-    - now eapply typing_var in typed.
-    - now eapply typing_evar in typed.
-    - eapply inversion_Const in typed as [decl [wfd [declc [cu cum]]]]; eauto.
-      specialize (axfree  _ _ declc). specialize (H decl).
-      destruct (cst_body decl); try congruence.
-      now specialize (H t declc eq_refl).
-    - simpl in cl; move/andP: cl => [clf cla].
-      eapply inversion_App in typed as [na [A [B [Hf _]]]]; eauto.
-    - simpl in cl; move/andP: cl => [/andP[_ clc] _].
-      eapply inversion_Case in typed; pcuicfo eauto.
-    - eapply inversion_Proj in typed; pcuicfo auto.
-  Qed.
-
-  Lemma ind_normal_constructor t i u args : 
-    axiom_free Σ ->
-    Σ ;;; [] |- t : mkApps (tInd i u) args -> normal Σ [] t -> construct_cofix_discr (head t).
-  Proof.
-    intros axfree Ht capp. destruct capp.
-    - eapply neutral_empty in H; eauto.
-    - eapply inversion_Sort in Ht as (? & ? & ? & ? & ?); auto.
-      eapply invert_cumul_sort_l in c as (? & ? & ?).
-      eapply red_mkApps_tInd in r as (? & eq & ?); eauto; eauto.
-      solve_discr.
-    - eapply inversion_Prod in Ht as (? & ? & ? & ? & ?); auto.
-      eapply invert_cumul_sort_l in c as (? & ? & ?).
-      eapply red_mkApps_tInd in r as (? & eq & ?); eauto; eauto.
-      solve_discr.
-    - eapply inversion_Lambda in Ht as (? & ? & ? & ? & ?); auto.
-      eapply invert_cumul_prod_l in c as (? & ? & ? & (? & ?) & ?); auto.
-      eapply red_mkApps_tInd in r as (? & eq & ?); eauto; eauto.
-      solve_discr.
-    - now rewrite head_mkApps /= /head /=.
-    - eapply PCUICValidity.inversion_mkApps in Ht as (? & ? & ?); auto.
-      eapply inversion_Ind in t as (? & ? & ? & decli & ? & ?); auto.
-      eapply PCUICSpine.typing_spine_strengthen in t0; eauto.
-      pose proof (on_declared_inductive wfΣ decli) as [onind oib].
-      rewrite oib.(ind_arity_eq) in t0.
-      rewrite !subst_instance_constr_it_mkProd_or_LetIn in t0.
-      eapply typing_spine_arity_mkApps_Ind in t0; eauto.
-      eexists; split; [sq|]; eauto.
-      now do 2 eapply isArity_it_mkProd_or_LetIn.
-    - admit. (* wf of fixpoints *)
-    - now rewrite /head /=. 
-  Admitted.
-
-  Lemma red_normal_constructor t i u args : 
-    axiom_free Σ ->
-    Σ ;;; [] |- t : mkApps (tInd i u) args ->
-    ∑ hnf, (red Σ.1 [] t hnf) * construct_cofix_discr (head hnf).
-  Proof.
-    intros axfree Ht. destruct (normalizer Ht) as [nf [rednf capp]].
-    exists nf; split; auto.
-    eapply subject_reduction in Ht; eauto.
-    now eapply ind_normal_constructor.
-  Qed.
-
-End Normalization.
-*)
-
 (** Evaluation is a subrelation of reduction: *)
 
 Tactic Notation "redt" uconstr(y) := eapply (CRelationClasses.transitivity (R:=red _ _) (y:=y)).
@@ -833,68 +651,11 @@ Section WeakNormalization.
     now eapply value_whnf.
   Qed.
 
-  (*
-  Lemma reducible Γ t : sum (∑ t', red1 Σ Γ t t') (wh_normal Σ Γ t).
-  Proof.
-    Ltac lefte := left; eexists; econstructor; eauto.
-    Ltac leftes := left; eexists; econstructor; solve [eauto].
-    Ltac righte := right; (solve [repeat (constructor; eauto)])||(repeat constructor).
-    induction t in Γ |- * using term_forall_list_ind.
-    all:try solve [righte].
-    - destruct (nth_error Γ n) eqn:hnth.
-      destruct c as [na [b|] ty]; [lefte|].
-      * rewrite hnth; reflexivity.
-      * right. do 2 constructor; rewrite hnth /= //.
-      * righte. rewrite hnth /= //. admit.
-    - destruct (IHt1 Γ) as [[? ?]|]; [lefte|].
-      destruct (IHt2 Γ) as [[? ?]|]; [leftes|].
-      destruct (IHt2 (Γ ,, vass n t1)) as [[? ?]|]; [|].
-      leftes. leftes.
-    - destruct (IHt1 Γ) as [[? ?]|]; [lefte|].
-      destruct (IHt2 Γ) as [[? ?]|]; [leftes|].
-      destruct (PCUICParallelReductionConfluence.view_lambda_fix_app t1 t2).
-      * rewrite [tApp _ _](mkApps_nested _ _ [a]).
-        destruct (unfold_fix mfix i) as [[rarg body]|] eqn:unf.
-        + destruct (is_constructor rarg (l ++ [a])) eqn:isc; [leftes|]; eauto.
-          right. rewrite /is_constructor in isc.
-          destruct nth_error eqn:eq.
-          ++ constructor; eapply whne_fixapp; eauto. admit.
-          ++ eapply whnf_fixapp. rewrite unf //.
-        + right. eapply whnf_fixapp. rewrite unf //.
-      * left. induction l; simpl. eexists. constructor.
-        eexists. eapply app_red_l. eapply red1_mkApps_l. constructor.
-      * admit.
-    - admit.
-    - admit.
-    - admit.
-    - admit.
-    - admit.
-  Admitted. 
-
-  Lemma normalizer {Γ t ty} :
-    Σ ;;; Γ |- t : ty ->
-    ∑ nf, (red Σ.1 Γ t nf) * wh_normal Σ Γ nf.
-  Proof.
-    intros Hty.
-    unshelve epose proof (PCUICSN.normalisation Σ Γ t (iswelltyped _ _ _ ty Hty)).
-    clear ty Hty.
-    move: t H. eapply Fix_F.
-    intros x IH.    
-    destruct (reducible  Γ x) as [[t' red]|nred].
-    specialize (IH t'). forward IH by (constructor; auto).
-    destruct IH as [nf [rednf norm]].
-    exists nf; split; auto. now transitivity t'.
-    exists x. split; [constructor|assumption].
-  Qed. *)
-
   Lemma typing_var {Γ n ty} : Σ ;;; Γ |- (tVar n) : ty -> False.
   Proof. intros Hty; depind Hty; eauto. Qed.
 
   Lemma typing_evar {Γ n l ty} : Σ ;;; Γ |- (tEvar n l) : ty -> False.
   Proof. intros Hty; depind Hty; eauto. Qed.
-
-  Definition axiom_free Σ :=
-    forall c decl, declared_constant Σ c decl -> cst_body decl <> None.
 
   Lemma invert_cumul_prod_ind {Γ na dom codom ind u args} :
     Σ ;;; Γ |- tProd na dom codom <= mkApps (tInd ind u) args -> False.
@@ -1015,8 +776,8 @@ Section WeakNormalization.
     match t with
     | tApp hd arg => axiom_free_value Σ (axiom_free_value Σ [] arg :: args) hd
     | tConst kn _ => match lookup_env Σ kn with
-                     | Some (ConstantDecl {| cst_body := Some _ |}) => true
-                     | _ => false
+                     | Some (ConstantDecl {| cst_body := None |}) => false
+                     | _ => true
                      end
     | tCase _ _ discr _ => axiom_free_value Σ [] discr
     | tProj _ t => axiom_free_value Σ [] t
@@ -1119,7 +880,7 @@ Section WeakNormalization.
     axiom_free_value Σ [] t ->
     Σ ;;; [] |- t : mkApps (tInd ind u) indargs ->
     wh_normal Σ [] t ->
-    check_recursivity_kind Σ (inductive_mind ind) Finite ->
+    ~check_recursivity_kind Σ (inductive_mind ind) CoFinite ->
     isConstruct_app t.
   Proof.
     intros axfree typed whnf ck.
@@ -1130,7 +891,7 @@ Section WeakNormalization.
     destruct hd eqn:eqh => //. subst hd.
     eapply decompose_app_inv in da. subst.
     eapply typing_cofix_coind in typed.
-    now move: (check_recursivity_kind_inj typed ck).
+    auto.
   Qed.
 
   Lemma fix_app_is_constructor {mfix idx args ty narg fn} : 
@@ -1149,11 +910,13 @@ Section WeakNormalization.
     rewrite /unfold_fix in unf. rewrite e in unf.
     noconf unf.
     eapply (wf_fixpoint_spine wfΣ) in t0; eauto.
-    rewrite /is_constructor. destruct (nth_error args (rarg x0)) eqn:hnth.
+    rewrite /is_constructor. destruct (nth_error args (rarg x0)) eqn:hnth; [|assumption].
     destruct_sigma t0. destruct t0.
     intros axfree norm.
     eapply whnf_ind_finite in t0; eauto.
-    assumption.
+    intros chk.
+    pose proof (check_recursivity_kind_inj chk i1).
+    discriminate.
   Qed.
   
   Lemma value_axiom_free Σ' t :

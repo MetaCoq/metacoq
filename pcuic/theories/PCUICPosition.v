@@ -2,7 +2,7 @@
 From Coq Require Import RelationClasses.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICInduction
-     PCUICReflect PCUICEquality PCUICLiftSubst.
+     PCUICReflect PCUICEquality PCUICLiftSubst PCUICCases.
 
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
@@ -10,7 +10,6 @@ From Equations Require Import Equations.
 Local Set Keyed Unification.
 
 Set Default Goal Selector "!".
-
 
 (* A choice is a local position.
    We define positions in a non dependent way to make it more practical.
@@ -856,6 +855,41 @@ Defined.
 Instance reflect_stack : ReflectEq stack :=
   let h := EqDec_ReflectEq stack in _.
 
+Section WfStack.
+  Context (Σ : global_env).
+
+  Fixpoint wf_stack stack :=
+    match stack return Type with
+    | ε => unit
+    | App _ π
+    | Fix _ _ _ π
+    | Fix_mfix_ty _ _ _ _ _ _ π
+    | Fix_mfix_bd _ _ _ _ _ _ π
+    | CoFix _ _ _ π
+    | CoFix_mfix_ty _ _ _ _ _ _ π
+    | CoFix_mfix_bd _ _ _ _ _ _ π
+    | Case_pars _ _ _ _ _ _ _ _ π => wf_stack π
+    | Case_p ci ppars puinst pctx c brs π => 
+      ∑ mdecl idecl,
+        declared_inductive Σ mdecl (ci_ind ci) idecl *
+        ind_case_predicate_context (ci_ind ci) mdecl idecl ppars puinst (forget_types pctx) pctx * 
+        wf_stack π
+    | Case _ _ _ π => wf_stack π
+    | Case_brs ci pred c bctx brs1 brs2 π =>
+      ∑ brctxs, case_branches_contexts Σ ci pred brctxs * 
+        (nth_error brctxs #|brs1| = Some bctx) * wf_stack π
+    | Proj _ π 
+    | Prod_l _ _ π
+    | Prod_r _ _ π
+    | Lambda_ty _ _ π
+    | Lambda_tm _ _ π
+    | LetIn_bd _ _ _ π
+    | LetIn_ty _ _ _ π
+    | LetIn_in _ _ _ π
+    | coApp _ π => wf_stack π
+      end.
+End WfStack.
+
 Fixpoint zipc t stack :=
   match stack with
   | ε => t
@@ -1218,7 +1252,6 @@ Proof.
 Qed.
 
 Section Stacks.
-
   Context (Σ : global_env_ext).
   Context `{checker_flags}.
 

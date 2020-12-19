@@ -122,7 +122,7 @@ Variant ind_case_predicate_context ind mdecl idecl params puinst pctx : context 
        decl_body := None;
        decl_type := indty |}
   in
-  let ictx' := map2 (fun na decl => set_binder_name na decl) pctx ictx in
+  let ictx' := map2 (fun na decl => set_binder_name na decl) pctx (inddecl :: ictx) in
   ind_case_predicate_context ind mdecl idecl params puinst pctx ictx'.
 
 Variant case_predicate_context Σ ci p : context -> Type@{cpred} :=

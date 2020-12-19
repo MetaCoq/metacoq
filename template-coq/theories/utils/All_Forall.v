@@ -907,6 +907,11 @@ Lemma OnOne2All_map {A I B} {P : I -> B -> B -> Type} {i : list I} {l l' : list 
   OnOne2All (fun i => on_Trel (P i) f) i l l' -> OnOne2All P i (map f l) (map f l').
 Proof. induction 1; simpl; constructor; try congruence. apply p. Qed.
 
+Lemma OnOne2All_map_all {A B I I'} {P} {i : list I} {l l' : list A} (g : I -> I') (f : A -> B) :
+  OnOne2All (fun i => on_Trel (P (g i)) f) i l l' -> OnOne2All P (map g i) (map f l) (map f l').
+Proof. induction 1; simpl; constructor; try congruence. apply p. Qed.
+
+
 Lemma OnOne2All_sym {A B} (P : B -> A -> A -> Type) i l l' : OnOne2All (fun i x y => P i y x) i l' l -> OnOne2All P i l l'.
 Proof.
   induction 1; constructor; auto.

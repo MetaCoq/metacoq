@@ -181,7 +181,7 @@ Inductive eq_term_upto_univ_napp Σ (Re Rle : Universe.t -> Universe.t -> Prop) 
     eq_predicate (eq_term_upto_univ_napp Σ Re Re 0) Re p p' ->
     eq_term_upto_univ_napp Σ Re Re 0 c c' ->
     All2 (fun x y =>
-      All2 (on_rel eq binder_relevance) (bcontext x) (bcontext y) *
+      All2 (eq_binder_annot) (bcontext x) (bcontext y) *
       eq_term_upto_univ_napp Σ Re Re 0 (bbody x) (bbody y)
     ) brs brs' ->
     eq_term_upto_univ_napp Σ Re Rle napp (tCase indn p c brs) (tCase indn p' c' brs')
@@ -2038,7 +2038,8 @@ Proof.
     eapply All2_symP; eauto. unfold on_rel. eauto.
     now symmetry.
   - eapply All2_sym. solve_all.
-    simpl in *. subst. eapply All2_symP; unfold on_rel; eauto.
+    simpl in *. subst. eapply Forall2_All2, Forall2_symP; eauto. typeclasses eauto.
+    now apply All2_Forall2.
     now eapply eq_term_upto_univ_sym.
   - eapply All2_sym. solve_all.
     now eapply eq_term_upto_univ_sym.

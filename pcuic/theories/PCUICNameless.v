@@ -38,7 +38,7 @@ Fixpoint nameless (t : term) : bool :=
   | tConst c u => true
   | tInd i u => true
   | tConstruct i n u => true
-  | tCase indn p c brs =>
+  | tCase ci p c brs =>
     forallb nameless p.(pparams) && 
     forallb banon p.(pcontext) &&
     nameless p.(preturn) && nameless c && 
@@ -86,7 +86,7 @@ Fixpoint nl (t : term) : term :=
   | tConst c u => tConst c u
   | tInd i u => tInd i u
   | tConstruct i n u => tConstruct i n u
-  | tCase indn p c brs => tCase indn (nl_predicate nl p) (nl c) (map (nl_branch nl) brs)
+  | tCase ci p c brs => tCase ci (nl_predicate nl p) (nl c) (map (nl_branch nl) brs)
   | tProj p c => tProj p (nl c)
   | tFix mfix idx => tFix (map (map_def_anon nl nl) mfix) idx
   | tCoFix mfix idx => tCoFix (map (map_def_anon nl nl) mfix) idx
@@ -202,17 +202,29 @@ Proof.
   - f_equal ; try solve [ ih ].
     * destruct e as [eqpar [eqinst [eqctx eqret]]].
       destruct p, p'; simpl in *. f_equal.
-
-    revert brs' H3 H0 a.
-    induction l ; intros brs' h1 h2 h.
-    + destruct brs' ; inversion h. reflexivity.
-    + destruct brs' ; inversion h. subst.
-      cbn in h1, h2. destruct_andb.
-      inversion X. subst.
-      f_equal.
-      * destruct a, p0. cbn in *. destruct X0. subst.
-        f_equal. eapply H8; eassumption.
-      * eapply IHl ; assumption.
+      + apply All2_eq; solve_all.
+      + red in eqinst.
+        apply Forall2_eq. eapply Forall2_map_inv in eqinst.
+        eapply (Forall2_impl eqinst); solve_all.
+        now apply Universe.make_inj in H.
+      + apply All2_eq; solve_all.
+        now eapply banon_eq_binder_annot.
+      + destruct X. ih.
+    * revert brs' H3 H0 a.
+      induction l ; intros brs' h1 h2 h.
+      + destruct brs' ; inversion h. reflexivity.
+      + destruct brs' ; inversion h. subst.
+        cbn in h1, h2. destruct_andb.
+        inversion X. subst. simpl in H5.
+        move/andb_and: H5 => [/andb_and [Hac Hab] Hl].
+        apply forallb_All in Hac.
+        f_equal.
+        ++ destruct a, b. cbn in *. destruct X1.
+           depelim h. destruct p0. depelim X0. simpl in *.
+           f_equal; try ih.
+           apply All2_eq.
+           solve_all. now apply banon_eq_binder_annot.
+        ++ eapply IHl ; tas. now depelim X0.
   - f_equal ; try solve [ ih ].
     revert mfix' H1 H2 H H0 a.
     induction m ; intros m' h1 h2 h3 h4 h.
@@ -251,6 +263,11 @@ Proof.
       * eapply IHm ; assumption.
 Qed.
 
+Lemma banon_list l : forallb (banon ∘ anonymize) l.
+Proof.
+  induction l; simpl; auto.
+Qed.
+
 Lemma nl_spec :
   forall u, nameless (nl u).
 Proof.
@@ -258,12 +275,16 @@ Proof.
   all: try reflexivity.
   all: try (simpl ; repeat (eapply andb_true_intro ; split) ; assumption).
   - cbn. eapply All_forallb. eapply All_map. assumption.
-  - simpl ; repeat (eapply andb_true_intro ; split) ; try assumption.
-    induction l.
-    + reflexivity.
-    + cbn. inversion X. subst.
-      repeat (eapply andb_true_intro ; split) ; try assumption.
-      eapply IHl. assumption.
+  - destruct X.
+    simpl ; repeat (eapply andb_true_intro ; split) ; try assumption.
+    * eapply All_forallb, All_map; assumption.
+    * now rewrite forallb_map banon_list.
+    * induction l.
+      + reflexivity.
+      + cbn. inversion X0. subst.
+        repeat (eapply andb_true_intro ; split) ; try assumption.
+        ++ now rewrite forallb_map banon_list.
+        ++ eapply IHl. assumption.
   - simpl ; repeat (eapply andb_true_intro ; split) ; try assumption.
     + induction m.
       * reflexivity.
@@ -371,9 +392,14 @@ Proof.
   - econstructor. all: try solve [ eauto ].
     eapply R_global_instance_nl; eauto.
   - econstructor; eauto.
-    induction a; constructor; auto.
-    intuition auto.
-    destruct x, y; simpl in *. apply aux; auto.
+    + red. destruct e; intuition auto; simpl.
+      * induction a0; constructor; auto.
+      * solve_all.
+      * apply aux. auto.
+    + induction a; constructor; auto.
+      intuition auto; simpl.
+      1:solve_all.
+      destruct x, y; simpl in *. apply aux; auto.
   - econstructor; eauto.
     induction a; constructor; auto.
     intuition auto.
@@ -452,7 +478,11 @@ Proof.
   - cbn in H. inversion H. subst. constructor.
     apply All2_map_inv in a. solve_all.
   - cbn in H. inversion H. subst. constructor ; try ih3.
-    apply All2_map_inv in a. solve_all.
+    + red. destruct e; solve_all.
+      * simpl in a0. eapply All2_map_inv in a0. solve_all.
+      * simpl in a3. eapply All2_map_inv in a3; solve_all.
+    + apply All2_map_inv in a. solve_all.
+      eapply All2_map_inv in a1. solve_all.
   - cbn in H. inversion H. subst. constructor ; try ih3.
     apply All2_map_inv in a. solve_all.
   - cbn in H. inversion H. subst. constructor ; try ih3.
@@ -502,11 +532,16 @@ Proof.
     + constructor.
     + simpl. inversion X. subst. constructor ; eauto.
   - simpl. destruct p. constructor ; eauto.
-    induction l.
-    + constructor.
-    + simpl. inversion X. subst. constructor.
-      * split ; auto.
-      * eapply IHl. assumption.
+    * destruct X; red; simpl in *; intuition auto.
+      + induction a; constructor; auto.
+      + reflexivity.
+      + induction pcontext; constructor; auto. red. reflexivity.
+    * induction l.
+      + constructor.
+      + simpl. inversion X0. subst. simpl in *. repeat constructor.
+        ++ simpl. induction (bcontext a); constructor; auto.
+        ++ auto.
+        ++ eapply IHl. assumption.
   - simpl. constructor. induction m.
     + constructor.
     + simpl. inversion X. subst. constructor ; auto.
@@ -545,14 +580,16 @@ Fixpoint nlstack (π : stack) : stack :=
     CoFix_mfix_ty (anonymize na) (nl bo) ra (map (map_def_anon nl nl) mfix1) (map (map_def_anon nl nl) mfix2) idx (nlstack ρ)
   | CoFix_mfix_bd na ty ra mfix1 mfix2 idx ρ =>
     CoFix_mfix_bd (anonymize na) (nl ty) ra (map (map_def_anon nl nl) mfix1) (map (map_def_anon nl nl) mfix2) idx (nlstack ρ)
-  | Case_p indn c brs ρ =>
-    Case_p indn (nl c) (map (on_snd nl) brs) (nlstack ρ)
-  | Case indn p brs ρ =>
-    Case indn (nl p) (map (on_snd nl) brs) (nlstack ρ)
-  | Case_brs indn p c m brs1 brs2 ρ =>
+  | Case_pars ci pars1 pars2 pinst pctx pret c brs ρ =>
+    Case_pars ci (map nl pars1) (map nl pars2) pinst (map anonymize pctx) (nl pret) (nl c) (map (nl_branch nl) brs) (nlstack ρ)
+  | Case_p ci pars pinst pctx c brs ρ =>
+    Case_p ci (map nl pars) pinst (nlctx pctx) (nl c) (map (nl_branch nl) brs) (nlstack ρ)
+  | Case ci p brs ρ =>
+    Case ci (nl_predicate nl p) (map (nl_branch nl) brs) (nlstack ρ)
+  | Case_brs ci p c m brs1 brs2 ρ =>
     Case_brs
-      indn (nl p) (nl c) m
-      (map (on_snd nl) brs1) (map (on_snd nl) brs2) (nlstack ρ)
+      ci (nl_predicate nl p) (nl c) (nlctx m)
+      (map (nl_branch nl) brs1) (map (nl_branch nl) brs2) (nlstack ρ)
   | Proj p ρ =>
     Proj p (nlstack ρ)
   | Prod_l na B ρ =>
@@ -599,6 +636,7 @@ Proof.
   intros ρ.
   induction ρ.
   all: try solve [ simpl ; rewrite ?IHρ ; reflexivity ].
+  - simpl. rewrite IHρ. rewrite map_length. reflexivity.
   - simpl. rewrite IHρ. rewrite map_length. reflexivity.
   - simpl. rewrite IHρ. rewrite map_length. reflexivity.
   - simpl. rewrite IHρ. rewrite map_length. reflexivity.
@@ -660,13 +698,15 @@ Proof.
   - simpl. f_equal. rename X into H; induction H.
     + reflexivity.
     + simpl. rewrite p IHAll. reflexivity.
-  - simpl. rewrite IHb1 IHb2. f_equal.
-    induction X.
-    + reflexivity.
-    + simpl. f_equal.
-      * unfold on_snd. destruct p, x. simpl in *.
-        rewrite p0. reflexivity.
-      * apply IHX.
+  - simpl. rewrite IHb. f_equal.
+    * unfold nl_predicate, map_predicate. simpl. f_equal; solve_all. simpl.
+      rewrite !map_map_compose; solve_all.
+    * induction X0.
+      + reflexivity.
+      + simpl. f_equal.
+        ++ destruct x. simpl in *. unfold nl_branch, map_branch.
+          simpl. f_equal. solve_all.
+        ++ apply IHX0.
   - simpl. f_equal. induction X ; try reflexivity.
     simpl. rewrite IHX. f_equal.
     destruct p as [h1 h2].
@@ -731,7 +771,16 @@ Proof.
   - simpl. rewrite IHπ. cbn. f_equal.
     rewrite map_app. cbn. reflexivity.
   - simpl. rewrite IHπ. cbn. f_equal.
+    f_equal. unfold nl_predicate; simpl; f_equal; solve_all.
     rewrite map_app. cbn. reflexivity.
+  - simpl. rewrite IHπ. cbn. f_equal.
+    f_equal. unfold nl_predicate; simpl; f_equal; solve_all.
+    unfold forget_types, nlctx. rewrite !map_map_compose.
+    reflexivity.
+  - simpl. rewrite IHπ. cbn. f_equal.
+    f_equal. rewrite map_app /nl_branch /=. f_equal. simpl. f_equal.
+    f_equal. unfold forget_types. rewrite !map_map_compose.
+    reflexivity.
 Qed.
 
 Lemma nl_zipx :
@@ -811,10 +860,14 @@ Proof.
     + simpl. f_equal.
       * eapply p.
       * eapply IHAll.
-  - f_equal. 1-2: solve [ auto ].
-    induction X. 1: reflexivity.
-    simpl. f_equal. 2: assumption.
-    unfold on_snd. cbn. f_equal. auto.
+  - rewrite map_length.
+    f_equal; auto.
+    * unfold nl_predicate, map_predicate; simpl; f_equal; solve_all.
+      rewrite !map_map_compose; solve_all.
+    * induction X0. 1: reflexivity.
+      simpl. f_equal. 2: assumption.
+      rewrite map_length.
+      unfold nl_branch, map_branch. cbn. f_equal. auto.
   - f_equal. rewrite map_length.
     generalize (#|m| + k). intro l.
     induction X.
@@ -877,6 +930,8 @@ Proof.
     rewrite map_app. simpl.
     rewrite 2!map_def_sig_nl.
     reflexivity.
+  - simpl. rewrite nlctx_app_context. now rewrite IHρ.
+  - simpl. rewrite nlctx_app_context. now rewrite IHρ.
 Qed.
 
 Lemma nl_subst :
@@ -896,10 +951,13 @@ Proof.
     + simpl. f_equal.
       * eapply p.
       * eapply IHAll.
-  - f_equal. 1-2: solve [ auto ].
-    induction X. 1: reflexivity.
-    simpl. f_equal. 2: assumption.
-    unfold on_snd. cbn. f_equal. auto.
+  - f_equal; auto.
+    * unfold nl_predicate, map_predicate; simpl; f_equal; 
+      rewrite ?map_map_compose ?map_length; solve_all.
+    * induction X0. 1: reflexivity.
+      simpl. f_equal. 2: assumption.
+      rewrite map_length.
+      unfold nl_branch, map_branch. cbn. f_equal. auto.
   - f_equal. rewrite map_length.
     generalize (#|m| + k). intro l.
     induction X.
@@ -971,6 +1029,10 @@ Proof.
   apply IHt1.
 Qed.
 
+Lemma nl_pred_set_preturn p pret : nl_predicate nl (set_preturn p pret) = 
+  set_preturn (nl_predicate nl p) (nl pret).
+Proof. reflexivity. Qed.
+
 Lemma nl_fix_context :
   forall mfix,
     nlctx (fix_context mfix) = fix_context (map (map_def_anon nl nl) mfix).
@@ -984,6 +1046,29 @@ Proof.
     + apply IHmfix.
     + unfold map_decl_anon. cbn. rewrite nl_lift. reflexivity.
 Qed.
+
+From MetaCoq.PCUIC Require Import PCUICCases.
+
+Lemma nl_case_predicate_context Σ ci p pctx :
+  case_predicate_context Σ ci p pctx ->
+  case_predicate_context (map (on_snd nl_global_decl) Σ) ci (nl_predicate nl p) (nlctx pctx).
+Proof.
+  induction 1; econstructor; eauto.
+  + unfold declared_inductive, declared_minductive in *.
+    destruct d as [Hl Hnth].
+    rewrite nl_lookup_env Hl /=.
+    split; eauto.
+    replace (ind_bodies (nl_mutual_inductive_body mdecl)) with
+    (map nl_one_inductive_body (ind_bodies mdecl)); [|now destruct mdecl].
+    rewrite nth_error_map Hnth /=. reflexivity.
+  + todo "ind_case_predicate_context".
+Qed.
+
+Lemma nl_case_branches_contexts Σ ci p brsctx :
+  case_branches_contexts Σ ci p brsctx ->
+  case_branches_contexts (map (on_snd nl_global_decl) Σ) ci (nl_predicate nl p) (map nlctx brsctx).
+Proof.
+Admitted.
 
 Lemma nl_red1 :
   forall Σ Γ M N,
@@ -999,11 +1084,11 @@ Proof.
     destruct (nth_error Γ i). 2: discriminate.
     cbn in *. apply some_inj in H. rewrite H. reflexivity.
   - rewrite nl_mkApps. cbn.
-    replace (nl (iota_red pars c args brs))
-      with (iota_red pars c (map nl args) (map (on_snd nl) brs)).
-    + eapply red_iota.
-    + unfold iota_red. rewrite nl_mkApps.
-      rewrite map_skipn. rewrite nth_map. all: reflexivity.
+    rewrite map_skipn.
+    change (nl (bbody (nth c brs dummy_branch))) with
+      (bbody (nl_branch nl (nth c brs dummy_branch))).
+    rewrite -map_nth.
+    eapply red_iota.
   - rewrite !nl_mkApps. cbn. eapply red_fix with (narg:=narg).
     + unfold unfold_fix in *. rewrite nth_error_map.
       destruct (nth_error mfix idx). 2: discriminate.
@@ -1052,12 +1137,20 @@ Proof.
   - rewrite nl_mkApps. cbn. constructor.
     rewrite nth_error_map H. reflexivity.
   - constructor. eapply OnOne2_map, OnOne2_impl. 1: eassumption.
-    cbn. intros x y [[? ?] ?]. split. all: assumption.
+    solve_all.
+  - rewrite nl_pred_set_preturn. econstructor.
+    * eapply nl_case_predicate_context; eauto.
+    * rewrite -nlctx_app_context. apply IHh.
+  - eapply case_red_brs. 
+    * eapply nl_case_branches_contexts; eauto.
+    * eapply OnOne2All_map_all, OnOne2All_impl. 1: eassumption.
+      cbn. intros x y [? ?]; cbn. solve_all. red; simpl.
+      subst bcontext.
+      split; auto. now rewrite -nlctx_app_context.
   - constructor. eapply OnOne2_map, OnOne2_impl. 1: eassumption.
-    cbn. intros x y [? ?]. all: assumption.
-  - constructor. eapply OnOne2_map, OnOne2_impl. 1: eassumption.
-    cbn. intros x y [[? ?] ?]. split. 1: assumption.
-    cbn. congruence.
+    cbn. intros x y [? ?]; auto.
+  - constructor. apply OnOne2_map. eapply OnOne2_impl; [eassumption|].
+    cbn. intros x y [? ?]; auto. red; simpl; intuition auto. congruence.
   - apply fix_red_body. eapply OnOne2_map, OnOne2_impl. 1: eassumption.
     cbn. intros x y [[? ?] ?]. split.
     + rewrite nlctx_app_context nl_fix_context in r0. assumption.
@@ -1256,12 +1349,10 @@ Proof.
       * rewrite nth_error_map H3. reflexivity.
     + unfold consistent_instance_ext.
       rewrite global_ext_levels_nlg global_ext_constraints_nlg; assumption.
-  - rewrite nl_mkApps map_app map_skipn. cbn.
+  - rewrite nl_mkApps map_app nl_it_mkLambda_or_LetIn. cbn.
     eapply type_Case with  (mdecl0:=nl_mutual_inductive_body mdecl)
                            (idecl0:=nl_one_inductive_body idecl)
-                           (btys0:=map (on_snd nl) btys)
-                           (u0:=u)
-    ; tea.
+                          (p0:=nl_predicate nl p); tea.
     + destruct isdecl as [HH1 HH2]. split.
       * eapply lookup_env_nlg in HH1. eapply HH1.
       * replace (ind_bodies (nl_mutual_inductive_body mdecl)) with
@@ -1330,12 +1421,16 @@ Proof.
     (*     unfold nlctx; now rewrite map_length. *)
     (*   * eapply All2_map, All2_impl; tea. *)
     (*     apply nl_eq_decl'. *)
-    + rewrite global_ext_constraints_nlg. exact H1.
-    + rewrite -> nl_mkApps in *; eassumption.
+    + rewrite nlctx_app_context in X2. eapply X2.
+    + rewrite global_ext_constraints_nlg; eauto.
+    + now rewrite nl_mkApps map_app /= in X5.
     + exact (todo "build_branches_type Nameless").
     + clear -X5. eapply All2_map, All2_impl; tea. cbn.
       clear. intros x y [[[? ?] ?] ?]. intuition eauto.
-      destruct s as [s [Hs IH]] ; exists s; eauto.
+      * instantiate (1:=fun y : context × term => (nlctx y.1, nl y.2)).
+        simpl. now rewrite map_length /nlctx map_length.
+      * simpl. now rewrite nlctx_app_context in t.
+      * simpl. now rewrite nlctx_app_context in t1.
   - destruct pdecl as [pdecl1 pdecl2]; simpl.
     rewrite map_rev.
     eapply type_Proj with (mdecl0:=nl_mutual_inductive_body mdecl)
@@ -1448,8 +1543,14 @@ Proof.
   induction M using term_forall_list_ind; cbnr.
   all: rewrite ?IHM1 ?IHM2 ?IHM3 ?IHM; cbnr.
   - f_equal. induction X; cbnr. congruence.
-  - f_equal. induction X; cbnr. f_equal; tas.
-    destruct x; unfold on_snd; simpl in *. congruence.
+  - destruct X; cbnr.
+    f_equal; solve_all.
+    * unfold nl_predicate; cbn; f_equal; solve_all.
+      induction (pcontext p); constructor; auto.
+    * unfold nl_branch; destruct x; cbn. f_equal; auto.
+      clear.
+      induction bcontext; simpl; try constructor; auto.
+      destruct a; simpl; f_equal; auto.
   - f_equal. induction X; cbnr. f_equal; tas.
     destruct p, x; unfold map_def_anon; simpl in *.
     rewrite anonymize_two; congruence.

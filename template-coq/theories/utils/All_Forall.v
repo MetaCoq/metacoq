@@ -33,6 +33,14 @@ Arguments All2_cons {_ _ _ _ _ _ _}.
 Derive Signature for All2.
 Derive NoConfusionHom for All2.
 
+Inductive All3 {A B C : Type} (R : A -> B -> C -> Type) : list A -> list B -> list C -> Type :=
+  All3_nil : All3 R [] [] []
+| All3_cons : forall (x : A) (y : B) (z : C) (l : list A) (l' : list B) (l'' : list C),
+    R x y z -> All3 R l l' l'' -> All3 R (x :: l) (y :: l') (z :: l'').
+Arguments All3_nil {_ _ _ _}.
+Arguments All3_cons {_ _ _ _ _ _ _ _ _ _}.
+Derive Signature NoConfusionHom for All3.
+
 Fixpoint alli {A} (p : nat -> A -> bool) (l : list A) (n : nat) : bool :=
   match l with
   | [] => true

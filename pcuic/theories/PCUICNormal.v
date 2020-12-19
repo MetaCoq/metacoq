@@ -3,7 +3,7 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From MetaCoq.Template
 Require Import config Universes monad_utils utils BasicAst AstUtils UnivSubst.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICContextRelation
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICContextRelation
      PCUICEquality PCUICLiftSubst PCUICTyping PCUICInduction.
 Require Import ssreflect.
 Set Asymmetric Patterns.
@@ -428,11 +428,11 @@ Proof with eauto using sq with pcuic.
   - left. constructor. eapply whnf_indapp with (v := []). 
   - left. constructor. eapply whnf_cstrapp with (v := []). 
   - destruct (RedFlags.iota flags) eqn:Eq...
-    destruct (IHt2 Γ) as [_ []].
+    destruct (IHt Γ) as [_ []].
     + left. destruct s...
     + right. intros [w]. depelim w. depelim w. all:help...
   -  destruct (RedFlags.iota flags) eqn:Eq...
-     destruct (IHt2 Γ) as [_ []].
+     destruct (IHt Γ) as [_ []].
     + left. destruct s...
     + right. intros [w]. depelim w. all:help...
   - destruct (RedFlags.iota flags) eqn:Eq...
@@ -512,7 +512,7 @@ Lemma red1_mkApps_tFix_inv Σ Γ mfix id v t' :
   red1 Σ Γ (mkApps (tFix mfix id) v) t' ->
   (∑ v', (t' = mkApps (tFix mfix id) v') * (OnOne2 (red1 Σ Γ) v v'))
   + (∑ mfix', (t' = mkApps (tFix mfix' id) v) * (OnOne2 (on_Trel_eq (red1 Σ Γ) dtype (fun x0 : def term => (dname x0, dbody x0, rarg x0))) mfix mfix'))
-  + (∑ mfix', (t' = mkApps (tFix mfix' id) v) * (OnOne2 (on_Trel_eq (red1 Σ (Γ ,,, PCUICLiftSubst.fix_context mfix)) dbody (fun x0 : def term => (dname x0, dtype x0, rarg x0))) mfix mfix')).
+  + (∑ mfix', (t' = mkApps (tFix mfix' id) v) * (OnOne2 (on_Trel_eq (red1 Σ (Γ ,,, fix_context mfix)) dbody (fun x0 : def term => (dname x0, dtype x0, rarg x0))) mfix mfix')).
 Proof.
   intros not_ctor. revert t'. induction v using rev_ind; intros.
   - cbn in *. depelim X; help; eauto.
@@ -541,7 +541,7 @@ Lemma red1_mkApps_tCoFix_inv Σ Γ mfix id v t' :
   red1 Σ Γ (mkApps (tCoFix mfix id) v) t' ->
   (∑ v', (t' = mkApps (tCoFix mfix id) v') * (OnOne2 (red1 Σ Γ) v v'))
   + (∑ mfix', (t' = mkApps (tCoFix mfix' id) v) * (OnOne2 (on_Trel_eq (red1 Σ Γ) dtype (fun x0 : def term => (dname x0, dbody x0, rarg x0))) mfix mfix'))
-  + (∑ mfix', (t' = mkApps (tCoFix mfix' id) v) * (OnOne2 (on_Trel_eq (red1 Σ (Γ ,,, PCUICLiftSubst.fix_context mfix)) dbody (fun x0 : def term => (dname x0, dtype x0, rarg x0))) mfix mfix')).
+  + (∑ mfix', (t' = mkApps (tCoFix mfix' id) v) * (OnOne2 (on_Trel_eq (red1 Σ (Γ ,,, fix_context mfix)) dbody (fun x0 : def term => (dname x0, dtype x0, rarg x0))) mfix mfix')).
 Proof.
   revert t'. induction v using rev_ind; intros.
   - cbn in *. depelim X; help; eauto.
@@ -720,18 +720,24 @@ Lemma whne_red1_ind
                ((dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)))
             defs mfix1 ->
           P (tFix defs i) (tFix mfix1 i))
-      (Hcase_discr : forall i p c brs p',
+      (Hcase_params : forall i p c brs params',
           whne flags Σ Γ c ->
-          red1 Σ Γ p p' ->
-          P (tCase i p c brs) (tCase i p' c brs))
+          OnOne2 (red1 Σ Γ) p.(pparams) params' ->
+          P (tCase i p c brs) (tCase i (set_pparams p params') c brs))
+      (Hcase_discr : forall i p pctx c brs p',
+          whne flags Σ Γ c ->
+          case_predicate_context Σ i p pctx ->
+          red1 Σ (Γ ,,, pctx) p.(preturn) p' ->
+          P (tCase i p c brs) (tCase i (set_preturn p p') c brs))
       (Hcase_motive : forall i p c brs c',
           whne flags Σ Γ c ->
           red1 Σ Γ c c' ->
           P c c' ->
           P (tCase i p c brs) (tCase i p c' brs))
-      (Hcase_branch : forall i p c brs brs',
+      (Hcase_branch : forall i p c brctxs brs brs',
           whne flags Σ Γ c ->
-          OnOne2 (on_Trel_eq (red1 Σ Γ) snd fst) brs brs' ->
+          case_branches_contexts Σ i p brctxs ->
+          OnOne2All (fun ctx => on_Trel_eq (red1 Σ (Γ ,,, ctx)) bbody bcontext) brctxs brs brs' ->
           P (tCase i p c brs) (tCase i p c brs'))
       (Hcase_noiota : forall t' i p c brs,
           RedFlags.iota flags = false ->
@@ -813,6 +819,7 @@ Proof.
       destruct wh as [|(?&?&?&?&?&?&?)]; [|discriminate].
       depelim w.
       solve_discr.
+    + eapply Hcase_params; eauto.
   - eauto.
   - depelim r; eauto.
     + solve_discr.
@@ -965,11 +972,18 @@ Inductive whnf_red Σ Γ : term -> term -> Type :=
                       red Σ (Γ,,, fix_context mfix) (dbody d) (dbody d'))
          mfix mfix' ->
     whnf_red Σ Γ (tFix mfix idx) (tFix mfix' idx)
-| whnf_red_tCase p motive motive' discr discr' brs brs' :
-    red Σ Γ motive motive' ->
+| whnf_red_tCase p motive pctx brctxs motivep motiveret discr discr' brs brs' :
+    case_predicate_context Σ p motive pctx ->
+    case_branches_contexts Σ p motive brctxs ->
+    All2 (red Σ Γ) motive.(pparams) motivep ->
+    red Σ (Γ ,,, pctx) motive.(preturn) motiveret ->
     red Σ Γ discr discr' ->
-    All2 (fun br br' => br.1 = br'.1 × red Σ Γ br.2 br'.2) brs brs' ->
-    whnf_red Σ Γ (tCase p motive discr brs) (tCase p motive' discr' brs')
+    All3 (fun brctx br br' => br.(bcontext) = br'.(bcontext) × red Σ (Γ ,,, brctx) br.(bbody) br'.(bbody)) brctxs brs brs' ->
+    whnf_red Σ Γ (tCase p motive discr brs) 
+      (tCase p {| pparams := motivep; 
+                  puinst := motive.(puinst);
+                  pcontext := motive.(pcontext); 
+                  preturn := motiveret |} discr' brs')
 | whnf_red_tProj p c c' :
     red Σ Γ c c' ->
     whnf_red Σ Γ (tProj p c) (tProj p c')
@@ -999,6 +1013,14 @@ Derive Signature for whnf_red.
 
 Hint Constructors whnf_red : pcuic.
 
+Lemma All3_impl {A B C} (P Q : A -> B -> C -> Type) {l l' l''} 
+  (a : All3 P l l' l'') : 
+  (forall x y z, P x y z -> Q x y z) ->
+  All3 Q l l' l''.
+Proof.
+  intros HPQ; induction a; constructor; auto.
+Qed.
+
 Lemma whnf_red_red Σ Γ t t' :
   whnf_red Σ Γ t t' ->
   red Σ Γ t t'.
@@ -1012,11 +1034,11 @@ Proof.
     cbn.
     intros ? ? (->&->&r1&r2).
     eauto.
-  - apply red_case; auto.
-    eapply All2_impl; eauto.
+  - eapply red_case; eauto.
+    eapply All3_impl; eauto.
     cbn.
-    intros ? ? (->&?).
-    eauto.
+    intros ? ? (eq&?).
+    intuition eauto.
   - apply red_proj_c; auto.
   - apply red_prod; auto.
   - apply red_abs; auto.
@@ -1109,6 +1131,8 @@ Proof.
   2: apply All2_same; auto.
   constructor.
   apply All2_same; auto.
+  destruct p. eapply whnf_red_tCase.
+  (* TODO: in wf environments, case predicate context can always be derived. *)
 Qed.
 
 Lemma whnf_red_refl Σ Γ t :

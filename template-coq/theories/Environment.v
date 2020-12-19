@@ -588,7 +588,7 @@ Definition test_predicate {term}
 Definition eqb_predicate {term} (eqb_univ_instance : Instance.t -> Instance.t -> bool) (eqterm : term -> term -> bool) (p p' : predicate term) :=
   forallb2 eqterm p.(pparams) p'.(pparams) &&
   eqb_univ_instance p.(puinst) p'.(puinst) &&
-  Nat.eqb #|p.(pcontext)| #|p'.(pcontext)| &&
+  forallb2 eqb_binder_annot p.(pcontext) p'.(pcontext) &&
   eqterm p.(preturn) p'.(preturn).
   
 Section map_predicate.

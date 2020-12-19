@@ -300,7 +300,7 @@ Defined.
 Definition eq_aname (na nb : binder_annot name) :=
   eqb na.(binder_name) nb.(binder_name) &&
   eqb na.(binder_relevance) nb.(binder_relevance).
-
+  
 #[program] Instance reflect_aname : ReflectEq aname := {
   eqb := eq_aname
 }.

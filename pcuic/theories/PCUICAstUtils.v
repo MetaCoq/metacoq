@@ -39,6 +39,30 @@ Fixpoint string_of_term (t : term) :=
   | tPrim i => "Int(" ^ string_of_prim string_of_term i ^ ")"
   end.
 
+Ltac change_Sk :=
+  repeat match goal with
+    | |- context [S (?x + ?y)] => progress change (S (x + y)) with (S x + y)
+    | |- context [#|?l| + (?x + ?y)] => progress replace (#|l| + (x + y)) with ((#|l| + x) + y) by now rewrite Nat.add_assoc
+  end.
+
+Hint Extern 10 => progress unfold map_branches_k : all.
+
+Ltac solve_all_one :=
+  try lazymatch goal with
+  | H: tCasePredProp _ _ _ |- _ => destruct H
+  end;
+  unfold tCaseBrsProp, tFixProp in *;
+  try apply map_predicate_eq_spec;
+  try apply map_predicate_id_spec;
+  repeat toAll; try All_map; try close_Forall;
+  change_Sk; auto with all;
+  intuition eauto 4 with all.
+
+Ltac solve_all := repeat (progress solve_all_one).
+Hint Extern 10 => rewrite !map_branch_map_branch : all.
+Hint Extern 10 => rewrite !map_predicate_map_predicate : all.
+  
+
 Lemma lookup_env_nil c s : lookup_env [] c = Some s -> False.
 Proof.
   induction c; simpl; auto => //.

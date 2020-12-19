@@ -116,7 +116,7 @@ Qed.
 Definition eq_predicate (eq_term : term -> term -> Type) Re p p' :=
   All2 eq_term p.(pparams) p'.(pparams) *
   (R_universe_instance Re p.(puinst) p'.(puinst) *
-    ((#|p.(pcontext)| = #|p'.(pcontext)|) *
+    ((All2 (on_rel eq binder_relevance) p.(pcontext) p'.(pcontext)) *
       eq_term p.(preturn) p'.(preturn))).
 
 (** ** Syntactic equality up-to universes
@@ -181,7 +181,7 @@ Inductive eq_term_upto_univ_napp Σ (Re Rle : Universe.t -> Universe.t -> Prop) 
     eq_predicate (eq_term_upto_univ_napp Σ Re Re 0) Re p p' ->
     eq_term_upto_univ_napp Σ Re Re 0 c c' ->
     All2 (fun x y =>
-      (#|bcontext x| = #|bcontext y|) *
+      All2 (on_rel eq binder_relevance) (bcontext x) (bcontext y) *
       eq_term_upto_univ_napp Σ Re Re 0 (bbody x) (bbody y)
     ) brs brs' ->
     eq_term_upto_univ_napp Σ Re Rle napp (tCase indn p c brs) (tCase indn p' c' brs')
@@ -251,6 +251,10 @@ Proof. reflexivity. Qed.
 
 Hint Resolve @eq_binder_annot_refl : core.
 
+Lemma eq_binder_relevances_refl (x : list aname) : All2 (on_rel eq binder_relevance) x x.
+Proof. now eapply All_All2_refl, All_refl. Qed.
+Hint Resolve eq_binder_relevances_refl : core.
+
 Instance eq_term_upto_univ_refl Σ Re Rle napp :
   RelationClasses.Reflexive Re ->
   RelationClasses.Reflexive Rle ->
@@ -266,8 +270,8 @@ Proof.
   all: try solve [unfold eq_predicate; solve_all; eapply All_All2; eauto].
   - apply R_global_instance_refl; auto.
   - apply R_global_instance_refl; auto.
-  - eapply All_All2; eauto. simpl. intuition eauto; reflexivity.
-  - eapply All_All2; eauto. simpl. intuition eauto; reflexivity.
+  - eapply All_All2; eauto. simpl; intuition eauto.
+  - eapply All_All2; eauto; simpl; intuition eauto.  
 Qed.
 
 Instance eq_term_refl `{checker_flags} Σ φ : Reflexive (eq_term Σ φ).
@@ -337,6 +341,8 @@ Proof.
     unfold R_universe_instance in r |- *.
     eapply Forall2_symP; eauto.
     eapply All2_sym; solve_all.
+    eapply All2_sym; solve_all.
+    eapply All2_symP; eauto.
   - econstructor.
     eapply All2_All_mix_left in X as h; eauto.
     clear a X.
@@ -428,12 +434,14 @@ Proof.
       induction 1 in l'' |- *; auto. intros H; depelim H. constructor; auto.
       eapply r; eauto. apply r.
     * etransitivity; eauto.
-    * clear -he a a0.
+    * eapply All2_trans; eauto.
+    * clear -H he a a0.
       induction a in a0, brs'0 |- *.
       + assumption.
       + depelim a0. destruct p. constructor; auto.
         destruct r as [h1 [h2 h3]].
-        split. now etransitivity.
+        split.
+        eapply All2_trans; eauto.
         eapply h1; eauto.
   - dependent destruction e2.
     econstructor.
@@ -712,14 +720,14 @@ Proof.
   induction u in n', v, n, k, e, Rle |- * using term_forall_list_ind.
   all: dependent destruction e.
   all: try solve [cbn ; constructor ; try lih ; try assumption; solve_all].
-  - cbn. destruct e as (? & ? & e & ?); rewrite e.
+  - cbn. destruct e as (? & ? & e & ?); rewrite (All2_length e).
     constructor; unfold eq_predicate in *; simpl; !!solve_all.
-    now rewrite hhh2.
+    now rewrite (All2_length hh2).
   - cbn. constructor.
-    pose proof (All2_length _ _ a).
+    pose proof (All2_length a).
     solve_all. rewrite H. eauto.
   - cbn. constructor.
-    pose proof (All2_length _ _ a).
+    pose proof (All2_length a).
     solve_all. rewrite H. eauto.
 Qed.
 
@@ -767,14 +775,14 @@ Proof.
     + constructor.
   - cbn. constructor. solve_all.
   - cbn.
-    destruct e as (? & ? & e & ?). rewrite e.
+    destruct e as (? & ? & e & ?). rewrite (All2_length e).
     constructor ; unfold eq_predicate; simpl; try sih ; solve_all.
-    now rewrite a1.
+    now rewrite (All2_length a1).
   - cbn. constructor ; try sih ; eauto.
-    pose proof (All2_length _ _ a).
+    pose proof (All2_length a).
     solve_all. now rewrite H.
   - cbn. constructor ; try sih ; eauto.
-    pose proof (All2_length _ _ a).
+    pose proof (All2_length a).
     solve_all. now rewrite H.
 Qed.
 
@@ -839,8 +847,8 @@ Definition compare_global_instance Σ equ lequ gr napp :=
   | None => compare_universe_instance equ
   end.
 
-Definition eqb_annot {A} (b b' : binder_annot A) : bool :=
-  eqb b.(binder_relevance) b'.(binder_relevance).
+Definition eqb_binder_annots (x y : list aname) : bool :=
+  forallb2 eqb_binder_annot x y.
 
 Fixpoint eqb_term_upto_univ_napp Σ (equ lequ : Universe.t -> Universe.t -> bool) napp (u v : term) : bool :=
   match u, v with
@@ -875,17 +883,17 @@ Fixpoint eqb_term_upto_univ_napp Σ (equ lequ : Universe.t -> Universe.t -> bool
     compare_global_instance Σ equ lequ (ConstructRef i k) napp u u'
 
   | tLambda na A t, tLambda na' A' t' =>
-    eqb_annot na na' &&
+    eqb_binder_annot na na' &&
     eqb_term_upto_univ_napp Σ equ equ 0 A A' &&
     eqb_term_upto_univ_napp Σ equ lequ 0 t t'
 
   | tProd na A B, tProd na' A' B' =>
-    eqb_annot na na' &&
+    eqb_binder_annot na na' &&
     eqb_term_upto_univ_napp Σ equ equ 0 A A' &&
     eqb_term_upto_univ_napp Σ equ lequ 0 B B'
 
   | tLetIn na B b u, tLetIn na' B' b' u' =>
-    eqb_annot na na' &&
+    eqb_binder_annot na na' &&
     eqb_term_upto_univ_napp Σ equ equ 0 B B' &&
     eqb_term_upto_univ_napp Σ equ equ 0 b b' &&
     eqb_term_upto_univ_napp Σ equ lequ 0 u u'
@@ -896,7 +904,7 @@ Fixpoint eqb_term_upto_univ_napp Σ (equ lequ : Universe.t -> Universe.t -> bool
       (eqb_term_upto_univ_napp Σ equ equ 0) p p' &&
     eqb_term_upto_univ_napp Σ equ equ 0 c c' &&
     forallb2 (fun x y =>
-      eqb #|bcontext x| #|bcontext y| &&
+      eqb_binder_annots x.(bcontext) y.(bcontext) &&
       eqb_term_upto_univ_napp Σ equ equ 0 (bbody x) (bbody y)
     ) brs brs'
 
@@ -910,7 +918,7 @@ Fixpoint eqb_term_upto_univ_napp Σ (equ lequ : Universe.t -> Universe.t -> bool
       eqb_term_upto_univ_napp Σ equ equ 0 x.(dtype) y.(dtype) &&
       eqb_term_upto_univ_napp Σ equ equ 0 x.(dbody) y.(dbody) &&
       eqb x.(rarg) y.(rarg) &&
-      eqb_annot x.(dname) y.(dname)
+      eqb_binder_annot x.(dname) y.(dname)
     ) mfix mfix'
 
   | tCoFix mfix idx, tCoFix mfix' idx' =>
@@ -919,7 +927,7 @@ Fixpoint eqb_term_upto_univ_napp Σ (equ lequ : Universe.t -> Universe.t -> bool
       eqb_term_upto_univ_napp Σ equ equ 0 x.(dtype) y.(dtype) &&
       eqb_term_upto_univ_napp Σ equ equ 0 x.(dbody) y.(dbody) &&
       eqb x.(rarg) y.(rarg) &&
-      eqb_annot x.(dname) y.(dname)
+      eqb_binder_annot x.(dname) y.(dname)
     ) mfix mfix'
 
   | tPrim p, tPrim p' => eqb p p'
@@ -990,21 +998,39 @@ Proof.
   eapply Forall2_impl; tea; eauto.
 Qed.
 
-Lemma eqb_annot_spec {A} na na' : eqb_annot na na' <-> @eq_binder_annot A na na'.
+Lemma eqb_annot_spec {A} na na' : eqb_binder_annot na na' <-> @eq_binder_annot A na na'.
 Proof.
-  unfold eqb_annot, eq_binder_annot.
-  now destruct (eqb_spec (binder_relevance na) (binder_relevance na')).
+  unfold eqb_binder_annot, eq_binder_annot.
+  now destruct Classes.eq_dec.
 Qed.
 
-Lemma eqb_annot_reflect {A} na na' : reflect (@eq_binder_annot A na na') (eqb_annot na na').
+Lemma eqb_annot_reflect {A} na na' : reflect (@eq_binder_annot A na na') (eqb_binder_annot na na').
 Proof.
-  unfold eqb_annot, eq_binder_annot.
-  destruct (eqb_spec (binder_relevance na) (binder_relevance na')); constructor; auto.
+  unfold eqb_binder_annot, eq_binder_annot.
+  destruct Classes.eq_dec; constructor; auto.
 Qed.
 
-Lemma eqb_annot_refl {A} n : @eqb_annot A n n.
+Lemma eqb_annot_refl {A} n : @eqb_binder_annot A n n.
 Proof.
   apply eqb_annot_spec. reflexivity.
+Qed.
+
+Lemma eqb_annots_spec nas nas' : eqb_binder_annots nas nas' <-> Forall2 (on_rel eq binder_relevance) nas nas'.
+Proof.
+  unfold eqb_binder_annots, eq_binder_annot.
+  split; intros.
+  eapply forallb2_Forall2 in H.
+  eapply (Forall2_impl H). unfold on_rel. apply eqb_annot_spec.
+  eapply Forall2_forallb2, (Forall2_impl H); apply eqb_annot_spec.
+Qed.
+
+Lemma eqb_annots_reflect nas nas' : reflectT (All2 (on_rel eq binder_relevance) nas nas') (eqb_binder_annots nas nas').
+Proof.
+  unfold eqb_binder_annots, eq_binder_annot.
+  destruct forallb2 eqn:H; constructor.
+  eapply Forall2_All2. now apply eqb_annots_spec.
+  intros H'; apply All2_Forall2, eqb_annots_spec in H'.
+  red in H'. unfold eqb_binder_annots in H'. congruence.
 Qed.
 
 Lemma eqb_term_upto_univ_impl (equ lequ : _ -> _ -> bool) Σ Re Rle napp :
@@ -1046,13 +1072,18 @@ Proof.
     repeat split.
     * apply forallb2_All2 in H. solve_all.
     * apply forallb2_Forall2 in H4. eapply Forall2_impl; eauto.
-    * now apply Nat.eqb_eq in H3.
+    * apply forallb2_Forall2 in H3. eapply Forall2_All2.
+      eapply Forall2_impl; eauto. simpl.
+      intros x y eqb. unfold eqb_binder_annot in eqb.
+      destruct Classes.eq_dec => //.
     * destruct X. eapply e; eauto.
     * apply forallb2_All2 in H0.
       eapply All2_impl'; tea.
       red in X. eapply All_impl; tea.
       cbn -[eqb]. intros x X0' y ?. rtoProp.
-      eapply Nat.eqb_eq in H5; split; auto. eauto.
+      apply eqb_annots_spec in H5.
+      split; eauto.
+      eapply Forall2_All2 in H5; eauto.
   - eqspec; [|discriminate]. intro. constructor; eauto.
   - eqspec; [|discriminate].
     econstructor; eauto.
@@ -1117,16 +1148,16 @@ Proof.
     * red in onuinst. 
       eapply Forall2_forallb2, Forall2_impl; eauto.
       now move=> x y /X.
-    * now apply Nat.eqb_eq.
+    * now eapply eqb_annots_spec, All2_Forall2. 
     * ih. contradiction.
   - move/andb_and => [/andb_and [/andb_and [ppars pinst] pctx] pret].
-    eapply Nat.eqb_eq in pctx.
-    rewrite pctx. intuition auto.
+    eapply eqb_annots_spec in pctx. intuition auto.
     * solve_all.
       now destruct (a _ _ 0 X y).
     * solve_all. red. apply All2_Forall2.
       eapply (All2_impl pinst); eauto.
       now move=> x y /X.
+    * now eapply Forall2_All2.
     * now destruct (r _ _ 0 X (preturn p')).
 Qed.
 
@@ -1239,16 +1270,15 @@ Proof.
     + destruct brs.
       * constructor. intro bot. inversion bot. subst. inversion X2.
       * cbn - [eqb]. inversion X. subst.
-        destruct a, b. cbn - [eqb]. eqspecs.
+        destruct a, b. cbn - [eqb eqb_binder_annots]. eqspecs.
+        destruct (eqb_annots_reflect bcontext bcontext0).
         -- cbn - [eqb]. pose proof (X0 equ Re 0 he bbody0) as hh. cbn in hh.
            destruct hh.
-           ++ cbn -[eqb] in *. destruct (IHl X1 brs).
-              ** constructor. constructor ; try assumption.
-                 constructor ; try easy.
-                 inversion e3. subst. assumption.
+           ++ cbn -[eqb eqb_binder_annots] in *. destruct (IHl X1 brs).
+              ** constructor ; try easy. inversion e2. subst.
+                 constructor; auto.
               ** constructor. intro bot. apply f. inversion bot. subst.
-                 constructor ; try assumption.
-                 inversion X4. subst. assumption.
+                 inversion X4. subst. constructor; auto.
            ++ constructor. intro bot. apply f. inversion bot. subst.
               inversion X4. subst. destruct X5. assumption.
         -- constructor. intro bot. inversion bot. subst.
@@ -1378,10 +1408,12 @@ Proof.
     rtoProp; repeat split.
     + solve_all. eapply All_All2; eauto.
     + eapply forallb2_map, forallb2_refl; eauto.
-    + now eapply Nat.eqb_eq.
+    + eapply forallb2_refl, eqb_annot_refl.
     + now apply i.
     + red in X0. solve_all. eapply All_All2; eauto. simpl.
-      intros x ih. rewrite Nat.eqb_refl. now rewrite -> ih by assumption.
+      intros x ih.
+      rewrite -> ih by assumption. rewrite andb_true_r.
+      apply forallb2_refl, eqb_annot_refl.
   - induction X.
     + reflexivity.
     + simpl. rewrite Nat.eqb_refl.
@@ -2003,9 +2035,11 @@ Proof.
     eapply All2_sym; solve_all. now symmetry.
     unfold R_universe_instance in r |- *.
     eapply Forall2_symP; eauto.
+    eapply All2_symP; eauto. unfold on_rel. eauto.
     now symmetry.
   - eapply All2_sym. solve_all.
-    simpl in *. subst. now eapply eq_term_upto_univ_sym.
+    simpl in *. subst. eapply All2_symP; unfold on_rel; eauto.
+    now eapply eq_term_upto_univ_sym.
   - eapply All2_sym. solve_all.
     now eapply eq_term_upto_univ_sym.
     now eapply eq_term_upto_univ_sym.

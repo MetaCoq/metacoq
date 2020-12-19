@@ -123,6 +123,8 @@ Proof.
   apply p.
 Qed.
 
+(** Types of variables are irrelevant during reduction *)
+
 Section ContextChangeTypesReduction.
   Context {cf : checker_flags}.
   Context (Σ : global_env).
@@ -153,6 +155,16 @@ Section ContextChangeTypesReduction.
   Global Instance change_decl_type_equiv : Equivalence change_decl_type.
   Proof. constructor; typeclasses eauto. Qed.
 
+  Lemma OnOne2All_All3 {A B} (P Q : A -> B -> B -> Type) l l' l'' :
+    OnOne2All P l l' l'' ->
+    (forall x y z, P x y z -> Q x y z) ->
+    (forall x y, Q x y y) ->
+    All3 Q l l' l''.
+  Proof.
+    intros H ? ?. induction H; constructor; auto.
+    induction tl in bs, e |- *; destruct bs; simpl in e; try constructor; auto; try congruence.
+  Qed.
+
   Lemma context_change_decl_types_red1 Γ Γ' s t :
     context_relation (fun _ _ => change_decl_type) Γ Γ' -> red1 Σ Γ s t -> red Σ Γ' s t.
   Proof.
@@ -162,10 +174,8 @@ Section ContextChangeTypesReduction.
       rewrite <- H.
       induction HT in i |- *; destruct i; eauto.
       now inv p.
-    -
-      eapply PCUICReduction.red_abs. eapply IHX0; eauto.  eauto.
-    -
-      eapply PCUICReduction.red_abs. eauto. eapply IHX0. eauto.
+    - eapply PCUICReduction.red_abs. eapply IHX0; eauto.  eauto.
+    - eapply PCUICReduction.red_abs. eauto. eapply IHX0. eauto.
       eauto. econstructor. eauto. econstructor.
     -
       eapply PCUICReduction.red_letin. eapply IHX0; eauto.
@@ -176,20 +186,17 @@ Section ContextChangeTypesReduction.
       eapply PCUICReduction.red_letin; eauto. eapply IHX0; eauto.
       econstructor. eauto. econstructor.
       
-    -     eapply PCUICReduction.red_case; eauto. clear.
-          eapply All_All2_refl. induction brs; eauto.
-    -     eapply PCUICReduction.red_case; eauto. clear.
-          eapply All_All2_refl. induction brs; eauto.
-    - destruct ind.
-      eapply red_case; eauto.
-      clear - X HT.
-      induction X.
-      + econstructor. destruct p. destruct p.
-        split; eauto.
-        eapply All_All2_refl.
-        induction tl; eauto.
-      + econstructor. now split.
-        eassumption.
+    - eapply PCUICReduction.red_case_pars; eauto.
+      simpl. eapply OnOne2_All2; eauto. simpl. intuition auto.
+    - eapply PCUICReduction.red_case_p; eauto. eapply IHX0.
+      eapply context_relation_app_inv; auto.
+      now eapply context_relation_refl.
+    - eapply PCUICReduction.red_case_c; eauto.
+    - eapply PCUICReduction.red_case_brs; eauto.
+      eapply OnOne2All_All3; eauto. simpl.
+      intros. intuition auto. eapply b0.
+      eapply context_relation_app_inv; auto.
+      now apply context_relation_refl.
     -
       eapply PCUICReduction.red_proj_c. eauto.
     -

@@ -871,7 +871,7 @@ Proof.
 Qed.
 
 Inductive OnOne2All {A B : Type} (P : B -> A -> A -> Type) : list B -> list A -> list A -> Type :=
-| OnOne2All_hd b bs hd hd' tl : P b hd hd' -> OnOne2All P (b:: bs) (hd :: tl) (hd' :: tl)
+| OnOne2All_hd b bs hd hd' tl : P b hd hd' -> #|bs| = #|tl| -> OnOne2All P (b :: bs) (hd :: tl) (hd' :: tl)
 | OnOne2All_tl b bs hd tl tl' : OnOne2All P bs tl tl' -> OnOne2All P (b :: bs) (hd :: tl) (hd :: tl').
 Derive Signature NoConfusion for OnOne2All.
 
@@ -890,26 +890,29 @@ Proof. induction l in i, i' |- *; simpl; try constructor; eauto.
   intros. destruct i' => //. simpl. constructor.
   eapply IHl; auto.
 Qed.
-
+(*
 Lemma OnOne2All_app_r {A} (P : nat -> A -> A -> Type) i l l' tl :
   OnOne2All P i l l' ->
   OnOne2All P i (l ++ tl) (l' ++ tl).
-Proof. induction 1; constructor; auto. Qed.
-
+Proof. induction 1; simpl; constructor; auto. rewrite app_length. Qed.
+*)
 Lemma OnOne2All_length {A B} {P} {i : list B} {l l' : list A} : OnOne2All P i l l' -> #|l| = #|l'|.
+Proof. induction 1; simpl; congruence. Qed.
+
+Lemma OnOne2All_length2 {A B} {P} {i : list B} {l l' : list A} : OnOne2All P i l l' -> #|i| = #|l|.
 Proof. induction 1; simpl; congruence. Qed.
 
 Lemma OnOne2All_mapP {A B I} {P} {i : list I} {l l' : list A} (f : A -> B) :
   OnOne2All (fun i => on_rel (P i) f) i l l' -> OnOne2All P i (map f l) (map f l').
-Proof. induction 1; simpl; constructor; try congruence. apply p. Qed.
+Proof. induction 1; simpl; constructor; try congruence. apply p. now rewrite map_length. Qed.
 
 Lemma OnOne2All_map {A I B} {P : I -> B -> B -> Type} {i : list I} {l l' : list A} (f : A -> B) :
   OnOne2All (fun i => on_Trel (P i) f) i l l' -> OnOne2All P i (map f l) (map f l').
-Proof. induction 1; simpl; constructor; try congruence. apply p. Qed.
+Proof. induction 1; simpl; constructor; try congruence. apply p. now rewrite map_length. Qed.
 
 Lemma OnOne2All_map_all {A B I I'} {P} {i : list I} {l l' : list A} (g : I -> I') (f : A -> B) :
   OnOne2All (fun i => on_Trel (P (g i)) f) i l l' -> OnOne2All P (map g i) (map f l) (map f l').
-Proof. induction 1; simpl; constructor; try congruence. apply p. Qed.
+Proof. induction 1; simpl; constructor; try congruence. apply p. now rewrite !map_length. Qed.
 
 
 Lemma OnOne2All_sym {A B} (P : B -> A -> A -> Type) i l l' : OnOne2All (fun i x y => P i y x) i l' l -> OnOne2All P i l l'.
@@ -935,7 +938,8 @@ Qed.
 Lemma OnOne2All_ind_l :
   forall A B (R : list A -> B -> A -> A -> Type)
     (P : forall L i l l', OnOne2All (R L) i l l' -> Type),
-    (forall L b bs x y l (r : R L b x y), P L (b :: bs) (x :: l) (y :: l) (OnOne2All_hd _ _ _ _ _ l r)) ->
+    (forall L b bs x y l (r : R L b x y) (len : #|bs| = #|l|), 
+      P L (b :: bs) (x :: l) (y :: l) (OnOne2All_hd _ _ _ _ _ l r len)) ->
     (forall L b bs x l l' (h : OnOne2All (R L) bs l l'),
         P L bs l l' h ->
         P L (b :: bs) (x :: l) (x :: l') (OnOne2All_tl _ _ _ x _ _ h)
@@ -960,7 +964,7 @@ Proof.
     specialize (h _ _ _ _ p X) as hh.
     destruct hh as [? [? ?]].
     eexists. constructor.
-      * constructor. eassumption.
+      * constructor; eassumption.
       * constructor ; eauto.
   - destruct l3.
     + inversion h2.
@@ -986,7 +990,7 @@ Proof.
       specialize (h _ _ _ _ p X) as hh.
       destruct hh as [? [? ?]].
       eexists. split.
-      * constructor. eassumption.
+      * constructor; eassumption.
       * constructor ; eauto.
   - destruct l3.
     + inversion h2.

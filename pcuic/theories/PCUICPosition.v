@@ -877,7 +877,9 @@ Section WfStack.
     | Case _ _ _ π => wf_stack π
     | Case_brs ci pred c bctx brs1 brs2 π =>
       ∑ brctxs, case_branches_contexts Σ ci pred brctxs * 
-        (nth_error brctxs #|brs1| = Some bctx) * wf_stack π
+        (nth_error brctxs #|brs1| = Some bctx) * 
+        (#|brctxs| = #|brs1| + S #|brs2|)%nat *
+        wf_stack π
     | Proj _ π 
     | Prod_l _ _ π
     | Prod_r _ _ π

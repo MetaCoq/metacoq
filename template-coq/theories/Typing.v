@@ -502,7 +502,7 @@ Proof.
     fix auxl 4.
     intros i l l' Hl. destruct Hl.
     + constructor; intros.
-      intuition auto.
+      intuition auto. auto.
     + constructor. eapply auxl. apply Hl.
 
   - apply X19.

@@ -357,8 +357,7 @@ Proof.
     revert brsctx brs brs' o.
     fix auxl 4.
     intros i l l' Hl. destruct Hl.
-    + constructor; intros.
-      intuition auto.
+    + constructor; intros; intuition auto.
     + constructor. eapply auxl. apply Hl.
 
   - revert l l' o.
@@ -637,7 +636,7 @@ Section ReductionCongruence.
     { | [] | tCtxHead_nat _ _ => False ;
       | [] | tCtxTail_nat _ _ => False ;
       | brctx :: brctxs | (tCtxHead_nat (bctx, ctx) l) => 
-        (brctx = bctx) * wf_context ctx;
+        (#|brctxs| = #|l|) * (brctx = bctx) * wf_context ctx;
       | brctx :: brctxs | (tCtxTail_nat hd ctx) => wf_branch_context brctxs ctx }.
 
   Inductive contextual_closure (red : forall Γ, term -> term -> Type) : context -> term -> term -> Type@{wf_context_i} :=
@@ -698,9 +697,9 @@ Section ReductionCongruence.
       econstructor; eauto.
       econstructor; eauto.
     - destruct brctx; simpl in X0 => //.
-      destruct X0 as [<- wf].
+      destruct X0 as [[eql <-] wf].
       specialize (X wf _ _ X1).
-      constructor. simpl. split; auto.
+      constructor; intuition auto.
     - destruct brctx; simpl in X0 => //.
       specialize (X _ X0 _ _ X1).
       constructor. auto.
@@ -778,7 +777,7 @@ Section ReductionCongruence.
         + constructor.
         + econstructor.
           * eapply IHp1.
-          * constructor. split ; eauto.
+          * constructor; intuition eauto.
             reflexivity.
       - clear h. rename IHh into h.
         induction h.
@@ -1100,6 +1099,10 @@ Section ReductionCongruence.
           eapply OnOne2All_impl ; eauto.
     Qed.
 
+    Lemma All3_length {A B C} {R : A -> B -> C -> Type} l l' l'' :
+      All3 R l l' l'' -> #|l| = #|l'| /\ #|l'| = #|l''|.
+    Proof. induction 1; simpl; intuition auto. Qed.
+
     Lemma All3_many_OnOne2All :
       forall B A (R : B -> A -> A -> Type) lΔ l l',
         All3 R lΔ l l' ->
@@ -1109,7 +1112,8 @@ Section ReductionCongruence.
       induction h.
       - constructor.
       - econstructor ; revgoals.
-        + constructor. eassumption.
+        + constructor; [eassumption|].
+          eapply All3_length in h; intuition eauto. now transitivity #|l'|.
         + clear - IHh. rename IHh into h.
           induction h.
           * constructor.
@@ -1776,15 +1780,17 @@ Section Stacks.
       econstructor.
       * econstructor; eauto.
       * cbn. now rewrite app_context_assoc in h.
-    - destruct wfπ as [brsctxs [[cbc enth] wf]].
+    - destruct wfπ as [brsctxs [[[cbc enth] elen] wf]].
       cbn; apply IHπ; [assumption|].
       econstructor; eauto.
       rewrite (nth_error_firstn_skipn enth).
       eapply OnOne2All_app.
       2:{ eapply nth_error_Some_length in enth. rewrite firstn_length_le //; lia. }
       constructor; cbn.
-      simpl in h. rewrite app_context_assoc in h.
-      split; auto. 
+      * simpl in h. rewrite app_context_assoc in h.
+        split; auto.
+      * eapply nth_error_Some_length in enth. rewrite skipn_length //.
+        lia.
   Qed.
 
   Corollary red_context :

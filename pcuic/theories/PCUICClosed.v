@@ -27,7 +27,7 @@ Notation closed_ctx ctx := (closedn_ctx 0 ctx).
 
 Lemma lift_decl_closed n k d : closed_decl k d -> lift_decl n k d = d.
 Proof.
-  case: d => na [body|] ty; rewrite /closed_decl /lift_decl /map_decl /=.
+  case: d => na [body|] ty; rewrite /closed_decl /lift_decl /map_decl /=; unf_term.
   - move/andP => [cb cty]. now rewrite !lift_closed //.
   - move=> cty; now rewrite !lift_closed //.
 Qed.
@@ -68,15 +68,17 @@ Proof.
   revert k.
   induction t in n, k' |- * using term_forall_list_ind; intros;
     simpl in *; rewrite -> ?andb_and in *;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, 
+      ?Nat.add_assoc, ?map_predicate_map_predicate;
     simpl closed in *; solve_all;
-    unfold test_def, test_snd in *;
-      try solve [simpl lift; simpl closed; f_equal; auto; repeat (rtoProp; solve_all)]; try easy.
+    unfold test_def, test_snd, test_predicate, test_branch in *;
+      try solve [simpl lift; simpl closed; f_equal; auto; repeat (rtoProp; simpl in *; solve_all)]; try easy.
 
   - elim (Nat.leb_spec k' n0); intros. simpl.
     elim (Nat.ltb_spec); auto. apply Nat.ltb_lt in H. lia.
     simpl. elim (Nat.ltb_spec); auto. intros.
     apply Nat.ltb_lt in H. lia.
+
 Qed.
 
 Lemma closedn_lift_inv n k k' t : k <= k' ->
@@ -85,9 +87,10 @@ Lemma closedn_lift_inv n k k' t : k <= k' ->
 Proof.
   induction t in n, k, k' |- * using term_forall_list_ind; intros;
     simpl in *;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc in *;
-    simpl closed in *; repeat (rtoProp; solve_all); try change_Sk;
-    unfold test_def, on_snd, test_snd in *; simpl in *; eauto with all.
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def,
+       ?map_length, ?Nat.add_assoc in *;
+    simpl closed in *; repeat (rtoProp; simpl in *; solve_all); try change_Sk;
+    unfold test_def, on_snd, test_snd, test_predicate, test_branch in *; simpl in *; eauto with all.
 
   - revert H0.
     elim (Nat.leb_spec k n0); intros. simpl in *.
@@ -96,6 +99,9 @@ Proof.
   - specialize (IHt2 n (S k) (S k')). eauto with all.
   - specialize (IHt2 n (S k) (S k')). eauto with all.
   - specialize (IHt3 n (S k) (S k')). eauto with all.
+  - rtoProp. solve_all. eapply (i n (#|pcontext p| + k)); eauto. lia.
+  - rtoProp. solve_all. eapply (a0 n (#|bcontext x| + k)); eauto; try lia.
+    now rewrite -Nat.add_assoc.
   - rtoProp. solve_all. specialize (b0 n (#|m| + k) (#|m| + k')). eauto with all.
   - rtoProp. solve_all. specialize (b0 n (#|m| + k) (#|m| + k')). eauto with all.
 Qed.
@@ -128,7 +134,7 @@ Proof.
     simpl in *;
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
     simpl closed in *; try change_Sk;
-    unfold test_def, on_snd, test_snd in *; simpl in *; eauto 4 with all.
+    unfold test_def, on_snd, test_branch, test_predicate in *; simpl in *; eauto 4 with all.
 
   - elim (Nat.leb_spec k' n); intros. simpl.
     destruct nth_error eqn:Heq.
@@ -156,16 +162,25 @@ Proof.
   - specialize (IHt3 (S k')).
     rewrite <- Nat.add_succ_comm in IHt3.
     rewrite IHt1 // IHt2 // IHt3 //.
-  - rewrite IHt1 // IHt2 //.
+  - rewrite IHt //.
     rewrite forallb_map. simpl.
-    bool_congr. eapply All_forallb_eq_forallb; eauto.
+    destruct X.
+    f_equal. f_equal. f_equal.
+    * eapply All_forallb_eq_forallb; eauto.
+    * specialize (e (#|pcontext p| + k')).
+      rewrite Nat.add_assoc in e.
+      now rewrite (Nat.add_comm k) in e.
+    * rewrite forallb_map. eapply All_forallb_eq_forallb. eauto.
+      intuition auto.
+      specialize (H (#|bcontext x| + k')).
+      rewrite Nat.add_assoc (Nat.add_comm k) in H.
+      now rewrite !Nat.add_assoc.
   - rewrite forallb_map. simpl.
     eapply All_forallb_eq_forallb; eauto. simpl.
     intros x [h1 h2]. rewrite h1 //.
     specialize (h2 (#|m| + k')).
     rewrite Nat.add_assoc in h2.
     rewrite (Nat.add_comm k #|m|) in h2. 
-    rewrite -> !Nat.add_assoc in *.
     rewrite h2 //.
   - rewrite forallb_map. simpl.
     eapply All_forallb_eq_forallb; eauto. simpl.
@@ -173,7 +188,6 @@ Proof.
     specialize (h2 (#|m| + k')).
     rewrite Nat.add_assoc in h2.
     rewrite (Nat.add_comm k #|m|) in h2. 
-    rewrite -> !Nat.add_assoc in *.
     rewrite h2 //.
 Qed.
 
@@ -186,7 +200,7 @@ Proof.
     simpl in *;
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
     simpl closed in *; repeat (rtoProp; f_equal; solve_all);  try change_Sk;
-    unfold test_def, on_snd, test_snd in *; simpl in *; eauto 4 with all.
+    unfold test_def, map_branch, test_branch, test_predicate in *; simpl in *; eauto 4 with all.
 
   - move: Hs; elim (Nat.leb_spec k' n); intros. simpl.
     destruct nth_error eqn:Heq.
@@ -204,15 +218,22 @@ Proof.
     rewrite <- Nat.add_succ_comm in IHt2. eauto.
   - specialize (IHt3 (S k')).
     rewrite <- Nat.add_succ_comm in IHt3. eauto.
+  - move/andb_and: H => [hpar hret].
+    rewrite !Nat.add_assoc in hret.
+    specialize (i (#|pcontext p| + k')).
+    rewrite Nat.add_assoc (Nat.add_comm k) in i.
+    rewrite i //.
+    rewrite andb_true_r. solve_all.
+  - specialize (a0 (#|bcontext x| + k')).
+    rewrite Nat.add_assoc (Nat.add_comm k) in a0.
+    rewrite !Nat.add_assoc in b. eauto.
   - move/andP: b => [hty hbod]. rewrite a0 //.
     specialize (b0 (#|m| + k')).
     rewrite Nat.add_assoc (Nat.add_comm k #|m|) in b0. 
-    rewrite -> !Nat.add_assoc in *.
     rewrite b0 //. now autorewrite with len in hbod.
   - move/andP: b => [hty hbod]. rewrite a0 //.
     specialize (b0 (#|m| + k')).
     rewrite Nat.add_assoc (Nat.add_comm k #|m|) in b0. 
-    rewrite -> !Nat.add_assoc in *.
     rewrite b0 //. now autorewrite with len in hbod.
 Qed.
 

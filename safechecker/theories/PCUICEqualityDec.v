@@ -86,9 +86,6 @@ Section EqualityDec.
     all: apply check_eqb_universe_refl.
   Qed.
 
-  Definition eqb_binder_annot {A} (b b' : binder_annot A) : bool :=
-    eqb b.(binder_relevance) b'.(binder_relevance).
-
   Lemma eq_binder_annot_reflect {A} na na' : reflect (eq_binder_annot (A:=A) na na') (eqb_binder_annot na na').
   Proof.
     unfold eq_binder_annot, eqb_binder_annot.

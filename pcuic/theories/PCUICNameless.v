@@ -39,7 +39,10 @@ Fixpoint nameless (t : term) : bool :=
   | tInd i u => true
   | tConstruct i n u => true
   | tCase indn p c brs =>
-    nameless p && nameless c && forallb (test_snd nameless) brs
+    forallb nameless p.(pparams) && 
+    forallb banon p.(pcontext) &&
+    nameless p.(preturn) && nameless c && 
+    forallb (fun b => forallb banon b.(bcontext) && nameless b.(bbody)) brs
   | tProj p c => nameless c
   | tFix mfix idx =>
     forallb (fun d => banon d.(dname)) mfix &&
@@ -60,6 +63,16 @@ Definition map_def_anon {A B} (tyf bodyf : A -> B) (d : def A) := {|
   rarg  := d.(rarg)
 |}.
 
+Definition nl_predicate (nl : term -> term) (p : predicate term) : predicate term :=
+  {| pparams := map nl p.(pparams);
+     puinst := p.(puinst);
+     pcontext := map anonymize p.(pcontext);
+     preturn := nl p.(preturn); |}.
+
+Definition nl_branch (nl : term -> term) (b : branch term) : branch term :=
+  {| bcontext := map anonymize b.(bcontext);
+     bbody := nl b.(bbody); |}.
+
 Fixpoint nl (t : term) : term :=
   match t with
   | tRel n => tRel n
@@ -73,7 +86,7 @@ Fixpoint nl (t : term) : term :=
   | tConst c u => tConst c u
   | tInd i u => tInd i u
   | tConstruct i n u => tConstruct i n u
-  | tCase indn p c brs => tCase indn (nl p) (nl c) (map (on_snd nl) brs)
+  | tCase indn p c brs => tCase indn (nl_predicate nl p) (nl c) (map (nl_branch nl) brs)
   | tProj p c => tProj p (nl c)
   | tFix mfix idx => tFix (map (map_def_anon nl nl) mfix) idx
   | tCoFix mfix idx => tCoFix (map (map_def_anon nl nl) mfix) idx
@@ -187,6 +200,9 @@ Proof.
   - f_equal ; try solve [ ih ].
     eapply eq_univ_make. assumption.
   - f_equal ; try solve [ ih ].
+    * destruct e as [eqpar [eqinst [eqctx eqret]]].
+      destruct p, p'; simpl in *. f_equal.
+
     revert brs' H3 H0 a.
     induction l ; intros brs' h1 h2 h.
     + destruct brs' ; inversion h. reflexivity.

@@ -95,10 +95,13 @@ Definition map_binder_annot {A B} (f : A -> B) (b : binder_annot A) : binder_ann
 
 Definition eq_binder_annot {A} (b b' : binder_annot A) : Prop :=
   b.(binder_relevance) = b'.(binder_relevance).
-
+  
 (** Type of annotated names *)
 Definition aname := binder_annot name.
 Instance anqme_eqdec : Classes.EqDec aname := _.
+
+Definition eqb_binder_annot {A} (b b' : binder_annot A) : bool :=
+  if Classes.eq_dec b.(binder_relevance) b'.(binder_relevance) then true else false.
 
 Definition string_of_name (na : name) :=
   match na with

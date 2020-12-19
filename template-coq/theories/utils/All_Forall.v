@@ -1924,10 +1924,10 @@ Proof.
   induction Hall; destruct n; simpl; try congruence. auto.
 Qed.
 
-Lemma All2_length {A B} {P : A -> B -> Type} l l' : All2 P l l' -> #|l| = #|l'|.
+Lemma All2_length {A B} {P : A -> B -> Type} {l l'} : All2 P l l' -> #|l| = #|l'|.
 Proof. induction 1; simpl; auto. Qed.
 
-Lemma All2_same {A} (P : A -> A -> Type) l : (forall x, P x x) -> All2 P l l.
+Lemma All2_same {A} {P : A -> A -> Type} l : (forall x, P x x) -> All2 P l l.
 Proof. induction l; constructor; auto. Qed.
 
 

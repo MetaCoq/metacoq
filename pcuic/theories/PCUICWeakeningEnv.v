@@ -1,10 +1,11 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICEquality PCUICTyping.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICEquality PCUICCases PCUICTyping.
 
 Require Import ssreflect.
 
 Set Default Goal Selector "!".
+Implicit Types (cf : checker_flags).
 
 Lemma global_ext_constraints_app Σ Σ' φ
   : ConstraintSet.Subset (global_ext_constraints (Σ, φ))
@@ -170,6 +171,58 @@ Proof.
 Qed.
 Hint Resolve extends_lookup : extends.
 
+Lemma weakening_env_declared_constant `{CF:checker_flags}:
+  forall (Σ : global_env) cst (decl : constant_body),
+    declared_constant Σ cst decl ->
+    forall Σ' : global_env, wf Σ' -> extends Σ Σ' -> declared_constant Σ' cst decl.
+Proof.
+  intros Σ cst decl H0 Σ' X2 H2.
+  eapply extends_lookup; eauto.
+Qed.
+Hint Resolve weakening_env_declared_constant : extends.
+
+Lemma weakening_env_declared_minductive `{CF:checker_flags}:
+  forall (Σ : global_env) ind decl,
+    declared_minductive Σ ind decl ->
+    forall Σ' : global_env, wf Σ' -> extends Σ Σ' -> declared_minductive Σ' ind decl.
+Proof.
+  intros Σ cst decl H0 Σ' X2 H2.
+  eapply extends_lookup; eauto.
+Qed.
+Hint Resolve weakening_env_declared_minductive : extends.
+
+Lemma weakening_env_declared_inductive:
+  forall (H : checker_flags) (Σ : global_env) ind mdecl decl,
+    declared_inductive Σ ind mdecl decl ->
+    forall Σ' : global_env, wf Σ' -> extends Σ Σ' -> declared_inductive Σ' ind mdecl decl.
+Proof.
+  intros H Σ cst decl H0 [Hmdecl Hidecl] Σ' X2 H2. split; eauto with extends.
+Qed.
+Hint Resolve weakening_env_declared_inductive : extends.
+
+Lemma weakening_env_declared_constructor :
+  forall (H : checker_flags) (Σ : global_env) ind mdecl idecl decl,
+    declared_constructor Σ ind mdecl idecl decl ->
+    forall Σ' : global_env, wf Σ' -> extends Σ Σ' ->
+    declared_constructor Σ' ind mdecl idecl decl.
+Proof.
+  intros H Σ cst mdecl idecl cdecl [Hidecl Hcdecl] Σ' X2 H2.
+  split; eauto with extends.
+Qed.
+Hint Resolve weakening_env_declared_constructor : extends.
+
+Lemma weakening_env_declared_projection :
+  forall (H : checker_flags) (Σ : global_env) ind mdecl idecl decl,
+    declared_projection Σ ind mdecl idecl decl ->
+    forall Σ' : global_env, wf Σ' -> extends Σ Σ' ->
+    declared_projection Σ' ind mdecl idecl decl.
+Proof.
+  intros H Σ cst mdecl idecl cdecl [Hidecl Hcdecl] Σ' X2 H2.
+  split; eauto with extends.
+Qed.
+Hint Resolve weakening_env_declared_projection : extends.
+
+
 Lemma extends_wf_local `{checker_flags} Σ Γ (wfΓ : wf_local Σ Γ) :
   All_local_env_over typing
       (fun Σ0 Γ0 wfΓ (t T : term) ty =>
@@ -187,19 +240,6 @@ Proof.
 Qed.
 Hint Resolve extends_wf_local : extends.
 
-Lemma weakening_env_red1 `{CF:checker_flags} Σ Σ' Γ M N :
-  wf Σ' ->
-  extends Σ Σ' ->
-  red1 Σ Γ M N ->
-  red1 Σ' Γ M N.
-Proof.
-  induction 3 using red1_ind_all;
-    try solve [econstructor; eauto;
-               eapply (OnOne2_impl X1); simpl; intuition eauto].
-
-  eapply extends_lookup in X0; eauto.
-  econstructor; eauto.
-Qed.
 
 Lemma global_variance_sigma_mon {cf:checker_flags} {Σ Σ' gr napp v} : 
   wf Σ' -> extends Σ Σ' -> 
@@ -256,9 +296,12 @@ Proof.
   - inversion 1; subst; constructor.
     eapply R_global_instance_weaken_env. 6:eauto. all:eauto.
   - inversion 1; subst; constructor; eauto.
-    eapply All2_impl'; tea.
-    eapply All_impl; eauto.
-    cbn. intros x ? y [? ?]. split; eauto.
+    * destruct X. destruct X2.
+      constructor; intuition auto; solve_all.
+      eauto using R_universe_instance_impl'.
+    * eapply All2_impl'; tea.
+      eapply All_impl; eauto.
+      cbn. intros x ? y [? ?]. split; eauto.
   - inversion 1; subst; constructor.
     eapply All2_impl'; tea.
     eapply All_impl; eauto.
@@ -267,6 +310,36 @@ Proof.
     eapply All2_impl'; tea.
     eapply All_impl; eauto.
     cbn. intros x [? ?] y [[[? ?] ?] ?]. repeat split; eauto.
+Qed.
+
+Lemma extends_case_predicate_context {cf} Σ Σ' ci p pctx : 
+  case_predicate_context Σ ci p pctx ->
+  extends Σ Σ' -> wf Σ' ->
+  case_predicate_context Σ' ci p pctx.
+Proof.
+  intros [] ext.
+  econstructor; eauto with extends.
+Qed.
+Hint Resolve extends_case_predicate_context : extends.
+ 
+Lemma extends_case_branches_contexts {cf} Σ Σ' ci p brsctx : 
+  case_branches_contexts Σ ci p brsctx ->
+  extends Σ Σ' -> wf Σ' ->
+  case_branches_contexts Σ' ci p brsctx.
+Proof.
+  intros [] ext.
+  econstructor; eauto with extends.
+Qed.
+Hint Resolve extends_case_branches_contexts : extends.
+
+Lemma weakening_env_red1 `{CF:checker_flags} Σ Σ' Γ M N :
+  wf Σ' ->
+  extends Σ Σ' ->
+  red1 Σ Γ M N ->
+  red1 Σ' Γ M N.
+Proof.
+  induction 3 using red1_ind_all;
+    try solve [econstructor; eauto with extends; solve_all].
 Qed.
 
 Lemma weakening_env_conv `{CF:checker_flags} Σ Σ' φ Γ M N :
@@ -319,56 +392,6 @@ Proof.
 Qed.
 Hint Resolve weakening_env_is_allowed_elimination : extends.
 
-Lemma weakening_env_declared_constant `{CF:checker_flags}:
-  forall (Σ : global_env) cst (decl : constant_body),
-    declared_constant Σ cst decl ->
-    forall Σ' : global_env, wf Σ' -> extends Σ Σ' -> declared_constant Σ' cst decl.
-Proof.
-  intros Σ cst decl H0 Σ' X2 H2.
-  eapply extends_lookup; eauto.
-Qed.
-Hint Resolve weakening_env_declared_constant : extends.
-
-Lemma weakening_env_declared_minductive `{CF:checker_flags}:
-  forall (Σ : global_env) ind decl,
-    declared_minductive Σ ind decl ->
-    forall Σ' : global_env, wf Σ' -> extends Σ Σ' -> declared_minductive Σ' ind decl.
-Proof.
-  intros Σ cst decl H0 Σ' X2 H2.
-  eapply extends_lookup; eauto.
-Qed.
-Hint Resolve weakening_env_declared_minductive : extends.
-
-Lemma weakening_env_declared_inductive:
-  forall (H : checker_flags) (Σ : global_env) ind mdecl decl,
-    declared_inductive Σ ind mdecl decl ->
-    forall Σ' : global_env, wf Σ' -> extends Σ Σ' -> declared_inductive Σ' ind mdecl decl.
-Proof.
-  intros H Σ cst decl H0 [Hmdecl Hidecl] Σ' X2 H2. split; eauto with extends.
-Qed.
-Hint Resolve weakening_env_declared_inductive : extends.
-
-Lemma weakening_env_declared_constructor :
-  forall (H : checker_flags) (Σ : global_env) ind mdecl idecl decl,
-    declared_constructor Σ ind mdecl idecl decl ->
-    forall Σ' : global_env, wf Σ' -> extends Σ Σ' ->
-    declared_constructor Σ' ind mdecl idecl decl.
-Proof.
-  intros H Σ cst mdecl idecl cdecl [Hidecl Hcdecl] Σ' X2 H2.
-  split; eauto with extends.
-Qed.
-Hint Resolve weakening_env_declared_constructor : extends.
-
-Lemma weakening_env_declared_projection :
-  forall (H : checker_flags) (Σ : global_env) ind mdecl idecl decl,
-    declared_projection Σ ind mdecl idecl decl ->
-    forall Σ' : global_env, wf Σ' -> extends Σ Σ' ->
-    declared_projection Σ' ind mdecl idecl decl.
-Proof.
-  intros H Σ cst mdecl idecl cdecl [Hidecl Hcdecl] Σ' X2 H2.
-  split; eauto with extends.
-Qed.
-Hint Resolve weakening_env_declared_projection : extends.
 
 Lemma weakening_All_local_env_impl `{checker_flags}
       (P Q : context -> term -> option term -> Type) l :
@@ -490,7 +513,6 @@ Proof.
     now apply extends_wf_universe.
   - econstructor; eauto 2 with extends.
     close_Forall. intros; intuition eauto with extends.
-    destruct b as [s [Hs IH]]; eauto.
   - econstructor; eauto with extends.
     + eapply fix_guard_extends; eauto.
     + eapply (All_impl X0); simpl; intuition eauto with extends.
@@ -542,7 +564,7 @@ Proof.
         ** destruct a as [na [b|] ty]; simpl in *; intuition eauto.
       * clear on_ctype on_cargs.
         revert on_cindices.
-        generalize (List.rev (PCUICLiftSubst.lift_context #|cshape_args y| 0 ind_indices)).
+        generalize (List.rev (lift_context #|cshape_args y| 0 ind_indices)).
         generalize (cshape_indices y).
         induction 1; constructor; eauto.
       * simpl.

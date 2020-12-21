@@ -107,15 +107,6 @@ Proof.
           auto.
 Qed.
 
-
-Lemma destArity_spec_Some ctx T ctx' s :
-  destArity ctx T = Some (ctx', s)
-  -> it_mkProd_or_LetIn ctx T = it_mkProd_or_LetIn ctx' (tSort s).
-Proof.
-  pose proof (PCUICClosed.destArity_spec ctx T) as H.
-  intro e; now rewrite e in H.
-Qed.
-
 Lemma isType_tProd {cf:checker_flags} {Σ : global_env_ext} (HΣ' : wf Σ)
       {Γ} (HΓ : wf_local Σ Γ) {na A B}
   : isType Σ Γ (tProd na A B)

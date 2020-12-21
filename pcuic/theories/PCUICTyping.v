@@ -24,10 +24,8 @@ Implicit Types (cf : checker_flags) (Σ : global_env_ext).
  *)
 
 
-Hint Rewrite subst_context_length subst_instance_context_length
-  app_context_length map_context_length fix_context_length fix_subst_length cofix_subst_length
-  map_length app_length lift_context_length
-  @mapi_length @mapi_rec_length List.rev_length Nat.add_0_r : len.
+Hint Rewrite subst_instance_context_length 
+  fix_context_length fix_subst_length cofix_subst_length : len.
 
 Fixpoint isArity T :=
   match T with

@@ -4,7 +4,7 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From MetaCoq.Template
 Require Import config Universes monad_utils utils BasicAst AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICContextRelation
-     PCUICEquality PCUICLiftSubst PCUICTyping PCUICInduction.
+     PCUICEquality PCUICLiftSubst PCUICTyping PCUICWeakeningEnv PCUICInduction.
 Require Import ssreflect.
 Set Asymmetric Patterns.
 
@@ -101,7 +101,8 @@ Section Normal.
       RedFlags.fix_ flags = false ->
       whne Γ (tFix defs i)
   
-  | whne_case i p c brs :
+  | whne_case i p c brs mdecl idecl :
+      lookup_inductive Σ (ci_ind i) = Some (mdecl, idecl) ->
       whne Γ c ->
       whne Γ (tCase i p c brs)
 
@@ -429,11 +430,17 @@ Proof with eauto using sq with pcuic.
   - left. constructor. eapply whnf_cstrapp with (v := []). 
   - destruct (RedFlags.iota flags) eqn:Eq...
     destruct (IHt Γ) as [_ []].
-    + left. destruct s...
+    + destruct (lookup_inductive Σ ind.(ci_ind)) as [[mdecl idecl]|] eqn:eql.
+      * left. destruct s...
+      * right; intros [w]. depelim w. depelim w. all:help...
+        now rewrite eql in e. 
     + right. intros [w]. depelim w. depelim w. all:help...
   -  destruct (RedFlags.iota flags) eqn:Eq...
      destruct (IHt Γ) as [_ []].
-    + left. destruct s...
+    + destruct (lookup_inductive Σ ind.(ci_ind)) as [[mdecl idecl]|] eqn:eql.
+      * left. destruct s...
+      * right; intros [w]. depelim w. depelim w. all:help...
+        now rewrite eql in e. 
     + right. intros [w]. depelim w. all:help...
   - destruct (RedFlags.iota flags) eqn:Eq...
     destruct (IHt Γ) as [_ []].
@@ -720,7 +727,8 @@ Lemma whne_red1_ind
                ((dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)))
             defs mfix1 ->
           P (tFix defs i) (tFix mfix1 i))
-      (Hcase_params : forall i p c brs params',
+      (Hcase_params : forall i mdecl idecl p c brs params',
+          declared_inductive Σ mdecl i.(ci_ind) idecl ->
           whne flags Σ Γ c ->
           OnOne2 (red1 Σ Γ) p.(pparams) params' ->
           P (tCase i p c brs) (tCase i (set_pparams p params') c brs))
@@ -729,7 +737,8 @@ Lemma whne_red1_ind
           case_predicate_context Σ i p pctx ->
           red1 Σ (Γ ,,, pctx) p.(preturn) p' ->
           P (tCase i p c brs) (tCase i (set_preturn p p') c brs))
-      (Hcase_motive : forall i p c brs c',
+      (Hcase_motive : forall i mdecl idecl p c brs c',
+          declared_inductive Σ mdecl i.(ci_ind) idecl ->
           whne flags Σ Γ c ->
           red1 Σ Γ c c' ->
           P c c' ->
@@ -879,6 +888,21 @@ Proof.
       inv e0.
       rewrite H3.
       reflexivity.
+  - econstructor; eauto. destruct H.
+    unfold lookup_inductive, lookup_minductive.
+    red in d. rewrite [lookup_env _ _]d e. reflexivity.
+  - destruct X0. destruct d.
+    econstructor; tas.
+    unfold lookup_inductive, lookup_minductive.
+    now rewrite [lookup_env _ _]H H0.
+  - destruct H as [d e].
+    econstructor; tas.
+    unfold lookup_inductive, lookup_minductive.
+    now rewrite [lookup_env _ _]d e.
+  - destruct X0 as [mdecl idecl brsctx [d e] cpc].
+    econstructor; tas.
+    unfold lookup_inductive, lookup_minductive.
+    now rewrite [lookup_env _ _]d e.
 Qed.
 
 Lemma whne_pres Σ Γ t t' :
@@ -1121,17 +1145,18 @@ Proof.
   now depelim w.
 Qed.
 
-Lemma whnf_red_refl_whne Σ Γ t :
+Lemma whnf_red_refl_whne {cf:checker_flags} Σ Γ t :
+  wf Σ ->
   whne RedFlags.default Σ Γ t ->
   whnf_red Σ Γ t t.
 Proof.
-  intros wh.
+  intros wfΣ wh.
   induction wh; cbn in *; try discriminate; eauto using whnf_red with pcuic.
   apply whnf_red_mkApps; auto.
   2: apply All2_same; auto.
   constructor.
   apply All2_same; auto.
-  destruct p. eapply whnf_red_tCase.
+  destruct p. econstructor. eapply whnf_red_tCase.
   (* TODO: in wf environments, case predicate context can always be derived. *)
 Qed.
 

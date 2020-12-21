@@ -27,39 +27,6 @@ Proof.
   now rewrite nth_error_map.
 Qed.
 
-Lemma build_case_predicate_type_spec {cf:checker_flags} Σ ind mdecl idecl pars u ps pty :
-  forall (o : on_ind_body (lift_typing typing) Σ (inductive_mind ind) mdecl (inductive_ind ind) idecl),
-  build_case_predicate_type ind mdecl idecl pars u ps = Some pty ->
-  ∑ parsubst, (context_subst (subst_instance_context u (ind_params mdecl)) pars parsubst *
-  (pty = it_mkProd_or_LetIn (subst_context parsubst 0 (subst_instance_context u o.(ind_indices))) 
-      (tProd {| binder_name := nNamed (ind_name idecl); binder_relevance := idecl.(ind_relevance) |}
-          (mkApps (tInd ind u) (map (lift0 #|o.(ind_indices)|) pars ++ to_extended_list o.(ind_indices))) 
-          (tSort ps)))).
-Proof.
-  intros []. unfold build_case_predicate_type.
-  destruct instantiate_params eqn:Heq=> //.
-  eapply instantiate_params_make_context_subst in Heq =>  /=.
-  destruct destArity eqn:Har => //.
-  move=> [=] <-. destruct Heq as [ctx'  [ty'' [s' [? [? ?]]]]].
-  subst t. exists s'. split. apply make_context_subst_spec in H0.
-  now rewrite List.rev_involutive in H0.
-  clear onProjections. clear onConstructors.
-  assert (p.1 = subst_context s' 0 (subst_instance_context u ind_indices)) as ->.
-  move: H. rewrite ind_arity_eq subst_instance_constr_it_mkProd_or_LetIn.
-  rewrite decompose_prod_n_assum_it_mkProd app_nil_r => [=].
-  move=> Hctx' Hty'.
-  subst ty''  ctx'.
-  move: Har. rewrite subst_instance_constr_it_mkProd_or_LetIn subst_it_mkProd_or_LetIn.
-  rewrite destArity_it_mkProd_or_LetIn. simpl. move=> [=] <- /=. 
-  now rewrite app_context_nil_l.
-  f_equal. rewrite subst_context_length subst_instance_context_length.
-  simpl.
-  f_equal. f_equal.  f_equal.
-  unfold to_extended_list.
-  rewrite to_extended_list_k_subst PCUICSubstitution.map_subst_instance_constr_to_extended_list_k.
-  reflexivity.
-Qed.
-
 Hint Resolve conv_ctx_refl : pcuic.
 
 Definition branch_type ind mdecl (idecl : one_inductive_body) params u p i (br : ident * term * nat) :=

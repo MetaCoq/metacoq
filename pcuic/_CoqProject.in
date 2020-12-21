@@ -10,6 +10,7 @@ theories/PCUICReflect.v
 theories/PCUICLiftSubst.v
 theories/PCUICUnivSubst.v
 theories/PCUICCases.v
+theories/PCUICContextSubst.v
 theories/PCUICTyping.v
 theories/PCUICGlobalEnv.v
 theories/PCUICInversion.v

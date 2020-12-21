@@ -437,6 +437,11 @@ Proof.
     rewrite -> Nat.add_comm, simpl_subst; eauto.
 Qed.
 
+Lemma subst_app_simpl' (l l' : list term) (k : nat) (t : term) n :
+  n = #|l| ->
+  subst (l ++ l') k t = subst l k (subst l' (k + n) t).
+Proof. intros ->; apply subst_app_simpl. Qed.
+
 Lemma isLambda_subst (s : list term) k (bod : term) :
   isLambda bod = true -> isLambda (subst s k bod) = true.
 Proof.
@@ -1675,3 +1680,96 @@ Fixpoint subst_app (t : term) (us : list term) : term :=
   | _, _ => mkApps t us
   end.
 
+Lemma extended_subst_length Γ n : #|extended_subst Γ n| = #|Γ|.
+Proof.
+  induction Γ in n |- *; simpl; auto.
+  now destruct a as [? [?|] ?] => /=; simpl; rewrite IHΓ.
+Qed.
+Hint Rewrite extended_subst_length map_length : len.
+  
+Lemma lift_extended_subst (Γ : context) k :
+  extended_subst Γ k = map (lift0 k) (extended_subst Γ 0).
+Proof.
+  induction Γ as [|[? [] ?] ?] in k |- *; simpl; auto; unf_term.
+  - rewrite IHΓ. f_equal.
+    autorewrite with len.
+    rewrite distr_lift_subst. f_equal.
+    autorewrite with len. rewrite simpl_lift; lia_f_equal.
+  - rewrite Nat.add_0_r; f_equal.
+    rewrite IHΓ (IHΓ 1).
+    rewrite map_map_compose. apply map_ext => x.
+    rewrite simpl_lift; try lia.
+    now rewrite Nat.add_1_r.
+Qed.
+
+Lemma lift_extended_subst' Γ k k' : extended_subst Γ (k + k') = map (lift0 k) (extended_subst Γ k').
+Proof.
+  induction Γ as [|[? [] ?] ?] in k |- *; simpl; auto.
+  - rewrite IHΓ. f_equal.
+    autorewrite with len.
+    rewrite distr_lift_subst. f_equal.
+    autorewrite with len. rewrite simpl_lift; lia_f_equal.
+  - f_equal.
+    rewrite (IHΓ (S k)) (IHΓ 1).
+    rewrite map_map_compose. apply map_ext => x.
+    rewrite simpl_lift; lia_f_equal.
+Qed.
+
+Lemma subst_extended_subst_k s Γ k k' : extended_subst (subst_context s k Γ) k' =
+  map (subst s (k + context_assumptions Γ + k')) (extended_subst Γ k').
+Proof.
+  induction Γ as [|[na [b|] ty] Γ]; simpl; auto; rewrite subst_context_snoc /=;
+    autorewrite with len; f_equal; auto.
+  - rewrite IHΓ.
+    rewrite commut_lift_subst_rec; try lia.
+    rewrite distr_subst. autorewrite with len. f_equal.
+    now rewrite context_assumptions_fold.
+  - elim: Nat.leb_spec => //. lia.
+  - rewrite (lift_extended_subst' _ 1 k') IHΓ.
+    rewrite (lift_extended_subst' _ 1 k').
+    rewrite !map_map_compose.
+    apply map_ext.
+    intros x.
+    erewrite (commut_lift_subst_rec); lia_f_equal.
+Qed.
+
+Lemma context_assumptions_app Γ Δ : context_assumptions (Γ ++ Δ) = 
+  context_assumptions Γ + context_assumptions Δ.
+Proof.
+  induction Γ as [|[? [] ?] ?]; simpl; auto.
+Qed.
+
+Hint Rewrite subst_context_length
+  app_context_length map_context_length
+  map_length app_length lift_context_length
+  @mapi_length @mapi_rec_length List.rev_length Nat.add_0_r
+  context_assumptions_app context_assumptions_fold : len.
+
+Lemma extended_subst_app Γ Γ' : 
+  extended_subst (Γ ++ Γ') 0 = 
+  extended_subst (subst_context (extended_subst Γ' 0) 0
+   (lift_context (context_assumptions Γ') #|Γ'| Γ)) 0 ++ 
+   extended_subst Γ' (context_assumptions Γ).
+Proof.
+  induction Γ as [|[na [b|] ty] Γ] in |- *; simpl; auto.
+  - autorewrite with len. 
+    rewrite IHΓ. simpl.  rewrite app_comm_cons.
+    f_equal.
+    erewrite subst_app_simpl'.
+    2:autorewrite with len; reflexivity.
+    simpl.
+    rewrite lift_context_snoc subst_context_snoc /=.
+    autorewrite with len. f_equal. f_equal.
+    rewrite !context_assumptions_fold.
+    rewrite -{3}(Nat.add_0_r #|Γ|).
+    erewrite <- (simpl_lift _ _ _ _ (#|Γ| + #|Γ'|)). all:try lia.
+    rewrite distr_lift_subst_rec. autorewrite with len.
+    f_equal. apply lift_extended_subst.
+  - rewrite lift_context_snoc  subst_context_snoc /=. lia_f_equal.
+    rewrite lift_extended_subst. rewrite IHΓ /=.
+    rewrite map_app. rewrite !(lift_extended_subst _ (S _)).
+    rewrite (lift_extended_subst _ (context_assumptions Γ)).
+    rewrite map_map_compose.
+    f_equal. apply map_ext. intros.
+    rewrite simpl_lift; lia_f_equal.
+Qed.

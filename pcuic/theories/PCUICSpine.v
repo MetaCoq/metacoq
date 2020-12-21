@@ -1923,34 +1923,6 @@ Proof.
       depelim inst_ctx_subst0; apply IHinst_subslet0; auto.
 Qed.
 
-Lemma extended_subst_app Γ Γ' : 
-  extended_subst (Γ ++ Γ') 0 = 
-  extended_subst (subst_context (extended_subst Γ' 0) 0
-   (lift_context (context_assumptions Γ') #|Γ'| Γ)) 0 ++ 
-   extended_subst Γ' (context_assumptions Γ).
-Proof.
-  induction Γ as [|[na [b|] ty] Γ] in |- *; simpl; auto.
-  - autorewrite with len. 
-    rewrite IHΓ. simpl.  rewrite app_comm_cons.
-    f_equal.
-    erewrite subst_app_simpl'.
-    2:autorewrite with len; reflexivity.
-    simpl.
-    rewrite lift_context_snoc subst_context_snoc /=.
-    autorewrite with len. f_equal. f_equal.
-    rewrite !context_assumptions_fold.
-    rewrite -{3}(Nat.add_0_r #|Γ|).
-    erewrite <- (simpl_lift _ _ _ _ (#|Γ| + #|Γ'|)). all:try lia.
-    rewrite distr_lift_subst_rec. autorewrite with len.
-    f_equal. apply lift_extended_subst.
-  - rewrite lift_context_snoc  subst_context_snoc /=. lia_f_equal.
-    rewrite lift_extended_subst. rewrite IHΓ /=.
-    rewrite map_app. rewrite !(lift_extended_subst _ (S _)).
-    rewrite (lift_extended_subst _ (context_assumptions Γ)).
-    rewrite map_map_compose.
-    f_equal. apply map_ext. intros.
-    rewrite simpl_lift; lia_f_equal.
-Qed.
 
 Lemma subst_rel0_lift_id n t : subst [tRel 0] n (lift 1 (S n) t) = t.
 Proof.
@@ -2050,7 +2022,7 @@ Proof.
     * constructor. rewrite /subst1 subst_it_mkProd_or_LetIn.
       rewrite Nat.add_0_r.
       rewrite smash_context_app smash_context_acc /= in subsl.
-      rewrite subst_empty lift0_id /= subst_context_nil app_nil_r 
+      rewrite  lift0_id /= subst_context_nil app_nil_r 
         lift0_context in subsl.
       rewrite -(smash_context_subst []) /= subst_context_nil in subsl.
       apply (X (subst_context [b] 0 Γ0) ltac:(now autorewrite with len)

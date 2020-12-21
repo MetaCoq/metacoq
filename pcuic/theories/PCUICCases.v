@@ -1,7 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-     PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICInduction.
+     PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICInduction
+     PCUICContextSubst.
 
 Require Import ssreflect.
 Require Import Equations.Prop.DepElim.
@@ -224,7 +225,7 @@ Qed. *)
 
 
 (* [params] and output already instantiated by [u] *)
-Definition build_case_predicate_context ind mdecl idecl params u : option context :=
+Definition build_case_predicate_context ind mdecl idecl params u pctx : option context :=
   index_part <- instantiate_params (subst_instance_context u (ind_params mdecl)) params
                                    (subst_instance_constr u (ind_type idecl)) ;;
   '(Γ, _) <- destArity [] index_part ;;
@@ -232,4 +233,273 @@ Definition build_case_predicate_context ind mdecl idecl params u : option contex
       {| decl_name := mkBindAnn (nNamed idecl.(ind_name)) idecl.(ind_relevance);
          decl_body := None;
          decl_type := mkApps (tInd ind u) (map (lift0 #|Γ|) params ++ to_extended_list Γ) |} in
-  ret (Γ,, inddecl).
+  if Reflect.eqb (S #|Γ|) #|pctx| then
+    let ictx := map2 set_binder_name pctx (Γ ,, inddecl) in
+    ret ictx
+  else None.
+
+Lemma lookup_inductive_declared Σ ind mdecl idecl :
+  lookup_inductive Σ ind = Some (mdecl, idecl) ->
+  declared_inductive Σ mdecl ind idecl.
+Proof.
+  unfold lookup_inductive, lookup_minductive, declared_inductive,
+    declared_minductive.
+  destruct lookup_env => //.
+  destruct g => //.
+  destruct nth_error eqn:e => //.
+  intros [= -> ->]. now rewrite e.
+Qed.
+
+Definition onSome {A} (P : A -> Type) (x : option A) : Type :=
+  match x with
+  | Some x => P x
+  | None => False
+  end.
+
+Lemma instantiate_params_subst_spec_fn {params pars s ty s' s'' ty' ty''} :
+  instantiate_params_subst_spec params pars s ty s' ty' ->
+  instantiate_params_subst_spec params pars s ty s'' ty'' ->
+  s' = s'' /\ ty' = ty''.
+Proof.
+  induction 1; intros ipars; depelim ipars; auto.
+Qed.
+
+Lemma instantiate_paramsP params pars ty t : 
+  instantiate_params params pars ty = Some t <~>
+  ∑ s' ty', instantiate_params_subst_spec (List.rev params) pars [] ty s' ty' *
+    (t = subst0 s' ty').
+Proof.
+  unfold instantiate_params.
+  destruct instantiate_params_subst as [[s'' ty'']|] eqn:ipars.
+  * apply instantiate_params_substP in ipars.
+    split.
+    + intros [= <-]. exists s'', ty''; split; auto.
+    + intros [s' [ty' [H' Heq]]]. subst t.
+      now destruct (instantiate_params_subst_spec_fn ipars H') as [-> ->].
+  * split; intros => //.
+    + destruct X as [s' [ty' [H' Heq]]]. 
+      eapply instantiate_params_substP in H'. congruence.
+Qed.
+
+
+Lemma instantiate_params_subst_make_context_subst ctx args s ty s' ty' :
+  instantiate_params_subst ctx args s ty = Some (s', ty') ->
+  ∑ ctx'',
+  make_context_subst ctx args s = Some s' /\
+  decompose_prod_n_assum [] (length ctx) ty = Some (ctx'', ty').
+Proof.
+  induction ctx in args, s, ty, s' |- *; simpl.
+  - case: args => [|a args'] // [= <- <-]. exists []; intuition congruence.
+  - case: a => [na [body|] ty''] /=.
+    + destruct ty; try congruence.
+      intros. move: (IHctx _ _ _ _ H) => [ctx'' [Hmake Hdecomp]].
+      eapply (decompose_prod_n_assum_extend_ctx [vdef na0 ty1 ty2]) in Hdecomp.
+      unfold snoc. eexists; intuition eauto.
+    + destruct ty; try congruence.
+      case: args => [|a args']; try congruence.
+      move=> H. move: (IHctx _ _ _ _ H) => [ctx'' [Hmake Hdecomp]].
+      eapply (decompose_prod_n_assum_extend_ctx [vass na0 ty1]) in Hdecomp.
+      unfold snoc. eexists; intuition eauto.
+Qed.
+
+Lemma instantiate_params_make_context_subst ctx args ty ty' :
+  instantiate_params ctx args ty = Some ty' ->
+  ∑ ctx' ty'' s',
+    decompose_prod_n_assum [] (length ctx) ty = Some (ctx', ty'') /\
+    make_context_subst (List.rev ctx) args [] = Some s' /\ ty' = subst0 s' ty''.
+Proof.
+  unfold instantiate_params.
+  case E: instantiate_params_subst => // [[s ty'']].
+  move=> [= <-].
+  eapply instantiate_params_subst_make_context_subst in E.
+  destruct E as [ctx'' [Hs Hty'']].
+  exists ctx'', ty'', s. split; auto.
+  now rewrite -> List.rev_length in Hty''.
+Qed.
+
+Ltac len := autorewrite with len; cbn.
+Tactic Notation "len" "in" hyp(cl) := autorewrite with len in cl.
+
+Lemma subst_it_mkProd_or_LetIn n k ctx t :
+  subst n k (it_mkProd_or_LetIn ctx t) =
+  it_mkProd_or_LetIn (subst_context n k ctx) (subst n (length ctx + k) t).
+Proof.
+  induction ctx in n, k, t |- *; simpl; try congruence.
+  pose (subst_context_snoc n k ctx a). unfold snoc in e. rewrite e. clear e.
+  simpl. rewrite -> IHctx.
+  pose (subst_context_snoc n k ctx a). simpl. now destruct a as [na [b|] ty].
+Qed.
+
+Lemma map_subst_instance_constr_to_extended_list_k u ctx k :
+  to_extended_list_k (subst_instance_context u ctx) k
+  = to_extended_list_k ctx k.
+Proof.
+  unfold to_extended_list_k.
+  cut (map (subst_instance_constr u) [] = []); [|reflexivity].
+  unf_term. generalize (@nil term); intros l Hl.
+  induction ctx in k, l, Hl |- *; cbnr.
+  destruct a as [? [] ?]; cbnr; eauto.
+  unf_term. eapply IHctx; cbn; congruence.
+Qed.
+
+Lemma to_extended_list_k_subst n k c k' :
+  to_extended_list_k (subst_context n k c) k' = to_extended_list_k c k'.
+Proof.
+  unfold to_extended_list_k. revert k'.
+  unf_term. generalize (@nil term) at 1 2.
+  induction c in n, k |- *; simpl; intros. 1: reflexivity.
+  rewrite subst_context_snoc. unfold snoc. simpl.
+  destruct a. destruct decl_body.
+  - unfold subst_decl, map_decl. simpl.
+    now rewrite IHc.
+  - simpl. apply IHc.
+Qed.
+
+(*
+Lemma build_case_predicate_type_spec {cf:checker_flags} Σ ind mdecl idecl pars u pctx :
+  forall (o : on_ind_body (lift_typing typing) Σ (inductive_mind ind) mdecl (inductive_ind ind) idecl),
+  build_case_predicate_context ind mdecl idecl pars u = Some pctx ->
+  ∑ parsubst, (context_subst (subst_instance_context u (ind_params mdecl)) pars parsubst *
+  (pctx = (subst_context parsubst 0 (subst_instance_context u o.(ind_indices)) ,,
+          (vass {| binder_name := nNamed (ind_name idecl); 
+                   binder_relevance := idecl.(ind_relevance) |}
+            (mkApps (tInd ind u) (map (lift0 #|o.(ind_indices)|) pars ++ 
+                to_extended_list o.(ind_indices))))))).
+Proof.
+  intros []. unfold build_case_predicate_context.
+  destruct instantiate_params eqn:Heq=> //.
+  eapply instantiate_params_make_context_subst in Heq =>  /=.
+  destruct destArity as [[ctx p]|] eqn:Har => //.
+  move=> [=] <-. destruct Heq as [ctx'  [ty'' [s' [? [? ?]]]]].
+  subst t. exists s'. split.
+  * apply make_context_subst_spec in H0.
+    now rewrite List.rev_involutive in H0.
+  * clear onProjections. clear onConstructors.
+    assert (ctx = subst_context s' 0 (subst_instance_context u ind_indices)) as ->.
+    { move: H. rewrite ind_arity_eq subst_instance_constr_it_mkProd_or_LetIn.
+      rewrite decompose_prod_n_assum_it_mkProd app_nil_r => [=].
+      move=> Hctx' Hty'.
+      subst ty''  ctx'.
+      move: Har. rewrite subst_instance_constr_it_mkProd_or_LetIn subst_it_mkProd_or_LetIn.
+      rewrite destArity_it_mkProd_or_LetIn. simpl. move=> [=] <- /=. 
+      now rewrite app_context_nil_l. }
+    f_equal. rewrite subst_context_length subst_instance_context_length.
+    unfold vass.
+    f_equal. f_equal. f_equal.
+    unfold to_extended_list.
+    rewrite to_extended_list_k_subst map_subst_instance_constr_to_extended_list_k.
+    reflexivity.
+Qed.
+*)
+
+Lemma instantiate_params_subst_it_mkProd_or_LetIn params pars ty s' ty' : 
+  #|pars| = context_assumptions params ->
+  instantiate_params_subst_spec (List.rev params) pars []
+    (it_mkProd_or_LetIn params ty) s' ty' ->
+    context_subst params pars s' * (ty = ty').
+Proof.
+  intros hpars ipars.
+  eapply instantiate_params_substP in ipars.
+  eapply instantiate_params_subst_make_context_subst in ipars as [ctx'' [mcs dec]].
+  apply make_context_subst_spec in mcs.
+  rewrite List.rev_involutive in mcs.
+  split; auto. len in dec.
+  rewrite decompose_prod_n_assum_it_mkProd app_nil_r in dec.
+  noconf dec. reflexivity.
+Qed.
+Derive Signature for context_subst.
+
+Lemma instantiate_params_subst_it_mkProd_or_LetIn_inv params pars ty s : 
+  context_subst params pars s ->
+  instantiate_params_subst_spec (List.rev params) pars []
+    (it_mkProd_or_LetIn params ty) s ty.
+Proof.
+  intros cs.
+  rewrite -(List.rev_involutive params) in cs.
+  rewrite -{2}(List.rev_involutive params).
+  eapply instantiate_params_substP.
+  eapply make_context_subst_spec_inv in cs.
+  revert cs. generalize (@nil term).
+  revert pars s ty.
+  induction (List.rev params); intros.
+  - simpl. now destruct pars; noconf cs.
+  - simpl. destruct a as [na [b|] bty]; rewrite it_mkProd_or_LetIn_app /=.
+    * apply IHl. now simpl in cs.
+    * destruct pars; noconf cs.
+      apply IHl. now simpl in cs. 
+Qed.
+
+Lemma it_mkProd_or_LetIn_inj ctx s ctx' s' :
+  it_mkProd_or_LetIn ctx (tSort s) = it_mkProd_or_LetIn ctx' (tSort s') ->
+  ctx = ctx' /\ s = s'.
+Proof.
+  move/(f_equal (destArity [])).
+  rewrite !destArity_it_mkProd_or_LetIn /=.
+  now rewrite !app_context_nil_l => [= -> ->].
+Qed.
+
+Lemma destArity_spec ctx T :
+  match destArity ctx T with
+  | Some (ctx', s) => it_mkProd_or_LetIn ctx T = it_mkProd_or_LetIn ctx' (tSort s)
+  | None => True
+  end.
+Proof.
+  induction T in ctx |- *; simpl; try easy.
+  - specialize (IHT2 (ctx,, vass na T1)). now destruct destArity.
+  - specialize (IHT3 (ctx,, vdef na T1 T2)). now destruct destArity.
+Qed.
+
+Lemma destArity_spec_Some ctx T ctx' s :
+  destArity ctx T = Some (ctx', s)
+  -> it_mkProd_or_LetIn ctx T = it_mkProd_or_LetIn ctx' (tSort s).
+Proof.
+  pose proof (destArity_spec ctx T) as H.
+  intro e; now rewrite e in H.
+Qed.
+
+Arguments Reflect.eqb : simpl never.
+
+Lemma ind_case_predicate_contextP ind pparams puinst pcontext mdecl idecl : 
+  forall pctx, 
+  ind_case_predicate_context ind mdecl idecl 
+    pparams puinst pcontext pctx <~>
+  build_case_predicate_context ind mdecl idecl pparams puinst pcontext = Some pctx.
+Proof.
+  intros pctx.
+  split. 
+  * intros [].
+    unfold build_case_predicate_context.
+    eapply instantiate_params_substP in i.
+    unfold instantiate_params.
+    rewrite i /=.
+    subst sty. rewrite e.
+    rewrite destArity_it_mkProd_or_LetIn /=.
+    case: Reflect.eqb_spec; len; [move=> _|congruence].
+    subst ictx'. f_equal. f_equal.
+    rewrite app_context_nil_l /snoc.
+    f_equal.
+  * rewrite /build_case_predicate_context.
+    unfold instantiate_params.
+    destruct instantiate_params_subst as [[s' ty']|] eqn:ipars => //.
+    eapply instantiate_params_substP in ipars.
+    simpl.
+    destruct destArity as [[Γ ?]|] eqn:da => //.
+    case: Reflect.eqb_spec => //.
+    intros eq [= <-].
+    econstructor; eauto.
+    apply destArity_spec_Some in da. simpl in da. eauto.
+Qed.
+
+(** To formalize reduction independently of typing invariants on cases, 
+    each case reduction step carries the contexts necessary to express it. *)
+
+Record case_contexts Σ ci (p : predicate term) :=
+  { case_pctx : context;
+    case_brsctxs : list context;
+    case_pctx_prf : case_predicate_context Σ ci p case_pctx;
+    case_brsctxs_prf : case_branches_contexts Σ ci p case_brsctxs }.
+Arguments case_pctx {Σ ci p}.
+Arguments case_brsctxs {Σ ci p}.
+Arguments case_pctx_prf {Σ ci p}.
+Arguments case_brsctxs_prf {Σ ci p}.
+

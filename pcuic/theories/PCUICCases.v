@@ -121,17 +121,18 @@ Definition case_predicate_context_gen ind mdecl idecl params puinst pctx : conte
 Definition case_predicate_context ind mdecl idecl p : context :=
   case_predicate_context_gen ind mdecl idecl p.(pparams) p.(puinst) p.(pcontext).
 
-Definition case_branch_context_gen params puinst cdecl : context :=
-  subst_context params 0 (subst_instance_context puinst cdecl.(cstr_args)).
+Definition case_branch_context_gen params puinst bctx cdecl : context :=
+  subst_context params 0 (subst_instance_context puinst 
+    (map2 set_binder_name bctx cdecl.(cstr_args))).
 
-Definition case_branch_context p cdecl : context :=
-  case_branch_context_gen p.(pparams) p.(puinst) cdecl.
+Definition case_branch_context p bctx cdecl : context :=
+  case_branch_context_gen p.(pparams) p.(puinst) bctx cdecl.
   
-Definition case_branches_contexts_gen idecl params puinst : list context :=
-  map (case_branch_context_gen params puinst) idecl.(ind_ctors).
+Definition case_branches_contexts_gen idecl params puinst brs : list context :=
+  map2 (case_branch_context_gen params puinst) brs idecl.(ind_ctors).
 
-Definition case_branches_contexts idecl p : list context :=
-  map (case_branch_context_gen p.(pparams) p.(puinst)) idecl.(ind_ctors).
+Definition case_branches_contexts idecl p brs : list context :=
+  map2 (case_branch_context_gen p.(pparams) p.(puinst)) brs idecl.(ind_ctors).
   
 Definition case_branch_type_gen ind params puinst ptm i cdecl : context * term :=
   let cstr := tConstruct ind i puinst in
@@ -146,6 +147,33 @@ Definition case_branches_types_gen ind idecl params puinst ptm : list (context *
 
 Definition case_branches_types ind idecl p ptm : list (context * term) :=
   mapi (case_branch_type_gen ind p.(pparams) p.(puinst) ptm) idecl.(ind_ctors).
+
+Lemma map2_length {A B C} (l : list A) (l' : list B) (f : A -> B -> C) : #|l| = #|l'| -> 
+  #|map2 f l l'| = #|l|.
+Proof.
+  induction l in l' |- *; destruct l' => /= //.
+  intros [= eq]. now rewrite IHl.
+Qed.
+
+Lemma case_predicate_context_length {ci mdecl idecl p} :
+  #|pcontext p| = S #|ind_indices idecl| ->
+  #|case_predicate_context (ci_ind ci) mdecl idecl p| = #|p.(pcontext)|.
+Proof.
+  intros hl.
+  unfold case_predicate_context, case_predicate_context_gen.
+  rewrite map2_length /= //. len.
+  rewrite /expand_lets_ctx /expand_lets_k_ctx; len.
+  now rewrite subst_instance_context_length; len.
+Qed.
+
+Lemma case_branches_contexts_length idecl p pctx :
+  #|idecl.(ind_ctors)| = #|pctx| ->
+  #|case_branches_contexts idecl p pctx| = #|pctx|.
+Proof.
+  intros hl.
+  unfold case_branches_contexts.
+  rewrite map2_length //.
+Qed.
 
 (*
 (** For cases typing *)

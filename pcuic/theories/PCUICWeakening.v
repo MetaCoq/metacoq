@@ -32,7 +32,7 @@ Lemma typed_liftn `{checker_flags} Σ Γ t T n k :
 Proof.
   intros wfΣ wfΓ Hk Hty.
   apply typecheck_closed in Hty; eauto.
-  destruct Hty as [_ Hcl].
+  destruct Hty as [_ [_ Hcl]].
   rewrite -> andb_and in Hcl. destruct Hcl as [clb clty].
   pose proof (closed_upwards k clb).
   pose proof (closed_upwards k clty).
@@ -41,7 +41,6 @@ Proof.
   simpl in *. forward H1 by lia.
   now apply (lift_closed n) in H1.
 Qed.
-
 
 Lemma closed_ctx_lift n k ctx : closed_ctx ctx -> lift_context n k ctx = ctx.
 Proof.
@@ -98,11 +97,15 @@ Proof.
 Qed.
 
 Lemma lift_iota_red n k pars c args brs :
+  #|skipn pars args| = #|bcontext (nth c brs dummy_branch)| ->
   lift n k (iota_red pars c args brs) =
-  iota_red pars c (List.map (lift n k) args) (List.map (on_snd (lift n k)) brs).
+  iota_red pars c (List.map (lift n k) args) 
+    (List.map (fun br => map_branch (lift n (#|br.(bcontext)| + k)) br) brs).
 Proof.
-  unfold iota_red. rewrite !lift_mkApps. f_equal; auto using map_skipn.
+  unfold iota_red.
+  rewrite distr_lift_subst map_skipn. f_equal.
   rewrite nth_map; simpl; auto.
+  now move=> ->.
 Qed.
 
 Lemma parsubst_empty k a : subst [] k a = a.

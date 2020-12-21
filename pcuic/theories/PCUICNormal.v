@@ -737,8 +737,10 @@ Lemma whne_red1_ind
       (Hcase_branch : forall i mdecl idecl p c brs brs',
           declared_inductive Σ mdecl i.(ci_ind) idecl ->
           whne flags Σ Γ c ->          
-          OnOne2All (fun ctx => on_Trel_eq (red1 Σ (Γ ,,, ctx)) bbody bcontext) 
-            (case_branches_contexts idecl p) brs brs' ->
+          OnOne2All (fun cdecl br br' => 
+            let ctx := case_branch_context p br.(bcontext) cdecl in
+            on_Trel_eq (red1 Σ (Γ ,,, ctx)) bbody bcontext br br') 
+            idecl.(ind_ctors) brs brs' ->
           P (tCase i p c brs) (tCase i p c brs'))
       (Hcase_noiota : forall t' i p c brs,
           RedFlags.iota flags = false ->
@@ -979,8 +981,10 @@ Inductive whnf_red Σ Γ : term -> term -> Type :=
      (motive.(preturn) = motiveret) ->
     red Σ Γ discr discr' ->
     (∑ mdecl idecl, declared_inductive Σ mdecl p.(ci_ind) idecl *
-      All3 (fun brctx br br' => br.(bcontext) = br'.(bcontext) × red Σ (Γ ,,, brctx) br.(bbody) br'.(bbody)) 
-      (case_branches_contexts idecl motive) brs brs') + (brs = brs') ->
+      All3 (fun cdecl br br' => br.(bcontext) = br'.(bcontext) ×
+      let brctx := case_branch_context motive br.(bcontext) cdecl in
+      red Σ (Γ ,,, brctx) br.(bbody) br'.(bbody)) 
+      idecl.(ind_ctors) brs brs') + (brs = brs') ->
     whnf_red Σ Γ (tCase p motive discr brs) 
       (tCase p {| pparams := motivep; 
                   puinst := motive.(puinst);

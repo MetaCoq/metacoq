@@ -59,8 +59,7 @@ Proof.
     destruct o0 as [onI onP onNP].
     constructor; auto.
     -- eapply Alli_impl. exact onI. eauto. intros.
-       refine {| ind_indices := X1.(ind_indices);
-                 ind_arity_eq := X1.(ind_arity_eq);
+       refine {| ind_arity_eq := X1.(ind_arity_eq);
                  ind_cshapes := X1.(ind_cshapes) |}.
        --- apply onArity in X1. unfold on_type in *; simpl in *.
            now eapply X.

@@ -143,20 +143,20 @@ Section Lookups.
     res <- lookup_ind_decl ind i;;
     let '(mib, body) := res in
     match nth_error body.(ind_ctors) k with
-    | Some (_, ty, _) => ret (mib, ty)
+    | Some cdecl => ret (mib, cdecl)
     | None => raise (UndeclaredConstructor (mkInd ind i) k)
     end.
 
   Definition lookup_constructor_type ind i k u :=
     res <- lookup_constructor_decl ind i k ;;
-    let '(mib, ty) := res in
-    ret (subst0 (inds ind u mib.(ind_bodies)) (subst_instance_constr u ty)).
+    let '(mib, cdecl) := res in
+    ret (subst0 (inds ind u mib.(ind_bodies)) (subst_instance_constr u cdecl.(cstr_type))).
 
   Definition lookup_constructor_type_cstrs ind i k u :=
     res <- lookup_constructor_decl ind i k ;;
-    let '(mib, ty) := res in
+    let '(mib, cdecl) := res in
     let cstrs := polymorphic_constraints mib.(ind_universes) in
-    ret (subst0 (inds ind u mib.(ind_bodies)) (subst_instance_constr u ty),
+    ret (subst0 (inds ind u mib.(ind_bodies)) (subst_instance_constr u cdecl.(cstr_type)),
         subst_instance_cstrs u cstrs).
 End Lookups.
 
@@ -262,10 +262,7 @@ Section Reduce.
     match lookup_ind_decl Σ (inductive_mind ind) (inductive_ind ind) with
     | TypeError _ => []
     | Checked (mib, oib) => 
-      match build_case_predicate_context ind mib oib p.(pparams) p.(puinst) with
-      | Some ctx => ctx
-      | None => []
-      end
+      case_predicate_context ind mib oib p.(pparams) p.(puinst) p.(pcontext)
     end.
 
   Definition map_context_with_binders (f : context -> term -> term) (c : context) Γ : context :=
@@ -282,11 +279,7 @@ Section Reduce.
   Definition rebuild_case_branch_ctx ind i p :=
     match lookup_constructor_decl Σ (inductive_mind ind) (inductive_ind ind) i with
     | TypeError _ => []
-    | Checked (mib, cty) => 
-      match build_branch_context ind mib cty p with
-      | Some ctx => ctx
-      | None => []
-      end
+    | Checked (mib, cdecl) => case_branch_context p cdecl
     end.
 
   Definition map_case_branch_with_binders ind i (f : context -> term -> term) Γ p br :=

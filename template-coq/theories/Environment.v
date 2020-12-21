@@ -60,7 +60,7 @@ Module Environment (T : Term).
   Definition map_decl f (d : context_decl) :=
     {| decl_name := d.(decl_name);
        decl_body := option_map f d.(decl_body);
-       decl_type := f d.(decl_type) |}.
+       decl_type := f d.(decl_type) |}.       
 
   Lemma map_decl_type f decl : f (decl_type decl) = decl_type (map_decl f decl).
   Proof. destruct decl; reflexivity. Qed.
@@ -177,6 +177,11 @@ Module Environment (T : Term).
   Instance subst_instance_context : UnivSubst context
     := map_context ∘ subst_instance_constr.
 
+  Definition set_binder_name (na : aname) (x : context_decl) : context_decl :=
+    {| decl_name := na;
+       decl_body := decl_body x;
+       decl_type := decl_type x |}.
+    
   Fixpoint context_assumptions (Γ : context) :=
     match Γ with
     | [] => 0

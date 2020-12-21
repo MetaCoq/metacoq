@@ -284,7 +284,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
       (Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2) *
       (Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps)) 
       brs
-      (case_branches_types ci.(ci_ind) idecl p ptm) ->
+      (case_branches_types ci.(ci_ind) mdecl idecl p ptm) ->
     Σ ;;; Γ |- tCase ci p c brs : mkApps ptm (indices ++ [c])
 
 | type_Proj p c u :
@@ -666,7 +666,7 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
           (Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps) *
           P Σ (Γ ,,, brctxty.1) brctxty.2 (tSort ps)) 
           brs
-          (case_branches_types ci.(ci_ind) idecl p ptm) ->
+          (case_branches_types ci.(ci_ind) mdecl idecl p ptm) ->
         P Σ Γ (tCase ci p c brs) (mkApps ptm (indices ++ [c]))) ->
 
    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : projection) (c : term) u
@@ -1072,7 +1072,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
             (Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps) *
             P Σ (Γ ,,, brctxty.1) brctxty.2 (tSort ps)) 
             brs
-            (case_branches_types ci.(ci_ind) idecl p ptm) ->
+            (case_branches_types ci.(ci_ind) mdecl idecl p ptm) ->
           P Σ Γ (tCase ci p c brs) (mkApps ptm (indices ++ [c]))) ->
           
 

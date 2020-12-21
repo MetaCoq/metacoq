@@ -1094,9 +1094,9 @@ Proof.
   + todo "ind_case_predicate_context".
 Qed.
 
-Lemma nl_case_branches_contexts idecl p pctx :
-  map nlctx (case_branches_contexts idecl p pctx) =
-  case_branches_contexts (nl_one_inductive_body idecl) (nl_predicate nl p) (map (map anonymize) pctx).
+Lemma nl_case_branches_contexts ind mdecl idecl p pctx :
+  map nlctx (case_branches_contexts ind mdecl idecl p pctx) =
+  case_branches_contexts ind (nl_mutual_inductive_body mdecl) (nl_one_inductive_body idecl) (nl_predicate nl p) (map (map anonymize) pctx).
 Proof.
 Admitted.
 
@@ -1133,6 +1133,24 @@ Proof.
     now rewrite nl_subst; len.
 Qed.
 
+
+Lemma nlctx_lift_context :
+  forall n k Γ,
+    nlctx (lift_context n k Γ) = lift_context n k (nlctx Γ).
+Proof.
+  intros s k Γ.
+  induction Γ as [| [na [b|] B] Δ ih] in Γ |- *; rewrite /= ?lift_context_snoc /snoc /=
+    /map_decl.
+  - reflexivity.
+  - simpl. f_equal; auto.
+    rewrite /lift_decl /map_decl /= /map_decl_anon /=; repeat f_equal.
+    * now rewrite nl_lift; len.
+    * now rewrite nl_lift; len. 
+  - simpl. f_equal; [|apply ih].
+    rewrite /subst_decl /map_decl /= /map_decl_anon /=; repeat f_equal.
+    now rewrite nl_lift; len.
+Qed.
+
 Lemma map_map2 {A B C D} (f : A -> B) (g : C -> D -> A) l l' : 
   map f (map2 g l l') = map2 (fun x y => f (g x y)) l l'.
 Proof.
@@ -1147,21 +1165,35 @@ Proof.
   apply IHl.
 Qed.
 
-Lemma nl_case_branch_context p pctx cdecl :
-  nlctx (case_branch_context p pctx cdecl) =
-  case_branch_context (nl_predicate nl p) (map anonymize pctx) (nl_constructor_body cdecl).
-Proof.
-  unfold case_branch_context, case_branch_context_gen.
-  rewrite nlctx_subst_context. f_equal.
-  rewrite nlctx_subst_instance_context. f_equal.
-  rewrite [nlctx _]map_map2 map2_map. reflexivity.
-Qed.
-
 Lemma nl_extended_subst Γ k :
   map nl (extended_subst Γ k) = extended_subst (nlctx Γ) k.
 Proof.
   revert k; induction Γ as [|[? [] ?] ?]; intros k; simpl; f_equal; auto;
      rewrite ?nl_subst ?nl_lift ?nl_context_assumptions ?IHΓ; len => //.
+Qed.
+
+Lemma nl_inds ind puinst bodies :
+ map nl (inds ind puinst bodies) =
+  inds ind puinst (map nl_one_inductive_body bodies).
+Proof.
+  rewrite /inds; len.
+  induction #|bodies|; simpl; f_equal; auto.
+Qed.
+
+Lemma nl_case_branch_context ind mdecl p pctx cdecl :
+  nlctx (case_branch_context ind mdecl p pctx cdecl) =
+  case_branch_context ind (nl_mutual_inductive_body mdecl) (nl_predicate nl p) (map anonymize pctx) (nl_constructor_body cdecl).
+Proof.
+  unfold case_branch_context, case_branch_context_gen.
+  rewrite nlctx_subst_context. f_equal.
+  rewrite /expand_lets_ctx /expand_lets_k_ctx.
+  rewrite nlctx_subst_context nl_extended_subst.
+  rewrite nlctx_subst_instance_context. f_equal.
+  rewrite nlctx_lift_context. simpl. len.
+  rewrite nl_context_assumptions. f_equal.
+  rewrite nlctx_subst_context ?nl_inds. f_equal.
+  rewrite nlctx_subst_instance_context. f_equal.
+  rewrite [nlctx _]map_map2 map2_map. reflexivity.
 Qed.
 
 Lemma nlctx_length Γ : #|nlctx Γ| = #|Γ|.
@@ -1328,16 +1360,6 @@ Proof.
   - reflexivity.
 Qed.
 *)
-Lemma nl_inds :
-  forall kn u bodies,
-    map nl (inds kn u bodies) = inds kn u (map nl_one_inductive_body bodies).
-Proof.
-  intros kn u bodies.
-  unfold inds. rewrite map_length.
-  induction #|bodies|.
-  - reflexivity.
-  - simpl. rewrite IHn. reflexivity.
-Qed.
 
 Lemma nl_it_mkProd_or_LetIn :
   forall Γ A,

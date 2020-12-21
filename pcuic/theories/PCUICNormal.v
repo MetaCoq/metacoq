@@ -738,7 +738,7 @@ Lemma whne_red1_ind
           declared_inductive Σ mdecl i.(ci_ind) idecl ->
           whne flags Σ Γ c ->          
           OnOne2All (fun cdecl br br' => 
-            let ctx := case_branch_context p br.(bcontext) cdecl in
+            let ctx := case_branch_context i.(ci_ind) mdecl p br.(bcontext) cdecl in
             on_Trel_eq (red1 Σ (Γ ,,, ctx)) bbody bcontext br br') 
             idecl.(ind_ctors) brs brs' ->
           P (tCase i p c brs) (tCase i p c brs'))

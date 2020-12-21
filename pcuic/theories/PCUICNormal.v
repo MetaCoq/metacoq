@@ -101,8 +101,7 @@ Section Normal.
       RedFlags.fix_ flags = false ->
       whne Γ (tFix defs i)
   
-  | whne_case i p c brs mdecl idecl :
-      lookup_inductive Σ (ci_ind i) = Some (mdecl, idecl) ->
+  | whne_case i p c brs :
       whne Γ c ->
       whne Γ (tCase i p c brs)
 
@@ -430,17 +429,11 @@ Proof with eauto using sq with pcuic.
   - left. constructor. eapply whnf_cstrapp with (v := []). 
   - destruct (RedFlags.iota flags) eqn:Eq...
     destruct (IHt Γ) as [_ []].
-    + destruct (lookup_inductive Σ ind.(ci_ind)) as [[mdecl idecl]|] eqn:eql.
-      * left. destruct s...
-      * right; intros [w]. depelim w. depelim w. all:help...
-        now rewrite eql in e. 
+    + left. destruct s...
     + right. intros [w]. depelim w. depelim w. all:help...
-  -  destruct (RedFlags.iota flags) eqn:Eq...
-     destruct (IHt Γ) as [_ []].
-    + destruct (lookup_inductive Σ ind.(ci_ind)) as [[mdecl idecl]|] eqn:eql.
-      * left. destruct s...
-      * right; intros [w]. depelim w. depelim w. all:help...
-        now rewrite eql in e. 
+  - destruct (RedFlags.iota flags) eqn:Eq...
+    destruct (IHt Γ) as [_ []].
+    + left. destruct s...
     + right. intros [w]. depelim w. all:help...
   - destruct (RedFlags.iota flags) eqn:Eq...
     destruct (IHt Γ) as [_ []].
@@ -727,26 +720,25 @@ Lemma whne_red1_ind
                ((dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)))
             defs mfix1 ->
           P (tFix defs i) (tFix mfix1 i))
-      (Hcase_params : forall i mdecl idecl p c brs params',
-          declared_inductive Σ mdecl i.(ci_ind) idecl ->
+      (Hcase_params : forall i p c brs params',
           whne flags Σ Γ c ->
           OnOne2 (red1 Σ Γ) p.(pparams) params' ->
           P (tCase i p c brs) (tCase i (set_pparams p params') c brs))
-      (Hcase_discr : forall i p pctx c brs p',
-          whne flags Σ Γ c ->
-          case_predicate_context Σ i p pctx ->
-          red1 Σ (Γ ,,, pctx) p.(preturn) p' ->
-          P (tCase i p c brs) (tCase i (set_preturn p p') c brs))
-      (Hcase_motive : forall i mdecl idecl p c brs c',
+      (Hcase_discr : forall i mdecl idecl p c brs p',
           declared_inductive Σ mdecl i.(ci_ind) idecl ->
+          whne flags Σ Γ c ->
+          red1 Σ (Γ ,,, case_predicate_context i mdecl idecl p) p.(preturn) p' ->
+          P (tCase i p c brs) (tCase i (set_preturn p p') c brs))
+      (Hcase_motive : forall i p c brs c',
           whne flags Σ Γ c ->
           red1 Σ Γ c c' ->
           P c c' ->
           P (tCase i p c brs) (tCase i p c' brs))
-      (Hcase_branch : forall i p c brctxs brs brs',
-          whne flags Σ Γ c ->
-          case_branches_contexts Σ i p brctxs ->
-          OnOne2All (fun ctx => on_Trel_eq (red1 Σ (Γ ,,, ctx)) bbody bcontext) brctxs brs brs' ->
+      (Hcase_branch : forall i mdecl idecl p c brs brs',
+          declared_inductive Σ mdecl i.(ci_ind) idecl ->
+          whne flags Σ Γ c ->          
+          OnOne2All (fun ctx => on_Trel_eq (red1 Σ (Γ ,,, ctx)) bbody bcontext) 
+            (case_branches_contexts idecl p) brs brs' ->
           P (tCase i p c brs) (tCase i p c brs'))
       (Hcase_noiota : forall t' i p c brs,
           RedFlags.iota flags = false ->
@@ -828,7 +820,6 @@ Proof.
       destruct wh as [|(?&?&?&?&?&?&?)]; [|discriminate].
       depelim w.
       solve_discr.
-    + eapply Hcase_params; eauto.
   - eauto.
   - depelim r; eauto.
     + solve_discr.
@@ -888,21 +879,6 @@ Proof.
       inv e0.
       rewrite H3.
       reflexivity.
-  - econstructor; eauto. destruct H.
-    unfold lookup_inductive, lookup_minductive.
-    red in d. rewrite [lookup_env _ _]d e. reflexivity.
-  - destruct X0. destruct d.
-    econstructor; tas.
-    unfold lookup_inductive, lookup_minductive.
-    now rewrite [lookup_env _ _]H H0.
-  - destruct H as [d e].
-    econstructor; tas.
-    unfold lookup_inductive, lookup_minductive.
-    now rewrite [lookup_env _ _]d e.
-  - destruct X0 as [mdecl idecl brsctx [d e] cpc].
-    econstructor; tas.
-    unfold lookup_inductive, lookup_minductive.
-    now rewrite [lookup_env _ _]d e.
 Qed.
 
 Lemma whne_pres Σ Γ t t' :
@@ -996,13 +972,15 @@ Inductive whnf_red Σ Γ : term -> term -> Type :=
                       red Σ (Γ,,, fix_context mfix) (dbody d) (dbody d'))
          mfix mfix' ->
     whnf_red Σ Γ (tFix mfix idx) (tFix mfix' idx)
-| whnf_red_tCase p motive pctx brctxs motivep motiveret discr discr' brs brs' :
-    case_predicate_context Σ p motive pctx ->
-    case_branches_contexts Σ p motive brctxs ->
+| whnf_red_tCase p motive motivep motiveret discr discr' brs brs' :
     All2 (red Σ Γ) motive.(pparams) motivep ->
-    red Σ (Γ ,,, pctx) motive.(preturn) motiveret ->
+    (∑ mdecl idecl, declared_inductive Σ mdecl p.(ci_ind) idecl *
+     red Σ (Γ ,,, case_predicate_context p mdecl idecl motive) motive.(preturn) motiveret) +
+     (motive.(preturn) = motiveret) ->
     red Σ Γ discr discr' ->
-    All3 (fun brctx br br' => br.(bcontext) = br'.(bcontext) × red Σ (Γ ,,, brctx) br.(bbody) br'.(bbody)) brctxs brs brs' ->
+    (∑ mdecl idecl, declared_inductive Σ mdecl p.(ci_ind) idecl *
+      All3 (fun brctx br br' => br.(bcontext) = br'.(bcontext) × red Σ (Γ ,,, brctx) br.(bbody) br'.(bbody)) 
+      (case_branches_contexts idecl motive) brs brs') + (brs = brs') ->
     whnf_red Σ Γ (tCase p motive discr brs) 
       (tCase p {| pparams := motivep; 
                   puinst := motive.(puinst);
@@ -1058,11 +1036,27 @@ Proof.
     cbn.
     intros ? ? (->&->&r1&r2).
     eauto.
-  - eapply red_case; eauto.
-    eapply All3_impl; eauto.
-    cbn.
-    intros ? ? (eq&?).
-    intuition eauto.
+  - destruct s as [[mdecl [idecl [decli redp]]]|<-].
+    * destruct s0 as [[mdecl' [idecl' [decli' redp']]]|<-].
+      pose proof (declared_inductive_inj decli decli') as [-> ->].
+      eapply red_case; eauto.
+      eapply All3_impl; eauto.
+      cbn.
+      intros ? ? (eq&?).
+      intuition eauto.
+      eapply red_trans.
+      eapply red_case_c; eauto.
+      eapply red_trans.
+      eapply red_case_p; eauto.
+      eapply red_trans. eapply red_case_pars; eauto.
+      eauto.
+    * destruct s0 as [[mdecl [idecl [decli red]]]|<-].
+      eapply red_case; eauto.
+      eapply All3_impl; eauto.
+      cbn. intros ? ? (eq&?). intuition eauto.
+      eapply red_trans.
+      eapply red_case_c; eauto.
+      now eapply red_case_pars.
   - apply red_proj_c; auto.
   - apply red_prod; auto.
   - apply red_abs; auto.
@@ -1145,19 +1139,18 @@ Proof.
   now depelim w.
 Qed.
 
-Lemma whnf_red_refl_whne {cf:checker_flags} Σ Γ t :
-  wf Σ ->
+Lemma whnf_red_refl_whne Σ Γ t :
   whne RedFlags.default Σ Γ t ->
   whnf_red Σ Γ t t.
 Proof.
-  intros wfΣ wh.
+  intros wh.
   induction wh; cbn in *; try discriminate; eauto using whnf_red with pcuic.
   apply whnf_red_mkApps; auto.
   2: apply All2_same; auto.
   constructor.
   apply All2_same; auto.
-  destruct p. econstructor. eapply whnf_red_tCase.
-  (* TODO: in wf environments, case predicate context can always be derived. *)
+  destruct p. econstructor; simpl; eauto.
+  eapply All2_same; auto.
 Qed.
 
 Lemma whnf_red_refl Σ Γ t :
@@ -1199,11 +1192,13 @@ Proof.
     eapply context_change_decl_types_red; eauto.
     apply fix_context_change_decl_types.
     now apply All2_length in a.
-  - constructor; try solve [etransitivity; eauto].
+  - simpl.
+    todo "trans red".
+    (* econstructor. try solve [etransitivity; eauto].
     eapply All2_trans; eauto.
     intros ? ? ? (->&?) (->&?).
     split; auto.
-    etransitivity; eauto.
+    etransitivity; eauto. *)
   - constructor.
     etransitivity; eauto.
   - constructor; etransitivity; eauto.
@@ -1261,12 +1256,18 @@ Proof.
       auto.
     + apply All2_same; auto.
   - constructor; auto.
-    apply All2_same; auto.
-  - constructor; auto.
-    apply All2_same; auto.
-  - constructor; auto.
     eapply OnOne2_All2; eauto.
-    intros ? ? (?&?); auto.
+  - constructor; auto.
+    apply All2_same; auto. 
+    left. exists mdecl, idecl; intuition auto.
+  - destruct p; econstructor; eauto. simpl.
+    eapply All2_same; auto.
+  - destruct p; econstructor; eauto. simpl.
+    eapply All2_same; auto.
+    left. exists mdecl, idecl; intuition auto.
+    eapply OnOne2All_All3; eauto.
+    intuition eauto. now destruct X1.
+    now destruct X1.  
 Qed.
 
 Lemma whnf_red1_inv Σ Γ t t' :

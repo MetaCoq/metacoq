@@ -1080,12 +1080,11 @@ Section ReductionCongruence.
     Qed.
 
     Lemma red_case_c :
-      forall ci mdecl idecl p c brs c',
-        declared_inductive Σ mdecl ci.(ci_ind) idecl ->
+      forall ci p c brs c',
         red Σ Γ c c' ->
         red Σ Γ (tCase ci p c brs) (tCase ci p c' brs).
     Proof.
-      intros ci mdecl idecl p c brs c' decli h.
+      intros ci p c brs c' h.
       rst_induction h; eauto with pcuic.
     Qed.
     

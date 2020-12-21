@@ -107,12 +107,21 @@ Definition nl_constant_body c :=
   Build_constant_body
     (nl c.(cst_type)) (option_map nl c.(cst_body)) c.(cst_universes).
 
+Definition nl_constructor_body c :=
+  {| cstr_name := c.(cstr_name) ;   
+     cstr_args := nlctx c.(cstr_args);
+     cstr_indices := map nl c.(cstr_indices);
+     cstr_type := nl c.(cstr_type);
+     cstr_arity := c.(cstr_arity) |}.
+
 Definition nl_one_inductive_body o :=
   Build_one_inductive_body
     o.(ind_name)
+    (nlctx o.(ind_indices))
+    o.(ind_sort)
     (nl o.(ind_type))
     o.(ind_kelim)
-    (map (fun '((x,y),n) => ((x, nl y), n)) o.(ind_ctors))
+    (map nl_constructor_body o.(ind_ctors))
     (map (fun '(x,y) => (x, nl y)) o.(ind_projs))
     o.(ind_relevance).
 
@@ -360,7 +369,6 @@ Proof.
     destruct nth_error => /= //.
     rewrite nth_error_map.
     destruct nth_error => /= //.
-    destruct p as [[id t] args] => /= //.
 Qed.
 
 Lemma R_global_instance_nl Σ Re Rle gr napp :
@@ -1033,6 +1041,10 @@ Lemma nl_pred_set_preturn p pret : nl_predicate nl (set_preturn p pret) =
   set_preturn (nl_predicate nl p) (nl pret).
 Proof. reflexivity. Qed.
 
+Lemma nl_pred_set_pparams p pret : nl_predicate nl (set_pparams p pret) = 
+  set_pparams (nl_predicate nl p) (map nl pret).
+Proof. reflexivity. Qed.
+
 Lemma nl_fix_context :
   forall mfix,
     nlctx (fix_context mfix) = fix_context (map (map_def_anon nl nl) mfix).
@@ -1061,18 +1073,19 @@ Proof.
   - simpl. now rewrite nth_error_map H0.
 Qed.
 
-Lemma nl_case_predicate_context Σ ci p pctx :
-  case_predicate_context Σ ci p pctx ->
-  case_predicate_context (map (on_snd nl_global_decl) Σ) ci (nl_predicate nl p) (nlctx pctx).
+Lemma nl_case_predicate_context ind mdecl idecl p :
+  nlctx (case_predicate_context ind mdecl idecl p) =
+  case_predicate_context ind (nl_mutual_inductive_body mdecl) (nl_one_inductive_body idecl) 
+    (nl_predicate nl p).
 Proof.
-  induction 1; econstructor; eauto.
-  + now eapply nl_declared_inductive.
+  unfold case_predicate_context, case_predicate_context_gen.
+  simpl.
   + todo "ind_case_predicate_context".
 Qed.
 
-Lemma nl_case_branches_contexts Σ ci p brsctx :
-  case_branches_contexts Σ ci p brsctx ->
-  case_branches_contexts (map (on_snd nl_global_decl) Σ) ci (nl_predicate nl p) (map nlctx brsctx).
+Lemma nl_case_branches_contexts idecl p :
+  map nlctx (case_branches_contexts idecl p) =
+  case_branches_contexts (nl_one_inductive_body idecl) (nl_predicate nl p).
 Proof.
 Admitted.
 
@@ -1142,18 +1155,18 @@ Proof.
       * discriminate.
   - rewrite nl_mkApps. cbn. constructor.
     rewrite nth_error_map H. reflexivity.
+  - rewrite nl_pred_set_pparams.
+    econstructor; tea.
+    eapply OnOne2_map, OnOne2_impl. 1: eassumption.
+    solve_all.
+  - rewrite nl_pred_set_preturn. econstructor.
+    * now eapply nl_declared_inductive. 
+    * rewrite -nl_case_predicate_context; eauto.
+      rewrite -nlctx_app_context. apply IHh.
   - econstructor; tea.
     * now eapply nl_declared_inductive.
-    * eapply OnOne2_map, OnOne2_impl. 1: eassumption.
-      solve_all.
-  - rewrite nl_pred_set_preturn. econstructor.
-    * eapply nl_case_predicate_context; eauto.
-    * rewrite -nlctx_app_context. apply IHh.
-  - econstructor; tea.
-    now eapply nl_declared_inductive.
-  -eapply case_red_brs. 
-    * eapply nl_case_branches_contexts; eauto.
-    * eapply OnOne2All_map_all, OnOne2All_impl. 1: eassumption.
+    * rewrite -nl_case_branches_contexts.
+      eapply OnOne2All_map_all, OnOne2All_impl. 1: eassumption.
       cbn. intros x y [? ?]; cbn. solve_all. red; simpl.
       subst bcontext.
       split; auto. now rewrite -nlctx_app_context.
@@ -1190,6 +1203,7 @@ Proof.
     destruct Σ. apply nl_red1. assumption.
 Qed.
 
+(*
 Lemma nl_instantiate_params :
   forall params args ty,
     option_map nl (instantiate_params params args ty) =
@@ -1224,7 +1238,7 @@ Proof.
   - simpl. f_equal. apply nl_subst.
   - reflexivity.
 Qed.
-
+*)
 Lemma nl_inds :
   forall kn u bodies,
     map nl (inds kn u bodies) = inds kn u (map nl_one_inductive_body bodies).
@@ -1345,12 +1359,12 @@ Proof.
       rewrite nth_error_map H2. reflexivity.
     + unfold consistent_instance_ext.
       rewrite global_ext_levels_nlg global_ext_constraints_nlg; assumption.
-  - destruct cdecl as [[id t] n]. cbn.
+  - cbn.
     rewrite nl_inds.
     eapply type_Construct with (idecl0:=nl_one_inductive_body idecl)
                                (mdecl0:=nl_mutual_inductive_body mdecl)
-                               (cdecl:=(id, nl t, n))
-    ; eauto using nlg_wf_local.
+                               (cdecl0:=nl_constructor_body cdecl);
+    eauto using nlg_wf_local.
     + destruct isdecl as [[H1 H2] H3]. repeat split.
       * eapply lookup_env_nlg in H1. eapply H1.
       * replace (ind_bodies (nl_mutual_inductive_body mdecl)) with
@@ -1360,15 +1374,24 @@ Proof.
     + unfold consistent_instance_ext.
       rewrite global_ext_levels_nlg global_ext_constraints_nlg; assumption.
   - rewrite nl_mkApps map_app nl_it_mkLambda_or_LetIn. cbn.
+    rewrite nl_case_predicate_context.
     eapply type_Case with  (mdecl0:=nl_mutual_inductive_body mdecl)
                            (idecl0:=nl_one_inductive_body idecl)
-                          (p0:=nl_predicate nl p); tea.
+                           (p0:=nl_predicate nl p); tea.
     + destruct isdecl as [HH1 HH2]. split.
       * eapply lookup_env_nlg in HH1. eapply HH1.
       * replace (ind_bodies (nl_mutual_inductive_body mdecl)) with
             (map nl_one_inductive_body (ind_bodies mdecl)); [|now destruct mdecl].
         rewrite nth_error_map HH2. reflexivity.
-    + exact (todo "build_case_predicate_type Nameless").
+    + simpl. now rewrite !map_length.
+    + simpl. now rewrite !map_length /nlctx nl_context_assumptions.
+    + rewrite -nl_case_predicate_context; eauto.
+      now rewrite -nlctx_app_context.
+    + todo "".
+    + now rewrite nl_mkApps map_app in X4.
+    + simpl. rewrite -nl_case_predicate_context.
+      rewrite -nl_it_mkLambda_or_LetIn.
+      todo "nlpredicate types".
     (* + clear -H0. unfold types_of_case in *. *)
     (*   set (params := instantiate_params *)
     (*                    (subst_instance_context u (ind_params mdecl)) *)
@@ -1431,16 +1454,12 @@ Proof.
     (*     unfold nlctx; now rewrite map_length. *)
     (*   * eapply All2_map, All2_impl; tea. *)
     (*     apply nl_eq_decl'. *)
-    + rewrite nlctx_app_context in X2. eapply X2.
-    + rewrite global_ext_constraints_nlg; eauto.
-    + now rewrite nl_mkApps map_app /= in X5.
-    + exact (todo "build_branches_type Nameless").
-    + clear -X5. eapply All2_map, All2_impl; tea. cbn.
+       (*clear -X5. eapply All2_map, All2_impl; tea. cbn.
       clear. intros x y [[[? ?] ?] ?]. intuition eauto.
       * instantiate (1:=fun y : context × term => (nlctx y.1, nl y.2)).
         simpl. now rewrite map_length /nlctx map_length.
       * simpl. now rewrite nlctx_app_context in t.
-      * simpl. now rewrite nlctx_app_context in t1.
+      * simpl. now rewrite nlctx_app_context in t1.*)
   - destruct pdecl as [pdecl1 pdecl2]; simpl.
     rewrite map_rev.
     eapply type_Proj with (mdecl0:=nl_mutual_inductive_body mdecl)

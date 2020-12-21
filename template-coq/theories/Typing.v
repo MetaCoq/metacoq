@@ -236,7 +236,7 @@ Variant case_branch_context ind mdecl cdecl p : context -> Type :=
 Definition case_branches_contexts ind mdecl idecl p : list context -> Type :=
   All2 (fun cdecl brctx => case_branch_context ind mdecl cdecl p brctx) idecl.(ind_ctors).
     
-Variant case_branch_type ind mdecl (cdecl : ident * term * nat) i p pctx : context -> term -> Type :=
+Variant case_branch_type ind mdecl (cdecl : constructor_body) i p pctx : context -> term -> Type :=
 | mk_case_branch_type s ty argctx indices : 
   instantiate_params_subst_spec (List.rev (subst_instance_context p.(puinst) (ind_params mdecl))) p.(pparams) []
     (subst_instance_constr p.(puinst) (cdecl.1.2)) s ty ->

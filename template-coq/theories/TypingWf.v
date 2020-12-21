@@ -241,6 +241,56 @@ Proof.
   destruct Hidecl as [s Hs]; wf.
 Qed.
 
+Lemma it_mkProd_or_LetIn_wf Γ t
+  : Ast.wf (it_mkProd_or_LetIn Γ t) -> Forall wf_decl Γ /\ Ast.wf t.
+Proof.
+  revert t. induction Γ; [simpl; auto with wf|]. intros t XX.
+  destruct a, decl_body; simpl in *.
+  apply IHΓ in XX as []. depelim H0; simpl in *; split; auto with wf.
+  apply IHΓ in XX as []. depelim H0. simpl in *.
+  split; auto. constructor; auto with wf.
+Qed.
+
+Lemma declared_inductive_wf_indices {cf:checker_flags} :
+  forall (Σ : global_env) ind
+         (mdecl : mutual_inductive_body) (idecl : one_inductive_body),
+  Forall_decls_typing (fun (_ : global_env_ext) (_ : context) (t T : term) => Ast.wf t /\ Ast.wf T) Σ ->
+  declared_inductive Σ mdecl ind idecl -> Forall wf_decl (ind_indices idecl).
+Proof.
+  intros.
+  destruct H as [Hmdecl Hidecl]. red in Hmdecl.
+  eapply lookup_on_global_env in X as [Σ' [wfΣ' prf]]; eauto.
+  apply onInductives in prf.
+  eapply nth_error_alli in Hidecl; eauto.
+  pose proof (onArity Hidecl).
+  rewrite Hidecl.(ind_arity_eq) in X.
+  destruct X as [s Hs]; wf.
+  eapply it_mkProd_or_LetIn_wf in H as [? H].
+  now eapply it_mkProd_or_LetIn_wf in H.
+Qed.
+
+Lemma declared_inductive_wf_ctors {cf:checker_flags} :
+  forall (Σ : global_env) ind
+         (mdecl : mutual_inductive_body) (idecl : one_inductive_body),
+  Forall_decls_typing (fun (_ : global_env_ext) (_ : context) (t T : term) => Ast.wf t /\ Ast.wf T) Σ ->
+  declared_inductive Σ mdecl ind idecl -> 
+  Forall (fun ctor => Forall wf_decl ctor.(cstr_args)) (ind_ctors idecl).
+Proof.
+  intros.
+  destruct H as [Hmdecl Hidecl]. red in Hmdecl.
+  eapply lookup_on_global_env in X as [Σ' [wfΣ' prf]]; eauto.
+  apply onInductives in prf.
+  eapply nth_error_alli in Hidecl; eauto.
+  pose proof (onConstructors Hidecl). red in X.
+  solve_all. destruct X.
+  clear -on_cargs.
+  induction (cstr_args x) as [|[na [b|] ty] args] in on_cargs, y |- * ;
+    try destruct on_cargs;
+   constructor; intuition eauto; simpl in *. red. simpl.
+   destruct y => //. intuition auto.
+   destruct y => //. eapply IHargs. intuition eauto.
+Qed.
+
 Lemma All_local_env_wf_decls ctx :  
   TemplateEnvTyping.All_local_env wf_decl_pred ctx ->
   Forall wf_decl ctx.
@@ -264,7 +314,7 @@ Qed.
 
 Lemma declared_constructor_wf {cf:checker_flags}:
   forall (Σ : global_env) (ind : inductive) (i : nat) (u : list Level.t)
-         (mdecl : mutual_inductive_body) (idecl : one_inductive_body) (cdecl : ident * term * nat),
+         (mdecl : mutual_inductive_body) (idecl : one_inductive_body) (cdecl : constructor_body),
     Forall_decls_typing (fun (_ : global_env_ext) (_ : context) (t T : term) => Ast.wf t /\ Ast.wf T) Σ ->
     declared_constructor Σ mdecl idecl (ind, i) cdecl ->
     Ast.wf (cstr_type cdecl).
@@ -308,6 +358,7 @@ Proof.
   now rewrite !app_context_nil_l => [= -> ->].
 Qed.
 
+(*
 Lemma case_predicate_contextP ind mdecl idecl params uinst pctx :
   build_case_predicate_context ind mdecl idecl params uinst = Some pctx <~>
   case_predicate_context ind mdecl idecl params uinst pctx.
@@ -335,7 +386,7 @@ Proof.
   rewrite H destArity_it_mkProd_or_LetIn in da.
   noconf da.
 Qed.
-
+*)
 Lemma wf_reln n acc Γ : Forall Ast.wf acc -> Forall Ast.wf (reln acc n Γ).
 Proof.
   induction Γ in acc, n |- * => wfacc /= //.
@@ -360,39 +411,79 @@ Proof.
   apply IHipars; auto with wf.
 Qed.
 
-Lemma it_mkProd_or_LetIn_wf Γ t
-  : Ast.wf (it_mkProd_or_LetIn Γ t) -> Forall wf_decl Γ /\ Ast.wf t.
+Lemma wf_map2_set_binder_name l l' : 
+  Forall wf_decl l' ->
+  Forall wf_decl (map2 set_binder_name l l').
 Proof.
-  revert t. induction Γ; [simpl; auto with wf|]. intros t XX.
-  destruct a, decl_body; simpl in *.
-  apply IHΓ in XX as []. depelim H0; simpl in *; split; auto with wf.
-  apply IHΓ in XX as []. depelim H0. simpl in *.
-  split; auto. constructor; auto with wf.
+  induction 1 in l |- *; destruct l; simpl; constructor.
+  apply H. apply IHForall.
 Qed.
 
-Lemma wf_build_case_predicate_context_spec ind mdecl idecl params uinst pctx :
-  Forall wf_decl mdecl.(ind_params) ->
-  Ast.wf (ind_type idecl) ->
-  Forall Ast.wf params ->
-  case_predicate_context ind mdecl idecl params uinst pctx ->
-  Forall wf_decl pctx.
+Definition lift_context_snoc0 n k Γ d : lift_context n k (d :: Γ) = lift_context n k Γ ,, lift_decl n (#|Γ| + k) d.
+Proof. unfold lift_context. now rewrite fold_context_snoc0. Qed.
+Hint Rewrite lift_context_snoc0 : lift.
+
+Lemma lift_context_snoc n k Γ d : lift_context n k (Γ ,, d) = lift_context n k Γ ,, lift_decl n (#|Γ| + k) d.
 Proof.
-  intros wfparams wfindty wfpars [].
-  constructor.
-  constructor => /= //.
-  rewrite /indty. apply wf_mkApps. constructor.
+  unfold snoc. apply lift_context_snoc0.
+Qed.
+Hint Rewrite lift_context_snoc : lift.
+
+Lemma wf_subst_context s k Γ : Forall wf_decl Γ -> Forall Ast.wf s -> Forall wf_decl (subst_context s k Γ).
+Proof.
+  intros wfΓ. induction wfΓ in s |- *.
+  - intros. constructor.
+  - rewrite subst_context_snoc. constructor; auto.
+    destruct H. destruct x as [? [] ?]; constructor; simpl in *; wf.
+Qed.
+
+Lemma wf_lift_context n k Γ : Forall wf_decl Γ -> Forall wf_decl (lift_context n k Γ).
+Proof.
+  intros wfΓ. induction wfΓ in n, k |- *.
+  - intros. constructor.
+  - rewrite lift_context_snoc0. constructor; auto.
+    destruct H. destruct x as [? [] ?]; constructor; simpl in *; wf.
+Qed.
+
+Lemma wf_subst_instance_context u Γ : 
+  Forall wf_decl Γ ->
+  Forall wf_decl (subst_instance_context u Γ).
+Proof.
+  induction 1; constructor; auto.
+  destruct x as [na [b|] ty]; simpl in *.
+  destruct H. now split; apply wf_subst_instance_constr.
+  destruct H. now split; auto; apply wf_subst_instance_constr.
+Qed.
+
+Lemma wf_extended_subst Γ n : 
+  Forall wf_decl Γ ->
+  Forall Ast.wf (extended_subst Γ n).
+Proof.
+  induction 1 in n |- *.
+  - simpl; constructor.
+  - destruct x as [na [b|] ty]; simpl; constructor; auto.
+    2:constructor.
+    eapply wf_subst; auto.
+    eapply wf_lift. apply H.
+Qed.
+
+Lemma wf_case_predicate_context ind mdecl idecl params uinst pctx :
+  Forall wf_decl mdecl.(ind_params) ->
+  Forall wf_decl (ind_indices idecl) ->
+  Forall Ast.wf params ->
+  Forall wf_decl (case_predicate_context ind mdecl idecl params uinst pctx).
+Proof.
+  intros wfparams wfindty wfpars.
+  unfold case_predicate_context.
+  apply wf_map2_set_binder_name. constructor.
+  simpl; split; auto. simpl. auto. simpl.
+  eapply wf_mkApps. constructor.
   apply app_Forall.
   solve_all; auto with wf. now apply wf_reln.
-  subst sty.
-  assert (Ast.wf (it_mkProd_or_LetIn ictx (tSort inds))).  
-  rewrite -e.
-  apply wf_instantiate_params_subst_spec in i as [wfs wfty];
-  auto with wf.
-  apply rev_Forall.
-  apply Forall_map. solve_all.
-  unfold wf_decl in *; destruct x as [na [b|] ?]; simpl in *;
-  intuition auto with wf.
-  now eapply it_mkProd_or_LetIn_wf in H as [].
+  eapply wf_subst_context => //.
+  apply wf_subst_instance_context, wf_subst_context.
+  now apply wf_lift_context.
+  now apply wf_extended_subst.
 Qed.
 
 Lemma on_global_wf_Forall_decls {cf:checker_flags} Σ :
@@ -419,26 +510,21 @@ Qed.
 
 Hint Resolve on_global_wf_Forall_decls : wf.
 
-Lemma wf_case_branches_context {cf:checker_flags} Σ ind mdecl idecl p ctxs :
+Lemma wf_case_branches_context {cf:checker_flags} Σ ind mdecl idecl p :
   on_global_env (fun Σ => wf_decl_pred) Σ ->
   declared_inductive Σ mdecl ind idecl ->
-  case_branches_contexts ind mdecl idecl p ctxs ->
-  Forall (fun ctx => Forall wf_decl ctx) ctxs.
+  Forall Ast.wf (Environment.pparams p) ->
+  Forall (fun ctor => Forall wf_decl (cstr_args ctor)) (ind_ctors idecl) ->
+  Forall (fun ctx => Forall wf_decl ctx) (case_branches_contexts idecl p).
 Proof.
-  intros ong decli.
+  intros ong decli wfpars.
   unfold case_branches_contexts.
-Admitted.
-(*   
-  solve_all.
-  depelim X. simpl in i.
-  pose proof (declared_inductive_wf_params Σ _ _ _ ong decli); auto.
-  pose proof (declared_inductive_wf Σ _ _ _ ong decli); auto.
-  
-  eapply declared_inductive_wf; eauto; wf.
-
-
-  eapply wf_instantiate_params_subst_spec in i; eauto. *)
-
+  intros Hforall. eapply Forall_map.
+  eapply Forall_impl; eauto. intros. simpl in H.
+  unfold case_branch_context_gen.
+  apply wf_subst_context; auto.
+  now apply wf_subst_instance_context.
+Qed.
 
 Lemma wf_red1 {cf:checker_flags} Σ Γ M N :
   on_global_env (fun Σ => wf_decl_pred) Σ ->
@@ -483,21 +569,23 @@ Proof.
     simpl. constructor; auto. simpl in *. depelim H; simpl in *.
     constructor; auto.
   - constructor; auto; simpl in *.
-    eapply wf_build_case_predicate_context_spec in X; auto with wf.
     apply IHred1; eauto.
     apply app_Forall => //.
+    apply wf_case_predicate_context; auto.
     eapply declared_inductive_wf_params in isdecl; auto.
-    eapply declared_inductive_wf; eauto; wf.
+    eapply declared_inductive_wf_indices; eauto; wf.
   - constructor; auto.
-    solve_all.
-    eapply OnOne2All_All_mix_left in X0; eauto.
-    eapply wf_case_branches_context in X; eauto. clear -wfΓ X H2 X0.
-    induction X0; try congruence.
-    inv H2. destruct p as [[? ?] ?]. constructor; intuition eauto.
-    apply b0; auto. depelim X.
+    pose proof (wf_case_branches_context _ _ _ _ _ wfΣ isdecl H).
+    solve_all. eapply OnOne2All_All_mix_left in X; eauto. simpl in X.
+    forward H3.
+    eapply declared_inductive_wf_ctors; eauto; wf.
+    clear -wfΓ X H2 H3.
+    induction X; try congruence.
+    inv H2. destruct p0 as [[? ?] ?]. constructor; intuition eauto.
+    apply b0; auto. depelim H3.
     apply app_Forall => //. solve_all.
     inv H2; constructor; intuition auto.
-    apply IHX0 => //. now depelim X.
+    apply X1 => //. now depelim H3.
   - now eapply wf_mkApps.
   - constructor; auto. induction X; auto; congruence.
     clear H H1 H0. induction X; inv H2; constructor; intuition auto; try congruence.
@@ -580,30 +668,21 @@ Proof.
   destruct X0; intuition auto.
 Qed.
 
-Lemma declared_inductive_wf_shapes {cf:checker_flags} {Σ : global_env_ext} {ind mdecl idecl} :
-    forall (oib : on_ind_body
-    (lift_typing (fun _ _ (t T : term) => Ast.wf t /\ Ast.wf T)) Σ
+Lemma declared_inductive_wf_ctors' {cf:checker_flags} {Σ : global_env_ext} {ind mdecl idecl} :
+    forall (oib : on_ind_body (lift_typing (fun _ _ (t T : term) => Ast.wf t /\ Ast.wf T)) Σ
     (inductive_mind ind) mdecl (inductive_ind ind) idecl),
-    Forall (fun cs => Forall wf_decl (cstr_args cs)) oib.(ind_cunivs).
+    Forall (fun cs => Forall wf_decl (cstr_args cs)) idecl.(ind_ctors).
 Proof.
   intros oib.
   pose proof (onConstructors oib) as h. unfold on_constructors in h.
   induction h; constructor; auto.
   destruct r.
   clear -on_cargs.
-  revert on_cargs. generalize (cdecl_sorts y).
-  induction (cstr_args y) as [|[? [] ?] ?]; simpl;
-    destruct l; intuition auto;
+  revert on_cargs. revert y. generalize (cstr_args x).
+  induction c as [|[? [] ?] ?]; simpl;
+    destruct y; intuition auto;
     constructor;
     try red; simpl; intuition eauto.
-Qed.
-
-Lemma wf_subst_context s k Γ : Forall wf_decl Γ -> Forall Ast.wf s -> Forall wf_decl (subst_context s k Γ).
-Proof.
-  intros wfΓ. induction wfΓ in s |- *.
-  - intros. constructor.
-  - rewrite subst_context_snoc. constructor; auto.
-    destruct H. destruct x as [? [] ?]; constructor; simpl in *; wf.
 Qed.
 
 Lemma wf_smash_context Γ Δ : Forall wf_decl Γ -> Forall wf_decl Δ ->
@@ -637,12 +716,12 @@ Proof.
   eapply nth_error_alli in Hidecl; eauto. intuition auto.
   pose proof (onProjections Hidecl) as on_projs.
   forward on_projs by now eapply nth_error_Some_non_nil in H.
-  destruct (ind_cunivs Hidecl) as [|? [|]] eqn:Heq; try contradiction.
+  destruct (ind_ctors idecl) as [|? [|]] eqn:Heq; try contradiction.
   destruct on_projs.
   eapply nth_error_alli in on_projs; eauto. red in on_projs.
   hnf in on_projs. simpl in on_projs.
   destruct (nth_error (smash_context _ _) _) eqn:Heq'; try contradiction.
-  pose proof (declared_inductive_wf_shapes Hidecl).
+  pose proof (declared_inductive_wf_ctors' Hidecl).
   eapply Forall_All in H1.
   simpl in Heq. rewrite Heq in H1.
   inv H1. clear X0. destruct on_projs as [onna on_projs]. rewrite on_projs.
@@ -746,12 +825,12 @@ Proof.
   - split. wf. unfold type_of_constructor.
     apply wf_subst; auto with wf. apply wf_subst_instance_constr.
     eapply declared_constructor_wf; eauto.
-  - destruct H1 as [wfret wps].
-    destruct H4 as [wfc wfapps].
+  - destruct H3 as [wfret wps].
+    destruct H6 as [wfc wfapps].
     eapply wf_mkApps_inv in wfapps.
     eapply Forall_app in wfapps as [wfp wfindices].
-    assert (Forall wf_decl pctx).
-    { now apply Forall_app in H2 as [? ?]. }
+    assert (Forall wf_decl predctx).
+    { now apply Forall_app in H4 as [? ?]. }
     split; [constructor; simpl; auto; solve_all|].
     apply wf_mkApps. subst ptm. wf. apply wf_it_mkLambda_or_LetIn; auto.
     apply app_Forall; auto.
@@ -846,7 +925,7 @@ Proof.
       eapply IHparams ; try exact e ; try assumption.
       constructor ; assumption.
 Qed.
-
+(* 
 Lemma wf_instantiate_params :
   forall params args t t',
     Forall wf_decl params ->
@@ -863,7 +942,7 @@ Proof.
   apply wf_instantiate_params_subst_ctx in eq as h2 ; trivial.
   - eapply wf_subst ; trivial.
   - eapply rev_Forall. assumption.
-Qed.
+Qed. *)
 
 Record wf_inductive_body idecl := {
   wf_ind_type : Ast.wf (ind_type idecl);

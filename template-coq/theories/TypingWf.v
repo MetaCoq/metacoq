@@ -60,7 +60,7 @@ Proof.
     constructor; auto.
     -- eapply Alli_impl. exact onI. eauto. intros.
        refine {| ind_arity_eq := X1.(ind_arity_eq);
-                 ind_cshapes := X1.(ind_cshapes) |}.
+                 ind_cunivs := X1.(ind_cunivs) |}.
        --- apply onArity in X1. unfold on_type in *; simpl in *.
            now eapply X.
        --- pose proof X1.(onConstructors) as X11. red in X11.
@@ -68,14 +68,14 @@ Proof.
            simpl. intros. destruct X2 as [? ? ? ?]; unshelve econstructor; eauto.
            * apply X; eauto.
            * clear -X0 X on_cargs. revert on_cargs.
-              generalize (cshape_args y), (cshape_sorts y).
-              induction c; destruct l; simpl; auto;
+              generalize (cstr_args x0), y.
+              induction c; destruct y0; simpl; auto;
               destruct a as [na [b|] ty]; simpl in *; auto;
            split; intuition eauto.
            * clear -X0 X on_cindices.
              revert on_cindices.
-             generalize (List.rev  (lift_context #|cshape_args y| 0 (ind_indices X1))).
-             generalize (cshape_indices y).
+             generalize (List.rev (lift_context #|cstr_args x0| 0 (ind_indices x))).
+             generalize (cstr_indices x0).
              induction 1; simpl; constructor; auto.
        --- simpl; intros. apply (onProjections X1 H0).
        --- destruct X1. simpl. unfold check_ind_sorts in *.
@@ -267,7 +267,7 @@ Lemma declared_constructor_wf {cf:checker_flags}:
          (mdecl : mutual_inductive_body) (idecl : one_inductive_body) (cdecl : ident * term * nat),
     Forall_decls_typing (fun (_ : global_env_ext) (_ : context) (t T : term) => Ast.wf t /\ Ast.wf T) Σ ->
     declared_constructor Σ mdecl idecl (ind, i) cdecl ->
-    Ast.wf (cdecl_type cdecl).
+    Ast.wf (cstr_type cdecl).
 Proof.
   intros Σ ind i u mdecl idecl cdecl X isdecl.
   destruct isdecl as [[Hmdecl Hidecl] Hcdecl]. red in Hmdecl.
@@ -584,15 +584,15 @@ Lemma declared_inductive_wf_shapes {cf:checker_flags} {Σ : global_env_ext} {ind
     forall (oib : on_ind_body
     (lift_typing (fun _ _ (t T : term) => Ast.wf t /\ Ast.wf T)) Σ
     (inductive_mind ind) mdecl (inductive_ind ind) idecl),
-    Forall (fun cs => Forall wf_decl (cshape_args cs)) oib.(ind_cshapes).
+    Forall (fun cs => Forall wf_decl (cstr_args cs)) oib.(ind_cunivs).
 Proof.
   intros oib.
   pose proof (onConstructors oib) as h. unfold on_constructors in h.
   induction h; constructor; auto.
   destruct r.
   clear -on_cargs.
-  revert on_cargs. generalize (cshape_sorts y).
-  induction (cshape_args y) as [|[? [] ?] ?]; simpl;
+  revert on_cargs. generalize (cdecl_sorts y).
+  induction (cstr_args y) as [|[? [] ?] ?]; simpl;
     destruct l; intuition auto;
     constructor;
     try red; simpl; intuition eauto.
@@ -637,7 +637,7 @@ Proof.
   eapply nth_error_alli in Hidecl; eauto. intuition auto.
   pose proof (onProjections Hidecl) as on_projs.
   forward on_projs by now eapply nth_error_Some_non_nil in H.
-  destruct (ind_cshapes Hidecl) as [|? [|]] eqn:Heq; try contradiction.
+  destruct (ind_cunivs Hidecl) as [|? [|]] eqn:Heq; try contradiction.
   destruct on_projs.
   eapply nth_error_alli in on_projs; eauto. red in on_projs.
   hnf in on_projs. simpl in on_projs.
@@ -867,7 +867,7 @@ Qed.
 
 Record wf_inductive_body idecl := {
   wf_ind_type : Ast.wf (ind_type idecl);
-  wf_ind_ctors : Forall (fun cdecl => Ast.wf (cdecl_type cdecl)) (ind_ctors idecl);
+  wf_ind_ctors : Forall (fun cdecl => Ast.wf (cstr_type cdecl)) (ind_ctors idecl);
   wf_ind_projs : Forall (fun pdecl => Ast.wf pdecl.2) (ind_projs idecl)
 }.
 

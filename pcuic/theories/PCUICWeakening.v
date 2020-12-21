@@ -287,7 +287,7 @@ Proof.
       + eapply All_map_id. eapply forallb_All in ct.
         eapply (All_impl ct). intros x.
         destruct x as [[id ty] arg]; unfold on_pi2; intros c; simpl; repeat f_equal.
-        apply lift_closed. unfold cdecl_type in c; simpl in c.
+        apply lift_closed. unfold cstr_type in c; simpl in c.
         eapply closed_upwards; eauto; lia.
       + simpl in X. rewrite -X in cp.
         eapply forallb_All in cp. eapply All_map_id; eauto.

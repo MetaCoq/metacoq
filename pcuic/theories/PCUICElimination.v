@@ -106,20 +106,20 @@ Proof.
   - rewrite H1 Bool.orb_true_r; auto.
 Qed.
 
-Lemma elim_sort_intype {cf:checker_flags} Σ mdecl ind idecl ind_indices ind_sort cshapes :
+Lemma elim_sort_intype {cf:checker_flags} Σ mdecl ind idecl ind_indices ind_sort cdecls :
   Universe.is_prop ind_sort ->  
-  elim_sort_prop_ind cshapes = IntoAny ->
+  elim_sort_prop_ind cdecls = IntoAny ->
   on_constructors (lift_typing typing)
     (Σ, ind_universes mdecl) mdecl 
     (inductive_ind ind) idecl ind_indices
-    (ind_ctors idecl) cshapes ->
+    (ind_ctors idecl) cdecls ->
   (#|ind_ctors idecl| = 0) + 
-  (∑ cdecl cshape, 
+  (∑ cdecl cdecl, 
     (ind_ctors idecl = [cdecl]) * 
-    (cshapes = [cshape]) * 
-    (Forall is_propositional cshape.(cshape_sorts)) *
+    (cdecls = [cdecl]) * 
+    (Forall is_propositional cdecl.(cdecl_sorts)) *
     (on_constructor (lift_typing typing) (Σ, ind_universes mdecl) mdecl 
-        (inductive_ind ind) idecl ind_indices cdecl cshape))%type.
+        (inductive_ind ind) idecl ind_indices cdecl cdecl))%type.
 Proof.
   intros uf lein onc.
   induction onc; simpl in *.
@@ -359,13 +359,13 @@ Lemma check_ind_sorts_is_propositional {cf:checker_flags} (Σ : global_env_ext) 
   is_propositional (ind_sort onib) -> 
   check_ind_sorts (lift_typing typing) (Σ.1, ind_universes mdecl)
     (PCUICEnvironment.ind_params mdecl) (PCUICEnvironment.ind_kelim idecl)
-    (ind_indices onib) (ind_cshapes onib) (ind_sort onib) ->
-  (#|ind_cshapes onib| <= 1) * All (fun cs => All is_propositional cs.(cshape_sorts)) (ind_cshapes onib).
+    (ind_indices onib) (ind_cunivs onib) (ind_sort onib) ->
+  (#|ind_cunivs onib| <= 1) * All (fun cs => All is_propositional cs.(cdecl_sorts)) (ind_cunivs onib).
 Proof.
   intros kelim isp.
   unfold check_ind_sorts. simpl.
   destruct Universe.is_prop eqn:isp'.
-  + induction (ind_cshapes onib); simpl; auto; try discriminate.
+  + induction (ind_cunivs onib); simpl; auto; try discriminate.
     destruct l; simpl. intros; split; eauto. constructor; [|constructor].
     destruct forallb eqn:fo. eapply forallb_All in fo.
     eapply All_impl; eauto; simpl.
@@ -373,7 +373,7 @@ Proof.
     intros leb.
     destruct (ind_kelim idecl); simpl in *; intuition congruence.
   + destruct Universe.is_sprop eqn:issp.
-    induction (ind_cshapes onib); simpl; auto; try discriminate.
+    induction (ind_cunivs onib); simpl; auto; try discriminate.
     destruct (ind_kelim idecl); simpl in *; intuition congruence.
     unfold is_propositional in isp.
     now rewrite isp' issp in isp.
@@ -459,7 +459,7 @@ Proof.
     assert (Universe.is_prop (ind_sort onib) || Universe.is_sprop (ind_sort onib)).
     { rewrite -(is_prop_subst_instance_univ u) -(is_sprop_subst_instance_univ u) => //. now subst tycs. }
     apply check_ind_sorts_is_propositional in X1 as [nctors X1]; eauto.
-    assert(#|ind_cshapes onib| = #|ind_ctors idecl|).
+    assert(#|ind_cunivs onib| = #|ind_ctors idecl|).
     clear wat X. clear -onib. pose proof (onib.(onConstructors)).
     eapply All2_length in X. now rewrite X. 
     rewrite H0 in nctors; split; auto.
@@ -499,7 +499,7 @@ Proof.
     pose proof (onc.(on_cargs)).
     pose proof (onib.(ind_sorts)).
     eapply check_ind_sorts_is_propositional in X0 as [nctors X1]; eauto.
-    assert(#|ind_cshapes onib| = #|ind_ctors idecl|).
+    assert(#|ind_cunivs onib| = #|ind_ctors idecl|).
     clear -onib. pose proof (onib.(onConstructors)).
     eapply All2_length in X. now rewrite X. now rewrite -H.
     rewrite -it_mkProd_or_LetIn_app in sp.
@@ -561,7 +561,7 @@ Proof.
   eapply declared_inductive_inj in H as []; eauto. subst.
   pose proof (declared_projection_projs_nonempty X d).
   pose proof (PCUICWeakeningEnv.on_declared_projection X d) as [oni onp].
-  simpl in onp. destruct ind_cshapes as [|? []]; try contradiction.
+  simpl in onp. destruct ind_cunivs as [|? []]; try contradiction.
   destruct onp as (((? & ?) & ?) & ?).
   inv o. auto.
 Qed.

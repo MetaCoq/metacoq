@@ -337,7 +337,7 @@ Proof.
       + eapply All_map_id. eapply forallb_All in ct.
         eapply (All_impl ct). intros x.
         destruct x as [[id ty] arg]; unfold on_pi2; intros c; simpl; repeat f_equal.
-        apply subst_closedn. unfold cdecl_type in c; simpl in c.
+        apply subst_closedn. unfold cstr_type in c; simpl in c.
         eapply closed_upwards; eauto; lia.
       + simpl in X. rewrite -X in cp.
         eapply forallb_All in cp. eapply All_map_id; eauto.
@@ -703,8 +703,8 @@ Proof.
   destruct Heq as [ctx' [ty'' [s' [Hty [Hsubst Ht0]]]]].
   subst ty; simpl.
   rewrite Heqty' in Hty.
-  destruct Honc as [Hcshape_args ? cshape_eq Hty' _ _]; unfold cdecl_type in *; simpl in *.
-  rewrite cshape_eq in Hty.
+  destruct Honc as [Hcstr_args ? cdecl_eq Hty' _ _]; unfold cstr_type in *; simpl in *.
+  rewrite cdecl_eq in Hty.
   rewrite -> !subst_instance_constr_it_mkProd_or_LetIn in Hty.
   rewrite !subst_it_mkProd_or_LetIn in Hty.
   assert (H0: #|subst_context (inds (inductive_mind ind) u (ind_bodies mdecl)) 0
@@ -717,7 +717,7 @@ Proof.
   intros Heqty'' <-. revert Heqty''.
   rewrite !subst_instance_context_length Nat.add_0_r.
   rewrite subst_context_length subst_instance_context_length.
-  rewrite (subst_cstr_concl_head ind u mdecl cs'.(cshape_args) cs'.(cshape_indices)).
+  rewrite (subst_cstr_concl_head ind u mdecl cs'.(cstr_args) cs'.(cstr_indices)).
   { destruct wfidecl as [Hmdecl Hnth].
     now apply nth_error_Some_length in Hnth.
   }
@@ -727,7 +727,7 @@ Proof.
   rewrite !decompose_app_mkApps; try by reflexivity.
   simpl. rewrite !map_app !subst_context_length
                  !subst_instance_context_length Nat.add_0_r.
-  eapply subst_to_extended_list_k with (k:=#|cs'.(cshape_args)|) in Hsubst as XX.
+  eapply subst_to_extended_list_k with (k:=#|cs'.(cstr_args)|) in Hsubst as XX.
   rewrite map_subst_instance_constr_to_extended_list_k in XX.
   rewrite !XX; clear XX.
   apply make_context_subst_spec in Hsubst as Hsubst'.
@@ -740,7 +740,7 @@ Proof.
     rewrite <- H1. apply onNpars in onmind.
     now rewrite subst_instance_context_assumptions. }
   move=> [= <- <-] chopm.
-  move: {chopm}(chopm _ (subst n (#|cs'.(cshape_args)| + k))).
+  move: {chopm}(chopm _ (subst n (#|cs'.(cstr_args)| + k))).
   rewrite map_app.
   move=> chopm; rewrite {}chopm /=.
   inversion 1; subst. f_equal. unfold on_snd; cbn; f_equal.

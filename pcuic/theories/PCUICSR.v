@@ -333,7 +333,7 @@ Proof.
     specialize (brtys  _ csubst).
     simpl in brtys. subst brty.
     eapply type_mkApps. eauto.
-    set argctx := cshape_args cs.
+    set argctx := cstr_args cs.
     clear Hbr brbrty Hbrty X5 Ht'.
     destruct typec' as [[[[_ equ] cu] eqargs] [cparsubst [cargsubst [iparsubst [iidxsubst ci]]]]].
     destruct ci as ((([cparsubst0 iparsubst0] & idxsubst0) & subsidx) & [s [typectx [Hpars Hargs]]]).
@@ -428,7 +428,7 @@ Proof.
          rewrite (subslet_length sp). now autorewrite with len.
          rewrite /to_extended_list -(PCUICSubstitution.map_subst_instance_constr_to_extended_list_k u (ind_indices oib)).
          rewrite -(to_extended_list_k_subst parsubst 0 (subst_instance_context _ _)_).
-         rewrite -(to_extended_list_k_lift_context (subst_context _ _ _) 0 #|cshape_args cs|).
+         rewrite -(to_extended_list_k_lift_context (subst_context _ _ _) 0 #|cstr_args cs|).
          erewrite subst_to_extended_list_k.
          2:{ eapply make_context_subst_spec_inv. rewrite List.rev_involutive. eapply sp. }
          rewrite map_lift0.
@@ -490,8 +490,8 @@ Proof.
            eapply All2_map.
            assert (All (fun x => closedn (#|parsubst| + #|argctx|) x) (map
            (subst (inds (inductive_mind ind) u (PCUICAst.ind_bodies mdecl))
-              (#|cshape_args cs| + #|ind_params mdecl|)
-            ∘ subst_instance_constr u) (cshape_indices cs))).
+              (#|cstr_args cs| + #|ind_params mdecl|)
+            ∘ subst_instance_constr u) (cstr_indices cs))).
            { pose proof (positive_cstr_closed_indices wf onc).
              eapply All_map.
              eapply All_map_inv in X1.
@@ -505,7 +505,7 @@ Proof.
            intros x cl.
            pose proof (all_rels_subst Σ pargctxu Γ (subst parsubst #|argctx| x) wf X) as X2.
            eapply red_conv in X2.
-           assert(subst (map (lift0 #|argctx|) parsubst) #|cshape_args cs| x =
+           assert(subst (map (lift0 #|argctx|) parsubst) #|cstr_args cs| x =
              (lift #|argctx| #|argctx| (subst parsubst #|argctx| x))) as ->.
            { epose proof (distr_lift_subst_rec _ _ #|argctx| #|argctx| 0) as l.
              rewrite Nat.add_0_r in l. rewrite -> l. f_equal.
@@ -560,7 +560,7 @@ Proof.
     { rewrite !map_app. eapply All2_app.
       * eapply All2_transitivity. intros x y z; eapply conv_trans; eauto.
         2:eauto.
-        (* 1: cshape indices are closed w.r.t. inds.
+        (* 1: cdecl indices are closed w.r.t. inds.
            2: parsubst and cparsubst are convertible
         *) 
         pose proof (positive_cstr_closed_indices wf onc).
@@ -598,17 +598,17 @@ Proof.
         specialize (cv idxsubst0 argsubst).
         forward cv. eapply All2_rev; auto. eapply All2_refl. reflexivity.
         specialize (cv convidx). clear convidx. rewrite subst_context_nil /= in cv.
-        rewrite /pargctxu /argctx. assert (#|cshape_args cs| = #|argctxu|) as lenargctxu.
+        rewrite /pargctxu /argctx. assert (#|cstr_args cs| = #|argctxu|) as lenargctxu.
         { rewrite /argctxu; autorewrite with len. reflexivity. }
         rewrite lenargctxu.
-        assert(context_assumptions (cshape_args cs) = context_assumptions argctxu1).
+        assert(context_assumptions (cstr_args cs) = context_assumptions argctxu1).
         { rewrite /argctxu1; autorewrite with len. reflexivity. }
         rewrite {1}H0 in cv.
         rewrite -(map_expand_lets_subst_comm _ _ _) in cv.
         rewrite (map_expand_lets_subst_comm _ _ _).
         assert(#|argctxu| = #|argctxu1|).
         { rewrite /argctxu /argctxu1; autorewrite with len. reflexivity. }
-        assert(context_assumptions argctxu = context_assumptions (cshape_args cs)) as ->.
+        assert(context_assumptions argctxu = context_assumptions (cstr_args cs)) as ->.
         { rewrite /argctxu /argctxu1; autorewrite with len. reflexivity. }
         rewrite -H2 in cv.
         rewrite /pargctxu1.
@@ -627,11 +627,11 @@ Proof.
       * simpl. rewrite lift_mkApps !subst_mkApps /=.
         constructor. 2:constructor.
         assert (R_global_instance Σ.1 (eq_universe (global_ext_constraints Σ)) (eq_universe (global_ext_constraints Σ)) 
-          (ConstructRef ind c0) (ind_npars mdecl + (context_assumptions (cshape_args cs))) u1 u).
+          (ConstructRef ind c0) (ind_npars mdecl + (context_assumptions (cstr_args cs))) u1 u).
         { unfold R_ind_universes in equ. clear -equ onc eqargs isdecl declc.
           rewrite /R_ind_universes /R_global_instance.
           assert (global_variance Σ.1 (ConstructRef ind c0)
-            (ind_npars mdecl + context_assumptions (cshape_args cs)) = Some []).
+            (ind_npars mdecl + context_assumptions (cstr_args cs)) = Some []).
           { unfold global_variance, lookup_constructor, lookup_inductive, lookup_minductive.
             change (fst_ctx Σ) with Σ.1.
             destruct isdecl as [lookmind looki].
@@ -776,7 +776,7 @@ Proof.
     destruct (on_declared_projection wf isdecl) as [oi onp].
     epose proof (subslet_projs _ _ _ _ wf (let (x, _) := isdecl in x)).
     set (oib := declared_inductive_inv _ _ _ _) in *. simpl in onp, X2.
-    destruct (ind_cshapes oib) as [|? []]; try contradiction.
+    destruct (ind_cunivs oib) as [|? []]; try contradiction.
     destruct onp as [[[tyargctx onps] Hp2] onp].
     specialize (X2 onps).
     red in onp.
@@ -810,8 +810,8 @@ Proof.
     rewrite projs_subst_above //. lia. simpl.
     rewrite !subst_projs_inst !projs_inst_lift.
     eapply (red_red _ (Γ ,,, smash_context [] (subst_instance_context u (ind_params mdecl)))
-       (skipn (context_assumptions (cshape_args c) - p.2) 
-       (smash_context [] (subst_context (inds (inductive_mind p.1.1) u (ind_bodies mdecl)) #|ind_params mdecl| (subst_instance_context u (cshape_args c))))) []); auto.
+       (skipn (context_assumptions (cstr_args c) - p.2) 
+       (smash_context [] (subst_context (inds (inductive_mind p.1.1) u (ind_bodies mdecl)) #|ind_params mdecl| (subst_instance_context u (cstr_args c))))) []); auto.
     ** eapply All2_map.
       eapply (All2_impl (P:=fun x y => red Σ.1 Γ x y)).
       2:{ intros x' y' hred. rewrite heq_length.
@@ -823,7 +823,7 @@ Proof.
       unfold unfold_cofix. rewrite Hnth. reflexivity.
     ** rewrite -projs_inst_lift.
       rewrite -subst_projs_inst.
-      assert (p.2 = context_assumptions (cshape_args c) - (context_assumptions (cshape_args c) - p.2)) by lia.
+      assert (p.2 = context_assumptions (cstr_args c) - (context_assumptions (cstr_args c) - p.2)) by lia.
       rewrite {1}H0. rewrite -skipn_projs map_skipn subst_projs_inst.
       eapply untyped_subslet_skipn. destruct p as [[[? ?] ?] ?]. simpl in *.
       rewrite /indsubst.
@@ -860,7 +860,7 @@ Proof.
     simpl in *.
     destruct typec' as [[[[_ equ] cu] eqargs] [cparsubst [cargsubst [iparsubst [iidxsubst ci]]]]].
     destruct ci as ((([cparsubst0 iparsubst0] & idxsubst0) & subsidx) & [s [typectx [Hpars Hargs]]]).
-    destruct ind_cshapes as [|? []]; try contradiction.
+    destruct ind_cunivs as [|? []]; try contradiction.
     destruct X2 as [projty projeq].
     noconf Hnth.
     specialize (projsubsl onProjs).
@@ -933,8 +933,8 @@ Proof.
     unshelve epose proof (constructor_cumulative_indices wf decli' oib onc _ Hu cu equ _ _ _ _ _ spargs iparsubst0 Hpars).
     { eapply (weaken_lookup_on_global_env' _ _ _ wf (proj1 decli)). }
     move: X2.
-    set (argsu1 := subst_instance_context u1 (cshape_args cs)) in *.
-    set (argsu := subst_instance_context u (cshape_args cs)) in *.
+    set (argsu1 := subst_instance_context u1 (cstr_args cs)) in *.
+    set (argsu := subst_instance_context u (cstr_args cs)) in *.
     set (argctxu1 := subst_context _ _ argsu1) in *.
     set (argctxu := subst_context _ _ argsu) in *.
     simpl.
@@ -959,10 +959,10 @@ Proof.
     autorewrite with len in Hu0, decltyeq |- *.
     simpl in Hu0, decltyeq |- *.
     move: Hu0 decltyeq.
-    assert (narg < context_assumptions (cshape_args cs)).
+    assert (narg < context_assumptions (cstr_args cs)).
     eapply nth_error_Some_length in H0. lia.
-    replace (context_assumptions (cshape_args cs) -
-      S (context_assumptions (cshape_args cs) - S narg))
+    replace (context_assumptions (cstr_args cs) -
+      S (context_assumptions (cstr_args cs) - S narg))
       with narg by lia.
     move=> Hu0 decltyeq.
     rewrite -Hty1. clear decltyeq.
@@ -1017,10 +1017,10 @@ Proof.
     rewrite nth_error_map Hdecl. simpl => [= Hdecl'].
     subst decl'. simpl in cum.
     autorewrite with len in cum; simpl in cum. 
-    assert(context_assumptions (cshape_args cs) -
-      S (context_assumptions (cshape_args cs) - S narg) = narg) by lia.
+    assert(context_assumptions (cstr_args cs) -
+      S (context_assumptions (cstr_args cs) - S narg) = narg) by lia.
     rewrite H2 in cum. 
-    set (idx := S (context_assumptions (cshape_args cs) - S narg)) in *.
+    set (idx := S (context_assumptions (cstr_args cs) - S narg)) in *.
     assert (wfpargctxu1 : wf_local Σ (Γ ,,, skipn idx (smash_context [] pargctxu1))).
     { simpl. apply wf_local_app_skipn. apply wf_local_smash_end; auto.
       apply idxsubst0. }

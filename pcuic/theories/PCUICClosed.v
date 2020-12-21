@@ -645,7 +645,7 @@ Proof.
   clearbody oib.
   have onpars := onParams (declared_minductive_inv weaken_env_prop_closed wfΣ X0 isdecl.p1.p1).
   have parslen := onNpars (declared_minductive_inv weaken_env_prop_closed wfΣ X0 isdecl.p1.p1).
-  simpl in onp. destruct (ind_cshapes oib) as [|? []] eqn:Heq; try contradiction.
+  simpl in onp. destruct (ind_cunivs oib) as [|? []] eqn:Heq; try contradiction.
   destruct onp as [_ onp].
   red in onp.
   destruct (nth_error (smash_context [] _) _) eqn:Heq'; try contradiction.
@@ -849,7 +849,7 @@ Proof.
     -- eapply Alli_impl. exact onI. eauto. intros.
        refine {| ind_indices := X1.(ind_indices);
                  ind_arity_eq := X1.(ind_arity_eq);
-                 ind_cshapes := X1.(ind_cshapes) |}.
+                 ind_cunivs := X1.(ind_cunivs) |}.
        --- apply onArity in X1. unfold on_type in *; simpl in *.
            now eapply X.
        --- pose proof X1.(onConstructors) as X11. red in X11.
@@ -857,14 +857,14 @@ Proof.
           simpl. intros. destruct X2 as [? ? ? ?]; unshelve econstructor; eauto.
           * apply X; eauto.
           * clear -X0 X on_cargs. revert on_cargs.
-            generalize (cshape_args y), (cshape_sorts y).
+            generalize (cstr_args y), (cdecl_sorts y).
             induction c; destruct l; simpl; auto;
               destruct a as [na [b|] ty]; simpl in *; auto;
           split; intuition eauto.
           * clear -X0 X on_cindices.
             revert on_cindices.
-            generalize (List.rev  (lift_context #|cshape_args y| 0 (ind_indices X1))).
-            generalize (cshape_indices y).
+            generalize (List.rev  (lift_context #|cstr_args y| 0 (ind_indices X1))).
+            generalize (cstr_indices y).
             induction 1; simpl; constructor; auto.
        --- simpl; intros. pose (onProjections X1 H0). simpl in *; auto.
        --- destruct X1. simpl. unfold check_ind_sorts in *.
@@ -921,7 +921,7 @@ Qed.
 Definition closed_inductive_body mdecl idecl :=
   closedn 0 idecl.(ind_type) &&
   forallb (fun cdecl => 
-    closedn (#|arities_context mdecl.(ind_bodies)|) (cdecl_type cdecl)) idecl.(ind_ctors) &&
+    closedn (#|arities_context mdecl.(ind_bodies)|) (cstr_type cdecl)) idecl.(ind_ctors) &&
   forallb (fun x => closedn (S (ind_npars mdecl)) x.2) idecl.(ind_projs).
 
 Definition closed_inductive_decl mdecl :=
@@ -988,7 +988,7 @@ Proof.
     pose proof (onProjections oib).
     destruct (eq_dec (ind_projs x) []) as [->|eq]; try constructor.
     specialize (X eq). clear eq.
-    destruct (ind_cshapes oib) as [|? []]; try contradiction.
+    destruct (ind_cunivs oib) as [|? []]; try contradiction.
     apply on_projs in X.
     assert (Alli (fun i pdecl => declared_projection Σ.1 mdecl x 
      (({| inductive_mind := mind; inductive_ind := n |}, mdecl.(ind_npars)), i) pdecl)

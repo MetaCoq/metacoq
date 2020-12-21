@@ -1073,6 +1073,17 @@ Proof.
   - simpl. now rewrite nth_error_map H0.
 Qed.
 
+Lemma nl_declared_constructor Σ mdecl idecl c cdecl :
+  declared_constructor Σ mdecl idecl c cdecl ->
+  declared_constructor (map (on_snd nl_global_decl) Σ) 
+    (nl_mutual_inductive_body mdecl) (nl_one_inductive_body idecl) c
+    (nl_constructor_body cdecl).
+Proof.
+  intros []. split.
+  - now eapply nl_declared_inductive.
+  - simpl. now rewrite nth_error_map H0.
+Qed.
+
 Lemma nl_case_predicate_context ind mdecl idecl p :
   nlctx (case_predicate_context ind mdecl idecl p) =
   case_predicate_context ind (nl_mutual_inductive_body mdecl) (nl_one_inductive_body idecl) 
@@ -1083,11 +1094,78 @@ Proof.
   + todo "ind_case_predicate_context".
 Qed.
 
-Lemma nl_case_branches_contexts idecl p :
-  map nlctx (case_branches_contexts idecl p) =
-  case_branches_contexts (nl_one_inductive_body idecl) (nl_predicate nl p).
+Lemma nl_case_branches_contexts idecl p pctx :
+  map nlctx (case_branches_contexts idecl p pctx) =
+  case_branches_contexts (nl_one_inductive_body idecl) (nl_predicate nl p) (map (map anonymize) pctx).
 Proof.
 Admitted.
+
+Lemma nlctx_subst_instance_context :
+  forall u Γ,
+    nlctx (subst_instance_context u Γ) = subst_instance_context u (nlctx Γ).
+Proof.
+  intros u Γ.
+  induction Γ as [| [na [b|] B] Δ ih] in Γ |- *; rewrite /= ?subst_context_snoc /snoc /=
+    /map_decl.
+  - reflexivity.
+  - f_equal; auto.
+    rewrite /subst_decl /map_decl /= /map_decl_anon /=; repeat f_equal;
+    now rewrite nl_subst_instance_constr.
+  - f_equal; [|apply ih].
+    rewrite /subst_decl /map_decl /= /map_decl_anon /=; repeat f_equal;
+    now rewrite nl_subst_instance_constr.
+Qed.
+
+Lemma nlctx_subst_context :
+  forall s k Γ,
+    nlctx (subst_context s k Γ) = subst_context (map nl s) k (nlctx Γ).
+Proof.
+  intros s k Γ.
+  induction Γ as [| [na [b|] B] Δ ih] in Γ |- *; rewrite /= ?subst_context_snoc /snoc /=
+    /map_decl.
+  - reflexivity.
+  - simpl. f_equal; auto.
+    rewrite /subst_decl /map_decl /= /map_decl_anon /=; repeat f_equal.
+    * now rewrite nl_subst; len.
+    * now rewrite nl_subst; len. 
+  - simpl. f_equal; [|apply ih].
+    rewrite /subst_decl /map_decl /= /map_decl_anon /=; repeat f_equal.
+    now rewrite nl_subst; len.
+Qed.
+
+Lemma map_map2 {A B C D} (f : A -> B) (g : C -> D -> A) l l' : 
+  map f (map2 g l l') = map2 (fun x y => f (g x y)) l l'.
+Proof.
+  induction l in l' |- *; destruct l'; simpl; auto. f_equal.
+  apply IHl.
+Qed.
+
+Lemma map2_map {A A' B B' C} (f : A -> B) (f' : A' -> B') (g : B -> B' -> C) l l' : 
+  map2 g (map f l) (map f' l') = map2 (fun x y => g (f x) (f' y)) l l'.
+Proof.
+  induction l in l' |- *; destruct l'; simpl; auto. f_equal.
+  apply IHl.
+Qed.
+
+Lemma nl_case_branch_context p pctx cdecl :
+  nlctx (case_branch_context p pctx cdecl) =
+  case_branch_context (nl_predicate nl p) (map anonymize pctx) (nl_constructor_body cdecl).
+Proof.
+  unfold case_branch_context, case_branch_context_gen.
+  rewrite nlctx_subst_context. f_equal.
+  rewrite nlctx_subst_instance_context. f_equal.
+  rewrite [nlctx _]map_map2 map2_map. reflexivity.
+Qed.
+
+Lemma nl_extended_subst Γ k :
+  map nl (extended_subst Γ k) = extended_subst (nlctx Γ) k.
+Proof.
+  revert k; induction Γ as [|[? [] ?] ?]; intros k; simpl; f_equal; auto;
+     rewrite ?nl_subst ?nl_lift ?nl_context_assumptions ?IHΓ; len => //.
+Qed.
+
+Lemma nlctx_length Γ : #|nlctx Γ| = #|Γ|.
+Proof. now rewrite map_length. Qed.
 
 Lemma nl_red1 :
   forall Σ Γ M N,
@@ -1103,11 +1181,21 @@ Proof.
     destruct (nth_error Γ i). 2: discriminate.
     cbn in *. apply some_inj in H. rewrite H. reflexivity.
   - rewrite nl_mkApps. cbn.
-    rewrite map_skipn.
-    change (nl (bbody (nth c brs dummy_branch))) with
-      (bbody (nl_branch nl (nth c brs dummy_branch))).
-    rewrite -map_nth.
-    eapply red_iota.
+    rewrite map_skipn nl_extended_subst nl_lift.
+    rewrite -(nl_context_assumptions brctx).
+    change (nl (bbody br)) with (bbody (nl_branch nl br)).
+    rewrite -(nlctx_length brctx).
+    change (subst0 (extended_subst (nlctx brctx) 0)
+    (lift (context_assumptions (nlctx brctx)) #|
+       nlctx brctx| (bbody (nl_branch nl br)))) with
+     (expand_lets (nlctx brctx) (bbody (nl_branch nl br))).
+    subst brctx.
+    epose proof (nth_error_map (nl_branch nl) c brs).
+    rewrite nl_case_branch_context.
+    rewrite H in H0. simpl in H0.
+    change (map anonymize (bcontext br)) with (bcontext (nl_branch nl br)).
+    eapply red_iota => //.
+    now eapply nl_declared_constructor.
   - rewrite !nl_mkApps. cbn. eapply red_fix with (narg:=narg).
     + unfold unfold_fix in *. rewrite nth_error_map.
       destruct (nth_error mfix idx). 2: discriminate.
@@ -1165,10 +1253,11 @@ Proof.
       rewrite -nlctx_app_context. apply IHh.
   - econstructor; tea.
     * now eapply nl_declared_inductive.
-    * rewrite -nl_case_branches_contexts.
+    * simpl.
       eapply OnOne2All_map_all, OnOne2All_impl. 1: eassumption.
       cbn. intros x y [? ?]; cbn. solve_all. red; simpl.
       subst bcontext.
+      rewrite -nl_case_branch_context.
       split; auto. now rewrite -nlctx_app_context.
   - constructor. eapply OnOne2_map, OnOne2_impl. 1: eassumption.
     cbn. intros x y [? ?]; auto.

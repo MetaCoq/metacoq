@@ -882,9 +882,10 @@ Section WfStack.
     | Case_brs ci pred c bctx brs1 brs2 π =>
       (∑ mdecl idecl,
         (declared_inductive Σ mdecl (ci_ind ci) idecl) *
-        (nth_error (case_branches_contexts idecl pred) #|brs1| = Some bctx) * 
-        (#|case_branches_contexts idecl pred| = #|brs1| + S #|brs2|)%nat) *
-      wf_stack π
+        let brctxs := map bcontext brs1 ++ forget_types bctx :: map bcontext brs2 in
+        (nth_error (case_branches_contexts idecl pred brctxs) #|brs1| = Some bctx) * 
+        (#|idecl.(ind_ctors)| = #|brs1| + S #|brs2|)%nat) *
+        wf_stack π
     | Proj _ π 
     | Prod_l _ _ π
     | Prod_r _ _ π

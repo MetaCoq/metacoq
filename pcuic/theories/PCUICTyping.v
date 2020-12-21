@@ -271,7 +271,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
 | type_Case (ci : case_info) p c brs indices ps :
     forall mdecl idecl (isdecl : declared_inductive Σ.1 mdecl ci.(ci_ind) idecl),
     mdecl.(ind_npars) = ci.(ci_npar) ->
-    #|idecl.(ind_indices)| = #|p.(pcontext)| ->
+    #|p.(pcontext)| = S #|idecl.(ind_indices)| ->
     context_assumptions idecl.(ind_indices) = #|p.(pparams)| ->
     let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
     Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps ->
@@ -648,7 +648,7 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
         Forall_decls_typing P Σ.1 -> 
         PΓ Σ Γ wfΓ ->
         mdecl.(ind_npars) = ci.(ci_npar) ->
-        #|idecl.(ind_indices)| = #|p.(pcontext)| ->
+        #|p.(pcontext)| = S #|idecl.(ind_indices)| ->
         context_assumptions idecl.(ind_indices) = #|p.(pparams)| ->
         let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
         forall pret : Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps,
@@ -1054,7 +1054,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
           Forall_decls_typing P Σ.1 -> 
           PΓ Σ Γ wfΓ ->
           mdecl.(ind_npars) = ci.(ci_npar) ->
-          #|idecl.(ind_indices)| = #|p.(pcontext)| ->
+          #|p.(pcontext)| = S #|idecl.(ind_indices)| ->
           context_assumptions idecl.(ind_indices) = #|p.(pparams)| ->
           let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
           forall pret : Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps,

@@ -107,21 +107,11 @@ Proof.
 Qed.
 
 Lemma closedn_mkApps k f u:
-  closedn k f -> forallb (closedn k) u ->
-  closedn k (mkApps f u).
-Proof.
-  induction u in k, f |- *; simpl; auto.
-  move=> Hf /andb_and[Ha Hu]. apply IHu. simpl. now rewrite Hf Ha. auto.
-Qed.
-
-Lemma closedn_mkApps_inv k f u:
-  closedn k (mkApps f u) ->
-  closedn k f && forallb (closedn k) u.
+  closedn k (mkApps f u) = closedn k f && forallb (closedn k) u.
 Proof.
   induction u in k, f |- *; simpl; auto.
   - now rewrite andb_true_r.
-  - move/IHu/andb_and => /= [/andb_and[Hf Ha] Hu].
-    now rewrite Hf Ha Hu.
+  - now rewrite IHu /= andb_assoc.
 Qed.
 
 Lemma closedn_subst_eq s k k' t :
@@ -416,13 +406,10 @@ Proof.
   f_equal. lia.
 Qed.
 
-Lemma closedn_mkProd_or_LetIn (Γ : context) d T :
-    closed_decl #|Γ| d ->
-    closedn (S #|Γ|) T -> closedn #|Γ| (mkProd_or_LetIn d T).
+Lemma closedn_mkProd_or_LetIn n d T :
+    closed_decl n d && closedn (S n) T = closedn n (mkProd_or_LetIn d T).
 Proof.
-  destruct d as [na [b|] ty]; simpl in *. unfold closed_decl.
-  simpl. now move/andP => [] -> ->.
-  simpl. now move/andP => [] /= _ -> ->.
+  destruct d as [na [b|] ty]; reflexivity.
 Qed.
 
 Lemma closedn_mkLambda_or_LetIn (Γ : context) d T :
@@ -434,18 +421,15 @@ Proof.
   simpl. now move/andP => [] /= _ -> ->.
 Qed.
 
-Lemma closedn_it_mkProd_or_LetIn
-      (Γ : context) (ctx : list context_decl) T :
-    closedn_ctx #|Γ| ctx ->
-    closedn (#|Γ| + #|ctx|) T -> closedn #|Γ| (it_mkProd_or_LetIn ctx T).
+Lemma closedn_it_mkProd_or_LetIn n (ctx : list context_decl) T :
+  closedn n (it_mkProd_or_LetIn ctx T) = 
+  closedn_ctx n ctx && closedn (n + #|ctx|) T.
 Proof.
-  induction ctx in Γ, T |- *. simpl.
+  induction ctx in n, T |- *. simpl.
   - now rewrite Nat.add_0_r.
-  - rewrite closedn_ctx_cons. move/andP => [] cctx ca cT.
-    apply (IHctx Γ (mkProd_or_LetIn a T) cctx).
-    simpl in cT. rewrite <- app_length.
-    eapply closedn_mkProd_or_LetIn;
-      now rewrite app_length // plus_n_Sm.
+  - rewrite closedn_ctx_cons.
+    rewrite (IHctx n (mkProd_or_LetIn a T)) /= -closedn_mkProd_or_LetIn.
+    now rewrite // plus_n_Sm andb_assoc.
 Qed.
 
 Lemma closedn_it_mkLambda_or_LetIn
@@ -645,7 +629,8 @@ Proof.
   clearbody oib.
   have onpars := onParams (declared_minductive_inv weaken_env_prop_closed wfΣ X0 isdecl.p1.p1).
   have parslen := onNpars (declared_minductive_inv weaken_env_prop_closed wfΣ X0 isdecl.p1.p1).
-  simpl in onp. destruct (ind_cunivs oib) as [|? []] eqn:Heq; try contradiction.
+  simpl in onp.
+  destruct (ind_ctors idecl) as [|? []] eqn:Heq; try contradiction.
   destruct onp as [_ onp].
   red in onp.
   destruct (nth_error (smash_context [] _) _) eqn:Heq'; try contradiction.
@@ -691,22 +676,6 @@ Proof.
   eapply closed_upwards. eauto. rewrite arities_context_length.
   rewrite context_assumptions_app parslen.
   rewrite context_assumptions_app in Heq'. lia.
-Qed.
-
-Lemma map2_length {A B C} (l : list A) (l' : list B) (f : A -> B -> C) : #|l| = #|l'| -> 
-  #|map2 f l l'| = #|l|.
-Proof.
-  induction l in l' |- *; destruct l' => /= //.
-  intros [= eq]. now rewrite IHl.
-Qed.
-
-Lemma ind_case_predicate_context_length {ci mdecl idecl pars inst ctx pctx} : 
-  ind_case_predicate_context (ci_ind ci) mdecl idecl pars inst ctx pctx ->
-  #|pctx| = #|ctx|.
-Proof.
-  intros [].
-  rewrite e0.
-  subst ictx'. rewrite map2_length //.
 Qed.
 
 (* Lemma ind_case_branches_types_length ci mdecl idecl p pctx brtys :
@@ -782,27 +751,29 @@ Proof.
       rewrite arities_context_length in Hs.
       eauto using closed_upwards with arith.
 
-  - destruct H4 as [H4 H6]. eapply closedn_mkApps_inv in H6. simpl in H6.
-    rewrite forallb_app in H6. move/andP: H6 => [clpar clinds].
+  - destruct H3 as [clret _].
+    destruct H6 as [clc clty].
+    rewrite closedn_mkApps in clty. simpl in clty.
+    rewrite forallb_app in clty. move/andP: clty => [clpar clinds].
+    rewrite app_context_length in clret.
     intuition auto.
     + unfold test_predicate. simpl. rtoProp; eauto.
       solve_all.
-      rewrite app_context_length in H6.
-      now rewrite -(ind_case_predicate_context_length X1).
+      now rewrite (case_predicate_context_length H1) in clret.
     + unfold test_branch. solve_all.
       move/andP: b1 => [clb cly].
       rewrite app_context_length in clb.
-      now rewrite a0.
-    + apply closedn_mkApps; auto.
+      now rewrite (Forall2_length a0).
+    + rewrite closedn_mkApps; auto.
       rewrite closedn_it_mkLambda_or_LetIn //.
-      rewrite closedn_ctx_app in H2.
-      now move/andP: H2 => [].
-      now rewrite app_context_length Nat.add_comm in H6.
-      rewrite forallb_app. simpl. now rewrite H4 clinds.
+      rewrite closedn_ctx_app in H4.
+      now move/andP: H4 => [].
+      now rewrite Nat.add_comm.
+      rewrite forallb_app. simpl. now rewrite clc clinds.
 
   - intuition auto.
     apply closedn_subst0.
-    + simpl. apply closedn_mkApps_inv in H3.
+    + simpl. rewrite closedn_mkApps in H3.
       rewrite forallb_rev H2. apply H3.
     + rewrite closedn_subst_instance_constr.
       eapply declared_projection_closed_ind in X0; eauto.
@@ -847,8 +818,7 @@ Proof.
     destruct o0 as [onI onP onNP].
     constructor; auto.
     -- eapply Alli_impl. exact onI. eauto. intros.
-       refine {| ind_indices := X1.(ind_indices);
-                 ind_arity_eq := X1.(ind_arity_eq);
+       refine {| ind_arity_eq := X1.(ind_arity_eq);
                  ind_cunivs := X1.(ind_cunivs) |}.
        --- apply onArity in X1. unfold on_type in *; simpl in *.
            now eapply X.
@@ -857,18 +827,19 @@ Proof.
           simpl. intros. destruct X2 as [? ? ? ?]; unshelve econstructor; eauto.
           * apply X; eauto.
           * clear -X0 X on_cargs. revert on_cargs.
-            generalize (cstr_args y), (cdecl_sorts y).
-            induction c; destruct l; simpl; auto;
+            generalize (cstr_args x0).
+            induction c in y |- *; destruct y; simpl; auto;
               destruct a as [na [b|] ty]; simpl in *; auto;
           split; intuition eauto.
           * clear -X0 X on_cindices.
             revert on_cindices.
-            generalize (List.rev  (lift_context #|cstr_args y| 0 (ind_indices X1))).
-            generalize (cstr_indices y).
+            generalize (List.rev (lift_context #|cstr_args x0| 0 (ind_indices x))).
+            generalize (cstr_indices x0).
             induction 1; simpl; constructor; auto.
        --- simpl; intros. pose (onProjections X1 H0). simpl in *; auto.
        --- destruct X1. simpl. unfold check_ind_sorts in *.
-           destruct Universe.is_prop, Universe.is_sprop; auto.
+           destruct Universe.is_prop => //.
+           destruct Universe.is_sprop; auto.
            split.
            * apply ind_sorts.
            * destruct indices_matter; auto.
@@ -878,7 +849,6 @@ Proof.
        eapply All_local_env_impl. eauto.
        intros. now apply X.
 Qed.
-
 
 Lemma declared_decl_closed `{checker_flags} {Σ : global_env} {cst decl} :
   wf Σ ->
@@ -918,16 +888,19 @@ Proof.
 Qed.
 
 
+Definition closed_constructor_body mdecl (b : constructor_body) :=
+  closedn_ctx (#|ind_bodies mdecl| + #|ind_params mdecl|) b.(cstr_args) &&
+  forallb (closedn (#|ind_bodies mdecl| + #|ind_params mdecl| + #|b.(cstr_args)|)) b.(cstr_indices) &&
+  closedn #|ind_bodies mdecl| b.(cstr_type).
+
 Definition closed_inductive_body mdecl idecl :=
   closedn 0 idecl.(ind_type) &&
-  forallb (fun cdecl => 
-    closedn (#|arities_context mdecl.(ind_bodies)|) (cstr_type cdecl)) idecl.(ind_ctors) &&
+  forallb (closed_constructor_body mdecl) idecl.(ind_ctors) &&
   forallb (fun x => closedn (S (ind_npars mdecl)) x.2) idecl.(ind_projs).
 
 Definition closed_inductive_decl mdecl :=
   closed_ctx (ind_params mdecl) &&
-  forallb (closed_inductive_body mdecl) (ind_bodies mdecl). 
-  
+  forallb (closed_inductive_body mdecl) (ind_bodies mdecl).
 
 Lemma closedn_All_local_env (ctx : list context_decl) :
   All_local_env 
@@ -982,13 +955,24 @@ Proof.
     now move/andP: oib => [].
   - pose proof (onConstructors oib).
     red in X. eapply All_forallb. eapply All2_All_left; eauto.
-    intros cdecl cs X0; eapply on_ctype in X0.
-    now move/andP: X0 => [].
+    intros cdecl cs X0; 
+    move/andP: (on_ctype X0) => [].
+    simpl. unfold closed_constructor_body.
+    intros Hty _.
+    rewrite arities_context_length in Hty.
+    rewrite Hty.
+    rewrite X0.(cstr_eq) closedn_it_mkProd_or_LetIn in Hty.
+    move/andP: Hty => [] _.
+    rewrite closedn_it_mkProd_or_LetIn.
+    move/andP=> [] ->. rewrite closedn_mkApps /=.
+    move/andP=> [] _. rewrite forallb_app.
+    now move/andP=> [] _ ->.
+
   - eapply All_forallb.
     pose proof (onProjections oib).
     destruct (eq_dec (ind_projs x) []) as [->|eq]; try constructor.
     specialize (X eq). clear eq.
-    destruct (ind_cunivs oib) as [|? []]; try contradiction.
+    destruct (ind_ctors x) as [|? []]; try contradiction.
     apply on_projs in X.
     assert (Alli (fun i pdecl => declared_projection Σ.1 mdecl x 
      (({| inductive_mind := mind; inductive_ind := n |}, mdecl.(ind_npars)), i) pdecl)
@@ -1136,7 +1120,7 @@ Proof.
   destruct h1 as [Σ' [wfΣ' decl']].
   red in decl'. destruct decl' as [h ? ? ?].
   eapply Alli_nth_error in h. 2: eassumption.
-  simpl in h. destruct h as [? ? ? [? h] ? ? ?].
+  simpl in h. destruct h as [? [? h] ? ? ?].
   eapply typecheck_closed in h as [? e]. 2: auto.
   now move: e => [_ /andP []]. 
 Qed.
@@ -1145,8 +1129,7 @@ Lemma declared_inductive_closed_constructors {cf:checker_flags} :
   forall Σ ind mdecl idecl,
       wf Σ ->
       declared_inductive Σ mdecl ind idecl ->
-      All (fun '(na, t, n) => closedn #|arities_context mdecl.(ind_bodies)| t)
-          idecl.(ind_ctors).
+      All (closed_constructor_body mdecl) idecl.(ind_ctors).
 Proof.
   intros Σ ind mdecl idecl hΣ [hmdecl hidecl].
   eapply (declared_inductive_closed (Σ:=empty_ext Σ)) in hmdecl; auto.
@@ -1156,8 +1139,7 @@ Proof.
   erewrite hidecl in clbodies. simpl in clbodies.
   unfold closed_inductive_body in clbodies.
   move/andP: clbodies => [/andP [_ cl] _].
-  eapply forallb_All in cl. apply (All_impl cl).
-  now intros [[? ?] ?]; simpl.
+  now eapply forallb_All in cl.
 Qed.
 
 Lemma declared_minductive_closed_inds {cf:checker_flags} :
@@ -1201,13 +1183,11 @@ Proof.
   destruct c as [i ci]. simpl in h. destruct h as [hidecl hcdecl].
   eapply declared_inductive_closed_constructors in hidecl as h. 2: auto.
   unfold type_of_constructor. simpl.
-  destruct cdecl as [[id t'] arity]. simpl.
-  destruct idecl as [na ty ke ct pr]. simpl in *.
   eapply All_nth_error in h. 2: eassumption.
-  simpl in h.
+  move/andP: h => [/andP [hargs hindices]] hty.
   eapply closedn_subst0.
   - eapply declared_inductive_closed_inds. all: eauto.
-  - simpl. rewrite inds_length. rewrite arities_context_length in h.
+  - simpl. rewrite inds_length.
     rewrite closedn_subst_instance_constr. assumption.
 Qed.
 

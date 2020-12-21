@@ -27,8 +27,9 @@ Fixpoint csubst t k u :=
   | tProd na A B => tProd na (csubst t k A) (csubst t (S k) B)
   | tLetIn na b ty b' => tLetIn na (csubst t k b) (csubst t k ty) (csubst t (S k) b')
   | tCase ind p c brs =>
-    let brs' := List.map (on_snd (csubst t k)) brs in
-    tCase ind (csubst t k p) (csubst t k c) brs'
+    let brs' := List.map (fun br => map_branch (csubst t (#|br.(bcontext)| + k)) br) brs in
+    tCase ind (map_predicate id (csubst t k) (csubst t (#|p.(pcontext)| + k)) p) 
+      (csubst t k c) brs'
   | tProj p c => tProj p (csubst t k c)
   | tFix mfix idx =>
     let k' := List.length mfix + k in

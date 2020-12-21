@@ -174,6 +174,7 @@ Section ContextChangeTypesReduction.
       rewrite <- H.
       induction HT in i |- *; destruct i; eauto.
       now inv p.
+    - econstructor. econstructor; eauto.
     - eapply PCUICReduction.red_abs. eapply IHX0; eauto.  eauto.
     - eapply PCUICReduction.red_abs. eauto. eapply IHX0. eauto.
       eauto. econstructor. eauto. econstructor.

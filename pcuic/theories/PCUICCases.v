@@ -120,7 +120,7 @@ Variant case_predicate_context Σ ci p : context -> Type@{cpred} :=
   ind_case_predicate_context (ci_ind ci) mdecl idecl p.(pparams) p.(puinst) p.(pcontext) pctx ->
   case_predicate_context Σ ci p pctx.
   
-Variant ind_case_branch_context ind mdecl (cdecl : ident * term * nat) p : context -> Type@{cpred} :=
+Variant ind_case_branch_context ind mdecl (cdecl : constructor_body) p : context -> Type@{cpred} :=
 | mk_ind_case_branch_context s ty argctx indices : 
     instantiate_params_subst_spec (List.rev (subst_instance_context p.(puinst) (ind_params mdecl))) p.(pparams) []
       (subst_instance_constr p.(puinst) (cdecl.1.2)) s ty ->
@@ -137,7 +137,7 @@ Variant case_branches_contexts Σ ci p : list context -> Type@{cpred} :=
     ind_case_branches_contexts (ci_ind ci) mdecl idecl p brsctx ->
     case_branches_contexts Σ ci p brsctx.
 
-Variant ind_case_branch_type ind mdecl (cdecl : ident * term * nat) i p pctx : context -> term -> Type@{cpred} :=
+Variant ind_case_branch_type ind mdecl (cdecl : constructor_body) i p pctx : context -> term -> Type@{cpred} :=
 | mk_ind_case_branch_type s ty argctx indices : 
   instantiate_params_subst_spec (List.rev (subst_instance_context p.(puinst) (ind_params mdecl))) p.(pparams) []
     (subst_instance_constr p.(puinst) (cdecl.1.2)) s ty ->

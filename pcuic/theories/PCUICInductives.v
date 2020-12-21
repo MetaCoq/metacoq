@@ -29,7 +29,7 @@ Qed.
 
 Hint Resolve conv_ctx_refl : pcuic.
 
-Definition branch_type ind mdecl (idecl : one_inductive_body) params u p i (br : ident * term * nat) :=
+Definition branch_type ind mdecl (idecl : one_inductive_body) params u p i (br : constructor_body) :=
   let inds := inds ind.(inductive_mind) u mdecl.(ind_bodies) in
   let '(id, t, ar) := br in
   let ty := subst0 inds (subst_instance_constr u t) in

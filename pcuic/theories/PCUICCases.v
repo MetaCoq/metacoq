@@ -93,18 +93,6 @@ Proof.
       now apply IHparams.
 Qed.
 
-
-Fixpoint map2 {A B C} (f : A -> B -> C) (l : list A) (l' : list B) : list C :=
-  match l, l' with
-  | hd :: tl, hd' :: tl' => f hd hd' :: map2 f tl tl'
-  | _, _ => []
-  end.
-
-Definition set_binder_name (na : aname) (x : context_decl) : context_decl :=
-  {| decl_name := na;
-     decl_body := decl_body x;
-     decl_type := decl_type x |}.
-
 Universe cpred.
 
 Variant ind_case_predicate_context ind mdecl idecl params puinst pctx : context -> Type@{cpred} :=

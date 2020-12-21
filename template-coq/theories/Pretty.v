@@ -165,7 +165,7 @@ Section print_term.
     match lookup_ind_decl i k with
     | Some oib =>
       match nth_error oib.(ind_ctors) l with
-      | Some (na, _, _) => na ^ print_universe_instance u
+      | Some cb => cb.(cstr_name) ^ print_universe_instance u
       | None =>
         "UnboundConstruct(" ^ string_of_inductive ind ^ "," ^ string_of_nat l ^ ","
                             ^ string_of_universe_instance u ^ ")"
@@ -207,7 +207,7 @@ Section print_term.
                     " in " ^ in_str ^
                     " return " ^ print_term Γret true (preturn p) ^
                     " with " ^ nl ^
-                    print_list (fun '(b, (na, _, _)) => na ^ " " ^ b)
+                    print_list (fun '(b, cb) => cb.(cstr_name) ^ " " ^ b)
                     (nl ^ " | ") brs ^ nl ^ "end" ^ nl)
       end
     | None =>

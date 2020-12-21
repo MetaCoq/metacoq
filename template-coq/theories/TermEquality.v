@@ -78,7 +78,7 @@ Definition global_variance Σ gr napp :=
   | ConstructRef ind k =>
     match lookup_constructor Σ ind k with
     | Some (mdecl, idecl, cdecl) =>
-      if (cdecl.2 + mdecl.(ind_npars))%nat <=? napp then
+      if (cdecl.(cstr_arity) + mdecl.(ind_npars))%nat <=? napp then
         (** Fully applied constructors are always compared at the same supertype, 
           which implies that no universe equality needs to be checked here. *)
         Some []
@@ -238,7 +238,7 @@ Proof.
   - apply Forall2_same; eauto.
 Qed.
 
-Instance eq_binder_annot_equiv {A} : RelationClasses.Equivalence (@eq_binder_annot A).
+Instance eq_binder_annot_equiv {A} : RelationClasses.Equivalence (@eq_binder_annot A A).
 Proof.
   split. 
   - red. reflexivity.
@@ -247,7 +247,7 @@ Proof.
     congruence.
 Qed. 
 
-Definition eq_binder_annot_refl {A} x : @eq_binder_annot A x x.
+Definition eq_binder_annot_refl {A} x : @eq_binder_annot A A x x.
 Proof. reflexivity. Qed.
 
 Hint Resolve @eq_binder_annot_refl : core.

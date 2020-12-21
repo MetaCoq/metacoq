@@ -93,9 +93,9 @@ Proof. ltac:(Equations.Prop.Tactics.eqdec_proof). Qed.
 Definition map_binder_annot {A B} (f : A -> B) (b : binder_annot A) : binder_annot B :=
   {| binder_name := f b.(binder_name); binder_relevance := b.(binder_relevance) |}.
 
-Definition eq_binder_annot {A} (b b' : binder_annot A) : Prop :=
+Definition eq_binder_annot {A B} (b : binder_annot A) (b' : binder_annot B) : Prop :=
   b.(binder_relevance) = b'.(binder_relevance).
-  
+
 (** Type of annotated names *)
 Definition aname := binder_annot name.
 Instance anqme_eqdec : Classes.EqDec aname := _.

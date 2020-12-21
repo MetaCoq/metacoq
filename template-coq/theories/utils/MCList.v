@@ -44,6 +44,11 @@ Next Obligation.
   simpl in H. auto with arith.
 Defined.
 
+Fixpoint map2 {A B C} (f : A -> B -> C) (l : list A) (l' : list B) : list C :=
+  match l, l' with
+  | hd :: tl, hd' :: tl' => f hd hd' :: map2 f tl tl'
+  | _, _ => []
+  end.
 
 Lemma nth_error_safe_nth {A} n (l : list A) (isdecl : n < Datatypes.length l) :
   nth_error l n = Some (safe_nth l (exist _ n isdecl)).

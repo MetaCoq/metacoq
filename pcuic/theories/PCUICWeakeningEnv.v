@@ -749,7 +749,7 @@ Proof.
   now inv H0.
 Qed.
 
-Lemma declared_inductive_inj `{cf : checker_flags} {Σ mdecl mdecl' ind idecl idecl'} :
+Lemma declared_inductive_inj {Σ mdecl mdecl' ind idecl idecl'} :
   declared_inductive Σ mdecl' ind idecl' ->
   declared_inductive Σ mdecl ind idecl ->
   mdecl = mdecl' /\ idecl = idecl'.
@@ -758,7 +758,7 @@ Proof.
   rewrite H in H1. inversion H1. subst. rewrite H2 in H0. inversion H0. eauto.
 Qed.
 
-Lemma declared_constructor_inj `{cf : checker_flags} {Σ mdecl mdecl' idecl idecl' cdecl cdecl' c} :
+Lemma declared_constructor_inj {Σ mdecl mdecl' idecl idecl' cdecl cdecl' c} :
   declared_constructor Σ mdecl' idecl' c cdecl ->
   declared_constructor Σ mdecl idecl c cdecl' ->
   mdecl = mdecl' /\ idecl = idecl'  /\ cdecl = cdecl'.
@@ -768,7 +768,7 @@ Proof.
   rewrite H0 in H2. intuition congruence.
 Qed.
 
-Lemma declared_projection_inj `{cf : checker_flags} {Σ mdecl mdecl' idecl idecl' pdecl pdecl' p} :
+Lemma declared_projection_inj {Σ mdecl mdecl' idecl idecl' pdecl pdecl' p} :
   declared_projection Σ mdecl' idecl' p pdecl ->
   declared_projection Σ mdecl idecl p pdecl' ->
   mdecl = mdecl' /\ idecl = idecl'  /\ pdecl = pdecl'.

@@ -1049,18 +1049,24 @@ Qed.
 
 From MetaCoq.PCUIC Require Import PCUICCases.
 
+Lemma nl_declared_inductive Σ mdecl ind idecl :
+  declared_inductive Σ mdecl ind idecl ->
+  declared_inductive (map (on_snd nl_global_decl) Σ) 
+    (nl_mutual_inductive_body mdecl) ind (nl_one_inductive_body idecl).
+Proof.
+  intros []. split.
+  - unfold declared_minductive.
+    rewrite nl_lookup_env H.
+    simpl. reflexivity.
+  - simpl. now rewrite nth_error_map H0.
+Qed.
+
 Lemma nl_case_predicate_context Σ ci p pctx :
   case_predicate_context Σ ci p pctx ->
   case_predicate_context (map (on_snd nl_global_decl) Σ) ci (nl_predicate nl p) (nlctx pctx).
 Proof.
   induction 1; econstructor; eauto.
-  + unfold declared_inductive, declared_minductive in *.
-    destruct d as [Hl Hnth].
-    rewrite nl_lookup_env Hl /=.
-    split; eauto.
-    replace (ind_bodies (nl_mutual_inductive_body mdecl)) with
-    (map nl_one_inductive_body (ind_bodies mdecl)); [|now destruct mdecl].
-    rewrite nth_error_map Hnth /=. reflexivity.
+  + now eapply nl_declared_inductive.
   + todo "ind_case_predicate_context".
 Qed.
 
@@ -1136,12 +1142,16 @@ Proof.
       * discriminate.
   - rewrite nl_mkApps. cbn. constructor.
     rewrite nth_error_map H. reflexivity.
-  - constructor. eapply OnOne2_map, OnOne2_impl. 1: eassumption.
-    solve_all.
+  - econstructor; tea.
+    * now eapply nl_declared_inductive.
+    * eapply OnOne2_map, OnOne2_impl. 1: eassumption.
+      solve_all.
   - rewrite nl_pred_set_preturn. econstructor.
     * eapply nl_case_predicate_context; eauto.
     * rewrite -nlctx_app_context. apply IHh.
-  - eapply case_red_brs. 
+  - econstructor; tea.
+    now eapply nl_declared_inductive.
+  -eapply case_red_brs. 
     * eapply nl_case_branches_contexts; eauto.
     * eapply OnOne2All_map_all, OnOne2All_impl. 1: eassumption.
       cbn. intros x y [? ?]; cbn. solve_all. red; simpl.

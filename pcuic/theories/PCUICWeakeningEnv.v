@@ -1,6 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICEquality PCUICCases PCUICTyping.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
+  PCUICEquality PCUICContextSubst PCUICUnivSubst PCUICCases PCUICTyping.
+From Equations Require Import Equations.
 
 Require Import ssreflect.
 
@@ -859,6 +861,83 @@ Proof.
   - destruct Hdecl as [Hidecl Hcdecl]. now apply on_declared_inductive in Hidecl.
   - apply (declared_projection_inv weaken_env_prop_typing wfΣ wfΣ Hdecl).
 Qed.
+
+Variant wf_predicate Σ ci (p : predicate term) := 
+| mk_wf_predicate mdecl idecl :
+  declared_inductive Σ mdecl ci.(ci_ind) idecl ->
+  #|p.(pparams)| = mdecl.(ind_npars) -> 
+  wf_predicate Σ ci p.
+
+Lemma wf_env_cpc {cf:checker_flags} {Σ} {P} (wfΣ : on_global_env P Σ) ind pparams puinst pcontext mdecl idecl 
+  (oib : on_ind_body P (Σ, ind_universes mdecl) (inductive_mind ind) mdecl (inductive_ind ind) idecl) :
+  #|pparams| = mdecl.(ind_npars) ->
+  #|pcontext| = S #|oib.(ind_indices)| ->
+  ∑ pctx, ind_case_predicate_context ind mdecl idecl pparams puinst pcontext pctx.
+Proof.
+  intros hl.
+  intros hpars.
+  destruct (build_case_predicate_context ind mdecl idecl pparams puinst pcontext) 
+    as [cpc|] eqn:bcpc.
+  - exists cpc. now eapply ind_case_predicate_contextP.
+  - move: bcpc. unfold build_case_predicate_context.
+    unfold instantiate_params.
+    destruct instantiate_params_subst as [[s' ty']|] eqn:ipars => /= //.
+    * apply instantiate_params_substP in ipars.
+      rewrite oib.(ind_arity_eq) in ipars.
+      rewrite !subst_instance_constr_it_mkProd_or_LetIn /= in ipars.
+      eapply instantiate_params_subst_it_mkProd_or_LetIn in ipars as [cs <-].
+      2:{ rewrite context_assumptions_map.
+          now rewrite mib.(onNpars). }
+      rewrite subst_it_mkProd_or_LetIn /= destArity_it_mkProd_or_LetIn /=.
+      len.
+
+  unfold build_case_predicate_context.
+  rewrite oib.(ind_arity_eq).
+  destruct instantiate_params eqn:ipars.
+  - apply instantiate_paramsP in ipars as [s' [ty' [ipars ->]]].
+    simpl.
+    pose proof ipars as ipars'.
+    rewrite subst_instance_constr_it_mkProd_or_LetIn in ipars'.
+    eapply instantiate_params_subst_it_mkProd_or_LetIn in ipars' as [-> <-].
+    * simpl. rewrite app_nil_r.
+      rewrite subst_instance_constr_it_mkProd_or_LetIn.
+      rewrite subst_it_mkProd_or_LetIn /=.
+      rewrite destArity_it_mkProd_or_LetIn /=.
+      simpl.
+      intros pctx.
+      split; intros.
+      + destruct X.
+        rewrite oib.(ind_arity_eq) in i.
+        pose proof (instantiate_params_subst_spec_fn ipars i) as [<- <-].
+        subst sty.
+        simpl in e.
+        rewrite subst_instance_constr_it_mkProd_or_LetIn subst_it_mkProd_or_LetIn /= in e.
+        eapply it_mkProd_or_LetIn_inj in e as [<- <-].
+                
+
+Admitted.
+
+Lemma wf_env_cpc {cf:checker_flags} {Σ} {wfΣ : wf Σ} ci p mdecl idecl : 
+  lookup_inductive Σ ci.(ci_ind) = Some (mdecl, idecl) ->
+  onSome (ind_case_predicate_context ci.(ci_ind) mdecl idecl 
+    (pparams p) (puinst p) (pcontext p)) 
+    (build_case_predicate_context ci.(ci_ind) mdecl idecl p.(pparams) p.(puinst)).
+Proof.
+  intros hl.
+  apply lookup_inductive_declared in hl.
+  pose proof (on_declared_inductive wfΣ hl) as [mib oib].
+  destruct (build_case_predicate_context ci.(ci_ind) mdecl idecl p.(pparams) p.(puinst)) eqn:bp.
+  simpl.
+  2:{ 
+    simpl.
+    move: bp.
+    unfold build_case_predicate_context.
+    destruct instantiate_params eqn:ipars.
+    eapply instantiate_params_substP
+
+  
+  }
+  exists c.
 
 Definition on_udecl_prop `{checker_flags} Σ (udecl : universes_decl)
   := let levels := levels_of_udecl udecl in

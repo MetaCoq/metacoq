@@ -858,7 +858,7 @@ Instance reflect_stack : ReflectEq stack :=
 Section WfStack.
   Context (Σ : global_env).
 
-  Fixpoint wf_stack stack :=
+  Fixpoint wf_stack stack : Type :=
     match stack return Type with
     | ε => unit
     | App _ π
@@ -867,18 +867,21 @@ Section WfStack.
     | Fix_mfix_bd _ _ _ _ _ _ π
     | CoFix _ _ _ π
     | CoFix_mfix_ty _ _ _ _ _ _ π
-    | CoFix_mfix_bd _ _ _ _ _ _ π
-    | Case_pars _ _ _ _ _ _ _ _ π => wf_stack π
+    | CoFix_mfix_bd _ _ _ _ _ _ π => wf_stack π
+    | Case_pars ci _ _ _ _ _ _ _ π =>
+      (∑ mdecl idecl,
+        declared_inductive Σ mdecl (ci_ind ci) idecl) * (wf_stack π)
     | Case_p ci ppars puinst pctx c brs π => 
-      ∑ mdecl idecl,
+      (∑ mdecl idecl,
         declared_inductive Σ mdecl (ci_ind ci) idecl *
-        ind_case_predicate_context (ci_ind ci) mdecl idecl ppars puinst (forget_types pctx) pctx * 
+        ind_case_predicate_context (ci_ind ci) mdecl idecl ppars puinst (forget_types pctx) pctx) * 
         wf_stack π
-    | Case _ _ _ π => wf_stack π
+    | Case ci _ _ π =>
+      (∑ mdecl idecl, declared_inductive Σ mdecl (ci_ind ci) idecl) * wf_stack π
     | Case_brs ci pred c bctx brs1 brs2 π =>
-      ∑ brctxs, case_branches_contexts Σ ci pred brctxs * 
+      (∑ brctxs, case_branches_contexts Σ ci pred brctxs * 
         (nth_error brctxs #|brs1| = Some bctx) * 
-        (#|brctxs| = #|brs1| + S #|brs2|)%nat *
+        (#|brctxs| = #|brs1| + S #|brs2|)%nat) *
         wf_stack π
     | Proj _ π 
     | Prod_l _ _ π

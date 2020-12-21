@@ -172,23 +172,23 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
 | letin_red_ty na b t b' r : red1 Σ Γ t r -> red1 Σ Γ (tLetIn na b t b') (tLetIn na b r b')
 | letin_red_body na b t b' r : red1 Σ (Γ ,, vdef na b t) b' r -> red1 Σ Γ (tLetIn na b t b') (tLetIn na b t r)
 
-| case_red_param ind params params' puinst pcontext preturn c brs :
-    OnOne2 (red1 Σ Γ) params params' ->
-    red1 Σ Γ (tCase ind (mkpredicate params puinst pcontext preturn) c brs)
-             (tCase ind (mkpredicate params' puinst pcontext preturn) c brs)
+| case_red_param ind p params' c brs :
+    OnOne2 (red1 Σ Γ) p.(pparams) params' ->
+    red1 Σ Γ (tCase ind p c brs)
+             (tCase ind (set_pparams p params') c brs)
 
-| case_red_return ind p preturn' c brs pctx :
-    case_predicate_context Σ ind p pctx ->
+| case_red_return ind p preturn' c brs pctx (cctx : case_predicate_context Σ ind p pctx) :
     red1 Σ (Γ ,,, pctx) p.(preturn) preturn' ->
     red1 Σ Γ (tCase ind p c brs)
              (tCase ind (set_preturn p preturn') c brs)
     
-| case_red_discr ind p c c' brs : red1 Σ Γ c c' -> red1 Σ Γ (tCase ind p c brs) (tCase ind p c' brs)
+| case_red_discr ind p c c' brs :
+  red1 Σ Γ c c' -> 
+  red1 Σ Γ (tCase ind p c brs) (tCase ind p c' brs)
 
-| case_red_brs ci p c brs brs' brsctx :
-    case_branches_contexts Σ ci p brsctx ->
+| case_red_brs ci p c brs brs' brsctxs (cctx : case_branches_contexts Σ ci p brsctxs) :
     OnOne2All (fun brctx br br' => 
-      on_Trel_eq (red1 Σ (Γ ,,, brctx)) bbody bcontext br br') brsctx brs brs' ->
+      on_Trel_eq (red1 Σ (Γ ,,, brctx)) bbody bcontext br br') brsctxs brs brs' ->
     red1 Σ Γ (tCase ci p c brs) (tCase ci p c brs')
 
 | proj_red p c c' : red1 Σ Γ c c' -> red1 Σ Γ (tProj p c) (tProj p c')
@@ -271,13 +271,13 @@ Lemma red1_ind_all :
        (forall (Γ : context) (na : aname) (b t b' r : term),
         red1 Σ (Γ,, vdef na b t) b' r -> P (Γ,, vdef na b t) b' r -> P Γ (tLetIn na b t b') (tLetIn na b t r)) ->
 
-       (forall (Γ : context) (ind : case_info) params params' puinst pcontext preturn c brs,
-           OnOne2 (Trel_conj (red1 Σ Γ) (P Γ)) params params' ->
-           P Γ (tCase ind (mkpredicate params puinst pcontext preturn) c brs)
-               (tCase ind (mkpredicate params' puinst pcontext preturn) c brs)) ->
+       (forall (Γ : context) (ind : case_info) p params' c brs,
+          OnOne2 (Trel_conj (red1 Σ Γ) (P Γ)) p.(pparams) params' ->
+           P Γ (tCase ind p c brs)
+               (tCase ind (set_pparams p params') c brs)) ->
 
        (forall (Γ : context) (ci : case_info) p preturn' c brs pctx,
-           case_predicate_context Σ ci p pctx ->
+            case_predicate_context Σ ci p pctx ->
            red1 Σ (Γ ,,, pctx) p.(preturn) preturn' ->
            P (Γ ,,, pctx) p.(preturn) preturn' ->
            P Γ (tCase ci p c brs)
@@ -286,10 +286,10 @@ Lemma red1_ind_all :
        (forall (Γ : context) (ind : case_info) (p : predicate term) (c c' : term) (brs : list (branch term)),
         red1 Σ Γ c c' -> P Γ c c' -> P Γ (tCase ind p c brs) (tCase ind p c' brs)) ->
 
-       (forall (Γ : context) ind p c brs brs' brsctx,
-        case_branches_contexts Σ ind p brsctx ->
+       (forall (Γ : context) ind p c brs brs' brsctxs (cctx : case_branches_contexts Σ ind p brsctxs),
           OnOne2All (fun brctx br br' => 
-            on_Trel_eq (Trel_conj (red1 Σ (Γ ,,, brctx)) (P (Γ ,,, brctx))) bbody bcontext br br') brsctx brs brs' ->
+            on_Trel_eq (Trel_conj (red1 Σ (Γ ,,, brctx)) (P (Γ ,,, brctx))) bbody bcontext br br') 
+            brsctxs brs brs' ->
           P Γ (tCase ind p c brs) (tCase ind p c brs')) ->
 
        (forall (Γ : context) (p : projection) (c c' : term), red1 Σ Γ c c' -> P Γ c c' ->
@@ -347,14 +347,15 @@ Proof.
   - eapply X4; eauto.
   - eapply X5; eauto.
 
-  - revert params params' o.
+  - revert params' o.
+    generalize (pparams p).
     fix auxl 3.
     intros params params' [].
     + constructor. split; auto.
     + constructor. auto.
       
-  - clear c0.
-    revert brsctx brs brs' o.
+  - clear cctx.
+    revert brsctxs brs brs' o.
     fix auxl 4.
     intros i l l' Hl. destruct Hl.
     + constructor; intros; intuition auto.
@@ -611,13 +612,14 @@ Section ReductionCongruence.
     | tCtxApp_l f a => (wf_context f);
     | tCtxApp_r f a => (wf_context a);
     | tCtxCase_pars ci pars puinst pctx pret c brs =>
-      wf_list_context pars;
+        wf_list_context pars;
     | tCtxCase_pred ci pars puinst names pctx p c brs => 
       ∑ mdecl idecl, 
         declared_inductive Σ mdecl ci.(ci_ind) idecl *
         ind_case_predicate_context ci.(ci_ind) mdecl idecl pars puinst names pctx *
         wf_context p;
-    | tCtxCase_discr ci p c brs => wf_context c;
+    | tCtxCase_discr ci p c brs =>
+        wf_context c;
     | tCtxCase_branch ci p c brs => 
       ∑ mdecl idecl pctx brsctx,
         declared_inductive Σ mdecl ci.(ci_ind) idecl *
@@ -686,11 +688,13 @@ Section ReductionCongruence.
     revert w Γ y r.
     eapply (fill_context_elim x P P' P''); subst P P' P''; cbv beta;
       intros **; simp fill_context; cbn in *; auto; try solve [constructor; eauto].
-    - simp wf_context in X0.
-      destruct X0 as [mdecl [idecl [[decli cp] wf]]].
+    - destruct X0 as [mdecl [idecl [[decli cp] wf]]].
       specialize (X wf (Γ ,,, c1) _ X1).
       econstructor; eauto.
       econstructor; eauto.
+    (* - destruct X0 as [mdecl [idecl [decli wf]]].
+      specialize (X wf Γ _ X1).
+      econstructor; eauto. *)
     - simp wf_context in X0.
       destruct X0 as [mdecl [idecl [pctx [brsctx [[[decli cp] cbs] wf]]]]].
       specialize (X _ wf _ _ X1).
@@ -1031,8 +1035,9 @@ Section ReductionCongruence.
           - cbn. f_equal. assumption.
         }
         eapply trans_red.
-        + eapply IHh. symmetry. apply el.
-        + constructor. rewrite (el' l').
+        + eapply IHh; tas. symmetry. apply el.
+        + change (set_pparams p l') with (set_pparams (set_pparams p (map g l1)) l').
+          econstructor. rewrite (el' l').
           eapply OnOne2_map.
           eapply OnOne2_impl ; eauto.
           intros [? []] [? []] [h1 h2].
@@ -1053,7 +1058,7 @@ Section ReductionCongruence.
         + eapply IHh.
         + assert (set_pparams p z = set_pparams (set_pparams p y) z) as ->.
           { now destruct p. }
-          eapply red_one_param; assumption.
+          eapply red_one_param; eassumption.
     Qed.
 
     Lemma red_case_p :
@@ -1073,11 +1078,12 @@ Section ReductionCongruence.
     Qed.
 
     Lemma red_case_c :
-      forall ci p c brs c',
+      forall ci mdecl idecl p c brs c',
+        declared_inductive Σ mdecl ci.(ci_ind) idecl ->
         red Σ Γ c c' ->
         red Σ Γ (tCase ci p c brs) (tCase ci p c' brs).
     Proof.
-      intros ci p c brs c' h.
+      intros ci mdecl idecl p c brs c' decli h.
       rst_induction h; eauto with pcuic.
     Qed.
     
@@ -1182,9 +1188,10 @@ Section ReductionCongruence.
                        pcontext := p.(pcontext); preturn := pret' |} c' brs').
     Proof.
       intros cpc h1 h2 h3 cbc h4.
+      destruct cpc.
       eapply red_trans; [eapply red_case_brs|]; eauto.
       eapply red_trans; [eapply red_case_c|]; eauto.
-      eapply red_trans; [eapply red_case_p|]; eauto.
+      eapply red_trans; [eapply red_case_p|]; eauto. 1:econstructor; eauto.
       eapply red_trans; [eapply red_case_pars|]; eauto.
     Qed.
 
@@ -1772,15 +1779,18 @@ Section Stacks.
       rewrite map_app. cbn. unfold def_sig at 2. simpl.
       rewrite app_context_assoc in h.
       intuition eauto.
-    - cbn. apply IHπ; [assumption|]. constructor.
+    - cbn. destruct wfπ as [[mdecl [idecl decli]] wfπ].
+      apply IHπ; [assumption|]. econstructor; tea.
       apply OnOne2_app. constructor.
       simpl. intuition eauto.
-    - destruct wfπ as [mdecl [idecl [[decli cpc] wf]]]. cbn.
+    - destruct wfπ as [[mdecl [idecl [decli cpc]]] wf]. cbn.
       eapply IHπ; [assumption|]. simpl in h.
       econstructor.
       * econstructor; eauto.
       * cbn. now rewrite app_context_assoc in h.
-    - destruct wfπ as [brsctxs [[[cbc enth] elen] wf]].
+    - cbn. destruct wfπ as [[mdecl [idecl decli]] wfπ].
+      apply IHπ; [assumption|]. econstructor; tea.
+    - destruct wfπ as [[brsctxs [[cbc enth] elen]] wf].
       cbn; apply IHπ; [assumption|].
       econstructor; eauto.
       rewrite (nth_error_firstn_skipn enth).

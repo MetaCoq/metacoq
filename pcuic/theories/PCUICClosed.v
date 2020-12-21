@@ -362,17 +362,6 @@ Proof.
   now rewrite closedn_subst_instance_constr IHl.
 Qed.
 
-Lemma destArity_spec ctx T :
-  match destArity ctx T with
-  | Some (ctx', s) => it_mkProd_or_LetIn ctx T = it_mkProd_or_LetIn ctx' (tSort s)
-  | None => True
-  end.
-Proof.
-  induction T in ctx |- *; simpl; try easy.
-  specialize (IHT2 (ctx,, vass na T1)). now destruct destArity.
-  specialize (IHT3 (ctx,, vdef na T1 T2)). now destruct destArity.
-Qed.
-
 Lemma closedn_All_local_closed:
   forall (cf : checker_flags) (Σ : global_env_ext) (Γ : context) (ctx : list context_decl)
          (wfΓ' : wf_local Σ (Γ ,,, ctx)),
@@ -635,12 +624,6 @@ Proof.
   apply closedn_ctx_spec. rewrite -(Nat.add_0_r n). apply Alli_shiftn, X.
   apply closedn_ctx_spec in H. rewrite -(Nat.add_0_r n) in H.
   now apply (Alli_shiftn_inv 0 _ n) in H.
-Qed.
-
-Lemma context_assumptions_app Γ Δ : context_assumptions (Γ ++ Δ) = 
-  context_assumptions Γ + context_assumptions Δ.
-Proof.
-  induction Γ as [|[? [] ?] ?]; simpl; auto.
 Qed.
 
 Lemma weaken_env_prop_closed {cf:checker_flags} : 

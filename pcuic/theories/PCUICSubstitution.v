@@ -2,7 +2,7 @@
 From MetaCoq.Template Require Import utils config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICPosition PCUICSigmaCalculus
-     PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICClosed
+     PCUICUnivSubst PCUICContextSubst PCUICTyping PCUICWeakeningEnv PCUICClosed
      PCUICReduction PCUICWeakening PCUICCumulativity PCUICUnivSubstitution.
 
 Require Import ssreflect.
@@ -23,37 +23,6 @@ Generalizable Variables Σ Γ t T.
 Inductive subs {cf:checker_flags} (Σ : global_env_ext) (Γ : context) : list term -> context -> Type :=
 | emptys : subs Σ Γ [] []
 | cons_ass Δ s na t T : subs Σ Γ s Δ -> Σ ;;; Γ |- t : subst0 s T -> subs Σ Γ (t :: s) (Δ ,, vass na T).
-
-(** Linking a context (with let-ins), an instance (reversed substitution)
-    for its assumptions and a well-formed substitution for it. *)
-
-Inductive context_subst : context -> list term -> list term -> Type :=
-| context_subst_nil : context_subst [] [] []
-| context_subst_ass Γ args s na t a :
-    context_subst Γ args s ->
-    context_subst (vass na t :: Γ) (args ++ [a]) (a :: s)
-| context_subst_def Γ args s na b t :
-    context_subst Γ args s ->
-    context_subst (vdef na b t :: Γ) args (subst s 0 b :: s).
-
-(** Promoting a substitution for the non-let declarations of ctx into a
-    substitution for the whole context *)
-
-Fixpoint make_context_subst ctx args s :=
-  match ctx with
-  | [] => match args with
-          | [] => Some s
-          | a :: args => None
-          end
-  | d :: ctx =>
-    match d.(decl_body) with
-    | Some body => make_context_subst ctx args (subst0 s body :: s)
-    | None => match args with
-              | a :: args => make_context_subst ctx args (a :: s)
-              | [] => None
-              end
-    end
-  end.
 
 (** Well-typed substitution into a context with let-ins *)
 
@@ -500,41 +469,6 @@ Proof.
        now rewrite <- IHparams.
 Qed.
 
-Lemma decompose_prod_n_assum_extend_ctx {ctx n t ctx' t'} ctx'' :
-  decompose_prod_n_assum ctx n t = Some (ctx', t') ->
-  decompose_prod_n_assum (ctx ++ ctx'') n t = Some (ctx' ++ ctx'', t').
-Proof.
-  induction n in ctx, t, ctx', t', ctx'' |- *.
-  - simpl. intros [= -> ->]. eauto.
-  - simpl.
-    destruct t; simpl; try congruence.
-    + intros H. eapply (IHn _ _ _ _ ctx'' H).
-    + intros H. eapply (IHn _ _ _ _ ctx'' H).
-Qed.
-
-Lemma subst_it_mkProd_or_LetIn n k ctx t :
-  subst n k (it_mkProd_or_LetIn ctx t) =
-  it_mkProd_or_LetIn (subst_context n k ctx) (subst n (length ctx + k) t).
-Proof.
-  induction ctx in n, k, t |- *; simpl; try congruence.
-  pose (subst_context_snoc n k ctx a). unfold snoc in e. rewrite e. clear e.
-  simpl. rewrite -> IHctx.
-  pose (subst_context_snoc n k ctx a). simpl. now destruct a as [na [b|] ty].
-Qed.
-
-Lemma to_extended_list_k_subst n k c k' :
-  to_extended_list_k (subst_context n k c) k' = to_extended_list_k c k'.
-Proof.
-  unfold to_extended_list_k. revert k'.
-  unf_term. generalize (@nil term) at 1 2.
-  induction c in n, k |- *; simpl; intros. 1: reflexivity.
-  rewrite subst_context_snoc. unfold snoc. simpl.
-  destruct a. destruct decl_body.
-  - unfold subst_decl, map_decl. simpl.
-    now rewrite IHc.
-  - simpl. apply IHc.
-Qed.
-
 Lemma to_extended_list_k_map_subst:
   forall n (k : nat) (c : context) k',
     #|c| + k' <= k ->
@@ -622,134 +556,6 @@ Proof.
   - simpl. now rewrite -> inds_length, closedn_subst_instance_constr.
 Qed.
 
-Lemma context_subst_length {Γ a s} : context_subst Γ a s -> #|Γ| = #|s|.
-Proof. induction 1; simpl; congruence. Qed.
-
-Lemma context_subst_assumptions_length {Γ a s} : context_subst Γ a s -> context_assumptions Γ = #|a|.
-Proof. induction 1; simpl; try congruence. rewrite app_length /=. lia. Qed.
-
-(* Lemma context_subst_app {cf:checker_flags} Γ Γ' a s : *)
-(*   context_subst (Γ' ++ Γ) a s -> *)
-(*   { a0 & { a1 & { s0 & { s1 & (context_subst Γ a0 s0 * context_subst (subst_context s0 0 Γ') a1 s1 *)
-(*                                * (a = a0 ++ a1) * (s = s1 ++ s0))%type } } } }. *)
-(* Proof. *)
-(*   induction Γ' in Γ, a, s |- *. simpl. *)
-(*   exists a, [], s, []. rewrite app_nil_r; intuition. constructor. *)
-
-(*   simpl. intros Hs. *)
-(*   inv Hs. *)
-(*   - specialize (IHΓ' _ _ _ H). *)
-(*     destruct IHΓ' as (a0' & a1' & s1 & s2 & ((sa0 & sa1) & eqargs) & eqs0). *)
-(*     subst. exists a0', (a1' ++ [a1]), s1, (a1 :: s2). intuition eauto. *)
-(*     rewrite subst_context_snoc. constructor. auto. now rewrite app_assoc. *)
-(*   - specialize (IHΓ' _ _ _ H). *)
-(*     destruct IHΓ' as (a0' & a1' & s1 & s2 & ((sa0 & sa1) & eqargs) & eqs0). *)
-(*     subst. exists a0', a1', s1, (subst s2 0 (subst s1 #|Γ'| b) :: s2). intuition eauto. *)
-(*     rewrite -> subst_context_snoc, Nat.add_0_r. *)
-(*     unfold subst_decl; simpl. unfold map_decl. simpl. *)
-(*     econstructor. auto. simpl. f_equal. *)
-(*     rewrite -> subst_app_simpl; auto. simpl. *)
-(*     pose proof(context_subst_length _ _ _ sa1) as Hs1. *)
-(*     rewrite subst_context_length in Hs1. rewrite -> Hs1. auto. *)
-(* Qed. *)
-
-Lemma make_context_subst_rec_spec ctx args s tele args' s' :
-  context_subst ctx args s ->
-  make_context_subst tele args' s = Some s' ->
-  context_subst (List.rev tele ++ ctx) (args ++ args') s'.
-Proof.
-  induction tele in ctx, args, s, args', s' |- *.
-  - move=> /= Hc. case: args'.
-    + move => [= <-].
-      now rewrite app_nil_r.
-    + move=> a l //.
-  - move=> Hc /=. case: a => [na [body|] ty] /=.
-    -- specialize (IHtele (vdef na body ty :: ctx) args (subst0 s body :: s) args' s').
-       move=> /=. rewrite <- app_assoc.
-       move/(IHtele _). move=> H /=. apply H.
-       constructor. auto.
-    -- case: args' => [|a args']; try congruence.
-       specialize (IHtele (vass na ty :: ctx) (args ++ [a]) (a :: s) args' s').
-       move=> /=. rewrite <- app_assoc.
-       move/(IHtele _). move=> H /=. simpl in H. rewrite <- app_assoc in H. apply H.
-       constructor. auto.
-Qed.
-
-Lemma make_context_subst_spec tele args s' :
-  make_context_subst tele args [] = Some s' ->
-  context_subst (List.rev tele) args s'.
-Proof.
-  move/(make_context_subst_rec_spec [] [] [] _ _ _ context_subst_nil).
-  rewrite app_nil_r /= //.
-Qed.
-
-Lemma subst_telescope_cons s k d Γ :
-  subst_telescope s k (d :: Γ) =
-  map_decl (subst s k) d :: subst_telescope s (S k) Γ.
-Proof.
-  simpl.
-  unfold subst_telescope, mapi. simpl.
-  rewrite Nat.add_0_r; f_equal.
-  rewrite mapi_rec_Sk. apply mapi_rec_ext.
-  intros. simpl. now rewrite Nat.add_succ_r.
-Qed.
-
-Lemma subst_telescope_comm_rec s k s' k' Γ:
-  subst_telescope (map (subst s' k) s) k' (subst_telescope s' (#|s| + k' + k) Γ) =
-  subst_telescope s' (k' + k) (subst_telescope s k' Γ).
-Proof.
-  induction Γ in k, k' |- *; rewrite ?subst_telescope_cons; simpl; auto.
-  f_equal.
-  * unfold map_decl. simpl.
-    f_equal.
-    + destruct a as [na [b|] ty]; simpl; auto.
-      f_equal. now rewrite distr_subst_rec.
-    + now rewrite distr_subst_rec.
-  * specialize (IHΓ k (S k')). now rewrite Nat.add_succ_r in IHΓ.
-Qed.
-
-Lemma subst_telescope_comm s k s' Γ:
-  subst_telescope (map (subst s' k) s) 0 (subst_telescope s' (#|s| + k) Γ) =
-  subst_telescope s' k (subst_telescope s 0 Γ).
-Proof.
-  now rewrite -(subst_telescope_comm_rec _ _ _ 0) Nat.add_0_r.
-Qed.
-
-Lemma instantiate_params_subst_make_context_subst ctx args s ty s' ty' :
-  instantiate_params_subst ctx args s ty = Some (s', ty') ->
-  ∑ ctx'',
-  make_context_subst ctx args s = Some s' /\
-  decompose_prod_n_assum [] (length ctx) ty = Some (ctx'', ty').
-Proof.
-  induction ctx in args, s, ty, s' |- *; simpl.
-  - case: args => [|a args'] // [= <- <-]. exists []; intuition congruence.
-  - case: a => [na [body|] ty''] /=.
-    + destruct ty; try congruence.
-      intros. move: (IHctx _ _ _ _ H) => [ctx'' [Hmake Hdecomp]].
-      eapply (decompose_prod_n_assum_extend_ctx [vdef na0 ty1 ty2]) in Hdecomp.
-      unfold snoc. eexists; intuition eauto.
-    + destruct ty; try congruence.
-      case: args => [|a args']; try congruence.
-      move=> H. move: (IHctx _ _ _ _ H) => [ctx'' [Hmake Hdecomp]].
-      eapply (decompose_prod_n_assum_extend_ctx [vass na0 ty1]) in Hdecomp.
-      unfold snoc. eexists; intuition eauto.
-Qed.
-
-Lemma instantiate_params_make_context_subst ctx args ty ty' :
-  instantiate_params ctx args ty = Some ty' ->
-  ∑ ctx' ty'' s',
-    decompose_prod_n_assum [] (length ctx) ty = Some (ctx', ty'') /\
-    make_context_subst (List.rev ctx) args [] = Some s' /\ ty' = subst0 s' ty''.
-Proof.
-  unfold instantiate_params.
-  case E: instantiate_params_subst => // [[s ty'']].
-  move=> [= <-].
-  eapply instantiate_params_subst_make_context_subst in E.
-  destruct E as [ctx'' [Hs Hty'']].
-  exists ctx'', ty'', s. split; auto.
-  now rewrite -> List.rev_length in Hty''.
-Qed.
-
 Lemma subst_cstr_concl_head ind u mdecl (arity : context) args :
   let head := tRel (#|ind_bodies mdecl| - S (inductive_ind ind) + #|ind_params mdecl| + #|arity|) in
   let s := (inds (inductive_mind ind) u (ind_bodies mdecl)) in
@@ -818,18 +624,6 @@ Proof.
     rewrite (Hfg n _ _ p E).
     case E' : map_option_out => [b'|]; try congruence.
     move=> [= <-]. now rewrite (IHHa _ _ E').
-Qed.
-
-Lemma map_subst_instance_constr_to_extended_list_k u ctx k :
-  to_extended_list_k (subst_instance_context u ctx) k
-  = to_extended_list_k ctx k.
-Proof.
-  unfold to_extended_list_k.
-  cut (map (subst_instance_constr u) [] = []); [|reflexivity].
-  unf_term. generalize (@nil term); intros l Hl.
-  induction ctx in k, l, Hl |- *; cbnr.
-  destruct a as [? [] ?]; cbnr; eauto.
-  unf_term. eapply IHctx; cbn; congruence.
 Qed.
 
 Lemma subst_build_case_predicate_type ind mdecl idecl u params ps pty n k :
@@ -1119,13 +913,6 @@ Qed.
 
 Arguments Nat.sub : simpl nomatch.
 
-Lemma extended_subst_length Γ n : #|extended_subst Γ n| = #|Γ|.
-Proof.
-  induction Γ in n |- *; simpl; auto.
-  now destruct a as [? [?|] ?] => /=; simpl; rewrite IHΓ.
-Qed.
-Hint Rewrite extended_subst_length : len.
-
 Lemma assumption_context_skipn Γ n :
   assumption_context Γ ->
   assumption_context (skipn n Γ).
@@ -1144,51 +931,6 @@ Proof.
   intros -> ; reflexivity.
 Qed.
 
-Lemma lift_extended_subst (Γ : context) k :
-  extended_subst Γ k = map (lift0 k) (extended_subst Γ 0).
-Proof.
-  induction Γ as [|[? [] ?] ?] in k |- *; simpl; auto.
-  - rewrite IHΓ. f_equal.
-    autorewrite with len.
-    rewrite distr_lift_subst. f_equal.
-    autorewrite with len. rewrite simpl_lift; lia_f_equal.
-  - rewrite Nat.add_0_r; f_equal.
-    rewrite IHΓ (IHΓ 1).
-    rewrite map_map_compose. apply map_ext => x.
-    rewrite simpl_lift; try lia.
-    now rewrite Nat.add_1_r.
-Qed.
-
-Lemma lift_extended_subst' Γ k k' : extended_subst Γ (k + k') = map (lift0 k) (extended_subst Γ k').
-Proof.
-  induction Γ as [|[? [] ?] ?] in k |- *; simpl; auto.
-  - rewrite IHΓ. f_equal.
-    autorewrite with len.
-    rewrite distr_lift_subst. f_equal.
-    autorewrite with len. rewrite simpl_lift; lia_f_equal.
-  - f_equal.
-    rewrite (IHΓ (S k)) (IHΓ 1).
-    rewrite map_map_compose. apply map_ext => x.
-    rewrite simpl_lift; lia_f_equal.
-Qed.
-
-Lemma subst_extended_subst_k s Γ k k' : extended_subst (subst_context s k Γ) k' =
-  map (subst s (k + context_assumptions Γ + k')) (extended_subst Γ k').
-Proof.
-  induction Γ as [|[na [b|] ty] Γ]; simpl; auto; rewrite subst_context_snoc /=;
-    autorewrite with len; f_equal; auto.
-  - rewrite IHΓ.
-    rewrite commut_lift_subst_rec; try lia.
-    rewrite distr_subst. autorewrite with len. f_equal.
-    now rewrite context_assumptions_fold.
-  - elim: Nat.leb_spec => //. lia.
-  - rewrite (lift_extended_subst' _ 1 k') IHΓ.
-    rewrite (lift_extended_subst' _ 1 k').
-    rewrite !map_map_compose.
-    apply map_ext.
-    intros x.
-    erewrite (commut_lift_subst_rec); lia_f_equal.
-Qed.
 
 Lemma extended_subst_subst_instance_constr u Γ n :
   map (subst_instance_constr u) (extended_subst Γ n) =
@@ -1344,8 +1086,6 @@ Proof.
     2:now autorewrite with len.
     now autorewrite with sigma.
 Qed.
-
-Hint Rewrite context_assumptions_app context_assumptions_fold : len.
 
 Lemma map_option_out_impl {A B} (l : list A) (f g : A -> option B) x :
   (forall x y, f x = Some y -> g x = Some y) ->
@@ -2786,13 +2526,6 @@ Lemma context_assumptions_subst s n Γ :
   context_assumptions (subst_context s n Γ) = context_assumptions Γ.
 Proof. apply context_assumptions_fold. Qed.
 Hint Rewrite context_assumptions_subst : pcuic.
-
-
-Lemma subst_app_simpl' (l l' : list term) (k : nat) (t : term) n :
-  n = #|l| ->
-  subst (l ++ l') k t = subst l k (subst l' (k + n) t).
-Proof. intros ->; apply subst_app_simpl. Qed.
-
 
 Lemma subst_app_context' (s s' : list term) (Γ : context) n :
   n = #|s| ->

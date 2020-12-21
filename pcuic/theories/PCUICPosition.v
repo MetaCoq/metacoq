@@ -883,7 +883,7 @@ Section WfStack.
       (∑ mdecl idecl,
         (declared_inductive Σ mdecl (ci_ind ci) idecl) *
         let brctxs := map bcontext brs1 ++ forget_types bctx :: map bcontext brs2 in
-        (nth_error (case_branches_contexts idecl pred brctxs) #|brs1| = Some bctx) * 
+        (nth_error (case_branches_contexts ci.(ci_ind) mdecl idecl pred brctxs) #|brs1| = Some bctx) * 
         (#|idecl.(ind_ctors)| = #|brs1| + S #|brs2|)%nat) *
         wf_stack π
     | Proj _ π 

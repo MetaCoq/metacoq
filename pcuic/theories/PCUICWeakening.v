@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
   PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICTyping PCUICWeakeningEnv
   PCUICClosed PCUICReduction PCUICPosition PCUICGeneration.
 
@@ -96,14 +96,21 @@ Proof.
   rewrite permute_lift; try easy.
 Qed.
 
-Lemma lift_iota_red n k pars c args brs :
-  #|skipn pars args| = #|bcontext (nth c brs dummy_branch)| ->
-  lift n k (iota_red pars c args brs) =
-  iota_red pars c (List.map (lift n k) args) 
-    (List.map (fun br => map_branch (lift n (#|br.(bcontext)| + k)) br) brs).
+Lemma lift_iota_red n k pars args bctx br :
+  #|skipn pars args| = context_assumptions bctx ->
+  #|br.(bcontext)| = #|bctx| ->
+  lift n k (iota_red pars args bctx br) =
+  iota_red pars (List.map (lift n k) args) (lift_context n k bctx)
+    (map_branch (lift n (#|bctx| + k)) br).
 Proof.
   unfold iota_red.
-  rewrite distr_lift_subst map_skipn. f_equal.
+  rewrite distr_lift_subst map_skipn.
+  intros. f_equal.
+  
+  rewrite /expand_lets /expand_lets_k.
+  rewrite distr_lift_subst. len.
+  rewrite H. rewrite Nat.add_comm.
+  rewrite [lift (context_assumptions (lift_context _ _ _)) _ _]simpl_lift. rewrite H.
   rewrite nth_map; simpl; auto.
   now move=> ->.
 Qed.

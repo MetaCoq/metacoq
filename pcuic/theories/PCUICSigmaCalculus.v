@@ -1,9 +1,9 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Morphisms.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-    PCUICLiftSubst PCUICUnivSubst
-     PCUICTyping PCUICClosed PCUICEquality.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
+  PCUICLiftSubst PCUICUnivSubst
+  PCUICTyping PCUICClosed PCUICEquality.
 
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
@@ -16,9 +16,6 @@ Open Scope sigma_scope.
 Set Keyed Unification.
 
 Set Default Goal Selector "!".
-
-(* TODO Maybe remove later? *)
-Require PCUICWeakening.
 
 Hint Rewrite @lift_rename Nat.add_0_r : sigma.
 
@@ -65,12 +62,14 @@ Proof.
   - simpl. f_equal. induction X.
     + reflexivity.
     + simpl. f_equal ; easy.
-  - simpl. rewrite IHt1 IHt2. f_equal.
-    induction X.
-    + reflexivity.
-    + simpl. f_equal. 2: easy.
-      destruct x. unfold on_snd. simpl in *.
-      easy.
+  - simpl. rewrite IHt. f_equal.
+    * rewrite !map_predicate_map_predicate.
+      solve_all.
+    * induction X0.
+      + reflexivity.
+      + simpl. f_equal. 2: easy.
+        destruct x. unfold map_branch. simpl in *.
+        easy.
   - simpl. f_equal.
     rewrite map_length.
     generalize #|m|. intro k.
@@ -364,10 +363,12 @@ Proof.
   - move/andb_and: clt => [] /andb_and[] ?. intros. f_equal; eauto.
     now eapply H1, up_ext_closed.
   - move/andb_and: clt => [] ? ?. f_equal; eauto.
-  - move/andb_and: clt => [] /andb_and[] ? ? b1.
-    red in X. solve_all. f_equal; eauto.
-    eapply All_map_eq. eapply (All_impl b1). pcuicfo.
-    unfold on_snd. f_equal. now eapply a0.
+  - move/andb_and: clt => [] /andb_and[] /andP /= [ppars pret] cc b1.
+    red in X. f_equal; eauto.
+    * unfold test_predicate in *. simpl in *. destruct X. solve_all.
+      eapply e; eauto. intros. eapply up_ext_closed; eauto.
+    * eapply All_map_eq. red in X0. solve_all.
+      unfold map_branch. f_equal. now eapply a0, up_ext_closed.
   - f_equal; eauto. red in X. solve_all.
     move/andb_and: b => []. eauto. intros.
     apply map_def_eq_spec; eauto.
@@ -526,12 +527,16 @@ Proof.
     + inversion a. subst. simpl. constructor.
       all: eauto.
   - simpl. constructor. all: eauto.
-    induction X in a, brs' |- *.
-    + inversion a. constructor.
-    + inversion a. subst. simpl.
-      constructor.
-      * unfold on_snd. intuition eauto.
-      * eauto.
+    * destruct X; destruct e as [? [? [ectx ?]]].
+      rewrite (All2_length ectx). red.
+      intuition auto; simpl; solve_all.
+    * induction X0 in a, brs' |- *.
+      + inversion a. constructor.
+      + inversion a. subst. simpl.
+        destruct X1 as [a0 e0]. rewrite (All2_length a0).
+        constructor.
+        ** unfold map_branch; simpl; intuition eauto.
+        ** eauto.
   - simpl. constructor.
     apply All2_length in a as e. rewrite <- e.
     generalize #|m|. intro k.
@@ -571,134 +576,7 @@ Definition urenaming Γ Δ f :=
 Definition renaming Σ Γ Δ f :=
   wf_local Σ Γ × urenaming Γ Δ f.
 
-(* TODO MOVE *)
-Lemma rename_iota_red :
-  forall f pars c args brs,
-    rename f (iota_red pars c args brs) =
-    iota_red pars c (map (rename f) args) (map (on_snd (rename f)) brs).
-Proof.
-  intros f pars c args brs.
-  unfold iota_red. rewrite rename_mkApps.
-  rewrite map_skipn. f_equal.
-  change (rename f (nth c brs (0, tDummy)).2)
-    with (on_snd (rename f) (nth c brs (0, tDummy))).2. f_equal.
-  rewrite <- map_nth with (f := on_snd (rename f)).
-  reflexivity.
-Qed.
 
-(* TODO MOVE *)
-Lemma isLambda_rename :
-  forall t f,
-    isLambda t ->
-    isLambda (rename f t).
-Proof.
-  intros t f h.
-  destruct t.
-  all: try discriminate.
-  simpl. reflexivity.
-Qed.
-
-(* TODO MOVE *)
-Lemma rename_unfold_fix :
-  forall mfix idx narg fn f,
-    unfold_fix mfix idx = Some (narg, fn) ->
-    unfold_fix (map (map_def (rename f) (rename (shiftn #|mfix| f))) mfix) idx
-    = Some (narg, rename f fn).
-Proof.
-  intros mfix idx narg fn f h.
-  unfold unfold_fix in *. rewrite nth_error_map.
-  case_eq (nth_error mfix idx).
-  2: intro neq ; rewrite neq in h ; discriminate.
-  intros d e. rewrite e in h.
-  inversion h. clear h.
-  simpl.
-  f_equal. f_equal.
-  rewrite rename_subst0. rewrite fix_subst_length.
-  f_equal.
-  unfold fix_subst. rewrite map_length.
-  generalize #|mfix| at 2 3. intro n.
-  induction n.
-  - reflexivity.
-  - simpl.
-    f_equal. rewrite IHn. reflexivity.
-Qed.
-
-(* TODO MOVE *)
-Lemma decompose_app_rename :
-  forall f t u l,
-    decompose_app t = (u, l) ->
-    decompose_app (rename f t) = (rename f u, map (rename f) l).
-Proof.
-  assert (aux : forall f t u l acc,
-    decompose_app_rec t acc = (u, l) ->
-    decompose_app_rec (rename f t) (map (rename f) acc) =
-    (rename f u, map (rename f) l)
-  ).
-  { intros f t u l acc h.
-    induction t in acc, h |- *.
-    all: try solve [ simpl in * ; inversion h ; reflexivity ].
-    simpl. simpl in h. specialize IHt1 with (1 := h). assumption.
-  }
-  intros f t u l.
-  unfold decompose_app.
-  eapply aux.
-Qed.
-
-(* TODO MOVE *)
-Lemma isConstruct_app_rename :
-  forall t f,
-    isConstruct_app t ->
-    isConstruct_app (rename f t).
-Proof.
-  intros t f h.
-  unfold isConstruct_app in *.
-  case_eq (decompose_app t). intros u l e.
-  apply decompose_app_rename with (f := f) in e as e'.
-  rewrite e'. rewrite e in h. simpl in h.
-  simpl.
-  destruct u. all: try discriminate.
-  simpl. reflexivity.
-Qed.
-
-(* TODO MOVE *)
-Lemma is_constructor_rename :
-  forall n l f,
-    is_constructor n l ->
-    is_constructor n (map (rename f) l).
-Proof.
-  intros n l f h.
-  unfold is_constructor in *.
-  rewrite nth_error_map.
-  destruct nth_error.
-  - simpl. apply isConstruct_app_rename. assumption.
-  - simpl. discriminate.
-Qed.
-
-(* TODO MOVE *)
-Lemma rename_unfold_cofix :
-  forall mfix idx narg fn f,
-    unfold_cofix mfix idx = Some (narg, fn) ->
-    unfold_cofix (map (map_def (rename f) (rename (shiftn #|mfix| f))) mfix) idx
-    = Some (narg, rename f fn).
-Proof.
-  intros mfix idx narg fn f h.
-  unfold unfold_cofix in *. rewrite nth_error_map.
-  case_eq (nth_error mfix idx).
-  2: intro neq ; rewrite neq in h ; discriminate.
-  intros d e. rewrite e in h.
-  inversion h.
-  simpl. f_equal. f_equal.
-  rewrite rename_subst0. rewrite cofix_subst_length.
-  f_equal.
-  unfold cofix_subst. rewrite map_length.
-  generalize #|mfix| at 2 3. intro n.
-  induction n.
-  - reflexivity.
-  - simpl.
-    f_equal. rewrite IHn. reflexivity.
-Qed.
-
-(* TODO MOVE *)
 Lemma rename_closedn :
   forall f n t,
     closedn n t ->
@@ -714,6 +592,20 @@ Proof.
   - rewrite nth_error_idsn_Some. all: auto.
   - rewrite nth_error_idsn_None. 1: lia.
     simpl. reflexivity.
+Qed.
+
+Lemma rename_closedn_ctx f n ts : 
+  forallb (closedn n) ts -> map (rename (shiftn n f)) ts = ts.
+Proof.
+  solve_all. now apply rename_closedn.
+Qed.
+
+Lemma rename_closed_extended_subst f Γ : 
+  closed_ctx Γ ->
+  map (rename (shiftn (context_assumptions Γ) f)) (extended_subst Γ 0) = extended_subst Γ 0. 
+Proof.
+  intros cl. apply rename_closedn_ctx.
+  now apply (closedn_extended_subst_gen Γ 0 0).
 Qed.
 
 (* TODO MOVE *)
@@ -912,6 +804,390 @@ Proof.
     + eapply ih. assumption.
 Qed.
 
+Lemma rename_extended_subst f Γ k : 
+  map (rename (shiftn (context_assumptions Γ) f)) (extended_subst Γ k) =
+  extended_subst (rename_context (shiftn (context_assumptions Γ) f) Γ) k.
+Proof.
+  revert f k.
+  induction Γ as [|[na [] ?] Γ]; intros f k; cbn -[rename_context]; auto;
+    rewrite ?rename_context_snoc /=; len; rewrite ?IHΓ.
+  - f_equal. admit.
+  - 
+Admitted.
+
+Definition rename_branch f br := 
+  map_branch (rename (shiftn #|br.(bcontext)| f)) br.
+  
+  (* TODO MOVE *)
+Lemma rename_iota_red :
+  forall f pars args bctx br,
+    rename f (iota_red pars args bctx br) =
+    iota_red pars (map (rename f) args)
+       (rename_context (shiftn pars f) bctx)
+       (rename_branch f br).
+Proof.
+  intros f pars args bctx br.
+  unfold iota_red.
+  rewrite rename_subst0 map_skipn. f_equal.
+  rewrite /expand_lets /expand_lets_k.
+  rewrite rename_subst0. len.
+Admitted.
+  
+(* TODO MOVE *)
+Lemma isLambda_rename :
+  forall t f,
+    isLambda t ->
+    isLambda (rename f t).
+Proof.
+  intros t f h.
+  destruct t.
+  all: try discriminate.
+  simpl. reflexivity.
+Qed.
+
+(* TODO MOVE *)
+Lemma rename_unfold_fix :
+  forall mfix idx narg fn f,
+    unfold_fix mfix idx = Some (narg, fn) ->
+    unfold_fix (map (map_def (rename f) (rename (shiftn #|mfix| f))) mfix) idx
+    = Some (narg, rename f fn).
+Proof.
+  intros mfix idx narg fn f h.
+  unfold unfold_fix in *. rewrite nth_error_map.
+  case_eq (nth_error mfix idx).
+  2: intro neq ; rewrite neq in h ; discriminate.
+  intros d e. rewrite e in h.
+  inversion h. clear h.
+  simpl.
+  f_equal. f_equal.
+  rewrite rename_subst0. rewrite fix_subst_length.
+  f_equal.
+  unfold fix_subst. rewrite map_length.
+  generalize #|mfix| at 2 3. intro n.
+  induction n.
+  - reflexivity.
+  - simpl.
+    f_equal. rewrite IHn. reflexivity.
+Qed.
+
+(* TODO MOVE *)
+Lemma decompose_app_rename :
+  forall f t u l,
+    decompose_app t = (u, l) ->
+    decompose_app (rename f t) = (rename f u, map (rename f) l).
+Proof.
+  assert (aux : forall f t u l acc,
+    decompose_app_rec t acc = (u, l) ->
+    decompose_app_rec (rename f t) (map (rename f) acc) =
+    (rename f u, map (rename f) l)
+  ).
+  { intros f t u l acc h.
+    induction t in acc, h |- *.
+    all: try solve [ simpl in * ; inversion h ; reflexivity ].
+    simpl. simpl in h. specialize IHt1 with (1 := h). assumption.
+  }
+  intros f t u l.
+  unfold decompose_app.
+  eapply aux.
+Qed.
+
+(* TODO MOVE *)
+Lemma isConstruct_app_rename :
+  forall t f,
+    isConstruct_app t ->
+    isConstruct_app (rename f t).
+Proof.
+  intros t f h.
+  unfold isConstruct_app in *.
+  case_eq (decompose_app t). intros u l e.
+  apply decompose_app_rename with (f := f) in e as e'.
+  rewrite e'. rewrite e in h. simpl in h.
+  simpl.
+  destruct u. all: try discriminate.
+  simpl. reflexivity.
+Qed.
+
+(* TODO MOVE *)
+Lemma is_constructor_rename :
+  forall n l f,
+    is_constructor n l ->
+    is_constructor n (map (rename f) l).
+Proof.
+  intros n l f h.
+  unfold is_constructor in *.
+  rewrite nth_error_map.
+  destruct nth_error.
+  - simpl. apply isConstruct_app_rename. assumption.
+  - simpl. discriminate.
+Qed.
+
+(* TODO MOVE *)
+Lemma rename_unfold_cofix :
+  forall mfix idx narg fn f,
+    unfold_cofix mfix idx = Some (narg, fn) ->
+    unfold_cofix (map (map_def (rename f) (rename (shiftn #|mfix| f))) mfix) idx
+    = Some (narg, rename f fn).
+Proof.
+  intros mfix idx narg fn f h.
+  unfold unfold_cofix in *. rewrite nth_error_map.
+  case_eq (nth_error mfix idx).
+  2: intro neq ; rewrite neq in h ; discriminate.
+  intros d e. rewrite e in h.
+  inversion h.
+  simpl. f_equal. f_equal.
+  rewrite rename_subst0. rewrite cofix_subst_length.
+  f_equal.
+  unfold cofix_subst. rewrite map_length.
+  generalize #|mfix| at 2 3. intro n.
+  induction n.
+  - reflexivity.
+  - simpl.
+    f_equal. rewrite IHn. reflexivity.
+Qed.
+
+(* TODO MOVE *)
+Definition rename_predicate f p := 
+  map_predicate id (rename f) (rename (shiftn #|p.(pcontext)| f)) p.
+
+Definition rename_constructor_body mdecl f c := 
+  map_constructor_body mdecl.(ind_npars) #|mdecl.(ind_bodies)|
+   (fun k => rename (shiftn k f)) c.
+  
+Fixpoint map2i_rec {A B C} (f : nat -> A -> B -> C) i (l : list A) (l' : list B) : list C :=
+  match l, l' with
+  | hd :: tl, hd' :: tl' => f i hd hd' :: map2i_rec f (S i) tl tl'
+  | _, _ => []
+  end.
+Definition map2i {A B C} (f : nat -> A -> B -> C) := map2i_rec f 0.
+
+Lemma mapi_map2 {A B C D} (f : nat -> A -> B) (g : C -> D -> A) l l' : 
+  mapi f (map2 g l l') = map2i (fun i x y => f i (g x y)) l l'.
+Proof.
+  unfold mapi, map2i. generalize 0.
+  induction l in l' |- *; intros; destruct l'; simpl; auto. f_equal.
+  apply IHl.
+Qed.
+
+Lemma map2_mapi {A A' B B' C} (f : nat -> A -> B) (f' : nat-> A' -> B') (g : B -> B' -> C) l l' : 
+  map2 g (mapi f l) (mapi f' l') = map2i (fun i x y => g (f i x) (f' i y)) l l'.
+Proof.
+  unfold mapi, map2i. generalize 0.
+  induction l in l' |- *; intros n; destruct l'; simpl; auto. f_equal.
+  apply IHl.
+Qed.
+
+Lemma map2i_ext {A B C} (f g : nat -> A -> B -> C) l l' :
+  (forall i x y, f i x y = g i x y) -> map2i f l l' = map2i g l l'.
+Proof.
+  intros Hfg.
+  unfold map2i.
+  generalize 0.
+  induction l in l' |- *; destruct l'; simpl; auto.
+  intros. f_equal; eauto.
+Qed.
+
+Lemma map2_set_binder_name_fold bctx f Γ :
+  #|bctx| = #|Γ| ->
+  map2 set_binder_name bctx (fold_context f Γ) = 
+  fold_context f (map2 set_binder_name bctx Γ).
+Proof.
+  intros hl.
+  rewrite !fold_context_alt mapi_map2 -{1}(map_id bctx).
+  rewrite -mapi_cst_map map2_mapi.
+  rewrite map2_length; len => //.
+  eapply map2i_ext => i x y.
+  rewrite hl.
+  destruct y; reflexivity.
+Qed.
+Hint Rewrite idsn_length : len.
+
+Lemma rename_subst :
+  forall f s n t,
+    rename (shiftn n f) (subst s n t) =
+    subst (map (rename f) s) n (rename (shiftn n (shiftn #|s| f)) t).
+Proof.
+  intros f s n t.
+  autorewrite with sigma.
+  eapply inst_ext. intro i. unfold Upn.
+  unfold ren, subst_consn, shiftn, subst_compose. simpl.
+  rewrite nth_error_map.
+  destruct (Nat.ltb_spec i n).
+  - rewrite idsn_lt //. simpl.
+    destruct (Nat.ltb_spec i n) => //. lia.
+  - rewrite nth_error_idsn_None //.
+    destruct (Nat.ltb_spec (i - n) #|s|).
+    * rewrite nth_error_idsn_None //; try lia.
+      len.
+      replace (n + (i - n) - n) with (i - n) by lia.
+      destruct nth_error eqn:hnth => /=.
+      ** sigma. apply inst_ext.
+        intros k. cbn.
+        elim: (Nat.ltb_spec (n + k) n); try lia.
+        intros. eapply nth_error_Some_length in hnth.
+        unfold shiftk. lia_f_equal.
+      ** eapply nth_error_None in hnth. lia.
+    * len.
+      replace (n + (#|s| + f (i - n - #|s|)) - n) with
+        (#|s| + f (i - n - #|s|)) by lia.
+      rewrite nth_error_idsn_None; try lia.
+      destruct nth_error eqn:hnth.
+      ** eapply nth_error_Some_length in hnth. lia.
+      ** simpl.
+        eapply nth_error_None in hnth.
+        destruct nth_error eqn:hnth'.
+        + eapply nth_error_Some_length in hnth'. lia.
+        + simpl. unfold shiftk.
+          case: Nat.ltb_spec; try lia.
+          intros. lia_f_equal.
+          assert (n + (i - n - #|s|) - n = (i - n - #|s|)) by lia.
+          rewrite H2. lia.
+Qed.
+
+Lemma nth_error_idsn_eq_Some n k i : nth_error (idsn n) k = Some i -> i = tRel k.
+Proof.
+  intros hnth.
+  move: (nth_error_Some_length hnth).
+  len. move/nth_error_idsn_Some.
+  now rewrite hnth => [= ->].
+Qed.
+(*
+Lemma rename_subst_k :
+  forall f s n k t,
+    rename (shiftn n f) (subst s (n + k) t) =
+    subst (map (rename f) s) (n + k) (rename (shiftn n (shiftn #|s| f)) t).
+Proof.
+  intros f s n k t.
+  autorewrite with sigma.
+  eapply inst_ext. intro i. unfold Upn.
+  unfold ren, subst_consn, shiftn, subst_compose. simpl.
+  rewrite nth_error_map. len.
+  destruct (Nat.ltb_spec i n).
+  - rewrite idsn_lt //. simpl.
+    destruct (Nat.ltb_spec i n) => //. lia.
+  - rewrite nth_error_idsn_None //.
+    destruct (Nat.ltb_spec (i - n) #|s|).
+    * replace (n + (i - n) - n) with (i - n) by lia.
+      replace (n + (i - n)) with i by lia.
+      rewrite (nth_error_idsn_None n i) //; try lia.
+      destruct nth_error eqn:hnth => /=.
+      ** sigma.
+        eapply nth_error_idsn_eq_Some in hnth. subst t0.
+        simpl. unfold subst_consn, subst_compose; simpl.
+        replace (n + (i - n)) with i by lia.
+        elim: (Nat.ltb_spec i n); try lia.
+        intros.
+        unfold shiftk. lia_f_equal.
+      ** eapply nth_error_None in hnth. lia.
+    * len.
+      replace (n + (#|s| + f (i - n - #|s|)) - n) with
+        (#|s| + f (i - n - #|s|)) by lia.
+      rewrite nth_error_idsn_None; try lia.
+      destruct nth_error eqn:hnth.
+      ** eapply nth_error_Some_length in hnth. lia.
+      ** simpl.
+        eapply nth_error_None in hnth.
+        destruct nth_error eqn:hnth'.
+        + eapply nth_error_Some_length in hnth'. lia.
+        + simpl. unfold shiftk.
+          case: Nat.ltb_spec; try lia.
+          intros. lia_f_equal.
+          assert (n + (i - n - #|s|) - n = (i - n - #|s|)) by lia.
+          rewrite H2. lia.
+Qed.
+*)
+Lemma rename_context_subst f s Γ : 
+  rename_context f (subst_context s 0 Γ) =
+  subst_context (map (rename f) s) 0 (rename_context (shiftn #|s| f) Γ).
+Proof.
+  rewrite !rename_context_alt !subst_context_alt.
+  rewrite !mapi_mapi. apply mapi_ext => i x.
+  rewrite /subst_decl !compose_map_decl.
+  apply map_decl_ext => t.
+  len.
+  generalize (Nat.pred #|Γ| - i).
+  intros.
+  now rewrite rename_subst.
+Qed.
+
+Lemma rename_context_subst_k f s k Γ : 
+  rename_context f (subst_context s k Γ) =
+  subst_context (map (rename f) s) k (rename_context (shiftn #|s| f) Γ).
+Proof.
+  rewrite !rename_context_alt !subst_context_alt.
+  rewrite !mapi_mapi. apply mapi_ext => i x.
+  rewrite /subst_decl !compose_map_decl.
+  apply map_decl_ext => t.
+  len.
+  generalize (Nat.pred #|Γ| - i).
+  intros.
+Abort.
+
+Lemma rename_context_lift f n k Γ : 
+  rename_context (shiftn k f) (lift_context n k Γ) =
+  lift_context n k (rename_context (shiftn k f) Γ).
+Proof.
+  rewrite !rename_context_alt !lift_context_alt.
+  rewrite !mapi_mapi. apply mapi_ext => i x.
+  rewrite /lift_decl !compose_map_decl.
+  apply map_decl_ext => t; len.
+  generalize (Nat.pred #|Γ| - i).
+  intros.
+Admitted.
+
+Lemma rename_inds f ind pu bodies : map (rename f) (inds ind pu bodies) = inds ind pu bodies.
+Proof.
+  unfold inds.
+  induction #|bodies|; simpl; auto. f_equal.
+  apply IHn.
+Qed.
+
+Lemma context_assumptions_subst_instance_context u Γ : 
+  context_assumptions (subst_instance_context u Γ) = 
+  context_assumptions Γ. 
+Proof. apply context_assumptions_map. Qed.
+
+Lemma context_assumptions_subst_context s k Γ : 
+  context_assumptions (subst_context s k Γ) = 
+  context_assumptions Γ. 
+Proof. apply context_assumptions_fold. Qed.
+
+Lemma context_assumptions_lift_context n k Γ : 
+  context_assumptions (lift_context n k Γ) = 
+  context_assumptions Γ. 
+Proof. apply context_assumptions_fold. Qed.
+
+Lemma rename_case_branch_context ind mdecl f p bctx cdecl :
+  #|bctx| = #|cstr_args cdecl| ->
+  #|pparams p| = context_assumptions (ind_params mdecl) ->
+  rename_context f (case_branch_context ind mdecl p bctx cdecl) = 
+  case_branch_context ind mdecl (rename_predicate f p) bctx 
+    (rename_constructor_body mdecl f cdecl).
+Proof.
+  unfold case_branch_context, case_branch_context_gen.
+  cbn -[fold_context].
+  intros hlen hlen'.
+  rewrite map2_set_binder_name_fold //.
+  rewrite rename_context_subst. f_equal.
+  unfold id.
+  rewrite /expand_lets_ctx /expand_lets_k_ctx.
+  simpl. len.
+  rewrite rename_context_subst; len.
+  rewrite hlen'.
+  rewrite -{1}(context_assumptions_subst_instance_context (puinst p)).
+  rewrite rename_closed_extended_subst. 1:admit.
+  f_equal.
+  rewrite (shiftn_compose _ _ _ _).
+
+
+(* 
+  rewrite rename_inds. f_equal.
+  rewrite rename_context_subst.
+  len. *)
+
+Admitted.
+
+
+
 Lemma red1_rename :
   forall Σ Γ Δ u v f,
     wf Σ ->
@@ -942,7 +1218,12 @@ Proof.
     rewrite hr'. constructor.
     rewrite e'. simpl. rewrite hbo'. reflexivity.
   - simpl. rewrite rename_mkApps. simpl.
-    rewrite rename_iota_red. constructor.
+    rewrite rename_iota_red.
+    subst brctx.
+    
+
+    subst brctx.
+    constructor.
   - rewrite 2!rename_mkApps. simpl.
     econstructor.
     + eapply rename_unfold_fix. eassumption.

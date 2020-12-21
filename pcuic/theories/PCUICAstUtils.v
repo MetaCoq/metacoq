@@ -180,9 +180,9 @@ Proof.
               mind_entry_consnames := _;
               mind_entry_lc := _;
             |}.
-    refine (List.map (fun x => fst (fst x)) ind_ctors).
+    refine (List.map (fun x => cstr_name x) ind_ctors).
     refine (List.map (fun x => remove_arity decl.(ind_npars)
-                                                (snd (fst x))) ind_ctors).
+                                                (cstr_type x)) ind_ctors).
 Defined.
 
 Fixpoint decompose_prod_assum (Γ : context) (t : term) : context * term :=

@@ -172,21 +172,25 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
 | letin_red_ty na b t b' r : red1 Σ Γ t r -> red1 Σ Γ (tLetIn na b t b') (tLetIn na b r b')
 | letin_red_body na b t b' r : red1 Σ (Γ ,, vdef na b t) b' r -> red1 Σ Γ (tLetIn na b t b') (tLetIn na b t r)
 
-| case_red_param ind p params' c brs :
+| case_red_param ci p params' c brs :
     OnOne2 (red1 Σ Γ) p.(pparams) params' ->
-    red1 Σ Γ (tCase ind p c brs)
-             (tCase ind (set_pparams p params') c brs)
+    red1 Σ Γ (tCase ci p c brs)
+             (tCase ci (set_pparams p params') c brs)
 
-| case_red_return ind p preturn' c brs pctx (cctx : case_predicate_context Σ ind p pctx) :
-    red1 Σ (Γ ,,, pctx) p.(preturn) preturn' ->
-    red1 Σ Γ (tCase ind p c brs)
-             (tCase ind (set_preturn p preturn') c brs)
+| case_red_return ci mdecl idecl p preturn' c brs 
+  (isdecl : declared_inductive Σ mdecl ci.(ci_ind) idecl) :
+  let pctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
+  red1 Σ (Γ ,,, pctx) p.(preturn) preturn' ->
+  red1 Σ Γ (tCase ci p c brs)
+          (tCase ci (set_preturn p preturn') c brs)
     
-| case_red_discr ind p c c' brs :
+| case_red_discr ci p c c' brs :
   red1 Σ Γ c c' -> 
-  red1 Σ Γ (tCase ind p c brs) (tCase ind p c' brs)
+  red1 Σ Γ (tCase ci p c brs) (tCase ci p c' brs)
 
-| case_red_brs ci p c brs brs' brsctxs (cctx : case_branches_contexts Σ ci p brsctxs) :
+| case_red_brs ci mdecl idecl p c brs brs' 
+    (isdecl : declared_inductive Σ mdecl ci.(ci_ind) idecl) :
+    let brsctxs := case_branches_contexts idecl p in
     OnOne2All (fun brctx br br' => 
       on_Trel_eq (red1 Σ (Γ ,,, brctx)) bbody bcontext br br') brsctxs brs brs' ->
     red1 Σ Γ (tCase ci p c brs) (tCase ci p c brs')
@@ -271,26 +275,29 @@ Lemma red1_ind_all :
        (forall (Γ : context) (na : aname) (b t b' r : term),
         red1 Σ (Γ,, vdef na b t) b' r -> P (Γ,, vdef na b t) b' r -> P Γ (tLetIn na b t b') (tLetIn na b t r)) ->
 
-       (forall (Γ : context) (ind : case_info) p params' c brs,
+       (forall (Γ : context) (ci : case_info) p params' c brs,
           OnOne2 (Trel_conj (red1 Σ Γ) (P Γ)) p.(pparams) params' ->
-           P Γ (tCase ind p c brs)
-               (tCase ind (set_pparams p params') c brs)) ->
-
-       (forall (Γ : context) (ci : case_info) p preturn' c brs pctx,
-            case_predicate_context Σ ci p pctx ->
-           red1 Σ (Γ ,,, pctx) p.(preturn) preturn' ->
-           P (Γ ,,, pctx) p.(preturn) preturn' ->
            P Γ (tCase ci p c brs)
-               (tCase ci (set_preturn p preturn') c brs)) ->
+               (tCase ci (set_pparams p params') c brs)) ->
+
+       (forall (Γ : context) (ci : case_info) mdecl idecl p preturn' c brs
+          (isdecl : declared_inductive Σ mdecl ci.(ci_ind) idecl),
+          let pctx := case_predicate_context ci.(ci_ind) mdecl idecl p in       
+          red1 Σ (Γ ,,, pctx) p.(preturn) preturn' ->
+          P (Γ ,,, pctx) p.(preturn) preturn' ->
+          P Γ (tCase ci p c brs)
+              (tCase ci (set_preturn p preturn') c brs)) ->
        
        (forall (Γ : context) (ind : case_info) (p : predicate term) (c c' : term) (brs : list (branch term)),
         red1 Σ Γ c c' -> P Γ c c' -> P Γ (tCase ind p c brs) (tCase ind p c' brs)) ->
 
-       (forall (Γ : context) ind p c brs brs' brsctxs (cctx : case_branches_contexts Σ ind p brsctxs),
+       (forall (Γ : context) ci mdecl idecl p c brs brs' 
+          (isdecl : declared_inductive Σ mdecl ci.(ci_ind) idecl),
+          let brsctxs := case_branches_contexts idecl p in
           OnOne2All (fun brctx br br' => 
             on_Trel_eq (Trel_conj (red1 Σ (Γ ,,, brctx)) (P (Γ ,,, brctx))) bbody bcontext br br') 
             brsctxs brs brs' ->
-          P Γ (tCase ind p c brs) (tCase ind p c brs')) ->
+          P Γ (tCase ci p c brs) (tCase ci p c brs')) ->
 
        (forall (Γ : context) (p : projection) (c c' : term), red1 Σ Γ c c' -> P Γ c c' ->
                                                              P Γ (tProj p c) (tProj p c')) ->
@@ -354,8 +361,9 @@ Proof.
     + constructor. split; auto.
     + constructor. auto.
       
-  - clear cctx.
-    revert brsctxs brs brs' o.
+  - subst brsctxs.
+    revert brs brs' o.
+    generalize (case_branches_contexts idecl p).
     fix auxl 4.
     intros i l l' Hl. destruct Hl.
     + constructor; intros; intuition auto.
@@ -614,18 +622,16 @@ Section ReductionCongruence.
     | tCtxCase_pars ci pars puinst pctx pret c brs =>
         wf_list_context pars;
     | tCtxCase_pred ci pars puinst names pctx p c brs => 
-      ∑ mdecl idecl, 
+      (∑ mdecl idecl, 
         declared_inductive Σ mdecl ci.(ci_ind) idecl *
-        ind_case_predicate_context ci.(ci_ind) mdecl idecl pars puinst names pctx *
+        (pctx = case_predicate_context_gen ci.(ci_ind) mdecl idecl pars puinst names)) *
         wf_context p;
     | tCtxCase_discr ci p c brs =>
         wf_context c;
     | tCtxCase_branch ci p c brs => 
-      ∑ mdecl idecl pctx brsctx,
+      (∑ mdecl idecl,
         declared_inductive Σ mdecl ci.(ci_ind) idecl *
-        ind_case_predicate_context ci.(ci_ind) mdecl idecl p.(pparams) p.(puinst) p.(pcontext) pctx *
-        ind_case_branches_contexts ci.(ci_ind) mdecl idecl p brsctx *
-        wf_branch_context brsctx brs;
+        wf_branch_context (case_branches_contexts idecl p) brs);
     | tCtxProj p c => (wf_context c) }
     (* | tCtxFix mfix n => tFix (fill_mfix_context mfix) n; *)
     (* | tCtxCoFix mfix n => tCoFix (fill_mfix_context mfix) n } *)
@@ -688,17 +694,12 @@ Section ReductionCongruence.
     revert w Γ y r.
     eapply (fill_context_elim x P P' P''); subst P P' P''; cbv beta;
       intros **; simp fill_context; cbn in *; auto; try solve [constructor; eauto].
-    - destruct X0 as [mdecl [idecl [[decli cp] wf]]].
-      specialize (X wf (Γ ,,, c1) _ X1).
+    - destruct X0 as [[mdecl [idecl [decli ->]]] wf].
+      specialize (X wf (Γ ,,, _) _ X1).
       econstructor; eauto.
-      econstructor; eauto.
-    (* - destruct X0 as [mdecl [idecl [decli wf]]].
-      specialize (X wf Γ _ X1).
-      econstructor; eauto. *)
     - simp wf_context in X0.
-      destruct X0 as [mdecl [idecl [pctx [brsctx [[[decli cp] cbs] wf]]]]].
+      destruct X0 as [mdecl [idecl [decli wf]]].
       specialize (X _ wf _ _ X1).
-      econstructor; eauto.
       econstructor; eauto.
     - destruct brctx; simpl in X0 => //.
       destruct X0 as [[eql <-] wf].
@@ -1061,18 +1062,19 @@ Section ReductionCongruence.
           eapply red_one_param; eassumption.
     Qed.
 
+    Coercion ci_ind : case_info >-> inductive.
+
     Lemma red_case_p :
-      forall ci pctx p c brs pret',
-        case_predicate_context Σ ci p pctx -> 
-        red Σ (Γ ,,, pctx) p.(preturn) pret' ->
+      forall ci mdecl idecl p c brs pret',
+        declared_inductive Σ mdecl ci.(ci_ind) idecl ->
+        red Σ (Γ ,,, case_predicate_context ci mdecl idecl p) p.(preturn) pret' ->
         red Σ Γ (tCase ci p c brs) 
           (tCase ci (set_preturn p pret') c brs).
     Proof.
-      intros ci pctx p c brs p' cpc h.
+      intros ci mdecl idecl p c brs p' decli h.
       unshelve epose proof 
-        (red_ctx (tCtxCase_pred ci p.(pparams) p.(puinst) p.(pcontext) pctx tCtxHole c brs) _ h).
-      { simpl.
-        destruct cpc. exists mdecl, idecl; intuition auto. }
+        (red_ctx (tCtxCase_pred ci p.(pparams) p.(puinst) p.(pcontext) _ tCtxHole c brs) _ h).
+      { simpl. split; auto. exists mdecl, idecl; intuition auto. }
       simp fill_context in X.
       destruct p; auto.
     Qed.
@@ -1088,12 +1090,13 @@ Section ReductionCongruence.
     Qed.
     
     Lemma red_case_one_brs :
-      forall ci p c brctxs brs brs',
-        case_branches_contexts Σ ci p brctxs ->
-        OnOne2All (fun brctx => on_Trel_eq (red Σ (Γ ,,, brctx)) bbody bcontext) brctxs brs brs' ->
+      forall (ci : case_info) mdecl idecl p c brs brs',
+        declared_inductive Σ mdecl ci idecl ->        
+        OnOne2All (fun brctx => on_Trel_eq (red Σ (Γ ,,, brctx)) bbody bcontext) 
+          (case_branches_contexts idecl p) brs brs' ->
         red Σ Γ (tCase ci p c brs) (tCase ci p c brs').
     Proof.
-      intros ci p c brctxs brs brs' cbc h.
+      intros ci mdecl idecl p c brs brs' isdecl h.
       apply OnOne2All_on_Trel_eq_red_redl in h.
       dependent induction h.
       - apply list_map_swap_eq in H. now subst.
@@ -1146,12 +1149,13 @@ Section ReductionCongruence.
     Qed. *)
 
     Lemma red_case_brs :
-      forall ci p c brctxs brs brs',
-        case_branches_contexts Σ ci p brctxs ->
-        All3 (fun ctx => on_Trel_eq (red Σ (Γ ,,, ctx)) bbody bcontext) brctxs brs brs' ->
+      forall ci mdecl idecl p c brs brs',
+        declared_inductive Σ mdecl ci.(ci_ind) idecl ->        
+        All3 (fun ctx => on_Trel_eq (red Σ (Γ ,,, ctx)) bbody bcontext)
+          (case_branches_contexts idecl p) brs brs' ->
         red Σ Γ (tCase ci p c brs) (tCase ci p c brs').
     Proof.
-      intros ci p c brctxs brs brs' cbc h.
+      intros ci mdecl idecl p c brs brs' isdecl h.
       apply All3_many_OnOne2All in h.
       induction h; trea.
       eapply red_trans.
@@ -1176,22 +1180,21 @@ Section ReductionCongruence.
           simpl. constructor. auto.
     Qed.
 
-    Lemma red_case {ci p c brs pars' pret' c' brs' pctx brctxs} :
-        case_predicate_context Σ ci p pctx ->
-        red Σ (Γ ,,, pctx) p.(preturn) pret' ->
-        All2 (red Σ Γ) p.(pparams) pars' ->
-        red Σ Γ c c' ->
-        case_branches_contexts Σ ci p brctxs ->
-        All3 (fun Δ => on_Trel_eq (red Σ (Γ ,,, Δ)) bbody bcontext) brctxs brs brs' ->
-        red Σ Γ (tCase ci p c brs) 
-          (tCase ci {| pparams := pars'; puinst := p.(puinst);
-                       pcontext := p.(pcontext); preturn := pret' |} c' brs').
+    Lemma red_case {ci mdecl idecl p c brs pars' pret' c' brs'} :
+      declared_inductive Σ mdecl ci.(ci_ind) idecl ->
+      red Σ (Γ ,,, case_predicate_context ci mdecl idecl p) p.(preturn) pret' ->
+      All2 (red Σ Γ) p.(pparams) pars' ->
+      red Σ Γ c c' ->
+      All3 (fun Δ => on_Trel_eq (red Σ (Γ ,,, Δ)) bbody bcontext) 
+       (case_branches_contexts idecl p) brs brs' ->
+      red Σ Γ (tCase ci p c brs) 
+        (tCase ci {| pparams := pars'; puinst := p.(puinst);
+                     pcontext := p.(pcontext); preturn := pret' |} c' brs').
     Proof.
-      intros cpc h1 h2 h3 cbc h4.
-      destruct cpc.
+      intros decli h1 h2 h3 h4.
       eapply red_trans; [eapply red_case_brs|]; eauto.
       eapply red_trans; [eapply red_case_c|]; eauto.
-      eapply red_trans; [eapply red_case_p|]; eauto. 1:econstructor; eauto.
+      eapply red_trans; [eapply red_case_p|]; eauto.
       eapply red_trans; [eapply red_case_pars|]; eauto.
     Qed.
 
@@ -1783,14 +1786,13 @@ Section Stacks.
       apply IHπ; [assumption|]. econstructor; tea.
       apply OnOne2_app. constructor.
       simpl. intuition eauto.
-    - destruct wfπ as [[mdecl [idecl [decli cpc]]] wf]. cbn.
+    - destruct wfπ as [[mdecl [idecl [decli eq]]] wf]. cbn.
       eapply IHπ; [assumption|]. simpl in h.
-      econstructor.
-      * econstructor; eauto.
-      * cbn. now rewrite app_context_assoc in h.
+      econstructor; eauto. unfold case_predicate_context.
+      rewrite -eq. now rewrite app_context_assoc in h.
     - cbn. destruct wfπ as [[mdecl [idecl decli]] wfπ].
       apply IHπ; [assumption|]. econstructor; tea.
-    - destruct wfπ as [[brsctxs [[cbc enth] elen]] wf].
+    - destruct wfπ as [[mdecl [idecl [[decli enth] elen]]] wf].
       cbn; apply IHπ; [assumption|].
       econstructor; eauto.
       rewrite (nth_error_firstn_skipn enth).

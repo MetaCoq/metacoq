@@ -36,6 +36,118 @@ Proof.
   - now rewrite app_length /= Nat.add_1_r IHl mapi_rec_app /= rev_app_distr /= Nat.add_0_r.
 Qed.
 
+
+
+Ltac len := autorewrite with len; cbn.
+Tactic Notation "len" "in" hyp(cl) := autorewrite with len in cl.
+
+Lemma subst_it_mkProd_or_LetIn n k ctx t :
+  subst n k (it_mkProd_or_LetIn ctx t) =
+  it_mkProd_or_LetIn (subst_context n k ctx) (subst n (length ctx + k) t).
+Proof.
+  induction ctx in n, k, t |- *; simpl; try congruence.
+  pose (subst_context_snoc n k ctx a). unfold snoc in e. rewrite e. clear e.
+  simpl. rewrite -> IHctx.
+  pose (subst_context_snoc n k ctx a). simpl. now destruct a as [na [b|] ty].
+Qed.
+
+Lemma map_subst_instance_constr_to_extended_list_k u ctx k :
+  to_extended_list_k (subst_instance_context u ctx) k
+  = to_extended_list_k ctx k.
+Proof.
+  unfold to_extended_list_k.
+  cut (map (subst_instance_constr u) [] = []); [|reflexivity].
+  unf_term. generalize (@nil term); intros l Hl.
+  induction ctx in k, l, Hl |- *; cbnr.
+  destruct a as [? [] ?]; cbnr; eauto.
+  unf_term. eapply IHctx; cbn; congruence.
+Qed.
+
+Lemma to_extended_list_k_subst n k c k' :
+  to_extended_list_k (subst_context n k c) k' = to_extended_list_k c k'.
+Proof.
+  unfold to_extended_list_k. revert k'.
+  unf_term. generalize (@nil term) at 1 2.
+  induction c in n, k |- *; simpl; intros. 1: reflexivity.
+  rewrite subst_context_snoc. unfold snoc. simpl.
+  destruct a. destruct decl_body.
+  - unfold subst_decl, map_decl. simpl.
+    now rewrite IHc.
+  - simpl. apply IHc.
+Qed.
+Lemma it_mkProd_or_LetIn_inj ctx s ctx' s' :
+  it_mkProd_or_LetIn ctx (tSort s) = it_mkProd_or_LetIn ctx' (tSort s') ->
+  ctx = ctx' /\ s = s'.
+Proof.
+  move/(f_equal (destArity [])).
+  rewrite !destArity_it_mkProd_or_LetIn /=.
+  now rewrite !app_context_nil_l => [= -> ->].
+Qed.
+
+Lemma destArity_spec ctx T :
+  match destArity ctx T with
+  | Some (ctx', s) => it_mkProd_or_LetIn ctx T = it_mkProd_or_LetIn ctx' (tSort s)
+  | None => True
+  end.
+Proof.
+  induction T in ctx |- *; simpl; try easy.
+  - specialize (IHT2 (ctx,, vass na T1)). now destruct destArity.
+  - specialize (IHT3 (ctx,, vdef na T1 T2)). now destruct destArity.
+Qed.
+
+Lemma destArity_spec_Some ctx T ctx' s :
+  destArity ctx T = Some (ctx', s)
+  -> it_mkProd_or_LetIn ctx T = it_mkProd_or_LetIn ctx' (tSort s).
+Proof.
+  pose proof (destArity_spec ctx T) as H.
+  intro e; now rewrite e in H.
+Qed.
+
+
+Definition case_predicate_context_gen ind mdecl idecl params puinst pctx : context :=
+  let indty := mkApps (tInd ind puinst) (map (lift0 #|idecl.(ind_indices)|) params ++ to_extended_list idecl.(ind_indices)) in
+  let inddecl := 
+    {| decl_name := 
+      {| binder_name := nNamed (ind_name idecl); binder_relevance := idecl.(ind_relevance) |};
+       decl_body := None;
+       decl_type := indty |}
+  in
+  let ictx := 
+    subst_context params 0
+      (subst_instance_context puinst (expand_lets_ctx mdecl.(ind_params) idecl.(ind_indices)))
+  in
+  map2 set_binder_name pctx (inddecl :: ictx).
+
+Definition case_predicate_context ind mdecl idecl p : context :=
+  case_predicate_context_gen ind mdecl idecl p.(pparams) p.(puinst) p.(pcontext).
+
+Definition case_branch_context_gen params puinst cdecl : context :=
+  subst_context params 0 (subst_instance_context puinst cdecl.(cstr_args)).
+
+Definition case_branch_context p cdecl : context :=
+  case_branch_context_gen p.(pparams) p.(puinst) cdecl.
+  
+Definition case_branches_contexts_gen idecl params puinst : list context :=
+  map (case_branch_context_gen params puinst) idecl.(ind_ctors).
+
+Definition case_branches_contexts idecl p : list context :=
+  map (case_branch_context_gen p.(pparams) p.(puinst)) idecl.(ind_ctors).
+  
+Definition case_branch_type_gen ind params puinst ptm i cdecl : context * term :=
+  let cstr := tConstruct ind i puinst in
+  let args := to_extended_list cdecl.(cstr_args) in
+  let cstrapp := mkApps cstr (map (lift0 #|cdecl.(cstr_args)|) params ++ args) in
+  let brctx := subst_context params 0 (subst_instance_context puinst cdecl.(cstr_args)) in
+  let ty := mkApps (lift0 #|cdecl.(cstr_args)| ptm) (cdecl.(cstr_indices) ++ [cstrapp]) in
+  (brctx, ty).
+
+Definition case_branches_types_gen ind idecl params puinst ptm : list (context * term) :=
+  mapi (case_branch_type_gen ind params puinst ptm) idecl.(ind_ctors).
+
+Definition case_branches_types ind idecl p ptm : list (context * term) :=
+  mapi (case_branch_type_gen ind p.(pparams) p.(puinst) ptm) idecl.(ind_ctors).
+
+(*
 (** For cases typing *)
 
 Inductive instantiate_params_subst_spec : context -> list term -> list term -> term -> list term -> term -> Prop :=
@@ -123,7 +235,7 @@ Variant case_predicate_context Σ ci p : context -> Type@{cpred} :=
 Variant ind_case_branch_context ind mdecl (cdecl : constructor_body) p : context -> Type@{cpred} :=
 | mk_ind_case_branch_context s ty argctx indices : 
     instantiate_params_subst_spec (List.rev (subst_instance_context p.(puinst) (ind_params mdecl))) p.(pparams) []
-      (subst_instance_constr p.(puinst) (cdecl.1.2)) s ty ->
+      (subst_instance_constr p.(puinst) (cdecl.(cstr_type))) s ty ->
     let sty := subst s 0 ty in
     sty = it_mkProd_or_LetIn argctx (mkApps (tInd ind p.(puinst)) (map (lift0 #|argctx|) p.(pparams) ++ indices)) ->
     ind_case_branch_context ind mdecl cdecl p argctx.
@@ -140,7 +252,7 @@ Variant case_branches_contexts Σ ci p : list context -> Type@{cpred} :=
 Variant ind_case_branch_type ind mdecl (cdecl : constructor_body) i p pctx : context -> term -> Type@{cpred} :=
 | mk_ind_case_branch_type s ty argctx indices : 
   instantiate_params_subst_spec (List.rev (subst_instance_context p.(puinst) (ind_params mdecl))) p.(pparams) []
-    (subst_instance_constr p.(puinst) (cdecl.1.2)) s ty ->
+    (subst_instance_constr p.(puinst) (cdecl.(cstr_type))) s ty ->
   let sty := subst s 0 ty in
   sty = it_mkProd_or_LetIn argctx (mkApps (tInd ind p.(puinst)) (map (lift0 #|argctx|) p.(pparams) ++ indices)) ->
   let cstr := tConstruct ind i p.(puinst) in
@@ -304,44 +416,8 @@ Proof.
   exists ctx'', ty'', s. split; auto.
   now rewrite -> List.rev_length in Hty''.
 Qed.
+*)
 
-Ltac len := autorewrite with len; cbn.
-Tactic Notation "len" "in" hyp(cl) := autorewrite with len in cl.
-
-Lemma subst_it_mkProd_or_LetIn n k ctx t :
-  subst n k (it_mkProd_or_LetIn ctx t) =
-  it_mkProd_or_LetIn (subst_context n k ctx) (subst n (length ctx + k) t).
-Proof.
-  induction ctx in n, k, t |- *; simpl; try congruence.
-  pose (subst_context_snoc n k ctx a). unfold snoc in e. rewrite e. clear e.
-  simpl. rewrite -> IHctx.
-  pose (subst_context_snoc n k ctx a). simpl. now destruct a as [na [b|] ty].
-Qed.
-
-Lemma map_subst_instance_constr_to_extended_list_k u ctx k :
-  to_extended_list_k (subst_instance_context u ctx) k
-  = to_extended_list_k ctx k.
-Proof.
-  unfold to_extended_list_k.
-  cut (map (subst_instance_constr u) [] = []); [|reflexivity].
-  unf_term. generalize (@nil term); intros l Hl.
-  induction ctx in k, l, Hl |- *; cbnr.
-  destruct a as [? [] ?]; cbnr; eauto.
-  unf_term. eapply IHctx; cbn; congruence.
-Qed.
-
-Lemma to_extended_list_k_subst n k c k' :
-  to_extended_list_k (subst_context n k c) k' = to_extended_list_k c k'.
-Proof.
-  unfold to_extended_list_k. revert k'.
-  unf_term. generalize (@nil term) at 1 2.
-  induction c in n, k |- *; simpl; intros. 1: reflexivity.
-  rewrite subst_context_snoc. unfold snoc. simpl.
-  destruct a. destruct decl_body.
-  - unfold subst_decl, map_decl. simpl.
-    now rewrite IHc.
-  - simpl. apply IHc.
-Qed.
 
 (*
 Lemma build_case_predicate_type_spec {cf:checker_flags} Σ ind mdecl idecl pars u pctx :
@@ -378,7 +454,7 @@ Proof.
     rewrite to_extended_list_k_subst map_subst_instance_constr_to_extended_list_k.
     reflexivity.
 Qed.
-*)
+
 
 Lemma instantiate_params_subst_it_mkProd_or_LetIn params pars ty s' ty' : 
   #|pars| = context_assumptions params ->
@@ -415,34 +491,6 @@ Proof.
     * apply IHl. now simpl in cs.
     * destruct pars; noconf cs.
       apply IHl. now simpl in cs. 
-Qed.
-
-Lemma it_mkProd_or_LetIn_inj ctx s ctx' s' :
-  it_mkProd_or_LetIn ctx (tSort s) = it_mkProd_or_LetIn ctx' (tSort s') ->
-  ctx = ctx' /\ s = s'.
-Proof.
-  move/(f_equal (destArity [])).
-  rewrite !destArity_it_mkProd_or_LetIn /=.
-  now rewrite !app_context_nil_l => [= -> ->].
-Qed.
-
-Lemma destArity_spec ctx T :
-  match destArity ctx T with
-  | Some (ctx', s) => it_mkProd_or_LetIn ctx T = it_mkProd_or_LetIn ctx' (tSort s)
-  | None => True
-  end.
-Proof.
-  induction T in ctx |- *; simpl; try easy.
-  - specialize (IHT2 (ctx,, vass na T1)). now destruct destArity.
-  - specialize (IHT3 (ctx,, vdef na T1 T2)). now destruct destArity.
-Qed.
-
-Lemma destArity_spec_Some ctx T ctx' s :
-  destArity ctx T = Some (ctx', s)
-  -> it_mkProd_or_LetIn ctx T = it_mkProd_or_LetIn ctx' (tSort s).
-Proof.
-  pose proof (destArity_spec ctx T) as H.
-  intro e; now rewrite e in H.
 Qed.
 
 Arguments Reflect.eqb : simpl never.
@@ -491,3 +539,4 @@ Arguments case_brsctxs {Σ ci p}.
 Arguments case_pctx_prf {Σ ci p}.
 Arguments case_brsctxs_prf {Σ ci p}.
 
+*)

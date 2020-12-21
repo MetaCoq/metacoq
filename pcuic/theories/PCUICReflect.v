@@ -168,16 +168,37 @@ Proof.
   unfold eqb_constant_body; finish_reflect.
 Defined.
 
+Local Infix "==?" := eqb (at level 20).
+
+Definition eqb_constructor_body (x y : constructor_body) :=
+  x.(cstr_name) ==? y.(cstr_name) &&
+  x.(cstr_args) ==? y.(cstr_args) &&
+  x.(cstr_indices) ==? y.(cstr_indices) &&
+  x.(cstr_type) ==? y.(cstr_type) &&
+  x.(cstr_arity) ==? y.(cstr_arity).
+
+Instance reflect_constructor_body : ReflectEq constructor_body.
+Proof.
+  refine {| eqb := eqb_constructor_body |}.
+  intros [] [].
+  unfold eqb_constructor_body; cbn -[eqb]. finish_reflect.
+Defined.
+  
 Definition eqb_one_inductive_body (x y : one_inductive_body) :=
-  let (n, t, k, c, p, r) := x in
-  let (n', t', k', c', p', r') := y in
-  eqb n n' && eqb t t' && eqb k k' && eqb c c' && eqb p p' && eqb r r'.
+  x.(ind_name) ==? y.(ind_name) &&
+  x.(ind_indices) ==? y.(ind_indices) &&
+  x.(ind_sort) ==? y.(ind_sort) &&
+  x.(ind_type) ==? y.(ind_type) &&
+  x.(ind_kelim) ==? y.(ind_kelim) &&
+  x.(ind_ctors) ==? y.(ind_ctors) &&
+  x.(ind_projs) ==? y.(ind_projs) &&
+  x.(ind_relevance) ==? y.(ind_relevance).
 
 Instance reflect_one_inductive_body : ReflectEq one_inductive_body.
 Proof.
   refine {| eqb := eqb_one_inductive_body |}.
   intros [] [].
-  unfold eqb_one_inductive_body; finish_reflect.
+  unfold eqb_one_inductive_body; cbn -[eqb]; finish_reflect.
 Defined.
 
 Definition eqb_mutual_inductive_body (x y : mutual_inductive_body) :=

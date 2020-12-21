@@ -314,17 +314,17 @@ Proof.
     cbn. intros x [? ?] y [[[? ?] ?] ?]. repeat split; eauto.
 Qed.
 
-Lemma extends_case_predicate_context {cf} Σ Σ' ci p pctx : 
-  case_predicate_context Σ ci p pctx ->
+(* Lemma extends_case_predicate_context {cf} Σ Σ' ci p pctx : 
   extends Σ Σ' -> wf Σ' ->
-  case_predicate_context Σ' ci p pctx.
+  declared_inductive 
+  case_predicate_context Σ ci p = case_predicate_context Σ' ci p.
 Proof.
   intros [] ext.
   econstructor; eauto with extends.
 Qed.
-Hint Resolve extends_case_predicate_context : extends.
+Hint Resolve extends_case_predicate_context : extends. *)
  
-Lemma extends_case_branches_contexts {cf} Σ Σ' ci p brsctx : 
+(* Lemma extends_case_branches_contexts {cf} Σ Σ' ci p brsctx : 
   case_branches_contexts Σ ci p brsctx ->
   extends Σ Σ' -> wf Σ' ->
   case_branches_contexts Σ' ci p brsctx.
@@ -332,7 +332,7 @@ Proof.
   intros [] ext.
   econstructor; eauto with extends.
 Qed.
-Hint Resolve extends_case_branches_contexts : extends.
+Hint Resolve extends_case_branches_contexts : extends. *)
 
 Lemma weakening_env_red1 `{CF:checker_flags} Σ Σ' Γ M N :
   wf Σ' ->
@@ -560,14 +560,14 @@ Proof.
       destruct X as [? ? ? ?]. unshelve econstructor; eauto.
       * unfold on_type in *; eauto.
       * clear on_cindices cstr_eq cstr_args_length.
-        revert on_cargs; generalize (cdecl_sorts y) as l.
-        induction (cstr_args y); destruct l; simpl in *; eauto.
+        revert on_cargs.
+        induction (cstr_args x0) in y |- *; destruct y; simpl in *; eauto.
         ** destruct a as [na [b|] ty]; simpl in *; intuition eauto.
         ** destruct a as [na [b|] ty]; simpl in *; intuition eauto.
       * clear on_ctype on_cargs.
         revert on_cindices.
-        generalize (List.rev (lift_context #|cstr_args y| 0 ind_indices)).
-        generalize (cstr_indices y).
+        generalize (List.rev (lift_context #|cstr_args x0| 0 (ind_indices x))).
+        generalize (cstr_indices x0).
         induction 1; constructor; eauto.
       * simpl.
         intros v indv. specialize (on_ctype_variance v indv).
@@ -677,7 +677,7 @@ Lemma declared_constructor_inv `{checker_flags} {Σ P mdecl idecl ref cdecl}
   let onib := declared_inductive_inv HP wfΣ HΣ (let (x, _) := Hdecl in x) in
   nth_error onib.(ind_cunivs) ref.2 = Some cs
   × on_constructor (lift_typing P) (Σ, ind_universes mdecl) mdecl
-                   (inductive_ind ref.1) idecl onib.(ind_indices) cdecl cs.
+                   (inductive_ind ref.1) idecl idecl.(ind_indices) cdecl cs.
 Proof.
   intros.
   destruct Hdecl as [Hidecl Hcdecl].
@@ -691,28 +691,32 @@ Lemma declared_projection_inv `{checker_flags} {Σ P mdecl idecl ref pdecl} :
   (wfΣ : wf Σ)
   (HΣ : Forall_decls_typing P Σ)
   (Hdecl : declared_projection Σ mdecl idecl ref pdecl),
-  let oib := declared_inductive_inv HP wfΣ HΣ (let (x, _) := Hdecl in x) in
-  match oib.(ind_cunivs) return Type with
-  | [cs] => 
-    sorts_local_ctx (lift_typing P) (Σ, ind_universes mdecl) (arities_context (ind_bodies mdecl) ,,, ind_params mdecl) (cstr_args cs)
-      (cdecl_sorts cs) *
-    on_projections mdecl (inductive_mind ref.1.1) (inductive_ind ref.1.1) idecl (oib.(ind_indices)) cs *
-    ((snd ref) < context_assumptions cs.(cstr_args)) *
-    on_projection mdecl (inductive_mind ref.1.1) (inductive_ind ref.1.1) cs (snd ref) pdecl
+  match idecl.(ind_ctors) return Type with
+  | [c] => 
+    let oib := declared_inductive_inv HP wfΣ HΣ (let (x, _) := Hdecl in x) in
+    (match oib.(ind_cunivs) with
+     | [cs] => sorts_local_ctx (lift_typing P) (Σ, ind_universes mdecl) (arities_context (ind_bodies mdecl) ,,, ind_params mdecl) (cstr_args c) cs
+     | _ => False
+    end) *
+    on_projections mdecl (inductive_mind ref.1.1) (inductive_ind ref.1.1) idecl (idecl.(ind_indices)) c *
+    ((snd ref) < context_assumptions c.(cstr_args)) *
+    on_projection mdecl (inductive_mind ref.1.1) (inductive_ind ref.1.1) c (snd ref) pdecl
   | _ => False
   end.
 Proof.
   intros.
   destruct (declared_inductive_inv HP wfΣ HΣ (let (x, _) := Hdecl in x)) in *.
-  destruct Hdecl as [Hidecl [Hcdecl Hnpar]]. simpl. clearbody oib.
+  destruct Hdecl as [Hidecl [Hcdecl Hnpar]]. simpl.
   forward onProjections.    
   { eapply nth_error_Some_length in Hcdecl.
     destruct (ind_projs idecl); simpl in *; try lia. congruence. }
-  destruct ind_cunivs as [|? []]; try contradiction.
+  destruct (ind_ctors idecl) as [|? []]; try contradiction.
+  destruct ind_cunivs as [|? []]; try contradiction; depelim onConstructors.
+  2:{ depelim onConstructors. }
   intuition auto.
-  - red in onConstructors. destruct onProjections.
+  - destruct onProjections.
     destruct (ind_ctors idecl) as [|? []]; simpl in *; try discriminate.
-    inv onConstructors. now eapply on_cargs in X.
+    inv onConstructors. now eapply on_cargs in o.
   - destruct onProjections. eapply nth_error_Some_length in Hcdecl. lia.
   - destruct onProjections.
     eapply nth_error_alli in Hcdecl; eauto. 
@@ -833,7 +837,7 @@ Lemma on_declared_constructor `{checker_flags} {Σ ref mdecl idecl cdecl}
      nth_error (ind_cunivs onib) ref.2 = Some ind_ctor_sort
     ×  on_constructor (lift_typing typing) (Σ, ind_universes mdecl)
                  mdecl (inductive_ind (fst ref))
-                 idecl onib.(ind_indices) cdecl ind_ctor_sort.
+                 idecl idecl.(ind_indices) cdecl ind_ctor_sort.
 Proof.
   split. 
   - destruct Hdecl as [Hidecl Hcdecl].
@@ -844,15 +848,17 @@ Defined.
 Lemma on_declared_projection `{checker_flags} {Σ ref mdecl idecl pdecl} :
   forall (wfΣ : wf Σ) (Hdecl : declared_projection Σ mdecl idecl ref pdecl),
   on_inductive (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind (fst (fst ref))) mdecl *
-  let oib := declared_inductive_inv weaken_env_prop_typing wfΣ wfΣ (let (x, _) := Hdecl in x) in
-  match oib.(ind_cunivs) return Type with
-  | [cs] => 
-    sorts_local_ctx (lift_typing typing) (Σ, ind_universes mdecl) 
-      (arities_context (ind_bodies mdecl) ,,, ind_params mdecl) (cstr_args cs)
-      (cdecl_sorts cs) *
-    on_projections mdecl (inductive_mind ref.1.1) (inductive_ind ref.1.1) idecl (oib.(ind_indices)) cs *
-    ((snd ref) < context_assumptions cs.(cstr_args)) *
-    on_projection mdecl (inductive_mind ref.1.1) (inductive_ind ref.1.1) cs (snd ref) pdecl
+  match idecl.(ind_ctors) return Type with
+  | [c] => 
+    let oib := declared_inductive_inv weaken_env_prop_typing wfΣ wfΣ (let (x, _) := Hdecl in x) in
+    (match oib.(ind_cunivs) with
+     | [cs] => sorts_local_ctx (lift_typing typing) (Σ, ind_universes mdecl)
+       (arities_context (ind_bodies mdecl) ,,, ind_params mdecl) (cstr_args c) cs
+     | _ => False
+    end) *
+    on_projections mdecl (inductive_mind ref.1.1) (inductive_ind ref.1.1) idecl (idecl.(ind_indices)) c *
+    ((snd ref) < context_assumptions c.(cstr_args)) *
+    on_projection mdecl (inductive_mind ref.1.1) (inductive_ind ref.1.1) c (snd ref) pdecl
   | _ => False
   end.
 Proof.
@@ -861,83 +867,6 @@ Proof.
   - destruct Hdecl as [Hidecl Hcdecl]. now apply on_declared_inductive in Hidecl.
   - apply (declared_projection_inv weaken_env_prop_typing wfΣ wfΣ Hdecl).
 Qed.
-
-Variant wf_predicate Σ ci (p : predicate term) := 
-| mk_wf_predicate mdecl idecl :
-  declared_inductive Σ mdecl ci.(ci_ind) idecl ->
-  #|p.(pparams)| = mdecl.(ind_npars) -> 
-  wf_predicate Σ ci p.
-
-Lemma wf_env_cpc {cf:checker_flags} {Σ} {P} (wfΣ : on_global_env P Σ) ind pparams puinst pcontext mdecl idecl 
-  (oib : on_ind_body P (Σ, ind_universes mdecl) (inductive_mind ind) mdecl (inductive_ind ind) idecl) :
-  #|pparams| = mdecl.(ind_npars) ->
-  #|pcontext| = S #|oib.(ind_indices)| ->
-  ∑ pctx, ind_case_predicate_context ind mdecl idecl pparams puinst pcontext pctx.
-Proof.
-  intros hl.
-  intros hpars.
-  destruct (build_case_predicate_context ind mdecl idecl pparams puinst pcontext) 
-    as [cpc|] eqn:bcpc.
-  - exists cpc. now eapply ind_case_predicate_contextP.
-  - move: bcpc. unfold build_case_predicate_context.
-    unfold instantiate_params.
-    destruct instantiate_params_subst as [[s' ty']|] eqn:ipars => /= //.
-    * apply instantiate_params_substP in ipars.
-      rewrite oib.(ind_arity_eq) in ipars.
-      rewrite !subst_instance_constr_it_mkProd_or_LetIn /= in ipars.
-      eapply instantiate_params_subst_it_mkProd_or_LetIn in ipars as [cs <-].
-      2:{ rewrite context_assumptions_map.
-          now rewrite mib.(onNpars). }
-      rewrite subst_it_mkProd_or_LetIn /= destArity_it_mkProd_or_LetIn /=.
-      len.
-
-  unfold build_case_predicate_context.
-  rewrite oib.(ind_arity_eq).
-  destruct instantiate_params eqn:ipars.
-  - apply instantiate_paramsP in ipars as [s' [ty' [ipars ->]]].
-    simpl.
-    pose proof ipars as ipars'.
-    rewrite subst_instance_constr_it_mkProd_or_LetIn in ipars'.
-    eapply instantiate_params_subst_it_mkProd_or_LetIn in ipars' as [-> <-].
-    * simpl. rewrite app_nil_r.
-      rewrite subst_instance_constr_it_mkProd_or_LetIn.
-      rewrite subst_it_mkProd_or_LetIn /=.
-      rewrite destArity_it_mkProd_or_LetIn /=.
-      simpl.
-      intros pctx.
-      split; intros.
-      + destruct X.
-        rewrite oib.(ind_arity_eq) in i.
-        pose proof (instantiate_params_subst_spec_fn ipars i) as [<- <-].
-        subst sty.
-        simpl in e.
-        rewrite subst_instance_constr_it_mkProd_or_LetIn subst_it_mkProd_or_LetIn /= in e.
-        eapply it_mkProd_or_LetIn_inj in e as [<- <-].
-                
-
-Admitted.
-
-Lemma wf_env_cpc {cf:checker_flags} {Σ} {wfΣ : wf Σ} ci p mdecl idecl : 
-  lookup_inductive Σ ci.(ci_ind) = Some (mdecl, idecl) ->
-  onSome (ind_case_predicate_context ci.(ci_ind) mdecl idecl 
-    (pparams p) (puinst p) (pcontext p)) 
-    (build_case_predicate_context ci.(ci_ind) mdecl idecl p.(pparams) p.(puinst)).
-Proof.
-  intros hl.
-  apply lookup_inductive_declared in hl.
-  pose proof (on_declared_inductive wfΣ hl) as [mib oib].
-  destruct (build_case_predicate_context ci.(ci_ind) mdecl idecl p.(pparams) p.(puinst)) eqn:bp.
-  simpl.
-  2:{ 
-    simpl.
-    move: bp.
-    unfold build_case_predicate_context.
-    destruct instantiate_params eqn:ipars.
-    eapply instantiate_params_substP
-
-  
-  }
-  exists c.
 
 Definition on_udecl_prop `{checker_flags} Σ (udecl : universes_decl)
   := let levels := levels_of_udecl udecl in

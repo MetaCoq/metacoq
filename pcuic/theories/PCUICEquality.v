@@ -80,7 +80,7 @@ Definition global_variance Σ gr napp :=
   | ConstructRef ind k =>
     match lookup_constructor Σ ind k with
     | Some (mdecl, idecl, cdecl) =>
-      if (cdecl.2 + mdecl.(ind_npars))%nat <=? napp then
+      if (cdecl.(cstr_arity) + mdecl.(ind_npars))%nat <=? napp then
         (** Fully applied constructors are always compared at the same supertype, 
           which implies that no universe equality needs to be checked here. *)
         Some []
@@ -237,7 +237,7 @@ Proof.
   - apply Forall2_same; eauto.
 Qed.
 
-Instance eq_binder_annot_equiv {A} : RelationClasses.Equivalence (@eq_binder_annot A).
+Instance eq_binder_annot_equiv {A} : RelationClasses.Equivalence (@eq_binder_annot A A).
 Proof.
   split. 
   - red. reflexivity.
@@ -246,7 +246,7 @@ Proof.
     apply transitivity.
 Qed. 
 
-Definition eq_binder_annot_refl {A} x : @eq_binder_annot A x x.
+Definition eq_binder_annot_refl {A} x : @eq_binder_annot A A x x.
 Proof. reflexivity. Qed.
 
 Hint Resolve @eq_binder_annot_refl : core.
@@ -322,7 +322,7 @@ Instance eq_term_upto_univ_sym Σ Re Rle napp :
   Symmetric (eq_term_upto_univ_napp Σ Re Rle napp).
 Proof.
   intros he hle u v e.
-  pose proof (@RelationClasses.symmetry _ (@eq_binder_annot name) _).
+  pose proof (@RelationClasses.symmetry _ (@eq_binder_annot name name) _).
   induction u in Rle, hle, v, napp, e |- * using term_forall_list_ind.
   all: dependent destruction e.
   all: try solve [
@@ -402,7 +402,7 @@ Instance eq_term_upto_univ_trans Σ Re Rle napp :
   Transitive (eq_term_upto_univ_napp Σ Re Rle napp).
 Proof.
   intros he hle u v w e1 e2.
-  pose proof (@RelationClasses.transitivity _ (@eq_binder_annot name) _).
+  pose proof (@RelationClasses.transitivity _ (@eq_binder_annot name name) _).
   induction u in Rle, hle, v, w, napp, e1, e2 |- * using term_forall_list_ind.
   all: dependent destruction e1.
   all: try solve [ eauto ].
@@ -998,13 +998,13 @@ Proof.
   eapply Forall2_impl; tea; eauto.
 Qed.
 
-Lemma eqb_annot_spec {A} na na' : eqb_binder_annot na na' <-> @eq_binder_annot A na na'.
+Lemma eqb_annot_spec {A} na na' : eqb_binder_annot na na' <-> @eq_binder_annot A A na na'.
 Proof.
   unfold eqb_binder_annot, eq_binder_annot.
   now destruct Classes.eq_dec.
 Qed.
 
-Lemma eqb_annot_reflect {A} na na' : reflect (@eq_binder_annot A na na') (eqb_binder_annot na na').
+Lemma eqb_annot_reflect {A} na na' : reflect (@eq_binder_annot A A na na') (eqb_binder_annot na na').
 Proof.
   unfold eqb_binder_annot, eq_binder_annot.
   destruct Classes.eq_dec; constructor; auto.

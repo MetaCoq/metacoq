@@ -15,11 +15,11 @@ Module Type Term.
   Parameter Inline tProj : projection -> term -> term.
   Parameter Inline mkApps : term -> list term -> term.
 
-  Parameter lift : nat -> nat -> term -> term.
-  Parameter subst : list term -> nat -> term -> term.
-  Parameter closedn : nat -> term -> bool.
-  Parameter noccur_between : nat -> nat -> term -> bool.
-  Parameter subst_instance_constr : UnivSubst term.
+  Parameter Inline lift : nat -> nat -> term -> term.
+  Parameter Inline subst : list term -> nat -> term -> term.
+  Parameter Inline closedn : nat -> term -> bool.
+  Parameter Inline noccur_between : nat -> nat -> term -> bool.
+  Parameter Inline subst_instance_constr : UnivSubst term.
   
 End Term.
 
@@ -240,26 +240,44 @@ Module Environment (T : Term).
   
   (** *** Environments *)
 
+  Record constructor_body := {
+    cstr_name : ident;
+    (* The arguments and indices are typeable under the context of 
+      arities of the mutual inductive + parameters *)
+    cstr_args : context;
+    cstr_indices : list term;
+    cstr_type : term; 
+    (* Closed type: on well-formed constructors: forall params, cstr_args, I params cstr_indices *)
+    cstr_arity : nat; (* arity, w/o lets, w/o parameters *)
+  }.
+
+  Definition map_constructor_body npars arities f c :=
+    {| cstr_name := c.(cstr_name);
+       cstr_args := fold_context (fun x => f (x + npars + arities)) c.(cstr_args);
+       cstr_indices := map (f (npars + arities + #|c.(cstr_args)|)) c.(cstr_indices);
+       cstr_type := f 0 c.(cstr_type);
+       cstr_arity := c.(cstr_arity) |}.
+
   (** See [one_inductive_body] from [declarations.ml]. *)
   Record one_inductive_body := {
     ind_name : ident;
-    ind_type : term; (* Closed arity *)
+    ind_indices : context; (* Indices of the inductive types, under params *)
+    ind_sort : Universe.t; (* Sort of the inductive. *)
+    ind_type : term; (* Closed arity = forall mind_params, ind_indices, tSort ind_sort *)
     ind_kelim : allowed_eliminations; (* Allowed eliminations *)
-    ind_ctors : list (ident * term (* Under context of arities of the mutual inductive *)
-                      * nat (* arity, w/o lets, w/o parameters *));
+    ind_ctors : list constructor_body;
     ind_projs : list (ident * term); (* names and types of projections, if any.
                                       Type under context of params and inductive object *)
     ind_relevance : relevance (* relevance of the inductive definition *) }.
 
-  Definition map_one_inductive_body npars arities f (n : nat) m :=
+  Definition map_one_inductive_body npars arities f m :=
     match m with
-    | Build_one_inductive_body ind_name ind_type ind_kelim ind_ctors ind_projs ind_relevance =>
-      Build_one_inductive_body ind_name
-                               (f 0 ind_type)
-                               ind_kelim
-                               (map (on_pi2 (f arities)) ind_ctors)
-                               (map (on_snd (f (S npars))) ind_projs)
-                               ind_relevance
+    | Build_one_inductive_body ind_name ind_indices ind_sort 
+        ind_type ind_kelim ind_ctors ind_projs ind_relevance =>
+      Build_one_inductive_body
+         ind_name (fold_context (fun x => f (npars + x)) ind_indices) ind_sort
+                  (f 0 ind_type) ind_kelim (map (map_constructor_body npars arities f) ind_ctors)
+                  (map (on_snd (f (S npars))) ind_projs) ind_relevance
     end.
 
 
@@ -462,17 +480,17 @@ Module Environment (T : Term).
       let arities := arities_context ind_bodies in
       let pars := fold_context f ind_pars in
       Build_mutual_inductive_body finite ind_npars pars
-                                  (mapi (map_one_inductive_body (context_assumptions pars) (length arities) f) ind_bodies)
+                                  (map (map_one_inductive_body (context_assumptions pars) (length arities) f) ind_bodies)
                                   ind_universes ind_variance
     end.
 
-  Lemma ind_type_map f npars_ass arities n oib :
-    ind_type (map_one_inductive_body npars_ass arities f n oib) = f 0 (ind_type oib).
+  Lemma ind_type_map f npars_ass arities oib :
+    ind_type (map_one_inductive_body npars_ass arities f oib) = f 0 (ind_type oib).
   Proof. destruct oib. reflexivity. Qed.
 
-  Lemma ind_ctors_map f npars_ass arities n oib :
-    ind_ctors (map_one_inductive_body npars_ass arities f n oib) =
-    map (on_pi2 (f arities)) (ind_ctors oib).
+  Lemma ind_ctors_map f npars_ass arities oib :
+    ind_ctors (map_one_inductive_body npars_ass arities f oib) =
+    map (map_constructor_body npars_ass arities f) (ind_ctors oib).
   Proof. destruct oib; simpl; reflexivity. Qed.
 
   Lemma ind_pars_map f m :
@@ -480,8 +498,8 @@ Module Environment (T : Term).
     fold_context f (ind_params m).
   Proof. destruct m; simpl; reflexivity. Qed.
 
-  Lemma ind_projs_map f npars_ass arities n oib :
-    ind_projs (map_one_inductive_body npars_ass arities f n oib) =
+  Lemma ind_projs_map f npars_ass arities oib :
+    ind_projs (map_one_inductive_body npars_ass arities f oib) =
     map (on_snd (f (S npars_ass))) (ind_projs oib).
   Proof. destruct oib; simpl. reflexivity. Qed.
 
@@ -546,8 +564,6 @@ Module Environment (T : Term).
     rewrite nth_error_fold_context_eq.
     do 2 f_equal. lia. now rewrite fold_context_length.
   Qed.
-
-
 
 End Environment.
 

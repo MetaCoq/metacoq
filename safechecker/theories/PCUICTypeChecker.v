@@ -650,7 +650,7 @@ Section Typecheck.
       rewrite -o.(onNpars) -H.
       forward (o0.(onProjections)).
       intros H'; rewrite H' nth_error_nil // in Heq_anonymous.
-      destruct ind_cshapes as [|cs []]; auto.
+      destruct ind_cunivs as [|cs []]; auto.
       intros onps.
       unshelve epose proof (onps.(on_projs_noidx _ _ _ _ _ _)).
       rewrite ond /= in H2.

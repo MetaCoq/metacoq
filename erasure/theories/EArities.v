@@ -214,7 +214,7 @@ Proof.
     (* eapply PCUICCumulativity.red_cumul in X. *)
     destruct (PCUICWeakeningEnv.on_declared_constructor _ d) as [XX [s [XX1 Ht]]].
     destruct x5 as [[? ?] ?]; cbn in *; subst.
-    destruct Ht. unfold cdecl_type in cstr_eq. simpl in cstr_eq. subst.
+    destruct Ht. unfold cstr_type in cstr_eq. simpl in cstr_eq. subst.
     change PCUICEnvironment.it_mkProd_or_LetIn with it_mkProd_or_LetIn in c2.
     change PCUICEnvironment.ind_params with ind_params in *.
     change PCUICEnvironment.to_extended_list_k with to_extended_list_k in *.
@@ -226,10 +226,10 @@ Proof.
     cbn in c2.
     rewrite PCUICUnivSubst.subst_instance_context_length in c2.
     rewrite app_length in c2.
-    destruct (Nat.leb_spec (#|cshape_args s| + #|ind_params x3| + 0) (#|ind_bodies x3| - S (inductive_ind ind) + #|ind_params x3| + #|cshape_args s|)). 2:lia.
+    destruct (Nat.leb_spec (#|cstr_args s| + #|ind_params x3| + 0) (#|ind_bodies x3| - S (inductive_ind ind) + #|ind_params x3| + #|cstr_args s|)). 2:lia.
     clear H.
     assert ((#|ind_bodies x3| - S (inductive_ind ind) + #|ind_params x3| +
-                                                                         #|cshape_args s| - (#|cshape_args s| + #|ind_params x3| + 0)) < #|inds (inductive_mind ind) u (ind_bodies x3)|).
+                                                                         #|cstr_args s| - (#|cstr_args s| + #|ind_params x3| + 0)) < #|inds (inductive_mind ind) u (ind_bodies x3)|).
     { rewrite inds_length. lia. }
     eapply nth_error_Some in H.
     destruct (nth_error (inds _ _ _) _) eqn:Heq; try congruence.

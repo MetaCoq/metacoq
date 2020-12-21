@@ -759,7 +759,7 @@ Proof.
         eapply Alli_impl; eauto. clear onI onP onnp; intros n x Xg.
         refine {| ind_indices := Xg.(ind_indices);
                   ind_arity_eq := Xg.(ind_arity_eq);
-                  ind_cshapes := Xg.(ind_cshapes) |}.
+                  ind_cunivs := Xg.(ind_cunivs) |}.
                   
         ++ apply onArity in Xg. destruct Xg as [s Hs]. exists s; auto.
             specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ [] (existT _ _ (existT _ _ Hs)))))).
@@ -781,8 +781,8 @@ Proof.
             apply IH. simpl. constructor 1. simpl. auto with arith.
             clear -X13 IH oncind.
             revert oncind.
-            generalize (List.rev (lift_context #|cshape_args y| 0 (ind_indices Xg))).
-            generalize (cshape_indices y). induction 1; constructor; auto.
+            generalize (List.rev (lift_context #|cstr_args y| 0 (ind_indices Xg))).
+            generalize (cstr_indices y). induction 1; constructor; auto.
             simpl in t2 |- *.
             specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ _ (existT _ _ t2)))))).
             apply IH. simpl. constructor 1. simpl. auto with arith.

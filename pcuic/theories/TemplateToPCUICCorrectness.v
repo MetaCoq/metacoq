@@ -448,15 +448,15 @@ Proof.
 Qed.
 
 Definition trans_constructor_shape (t : ST.constructor_shape) : constructor_shape :=
-  {| cshape_args := trans_local t.(ST.cshape_args);
-     cshape_indices := map trans t.(ST.cshape_indices); 
-     cshape_sorts := t.(ST.cshape_sorts) |}.
+  {| cstr_args := trans_local t.(ST.cstr_args);
+     cstr_indices := map trans t.(ST.cstr_indices); 
+     cdecl_sorts := t.(ST.cdecl_sorts) |}.
 
-Lemma trans_cshape_args cs : trans_local (ST.cshape_args cs) = cshape_args (trans_constructor_shape cs).
+Lemma trans_cstr_args cs : trans_local (ST.cstr_args cs) = cstr_args (trans_constructor_shape cs).
 Proof. reflexivity. Qed.
 
-Lemma trans_cshape_args_length cs : #|ST.cshape_args cs| = #|cshape_args (trans_constructor_shape cs)|.
-Proof. now rewrite -trans_cshape_args map_length. Qed.
+Lemma trans_cstr_args_length cs : #|ST.cstr_args cs| = #|cstr_args (trans_constructor_shape cs)|.
+Proof. now rewrite -trans_cstr_args map_length. Qed.
 
 Lemma context_assumptions_map ctx : context_assumptions (map trans_decl ctx) = Ast.context_assumptions ctx.
 Proof.
@@ -545,7 +545,7 @@ Admitted.
     rewrite /ST.cstr_concl_head. cbn -[subst].
     rewrite trans_ind_bodies. len.
     rewrite trans_ind_bodies_length trans_ind_params_length.
-    rewrite map_app trans_to_extended_list trans_ind_params trans_cshape_args_length.
+    rewrite map_app trans_to_extended_list trans_ind_params trans_cstr_args_length.
     rewrite (subst_cstr_concl_head ind u (trans_minductive_body mdecl)) //.
     rewrite expand_lets_k_mkApps subst_mkApps /=.
     intros eqit.
@@ -737,7 +737,7 @@ Admitted.
 (*   (* rewrite decompose_prod_n_assum_it_mkProd in Hdecomp. *) *)
 (*   (* injection Hdecomp. intros <- <-. clear Hdecomp. *) *)
 
-(*   (* subst cshape_concl_head. destruct Hctx''. *) *)
+(*   (* subst cdecl_concl_head. destruct Hctx''. *) *)
 
 (*   (* admit. admit. admit. admit. congruence. *) *)
 (*   (* revert H1. destruct map_option_out. intros. *) *)
@@ -844,7 +844,7 @@ Proof.
     -- eapply Alli_impl. exact onI. eauto. intros.
        refine {| ST.ind_indices := X1.(ST.ind_indices);
                  ST.ind_arity_eq := X1.(ST.ind_arity_eq);
-                 ST.ind_cshapes := X1.(ST.ind_cshapes) |}.
+                 ST.ind_cunivs := X1.(ST.ind_cunivs) |}.
        --- apply ST.onArity in X1. unfold on_type in *; simpl in *.
            now eapply X.
        --- pose proof X1.(ST.onConstructors) as X11. red in X11.
@@ -852,14 +852,14 @@ Proof.
           simpl. intros. destruct X2 as [? ? ? ?]; unshelve econstructor; eauto.
           * apply X; eauto.
           * clear -X0 X on_cargs. revert on_cargs.
-            generalize (ST.cshape_args y), (ST.cshape_sorts y).
+            generalize (ST.cstr_args y), (ST.cdecl_sorts y).
             induction c; destruct l; simpl; auto;
               destruct a as [na [b|] ty]; simpl in *; auto;
           split; intuition eauto.
           * clear -X0 X on_cindices.
             revert on_cindices.
-            generalize (List.rev (SL.lift_context #|ST.cshape_args y| 0 (ST.ind_indices X1))).
-            generalize (ST.cshape_indices y).
+            generalize (List.rev (SL.lift_context #|ST.cstr_args y| 0 (ST.ind_indices X1))).
+            generalize (ST.cstr_indices y).
             induction 1; simpl; constructor; auto.
        --- simpl; intros. pose (ST.onProjections X1 H0). simpl in *; auto.
        --- destruct X1. simpl. unfold ST.check_ind_sorts in *.
@@ -1890,7 +1890,7 @@ Proof.
       -- eapply Alli_map. eapply Alli_impl. exact onI. eauto. intros.
          unshelve refine {| ind_indices := trans_local X1.(ST.ind_indices); 
           ind_sort := X1.(ST.ind_sort);
-          ind_cshapes := map trans_constructor_shape X1.(ST.ind_cshapes) |}.
+          ind_cunivs := map trans_constructor_shape X1.(ST.ind_cunivs) |}.
         --- simpl; rewrite X1.(ST.ind_arity_eq).
             now rewrite !trans_it_mkProd_or_LetIn.
         --- apply ST.onArity in X1. unfold on_type in *; simpl in *.
@@ -1901,7 +1901,7 @@ Proof.
             simpl. intros [[? ?] ?] cs onc. destruct onc; unshelve econstructor; eauto.
             + simpl. unfold trans_local. rewrite context_assumptions_map.
               now rewrite cstr_args_length. 
-            + simpl; unfold cdecl_type, ST.cdecl_type in cstr_eq |- *; simpl in *.
+            + simpl; unfold cstr_type, ST.cstr_type in cstr_eq |- *; simpl in *.
                rewrite cstr_eq. rewrite !trans_it_mkProd_or_LetIn.
                autorewrite with len. f_equal. f_equal.
                rewrite !trans_mkApps //.
@@ -1911,12 +1911,12 @@ Proof.
                rewrite /trans_local !map_length.
                unfold TemplateEnvironment.to_extended_list_k.
                now rewrite trans_reln.
-            + unfold cdecl_type, ST.cdecl_type in on_ctype |- *; simpl in *.
+            + unfold cstr_type, ST.cstr_type in on_ctype |- *; simpl in *.
               red. 
               move: (X (Σ, Ast.ind_universes m) (Ast.arities_context (Ast.ind_bodies m)) t None).
               now rewrite trans_arities_context.
             + clear -X0 IHX0 X on_cargs. revert on_cargs. simpl.
-              generalize (ST.cshape_args cs), (ST.cshape_sorts cs).
+              generalize (ST.cstr_args cs), (ST.cdecl_sorts cs).
               have foo := (X (Σ, udecl) _ _ _ X0).
               rewrite -trans_arities_context.
               induction c; destruct l; simpl; auto;
@@ -1934,19 +1934,19 @@ Proof.
               revert on_cindices.
               rewrite trans_lift_context /trans_local -map_rev.
               simpl. rewrite {2}/trans_local map_length.
-              generalize (List.rev (LiftSubst.lift_context #|ST.cshape_args cs| 0 (ST.ind_indices X1))).
-              generalize (ST.cshape_indices cs).
+              generalize (List.rev (LiftSubst.lift_context #|ST.cstr_args cs| 0 (ST.ind_indices X1))).
+              generalize (ST.cstr_indices cs).
               rewrite -trans_arities_context.
               induction 1; simpl; constructor; auto;
               have foo := (X (Σ, Ast.ind_universes m) _ _ _ X0);
               specialize (foo (Ast.app_context (Ast.app_context (Ast.arities_context (Ast.ind_bodies m)) 
-                (Ast.ind_params m)) (ST.cshape_args cs))).
+                (Ast.ind_params m)) (ST.cstr_args cs))).
               rewrite /trans_local !map_app in foo.
               now apply (foo i (Some t)).
               now rewrite (trans_subst_telescope [i] 0) in IHon_cindices.
               now rewrite (trans_subst_telescope [b] 0) in IHon_cindices.
             + clear -IHX0 on_ctype_positive.
-              unfold ST.cdecl_type in *. unfold cdecl_type. simpl in *.
+              unfold ST.cstr_type in *. unfold cstr_type. simpl in *.
               change [] with (map trans_decl []). revert on_ctype_positive.
               generalize (@nil Ast.context_decl). induction 1; simpl.
               rewrite trans_mkApps. simpl.

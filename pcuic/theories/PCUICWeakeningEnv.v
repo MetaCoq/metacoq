@@ -560,14 +560,14 @@ Proof.
       destruct X as [? ? ? ?]. unshelve econstructor; eauto.
       * unfold on_type in *; eauto.
       * clear on_cindices cstr_eq cstr_args_length.
-        revert on_cargs; generalize (cshape_sorts y) as l.
-        induction (cshape_args y); destruct l; simpl in *; eauto.
+        revert on_cargs; generalize (cdecl_sorts y) as l.
+        induction (cstr_args y); destruct l; simpl in *; eauto.
         ** destruct a as [na [b|] ty]; simpl in *; intuition eauto.
         ** destruct a as [na [b|] ty]; simpl in *; intuition eauto.
       * clear on_ctype on_cargs.
         revert on_cindices.
-        generalize (List.rev (lift_context #|cshape_args y| 0 ind_indices)).
-        generalize (cshape_indices y).
+        generalize (List.rev (lift_context #|cstr_args y| 0 ind_indices)).
+        generalize (cstr_indices y).
         induction 1; constructor; eauto.
       * simpl.
         intros v indv. specialize (on_ctype_variance v indv).
@@ -675,7 +675,7 @@ Lemma declared_constructor_inv `{checker_flags} {Σ P mdecl idecl ref cdecl}
   (Hdecl : declared_constructor Σ mdecl idecl ref cdecl) :
   ∑ cs,
   let onib := declared_inductive_inv HP wfΣ HΣ (let (x, _) := Hdecl in x) in
-  nth_error onib.(ind_cshapes) ref.2 = Some cs
+  nth_error onib.(ind_cunivs) ref.2 = Some cs
   × on_constructor (lift_typing P) (Σ, ind_universes mdecl) mdecl
                    (inductive_ind ref.1) idecl onib.(ind_indices) cdecl cs.
 Proof.
@@ -692,12 +692,12 @@ Lemma declared_projection_inv `{checker_flags} {Σ P mdecl idecl ref pdecl} :
   (HΣ : Forall_decls_typing P Σ)
   (Hdecl : declared_projection Σ mdecl idecl ref pdecl),
   let oib := declared_inductive_inv HP wfΣ HΣ (let (x, _) := Hdecl in x) in
-  match oib.(ind_cshapes) return Type with
+  match oib.(ind_cunivs) return Type with
   | [cs] => 
-    sorts_local_ctx (lift_typing P) (Σ, ind_universes mdecl) (arities_context (ind_bodies mdecl) ,,, ind_params mdecl) (cshape_args cs)
-      (cshape_sorts cs) *
+    sorts_local_ctx (lift_typing P) (Σ, ind_universes mdecl) (arities_context (ind_bodies mdecl) ,,, ind_params mdecl) (cstr_args cs)
+      (cdecl_sorts cs) *
     on_projections mdecl (inductive_mind ref.1.1) (inductive_ind ref.1.1) idecl (oib.(ind_indices)) cs *
-    ((snd ref) < context_assumptions cs.(cshape_args)) *
+    ((snd ref) < context_assumptions cs.(cstr_args)) *
     on_projection mdecl (inductive_mind ref.1.1) (inductive_ind ref.1.1) cs (snd ref) pdecl
   | _ => False
   end.
@@ -708,7 +708,7 @@ Proof.
   forward onProjections.    
   { eapply nth_error_Some_length in Hcdecl.
     destruct (ind_projs idecl); simpl in *; try lia. congruence. }
-  destruct ind_cshapes as [|? []]; try contradiction.
+  destruct ind_cunivs as [|? []]; try contradiction.
   intuition auto.
   - red in onConstructors. destruct onProjections.
     destruct (ind_ctors idecl) as [|? []]; simpl in *; try discriminate.
@@ -830,7 +830,7 @@ Lemma on_declared_constructor `{checker_flags} {Σ ref mdecl idecl cdecl}
               (inductive_mind (fst ref)) mdecl (inductive_ind (fst ref)) idecl *
   ∑ ind_ctor_sort,
     let onib := declared_inductive_inv weaken_env_prop_typing wfΣ wfΣ (let (x, _) := Hdecl in x) in
-     nth_error (ind_cshapes onib) ref.2 = Some ind_ctor_sort
+     nth_error (ind_cunivs onib) ref.2 = Some ind_ctor_sort
     ×  on_constructor (lift_typing typing) (Σ, ind_universes mdecl)
                  mdecl (inductive_ind (fst ref))
                  idecl onib.(ind_indices) cdecl ind_ctor_sort.
@@ -845,13 +845,13 @@ Lemma on_declared_projection `{checker_flags} {Σ ref mdecl idecl pdecl} :
   forall (wfΣ : wf Σ) (Hdecl : declared_projection Σ mdecl idecl ref pdecl),
   on_inductive (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind (fst (fst ref))) mdecl *
   let oib := declared_inductive_inv weaken_env_prop_typing wfΣ wfΣ (let (x, _) := Hdecl in x) in
-  match oib.(ind_cshapes) return Type with
+  match oib.(ind_cunivs) return Type with
   | [cs] => 
     sorts_local_ctx (lift_typing typing) (Σ, ind_universes mdecl) 
-      (arities_context (ind_bodies mdecl) ,,, ind_params mdecl) (cshape_args cs)
-      (cshape_sorts cs) *
+      (arities_context (ind_bodies mdecl) ,,, ind_params mdecl) (cstr_args cs)
+      (cdecl_sorts cs) *
     on_projections mdecl (inductive_mind ref.1.1) (inductive_ind ref.1.1) idecl (oib.(ind_indices)) cs *
-    ((snd ref) < context_assumptions cs.(cshape_args)) *
+    ((snd ref) < context_assumptions cs.(cstr_args)) *
     on_projection mdecl (inductive_mind ref.1.1) (inductive_ind ref.1.1) cs (snd ref) pdecl
   | _ => False
   end.

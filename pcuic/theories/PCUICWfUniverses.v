@@ -749,7 +749,7 @@ Section CheckerFlags.
       now intros _ hargs%forallb_All.
       pose proof (declared_projection_inv wf_universes_weaken wf X isdecl).
       destruct (declared_inductive_inv); simpl in *.
-      destruct ind_cshapes as [|cs []] => //.
+      destruct ind_cunivs as [|cs []] => //.
       destruct X1. red in o. subst ty.
       destruct nth_error eqn:heq => //.
       destruct o as [_ ->].

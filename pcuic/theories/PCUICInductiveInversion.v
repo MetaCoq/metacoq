@@ -506,16 +506,16 @@ Proof.
   - discriminate.
 Qed.
 
-Lemma on_constructor_wf_args {cf:checker_flags} Σ ind mdecl idecl cshape cdecl : 
+Lemma on_constructor_wf_args {cf:checker_flags} Σ ind mdecl idecl cdecl cdecl : 
   wf Σ -> 
   declared_inductive Σ mdecl ind idecl ->
   on_inductive (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind ind) mdecl ->
   forall (oib : on_ind_body (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind ind) mdecl 
            (inductive_ind ind) idecl)
         (onc : on_constructor (lift_typing typing) (Σ, ind_universes mdecl)
-          mdecl (inductive_ind ind) idecl (ind_indices oib) cdecl cshape),
+          mdecl (inductive_ind ind) idecl (ind_indices oib) cdecl cdecl),
   wf_local (Σ, ind_universes mdecl)
-   (arities_context (ind_bodies mdecl) ,,, ind_params mdecl ,,, cshape_args cshape).
+   (arities_context (ind_bodies mdecl) ,,, ind_params mdecl ,,, cstr_args cdecl).
 Proof.
   move=> wfΣ declm oi oib onc.
   pose proof (on_cargs onc). simpl in X.
@@ -525,23 +525,23 @@ Proof.
   now eapply onParams.
 Qed.
 
-Lemma on_constructor_subst {cf:checker_flags} Σ ind mdecl idecl cshape cdecl : 
+Lemma on_constructor_subst {cf:checker_flags} Σ ind mdecl idecl cdecl cdecl : 
   wf Σ -> 
   declared_inductive Σ mdecl ind idecl ->
   on_inductive (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind ind) mdecl ->
   forall (oib : on_ind_body (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind ind) mdecl 
            (inductive_ind ind) idecl)
         (onc : on_constructor (lift_typing typing) (Σ, ind_universes mdecl)
-          mdecl (inductive_ind ind) idecl (ind_indices oib) cdecl cshape),
+          mdecl (inductive_ind ind) idecl (ind_indices oib) cdecl cdecl),
   wf_global_ext Σ (ind_universes mdecl) *
   wf_local (Σ, ind_universes mdecl)
-   (arities_context (ind_bodies mdecl) ,,, ind_params mdecl ,,, cshape_args cshape) *
+   (arities_context (ind_bodies mdecl) ,,, ind_params mdecl ,,, cstr_args cdecl) *
   ∑ inst,
   spine_subst (Σ, ind_universes mdecl)
              (arities_context (ind_bodies mdecl) ,,, ind_params mdecl ,,,
-              cshape_args cshape)
-             ((to_extended_list_k (ind_params mdecl) #|cshape_args cshape|) ++
-              (cshape_indices cshape)) inst
+              cstr_args cdecl)
+             ((to_extended_list_k (ind_params mdecl) #|cstr_args cdecl|) ++
+              (cstr_indices cdecl)) inst
           (ind_params mdecl ,,, ind_indices oib). 
 Proof.
   move=> wfΣ declm oi oib onc.
@@ -565,8 +565,8 @@ Proof.
   autorewrite with len in nth.
   all:auto.
   assert ( (#|ind_bodies mdecl| - S (inductive_ind ind) + #|ind_params mdecl| +
-  #|cshape_args cshape| -
-  (#|cshape_args cshape| + #|ind_params mdecl|)) = #|ind_bodies mdecl| - S (inductive_ind ind)) by lia.
+  #|cstr_args cdecl| -
+  (#|cstr_args cdecl| + #|ind_params mdecl|)) = #|ind_bodies mdecl| - S (inductive_ind ind)) by lia.
   move: nth; rewrite H; clear H. destruct nth_error eqn:Heq => //.
   simpl.
   move=> [=] Hdecl. eapply (nth_errror_arities_context (Σ, ind_universes mdecl)) in Heq; eauto.
@@ -592,25 +592,25 @@ Proof.
   apply on_minductive_wf_params_indices => //. pcuic.
 Qed.
 
-Lemma on_constructor_inst {cf:checker_flags} {Σ ind mdecl idecl cshape cdecl} u : 
+Lemma on_constructor_inst {cf:checker_flags} {Σ ind mdecl idecl cdecl cdecl} u : 
   wf Σ.1 -> 
   declared_inductive Σ.1 mdecl ind idecl ->
   on_inductive (lift_typing typing) (Σ.1, ind_universes mdecl) (inductive_mind ind) mdecl ->
   forall (oib : on_ind_body (lift_typing typing) (Σ.1, ind_universes mdecl) (inductive_mind ind) mdecl 
            (inductive_ind ind) idecl)
         (onc : on_constructor (lift_typing typing) (Σ.1, PCUICAst.ind_universes mdecl)
-          mdecl (inductive_ind ind) idecl (ind_indices oib) cdecl cshape), 
+          mdecl (inductive_ind ind) idecl (ind_indices oib) cdecl cdecl), 
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   wf_local Σ (subst_instance_context u
-    (arities_context (ind_bodies mdecl) ,,, ind_params mdecl ,,, cshape_args cshape)) *
+    (arities_context (ind_bodies mdecl) ,,, ind_params mdecl ,,, cstr_args cdecl)) *
   ∑ inst,
   spine_subst Σ
           (subst_instance_context u
              (arities_context (ind_bodies mdecl) ,,, ind_params mdecl ,,,
-              cshape_args cshape))
+              cstr_args cdecl))
           (map (subst_instance_constr u)
-             (to_extended_list_k (ind_params mdecl) #|cshape_args cshape|) ++
-           map (subst_instance_constr u) (cshape_indices cshape)) inst
+             (to_extended_list_k (ind_params mdecl) #|cstr_args cdecl|) ++
+           map (subst_instance_constr u) (cstr_indices cdecl)) inst
           (subst_instance_context u (ind_params mdecl) ,,,
            subst_instance_context u (ind_indices oib)). 
 Proof.
@@ -1033,28 +1033,28 @@ Proof.
     lia_f_equal.
 Qed.
 
-Lemma on_constructor_inst_pars_indices {cf:checker_flags} {Σ ind u mdecl idecl cshape cdecl Γ pars parsubst} : 
+Lemma on_constructor_inst_pars_indices {cf:checker_flags} {Σ ind u mdecl idecl cdecl cdecl Γ pars parsubst} : 
   wf Σ.1 -> 
   declared_inductive Σ.1 mdecl ind idecl ->
   on_inductive (lift_typing typing) (Σ.1, ind_universes mdecl) (inductive_mind ind) mdecl ->
   forall (oib : on_ind_body (lift_typing typing) (Σ.1, ind_universes mdecl) (inductive_mind ind) mdecl 
            (inductive_ind ind) idecl)
         (onc : on_constructor (lift_typing typing) (Σ.1, PCUICAst.ind_universes mdecl)
-          mdecl (inductive_ind ind) idecl (ind_indices oib) cdecl cshape), 
+          mdecl (inductive_ind ind) idecl (ind_indices oib) cdecl cdecl), 
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   spine_subst Σ Γ pars parsubst (subst_instance_context u (ind_params mdecl)) ->
   wf_local Σ (subst_instance_context u (ind_params mdecl) ,,,
     subst_context (inds (inductive_mind ind) u (ind_bodies mdecl)) #|ind_params mdecl|
-    (subst_instance_context u (cshape_args cshape))) *
+    (subst_instance_context u (cstr_args cdecl))) *
   ∑ inst,
   spine_subst Σ
           (Γ ,,, subst_context parsubst 0 (subst_context (ind_subst mdecl ind u) #|ind_params mdecl|
-            (subst_instance_context u (cshape_args cshape))))
-          (map (subst parsubst #|cshape_args cshape|)
-            (map (subst (ind_subst mdecl ind u) (#|cshape_args cshape| + #|ind_params mdecl|))
-              (map (subst_instance_constr u) (cshape_indices cshape))))
+            (subst_instance_context u (cstr_args cdecl))))
+          (map (subst parsubst #|cstr_args cdecl|)
+            (map (subst (ind_subst mdecl ind u) (#|cstr_args cdecl| + #|ind_params mdecl|))
+              (map (subst_instance_constr u) (cstr_indices cdecl))))
           inst
-          (lift_context #|cshape_args cshape| 0
+          (lift_context #|cstr_args cdecl| 0
           (subst_context parsubst 0 (subst_instance_context u (ind_indices oib)))). 
 Proof.
   move=> wfΣ declm oi oib onc cext sp.
@@ -1078,13 +1078,13 @@ Proof.
     rewrite closedn_ctx_app in X; simpl; eauto.
     move/andb_and: X; intuition auto;
     now rewrite closedn_subst_instance_context. }
-  assert (closedn_ctx (#|ind_params mdecl| + #|cshape_args cshape|) (subst_instance_context u (ind_indices oib))) 
+  assert (closedn_ctx (#|ind_params mdecl| + #|cstr_args cdecl|) (subst_instance_context u (ind_indices oib))) 
     as clinds'.
   { eapply closedn_ctx_upwards; eauto. lia. }
   rewrite closed_ctx_subst // in spr.
   rewrite (closed_ctx_subst(inds (inductive_mind ind) u (ind_bodies mdecl)) _ (subst_context (List.rev _) _ _)) in spr.
   { len.
-    rewrite -(Nat.add_0_r (#|cshape_args cshape| + #|ind_params mdecl|)).
+    rewrite -(Nat.add_0_r (#|cstr_args cdecl| + #|ind_params mdecl|)).
     eapply closedn_ctx_subst. len.
     rewrite -(subst_instance_context_assumptions u).
     eapply closedn_ctx_expand_lets. eapply closedn_ctx_upwards; eauto. lia.
@@ -1111,19 +1111,19 @@ Proof.
   rewrite (map_map_compose _ _ _ _ (subst (List.rev pars) _)) in spr.
   assert (map
               (fun x : term =>
-               subst (List.rev pars) #|cshape_args cshape|
-                 (lift0 #|cshape_args cshape| x))
+               subst (List.rev pars) #|cstr_args cdecl|
+                 (lift0 #|cstr_args cdecl| x))
               (extended_subst (subst_instance_context u (ind_params mdecl)) 0) = 
               (map
               (fun x : term =>
-              (lift0 #|cshape_args cshape|
+              (lift0 #|cstr_args cdecl|
                 (subst (List.rev pars) 0 x)))
               (extended_subst (subst_instance_context u (ind_params mdecl)) 0))
               ).
   eapply map_ext => x.
   now rewrite -(commut_lift_subst_rec _ _ _ 0).
   rewrite H in spr. clear H.
-  rewrite -(map_map_compose  _ _  _ _ (lift0 #|cshape_args cshape|)) in spr.
+  rewrite -(map_map_compose  _ _  _ _ (lift0 #|cstr_args cdecl|)) in spr.
   rewrite -(spine_subst_extended_subst sp) in spr.
   rewrite subst_map_lift_lift_context in spr.
   rewrite -(context_subst_length sp).
@@ -1285,21 +1285,21 @@ Lemma Construct_Ind_ind_eq {cf:checker_flags} {Σ} (wfΣ : wf Σ.1):
   forall {Γ n i args u i' args' u' mdecl idecl cdecl},
   Σ ;;; Γ |- mkApps (tConstruct i n u) args : mkApps (tInd i' u') args' ->
   forall (Hdecl : declared_constructor Σ.1 mdecl idecl (i, n) cdecl),
-  let '(onind, oib, existT cshape (hnth, onc)) := on_declared_constructor wfΣ Hdecl in
+  let '(onind, oib, existT cdecl (hnth, onc)) := on_declared_constructor wfΣ Hdecl in
   (i = i') * 
   (* Universe instances match *)
-  R_ind_universes Σ i (context_assumptions (ind_params mdecl) + #|cshape_indices cshape|) u u' *
+  R_ind_universes Σ i (context_assumptions (ind_params mdecl) + #|cstr_indices cdecl|) u u' *
   consistent_instance_ext Σ (ind_universes mdecl) u' *    
-  (#|args| = (ind_npars mdecl + context_assumptions cshape.(cshape_args))%nat) *
+  (#|args| = (ind_npars mdecl + context_assumptions cdecl.(cstr_args))%nat) *
   ∑ parsubst argsubst parsubst' argsubst',
     let parctx := (subst_instance_context u (ind_params mdecl)) in
     let parctx' := (subst_instance_context u' (ind_params mdecl)) in
     let argctx := (subst_context parsubst 0
     ((subst_context (inds (inductive_mind i) u mdecl.(ind_bodies)) #|ind_params mdecl|
-    (subst_instance_context u cshape.(cshape_args))))) in
+    (subst_instance_context u cdecl.(cstr_args))))) in
     let argctx2 := (subst_context parsubst' 0
     ((subst_context (inds (inductive_mind i) u' mdecl.(ind_bodies)) #|ind_params mdecl|
-    (subst_instance_context u' cshape.(cshape_args))))) in
+    (subst_instance_context u' cdecl.(cstr_args))))) in
     let argctx' := (subst_context parsubst' 0 (subst_instance_context u' oib.(ind_indices))) in
     
     spine_subst Σ Γ (firstn (ind_npars mdecl) args) parsubst parctx *
@@ -1316,9 +1316,9 @@ Lemma Construct_Ind_ind_eq {cf:checker_flags} {Σ} (wfΣ : wf Σ.1):
     (** Indices match *)
     All2 (fun par par' => Σ ;;; Γ |- par = par') 
       (map (subst0 (argsubst ++ parsubst) ∘ 
-      subst (inds (inductive_mind i) u mdecl.(ind_bodies)) (#|cshape.(cshape_args)| + #|ind_params mdecl|)
+      subst (inds (inductive_mind i) u mdecl.(ind_bodies)) (#|cdecl.(cstr_args)| + #|ind_params mdecl|)
       ∘ (subst_instance_constr u)) 
-        cshape.(cshape_indices))
+        cdecl.(cstr_indices))
       (skipn mdecl.(ind_npars) args')).
 
 Proof.
@@ -1339,17 +1339,17 @@ Proof.
   remember (on_declared_inductive wfΣ decli). clear onmind onind.
   destruct p.
   rename o into onmind. rename o0 into onind.
-  destruct declared_constructor_inv as [cshape [_ onc]].
+  destruct declared_constructor_inv as [cdecl [_ onc]].
   simpl in onc. unfold on_declared_inductive in Heqp.
   injection Heqp. intros indeq _. 
   move: onc Heqp. rewrite -indeq.
   intros onc Heqp. clear Heqp. simpl in onc.
   pose proof (on_constructor_inst u wfΣ decli onmind onind onc const).
-  destruct onc as [argslength conclhead cshape_eq [cs' t] cargs cinds]; simpl.
+  destruct onc as [argslength conclhead cdecl_eq [cs' t] cargs cinds]; simpl.
   simpl in *. 
   unfold type_of_constructor in hs. simpl in hs.
-  unfold cdecl_type in cshape_eq.
-  rewrite cshape_eq in hs.  
+  unfold cstr_type in cdecl_eq.
+  rewrite cdecl_eq in hs.  
   rewrite !subst_instance_constr_it_mkProd_or_LetIn in hs.
   rewrite !subst_it_mkProd_or_LetIn subst_instance_context_length Nat.add_0_r in hs.
   rewrite subst_instance_constr_mkApps subst_mkApps subst_instance_context_length in hs.
@@ -1372,7 +1372,7 @@ Proof.
   now autorewrite with len in Hu.
   now rewrite Hargslen context_assumptions_app !context_assumptions_subst !subst_instance_context_assumptions; lia.
 
-  exists (skipn #|cshape.(cshape_args)| isubst), (firstn #|cshape.(cshape_args)| isubst).
+  exists (skipn #|cdecl.(cstr_args)| isubst), (firstn #|cdecl.(cstr_args)| isubst).
   apply make_context_subst_spec in Hisubst.
   move: Hisubst.
   rewrite List.rev_involutive.
@@ -1410,7 +1410,7 @@ Proof.
     eapply weaken_wf_local => //.
     rewrite -subst_instance_context_app. 
     apply a.
-  - exists (map (subst_instance_univ u') (cshape_sorts cshape)). split.
+  - exists (map (subst_instance_univ u') (cdecl_sorts cdecl)). split.
     move/onParams: onmind. rewrite /on_context.
     pose proof (wf_local_instantiate Σ (InductiveDecl mdecl) (ind_params mdecl) u').
     move=> H'. eapply X in H'; eauto.
@@ -1445,12 +1445,12 @@ Proof.
     rewrite skipn_all_app_eq.
     len.  lia.
     rewrite !map_map_compose.
-    assert (#|cshape.(cshape_args)| <= #|isubst|).
+    assert (#|cdecl.(cstr_args)| <= #|isubst|).
     apply context_subst_length in argsub.
     autorewrite with len in argsub.
     now apply firstn_length_le_inv.
 
-    rewrite -(firstn_skipn #|cshape.(cshape_args)| isubst).
+    rewrite -(firstn_skipn #|cdecl.(cstr_args)| isubst).
     rewrite -[map _ (to_extended_list_k _ _)]
                (map_map_compose _ _ _ (subst_instance_constr u)
                               (fun x => subst _ _ (subst _ _ x))).
@@ -1470,7 +1470,7 @@ Proof.
 
   - rewrite it_mkProd_or_LetIn_app.
     unfold type_of_constructor in vty.
-    rewrite cshape_eq in vty. move: vty.
+    rewrite cdecl_eq in vty. move: vty.
     rewrite !subst_instance_constr_it_mkProd_or_LetIn.
     rewrite !subst_it_mkProd_or_LetIn subst_instance_context_length Nat.add_0_r.
     rewrite subst_instance_constr_mkApps subst_mkApps subst_instance_context_length.
@@ -1658,7 +1658,7 @@ Proof.
   simpl in *. 
   set (foo := (All2_nth_error_Some _ _ _ _)) in X.
   clearbody foo.
-  destruct (ind_cshapes oib) as [|? []] eqn:Heq; try contradiction.
+  destruct (ind_cunivs oib) as [|? []] eqn:Heq; try contradiction.
   destruct foo as [t' [ntht' onc]].
   destruct c; simpl in ntht'; try discriminate.
   noconf ntht'.
@@ -1757,8 +1757,8 @@ Qed.
 Lemma positive_cstr_closed_indices {cf:checker_flags} {Σ : global_env_ext} (wfΣ : wf Σ.1):
   forall {i mdecl idecl cdecl ind_indices cs},
   on_constructor (lift_typing typing) (Σ.1, ind_universes mdecl) mdecl i idecl ind_indices cdecl cs -> 
-  All (closedn (context_assumptions (ind_params mdecl ,,, cshape_args cs)))
-    (map (expand_lets (cshape_args cs ++ ind_params mdecl)) (cshape_indices cs)).
+  All (closedn (context_assumptions (ind_params mdecl ,,, cstr_args cs)))
+    (map (expand_lets (cstr_args cs ++ ind_params mdecl)) (cstr_indices cs)).
 Proof.
   intros.
   pose proof (X.(on_ctype_positive)).
@@ -1768,8 +1768,8 @@ Proof.
   rewrite app_context_nil_l in hpos.
   rewrite expand_lets_mkApps in hpos.
   unfold cstr_concl_head in hpos.
-  have subsrel := expand_lets_cstr_head (#|ind_bodies mdecl| - S i) (cshape_args cs  ++ ind_params mdecl).
-  rewrite app_length (Nat.add_comm #|(cshape_args cs)|) Nat.add_assoc in subsrel. rewrite {}subsrel in hpos.
+  have subsrel := expand_lets_cstr_head (#|ind_bodies mdecl| - S i) (cstr_args cs  ++ ind_params mdecl).
+  rewrite app_length (Nat.add_comm #|(cstr_args cs)|) Nat.add_assoc in subsrel. rewrite {}subsrel in hpos.
   rewrite context_assumptions_app in hpos. depelim hpos; solve_discr.
   noconf H0. noconf H1.
   eapply All_map_inv in a.
@@ -2166,23 +2166,23 @@ Lemma positive_cstr_closed_args {cf:checker_flags} {Σ : global_env_ext} {wfΣ :
  (smash_context []
     (subst_instance_context u
        (expand_lets_ctx (PCUICEnvironment.ind_params mdecl)
-          (cshape_args cs))))
+          (cstr_args cs))))
  (smash_context []
     (subst_instance_context u'
        (expand_lets_ctx (PCUICEnvironment.ind_params mdecl)
-          (cshape_args cs)))) ->
+          (cstr_args cs)))) ->
   
   wt_cumul_ctx_rel Σ (subst_instance_context u (smash_context [] (PCUICEnvironment.ind_params mdecl)))
       (subst_context (inds (inductive_mind ind) u (ind_bodies mdecl)) (context_assumptions (ind_params mdecl))
        (smash_context []
           (subst_instance_context u
              (expand_lets_ctx (PCUICEnvironment.ind_params mdecl)
-                (cshape_args cs)))))
+                (cstr_args cs)))))
        (subst_context (inds (inductive_mind ind) u' (ind_bodies mdecl)) (context_assumptions (ind_params mdecl))
            ((smash_context []
           (subst_instance_context u'
              (expand_lets_ctx (PCUICEnvironment.ind_params mdecl)
-                (cshape_args cs)))))).
+                (cstr_args cs)))))).
 Proof.
   intros * decli onind oib onc cu Ru cx.
   pose proof (onc.(on_ctype_positive)) as cpos.
@@ -3120,19 +3120,19 @@ Lemma constructor_cumulative_indices {cf:checker_flags} {Σ : global_env_ext} (w
   spine_subst Σ Γ pars' parsubst' (subst_instance_context u' (ind_params mdecl)) ->  
   All2 (conv Σ Γ) pars pars' ->
   let argctx := 
-      (subst_context (ind_subst mdecl ind u) #|ind_params mdecl| (subst_instance_context u (cshape_args cs)))
+      (subst_context (ind_subst mdecl ind u) #|ind_params mdecl| (subst_instance_context u (cstr_args cs)))
   in
   let argctx' :=
-     (subst_context (ind_subst mdecl ind u') #|ind_params mdecl| (subst_instance_context u' (cshape_args cs)))
+     (subst_context (ind_subst mdecl ind u') #|ind_params mdecl| (subst_instance_context u' (cstr_args cs)))
   in
   let pargctx := subst_context parsubst 0 argctx in
   let pargctx' := subst_context parsubst' 0 argctx' in
   cumul_ctx_rel Σ Γ (smash_context [] pargctx) (smash_context [] pargctx') *
   All2 (conv Σ (Γ ,,, smash_context [] pargctx))
-    (map (subst parsubst (context_assumptions (cshape_args cs)))
-      (map (expand_lets argctx) (map (subst_instance_constr u) (cshape_indices cs))))
-    (map (subst parsubst' (context_assumptions (cshape_args cs)))
-      (map (expand_lets argctx') (map (subst_instance_constr u') (cshape_indices cs)))).
+    (map (subst parsubst (context_assumptions (cstr_args cs)))
+      (map (expand_lets argctx) (map (subst_instance_constr u) (cstr_indices cs))))
+    (map (subst parsubst' (context_assumptions (cstr_args cs)))
+      (map (expand_lets argctx') (map (subst_instance_constr u') (cstr_indices cs)))).
 Proof.
   intros * decli oib onc onu cu cu' Ru Γ * spu spu' cpars *. move: Ru.
   unfold R_global_instance.
@@ -3247,7 +3247,7 @@ Proof.
       simpl.
       rewrite -(map_map_compose _ _ _ _ (subst (List.rev pars') _)).
       evar (k : nat).
-      replace (context_assumptions (cshape_args cs)) with k. subst k.
+      replace (context_assumptions (cstr_args cs)) with k. subst k.
       unshelve eapply (conv_terms_subst _ _ _ _ _ _ _ _ _ wfΣ _ (spine_subst_smash wfΣ spu) (spine_subst_smash wfΣ spu')).
       { rewrite -app_context_assoc -smash_context_app_expand. eapply wf_local_smash_end; eauto.
         rewrite /argctx. apply weaken_wf_local; eauto. eapply spu.
@@ -3415,7 +3415,7 @@ Proof.
     { rewrite /pargctx.
       rewrite (smash_context_subst []).
       evar (i : nat).
-      replace (context_assumptions (cshape_args cs)) with i. subst i.
+      replace (context_assumptions (cstr_args cs)) with i. subst i.
       unshelve eapply (conv_terms_subst _ _ _ _ _ _ _ _ _ wfΣ _ spu spu'); eauto.
       { rewrite -app_context_assoc. eapply weaken_wf_local; eauto.
         rewrite !subst_instance_context_app in wfargs.
@@ -3462,7 +3462,7 @@ Proof.
   set (oib := declared_inductive_inv _ _ _ _) in *.
   clearbody onp.
   destruct oib. simpl in *. destruct onp.
-  destruct ind_cshapes as [|[] []] eqn:cseq => //.
+  destruct ind_cunivs as [|[] []] eqn:cseq => //.
   depelim onConstructors. exists x.
   split; eauto. eapply declp. simpl. now rewrite H.
 Qed.
@@ -3528,28 +3528,28 @@ Lemma subslet_projs_smash {cf:checker_flags} (Σ : global_env_ext) i mdecl idecl
   forall (wfΣ : wf Σ.1) 
   (Hdecl : declared_inductive Σ.1 mdecl i idecl),
   let oib := declared_inductive_inv weaken_env_prop_typing wfΣ wfΣ Hdecl in
-  match ind_cshapes oib return Type with
+  match ind_cunivs oib return Type with
   | [cs] => 
     on_projections mdecl (inductive_mind i) (inductive_ind i) 
      idecl (ind_indices oib) cs -> 
      forall Γ t u,
      let indsubst := inds (inductive_mind i) u (ind_bodies mdecl) in
      untyped_subslet Γ
-     (projs_inst i (ind_npars mdecl) (context_assumptions (cshape_args cs)) t)
+     (projs_inst i (ind_npars mdecl) (context_assumptions (cstr_args cs)) t)
      (lift_context 1 0 (subst_context (inds (inductive_mind i) u (ind_bodies mdecl))
         (context_assumptions (ind_params mdecl))
-        (subst_instance_context u (expand_lets_ctx (ind_params mdecl) (smash_context [] (cshape_args cs))))))
+        (subst_instance_context u (expand_lets_ctx (ind_params mdecl) (smash_context [] (cstr_args cs))))))
   | _ => True
   end.
 Proof.
   intros wfΣ Hdecl oib.
-  destruct ind_cshapes as [|cs []] eqn:Heq; trivial.
+  destruct ind_cunivs as [|cs []] eqn:Heq; trivial.
   intros onp. simpl. intros Γ t u. 
   destruct onp.
   assert (#|PCUICEnvironment.ind_projs idecl| >=
-  PCUICEnvironment.context_assumptions (cshape_args cs)). lia.
+  PCUICEnvironment.context_assumptions (cstr_args cs)). lia.
   clear on_projs_all.
-  induction (cshape_args cs) as [|[? [] ?] ?].
+  induction (cstr_args cs) as [|[? [] ?] ?].
   - simpl. constructor.
   - simpl. apply IHc. now simpl in H.
   - simpl. rewrite smash_context_acc /=. simpl.
@@ -3596,7 +3596,7 @@ Proof.
   epose proof (declared_projection_type_and_eq wfΣ declp).
   destruct (on_declared_projection wfΣ declp).
   set (oib := declared_inductive_inv _ _ _ _) in *. simpl in X, y.
-  destruct ind_cshapes as [|[] []] eqn:cseq => //.
+  destruct ind_cunivs as [|[] []] eqn:cseq => //.
   simpl in *. destruct y as [[[_ onps] onidx] onproj].
   simpl in X.
   destruct X as [_ [idecl' [[[idecl'nth _] pty] pty']]].
@@ -3666,7 +3666,7 @@ Proof.
     rewrite /projection_type /=.
     fold (expand_lets_k (ind_params mdecl) p.2 ty).
     rewrite projs_inst_skipn.
-    assert (context_assumptions cshape_args - S (PCUICEnvironment.context_assumptions cshape_args - S p.2) = p.2) as -> by lia.
+    assert (context_assumptions cstr_args - S (PCUICEnvironment.context_assumptions cstr_args - S p.2) = p.2) as -> by lia.
     clear X.
     rewrite - subst_subst_instance_constr.
     rewrite - (subst_subst_instance_constr u').
@@ -3890,7 +3890,7 @@ Qed.
 Lemma leb_elim_prop_sort shapes f n cs : 
   allowed_eliminations_subset f (elim_sort_prop_ind shapes) ->
   nth_error shapes n = Some cs ->
-  allowed_eliminations_subset f (if is_propositional cs.(cshape_sort) then IntoAny else IntoPropSProp).
+  allowed_eliminations_subset f (if is_propositional cs.(cdecl_sort) then IntoAny else IntoPropSProp).
 Proof.
   destruct shapes as [|? []]; simpl.
   - rewrite nth_error_nil => //.
@@ -3967,8 +3967,8 @@ Proof.
            (inds (inductive_mind ind) u (PCUICEnvironment.ind_bodies mdecl))
            #|ind_params mdecl|
            (map_context (subst_instance_constr u)
-              (cshape_args cs))))
-  (List.map (subst_instance_univ u) (cshape_sorts cs))).
+              (cstr_args cs))))
+  (List.map (subst_instance_univ u) (cdecl_sorts cs))).
   { pose proof (onc.(on_cargs)).
     eapply sorts_local_ctx_instantiate in X; eauto.
     rewrite subst_instance_context_app in X.
@@ -3991,12 +3991,12 @@ Proof.
     eapply sppars. }
   eexists.
   set (binder := vass _ _) in *.
-  (* assert (wfcs : wf_universe Σ (subst_instance u (cshape_sort cs))).
+  (* assert (wfcs : wf_universe Σ (subst_instance u (cdecl_sort cs))).
   { eapply type_local_ctx_wf in X; pcuic. } *)
   eapply type_it_mkProd_or_LetIn_sorts. eauto. eapply X.
   eapply sorts_local_ctx_wf_local in X.
   eapply type_mkApps.
-  relativize #|cshape_args cs|.
+  relativize #|cstr_args cs|.
   eapply weakening; eauto. now len.
   len. rewrite lift_it_mkProd_or_LetIn /=.
   epose proof (on_constructor_inst_pars_indices wfΣ decli onind _ onc cu sppars) as 
@@ -4011,19 +4011,19 @@ Proof.
         (inds (inductive_mind ind) u (PCUICEnvironment.ind_bodies mdecl))
         #|PCUICEnvironment.ind_params mdecl|
         (PCUICEnvironment.map_context (subst_instance_constr u)
-           (cshape_args cs))) ,,,
-   lift_context #|cshape_args cs| 0
+           (cstr_args cs))) ,,,
+   lift_context #|cstr_args cs| 0
      (subst_context (skipn #|ind_indices oib| instsubst) 0
         (subst_instance_context u (ind_indices oib))) ,,,
-   [lift_decl #|cshape_args cs| #|ind_indices oib| binder])).
+   [lift_decl #|cstr_args cs| #|ind_indices oib| binder])).
   { constructor. 
-    relativize #|cshape_args cs|.
+    relativize #|cstr_args cs|.
     eapply weakening_wf_local; eauto. eapply spargs. now len.
     red. set (sort := subst_instance_univ u (ind_sort oib)). exists sort.
     simpl.
-    change (tSort sort) with (lift #|cshape_args cs| #|ind_indices oib| (tSort sort)).
+    change (tSort sort) with (lift #|cstr_args cs| #|ind_indices oib| (tSort sort)).
     change (skipn #|ind_indices oib| instsubst) with parsubst.
-    relativize #|cshape_args cs|. 
+    relativize #|cstr_args cs|. 
     change #|ind_indices _| with #|ind_indices oib|.
     relativize #|ind_indices oib|.
     eapply weakening_typing; eauto. all:len => //.
@@ -4091,9 +4091,9 @@ Proof.
     rewrite subst_empty skipn_S skipn_0.
     rewrite lift_mkApps subst_mkApps !map_app /=.
     assert (eqpars : map (subst0 instps)
-    (map (lift #|cshape_args cs| #|ind_indices oib|)
+    (map (lift #|cstr_args cs| #|ind_indices oib|)
        (map (lift0 #|ind_indices oib|) (firstn (ind_npars mdecl) args))) = 
-       map (lift0 #|cshape_args cs|) (firstn (ind_npars mdecl) args)).    
+       map (lift0 #|cstr_args cs|) (firstn (ind_npars mdecl) args)).    
     { rewrite (map_map_compose _ _ _ _ (lift _ _)).
       rewrite -simpl_map_lift /=.
       rewrite -(map_map_compose _ _ _ _ (lift _ _)).
@@ -4108,7 +4108,7 @@ Proof.
     eapply wf_arity_spine_typing_spine; eauto.
     split.
     apply (declared_constructor_valid_ty _ _ _ _ _ _ _ _ wfΣ (spinst.(spine_dom_wf _ _ _ _ _)) H cu).
-    pose proof onc.(cstr_eq). unfold cdecl_type in H0.
+    pose proof onc.(cstr_eq). unfold cstr_type in H0.
     unfold type_of_constructor; rewrite {}H0.
     rewrite !subst_instance_constr_it_mkProd_or_LetIn !subst_it_mkProd_or_LetIn.
     rewrite -it_mkProd_or_LetIn_app. len.
@@ -4121,11 +4121,11 @@ Proof.
     split. len.
     rewrite (closed_ctx_subst  _ _ (subst_instance_context _ _)).
     eapply closed_wf_local; eauto. eapply on_minductive_wf_params; eauto.
-    instantiate (1 := all_rels _ _ _ ++ (map (lift0 #|cshape_args cs|) (skipn #|ind_indices oib| instsubst))).
-    rewrite -(closed_ctx_lift #|cshape_args cs| 0 (subst_instance_context _ _)).
+    instantiate (1 := all_rels _ _ _ ++ (map (lift0 #|cstr_args cs|) (skipn #|ind_indices oib| instsubst))).
+    rewrite -(closed_ctx_lift #|cstr_args cs| 0 (subst_instance_context _ _)).
     eapply closed_wf_local; eauto. eapply on_minductive_wf_params; eauto.
     rewrite skipn_all_app_eq. all:cycle 1.
-    relativize #|cshape_args cs|.
+    relativize #|cstr_args cs|.
     eapply spine_subst_weakening; eauto. len. reflexivity.
     simpl. len.
     rewrite (firstn_app_left _ 0) // ?firstn_0 //. all:cycle 1.
@@ -4141,7 +4141,7 @@ Proof.
       now rewrite !closedn_ctx_app /=; len => /andb_and [_ ?].
       now rewrite lift_context_subst_context. } 
     len.
-    rewrite (subst_cstr_concl_head ind u mdecl (cshape_args cs) _ _).
+    rewrite (subst_cstr_concl_head ind u mdecl (cstr_args cs) _ _).
     destruct decli. now eapply nth_error_Some_length in H1.
     rewrite subst_mkApps /= map_app.
     eapply arity_spine_conv.
@@ -4169,12 +4169,12 @@ Proof.
       move: (spine_subst_subst_to_extended_list_k spinst).
       rewrite !to_extended_list_k_fold_context PCUICSubstitution.map_subst_instance_constr_to_extended_list_k.
       move=> ->.
-      set (argctx := cshape_args cs) in *.
+      set (argctx := cstr_args cs) in *.
       change (skipn #|ind_indices oib| instsubst) with parsubst in spinst, X0 |- *.
       assert (All (fun x => closedn (#|parsubst| + #|argctx|) x) (map
       (subst (inds (inductive_mind ind) u (PCUICAst.ind_bodies mdecl))
-         (#|cshape_args cs| + #|ind_params mdecl|)
-       ∘ subst_instance_constr u) (cshape_indices cs))).
+         (#|cstr_args cs| + #|ind_params mdecl|)
+       ∘ subst_instance_constr u) (cstr_indices cs))).
       { pose proof (positive_cstr_closed_indices wfΣ onc).
         eapply All_map.
         eapply All_map_inv in X1.
@@ -4193,7 +4193,7 @@ Proof.
       etransitivity.
       2:symmetry; eapply red_conv; eauto.
       len.
-      assert(subst (map (lift0 #|argctx|) parsubst) #|cshape_args cs| x =
+      assert(subst (map (lift0 #|argctx|) parsubst) #|cstr_args cs| x =
       (lift #|argctx| #|argctx| (subst parsubst #|argctx| x))) as <-.
       { epose proof (distr_lift_subst_rec _ _ #|argctx| #|argctx| 0) as l.
         rewrite Nat.add_0_r in l. rewrite -> l. f_equal.

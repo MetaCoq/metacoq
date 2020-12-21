@@ -658,14 +658,14 @@ Section CheckEnv.
     isType Σ (arities_context mdecl.(ind_bodies)) d.1.2 * 
     (d.1.2 = 
       it_mkProd_or_LetIn 
-        (mdecl.(ind_params) ,,, cs.(cshape_args))
-        (mkApps (tRel (#|mdecl.(ind_params) ,,, cs.(cshape_args)| + (#|ind_bodies mdecl| - ind)))
-          (to_extended_list_k mdecl.(ind_params) #|cs.(cshape_args)| ++ 
-          cs.(cshape_indices)))) * 
+        (mdecl.(ind_params) ,,, cs.(cstr_args))
+        (mkApps (tRel (#|mdecl.(ind_params) ,,, cs.(cstr_args)| + (#|ind_bodies mdecl| - ind)))
+          (to_extended_list_k mdecl.(ind_params) #|cs.(cstr_args)| ++ 
+          cs.(cstr_indices)))) * 
     (sorts_local_ctx (lift_typing typing) Σ 
-      (arities_context mdecl.(ind_bodies) ,,, ind_params mdecl) cs.(cshape_args) 
-      cs.(cshape_sorts)) * 
-    (d.2 = context_assumptions cs.(cshape_args)).
+      (arities_context mdecl.(ind_bodies) ,,, ind_params mdecl) cs.(cstr_args) 
+      cs.(cdecl_sorts)) * 
+    (d.2 = context_assumptions cs.(cstr_args)).
 
   Program Definition isRel_n n (t : term) : typing_result (t = tRel n) :=
     match t with
@@ -749,9 +749,9 @@ Section CheckEnv.
           (Msg "Parameters in the conclusion of the constructor type do not match the inductive parameters")) ;;
       '(cs; Hcs) <- wrap_error Σ d.1.1 
         (infer_sorts_local_ctx Σ (arities_context mdecl.(ind_bodies) ,,, mdecl.(ind_params)) args _) ;;
-      ret ({| cshape_args := args;
-              cshape_indices := skipn mdecl.(ind_npars) conclargs;
-              cshape_sorts := cs |}; _)
+      ret ({| cstr_args := args;
+              cstr_indices := skipn mdecl.(ind_npars) conclargs;
+              cdecl_sorts := cs |}; _)
     | None =>
       raise (Σ.(wf_env_ext_env), IllFormedDecl d.1.1 (Msg "Not enough parameters in constructor type"))
     end.
@@ -1485,9 +1485,9 @@ Section CheckEnv.
     Qed.
 
   Definition wt_indices Σ mdecl indices cs :=
-    wf_local Σ (ind_arities mdecl,,, ind_params mdecl,,, cs.(cshape_args)) *
-    ctx_inst Σ (ind_arities mdecl,,, ind_params mdecl,,, cs.(cshape_args)) 
-      (cs.(cshape_indices)) (List.rev (lift_context #|cs.(cshape_args)| 0 indices)).
+    wf_local Σ (ind_arities mdecl,,, ind_params mdecl,,, cs.(cstr_args)) *
+    ctx_inst Σ (ind_arities mdecl,,, ind_params mdecl,,, cs.(cstr_args)) 
+      (cs.(cstr_indices)) (List.rev (lift_context #|cs.(cstr_args)| 0 indices)).
 
   Lemma ctx_inst_wt Σ Γ s Δ : 
     ctx_inst Σ Γ s Δ ->
@@ -1604,8 +1604,8 @@ Section CheckEnv.
     eapply inversion_Rel in Hf as [decl [wfctx [Hnth cum]]]; auto.
     rewrite nth_error_app_ge in Hnth. lia.
     split. now rewrite app_context_assoc in wfctx.
-    replace (#|ind_params mdecl,,, cshape_args y| + (#|ind_bodies mdecl| - S n) -
-    #|ind_params mdecl,,, cshape_args y|) with (#|ind_bodies mdecl| - S n) in Hnth by lia.
+    replace (#|ind_params mdecl,,, cstr_args y| + (#|ind_bodies mdecl| - S n) -
+    #|ind_params mdecl,,, cstr_args y|) with (#|ind_bodies mdecl| - S n) in Hnth by lia.
     pose proof (nth_error_Some_length hnth).
     rewrite nth_error_rev in hnth => //.
     eapply nth_error_arities_context in hnth. rewrite Hnth in hnth.
@@ -1658,12 +1658,12 @@ Section CheckEnv.
            syntactically the heads. *)
         check_args <- wrap_error wfext.(@wf_env_ext_env cf) (string_of_kername id)
           (check_leq_context true wfext 
-            (subst_instance_context u (expand_lets_ctx (ind_params mdecl) (smash_context [] (cshape_args cs))))
-            (subst_instance_context u' (expand_lets_ctx (ind_params mdecl) (smash_context [] (cshape_args cs))))) ;;
+            (subst_instance_context u (expand_lets_ctx (ind_params mdecl) (smash_context [] (cstr_args cs))))
+            (subst_instance_context u' (expand_lets_ctx (ind_params mdecl) (smash_context [] (cstr_args cs))))) ;;
         check_indices <- wrap_error wfext.(@wf_env_ext_env cf) (string_of_kername id)
           (check_leq_terms false wfext
-            (map (subst_instance_constr u ∘ expand_lets (ind_params mdecl ,,, cs.(cshape_args))) (cshape_indices cs))
-            (map (subst_instance_constr u' ∘ expand_lets (ind_params mdecl ,,, cs.(cshape_args))) (cshape_indices cs))) ;;
+            (map (subst_instance_constr u ∘ expand_lets (ind_params mdecl ,,, cs.(cstr_args))) (cstr_indices cs))
+            (map (subst_instance_constr u' ∘ expand_lets (ind_params mdecl ,,, cs.(cstr_args))) (cstr_indices cs))) ;;
         ret _
       | None => False_rect _ _
       end
@@ -1748,7 +1748,7 @@ Section CheckEnv.
       eapply isType_it_mkProd_or_LetIn_wf_local in wfar.
       now rewrite app_context_nil_l in wfar. auto. }
     econstructor => //.
-    unfold cdecl_type. rewrite eq.
+    unfold cstr_type. rewrite eq.
     rewrite it_mkProd_or_LetIn_app. autorewrite with len. lia_f_equal.
   Qed.
 
@@ -1765,10 +1765,10 @@ Section CheckEnv.
     (cs : constructor_shape) 
     (oncs : ∥ on_constructors (lift_typing typing) Σ mdecl i idecl indices idecl.(ind_ctors) [cs] ∥) 
     (k : nat) (p : ident × term) (hnth : nth_error idecl.(ind_projs) k = Some p)
-    (heq : #|idecl.(ind_projs)| = context_assumptions cs.(cshape_args))
+    (heq : #|idecl.(ind_projs)| = context_assumptions cs.(cstr_args))
     : typing_result (∥ on_projection mdecl mind i cs k p ∥) :=
-    let Γ :=  smash_context [] (cs.(cshape_args) ++ ind_params mdecl) in
-    match nth_error Γ (context_assumptions (cs.(cshape_args)) - S k) with
+    let Γ :=  smash_context [] (cs.(cstr_args) ++ ind_params mdecl) in
+    match nth_error Γ (context_assumptions (cs.(cstr_args)) - S k) with
     | Some decl =>
       let u := abstract_instance (ind_universes mdecl) in
       let ind := {| inductive_mind := mind; inductive_ind := i |} in
@@ -1802,7 +1802,7 @@ Section CheckEnv.
     typing_result (∥ on_projections mdecl mind i idecl indices cs ∥) :=
     check_indices <- check_eq_true (eqb [] indices) (Msg "Primitive records cannot have indices") ;;
     check_elim <- check_eq_true (eqb (ind_kelim idecl) IntoAny) (Msg "Primitive records must be eliminable to Type");;
-    check_length <- check_eq_true (eqb #|idecl.(ind_projs)| (context_assumptions cs.(cshape_args)))
+    check_length <- check_eq_true (eqb #|idecl.(ind_projs)| (context_assumptions cs.(cstr_args)))
       (Msg "Invalid number of projections") ;;
     check_projs <- monad_Alli_nth idecl.(ind_projs) 
       (fun n p hnth => check_projection Σ mind mdecl i idecl indices cs oncs n p hnth (eqb_eq _ _ check_length)) ;;
@@ -1839,10 +1839,10 @@ Section CheckEnv.
   Qed.
 
   Definition checkb_constructors_smaller (G : universes_graph) (cs : list constructor_shape) (ind_sort : Universe.t) :=
-    List.forallb (fun cs => List.forallb (fun argsort => check_leqb_universe G argsort ind_sort) cs.(cshape_sorts)) cs.
+    List.forallb (fun cs => List.forallb (fun argsort => check_leqb_universe G argsort ind_sort) cs.(cdecl_sorts)) cs.
 
   Lemma check_constructors_smallerP (Σ : wf_env_ext) cs ind_sort : 
-    Forall (fun cs => Forall (wf_universe Σ) cs.(cshape_sorts)) cs -> wf_universe Σ ind_sort ->
+    Forall (fun cs => Forall (wf_universe Σ) cs.(cdecl_sorts)) cs -> wf_universe Σ ind_sort ->
     ∥ reflect (check_constructors_smaller Σ cs ind_sort) (checkb_constructors_smaller Σ cs ind_sort) ∥.
   Proof.
     unfold check_constructors_smaller, checkb_constructors_smaller.
@@ -1870,7 +1870,7 @@ Section CheckEnv.
   Qed.
 
   Definition wf_cs_sorts (Σ : wf_env_ext) cs := 
-    Forall (fun cs => Forall (wf_universe Σ) cs.(cshape_sorts)) cs.
+    Forall (fun cs => Forall (wf_universe Σ) cs.(cdecl_sorts)) cs.
 
   Program Definition do_check_ind_sorts (Σ : wf_env_ext) (params : context) (wfparams : ∥ wf_local Σ params ∥) 
     (kelim : allowed_eliminations) (indices : context) 
@@ -2026,7 +2026,7 @@ Section CheckEnv.
         (sq 
         {| ind_indices := indices; ind_sort := ctxinds.2; 
            ind_arity_eq := _; onArity := _;
-           ind_cshapes := cs;
+           ind_cunivs := cs;
            onConstructors := oncstrs;
            onProjections := onprojs;
            ind_sorts := onsorts; 

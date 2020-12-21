@@ -873,16 +873,18 @@ Section WfStack.
         declared_inductive Σ mdecl (ci_ind ci) idecl) * (wf_stack π)
     | Case_p ci ppars puinst pctx c brs π => 
       (∑ mdecl idecl,
-        declared_inductive Σ mdecl (ci_ind ci) idecl *
-        ind_case_predicate_context (ci_ind ci) mdecl idecl ppars puinst (forget_types pctx) pctx) * 
+        declared_inductive Σ mdecl (ci_ind ci) idecl * 
+        (pctx = case_predicate_context_gen (ci_ind ci) mdecl idecl ppars puinst 
+          (forget_types pctx))) *
         wf_stack π
     | Case ci _ _ π =>
       (∑ mdecl idecl, declared_inductive Σ mdecl (ci_ind ci) idecl) * wf_stack π
     | Case_brs ci pred c bctx brs1 brs2 π =>
-      (∑ brctxs, case_branches_contexts Σ ci pred brctxs * 
-        (nth_error brctxs #|brs1| = Some bctx) * 
-        (#|brctxs| = #|brs1| + S #|brs2|)%nat) *
-        wf_stack π
+      (∑ mdecl idecl,
+        (declared_inductive Σ mdecl (ci_ind ci) idecl) *
+        (nth_error (case_branches_contexts idecl pred) #|brs1| = Some bctx) * 
+        (#|case_branches_contexts idecl pred| = #|brs1| + S #|brs2|)%nat) *
+      wf_stack π
     | Proj _ π 
     | Prod_l _ _ π
     | Prod_r _ _ π

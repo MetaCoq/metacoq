@@ -37,7 +37,7 @@ Fixpoint isArity T :=
 
 Definition type_of_constructor mdecl (cdecl : constructor_body) (c : inductive * nat) (u : list Level.t) :=
   let mind := inductive_mind (fst c) in
-  subst0 (inds mind u mdecl.(ind_bodies)) (subst_instance_constr u (snd (fst cdecl))).
+  subst0 (inds mind u mdecl.(ind_bodies)) (subst_instance_constr u (cstr_type cdecl)).
 
 Definition extends (Σ Σ' : global_env) :=
   { Σ'' & Σ' = Σ'' ++ Σ }.
@@ -271,18 +271,20 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
 | type_Case (ci : case_info) p c brs indices ps :
     forall mdecl idecl (isdecl : declared_inductive Σ.1 mdecl ci.(ci_ind) idecl),
     mdecl.(ind_npars) = ci.(ci_npar) ->
-    forall pctx, ind_case_predicate_context ci.(ci_ind) mdecl idecl p.(pparams) p.(puinst) p.(pcontext) pctx ->
-    Σ ;;; Γ ,,, pctx |- p.(preturn) : tSort ps ->
+    #|idecl.(ind_indices)| = #|p.(pcontext)| ->
+    context_assumptions idecl.(ind_indices) = #|p.(pparams)| ->
+    let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
+    Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps ->
     is_allowed_elimination Σ ps idecl.(ind_kelim) ->
     Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
     isCoFinite mdecl.(ind_finite) = false ->
-    forall brtys, ind_case_branches_types ci.(ci_ind) mdecl idecl p pctx brtys ->
+    let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
     All2 (fun br brctxty =>
-      (#|br.(bcontext)| = #|brctxty.1|) *
+      (Forall2 (fun na decl => eq_binder_annot na decl.(decl_name)) br.(bcontext) brctxty.1) *
       (Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2) *
-      (* This is a paranoid assumption *)
-      (Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps)) brs brtys ->
-    let ptm := it_mkLambda_or_LetIn pctx p.(preturn) in
+      (Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps)) 
+      brs
+      (case_branches_types ci.(ci_ind) idecl p ptm) ->
     Σ ;;; Γ |- tCase ci p c brs : mkApps ptm (indices ++ [c])
 
 | type_Proj p c u :
@@ -640,28 +642,32 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
        consistent_instance_ext Σ mdecl.(ind_universes) u ->
        P Σ Γ (tConstruct ind i u) (type_of_constructor mdecl cdecl (ind, i) u)) ->
 
-  (forall (Σ : global_env_ext) (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ),     
-       forall (ci : case_info) p c brs indices ps mdecl idecl
-         (isdecl : declared_inductive Σ.1 mdecl ci.(ci_ind) idecl),
-         Forall_decls_typing P Σ.1 -> 
-         PΓ Σ Γ wfΓ ->
-         mdecl.(ind_npars) = ci.(ci_npar) ->
-         forall pctx, ind_case_predicate_context ci.(ci_ind) mdecl idecl p.(pparams) p.(puinst) p.(pcontext) pctx ->
-         forall (pty : Σ ;;; Γ ,,, pctx |- p.(preturn) : tSort ps),
-         P Σ (Γ ,,, pctx) p.(preturn) (tSort ps) ->
-         PΓ Σ (Γ ,,, pctx) (typing_wf_local pty) ->
-         is_allowed_elimination Σ ps idecl.(ind_kelim) ->
-         Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
-         P Σ Γ c (mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices)) ->
-         isCoFinite mdecl.(ind_finite) = false ->
-         forall brtys, 
-         ind_case_branches_types ci.(ci_ind) mdecl idecl p pctx brtys ->
-         All2 (fun br brctxty =>
-           (#|br.(bcontext)| = #|brctxty.1|) *
-           (Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2) * P Σ (Γ ,,, brctxty.1) br.(bbody) brctxty.2 *
-           (Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps) * P Σ (Γ ,,, brctxty.1) brctxty.2 (tSort ps)) brs brtys ->
-         let ptm := it_mkLambda_or_LetIn pctx p.(preturn) in
-         P Σ Γ (tCase ci p c brs) (mkApps ptm (indices ++ [c]))) ->
+     (forall (Σ : global_env_ext) (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ),     
+      forall (ci : case_info) p c brs indices ps mdecl idecl
+        (isdecl : declared_inductive Σ.1 mdecl ci.(ci_ind) idecl),
+        Forall_decls_typing P Σ.1 -> 
+        PΓ Σ Γ wfΓ ->
+        mdecl.(ind_npars) = ci.(ci_npar) ->
+        #|idecl.(ind_indices)| = #|p.(pcontext)| ->
+        context_assumptions idecl.(ind_indices) = #|p.(pparams)| ->
+        let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
+        forall pret : Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps,
+        P Σ (Γ ,,, predctx) p.(preturn) (tSort ps) ->
+        PΓ Σ (Γ ,,, predctx) (typing_wf_local pret) ->
+        is_allowed_elimination Σ ps idecl.(ind_kelim) ->
+        Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
+        P Σ Γ c (mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices)) ->
+        isCoFinite mdecl.(ind_finite) = false ->
+        let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
+        All2 (fun br brctxty =>
+          Forall2 (fun na decl => eq_binder_annot na decl.(decl_name)) br.(bcontext) brctxty.1 *
+          (Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2) * 
+          P Σ (Γ ,,, brctxty.1) br.(bbody) brctxty.2 *
+          (Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps) *
+          P Σ (Γ ,,, brctxty.1) brctxty.2 (tSort ps)) 
+          brs
+          (case_branches_types ci.(ci_ind) idecl p ptm) ->
+        P Σ Γ (tCase ci p c brs) (mkApps ptm (indices ++ [c]))) ->
 
    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : projection) (c : term) u
          mdecl idecl pdecl (isdecl : declared_projection Σ.1 mdecl idecl p pdecl) args,
@@ -757,8 +763,7 @@ Proof.
       + red in Xg.
         destruct Xg as [onI onP onnp]; constructor; eauto.
         eapply Alli_impl; eauto. clear onI onP onnp; intros n x Xg.
-        refine {| ind_indices := Xg.(ind_indices);
-                  ind_arity_eq := Xg.(ind_arity_eq);
+        refine {| ind_arity_eq := Xg.(ind_arity_eq);
                   ind_cunivs := Xg.(ind_cunivs) |}.
                   
         ++ apply onArity in Xg. destruct Xg as [s Hs]. exists s; auto.
@@ -781,8 +786,8 @@ Proof.
             apply IH. simpl. constructor 1. simpl. auto with arith.
             clear -X13 IH oncind.
             revert oncind.
-            generalize (List.rev (lift_context #|cstr_args y| 0 (ind_indices Xg))).
-            generalize (cstr_indices y). induction 1; constructor; auto.
+            generalize (List.rev (lift_context #|cstr_args x0| 0 (ind_indices x))).
+            generalize (cstr_indices x0). induction 1; constructor; auto.
             simpl in t2 |- *.
             specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ _ (existT _ _ t2)))))).
             apply IH. simpl. constructor 1. simpl. auto with arith.
@@ -799,7 +804,7 @@ Proof.
             destruct X14 as [u Hu]. exists u.
             specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ _ (existT _ _ Hu)))))).
             apply IH. simpl. constructor 1. simpl. auto with arith.
-          ++ apply onIndices.
+          ++ apply (onIndices Xg).
           ++ red in onP |- *.
             eapply All_local_env_impl; eauto.
             intros. destruct T; simpl in X14.
@@ -880,10 +885,10 @@ Proof.
         eapply (X8 Σ wfΣ Γ (typing_wf_local H0) ci); eauto.
         ++ eapply (X14 _ _ _ H); eauto. simpl; auto with arith.
         ++ eapply (X14 _ _ _ H); eauto. simpl; auto with arith.
-        ++ simpl in *. eapply (X13 _ _ _ H); eauto. clear. lia.
+        ++ simpl in *. eapply (X13 _ _ _ H); eauto. clear. subst predctx. lia.
         ++ eapply (X14 _ _ _ H0); simpl. lia.
         ++ clear X13 Hdecls. revert a X14. simpl. clear. intros.
-          induction a; simpl in *.
+          subst ptm predctx; induction a; simpl in *.
           ** constructor.
           ** destruct r as [[? ?] ?]. constructor.
               --- intuition eauto.
@@ -1043,29 +1048,33 @@ Lemma typing_ind_env `{cf : checker_flags} :
         PΓ Σ Γ wfΓ ->
         consistent_instance_ext Σ mdecl.(ind_universes) u ->
         P Σ Γ (tConstruct ind i u) (type_of_constructor mdecl cdecl (ind, i) u)) ->
-
-  (forall (Σ : global_env_ext) (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ),     
-       forall (ci : case_info) p c brs indices ps mdecl idecl
-         (isdecl : declared_inductive Σ.1 mdecl ci.(ci_ind) idecl),
-         Forall_decls_typing P Σ.1 -> 
-         PΓ Σ Γ wfΓ ->
-         mdecl.(ind_npars) = ci.(ci_npar) ->
-         forall pctx, ind_case_predicate_context ci.(ci_ind) mdecl idecl p.(pparams) p.(puinst) p.(pcontext) pctx ->
-         forall (pty : Σ ;;; Γ ,,, pctx |- p.(preturn) : tSort ps),
-         P Σ (Γ ,,, pctx) p.(preturn) (tSort ps) ->
-         PΓ Σ (Γ ,,, pctx) (typing_wf_local pty) ->
-         is_allowed_elimination Σ ps idecl.(ind_kelim) ->
-         Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
-         P Σ Γ c (mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices)) ->
-         isCoFinite mdecl.(ind_finite) = false ->
-         forall brtys, 
-         ind_case_branches_types ci.(ci_ind) mdecl idecl p pctx brtys ->
-         All2 (fun br brctxty =>
-           (#|br.(bcontext)| = #|brctxty.1|) *
-           (Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2) * P Σ (Γ ,,, brctxty.1) br.(bbody) brctxty.2 *
-           (Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps) * P Σ (Γ ,,, brctxty.1) brctxty.2 (tSort ps)) brs brtys ->
-         let ptm := it_mkLambda_or_LetIn pctx p.(preturn) in
-         P Σ Γ (tCase ci p c brs) (mkApps ptm (indices ++ [c]))) ->
+        (forall (Σ : global_env_ext) (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ),     
+        forall (ci : case_info) p c brs indices ps mdecl idecl
+          (isdecl : declared_inductive Σ.1 mdecl ci.(ci_ind) idecl),
+          Forall_decls_typing P Σ.1 -> 
+          PΓ Σ Γ wfΓ ->
+          mdecl.(ind_npars) = ci.(ci_npar) ->
+          #|idecl.(ind_indices)| = #|p.(pcontext)| ->
+          context_assumptions idecl.(ind_indices) = #|p.(pparams)| ->
+          let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
+          forall pret : Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps,
+          P Σ (Γ ,,, predctx) p.(preturn) (tSort ps) ->
+          PΓ Σ (Γ ,,, predctx) (typing_wf_local pret) ->
+          is_allowed_elimination Σ ps idecl.(ind_kelim) ->
+          Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
+          P Σ Γ c (mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices)) ->
+          isCoFinite mdecl.(ind_finite) = false ->
+          let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
+          All2 (fun br brctxty =>
+            Forall2 (fun na decl => eq_binder_annot na decl.(decl_name)) br.(bcontext) brctxty.1 *
+            (Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2) * 
+            P Σ (Γ ,,, brctxty.1) br.(bbody) brctxty.2 *
+            (Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps) *
+            P Σ (Γ ,,, brctxty.1) brctxty.2 (tSort ps)) 
+            brs
+            (case_branches_types ci.(ci_ind) idecl p ptm) ->
+          P Σ Γ (tCase ci p c brs) (mkApps ptm (indices ++ [c]))) ->
+          
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : projection) (c : term) u
           mdecl idecl pdecl (isdecl : declared_projection Σ.1 mdecl idecl p pdecl) args,

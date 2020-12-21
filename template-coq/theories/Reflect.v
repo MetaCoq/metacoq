@@ -700,7 +700,6 @@ Defined.
 
 Local Infix "==?" := eqb (at level 20).
 
-
 Definition eqb_Variance x y :=
   match x, y with
   | Variance.Irrelevant, Variance.Irrelevant

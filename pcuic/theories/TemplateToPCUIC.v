@@ -53,12 +53,21 @@ Definition trans_decl (d : Ast.context_decl) :=
 
 Definition trans_local Γ := List.map trans_decl Γ.
 
+Definition trans_constructor_body (d : Ast.constructor_body) :=
+  {| cstr_name := d.(Ast.cstr_name); 
+     cstr_args := trans_local d.(Ast.cstr_args);
+     cstr_indices := map trans d.(Ast.cstr_indices); 
+     cstr_type := trans d.(Ast.cstr_type);
+     cstr_arity := d.(Ast.cstr_arity) |}.
+
 Definition trans_one_ind_body (d : Ast.one_inductive_body) :=
   {| ind_name := d.(Ast.ind_name);
      ind_relevance := d.(Ast.ind_relevance);
+     ind_indices := trans_local d.(Ast.ind_indices);
+     ind_sort := d.(Ast.ind_sort);
      ind_type := trans d.(Ast.ind_type);
      ind_kelim := d.(Ast.ind_kelim);
-     ind_ctors := List.map (fun '(x, y, z) => (x, trans y, z)) d.(Ast.ind_ctors);
+     ind_ctors := List.map trans_constructor_body d.(Ast.ind_ctors);
      ind_projs := List.map (fun '(x, y) => (x, trans y)) d.(Ast.ind_projs) |}.
 
 Definition trans_constant_body bd :=

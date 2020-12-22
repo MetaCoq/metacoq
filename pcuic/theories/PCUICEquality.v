@@ -1104,15 +1104,6 @@ Proof.
   - eqspec; [|discriminate]. constructor.
 Qed.
 
-Lemma elimT {T} {b} : reflectT T b -> b -> T.
-Proof. intros [] => //. Qed.
-Coercion elimT : reflectT >-> Funclass.
-
-Lemma introT {T} {b} : reflectT T b -> T -> b.
-Proof. intros [] => //. Qed.
-
-Hint View for move/ introT|2.
-
 Definition reflect_eq_predicate {Σ equ lequ} {Re Rle : Universe.t -> Universe.t -> Prop} :
   (forall u u', reflectT (Re u u') (equ u u')) ->
   (forall u u', reflectT (Rle u u') (lequ u u')) ->

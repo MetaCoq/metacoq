@@ -5,38 +5,6 @@ From MetaCoq.Template Require Import utils AstUtils BasicAst Ast Environment Ind
 Require Import ssreflect.
 From Equations Require Import Equations.
 
-(** * Notion of reflection for Type-based properties *)
-
-Inductive reflectT (A : Type) : bool -> Type :=
-| ReflectT : A -> reflectT A true
-| ReflectF : (A -> False) -> reflectT A false.
-
-Lemma reflectT_reflect (A : Prop) b : reflectT A b -> reflect A b.
-Proof.
-  destruct 1; now constructor.
-Qed.
-
-Lemma reflect_reflectT (A : Prop) b : reflect A b -> reflectT A b.
-Proof.
-  destruct 1; now constructor.
-Qed.
-
-Lemma equiv_reflectT P (b : bool) : (P -> b) -> (b -> P) -> reflectT P b.
-Proof.
-  intros. destruct b; constructor; auto.
-  intros p; specialize (H p). discriminate.
-Qed.
-
-Lemma reflectT_subrelation {A} {R} {r : A -> A -> bool} : (forall x y, reflectT (R x y) (r x y)) -> CRelationClasses.subrelation R r.
-Proof.
-  intros. intros x y h. destruct (X x y); auto.
-Qed.
-
-Lemma reflectT_subrelation' {A} {R} {r : A -> A -> bool} : (forall x y, reflectT (R x y) (r x y)) -> CRelationClasses.subrelation r R.
-Proof.
-  intros. intros x y h. destruct (X x y); auto. discriminate.
-Qed.
-
 (* Some reflection / EqDec lemmata *)
 
 Class ReflectEq A := {

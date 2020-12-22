@@ -31,6 +31,7 @@ Qed.
 Lemma subst_instance_context_length u ctx
   : #|subst_instance_context u ctx| = #|ctx|.
 Proof. unfold subst_instance_context, map_context. now rewrite map_length. Qed.
+Hint Rewrite subst_instance_context_length : len.
 
 Lemma subst_subst_instance_constr u c N k :
   subst (map (subst_instance_constr u) N) k (subst_instance_constr u c)

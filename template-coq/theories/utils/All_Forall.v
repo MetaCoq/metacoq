@@ -33,6 +33,19 @@ Arguments All2_cons {_ _ _ _ _ _ _}.
 Derive Signature for All2.
 Derive NoConfusionHom for All2.
 
+Inductive All2i {A B : Type} (R : nat -> A -> B -> Type) (n : nat)
+  : list A -> list B -> Type :=
+| All2i_nil : All2i R n [] []
+| All2i_cons :
+    forall x y l r,
+      R n x y ->
+      All2i R (S n) l r ->
+      All2i R n (x :: l) (y :: r).
+Arguments All2i_nil {_ _ _ _}.
+Arguments All2i_cons {_ _ _ _ _ _ _ _}.
+
+Derive Signature NoConfusionHom for All2i.
+
 Inductive All3 {A B C : Type} (R : A -> B -> C -> Type) : list A -> list B -> list C -> Type :=
   All3_nil : All3 R [] [] []
 | All3_cons : forall (x : A) (y : B) (z : C) (l : list A) (l' : list B) (l'' : list C),
@@ -1198,6 +1211,26 @@ Section All2_size.
   end.
 End All2_size.
 
+Section All2i_size.
+  Context {A B} (P : nat -> A -> B -> Type) (fn : forall i x1 x2, P i x1 x2 -> size).
+  Fixpoint all2i_size {n l1 l2} (f : All2i P n l1 l2) : size :=
+  match f with
+  | All2i_nil => 0
+  | All2i_cons rxy rll' => fn _ _ _ rxy + all2i_size rll'
+  end.
+End All2i_size.
+
+Lemma All2i_impl {A B R R' n l l'} :
+    @All2i A B R n l l' ->
+    (forall i x y, R i x y -> R' i x y) ->
+    All2i R' n l l'.
+Proof.
+  intros ha h.
+  induction ha. 1: constructor.
+  constructor. 2: assumption.
+  eapply h. assumption.
+Qed.
+
 Ltac close_Forall :=
   match goal with
   | H : Forall _ _ |- Forall _ _ => apply (Forall_impl H); clear H; simpl
@@ -1206,6 +1239,7 @@ Ltac close_Forall :=
   | H : OnOne2i _ _ _ _ |- OnOne2i _ _ _ _ => apply (OnOne2_impl H); clear H; simpl
   | H : OnOne2All _ _ _ _ |- OnOne2All _ _ _ _ => apply (OnOne2All_impl H); clear H; simpl
   | H : All2 _ _ _ |- All2 _ _ _ => apply (All2_impl H); clear H; simpl
+  | H : All2i _ _ _ _ |- All2i _ _ _ _ => apply (All2i_impl H); clear H; simpl
   | H : All2 _ _ _ |- All _ _ =>
     (apply (All2_All_left H) || apply (All2_All_right H)); clear H; simpl
   end.
@@ -2107,29 +2141,6 @@ Proof.
   - constructor.
   - inversion h2.
     specialize (IHh1 X0). auto.
-Qed.
-
-
-Inductive All2i {A B : Type} (R : nat -> A -> B -> Type) (n : nat)
-  : list A -> list B -> Type :=
-| All2i_nil : All2i R n [] []
-| All2i_cons :
-    forall x y l r,
-      R n x y ->
-      All2i R (S n) l r ->
-      All2i R n (x :: l) (y :: r).
-Derive Signature NoConfusionHom for All2i.
-
-Lemma All2i_impl :
-  forall A B R R' n l l',
-    @All2i A B R n l l' ->
-    (forall i x y, R i x y -> R' i x y) ->
-    All2i R' n l l'.
-Proof.
-  intros A B R R' n l l' ha h.
-  induction ha. 1: constructor.
-  constructor. 2: assumption.
-  eapply h. assumption.
 Qed.
 
 Lemma All2i_mapi :

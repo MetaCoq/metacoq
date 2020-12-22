@@ -138,23 +138,26 @@ Definition case_branches_contexts_gen ind mdecl idecl params puinst brs : list c
 Definition case_branches_contexts ind mdecl idecl p brs : list context :=
   map2 (case_branch_context_gen ind mdecl p.(pparams) p.(puinst)) brs idecl.(ind_ctors).
   
-Definition case_branch_type_gen ind mdecl params puinst ptm i cdecl : context * term :=
+Definition case_branch_type_gen ind mdecl (idecl : one_inductive_body) params puinst bctx ptm i cdecl : context * term :=
   let cstr := tConstruct ind i puinst in
   let args := to_extended_list cdecl.(cstr_args) in
   let cstrapp := mkApps cstr (map (lift0 #|cdecl.(cstr_args)|) params ++ args) in
-  let brctx :=
-    subst_context params 0 
-      (expand_lets_ctx (subst_instance_context puinst mdecl.(ind_params))
-        (subst_context (inds (inductive_mind ind) puinst mdecl.(ind_bodies)) #|mdecl.(ind_params)|
-          (subst_instance_context puinst cdecl.(cstr_args)))) in
-  let ty := mkApps (lift0 #|cdecl.(cstr_args)| ptm) (cdecl.(cstr_indices) ++ [cstrapp]) in
+  let brctx := case_branch_context_gen ind mdecl params puinst bctx cdecl in
+  let upars := subst_instance_context puinst mdecl.(ind_params) in
+  let indices :=
+    map (expand_lets upars)
+      (map (subst_instance_constr puinst) cdecl.(cstr_indices)) in
+  let ty := mkApps (lift0 #|cdecl.(cstr_args)| ptm) (indices ++ [cstrapp]) in
   (brctx, ty).
 
-Definition case_branches_types_gen ind mdecl idecl params puinst ptm : list (context * term) :=
-  mapi (case_branch_type_gen ind mdecl params puinst ptm) idecl.(ind_ctors).
+Definition case_branch_type ind mdecl idecl p (b : branch term) ptm i cdecl : context * term :=
+  case_branch_type_gen ind mdecl idecl p.(pparams) p.(puinst) b.(bcontext) ptm i cdecl.
+
+(* Definition case_branches_types_gen ind mdecl idecl params puinst ptm : list (context * term) :=
+  mapi (case_branch_type_gen ind mdecl idecl params puinst ptm) idecl.(ind_ctors).
 
 Definition case_branches_types ind mdecl idecl p ptm : list (context * term) :=
-  mapi (case_branch_type_gen ind mdecl p.(pparams) p.(puinst) ptm) idecl.(ind_ctors).
+  mapi (case_branch_type_gen ind mdecl idecl p.(pparams) p.(puinst) ptm) idecl.(ind_ctors). *)
 
 Lemma map2_length {A B C} (l : list A) (l' : list B) (f : A -> B -> C) : #|l| = #|l'| -> 
   #|map2 f l l'| = #|l|.
@@ -182,6 +185,15 @@ Proof.
   unfold case_branches_contexts.
   rewrite map2_length //.
 Qed.
+
+Definition wf_predicate mdecl idecl (p : predicate term) : Prop := 
+  (#|p.(pparams)| = mdecl.(ind_npars)) /\
+  (Forall2 (fun na decl => eq_binder_annot na decl.(decl_name)) 
+    p.(pcontext) idecl.(ind_indices)).
+    
+Definition wf_branch cdecl (b : branch term) : Prop := 
+  (Forall2 (fun na decl => eq_binder_annot na decl.(decl_name)) 
+    b.(bcontext) cdecl.(cstr_args)).
 
 (*
 (** For cases typing *)

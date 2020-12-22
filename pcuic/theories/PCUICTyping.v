@@ -279,12 +279,12 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
     isCoFinite mdecl.(ind_finite) = false ->
     let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
-    All2 (fun br brctxty =>
-      (Forall2 (fun na decl => eq_binder_annot na decl.(decl_name)) br.(bcontext) brctxty.1) *
+    All2i (fun i cdecl br =>
+      let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
+      wf_branch cdecl br * 
       (Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2) *
       (Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps)) 
-      brs
-      (case_branches_types ci.(ci_ind) mdecl idecl p ptm) ->
+      0 idecl.(ind_ctors) brs ->
     Σ ;;; Γ |- tCase ci p c brs : mkApps ptm (indices ++ [c])
 
 | type_Proj p c u :
@@ -386,7 +386,7 @@ Proof.
   - exact (S (S (wf_local_size _ typing_size _ a))).
   - exact (S (S (wf_local_size _ typing_size _ a))).
   - exact (S (Nat.max d1 (Nat.max d2
-      (all2_size _ (fun x y p => Nat.max (typing_size _ _ _ _ p.1.2) (typing_size _ _ _ _ p.2)) a)))).
+      (all2i_size _ (fun i x y p => Nat.max (typing_size _ _ _ _ p.1.2) (typing_size _ _ _ _ p.2)) a)))).
   - exact (S (Nat.max (Nat.max (wf_local_size _ typing_size _ a) 
     (all_size _ (fun x p => typing_size Σ _ _ _ p.π2) a0)) (all_size _ (fun x p => typing_size Σ _ _ _ p) a1))).
   - exact (S (Nat.max (Nat.max (wf_local_size _ typing_size _ a) 

@@ -1795,14 +1795,6 @@ Proof.
   lia_f_equal.
 Qed.
 
-Lemma expand_lets_k_ctx_length Γ k Δ : #|expand_lets_k_ctx Γ k Δ| = #|Δ|.
-Proof. now rewrite /expand_lets_k_ctx; len. Qed.
-Hint Rewrite expand_lets_k_ctx_length : len.
-
-Lemma expand_lets_ctx_length Γ Δ : #|expand_lets_ctx Γ Δ| = #|Δ|.
-Proof. now rewrite /expand_lets_ctx; len. Qed.
-Hint Rewrite expand_lets_ctx_length : len.
-
 Lemma expand_lets_k_ctx_nil Γ k : expand_lets_k_ctx Γ k [] = [].
 Proof. reflexivity. Qed.
 

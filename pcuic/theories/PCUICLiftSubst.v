@@ -9,6 +9,15 @@ Require Import ssreflect Morphisms. Import Nat.
   Definition of [closedn] (boolean) predicate for checking if
   a term is closed. *)
 
+Hint Rewrite subst_context_length
+  app_context_length map_context_length
+  map_length app_length
+  @mapi_length @mapi_rec_length List.rev_length Nat.add_0_r
+  context_assumptions_fold 
+  smash_context_length : len.
+
+Ltac len := autorewrite with len; cbn.
+Tactic Notation "len" "in" hyp(cl) := autorewrite with len in cl.
 
 Notation "`=1`" := (pointwise_relation _ Logic.eq) (at level 80).
 Infix "=1" := (pointwise_relation _ Logic.eq) (at level 90).
@@ -479,7 +488,7 @@ Qed.
 
 Lemma lift_context_length n k Γ : #|lift_context n k Γ| = #|Γ|.
 Proof. apply fold_context_length. Qed.
-Hint Rewrite lift_context_length : lift.
+Hint Rewrite lift_context_length : lift len.
 
 Definition lift_context_snoc0 n k Γ d : lift_context n k (d :: Γ) = lift_context n k Γ ,, lift_decl n (#|Γ| + k) d.
 Proof. unfold lift_context. now rewrite fold_context_snoc0. Qed.
@@ -577,25 +586,8 @@ Proof.
     + simpl. apply IHΓ'; simpl in *; (lia || congruence).
 Qed.
 
-Lemma subst_context_length s n Γ : #|subst_context s n Γ| = #|Γ|.
-Proof.
-  induction Γ as [|[na [body|] ty] tl] in Γ |- *; cbn; eauto.
-  - rewrite !List.rev_length !mapi_length !app_length !List.rev_length. simpl. lia.
-  - rewrite !List.rev_length !mapi_length !app_length !List.rev_length. simpl. lia.
-Qed.
-Hint Rewrite subst_context_length : len.
 Hint Rewrite subst_context_length : subst wf.
-
-Lemma subst_context_snoc s k Γ d : subst_context s k (d :: Γ) = subst_context s k Γ ,, subst_decl s (#|Γ| + k) d.
-Proof.
-  unfold subst_context, fold_context.
-  rewrite !rev_mapi !rev_involutive /mapi mapi_rec_eqn /snoc.
-  f_equal. 1: now rewrite Nat.sub_0_r List.rev_length.
-  rewrite mapi_rec_Sk. simpl. apply mapi_rec_ext. intros.
-  rewrite app_length !List.rev_length. simpl. f_equal. f_equal. lia.
-Qed.
 Hint Rewrite subst_context_snoc : subst.
-
 
 Lemma subst_decl0 k d : map_decl (subst [] k) d = d.
 Proof.
@@ -603,9 +595,6 @@ Proof.
     unfold subst_decl, map_decl; simpl in *;
     f_equal; simpl; rewrite subst_empty; intuition trivial.
 Qed.
-
-Lemma subst_context_nil s n : subst_context s n [] = [].
-Proof. reflexivity. Qed.
 
 Lemma subst0_context k Γ : subst_context [] k Γ = Γ.
 Proof.
@@ -616,24 +605,11 @@ Proof.
   erewrite subst_decl0; f_equal; eauto.
 Qed.
 
-Lemma fold_context_length f Γ : #|fold_context f Γ| = #|Γ|.
-Proof.
-  unfold fold_context. now rewrite !List.rev_length mapi_length List.rev_length.
-Qed.
-
 Lemma subst_context_snoc0 s Γ d : subst_context s 0 (Γ ,, d) = subst_context s 0 Γ ,, subst_decl s #|Γ| d.
 Proof.
   unfold snoc. now rewrite subst_context_snoc Nat.add_0_r.
 Qed.
 Hint Rewrite subst_context_snoc : subst.
-
-Lemma subst_context_alt s k Γ :
-  subst_context s k Γ =
-  mapi (fun k' d => subst_decl s (Nat.pred #|Γ| - k' + k) d) Γ.
-Proof.
-  unfold subst_context, fold_context. rewrite rev_mapi. rewrite List.rev_involutive.
-  apply mapi_ext. intros. f_equal. now rewrite List.rev_length.
-Qed.
 
 Lemma subst_context_app s k Γ Δ :
   subst_context s k (Γ ,,, Δ) = subst_context s k Γ ,,, subst_context s (#|Γ| + k) Δ.
@@ -666,13 +642,13 @@ Proof.
   f_equal. rewrite List.skipn_length. lia.
 Qed.
 
-Lemma smash_context_length Γ Γ' : #|smash_context Γ Γ'| = #|Γ| + context_assumptions Γ'.
-Proof.
-  induction Γ' as [|[na [body|] ty] tl] in Γ |- *; cbn; eauto.
-  - now rewrite IHtl subst_context_length.
-  - rewrite IHtl app_length. simpl. lia.
-Qed.
-Hint Rewrite smash_context_length : len.
+Lemma expand_lets_k_ctx_length Γ k Δ : #|expand_lets_k_ctx Γ k Δ| = #|Δ|.
+Proof. now rewrite /expand_lets_k_ctx; len. Qed.
+Hint Rewrite expand_lets_k_ctx_length : len.
+
+Lemma expand_lets_ctx_length Γ Δ : #|expand_lets_ctx Γ Δ| = #|Δ|.
+Proof. now rewrite /expand_lets_ctx; len. Qed.
+Hint Rewrite expand_lets_ctx_length : len.
 
 (* Sigma calculus*)
 
@@ -1733,17 +1709,13 @@ Proof.
     erewrite (commut_lift_subst_rec); lia_f_equal.
 Qed.
 
+(* TODO move *)
 Lemma context_assumptions_app Γ Δ : context_assumptions (Γ ++ Δ) = 
   context_assumptions Γ + context_assumptions Δ.
 Proof.
   induction Γ as [|[? [] ?] ?]; simpl; auto.
 Qed.
-
-Hint Rewrite subst_context_length
-  app_context_length map_context_length
-  map_length app_length lift_context_length
-  @mapi_length @mapi_rec_length List.rev_length Nat.add_0_r
-  context_assumptions_app context_assumptions_fold : len.
+Hint Rewrite context_assumptions_app : len.
 
 Lemma extended_subst_app Γ Γ' : 
   extended_subst (Γ ++ Γ') 0 = 

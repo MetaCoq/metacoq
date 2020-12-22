@@ -1494,8 +1494,11 @@ Proof.
       * replace (ind_bodies (nl_mutual_inductive_body mdecl)) with
             (map nl_one_inductive_body (ind_bodies mdecl)); [|now destruct mdecl].
         rewrite nth_error_map HH2. reflexivity.
-    + simpl. now rewrite !map_length.
-    + simpl. now rewrite !map_length /nlctx nl_context_assumptions.
+    + destruct H0 as [wfpars wfpctx].
+      split; simpl; rewrite ?map_length //.
+      clear -wfpctx. depelim wfpctx. rewrite H0.
+      simpl. constructor => //.
+      eapply Forall2_map; solve_all.
     + rewrite -nl_case_predicate_context; eauto.
       now rewrite -nlctx_app_context.
     + todo "".

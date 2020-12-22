@@ -1,5 +1,5 @@
 From Coq Require Import List Bool Arith ssreflect Lia.
-From MetaCoq.Template Require Import MCPrelude MCList MCRelations MCProd MCOption.
+From MetaCoq.Template Require Import MCPrelude MCReflect MCList MCRelations MCProd MCOption.
 From Equations Require Import Equations.
 Import ListNotations.
 
@@ -54,12 +54,14 @@ Arguments All3_nil {_ _ _ _}.
 Arguments All3_cons {_ _ _ _ _ _ _ _ _ _}.
 Derive Signature NoConfusionHom for All3.
 
-Fixpoint alli {A} (p : nat -> A -> bool) (l : list A) (n : nat) : bool :=
+Section alli.
+  Context {A} (p : nat -> A -> bool).
+  Fixpoint alli (n : nat) (l : list A) : bool :=
   match l with
   | [] => true
-  | hd :: tl => p n hd && alli p tl (S n)
+  | hd :: tl => p n hd && alli (S n) tl
   end.
-
+End alli.
 Section Forallb2.
   Context {A} (f : A -> A -> bool).
 
@@ -147,6 +149,19 @@ Proof.
     constructor; auto. now destruct (Hp _ H).
 Qed.
 
+Lemma allbiP {A} (P : nat -> A -> Type) (p : nat -> A -> bool) n l :
+  (forall i x, reflectT (P i x) (p i x)) -> 
+  reflectT (Alli P n l) (alli p n l).
+Proof.
+  intros Hp.
+  apply equiv_reflectT.
+  - induction 1; rewrite /= // IHX // andb_true_r.
+    now destruct (Hp n hd).
+  - induction l in n |- *; rewrite /= //. constructor. 
+    move/andb_and => [pa pl].
+    constructor; auto. now destruct (Hp n a).
+Qed.
+
 Lemma map_eq_inj {A B} (f g : A -> B) l: map f l = map g l ->
                                          All (fun x => f x = g x) l.
 Proof.
@@ -200,6 +215,12 @@ Proof.
   rewrite andb_and. intuition auto.
 Qed.
 
+Lemma All2P {A : Type} {p : A -> A -> bool} {l l' : list A} :
+  reflectT (All2 p l l') (forallb2 p l l').
+Proof.
+  apply equiv_reflectT. apply All2_forallb2. apply forallb2_All2.
+Qed.
+
 Lemma forallb2_app {A} (p : A -> A -> bool) l l' q q' :
   is_true (forallb2 p l l' && forallb2 p q q')
   -> is_true (forallb2 p (l ++ q) (l' ++ q')).
@@ -248,6 +269,24 @@ Qed.
 Lemma All2_All_mix_right {A B} {P : B -> Type} {Q : A -> B -> Type}
       {l : list A} {l' : list B} :
   All P l' -> All2 Q l l' -> All2 (fun x y => (Q x y * P y)%type) l l'.
+Proof.
+  induction 2; simpl; intros; constructor.
+  inv X; intuition auto.
+  apply IHX0. inv X; intuition auto.
+Qed.
+
+Lemma All2i_All_mix_left {A B} {P : A -> Type} {Q : nat -> A -> B -> Type}
+      {n} {l : list A} {l' : list B} :
+  All P l -> All2i Q n l l' -> All2i (fun i x y => (P x * Q i x y)%type) n l l'.
+Proof.
+  induction 2; simpl; intros; constructor.
+  inv X; intuition auto.
+  apply IHX0. inv X; intuition auto.
+Qed.
+
+Lemma All2i_All_mix_right {A B} {P : B -> Type} {Q : nat -> A -> B -> Type}
+      {n} {l : list A} {l' : list B} :
+  All P l' -> All2i Q n l l' -> All2i (fun i x y => (Q i x y * P y)%type) n l l'.
 Proof.
   induction 2; simpl; intros; constructor.
   inv X; intuition auto.
@@ -308,6 +347,22 @@ Qed.
 Lemma All2_All_right {A B} {P : A -> B -> Type} {Q : B -> Type} {l l'} :
   All2 P l l' ->
   (forall x y, P x y -> Q y) ->
+  All Q l'.
+Proof.
+  intros HF H. induction HF; constructor; eauto.
+Qed.
+
+Lemma All2i_All_left {A B} {P : nat -> A -> B -> Type} {Q : A -> Type} {n l l'} :
+  All2i P n l l' ->
+  (forall i x y, P i x y -> Q x) ->
+  All Q l.
+Proof.
+  intros HF H. induction HF; constructor; eauto.
+Qed.
+
+Lemma All2i_All_right {A B} {P : nat -> A -> B -> Type} {Q : B -> Type} {n l l'} :
+  All2i P n l l' ->
+  (forall i x y, P i x y -> Q y) ->
   All Q l'.
 Proof.
   intros HF H. induction HF; constructor; eauto.
@@ -496,7 +551,6 @@ Proof.
   simpl; intros.
   now replace (Nat.pred (#|l| + 1) - S n) with (Nat.pred #|l| - n) by lia.
 Qed.
-
 
 Lemma Alli_app_inv {A} {P} {l l' : list A} {n} : Alli P n l -> Alli P (n + #|l|) l' -> Alli P n (l ++ l').
 Proof.
@@ -1094,6 +1148,12 @@ Ltac toAll :=
   | H : All _ ?x, H' : All2 _ _ ?x  |- _ =>
     apply (All2_All_mix_right H) in H'; clear H
 
+  | H : All _ ?x, H' : All2i _ _ ?x _  |- _ =>
+    apply (All2i_All_mix_left H) in H'; clear H
+
+  | H : All _ ?x, H' : All2i _ _ _ ?x  |- _ =>
+    apply (All2i_All_mix_right H) in H'; clear H
+
   | |- All _ (map _ _) => apply All_map
 
   | H : All _ (map _ _) |- _ => apply All_map_inv in H
@@ -1242,6 +1302,8 @@ Ltac close_Forall :=
   | H : All2i _ _ _ _ |- All2i _ _ _ _ => apply (All2i_impl H); clear H; simpl
   | H : All2 _ _ _ |- All _ _ =>
     (apply (All2_All_left H) || apply (All2_All_right H)); clear H; simpl
+  | H : All2i _ _ _ _ |- All _ _ =>
+    (apply (All2i_All_left H) || apply (All2i_All_right H)); clear H; simpl
   end.
 
 Lemma All2_non_nil {A B} (P : A -> B -> Type) (l : list A) (l' : list B) :

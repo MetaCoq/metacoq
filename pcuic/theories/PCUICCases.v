@@ -36,9 +36,6 @@ Proof.
   - now rewrite app_length /= Nat.add_1_r IHl mapi_rec_app /= rev_app_distr /= Nat.add_0_r.
 Qed.
 
-Ltac len := autorewrite with len; cbn.
-Tactic Notation "len" "in" hyp(cl) := autorewrite with len in cl.
-
 Lemma subst_it_mkProd_or_LetIn n k ctx t :
   subst n k (it_mkProd_or_LetIn ctx t) =
   it_mkProd_or_LetIn (subst_context n k ctx) (subst n (length ctx + k) t).
@@ -119,6 +116,7 @@ Definition case_predicate_context_gen ind mdecl idecl params puinst pctx : conte
 
 Definition case_predicate_context ind mdecl idecl p : context :=
   case_predicate_context_gen ind mdecl idecl p.(pparams) p.(puinst) p.(pcontext).
+Arguments case_predicate_context _ _ _ !_.
 
 Definition case_branch_context_gen ind mdecl params puinst bctx cdecl : context :=
   subst_context params 0
@@ -131,13 +129,14 @@ Definition case_branch_context_gen ind mdecl params puinst bctx cdecl : context 
 
 Definition case_branch_context ind mdecl p bctx cdecl : context :=
   case_branch_context_gen ind mdecl p.(pparams) p.(puinst) bctx cdecl.
-  
+Arguments case_branch_context _ _ _ _ !_.
+
 Definition case_branches_contexts_gen ind mdecl idecl params puinst brs : list context :=
   map2 (case_branch_context_gen ind mdecl params puinst) brs idecl.(ind_ctors).
 
 Definition case_branches_contexts ind mdecl idecl p brs : list context :=
   map2 (case_branch_context_gen ind mdecl p.(pparams) p.(puinst)) brs idecl.(ind_ctors).
-  
+
 Definition case_branch_type_gen ind mdecl (idecl : one_inductive_body) params puinst bctx ptm i cdecl : context * term :=
   let cstr := tConstruct ind i puinst in
   let args := to_extended_list cdecl.(cstr_args) in
@@ -152,7 +151,8 @@ Definition case_branch_type_gen ind mdecl (idecl : one_inductive_body) params pu
 
 Definition case_branch_type ind mdecl idecl p (b : branch term) ptm i cdecl : context * term :=
   case_branch_type_gen ind mdecl idecl p.(pparams) p.(puinst) b.(bcontext) ptm i cdecl.
-
+Arguments case_branch_type _ _ _ _ _ _ _ !_.
+  
 (* Definition case_branches_types_gen ind mdecl idecl params puinst ptm : list (context * term) :=
   mapi (case_branch_type_gen ind mdecl idecl params puinst ptm) idecl.(ind_ctors).
 
@@ -166,15 +166,63 @@ Proof.
   intros [= eq]. now rewrite IHl.
 Qed.
 
+Definition idecl_binder idecl :=
+  {| decl_name := 
+    {| binder_name := nNamed idecl.(ind_name);
+        binder_relevance := idecl.(ind_relevance) |};
+     decl_body := None;
+     decl_type := idecl.(ind_type) |}.
+
+Definition wf_predicate mdecl idecl (p : predicate term) : Prop := 
+  let decl := idecl_binder idecl in
+  (#|p.(pparams)| = mdecl.(ind_npars)) /\
+  (Forall2 (fun na decl => eq_binder_annot na decl.(decl_name)) 
+    p.(pcontext) (decl :: idecl.(ind_indices))).
+    
+Definition wf_branch cdecl (b : branch term) : Prop := 
+  (Forall2 (fun na decl => eq_binder_annot na decl.(decl_name)) 
+    b.(bcontext) cdecl.(cstr_args)).
+
 Lemma case_predicate_context_length {ci mdecl idecl p} :
-  #|pcontext p| = S #|ind_indices idecl| ->
+  wf_predicate mdecl idecl p ->
   #|case_predicate_context (ci_ind ci) mdecl idecl p| = #|p.(pcontext)|.
 Proof.
   intros hl.
   unfold case_predicate_context, case_predicate_context_gen.
   rewrite map2_length /= //. len.
-  rewrite /expand_lets_ctx /expand_lets_k_ctx; len.
-  now rewrite subst_instance_context_length; len.
+  destruct hl.
+  now rewrite (Forall2_length H0).
+Qed.
+
+Lemma case_predicate_context_length_indices {ci mdecl idecl p} :
+  wf_predicate mdecl idecl p ->
+  #|case_predicate_context (ci_ind ci) mdecl idecl p| = S #|idecl.(ind_indices)|.
+Proof.
+  intros hl.
+  unfold case_predicate_context, case_predicate_context_gen.
+  pose proof (Forall2_length (proj2 hl)). simpl in H.
+  rewrite -H.
+  now rewrite map2_length /= //; len.
+Qed.
+
+Lemma case_branch_context_length ind mdecl p br cdecl :
+  wf_branch cdecl br ->
+  #|case_branch_context ind mdecl p br.(bcontext) cdecl| = #|br.(bcontext)|.
+Proof.
+  intros hl.
+  unfold case_branch_context, case_branch_context_gen; len.
+  rewrite map2_length //. red in hl.
+  now rewrite (Forall2_length hl).
+Qed.
+
+Lemma case_branch_context_length_args ind mdecl p br cdecl :
+  wf_branch cdecl br ->
+  #|case_branch_context ind mdecl p br.(bcontext) cdecl| = #|cdecl.(cstr_args)|.
+Proof.
+  intros hl.
+  unfold case_branch_context, case_branch_context_gen; len.
+  apply Forall2_length in hl.
+  rewrite map2_length //.
 Qed.
 
 Lemma case_branches_contexts_length ind mdecl idecl p pctx :
@@ -185,15 +233,6 @@ Proof.
   unfold case_branches_contexts.
   rewrite map2_length //.
 Qed.
-
-Definition wf_predicate mdecl idecl (p : predicate term) : Prop := 
-  (#|p.(pparams)| = mdecl.(ind_npars)) /\
-  (Forall2 (fun na decl => eq_binder_annot na decl.(decl_name)) 
-    p.(pcontext) idecl.(ind_indices)).
-    
-Definition wf_branch cdecl (b : branch term) : Prop := 
-  (Forall2 (fun na decl => eq_binder_annot na decl.(decl_name)) 
-    b.(bcontext) cdecl.(cstr_args)).
 
 (*
 (** For cases typing *)

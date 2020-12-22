@@ -271,9 +271,8 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
 | type_Case (ci : case_info) p c brs indices ps :
     forall mdecl idecl (isdecl : declared_inductive Σ.1 mdecl ci.(ci_ind) idecl),
     mdecl.(ind_npars) = ci.(ci_npar) ->
-    #|p.(pcontext)| = S #|idecl.(ind_indices)| ->
-    context_assumptions idecl.(ind_indices) = #|p.(pparams)| ->
     let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
+    wf_predicate mdecl idecl p ->
     Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps ->
     is_allowed_elimination Σ ps idecl.(ind_kelim) ->
     Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
@@ -281,9 +280,9 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
     All2i (fun i cdecl br =>
       let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
-      wf_branch cdecl br * 
-      (Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2) *
-      (Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps)) 
+      wf_branch cdecl br *
+      ((Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2) *
+      (Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps))) 
       0 idecl.(ind_ctors) brs ->
     Σ ;;; Γ |- tCase ci p c brs : mkApps ptm (indices ++ [c])
 
@@ -361,6 +360,19 @@ Include PCUICDeclarationTyping.
 
 Definition isWfArity {cf:checker_flags} Σ (Γ : context) T :=
   (isType Σ Γ T × { ctx & { s & (destArity [] T = Some (ctx, s)) } }).
+  
+Definition tybranches {cf} Σ Γ ci mdecl idecl p ps ptm n ctors brs :=
+   All2i
+  (fun (i : nat) (cdecl : constructor_body) (br : branch term) =>
+   let brctxty := case_branch_type ci mdecl idecl p br ptm i cdecl in
+   wf_branch cdecl br *
+   (Σ;;; Γ,,, brctxty.1 |- bbody br : brctxty.2
+    × Σ;;; Γ,,, brctxty.1 |- brctxty.2 : tSort ps)) n ctors brs.
+
+Definition branches_size {cf} {Σ Γ ci mdecl idecl p ps ptm brs} (typing_size : forall Σ Γ t T, Σ ;;; Γ |- t : T -> size)
+  {n ctors}
+  (a : tybranches Σ Γ ci mdecl idecl p ps ptm n ctors brs) : size :=
+  (all2i_size _ (fun i x y p => Nat.max (typing_size _ _ _ _ p.2.1) (typing_size _ _ _ _ p.2.2)) a).
 
 Definition typing_size `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t : T) : size.
 Proof.
@@ -369,9 +381,9 @@ Proof.
   destruct 1 ;
     repeat match goal with
            | H : typing _ _ _ _ |- _ => apply typing_size in H
-           end;
+    end;
     match goal with
-    | H : All2 _ _ _ |- _ => idtac
+    | H : All2i _ _ _ _ |- _ => idtac
     | H : All_local_env _ _ |- _ => idtac
     | H : All _ _ |- _ => idtac
     | H : _ + _ |- _ => idtac
@@ -385,8 +397,7 @@ Proof.
   - exact (S (S (wf_local_size _ typing_size _ a))).
   - exact (S (S (wf_local_size _ typing_size _ a))).
   - exact (S (S (wf_local_size _ typing_size _ a))).
-  - exact (S (Nat.max d1 (Nat.max d2
-      (all2i_size _ (fun i x y p => Nat.max (typing_size _ _ _ _ p.1.2) (typing_size _ _ _ _ p.2)) a)))).
+  - exact (S (Nat.max d1 (Nat.max d2 (branches_size typing_size a)))).
   - exact (S (Nat.max (Nat.max (wf_local_size _ typing_size _ a) 
     (all_size _ (fun x p => typing_size Σ _ _ _ p.π2) a0)) (all_size _ (fun x p => typing_size Σ _ _ _ p) a1))).
   - exact (S (Nat.max (Nat.max (wf_local_size _ typing_size _ a) 
@@ -648,9 +659,8 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
         Forall_decls_typing P Σ.1 -> 
         PΓ Σ Γ wfΓ ->
         mdecl.(ind_npars) = ci.(ci_npar) ->
-        #|p.(pcontext)| = S #|idecl.(ind_indices)| ->
-        context_assumptions idecl.(ind_indices) = #|p.(pparams)| ->
         let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
+        wf_predicate mdecl idecl p ->
         forall pret : Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps,
         P Σ (Γ ,,, predctx) p.(preturn) (tSort ps) ->
         PΓ Σ (Γ ,,, predctx) (typing_wf_local pret) ->
@@ -659,14 +669,13 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
         P Σ Γ c (mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices)) ->
         isCoFinite mdecl.(ind_finite) = false ->
         let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
-        All2 (fun br brctxty =>
-          Forall2 (fun na decl => eq_binder_annot na decl.(decl_name)) br.(bcontext) brctxty.1 *
-          (Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2) * 
-          P Σ (Γ ,,, brctxty.1) br.(bbody) brctxty.2 *
-          (Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps) *
-          P Σ (Γ ,,, brctxty.1) brctxty.2 (tSort ps)) 
-          brs
-          (case_branches_types ci.(ci_ind) mdecl idecl p ptm) ->
+        All2i (fun i cdecl br =>
+          let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
+          wf_branch cdecl br *
+          ((Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2) * 
+            P Σ (Γ ,,, brctxty.1) br.(bbody) brctxty.2 *
+            (Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps) *
+            P Σ (Γ ,,, brctxty.1) brctxty.2 (tSort ps))) 0 idecl.(ind_ctors) brs ->
         P Σ Γ (tCase ci p c brs) (mkApps ptm (indices ++ [c]))) ->
 
    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : projection) (c : term) u
@@ -734,14 +743,14 @@ Proof.
   clear Σ wfΣ Γ t T H.
   intros (Σ & wfΣ & Γ & t & t0 & H). simpl.
   intros IH. simpl in IH.
-  split. 
-  - destruct Σ as [Σ φ]. destruct Σ.
+  split.
+  - clear X X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12.
+    destruct Σ as [Σ φ]. destruct Σ.
     constructor.
     cbn in wfΣ; inversion_clear wfΣ. auto.
-    inv wfΣ.
-    rename X14 into Xg.
+    rename X0 into Xg.
     constructor; auto. unfold Forall_decls_typing in IH.
-    * simple refine (let IH' := IH ((Σ, udecl); (X13; []; (tSort Universe.lProp); _; _)) in _).
+    * simple refine (let IH' := IH ((Σ, udecl); (X; []; (tSort Universe.lProp); _; _)) in _).
       shelve. simpl. apply type_Prop.
       forward IH'. constructor 1; cbn. lia.
       apply IH'; auto.
@@ -750,14 +759,14 @@ Proof.
       + destruct c; simpl in *.
         destruct cst_body; simpl in *.
         simpl.
-        intros. red in Xg. simpl in Xg.
-        specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ [] (existT _ _ (existT _ _ Xg)))))).
+        red in Xg; simpl in Xg. intros. red. simpl.
+        specialize (IH (existT _ (Σ, udecl) (existT _ X (existT _ [] (existT _ _ (existT _ _ Xg)))))).
         simpl in IH.
         forward IH. constructor 1. simpl; lia.
         apply IH.
         red. simpl. red in Xg; simpl in Xg.
         destruct Xg as [s Hs]. red. simpl.
-        specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ [] (existT _ _ (existT _ _ Hs)))))).
+        specialize (IH (existT _ (Σ, udecl) (existT _ X (existT _ [] (existT _ _ (existT _ _ Hs)))))).
         simpl in IH.
         forward IH. constructor 1. simpl; lia. exists s. eapply IH.
       + red in Xg.
@@ -767,29 +776,29 @@ Proof.
                   ind_cunivs := Xg.(ind_cunivs) |}.
                   
         ++ apply onArity in Xg. destruct Xg as [s Hs]. exists s; auto.
-            specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ [] (existT _ _ (existT _ _ Hs)))))).
+            specialize (IH (existT _ (Σ, udecl) (existT _ X (existT _ [] (existT _ _ (existT _ _ Hs)))))).
             simpl in IH. simpl. apply IH; constructor 1; simpl; lia.
         ++ pose proof Xg.(onConstructors) as Xg'.
             eapply All2_impl; eauto. intros.
-            destruct X14 as [cass chead tyeq onctyp oncargs oncind].
+            destruct X0 as [cass chead tyeq onctyp oncargs oncind].
             unshelve econstructor; eauto.
             destruct onctyp as [s Hs].
             simpl in Hs.
-            specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ _ (existT _ _ Hs)))))).
+            specialize (IH (existT _ (Σ, udecl) (existT _ X (existT _ _ (existT _ _ (existT _ _ Hs)))))).
             simpl in IH. simpl. exists s. simpl. apply IH; constructor 1; simpl; auto with arith.
-            eapply sorts_local_ctx_impl; eauto. simpl. intros. red in X14.
+            eapply sorts_local_ctx_impl; eauto. simpl. intros. red in X0.
             destruct T.
-            specialize (IH ((Σ, udecl); (X13; _; _; _; X14))).
+            specialize (IH ((Σ, udecl); (X; _; _; _; X0))).
             apply IH. simpl. constructor 1. simpl. auto with arith.
-            destruct X14 as [u Hu]. exists u.
-            specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ _ (existT _ _ Hu)))))).
+            destruct X0 as [u Hu]. exists u.
+            specialize (IH (existT _ (Σ, udecl) (existT _ X (existT _ _ (existT _ _ (existT _ _ Hu)))))).
             apply IH. simpl. constructor 1. simpl. auto with arith.
-            clear -X13 IH oncind.
+            clear -X IH oncind.
             revert oncind.
             generalize (List.rev (lift_context #|cstr_args x0| 0 (ind_indices x))).
             generalize (cstr_indices x0). induction 1; constructor; auto.
             simpl in t2 |- *.
-            specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ _ (existT _ _ t2)))))).
+            specialize (IH (existT _ (Σ, udecl) (existT _ X (existT _ _ (existT _ _ (existT _ _ t2)))))).
             apply IH. simpl. constructor 1. simpl. auto with arith.
         ++ intros Hprojs; pose proof (onProjections Xg Hprojs); auto. 
         ++ destruct Xg. simpl. unfold check_ind_sorts in *.
@@ -797,21 +806,21 @@ Proof.
             destruct Universe.is_sprop; auto.
             split. apply ind_sorts0. destruct indices_matter; auto.
             eapply type_local_ctx_impl. eapply ind_sorts0.
-            intros. red in X14.
+            intros. red in X0.
             destruct T.
-            specialize (IH ((Σ, udecl); (X13; _; _; _; X14))).
+            specialize (IH ((Σ, udecl); (X; _; _; _; X0))).
             apply IH. simpl. constructor 1. simpl. auto with arith.
-            destruct X14 as [u Hu]. exists u.
-            specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ _ (existT _ _ Hu)))))).
+            destruct X0 as [u Hu]. exists u.
+            specialize (IH (existT _ (Σ, udecl) (existT _ X (existT _ _ (existT _ _ (existT _ _ Hu)))))).
             apply IH. simpl. constructor 1. simpl. auto with arith.
           ++ apply (onIndices Xg).
           ++ red in onP |- *.
             eapply All_local_env_impl; eauto.
-            intros. destruct T; simpl in X14.
-            specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ _ (existT _ _ X14)))))).
+            intros. destruct T; simpl in X0.
+            specialize (IH (existT _ (Σ, udecl) (existT _ X (existT _ _ (existT _ _ (existT _ _ X0)))))).
             simpl in IH. apply IH. constructor 1. simpl. lia.
-            destruct X14 as [u Hu].
-            specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ _ (existT _ _ Hu)))))).
+            destruct X0 as [u Hu].
+            specialize (IH (existT _ (Σ, udecl) (existT _ X (existT _ _ (existT _ _ (existT _ _ Hu)))))).
             simpl in IH. simpl. exists u. apply IH. constructor 1. simpl. lia.
 
   - assert (forall Γ t T (Hty : Σ ;;; Γ |- t : T),
@@ -887,17 +896,18 @@ Proof.
         ++ eapply (X14 _ _ _ H); eauto. simpl; auto with arith.
         ++ simpl in *. eapply (X13 _ _ _ H); eauto. clear. subst predctx. lia.
         ++ eapply (X14 _ _ _ H0); simpl. lia.
-        ++ clear X13 Hdecls. revert a X14. simpl. clear. intros.
-          subst ptm predctx; induction a; simpl in *.
+        ++ clear X13 Hdecls. revert a X14. clear. intros.
+          simpl in X14.
+          subst ptm predctx; induction a.
           ** constructor.
-          ** destruct r as [[? ?] ?]. constructor.
+          ** destruct r0 as [? [? ?]]. constructor.
               --- intuition eauto.
                   +++ eapply (X14 _ _ _ t); eauto. simpl; auto with arith.
                       lia.
                   +++ eapply (X14 _ _ _ t0); eauto. simpl; auto with arith.
                       lia.
               --- apply IHa. auto. intros.
-                  eapply (X14 _ _ _ Hty). lia.
+                  eapply (X14 _ _ _ Hty). simpl. lia.
 
     -- eapply X9; eauto. apply Hdecls; simpl.
         pose proof (typing_size_pos H). lia.
@@ -1054,9 +1064,8 @@ Lemma typing_ind_env `{cf : checker_flags} :
           Forall_decls_typing P Σ.1 -> 
           PΓ Σ Γ wfΓ ->
           mdecl.(ind_npars) = ci.(ci_npar) ->
-          #|p.(pcontext)| = S #|idecl.(ind_indices)| ->
-          context_assumptions idecl.(ind_indices) = #|p.(pparams)| ->
           let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
+          wf_predicate mdecl idecl p ->
           forall pret : Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps,
           P Σ (Γ ,,, predctx) p.(preturn) (tSort ps) ->
           PΓ Σ (Γ ,,, predctx) (typing_wf_local pret) ->
@@ -1065,14 +1074,13 @@ Lemma typing_ind_env `{cf : checker_flags} :
           P Σ Γ c (mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices)) ->
           isCoFinite mdecl.(ind_finite) = false ->
           let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
-          All2 (fun br brctxty =>
-            Forall2 (fun na decl => eq_binder_annot na decl.(decl_name)) br.(bcontext) brctxty.1 *
-            (Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2) * 
+          All2i (fun i cdecl br =>
+          let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
+          wf_branch cdecl br *
+          ((Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2) * 
             P Σ (Γ ,,, brctxty.1) br.(bbody) brctxty.2 *
             (Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps) *
-            P Σ (Γ ,,, brctxty.1) brctxty.2 (tSort ps)) 
-            brs
-            (case_branches_types ci.(ci_ind) mdecl idecl p ptm) ->
+            P Σ (Γ ,,, brctxty.1) brctxty.2 (tSort ps))) 0 idecl.(ind_ctors) brs ->
           P Σ Γ (tCase ci p c brs) (mkApps ptm (indices ++ [c]))) ->
           
 

@@ -31,6 +31,9 @@ Definition shiftn k f :=
 Notation map_branches_shift f fn brs :=
   (map (fun b => map_branch (f (shiftn #|bcontext b| fn)) b) brs).
 
+Definition rename_predicate (rename : (nat -> nat) -> term -> term) f p := 
+  map_predicate id (rename f) (rename (shiftn #|p.(pcontext)| f)) p.
+  
 Fixpoint rename f t : term :=
   match t with
   | tRel i => tRel (f i)
@@ -40,7 +43,7 @@ Fixpoint rename f t : term :=
   | tProd na A B => tProd na (rename f A) (rename (shiftn 1 f) B)
   | tLetIn na b t b' => tLetIn na (rename f b) (rename f t) (rename (shiftn 1 f) b')
   | tCase ind p c brs =>
-    let p' := map_predicate id (rename f) (rename (shiftn #|p.(pcontext)| f)) p in
+    let p' := rename_predicate rename f p in
     let brs' := map_branches_shift rename f brs in
     tCase ind p' (rename f c) brs'
   | tProj p c => tProj p (rename f c)
@@ -749,7 +752,9 @@ Proof.
   - rewrite IHx2. apply rename_ext, shiftn_compose.
   - rewrite IHx2. apply rename_ext, shiftn_compose.
   - rewrite IHx3. apply rename_ext, shiftn_compose.
-  - rewrite e. apply rename_ext, shiftn_compose. 
+  - rewrite /rename_predicate map_predicate_map_predicate.
+    solve_all; len. rewrite e.
+    apply rename_ext, shiftn_compose. 
   - rewrite map_branches_shiftn. solve_all. apply map_branch_eq_spec.
     rewrite H. apply rename_ext, shiftn_compose.
   - rewrite map_map_compose; apply All_map_eq. solve_all.
@@ -998,7 +1003,8 @@ Proof.
   - f_equal; auto. now rewrite shiftn_id.
   - f_equal; auto. now rewrite shiftn_id.
   - f_equal; auto. now rewrite shiftn_id.
-  - setoid_rewrite shiftn_id. f_equal; solve_all.
+  - setoid_rewrite shiftn_id. f_equal; solve_all. 
+    now rewrite shiftn_id.
   - f_equal; auto. solve_all.
     apply map_def_id_spec; auto.
     now rewrite shiftn_id.

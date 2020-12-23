@@ -260,7 +260,7 @@ Module Environment (T : Term).
     {| cstr_name := c.(cstr_name);
        cstr_args := fold_context (fun x => f (x + npars + arities)) c.(cstr_args);
        cstr_indices := map (f (npars + arities + #|c.(cstr_args)|)) c.(cstr_indices);
-       cstr_type := f 0 c.(cstr_type);
+       cstr_type := f arities c.(cstr_type);
        cstr_arity := c.(cstr_arity) |}.
 
   (** See [one_inductive_body] from [declarations.ml]. *)

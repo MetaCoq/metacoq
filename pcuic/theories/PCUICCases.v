@@ -217,6 +217,21 @@ Proof.
   now rewrite map2_length /= //; len.
 Qed.
 
+Lemma wf_predicate_length_pars {mdecl idecl p} :
+  wf_predicate mdecl idecl p ->
+  #|p.(pparams)| = ind_npars mdecl.
+Proof.
+  now intros [].
+Qed.
+
+Lemma wf_predicate_length_pcontext {mdecl idecl p} :
+  wf_predicate mdecl idecl p ->
+  #|p.(pcontext)| = S #|ind_indices idecl|.
+Proof.
+  intros [].
+  now rewrite (Forall2_length H0).
+Qed.
+
 Lemma case_branch_context_length ind mdecl p br cdecl :
   wf_branch cdecl br ->
   #|case_branch_context ind mdecl p br.(bcontext) cdecl| = #|br.(bcontext)|.

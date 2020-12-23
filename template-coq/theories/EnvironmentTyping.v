@@ -14,17 +14,17 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
   Definition declared_minductive Σ mind decl :=
     lookup_env Σ mind = Some (InductiveDecl decl).
 
-  Definition declared_inductive Σ mdecl ind decl :=
+  Definition declared_inductive Σ ind mdecl decl :=
     declared_minductive Σ (inductive_mind ind) mdecl /\
     List.nth_error mdecl.(ind_bodies) (inductive_ind ind) = Some decl.
 
   Definition declared_constructor Σ mdecl idecl cstr cdecl : Prop :=
-    declared_inductive Σ mdecl (fst cstr) idecl /\
+    declared_inductive Σ (fst cstr) mdecl idecl /\
     List.nth_error idecl.(ind_ctors) (snd cstr) = Some cdecl.
 
   Definition declared_projection Σ mdecl idecl (proj : projection) pdecl
   : Prop :=
-    declared_inductive Σ mdecl (fst (fst proj)) idecl /\
+    declared_inductive Σ (fst (fst proj)) mdecl idecl /\
     List.nth_error idecl.(ind_projs) (snd proj) = Some pdecl /\
     mdecl.(ind_npars) = snd (fst proj).
 

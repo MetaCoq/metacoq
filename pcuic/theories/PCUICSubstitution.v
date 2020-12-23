@@ -347,9 +347,9 @@ Proof.
         eapply closed_upwards; eauto; lia.
 Qed.
 
-Lemma subst_declared_inductive {cf:checker_flags} Σ ind mdecl idecl n k :
+Lemma subst_declared_inductive {cf:checker_flags} ind Σ mdecl idecl n k :
   wf Σ ->
-  declared_inductive Σ mdecl ind idecl ->
+  declared_inductive Σ ind mdecl idecl ->
   map_one_inductive_body (context_assumptions mdecl.(ind_params))
                          (length (arities_context mdecl.(ind_bodies)))
                          (fun k' => subst n (k' + k)) (inductive_ind ind) idecl = idecl.
@@ -669,7 +669,7 @@ Qed.
 Lemma subst_build_branches_type {cf:checker_flags}
       n k Σ ind mdecl idecl indices args u p brs cs :
   wf Σ ->
-  declared_inductive Σ mdecl ind idecl ->
+  declared_inductive Σ ind mdecl idecl ->
   closed_ctx (subst_instance_context u (ind_params mdecl)) ->
   on_inductive (lift_typing typing) (Σ, ind_universes mdecl)
                (inductive_mind ind) mdecl ->
@@ -2065,7 +2065,7 @@ Proof.
     rewrite !map_cst_type. eapply subst_declared_constant in H as ->; eauto.
 
   - eapply refine_type. econstructor; eauto.
-    eapply on_declared_inductive in isdecl as [on_mind on_ind]; auto.
+    eapply on_declared_inductive in as isdecl [on_mind on_ind]; auto.
     apply onArity in on_ind as [[s' Hindty] _].
     apply typecheck_closed in Hindty as [_ Hindty]; eauto. symmetry.
     move/andb_and/proj1: Hindty. rewrite -(closedn_subst_instance_constr _ _ u) => Hty.
@@ -2315,7 +2315,7 @@ Proof.
     rewrite !map_cst_type. eapply subst_declared_constant in H as ->; eauto.
 
   - eapply refine_type. 1: econstructor; eauto.
-    eapply on_declared_inductive in isdecl as [on_mind on_ind]; auto.
+    eapply on_declared_inductive in as isdecl [on_mind on_ind]; auto.
     apply onArity in on_ind as [s' Hindty].
     apply typecheck_closed in Hindty as [_ Hindty]; eauto. symmetry.
     move/andb_and/proj1: Hindty. rewrite -(closedn_subst_instance_constr _ _ u) => Hty.
@@ -2351,7 +2351,7 @@ Proof.
       * now rewrite closedn_subst_instance_context.
     + now rewrite !subst_mkApps in X4.
     + simpl.
-      destruct (on_declared_inductive wfΣ isdecl) as [oind obod].
+      destruct (on_declared_inductive wfΣ as isdecl) [oind obod].
       pose obod.(onConstructors) as onc.
       eapply (subst_build_branches_type s #|Δ|) in H3; eauto.
       * subst params. rewrite firstn_map. exact H3.

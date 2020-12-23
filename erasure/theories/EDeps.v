@@ -360,8 +360,8 @@ Lemma erases_deps_forall_ind Σ Σ'
         P (Extract.E.tConst kn))
   (Hconstruct : forall (ind : inductive) (c : nat), P (Extract.E.tConstruct ind c))
   (Hcase : forall (p : inductive × nat) mdecl idecl mdecl' idecl' (discr : Extract.E.term) (brs : list (nat × Extract.E.term)),
-        PCUICTyping.declared_inductive Σ mdecl (fst p) idecl ->
-        ETyping.declared_inductive Σ' mdecl' (fst p) idecl' ->
+        PCUICTyping.declared_inductive Σ (fst p) mdecl idecl ->
+        ETyping.declared_inductive Σ' (fst p) mdecl' idecl' ->
         erases_one_inductive_body idecl idecl' ->
         erases_deps Σ Σ' discr ->
         P discr ->
@@ -369,8 +369,8 @@ Lemma erases_deps_forall_ind Σ Σ'
         Forall (fun br => P br.2) brs ->
         P (Extract.E.tCase p discr brs))
   (Hproj : forall (p : projection) mdecl idecl mdecl' idecl' (t : Extract.E.term),
-        PCUICTyping.declared_inductive Σ mdecl p.1.1 idecl ->
-        ETyping.declared_inductive Σ' mdecl' p.1.1 idecl' ->
+        PCUICTyping.declared_inductive Σ p.1.1 mdecl idecl ->
+        ETyping.declared_inductive Σ' p.1.1 mdecl' idecl' ->
         erases_one_inductive_body idecl idecl' ->
         erases_deps Σ Σ' t -> P t -> P (Extract.E.tProj p t))
   (Hfix : forall (defs : list (Extract.E.def Extract.E.term)) (i : nat),
@@ -504,9 +504,9 @@ Definition globals_erased_with_deps Σ Σ' :=
       erases_constant_body (Σ, cst_universes cst) cst cst' /\
       (forall body, cst_body cst' = Some body -> erases_deps Σ Σ' body)) /\
   (forall k mdecl idecl,
-      PCUICTyping.declared_inductive Σ mdecl k idecl ->
+      PCUICTyping.declared_inductive Σ k mdecl idecl ->
       exists mdecl' idecl',
-        ETyping.declared_inductive Σ' mdecl' k idecl' /\
+        ETyping.declared_inductive Σ' k mdecl' idecl' /\
         erases_mutual_inductive_body mdecl mdecl').
 
 

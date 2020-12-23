@@ -230,7 +230,7 @@ Lemma declared_inductive_wf {cf:checker_flags} :
   forall (Σ : global_env) ind
          (mdecl : mutual_inductive_body) (idecl : one_inductive_body),
   Forall_decls_typing (fun (_ : global_env_ext) (_ : context) (t T : term) => Ast.wf t /\ Ast.wf T) Σ ->
-  declared_inductive Σ mdecl ind idecl -> Ast.wf (ind_type idecl).
+  declared_inductive Σ ind mdecl idecl -> Ast.wf (ind_type idecl).
 Proof.
   intros.
   destruct H as [Hmdecl Hidecl]. red in Hmdecl.
@@ -255,7 +255,7 @@ Lemma declared_inductive_wf_indices {cf:checker_flags} :
   forall (Σ : global_env) ind
          (mdecl : mutual_inductive_body) (idecl : one_inductive_body),
   Forall_decls_typing (fun (_ : global_env_ext) (_ : context) (t T : term) => Ast.wf t /\ Ast.wf T) Σ ->
-  declared_inductive Σ mdecl ind idecl -> Forall wf_decl (ind_indices idecl).
+  declared_inductive Σ ind mdecl idecl -> Forall wf_decl (ind_indices idecl).
 Proof.
   intros.
   destruct H as [Hmdecl Hidecl]. red in Hmdecl.
@@ -273,7 +273,7 @@ Lemma declared_inductive_wf_ctors {cf:checker_flags} :
   forall (Σ : global_env) ind
          (mdecl : mutual_inductive_body) (idecl : one_inductive_body),
   Forall_decls_typing (fun (_ : global_env_ext) (_ : context) (t T : term) => Ast.wf t /\ Ast.wf T) Σ ->
-  declared_inductive Σ mdecl ind idecl -> 
+  declared_inductive Σ ind mdecl idecl -> 
   Forall (fun ctor => Forall wf_decl ctor.(cstr_args)) (ind_ctors idecl).
 Proof.
   intros.
@@ -303,7 +303,7 @@ Lemma declared_inductive_wf_params {cf:checker_flags} :
   forall (Σ : global_env) ind
          (mdecl : mutual_inductive_body) (idecl : one_inductive_body),
   on_global_env (fun Σ => wf_decl_pred) Σ ->
-  declared_inductive Σ mdecl ind idecl -> Forall wf_decl (ind_params mdecl).
+  declared_inductive Σ ind mdecl idecl -> Forall wf_decl (ind_params mdecl).
 Proof.
   intros.
   destruct H as [Hmdecl Hidecl]. red in Hmdecl.
@@ -512,7 +512,7 @@ Hint Resolve on_global_wf_Forall_decls : wf.
 
 Lemma wf_case_branches_context {cf:checker_flags} Σ ind mdecl idecl p :
   on_global_env (fun Σ => wf_decl_pred) Σ ->
-  declared_inductive Σ mdecl ind idecl ->
+  declared_inductive Σ ind mdecl idecl ->
   Forall Ast.wf (Environment.pparams p) ->
   Forall (fun ctor => Forall wf_decl (cstr_args ctor)) (ind_ctors idecl) ->
   Forall (fun ctx => Forall wf_decl ctx) (case_branches_contexts idecl p).
@@ -953,7 +953,7 @@ Record wf_inductive_body idecl := {
 Lemma declared_minductive_declared {cf:checker_flags} {Σ : global_env_ext} {mind} {mdecl} :
   wf Σ.1 ->  
   declared_minductive Σ mind mdecl ->
-  (Alli (fun i decl => declared_inductive Σ mdecl {| inductive_mind := mind; inductive_ind := i |} decl)
+  (Alli (fun i decl => declared_inductive Σ {| mdecl inductive_mind := mind; inductive_ind := i |} decl)
     0 (ind_bodies mdecl)).
 Proof.
  intros; eapply forall_nth_error_Alli. intros; split; auto.
@@ -962,7 +962,7 @@ Qed.
 Lemma declared_inductive_declared {cf:checker_flags} {Σ : global_env_ext}
   {ind mdecl idecl} :
   wf Σ.1 ->  
-  declared_inductive Σ mdecl ind idecl ->
+  declared_inductive Σ ind mdecl idecl ->
   (Alli (fun i decl => declared_constructor Σ mdecl idecl (ind, i) decl) 0 (ind_ctors idecl)) *
   (Alli (fun i decl => declared_projection Σ mdecl idecl ((ind, ind_npars mdecl), i) decl) 0 (ind_projs idecl)).
 Proof.

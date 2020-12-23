@@ -987,7 +987,7 @@ Proof.
   apply onInductives in decl'.
   eapply All_forallb.
   
-  assert (Alli (fun i =>  declared_inductive Σ mdecl {| inductive_mind := mind; inductive_ind := i |}) 
+  assert (Alli (fun i =>  declared_inductive Σ {| mdecl inductive_mind := mind; inductive_ind := i |}) 
     0 (ind_bodies mdecl)).
   { eapply forall_nth_error_Alli. intros.
     split; auto. }
@@ -1038,7 +1038,7 @@ Qed.
 Lemma declared_inductive_closed {cf:checker_flags}
    {Σ : global_env} {mdecl mind idecl} : 
   wf Σ ->
-  declared_inductive Σ mdecl mind idecl ->
+  declared_inductive Σ mind mdecl idecl ->
   closed_inductive_body mdecl idecl.
 Proof.
   intros wf [decli hnth].
@@ -1051,7 +1051,7 @@ Qed.
 Lemma declared_inductive_closed_pars_indices {cf:checker_flags}
    {Σ : global_env} {mdecl mind idecl} : 
   wf Σ ->
-  declared_inductive Σ mdecl mind idecl ->
+  declared_inductive Σ mind mdecl idecl ->
   closed_ctx (ind_params mdecl ,,, ind_indices idecl).
 Proof.
   intros wf decli.
@@ -1196,11 +1196,11 @@ Qed.
 Lemma declared_inductive_closed_type {cf:checker_flags} :
   forall Σ mdecl ind idecl,
     wf Σ ->
-    declared_inductive Σ mdecl ind idecl ->
+    declared_inductive Σ ind mdecl idecl ->
     closed idecl.(ind_type).
 Proof.
   intros Σ mdecl ind idecl hΣ h.
-  unfold declared_inductive in h. destruct h as [h1 h2].
+  unfold declared_inductive in destruct h. h as [h1 h2].
   unfold declared_minductive in h1.
   eapply lookup_on_global_env in h1. 2: eauto.
   destruct h1 as [Σ' [wfΣ' decl']].
@@ -1214,11 +1214,11 @@ Qed.
 Lemma declared_inductive_closed_params {cf:checker_flags} :
   forall Σ mdecl ind idecl,
     wf Σ ->
-    declared_inductive Σ mdecl ind idecl ->
+    declared_inductive Σ ind mdecl idecl ->
     closed_ctx mdecl.(ind_params).
 Proof.
   intros Σ mdecl ind idecl hΣ h.
-  pose proof (on_declared_inductive hΣ h) as [onmind _].
+  pose proof (on_declared_inductive hΣ as h) [onmind _].
   eapply onParams in onmind.
   eapply closed_wf_local; eauto. simpl. auto.
 Qed.
@@ -1238,7 +1238,7 @@ Proof.
 Qed.
 
 Lemma declared_inductive_ind_npars {cf:checker_flags} {Σ} {wfΣ : wf Σ} {mdecl ind idecl} :
-  declared_inductive Σ mdecl ind idecl ->
+  declared_inductive Σ ind mdecl idecl ->
   ind_npars mdecl = context_assumptions mdecl.(ind_params).
 Proof.
   intros h.
@@ -1254,7 +1254,7 @@ Qed.
 Lemma declared_inductive_closed_constructors {cf:checker_flags} :
   forall Σ ind mdecl idecl,
       wf Σ ->
-      declared_inductive Σ mdecl ind idecl ->
+      declared_inductive Σ ind mdecl idecl ->
       All (closed_constructor_body mdecl) idecl.(ind_ctors).
 Proof.
   intros Σ ind mdecl idecl hΣ [hmdecl hidecl].
@@ -1290,11 +1290,11 @@ Qed.
 Lemma declared_inductive_closed_inds {cf:checker_flags} :
   forall Σ ind mdecl idecl u,
       wf Σ ->
-      declared_inductive Σ mdecl ind idecl ->
+      declared_inductive Σ ind mdecl idecl ->
       forallb (closedn 0) (inds (inductive_mind ind) u (ind_bodies mdecl)).
 Proof.
   intros Σ ind mdecl idecl u hΣ h.
-  unfold declared_inductive in h. destruct h as [hmdecl hidecl].
+  unfold declared_inductive in destruct h. h as [hmdecl hidecl].
   eapply declared_minductive_closed_inds in hmdecl. all: eauto.
 Qed.
 

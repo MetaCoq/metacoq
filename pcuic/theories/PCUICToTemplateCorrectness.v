@@ -186,9 +186,9 @@ Proof.
     now apply trans_constraintSet_in.
 Qed.
 
-Lemma trans_declared_inductive Σ mdecl ind idecl:
-  ST.declared_inductive Σ mdecl ind idecl ->
-  TT.declared_inductive (trans_global_decls Σ) (trans_minductive_body mdecl) ind (trans_one_ind_body idecl).
+Lemma trans_declared_inductive Σ ind mdecl idecl:
+  ST.declared_inductive Σ ind mdecl idecl ->
+  TT.declared_inductive (trans_global_decls Σ) (trans_minductive_body mdecl) (trans_one_ind_body ind idecl).
 Proof.
   intros [].
   split.

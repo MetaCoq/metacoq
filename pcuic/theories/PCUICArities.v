@@ -382,7 +382,7 @@ Qed.
 
 Lemma subslet_inds_gen {cf:checker_flags} Σ ind mdecl idecl :
   wf Σ ->
-  declared_inductive Σ mdecl ind idecl ->
+  declared_inductive Σ ind mdecl idecl ->
   let u := PCUICLookup.abstract_instance (ind_universes mdecl) in
   subslet (Σ, ind_universes mdecl) [] (inds (inductive_mind ind) u (ind_bodies mdecl))
     (arities_context (ind_bodies mdecl)).
@@ -424,7 +424,7 @@ Qed.
 
 Lemma subslet_inds {cf:checker_flags} Σ ind u mdecl idecl :
   wf Σ.1 ->
-  declared_inductive Σ.1 mdecl ind idecl ->
+  declared_inductive Σ.1 ind mdecl idecl ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   subslet Σ [] (inds (inductive_mind ind) u (ind_bodies mdecl))
     (subst_instance_context u (arities_context (ind_bodies mdecl))).

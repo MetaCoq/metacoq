@@ -143,7 +143,7 @@ Section Typecheck.
 
   Program Definition lookup_ind_decl ind
     : typing_result
-        ({decl & {body & declared_inductive (fst Σ) decl ind body}}) :=
+        ({decl & {body & declared_inductive (fst Σ) ind decl body}}) :=
     match lookup_env (fst Σ) ind.(inductive_mind) with
     | Some (InductiveDecl decl) =>
       match nth_error decl.(ind_bodies) ind.(inductive_ind) with
@@ -578,7 +578,7 @@ Section Typecheck.
     have [pctx' da] : (∑ pctx', destArity [] pty' =  Some (pctx', X0)).
     { symmetry in Heq_anonymous0.
       unshelve eapply (PCUICInductives.build_case_predicate_type_spec (Σ.1, ind_universes d)) in Heq_anonymous0 as [parsubst [_ ->]].
-      eauto. eapply (PCUICWeakeningEnv.on_declared_inductive wfΣ) in HH as [? ?]. eauto.
+      eauto. eapply (PCUICWeakeningEnv.on_declared_inductive wfΣ) HH in as [? ?]. eauto.
       eexists. rewrite !destArity_it_mkProd_or_LetIn; simpl. reflexivity. }
     eapply PCUICInductiveInversion.build_branches_type_wt. 6:eapply typ_p. all:eauto.
   Defined.

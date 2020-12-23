@@ -342,7 +342,7 @@ Variant ind_case_predicate_context ind mdecl idecl params puinst pctx : context 
 
 Variant case_predicate_context Σ ci p : context -> Type@{cpred} :=
 | mk_case_predicate_context mdecl idecl pctx :
-  declared_inductive Σ mdecl (ci_ind ci) idecl ->
+  declared_inductive Σ (ci_ind ci) mdecl idecl ->
   ind_case_predicate_context (ci_ind ci) mdecl idecl p.(pparams) p.(puinst) p.(pcontext) pctx ->
   case_predicate_context Σ ci p pctx.
   
@@ -359,7 +359,7 @@ Definition ind_case_branches_contexts ind mdecl idecl p : list context -> Type@{
 
 Variant case_branches_contexts Σ ci p : list context -> Type@{cpred} :=
   | mk_case_branches_contexts mdecl idecl brsctx : 
-    declared_inductive Σ mdecl (ci_ind ci) idecl ->
+    declared_inductive Σ (ci_ind ci) mdecl idecl ->
     ind_case_branches_contexts (ci_ind ci) mdecl idecl p brsctx ->
     case_branches_contexts Σ ci p brsctx.
 
@@ -454,7 +454,7 @@ Definition build_case_predicate_context ind mdecl idecl params u pctx : option c
 
 Lemma lookup_inductive_declared Σ ind mdecl idecl :
   lookup_inductive Σ ind = Some (mdecl, idecl) ->
-  declared_inductive Σ mdecl ind idecl.
+  declared_inductive Σ ind mdecl idecl.
 Proof.
   unfold lookup_inductive, lookup_minductive, declared_inductive,
     declared_minductive.

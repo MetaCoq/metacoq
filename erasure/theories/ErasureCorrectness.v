@@ -667,8 +667,8 @@ Proof.
 Qed.  
 
 Lemma isPropositional_propositional Σ Σ' ind mdecl idecl mdecl' idecl' : 
-  PCUICTyping.declared_inductive Σ mdecl ind idecl ->
-  ETyping.declared_inductive Σ' mdecl' ind idecl' ->
+  PCUICTyping.declared_inductive Σ ind mdecl idecl ->
+  ETyping.declared_inductive Σ' ind mdecl' idecl' ->
   erases_one_inductive_body idecl idecl' ->
   forall b, isPropositional Σ ind b -> is_propositional_ind Σ' ind = Some b.
 Proof.

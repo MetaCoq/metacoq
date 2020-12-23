@@ -1515,7 +1515,7 @@ Section Conversion.
 
   Lemma welltyped_zipc_tCase_brs_length Γ p motive discr brs π :
     welltyped Σ Γ (zipc (tCase p motive discr brs) π) ->
-    exists mib oib, declared_inductive Σ mib p.1 oib /\ #|brs| = #|ind_ctors oib|.
+    exists mib oib, declared_inductive Σ p.1 mib oib /\ #|brs| = #|ind_ctors oib|.
   Proof.
     intros wf.
     zip fold in wf.

@@ -1062,9 +1062,9 @@ Qed.
 
 From MetaCoq.PCUIC Require Import PCUICCases.
 
-Lemma nl_declared_inductive Σ mdecl ind idecl :
-  declared_inductive Σ mdecl ind idecl ->
-  declared_inductive (map (on_snd nl_global_decl) Σ) 
+Lemma nl_declared_inductive Σ ind mdecl idecl :
+  declared_inductive Σ ind mdecl idecl ->
+  declared_inductive (map nl_global_decl) (on_snd Σ) 
     (nl_mutual_inductive_body mdecl) ind (nl_one_inductive_body idecl).
 Proof.
   intros []. split.

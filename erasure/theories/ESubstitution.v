@@ -56,7 +56,7 @@ Lemma Informative_extends:
   forall (Σ : global_env_ext) (ind : inductive)
     (mdecl : PCUICAst.mutual_inductive_body) (idecl : PCUICAst.one_inductive_body),
 
-    PCUICTyping.declared_inductive (fst Σ) mdecl ind idecl ->
+    PCUICTyping.declared_inductive (fst Σ) ind mdecl idecl ->
     forall (Σ' : global_env) (u0 : Instance.t),
       wf Σ' ->
       extends Σ Σ' ->

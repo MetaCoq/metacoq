@@ -350,7 +350,7 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
     red1 Σ Γ (tCase ind (mkpredicate params puinst pcontext preturn) c brs)
              (tCase ind (mkpredicate params' puinst pcontext preturn) c brs)
 
-| case_red_pred_return ind mdecl idecl (isdecl : declared_inductive Σ mdecl ind.(ci_ind) idecl)
+| case_red_pred_return ind mdecl idecl (isdecl : declared_inductive Σ ind.(ci_ind) mdecl idecl)
                        params puinst pcontext preturn preturn' c brs :
     red1 Σ (Γ ,,, case_predicate_context ind.(ci_ind) mdecl idecl params puinst pcontext) preturn preturn' ->
     red1 Σ Γ (tCase ind (mkpredicate params puinst pcontext preturn) c brs)
@@ -358,7 +358,7 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
     
 | case_red_discr ind p c c' brs : red1 Σ Γ c c' -> red1 Σ Γ (tCase ind p c brs) (tCase ind p c' brs)
 
-| case_red_brs ind mdecl idecl (isdecl : declared_inductive Σ mdecl ind.(ci_ind) idecl) p c brs brs' :
+| case_red_brs ind mdecl idecl (isdecl : declared_inductive Σ ind.(ci_ind) mdecl idecl) p c brs brs' :
     OnOne2All (fun brctx br br' => 
       on_Trel_eq (red1 Σ (Γ ,,, brctx)) bbody bcontext br br') 
       (case_branches_contexts idecl p) brs brs' ->
@@ -452,7 +452,7 @@ Lemma red1_ind_all :
                (tCase ind (mkpredicate params' puinst pcontext preturn) c brs)) ->
 
        (forall (Γ : context) (ci : case_info)
-               idecl mdecl (isdecl : declared_inductive Σ mdecl ci.(ci_ind) idecl)
+               idecl mdecl (isdecl : declared_inductive Σ ci.(ci_ind) mdecl idecl)
                params puinst pcontext preturn preturn' c brs,
            red1 Σ (Γ ,,, case_predicate_context ci.(ci_ind) mdecl idecl params puinst pcontext) preturn preturn' ->
            P (Γ ,,, case_predicate_context ci.(ci_ind) mdecl idecl params puinst pcontext) preturn preturn' ->
@@ -462,7 +462,7 @@ Lemma red1_ind_all :
        (forall (Γ : context) (ind : case_info) (p : predicate term) (c c' : term) (brs : list (branch term)),
         red1 Σ Γ c c' -> P Γ c c' -> P Γ (tCase ind p c brs) (tCase ind p c' brs)) ->
 
-       (forall (Γ : context) ind mdecl idecl (isdecl : declared_inductive Σ mdecl ind.(ci_ind) idecl) p c brs brs',        
+       (forall (Γ : context) ind mdecl idecl (isdecl : declared_inductive Σ ind.(ci_ind) mdecl idecl) p c brs brs',        
           OnOne2All (fun brctx br br' => 
             on_Trel_eq (Trel_conj (red1 Σ (Γ ,,, brctx)) (P (Γ ,,, brctx))) bbody bcontext br br') 
               (case_branches_contexts idecl p) brs brs' ->
@@ -899,7 +899,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
 
 | type_Ind ind u :
     wf_local Σ Γ ->
-    forall mdecl idecl (isdecl : declared_inductive Σ.1 mdecl ind idecl),
+    forall mdecl idecl (isdecl : declared_inductive Σ.1 ind mdecl idecl),
     consistent_instance_ext Σ mdecl.(ind_universes) u ->
     Σ ;;; Γ |- (tInd ind u) : subst_instance_constr u idecl.(ind_type)
 
@@ -910,7 +910,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     Σ ;;; Γ |- (tConstruct ind i u) : type_of_constructor mdecl cdecl (ind, i) u
 
 | type_Case (ci : case_info) p c brs indices ps :
-    forall mdecl idecl (isdecl : declared_inductive Σ.1 mdecl ci.(ci_ind) idecl),
+    forall mdecl idecl (isdecl : declared_inductive Σ.1 ci.(ci_ind) mdecl idecl),
     mdecl.(ind_npars) = ci.(ci_npar) ->
     #|idecl.(ind_indices)| = #|p.(pcontext)| ->
     context_assumptions idecl.(ind_indices) = #|p.(pparams)| ->
@@ -1242,7 +1242,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         P Σ Γ (tConst cst u) (subst_instance_constr u (cst_type decl))) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (ind : inductive) u
-          mdecl idecl (isdecl : declared_inductive Σ.1 mdecl ind idecl),
+          mdecl idecl (isdecl : declared_inductive Σ.1 ind mdecl idecl),
         Forall_decls_typing P Σ.1 ->
         PΓ Σ Γ wfΓ ->
         consistent_instance_ext Σ mdecl.(ind_universes) u ->
@@ -1257,7 +1257,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
 
      (forall (Σ : global_env_ext) (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ),     
       forall (ci : case_info) p c brs indices ps mdecl idecl
-        (isdecl : declared_inductive Σ.1 mdecl ci.(ci_ind) idecl),
+        (isdecl : declared_inductive Σ.1 ci.(ci_ind) mdecl idecl),
         Forall_decls_typing P Σ.1 -> 
         PΓ Σ Γ wfΓ ->
         mdecl.(ind_npars) = ci.(ci_npar) ->

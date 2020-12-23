@@ -307,9 +307,9 @@ Proof.
         eapply closed_upwards; eauto; lia.
 Qed.
 
-Lemma lift_declared_inductive `{checker_flags} Σ ind mdecl idecl n k :
+Lemma lift_declared_inductive `{checker_flags} ind Σ mdecl idecl n k :
   wf Σ ->
-  declared_inductive Σ mdecl ind idecl ->
+  declared_inductive Σ ind mdecl idecl ->
   map_one_inductive_body (context_assumptions mdecl.(ind_params))
                          (length (arities_context mdecl.(ind_bodies))) (fun k' => lift n (k' + k))
                          (inductive_ind ind) idecl = idecl.
@@ -1006,7 +1006,7 @@ Proof.
     erewrite <- (ind_type_map (fun k' => lift #|Γ''| (k' + #|Γ'|))).
     pose proof isdecl as isdecl'.
     destruct isdecl. intuition auto.
-    eapply lift_declared_inductive in isdecl'. 2: auto.
+    eapply lift_declared_inductive in 2: isdecl'. auto.
     rewrite -> isdecl'.
     econstructor; try red; intuition eauto.
 

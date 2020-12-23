@@ -1377,7 +1377,7 @@ Lemma rename_context_expand_lets_ctx k f Γ Δ :
   expand_lets_ctx () *)
 
 Lemma rename_case_predicate_context Σ {wfΣ : wf Σ} ind mdecl idecl f p :
-  declared_inductive Σ mdecl ind idecl ->
+  declared_inductive Σ ind mdecl idecl ->
   wf_predicate mdecl idecl p ->
   rename_context f (case_predicate_context ind mdecl idecl p) =
   case_predicate_context ind mdecl idecl (rename_predicate rename f p).
@@ -2014,7 +2014,7 @@ Qed.*)
 Lemma inst_declared_inductive :
   forall Σ ind mdecl idecl σ,
     wf Σ ->
-    declared_inductive Σ mdecl ind idecl ->
+    declared_inductive Σ ind mdecl idecl ->
     map_one_inductive_body
       (context_assumptions mdecl.(ind_params))
       #|arities_context mdecl.(ind_bodies)|
@@ -2056,7 +2056,7 @@ Qed.
 (* Lemma types_of_case_rename : *)
 (*   forall Σ ind mdecl idecl npar args u p pty indctx pctx ps btys f, *)
 (*     wf Σ -> *)
-(*     declared_inductive Σ mdecl ind idecl -> *)
+(*     declared_inductive Σ ind mdecl idecl -> *)
 (*     types_of_case ind mdecl idecl (firstn npar args) u p pty = *)
 (*     Some (indctx, pctx, ps, btys) -> *)
 (*     types_of_case *)
@@ -2075,12 +2075,12 @@ Qed.
 (*   case_eq (instantiate_params (subst_instance_context u (ind_params mdecl)) (firstn npar args) (subst_instance_constr u (ind_type idecl))) ; *)
 (*     try solve [ intro bot ; rewrite bot in h ; discriminate h ]. *)
 (*   intros ity eity. rewrite eity in h. *)
-(*   pose proof (on_declared_inductive hΣ hdecl) as [onmind onind]. *)
+(*   pose proof (on_declared_inductive hΣ as hdecl) [onmind onind]. *)
 (*   apply onParams in onmind as Hparams. *)
 (*   assert (closedparams : closed_ctx (subst_instance_context u (ind_params mdecl))). *)
 (*   { rewrite closedn_subst_instance_context. *)
 (*     eapply PCUICWeakening.closed_wf_local. all: eauto. eauto. } *)
-(*   epose proof (inst_declared_inductive _ ind mdecl idecl (ren f) hΣ) as hi. *)
+(*   epose proof (inst_declared_inductive _ mdecl ind idecl (ren f) hΣ) as hi. *)
 (*   forward hi by assumption. rewrite <- hi. *)
 (*   eapply instantiate_params_rename with (f := f) in eity ; auto. *)
 (*   rewrite -> ind_type_map. *)
@@ -2659,7 +2659,7 @@ Admitted.
 (* Lemma types_of_case_inst : *)
 (*   forall Σ ind mdecl idecl npar args u p pty indctx pctx ps btys σ, *)
 (*     wf Σ -> *)
-(*     declared_inductive Σ mdecl ind idecl -> *)
+(*     declared_inductive Σ ind mdecl idecl -> *)
 (*     types_of_case ind mdecl idecl (firstn npar args) u p pty = *)
 (*     Some (indctx, pctx, ps, btys) -> *)
 (*     types_of_case ind mdecl idecl (firstn npar (map (inst σ) args)) u p.[σ] pty.[σ] = *)
@@ -2670,12 +2670,12 @@ Admitted.
 (*   case_eq (instantiate_params (subst_instance_context u (ind_params mdecl)) (firstn npar args) (subst_instance_constr u (ind_type idecl))) ; *)
 (*     try solve [ intro bot ; rewrite bot in h ; discriminate h ]. *)
 (*   intros ity eity. rewrite eity in h. *)
-(*   pose proof (on_declared_inductive hΣ hdecl) as [onmind onind]. *)
+(*   pose proof (on_declared_inductive hΣ as hdecl) [onmind onind]. *)
 (*   apply onParams in onmind as Hparams. *)
 (*   assert (closedparams : closed_ctx (subst_instance_context u (ind_params mdecl))). *)
 (*   { rewrite closedn_subst_instance_context. *)
 (*     eapply PCUICWeakening.closed_wf_local. all: eauto. eauto. } *)
-(*   epose proof (inst_declared_inductive _ ind mdecl idecl σ hΣ) as hi. *)
+(*   epose proof (inst_declared_inductive _ mdecl ind idecl σ hΣ) as hi. *)
 (*   forward hi by assumption. rewrite <- hi. *)
 (*   eapply instantiate_params_inst with (σ := σ) in eity ; auto. *)
 (*   rewrite -> ind_type_map. *)

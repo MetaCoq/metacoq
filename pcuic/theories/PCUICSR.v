@@ -404,7 +404,7 @@ Proof.
            rewrite subst_instance_context_length. rewrite Nat.add_comm. eapply closedn_ctx_subst.
           2:eapply declared_minductive_closed_inds; eauto.
           rewrite /argctx. autorewrite with len. simpl.
-          pose proof (on_declared_inductive wf isdecl) as [onind _].
+          pose proof (on_declared_inductive wf as isdecl) [onind _].
           pose proof (on_constructor_inst u wf isdecl onind oib onc cu) as [wfcl _]; auto.
           eapply closed_wf_local in wfcl; auto.
           rewrite !subst_instance_context_app in wfcl.
@@ -442,7 +442,7 @@ Proof.
            eapply wf_arity_spine_typing_spine; eauto.
            constructor. epose proof (oib.(onArity)).
            rewrite (oib.(ind_arity_eq)) !subst_instance_constr_it_mkProd_or_LetIn.
-           pose proof (on_declared_inductive wf decli) as [ondi oni].
+           pose proof (on_declared_inductive wf as decli) [ondi oni].
            generalize (on_inductive_inst _ _ _ u _ _ wf X (proj1 decli) ondi oib cu).
            now rewrite subst_instance_context_app it_mkProd_or_LetIn_app.
            rewrite (oib.(ind_arity_eq)) !subst_instance_constr_it_mkProd_or_LetIn.
@@ -454,7 +454,7 @@ Proof.
            rewrite subst_it_mkProd_or_LetIn.
            eapply arity_spine_it_mkProd_or_LetIn_Sort => //.
            simpl in sp.
-           pose proof (on_declared_inductive wf decli) as [ondi oni].
+           pose proof (on_declared_inductive wf as decli) [ondi oni].
            eapply (on_inductive_sort_inst); eauto.
            instantiate (1:=inst).
            eapply spine_subst_eq; [eapply sp|].
@@ -688,7 +688,7 @@ Proof.
     * pose proof typec as typec'.
       eapply (env_prop_typing _ _ validity) in typec' as wat; auto.
       unshelve eapply isType_mkApps_Ind in wat as [parsubst [argsubst wat]]; eauto.
-      set (oib := on_declared_inductive wf isdecl) in *. clearbody oib.
+      set (oib := on_declared_inductive wf in isdecl) *. clearbody oib.
       destruct oib as [onind oib].
       destruct wat  as [[spars sargs] cu].
       unshelve eapply (build_case_predicate_type_spec (Σ.1, _)) in heq_build_case_predicate_type as [parsubst' [cparsubst Hpty]]; eauto.
@@ -719,7 +719,7 @@ Proof.
     * pose proof typec as typec'.
       eapply (env_prop_typing _ _ validity) in typec' as wat; auto.
       unshelve eapply isType_mkApps_Ind in wat as [parsubst [argsubst wat]]; eauto.
-      set (oib := on_declared_inductive wf isdecl) in *. clearbody oib.
+      set (oib := on_declared_inductive wf in isdecl) *. clearbody oib.
       destruct oib as [onind oib].
       destruct wat as [[spars sargs] cu].
       unshelve eapply (build_case_predicate_type_spec (Σ.1, _)) in heq_build_case_predicate_type as [parsubst' [cparsubst Hpty]]; eauto.
@@ -790,7 +790,7 @@ Proof.
       (smash_context [] (subst_instance_context u (ind_params mdecl))) []). auto.
     { unshelve eapply isType_mkApps_Ind in X1 as [parsubst [argsubst Hind]]; eauto.
       eapply (let (x, _) := isdecl in x).
-      unfold on_declared_inductive in Hind. fold oib in Hind. simpl in Hind.
+      unfold on_declared_inductive in fold Hind. oib in Hind. simpl in Hind.
       destruct Hind as [[sppars spargs] cu].
       rewrite firstn_all2 in sppars. lia.
       eapply spine_subst_smash in sppars.

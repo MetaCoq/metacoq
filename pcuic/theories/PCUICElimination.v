@@ -16,7 +16,7 @@ Definition Is_proof `{cf : checker_flags} Σ Γ t := ∑ T u, Σ ;;; Γ |- t : T
 
 Definition SingletonProp `{cf : checker_flags} (Σ : global_env_ext) (ind : inductive) :=
   forall mdecl idecl,
-    declared_inductive (fst Σ) mdecl ind idecl ->
+    declared_inductive (fst Σ) ind mdecl idecl ->
     forall Γ args u n (Σ' : global_env_ext),
       wf Σ' ->
       extends Σ Σ' ->
@@ -27,7 +27,7 @@ Definition SingletonProp `{cf : checker_flags} (Σ : global_env_ext) (ind : indu
 
 Definition Computational `{cf : checker_flags} (Σ : global_env_ext) (ind : inductive) :=
   forall mdecl idecl,
-    declared_inductive (fst Σ) mdecl ind idecl ->
+    declared_inductive (fst Σ) ind mdecl idecl ->
     forall Γ args u n (Σ' : global_env_ext),
       wf Σ' ->
       extends Σ Σ' ->
@@ -36,7 +36,7 @@ Definition Computational `{cf : checker_flags} (Σ : global_env_ext) (ind : indu
 
 Definition Informative `{cf : checker_flags} (Σ : global_env_ext) (ind : inductive) :=
   forall mdecl idecl,
-    declared_inductive (fst Σ) mdecl ind idecl ->
+    declared_inductive (fst Σ) ind mdecl idecl ->
     forall Γ args u n (Σ' : global_env_ext),
       wf_ext Σ' ->
       extends Σ Σ' ->
@@ -48,7 +48,7 @@ Lemma elim_restriction_works_kelim1
       `{cf : checker_flags} (Σ : global_env_ext) Γ T ind npar p c brs mind idecl :
   check_univs ->
   wf_ext Σ ->
-  declared_inductive (fst Σ) mind ind idecl ->
+  declared_inductive (fst Σ) ind mind idecl ->
   Σ ;;; Γ |- tCase (ind, npar) p c brs : T ->
   (Is_proof Σ Γ (tCase (ind, npar) p c brs) -> False) ->
   ind_kelim idecl = IntoAny \/ ind_kelim idecl = IntoSetPropSProp.
@@ -78,7 +78,7 @@ Proof.
   simpl in watiapp.
   eapply (isType_mkApps_Ind wfΣ H) in watiapp as [psub [asub [[spp spa] cuni]]]; eauto.
   2:eapply typing_wf_local; eauto.
-  destruct on_declared_inductive as [oi oib] in *. simpl in *.
+  destruct on_declared_inductive as oib] [oi in *. simpl in *.
   eapply (build_case_predicate_type_spec _ _ _ _ _ _ _ _ oib) in e0 as [parsubst [cs eq]].
   rewrite eq in t.
   eapply PCUICGeneration.type_mkApps. eauto.
@@ -232,7 +232,7 @@ Lemma typing_spine_proofs {cf:checker_flags} Σ Γ Δ ind u args' args T' s :
       (∑ s, (Σ ;;; Γ ,,, Γ' |- t : tSort s) * is_propositional s)%type) Δ ->
     ∥ All (Is_proof Σ Γ) args ∥) *
     (forall mdecl idecl 
-    (Hdecl : declared_inductive Σ.1 mdecl ind idecl)
+    (Hdecl : declared_inductive Σ.1 ind mdecl idecl)
     (oib : on_ind_body (lift_typing typing) (Σ.1, ind_universes mdecl)
       (inductive_mind ind) mdecl (inductive_ind ind) idecl),
       consistent_instance_ext Σ (ind_universes mdecl) u ->
@@ -413,7 +413,7 @@ Qed.
 Lemma Is_proof_mkApps_tConstruct `{cf : checker_flags} (Σ : global_env_ext) Γ ind n u mdecl idecl args :
   check_univs = true ->
   wf_ext Σ ->
-  declared_inductive (fst Σ) mdecl ind idecl ->
+  declared_inductive (fst Σ) ind mdecl idecl ->
   (ind_kelim idecl <> IntoPropSProp /\ ind_kelim idecl <> IntoSProp) ->
   Is_proof Σ Γ (mkApps (tConstruct ind n u) args) ->
   #|ind_ctors idecl| <= 1 /\ ∥ All (Is_proof Σ Γ) (skipn (ind_npars mdecl) args) ∥.
@@ -512,12 +512,12 @@ Qed.
 Lemma elim_restriction_works_kelim `{cf : checker_flags} (Σ : global_env_ext) ind mind idecl :
   check_univs = true ->
   wf_ext Σ ->
-  declared_inductive (fst Σ) mind ind idecl ->
+  declared_inductive (fst Σ) ind mind idecl ->
   (ind_kelim idecl <> IntoPropSProp /\ ind_kelim idecl <> IntoSProp) -> Informative Σ ind.
 Proof.
   intros cu HΣ H indk.
   assert (wfΣ : wf Σ) by apply HΣ.
-  destruct (PCUICWeakeningEnv.on_declared_inductive wfΣ H) as [[]]; eauto.
+  destruct (PCUICWeakeningEnv.on_declared_inductive wfΣ as H) [[]]; eauto.
   intros ?. intros.
   eapply declared_inductive_inj in H as []; eauto; subst idecl0 mind.
   eapply Is_proof_mkApps_tConstruct in X1; tea.
@@ -527,7 +527,7 @@ Qed.
 Lemma elim_restriction_works `{cf : checker_flags} (Σ : global_env_ext) Γ T ind npar p c brs mind idecl : 
   check_univs = true ->
   wf_ext Σ ->
-  declared_inductive (fst Σ) mind ind idecl ->
+  declared_inductive (fst Σ) ind mind idecl ->
   Σ ;;; Γ |- tCase (ind, npar) p c brs : T ->
   (Is_proof Σ Γ (tCase (ind, npar) p c brs) -> False) -> Informative Σ ind.
 Proof.
@@ -549,7 +549,7 @@ Qed.
 
 Lemma elim_restriction_works_proj_kelim1 `{cf : checker_flags} (Σ : global_env_ext) Γ T p c mind idecl :
   wf Σ ->
-  declared_inductive (fst Σ) mind (fst (fst p)) idecl ->
+  declared_inductive (fst Σ) (fst (fst p)) mind idecl ->
   Σ ;;; Γ |- tProj p c : T ->
   (Is_proof Σ Γ (tProj p c) -> False) -> ind_kelim idecl = IntoAny.
 Proof.
@@ -568,7 +568,7 @@ Qed.
 
 Lemma elim_restriction_works_proj `{cf : checker_flags} (Σ : global_env_ext) Γ  p c mind idecl T :
   check_univs = true -> wf_ext Σ ->
-  declared_inductive (fst Σ) mind (fst (fst p)) idecl ->
+  declared_inductive (fst Σ) (fst (fst p)) mind idecl ->
   Σ ;;; Γ |- tProj p c : T ->
   (Is_proof Σ Γ (tProj p c) -> False) -> Informative Σ (fst (fst p)).
 Proof.

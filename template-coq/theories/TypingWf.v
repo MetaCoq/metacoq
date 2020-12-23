@@ -316,7 +316,7 @@ Lemma declared_constructor_wf {cf:checker_flags}:
   forall (Σ : global_env) (ind : inductive) (i : nat) (u : list Level.t)
          (mdecl : mutual_inductive_body) (idecl : one_inductive_body) (cdecl : constructor_body),
     Forall_decls_typing (fun (_ : global_env_ext) (_ : context) (t T : term) => Ast.wf t /\ Ast.wf T) Σ ->
-    declared_constructor Σ mdecl idecl (ind, i) cdecl ->
+    declared_constructor Σ (ind, i) mdecl idecl cdecl ->
     Ast.wf (cstr_type cdecl).
 Proof.
   intros Σ ind i u mdecl idecl cdecl X isdecl.
@@ -963,7 +963,7 @@ Lemma declared_inductive_declared {cf:checker_flags} {Σ : global_env_ext}
   {ind mdecl idecl} :
   wf Σ.1 ->  
   declared_inductive Σ ind mdecl idecl ->
-  (Alli (fun i decl => declared_constructor Σ mdecl idecl (ind, i) decl) 0 (ind_ctors idecl)) *
+  (Alli (fun i decl => declared_constructor Σ (ind, i) mdecl idecl decl)  0 (ind_ctors idecl)) *
   (Alli (fun i decl => declared_projection Σ mdecl idecl ((ind, ind_npars mdecl), i) decl) 0 (ind_projs idecl)).
 Proof.
  intros; split; eapply forall_nth_error_Alli; intros; split; auto.

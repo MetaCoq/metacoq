@@ -18,7 +18,7 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     declared_minductive Σ (inductive_mind ind) mdecl /\
     List.nth_error mdecl.(ind_bodies) (inductive_ind ind) = Some decl.
 
-  Definition declared_constructor Σ mdecl idecl cstr cdecl : Prop :=
+  Definition declared_constructor Σ cstr mdecl idecl cdecl : Prop :=
     declared_inductive Σ (fst cstr) mdecl idecl /\
     List.nth_error idecl.(ind_ctors) (snd cstr) = Some cdecl.
 

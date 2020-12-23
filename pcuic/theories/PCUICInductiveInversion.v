@@ -288,7 +288,7 @@ Ltac pcuic := intuition eauto 5 with pcuic ||
 Lemma declared_constructor_valid_ty {cf:checker_flags} Σ Γ mdecl idecl i n cdecl u :
   wf Σ.1 ->
   wf_local Σ Γ ->
-  declared_constructor Σ.1 mdecl idecl (i, n) cdecl ->
+  declared_constructor Σ.1 (i, n) mdecl idecl cdecl ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   isType Σ Γ (type_of_constructor mdecl cdecl (i, n) u).
 Proof.
@@ -1284,7 +1284,7 @@ Qed.
 Lemma Construct_Ind_ind_eq {cf:checker_flags} {Σ} (wfΣ : wf Σ.1):
   forall {Γ n i args u i' args' u' mdecl idecl cdecl},
   Σ ;;; Γ |- mkApps (tConstruct i n u) args : mkApps (tInd i' u') args' ->
-  forall (Hdecl : declared_constructor Σ.1 mdecl idecl (i, n) cdecl),
+  forall (Hdecl : declared_constructor Σ.1 (i, n) mdecl idecl cdecl),
   let '(onind, oib, existT cdecl (hnth, onc)) := on_declared_constructor wfΣ Hdecl in
   (i = i') * 
   (* Universe instances match *)
@@ -1611,7 +1611,7 @@ Proof.
   eapply inversion_mkApps in typec as [A' [tyc tyargs]]; auto.
   eapply (inversion_Construct Σ wΣ) in tyc as [mdecl' [idecl' [cdecl' [wfl [declc [Hu tyc]]]]]].
   epose proof (PCUICInductiveInversion.Construct_Ind_ind_eq _ ht0 declc); eauto.
-  destruct on_declared_constructor as [[onmind oib] [cs [? ?]]].
+  destruct on_declared_constructor as [cs [[onmind oib] [? ?]]].
   simpl in *.
   intuition auto.
 Qed.
@@ -1628,7 +1628,7 @@ Proof.
   eapply inversion_mkApps in typec as [A' [tyc tyargs]]; auto.
   eapply (inversion_Construct Σ wΣ) in tyc as [mdecl' [idecl' [cdecl' [wfl [declc [Hu tyc]]]]]].
   epose proof (PCUICInductiveInversion.Construct_Ind_ind_eq _ hc declc); eauto.
-  destruct on_declared_constructor as [[onmind oib] [cs [? ?]]].
+  destruct on_declared_constructor as [cs [[onmind oib] [? ?]]].
   simpl in *.
   intuition auto.
 Qed.
@@ -1650,7 +1650,7 @@ Proof.
   eapply (inversion_Construct Σ wΣ) in tyc as [mdecl' [idecl' [cdecl' [wfl [declc [Hu tyc]]]]]].
   pose proof (declared_inductive_unique_sig d.p1 declc.p1) as H; noconf H.
   set (declc' :=  
-   (conj (let (x, _) := d in x) declc.p2) : declared_constructor Σ.1  mdecl idecl (i, c) cdecl').
+   (conj (let (x, _) := d in x) declc.p2) : declared_constructor Σ.1 (i, c) idecl  mdecl cdecl').
   epose proof (PCUICInductiveInversion.Construct_Ind_ind_eq _ hc declc'); eauto.
   simpl in X.
   destruct (on_declared_projection wΣ d).
@@ -3447,7 +3447,7 @@ Qed.
 Lemma declared_projection_constructor {cf:checker_flags} {Σ : global_env_ext} (wfΣ : wf Σ.1) :
   forall {mdecl idecl p pdecl},
   declared_projection Σ mdecl idecl p pdecl ->
-  ∑ cdecl, declared_constructor Σ mdecl idecl (p.1.1, 0) cdecl.
+  ∑ cdecl, declared_constructor Σ (p.1.1, 0) mdecl idecl cdecl.
 Proof.
   intros * declp.
   set (onp := on_declared_projection wfΣ declp).
@@ -3915,7 +3915,7 @@ Proof.
   intros n [narg brty] nth.
   eapply nth_branches_type in Hb as [br [Hbth Hbr]]; eauto.
   simpl.
-  assert (declared_constructor Σ.1 mdecl idecl (ind, n) br).
+  assert (declared_constructor Σ.1 (ind, n) mdecl idecl br).
   split; eauto.
   destruct (on_declared_constructor wfΣ H) as [[onind oib] [cs [nthc onc]]].
   clear oib. set (oib := declared_inductive_inv _ _ _ _) in *.

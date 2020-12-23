@@ -142,9 +142,9 @@ Proof.
 Qed.
 
 Lemma forall_decls_declared_constructor Σ cst mdecl idecl decl :
-  ST.declared_constructor Σ mdecl idecl cst decl ->
-  declared_constructor (trans_global_decls Σ) (trans_minductive_body mdecl) (trans_one_ind_body idecl)
-                    cst ((fun '(x, y, z) => (x, trans y, z)) decl).
+  ST.declared_constructor Σ cst mdecl idecl decl ->
+  declared_constructor (trans_global_decls Σ) cst (trans_minductive_body mdecl) (trans_one_ind_body idecl)
+                    (fun '(x, y, z) => (x, trans y, z)) decl).
 Proof.
   unfold declared_constructor, ST.declared_constructor.
   move=> [decl' Hnth].

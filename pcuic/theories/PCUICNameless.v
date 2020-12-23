@@ -1074,10 +1074,10 @@ Proof.
   - simpl. now rewrite nth_error_map H0.
 Qed.
 
-Lemma nl_declared_constructor Σ mdecl idecl c cdecl :
-  declared_constructor Σ mdecl idecl c cdecl ->
-  declared_constructor (map (on_snd nl_global_decl) Σ) 
-    (nl_mutual_inductive_body mdecl) (nl_one_inductive_body idecl) c
+Lemma nl_declared_constructor Σ c mdecl idecl cdecl :
+  declared_constructor Σ c mdecl idecl cdecl ->
+  declared_constructor (map (on_snd nl_global_decl) Σ) c
+    (nl_mutual_inductive_body mdecl) (nl_one_inductive_body idecl)
     (nl_constructor_body cdecl).
 Proof.
   intros []. split.

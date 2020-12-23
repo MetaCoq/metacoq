@@ -154,9 +154,9 @@ Proof.
 Qed.
 
 Lemma forall_decls_declared_projection Σ cst mdecl idecl decl :
-  ST.declared_projection Σ mdecl idecl cst decl ->
-  declared_projection (trans_global_decls Σ) (trans_minductive_body mdecl) (trans_one_ind_body idecl)
-                    cst ((fun '(x, y) => (x, trans y)) decl).
+  ST.declared_projection Σ cst mdecl idecl decl ->
+  declared_projection (trans_global_decls Σ) cst (trans_minductive_body mdecl) (trans_one_ind_body idecl)
+                    ((fun '(x, y) => (x, trans y)) decl).
 Proof.
   unfold declared_constructor, ST.declared_constructor.
   move=> [decl' [Hnth Hnpar]].

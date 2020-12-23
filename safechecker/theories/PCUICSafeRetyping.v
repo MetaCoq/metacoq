@@ -561,7 +561,7 @@ Section TypeOf.
       eapply cumul_Ind_Ind_inv in X0 as [[eqi' Ru'] cl']; eauto.
       destruct d as [decl [body decli]].
       pose proof (declared_inductive_inj (proj1 declp) decli) as [-> ->].
-      assert (declared_projection Σ mdecl idecl (ind, n, k) pdecl).
+      assert (declared_projection Σ (ind, n, k) mdecl idecl pdecl).
       { red; intuition eauto. simpl. eapply declp. }
       pose proof (@Reflect.eqb_eq inductive _). apply H0 in eqi'. subst ind.
       destruct (declared_projection_inj declp H) as [_ [_ ->]].

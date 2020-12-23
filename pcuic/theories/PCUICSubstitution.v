@@ -402,7 +402,7 @@ Qed.
 
 Lemma subst_declared_projection {cf:checker_flags} Σ c mdecl idecl pdecl n k :
   wf Σ ->
-  declared_projection Σ mdecl idecl c pdecl ->
+  declared_projection Σ c mdecl idecl pdecl ->
   on_snd (subst n (S (ind_npars mdecl + k))) pdecl = pdecl.
 Proof.
   intros.

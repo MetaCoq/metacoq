@@ -3446,7 +3446,7 @@ Qed.
 
 Lemma declared_projection_constructor {cf:checker_flags} {Σ : global_env_ext} (wfΣ : wf Σ.1) :
   forall {mdecl idecl p pdecl},
-  declared_projection Σ mdecl idecl p pdecl ->
+  declared_projection Σ p mdecl idecl pdecl ->
   ∑ cdecl, declared_constructor Σ (p.1.1, 0) mdecl idecl cdecl.
 Proof.
   intros * declp.
@@ -3572,7 +3572,7 @@ From MetaCoq.PCUIC Require Import PCUICContextRelation.
 
 Lemma projection_cumulative_indices {cf:checker_flags} {Σ : global_env_ext} (wfΣ : wf Σ.1) :
   forall {mdecl idecl p pdecl u u' },
-  declared_projection Σ mdecl idecl p pdecl ->
+  declared_projection Σ p mdecl idecl pdecl ->
   on_udecl_prop Σ (ind_universes mdecl) ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   consistent_instance_ext Σ (ind_universes mdecl) u' ->

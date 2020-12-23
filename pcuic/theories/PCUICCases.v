@@ -173,16 +173,28 @@ Definition idecl_binder idecl :=
      decl_body := None;
      decl_type := idecl.(ind_type) |}.
 
-Definition wf_predicate mdecl idecl (p : predicate term) : Prop := 
+Definition wf_predicate_gen mdecl idecl (pparams : list term) (pcontext : list aname) : Prop := 
   let decl := idecl_binder idecl in
-  (#|p.(pparams)| = mdecl.(ind_npars)) /\
+  (#|pparams| = mdecl.(ind_npars)) /\
   (Forall2 (fun na decl => eq_binder_annot na decl.(decl_name)) 
-    p.(pcontext) (decl :: idecl.(ind_indices))).
+    pcontext (decl :: idecl.(ind_indices))).
     
-Definition wf_branch cdecl (b : branch term) : Prop := 
+Definition wf_predicate mdecl idecl (p : predicate term) : Prop := 
+  wf_predicate_gen mdecl idecl p.(pparams) p.(pcontext).
+    
+Definition wf_branch_gen cdecl (bctx : list aname) : Prop := 
   (Forall2 (fun na decl => eq_binder_annot na decl.(decl_name)) 
-    b.(bcontext) cdecl.(cstr_args)).
+    bctx cdecl.(cstr_args)).
+      
+Definition wf_branch cdecl (b : branch term) : Prop := 
+  wf_branch_gen cdecl b.(bcontext).
 
+Definition wf_branches_gen (ctors : list constructor_body) (brs : list (list aname)) : Prop := 
+  Forall2 wf_branch_gen ctors brs.
+  
+Definition wf_branches idecl (brs : list (branch term)) : Prop := 
+  Forall2 wf_branch idecl.(ind_ctors) brs.
+  
 Lemma case_predicate_context_length {ci mdecl idecl p} :
   wf_predicate mdecl idecl p ->
   #|case_predicate_context (ci_ind ci) mdecl idecl p| = #|p.(pcontext)|.

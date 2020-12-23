@@ -726,6 +726,7 @@ Lemma whne_red1_ind
           P (tCase i p c brs) (tCase i (set_pparams p params') c brs))
       (Hcase_discr : forall i mdecl idecl p c brs p',
           declared_inductive Σ mdecl i.(ci_ind) idecl ->
+          wf_predicate mdecl idecl p ->
           whne flags Σ Γ c ->
           red1 Σ (Γ ,,, case_predicate_context i mdecl idecl p) p.(preturn) p' ->
           P (tCase i p c brs) (tCase i (set_preturn p p') c brs))
@@ -736,6 +737,8 @@ Lemma whne_red1_ind
           P (tCase i p c brs) (tCase i p c' brs))
       (Hcase_branch : forall i mdecl idecl p c brs brs',
           declared_inductive Σ mdecl i.(ci_ind) idecl ->
+          wf_predicate mdecl idecl p ->
+          wf_branches idecl brs ->
           whne flags Σ Γ c ->          
           OnOne2All (fun cdecl br br' => 
             let ctx := case_branch_context i.(ci_ind) mdecl p br.(bcontext) cdecl in
@@ -815,7 +818,7 @@ Proof.
   - depelim r; eauto.
     + apply whne_mkApps_inv in wh; [|easy].
       destruct wh as [|(?&?&?&?&?&?&?)]; [|discriminate].
-      depelim w.
+      depelim w1.
       solve_discr.
     + solve_discr.
     + apply whne_mkApps_inv in wh; [|easy].
@@ -977,12 +980,15 @@ Inductive whnf_red Σ Γ : term -> term -> Type :=
 | whnf_red_tCase p motive motivep motiveret discr discr' brs brs' :
     All2 (red Σ Γ) motive.(pparams) motivep ->
     (∑ mdecl idecl, declared_inductive Σ mdecl p.(ci_ind) idecl *
-     red Σ (Γ ,,, case_predicate_context p mdecl idecl motive) motive.(preturn) motiveret) +
+      wf_predicate mdecl idecl motive *
+      red Σ (Γ ,,, case_predicate_context p mdecl idecl motive) motive.(preturn) motiveret) +
      (motive.(preturn) = motiveret) ->
     red Σ Γ discr discr' ->
     (∑ mdecl idecl, declared_inductive Σ mdecl p.(ci_ind) idecl *
+      wf_predicate mdecl idecl motive *
+      wf_branches idecl brs *
       All3 (fun cdecl br br' => br.(bcontext) = br'.(bcontext) ×
-      let brctx := case_branch_context motive br.(bcontext) cdecl in
+      let brctx := case_branch_context p.(ci_ind) mdecl motive br.(bcontext) cdecl in
       red Σ (Γ ,,, brctx) br.(bbody) br'.(bbody)) 
       idecl.(ind_ctors) brs brs') + (brs = brs') ->
     whnf_red Σ Γ (tCase p motive discr brs) 
@@ -1040,8 +1046,8 @@ Proof.
     cbn.
     intros ? ? (->&->&r1&r2).
     eauto.
-  - destruct s as [[mdecl [idecl [decli redp]]]|<-].
-    * destruct s0 as [[mdecl' [idecl' [decli' redp']]]|<-].
+  - destruct s as [[mdecl [idecl [[decli wfp] redp]]]|<-].
+    * destruct s0 as [[mdecl' [idecl' [[[decli' wfp'] wfbrs'] redp']]]|<-].
       pose proof (declared_inductive_inj decli decli') as [-> ->].
       eapply red_case; eauto.
       eapply All3_impl; eauto.
@@ -1054,7 +1060,7 @@ Proof.
       eapply red_case_p; eauto.
       eapply red_trans. eapply red_case_pars; eauto.
       eauto.
-    * destruct s0 as [[mdecl [idecl [decli red]]]|<-].
+    * destruct s0 as [[mdecl [idecl [[[decli wfp] wfb] red]]]|<-].
       eapply red_case; eauto.
       eapply All3_impl; eauto.
       cbn. intros ? ? (eq&?). intuition eauto.

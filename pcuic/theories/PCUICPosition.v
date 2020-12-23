@@ -874,6 +874,7 @@ Section WfStack.
     | Case_p ci ppars puinst pctx c brs π => 
       (∑ mdecl idecl,
         declared_inductive Σ mdecl (ci_ind ci) idecl * 
+        wf_predicate_gen mdecl idecl ppars (forget_types pctx) *
         (pctx = case_predicate_context_gen (ci_ind ci) mdecl idecl ppars puinst 
           (forget_types pctx))) *
         wf_stack π
@@ -881,8 +882,10 @@ Section WfStack.
       (∑ mdecl idecl, declared_inductive Σ mdecl (ci_ind ci) idecl) * wf_stack π
     | Case_brs ci pred c bctx brs1 brs2 π =>
       (∑ mdecl idecl,
-        (declared_inductive Σ mdecl (ci_ind ci) idecl) *
+        declared_inductive Σ mdecl (ci_ind ci) idecl *
+        wf_predicate mdecl idecl pred *
         let brctxs := map bcontext brs1 ++ forget_types bctx :: map bcontext brs2 in
+        wf_branches_gen idecl.(ind_ctors) brctxs *
         (nth_error (case_branches_contexts ci.(ci_ind) mdecl idecl pred brctxs) #|brs1| = Some bctx) * 
         (#|idecl.(ind_ctors)| = #|brs1| + S #|brs2|)%nat) *
         wf_stack π

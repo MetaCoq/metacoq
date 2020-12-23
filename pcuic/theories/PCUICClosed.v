@@ -316,6 +316,13 @@ Proof.
   rewrite H. now apply lift_closed.
 Qed.
 
+Lemma rev_subst_instance_context {u Γ} :
+  List.rev (subst_instance_context u Γ) = subst_instance_context u (List.rev Γ).
+Proof.
+  unfold subst_instance_context, map_context.
+  now rewrite map_rev.
+Qed.
+
 Local Open Scope sigma.
 
 Require Import Morphisms.
@@ -620,6 +627,16 @@ Proof.
   intros; apply (closed_smash_context_gen n _ []); auto. constructor.
 Qed.
 
+Lemma closedn_subst_instance_context {k Γ u} :
+  closedn_ctx k (subst_instance_context u Γ) = closedn_ctx k Γ.
+Proof.
+  unfold closedn_ctx.
+  rewrite rev_subst_instance_context.
+  rewrite alli_map.
+  apply alli_ext; intros i [? [] ?]; unfold closed_decl; cbn.
+  all: now rewrite !closedn_subst_instance_constr.
+Qed.
+
 Lemma closedn_ctx_spec k Γ : closedn_ctx k Γ <~> Alli closed_decl k (List.rev Γ).
 Proof.
   split.
@@ -650,12 +667,12 @@ Lemma weaken_env_prop_closed {cf:checker_flags} :
   closedn #|Γ| t && closedn #|Γ| T)).
 Proof. repeat red. intros. destruct t; red in X0; eauto. Qed.
 
-Lemma declared_projection_closed_ind {cf:checker_flags} {Σ : global_env_ext} {mdecl idecl p pdecl} : 
-  wf Σ.1 ->
-  declared_projection Σ.1 mdecl idecl p pdecl ->
+Lemma declared_projection_closed_ind {cf:checker_flags} {Σ : global_env} {mdecl idecl p pdecl} : 
+  wf Σ ->
+  declared_projection Σ mdecl idecl p pdecl ->
   Forall_decls_typing
   (fun _ (Γ : context) (t T : term) =>
-  closedn #|Γ| t && closedn #|Γ| T) Σ.1 ->
+  closedn #|Γ| t && closedn #|Γ| T) Σ ->
   closedn (S (ind_npars mdecl)) pdecl.2.
 Proof.
   intros wfΣ isdecl X0.
@@ -946,18 +963,18 @@ Qed.
 Lemma skipn_0 {A} (l : list A) : skipn 0 l = l.
 Proof. reflexivity. Qed.
 
-Lemma declared_projection_closed {cf:checker_flags} {Σ : global_env_ext} {mdecl idecl p pdecl} : 
-  wf Σ.1 ->
-  declared_projection Σ.1 mdecl idecl p pdecl ->
+Lemma declared_projection_closed {cf:checker_flags} {Σ : global_env} {mdecl idecl p pdecl} : 
+  wf Σ ->
+  declared_projection Σ mdecl idecl p pdecl ->
   closedn (S (ind_npars mdecl)) pdecl.2.
 Proof.
   intros; eapply declared_projection_closed_ind; eauto.
-  eapply typecheck_closed; eauto. eapply type_Prop.
+  eapply (env_prop_sigma _ _ typecheck_closed); eauto.
 Qed.
 
-Lemma declared_inductive_closed {cf:checker_flags} {Σ : global_env_ext} {mdecl mind} : 
-  wf Σ.1 ->
-  declared_minductive Σ.1 mind mdecl ->
+Lemma declared_inductive_closed {cf:checker_flags} {Σ : global_env} {mdecl mind} : 
+  wf Σ ->
+  declared_minductive Σ mind mdecl ->
   closed_inductive_decl mdecl.
 Proof.
   intros wfΣ decl.
@@ -969,7 +986,7 @@ Proof.
   apply onInductives in decl'.
   eapply All_forallb.
   
-  assert (Alli (fun i =>  declared_inductive Σ.1 mdecl {| inductive_mind := mind; inductive_ind := i |}) 
+  assert (Alli (fun i =>  declared_inductive Σ mdecl {| inductive_mind := mind; inductive_ind := i |}) 
     0 (ind_bodies mdecl)).
   { eapply forall_nth_error_Alli. intros.
     split; auto. }
@@ -1002,7 +1019,7 @@ Proof.
     specialize (X eq). clear eq.
     destruct (ind_ctors x) as [|? []]; try contradiction.
     apply on_projs in X.
-    assert (Alli (fun i pdecl => declared_projection Σ.1 mdecl x 
+    assert (Alli (fun i pdecl => declared_projection Σ mdecl x 
      (({| inductive_mind := mind; inductive_ind := n |}, mdecl.(ind_npars)), i) pdecl)
       0 (ind_projs x)).
     { eapply forall_nth_error_Alli.
@@ -1011,21 +1028,24 @@ Proof.
     now eapply declared_projection_closed in H.
 Qed.
 
-Lemma rev_subst_instance_context {u Γ} :
-  List.rev (subst_instance_context u Γ) = subst_instance_context u (List.rev Γ).
+Lemma declared_constructor_closed {cf:checker_flags} {Σ : global_env} {mdecl idecl c cdecl} : 
+  wf Σ ->
+  declared_constructor Σ mdecl idecl c cdecl ->
+  closed_constructor_body mdecl cdecl.
 Proof.
-  unfold subst_instance_context, map_context.
-  now rewrite map_rev.
-Qed.
-
-Lemma closedn_subst_instance_context {k Γ u} :
-  closedn_ctx k (subst_instance_context u Γ) = closedn_ctx k Γ.
-Proof.
-  unfold closedn_ctx.
-  rewrite rev_subst_instance_context.
-  rewrite alli_map.
-  apply alli_ext; intros i [? [] ?]; unfold closed_decl; cbn.
-  all: now rewrite !closedn_subst_instance_constr.
+  intros wf declc.
+  move: (declared_inductive_closed wf (proj1 (proj1 declc))).
+  rewrite /closed_inductive_decl.
+  rewrite /closed_inductive_body.
+  move/andP=> [_ clbs].
+  destruct declc.
+  destruct H.
+  solve_all.
+  eapply nth_error_all in clbs; eauto.
+  simpl in clbs.
+  move/andP: clbs => [] /andP [] _ clc _.
+  solve_all.
+  eapply nth_error_all in clc; eauto. now simpl in clc.
 Qed.
 
 Lemma subject_closed `{checker_flags} {Σ Γ t T} : 
@@ -1154,6 +1174,18 @@ Proof.
   simpl in h. destruct h as [? [? h] ? ? ?].
   eapply typecheck_closed in h as [? e]. 2: auto.
   now move: e => [_ /andP []]. 
+Qed.
+
+Lemma declared_inductive_closed_params {cf:checker_flags} :
+  forall Σ mdecl ind idecl,
+    wf Σ ->
+    declared_inductive Σ mdecl ind idecl ->
+    closed_ctx mdecl.(ind_params).
+Proof.
+  intros Σ mdecl ind idecl hΣ h.
+  pose proof (on_declared_inductive hΣ h) as [onmind _].
+  eapply onParams in onmind.
+  eapply closed_wf_local; eauto. simpl. auto.
 Qed.
 
 Lemma declared_inductive_closed_constructors {cf:checker_flags} :

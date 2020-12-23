@@ -3,7 +3,7 @@ From Coq Require Import Morphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
   PCUICLiftSubst PCUICUnivSubst
-  PCUICTyping PCUICClosed PCUICEquality.
+  PCUICTyping PCUICClosed PCUICEquality PCUICWeakeningEnv.
 
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
@@ -63,7 +63,7 @@ Proof.
     + reflexivity.
     + simpl. f_equal ; easy.
   - simpl. rewrite IHt. f_equal.
-    * rewrite !map_predicate_map_predicate.
+    * rewrite /rename_predicate !map_predicate_map_predicate.
       solve_all.
     * induction X0.
       + reflexivity.
@@ -527,7 +527,8 @@ Proof.
     + inversion a. subst. simpl. constructor.
       all: eauto.
   - simpl. constructor. all: eauto.
-    * destruct X; destruct e as [? [? [ectx ?]]].
+    * rewrite /rename_predicate.
+      destruct X; destruct e as [? [? [ectx ?]]].
       rewrite (All2_length ectx). red.
       intuition auto; simpl; solve_all.
     * induction X0 in a, brs' |- *.
@@ -823,7 +824,7 @@ Lemma rename_iota_red :
   forall f pars args bctx br,
     rename f (iota_red pars args bctx br) =
     iota_red pars (map (rename f) args)
-       (rename_context (shiftn pars f) bctx)
+       (rename_context f bctx)
        (rename_branch f br).
 Proof.
   intros f pars args bctx br.
@@ -944,10 +945,6 @@ Proof.
   - simpl.
     f_equal. rewrite IHn. reflexivity.
 Qed.
-
-(* TODO MOVE *)
-Definition rename_predicate f p := 
-  map_predicate id (rename f) (rename (shiftn #|p.(pcontext)| f)) p.
 
 Definition rename_constructor_body mdecl f c := 
   map_constructor_body #|mdecl.(ind_params)| #|mdecl.(ind_bodies)|
@@ -1257,18 +1254,18 @@ Proof.
   now rewrite shiftn_add Nat.add_assoc.
 Qed.
 
-Lemma rename_case_branch_context_gen ind mdecl f p btx cdecl :
+Lemma rename_case_branch_context_gen ind mdecl f p bctx cdecl :
   closed_ctx (ind_params mdecl) ->
   #|bctx| = #|cstr_args cdecl| ->
   #|pparams p| = context_assumptions (ind_params mdecl) ->
   rename_context f (case_branch_context ind mdecl p bctx cdecl) = 
-  case_branch_context ind mdecl (rename_predicate f p) bctx 
+  case_branch_context ind mdecl (rename_predicate rename f p) bctx 
     (rename_constructor_body mdecl f cdecl).
 Proof.
   intros clpars. unfold case_branch_context, case_branch_context_gen.
   rewrite rename_cstr_args.
   cbn -[fold_context].
-  intros hlen'.
+  intros hlen hlen'.
   rewrite map2_set_binder_name_fold //.
   change (fold_context
   (fun i : nat => rename (shiftn i (shiftn (ind_npars mdecl + #|ind_bodies mdecl|) f)))) with
@@ -1288,6 +1285,19 @@ Proof.
   rewrite -rename_context_subst_instance_context.
   rewrite rename_context_subst_k rename_inds. now len.
 Qed.
+
+Lemma rename_closed_constructor_body mdecl cdecl f : 
+  closed_constructor_body mdecl cdecl ->
+  rename_constructor_body mdecl f cdecl = cdecl.
+Proof.
+  rewrite /closed_constructor_body /rename_constructor_body /map_constructor_body.
+  move/andP=> [] /andP [] clctx clind clty.
+  destruct cdecl; cbn -[fold_context] in *; f_equal.
+  + admit.
+  + admit.
+  + rewrite rename_closed.
+
+
 
 Lemma red1_rename :
   forall Σ Γ Δ u v f,
@@ -1322,8 +1332,20 @@ Proof.
     rewrite rename_iota_red.
     subst brctx.
     rewrite rename_case_branch_context_gen.
-    
+    * eapply declared_inductive_closed_params; eauto with pcuic.
+      eapply isdecl.
+    * now rewrite (Forall2_length H2).
+    * pose proof (on_declared_constructor _ isdecl) as [[oni _] _].
+      rewrite oni.(onNpars). apply H1.
+    * change (bcontext br) with (bcontext (rename_branch f br)).
+      eapply red_iota.
+      + epose proof (declared_constructor_closed _ isdecl).
 
+      rewrite rename_closed.
+      pose proof (declare)
+      eapply rename_de
+
+    
     subst brctx.
     constructor.
   - rewrite 2!rename_mkApps. simpl.

@@ -944,6 +944,7 @@ Definition closed_constructor_body mdecl (b : constructor_body) :=
 
 Definition closed_inductive_body mdecl idecl :=
   closedn 0 idecl.(ind_type) &&
+  closedn_ctx #|mdecl.(ind_params)| idecl.(ind_indices) &&
   forallb (closed_constructor_body mdecl) idecl.(ind_ctors) &&
   forallb (fun x => closedn (S (ind_npars mdecl)) x.2) idecl.(ind_projs).
 
@@ -972,7 +973,7 @@ Proof.
   eapply (env_prop_sigma _ _ typecheck_closed); eauto.
 Qed.
 
-Lemma declared_inductive_closed {cf:checker_flags} {Σ : global_env} {mdecl mind} : 
+Lemma declared_minductive_closed {cf:checker_flags} {Σ : global_env} {mdecl mind} : 
   wf Σ ->
   declared_minductive Σ mind mdecl ->
   closed_inductive_decl mdecl.
@@ -996,8 +997,14 @@ Proof.
   intros n x [decli oib].
   rewrite /closed_inductive_body.
   apply andb_and; split. apply andb_and. split.
-  - apply onArity in oib. hnf in oib.
-    now move/andP: oib => [].
+  - rewrite andb_and. split.
+    * apply onArity in oib. hnf in oib.
+      now move/andP: oib => [] /= ->.
+    * pose proof (onArity oib).
+      rewrite oib.(ind_arity_eq) in X.
+      red in X. simpl in X.
+      rewrite !closedn_it_mkProd_or_LetIn /= !andb_true_r in X.
+      now move/andP: X.
   - pose proof (onConstructors oib).
     red in X. eapply All_forallb. eapply All2_All_left; eauto.
     intros cdecl cs X0; 
@@ -1028,13 +1035,41 @@ Proof.
     now eapply declared_projection_closed in H.
 Qed.
 
+Lemma declared_inductive_closed {cf:checker_flags}
+   {Σ : global_env} {mdecl mind idecl} : 
+  wf Σ ->
+  declared_inductive Σ mdecl mind idecl ->
+  closed_inductive_body mdecl idecl.
+Proof.
+  intros wf [decli hnth].
+  apply declared_minductive_closed in decli; auto.
+  move/andP: decli => [clpars cli].
+  solve_all. eapply nth_error_all in cli; eauto.
+  now simpl in cli.
+Qed.
+
+Lemma declared_inductive_closed_pars_indices {cf:checker_flags}
+   {Σ : global_env} {mdecl mind idecl} : 
+  wf Σ ->
+  declared_inductive Σ mdecl mind idecl ->
+  closed_ctx (ind_params mdecl ,,, ind_indices idecl).
+Proof.
+  intros wf decli.
+  pose proof (declared_minductive_closed _ (proj1 decli)).
+  move/andP: H => [] clpars _. move: decli.
+  move/declared_inductive_closed.
+  move/andP => [] /andP [] clind clbodies.
+  move/andP: clind => [] _ indpars _.
+  now rewrite closedn_ctx_app clpars indpars.
+Qed.
+
 Lemma declared_constructor_closed {cf:checker_flags} {Σ : global_env} {mdecl idecl c cdecl} : 
   wf Σ ->
   declared_constructor Σ mdecl idecl c cdecl ->
   closed_constructor_body mdecl cdecl.
 Proof.
   intros wf declc.
-  move: (declared_inductive_closed wf (proj1 (proj1 declc))).
+  move: (declared_minductive_closed wf (proj1 (proj1 declc))).
   rewrite /closed_inductive_decl.
   rewrite /closed_inductive_body.
   move/andP=> [_ clbs].
@@ -1188,6 +1223,34 @@ Proof.
   eapply closed_wf_local; eauto. simpl. auto.
 Qed.
 
+Coercion declared_inductive_minductive : declared_inductive >-> declared_minductive.
+
+Lemma declared_minductive_ind_npars {cf:checker_flags} {Σ} {wfΣ : wf Σ} {mdecl ind} :
+  declared_minductive Σ ind mdecl ->
+  ind_npars mdecl = context_assumptions mdecl.(ind_params).
+Proof.
+  intros h.
+  unfold declared_minductive in h.
+  eapply lookup_on_global_env in h. 2: eauto.
+  destruct h as [Σ' [wfΣ' decl']].
+  red in decl'. destruct decl' as [h ? ? ?].
+  now rewrite onNpars.
+Qed.
+
+Lemma declared_inductive_ind_npars {cf:checker_flags} {Σ} {wfΣ : wf Σ} {mdecl ind idecl} :
+  declared_inductive Σ mdecl ind idecl ->
+  ind_npars mdecl = context_assumptions mdecl.(ind_params).
+Proof.
+  intros h.
+  eapply (declared_minductive_ind_npars h).
+
+  unfold declared_minductive in h.
+  eapply lookup_on_global_env in h. 2: eauto.
+  destruct h as [Σ' [wfΣ' decl']].
+  red in decl'. destruct decl' as [h ? ? ?].
+  now rewrite onNpars.
+Qed.
+
 Lemma declared_inductive_closed_constructors {cf:checker_flags} :
   forall Σ ind mdecl idecl,
       wf Σ ->
@@ -1195,7 +1258,7 @@ Lemma declared_inductive_closed_constructors {cf:checker_flags} :
       All (closed_constructor_body mdecl) idecl.(ind_ctors).
 Proof.
   intros Σ ind mdecl idecl hΣ [hmdecl hidecl].
-  eapply (declared_inductive_closed (Σ:=empty_ext Σ)) in hmdecl; auto.
+  eapply (declared_minductive_closed (Σ:=empty_ext Σ)) in hmdecl; auto.
   unfold closed_inductive_decl in hmdecl.
   move/andP: hmdecl => [clpars clbodies].
   eapply nth_error_forallb in clbodies; eauto.

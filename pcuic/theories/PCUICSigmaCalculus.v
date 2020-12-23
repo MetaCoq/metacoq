@@ -595,7 +595,73 @@ Proof.
     simpl. reflexivity.
 Qed.
 
-Lemma rename_closedn_ctx f n ts : 
+Lemma alli_fold_context (p : nat -> context_decl -> bool) ctx f : 
+  (forall i d, p i d -> map_decl (f i) d = d) ->
+  alli p 0 (List.rev ctx) ->
+  fold_context f ctx = ctx.
+Proof.
+  intros Hf.
+  rewrite /fold_context /mapi.
+  generalize 0.
+  induction ctx using rev_ind; simpl; intros n; auto.
+  rewrite List.rev_app_distr /=.
+  move/andP=> [] Hc Hd.
+  rewrite Hf //; len. f_equal.
+  now apply IHctx.
+Qed.
+
+Lemma shiftn_add n m f : shiftn n (shiftn m f) =1 shiftn (n + m) f.
+Proof.
+  intros i.
+  unfold shiftn.
+  destruct (Nat.ltb_spec i n).
+  - destruct (Nat.ltb_spec i (n + m)); try lia.
+  - destruct (Nat.ltb_spec i (n + m)); try lia;
+    destruct (Nat.ltb_spec (i - n) m); try lia.
+    rewrite Nat.add_assoc. f_equal. f_equal. lia.  
+Qed.
+
+Lemma rename_closed_decl k f d : closed_decl k d -> map_decl (rename (shiftn k f)) d = d.
+Proof.
+  rewrite /closed_decl /map_decl.  
+  destruct d as [? [] ?] => /=.
+  - move/andP=> [] clt clty.
+    rewrite !rename_closedn //.
+  - move=> clt. rewrite !rename_closedn //.
+Qed.
+
+Ltac nat_compare_specs :=
+  match goal with
+  | |- context [?x <=? ?y] =>
+    destruct (Nat.leb_spec x y); try lia
+  | |- context [?x <? ?y] =>
+    destruct (Nat.ltb_spec x y); try lia
+  end.
+
+Instance shiftn_proper : Proper (Logic.eq ==> `=1` ==> `=1`) shiftn.
+Proof.
+  intros x y -> f g Hfg.
+  unfold shiftn; intros i.
+  nat_compare_specs. now rewrite Hfg.
+Qed.
+
+Instance map_decl_proper : Proper (`=1` ==> Logic.eq ==> Logic.eq) map_decl.
+Proof.
+  intros f g Hfg x y ->. now apply map_decl_ext.
+Qed.
+
+Lemma rename_closedn_ctx f n Γ : 
+  closedn_ctx n Γ -> 
+  rename_context (shiftn n f) Γ = Γ.
+Proof.
+  unfold closedn_ctx, rename_context.
+  apply alli_fold_context.
+  intros. rewrite shiftn_add.
+  intros. apply rename_closed_decl.
+  now rewrite Nat.add_comm.
+Qed.
+
+Lemma rename_closedn_terms f n ts : 
   forallb (closedn n) ts -> map (rename (shiftn n f)) ts = ts.
 Proof.
   solve_all. now apply rename_closedn.
@@ -605,7 +671,7 @@ Lemma rename_closed_extended_subst f Γ :
   closed_ctx Γ ->
   map (rename (shiftn (context_assumptions Γ) f)) (extended_subst Γ 0) = extended_subst Γ 0. 
 Proof.
-  intros cl. apply rename_closedn_ctx.
+  intros cl. apply rename_closedn_terms.
   now apply (closedn_extended_subst_gen Γ 0 0).
 Qed.
 
@@ -1105,15 +1171,7 @@ Proof.
   intros.
   now rewrite rename_subst.
 Qed.
-
-Ltac nat_compare_specs :=
-  match goal with
-  | |- context [?x <=? ?y] =>
-    destruct (Nat.leb_spec x y); try lia
-  | |- context [?x <? ?y] =>
-    destruct (Nat.ltb_spec x y); try lia
-  end.
-
+  
 Lemma rename_shiftnk :
   forall f n k t,
     rename (shiftn (n + k) f) (lift n k t) = lift n k (rename (shiftn k f) t).
@@ -1125,17 +1183,6 @@ Proof.
   rewrite - !ren_shiftn up_Upn. rewrite Nat.add_comm. sigma.
   rewrite !Upn_compose.
   apply Upn_ext. now rewrite shiftn_consn_idsn.
-Qed.
-
-Lemma shiftn_add n m f : shiftn n (shiftn m f) =1 shiftn (n + m) f.
-Proof.
-  intros i.
-  unfold shiftn.
-  destruct (Nat.ltb_spec i n).
-  - destruct (Nat.ltb_spec i (n + m)); try lia.
-  - destruct (Nat.ltb_spec i (n + m)); try lia;
-    destruct (Nat.ltb_spec (i - n) m); try lia.
-    rewrite Nat.add_assoc. f_equal. f_equal. lia.  
 Qed.
 
 Lemma rename_context_lift f n k Γ : 
@@ -1174,14 +1221,6 @@ Lemma context_assumptions_lift_context n k Γ :
   context_assumptions (lift_context n k Γ) = 
   context_assumptions Γ. 
 Proof. apply context_assumptions_fold. Qed.
-
-Instance shiftn_proper : Proper (Logic.eq ==> `=1` ==> `=1`) shiftn.
-Proof.
-  intros x y -> f g Hfg.
-  unfold shiftn; intros i.
-  nat_compare_specs. now rewrite Hfg.
-Qed.
-
 
 Lemma fold_context_ext f g c : 
   (forall i, f i =1 g i) ->
@@ -1286,6 +1325,113 @@ Proof.
   rewrite rename_context_subst_k rename_inds. now len.
 Qed.
 
+Lemma rename_reln f ctx n acc :
+  forallb (closedn (n + #|ctx|)) acc ->
+  map (rename (shiftn (n + #|ctx|) f)) (reln acc n ctx) = 
+  reln acc n ctx.
+Proof.
+  induction ctx in n, acc |- *; simpl; auto.
+  - intros clacc. solve_all. now rewrite rename_closedn.
+  - intros clacc.
+    destruct a as [? [] ?].
+    * rewrite Nat.add_succ_r.
+      change (S (n + #|ctx|)) with (S n + #|ctx|).
+      rewrite Nat.add_1_r IHctx // /= -Nat.add_succ_r //.
+    * rewrite Nat.add_succ_r Nat.add_1_r. rewrite (IHctx (S n)) /= // -Nat.add_succ_r //.
+      simpl. rewrite clacc andb_true_r.
+      eapply Nat.ltb_lt. lia.
+Qed.
+
+Lemma rename_to_extended_list f ctx :
+  map (rename (shiftn #|ctx| f)) (to_extended_list ctx) = to_extended_list ctx.
+Proof.
+  unfold to_extended_list, to_extended_list_k.
+  now apply (rename_reln _ _ 0).
+Qed.
+
+Lemma closedn_ctx_expand_lets Γ Δ : 
+  closed_ctx (Γ ,,, Δ) ->
+  closedn_ctx (context_assumptions Γ) (expand_lets_ctx Γ Δ).
+Proof.
+  rewrite /expand_lets_ctx /expand_lets_k_ctx.
+  intros cl.
+  pose proof (closedn_ctx_subst (context_assumptions Γ) 0).
+  rewrite Nat.add_0_r in H0. apply: H0.
+  - simpl. len.
+    rewrite closedn_ctx_lift //.
+    rewrite closedn_ctx_app in cl. now move/andP: cl.
+  - apply (closedn_extended_subst_gen Γ 0 0).
+    rewrite closedn_ctx_app in cl.
+    now move/andP: cl => [].
+Qed.
+
+(* 
+Lemma rename_context_expand_lets_ctx k f Γ Δ :
+  k = context_assumptions Γ ->
+  rename_context (shiftn k f) (expand_lets_ctx Γ Δ) =
+  expand_lets_ctx (
+
+Lemma rename_context_expand_lets_ctx k f Γ Δ :
+  k = context_assumptions Γ ->
+  rename_context (shiftn k f) (expand_lets_ctx Γ Δ) =
+  expand_lets_ctx () *)
+
+Lemma rename_case_predicate_context Σ {wfΣ : wf Σ} ind mdecl idecl f p :
+  declared_inductive Σ mdecl ind idecl ->
+  wf_predicate mdecl idecl p ->
+  rename_context f (case_predicate_context ind mdecl idecl p) =
+  case_predicate_context ind mdecl idecl (rename_predicate rename f p).
+Proof.
+  intros decli wfp.
+  unfold case_predicate_context. simpl.
+  unfold id. unfold case_predicate_context_gen.
+  rewrite /rename_context.
+  rewrite -map2_set_binder_name_fold //.
+  - len. len. destruct wfp.
+    rewrite (Forall2_length H1) //.
+  - f_equal. rewrite fold_context_snoc0 /= /snoc.
+    f_equal.
+    * rewrite /map_decl /=. f_equal.
+      len. rewrite rename_mkApps /=. f_equal.
+      rewrite !map_app !map_map_compose. f_equal.
+      + solve_all.
+        eapply All_refl => x.
+        apply rename_shiftn.
+      + now rewrite rename_to_extended_list.
+    * rewrite -/(rename_context f _).
+      rewrite rename_context_subst rename_context_subst_instance_context.
+      f_equal. f_equal.
+      rewrite rename_closedn_ctx //.
+      pose proof (closedn_ctx_expand_lets (ind_params mdecl) (ind_indices idecl)
+        (declared_inductive_closed_pars_indices _ decli)).
+      rewrite (wf_predicate_length_pars wfp).
+      
+      pose proof 
+
+
+      rewrite closedn_exp
+      rewrite rename_context_expand_lets_ctx.
+
+    
+  change (fold_context
+  (fun i : nat => rename (shiftn i (shiftn (ind_npars mdecl + #|ind_bodies mdecl|) f)))) with
+    (rename_context (shiftn (ind_npars mdecl + #|ind_bodies mdecl|) f)).
+  rewrite rename_context_subst. f_equal.
+  unfold id.
+  rewrite /expand_lets_ctx /expand_lets_k_ctx.
+  simpl. len.
+  rewrite rename_context_subst; len.
+  rewrite hlen'.
+  rewrite -{1}(context_assumptions_subst_instance_context (puinst p)).
+  rewrite rename_closed_extended_subst.
+  { now rewrite closedn_subst_instance_context. }
+  f_equal.
+  rewrite shiftn_add Nat.add_comm.
+  rewrite rename_context_lift. f_equal.
+  rewrite -rename_context_subst_instance_context.
+  rewrite rename_context_subst_k rename_inds. now len.
+Qed. *)
+
 Lemma rename_closed_constructor_body mdecl cdecl f : 
   closed_constructor_body mdecl cdecl ->
   rename_constructor_body mdecl f cdecl = cdecl.
@@ -1293,11 +1439,40 @@ Proof.
   rewrite /closed_constructor_body /rename_constructor_body /map_constructor_body.
   move/andP=> [] /andP [] clctx clind clty.
   destruct cdecl; cbn -[fold_context] in *; f_equal.
-  + admit.
-  + admit.
-  + rewrite rename_closed.
+  + move: clctx. unfold closed_ctx.
+    apply alli_fold_context => i d cldecl.
+    rewrite rename_closed_decl //.
+    red; rewrite -cldecl; lia_f_equal.
+  + solve_all. rewrite rename_closedn //.
+    red; rewrite -H0. lia_f_equal.
+  + now rewrite rename_closedn.
+Qed.
 
+Lemma rename_wf_predicate mdecl idecl f p :
+  wf_predicate mdecl idecl p ->
+  wf_predicate mdecl idecl (rename_predicate rename f p).
+Proof.
+  intros []. split.
+  - now len.
+  - apply H1.
+Qed.
 
+Lemma rename_wf_branch cdecl f br :
+  wf_branch cdecl br ->
+  wf_branch cdecl (rename_branch f br).
+Proof.
+  unfold wf_branch, wf_branch_gen. now simpl.
+Qed.
+
+Lemma rename_predicate_set_pparams f p params :
+  rename_predicate rename f (set_pparams p params) = 
+  set_pparams (rename_predicate rename f p) (map (rename f) params).
+Proof. reflexivity. Qed.
+
+Lemma rename_predicate_set_preturn f p pret :
+  rename_predicate rename f (set_preturn p pret) = 
+  set_preturn (rename_predicate rename f p) (rename (shiftn #|pcontext p| f) pret).
+Proof. reflexivity. Qed.
 
 Lemma red1_rename :
   forall Σ Γ Δ u v f,
@@ -1338,16 +1513,11 @@ Proof.
     * pose proof (on_declared_constructor _ isdecl) as [[oni _] _].
       rewrite oni.(onNpars). apply H1.
     * change (bcontext br) with (bcontext (rename_branch f br)).
-      eapply red_iota.
-      + epose proof (declared_constructor_closed _ isdecl).
-
-      rewrite rename_closed.
-      pose proof (declare)
-      eapply rename_de
-
-    
-    subst brctx.
-    constructor.
+      epose proof (declared_constructor_closed _ isdecl).
+      rewrite rename_closed_constructor_body //.
+      eapply red_iota; eauto.
+      + rewrite nth_error_map H0 /= //.
+      + now apply rename_wf_predicate.
   - rewrite 2!rename_mkApps. simpl.
     econstructor.
     + eapply rename_unfold_fix. eassumption.
@@ -1366,12 +1536,18 @@ Proof.
       eapply declared_constant_closed_body. all: eauto.
   - simpl. rewrite rename_mkApps. simpl.
     econstructor. rewrite nth_error_map. rewrite H0. reflexivity.
-
-  - simpl. constructor. induction X.
-    + destruct p0 as [[p1 p2] p3]. constructor. split ; eauto.
-      simpl. eapply p2. assumption.
-    + simpl. constructor. eapply IHX.
-  - simpl. constructor. induction X.
+  - simpl.
+    rewrite rename_predicate_set_pparams. econstructor.
+    simpl. eapply OnOne2_map. solve_all. red; eauto.
+  - simpl. rewrite rename_predicate_set_preturn.
+    eapply case_red_return; eauto.
+    + now apply rename_wf_predicate.
+    + simpl. apply IHh.
+      erewrite <-(case_predicate_context_length (p:=rename_predicate rename f p)); eauto.
+      2:{ now eapply rename_wf_predicate. }
+      rewrite -rename_case_predicate_context.
+      eapply urenaming_context.
+    induction X.
     + destruct p as [p1 p2]. constructor.
       eapply p2. assumption.
     + simpl. constructor. eapply IHX.

@@ -32,6 +32,13 @@ Notation "x .π2" := (@projT2 _ _ x) (at level 3, format "x '.π2'").
 
 Create HintDb terms.
 
+(** This tactic helps rewrite with all the length lemmas available 
+  in the library *)
+Ltac len := autorewrite with len; cbn.
+Tactic Notation "len" "in" hyp(cl) := autorewrite with len in cl.
+
+Hint Rewrite Nat.add_0_r : len.
+
 Ltac arith_congr := repeat (try lia; progress f_equal).
 Ltac lia_f_equal := repeat (lia || f_equal).
 

@@ -779,12 +779,26 @@ Proof.
   rewrite H0 in H2. intuition congruence.
 Qed.
 
-Lemma declared_inductive_minductive Σ ind mdecl idecl :
+Lemma declared_inductive_minductive {Σ ind mdecl idecl} :
   declared_inductive Σ ind mdecl idecl -> declared_minductive Σ (inductive_mind ind) mdecl.
 Proof. now intros []. Qed.
 Hint Resolve declared_inductive_minductive : pcuic core.
 
-Lemma on_declared_constant `{checker_flags} Σ cst decl :
+Coercion declared_inductive_minductive : declared_inductive >-> declared_minductive.
+
+Lemma declared_constructor_inductive {Σ ind mdecl idecl cdecl} :
+  declared_constructor Σ ind mdecl idecl cdecl ->
+  declared_inductive Σ ind.1 mdecl idecl.
+Proof. now intros []. Qed.
+Coercion declared_constructor_inductive : declared_constructor >-> declared_inductive.
+
+Lemma declared_projection_inductive {Σ ind mdecl idecl cdecl} :
+  declared_projection Σ ind mdecl idecl cdecl ->
+  declared_inductive Σ ind.1.1 mdecl idecl.
+Proof. now intros []. Qed.
+Coercion declared_projection_inductive : declared_projection >-> declared_inductive.
+
+Lemma on_declared_constant `{checker_flags} {Σ cst decl} :
   wf Σ -> declared_constant Σ cst decl ->
   on_constant_decl (lift_typing typing) (Σ, cst_universes decl) decl.
 Proof.
@@ -813,20 +827,19 @@ Proof.
   apply (declared_minductive_inv weaken_env_prop_typing wfΣ wfΣ Hdecl).
 Qed.
 
-Lemma on_declared_inductive `{checker_flags} ref {Σ mdecl idecl} :
-  wf Σ ->
+Lemma on_declared_inductive `{checker_flags} {Σ ref mdecl idecl} {wfΣ : wf Σ} :
   declared_inductive Σ ref mdecl idecl ->
   on_inductive (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind ref) mdecl *
   on_ind_body (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind ref) mdecl (inductive_ind ref) idecl.
 Proof.
-  intros wfΣ Hdecl.
+  intros Hdecl.
   split.
   - destruct Hdecl as [Hmdecl _]. now apply on_declared_minductive in Hmdecl.
   - apply (declared_inductive_inv weaken_env_prop_typing wfΣ wfΣ Hdecl).
 Defined.
 
 Lemma on_declared_constructor `{checker_flags} {Σ ref mdecl idecl cdecl}
-  (wfΣ : wf Σ)
+  {wfΣ : wf Σ}
   (Hdecl : declared_constructor Σ ref mdecl idecl cdecl) :
   on_inductive (lift_typing typing) (Σ, ind_universes mdecl)
                (inductive_mind (fst ref)) mdecl *
@@ -839,14 +852,13 @@ Lemma on_declared_constructor `{checker_flags} {Σ ref mdecl idecl cdecl}
                  mdecl (inductive_ind (fst ref))
                  idecl idecl.(ind_indices) cdecl ind_ctor_sort.
 Proof.
-  split. 
-  - destruct Hdecl as [Hidecl Hcdecl].
-    now apply on_declared_inductive in Hidecl.
+  split.
+  - apply (on_declared_inductive Hdecl).
   - apply (declared_constructor_inv weaken_env_prop_typing wfΣ wfΣ Hdecl).
 Defined.
 
-Lemma on_declared_projection `{checker_flags} {Σ ref mdecl idecl pdecl} :
-  forall (wfΣ : wf Σ) (Hdecl : declared_projection Σ ref mdecl idecl pdecl),
+Lemma on_declared_projection `{checker_flags} {Σ ref mdecl idecl pdecl} {wfΣ : wf Σ} 
+  (Hdecl : declared_projection Σ ref mdecl idecl pdecl) :
   on_inductive (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind (fst (fst ref))) mdecl *
   match idecl.(ind_ctors) return Type with
   | [c] => 
@@ -862,9 +874,8 @@ Lemma on_declared_projection `{checker_flags} {Σ ref mdecl idecl pdecl} :
   | _ => False
   end.
 Proof.
-  intros wfΣ Hdecl.
   split. 
-  - destruct Hdecl as [Hidecl Hcdecl]. now apply on_declared_inductive in Hidecl.
+  - apply (on_declared_inductive Hdecl).
   - apply (declared_projection_inv weaken_env_prop_typing wfΣ wfΣ Hdecl).
 Qed.
 

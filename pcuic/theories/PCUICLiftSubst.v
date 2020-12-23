@@ -16,9 +16,6 @@ Hint Rewrite subst_context_length
   context_assumptions_fold 
   smash_context_length : len.
 
-Ltac len := autorewrite with len; cbn.
-Tactic Notation "len" "in" hyp(cl) := autorewrite with len in cl.
-
 Notation "`=1`" := (pointwise_relation _ Logic.eq) (at level 80).
 Infix "=1" := (pointwise_relation _ Logic.eq) (at level 90).
 

@@ -1,4 +1,4 @@
-From Coq Require Import List Bool Arith ssreflect Lia.
+From Coq Require Import List Bool Arith ssreflect Morphisms Lia.
 From MetaCoq.Template Require Import MCPrelude MCReflect MCList MCRelations MCProd MCOption.
 From Equations Require Import Equations.
 Import ListNotations.
@@ -62,6 +62,52 @@ Section alli.
   | hd :: tl => p n hd && alli (S n) tl
   end.
 End alli.
+
+Lemma alli_ext {A} (p q : nat -> A -> bool) n (l : list A) :
+  (forall i, p i =1 q i) ->
+  alli p n l = alli q n l.
+Proof.
+  intros hfg.
+  induction l in n |- *; simpl; auto.
+  now rewrite IHl.
+Qed.
+
+Instance alli_proper {A} :
+   Proper ((pointwise_relation nat (pointwise_relation A eq)) ==> eq ==> eq ==> eq) alli.
+Proof.
+  intros f g fg.
+  intros ? ? -> ? ? ->.
+  now apply alli_ext.
+Qed.
+
+Section alli.
+  Context {A} (p q : nat -> A -> bool) (l l' : list A).
+
+  Lemma alli_app n : 
+    alli p n (l ++ l') =
+    alli p n l && alli p (#|l| + n) l'.
+  Proof.
+    induction l in n |- *; simpl; auto.
+    now rewrite IHl0 Nat.add_succ_r andb_assoc.
+  Qed.
+
+  Lemma alli_shift n :
+    alli p n l = alli (fun i => p (n + i)) 0 l.
+  Proof.
+    induction l in n, p |- *; simpl; auto.
+    rewrite IHl0 (IHl0 _ 1) Nat.add_0_r.
+    f_equal. apply alli_ext => x.
+    now rewrite Nat.add_succ_r.
+  Qed.
+
+  Lemma alli_map {B} (f : B -> A) n bs : alli p n (map f bs) = alli (fun i => p i ∘ f) n bs.
+  Proof.
+    induction bs in n |- *; simpl; auto.
+    now rewrite IHbs.
+  Qed.
+End alli.
+
+
 Section Forallb2.
   Context {A} (f : A -> A -> bool).
 
@@ -948,6 +994,12 @@ Proof.
   intros H; induction 1; constructor; try inv H; intuition.
 Qed.
 
+Lemma OnOne2All_All2_mix_left {A B} {P : B -> A -> A -> Type} {Q : B -> A -> Type} {i l l'} :
+  All2 Q i l -> OnOne2All P i l l' -> OnOne2All (fun i x y => (P i x y * Q i x)%type) i l l'.
+Proof.
+  intros a; induction 1; constructor; try inv a; intuition.
+Qed.
+
 Lemma OnOne2All_app {A B} (P : B -> A -> A -> Type) {i i' l tl tl'} : 
   OnOne2All P i tl tl' -> 
   #|i'| = #|l| ->
@@ -1707,6 +1759,13 @@ Proof.
   induction 1; constructor; auto.
 Qed.
 
+Lemma Forall2_map_right {A B C} (P : A -> B -> Prop) (f : C -> B) (l : list A) (l' : list C) :
+  Forall2 P l (map f l') <-> Forall2 (fun x y => P x (f y)) l l'.
+Proof.
+  split; intros.
+  + eapply Forall2_map_inv. now rewrite map_id.
+  + rewrite -(map_id l). now eapply Forall2_map.  
+Qed.
 
 Lemma Forall2_and {A B} (R R' : A -> B -> Prop) l l'
   : Forall2 R l l' -> Forall2 R' l l' -> Forall2 (fun x y => R x y /\ R' x y) l l'.
@@ -2135,6 +2194,13 @@ Proof.
   rewrite !andb_and. intros [px pl] Hx. eauto.
 Qed.
 
+Lemma All_forallb_eq_forallb {A} (P : A -> Type) (p q : A -> bool) l :
+  All P l ->
+  (forall x, P x -> p x = q x) ->
+  forallb p l = forallb q l.
+Proof.
+  induction 1; simpl; intuition (f_equal; auto).
+Qed.
 
 Lemma forallb_nth {A} (l : list A) (n : nat) P d :
   forallb P l -> n < #|l| -> exists x, (nth n l d = x) /\ P x.

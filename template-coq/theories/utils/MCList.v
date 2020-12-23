@@ -8,9 +8,16 @@ Arguments skipn : simpl nomatch.
 
 Notation "#| l |" := (List.length l) (at level 0, l at level 99, format "#| l |").
 
-Hint Rewrite map_length : len.
+Hint Rewrite map_length app_length List.rev_length : len.
 
 Arguments nil {_}, _.
+
+Instance proper_map_ho {A B} : Proper ((pointwise_relation A Logic.eq) ==> Logic.eq ==> Logic.eq)
+  (@map A B).
+Proof.
+  intros f g Hfg x y ->. apply map_ext.
+  apply Hfg.
+Qed.
 
 Lemma app_tip_assoc {A} (l : list A) x l' : (l ++ [x]) ++ l' = l ++ (x :: l').
 Proof. now rewrite <- app_assoc. Qed.

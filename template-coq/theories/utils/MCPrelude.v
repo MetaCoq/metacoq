@@ -1,4 +1,4 @@
-Require Import String ZArith Lia.
+Require Import String ZArith Lia Morphisms.
 From Equations Require Import Equations.
 Set Equations Transparent.
 
@@ -29,6 +29,18 @@ Notation "( x ; y ; z ; t ; u )" := (x ; ( y ; (z ; (t ; u)))).
 Notation "( x ; y ; z ; t ; u ; v )" := (x ; ( y ; (z ; (t ; (u ; v))))).
 Notation "x .π1" := (@projT1 _ _ x) (at level 3, format "x '.π1'").
 Notation "x .π2" := (@projT2 _ _ x) (at level 3, format "x '.π2'").
+
+(** Shorthand for pointwise equality relation in Proper signatures *)
+Notation "`=1`" := (pointwise_relation _ Logic.eq) (at level 80).
+Infix "=1" := (pointwise_relation _ Logic.eq) (at level 70).
+
+(** Higher-order lemma to simplify Proper proofs. *)
+Instance proper_ext_eq {A B} : Proper (`=1` ==> `=1` ==> iff) (@pointwise_relation A _ (@Logic.eq B)).
+Proof.
+  intros f f' Hff' g g' Hgg'. split; intros.
+  - intros x. now rewrite <- Hff', <- Hgg'.
+  - intros x. now rewrite Hff', Hgg'.
+Qed.
 
 Create HintDb terms.
 

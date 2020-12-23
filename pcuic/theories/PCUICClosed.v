@@ -7,14 +7,6 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInducti
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
 
-Lemma All_forallb_eq_forallb {A} (P : A -> Type) (p q : A -> bool) l :
-  All P l ->
-  (forall x, P x -> p x = q x) ->
-  forallb p l = forallb q l.
-Proof.
-  induction 1; simpl; intuition (f_equal; auto).
-Qed.
-
 (** * Lemmas about the [closedn] predicate *)
 
 Definition closed_decl n d :=
@@ -43,50 +35,6 @@ Proof.
   - move/andP => [cb cty] k' lek'. do 2 rewrite (@closed_upwards k) //.
   - move=> cty k' lek'; rewrite (@closed_upwards k) //.
 Qed.
-
-Lemma alli_ext {A} (p q : nat -> A -> bool) n (l : list A) :
-  (forall i, p i =1 q i) ->
-  alli p n l = alli q n l.
-Proof.
-  intros hfg.
-  induction l in n |- *; simpl; auto.
-  now rewrite IHl.
-Qed.
-
-Instance alli_proper {A} :
-   Proper ((pointwise_relation nat (pointwise_relation A eq)) ==> eq ==> eq ==> eq) alli.
-Proof.
-  intros f g fg.
-  intros ? ? -> ? ? ->.
-  now apply alli_ext.
-Qed.
-
-Section alli.
-  Context {A} (p q : nat -> A -> bool) (l l' : list A).
-
-  Lemma alli_app n : 
-    alli p n (l ++ l') =
-    alli p n l && alli p (#|l| + n) l'.
-  Proof.
-    induction l in n |- *; simpl; auto.
-    now rewrite IHl0 Nat.add_succ_r andb_assoc.
-  Qed.
-
-  Lemma alli_shift n :
-    alli p n l = alli (fun i => p (n + i)) 0 l.
-  Proof.
-    induction l in n, p |- *; simpl; auto.
-    rewrite IHl0 (IHl0 _ 1) Nat.add_0_r.
-    f_equal. apply alli_ext => x.
-    now rewrite Nat.add_succ_r.
-  Qed.
-
-  Lemma alli_map {B} (f : B -> A) n bs : alli p n (map f bs) = alli (fun i => p i ∘ f) n bs.
-  Proof.
-    induction bs in n |- *; simpl; auto.
-    now rewrite IHbs.
-  Qed.
-End alli.
 
 Lemma alli_fold_context (p : nat -> context_decl -> bool) ctx f : 
   (forall i d, p i d -> map_decl (f i) d = d) ->
@@ -127,7 +75,7 @@ Proof.
   f_equal. rewrite IHctx // lift_decl_closed // Nat.add_comm //.
 Qed.
 
-Lemma map_decl_ext' f g k d : closed_decl k d -> 
+Lemma map_decl_closed_ext f g k d : closed_decl k d -> 
   (forall x, closedn k x -> f x = g x) -> 
   map_decl f d = map_decl g d.
 Proof.
@@ -327,75 +275,6 @@ Proof.
   intros. assert(Hl:=lift_closed (#|s| + 0) _ _ Hcl).
   do 2 (forward H; auto). rewrite Hl in H.
   rewrite H. now apply lift_closed.
-Qed.
-
-Lemma rev_subst_instance_context {u Γ} :
-  List.rev (subst_instance_context u Γ) = subst_instance_context u (List.rev Γ).
-Proof.
-  unfold subst_instance_context, map_context.
-  now rewrite map_rev.
-Qed.
-
-Local Open Scope sigma.
-
-Require Import Morphisms.
-    Instance Upn_ext n : Proper (`=1` ==> `=1`) (Upn n).
-    Proof.
-      unfold Upn. reduce_goal. now rewrite H.
-    Qed.
-
-    Instance Up_ext : Proper (`=1` ==> `=1`) Up.
-    Proof.
-      unfold Up. reduce_goal. unfold subst_compose, subst_cons.
-      destruct a. reflexivity. now rewrite H.
-    Qed.
-
-    Lemma Upn_S σ n : ⇑^(S n) σ =1 ⇑ ⇑^n σ.
-    Proof.
-      rewrite Upn_Up. induction n in σ |- *. rewrite !Upn_0. now eapply Up_ext.
-      rewrite Upn_Up. rewrite IHn. eapply Up_ext. now rewrite Upn_Up.
-    Qed.
-    Hint Rewrite Upn_0 Upn_S : sigma.
-
-    Ltac sigma := autorewrite with sigma.
-
-Instance up_proper k : Proper (`=1` ==> `=1`) (up k).
-Proof. reduce_goal. now apply up_ext. Qed.
-
-Lemma Upn_Upn k k' σ : ⇑^(k + k') σ =1 ⇑^k (⇑^k' σ).
-Proof.
-  setoid_rewrite <- up_Upn. rewrite -(@up_Upn k').
-  symmetry; apply up_up.
-Qed.
-Hint Rewrite Upn_Upn : sigma.
-
-Lemma inst_closed σ k t : closedn k t -> t.[⇑^k σ] = t.
-Proof.
-  intros Hs.
-  induction t in σ, k, Hs |- * using term_forall_list_ind; intros; sigma;
-    simpl in *;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_branch_map_branch,
-      ?map_length, ?Nat.add_assoc in *;
-      unfold test_def, map_branch, test_branch, test_predicate in *; simpl in *; eauto with all;
-    simpl closed in *; repeat (rtoProp; f_equal; solve_all); try change_Sk.
-    
-  - revert Hs.
-    unfold Upn.
-    elim (Nat.ltb_spec n k); intros. simpl in *.
-    destruct (subst_consn_lt (l := idsn k) (i := n)) as [t [Heq Heq']].
-    + now rewrite idsn_length //.
-    + now rewrite idsn_lt in Heq.
-    + discriminate.
-  - specialize (IHt2 σ (S k) H0). rewrite -{2}IHt2. now sigma.
-  - specialize (IHt2 σ (S k) H0). rewrite -{2}IHt2. now sigma.
-  - specialize (IHt3 σ (S k) H0). rewrite -{2}IHt3. now sigma.
-  - specialize (e σ (#|pcontext p| + k)). rewrite -{2}e; now sigma.
-  - specialize (a σ (#|bcontext x| + k)). destruct x; simpl in *. f_equal.
-    now rewrite -{2}a; sigma.
-  - rtoProp. specialize (b0 σ (#|m| + k) H0). eapply map_def_id_spec; auto.
-    revert b0. now sigma.
-  - rtoProp. specialize (b0 σ (#|m| + k) H0). eapply map_def_id_spec; auto.
-    revert b0. now sigma.
 Qed.
 
 Lemma closedn_subst_instance_constr k t u :
@@ -1186,6 +1065,22 @@ Proof.
   rewrite -(Nat.add_assoc k) in clt.
   eapply (closedn_subst s) in clt => //. rewrite Nat.add_assoc in clt.
   autorewrite with len. now rewrite (Nat.add_comm #|Γ|).
+Qed.
+
+Lemma closedn_ctx_expand_lets Γ Δ : 
+  closed_ctx (Γ ,,, Δ) ->
+  closedn_ctx (context_assumptions Γ) (expand_lets_ctx Γ Δ).
+Proof.
+  rewrite /expand_lets_ctx /expand_lets_k_ctx.
+  intros cl.
+  pose proof (closedn_ctx_subst (context_assumptions Γ) 0).
+  rewrite Nat.add_0_r in H0. apply: H0.
+  - simpl. len.
+    rewrite closedn_ctx_lift //.
+    rewrite closedn_ctx_app in cl. now move/andP: cl.
+  - apply (closedn_extended_subst_gen Γ 0 0).
+    rewrite closedn_ctx_app in cl.
+    now move/andP: cl => [].
 Qed.
 
 Lemma declared_constant_closed_type {cf:checker_flags} :

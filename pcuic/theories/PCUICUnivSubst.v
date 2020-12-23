@@ -75,3 +75,11 @@ Proof.
       unfold test_def, test_predicate in *; simpl;
       f_equal; eauto; repeat (rtoProp; solve_all); intuition auto with substu.
 Qed.
+
+
+Lemma rev_subst_instance_context {u Γ} :
+  List.rev (subst_instance_context u Γ) = subst_instance_context u (List.rev Γ).
+Proof.
+  unfold subst_instance_context, map_context.
+  now rewrite map_rev.
+Qed.

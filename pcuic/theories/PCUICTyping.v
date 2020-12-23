@@ -264,7 +264,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
 | type_Construct ind i u :
     wf_local Σ Γ ->
     forall mdecl idecl cdecl,
-    declared_constructor Σ.1 mdecl idecl (ind, i) cdecl ->
+    declared_constructor Σ.1 (ind, i) mdecl idecl cdecl ->
     consistent_instance_ext Σ mdecl.(ind_universes) u ->
     Σ ;;; Γ |- (tConstruct ind i u) : type_of_constructor mdecl cdecl (ind, i) u
 
@@ -647,7 +647,7 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
        P Σ Γ (tInd ind u) (subst_instance_constr u (ind_type idecl))) ->
 
    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (ind : inductive) (i : nat) u
-           mdecl idecl cdecl (isdecl : declared_constructor Σ.1 mdecl idecl (ind, i) cdecl),
+           mdecl idecl cdecl (isdecl : declared_constructor Σ.1 (ind, i) mdecl idecl cdecl),
        Forall_decls_typing P Σ.1 ->
        PΓ Σ Γ wfΓ ->
        consistent_instance_ext Σ mdecl.(ind_universes) u ->
@@ -1053,7 +1053,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         P Σ Γ (tInd ind u) (subst_instance_constr u (ind_type idecl))) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (ind : inductive) (i : nat) u
-            mdecl idecl cdecl (isdecl : declared_constructor Σ.1 mdecl idecl (ind, i) cdecl),
+            mdecl idecl cdecl (isdecl : declared_constructor Σ.1 (ind, i) mdecl idecl cdecl),
         Forall_decls_typing P Σ.1 ->
         PΓ Σ Γ wfΓ ->
         consistent_instance_ext Σ mdecl.(ind_universes) u ->

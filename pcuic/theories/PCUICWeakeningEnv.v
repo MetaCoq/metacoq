@@ -204,9 +204,9 @@ Hint Resolve weakening_env_declared_inductive : extends.
 
 Lemma weakening_env_declared_constructor :
   forall (H : checker_flags) (Σ : global_env) ind mdecl idecl decl,
-    declared_constructor Σ ind mdecl idecl decl ->
+    declared_constructor Σ idecl ind mdecl decl ->
     forall Σ' : global_env, wf Σ' -> extends Σ Σ' ->
-    declared_constructor Σ' ind mdecl idecl decl.
+    declared_constructor Σ' idecl ind mdecl decl.
 Proof.
   intros H Σ cst mdecl idecl cdecl [Hidecl Hcdecl] Σ' X2 H2.
   split; eauto with extends.
@@ -672,7 +672,7 @@ Lemma declared_constructor_inv `{checker_flags} {Σ P mdecl idecl ref cdecl}
   (HP : weaken_env_prop (lift_typing P))
   (wfΣ : wf Σ)
   (HΣ : Forall_decls_typing P Σ)
-  (Hdecl : declared_constructor Σ mdecl idecl ref cdecl) :
+  (Hdecl : declared_constructor Σ ref mdecl idecl cdecl) :
   ∑ cs,
   let onib := declared_inductive_inv HP wfΣ HΣ (let (x, _) := Hdecl in x) in
   nth_error onib.(ind_cunivs) ref.2 = Some cs
@@ -759,8 +759,8 @@ Proof.
 Qed.
 
 Lemma declared_constructor_inj {Σ mdecl mdecl' idecl idecl' cdecl cdecl' c} :
-  declared_constructor Σ mdecl' idecl' c cdecl ->
-  declared_constructor Σ mdecl idecl c cdecl' ->
+  declared_constructor Σ c mdecl' idecl' cdecl ->
+  declared_constructor Σ c mdecl idecl cdecl' ->
   mdecl = mdecl' /\ idecl = idecl'  /\ cdecl = cdecl'.
 Proof.
   intros [] []. 
@@ -827,7 +827,7 @@ Defined.
 
 Lemma on_declared_constructor `{checker_flags} {Σ ref mdecl idecl cdecl}
   (wfΣ : wf Σ)
-  (Hdecl : declared_constructor Σ mdecl idecl ref cdecl) :
+  (Hdecl : declared_constructor Σ ref mdecl idecl cdecl) :
   on_inductive (lift_typing typing) (Σ, ind_universes mdecl)
                (inductive_mind (fst ref)) mdecl *
   on_ind_body (lift_typing typing) (Σ, ind_universes mdecl)

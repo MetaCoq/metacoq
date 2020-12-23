@@ -1065,7 +1065,7 @@ Qed.
 
 Lemma declared_constructor_closed {cf:checker_flags} {Σ : global_env} {mdecl idecl c cdecl} : 
   wf Σ ->
-  declared_constructor Σ mdecl idecl c cdecl ->
+  declared_constructor Σ c mdecl idecl cdecl ->
   closed_constructor_body mdecl cdecl.
 Proof.
   intros wf declc.
@@ -1301,7 +1301,7 @@ Qed.
 Lemma declared_constructor_closed_type {cf:checker_flags} :
   forall Σ mdecl idecl c cdecl u,
     wf Σ ->
-    declared_constructor Σ mdecl idecl c cdecl ->
+    declared_constructor Σ c mdecl idecl cdecl ->
     closed (type_of_constructor mdecl cdecl c u).
 Proof.
   intros Σ mdecl idecl c cdecl u hΣ h.

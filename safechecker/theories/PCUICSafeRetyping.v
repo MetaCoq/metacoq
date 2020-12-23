@@ -396,7 +396,7 @@ Section TypeOf.
       exists mdecl, idecl. split; auto.
 
     - destruct d as [decl [body decli]].
-      assert (declared_constructor Σ decl body (ind, k) cdecl) as declc.
+      assert (declared_constructor Σ (ind, k) decl body cdecl) as declc.
       { red; intuition auto. }
       eapply inversion_Construct in HT; auto.
       dependent elimination HT as [(mdecl; idecl; cdecl; (wf'', (declc', (rest, cum))))].

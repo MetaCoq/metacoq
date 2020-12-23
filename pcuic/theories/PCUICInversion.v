@@ -160,7 +160,7 @@ Section Inversion.
       Σ ;;; Γ |- tConstruct ind i u : T ->
       ∑ mdecl idecl cdecl,
         wf_local Σ Γ ×
-        declared_constructor (fst Σ) mdecl idecl (ind, i) cdecl ×
+        declared_constructor (fst Σ) (ind, i) mdecl idecl cdecl ×
         consistent_instance_ext Σ (ind_universes mdecl) u ×
         Σ;;; Γ |- type_of_constructor mdecl cdecl (ind, i) u <= T.
   Proof.

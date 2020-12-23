@@ -132,7 +132,7 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
 
 (** Case *)
 | red_iota ci mdecl idecl cdecl c u args p brs br
-    (isdecl : declared_constructor Σ mdecl idecl (ci.(ci_ind), c) cdecl) :
+    (isdecl : declared_constructor Σ (ci.(ci_ind), c) mdecl idecl cdecl) :
     nth_error brs c = Some br ->
     wf_predicate mdecl idecl p -> 
     wf_branch cdecl br ->
@@ -243,7 +243,7 @@ Lemma red1_ind_all :
 
        (forall (Γ : context) (ci : case_info) mdecl idecl cdecl (c : nat) (u : Instance.t) (args : list term)
           (p : predicate term) (brs : list (branch term)) br
-          (isdecl : declared_constructor Σ mdecl idecl (ci.(ci_ind), c) cdecl),
+          (isdecl : declared_constructor Σ (ci.(ci_ind), c) mdecl idecl cdecl),
           nth_error brs c = Some br ->
           let brctx := case_branch_context ci.(ci_ind) mdecl p br.(bcontext) cdecl in
           wf_predicate mdecl idecl p ->

@@ -382,7 +382,7 @@ Proof.
 Qed.
 
 Lemma subst_declared_constructor {cf:checker_flags} Σ c u mdecl idecl cdecl n k :
-  wf Σ -> declared_constructor Σ mdecl idecl c cdecl ->
+  wf Σ -> declared_constructor Σ c mdecl idecl cdecl ->
   subst (map (subst_instance_constr u) n) k (type_of_constructor mdecl cdecl c u) = (type_of_constructor mdecl cdecl c u).
 Proof.
   unfold declared_constructor. destruct c as [i ci]. intros wfΣ [Hidecl Hcdecl].

@@ -704,7 +704,7 @@ Proof.
 Lemma declared_projection_wf {cf:checker_flags}:
   forall (Σ : global_env) (p : projection)
          (mdecl : mutual_inductive_body) (idecl : one_inductive_body) (pdecl : ident * term),
-    declared_projection Σ mdecl idecl p pdecl ->
+    declared_projection Σ p mdecl idecl pdecl ->
     Forall_decls_typing (fun (_ : global_env_ext) (_ : context) (t T : term) => Ast.wf t /\ Ast.wf T) Σ ->
     Ast.wf (snd pdecl).
 Proof.
@@ -964,7 +964,7 @@ Lemma declared_inductive_declared {cf:checker_flags} {Σ : global_env_ext}
   wf Σ.1 ->  
   declared_inductive Σ ind mdecl idecl ->
   (Alli (fun i decl => declared_constructor Σ (ind, i) mdecl idecl decl)  0 (ind_ctors idecl)) *
-  (Alli (fun i decl => declared_projection Σ mdecl idecl ((ind, ind_npars mdecl), i) decl) 0 (ind_projs idecl)).
+  (Alli (fun i decl => declared_projection Σ ((ind, ind_npars mdecl), i) mdecl idecl decl) 0 (ind_projs idecl)).
 Proof.
  intros; split; eapply forall_nth_error_Alli; intros; split; auto.
 Qed.

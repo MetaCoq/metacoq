@@ -33,7 +33,7 @@ Definition declared_constructor Σ cstr mdecl idecl cdecl : Prop :=
   declared_inductive Σ (fst cstr) mdecl idecl /\
   List.nth_error idecl.(ind_ctors) (snd cstr) = Some cdecl.
 
-Definition declared_projection Σ mdecl idecl (proj : projection) pdecl : Prop :=
+Definition declared_projection Σ (proj : projection) mdecl idecl pdecl : Prop :=
   declared_inductive Σ (fst (fst proj)) mdecl idecl /\
   List.nth_error idecl.(ind_projs) (snd proj) = Some pdecl.
 

@@ -532,7 +532,7 @@ Proof.
   set (p := ((ind, ind_npars mdecl), i)).
   intros pdecl Hp. simpl.
   set(isdecl := (conj decli (conj Hp eq_refl)) :
-      declared_projection Σ.1 mdecl idecl p pdecl).
+      declared_projection Σ.1 p mdecl idecl pdecl).
   destruct (on_declared_projection wfΣ isdecl) as [oni onp].
   set (declared_inductive_inv _ _ _ _) as oib' in onp.
   change oib' with oib in *. clear oib'.
@@ -858,7 +858,7 @@ Qed.
 
 Lemma declared_projection_type {cf:checker_flags} {Σ : global_env_ext} {mdecl idecl p pdecl} : 
   wf Σ.1 ->
-  declared_projection Σ mdecl idecl p pdecl ->
+  declared_projection Σ p mdecl idecl pdecl ->
   let u := PCUICLookup.abstract_instance (ind_universes mdecl) in    
   isType (Σ.1, ind_universes mdecl)
     ((vass {| binder_name := nAnon; binder_relevance := idecl.(ind_relevance) |} (mkApps (tInd p.1.1 u) 
@@ -880,7 +880,7 @@ Proof.
 Qed.
 
 Lemma declared_projection_type_and_eq {cf:checker_flags} {Σ : global_env_ext} {mdecl idecl p pdecl} : 
-  forall (wfΣ : wf Σ.1) (Hdecl : declared_projection Σ mdecl idecl p pdecl),
+  forall (wfΣ : wf Σ.1) (Hdecl : declared_projection Σ p mdecl idecl pdecl),
   let u := PCUICLookup.abstract_instance (ind_universes mdecl) in
   let oib := declared_inductive_inv weaken_env_prop_typing wfΣ wfΣ (let (x, _) := Hdecl in x) in
   match ind_cunivs oib return Type with
@@ -1121,7 +1121,7 @@ Qed.
 
 Lemma wf_projection_context {cf:checker_flags} (Σ : global_env_ext) {mdecl idecl p pdecl u} : 
   wf Σ.1 ->
-  declared_projection Σ mdecl idecl p pdecl ->
+  declared_projection Σ p mdecl idecl pdecl ->
   consistent_instance_ext Σ (PCUICAst.ind_universes mdecl) u ->
   wf_local Σ (projection_context mdecl idecl p.1.1 u).
 Proof.
@@ -1219,7 +1219,7 @@ Proof.
 Qed.
 
 Lemma projection_subslet {cf:checker_flags} Σ Γ mdecl idecl u c p pdecl args :
-  declared_projection Σ.1 mdecl idecl p pdecl ->
+  declared_projection Σ.1 p mdecl idecl pdecl ->
   wf Σ.1 ->
   Σ ;;; Γ |- c : mkApps (tInd p.1.1 u) args ->
   isType Σ Γ (mkApps (tInd p.1.1 u) args) ->

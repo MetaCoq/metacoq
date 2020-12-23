@@ -846,7 +846,7 @@ Proof.
     destruct isdecl' as [decli' [H0 Hi]].
     destruct (declared_inductive_inj decli' decli) as []; subst mdecl' idecl'.
     simpl in decli'.
-    set (pdecl' := conj decli isdecl.p2 : declared_projection Σ.1 mdecl idecl (i, pars, narg) pdecl).
+    set (pdecl' := conj decli isdecl.p2 : declared_projection Σ.1 (i, pars, narg) mdecl idecl pdecl).
     epose proof (declared_projection_type_and_eq wf pdecl').
     simpl in X2.
     pose proof (subslet_projs Σ _ _ _ _ decli) as projsubsl.

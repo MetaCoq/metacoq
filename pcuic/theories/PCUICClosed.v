@@ -669,7 +669,7 @@ Proof. repeat red. intros. destruct t; red in X0; eauto. Qed.
 
 Lemma declared_projection_closed_ind {cf:checker_flags} {Σ : global_env} {mdecl idecl p pdecl} : 
   wf Σ ->
-  declared_projection Σ mdecl idecl p pdecl ->
+  declared_projection Σ p mdecl idecl pdecl ->
   Forall_decls_typing
   (fun _ (Γ : context) (t T : term) =>
   closedn #|Γ| t && closedn #|Γ| T) Σ ->
@@ -966,7 +966,7 @@ Proof. reflexivity. Qed.
 
 Lemma declared_projection_closed {cf:checker_flags} {Σ : global_env} {mdecl idecl p pdecl} : 
   wf Σ ->
-  declared_projection Σ mdecl idecl p pdecl ->
+  declared_projection Σ p mdecl idecl pdecl ->
   closedn (S (ind_npars mdecl)) pdecl.2.
 Proof.
   intros; eapply declared_projection_closed_ind; eauto.
@@ -1320,7 +1320,7 @@ Qed.
 Lemma declared_projection_closed_type {cf:checker_flags} :
   forall Σ mdecl idecl p pdecl,
     wf Σ ->
-    declared_projection Σ mdecl idecl p pdecl ->
+    declared_projection Σ p mdecl idecl pdecl ->
     closedn (S (ind_npars mdecl)) pdecl.2.
 Proof.
   intros Σ mdecl idecl p pdecl hΣ decl.

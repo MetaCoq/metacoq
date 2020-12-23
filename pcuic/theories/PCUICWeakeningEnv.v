@@ -215,9 +215,9 @@ Hint Resolve weakening_env_declared_constructor : extends.
 
 Lemma weakening_env_declared_projection :
   forall (H : checker_flags) (Σ : global_env) ind mdecl idecl decl,
-    declared_projection Σ ind mdecl idecl decl ->
+    declared_projection Σ idecl ind mdecl decl ->
     forall Σ' : global_env, wf Σ' -> extends Σ Σ' ->
-    declared_projection Σ' ind mdecl idecl decl.
+    declared_projection Σ' idecl ind mdecl decl.
 Proof.
   intros H Σ cst mdecl idecl cdecl [Hidecl Hcdecl] Σ' X2 H2.
   split; eauto with extends.
@@ -690,7 +690,7 @@ Lemma declared_projection_inv `{checker_flags} {Σ P mdecl idecl ref pdecl} :
   forall (HP : weaken_env_prop (lift_typing P))
   (wfΣ : wf Σ)
   (HΣ : Forall_decls_typing P Σ)
-  (Hdecl : declared_projection Σ mdecl idecl ref pdecl),
+  (Hdecl : declared_projection Σ ref mdecl idecl pdecl),
   match idecl.(ind_ctors) return Type with
   | [c] => 
     let oib := declared_inductive_inv HP wfΣ HΣ (let (x, _) := Hdecl in x) in
@@ -769,8 +769,8 @@ Proof.
 Qed.
 
 Lemma declared_projection_inj {Σ mdecl mdecl' idecl idecl' pdecl pdecl' p} :
-  declared_projection Σ mdecl' idecl' p pdecl ->
-  declared_projection Σ mdecl idecl p pdecl' ->
+  declared_projection Σ p mdecl' idecl' pdecl ->
+  declared_projection Σ p mdecl idecl pdecl' ->
   mdecl = mdecl' /\ idecl = idecl'  /\ pdecl = pdecl'.
 Proof.
   intros [] []. 
@@ -846,7 +846,7 @@ Proof.
 Defined.
 
 Lemma on_declared_projection `{checker_flags} {Σ ref mdecl idecl pdecl} :
-  forall (wfΣ : wf Σ) (Hdecl : declared_projection Σ mdecl idecl ref pdecl),
+  forall (wfΣ : wf Σ) (Hdecl : declared_projection Σ ref mdecl idecl pdecl),
   on_inductive (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind (fst (fst ref))) mdecl *
   match idecl.(ind_ctors) return Type with
   | [c] => 

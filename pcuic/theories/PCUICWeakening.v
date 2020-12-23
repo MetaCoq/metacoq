@@ -363,7 +363,7 @@ Qed.
 
 Lemma lift_declared_projection `{checker_flags} Σ c mdecl idecl pdecl n k :
   wf Σ ->
-  declared_projection Σ mdecl idecl c pdecl ->
+  declared_projection Σ c mdecl idecl pdecl ->
   on_snd (lift n (S (ind_npars mdecl + k))) pdecl = pdecl.
 Proof.
   intros.

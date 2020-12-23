@@ -539,7 +539,7 @@ Qed.
 
 Lemma declared_projection_projs_nonempty `{cf : checker_flags} {Σ : global_env_ext} { mind ind p a} :
   wf Σ ->
-  declared_projection Σ mind ind p a ->
+  declared_projection Σ p mind ind a ->
   ind_projs ind <> [].
 Proof.
   intros. destruct H. destruct H0.

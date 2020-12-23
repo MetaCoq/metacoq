@@ -202,6 +202,35 @@ Proof.
         rewrite Nat.sub_diag in hnth. simpl in hnth. congruence.
 Qed.
 
+Lemma inst_closed σ k t : closedn k t -> t.[⇑^k σ] = t.
+Proof.
+  intros Hs.
+  induction t in σ, k, Hs |- * using term_forall_list_ind; intros; sigma;
+    simpl in *;
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_branch_map_branch,
+      ?map_length, ?Nat.add_assoc in *;
+      unfold test_def, map_branch, test_branch, test_predicate in *; simpl in *; eauto with all;
+    simpl closed in *; repeat (rtoProp; f_equal; solve_all); try change_Sk.
+    
+  - revert Hs.
+    unfold Upn.
+    elim (Nat.ltb_spec n k); intros. simpl in *.
+    destruct (subst_consn_lt (l := idsn k) (i := n)) as [t [Heq Heq']].
+    + now rewrite idsn_length //.
+    + now rewrite idsn_lt in Heq.
+    + discriminate.
+  - specialize (IHt2 σ (S k) H0). rewrite -{2}IHt2. now sigma.
+  - specialize (IHt2 σ (S k) H0). rewrite -{2}IHt2. now sigma.
+  - specialize (IHt3 σ (S k) H0). rewrite -{2}IHt3. now sigma.
+  - specialize (e σ (#|pcontext p| + k)). rewrite -{2}e; now sigma.
+  - specialize (a σ (#|bcontext x| + k)). destruct x; simpl in *. f_equal.
+    now rewrite -{2}a; sigma.
+  - rtoProp. specialize (b0 σ (#|m| + k) H0). eapply map_def_id_spec; auto.
+    revert b0. now sigma.
+  - rtoProp. specialize (b0 σ (#|m| + k) H0). eapply map_def_id_spec; auto.
+    revert b0. now sigma.
+Qed.
+
 Lemma inst_decl_closed :
   forall σ k d,
     closed_decl k d ->

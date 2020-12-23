@@ -783,16 +783,6 @@ Proof. unfold rename_context.
   now rewrite rename_subst_instance_constr.
 Qed.
 
-Lemma fold_context_compose f g Γ : 
-  fold_context f (fold_context g Γ) = 
-  fold_context (fun i => f i ∘ g i) Γ.
-Proof.
-  rewrite !fold_context_alt mapi_mapi.
-  apply mapi_ext => i d.
-  rewrite compose_map_decl. apply map_decl_ext => t.
-  now len.
-Qed.
-
 Lemma rename_context_subst_k f s k Γ : 
   rename_context (shiftn k f) (subst_context s k Γ) =
   subst_context (map (rename f) s) k (rename_context (shiftn (k + #|s|) f) Γ).
@@ -867,22 +857,6 @@ Lemma rename_to_extended_list f ctx :
 Proof.
   unfold to_extended_list, to_extended_list_k.
   now apply (rename_reln _ _ 0).
-Qed.
-
-Lemma closedn_ctx_expand_lets Γ Δ : 
-  closed_ctx (Γ ,,, Δ) ->
-  closedn_ctx (context_assumptions Γ) (expand_lets_ctx Γ Δ).
-Proof.
-  rewrite /expand_lets_ctx /expand_lets_k_ctx.
-  intros cl.
-  pose proof (closedn_ctx_subst (context_assumptions Γ) 0).
-  rewrite Nat.add_0_r in H0. apply: H0.
-  - simpl. len.
-    rewrite closedn_ctx_lift //.
-    rewrite closedn_ctx_app in cl. now move/andP: cl.
-  - apply (closedn_extended_subst_gen Γ 0 0).
-    rewrite closedn_ctx_app in cl.
-    now move/andP: cl => [].
 Qed.
 
 (* 
@@ -960,14 +934,6 @@ Proof.
   unfold wf_branch, wf_branch_gen. now simpl.
 Qed.
 
-Lemma Forall2_map_right {A B C} (P : A -> B -> Prop) (f : C -> B) (l : list A) (l' : list C) :
-  Forall2 P l (map f l') <-> Forall2 (fun x y => P x (f y)) l l'.
-Proof.
-  split; intros.
-  + eapply Forall2_map_inv. now rewrite map_id.
-  + rewrite -(map_id l). now eapply Forall2_map.  
-Qed.
-
 Lemma rename_wf_branches cdecl f brs :
   wf_branches cdecl brs ->
   wf_branches cdecl (map (rename_branch f) brs).
@@ -986,12 +952,6 @@ Lemma rename_predicate_set_preturn f p pret :
   rename_predicate rename f (set_preturn p pret) = 
   set_preturn (rename_predicate rename f p) (rename (shiftn #|pcontext p| f) pret).
 Proof. reflexivity. Qed.
-
-Lemma OnOne2All_All2_mix_left {A B} {P : B -> A -> A -> Type} {Q : B -> A -> Type} {i l l'} :
-  All2 Q i l -> OnOne2All P i l l' -> OnOne2All (fun i x y => (P i x y * Q i x)%type) i l l'.
-Proof.
-  intros a; induction 1; constructor; try inv a; intuition.
-Qed.
 
 Lemma red1_rename :
   forall Σ Γ Δ u v f,

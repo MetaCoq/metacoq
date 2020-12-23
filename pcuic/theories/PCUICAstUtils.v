@@ -304,38 +304,6 @@ Proof.
   now rewrite -app_assoc !app_nil_r Nat.add_1_r.
 Qed.
 
-Lemma context_assumptions_length_bound Γ : context_assumptions Γ <= #|Γ|.
-Proof.
-  induction Γ; simpl; auto. destruct a as [? [?|] ?]; simpl; auto.
-  lia.
-Qed.
-
-Lemma context_assumptions_map f Γ : context_assumptions (map_context f Γ) = context_assumptions Γ.
-Proof.
-  induction Γ as [|[? [?|] ?] ?]; simpl; auto.
-Qed.
-
-Lemma context_assumptions_mapi f Γ : context_assumptions (mapi (fun i => map_decl (f i)) Γ) = 
-  context_assumptions Γ.
-Proof.
-  rewrite /mapi; generalize 0.
-  induction Γ; simpl; intros; eauto.
-  destruct a as [? [b|] ?]; simpl; auto.
-Qed.
-
-Hint Rewrite context_assumptions_map context_assumptions_mapi : len.
-
-Lemma compose_map_decl f g x : map_decl f (map_decl g x) = map_decl (f ∘ g) x.
-Proof.
-  destruct x as [? [?|] ?]; reflexivity.
-Qed.
-
-Lemma map_decl_ext f g x : (forall x, f x = g x) -> map_decl f x = map_decl g x.
-Proof.
-  intros H; destruct x as [? [?|] ?]; rewrite /map_decl /=; f_equal; auto.
-  now rewrite (H t).
-Qed.
-
 Ltac merge_All :=
   unfold tFixProp, tCaseBrsProp in *;
   repeat toAll.

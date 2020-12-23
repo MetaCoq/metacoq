@@ -232,7 +232,12 @@ Proof.
   now rewrite (Forall2_length H0).
 Qed.
 
-Lemma case_branch_context_length ind mdecl p br cdecl :
+Lemma wf_branch_length {cdecl br} :
+  wf_branch cdecl br ->
+  #|br.(bcontext)| = #|cstr_args cdecl|.
+Proof. apply Forall2_length. Qed.
+
+Lemma case_branch_context_length {ind mdecl p br cdecl} :
   wf_branch cdecl br ->
   #|case_branch_context ind mdecl p br.(bcontext) cdecl| = #|br.(bcontext)|.
 Proof.
@@ -242,7 +247,7 @@ Proof.
   now rewrite (Forall2_length hl).
 Qed.
 
-Lemma case_branch_context_length_args ind mdecl p br cdecl :
+Lemma case_branch_context_length_args {ind mdecl p br cdecl} :
   wf_branch cdecl br ->
   #|case_branch_context ind mdecl p br.(bcontext) cdecl| = #|cdecl.(cstr_args)|.
 Proof.
@@ -252,7 +257,7 @@ Proof.
   rewrite map2_length //.
 Qed.
 
-Lemma case_branches_contexts_length ind mdecl idecl p pctx :
+Lemma case_branches_contexts_length {ind mdecl idecl p pctx} :
   #|idecl.(ind_ctors)| = #|pctx| ->
   #|case_branches_contexts ind mdecl idecl p pctx| = #|pctx|.
 Proof.

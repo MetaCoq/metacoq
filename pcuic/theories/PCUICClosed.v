@@ -88,7 +88,20 @@ Section alli.
   Qed.
 End alli.
 
-Require Import ssrbool.
+Lemma alli_fold_context (p : nat -> context_decl -> bool) ctx f : 
+  (forall i d, p i d -> map_decl (f i) d = d) ->
+  alli p 0 (List.rev ctx) ->
+  fold_context f ctx = ctx.
+Proof.
+  intros Hf.
+  rewrite /fold_context /mapi.
+  generalize 0.
+  induction ctx using rev_ind; simpl; intros n; auto.
+  rewrite List.rev_app_distr /=.
+  move/andP=> [] Hc Hd.
+  rewrite Hf //; len. f_equal.
+  now apply IHctx.
+Qed.
 
 Lemma closedn_ctx_cons n d Γ : closedn_ctx n (d :: Γ) = closedn_ctx n Γ && closed_decl (n + #|Γ|) d.
 Proof.
@@ -987,7 +1000,7 @@ Proof.
   apply onInductives in decl'.
   eapply All_forallb.
   
-  assert (Alli (fun i =>  declared_inductive Σ {| mdecl inductive_mind := mind; inductive_ind := i |}) 
+  assert (Alli (fun i =>  declared_inductive Σ {| inductive_mind := mind; inductive_ind := i |} mdecl) 
     0 (ind_bodies mdecl)).
   { eapply forall_nth_error_Alli. intros.
     split; auto. }
@@ -1026,8 +1039,8 @@ Proof.
     specialize (X eq). clear eq.
     destruct (ind_ctors x) as [|? []]; try contradiction.
     apply on_projs in X.
-    assert (Alli (fun i pdecl => declared_projection Σ mdecl x 
-     (({| inductive_mind := mind; inductive_ind := n |}, mdecl.(ind_npars)), i) pdecl)
+    assert (Alli (fun i pdecl => declared_projection Σ 
+     (({| inductive_mind := mind; inductive_ind := n |}, mdecl.(ind_npars)), i) mdecl x pdecl)
       0 (ind_projs x)).
     { eapply forall_nth_error_Alli.
       intros. split; auto. }
@@ -1200,7 +1213,8 @@ Lemma declared_inductive_closed_type {cf:checker_flags} :
     closed idecl.(ind_type).
 Proof.
   intros Σ mdecl ind idecl hΣ h.
-  unfold declared_inductive in destruct h. h as [h1 h2].
+  unfold declared_inductive in h.
+  destruct h as [h1 h2].
   unfold declared_minductive in h1.
   eapply lookup_on_global_env in h1. 2: eauto.
   destruct h1 as [Σ' [wfΣ' decl']].
@@ -1211,19 +1225,15 @@ Proof.
   now move: e => [_ /andP []]. 
 Qed.
 
-Lemma declared_inductive_closed_params {cf:checker_flags} :
-  forall Σ mdecl ind idecl,
-    wf Σ ->
-    declared_inductive Σ ind mdecl idecl ->
-    closed_ctx mdecl.(ind_params).
+Lemma declared_inductive_closed_params {cf:checker_flags} {Σ mdecl ind idecl} {wfΣ : wf Σ} :
+  declared_inductive Σ ind mdecl idecl ->
+  closed_ctx mdecl.(ind_params).
 Proof.
-  intros Σ mdecl ind idecl hΣ h.
-  pose proof (on_declared_inductive hΣ as h) [onmind _].
+  intros h.
+  pose proof (on_declared_inductive h) as [onmind _].
   eapply onParams in onmind.
   eapply closed_wf_local; eauto. simpl. auto.
 Qed.
-
-Coercion declared_inductive_minductive : declared_inductive >-> declared_minductive.
 
 Lemma declared_minductive_ind_npars {cf:checker_flags} {Σ} {wfΣ : wf Σ} {mdecl ind} :
   declared_minductive Σ ind mdecl ->
@@ -1237,27 +1247,11 @@ Proof.
   now rewrite onNpars.
 Qed.
 
-Lemma declared_inductive_ind_npars {cf:checker_flags} {Σ} {wfΣ : wf Σ} {mdecl ind idecl} :
+Lemma declared_inductive_closed_constructors {cf:checker_flags} {Σ ind mdecl idecl} {wfΣ : wf Σ} :
   declared_inductive Σ ind mdecl idecl ->
-  ind_npars mdecl = context_assumptions mdecl.(ind_params).
+  All (closed_constructor_body mdecl) idecl.(ind_ctors).
 Proof.
-  intros h.
-  eapply (declared_minductive_ind_npars h).
-
-  unfold declared_minductive in h.
-  eapply lookup_on_global_env in h. 2: eauto.
-  destruct h as [Σ' [wfΣ' decl']].
-  red in decl'. destruct decl' as [h ? ? ?].
-  now rewrite onNpars.
-Qed.
-
-Lemma declared_inductive_closed_constructors {cf:checker_flags} :
-  forall Σ ind mdecl idecl,
-      wf Σ ->
-      declared_inductive Σ ind mdecl idecl ->
-      All (closed_constructor_body mdecl) idecl.(ind_ctors).
-Proof.
-  intros Σ ind mdecl idecl hΣ [hmdecl hidecl].
+  intros [hmdecl hidecl].
   eapply (declared_minductive_closed (Σ:=empty_ext Σ)) in hmdecl; auto.
   unfold closed_inductive_decl in hmdecl.
   move/andP: hmdecl => [clpars clbodies].
@@ -1268,13 +1262,11 @@ Proof.
   now eapply forallb_All in cl.
 Qed.
 
-Lemma declared_minductive_closed_inds {cf:checker_flags} :
-  forall Σ ind mdecl u,
-    wf Σ ->
-    declared_minductive Σ (inductive_mind ind) mdecl ->
-    forallb (closedn 0) (inds (inductive_mind ind) u (ind_bodies mdecl)).
+Lemma declared_minductive_closed_inds {cf:checker_flags} {Σ ind mdecl u} {wfΣ : wf Σ} :
+  declared_minductive Σ (inductive_mind ind) mdecl ->
+  forallb (closedn 0) (inds (inductive_mind ind) u (ind_bodies mdecl)).
 Proof.
-  intros Σ ind mdecl u hΣ h.
+  intros h.
   red in h.
   eapply lookup_on_global_env in h. 2: eauto.
   destruct h as [Σ' [wfΣ' decl']].
@@ -1287,44 +1279,31 @@ Proof.
   - simpl. eauto.
 Qed.
 
-Lemma declared_inductive_closed_inds {cf:checker_flags} :
-  forall Σ ind mdecl idecl u,
-      wf Σ ->
-      declared_inductive Σ ind mdecl idecl ->
-      forallb (closedn 0) (inds (inductive_mind ind) u (ind_bodies mdecl)).
+Lemma declared_constructor_closed_type {cf:checker_flags}
+  {Σ mdecl idecl c cdecl u} {wfΣ : wf Σ} :
+  declared_constructor Σ c mdecl idecl cdecl ->
+  closed (type_of_constructor mdecl cdecl c u).
 Proof.
-  intros Σ ind mdecl idecl u hΣ h.
-  unfold declared_inductive in destruct h. h as [hmdecl hidecl].
-  eapply declared_minductive_closed_inds in hmdecl. all: eauto.
-Qed.
-
-Lemma declared_constructor_closed_type {cf:checker_flags} :
-  forall Σ mdecl idecl c cdecl u,
-    wf Σ ->
-    declared_constructor Σ c mdecl idecl cdecl ->
-    closed (type_of_constructor mdecl cdecl c u).
-Proof.
-  intros Σ mdecl idecl c cdecl u hΣ h.
+  intros h.
   unfold declared_constructor in h.
   destruct c as [i ci]. simpl in h. destruct h as [hidecl hcdecl].
-  eapply declared_inductive_closed_constructors in hidecl as h. 2: auto.
+  eapply declared_inductive_closed_constructors in hidecl as h.
   unfold type_of_constructor. simpl.
   eapply All_nth_error in h. 2: eassumption.
   move/andP: h => [/andP [hargs hindices]] hty.
   eapply closedn_subst0.
-  - eapply declared_inductive_closed_inds. all: eauto.
+  - eapply declared_minductive_closed_inds. all: eauto.
   - simpl. rewrite inds_length.
     rewrite closedn_subst_instance_constr. assumption.
 Qed.
 
-Lemma declared_projection_closed_type {cf:checker_flags} :
-  forall Σ mdecl idecl p pdecl,
-    wf Σ ->
-    declared_projection Σ p mdecl idecl pdecl ->
-    closedn (S (ind_npars mdecl)) pdecl.2.
+Lemma declared_projection_closed_type {cf:checker_flags} 
+  {Σ mdecl idecl p pdecl} {wfΣ : wf Σ} :
+  declared_projection Σ p mdecl idecl pdecl ->
+  closedn (S (ind_npars mdecl)) pdecl.2.
 Proof.
-  intros Σ mdecl idecl p pdecl hΣ decl.
-  now eapply (declared_projection_closed (Σ:=empty_ext Σ)) in decl.
+  intros decl.
+  now eapply declared_projection_closed in decl.
 Qed.
 
 Lemma map_subst_closedn (s : list term) (k : nat) l :

@@ -321,12 +321,20 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
 where " Σ ;;; Γ |- t : T " := (typing Σ Γ t T)
 and "'wf_local' Σ Γ " := (All_local_env (lift_typing typing Σ) Γ).
 
-Lemma meta_conv {cf : checker_flags} Σ Γ t A B :
+Lemma meta_conv {cf} {Σ Γ t A B} :
     Σ ;;; Γ |- t : A ->
     A = B ->
     Σ ;;; Γ |- t : B.
 Proof.
   intros h []; assumption.
+Qed.
+
+Lemma meta_conv_term {cf} {Σ Γ t t' A} :
+    Σ ;;; Γ |- t : A ->
+    t = t' ->
+    Σ ;;; Γ |- t' : A.
+Proof.
+  intros h []. assumption.
 Qed.
 
 (** ** Typechecking of global environments *)

@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils BasicAst.
 From MetaCoq.Template Require Import Universes.
+From Coq Require Import ssreflect ssrfun.
 
 Module Type Term.
 
@@ -83,6 +84,7 @@ Module Environment (T : Term).
     
   Lemma map_context_length f l : #|map_context f l| = #|l|.
   Proof. now unfold map_context; rewrite map_length. Qed.
+  Hint Rewrite map_context_length : len.
 
   Definition fold_context f (Γ : context) : context :=
     List.rev (mapi (fun k' decl => map_decl (f k') decl) (List.rev Γ)).
@@ -99,17 +101,18 @@ Module Environment (T : Term).
 
   Lemma fold_context_length f Γ : length (fold_context f Γ) = length Γ.
   Proof.
-    unfold fold_context. now rewrite !List.rev_length, mapi_length, List.rev_length.
+    unfold fold_context. now rewrite !List.rev_length mapi_length List.rev_length.
   Qed.
+  Hint Rewrite fold_context_length : len.
 
   Lemma fold_context_snoc0 f Γ d :
     fold_context f (d :: Γ) = fold_context f Γ ,, map_decl (f (length Γ)) d.
   Proof.
     unfold fold_context.
-    rewrite !rev_mapi, !rev_involutive. unfold mapi; rewrite mapi_rec_eqn.
-    unfold snoc. f_equal. now rewrite Nat.sub_0_r, List.rev_length.
+    rewrite !rev_mapi !rev_involutive. unfold mapi; rewrite mapi_rec_eqn.
+    unfold snoc. f_equal. now rewrite Nat.sub_0_r List.rev_length.
     rewrite mapi_rec_Sk. simpl. apply mapi_rec_ext. intros.
-    rewrite app_length, !List.rev_length. simpl. f_equal. f_equal. lia.
+    rewrite app_length !List.rev_length. simpl. f_equal. f_equal. lia.
   Qed.
 
   Lemma fold_context_app f Γ Δ :
@@ -140,14 +143,9 @@ Module Environment (T : Term).
   Definition subst_decl s k (d : context_decl) := map_decl (subst s k) d.
   
   Lemma subst_context_length s n Γ : #|subst_context s n Γ| = #|Γ|.
-  Proof.
-    induction Γ as [|[na [body|] ty] tl] in Γ |- *; cbn; eauto.
-    - rewrite !List.rev_length, !mapi_rec_length, !app_length, !List.rev_length. simpl.
-      lia.
-    - rewrite !List.rev_length, !mapi_rec_length, !app_length, !List.rev_length. simpl.
-      lia.
-  Qed.
-  
+  Proof. now rewrite /subst_context; len. Qed.
+  Hint Rewrite subst_context_length : len.
+
   Lemma subst_context_nil s n : subst_context s n [] = [].
   Proof. reflexivity. Qed.
   
@@ -161,11 +159,7 @@ Module Environment (T : Term).
   
   Lemma subst_context_snoc s k Γ d : subst_context s k (d :: Γ) = subst_context s k Γ ,, subst_decl s (#|Γ| + k) d.
   Proof.
-    unfold subst_context, fold_context.
-    rewrite !rev_mapi, !rev_involutive; unfold mapi; rewrite mapi_rec_eqn; unfold snoc.
-    f_equal. now rewrite Nat.sub_0_r, List.rev_length.
-    rewrite mapi_rec_Sk. simpl. apply mapi_rec_ext. intros.
-    rewrite app_length, !List.rev_length. simpl. f_equal. f_equal. lia.
+    now rewrite /subst_context fold_context_snoc0.
   Qed.
   
   Definition subst_telescope s k (Γ : context) : context :=
@@ -204,8 +198,8 @@ Module Environment (T : Term).
   Lemma smash_context_length Γ Γ' : #|smash_context Γ Γ'| = #|Γ| + context_assumptions Γ'.
   Proof.
     induction Γ' as [|[na [body|] ty] tl] in Γ |- *; cbn; eauto.
-    - now rewrite IHtl, subst_context_length.
-    - rewrite IHtl, app_length. simpl. lia.
+    - now rewrite IHtl subst_context_length.
+    - rewrite IHtl app_length. simpl. lia.
   Qed.
 
   (* Smashing a context Γ with Δ depending on it is the same as smashing Γ
@@ -429,7 +423,7 @@ Module Environment (T : Term).
     induction Γ in l, k |- *; simpl; auto.
     destruct a as [na [body|] ty]; simpl.
     now rewrite IHΓ.
-    now rewrite IHΓ, <- app_assoc.
+    now rewrite IHΓ -app_assoc.
   Qed.
 
   Lemma to_extended_list_k_cons d Γ k :
@@ -442,7 +436,7 @@ Module Environment (T : Term).
     unfold to_extended_list_k.
     rewrite reln_alt_eq. simpl.
     destruct d as [na [body|] ty]. simpl.
-    now rewrite reln_alt_eq, Nat.add_1_r.
+    now rewrite reln_alt_eq Nat.add_1_r.
     simpl. rewrite reln_alt_eq.
     now rewrite <- app_assoc, !app_nil_r, Nat.add_1_r.
   Qed.
@@ -454,7 +448,6 @@ Module Environment (T : Term).
 
   Lemma arities_context_length l : #|arities_context l| = #|l|.
   Proof. unfold arities_context. now rewrite rev_map_length. Qed.
-
 
   Lemma app_context_nil_l Γ : [] ,,, Γ = Γ.
   Proof.
@@ -570,6 +563,77 @@ Module Environment (T : Term).
     do 2 f_equal. lia. now rewrite fold_context_length.
   Qed.
 
+  Lemma context_assumptions_length_bound Γ : context_assumptions Γ <= #|Γ|.
+  Proof.
+    induction Γ; simpl; auto. destruct a as [? [?|] ?]; simpl; auto.
+    lia.
+  Qed.
+  
+  Lemma context_assumptions_map f Γ : context_assumptions (map_context f Γ) = context_assumptions Γ.
+  Proof.
+    induction Γ as [|[? [?|] ?] ?]; simpl; auto.
+  Qed.
+  
+  Lemma context_assumptions_mapi f Γ : context_assumptions (mapi (fun i => map_decl (f i)) Γ) = 
+    context_assumptions Γ.
+  Proof.
+    rewrite /mapi; generalize 0.
+    induction Γ; simpl; intros; eauto.
+    destruct a as [? [b|] ?]; simpl; auto.
+  Qed.
+  
+  Hint Rewrite context_assumptions_map context_assumptions_mapi : len.
+  
+  Lemma compose_map_decl f g x : map_decl f (map_decl g x) = map_decl (f ∘ g) x.
+  Proof.
+    destruct x as [? [?|] ?]; reflexivity.
+  Qed.
+  
+  Lemma map_decl_ext f g x : (forall x, f x = g x) -> map_decl f x = map_decl g x.
+  Proof.
+    intros H; destruct x as [? [?|] ?]; rewrite /map_decl /=; f_equal; auto.
+    now rewrite (H t).
+  Qed.
+
+  Lemma context_assumptions_subst_instance_context u Γ : 
+    context_assumptions (subst_instance_context u Γ) = 
+    context_assumptions Γ. 
+  Proof. apply context_assumptions_map. Qed.
+
+  Lemma context_assumptions_subst_context s k Γ : 
+    context_assumptions (subst_context s k Γ) = 
+    context_assumptions Γ. 
+  Proof. apply context_assumptions_fold. Qed.
+
+  Lemma context_assumptions_lift_context n k Γ : 
+    context_assumptions (lift_context n k Γ) = 
+    context_assumptions Γ. 
+  Proof. apply context_assumptions_fold. Qed.
+
+  Lemma fold_context_ext f g c : 
+    (forall i, f i =1 g i) ->
+    fold_context f c = fold_context g c.
+  Proof.
+    intros Hfg.
+    rewrite !fold_context_alt.
+    eapply mapi_ext => i d.
+    eapply map_decl_ext => t.
+    now rewrite Hfg.
+  Qed.
+
+  Lemma fold_context_map f g Γ : 
+    (forall i x, f i (g x) = g (f i x)) ->
+    fold_context f (map_context g Γ) = map_context g (fold_context f Γ).
+  Proof.
+    intros Hfg.
+    rewrite !fold_context_alt mapi_map.
+    rewrite /map_context map_mapi.
+    apply mapi_ext => i x.
+    rewrite !compose_map_decl.
+    apply map_decl_ext => t.
+    rewrite Hfg.
+    now len.
+  Qed.
 End Environment.
 
 Module Type EnvironmentSig (T : Term).

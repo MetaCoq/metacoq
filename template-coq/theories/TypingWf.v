@@ -953,7 +953,7 @@ Record wf_inductive_body idecl := {
 Lemma declared_minductive_declared {cf:checker_flags} {Σ : global_env_ext} {mind} {mdecl} :
   wf Σ.1 ->  
   declared_minductive Σ mind mdecl ->
-  (Alli (fun i decl => declared_inductive Σ {| mdecl inductive_mind := mind; inductive_ind := i |} decl)
+  (Alli (fun i decl => declared_inductive Σ {| inductive_mind := mind; inductive_ind := i |} mdecl decl)
     0 (ind_bodies mdecl)).
 Proof.
  intros; eapply forall_nth_error_Alli. intros; split; auto.

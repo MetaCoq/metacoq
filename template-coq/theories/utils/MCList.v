@@ -7,6 +7,9 @@ Arguments firstn : simpl nomatch.
 Arguments skipn : simpl nomatch.
 
 Notation "#| l |" := (List.length l) (at level 0, l at level 99, format "#| l |").
+
+Hint Rewrite map_length : len.
+
 Arguments nil {_}, _.
 
 Lemma app_tip_assoc {A} (l : list A) x l' : (l ++ [x]) ++ l' = l ++ (x :: l').
@@ -134,6 +137,7 @@ Proof.
   }
   intro l. apply h.
 Defined.
+Hint Rewrite @rev_length : len.
 
 Fact rev_map_length :
   forall {A B} {f : A -> B} {l : list A},
@@ -152,6 +156,7 @@ Proof.
   }
   intro l. apply h.
 Defined.
+Hint Rewrite @rev_map_length : len.
 
 Fact rev_map_app :
   forall {A B} {f : A -> B} {l1 l2},
@@ -163,7 +168,6 @@ Proof.
   - simpl. rewrite !rev_map_cons. rewrite IHl1.
     rewrite app_assoc. reflexivity.
 Defined.
-
 
 Lemma map_map_compose :
   forall (A B C : Type) (f : A -> B) (g : B -> C) (l : list A),
@@ -474,10 +478,12 @@ Proof. unfold mapi at 1. rewrite mapi_rec_rev. now rewrite Nat.add_0_r. Qed.
 Lemma mapi_rec_length {A B} (f : nat -> A -> B) (l : list A) n :
   length (mapi_rec f l n) = length l.
 Proof. induction l in n |- *; simpl; try congruence. Qed.
+Hint Rewrite @mapi_rec_length : len.
 
 Lemma mapi_length {A B} (f : nat -> A -> B) (l : list A) :
   length (mapi f l) = length l.
 Proof. apply mapi_rec_length. Qed.
+Hint Rewrite @mapi_length : len.
 
 Lemma skipn_length {A} n (l : list A) : n <= length l -> length (skipn n l) = length l - n.
 Proof.
@@ -961,6 +967,7 @@ Lemma unfold_length {A} (f : nat -> A) m : #|unfold m f| = m.
 Proof.
   induction m; simpl; rewrite ?app_length /=; auto. lia.
 Qed.
+Hint Rewrite @unfold_length : len.
 
 Lemma nth_error_unfold {A} (f : nat -> A) m n : n < m <-> nth_error (unfold m f) n = Some (f n).
 Proof.
@@ -1077,4 +1084,37 @@ Lemma firstn_length_le_inv {A} n (l : list A) : #|firstn n l| = n -> n <= #|l|.
 Proof.
   induction l in n |- *; simpl; auto with arith;
   destruct n; simpl; auto with arith. discriminate.
+Qed.
+
+Fixpoint map2i_rec {A B C} (f : nat -> A -> B -> C) i (l : list A) (l' : list B) : list C :=
+  match l, l' with
+  | hd :: tl, hd' :: tl' => f i hd hd' :: map2i_rec f (S i) tl tl'
+  | _, _ => []
+  end.
+Definition map2i {A B C} (f : nat -> A -> B -> C) := map2i_rec f 0.
+
+Lemma mapi_map2 {A B C D} (f : nat -> A -> B) (g : C -> D -> A) l l' : 
+  mapi f (map2 g l l') = map2i (fun i x y => f i (g x y)) l l'.
+Proof.
+  unfold mapi, map2i. generalize 0.
+  induction l in l' |- *; intros; destruct l'; simpl; auto. f_equal.
+  apply IHl.
+Qed.
+
+Lemma map2_mapi {A A' B B' C} (f : nat -> A -> B) (f' : nat-> A' -> B') (g : B -> B' -> C) l l' : 
+  map2 g (mapi f l) (mapi f' l') = map2i (fun i x y => g (f i x) (f' i y)) l l'.
+Proof.
+  unfold mapi, map2i. generalize 0.
+  induction l in l' |- *; intros n; destruct l'; simpl; auto. f_equal.
+  apply IHl.
+Qed.
+
+Lemma map2i_ext {A B C} (f g : nat -> A -> B -> C) l l' :
+  (forall i x y, f i x y = g i x y) -> map2i f l l' = map2i g l l'.
+Proof.
+  intros Hfg.
+  unfold map2i.
+  generalize 0.
+  induction l in l' |- *; destruct l'; simpl; auto.
+  intros. f_equal; eauto.
 Qed.

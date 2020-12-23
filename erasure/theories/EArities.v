@@ -40,7 +40,7 @@ Qed.
 
 Lemma isArity_ind_type (Σ : global_env_ext) mind ind idecl :
   wf Σ ->
-  declared_inductive (fst Σ) mind ind idecl ->
+  declared_inductive (fst Σ) ind mind idecl ->
   isArity (ind_type idecl).
 Proof.
   intros. 

@@ -257,7 +257,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
 | type_Ind ind u :
     wf_local Σ Γ ->
     forall mdecl idecl,
-    declared_inductive Σ.1 mdecl ind idecl ->
+    declared_inductive Σ.1 ind mdecl idecl ->
     consistent_instance_ext Σ mdecl.(ind_universes) u ->
     Σ ;;; Γ |- (tInd ind u) : subst_instance_constr u idecl.(ind_type)
 
@@ -269,7 +269,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     Σ ;;; Γ |- (tConstruct ind i u) : type_of_constructor mdecl cdecl (ind, i) u
 
 | type_Case (ci : case_info) p c brs indices ps :
-    forall mdecl idecl (isdecl : declared_inductive Σ.1 mdecl ci.(ci_ind) idecl),
+    forall mdecl idecl (isdecl : declared_inductive Σ.1 ci.(ci_ind) mdecl idecl),
     mdecl.(ind_npars) = ci.(ci_npar) ->
     let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
     wf_predicate mdecl idecl p ->
@@ -640,7 +640,7 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
        P Σ Γ (tConst cst u) (subst_instance_constr u (cst_type decl))) ->
 
    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (ind : inductive) u
-         mdecl idecl (isdecl : declared_inductive Σ.1 mdecl ind idecl),
+         mdecl idecl (isdecl : declared_inductive Σ.1 ind mdecl idecl),
        Forall_decls_typing P Σ.1 ->
        PΓ Σ Γ wfΓ ->
        consistent_instance_ext Σ mdecl.(ind_universes) u ->
@@ -655,7 +655,7 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
 
      (forall (Σ : global_env_ext) (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ),     
       forall (ci : case_info) p c brs indices ps mdecl idecl
-        (isdecl : declared_inductive Σ.1 mdecl ci.(ci_ind) idecl),
+        (isdecl : declared_inductive Σ.1 ci.(ci_ind) mdecl idecl),
         Forall_decls_typing P Σ.1 -> 
         PΓ Σ Γ wfΓ ->
         mdecl.(ind_npars) = ci.(ci_npar) ->
@@ -1046,7 +1046,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         P Σ Γ (tConst cst u) (subst_instance_constr u (cst_type decl))) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (ind : inductive) u
-          mdecl idecl (isdecl : declared_inductive Σ.1 mdecl ind idecl),
+          mdecl idecl (isdecl : declared_inductive Σ.1 ind mdecl idecl),
         Forall_decls_typing P Σ.1 ->
         PΓ Σ Γ wfΓ ->
         consistent_instance_ext Σ mdecl.(ind_universes) u ->
@@ -1060,7 +1060,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         P Σ Γ (tConstruct ind i u) (type_of_constructor mdecl cdecl (ind, i) u)) ->
         (forall (Σ : global_env_ext) (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ),     
         forall (ci : case_info) p c brs indices ps mdecl idecl
-          (isdecl : declared_inductive Σ.1 mdecl ci.(ci_ind) idecl),
+          (isdecl : declared_inductive Σ.1 ci.(ci_ind) mdecl idecl),
           Forall_decls_typing P Σ.1 -> 
           PΓ Σ Γ wfΓ ->
           mdecl.(ind_npars) = ci.(ci_npar) ->

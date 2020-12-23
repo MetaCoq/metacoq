@@ -148,7 +148,7 @@ Section Inversion.
       Σ ;;; Γ |- tInd ind u : T ->
       ∑ mdecl idecl,
         wf_local Σ Γ ×
-        declared_inductive Σ mdecl ind idecl ×
+        declared_inductive Σ ind mdecl idecl ×
         consistent_instance_ext Σ (ind_universes mdecl) u ×
         Σ ;;; Γ |- subst_instance_constr u idecl.(ind_type) <= T.
   Proof.
@@ -173,7 +173,7 @@ Section Inversion.
       ∑ u args mdecl idecl ps pty btys,
         let ind := indnpar.1 in
         let npar := indnpar.2 in
-        declared_inductive Σ mdecl ind idecl ×
+        declared_inductive Σ ind mdecl idecl ×
         ind_npars mdecl = npar ×
         let params := firstn npar args in
         build_case_predicate_type ind mdecl idecl params u ps = Some pty ×

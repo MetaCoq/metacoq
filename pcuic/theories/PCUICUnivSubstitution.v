@@ -2108,7 +2108,7 @@ Section SubstIdentity.
 
   Lemma subst_instance_ind_sort_id Σ mdecl ind idecl :
     wf Σ ->
-    declared_inductive Σ mdecl ind idecl ->
+    declared_inductive Σ ind mdecl idecl ->
     forall (oib : on_ind_body (lift_typing typing) (Σ, ind_universes mdecl)
     (inductive_mind ind) mdecl (inductive_ind ind) idecl),
     let u := PCUICLookup.abstract_instance (ind_universes mdecl) in
@@ -2131,12 +2131,12 @@ Section SubstIdentity.
 
   Lemma subst_instance_ind_type_id Σ mdecl ind idecl :
     wf Σ ->
-    declared_inductive Σ mdecl ind idecl ->
+    declared_inductive Σ ind mdecl idecl ->
     let u := PCUICLookup.abstract_instance (ind_universes mdecl) in
     subst_instance_constr u (ind_type idecl) = ind_type idecl.
   Proof.
     intros wfΣ decli u.
-    pose proof (on_declared_inductive wfΣ decli) as [_ oib].
+    pose proof (on_declared_inductive wfΣ as decli) [_ oib].
     pose proof (onArity oib) as ona.
     rewrite (oib.(ind_arity_eq)) in ona |- *.
     red in ona. destruct ona.

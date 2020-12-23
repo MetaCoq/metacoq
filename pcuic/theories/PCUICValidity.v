@@ -206,7 +206,7 @@ Section Validity.
 
     - (* Case predicate application *)
       eapply (isType_mkApps_Ind wf isdecl) in X4 as [parsubst [argsubst Hind]]; auto.
-      destruct (on_declared_inductive wf isdecl) as [onmind oib]. simpl in Hind.
+      destruct (on_declared_inductive wf as isdecl) [onmind oib]. simpl in Hind.
       destruct Hind as [[sparsubst sargsubst] cu].
       subst npar.
       eapply (build_case_predicate_type_spec _ _ _ _ _ _ _ _ oib) in heq_build_case_predicate_type as

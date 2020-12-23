@@ -129,9 +129,9 @@ Proof.
   - by move => [=] ->.
 Qed.
 
-Lemma forall_decls_declared_inductive Σ mdecl ind decl :
-  ST.declared_inductive Σ mdecl ind decl ->
-  declared_inductive (trans_global_decls Σ) (trans_minductive_body mdecl) ind (trans_one_ind_body decl).
+Lemma forall_decls_declared_inductive Σ ind mdecl decl :
+  ST.declared_inductive Σ ind mdecl decl ->
+  declared_inductive (trans_global_decls Σ) (trans_minductive_body mdecl) (trans_one_ind_body ind decl).
 Proof.
   unfold declared_inductive, ST.declared_inductive.
   move=> [decl' Hnth].
@@ -618,14 +618,14 @@ Admitted.
 (*   S.wf p -> S.wf pty -> S.wf (S.ind_type idecl) -> *)
 (*   All S.wf args -> *)
 (*   ST.wf Σ -> *)
-(*   ST.declared_inductive Σ mdecl ind idecl -> *)
+(*   ST.declared_inductive Σ ind mdecl idecl -> *)
 (*   ST.types_of_case ind mdecl idecl args u p pty = Some (indctx, pctx, ps, btys) -> *)
 (*   types_of_case ind (trans_minductive_body mdecl) (trans_one_ind_body idecl) *)
 (*   (map trans args) u (trans p) (trans pty) = *)
 (*   Some (trans_local indctx, trans_local pctx, ps, map (on_snd trans) btys). *)
 (* Proof. *)
 (*   intros wfp wfpty wfdecl wfargs wfΣ Hidecl. *)
-(*   pose proof (on_declared_inductive wfΣ Hidecl) as [onmind onind]. *)
+(*   pose proof (on_declared_inductive wfΣ as Hidecl) [onmind onind]. *)
 (*   apply ST.onParams in onmind as Hparams. *)
 (*   (* Maybe have a lemma for this we do it all the time *) *)
 (*   assert (wc : Forall wf_decl (UnivSubst.subst_instance_context u (S.ind_params mdecl))). *)

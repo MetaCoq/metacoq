@@ -195,8 +195,8 @@ Hint Resolve weakening_env_declared_minductive : extends.
 
 Lemma weakening_env_declared_inductive:
   forall (H : checker_flags) (Σ : global_env) ind mdecl decl,
-    declared_inductive Σ ind mdecl decl ->
-    forall Σ' : global_env, wf Σ' -> extends Σ Σ' -> declared_inductive Σ' ind mdecl decl.
+    declared_inductive Σ mdecl ind decl ->
+    forall Σ' : global_env, wf Σ' -> extends Σ Σ' -> declared_inductive Σ' mdecl ind decl.
 Proof.
   intros H Σ cst decl H0 [Hmdecl Hidecl] Σ' X2 H2. split; eauto with extends.
 Qed.
@@ -657,7 +657,7 @@ Qed.
 Lemma declared_inductive_inv `{checker_flags} {Σ P ind mdecl idecl} :
   weaken_env_prop (lift_typing P) ->
   wf Σ -> Forall_decls_typing P Σ ->
-  declared_inductive Σ mdecl ind idecl ->
+  declared_inductive Σ ind mdecl idecl ->
   on_ind_body (lift_typing P) (Σ, ind_universes mdecl) (inductive_mind ind) mdecl (inductive_ind ind) idecl.
 Proof.
   intros.
@@ -750,8 +750,8 @@ Proof.
 Qed.
 
 Lemma declared_inductive_inj {Σ mdecl mdecl' ind idecl idecl'} :
-  declared_inductive Σ mdecl' ind idecl' ->
-  declared_inductive Σ mdecl ind idecl ->
+  declared_inductive Σ ind mdecl' idecl' ->
+  declared_inductive Σ ind mdecl idecl ->
   mdecl = mdecl' /\ idecl = idecl'.
 Proof.
   intros [] []. unfold declared_minductive in *.
@@ -780,7 +780,7 @@ Proof.
 Qed.
 
 Lemma declared_inductive_minductive Σ ind mdecl idecl :
-  declared_inductive Σ mdecl ind idecl -> declared_minductive Σ (inductive_mind ind) mdecl.
+  declared_inductive Σ ind mdecl idecl -> declared_minductive Σ (inductive_mind ind) mdecl.
 Proof. now intros []. Qed.
 Hint Resolve declared_inductive_minductive : pcuic core.
 
@@ -813,9 +813,9 @@ Proof.
   apply (declared_minductive_inv weaken_env_prop_typing wfΣ wfΣ Hdecl).
 Qed.
 
-Lemma on_declared_inductive `{checker_flags} {Σ ref mdecl idecl} :
+Lemma on_declared_inductive `{checker_flags} ref {Σ mdecl idecl} :
   wf Σ ->
-  declared_inductive Σ mdecl ref idecl ->
+  declared_inductive Σ ref mdecl idecl ->
   on_inductive (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind ref) mdecl *
   on_ind_body (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind ref) mdecl (inductive_ind ref) idecl.
 Proof.

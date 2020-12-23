@@ -725,7 +725,7 @@ Lemma whne_red1_ind
           OnOne2 (red1 Σ Γ) p.(pparams) params' ->
           P (tCase i p c brs) (tCase i (set_pparams p params') c brs))
       (Hcase_discr : forall i mdecl idecl p c brs p',
-          declared_inductive Σ mdecl i.(ci_ind) idecl ->
+          declared_inductive Σ i.(ci_ind) mdecl idecl ->
           wf_predicate mdecl idecl p ->
           whne flags Σ Γ c ->
           red1 Σ (Γ ,,, case_predicate_context i mdecl idecl p) p.(preturn) p' ->
@@ -736,7 +736,7 @@ Lemma whne_red1_ind
           P c c' ->
           P (tCase i p c brs) (tCase i p c' brs))
       (Hcase_branch : forall i mdecl idecl p c brs brs',
-          declared_inductive Σ mdecl i.(ci_ind) idecl ->
+          declared_inductive Σ i.(ci_ind) mdecl idecl ->
           wf_predicate mdecl idecl p ->
           wf_branches idecl brs ->
           whne flags Σ Γ c ->          
@@ -979,12 +979,12 @@ Inductive whnf_red Σ Γ : term -> term -> Type :=
     whnf_red Σ Γ (tFix mfix idx) (tFix mfix' idx)
 | whnf_red_tCase p motive motivep motiveret discr discr' brs brs' :
     All2 (red Σ Γ) motive.(pparams) motivep ->
-    (∑ mdecl idecl, declared_inductive Σ mdecl p.(ci_ind) idecl *
+    (∑ mdecl idecl, declared_inductive Σ p.(ci_ind) mdecl idecl *
       wf_predicate mdecl idecl motive *
       red Σ (Γ ,,, case_predicate_context p mdecl idecl motive) motive.(preturn) motiveret) +
      (motive.(preturn) = motiveret) ->
     red Σ Γ discr discr' ->
-    (∑ mdecl idecl, declared_inductive Σ mdecl p.(ci_ind) idecl *
+    (∑ mdecl idecl, declared_inductive Σ p.(ci_ind) mdecl idecl *
       wf_predicate mdecl idecl motive *
       wf_branches idecl brs *
       All3 (fun cdecl br br' => br.(bcontext) = br'.(bcontext) ×

@@ -55,7 +55,7 @@ Proof.
 Qed.
 
 Lemma build_branches_type_lookup {cf:checker_flags} Σ Γ ind mdecl idecl cdecl pars u p (brs :  list (nat * term)) btys : 
-  declared_inductive Σ.1 mdecl ind idecl ->
+  declared_inductive Σ.1 ind mdecl idecl ->
   map_option_out (build_branches_type ind mdecl idecl pars u p) = Some btys ->
   All2 (fun br bty => (br.1 = bty.1) * (Σ ;;; Γ |- br.2 : bty.2))%type brs btys ->
   forall c, nth_error (ind_ctors idecl) c = Some cdecl ->
@@ -90,7 +90,7 @@ Import PCUICEnvironment.
 From MetaCoq.PCUIC Require Import PCUICCtxShape.
 
 Lemma branch_type_spec {cf:checker_flags} Σ ind mdecl idecl cdecl pars u p c nargs bty : 
-  declared_inductive Σ mdecl ind idecl ->
+  declared_inductive Σ ind mdecl idecl ->
   forall (omib : on_inductive (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind ind) mdecl),
   forall (oib : on_ind_body (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind ind) mdecl (inductive_ind ind) idecl),
   forall cdecl (cs : on_constructor (lift_typing typing) (Σ, ind_universes mdecl) mdecl (inductive_ind ind) idecl (ind_indices oib) cdecl cdecl),
@@ -313,7 +313,7 @@ Qed.
 
 Lemma nth_errror_arities_context {cf:checker_flags} (Σ : global_env_ext) mdecl ind idecl decl : 
   wf Σ.1 ->
-  declared_inductive Σ mdecl ind idecl ->
+  declared_inductive Σ ind mdecl idecl ->
   on_inductive (lift_typing typing) (Σ.1, ind_universes mdecl)
     (inductive_mind ind) mdecl ->
   on_ind_body (lift_typing typing) (Σ.1, ind_universes mdecl)
@@ -363,7 +363,7 @@ Qed.
 
 Lemma subslet_projs {cf:checker_flags} (Σ : global_env_ext) i mdecl idecl :
   forall (wfΣ : wf Σ.1) 
-  (Hdecl : declared_inductive Σ.1 mdecl i idecl),
+  (Hdecl : declared_inductive Σ.1 i mdecl idecl),
   let oib := declared_inductive_inv weaken_env_prop_typing wfΣ wfΣ Hdecl in
   match ind_cunivs oib return Type with
   | [cs] => 
@@ -475,7 +475,7 @@ Definition projection_decl_type mdecl ind k ty :=
       (subst0 projsubst (lift 1 k ty)).
 
 Lemma on_projections_decl {cf:checker_flags} {Σ mdecl ind idecl cs} :
-  forall (Hdecl : declared_inductive Σ mdecl ind idecl) (wfΣ : wf Σ),
+  forall (Hdecl : declared_inductive Σ ind mdecl idecl) (wfΣ : wf Σ),
   let oib := declared_inductive_inv weaken_env_prop_typing wfΣ wfΣ Hdecl in
   let u := PCUICLookup.abstract_instance (ind_universes mdecl) in
   on_projections mdecl (inductive_mind ind) (inductive_ind ind) idecl (oib.(ind_indices)) cs ->
@@ -495,7 +495,7 @@ Qed.
 
 (* Well, it's a smash_context mess! *)
 Lemma declared_projections {cf:checker_flags} {Σ : global_env_ext} {mdecl ind idecl} : 
-  forall (wfΣ : wf Σ.1) (Hdecl : declared_inductive Σ mdecl ind idecl),
+  forall (wfΣ : wf Σ.1) (Hdecl : declared_inductive Σ ind mdecl idecl),
   let oib := declared_inductive_inv weaken_env_prop_typing wfΣ wfΣ Hdecl in
   let u := PCUICLookup.abstract_instance (ind_universes mdecl) in
   match ind_cunivs oib return Type with
@@ -1150,7 +1150,7 @@ Qed.
 
 Lemma invert_type_mkApps_ind {cf:checker_flags} Σ Γ ind u args T mdecl idecl :
   wf Σ.1 ->
-  declared_inductive Σ.1 mdecl ind idecl ->
+  declared_inductive Σ.1 ind mdecl idecl ->
   Σ ;;; Γ |- mkApps (tInd ind u) args : T ->
   (typing_spine Σ Γ (subst_instance_constr u (ind_type idecl)) args T)
   * consistent_instance_ext Σ (ind_universes mdecl) u.
@@ -1162,12 +1162,12 @@ Proof.
     noconf H2. clear IHtyping1 IHtyping3.
     specialize (IHtyping2 _ _ _ _ _ _ _ wfΣ decli eq_refl) as [IH cu];
       split; auto.
-    destruct (on_declared_inductive wfΣ decli) as [onmind oib].
+    destruct (on_declared_inductive wfΣ as decli) [onmind oib].
     eapply typing_spine_app; eauto.
   - invs H0. destruct (declared_inductive_inj d decli) as [-> ->].
     clear decli. split; auto.
     constructor; [|reflexivity].
-    destruct (on_declared_inductive wfΣ d) as [onmind oib].
+    destruct (on_declared_inductive wfΣ as d) [onmind oib].
     pose proof (oib.(onArity)) as ar.
     eapply isType_weaken; eauto.
     eapply (isType_subst_instance_decl _ []); eauto.
@@ -1178,7 +1178,7 @@ Proof.
 Qed.
 
 Lemma isType_mkApps_Ind {cf:checker_flags} {Σ Γ ind u args} (wfΣ : wf Σ.1)
-  {mdecl idecl} (declm : declared_inductive Σ.1 mdecl ind idecl) :
+  {mdecl idecl} (declm : declared_inductive Σ.1 ind mdecl idecl) :
   wf_local Σ Γ ->
   isType Σ Γ (mkApps (tInd ind u) args) ->
   ∑ parsubst argsubst,
@@ -1192,7 +1192,7 @@ Proof.
   move=> wfΓ isType.
   destruct isType as [s Hs].
   eapply invert_type_mkApps_ind in Hs as [tyargs cu]; eauto.
-  set (decli' := on_declared_inductive _ _). clearbody decli'.
+  set (decli' := on_declared_inductive _ clearbody _). decli'.
   rename declm into decli.
   destruct decli' as [declm decli'].
   pose proof (decli'.(onArity)) as ar. 
@@ -1229,7 +1229,7 @@ Proof.
   destruct (on_declared_projection wfΣ declp).
   destruct (isType_mkApps_Ind wfΣ (let (x, _) := declp in x) (typing_wf_local Hc) Ha) as 
     [parsubst [argsubst [[sppars spargs] cu]]].
-  unfold on_declared_inductive in spargs. simpl in spargs.
+  unfold on_declared_inductive in simpl spargs. in spargs.
   unfold projection_context.
   set (oib := declared_inductive_inv _ _ _ _) in *. clearbody oib.
   simpl in y. destruct (ind_cunivs oib) as [|cs []]; try contradiction.

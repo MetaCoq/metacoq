@@ -304,13 +304,13 @@ Qed.
 Lemma declared_inductive_valid_type {cf:checker_flags} Σ Γ mdecl idecl i u :
   wf Σ.1 ->
   wf_local Σ Γ ->
-  declared_inductive Σ.1 mdecl i idecl ->
+  declared_inductive Σ.1 i mdecl idecl ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   isType Σ Γ (subst_instance_constr u (ind_type idecl)).
 Proof.
   move=> wfΣ wfΓ declc Hu.
   pose declc as declc'.
-  apply on_declared_inductive in declc' as [onmind onind]; auto.
+  apply on_declared_inductive in as declc' [onmind onind]; auto.
   apply onArity in onind.
   destruct onind as [s Hs].
   epose proof (PCUICUnivSubstitution.typing_subst_instance_decl Σ) as s'.
@@ -508,7 +508,7 @@ Qed.
 
 Lemma on_constructor_wf_args {cf:checker_flags} Σ ind mdecl idecl cdecl cdecl : 
   wf Σ -> 
-  declared_inductive Σ mdecl ind idecl ->
+  declared_inductive Σ ind mdecl idecl ->
   on_inductive (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind ind) mdecl ->
   forall (oib : on_ind_body (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind ind) mdecl 
            (inductive_ind ind) idecl)
@@ -527,7 +527,7 @@ Qed.
 
 Lemma on_constructor_subst {cf:checker_flags} Σ ind mdecl idecl cdecl cdecl : 
   wf Σ -> 
-  declared_inductive Σ mdecl ind idecl ->
+  declared_inductive Σ ind mdecl idecl ->
   on_inductive (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind ind) mdecl ->
   forall (oib : on_ind_body (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind ind) mdecl 
            (inductive_ind ind) idecl)
@@ -594,7 +594,7 @@ Qed.
 
 Lemma on_constructor_inst {cf:checker_flags} {Σ ind mdecl idecl cdecl cdecl} u : 
   wf Σ.1 -> 
-  declared_inductive Σ.1 mdecl ind idecl ->
+  declared_inductive Σ.1 ind mdecl idecl ->
   on_inductive (lift_typing typing) (Σ.1, ind_universes mdecl) (inductive_mind ind) mdecl ->
   forall (oib : on_ind_body (lift_typing typing) (Σ.1, ind_universes mdecl) (inductive_mind ind) mdecl 
            (inductive_ind ind) idecl)
@@ -1035,7 +1035,7 @@ Qed.
 
 Lemma on_constructor_inst_pars_indices {cf:checker_flags} {Σ ind u mdecl idecl cdecl cdecl Γ pars parsubst} : 
   wf Σ.1 -> 
-  declared_inductive Σ.1 mdecl ind idecl ->
+  declared_inductive Σ.1 ind mdecl idecl ->
   on_inductive (lift_typing typing) (Σ.1, ind_universes mdecl) (inductive_mind ind) mdecl ->
   forall (oib : on_ind_body (lift_typing typing) (Σ.1, ind_universes mdecl) (inductive_mind ind) mdecl 
            (inductive_ind ind) idecl)
@@ -1336,7 +1336,7 @@ Proof.
   subst mdecl' idecl' cdecl'. clear isdecl.
   destruct p as [onmind onind]. clear onc.
   destruct declc as [decli declc].
-  remember (on_declared_inductive wfΣ decli). clear onmind onind.
+  remember (on_declared_inductive wfΣ clear decli). onmind onind.
   destruct p.
   rename o into onmind. rename o0 into onind.
   destruct declared_constructor_inv as [cdecl [_ onc]].
@@ -1366,7 +1366,7 @@ Proof.
   eapply mkApps_ind_typing_spine in hs as [isubst [[[Hisubst [Hargslen [Hi Hu]]] Hargs] Hs]]; auto.
   subst i'.
   eapply (isType_mkApps_Ind wfΣ decli) in vi' as (parsubst & argsubst & (spars & sargs) & cons) => //.
-  unfold on_declared_inductive in sargs. simpl in sargs. rewrite -indeq in sargs. clear indeq.
+  unfold on_declared_inductive in simpl sargs. in sargs. rewrite -indeq in sargs. clear indeq.
   split=> //. split=> //.
   split; auto. split => //.
   now autorewrite with len in Hu.
@@ -1578,7 +1578,7 @@ Proof.
   constructor. constructor.
 Qed.
 
-Lemma declared_inductive_unique {Σ mdecl idecl p} (q r : declared_inductive Σ mdecl p idecl) : q = r.
+Lemma declared_inductive_unique {Σ mdecl idecl p} (q r : declared_inductive Σ p mdecl idecl) : q = r.
 Proof.
   unfold declared_inductive in q, r.
   destruct q, r.
@@ -1586,9 +1586,9 @@ Proof.
 Qed.
 
 Lemma declared_inductive_unique_sig {cf:checker_flags} {Σ ind mib decl mib' decl'}
-      (decl1 : declared_inductive Σ mib ind decl)
-      (decl2 : declared_inductive Σ mib' ind decl') :
-  @sigmaI _ (fun '(m, d) => declared_inductive Σ m ind d)
+      (decl1 : declared_inductive Σ ind mib decl)
+      (decl2 : declared_inductive Σ ind mib' decl') :
+  @sigmaI _ (fun '(m, d) => declared_inductive Σ ind m d)
           (mib, decl) decl1 =
   @sigmaI _ _ (mib', decl') decl2.
 Proof.
@@ -1820,7 +1820,7 @@ Qed.
 
 
 Lemma declared_inductive_lookup_inductive {Σ ind mdecl idecl} :
-  declared_inductive Σ mdecl ind idecl ->
+  declared_inductive Σ ind mdecl idecl ->
   lookup_inductive Σ ind = Some (mdecl, idecl).
 Proof.
   rewrite /declared_inductive /lookup_inductive.
@@ -1973,7 +1973,7 @@ Qed.
 
 Lemma positive_cstr_arg_subst {cf:checker_flags} {Σ : global_env_ext} {ind mdecl idecl Γ t u u'} :
   wf Σ -> 
-  declared_inductive Σ mdecl ind idecl ->
+  declared_inductive Σ ind mdecl idecl ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   R_opt_variance (eq_universe Σ) (leq_universe Σ) (ind_variance mdecl) u u' ->
   wf_local Σ (subst_instance_context u (ind_arities mdecl) ,,, subst_instance_context u Γ) ->
@@ -2017,7 +2017,7 @@ Proof.
       inductive_ind := Nat.pred #|ind_bodies mdecl| - (k - #|ctx|) |} i).
       { split; auto. simpl. rewrite -e nth_error_rev; lia_f_equal. }
       rewrite (declared_inductive_lookup_inductive H) //.
-      eapply on_declared_inductive in H as [onmind onind] => //. simpl in *.
+      eapply on_declared_inductive in as H [onmind onind] => //. simpl in *.
       rewrite e0 /ind_realargs /PCUICTypingDef.destArity.
       rewrite !onind.(ind_arity_eq).
       rewrite !destArity_it_mkProd_or_LetIn /=; len; simpl.
@@ -2079,7 +2079,7 @@ Qed.
 
 Lemma positive_cstr_closed_args_subst_arities {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ.1} {u u' Γ}
    {i ind mdecl idecl cdecl ind_indices cs} :
-  declared_inductive Σ mdecl ind idecl ->
+  declared_inductive Σ ind mdecl idecl ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   on_constructor (lift_typing typing) (Σ.1, ind_universes mdecl) mdecl i idecl ind_indices cdecl cs -> 
   R_opt_variance (eq_universe Σ) (leq_universe Σ) (ind_variance mdecl) u u' ->
@@ -2144,7 +2144,7 @@ Qed.
 
 Lemma positive_cstr_closed_args {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ.1} {u u'} 
   {ind mdecl idecl cdecl cs} :
-  declared_inductive Σ mdecl ind idecl ->
+  declared_inductive Σ ind mdecl idecl ->
   on_inductive (lift_typing typing) (Σ.1, ind_universes mdecl) (inductive_mind ind) mdecl ->
   forall (oib : on_ind_body (lift_typing typing) (Σ.1, ind_universes mdecl) (inductive_mind ind) mdecl 
            (inductive_ind ind) idecl)
@@ -2969,7 +2969,7 @@ Qed.
 
 Lemma inductive_cumulative_indices {cf:checker_flags} {Σ : global_env_ext} (wfΣ : wf Σ.1) :
   forall {ind mdecl idecl u u' napp},
-  declared_inductive Σ mdecl ind idecl ->
+  declared_inductive Σ ind mdecl idecl ->
   forall (oib : on_ind_body (lift_typing typing) (Σ.1, ind_universes mdecl) (inductive_mind ind) mdecl 
     (inductive_ind ind) idecl),
   on_udecl_prop Σ (ind_universes mdecl) ->
@@ -3001,7 +3001,7 @@ Proof.
     (subst_instance_context u
       (smash_context [] (PCUICEnvironment.ind_params mdecl)))) as clspu.
   { rewrite subst_instance_context_smash. now eapply closedn_smash_context. }
-  eapply on_declared_inductive in decli' as [onind _]; eauto.
+  eapply on_declared_inductive in as decli' [onind _]; eauto.
   assert (wf_local Σ
   (smash_context []
      (subst_instance_context u (PCUICEnvironment.ind_params mdecl)) ,,,
@@ -3098,7 +3098,7 @@ Qed.
 
 Lemma constructor_cumulative_indices {cf:checker_flags} {Σ : global_env_ext} (wfΣ : wf Σ.1) :
   forall {ind mdecl idecl cdecl cs u u' napp},
-  declared_inductive Σ mdecl ind idecl ->
+  declared_inductive Σ ind mdecl idecl ->
   forall (oib : on_ind_body (lift_typing typing) (Σ.1, ind_universes mdecl) (inductive_mind ind) mdecl 
     (inductive_ind ind) idecl),
   on_constructor (lift_typing typing) (Σ.1, ind_universes mdecl) mdecl (inductive_ind ind) idecl 
@@ -3129,7 +3129,7 @@ Proof.
   intros * decli oib onc onu cu cu' Ru Γ * spu spu' cpars *. move: Ru.
   unfold R_global_instance.
   pose proof decli as decli'.
-  eapply on_declared_inductive in decli' as [onind _]; eauto.
+  eapply on_declared_inductive in as decli' [onind _]; eauto.
   assert (closed_ctx
     (subst_instance_context u
       (PCUICEnvironment.ind_params mdecl))) as clpu.
@@ -3486,7 +3486,7 @@ Hint Resolve assumption_context_fold assumption_context_expand_lets_ctx
   assumption_context_subst_context assumption_context_lift_context : pcuic.
 
 Lemma subst_inds_smash_params {cf:checker_flags} {Σ : global_env_ext} {mdecl ind idecl u} {wfΣ : wf Σ} :
-  declared_inductive Σ mdecl ind idecl ->
+  declared_inductive Σ ind mdecl idecl ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   subst_context (inds (inductive_mind ind) u (ind_bodies mdecl)) 0
     (subst_instance_context u (smash_context [] (PCUICEnvironment.ind_params mdecl))) =
@@ -3518,7 +3518,7 @@ Qed.
 
 Lemma subslet_projs_smash {cf:checker_flags} (Σ : global_env_ext) i mdecl idecl :
   forall (wfΣ : wf Σ.1) 
-  (Hdecl : declared_inductive Σ.1 mdecl i idecl),
+  (Hdecl : declared_inductive Σ.1 i mdecl idecl),
   let oib := declared_inductive_inv weaken_env_prop_typing wfΣ wfΣ Hdecl in
   match ind_cunivs oib return Type with
   | [cs] => 
@@ -3701,7 +3701,7 @@ Proof.
   split; auto.
   simpl. rewrite H.
   pose proof decli as decli'.
-  eapply on_declared_inductive in decli' as [onmi oni]; auto.
+  eapply on_declared_inductive in as decli' [onmi oni]; auto.
   rewrite oni.(ind_arity_eq) in Hargs |- *.
   rewrite !destArity_it_mkProd_or_LetIn. simpl.
   rewrite app_context_nil_l.
@@ -3781,7 +3781,7 @@ Qed.
 Lemma WfArity_build_case_predicate_type {cf:checker_flags} Σ
       Γ ind u args mdecl idecl ps pty :
   wf Σ.1 ->
-  declared_inductive Σ.1 mdecl ind idecl ->
+  declared_inductive Σ.1 ind mdecl idecl ->
   isType Σ Γ (mkApps (tInd ind u) args) ->
   let params := firstn (ind_npars mdecl) args in
   wf_universe Σ ps ->
@@ -3808,7 +3808,7 @@ Proof.
   rewrite instantiate_params_.
   destruct instantiate_params_subst as [[parsubst ty]|] eqn:ip => // => [= eqip].
   subst ipars.
-  pose proof (PCUICWeakeningEnv.on_declared_inductive wfΣ isdecl) as [onind oib].
+  pose proof (PCUICWeakeningEnv.on_declared_inductive wfΣ as isdecl) [onind oib].
   rewrite oib.(ind_arity_eq) in ip.
   eapply PCUICSubstitution.instantiate_params_subst_make_context_subst in ip as 
     [ctx' [mparsubst dp]].
@@ -3901,7 +3901,7 @@ Qed.
 Lemma build_branches_type_wt {cf : checker_flags}	(Σ : global_env × universes_decl) Γ ind mdecl idecl u 
   (c p pty : term) pctx ps (args : list term) (btys : list (nat × term)) :
   wf Σ.1 ->
-  declared_inductive Σ.1 mdecl ind idecl ->
+  declared_inductive Σ.1 ind mdecl idecl ->
   Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
   destArity [] pty = Some (pctx, ps) ->
   build_case_predicate_type ind mdecl idecl (firstn (ind_npars mdecl) args) u ps = Some pty ->

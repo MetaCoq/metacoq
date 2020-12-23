@@ -268,15 +268,15 @@ Inductive erases_deps (Σ : global_env) (Σ' : E.global_declarations) : E.term -
 | erases_deps_tConstruct ind c :
     erases_deps Σ Σ' (E.tConstruct ind c)
 | erases_deps_tCase p mdecl idecl mdecl' idecl' discr brs :
-    PCUICTyping.declared_inductive Σ mdecl (fst p) idecl ->
-    ETyping.declared_inductive Σ' mdecl' (fst p) idecl' ->
+    PCUICTyping.declared_inductive Σ (fst p) mdecl idecl ->
+    ETyping.declared_inductive Σ' (fst p) mdecl' idecl' ->
     erases_one_inductive_body idecl idecl' ->
     erases_deps Σ Σ' discr ->
     Forall (fun br => erases_deps Σ Σ' br.2) brs ->
     erases_deps Σ Σ' (E.tCase p discr brs)
 | erases_deps_tProj p mdecl idecl mdecl' idecl' t :
-    PCUICTyping.declared_inductive Σ mdecl p.1.1 idecl ->
-    ETyping.declared_inductive Σ' mdecl' p.1.1 idecl' ->
+    PCUICTyping.declared_inductive Σ p.1.1 mdecl idecl ->
+    ETyping.declared_inductive Σ' p.1.1 mdecl' idecl' ->
     erases_one_inductive_body idecl idecl' ->
     erases_deps Σ Σ' t ->
     erases_deps Σ Σ' (E.tProj p t)

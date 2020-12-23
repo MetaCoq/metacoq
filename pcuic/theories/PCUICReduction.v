@@ -182,7 +182,7 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
              (tCase ci (set_pparams p params') c brs)
 
 | case_red_return ci mdecl idecl p preturn' c brs 
-  (isdecl : declared_inductive Σ mdecl ci.(ci_ind) idecl) :
+  (isdecl : declared_inductive Σ ci.(ci_ind) mdecl idecl) :
   let pctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
   wf_predicate mdecl idecl p -> 
   red1 Σ (Γ ,,, pctx) p.(preturn) preturn' ->
@@ -194,7 +194,7 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
   red1 Σ Γ (tCase ci p c brs) (tCase ci p c' brs)
 
 | case_red_brs ci mdecl idecl p c brs brs' 
-    (isdecl : declared_inductive Σ mdecl ci.(ci_ind) idecl) :
+    (isdecl : declared_inductive Σ ci.(ci_ind) mdecl idecl) :
     wf_predicate mdecl idecl p -> 
     wf_branches idecl brs ->  
     OnOne2All (fun cdecl br br' =>
@@ -294,7 +294,7 @@ Lemma red1_ind_all :
                (tCase ci (set_pparams p params') c brs)) ->
 
        (forall (Γ : context) (ci : case_info) mdecl idecl p preturn' c brs
-          (isdecl : declared_inductive Σ mdecl ci.(ci_ind) idecl),
+          (isdecl : declared_inductive Σ ci.(ci_ind) mdecl idecl),
           let pctx := case_predicate_context ci.(ci_ind) mdecl idecl p in       
           wf_predicate mdecl idecl p ->
           red1 Σ (Γ ,,, pctx) p.(preturn) preturn' ->
@@ -306,7 +306,7 @@ Lemma red1_ind_all :
         red1 Σ Γ c c' -> P Γ c c' -> P Γ (tCase ind p c brs) (tCase ind p c' brs)) ->
 
        (forall (Γ : context) ci mdecl idecl p c brs brs' 
-          (isdecl : declared_inductive Σ mdecl ci.(ci_ind) idecl),
+          (isdecl : declared_inductive Σ ci.(ci_ind) mdecl idecl),
           wf_predicate mdecl idecl p ->
           wf_branches idecl brs ->
           OnOne2All (fun cdecl br br' =>
@@ -645,7 +645,7 @@ Section ReductionCongruence.
         wf_list_context pars;
     | tCtxCase_pred ci pars puinst names pctx p c brs => 
       (∑ mdecl idecl, 
-        declared_inductive Σ mdecl ci.(ci_ind) idecl *
+        declared_inductive Σ ci.(ci_ind) mdecl idecl *
         (pctx = case_predicate_context_gen ci.(ci_ind) mdecl idecl pars puinst names) * 
         wf_predicate_gen mdecl idecl pars names) *
         wf_context p;
@@ -653,7 +653,7 @@ Section ReductionCongruence.
         wf_context c;
     | tCtxCase_branch ci p c brs => 
       (∑ mdecl idecl,
-        declared_inductive Σ mdecl ci.(ci_ind) idecl *
+        declared_inductive Σ ci.(ci_ind) mdecl idecl *
         wf_predicate mdecl idecl p *
         wf_branch_context (ci.(ci_ind), mdecl, idecl, p) idecl.(ind_ctors) brs);
     | tCtxProj p c => (wf_context c) }
@@ -1136,7 +1136,7 @@ Section ReductionCongruence.
 
     Lemma red_case_p :
       forall ci mdecl idecl p c brs pret',
-        declared_inductive Σ mdecl ci.(ci_ind) idecl ->
+        declared_inductive Σ ci.(ci_ind) mdecl idecl ->
         wf_predicate mdecl idecl p -> 
         red Σ (Γ ,,, case_predicate_context ci mdecl idecl p) p.(preturn) pret' ->
         red Σ Γ (tCase ci p c brs) 
@@ -1183,7 +1183,7 @@ Section ReductionCongruence.
 
     Lemma red_case_one_brs :
       forall (ci : case_info) mdecl idecl p c brs brs',
-        declared_inductive Σ mdecl ci idecl ->
+        declared_inductive Σ ci mdecl idecl ->
         wf_predicate mdecl idecl p ->
         wf_branches idecl brs ->
         OnOne2All (fun cdecl br br' => 
@@ -1263,7 +1263,7 @@ Section ReductionCongruence.
 
     Lemma red_case_brs_wf :
       forall ci mdecl idecl p c brs brs',
-        declared_inductive Σ mdecl ci.(ci_ind) idecl ->
+        declared_inductive Σ ci.(ci_ind) mdecl idecl ->
         wf_predicate mdecl idecl p ->
         wf_branches idecl brs ->
         red_brs Γ ci.(ci_ind) mdecl idecl p brs brs' ->
@@ -1288,7 +1288,7 @@ Section ReductionCongruence.
 
     Lemma red_case_brs :
       forall ci mdecl idecl p c brs brs',
-      declared_inductive Σ mdecl ci.(ci_ind) idecl ->
+      declared_inductive Σ ci.(ci_ind) mdecl idecl ->
       wf_predicate mdecl idecl p ->
       wf_branches idecl brs ->
       red_brs Γ ci.(ci_ind) mdecl idecl p brs brs' ->
@@ -1316,7 +1316,7 @@ Section ReductionCongruence.
     Qed.
 
     Lemma red_case {ci mdecl idecl p c brs pars' pret' c' brs'} :
-      declared_inductive Σ mdecl ci.(ci_ind) idecl ->
+      declared_inductive Σ ci.(ci_ind) mdecl idecl ->
       wf_predicate mdecl idecl p ->
       wf_branches idecl brs ->
       red Σ (Γ ,,, case_predicate_context ci mdecl idecl p) p.(preturn) pret' ->

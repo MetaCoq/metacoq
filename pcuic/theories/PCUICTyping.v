@@ -472,11 +472,10 @@ Hint Extern 4 (wf_local _ ?Γ) =>
 
 Hint Resolve typing_wf_local : wf.
 
-Definition env_prop `{checker_flags} (P : forall Σ Γ t T, Type) (PΓ : forall Σ Γ, wf_local Σ Γ ->  Type) :=
+Definition env_prop `{checker_flags} (P : forall Σ Γ t T, Type) (PΓ : forall Σ Γ, Type) :=
   forall Σ (wfΣ : wf Σ.1) Γ t T (ty : Σ ;;; Γ |- t : T),
     Forall_decls_typing P Σ.1 * 
-    (PΓ Σ Γ (typing_wf_local ty) *
-     P Σ Γ t T).
+    (PΓ Σ Γ * P Σ Γ t T).
 
 Lemma env_prop_typing `{checker_flags} P PΓ : env_prop P PΓ ->
   forall Σ (wfΣ : wf Σ.1) (Γ : context) (t T : term),
@@ -489,7 +488,7 @@ Proof.
 Defined.
 
 Lemma env_prop_wf_local `{checker_flags} P PΓ : env_prop P PΓ ->
-  forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ), PΓ Σ Γ wfΓ.
+  forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ), PΓ Σ Γ.
 Proof. intros.
   pose (type_Prop_wf _ _ wfΓ).
   now destruct (X _ wfΣ _ _ _ t) as [? [? ?]].
@@ -588,23 +587,23 @@ Qed.
 Lemma typing_ind_env_app_size `{cf : checker_flags} :
  forall (P : global_env_ext -> context -> term -> term -> Type)
         (Pdecl := fun Σ Γ wfΓ t T tyT => P Σ Γ t T)
-        (PΓ : forall Σ Γ, wf_local Σ Γ -> Type),
+        (PΓ : global_env_ext -> context -> Type),
 
    (forall Σ (wfΣ : wf Σ.1)  (Γ : context) (wfΓ : wf_local Σ Γ), 
-        All_local_env_over typing Pdecl Σ Γ wfΓ -> PΓ Σ Γ wfΓ) ->
+        All_local_env_over typing Pdecl Σ Γ wfΓ -> PΓ Σ Γ) ->
 
    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (n : nat) decl,
        nth_error Γ n = Some decl ->
-       PΓ Σ Γ wfΓ ->
+       PΓ Σ Γ ->
        P Σ Γ (tRel n) (lift0 (S n) decl.(decl_type))) ->
 
    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (u : Universe.t),
-       PΓ Σ Γ wfΓ ->
+       PΓ Σ Γ ->
        wf_universe Σ u ->
        P Σ Γ (tSort u) (tSort (Universe.super u))) ->
 
    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (n : aname) (t b : term) (s1 s2 : Universe.t),
-       PΓ Σ Γ wfΓ ->
+       PΓ Σ Γ ->
        Σ ;;; Γ |- t : tSort s1 ->
        P Σ Γ t (tSort s1) ->
        Σ ;;; Γ,, vass n t |- b : tSort s2 ->
@@ -612,14 +611,14 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
 
    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (n : aname) (t b : term)
            (s1 : Universe.t) (bty : term),
-       PΓ Σ Γ wfΓ ->
+       PΓ Σ Γ ->
        Σ ;;; Γ |- t : tSort s1 ->
        P Σ Γ t (tSort s1) ->
        Σ ;;; Γ,, vass n t |- b : bty -> P Σ (Γ,, vass n t) b bty -> P Σ Γ (tLambda n t b) (tProd n t bty)) ->
 
    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (n : aname) (b b_ty b' : term)
            (s1 : Universe.t) (b'_ty : term),
-       PΓ Σ Γ wfΓ ->
+       PΓ Σ Γ ->
        Σ ;;; Γ |- b_ty : tSort s1 ->
        P Σ Γ b_ty (tSort s1) ->
        Σ ;;; Γ |- b : b_ty ->
@@ -628,7 +627,7 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
        P Σ (Γ,, vdef n b b_ty) b' b'_ty -> P Σ Γ (tLetIn n b b_ty b') (tLetIn n b b_ty b'_ty)) ->
 
    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (t : term) na A B u s,
-       PΓ Σ Γ wfΓ ->
+       PΓ Σ Γ ->
       
 
        Σ ;;; Γ |- tProd na A B : tSort s -> P Σ Γ (tProd na A B) (tSort s) ->
@@ -642,7 +641,7 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
 
    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) cst u (decl : constant_body),
        Forall_decls_typing P Σ.1 ->
-       PΓ Σ Γ wfΓ ->
+       PΓ Σ Γ ->
        declared_constant Σ.1 cst decl ->
        consistent_instance_ext Σ decl.(cst_universes) u ->
        P Σ Γ (tConst cst u) (subst_instance_constr u (cst_type decl))) ->
@@ -650,14 +649,14 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (ind : inductive) u
          mdecl idecl (isdecl : declared_inductive Σ.1 ind mdecl idecl),
        Forall_decls_typing P Σ.1 ->
-       PΓ Σ Γ wfΓ ->
+       PΓ Σ Γ ->
        consistent_instance_ext Σ mdecl.(ind_universes) u ->
        P Σ Γ (tInd ind u) (subst_instance_constr u (ind_type idecl))) ->
 
    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (ind : inductive) (i : nat) u
            mdecl idecl cdecl (isdecl : declared_constructor Σ.1 (ind, i) mdecl idecl cdecl),
        Forall_decls_typing P Σ.1 ->
-       PΓ Σ Γ wfΓ ->
+       PΓ Σ Γ ->
        consistent_instance_ext Σ mdecl.(ind_universes) u ->
        P Σ Γ (tConstruct ind i u) (type_of_constructor mdecl cdecl (ind, i) u)) ->
 
@@ -665,13 +664,13 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
       forall (ci : case_info) p c brs indices ps mdecl idecl
         (isdecl : declared_inductive Σ.1 ci.(ci_ind) mdecl idecl),
         Forall_decls_typing P Σ.1 -> 
-        PΓ Σ Γ wfΓ ->
+        PΓ Σ Γ ->
         mdecl.(ind_npars) = ci.(ci_npar) ->
         let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
         wf_predicate mdecl idecl p ->
         forall pret : Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps,
         P Σ (Γ ,,, predctx) p.(preturn) (tSort ps) ->
-        PΓ Σ (Γ ,,, predctx) (typing_wf_local pret) ->
+        PΓ Σ (Γ ,,, predctx) ->
         is_allowed_elimination Σ ps idecl.(ind_kelim) ->
         Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
         P Σ Γ c (mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices)) ->
@@ -679,16 +678,17 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
         let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
         All2i (fun i cdecl br =>
           let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
-          wf_branch cdecl br *
-          ((Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2) * 
-            P Σ (Γ ,,, brctxty.1) br.(bbody) brctxty.2 *
-            (Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps) *
-            P Σ (Γ ,,, brctxty.1) brctxty.2 (tSort ps))) 0 idecl.(ind_ctors) brs ->
+          (wf_branch cdecl br *
+          ∑ brty : (Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2),
+            PΓ Σ (Γ ,,, brctxty.1) *
+            (P Σ (Γ ,,, brctxty.1) br.(bbody) brctxty.2 *
+            ((Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps) *
+            P Σ (Γ ,,, brctxty.1) brctxty.2 (tSort ps))))) 0 idecl.(ind_ctors) brs ->
         P Σ Γ (tCase ci p c brs) (mkApps ptm (indices ++ [c]))) ->
 
    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : projection) (c : term) u
          mdecl idecl pdecl (isdecl : declared_projection Σ.1 p mdecl idecl pdecl) args,
-       Forall_decls_typing P Σ.1 -> PΓ Σ Γ wfΓ ->
+       Forall_decls_typing P Σ.1 -> PΓ Σ Γ ->
        Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ->
        P Σ Γ c (mkApps (tInd (fst (fst p)) u) args) ->
        #|args| = ind_npars mdecl ->
@@ -698,7 +698,7 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
        let types := fix_context mfix in
        fix_guard Σ Γ mfix ->
        nth_error mfix n = Some decl ->
-       PΓ Σ Γ wfΓ ->
+       PΓ Σ (Γ ,,, types) ->
        All (fun d => {s & (Σ ;;; Γ |- d.(dtype) : tSort s)%type * P Σ Γ d.(dtype) (tSort s)})%type mfix ->
        All (fun d => (Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype))%type *
            P Σ (Γ ,,, types) d.(dbody) (lift0 #|types| d.(dtype)))%type mfix ->
@@ -709,7 +709,7 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
        let types := fix_context mfix in
        cofix_guard Σ Γ mfix ->
        nth_error mfix n = Some decl ->
-       PΓ Σ Γ wfΓ ->
+       PΓ Σ (Γ ,,, types) ->       
        All (fun d => {s & (Σ ;;; Γ |- d.(dtype) : tSort s)%type * P Σ Γ d.(dtype) (tSort s)})%type mfix ->
        All (fun d => (Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype))%type *
            P Σ (Γ ,,, types) d.(dbody) (lift0 #|types| d.(dtype)))%type mfix ->
@@ -717,7 +717,7 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
        P Σ Γ (tCoFix mfix n) decl.(dtype)) ->
 
    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (t A B : term) s,
-       PΓ Σ Γ wfΓ ->
+       PΓ Σ Γ ->
        Σ ;;; Γ |- t : A ->
        P Σ Γ t A ->
        Σ ;;; Γ |- B : tSort s ->
@@ -727,7 +727,7 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
 
       env_prop P PΓ.
 Proof.
-  intros P Pdecl PΓ; unfold env_prop.
+  intros P Pdecl PΓ.
   intros XΓ X X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 Σ wfΣ Γ t T H.
   (* NOTE (Danil): while porting to 8.9, I had to split original "pose" into 2 pieces,
     otherwise it takes forever to execure the "pose", for some reason *)
@@ -848,8 +848,8 @@ Proof.
 
     assert (forall Γ' t T (Hty : Σ ;;; Γ' |- t : T),
       typing_size Hty <= typing_size H ->
-      PΓ Σ Γ' (typing_wf_local Hty)).
-    { intros. apply XΓ; auto.
+      PΓ Σ Γ').
+    { intros. eapply (XΓ _ _ _ (typing_wf_local Hty)); auto.
       clear -Pdecl wfΣ X14 H0.
       pose proof (typing_wf_local_size Hty).
       set (foo := typing_wf_local Hty) in *.
@@ -864,7 +864,7 @@ Proof.
       - red. simpl. apply (X14 _ _ _ Hu). lia. }
       
     clear IH.
-    assert (pΓ : PΓ Σ Γ (typing_wf_local H)).
+    assert (pΓ : PΓ Σ Γ).
     { apply (X13 _ _ _ H). lia. }
     split; auto.
     set (wfΓ := typing_wf_local H); clearbody wfΓ.
@@ -904,17 +904,22 @@ Proof.
         ++ eapply (X14 _ _ _ H); eauto. simpl; auto with arith.
         ++ simpl in *. eapply (X13 _ _ _ H); eauto. clear. subst predctx. lia.
         ++ eapply (X14 _ _ _ H0); simpl. lia.
-        ++ clear X13 Hdecls. revert a X14. clear. intros.
+        ++ clear Hdecls. simpl in X13. revert a X13 X14.
+          clear. intros.
           simpl in X14.
           subst ptm predctx; induction a.
           ** constructor.
           ** destruct r0 as [? [? ?]]. constructor.
-              --- intuition eauto.
-                  +++ eapply (X14 _ _ _ t); eauto. simpl; auto with arith.
-                      lia.
+              --- intros brctxty. split; auto.
+                  exists t. repeat split.
+                  +++ eapply (X13 _ _ _ t); eauto. simpl. lia.
+                  +++ unshelve eapply (X14 _ _ _ t _); eauto.
+                      simpl. lia.
+                  +++ simpl; auto with arith.
                   +++ eapply (X14 _ _ _ t0); eauto. simpl; auto with arith.
                       lia.
-              --- apply IHa. auto. intros.
+              --- apply IHa. auto. intros. apply (X13 _ _ _ Hty). simpl. lia.
+                  intros.
                   eapply (X14 _ _ _ Hty). simpl. lia.
 
     -- eapply X9; eauto. apply Hdecls; simpl.
@@ -923,6 +928,15 @@ Proof.
 
     -- clear X X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X11 X12.
         eapply X10; eauto; clear X10. simpl in *.
+        * assert(forall Γ0 (t T : term) (Hty : Σ;;; Γ0 |- t : T),
+                  typing_size Hty <
+                        S
+                          (all_size _ (fun (x : def term) p => typing_size p) a1) ->
+                        PΓ Σ Γ0).
+          {intros. eapply (X13 _ _ _ Hty); eauto. lia. }
+          destruct mfix. now rewrite nth_error_nil in e.
+          depelim a1.
+          eapply (X _ _ _ t). simpl. lia.
         * assert(forall (t T : term) (Hty : Σ;;; Γ |- t : T),
                     typing_size Hty <
                     S (all_size (fun x : def term =>
@@ -931,7 +945,7 @@ Proof.
                       (p : ∑ s : Universe.t, Σ;;; Γ |- dtype x : tSort s) =>
                     typing_size p.π2) a0) ->
                     Forall_decls_typing P Σ.1 * P Σ Γ t T).
-          intros; eauto. eapply (X14 _ _ _ Hty); eauto. lia.
+          intros; eauto. eapply (X14 _ _ _ Hty); eauto. simpl. lia.
           clear X13 X14 a pΓ Hdecls.
           clear -a0 X.
           induction a0; constructor.
@@ -960,6 +974,15 @@ Proof.
 
     -- clear X X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X12.
         eapply X11; eauto; clear X11. simpl in *.
+        * assert(forall Γ0 (t T : term) (Hty : Σ;;; Γ0 |- t : T),
+                  typing_size Hty <
+                        S
+                          (all_size _ (fun (x : def term) p => typing_size p) a1) ->
+                        PΓ Σ Γ0).
+          {intros. eapply (X13 _ _ _ Hty); eauto. lia. }
+          destruct mfix. now rewrite nth_error_nil in e.
+          depelim a1.
+          eapply (X _ _ _ t). simpl. lia.        
         * assert(forall (t T : term) (Hty : Σ;;; Γ |- t : T),
                   typing_size Hty <
                   S (all_size (fun x : def term =>
@@ -968,7 +991,7 @@ Proof.
                     (p : ∑ s : Universe.t, Σ;;; Γ |- dtype x : tSort s) =>
                   typing_size p.π2) a0) ->
                   Forall_decls_typing P Σ.1 * P Σ Γ t T).
-        intros; eauto. eapply (X14 _ _ _ Hty); eauto. lia.
+        intros; eauto. eapply (X14 _ _ _ Hty); eauto. simpl; lia.
         clear X13 X14 a pΓ Hdecls.
         clear -a0 X.
         induction a0; constructor.
@@ -1000,23 +1023,23 @@ Qed.
 Lemma typing_ind_env `{cf : checker_flags} :
   forall (P : global_env_ext -> context -> term -> term -> Type)
          (Pdecl := fun Σ Γ wfΓ t T tyT => P Σ Γ t T)
-         (PΓ : forall Σ Γ, wf_local Σ Γ -> Type),
+         (PΓ : global_env_ext -> context -> Type),
 
     (forall Σ (wfΣ : wf Σ.1)  (Γ : context) (wfΓ : wf_local Σ Γ), 
-         All_local_env_over typing Pdecl Σ Γ wfΓ -> PΓ Σ Γ wfΓ) ->
+         All_local_env_over typing Pdecl Σ Γ wfΓ -> PΓ Σ Γ) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (n : nat) decl,
         nth_error Γ n = Some decl ->
-        PΓ Σ Γ wfΓ ->
+        PΓ Σ Γ ->
         P Σ Γ (tRel n) (lift0 (S n) decl.(decl_type))) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (u : Universe.t),
-        PΓ Σ Γ wfΓ ->
+        PΓ Σ Γ ->
         wf_universe Σ u ->
         P Σ Γ (tSort u) (tSort (Universe.super u))) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (n : aname) (t b : term) (s1 s2 : Universe.t),
-        PΓ Σ Γ wfΓ ->
+        PΓ Σ Γ ->
         Σ ;;; Γ |- t : tSort s1 ->
         P Σ Γ t (tSort s1) ->
         Σ ;;; Γ,, vass n t |- b : tSort s2 ->
@@ -1024,14 +1047,14 @@ Lemma typing_ind_env `{cf : checker_flags} :
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (n : aname) (t b : term)
             (s1 : Universe.t) (bty : term),
-        PΓ Σ Γ wfΓ ->
+        PΓ Σ Γ ->
         Σ ;;; Γ |- t : tSort s1 ->
         P Σ Γ t (tSort s1) ->
         Σ ;;; Γ,, vass n t |- b : bty -> P Σ (Γ,, vass n t) b bty -> P Σ Γ (tLambda n t b) (tProd n t bty)) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (n : aname) (b b_ty b' : term)
             (s1 : Universe.t) (b'_ty : term),
-        PΓ Σ Γ wfΓ ->
+        PΓ Σ Γ ->
         Σ ;;; Γ |- b_ty : tSort s1 ->
         P Σ Γ b_ty (tSort s1) ->
         Σ ;;; Γ |- b : b_ty ->
@@ -1040,7 +1063,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         P Σ (Γ,, vdef n b b_ty) b' b'_ty -> P Σ Γ (tLetIn n b b_ty b') (tLetIn n b b_ty b'_ty)) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (t : term) na A B u s,
-        PΓ Σ Γ wfΓ ->
+        PΓ Σ Γ ->
         Σ ;;; Γ |- tProd na A B : tSort s -> P Σ Γ (tProd na A B) (tSort s) ->
         Σ ;;; Γ |- t : tProd na A B -> P Σ Γ t (tProd na A B) ->
         Σ ;;; Γ |- u : A -> P Σ Γ u A ->
@@ -1048,7 +1071,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) cst u (decl : constant_body),
         Forall_decls_typing P Σ.1 ->
-        PΓ Σ Γ wfΓ ->
+        PΓ Σ Γ ->
         declared_constant Σ.1 cst decl ->
         consistent_instance_ext Σ decl.(cst_universes) u ->
         P Σ Γ (tConst cst u) (subst_instance_constr u (cst_type decl))) ->
@@ -1056,27 +1079,27 @@ Lemma typing_ind_env `{cf : checker_flags} :
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (ind : inductive) u
           mdecl idecl (isdecl : declared_inductive Σ.1 ind mdecl idecl),
         Forall_decls_typing P Σ.1 ->
-        PΓ Σ Γ wfΓ ->
+        PΓ Σ Γ ->
         consistent_instance_ext Σ mdecl.(ind_universes) u ->
         P Σ Γ (tInd ind u) (subst_instance_constr u (ind_type idecl))) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (ind : inductive) (i : nat) u
             mdecl idecl cdecl (isdecl : declared_constructor Σ.1 (ind, i) mdecl idecl cdecl),
         Forall_decls_typing P Σ.1 ->
-        PΓ Σ Γ wfΓ ->
+        PΓ Σ Γ ->
         consistent_instance_ext Σ mdecl.(ind_universes) u ->
         P Σ Γ (tConstruct ind i u) (type_of_constructor mdecl cdecl (ind, i) u)) ->
         (forall (Σ : global_env_ext) (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ),     
         forall (ci : case_info) p c brs indices ps mdecl idecl
           (isdecl : declared_inductive Σ.1 ci.(ci_ind) mdecl idecl),
           Forall_decls_typing P Σ.1 -> 
-          PΓ Σ Γ wfΓ ->
+          PΓ Σ Γ ->
           mdecl.(ind_npars) = ci.(ci_npar) ->
           let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
           wf_predicate mdecl idecl p ->
           forall pret : Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps,
           P Σ (Γ ,,, predctx) p.(preturn) (tSort ps) ->
-          PΓ Σ (Γ ,,, predctx) (typing_wf_local pret) ->
+          PΓ Σ (Γ ,,, predctx) ->
           is_allowed_elimination Σ ps idecl.(ind_kelim) ->
           Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
           P Σ Γ c (mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices)) ->
@@ -1085,16 +1108,17 @@ Lemma typing_ind_env `{cf : checker_flags} :
           All2i (fun i cdecl br =>
           let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
           wf_branch cdecl br *
-          ((Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2) * 
-            P Σ (Γ ,,, brctxty.1) br.(bbody) brctxty.2 *
-            (Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps) *
-            P Σ (Γ ,,, brctxty.1) brctxty.2 (tSort ps))) 0 idecl.(ind_ctors) brs ->
+          ∑ brty : (Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2),
+          PΓ Σ (Γ ,,, brctxty.1) *
+          (P Σ (Γ ,,, brctxty.1) br.(bbody) brctxty.2 *
+            ((Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps) *
+              P Σ (Γ ,,, brctxty.1) brctxty.2 (tSort ps)))) 0 idecl.(ind_ctors) brs ->
           P Σ Γ (tCase ci p c brs) (mkApps ptm (indices ++ [c]))) ->
           
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : projection) (c : term) u
           mdecl idecl pdecl (isdecl : declared_projection Σ.1 p mdecl idecl pdecl) args,
-        Forall_decls_typing P Σ.1 -> PΓ Σ Γ wfΓ ->
+        Forall_decls_typing P Σ.1 -> PΓ Σ Γ ->
         Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ->
         P Σ Γ c (mkApps (tInd (fst (fst p)) u) args) ->
         #|args| = ind_npars mdecl ->
@@ -1104,7 +1128,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         let types := fix_context mfix in
         fix_guard Σ Γ mfix ->
         nth_error mfix n = Some decl ->
-        PΓ Σ Γ wfΓ ->
+        PΓ Σ (Γ ,,, types) ->
         All (fun d => {s & (Σ ;;; Γ |- d.(dtype) : tSort s)%type * P Σ Γ d.(dtype) (tSort s)})%type mfix ->
         All (fun d => (Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype))%type *
             P Σ (Γ ,,, types) d.(dbody) (lift0 #|types| d.(dtype)))%type mfix ->
@@ -1115,7 +1139,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         let types := fix_context mfix in
         cofix_guard Σ Γ mfix ->
         nth_error mfix n = Some decl ->
-        PΓ Σ Γ wfΓ ->
+        PΓ Σ (Γ ,,, types) ->
         All (fun d => {s & (Σ ;;; Γ |- d.(dtype) : tSort s)%type * P Σ Γ d.(dtype) (tSort s)})%type mfix ->
         All (fun d => (Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype))%type *
             P Σ (Γ ,,, types) d.(dbody) (lift0 #|types| d.(dtype)))%type mfix ->
@@ -1123,7 +1147,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         P Σ Γ (tCoFix mfix n) decl.(dtype)) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (t A B : term) s,
-        PΓ Σ Γ wfΓ ->
+        PΓ Σ Γ ->
         Σ ;;; Γ |- t : A ->
         P Σ Γ t A ->
         Σ ;;; Γ |- B : tSort s ->

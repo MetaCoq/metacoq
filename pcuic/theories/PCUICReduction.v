@@ -137,6 +137,7 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
     wf_predicate mdecl idecl p -> 
     wf_branch cdecl br ->
     let brctx := case_branch_context ci.(ci_ind) mdecl p br.(bcontext) cdecl in
+    #|skipn (ci_npar ci) args| = context_assumptions brctx ->
     red1 Σ Γ (tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs)
          (iota_red ci.(ci_npar) args brctx br)
 
@@ -248,6 +249,7 @@ Lemma red1_ind_all :
           let brctx := case_branch_context ci.(ci_ind) mdecl p br.(bcontext) cdecl in
           wf_predicate mdecl idecl p ->
           wf_branch cdecl br ->
+          #|skipn (ci_npar ci) args| = context_assumptions brctx ->
           P Γ (tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs)
               (iota_red ci.(ci_npar) args brctx br)) ->
 

@@ -144,8 +144,11 @@ Definition case_branch_type_gen ind mdecl (idecl : one_inductive_body) params pu
   let brctx := case_branch_context_gen ind mdecl params puinst bctx cdecl in
   let upars := subst_instance_context puinst mdecl.(ind_params) in
   let indices :=
-    map (expand_lets upars)
-      (map (subst_instance_constr puinst) cdecl.(cstr_indices)) in
+    (map (subst params #|cdecl.(cstr_args)|)
+      (map (expand_lets_k upars #|cdecl.(cstr_args)|)
+        (map (subst (inds (inductive_mind ind) puinst mdecl.(ind_bodies))
+                    (#|mdecl.(ind_params)| + #|cdecl.(cstr_args)|))
+          (map (subst_instance_constr puinst) cdecl.(cstr_indices))))) in
   let ty := mkApps (lift0 #|cdecl.(cstr_args)| ptm) (indices ++ [cstrapp]) in
   (brctx, ty).
 
@@ -161,6 +164,14 @@ Definition case_branches_types ind mdecl idecl p ptm : list (context * term) :=
 
 Lemma map2_length {A B C} (l : list A) (l' : list B) (f : A -> B -> C) : #|l| = #|l'| -> 
   #|map2 f l l'| = #|l|.
+Proof.
+  induction l in l' |- *; destruct l' => /= //.
+  intros [= eq]. now rewrite IHl.
+Qed.
+
+Lemma map2_set_binder_name_context_assumptions 
+  (l : list aname) (l' : context) : #|l| = #|l'| -> 
+  context_assumptions (map2 set_binder_name l l') = context_assumptions l'.
 Proof.
   induction l in l' |- *; destruct l' => /= //.
   intros [= eq]. now rewrite IHl.
@@ -255,6 +266,18 @@ Proof.
   unfold case_branch_context, case_branch_context_gen; len.
   apply Forall2_length in hl.
   rewrite map2_length //.
+Qed.
+
+Lemma case_branch_context_assumptions {ind mdecl p br cdecl} :
+  wf_branch cdecl br ->
+  context_assumptions (case_branch_context ind mdecl p br.(bcontext) cdecl) = 
+  context_assumptions cdecl.(cstr_args).
+Proof.
+  intros hl.
+  unfold case_branch_context, case_branch_context_gen; len.
+  apply Forall2_length in hl.
+  rewrite /expand_lets_ctx /expand_lets_k_ctx. len.
+  now rewrite map2_set_binder_name_context_assumptions.
 Qed.
 
 Lemma case_branches_contexts_length {ind mdecl idecl p pctx} :

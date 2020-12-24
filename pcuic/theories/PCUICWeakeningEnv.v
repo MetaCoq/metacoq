@@ -501,7 +501,7 @@ Hint Resolve extends_wf_fixpoint extends_wf_cofixpoint : extends.
 Lemma weakening_env `{checker_flags} :
   env_prop (fun Σ Γ t T =>
               forall Σ', wf Σ' -> extends Σ.1 Σ' -> (Σ', Σ.2) ;;; Γ |- t : T)
-           (fun Σ Γ _ =>
+           (fun Σ Γ =>
              forall Σ', wf Σ' -> extends Σ.1 Σ' -> wf_local (Σ', Σ.2) Γ).
 Proof.
   apply typing_ind_env; intros;
@@ -517,11 +517,15 @@ Proof.
     close_Forall. intros; intuition eauto with extends.
   - econstructor; eauto with extends.
     + eapply fix_guard_extends; eauto.
+    + specialize (forall_Σ' _ wfΣ' extΣ).
+      now apply wf_local_app_inv in forall_Σ'.
     + eapply (All_impl X0); simpl; intuition eauto with extends.
       destruct X as [s Hs]; exists s. intuition eauto with extends.
     + eapply All_impl; eauto; simpl; intuition eauto with extends.
   - econstructor; eauto with extends.
     + eapply cofix_guard_extends; eauto.
+    + specialize (forall_Σ' _ wfΣ' extΣ).
+      now apply wf_local_app_inv in forall_Σ'.
     + eapply (All_impl X0); simpl; intuition eauto with extends.
       destruct X as [s Hs]; exists s. intuition eauto with extends.
     + eapply All_impl; eauto; simpl; intuition eauto with extends.

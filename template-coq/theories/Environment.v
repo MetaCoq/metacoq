@@ -285,6 +285,8 @@ Module Environment (T : Term).
     {| cstr_name := c.(cstr_name);
        cstr_args := fold_context (fun x => f (x + npars + arities)) c.(cstr_args);
        cstr_indices := map (f (npars + arities + #|c.(cstr_args)|)) c.(cstr_indices);
+        (* Note only after positivity checking we can ensure that the indices do not mention the 
+           inductive type.. beware of lets! *)
        cstr_type := f arities c.(cstr_type);
        cstr_arity := c.(cstr_arity) |}.
 

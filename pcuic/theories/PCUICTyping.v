@@ -278,9 +278,9 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
     isCoFinite mdecl.(ind_finite) = false ->
     let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
+    wf_branches idecl brs ->
     All2i (fun i cdecl br =>
       let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
-      wf_branch cdecl br *
       ((Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2) *
       (Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps))) 
       0 idecl.(ind_ctors) brs ->
@@ -373,14 +373,13 @@ Definition tybranches {cf} Σ Γ ci mdecl idecl p ps ptm n ctors brs :=
    All2i
   (fun (i : nat) (cdecl : constructor_body) (br : branch term) =>
    let brctxty := case_branch_type ci mdecl idecl p br ptm i cdecl in
-   wf_branch cdecl br *
    (Σ;;; Γ,,, brctxty.1 |- bbody br : brctxty.2
     × Σ;;; Γ,,, brctxty.1 |- brctxty.2 : tSort ps)) n ctors brs.
 
 Definition branches_size {cf} {Σ Γ ci mdecl idecl p ps ptm brs} (typing_size : forall Σ Γ t T, Σ ;;; Γ |- t : T -> size)
   {n ctors}
   (a : tybranches Σ Γ ci mdecl idecl p ps ptm n ctors brs) : size :=
-  (all2i_size _ (fun i x y p => Nat.max (typing_size _ _ _ _ p.2.1) (typing_size _ _ _ _ p.2.2)) a).
+  (all2i_size _ (fun i x y p => Nat.max (typing_size _ _ _ _ p.1) (typing_size _ _ _ _ p.2)) a).
 
 Definition typing_size `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t : T) : size.
 Proof.
@@ -676,10 +675,10 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
         P Σ Γ c (mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices)) ->
         isCoFinite mdecl.(ind_finite) = false ->
         let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
+        wf_branches idecl brs ->
         All2i (fun i cdecl br =>
           let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
-          (wf_branch cdecl br *
-          ∑ brty : (Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2),
+          ((Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2) *
             PΓ Σ (Γ ,,, brctxty.1) *
             (P Σ (Γ ,,, brctxty.1) br.(bbody) brctxty.2 *
             ((Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps) *
@@ -905,20 +904,21 @@ Proof.
         ++ simpl in *. eapply (X13 _ _ _ H); eauto. clear. subst predctx. lia.
         ++ eapply (X14 _ _ _ H0); simpl. lia.
         ++ clear Hdecls. simpl in X13. revert a X13 X14.
-          clear. intros.
+          clear. intros. simpl in X14. clear w0.
           simpl in X14.
           subst ptm predctx; induction a.
           ** constructor.
-          ** destruct r0 as [? [? ?]]. constructor.
-              --- intros brctxty. split; auto.
-                  exists t. repeat split.
+          ** destruct r0 as [? ?]. constructor.
+              --- intros brctxty. 
+                  repeat split.
+                  +++ exact t.
                   +++ eapply (X13 _ _ _ t); eauto. simpl. lia.
                   +++ unshelve eapply (X14 _ _ _ t _); eauto.
                       simpl. lia.
                   +++ simpl; auto with arith.
                   +++ eapply (X14 _ _ _ t0); eauto. simpl; auto with arith.
                       lia.
-              --- apply IHa. auto. intros. apply (X13 _ _ _ Hty). simpl. lia.
+              --- apply IHa; auto. intros. apply (X13 _ _ _ Hty). simpl. lia.
                   intros.
                   eapply (X14 _ _ _ Hty). simpl. lia.
 
@@ -1105,14 +1105,14 @@ Lemma typing_ind_env `{cf : checker_flags} :
           P Σ Γ c (mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices)) ->
           isCoFinite mdecl.(ind_finite) = false ->
           let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
+          wf_branches idecl brs ->          
           All2i (fun i cdecl br =>
           let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
-          wf_branch cdecl br *
-          ∑ brty : (Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2),
+          ((Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2) *
           PΓ Σ (Γ ,,, brctxty.1) *
           (P Σ (Γ ,,, brctxty.1) br.(bbody) brctxty.2 *
             ((Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps) *
-              P Σ (Γ ,,, brctxty.1) brctxty.2 (tSort ps)))) 0 idecl.(ind_ctors) brs ->
+              P Σ (Γ ,,, brctxty.1) brctxty.2 (tSort ps))))) 0 idecl.(ind_ctors) brs ->
           P Σ Γ (tCase ci p c brs) (mkApps ptm (indices ++ [c]))) ->
           
 

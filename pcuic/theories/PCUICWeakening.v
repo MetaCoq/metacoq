@@ -2,7 +2,8 @@
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
   PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICTyping PCUICWeakeningEnv
-  PCUICClosed PCUICReduction PCUICPosition PCUICGeneration.
+  PCUICClosed PCUICReduction PCUICPosition PCUICGeneration
+  PCUICSigmaCalculus PCUICRename.
 
 Require Import ssreflect.
 From Equations Require Import Equations.
@@ -96,37 +97,145 @@ Proof.
   rewrite permute_lift; try easy.
 Qed.
 
-Lemma lift_iota_red n k pars args bctx br :
-  #|skipn pars args| = context_assumptions bctx ->
-  #|br.(bcontext)| = #|bctx| ->
-  lift n k (iota_red pars args bctx br) =
-  iota_red pars (List.map (lift n k) args) (lift_context n k bctx)
-    (map_branch (lift n (#|bctx| + k)) br).
+Lemma weakening_renaming Γ Γ' Γ'' :
+  urenaming (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (Γ ,,, Γ') 
+    (lift_renaming #|Γ''| #|Γ'|).
 Proof.
-  unfold iota_red.
-  rewrite distr_lift_subst map_skipn.
-  intros. f_equal.
-  
-  rewrite /expand_lets /expand_lets_k.
-  rewrite distr_lift_subst. len.
-  rewrite H. rewrite Nat.add_comm.
-  rewrite [lift (context_assumptions (lift_context _ _ _)) _ _]simpl_lift. rewrite H.
-  rewrite nth_map; simpl; auto.
-  now move=> ->.
+  intros i d hnth.
+  unfold lift_renaming.
+  destruct (Nat.leb #|Γ'| i) eqn:leb; [apply Nat.leb_le in leb|eapply Nat.leb_nle in leb].
+  - rewrite -weaken_nth_error_ge //.
+    exists d; split; auto.
+    rewrite !lift_rename rename_compose /=.
+    rewrite /lift_renaming /=.
+    split.
+    * apply rename_ext => k. now nat_compare_specs.
+    * intros b db. exists b. split => //.
+      rewrite !lift_rename rename_compose /=.
+      apply rename_ext => k. rewrite /lift_renaming /=.
+      now nat_compare_specs.
+  - rewrite weaken_nth_error_lt; try lia.
+    rewrite hnth /=. eexists. split; [eauto|].
+    simpl. rewrite !lift_rename !rename_compose /lift_renaming /=.
+    split.
+    * apply rename_ext => k. now repeat nat_compare_specs.
+    * move=> b -> /=. eexists; split; eauto.
+      rewrite !lift_rename !rename_compose /lift_renaming.
+      apply rename_ext => k. simpl. now repeat nat_compare_specs.
+Qed.
+(* 
+Lemma exchange_renaming Γ Γ' Γ'' :
+  urenaming (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (Γ ,,, Γ') 
+    (lift_renaming #|Γ''| #|Γ'|).
+Proof.
+  intros i d hnth.
+  unfold lift_renaming.
+  destruct (Nat.leb #|Γ'| i) eqn:leb; [apply Nat.leb_le in leb|eapply Nat.leb_nle in leb].
+  - rewrite -weaken_nth_error_ge //.
+    exists d; split; auto.
+    rewrite !lift_rename rename_compose /=.
+    rewrite /lift_renaming /=.
+    split.
+    * apply rename_ext => k. now nat_compare_specs.
+    * intros b db. exists b. split => //.
+      rewrite !lift_rename rename_compose /=.
+      apply rename_ext => k. rewrite /lift_renaming /=.
+      now nat_compare_specs.
+  - rewrite weaken_nth_error_lt; try lia.
+    rewrite hnth /=. eexists. split; [eauto|].
+    simpl. rewrite !lift_rename !rename_compose /lift_renaming /=.
+    split.
+    * apply rename_ext => k. now repeat nat_compare_specs.
+    * move=> b -> /=. eexists; split; eauto.
+      rewrite !lift_rename !rename_compose /lift_renaming.
+      apply rename_ext => k. simpl. now repeat nat_compare_specs.
+Qed. *)
+
+
+Lemma All_local_env_fold P f Γ :
+  All_local_env (fun Γ t T => P (fold_context f Γ) (f #|Γ| t) (option_map (f #|Γ|) T)) Γ <~>
+  All_local_env P (fold_context f Γ).
+Proof.
+  split.
+  - induction 1; simpl; rewrite ?fold_context_snoc0; constructor; auto.
+  - induction Γ; simpl; rewrite ?fold_context_snoc0; intros H.
+    * constructor.
+    * destruct a as [na [b|] ty]; depelim H; specialize (IHΓ H); constructor; auto.
 Qed.
 
-Lemma parsubst_empty k a : subst [] k a = a.
+Lemma All_local_env_impl_ind {P Q : context -> term -> option term -> Type} {l} :
+  All_local_env P l ->
+  (forall Γ t T, All_local_env Q Γ -> P Γ t T -> Q Γ t T) ->
+  All_local_env Q l.
 Proof.
-  induction a in k |- * using term_forall_list_ind; simpl; try congruence;
-    try solve [f_equal; eauto; solve_all; eauto].
-
-  - elim (Nat.compare_spec k n); destruct (Nat.leb_spec k n); intros; try easy.
-    + subst. rewrite Nat.sub_diag. simpl. rewrite Nat.sub_0_r. reflexivity.
-    + assert (n - k > 0) by lia.
-      assert (exists n', n - k = S n').
-      * exists (Nat.pred (n - k)). lia.
-      * destruct H2. rewrite H2. simpl. now rewrite Nat.sub_0_r.
+  induction 1; intros; simpl; econstructor; eauto.
 Qed.
+
+Lemma weakening_wf_local {cf: checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γ' Γ''} :
+  wf_local Σ (Γ ,,, Γ'') ->
+  wf_local Σ (Γ ,,, Γ') ->  
+  wf_local Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ').
+Proof.
+  intros wfΓ'' wfΓ'.
+  pose proof (env_prop_wf_local _ _ typing_rename_prop _ wfΣ _ wfΓ'). simpl in X.
+  eapply All_local_env_app_inv in X as [XΓ XΓ'].
+  apply wf_local_app => //.
+  rewrite /lift_context.
+  apply All_local_env_fold.
+  eapply (All_local_env_impl_ind XΓ').
+  intros Δ t [T|] IH; unfold lift_typing; simpl.
+  - intros Hf. red. rewrite -/(lift_context #|Γ''| 0 Δ).
+    rewrite Nat.add_0_r. rewrite !lift_rename. apply Hf.
+    split.
+    + apply wf_local_app; auto.
+      apply All_local_env_fold in IH. apply IH.
+    + apply (weakening_renaming Γ Δ Γ'').
+  - intros [s Hs]; exists s. red.
+    rewrite -/(lift_context #|Γ''| 0 Δ).
+    rewrite Nat.add_0_r !lift_rename. apply Hs.
+    split.
+    + apply wf_local_app; auto.
+      apply All_local_env_fold in IH. apply IH.
+    + apply (weakening_renaming Γ Δ Γ'').
+Qed.
+
+Lemma weakening_typing `{cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γ' Γ''} {t T} :
+  wf_local Σ (Γ ,,, Γ'') ->
+  Σ ;;; Γ ,,, Γ' |- t : T ->
+  Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' |- lift #|Γ''| #|Γ'| t : lift #|Γ''| #|Γ'| T.
+Proof.
+  intros wfext Ht.
+  rewrite !lift_rename.
+  eapply (env_prop_typing _ _ typing_rename_prop); eauto.
+  split.
+  - eapply weakening_wf_local; eauto with pcuic.
+  - now apply weakening_renaming.
+Qed.
+
+Lemma weakening `{cf : checker_flags} Σ Γ Γ' (t : term) T :
+  wf Σ.1 -> wf_local Σ (Γ ,,, Γ') ->
+  Σ ;;; Γ |- t : T ->
+  Σ ;;; Γ ,,, Γ' |- lift0 #|Γ'| t : lift0 #|Γ'| T.
+Proof.
+  intros HΣ HΓΓ' * H.
+  eapply (weakening_typing (Γ' := [])); eauto.
+Qed.
+
+Lemma decompose_prod_assum_ctx ctx t : decompose_prod_assum ctx t =
+  let (ctx', t') := decompose_prod_assum [] t in
+  (ctx ,,, ctx', t').
+Proof.
+  induction t in ctx |- *; simpl; auto.
+  - simpl. rewrite IHt2.
+    rewrite (IHt2 ([] ,, vass _ _)).
+    destruct (decompose_prod_assum [] t2). simpl.
+    unfold snoc. now rewrite app_context_assoc.
+  - simpl. rewrite IHt3.
+    rewrite (IHt3 ([] ,, vdef _ _ _)).
+    destruct (decompose_prod_assum [] t3). simpl.
+    unfold snoc. now rewrite app_context_assoc.
+Qed.
+
 
 Lemma smash_context_lift Δ k n Γ :
   smash_context (lift_context n (k + #|Γ|) Δ) (lift_context n k Γ) =
@@ -154,37 +263,6 @@ Proof.
     rewrite /lift_context // /fold_context /= /map_decl /=.
     now lia_f_equal.
 Qed.
-
-Lemma lift_unfold_fix n k mfix idx narg fn :
-  unfold_fix mfix idx = Some (narg, fn) ->
-  unfold_fix (map (map_def (lift n k) (lift n (#|mfix| + k))) mfix) idx = Some (narg, lift n k fn).
-Proof.
-  unfold unfold_fix.
-  rewrite nth_error_map. destruct (nth_error mfix idx) eqn:Hdef; try congruence.
-  intros [= <- <-]. simpl.
-  repeat f_equal.
-  rewrite (distr_lift_subst_rec _ _ n 0 k).
-  rewrite fix_subst_length. f_equal.
-  unfold fix_subst. rewrite !map_length.
-  generalize #|mfix| at 2 3. induction n0; auto. simpl.
-  f_equal. apply IHn0.
-Qed.
-Hint Resolve lift_unfold_fix : pcuic.
-
-Lemma lift_unfold_cofix n k mfix idx narg fn :
-  unfold_cofix mfix idx = Some (narg, fn) ->
-  unfold_cofix (map (map_def (lift n k) (lift n (#|mfix| + k))) mfix) idx = Some (narg, lift n k fn).
-Proof.
-  unfold unfold_cofix.
-  rewrite nth_error_map. destruct (nth_error mfix idx) eqn:Hdef; try congruence.
-  intros [= <- <-]. simpl. repeat f_equal.
-  rewrite (distr_lift_subst_rec _ _ n 0 k).
-  rewrite cofix_subst_length. f_equal.
-  unfold cofix_subst. rewrite !map_length.
-  generalize #|mfix| at 2 3. induction n0; auto. simpl.
-  f_equal. apply IHn0.
-Qed.
-Hint Resolve lift_unfold_cofix : pcuic.
 
 Lemma decompose_app_rec_lift n k t l :
   let (f, a) := decompose_app_rec t l in
@@ -220,7 +298,6 @@ Hint Resolve lift_is_constructor : core.
 Hint Rewrite lift_subst_instance_constr : lift.
 Hint Rewrite lift_mkApps : lift.
 Hint Rewrite distr_lift_subst distr_lift_subst10 : lift.
-Hint Rewrite lift_iota_red : lift.
 
 Lemma lift_declared_constant `{checker_flags} Σ cst decl n k :
   wf Σ ->
@@ -504,21 +581,6 @@ Proof.
   move/instantiate_params_subst_length: E => -> /=.  do 3 f_equal. lia.
 Qed.
 Hint Rewrite lift_instantiate_params : lift.
-
-Lemma decompose_prod_assum_ctx ctx t : decompose_prod_assum ctx t =
-  let (ctx', t') := decompose_prod_assum [] t in
-  (ctx ,,, ctx', t').
-Proof.
-  induction t in ctx |- *; simpl; auto.
-  - simpl. rewrite IHt2.
-    rewrite (IHt2 ([] ,, vass _ _)).
-    destruct (decompose_prod_assum [] t2). simpl.
-    unfold snoc. now rewrite app_context_assoc.
-  - simpl. rewrite IHt3.
-    rewrite (IHt3 ([] ,, vdef _ _ _)).
-    destruct (decompose_prod_assum [] t3). simpl.
-    unfold snoc. now rewrite app_context_assoc.
-Qed.
 
 Lemma lift_decompose_prod_assum_rec ctx t n k :
   (let (ctx', t') := decompose_prod_assum ctx t in

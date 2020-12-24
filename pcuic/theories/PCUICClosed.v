@@ -623,14 +623,11 @@ Proof.
 Qed.
 
 Set SimplIsCbn.
-(* Lemma ind_case_branches_types_length ci mdecl idecl p pctx brtys :
-  ind_case_branches_types (ci_ind ci) mdecl idecl p pctx brtys ->
-  #| *)
 
 Lemma typecheck_closed `{cf : checker_flags} :
   env_prop (fun Σ Γ t T =>
               closedn #|Γ| t && closedn #|Γ| T)
-           (fun Σ Γ _ => closed_ctx Γ).
+           (fun Σ Γ => closed_ctx Γ).
 Proof.
   assert (X := weaken_env_prop_closed).
   apply typing_ind_env; intros * wfΣ Γ wfΓ *; intros; cbn in *;
@@ -703,11 +700,13 @@ Proof.
     rewrite closedn_mkApps in clty. simpl in clty.
     rewrite forallb_app in clty. move/andP: clty => [clpar clinds].
     rewrite app_context_length in clret.
-    intuition auto.
+    red in H7. eapply Forall2_All2 in H7.
+    eapply All2i_All2_mix_left in X2; eauto.
+    intuition auto. 
     + unfold test_predicate. simpl. rtoProp; eauto.
       now rewrite (case_predicate_context_length H1) in clret.
-    + unfold test_branch. solve_all.
-      move/andP: b1 => [].
+    + unfold test_branch. clear H7. solve_all.
+      move/andP: a0 => [].
       rewrite app_context_length case_branch_context_length //.
     + rewrite closedn_mkApps; auto.
       rewrite closedn_it_mkLambda_or_LetIn //.

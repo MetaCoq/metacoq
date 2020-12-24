@@ -1064,8 +1064,8 @@ From MetaCoq.PCUIC Require Import PCUICCases.
 
 Lemma nl_declared_inductive Σ ind mdecl idecl :
   declared_inductive Σ ind mdecl idecl ->
-  declared_inductive (map nl_global_decl) (on_snd Σ) 
-    (nl_mutual_inductive_body mdecl) ind (nl_one_inductive_body idecl).
+  declared_inductive (map (on_snd nl_global_decl) Σ) ind
+    (nl_mutual_inductive_body mdecl) (nl_one_inductive_body idecl).
 Proof.
   intros []. split.
   - unfold declared_minductive.
@@ -1200,16 +1200,43 @@ Proof.
   all: now rewrite nl_subst_instance_constr.
 Qed.
 
+Lemma map_fold_context f g ctx : map (map_decl f) (fold_context g ctx) = fold_context (fun i => f ∘ g i) ctx.
+Proof.
+  rewrite !fold_context_alt map_mapi. 
+  apply mapi_ext => i d. now rewrite compose_map_decl.
+Qed.
+
+Lemma map_anon_fold_context g g' ctx : 
+  (forall i, nl ∘ g i =1 g' i ∘ nl) ->
+  map (map_decl_anon nl) (fold_context g ctx) = 
+  fold_context g' (map (map_decl_anon nl) ctx).
+Proof.
+  intros hg.
+  rewrite !fold_context_alt map_mapi mapi_map. 
+  apply mapi_ext => i d.
+  rewrite /map_decl /map_decl_anon. len.
+  f_equal.
+  - destruct (decl_body d) => /= //.
+    f_equal. apply hg.
+  - apply hg.
+Qed.
+
 Lemma nl_subst_context s k ctx :
   nlctx (subst_context s k ctx) = 
   subst_context (map nl s) k (nlctx ctx).
 Proof.
   rewrite /nlctx /subst_context.
-  rewrite fold_context_map.
-  induction ctx; cbnr.
-  f_equal. 2: apply IHctx.
-  clear. destruct a as [? [] ?]; unfold map_decl, map_decl_anon; cbn; f_equal.
-  all: now rewrite nl_subst_instance_constr.
+  apply map_anon_fold_context. 
+  intros i x. now rewrite nl_subst.
+Qed.
+
+Lemma nl_lift_context n k ctx :
+  nlctx (lift_context n k ctx) = 
+  lift_context n k (nlctx ctx).
+Proof.
+  rewrite /nlctx /subst_context.
+  apply map_anon_fold_context. 
+  intros i x. now rewrite nl_lift.
 Qed.
 
 Lemma nl_expand_lets_ctx Γ Δ : 
@@ -1217,8 +1244,35 @@ Lemma nl_expand_lets_ctx Γ Δ :
   expand_lets_ctx (nlctx Γ) (nlctx Δ).
 Proof.
   rewrite /expand_lets_ctx /expand_lets_k_ctx.
-  rewrite nl_subst_context. nl_extended_subst nl_lift; len.
+  now rewrite nl_subst_context nl_extended_subst nl_lift_context; len.
 Qed.
+
+Lemma nl_inds ind puinst bodies :
+ map nl (inds ind puinst bodies) =
+  inds ind puinst (map nl_one_inductive_body bodies).
+Proof.
+  rewrite /inds; len.
+  induction #|bodies|; simpl; f_equal; auto.
+Qed.
+
+
+Lemma map_map2 {A B C D} (f : A -> B) (g : C -> D -> A) l l' : 
+  map f (map2 g l l') = map2 (fun x y => f (g x y)) l l'.
+Proof.
+  induction l in l' |- *; destruct l'; simpl; auto. f_equal.
+  apply IHl.
+Qed.
+
+Lemma map2_map {A A' B B' C} (f : A -> B) (f' : A' -> B') (g : B -> B' -> C) l l' : 
+  map2 g (map f l) (map f' l') = map2 (fun x y => g (f x) (f' y)) l l'.
+Proof.
+  induction l in l' |- *; destruct l'; simpl; auto. f_equal.
+  apply IHl.
+Qed.
+
+Lemma nlctx_length Γ : #|nlctx Γ| = #|Γ|.
+Proof. now rewrite map_length. Qed.
+Hint Rewrite nlctx_length : len.
 
 Lemma nl_case_branch_context ind mdecl p br cdecl :
   nlctx (case_branch_context ind mdecl p br cdecl) =
@@ -1228,9 +1282,12 @@ Lemma nl_case_branch_context ind mdecl p br cdecl :
 Proof.
   unfold case_branch_context, case_branch_context_gen. simpl.
   rewrite nlctx_subst_context. f_equal.
-  rewrite nl_expand_lets.
-  
-Admitted.
+  rewrite nl_expand_lets_ctx nlctx_subst_instance_context.
+  f_equal.
+  rewrite nl_subst_context nl_inds nlctx_subst_instance_context; len.
+  f_equal. f_equal.
+  now rewrite /nlctx map_map2 map2_map. 
+Qed.
 
 Lemma nl_case_branch_type ci mdecl idecl p br i cdecl : 
   let ptm :=
@@ -1258,31 +1315,6 @@ Proof.
       now rewrite nl_to_extended_list.
 Qed.
 
-Lemma map_map2 {A B C D} (f : A -> B) (g : C -> D -> A) l l' : 
-  map f (map2 g l l') = map2 (fun x y => f (g x y)) l l'.
-Proof.
-  induction l in l' |- *; destruct l'; simpl; auto. f_equal.
-  apply IHl.
-Qed.
-
-Lemma map2_map {A A' B B' C} (f : A -> B) (f' : A' -> B') (g : B -> B' -> C) l l' : 
-  map2 g (map f l) (map f' l') = map2 (fun x y => g (f x) (f' y)) l l'.
-Proof.
-  induction l in l' |- *; destruct l'; simpl; auto. f_equal.
-  apply IHl.
-Qed.
-
-Lemma nl_inds ind puinst bodies :
- map nl (inds ind puinst bodies) =
-  inds ind puinst (map nl_one_inductive_body bodies).
-Proof.
-  rewrite /inds; len.
-  induction #|bodies|; simpl; f_equal; auto.
-Qed.
-
-Lemma nlctx_length Γ : #|nlctx Γ| = #|Γ|.
-Proof. now rewrite map_length. Qed.
-Hint Rewrite nlctx_length : len.
 
 Lemma nl_wf_predicate mdecl idecl p : 
   wf_predicate mdecl idecl p ->
@@ -1336,12 +1368,15 @@ Proof.
     subst brctx.
     epose proof (nth_error_map (nl_branch nl) c brs).
     rewrite nl_case_branch_context.
-    rewrite H in H2. simpl in H2.
+    rewrite H in H3. simpl in H3.
     change (map anonymize (bcontext br)) with (bcontext (nl_branch nl br)).
     eapply red_iota => //.
     + now eapply nl_declared_constructor.
     + now apply nl_wf_predicate.
     + now apply nl_wf_branch.
+    + rewrite -nl_case_branch_context. 
+      rewrite nl_context_assumptions -H2.
+      now rewrite !List.skipn_length !map_length.
   - rewrite !nl_mkApps. cbn. eapply red_fix with (narg:=narg).
     + unfold unfold_fix in *. rewrite nth_error_map.
       destruct (nth_error mfix idx). 2: discriminate.
@@ -1479,11 +1514,18 @@ Proof.
 Qed.
 *)
 
+Lemma nl_check_one_fix d : check_one_fix d = check_one_fix (map_def_anon nl nl d).
+Proof.
+  destruct d; simpl.
+  rewrite (nl_decompose_prod_assum [] dtype).
+  destruct decompose_prod_assum.
+Admitted.
 
 Lemma nl_wf_fixpoint Σ mfix :
   wf_fixpoint Σ.1 mfix = wf_fixpoint (nlg Σ).1 (map (map_def_anon nl nl) mfix).
 Proof.
   unfold wf_fixpoint.
+  destruct (map check_one_fix mfix) eqn:hmap.
 Admitted.
 
 Lemma nl_wf_cofixpoint Σ mfix :
@@ -1543,7 +1585,7 @@ Axiom nl_cofix_guard : forall Σ Γ mfix,
 
 Lemma typing_nlg {cf : checker_flags} :
   env_prop (fun Σ Γ t T => nlg Σ ;;; nlctx Γ |- nl t : nl T)
-    (fun Σ Γ _ => wf_local (nlg Σ) (nlctx Γ)).
+    (fun Σ Γ => wf_local (nlg Σ) (nlctx Γ)).
 Proof.
   clear.
   apply typing_ind_env; intros; cbn in *;
@@ -1607,16 +1649,16 @@ Proof.
       now rewrite -nlctx_app_context.
     + simpl. now apply nl_is_allowed_elimination.
     + now rewrite nl_mkApps map_app in X4.
+    + now eapply nl_wf_branches.
     + eapply All2i_map, (All2i_impl X5).
       intros i cdecl br.
       set (cbt := case_branch_type _ _ _ _ _ _ _ _) in *.
-      intros (wfb & ((bbodyty & IHbody) & bty) & IHbty).
+      intros (bbodyty & IHbody & bty & IHbty).
       rewrite -nl_case_predicate_context.
       simpl preturn. rewrite -nl_it_mkLambda_or_LetIn.
       rewrite nl_case_branch_type.
       rewrite -/cbt. unfold map_pair. cbn.
       repeat split.
-      * now apply nl_wf_branch.
       * now rewrite nlctx_app_context in IHbody.
       * now rewrite nlctx_app_context in IHbty.
   - destruct pdecl as [pdecl1 pdecl2]; simpl.
@@ -1641,7 +1683,7 @@ Proof.
     constructor.
     + now eapply nl_fix_guard.
     + now rewrite nth_error_map H0.
-    + auto.
+    + rewrite nlctx_app_context in X. now eapply wf_local_app_inv in X.
     + clear -X0.
       apply All_map. eapply All_impl; tea.
       simpl. intros x [s Hs]. now exists s.
@@ -1660,6 +1702,7 @@ Proof.
     constructor; auto.
     + now apply nl_cofix_guard.
     + now rewrite nth_error_map H0.
+    + now rewrite nlctx_app_context in X; apply wf_local_app_inv in X.
     + clear -X0.
       apply All_map. eapply All_impl; tea.
       simpl. intros x [s Hs]. now exists s.

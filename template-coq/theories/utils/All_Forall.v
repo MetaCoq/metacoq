@@ -339,6 +339,15 @@ Proof.
   apply IHX0. inv X; intuition auto.
 Qed.
 
+Lemma All2i_All2_mix_left {A B} {P : A -> B -> Type} {Q : nat -> A -> B -> Type}
+      {n} {l : list A} {l' : list B} :
+  All2 P l l' -> All2i Q n l l' -> All2i (fun i x y => (P x y * Q i x y)%type) n l l'.
+Proof.
+  induction 2; simpl; intros; constructor.
+  inv X; intuition auto.
+  apply IHX0. inv X; intuition auto.
+Qed.
+
 Lemma Forall_All {A : Type} (P : A -> Prop) l :
   Forall P l -> All P l.
 Proof.

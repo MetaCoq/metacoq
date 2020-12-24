@@ -1365,32 +1365,29 @@ Tactic Notation "relativize" open_constr(c) :=
   let x := fresh in
   evar (x : ty); replace c with x; subst x.
 
-Lemma wf_local_renaming Σ Γ Δ : 
-  All_local_env (lift_typing (fun (Σ : global_env_ext) (Γ : context) (t T : term) =>
+Lemma wf_local_app_renaming Σ Γ Δ : 
+  All_local_env (lift_typing (fun (Σ : global_env_ext) (Γ' : context) (t T : term) =>
     forall (Δ : PCUICEnvironment.context) (f : nat -> nat),
-    renaming Σ Δ Γ f -> Σ;;; Δ |- rename f t : rename f T) Σ) 
-    (Γ,,, Δ) ->
+    renaming Σ Δ (Γ ,,, Γ') f -> Σ ;;; Δ |- rename f t : rename f T) Σ) 
+    Δ ->
   forall Δ' f, 
   renaming Σ Δ' Γ f ->
   wf_local Σ (Δ' ,,, rename_context f Δ).
 Proof.
-  intros.
-  destruct X0.
-  eapply All_local_env_app_inv in X as [_ X].
+  intros. destruct X0.
   induction X.
   - apply a.
   - simpl. destruct t0 as [s Hs].
     rewrite rename_context_snoc /=. constructor; auto.
     red. simpl. exists s.
     eapply (Hs (Δ' ,,, rename_context f Γ0) (shiftn #|Γ0| f)).
-    split => //. 
-    now eapply urenaming_context.
+    split => //. now eapply urenaming_context.
   - destruct t0 as [s Hs]. red in t1.
     rewrite rename_context_snoc /=. constructor; auto.
     * red. exists s.
       apply (Hs (Δ' ,,, rename_context f Γ0) (shiftn #|Γ0| f)).
-      split=> //. now eapply urenaming_context.
-    * red. apply t1. split => //.
+      split => //. now eapply urenaming_context.
+    * red. apply t1. split => //. 
       now eapply urenaming_context. 
 Qed.
 
@@ -1568,6 +1565,32 @@ Proof.
   2:{ intros x y. apply (rename_check_one_cofix f mfix). }
   now rewrite hmap.
 Qed.
+(*
+Lemma wf_local_renaming Σ Γ : 
+  All_local_env (lift_typing (fun (Σ : global_env_ext) (Γ : context) (t T : term) =>
+    forall (Δ : PCUICEnvironment.context) (f : nat -> nat),
+    urenaming Δ Γ f -> Σ;;; Δ |- rename f t : rename f T) Σ) Γ ->
+  forall Δ' f, 
+  urenaming Δ' Γ f ->
+  wf_local Σ Δ'.
+Proof.
+  intros. red in X0.
+  induction X.
+  - red in X0.
+  - simpl. destruct t0 as [s Hs].
+    rewrite rename_context_snoc /=. constructor; auto.
+    red. simpl. exists s.
+    eapply (Hs (Δ' ,,, rename_context f Γ0) (shiftn #|Γ0| f)).
+    split => //. 
+    now eapply urenaming_context.
+  - destruct t0 as [s Hs]. red in t1.
+    rewrite rename_context_snoc /=. constructor; auto.
+    * red. exists s.
+      apply (Hs (Δ' ,,, rename_context f Γ0) (shiftn #|Γ0| f)).
+      split=> //. now eapply urenaming_context.
+    * red. apply t1. split => //.
+      now eapply urenaming_context. 
+Qed.*)
 
 Lemma typing_rename_prop : env_prop
   (fun Σ Γ t A =>
@@ -1585,10 +1608,12 @@ Proof.
   - intros Σ wfΣ Γ wfΓ HΓ.
     induction HΓ; constructor; firstorder eauto.
   
-  - intros Σ wfΣ Γ wfΓ n decl isdecl ihΓ Δ f [hΔ hf].
-    simpl. eapply hf in isdecl as h.
+  - intros Σ wfΣ Γ wfΓ n decl isdecl ihΓ Δ f hf.
+    simpl.
+    eapply hf in isdecl as h.
     destruct h as [decl' [isdecl' [h1 h2]]].
-    rewrite h1. econstructor. all: auto.
+    rewrite h1. econstructor. all: auto. apply hf.
+
   - intros Σ wfΣ Γ wfΓ l X H0 Δ f [hΔ hf].
     simpl. constructor. all: auto.
   - intros Σ wfΣ Γ wfΓ na A B s1 s2 X hA ihA hB ihB Δ f hf.
@@ -1664,7 +1689,8 @@ Proof.
       + eapply IHpret.
         rewrite -rename_case_predicate_context //.
         split.
-        ++ eapply wf_local_renaming; eauto.
+        ++ apply All_local_env_app_inv in IHpredctx as [].
+          eapply wf_local_app_renaming; eauto. apply a0.          
         ++ rewrite /predctx.
            rewrite -(case_predicate_context_length (ci:=ci) wfp).
           eapply urenaming_context. apply Hf.
@@ -1684,7 +1710,9 @@ Proof.
         rewrite rename_case_branch_type //.
         rewrite -/brctxty. intros brctx'.
         assert (wf_local Σ (Δ,,, brctx'.1)).
-        { rewrite /brctx'. cbn. eapply wf_local_renaming; tea. }
+        { rewrite /brctx'. cbn.
+          apply All_local_env_app_inv in Hbrctx as [].
+          eapply wf_local_app_renaming; tea. apply a0. }
         repeat split.
         ++ eapply IHbr. 
           split => //.
@@ -1714,7 +1742,8 @@ Proof.
       rewrite List.rev_length. rewrite e. assumption.
 
   - intros Σ wfΣ Γ wfΓ mfix n decl types H1 hdecl X ihmfixt ihmfixb wffix Δ f hf.
-    eapply wf_local_renaming in X; eauto.
+    apply All_local_env_app_inv in X as [_ X].
+    eapply wf_local_app_renaming in X; tea.
     simpl. eapply meta_conv.
     + eapply type_Fix.
       * eapply fix_guard_rename; eauto.
@@ -1737,7 +1766,8 @@ Proof.
     + reflexivity.
 
   - intros Σ wfΣ Γ wfΓ mfix n decl types guard hdecl X ihmfixt ihmfixb wfcofix Δ f hf.
-    eapply wf_local_renaming in X; eauto.
+    apply All_local_env_app_inv in X as [_ X].
+    eapply wf_local_app_renaming in X; eauto.
     simpl. eapply meta_conv.
     + eapply type_CoFix; auto.
       * eapply cofix_guard_rename; eauto.

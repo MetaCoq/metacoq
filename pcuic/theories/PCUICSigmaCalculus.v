@@ -44,9 +44,10 @@ Proof.
   intros x y -> f g Hfg ?. now apply shiftn_ext.
 Qed.
 
-Lemma rename_ext f f' : (forall i, f i = f' i) -> (forall t, rename f t = rename f' t).
+Lemma rename_ext f f' : (f =1 f') -> (rename f =1 rename f').
 Proof.
-  intros. revert f f' H.
+  unfold pointwise_relation.
+  intros H t. revert f f' H.
   elim t using term_forall_list_ind; simpl in |- *; intros; try easy ;
     try (try rewrite H; try rewrite H0 ; try rewrite H1 ; easy);
     try solve [f_equal; solve_all; eauto using shiftn_ext].
@@ -160,7 +161,7 @@ Proof.
   - elim (Nat.leb_spec (k + k') x) => H'.
     + elim (Nat.leb_spec k' (x - k)) => H''.
       ++ rewrite Nat.sub_add_distr.
-         rewrite -> rename_compose. apply rename_ext. intros. lia.
+         rewrite -> rename_compose. apply rename_ext => t. lia.
       ++ simpl. lia.
     + edestruct (Nat.leb_spec k' (x - k)); simpl; lia_f_equal.
   - elim (Nat.leb_spec (k + k') x) => H'; lia_f_equal.

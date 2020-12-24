@@ -18,11 +18,6 @@ Local Set SimplIsCbn.
 Ltac len := autorewrite with len.
 Hint Rewrite reln_length : len.
 
-Tactic Notation "relativize" open_constr(c) := 
-  let ty := type of c in  
-  let x := fresh in
-  evar (x : ty); replace c with x; subst x.
-
 Ltac substu := autorewrite with substu => /=.
 Tactic Notation "len" "in" hyp(id) :=
   autorewrite with len in id; simpl in id.

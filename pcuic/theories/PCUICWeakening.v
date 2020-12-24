@@ -46,7 +46,7 @@ Lemma closed_ctx_lift n k ctx : closed_ctx ctx -> lift_context n k ctx = ctx.
 Proof.
   induction ctx in n, k |- *; auto.
   unfold closed_ctx, id. simpl.
-  rewrite mapi_app forallb_app List.rev_length /= lift_context_snoc0 /snoc Nat.add_0_r.
+  rewrite alli_app List.rev_length /= lift_context_snoc0 /snoc Nat.add_0_r.
   move/andb_and => /= [Hctx /andb_and [Ha _]].
   rewrite IHctx // lift_decl_closed //. now apply: closed_decl_upwards.
 Qed.

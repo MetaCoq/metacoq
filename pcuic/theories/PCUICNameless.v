@@ -1174,9 +1174,6 @@ Proof.
     all: apply IHindctx.
 Qed.
 
-Definition map_pair {A B C D} (f : A -> B) (g : C -> D) (p : A × C) : B × D :=
-  (f p.1, g p.2).
-
 Lemma nl_extended_subst Γ k :
   map nl (extended_subst Γ k) = extended_subst (nlctx Γ) k.
 Proof.

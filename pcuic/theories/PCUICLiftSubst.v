@@ -506,6 +506,28 @@ Proof.
   apply mapi_ext. intros. f_equal. rewrite List.rev_length. f_equal. lia.
 Qed.
 
+Lemma lift_it_mkProd_or_LetIn n k ctx t :
+  lift n k (it_mkProd_or_LetIn ctx t) =
+  it_mkProd_or_LetIn (lift_context n k ctx) (lift n (length ctx + k) t).
+Proof.
+  induction ctx in n, k, t |- *; simpl; try congruence.
+  pose (lift_context_snoc n k ctx a). unfold snoc in e. rewrite -> e. clear e.
+  simpl. rewrite -> IHctx.
+  pose (lift_context_snoc n k ctx a).
+  now destruct a as [na [b|] ty].
+Qed.
+
+Lemma lift_it_mkLambda_or_LetIn n k ctx t :
+  lift n k (it_mkLambda_or_LetIn ctx t) =
+  it_mkLambda_or_LetIn (lift_context n k ctx) (lift n (length ctx + k) t).
+Proof.
+  induction ctx in n, k, t |- *; simpl; try congruence.
+  pose (lift_context_snoc n k ctx a). unfold snoc in e. rewrite -> e. clear e.
+  simpl. rewrite -> IHctx.
+  pose (lift_context_snoc n k ctx a).
+  now destruct a as [na [b|] ty].
+Qed.
+
 Lemma map_lift_lift n k l : map (fun x => lift0 n (lift0 k x)) l = map (lift0 (n + k)) l.
 Proof. apply map_ext => x.
   rewrite simpl_lift; try lia. reflexivity.

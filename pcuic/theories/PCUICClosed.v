@@ -1067,6 +1067,41 @@ Proof.
   autorewrite with len. now rewrite (Nat.add_comm #|Γ|).
 Qed.
 
+Lemma map_subst_closedn (s : list term) (k : nat) l :
+  forallb (closedn k) l -> map (subst s k) l = l.
+Proof.
+  induction l; simpl; auto.
+  move/andP=> [cla cll]. rewrite IHl //.
+  now rewrite subst_closedn.
+Qed.
+
+Lemma closedn_extended_subst_gen Γ k k' : 
+  closedn_ctx k Γ -> 
+  forallb (closedn (k' + k + context_assumptions Γ)) (extended_subst Γ k').
+Proof.
+  induction Γ as [|[? [] ?] ?] in k, k' |- *; simpl; auto;
+  rewrite ?closedn_ctx_cons;
+   move/andP => [clΓ /andP[clb clt]].
+  - rewrite IHΓ //.
+    epose proof (closedn_subst (extended_subst Γ k') (k' + k + context_assumptions Γ) 0).
+    autorewrite with len in H. rewrite andb_true_r.
+    eapply H; auto.
+    replace (k' + k + context_assumptions Γ + #|Γ|)
+    with (k + #|Γ| + (context_assumptions Γ + k')) by lia.
+    eapply closedn_lift. eapply clb.
+  - apply andb_and. split.
+    * apply Nat.ltb_lt; lia.
+    * specialize (IHΓ k (S k') clΓ).
+      red. rewrite -IHΓ. f_equal. f_equal. lia.
+Qed.
+
+Lemma closedn_extended_subst Γ : 
+  closed_ctx Γ -> 
+  forallb (closedn (context_assumptions Γ)) (extended_subst Γ 0).
+Proof.
+  intros clΓ. now apply (closedn_extended_subst_gen Γ 0 0).
+Qed.
+
 Lemma closedn_ctx_expand_lets Γ Δ : 
   closed_ctx (Γ ,,, Δ) ->
   closedn_ctx (context_assumptions Γ) (expand_lets_ctx Γ Δ).
@@ -1074,7 +1109,7 @@ Proof.
   rewrite /expand_lets_ctx /expand_lets_k_ctx.
   intros cl.
   pose proof (closedn_ctx_subst (context_assumptions Γ) 0).
-  rewrite Nat.add_0_r in H0. apply: H0.
+  rewrite Nat.add_0_r in H. apply: H.
   - simpl. len.
     rewrite closedn_ctx_lift //.
     rewrite closedn_ctx_app in cl. now move/andP: cl.
@@ -1200,43 +1235,6 @@ Proof.
   intros decl.
   now eapply declared_projection_closed in decl.
 Qed.
-
-Lemma map_subst_closedn (s : list term) (k : nat) l :
-  forallb (closedn k) l -> map (subst s k) l = l.
-Proof.
-  induction l; simpl; auto.
-  move/andP=> [cla cll]. rewrite IHl //.
-  now rewrite subst_closedn.
-Qed.
-
-Lemma closedn_extended_subst_gen Γ k k' : 
-  closedn_ctx k Γ -> 
-  forallb (closedn (k' + k + context_assumptions Γ)) (extended_subst Γ k').
-Proof.
-  induction Γ as [|[? [] ?] ?] in k, k' |- *; simpl; auto;
-  rewrite ?closedn_ctx_cons;
-   move/andP => [clΓ /andP[clb clt]].
-  - rewrite IHΓ //.
-    epose proof (closedn_subst (extended_subst Γ k') (k' + k + context_assumptions Γ) 0).
-    autorewrite with len in H. rewrite andb_true_r.
-    eapply H; auto.
-    replace (k' + k + context_assumptions Γ + #|Γ|)
-    with (k + #|Γ| + (context_assumptions Γ + k')) by lia.
-    eapply closedn_lift. eapply clb.
-  - apply andb_and. split.
-    * apply Nat.ltb_lt; lia.
-    * specialize (IHΓ k (S k') clΓ).
-      red. rewrite -IHΓ. f_equal. f_equal. lia.
-Qed.
-
-Lemma closedn_extended_subst Γ : 
-  closed_ctx Γ -> 
-  forallb (closedn (context_assumptions Γ)) (extended_subst Γ 0).
-Proof.
-  intros clΓ. now apply (closedn_extended_subst_gen Γ 0 0).
-Qed.
-
-
 Lemma term_closedn_list_ind :
   forall (P : nat -> term -> Type), 
     (forall k (n : nat), n < k -> P k (tRel n)) ->

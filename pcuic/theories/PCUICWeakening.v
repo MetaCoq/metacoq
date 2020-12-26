@@ -172,12 +172,11 @@ Proof.
   - now eapply rename_ext_cond.
 Qed.  
 
-
-Lemma weakening_renaming Γ Γ' Γ'' :
-  urenaming (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (Γ ,,, Γ') 
+Lemma weakening_renaming P Γ Γ' Γ'' :
+  urenaming P (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (Γ ,,, Γ') 
     (lift_renaming #|Γ''| #|Γ'|).
 Proof.
-  intros i d hnth.
+  intros i d hpi hnth.
   unfold lift_renaming.
   destruct (Nat.leb #|Γ'| i) eqn:leb; [apply Nat.leb_le in leb|eapply Nat.leb_nle in leb].
   - rewrite -weaken_nth_error_ge //.
@@ -241,6 +240,9 @@ Proof.
     constructor. lia.
 Qed.
 
+Definition strengthen k n :=
+  fun i => if i <? k then i else (i - n).
+
 Lemma shiftn_strengthen_rel k n i k' : 
   (i < k + k' \/ k + k' + n <= i) ->
   shiftn k (strengthen k' n) i = strengthen (k + k') n i.
@@ -260,15 +262,40 @@ Proof.
   intros. eapply shiftn_strengthen_rel. lia.
 Qed.
 
+Definition strengthen_context (Γ Γs Δ : context) :=
+  Γ ,,, rename_context (strengthen 0 #|Γs|) Δ.
+
+Definition strengthen_rename Δ Γs i :=  
+  if i <? Δ then 
+    strengthen Δ Γs
+  else id.
+
+Lemma lookup_strengthen_contexts Γ Γs Δ i :
+  nth_error (strengthen_context Γ Γs Δ) 
+    (strengthen #|Δ| #|Γs| i) = 
+  option_map (map_decl (rename (strengthen_rename #|Δ| #|Γs| i))) 
+    (nth_error (Γ ,,, Γs ,,, Δ) i).
+Proof.
+  rewrite /strengthen_context /strengthen.
+  nat_compare_specs.
+  * rewrite nth_error_app_lt; len => //.
+    rewrite nth_error_app_lt; len => //.
+    rewrite /rename_context.
+    destruct (nth_error Δ i) eqn:hnth => //.
+    ++ rewrite (nth_error_fold_context _ _ _ _ _ _ hnth); eauto.
+Admitted.
+
 Lemma strenghten_urenaming Γ Γs Δ :
   noccur_between_ctx 0 #|Γs| Δ ->
-  urenaming
+  urenaming (nocc_betweenp #|Δ| #|Γs|)
     (Γ ,,, rename_context (strengthen 0 #|Γs|) Δ)
     (Γ ,,, Γs ,,, Δ)
     (strengthen #|Δ| #|Γs|).
 Proof.
-  intros nocc i d hnth.
-  rewrite lookup_exchange_contexts hnth => /=.
+  intros nocc i d hpi hnth.
+  unfold nocc_betweenp in hpi.
+  rewrite nth_error_strengthen_context.
+  (* rewrite lookup_exchange_contexts hnth => /=.
   eexists; split; eauto.
   pose proof (exchange_lift_rename nocc hnth).
   rewrite !lift_rename !rename_compose /lift_renaming /=. 
@@ -277,8 +304,8 @@ Proof.
     intros ? [= <-]. eexists; split => //.
     rewrite !lift_rename !rename_compose.
     rewrite /lift_renaming /= //. 
-  - split => //.
-Qed.
+  - split => //. *)
+Admitted.
 
 
 (* l, r, p -> r, l, p *)
@@ -497,14 +524,14 @@ Proof.
     now unfold ren_id. }
 Qed.
 
-Lemma exchange_urenaming Γ Γl Γr Δ :
+Lemma exchange_urenaming P Γ Γl Γr Δ :
   noccur_between_ctx 0 #|Γl| Γr ->
-  urenaming
+  urenaming P
     (exchange_contexts Γ Γl Γr Δ)
     (Γ ,,, Γl ,,, Γr ,,, Δ)
     (exchange_renaming #|Γl| #|Γr| #|Δ|).
 Proof.
-  intros nocc i d hnth.
+  intros nocc i d hpi hnth.
   rewrite lookup_exchange_contexts hnth => /=.
   eexists; split; eauto.
   pose proof (exchange_lift_rename nocc hnth).
@@ -550,7 +577,9 @@ Proof.
   eapply (All_local_env_impl_ind XΓ').
   intros Δ t [T|] IH; unfold lift_typing; simpl.
   - intros Hf. red. rewrite -/(lift_context #|Γ''| 0 Δ).
-    rewrite Nat.add_0_r. rewrite !lift_rename. apply Hf.
+    rewrite Nat.add_0_r. rewrite !lift_rename. 
+    eapply (Hf (fun x => true)).
+    2:{  }
     split.
     + apply wf_local_app; auto.
       apply All_local_env_fold in IH. apply IH.
@@ -580,7 +609,7 @@ Lemma weakening_typing `{cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ
 Proof.
   intros wfext Ht.
   rewrite !lift_rename.
-  eapply (env_prop_typing _ _ typing_rename_prop); eauto.
+  eapply (typing_rename); eauto.
   split.
   - eapply weakening_wf_local; eauto with pcuic.
   - now apply weakening_renaming.
@@ -662,7 +691,7 @@ Proof.
       apply Hf. split.
       + apply wf_local_app; auto.
         apply All_local_env_fold in IH. apply IH.
-      +  setoid_rewrite shiftn_exchange_renaming. apply exchange_urenaming. Γ Δ Γ'').
+      + setoid_rewrite shiftn_exchange_renaming. apply exchange_urenaming.
     - intros [s Hs]; exists s. red.
       rewrite -/(lift_context #|Γ''| 0 Δ).
       rewrite Nat.add_0_r !lift_rename. apply Hs.

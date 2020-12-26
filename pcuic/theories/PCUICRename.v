@@ -99,7 +99,6 @@ Proof.
   unfold rename_context. apply fold_context_alt.
 Qed.
 
-
 Lemma lift_renaming_0 k : ren (lift_renaming k 0) = ren (Nat.add k).
 Proof. reflexivity. Qed.
 
@@ -1175,16 +1174,38 @@ Qed.
 Instance all_free_vars_proper : Proper (`=1` ==> Logic.eq ==> Logic.eq) all_free_vars.
 Proof. intros f g Hfg ? ? ->. now apply all_free_vars_ext. Qed.
 
-(* Lemma all_free_vars_true (p : nat -> bool) k t : (forall k, p k) -> all_free_vars p k t.
+Definition closedP (n : nat) (P : nat -> bool) := 
+  fun i => if i <? n then P i else false.
+  
+Instance closedP_proper n : Proper (`=1` ==> `=1`) (closedP n).
+Proof. intros f g Hfg. intros i; rewrite /closedP. now rewrite Hfg. Qed.
+  
+Lemma shiftnP_closedP k n P : shiftnP k (closedP n P) =1 closedP (k + n) (shiftnP k P).
 Proof.
-  intros. revert k.
-  induction t using PCUICInduction.term_forall_list_ind; simpl => //; solve_all.
-  all:try now rewrite ?IHt1 ?IHt2 ?IHt3.
-  - nat_compare_specs => //.
-  - rewrite i IHt /=. rtoProp. split; solve_all.
-  - unfold test_def. now rewrite a b.
-  - unfold test_def. now rewrite a b.
-Qed. *)
+  intros i; rewrite /shiftnP /closedP.
+  repeat nat_compare_specs => //.
+Qed.
+
+Lemma shiftnP_xpredT n : shiftnP n xpredT =1 xpredT.
+Proof. intros i; rewrite /shiftnP. nat_compare_specs => //. Qed.
+
+Lemma closed_all_free_vars n t : closedn n t -> all_free_vars (closedP n xpredT) t.
+Proof.
+  revert n t.
+  apply: term_closedn_list_ind; simpl => //; intros.
+  all:(rewrite ?shiftnP_closedP ?shiftnP_xpredT).
+  all:try (rtoProp; now rewrite ?IHt1 ?IHt2 ?IHt3).
+  - rewrite /closedP /=. now nat_compare_specs.
+  - solve_all.
+  - destruct X. rtoProp. intuition solve_all.
+    now rewrite shiftnP_closedP shiftnP_xpredT.
+  - unfold test_def. solve_all.
+    rewrite a. rewrite shiftnP_closedP shiftnP_xpredT.
+    now len in b.
+  - unfold test_def; solve_all. 
+    rewrite a. rewrite shiftnP_closedP shiftnP_xpredT.
+    now len in b.
+Qed.
 
 Lemma shiftnP_impl (p q : nat -> bool) : (forall i, p i -> q i) ->
   forall n i, shiftnP n p i -> shiftnP n q i.
@@ -1220,17 +1241,6 @@ Definition nocc_between k n t :=
   (all_free_vars (nocc_betweenp k n) t).
 
 Definition noccur_shift p k := fun i => (i <? k) || p (i - k).
-Require Import FunctionalExtensionality.
-(* 
-Lemma nocc_between_noccur_between k n t : 
-  noccur_between k n t = nocc_between k n t.
-Proof.
-  intros. revert t k.
-  induction t using PCUICInduction.term_forall_list_ind; simpl => //.
-  - rewrite /nocc_between /nocc_betweenp /=. solve_all.
-  - admit.
-  - intros. rewrite IHt1 IHt2 /nocc_between /nocc_betweenp /=.
-Admitted. *)
 
 Lemma weakenable_nocc k : weakenable_pred (nocc_betweenp k).
 Proof.
@@ -1476,9 +1486,6 @@ Proof.
       now eapply urenaming_context.
     * now len.
 Qed.
-
-Definition closedP (n : nat) (P : nat -> bool) := 
-  fun i => if i <? n then P i else false.
 
 Lemma red1_all_free_vars {P Σ Γ u v} {wfΣ : wf Σ} :
   all_free_vars (closedP #|Γ| P) u ->
@@ -1840,12 +1847,6 @@ Proof.
       now eapply urenaming_context. 
 Qed.*)
 
-Lemma shiftnP_closedP k n P : shiftnP k (closedP n P) =1 closedP (k + n) (shiftnP k P).
-Proof.
-  intros i; rewrite /shiftnP /closedP.
-  repeat nat_compare_specs => //.
-Qed.
-
 Lemma renaming_extP P P' Σ Γ Δ f :
   P =1 P' ->
   renaming P Σ Γ Δ f -> renaming P' Σ Γ Δ f.
@@ -2069,7 +2070,7 @@ Admitted.
       apply hf.
 Qed.
 *)
-Lemma typing_rename :
+Lemma typing_rename_P :
   forall P Σ Γ Δ f t A,
     wf Σ.1 ->
     renaming (closedP #|Γ| P) Σ Δ Γ f ->
@@ -2082,4 +2083,45 @@ Proof.
   apply typing_rename_prop.
 Qed.
 
+Lemma typing_rename :
+  forall Σ Γ Δ f t A,
+    wf Σ.1 ->
+    renaming (closedP #|Γ| xpredT) Σ Δ Γ f ->
+    Σ ;;; Γ |- t : A ->
+    Σ ;;; Δ |- rename f t : rename f A.
+Proof.
+  intros Σ Γ Δ f t A hΣ hf h.
+  eapply typing_rename_P; eauto.
+  eapply closed_all_free_vars.
+  now eapply subject_closed in h.
+Qed.
+
+Lemma typing_rename_prop' : env_prop
+  (fun Σ Γ t A =>
+    forall Δ f,
+    renaming (closedP #|Γ| xpredT) Σ Δ Γ f ->
+    Σ ;;; Δ |- rename f t : rename f A)
+   (fun Σ Γ =>
+   All_local_env
+   (lift_typing (fun (Σ : global_env_ext) (Γ : context) (t T : term)
+    =>
+    forall P (Δ : PCUICEnvironment.context) (f : nat -> nat),
+    renaming (closedP #|Γ| P) Σ Δ Γ f -> 
+    Σ;;; Δ |- rename f t : rename f T) Σ) Γ).
+Proof.
+  red. intros.
+  destruct (typing_rename_prop Σ wfΣ Γ t T ty) as [? []].
+  split.
+  - eapply on_global_env_impl. 2:eapply f.
+    intros.
+    red in X0. destruct T0; red.
+    * intros.
+      specialize (X0 xpredT _ _ X1).
+      
+
+
+  destruct X.
+
 End Renaming.
+
+

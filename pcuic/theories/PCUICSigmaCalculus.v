@@ -1233,3 +1233,257 @@ Proof.
   len. move/nth_error_idsn_Some.
   now rewrite hnth => [= ->].
 Qed.
+
+Lemma subst_consn_ids_rel_ren n k f : (idsn n ⋅n (tRel k ⋅ ren f) =1 ren (ren_ids n ⋅n (subst_cons_gen k f)))%sigma.
+Proof.
+  intros i.
+  destruct (Nat.leb_spec n i).
+  - rewrite subst_consn_ge idsn_length //.
+    unfold ren. f_equal. rewrite subst_consn_ge ren_ids_length; auto.
+    unfold subst_cons_gen. destruct (i - n) eqn:eqin.
+    * simpl. auto.
+    * simpl. reflexivity.
+  - assert (Hr:i < #|ren_ids n|) by (rewrite ren_ids_length; lia).
+    assert (Hi:i < #|idsn n|) by (rewrite idsn_length; lia).
+    destruct (subst_consn_lt Hi) as [x' [Hnth He]].
+    destruct (subst_consn_lt Hr) as [x'' [Hnth' He']].
+    rewrite (idsn_lt H) in Hnth.
+    rewrite (ren_ids_lt H) in Hnth'.
+    injection Hnth as <-. injection Hnth' as <-. rewrite He.
+    unfold ren. now rewrite He'.
+Qed.
+
+Arguments Nat.sub : simpl never.
+
+(** The central lemma to show that let expansion commutes with lifting and substitution *)
+Lemma subst_reli_lift_id i n t : i <= n ->
+  subst [tRel i] n (lift (S i) (S n) t) = (lift i n t).
+Proof.
+  intros ltin.
+  sigma.
+  apply inst_ext.
+  unfold Upn. sigma. unfold shiftk at 1 => /=.
+  simpl.
+  rewrite ren_shiftk. rewrite subst_consn_ids_rel_ren.
+  unfold lift_renaming. rewrite compose_ren.
+  intros i'. unfold ren, ids; simpl. f_equal.
+  elim: Nat.leb_spec => H'.
+  * unfold subst_consn, subst_cons_gen.
+    elim: nth_error_spec => [i'' e l|].
+    { rewrite ren_ids_length /= in l. lia. }
+    rewrite ren_ids_length /=.
+    intros Hn. destruct (S (i + i') - n) eqn:?; try lia.
+    elim: (Nat.leb_spec n i'); try lia.
+  * unfold subst_consn, subst_cons_gen.
+    elim: nth_error_spec => [i'' e l|].
+    { rewrite (@ren_ids_lt n i') // in e.
+      { rewrite ren_ids_length // in l. }
+    noconf e. rewrite ren_ids_length in l. 
+    elim: Nat.leb_spec; try lia. }
+    rewrite ren_ids_length /=.
+    intros. destruct (i' - n) eqn:?; try lia.
+    elim: Nat.leb_spec; try lia.
+Qed.
+
+Lemma subst_context_lift_id Γ k n : n <= k -> subst_context [tRel n] k (lift_context (S n) (S k) Γ) = lift_context n k Γ.
+Proof.
+  intros nk.
+  rewrite subst_context_alt !lift_context_alt.
+  rewrite mapi_compose.
+  apply mapi_ext; len.
+  intros n' [? [?|] ?]; unfold lift_decl, subst_decl, map_decl; simpl.
+  * intros. now rewrite !Nat.add_succ_r !subst_reli_lift_id //.
+  * f_equal. now rewrite !Nat.add_succ_r !subst_reli_lift_id //.
+Qed.
+
+Lemma expand_lets_k_vass Γ na ty k t : 
+  expand_lets_k (Γ ++ [{| decl_name := na; decl_body := None; decl_type := ty |}]) k t =
+  expand_lets_k Γ k t.
+Proof.
+  rewrite /expand_lets /expand_lets_k; len.
+  rewrite extended_subst_app /=.
+  rewrite subst_app_simpl. simpl. len.
+  rewrite !Nat.add_1_r.
+  rewrite subst_context_lift_id // lift0_context. f_equal.
+  rewrite Nat.add_succ_r.
+  rewrite subst_reli_lift_id //.
+  move: (context_assumptions_length_bound Γ); lia.
+Qed.
+
+Lemma expand_lets_vass Γ na ty t : 
+  expand_lets (Γ ++ [{| decl_name := na; decl_body := None; decl_type := ty |}]) t =
+  expand_lets Γ t.
+Proof.
+  rewrite /expand_lets; apply expand_lets_k_vass.
+Qed.
+
+Lemma expand_lets_k_vdef Γ na b ty k t : 
+  expand_lets_k (Γ ++ [{| decl_name := na; decl_body := Some b; decl_type := ty |}]) k t =
+  expand_lets_k (subst_context [b] 0 Γ) k (subst [b] (k + #|Γ|) t).
+Proof.
+  rewrite /expand_lets /expand_lets_k; len.
+  rewrite extended_subst_app /=.
+  rewrite subst_app_simpl. simpl. len.
+  rewrite !subst_empty lift0_id lift0_context.
+  epose proof (distr_lift_subst_rec _ [b] (context_assumptions Γ) (k + #|Γ|) 0).
+  rewrite !Nat.add_0_r in H.
+  f_equal. simpl in H. rewrite Nat.add_assoc.
+  rewrite <- H.
+  reflexivity.
+Qed.
+
+Lemma expand_lets_vdef Γ na b ty t : 
+  expand_lets (Γ ++ [{| decl_name := na; decl_body := Some b; decl_type := ty |}]) t =
+  expand_lets (subst_context [b] 0 Γ) (subst [b] #|Γ| t).
+Proof.
+  rewrite /expand_lets; apply expand_lets_k_vdef.
+Qed.
+
+Definition expand_lets_k_ctx_vass Γ k Δ na ty :
+  expand_lets_k_ctx Γ k (Δ ++ [{| decl_name := na; decl_body := None; decl_type := ty |}]) =
+  expand_lets_k_ctx Γ (S k) Δ ++ [{| decl_name := na; decl_body := None; decl_type :=
+    expand_lets_k Γ k ty |}].
+Proof. 
+  now  rewrite /expand_lets_k_ctx lift_context_app subst_context_app /=; simpl.
+Qed.
+
+Definition expand_lets_k_ctx_decl Γ k Δ d :
+  expand_lets_k_ctx Γ k (Δ ++ [d]) = expand_lets_k_ctx Γ (S k) Δ ++ [map_decl (expand_lets_k Γ k) d].
+Proof. 
+  rewrite /expand_lets_k_ctx lift_context_app subst_context_app /=; simpl.
+  unfold app_context. simpl.
+  rewrite /subst_context /fold_context /=.
+  f_equal. rewrite compose_map_decl. f_equal.
+Qed.
+
+Lemma expand_lets_nil t : expand_lets [] t = t.
+Proof. by rewrite /expand_lets /expand_lets_k /= subst_empty lift0_id. Qed.
+
+Lemma context_assumptions_context {Γ} :
+  assumption_context Γ -> 
+  context_assumptions Γ = #|Γ|.
+Proof.
+  induction 1; simpl; auto.
+Qed.
+
+Lemma assumption_context_app Γ Γ' :
+  assumption_context (Γ' ,,, Γ) ->
+  assumption_context Γ * assumption_context Γ'.
+Proof.
+  induction Γ; simpl; split; try constructor; auto.
+  - depelim H. constructor; auto. now eapply IHΓ.
+  - depelim H. now eapply IHΓ.
+Qed.
+
+Lemma subst_app_context s s' Γ : subst_context (s ++ s') 0 Γ = subst_context s 0 (subst_context s' #|s| Γ).
+Proof.
+  induction Γ; simpl; auto.
+  rewrite !subst_context_snoc /= /subst_decl /map_decl /=. simpl.
+  rewrite IHΓ. f_equal. f_equal.
+  - destruct a as [na [b|] ty]; simpl; auto.
+    f_equal. rewrite subst_context_length Nat.add_0_r.
+    now rewrite subst_app_simpl.
+  - rewrite subst_context_length Nat.add_0_r.
+    now rewrite subst_app_simpl.
+Qed.
+
+Lemma expand_lets_assumption_context Γ Δ :
+  assumption_context Γ -> expand_lets_ctx Γ Δ = Δ.
+Proof.
+  induction Γ using rev_ind.
+  - by rewrite /expand_lets_ctx /expand_lets_k_ctx /= lift0_context subst0_context.
+  - intros ass. eapply assumption_context_app in ass as [assl assx].
+    depelim assx.
+    rewrite /expand_lets_ctx /expand_lets_k_ctx; len; simpl.
+    rewrite extended_subst_app /=. 
+    rewrite subst_app_context /=; len.
+    rewrite subst_context_lift_id // lift0_context.
+    rewrite (context_assumptions_context assl). simpl.
+    rewrite !Nat.add_1_r subst_context_lift_id //.
+    rewrite /expand_lets_ctx /expand_lets_k_ctx in IHΓ.
+    rewrite (context_assumptions_context assl) in IHΓ .
+    now simpl in IHΓ.
+Qed.
+
+Lemma subst_extended_subst s Γ k : extended_subst (subst_context s k Γ) 0 = 
+  map (subst s (k + context_assumptions Γ)) (extended_subst Γ 0).
+Proof.
+  induction Γ as [|[na [b|] ty] Γ]; simpl; auto; rewrite subst_context_snoc /=;
+    autorewrite with len; f_equal; auto.
+  - rewrite IHΓ.
+    rewrite commut_lift_subst_rec; try lia.
+    rewrite distr_subst. now len.
+  - elim: Nat.leb_spec => //. lia.
+  - rewrite ? (lift_extended_subst _ 1); rewrite IHΓ. 
+    rewrite !map_map_compose. apply map_ext.
+    intros x. 
+    erewrite (commut_lift_subst_rec); lia_f_equal.
+Qed.
+
+Lemma expand_lets_subst_comm Γ s : 
+  expand_lets (subst_context s 0 Γ) ∘ subst s #|Γ| =1 subst s (context_assumptions Γ) ∘ expand_lets Γ.
+Proof.
+  unfold expand_lets, expand_lets_k; simpl; intros x. len.
+  rewrite !subst_extended_subst.
+  rewrite distr_subst. f_equal; len.
+  now rewrite commut_lift_subst_rec.
+Qed.
+
+Lemma map_expand_lets_subst_comm Γ s :
+  map (expand_lets (subst_context s 0 Γ)) ∘ (map (subst s #|Γ|)) =1 
+  map (subst s (context_assumptions Γ)) ∘ (map (expand_lets Γ)).
+Proof.
+  intros l. rewrite !map_map_compose.
+  apply map_ext. intros x; apply expand_lets_subst_comm.
+Qed.
+
+Lemma map_subst_expand_lets s Γ : 
+  context_assumptions Γ = #|s| ->
+  subst0 (map (subst0 s) (extended_subst Γ 0)) =1 subst0 s ∘ expand_lets Γ.
+Proof.
+  intros Hs x; unfold expand_lets, expand_lets_k.
+  rewrite distr_subst. f_equal.
+  len.
+  simpl. rewrite simpl_subst_k //.
+Qed.
+
+Lemma map_subst_expand_lets_k s Γ k x : 
+  context_assumptions Γ = #|s| ->
+  subst (map (subst0 s) (extended_subst Γ 0)) k x = (subst s k ∘ expand_lets_k Γ k) x.
+Proof.
+  intros Hs; unfold expand_lets, expand_lets_k.
+  epose proof (distr_subst_rec _ _ _ 0 _). rewrite -> Nat.add_0_r in H.
+  rewrite -> H. clear H. f_equal.
+  len.
+  simpl. rewrite simpl_subst_k //.
+Qed.
+
+Lemma subst_context_map_subst_expand_lets s Γ Δ : 
+  context_assumptions Γ = #|s| ->
+  subst_context (map (subst0 s) (extended_subst Γ 0)) 0 Δ = subst_context s 0 (expand_lets_ctx Γ Δ).
+Proof.
+  intros Hs. rewrite !subst_context_alt.
+  unfold expand_lets_ctx, expand_lets_k_ctx.
+  rewrite subst_context_alt lift_context_alt. len.
+  rewrite !mapi_compose. apply mapi_ext.
+  intros n x. unfold subst_decl, lift_decl.
+  rewrite !compose_map_decl. apply map_decl_ext.
+  intros. simpl. rewrite !Nat.add_0_r.
+  generalize (Nat.pred #|Δ| - n). intros.
+  rewrite map_subst_expand_lets_k //.
+Qed.
+
+Lemma subst_context_map_subst_expand_lets_k s Γ Δ k : 
+  context_assumptions Γ = #|s| ->
+  subst_context (map (subst0 s) (extended_subst Γ 0)) k Δ = subst_context s k (expand_lets_k_ctx Γ k Δ).
+Proof.
+  intros Hs. rewrite !subst_context_alt.
+  unfold expand_lets_ctx, expand_lets_k_ctx.
+  rewrite subst_context_alt lift_context_alt. len.
+  rewrite !mapi_compose. apply mapi_ext.
+  intros n x. unfold subst_decl, lift_decl.
+  rewrite !compose_map_decl. apply map_decl_ext.
+  intros. simpl.
+  rewrite map_subst_expand_lets_k //. f_equal.
+  rewrite /expand_lets_k. lia_f_equal.
+Qed.

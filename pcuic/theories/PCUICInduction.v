@@ -318,3 +318,31 @@ Proof.
     apply auxt'. intros. apply auxt.
     hnf in *; cbn in *. unfold mfixpoint_size, def_size in *. lia. 
 Defined.
+
+Lemma ctx_length_ind (P : context -> Type) (p0 : P [])
+  (pS : forall d Γ, (forall Γ', #|Γ'| <= #|Γ|  -> P Γ') -> P (d :: Γ)) 
+  Γ : P Γ.
+Proof.
+  generalize (le_n #|Γ|).
+  generalize #|Γ| at 2.
+  induction n in Γ |- *.
+  destruct Γ; [|simpl; intros; elimtype False; lia].
+  intros. apply p0.
+  intros.
+  destruct Γ; simpl in *.
+  apply p0. apply pS. intros. apply IHn. simpl. lia.
+Qed.
+
+Lemma ctx_length_rev_ind (P : context -> Type) (p0 : P [])
+  (pS : forall d Γ, (forall Γ', #|Γ'| <= #|Γ|  -> P Γ') -> P (Γ ++ [d])) 
+  Γ : P Γ.
+Proof.
+  generalize (le_n #|Γ|).
+  generalize #|Γ| at 2.
+  induction n in Γ |- *.
+  destruct Γ using MCList.rev_ind; [|simpl; rewrite app_length; simpl; intros; elimtype False; try lia].
+  intros. apply p0.
+  destruct Γ using MCList.rev_ind; simpl in *; rewrite ?app_length; simpl; intros Hlen.
+  intros. apply p0.
+  apply pS. intros. apply IHn. simpl. lia.
+Qed.

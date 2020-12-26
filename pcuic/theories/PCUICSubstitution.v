@@ -2485,6 +2485,19 @@ Qed.
 
 (* TODO Move to liftsubst *)
 
+Lemma expand_lets_subst_comm' Γ s k x : 
+  closedn (k + #|Γ|) x ->
+  expand_lets (subst_context s k Γ) x = subst s (k + context_assumptions Γ) (expand_lets Γ x).
+Proof.
+  unfold expand_lets, expand_lets_k; simpl; intros clx.
+  len.
+  rewrite !subst_extended_subst.
+  rewrite distr_subst. f_equal.
+  len. rewrite subst_closedn //.
+  rewrite Nat.add_assoc; eapply closedn_lift.
+  now rewrite Nat.add_comm.
+Qed.
+
 Lemma subst_context_comm s s' Γ :
   subst_context s 0 (subst_context s' 0 Γ) =
   subst_context (map (subst s 0) s' ++ s) 0 Γ.
@@ -2508,18 +2521,6 @@ Proof.
     rewrite subst_app_simpl.
     rewrite distr_subst_rec. rewrite Nat.add_0_r; f_equal; try lia.
     rewrite map_length. f_equal. lia.
-Qed.
-
-Lemma subst_app_context s s' Γ : subst_context (s ++ s') 0 Γ = subst_context s 0 (subst_context s' #|s| Γ).
-Proof.
-  induction Γ; simpl; auto.
-  rewrite !subst_context_snoc /= /subst_decl /map_decl /=. simpl.
-  rewrite IHΓ. f_equal. f_equal.
-  - destruct a as [na [b|] ty]; simpl; auto.
-    f_equal. rewrite subst_context_length Nat.add_0_r.
-    now rewrite subst_app_simpl.
-  - rewrite subst_context_length Nat.add_0_r.
-    now rewrite subst_app_simpl.
 Qed.
 
 Lemma context_assumptions_subst s n Γ :

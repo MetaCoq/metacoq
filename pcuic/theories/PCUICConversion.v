@@ -994,15 +994,6 @@ Section Inversions.
 
 End Inversions.
 
-Lemma assumption_context_app Γ Γ' :
-  assumption_context (Γ' ,,, Γ) ->
-  assumption_context Γ * assumption_context Γ'.
-Proof.
-  induction Γ; simpl; split; try constructor; auto.
-  - depelim H. constructor; auto. now eapply IHΓ.
-  - depelim H. now eapply IHΓ.
-Qed.
-
 (* Unused... *)
 Lemma it_mkProd_or_LetIn_ass_inv {cf : checker_flags} (Σ : global_env_ext) Γ ctx ctx' s s' :
   wf Σ ->

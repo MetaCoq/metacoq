@@ -475,14 +475,6 @@ Proof.
   repeat nat_compare_specs; lia.
 Qed. *)
 
-Lemma alli_Alli {A} (p : nat -> A -> bool) n l : 
-  alli p n l <~> Alli p n l.
-Proof.
-  destruct (allbiP p p n l).
-  - intros. destruct (p i x); now constructor.
-  - split; eauto.
-  - split; eauto. by [].
-Qed.
 
 Lemma nth_error_noccur_between_ctx k n Γ i d : 
   noccur_between_ctx k n Γ -> 

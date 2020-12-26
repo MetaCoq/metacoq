@@ -1,4 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
+From Coq Require Import Morphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
   PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICTyping PCUICWeakeningEnv
@@ -7,6 +8,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInducti
 
 Require Import ssreflect.
 From Equations Require Import Equations.
+
+Implicit Types cf : checker_flags.
 
 (** * Weakening lemmas for typing derivations.
 
@@ -97,6 +100,79 @@ Proof.
   rewrite permute_lift; try easy.
 Qed.
 
+Definition noccur_between_decl k n d :=
+  option_default (noccur_between k n) d.(decl_body) true && 
+  noccur_between k n d.(decl_type).
+
+Definition noccur_between_ctx k n (t : context) : bool :=
+  alli (fun k' => noccur_between_decl (k + k') n) 0 (List.rev t).
+
+Lemma noccur_between_ctx_cons k n d Γ : 
+  noccur_between_ctx k n (d :: Γ) = 
+  noccur_between_decl (k + #|Γ|) n d && noccur_between_ctx k n Γ.
+Proof.
+  unfold noccur_between_ctx.
+  simpl. rewrite alli_app /= andb_true_r.
+  now rewrite Nat.add_0_r List.rev_length andb_comm.
+Qed.
+
+Lemma All_local_env_eq P ctx ctx' :
+  All_local_env P ctx -> 
+  ctx = ctx' ->
+  All_local_env P ctx'.
+Proof. now intros H ->. Qed.
+
+Lemma shiftn_ext_noccur_between f f' k n k' i :
+  (i < k' + k \/ k' + k + n <= i) ->
+  (forall i, i < k \/ k + n <= i -> f i = f' i) ->
+  shiftn k' f i = shiftn k' f' i.
+Proof.
+  intros.
+  unfold shiftn. destruct (Nat.ltb_spec i k').
+  - auto.
+  - rewrite H0; auto. lia.
+Qed.
+
+Lemma rename_ext_cond f f' k n : (forall i, i < k \/ k + n <= i -> f i = f' i) -> 
+  (forall t, noccur_between k n t -> rename f t = rename f' t).
+Proof.
+intros. revert k n t H0 f f' H.
+apply: term_noccur_between_list_ind; simpl in |- *; intros; try easy ;
+  try (try rewrite H; try rewrite H0 ; try rewrite H1 ; easy);
+  try solve [f_equal; solve_all].
+- f_equal; auto. apply H0. intros.
+  eapply (shiftn_ext_noccur_between f f' k n); eauto.
+- f_equal; auto. apply H0. intros.
+  eapply (shiftn_ext_noccur_between f f' k n); eauto.
+- f_equal; auto. eapply H1. intros.
+  eapply (shiftn_ext_noccur_between f f' k n); eauto.
+- destruct X. f_equal; auto; solve_all.
+  * apply e. intros.
+    eapply (shiftn_ext_noccur_between f f' k n); eauto.
+  * apply map_branch_eq_spec. apply H1.
+    intros; eapply (shiftn_ext_noccur_between f f' k n); eauto.
+- red in X. f_equal; solve_all.
+  eapply map_def_eq_spec; auto. apply b.
+  rewrite fix_context_length.
+  intros; eapply (shiftn_ext_noccur_between f f' k n); eauto.
+- f_equal; auto. red in X. solve_all.
+  eapply map_def_eq_spec; auto. apply b.
+  rewrite fix_context_length.
+  intros. eapply (shiftn_ext_noccur_between f f' k n); eauto.
+Qed.
+
+Lemma rename_decl_ext_cond f f' k n : (forall i, i < k \/ k + n <= i -> f i = f' i) -> 
+  (forall t, noccur_between_decl k n t -> rename_decl f t = rename_decl f' t).
+Proof.
+  intros Hi d. move/andb_and=> [clb clt].
+  rewrite /rename_decl.
+  destruct d as [na [b|] ty] => /=; rewrite /map_decl /=; simpl in *; f_equal.
+  - f_equal. now eapply rename_ext_cond.
+  - now eapply rename_ext_cond.
+  - now eapply rename_ext_cond.
+Qed.  
+
+
 Lemma weakening_renaming Γ Γ' Γ'' :
   urenaming (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (Γ ,,, Γ') 
     (lift_renaming #|Γ''| #|Γ'|).
@@ -123,34 +199,323 @@ Proof.
       rewrite !lift_rename !rename_compose /lift_renaming.
       apply rename_ext => k. simpl. now repeat nat_compare_specs.
 Qed.
-(* 
-Lemma exchange_renaming Γ Γ' Γ'' :
-  urenaming (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (Γ ,,, Γ') 
-    (lift_renaming #|Γ''| #|Γ'|).
+
+Variant lookup_decl_spec Γ Δ i : option context_decl -> Type :=
+| lookup_head d : i < #|Δ| ->
+  nth_error Δ i = Some d -> lookup_decl_spec Γ Δ i (Some d)
+| lookup_tail d : #|Δ| <= i < #|Γ| + #|Δ| ->
+  nth_error Γ (i - #|Δ|) = Some d ->
+  lookup_decl_spec Γ Δ i (Some d)
+| lookup_above : #|Γ| + #|Δ| <= i -> lookup_decl_spec Γ Δ i None.
+
+Lemma lookup_declP Γ Δ i : lookup_decl_spec Γ Δ i (nth_error (Γ ,,, Δ) i).
 Proof.
-  intros i d hnth.
-  unfold lift_renaming.
-  destruct (Nat.leb #|Γ'| i) eqn:leb; [apply Nat.leb_le in leb|eapply Nat.leb_nle in leb].
-  - rewrite -weaken_nth_error_ge //.
-    exists d; split; auto.
-    rewrite !lift_rename rename_compose /=.
-    rewrite /lift_renaming /=.
-    split.
-    * apply rename_ext => k. now nat_compare_specs.
-    * intros b db. exists b. split => //.
-      rewrite !lift_rename rename_compose /=.
-      apply rename_ext => k. rewrite /lift_renaming /=.
-      now nat_compare_specs.
-  - rewrite weaken_nth_error_lt; try lia.
-    rewrite hnth /=. eexists. split; [eauto|].
-    simpl. rewrite !lift_rename !rename_compose /lift_renaming /=.
-    split.
-    * apply rename_ext => k. now repeat nat_compare_specs.
-    * move=> b -> /=. eexists; split; eauto.
-      rewrite !lift_rename !rename_compose /lift_renaming.
-      apply rename_ext => k. simpl. now repeat nat_compare_specs.
+  destruct (Nat.ltb i #|Δ|) eqn:ltb.
+  - apply Nat.ltb_lt in ltb.
+    rewrite nth_error_app_lt //.
+    destruct nth_error eqn:hnth.
+    * constructor; auto.
+    * apply nth_error_None in hnth. lia.
+  - apply Nat.ltb_nlt in ltb.
+    rewrite nth_error_app_ge; try lia.
+    destruct nth_error eqn:hnth.
+    * constructor 2; auto.
+      apply nth_error_Some_length in hnth.
+      split; lia.
+    * constructor. eapply nth_error_None in hnth. lia.
+Qed.
+
+Hint Rewrite rename_context_length : len.
+
+Variant shiftn_spec k f i : nat -> Type :=
+| shiftn_below : i < k -> shiftn_spec k f i i
+| shiftn_above : k <= i -> shiftn_spec k f i (k + f (i - k)).
+
+Lemma shiftnP k f i : shiftn_spec k f i (shiftn k f i).
+Proof.
+  rewrite /shiftn.
+  destruct (Nat.ltb i k) eqn:ltb.
+  * apply Nat.ltb_lt in ltb.
+    now constructor.
+  * apply Nat.ltb_nlt in ltb.
+    constructor. lia.
+Qed.
+
+Lemma shiftn_strengthen_rel k n i k' : 
+  (i < k + k' \/ k + k' + n <= i) ->
+  shiftn k (strengthen k' n) i = strengthen (k + k') n i.
+Proof.
+  rewrite /shiftn /strengthen.
+  destruct (Nat.ltb_spec i k); auto.
+  - destruct (Nat.ltb_spec i (k + k')); lia.
+  - destruct (Nat.ltb_spec (i - k) k'); destruct (Nat.ltb_spec i (k + k')); lia.
+Qed.
+
+Lemma shiftn_strengthen k k' n t : 
+  noccur_between (k' + k) n t ->
+  rename (shiftn k (strengthen k' n)) t = rename (strengthen (k + k') n) t.
+Proof.
+  intros nocc.
+  eapply rename_ext_cond; tea.
+  intros. eapply shiftn_strengthen_rel. lia.
+Qed.
+
+Lemma strenghten_urenaming Γ Γs Δ :
+  noccur_between_ctx 0 #|Γs| Δ ->
+  urenaming
+    (Γ ,,, rename_context (strengthen 0 #|Γs|) Δ)
+    (Γ ,,, Γs ,,, Δ)
+    (strengthen #|Δ| #|Γs|).
+Proof.
+  intros nocc i d hnth.
+  rewrite lookup_exchange_contexts hnth => /=.
+  eexists; split; eauto.
+  pose proof (exchange_lift_rename nocc hnth).
+  rewrite !lift_rename !rename_compose /lift_renaming /=. 
+  destruct d as [na [b|] ty]; noconf H; simpl in *.
+  - split => //.
+    intros ? [= <-]. eexists; split => //.
+    rewrite !lift_rename !rename_compose.
+    rewrite /lift_renaming /= //. 
+  - split => //.
+Qed.
+
+
+(* l, r, p -> r, l, p *)
+Definition exchange_renaming l r p :=
+  fun i => 
+    if p <=? i then
+      if p + r <=? i then
+        if p + r + l <=? i then i
+        else i - r
+      else i + l
+    else i.
+
+Variant exchange_renaming_spec l r p i : nat -> Type :=
+| exch_below : i < p -> exchange_renaming_spec l r p i i
+| exch_right : p <= i < p + r -> exchange_renaming_spec l r p i (i + l)
+| exch_left : p + r <= i < p + r + l -> exchange_renaming_spec l r p i (i - r)
+| exch_above : p + r + l <= i -> exchange_renaming_spec l r p i i.
+
+Lemma exchange_renamingP l r p i : 
+  exchange_renaming_spec l r p i (exchange_renaming l r p i).
+Proof.
+  unfold exchange_renaming.
+  case: leb_spec_Set; [|constructor; auto].
+  elim: leb_spec_Set; [|constructor; auto].
+  elim: leb_spec_Set; [|constructor; auto].
+  intros.
+  constructor 4; auto.
+Qed.
+
+Lemma shiftn_exchange_renaming n l r p : 
+  shiftn n (exchange_renaming l r p) =1 
+  exchange_renaming l r (n + p).
+Proof.
+  intros i.
+  case: exchange_renamingP.
+  * case: shiftnP; try lia.
+    case: exchange_renamingP; lia.
+  * case: shiftnP; try lia.
+    case: exchange_renamingP; lia.
+  * case: shiftnP; try lia.
+    case: exchange_renamingP; lia.
+  * case: shiftnP; try lia.
+    case: exchange_renamingP; lia.
+Qed.
+
+Lemma exchange_renaming_lift_renaming l r p i k :
+  i < p ->
+  exchange_renaming l r p (lift_renaming (S i) 0 k) =
+  lift_renaming (S i) 0
+    (shiftn (p - S i) (exchange_renaming l r 0) k).
+Proof.
+  intros ip.
+  rewrite shiftn_exchange_renaming.
+  rewrite /lift_renaming /=.
+  case: exchange_renamingP; try lia; intros Hp.
+  all: case: exchange_renamingP; lia.
+Qed.
+
+Definition exchange_contexts Γ Γl Γr Δ :=
+  (Γ ,,, rename_context (strengthen 0 #|Γl|) Γr ,,, 
+  rename_context (lift_renaming #|Γr| 0) Γl ,,, 
+  rename_context (exchange_renaming #|Γl| #|Γr| 0) Δ).
+
+Definition exchange_rename Γl Γr Δ i :=
+  if Δ <=? i then
+    if Δ + Γr <=? i then
+      if Δ + Γr + Γl <=? i then ren_id
+      else (lift_renaming Γr (Γl - S (i - Γr - Δ)))
+    else (shiftn (Γr - S (i - Δ)) (strengthen 0 Γl))
+  else (exchange_renaming Γl Γr (Δ - S i)).
+
+Lemma map_decl_id : map_decl id =1 id.
+Proof. intros d; now destruct d as [? [] ?]. Qed.
+
+Instance option_map_ext {A B} : Proper (`=1` ==> Logic.eq ==> Logic.eq) (@option_map A B).
+Proof.
+  intros f g Hfg x y <-.
+  now destruct x => /=; f_equal.
+Qed.
+
+Lemma option_map_id {A} : option_map (@id A) =1 id.
+Proof. by intros []. Qed.
+
+Instance map_decl_pointwise : Proper (`=1` ==> `=1`) map_decl.
+Proof. intros f g Hfg x. rewrite /map_decl.
+  destruct x => /=. f_equal.
+  - now rewrite Hfg.
+  - apply Hfg.
+Qed.
+
+Lemma lookup_exchange_contexts Γ Γl Γr Δ i :
+  nth_error (exchange_contexts Γ Γl Γr Δ) (exchange_renaming #|Γl| #|Γr| #|Δ| i) =
+  option_map (map_decl (rename (exchange_rename #|Γl| #|Γr| #|Δ| i))) 
+    (nth_error (Γ ,,, Γl,,, Γr,,, Δ) i).
+Proof.
+  rewrite /exchange_renaming /exchange_contexts /exchange_rename.
+  case: (leb_spec_Set #|Δ| i) => hΔ.
+  * case: leb_spec_Set => hΓr.
+    + case: leb_spec_Set => hΓl.
+      - do 6 (rewrite nth_error_app_ge; len; try lia => //).
+        assert (i - #|Δ| - #|Γl| - #|Γr| = i - #|Δ| - #|Γr| - #|Γl|) as -> by lia.
+        now rewrite rename_ren_id map_decl_id option_map_id.
+      - rewrite nth_error_app_ge; len; try lia => //.
+        rewrite nth_error_app_lt; len; try lia => //.
+        rewrite nth_error_app_ge; len; try lia => //.
+        rewrite nth_error_app_ge; len; try lia => //.
+        rewrite nth_error_app_lt; len; try lia => //.
+        rewrite nth_error_rename_context.
+        assert (i - #|Δ| - #|Γr| = i - #|Γr| - #|Δ|) as -> by lia.
+        apply option_map_ext => //.
+        intros d. apply map_decl_ext => t.
+        now rewrite shiftn_lift_renaming Nat.add_0_r.
+    + rewrite nth_error_app_ge; len; try lia => //.
+      rewrite nth_error_app_ge; len; try lia => //.
+      rewrite nth_error_app_lt; len; try lia => //.
+      rewrite nth_error_app_ge; len; try lia => //.
+      rewrite nth_error_app_lt; len; try lia => //.
+      rewrite nth_error_rename_context.
+      assert (i + #|Γl| - #|Δ| - #|Γl| = i - #|Δ|) as -> by lia.
+      reflexivity.
+  * rewrite nth_error_app_lt; len; try lia => //.
+    rewrite nth_error_app_lt; len; try lia => //.
+    rewrite nth_error_rename_context.
+    now rewrite shiftn_exchange_renaming Nat.add_0_r.
+Qed.
+
+
+(* 
+Lemma exchange_renaming_add Γl Γr Δ n : 
+  exchange_renaming Γl Γr Δ n = n + exchange_renaming Γl Γr Δ 0.
+Proof.
+  case: exchange_renamingP; case: exchange_renamingP; simpl; try lia.
+  - intros.
+ *)
+ 
+Lemma exchange_rename_Δ Γl Γr Δ i (k : nat) :
+  (* noccur_between_ctx 0 Γl Γr -> *)
+  i < Δ ->
+  (* From the i-prefix of Γ Γl Γr Δ to Γ Γr Γl Δ *)
+  exchange_renaming Γl Γr Δ (S i + k) = 
+  S (i + exchange_renaming Γl Γr (Δ - S i) k).
+Proof.
+  rewrite /exchange_renaming.
+  repeat nat_compare_specs; lia.
+Qed.
+
+Lemma exchange_rename_Γr Γl Γr Δ i (k : nat) :
+  (* noccur_between_ctx 0 Γl Γr -> *)
+  Δ <= i < Δ + Γr ->
+  k < Γr - S (i - Δ) \/ Γr - S (i - Δ) + Γl <= k ->
+  (* From the i-prefix of Γ Γl Γr Δ to Γ Γr Γl Δ *)
+  exchange_renaming Γl Γr Δ (S i + k) = 
+  S (i + Γl + strengthen (Γr - S (i - Δ)) Γl k).
+Proof.
+  rewrite /exchange_renaming /strengthen.
+  repeat nat_compare_specs.
+Qed.
+(* 
+Lemma exchange_rename_Γl Γl Γr Δ i (k : nat) :
+  (* noccur_between_ctx 0 Γl Γr -> *)
+  Δ + Γr <= i < Δ + Γr + Γl ->
+  (* From the i-prefix of Γ Γl Γr Δ to Γ Γr Γl Δ *)
+  exchange_renaming Γl Γr Δ (S i + k) = 
+  S (i + exchange_renaming Γl Γr (Δ - S i) k).
+Proof.
+  rewrite /exchange_renaming.
+  repeat nat_compare_specs; lia.
 Qed. *)
 
+Lemma alli_Alli {A} (p : nat -> A -> bool) n l : 
+  alli p n l <~> Alli p n l.
+Proof.
+  destruct (allbiP p p n l).
+  - intros. destruct (p i x); now constructor.
+  - split; eauto.
+  - split; eauto. by [].
+Qed.
+
+Lemma nth_error_noccur_between_ctx k n Γ i d : 
+  noccur_between_ctx k n Γ -> 
+  nth_error Γ i = Some d ->
+  noccur_between_decl (k + (#|Γ| - S i)) n d.
+Proof.
+  rewrite /noccur_between_ctx.
+  intros alli nth. apply alli_Alli in alli.
+  eapply Alli_rev_nth_error in alli; eauto.
+Qed.
+
+Lemma exchange_lift_rename {Γ Γl Γr Δ : context} {i d} :
+  noccur_between_ctx 0 #|Γl| Γr ->
+  nth_error (Γ,,, Γl,,, Γr,,, Δ) i = Some d ->
+  rename_decl (fun k => exchange_renaming #|Γl| #|Γr| #|Δ| (S (i + k))) d =
+  rename_decl (fun k => S (exchange_renaming #|Γl| #|Γr| #|Δ| i + exchange_rename #|Γl| #|Γr| #|Δ| i k)) d.
+Proof.
+  intros nocc hlen.
+  move: hlen.
+  case: lookup_declP => // d' Hi hnth [=]; intros ->; [|move: hnth; len in Hi].
+  { apply map_decl_ext, rename_ext => k.
+    rewrite {2}/exchange_renaming /exchange_rename. nat_compare_specs.
+    now apply exchange_rename_Δ. }
+  case: lookup_declP => // d' Hi' hnth [=]; intros ->; [|move: hnth; len in Hi'].
+  { eapply nth_error_noccur_between_ctx in nocc; eauto.
+    simpl in nocc. move: nocc.
+    apply rename_decl_ext_cond => k Hk.
+    rewrite {2}/exchange_renaming /exchange_rename.
+    repeat nat_compare_specs.
+    rewrite shiftn_strengthen_rel Nat.add_0_r //.
+    now rewrite exchange_rename_Γr. }
+  case: lookup_declP => // d' Hi'' hnth [=]; intros ->; [|move: hnth; len in Hi''].
+  { apply map_decl_ext, rename_ext => k.
+    rewrite /exchange_renaming /exchange_rename /lift_renaming; 
+    repeat nat_compare_specs. }
+  { move/nth_error_Some_length => hlen.
+    apply map_decl_ext, rename_ext => k.
+    rewrite /exchange_renaming /exchange_rename; repeat nat_compare_specs.
+    now unfold ren_id. }
+Qed.
+
+Lemma exchange_urenaming Γ Γl Γr Δ :
+  noccur_between_ctx 0 #|Γl| Γr ->
+  urenaming
+    (exchange_contexts Γ Γl Γr Δ)
+    (Γ ,,, Γl ,,, Γr ,,, Δ)
+    (exchange_renaming #|Γl| #|Γr| #|Δ|).
+Proof.
+  intros nocc i d hnth.
+  rewrite lookup_exchange_contexts hnth => /=.
+  eexists; split; eauto.
+  pose proof (exchange_lift_rename nocc hnth).
+  rewrite !lift_rename !rename_compose /lift_renaming /=. 
+  destruct d as [na [b|] ty]; noconf H; simpl in *.
+  - split => //.
+    intros ? [= <-]. eexists; split => //.
+    rewrite !lift_rename !rename_compose.
+    rewrite /lift_renaming /= //. 
+  - split => //.
+Qed.
 
 Lemma All_local_env_fold P f Γ :
   All_local_env (fun Γ t T => P (fold_context f Γ) (f #|Γ| t) (option_map (f #|Γ|) T)) Γ <~>
@@ -172,11 +537,11 @@ Proof.
 Qed.
 
 Lemma weakening_wf_local {cf: checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γ' Γ''} :
-  wf_local Σ (Γ ,,, Γ'') ->
-  wf_local Σ (Γ ,,, Γ') ->  
+  wf_local Σ (Γ ,,, Γ') ->
+  wf_local Σ (Γ ,,, Γ'') ->  
   wf_local Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ').
 Proof.
-  intros wfΓ'' wfΓ'.
+  intros wfΓ' wfΓ''.
   pose proof (env_prop_wf_local _ _ typing_rename_prop _ wfΣ _ wfΓ'). simpl in X.
   eapply All_local_env_app_inv in X as [XΓ XΓ'].
   apply wf_local_app => //.
@@ -197,6 +562,15 @@ Proof.
     + apply wf_local_app; auto.
       apply All_local_env_fold in IH. apply IH.
     + apply (weakening_renaming Γ Δ Γ'').
+Qed.
+
+Lemma weakening_wf_local_eq {cf: checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γ' Γ'' n} :
+  wf_local Σ (Γ ,,, Γ') ->
+  wf_local Σ (Γ ,,, Γ'') ->
+  n = #|Γ''| ->
+  wf_local Σ (Γ ,,, Γ'' ,,, lift_context n 0 Γ').
+Proof.
+  intros ? ? ->; now apply weakening_wf_local.
 Qed.
 
 Lemma weakening_typing `{cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γ' Γ''} {t T} :
@@ -220,6 +594,99 @@ Proof.
   intros HΣ HΓΓ' * H.
   eapply (weakening_typing (Γ' := [])); eauto.
 Qed.
+
+Lemma weaken_wf_local {cf:checker_flags} {Σ Δ} Γ :
+  wf Σ.1 ->
+  wf_local Σ Γ ->
+  wf_local Σ Δ -> wf_local Σ (Γ ,,, Δ).
+Proof.
+  intros wfΣ wfΓ wfΔ.
+  generalize (weakening_wf_local (Γ := []) (Γ'' := Γ) (Γ' := Δ)) => /=.
+  rewrite !app_context_nil_l.
+  move/(_ wfΔ wfΓ).
+  rewrite closed_ctx_lift //.
+  now eapply closed_wf_local.
+Qed.
+
+Lemma rename_context_lift_context n k Γ :
+  rename_context (lift_renaming n k) Γ = lift_context n k Γ.
+Proof.
+  rewrite /rename_context /lift_context.
+  apply fold_context_ext => i t.
+  now rewrite lift_rename shiftn_lift_renaming.
+Qed.
+
+Lemma wf_local_app_ind {cf : checker_flags} {Σ Γ1 Γ2} :
+  wf_local Σ Γ1 -> 
+  (wf_local Σ Γ1 -> wf_local_rel Σ Γ1 Γ2) ->
+  wf_local Σ (Γ1 ,,, Γ2).
+Proof.
+  intros wf IH.
+  apply wf_local_app; auto.
+Qed.
+
+Lemma meta_conv_all {cf} {Σ Γ t A Γ' t' A'} :
+    Σ ;;; Γ |- t : A ->
+    Γ = Γ' -> t = t' -> A = A' ->
+    Σ ;;; Γ' |- t' : A'.
+Proof.
+  intros h [] [] []; assumption.
+Qed.
+
+Instance fold_context_proper : Proper (pointwise_relation nat (pointwise_relation _ Logic.eq) ==> Logic.eq ==> Logic.eq) fold_context.
+Proof.
+  intros f g Hfg x y <-. now apply fold_context_ext.
+Qed.
+
+Lemma exchange_wf_local {cf: checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γl Γr Δ} :
+  noccur_between_ctx 0 #|Γl| Γr ->
+  wf_local Σ (Γ ,,, Γl ,,, Γr ,,, Δ) ->
+  wf_local Σ (exchange_contexts Γ Γl Γr Δ).
+Proof.
+  intros nocc wf.
+  pose proof (env_prop_wf_local _ _ typing_rename_prop _ wfΣ _ wf).
+  simpl in X. rewrite /exchange_contexts.
+  eapply All_local_env_app_inv in X as [XΓ XΓ'].
+  apply wf_local_app_ind => //.
+  - rewrite rename_context_lift_context /strengthen /=.
+    eapply weakening_wf_local_eq; eauto with wf.
+    * admit.
+    * now len.
+  - intros wfstr.
+    apply All_local_env_fold.
+    eapply (All_local_env_impl_ind XΓ').
+    intros Δ' t [T|] IH; unfold lift_typing; simpl.
+    * intros Hf. red.
+      eapply meta_conv_all. 2: reflexivity.
+      2-3:now rewrite shiftn_exchange_renaming.
+      apply Hf. split.
+      + apply wf_local_app; auto.
+        apply All_local_env_fold in IH. apply IH.
+      +  setoid_rewrite shiftn_exchange_renaming. apply exchange_urenaming. Γ Δ Γ'').
+    - intros [s Hs]; exists s. red.
+      rewrite -/(lift_context #|Γ''| 0 Δ).
+      rewrite Nat.add_0_r !lift_rename. apply Hs.
+      split.
+      + apply wf_local_app; auto.
+        apply All_local_env_fold in IH. apply IH.
+      + apply (weakening_renaming Γ Δ Γ'').
+Qed.
+
+Lemma exchange_typing `{cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γ' Γ''} {t T} :
+  wf_local Σ (Γ ,,, Γ'') ->
+  Σ ;;; Γ ,,, Γ' |- t : T ->
+  Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' |- lift #|Γ''| #|Γ'| t : lift #|Γ''| #|Γ'| T.
+Proof.
+  intros wfext Ht.
+  rewrite !lift_rename.
+  eapply (env_prop_typing _ _ typing_rename_prop); eauto.
+  split.
+  - eapply weakening_wf_local; eauto with pcuic.
+  - now apply weakening_renaming.
+Qed.
+
+
+
 
 Lemma decompose_prod_assum_ctx ctx t : decompose_prod_assum ctx t =
   let (ctx', t') := decompose_prod_assum [] t in
@@ -1218,19 +1685,6 @@ Proof.
     econstructor 2 ; eauto.
   - eapply weakening_red1 in r ; auto.
     econstructor 3 ; eauto.
-Qed.
-
-Lemma weaken_wf_local {cf:checker_flags} {Σ Γ } Δ :
-  wf Σ.1 ->
-  wf_local Σ Δ ->
-  wf_local Σ Γ -> wf_local Σ (Δ ,,, Γ).
-Proof.
-  intros wfΣ wfΔ wfΓ.
-  move: (weakening_wf_local _ [] Γ Δ wfΣ).
-  rewrite !app_context_nil_l.
-  move/(_ wfΓ wfΔ).
-  rewrite closed_ctx_lift //.
-  now eapply closed_wf_local.
 Qed.
 
 Lemma weaken_ctx {cf:checker_flags} {Σ Γ t T} Δ :

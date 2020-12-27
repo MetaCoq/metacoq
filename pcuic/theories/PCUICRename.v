@@ -1179,6 +1179,33 @@ Proof. intros f g Hfg ? ? ->. now apply all_free_vars_ext. Qed.
 Instance all_free_vars_proper_pointwise : Proper (`=1` ==> `=1`) all_free_vars.
 Proof. intros f g Hfg x. now apply all_free_vars_ext. Qed.
 
+Lemma shiftnP_impl (p q : nat -> bool) : (forall i, p i -> q i) ->
+  forall n i, shiftnP n p i -> shiftnP n q i.
+Proof.
+  intros Hi n i. rewrite /shiftnP.
+  nat_compare_specs => //. apply Hi.
+Qed.
+
+Lemma all_free_vars_impl (p q : nat -> bool) t : (forall i, p i -> q i) -> 
+  all_free_vars p t -> all_free_vars q t.
+Proof.
+  revert t p q.
+  induction t using PCUICInduction.term_forall_list_ind; simpl => //; solve_all.
+  all:try (rtoProp; now rewrite ?IHt1 ?IHt2 ?IHt3; eauto 2).
+  - rtoProp. intuition auto.
+    * eapply IHt1; eauto.
+    * eapply IHt2; eauto using shiftnP_impl.
+  - rtoProp; intuition auto.
+    * eapply IHt1; eauto.
+    * eapply IHt2; eauto using shiftnP_impl.
+  - rtoProp; intuition eauto 3 using shiftnP_impl.
+  - rtoProp; intuition eauto 3 using shiftnP_impl.
+    * solve_all.
+    * solve_all; eauto using shiftnP_impl.
+  - unfold test_def in *. apply /andP. move/andP: b. intuition eauto using shiftnP_impl.
+  - unfold test_def in *. apply /andP. move/andP: b. intuition eauto using shiftnP_impl.
+Qed.
+
 Definition closedP (n : nat) (P : nat -> bool) := 
   fun i => if i <? n then P i else false.
   
@@ -1194,7 +1221,7 @@ Qed.
 Lemma shiftnP_xpredT n : shiftnP n xpredT =1 xpredT.
 Proof. intros i; rewrite /shiftnP. nat_compare_specs => //. Qed.
 
-Lemma closed_all_free_vars {n t} : closedn n t -> all_free_vars (closedP n xpredT) t.
+Lemma closedn_all_free_vars {n t} : closedn n t -> all_free_vars (closedP n xpredT) t.
 Proof.
   revert n t.
   apply: term_closedn_list_ind; simpl => //; intros.
@@ -1210,6 +1237,30 @@ Proof.
   - unfold test_def; solve_all. 
     rewrite a. rewrite shiftnP_closedP shiftnP_xpredT.
     now len in b.
+Qed.
+
+(** Any predicate is admissible as there are no free variables to consider *)
+Lemma closed_all_free_vars {P t} : closed t -> all_free_vars P t.
+Proof.
+  move/closedn_all_free_vars.
+  eapply all_free_vars_impl.
+  intros i; rewrite /closedP /= //.
+Qed.
+
+Lemma all_free_vars_subst_instance {p u t} : all_free_vars p t = all_free_vars p (subst_instance_constr u t).
+Proof.
+  revert t p.
+  apply: term_forall_list_ind; simpl => //; intros.
+  all:try (rtoProp; now rewrite -?IHt1 -?IHt2 -?IHt3).
+  - rewrite forallb_map. eapply All_forallb_eq_forallb; eauto.
+  - destruct X. f_equal.
+    * rewrite forallb_map; eapply All_forallb_eq_forallb; eauto.
+    * rewrite -e -H. f_equal. f_equal.
+      rewrite forallb_map. eapply All_forallb_eq_forallb; eauto.
+  - unfold test_def. rewrite forallb_map; len.
+    eapply All_forallb_eq_forallb; intuition eauto. solve_all.
+  - unfold test_def; rewrite forallb_map; len.
+    eapply All_forallb_eq_forallb; intuition eauto. solve_all.
 Qed.
 
 Definition test_decl (f : term -> bool) (d : context_decl) : bool :=
@@ -1270,33 +1321,6 @@ Proof.
   now apply IHl.
 Qed.
 
-Lemma shiftnP_impl (p q : nat -> bool) : (forall i, p i -> q i) ->
-  forall n i, shiftnP n p i -> shiftnP n q i.
-Proof.
-  intros Hi n i. rewrite /shiftnP.
-  nat_compare_specs => //. apply Hi.
-Qed.
-
-Lemma all_free_vars_impl (p q : nat -> bool) t : (forall i, p i -> q i) -> 
-  all_free_vars p t -> all_free_vars q t.
-Proof.
-  revert t p q.
-  induction t using PCUICInduction.term_forall_list_ind; simpl => //; solve_all.
-  all:try (rtoProp; now rewrite ?IHt1 ?IHt2 ?IHt3; eauto 2).
-  - rtoProp. intuition auto.
-    * eapply IHt1; eauto.
-    * eapply IHt2; eauto using shiftnP_impl.
-  - rtoProp; intuition auto.
-    * eapply IHt1; eauto.
-    * eapply IHt2; eauto using shiftnP_impl.
-  - rtoProp; intuition eauto 3 using shiftnP_impl.
-  - rtoProp; intuition eauto 3 using shiftnP_impl.
-    * solve_all.
-    * solve_all; eauto using shiftnP_impl.
-  - unfold test_def in *. apply /andP. move/andP: b. intuition eauto using shiftnP_impl.
-  - unfold test_def in *. apply /andP. move/andP: b. intuition eauto using shiftnP_impl.
-Qed.
-
 Lemma test_decl_impl (p q : term -> bool) d : 
   (forall i, p i -> q i) -> 
   test_decl p d -> test_decl q d.
@@ -1333,10 +1357,10 @@ Lemma closed_decl_all_free_vars {n d} : closed_decl n d -> all_free_vars_decl (c
 Proof.
   rewrite /closed_decl /all_free_vars_decl /test_decl.
   rewrite andb_comm => /andP [cld clb].
-  rewrite (closed_all_free_vars cld) /=.
+  rewrite (closedn_all_free_vars cld) /=.
   destruct (decl_body d) eqn:db => /= //.
   rewrite /foroptb /=.
-  now rewrite (closed_all_free_vars clb).
+  now rewrite (closedn_all_free_vars clb).
 Qed.
 
 Lemma closedn_ctx_all_free_vars {n ctx} : closedn_ctx n ctx ->
@@ -1649,15 +1673,34 @@ Qed.
 Definition addnP n (p : nat -> bool) :=
   fun i => p (i + n).
 
-Instance addnP_proper n : Proper (`=1` ==> `=1`) (addnP n).
+Instance addnP_proper n : Proper (`=1` ==> Logic.eq ==> Logic.eq) (addnP n).
 Proof.
   intros i f g Hfg; now rewrite /addnP.
 Qed.
   
+Instance addnP_proper_pointwise : Proper (Logic.eq ==> `=1` ==> `=1`) addnP.
+Proof.
+  intros i f g Hfg; now rewrite /addnP.
+Qed.
+
+Lemma addnP_shiftnP n P : addnP n (shiftnP n P) =1 P.
+Proof.
+  intros i; rewrite /addnP /shiftnP /=.
+  nat_compare_specs. lia_f_equal.
+Qed.
+
+
 Definition on_ctx_free_vars P ctx :=
   alli (fun k => (all_free_vars_decl (addnP k P))) 0 ctx.
 
-Instance on_ctx_free_vars_proper : Proper (`=1` ==> `=1`) on_ctx_free_vars.
+Instance on_ctx_free_vars_proper : Proper (`=1` ==> eq ==> eq) on_ctx_free_vars.
+Proof.
+  rewrite /on_ctx_free_vars => f g Hfg x y <-.
+  apply alli_ext => k.
+  now setoid_rewrite Hfg. 
+Qed.
+
+Instance on_ctx_free_vars_proper_pointwise : Proper (`=1` ==> `=1`) on_ctx_free_vars.
 Proof.
   rewrite /on_ctx_free_vars => f g Hfg x.
   apply alli_ext => k.
@@ -1673,7 +1716,7 @@ Proof.
   - split; eauto. by [].
 Qed.
 
-Lemma addnP_add n k p : addnP (n + k) p =1 addnP n (addnP k p).
+Lemma addnP_add n k p : addnP n (addnP k p) =1 addnP (n + k) p.
 Proof.
   rewrite /addnP => i. lia_f_equal.
 Qed.
@@ -1686,7 +1729,7 @@ Proof.
   rewrite /on_ctx_free_vars.
   solve_all.
   eapply alli_Alli, Alli_nth_error in H; eauto.
-  now rewrite Nat.add_comm addnP_add.
+  now rewrite Nat.add_comm -addnP_add.
 Qed.
 
 Definition aboveP k (p : nat -> bool) :=
@@ -1699,14 +1742,6 @@ Proof.
    nat_compare_specs => //.
    lia_f_equal.
 Qed.
-
-(* Lemma strengthenP_addn i p : addnP n (shiftnP k p) =1 aboveP i p.
-Proof.
-   intros k.
-   rewrite /strengthenP /= /addnP /aboveP.
-   nat_compare_specs => //.
-   lia_f_equal.
-Qed. *)
 
 Lemma all_free_vars_lift0 i p t :
   all_free_vars (addnP i p) t ->
@@ -1736,17 +1771,6 @@ Proof.
   - now rewrite andb_true_r.
   - now rewrite IHargs /= andb_assoc.
 Qed.
-
-(*Lemma all_free_vars_liftn n k p t :
-  all_free_vars (addnP (S i) p) t ->
-  all_free_vars (shiftnP (n + k) p) (lift n k t).
-Proof.
-  rewrite -(all_free_vars_lift _ (S i) 0).
-  rewrite /strengthenP /=.
-  unshelve eapply all_free_vars_impl.
-  simpl. intros i'. nat_compare_specs => //.
-  rewrite /addnP. now replace (i' - S i + S i) with i' by lia.
-Qed. *)
 
 Lemma forallb_ext {A} (p q : A -> bool) : p =1 q -> forallb p =1 forallb q.
 Proof.
@@ -1796,47 +1820,6 @@ Proof.
   intros.
   red; rewrite -H2. lia_f_equal.
 Qed.
- 
-(*Lemma aboveP_add n k p : aboveP (n + k) p =1 aboveP n (aboveP k p).
-Proof.
-  rewrite /aboveP => i. repeat nat_compare_specs => /= //.
- *)
-
-(* Lemma all_free_vars_extended_subst p k ctx :
-  alli (fun k => test_decl (all_free_vars (addnP (S k) p))) k ctx ->
-  forallb (all_free_vars (addnP k (shiftnP (context_assumptions ctx) p)))
-    (extended_subst ctx k).
-Proof.
-  induction ctx as [|[na [b|] ty] ctx] in k |- *; simpl; auto.
-  - simpl. rewrite {1}/test_decl /= /foroptb /=.
-    move/andP => [] /andP [] hty /= hb hctx.
-    specialize (IHctx _ hctx).
-    pose proof (extended_subst_shiftn_aboveP p ctx 1 k).
-    rewrite [addnP (S _) _](addnP_add 1 k) in IHctx.
-    rewrite Nat.add_0_r in H. rewrite {}H in IHctx.
-
-Admitted. *)
-
-(* 
-Lemma all_free_vars_lift0_above' i n p t :
-  all_free_vars (aboveP n p) t = all_free_vars (aboveP (i + n) p) (lift0 i t).
-Proof.
-  rewrite -(all_free_vars_lift0_above).
-  rewrite /strengthenP /= /aboveP /addnP.
-  unshelve eapply all_free_vars_ext.
-  simpl. intros i'. repeat nat_compare_specs => //; try lia.
-  now replace (i' - i + i) with i' by lia.
-Qed. *)
-
-
-Lemma above_extended_subst ctx k p : 
-  forallb (all_free_vars (aboveP (S k) p)) (extended_subst ctx (S k)) ->
-  forallb (all_free_vars (aboveP k p)) (extended_subst ctx k).
-Proof.
-  rewrite (lift_extended_subst' _ 1) forallb_map.
-  eapply forallb_impl => i hin.
-
-Admitted.
 
 Definition occ_betweenP k n :=
   fun i => (k <=? i) && (i <? k + n).
@@ -2060,9 +2043,51 @@ Proof.
     now rewrite orb_diag.
 Qed.
 
-Lemma all_free_vars_case_branch_context Σ {wfΣ : wf Σ} P ci mdecl idecl p br cdecl :
+Lemma all_free_vars_terms_inds P ind puinst bodies : 
+  all_free_vars_terms P (inds ind puinst bodies).
+Proof.
+  rewrite /inds.
+  induction #|bodies|; simpl; auto.
+Qed.
+
+Lemma all_free_vars_decl_map P f d :
+  (forall i, all_free_vars P i = all_free_vars P (f i)) ->
+  all_free_vars_decl P d = all_free_vars_decl P (map_decl f d).
+Proof.
+  intros Hi.
+  rewrite /all_free_vars_decl /test_decl.
+  rewrite Hi. f_equal.
+  simpl. destruct (decl_body d) => //.
+  now rewrite /foroptb /= (Hi t).
+Qed.
+
+Lemma all_free_vars_subst_instance_context P u Γ :
+  all_free_vars_ctx P (subst_instance_context u Γ) = all_free_vars_ctx P Γ.
+Proof.
+  rewrite /all_free_vars_ctx.
+  rewrite /subst_instance_context -map_rev alli_map.
+  apply alli_ext => i d.
+  symmetry. apply all_free_vars_decl_map.
+  intros. apply all_free_vars_subst_instance.
+Qed.
+
+Lemma all_free_vars_map2_cstr_args p bctx ctx :
+  #|bctx| = #|ctx| ->
+  all_free_vars_ctx p ctx =
+  all_free_vars_ctx p (map2 set_binder_name bctx ctx).
+Proof.
+  rewrite /all_free_vars_ctx.
+  induction ctx as [|d ctx] in bctx |- *; simpl; auto.
+  - destruct bctx; reflexivity.
+  - destruct bctx => /= //.
+    intros [= hlen].
+    rewrite alli_app (IHctx bctx) // alli_app. f_equal.
+    len. rewrite map2_length // hlen. f_equal.
+Qed.
+
+Lemma all_free_vars_case_branch_context {Σ} {wfΣ : wf Σ} {P ci i mdecl idecl p br cdecl} :
   let brctx := case_branch_context ci mdecl p (bcontext br) cdecl in
-  declared_inductive Σ ci mdecl idecl ->
+  declared_constructor Σ (ci, i) mdecl idecl cdecl ->
   wf_predicate mdecl idecl p ->
   wf_branch cdecl br ->
   forallb (all_free_vars P) (pparams p) ->
@@ -2082,25 +2107,288 @@ Proof.
     apply (declared_inductive_closed_params decli).
   * rewrite -(subst_it_mkProd_or_LetIn _ _ _ (tSort _)).
     eapply all_free_vars_impl; cycle 1.
-    + eapply all_free_vars_subst_gen.
-  rewrite all_free_vars_it
+    + eapply (all_free_vars_subst_gen _ P).
+      { eapply all_free_vars_terms_inds. }
+      rewrite -all_free_vars_ctx_all_term.
+      rewrite all_free_vars_subst_instance_context.
+      rewrite -all_free_vars_map2_cstr_args.
+      { apply (wf_branch_length wfb). }
+      instantiate (1 := closedP (#|mdecl.(ind_bodies)| + #|mdecl.(ind_params)|) xpredT).
+      eapply closedn_ctx_all_free_vars.
+      now move/andP: (declared_constructor_closed wfΣ decli) => [] /andP [].
+    + intros i'.
+      rewrite /substP /= /closedP /shiftnP. len.
+      now repeat nat_compare_specs => /= //.
+Qed.
 
+Lemma all_free_vars_to_extended_list P ctx : 
+  forallb (all_free_vars (shiftnP #|ctx| P)) (to_extended_list ctx).
+Proof.
+  rewrite /to_extended_list /to_extended_list_k.
+  change #|ctx| with (0 + #|ctx|).
+  have: (forallb (all_free_vars (shiftnP (0 + #|ctx|) P)) []) by easy.
+  generalize (@nil term), 0.
+  induction ctx; intros l n.
+  - simpl; auto.
+  - simpl. intros Hl.
+    destruct a as [? [?|] ?].
+    * rewrite Nat.add_succ_r in Hl.
+      specialize (IHctx _ (S n) Hl).
+      now rewrite Nat.add_succ_r Nat.add_1_r.
+    * rewrite Nat.add_succ_r Nat.add_1_r. eapply (IHctx _ (S n)).
+      rewrite -[_ + _](Nat.add_succ_r n #|ctx|) /= Hl.
+      rewrite /shiftnP.
+      nat_compare_specs => /= //.
+Qed.
 
-  rewrite /expand_lets_ctx /expand_lets_k_ctx.
-  rewrite all_free_vars_it
-  eapply 
+(** This is less precise than the strengthenP lemma above *)
+Lemma all_free_vars_lift_impl (p : nat -> bool) (n k : nat) (t : term) :
+  all_free_vars (shiftnP k p) t ->
+  all_free_vars (shiftnP (n + k) p) (lift n k t).
+Proof.
+  rewrite -(all_free_vars_lift _ n k t).
+  eapply all_free_vars_impl.
+  intros i.
+  rewrite /shiftnP /strengthenP.
+  repeat nat_compare_specs => /= //.
+  now replace (i - n - k) with (i - (n + k)) by lia.
+Qed.
 
+Lemma all_free_vars_case_predicate_context {Σ} {wfΣ : wf Σ} {P ci mdecl idecl p} :
+  let pctx := case_predicate_context ci mdecl idecl p in
+  declared_inductive Σ ci mdecl idecl ->
+  wf_predicate mdecl idecl p ->
+  forallb (all_free_vars P) (pparams p) ->
+  all_free_vars (shiftnP #|pcontext p| P) (preturn p) ->
+  all_free_vars_ctx P pctx.
+Proof.
+  intros pctx decli wfp wfb havp.
+  rewrite /pctx /case_predicate_context /case_predicate_context_gen.
+  set (ibinder := {| decl_name := _ |}).
+  rewrite -all_free_vars_map2_cstr_args /=; len.
+  { eapply (wf_predicate_length_pcontext wfp). }
+  rewrite alli_app; len; rewrite andb_true_r.
+  apply andb_true_iff. split.
+  - rewrite -/(all_free_vars_ctx P _).
+    rewrite (all_free_vars_ctx_all_term _ _ Universe.type0).
+    rewrite -(subst_it_mkProd_or_LetIn _ _ _ (tSort _)).
+    apply all_free_vars_subst => //.
+    rewrite -all_free_vars_ctx_all_term.
+    rewrite all_free_vars_subst_instance_context.
+    rewrite (all_free_vars_ctx_all_term _ _ (Universe.type0)).
+    rewrite -(expand_lets_it_mkProd_or_LetIn _ _ 0 (tSort _)).
+    eapply all_free_vars_expand_lets_k; len.
+    * rewrite (wf_predicate_length_pars wfp).
+      apply (declared_minductive_ind_npars decli).
+    * eapply closed_ctx_all_free_vars.
+      apply (declared_inductive_closed_params decli).
+    * eapply all_free_vars_impl; cycle 1.
+      { rewrite <- all_free_vars_ctx_all_term.
+        instantiate (1 := closedP #|mdecl.(ind_params)| xpredT).
+        eapply closedn_ctx_all_free_vars.
+        move: (declared_inductive_closed_pars_indices wfΣ decli).
+        now rewrite closedn_ctx_app => /andP []. }
+       intros i'.
+      rewrite /substP /= /closedP /shiftnP. len.
+      now repeat nat_compare_specs => /= //.
+  - rewrite /all_free_vars_decl /ibinder /test_decl /= /foroptb /= andb_true_r.
+    rewrite all_free_vars_mkApps /= forallb_app /=.
+    rewrite all_free_vars_to_extended_list /= andb_true_r.
+    rewrite -/(is_true _).
+    rewrite forallb_map. unshelve eapply (forallb_impl _ _ _ _ wfb).
+    intros. simpl.
+    eapply all_free_vars_lift0. now rewrite addnP_shiftnP.
+Qed.
 
+Lemma forall_free_vars_extended_subst brctx p :
+  all_free_vars_ctx p brctx ->
+  forallb (all_free_vars (shiftnP (context_assumptions brctx) p))
+    (extended_subst brctx 0).
+Proof.
+  move/all_free_vars_extended_subst.
+  eapply forallb_impl.
+  intros x hin.
+  rewrite Nat.add_0_r shiftnP0.
+  eapply all_free_vars_impl.
+  intros i. rewrite /orP /strengthenP /= /occ_betweenP /shiftnP.
+  repeat nat_compare_specs => /= //.
+  now rewrite orb_false_r.
+Qed.
 
-Admitted.
+Lemma all_free_vars_fix_subst P mfix idx :
+  all_free_vars P (tFix mfix idx) ->
+  forallb (all_free_vars P) (fix_subst mfix).
+Proof.
+  move=> /=; rewrite /fix_subst.
+  intros hmfix. generalize hmfix.
+  induction mfix at 2 4; simpl; auto.
+  move/andP => [ha hm]. rewrite IHm // andb_true_r //.
+Qed.
+
+Lemma all_free_vars_unfold_fix P mfix idx narg fn :
+  unfold_fix mfix idx = Some (narg, fn) ->
+  all_free_vars P (tFix mfix idx) ->
+  all_free_vars P fn.
+Proof.
+  rewrite /unfold_fix. 
+  destruct nth_error eqn:hnth => // [=] _ <- /=.
+  intros hmfix; generalize hmfix.
+  move/forallb_All/(nth_error_all hnth) => /andP [] _ Hbody.
+  eapply all_free_vars_subst; len => //.
+  eapply (all_free_vars_fix_subst _ _ idx) => //.
+Qed.
+
+Lemma all_free_vars_cofix_subst P mfix idx :
+  all_free_vars P (tCoFix mfix idx) ->
+  forallb (all_free_vars P) (cofix_subst mfix).
+Proof.
+  move=> /=; rewrite /cofix_subst.
+  intros hmfix. generalize hmfix.
+  induction mfix at 2 4; simpl; auto.
+  move/andP => [ha hm]. rewrite IHm // andb_true_r //.
+Qed.
+
+Lemma all_free_vars_unfold_cofix P mfix idx narg fn :
+  unfold_cofix mfix idx = Some (narg, fn) ->
+  all_free_vars P (tCoFix mfix idx) ->
+  all_free_vars P fn.
+Proof.
+  rewrite /unfold_cofix. 
+  destruct nth_error eqn:hnth => // [=] _ <- /=.
+  intros hmfix; generalize hmfix.
+  move/forallb_All/(nth_error_all hnth) => /andP [] _ Hbody.
+  eapply all_free_vars_subst; len => //.
+  eapply (all_free_vars_cofix_subst _ _ idx) => //.
+Qed.
+
+Lemma nth_error_forallb {A} {p : A -> bool} {l : list A} {n x} :
+  nth_error l n = Some x -> forallb p l -> p x.
+Proof.
+  intros Hnth HPl. 
+  induction l in n, Hnth, HPl |- * => //.
+  - rewrite nth_error_nil in Hnth => //.
+  - destruct n => /=; noconf Hnth.
+    * now move: HPl => /= /andP.
+    * eapply IHl; tea. now move: HPl => /andP.
+Qed.
+
+Lemma addnP_shiftnP_comm n (P : nat -> bool) : P 0 -> addnP 1 (shiftnP n P) =1 shiftnP n (addnP 1 P).
+Proof.
+  intros p0 i; rewrite /addnP /shiftnP /=.
+  repeat nat_compare_specs => /= //. 
+  - assert (n = i + 1) as -> by lia.
+    now replace (i + 1 - (i + 1)) with 0 by lia.
+  - lia_f_equal.
+Qed.
+
+Lemma on_ctx_free_vars_concat P Γ Δ : 
+  on_ctx_free_vars (addnP 1 P) Γ ->
+  on_ctx_free_vars (addnP 1 (shiftnP #|Δ| P)) Δ ->  
+  on_ctx_free_vars (addnP 1 (shiftnP #|Δ| P)) (Γ ,,, Δ).
+Proof.
+  rewrite /on_ctx_free_vars alli_app.
+  move=> hΓ -> /=; rewrite alli_shiftn.
+  eapply alli_impl; tea => i d /=.
+  simpl. rewrite !addnP_add.
+  apply all_free_vars_decl_impl => k.
+  rewrite (Nat.add_comm #|Δ|) -Nat.add_assoc (Nat.add_comm #|Δ|).
+  now rewrite - !addnP_add addnP_shiftnP.
+Qed.
+
+Lemma on_ctx_free_vars_tip P d : on_ctx_free_vars P [d] = all_free_vars_decl P d.
+Proof.
+  now rewrite /on_ctx_free_vars /= addnP0 andb_true_r.
+Qed.
+
+Lemma OnOne2_impl_All_r {A} (P : A -> A -> Type) (Q : A -> Type) l l' : 
+  (forall x y, Q x -> P x y -> Q y) ->
+  OnOne2 P l l' -> All Q l -> All Q l'.
+Proof.
+  intros HPQ.
+  induction 1; intros H; depelim H; constructor; auto.
+  now eapply HPQ.
+Qed.
+
+Lemma OnOne2All_impl_All_r {A B} (P : B -> A -> A -> Type) (Q : A -> Type) i l l' : 
+  (forall i x y, Q x -> P i x y -> Q y) ->
+  OnOne2All P i l l' -> All Q l -> All Q l'.
+Proof.
+  intros HPQ.
+  induction 1; intros H; depelim H; constructor; auto.
+  now eapply HPQ.
+Qed.
+
+Lemma on_ctx_free_vars_extend P Γ Δ :
+  all_free_vars_ctx P Δ ->
+  on_ctx_free_vars (addnP 1 P) Γ ->
+  on_ctx_free_vars (addnP 1 (shiftnP #|Δ| P)) (Γ ,,, Δ).
+Proof.
+  intros hΔ hΓ.
+  apply on_ctx_free_vars_concat => //.
+  revert P Γ hΓ hΔ.
+  induction Δ using rev_ind; simpl; auto; intros P Γ hΓ.
+  rewrite /on_ctx_free_vars /all_free_vars_ctx List.rev_app_distr /= shiftnP0.
+  rewrite alli_shift. setoid_rewrite Nat.add_comm. setoid_rewrite <- shiftnP_add.
+  move/andP=> [] hx hΔ.
+  rewrite alli_app /= andb_true_r Nat.add_0_r; len.
+  rewrite addnP_add.
+  setoid_rewrite <-(shiftnP_add #|Δ| 1).
+  specialize (IHΔ (shiftnP 1 P) (Γ ,, x)).
+  forward IHΔ.
+  * simpl. apply (on_ctx_free_vars_concat _ _ [x]) => //.
+    simpl. rewrite addnP_shiftnP.
+    now rewrite on_ctx_free_vars_tip.
+  * specialize (IHΔ hΔ).
+    rewrite /on_ctx_free_vars in IHΔ.  
+    rewrite IHΔ /=.
+    now rewrite shiftnP_add addnP_shiftnP.
+Qed.
+
+Lemma OnOne2All_nth_error {A B} (P : A -> B -> B -> Type) il l l' :
+  OnOne2All P il l l' ->
+  OnOne2All (fun i x y => (∑ ni, nth_error il ni = Some i) * P i x y) il l l'.
+Proof.
+  induction 1.
+  - econstructor => //.
+    split => //.
+    exists 0; reflexivity.
+  - constructor. eapply (OnOne2All_impl IHX).
+    intros i x y [[ni hni] ?].
+    split; auto. exists (S ni). apply hni.
+Qed.
+
+Lemma all_free_vars_fix_context P mfix : 
+  All (fun x : def term =>
+      test_def (all_free_vars P) (all_free_vars (shiftnP #|mfix| P)) x)
+      mfix ->
+  all_free_vars_ctx P (fix_context mfix).
+Proof.
+  intros a.
+  assert (All (fun x => all_free_vars P x.(dtype)) mfix).
+  { solve_all. now move/andP: H=> []. } clear a.
+  induction mfix using rev_ind; simpl; auto.
+  rewrite /fix_context /= mapi_app List.rev_app_distr /=.
+  rewrite /all_free_vars_ctx /= alli_app. len.
+  rewrite andb_true_r.
+  eapply All_app in X as [X Hx].
+  depelim Hx. clear Hx.
+  specialize (IHmfix X).
+  rewrite /all_free_vars_ctx in IHmfix.
+  rewrite IHmfix /= /all_free_vars_decl /test_decl /= /foroptb /= andb_true_r.
+  apply all_free_vars_lift0.
+  now rewrite addnP_shiftnP.
+Qed.
+
+(** This shows preservation by reduction of closed/noccur_between predicates 
+  necessary to prove exchange and strengthening lemmas. *)
 Lemma red1_all_free_vars {P Σ Γ u v} {wfΣ : wf Σ} :
   all_free_vars P u ->
-  on_ctx_free_vars P Γ ->
+  on_ctx_free_vars (addnP 1 P) Γ ->
   red1 Σ Γ u v ->
   all_free_vars P v.
 Proof.
   intros hav hctx h.
-  induction h using red1_ind_all in hav, hctx |- *.
+  induction h using red1_ind_all in P, hav, hctx |- *.
   all: try solve [
     simpl ; constructor ; eapply IHh ;
     try (simpl in hav; rtoProp);
@@ -2110,32 +2398,100 @@ Proof.
   ].
   all:simpl in hav |- *; try toAll.
   all:try move/and3P: hav => [h1 h2 h3].
-  all:try move/andP: hav => [] /andP [] h1 h2 h3.
+  all:try (move/andP: hav => [] /andP [] h1 h2 h3).
   all:try move/andP: hav => [h1 h2].
+  all:try move/andP: h3 => [] h3 h4.
+  all:try rewrite ?h1 // ?h2 // ?h3 // ?h4 // ?IHh /= // ?andb_true_r.
   all:try eapply all_free_vars_subst1; eauto.
   - destruct (nth_error Γ i) eqn:hnth => //.
     simpl in H. noconf H.
-    eapply nth_error_all_free_vars_ctx in hctx; eauto.
-    move/andP: hctx => [hty hbody].
-    rewrite H /foroptb /= in hbody.
-    now apply all_free_vars_lift0.
-  - rewrite /iota_red.
-    move/andP: h3 => []. 
-    rewrite all_free_vars_mkApps => /andP => [] [] hf hargs hbrs.
+    epose proof (nth_error_all_free_vars_ctx P 1 Γ i c).
+    forward H0. { unfold on_ctx_free_vars. apply hctx. }
+    specialize (H0 hnth). simpl in H0.
+    move/andP: H0. 
+    (* why doesn't this work?? rewrite /= H => [_ hbody]. *)
+    rewrite /= H /foroptb /=. move=> [_ hbody].
+    rewrite all_free_vars_lift0 //.
+  - rewrite /iota_red. rename h4 into hbrs.
+    move: h3. rewrite all_free_vars_mkApps => /andP [] hf hargs.
     apply all_free_vars_subst.
     { rewrite forallb_skipn //. }
     rewrite H2.
     rewrite /expand_lets /expand_lets_k /=.
     eapply all_free_vars_subst.
-    * eapply all_free_vars_extended_subst.
-      rewrite -/(on_ctx_free_vars P brctx).
-    
-    nat_compare_specs => //.
-    rewrite /closedP.
-    replace (i' - S i + S i) with i' by lia.
-    nat_compare_specs => //.
-  - rewrite /iota_red.
-    admit.
+    * eapply forall_free_vars_extended_subst.
+      eapply all_free_vars_case_branch_context; eauto.
+    * rewrite extended_subst_length.
+      rewrite (case_branch_context_length H1).
+      rewrite shiftnP_add.
+      eapply nth_error_forallb in hbrs; eauto.
+      simpl in hbrs.
+      eapply all_free_vars_lift_impl in hbrs.
+      now rewrite Nat.add_comm.
+  - rewrite !all_free_vars_mkApps in hav |- *.
+    rtoProp.
+    eapply all_free_vars_unfold_fix in H; eauto. 
+  - move: h3; rewrite !all_free_vars_mkApps.
+    move=> /andP[] hcofix ->.
+    eapply all_free_vars_unfold_cofix in hcofix; eauto.
+    now rewrite hcofix.
+  - move: hav; rewrite !all_free_vars_mkApps => /andP [] hcofix ->.
+    eapply all_free_vars_unfold_cofix in H as ->; eauto.
+  - eapply closed_all_free_vars. rewrite closedn_subst_instance_constr.
+    eapply declared_constant_closed_body; eauto.
+  - move: hav; rewrite all_free_vars_mkApps /=.
+    now move/(nth_error_forallb H).
+  - rewrite (on_ctx_free_vars_concat _ _ [_]) // /=
+      on_ctx_free_vars_tip /= addnP_shiftnP /all_free_vars_decl
+      /test_decl /= andb_true_r //.
+  - rewrite (on_ctx_free_vars_concat _ _ [_]) //
+      on_ctx_free_vars_tip /= addnP_shiftnP /all_free_vars_decl /test_decl /= h2 /=
+      /foroptb /= h1 //.
+  - solve_all.
+    eapply OnOne2_impl_All_r; eauto. solve_all.
+  - rewrite /pctx.
+    rewrite -(case_predicate_context_length (ci:=ci) H).
+    eapply on_ctx_free_vars_extend => //.
+    apply (all_free_vars_case_predicate_context isdecl H h1 h2).
+  - toAll.
+    eapply Forall2_All2 in H0.
+    eapply OnOne2All_All2_mix_left in X; eauto.
+    eapply OnOne2All_nth_error in X.
+    eapply OnOne2All_impl_All_r in X; eauto; solve_all.
+    destruct a as [cidx hnth].
+    rewrite -b. eapply b1 => //.
+    erewrite <- (case_branch_context_length b0).
+    eapply on_ctx_free_vars_extend => //.
+    eapply (all_free_vars_case_branch_context (i := cidx)); eauto.
+    * split; eauto.
+    * solve_all.
+  - rewrite (on_ctx_free_vars_concat _ _ [_]) // /=
+      on_ctx_free_vars_tip /= addnP_shiftnP /all_free_vars_decl /test_decl /= h1 /= //.
+  - toAll. eapply OnOne2_impl_All_r; eauto; solve_all.
+  - toAll. unfold test_def.
+    rewrite -(OnOne2_length X).
+    eapply OnOne2_impl_All_r; eauto; solve_all.
+    destruct x, y; noconf b; simpl in *. rtoProp; solve_all.
+  - toAll. unfold test_def in *. rewrite -(OnOne2_length X).
+    eapply OnOne2_impl_All_r; eauto; solve_all.
+    destruct x, y; noconf b; simpl in *; rtoProp; solve_all.
+    apply b0 => //.
+    rewrite -(fix_context_length mfix0).
+    eapply on_ctx_free_vars_extend => //.
+    now apply all_free_vars_fix_context.
+  - toAll. unfold test_def.
+    rewrite -(OnOne2_length X).
+    eapply OnOne2_impl_All_r; eauto; solve_all.
+    destruct x, y; noconf b; simpl in *. rtoProp; solve_all.
+  - toAll. unfold test_def in *. rewrite -(OnOne2_length X).
+    eapply OnOne2_impl_All_r; eauto; solve_all.
+    destruct x, y; noconf b; simpl in *; rtoProp; solve_all.
+    apply b0 => //.
+    rewrite -(fix_context_length mfix0).
+    eapply on_ctx_free_vars_extend => //.
+    now apply all_free_vars_fix_context.
+Qed.
+
 Lemma red1_all_free_vars {P Σ Γ u v} {wfΣ : wf Σ} :
   all_free_vars (closedP #|Γ| P) u ->
   red1 Σ Γ u v ->
@@ -2741,7 +3097,7 @@ Lemma typing_rename :
 Proof.
   intros Σ Γ Δ f t A hΣ hf h.
   eapply typing_rename_P; eauto.
-  eapply closed_all_free_vars.
+  eapply closedn_all_free_vars.
   now eapply subject_closed in h.
 Qed.
 

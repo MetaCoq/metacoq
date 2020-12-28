@@ -18,6 +18,11 @@ Set Keyed Unification.
 
 Set Default Goal Selector "!".
 
+Tactic Notation "relativize" open_constr(c) := 
+  let ty := type of c in  
+  let x := fresh in
+  evar (x : ty); replace c with x; subst x.
+
 Lemma rename_mkApps :
   forall f t l,
     rename f (mkApps t l) = mkApps (rename f t) (map (rename f) l).
@@ -180,9 +185,7 @@ Lemma map_vass_map_def g l r :
 Proof.
   rewrite mapi_mapi mapi_map. apply mapi_ext.
   intros. unfold map_decl, vass; simpl; f_equal.
-  rewrite !lift_rename.
-  autorewrite with sigma. rewrite -ren_shiftn up_Upn.
-  rewrite shiftn_consn_idsn. reflexivity.
+  now sigma.
 Qed.
 
 Lemma rename_fix_context r :
@@ -250,12 +253,29 @@ Proof.
 Qed.
 
 (* Notion of valid renaming without typing information. *)
+
+(** We might want to relax this to allow "renamings" that change e.g. 
+  the universes or names, but should generalize the renaming operation at 
+  the same time *)
+(** Remark: renaming allows instantiating an assumption with a well-typed body *)
+
 Definition urenaming (P : nat -> bool) Γ Δ f :=
+  forall i decl, P i -> 
+    nth_error Δ i = Some decl ->
+    ∑ decl', (nth_error Γ (f i) = Some decl') ×
+    (eq_binder_annot decl.(decl_name) decl'.(decl_name) ×
+    ((rename (f ∘ rshiftk (S i)) decl.(decl_type) = 
+     rename (rshiftk (S (f i))) decl'.(decl_type)) ×
+      on_Some_or_None (fun body => Some (rename (f ∘ rshiftk (S i)) body) =
+         option_map (rename (rshiftk (S (f i)))) decl'.(decl_body)) decl.(decl_body))).
+
+(* Definition urenaming (P : nat -> bool) Γ Δ f :=
   forall i decl,
     P i ->
     nth_error Δ i = Some decl ->
     ∑ decl',
       nth_error Γ (f i) = Some decl' ×
+      eq_binder_annot decl.(decl_name) decl'.(decl_name) ×
       rename f (lift0 (S i) decl.(decl_type))
       = lift0 (S (f i)) decl'.(decl_type) ×
       (forall b,
@@ -263,7 +283,7 @@ Definition urenaming (P : nat -> bool) Γ Δ f :=
          ∑ b',
            decl'.(decl_body) = Some b' ×
            rename f (lift0 (S i) b) = lift0 (S (f i)) b'
-      ).
+      ). *)
 
 (* Definition of a good renaming with respect to typing *)
 Definition renaming P Σ Γ Δ f :=
@@ -357,9 +377,7 @@ Proof.
   intros f t h.
   replace (rename f t) with (rename (shiftn 0 f) t).
   - apply rename_closedn. assumption.
-  - autorewrite with sigma. eapply inst_ext. intro i.
-    unfold ren, shiftn. simpl.
-    f_equal. f_equal. lia.
+  - now sigma.
 Qed.
 
 (* TODO MOVE *)
@@ -380,21 +398,6 @@ Proof.
   now eapply subject_closed in decl'.
 Qed.
 
-Lemma rename_shiftn :
-  forall f k t,
-    rename (shiftn k f) (lift0 k t) = lift0 k (rename f t).
-Proof.
-  intros f k t.
-  autorewrite with sigma.
-  eapply inst_ext. intro i.
-  unfold ren, lift_renaming, shiftn, subst_compose. simpl.
-  destruct (Nat.ltb_spec (k + i) k); try lia.
-  unfold shiftk. lia_f_equal.
-Qed.
-
-Definition weakenable_pred (P : nat -> nat -> bool) : Prop :=
-  forall k n, P (S k) (S n) -> P k n.
-
 Definition shiftnP k p i :=
   if i <? k then true else p (i - k).
 
@@ -412,33 +415,22 @@ Proof.
   intros [|i] decl hP e.
   - simpl in e. inversion e. subst. clear e.
     simpl. eexists. split. 1: reflexivity.
-    split.
-    + autorewrite with sigma.
-      eapply inst_ext. intro i.
-      unfold ren, lift_renaming, shiftn, subst_compose. simpl.
-      now rewrite Nat.sub_0_r.
-    + intros. discriminate.
+    repeat split.
+    now sigma.
   - simpl in e. simpl.
     replace (i - 0) with i by lia.
-    eapply h in e as [decl' [? [h1 h2]]].
+    eapply h in e as [decl' [? [? [h1 h2]]]].
     2:{ unfold shiftnP in hP. simpl in hP. now rewrite Nat.sub_0_r in hP. }
     eexists. split. 1: eassumption.
-    split.
-    + rewrite simpl_lift0. rewrite rename_shiftn. rewrite h1.
-      autorewrite with sigma.
-      eapply inst_ext. intro j.
-      unfold ren, lift_renaming, shiftn, subst_compose. simpl.
-      replace (i - 0) with i by lia.
-      reflexivity.
-    + intros b e'.
-      eapply h2 in e' as [b' [? hb]].
-      eexists. split. 1: eassumption.
-      rewrite simpl_lift0. rewrite rename_shiftn. rewrite hb.
-      autorewrite with sigma.
-      eapply inst_ext. intro j.
-      unfold ren, lift_renaming, shiftn, subst_compose. simpl.
-      replace (i - 0) with i by lia.
-      reflexivity.
+    repeat split.
+    + tas.
+    + setoid_rewrite shiftn_1_S.
+      rewrite -rename_compose h1.
+      now sigma.
+    + move: h2.
+      destruct (decl_body decl) => /= //; destruct (decl_body decl') => /= //.
+      setoid_rewrite shiftn_1_S => [=] h2.
+      now rewrite -rename_compose h2; sigma.
 Qed.
 
 Lemma renaming_vass :
@@ -461,38 +453,22 @@ Proof.
   intros [|i] decl hP e.
   - simpl in e. inversion e. subst. clear e.
     simpl. eexists. split. 1: reflexivity.
-    split.
-    + autorewrite with sigma.
-      eapply inst_ext. intro i.
-      unfold ren, lift_renaming, shiftn, subst_compose. simpl.
-      replace (i - 0) with i by lia. reflexivity.
-    + intros b' [= <-].
-      simpl. eexists. split. 1: reflexivity.
-      autorewrite with sigma.
-      eapply inst_ext. intro i.
-      unfold ren, lift_renaming, shiftn, subst_compose. simpl.
-      replace (i - 0) with i by lia. reflexivity.
+    repeat split.
+    + now sigma.
+    + simpl. now sigma.
   - simpl in e. simpl.
     replace (i - 0) with i by lia.
-    eapply h in e as [decl' [? [h1 h2]]].
+    eapply h in e as [decl' [? [? [h1 h2]]]].
     2:{ rewrite /shiftnP /= Nat.sub_0_r // in hP. }
     eexists. split. 1: eassumption.
-    split.
-    + rewrite simpl_lift0. rewrite rename_shiftn. rewrite h1.
-      autorewrite with sigma.
-      eapply inst_ext. intro j.
-      unfold ren, lift_renaming, shiftn, subst_compose. simpl.
-      replace (i - 0) with i by lia.
-      reflexivity.
-    + intros b0 e'.
-      eapply h2 in e' as [b' [? hb]].
-      eexists. split. 1: eassumption.
-      rewrite simpl_lift0. rewrite rename_shiftn. rewrite hb.
-      autorewrite with sigma.
-      eapply inst_ext. intro j.
-      unfold ren, lift_renaming, shiftn, subst_compose. simpl.
-      replace (i - 0) with i by lia.
-      reflexivity.
+    repeat split => //.
+    + setoid_rewrite shiftn_1_S.
+      rewrite -rename_compose h1.
+      now sigma.
+    + move: h2.
+      destruct (decl_body decl) => /= //; destruct (decl_body decl') => /= //.
+      setoid_rewrite shiftn_1_S => [=] h2.
+      now rewrite -rename_compose h2; sigma.
 Qed.
 
 Lemma renaming_vdef :
@@ -516,14 +492,16 @@ Proof.
   intros P P' Γ Δ f g hP hfg h.
   intros i decl p e.
   rewrite -hP in p.
-  specialize (h i decl p e) as [decl' [h1 [h2 h3]]].
-  exists decl'. split ; [| split ].
+  specialize (h i decl p e) as [decl' [? [h1 [h2 h3]]]].
+  exists decl'. repeat split => //.
   - rewrite <- (hfg i). assumption.
   - rewrite <- (hfg i). rewrite <- h2.
     eapply rename_ext. intros j. symmetry. apply hfg.
-  - intros b hb. specialize (h3 b hb) as [b' [p1 p2]].
-    exists b'. split ; auto. rewrite <- (hfg i). rewrite <- p2.
-    eapply rename_ext. intros j. symmetry. apply hfg.
+  - move: h3. destruct (decl_body decl) => /= //.
+    rewrite /rshiftk.
+    destruct (decl_body decl') => /= //.
+    intros [=]; f_equal.
+    now setoid_rewrite <- (hfg _).
 Qed.
 
 (* Instance urename_proper : CMorphisms.Proper (`=1` ==> Logic.eq ==> Logic.eq ==> `=1` ==> CRelationClasses.iffT) urenaming.
@@ -754,8 +732,9 @@ Lemma rename_shiftnk :
     rename (shiftn (n + k) f) (lift n k t) = lift n k (rename (shiftn k f) t).
 Proof.
   intros f n k t.
+  rewrite !lift_rename.
   autorewrite with sigma.
-  rewrite !ren_lift_renaming.
+  rewrite - !compose_ren ren_lift_renaming.
   eapply inst_ext.
   rewrite - !ren_shiftn up_Upn. rewrite Nat.add_comm. sigma.
   rewrite !Upn_compose.
@@ -1397,12 +1376,6 @@ Definition nocc_between k n t :=
 
 Definition noccur_shift p k := fun i => (i <? k) || p (i - k).
 
-Lemma weakenable_nocc k : weakenable_pred (nocc_betweenp k).
-Proof.
-  intros n i; rewrite /nocc_betweenp.
-  repeat nat_compare_specs => /= //.
-Qed.
-
 Hint Resolve All_forallb_eq_forallb : all.
 
 Definition strengthenP k n (p : nat -> bool) := 
@@ -1503,6 +1476,9 @@ Proof.
     rewrite shiftnP_substP; len. solve_all.
 Qed.
 
+Lemma rshiftk_S x f : S (rshiftk x f) = rshiftk (S x) f.
+Proof. reflexivity. Qed.
+
 Lemma red1_rename :
   forall P Σ Γ Δ u v f,
     wf Σ ->
@@ -1526,11 +1502,15 @@ Proof.
   - destruct (nth_error Γ i) eqn:hnth; noconf H.
     unfold urenaming in hf.
     specialize hf with (1 := hav) (2 := hnth).
-    destruct hf as [decl' [e' [hr hbo]]].
-    specialize hbo with (1 := H).
-    destruct hbo as [body' [hbo' hr']].
-    rewrite hr'. constructor.
-    rewrite e'. simpl. rewrite hbo'. reflexivity.
+    destruct hf as [decl' [e' [? [hr hbo]]]].
+    rewrite H /= in hbo.
+    rewrite lift0_rename.
+    destruct (decl_body decl') eqn:hdecl => //. noconf hbo.
+    sigma in H0. sigma. rewrite H0.
+    relativize (t.[_]).
+    2:{ setoid_rewrite rshiftk_S. rewrite -rename_inst.
+        now rewrite -(lift0_rename (S (f i)) _). }
+    constructor. now rewrite e' /= hdecl.
   - rewrite rename_mkApps. simpl.
     rewrite rename_iota_red. 1:apply H2.
     { rewrite /brctx. rewrite case_branch_context_length //. }
@@ -2581,11 +2561,6 @@ Lemma rename_predicate_preturn f p :
   preturn (rename_predicate rename f p).
 Proof. reflexivity. Qed.
 
-Tactic Notation "relativize" open_constr(c) := 
-  let ty := type of c in  
-  let x := fresh in
-  evar (x : ty); replace c with x; subst x.
-
 Lemma wf_local_app_renaming P Σ Γ Δ : 
   All_local_env (lift_typing (fun (Σ : global_env_ext) (Γ' : context) (t T : term) =>
     forall P (Δ : PCUICEnvironment.context) (f : nat -> nat),
@@ -2853,8 +2828,9 @@ Proof.
     simpl in *. 
     eapply hf in isdecl as h => //.
     2:{ rewrite /shiftnP. eapply nth_error_Some_length in isdecl. now nat_compare_specs. }
-    destruct h as [decl' [isdecl' [h1 h2]]].
-    rewrite h1. econstructor. all: auto. apply hf.
+    destruct h as [decl' [isdecl' [? [h1 h2]]]].
+    rewrite lift0_rename rename_compose h1 -lift0_rename.
+    econstructor. all: auto. apply hf.
 
   - intros Σ wfΣ Γ wfΓ l X H0 P Δ f [hΔ hf].
     simpl. constructor. all: auto.
@@ -3020,8 +2996,7 @@ Proof.
           { now rewrite app_context_length -shiftnP_add. }
           { reflexivity. }
           apply urenaming_context; auto. apply hf.
-        ++ autorewrite with sigma. subst types. rewrite fix_context_length.
-          now rewrite -ren_shiftn up_Upn shiftn_consn_idsn.
+        ++ len; now sigma.
       * now eapply rename_wf_fixpoint.
     + reflexivity.
 
@@ -3047,8 +3022,7 @@ Proof.
             { now rewrite app_context_length -shiftnP_add. }
             { reflexivity. }
             apply urenaming_context; auto. apply hf.
-        ++ autorewrite with sigma. subst types. rewrite fix_context_length.
-           now rewrite -ren_shiftn up_Upn shiftn_consn_idsn.
+        ++ len. now sigma.
       * now eapply rename_wf_cofixpoint.
     + reflexivity.
 
@@ -3102,6 +3076,53 @@ Proof.
   eapply (typing_rename_P (fun _ => false)) ; eauto.
 Qed.
 
+Lemma typing_all_free_vars : env_prop
+  (fun Σ Γ t A =>
+    forall P,
+    all_free_vars (closedP #|Γ| P) t ->
+    ∑ Af, (red Σ Γ A Af * all_free_vars (closedP #|Γ| P) Af))
+   (fun Σ Γ =>
+   All_local_env
+   (lift_typing (fun (Σ : global_env_ext) (Γ : context) (t T : term)
+    =>
+    forall P,
+    all_free_vars (closedP #|Γ| P) t ->
+    ∑ Af, (red1 Σ Γ T Af * all_free_vars (closedP #|Γ| P) Af)) Σ) Γ).
+Proof.
+  (*
+  apply typing_ind_env.
+  7:{
+    - intros Σ wfΣ Γ wfΓ t na A B a u X hty ihty ht iht hu ihu P.
+      simpl. move/andP=> [havt havs].
+      destruct (iht _ havt) as [ty [redty hav]].
+      eapply invert_red_prod in redty as [A' [B' [[eq redA] redB]]]. subst ty.
+      move: hav => /= /andP [hA' hB'].
+      eexists (B' {0 := a}); split. 1:admit.
+      eapply all_free_vars_subst=> /=; rewrite ?havs //. }
+  2:{ - intros Σ wfΣ Γ wfΓ n decl isdecl ihΓ P.
+        simpl in * => hn.
+        eexists; split; eauto.
+        eapply (nth_error_All_local_env (n:=n)) in ihΓ.
+        2:{ eapply nth_error_Some_length in isdecl; eauto. }
+        rewrite isdecl in ihΓ. simpl in ihΓ. rewrite /closedP in hn.
+        move: hn; nat_compare_specs => //. intros pn.
+        move: ihΓ. unfold on_local_decl. 
+        destruct decl_body eqn:db;
+        unfold lift_typing; simpl.
+        * intros ih. specialize (ih P).
+          rewrite skipn_length // in ih.
+          rewrite all_free_vars_lift0 //.
+          admit.
+        * admit. }
+
+  13:{
+    - intros Σ wfΣ Γ wfΓ t A B X hwf ht iht htB ihB cum P hav.
+      specialize (iht _ hav) as [Af [redAf havaf]].
+      admit. (* certainly provable *)
+  }*)
+Admitted.
+
+(* 
 Lemma typing_rename_prop' : env_prop
   (fun Σ Γ t A =>
     forall Δ f,
@@ -3126,7 +3147,7 @@ Proof.
       
 
 
-  destruct X.
+  destruct X. *)
 
 End Renaming.
 

@@ -66,17 +66,72 @@ Proof. intros f f' Hff' t t' ->. now apply rename_ext. Qed.
 Instance rename_proper_pointwise : Proper (`=1` ==> pointwise_relation _ Logic.eq) rename.
 Proof. intros f f' Hff' t. now apply rename_ext. Qed.
 
+Lemma shiftn0 r : shiftn 0 r =1 r.
+Proof.
+  intros x.
+  unfold shiftn. destruct (Nat.ltb_spec x 0); try lia.
+  rewrite Nat.sub_0_r. lia.
+Qed.
+
+Lemma shiftnS n r : shiftn (S n) r =1 shiftn 1 (shiftn n r).
+Proof.
+  intros x. unfold shiftn.
+  destruct x.
+  - simpl. auto.
+  - simpl. rewrite Nat.sub_0_r.
+    destruct (Nat.ltb_spec x n);
+    destruct (Nat.ltb_spec (S x) (S n)); auto; lia.
+Qed.
+
+Lemma shiftn_add n m f : shiftn n (shiftn m f) =1 shiftn (n + m) f.
+Proof.
+  intros i.
+  unfold shiftn.
+  destruct (Nat.ltb_spec i n).
+  - destruct (Nat.ltb_spec i (n + m)); try lia.
+  - destruct (Nat.ltb_spec i (n + m)); try lia;
+    destruct (Nat.ltb_spec (i - n) m); try lia.
+    rewrite Nat.add_assoc. f_equal. f_equal. lia.  
+Qed.
+
+Hint Rewrite shiftn0 : sigma.
+
+Definition rshiftk n := Nat.add n.
+
+Instance rshiftk_proper : Proper (Logic.eq ==> Logic.eq) rshiftk.
+Proof.
+  now intros x y ->.
+Qed.
+
+Lemma shiftn_rshiftk n f : shiftn n f ∘ rshiftk n =1 rshiftk n ∘ f.
+Proof.
+  intros i. rewrite /shiftn /rshiftk /=. nat_compare_specs.
+  now replace (n + i - n) with i by lia.
+Qed.
+Hint Rewrite shiftn_rshiftk : sigma.
+
+Lemma shiftn_1_S f x : shiftn 1 f (S x) = rshiftk 1 (f x).
+Proof. now rewrite /shiftn /= Nat.sub_0_r. Qed.
+Hint Rewrite shiftn_1_S : sigma.
 
 Definition lift_renaming n k :=
   fun i =>
     if Nat.leb k i then (* Lifted *) n + i
     else i.
 
+Lemma lift_renaming_spec n k : lift_renaming n k =1 (shiftn k (rshiftk n)).
+Proof.
+  rewrite /lift_renaming /shiftn /rshiftk.
+  intros i. repeat nat_compare_specs.
+Qed.
+
+Lemma lift_renaming_0_rshift k : lift_renaming k 0 =1 rshiftk k.
+Proof. reflexivity. Qed.
+
 Lemma shiftn_lift_renaming n m k :
   shiftn m (lift_renaming n k) =1 lift_renaming n (m + k).
 Proof.
-  unfold lift_renaming, shiftn. intros i.
-  repeat (nat_compare_specs; try lia).
+  now rewrite !lift_renaming_spec shiftn_add.
 Qed.
 
 Lemma lift_rename n k t : lift n k t = rename (lift_renaming n k) t.
@@ -102,6 +157,12 @@ Proof.
     rewrite b. now rewrite shiftn_lift_renaming.
 Qed.
 Hint Rewrite @lift_rename : sigma.
+
+Lemma lift0_rename k : lift0 k =1 rename (rshiftk k).
+Proof.
+  now intros t; rewrite lift_rename lift_renaming_0_rshift.
+Qed.
+Hint Rewrite lift0_rename : sigma.
 
 Definition up k (s : nat -> term) :=
   fun i =>
@@ -152,6 +213,15 @@ Proof.
     rewrite map_def_map_def map_length.
     apply map_def_eq_spec; auto.
     rewrite b. apply rename_ext, shiftn_compose.
+Qed.
+
+Lemma rename_shiftn :
+  forall f k t,
+    rename (shiftn k f) (lift0 k t) = lift0 k (rename f t).
+Proof.
+  intros f k t.
+  rewrite lift0_rename !(rename_compose _ _ _).
+  now sigma.
 Qed.
 
 Lemma up_up k k' s : up k (up k' s) =1 up (k + k') s.
@@ -635,6 +705,7 @@ Proof.
   intros i.
   destruct i; simpl; reflexivity.
 Qed.
+Hint Rewrite compose_ren : sigma.
 
 Lemma subst_cons_ren i f : (tRel i ⋅ ren f) =1 ren (subst_cons_gen i f).
 Proof.
@@ -1027,23 +1098,6 @@ Fixpoint subst_app (t : term) (us : list term) : term :=
   | _, _ => mkApps t us
   end.
 
-Lemma shiftn0 r : shiftn 0 r =1 r.
-Proof.
-  intros x.
-  unfold shiftn. destruct (Nat.ltb_spec x 0); try lia.
-  rewrite Nat.sub_0_r. lia.
-Qed.
-
-Lemma shiftnS n r : shiftn (S n) r =1 shiftn 1 (shiftn n r).
-Proof.
-  intros x. unfold shiftn.
-  destruct x.
-  - simpl. auto.
-  - simpl. rewrite Nat.sub_0_r.
-    destruct (Nat.ltb_spec x n);
-    destruct (Nat.ltb_spec (S x) (S n)); auto; lia.
-Qed.
-
 Lemma subst_consn_shiftn n (l : list term) σ : #|l| = n -> ↑^n ∘s (l ⋅n σ) =1 σ.
 Proof.
   induction n in l |- *; simpl; intros; sigma.
@@ -1213,17 +1267,6 @@ Proof.
     * apply IH.
     * specialize (IH' (#|m| + k)). sigma.
       now rewrite - !up_Upn up_up !up_Upn.
-Qed.
-
-Lemma shiftn_add n m f : shiftn n (shiftn m f) =1 shiftn (n + m) f.
-Proof.
-  intros i.
-  unfold shiftn.
-  destruct (Nat.ltb_spec i n).
-  - destruct (Nat.ltb_spec i (n + m)); try lia.
-  - destruct (Nat.ltb_spec i (n + m)); try lia;
-    destruct (Nat.ltb_spec (i - n) m); try lia.
-    rewrite Nat.add_assoc. f_equal. f_equal. lia.  
 Qed.
 
 Lemma nth_error_idsn_eq_Some n k i : nth_error (idsn n) k = Some i -> i = tRel k.

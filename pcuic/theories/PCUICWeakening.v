@@ -379,7 +379,7 @@ Proof.
   now rewrite shiftn_id rename_ren_id.
 Qed.
 
-Lemma strengthen_urenaming Γ Γs Δ :
+Lemma strengthen_urenaming_gen Γ Γs Δ :
   let Δ' := lift_context #|Γs| 0 Δ in 
   urenaming (nocc_betweenp #|Δ| #|Γs|)
     (strengthen_context Γ Γs Δ')
@@ -435,6 +435,19 @@ Proof.
       apply rename_ext => k.
       rewrite /strengthen /strengthen_rename /rshiftk /id.
       repeat nat_compare_specs.
+Qed.
+
+Lemma strengthen_urenaming Γ Γs Δ :
+  let Δ' := lift_context #|Γs| 0 Δ in 
+  urenaming (nocc_betweenp #|Δ| #|Γs|)
+    (Γ ,,, Δ)
+    (Γ ,,, Γs ,,, Δ')
+    (strengthen #|Δ| #|Γs|).
+Proof.
+  pose proof (strengthen_urenaming_gen Γ Γs Δ).
+  simpl in X.
+  rewrite /strengthen_context in X.
+  now rewrite strengthen_lift_ctx in X.
 Qed.
 
 (* l, r, p -> r, l, p *)
@@ -897,11 +910,11 @@ Proof.
     rewrite /=. econstructor.
     + eapply IHd1; eauto.
     + specialize (IHd1 _ _ isd1 eq_refl).
-      pose proof (is_strenghtenable_isLift _ isd1) as [[A' ->] _].
+      pose proof (is_strengthenable_isLift _ isd1) as [[A' ->] _].
       specialize (IHd2 _ (Δ,, vass na A') isd2).
       forward IHd2. { now rewrite lift_context_snoc Nat.add_0_r. }
       rewrite strengthen_lift.
-      rewrite shiftn_strengthen. { pose proof (is_strenghtenable_isLift _ isd2). admit. }
+      rewrite shiftn_strengthen. { pose proof (is_strengthenable_isLift _ isd2). admit. }
       apply IHd2.
   - admit.
   - admit.
@@ -927,40 +940,66 @@ Proof.
   - intros Γs Δ. move/andP=> [hd1 hd2]. intros ->.
     specialize (IHd1 _ _ hd1 eq_refl).
     specialize (IHd2 _ _ hd2 eq_refl).
-    epose proof (is_strenghtenable_isLift _ hd1).
-    epose proof (is_strenghtenable_isLift _ hd2).
+    epose proof (is_strengthenable_isLift _ hd1).
+    epose proof (is_strengthenable_isLift _ hd2).
     eapply type_Cumul; eauto.
     eapply cumul_renameP; eauto.
-    * epose proof (strengthen_urenaming Γl Γs Δ).
-      simpl in X1. rewrite /strengthen_context in X1.
-      now rewrite strengthen_lift_ctx in X1.
+    * apply (strengthen_urenaming Γl Γs Δ).
     * destruct X. admit.
 Admitted.
+
+Lemma invert_cumul_prod_r {cf:checker_flags} Σ Γ C na A B :
+Σ ;;; Γ |- C <= tProd na A B ->
+∑ na' A' B', red Σ.1 Γ C (tProd na' A' B') *
+             eq_binder_annot na na' *
+             (Σ ;;; Γ |- A = A') *
+             (Σ ;;; (Γ ,, vass na A) |- B' <= B).
+Proof.
+Admitted.
+Lemma inversion_Prod {cf:checker_flags} Σ :
+    forall {Γ na A B T},
+      Σ ;;; Γ |- tProd na A B : T ->
+      ∑ s1 s2,
+        Σ ;;; Γ |- A : tSort s1 ×
+        Σ ;;; Γ ,, vass na A |- B : tSort s2 ×
+        Σ ;;; Γ |- tSort (Universe.sort_of_product s1 s2) <= T.
+  Proof.
+  Admitted.
+
+  Lemma type_reduction {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ t A B} : 
+    Σ ;;; Γ |- t : A -> red Σ Γ A B -> Σ ;;; Γ |- t : B.
+  Proof.
+  Admitted.
 
 Lemma noccur_iss {cf:checker_flags} : 
   forall Σ {wfΣ : wf Σ.1} Γ t T (d : Σ ;;; Γ |- t : T),
     forall Γl Γs Δ, 
     Γ = Γl ,,, Γs ,,, lift_context #|Γs| 0 Δ ->
     isLift #|Γs| #|Δ| t ->
-    ∑ T', { d' : Σ ;;; Γ |- t : T' | (is_strengthenable d' #|Δ| #|Γs|) /\ ∥ cumul Σ Γ T' T ∥ }.
+    ∑ T' (d' : Σ ;;; Γ |- t : T'), (is_strengthenable d' #|Δ| #|Γs|) × cumul Σ Γ T' T.
 Proof.
   intros. induction d in Γs, Δ, X |- *.
-  - unshelve eexists; [econstructor; eauto|].
-    simpl. admit.
-  - unshelve eexists; [econstructor; eauto|].
-    simpl; auto.
+  - eexists; unshelve eexists; [econstructor; eauto|].
+    simpl. split; auto. 2:reflexivity. admit.
+  - admit.
   - admit.
   - admit.
   - admit.
   - destruct X as [[] ?]; noconf e.
-    specialize (IHd2 _ _ (isLift_lift _ _ _)) as [IHd2 isd2].
-    specialize (IHd3 _ _ (isLift_lift _ _ _)) as [IHd3 isd3].
-    pose proof (is_strengthenable_isLift _ isd2) as [? [? ?]].
-    destruct x; noconf e.
-    specialize (IHd1 Γs Δ). forward IHd1. { now eexists (tProd _ _ _). }
-    destruct IHd1. clear d1.
-    unshelve eexists; [econstructor; eauto|].
-    simpl. now rewrite i0 isd2 isd3.
+    specialize (IHd2 _ _ (isLift_lift _ _ _)) as [? [IHd2 [isd2 ?]]].
+    specialize (IHd3 _ _ (isLift_lift _ _ _)) as [? [IHd3 [isd3 ?]]].
+    pose proof (is_strengthenable_isLift _ isd2) as [? [? ->]].
+    eapply invert_cumul_prod_r in c as [? [? [? [[[? ?] ?] ?]]]].
+    exists (x3 {0 := (lift #|Γs| #|Δ| v)}).
+    unshelve eexists.
+    * epose proof (type_reduction IHd2 r).
+      econstructor.
+      2:eauto. 1:admit.
+      eapply type_Cumul'.
+      + eapply IHd3.
+      + admit.
+      + admit.
+    * simpl. admit.
   - admit.
   - admit.
   - admit.
@@ -968,9 +1007,74 @@ Proof.
   - admit.
   - admit.
   - admit.
-  - specialize (IHd2 )
+  - specialize (IHd1 _ _ X) as [A' [dA' [? ?]]].
+    exists A', dA'. split; auto. admit.
+Admitted.
+    
+Lemma alli_mapi {A B} (f : nat -> A -> bool) (g : nat -> B -> A) n l : 
+  alli f n (mapi_rec g l n) = alli (fun i x => f i (g i x)) n l.
+Proof.
+  revert n; induction l => n; simpl; auto.
+  now rewrite IHl.
+Qed.
 
+Lemma alli_fold_context_prop f g ctx : 
+  alli f 0 (fold_context g ctx) =
+  alli (fun i x => f i (map_decl (g (Nat.pred #|ctx| - i)) x)) 0 ctx.
+Proof.
+  now rewrite fold_context_alt /mapi alli_mapi.
+Qed.
 
+Lemma test_decl_map_decl f g x : test_decl f (map_decl g x) = test_decl (f ∘ g) x.
+Proof.
+  rewrite /test_decl /map_decl /=.
+  f_equal. rewrite /foroptb. f_equal.
+  now rewrite option_map_two.
+Qed.
+
+Lemma all_free_vars_true t : all_free_vars xpredT t.
+Proof.
+Admitted.
+
+Lemma strengthen_thm {cf} : forall Σ {wfΣ : wf Σ.1} Γ t T (d : Σ ;;; Γ |- t : T),
+  forall Γl Γs Δ, 
+  Γ = Γl ,,, Γs ,,, lift_context #|Γs| 0 Δ ->
+  isLift #|Γs| #|Δ| t ->
+  isLift #|Γs| #|Δ| T ->
+  Σ ;;; Γl ,,, Δ |- rename (strengthen #|Δ| #|Γs|) t : rename (strengthen #|Δ| #|Γs|) T.
+Proof.
+  intros.
+  pose proof (noccur_iss _ _ _ _ d _ _ _ H X) as [T' [d' [isd cum]]].
+  pose proof (typing_rename_prop _ _ _ _ d' _ _ _ isd H).
+  eapply type_Cumul'; eauto.
+  * destruct X0 as [? ->].
+    rewrite strengthen_lift. admit.
+  * subst Γ. eapply cumul_renameP; eauto.
+    + eapply strengthen_urenaming.
+    + epose proof (is_strengthenable_isLift _ isd). admit.
+    + admit.
+    + unfold on_ctx_free_vars.
+      rewrite alli_app. apply/andP; split.
+      - rewrite /lift_context.
+        rewrite alli_fold_context_prop.
+        clear. eapply alli_Alli.
+        eapply forall_nth_error_Alli.
+        intros i x hnth. simpl.
+        eapply nth_error_Some_length in hnth.
+        rewrite {1}/nocc_betweenp. nat_compare_specs.
+        nat_compare_specs. simpl.
+        rewrite Nat.add_0_r.
+        rewrite /all_free_vars_decl.
+        rewrite test_decl_map_decl.
+        eapply (test_decl_impl (fun _ => true)).
+        { intros k _.
+          eapply all_free_vars_impl.
+          2:{ erewrite all_free_vars_lift. apply all_free_vars_true. } 
+          intros k'.
+          rewrite /strengthenP /nocc_betweenp /addnP.
+          repeat nat_compare_specs => /= //. }
+        destruct x as [na [?|] ? ]=> //.
+Admitted.
 
 (** For an unconditional renaming defined on all variables in the source context *)
 Lemma typing_rename_prop {cf:checker_flags} : env_prop

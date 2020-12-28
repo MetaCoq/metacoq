@@ -477,16 +477,6 @@ Definition option_all (p : term -> bool) (o : option term) : bool :=
 Definition test_decl (p : term -> bool) d :=
   p d.(decl_type) && option_all p d.(decl_body).
 
-Lemma option_all_map f g x : option_all f (option_map g x) = option_all (f ∘ g) x.
-Proof.
-  destruct x; reflexivity.
-Qed.
-
-Lemma test_decl_map_decl f g x : test_decl f (map_decl g x) = test_decl (f ∘ g) x.
-Proof.
-  now rewrite /test_decl /map_decl /= option_all_map.
-Qed.
-
 Lemma option_all_ext f g x : f =1 g -> option_all f x = option_all g x.
 Proof.
   move=> Hf; destruct x; simpl => //; rewrite Hf; reflexivity.

@@ -1677,9 +1677,8 @@ Proof.
   nat_compare_specs. lia_f_equal.
 Qed.
 
-
 Definition on_ctx_free_vars P ctx :=
-  alli (fun k => (all_free_vars_decl (addnP k P))) 0 ctx.
+  alli (fun k d => P k ==> (all_free_vars_decl (addnP (S k) P) d)) 0 ctx.
 
 Instance on_ctx_free_vars_proper : Proper (`=1` ==> eq ==> eq) on_ctx_free_vars.
 Proof.
@@ -1711,12 +1710,14 @@ Qed.
 
 Lemma nth_error_all_free_vars_ctx P n ctx i d :
   on_ctx_free_vars (addnP n P) ctx ->
+  P (n + i) ->
   nth_error ctx i = Some d ->
-  test_decl (all_free_vars (addnP (n + i) P)) d.
+  test_decl (all_free_vars (addnP (n + S i) P)) d.
 Proof.
   rewrite /on_ctx_free_vars.
   solve_all.
   eapply alli_Alli, Alli_nth_error in H; eauto.
+  rewrite /= {1}/addnP Nat.add_comm H0 /= in H.
   now rewrite Nat.add_comm -addnP_add.
 Qed.
 
@@ -2270,22 +2271,26 @@ Proof.
 Qed.
 
 Lemma on_ctx_free_vars_concat P Γ Δ : 
-  on_ctx_free_vars (addnP 1 P) Γ ->
-  on_ctx_free_vars (addnP 1 (shiftnP #|Δ| P)) Δ ->  
-  on_ctx_free_vars (addnP 1 (shiftnP #|Δ| P)) (Γ ,,, Δ).
+  on_ctx_free_vars P Γ ->
+  on_ctx_free_vars (shiftnP #|Δ| P) Δ ->  
+  on_ctx_free_vars (shiftnP #|Δ| P) (Γ ,,, Δ).
 Proof.
   rewrite /on_ctx_free_vars alli_app.
   move=> hΓ -> /=; rewrite alli_shiftn.
   eapply alli_impl; tea => i d /=.
-  simpl. rewrite !addnP_add.
+  simpl.
+  rewrite {1}/shiftnP. nat_compare_specs.
+  replace (#|Δ| + i - #|Δ|) with i by lia.
+  destruct (P i) eqn:pi => /= //.
   apply all_free_vars_decl_impl => k.
-  rewrite (Nat.add_comm #|Δ|) -Nat.add_assoc (Nat.add_comm #|Δ|).
-  now rewrite - !addnP_add addnP_shiftnP.
+  rewrite /addnP /shiftnP.
+  nat_compare_specs.
+  now replace (k + S (#|Δ| + i) - #|Δ|) with (k + S i) by lia.
 Qed.
 
-Lemma on_ctx_free_vars_tip P d : on_ctx_free_vars P [d] = all_free_vars_decl P d.
+Lemma on_ctx_free_vars_tip P d : on_ctx_free_vars P [d] = P 0 ==> all_free_vars_decl (addnP 1 P) d.
 Proof.
-  now rewrite /on_ctx_free_vars /= addnP0 andb_true_r.
+  now rewrite /on_ctx_free_vars /= /= andb_true_r.
 Qed.
 
 Lemma OnOne2_impl_All_r {A} (P : A -> A -> Type) (Q : A -> Type) l l' : 
@@ -2306,10 +2311,16 @@ Proof.
   now eapply HPQ.
 Qed.
 
+Lemma shiftnPS n P : shiftnP (S n) P n.
+Proof.
+  rewrite /shiftnP /=.
+  now nat_compare_specs.
+Qed.
+
 Lemma on_ctx_free_vars_extend P Γ Δ :
   all_free_vars_ctx P Δ ->
-  on_ctx_free_vars (addnP 1 P) Γ ->
-  on_ctx_free_vars (addnP 1 (shiftnP #|Δ| P)) (Γ ,,, Δ).
+  on_ctx_free_vars P Γ ->
+  on_ctx_free_vars (shiftnP #|Δ| P) (Γ ,,, Δ).
 Proof.
   intros hΔ hΓ.
   apply on_ctx_free_vars_concat => //.
@@ -2319,17 +2330,19 @@ Proof.
   rewrite alli_shift. setoid_rewrite Nat.add_comm. setoid_rewrite <- shiftnP_add.
   move/andP=> [] hx hΔ.
   rewrite alli_app /= andb_true_r Nat.add_0_r; len.
-  rewrite addnP_add.
-  setoid_rewrite <-(shiftnP_add #|Δ| 1).
+  rewrite Nat.add_comm.
+  rewrite addnP_shiftnP.
   specialize (IHΔ (shiftnP 1 P) (Γ ,, x)).
   forward IHΔ.
   * simpl. apply (on_ctx_free_vars_concat _ _ [x]) => //.
-    simpl. rewrite addnP_shiftnP.
-    now rewrite on_ctx_free_vars_tip.
+    simpl.
+    now rewrite on_ctx_free_vars_tip {1}/shiftnP /= addnP_shiftnP.
   * specialize (IHΔ hΔ).
-    rewrite /on_ctx_free_vars in IHΔ.  
-    rewrite IHΔ /=.
-    now rewrite shiftnP_add addnP_shiftnP.
+    rewrite shiftnPS /= hx andb_true_r.
+    rewrite /on_ctx_free_vars in IHΔ.
+    rewrite -(Nat.add_1_r #|Δ|).
+    setoid_rewrite <-(shiftnP_add).
+    now setoid_rewrite <- (shiftnP_add _ _ _ _).
 Qed.
 
 Lemma OnOne2All_nth_error {A B} (P : A -> B -> B -> Type) il l l' :
@@ -2366,12 +2379,43 @@ Proof.
   apply all_free_vars_lift0.
   now rewrite addnP_shiftnP.
 Qed.
+(* 
+Definition all_free_vars_ctx_gen P ctx :=
+  alli (fun k => (all_free_vars_decl (addnP k P))) 0 ctx.
+
+Instance all_free_vars_ctx_gen_proper : Proper (`=1` ==> `=1`) all_free_vars_ctx_gen.
+Proof.
+  rewrite /all_free_vars_ctx_gen => f g Hfg x.
+  now setoid_rewrite Hfg. 
+Qed.
+
+Lemma all_free_vars_ctx_gen_decl (P : nat -> bool) (Q : nat -> bool) Γ i d : 
+  nth_error Γ i = Some d ->
+  P i ->
+  (forall k, all_free_vars (addnP i Q) k -> all_free_vars (addnP i P) k) ->
+  all_free_vars_ctx_gen Q Γ -> 
+  test_decl (all_free_vars (addnP i P)) d.
+Proof.
+  rewrite /all_free_vars_ctx_gen.
+  solve_all.
+  eapply alli_Alli, Alli_nth_error in H2; eauto.
+  simpl in H1. rewrite /all_free_vars_decl in H1.
+  eapply test_decl_impl. 2:eapply H2.
+  intros. simpl in H3. apply H1. auto.
+Qed. *)
+
 
 (** This shows preservation by reduction of closed/noccur_between predicates 
   necessary to prove exchange and strengthening lemmas. *)
-Lemma red1_all_free_vars {P Σ Γ u v} {wfΣ : wf Σ} :
+Lemma red1_all_free_vars {P : nat -> bool} {Σ Γ u v} {wfΣ : wf Σ} :
   all_free_vars P u ->
-  on_ctx_free_vars (addnP 1 P) Γ ->
+  (* (forall i k, P i -> (* The ith variable of Γ is present  *)
+  (* k respect Q for the prefix of Γ from begginning to i, i.e. k 
+    is under Γ_i *)
+  all_free_vars (addnP (S i) Q) k -> 
+  (* P holds *)
+  all_free_vars (addnP (S i) P) k) -> *)
+  on_ctx_free_vars P Γ ->
   red1 Σ Γ u v ->
   all_free_vars P v.
 Proof.
@@ -2393,13 +2437,13 @@ Proof.
   all:try eapply all_free_vars_subst1; eauto.
   - destruct (nth_error Γ i) eqn:hnth => //.
     simpl in H. noconf H.
-    epose proof (nth_error_all_free_vars_ctx P 1 Γ i c).
-    forward H0. { unfold on_ctx_free_vars. apply hctx. }
-    specialize (H0 hnth). simpl in H0.
-    move/andP: H0. 
-    (* why doesn't this work?? rewrite /= H => [_ hbody]. *)
-    rewrite /= H /foroptb /=. move=> [_ hbody].
+    epose proof (nth_error_all_free_vars_ctx P 0 Γ i c).
+    forward H0. { now rewrite addnP0. }
+    specialize (H0 hav hnth). simpl in H0.
+    rewrite /test_decl H in H0.
     rewrite all_free_vars_lift0 //.
+    move/andP: H0 => [].
+    now rewrite /foroptb /= => _ hbod.
   - rewrite /iota_red. rename h4 into hbrs.
     move: h3. rewrite all_free_vars_mkApps => /andP [] hf hargs.
     apply all_free_vars_subst.
@@ -2506,7 +2550,7 @@ Lemma cumul_renameP :
     urenaming P Δ Γ f ->
     all_free_vars P A ->
     all_free_vars P B ->
-    on_ctx_free_vars (addnP 1 P) Γ ->
+    on_ctx_free_vars P Γ ->
     Σ ;;; Γ |- A <= B ->
     Σ ;;; Δ |- rename f A <= rename f B.
 Proof.

@@ -88,7 +88,7 @@ struct
         let evm, brs = map_evm aux evm (List.map snd brs) in
         (* todo: reify better case_info *)
         let ci = Inductiveops.make_case_info (Global.env ()) ind relevance Constr.RegularStyle in
-        evm, Constr.mkCase (ci, ty, Constr.NoInvert, d, Array.of_list brs)
+        evm, Constr.mkCase (Inductive.contract_case (Global.env ()) (ci, ty, Constr.NoInvert, d, Array.of_list brs))
       | ACoq_tFix (lbd, i) ->
         let (names,types,bodies,rargs) = (List.map (fun p->p.adname) lbd,  List.map (fun p->p.adtype) lbd, List.map (fun p->p.adbody) lbd,
                                           List.map (fun p->p.rarg) lbd) in

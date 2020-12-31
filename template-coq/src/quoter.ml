@@ -237,7 +237,8 @@ struct
          (Q.mkInd (quote_inductive' mind) (Q.quote_univ_instance pu),
           add_inductive mind acc)
 
-      | Constr.Case (ci,typeInfo,iv,discriminant,e) ->
+      | Constr.Case (ci,u,pms,typeInfo,iv,discriminant,e) ->
+        let (ci,typeInfo,iv,discriminant,e) = Inductive.expand_case (snd env) (ci,u,pms,typeInfo,iv,discriminant,e) in
          let () = match iv with
            | Constr.NoInvert -> ()
            | Constr.CaseInvert _ ->

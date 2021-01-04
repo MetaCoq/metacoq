@@ -1243,6 +1243,33 @@ Proof.
     rewrite closedn_subst_instance_constr. assumption.
 Qed.
 
+Lemma declared_constructor_closed_args {cf:checker_flags}
+  {Σ mdecl idecl c cdecl} {wfΣ : wf Σ} :
+  declared_constructor Σ c mdecl idecl cdecl ->
+  closedn_ctx (#|ind_bodies mdecl| + #|ind_params mdecl|) cdecl.(cstr_args).
+Proof.
+  intros h.
+  unfold declared_constructor in h.
+  destruct c as [i ci]. simpl in h. destruct h as [hidecl hcdecl].
+  eapply declared_inductive_closed_constructors in hidecl as h.
+  eapply All_nth_error in h. 2: eassumption.
+  move/andP: h => [/andP [hargs hindices]] hty.
+  apply hargs.
+Qed.
+
+Lemma declared_constructor_closed_indices {cf:checker_flags}
+  {Σ mdecl idecl c cdecl} {wfΣ : wf Σ} :
+  declared_constructor Σ c mdecl idecl cdecl ->
+  forallb (closedn (#|ind_bodies mdecl| + #|ind_params mdecl| + #|cstr_args cdecl|)) cdecl.(cstr_indices).
+Proof.
+  intros h.
+  unfold declared_constructor in h.
+  destruct c as [i ci]. simpl in h. destruct h as [hidecl hcdecl].
+  eapply declared_inductive_closed_constructors in hidecl as h.
+  eapply All_nth_error in h. 2: eassumption.
+  now move/andP: h => [/andP [hargs hindices]] hty.
+Qed.
+
 Lemma declared_projection_closed_type {cf:checker_flags} 
   {Σ mdecl idecl p pdecl} {wfΣ : wf Σ} :
   declared_projection Σ p mdecl idecl pdecl ->

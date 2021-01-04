@@ -148,6 +148,12 @@ Section alli.
   Qed.
 End alli.
 
+Lemma alli_mapi {A B} (f : nat -> A -> bool) (g : nat -> B -> A) n l : 
+  alli f n (mapi_rec g l n) = alli (fun i x => f i (g i x)) n l.
+Proof.
+  revert n; induction l => n; simpl; auto.
+  now rewrite IHl.
+Qed.
 
 Section Forallb2.
   Context {A} (f : A -> A -> bool).

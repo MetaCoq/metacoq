@@ -47,10 +47,6 @@ Definition extends (Σ Σ' : global_env) :=
 Module PCUICEnvTyping := EnvTyping PCUICTerm PCUICEnvironment.
 Include PCUICEnvTyping.
 
-Derive NoConfusion for All_local_env.
-Derive NoConfusion for context_decl.
-Derive NoConfusion for list.
-
 (* AXIOM GUARD CONDITION *)
 
 Class GuardChecker := 
@@ -335,6 +331,14 @@ Lemma meta_conv_term {cf} {Σ Γ t t' A} :
     Σ ;;; Γ |- t' : A.
 Proof.
   intros h []. assumption.
+Qed.
+
+Lemma meta_conv_all {cf} {Σ Γ t A Γ' t' A'} :
+    Σ ;;; Γ |- t : A ->
+    Γ = Γ' -> t = t' -> A = A' ->
+    Σ ;;; Γ' |- t' : A'.
+Proof.
+  intros h [] [] []; assumption.
 Qed.
 
 (** ** Typechecking of global environments *)
@@ -1297,6 +1301,15 @@ Section All_local_env.
     apply wf_local_rel_app_inv in H as [H H']; tas.
     rewrite app_context_nil_l in H'.
     now split; [eapply wf_local_local_rel|].
+  Qed.
+
+  Lemma wf_local_app_ind {Σ Γ1 Γ2} :
+    wf_local Σ Γ1 -> 
+    (wf_local Σ Γ1 -> wf_local_rel Σ Γ1 Γ2) ->
+    wf_local Σ (Γ1 ,,, Γ2).
+  Proof.
+    intros wf IH.
+    apply wf_local_app; auto.
   Qed.
 
   Lemma All_local_env_map (P : context -> term -> option term -> Type) f l :

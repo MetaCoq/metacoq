@@ -44,6 +44,12 @@ Proof.
   intros x y -> f g Hfg ?. now apply shiftn_ext.
 Qed.
 
+Lemma shiftn_id i : shiftn i id =1 id.
+Proof.
+  intros k; rewrite /shiftn. nat_compare_specs => /= //.
+  rewrite /id. lia.
+Qed.
+
 Lemma rename_ext f f' : (f =1 f') -> (rename f =1 rename f').
 Proof.
   unfold pointwise_relation.
@@ -401,12 +407,8 @@ Definition ren_id (x : nat) := x.
 Lemma ren_id_ids : ren ren_id =1 ids.
 Proof. reflexivity. Qed.
 
-Lemma shiftn_id n : shiftn n ren_id =1 ren_id.
-Proof.
-  intros i; unfold shiftn.
-  elim (Nat.ltb_spec i n) => H //.
-  unfold ren_id. lia.
-Qed.
+Lemma shiftn_ren_id n : shiftn n ren_id =1 ren_id.
+Proof. apply shiftn_id. Qed.
 
 Lemma rename_ren_id : rename ren_id =1 id.
 Proof.
@@ -732,12 +734,6 @@ Proof.
 Qed.
 
 Infix "=2" := (Logic.eq ==> (pointwise_relation _ Logic.eq))%signature (at level 70) : signature_scope.
-
-Definition compose2 {A B C} (g : B -> C) (f : A -> B) : A -> C :=
-  fun x => g (f x).
-Infix "∘'" := compose2 (at level 90) : signature.
-
-Delimit Scope program_scope with prog.
 
 Lemma subst_consn_subst_cons' {A} (t : A) l : (subst_consn (t :: l) =2 ((subst_cons_gen t) ∘ (subst_consn l)))%signature.
 Proof. red.

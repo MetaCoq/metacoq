@@ -19,9 +19,10 @@ theories/PCUICNormal.v
 theories/PCUICNameless.v
 theories/PCUICEquality.v
 theories/PCUICWeakeningEnv.v
+theories/PCUICClosed.v
+theories/PCUICOnFreeVars.v
 theories/PCUICRename.v
 theories/PCUICInst.v
-theories/PCUICClosed.v
 theories/PCUICWeakening.v
 theories/PCUICUnivSubstitution.v
 theories/PCUICSubstitution.v

@@ -1183,12 +1183,19 @@ Qed.
 
 Hint Rewrite nl_context_assumptions : len.
 
+Lemma nl_expand_lets_k Γ k t : 
+  nl (expand_lets_k Γ k t) = 
+  expand_lets_k (nlctx Γ) k (nl t).
+Proof.
+  rewrite /expand_lets_k.
+  now rewrite nl_subst nl_extended_subst nl_lift; len.
+Qed.
+
 Lemma nl_expand_lets Γ t : 
   nl (expand_lets Γ t) = 
   expand_lets (nlctx Γ) (nl t).
 Proof.
-  rewrite /expand_lets /expand_lets_k.
-  now rewrite nl_subst nl_extended_subst nl_lift; len.
+  now rewrite /expand_lets nl_expand_lets_k.
 Qed.
 
 Lemma subst_instance_context_nlctx u ctx :
@@ -1306,8 +1313,8 @@ Proof.
   - rewrite nl_mkApps nl_lift; len. f_equal.
     rewrite !map_map_compose map_app /= !map_map_compose nl_mkApps.
     f_equal.
-    * apply map_ext => idx; rewrite nl_expand_lets.
-      now rewrite nlctx_subst_instance_context nl_subst_instance_constr.
+    * apply map_ext => idx. rewrite nl_subst nl_expand_lets_k.
+      now rewrite nlctx_subst_instance_context nl_subst nl_inds nl_subst_instance_constr.
     * f_equal.
       simpl. f_equal.
       rewrite map_app !map_map_compose.

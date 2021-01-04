@@ -1,4 +1,4 @@
-From Coq Require Import List ssreflect Arith.
+From Coq Require Import List ssreflect Arith Morphisms.
 From MetaCoq Require Import MCPrelude MCList MCProd.
 
 Definition option_get {A} (default : A) (x : option A) : A
@@ -92,6 +92,22 @@ Proof.
   move=> [=] <-. by rewrite (IHl l0 eq_refl).
 Qed.
 
+Lemma map_option_out_impl {A B} (l : list A) (f g : A -> option B) x :
+  (forall x y, f x = Some y -> g x = Some y) ->
+  map_option_out (map f l) = Some x ->
+  map_option_out (map g l) = Some x.
+Proof.
+  intros Hfg.
+  induction l in x |- *; simpl; auto.
+  destruct (f a) eqn:fa.
+  - rewrite (Hfg _ _ fa).
+    move: IHl; destruct map_option_out.
+    * move=> H'. specialize (H' _ eq_refl).
+      rewrite H'. congruence.
+    * discriminate.
+  - discriminate.
+Qed.
+
 Lemma option_map_Some {A B} (f : A -> B) (o : option A) x : 
   option_map f o = Some x ->
   ∑ y, (o = Some y) /\ (x = f y).
@@ -115,3 +131,20 @@ Definition foroptb2 {A : Type} (p : A -> A -> bool) (o o': option A) : bool :=
   | None, None => true
   | _, _ => false
   end.
+
+Instance foroptb_proper A : Proper (`=1` ==> Logic.eq ==> Logic.eq) (@foroptb A).
+Proof.
+  intros f g Hfg x y ->; rewrite /foroptb.
+  destruct y; simpl; rewrite // ?Hfg.
+Qed.
+
+Instance foroptb_proper_pointwise A : Proper (`=1` ==> `=1`) (@foroptb A).
+Proof.
+  intros f g Hfg y; rewrite /foroptb.
+  destruct y; simpl; rewrite // ?Hfg.
+Qed.
+
+Lemma foroptb_impl {A} (f g : A -> bool) x : (forall x, f x -> g x) -> foroptb f x -> foroptb g x.
+Proof.
+  move=> Hf; destruct x; simpl => //; apply Hf.
+Qed.

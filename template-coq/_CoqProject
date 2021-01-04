@@ -12,6 +12,7 @@ theories/utils/LibHypsNaming.v
 theories/utils/MCList.v
 theories/utils/MCOption.v
 theories/utils/MCProd.v
+theories/utils/MCPred.v
 theories/utils/MCRelations.v
 theories/utils/MCSquash.v
 theories/utils/MCString.v

@@ -42,6 +42,10 @@ Proof.
   - intros x. now rewrite Hff', Hgg'.
 Qed.
 
+Ltac tas := try assumption.
+Ltac tea := try eassumption.
+Ltac trea := try reflexivity; try eassumption.
+
 Create HintDb terms.
 
 (** This tactic helps rewrite with all the length lemmas available 
@@ -84,3 +88,10 @@ Hint Extern 10 (@eq nat _ _) => lia : terms.
 Ltac easy ::= easy0 || solve [intuition eauto 3 with core terms].
 
 Ltac inv H := inversion_clear H.
+
+(** Turns a subterm of the goal into an evar + equality subgoal 
+  for easier lemma application. *)
+Tactic Notation "relativize" open_constr(c) := 
+  let ty := type of c in  
+  let x := fresh in
+  evar (x : ty); replace c with x; subst x.

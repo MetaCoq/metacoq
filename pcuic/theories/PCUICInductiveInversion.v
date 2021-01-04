@@ -467,41 +467,6 @@ Proof.
   now rewrite !Nat.add_succ_r !subst_rel0_lift_id.
 Qed.
 
-
-Definition option_all (p : term -> bool) (o : option term) : bool :=
-  match o with
-  | None => true
-  | Some b => p b
-  end.
-
-Definition test_decl (p : term -> bool) d :=
-  p d.(decl_type) && option_all p d.(decl_body).
-
-Lemma option_all_ext f g x : f =1 g -> option_all f x = option_all g x.
-Proof.
-  move=> Hf; destruct x; simpl => //; rewrite Hf; reflexivity.
-Qed.
-
-Lemma test_decl_eq f g x : f =1 g -> test_decl f x = test_decl g x.
-Proof.
-  intros Hf; rewrite /test_decl (Hf (decl_type x)) (option_all_ext f g) //.
-Qed.
-
-
-Lemma option_all_impl (f g : term -> bool) x : (forall x, f x -> g x) -> option_all f x -> option_all g x.
-Proof.
-  move=> Hf; destruct x; simpl => //; apply Hf.
-Qed.
-
-Lemma test_decl_impl (f g : term -> bool) x : (forall x, f x -> g x) -> test_decl f x -> test_decl g x.
-Proof.
-  intros Hf; rewrite /test_decl.
-  move/andb_and=> [Hd Hb].
-  apply/andb_and; split; eauto.
-  eapply option_all_impl; eauto.
-Qed.
-
-
 Lemma assumption_context_app_inv Γ Δ : assumption_context Γ -> assumption_context Δ ->  
   assumption_context (Γ ++ Δ).
 Proof.

@@ -1135,6 +1135,23 @@ Proof.
     now eapply subject_closed in h.
 Qed.
 
+Lemma declared_constant_closed_body {cf : checker_flags} :
+  forall Σ cst decl body,
+    wf Σ ->
+    declared_constant Σ cst decl ->
+    decl.(cst_body) = Some body ->
+    closed body.
+Proof.
+  intros Σ cst decl body hΣ h e.
+  unfold declared_constant in h.
+  eapply lookup_on_global_env in h. 2: eauto.
+  destruct h as [Σ' [wfΣ' decl']].
+  red in decl'. red in decl'.
+  destruct decl as [ty bo un]. simpl in *.
+  rewrite e in decl'.
+  now eapply subject_closed in decl'.
+Qed.
+
 Lemma declared_inductive_closed_type {cf:checker_flags} :
   forall Σ mdecl ind idecl,
     wf Σ ->
@@ -1184,7 +1201,7 @@ Proof.
   eapply (declared_minductive_closed (Σ:=empty_ext Σ)) in hmdecl; auto.
   unfold closed_inductive_decl in hmdecl.
   move/andP: hmdecl => [clpars clbodies].
-  eapply nth_error_forallb in clbodies; eauto.
+  eapply forallb_nth_error in clbodies; eauto.
   erewrite hidecl in clbodies. simpl in clbodies.
   unfold closed_inductive_body in clbodies.
   move/andP: clbodies => [/andP [_ cl] _].

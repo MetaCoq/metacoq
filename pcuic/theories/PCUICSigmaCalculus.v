@@ -731,15 +731,15 @@ Proof.
     -- rewrite nth_error_app_lt ?ren_ids_length //. apply IHn; lia.
 Qed.
 
-Infix "=2" := (Logic.eq ==> (pointwise_relation _ Logic.eq))%signature (at level 80).
+Infix "=2" := (Logic.eq ==> (pointwise_relation _ Logic.eq))%signature (at level 70) : signature_scope.
 
 Definition compose2 {A B C} (g : B -> C) (f : A -> B) : A -> C :=
   fun x => g (f x).
-Infix "∘'" := compose2 (at level 90).
+Infix "∘'" := compose2 (at level 90) : signature.
 
 Delimit Scope program_scope with prog.
 
-Lemma subst_consn_subst_cons' {A} (t : A) l : subst_consn (t :: l) =2 ((subst_cons_gen t) ∘ (subst_consn l)).
+Lemma subst_consn_subst_cons' {A} (t : A) l : (subst_consn (t :: l) =2 ((subst_cons_gen t) ∘ (subst_consn l)))%signature.
 Proof. red.
   intros x y <-. apply subst_consn_subst_cons_gen.
 Qed.
@@ -1401,6 +1401,47 @@ Qed.
 
 Lemma expand_lets_nil t : expand_lets [] t = t.
 Proof. by rewrite /expand_lets /expand_lets_k /= subst_empty lift0_id. Qed.
+
+Lemma expand_lets_it_mkProd_or_LetIn Γ Δ k t : 
+  expand_lets_k Γ k (it_mkProd_or_LetIn Δ t) = 
+  it_mkProd_or_LetIn (expand_lets_k_ctx Γ k Δ) (expand_lets_k Γ (k + #|Δ|) t).
+Proof.
+  revert k; induction Δ as [|[na [b|] ty] Δ] using ctx_length_rev_ind; simpl; auto; intros k.
+  - now rewrite /expand_lets_k_ctx /= Nat.add_0_r.
+  - rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /=.
+    rewrite /expand_lets_ctx expand_lets_k_ctx_decl /= it_mkProd_or_LetIn_app.
+    simpl. f_equal. rewrite app_length /=.
+    simpl. rewrite Nat.add_1_r Nat.add_succ_r.
+    now rewrite -(H Δ ltac:(lia) (S k)).
+  - rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /=.
+    rewrite /expand_lets_ctx expand_lets_k_ctx_decl /= it_mkProd_or_LetIn_app.
+    simpl. f_equal. rewrite app_length /=.
+    simpl. rewrite Nat.add_1_r Nat.add_succ_r.
+    now rewrite -(H Δ ltac:(lia) (S k)).
+Qed.
+
+Lemma expand_lets_k_mkApps Γ k f args : 
+  expand_lets_k Γ k (mkApps f args) =
+  mkApps (expand_lets_k Γ k f) (map (expand_lets_k Γ k) args).
+Proof.
+  now rewrite /expand_lets_k lift_mkApps subst_mkApps map_map_compose.
+Qed.
+
+Lemma expand_lets_mkApps Γ f args : 
+  expand_lets Γ (mkApps f args) =
+  mkApps (expand_lets Γ f) (map (expand_lets Γ) args).
+Proof.
+  now rewrite /expand_lets expand_lets_k_mkApps.
+Qed.
+
+Lemma expand_lets_tRel k Γ : 
+  expand_lets Γ (tRel (k + #|Γ|)) = tRel (k + context_assumptions Γ).
+Proof.
+  rewrite /expand_lets /expand_lets_k. 
+  rewrite lift_rel_ge; try lia.
+  rewrite subst_rel_gt; len; try lia.
+  lia_f_equal.
+Qed.
 
 Lemma context_assumptions_context {Γ} :
   assumption_context Γ -> 

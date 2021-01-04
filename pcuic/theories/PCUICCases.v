@@ -289,6 +289,14 @@ Proof.
   rewrite map2_length //.
 Qed.
 
+Lemma case_branch_type_length {ci mdecl idecl p br ptm i cdecl} :
+  wf_branch cdecl br ->
+  #|(case_branch_type ci mdecl idecl p br ptm i cdecl).1| = #|cstr_args cdecl|.
+Proof.
+  intros wf; simpl.
+  now rewrite case_branch_context_length_args.
+Qed.
+
 (*
 (** For cases typing *)
 

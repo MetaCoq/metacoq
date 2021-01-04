@@ -63,6 +63,24 @@ Module Environment (T : Term).
        decl_body := option_map f d.(decl_body);
        decl_type := f d.(decl_type) |}.       
 
+  Definition test_decl (f : term -> bool) (d : context_decl) : bool :=
+    f d.(decl_type) && foroptb f d.(decl_body).
+
+  Instance test_decl_proper : Proper (`=1` ==> Logic.eq ==> Logic.eq) test_decl.
+  Proof. 
+    intros f g Hfg [na [b|] ty] ? <- => /=; rewrite /test_decl /=;
+    now rewrite Hfg.
+  Qed.
+
+  Lemma test_decl_impl (f g : term -> bool) x : (forall x, f x -> g x) -> 
+    test_decl f x -> test_decl g x.
+  Proof.
+    intros Hf; rewrite /test_decl.
+    move/andb_and=> [Hd Hb].
+    apply/andb_and; split; eauto.
+    eapply foroptb_impl; eauto.
+  Qed.
+
   Lemma map_decl_type f decl : f (decl_type decl) = decl_type (map_decl f decl).
   Proof. destruct decl; reflexivity. Qed.
 
@@ -99,6 +117,9 @@ Module Environment (T : Term).
     apply mapi_ext. intros. f_equal. now rewrite List.rev_length.
   Qed.
 
+  Lemma fold_context_tip f d : fold_context f [d] = [map_decl (f 0) d].
+  Proof. reflexivity. Qed.
+  
   Lemma fold_context_length f Γ : length (fold_context f Γ) = length Γ.
   Proof.
     unfold fold_context. now rewrite !List.rev_length mapi_length List.rev_length.
@@ -406,6 +427,14 @@ Module Environment (T : Term).
 
   Definition to_extended_list_k Γ k := reln [] k Γ.
   Definition to_extended_list Γ := to_extended_list_k Γ 0.
+
+  Lemma reln_fold f ctx n acc :
+    reln acc n (fold_context f ctx) = 
+    reln acc n ctx.
+  Proof.
+    induction ctx as [|[na [b|] ty] ctx] in n, acc |- *; simpl; auto;
+      rewrite fold_context_snoc0 /=; apply IHctx.
+  Qed.
 
   Lemma reln_list_lift_above l p Γ :
     Forall (fun x => exists n, x = tRel n /\ p <= n /\ n < p + length Γ) l ->

@@ -185,10 +185,6 @@ Proof.
   destruct q. apply Eqdep_dec.UIP_refl_bool.
 Qed.
 
-Ltac tas := try assumption.
-Ltac tea := try eassumption.
-Ltac trea := try reflexivity; try eassumption.
-
 Axiom todo : String.string -> forall {A}, A.
 Ltac todo s := exact (todo s).
 

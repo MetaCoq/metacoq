@@ -80,6 +80,47 @@ Proof.
   now apply alli_ext.
 Qed.
 
+Lemma alli_impl {A} (p q : nat -> A -> bool) n (l : list A) : 
+  (forall i x, p i x -> q i x) ->
+  alli p n l -> alli q n l.
+Proof.
+  intros hpq. induction l in n |- *; simpl; auto.
+  move/andb_and => [pna a'].
+  rewrite (hpq _ _ pna).
+  now apply IHl.
+Qed.
+
+Lemma allbiP {A} (P : nat -> A -> Type) (p : nat -> A -> bool) n l :
+  (forall i x, reflectT (P i x) (p i x)) -> 
+  reflectT (Alli P n l) (alli p n l).
+Proof.
+  intros Hp.
+  apply equiv_reflectT.
+  - induction 1; rewrite /= // IHX // andb_true_r.
+    now destruct (Hp n hd).
+  - induction l in n |- *; rewrite /= //. constructor. 
+    move/andb_and => [pa pl].
+    constructor; auto. now destruct (Hp n a).
+Qed.
+
+Lemma alli_Alli {A} (p : nat -> A -> bool) n l : 
+  alli p n l <~> Alli p n l.
+Proof.
+  destruct (allbiP p p n l).
+  - intros. destruct (p i x); now constructor.
+  - split; eauto.
+  - split; eauto. by [].
+Qed.
+
+Lemma alli_shiftn {A} n k p (l : list A) :
+  alli p (n + k) l = alli (fun i => p (n + i)) k l.
+Proof.
+  induction l in n, k, p |- *; simpl; auto. f_equal.
+  rewrite (IHl (S n) k p) (IHl 1 k _).
+  apply alli_ext => x.
+  now rewrite Nat.add_succ_r.
+Qed.
+
 Section alli.
   Context {A} (p q : nat -> A -> bool) (l l' : list A).
 
@@ -183,6 +224,18 @@ Proof.
     constructor; auto. now destruct (Hp a).
 Qed.
 
+Lemma forallb_ext {A} (p q : A -> bool) : p =1 q -> forallb p =1 forallb q.
+Proof.
+  intros hpq l.
+  induction l; simpl; auto.
+  now rewrite (hpq a) IHl.
+Qed.
+
+Instance forallb_proper {A} : Proper (`=1` ==> eq ==> eq) (@forallb A).
+Proof.
+  intros f g Hfg ? ? ->. now apply forallb_ext.
+Qed.
+
 Lemma forallbP_cond {A} (P Q : A -> Prop) (p : A -> bool) l : 
   Forall Q l ->
   (forall x, Q x -> reflect (P x) (p x)) -> reflect (Forall P l) (forallb p l).
@@ -195,17 +248,25 @@ Proof.
     constructor; auto. now destruct (Hp _ H).
 Qed.
 
-Lemma allbiP {A} (P : nat -> A -> Type) (p : nat -> A -> bool) n l :
-  (forall i x, reflectT (P i x) (p i x)) -> 
-  reflectT (Alli P n l) (alli p n l).
+Lemma nth_error_forallb {A} {p : A -> bool} {l : list A} {n x} :
+  nth_error l n = Some x -> forallb p l -> p x.
 Proof.
-  intros Hp.
-  apply equiv_reflectT.
-  - induction 1; rewrite /= // IHX // andb_true_r.
-    now destruct (Hp n hd).
-  - induction l in n |- *; rewrite /= //. constructor. 
-    move/andb_and => [pa pl].
-    constructor; auto. now destruct (Hp n a).
+  intros Hnth HPl. 
+  induction l in n, Hnth, HPl |- * => //.
+  - rewrite nth_error_nil in Hnth => //.
+  - destruct n => /=; noconf Hnth.
+    * now move: HPl => /= /andb_and.
+    * eapply IHl; tea. now move: HPl => /andb_and.
+Qed.
+
+Lemma forallb_nth_error {A} P l n :
+  @forallb A P l -> on_Some_or_None P (nth_error l n).
+Proof.
+  induction l in n |- *.
+  - intros _. destruct n; constructor.
+  - intro H. apply forallb_Forall in H.
+    inv H. destruct n; cbn; auto.
+    now apply forallb_Forall in H1; eauto.
 Qed.
 
 Lemma map_eq_inj {A B} (f g : A -> B) l: map f l = map g l ->
@@ -818,6 +879,17 @@ Proof.
     intros [= ->]. exists t'; intuition auto.
 Qed.
 
+
+
+Lemma OnOne2_impl_All_r {A} (P : A -> A -> Type) (Q : A -> Type) l l' : 
+  (forall x y, Q x -> P x y -> Q y) ->
+  OnOne2 P l l' -> All Q l -> All Q l'.
+Proof.
+  intros HPQ.
+  induction 1; intros H; depelim H; constructor; auto.
+  now eapply HPQ.
+Qed.
+
 Inductive OnOne2i {A : Type} (P : nat -> A -> A -> Type) : nat -> list A -> list A -> Type :=
 | OnOne2i_hd i hd hd' tl : P i hd hd' -> OnOne2i P i (hd :: tl) (hd' :: tl)
 | OnOne2i_tl i hd tl tl' : OnOne2i P (S i) tl tl' -> OnOne2i P i (hd :: tl) (hd :: tl').
@@ -1183,6 +1255,28 @@ Proof.
     intros [= ->]. exists t'; intuition auto.
 Qed.
 
+Lemma OnOne2All_impl_All_r {A B} (P : B -> A -> A -> Type) (Q : A -> Type) i l l' : 
+  (forall i x y, Q x -> P i x y -> Q y) ->
+  OnOne2All P i l l' -> All Q l -> All Q l'.
+Proof.
+  intros HPQ.
+  induction 1; intros H; depelim H; constructor; auto.
+  now eapply HPQ.
+Qed.
+
+Lemma OnOne2All_nth_error_impl {A B} (P : A -> B -> B -> Type) il l l' :
+  OnOne2All P il l l' ->
+  OnOne2All (fun i x y => (∑ ni, nth_error il ni = Some i) × P i x y) il l l'.
+Proof.
+  induction 1.
+  - econstructor => //.
+    split => //.
+    exists 0; reflexivity.
+  - constructor. eapply (OnOne2All_impl IHX).
+    intros i x y [[ni hni] ?].
+    split; auto. exists (S ni). apply hni.
+Qed.
+
 Ltac toAll :=
   match goal with
   | H : is_true (forallb _ _) |- _ => apply forallb_All in H
@@ -1398,16 +1492,6 @@ Proof.
   destruct n; discriminate.
   revert Hnth. destruct n. intros [= ->]. now rewrite Nat.add_0_r.
   intros H'; eauto. rewrite <- Nat.add_succ_comm. eauto.
-Qed.
-
-Lemma nth_error_forallb {A} P l n :
-  @forallb A P l -> on_Some_or_None P (nth_error l n).
-Proof.
-  induction l in n |- *.
-  - intros _. destruct n; constructor.
-  - intro H. apply forallb_Forall in H.
-    inv H. destruct n; cbn; auto.
-    now apply forallb_Forall in H1; eauto.
 Qed.
 
 Lemma All_map_id' {A} {P : A -> Type} {l} {f} :
@@ -2478,4 +2562,43 @@ Proof.
   - constructor.
     + apply p.
     + apply IHX0.
+Qed.
+
+Lemma All2i_map {A B C D} (R : nat -> C -> D -> Type) (f : A -> C) (g : B -> D) n l l' :
+  All2i (fun i x y => R i (f x) (g y)) n l l' -> All2i R n (map f l) (map g l').
+Proof. induction 1; simpl; constructor; try congruence. Qed.
+
+Lemma All2i_map_right {B C D} (R : nat -> C -> D -> Type) (g : B -> D) n l l' :
+  All2i (fun i x y => R i x (g y)) n l l' -> All2i R n l (map g l').
+Proof. induction 1; simpl; constructor; try congruence. Qed.
+
+Lemma All2i_nth_impl_gen {A B} (R : nat -> A -> B -> Type) n l l' :
+  All2i R n l l' ->
+  All2i (fun i x y => 
+    (if i <? n then False
+    else nth_error l (i - n) = Some x) × R i x y) n l l'.
+Proof.
+  intros a. depind a.
+  - constructor.
+  - constructor.
+    * simpl. destruct (Nat.ltb n n) eqn:ltb.
+      + eapply Nat.ltb_lt in ltb. lia.
+      + rewrite Nat.sub_diag. auto.
+    * simpl. eapply (All2i_impl IHa).
+      intros. destruct (Nat.ltb i (S n)) eqn:ltb; simpl in *; destruct X =>  //.
+      apply Nat.ltb_nlt in ltb. 
+      destruct (Nat.ltb i n) eqn:ltb'; simpl in *.
+      + eapply Nat.ltb_lt in ltb'. lia.
+      + eapply Nat.ltb_nlt in ltb'.
+        assert (i - n = S (i - S n)) as -> by lia. simpl. now rewrite e.
+Qed.
+
+Lemma All2i_nth_hyp {A B} (R : nat -> A -> B -> Type) l l' :
+  All2i R 0 l l' ->
+  All2i (fun i x y => nth_error l i = Some x × R i x y) 0 l l'.
+Proof.
+  intros a.
+  eapply All2i_nth_impl_gen in a. simpl in a.
+  eapply (All2i_impl a). intros.
+  now rewrite Nat.sub_0_r in X.
 Qed.

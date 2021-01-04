@@ -1187,7 +1187,6 @@ Proof.
 Qed.
 
 Lemma erase_correct (wfl := Ee.default_wcbv_flags) (Σ : global_env_ext) (wfΣ : wf_ext Σ) t v Σ' t' deps :
-  axiom_free Σ.1 ->
   forall wt : welltyped Σ [] t,
   erase Σ (sq wfΣ) [] t wt = t' ->
   KernameSet.subset (term_global_deps t') deps ->
@@ -1195,10 +1194,9 @@ Lemma erase_correct (wfl := Ee.default_wcbv_flags) (Σ : global_env_ext) (wfΣ :
   Σ |-p t ▷ v ->
   exists v', Σ;;; [] |- v ⇝ℇ v' /\ ∥ Σ' ⊢ t' ▷ v' ∥.
 Proof.
-  intros axiomfree wt.
+  intros wt.
   generalize (sq wfΣ.1) as swfΣ.
   intros swfΣ HΣ' Hsub Ht' ev.
-  assert (extraction_pre Σ) by now constructor.
   pose proof (erases_erase (wfΣ := sq wfΣ) wt); eauto.
   rewrite HΣ' in H.
   destruct wt as [T wt].

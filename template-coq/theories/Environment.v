@@ -37,7 +37,8 @@ Module Environment (T : Term).
     decl_body : option term ;
     decl_type : term
   }.
-
+  Derive NoConfusion for context_decl.
+  
   (** Local (de Bruijn) variable binding *)
 
   Definition vass x A :=
@@ -81,12 +82,22 @@ Module Environment (T : Term).
     eapply foroptb_impl; eauto.
   Qed.
 
+  Instance map_decl_pointwise : Proper (`=1` ==> `=1`) map_decl.
+  Proof. intros f g Hfg x. rewrite /map_decl.
+    destruct x => /=. f_equal.
+    - now rewrite Hfg.
+    - apply Hfg.
+  Qed.
+
   Lemma map_decl_type f decl : f (decl_type decl) = decl_type (map_decl f decl).
   Proof. destruct decl; reflexivity. Qed.
 
   Lemma map_decl_body f decl : option_map f (decl_body decl) = decl_body (map_decl f decl).
   Proof. destruct decl; reflexivity. Qed.
 
+  Lemma map_decl_id : map_decl id =1 id.
+  Proof. intros d; now destruct d as [? [] ?]. Qed.
+  
   Lemma option_map_decl_body_map_decl f x :
     option_map decl_body (option_map (map_decl f) x) =
     option_map (option_map f) (option_map decl_body x).
@@ -144,8 +155,18 @@ Module Environment (T : Term).
     rewrite List.rev_app_distr.
     rewrite mapi_app. rewrite <- List.rev_app_distr. f_equal. f_equal.
     apply mapi_ext. intros. f_equal. rewrite List.rev_length. f_equal.
-  Qed. 
-  
+  Qed.
+    
+  Lemma fold_context_id x : fold_context (fun i x => x) x = x.
+  Proof.
+    rewrite fold_context_alt.
+    rewrite /mapi. generalize 0.
+    induction x; simpl; auto.
+    intros n.
+    f_equal; auto. 
+    now rewrite map_decl_id.
+  Qed.
+
   Lemma compose_map_decl f g x : map_decl f (map_decl g x) = map_decl (f ∘ g) x.
   Proof.
     destruct x as [? [?|] ?]; reflexivity.
@@ -171,7 +192,36 @@ Module Environment (T : Term).
     rewrite compose_map_decl. apply map_decl_ext => t.
     now len.
   Qed.
+  
+  Lemma fold_context_ext f g Γ :
+    f =2 g ->
+    fold_context f Γ = fold_context g Γ.
+  Proof.
+    intros hfg.
+    induction Γ; simpl; auto; rewrite !fold_context_snoc0.
+    simpl. rewrite IHΓ. f_equal. apply map_decl_ext.
+    intros. now apply hfg.
+  Qed.
 
+  Instance fold_context_proper : Proper (pointwise_relation nat (pointwise_relation _ Logic.eq) ==> Logic.eq ==> Logic.eq) fold_context.
+  Proof.
+    intros f g Hfg x y <-. now apply fold_context_ext.
+  Qed.
+
+  Lemma alli_fold_context_prop f g ctx : 
+    alli f 0 (fold_context g ctx) =
+    alli (fun i x => f i (map_decl (g (Nat.pred #|ctx| - i)) x)) 0 ctx.
+  Proof.
+    now rewrite fold_context_alt /mapi alli_mapi.
+  Qed.
+
+  Lemma test_decl_map_decl f g x : test_decl f (map_decl g x) = test_decl (f ∘ g) x.
+  Proof.
+    rewrite /test_decl /map_decl /=.
+    f_equal. rewrite /foroptb. f_equal.
+    now rewrite option_map_two.
+  Qed.
+  
   Definition lift_decl n k d := (map_decl (lift n k) d).
 
   Definition lift_context n k (Γ : context) : context :=
@@ -672,17 +722,6 @@ Module Environment (T : Term).
   
   Hint Rewrite context_assumptions_subst_instance_context
      context_assumptions_subst_context context_assumptions_lift_context : len.
-
-  Lemma fold_context_ext f g c : 
-    (forall i, f i =1 g i) ->
-    fold_context f c = fold_context g c.
-  Proof.
-    intros Hfg.
-    rewrite !fold_context_alt.
-    eapply mapi_ext => i d.
-    eapply map_decl_ext => t.
-    now rewrite Hfg.
-  Qed.
 
   Lemma fold_context_map f g Γ : 
     (forall i x, f i (g x) = g (f i x)) ->

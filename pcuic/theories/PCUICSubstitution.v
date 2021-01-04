@@ -995,16 +995,6 @@ Proof.
   now rewrite fold_context_length.
 Qed.
 
-Lemma fold_context_ext f g Γ :
-  f =2 g ->
-  fold_context f Γ = fold_context g Γ.
-Proof.
-  intros hfg.
-  induction Γ; simpl; auto; rewrite !fold_context_snoc0.
-  simpl. rewrite IHΓ. f_equal. apply PCUICAstUtils.map_decl_ext.
-  intros. now apply hfg.
-Qed.
-
 Lemma smash_context_acc Γ Δ :
   smash_context Δ Γ =
       subst_context (extended_subst Γ 0) 0 (lift_context (context_assumptions Γ) #|Γ| Δ)

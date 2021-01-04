@@ -1634,27 +1634,23 @@ Proof.
         eapply on_ctx_free_vars_extend => //.
 Qed.
 
-Lemma typing_rename_P :
-  forall P Σ Γ Δ f t A,
-    wf Σ.1 ->
+Lemma typing_rename_P {P Σ Γ Δ f t A} {wfΣ : wf Σ.1} :
     renaming (shiftnP #|Γ| P) Σ Δ Γ f ->
     Σ ;;; Γ |- t : A ->
     Σ ;;; Δ |- rename f t : rename f A.
 Proof.
-  intros P Σ Γ Δ f t A hΣ hf h.
-  revert Σ hΣ Γ t A h P Δ f hf.
+  intros hf h.
+  revert Σ wfΣ Γ t A h P Δ f hf.
   apply typing_rename_prop.
 Qed.
 
-Lemma typing_rename :
-  forall Σ Γ Δ f t A,
-    wf Σ.1 ->
-    renaming (closedP #|Γ| xpredT) Σ Δ Γ f ->
-    Σ ;;; Γ |- t : A ->
-    Σ ;;; Δ |- rename f t : rename f A.
+Lemma typing_rename {Σ Γ Δ f t A} {wfΣ : wf Σ.1} :
+  renaming (closedP #|Γ| xpredT) Σ Δ Γ f ->
+  Σ ;;; Γ |- t : A ->
+  Σ ;;; Δ |- rename f t : rename f A.
 Proof.
-  intros Σ Γ Δ f t A hΣ hf h.
-  eapply (typing_rename_P (fun _ => false)) ; eauto.
+  intros hf h.
+  eapply (typing_rename_P (P:=fun _ => false)) ; eauto.
 Qed.
 
 End Renaming.

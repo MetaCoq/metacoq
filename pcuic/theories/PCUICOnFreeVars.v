@@ -88,6 +88,22 @@ Proof. intros f g Hfg ? ? ->. now apply on_free_vars_ext. Qed.
 Instance on_free_vars_proper_pointwise : Proper (`=1` ==> `=1`) on_free_vars.
 Proof. intros f g Hfg x. now apply on_free_vars_ext. Qed.
 
+Lemma shiftnP_xpredT n : shiftnP n xpredT =1 xpredT.
+Proof. intros i; rewrite /shiftnP. nat_compare_specs => //. Qed.
+
+Lemma on_free_vars_true t : on_free_vars xpredT t.
+Proof.
+  revert t.
+  induction t using PCUICInduction.term_forall_list_ind; simpl => //; solve_all.
+  all:try (rtoProp; now rewrite ?shiftnP_xpredT ?IHt1 ?IHt2 ?IHt3; eauto 2; 
+    try rtoProp; solve_all).
+  - rtoProp. rewrite shiftnP_xpredT. intuition eauto 3.
+    * solve_all.
+    * solve_all; rewrite shiftnP_xpredT; auto using shiftnP_xpredT.
+  - unfold test_def in *. apply /andP. now rewrite shiftnP_xpredT.
+  - unfold test_def in *. apply /andP. now rewrite shiftnP_xpredT.
+Qed.
+
 Lemma on_free_vars_impl (p q : nat -> bool) t : (forall i, p i -> q i) -> 
   on_free_vars p t -> on_free_vars q t.
 Proof.
@@ -119,9 +135,6 @@ Proof.
   intros i; rewrite /shiftnP /closedP.
   repeat nat_compare_specs => //.
 Qed.
-
-Lemma shiftnP_xpredT n : shiftnP n xpredT =1 xpredT.
-Proof. intros i; rewrite /shiftnP. nat_compare_specs => //. Qed.
 
 Lemma closedP_on_free_vars {n t} : closedn n t -> on_free_vars (closedP n xpredT) t.
 Proof.

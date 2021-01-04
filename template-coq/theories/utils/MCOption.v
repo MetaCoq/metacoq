@@ -67,6 +67,14 @@ Proof.
   intros []; cbn; congruence.
 Qed.
 
+Instance option_map_proper {A B} : Proper (`=1` ==> Logic.eq ==> Logic.eq) (@option_map A B).
+Proof.
+  intros f g Hfg x y <-. now apply option_map_ext.
+Qed.
+
+Lemma option_map_id {A} : option_map (@id A) =1 id.
+Proof. by intros []. Qed.
+
 Lemma nth_map_option_out {A B} (f : nat -> A -> option B) l l' i t : map_option_out (mapi f l) = Some l' ->
   nth_error l' i = Some t ->
   (∑ x, (nth_error l i = Some x) /\ (f i x = Some t)).

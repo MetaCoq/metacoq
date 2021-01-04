@@ -347,4 +347,4 @@ Definition forget_types (c : context) : list aname :=
 Module PCUICLookup := Lookup PCUICTerm PCUICEnvironment.
 Include PCUICLookup.
 
-Derive NoConfusion for global_decl context_decl.
+Derive NoConfusion for global_decl.

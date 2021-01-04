@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils BasicAst AstUtils
      Universes Environment.
+From Equations Require Import Equations.
 
 Module Lookup (T : Term) (E : EnvironmentSig T).
 
@@ -138,7 +139,7 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T).
         typing Γ t None ->
         typing Γ b (Some t) ->
         All_local_env (Γ ,, vdef na b t).
-  Derive Signature for All_local_env.
+  Derive Signature NoConfusion for All_local_env.
   End TypeLocal.
 
   Arguments localenv_nil {_}.
@@ -219,6 +220,24 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T).
     apply aux. apply p. apply aux. apply p.
   Defined.
 
+  Lemma All_local_env_fold P f Γ :
+    All_local_env (fun Γ t T => P (fold_context f Γ) (f #|Γ| t) (option_map (f #|Γ|) T)) Γ <~>
+    All_local_env P (fold_context f Γ).
+  Proof.
+    split.
+    - induction 1; simpl; try unfold snoc; rewrite ?fold_context_snoc0; try constructor; auto.
+    - induction Γ; simpl; try unfold snoc; rewrite ?fold_context_snoc0; intros H.
+      * constructor.
+      * destruct a as [na [b|] ty]; depelim H; specialize (IHΓ H); constructor; simpl; auto.
+  Qed.
+
+  Lemma All_local_env_impl_ind {P Q : context -> term -> option term -> Type} {l} :
+    All_local_env P l ->
+    (forall Γ t T, All_local_env Q Γ -> P Γ t T -> Q Γ t T) ->
+    All_local_env Q l.
+  Proof.
+    induction 1; intros; simpl; econstructor; eauto.
+  Qed.
   Lemma All2_local_env_app_inv :
     forall P (Γ Γ' Γl Γr : context),
       All2_local_env (on_decl P) Γ Γl ->
@@ -276,7 +295,8 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T).
           All_local_env_over Σ (Γ ,, vdef na b t)
                              (localenv_cons_def all tu tb).
   End TypeLocalOver.
-  
+  Derive Signature for All_local_env_over.
+
   Section TypeCtxInst.
     Context (typing : forall (Σ : global_env_ext) (Γ : context), term -> term -> Type).
 
@@ -290,6 +310,7 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T).
     | ctx_inst_def na b t inst Δ :
         ctx_inst Σ Γ inst (subst_telescope [b] 0 Δ) ->
         ctx_inst Σ Γ inst (vdef na b t :: Δ).
+    Derive Signature NoConfusion for ctx_inst.
   End TypeCtxInst.
 
 End EnvTyping.
@@ -327,8 +348,6 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
   Definition isType `{checker_flags} (Σ : global_env_ext) (Γ : context) (t : term) :=
     { s : _ & Σ ;;; Γ |- t : tSort s }.
 
-  Derive Signature NoConfusion for ctx_inst.
-  
   Section ContextConversion.
     Context {cf : checker_flags}.
     Context (Σ : global_env_ext).

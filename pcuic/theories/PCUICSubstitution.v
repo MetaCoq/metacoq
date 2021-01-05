@@ -905,12 +905,6 @@ Proof.
       lia_f_equal.
 Qed.
 
-Lemma smash_context_app Δ Γ Γ' :
-  smash_context Δ (Γ ++ Γ') = smash_context (smash_context Δ Γ) Γ'.
-Proof.
-  revert Δ; induction Γ as [|[na [b|] ty]]; intros Δ; simpl; auto.
-Qed.
-
 Arguments Nat.sub : simpl nomatch.
 
 Lemma assumption_context_skipn Γ n :
@@ -929,152 +923,6 @@ Hint Rewrite idsn_length : len.
 Lemma subst_fn_eq s s' x : s = s' -> subst_fn s x = subst_fn s' x.
 Proof.
   intros -> ; reflexivity.
-Qed.
-
-
-Lemma extended_subst_subst_instance_constr u Γ n :
-  map (subst_instance_constr u) (extended_subst Γ n) =
-  extended_subst (subst_instance_context u Γ) n.
-Proof.
-  induction Γ as [|[?[]?] ?] in n |- *; simpl; auto.
-  - autorewrite with len.
-    f_equal; auto.
-    rewrite -subst_subst_instance_constr.
-    rewrite -lift_subst_instance_constr /=.
-    f_equal. apply IHΓ.
-  - f_equal; auto.
-Qed.
-
-Local Open Scope sigma_scope.
-
-Lemma inst_extended_subst_shift (Γ : context) k :
-  map (inst ((extended_subst Γ 0 ⋅n ids) ∘s ↑^k)) (idsn #|Γ|) =
-  map (inst (extended_subst Γ k ⋅n ids)) (idsn #|Γ|).
-Proof.
-  intros.
-  rewrite !map_idsn_spec.
-  apply nat_recursion_ext => x l' Hx.
-  f_equal. f_equal.
-  edestruct (@subst_consn_lt _ (extended_subst Γ k) x) as [d [Hd Hσ]].
-  { now (autorewrite with len; lia). }
-  simpl. rewrite Hσ.
-  edestruct (@subst_consn_lt _ (extended_subst Γ 0) x) as [d' [Hd' Hσ']];
-    try (autorewrite with len; trivial).
-  unfold subst_compose. rewrite Hσ'.
-  apply some_inj.
-  rewrite -Hd. change (Some d'.[↑^k]) with (option_map (fun x => inst (↑^k) x) (Some d')).
-  rewrite -Hd'.
-  rewrite (lift_extended_subst _ k).
-  rewrite nth_error_map. apply option_map_ext => t.
-  now autorewrite with sigma.
-Qed.
-
-Lemma subst_context_decompo s s' Γ k :
-  subst_context (s ++ s') k Γ =
-  subst_context s' k (subst_context (map (lift0 #|s'|) s) k Γ).
-Proof.
-  intros.
-  rewrite !subst_context_alt !mapi_compose.
-  apply mapi_ext => i x.
-  destruct x as [na [b|] ty] => //.
-  - rewrite /subst_decl /map_decl /=; f_equal.
-    + rewrite !mapi_length. f_equal.
-      now rewrite subst_app_decomp.
-    + rewrite mapi_length.
-      now rewrite subst_app_decomp.
-  - rewrite /subst_decl /map_decl /=; f_equal.
-    rewrite !mapi_length. now rewrite subst_app_decomp.
-Qed.
-
-Lemma fold_context_compose f g Γ :
-  fold_context f (fold_context g Γ) = fold_context (fun n x => f n (g n x)) Γ.
-Proof.
-  induction Γ; simpl; auto; rewrite !fold_context_snoc0.
-  simpl. rewrite IHΓ. f_equal.
-  rewrite PCUICAstUtils.compose_map_decl.
-  now rewrite fold_context_length.
-Qed.
-
-Lemma smash_context_acc Γ Δ :
-  smash_context Δ Γ =
-      subst_context (extended_subst Γ 0) 0 (lift_context (context_assumptions Γ) #|Γ| Δ)
-   ++ smash_context [] Γ.
-Proof.
-  revert Δ.
-  induction Γ as [|[? [] ?] ?]; intros Δ.
-  - simpl; auto.
-    now rewrite subst0_context app_nil_r lift0_context.
-  - simpl. autorewrite with len.
-    rewrite IHΓ; auto.
-    rewrite subst_context_nil. f_equal.
-    rewrite (subst_context_decompo [_] _).
-    simpl. autorewrite with len.
-    rewrite lift0_id.
-    rewrite subst0_context.
-    unfold subst_context, lift_context.
-    rewrite !fold_context_compose.
-    apply fold_context_ext. intros n n' -> x.
-    rewrite Nat.add_0_r.
-    autorewrite with sigma.
-    apply inst_ext.
-    setoid_rewrite ren_lift_renaming.
-    autorewrite with sigma.
-    rewrite !Upn_compose.
-    apply Upn_ext.
-    autorewrite with sigma.
-    unfold Up.
-    rewrite subst_consn_subst_cons.
-    autorewrite with sigma.
-    reflexivity.
-
-  - simpl.
-    rewrite IHΓ /=. auto.
-    rewrite (IHΓ [_]). auto. rewrite !app_assoc. f_equal.
-    rewrite app_nil_r. unfold map_decl. simpl. unfold app_context.
-    simpl. rewrite lift_context_app subst_context_app /app_context. simpl.
-    unfold lift_context at 2. unfold subst_context at 2, fold_context. simpl.
-    f_equal.
-    unfold subst_context, lift_context.
-    rewrite !fold_context_compose.
-    apply fold_context_ext. intros n n' ->. intros x.
-    rewrite Nat.add_0_r.
-
-    autorewrite with sigma.
-    apply inst_ext. rewrite !ren_lift_renaming.
-    autorewrite with sigma.
-    rewrite !Upn_compose.
-    autorewrite with sigma.
-    apply Upn_ext.
-    unfold Up.
-
-    rewrite subst_consn_subst_cons.
-    autorewrite with sigma.
-    apply subst_cons_proper; auto.
-    rewrite !Upn_eq. autorewrite with sigma.
-    rewrite subst_consn_compose.
-    setoid_rewrite subst_consn_compose at 2 3.
-    apply subst_consn_proper.
-    { rewrite -inst_extended_subst_shift; auto. }
-
-    autorewrite with sigma.
-    rewrite -subst_compose_assoc.
-    rewrite shiftk_compose.
-    autorewrite with sigma.
-    setoid_rewrite <- (compose_ids_l ↑) at 2.
-    rewrite -subst_consn_compose.
-    rewrite - !subst_compose_assoc.
-    rewrite -shiftk_shift shiftk_compose.
-    autorewrite with sigma.
-    rewrite subst_consn_compose.
-    rewrite -shiftk_compose subst_compose_assoc.
-    rewrite subst_consn_shiftn.
-    2:now autorewrite with len.
-    autorewrite with sigma.
-    rewrite -shiftk_shift.
-    rewrite -shiftk_compose subst_compose_assoc.
-    rewrite subst_consn_shiftn.
-    2:now autorewrite with len.
-    now autorewrite with sigma.
 Qed.
 
 Lemma map_option_out_impl {A B} (l : list A) (f g : A -> option B) x :
@@ -1126,13 +974,6 @@ Proof.
   destruct (decompose_app (decl_type x)) eqn:Happ.
   destruct t0; try discriminate. simpl in *.
   erewrite decompose_app_subst; eauto. simpl. auto.
-Qed.
-
-Lemma decompose_prod_assum_mkApps ctx ind u args :
-  decompose_prod_assum ctx (mkApps (tInd ind u) args) = (ctx, mkApps (tInd ind u) args).
-Proof.
-  apply (decompose_prod_assum_it_mkProd ctx []).
-  now rewrite is_ind_app_head_mkApps.
 Qed.
 
 Lemma substitution_check_one_cofix s k mfix inds :

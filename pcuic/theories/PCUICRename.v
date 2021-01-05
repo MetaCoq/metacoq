@@ -99,18 +99,6 @@ Proof.
   unfold rename_context. apply fold_context_alt.
 Qed.
 
-Lemma lift_renaming_0 k : ren (lift_renaming k 0) = ren (Nat.add k).
-Proof. reflexivity. Qed.
-
-Lemma ren_lift_renaming n k : ren (lift_renaming n k) =1 (⇑^k ↑^n).
-Proof.
-  unfold subst_compose. intros i.
-  simpl. rewrite -{1}(Nat.add_0_r k). unfold ren. rewrite - (shiftn_lift_renaming n k 0).
-  pose proof (ren_shiftn k (lift_renaming n 0) i).
-  change ((ren (shiftn k (lift_renaming n 0)) i) = ((⇑^k (↑^n)) i)).
-  rewrite -H. sigma. rewrite lift_renaming_0. reflexivity.
-Qed.
-
 Lemma rename_subst0 :
   forall f l t,
     rename f (subst0 l t) =

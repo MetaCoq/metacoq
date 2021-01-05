@@ -1611,6 +1611,46 @@ Proof.
     * now len.
 Qed.
 
+Lemma eq_term_upto_univ_inst Σ :
+  forall Re Rle napp u v σ,
+    Reflexive Re -> Reflexive Rle ->
+    eq_term_upto_univ_napp Σ Re Rle napp u v ->
+    eq_term_upto_univ_napp Σ Re Rle napp u.[σ] v.[σ].
+Proof.
+  intros Re Rle napp u v σ hRe hRle h.
+  induction u in v, napp, Re, Rle, hRe, hRle, σ, h |- * using term_forall_list_ind.
+  all: dependent destruction h.
+  all: try solve [
+    simpl ; constructor ; eauto
+  ].
+  - simpl. reflexivity.
+  - simpl. constructor.
+    induction X in a, args' |- *.
+    + inversion a. constructor.
+    + inversion a. subst. simpl. constructor.
+      all: eauto.
+  - simpl. constructor. all: eauto.
+    * rewrite /rename_predicate.
+      destruct X; destruct e as [? [? [ectx ?]]].
+      rewrite (All2_length ectx). red.
+      intuition auto; simpl; solve_all.
+    * induction X0 in a, brs' |- *.
+      + inversion a. constructor.
+      + inversion a. subst. simpl.
+        destruct X1 as [a0 e0]. rewrite (All2_length a0).
+        constructor.
+        ** unfold map_branch; simpl; intuition eauto.
+        ** eauto.
+  - simpl. constructor.
+    apply All2_length in a as e. rewrite <- e.
+    generalize #|m|. intro k.
+    eapply All2_map. simpl. solve_all.
+  - simpl. constructor.
+    apply All2_length in a as e. rewrite <- e.
+    generalize #|m|. intro k.
+    eapply All2_map. simpl. solve_all.
+Qed.
+
 Lemma inst_cumul {Σ : global_env_ext} {wfΣ : wf Σ} Γ Δ σ A B :
   usubst Γ σ Δ ->
   Σ ;;; Γ |- A <= B ->
@@ -1618,15 +1658,15 @@ Lemma inst_cumul {Σ : global_env_ext} {wfΣ : wf Σ} Γ Δ σ A B :
 Proof.
   intros hσ h.
   induction h.
-  - eapply cumul_refl. admit. 
-    (* eapply eq_term_upto_univ_inst. assumption. *)
+  - eapply cumul_refl.
+    eapply eq_term_upto_univ_inst. all:try typeclasses eauto. assumption.
   - eapply red_cumul_cumul.
     + eapply red1_inst; tea.
     + apply IHh.
   - eapply red_cumul_cumul_inv.
     + eapply red1_inst; tea.
     + eapply IHh; eauto.
-Admitted.
+Qed.
 
 Lemma type_inst : env_prop
   (fun Σ Γ t A =>

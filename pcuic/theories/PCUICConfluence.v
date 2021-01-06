@@ -10,8 +10,6 @@ Require Import CRelationClasses CMorphisms.
 Require Import Equations.Prop.DepElim.
 Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 
-Ltac tc := try typeclasses eauto 10.
-
 Lemma red1_eq_context_upto_l Σ Rle Re Γ Δ u v :
   RelationClasses.Reflexive Rle ->
   SubstUnivPreserving Rle ->

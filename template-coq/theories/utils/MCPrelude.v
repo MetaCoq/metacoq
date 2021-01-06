@@ -42,9 +42,11 @@ Proof.
   - intros x. now rewrite Hff', Hgg'.
 Qed.
 
+(** Common abbreviations *)
 Ltac tas := try assumption.
 Ltac tea := try eassumption.
 Ltac trea := try reflexivity; try eassumption.
+Ltac tc := typeclasses eauto.
 
 Create HintDb terms.
 

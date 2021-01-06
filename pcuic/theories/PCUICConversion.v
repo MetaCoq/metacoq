@@ -13,8 +13,6 @@ Require Import Equations.Prop.DepElim.
 
 Set Default Goal Selector "!".
 
-
-Ltac tc := try typeclasses eauto 10.
 Ltac pcuic := intuition eauto 5 with pcuic ||
   (try solve [repeat red; cbn in *; intuition auto; eauto 5 with pcuic || (try lia || congruence)]).
 

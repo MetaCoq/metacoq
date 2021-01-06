@@ -27,6 +27,7 @@ End Term.
 Module Environment (T : Term).
 
   Import T.
+  Existing Instance subst_instance_constr.
 
   (** ** Declarations *)
 
@@ -267,10 +268,10 @@ Module Environment (T : Term).
     mapi (fun k' decl => map_decl (subst s (k' + k)) decl) Γ.
 
   Instance subst_instance_decl : UnivSubst context_decl
-    := map_decl ∘ subst_instance_constr.
+    := map_decl ∘ subst_instance.
   
   Instance subst_instance_context : UnivSubst context
-    := map_context ∘ subst_instance_constr.
+    := map_context ∘ subst_instance.
 
   Definition set_binder_name (na : aname) (x : context_decl) : context_decl :=
     {| decl_name := na;
@@ -705,8 +706,8 @@ Module Environment (T : Term).
   
   Hint Rewrite context_assumptions_map context_assumptions_mapi context_assumptions_app : len.
 
-  Lemma context_assumptions_subst_instance_context u Γ : 
-    context_assumptions (subst_instance_context u Γ) = 
+  Lemma context_assumptions_subst_instance u Γ : 
+    context_assumptions (subst_instance u Γ) = 
     context_assumptions Γ. 
   Proof. apply context_assumptions_map. Qed.
 
@@ -720,7 +721,7 @@ Module Environment (T : Term).
     context_assumptions Γ. 
   Proof. apply context_assumptions_fold. Qed.
   
-  Hint Rewrite context_assumptions_subst_instance_context
+  Hint Rewrite context_assumptions_subst_instance
      context_assumptions_subst_context context_assumptions_lift_context : len.
 
   Lemma fold_context_map f g Γ : 

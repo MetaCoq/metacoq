@@ -259,7 +259,7 @@ Definition lift := lift.
 Definition subst := subst.
 Definition closedn := closedn.
 Definition noccur_between := noccur_between.
-Definition subst_instance_constr := subst_instance_constr.
+Definition subst_instance_constr := subst_instance.
 
 End TemplateTerm.
 

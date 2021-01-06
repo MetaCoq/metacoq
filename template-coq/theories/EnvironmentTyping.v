@@ -580,9 +580,9 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       let univs := ind_universes mdecl in
       match variance_universes univs v with
       | Some (univs, u, u') =>
-        cumul_ctx_rel (Σ, univs) (subst_instance_context u (smash_context [] (ind_params mdecl)))
-          (subst_instance_context u (expand_lets_ctx (ind_params mdecl) (smash_context [] indices)))
-          (subst_instance_context u' (expand_lets_ctx (ind_params mdecl) (smash_context [] indices)))
+        cumul_ctx_rel (Σ, univs) (subst_instance u (smash_context [] (ind_params mdecl)))
+          (subst_instance u (expand_lets_ctx (ind_params mdecl) (smash_context [] indices)))
+          (subst_instance u' (expand_lets_ctx (ind_params mdecl) (smash_context [] indices)))
       | None => False
       end.
 
@@ -590,13 +590,13 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       let univs := ind_universes mdecl in
       match variance_universes univs v with
       | Some (univs, u, u') =>
-        cumul_ctx_rel (Σ, univs) (subst_instance_context u (ind_arities mdecl ,,, smash_context [] (ind_params mdecl)))
-          (subst_instance_context u (expand_lets_ctx (ind_params mdecl) (smash_context [] (cstr_args cs))))
-          (subst_instance_context u' (expand_lets_ctx (ind_params mdecl) (smash_context [] (cstr_args cs)))) *
+        cumul_ctx_rel (Σ, univs) (subst_instance u (ind_arities mdecl ,,, smash_context [] (ind_params mdecl)))
+          (subst_instance u (expand_lets_ctx (ind_params mdecl) (smash_context [] (cstr_args cs))))
+          (subst_instance u' (expand_lets_ctx (ind_params mdecl) (smash_context [] (cstr_args cs)))) *
         All2 
-          (conv (Σ, univs) (subst_instance_context u (ind_arities mdecl ,,, smash_context [] (ind_params mdecl ,,, cstr_args cs))))
-          (map (subst_instance_constr u ∘ expand_lets (ind_params mdecl ,,, cstr_args cs)) (cstr_indices cs))
-          (map (subst_instance_constr u' ∘ expand_lets (ind_params mdecl ,,, cstr_args cs)) (cstr_indices cs))
+          (conv (Σ, univs) (subst_instance u (ind_arities mdecl ,,, smash_context [] (ind_params mdecl ,,, cstr_args cs))))
+          (map (subst_instance u ∘ expand_lets (ind_params mdecl ,,, cstr_args cs)) (cstr_indices cs))
+          (map (subst_instance u' ∘ expand_lets (ind_params mdecl ,,, cstr_args cs)) (cstr_indices cs))
       | None => False (* Monomorphic inductives have no variance attached *)
       end.
 
